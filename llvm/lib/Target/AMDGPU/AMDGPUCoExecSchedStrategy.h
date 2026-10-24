@@ -222,6 +222,7 @@ protected:
     unsigned Carried = 0;
     unsigned Buffer = 0;
     unsigned Fence = 0;
+    unsigned WARVdst = 0;
     unsigned Effective = 0;
   };
 

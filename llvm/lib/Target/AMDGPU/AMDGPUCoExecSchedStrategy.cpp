@@ -39,6 +39,8 @@ static cl::opt<CarriedLatency> BlockCarriedLatency(
 // Default VGPR threshold percent for coexec scheduler.
 static constexpr unsigned DefaultCoExecVGPRThresholdPercent = 100;
 
+static constexpr unsigned WARVdstStallFactor = 4;
+
 namespace {
 
 // Used to disable post-RA scheduling with function level granularity.
@@ -905,6 +907,35 @@ CandidateHeuristics::getStallCosts(SUnit *SU, SchedBoundary &Zone) {
     return FenceStallFinish <= CurrCycle ? 0 : FenceStallFinish - CurrCycle;
   };
 
+  auto getWARVdstStalls = [this, &CurrCycle](SUnit *SU) -> unsigned {
+    if (!SII->getSubtarget().hasGFX1250Insts())
+      return 0;
+
+    MachineInstr *MI = SU->getInstr();
+    if (classifyFlavor(*MI, *SII) != InstructionFlavor::DS || !MI->mayLoad())
+      return 0;
+
+    unsigned MaxStall = 0;
+    for (const SDep &Pred : SU->Preds) {
+      if (Pred.getKind() != SDep::Anti || !Pred.getReg().isVirtual())
+        continue;
+
+      SUnit *PredSU = Pred.getSUnit();
+      MachineInstr *PredMI = PredSU->getInstr();
+      InstructionFlavor PredFlavor = classifyFlavor(*PredMI, *SII);
+      if (PredFlavor != InstructionFlavor::WMMA &&
+          PredFlavor != InstructionFlavor::SingleCycleVALU &&
+          PredFlavor != InstructionFlavor::MultiCycleVALU)
+        continue;
+
+      unsigned TargetCycle = PredSU->TopReadyCycle +
+                             WARVdstStallFactor * getHWUICyclesForMI(PredMI);
+      if (TargetCycle > CurrCycle)
+        MaxStall = std::max(MaxStall, TargetCycle - CurrCycle);
+    }
+    return MaxStall;
+  };
+
   unsigned ReadyCycle = SU->TopReadyCycle;
   StallCosts Costs;
   Costs.Ready = ReadyCycle > CurrCycle ? ReadyCycle - CurrCycle : 0;
@@ -914,8 +945,10 @@ CandidateHeuristics::getStallCosts(SUnit *SU, SchedBoundary &Zone) {
   Costs.Carried = CarriedLatency > CurrCycle ? CarriedLatency - CurrCycle : 0;
   Costs.Buffer = getBufferFullStalls(SU);
   Costs.Fence = getFenceStalls(SU);
-  Costs.Effective = std::max({Costs.Ready, Costs.Structural, Costs.Latency,
-                              Costs.Carried, Costs.Buffer, Costs.Fence});
+  Costs.WARVdst = getWARVdstStalls(SU);
+  Costs.Effective =
+      std::max({Costs.Ready, Costs.Structural, Costs.Latency, Costs.Carried,
+                Costs.Buffer, Costs.Fence, Costs.WARVdst});
   return Costs;
 }
 
@@ -934,11 +967,12 @@ bool CandidateHeuristics::tryEffectiveStall(
            << " (ready=" << TryCosts.Ready << ", struct=" << TryCosts.Structural
            << ", lat=" << TryCosts.Latency << ", carried=" << TryCosts.Carried
            << ", buffer=" << TryCosts.Buffer << ", fence=" << TryCosts.Fence
+           << ", warvdst=" << TryCosts.WARVdst
            << ") cand=" << CandCosts.Effective << " (ready=" << CandCosts.Ready
            << ", struct=" << CandCosts.Structural
            << ", lat=" << CandCosts.Latency << ", carried=" << CandCosts.Carried
            << ", buffer=" << CandCosts.Buffer << ", fence=" << CandCosts.Fence
-           << ")\n";
+           << ", warvdst=" << CandCosts.WARVdst << ")\n";
   });
 
   return tryLess(TryCosts.Effective, CandCosts.Effective, TryCand, Cand,
