@@ -595,7 +595,7 @@ Error RawMemProfReader::symbolizeAndFilterStackFrames(
 
   // For entries where all PCs in the callstack are discarded, we erase the
   // entry from the stack map.
-  llvm::SmallVector<uint64_t> EntriesToErase;
+  llvm::DenseSet<uint64_t> EntriesToErase;
   // We keep track of all prior discarded entries so that we can avoid invoking
   // the symbolizer for such entries.
   llvm::DenseSet<uint64_t> AllVAddrsToDiscard;
@@ -654,19 +654,22 @@ Error RawMemProfReader::symbolizeAndFilterStackFrames(
       return AllVAddrsToDiscard.contains(A);
     });
     if (CallStack.empty())
-      EntriesToErase.push_back(Entry.getFirst());
+      EntriesToErase.insert(Entry.getFirst());
   }
 
   // Drop the entries where the callstack is empty.
-  for (const uint64_t Id : EntriesToErase) {
+  for (const uint64_t Id : EntriesToErase)
     StackMap.erase(Id);
-    if (auto It = CallstackProfileData.find(Id);
-        It != CallstackProfileData.end()) {
-      if (It->second.AccessHistogramSize > 0)
-        free((void *)It->second.AccessHistogram);
-      CallstackProfileData.erase(It);
-    }
-  }
+
+  if (!EntriesToErase.empty())
+    CallstackProfileData.remove_if(
+        [&EntriesToErase](const std::pair<uint64_t, MemInfoBlock> &KV) {
+          if (!EntriesToErase.contains(KV.first))
+            return false;
+          if (KV.second.AccessHistogramSize > 0)
+            free((void *)KV.second.AccessHistogram);
+          return true;
+        });
 
   if (StackMap.empty())
     return make_error<InstrProfError>(
