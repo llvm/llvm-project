@@ -21,7 +21,12 @@
 
 #if SANITIZER_LINUX || SANITIZER_FUCHSIA
 
-#  if (__GLIBC_PREREQ(2, 16) || SANITIZER_ANDROID || SANITIZER_FUCHSIA) && \
+// uClibc-ng has provided getauxval() since 1.0.41 (December 2022) but
+// cannot satisfy __GLIBC_PREREQ because it deliberately reports
+// __GLIBC__=2 / __GLIBC_MINOR__=2 for source-level compatibility; add
+// SANITIZER_UCLIBC explicitly.
+#  if (__GLIBC_PREREQ(2, 16) || SANITIZER_ANDROID || SANITIZER_FUCHSIA || \
+       SANITIZER_UCLIBC) &&                                               \
       !SANITIZER_GO
 #    define SANITIZER_USE_GETAUXVAL 1
 #  else
