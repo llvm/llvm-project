@@ -127,4 +127,4 @@ exit:
   ret void
 }
 
-attributes #0 = { "target-features"="+sve" optsize }
+attributes #0 = { "target-features"="+sve" vscale_range(2, 1024) optsize }
