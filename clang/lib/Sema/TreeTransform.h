@@ -3237,9 +3237,10 @@ public:
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
   ExprResult RebuildStmtExpr(SourceLocation LParenLoc, Stmt *SubStmt,
-                             SourceLocation RParenLoc, unsigned TemplateDepth) {
-    return getSema().BuildStmtExpr(LParenLoc, SubStmt, RParenLoc,
-                                   TemplateDepth);
+                             SourceLocation RParenLoc, unsigned TemplateDepth,
+                             bool HasResult) {
+    return getSema().BuildStmtExpr(LParenLoc, SubStmt, RParenLoc, TemplateDepth,
+                                   HasResult);
   }
 
   /// Build a new __builtin_choose_expr expression.
@@ -14817,7 +14818,8 @@ TreeTransform<Derived>::TransformStmtExpr(StmtExpr *E) {
   }
 
   return getDerived().RebuildStmtExpr(E->getLParenLoc(), SubStmt.get(),
-                                      E->getRParenLoc(), NewDepth);
+                                      E->getRParenLoc(), NewDepth,
+                                      !E->getType()->isVoidType());
 }
 
 template<typename Derived>

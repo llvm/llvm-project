@@ -2727,13 +2727,14 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool StopIfCastExpr,
 
       Actions.ActOnStartStmtExpr();
 
-      StmtResult Stmt(ParseCompoundStatement(true));
+      bool HasResult = true;
+      StmtResult Stmt(ParseCompoundStatement(true, &HasResult));
       ExprType = ParenParseOption::CompoundStmt;
 
       // If the substmt parsed correctly, build the AST node.
       if (!Stmt.isInvalid()) {
         Result = Actions.ActOnStmtExpr(getCurScope(), OpenLoc, Stmt.get(),
-                                       Tok.getLocation());
+                                       Tok.getLocation(), HasResult);
       } else {
         Actions.ActOnStmtExprError();
       }
