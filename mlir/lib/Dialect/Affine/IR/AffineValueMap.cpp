@@ -33,9 +33,18 @@ void AffineValueMap::composeSimplifyAndCanonicalize() {
   this->map.reset(sMap);
 }
 
-void AffineValueMap::difference(const AffineValueMap &a,
-                                const AffineValueMap &b, AffineValueMap *res) {
+void AffineValueMap::combine(const AffineValueMap &a, const AffineValueMap &b,
+                             AffineExpr expr, AffineValueMap *res) {
   assert(a.getNumResults() == b.getNumResults() && "invalid inputs");
+
+  bool validExpr = true;
+  expr.walk([&](AffineExpr subExpr) {
+    if (auto dim = llvm::dyn_cast<AffineDimExpr>(subExpr))
+      validExpr &= dim.getPosition() < 2;
+    else if (llvm::isa<AffineSymbolExpr>(subExpr))
+      validExpr = false;
+  });
+  assert(validExpr && "combining expression must use only d0 and d1");
 
   SmallVector<Value, 4> allOperands;
   allOperands.reserve(a.getNumOperands() + b.getNumOperands());
@@ -53,19 +62,37 @@ void AffineValueMap::difference(const AffineValueMap &a,
                   .shiftDims(a.getNumDims())
                   .shiftSymbols(a.getNumSymbols());
 
-  // Construct the difference expressions.
+  // Substitute the corresponding results into the combining expression.
   auto aMap = a.getAffineMap();
-  SmallVector<AffineExpr, 4> diffExprs;
-  diffExprs.reserve(a.getNumResults());
-  for (unsigned i = 0, e = bMap.getNumResults(); i < e; ++i)
-    diffExprs.push_back(aMap.getResult(i) - bMap.getResult(i));
+  SmallVector<AffineExpr, 4> resultExprs;
+  resultExprs.reserve(a.getNumResults());
+  for (unsigned i = 0, e = bMap.getNumResults(); i < e; ++i) {
+    AffineExpr replacements[] = {aMap.getResult(i), bMap.getResult(i)};
+    resultExprs.push_back(expr.replaceDims(replacements));
+  }
 
-  auto diffMap = AffineMap::get(bMap.getNumDims(), bMap.getNumSymbols(),
-                                diffExprs, bMap.getContext());
-  fullyComposeAffineMapAndOperands(&diffMap, &allOperands);
-  canonicalizeMapAndOperands(&diffMap, &allOperands);
-  diffMap = simplifyAffineMap(diffMap);
-  res->reset(diffMap, allOperands);
+  auto resultMap = AffineMap::get(bMap.getNumDims(), bMap.getNumSymbols(),
+                                  resultExprs, bMap.getContext());
+  fullyComposeAffineMapAndOperands(&resultMap, &allOperands);
+  canonicalizeMapAndOperands(&resultMap, &allOperands);
+  resultMap = simplifyAffineMap(resultMap);
+  res->reset(resultMap, allOperands);
+}
+
+void AffineValueMap::difference(const AffineValueMap &a,
+                                const AffineValueMap &b, AffineValueMap *res) {
+  MLIRContext *context = a.getAffineMap().getContext();
+  AffineExpr lhs = getAffineDimExpr(0, context);
+  AffineExpr rhs = getAffineDimExpr(1, context);
+  combine(a, b, lhs - rhs, res);
+}
+
+void AffineValueMap::sum(const AffineValueMap &a, const AffineValueMap &b,
+                         AffineValueMap *res) {
+  MLIRContext *context = a.getAffineMap().getContext();
+  AffineExpr lhs = getAffineDimExpr(0, context);
+  AffineExpr rhs = getAffineDimExpr(1, context);
+  combine(a, b, lhs + rhs, res);
 }
 
 // Returns true and sets 'indexOfMatch' if 'valueToMatch' is found in
