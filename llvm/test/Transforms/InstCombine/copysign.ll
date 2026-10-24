@@ -457,3 +457,19 @@ define <2 x float> @select_two_copysigns_const_mag_vec(<2 x i1> %c, <2 x float> 
   %r = select <2 x i1> %c, <2 x float> %q, <2 x float> %p
   ret <2 x float> %r
 }
+
+; A negative constant splat magnitude is canonicalized like a scalar
+; constant.
+define <2 x float> @select_two_copysigns_negative_const_mag_vec(<2 x i1> %c, <2 x float> %v, <2 x float> %x) {
+; CHECK-LABEL: @select_two_copysigns_negative_const_mag_vec(
+; CHECK-NEXT:    [[R_V:%.*]] = select <2 x i1> [[C:%.*]], <2 x float> splat (float 2.000000e+00), <2 x float> [[V:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = call <2 x float> @llvm.copysign.v2f32(<2 x float> [[R_V]], <2 x float> [[X:%.*]])
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %p = call <2 x float> @llvm.copysign.v2f32(<2 x float> %v, <2 x float> %x)
+  %q = call <2 x float> @llvm.copysign.v2f32(<2 x float> splat (float -2.000000e+00), <2 x float> %x)
+  %r = select <2 x i1> %c, <2 x float> %q, <2 x float> %p
+  ret <2 x float> %r
+}
+
+declare <2 x float> @llvm.copysign.v2f32(<2 x float>, <2 x float>)

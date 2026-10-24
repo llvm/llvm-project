@@ -527,9 +527,9 @@ static bool allowSelectSinkingIntoArg(Intrinsic::ID IID, unsigned ArgNo,
     if (ArgNo == 1)
       return false;
     for (Value **V : {&TV, &FV}) {
-      auto *CFP = dyn_cast<ConstantFP>(*V);
-      if (CFP && CFP->getValueAPF().isNegative())
-        *V = ConstantFP::get((*V)->getType(), abs(CFP->getValueAPF()));
+      const APFloat *C;
+      if (match(*V, m_APFloat(C)) && C->isNegative())
+        *V = ConstantFP::get((*V)->getType(), abs(*C));
     }
     return true;
   default:
