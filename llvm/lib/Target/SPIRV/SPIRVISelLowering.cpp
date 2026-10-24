@@ -289,6 +289,10 @@ static void validateGroupWaitEventsPtr(const SPIRVSubtarget &STI,
   doInsertBitcast(STI, MRI, GR, I, OpReg, OpIdx, NewPtrType);
 }
 
+// The Size operand of OpLifetimeStart/OpLifetimeStop must be 0 if Pointer
+// points to a non-void type; i8 (uchar*) is treated as void*. The exception is
+// a variable length array: its pointer only points to the element type, so the
+// byte size is kept and the pointer is bitcast to uchar* to make that valid.
 static void validateLifetimeStart(const SPIRVSubtarget &STI,
                                   MachineRegisterInfo *MRI,
                                   SPIRVGlobalRegistry &GR, MachineInstr &I) {
@@ -296,12 +300,17 @@ static void validateLifetimeStart(const SPIRVSubtarget &STI,
   MachineFunction *MF = I.getParent()->getParent();
   Register PtrTypeReg = getTypeReg(MRI, PtrReg);
   SPIRVTypeInst PtrType = GR.getSPIRVTypeForVReg(PtrTypeReg, MF);
-  SPIRVTypeInst PonteeElemType = PtrType ? GR.getPointeeType(PtrType) : nullptr;
-  if (!PonteeElemType || PonteeElemType->getOpcode() == SPIRV::OpTypeVoid ||
-      (PonteeElemType->getOpcode() == SPIRV::OpTypeInt &&
-       PonteeElemType->getOperand(1).getImm() == 8))
+  SPIRVTypeInst PointeeElemType =
+      PtrType ? GR.getPointeeType(PtrType) : nullptr;
+  if (!PointeeElemType || PointeeElemType->getOpcode() == SPIRV::OpTypeVoid ||
+      (PointeeElemType->getOpcode() == SPIRV::OpTypeInt &&
+       PointeeElemType->getOperand(1).getImm() == 8))
     return;
-  // To keep the code valid a bitcast must be inserted
+  MachineInstr *PtrDef = MRI->getVRegDef(PtrReg);
+  if (!PtrDef || PtrDef->getOpcode() != SPIRV::OpVariableLengthArrayINTEL) {
+    I.getOperand(1).setImm(0);
+    return;
+  }
   SPIRV::StorageClass::StorageClass SC =
       static_cast<SPIRV::StorageClass::StorageClass>(
           PtrType->getOperand(1).getImm());
