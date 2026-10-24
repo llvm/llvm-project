@@ -872,7 +872,12 @@ void SelectOptimizeImpl::collectSelectGroups(BasicBlock &BB,
           I->getOpcode() != Instruction::Or)
         return SelectInfo.end();
 
-      if (I->getOpcode() == Instruction::Or && I->getType()->isIntegerTy(1))
+      // The BinOp(Aux(X), Y) form models a select whose `Aux` widens i1 X to
+      // the BinOp's type. An i1-typed BinOp can't have such an `Aux`: ZExt/SExt
+      // must widen, and the only i1 auxiliaries (`Not`, and the identity
+      // `lshr/ashr i1 %x, 0`) are not ones `getTrueOrFalseValue()` can
+      // materialize. Bail out rather than form a group that would assert.
+      if (I->getType()->isIntegerTy(1))
         return SelectInfo.end();
 
       // Iterate through operands and find dependant on recognised sign
