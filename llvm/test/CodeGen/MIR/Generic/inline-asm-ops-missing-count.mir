@@ -1,0 +1,11 @@
+# RUN: not llc -run-pass=none -filetype=null %s 2>&1 | FileCheck %s
+
+# Test parsing error for an inline asm operand count that isn't a number.
+
+# CHECK: [[@LINE+5]]:{{[0-9]+}}: expected an operand count after 'ops:'
+---
+name: foo
+body: |
+  bb.0:
+    INLINEASM &"", attdialect, mem:m ops:five
+...

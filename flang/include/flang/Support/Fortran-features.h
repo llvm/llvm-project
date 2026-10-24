@@ -61,7 +61,7 @@ ENUM_CLASS(LanguageFeature, BackslashEscapes, OldDebugLines,
     MultipleProgramUnitsOnSameLine, AllocatedForAssociated,
     OpenMPThreadprivateEquivalence, RelaxedCLocChecks, CudaPinned,
     CUDAImplicitDataAttrSpelling, OpenAccDefaultNoneScalarsStrict,
-    OpenACCMultipleNamesInRoutine, EnumerationType, CUDAInit,
+    OpenACCMultipleNamesInRoutine, CUDAInit,
     PreferIntrinsicModuleUseAssociation, MultipleCommonBlockInit,
     OutOfBoundsSubscripts, ImplicitModulePrefix)
 

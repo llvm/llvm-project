@@ -118,7 +118,8 @@ static bool isSignTest(ICmpInst::Predicate &Pred, const APInt &C) {
 /// Even if there are multiple uses, they can often be sunk into the block
 /// guarded by the icmp.
 Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
-    LoadInst *LI, GetElementPtrInst *GEP, CmpInst &ICI, ConstantInt *AndCst) {
+    LoadInst *LI, GetElementPtrInst *GEP, CmpPredicate Pred, Constant *RHSC,
+    Instruction &CtxI, ConstantInt *AndCst) {
   auto *GV = dyn_cast<GlobalVariable>(getUnderlyingObject(GEP));
   if (LI->isVolatile() || !GV || !GV->isConstant() ||
       !GV->hasDefinitiveInitializer())
@@ -146,6 +147,17 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
 
   // Don't handle overlapping loads for now.
   if (!Stride.uge(EltSize.getFixedValue()))
+    return nullptr;
+
+  // With nusw (implied by inbounds), Idx * Stride does not wrap as a signed
+  // quantity, and the following enumeration over ArrayElementCount is valid so
+  // long as the stride is positive. Conversely, without nusw, Idx * Stride is
+  // computed modulo 2^N (see MaskIdx below), and the masking in MaskIdx below
+  // is only exact when the stride is a power of two.
+  bool StrideIsValid = Expr.Flags.hasNoUnsignedSignedWrap()
+                           ? !Stride.isNegative()
+                           : Stride.isPowerOf2();
+  if (!StrideIsValid)
     return nullptr;
 
   // Don't blow up on huge arrays.
@@ -184,7 +196,6 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
   uint64_t MagicBitvector = 0;
 
   // Scan the array and see if one of our patterns matches.
-  Constant *CompareRHS = cast<Constant>(ICI.getOperand(1));
   APInt Offset = ConstOffset;
   for (unsigned i = 0, e = ArrayElementCount; i != e; ++i, Offset += Stride) {
     Constant *Elt = ConstantFoldLoadFromConst(Init, EltTy, Offset, DL);
@@ -199,8 +210,7 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
     }
 
     // Find out if the comparison would be true or false for the i'th element.
-    Constant *C = ConstantFoldCompareInstOperands(ICI.getPredicate(), Elt,
-                                                  CompareRHS, DL, &TLI);
+    Constant *C = ConstantFoldCompareInstOperands(Pred, Elt, RHSC, DL, &TLI);
     if (!C)
       return nullptr;
 
@@ -299,7 +309,7 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
     Idx = MaskIdx(Idx);
     // None true -> false.
     if (FirstTrueElement == Undefined)
-      return replaceInstUsesWith(ICI, Builder.getFalse());
+      return replaceInstUsesWith(CtxI, Builder.getFalse());
 
     Value *FirstTrueIdx = ConstantInt::get(Idx->getType(), FirstTrueElement);
 
@@ -320,7 +330,7 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
     Idx = MaskIdx(Idx);
     // None false -> true.
     if (FirstFalseElement == Undefined)
-      return replaceInstUsesWith(ICI, Builder.getTrue());
+      return replaceInstUsesWith(CtxI, Builder.getTrue());
 
     Value *FirstFalseIdx = ConstantInt::get(Idx->getType(), FirstFalseElement);
 
@@ -1985,7 +1995,9 @@ Instruction *InstCombinerImpl::foldICmpAndConstant(ICmpInst &Cmp,
   if (auto *C2 = dyn_cast<ConstantInt>(Y))
     if (auto *LI = dyn_cast<LoadInst>(X))
       if (auto *GEP = dyn_cast<GetElementPtrInst>(LI->getOperand(0)))
-        if (Instruction *Res = foldCmpLoadFromIndexedGlobal(LI, GEP, Cmp, C2))
+        if (Instruction *Res = foldCmpLoadFromIndexedGlobal(
+                LI, GEP, Cmp.getPredicate(), cast<Constant>(Cmp.getOperand(1)),
+                Cmp, C2))
           return Res;
 
   if (!Cmp.isEquality())
@@ -4502,8 +4514,8 @@ Instruction *InstCombinerImpl::foldICmpInstWithConstantNotInt(ICmpInst &I) {
     // Try to optimize things like "A[i] > 4" to index computations.
     if (GetElementPtrInst *GEP =
             dyn_cast<GetElementPtrInst>(LHSI->getOperand(0)))
-      if (Instruction *Res =
-              foldCmpLoadFromIndexedGlobal(cast<LoadInst>(LHSI), GEP, I))
+      if (Instruction *Res = foldCmpLoadFromIndexedGlobal(
+              cast<LoadInst>(LHSI), GEP, I.getPredicate(), RHSC, I))
         return Res;
     break;
   }
@@ -7069,7 +7081,7 @@ static bool isChainSelectCmpBranch(const SelectInst *SI) {
   const BasicBlock *BB = SI->getParent();
   if (!BB)
     return false;
-  auto *BI = dyn_cast_or_null<CondBrInst>(BB->getTerminator());
+  auto *BI = dyn_cast<CondBrInst>(BB->getTerminator());
   if (!BI)
     return false;
   auto *IC = dyn_cast<ICmpInst>(BI->getCondition());
@@ -9479,8 +9491,8 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
       break;
     case Instruction::Load:
       if (auto *GEP = dyn_cast<GetElementPtrInst>(LHSI->getOperand(0)))
-        if (Instruction *Res =
-                foldCmpLoadFromIndexedGlobal(cast<LoadInst>(LHSI), GEP, I))
+        if (Instruction *Res = foldCmpLoadFromIndexedGlobal(
+                cast<LoadInst>(LHSI), GEP, I.getPredicate(), RHSC, I))
           return Res;
       break;
     case Instruction::FPTrunc:

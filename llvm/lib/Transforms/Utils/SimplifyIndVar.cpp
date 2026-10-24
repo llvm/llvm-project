@@ -16,12 +16,14 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -103,6 +105,7 @@ namespace {
                              bool IsSigned);
     void replaceRemWithNumerator(BinaryOperator *Rem);
     void replaceRemWithNumeratorOrZero(BinaryOperator *Rem);
+    bool replaceRemWithNumeratorOrZeroUpdateProfiles(SelectInst &SI);
     void replaceSRemWithURem(BinaryOperator *Rem);
     bool eliminateSDiv(BinaryOperator *SDiv);
     bool strengthenBinaryOp(BinaryOperator *BO, Instruction *IVOperand);
@@ -356,6 +359,32 @@ void SimplifyIndvar::replaceRemWithNumerator(BinaryOperator *Rem) {
   DeadInsts.emplace_back(Rem);
 }
 
+bool SimplifyIndvar::replaceRemWithNumeratorOrZeroUpdateProfiles(
+    SelectInst &SI) {
+  // The select instruction condition is guaranteed to evaluate to true exactly
+  // once through the duration of the loop if it is executed on every loop
+  // iteration. So we set the branch weights to be {1, LoopIterations - 1}.
+
+  // Check that the select instruction does execute every iteration.
+  BasicBlock *Latch = L->getLoopLatch();
+  if (L->getExitingBlock() != Latch || !DT->dominates(SI.getParent(), Latch))
+    return false;
+
+  // Early exits also invalidate the assumption that the select instruction is
+  // executed on every iteration, so bail here if we run into any.
+  if (L->getExitingBlock() == nullptr || L->getExitingBlock() != Latch)
+    return false;
+
+  // Construct the branch weights using the trip count.
+  unsigned TripCount = SE->getSmallConstantTripCount(L);
+  if (!TripCount)
+    TripCount = getLoopEstimatedTripCount(L).value_or(0);
+  if (!TripCount)
+    return false;
+  setBranchWeights(SI, {1, TripCount - 1}, /*IsExpected=*/false);
+  return true;
+}
+
 // (i+1) % n  -->  (i+1)==n?0:(i+1)  if i is in [0,n).
 void SimplifyIndvar::replaceRemWithNumeratorOrZero(BinaryOperator *Rem) {
   auto *T = Rem->getType();
@@ -370,6 +399,8 @@ void SimplifyIndvar::replaceRemWithNumeratorOrZero(BinaryOperator *Rem) {
   ++NumElimRem;
   Changed = true;
   DeadInsts.emplace_back(Rem);
+  if (!replaceRemWithNumeratorOrZeroUpdateProfiles(*Sel))
+    setExplicitlyUnknownBranchWeightsIfProfiled(*Sel, DEBUG_TYPE);
 }
 
 /// SimplifyIVUsers helper for eliminating useless remainder operations
