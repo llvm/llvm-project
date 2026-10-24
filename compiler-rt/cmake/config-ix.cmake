@@ -119,6 +119,7 @@ check_cxx_compiler_flag("-Werror;-ftrivial-auto-var-init=pattern" COMPILER_RT_HA
 check_c_compiler_flag(-nogpulib             COMPILER_RT_HAS_NOGPULIB_FLAG)
 check_c_compiler_flag(-nostdlibinc          COMPILER_RT_HAS_NOSTDLIBINC_FLAG)
 check_c_compiler_flag(-flto                 COMPILER_RT_HAS_FLTO_FLAG)
+check_c_compiler_flag(-flto=thin            COMPILER_RT_HAS_FLTO_THIN_FLAG)
 check_c_compiler_flag("-Xclang;-mcode-object-version=none" COMPILER_RT_HAS_CODE_OBJECT_VERSION_FLAG)
 
 if(NOT WIN32 AND NOT CYGWIN)
