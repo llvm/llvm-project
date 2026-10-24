@@ -1045,8 +1045,7 @@ bool AArch64DAGToDAGISel::SelectShiftedRegisterFromAnd(SDValue N, SDValue &Reg,
   unsigned NewShiftOp;
   if (LHSOpcode == ISD::SHL) {
     // LowZBits <= ShiftAmtC will fall into isBitfieldPositioningOp
-    // BitWidth != LowZBits + MaskLen doesn't match the pattern
-    if (LowZBits <= ShiftAmtC || (BitWidth != LowZBits + MaskLen))
+    if (LowZBits <= ShiftAmtC)
       return false;
 
     NewShiftC = LowZBits - ShiftAmtC;
@@ -1064,10 +1063,6 @@ bool AArch64DAGToDAGISel::SelectShiftedRegisterFromAnd(SDValue N, SDValue &Reg,
     if (LHSOpcode == ISD::SRA && (BitWidth != (LowZBits + MaskLen)))
       return false;
 
-    // SRL high bits can be 0 or 1
-    if (LHSOpcode == ISD::SRL && (BitWidth > (NewShiftC + MaskLen)))
-      return false;
-
     if (LHSOpcode == ISD::SRL)
       NewShiftOp = VT == MVT::i64 ? AArch64::UBFMXri : AArch64::UBFMWri;
     else
@@ -1076,9 +1071,13 @@ bool AArch64DAGToDAGISel::SelectShiftedRegisterFromAnd(SDValue N, SDValue &Reg,
 
   assert(NewShiftC < BitWidth && "Invalid shift amount");
   SDValue NewShiftAmt = CurDAG->getTargetConstant(NewShiftC, DL, VT);
-  SDValue BitWidthMinus1 = CurDAG->getTargetConstant(BitWidth - 1, DL, VT);
+  // If the mask doesn't extend to the MSB, extract only the masked field.
+  unsigned MSB = BitWidth - 1;
+  if (LowZBits + MaskLen < BitWidth)
+    MSB = std::min<uint64_t>(NewShiftC + MaskLen, BitWidth) - 1;
+  SDValue MSBC = CurDAG->getTargetConstant(MSB, DL, VT);
   Reg = SDValue(CurDAG->getMachineNode(NewShiftOp, DL, VT, LHS->getOperand(0),
-                                       NewShiftAmt, BitWidthMinus1),
+                                       NewShiftAmt, MSBC),
                 0);
   unsigned ShVal = AArch64_AM::getShifterImm(AArch64_AM::LSL, LowZBits);
   Shift = CurDAG->getTargetConstant(ShVal, DL, MVT::i32);
@@ -8270,6 +8269,57 @@ bool AArch64DAGToDAGISel::tryFoldCselToFMaxMin(SDNode *N) {
   return true;
 }
 
+/// (X >> C) & Mask -> ((X & (Mask << C)) >> (C + Scale)) << Scale
+/// (X << C) & Mask -> ((X & (Mask >> C)) >> (Scale - C)) << Scale, C < Scale
+/// where Mask is a run of ones starting at Scale, used only by ADDs. The masked
+/// right shift is a UBFX (or LSR) and the left shift usually folds into users.
+static SDValue foldMaskedShiftToScale(SelectionDAG &DAG, SDNode &N) {
+  // Restrict to Scale values that may be used in addressing modes.
+  uint64_t Mask;
+  unsigned Scale, MaskLen;
+  if (N.getValueType(0) != MVT::i64 ||
+      !isOpcWithIntImmediate(&N, ISD::AND, Mask) ||
+      !isShiftedMask_64(Mask, Scale, MaskLen) || Scale == 0 || Scale > 4 ||
+      !all_of(N.users(), [](SDNode *U) { return U->getOpcode() == ISD::ADD; }))
+    return SDValue();
+
+  // Extends from i32 can only differ above bit 31, which the mask clears.
+  SDValue Shift = N.getOperand(0);
+  bool IsExtended = ISD::isExtOpcode(Shift.getOpcode());
+  if (IsExtended && Shift.hasOneUse() && isUInt<32>(Mask))
+    Shift = Shift.getOperand(0);
+  if (!Shift.hasOneUse())
+    return SDValue();
+
+  uint64_t C, FieldMask;
+  EVT VT = Shift.getValueType();
+  unsigned BW = VT.getSizeInBits();
+  if (isOpcWithIntImmediate(Shift.getNode(), ISD::SRL, C) && C + Scale < BW)
+    FieldMask = (Mask << C) & maskTrailingOnes<uint64_t>(BW);
+  else if (isOpcWithIntImmediate(Shift.getNode(), ISD::SHL, C) && C < Scale)
+    FieldMask = Mask >> C;
+  else
+    return SDValue();
+  assert((!IsExtended || VT == MVT::i32) && "illegal extend");
+
+  SDLoc DL(&N);
+  SDValue X = Shift.getOperand(0);
+  unsigned ShiftOpc = ISD::SRL;
+  unsigned R = llvm::countr_zero(FieldMask);
+  if (Scale + MaskLen != 64)
+    X = DAG.getNode(ISD::AND, DL, VT, X, DAG.getConstant(FieldMask, DL, VT));
+  else if (Shift.getOpcode() == ISD::SHL && X.getOpcode() == ISD::SIGN_EXTEND) {
+    // The bits shifted in are shifted out again by Scale, so an SRA works.
+    // An SRA of a sign extend is an SBFX.
+    ShiftOpc = ISD::SRA;
+  }
+  X = DAG.getNode(ShiftOpc, DL, VT, X, DAG.getShiftAmountConstant(R, VT, DL));
+  if (IsExtended)
+    X = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, X);
+  return DAG.getNode(ISD::SHL, DL, MVT::i64, X,
+                     DAG.getShiftAmountConstant(Scale, MVT::i64, DL));
+}
+
 void AArch64DAGToDAGISel::PreprocessISelDAG() {
   bool MadeChange = false;
   for (SDNode &N : llvm::make_early_inc_range(CurDAG->allnodes())) {
@@ -8278,6 +8328,10 @@ void AArch64DAGToDAGISel::PreprocessISelDAG() {
 
     SDValue Result;
     switch (N.getOpcode()) {
+    case ISD::AND: {
+      Result = foldMaskedShiftToScale(*CurDAG, N);
+      break;
+    }
     case ISD::SCALAR_TO_VECTOR: {
       EVT ScalarTy = N.getValueType(0).getVectorElementType();
       if ((ScalarTy == MVT::i32 || ScalarTy == MVT::i64) &&
