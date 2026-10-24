@@ -69,7 +69,7 @@ define signext i32 @bittest_31_i32(i32 signext %a) nounwind {
 ; LA64-LABEL: bittest_31_i32:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    nor $a0, $a0, $zero
-; LA64-NEXT:    bstrpick.d $a0, $a0, 31, 31
+; LA64-NEXT:    srli.d $a0, $a0, 63
 ; LA64-NEXT:    ret
   %shr = lshr i32 %a, 31
   %not = xor i32 %shr, -1
