@@ -5846,6 +5846,10 @@ bool LLParser::parseSpecializedMDNode(MDNode *&N, bool IsDistinct) {
 #define GET_OR_DISTINCT(CLASS, ARGS)                                           \
   (IsDistinct ? CLASS::getDistinct ARGS : CLASS::get ARGS)
 
+bool LLParser::parseMDFunctionLocalContext(MDNode *&Result, bool IsDistinct) {
+  return tokError("!MDFunctionLocalContext parsing not yet implemented");
+}
+
 /// parseDILocationFields:
 ///   ::= !DILocation(line: 43, column: 8, scope: !5, inlinedAt: !6,
 ///   isImplicitCode: true, atomGroup: 1, atomRank: 1)
