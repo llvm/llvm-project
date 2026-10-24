@@ -4144,6 +4144,11 @@ define half @vreduce_fminimum_v128f16(ptr %x) {
 ; ZVFHMIN-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
 ; ZVFHMIN-NEXT:    vle16.v v16, (a0)
 ; ZVFHMIN-NEXT:    li a2, 32
+; ZVFHMIN-NEXT:    csrr a3, vlenb
+; ZVFHMIN-NEXT:    slli a3, a3, 3
+; ZVFHMIN-NEXT:    add a3, sp, a3
+; ZVFHMIN-NEXT:    addi a3, a3, 16
+; ZVFHMIN-NEXT:    vl8r.v v8, (a3) # vscale x 64-byte Folded Reload
 ; ZVFHMIN-NEXT:    vmv4r.v v8, v16
 ; ZVFHMIN-NEXT:    csrr a3, vlenb
 ; ZVFHMIN-NEXT:    slli a3, a3, 3
@@ -4159,8 +4164,9 @@ define half @vreduce_fminimum_v128f16(ptr %x) {
 ; ZVFHMIN-NEXT:    vle16.v v24, (a0)
 ; ZVFHMIN-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
 ; ZVFHMIN-NEXT:    vmfeq.vv v0, v8, v8
-; ZVFHMIN-NEXT:    vmv4r.v v16, v24
 ; ZVFHMIN-NEXT:    addi a0, sp, 16
+; ZVFHMIN-NEXT:    vl8r.v v16, (a0) # vscale x 64-byte Folded Reload
+; ZVFHMIN-NEXT:    vmv4r.v v16, v24
 ; ZVFHMIN-NEXT:    vs8r.v v16, (a0) # vscale x 64-byte Folded Spill
 ; ZVFHMIN-NEXT:    vsetvli zero, a2, e16, m8, ta, ma
 ; ZVFHMIN-NEXT:    vslidedown.vx v24, v24, a2
@@ -5337,6 +5343,11 @@ define half @vreduce_fmaximum_v128f16(ptr %x) {
 ; ZVFHMIN-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
 ; ZVFHMIN-NEXT:    vle16.v v16, (a0)
 ; ZVFHMIN-NEXT:    li a2, 32
+; ZVFHMIN-NEXT:    csrr a3, vlenb
+; ZVFHMIN-NEXT:    slli a3, a3, 3
+; ZVFHMIN-NEXT:    add a3, sp, a3
+; ZVFHMIN-NEXT:    addi a3, a3, 16
+; ZVFHMIN-NEXT:    vl8r.v v8, (a3) # vscale x 64-byte Folded Reload
 ; ZVFHMIN-NEXT:    vmv4r.v v8, v16
 ; ZVFHMIN-NEXT:    csrr a3, vlenb
 ; ZVFHMIN-NEXT:    slli a3, a3, 3
@@ -5352,8 +5363,9 @@ define half @vreduce_fmaximum_v128f16(ptr %x) {
 ; ZVFHMIN-NEXT:    vle16.v v24, (a0)
 ; ZVFHMIN-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
 ; ZVFHMIN-NEXT:    vmfeq.vv v0, v8, v8
-; ZVFHMIN-NEXT:    vmv4r.v v16, v24
 ; ZVFHMIN-NEXT:    addi a0, sp, 16
+; ZVFHMIN-NEXT:    vl8r.v v16, (a0) # vscale x 64-byte Folded Reload
+; ZVFHMIN-NEXT:    vmv4r.v v16, v24
 ; ZVFHMIN-NEXT:    vs8r.v v16, (a0) # vscale x 64-byte Folded Spill
 ; ZVFHMIN-NEXT:    vsetvli zero, a2, e16, m8, ta, ma
 ; ZVFHMIN-NEXT:    vslidedown.vx v24, v24, a2
