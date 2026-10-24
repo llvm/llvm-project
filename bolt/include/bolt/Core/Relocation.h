@@ -102,6 +102,14 @@ public:
   /// Return code for a RELATIVE relocation
   virtual uint32_t getRelative() const = 0;
   virtual MCBinaryExpr::Opcode getComposeOpcodeFor(uint32_t Type) const;
+
+  /// Return true if a relocation of \p Type is emitted as its symbol alone,
+  /// without the addend, because the target's own fixup encodes the addend.
+  virtual bool emitsBareSymbol(uint32_t Type) const { return false; }
+
+  /// Return true if relocations that share an offset are combined with
+  /// getComposeOpcodeFor(). If false, the first relocation's value is kept.
+  virtual bool composesRelocations() const { return true; }
   virtual void printType(raw_ostream &OS, uint32_t Type) const = 0;
 };
 
@@ -228,6 +236,8 @@ std::unique_ptr<RelocationHandler> createX86RelocationHandler();
 std::unique_ptr<RelocationHandler> createAArch64RelocationHandler();
 
 std::unique_ptr<RelocationHandler> createRISCVRelocationHandler(bool Is64Bit);
+
+std::unique_ptr<RelocationHandler> createPPC64RelocationHandler();
 
 } // namespace bolt
 } // namespace llvm
