@@ -15292,6 +15292,36 @@ SDValue DAGCombiner::visitSETCC(SDNode *N) {
       }
     }
   }
+
+  // (setcc (zext a), (zext b), setu??) -> (setcc a, b, setu??)
+  // (setcc (sext a), (sext b), sets??) -> (setcc a, b, sets??)
+  if (((ISD::isUnsignedIntSetCC(Cond) && N0.getOpcode() == ISD::ZERO_EXTEND &&
+        N1.getOpcode() == ISD::ZERO_EXTEND) ||
+       (ISD::isSignedIntSetCC(Cond) && N0.getOpcode() == ISD::SIGN_EXTEND &&
+        N1.getOpcode() == ISD::SIGN_EXTEND)) &&
+      N0.hasOneUse() && N1.hasOneUse()) {
+    SDValue LHS = N0.getOperand(0), RHS = N1.getOperand(0);
+    EVT SmallVT =
+        LHS.getScalarValueSizeInBits() > RHS.getScalarValueSizeInBits()
+            ? LHS.getValueType()
+            : RHS.getValueType();
+    // Profitability checks
+    if ((!TLI.isTypeLegal(N0.getValueType()) ||
+         TLI.isNarrowingProfitable(N, N0.getValueType(), SmallVT)) &&
+        TLI.isOperationLegalOrCustom(ISD::SETCC, SmallVT, LegalOperations) &&
+        TLI.isTypeDesirableForOp(ISD::SETCC, SmallVT) &&
+        (!LegalOperations ||
+         TLI.isCondCodeLegal(Cond, SmallVT.getSimpleVT()))) {
+      LHS = DAG.getExtOrTrunc(ISD::isSignedIntSetCC(Cond), LHS, SDLoc(LHS),
+                              SmallVT);
+      RHS = DAG.getExtOrTrunc(ISD::isSignedIntSetCC(Cond), RHS, SDLoc(RHS),
+                              SmallVT);
+      SDValue NewSetCC =
+          DAG.getSetCC(DL, getSetCCResultType(SmallVT), LHS, RHS, Cond);
+      return DAG.getBoolExtOrTrunc(NewSetCC, DL, VT, SmallVT);
+    }
+  }
+
   return SDValue();
 }
 
