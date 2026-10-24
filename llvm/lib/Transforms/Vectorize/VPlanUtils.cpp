@@ -520,7 +520,8 @@ bool vputils::isSingleScalar(const VPValue *VPV) {
   return isa<VPExpandSCEVRecipe>(VPV);
 }
 
-bool vputils::isUniformAcrossVFsAndUFs(const VPValue *V) {
+static bool isUniformAcrossVFsAndUFsImpl(
+    const VPValue *V, function_ref<bool(const VPValue *)> AddToWorklist) {
   // Live-ins, symbolic and canonical-IV region values are uniform.
   if (auto *RV = dyn_cast<VPRegionValue>(V))
     return RV == RV->getDefiningRegion()->getCanonicalIV();
@@ -536,12 +537,12 @@ bool vputils::isUniformAcrossVFsAndUFs(const VPValue *V) {
               m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>()) ||
         match(R, m_ExtractVectorForPart(m_VPValue(), m_VPValue())))
       return false;
-    return all_of(R->operands(), isUniformAcrossVFsAndUFs);
+    return all_of(R->operands(), AddToWorklist);
   }
 
   return TypeSwitch<const VPRecipeBase *, bool>(R)
-      .Case([](const VPDerivedIVRecipe *R) { return true; })
-      .Case([](const VPReplicateRecipe *R) {
+      .Case([](const VPDerivedIVRecipe *) { return true; })
+      .Case([&](const VPReplicateRecipe *R) {
         // Be conservative about side-effects, except for the
         // known-side-effecting assumes and stores, which we know will be
         // uniform. Each alloca creates a distinct allocation, so allocas are
@@ -549,29 +550,46 @@ bool vputils::isUniformAcrossVFsAndUFs(const VPValue *V) {
         return R->isSingleScalar() && R->getOpcode() != Instruction::Alloca &&
                (!R->mayHaveSideEffects() ||
                 isa<AssumeInst, StoreInst>(R->getUnderlyingInstr())) &&
-               all_of(R->operands(), isUniformAcrossVFsAndUFs);
+               all_of(R->operands(), AddToWorklist);
       })
-      .Case([](const VPWidenRecipe *R) {
+      .Case([&](const VPWidenRecipe *R) {
         return preservesUniformity(R->getOpcode()) &&
-               all_of(R->operands(), isUniformAcrossVFsAndUFs);
+               all_of(R->operands(), AddToWorklist);
       })
       .Case([](const VPPhi *) {
         // Bail out on VPPhi, as we can end up in infinite cycles.
         return false;
       })
-      .Case([](const VPInstruction *VPI) {
+      .Case([&](const VPInstruction *VPI) {
         return (VPI->isSingleScalar() || VPI->isVectorToScalar() ||
                 preservesUniformity(VPI->getOpcode())) &&
-               all_of(VPI->operands(), isUniformAcrossVFsAndUFs);
+               all_of(VPI->operands(), AddToWorklist);
       })
-      .Case([](const VPWidenCastRecipe *R) {
+      .Case([&](const VPWidenCastRecipe *R) {
         // A cast is uniform according to its operand.
-        return isUniformAcrossVFsAndUFs(R->getOperand(0));
+        return AddToWorklist(R->getOperand(0));
       })
-      .Default([](const VPRecipeBase *) { // A value is considered non-uniform
-                                          // unless proven otherwise.
+      .Default([](const VPRecipeBase *) {
+        // A value is considered non-uniform unless proven otherwise.
         return false;
       });
+}
+
+bool vputils::isUniformAcrossVFsAndUFs(const VPValue *V) {
+  SmallSetVector<const VPValue *, 8> Worklist;
+  Worklist.insert(V);
+
+  auto AddToWorklist = [&Worklist](const VPValue *Op) {
+    Worklist.insert(Op);
+    return true;
+  };
+
+  // All dependency checks are conjunctive, so each value needs checking once.
+  for (unsigned I = 0; I != Worklist.size(); ++I) {
+    if (!isUniformAcrossVFsAndUFsImpl(Worklist[I], AddToWorklist))
+      return false;
+  }
+  return true;
 }
 
 bool vputils::doesGeneratePerAllLanes(const VPRecipeBase *R) {
