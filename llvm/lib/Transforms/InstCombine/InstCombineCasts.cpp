@@ -2404,15 +2404,14 @@ Instruction *InstCombinerImpl::visitFPTrunc(FPTruncInst &FPT) {
         // destination type.
         if (SrcWidth == OpWidth)
           break;
-        Value *LHS, *RHS;
-        if (LHSWidth == SrcWidth) {
-           LHS = Builder.CreateFPTrunc(BO->getOperand(0), LHSMinType);
-           RHS = Builder.CreateFPTrunc(BO->getOperand(1), LHSMinType);
-        } else {
-           LHS = Builder.CreateFPTrunc(BO->getOperand(0), RHSMinType);
-           RHS = Builder.CreateFPTrunc(BO->getOperand(1), RHSMinType);
-        }
-
+        Type *EvalTy = LHSWidth == SrcWidth ? LHSMinType : RHSMinType;
+        // CreateFPCast can only emit an fpext or an fptrunc. Types of equal
+        // size but different format (like bfloat <-> half) are neither.
+        if (EvalTy != Ty &&
+            EvalTy->getScalarSizeInBits() == Ty->getScalarSizeInBits())
+          break;
+        Value *LHS = Builder.CreateFPTrunc(BO->getOperand(0), EvalTy);
+        Value *RHS = Builder.CreateFPTrunc(BO->getOperand(1), EvalTy);
         Value *ExactResult = Builder.CreateFRemFMF(LHS, RHS, BO);
         return CastInst::CreateFPCast(ExactResult, Ty);
       }
