@@ -20,12 +20,8 @@ if(LIBC_TESTS_CAN_USE_MPFR OR LIBC_TESTS_CAN_USE_MPC)
     libc.test.UnitTest.FPTestHelpers
   )
   if(EXISTS ${LLVM_LIBC_MPFR_INSTALL_PATH})
-    target_include_directories(libcMPCommon PUBLIC
-      ${LLVM_LIBC_MPFR_INSTALL_PATH}/include
-      /opt/homebrew/opt/gmp/include)
-    target_link_directories(libcMPCommon PUBLIC
-      ${LLVM_LIBC_MPFR_INSTALL_PATH}/lib
-      /opt/homebrew/opt/gmp/lib)
+    target_include_directories(libcMPCommon PUBLIC ${LLVM_LIBC_MPFR_INSTALL_PATH}/include)
+    target_link_directories(libcMPCommon PUBLIC ${LLVM_LIBC_MPFR_INSTALL_PATH}/lib)
   endif()
   target_include_directories(libcMPCommon PUBLIC ${LIBC_SOURCE_DIR})
   target_link_libraries(libcMPCommon PUBLIC mpfr gmp)
@@ -55,15 +51,9 @@ if(LIBC_TESTS_CAN_USE_MPFR)
     libc.test.UnitTest.LibcTest
   )
   if(EXISTS ${LLVM_LIBC_MPFR_INSTALL_PATH})
-    target_include_directories(libcMPFRWrapper PUBLIC
-      ${LLVM_LIBC_MPFR_INSTALL_PATH}/include
-      /opt/homebrew/opt/gmp/include)
-
-    target_link_directories(libcMPFRWrapper PUBLIC
-      ${LLVM_LIBC_MPFR_INSTALL_PATH}/lib
-      /opt/homebrew/opt/gmp/lib)
+    target_include_directories(libcMPFRWrapper PUBLIC ${LLVM_LIBC_MPFR_INSTALL_PATH}/include)
+    target_link_directories(libcMPFRWrapper PUBLIC ${LLVM_LIBC_MPFR_INSTALL_PATH}/lib)
   endif()
-
   target_include_directories(libcMPFRWrapper PUBLIC ${LIBC_SOURCE_DIR})
   target_link_libraries(libcMPFRWrapper PUBLIC libcMPCommon)
 elseif(NOT LIBC_TARGET_OS_IS_GPU AND NOT LLVM_LIBC_FULL_BUILD)
