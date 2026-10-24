@@ -454,6 +454,7 @@ public:
                             std::optional<unsigned> &TiedDefIdx,
                             bool IsDef = false);
   bool parseImmediateOperand(MachineOperand &Dest);
+  bool parseInlineAsmOperandCount(InlineAsm::Flag &F);
   bool parseSymbolicInlineAsmOperand(unsigned OpIdx, MachineOperand &Dest);
   bool parseIRConstant(StringRef::iterator Loc, StringRef StringValue,
                        const Constant *&C);
@@ -1798,6 +1799,32 @@ bool MIParser::parseImmediateOperand(MachineOperand &Dest) {
   return false;
 }
 
+/// Parse the optional "ops:N" that ends an inline asm operand flag, giving the
+/// number of operands that follow it. It's omitted when there's one operand.
+bool MIParser::parseInlineAsmOperandCount(InlineAsm::Flag &F) {
+  if (Token.isNot(MIToken::Identifier) || Token.stringValue() != "ops")
+    return false;
+
+  lex();
+  if (Token.isNot(MIToken::colon))
+    return error("expected ':' after 'ops'");
+
+  lex();
+  if (Token.isNot(MIToken::IntegerLiteral))
+    return error("expected an operand count after 'ops:'");
+
+  unsigned NumOps;
+  if (getUnsigned(NumOps))
+    return true;
+
+  if (NumOps > InlineAsm::Flag::getMaxNumOperandRegisters())
+    return error("invalid inline asm operand count");
+
+  F.setNumOperandRegisters(NumOps);
+  lex();
+  return false;
+}
+
 bool MIParser::parseSymbolicInlineAsmOperand(unsigned OpIdx,
                                              MachineOperand &Dest) {
   assert(OpIdx >= InlineAsm::MIOp_ExtraInfo);
@@ -1867,6 +1894,8 @@ bool MIParser::parseSymbolicInlineAsmOperand(unsigned OpIdx,
     lex();
 
     F.setMatchingOp(OperandNo);
+    if (parseInlineAsmOperandCount(F))
+      return true;
 
     Dest = MachineOperand::CreateImm(F);
     return false;
@@ -1938,6 +1967,9 @@ bool MIParser::parseSymbolicInlineAsmOperand(unsigned OpIdx,
     F.setRegMayBeFolded(true);
     lex();
   }
+
+  if (parseInlineAsmOperandCount(F))
+    return true;
 
   Dest = MachineOperand::CreateImm(F);
   return false;

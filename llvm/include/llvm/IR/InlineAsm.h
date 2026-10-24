@@ -362,6 +362,19 @@ public:
       return Bitfield::get<NumOperands>(Storage);
     }
 
+    /// The largest number of operands that a flag can describe.
+    static constexpr unsigned getMaxNumOperandRegisters() {
+      return (1u << NumOperands::Bits) - 1;
+    }
+
+    /// Set the number of operands that follow the flag. (The MIR parser reads
+    /// the count last, so it can't pass it to the constructor.)
+    void setNumOperandRegisters(unsigned NumOps) {
+      assert(NumOps <= getMaxNumOperandRegisters() &&
+             "Too many operands for a flag");
+      Bitfield::set<NumOperands>(Storage, NumOps);
+    }
+
     /// isUseOperandTiedToDef - Return true if the flag of the inline asm
     /// operand indicates it is an use operand that's matched to a def operand.
     bool isUseOperandTiedToDef(unsigned &Idx) const {
