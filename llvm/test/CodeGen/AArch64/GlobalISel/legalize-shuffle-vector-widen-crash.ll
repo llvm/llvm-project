@@ -5,25 +5,28 @@ target triple = "arm64-apple-macosx11.0.0"
 
 declare i32 @llvm.aarch64.neon.uaddv.i32.v4i32(<4 x i32>) #0
 
-define i32 @bar() {
+; The vectors are function arguments (not constants) so the shuffle result is not
+; known, ensuring the <4 x i1> shuffle still reaches the widen legalization path
+; this test guards rather than being folded to a constant beforehand.
+define i32 @bar(<8 x i1> %a, <8 x i1> %b) {
 ; CHECK-LABEL: bar:
 ; CHECK:       ; %bb.0: ; %bb
-; CHECK-NEXT:    movi.2d v0, #0000000000000000
+; CHECK-NEXT:    ; kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    umov.b w8, v0[0]
 ; CHECK-NEXT:    umov.b w9, v0[1]
-; CHECK-NEXT:    fmov s1, w8
+; CHECK-NEXT:    movi.4s v1, #1
+; CHECK-NEXT:    fmov s2, w8
 ; CHECK-NEXT:    umov.b w8, v0[2]
-; CHECK-NEXT:    mov.s v1[1], w9
+; CHECK-NEXT:    mov.s v2[1], w9
 ; CHECK-NEXT:    umov.b w9, v0[3]
-; CHECK-NEXT:    movi.4s v0, #1
-; CHECK-NEXT:    mov.s v1[2], w8
-; CHECK-NEXT:    mov.s v1[3], w9
-; CHECK-NEXT:    and.16b v0, v1, v0
+; CHECK-NEXT:    mov.s v2[2], w8
+; CHECK-NEXT:    mov.s v2[3], w9
+; CHECK-NEXT:    and.16b v0, v2, v1
 ; CHECK-NEXT:    addv.4s s0, v0
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
 bb:
-  %shufflevector = shufflevector <8 x i1> zeroinitializer, <8 x i1> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %shufflevector = shufflevector <8 x i1> %a, <8 x i1> %b, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %zext = zext <4 x i1> %shufflevector to <4 x i32>
   %call = call i32 @llvm.aarch64.neon.uaddv.i32.v4i32(<4 x i32> %zext)
   %icmp = icmp eq i32 %call, 0
