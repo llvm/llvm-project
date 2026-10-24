@@ -193,7 +193,8 @@ Parser::ParseOpenMPDeclareReductionDirective(AccessSpecifier AS) {
     return DeclGroupPtrTy();
 
   SmallVector<std::pair<QualType, SourceLocation>, 8> ReductionTypes;
-  // Parse list of types until ':' token.
+  // Parse list of types until ':' token. Stop at eof if code completion cut
+  // off parsing to avoid an infinite loop.
   do {
     ColonProtectionRAIIObject ColonRAII(*this);
     SourceRange Range;
@@ -221,7 +222,7 @@ Parser::ParseOpenMPDeclareReductionDirective(AccessSpecifier AS) {
         return DeclGroupPtrTy();
       }
     }
-  } while (Tok.isNot(tok::annot_pragma_openmp_end));
+  } while (Tok.isNot(tok::annot_pragma_openmp_end) && Tok.isNot(tok::eof));
 
   if (ReductionTypes.empty()) {
     SkipUntil(tok::annot_pragma_openmp_end, StopBeforeMatch);
@@ -2963,8 +2964,10 @@ bool Parser::ParseOpenMPSimpleVarList(
   bool IsCorrect = true;
   bool NoIdentIsFound = true;
 
-  // Read tokens while ')' or annot_pragma_openmp_end is not found.
-  while (Tok.isNot(tok::r_paren) && Tok.isNot(tok::annot_pragma_openmp_end)) {
+  // Read tokens while ')' or annot_pragma_openmp_end is not found. Stop at
+  // eof if code completion cut off parsing to avoid an infinite loop.
+  while (Tok.isNot(tok::r_paren) && Tok.isNot(tok::annot_pragma_openmp_end) &&
+         Tok.isNot(tok::eof)) {
     CXXScopeSpec SS;
     UnqualifiedId Name;
     // Read var name.
@@ -5471,8 +5474,12 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
       (Kind == OMPC_adjust_args &&
        Data.ExtraModifier != OMPC_ADJUST_ARGS_unknown);
   const bool MayHaveTail = (Kind == OMPC_linear || Kind == OMPC_aligned);
+  // If code completion cut off parsing, the current token is morphed into
+  // eof; the loop body makes no progress then, so exit to avoid an infinite
+  // loop.
   while (IsComma || (Tok.isNot(tok::r_paren) && Tok.isNot(tok::colon) &&
-                     Tok.isNot(tok::annot_pragma_openmp_end))) {
+                     Tok.isNot(tok::annot_pragma_openmp_end) &&
+                     Tok.isNot(tok::eof))) {
     ParseScope OMPListScope(this, Scope::OpenMPDirectiveScope);
     ColonProtectionRAIIObject ColonRAII(*this, MayHaveTail);
     if (!ParseOpenMPReservedLocator(Kind, Data, getLangOpts())) {
@@ -5515,7 +5522,9 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
 
     if (getLangOpts().OpenMP >= 52 && Kind == OMPC_linear) {
       bool Malformed = false;
-      while (Tok.isNot(tok::r_paren)) {
+      // Stop at eof if code completion cut off parsing to avoid an infinite
+      // loop.
+      while (Tok.isNot(tok::r_paren) && Tok.isNot(tok::eof)) {
         if (Tok.is(tok::identifier)) {
           // identifier could be a linear kind (val, uval, ref) or step
           // modifier or step size
