@@ -672,6 +672,13 @@ function(add_mlir_public_c_api_library name)
     PRIVATE
     -DMLIR_CAPI_BUILDING_LIBRARY=1
   )
+  if(BUILD_SHARED_LIBS)
+    target_compile_definitions(obj.${name}
+      PRIVATE -DMLIR_CAPI_ENABLE_WINDOWS_DLL_DECLSPEC=1)
+    target_compile_definitions(${name}
+      PUBLIC -DMLIR_CAPI_ENABLE_WINDOWS_DLL_DECLSPEC=1
+      PRIVATE -DMLIR_CAPI_BUILDING_LIBRARY=1)
+  endif()
 endfunction()
 
 # Declare the library associated with a dialect.
