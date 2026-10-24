@@ -38,6 +38,7 @@
 #include "ToolChains/MinGW.h"
 #include "ToolChains/MipsLinux.h"
 #include "ToolChains/NetBSD.h"
+#include "ToolChains/Nintendo.h"
 #include "ToolChains/OHOS.h"
 #include "ToolChains/OpenBSD.h"
 #include "ToolChains/PPCFreeBSD.h"
@@ -6340,6 +6341,9 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
       break;
     case llvm::Triple::ChipStar:
       TC = std::make_unique<toolchains::HIPSPVToolChain>(*this, Target, Args);
+      break;
+    case llvm::Triple::NintendoOS:
+      TC = std::make_unique<toolchains::NintendoOS>(*this, Target, Args);
       break;
     default:
       // Of these targets, Hexagon is the only one that might have

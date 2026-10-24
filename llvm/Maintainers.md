@@ -520,6 +520,11 @@ martin@martin.st (email), [mstorsjo](https://github.com/mstorsjo) (GitHub)
 Jeremy Morse \
 jeremy.morse@sony.com (email), [jmorse](https://github.com/jmorse) (GitHub)
 
+#### Nintendo support
+
+Henry Cheang \
+henry.cheang@ntd.nintendo.com (email), [hcheang01](https://github.com/hcheang01) (GitHub)
+
 #### Inline assembly
 
 Eric Christopher \
