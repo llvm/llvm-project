@@ -623,8 +623,8 @@ std::optional<Expr<SomeType>> ConvertToType(
 // Conversions to the type of another expression
 template <TypeCategory TC, typename FROM>
 common::IfNoLvalue<Expr<Type<TC>>, FROM> ConvertTo(
-    int toKind, const Expr<Type<TC>> &to, FROM &&x) {
-  return ConvertToType<Type<TC>>(toKind, std::move(x));
+    const Expr<Type<TC>> &to, FROM &&x) {
+  return ConvertToType<Type<TC>>(to.kind(), std::move(x));
 }
 
 template <TypeCategory TC, typename FROM>
@@ -702,10 +702,10 @@ SameKindExprs<CAT, 2> AsSameKindExprs(
     return {SameExprs<Type<CAT>>{std::move(kx), std::move(ky)}};
   } else if (xKind < yKind) {
     return {SameExprs<Type<CAT>>{
-        ConvertTo(yKind, ky, std::move(kx)), std::move(ky)}};
+        ConvertTo(ky, std::move(kx)), std::move(ky)}};
   } else {
-    return {SameExprs<Type<CAT>>{
-        std::move(kx), ConvertTo(xKind, kx, std::move(ky))}};
+    auto converted{ConvertTo(kx, std::move(ky))};
+    return {SameExprs<Type<CAT>>{std::move(kx), std::move(converted)}};
   }
 #if !__clang__ && 100 * __GNUC__ + __GNUC_MINOR__ == 801
         // Silence a bogus warning about a missing return with G++ 8.1.0.
