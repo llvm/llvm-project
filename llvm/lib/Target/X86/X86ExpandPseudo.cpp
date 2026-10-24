@@ -938,12 +938,14 @@ bool X86ExpandPseudoImpl::expandMBB(MachineBasicBlock &MBB) {
 bool X86ExpandPseudoImpl::expandPseudosWhichAffectControlFlow(
     MachineFunction &MF) {
   // Currently pseudo which affects control flow is only
-  // X86::VASTART_SAVE_XMM_REGS which is located in Entry block.
-  // So we do not need to evaluate other blocks.
-  for (MachineInstr &Instr : MF.front().instrs()) {
-    if (Instr.getOpcode() == X86::VASTART_SAVE_XMM_REGS) {
-      expandVastartSaveXmmRegs(&(MF.front()), Instr);
-      return true;
+  // X86::VASTART_SAVE_XMM_REGS. It is created in the entry block, but the
+  // prologue can split that block, e.g. for an inline stack probe loop.
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &Instr : MBB.instrs()) {
+      if (Instr.getOpcode() == X86::VASTART_SAVE_XMM_REGS) {
+        expandVastartSaveXmmRegs(&MBB, Instr);
+        return true;
+      }
     }
   }
 
