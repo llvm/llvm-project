@@ -392,6 +392,16 @@ emitAMDGCNImageOverloadedReturnType(CIRGenFunction &cgf, const CallExpr *e,
   return callOp.getResult();
 }
 
+static mlir::Value emitAMDGPUPredicate(CIRGenFunction &cgf, const CallExpr *e,
+                                       const llvm::Twine &name) {
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  mlir::Location loc = cgf.getLoc(e->getExprLoc());
+  mlir::Value result = cir::AMDGPUFeaturePredicateOp::create(
+      builder, loc, builder.getBoolTy(), builder.getStringAttr(name));
+  // Sema retypes the call to the logical operation type, which is int in C.
+  return builder.createBoolToInt(result, cgf.convertType(e->getType()));
+}
+
 std::optional<mlir::Value>
 CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
                                       const CallExpr *expr) {
@@ -860,6 +870,23 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
                  std::string("unimplemented AMDGPU builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinId));
     return mlir::Value{};
+  }
+  case AMDGPU::BI__builtin_amdgcn_processor_is: {
+    assert(cgm.getTriple().isSPIRV() &&
+           "__builtin_amdgcn_processor_is should never reach CodeGen for "
+           "concrete targets!");
+    StringRef proc = cast<clang::StringLiteral>(expr->getArg(0))->getString();
+    return emitAMDGPUPredicate(*this, expr, "is." + proc);
+  }
+  case AMDGPU::BI__builtin_amdgcn_is_invocable: {
+    assert(cgm.getTriple().isSPIRV() &&
+           "__builtin_amdgcn_is_invocable should never reach CodeGen for "
+           "concrete targets!");
+    auto *fd = cast<FunctionDecl>(
+        cast<DeclRefExpr>(expr->getArg(0))->getReferencedDeclOfCallee());
+    StringRef rf =
+        getContext().BuiltinInfo.getRequiredFeatures(fd->getBuiltinID());
+    return emitAMDGPUPredicate(*this, expr, "has." + rf);
   }
   case AMDGPU::BI__builtin_amdgcn_read_exec:
   case AMDGPU::BI__builtin_amdgcn_read_exec_lo:
