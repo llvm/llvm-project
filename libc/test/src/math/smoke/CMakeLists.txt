@@ -4733,6 +4733,21 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  cosh_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    cosh_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.math.cosh
+    libc.src.__support.math.cosh_double_eval
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.attributes
+)
+
+add_fp_unittest(
   coshf_test
   SUITE
     libc-math-smoke-tests
