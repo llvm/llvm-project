@@ -716,12 +716,12 @@ define signext i32 @test14b(i32 %0, i32 signext %1) {
 ; CHECK-NEXT:  # %bb.1: # %.preheader
 ; CHECK-NEXT:    ori $a2, $zero, 1
 ; CHECK-NEXT:    ori $a3, $zero, 1000
+; CHECK-NEXT:    addi.w $a0, $a0, 0
 ; CHECK-NEXT:    .p2align 4, , 16
 ; CHECK-NEXT:  .LBB14_2: # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    addi.w $a4, $a0, 0
-; CHECK-NEXT:    blt $a3, $a4, .LBB14_5
+; CHECK-NEXT:    blt $a3, $a0, .LBB14_5
 ; CHECK-NEXT:  # %bb.3: # in Loop: Header=BB14_2 Depth=1
-; CHECK-NEXT:    add.d $a0, $a2, $a0
+; CHECK-NEXT:    add.w $a0, $a2, $a0
 ; CHECK-NEXT:    addi.w $a2, $a2, 1
 ; CHECK-NEXT:    blt $a2, $a1, .LBB14_2
 ; CHECK-NEXT:  .LBB14_4:
@@ -784,12 +784,12 @@ define signext i32 @test14c(i32 zeroext %0, i32 signext %1) {
 ; CHECK-NEXT:  # %bb.1: # %.preheader
 ; CHECK-NEXT:    ori $a2, $zero, 1
 ; CHECK-NEXT:    ori $a3, $zero, 1000
+; CHECK-NEXT:    addi.w $a0, $a0, 0
 ; CHECK-NEXT:    .p2align 4, , 16
 ; CHECK-NEXT:  .LBB15_2: # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    addi.w $a4, $a0, 0
-; CHECK-NEXT:    blt $a3, $a4, .LBB15_5
+; CHECK-NEXT:    blt $a3, $a0, .LBB15_5
 ; CHECK-NEXT:  # %bb.3: # in Loop: Header=BB15_2 Depth=1
-; CHECK-NEXT:    add.d $a0, $a2, $a0
+; CHECK-NEXT:    add.w $a0, $a2, $a0
 ; CHECK-NEXT:    addi.w $a2, $a2, 1
 ; CHECK-NEXT:    blt $a2, $a1, .LBB15_2
 ; CHECK-NEXT:  .LBB15_4:
