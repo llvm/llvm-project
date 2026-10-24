@@ -837,6 +837,10 @@ bool SymbolCollector::handleMacroOccurrence(const IdentifierInfo *Name,
     S.Flags |= Symbol::IndexedForCodeCompletion;
     S.Flags |= Symbol::VisibleOutsideFile;
   }
+  if (Name->isDeprecatedMacro()) {
+    S.Flags |= Symbol::Deprecated;
+    S.Tags |= toSymbolTagBitmask(SymbolTag::Deprecated);
+  }
   S.SymInfo = index::getSymbolInfoForMacro(*MI);
   S.Origin = Opts.Origin;
   // FIXME: use the result to filter out symbols.
@@ -945,9 +949,17 @@ void SymbolCollector::finish() {
     for (const IdentifierInfo *II : IndexedMacros) {
       if (const auto *MI = PP->getMacroDefinition(II).getMacroInfo())
         if (auto ID =
-                getSymbolIDCached(II->getName(), MI, PP->getSourceManager()))
-          if (MI->isUsedForHeaderGuard())
+                getSymbolIDCached(II->getName(), MI, PP->getSourceManager())) {
+          if (MI->isUsedForHeaderGuard()) {
             Symbols.erase(ID);
+          } else if (II->isDeprecatedMacro()) {
+            if (const auto *S = Symbols.find(ID)) {
+              auto *ModS = const_cast<Symbol *>(S);
+              ModS->Flags |= Symbol::Deprecated;
+              ModS->Tags |= toSymbolTagBitmask(SymbolTag::Deprecated);
+            }
+          }
+        }
     }
   }
   llvm::DenseMap<FileID, bool> FileToContainsImportsOrObjC;

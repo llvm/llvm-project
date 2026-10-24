@@ -362,6 +362,7 @@ void setTags(clangd::Diag &D) {
       diag::warn_deprecated_volatile_return,
       diag::warn_deprecated_volatile_structured_binding,
       diag::warn_opencl_attr_deprecated_ignored,
+      diag::warn_pragma_deprecated_macro_use,
       diag::warn_property_method_deprecated,
       diag::warn_vector_mode_deprecated,
   };
@@ -738,7 +739,7 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
   if (Info.getLocation().isInvalid()) {
     // Handle diagnostics coming from command-line arguments. The source manager
     // is *not* available at this point, so we cannot use it.
-    if (!OriginallyError) {
+    if (isNote(DiagLevel) || !OriginallyError) {
       IgnoreDiagnostics::log(DiagLevel, Info);
       return; // non-errors add too much noise, do not show them.
     }
