@@ -3232,7 +3232,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
       if ((getTarget().getTriple().isAMDGCN() ||
            getTarget().getTriple().isSPIRV()) &&
           getLangOpts().HIP)
-        return errorBuiltinNYI(*this, e, builtinID);
+        return RValue::get(emitDevicePrintfCallExpr(e));
     }
     break;
   case Builtin::BI__builtin_canonicalize:
