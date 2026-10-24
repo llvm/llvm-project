@@ -12001,8 +12001,8 @@ static void DiagnoseNamespaceInlineMismatch(Sema &S, SourceLocation KeywordLoc,
   *IsInline = PrevNS->isInline();
 }
 
-/// Diagnose 'abi_tag' on a namespace rejecting a different tag on a subsequent
-/// namespace re-opening.
+/// Diagnose 'abi_tag' on a namespace being ignored in favor of a tag on
+/// the first namespace declaration.
 static void DiagnoseNamespaceABITagMismatch(Sema &S, const Decl *NewD,
                                             const Decl *OldD) {
   assert(NewD != OldD);
@@ -12017,15 +12017,15 @@ static void DiagnoseNamespaceABITagMismatch(Sema &S, const Decl *NewD,
                       return !llvm::is_contained(OldAbiTagAttr->tags(), NewTag);
                     });
       if (!ExtraTags.empty()) {
-        S.Diag(OldAbiTagAttr->getLocation(), diag::warn_abi_tag_ignored)
-            << true << PrintableTags(OldAbiTagAttr->tags())
-            << PrintableTags(ExtraTags);
-        S.Diag(NewAbiTagAttr->getLocation(), diag::note_declared_at);
+        S.Diag(NewAbiTagAttr->getLocation(), diag::warn_abi_tag_ignored)
+            << PrintableTags(ExtraTags) << true
+            << PrintableTags(OldAbiTagAttr->tags());
+        S.Diag(OldAbiTagAttr->getLocation(), diag::note_previous_declaration);
       }
     } else {
-      S.Diag(OldD->getLocation(), diag::warn_abi_tag_ignored)
-          << false << "" << PrintableTags(NewAbiTagAttr->tags());
-      S.Diag(NewAbiTagAttr->getLocation(), diag::note_declared_at);
+      S.Diag(NewAbiTagAttr->getLocation(), diag::warn_abi_tag_ignored)
+          << PrintableTags(NewAbiTagAttr->tags()) << false << "";
+      S.Diag(OldD->getLocation(), diag::note_previous_declaration);
     }
   }
 }

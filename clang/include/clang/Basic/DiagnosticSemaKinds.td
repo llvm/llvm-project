@@ -6503,8 +6503,8 @@ def warn_attr_abi_tag_namespace : Warning<
   "'abi_tag' attribute on %select{non-inline|anonymous}0 namespace ignored">,
   InGroup<IgnoredAttributes>;
 def warn_abi_tag_ignored : Warning<
-  "%select{no 'abi_tag'|'abi_tag(\"%1\")'}0 prevents applying 'abi_tag(\"%2\")' later">,
-  InGroup<DiagGroup<"abi-tag-redeclaration">>;
+  "'abi_tag(\"%0\")' is ignored, applying %select{no 'abi_tag'|'abi_tag(\"%2\")'}1">,
+  InGroup<DiagGroup<"abi-tag-redeclaration">>, ShowInSystemHeader;
 def err_abi_tag_on_redeclaration : Error<
   "cannot add 'abi_tag' attribute in a redeclaration">;
 def err_new_abi_tag_on_redeclaration : Error<
