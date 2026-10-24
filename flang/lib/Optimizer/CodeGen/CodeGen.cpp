@@ -382,9 +382,9 @@ public:
           mlir::LLVM::StoreOp::create(rewriter, fusedLoc, addr, slot);
           addr = slot;
           expr = mlir::LLVM::DIExpressionAttr::get(
-              rewriter.getContext(), {mlir::LLVM::DIExpressionElemAttr::get(
-                                         rewriter.getContext(),
-                                         llvm::dwarf::DW_OP_deref, {})});
+              rewriter.getContext(),
+              {mlir::LLVM::DIExpressionElemAttr::get(
+                  rewriter.getContext(), llvm::dwarf::DW_OP_deref, {})});
         }
         mlir::LLVM::DbgDeclareOp::create(rewriter, fusedLoc, addr, varAttr,
                                          expr);
