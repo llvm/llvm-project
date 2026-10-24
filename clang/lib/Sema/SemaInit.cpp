@@ -7889,7 +7889,9 @@ Sema::CreateMaterializeTemporaryExpr(QualType T, Expr *Temporary,
   // but there may be a chance to merge them.
   Cleanup.setExprNeedsCleanups(false);
   if (isInLifetimeExtendingContext())
-    currentEvaluationContext().ForRangeLifetimeExtendTemps.push_back(MTE);
+    currentEvaluationContext()
+        .getOrCreateRareData()
+        .ForRangeLifetimeExtendTemps.push_back(MTE);
   return MTE;
 }
 
