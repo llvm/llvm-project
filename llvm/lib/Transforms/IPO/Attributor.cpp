@@ -2521,11 +2521,14 @@ ChangeStatus Attributor::cleanupIR() {
                       << " instead of " << *OldV << "\n");
     U->set(NewV);
 
-    if (Instruction *I = dyn_cast<Instruction>(OldV)) {
+    // The new value may reference a function, e.g., if an argument is replaced
+    // by a function pointer, so the call graph of the user's function changes.
+    if (I)
       CGModifiedFunctions.insert(I->getFunction());
-      if (!isa<PHINode>(I) && !ToBeDeletedInsts.count(I) &&
-          isInstructionTriviallyDead(I))
-        DeadInsts.push_back(I);
+    if (Instruction *OldI = dyn_cast<Instruction>(OldV)) {
+      if (!isa<PHINode>(OldI) && !ToBeDeletedInsts.count(OldI) &&
+          isInstructionTriviallyDead(OldI))
+        DeadInsts.push_back(OldI);
     }
     if (isa<UndefValue>(NewV) && isa<CallBase>(U->getUser())) {
       auto *CB = cast<CallBase>(U->getUser());
