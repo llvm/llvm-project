@@ -17,6 +17,7 @@
 #include "../llvm-libc-macros/EFIAPI-macros.h"
 #include "../llvm-libc-macros/stdint-macros.h"
 #include "EFI_STATUS.h"
+#include "char16_t.h"
 #include "size_t.h"
 #include <stdbool.h>
 
