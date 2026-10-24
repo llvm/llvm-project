@@ -750,6 +750,7 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
       DynamicVGPRBlockSize(MFI.getDynamicVGPRBlockSize()),
       ScratchReservedForDynamicVGPRs(MFI.getScratchReservedForDynamicVGPRs()),
       NumKernargPreloadSGPRs(MFI.getNumKernargPreloadedSGPRs()),
+      ICachePrefetchLines(MFI.getICachePrefetchLines()),
       MinNumAGPRs(MFI.getMinNumAGPRs()) {
   for (Register Reg : MFI.getSGPRSpillPhysVGPRs())
     SpillPhysVGPRS.push_back(regToString(Reg, TRI));
@@ -797,6 +798,7 @@ bool SIMachineFunctionInfo::initializeBaseYamlFields(
   NumWaveDispatchVGPRs = YamlMFI.NumWaveDispatchVGPRs;
   BytesInStackArgArea = YamlMFI.BytesInStackArgArea;
   ReturnsVoid = YamlMFI.ReturnsVoid;
+  ICachePrefetchLines = YamlMFI.ICachePrefetchLines;
   IsWholeWaveFunction = YamlMFI.IsWholeWaveFunction;
   MinNumAGPRs = YamlMFI.MinNumAGPRs;
   // This can also be set by the function attribute, MFI has higher precedence
