@@ -392,7 +392,7 @@ std::optional<APInt> constantTripCount(
 
     /// Non-constant bound, let's try to compute the difference between the
     /// upper and lower bound
-    std::optional<llvm::APSInt> maybeDiff =
+    std::optional<llvm::APInt> maybeDiff =
         computeUbMinusLb(cast<Value>(lb), cast<Value>(ub), isSigned);
     if (!maybeDiff)
       return std::nullopt;
@@ -400,7 +400,7 @@ std::optional<APInt> constantTripCount(
   }
   LDBG() << "constantTripCount: " << (isSigned ? "isSigned" : "isUnsigned")
          << ", ub-lb: " << diff << "(" << diff.getBitWidth() << "b)";
-  if (diff.isNegative()) {
+  if (isSigned && diff.isNegative()) {
     LDBG() << "constantTripCount is 0 because ub-lb diff is negative";
     return APInt(bitwidth, 0);
   }
@@ -424,7 +424,6 @@ std::optional<APInt> constantTripCount(
   llvm::APInt remainder = diff.urem(stepCst);
   if (!remainder.isZero())
     tripCount = tripCount + 1;
-
   LDBG() << "constantTripCount found: " << tripCount;
   return tripCount;
 }
