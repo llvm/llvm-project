@@ -3323,7 +3323,7 @@ TEST(TargetParserTest, testAMDGPUgetTotalNumVGPRs) {
 
 TEST(TargetParserTest, testAMDGPUgetAddressableNumVGPRs) {
   // A wave addresses 256 VGPRs, except on gfx90a where the unified file makes
-  // the AGPRs addressable too, and on targets with 1024 addressable VGPRs.
+  // the AGPRs addressable too, and on targets with VGPR MSBs.
   EXPECT_EQ(AMDGPU::getAddressableNumVGPRs(AMDGPU::GK_GFX600, false), 256u);
   EXPECT_EQ(AMDGPU::getAddressableNumVGPRs(AMDGPU::GK_GFX1030, true), 256u);
 
