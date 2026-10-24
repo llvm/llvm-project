@@ -727,7 +727,7 @@ static MachineInstr *foldInlineAsmMemOperand(MachineInstr &MI,
   // the slot through a use, and through a def tied to a use, which need not
   // be the same virtual register when the allocator lowers ties itself. In
   // that case the caller must store the tied use's value into the slot before
-  // the asm, as RegAllocFast does.
+  // the asm.
   bool Reads = false;
   bool Writes = false;
   for (unsigned Op : Ops) {
