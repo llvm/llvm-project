@@ -286,6 +286,29 @@ Error object::extractCodeObject(const ObjectFile &Source, size_t Offset,
 
 Error object::extractCodeObject(const MemoryBufferRef Buffer, int64_t Offset,
                                 int64_t Size, StringRef OutputFileName) {
+  // Offset and Size come from the bundle entry header, so bound them against
+  // the buffer before forming pointers from them. The ObjectFile overload
+  // above already does this; without it the copy below reads out of bounds.
+  if (Offset < 0 || Size < 0)
+    return createStringError("offset (" + Twine(Offset) + ") and size (" +
+                             Twine(Size) + ") must be non-negative");
+
+  if (static_cast<uint64_t>(Size) > Buffer.getBufferSize())
+    return createStringError("size (" + Twine(Size) +
+                             ") is larger than source (" +
+                             Twine(Buffer.getBufferSize()) + ")");
+
+  if (static_cast<uint64_t>(Offset) > Buffer.getBufferSize())
+    return createStringError("offset (" + Twine(Offset) +
+                             ") is beyond the end of the source (" +
+                             Twine(Buffer.getBufferSize()) + ")");
+
+  if (static_cast<uint64_t>(Offset) + static_cast<uint64_t>(Size) >
+      Buffer.getBufferSize())
+    return createStringError("offset + size (" + Twine(Offset + Size) +
+                             ") is beyond the end of the source (" +
+                             Twine(Buffer.getBufferSize()) + ")");
+
   Expected<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
       FileOutputBuffer::create(OutputFileName, Size);
   if (!BufferOrErr)
