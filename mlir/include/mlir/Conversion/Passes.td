@@ -975,7 +975,7 @@ def ConvertMathToEmitC  : Pass<"convert-math-to-emitc"> {
   let dependentDialects = ["emitc::EmitCDialect"];
   let options = [
     Option<"languageTarget", "language-target", "::mlir::emitc::LanguageTarget",
-      /*default=*/"::mlir::emitc::LanguageTarget::c99", "Select the language standard target for callees (c99 or cpp11).",
+      /*default=*/"::mlir::emitc::LanguageTarget::cpp11", "Select the language standard target for callees (c99 or cpp11).",
       [{::llvm::cl::values(
             clEnumValN(::mlir::emitc::LanguageTarget::c99, "c99", "c99"),
             clEnumValN(::mlir::emitc::LanguageTarget::cpp11, "cpp11", "cpp11")
