@@ -146,6 +146,28 @@ module data
   !ERROR: Rank-1 integer array used as upper bounds in DECLARATION must have constant size
   integer :: gg3(nonconstsize : nonconstsize)
 end module 
+! A raw rank-1 bound element in a(0:n)'s extents (the lower bound 0 makes
+! neither UBOUND nor LBOUND exact) must keep SIZE from folding, but must not
+! keep it from validating DIM=: an out-of-range or non-positive DIM is still
+! diagnosed.
+subroutine size_dim_checked(n)
+  integer, intent(in) :: n(2)
+  real :: a(0:n)
+  !ERROR: DIM=9 dimension is out of range for rank-2 array
+  print *, size(a, 9)
+  !ERROR: DIM=2147483648 dimension is out of range for rank-2 array
+  print *, size(a, 2147483648_8)
+  !ERROR: DIM=0 dimension must be positive
+  print *, size(a, 0)
+end subroutine
+! With a constant base the raw element folds to its scalar value, so size(a)
+! is a constant expression: 3*4 == 12 (a kind of -1 would be rejected).
+subroutine size_constant_base()
+  real :: a(0:[2, 3])
+  integer, parameter :: count = size(a)
+  integer(kind=merge(4, -1, count == 12)) :: ok
+  ok = 0
+end subroutine
 program declaration_array_bounds
   use getter
   implicit none
@@ -282,5 +304,17 @@ program declaration_array_bounds
   integer :: n(2147483648_8) !2^31
   !ERROR: DECLARATION rank-1 integer array bound(s) imply rank 2147483648, which is greater than the maximum supported rank 15
   integer :: too_big(n)
+
+  ! A rank-1 bound base gives the array its rank; an intrinsic inquiry on that
+  ! array (ubound/lbound/size) -- the form such a bound takes when serialized to
+  ! a module file -- is validated by the ordinary DIM-range check.  A DIM beyond
+  ! the rank, including one that overflows signed 32-bit (2^31), is rejected
+  ! without wrapping, so a consumer cannot be handed an out-of-range dimension.
+  integer, parameter :: twodims(2) = [3, 4]
+  integer :: a_dim(twodims) ! rank-2
+  !ERROR: DIM=9 dimension is out of range for rank-2 array
+  integer :: bad_dim(ubound(a_dim, 9))
+  !ERROR: DIM=2147483648 dimension is out of range for rank-2 array
+  integer :: bad_dim_ovf(ubound(a_dim, 2147483648_8))
 
 end program

@@ -11,6 +11,7 @@
 #include "resolve-names.h"
 #include "flang/Common/restorer.h"
 #include "flang/Evaluate/fold.h"
+#include "flang/Evaluate/shape.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Parser/message.h"
 #include "flang/Parser/parsing.h"
@@ -101,6 +102,13 @@ private:
 
   template <typename T> void DoExpr(evaluate::Expr<T> expr) {
     for (const Symbol &symbol : evaluate::CollectSymbols(expr)) {
+      DoSymbol(symbol);
+    }
+    // A rank-1 bound element serialized through its ubound()/lbound()
+    // provenance names its originating array, which CollectSymbols() does not
+    // visit; declare that array too, ahead of the entity that inquires it.
+    for (const Symbol &symbol :
+        evaluate::CollectRankOneBoundProvenanceSymbols(expr)) {
       DoSymbol(symbol);
     }
   }
@@ -239,6 +247,10 @@ static void HarvestSymbolsNeededFromOtherModules(
   auto HarvestBound{[&](const Bound &bound) {
     if (const auto &expr{bound.GetExplicit()}) {
       for (SymbolRef ref : evaluate::CollectSymbols(*expr)) {
+        set.emplace(*ref);
+      }
+      for (SymbolRef ref :
+          evaluate::CollectRankOneBoundProvenanceSymbols(*expr)) {
         set.emplace(*ref);
       }
     }
@@ -1156,6 +1168,38 @@ void PutShapeSpec(llvm::raw_ostream &os, const ShapeSpec &x) {
   }
 }
 
+// Every expression the module file writer prints must have a Fortran spelling.
+// A RankOneBoundElement without ubound()/lbound() provenance has none (its
+// debug rendering is the synthetic %ROBE marker, which the module file reader
+// cannot parse).  Such a raw element may live only in its own array's
+// ShapeSpec, which PutShape() unwraps whole; every other route to the file --
+// bounds, initializers, character lengths, and type parameters -- comes
+// through one of these checks.
+template <typename T>
+static void CheckWritableExpr(const evaluate::Expr<T> &expr) {
+  CHECK(!evaluate::ContainsUntaggedRankOneBoundElement(expr));
+}
+static void CheckWritableParamValue(const ParamValue &value) {
+  if (const auto &expr{value.GetExplicit()}) {
+    CheckWritableExpr(*expr);
+  }
+}
+// Character lengths and derived type parameters are printed by
+// DeclTypeSpec::AsFortran(), which diagnostics share, so they are checked here
+// on the writer's side rather than in the printer.
+static void CheckWritableType(const DeclTypeSpec &type) {
+  if (type.category() == DeclTypeSpec::Character) {
+    CheckWritableParamValue(type.characterTypeSpec().length());
+  } else if (const DerivedTypeSpec *derived{type.AsDerived()}) {
+    for (const auto &[keyword, value] : derived->rawParameters()) {
+      CheckWritableParamValue(value);
+    }
+    for (const auto &[name, value] : derived->parameters()) {
+      CheckWritableParamValue(value);
+    }
+  }
+}
+
 // Check whether any bound in an ArraySpec holds a RankOneBoundElement,
 // indicating the shape came from a rank-1 integer array expression.
 bool HasRankOneBound(const ArraySpec &shape) {
@@ -1187,6 +1231,7 @@ void PutShape(
         auto lb{first.lbound().GetExplicit()};
         if (auto *robe =
                 evaluate::UnwrapExpr<evaluate::RankOneBoundElement>(*lb)) {
+          CheckWritableExpr(robe->base());
           robe->base().AsFortran(os);
         } else {
           PutBound(os, first.lbound());
@@ -1197,6 +1242,7 @@ void PutShape(
         auto ub{first.ubound().GetExplicit()};
         if (auto *robe =
                 evaluate::UnwrapExpr<evaluate::RankOneBoundElement>(*ub)) {
+          CheckWritableExpr(robe->base());
           robe->base().AsFortran(os);
         } else {
           PutBound(os, first.ubound());
@@ -1391,6 +1437,7 @@ void PutInit(llvm::raw_ostream &os, const Symbol &symbol, const MaybeExpr &init,
     if (unanalyzed) {
       parser::Unparse(os << assign, *unanalyzed, context.langOptions());
     } else if (init) {
+      CheckWritableExpr(*init);
       init->AsFortran(os << assign);
     }
   }
@@ -1398,6 +1445,7 @@ void PutInit(llvm::raw_ostream &os, const Symbol &symbol, const MaybeExpr &init,
 
 void PutInit(llvm::raw_ostream &os, const MaybeIntExpr &init) {
   if (init) {
+    CheckWritableExpr(*init);
     init->AsFortran(os << '=');
   }
 }
@@ -1408,6 +1456,7 @@ void PutBound(llvm::raw_ostream &os, const Bound &x) {
   } else if (x.isColon()) {
     os << ':';
   } else {
+    CheckWritableExpr(*x.GetExplicit());
     x.GetExplicit()->AsFortran(os);
   }
 }
@@ -1469,6 +1518,7 @@ llvm::raw_ostream &PutAttr(llvm::raw_ostream &os, Attr attr) {
 }
 
 llvm::raw_ostream &PutType(llvm::raw_ostream &os, const DeclTypeSpec &type) {
+  CheckWritableType(type);
   return PutLower(os, type.AsFortran());
 }
 
