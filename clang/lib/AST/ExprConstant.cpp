@@ -3583,6 +3583,12 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
     return false;
   }
 
+  // If the declaration holding the initializer is itself invalid, bail out
+  // rather than evaluating a potentially bogus value. getAnyInitializer()
+  // above redirected VD to the declaration holding the initializer.
+  if (Init && VD->isInvalidDecl())
+    return false;
+
   // P2280R4 struck the initialization requirement for variables of reference
   // type so we can no longer assume we have an Init.
   // Used to be C++20 [expr.const]p5.12:
