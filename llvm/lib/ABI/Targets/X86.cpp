@@ -1401,5 +1401,88 @@ createX86_64TargetInfo(TypeBuilder &TB, X86AVXABILevel AVXLevel,
                                             Compat);
 }
 
+namespace {
+
+class WinX86_64TargetInfo : public TargetInfo {
+  [[maybe_unused]] X86AVXABILevel AVXLevel;
+  ABICompatInfo CompatInfo;
+
+  ArgInfo classify(const Type *Ty, bool IsReturn, bool IsInstanceMethod) const {
+    if (Ty->isVoid())
+      return ArgInfo::getIgnore();
+
+    if (IsReturn && IsInstanceMethod && isAggregateTypeForABI(Ty)) {
+      ArgInfo AI =
+          getNaturalAlignIndirect(Ty, getAllocaAddrSpace(), /*ByVal=*/false);
+      AI.setSRetAfterThis(true);
+      return AI;
+    }
+
+    if (const auto *RT = dyn_cast<RecordType>(Ty)) {
+      if (!RT->canPassInRegisters() || RT->hasFlexibleArrayMember())
+        return getNaturalAlignIndirect(Ty, getAllocaAddrSpace(),
+                                       /*ByVal=*/false);
+
+      uint64_t Width = RT->getSizeInBits().getFixedValue();
+      if (Width > 64 || !llvm::isPowerOf2_64(Width))
+        return getNaturalAlignIndirect(Ty, getAllocaAddrSpace(),
+                                       /*ByVal=*/false);
+
+      const Type *CoerceTy =
+          TB.getIntegerType(TypeSize::getFixed(Width), /*IsSigned=*/false);
+      return ArgInfo::getDirect(CoerceTy);
+    }
+
+    if (const auto *IT = dyn_cast<IntegerType>(Ty)) {
+      // MSVC WinX86_64 ABI only extends 1-bit booleans; other small integers
+      // are passed directly.
+      if (IT->getSizeInBits().getFixedValue() == 1)
+        return ArgInfo::getExtend(Ty, IT->isSigned());
+      if (IT->getSizeInBits().getFixedValue() > 64)
+        return getNaturalAlignIndirect(Ty, getAllocaAddrSpace(),
+                                       /*ByVal=*/false);
+      return ArgInfo::getDirect();
+    }
+
+    if (Ty->isFloat() || Ty->isPointer() || Ty->isVector())
+      return ArgInfo::getDirect();
+
+    if (isAggregateTypeForABI(Ty)) {
+      uint64_t Width = Ty->getSizeInBits().getFixedValue();
+      if (Width > 64 || !llvm::isPowerOf2_64(Width))
+        return getNaturalAlignIndirect(Ty, getAllocaAddrSpace(),
+                                       /*ByVal=*/false);
+      const Type *CoerceTy =
+          TB.getIntegerType(TypeSize::getFixed(Width), /*IsSigned=*/false);
+      return ArgInfo::getDirect(CoerceTy);
+    }
+
+    return ArgInfo::getDirect();
+  }
+
+public:
+  WinX86_64TargetInfo(TypeBuilder &TB, X86AVXABILevel AVXLevel,
+                      const ABICompatInfo &Compat)
+      : TargetInfo(TB), AVXLevel(AVXLevel), CompatInfo(Compat) {}
+
+  const ABICompatInfo &getABICompatInfo() const override { return CompatInfo; }
+
+  void computeInfo(FunctionInfo &FI) const override {
+    FI.getReturnInfo() =
+        classify(FI.getReturnType(), /*IsReturn=*/true, FI.isInstanceMethod());
+    for (auto &Arg : FI.arguments())
+      Arg.Info = classify(Arg.getType(), /*IsReturn=*/false,
+                          /*IsInstanceMethod=*/false);
+  }
+};
+
+} // namespace
+
+std::unique_ptr<TargetInfo>
+createWinX86_64TargetInfo(TypeBuilder &TB, X86AVXABILevel AVXLevel,
+                          const ABICompatInfo &Compat) {
+  return std::make_unique<WinX86_64TargetInfo>(TB, AVXLevel, Compat);
+}
+
 } // namespace abi
 } // namespace llvm

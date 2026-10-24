@@ -132,6 +132,11 @@ TEST_F(FunctionInfoTest, IndirectAliasedSurvivesFunctionInfo) {
   EXPECT_EQ(Info.getIndirectAlign(), llvm::Align(8));
 }
 
+TEST_F(FunctionInfoTest, ArgEntryGetType) {
+  ArgEntry Entry(I32);
+  EXPECT_EQ(Entry.getType(), I32);
+}
+
 #if GTEST_HAS_DEATH_TEST && !defined(NDEBUG)
 TEST_F(FunctionInfoTest, CanBeFlattenedIsDirectOnly) {
   EXPECT_DEATH((void)ArgInfo::getIgnore().getCanBeFlattened(), "Invalid Kind");

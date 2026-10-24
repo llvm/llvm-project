@@ -11,5 +11,6 @@ add_llvm_unittest(ABITests
   TargetInfoTest.cpp
   AMDGPUTargetInfoTest.cpp
   X86TargetInfoTest.cpp
+  WinX86_64TargetInfoTest.cpp
   TypesTest.cpp
   )

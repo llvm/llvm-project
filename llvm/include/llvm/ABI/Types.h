@@ -17,13 +17,19 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
+#include "llvm/ADT/bit.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/TypeSize.h"
 
 namespace llvm {
+
+/// Returns the largest power of two less than or equal to the given value.
+inline uint64_t PowerOf2Floor(uint64_t A) { return llvm::bit_floor(A); }
+
 namespace abi {
 
 enum class TypeKind {
@@ -489,6 +495,14 @@ public:
                                     bool IsBitInt = false) {
     return new (Allocator.Allocate<IntegerType>())
         IntegerType(BitWidth, Align, Signed, IsBitInt);
+  }
+
+  const IntegerType *getIntegerType(TypeSize Size, bool Signed = false) {
+    uint64_t BitWidth = Size.getFixedValue();
+    return getIntegerType(
+        BitWidth,
+        Align(llvm::PowerOf2Floor(std::max<uint64_t>(1, BitWidth / 8))),
+        Signed);
   }
 
   const FloatType *getFloatType(const fltSemantics &Semantics, Align Align) {
