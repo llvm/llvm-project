@@ -1541,7 +1541,8 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
   if (LangOpts.OpenMP)
     OpenMP().ActOnFinishedFunctionDefinitionInOpenMPAssumeScope(Method);
 
-  handleLambdaNumbering(Class, Method);
+  if (!Method->getType()->containsErrors())
+    handleLambdaNumbering(Class, Method);
 
   for (auto &&C : LSI->Captures) {
     if (!C.isVariableCapture())
