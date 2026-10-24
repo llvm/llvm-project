@@ -139,6 +139,10 @@ infrastructure are described first, followed by tool-specific sections.
   piping from {program}`git` to {program}`clang-tidy-diff.py`, where slashes
   will now be automatically normalized.
 
+- Fixed a crash in {program}`clang-tidy` when `HeaderFileExtensions` or
+  `ImplementationFileExtensions` contains an invalid entry, such as one with a
+  leading dot. The invalid option is now reported as a warning.
+
 #### New checks
 
 - New {doc}`llvm-invalid-regex-pattern
@@ -329,6 +333,10 @@ infrastructure are described first, followed by tool-specific sections.
   <clang-tidy/checks/performance/no-automatic-move>` check by no longer
   warning when returning a variable captured by a lambda or a block, which is
   never implicitly moved from.
+
+- Improved {doc}`performance-noexcept-move-constructor
+  <clang-tidy/checks/performance/noexcept-move-constructor>` check by fixing
+  false negatives for implicitly `noexcept(false)` move operations.
 
 - Improved {doc}`performance-prefer-single-char-overloads
   <clang-tidy/checks/performance/prefer-single-char-overloads>` check to
