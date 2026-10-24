@@ -24,9 +24,25 @@
 namespace clang {
 namespace dataflow {
 
+/// Returns true if `DC` is `std` or the top-level `tl` namespace, which holds
+/// `tl::expected` (https://github.com/TartanLlama/expected).
+static bool isSupportedNamespace(const DeclContext &DC) {
+  if (DC.isStdNamespace())
+    return true;
+  const auto *NS = dyn_cast<NamespaceDecl>(&DC);
+  return NS != nullptr && NS->getDeclName().isIdentifier() &&
+         NS->getName() == "tl" && NS->getParent()->isTranslationUnit();
+}
+
 static bool isExpectedClass(const CXXRecordDecl &RD) {
   return RD.getDeclName().isIdentifier() && RD.getName() == "expected" &&
-         RD.getDeclContext()->isStdNamespace();
+         isSupportedNamespace(*RD.getDeclContext());
+}
+
+/// Returns the name of the expected class `RD` to show in diagnostics.
+static llvm::StringRef getExpectedTypeName(const CXXRecordDecl &RD) {
+  return RD.getDeclContext()->isStdNamespace() ? "std::expected"
+                                               : "tl::expected";
 }
 
 // Classes derived from `std::expected` are deliberately not supported.
@@ -56,7 +72,7 @@ AST_MATCHER(CXXRecordDecl, expectedClass) { return isExpectedClass(Node); }
 
 AST_MATCHER(CXXRecordDecl, unexpectedClass) {
   return Node.getDeclName().isIdentifier() && Node.getName() == "unexpected" &&
-         Node.getDeclContext()->isStdNamespace();
+         isSupportedNamespace(*Node.getDeclContext());
 }
 
 auto expectedMemberCall(ast_matchers::internal::Matcher<NamedDecl> Name) {
@@ -79,27 +95,25 @@ auto hasUnexpectedType() {
       recordType(hasDeclaration(cxxRecordDecl(unexpectedClass())))));
 }
 
+auto expectedComparisonCall(
+    const ast_matchers::internal::Matcher<Expr> &Other) {
+  return cxxOperatorCallExpr(
+      hasAnyOverloadedOperatorName("==", "!="), argumentCountIs(2),
+      anyOf(allOf(hasArgument(0, hasExpectedType()), hasArgument(1, Other)),
+            allOf(hasArgument(0, Other), hasArgument(1, hasExpectedType()))));
+}
+
 auto expectedEqualityCall() {
-  return cxxOperatorCallExpr(
-      hasOverloadedOperatorName("=="), argumentCountIs(2),
-      hasArgument(0, hasExpectedType()), hasArgument(1, hasExpectedType()));
+  return expectedComparisonCall(hasExpectedType());
 }
 
-// Reversed comparisons (`v == e`) are rewritten to `e == v`, so the expected is
-// always the first argument.
 auto expectedValueEqualityCall() {
-  return cxxOperatorCallExpr(
-      hasOverloadedOperatorName("=="), argumentCountIs(2),
-      hasArgument(0, hasExpectedType()),
-      hasArgument(1, unless(anyOf(hasExpectedType(), hasUnexpectedType()))));
+  return expectedComparisonCall(
+      unless(anyOf(hasExpectedType(), hasUnexpectedType())));
 }
 
-// Reversed comparisons (`u == e`) are rewritten to `e == u`, so the expected is
-// always the first argument.
 auto expectedUnexpectedEqualityCall() {
-  return cxxOperatorCallExpr(
-      hasOverloadedOperatorName("=="), argumentCountIs(2),
-      hasArgument(0, hasExpectedType()), hasArgument(1, hasUnexpectedType()));
+  return expectedComparisonCall(hasUnexpectedType());
 }
 
 // Copy and move constructors are modeled by the framework, which copies the
@@ -115,7 +129,8 @@ auto expectedConstructor() {
 auto expectedErrorConstructor() {
   return cxxConstructExpr(
       expectedConstructor(),
-      hasArgument(0, anyOf(hasType(namedDecl(hasName("std::unexpect_t"))),
+      hasArgument(0, anyOf(hasType(namedDecl(hasAnyName("std::unexpect_t",
+                                                        "tl::unexpect_t"))),
                            hasUnexpectedType())));
 }
 
@@ -175,6 +190,17 @@ const Formula &forceBoolValue(Environment &Env, const Expr &E) {
   return Value->formula();
 }
 
+const Formula &equalityFormula(Environment &Env, const CXXOperatorCallExpr &E) {
+  const Formula &Result = forceBoolValue(Env, E);
+  if (E.getOperator() == OO_ExclaimEqual)
+    return Env.arena().makeNot(Result);
+  return Result;
+}
+
+const Expr &getExpectedOperand(const CXXOperatorCallExpr &E) {
+  return isExpectedType(E.getArg(0)->getType()) ? *E.getArg(0) : *E.getArg(1);
+}
+
 StorageLocation &locForHasValue(const RecordStorageLocation &ExpectedLoc) {
   return ExpectedLoc.getSyntheticField("has_value");
 }
@@ -225,7 +251,6 @@ void transferTransformCall(const CXXMemberCallExpr *E,
                 State.Env);
 }
 
-// `x != y` is rewritten to `!(x == y)`, so it needs no separate handling.
 void transferExpectedEqualityCall(const CXXOperatorCallExpr *E,
                                   const MatchFinder::MatchResult &,
                                   LatticeTransferState &State) {
@@ -238,7 +263,7 @@ void transferExpectedEqualityCall(const CXXOperatorCallExpr *E,
     return;
 
   Arena &A = Env.arena();
-  const Formula &EqVal = forceBoolValue(Env, *E);
+  const Formula &EqVal = equalityFormula(Env, *E);
   const Formula &LHasValue = LHasValueVal->formula();
   const Formula &RHasValue = RHasValueVal->formula();
 
@@ -257,13 +282,13 @@ void transferExpectedValueEqualityCall(const CXXOperatorCallExpr *E,
                                        LatticeTransferState &State) {
   Environment &Env = State.Env;
   BoolValue *HasValueVal =
-      getHasValue(Env, Env.get<RecordStorageLocation>(*E->getArg(0)));
+      getHasValue(Env, Env.get<RecordStorageLocation>(getExpectedOperand(*E)));
   if (HasValueVal == nullptr)
     return;
 
   // `e == v` --> `e.has_value() && *e == v`
-  Env.assume(
-      Env.arena().makeImplies(forceBoolValue(Env, *E), HasValueVal->formula()));
+  Env.assume(Env.arena().makeImplies(equalityFormula(Env, *E),
+                                     HasValueVal->formula()));
 }
 
 void transferExpectedUnexpectedEqualityCall(const CXXOperatorCallExpr *E,
@@ -271,13 +296,13 @@ void transferExpectedUnexpectedEqualityCall(const CXXOperatorCallExpr *E,
                                             LatticeTransferState &State) {
   Environment &Env = State.Env;
   BoolValue *HasValueVal =
-      getHasValue(Env, Env.get<RecordStorageLocation>(*E->getArg(0)));
+      getHasValue(Env, Env.get<RecordStorageLocation>(getExpectedOperand(*E)));
   if (HasValueVal == nullptr)
     return;
 
   // `e == u` --> `!e.has_value() && e.error() == u.error()`
   Arena &A = Env.arena();
-  Env.assume(A.makeImplies(forceBoolValue(Env, *E),
+  Env.assume(A.makeImplies(equalityFormula(Env, *E),
                            A.makeNot(HasValueVal->formula())));
 }
 
@@ -339,17 +364,19 @@ auto buildTransferMatchSwitch() {
       // expected::emplace
       .CaseOfCFGStmt<CXXMemberCallExpr>(expectedMemberCall(hasName("emplace")),
                                         transferEmplaceCall)
-      // expected::transform, expected::transform_error
+      // expected::transform, expected::transform_error, and their
+      // `tl::expected` aliases expected::map, expected::map_error
       .CaseOfCFGStmt<CXXMemberCallExpr>(
-          expectedMemberCall(hasAnyName("transform", "transform_error")),
+          expectedMemberCall(
+              hasAnyName("transform", "transform_error", "map", "map_error")),
           transferTransformCall)
-      // operator== between two expecteds
+      // operator==, operator!= between two expecteds
       .CaseOfCFGStmt<CXXOperatorCallExpr>(expectedEqualityCall(),
                                           transferExpectedEqualityCall)
-      // operator== between an expected and a value
+      // operator==, operator!= between an expected and a value
       .CaseOfCFGStmt<CXXOperatorCallExpr>(expectedValueEqualityCall(),
                                           transferExpectedValueEqualityCall)
-      // operator== between an expected and an unexpected
+      // operator==, operator!= between an expected and an unexpected
       .CaseOfCFGStmt<CXXOperatorCallExpr>(
           expectedUnexpectedEqualityCall(),
           transferExpectedUnexpectedEqualityCall)
@@ -370,12 +397,14 @@ auto buildTransferMatchSwitch() {
       .Build();
 }
 
+/// `ExpectedClass` is the class of the called accessor.
 llvm::SmallVector<UncheckedExpectedAccessDiagnostic>
 diagnoseAccess(SourceLocation AccessLoc, UncheckedExpectedAccessKind Kind,
+               const CXXRecordDecl &ExpectedClass,
                const RecordStorageLocation *ExpectedLoc,
                const Environment &Env) {
   if (ExpectedLoc != nullptr) {
-    // Accesses through classes derived from `std::expected` are not modeled.
+    // Accesses through classes derived from an expected are not modeled.
     if (!isExpectedType(ExpectedLoc->getType()))
       return {};
     if (auto *HasValueVal = Env.get<BoolValue>(locForHasValue(*ExpectedLoc))) {
@@ -389,7 +418,7 @@ diagnoseAccess(SourceLocation AccessLoc, UncheckedExpectedAccessKind Kind,
     }
   }
 
-  return {{AccessLoc, Kind}};
+  return {{AccessLoc, Kind, getExpectedTypeName(ExpectedClass)}};
 }
 
 auto buildDiagnoseMatchSwitch() {
@@ -403,6 +432,7 @@ auto buildDiagnoseMatchSwitch() {
              const Environment &Env) {
             return diagnoseAccess(E->getExprLoc(),
                                   UncheckedExpectedAccessKind::Value,
+                                  *E->getMethodDecl()->getParent(),
                                   getImplicitObjectLocation(*E, Env), Env);
           })
       // expected::operator*, expected::operator->
@@ -414,6 +444,7 @@ auto buildDiagnoseMatchSwitch() {
             // expression, so point at the operator token instead.
             return diagnoseAccess(
                 E->getOperatorLoc(), UncheckedExpectedAccessKind::Value,
+                *cast<CXXMethodDecl>(E->getCalleeDecl())->getParent(),
                 Env.get<RecordStorageLocation>(*E->getArg(0)), Env);
           })
       // expected::error
@@ -423,6 +454,7 @@ auto buildDiagnoseMatchSwitch() {
              const Environment &Env) {
             return diagnoseAccess(E->getExprLoc(),
                                   UncheckedExpectedAccessKind::Error,
+                                  *E->getMethodDecl()->getParent(),
                                   getImplicitObjectLocation(*E, Env), Env);
           })
       .Build();

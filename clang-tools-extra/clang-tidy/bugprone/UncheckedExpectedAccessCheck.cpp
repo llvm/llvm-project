@@ -57,9 +57,8 @@ void UncheckedExpectedAccessCheck::check(
                                      UncheckedExpectedAccessDiagnostic>(
               *FuncDecl, *Result.Context, Diagnoser))
     for (const UncheckedExpectedAccessDiagnostic &Diag : *Diags)
-      diag(Diag.Loc,
-           "unchecked access to 'std::expected' %select{value|error}0")
-          << llvm::to_underlying(Diag.Kind);
+      diag(Diag.Loc, "unchecked access to '%0' %select{value|error}1")
+          << Diag.TypeName << llvm::to_underlying(Diag.Kind);
   else
     llvm::consumeError(Diags.takeError());
 }

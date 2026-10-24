@@ -10,6 +10,11 @@ average clang-tidy check.
 This check identifies unsafe accesses to values and errors contained in
 `std::expected<T, E>` objects.
 
+The check also supports `tl::expected<T, E>` from
+[TartanLlama/expected](https://github.com/TartanLlama/expected), and
+everything below applies to it as well. Its `map` and `map_error` member
+functions are treated like `transform` and `transform_error`.
+
 An access to the value of a `std::expected<T, E>` occurs when one of its
 `value`, `operator*`, or `operator->` member functions is invoked. The check
 considers these member functions as equivalent, even though `value` throws
@@ -143,4 +148,4 @@ yet; support for them is planned.
 
 3. **Lambdas.** The check does not currently report unsafe expected accesses in lambdas; support for analyzing is planned.
 
-4. **Derived classes.** Classes derived from `std::expected` are not analyzed by this check.
+4. **Derived classes.** Classes derived from `std::expected` or `tl::expected` are not analyzed by this check.
