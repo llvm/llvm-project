@@ -13,6 +13,7 @@
 #include <__algorithm/in_out_result.h>
 #include <__algorithm/unwrap_iter.h>
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__fwd/memory.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/reverse_iterator.h>
@@ -479,6 +480,48 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void __uninitialized_allocat
     }
     __guard.__complete();
     std::__allocator_destroy(__alloc, __first, __last);
+  }
+}
+
+// __uninitialized_relocate_backward relocates the objects in [__first, __last) into __result element-by-element from
+// __first to __last. Relocation means that the objects in [__first, __last) are placed into __result as-if by
+// move-construct and destroy, except that the move constructor and destructor may never be called if they are known to
+// be equivalent to a memcpy.
+//
+// Preconditions:  At __result there is no object and [__first, __last) contains objects
+// Postconditions: If no exceptions were thrown, __result contains the objects from [__first, __last), otherwise it
+//                 doesn't contain any objects.
+//                 [__first, __last) doesn't contain any objects.
+template <class _Alloc, class _ContiguousIterator>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void __uninitialized_allocator_relocate_backward(
+    _Alloc& __alloc, _ContiguousIterator __first, _ContiguousIterator __last, _ContiguousIterator __result) {
+  static_assert(__libcpp_is_contiguous_iterator<_ContiguousIterator>::value, "");
+  using _ValueType = typename iterator_traits<_ContiguousIterator>::value_type;
+
+  if (__libcpp_is_constant_evaluated() || !__allocator_has_trivial_move_construct_v<_Alloc, _ValueType> ||
+      !__allocator_has_trivial_destroy_v<_Alloc, _ValueType> || !__is_trivially_relocatable_v<_ValueType>) {
+    size_t __count = __last - __first;
+    __result += __count;
+    size_t __i = 0;
+
+    using __alloc_traits = allocator_traits<_Alloc>;
+    auto __guard = std::__make_exception_guard([&] {
+      for (size_t __j = 0; __j != __i; ++__j)
+        __alloc_traits::destroy(__alloc, __result);
+      for (; __first != __last; ++__first)
+        __alloc_traits::destroy(__alloc, __first);
+    });
+
+    for (; __i != __count; ++__i) {
+      __alloc_traits::construct(__alloc, std::__to_address(--__result), std::move(*--__last));
+      __alloc_traits::destroy(__alloc, std::__to_address(__last));
+    }
+    __guard.__complete();
+  } else {
+    // Casting to void* to suppress clang complaining that this is technically UB.
+    __builtin_memmove(static_cast<void*>(std::__to_address(__result)),
+                      std::__to_address(__first),
+                      sizeof(_ValueType) * (__last - __first));
   }
 }
 
