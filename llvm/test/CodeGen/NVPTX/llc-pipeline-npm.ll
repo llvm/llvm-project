@@ -117,7 +117,7 @@
 ; O2-NEXT:   load-store-vectorizer
 ; O2-NEXT:   sroa<preserve-cfg;aggregate-to-vector>
 ; O2-NEXT:   nvptx-tag-invariant-loads
-; O2-NEXT:   nvptx-ir-peephole
+; O2-NEXT:   nvptx-codegen-prepare
 ; O2-NEXT:   nvptx-lower-unreachable
 ; O2-NEXT:   codegenprepare
 ; O2-NEXT:   lower-invoke
