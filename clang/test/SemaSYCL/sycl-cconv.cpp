@@ -6,7 +6,7 @@
 
 __inline __cdecl int printf(char const* const _Format, ...) { return 0; }
 
-// FIXME: that should be diagnosed.
+// expected-error@+1 {{'clang::sycl_external' attribute is ignored when GPU relocatable device code (-fgpu-rdc) is disabled}}
 [[clang::sycl_external]] int foo(int, ...) { return 0; }
 
 __inline __cdecl int moo() { return 0; }
