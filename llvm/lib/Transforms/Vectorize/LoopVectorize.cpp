@@ -5066,13 +5066,15 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
   // for later use by the cost model.
   Config.computeMinimalBitwidths();
 
-  // Invalidate interleave groups if all blocks of loop will be predicated.
-  if (CM->blockNeedsPredicationForAnyReason(OrigLoop->getHeader()) &&
+  // Invalidate interleave groups if all blocks of loop will be predicated, or
+  // all memory accesses will be masked due to uncountable exits with side
+  // effects.
+  if ((CM->blockNeedsPredicationForAnyReason(OrigLoop->getHeader()) ||
+       Legal->hasUncountableExitWithSideEffects()) &&
       !useMaskedInterleavedAccesses(Opts, TTI)) {
-    LLVM_DEBUG(
-        dbgs()
-        << "LV: Invalidate all interleaved groups due to fold-tail by masking "
-           "which requires masked-interleaved support.\n");
+    LLVM_DEBUG(dbgs() << "LV: Invalidate all interleaved groups due to "
+                         "predication which requires masked-interleaved "
+                         "support.\n");
     if (CM->InterleaveInfo.invalidateGroups())
       // Invalidating interleave groups also requires invalidating all decisions
       // based on them, which includes widening decisions and uniform and scalar
