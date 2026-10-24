@@ -2253,14 +2253,14 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
   LLVMContext &Ctx = I->getContext();
   Module *M = I->getModule();
   const DataLayout &DL = M->getDataLayout();
+  const Triple &TT = M->getTargetTriple();
   IRBuilder<> Builder(I);
   IRBuilder<> AllocaBuilder(&I->getFunction()->getEntryBlock().front());
 
   bool UseSizedLibcall = canUseSizedAtomicCall(Size, Alignment, DL);
   Type *SizedIntTy = Type::getIntNTy(Ctx, Size * 8);
 
-  if (M->getTargetTriple().isOSWindows() && M->getTargetTriple().isX86_64() &&
-      Size == 16) {
+  if (TT.isOSWindows() && TT.isX86_64() && Size == 16) {
     // x86_64 Windows passes i128 as an XMM vector; on return, it is in
     // XMM0, and as a parameter, it is passed indirectly. The generic lowering
     // rules handles this correctly if we pass it as a v2i64 rather than
@@ -2402,7 +2402,7 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
   // FIXME: Once runtime libcall attribute derivation is centralized in
   // RuntimeLibcalls, TargetLibraryInfo should not be used here.
   Attribute::AttrKind OrderingExt =
-      TargetLibraryInfo::getExtAttrForI32Param(M->getTargetTriple());
+      TargetLibraryInfo::getExtAttrForI32Param(TT);
 
   // 'ordering' ('success_order' for cas) argument.
   Args.push_back(OrderingVal);
@@ -2414,13 +2414,22 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
     Attr = Attr.maybeAddParamAttribute(Ctx, Args.size() - 1, OrderingExt);
   }
 
-  // Now, the return type.  FIXME: Properly add extension attributes.
+  // Now, the return type.
   if (CASExpected) {
     ResultTy = Type::getInt1Ty(Ctx);
-    Attr = Attr.addRetAttribute(Ctx, Attribute::ZExt);
-  } else if (HasResult && UseSizedLibcall)
+    if (auto AK = RTLIB::RuntimeLibcallsInfo::getExtAttrForBoolReturn(TT))
+      Attr = Attr.addRetAttribute(Ctx, AK);
+  } else if (HasResult && UseSizedLibcall) {
     ResultTy = SizedIntTy;
-  else
+    Attribute::AttrKind RetExt = Attribute::None;
+    if (Size < 4)
+      RetExt =
+          RTLIB::RuntimeLibcallsInfo::getExtAttrForI8Return(/*Signed=*/false);
+    else if (Size == 4)
+      RetExt = TargetLibraryInfo::getExtAttrForI32Return(TT, /*Signed=*/false);
+    if (RetExt)
+      Attr = Attr.addRetAttribute(Ctx, RetExt);
+  } else
     ResultTy = Type::getVoidTy(Ctx);
 
   // Done with setting up arguments and return types, create the call:

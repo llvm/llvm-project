@@ -13,7 +13,7 @@ target triple = "sparc-unknown-unknown"
 ;; straightforward.
 
 ; CHECK-LABEL: @test_load_i16(
-; CHECK:  %1 = call i16 @__atomic_load_2(ptr %arg, i32 5)
+; CHECK:  %1 = call zeroext i16 @__atomic_load_2(ptr %arg, i32 5)
 ; CHECK:  ret i16 %1
 define i16 @test_load_i16(ptr %arg) {
   %ret = load atomic i16, ptr %arg seq_cst, align 4
@@ -29,7 +29,7 @@ define void @test_store_i16(ptr %arg, i16 %val) {
 }
 
 ; CHECK-LABEL: @test_exchange_i16(
-; CHECK:  %1 = call i16 @__atomic_exchange_2(ptr %arg, i16 %val, i32 5)
+; CHECK:  %1 = call zeroext i16 @__atomic_exchange_2(ptr %arg, i16 %val, i32 5)
 ; CHECK:  ret i16 %1
 define i16 @test_exchange_i16(ptr %arg, i16 %val) {
   %ret = atomicrmw xchg ptr %arg, i16 %val seq_cst
@@ -54,7 +54,7 @@ define i16 @test_cmpxchg_i16(ptr %arg, i16 %old, i16 %new) {
 }
 
 ; CHECK-LABEL: @test_add_i16(
-; CHECK:  %1 = call i16 @__atomic_fetch_add_2(ptr %arg, i16 %val, i32 5)
+; CHECK:  %1 = call zeroext i16 @__atomic_fetch_add_2(ptr %arg, i16 %val, i32 5)
 ; CHECK:  ret i16 %1
 define i16 @test_add_i16(ptr %arg, i16 %val) {
   %ret = atomicrmw add ptr %arg, i16 %val seq_cst
