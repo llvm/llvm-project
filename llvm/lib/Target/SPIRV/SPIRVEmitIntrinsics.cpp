@@ -3234,8 +3234,8 @@ void SPIRVEmitIntrinsicsImpl::insertConstantsForFPFastMathDefault(Module &M) {
   // with FPFastMathDefaultInfo.
   auto Node = M.getNamedMetadata("spirv.ExecutionMode");
   if (!Node) {
-    if (!M.getNamedMetadata("opencl.enable.FP_CONTRACT")) {
-      // This requires emitting ContractionOff. However, because
+    if (ST->allowsImplicitContractionOff(M)) {
+      // This may require emitting ContractionOff. However, because
       // ContractionOff is now deprecated, we need to replace it with
       // FPFastMathDefaultInfo with FP Fast Math Mode bitmask set to all 0.
       // We need to create the constant for that.

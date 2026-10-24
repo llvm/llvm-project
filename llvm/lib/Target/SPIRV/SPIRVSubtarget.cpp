@@ -39,6 +39,22 @@ static cl::opt<ExtensionSet, false, SPIRVExtensionsParser>
     Extensions("spirv-ext",
                cl::desc("Specify list of enabled SPIR-V extensions"));
 
+namespace {
+enum class SPIRVFPContractMode { On, Off, Fast };
+} // namespace
+
+static cl::opt<SPIRVFPContractMode> SPIRVFPContract(
+    "spirv-fp-contract",
+    cl::desc("Override FP contraction policy for SPIR-V kernel entry points"),
+    cl::values(
+        clEnumValN(SPIRVFPContractMode::On, "on",
+                   "Follow IR metadata and FP operations (default)"),
+        clEnumValN(SPIRVFPContractMode::Off, "off",
+                   "Force ContractionOff on all kernel entry points"),
+        clEnumValN(SPIRVFPContractMode::Fast, "fast",
+                   "Suppress ContractionOff on all kernel entry points")),
+    cl::init(SPIRVFPContractMode::On));
+
 // Provides access to the cl::opt<...> `Extensions` variable from outside of the
 // module.
 void SPIRVSubtarget::addExtensionsToClOpt(const ExtensionSet &AllowList) {
@@ -131,6 +147,17 @@ SPIRVSubtarget &SPIRVSubtarget::initSubtargetDependencies(StringRef CPU,
 
 bool SPIRVSubtarget::canUseExtension(SPIRV::Extension::Extension E) const {
   return AvailableExtensions.contains(E);
+}
+
+bool SPIRVSubtarget::allowsImplicitContractionOff(const Module &M) const {
+  return isKernel() && !M.getNamedMetadata("spirv.ExecutionMode") &&
+         SPIRVFPContract != SPIRVFPContractMode::Fast &&
+         (SPIRVFPContract == SPIRVFPContractMode::Off ||
+          !M.getNamedMetadata("opencl.enable.FP_CONTRACT"));
+}
+
+bool SPIRVSubtarget::forcesContractionOff() const {
+  return SPIRVFPContract == SPIRVFPContractMode::Off;
 }
 
 bool SPIRVSubtarget::canUseExtInstSet(

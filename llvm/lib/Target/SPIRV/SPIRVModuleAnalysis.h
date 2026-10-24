@@ -18,6 +18,7 @@
 #include "SPIRVGlobalRegistry.h"
 #include "SPIRVUtils.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/PassManager.h"
@@ -169,6 +170,8 @@ struct ModuleAnalysisInfo {
   // largest bit width, therefore, we will have {half, float, double} in
   // the order of their bit widths.
   FPFastMathDefaultInfoMapTy FPFastMathDefaultInfoMap;
+  // Kernels getting plain ContractionOff (no SPV_KHR_float_controls2).
+  SmallPtrSet<const Function *, 4> ImplicitContractionOff;
 
   enum class AMDGPUAtomicMDKind : uint8_t {
     NoFineGrainedMemory,
@@ -239,6 +242,13 @@ struct ModuleAnalysisInfo {
     }
     llvm_unreachable("unknown AMDGPUAtomicMDKind");
   }
+  // Calls Fn for each FPFastMathDefault execution mode to emit, in module
+  // order. Needs MB_TypeConstVars populated.
+  void forEachFPFastMathDefault(
+      const Module &M,
+      function_ref<void(const Function &, const MachineInstr &FloatTy,
+                        const FPFastMathDefaultInfo &)>
+          Fn) const;
   // Must stay alive until the AsmPrinter consumes it.
   bool invalidate(Module &, const PreservedAnalyses &,
                   ModuleAnalysisManager::Invalidator &) {
