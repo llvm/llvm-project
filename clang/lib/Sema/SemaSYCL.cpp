@@ -495,6 +495,118 @@ ExprResult SemaSYCL::BuildSYCLKernelLaunchIdExpr(FunctionDecl *FD,
 
 namespace {
 
+bool isSyclSpecialType(QualType Ty) {
+  if (const auto *RT = Ty->getAsRecordDecl())
+    return RT->getMostRecentDecl()->hasAttr<SYCLSpecialKernelParameterAttr>();
+  return false;
+}
+
+class KernelSpecialParamsCreator
+    : public SubobjectVisitor<KernelSpecialParamsCreator> {
+  using ObjectAccess =
+      llvm::PointerUnion<ValueDecl *, CXXBaseSpecifier *, FieldDecl *>;
+  SemaSYCL &SemaSYCLRef;
+  SourceLocation SrcLoc;
+  SmallVector<ObjectAccess, 4> ObjectAccessPath;
+  llvm::SmallVectorImpl<Expr *> &ResultingArgs;
+  RecordDecl *CurRD;
+
+  Expr *buildMemberExpr(Expr *Base, ValueDecl *Member) {
+    DeclAccessPair MemberDAP = DeclAccessPair::make(Member, AS_none);
+    MemberExpr *Result = SemaSYCLRef.SemaRef.BuildMemberExpr(
+        Base, /*IsArrow */ false, SrcLoc, NestedNameSpecifierLoc(), SrcLoc,
+        Member, MemberDAP,
+        /*HadMultipleCandidates*/ false,
+        DeclarationNameInfo(Member->getDeclName(), SrcLoc), Member->getType(),
+        VK_LValue, OK_Ordinary);
+    return Result;
+  }
+  Expr *buildDerivedToBaseCast(Expr *Base, CXXBaseSpecifier *BS) {
+    CXXCastPath BasePath;
+    QualType DerivedTy = SemaSYCLRef.getASTContext().getCanonicalTagType(CurRD);
+    QualType BaseTy = BS->getType();
+    SemaSYCLRef.SemaRef.CheckDerivedToBaseConversion(DerivedTy, BaseTy, SrcLoc,
+                                                     SourceRange(), &BasePath,
+                                                     /*IgnoreBaseAccess*/ true);
+    auto *Cast = ImplicitCastExpr::Create(
+        SemaSYCLRef.getASTContext(), BaseTy, CK_DerivedToBase, Base,
+        /* CXXCastPath=*/&BasePath, VK_LValue, FPOptionsOverride());
+    return Cast;
+  }
+
+  void createResultingArg() {
+    SmallVector<Expr *, 16> MemberExprBases;
+    auto *Param = cast<ValueDecl *>(ObjectAccessPath.front());
+    QualType ParamTy = Param->getType().getNonReferenceType();
+    Expr *Base =
+        SemaSYCLRef.SemaRef.BuildDeclRefExpr(Param, ParamTy, VK_LValue, SrcLoc);
+    MemberExprBases.push_back(Base);
+
+    for (auto Parent : ObjectAccessPath) {
+      if (auto *FD = Parent.dyn_cast<FieldDecl *>()) {
+        MemberExprBases.push_back(buildMemberExpr(MemberExprBases.back(), FD));
+      } else if (auto *BS = Parent.dyn_cast<CXXBaseSpecifier *>()) {
+        MemberExprBases.push_back(
+            buildDerivedToBaseCast(MemberExprBases.back(), BS));
+      }
+    }
+    ResultingArgs.push_back(MemberExprBases.back());
+  }
+
+public:
+  KernelSpecialParamsCreator(SemaSYCL &SR, SourceLocation Loc,
+                             llvm::SmallVectorImpl<Expr *> &ResultingArgs)
+      : SubobjectVisitor<KernelSpecialParamsCreator>(SR.getASTContext()),
+        SemaSYCLRef(SR), SrcLoc(Loc), ResultingArgs(ResultingArgs) {}
+
+  void traverseRecord(RecordDecl *RD) {
+    CurRD = RD;
+    SubobjectVisitor::traverseRecord(RD);
+  }
+
+  void checkParameter(ValueDecl *PVD) {
+    ObjectAccessPath.push_back(PVD);
+    // Check the immediate type of the parameter.
+    visit(PVD->getType());
+    ObjectAccessPath.pop_back();
+    assert(ObjectAccessPath.empty());
+  }
+
+  bool visitBaseSpecifierPre(CXXBaseSpecifier *BS) {
+    ObjectAccessPath.push_back(BS);
+
+    // Do not visit inside of special types.
+    return !isSyclSpecialType(BS->getType());
+  }
+
+  bool visitFieldDeclPre(FieldDecl *FD) {
+    ObjectAccessPath.push_back(FD);
+
+    // Do not visit inside of special types.
+    return !isSyclSpecialType(FD->getType());
+  }
+  void visitFieldDeclPost(FieldDecl *FD) {
+    if (isSyclSpecialType(FD->getType()))
+      createResultingArg();
+
+    ObjectAccessPath.pop_back();
+  }
+
+  void visitBaseSpecifierPost(CXXBaseSpecifier *BS) {
+    if (isSyclSpecialType(BS->getType()))
+      createResultingArg();
+
+    ObjectAccessPath.pop_back();
+  }
+};
+
+void createArgumentsForSpecialTypes(SmallVectorImpl<Expr *> &Args,
+                                    ValueDecl *KernelArgObj, SourceLocation Loc,
+                                    SemaSYCL &SemaSYCLRef) {
+  KernelSpecialParamsCreator KSPC(SemaSYCLRef, Loc, Args);
+  KSPC.checkParameter(KernelArgObj);
+}
+
 // Constructs the arguments to be passed for the SYCL kernel launch call.
 // The first argument is a string literal that contains the SYCL kernel
 // name. The remaining arguments are the parameters of 'FD' passed as
@@ -561,6 +673,7 @@ StmtResult BuildSYCLKernelLaunchCallStmt(Sema &SemaRef, FunctionDecl *FD,
         return StmtError();
     }
 
+    Expr *KernelLaunchRes;
     // Establish a code synthesis context for the implicit call to
     // 'sycl_kernel_launch'.
     {
@@ -575,8 +688,42 @@ StmtResult BuildSYCLKernelLaunchCallStmt(Sema &SemaRef, FunctionDecl *FD,
           SemaRef.BuildCallExpr(SemaRef.getCurScope(), IdExpr, Loc, Args, Loc);
       if (LaunchResult.isInvalid())
         return StmtError();
+      KernelLaunchRes =
+          SemaRef.MaybeCreateExprWithCleanups(LaunchResult).get();
+    }
+    if (!KernelLaunchRes->getType()->isVoidType()) {
+      llvm::SmallVector<Expr *, 12> SpecialArgs;
+      for (auto Param : FD->parameters()) {
+        if (Param->getType()->isRecordType())
+          createArgumentsForSpecialTypes(SpecialArgs, Param, Loc,
+                                         SemaRef.SYCL());
+      }
+      // Establish a code synthesis context for the implicit call to callable
+      // object returned by 'sycl_kernel_launch'. The callable object returned
+      // by 'sycl_kernel_launch' is invoked with references to the special
+      // kernel parameter subobjects.
+      Sema::CodeSynthesisContext CSC;
+      CSC.Kind = Sema::CodeSynthesisContext::
+          SYCLKernelHostSpecialParametersHandlerCall;
+      CSC.Entity = FD;
+      CSC.CallArgs = SpecialArgs.data();
+      CSC.NumCallArgs = SpecialArgs.size();
+      Sema::ScopedCodeSynthesisContext ScopedCSC(SemaRef, CSC);
 
-      Stmts.push_back(SemaRef.MaybeCreateExprWithCleanups(LaunchResult).get());
+      ExprResult Result = SemaRef.BuildCallExpr(
+          SemaRef.getCurScope(), KernelLaunchRes, Loc, SpecialArgs, Loc);
+      if (Result.isInvalid())
+        return StmtError();
+
+      QualType Ty = Result.get()->getType();
+      if (!Ty->isVoidType()) {
+        SemaRef.Diag(Loc, diag::err_sycl_kernel_launch_not_void) << Ty;
+        return StmtError();
+      }
+
+      Stmts.push_back(SemaRef.MaybeCreateExprWithCleanups(Result).get());
+    } else {
+      Stmts.push_back(KernelLaunchRes);
     }
   }
 
