@@ -770,12 +770,13 @@ static Type *getPointeeTypeByCallInst(StringRef DemangledName,
                                       Function *CalledF, unsigned OpIdx) {
   // OpenCL.std printf takes its format string as a pointer to i8. Match the
   // bare builtin name, as lowering does, to also cover unmangled `printf`.
+  std::string Name = SPIRV::lookupBuiltinNameHelper(DemangledName);
   // OpenCL get_fence only has void* overloads.
-  if (OpIdx == 0) {
-    std::string Name = SPIRV::lookupBuiltinNameHelper(DemangledName);
-    if (Name == "printf" || Name == "get_fence")
-      return IntegerType::getInt8Ty(CalledF->getContext());
-  }
+  if (OpIdx == 0 && (Name == "printf" || Name == "get_fence"))
+    return IntegerType::getInt8Ty(CalledF->getContext());
+  if (OpIdx == 2 && (Name == "capture_event_profiling_info" ||
+                     Name == "__spirv_CaptureEventProfilingInfo"))
+    return IntegerType::getInt8Ty(CalledF->getContext());
   return nullptr;
 }
 
