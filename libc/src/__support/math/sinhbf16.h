@@ -89,18 +89,17 @@ LIBC_INLINE bfloat16 sinhbf16(bfloat16 x) {
   // |x| >= 6.875
   // return e^x / 2
   if (x_abs >= 0x40dc) {
-    uint32_t x_abs_bits = fputil::FPBits<float>(xf).uintval() & 0x7fffffff;
-    float x_abs_f = fputil::FPBits<float>(x_abs_bits).get_val();
-    float abs_result = math::sinhcoshbf16_internal::exp_half(x_abs_f);
-    if (x_u & 0x8000) {
+    float abs_result =
+        math::sinhcoshbf16_internal::exp_half(x_bits.abs().get_val());
+    if (x_bits.is_neg()) {
       abs_result = -abs_result;
     }
     return fputil::cast<bfloat16>(abs_result);
   }
 
   // sinh(x) = (e^x - e^(-x)) / 2.
-  float result = static_cast<float>(
-      math::sinhcoshbf16_internal::eval_sinh_or_cosh</*is_sinh*/ true>(xf));
+  float result =
+      math::sinhcoshbf16_internal::eval_sinh_or_cosh</*is_sinh*/ true>(xf);
 
   return fputil::cast<bfloat16>(result);
 }
