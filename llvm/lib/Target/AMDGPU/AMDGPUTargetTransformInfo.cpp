@@ -2166,6 +2166,19 @@ InstructionCost GCNTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
   bool IsDS = AddressSpace == AMDGPUAS::LOCAL_ADDRESS ||
               AddressSpace == AMDGPUAS::REGION_ADDRESS;
   bool HasDwordx3 = IsDS ? ST->hasDS96AndDS128() : ST->hasDwordx3LoadStores();
+  bool HasUnalignedAccess = ST->hasUnalignedBufferAccessEnabled();
+  if (AddressSpace == AMDGPUAS::PRIVATE_ADDRESS ||
+      AddressSpace == AMDGPUAS::FLAT_ADDRESS)
+    HasUnalignedAccess = ST->hasUnalignedScratchAccessEnabled();
+  if (IsDS) {
+    HasUnalignedAccess = ST->hasUnalignedDSAccessEnabled();
+    if (Alignment >= 4 && Alignment < 8)
+      MaxBytes = 8;
+    HasDwordx3 = HasDwordx3 &&
+                 (Alignment >= 16 || (Alignment < 4 && HasUnalignedAccess));
+  }
+  if (Alignment < 4 && !HasUnalignedAccess)
+    MaxBytes = std::min<unsigned>(MaxBytes, Alignment.value());
   bool MergesDwords = !IsDS && AddressSpace != AMDGPUAS::PRIVATE_ADDRESS &&
                       ST->hasFlatInstOffsets() &&
                       (AddressSpace != AMDGPUAS::FLAT_ADDRESS ||
