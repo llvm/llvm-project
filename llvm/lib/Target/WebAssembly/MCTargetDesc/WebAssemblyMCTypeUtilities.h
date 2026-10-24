@@ -19,6 +19,8 @@
 
 namespace llvm {
 
+class APFloat;
+
 namespace WebAssembly {
 
 /// Used as immediate MachineOperands for block signatures
@@ -50,6 +52,11 @@ inline bool isRefType(wasm::ValType Type) {
          Type == wasm::ValType::EXNREF;
 }
 
+inline bool isNumType(wasm::ValType Type) {
+  return Type == wasm::ValType::I32 || Type == wasm::ValType::I64 ||
+         Type == wasm::ValType::F32 || Type == wasm::ValType::F64;
+}
+
 // Convert ValType or a list/signature of ValTypes to a string.
 
 // Convert an unsigned integer, which can be among wasm::ValType enum, to its
@@ -72,6 +79,15 @@ wasm::ValType regClassToValType(unsigned RC);
 
 std::optional<wasm::ValType> parseType(StringRef Type);
 BlockType parseBlockType(StringRef Type);
+
+// Build the `<type>.const` init expression that gives a global of type Type the
+// value whose raw bits are Bits, or nullopt if Type is not a number type.
+std::optional<wasm::WasmInitExpr> makeGlobalInitExpr(wasm::ValType Type,
+                                                     uint64_t Bits);
+
+// Spell a float the way the WebAssembly text format does: a C99 hexadecimal
+// floating-point literal, or nan:0x<payload> for a non-canonical NaN.
+std::string floatToString(const APFloat &FP);
 
 } // end namespace WebAssembly
 } // end namespace llvm
