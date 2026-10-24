@@ -4284,9 +4284,14 @@ bool llvm::foldBranchToCommonDest(CondBrInst *BI, DomTreeUpdater *DTU,
 
   Instruction *Cond = dyn_cast<Instruction>(BI->getCondition());
 
-  if (!Cond || !isa<CmpInst, BinaryOperator, SelectInst, TruncInst>(Cond) ||
-      Cond->getParent() != BB || !Cond->hasOneUse())
+  if (!Cond || Cond->getParent() != BB || !Cond->hasOneUse())
     return false;
+
+  if (!isa<CmpInst, BinaryOperator, SelectInst, TruncInst>(Cond)) {
+    auto *II = dyn_cast<IntrinsicInst>(Cond);
+    if (!II || !II->doesNotAccessMemory() || !isSafeToSpeculativelyExecute(II))
+      return false;
+  }
 
   // Finally, don't infinitely unroll conditional loops.
   if (is_contained(successors(BB), BB))
