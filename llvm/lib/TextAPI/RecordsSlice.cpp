@@ -281,7 +281,7 @@ StringRef RecordsSlice::copyString(StringRef String) {
     return String;
 
   void *Ptr = StringAllocator.Allocate(String.size(), 1);
-  memcpy(Ptr, String.data(), String.size());
+  llvm::copy(String, static_cast<char *>(Ptr));
   return StringRef(reinterpret_cast<const char *>(Ptr), String.size());
 }
 
