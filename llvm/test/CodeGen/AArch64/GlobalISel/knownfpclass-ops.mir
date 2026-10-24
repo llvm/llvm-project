@@ -1490,3 +1490,55 @@ body:             |
     %fma:_(f32) = G_FMA %val, %val, %c
     %copy:_(f32) = COPY %fma
 ...
+---
+name:            FMAPosPosNeg
+body:             |
+  bb.0:
+  ; CHECK-LABEL: name: @FMAPosPosNeg
+  ; CHECK-NEXT: %ptr:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %load0:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %load1:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %load2:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %x:_ FPClasses:(nan pinf pzero psub pnorm) SignBitKnown:0
+  ; CHECK-NEXT: %y:_ FPClasses:(nan pinf pzero psub pnorm) SignBitKnown:0
+  ; CHECK-NEXT: %abs2:_ FPClasses:(nan pinf pzero psub pnorm) SignBitKnown:0
+  ; CHECK-NEXT: %z:_ FPClasses:(nan ninf nzero nsub nnorm) SignBitKnown:1
+  ; CHECK-NEXT: %fma:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %copy:_ FPClasses:(all) SignBitKnown:?
+    %ptr:_(p0) = G_IMPLICIT_DEF
+    %load0:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %load1:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %load2:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %x:_(f32) = G_FABS %load0
+    %y:_(f32) = G_FABS %load1
+    %abs2:_(f32) = G_FABS %load2
+    %z:_(f32) = G_FNEG %abs2
+    %fma:_(f32) = G_FMA %x, %y, %z
+    %copy:_(f32) = COPY %fma
+...
+---
+name:            FMADPosPosNeg
+body:             |
+  bb.0:
+  ; CHECK-LABEL: name: @FMADPosPosNeg
+  ; CHECK-NEXT: %ptr:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %load0:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %load1:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %load2:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %x:_ FPClasses:(nan pinf pzero psub pnorm) SignBitKnown:0
+  ; CHECK-NEXT: %y:_ FPClasses:(nan pinf pzero psub pnorm) SignBitKnown:0
+  ; CHECK-NEXT: %abs2:_ FPClasses:(nan pinf pzero psub pnorm) SignBitKnown:0
+  ; CHECK-NEXT: %z:_ FPClasses:(nan ninf nzero nsub nnorm) SignBitKnown:1
+  ; CHECK-NEXT: %fmad:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %copy:_ FPClasses:(all) SignBitKnown:?
+    %ptr:_(p0) = G_IMPLICIT_DEF
+    %load0:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %load1:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %load2:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %x:_(f32) = G_FABS %load0
+    %y:_(f32) = G_FABS %load1
+    %abs2:_(f32) = G_FABS %load2
+    %z:_(f32) = G_FNEG %abs2
+    %fmad:_(f32) = G_FMAD %x, %y, %z
+    %copy:_(f32) = COPY %fmad
+...

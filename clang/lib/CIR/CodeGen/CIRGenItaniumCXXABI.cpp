@@ -113,6 +113,9 @@ public:
 
   mlir::Value getVTableAddressPoint(BaseSubobject base,
                                     const CXXRecordDecl *vtableClass) override;
+  cir::GlobalViewAttr
+  getVTableAddressPointAttr(BaseSubobject base,
+                            const CXXRecordDecl *vtableClass) override;
   mlir::Value getVTableAddressPointInStructorWithVTT(
       CIRGenFunction &cgf, const CXXRecordDecl *vtableClass, BaseSubobject base,
       const CXXRecordDecl *nearestVBase);
@@ -1712,6 +1715,27 @@ CIRGenItaniumCXXABI::getVTableAddressPoint(BaseSubobject base,
       cir::AddressPointAttr::get(cgm.getBuilder().getContext(),
                                  addressPoint.VTableIndex,
                                  addressPoint.AddressPointIndex));
+}
+
+cir::GlobalViewAttr CIRGenItaniumCXXABI::getVTableAddressPointAttr(
+    BaseSubobject base, const CXXRecordDecl *vtableClass) {
+  cir::GlobalOp vtable = getAddrOfVTable(vtableClass, CharUnits());
+
+  // Find the appropriate vtable within the vtable group, and the address point
+  // within that vtable.
+  VTableLayout::AddressPointLocation addressPoint =
+      cgm.getItaniumVTableContext()
+          .getVTableLayout(vtableClass)
+          .getAddressPoint(base);
+
+  CIRGenBuilderTy &builder = cgm.getBuilder();
+  mlir::ArrayAttr indices = builder.getArrayAttr(
+      {builder.getI32IntegerAttr(addressPoint.VTableIndex),
+       builder.getI32IntegerAttr(addressPoint.AddressPointIndex)});
+  return cir::GlobalViewAttr::get(
+      cir::VPtrType::get(builder.getContext()),
+      mlir::FlatSymbolRefAttr::get(vtable.getSymNameAttr()), indices,
+      /*addressPoint=*/true);
 }
 
 mlir::Value CIRGenItaniumCXXABI::getVTableAddressPointInStructor(

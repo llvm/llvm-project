@@ -8,7 +8,7 @@
 ; REMARK-LABEL: Function:        pack_bytes
 ; REMARK:       Args:
 ; REMARK-NEXT:    - String:          'Vectorized horizontal reduction with cost '
-; REMARK-NEXT:    - Cost:            '-26'
+; REMARK-NEXT:    - Cost:            '-25'
 ; REMARK-NEXT:    - String:          ' and with tree size '
 ; REMARK-NEXT:    - TreeSize:        '8'
 

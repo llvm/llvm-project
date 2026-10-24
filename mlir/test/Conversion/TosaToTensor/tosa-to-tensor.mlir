@@ -571,6 +571,8 @@ func.func @pad_dyn_input(%arg0 : tensor<?x2xf32>) -> (tensor<?x9xf32>) {
 func.func @pad_dyn_padding(%arg0 : tensor<1x2xf32>) -> (tensor<?x9xf32>) {
   %0 = tosa.const_shape values(dense<[-1, 2, 3, 4]> : tensor<4xindex>) : () -> !tosa.shape<4>
   %pad_const = "tosa.const"() <{values = dense<3.14> : tensor<1xf32>}> : () -> tensor<1xf32>
+  // CHECK: [[FALSE:%.+]] = arith.constant false
+  // CHECK: cf.assert [[FALSE]], "tosa.pad: padding must be non-negative
   // CHECK-DAG: [[INDEX1:%.+]] = arith.constant -1 : index
   // CHECK-DAG: [[INDEX2:%.+]] = arith.constant 2 : index
   // CHECK-DAG: [[INDEX3:%.+]] = arith.constant 3 : index
@@ -589,14 +591,10 @@ func.func @pad_dyn_padding(%arg0 : tensor<1x2xf32>) -> (tensor<?x9xf32>) {
 // CHECK-SAME: %[[ARG0:.+]]: tensor<5x1xf32>
 // CHECK-SAME: %[[ARG1:.+]]: tensor<6x1xf32>
 func.func @concat(%arg0: tensor<5x1xf32>, %arg1: tensor<6x1xf32>) -> () {
-  // CHECK-DAG: [[INIT:%.+]] = tensor.empty() : tensor<11x1xf32>
-  // CHECK-DAG: [[INSERT0:%.+]] = tensor.insert_slice %[[ARG0]] into [[INIT]][0, 0] [5, 1] [1, 1]
-  // CHECK-DAG: [[INSERT1:%.+]] = tensor.insert_slice %[[ARG1]] into [[INSERT0]][5, 0] [6, 1] [1, 1]
+  // CHECK: tensor.concat dim(0) %[[ARG0]], %[[ARG1]] : (tensor<5x1xf32>, tensor<6x1xf32>) -> tensor<11x1xf32>
   %0 = "tosa.concat"(%arg0, %arg1) <{ axis = 0 : i32}> : (tensor<5x1xf32>, tensor<6x1xf32>)  -> (tensor<11x1xf32>)
 
-  // CHECK-DAG: [[INIT:%.+]] = tensor.empty() : tensor<5x2xf32>
-  // CHECK-DAG: [[INSERT0:%.+]] = tensor.insert_slice %[[ARG0]] into [[INIT]][0, 0] [5, 1] [1, 1]
-  // CHECK: [[INSERT1:%.+]] = tensor.insert_slice %[[ARG0]] into [[INSERT0]][0, 1] [5, 1] [1, 1]
+  // CHECK: tensor.concat dim(1) %[[ARG0]], %[[ARG0]] : (tensor<5x1xf32>, tensor<5x1xf32>) -> tensor<5x2xf32>
   %1 = "tosa.concat"(%arg0, %arg0) <{ axis = 1 : i32}> : (tensor<5x1xf32>, tensor<5x1xf32>)  -> (tensor<5x2xf32>)
   return
 }
@@ -607,16 +605,7 @@ func.func @concat(%arg0: tensor<5x1xf32>, %arg1: tensor<6x1xf32>) -> () {
 // CHECK-SAME: (%[[ARG0:[0-9a-zA-Z_]*]]:
 // CHECK-SAME:  %[[ARG1:[0-9a-zA-Z_]*]]
 func.func @concat_non_axis_dyn(%arg0: tensor<5x?xf32>, %arg1: tensor<6x?xf32>) -> () {
-  // CHECK-DAG: %[[AXIS:.+]] = arith.constant 0
-  // CHECK-DAG: %[[IDX1:.+]] = arith.constant 1
-  // CHECK-DAG: %[[DIM0:.+]] = tensor.dim %[[ARG0]], %[[IDX1]]
-  // CHECK-DAG: %[[INIT:.+]] = tensor.empty(%[[DIM0]]) : tensor<11x?xf32>
-  // CHECK-DAG: %[[IDX1_1:.+]] = arith.constant 1 : index
-  // CHECK-DAG: %[[DIM1:.+]] = tensor.dim %[[ARG0]], %[[IDX1_1]]
-  // CHECK-DAG: %[[INSERT0:.+]] = tensor.insert_slice %[[ARG0]] into %[[INIT]][0, 0] [5, %[[DIM1]]] [1, 1]
-  // CHECK-DAG: %[[IDX1_2:.+]] = arith.constant 1 : index
-  // CHECK-DAG: %[[DIM2:.+]] = tensor.dim %[[ARG1]], %[[IDX1_2]] : tensor<6x?xf32>
-  // CHECK: %[[INSERT1:.+]] = tensor.insert_slice %[[ARG1]] into %[[INSERT0]][5, 0] [6, %[[DIM2]]] [1, 1]
+  // CHECK: tensor.concat dim(0) %[[ARG0]], %[[ARG1]] : (tensor<5x?xf32>, tensor<6x?xf32>) -> tensor<11x?xf32>
   %0 = "tosa.concat"(%arg0, %arg1) <{ axis = 0 : i32}> : (tensor<5x?xf32>, tensor<6x?xf32>)  -> (tensor<11x?xf32>)
   return
 }
@@ -627,19 +616,7 @@ func.func @concat_non_axis_dyn(%arg0: tensor<5x?xf32>, %arg1: tensor<6x?xf32>) -
 // CHECK-SAME: (%[[ARG0:[0-9a-zA-Z_]*]]:
 // CHECK-SAME:  %[[ARG1:[0-9a-zA-Z_]*]]:
 func.func @concat_axis_dyn(%arg0: tensor<?x3xf32>, %arg1: tensor<?x3xf32>) -> () {
-  // CHECK-DAG: %[[AXIS:.+]] = arith.constant 0 : index
-  // CHECK-DAG: %[[IDX0:.+]] = arith.constant 0 : index
-  // CHECK-DAG: %[[DIM0:.+]] = tensor.dim %[[ARG0]], %[[IDX0]] : tensor<?x3xf32>
-  // CHECK-DAG: %[[DIM1:.+]] = tensor.dim %[[ARG1]], %[[AXIS]] : tensor<?x3xf32>
-  // CHECK-DAG: %[[SUM:.+]] = arith.addi %[[DIM0]], %[[DIM1]] : index
-  // CHECK-DAG: %[[INIT:.+]] = tensor.empty(%[[SUM]]) : tensor<?x3xf32>
-  // CHECK-DAG: %[[IDX0_1:.+]] = arith.constant 0 : index
-  // CHECK-DAG: %[[DIM2:.+]] = tensor.dim %[[ARG0]], %[[IDX0_1]] : tensor<?x3xf32>
-  // CHECK-DAG: %[[INSERT0:.+]] = tensor.insert_slice %[[ARG0]] into %[[INIT]][0, 0] [%[[DIM2]], 3] [1, 1] : tensor<?x3xf32> into tensor<?x3xf32>
-  // CHECK-DAG: %[[IDX0_2:.+]] = arith.constant 0 : index
-  // CHECK-DAG: %[[DIM3:.+]] = tensor.dim %[[ARG1]], %[[IDX0_2]] : tensor<?x3xf32>
-  // CHECK: %[[INSERT1:.+]] = tensor.insert_slice %[[ARG1]] into %[[INSERT0]][%[[DIM0]], 0] [%[[DIM3]], 3] [1, 1] : tensor<?x3xf32> into tensor<?x3xf32>
-
+  // CHECK: tensor.concat dim(0) %[[ARG0]], %[[ARG1]] : (tensor<?x3xf32>, tensor<?x3xf32>) -> tensor<?x3xf32>
   %0 = "tosa.concat"(%arg0, %arg1) <{ axis = 0 : i32}> : (tensor<?x3xf32>, tensor<?x3xf32>)  -> (tensor<?x3xf32>)
   return
 }
@@ -651,26 +628,7 @@ func.func @concat_axis_dyn(%arg0: tensor<?x3xf32>, %arg1: tensor<?x3xf32>) -> ()
 // CHECK-SAME:  %[[ARG1:[0-9a-zA-Z_]*]]:
 // CHECK-SAME:  %[[ARG2:[0-9a-zA-Z_]*]]:
 func.func @concat_axis_dyn_mixed(%arg0: tensor<?x1xf32>, %arg1: tensor<?x1xf32>, %arg2: tensor<?x1xf32>) -> () {
-  // CHECK-DAG: %[[C0:.+]] = arith.constant 0 : index
-  // CHECK-DAG: %[[C0_0:.+]] = arith.constant 0 : index
-  // CHECK-DAG: %[[OFFSET0:.+]] = tensor.dim %[[ARG0]], %[[C0_0]] : tensor<?x1xf32>
-  // CHECK-DAG: %[[DIM1_0:.+]] = tensor.dim %[[ARG1]], %[[C0]] : tensor<?x1xf32>
-  // CHECK-DAG: %[[OFFSET1:.+]] = arith.addi %[[OFFSET0]], %[[DIM1_0]] : index
-  // CHECK-DAG: %[[DIM2_2:.+]] = tensor.dim %[[ARG2]], %[[C0]] : tensor<?x1xf32>
-  // CHECK-DAG: %[[OFFSET2:.+]] = arith.addi %[[OFFSET1]], %[[DIM2_2]] : index
-  // CHECK-DAG: %[[INIT:.+]] = tensor.empty() : tensor<5x1xf32>
-  // CHECK-DAG: %[[C0_3:.+]] = arith.constant 0 : index
-  // CHECK-DAG: %[[DIM_4:.+]] = tensor.dim %[[ARG0]], %[[C0_3]] : tensor<?x1xf32>
-  // CHECK-DAG: %[[INSERT0:.+]] = tensor.insert_slice %[[ARG0]] into %[[INIT]][0, 0] [%[[DIM_4]], 1] [1, 1] : tensor<?x1xf32> into tensor<5x1xf32>
-  // CHECK-DAG: %[[C0_4:.+]] = arith.constant 0 : index
-  // CHECK-DAG: %[[DIM_6:.+]] = tensor.dim %[[ARG1]], %[[C0_4]] : tensor<?x1xf32>
-  // CHECK-DAG: %[[INSERT1:.+]] = tensor.insert_slice %[[ARG1]] into %[[INSERT0]][%[[OFFSET0]], 0] [%[[DIM_6]], 1] [1, 1] : tensor<?x1xf32> into tensor<5x1xf32>
-  // CHECK-DAG: %[[C0_8:.+]] = arith.constant 0 : index
-  // CHECK-DAG: %[[DIM_9:.+]] = tensor.dim %[[ARG2]], %[[C0_8]] : tensor<?x1xf32>
-  // CHECK-DAG: %[[INSERT3:.+]] = tensor.insert_slice %[[ARG2]] into %[[INSERT1]][%[[OFFSET1]], 0] [%[[DIM_9]], 1] [1, 1] : tensor<?x1xf32> into tensor<5x1xf32>
-
-  // CHECK: return
-
+  // CHECK: tensor.concat dim(0) %[[ARG0]], %[[ARG1]], %[[ARG2]] : (tensor<?x1xf32>, tensor<?x1xf32>, tensor<?x1xf32>) -> tensor<5x1xf32>
   %0 = "tosa.concat"(%arg0, %arg1, %arg2) <{axis = 0 : i32}> : (tensor<?x1xf32>, tensor<?x1xf32>, tensor<?x1xf32>) -> tensor<5x1xf32>
   return
 }
@@ -682,21 +640,7 @@ func.func @concat_axis_dyn_mixed(%arg0: tensor<?x1xf32>, %arg1: tensor<?x1xf32>,
 // CHECK-SAME:  %[[ARG1:[0-9a-zA-Z_]*]]:
 // CHECK-SAME:  %[[ARG2:[0-9a-zA-Z_]*]]:
 func.func @concat_non_axis_dyn_mixed(%arg0: tensor<?x1xf32>, %arg1: tensor<?x1xf32>, %arg2: tensor<?x1xf32>) -> () {
-  // CHECK-DAG: %[[UNUSED0:.+]] = arith.constant 0 : index
-  // CHECK-DAG: %[[UNUSED1:.+]] = tensor.dim %[[ARG0]], %[[UNUSED0]] : tensor<?x1xf32>
-
-  // CHECK-DAG: %[[INIT:.+]] = tensor.empty() : tensor<5x3xf32>
-  // CHECK-DAG: %[[C0_0:.+]] = arith.constant 0 : index
-  // CHECK-DAG: %[[DIM0_0:.+]] = tensor.dim %[[ARG0]], %[[C0_0]] : tensor<?x1xf32>
-  // CHECK-DAG: %[[INSERT0:.+]] = tensor.insert_slice %[[ARG0]] into %[[INIT]][0, 0] [%[[DIM0_0]], 1] [1, 1] : tensor<?x1xf32> into tensor<5x3xf32>
-  // CHECK-DAG: %[[C0_1:.+]] = arith.constant 0 : index
-  // CHECK-DAG: %[[DIM1_0:.+]] = tensor.dim %[[ARG1]], %[[C0_1]] : tensor<?x1xf32>
-  // CHECK-DAG: %[[INSERT1:.+]] = tensor.insert_slice %[[ARG1]] into %[[INSERT0]][0, 1] [%[[DIM1_0]], 1] [1, 1] : tensor<?x1xf32> into tensor<5x3xf32>
-  // CHECK-DAG: %[[C0_2:.+]] = arith.constant 0 : index
-  // CHECK-DAG: %[[DIM2_0:.+]] = tensor.dim %[[ARG2]], %[[C0_2]] : tensor<?x1xf32>
-  // CHECK-DAG: %[[INSERT2:.+]] = tensor.insert_slice %[[ARG2]] into %[[INSERT1]][0, 2] [%[[DIM2_0]], 1] [1, 1] : tensor<?x1xf32> into tensor<5x3xf32>
-  // CHECK: return
-
+  // CHECK: tensor.concat dim(1) %[[ARG0]], %[[ARG1]], %[[ARG2]] : (tensor<?x1xf32>, tensor<?x1xf32>, tensor<?x1xf32>) -> tensor<5x3xf32>
   %0 = "tosa.concat"(%arg0, %arg1, %arg2) <{axis = 1 : i32}> : (tensor<?x1xf32>, tensor<?x1xf32>, tensor<?x1xf32>) -> tensor<5x3xf32>
   return
 }
