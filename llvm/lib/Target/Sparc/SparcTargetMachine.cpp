@@ -156,7 +156,7 @@ void SparcPassConfig::addIRPasses() {
 }
 
 bool SparcPassConfig::addInstSelector() {
-  addPass(createSparcISelDag(getSparcTargetMachine()));
+  addPass(createSparcISelDag(getSparcTargetMachine(), getOptLevel()));
   return false;
 }
 
