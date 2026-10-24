@@ -13,6 +13,7 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallString.h"
@@ -180,6 +181,9 @@ private:
 
   // Is alt macro mode enabled.
   bool AltMacroMode = false;
+
+  // Retrieve all temporary symbols in assembly syntax.
+  DenseMap<const MCSymbol *, SMLoc> LocalSymbolLocs;
 
 protected:
   virtual bool parseStatement(ParseStatementInfo &Info,
@@ -1043,13 +1047,18 @@ bool AsmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
         // Variable symbols may not be marked as defined, so check those
         // explicitly. If we know it's a variable, we have a definition for
         // the purposes of this check.
+
         if (Sym && Sym->isTemporary() && !Sym->isVariable() &&
-            !Sym->isDefined())
-          // FIXME: We would really like to refer back to where the symbol was
-          // first referenced for a source location. We need to add something
-          // to track that. Currently, we just point to the end of the file.
-          printError(getTok().getLoc(), "assembler local symbol '" +
-                                            Sym->getName() + "' not defined");
+            !Sym->isDefined()) {
+          // Report the error at the first reference to the temporary symbol.
+          SMLoc ErrorLoc = getTok().getLoc();
+          auto It = LocalSymbolLocs.find(Sym);
+          if (It != LocalSymbolLocs.end())
+            ErrorLoc = It->second;
+
+          printError(ErrorLoc, "assembler local symbol '" + Sym->getName() +
+                                   "' not defined");
+        }
       }
     }
 
@@ -1242,6 +1251,11 @@ bool AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
     if (!Sym)
       Sym = getContext().parseSymbol(MAI.isHLASM() ? SymbolName.upper()
                                                    : SymbolName);
+
+    // Store in the mapping table.
+    if (Sym && Sym->isTemporary()) {
+      LocalSymbolLocs.try_emplace(Sym, FirstTokenLoc);
+    }
 
     // If this is an absolute variable reference, substitute it now to preserve
     // semantics in the face of reassignment.
