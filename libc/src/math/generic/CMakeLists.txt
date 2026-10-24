@@ -467,6 +467,16 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  tgamma
+  SRCS
+    tgamma.cpp
+  HDRS
+    ../tgamma.h
+  DEPENDS
+    libc.src.__support.math.tgamma
+)
+
+add_entrypoint_object(
   fabs
   SRCS
     fabs.cpp
