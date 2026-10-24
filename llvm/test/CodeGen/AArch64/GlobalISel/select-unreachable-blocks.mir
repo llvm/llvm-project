@@ -29,7 +29,7 @@ body:             |
   ; CHECK-NEXT:   [[ADDWri:%[0-9]+]]:gpr32sp = ADDWri [[COPY]], 2, 0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
-  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:gpr32 = PHI [[ADDWri]], %bb.2
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:gpr32all = PHI [[ADDWri]], %bb.2
   ; CHECK-NEXT:   $w0 = COPY [[PHI]]
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
   bb.1:

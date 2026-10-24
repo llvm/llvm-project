@@ -24,7 +24,7 @@
 # RBS-LABEL:  name: foo
 # RBS:        DBG_VALUE %0:gpr(i32), $noreg
 # ISEL-LABEL: name: foo
-# ISEL:       DBG_VALUE %0:gpr32, $noreg
+# ISEL:       DBG_VALUE %0:gpr32all, $noreg
 ---
 name:            foo
 legalized:       true
