@@ -6004,10 +6004,11 @@ SDValue DAGTypeLegalizer::ExpandIntOp_XINT_TO_FP(SDNode *N) {
   SDValue Op = N->getOperand(IsStrict ? 1 : 0);
   EVT DstVT = N->getValueType(0);
 
-  // If the half-width signed bounds overflow the destination type in every
-  // rounding mode, clamp to them and convert from the half-width type, so that
-  // e.g. f16 needs no libcall. Unsigned inputs are clamped to the signed
-  // maximum so that the signed conversion can be used.
+  // A signed type wider than semanticsIntSizeInBits has bounds of at least
+  // 2^(MaxExponent + 1) in magnitude, which overflow DstVT in every rounding
+  // mode. If the half-width type is that wide, clamp to its bounds and convert
+  // from it, so that e.g. f16 needs no libcall. Unsigned inputs are clamped to
+  // the signed maximum so that the signed conversion can be used.
   EVT OpVT = Op.getValueType();
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), OpVT);
   unsigned NBits = NVT.getSizeInBits();
