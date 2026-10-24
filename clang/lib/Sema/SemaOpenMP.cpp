@@ -24323,7 +24323,7 @@ public:
         AllowWholeSizeArraySection = false;
     } else if (DKind == OMPD_target_update &&
                SemaRef.getLangOpts().OpenMP >= 50) {
-      if (IsPointer && !AllowAnotherPtr)
+      if (IsPointer && !AllowAnotherPtr && !OASE->getLength())
         SemaRef.Diag(ELoc, diag::err_omp_section_length_undefined)
             << /*array of unknown bound */ 1;
       else
