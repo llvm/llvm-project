@@ -1136,6 +1136,29 @@ bool GIMatchTableExecutor::executeMatchTable(
       break;
     }
 
+    case GIR_BuildFConstant: {
+      uint64_t TempRegID = readULEB();
+      uint64_t Bits = readU64();
+      initializeBuilder();
+      Register TempReg = State.TempRegisters[TempRegID];
+      LLT Ty = MRI.getType(TempReg).getScalarType();
+      unsigned Width = Ty.getScalarSizeInBits();
+      // Any value bigger than 64 bits is not supported as a scalar FP type
+      // due to the tablegen limitations.
+      if (Width > 64 && Bits != 0)
+        report_fatal_error("GIR_BuildFConstant cannot represent a non-zero "
+                           "bit pattern for a scalar FP type wider than 64 "
+                           "bits");
+      APFloat Val(getFltSemanticForLLT(Ty),
+                  APInt(Width, Bits, /*isSigned=*/false,
+                        /*implicitTrunc=*/true));
+      Builder.buildFConstant(TempReg, Val);
+      DEBUG_WITH_TYPE(TgtExecutor::getName(),
+                      dbgs() << CurrentIdx << ": GIR_BuildFConstant(TempReg["
+                             << TempRegID << "], Bits=" << Bits << ")\n");
+      break;
+    }
+
     case GIR_RootToRootCopy:
     case GIR_Copy: {
       uint64_t NewInsnID =
