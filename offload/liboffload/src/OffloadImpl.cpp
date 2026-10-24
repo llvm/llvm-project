@@ -237,7 +237,8 @@ struct ol_context_impl_t {
   ///
   /// Queues may be added to the outstanding queue list by olDestroyQueue if
   /// they are destroyed but not completed.
-  __tgt_async_info *getOutstandingQueue(ol_device_handle_t Device) {
+  llvm::Expected<__tgt_async_info *>
+  getOutstandingQueue(ol_device_handle_t Device) {
     std::lock_guard<std::mutex> Lock(OutstandingQueuesMutex);
     auto It = OutstandingQueues.find(Device);
     if (It == OutstandingQueues.end() || It->second.empty())
@@ -247,7 +248,10 @@ struct ol_context_impl_t {
     // As queues are pulled and popped from this list, longer running queues
     // naturally bubble to the start of the array. Hence looping backwards.
     for (auto Q = Bucket.rbegin(); Q != Bucket.rend(); Q++) {
-      if (!Device->Device->hasPendingWork(*Q)) {
+      auto PendingOrErr = Device->Device->hasPendingWork(*Q);
+      if (!PendingOrErr)
+        return PendingOrErr.takeError();
+      if (!*PendingOrErr) {
         auto OutstandingQueue = *Q;
         *Q = Bucket.back();
         Bucket.pop_back();
@@ -950,13 +954,16 @@ Error olCreateQueue_impl(ol_context_handle_t Context, ol_device_handle_t Device,
   auto CreatedQueue =
       std::make_unique<ol_queue_impl_t>(nullptr, Context, Device);
 
-  auto OutstandingQueue = Context->getOutstandingQueue(Device);
-  if (OutstandingQueue) {
+  auto OutstandingQueueOrErr = Context->getOutstandingQueue(Device);
+  if (!OutstandingQueueOrErr)
+    return OutstandingQueueOrErr.takeError();
+  if (auto *OutstandingQueue = *OutstandingQueueOrErr) {
     // The queue is empty, but we still need to sync it to release any temporary
     // memory allocations or do other cleanup.
     if (auto Err =
             Device->Device->synchronize(OutstandingQueue, /*Release=*/false))
       return Err;
+    ODBG(OLDT_Sync) << "Reusing outstanding queue " << OutstandingQueue;
     CreatedQueue->AsyncInfo = OutstandingQueue;
   } else if (auto Err = Context->PluginCtx->initAsyncInfo(
                  *Device->Device, &(CreatedQueue->AsyncInfo))) {
@@ -982,8 +989,11 @@ Error olDestroyQueue_impl(ol_queue_handle_t Queue) {
     if (auto Err = Device->Device->synchronize(Queue->AsyncInfo,
                                                /*Release=*/true))
       return Err;
+    delete Queue->AsyncInfo;
   } else {
     // The queue still has outstanding work. Store it so we can check it later.
+    ODBG(OLDT_Sync) << "Keeping busy queue " << Queue->AsyncInfo
+                    << " for reuse";
     Context->addOutstandingQueue(Device, Queue->AsyncInfo);
   }
 
