@@ -11,8 +11,10 @@
 
 // Computes an integer power of a real or complex value.
 
+#include "flang/Evaluate/real-value.h"
 #include "flang/Evaluate/real.h"
 #include "flang/Evaluate/target.h"
+#include <type_traits>
 
 namespace Fortran::evaluate {
 
@@ -62,13 +64,17 @@ ValueWithRealFlags<REAL> IntPower(const REAL &base, const INT &power,
   REAL one{REAL::FromInteger(realKind, INT{intKind, 1}).value};
   ValueWithRealFlags<REAL> result{
       TimesIntPowerOf(one, base, power, /*forceMultiply=*/false, rounding)};
-  if (result.flags.test(RealFlag::Overflow) && power.IsNegative()) {
-    ValueWithRealFlags<REAL> retry;
-    REAL recip{one.Divide(base, rounding).AccumulateFlags(retry.flags)};
-    retry.value =
-        TimesIntPowerOf(one, recip, power, /*forceMultiply=*/true, rounding)
-            .AccumulateFlags(retry.flags);
-    if (!retry.flags.test(RealFlag::Overflow)) {
+  // The real overload on main retried with the reciprocal when a negative
+  // power overflowed and ABS(base) > 1, and always kept that retry. Complex
+  // values did not retry; flang-rt takes one reciprocal at the end instead.
+  if constexpr (std::is_same_v<REAL, value::RealValue>) {
+    if (result.flags.test(RealFlag::Overflow) && power.IsNegative() &&
+        !base.IsZero() && base.ABS().Compare(one) == Relation::Greater) {
+      ValueWithRealFlags<REAL> retry;
+      REAL recip{one.Divide(base, rounding).AccumulateFlags(retry.flags)};
+      retry.value =
+          TimesIntPowerOf(one, recip, power, /*forceMultiply=*/true, rounding)
+              .AccumulateFlags(retry.flags);
       return retry;
     }
   }
