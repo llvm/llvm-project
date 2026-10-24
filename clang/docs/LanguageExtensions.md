@@ -4055,6 +4055,135 @@ template<typename T> constexpr T *addressof(T &value) {
 }
 ```
 
+### `__addrspaceof`
+
+`__addrspaceof` returns a Clang address-space identifier for a type, object, or
+expression.
+
+This is useful for performance-sensitive code that needs a compile-time value
+to choose an address-space-specific operation, overload, or template
+specialization. For example, GPU code may select different loads for global,
+shared/local, or constant memory.
+
+**Syntax**:
+
+```c++
+int __addrspaceof(type-or-expression)
+```
+
+The parentheses are required. The operand is not evaluated. The result is an
+integer constant expression.
+Reference types are adjusted to their referenced type before the address space
+is queried.
+
+For a type operand, the operator returns its top-level explicit address space,
+or the default address space if it has none.
+
+For an unparenthesized id-expression or unparenthesized member access, the
+operator queries the directly named variable, structured binding, or data
+member. It first uses the top-level explicit address space of the entity's
+type. For a CUDA/HIP entity without a top-level explicit address space, it uses
+the storage address space specified by `__device__`, `__shared__`, or
+`__constant__`. Otherwise, it returns the default address space. An explicit
+`__device__` `const` global or static data member that is promoted to constant
+memory is reported as the CUDA or HIP constant address space.
+
+For other expression operands, the operator returns the top-level explicit
+address space of the expression's type, or the default address space if it has
+none. It does not follow pointers or look through expression wrappers to find
+an underlying object. Enumerators and non-type template parameters use this
+expression-type rule. As with `decltype`, extra parentheses can change a direct
+entity query into an expression query.
+
+```c++
+__device__ int *p;
+
+static_assert(__addrspaceof(p) == __ADDRSPACE_GLOBAL);
+static_assert(__addrspaceof(*p) == __ADDRSPACE_DEFAULT);
+static_assert(__addrspaceof((p)) == __ADDRSPACE_DEFAULT);
+```
+
+The first query reports where the pointer variable is stored. The second
+reports the address space of the pointed-to object type. The third treats `p`
+as an lvalue expression because of the extra parentheses.
+
+Language address spaces come from a language or Clang extension. Matching
+memory kinds in OpenCL, CUDA, HIP, SYCL, and HLSL get the same value. Clang
+predefines these macros for the common kinds and the HLSL-specific kinds:
+
+| Macro | Value | Typical use |
+| --- | ---: | --- |
+| `__ADDRSPACE_DEFAULT` | 0 | Unqualified type or expression |
+| `__ADDRSPACE_GLOBAL` | 1 | OpenCL/SYCL global, CUDA/HIP `__device__`, HLSL device |
+| `__ADDRSPACE_LOCAL` | 2 | OpenCL/SYCL local, CUDA/HIP `__shared__`, HLSL groupshared |
+| `__ADDRSPACE_CONSTANT` | 3 | OpenCL/SYCL constant, CUDA/HIP `__constant__`, HLSL constant |
+| `__ADDRSPACE_PRIVATE` | 4 | OpenCL/SYCL/HLSL private |
+| `__ADDRSPACE_GENERIC` | 5 | OpenCL/SYCL generic |
+| `__ADDRSPACE_HLSL_INPUT` | 6 | HLSL input |
+| `__ADDRSPACE_HLSL_OUTPUT` | 7 | HLSL output |
+| `__ADDRSPACE_HLSL_PUSH_CONSTANT` | 8 | HLSL push constant |
+
+Values from `0` through `0xFFFFFF` are reserved for language address spaces,
+leaving room for over 16 million values. Some specialized language address
+spaces have no predefined macro. Deprecated OpenCL and SYCL `global_device`
+and `global_host` address spaces return `__ADDRSPACE_GLOBAL`.
+
+For a source-written `__attribute__((address_space(N)))`, use
+`__ADDRSPACE_TARGET(N)`. This macro gives the value `0x1000000 + N`; it does
+not change where an object is stored. Results for valid `N` start at
+`0x1000000` and currently stay below `0x1800000`. Use a language macro to
+select a kind of memory across languages or targets. Use
+`__ADDRSPACE_TARGET(N)` when code needs the exact numbered space written in an
+attribute. The meaning of `N` depends on the target. For example,
+`__ADDRSPACE_TARGET(3)` is different from `__ADDRSPACE_CONSTANT`, whose value
+is `3`.
+
+**Example use**:
+
+```c++
+using as3_int = int __attribute__((address_space(3)));
+as3_int *p;
+
+static_assert(__addrspaceof(as3_int) == __ADDRSPACE_TARGET(3));
+static_assert(__addrspaceof(*p) == __ADDRSPACE_TARGET(3));
+```
+
+**OpenCL example use**:
+
+```c
+__global int *global_p;
+__local int *local_p;
+
+static_assert(__addrspaceof(*global_p) ==
+              __ADDRSPACE_GLOBAL);
+static_assert(__addrspaceof(*local_p) ==
+              __ADDRSPACE_LOCAL);
+```
+
+**CUDA/HIP example use**:
+
+```c++
+__device__ int dev;
+__device__ int dev_arr[4];
+__constant__ int cst;
+__device__ const int dev_cst = 1;
+
+static_assert(__addrspaceof(dev) ==
+              __ADDRSPACE_GLOBAL);
+static_assert(__addrspaceof(dev_arr) ==
+              __ADDRSPACE_GLOBAL);
+static_assert(__addrspaceof(cst) ==
+              __ADDRSPACE_CONSTANT);
+static_assert(__addrspaceof(dev_cst) ==
+              __ADDRSPACE_CONSTANT);
+```
+
+CUDA and HIP compilation return the same common memory-region values. The
+operator is a static frontend query. It does not classify an arbitrary runtime
+pointer value and does not use optimizer or backend analysis.
+
+Query for this extension with `__has_extension(addrspaceof)`.
+
 ### `__builtin_function_start`
 
 `__builtin_function_start` returns the address of a function body.
