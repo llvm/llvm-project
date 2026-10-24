@@ -228,8 +228,10 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
           unsigned Idx = It->getCaseIndex();
 
           // Check for and prevent uint64_t overflow by reducing branch weights.
-          if (Weights[0] > UINT64_MAX - Weights[Idx + 1])
-            fitWeights(Weights);
+          if (Weights[0] > UINT64_MAX - Weights[Idx + 1]) {
+            SmallVector<uint32_t> Fitted = fitWeights(Weights);
+            Weights.assign(Fitted.begin(), Fitted.end());
+          }
 
           Weights[0] += Weights[Idx + 1];
           // Remove weight for this case.
