@@ -13342,6 +13342,7 @@ static SDValue foldVSelectToSignBitSplatMask(SDNode *N, SelectionDAG &DAG) {
 // (select (setcc a, b, set?ge), (sub a, b), (sub b, a)) --> (abd? a, b)
 // (select (setcc a, b, set?lt), (sub b, a), (sub a, b)) --> (abd? a, b)
 // (select (setcc a, b, set?le), (sub b, a), (sub a, b)) --> (abd? a, b)
+// Subs may use sext (signed) / zext (unsigned) of a, b --> (zext (abd? a, b))
 SDValue DAGCombiner::foldSelectToABD(SDValue LHS, SDValue RHS, SDValue True,
                                      SDValue False, ISD::CondCode CC,
                                      const SDLoc &DL) {
