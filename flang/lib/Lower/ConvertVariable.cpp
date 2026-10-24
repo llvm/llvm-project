@@ -2550,6 +2550,47 @@ fir::FortranVariableFlagsAttr Fortran::lower::translateSymbolAttributes(
   return fir::FortranVariableFlagsAttr::get(mlirContext, flags);
 }
 
+/// Return local VOLATILE and ASYNCHRONOUS attributes from an associated name.
+static fir::FortranVariableFlagsEnum
+getLocalAssociationFlags(const Fortran::semantics::Symbol &sym) {
+  fir::FortranVariableFlagsEnum flags = fir::FortranVariableFlagsEnum::None;
+  const auto &attrs = sym.attrs();
+  if (attrs.test(Fortran::semantics::Attr::ASYNCHRONOUS))
+    flags = flags | fir::FortranVariableFlagsEnum::asynchronous;
+  if (attrs.test(Fortran::semantics::Attr::VOLATILE))
+    flags = flags | fir::FortranVariableFlagsEnum::fortran_volatile;
+  return flags;
+}
+
+static bool isBlockScopeAssociation(const Fortran::semantics::Symbol &sym) {
+  return sym.owner().kind() ==
+             Fortran::semantics::Scope::Kind::BlockConstruct &&
+         (sym.has<Fortran::semantics::HostAssocDetails>() ||
+          sym.has<Fortran::semantics::UseDetails>());
+}
+
+/// Find the associated name for \p sym in the current function scope.
+static const Fortran::semantics::Symbol *
+getCurrentFunctionAssociation(Fortran::lower::AbstractConverter &converter,
+                              const Fortran::semantics::Symbol &sym) {
+  const Fortran::lower::pft::FunctionLikeUnit *funit =
+      converter.getCurrentFunctionUnit();
+  if (!funit)
+    return nullptr;
+
+  const Fortran::semantics::Scope &scope = funit->getScope();
+  // The associated name carrying local attributes may belong to a host scope,
+  // such as the enclosing submodule of a module procedure.
+  const Fortran::semantics::Symbol *localSym = scope.FindSymbol(sym.name());
+  if (!localSym)
+    return nullptr;
+  if ((!localSym->has<Fortran::semantics::HostAssocDetails>() &&
+       !localSym->has<Fortran::semantics::UseDetails>()) ||
+      &localSym->GetUltimate() != &sym.GetUltimate())
+    return nullptr;
+  return localSym;
+}
+
 static bool
 isCapturedInInternalProcedure(Fortran::lower::AbstractConverter &converter,
                               const Fortran::semantics::Symbol &sym) {
@@ -2610,6 +2651,12 @@ static void genDeclareSymbol(Fortran::lower::AbstractConverter &converter,
       extraFlags = extraFlags | fir::FortranVariableFlagsEnum::internal_assoc;
     if (converter.isVisibleCrayPointerTarget(sym))
       extraFlags = extraFlags | fir::FortranVariableFlagsEnum::target;
+    // Instantiating a captured global may pass a symbol from an enclosing
+    // scope instead of the associated symbol in the current function.
+    if (const Fortran::semantics::Symbol *localSym =
+            getCurrentFunctionAssociation(converter, sym);
+        localSym && localSym != &sym)
+      extraFlags = extraFlags | getLocalAssociationFlags(*localSym);
     fir::FortranVariableFlagsAttr attributes =
         Fortran::lower::translateSymbolAttributes(builder.getContext(), sym,
                                                   extraFlags);
@@ -2705,10 +2752,16 @@ void Fortran::lower::genDeclareSymbol(
     const mlir::Location loc = genLocation(converter, sym);
     if (isCapturedInInternalProcedure(converter, sym))
       extraFlags = extraFlags | fir::FortranVariableFlagsEnum::internal_assoc;
-    // FIXME: Using the ultimate symbol for translating symbol attributes will
-    // lead to situations where the VOLATILE/ASYNCHRONOUS attributes are not
-    // propagated to the hlfir.declare (these attributes can be added when
-    // using module variables).
+    // A BLOCK construct passes its local associated symbol directly.
+    if (isBlockScopeAssociation(sym))
+      extraFlags = extraFlags | getLocalAssociationFlags(sym);
+    // Host association lowering may pass either a symbol from an enclosing
+    // scope or the associated symbol in the current function. Since attributes
+    // are translated from the ultimate symbol below, retain local association
+    // attributes in both cases.
+    if (const Fortran::semantics::Symbol *localSym =
+            getCurrentFunctionAssociation(converter, sym))
+      extraFlags = extraFlags | getLocalAssociationFlags(*localSym);
     fir::FortranVariableFlagsAttr attributes =
         Fortran::lower::translateSymbolAttributes(
             builder.getContext(), sym.GetUltimate(), extraFlags);
