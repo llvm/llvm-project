@@ -4540,12 +4540,12 @@ define void @memcpy_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5)
 ; ALIGNED-NEXT:    buffer_load_ubyte v56, v2, s[0:3], 0 offen offset:18
 ; ALIGNED-NEXT:    buffer_load_ubyte v60, v2, s[0:3], 0 offen offset:16
 ; ALIGNED-NEXT:    buffer_load_ubyte v57, v2, s[0:3], 0 offen offset:17
-; ALIGNED-NEXT:    v_add_nc_u32_e32 v2, 0x100, v2
-; ALIGNED-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:1192 ; 4-byte Folded Spill
 ; ALIGNED-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:232
 ; ALIGNED-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:236
 ; ALIGNED-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:228
 ; ALIGNED-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:224
+; ALIGNED-NEXT:    v_add_nc_u32_e32 v2, 0x100, v2
+; ALIGNED-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:1192 ; 4-byte Folded Spill
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(2)
 ; ALIGNED-NEXT:    v_lshl_or_b32 v0, v127, 8, v56
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(0)
@@ -4558,8 +4558,8 @@ define void @memcpy_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5)
 ; ALIGNED-NEXT:    s_add_u32 s4, s4, 0x100
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(0)
 ; ALIGNED-NEXT:    v_add_co_ci_u32_e64 v4, null, s5, v0, vcc_lo
+; ALIGNED-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:1220 ; 4-byte Folded Reload
 ; ALIGNED-NEXT:    v_add_co_u32 v5, vcc_lo, v3, 3
-; ALIGNED-NEXT:    s_addc_u32 s5, s5, 0
 ; ALIGNED-NEXT:    v_add_co_ci_u32_e64 v6, null, 0, v4, vcc_lo
 ; ALIGNED-NEXT:    flat_store_byte v[5:6], v11 offset:247
 ; ALIGNED-NEXT:    flat_store_byte v[5:6], v10 offset:248
@@ -4620,7 +4620,7 @@ define void @memcpy_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5)
 ; ALIGNED-NEXT:    buffer_store_dword v59, off, s[0:3], s32 offset:216
 ; ALIGNED-NEXT:    buffer_store_dword v61, off, s[0:3], s32 offset:220
 ; ALIGNED-NEXT:    buffer_store_dword v106, off, s[0:3], s32 offset:212
-; ALIGNED-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:1220 ; 4-byte Folded Reload
+; ALIGNED-NEXT:    s_addc_u32 s5, s5, 0
 ; ALIGNED-NEXT:    v_cmp_lt_u64_e64 vcc_lo, s[4:5], 0x800
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(0)
 ; ALIGNED-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:208
@@ -13543,8 +13543,6 @@ define void @memmove_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5
 ; ALIGNED-NEXT:    buffer_load_ubyte v117, v2, s[0:3], 0 offen offset:18
 ; ALIGNED-NEXT:    buffer_load_ubyte v61, v2, s[0:3], 0 offen offset:16
 ; ALIGNED-NEXT:    buffer_load_ubyte v45, v2, s[0:3], 0 offen offset:17
-; ALIGNED-NEXT:    v_add_nc_u32_e32 v2, 0x100, v2
-; ALIGNED-NEXT:    buffer_store_dword v96, off, s[0:3], s32 offset:1448 ; 4-byte Folded Spill
 ; ALIGNED-NEXT:    buffer_store_dword v100, off, s[0:3], s32 offset:232
 ; ALIGNED-NEXT:    buffer_store_dword v99, off, s[0:3], s32 offset:236
 ; ALIGNED-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:228
@@ -13587,6 +13585,7 @@ define void @memmove_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5
 ; ALIGNED-NEXT:    flat_store_byte v[3:4], v120 offset:227
 ; ALIGNED-NEXT:    flat_store_byte v[3:4], v1 offset:225
 ; ALIGNED-NEXT:    flat_store_byte v[3:4], v6 offset:221
+; ALIGNED-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:1484 ; 4-byte Folded Reload
 ; ALIGNED-NEXT:    buffer_store_dword v28, off, s[0:3], s32 offset:192
 ; ALIGNED-NEXT:    buffer_store_dword v33, off, s[0:3], s32 offset:204
 ; ALIGNED-NEXT:    buffer_store_dword v38, off, s[0:3], s32 offset:200
@@ -13611,7 +13610,6 @@ define void @memmove_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5
 ; ALIGNED-NEXT:    buffer_store_dword v81, off, s[0:3], s32 offset:220
 ; ALIGNED-NEXT:    buffer_store_dword v119, off, s[0:3], s32 offset:212
 ; ALIGNED-NEXT:    buffer_store_dword v63, off, s[0:3], s32 offset:208
-; ALIGNED-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:1484 ; 4-byte Folded Reload
 ; ALIGNED-NEXT:    flat_store_byte v[3:4], v31 offset:199
 ; ALIGNED-NEXT:    flat_store_byte v[3:4], v30 offset:200
 ; ALIGNED-NEXT:    flat_store_byte v[3:4], v32 offset:198
@@ -13628,6 +13626,8 @@ define void @memmove_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5
 ; ALIGNED-NEXT:    flat_store_byte v[3:4], v36 offset:195
 ; ALIGNED-NEXT:    flat_store_byte v[3:4], v50 offset:193
 ; ALIGNED-NEXT:    flat_store_byte v[3:4], v52 offset:189
+; ALIGNED-NEXT:    buffer_store_dword v96, off, s[0:3], s32 offset:1448 ; 4-byte Folded Spill
+; ALIGNED-NEXT:    v_add_nc_u32_e32 v2, 0x100, v2
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(3)
 ; ALIGNED-NEXT:    v_lshl_or_b32 v96, v125, 8, v117
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(1)
@@ -15094,6 +15094,7 @@ define void @memmove_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5
 ; ALIGNED-NEXT:    flat_store_byte v[3:4], v1 offset:227
 ; ALIGNED-NEXT:    flat_store_byte v[3:4], v9 offset:225
 ; ALIGNED-NEXT:    flat_store_byte v[3:4], v11 offset:221
+; ALIGNED-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:1484 ; 4-byte Folded Reload
 ; ALIGNED-NEXT:    buffer_store_dword v33, off, s[0:3], s32 offset:448
 ; ALIGNED-NEXT:    buffer_store_dword v38, off, s[0:3], s32 offset:460
 ; ALIGNED-NEXT:    buffer_store_dword v51, off, s[0:3], s32 offset:456
@@ -15118,7 +15119,6 @@ define void @memmove_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5
 ; ALIGNED-NEXT:    buffer_store_dword v86, off, s[0:3], s32 offset:476
 ; ALIGNED-NEXT:    buffer_store_dword v75, off, s[0:3], s32 offset:468
 ; ALIGNED-NEXT:    buffer_store_dword v123, off, s[0:3], s32 offset:464
-; ALIGNED-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:1484 ; 4-byte Folded Reload
 ; ALIGNED-NEXT:    flat_store_byte v[3:4], v35 offset:199
 ; ALIGNED-NEXT:    flat_store_byte v[3:4], v36 offset:200
 ; ALIGNED-NEXT:    flat_store_byte v[3:4], v37 offset:198
