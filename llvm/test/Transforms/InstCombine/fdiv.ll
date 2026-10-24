@@ -64,12 +64,11 @@ define float @not_exact_but_allow_recip(float %x) {
   ret float %div
 }
 
-; Fast math allows us to replace this fdiv, but we don't to avoid a denormal.
-; TODO: What if the function attributes tell us that denormals are flushed?
+; Allow a subnormal reciprocal when IEEE denormal handling preserves it.
 
 define float @not_exact_but_allow_recip_but_denorm(float %x) {
 ; CHECK-LABEL: @not_exact_but_allow_recip_but_denorm(
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv arcp float [[X:%.*]], f0x7F000008
+; CHECK-NEXT:    [[DIV:%.*]] = fmul arcp float [[X:%.*]], f0x003FFFFC
 ; CHECK-NEXT:    ret float [[DIV]]
 ;
   %div = fdiv arcp float %x, 0x47E0000100000000

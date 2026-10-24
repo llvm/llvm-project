@@ -552,12 +552,10 @@ define double @test_double_fdiv_f32_ieee() #5 {
 
 ; ============================================================================ ;
 ; frem tests
-; Output modes are tested by using two small normal numbers to produce a
-; denormal result. If denormal outputs should be flushed to zero, the result
-; should be zero.
-; Input modes are tested by calculating the remainder of a denormal number
-; and a larger normal number. If denormal inputs should be treated as zero
-; the result also becomes zero.
+; Remainder folding does not apply denormal input or output flushing, as it is
+; often expanded to custom lowerings or libcalls that do not follow the caller's
+; denormal mode.
+; Check that both subnormal inputs and subnormal results are preserved.
 ; ============================================================================ ;
 
 define float @test_float_frem_ieee_out() #0 {
@@ -571,18 +569,18 @@ define float @test_float_frem_ieee_out() #0 {
 
 define float @test_float_frem_pzero_out() #1 {
 ; CHECK-LABEL: @test_float_frem_pzero_out(
-; CHECK-NEXT:    ret float 0.000000e+00
+; CHECK-NEXT:    ret float f0x80400000
 ;
-; denormal result is flushed to positive zero
+; denormal result is preserved despite the output flushing mode
   %result = frem float 0xB818000000000000, 0x3810000000000000
   ret float %result
 }
 
 define float @test_float_frem_psign_out() #2 {
 ; CHECK-LABEL: @test_float_frem_psign_out(
-; CHECK-NEXT:    ret float -0.000000e+00
+; CHECK-NEXT:    ret float f0x80400000
 ;
-; denormal result is flushed to sign preserved zero
+; denormal result and its sign are preserved despite the output flushing mode
   %result = frem float 0xB818000000000000, 0x3810000000000000
   ret float %result
 }
@@ -598,30 +596,27 @@ define float @test_float_frem_ieee_in() #0 {
 
 define float @test_float_frem_pzero_in() #3 {
 ; CHECK-LABEL: @test_float_frem_pzero_in(
-; CHECK-NEXT:    ret float 0.000000e+00
+; CHECK-NEXT:    ret float f0x00400000
 ;
-; denormal operand is treated as zero
-; remainder is now zero
+; denormal operand is preserved, so the remainder equals the input
   %result = frem float 0x3800000000000000, 2.000000e+00
   ret float %result
 }
 
 define float @test_float_frem_psign_in() #4 {
 ; CHECK-LABEL: @test_float_frem_psign_in(
-; CHECK-NEXT:    ret float 0.000000e+00
+; CHECK-NEXT:    ret float f0x00400000
 ;
-; denormal operand is treated as zero
-; remainder is now zero
+; denormal operand is preserved, so the remainder equals the input
   %result = frem float 0x3800000000000000, 2.000000e+00
   ret float %result
 }
 
 define float @test_float_frem_pzero_f32_out() #1 {
 ; CHECK-LABEL: @test_float_frem_pzero_f32_out(
-; CHECK-NEXT:    ret float 0.000000e+00
+; CHECK-NEXT:    ret float f0x80400000
 ;
-; f32 only attribute should flush float output
-; same as pzero_out above
+; denormal result is preserved, as in pzero_out above
   %result = frem float 0xB818000000000000, 0x3810000000000000
   ret float %result
 }
@@ -637,18 +632,18 @@ define double @test_double_frem_ieee_out() #0 {
 
 define double @test_double_frem_pzero_out() #1 {
 ; CHECK-LABEL: @test_double_frem_pzero_out(
-; CHECK-NEXT:    ret double 0.000000e+00
+; CHECK-NEXT:    ret double f0x8008000000000000
 ;
-; denormal result is flushed to positive zero
+; denormal result is preserved despite the output flushing mode
   %result = frem double 0x8018000000000000, 0x0010000000000000
   ret double %result
 }
 
 define double @test_double_frem_psign_out() #2 {
 ; CHECK-LABEL: @test_double_frem_psign_out(
-; CHECK-NEXT:    ret double -0.000000e+00
+; CHECK-NEXT:    ret double f0x8008000000000000
 ;
-; denormal result is flushed to sign preserved zero
+; denormal result and its sign are preserved despite the output flushing mode
   %result = frem double 0x8018000000000000, 0x0010000000000000
   ret double %result
 }
@@ -664,20 +659,18 @@ define double @test_double_frem_ieee_in() #0 {
 
 define double @test_double_frem_pzero_in() #3 {
 ; CHECK-LABEL: @test_double_frem_pzero_in(
-; CHECK-NEXT:    ret double 0.000000e+00
+; CHECK-NEXT:    ret double f0x0008000000000000
 ;
-; denormal operand is treated as zero
-; remainder is now zero
+; denormal operand is preserved, so the remainder equals the input
   %result = frem double 0x0008000000000000, 2.000000e+00
   ret double %result
 }
 
 define double @test_double_frem_psign_in() #4 {
 ; CHECK-LABEL: @test_double_frem_psign_in(
-; CHECK-NEXT:    ret double 0.000000e+00
+; CHECK-NEXT:    ret double f0x0008000000000000
 ;
-; denormal operand is treated as zero
-; remainder is now zero
+; denormal operand is preserved, so the remainder equals the input
   %result = frem double 0x0008000000000000, 2.000000e+00
   ret double %result
 }

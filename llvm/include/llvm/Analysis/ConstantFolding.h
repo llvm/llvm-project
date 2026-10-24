@@ -20,6 +20,7 @@
 #define LLVM_ANALYSIS_CONSTANTFOLDING_H
 
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/FPFold.h"
 #include <stdint.h>
 
 namespace llvm {
@@ -40,6 +41,19 @@ class GlobalVariable;
 class Instruction;
 class TargetLibraryInfo;
 class Type;
+
+/// Return the denormal mode for \p Ty in the supplied context. Use the
+/// instruction's function when available, otherwise \p CtxF. Return Dynamic
+/// if no function is available or the type is not floating-point.
+LLVM_ABI DenormalMode getDenormMode(Type *Ty, const Instruction *CtxI = nullptr,
+                                    const Function *CtxF = nullptr);
+
+/// Return the instruction's denormal mode, or Dynamic if it is null.
+LLVM_ABI DenormalMode getDenormMode(const Instruction *I);
+
+inline DenormalMode getDenormMode(const Instruction &I) {
+  return getDenormMode(&I);
+}
 
 /// If this constant is a constant offset from a global, return the global and
 /// the constant. Because of constantexprs, this function is recursive.
@@ -96,9 +110,10 @@ LLVM_ABI Constant *ConstantFoldUnaryOpOperand(unsigned Opcode, Constant *Op,
 
 /// Attempt to constant fold a binary operation with the specified operands.
 /// Returns null or a constant expression of the specified operands on failure.
-LLVM_ABI Constant *ConstantFoldBinaryOpOperands(unsigned Opcode, Constant *LHS,
-                                                Constant *RHS,
-                                                const DataLayout &DL);
+LLVM_ABI Constant *ConstantFoldBinaryOpOperands(
+    unsigned Opcode, Constant *LHS, Constant *RHS, const DataLayout &DL,
+    DenormalMode DenormMode = DenormalMode::getDynamic(),
+    bool AvoidFoldingToNaN = shouldAvoidFoldingToNaN());
 
 /// Attempt to constant fold a floating point binary operation with the
 /// specified operands, applying the denormal handling mod to the operands.
@@ -107,17 +122,6 @@ LLVM_ABI Constant *
 ConstantFoldFPInstOperands(unsigned Opcode, Constant *LHS, Constant *RHS,
                            const DataLayout &DL, const Instruction *I,
                            bool AllowNonDeterministic = true);
-
-/// Attempt to flush float point constant according to denormal mode set in the
-/// instruction's parent function attributes. If so, return a zero with the
-/// correct sign, otherwise return the original constant. Inputs and outputs to
-/// floating point instructions can have their mode set separately, so the
-/// direction is also needed.
-///
-/// If the calling function's denormal_fpenv input mode is dynamic for the
-/// floating-point type, returns nullptr for denormal inputs.
-LLVM_ABI Constant *FlushFPConstant(Constant *Operand, const Function *CtxF,
-                                   bool IsOutput);
 
 /// Attempt to constant fold a cast with the specified operand.  If it
 /// fails, it returns a constant expression of the specified operand.

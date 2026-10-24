@@ -15,6 +15,7 @@
 #ifndef LLVM_IR_INSTRUCTIONS_H
 #define LLVM_IR_INSTRUCTIONS_H
 
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Bitfields.h"
 #include "llvm/ADT/MapVector.h"
@@ -46,7 +47,6 @@
 
 namespace llvm {
 
-class APFloat;
 class APInt;
 class BasicBlock;
 class ConstantInt;
@@ -1575,6 +1575,10 @@ public:
 
   /// Return result of `LHS Pred RHS` comparison.
   LLVM_ABI static bool compare(const APFloat &LHS, const APFloat &RHS,
+                               FCmpInst::Predicate Pred);
+
+  /// Return the result of applying \p Pred to \p Result.
+  LLVM_ABI static bool compare(APFloat::cmpResult Result,
                                FCmpInst::Predicate Pred);
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
