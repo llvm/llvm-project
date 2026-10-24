@@ -886,6 +886,37 @@ static bool replaceExtractElements(InsertElementInst *InsElt,
   return true;
 }
 
+// In a fixed vector, return boolean for if there is a poison lane at IndexOp
+// and all other lanes are zero
+static bool isPoisonLaneInOtherwiseZeroVector(Value *VecOp, Value *IndexOp) {
+  auto VecTy = dyn_cast<FixedVectorType>(VecOp->getType());
+  if (!VecTy)
+    return false;
+
+  unsigned NumElts = VecTy->getNumElements();
+  if (NumElts < 2)
+    return false;
+
+  // Check the insert index is at a real poison lane in the vector
+  Constant *CV;
+  ConstantInt *Idx;
+  if (!match(VecOp, m_Constant(CV)) || !match(IndexOp, m_ConstantInt(Idx)) ||
+      Idx->getZExtValue() >= NumElts ||
+      !match(CV->getAggregateElement(Idx), m_Poison()))
+    return false;
+
+  // Check that the rest of the lanes are zero
+  for (unsigned i = 0; i < NumElts; ++i) {
+    if (i == Idx->getZExtValue())
+      continue;
+
+    if (!match(CV->getAggregateElement(i), m_Zero()))
+      return false;
+  }
+
+  return true;
+}
+
 /// We are building a shuffle to create V, which is a sequence of insertelement,
 /// extractelement pairs. If PermittedRHS is set, then we must either use it or
 /// not rely on the second vector source. Return a std::pair containing the
@@ -918,6 +949,12 @@ static ShuffleOps collectShuffleElements(Value *V, SmallVectorImpl<int> &Mask,
     Value *VecOp    = IEI->getOperand(0);
     Value *ScalarOp = IEI->getOperand(1);
     Value *IdxOp    = IEI->getOperand(2);
+
+    // If we are inserting into a zero splat with one poison at IdxOp
+    // Treat VecOp as a zero vector for this transformation
+    if (isPoisonLaneInOtherwiseZeroVector(VecOp, IdxOp)) {
+      VecOp = Constant::getNullValue(VecOp->getType());
+    }
 
     if (ExtractElementInst *EI = dyn_cast<ExtractElementInst>(ScalarOp)) {
       if (isa<ConstantInt>(EI->getOperand(1)) && isa<ConstantInt>(IdxOp)) {
