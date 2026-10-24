@@ -706,6 +706,390 @@ define <8 x double> @round_v8f64(<8 x double> %x) {
   ret <8 x double> %a
 }
 
+define i64 @round_f32_to_i64(float %x) nounwind {
+; SSE2-LABEL: round_f32_to_i64:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pushq %rax
+; SSE2-NEXT:    callq roundf@PLT
+; SSE2-NEXT:    cvttss2si %xmm0, %rax
+; SSE2-NEXT:    popq %rcx
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: round_f32_to_i64:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movaps {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; SSE41-NEXT:    andps %xmm0, %xmm1
+; SSE41-NEXT:    orps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE41-NEXT:    addss %xmm0, %xmm1
+; SSE41-NEXT:    cvttss2si %xmm1, %rax
+; SSE41-NEXT:    retq
+;
+; AVX1-LABEL: round_f32_to_i64:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1]
+; AVX1-NEXT:    vorps %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vaddss %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vcvttss2si %xmm0, %rax
+; AVX1-NEXT:    retq
+;
+; AVX512F-LABEL: round_f32_to_i64:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1]
+; AVX512F-NEXT:    vpternlogd {{.*#+}} xmm1 = xmm1 | (xmm0 & m32bcst)
+; AVX512F-NEXT:    vaddss %xmm1, %xmm0, %xmm0
+; AVX512F-NEXT:    vcvttss2si %xmm0, %rax
+; AVX512F-NEXT:    retq
+;
+; AVX512FP16-LABEL: round_f32_to_i64:
+; AVX512FP16:       ## %bb.0:
+; AVX512FP16-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1]
+; AVX512FP16-NEXT:    vpternlogd {{.*#+}} xmm1 = xmm1 | (xmm0 & m32bcst)
+; AVX512FP16-NEXT:    vaddss %xmm1, %xmm0, %xmm0
+; AVX512FP16-NEXT:    vcvttss2si %xmm0, %rax
+; AVX512FP16-NEXT:    retq
+  %r = call float @llvm.round.f32(float %x)
+  %c = fptosi float %r to i64
+  ret i64 %c
+}
+
+define i64 @round_f64_to_i64(double %x) nounwind {
+; SSE2-LABEL: round_f64_to_i64:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pushq %rax
+; SSE2-NEXT:    callq round@PLT
+; SSE2-NEXT:    cvttsd2si %xmm0, %rax
+; SSE2-NEXT:    popq %rcx
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: round_f64_to_i64:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movapd {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0]
+; SSE41-NEXT:    andpd %xmm0, %xmm1
+; SSE41-NEXT:    orpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE41-NEXT:    addsd %xmm0, %xmm1
+; SSE41-NEXT:    cvttsd2si %xmm1, %rax
+; SSE41-NEXT:    retq
+;
+; AVX1-LABEL: round_f64_to_i64:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vandpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm2 = [4.9999999999999994E-1,4.9999999999999994E-1]
+; AVX1-NEXT:    # xmm2 = mem[0,0]
+; AVX1-NEXT:    vorpd %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vcvttsd2si %xmm0, %rax
+; AVX1-NEXT:    retq
+;
+; AVX512F-LABEL: round_f64_to_i64:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [4.9999999999999994E-1,4.9999999999999994E-1]
+; AVX512F-NEXT:    vpternlogq {{.*#+}} xmm1 = xmm1 | (xmm0 & m64bcst)
+; AVX512F-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
+; AVX512F-NEXT:    vcvttsd2si %xmm0, %rax
+; AVX512F-NEXT:    retq
+;
+; AVX512FP16-LABEL: round_f64_to_i64:
+; AVX512FP16:       ## %bb.0:
+; AVX512FP16-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [4.9999999999999994E-1,4.9999999999999994E-1]
+; AVX512FP16-NEXT:    vpternlogq {{.*#+}} xmm1 = xmm1 | (xmm0 & m64bcst)
+; AVX512FP16-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
+; AVX512FP16-NEXT:    vcvttsd2si %xmm0, %rax
+; AVX512FP16-NEXT:    retq
+  %r = call double @llvm.round.f64(double %x)
+  %c = fptosi double %r to i64
+  ret i64 %c
+}
+
+define i32 @round_f64_to_i32(double %x) nounwind {
+; SSE2-LABEL: round_f64_to_i32:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pushq %rax
+; SSE2-NEXT:    callq round@PLT
+; SSE2-NEXT:    cvttsd2si %xmm0, %eax
+; SSE2-NEXT:    popq %rcx
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: round_f64_to_i32:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movapd {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0]
+; SSE41-NEXT:    andpd %xmm0, %xmm1
+; SSE41-NEXT:    orpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE41-NEXT:    addsd %xmm0, %xmm1
+; SSE41-NEXT:    cvttsd2si %xmm1, %eax
+; SSE41-NEXT:    retq
+;
+; AVX1-LABEL: round_f64_to_i32:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vandpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm2 = [4.9999999999999994E-1,4.9999999999999994E-1]
+; AVX1-NEXT:    # xmm2 = mem[0,0]
+; AVX1-NEXT:    vorpd %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vcvttsd2si %xmm0, %eax
+; AVX1-NEXT:    retq
+;
+; AVX512F-LABEL: round_f64_to_i32:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [4.9999999999999994E-1,4.9999999999999994E-1]
+; AVX512F-NEXT:    vpternlogq {{.*#+}} xmm1 = xmm1 | (xmm0 & m64bcst)
+; AVX512F-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
+; AVX512F-NEXT:    vcvttsd2si %xmm0, %eax
+; AVX512F-NEXT:    retq
+;
+; AVX512FP16-LABEL: round_f64_to_i32:
+; AVX512FP16:       ## %bb.0:
+; AVX512FP16-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [4.9999999999999994E-1,4.9999999999999994E-1]
+; AVX512FP16-NEXT:    vpternlogq {{.*#+}} xmm1 = xmm1 | (xmm0 & m64bcst)
+; AVX512FP16-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
+; AVX512FP16-NEXT:    vcvttsd2si %xmm0, %eax
+; AVX512FP16-NEXT:    retq
+  %r = call double @llvm.round.f64(double %x)
+  %c = fptosi double %r to i32
+  ret i32 %c
+}
+
+define i64 @round_f64_to_u64(double %x) nounwind {
+; SSE2-LABEL: round_f64_to_u64:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pushq %rax
+; SSE2-NEXT:    callq round@PLT
+; SSE2-NEXT:    cvttsd2si %xmm0, %rcx
+; SSE2-NEXT:    movq %rcx, %rdx
+; SSE2-NEXT:    sarq $63, %rdx
+; SSE2-NEXT:    subsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    cvttsd2si %xmm0, %rax
+; SSE2-NEXT:    andq %rdx, %rax
+; SSE2-NEXT:    orq %rcx, %rax
+; SSE2-NEXT:    popq %rcx
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: round_f64_to_u64:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movapd {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0]
+; SSE41-NEXT:    andpd %xmm0, %xmm1
+; SSE41-NEXT:    orpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE41-NEXT:    addsd %xmm0, %xmm1
+; SSE41-NEXT:    xorps %xmm0, %xmm0
+; SSE41-NEXT:    roundsd $11, %xmm1, %xmm0
+; SSE41-NEXT:    cvttsd2si %xmm0, %rcx
+; SSE41-NEXT:    movq %rcx, %rdx
+; SSE41-NEXT:    sarq $63, %rdx
+; SSE41-NEXT:    subsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE41-NEXT:    cvttsd2si %xmm0, %rax
+; SSE41-NEXT:    andq %rdx, %rax
+; SSE41-NEXT:    orq %rcx, %rax
+; SSE41-NEXT:    retq
+;
+; AVX1-LABEL: round_f64_to_u64:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vandpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm2 = [4.9999999999999994E-1,4.9999999999999994E-1]
+; AVX1-NEXT:    # xmm2 = mem[0,0]
+; AVX1-NEXT:    vorpd %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vroundsd $11, %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    vcvttsd2si %xmm0, %rcx
+; AVX1-NEXT:    movq %rcx, %rdx
+; AVX1-NEXT:    sarq $63, %rdx
+; AVX1-NEXT:    vsubsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vcvttsd2si %xmm0, %rax
+; AVX1-NEXT:    andq %rdx, %rax
+; AVX1-NEXT:    orq %rcx, %rax
+; AVX1-NEXT:    retq
+;
+; AVX512F-LABEL: round_f64_to_u64:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [4.9999999999999994E-1,4.9999999999999994E-1]
+; AVX512F-NEXT:    vpternlogq {{.*#+}} xmm1 = xmm1 | (xmm0 & m64bcst)
+; AVX512F-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
+; AVX512F-NEXT:    vcvttsd2usi %xmm0, %rax
+; AVX512F-NEXT:    retq
+;
+; AVX512FP16-LABEL: round_f64_to_u64:
+; AVX512FP16:       ## %bb.0:
+; AVX512FP16-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [4.9999999999999994E-1,4.9999999999999994E-1]
+; AVX512FP16-NEXT:    vpternlogq {{.*#+}} xmm1 = xmm1 | (xmm0 & m64bcst)
+; AVX512FP16-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
+; AVX512FP16-NEXT:    vcvttsd2usi %xmm0, %rax
+; AVX512FP16-NEXT:    retq
+  %r = call double @llvm.round.f64(double %x)
+  %c = fptoui double %r to i64
+  ret i64 %c
+}
+
+define <4 x i32> @round_v4f32_to_v4i32(<4 x float> %x) nounwind {
+; SSE2-LABEL: round_v4f32_to_v4i32:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    subq $56, %rsp
+; SSE2-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; SSE2-NEXT:    callq roundf@PLT
+; SSE2-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; SSE2-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
+; SSE2-NEXT:    callq roundf@PLT
+; SSE2-NEXT:    unpcklps (%rsp), %xmm0 # 16-byte Folded Reload
+; SSE2-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
+; SSE2-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; SSE2-NEXT:    callq roundf@PLT
+; SSE2-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; SSE2-NEXT:    callq roundf@PLT
+; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
+; SSE2-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; SSE2-NEXT:    unpcklpd (%rsp), %xmm1 # 16-byte Folded Reload
+; SSE2-NEXT:    # xmm1 = xmm1[0],mem[0]
+; SSE2-NEXT:    cvttps2dq %xmm1, %xmm0
+; SSE2-NEXT:    addq $56, %rsp
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: round_v4f32_to_v4i32:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movaps {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; SSE41-NEXT:    andps %xmm0, %xmm1
+; SSE41-NEXT:    orps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE41-NEXT:    addps %xmm0, %xmm1
+; SSE41-NEXT:    cvttps2dq %xmm1, %xmm0
+; SSE41-NEXT:    retq
+;
+; AVX1-LABEL: round_v4f32_to_v4i32:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; AVX1-NEXT:    vorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vaddps %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vcvttps2dq %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX512F-LABEL: round_v4f32_to_v4i32:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1]
+; AVX512F-NEXT:    vpternlogd {{.*#+}} xmm1 = xmm1 | (xmm0 & m32bcst)
+; AVX512F-NEXT:    vaddps %xmm1, %xmm0, %xmm0
+; AVX512F-NEXT:    vcvttps2dq %xmm0, %xmm0
+; AVX512F-NEXT:    retq
+;
+; AVX512FP16-LABEL: round_v4f32_to_v4i32:
+; AVX512FP16:       ## %bb.0:
+; AVX512FP16-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1]
+; AVX512FP16-NEXT:    vpternlogd {{.*#+}} xmm1 = xmm1 | (xmm0 & m32bcst)
+; AVX512FP16-NEXT:    vaddps %xmm1, %xmm0, %xmm0
+; AVX512FP16-NEXT:    vcvttps2dq %xmm0, %xmm0
+; AVX512FP16-NEXT:    retq
+  %r = call <4 x float> @llvm.round.v4f32(<4 x float> %x)
+  %c = fptosi <4 x float> %r to <4 x i32>
+  ret <4 x i32> %c
+}
+
+define i32 @trunc_f32_to_i32(float %x) {
+; SSE2-LABEL: trunc_f32_to_i32:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    cvttss2si %xmm0, %eax
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: trunc_f32_to_i32:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    cvttss2si %xmm0, %eax
+; SSE41-NEXT:    retq
+;
+; AVX1-LABEL: trunc_f32_to_i32:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vcvttss2si %xmm0, %eax
+; AVX1-NEXT:    retq
+;
+; AVX512F-LABEL: trunc_f32_to_i32:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vcvttss2si %xmm0, %eax
+; AVX512F-NEXT:    retq
+;
+; AVX512FP16-LABEL: trunc_f32_to_i32:
+; AVX512FP16:       ## %bb.0:
+; AVX512FP16-NEXT:    vcvttss2si %xmm0, %eax
+; AVX512FP16-NEXT:    retq
+  %r = call float @llvm.trunc.f32(float %x)
+  %c = fptosi float %r to i32
+  ret i32 %c
+}
+
+define i32 @trunc_f64_to_u32(double %x) {
+; SSE2-LABEL: trunc_f64_to_u32:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    cvttsd2si %xmm0, %rax
+; SSE2-NEXT:    # kill: def $eax killed $eax killed $rax
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: trunc_f64_to_u32:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    cvttsd2si %xmm0, %rax
+; SSE41-NEXT:    # kill: def $eax killed $eax killed $rax
+; SSE41-NEXT:    retq
+;
+; AVX1-LABEL: trunc_f64_to_u32:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vcvttsd2si %xmm0, %rax
+; AVX1-NEXT:    # kill: def $eax killed $eax killed $rax
+; AVX1-NEXT:    retq
+;
+; AVX512F-LABEL: trunc_f64_to_u32:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vcvttsd2usi %xmm0, %eax
+; AVX512F-NEXT:    retq
+;
+; AVX512FP16-LABEL: trunc_f64_to_u32:
+; AVX512FP16:       ## %bb.0:
+; AVX512FP16-NEXT:    vcvttsd2usi %xmm0, %eax
+; AVX512FP16-NEXT:    retq
+  %r = call double @llvm.trunc.f64(double %x)
+  %c = fptoui double %r to i32
+  ret i32 %c
+}
+
+define i32 @trunc_f32_to_i32_multiple_uses(float %x, ptr %p) nounwind {
+; SSE2-LABEL: trunc_f32_to_i32_multiple_uses:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pushq %rbx
+; SSE2-NEXT:    movq %rdi, %rbx
+; SSE2-NEXT:    callq truncf@PLT
+; SSE2-NEXT:    movss %xmm0, (%rbx)
+; SSE2-NEXT:    cvttss2si %xmm0, %eax
+; SSE2-NEXT:    popq %rbx
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: trunc_f32_to_i32_multiple_uses:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    roundss $11, %xmm0, %xmm1
+; SSE41-NEXT:    movss %xmm1, (%rdi)
+; SSE41-NEXT:    cvttss2si %xmm0, %eax
+; SSE41-NEXT:    retq
+;
+; AVX1-LABEL: trunc_f32_to_i32_multiple_uses:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vroundss $11, %xmm0, %xmm0, %xmm1
+; AVX1-NEXT:    vmovss %xmm1, (%rdi)
+; AVX1-NEXT:    vcvttss2si %xmm0, %eax
+; AVX1-NEXT:    retq
+;
+; AVX512F-LABEL: trunc_f32_to_i32_multiple_uses:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vroundss $11, %xmm0, %xmm0, %xmm1
+; AVX512F-NEXT:    vmovss %xmm1, (%rdi)
+; AVX512F-NEXT:    vcvttss2si %xmm0, %eax
+; AVX512F-NEXT:    retq
+;
+; AVX512FP16-LABEL: trunc_f32_to_i32_multiple_uses:
+; AVX512FP16:       ## %bb.0:
+; AVX512FP16-NEXT:    vroundss $11, %xmm0, %xmm0, %xmm1
+; AVX512FP16-NEXT:    vmovss %xmm1, (%rdi)
+; AVX512FP16-NEXT:    vcvttss2si %xmm0, %eax
+; AVX512FP16-NEXT:    retq
+  %r = call float @llvm.trunc.f32(float %x)
+  store float %r, ptr %p
+  %c = fptosi float %r to i32
+  ret i32 %c
+}
+
 declare half @llvm.round.f16(half)
 declare float @llvm.round.f32(float)
 declare double @llvm.round.f64(double)
@@ -715,3 +1099,5 @@ declare <8 x float> @llvm.round.v8f32(<8 x float>)
 declare <4 x double> @llvm.round.v4f64(<4 x double>)
 declare <16 x float> @llvm.round.v16f32(<16 x float>)
 declare <8 x double> @llvm.round.v8f64(<8 x double>)
+declare float @llvm.trunc.f32(float)
+declare double @llvm.trunc.f64(double)

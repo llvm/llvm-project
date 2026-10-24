@@ -1421,7 +1421,6 @@ define amdgpu_kernel void @v_udiv_i8(ptr addrspace(1) %out, ptr addrspace(1) %in
 ; SI-NEXT:    v_cvt_f32_ubyte0_e32 v1, v1
 ; SI-NEXT:    v_add_i32_e32 v1, vcc, 1, v1
 ; SI-NEXT:    v_mul_f32_e32 v0, v1, v0
-; SI-NEXT:    v_trunc_f32_e32 v0, v0
 ; SI-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; SI-NEXT:    v_and_b32_e32 v0, 0xff, v0
 ; SI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
@@ -1448,7 +1447,6 @@ define amdgpu_kernel void @v_udiv_i8(ptr addrspace(1) %out, ptr addrspace(1) %in
 ; VI-NEXT:    v_cvt_f32_ubyte0_e32 v1, v1
 ; VI-NEXT:    v_add_u32_e32 v1, vcc, 1, v1
 ; VI-NEXT:    v_mul_f32_e32 v0, v1, v0
-; VI-NEXT:    v_trunc_f32_e32 v0, v0
 ; VI-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; VI-NEXT:    v_and_b32_e32 v0, 0xff, v0
 ; VI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
@@ -1470,7 +1468,6 @@ define amdgpu_kernel void @v_udiv_i8(ptr addrspace(1) %out, ptr addrspace(1) %in
 ; GCN-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
 ; GCN-NEXT:    v_add_u32_e32 v0, vcc, 1, v0
 ; GCN-NEXT:    v_mul_f32_e32 v0, v0, v1
-; GCN-NEXT:    v_trunc_f32_e32 v0, v0
 ; GCN-NEXT:    v_cvt_u32_f32_e32 v2, v0
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0
 ; GCN-NEXT:    v_mov_b32_e32 v1, s1
@@ -1490,7 +1487,6 @@ define amdgpu_kernel void @v_udiv_i8(ptr addrspace(1) %out, ptr addrspace(1) %in
 ; GFX1030-NEXT:    v_rcp_f32_e32 v2, v2
 ; GFX1030-NEXT:    v_add_nc_u32_e32 v1, 1, v1
 ; GFX1030-NEXT:    v_mul_f32_e32 v1, v1, v2
-; GFX1030-NEXT:    v_trunc_f32_e32 v1, v1
 ; GFX1030-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; GFX1030-NEXT:    v_and_b32_e32 v1, 0xff, v1
 ; GFX1030-NEXT:    global_store_dword v0, v1, s[0:1]
@@ -1500,7 +1496,7 @@ define amdgpu_kernel void @v_udiv_i8(ptr addrspace(1) %out, ptr addrspace(1) %in
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 0, @10, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 1 @6
-; EG-NEXT:    ALU 9, @11, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    ALU 8, @11, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T1.X, T0.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
@@ -1515,7 +1511,6 @@ define amdgpu_kernel void @v_udiv_i8(ptr addrspace(1) %out, ptr addrspace(1) %in
 ; EG-NEXT:     ADD_INT T0.W, PS, 1,
 ; EG-NEXT:     RECIP_IEEE * T0.X, T0.Y,
 ; EG-NEXT:     MUL_IEEE * T0.W, PV.W, PS,
-; EG-NEXT:     TRUNC * T0.W, PV.W,
 ; EG-NEXT:     TRUNC * T0.W, PV.W,
 ; EG-NEXT:     LSHR T0.X, KC0[2].Y, literal.x,
 ; EG-NEXT:     FLT_TO_UINT * T1.X, PV.W,
@@ -1551,7 +1546,6 @@ define amdgpu_kernel void @v_udiv_i16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; SI-NEXT:    v_rcp_f32_e32 v0, v0
 ; SI-NEXT:    v_add_i32_e32 v1, vcc, 1, v1
 ; SI-NEXT:    v_mul_f32_e32 v0, v1, v0
-; SI-NEXT:    v_trunc_f32_e32 v0, v0
 ; SI-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; SI-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; SI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
@@ -1578,7 +1572,6 @@ define amdgpu_kernel void @v_udiv_i16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; VI-NEXT:    v_rcp_f32_e32 v0, v0
 ; VI-NEXT:    v_add_u32_e32 v1, vcc, 1, v1
 ; VI-NEXT:    v_mul_f32_e32 v0, v1, v0
-; VI-NEXT:    v_trunc_f32_e32 v0, v0
 ; VI-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; VI-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; VI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
@@ -1600,7 +1593,6 @@ define amdgpu_kernel void @v_udiv_i16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GCN-NEXT:    v_rcp_f32_e32 v1, v1
 ; GCN-NEXT:    v_add_u32_e32 v0, vcc, 1, v0
 ; GCN-NEXT:    v_mul_f32_e32 v0, v0, v1
-; GCN-NEXT:    v_trunc_f32_e32 v0, v0
 ; GCN-NEXT:    v_cvt_u32_f32_e32 v2, v0
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0
 ; GCN-NEXT:    v_mov_b32_e32 v1, s1
@@ -1620,7 +1612,6 @@ define amdgpu_kernel void @v_udiv_i16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GFX1030-NEXT:    v_rcp_f32_e32 v2, v2
 ; GFX1030-NEXT:    v_add_nc_u32_e32 v1, 1, v1
 ; GFX1030-NEXT:    v_mul_f32_e32 v1, v1, v2
-; GFX1030-NEXT:    v_trunc_f32_e32 v1, v1
 ; GFX1030-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; GFX1030-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX1030-NEXT:    global_store_dword v0, v1, s[0:1]
@@ -1630,7 +1621,7 @@ define amdgpu_kernel void @v_udiv_i16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 0, @10, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 1 @6
-; EG-NEXT:    ALU 9, @11, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    ALU 8, @11, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T1.X, T0.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
@@ -1645,7 +1636,6 @@ define amdgpu_kernel void @v_udiv_i16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; EG-NEXT:     ADD_INT T0.W, PS, 1,
 ; EG-NEXT:     RECIP_IEEE * T0.X, T0.Y,
 ; EG-NEXT:     MUL_IEEE * T0.W, PV.W, PS,
-; EG-NEXT:     TRUNC * T0.W, PV.W,
 ; EG-NEXT:     TRUNC * T0.W, PV.W,
 ; EG-NEXT:     LSHR T0.X, KC0[2].Y, literal.x,
 ; EG-NEXT:     FLT_TO_UINT * T1.X, PV.W,
@@ -2467,7 +2457,6 @@ define amdgpu_kernel void @fdiv_test_denormals(ptr addrspace(1) nocapture readon
 ; SI-NEXT:    v_rcp_f32_e32 v0, v0
 ; SI-NEXT:    v_add_i32_e32 v1, vcc, 1, v1
 ; SI-NEXT:    v_mul_f32_e32 v0, v1, v0
-; SI-NEXT:    v_trunc_f32_e32 v0, v0
 ; SI-NEXT:    v_cvt_i32_f32_e32 v0, v0
 ; SI-NEXT:    buffer_store_byte v0, off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
@@ -2490,7 +2479,6 @@ define amdgpu_kernel void @fdiv_test_denormals(ptr addrspace(1) nocapture readon
 ; VI-NEXT:    v_rcp_f32_e32 v0, v0
 ; VI-NEXT:    v_add_u32_e32 v1, vcc, 1, v1
 ; VI-NEXT:    v_mul_f32_e32 v0, v1, v0
-; VI-NEXT:    v_trunc_f32_e32 v0, v0
 ; VI-NEXT:    v_cvt_i32_f32_e32 v0, v0
 ; VI-NEXT:    buffer_store_byte v0, off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
@@ -2515,7 +2503,6 @@ define amdgpu_kernel void @fdiv_test_denormals(ptr addrspace(1) nocapture readon
 ; GCN-NEXT:    v_rcp_f32_e32 v2, v2
 ; GCN-NEXT:    v_add_u32_e32 v3, vcc, 1, v3
 ; GCN-NEXT:    v_mul_f32_e32 v2, v3, v2
-; GCN-NEXT:    v_trunc_f32_e32 v2, v2
 ; GCN-NEXT:    v_cvt_i32_f32_e32 v2, v2
 ; GCN-NEXT:    flat_store_byte v[0:1], v2
 ; GCN-NEXT:    s_endpgm
@@ -2536,7 +2523,6 @@ define amdgpu_kernel void @fdiv_test_denormals(ptr addrspace(1) nocapture readon
 ; GFX1030-NEXT:    v_rcp_f32_e32 v2, v2
 ; GFX1030-NEXT:    v_add_nc_u32_e32 v3, 1, v3
 ; GFX1030-NEXT:    v_mul_f32_e32 v2, v3, v2
-; GFX1030-NEXT:    v_trunc_f32_e32 v2, v2
 ; GFX1030-NEXT:    v_cvt_i32_f32_e32 v2, v2
 ; GFX1030-NEXT:    global_store_byte v[0:1], v2, off
 ; GFX1030-NEXT:    s_endpgm
@@ -2547,7 +2533,7 @@ define amdgpu_kernel void @fdiv_test_denormals(ptr addrspace(1) nocapture readon
 ; EG-NEXT:    TEX 0 @8
 ; EG-NEXT:    ALU 0, @13, KC0[], KC1[]
 ; EG-NEXT:    TEX 0 @10
-; EG-NEXT:    ALU 18, @14, KC0[], KC1[]
+; EG-NEXT:    ALU 17, @14, KC0[], KC1[]
 ; EG-NEXT:    MEM_RAT MSKOR T0.XW, T1.X
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
@@ -2569,7 +2555,6 @@ define amdgpu_kernel void @fdiv_test_denormals(ptr addrspace(1) nocapture readon
 ; EG-NEXT:     ADD_INT T0.W, PS, 1,
 ; EG-NEXT:     RECIP_IEEE * T0.X, T0.X,
 ; EG-NEXT:     MUL_IEEE * T0.W, PV.W, PS,
-; EG-NEXT:     TRUNC * T0.W, PV.W,
 ; EG-NEXT:     TRUNC * T0.W, PV.W,
 ; EG-NEXT:     FLT_TO_INT * T0.W, PV.W,
 ; EG-NEXT:     AND_INT T0.X, PV.W, literal.x,

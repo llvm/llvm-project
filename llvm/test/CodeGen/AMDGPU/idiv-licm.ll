@@ -617,7 +617,6 @@ define amdgpu_kernel void @udiv16_invariant_denom(ptr addrspace(1) nocapture %ar
 ; GFX9-NEXT:    s_and_b32 s4, s2, 0xffff
 ; GFX9-NEXT:    v_add_u32_e32 v1, 1, v1
 ; GFX9-NEXT:    v_mul_f32_e32 v1, v1, v0
-; GFX9-NEXT:    v_trunc_f32_e32 v1, v1
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; GFX9-NEXT:    v_mov_b32_e32 v2, s3
 ; GFX9-NEXT:    s_cmpk_eq_i32 s4, 0x400
@@ -648,7 +647,6 @@ define amdgpu_kernel void @udiv16_invariant_denom(ptr addrspace(1) nocapture %ar
 ; GFX10-NEXT:    v_add_nc_u32_e32 v1, 1, v1
 ; GFX10-NEXT:    s_cmpk_eq_i32 s3, 0x400
 ; GFX10-NEXT:    v_mul_f32_e32 v1, v1, v0
-; GFX10-NEXT:    v_trunc_f32_e32 v1, v1
 ; GFX10-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; GFX10-NEXT:    global_store_short v2, v1, s[0:1]
 ; GFX10-NEXT:    s_cbranch_scc0 .LBB4_1
@@ -679,8 +677,7 @@ define amdgpu_kernel void @udiv16_invariant_denom(ptr addrspace(1) nocapture %ar
 ; GFX11-NEXT:    s_cmpk_eq_i32 s3, 0x400
 ; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX11-NEXT:    v_mul_f32_e32 v1, v1, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_trunc_f32_e32 v1, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; GFX11-NEXT:    global_store_b16 v2, v1, s[0:1]
 ; GFX11-NEXT:    s_cbranch_scc0 .LBB4_1
@@ -722,7 +719,6 @@ define amdgpu_kernel void @urem16_invariant_denom(ptr addrspace(1) nocapture %ar
 ; GFX9-NEXT:    s_and_b32 s6, s3, 0xffff
 ; GFX9-NEXT:    v_add_u32_e32 v1, 1, v1
 ; GFX9-NEXT:    v_mul_f32_e32 v1, v1, v0
-; GFX9-NEXT:    v_trunc_f32_e32 v1, v1
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; GFX9-NEXT:    v_mov_b32_e32 v2, s5
 ; GFX9-NEXT:    s_cmpk_eq_i32 s6, 0x400
@@ -753,7 +749,6 @@ define amdgpu_kernel void @urem16_invariant_denom(ptr addrspace(1) nocapture %ar
 ; GFX10-NEXT:    v_mov_b32_e32 v2, s5
 ; GFX10-NEXT:    v_add_nc_u32_e32 v1, 1, v1
 ; GFX10-NEXT:    v_mul_f32_e32 v1, v1, v0
-; GFX10-NEXT:    v_trunc_f32_e32 v1, v1
 ; GFX10-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; GFX10-NEXT:    v_mul_lo_u32 v1, v1, s2
 ; GFX10-NEXT:    v_sub_nc_u32_e32 v1, s4, v1
@@ -787,13 +782,11 @@ define amdgpu_kernel void @urem16_invariant_denom(ptr addrspace(1) nocapture %ar
 ; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX11-NEXT:    v_mul_f32_e32 v1, v1, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_trunc_f32_e32 v1, v1
 ; GFX11-NEXT:    v_cvt_u32_f32_e32 v1, v1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_mul_lo_u32 v1, v1, s2
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_sub_nc_u32_e32 v1, s4, v1
 ; GFX11-NEXT:    s_and_b32 s4, s3, 0xffff
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_cmpk_eq_i32 s4, 0x400
 ; GFX11-NEXT:    global_store_b16 v2, v1, s[0:1]
 ; GFX11-NEXT:    s_cbranch_scc0 .LBB5_1
@@ -835,7 +828,6 @@ define amdgpu_kernel void @sdiv16_invariant_denom(ptr addrspace(1) nocapture %ar
 ; GFX9-NEXT:    s_lshl_b32 s3, s3, 1
 ; GFX9-NEXT:    v_add_u32_e32 v1, 1, v1
 ; GFX9-NEXT:    v_mul_f32_e32 v1, v1, v0
-; GFX9-NEXT:    v_trunc_f32_e32 v1, v1
 ; GFX9-NEXT:    v_cvt_i32_f32_e32 v1, v1
 ; GFX9-NEXT:    s_and_b32 s4, s2, 0xffff
 ; GFX9-NEXT:    v_mov_b32_e32 v2, s3
@@ -868,7 +860,6 @@ define amdgpu_kernel void @sdiv16_invariant_denom(ptr addrspace(1) nocapture %ar
 ; GFX10-NEXT:    s_and_b32 s3, s2, 0xffff
 ; GFX10-NEXT:    s_cmpk_eq_i32 s3, 0x400
 ; GFX10-NEXT:    v_mul_f32_e32 v1, v1, v0
-; GFX10-NEXT:    v_trunc_f32_e32 v1, v1
 ; GFX10-NEXT:    v_cvt_i32_f32_e32 v1, v1
 ; GFX10-NEXT:    global_store_short v2, v1, s[0:1]
 ; GFX10-NEXT:    s_cbranch_scc0 .LBB6_1
@@ -886,7 +877,6 @@ define amdgpu_kernel void @sdiv16_invariant_denom(ptr addrspace(1) nocapture %ar
 ; GFX11-NEXT:    v_cvt_f32_i32_e32 v0, s2
 ; GFX11-NEXT:    s_mov_b32 s2, 0
 ; GFX11-NEXT:    v_rcp_f32_e32 v0, v0
-; GFX11-NEXT:    .p2align 6
 ; GFX11-NEXT:  .LBB6_1: ; %bb3
 ; GFX11-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX11-NEXT:    s_sext_i32_i16 s3, s2
@@ -902,8 +892,6 @@ define amdgpu_kernel void @sdiv16_invariant_denom(ptr addrspace(1) nocapture %ar
 ; GFX11-NEXT:    s_cmpk_eq_i32 s3, 0x400
 ; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX11-NEXT:    v_mul_f32_e32 v1, v1, v0
-; GFX11-NEXT:    v_trunc_f32_e32 v1, v1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_cvt_i32_f32_e32 v1, v1
 ; GFX11-NEXT:    global_store_b16 v2, v1, s[0:1]
 ; GFX11-NEXT:    s_cbranch_scc0 .LBB6_1
@@ -945,7 +933,6 @@ define amdgpu_kernel void @srem16_invariant_denom(ptr addrspace(1) nocapture %ar
 ; GFX9-NEXT:    s_lshl_b32 s5, s5, 1
 ; GFX9-NEXT:    v_add_u32_e32 v1, 1, v1
 ; GFX9-NEXT:    v_mul_f32_e32 v1, v1, v0
-; GFX9-NEXT:    v_trunc_f32_e32 v1, v1
 ; GFX9-NEXT:    v_cvt_i32_f32_e32 v1, v1
 ; GFX9-NEXT:    s_and_b32 s6, s3, 0xffff
 ; GFX9-NEXT:    v_mov_b32_e32 v2, s5
@@ -978,7 +965,6 @@ define amdgpu_kernel void @srem16_invariant_denom(ptr addrspace(1) nocapture %ar
 ; GFX10-NEXT:    v_mov_b32_e32 v2, s5
 ; GFX10-NEXT:    v_add_nc_u32_e32 v1, 1, v1
 ; GFX10-NEXT:    v_mul_f32_e32 v1, v1, v0
-; GFX10-NEXT:    v_trunc_f32_e32 v1, v1
 ; GFX10-NEXT:    v_cvt_i32_f32_e32 v1, v1
 ; GFX10-NEXT:    v_mul_lo_u32 v1, v1, s2
 ; GFX10-NEXT:    v_sub_nc_u32_e32 v1, s4, v1
@@ -1012,13 +998,12 @@ define amdgpu_kernel void @srem16_invariant_denom(ptr addrspace(1) nocapture %ar
 ; GFX11-NEXT:    v_dual_mov_b32 v2, s5 :: v_dual_add_nc_u32 v1, 1, v1
 ; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX11-NEXT:    v_mul_f32_e32 v1, v1, v0
-; GFX11-NEXT:    v_trunc_f32_e32 v1, v1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_cvt_i32_f32_e32 v1, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_mul_lo_u32 v1, v1, s2
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_sub_nc_u32_e32 v1, s4, v1
 ; GFX11-NEXT:    s_and_b32 s4, s3, 0xffff
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_cmpk_eq_i32 s4, 0x400
 ; GFX11-NEXT:    global_store_b16 v2, v1, s[0:1]
 ; GFX11-NEXT:    s_cbranch_scc0 .LBB7_1
