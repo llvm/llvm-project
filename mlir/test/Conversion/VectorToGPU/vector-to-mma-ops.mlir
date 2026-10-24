@@ -727,3 +727,40 @@ func.func @read_transpose_with_broadcast_3d(%arg0: memref<2x2x2xf16>, %arg1: mem
   vector.transfer_write %B, %arg1[%c0, %c0] {in_bounds = [true, true]} : vector<2x2xf16>, memref<2x2xf16>
   return
 }
+
+// -----
+
+// A masked contraction is not prepared for MMA conversion. With transposes
+// the rewrite would create ops inside the vector.mask region; with only an
+// operand swap it would swap the m and n dimensions under an unchanged mask.
+
+#map1 = affine_map<(d0, d1, d2) -> (d2, d0)>
+#map2 = affine_map<(d0, d1, d2) -> (d2, d1)>
+#map3 = affine_map<(d0, d1, d2) -> (d0, d1)>
+
+// CHECK-LABEL: func @masked_matmul_km_kn_mn
+//   CHECK-NOT:   vector.transpose
+//       CHECK:   vector.mask %{{.*}} { vector.contract
+//   CHECK-NOT:   vector.transpose
+//       CHECK:   return
+func.func @masked_matmul_km_kn_mn(%arg0: vector<16x16xf16>, %arg1: vector<16x16xf16>, %arg2: vector<16x16xf16>, %m: index, %n: index, %k: index) -> vector<16x16xf16> {
+  %mask = vector.create_mask %m, %n, %k : vector<16x16x16xi1>
+  %D = vector.mask %mask { vector.contract {indexing_maps = [#map1, #map2, #map3], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %arg0, %arg1, %arg2 : vector<16x16xf16>, vector<16x16xf16> into vector<16x16xf16> } : vector<16x16x16xi1> -> vector<16x16xf16>
+  return %D : vector<16x16xf16>
+}
+
+// -----
+
+#map1 = affine_map<(d0, d1, d2) -> (d2, d0)>
+#map4 = affine_map<(d0, d1, d2) -> (d1, d2)>
+#map5 = affine_map<(d0, d1, d2) -> (d1, d0)>
+
+// CHECK-LABEL: func @masked_matmul_km_nk_nm
+//  CHECK-SAME:   (%[[A:.+]]: vector<16x16xf16>, %[[B:.+]]: vector<16x16xf16>, %[[C:.+]]: vector<16x16xf16>
+//       CHECK:   vector.mask %{{.*}} { vector.contract {{.+}} %[[A]], %[[B]], %[[C]]
+//       CHECK:   return
+func.func @masked_matmul_km_nk_nm(%arg0: vector<16x16xf16>, %arg1: vector<16x16xf16>, %arg2: vector<16x16xf16>, %m: index, %n: index, %k: index) -> vector<16x16xf16> {
+  %mask = vector.create_mask %m, %n, %k : vector<16x16x16xi1>
+  %D = vector.mask %mask { vector.contract {indexing_maps = [#map1, #map4, #map5], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %arg0, %arg1, %arg2 : vector<16x16xf16>, vector<16x16xf16> into vector<16x16xf16> } : vector<16x16x16xi1> -> vector<16x16xf16>
+  return %D : vector<16x16xf16>
+}
