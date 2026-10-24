@@ -97,9 +97,10 @@ FileCheck to use case-insensitive matching.
 :::
 
 :::{option} --implicit-check-not check-pattern
-Adds implicit negative checks for the specified patterns between positive
-checks. The option allows writing stricter tests without stuffing them with
-`CHECK-NOT`s.
+Adds implicit negative checks for the specified patterns across the whole
+input. A pattern occurrence fails the check unless a positive check matches
+that same text. The option allows writing stricter tests without stuffing
+them with `CHECK-NOT`s.
 
 For example, "`--implicit-check-not warning:`" can be useful when testing
 diagnostic messages from tools that don't have an option similar to `clang
