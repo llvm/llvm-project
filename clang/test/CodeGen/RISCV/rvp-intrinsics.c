@@ -2139,6 +2139,7 @@ uint16x4_t test_pmaxu_u16x4(uint16x4_t a, uint16x4_t b) {
 uint32x2_t test_pmaxu_u32x2(uint32x2_t a, uint32x2_t b) {
   return __riscv_pmaxu_u32x2(a, b);
 }
+
 /* Packed Comparison (32-bit) */
 
 // CHECK-LABEL: define dso_local i32 @test_pmseq_i8x4_u8x4(
@@ -6735,6 +6736,7 @@ int32x2_t test_pmulqr_i32x2(int32x2_t rs1, int32x2_t rs2) {
 uint32_t test_preinterpret_u8x4_u32(uint8x4_t x) {
   return __riscv_preinterpret_u8x4_u32(x);
 }
+
 // RV32-LABEL: define dso_local i32 @test_preinterpret_u16x2_u32(
 // RV32-SAME: i32 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
 // RV32-NEXT:  [[ENTRY:.*:]]
@@ -6748,6 +6750,7 @@ uint32_t test_preinterpret_u8x4_u32(uint8x4_t x) {
 uint32_t test_preinterpret_u16x2_u32(uint16x2_t x) {
   return __riscv_preinterpret_u16x2_u32(x);
 }
+
 // RV32-LABEL: define dso_local i32 @test_preinterpret_i8x4_u32(
 // RV32-SAME: i32 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
 // RV32-NEXT:  [[ENTRY:.*:]]
@@ -6761,6 +6764,7 @@ uint32_t test_preinterpret_u16x2_u32(uint16x2_t x) {
 uint32_t test_preinterpret_i8x4_u32(int8x4_t x) {
   return __riscv_preinterpret_i8x4_u32(x);
 }
+
 // RV32-LABEL: define dso_local i32 @test_preinterpret_i16x2_u32(
 // RV32-SAME: i32 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
 // RV32-NEXT:  [[ENTRY:.*:]]
@@ -6774,6 +6778,7 @@ uint32_t test_preinterpret_i8x4_u32(int8x4_t x) {
 uint32_t test_preinterpret_i16x2_u32(int16x2_t x) {
   return __riscv_preinterpret_i16x2_u32(x);
 }
+
 // RV32-LABEL: define dso_local i32 @test_preinterpret_u8x4_i32(
 // RV32-SAME: i32 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
 // RV32-NEXT:  [[ENTRY:.*:]]
@@ -6787,6 +6792,7 @@ uint32_t test_preinterpret_i16x2_u32(int16x2_t x) {
 int32_t test_preinterpret_u8x4_i32(uint8x4_t x) {
   return __riscv_preinterpret_u8x4_i32(x);
 }
+
 // RV32-LABEL: define dso_local i32 @test_preinterpret_u16x2_i32(
 // RV32-SAME: i32 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
 // RV32-NEXT:  [[ENTRY:.*:]]
@@ -6800,6 +6806,7 @@ int32_t test_preinterpret_u8x4_i32(uint8x4_t x) {
 int32_t test_preinterpret_u16x2_i32(uint16x2_t x) {
   return __riscv_preinterpret_u16x2_i32(x);
 }
+
 // RV32-LABEL: define dso_local i32 @test_preinterpret_i8x4_i32(
 // RV32-SAME: i32 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
 // RV32-NEXT:  [[ENTRY:.*:]]
@@ -6813,6 +6820,7 @@ int32_t test_preinterpret_u16x2_i32(uint16x2_t x) {
 int32_t test_preinterpret_i8x4_i32(int8x4_t x) {
   return __riscv_preinterpret_i8x4_i32(x);
 }
+
 // RV32-LABEL: define dso_local i32 @test_preinterpret_i16x2_i32(
 // RV32-SAME: i32 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
 // RV32-NEXT:  [[ENTRY:.*:]]
@@ -6826,6 +6834,7 @@ int32_t test_preinterpret_i8x4_i32(int8x4_t x) {
 int32_t test_preinterpret_i16x2_i32(int16x2_t x) {
   return __riscv_preinterpret_i16x2_i32(x);
 }
+
 // RV32-LABEL: define dso_local i32 @test_preinterpret_u32_u8x4(
 // RV32-SAME: i32 noundef [[X:%.*]]) #[[ATTR0]] {
 // RV32-NEXT:  [[ENTRY:.*:]]
@@ -6839,6 +6848,7 @@ int32_t test_preinterpret_i16x2_i32(int16x2_t x) {
 uint8x4_t test_preinterpret_u32_u8x4(uint32_t x) {
   return __riscv_preinterpret_u32_u8x4(x);
 }
+
 // RV32-LABEL: define dso_local i32 @test_preinterpret_u32_u16x2(
 // RV32-SAME: i32 noundef [[X:%.*]]) #[[ATTR0]] {
 // RV32-NEXT:  [[ENTRY:.*:]]
@@ -6852,6 +6862,7 @@ uint8x4_t test_preinterpret_u32_u8x4(uint32_t x) {
 uint16x2_t test_preinterpret_u32_u16x2(uint32_t x) {
   return __riscv_preinterpret_u32_u16x2(x);
 }
+
 // RV32-LABEL: define dso_local i32 @test_preinterpret_u32_i8x4(
 // RV32-SAME: i32 noundef [[X:%.*]]) #[[ATTR0]] {
 // RV32-NEXT:  [[ENTRY:.*:]]
@@ -6865,6 +6876,7 @@ uint16x2_t test_preinterpret_u32_u16x2(uint32_t x) {
 int8x4_t test_preinterpret_u32_i8x4(uint32_t x) {
   return __riscv_preinterpret_u32_i8x4(x);
 }
+
 // RV32-LABEL: define dso_local i32 @test_preinterpret_u32_i16x2(
 // RV32-SAME: i32 noundef [[X:%.*]]) #[[ATTR0]] {
 // RV32-NEXT:  [[ENTRY:.*:]]
@@ -6878,6 +6890,7 @@ int8x4_t test_preinterpret_u32_i8x4(uint32_t x) {
 int16x2_t test_preinterpret_u32_i16x2(uint32_t x) {
   return __riscv_preinterpret_u32_i16x2(x);
 }
+
 // RV32-LABEL: define dso_local i32 @test_preinterpret_i32_u8x4(
 // RV32-SAME: i32 noundef [[X:%.*]]) #[[ATTR0]] {
 // RV32-NEXT:  [[ENTRY:.*:]]
@@ -6891,6 +6904,7 @@ int16x2_t test_preinterpret_u32_i16x2(uint32_t x) {
 uint8x4_t test_preinterpret_i32_u8x4(int32_t x) {
   return __riscv_preinterpret_i32_u8x4(x);
 }
+
 // RV32-LABEL: define dso_local i32 @test_preinterpret_i32_u16x2(
 // RV32-SAME: i32 noundef [[X:%.*]]) #[[ATTR0]] {
 // RV32-NEXT:  [[ENTRY:.*:]]
@@ -6904,6 +6918,7 @@ uint8x4_t test_preinterpret_i32_u8x4(int32_t x) {
 uint16x2_t test_preinterpret_i32_u16x2(int32_t x) {
   return __riscv_preinterpret_i32_u16x2(x);
 }
+
 // RV32-LABEL: define dso_local i32 @test_preinterpret_i32_i8x4(
 // RV32-SAME: i32 noundef [[X:%.*]]) #[[ATTR0]] {
 // RV32-NEXT:  [[ENTRY:.*:]]
@@ -6917,6 +6932,7 @@ uint16x2_t test_preinterpret_i32_u16x2(int32_t x) {
 int8x4_t test_preinterpret_i32_i8x4(int32_t x) {
   return __riscv_preinterpret_i32_i8x4(x);
 }
+
 // RV32-LABEL: define dso_local i32 @test_preinterpret_i32_i16x2(
 // RV32-SAME: i32 noundef [[X:%.*]]) #[[ATTR0]] {
 // RV32-NEXT:  [[ENTRY:.*:]]
@@ -6940,6 +6956,7 @@ int16x2_t test_preinterpret_i32_i16x2(int32_t x) {
 uint64_t test_preinterpret_u8x8_u64(uint8x8_t x) {
   return __riscv_preinterpret_u8x8_u64(x);
 }
+
 // CHECK-LABEL: define dso_local i64 @test_preinterpret_u16x4_u64(
 // CHECK-SAME: i64 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -6948,6 +6965,7 @@ uint64_t test_preinterpret_u8x8_u64(uint8x8_t x) {
 uint64_t test_preinterpret_u16x4_u64(uint16x4_t x) {
   return __riscv_preinterpret_u16x4_u64(x);
 }
+
 // CHECK-LABEL: define dso_local i64 @test_preinterpret_u32x2_u64(
 // CHECK-SAME: i64 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -6956,6 +6974,7 @@ uint64_t test_preinterpret_u16x4_u64(uint16x4_t x) {
 uint64_t test_preinterpret_u32x2_u64(uint32x2_t x) {
   return __riscv_preinterpret_u32x2_u64(x);
 }
+
 // CHECK-LABEL: define dso_local i64 @test_preinterpret_i8x8_u64(
 // CHECK-SAME: i64 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -6964,6 +6983,7 @@ uint64_t test_preinterpret_u32x2_u64(uint32x2_t x) {
 uint64_t test_preinterpret_i8x8_u64(int8x8_t x) {
   return __riscv_preinterpret_i8x8_u64(x);
 }
+
 // CHECK-LABEL: define dso_local i64 @test_preinterpret_i16x4_u64(
 // CHECK-SAME: i64 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -6972,6 +6992,7 @@ uint64_t test_preinterpret_i8x8_u64(int8x8_t x) {
 uint64_t test_preinterpret_i16x4_u64(int16x4_t x) {
   return __riscv_preinterpret_i16x4_u64(x);
 }
+
 // CHECK-LABEL: define dso_local i64 @test_preinterpret_i32x2_u64(
 // CHECK-SAME: i64 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -6980,6 +7001,7 @@ uint64_t test_preinterpret_i16x4_u64(int16x4_t x) {
 uint64_t test_preinterpret_i32x2_u64(int32x2_t x) {
   return __riscv_preinterpret_i32x2_u64(x);
 }
+
 // CHECK-LABEL: define dso_local i64 @test_preinterpret_u8x8_i64(
 // CHECK-SAME: i64 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -6988,6 +7010,7 @@ uint64_t test_preinterpret_i32x2_u64(int32x2_t x) {
 int64_t test_preinterpret_u8x8_i64(uint8x8_t x) {
   return __riscv_preinterpret_u8x8_i64(x);
 }
+
 // CHECK-LABEL: define dso_local i64 @test_preinterpret_u16x4_i64(
 // CHECK-SAME: i64 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -6996,6 +7019,7 @@ int64_t test_preinterpret_u8x8_i64(uint8x8_t x) {
 int64_t test_preinterpret_u16x4_i64(uint16x4_t x) {
   return __riscv_preinterpret_u16x4_i64(x);
 }
+
 // CHECK-LABEL: define dso_local i64 @test_preinterpret_u32x2_i64(
 // CHECK-SAME: i64 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -7004,6 +7028,7 @@ int64_t test_preinterpret_u16x4_i64(uint16x4_t x) {
 int64_t test_preinterpret_u32x2_i64(uint32x2_t x) {
   return __riscv_preinterpret_u32x2_i64(x);
 }
+
 // CHECK-LABEL: define dso_local i64 @test_preinterpret_i8x8_i64(
 // CHECK-SAME: i64 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -7012,6 +7037,7 @@ int64_t test_preinterpret_u32x2_i64(uint32x2_t x) {
 int64_t test_preinterpret_i8x8_i64(int8x8_t x) {
   return __riscv_preinterpret_i8x8_i64(x);
 }
+
 // CHECK-LABEL: define dso_local i64 @test_preinterpret_i16x4_i64(
 // CHECK-SAME: i64 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -7020,6 +7046,7 @@ int64_t test_preinterpret_i8x8_i64(int8x8_t x) {
 int64_t test_preinterpret_i16x4_i64(int16x4_t x) {
   return __riscv_preinterpret_i16x4_i64(x);
 }
+
 // CHECK-LABEL: define dso_local i64 @test_preinterpret_i32x2_i64(
 // CHECK-SAME: i64 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -7028,6 +7055,7 @@ int64_t test_preinterpret_i16x4_i64(int16x4_t x) {
 int64_t test_preinterpret_i32x2_i64(int32x2_t x) {
   return __riscv_preinterpret_i32x2_i64(x);
 }
+
 // CHECK-LABEL: define dso_local i64 @test_preinterpret_u64_u8x8(
 // CHECK-SAME: i64 noundef [[X:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -7036,6 +7064,7 @@ int64_t test_preinterpret_i32x2_i64(int32x2_t x) {
 uint8x8_t test_preinterpret_u64_u8x8(uint64_t x) {
   return __riscv_preinterpret_u64_u8x8(x);
 }
+
 // CHECK-LABEL: define dso_local i64 @test_preinterpret_u64_u16x4(
 // CHECK-SAME: i64 noundef [[X:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -7044,6 +7073,7 @@ uint8x8_t test_preinterpret_u64_u8x8(uint64_t x) {
 uint16x4_t test_preinterpret_u64_u16x4(uint64_t x) {
   return __riscv_preinterpret_u64_u16x4(x);
 }
+
 // CHECK-LABEL: define dso_local i64 @test_preinterpret_u64_u32x2(
 // CHECK-SAME: i64 noundef [[X:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -7052,6 +7082,7 @@ uint16x4_t test_preinterpret_u64_u16x4(uint64_t x) {
 uint32x2_t test_preinterpret_u64_u32x2(uint64_t x) {
   return __riscv_preinterpret_u64_u32x2(x);
 }
+
 // CHECK-LABEL: define dso_local i64 @test_preinterpret_u64_i8x8(
 // CHECK-SAME: i64 noundef [[X:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -7060,6 +7091,7 @@ uint32x2_t test_preinterpret_u64_u32x2(uint64_t x) {
 int8x8_t test_preinterpret_u64_i8x8(uint64_t x) {
   return __riscv_preinterpret_u64_i8x8(x);
 }
+
 // CHECK-LABEL: define dso_local i64 @test_preinterpret_u64_i16x4(
 // CHECK-SAME: i64 noundef [[X:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -7068,6 +7100,7 @@ int8x8_t test_preinterpret_u64_i8x8(uint64_t x) {
 int16x4_t test_preinterpret_u64_i16x4(uint64_t x) {
   return __riscv_preinterpret_u64_i16x4(x);
 }
+
 // CHECK-LABEL: define dso_local i64 @test_preinterpret_u64_i32x2(
 // CHECK-SAME: i64 noundef [[X:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -7076,6 +7109,7 @@ int16x4_t test_preinterpret_u64_i16x4(uint64_t x) {
 int32x2_t test_preinterpret_u64_i32x2(uint64_t x) {
   return __riscv_preinterpret_u64_i32x2(x);
 }
+
 // CHECK-LABEL: define dso_local i64 @test_preinterpret_i64_u8x8(
 // CHECK-SAME: i64 noundef [[X:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -7084,6 +7118,7 @@ int32x2_t test_preinterpret_u64_i32x2(uint64_t x) {
 uint8x8_t test_preinterpret_i64_u8x8(int64_t x) {
   return __riscv_preinterpret_i64_u8x8(x);
 }
+
 // CHECK-LABEL: define dso_local i64 @test_preinterpret_i64_u16x4(
 // CHECK-SAME: i64 noundef [[X:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -7092,6 +7127,7 @@ uint8x8_t test_preinterpret_i64_u8x8(int64_t x) {
 uint16x4_t test_preinterpret_i64_u16x4(int64_t x) {
   return __riscv_preinterpret_i64_u16x4(x);
 }
+
 // CHECK-LABEL: define dso_local i64 @test_preinterpret_i64_u32x2(
 // CHECK-SAME: i64 noundef [[X:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -7100,6 +7136,7 @@ uint16x4_t test_preinterpret_i64_u16x4(int64_t x) {
 uint32x2_t test_preinterpret_i64_u32x2(int64_t x) {
   return __riscv_preinterpret_i64_u32x2(x);
 }
+
 // CHECK-LABEL: define dso_local i64 @test_preinterpret_i64_i8x8(
 // CHECK-SAME: i64 noundef [[X:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -7108,6 +7145,7 @@ uint32x2_t test_preinterpret_i64_u32x2(int64_t x) {
 int8x8_t test_preinterpret_i64_i8x8(int64_t x) {
   return __riscv_preinterpret_i64_i8x8(x);
 }
+
 // CHECK-LABEL: define dso_local i64 @test_preinterpret_i64_i16x4(
 // CHECK-SAME: i64 noundef [[X:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -7116,6 +7154,7 @@ int8x8_t test_preinterpret_i64_i8x8(int64_t x) {
 int16x4_t test_preinterpret_i64_i16x4(int64_t x) {
   return __riscv_preinterpret_i64_i16x4(x);
 }
+
 // CHECK-LABEL: define dso_local i64 @test_preinterpret_i64_i32x2(
 // CHECK-SAME: i64 noundef [[X:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -7134,6 +7173,7 @@ int32x2_t test_preinterpret_i64_i32x2(int64_t x) {
 uint8x4_t test_preinterpret_i8x4_u8x4(int8x4_t x) {
   return __riscv_preinterpret_i8x4_u8x4(x);
 }
+
 // CHECK-LABEL: define dso_local i32 @test_preinterpret_u16x2_u8x4(
 // CHECK-SAME: i32 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -7142,6 +7182,7 @@ uint8x4_t test_preinterpret_i8x4_u8x4(int8x4_t x) {
 uint8x4_t test_preinterpret_u16x2_u8x4(uint16x2_t x) {
   return __riscv_preinterpret_u16x2_u8x4(x);
 }
+
 // CHECK-LABEL: define dso_local i32 @test_preinterpret_i16x2_u8x4(
 // CHECK-SAME: i32 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -7150,6 +7191,7 @@ uint8x4_t test_preinterpret_u16x2_u8x4(uint16x2_t x) {
 uint8x4_t test_preinterpret_i16x2_u8x4(int16x2_t x) {
   return __riscv_preinterpret_i16x2_u8x4(x);
 }
+
 // CHECK-LABEL: define dso_local i32 @test_preinterpret_u8x4_i8x4(
 // CHECK-SAME: i32 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -7158,6 +7200,7 @@ uint8x4_t test_preinterpret_i16x2_u8x4(int16x2_t x) {
 int8x4_t test_preinterpret_u8x4_i8x4(uint8x4_t x) {
   return __riscv_preinterpret_u8x4_i8x4(x);
 }
+
 // CHECK-LABEL: define dso_local i32 @test_preinterpret_u16x2_i8x4(
 // CHECK-SAME: i32 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -7166,6 +7209,7 @@ int8x4_t test_preinterpret_u8x4_i8x4(uint8x4_t x) {
 int8x4_t test_preinterpret_u16x2_i8x4(uint16x2_t x) {
   return __riscv_preinterpret_u16x2_i8x4(x);
 }
+
 // CHECK-LABEL: define dso_local i32 @test_preinterpret_i16x2_i8x4(
 // CHECK-SAME: i32 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -7174,6 +7218,7 @@ int8x4_t test_preinterpret_u16x2_i8x4(uint16x2_t x) {
 int8x4_t test_preinterpret_i16x2_i8x4(int16x2_t x) {
   return __riscv_preinterpret_i16x2_i8x4(x);
 }
+
 // CHECK-LABEL: define dso_local i32 @test_preinterpret_u8x4_u16x2(
 // CHECK-SAME: i32 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -7182,6 +7227,7 @@ int8x4_t test_preinterpret_i16x2_i8x4(int16x2_t x) {
 uint16x2_t test_preinterpret_u8x4_u16x2(uint8x4_t x) {
   return __riscv_preinterpret_u8x4_u16x2(x);
 }
+
 // CHECK-LABEL: define dso_local i32 @test_preinterpret_i8x4_u16x2(
 // CHECK-SAME: i32 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -7190,6 +7236,7 @@ uint16x2_t test_preinterpret_u8x4_u16x2(uint8x4_t x) {
 uint16x2_t test_preinterpret_i8x4_u16x2(int8x4_t x) {
   return __riscv_preinterpret_i8x4_u16x2(x);
 }
+
 // CHECK-LABEL: define dso_local i32 @test_preinterpret_i16x2_u16x2(
 // CHECK-SAME: i32 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -7198,6 +7245,7 @@ uint16x2_t test_preinterpret_i8x4_u16x2(int8x4_t x) {
 uint16x2_t test_preinterpret_i16x2_u16x2(int16x2_t x) {
   return __riscv_preinterpret_i16x2_u16x2(x);
 }
+
 // CHECK-LABEL: define dso_local i32 @test_preinterpret_u8x4_i16x2(
 // CHECK-SAME: i32 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -7206,6 +7254,7 @@ uint16x2_t test_preinterpret_i16x2_u16x2(int16x2_t x) {
 int16x2_t test_preinterpret_u8x4_i16x2(uint8x4_t x) {
   return __riscv_preinterpret_u8x4_i16x2(x);
 }
+
 // CHECK-LABEL: define dso_local i32 @test_preinterpret_i8x4_i16x2(
 // CHECK-SAME: i32 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -7214,6 +7263,7 @@ int16x2_t test_preinterpret_u8x4_i16x2(uint8x4_t x) {
 int16x2_t test_preinterpret_i8x4_i16x2(int8x4_t x) {
   return __riscv_preinterpret_i8x4_i16x2(x);
 }
+
 // CHECK-LABEL: define dso_local i32 @test_preinterpret_u16x2_i16x2(
 // CHECK-SAME: i32 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -7232,6 +7282,7 @@ int16x2_t test_preinterpret_u16x2_i16x2(uint16x2_t x) {
 uint8x8_t test_preinterpret_i8x8_u8x8(int8x8_t x) {
   return __riscv_preinterpret_i8x8_u8x8(x);
 }
+
 // CHECK-LABEL: define dso_local i64 @test_preinterpret_u16x4_u8x8(
 // CHECK-SAME: i64 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -7240,6 +7291,7 @@ uint8x8_t test_preinterpret_i8x8_u8x8(int8x8_t x) {
 uint8x8_t test_preinterpret_u16x4_u8x8(uint16x4_t x) {
   return __riscv_preinterpret_u16x4_u8x8(x);
 }
+
 // CHECK-LABEL: define dso_local i64 @test_preinterpret_i16x4_u8x8(
 // CHECK-SAME: i64 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -7248,6 +7300,7 @@ uint8x8_t test_preinterpret_u16x4_u8x8(uint16x4_t x) {
 uint8x8_t test_preinterpret_i16x4_u8x8(int16x4_t x) {
   return __riscv_preinterpret_i16x4_u8x8(x);
 }
+
 // CHECK-LABEL: define dso_local i64 @test_preinterpret_u32x2_u8x8(
 // CHECK-SAME: i64 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -7256,6 +7309,7 @@ uint8x8_t test_preinterpret_i16x4_u8x8(int16x4_t x) {
 uint8x8_t test_preinterpret_u32x2_u8x8(uint32x2_t x) {
   return __riscv_preinterpret_u32x2_u8x8(x);
 }
+
 // CHECK-LABEL: define dso_local i64 @test_preinterpret_i32x2_u8x8(
 // CHECK-SAME: i64 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -7264,6 +7318,7 @@ uint8x8_t test_preinterpret_u32x2_u8x8(uint32x2_t x) {
 uint8x8_t test_preinterpret_i32x2_u8x8(int32x2_t x) {
   return __riscv_preinterpret_i32x2_u8x8(x);
 }
+
 // CHECK-LABEL: define dso_local i64 @test_preinterpret_u8x8_i8x8(
 // CHECK-SAME: i64 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -7272,6 +7327,7 @@ uint8x8_t test_preinterpret_i32x2_u8x8(int32x2_t x) {
 int8x8_t test_preinterpret_u8x8_i8x8(uint8x8_t x) {
   return __riscv_preinterpret_u8x8_i8x8(x);
 }
+
 // CHECK-LABEL: define dso_local i64 @test_preinterpret_u16x4_i8x8(
 // CHECK-SAME: i64 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -7280,6 +7336,7 @@ int8x8_t test_preinterpret_u8x8_i8x8(uint8x8_t x) {
 int8x8_t test_preinterpret_u16x4_i8x8(uint16x4_t x) {
   return __riscv_preinterpret_u16x4_i8x8(x);
 }
+
 // CHECK-LABEL: define dso_local i64 @test_preinterpret_i16x4_i8x8(
 // CHECK-SAME: i64 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -7288,6 +7345,7 @@ int8x8_t test_preinterpret_u16x4_i8x8(uint16x4_t x) {
 int8x8_t test_preinterpret_i16x4_i8x8(int16x4_t x) {
   return __riscv_preinterpret_i16x4_i8x8(x);
 }
+
 // CHECK-LABEL: define dso_local i64 @test_preinterpret_u32x2_i8x8(
 // CHECK-SAME: i64 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -7296,6 +7354,7 @@ int8x8_t test_preinterpret_i16x4_i8x8(int16x4_t x) {
 int8x8_t test_preinterpret_u32x2_i8x8(uint32x2_t x) {
   return __riscv_preinterpret_u32x2_i8x8(x);
 }
+
 // CHECK-LABEL: define dso_local i64 @test_preinterpret_i32x2_i8x8(
 // CHECK-SAME: i64 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -7304,6 +7363,7 @@ int8x8_t test_preinterpret_u32x2_i8x8(uint32x2_t x) {
 int8x8_t test_preinterpret_i32x2_i8x8(int32x2_t x) {
   return __riscv_preinterpret_i32x2_i8x8(x);
 }
+
 // CHECK-LABEL: define dso_local i64 @test_preinterpret_u8x8_u16x4(
 // CHECK-SAME: i64 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -7312,6 +7372,7 @@ int8x8_t test_preinterpret_i32x2_i8x8(int32x2_t x) {
 uint16x4_t test_preinterpret_u8x8_u16x4(uint8x8_t x) {
   return __riscv_preinterpret_u8x8_u16x4(x);
 }
+
 // CHECK-LABEL: define dso_local i64 @test_preinterpret_i8x8_u16x4(
 // CHECK-SAME: i64 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -7320,6 +7381,7 @@ uint16x4_t test_preinterpret_u8x8_u16x4(uint8x8_t x) {
 uint16x4_t test_preinterpret_i8x8_u16x4(int8x8_t x) {
   return __riscv_preinterpret_i8x8_u16x4(x);
 }
+
 // CHECK-LABEL: define dso_local i64 @test_preinterpret_i16x4_u16x4(
 // CHECK-SAME: i64 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -7328,6 +7390,7 @@ uint16x4_t test_preinterpret_i8x8_u16x4(int8x8_t x) {
 uint16x4_t test_preinterpret_i16x4_u16x4(int16x4_t x) {
   return __riscv_preinterpret_i16x4_u16x4(x);
 }
+
 // CHECK-LABEL: define dso_local i64 @test_preinterpret_u32x2_u16x4(
 // CHECK-SAME: i64 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -7336,6 +7399,7 @@ uint16x4_t test_preinterpret_i16x4_u16x4(int16x4_t x) {
 uint16x4_t test_preinterpret_u32x2_u16x4(uint32x2_t x) {
   return __riscv_preinterpret_u32x2_u16x4(x);
 }
+
 // CHECK-LABEL: define dso_local i64 @test_preinterpret_i32x2_u16x4(
 // CHECK-SAME: i64 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -7344,6 +7408,7 @@ uint16x4_t test_preinterpret_u32x2_u16x4(uint32x2_t x) {
 uint16x4_t test_preinterpret_i32x2_u16x4(int32x2_t x) {
   return __riscv_preinterpret_i32x2_u16x4(x);
 }
+
 // CHECK-LABEL: define dso_local i64 @test_preinterpret_u8x8_i16x4(
 // CHECK-SAME: i64 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -7352,6 +7417,7 @@ uint16x4_t test_preinterpret_i32x2_u16x4(int32x2_t x) {
 int16x4_t test_preinterpret_u8x8_i16x4(uint8x8_t x) {
   return __riscv_preinterpret_u8x8_i16x4(x);
 }
+
 // CHECK-LABEL: define dso_local i64 @test_preinterpret_i8x8_i16x4(
 // CHECK-SAME: i64 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -7360,6 +7426,7 @@ int16x4_t test_preinterpret_u8x8_i16x4(uint8x8_t x) {
 int16x4_t test_preinterpret_i8x8_i16x4(int8x8_t x) {
   return __riscv_preinterpret_i8x8_i16x4(x);
 }
+
 // CHECK-LABEL: define dso_local i64 @test_preinterpret_u16x4_i16x4(
 // CHECK-SAME: i64 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -7368,6 +7435,7 @@ int16x4_t test_preinterpret_i8x8_i16x4(int8x8_t x) {
 int16x4_t test_preinterpret_u16x4_i16x4(uint16x4_t x) {
   return __riscv_preinterpret_u16x4_i16x4(x);
 }
+
 // CHECK-LABEL: define dso_local i64 @test_preinterpret_u32x2_i16x4(
 // CHECK-SAME: i64 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -7376,6 +7444,7 @@ int16x4_t test_preinterpret_u16x4_i16x4(uint16x4_t x) {
 int16x4_t test_preinterpret_u32x2_i16x4(uint32x2_t x) {
   return __riscv_preinterpret_u32x2_i16x4(x);
 }
+
 // CHECK-LABEL: define dso_local i64 @test_preinterpret_i32x2_i16x4(
 // CHECK-SAME: i64 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -7384,6 +7453,7 @@ int16x4_t test_preinterpret_u32x2_i16x4(uint32x2_t x) {
 int16x4_t test_preinterpret_i32x2_i16x4(int32x2_t x) {
   return __riscv_preinterpret_i32x2_i16x4(x);
 }
+
 // CHECK-LABEL: define dso_local i64 @test_preinterpret_u8x8_u32x2(
 // CHECK-SAME: i64 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -7392,6 +7462,7 @@ int16x4_t test_preinterpret_i32x2_i16x4(int32x2_t x) {
 uint32x2_t test_preinterpret_u8x8_u32x2(uint8x8_t x) {
   return __riscv_preinterpret_u8x8_u32x2(x);
 }
+
 // CHECK-LABEL: define dso_local i64 @test_preinterpret_i8x8_u32x2(
 // CHECK-SAME: i64 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -7400,6 +7471,7 @@ uint32x2_t test_preinterpret_u8x8_u32x2(uint8x8_t x) {
 uint32x2_t test_preinterpret_i8x8_u32x2(int8x8_t x) {
   return __riscv_preinterpret_i8x8_u32x2(x);
 }
+
 // CHECK-LABEL: define dso_local i64 @test_preinterpret_u16x4_u32x2(
 // CHECK-SAME: i64 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -7408,6 +7480,7 @@ uint32x2_t test_preinterpret_i8x8_u32x2(int8x8_t x) {
 uint32x2_t test_preinterpret_u16x4_u32x2(uint16x4_t x) {
   return __riscv_preinterpret_u16x4_u32x2(x);
 }
+
 // CHECK-LABEL: define dso_local i64 @test_preinterpret_i16x4_u32x2(
 // CHECK-SAME: i64 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -7416,6 +7489,7 @@ uint32x2_t test_preinterpret_u16x4_u32x2(uint16x4_t x) {
 uint32x2_t test_preinterpret_i16x4_u32x2(int16x4_t x) {
   return __riscv_preinterpret_i16x4_u32x2(x);
 }
+
 // CHECK-LABEL: define dso_local i64 @test_preinterpret_i32x2_u32x2(
 // CHECK-SAME: i64 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -7424,6 +7498,7 @@ uint32x2_t test_preinterpret_i16x4_u32x2(int16x4_t x) {
 uint32x2_t test_preinterpret_i32x2_u32x2(int32x2_t x) {
   return __riscv_preinterpret_i32x2_u32x2(x);
 }
+
 // CHECK-LABEL: define dso_local i64 @test_preinterpret_u8x8_i32x2(
 // CHECK-SAME: i64 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -7432,6 +7507,7 @@ uint32x2_t test_preinterpret_i32x2_u32x2(int32x2_t x) {
 int32x2_t test_preinterpret_u8x8_i32x2(uint8x8_t x) {
   return __riscv_preinterpret_u8x8_i32x2(x);
 }
+
 // CHECK-LABEL: define dso_local i64 @test_preinterpret_i8x8_i32x2(
 // CHECK-SAME: i64 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -7440,6 +7516,7 @@ int32x2_t test_preinterpret_u8x8_i32x2(uint8x8_t x) {
 int32x2_t test_preinterpret_i8x8_i32x2(int8x8_t x) {
   return __riscv_preinterpret_i8x8_i32x2(x);
 }
+
 // CHECK-LABEL: define dso_local i64 @test_preinterpret_u16x4_i32x2(
 // CHECK-SAME: i64 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -7448,6 +7525,7 @@ int32x2_t test_preinterpret_i8x8_i32x2(int8x8_t x) {
 int32x2_t test_preinterpret_u16x4_i32x2(uint16x4_t x) {
   return __riscv_preinterpret_u16x4_i32x2(x);
 }
+
 // CHECK-LABEL: define dso_local i64 @test_preinterpret_i16x4_i32x2(
 // CHECK-SAME: i64 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -7456,6 +7534,7 @@ int32x2_t test_preinterpret_u16x4_i32x2(uint16x4_t x) {
 int32x2_t test_preinterpret_i16x4_i32x2(int16x4_t x) {
   return __riscv_preinterpret_i16x4_i32x2(x);
 }
+
 // CHECK-LABEL: define dso_local i64 @test_preinterpret_u32x2_i32x2(
 // CHECK-SAME: i64 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
