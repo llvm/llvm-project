@@ -156,4 +156,28 @@ define <8 x float> @splat_fdiv_v8f32_estimate(<8 x float> %x, float %y) #0 {
   ret <8 x float> %r
 }
 
+define <4 x float> @fdiv_exact_inverse_vector(<4 x i1> %c, <4 x float> %x) {
+; SSE-LABEL: fdiv_exact_inverse_vector:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pslld $31, %xmm0
+; SSE-NEXT:    psrad $31, %xmm0
+; SSE-NEXT:    movdqa %xmm0, %xmm2
+; SSE-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    por %xmm2, %xmm0
+; SSE-NEXT:    mulps %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: fdiv_exact_inverse_vector:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpslld $31, %xmm0, %xmm0
+; AVX-NEXT:    vbroadcastss {{.*#+}} xmm2 = [1.25E-1,1.25E-1,1.25E-1,1.25E-1]
+; AVX-NEXT:    vblendvps %xmm0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm0
+; AVX-NEXT:    vmulps %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    retq
+  %d = select <4 x i1> %c, <4 x float> <float 4.0, float 4.0, float 4.0, float 4.0>, <4 x float> <float 8.0, float 8.0, float 8.0, float 8.0>
+  %r = fdiv <4 x float> %x, %d
+  ret <4 x float> %r
+}
+
 attributes #0 = { "reciprocal-estimates"="divf,vec-divf" }
