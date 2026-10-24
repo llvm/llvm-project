@@ -25,6 +25,7 @@ add_clang_library(MLIRCIRInterfaces
   MLIRInferTypeOpInterfaceIncGen
   MLIRLoopLikeInterfaceIncGen
   MLIRSideEffectInterfacesIncGen
+  mlir-headers
 
   LINK_LIBS
   MLIRIR

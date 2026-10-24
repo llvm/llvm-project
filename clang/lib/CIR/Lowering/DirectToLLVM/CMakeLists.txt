@@ -16,6 +16,8 @@ add_clang_library(clangCIRLoweringDirectToLLVM
   MLIRBuiltinLocationAttributesIncGen
   MLIRBytecodeOpInterfaceIncGen
   MLIRCIROpInterfacesIncGen
+  MLIRCIRPassIncGen
+  mlir-headers
 
   LINK_LIBS
   clangCIRLoweringCommon
