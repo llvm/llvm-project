@@ -490,6 +490,14 @@ bool Descriptor::hasTrivialDtor() const {
 
 bool Descriptor::isUnion() const { return isRecord() && ElemRecord->isUnion(); }
 
+bool Descriptor::containsPointer() const {
+  if (isPrimitive() || isPrimitiveArray())
+    return getPrimType() == PT_Ptr;
+  if (isCompositeArray())
+    return ElemDesc->containsPointer();
+  return isRecord() && ElemRecord->hasPtrField();
+}
+
 unsigned Descriptor::getElemDataSize() const {
   if ((isPrimitive() || isPrimitiveArray()) &&
       isIntegerOrBoolType(getPrimType())) {
