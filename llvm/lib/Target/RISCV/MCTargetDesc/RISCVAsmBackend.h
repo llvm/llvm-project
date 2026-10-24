@@ -16,6 +16,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/Support/Alignment.h"
 
 namespace llvm {
 class MCAssembler;
@@ -33,6 +34,8 @@ protected:
   MCSymbol *PCRelTemp = nullptr;
 
   bool isPCRelFixupResolved(const MCSymbol *SymA, const MCFragment &F);
+
+  bool relaxCodeAlign(MCFragment &F, Align Alignment, unsigned &Size);
 
   StringMap<MCSymbol *> VendorSymbols;
 
@@ -68,6 +71,7 @@ public:
                         const MCSubtargetInfo &STI) const override;
 
   bool relaxAlign(MCFragment &F, unsigned &Size) override;
+  bool relaxPrefAlign(MCFragment &F, unsigned &Size) override;
   bool relaxDwarfLineAddr(MCFragment &) const override;
   bool relaxDwarfCFA(MCFragment &) const override;
   std::pair<bool, bool> relaxLEB128(MCFragment &LF,
