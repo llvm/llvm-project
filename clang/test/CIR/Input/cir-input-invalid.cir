@@ -26,11 +26,12 @@
 
 // RUN: not %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-cir %t/no-triple.cir -o - 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=NO-TRIPLE --implicit-check-not=error:
-// RUN: not %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-cir %t/int-triple.cir -o - 2>&1 \
-// RUN:   | FileCheck %s --check-prefix=NO-TRIPLE --implicit-check-not=error:
 // RUN: not %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-obj %t/no-triple.cir -o /dev/null 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=NO-TRIPLE --implicit-check-not=error:
 // NO-TRIPLE: error: missing target triple in ClangIR input
+// RUN: not %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-cir %t/int-triple.cir -o - 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=BAD-TRIPLE --implicit-check-not=error:
+// BAD-TRIPLE: error: 'builtin.module' op expects 'cir.triple' to be a string
 
 // RUN: not %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-cir %t/mismatch.cir -o - 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=MISMATCH --implicit-check-not=error:
