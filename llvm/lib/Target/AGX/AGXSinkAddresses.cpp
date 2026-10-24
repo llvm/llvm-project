@@ -228,21 +228,19 @@ static bool narrowLocalAddresses(Function &F) {
   for (Instruction &I : instructions(F))
     if (isNarrowable(I))
       Set.insert(&I);
-  bool Removed = true;
-  while (Removed) {
-    Removed = false;
-    for (Instruction *I : SmallVector<Instruction *, 32>(Set.begin(), Set.end())) {
+  bool Removed;
+  do {
+    // Compact the ordered candidates once per round. Removing each rejected
+    // instruction individually shifts the remaining vector every time.
+    Removed = Set.remove_if([&](Instruction *I) {
       bool OK = !I->use_empty() &&
                 (isCheapIndex(*I) || all_of(I->users(), [&](User *U) {
                    return isNarrowUse(U) || (isa<Instruction>(U) &&
                                              Set.contains(cast<Instruction>(U)));
                  }));
-      if (!OK) {
-        Set.remove(I);
-        Removed = true;
-      }
-    }
-  }
+      return !OK;
+    });
+  } while (Removed);
   // Only worth it where an address is computed.
   SmallVector<Instruction *, 16> Roots;
   for (Instruction *I : Set)
