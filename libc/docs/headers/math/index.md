@@ -180,7 +180,7 @@ log
 | cbrt      | {{ check }}       | {{ check }}      |                         | {{ check }}           |                         | {{ check }}             | 7.12.7.1               | F.10.4.1                   |
 | compoundn |                   |                  |                         |                       |                         |                         | 7.12.7.2               | F.10.4.2                   |
 | cos       | {{ check }}       | {{ check }}      |                         | {{ check }}           |                         |                         | 7.12.4.5               | F.10.1.5                   |
-| cosh      | {{ check }}       |                  |                         | {{ check }}           |                         |                         | 7.12.5.4               | F.10.2.4                   |
+| cosh      | {{ check }}       | {{ check }}      |                         | {{ check }}           |                         |                         | 7.12.5.4               | F.10.2.4                   |
 | cospi     | {{ check }}       |                  |                         | {{ check }}           |                         |                         | 7.12.4.12              | F.10.1.12                  |
 | dsqrt     | N/A               | N/A              | {{ check }}             | N/A                   | {{ check }}\*           |                         | 7.12.14.6              | F.10.11                    |
 | erf       | {{ check }}       |                  |                         |                       |                         |                         | 7.12.8.1               | F.10.5.1                   |

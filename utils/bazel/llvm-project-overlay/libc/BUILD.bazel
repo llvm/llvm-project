@@ -8703,6 +8703,35 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_cosh_double_eval",
+    hdrs = ["src/__support/math/cosh_double_eval.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_except_value_utils",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_rounding_mode",
+        ":__support_macros_attributes",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+        ":__support_math_sinhcosh_utils",
+        ":hdr_errno_macros",
+        ":hdr_fenv_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_cosh",
+    hdrs = ["src/__support/math/cosh.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+        ":__support_math_cosh_double_eval",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_coshf",
     hdrs = ["src/__support/math/coshf.h"],
     deps = [
@@ -13038,6 +13067,11 @@ libc_math_function(
     additional_deps = [
         ":__support_math_cosf16",
     ],
+)
+
+libc_math_function(
+    name = "cosh",
+    additional_deps = [":__support_math_cosh"],
 )
 
 libc_math_function(
