@@ -67,12 +67,36 @@ define i64 @zext_of_trunc_nuw(i64 %x) {
   ret i64 %z
 }
 
+; A value-preserving zext of chained no-unsigned-wrap truncs folds back
+; to the source.
+define i64 @zext_of_chained_trunc_nuw(i64 %x) {
+; CHECK-LABEL: @zext_of_chained_trunc_nuw(
+; CHECK-NEXT:    ret i64 [[X:%.*]]
+;
+  %t48 = trunc nuw i64 %x to i48
+  %t = trunc nuw i48 %t48 to i32
+  %z = zext i32 %t to i64
+  ret i64 %z
+}
+
 ; A value-preserving sext of a no-signed-wrap trunc folds back to the source.
 define i64 @sext_of_trunc_nsw(i64 %x) {
 ; CHECK-LABEL: @sext_of_trunc_nsw(
 ; CHECK-NEXT:    ret i64 [[X:%.*]]
 ;
   %t = trunc nsw i64 %x to i32
+  %s = sext i32 %t to i64
+  ret i64 %s
+}
+
+; A value-preserving sext of chained no-signed-wrap truncs folds back
+; to the source.
+define i64 @sext_of_chained_trunc_nsw(i64 %x) {
+; CHECK-LABEL: @sext_of_chained_trunc_nsw(
+; CHECK-NEXT:    ret i64 [[X:%.*]]
+;
+  %t48 = trunc nsw i64 %x to i48
+  %t = trunc nsw i48 %t48 to i32
   %s = sext i32 %t to i64
   ret i64 %s
 }
