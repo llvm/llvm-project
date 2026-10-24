@@ -122,6 +122,7 @@ enum ActionType {
   GenHLSLAliasIntrinsics,
   GenHLSLInlineIntrinsics,
   GenAttrDocs,
+  GenAttrDocSyntaxes,
   GenBuiltinDocs,
   GenDiagDocs,
   GenOptDocs,
@@ -361,6 +362,8 @@ cl::opt<ActionType> Action(
                    "hlsl_intrinsics.h"),
         clEnumValN(GenAttrDocs, "gen-attr-docs",
                    "Generate attribute documentation"),
+        clEnumValN(GenAttrDocSyntaxes, "gen-attr-doc-syntaxes",
+                   "Generate attribute documentation syntax database"),
         clEnumValN(GenBuiltinDocs, "gen-builtin-docs",
                    "Generate builtin documentation"),
         clEnumValN(GenDiagDocs, "gen-diag-docs",
@@ -680,6 +683,9 @@ bool ClangTableGenMain(raw_ostream &OS, const RecordKeeper &Records) {
     break;
   case GenAttrDocs:
     EmitClangAttrDocs(Records, OS);
+    break;
+  case GenAttrDocSyntaxes:
+    EmitClangAttrDocSyntaxes(Records, OS);
     break;
   case GenBuiltinDocs:
     EmitClangBuiltinDocs(Records, OS);

@@ -24,6 +24,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
@@ -5587,53 +5588,16 @@ createDocumentationData(const Record &Documentation,
   return Doc;
 }
 
-static void WriteDocumentation(const RecordKeeper &Records,
-                               const DocumentationData &Doc, raw_ostream &OS) {
+static void WriteDocumentation(const DocumentationData &Doc, raw_ostream &OS) {
   if (StringRef Label = Doc.Documentation->getValueAsString("Label");
       !Label.empty())
     OS << "(" << Label << ")=\n\n";
   OS << "### " << Doc.Heading << "\n\n";
 
-  if (Doc.SupportedSpellings.hasSpelling()) {
-    // List what spelling syntaxes the attribute supports.
-    // Note: "#pragma clang attribute" is handled outside the spelling kinds
-    // loop so it must be last.
-    OS << ":::{list-table} Supported Syntaxes\n";
-    OS << ":header-rows: 1\n\n";
-    OS << "* - GNU\n";
-    OS << "  - C++11\n";
-    OS << "  - C23\n";
-    OS << "  - `__declspec`\n";
-    OS << "  - Keyword\n";
-    OS << "  - `#pragma`\n";
-    OS << "  - HLSL Annotation\n";
-    OS << "  - `#pragma clang attribute`\n";
-    OS << "*";
-    for (size_t Kind = 0; Kind != NumSpellingKinds; ++Kind) {
-      SpellingKind K = (SpellingKind)Kind;
-      // TODO: List Microsoft (IDL-style attribute) spellings once we fully
-      // support them.
-      if (K == SpellingKind::Microsoft)
-        continue;
-
-      OS << " - ";
-      bool PrintedAny = false;
-      for (StringRef Spelling : Doc.SupportedSpellings[K]) {
-        if (PrintedAny)
-          OS << " <br/> ";
-        OS << "`" << Spelling << "`";
-        PrintedAny = true;
-      }
-
-      OS << "\n ";
-    }
-
-    OS << " - ";
-    if (getPragmaAttributeSupport(Records).isAttributedSupported(
-            *Doc.Attributes.front()))
-      OS << "Yes";
-    OS << "\n:::\n\n";
-  }
+  StringRef DocName = Doc.Documentation->getName();
+  if (DocName == "Undocumented")
+    DocName = Doc.Attributes.front()->getName();
+  OS << "{clang-attr-syntaxes}`" << DocName << "`\n\n";
 
   // If the attribute is deprecated, print a message about it, and possibly
   // provide a replacement attribute.
@@ -5647,11 +5611,42 @@ static void WriteDocumentation(const RecordKeeper &Records,
     OS << "\n\n";
   }
 
-  const StringRef ContentStr = Doc.Documentation->getValueAsString("Content");
   // Trim leading and trailing newlines and spaces.
-  OS << ContentStr.trim();
+  OS << Doc.Documentation->getValueAsString("Content").trim();
 
   OS << "\n\n\n";
+}
+
+static void WriteGeneratedSyntaxes(const RecordKeeper &Records,
+                                   const DocumentationData &Doc,
+                                   json::OStream &J) {
+  J.attributeArray("syntaxes", [&] {
+    auto EmitSpellings = [&](StringRef Name, SpellingKind Kind) {
+      J.object([&] {
+        J.attribute("name", Name);
+        J.attributeArray("spellings", [&] {
+          for (StringRef Spelling : Doc.SupportedSpellings[Kind])
+            J.value(Spelling);
+        });
+      });
+    };
+
+    EmitSpellings("GNU", SpellingKind::GNU);
+    EmitSpellings("C++11", SpellingKind::CXX11);
+    EmitSpellings("C23", SpellingKind::C23);
+    // TODO: List Microsoft (IDL-style attribute) spellings once we fully
+    // support them.
+    EmitSpellings("__declspec", SpellingKind::Declspec);
+    EmitSpellings("Keyword", SpellingKind::Keyword);
+    EmitSpellings("#pragma", SpellingKind::Pragma);
+    EmitSpellings("HLSL Annotation", SpellingKind::HLSLAnnotation);
+    J.object([&] {
+      J.attribute("name", "#pragma clang attribute");
+      J.attribute("supported",
+                  getPragmaAttributeSupport(Records).isAttributedSupported(
+                      *Doc.Attributes.front()));
+    });
+  });
 }
 
 using AttributesByDocumentation =
@@ -5776,8 +5771,63 @@ void EmitClangAttrDocs(const RecordKeeper &Records, raw_ostream &OS) {
        << getAttributeReferenceCategoryFileName(CategoryName) << "\n";
     WriteCategoryHeader(CategoryDocs.front().Category, OS);
     for (const DocumentationData &Doc : CategoryDocs)
-      WriteDocumentation(Records, Doc, OS);
+      WriteDocumentation(Doc, OS);
   }
+}
+
+void EmitClangAttrDocSyntaxes(const RecordKeeper &Records, raw_ostream &OS) {
+  DocumentationByCategory DocsByCategory =
+      GatherAttributeDocumentation(Records);
+  json::OStream J(OS, /*IndentSize=*/2);
+
+  auto EmitEntry = [&](const DocumentationData &Doc) {
+    J.object([&] {
+      StringRef DocName = Doc.Documentation->getName();
+      if (DocName == "Undocumented")
+        DocName = Doc.Attributes.front()->getName();
+      J.attribute("doc", DocName);
+      J.attribute("heading", Doc.Heading);
+      J.attribute("category", Doc.Category->getValueAsString("Name"));
+      J.attributeArray("attributes", [&] {
+        for (const Record *Attribute : Doc.Attributes)
+          J.value(Attribute->getName());
+      });
+      WriteGeneratedSyntaxes(Records, Doc, J);
+    });
+  };
+
+  auto EmitCategory = [&](StringRef CategoryName,
+                          const AttributesByDocumentation &AttributesByDoc) {
+    std::vector<DocumentationData> CategoryDocs;
+    for (const auto &[Doc, Attributes] : AttributesByDoc) {
+      if (CategoryName == "Undocumented") {
+        for (const Record *Attribute : Attributes)
+          CategoryDocs.push_back(
+              createDocumentationData(*Doc, ArrayRef(Attribute)));
+      } else {
+        CategoryDocs.push_back(createDocumentationData(*Doc, Attributes));
+      }
+    }
+    llvm::sort(CategoryDocs,
+               [](const DocumentationData &L, const DocumentationData &R) {
+                 return L.Heading < R.Heading;
+               });
+    for (const DocumentationData &Doc : CategoryDocs)
+      EmitEntry(Doc);
+  };
+
+  J.object([&] {
+    J.attributeArray("attributes", [&] {
+      for (const auto &[CategoryName, AttributesByDoc] : DocsByCategory)
+        if (CategoryName != "Undocumented")
+          EmitCategory(CategoryName, AttributesByDoc);
+    });
+    J.attributeArray("undocumented", [&] {
+      auto Undocumented = DocsByCategory.find("Undocumented");
+      if (Undocumented != DocsByCategory.end())
+        EmitCategory(Undocumented->first, Undocumented->second);
+    });
+  });
 }
 
 void EmitTestPragmaAttributeSupportedAttributes(const RecordKeeper &Records,
