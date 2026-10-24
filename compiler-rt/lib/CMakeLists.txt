@@ -49,6 +49,11 @@ if(COMPILER_RT_BUILD_SANITIZERS)
     add_subdirectory(ubsan)
   endif()
 
+  if(COMPILER_RT_HAS_EXTERN_SANITIZER)
+    add_subdirectory(${COMPILER_RT_EXTERN_SANITIZER_SRC_DIR}
+                    ${CMAKE_CURRENT_BINARY_DIR}/${COMPILER_RT_EXTERN_SANITIZER})
+  endif()
+
   foreach(sanitizer ${COMPILER_RT_SANITIZERS_TO_BUILD})
     compiler_rt_build_runtime(${sanitizer})
   endforeach()

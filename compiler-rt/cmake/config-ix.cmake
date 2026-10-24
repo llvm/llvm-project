@@ -773,6 +773,18 @@ set(COMPILER_RT_SANITIZERS_TO_BUILD all CACHE STRING
     "sanitizers to build if supported on the target (all;${ALL_SANITIZERS})")
 list_replace(COMPILER_RT_SANITIZERS_TO_BUILD all "${ALL_SANITIZERS}")
 
+set(COMPILER_RT_EXTERN_SANITIZER "" CACHE STRING
+    "Name of an out-of-tree sanitizer runtime.")
+set(COMPILER_RT_EXTERN_SANITIZER_SRC_DIR "" CACHE PATH
+    "Absolute path to the source for an out-of-tree runtime.")
+set(COMPILER_RT_HAS_EXTERN_SANITIZER FALSE)
+if(NOT "${COMPILER_RT_EXTERN_SANITIZER}" STREQUAL "")
+  if(NOT IS_ABSOLUTE "${COMPILER_RT_EXTERN_SANITIZER_SRC_DIR}" OR NOT IS_DIRECTORY "${COMPILER_RT_EXTERN_SANITIZER_SRC_DIR}")
+    message(FATAL_ERROR "Specify the absolute path to an out-of-tree source directory (`COMPILER_RT_EXTERN_SANITIZER_SRC_DIR`)")
+  endif()
+  set(COMPILER_RT_HAS_EXTERN_SANITIZER TRUE)
+endif()
+
 if (SANITIZER_COMMON_SUPPORTED_ARCH AND NOT LLVM_USE_SANITIZER AND
     (OS_NAME MATCHES "Android|Darwin|Linux|FreeBSD|NetBSD|Fuchsia|SunOS|Haiku" OR
     (OS_NAME MATCHES "Windows" AND NOT CYGWIN AND
