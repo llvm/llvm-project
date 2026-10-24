@@ -376,6 +376,10 @@ private:
     return op.emitError("unsupported op serialization");
   }
 
+  /// Serializes a memory copy and its optional memory access masks.
+  template <typename OpTy>
+  LogicalResult processCopyMemoryOp(OpTy op, spirv::Opcode opcode);
+
   //===--------------------------------------------------------------------===//
   // Utilities
   //===--------------------------------------------------------------------===//

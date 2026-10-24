@@ -585,6 +585,11 @@ private:
            << OpTy::getOperationName() << " op";
   }
 
+  /// Deserializes a memory copy with `numValueOperands` leading IDs.
+  template <typename OpTy>
+  LogicalResult processCopyMemoryOp(ArrayRef<uint32_t> words,
+                                    unsigned numValueOperands);
+
 private:
   /// The SPIR-V binary module.
   ArrayRef<uint32_t> binary;

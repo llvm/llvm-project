@@ -169,6 +169,73 @@ def SPIRV_CopyMemoryOp : SPIRV_Op<"CopyMemory", [DeclareOpInterfaceMethods<Align
 
 // -----
 
+def SPIRV_CopyMemorySizedOp : SPIRV_Op<"CopyMemorySized", [DeclareOpInterfaceMethods<AlignmentAttrOpInterface>]> {
+  let summary = [{
+    Copy from the memory pointed to by Source to the memory pointed to by
+    Target.
+  }];
+
+  let description = [{
+    Target and Source must have pointer types. Their pointee types may differ.
+
+    Size is the number of bytes to copy. It must have a scalar integer type.
+    If it is a constant instruction, the constant value must not be 0. It is
+    invalid for both the constant's type to have Signedness of 1 and to have
+    the sign bit set. Otherwise, as a run-time value, Size is treated as
+    unsigned, and if its value is 0, no memory access is made.
+
+    If present, any Memory Operands must begin with a memory operand
+    literal. If not present, it is the same as specifying the memory operand
+    None. Before version 1.4, at most one memory operands mask can be
+    provided. Starting with version 1.4 two masks can be provided, as
+    described in Memory Operands. If no masks or only one mask is present,
+    it applies to both Source and Target. If two masks are present, the
+    first applies to Target and must not include MakePointerVisible, and the
+    second applies to Source and must not include MakePointerAvailable.
+
+    <!-- End of AutoGen section -->
+
+    Serialization supports the Volatile, Aligned, Nontemporal, and
+    NonPrivatePointer memory operands. Masks requiring scope or alias-list
+    operands are not supported.
+
+    ```
+    copy-memory-sized-op ::= `spirv.CopyMemorySized ` ssa-use `, ` ssa-use
+                             `, ` ssa-use
+                             (`[` memory-access `]` (`, [` memory-access `]`)?)?
+                             ` : ` spirv-pointer-type `, ` spirv-pointer-type
+                             `, ` integer-type
+    ```
+
+    #### Example:
+
+    ```mlir
+    %0 = spirv.Variable : !spirv.ptr<f32, Function>
+    %1 = spirv.Variable : !spirv.ptr<i32, Function>
+    %2 = spirv.Constant 4 : i32
+    spirv.CopyMemorySized %0, %1, %2 : !spirv.ptr<f32, Function>, !spirv.ptr<i32, Function>, i32
+    spirv.CopyMemorySized %0, %1, %2 ["Aligned", 4] : !spirv.ptr<f32, Function>, !spirv.ptr<i32, Function>, i32
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_AnyPtr:$target,
+    SPIRV_AnyPtr:$source,
+    SPIRV_Integer:$size,
+    OptionalAttr<SPIRV_MemoryAccessAttr>:$memory_access,
+    OptionalAttr<IntValidAlignment<I32Attr>>:$alignment,
+    OptionalAttr<SPIRV_MemoryAccessAttr>:$source_memory_access,
+    OptionalAttr<IntValidAlignment<I32Attr>>:$source_alignment
+  );
+
+  let results = (outs);
+
+  let autogenSerialization = 0;
+  let autogenAvailability = 0;
+}
+
+// -----
+
 def SPIRV_InBoundsPtrAccessChainOp : SPIRV_Op<"InBoundsPtrAccessChain", [Pure]> {
   let summary = [{
     Has the same semantics as OpPtrAccessChain, with the addition that the

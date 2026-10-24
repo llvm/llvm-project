@@ -148,3 +148,81 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.4, [Shader, Linkage], []> {
     spirv.Return
   }
 }
+
+// -----
+
+spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses, Int64, Linkage], []> {
+  spirv.func @copy_memory_sized(%size: i64) "None" {
+    %0 = spirv.Variable : !spirv.ptr<f32, Function>
+    %1 = spirv.Variable : !spirv.ptr<i32, Function>
+    %2 = spirv.Constant 4 : i32
+
+    // CHECK: spirv.CopyMemorySized %{{.*}}, %{{.*}}, %{{.*}} : !spirv.ptr<f32, Function>, !spirv.ptr<i32, Function>, i32
+    spirv.CopyMemorySized %0, %1, %2 : !spirv.ptr<f32, Function>, !spirv.ptr<i32, Function>, i32
+
+    // CHECK: spirv.CopyMemorySized %{{.*}}, %{{.*}}, %{{.*}} : !spirv.ptr<f32, Function>, !spirv.ptr<i32, Function>, i64
+    spirv.CopyMemorySized %0, %1, %size : !spirv.ptr<f32, Function>, !spirv.ptr<i32, Function>, i64
+
+    // CHECK: spirv.CopyMemorySized %{{.*}}, %{{.*}}, %{{.*}} ["Volatile"] : !spirv.ptr<f32, Function>, !spirv.ptr<i32, Function>, i32
+    spirv.CopyMemorySized %0, %1, %2 ["Volatile"] : !spirv.ptr<f32, Function>, !spirv.ptr<i32, Function>, i32
+
+    // CHECK: spirv.CopyMemorySized %{{.*}}, %{{.*}}, %{{.*}} ["Aligned", 4] : !spirv.ptr<f32, Function>, !spirv.ptr<i32, Function>, i32
+    spirv.CopyMemorySized %0, %1, %2 ["Aligned", 4] : !spirv.ptr<f32, Function>, !spirv.ptr<i32, Function>, i32
+
+    // CHECK: spirv.CopyMemorySized %{{.*}}, %{{.*}}, %{{.*}} ["Volatile|Aligned", 4] : !spirv.ptr<f32, Function>, !spirv.ptr<i32, Function>, i32
+    spirv.CopyMemorySized %0, %1, %2 ["Volatile|Aligned", 4] : !spirv.ptr<f32, Function>, !spirv.ptr<i32, Function>, i32
+
+    spirv.Return
+  }
+}
+
+// -----
+
+spirv.module Physical64 OpenCL requires #spirv.vce<v1.4, [Kernel, Addresses, Linkage], []> {
+  spirv.func @copy_memory_sized_with_two_access_operands() "None" {
+    %0 = spirv.Variable : !spirv.ptr<f32, Function>
+    %1 = spirv.Variable : !spirv.ptr<i32, Function>
+    %2 = spirv.Constant 4 : i32
+
+    // CHECK: spirv.CopyMemorySized %{{.*}}, %{{.*}}, %{{.*}} ["Volatile"], ["Volatile"] : !spirv.ptr<f32, Function>, !spirv.ptr<i32, Function>, i32
+    spirv.CopyMemorySized %0, %1, %2 ["Volatile"], ["Volatile"] : !spirv.ptr<f32, Function>, !spirv.ptr<i32, Function>, i32
+
+    // CHECK: spirv.CopyMemorySized %{{.*}}, %{{.*}}, %{{.*}} ["Aligned", 4], ["Volatile"] : !spirv.ptr<f32, Function>, !spirv.ptr<i32, Function>, i32
+    spirv.CopyMemorySized %0, %1, %2 ["Aligned", 4], ["Volatile"] : !spirv.ptr<f32, Function>, !spirv.ptr<i32, Function>, i32
+
+    // CHECK: spirv.CopyMemorySized %{{.*}}, %{{.*}}, %{{.*}} ["Volatile"], ["Aligned", 4] : !spirv.ptr<f32, Function>, !spirv.ptr<i32, Function>, i32
+    spirv.CopyMemorySized %0, %1, %2 ["Volatile"], ["Aligned", 4] : !spirv.ptr<f32, Function>, !spirv.ptr<i32, Function>, i32
+
+    // CHECK: spirv.CopyMemorySized %{{.*}}, %{{.*}}, %{{.*}} ["Aligned", 8], ["Aligned", 4] : !spirv.ptr<f32, Function>, !spirv.ptr<i32, Function>, i32
+    spirv.CopyMemorySized %0, %1, %2 ["Aligned", 8], ["Aligned", 4] : !spirv.ptr<f32, Function>, !spirv.ptr<i32, Function>, i32
+
+    // CHECK: spirv.CopyMemorySized %{{.*}}, %{{.*}}, %{{.*}} ["Volatile|Aligned", 8], ["Volatile|Aligned", 4]
+    spirv.CopyMemorySized %0, %1, %2 ["Volatile|Aligned", 8], ["Volatile|Aligned", 4] : !spirv.ptr<f32, Function>, !spirv.ptr<i32, Function>, i32
+
+    // Source-only masks acquire an explicit None target mask in text and binary.
+    // CHECK: spirv.CopyMemorySized %{{.*}}, %{{.*}}, %{{.*}} ["None"], ["Volatile"] : !spirv.ptr<f32, Function>, !spirv.ptr<i32, Function>, i32
+    "spirv.CopyMemorySized"(%0, %1, %2) {source_memory_access = #spirv.memory_access<Volatile>} : (!spirv.ptr<f32, Function>, !spirv.ptr<i32, Function>, i32) -> ()
+    // CHECK: spirv.CopyMemorySized %{{.*}}, %{{.*}}, %{{.*}} ["None"], ["Volatile|Aligned", 4] : !spirv.ptr<f32, Function>, !spirv.ptr<i32, Function>, i32
+    "spirv.CopyMemorySized"(%0, %1, %2) {source_memory_access = #spirv.memory_access<Volatile|Aligned>, source_alignment = 4 : i32} : (!spirv.ptr<f32, Function>, !spirv.ptr<i32, Function>, i32) -> ()
+    // CHECK: spirv.CopyMemorySized %{{.*}}, %{{.*}}, %{{.*}} ["None"], ["None"] : !spirv.ptr<f32, Function>, !spirv.ptr<i32, Function>, i32
+    "spirv.CopyMemorySized"(%0, %1, %2) {source_memory_access = #spirv.memory_access<None>} : (!spirv.ptr<f32, Function>, !spirv.ptr<i32, Function>, i32) -> ()
+
+    spirv.Return
+  }
+}
+
+// -----
+
+spirv.module Physical64 OpenCL requires #spirv.vce<v1.4, [Kernel, Addresses, Linkage], []> {
+  spirv.func @copy_memory_combined_masks(%dst: !spirv.ptr<i32, Function>, %src: !spirv.ptr<i32, Function>) "None" {
+    // CHECK: spirv.CopyMemory "Function" %{{.*}}, "Function" %{{.*}} ["Volatile|Aligned", 4], ["Volatile|Aligned", 8] : i32
+    spirv.CopyMemory "Function" %dst, "Function" %src ["Volatile|Aligned", 4], ["Volatile|Aligned", 8] : i32
+    // CHECK: spirv.CopyMemory "Function" %{{.*}}, "Function" %{{.*}} ["None"], ["Volatile"] : i32
+    "spirv.CopyMemory"(%dst, %src) {source_memory_access = #spirv.memory_access<Volatile>} : (!spirv.ptr<i32, Function>, !spirv.ptr<i32, Function>) -> ()
+    // CHECK: spirv.CopyMemory "Function" %{{.*}}, "Function" %{{.*}} ["None"], ["Volatile|Aligned", 4] : i32
+    "spirv.CopyMemory"(%dst, %src) {source_memory_access = #spirv.memory_access<Volatile|Aligned>, source_alignment = 4 : i32} : (!spirv.ptr<i32, Function>, !spirv.ptr<i32, Function>) -> ()
+    // CHECK: spirv.CopyMemory "Function" %{{.*}}, "Function" %{{.*}} ["None"], ["None"] : i32
+    "spirv.CopyMemory"(%dst, %src) {source_memory_access = #spirv.memory_access<None>} : (!spirv.ptr<i32, Function>, !spirv.ptr<i32, Function>) -> ()
+    spirv.Return
+  }
+}
