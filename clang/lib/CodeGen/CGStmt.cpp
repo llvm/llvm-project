@@ -2594,8 +2594,18 @@ CodeGenFunction::EmitAsmInput(const TargetInfo::ConstraintInfo &Info,
   if (InputExpr->getStmtClass() == Expr::CXXThisExprClass)
     return {EmitScalarExpr(InputExpr), nullptr};
   InputExpr = InputExpr->IgnoreParenNoopCasts(getContext());
-  LValue Dest = EmitLValue(InputExpr);
-  return EmitAsmInputLValue(Info, Dest, InputExpr->getType(), ConstraintStr,
+  // EmitLValue can't emit all complex and aggregate rvalues; use a temporary.
+  QualType InputTy = InputExpr->getType();
+  LValue Dest;
+  if (InputExpr->isGLValue() || hasScalarEvaluationKind(InputTy)) {
+    Dest = EmitLValue(InputExpr);
+  } else if (hasAggregateEvaluationKind(InputTy)) {
+    Dest = EmitAggExprToLValue(InputExpr);
+  } else {
+    Dest = MakeAddrLValue(CreateMemTemp(InputTy), InputTy);
+    EmitComplexExprIntoLValue(InputExpr, Dest, /*isInit=*/true);
+  }
+  return EmitAsmInputLValue(Info, Dest, InputTy, ConstraintStr,
                             InputExpr->getExprLoc());
 }
 
