@@ -38,6 +38,15 @@ body:             |
     $w0 = COPY %0(f32)
 ...
 ---
+name:            FConstantBFloatInf
+body:             |
+  bb.0:
+  ; CHECK-LABEL: name: @FConstantBFloatInf
+  ; CHECK-NEXT: %0:_ FPClasses:(pinf) SignBitKnown:0
+    %0:_(bf16) = G_FCONSTANT bfloat 0xR7F80
+    $h0 = COPY %0(bf16)
+...
+---
 name:            FAbs
 body:             |
   bb.0:
