@@ -94,7 +94,6 @@
 ! RUN:     -fgcse-las                                                       \
 ! RUN:     -fgcse-sm                                                        \
 ! RUN:     -fipa-cp                                                         \
-! RUN:     -finline-functions-called-once                                   \
 ! RUN:     -fmodulo-sched                                                   \
 ! RUN:     -fmodulo-sched-allow-regmoves                                    \
 ! RUN:     -fpeel-loops                                                     \
@@ -148,7 +147,6 @@
 ! CHECK-WARNING-DAG: optimization flag '-fgcse-las' is not supported
 ! CHECK-WARNING-DAG: optimization flag '-fgcse-sm' is not supported
 ! CHECK-WARNING-DAG: optimization flag '-fipa-cp' is not supported
-! CHECK-WARNING-DAG: optimization flag '-finline-functions-called-once' is not supported
 ! CHECK-WARNING-DAG: optimization flag '-fmodulo-sched' is not supported
 ! CHECK-WARNING-DAG: optimization flag '-fmodulo-sched-allow-regmoves' is not supported
 ! CHECK-WARNING-DAG: optimization flag '-fpeel-loops' is not supported
