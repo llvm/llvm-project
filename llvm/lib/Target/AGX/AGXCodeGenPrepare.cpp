@@ -32,7 +32,9 @@
 #include "AGX.h"
 #include "AGXMachineFunctionInfo.h"
 #include "AGXSubtarget.h"
+#include "llvm/ADT/GenericUniformityImpl.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/Analysis/CycleAnalysis.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -42,6 +44,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -298,7 +301,7 @@ class AGXCodeGenPrepare : public FunctionPass {
   bool expandMemIntrinsics(Function &F, const TargetTransformInfo &TTI);
   bool unifyExits(Function &F);
   bool lowerConstrainedFP(Function &F);
-  bool lowerDivergentShuffles(Function &F, const UniformityInfo &UI);
+  bool lowerDivergentShuffles(Function &F, const TargetTransformInfo &TTI);
   bool lowerMatrixFMA(Function &F, const AGXSubtarget &ST);
   bool flushHalfDenormals(Function &F);
   bool flushFloatMinMax(Function &F);
@@ -314,7 +317,6 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<TargetTransformInfoWrapperPass>();
     AU.addRequired<TargetPassConfig>();
-    AU.addRequired<UniformityInfoWrapperPass>();
   }
 };
 
@@ -326,7 +328,6 @@ INITIALIZE_PASS_BEGIN(AGXCodeGenPrepare, DEBUG_TYPE, "AGX CodeGen Prepare",
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
-INITIALIZE_PASS_DEPENDENCY(UniformityInfoWrapperPass)
 INITIALIZE_PASS_END(AGXCodeGenPrepare, DEBUG_TYPE, "AGX CodeGen Prepare",
                     false, false)
 
@@ -571,7 +572,7 @@ bool AGXCodeGenPrepare::unifyExits(Function &F) {
 /// threads whose source is outside the SIMD-group (or quad) keep their own
 /// value, as Metal documents for simd_shuffle_up and simd_shuffle_down.
 bool AGXCodeGenPrepare::lowerDivergentShuffles(Function &F,
-                                               const UniformityInfo &UI) {
+                                               const TargetTransformInfo &TTI) {
   SmallVector<IntrinsicInst *, 8> Worklist;
   for (Instruction &I : instructions(F)) {
     auto *II = dyn_cast<IntrinsicInst>(&I);
@@ -586,14 +587,27 @@ bool AGXCodeGenPrepare::lowerDivergentShuffles(Function &F,
     case Intrinsic::agx_quad_shuffle_xor:
     case Intrinsic::agx_quad_shuffle_up:
     case Intrinsic::agx_quad_shuffle_down:
-      if (!isa<Constant>(II->getArgOperand(1)) &&
-          UI.isDivergentAtUse(II->getArgOperandUse(1)))
+      if (!isa<Constant>(II->getArgOperand(1)))
         Worklist.push_back(II);
       break;
     default:
       break;
     }
   }
+
+  // Most compute kernels have no variable shuffle indices. Do not compute
+  // whole-function divergence (and its dominator/cycle analyses) for them.
+  // Build it after matrix lowering, which can itself introduce shuffles.
+  if (Worklist.empty())
+    return false;
+  DominatorTree DT(F);
+  CycleInfo CI;
+  CI.compute(F);
+  UniformityInfo UI(DT, CI, &TTI);
+  UI.compute();
+  llvm::erase_if(Worklist, [&](IntrinsicInst *II) {
+    return !UI.isDivergentAtUse(II->getArgOperandUse(1));
+  });
 
   for (IntrinsicInst *II : Worklist) {
     IRBuilder<> B(II);
@@ -960,8 +974,7 @@ bool AGXCodeGenPrepare::runOnFunction(Function &F) {
   bool Changed = diagnoseDoubles(F);
   Changed |= lowerMatrixFMA(F, ST);
   if (ST.hasQuadShuffleIndexMerge())
-    Changed |= lowerDivergentShuffles(
-        F, getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo());
+    Changed |= lowerDivergentShuffles(F, TTI);
   Changed |= lowerConstrainedFP(F);
   Changed |= flushHalfDenormals(F);
   Changed |= flushFloatMinMax(F);
