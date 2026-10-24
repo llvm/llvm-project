@@ -445,6 +445,7 @@ add_fp_unittest(
   HDRS
     CanonicalizeTest.h
   DEPENDS
+    libc.src.__support.FPUtil.float128
     libc.src.math.canonicalizef128
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.fenv_impl
@@ -2589,6 +2590,7 @@ add_fp_unittest(
   HDRS
     ModfTest.h
   DEPENDS
+    libc.src.__support.FPUtil.float128
     libc.src.math.modff128
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.basic_operations
@@ -3765,6 +3767,7 @@ add_fp_unittest(
   HDRS
     RemQuoTest.h
   DEPENDS
+    libc.src.__support.FPUtil.float128
     libc.src.math.remquof128
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.FPUtil.fp_bits
