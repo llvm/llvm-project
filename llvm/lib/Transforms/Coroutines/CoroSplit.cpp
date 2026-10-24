@@ -947,6 +947,14 @@ void coro::BaseCloner::create() {
     VMap[&A] = DummyArgs.back();
   }
 
+  // In continuation-lowering, the continuation functions take the storage as
+  // their first argument. If the frame is inline in the storage, the storage
+  // is the frame pointer, which is remapped below. Otherwise, map it here for
+  // the code that signs the next continuation with its address.
+  if ((Shape.ABI == coro::ABI::Retcon || Shape.ABI == coro::ABI::RetconOnce) &&
+      !Shape.RetconLowering.IsFrameInlineInStorage)
+    VMap[Shape.getRetconCoroId()->getStorage()] = NewF->getArg(0);
+
   SmallVector<ReturnInst *, 4> Returns;
 
   // Ignore attempts to change certain attributes of the function.
@@ -1900,6 +1908,25 @@ void coro::AsyncABI::splitCoroutine(Function &F, coro::Shape &Shape,
   }
 }
 
+/// Sign the continuation function \p Fn with the same schema as the signed
+/// prototype \p Schema. If the schema is address-discriminated, the address is
+/// that of the coroutine storage \p Storage.
+static Value *signContinuation(IRBuilder<> &Builder, ConstantPtrAuth *Schema,
+                               Function *Fn, Value *Storage) {
+  if (!Schema->hasAddressDiscriminator())
+    return Schema->getWithSameSchema(Fn);
+
+  Type *Int64Ty = Builder.getInt64Ty();
+  Value *Disc = Builder.CreatePtrToInt(Storage, Int64Ty);
+  if (!Schema->getDiscriminator()->isZero())
+    Disc = Builder.CreateIntrinsic(Intrinsic::ptrauth_blend,
+                                   {Disc, Schema->getDiscriminator()});
+  Value *Signed = Builder.CreateIntrinsic(
+      Intrinsic::ptrauth_sign,
+      {Builder.CreatePtrToInt(Fn, Int64Ty), Schema->getKey(), Disc});
+  return Builder.CreateIntToPtr(Signed, Fn->getType());
+}
+
 void coro::AnyRetconABI::splitCoroutine(Function &F, coro::Shape &Shape,
                                         SmallVectorImpl<Function *> &Clones,
                                         TargetTransformInfo &TTI) {
@@ -2010,10 +2037,18 @@ void coro::AnyRetconABI::splitCoroutine(Function &F, coro::Shape &Shape,
       Builder.CreateRet(RetV);
     }
 
+    // Sign the continuation if the prototype is signed.
+    Value *ContinuationValue = Continuation;
+    if (ConstantPtrAuth *Schema = Id->getSignedPrototype()) {
+      IRBuilder<> Builder(Branch);
+      ContinuationValue =
+          signContinuation(Builder, Schema, Continuation, Id->getStorage());
+    }
+
     // Branch to the return block.
     Branch->setSuccessor(0, ReturnBB);
     assert(ContinuationPhi);
-    ContinuationPhi->addIncoming(Continuation, SuspendBB);
+    ContinuationPhi->addIncoming(ContinuationValue, SuspendBB);
     for (auto [Phi, VUse] :
          llvm::zip_equal(ReturnPHIs, Suspend->value_operands()))
       Phi->addIncoming(VUse, SuspendBB);

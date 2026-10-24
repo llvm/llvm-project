@@ -1281,6 +1281,12 @@ public:
   /// expressions referencing these special arrays.
   enum { AddrDiscriminator_CtorsDtors = 1 };
 
+  /// A constant value for the address discriminator of a signed prototype of
+  /// llvm.coro.id.retcon or llvm.coro.id.retcon.once. Coroutine lowering signs
+  /// the continuation functions with the address of the coroutine storage in
+  /// its place.
+  enum { AddrDiscriminator_UseCoroStorage = 1 };
+
   /// Whether the address uses a special address discriminator.
   /// These discriminators can't be used in real pointer-auth values; they
   /// can only be used in "prototype" values that indicate how some real
