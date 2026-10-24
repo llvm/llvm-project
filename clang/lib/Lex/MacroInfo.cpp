@@ -86,7 +86,9 @@ unsigned MacroInfo::getDefinitionLengthSlow(const SourceManager &SM) const {
 /// if they use different identifiers for the function macro parameters.
 /// Otherwise the comparison is lexical and this implements the rules in
 /// C99 6.10.3.
-bool MacroInfo::isIdenticalTo(const MacroInfo &Other, Preprocessor &PP,
+bool MacroInfo::isIdenticalTo(const MacroInfo &Other,
+                              const SourceManager &SourceMgr,
+                              const LangOptions &LangOpts,
                               bool Syntactically) const {
   bool Lexically = !Syntactically;
 
@@ -136,8 +138,11 @@ bool MacroInfo::isIdenticalTo(const MacroInfo &Other, Preprocessor &PP,
       continue;
     }
 
+    auto getSpelling = [&](const Token &token) {
+      return Lexer::getSpelling(token, SourceMgr, LangOpts);
+    };
     // Otherwise, check the spelling.
-    if (PP.getSpelling(A) != PP.getSpelling(B))
+    if (getSpelling(A) != getSpelling(B))
       return false;
   }
 
