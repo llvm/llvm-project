@@ -20,15 +20,25 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
-LIBC_INLINE ErrorOr<int> open(const char *path, int flags, mode_t mode_flags) {
 #ifdef SYS_openat
-  int fd = syscall_impl<int>(SYS_openat, AT_FDCWD, path, flags, mode_flags);
-#else
-  int fd = syscall_impl<int>(SYS_open, path, flags, mode_flags);
-#endif
+LIBC_INLINE ErrorOr<int> openat(int dfd, const char *path, int flags,
+                                mode_t mode_flags) {
+  int fd = syscall_impl<int>(SYS_openat, dfd, path, flags, mode_flags);
   if (fd < 0)
     return Error(-fd);
   return fd;
+}
+#endif
+
+LIBC_INLINE ErrorOr<int> open(const char *path, int flags, mode_t mode_flags) {
+#ifdef SYS_openat
+  return openat(AT_FDCWD, path, flags, mode_flags);
+#else
+  int fd = syscall_impl<int>(SYS_open, path, flags, mode_flags);
+  if (fd < 0)
+    return Error(-fd);
+  return fd;
+#endif
 }
 
 } // namespace linux_syscalls
