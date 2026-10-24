@@ -207,6 +207,86 @@ libc_test(
     ],
 )
 
+libc_test(
+    name = "getgid_test",
+    srcs = ["getgid_test.cpp"],
+    deps = [
+        "//libc:getgid",
+    ],
+)
+
+libc_test(
+    name = "getegid_test",
+    srcs = ["getegid_test.cpp"],
+    deps = [
+        "//libc:getegid",
+    ],
+)
+
+libc_test(
+    name = "setuid_test",
+    srcs = ["setuid_test.cpp"],
+    deps = [
+        "//libc:getuid",
+        "//libc:hdr_errno_macros",
+        "//libc:setuid",
+    ],
+)
+
+libc_test(
+    name = "setgid_test",
+    srcs = ["setgid_test.cpp"],
+    deps = [
+        "//libc:getgid",
+        "//libc:hdr_errno_macros",
+        "//libc:setgid",
+    ],
+)
+
+libc_test(
+    name = "setreuid_test",
+    srcs = ["setreuid_test.cpp"],
+    deps = [
+        "//libc:geteuid",
+        "//libc:getuid",
+        "//libc:hdr_errno_macros",
+        "//libc:setreuid",
+    ],
+)
+
+libc_test(
+    name = "setregid_test",
+    srcs = ["setregid_test.cpp"],
+    deps = [
+        "//libc:getegid",
+        "//libc:getgid",
+        "//libc:hdr_errno_macros",
+        "//libc:setregid",
+    ],
+)
+
+libc_test(
+    name = "setresuid_test",
+    srcs = ["setresuid_test.cpp"],
+    deps = [
+        "//libc:geteuid",
+        "//libc:getuid",
+        "//libc:hdr_errno_macros",
+        "//libc:setresuid",
+    ],
+)
+
+libc_test(
+    name = "setresgid_test",
+    srcs = ["setresgid_test.cpp"],
+    deps = [
+        "//libc:getegid",
+        "//libc:getgid",
+        "//libc:hdr_errno_macros",
+        "//libc:setresgid",
+    ],
+)
+
 # TODO: add rules for functions modifying directories.
 
 #TODO: Enable once fullbuild is added to bazel, since this depends on a macro

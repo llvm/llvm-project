@@ -570,6 +570,11 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "llvm_libc_types_gid_t",
+    hdrs = ["include/llvm-libc-types/gid_t.h"],
+)
+
+libc_support_library(
     name = "llvm_libc_types_pid_t",
     hdrs = ["include/llvm-libc-types/pid_t.h"],
 )
@@ -1387,6 +1392,15 @@ libc_support_library(
     hdrs = ["hdr/types/pid_t.h"],
     deps = select({
         ":full_build": [":llvm_libc_types_pid_t"],
+        "//conditions:default": [],
+    }),
+)
+
+libc_support_library(
+    name = "types_gid_t",
+    hdrs = ["hdr/types/gid_t.h"],
+    deps = select({
+        ":full_build": [":llvm_libc_types_gid_t"],
         "//conditions:default": [],
     }),
 )
@@ -4266,6 +4280,117 @@ libc_support_library(
         ":__support_error_or",
         ":__support_macros_config",
         ":__support_osutil_syscall",
+    ],
+)
+
+libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_getegid",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/getegid.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":types_gid_t",
+    ],
+)
+
+libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_setgid",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/setgid.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":types_gid_t",
+    ],
+)
+
+libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_setregid",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/setregid.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":types_gid_t",
+    ],
+)
+
+libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_setresgid",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/setresgid.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":types_gid_t",
+    ],
+)
+
+libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_setreuid",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/setreuid.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":types_uid_t",
+    ],
+)
+
+libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_setresuid",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/setresuid.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":types_uid_t",
+    ],
+)
+
+libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_setuid",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/setuid.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":types_uid_t",
     ],
 )
 
@@ -17590,6 +17715,116 @@ libc_function(
         ":__support_osutil_syscall",
         ":errno",
         ":hdr_unistd_macros",
+        ":types_uid_t",
+    ],
+)
+
+libc_function(
+    name = "getegid",
+    srcs = ["src/unistd/linux/getegid.cpp"],
+    hdrs = ["src/unistd/getegid.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_getegid",
+        ":types_gid_t",
+    ],
+)
+
+libc_function(
+    name = "getgid",
+    srcs = ["src/unistd/linux/getgid.cpp"],
+    hdrs = ["src/unistd/getgid.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":errno",
+        ":hdr_unistd_macros",
+        ":types_gid_t",
+    ],
+)
+
+libc_function(
+    name = "setgid",
+    srcs = ["src/unistd/linux/setgid.cpp"],
+    hdrs = ["src/unistd/setgid.h"],
+    deps = [
+        ":__support_common",
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_setgid",
+        ":errno",
+        ":types_gid_t",
+    ],
+)
+
+libc_function(
+    name = "setregid",
+    srcs = ["src/unistd/linux/setregid.cpp"],
+    hdrs = ["src/unistd/setregid.h"],
+    deps = [
+        ":__support_common",
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_setregid",
+        ":errno",
+        ":types_gid_t",
+    ],
+)
+
+libc_function(
+    name = "setresgid",
+    srcs = ["src/unistd/linux/setresgid.cpp"],
+    hdrs = ["src/unistd/setresgid.h"],
+    deps = [
+        ":__support_common",
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_setresgid",
+        ":errno",
+        ":types_gid_t",
+    ],
+)
+
+libc_function(
+    name = "setreuid",
+    srcs = ["src/unistd/linux/setreuid.cpp"],
+    hdrs = ["src/unistd/setreuid.h"],
+    deps = [
+        ":__support_common",
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_setreuid",
+        ":errno",
+        ":types_uid_t",
+    ],
+)
+
+libc_function(
+    name = "setresuid",
+    srcs = ["src/unistd/linux/setresuid.cpp"],
+    hdrs = ["src/unistd/setresuid.h"],
+    deps = [
+        ":__support_common",
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_setresuid",
+        ":errno",
+        ":types_uid_t",
+    ],
+)
+
+libc_function(
+    name = "setuid",
+    srcs = ["src/unistd/linux/setuid.cpp"],
+    hdrs = ["src/unistd/setuid.h"],
+    deps = [
+        ":__support_common",
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_setuid",
+        ":errno",
         ":types_uid_t",
     ],
 )
