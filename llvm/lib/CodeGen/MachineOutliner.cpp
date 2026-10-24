@@ -1223,6 +1223,10 @@ bool MachineOutliner::outline(
 
     // If we made it unbeneficial to outline this function, skip it.
     if (OF->getBenefit() < Opts->outliner_benefit_threshold) {
+      // Overlap pruning can make a sequence that was profitable at discovery
+      // locally unprofitable. Record it like one rejected at discovery.
+      if (!OF->Candidates.empty())
+        recordUnprofitableCandidate(*OF);
       LLVM_DEBUG(dbgs() << "SKIP: Expected benefit (" << OF->getBenefit()
                         << " B) < threshold ("
                         << Opts->outliner_benefit_threshold << " B)\n");
