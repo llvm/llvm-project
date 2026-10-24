@@ -458,9 +458,14 @@ unsigned AMDGPU::getAddressableNumVGPRs(GPUKind AK, bool IsWave32) {
   // The unified register file makes the AGPRs addressable as VGPRs.
   if (Features.test(FEAT_GFX90A_INSTS))
     return 512;
+
+  // VGPR operand fields are 8 bits; VGPR MSBs add 2 more per operand.
+  constexpr unsigned OperandBits = 8;
+  constexpr unsigned MSBBits = 2;
+  unsigned Bits = OperandBits;
   if (Features.test(FEAT_VGPR_MSBS))
-    return IsWave32 ? 1024 : 512;
-  return 256;
+    Bits += MSBBits;
+  return std::min(1u << Bits, getTotalNumVGPRs(AK, IsWave32));
 }
 
 unsigned AMDGPU::getAddressableNumVGPRs(Triple::SubArchType SubArch,
