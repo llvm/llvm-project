@@ -15,7 +15,10 @@
 #define LLVM_LIB_TARGET_RISCV_RISCV_H
 
 #include "MCTargetDesc/RISCVBaseInfo.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
+#include "llvm/IR/Analysis.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
@@ -39,14 +42,32 @@ public:
 FunctionPass *createRISCVCodeGenPrepareLegacyPass();
 void initializeRISCVCodeGenPrepareLegacyPass(PassRegistry &);
 
-FunctionPass *createRISCVDeadRegisterDefinitionsPass();
-void initializeRISCVDeadRegisterDefinitionsPass(PassRegistry &);
+class RISCVDeadRegisterDefinitionsPass
+    : public OptionalPassInfoMixin<RISCVDeadRegisterDefinitionsPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+FunctionPass *createRISCVDeadRegisterDefinitionsLegacyPass();
+void initializeRISCVDeadRegisterDefinitionsLegacyPass(PassRegistry &);
 
-FunctionPass *createRISCVIndirectBranchTrackingPass();
-void initializeRISCVIndirectBranchTrackingPass(PassRegistry &);
+class RISCVIndirectBranchTrackingPass
+    : public RequiredPassInfoMixin<RISCVIndirectBranchTrackingPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+FunctionPass *createRISCVIndirectBranchTrackingLegacyPass();
+void initializeRISCVIndirectBranchTrackingLegacyPass(PassRegistry &);
 
-FunctionPass *createRISCVLandingPadSetupPass();
-void initializeRISCVLandingPadSetupPass(PassRegistry &);
+class RISCVLandingPadSetupPass
+    : public RequiredPassInfoMixin<RISCVLandingPadSetupPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+FunctionPass *createRISCVLandingPadSetupLegacyPass();
+void initializeRISCVLandingPadSetupLegacyPass(PassRegistry &);
 
 FunctionPass *createRISCVISelDagLegacyPass(RISCVTargetMachine &TM,
                                            CodeGenOptLevel OptLevel);
@@ -56,11 +77,23 @@ public:
   RISCVISelDAGToDAGPass(RISCVTargetMachine &TM, CodeGenOptLevel OptLevel);
 };
 
-FunctionPass *createRISCVLateBranchOptPass();
-void initializeRISCVLateBranchOptPass(PassRegistry &);
+class RISCVLateBranchOptPass
+    : public OptionalPassInfoMixin<RISCVLateBranchOptPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+FunctionPass *createRISCVLateBranchOptLegacyPass();
+void initializeRISCVLateBranchOptLegacyPass(PassRegistry &);
 
-FunctionPass *createRISCVMakeCompressibleOptPass();
-void initializeRISCVMakeCompressibleOptPass(PassRegistry &);
+class RISCVMakeCompressiblePass
+    : public OptionalPassInfoMixin<RISCVMakeCompressiblePass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+FunctionPass *createRISCVMakeCompressibleLegacyPass();
+void initializeRISCVMakeCompressibleLegacyPass(PassRegistry &);
 
 class RISCVGatherScatterLoweringPass
     : public OptionalPassInfoMixin<RISCVGatherScatterLoweringPass> {
@@ -107,8 +140,15 @@ public:
 FunctionPass *createRISCVFoldMemOffsetLegacyPass();
 void initializeRISCVFoldMemOffsetLegacyPass(PassRegistry &);
 
-FunctionPass *createRISCVMergeBaseOffsetOptPass();
-void initializeRISCVMergeBaseOffsetOptPass(PassRegistry &);
+class RISCVMergeBaseOffsetPass
+    : public OptionalPassInfoMixin<RISCVMergeBaseOffsetPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createRISCVMergeBaseOffsetLegacyPass();
+void initializeRISCVMergeBaseOffsetLegacyPass(PassRegistry &);
 
 class RISCVExpandPseudoPreRAPass
     : public RequiredPassInfoMixin<RISCVExpandPseudoPreRAPass> {
