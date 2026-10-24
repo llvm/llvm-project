@@ -576,9 +576,11 @@ static bool isFusableAppleSMEComputeOp(const MachineInstr &MI,
                              MI.definesRegister(AArch64::ZA, TRI);
 
   // (read/write ZA or read/write Z)
-  if (!ReadOrWriteZA &&
-      !definesRegInClass(MI, {&AArch64::ZPRRegClass, &AArch64::ZPR2RegClass,
-                              &AArch64::ZPR3RegClass, &AArch64::ZPR4RegClass}))
+  const TargetRegisterClass *ZClasses[] = {
+      &AArch64::ZPRRegClass, &AArch64::ZPR2RegClass, &AArch64::ZPR3RegClass,
+      &AArch64::ZPR4RegClass};
+  if (!ReadOrWriteZA && !definesRegInClass(MI, ZClasses) &&
+      !readsRegInClass(MI, ZClasses))
     return false;
 
   // (NOT load/store)
