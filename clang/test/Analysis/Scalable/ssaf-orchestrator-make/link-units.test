@@ -1,0 +1,54 @@
+
+# REQUIRES: ssaf-orchestrator-make-build
+# RUN: rm -rf %t && split-file %s %t
+# RUN: mkdir -p %t/build
+
+# RUN: cd %t
+# RUN: %clang-ssaf-orchestrator-make \
+# RUN:     --extract-summaries=PointerFlow \
+# RUN:     --ssaf-clang=%ssaf-orchestrator-make-clang \
+# RUN:     -o %t/out -- make \
+# RUN:   | FileCheck %s --check-prefix=STDOUT
+
+# STDOUT: summaries: 5
+# STDOUT: link-unit: {{[^ ]*}}/build/prg
+# STDOUT: link-unit-summary: {{[^ ]*}}/out/ssaf-artifacts{{[^ ]*}}/build/prg.summary.json
+
+# RUN: cat %t/out/ssaf-artifacts%t/build/libhelp.a.summary.json | FileCheck %s --check-prefix=LIB
+# LIB: "type": "StaticLibrary"
+# RUN: cat %t/out/ssaf-artifacts%t/build/prg.summary.json | FileCheck %s --check-prefix=LU
+# LU: "type": "LUSummary"
+
+# RUN: cat %t/out/build-graph%t/build/libhelp.a.buildstep.json \
+# RUN:   | FileCheck %s --check-prefix=UNIT-LIB
+# UNIT-LIB-DAG: build/helper.o
+# UNIT-LIB-DAG: build/other.o
+# RUN: cat %t/out/build-graph%t/build/prg.buildstep.json \
+# RUN:   | FileCheck %s --check-prefix=UNIT-PRG
+# UNIT-PRG-DAG: build/main.o
+# UNIT-PRG-DAG: build/libhelp.a
+
+#--- Makefile
+CXX = clang++
+LIBOBJS = build/helper.o build/other.o
+all: build/prg
+build/%.o: src/%.cpp
+	$(CXX) -c -o $@ $<
+build/libhelp.a: $(LIBOBJS)
+	$(AR) rcs $@ $(LIBOBJS)
+build/prg: build/main.o build/libhelp.a
+	$(CXX) -o $@ build/main.o build/libhelp.a
+
+#--- src/helper.cpp
+int helper(int *p) { return p[0]; }
+
+#--- src/other.cpp
+int other(int *p) { return p[1]; }
+
+#--- src/main.cpp
+int helper(int *p);
+int other(int *p);
+int main() {
+  int values[2] = {1, 2};
+  return helper(values) + other(values);
+}

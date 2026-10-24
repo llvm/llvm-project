@@ -1,0 +1,35 @@
+
+# REQUIRES: ssaf-orchestrator-make-build
+# RUN: rm -rf %t && split-file %s %t
+# RUN: mkdir -p %t/build
+
+# A build command that cannot be run at all.
+# RUN: cd %t
+# RUN: not %clang-ssaf-orchestrator-make \
+# RUN:     --extract-summaries=PointerFlow \
+# RUN:     --ssaf-clang=%ssaf-orchestrator-make-clang \
+# RUN:     -o %t/out -- %t/no-such-build-tool 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=UNRUNNABLE
+# UNRUNNABLE: error: cannot run '{{.*}}/no-such-build-tool'
+
+# A build that runs and fails takes the run down with its own status.
+# RUN: not %clang-ssaf-orchestrator-make \
+# RUN:     --extract-summaries=PointerFlow \
+# RUN:     --ssaf-clang=%ssaf-orchestrator-make-clang \
+# RUN:     -o %t/out -- make broken 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=FAILED
+# FAILED: error: build failed (exit {{[1-9][0-9]*}})
+
+#--- Makefile
+CXX = clang++
+all: build/prg
+broken: src/broken.cpp
+	$(CXX) -c -o build/broken.o $<
+build/prg: src/a.cpp
+	$(CXX) -o $@ $<
+
+#--- src/a.cpp
+int main() { return 0; }
+
+#--- src/broken.cpp
+this is not C++ at all
