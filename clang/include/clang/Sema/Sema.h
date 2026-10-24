@@ -911,7 +911,8 @@ class Sema final : public SemaBase {
 public:
   Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
        TranslationUnitKind TUKind = TU_Complete,
-       CodeCompleteConsumer *CompletionConsumer = nullptr);
+       CodeCompleteConsumer *CompletionConsumer = nullptr,
+       bool HasReducedDebugInfo = false);
   ~Sema();
 
   /// Perform initialization that occurs after the parser has been
@@ -926,6 +927,7 @@ public:
   LLVM_DECLARE_VIRTUAL_ANCHOR_FUNCTION();
 
   const LangOptions &getLangOpts() const { return LangOpts; }
+  bool hasReducedDebugInfo() const { return HasReducedDebugInfo; }
   OpenCLOptions &getOpenCLOptions() { return OpenCLFeatures; }
   FPOptions &getCurFPFeatures() { return CurFPFeatures; }
 
@@ -1328,6 +1330,7 @@ public:
   FPOptions CurFPFeatures;
 
   const LangOptions &LangOpts;
+  const bool HasReducedDebugInfo;
   Preprocessor &PP;
   ASTContext &Context;
   ASTConsumer &Consumer;

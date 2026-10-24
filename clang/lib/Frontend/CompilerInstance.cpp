@@ -771,7 +771,8 @@ CompilerInstance::createCodeCompletionConsumer(Preprocessor &PP,
 void CompilerInstance::createSema(TranslationUnitKind TUKind,
                                   CodeCompleteConsumer *CompletionConsumer) {
   TheSema.reset(new Sema(getPreprocessor(), getASTContext(), getASTConsumer(),
-                         TUKind, CompletionConsumer));
+                         TUKind, CompletionConsumer,
+                         getCodeGenOpts().hasReducedDebugInfo()));
 
   // Set up API notes.
   TheSema->APINotes.setSwiftVersion(getAPINotesOpts().SwiftVersion);

@@ -276,10 +276,12 @@ const unsigned Sema::MaxAlignmentExponent;
 const uint64_t Sema::MaximumAlignment;
 
 Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
-           TranslationUnitKind TUKind, CodeCompleteConsumer *CodeCompleter)
+           TranslationUnitKind TUKind, CodeCompleteConsumer *CodeCompleter,
+           bool HasReducedDebugInfoArg)
     : SemaBase(*this), CollectStats(false), TUKind(TUKind),
-      CurFPFeatures(pp.getLangOpts()), LangOpts(pp.getLangOpts()), PP(pp),
-      Context(ctxt), Consumer(consumer), Diags(PP.getDiagnostics()),
+      CurFPFeatures(pp.getLangOpts()), LangOpts(pp.getLangOpts()),
+      HasReducedDebugInfo(HasReducedDebugInfoArg), PP(pp), Context(ctxt),
+      Consumer(consumer), Diags(PP.getDiagnostics()),
       SourceMgr(PP.getSourceManager()), APINotes(SourceMgr, LangOpts),
       AnalysisWarnings(*this), ThreadSafetyDeclCache(nullptr),
       LateTemplateParser(nullptr), OpaqueParser(nullptr), CurContext(nullptr),
@@ -1335,6 +1337,7 @@ void Sema::ActOnEndOfTranslationUnit() {
 
   DiagnoseUnterminatedPragmaAlignPack();
   DiagnoseUnterminatedPragmaAttribute();
+  BPF().DiagnoseAnonymousPreserveAIEnums();
   OpenMP().DiagnoseUnterminatedOpenMPDeclareTarget();
   DiagnosePrecisionLossInComplexDivision();
   DiagnoseUnusedAPINotesSelectors();
