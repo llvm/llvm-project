@@ -102,6 +102,29 @@ and only if absolutely required; for example for certain code that cannot
 tolerate any instrumentation and resulting side-effects. This attribute
 overrides `no_sanitize("thread")`.
 
+## Re-enabling Instrumentation in Regions
+
+Inside a function with `__attribute__((disable_sanitizer_instrumentation))` or
+`__attribute__((no_sanitize("thread")))`, a region delimited by
+`__builtin_sanitizer_instrumentation_begin()` and
+`__builtin_sanitizer_instrumentation_end()` is instrumented again: plain
+memory accesses and memory intrinsics in it are instrumented. A
+`disable_sanitizer_instrumentation` function also gets its atomic accesses
+instrumented only inside regions, and no function entry/exit hooks. Regions
+nest, and code reachable without passing through a
+`__builtin_sanitizer_instrumentation_begin()` is not considered to be in a
+region.
+
+```c
+__attribute__((disable_sanitizer_instrumentation))
+void mostly_uninstrumented(int *p) {
+  ... // not instrumented
+  __builtin_sanitizer_instrumentation_begin();
+  *p = 0; // instrumented
+  __builtin_sanitizer_instrumentation_end();
+}
+```
+
 ## Interaction of Inlining with Disabling Sanitizer Instrumentation
 
 - A `no_sanitize` function will not be inlined heuristically by the compiler into a sanitized function.

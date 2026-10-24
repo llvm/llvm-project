@@ -8161,6 +8161,8 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
   case Intrinsic::donothing:
+  case Intrinsic::sanitizer_instrumentation_begin:
+  case Intrinsic::sanitizer_instrumentation_end:
   case Intrinsic::seh_try_begin:
   case Intrinsic::seh_scope_begin:
   case Intrinsic::seh_try_end:

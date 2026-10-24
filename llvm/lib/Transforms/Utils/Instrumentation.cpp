@@ -12,6 +12,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/Instrumentation.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/IR/CFG.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -123,4 +127,163 @@ void llvm::setGlobalVariableLargeSection(const Triple &TargetTriple,
   if (!CM || (*CM != CodeModel::Medium && *CM != CodeModel::Large))
     return;
   GV.setCodeModel(CodeModel::Large);
+}
+
+bool llvm::isSanitizerInstrumentationBegin(const Instruction &I) {
+  const auto *II = dyn_cast<IntrinsicInst>(&I);
+  return II &&
+         II->getIntrinsicID() == Intrinsic::sanitizer_instrumentation_begin;
+}
+
+bool llvm::isSanitizerInstrumentationEnd(const Instruction &I) {
+  const auto *II = dyn_cast<IntrinsicInst>(&I);
+  return II && II->getIntrinsicID() == Intrinsic::sanitizer_instrumentation_end;
+}
+
+bool llvm::hasSanitizerInstrumentationRegions(const Function &F) {
+  // Most modules never use the markers, so avoid scanning their functions.
+  const Module *M = F.getParent();
+  auto IsUsed = [M](Intrinsic::ID ID) {
+    const Function *Decl = Intrinsic::getDeclarationIfExists(M, ID);
+    return Decl && !Decl->use_empty();
+  };
+  if (!IsUsed(Intrinsic::sanitizer_instrumentation_begin) &&
+      !IsUsed(Intrinsic::sanitizer_instrumentation_end))
+    return false;
+
+  for (const BasicBlock &BB : F)
+    for (const Instruction &I : BB)
+      if (isSanitizerInstrumentationBegin(I) ||
+          isSanitizerInstrumentationEnd(I))
+        return true;
+  return false;
+}
+
+// Lattice top of the region analysis: this block has not been reached yet, so
+// it does not constrain the depth of its successors.
+static constexpr unsigned UnreachedDepth = ~0U;
+
+/// Return the region nesting depth after \p I, given the depth before it.
+static unsigned regionDepthAfter(const Instruction &I, unsigned Depth) {
+  if (isSanitizerInstrumentationBegin(I))
+    return Depth + 1;
+  // Saturate at zero: an unbalanced end() is malformed input, and wrapping
+  // around would spuriously instrument the rest of the function.
+  if (isSanitizerInstrumentationEnd(I) && Depth)
+    return Depth - 1;
+  return Depth;
+}
+
+/// Find the first problem with the region markers of \p F, given the fixed
+/// point of the region analysis.
+///
+/// With the "must" (minimum) join the analysis is exact as long as all paths
+/// to a block agree on the nesting depth, so the first point where they
+/// disagree is a block whose reached predecessors leave with different depths.
+/// Joins are checked first, so that an end() or a return that only looks
+/// unbalanced because of an earlier bad join is not blamed instead.
+static std::optional<SanitizerInstrumentationRegionProblem>
+findSanitizerInstrumentationRegionProblem(const Function &F,
+                                          ArrayRef<unsigned> DepthIn,
+                                          ArrayRef<unsigned> DepthOut) {
+  for (const BasicBlock &BB : F) {
+    if (&BB == &F.getEntryBlock() || DepthIn[BB.getNumber()] == UnreachedDepth)
+      continue;
+    unsigned Min = UnreachedDepth, Max = 0;
+    for (const BasicBlock *Pred : predecessors(&BB)) {
+      unsigned Out = DepthOut[Pred->getNumber()];
+      if (Out == UnreachedDepth)
+        continue;
+      Min = std::min(Min, Out);
+      Max = std::max(Max, Out);
+    }
+    if (Min == Max)
+      continue;
+    // Point at the first instruction that has a location, if any.
+    const Instruction *Where = &*BB.getFirstNonPHIOrAlloca();
+    for (const Instruction &I : BB)
+      if (I.getDebugLoc()) {
+        Where = &I;
+        break;
+      }
+    return SanitizerInstrumentationRegionProblem{
+        Min == 0 ? SanitizerInstrumentationRegionIssue::MergeOutsideRegion
+                 : SanitizerInstrumentationRegionIssue::MergeNestedRegions,
+        Where};
+  }
+
+  for (const BasicBlock &BB : F) {
+    unsigned Depth = DepthIn[BB.getNumber()];
+    if (Depth == UnreachedDepth)
+      continue;
+    for (const Instruction &I : BB) {
+      if (isSanitizerInstrumentationEnd(I) && !Depth)
+        return SanitizerInstrumentationRegionProblem{
+            SanitizerInstrumentationRegionIssue::UnmatchedEnd, &I};
+      // Only returns are checked. Not closing a region before a call that
+      // does not return (BUG(), panic()) is common and harmless, and
+      // unwinding out of a function cannot be checked consistently: a call
+      // without a landing pad leaves no terminator to look at.
+      if (isa<ReturnInst>(I) && Depth)
+        return SanitizerInstrumentationRegionProblem{
+            SanitizerInstrumentationRegionIssue::NotClosedAtReturn, &I};
+      Depth = regionDepthAfter(I, Depth);
+    }
+  }
+  return std::nullopt;
+}
+
+void llvm::diagnoseSanitizerInstrumentationRegionProblem(
+    const Function &F, const SanitizerInstrumentationRegionProblem &Problem) {
+  F.getContext().diagnose(DiagnosticInfoSanitizerInstrumentationRegion(
+      F, Problem.Where->getDebugLoc(), Problem.Issue));
+}
+
+std::optional<SanitizerInstrumentationRegionProblem>
+llvm::computeSanitizerInstrumentationRegions(
+    const Function &F, SmallPtrSetImpl<const Instruction *> &InRegion) {
+  // Nesting depth at the start and at the end of each block, indexed by block
+  // number.
+  SmallVector<unsigned> DepthIn(F.getMaxBlockNumber(), UnreachedDepth);
+  SmallVector<unsigned> DepthOut(F.getMaxBlockNumber(), UnreachedDepth);
+
+  // Worklist iteration from the entry block. A block is queued when its input
+  // depth decreases, and depths are bounded below by zero, so this terminates;
+  // each block is scanned at most once per distinct input depth. (Iterating
+  // over the blocks in layout order instead is quadratic when the layout is
+  // far from a topological order.)
+  const BasicBlock *Entry = &F.getEntryBlock();
+  DepthIn[Entry->getNumber()] = 0;
+  SmallSetVector<const BasicBlock *, 32> Worklist;
+  Worklist.insert(Entry);
+  while (!Worklist.empty()) {
+    const BasicBlock *BB = Worklist.pop_back_val();
+    unsigned Depth = DepthIn[BB->getNumber()];
+    for (const Instruction &I : *BB)
+      Depth = regionDepthAfter(I, Depth);
+    if (Depth >= DepthOut[BB->getNumber()])
+      continue;
+    DepthOut[BB->getNumber()] = Depth;
+    // Must-join: the depth at the start of a successor is the minimum over
+    // its predecessors.
+    for (const BasicBlock *Succ : successors(BB)) {
+      if (Depth < DepthIn[Succ->getNumber()]) {
+        DepthIn[Succ->getNumber()] = Depth;
+        Worklist.insert(Succ);
+      }
+    }
+  }
+
+  for (const BasicBlock &BB : F) {
+    unsigned Depth = DepthIn[BB.getNumber()];
+    if (Depth == UnreachedDepth)
+      continue;
+    for (const Instruction &I : BB) {
+      Depth = regionDepthAfter(I, Depth);
+      if (Depth > 0)
+        InRegion.insert(&I);
+    }
+  }
+
+  return findSanitizerInstrumentationRegionProblem(F, DepthIn, DepthOut);
 }

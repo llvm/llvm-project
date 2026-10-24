@@ -2877,13 +2877,23 @@ bool AddressSanitizer::instrumentFunction(Function &F,
   if (maybeInsertAsanInitAtFunctionEntry(F))
     FunctionModified = true;
 
-  // Leave if the function doesn't need instrumentation.
-  if (!F.hasFnAttribute(Attribute::SanitizeAddress)) return FunctionModified;
+  // Leave if the function doesn't need instrumentation. Functions that are
+  // not instrumented as a whole are still instrumented inside
+  // llvm.sanitizer.instrumentation.begin()/end() regions. Only memory
+  // accesses are instrumented there: the stack frame of such a function is
+  // not laid out by ASan, so stack poisoning, use-after-return and the
+  // handling of noreturn calls (which unpoisons the stack) are left out.
+  bool RegionOnly = false;
+  if (!F.hasFnAttribute(Attribute::SanitizeAddress) ||
+      F.hasFnAttribute(Attribute::DisableSanitizerInstrumentation)) {
+    if (!hasSanitizerInstrumentationRegions(F))
+      return FunctionModified;
+    RegionOnly = true;
+  }
 
-  if (F.hasFnAttribute(Attribute::DisableSanitizerInstrumentation))
-    return FunctionModified;
-
-  LLVM_DEBUG(dbgs() << "ASAN instrumenting:\n" << F << "\n");
+  LLVM_DEBUG(dbgs() << "ASAN instrumenting" << (RegionOnly ? " regions" : "")
+                    << ":\n"
+                    << F << "\n");
 
   initializeCallbacks(TLI);
 
@@ -2891,14 +2901,33 @@ bool AddressSanitizer::instrumentFunction(Function &F,
 
   RuntimeCallInserter RTCI(F);
 
+  // On targets with a dynamic shadow base, the base is loaded in the entry
+  // block, i.e. outside the regions of a region-only function. That is a load
+  // of a global (or an empty inline asm), not a call into the runtime, so it
+  // is acceptable even in a function that must not call instrumented code.
   FunctionModified |= maybeInsertDynamicShadowAtFunctionEntry(F);
 
-  // We can't instrument allocas used with llvm.localescape. Only static allocas
-  // can be passed to that intrinsic.
-  markEscapedLocalAllocas(F);
+  SmallPtrSet<const Instruction *, 16> InRegion;
+  if (RegionOnly) {
+    if (auto Problem = computeSanitizerInstrumentationRegions(F, InRegion))
+      diagnoseSanitizerInstrumentationRegionProblem(F, *Problem);
+  } else {
+    // We can't instrument allocas used with llvm.localescape. Only static
+    // allocas can be passed to that intrinsic. (The locals of a region-only
+    // function are not instrumented at all, see below.)
+    markEscapedLocalAllocas(F);
 
-  if (TargetTriple.isOSWindows())
-    markCatchParametersAsUninteresting(F);
+    if (TargetTriple.isOSWindows())
+      markCatchParametersAsUninteresting(F);
+  }
+
+  // The locals of a function that is only instrumented in regions have no
+  // redzones, so checking them can only trip over stale stack poisoning.
+  auto IsLocalOnly = [](const Value *Ptr) {
+    SmallVector<const Value *, 4> Objects;
+    getUnderlyingObjects(Ptr, Objects);
+    return all_of(Objects, [](const Value *V) { return isa<AllocaInst>(V); });
+  };
 
   // We want to instrument every address only once per basic block (unless there
   // are calls between uses).
@@ -2920,12 +2949,20 @@ bool AddressSanitizer::instrumentFunction(Function &F,
       // Skip instructions inserted by another instrumentation.
       if (Inst.hasMetadata(LLVMContext::MD_nosanitize))
         continue;
+      if (RegionOnly && !InRegion.contains(&Inst)) {
+        // A call between two regions can free memory like any other call.
+        if (isa<CallBase>(Inst))
+          TempsToInstrument.clear();
+        continue;
+      }
       SmallVector<InterestingMemoryOperand, 1> InterestingOperands;
       getInterestingMemoryOperands(&Inst, InterestingOperands, TTI);
 
       AssumeInst *AI;
       if (!InterestingOperands.empty()) {
         for (auto &Operand : InterestingOperands) {
+          if (RegionOnly && IsLocalOnly(Operand.getPtr()))
+            continue;
           if (Opts.asan_opt && Opts.asan_opt_same_temp) {
             Value *Ptr = Operand.getPtr();
             // If we have a mask, skip instrumentation if we've already
@@ -2950,6 +2987,10 @@ bool AddressSanitizer::instrumentFunction(Function &F,
                   isInterestingPointerSubtraction(&Inst))) {
         PointerComparisonsOrSubtracts.push_back(&Inst);
       } else if (MemIntrinsic *MI = dyn_cast<MemIntrinsic>(&Inst)) {
+        if (RegionOnly && IsLocalOnly(MI->getDest()) &&
+            (!isa<MemTransferInst>(MI) ||
+             IsLocalOnly(cast<MemTransferInst>(MI)->getSource())))
+          continue;
         // ok, take it.
         IntrinToInstrument.push_back(MI);
         NumInsnsPerBB++;
@@ -2963,7 +3004,9 @@ bool AddressSanitizer::instrumentFunction(Function &F,
         if (auto *CB = dyn_cast<CallBase>(&Inst)) {
           // A call inside BB.
           TempsToInstrument.clear();
-          if (CB->doesNotReturn())
+          // The stack of a region-only function is not poisoned, so there is
+          // nothing to unpoison before a noreturn call.
+          if (CB->doesNotReturn() && !RegionOnly)
             NoReturnCalls.push_back(CB);
         }
         if (CallInst *CI = dyn_cast<CallInst>(&Inst))
@@ -2994,8 +3037,11 @@ bool AddressSanitizer::instrumentFunction(Function &F,
     FunctionModified = true;
   }
 
-  FunctionStackPoisoner FSP(F, *this, RTCI);
-  bool ChangedStack = FSP.runOnFunction();
+  bool ChangedStack = false;
+  if (!RegionOnly) {
+    FunctionStackPoisoner FSP(F, *this, RTCI);
+    ChangedStack = FSP.runOnFunction();
+  }
 
   // We must unpoison the stack before NoReturn calls (throw, _exit, etc).
   // See e.g. https://github.com/google/sanitizers/issues/37
