@@ -1389,7 +1389,7 @@ bool LoopVectorizationLegality::blockNeedsPredication(
 }
 
 bool LoopVectorizationLegality::blockCanBePredicated(
-    BasicBlock *BB, SmallPtrSetImpl<Value *> &SafePtrs,
+    BasicBlock *BB, SafeAccessesTy &SafeAccesses,
     SmallPtrSetImpl<const Instruction *> &MaskedOp) const {
   for (Instruction &I : *BB) {
     // We can predicate blocks with calls to assume, as long as we drop them in
@@ -1417,7 +1417,11 @@ bool LoopVectorizationLegality::blockCanBePredicated(
 
     // Loads are handled via masking (or speculated if safe to do so.)
     if (auto *LI = dyn_cast<LoadInst>(&I)) {
-      if (!SafePtrs.count(LI->getPointerOperand()))
+      auto It = SafeAccesses.find(LI->getPointerOperand());
+      TypeSize Size = LI->getDataLayout().getTypeStoreSize(LI->getType());
+      if (Size.isScalable() || It == SafeAccesses.end() ||
+          It->second.Alignment < LI->getAlign() ||
+          It->second.MaxSize < Size.getFixedValue())
         MaskedOp.insert(LI);
       continue;
     }
@@ -1448,19 +1452,29 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
 
   assert(TheLoop->getNumBlocks() > 1 && "Single block loops are vectorizable");
 
-  // A list of pointers which are known to be dereferenceable within scope of
-  // the loop body for each iteration of the loop which executes.  That is,
-  // the memory pointed to can be dereferenced (with the access size implied by
-  // the value's type) unconditionally within the loop header without
-  // introducing a new fault.
-  SmallPtrSet<Value *, 8> SafePointers;
+  // Record the maximum fixed access size and alignment known to be safe for
+  // each pointer in every executed iteration. A later load can use the size
+  // and alignment established by different accesses to the same pointer.
+  // Scalable accesses do not establish either size or alignment.
+  SafeAccessesTy SafeAccesses;
+  auto RecordSafeAccess = [&SafeAccesses](Instruction &I) {
+    Value *Ptr = getLoadStorePointerOperand(&I);
+    if (!Ptr)
+      return;
+    TypeSize Size = I.getDataLayout().getTypeStoreSize(getLoadStoreType(&I));
+    if (Size.isScalable())
+      return;
+    Align Alignment = getLoadStoreAlignment(&I);
+    auto &Info = SafeAccesses[Ptr];
+    Info.Alignment = std::max(Info.Alignment, Alignment);
+    Info.MaxSize = std::max(Info.MaxSize, Size.getFixedValue());
+  };
 
-  // Collect safe addresses.
+  // Collect safe accesses.
   for (BasicBlock *BB : TheLoop->blocks()) {
     if (!blockNeedsPredication(BB)) {
       for (Instruction &I : *BB)
-        if (auto *Ptr = getLoadStorePointerOperand(&I))
-          SafePointers.insert(Ptr);
+        RecordSafeAccess(I);
       continue;
     }
 
@@ -1522,7 +1536,7 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
           CanSpeculatePointerOp(LI->getPointerOperand()) &&
           isDereferenceableAndAlignedInLoop(LI, TheLoop, SE, *DT, AC,
                                             &Predicates))
-        SafePointers.insert(LI->getPointerOperand());
+        RecordSafeAccess(*LI);
       Predicates.clear();
     }
   }
@@ -1547,7 +1561,7 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
 
     // We must be able to predicate all blocks that need to be predicated.
     if (blockNeedsPredication(BB) &&
-        !blockCanBePredicated(BB, SafePointers, ConditionallyExecutedOps)) {
+        !blockCanBePredicated(BB, SafeAccesses, ConditionallyExecutedOps)) {
       reportVectorizationFailure(
           "Control flow cannot be substituted for a select", "NoCFGForSelect",
           ORE, TheLoop, BB->getTerminator());
@@ -2110,14 +2124,14 @@ bool LoopVectorizationLegality::canFoldTailByMasking() const {
 
   LLVM_DEBUG(dbgs() << "LV: checking if tail can be folded by masking.\n");
 
-  // The list of pointers that we can safely read and write to remains empty.
-  SmallPtrSet<Value *, 8> SafePointers;
+  // No accesses are known to be safe in inactive lanes of the folded tail.
+  SafeAccessesTy SafeAccesses;
 
   // Check all blocks for predication, including those that ordinarily do not
   // need predication such as the header block.
   SmallPtrSet<const Instruction *, 8> TmpMaskedOp;
   for (BasicBlock *BB : TheLoop->blocks()) {
-    if (!blockCanBePredicated(BB, SafePointers, TmpMaskedOp)) {
+    if (!blockCanBePredicated(BB, SafeAccesses, TmpMaskedOp)) {
       LLVM_DEBUG(dbgs() << "LV: Cannot fold tail by masking.\n");
       return false;
     }
@@ -2129,15 +2143,15 @@ bool LoopVectorizationLegality::canFoldTailByMasking() const {
 }
 
 void LoopVectorizationLegality::prepareToFoldTailByMasking() {
-  // The list of pointers that we can safely read and write to remains empty.
-  SmallPtrSet<Value *, 8> SafePointers;
+  // No accesses are known to be safe in inactive lanes of the folded tail.
+  SafeAccessesTy SafeAccesses;
 
   // Mark all blocks for predication, including those that ordinarily do not
   // need predication such as the header block, and collect instructions needing
   // predication in TailFoldedMaskedOp.
   for (BasicBlock *BB : TheLoop->blocks()) {
     [[maybe_unused]] bool R =
-        blockCanBePredicated(BB, SafePointers, TailFoldedMaskedOp);
+        blockCanBePredicated(BB, SafeAccesses, TailFoldedMaskedOp);
     assert(R && "Must be able to predicate block when tail-folding.");
   }
 }
