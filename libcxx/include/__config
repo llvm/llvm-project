@@ -262,6 +262,15 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_HAS_TRIVIAL_CONDVAR_DESTRUCTION 0
 #  endif
 
+// The built library's heavy asymmetric thread fence is always a process-wide barrier (FlushProcessWriteBuffers
+// on Windows), so the light fence can be a compiler barrier without checking at runtime.
+// See <__atomic/asymmetric_thread_fence.h>.
+#  if defined(_WIN32)
+#    define _LIBCPP_HAS_GUARANTEED_ASYMMETRIC_THREAD_FENCE 1
+#  else
+#    define _LIBCPP_HAS_GUARANTEED_ASYMMETRIC_THREAD_FENCE 0
+#  endif
+
 // We often repeat things just for handling wide characters in the library.
 // When wide characters are disabled, it can be useful to have a quick way of
 // disabling it without having to resort to #if-#endif, which has a larger
