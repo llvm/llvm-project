@@ -1324,7 +1324,7 @@ unsigned getVGPREncodingGranule(const MCSubtargetInfo &STI,
                       ? *EnableWavefrontSize32
                       : STI.getFeatureBits().test(FeatureWavefrontSize32);
 
-  if (STI.getFeatureBits().test(Feature1024AddressableVGPRs))
+  if (STI.getFeatureBits().test(FeatureVGPRMSBs))
     return IsWave32 ? 16 : 8;
 
   return IsWave32 ? 8 : 4;
@@ -1334,7 +1334,7 @@ unsigned getArchVGPRAllocGranule() { return 4; }
 
 unsigned getAddressableNumArchVGPRs(const MCSubtargetInfo &STI) {
   const auto &Features = STI.getFeatureBits();
-  if (Features.test(Feature1024AddressableVGPRs))
+  if (Features.test(FeatureVGPRMSBs))
     return Features.test(FeatureWavefrontSize32) ? 1024 : 512;
   return 256;
 }
