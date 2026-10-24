@@ -452,7 +452,7 @@ APINotesManager::findAPINotes(SourceLocation Loc) {
     }
 
     // We didn't find anything. Look at the parent directory.
-    if (!DirsVisited.insert(*Dir)) {
+    if (!DirsVisited.insert(*Dir).second) {
       Dir = std::nullopt;
       break;
     }

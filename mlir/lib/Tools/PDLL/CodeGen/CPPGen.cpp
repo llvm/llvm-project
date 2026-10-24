@@ -84,7 +84,7 @@ void CodeGen::generate(const ast::Module &astModule, ModuleOp module) {
       std::string name;
       do {
         name = (basePatternName + Twine(patternIndex++)).str();
-      } while (!patternNames.insert(name));
+      } while (!patternNames.insert(name).second);
     }
 
     generate(pattern, patternNames.back(), nativeFunctions);

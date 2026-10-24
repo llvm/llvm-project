@@ -1987,7 +1987,7 @@ joinOrderedInstructions(EquivalenceClasses<Instruction *> &UnionFind,
     // SeenLeaders are not leaders anymore. However, The new leader of
     // previously merged instructions must be one of the former leaders of
     // these merged instructions.
-    bool Inserted = SeenLeaders.insert(Leader);
+    bool Inserted = SeenLeaders.insert(Leader).second;
     if (Inserted)
       continue;
 

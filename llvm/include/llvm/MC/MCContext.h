@@ -788,7 +788,7 @@ public:
   }
 
   bool addGenDwarfSection(MCSection *Sec) {
-    return SectionsForRanges.insert(Sec);
+    return SectionsForRanges.insert(Sec).second;
   }
 
   LLVM_ABI void finalizeDwarfSections(MCStreamer &MCOS);

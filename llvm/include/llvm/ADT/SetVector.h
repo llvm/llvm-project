@@ -153,23 +153,26 @@ public:
   }
 
   /// Insert a new element into the SetVector.
-  /// \returns true if the element was inserted into the SetVector.
-  bool insert(const value_type &X) {
+  /// \returns a pair, whose first member is the iterator pointed to the
+  /// element, and the second member indicates if the element was inserted.
+  std::pair<iterator, bool> insert(const value_type &X) {
     if constexpr (canBeSmall())
       if (isSmall()) {
         if (!llvm::is_contained(vector_, X)) {
           vector_.push_back(X);
           if (vector_.size() > N)
             makeBig();
-          return true;
+          return {std::prev(vector_.end()), true};
         }
-        return false;
+        return {find(vector_, X), false};
       }
 
     bool result = set_.insert(X).second;
-    if (result)
+    if (result) {
       vector_.push_back(X);
-    return result;
+      return {std::prev(vector_.end()), result};
+    }
+    return {find(vector_, X), result};
   }
 
   /// Insert a range of elements into the SetVector.
@@ -304,7 +307,7 @@ public:
     bool Changed = false;
 
     for (const auto &Elem : S)
-      if (insert(Elem))
+      if (insert(Elem).second)
         Changed = true;
 
     return Changed;

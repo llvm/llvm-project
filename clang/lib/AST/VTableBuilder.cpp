@@ -1430,7 +1430,7 @@ bool ItaniumVTableBuilder::IsOverriderUsed(
              "Primary base should always be at offset 0!");
     }
 
-    if (!PrimaryBases.insert(PrimaryBase))
+    if (!PrimaryBases.insert(PrimaryBase).second)
       llvm_unreachable("Found a duplicate primary base!");
 
     RD = PrimaryBase;
@@ -1511,7 +1511,7 @@ void ItaniumVTableBuilder::AddMethods(
                PrimaryBaseOffsetInLayoutClass, FirstBaseInPrimaryBaseChain,
                FirstBaseOffsetInLayoutClass, PrimaryBases);
 
-    if (!PrimaryBases.insert(PrimaryBase))
+    if (!PrimaryBases.insert(PrimaryBase).second)
       llvm_unreachable("Found a duplicate primary base!");
   }
 
@@ -3072,7 +3072,7 @@ void VFTableBuilder::AddMethods(BaseSubobject Base, unsigned BaseDepth,
   if (NextBase) {
     AddMethods(BaseSubobject(NextBase, NextBaseOffset), BaseDepth + 1,
                NextLastVBase, VisitedBases);
-    if (!VisitedBases.insert(NextBase))
+    if (!VisitedBases.insert(NextBase).second)
       llvm_unreachable("Found a duplicate primary base!");
   }
 

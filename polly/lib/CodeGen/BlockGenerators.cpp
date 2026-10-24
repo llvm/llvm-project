@@ -1123,7 +1123,7 @@ void RegionGenerator::copyStmt(ScopStmt &Stmt, LoopToScevMapT &LTS,
 
     // And continue with new successors inside the region.
     for (auto SI = succ_begin(BB), SE = succ_end(BB); SI != SE; SI++)
-      if (R->contains(*SI) && SeenBlocks.insert(*SI))
+      if (R->contains(*SI) && SeenBlocks.insert(*SI).second)
         Blocks.push_back(*SI);
 
     // Remember value in case it is visible after this subregion.

@@ -924,7 +924,7 @@ void GenericUniformityAnalysisImpl<ContextT>::propagateCycleExitDivergence(
   LLVM_DEBUG(dbgs() << "\tOuter-most exiting cycle: "
                     << Context.print(CI.getHeader(OuterDivCycle)) << "\n");
 
-  if (!DivergentExitCycles.insert(OuterDivCycle))
+  if (!DivergentExitCycles.insert(OuterDivCycle).second)
     return;
 
   // Exit divergence does not matter if the cycle itself is assumed to

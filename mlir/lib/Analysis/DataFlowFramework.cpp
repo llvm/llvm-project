@@ -41,8 +41,8 @@ AnalysisState::~AnalysisState() = default;
 
 void AnalysisState::addDependency(ProgramPoint *dependent,
                                   DataFlowAnalysis *analysis) {
-  auto inserted = dependents.insert({dependent, analysis});
-  (void)inserted;
+  [[maybe_unused]] bool inserted =
+      dependents.insert({dependent, analysis}).second;
   DATAFLOW_DEBUG({
     if (inserted) {
       LDBG() << "Creating dependency between " << debugName << " of " << anchor

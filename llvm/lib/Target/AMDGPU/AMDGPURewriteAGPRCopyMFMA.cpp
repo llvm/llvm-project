@@ -191,7 +191,7 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::recomputeRegClassExceptRewritable(
           if (OtherReg.isPhysical())
             return false;
 
-          if (OtherReg != Reg && RewriteRegs.insert(OtherReg))
+          if (OtherReg != Reg && RewriteRegs.insert(OtherReg).second)
             Worklist.push_back(OtherReg);
         }
 

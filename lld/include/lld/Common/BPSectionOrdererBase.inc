@@ -381,7 +381,7 @@ auto BPOrderer<D>::computeOrder(
   // Order startup functions,
   for (auto &node : nodesForStartup) {
     const auto *isec = sections[node.Id];
-    if (orderedSections.insert(isec)) {
+    if (orderedSections.insert(isec).second) {
       startupSize += D::getSize(*isec);
       ++numStartupSections;
     }
@@ -390,7 +390,7 @@ auto BPOrderer<D>::computeOrder(
   for (const auto &nodes : nodesForCompression) {
     for (auto &node : nodes) {
       const auto *isec = sections[node.Id];
-      if (orderedSections.insert(isec)) {
+      if (orderedSections.insert(isec).second) {
         compressionSize += D::getSize(*isec);
         ++numCompressionSections;
       }
@@ -399,7 +399,7 @@ auto BPOrderer<D>::computeOrder(
         continue;
       for (auto dupSecIdx : It->getSecond()) {
         const auto *dupIsec = sections[dupSecIdx];
-        if (orderedSections.insert(dupIsec)) {
+        if (orderedSections.insert(dupIsec).second) {
           duplicateCompressionSize += D::getSize(*dupIsec);
           ++numDuplicateCompressionSections;
         }

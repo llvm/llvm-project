@@ -3347,7 +3347,7 @@ Instruction *InstCombinerImpl::optimizeBitCastFromPhi(CastInst &CI,
       }
 
       if (auto *PNode = dyn_cast<PHINode>(IncValue)) {
-        if (OldPhiNodes.insert(PNode))
+        if (OldPhiNodes.insert(PNode).second)
           PhiWorklist.push_back(PNode);
         continue;
       }

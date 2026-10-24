@@ -551,7 +551,7 @@ void coro::sinkSpillUsesAfterCoroBegin(
       if (Inst->getParent() != CoroBegin->getParent() ||
           Dom.dominates(CoroBegin, Inst))
         continue;
-      if (ToMove.insert(Inst))
+      if (ToMove.insert(Inst).second)
         Worklist.push_back(Inst);
     }
   };
@@ -567,7 +567,7 @@ void coro::sinkSpillUsesAfterCoroBegin(
       auto Inst = cast<Instruction>(U);
       if (Dom.dominates(CoroBegin, Inst))
         continue;
-      if (ToMove.insert(Inst))
+      if (ToMove.insert(Inst).second)
         Worklist.push_back(Inst);
     }
   }

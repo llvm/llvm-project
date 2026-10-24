@@ -9287,7 +9287,7 @@ BuiltinCandidateTypeSet::AddPointerWithMoreQualifiedTypeVariants(QualType Ty,
                                              const Qualifiers &VisibleQuals) {
 
   // Insert this type.
-  if (!PointerTypes.insert(Ty))
+  if (!PointerTypes.insert(Ty).second)
     return false;
 
   QualType PointeeTy;
@@ -9355,7 +9355,7 @@ bool
 BuiltinCandidateTypeSet::AddMemberPointerWithMoreQualifiedTypeVariants(
     QualType Ty) {
   // Insert this type.
-  if (!MemberPointerTypes.insert(Ty))
+  if (!MemberPointerTypes.insert(Ty).second)
     return false;
 
   const MemberPointerType *PointerTy = Ty->getAs<MemberPointerType>();

@@ -173,7 +173,7 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
           DeadDefSet.insert(Reg);
         }
       } else {
-        if (ExternUses.insert(Reg)) {
+        if (ExternUses.insert(Reg).second) {
           if (MO.isUndef())
             UndefUseSet.insert(Reg);
         }
@@ -198,7 +198,7 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
       if (!Reg)
         continue;
 
-      if (LocalDefs.insert(Reg)) {
+      if (LocalDefs.insert(Reg).second) {
         if (!MO.isDead() && Reg.isPhysical()) {
           for (MCRegUnit Unit : TRI->regunits(Reg.asMCReg()))
             LocalDefsP.set(static_cast<unsigned>(Unit));

@@ -854,11 +854,11 @@ TEST(AssignmentTrackingTest, InstrMethods) {
   SetVector<DbgVariableRecord *> Markers;
   for (const Instruction *SI : Stores) {
     Metadata *ID = SI->getMetadata(LLVMContext::MD_DIAssignID);
-    ASSERT_TRUE(OrigIDs.insert(ID));
+    ASSERT_TRUE(OrigIDs.insert(ID).second);
     ASSERT_TRUE(ID != nullptr);
     auto Range = at::getDVRAssignmentMarkers(SI);
     ASSERT_TRUE(std::distance(Range.begin(), Range.end()) == 1);
-    ASSERT_TRUE(Markers.insert(*Range.begin()));
+    ASSERT_TRUE(Markers.insert(*Range.begin()).second);
   }
 
   // Test 1 - mergeDIAssignID.

@@ -94,8 +94,8 @@ void PredecessorState::print(raw_ostream &os) const {
 }
 
 ChangeResult PredecessorState::join(Operation *predecessor) {
-  return knownPredecessors.insert(predecessor) ? ChangeResult::Change
-                                               : ChangeResult::NoChange;
+  return knownPredecessors.insert(predecessor).second ? ChangeResult::Change
+                                                      : ChangeResult::NoChange;
 }
 
 ChangeResult PredecessorState::join(Operation *predecessor, ValueRange inputs) {

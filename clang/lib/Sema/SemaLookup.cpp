@@ -2903,7 +2903,7 @@ namespace {
 
     bool addClassTransitive(CXXRecordDecl *RD) {
       Classes.insert(RD);
-      return ClassesTransitive.insert(RD);
+      return ClassesTransitive.insert(RD).second;
     }
 
     Sema &S;

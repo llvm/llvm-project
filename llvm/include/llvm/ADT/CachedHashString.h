@@ -40,6 +40,9 @@ public:
       : P(S.data()), Size(S.size()), Hash(Hash) {
     assert(S.size() <= std::numeric_limits<uint32_t>::max());
   }
+  bool operator==(const CachedHashStringRef &Other) const {
+    return hash() == Other.hash() && val() == Other.val();
+  }
 
   StringRef val() const { return StringRef(P, Size); }
   const char *data() const { return P; }

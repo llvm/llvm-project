@@ -4912,7 +4912,7 @@ ChangeStatus AAIsDeadFunction::updateImpl(Attributor &A) {
     } else if (AliveSuccessors.empty() ||
                (I->isTerminator() &&
                 AliveSuccessors.size() < I->getNumSuccessors())) {
-      if (KnownDeadEnds.insert(I))
+      if (KnownDeadEnds.insert(I).second)
         Change = ChangeStatus::CHANGED;
     }
 
@@ -10688,7 +10688,7 @@ struct AACallEdgesImpl : public AACallEdges {
 
 protected:
   void addCalledFunction(Function *Fn, ChangeStatus &Change) {
-    if (CalledFunctions.insert(Fn)) {
+    if (CalledFunctions.insert(Fn).second) {
       Change = ChangeStatus::CHANGED;
       LLVM_DEBUG(dbgs() << "[AACallEdges] New call edge: " << Fn->getName()
                         << "\n");
@@ -12098,7 +12098,7 @@ struct AAUnderlyingObjectsImpl
 
       if (!A.getAssumedSimplifiedValues(IRPosition::value(Ptr), *this, Values,
                                         Scope, UsedAssumedInformation))
-        return UnderlyingObjects.insert(&Ptr);
+        return UnderlyingObjects.insert(&Ptr).second;
 
       bool Changed = false;
 
@@ -12110,7 +12110,7 @@ struct AAUnderlyingObjectsImpl
           continue;
         if (UO && UO != Obj) {
           if (isa<AllocaInst>(UO) || isa<GlobalValue>(UO)) {
-            Changed |= UnderlyingObjects.insert(UO);
+            Changed |= UnderlyingObjects.insert(UO).second;
             continue;
           }
 
@@ -12118,7 +12118,7 @@ struct AAUnderlyingObjectsImpl
               *this, IRPosition::value(*UO), DepClassTy::OPTIONAL);
           auto Pred = [&](Value &V) {
             if (&V == UO)
-              Changed |= UnderlyingObjects.insert(UO);
+              Changed |= UnderlyingObjects.insert(UO).second;
             else
               Values.emplace_back(V, nullptr);
             return true;
@@ -12147,7 +12147,7 @@ struct AAUnderlyingObjectsImpl
           continue;
         }
 
-        Changed |= UnderlyingObjects.insert(Obj);
+        Changed |= UnderlyingObjects.insert(Obj).second;
       }
 
       return Changed;
@@ -12187,7 +12187,7 @@ private:
     const auto *AA = A.getAAFor<AAUnderlyingObjects>(
         *this, IRPosition::value(V), DepClassTy::OPTIONAL);
     auto Pred = [&](Value &V) {
-      Changed |= UnderlyingObjects.insert(&V);
+      Changed |= UnderlyingObjects.insert(&V).second;
       return true;
     };
     if (!AA || !AA->forallUnderlyingObjects(Pred, Scope))

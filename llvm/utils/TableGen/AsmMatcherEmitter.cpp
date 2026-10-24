@@ -2029,7 +2029,7 @@ static unsigned
 getConverterOperandID(const std::string &Name,
                       SmallSetVector<CachedHashString, 16> &Table,
                       bool &IsNew) {
-  IsNew = Table.insert(CachedHashString(Name));
+  IsNew = Table.insert(CachedHashString(Name)).second;
 
   unsigned ID = IsNew ? Table.size() - 1 : find(Table, Name) - Table.begin();
 
@@ -2145,7 +2145,8 @@ emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
       II->ConversionFnKind = Signature;
 
       // Check if we have already generated this signature.
-      if (!InstructionConversionKinds.insert(CachedHashString(Signature)))
+      if (!InstructionConversionKinds.insert(CachedHashString(Signature))
+               .second)
         continue;
 
       // Remember this converter for the kind enum.
@@ -2351,7 +2352,7 @@ emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
 
     // Save the signature. If we already have it, don't add a new row
     // to the table.
-    if (!InstructionConversionKinds.insert(CachedHashString(Signature)))
+    if (!InstructionConversionKinds.insert(CachedHashString(Signature)).second)
       continue;
 
     // Add the row to the table.

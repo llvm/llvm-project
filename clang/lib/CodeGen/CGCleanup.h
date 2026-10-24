@@ -310,7 +310,7 @@ class alignas(8) EHCleanupScope : public EHScope {
   private:
     void CollectUses(llvm::Instruction *I,
                      llvm::SetVector<llvm::Instruction *> &Uses) {
-      if (!I || !Uses.insert(I))
+      if (!I || !Uses.insert(I).second)
         return;
       for (auto *User : I->users())
         CollectUses(cast<llvm::Instruction>(User), Uses);

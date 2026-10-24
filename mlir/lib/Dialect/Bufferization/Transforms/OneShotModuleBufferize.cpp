@@ -335,7 +335,7 @@ static LogicalResult getFuncOpsOrderedByCalls(
             return WalkResult::skip();
 
           callerMap[calledFunction].insert(callOp);
-          if (calledBy[calledFunction].insert(funcOp)) {
+          if (calledBy[calledFunction].insert(funcOp).second) {
             numberCallOpsContainedInFuncOp[funcOp]++;
           }
           return WalkResult::advance();

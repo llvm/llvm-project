@@ -566,7 +566,7 @@ void IRNumberingState::number(Dialect *dialect,
 
   for (const auto &resource : resources) {
     // Check if this is a newly seen resource.
-    if (!dialectNumber.resources.insert(resource))
+    if (!dialectNumber.resources.insert(resource).second)
       return;
 
     auto *numbering =
