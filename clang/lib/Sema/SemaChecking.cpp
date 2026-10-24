@@ -12523,8 +12523,47 @@ static bool IsSameFloatAfterCast(const APValue &value,
           IsSameFloatAfterCast(value.getComplexFloatImag(), Src, Tgt));
 }
 
-static void AnalyzeImplicitConversions(Sema &S, Expr *E, SourceLocation CC,
-                                       bool IsListInit = false);
+ImplicitConversionPath::Condition::Condition(Expr *Cond, bool InConstantContext)
+    : Cond(Cond), InConstantContext(InConstantContext) {}
+
+bool ImplicitConversionPath::Condition::isUnselected(Sema &S,
+                                                     bool IsTrueOperand) {
+  if (Result == Value::NotEvaluated) {
+    Result = Value::Unknown;
+    bool CondValue;
+    if (Cond->EvaluateAsBooleanCondition(CondValue, S.Context,
+                                         InConstantContext)) {
+      bool ConstantCondValue;
+      // A condition can select different operands at runtime and during
+      // constant evaluation. Only rule out an operand if both agree.
+      if (InConstantContext ||
+          (Cond->EvaluateAsBooleanCondition(ConstantCondValue, S.Context,
+                                            /*InConstantContext=*/true) &&
+           ConstantCondValue == CondValue))
+        Result = CondValue ? Value::True : Value::False;
+    }
+  }
+  return Result == (IsTrueOperand ? Value::False : Value::True);
+}
+
+ImplicitConversionPath::ImplicitConversionPath(
+    const ImplicitConversionPath *Parent, Condition &Cond, bool IsTrueOperand)
+    : Parent(Parent), Cond(Cond), IsTrueOperand(IsTrueOperand) {}
+
+bool ImplicitConversionPath::isKnownUnreachable(Sema &S) const {
+  if (!Unreachable.has_value()) {
+    // Check the outer operands first. An unselected outer operand makes
+    // evaluating this condition unnecessary, but does not skip other checks.
+    Unreachable = (Parent && Parent->isKnownUnreachable(S)) ||
+                  Cond.isUnselected(S, IsTrueOperand);
+  }
+  return *Unreachable;
+}
+
+static void
+AnalyzeImplicitConversions(Sema &S, Expr *E, SourceLocation CC,
+                           bool IsListInit = false,
+                           const ImplicitConversionPath *Path = nullptr);
 
 static bool IsEnumConstOrFromMacro(Sema &S, const Expr *E) {
   // Suppress cases where we are comparing against an enum constant.
@@ -12859,26 +12898,30 @@ static bool CheckTautologicalComparison(Sema &S, BinaryOperator *E,
 
 /// Analyze the operands of the given comparison.  Implements the
 /// fallback case from AnalyzeComparison.
-static void AnalyzeImpConvsInComparison(Sema &S, BinaryOperator *E) {
-  AnalyzeImplicitConversions(S, E->getLHS(), E->getOperatorLoc());
-  AnalyzeImplicitConversions(S, E->getRHS(), E->getOperatorLoc());
+static void AnalyzeImpConvsInComparison(Sema &S, BinaryOperator *E,
+                                        const ImplicitConversionPath *Path) {
+  AnalyzeImplicitConversions(S, E->getLHS(), E->getOperatorLoc(),
+                             /*IsListInit=*/false, Path);
+  AnalyzeImplicitConversions(S, E->getRHS(), E->getOperatorLoc(),
+                             /*IsListInit=*/false, Path);
 }
 
 /// Implements -Wsign-compare.
 ///
 /// \param E the binary operator to check for warnings
-static void AnalyzeComparison(Sema &S, BinaryOperator *E) {
+static void AnalyzeComparison(Sema &S, BinaryOperator *E,
+                              const ImplicitConversionPath *Path) {
   // The type the comparison is being performed in.
   QualType T = E->getLHS()->getType();
 
   // Only analyze comparison operators where both sides have been converted to
   // the same type.
   if (!S.Context.hasSameUnqualifiedType(T, E->getRHS()->getType()))
-    return AnalyzeImpConvsInComparison(S, E);
+    return AnalyzeImpConvsInComparison(S, E, Path);
 
   // Don't analyze value-dependent comparisons directly.
   if (E->isValueDependent())
-    return AnalyzeImpConvsInComparison(S, E);
+    return AnalyzeImpConvsInComparison(S, E, Path);
 
   Expr *LHS = E->getLHS();
   Expr *RHS = E->getRHS();
@@ -12891,7 +12934,7 @@ static void AnalyzeComparison(Sema &S, BinaryOperator *E) {
 
     // We don't care about expressions whose result is a constant.
     if (RHSValue && LHSValue)
-      return AnalyzeImpConvsInComparison(S, E);
+      return AnalyzeImpConvsInComparison(S, E, Path);
 
     // We only care about expressions where just one side is literal
     if ((bool)RHSValue ^ (bool)LHSValue) {
@@ -12904,7 +12947,7 @@ static void AnalyzeComparison(Sema &S, BinaryOperator *E) {
       // Check whether an integer constant comparison results in a value
       // of 'true' or 'false'.
       if (CheckTautologicalComparison(S, E, Const, Other, Value, RhsConstant))
-        return AnalyzeImpConvsInComparison(S, E);
+        return AnalyzeImpConvsInComparison(S, E, Path);
     }
   }
 
@@ -12912,7 +12955,7 @@ static void AnalyzeComparison(Sema &S, BinaryOperator *E) {
     // We don't do anything special if this isn't an unsigned integral
     // comparison:  we're only interested in integral comparisons, and
     // signed comparisons only happen in cases we don't care to warn about.
-    return AnalyzeImpConvsInComparison(S, E);
+    return AnalyzeImpConvsInComparison(S, E, Path);
   }
 
   LHS = LHS->IgnoreParenImpCasts();
@@ -12940,7 +12983,7 @@ static void AnalyzeComparison(Sema &S, BinaryOperator *E) {
     signedOperand = RHS;
     unsignedOperand = LHS;
   } else {
-    return AnalyzeImpConvsInComparison(S, E);
+    return AnalyzeImpConvsInComparison(S, E, Path);
   }
 
   // Otherwise, calculate the effective range of the signed operand.
@@ -12952,8 +12995,10 @@ static void AnalyzeComparison(Sema &S, BinaryOperator *E) {
 
   // Go ahead and analyze implicit conversions in the operands.  Note
   // that we skip the implicit conversions on both sides.
-  AnalyzeImplicitConversions(S, LHS, E->getOperatorLoc());
-  AnalyzeImplicitConversions(S, RHS, E->getOperatorLoc());
+  AnalyzeImplicitConversions(S, LHS, E->getOperatorLoc(), /*IsListInit=*/false,
+                             Path);
+  AnalyzeImplicitConversions(S, RHS, E->getOperatorLoc(), /*IsListInit=*/false,
+                             Path);
 
   // If the signed range is non-negative, -Wsign-compare won't fire.
   if (signedRange->NonNegative)
@@ -13147,9 +13192,11 @@ static bool AnalyzeBitFieldAssignment(Sema &S, FieldDecl *Bitfield, Expr *Init,
 
 /// Analyze the given simple or compound assignment for warning-worthy
 /// operations.
-static void AnalyzeAssignment(Sema &S, BinaryOperator *E) {
+static void AnalyzeAssignment(Sema &S, BinaryOperator *E,
+                              const ImplicitConversionPath *Path) {
   // Just recurse on the LHS.
-  AnalyzeImplicitConversions(S, E->getLHS(), E->getOperatorLoc());
+  AnalyzeImplicitConversions(S, E->getLHS(), E->getOperatorLoc(),
+                             /*IsListInit=*/false, Path);
 
   // We want to recurse on the RHS as normal unless we're assigning to
   // a bitfield.
@@ -13158,7 +13205,8 @@ static void AnalyzeAssignment(Sema &S, BinaryOperator *E) {
                                   E->getOperatorLoc())) {
       // Recurse, ignoring any implicit conversions on the RHS.
       return AnalyzeImplicitConversions(S, E->getRHS()->IgnoreParenImpCasts(),
-                                        E->getOperatorLoc());
+                                        E->getOperatorLoc(),
+                                        /*IsListInit=*/false, Path);
     }
   }
 
@@ -13167,7 +13215,8 @@ static void AnalyzeAssignment(Sema &S, BinaryOperator *E) {
   llvm::SaveAndRestore OBTAssignmentContext(
       S.InOverflowBehaviorAssignmentContext, true);
 
-  AnalyzeImplicitConversions(S, E->getRHS(), E->getOperatorLoc());
+  AnalyzeImplicitConversions(S, E->getRHS(), E->getOperatorLoc(),
+                             /*IsListInit=*/false, Path);
 
   // Diagnose implicitly sequentially-consistent atomic assignment.
   if (E->getLHS()->getType()->isAtomicType())
@@ -13319,12 +13368,15 @@ static void DiagnoseFloatingImpCast(Sema &S, const Expr *E, QualType T,
 
 /// Analyze the given compound assignment for the possible losing of
 /// floating-point precision.
-static void AnalyzeCompoundAssignment(Sema &S, BinaryOperator *E) {
+static void AnalyzeCompoundAssignment(Sema &S, BinaryOperator *E,
+                                      const ImplicitConversionPath *Path) {
   assert(isa<CompoundAssignOperator>(E) &&
          "Must be compound assignment operation");
   // Recurse on the LHS and RHS in here
-  AnalyzeImplicitConversions(S, E->getLHS(), E->getOperatorLoc());
-  AnalyzeImplicitConversions(S, E->getRHS(), E->getOperatorLoc());
+  AnalyzeImplicitConversions(S, E->getLHS(), E->getOperatorLoc(),
+                             /*IsListInit=*/false, Path);
+  AnalyzeImplicitConversions(S, E->getRHS(), E->getOperatorLoc(),
+                             /*IsListInit=*/false, Path);
 
   if (E->getLHS()->getType()->isAtomicType())
     S.Diag(E->getOperatorLoc(), diag::warn_atomic_implicit_seq_cst);
@@ -13601,7 +13653,8 @@ bool Sema::DiscardingCFIUncheckedCallee(QualType From, QualType To) const {
 }
 
 void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
-                                   bool *ICContext, bool IsListInit) {
+                                   bool *ICContext, bool IsListInit,
+                                   const ImplicitConversionPath *Path) {
   if (E->isTypeDependent() || E->isValueDependent()) return;
 
   const Type *Source = Context.getCanonicalType(E->getType()).getTypePtr();
@@ -14035,6 +14088,11 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
       if (SourceMgr.isInSystemMacro(CC))
         return;
 
+      if (Diags.isIgnored(diag::warn_impcast_integer_precision_constant,
+                          E->getExprLoc()) ||
+          (Path && Path->isKnownUnreachable(*this)))
+        return;
+
       std::string PrettySourceValue = toString(Value, 10);
       std::string PrettyTargetValue = PrettyPrintInRange(Value, TargetRange);
 
@@ -14088,6 +14146,13 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
         !SourceMgr.isInSystemMacro(CC)) {
       llvm::APSInt Value = Result.Val.getInt();
       if (isSameWidthConstantConversion(*this, E, T, CC)) {
+        if (isUnevaluatedContext() ||
+            currentEvaluationContext().isDiscardedStatementContext() ||
+            Diags.isIgnored(diag::warn_impcast_integer_precision_constant,
+                            E->getExprLoc()) ||
+            (Path && Path->isKnownUnreachable(*this)))
+          return;
+
         std::string PrettySourceValue = toString(Value, 10);
         std::string PrettyTargetValue = PrettyPrintInRange(Value, TargetRange);
 
@@ -14156,34 +14221,50 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
 }
 
 static void CheckConditionalOperator(Sema &S, AbstractConditionalOperator *E,
-                                     SourceLocation CC, QualType T);
+                                     SourceLocation CC, QualType T,
+                                     const ImplicitConversionPath *Path);
 
 static void CheckConditionalOperand(Sema &S, Expr *E, QualType T,
-                                    SourceLocation CC, bool &ICContext) {
+                                    SourceLocation CC, bool &ICContext,
+                                    const ImplicitConversionPath *Path) {
   E = E->IgnoreParenImpCasts();
   // Diagnose incomplete type for second or third operand in C.
   if (!S.getLangOpts().CPlusPlus && E->getType()->isRecordType())
     S.RequireCompleteExprType(E, diag::err_incomplete_type);
 
   if (auto *CO = dyn_cast<AbstractConditionalOperator>(E))
-    return CheckConditionalOperator(S, CO, CC, T);
+    return CheckConditionalOperator(S, CO, CC, T, Path);
 
-  AnalyzeImplicitConversions(S, E, CC);
+  AnalyzeImplicitConversions(S, E, CC, /*IsListInit=*/false, Path);
   if (E->getType() != T)
-    return S.CheckImplicitConversion(E, T, CC, &ICContext);
+    return S.CheckImplicitConversion(E, T, CC, &ICContext,
+                                     /*IsListInit=*/false, Path);
 }
 
 static void CheckConditionalOperator(Sema &S, AbstractConditionalOperator *E,
-                                     SourceLocation CC, QualType T) {
-  AnalyzeImplicitConversions(S, E->getCond(), E->getQuestionLoc());
+                                     SourceLocation CC, QualType T,
+                                     const ImplicitConversionPath *Path) {
+  AnalyzeImplicitConversions(S, E->getCond(), E->getQuestionLoc(),
+                             /*IsListInit=*/false, Path);
+
+  ImplicitConversionPath::Condition Cond(E->getCond(),
+                                         S.isConstantEvaluatedContext());
+  ImplicitConversionPath TruePath(Path, Cond, /*IsTrueOperand=*/true);
+  ImplicitConversionPath FalsePath(Path, Cond, /*IsTrueOperand=*/false);
 
   Expr *TrueExpr = E->getTrueExpr();
-  if (auto *BCO = dyn_cast<BinaryConditionalOperator>(E))
+  const ImplicitConversionPath *TrueOperandPath = &TruePath;
+
+  if (auto *BCO = dyn_cast<BinaryConditionalOperator>(E)) {
+    // The common expression supplies the condition as well as the true value,
+    // so its subexpressions are evaluated even when the condition is false.
     TrueExpr = BCO->getCommon();
+    TrueOperandPath = Path;
+  }
 
   bool Suspicious = false;
-  CheckConditionalOperand(S, TrueExpr, T, CC, Suspicious);
-  CheckConditionalOperand(S, E->getFalseExpr(), T, CC, Suspicious);
+  CheckConditionalOperand(S, TrueExpr, T, CC, Suspicious, TrueOperandPath);
+  CheckConditionalOperand(S, E->getFalseExpr(), T, CC, Suspicious, &FalsePath);
 
   if (T->isBooleanType())
     DiagnoseIntInBoolContext(S, E);
@@ -14202,10 +14283,11 @@ static void CheckConditionalOperator(Sema &S, AbstractConditionalOperator *E,
 
   Suspicious = false;
   S.CheckImplicitConversion(TrueExpr->IgnoreParenImpCasts(), E->getType(), CC,
-                            &Suspicious);
+                            &Suspicious, /*IsListInit=*/false, TrueOperandPath);
   if (!Suspicious)
     S.CheckImplicitConversion(E->getFalseExpr()->IgnoreParenImpCasts(),
-                              E->getType(), CC, &Suspicious);
+                              E->getType(), CC, &Suspicious,
+                              /*IsListInit=*/false, &FalsePath);
 }
 
 /// Check conversion of given expression to boolean.
@@ -14226,18 +14308,22 @@ struct AnalyzeImplicitConversionsWorkItem {
   Expr *E;
   SourceLocation CC;
   bool IsListInit;
+  // The enclosing conditional operands outlive this work list. Recording the
+  // path does not evaluate conditions or skip unrelated diagnostics.
+  const ImplicitConversionPath *Path;
 };
 }
 
 static void CheckCommaOperand(
     Sema &S, Expr *E, QualType T, SourceLocation CC,
-    bool ExtraCheckForImplicitConversion,
+    bool ExtraCheckForImplicitConversion, const ImplicitConversionPath *Path,
     llvm::SmallVectorImpl<AnalyzeImplicitConversionsWorkItem> &WorkList) {
   E = E->IgnoreParenImpCasts();
-  WorkList.push_back({E, CC, false});
+  WorkList.push_back({E, CC, false, Path});
 
   if (ExtraCheckForImplicitConversion && E->getType() != T)
-    S.CheckImplicitConversion(E, T, CC);
+    S.CheckImplicitConversion(E, T, CC, /*ICContext=*/nullptr,
+                              /*IsListInit=*/false, Path);
 }
 
 /// Data recursive variant of AnalyzeImplicitConversions. Subexpressions
@@ -14315,9 +14401,11 @@ static void AnalyzeImplicitConversions(
       /// how CheckConditionalOperand behaves; it's as-if the correct operand
       /// were directly used for the implicit conversion check.
       CheckCommaOperand(S, BO->getLHS(), T, BO->getOperatorLoc(),
-                        /*ExtraCheckForImplicitConversion=*/false, WorkList);
+                        /*ExtraCheckForImplicitConversion=*/false, Item.Path,
+                        WorkList);
       CheckCommaOperand(S, BO->getRHS(), T, BO->getOperatorLoc(),
-                        /*ExtraCheckForImplicitConversion=*/true, WorkList);
+                        /*ExtraCheckForImplicitConversion=*/true, Item.Path,
+                        WorkList);
       return;
     }
   }
@@ -14325,7 +14413,7 @@ static void AnalyzeImplicitConversions(
   // For conditional operators, we analyze the arguments as if they
   // were being fed directly into the output.
   if (auto *CO = dyn_cast<AbstractConditionalOperator>(SourceExpr)) {
-    CheckConditionalOperator(S, CO, CC, T);
+    CheckConditionalOperator(S, CO, CC, T, Item.Path);
     return;
   }
 
@@ -14337,7 +14425,8 @@ static void AnalyzeImplicitConversions(
   // The non-canonical typecheck is just an optimization;
   // CheckImplicitConversion will filter out dead implicit conversions.
   if (SourceExpr->getType() != T)
-    S.CheckImplicitConversion(SourceExpr, T, CC, nullptr, IsListInit);
+    S.CheckImplicitConversion(SourceExpr, T, CC, nullptr, IsListInit,
+                              Item.Path);
 
   // Now continue drilling into this expression.
 
@@ -14347,7 +14436,7 @@ static void AnalyzeImplicitConversions(
     // FIXME: Use a more uniform representation for this.
     for (auto *SE : POE->semantics())
       if (auto *OVE = dyn_cast<OpaqueValueExpr>(SE))
-        WorkList.push_back({OVE->getSourceExpr(), CC, IsListInit});
+        WorkList.push_back({OVE->getSourceExpr(), CC, IsListInit, Item.Path});
   }
 
   // Skip past explicit casts.
@@ -14367,33 +14456,34 @@ static void AnalyzeImplicitConversions(
     E = E->IgnoreParenImpCasts();
     if (!CE->getType()->isVoidType() && E->getType()->isAtomicType())
       S.Diag(E->getBeginLoc(), diag::warn_atomic_implicit_seq_cst);
-    WorkList.push_back({E, CC, IsListInit});
+    WorkList.push_back({E, CC, IsListInit, Item.Path});
     return;
   }
 
   if (auto *OutArgE = dyn_cast<HLSLOutArgExpr>(E)) {
-    WorkList.push_back({OutArgE->getArgLValue(), CC, IsListInit});
+    WorkList.push_back({OutArgE->getArgLValue(), CC, IsListInit, Item.Path});
     // The base expression is only used to initialize the parameter for
     // arguments to `inout` parameters, so we only traverse down the base
     // expression for `inout` cases.
     if (OutArgE->isInOut())
-      WorkList.push_back(
-          {OutArgE->getCastedTemporary()->getSourceExpr(), CC, IsListInit});
-    WorkList.push_back({OutArgE->getWritebackCast(), CC, IsListInit});
+      WorkList.push_back({OutArgE->getCastedTemporary()->getSourceExpr(), CC,
+                          IsListInit, Item.Path});
+    WorkList.push_back(
+        {OutArgE->getWritebackCast(), CC, IsListInit, Item.Path});
     return;
   }
 
   if (BinaryOperator *BO = dyn_cast<BinaryOperator>(E)) {
     // Do a somewhat different check with comparison operators.
     if (BO->isComparisonOp())
-      return AnalyzeComparison(S, BO);
+      return AnalyzeComparison(S, BO, Item.Path);
 
     // And with simple assignments.
     if (BO->getOpcode() == BO_Assign)
-      return AnalyzeAssignment(S, BO);
+      return AnalyzeAssignment(S, BO, Item.Path);
     // And with compound assignments.
     if (BO->isAssignmentOp())
-      return AnalyzeCompoundAssignment(S, BO);
+      return AnalyzeCompoundAssignment(S, BO, Item.Path);
   }
 
   // These break the otherwise-useful invariant below.  Fortunately,
@@ -14426,7 +14516,7 @@ static void AnalyzeImplicitConversions(
       // Ignore checking string literals that are in logical and operators.
       // This is a common pattern for asserts.
       continue;
-    WorkList.push_back({ChildExpr, CC, IsListInit});
+    WorkList.push_back({ChildExpr, CC, IsListInit, Item.Path});
   }
 
   if (BO && BO->isLogicalOp()) {
@@ -14453,10 +14543,12 @@ static void AnalyzeImplicitConversions(
 /// AnalyzeImplicitConversions - Find and report any interesting
 /// implicit conversions in the given expression.  There are a couple
 /// of competing diagnostics here, -Wconversion and -Wsign-compare.
-static void AnalyzeImplicitConversions(Sema &S, Expr *OrigE, SourceLocation CC,
-                                       bool IsListInit/*= false*/) {
+static void
+AnalyzeImplicitConversions(Sema &S, Expr *OrigE, SourceLocation CC,
+                           bool IsListInit /*= false*/,
+                           const ImplicitConversionPath *Path /*= nullptr*/) {
   llvm::SmallVector<AnalyzeImplicitConversionsWorkItem, 16> WorkList;
-  WorkList.push_back({OrigE, CC, IsListInit});
+  WorkList.push_back({OrigE, CC, IsListInit, Path});
   while (!WorkList.empty())
     AnalyzeImplicitConversions(S, WorkList.pop_back_val(), WorkList);
 }
