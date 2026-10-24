@@ -3,6 +3,7 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_clang_library(clangScalableStaticAnalysisSourceTransformation
+  EntityLookup.cpp
   SARIFTransformationReportFormat.cpp
   TransformationRegistry.cpp
   Transformations/CppBoundedBuffers.cpp
