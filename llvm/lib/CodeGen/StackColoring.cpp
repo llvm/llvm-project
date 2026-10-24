@@ -24,9 +24,12 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DepthFirstIterator.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -419,6 +422,8 @@ class StackColoring {
   /// SlotIndex analysis object.
   SlotIndexes *Indexes = nullptr;
 
+  AAResults *AA = nullptr;
+
   /// The list of lifetime markers found. These markers are to be removed
   /// once the coloring is done.
   SmallVector<MachineInstr*, 8> Markers;
@@ -435,7 +440,8 @@ class StackColoring {
   unsigned NumIterations;
 
 public:
-  StackColoring(SlotIndexes *Indexes) : Indexes(Indexes) {}
+  StackColoring(SlotIndexes *Indexes, AAResults *AA)
+      : Indexes(Indexes), AA(AA) {}
   bool run(MachineFunction &Func, bool OnlyRemoveMarkers = false);
 
 private:
@@ -520,11 +526,13 @@ char &llvm::StackColoringLegacyID = StackColoringLegacy::ID;
 
 INITIALIZE_PASS_BEGIN(StackColoringLegacy, DEBUG_TYPE,
                       "Merge disjoint stack slots", false, false)
+INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
 INITIALIZE_PASS_END(StackColoringLegacy, DEBUG_TYPE,
                     "Merge disjoint stack slots", false, false)
 
 void StackColoringLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
+  AU.addRequired<AAResultsWrapperPass>();
   AU.addRequired<SlotIndexesWrapperPass>();
   AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
@@ -985,6 +993,26 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
     FromAI->replaceAllUsesWith(Inst);
   }
 
+  // Only the targets of the merge have uses left, so AA queried without
+  // metadata can tell whether an underlying object may point into a merged
+  // slot. Arguments and identified objects cannot, and are skipped first
+  // because BasicAA gives up on some phis that getUnderlyingObjects looks
+  // through.
+  SmallSetVector<const AllocaInst *, 8> Targets;
+  for (const auto &[From, To] : Allocas)
+    Targets.insert(To);
+  BatchAAResults BatchAA(*AA);
+  auto MayPointIntoMergedSlot = [&](const Value *V) {
+    if (const auto *AI = dyn_cast<AllocaInst>(V))
+      return MergedAllocas.contains(AI);
+    if (isIdentifiedObject(V) || isa<Argument>(V))
+      return false;
+    MemoryLocation Loc = MemoryLocation::getBeforeOrAfter(V);
+    return any_of(Targets, [&](const AllocaInst *AI) {
+      return !BatchAA.isNoAlias(Loc, MemoryLocation::getBeforeOrAfter(AI));
+    });
+  };
+
   // Remap all instructions to the new stack slots.
   std::vector<std::vector<MachineMemOperand *>> SSRefs(
       MFI->getObjectIndexEnd());
@@ -1070,20 +1098,9 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
         if (MMO->getAAInfo()) {
           if (const Value *MMOV = MMO->getValue()) {
             SmallVector<Value *, 4> Objs;
-
-            if (!getUnderlyingObjectsForCodeGen(MMOV, Objs) || Objs.empty())
-              MayHaveConflictingAAMD = true;
-            else
-              for (Value *V : Objs) {
-                // If this memory location comes from a known stack slot
-                // that is not remapped, we continue checking.
-                // Otherwise, we need to invalidate AA infomation.
-                const AllocaInst *AI = dyn_cast_or_null<AllocaInst>(V);
-                if (AI && MergedAllocas.count(AI)) {
-                  MayHaveConflictingAAMD = true;
-                  break;
-                }
-              }
+            getUnderlyingObjectsForCodeGen(MMOV, Objs);
+            MayHaveConflictingAAMD =
+                Objs.empty() || any_of(Objs, MayPointIntoMergedSlot);
           }
         }
         if (MayHaveConflictingAAMD) {
@@ -1188,13 +1205,17 @@ void StackColoring::expungeSlotMap(DenseMap<int, int> &SlotRemap,
 }
 
 bool StackColoringLegacy::runOnMachineFunction(MachineFunction &MF) {
-  StackColoring SC(&getAnalysis<SlotIndexesWrapperPass>().getSI());
+  StackColoring SC(&getAnalysis<SlotIndexesWrapperPass>().getSI(),
+                   &getAnalysis<AAResultsWrapperPass>().getAAResults());
   return SC.run(MF, skipFunction(MF.getFunction()));
 }
 
 PreservedAnalyses StackColoringPass::run(MachineFunction &MF,
                                          MachineFunctionAnalysisManager &MFAM) {
-  StackColoring SC(&MFAM.getResult<SlotIndexesAnalysis>(MF));
+  auto &AA = MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
+                 .getManager()
+                 .getResult<AAManager>(MF.getFunction());
+  StackColoring SC(&MFAM.getResult<SlotIndexesAnalysis>(MF), &AA);
   bool OnlyRemoveMarkers = MF.getFunction().hasOptNone() ||
                            shouldSkipOptimizationForOptBisect(MF.getFunction());
   if (SC.run(MF, OnlyRemoveMarkers)) {
