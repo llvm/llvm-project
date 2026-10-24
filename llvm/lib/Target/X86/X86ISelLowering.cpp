@@ -20291,9 +20291,28 @@ static SDValue LowerI64IntToFP16(SDValue Op, const SDLoc &dl, SelectionDAG &DAG,
   if (SrcVT != MVT::i64 || Subtarget.is64Bit() || VT != MVT::f16)
     return SDValue();
 
-  // Pack the i64 into a vector, do the operation and extract.
+  // Pack the i64 into a vector, do the operation and extract. Without VLX, use
+  // a zeroed 512-bit vector, since a strict v2i64 conversion would be split
+  // back into this scalar one.
 
   assert(Subtarget.hasFP16() && "Expected FP16");
+
+  if (!Subtarget.hasVLX()) {
+    SDValue InVec = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, MVT::v8i64,
+                                DAG.getConstant(0, dl, MVT::v8i64), Src,
+                                DAG.getVectorIdxConstant(0, dl));
+    SDValue CvtVec, Chain;
+    if (IsStrict) {
+      CvtVec = DAG.getNode(Op.getOpcode(), dl, {MVT::v8f16, MVT::Other},
+                           {Op.getOperand(0), InVec});
+      Chain = CvtVec.getValue(1);
+    } else {
+      CvtVec = DAG.getNode(Op.getOpcode(), dl, MVT::v8f16, InVec);
+    }
+    SDValue Value = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, VT, CvtVec,
+                                DAG.getVectorIdxConstant(0, dl));
+    return IsStrict ? DAG.getMergeValues({Value, Chain}, dl) : Value;
+  }
 
   SDValue InVec = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, MVT::v2i64, Src);
   if (IsStrict) {
@@ -31065,6 +31084,10 @@ SDValue X86TargetLowering::LowerWin64_INT128_TO_FP(SDValue Op,
   assert(Subtarget.isCallingConvWin64(CallingConv::C) && "Unexpected target");
   EVT VT = Op.getValueType();
   bool IsStrict = Op->isStrictFPOpcode();
+
+  // The generic expansion converts to f16 without a libcall.
+  if (VT == MVT::f16)
+    return SDValue();
 
   SDValue Arg = Op.getOperand(IsStrict ? 1 : 0);
   EVT ArgVT = Arg.getValueType();

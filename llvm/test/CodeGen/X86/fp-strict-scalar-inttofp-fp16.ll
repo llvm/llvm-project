@@ -2,7 +2,8 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+sse2  -O3 | FileCheck %s --check-prefixes=SSE2
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+f16c  -O3 | FileCheck %s --check-prefixes=AVX,F16C
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f  -O3 | FileCheck %s --check-prefixes=AVX,AVX512
-; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+avx512fp16 -mattr=+avx512vl -O3 | FileCheck %s --check-prefixes=X86
+; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+avx512fp16 -mattr=+avx512vl -O3 | FileCheck %s --check-prefixes=X86,X86-VL
+; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+avx512fp16 -O3 | FileCheck %s --check-prefixes=X86,X86-NOVL
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512fp16 -mattr=+avx512vl -O3 | FileCheck %s --check-prefixes=X64
 
 declare half @llvm.experimental.constrained.sitofp.f16.i1(i1, metadata, metadata)
@@ -177,11 +178,18 @@ define half @sitofp_i64tof16(i64 %x) #0 {
 ; AVX-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
-; X86-LABEL: sitofp_i64tof16:
-; X86:       # %bb.0:
-; X86-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X86-NEXT:    vcvtqq2ph %xmm0, %xmm0
-; X86-NEXT:    retl
+; X86-VL-LABEL: sitofp_i64tof16:
+; X86-VL:       # %bb.0:
+; X86-VL-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X86-VL-NEXT:    vcvtqq2ph %xmm0, %xmm0
+; X86-VL-NEXT:    retl
+;
+; X86-NOVL-LABEL: sitofp_i64tof16:
+; X86-NOVL:       # %bb.0:
+; X86-NOVL-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X86-NOVL-NEXT:    vcvtqq2ph %zmm0, %xmm0
+; X86-NOVL-NEXT:    vzeroupper
+; X86-NOVL-NEXT:    retl
 ;
 ; X64-LABEL: sitofp_i64tof16:
 ; X64:       # %bb.0:
@@ -388,11 +396,18 @@ define half @uitofp_i64tof16(i64 %x) #0 {
 ; AVX512-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
 ;
-; X86-LABEL: uitofp_i64tof16:
-; X86:       # %bb.0:
-; X86-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X86-NEXT:    vcvtuqq2ph %xmm0, %xmm0
-; X86-NEXT:    retl
+; X86-VL-LABEL: uitofp_i64tof16:
+; X86-VL:       # %bb.0:
+; X86-VL-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X86-VL-NEXT:    vcvtuqq2ph %xmm0, %xmm0
+; X86-VL-NEXT:    retl
+;
+; X86-NOVL-LABEL: uitofp_i64tof16:
+; X86-NOVL:       # %bb.0:
+; X86-NOVL-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X86-NOVL-NEXT:    vcvtuqq2ph %zmm0, %xmm0
+; X86-NOVL-NEXT:    vzeroupper
+; X86-NOVL-NEXT:    retl
 ;
 ; X64-LABEL: uitofp_i64tof16:
 ; X64:       # %bb.0:
