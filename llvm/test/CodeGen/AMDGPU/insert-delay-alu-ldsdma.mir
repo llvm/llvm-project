@@ -15,11 +15,11 @@ body: |
     ; CHECK-NEXT: $exec = IMPLICIT_DEF
     ; CHECK-NEXT: $sgpr0 = V_READFIRSTLANE_B32 $vgpr0, implicit $exec
     ; CHECK-NEXT: S_DELAY_ALU .id0_VALU_DEP_1
-    ; CHECK-NEXT: TENSOR_LOAD_TO_LDS_d2_gfx1250 $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    ; CHECK-NEXT: TENSOR_LOAD_TO_LDS_d2_gfx1250 $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt, implicit $asyncmarker
     ; CHECK-NEXT: S_ENDPGM 0
     $exec = IMPLICIT_DEF
     $sgpr0 = V_READFIRSTLANE_B32 $vgpr0, implicit $exec
-    TENSOR_LOAD_TO_LDS_d2_gfx1250 $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    TENSOR_LOAD_TO_LDS_d2_gfx1250 $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt, implicit $asyncmarker
     S_ENDPGM 0
 ...
 
@@ -34,13 +34,13 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: $exec = IMPLICIT_DEF
     ; CHECK-NEXT: $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
-    ; CHECK-NEXT: TENSOR_LOAD_TO_LDS_d2_gfx1250 $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    ; CHECK-NEXT: TENSOR_LOAD_TO_LDS_d2_gfx1250 $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt, implicit $asyncmarker
     ; CHECK-NEXT: S_DELAY_ALU .id0_VALU_DEP_1
     ; CHECK-NEXT: $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0
     $exec = IMPLICIT_DEF
     $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
-    TENSOR_LOAD_TO_LDS_d2_gfx1250 $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    TENSOR_LOAD_TO_LDS_d2_gfx1250 $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt, implicit $asyncmarker
     $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
     S_ENDPGM 0
 ...
