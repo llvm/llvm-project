@@ -512,13 +512,6 @@ static KnownFPClass fadd_impl(const KnownFPClass &KnownLHS,
                               const KnownFPClass &KnownRHS, bool IsFMA) {
   KnownFPClass Known;
 
-  // Adding positive and negative infinity produces NaN, but only if both
-  // opposite-sign infinity combinations are possible.
-  if (KnownLHS.isKnownNeverNaN() && KnownRHS.isKnownNeverNaN() &&
-      (KnownLHS.isKnownNever(fcPosInf) || KnownRHS.isKnownNever(fcNegInf)) &&
-      (KnownLHS.isKnownNever(fcNegInf) || KnownRHS.isKnownNever(fcPosInf)))
-    Known.knownNot(fcNan);
-
   if (KnownLHS.cannotBeOrderedLessThanZero() &&
       KnownRHS.cannotBeOrderedLessThanZero()) {
     Known.knownNot(KnownFPClass::OrderedLessThanZeroMask);
@@ -540,11 +533,18 @@ static KnownFPClass fadd_impl(const KnownFPClass &KnownLHS,
   }
 
   if (!IsFMA) {
+    Known.propagateNonSNaN(KnownLHS, KnownRHS);
+
+    // Adding positive and negative infinity produces NaN, but only if both
+    // opposite-sign infinity combinations are possible.
+    if (KnownLHS.isKnownNeverNaN() && KnownRHS.isKnownNeverNaN() &&
+        (KnownLHS.isKnownNever(fcPosInf) || KnownRHS.isKnownNever(fcNegInf)) &&
+        (KnownLHS.isKnownNever(fcNegInf) || KnownRHS.isKnownNever(fcPosInf)))
+      Known.knownNot(fcNan);
+
     // (fadd x, +0.0) is guaranteed to return +0.0, not -0.0.
     if (KnownLHS.isKnownNever(fcNegZero) || KnownRHS.isKnownNever(fcNegZero))
       Known.knownNot(fcNegZero);
-
-    Known.propagateNonSNaN(KnownLHS, KnownRHS);
   }
 
   return Known;
