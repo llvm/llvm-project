@@ -192,6 +192,15 @@ ExprDependence clang::computeDependence(StmtExpr *E, unsigned TemplateDepth) {
   return D & ~ExprDependence::UnexpandedPack;
 }
 
+ExprDependence clang::computeDependence(SplatVectorExpr *E) {
+  auto D = toExprDependenceAsWritten(
+               E->getTypeSourceInfo()->getType()->getDependence()) |
+           E->getSrcExpr()->getDependence();
+  if (!E->getType()->isDependentType())
+    D &= ~ExprDependence::Type;
+  return D;
+}
+
 ExprDependence clang::computeDependence(ConvertVectorExpr *E) {
   auto D = toExprDependenceAsWritten(
                E->getTypeSourceInfo()->getType()->getDependence()) |

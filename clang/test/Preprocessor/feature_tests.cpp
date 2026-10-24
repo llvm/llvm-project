@@ -11,6 +11,7 @@
 
 #if  !__has_builtin(__builtin_huge_val) || \
      !__has_builtin(__builtin_shufflevector) || \
+     !__has_builtin(__builtin_splatvector) || \
      !__has_builtin(__builtin_convertvector) || \
      !__has_builtin(__builtin_trap) || \
      !__has_builtin(__c11_atomic_init) || \

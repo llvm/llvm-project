@@ -460,6 +460,27 @@ TEST_P(ImportExpr, ImportStmtExpr) {
                        hasDescendant(implicitCastExpr()))))))));
 }
 
+TEST_P(ASTImporterOptionSpecificTestBase, ImportSplatVectorExpr) {
+  Decl *From, *To;
+  std::tie(From, To) = getImportedDecl(
+      "typedef double v4double __attribute__((__vector_size__(32)));"
+      "float f;"
+      "void declToImport() { (void)__builtin_splatvector(f, v4double); }",
+      Lang_CXX03, "", Lang_CXX03);
+
+  auto ToResults = match(splatVectorExpr().bind("splat"), To->getASTContext());
+  auto FromResults =
+      match(splatVectorExpr().bind("splat"), From->getASTContext());
+
+  const SplatVectorExpr *FromSplatVectorExpr =
+      selectFirst<SplatVectorExpr>("splat", FromResults);
+  ASSERT_TRUE(FromSplatVectorExpr);
+
+  const SplatVectorExpr *ToSplatVectorExpr =
+      selectFirst<SplatVectorExpr>("splat", ToResults);
+  ASSERT_TRUE(ToSplatVectorExpr);
+}
+
 TEST_P(ImportExpr, ImportConditionalOperator) {
   MatchVerifier<Decl> Verifier;
   testImport("void declToImport() { (void)(true ? 1 : -5); }", Lang_CXX03, "",
