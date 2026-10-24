@@ -905,10 +905,9 @@ define i128 @isolate_msb_i128(i128 %a0, i128 %idx) nounwind {
 ; SSE-NEXT:    xorl $63, %eax
 ; SSE-NEXT:    bsrq %rdi, %rcx
 ; SSE-NEXT:    xorl $63, %ecx
-; SSE-NEXT:    orb $64, %cl
+; SSE-NEXT:    orl $64, %ecx
 ; SSE-NEXT:    testq %rsi, %rsi
-; SSE-NEXT:    movzbl %cl, %ecx
-; SSE-NEXT:    cmovnel %eax, %ecx
+; SSE-NEXT:    cmovneq %rax, %rcx
 ; SSE-NEXT:    movabsq $-9223372036854775808, %rdx # imm = 0x8000000000000000
 ; SSE-NEXT:    xorl %eax, %eax
 ; SSE-NEXT:    shrdq %cl, %rdx, %rax
@@ -925,10 +924,9 @@ define i128 @isolate_msb_i128(i128 %a0, i128 %idx) nounwind {
 ; AVX-LABEL: isolate_msb_i128:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    lzcntq %rdi, %rax
-; AVX-NEXT:    addb $64, %al
-; AVX-NEXT:    lzcntq %rsi, %rdx
-; AVX-NEXT:    movzbl %al, %ecx
-; AVX-NEXT:    cmovael %edx, %ecx
+; AVX-NEXT:    addl $64, %eax
+; AVX-NEXT:    lzcntq %rsi, %rcx
+; AVX-NEXT:    cmovbq %rax, %rcx
 ; AVX-NEXT:    xorl %r8d, %r8d
 ; AVX-NEXT:    movabsq $-9223372036854775808, %rdx # imm = 0x8000000000000000
 ; AVX-NEXT:    xorl %eax, %eax
@@ -954,19 +952,18 @@ define i128 @isolate_msb_i128_vector(<2 x i64> %v0, i128 %idx) nounwind {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movq %xmm0, %rax
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; SSE2-NEXT:    movq %xmm1, %rcx
+; SSE2-NEXT:    movq %xmm1, %rdx
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
 ; SSE2-NEXT:    pcmpeqd %xmm0, %xmm1
 ; SSE2-NEXT:    movmskps %xmm1, %esi
 ; SSE2-NEXT:    xorl $15, %esi
-; SSE2-NEXT:    bsrq %rcx, %rdx
-; SSE2-NEXT:    xorl $63, %edx
-; SSE2-NEXT:    bsrq %rax, %rax
-; SSE2-NEXT:    xorl $63, %eax
-; SSE2-NEXT:    orb $64, %al
-; SSE2-NEXT:    testq %rcx, %rcx
-; SSE2-NEXT:    movzbl %al, %ecx
-; SSE2-NEXT:    cmovnel %edx, %ecx
+; SSE2-NEXT:    bsrq %rdx, %rdi
+; SSE2-NEXT:    xorl $63, %edi
+; SSE2-NEXT:    bsrq %rax, %rcx
+; SSE2-NEXT:    xorl $63, %ecx
+; SSE2-NEXT:    orl $64, %ecx
+; SSE2-NEXT:    testq %rdx, %rdx
+; SSE2-NEXT:    cmovneq %rdi, %rcx
 ; SSE2-NEXT:    movabsq $-9223372036854775808, %rdx # imm = 0x8000000000000000
 ; SSE2-NEXT:    xorl %eax, %eax
 ; SSE2-NEXT:    shrdq %cl, %rdx, %rax
@@ -983,15 +980,14 @@ define i128 @isolate_msb_i128_vector(<2 x i64> %v0, i128 %idx) nounwind {
 ; SSE42-LABEL: isolate_msb_i128_vector:
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    movq %xmm0, %rax
-; SSE42-NEXT:    pextrq $1, %xmm0, %rcx
-; SSE42-NEXT:    bsrq %rcx, %rdx
-; SSE42-NEXT:    xorl $63, %edx
-; SSE42-NEXT:    bsrq %rax, %rax
-; SSE42-NEXT:    xorl $63, %eax
-; SSE42-NEXT:    orb $64, %al
-; SSE42-NEXT:    testq %rcx, %rcx
-; SSE42-NEXT:    movzbl %al, %ecx
-; SSE42-NEXT:    cmovnel %edx, %ecx
+; SSE42-NEXT:    pextrq $1, %xmm0, %rdx
+; SSE42-NEXT:    bsrq %rdx, %rsi
+; SSE42-NEXT:    xorl $63, %esi
+; SSE42-NEXT:    bsrq %rax, %rcx
+; SSE42-NEXT:    xorl $63, %ecx
+; SSE42-NEXT:    orl $64, %ecx
+; SSE42-NEXT:    testq %rdx, %rdx
+; SSE42-NEXT:    cmovneq %rsi, %rcx
 ; SSE42-NEXT:    movabsq $-9223372036854775808, %rdx # imm = 0x8000000000000000
 ; SSE42-NEXT:    xorl %eax, %eax
 ; SSE42-NEXT:    shrdq %cl, %rdx, %rax
@@ -1005,27 +1001,48 @@ define i128 @isolate_msb_i128_vector(<2 x i64> %v0, i128 %idx) nounwind {
 ; SSE42-NEXT:    cmoveq %rsi, %rdx
 ; SSE42-NEXT:    retq
 ;
-; AVX-LABEL: isolate_msb_i128_vector:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vpextrq $1, %xmm0, %rax
-; AVX-NEXT:    vmovq %xmm0, %rcx
-; AVX-NEXT:    lzcntq %rcx, %rcx
-; AVX-NEXT:    addb $64, %cl
-; AVX-NEXT:    lzcntq %rax, %rax
-; AVX-NEXT:    movzbl %cl, %ecx
-; AVX-NEXT:    cmovael %eax, %ecx
-; AVX-NEXT:    xorl %esi, %esi
-; AVX-NEXT:    movabsq $-9223372036854775808, %rdx # imm = 0x8000000000000000
-; AVX-NEXT:    xorl %eax, %eax
-; AVX-NEXT:    shrdq %cl, %rdx, %rax
-; AVX-NEXT:    shrxq %rcx, %rdx, %rdx
-; AVX-NEXT:    testb $64, %cl
-; AVX-NEXT:    cmovneq %rdx, %rax
-; AVX-NEXT:    cmovneq %rsi, %rdx
-; AVX-NEXT:    vptest %xmm0, %xmm0
-; AVX-NEXT:    cmoveq %rsi, %rax
-; AVX-NEXT:    cmoveq %rsi, %rdx
-; AVX-NEXT:    retq
+; AVX2-LABEL: isolate_msb_i128_vector:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX2-NEXT:    vmovq %xmm0, %rcx
+; AVX2-NEXT:    lzcntq %rcx, %rdx
+; AVX2-NEXT:    addl $64, %edx
+; AVX2-NEXT:    xorl %ecx, %ecx
+; AVX2-NEXT:    lzcntq %rax, %rcx
+; AVX2-NEXT:    cmovbq %rdx, %rcx
+; AVX2-NEXT:    xorl %esi, %esi
+; AVX2-NEXT:    movabsq $-9223372036854775808, %rdx # imm = 0x8000000000000000
+; AVX2-NEXT:    xorl %eax, %eax
+; AVX2-NEXT:    shrdq %cl, %rdx, %rax
+; AVX2-NEXT:    shrxq %rcx, %rdx, %rdx
+; AVX2-NEXT:    testb $64, %cl
+; AVX2-NEXT:    cmovneq %rdx, %rax
+; AVX2-NEXT:    cmovneq %rsi, %rdx
+; AVX2-NEXT:    vptest %xmm0, %xmm0
+; AVX2-NEXT:    cmoveq %rsi, %rax
+; AVX2-NEXT:    cmoveq %rsi, %rdx
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: isolate_msb_i128_vector:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX512-NEXT:    vmovq %xmm0, %rcx
+; AVX512-NEXT:    lzcntq %rcx, %rdx
+; AVX512-NEXT:    addl $64, %edx
+; AVX512-NEXT:    lzcntq %rax, %rcx
+; AVX512-NEXT:    cmovbq %rdx, %rcx
+; AVX512-NEXT:    xorl %esi, %esi
+; AVX512-NEXT:    movabsq $-9223372036854775808, %rdx # imm = 0x8000000000000000
+; AVX512-NEXT:    xorl %eax, %eax
+; AVX512-NEXT:    shrdq %cl, %rdx, %rax
+; AVX512-NEXT:    shrxq %rcx, %rdx, %rdx
+; AVX512-NEXT:    testb $64, %cl
+; AVX512-NEXT:    cmovneq %rdx, %rax
+; AVX512-NEXT:    cmovneq %rsi, %rdx
+; AVX512-NEXT:    vptest %xmm0, %xmm0
+; AVX512-NEXT:    cmoveq %rsi, %rax
+; AVX512-NEXT:    cmoveq %rsi, %rdx
+; AVX512-NEXT:    retq
   %a0 = bitcast <2 x i64> %v0 to i128
   %eqz = icmp eq i128 %a0, 0
   %clz = call i128 @llvm.ctlz.i128(i128 %a0, i1 -1)
@@ -1044,10 +1061,9 @@ define i128 @isolate_msb_i128_load(ptr %p0, i128 %idx) nounwind {
 ; SSE-NEXT:    xorl $63, %eax
 ; SSE-NEXT:    bsrq %rsi, %rcx
 ; SSE-NEXT:    xorl $63, %ecx
-; SSE-NEXT:    orb $64, %cl
+; SSE-NEXT:    orl $64, %ecx
 ; SSE-NEXT:    testq %rdi, %rdi
-; SSE-NEXT:    movzbl %cl, %ecx
-; SSE-NEXT:    cmovnel %eax, %ecx
+; SSE-NEXT:    cmovneq %rax, %rcx
 ; SSE-NEXT:    movabsq $-9223372036854775808, %rdx # imm = 0x8000000000000000
 ; SSE-NEXT:    xorl %eax, %eax
 ; SSE-NEXT:    shrdq %cl, %rdx, %rax
@@ -1066,10 +1082,9 @@ define i128 @isolate_msb_i128_load(ptr %p0, i128 %idx) nounwind {
 ; AVX-NEXT:    movq (%rdi), %rsi
 ; AVX-NEXT:    movq 8(%rdi), %rdi
 ; AVX-NEXT:    lzcntq %rsi, %rax
-; AVX-NEXT:    addb $64, %al
-; AVX-NEXT:    lzcntq %rdi, %rdx
-; AVX-NEXT:    movzbl %al, %ecx
-; AVX-NEXT:    cmovael %edx, %ecx
+; AVX-NEXT:    addl $64, %eax
+; AVX-NEXT:    lzcntq %rdi, %rcx
+; AVX-NEXT:    cmovbq %rax, %rcx
 ; AVX-NEXT:    xorl %r8d, %r8d
 ; AVX-NEXT:    movabsq $-9223372036854775808, %rdx # imm = 0x8000000000000000
 ; AVX-NEXT:    xorl %eax, %eax
@@ -1557,5 +1572,3 @@ define i128 @bitreverse_i128_load(ptr %p0) nounwind {
   ret i128 %res
 }
 
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; AVX512: {{.*}}
