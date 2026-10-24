@@ -873,6 +873,27 @@ def check_breakpoint(
 
 
 # ==================================================
+# Utility functions for expressions
+# ==================================================
+
+
+def get_expr_error_messages(test, frame, expr):
+    """Evaluates the given expression in the given frame, asserts that it
+    failed and returns the messages of all error diagnostics it produced."""
+    value = frame.EvaluateExpression(expr)
+    error = value.GetError()
+    test.assertTrue(error.Fail(), "Expression unexpectedly succeeded: " + expr)
+    diags = error.GetErrorData().GetValueForKey("errors").GetItemAtIndex(0)
+    details = diags.GetValueForKey("details")
+    messages = []
+    for i in range(details.GetSize()):
+        detail = details.GetItemAtIndex(i)
+        if str(detail.GetValueForKey("severity")) == "error":
+            messages.append(str(detail.GetValueForKey("message")))
+    return messages
+
+
+# ==================================================
 # Utility functions related to Threads and Processes
 # ==================================================
 
