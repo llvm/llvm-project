@@ -9727,6 +9727,10 @@ public:
   /// and mark a handler label already in scope as referenced.
   void NoteOverflowCheckedOps(Expr *E);
 
+  /// Diagnose overflow-checked operations in the body of \p D that trap
+  /// because no overflow handler label is visible to them.
+  void DiagnoseOverflowHandlers(Decl *D, Stmt *Body);
+
   /// Look up the constructors for the given class.
   DeclContextLookupResult LookupConstructors(CXXRecordDecl *Class);
 
