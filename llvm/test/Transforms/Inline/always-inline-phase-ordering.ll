@@ -9,7 +9,9 @@ target triple = "arm64e-apple-macosx13"
 ; CHECK: remark: <unknown>:0:0: 'spam' inlined into 'blam' with (cost=65, threshold=75)
 ; CHECK: remark: <unknown>:0:0: 'wibble.1' inlined into 'widget' with (cost=30, threshold=75)
 ; CHECK: remark: <unknown>:0:0: 'widget' inlined into 'bar.8' with (cost=30, threshold=75)
-; CHECK: remark: <unknown>:0:0: 'barney' inlined into 'wombat' with (cost=30, threshold=75)
+; CHECK: remark: <unknown>:0:0: 'widget' inlined into 'pluto' with (cost=30, threshold=75)
+; CHECK: remark: <unknown>:0:0: 'pluto' inlined into 'barney' with (cost=30, threshold=325)
+; CHECK: remark: <unknown>:0:0: 'barney' inlined into 'wombat' with (cost=60, threshold=75)
 
 define linkonce_odr void @wombat(ptr %arg) #0 {
 bb:

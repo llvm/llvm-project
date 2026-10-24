@@ -2071,12 +2071,6 @@ InlineCostCallAnalyzer::getHotCallSiteThreshold(CallBase &Call,
 }
 
 void InlineCostCallAnalyzer::updateThreshold(CallBase &Call, Function &Callee) {
-  // If no size growth is allowed for this inlining, set Threshold to 0.
-  if (!allowSizeGrowth(Call)) {
-    Threshold = 0;
-    return;
-  }
-
   Function *Caller = Call.getCaller();
 
   // return min(A, B) if B is valid.
@@ -2111,6 +2105,12 @@ void InlineCostCallAnalyzer::updateThreshold(CallBase &Call, Function &Callee) {
     VectorBonusPercent = 0;
     LastCallToStaticBonus = 0;
   };
+
+  // If no size growth is allowed for this inlining, set Threshold to 0.
+  if (!allowSizeGrowth(Call)) {
+    Threshold = 0;
+    DisallowAllBonuses();
+  }
 
   // Use the OptMinSizeThreshold or OptSizeThreshold knob if they are available
   // and reduce the threshold if the caller has the necessary attribute.
