@@ -602,6 +602,11 @@ struct VPlanTransforms {
   addBranchWeightToMiddleTerminator(VPlan &Plan, ElementCount VF,
                                     std::optional<unsigned> VScaleForTuning);
 
+  /// Materialize the start value of each fixed-order recurrence phi in \p
+  /// Plan as [poison, ..., poison, start value] for vector VF plans.
+  static void materializeFirstOrderRecurrenceStartValue(VPlan &Plan,
+                                                        VFRange &Range);
+
   /// Adjust first-order recurrence users in the middle block: create
   /// penultimate element extracts for LCSSA phi users, and handle penultimate
   /// extracts of the last active lane edge.

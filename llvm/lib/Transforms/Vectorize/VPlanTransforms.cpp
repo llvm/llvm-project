@@ -1366,7 +1366,13 @@ static VPValue *simplifyRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
       return Def->getOperand(0);
     }
     if (auto *Phi = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(Def)) {
-      if (all_equal(Phi->incoming_values()))
+      if (match(Phi->getOperand(0),
+                m_CombineOr(
+                    m_Specific(Phi->getOperand(1)),
+                    m_InsertElement(
+                        m_VPValue(), m_Specific(Phi->getOperand(1)),
+                        m_Sub(m_ZExtOrTruncOrSelf(m_Specific(&Plan.getVF())),
+                              m_One())))))
         return Phi->getOperand(0);
     }
     return nullptr;
@@ -4719,6 +4725,38 @@ VPlanTransforms::narrowInterleaveGroups(VPlan &Plan,
                  IsaPred<VPVectorPointerRecipe>) &&
          "All VPVectorPointerRecipes should have been removed");
   return NewPlan;
+}
+
+void VPlanTransforms::materializeFirstOrderRecurrenceStartValue(
+    VPlan &Plan, VFRange &Range) {
+  VPRegionBlock *VectorRegion = Plan.getVectorLoopRegion();
+  VPBuilder PHBuilder(Plan.getVectorPreheader());
+
+  auto IsScalar = [](ElementCount VF) -> bool { return VF.isScalar(); };
+  if (LoopVectorizationPlanner::getDecisionAndClampRange(IsScalar, Range))
+    return;
+
+  for (VPFirstOrderRecurrencePHIRecipe &FOR :
+       make_isa_range<VPFirstOrderRecurrencePHIRecipe>(
+           VectorRegion->getEntryBasicBlock()->phis())) {
+    // Adjust start value of fixed-order recurrence phi to [poison, ... ,
+    // poison, start value] for vector VF plans.
+    VPValue *StartV = FOR.getStartValue();
+    DebugLoc DL = FOR.getDebugLoc();
+    VPValue *Poison = Plan.getPoison(StartV->getScalarType());
+    // TODO: Use the type of runtimeVF as index type.
+    Type *IdxTy = Type::getInt32Ty(Plan.getContext());
+    VPValue *RuntimeVF =
+        PHBuilder.createScalarZExtOrTrunc(&Plan.getVF(), IdxTy, DL);
+    // TODO: Set nowrap flag for LastIdx.
+    VPValue *LastIdx = PHBuilder.createOverflowingOp(
+        Instruction::Sub, {RuntimeVF, Plan.getConstantInt(IdxTy, 1)},
+        {false, false}, DL);
+    VPValue *NewStart = PHBuilder.createNaryOp(Instruction::InsertElement,
+                                               {Poison, StartV, LastIdx}, DL,
+                                               "vector.recur.init");
+    FOR.setOperand(0, NewStart);
+  }
 }
 
 void VPlanTransforms::adjustFirstOrderRecurrenceMiddleUsers(VPlan &Plan,
