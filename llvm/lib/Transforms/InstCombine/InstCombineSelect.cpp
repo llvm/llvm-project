@@ -161,13 +161,31 @@ static Value *foldSelectICmpAnd(SelectInst &Sel, Value *CondVal, Value *TrueVal,
   Type *SelType = Sel.getType();
   // In general, when both constants are non-zero, we would need an offset to
   // replace the select. This would require more instructions than we started
-  // with. But there's one special-case that we handle here because it can
+  // with. But there are special cases that we handle here because they can
   // simplify/reduce the instructions.
   const APInt &TC = *SelTC;
   const APInt &FC = *SelFC;
   if (!TC.isZero() && !FC.isZero()) {
     if (TC.getBitWidth() != AndMask.getBitWidth())
       return nullptr;
+
+    // Move the tested bit when the select constants differ in one bit.
+    // (V & AndMaskC) == 0 ? TC : FC --> ((V & AndMaskC) << ShAmt) ^ TC
+    // (V & AndMaskC) == 0 ? TC : FC --> ((V & AndMaskC) >> ShAmt) ^ TC
+    // ShAmt is abs(log2(AndMaskC) - log2(TC ^ FC)).
+    // The compare must die to pay for the extra shift.
+    APInt Diff = TC ^ FC;
+    if (!CreateAnd && CondVal->hasOneUse() && Diff.isPowerOf2() &&
+        Diff != AndMask) {
+      unsigned SrcBit = AndMask.logBase2();
+      unsigned DstBit = Diff.logBase2();
+      if (SrcBit > DstBit)
+        V = Builder.CreateLShr(V, SrcBit - DstBit);
+      else
+        V = Builder.CreateShl(V, DstBit - SrcBit);
+      return Builder.CreateXor(V, TC);
+    }
+
     // If we have to create an 'and', then we must kill the cmp to not
     // increase the instruction count.
     if (CreateAnd && !CondVal->hasOneUse())
