@@ -11,6 +11,7 @@
 #include "flang-rt/runtime/derived.h"
 #include "flang-rt/runtime/descriptor.h"
 #include "flang-rt/runtime/environment.h"
+#include "flang-rt/runtime/memory-map.h"
 #include "flang-rt/runtime/memory.h"
 #include "flang-rt/runtime/stat.h"
 #include "flang-rt/runtime/terminator.h"
@@ -851,6 +852,25 @@ void RTDEF(CopyOutAssignDirect)(const Descriptor &var, Descriptor &temp,
   // writable anyway.
   // Setting the system environment variable FLANG_RT_COPYOUT_MODIFIED_ONLY=0
   // restores the unconditional copy-out.
+  //
+  // Additionally, FLANG_RT_COPYOUT_READONLY_MODE (host only, default off)
+  // consults the process memory map and skips the copy-out entirely when the
+  // destination lives in read-only memory - a compatibility mode: any store
+  // into such a destination could only rewrite identical bytes or fault, so
+  // skipping converts the fault into a no-op. Mode 1 trusts a one-time
+  // snapshot of the map (no system calls here); mode 2 re-confirms each
+  // rare snapshot hit against the current map, and a stale entry (the
+  // destination is writable now) falls through to the regular copy-out.
+  // Because both CopyOutAssign and compiler-inlined copy-out funnel through
+  // this entry point, the policy covers both. See memory-map.h.
+#if !defined(RT_DEVICE_COMPILATION) && !defined(RT_GPU_TARGET)
+  if (CopyOutReadOnlyMode mode{GetCopyOutReadOnlyMode()};
+      mode != CopyOutReadOnlyMode::Off && CopyOutReadOnlyCandidate(var) &&
+      (mode == CopyOutReadOnlyMode::Trust || CopyOutReadOnlyConfirm(var))) {
+    NoteSkippedCopyOut(sourceFile, sourceLine);
+    return;
+  }
+#endif
   if (executionEnvironment.copyOutModifiedOnly) {
     ShallowCopyModifiedSuffix(var, temp);
   } else {
@@ -865,6 +885,40 @@ void RTDEF(CopyOutAssign)(
     RTNAME(CopyOutAssignDirect)(*var, temp, sourceFile, sourceLine);
   }
   temp.Deallocate();
+}
+
+// Compiler-visible entry points for the read-only copy-out checks, so that
+// inlined copy-out code can apply the same policy as CopyOutAssign above.
+// Device compilations get inert stubs (mode 0 / false / no-op), keeping the
+// symbols available to link while leaving device behavior unchanged.
+std::int32_t RTDEF(CopyOutReadOnlyMode)() {
+#if !defined(RT_DEVICE_COMPILATION) && !defined(RT_GPU_TARGET)
+  return static_cast<std::int32_t>(GetCopyOutReadOnlyMode());
+#else
+  return 0;
+#endif
+}
+
+bool RTDEF(CopyOutReadOnlyCandidate)(const Descriptor &var) {
+#if !defined(RT_DEVICE_COMPILATION) && !defined(RT_GPU_TARGET)
+  return CopyOutReadOnlyCandidate(var);
+#else
+  return false;
+#endif
+}
+
+bool RTDEF(CopyOutReadOnlyConfirm)(const Descriptor &var) {
+#if !defined(RT_DEVICE_COMPILATION) && !defined(RT_GPU_TARGET)
+  return CopyOutReadOnlyConfirm(var);
+#else
+  return false;
+#endif
+}
+
+void RTDEF(NoteSkippedCopyOut)(const char *sourceFile, int sourceLine) {
+#if !defined(RT_DEVICE_COMPILATION) && !defined(RT_GPU_TARGET)
+  NoteSkippedCopyOut(sourceFile, sourceLine);
+#endif
 }
 
 void RTDEF(AssignExplicitLengthCharacter)(Descriptor &to,
