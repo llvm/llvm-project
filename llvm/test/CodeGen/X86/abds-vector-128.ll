@@ -846,6 +846,41 @@ define <8 x i16> @abd_cmp_v8i16_multiuse_sub(<8 x i16> %a, <8 x i16> %b) nounwin
   ret <8 x i16> %res
 }
 
+define <2 x i32> @PR235263(<2 x i32> %x) {
+; SSE2-LABEL: PR235263:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movq {{.*#+}} xmm2 = [4294967291,2147483648,0,0]
+; SSE2-NEXT:    movdqa %xmm0, %xmm1
+; SSE2-NEXT:    pcmpgtd %xmm2, %xmm1
+; SSE2-NEXT:    psubd %xmm2, %xmm0
+; SSE2-NEXT:    pxor %xmm1, %xmm0
+; SSE2-NEXT:    psubd %xmm0, %xmm1
+; SSE2-NEXT:    movdqa %xmm1, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE42-LABEL: PR235263:
+; SSE42:       # %bb.0:
+; SSE42-NEXT:    movq {{.*#+}} xmm1 = [4294967291,2147483648,0,0]
+; SSE42-NEXT:    movdqa %xmm0, %xmm2
+; SSE42-NEXT:    pminsd %xmm1, %xmm2
+; SSE42-NEXT:    pmaxsd %xmm1, %xmm0
+; SSE42-NEXT:    psubd %xmm2, %xmm0
+; SSE42-NEXT:    retq
+;
+; AVX-LABEL: PR235263:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovq {{.*#+}} xmm1 = [4294967291,2147483648,0,0]
+; AVX-NEXT:    vpminsd %xmm1, %xmm0, %xmm2
+; AVX-NEXT:    vpmaxsd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpsubd %xmm2, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %add = add nsw <2 x i32> %x, <i32 5, i32 -2147483648>
+  %cmp = icmp sgt <2 x i32> %add, zeroinitializer
+  %sub = sub <2 x i32> <i32 -5, i32 -2147483648>, %x
+  %sel = select <2 x i1> %cmp, <2 x i32> %add, <2 x i32> %sub
+  ret <2 x i32> %sel
+}
+
 declare <16 x i8> @llvm.abs.v16i8(<16 x i8>, i1)
 declare <8 x i16> @llvm.abs.v8i16(<8 x i16>, i1)
 declare <4 x i32> @llvm.abs.v4i32(<4 x i32>, i1)

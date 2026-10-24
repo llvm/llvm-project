@@ -1091,6 +1091,28 @@ define i128 @abd_select_i128(i128 %a, i128 %b) nounwind {
   ret i128 %sub
 }
 
+define i32 @PR235263(i32 %x) {
+; CHECK-SD-LABEL: PR235263:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    mov w8, #-2147483648 // =0x80000000
+; CHECK-SD-NEXT:    subs w8, w0, w8
+; CHECK-SD-NEXT:    cneg w0, w8, le
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: PR235263:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov w8, #-2147483648 // =0x80000000
+; CHECK-GI-NEXT:    adds w9, w0, w8
+; CHECK-GI-NEXT:    sub w8, w8, w0
+; CHECK-GI-NEXT:    csel w0, w9, w8, gt
+; CHECK-GI-NEXT:    ret
+  %add = add nsw i32 %x, -2147483648
+  %cmp = icmp sgt i32 %add, 0
+  %sub = sub i32 -2147483648, %x
+  %sel = select i1 %cmp, i32 %add, i32 %sub
+  ret i32 %sel
+}
+
 declare i8 @llvm.abs.i8(i8, i1)
 declare i16 @llvm.abs.i16(i16, i1)
 declare i32 @llvm.abs.i32(i32, i1)
