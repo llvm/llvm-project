@@ -12001,6 +12001,35 @@ static void DiagnoseNamespaceInlineMismatch(Sema &S, SourceLocation KeywordLoc,
   *IsInline = PrevNS->isInline();
 }
 
+/// Diagnose 'abi_tag' on a namespace being ignored in favor of a tag on
+/// the first namespace declaration.
+static void DiagnoseNamespaceABITagMismatch(Sema &S, const Decl *NewD,
+                                            const Decl *OldD) {
+  assert(NewD != OldD);
+  auto PrintableTags = [](ArrayRef<StringRef> Tags) {
+    return llvm::join(Tags, R"(", ")");
+  };
+  if (const auto *NewAbiTagAttr = NewD->getAttr<AbiTagAttr>()) {
+    if (const auto *OldAbiTagAttr = OldD->getAttr<AbiTagAttr>()) {
+      SmallVector<StringRef, 4> ExtraTags;
+      llvm::copy_if(NewAbiTagAttr->tags(), std::back_inserter(ExtraTags),
+                    [OldAbiTagAttr](StringRef NewTag) {
+                      return !llvm::is_contained(OldAbiTagAttr->tags(), NewTag);
+                    });
+      if (!ExtraTags.empty()) {
+        S.Diag(NewAbiTagAttr->getLocation(), diag::warn_abi_tag_ignored)
+            << PrintableTags(ExtraTags) << true
+            << PrintableTags(OldAbiTagAttr->tags());
+        S.Diag(OldAbiTagAttr->getLocation(), diag::note_previous_declaration);
+      }
+    } else {
+      S.Diag(NewAbiTagAttr->getLocation(), diag::warn_abi_tag_ignored)
+          << PrintableTags(NewAbiTagAttr->tags()) << false << "";
+      S.Diag(OldD->getLocation(), diag::note_previous_declaration);
+    }
+  }
+}
+
 /// ActOnStartNamespaceDef - This is called at the start of a namespace
 /// definition.
 Decl *Sema::ActOnStartNamespaceDef(Scope *NamespcScope,
@@ -12110,6 +12139,8 @@ Decl *Sema::ActOnStartNamespaceDef(Scope *NamespcScope,
   // FIXME: Should we be merging attributes?
   if (const VisibilityAttr *Attr = Namespc->getAttr<VisibilityAttr>())
     PushNamespaceVisibilityAttr(Attr, Loc);
+  if (Decl *PrevTagDecl = Namespc->getCanonicalDecl(); PrevTagDecl != Namespc)
+    DiagnoseNamespaceABITagMismatch(*this, Namespc, PrevTagDecl);
 
   if (IsStd)
     StdNamespace = Namespc;

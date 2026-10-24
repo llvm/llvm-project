@@ -752,6 +752,10 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   `-Wunsafe-buffer-usage` to control warnings on `main`'s `argv` parameter,
   allowing users to suppress them with `-Wno-unsafe-buffer-usage-main-argv`.
 
+- Added `-Wabi-tag-redeclaration` to diagnose when the `abi_tag` attribute
+  spelled on a namespace declaration doesn't match the one actually applied,
+  which is taken from the first declaration of that namespace.
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
