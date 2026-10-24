@@ -1603,7 +1603,9 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
 
       Record.push_back(IMPORT);
       Record.push_back((unsigned)M.Kind); // FIXME: Stable encoding
-      AddSourceLocation(M.ImportLoc, Record);
+      // The reader resolves this against the importing module file, so it
+      // has to stay local to it.
+      AddLocalSourceLocation(M.ImportLoc, Record);
       AddStringBlob(M.ModuleName, Record, Blob);
       Record.push_back(M.StandardCXXModule);
 
@@ -1816,6 +1818,12 @@ struct InputFileEntry {
   bool IsModuleMap;
   uint32_t ContentHash[2];
 
+  /// The first source location entry written for the file, and the offset that
+  /// entry starts at. \c SLocIndex is a FileID, so it counts from one, and is
+  /// zero when no entries were written.
+  unsigned SLocIndex = 0;
+  SourceLocation::UIntTy SLocOffset = 0;
+
   InputFileEntry(FileEntryRef File) : File(File) {}
 
   void trySetContentHash(
@@ -1871,6 +1879,8 @@ void ASTWriter::WriteInputFiles(SourceManager &SourceMgr) {
   IFAbbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // Transient
   IFAbbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // Top-level
   IFAbbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // Module map
+  IFAbbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // SLoc index
+  IFAbbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 32));  // SLoc offset
   IFAbbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 16)); // Name as req. len
   IFAbbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob)); // Name as req. + name
   unsigned IFAbbrevCode = Stream.EmitAbbrev(std::move(IFAbbrev));
@@ -1917,6 +1927,14 @@ void ASTWriter::WriteInputFiles(SourceManager &SourceMgr) {
     Entry.IsModuleMap = isModuleMap(File.getFileCharacteristic());
 
     Entry.trySetContentHash(*PP, [&] { return Cache->getBufferIfLoaded(); });
+
+    // Entries come in order, so the first one naming a file is the one to
+    // record. These are the adjusted values a reader sees, since entries left
+    // out earlier in the table shift both.
+    if (IsSLocAffecting[I]) {
+      Entry.SLocIndex = getAdjustedFileID(FileID::get(I)).ID;
+      Entry.SLocOffset = getAdjustedOffset(SLoc->getOffset()) - 2;
+    }
 
     if (Entry.IsSystemFile)
       SystemFiles.push_back(Entry);
@@ -1992,6 +2010,8 @@ void ASTWriter::WriteInputFiles(SourceManager &SourceMgr) {
           Entry.IsTransient,
           Entry.IsTopLevel,
           Entry.IsModuleMap,
+          Entry.SLocIndex,
+          Entry.SLocOffset,
           NameAsRequested.size()};
 
       Stream.EmitRecordWithBlob(IFAbbrevCode, Record,
@@ -5624,6 +5644,26 @@ void ASTWriter::computeNonAffectingInputFiles() {
 
   auto AffectingModuleMaps = GetAffectingModuleMaps(*PP, WritingModule);
 
+  // A FileID is serialized as an index into this module's SLoc table, so
+  // collect the local files named by records written below. The invalid FileID
+  // cannot be stored in a DenseSet, so skip it.
+  llvm::DenseSet<FileID> NamedFileIDs;
+  if (SrcMgr.getMainFileID().isValid())
+    NamedFileIDs.insert(SrcMgr.getMainFileID());
+  if (SrcMgr.hasLineTable())
+    for (const auto &L : SrcMgr.getLineTable())
+      if (L.first.ID > 0)
+        NamedFileIDs.insert(L.first);
+  for (const auto &F : PP->getDiagnostics().DiagStatesByLoc.Files)
+    if (F.first.isValid() && F.second.HasLocalTransitions)
+      NamedFileIDs.insert(F.first);
+  // The import location of a module is written local to this module file and
+  // resolved against it, so the file it points into has to keep its entries.
+  if (hasChain())
+    for (ModuleFile &M : getChain()->getModuleManager())
+      if (M.isDirectlyImported() && M.ImportLoc.isValid())
+        NamedFileIDs.insert(SrcMgr.getFileID(M.ImportLoc));
+
   unsigned FileIDAdjustment = 0;
   unsigned OffsetAdjustment = 0;
 
@@ -5632,6 +5672,33 @@ void ASTWriter::computeNonAffectingInputFiles() {
 
   NonAffectingFileIDAdjustments.push_back(FileIDAdjustment);
   NonAffectingOffsetAdjustments.push_back(OffsetAdjustment);
+
+  // Leaves \p FID out of this module. A nonzero \p RedirectAdjustment redirects
+  // its locations to a loaded copy.
+  auto MarkNonAffecting = [&](FileID FID, int64_t RedirectAdjustment) {
+    FileIDAdjustment += 1;
+    // Even empty files take up one element in the offset table.
+    OffsetAdjustment += SrcMgr.getFileIDSize(FID) + 1;
+
+    // Adjacent files with the same redirect can share a range. Files redirected
+    // to different copies need separate ranges.
+    if (!NonAffectingFileIDs.empty() &&
+        NonAffectingFileIDs.back().ID == FID.ID - 1 &&
+        NonAffectingRedirectAdjustments.back() == RedirectAdjustment) {
+      NonAffectingFileIDs.back() = FID;
+      NonAffectingRanges.back().setEnd(SrcMgr.getLocForEndOfFile(FID));
+      NonAffectingFileIDAdjustments.back() = FileIDAdjustment;
+      NonAffectingOffsetAdjustments.back() = OffsetAdjustment;
+      return;
+    }
+
+    NonAffectingFileIDs.push_back(FID);
+    NonAffectingRanges.emplace_back(SrcMgr.getLocForStartOfFile(FID),
+                                    SrcMgr.getLocForEndOfFile(FID));
+    NonAffectingFileIDAdjustments.push_back(FileIDAdjustment);
+    NonAffectingOffsetAdjustments.push_back(OffsetAdjustment);
+    NonAffectingRedirectAdjustments.push_back(RedirectAdjustment);
+  };
 
   for (unsigned I = 1; I != N; ++I) {
     const SrcMgr::SLocEntry *SLoc = &SrcMgr.getLocalSLocEntry(I);
@@ -5645,43 +5712,44 @@ void ASTWriter::computeNonAffectingInputFiles() {
     if (!Cache->OrigEntry)
       continue;
 
-    // Don't prune anything other than module maps.
-    if (!isModuleMap(File.getFileCharacteristic()))
-      continue;
+    if (isModuleMap(File.getFileCharacteristic())) {
+      // Don't prune module maps if all are guaranteed to be affecting.
+      if (!AffectingModuleMaps)
+        continue;
 
-    // Don't prune module maps if all are guaranteed to be affecting.
-    if (!AffectingModuleMaps)
-      continue;
+      // Affecting module maps may be named by FileID in the submodule block, so
+      // they cannot be redirected.
+      if (AffectingModuleMaps->DefinitionFileIDs.contains(FID))
+        continue;
 
-    // Don't prune module maps that are affecting.
-    if (AffectingModuleMaps->DefinitionFileIDs.contains(FID))
-      continue;
-
-    IsSLocAffecting[I] = false;
-    IsSLocFileEntryAffecting[I] =
-        AffectingModuleMaps->DefinitionFiles.contains(*Cache->OrigEntry);
-
-    FileIDAdjustment += 1;
-    // Even empty files take up one element in the offset table.
-    OffsetAdjustment += SrcMgr.getFileIDSize(FID) + 1;
-
-    // If the previous file was non-affecting as well, just extend its entry
-    // with our information.
-    if (!NonAffectingFileIDs.empty() &&
-        NonAffectingFileIDs.back().ID == FID.ID - 1) {
-      NonAffectingFileIDs.back() = FID;
-      NonAffectingRanges.back().setEnd(SrcMgr.getLocForEndOfFile(FID));
-      NonAffectingFileIDAdjustments.back() = FileIDAdjustment;
-      NonAffectingOffsetAdjustments.back() = OffsetAdjustment;
+      // A module map with no affecting locations can be left out.
+      IsSLocAffecting[I] = false;
+      IsSLocFileEntryAffecting[I] =
+          AffectingModuleMaps->DefinitionFiles.contains(*Cache->OrigEntry);
+      MarkNonAffecting(FID, 0);
       continue;
     }
 
-    NonAffectingFileIDs.push_back(FID);
-    NonAffectingRanges.emplace_back(SrcMgr.getLocForStartOfFile(FID),
-                                    SrcMgr.getLocForEndOfFile(FID));
-    NonAffectingFileIDAdjustments.push_back(FileIDAdjustment);
-    NonAffectingOffsetAdjustments.push_back(OffsetAdjustment);
+    if (NamedFileIDs.contains(FID))
+      continue;
+
+    // Reuse the source location entries of a loaded module that already has
+    // this input file.
+    if (!hasChain())
+      continue;
+    serialization::InputFileLoc Loaded =
+        getChain()->getLoadedFileLoc(*Cache->OrigEntry);
+    if (!Loaded.isValid())
+      continue;
+
+    IsSLocAffecting[I] = false;
+    IsSLocFileEntryAffecting[I] = true;
+    MarkNonAffecting(FID, static_cast<int64_t>(SLoc->getOffset()) -
+                              static_cast<int64_t>(Loaded.Offset));
   }
+
+  assert(NonAffectingRedirectAdjustments.size() == NonAffectingRanges.size() &&
+         "Every non-affecting range needs a redirect adjustment");
 
   if (!PP->getHeaderSearchInfo().getHeaderSearchOpts().ModulesIncludeVFSUsage)
     return;
@@ -6823,6 +6891,9 @@ FileID ASTWriter::getAdjustedFileID(FileID FID) const {
   if (FID.isInvalid() || PP->getSourceManager().isLoadedFileID(FID) ||
       NonAffectingFileIDs.empty())
     return FID;
+  assert(getRedirectedLocation(PP->getSourceManager().getLocForStartOfFile(FID))
+             .isInvalid() &&
+         "Cannot name a redirected file by FileID");
   auto It = llvm::lower_bound(NonAffectingFileIDs, FID);
   unsigned Idx = std::distance(NonAffectingFileIDs.begin(), It);
   unsigned Offset = NonAffectingFileIDAdjustments[Idx];
@@ -6842,9 +6913,44 @@ unsigned ASTWriter::getAdjustedNumCreatedFIDs(FileID FID) const {
   return AdjustedNumCreatedFIDs;
 }
 
+SourceLocation ASTWriter::getRedirectedLocation(SourceLocation Loc) const {
+  if (Loc.isMacroID())
+    return SourceLocation();
+
+  SourceLocation::UIntTy Offset = Loc.getOffset();
+  if (PP->getSourceManager().isLoadedOffset(Offset))
+    return SourceLocation();
+
+  unsigned Idx = getNonAffectingRangeLowerBound(Offset);
+  if (Idx == NonAffectingRanges.size())
+    return SourceLocation();
+
+  // The search only rules out ranges ending before the offset, so check that
+  // the offset really is inside the one we landed on.
+  if (Offset < NonAffectingRanges[Idx].getBegin().getOffset())
+    return SourceLocation();
+
+  int64_t Adjustment = NonAffectingRedirectAdjustments[Idx];
+  if (!Adjustment)
+    return SourceLocation();
+  return SourceLocation::getFileLoc(static_cast<SourceLocation::UIntTy>(
+      static_cast<int64_t>(Offset) - Adjustment));
+}
+
 SourceLocation ASTWriter::getAdjustedLocation(SourceLocation Loc) const {
   if (Loc.isInvalid())
     return Loc;
+  // Redirect locations in omitted files before adjusting local offsets.
+  if (SourceLocation Redirected = getRedirectedLocation(Loc);
+      Redirected.isValid())
+    return Redirected;
+  return getAdjustedLocalLocation(Loc);
+}
+
+SourceLocation ASTWriter::getAdjustedLocalLocation(SourceLocation Loc) const {
+  if (Loc.isInvalid())
+    return Loc;
+  // getAdjustment() is also used for values that are not source locations.
   return Loc.getLocWithOffset(-getAdjustment(Loc.getOffset()));
 }
 
@@ -6872,13 +6978,17 @@ ASTWriter::getAdjustment(SourceLocation::UIntTy Offset) const {
   if (Offset < NonAffectingRanges.front().getBegin().getOffset())
     return 0;
 
-  auto Contains = [](const SourceRange &Range, SourceLocation::UIntTy Offset) {
+  return NonAffectingOffsetAdjustments[getNonAffectingRangeLowerBound(Offset)];
+}
+
+unsigned
+ASTWriter::getNonAffectingRangeLowerBound(SourceLocation::UIntTy Offset) const {
+  auto EndsBefore = [](const SourceRange &Range,
+                       SourceLocation::UIntTy Offset) {
     return Range.getEnd().getOffset() < Offset;
   };
-
-  auto It = llvm::lower_bound(NonAffectingRanges, Offset, Contains);
-  unsigned Idx = std::distance(NonAffectingRanges.begin(), It);
-  return NonAffectingOffsetAdjustments[Idx];
+  auto It = llvm::lower_bound(NonAffectingRanges, Offset, EndsBefore);
+  return std::distance(NonAffectingRanges.begin(), It);
 }
 
 void ASTWriter::AddFileID(FileID FID, RecordDataImpl &Record) {
@@ -6937,6 +7047,12 @@ ASTWriter::EmitEntryOffset(const SrcMgr::SLocEntry &SLoc,
 
 void ASTWriter::AddSourceLocation(SourceLocation Loc, RecordDataImpl &Record) {
   Loc = getAdjustedLocation(Loc);
+  Record.push_back(getRawSourceLocationEncoding(Loc));
+}
+
+void ASTWriter::AddLocalSourceLocation(SourceLocation Loc,
+                                       RecordDataImpl &Record) {
+  Loc = getAdjustedLocalLocation(Loc);
   Record.push_back(getRawSourceLocationEncoding(Loc));
 }
 
@@ -7274,7 +7390,11 @@ void ASTWriter::associateDeclWithFile(const Decl *D, LocalDeclID ID) {
   if (FID.isInvalid())
     return;
   assert(SM.getSLocEntry(FID).isFile());
-  assert(IsSLocAffecting[FID.ID]);
+  // We write no declaration table for a file we leave out, and a redirected one
+  // already has its table in the module that kept its locations.
+  assert(IsSLocAffecting[FID.ID] || getRedirectedLocation(FileLoc).isValid());
+  if (!IsSLocAffecting[FID.ID])
+    return;
 
   std::unique_ptr<DeclIDInFileInfo> &Info = FileDeclIDs[FID];
   if (!Info)
