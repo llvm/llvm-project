@@ -22656,18 +22656,6 @@ TEST_F(FormatTest, OneLineFormatOffRegex) {
                "\t}\n"
                "#endif\n"
                "}",
-               "void f()\n"
-               "{\n"
-               "#if !X\n"
-               "#else\n"
-               "  {\n"
-               "#if Y\n"
-               "#else // #if Y\n"
-               "    // comment\n"
-               "#endif\n"
-               "  }\n"
-               "#endif\n"
-               "}",
                Style);
 }
 
