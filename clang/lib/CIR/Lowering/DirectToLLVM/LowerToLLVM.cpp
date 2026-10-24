@@ -2286,8 +2286,13 @@ mlir::LogicalResult CIRToLLVMGetElementOpLowering::matchAndRewrite(
     // offset is always zero. The second offset tell us which member it
     // will access.
     std::array<mlir::LLVM::GEPArg, 2> offset{0, index};
-    rewriter.replaceOpWithNewOp<mlir::LLVM::GEPOp>(op, llResultTy, llArrayTy,
-                                                   adaptor.getBase(), offset);
+    mlir::LLVM::GEPNoWrapFlags flags = mlir::LLVM::GEPNoWrapFlags::none;
+    if (op.getInBounds())
+      flags |= mlir::LLVM::GEPNoWrapFlags::inbounds;
+    if (op.getNoUnsignedWrap())
+      flags |= mlir::LLVM::GEPNoWrapFlags::nuw;
+    rewriter.replaceOpWithNewOp<mlir::LLVM::GEPOp>(
+        op, llResultTy, llArrayTy, adaptor.getBase(), offset, flags);
     return mlir::success();
   }
 

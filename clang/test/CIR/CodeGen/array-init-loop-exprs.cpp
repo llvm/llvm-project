@@ -65,7 +65,7 @@ struct HasMultiDimArray {
 // CIR:   %[[ITR_LOAD:.*]] = cir.load {{.*}}%[[ITR_ALLOCA]] : !cir.ptr<!cir.ptr<!rec_NonTrivial>>, !cir.ptr<!rec_NonTrivial>
 // CIR:   %[[IDX:.*]] = cir.ptr_diff %[[ITR_LOAD]], %[[THIS_ARR_DECAY]] : !cir.ptr<!rec_NonTrivial> -> !s64i
 // CIR:   %[[IDX_CAST:.*]] = cir.cast integral %[[IDX]] : !s64i -> !u64i
-// CIR:   %[[RHS_ELT:.*]] = cir.get_element %[[RHS_ARR]][%[[IDX_CAST]] : !u64i] : !cir.ptr<!cir.array<!rec_NonTrivial x 3>> -> !cir.ptr<!rec_NonTrivial>
+// CIR:   %[[RHS_ELT:.*]] = cir.get_element inbounds nuw %[[RHS_ARR]][%[[IDX_CAST]] : !u64i] : !cir.ptr<!cir.array<!rec_NonTrivial x 3>> -> !cir.ptr<!rec_NonTrivial>
 // CIR:   cir.call @_ZN10NonTrivialC1ERKS_(%[[ITR_LOAD]], %[[RHS_ELT]]) : (!cir.ptr<!rec_NonTrivial> {{.*}}, !cir.ptr<!rec_NonTrivial> {{.*}}) -> ()
 // CIR:   %[[ONE:.*]] = cir.const #cir.int<1> : !s64i
 // CIR:   %[[NEXT_ITR:.*]] = cir.ptr_stride %[[ITR_LOAD]], %[[ONE]] : (!cir.ptr<!rec_NonTrivial>, !s64i) -> !cir.ptr<!rec_NonTrivial>
@@ -96,7 +96,7 @@ struct HasMultiDimArray {
 // CIR:   %[[ITR1_LOAD:.*]] = cir.load {{.*}}%[[ITR1_ALLOCA]] : !cir.ptr<!cir.ptr<!cir.array<!cir.array<!rec_NonTrivial x 4> x 3>>>, !cir.ptr<!cir.array<!cir.array<!rec_NonTrivial x 4> x 3>>
 // CIR:   %[[IDX1:.*]] = cir.ptr_diff %[[ITR1_LOAD]], %[[THIS_ARR_DECAY]] : !cir.ptr<!cir.array<!cir.array<!rec_NonTrivial x 4> x 3>> -> !s64i
 // CIR:   %[[IDX1_CAST:.*]] = cir.cast integral %[[IDX1]] : !s64i -> !u64i
-// CIR:   %[[RHS_ELT1:.*]] = cir.get_element %[[RHS_ARR]][%[[IDX1_CAST]] : !u64i] : !cir.ptr<!cir.array<!cir.array<!cir.array<!rec_NonTrivial x 4> x 3> x 2>> -> !cir.ptr<!cir.array<!cir.array<!rec_NonTrivial x 4> x 3>>
+// CIR:   %[[RHS_ELT1:.*]] = cir.get_element inbounds nuw %[[RHS_ARR]][%[[IDX1_CAST]] : !u64i] : !cir.ptr<!cir.array<!cir.array<!cir.array<!rec_NonTrivial x 4> x 3> x 2>> -> !cir.ptr<!cir.array<!cir.array<!rec_NonTrivial x 4> x 3>>
 // CIR:   %[[ARR1_DECAY:.*]] = cir.cast array_to_ptrdecay %[[ITR1_LOAD]] : !cir.ptr<!cir.array<!cir.array<!rec_NonTrivial x 4> x 3>> -> !cir.ptr<!cir.array<!rec_NonTrivial x 4>>
 // CIR:   cir.store {{.*}}%[[ARR1_DECAY]], %[[ITR2_ALLOCA]] : !cir.ptr<!cir.array<!rec_NonTrivial x 4>>, !cir.ptr<!cir.ptr<!cir.array<!rec_NonTrivial x 4>>>
 // CIR:   %[[SIZE2_CONST:.*]] = cir.const #cir.int<3> : !s64i
@@ -105,7 +105,7 @@ struct HasMultiDimArray {
 // CIR:     %[[ITR2_LOAD:.*]] = cir.load {{.*}}%[[ITR2_ALLOCA]] : !cir.ptr<!cir.ptr<!cir.array<!rec_NonTrivial x 4>>>, !cir.ptr<!cir.array<!rec_NonTrivial x 4>>
 // CIR:     %[[IDX2:.*]] = cir.ptr_diff %[[ITR2_LOAD]], %[[ARR1_DECAY]] : !cir.ptr<!cir.array<!rec_NonTrivial x 4>> -> !s64i
 // CIR:     %[[IDX2_CAST:.*]] = cir.cast integral %[[IDX2]] : !s64i -> !u64i
-// CIR:     %[[RHS_ELT2:.*]] = cir.get_element %[[RHS_ELT1]][%[[IDX2_CAST]] : !u64i] : !cir.ptr<!cir.array<!cir.array<!rec_NonTrivial x 4> x 3>> -> !cir.ptr<!cir.array<!rec_NonTrivial x 4>>
+// CIR:     %[[RHS_ELT2:.*]] = cir.get_element inbounds nuw %[[RHS_ELT1]][%[[IDX2_CAST]] : !u64i] : !cir.ptr<!cir.array<!cir.array<!rec_NonTrivial x 4> x 3>> -> !cir.ptr<!cir.array<!rec_NonTrivial x 4>>
 // CIR:     %[[ARR2_DECAY:.*]] = cir.cast array_to_ptrdecay %[[ITR2_LOAD]] : !cir.ptr<!cir.array<!rec_NonTrivial x 4>> -> !cir.ptr<!rec_NonTrivial>
 // CIR:     cir.store {{.*}}%[[ARR2_DECAY]], %[[ITR3_ALLOCA]] : !cir.ptr<!rec_NonTrivial>, !cir.ptr<!cir.ptr<!rec_NonTrivial>>
 // CIR:     %[[SIZE3_CONST:.*]] = cir.const #cir.int<4> : !s64i
@@ -114,7 +114,7 @@ struct HasMultiDimArray {
 // CIR:       %[[ITR3_LOAD:.*]] = cir.load {{.*}}%[[ITR3_ALLOCA]] : !cir.ptr<!cir.ptr<!rec_NonTrivial>>, !cir.ptr<!rec_NonTrivial>
 // CIR:       %[[IDX3:.*]] = cir.ptr_diff %[[ITR3_LOAD]], %[[ARR2_DECAY]] : !cir.ptr<!rec_NonTrivial> -> !s64i
 // CIR:       %[[IDX3_CAST:.*]] = cir.cast integral %[[IDX3]] : !s64i -> !u64i
-// CIR:       %[[RHS_ELT3:.*]] = cir.get_element %[[RHS_ELT2]][%[[IDX3_CAST]] : !u64i] : !cir.ptr<!cir.array<!rec_NonTrivial x 4>> -> !cir.ptr<!rec_NonTrivial>
+// CIR:       %[[RHS_ELT3:.*]] = cir.get_element inbounds nuw %[[RHS_ELT2]][%[[IDX3_CAST]] : !u64i] : !cir.ptr<!cir.array<!rec_NonTrivial x 4>> -> !cir.ptr<!rec_NonTrivial>
 // CIR:       cir.call @_ZN10NonTrivialC1ERKS_(%[[ITR3_LOAD]], %[[RHS_ELT3]]) : (!cir.ptr<!rec_NonTrivial> {{.*}}, !cir.ptr<!rec_NonTrivial> {{.*}}) -> ()
 // CIR:       %[[ONE:.*]] = cir.const #cir.int<1> : !s64i
 // CIR:       %[[NEXT_ITR3:.*]] = cir.ptr_stride %[[ITR3_LOAD]], %[[ONE]] : (!cir.ptr<!rec_NonTrivial>, !s64i) -> !cir.ptr<!rec_NonTrivial>
@@ -175,7 +175,7 @@ struct HasMultiDimArray {
 // LLVM: %[[START_PTR:.*]] = ptrtoint ptr %[[THIS_ARR_DECAY]] to i64
 // LLVM: %[[PTR_DIFF:.*]] = sub i64 %[[ITR_PTR]], %[[START_PTR]]
 // LLVM: %[[IDX:.*]] = sdiv exact i64 %[[PTR_DIFF]], 4
-// LLVM: %[[RHS_ELT:.*]] = getelementptr [3 x %struct.NonTrivial], ptr %[[RHS_ARR]], i32 0, i64 %[[IDX]]
+// LLVM: %[[RHS_ELT:.*]] = getelementptr inbounds nuw [3 x %struct.NonTrivial], ptr %[[RHS_ARR]], i32 0, i64 %[[IDX]]
 // LLVM: call void @_ZN10NonTrivialC1ERKS_(ptr {{.*}}%[[LOAD_ITR]], ptr {{.*}}%[[RHS_ELT]])
 // LLVM: %[[NEXT_ITR:.*]] = getelementptr %struct.NonTrivial, ptr %[[LOAD_ITR]], i64 1
 // LLVM: store ptr %[[NEXT_ITR]], ptr %[[ITR_ALLOCA]]
@@ -210,7 +210,7 @@ struct HasMultiDimArray {
 // LLVM: %[[ITR1_START_PTR:.*]] = ptrtoint ptr %[[THIS_ARR_DECAY]] to i64
 // LLVM: %[[PTR_DIFF:.*]] = sub i64 %[[ITR1_PTR]], %[[ITR1_START_PTR]]
 // LLVM: %[[IDX1:.*]] = sdiv exact i64 %[[PTR_DIFF]], 48
-// LLVM: %[[RHS_ELT1:.*]] = getelementptr [2 x [3 x [4 x %struct.NonTrivial]]], ptr %[[RHS_ARR]], i32 0, i64 %[[IDX1]]
+// LLVM: %[[RHS_ELT1:.*]] = getelementptr inbounds nuw [2 x [3 x [4 x %struct.NonTrivial]]], ptr %[[RHS_ARR]], i32 0, i64 %[[IDX1]]
 // LLVM: %[[ARR1_DECAY:.*]] = getelementptr [4 x %struct.NonTrivial], ptr %[[ITR1_LOAD]], i32 0
 // LLVM: store ptr %[[ARR1_DECAY]], ptr %[[ITR2_ALLOCA]]
 // LLVM: %[[END_ITR2:.*]] = getelementptr [4 x %struct.NonTrivial], ptr %[[ARR1_DECAY]], i64 3
@@ -227,7 +227,7 @@ struct HasMultiDimArray {
 // LLVM: %[[ITR2_START_PTR:.*]] = ptrtoint ptr %[[ARR1_DECAY]] to i64
 // LLVM: %[[PTR_DIFF:.*]] = sub i64 %[[ITR2_PTR]], %[[ITR2_START_PTR]]
 // LLVM: %[[IDX2:.*]] = sdiv exact i64 %[[PTR_DIFF]], 16
-// LLVM: %[[RHS_ELT2:.*]] = getelementptr [3 x [4 x %struct.NonTrivial]], ptr %[[RHS_ELT1]], i32 0, i64 %[[IDX2]]
+// LLVM: %[[RHS_ELT2:.*]] = getelementptr inbounds nuw [3 x [4 x %struct.NonTrivial]], ptr %[[RHS_ELT1]], i32 0, i64 %[[IDX2]]
 // LLVM: %[[ARR2_DECAY:.*]] = getelementptr %struct.NonTrivial, ptr %[[ITR2_LOAD]], i32 0
 // LLVM: store ptr %[[ARR2_DECAY]], ptr %[[ITR3_ALLOCA]]
 // LLVM: %[[END_ITR3:.*]] = getelementptr %struct.NonTrivial, ptr %[[ARR2_DECAY]], i64 4
@@ -244,7 +244,7 @@ struct HasMultiDimArray {
 // LLVM: %[[ITR3_START_PTR:.*]] = ptrtoint ptr %[[ARR2_DECAY]] to i64
 // LLVM: %[[PTR_DIFF:.*]] = sub i64 %[[ITR3_PTR]], %[[ITR3_START_PTR]]
 // LLVM: %[[IDX3:.*]] = sdiv exact i64 %[[PTR_DIFF]], 4
-// LLVM: %[[RHS_ELT3:.*]] = getelementptr [4 x %struct.NonTrivial], ptr %[[RHS_ELT2]], i32 0, i64 %[[IDX3]]
+// LLVM: %[[RHS_ELT3:.*]] = getelementptr inbounds nuw [4 x %struct.NonTrivial], ptr %[[RHS_ELT2]], i32 0, i64 %[[IDX3]]
 // LLVM: call void @_ZN10NonTrivialC1ERKS_(ptr{{.*}} %[[ITR3_LOAD]], ptr{{.*}} %[[RHS_ELT3]])
 // LLVM: %[[NEXT_ITR3:.*]] = getelementptr %struct.NonTrivial, ptr %[[ITR3_LOAD]], i64 1
 // LLVM: store ptr %[[NEXT_ITR3]], ptr %[[ITR3_ALLOCA]]

@@ -71,14 +71,14 @@ B:
 // CIR:   %[[C_TBL:.*]] = cir.get_global @c.tbl
 // CIR: [[LABEL_A:.*]]:
 // CIR:   cir.label "A"
-// CIR:   %[[P:.*]] = cir.get_element %[[C_TBL]][%{{.*}}]
+// CIR:   %[[P:.*]] = cir.get_element inbounds %[[C_TBL]][%{{.*}} : !s64i] : !cir.ptr<!cir.array<!cir.ptr<!void> x 3>> -> !cir.ptr<!cir.ptr<!void>>
 // CIR: [[LABEL_B:.*]]:
 // CIR:   cir.label "B"
 
 // LLVM: define dso_local void @c(i32 noundef %{{.*}})
 // LLVM:   br label %[[C_A]]
 // LLVM: [[C_A]]:
-// LLVM:   %[[TARGET:.*]] = getelementptr{{.*}} [3 x ptr], ptr @c.tbl
+// LLVM:   %[[TARGET:.*]] = getelementptr inbounds [3 x ptr], ptr @c.tbl,
 // LLVM:   %[[P:.*]] = load ptr, ptr %[[TARGET]], align 8
 // LLVM:   br label %[[C_B]]
 // LLVM: [[C_B]]:

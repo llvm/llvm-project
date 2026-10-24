@@ -1133,7 +1133,8 @@ CIRGenFunction::emitX86CpuSupports(mlir::Location loc,
 
     mlir::Value cpuFeatVal = builder.getArrayElement(
         loc, loc, cpuFeatArrPtr, arrTy,
-        /*index=*/builder.getUInt32(0, loc), /*shouldDecay=*/true);
+        /*idx=*/builder.getUInt32(0, loc), /*shouldDecay=*/true,
+        cir::PtrOffsetFlags::InBounds);
     cir::LoadOp features = builder.createAlignedLoad(
         loc, u32, cpuFeatVal, CharUnits::fromQuantity(4));
 
@@ -1153,7 +1154,7 @@ CIRGenFunction::emitX86CpuSupports(mlir::Location loc,
         loc, loc, getCpuFeatures2,
         cast<cir::PointerType>(getCpuFeatures2.getType()).getPointee(),
         builder.getUInt32(/*index=*/i - 1, loc),
-        /*shouldDecay=*/true);
+        /*shouldDecay=*/true, cir::PtrOffsetFlags::InBounds);
     cir::LoadOp features = builder.createAlignedLoad(
         loc, u32, getArrayElt, CharUnits::fromQuantity(4));
 

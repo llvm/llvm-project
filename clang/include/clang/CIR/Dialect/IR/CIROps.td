@@ -4246,18 +4246,42 @@ def CIR_GetElementOp : CIR_Op<"get_element", [
     It expects a pointer to the `base` array and the `index` of the element.
     The result pointer preserves the address space of the base pointer.
 
+    The optional `inbounds` and `nuw` (no unsigned wrap) flags have the
+    semantics of the same flags on LLVM's `getelementptr`.  With `inbounds`,
+    unless `index` is zero, `base` and the result both point into the same
+    allocated object, or to its end.  `inbounds` also guarantees that scaling
+    `index` by the element size does not overflow as a signed value, and that
+    adding that signed offset to the unsigned address of `base` does not wrap.
+    With `nuw`, the scaling and the addition do not wrap when `index` and the
+    address are both treated as unsigned.  The result is poison if the
+    guarantee of a present flag does not hold.
+
     Example:
     ```
-    // Suppose we have a array.
+    // Suppose we have an array.
     !s32i = !cir.int<s, 32>
+    !u32i = !cir.int<u, 32>
     !arr_ty = !cir.array<!s32i x 4>
 
     // Get the address of the element at index 1.
-    %elem_1 = cir.get_element %0[1 : !s32i] : !cir.ptr<!array_ty> -> !cir.ptr<!s32i>
+    %elem_1 = cir.get_element %0[1 : !s32i] :
+      !cir.ptr<!arr_ty> -> !cir.ptr<!s32i>
 
     // Get the address of the element at index %i.
     %i = ...
-    %elem_i = cir.get_element %0[%i : !s32i] : !cir.ptr<!array_ty> -> !cir.ptr<!s32i>
+    %elem_i = cir.get_element %0[%i : !s32i] :
+      !cir.ptr<!arr_ty> -> !cir.ptr<!s32i>
+
+    // The same, when %0 and the result are known to be in bounds of the same
+    // allocated object.
+    %elem_ib = cir.get_element inbounds %0[%i : !s32i] :
+      !cir.ptr<!arr_ty> -> !cir.ptr<!s32i>
+
+    // The same, when scaling %u and adding it to %0 are also known not to
+    // wrap as unsigned arithmetic.
+    %u = ...
+    %elem_ibnuw = cir.get_element inbounds nuw %0[%u : !u32i] :
+      !cir.ptr<!arr_ty> -> !cir.ptr<!s32i>
 
     // With address space (e.g., GPU private memory):
     %elem_gpu = cir.get_element %gpu_arr[%i : !s32i] :
@@ -4269,11 +4293,15 @@ def CIR_GetElementOp : CIR_Op<"get_element", [
 
   let arguments = (ins
     Arg<CIR_PtrToArray, "the base address of the array ">:$base,
-    Arg<CIR_AnyFundamentalIntType, "the index of the element">:$index
+    Arg<CIR_AnyFundamentalIntType, "the index of the element">:$index,
+    UnitProp:$in_bounds,
+    UnitProp:$no_unsigned_wrap
   );
   let results = (outs CIR_PointerType : $result);
 
   let assemblyFormat = [{
+    (`inbounds` $in_bounds^)?
+    (`nuw` $no_unsigned_wrap^)?
     $base`[` $index `:` type($index) `]` attr-dict
       `:` qualified(type($base)) `->` qualified(type($result))
   }];
