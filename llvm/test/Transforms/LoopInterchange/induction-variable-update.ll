@@ -15,24 +15,35 @@
 define void @pointer_induction(ptr %A, ptr %base) {
 ; CHECK-LABEL: define void @pointer_induction(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[BASE:%.*]]) {
-; CHECK-NEXT:  [[INNER_HEADER_PREHEADER:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[INNER_HEADER_PREHEADER:.*]]
+; CHECK:       [[OUTER_HEADER_PREHEADER:.*]]:
+; CHECK-NEXT:    br label %[[OUTER_HEADER:.*]]
+; CHECK:       [[OUTER_HEADER]]:
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[OUTER_LATCH:.*]] ], [ 0, %[[OUTER_HEADER_PREHEADER]] ]
+; CHECK-NEXT:    br label %[[INNER_HEADER_SPLIT1:.*]]
+; CHECK:       [[INNER_HEADER_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[INNER_HEADER:.*]]
 ; CHECK:       [[INNER_HEADER]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[INNER_HEADER_PREHEADER]] ], [ [[I_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
-; CHECK-NEXT:    br label %[[OUTER_HEADER_PREHEADER:.*]]
-; CHECK:       [[OUTER_HEADER_PREHEADER]]:
-; CHECK-NEXT:    [[J:%.*]] = phi i64 [ 0, %[[INNER_HEADER]] ], [ [[J_NEXT:%.*]], %[[OUTER_HEADER_PREHEADER]] ]
-; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[BASE]], %[[INNER_HEADER]] ], [ [[TMP0:%.*]], %[[OUTER_HEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[TMP1:%.*]], %[[INNER_HEADER_SPLIT:.*]] ], [ 0, %[[INNER_HEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[TMP0:%.*]], %[[INNER_HEADER_SPLIT]] ], [ [[BASE]], %[[INNER_HEADER_PREHEADER]] ]
+; CHECK-NEXT:    br label %[[OUTER_HEADER_PREHEADER]]
+; CHECK:       [[INNER_HEADER_SPLIT1]]:
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [256 x ptr], ptr [[A]], i64 [[J]], i64 [[I]]
 ; CHECK-NEXT:    store ptr [[P]], ptr [[GEP]], align 8
-; CHECK-NEXT:    [[J_NEXT]] = add nuw nsw i64 [[J]], 1
-; CHECK-NEXT:    [[TMP0]] = getelementptr inbounds i8, ptr [[P]], i64 8
+; CHECK-NEXT:    [[J_NEXT:%.*]] = add nuw nsw i64 [[J]], 1
+; CHECK-NEXT:    [[P_NEXT:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 8
 ; CHECK-NEXT:    [[EC_J:%.*]] = icmp eq i64 [[J_NEXT]], 256
-; CHECK-NEXT:    br i1 [[EC_J]], label %[[OUTER_LATCH]], label %[[OUTER_HEADER_PREHEADER]]
+; CHECK-NEXT:    br label %[[OUTER_LATCH]]
+; CHECK:       [[INNER_HEADER_SPLIT]]:
+; CHECK-NEXT:    [[TMP0]] = getelementptr inbounds i8, ptr [[P]], i64 8
+; CHECK-NEXT:    [[TMP1]] = add nuw nsw i64 [[J]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 256
+; CHECK-NEXT:    br i1 [[TMP2]], label %[[EXIT:.*]], label %[[INNER_HEADER]]
 ; CHECK:       [[OUTER_LATCH]]:
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
 ; CHECK-NEXT:    [[EC_I:%.*]] = icmp eq i64 [[I_NEXT]], 256
-; CHECK-NEXT:    br i1 [[EC_I]], label %[[EXIT:.*]], label %[[INNER_HEADER]]
+; CHECK-NEXT:    br i1 [[EC_I]], label %[[INNER_HEADER_SPLIT]], label %[[OUTER_HEADER]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
