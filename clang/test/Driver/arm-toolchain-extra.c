@@ -30,6 +30,6 @@
 // C-ARM-BAREMETAL-NOGCC: "{{.*}}/arm-nogcc/bin/../armv6m-none-eabi/lib/crt0.o"
 // C-ARM-BAREMETAL-NOGCC: "{{.*}}/arm-nogcc/{{.*}}/armv6m-none-eabi/lib/crtbegin.o"
 // C-ARM-BAREMETAL-NOGCC: "{{.*}}/arm-nogcc/bin/../armv6m-none-eabi/lib"
-// C-ARM-BAREMETAL-NOGCC: "{{.*}}.o" "--start-group" "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed" "-lc" "-lgloss" "--end-group"
+// C-ARM-BAREMETAL-NOGCC: "{{.*}}.o" "--start-group" "-lgcc" "--push-state" "--as-needed" "-lgcc_s" "--pop-state" "-lc" "-lgloss" "--end-group"
 // C-ARM-BAREMETAL-NOGCC: "{{.*}}/arm-nogcc/{{.*}}/armv6m-none-eabi/lib/crtend.o"
 

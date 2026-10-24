@@ -24,7 +24,7 @@
 // CHECK-GLD: "--as-needed" "-latomic" "--no-as-needed"
 // CHECK-LD-SPARC32-SAME: "-lgcc"
 // CHECK-LD: "-z" "ignore" "-lgcc_s" "-z" "record"
-// CHECK-GLD: "--as-needed" "-lgcc_s" "--no-as-needed"
+// CHECK-GLD: "--push-state" "--as-needed" "-lgcc_s" "--pop-state"
 // CHECK-LD-SPARC32-SAME: "-lc"
 // CHECK-LD-SPARC32-SAME: "[[SYSROOT]]/usr/gcc/4.8/lib/gcc/sparc-sun-solaris2.11/4.8.2{{/|\\\\}}crtend.o"
 // CHECK-LD-SPARC32-SAME: "[[SYSROOT]]/usr/lib{{/|\\\\}}crtn.o"

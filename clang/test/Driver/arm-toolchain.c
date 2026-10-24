@@ -15,7 +15,7 @@
 // LLD-ARM-BAREMETAL: "{{.*}}/Inputs/basic_arm_gcc_tree/lib/gcc/armv6m-none-eabi/8.2.1/crtbegin.o"
 // LLD-ARM-BAREMETAL: "-L{{.*}}/Inputs/basic_arm_gcc_tree/lib/gcc/armv6m-none-eabi/8.2.1"
 // LLD-ARM-BAREMETAL: "-L{{.*}}/Inputs/basic_arm_gcc_tree/armv6m-none-eabi/lib"
-// LLD-ARM-BAREMETAL: "{{.*}}.o" "--start-group" "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed" "-lc" "-lgloss" "--end-group"
+// LLD-ARM-BAREMETAL: "{{.*}}.o" "--start-group" "-lgcc" "--push-state" "--as-needed" "-lgcc_s" "--pop-state" "-lc" "-lgloss" "--end-group"
 // LLD-ARM-BAREMETAL: "{{.*}}/Inputs/basic_arm_gcc_tree/lib/gcc/armv6m-none-eabi/8.2.1/crtend.o"
 
 // RUN: %clang -### %s -fuse-ld= \
@@ -34,7 +34,7 @@
 // C-ARM-BAREMETAL: "{{.*}}/Inputs/basic_arm_gcc_tree/lib/gcc/armv6m-none-eabi/8.2.1/crtbegin.o"
 // C-ARM-BAREMETAL: "-L{{.*}}/Inputs/basic_arm_gcc_tree/lib/gcc/armv6m-none-eabi/8.2.1"
 // C-ARM-BAREMETAL: "-L{{.*}}/Inputs/basic_arm_gcc_tree/armv6m-none-eabi/lib"
-// C-ARM-BAREMETAL: "{{.*}}.o" "--start-group" "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed" "-lc" "-lgloss" "--end-group"
+// C-ARM-BAREMETAL: "{{.*}}.o" "--start-group" "-lgcc" "--push-state" "--as-needed" "-lgcc_s" "--pop-state" "-lc" "-lgloss" "--end-group"
 // C-ARM-BAREMETAL: "{{.*}}/Inputs/basic_arm_gcc_tree/lib/gcc/armv6m-none-eabi/8.2.1/crtend.o"
 
 // RUN: %clang -### %s -fuse-ld= \
@@ -51,7 +51,7 @@
 // C-ARM-BAREMETAL-NOSYSROOT: "{{.*}}/Inputs/basic_arm_gcc_tree/lib/gcc/armv6m-none-eabi/8.2.1/crtbegin.o"
 // C-ARM-BAREMETAL-NOSYSROOT: "-L{{.*}}/Inputs/basic_arm_gcc_tree/lib/gcc/armv6m-none-eabi/8.2.1"
 // C-ARM-BAREMETAL-NOSYSROOT: "-L{{.*}}/Inputs/basic_arm_gcc_tree/lib/gcc/armv6m-none-eabi/8.2.1/../../../../armv6m-none-eabi/lib"
-// C-ARM-BAREMETAL-NOSYSROOT: "{{.*}}.o" "--start-group" "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed" "-lc" "-lgloss" "--end-group"
+// C-ARM-BAREMETAL-NOSYSROOT: "{{.*}}.o" "--start-group" "-lgcc" "--push-state" "--as-needed" "-lgcc_s" "--pop-state" "-lc" "-lgloss" "--end-group"
 // C-ARM-BAREMETAL-NOSYSROOT: "{{.*}}/Inputs/basic_arm_gcc_tree/lib/gcc/armv6m-none-eabi/8.2.1/crtend.o"
 
 // RUN: %clangxx -### %s -fuse-ld= \
@@ -156,7 +156,7 @@
 
 // ARM-BAREMETAL-UNWINDLIB: "{{.*}}crt0.o"
 // ARM-BAREMETAL-UNWINDLIB: "{{.*}}clang_rt.crtbegin.o"
-// ARM-BAREMETAL-UNWINDLIB: "--start-group" "{{.*}}libclang_rt.builtins.a" "--as-needed" "-lunwind" "--no-as-needed" "-lc" "-lgloss" "--end-group"
+// ARM-BAREMETAL-UNWINDLIB: "--start-group" "{{.*}}libclang_rt.builtins.a" "--push-state" "--as-needed" "-lunwind" "--pop-state" "-lc" "-lgloss" "--end-group"
 // ARM-BAREMETAL-UNWINDLIB: "{{.*}}clang_rt.crtend.o"
 
 // RUN: %clang -static-pie -### %s -fuse-ld= \
