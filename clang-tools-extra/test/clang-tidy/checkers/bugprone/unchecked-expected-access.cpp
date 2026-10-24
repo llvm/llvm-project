@@ -880,3 +880,61 @@ int void_transform_unchecked(std::expected<void, int> e) {
   return *e.transform([] { return 1; });
   // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: unchecked access to 'std::expected' value [bugprone-unchecked-expected-access]
 }
+
+// Forwarding.
+
+int forward_lvalue_after_check(std::expected<int, int> &e) {
+  if (!e)
+    return 0;
+  return *std::forward<std::expected<int, int> &>(e);
+}
+
+int forward_rvalue_after_check(std::expected<int, int> e) {
+  if (!e)
+    return 0;
+  return std::forward<std::expected<int, int>>(e).value();
+}
+
+int forward_error_after_check(std::expected<int, int> &e) {
+  if (e)
+    return 0;
+  return std::forward<std::expected<int, int> &>(e).error();
+}
+
+template <class Exp> int forward_after_check(Exp &&e) {
+  if (!e)
+    return 0;
+  return *std::forward<Exp>(e);
+}
+
+int instantiate_forward_after_check(std::expected<int, int> e) {
+  return forward_after_check(e);
+}
+
+int forward_unchecked(std::expected<int, int> e) {
+  return *std::forward<std::expected<int, int>>(e);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: unchecked access to 'std::expected' value [bugprone-unchecked-expected-access]
+}
+
+int forward_value_access_when_error(std::expected<int, int> &e) {
+  if (e)
+    return 0;
+  return *std::forward<std::expected<int, int> &>(e);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: unchecked access to 'std::expected' value [bugprone-unchecked-expected-access]
+}
+
+int forward_error_access_when_value(std::expected<int, int> &e) {
+  if (!e)
+    return 0;
+  return std::forward<std::expected<int, int> &>(e).error();
+  // CHECK-MESSAGES: :[[@LINE-1]]:53: warning: unchecked access to 'std::expected' error [bugprone-unchecked-expected-access]
+}
+
+template <class Exp> int forward_without_check(Exp &&e) {
+  return *std::forward<Exp>(e);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: unchecked access to 'std::expected' value [bugprone-unchecked-expected-access]
+}
+
+int instantiate_forward_without_check(std::expected<int, int> e) {
+  return forward_without_check(e);
+}

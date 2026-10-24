@@ -179,6 +179,11 @@ auto expectedErrorAssignment() {
                              hasArgument(1, hasUnexpectedType()));
 }
 
+auto stdForwardCall() {
+  return callExpr(callee(functionDecl(hasName("std::forward"))),
+                  argumentCountIs(1), hasArgument(0, hasExpectedType()));
+}
+
 /// Ensures that `E` is mapped to a `BoolValue` and returns its formula.
 const Formula &forceBoolValue(Environment &Env, const Expr &E) {
   auto *Value = Env.get<BoolValue>(E);
@@ -354,6 +359,12 @@ void transferErrorAssignment(const CXXOperatorCallExpr *E,
   assignExpected(*E, State.Env.getBoolLiteralValue(false), State.Env);
 }
 
+void transferStdForwardCall(const CallExpr *E, const MatchFinder::MatchResult &,
+                            LatticeTransferState &State) {
+  if (StorageLocation *Loc = State.Env.getStorageLocation(*E->getArg(0)))
+    State.Env.setStorageLocation(*E, *Loc);
+}
+
 // FIXME: Model `swap`.
 auto buildTransferMatchSwitch() {
   return CFGMatchSwitchBuilder<LatticeTransferState>()
@@ -394,6 +405,8 @@ auto buildTransferMatchSwitch() {
                                           transferErrorAssignment)
       .CaseOfCFGStmt<CXXOperatorCallExpr>(expectedAssignment(),
                                           transferValueAssignment)
+      // std::forward
+      .CaseOfCFGStmt<CallExpr>(stdForwardCall(), transferStdForwardCall)
       .Build();
 }
 

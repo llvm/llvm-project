@@ -361,3 +361,15 @@ int error_access_when_not_equal_to_unexpected(tl::expected<int, int> e) {
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: unchecked access to 'tl::expected' error [bugprone-unchecked-expected-access]
   return 0;
 }
+
+// Forwarding. This is the pattern that `tl::expected` uses to implement `map`,
+// `transform` and `and_then`.
+
+template <class Exp> int map_impl_like(Exp &&exp) {
+  return exp.has_value() ? *std::forward<Exp>(exp)
+                         : std::forward<Exp>(exp).error();
+}
+
+int instantiate_map_impl_like(tl::expected<int, int> e) {
+  return map_impl_like(e);
+}
