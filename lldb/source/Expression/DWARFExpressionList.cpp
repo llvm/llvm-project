@@ -12,7 +12,6 @@
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StackFrame.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
-#include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -221,9 +220,9 @@ void DWARFExpressionList::GetDescription(Stream *s,
     os << "\n";
     os.indent(s->GetIndentLevel() + 2);
     os << "[";
-    llvm::DWARFFormValue::dumpAddress(os, addr_size, entry.GetRangeBase());
+    os << llvm::format_hex(entry.GetRangeBase(), 2 + 2 * addr_size);
     os << ", ";
-    llvm::DWARFFormValue::dumpAddress(os, addr_size, entry.GetRangeEnd());
+    os << llvm::format_hex(entry.GetRangeEnd(), 2 + 2 * addr_size);
     os << "): ";
     expr.DumpLocation(s, level, abi);
   }
