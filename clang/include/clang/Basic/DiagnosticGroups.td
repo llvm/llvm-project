@@ -668,6 +668,13 @@ Detects function definitions whose parameters or implicit this argument are mark
 }];
 }
 
+def LifetimeSafetyOverriddenMissingLifetimebound
+    : DiagGroup<"lifetime-safety-overridden-missing-lifetimebound"> {
+  code Documentation = [{
+Detects overriding virtual methods that add [[clang::lifetimebound]] annotations that are missing from the overridden method.
+  }];
+}
+
 def LifetimeSafetyPermissive : DiagGroup<"lifetime-safety-permissive",
                                          [LifetimeSafetyUseAfterScope,
                                          LifetimeSafetyReturnStackAddr,
@@ -721,7 +728,8 @@ Detects misuse of [[clang::noescape]] annotation where the parameter escapes (fo
 def LifetimeSafetyAnnotationPlacement
     : DiagGroup<"lifetime-safety-annotation-placement",
                 [LifetimeSafetyInapplicableLifetimebound,
-                 LifetimeSafetyMisplacedLifetimebound]> {
+                 LifetimeSafetyMisplacedLifetimebound,
+                 LifetimeSafetyOverriddenMissingLifetimebound]> {
   code Documentation = [{
 Validates that lifetime annotations are placed on appropriate types and in appropriate locations.
   }];
