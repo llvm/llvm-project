@@ -25,14 +25,16 @@ bool cmp_eq(void (Foo::*lhs)(int), void (Foo::*rhs)(int)) {
 }
 
 // CIR-BEFORE: cir.func {{.*}} @_Z6cmp_eqM3FooFviES1_
-// CIR-BEFORE:   %[[LHS:.*]] = cir.load{{.*}} %0 : !cir.ptr<!cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>>
-// CIR-BEFORE:   %[[RHS:.*]] = cir.load{{.*}} %1 : !cir.ptr<!cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>>
+// CIR-BEFORE:   %[[LHS:.*]] = cir.load{{.*}} %1 : !cir.ptr<!cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>>
+// CIR-BEFORE:   %[[RHS:.*]] = cir.load{{.*}} %2 : !cir.ptr<!cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>>
 // CIR-BEFORE:   %[[CMP:.*]] = cir.cmp eq %[[LHS]], %[[RHS]] : !cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>
 // CIR-BEFORE:   cir.store %[[CMP]], %{{.*}} : !cir.bool, !cir.ptr<!cir.bool>
 
 // CIR-AFTER:     @_Z6cmp_eqM3FooFviES1_
-// CIR-AFTER:       cir.store %{{.*}}, %[[LHS_ADDR:.*]] : !rec_anon_struct, !cir.ptr<!rec_anon_struct>
-// CIR-AFTER:       cir.store %{{.*}}, %[[RHS_ADDR:.*]] : !rec_anon_struct, !cir.ptr<!rec_anon_struct>
+// CIR-AFTER-X86:   cir.copy %{{.*}} align(8) to %[[LHS_ADDR:[^ ]+]] align(8) : !cir.ptr<!rec_anon_struct>
+// CIR-AFTER-X86:   cir.copy %{{.*}} align(8) to %[[RHS_ADDR:[^ ]+]] align(8) : !cir.ptr<!rec_anon_struct>
+// CIR-AFTER-ARM:   cir.store %{{.*}}, %[[LHS_ADDR:.*]] : !rec_anon_struct, !cir.ptr<!rec_anon_struct>
+// CIR-AFTER-ARM:   cir.store %{{.*}}, %[[RHS_ADDR:.*]] : !rec_anon_struct, !cir.ptr<!rec_anon_struct>
 // CIR-AFTER:       %[[LHS:.*]] = cir.load{{.*}} %[[LHS_ADDR]] : !cir.ptr<!rec_anon_struct>, !rec_anon_struct
 // CIR-AFTER:       %[[RHS:.*]] = cir.load{{.*}} %[[RHS_ADDR]] : !cir.ptr<!rec_anon_struct>, !rec_anon_struct
 // CIR-AFTER:       %[[NULL:.*]] = cir.const #cir.int<0> : !s64i
@@ -54,8 +56,10 @@ bool cmp_eq(void (Foo::*lhs)(int), void (Foo::*rhs)(int)) {
 
 // LLVM-X86: define dso_local noundef zeroext i1 @_Z6cmp_eqM3FooFviES1_(i64 %{{[^,)]+}}, i64 %{{[^,)]+}}, i64 %{{[^,)]+}}, i64 %{{[^,)]+}})
 // LLVM-ARM: define dso_local noundef i1 @_Z6cmp_eqM3FooFviES1_({ i64, i64 } %{{[^,)]+}}, { i64, i64 } %{{[^,)]+}})
-// LLVM:       store { i64, i64 } %{{.*}}, ptr %[[LHS_ADDR:.*]], align 8
-// LLVM:       store { i64, i64 } %{{.*}}, ptr %[[RHS_ADDR:.*]], align 8
+// LLVM-X86:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[LHS_ADDR:[^,]+]], ptr align 8 %{{.*}}, i64 16, i1 false)
+// LLVM-X86:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[RHS_ADDR:[^,]+]], ptr align 8 %{{.*}}, i64 16, i1 false)
+// LLVM-ARM:   store { i64, i64 } %{{.*}}, ptr %[[LHS_ADDR:.*]], align 8
+// LLVM-ARM:   store { i64, i64 } %{{.*}}, ptr %[[RHS_ADDR:.*]], align 8
 // LLVM:       %[[LHS:.*]] = load { i64, i64 }, ptr %[[LHS_ADDR]]
 // LLVM:       %[[RHS:.*]] = load { i64, i64 }, ptr %[[RHS_ADDR]]
 // LLVM:       %[[LHS_PTR:.*]] = extractvalue { i64, i64 } %[[LHS]], 0
@@ -101,14 +105,16 @@ bool cmp_ne(void (Foo::*lhs)(int), void (Foo::*rhs)(int)) {
 }
   
 // CIR-BEFORE: cir.func {{.*}} @_Z6cmp_neM3FooFviES1_
-// CIR-BEFORE:   %[[LHS:.*]] = cir.load{{.*}} %0 : !cir.ptr<!cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>>
-// CIR-BEFORE:   %[[RHS:.*]] = cir.load{{.*}} %1 : !cir.ptr<!cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>>
+// CIR-BEFORE:   %[[LHS:.*]] = cir.load{{.*}} %1 : !cir.ptr<!cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>>
+// CIR-BEFORE:   %[[RHS:.*]] = cir.load{{.*}} %2 : !cir.ptr<!cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>>
 // CIR-BEFORE:   %[[CMP:.*]] = cir.cmp ne %[[LHS]], %[[RHS]] : !cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>
 // CIR-BEFORE:   cir.store %[[CMP]], %{{.*}} : !cir.bool, !cir.ptr<!cir.bool>
 
 // CIR-AFTER:     cir.func {{.*}} @_Z6cmp_neM3FooFviES1_
-// CIR-AFTER:       cir.store %{{.*}}, %[[LHS_ADDR:.*]] : !rec_anon_struct, !cir.ptr<!rec_anon_struct>
-// CIR-AFTER:       cir.store %{{.*}}, %[[RHS_ADDR:.*]] : !rec_anon_struct, !cir.ptr<!rec_anon_struct>
+// CIR-AFTER-X86:   cir.copy %{{.*}} align(8) to %[[LHS_ADDR:[^ ]+]] align(8) : !cir.ptr<!rec_anon_struct>
+// CIR-AFTER-X86:   cir.copy %{{.*}} align(8) to %[[RHS_ADDR:[^ ]+]] align(8) : !cir.ptr<!rec_anon_struct>
+// CIR-AFTER-ARM:   cir.store %{{.*}}, %[[LHS_ADDR:.*]] : !rec_anon_struct, !cir.ptr<!rec_anon_struct>
+// CIR-AFTER-ARM:   cir.store %{{.*}}, %[[RHS_ADDR:.*]] : !rec_anon_struct, !cir.ptr<!rec_anon_struct>
 // CIR-AFTER:       %[[LHS:.*]] = cir.load{{.*}} %[[LHS_ADDR]] : !cir.ptr<!rec_anon_struct>, !rec_anon_struct
 // CIR-AFTER:       %[[RHS:.*]] = cir.load{{.*}} %[[RHS_ADDR]] : !cir.ptr<!rec_anon_struct>, !rec_anon_struct
 // CIR-AFTER:       %[[NULL:.*]] = cir.const #cir.int<0> : !s64i
@@ -130,8 +136,10 @@ bool cmp_ne(void (Foo::*lhs)(int), void (Foo::*rhs)(int)) {
 
 // LLVM-X86: define dso_local noundef zeroext i1 @_Z6cmp_neM3FooFviES1_(i64 %{{[^,)]+}}, i64 %{{[^,)]+}}, i64 %{{[^,)]+}}, i64 %{{[^,)]+}})
 // LLVM-ARM: define dso_local noundef i1 @_Z6cmp_neM3FooFviES1_({ i64, i64 } %{{[^,)]+}}, { i64, i64 } %{{[^,)]+}})
-// LLVM:       store { i64, i64 } %{{.*}}, ptr %[[LHS_ADDR:.*]], align 8
-// LLVM:       store { i64, i64 } %{{.*}}, ptr %[[RHS_ADDR:.*]], align 8
+// LLVM-X86:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[LHS_ADDR:[^,]+]], ptr align 8 %{{.*}}, i64 16, i1 false)
+// LLVM-X86:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[RHS_ADDR:[^,]+]], ptr align 8 %{{.*}}, i64 16, i1 false)
+// LLVM-ARM:   store { i64, i64 } %{{.*}}, ptr %[[LHS_ADDR:.*]], align 8
+// LLVM-ARM:   store { i64, i64 } %{{.*}}, ptr %[[RHS_ADDR:.*]], align 8
 // LLVM:       %[[LHS:.*]] = load { i64, i64 }, ptr %[[LHS_ADDR]]
 // LLVM:       %[[RHS:.*]] = load { i64, i64 }, ptr %[[RHS_ADDR]]
 // LLVM:       %[[LHS_PTR:.*]] = extractvalue { i64, i64 } %[[LHS]], 0

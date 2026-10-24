@@ -25,7 +25,7 @@ define float @sinf(float %x) {
 
 ; CHECK: declare double @fdim(double, double)
 ; CHECK: declare float @fdimf(float, float)
-; CHECK: declare double @fdiml(double, double)
+; CHECK: declare x86_fp80 @fdiml(x86_fp80, x86_fp80)
 
 ; CHECK: declare void @free(ptr allocptr noundef captures(none)) [[FREE_ATTRS:#[0-9]+]]
 
@@ -33,27 +33,27 @@ define float @sinf(float %x) {
 
 ; CHECK: declare double @nan(ptr)
 ; CHECK: declare float @nanf(ptr)
-; CHECK: declare double @nanl(ptr)
+; CHECK: declare x86_fp80 @nanl(ptr)
 
-; CHECK: declare double @nexttoward(double, double)
-; CHECK: declare float @nexttowardf(float, double)
-; CHECK: declare double @nexttowardl(double, double)
+; CHECK: declare double @nexttoward(double, x86_fp80)
+; CHECK: declare float @nexttowardf(float, x86_fp80)
+; CHECK: declare x86_fp80 @nexttowardl(x86_fp80, x86_fp80)
 
 ; CHECK: declare double @remainder(double, double)
 ; CHECK: declare float @remainderf(float, float)
-; CHECK: declare double @remainderl(double, double)
+; CHECK: declare x86_fp80 @remainderl(x86_fp80, x86_fp80)
 
 ; CHECK: declare double @remquo(double, double, ptr)
 ; CHECK: declare float @remquof(float, float, ptr)
-; CHECK: declare double @remquol(double, double, ptr)
+; CHECK: declare x86_fp80 @remquol(x86_fp80, x86_fp80, ptr)
 
 ; CHECK: declare double @scalbln(double, i32)
 ; CHECK: declare float @scalblnf(float, i32)
-; CHECK: declare double @scalblnl(double, i32)
+; CHECK: declare x86_fp80 @scalblnl(x86_fp80, i32)
 
 ; CHECK: declare double @scalbn(double, i32)
 ; CHECK: declare float @scalbnf(float, i32)
-; CHECK: declare double @scalbnl(double, i32)
+; CHECK: declare x86_fp80 @scalbnl(x86_fp80, i32)
 
 ; CHECK: declare nofpclass(ninf nsub nnorm) double @sqrt(double) [[SQRT_ATTRS:#[0-9]+]]
 
@@ -61,9 +61,9 @@ define float @sinf(float %x) {
 
 ; CHECK: declare double @tgamma(double)
 ; CHECK: declare float @tgammaf(float)
-; CHECK: declare double @tgammal(double)
+; CHECK: declare x86_fp80 @tgammal(x86_fp80)
 
-; CHECK: declare double @truncl(double)
+; CHECK: declare x86_fp80 @truncl(x86_fp80)
 
 ; CHECK: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
 ; CHECK: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }

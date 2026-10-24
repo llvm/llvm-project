@@ -35,7 +35,7 @@ end subroutine omp_unroll_heuristic01
 ! CHECK:           %[[VAL_15:.*]] = arith.select %[[VAL_13]], %[[VAL_14]], %[[VAL_10]] : i32
 ! CHECK:           %[[VAL_16:.*]] = arith.select %[[VAL_13]], %[[VAL_9]], %[[VAL_8]] : i32
 ! CHECK:           %[[VAL_17:.*]] = arith.select %[[VAL_13]], %[[VAL_8]], %[[VAL_9]] : i32
-! CHECK:           %[[VAL_18:.*]] = arith.subi %[[VAL_17]], %[[VAL_16]] overflow<nuw> : i32
+! CHECK:           %[[VAL_18:.*]] = arith.subi %[[VAL_17]], %[[VAL_16]] : i32
 ! CHECK:           %[[VAL_19:.*]] = arith.divui %[[VAL_18]], %[[VAL_15]] : i32
 ! CHECK:           %[[VAL_20:.*]] = arith.addi %[[VAL_19]], %[[VAL_12]] overflow<nuw> : i32
 ! CHECK:           %[[VAL_21:.*]] = arith.cmpi slt, %[[VAL_17]], %[[VAL_16]] : i32

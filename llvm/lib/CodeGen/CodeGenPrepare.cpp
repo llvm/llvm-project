@@ -168,7 +168,7 @@ class TypePromotionTransaction;
 
 class CodeGenPrepare {
   friend class CodeGenPrepareLegacyPass;
-  const CodeGenOptions &Opts = CodeGenOptions::Global;
+  const CodeGenOptions &Opts;
   const TargetMachine *TM = nullptr;
   const TargetSubtargetInfo *SubtargetInfo = nullptr;
   const TargetLowering *TLI = nullptr;
@@ -229,8 +229,10 @@ class CodeGenPrepare {
   const DataLayout *DL = nullptr;
 
 public:
-  CodeGenPrepare() = default;
-  CodeGenPrepare(const TargetMachine *TM) : TM(TM){};
+  CodeGenPrepare(const TargetMachine *TM)
+      : Opts(cl::LibraryOptionsContext::get<CodeGenOptions>(
+            TM->Options.MCOptions.LibraryOptions)),
+        TM(TM) {}
   /// If encounter huge function, we need to limit the build time.
   bool IsHugeFunc = false;
 
@@ -866,7 +868,7 @@ bool CodeGenPrepare::isMergingEmptyBlockProfitable(BasicBlock *BB,
                  isa<IndirectBrInst>(Pred->getTerminator())))
     return true;
 
-  if (BB->getTerminator() != &*BB->getFirstNonPHIOrDbg())
+  if (BB->getTerminator() != &*BB->getFirstNonPHIOrPseudoProbe())
     return true;
 
   // We use a simple cost heuristic which determine skipping merging is
@@ -2872,9 +2874,6 @@ static bool isIntrinsicOrLFToBeTailCalled(const TargetLibraryInfo *TLInfo,
 /// @endcode
 bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB,
                                                 ModifyDT &ModifiedDT) {
-  if (!BB->getTerminator())
-    return false;
-
   ReturnInst *RetI = dyn_cast<ReturnInst>(BB->getTerminator());
   if (!RetI)
     return false;
@@ -4582,6 +4581,8 @@ static bool MightBeFoldableInst(Instruction *I) {
     return true;
   case Instruction::Add:
     return true;
+  case Instruction::Or:
+    return cast<PossiblyDisjointInst>(I)->isDisjoint();
   case Instruction::Mul:
   case Instruction::Shl:
     // Can only handle X*C and X << C.
@@ -5092,6 +5093,10 @@ bool AddressingModeMatcher::matchOperationAddr(User *AddrInst, unsigned Opcode,
       return matchAddr(AddrInst->getOperand(0), Depth);
     return false;
   }
+  case Instruction::Or:
+    if (!cast<PossiblyDisjointInst>(AddrInst)->isDisjoint())
+      return false;
+    [[fallthrough]];
   case Instruction::Add: {
     // Check to see if we can merge in one operand, then the other.  If so, we
     // win.
@@ -5132,9 +5137,6 @@ bool AddressingModeMatcher::matchOperationAddr(User *AddrInst, unsigned Opcode,
     TPT.rollback(LastKnownGood);
     break;
   }
-  // case Instruction::Or:
-  //  TODO: We can handle "Or Val, Imm" iff this OR is equivalent to an ADD.
-  // break;
   case Instruction::Mul:
   case Instruction::Shl: {
     // Can only handle X*C and X << C.
@@ -5201,7 +5203,7 @@ bool AddressingModeMatcher::matchOperationAddr(User *AddrInst, unsigned Opcode,
 
       if (Opts.cgp_split_large_offset_gep && isa<GetElementPtrInst>(AddrInst) &&
           TLI.shouldConsiderGEPOffsetSplit() && Depth == 0 &&
-          ConstantOffset > 0) {
+          ConstantOffset != 0) {
         // Record GEPs with non-zero offsets as candidates for splitting in
         // the event that the offset cannot fit into the r+i addressing mode.
         // Simple and common case that only one GEP is used in calculating the
@@ -5715,7 +5717,7 @@ static BasicBlock::iterator findInsertPos(Value *Addr, Instruction *MemoryInst,
   for (User *U : Addr->users()) {
     Instruction *UserInst = dyn_cast<Instruction>(U);
     if (UserInst && UserInst->getParent() == MemoryInst->getParent()) {
-      if (isa<PHINode>(UserInst) || UserInst->isDebugOrPseudoInst())
+      if (isa<PHINode>(UserInst))
         continue;
       if (UserInst->comesBefore(Earliest))
         Earliest = UserInst;
@@ -7276,6 +7278,12 @@ bool CodeGenPrepare::optimizeExtUses(Instruction *I) {
     MadeChange = true;
   }
 
+  // The uses rewritten above read trunc(I), which equals Src only where I isn't
+  // poison. A poison-generating flag such as zext nneg can only hold under a
+  // guard, such as a sign check of Src, that itself is one of those uses.
+  if (MadeChange)
+    I->dropPoisonGeneratingFlags();
+
   return MadeChange;
 }
 
@@ -7613,7 +7621,7 @@ bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI) {
     return false;
 
   // If the SelectOptimize pass is enabled, selects have already been optimized.
-  if (!getCGPassBuilderOption().DisableSelectOptimize)
+  if (!Opts.disable_select_optimize)
     return false;
 
   // Find all consecutive select instructions that share the same condition.
@@ -8955,6 +8963,11 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
     return AnyChange;
   }
 
+  // Try to fold some cross-lane vector operations if in a loop.
+  if (I->getType()->isVectorTy() &&
+      TLI->optimizeVectorCrossLaneOperation(I, LI->getLoopFor(I->getParent())))
+    return true;
+
   if (tryToSinkFreeOperands(I))
     return true;
 
@@ -9157,7 +9170,7 @@ bool CodeGenPrepare::placePseudoProbes(Function &F) {
   for (auto &Block : F) {
     // Move the rest probes to the beginning of the block.
     auto FirstInst = Block.getFirstInsertionPt();
-    while (FirstInst != Block.end() && FirstInst->isDebugOrPseudoInst())
+    while (FirstInst != Block.end() && isa<PseudoProbeInst>(FirstInst))
       ++FirstInst;
     BasicBlock::iterator I(FirstInst);
     I++;

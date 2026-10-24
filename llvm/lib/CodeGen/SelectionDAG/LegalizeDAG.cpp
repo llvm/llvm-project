@@ -540,6 +540,10 @@ void SelectionDAGLegalize::LegalizeStoreOps(SDNode *Node) {
       ReplaceNode(SDValue(Node, 0), Result);
       break;
     }
+    case TargetLowering::Expand:
+      assert(VT.isVector() && "Cannot expand a scalar store");
+      ReplaceNode(SDValue(Node, 0), TLI.scalarizeVectorStore(ST, DAG));
+      break;
     }
     return;
   }
@@ -719,6 +723,10 @@ void SelectionDAGLegalize::LegalizeLoadOps(SDNode *Node) {
       RChain = Res.getValue(1);
       break;
     }
+    case TargetLowering::Expand:
+      assert(VT.isVector() && "Cannot expand a scalar load");
+      std::tie(RVal, RChain) = TLI.scalarizeVectorLoad(LD, DAG);
+      break;
     }
     if (RChain.getNode() != Node) {
       assert(RVal.getNode() != Node && "Load must be completely replaced");
@@ -3769,57 +3777,12 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Results.push_back(TLI.expandVectorSplice(Node, DAG));
     break;
   }
-  case ISD::VECTOR_DEINTERLEAVE: {
-    unsigned Factor = Node->getNumOperands();
-    if (Factor <= 2 || Factor % 2 != 0)
-      break;
-    SmallVector<SDValue, 8> Ops(Node->ops());
-    EVT VecVT = Node->getValueType(0);
-    SmallVector<EVT> HalfVTs(Factor / 2, VecVT);
-    // Deinterleave at Factor/2 so each result contains two factors interleaved:
-    // a0b0 c0d0 a1b1 c1d1 -> [a0c0 b0d0] [a1c1 b1d1]
-    SDValue L = DAG.getNode(ISD::VECTOR_DEINTERLEAVE, dl, HalfVTs,
-                            ArrayRef(Ops).take_front(Factor / 2));
-    SDValue R = DAG.getNode(ISD::VECTOR_DEINTERLEAVE, dl, HalfVTs,
-                            ArrayRef(Ops).take_back(Factor / 2));
-    Results.resize(Factor);
-    // Deinterleave the 2 factors out:
-    // [a0c0 a1c1] [b0d0 b1d1] -> a0a1 b0b1 c0c1 d0d1
-    for (unsigned I = 0; I < Factor / 2; I++) {
-      SDValue Deinterleave =
-          DAG.getNode(ISD::VECTOR_DEINTERLEAVE, dl, {VecVT, VecVT},
-                      {L.getValue(I), R.getValue(I)});
-      Results[I] = Deinterleave.getValue(0);
-      Results[I + Factor / 2] = Deinterleave.getValue(1);
-    }
+  case ISD::VECTOR_INTERLEAVE:
+    TLI.expandVectorInterleave(Node, Results, DAG);
     break;
-  }
-  case ISD::VECTOR_INTERLEAVE: {
-    unsigned Factor = Node->getNumOperands();
-    if (Factor <= 2 || Factor % 2 != 0)
-      break;
-    EVT VecVT = Node->getValueType(0);
-    SmallVector<EVT> HalfVTs(Factor / 2, VecVT);
-    SmallVector<SDValue, 8> LOps, ROps;
-    // Interleave so we have 2 factors per result:
-    // a0a1 b0b1 c0c1 d0d1 -> [a0c0 b0d0] [a1c1 b1d1]
-    for (unsigned I = 0; I < Factor / 2; I++) {
-      SDValue Interleave =
-          DAG.getNode(ISD::VECTOR_INTERLEAVE, dl, {VecVT, VecVT},
-                      {Node->getOperand(I), Node->getOperand(I + Factor / 2)});
-      LOps.push_back(Interleave.getValue(0));
-      ROps.push_back(Interleave.getValue(1));
-    }
-    // Interleave at Factor/2:
-    // [a0c0 b0d0] [a1c1 b1d1] -> a0b0 c0d0 a1b1 c1d1
-    SDValue L = DAG.getNode(ISD::VECTOR_INTERLEAVE, dl, HalfVTs, LOps);
-    SDValue R = DAG.getNode(ISD::VECTOR_INTERLEAVE, dl, HalfVTs, ROps);
-    for (unsigned I = 0; I < Factor / 2; I++)
-      Results.push_back(L.getValue(I));
-    for (unsigned I = 0; I < Factor / 2; I++)
-      Results.push_back(R.getValue(I));
+  case ISD::VECTOR_DEINTERLEAVE:
+    TLI.expandVectorDeinterleave(Node, Results, DAG);
     break;
-  }
   case ISD::EXTRACT_ELEMENT: {
     EVT OpTy = Node->getOperand(0).getValueType();
     if (Node->getConstantOperandVal(1)) {
@@ -6220,6 +6183,18 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   case ISD::ATOMIC_STORE: {
     AtomicSDNode *AM = cast<AtomicSDNode>(Node);
     SDLoc SL(Node);
+    if (AM->getOpcode() == ISD::ATOMIC_STORE && NVT.bitsGT(OVT)) {
+      assert(NVT.isInteger() && "unexpected promotion type");
+      MVT IntVT = MVT::getIntegerVT(OVT.getSizeInBits());
+      EVT MemVT = AM->getMemoryVT().changeTypeToInteger();
+      SDValue IntVal = DAG.getNode(ISD::BITCAST, SL, IntVT, AM->getVal());
+      SDValue ExtVal = DAG.getNode(ISD::ANY_EXTEND, SL, NVT, IntVal);
+      Results.push_back(DAG.getAtomic(ISD::ATOMIC_STORE, SL, MemVT,
+                                      AM->getChain(), ExtVal, AM->getBasePtr(),
+                                      AM->getMemOperand()));
+      break;
+    }
+
     SDValue CastVal = DAG.getNode(ISD::BITCAST, SL, NVT, AM->getVal());
     assert(NVT.getSizeInBits() == OVT.getSizeInBits() &&
            "unexpected promotion type");
@@ -6247,6 +6222,22 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   case ISD::ATOMIC_LOAD: {
     AtomicSDNode *AM = cast<AtomicSDNode>(Node);
     SDLoc SL(Node);
+    if (NVT.bitsGT(OVT)) {
+      assert(NVT.isInteger() && "unexpected promotion type");
+      MVT IntVT = MVT::getIntegerVT(OVT.getSizeInBits());
+      EVT MemVT = AM->getMemoryVT().changeTypeToInteger();
+      ISD::LoadExtType ExtType = AM->getExtensionType();
+      if (ExtType == ISD::NON_EXTLOAD)
+        ExtType = ISD::EXTLOAD;
+      SDValue NewAtomic =
+          DAG.getAtomicLoad(ExtType, SL, MemVT, NVT, AM->getChain(),
+                            AM->getBasePtr(), AM->getMemOperand());
+      SDValue Trunc = DAG.getNode(ISD::TRUNCATE, SL, IntVT, NewAtomic);
+      Results.push_back(DAG.getNode(ISD::BITCAST, SL, OVT, Trunc));
+      Results.push_back(NewAtomic.getValue(1));
+      break;
+    }
+
     assert(NVT.getSizeInBits() == OVT.getSizeInBits() &&
            "unexpected promotion type");
     assert(AM->getMemoryVT().getSizeInBits() == NVT.getSizeInBits() &&

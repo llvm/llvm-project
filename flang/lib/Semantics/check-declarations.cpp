@@ -3710,7 +3710,9 @@ void CheckHelper::CheckAlreadySeenDefinedIo(const DerivedTypeSpec &derivedType,
 void CheckHelper::CheckDioDummyIsDerived(const Symbol &proc, const Symbol &arg,
     common::DefinedIo ioKind, const Symbol &generic) {
   if (const DeclTypeSpec *type{arg.GetType()}) {
-    if (const DerivedTypeSpec *derivedType{type->AsDerived()}) {
+    // An enumeration type is not a derived type (F2023 R1221).
+    if (const DerivedTypeSpec *derivedType{type->AsDerived()};
+        derivedType && !IsEnumerationType(derivedType->typeSymbol())) {
       if (derivedType->IsVectorType()) {
         messages_.Say(arg.name(),
             "Dummy argument '%s' of a defined input/output procedure must not be a vector type"_err_en_US,

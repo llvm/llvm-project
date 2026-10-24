@@ -62,6 +62,7 @@ private:
   void emitDeviceStubBodyNew(CIRGenFunction &cgf, cir::FuncOp fn,
                              FunctionArgList &args);
   void recordDeviceBinary();
+  void transformManagedVars();
   mlir::Value prepareKernelArgs(CIRGenFunction &cgf, mlir::Location loc,
                                 FunctionArgList &args);
   mlir::Operation *getKernelHandle(cir::FuncOp fn, GlobalDecl gd) override;
@@ -354,9 +355,15 @@ void CIRGenNVCUDARuntime::emitDeviceStub(CIRGenFunction &cgf, cir::FuncOp fn,
     auto gv = cir::GlobalViewAttr::get(fnPtrTy, sym);
 
     globalOp->setAttr("initial_value", gv);
-    globalOp->removeAttr("sym_visibility");
     globalOp->setAttr("alignment", builder.getI64IntegerAttr(
                                        cgm.getPointerAlign().getQuantity()));
+
+    // The stub's linkage is only final once it is defined, so the handle
+    // takes it over here.
+    globalOp.setLinkage(fn.getLinkage());
+    mlir::SymbolTable::setSymbolVisibility(
+        globalOp, cgm.getMLIRVisibilityFromCIRLinkage(fn.getLinkage()));
+    cgm.setDSOLocal(static_cast<mlir::Operation *>(globalOp));
   }
 
   // CUDA 9.0 changed the way to launch kernels.
@@ -416,6 +423,13 @@ mlir::Operation *CIRGenNVCUDARuntime::getKernelHandle(cir::FuncOp fn,
 
   globalOp->setAttr("alignment", builder.getI64IntegerAttr(
                                      cgm.getPointerAlign().getQuantity()));
+
+  // Inherit visibility and comdat from the kernel's declaration.
+  auto *fd = cast<FunctionDecl>(gd.getDecl());
+  cgm.setGVProperties(globalOp, fd);
+  FunctionTemplateDecl *ft = fd->getPrimaryTemplate();
+  if (!ft || ft->isThisDeclarationADefinition())
+    cgm.maybeSetTrivialComdat(*fd, globalOp);
 
   // Store references
   kernelHandles[fn.getSymName()] = globalOp;
@@ -524,15 +538,19 @@ void CIRGenNVCUDARuntime::handleGlobalReplace(cir::GlobalOp oldGV,
 }
 
 /// Whether this translation unit has anything for the CUDA runtime to register.
-/// These are the same two attributes LoweringPrepare collects to decide whether
-/// to build a module ctor, so both sides answer the question from one source.
+/// Like LoweringPrepare, count only kernel stub definitions and device
+/// variables carrying registration metadata, not kernel declarations or
+/// launch-site calls.
 static bool hasEntitiesToRegister(mlir::ModuleOp module) {
   // A walk, not a scan of the module body, so this stays in agreement with the
   // recursive walk LoweringPrepare collects them with.
   return module
       ->walk([](mlir::Operation *op) {
-        if (op->hasAttr(cir::CUDAKernelNameAttr::getMnemonic()) ||
-            op->hasAttr(cir::CUDAVarRegistrationInfoAttr::getMnemonic()))
+        if (auto fn = mlir::dyn_cast<cir::FuncOp>(op);
+            fn && !fn.isDeclaration() &&
+            fn->hasAttr(cir::CUDAKernelNameAttr::getMnemonic()))
+          return mlir::WalkResult::interrupt();
+        if (op->hasAttr(cir::CUDAVarRegistrationInfoAttr::getMnemonic()))
           return mlir::WalkResult::interrupt();
         return mlir::WalkResult::advance();
       })
@@ -581,7 +599,76 @@ void CIRGenNVCUDARuntime::recordDeviceBinary() {
                            mlir::StringAttr::get(bytes, fatbinTy));
 }
 
+// Uses of a managed variable load its address from a pointer the runtime fills.
+void CIRGenNVCUDARuntime::transformManagedVars() {
+  CIRGenBuilderTy &builder = cgm.getBuilder();
+  mlir::ModuleOp module = cgm.getModule();
+  for (auto &&info : deviceVars) {
+    cir::GlobalOp var = info.var;
+    if (info.flags != cir::CUDADeviceVarKind::Variable ||
+        !info.d->hasAttr<HIPManagedAttr>())
+      continue;
+
+    cir::PointerType varPtrTy =
+        builder.getPointerTo(var.getSymType(), var.getAddrSpaceAttr());
+    mlir::ptr::MemorySpaceAttrInterface managedAS = cir::toCIRAddressSpaceAttr(
+        cgm.getMLIRContext(),
+        cgm.getLangOpts().CUDAIsDevice ? LangAS::cuda_device : LangAS::Default);
+    std::optional<mlir::SymbolTable::UseRange> uses = var.getSymbolUses(module);
+
+    std::string name = var.getSymName().str();
+    // An empty comdat would follow the rename.
+    std::optional<llvm::StringRef> comdat = var.getComdat();
+    if (comdat && comdat->empty())
+      var.setComdat(llvm::StringRef(name));
+    cgm.eraseGlobalSymbol(var);
+    var.setSymName(name + ".managed");
+    cgm.insertGlobalSymbol(var);
+
+    cir::GlobalOp managedVar =
+        cgm.createGlobalOp(var.getLoc(), name, varPtrTy,
+                           /*isConstant=*/false, managedAS);
+    managedVar.setLinkage(var.getLinkage());
+    if (!var.isDeclaration())
+      managedVar.setInitialValueAttr(builder.getConstNullPtrAttr(varPtrTy));
+    managedVar.setDsoLocal(var.getDsoLocal());
+    managedVar.setGlobalVisibility(var.getGlobalVisibility());
+    mlir::SymbolTable::setSymbolVisibility(
+        managedVar, mlir::SymbolTable::getSymbolVisibility(var));
+    managedVar->setAttr(
+        cir::CUDAExternallyInitializedAttr::getMnemonic(),
+        cir::CUDAExternallyInitializedAttr::get(&cgm.getMLIRContext()));
+
+    // The uses now name the pointer global.
+    cir::PointerType managedPtrTy =
+        builder.getPointerTo(varPtrTy, managedVar.getAddrSpaceAttr());
+    for (mlir::SymbolTable::SymbolUse use : *uses) {
+      auto getGlobalOp = dyn_cast<cir::GetGlobalOp>(use.getUser());
+      if (!getGlobalOp) {
+        cgm.errorNYI(info.d->getSourceRange(),
+                     "transformManagedVars: non-instruction use");
+        continue;
+      }
+      mlir::Value addr = getGlobalOp.getAddr();
+      addr.setType(managedPtrTy);
+      mlir::OpBuilder::InsertionGuard guard(builder);
+      builder.setInsertionPointAfter(getGlobalOp);
+      mlir::Value ld = builder.createAlignedLoad(
+          getGlobalOp.getLoc(), varPtrTy, addr,
+          CharUnits::fromQuantity(var.getAlignment().value_or(1)));
+      addr.replaceAllUsesExcept(ld, ld.getDefiningOp());
+    }
+
+    // The runtime allocates them even if device code never uses them.
+    if (cgm.getLangOpts().CUDAIsDevice && !var.isDeclaration()) {
+      cgm.addCompilerUsedGlobal(var);
+      cgm.addCompilerUsedGlobal(managedVar);
+    }
+  }
+}
+
 void CIRGenNVCUDARuntime::finalizeModule() {
+  transformManagedVars();
   if (!cgm.getLangOpts().CUDAIsDevice) {
     recordDeviceBinary();
     return;

@@ -3284,7 +3284,6 @@ bool ARMBaseInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
       .add(condCodeOp());
   UseMI.setDesc(get(NewUseOpc));
   UseMI.getOperand(1).setReg(NewReg);
-  UseMI.getOperand(1).setIsKill();
   UseMI.getOperand(2).ChangeToImmediate(SOImmValV2);
   DefMI.eraseFromParent();
   // FIXME: t2ADDrr should be split, as different rulles apply when writing to SP.
@@ -6061,17 +6060,8 @@ void ARMBaseInstrInfo::mergeOutliningCandidateAttributes(
 
 bool ARMBaseInstrInfo::isFunctionSafeToOutlineFrom(
     MachineFunction &MF, bool OutlineFromLinkOnceODRs) const {
-  const Function &F = MF.getFunction();
-
-  // Can F be deduplicated by the linker? If it can, don't outline from it.
-  if (!OutlineFromLinkOnceODRs && F.hasLinkOnceODRLinkage())
-    return false;
-
-  // Don't outline from functions with section markings; the program could
-  // expect that all the code is in the named section.
-  // FIXME: Allow outlining from multiple functions with the same section
-  // marking.
-  if (F.hasSection())
+  if (!TargetInstrInfo::isFunctionSafeToOutlineFrom(MF,
+                                                    OutlineFromLinkOnceODRs))
     return false;
 
   // FIXME: Thumb1 outlining is not handled

@@ -493,7 +493,7 @@ static bool checkThreadSafetyAttrSubject(Sema &S, Decl *D, const ParsedAttr &AL,
 bool Sema::checkInstantiatedThreadSafetyAttrs(const Decl *D, const Attr *A) {
   if (!isa<AssertCapabilityAttr, AcquireCapabilityAttr,
            TryAcquireCapabilityAttr, ReleaseCapabilityAttr,
-           RequiresCapabilityAttr, LocksExcludedAttr>(A))
+           RequiresCapabilityAttr, LocksExcludedAttr, LockReturnedAttr>(A))
     return true;
 
   const auto *VD = dyn_cast<ValueDecl>(D);
@@ -502,7 +502,9 @@ bool Sema::checkInstantiatedThreadSafetyAttrs(const Decl *D, const Attr *A) {
 
   // Parameters of template functions need to be re-checked during
   // instantiation because their types might have been dependent.
-  if (const auto *PVD = dyn_cast<ParmVarDecl>(VD)) {
+  // lock_returned does not apply to scoped_lockable references.
+  if (const auto *PVD = dyn_cast<ParmVarDecl>(VD);
+      PVD && !isa<LockReturnedAttr>(A)) {
     if (isCallbackOrDependent(PVD->getType()))
       return true;
     return checkFunParamsAreScopedLockable(*this, PVD, *A);
@@ -684,6 +686,9 @@ static bool checkTryLockFunAttrCommon(Sema &S, Decl *D, const ParsedAttr &AL,
 }
 
 static void handleLockReturnedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  if (!checkThreadSafetyAttrSubject(S, D, AL))
+    return;
+
   // check that the argument is lockable object
   SmallVector<Expr*, 1> Args;
   checkAttrArgsAreCapabilityObjs(S, D, AL, Args);
@@ -3709,13 +3714,18 @@ bool Sema::checkTargetAttr(SourceLocation LiteralLoc, StringRef AttrStr) {
              << Unsupported << None << CurFeature << Target;
   }
 
+  if (ParsedAttrs.BranchProtection.empty()) {
+    if (!ParsedAttrs.SignReturnAddrHardening.empty())
+      return Diag(LiteralLoc,
+                  diag::warn_attribute_harden_pac_ret_requires_pac_ret);
+    return false;
+  }
+
   TargetInfo::BranchProtectionInfo BPI{};
   StringRef DiagMsg;
-  if (ParsedAttrs.BranchProtection.empty())
-    return false;
+
   if (!Context.getTargetInfo().validateBranchProtection(
-          ParsedAttrs.BranchProtection, ParsedAttrs.CPU, BPI,
-          Context.getLangOpts(), DiagMsg)) {
+          ParsedAttrs, BPI, Context.getLangOpts(), DiagMsg)) {
     if (DiagMsg.empty())
       return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
              << Unsupported << None << "branch-protection" << Target;
@@ -3724,6 +3734,19 @@ bool Sema::checkTargetAttr(SourceLocation LiteralLoc, StringRef AttrStr) {
   }
   if (!DiagMsg.empty())
     Diag(LiteralLoc, diag::warn_unsupported_branch_protection_spec) << DiagMsg;
+
+  if (!ParsedAttrs.SignReturnAddrHardening.empty()) {
+    auto SignReturnAddrHardenOpt =
+        Context.getTargetInfo().parseSignReturnAddressHardening(
+            ParsedAttrs.SignReturnAddrHardening);
+    if (!SignReturnAddrHardenOpt)
+      return Diag(LiteralLoc, diag::err_invalid_harden_pac_ret_spec)
+             << ParsedAttrs.SignReturnAddrHardening;
+
+    if (BPI.SignReturnAddr == LangOptions::SignReturnAddressScopeKind::None)
+      return Diag(LiteralLoc,
+                  diag::warn_attribute_harden_pac_ret_requires_pac_ret);
+  }
 
   return false;
 }
@@ -4139,8 +4162,7 @@ static bool handleFormatAttrCommon(Sema &S, Decl *D, const ParsedAttr &AL,
 
   // In C++ the implicit 'this' function parameter also counts, and they are
   // counted from one.
-  bool HasImplicitThisParam = hasImplicitObjectParameter(D);
-  Info->NumArgs = getFunctionOrMethodNumParams(D) + HasImplicitThisParam;
+  Info->NumArgs = getFunctionOrMethodNumParams(D, /*IncludeThis=*/true);
 
   Info->Identifier = AL.getArgAsIdent(0)->getIdentifierInfo();
   StringRef Format = Info->Identifier->getName();
@@ -4176,7 +4198,7 @@ static bool handleFormatAttrCommon(Sema &S, Decl *D, const ParsedAttr &AL,
   // FIXME: Do we need to bounds check?
   unsigned ArgIdx = Info->FormatStringIdx - 1;
 
-  if (HasImplicitThisParam) {
+  if (hasImplicitObjectParameter(D)) {
     if (ArgIdx == 0) {
       S.Diag(AL.getLoc(),
              diag::err_format_attribute_implicit_this_format_string)
@@ -6183,7 +6205,10 @@ static void handleLaunchBoundsAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 static std::pair<Expr *, int>
 makeClusterDimsArgExpr(Sema &S, Expr *E, const CUDAClusterDimsAttr &AL,
                        const unsigned Idx) {
-  if (!E || S.DiagnoseUnexpandedParameterPack(E))
+  if (!E)
+    return {nullptr, 1};
+
+  if (S.DiagnoseUnexpandedParameterPack(E))
     return {};
 
   // Accept template arguments for now as they depend on something else.
@@ -6197,18 +6222,23 @@ makeClusterDimsArgExpr(Sema &S, Expr *E, const CUDAClusterDimsAttr &AL,
         << &AL << Idx << AANT_ArgumentIntegerConstant << E->getSourceRange();
     return {};
   }
-  // Make sure we can fit it in 4 bits.
-  if (!I->isIntN(4)) {
-    S.Diag(E->getExprLoc(), diag::err_ice_too_large)
-        << toString(*I, 10, false) << 4 << /*Unsigned=*/1;
-    return {};
-  }
   if (*I < 0) {
     S.Diag(E->getExprLoc(), diag::warn_attribute_argument_n_negative)
         << &AL << Idx << E->getSourceRange();
+    return {};
+  }
+  // Make sure we can fit it in 8 bits, so the product below cannot overflow.
+  if (!I->isIntN(8)) {
+    S.Diag(E->getExprLoc(), diag::err_ice_too_large)
+        << toString(*I, 10, false) << 8 << /*Unsigned=*/1;
+    return {};
   }
 
-  return {ConstantExpr::Create(S.getASTContext(), E, APValue(*I)),
+  ExprResult Result = S.DefaultLvalueConversion(E);
+  if (!Result.isUsable())
+    return {};
+
+  return {ConstantExpr::Create(S.getASTContext(), Result.get(), APValue(*I)),
           I->getZExtValue()};
 }
 
@@ -7236,9 +7266,22 @@ static void handleHandleAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(Attr::Create(S.Context, Argument, AL));
 }
 
-template<typename Attr>
 static void handleUnsafeBufferUsage(Sema &S, Decl *D, const ParsedAttr &AL) {
-  D->addAttr(Attr::Create(S.Context, AL));
+  StringRef Category;
+  if (AL.getAttrName()->getName() == "unsafe_buffer_usage_in_container") {
+    if (!AL.checkExactlyNumArgs(S, 0))
+      return;
+    Category = "container";
+  } else if (AL.getNumArgs() != 0) {
+    SourceLocation Loc;
+    if (!S.checkStringLiteralArgumentAttr(AL, 0, Category, &Loc))
+      return;
+    if (Category != "container") {
+      S.Diag(Loc, diag::warn_attribute_type_not_supported) << AL << Category;
+      return;
+    }
+  }
+  D->addAttr(UnsafeBufferUsageAttr::Create(S.Context, Category, AL));
 }
 
 static void handleCFGuardAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
@@ -8282,6 +8325,9 @@ ProcessDeclAttribute(Sema &S, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_HLSLResourceBinding:
     S.HLSL().handleResourceBindingAttr(D, AL);
     break;
+  case ParsedAttr::AT_HLSLInterpolationModifier:
+    S.HLSL().handleInterpolationModifierAttr(D, AL);
+    break;
   case ParsedAttr::AT_HLSLParamModifier:
     S.HLSL().handleParamModifierAttr(D, AL);
     break;
@@ -8464,7 +8510,7 @@ ProcessDeclAttribute(Sema &S, Decl *D, const ParsedAttr &AL,
     break;
 
   case ParsedAttr::AT_UnsafeBufferUsage:
-    handleUnsafeBufferUsage<UnsafeBufferUsageAttr>(S, D, AL);
+    handleUnsafeBufferUsage(S, D, AL);
     break;
 
   case ParsedAttr::AT_UseHandle:
@@ -8728,6 +8774,12 @@ void Sema::checkUnusedDeclAttributes(Declarator &D) {
 
 void Sema::DiagnoseUnknownAttribute(const ParsedAttr &AL) {
   SourceRange NR = AL.getNormalizedRange();
+  // Skip the expensive spelling-list typo-correction scan when the
+  // diagnostics it feeds are disabled at this location.
+  if (Diags.isIgnored(diag::warn_unknown_attribute_ignored, NR.getBegin()) &&
+      Diags.isIgnored(diag::warn_unknown_attribute_ignored_suggestion,
+                      NR.getBegin()))
+    return;
   StringRef ScopeName = AL.getNormalizedScopeName();
   std::optional<StringRef> CorrectedScopeName =
       AL.tryGetCorrectedScopeName(ScopeName);

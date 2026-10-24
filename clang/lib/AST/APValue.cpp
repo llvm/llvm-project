@@ -21,6 +21,67 @@
 #include "llvm/Support/raw_ostream.h"
 using namespace clang;
 
+static bool visitAPValue(const APValue &Value,
+                         llvm::function_ref<bool(const APValue &)> Visitor) {
+  if (!Visitor(Value))
+    return false;
+
+  switch (Value.getKind()) {
+  case APValue::None:
+  case APValue::Indeterminate:
+  case APValue::Int:
+  case APValue::Float:
+  case APValue::FixedPoint:
+  case APValue::ComplexInt:
+  case APValue::ComplexFloat:
+  case APValue::LValue:
+  case APValue::MemberPointer:
+  case APValue::AddrLabelDiff:
+  case APValue::Reflection:
+    return true;
+
+  case APValue::Vector:
+    for (unsigned I = 0, N = Value.getVectorLength(); I != N; ++I)
+      if (!visitAPValue(Value.getVectorElt(I), Visitor))
+        return false;
+    return true;
+
+  case APValue::Matrix:
+    for (unsigned I = 0, N = Value.getMatrixNumElements(); I != N; ++I)
+      if (!visitAPValue(Value.getMatrixElt(I), Visitor))
+        return false;
+    return true;
+
+  case APValue::Array:
+    for (unsigned I = 0, N = Value.getArrayInitializedElts(); I != N; ++I)
+      if (!visitAPValue(Value.getArrayInitializedElt(I), Visitor))
+        return false;
+    return !Value.hasArrayFiller() ||
+           visitAPValue(Value.getArrayFiller(), Visitor);
+
+  case APValue::Struct:
+    for (unsigned I = 0, N = Value.getStructNumBases(); I != N; ++I)
+      if (!visitAPValue(Value.getStructBase(I), Visitor))
+        return false;
+    for (unsigned I = 0, N = Value.getStructNumFields(); I != N; ++I)
+      if (!visitAPValue(Value.getStructField(I), Visitor))
+        return false;
+    for (unsigned I = 0, N = Value.getStructNumVirtualBases(); I != N; ++I)
+      if (!visitAPValue(Value.getStructVirtualBase(I), Visitor))
+        return false;
+    return true;
+
+  case APValue::Union:
+    return !Value.getUnionField() ||
+           visitAPValue(Value.getUnionValue(), Visitor);
+  }
+  llvm_unreachable("unknown APValue kind");
+}
+
+void APValue::visit(llvm::function_ref<bool(const APValue &)> Visitor) const {
+  visitAPValue(*this, Visitor);
+}
+
 /// The identity of a type_info object depends on the canonical unqualified
 /// type only.
 TypeInfoLValue::TypeInfoLValue(const Type *T)
@@ -1204,99 +1265,58 @@ LinkageInfo LinkageComputer::getLVForValue(const APValue &V,
                                            LVComputationKind computation) {
   LinkageInfo LV = LinkageInfo::external();
 
-  auto MergeLV = [&](LinkageInfo MergeLV) {
-    LV.merge(MergeLV);
-    return LV.getLinkage() == Linkage::Internal;
-  };
-  auto Merge = [&](const APValue &V) {
-    return MergeLV(getLVForValue(V, computation));
-  };
+  auto MergeLV = [&](LinkageInfo MergeLV) { LV.merge(MergeLV); };
+  V.visit([&](const APValue &Value) {
+    switch (Value.getKind()) {
+    case APValue::AddrLabelDiff:
+      // Even for an inline function, it's not reasonable to treat a difference
+      // between the addresses of labels as an external value.
+      LV = LinkageInfo::internal();
+      return false;
 
-  switch (V.getKind()) {
-  case APValue::None:
-  case APValue::Indeterminate:
-  case APValue::Int:
-  case APValue::Float:
-  case APValue::FixedPoint:
-  case APValue::ComplexInt:
-  case APValue::ComplexFloat:
-  case APValue::Vector:
-  case APValue::Reflection:
-  case APValue::Matrix:
-    break;
+    case APValue::LValue:
+      if (!Value.getLValueBase()) {
+        // Null or absolute address: this is external.
+      } else if (const auto *VD =
+                     Value.getLValueBase().dyn_cast<const ValueDecl *>()) {
+        MergeLV(getLVForDecl(VD, computation));
+      } else if (const auto TI =
+                     Value.getLValueBase().dyn_cast<TypeInfoLValue>()) {
+        MergeLV(getLVForType(*TI.getType(), computation));
+      } else if (const Expr *E =
+                     Value.getLValueBase().dyn_cast<const Expr *>()) {
+        // Almost all expression bases are internal. The exception is
+        // lifetime-extended temporaries.
+        // FIXME: These should be modeled as having the
+        // LifetimeExtendedTemporaryDecl itself as the base.
+        // FIXME: If we permit Objective-C object literals in template
+        // arguments, they should not imply internal linkage.
+        auto *MTE = dyn_cast<MaterializeTemporaryExpr>(E);
+        if (!MTE || MTE->getStorageDuration() == SD_FullExpression)
+          LV = LinkageInfo::internal();
+        else
+          MergeLV(getLVForDecl(MTE->getExtendingDecl(), computation));
+      } else {
+        assert(Value.getLValueBase().is<DynamicAllocLValue>() &&
+               "unexpected LValueBase kind");
+        LV = LinkageInfo::internal();
+      }
+      // The lvalue path doesn't matter: pointers to all subobjects always have
+      // the same visibility as pointers to the complete object.
+      return LV.getLinkage() != Linkage::Internal;
 
-  case APValue::AddrLabelDiff:
-    // Even for an inline function, it's not reasonable to treat a difference
-    // between the addresses of labels as an external value.
-    return LinkageInfo::internal();
+    case APValue::MemberPointer:
+      if (const NamedDecl *D = Value.getMemberPointerDecl())
+        MergeLV(getLVForDecl(D, computation));
+      // Note that we could have a base-to-derived conversion here to a member
+      // of a derived class with less linkage/visibility. That's covered by the
+      // linkage and visibility of the value's type.
+      return LV.getLinkage() != Linkage::Internal;
 
-  case APValue::Struct: {
-    for (unsigned I = 0, N = V.getStructNumBases(); I != N; ++I)
-      if (Merge(V.getStructBase(I)))
-        break;
-    for (unsigned I = 0, N = V.getStructNumFields(); I != N; ++I)
-      if (Merge(V.getStructField(I)))
-        break;
-    for (unsigned I = 0, N = V.getStructNumVirtualBases(); I != N; ++I)
-      if (Merge(V.getStructVirtualBase(I)))
-        break;
-    break;
-  }
-
-  case APValue::Union:
-    if (V.getUnionField())
-      Merge(V.getUnionValue());
-    break;
-
-  case APValue::Array: {
-    for (unsigned I = 0, N = V.getArrayInitializedElts(); I != N; ++I)
-      if (Merge(V.getArrayInitializedElt(I)))
-        break;
-    if (V.hasArrayFiller())
-      Merge(V.getArrayFiller());
-    break;
-  }
-
-  case APValue::LValue: {
-    if (!V.getLValueBase()) {
-      // Null or absolute address: this is external.
-    } else if (const auto *VD =
-                   V.getLValueBase().dyn_cast<const ValueDecl *>()) {
-      if (VD && MergeLV(getLVForDecl(VD, computation)))
-        break;
-    } else if (const auto TI = V.getLValueBase().dyn_cast<TypeInfoLValue>()) {
-      if (MergeLV(getLVForType(*TI.getType(), computation)))
-        break;
-    } else if (const Expr *E = V.getLValueBase().dyn_cast<const Expr *>()) {
-      // Almost all expression bases are internal. The exception is
-      // lifetime-extended temporaries.
-      // FIXME: These should be modeled as having the
-      // LifetimeExtendedTemporaryDecl itself as the base.
-      // FIXME: If we permit Objective-C object literals in template arguments,
-      // they should not imply internal linkage.
-      auto *MTE = dyn_cast<MaterializeTemporaryExpr>(E);
-      if (!MTE || MTE->getStorageDuration() == SD_FullExpression)
-        return LinkageInfo::internal();
-      if (MergeLV(getLVForDecl(MTE->getExtendingDecl(), computation)))
-        break;
-    } else {
-      assert(V.getLValueBase().is<DynamicAllocLValue>() &&
-             "unexpected LValueBase kind");
-      return LinkageInfo::internal();
+    default:
+      return true;
     }
-    // The lvalue path doesn't matter: pointers to all subobjects always have
-    // the same visibility as pointers to the complete object.
-    break;
-  }
-
-  case APValue::MemberPointer:
-    if (const NamedDecl *D = V.getMemberPointerDecl())
-      MergeLV(getLVForDecl(D, computation));
-    // Note that we could have a base-to-derived conversion here to a member of
-    // a derived class with less linkage/visibility. That's covered by the
-    // linkage and visibility of the value's type.
-    break;
-  }
+  });
 
   return LV;
 }
