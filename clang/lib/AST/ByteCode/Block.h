@@ -79,7 +79,7 @@ public:
   bool isStatic() const { return IsStatic; }
   /// Checks if the block is temporary.
   bool isTemporary() const { return Desc->IsTemporary; }
-  bool isWeak() const { return AccessFlags & WeakFlag; }
+  bool isWeak() const;
   bool isDynamic() const {
     bool Result = (DynAllocId != std::nullopt);
     assert((Result == Desc->isDynAlloc()) &&
