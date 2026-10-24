@@ -71,7 +71,7 @@ body: |
 # CHECK: %9:sreg_32_xm0 = EXTRACT_SUBREG undef %8, %subreg.sub1
 # CHECK: S_NOP 0, implicit undef %9
 
-# CHECK: %10:sgpr_128 = EXTRACT_SUBREG undef %0, %subreg.sub2_sub3
+# CHECK: %10:sreg_64 = EXTRACT_SUBREG undef %0, %subreg.sub2_sub3
 # CHECK: S_NOP 0, implicit undef %10
 name: test1
 registers:
@@ -85,7 +85,7 @@ registers:
   - { id: 7, class: sreg_32_xm0 }
   - { id: 8, class: sreg_64 }
   - { id: 9, class: sreg_32_xm0 }
-  - { id: 10, class: sgpr_128 }
+  - { id: 10, class: sreg_64 }
 body: |
   bb.0:
     %0 = REG_SEQUENCE $sgpr0, %subreg.sub0, $sgpr0, %subreg.sub2
