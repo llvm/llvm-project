@@ -29,10 +29,10 @@ protected:
 public:
   OffloadTargetInfo(const llvm::Triple &Triple) : TargetInfo(Triple) {}
 
-  // Clang driver emits -target-cpu to indicate offload device architecture for
-  // both CUDA and SYCL. We override setCPU to capture this offload device
-  // architecture information.
   bool setCPU(StringRef Name) override {
+    // Clang driver emits -target-cpu to indicate offload device architecture
+    // for both CUDA and SYCL. We override setCPU to capture this offload device
+    // architecture information.
     DeviceArch = StringToOffloadArch(Name);
     return !DeviceArch.isUnknownOrUnused();
   }

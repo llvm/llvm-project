@@ -1426,8 +1426,10 @@ public:
     return isValidCPUName(Name);
   }
 
-  /// Returns an OffloadArch if targeting an offload device, otherwise return
-  /// Unused.
+  /// Returns the OffloadArch if targeting an offload device, otherwise returns
+  /// OffloadArch::getUnused().
+  virtual OffloadArch getOffloadArch() const;
+
   virtual OffloadArch getOffloadArch() const;
 
   virtual ParsedTargetAttr parseTargetAttr(StringRef Str) const;
