@@ -41,10 +41,6 @@ public:
     return !StringToOffloadArch(Name).isUnknown();
   }
 
-  void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override {
-    fillValidOffloadArchList(Values);
-  }
-
   OffloadArch getOffloadArch() const override { return DeviceArch; }
 };
 
