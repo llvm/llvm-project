@@ -132,7 +132,7 @@ OMPRequiresDecl *OMPRequiresDecl::CreateDeserialized(ASTContext &C,
 OMPDeclareReductionDecl::OMPDeclareReductionDecl(
     Kind DK, DeclContext *DC, SourceLocation L, DeclarationName Name,
     QualType Ty, OMPDeclareReductionDecl *PrevDeclInScope)
-    : ValueDecl(DK, DC, L, Name, Ty), DeclContext(DK), Combiner(nullptr),
+    : ValueDecl(DK, DC, L, Name, Ty), DeclContext(DK, this), Combiner(nullptr),
       PrevDeclInScope(PrevDeclInScope) {
   setInitializer(nullptr, OMPDeclareReductionInitKind::Call);
 }
