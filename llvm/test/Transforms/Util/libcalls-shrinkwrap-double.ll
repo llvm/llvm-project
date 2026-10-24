@@ -157,6 +157,16 @@ entry:
 ; CHECK-NEXT: br label %[[END_LABEL]]
 ; CHECK: [[END_LABEL]]:
 
+  %call_03a = call double @tan(double %value)
+; CHECK: [[COND1:%[0-9]+]] = fcmp oeq double %value, -inf
+; CHECK: [[COND2:%[0-9]+]] = fcmp oeq double %value, +inf
+; CHECK: [[COND:%[0-9]+]] = or i1 [[COND2]], [[COND1]]
+; CHECK: br i1 [[COND]], label %[[CALL_LABEL:cdce.call[0-9]*]], label %[[END_LABEL:cdce.end[0-9]*]], !prof ![[BRANCH_WEIGHT]]
+; CHECK: [[CALL_LABEL]]:
+; CHECK-NEXT: %call_03a = call double @tan(double %value)
+; CHECK-NEXT: br label %[[END_LABEL]]
+; CHECK: [[END_LABEL]]:
+
   %call_04 = call double @acosh(double %value)
 ; CHECK: [[COND:%[0-9]+]] = fcmp olt double %value, 1.000000e+00
 ; CHECK: br i1 [[COND]], label %[[CALL_LABEL:cdce.call[0-9]*]], label %[[END_LABEL:cdce.end[0-9]*]], !prof ![[BRANCH_WEIGHT]]
@@ -268,6 +278,16 @@ entry:
 ; CHECK-NEXT: br label %[[END_LABEL]]
 ; CHECK: [[END_LABEL]]:
 
+  %call_03a = call double @tan(double %value) strictfp
+; CHECK: [[COND1:%[0-9]+]] = call i1 @llvm.experimental.constrained.fcmp.f64(double %value, double -inf, metadata !"oeq", metadata !"fpexcept.strict")
+; CHECK: [[COND2:%[0-9]+]] = call i1 @llvm.experimental.constrained.fcmp.f64(double %value, double +inf, metadata !"oeq", metadata !"fpexcept.strict")
+; CHECK: [[COND:%[0-9]+]] = or i1 [[COND2]], [[COND1]]
+; CHECK: br i1 [[COND]], label %[[CALL_LABEL:cdce.call[0-9]*]], label %[[END_LABEL:cdce.end[0-9]*]], !prof ![[BRANCH_WEIGHT]]
+; CHECK: [[CALL_LABEL]]:
+; CHECK-NEXT: %call_03a = call double @tan(double %value)
+; CHECK-NEXT: br label %[[END_LABEL]]
+; CHECK: [[END_LABEL]]:
+
   %call_04 = call double @acosh(double %value) strictfp
 ; CHECK: [[COND:%[0-9]+]] = call i1 @llvm.experimental.constrained.fcmp.f64(double %value, double 1.000000e+00, metadata !"olt", metadata !"fpexcept.strict")
 ; CHECK: br i1 [[COND]], label %[[CALL_LABEL:cdce.call[0-9]*]], label %[[END_LABEL:cdce.end[0-9]*]], !prof ![[BRANCH_WEIGHT]]
@@ -341,6 +361,7 @@ declare double @acos(double)
 declare double @asin(double)
 declare double @cos(double)
 declare double @sin(double)
+declare double @tan(double)
 declare double @acosh(double)
 declare double @sqrt(double)
 declare double @atanh(double)
