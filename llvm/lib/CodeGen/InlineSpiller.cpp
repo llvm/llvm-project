@@ -226,7 +226,8 @@ private:
   bool foldMemoryOperand(ArrayRef<std::pair<MachineInstr *, unsigned>>,
                          MachineInstr *LoadMI = nullptr);
   void insertReload(Register VReg, SlotIndex, MachineBasicBlock::iterator MI);
-  void insertSpill(Register VReg, bool isKill, MachineBasicBlock::iterator MI);
+  void insertSpill(Register VReg, bool isKill, MachineBasicBlock::iterator MI,
+                   bool CanHoist);
 
   void spillAroundUses(Register Reg);
   void spillAll();
@@ -419,6 +420,19 @@ bool InlineSpiller::isSibling(Register Reg) {
   return Reg.isVirtual() && VRM.getOriginal(Reg) == Original;
 }
 
+/// Return the lanes of LI that are live at Idx.
+static LaneBitmask getLiveLaneMaskAt(const LiveInterval &LI, SlotIndex Idx,
+                                     const MachineRegisterInfo &MRI) {
+  if (!LI.hasSubRanges())
+    return LI.liveAt(Idx) ? MRI.getMaxLaneMaskForVReg(LI.reg())
+                          : LaneBitmask::getNone();
+  LaneBitmask LiveMask;
+  for (const LiveInterval::SubRange &SR : LI.subranges())
+    if (SR.liveAt(Idx))
+      LiveMask |= SR.LaneMask;
+  return LiveMask;
+}
+
 /// It is beneficial to spill to earlier place in the same BB in case
 /// as follows:
 /// There is an alternative def earlier in the same MBB.
@@ -454,6 +468,29 @@ bool InlineSpiller::hoistSpillInsideBB(LiveInterval &SpillLI,
   if (DefMBB != CopyMI.getParent() || !SrcQ.isKill())
     return false;
 
+  // The spill slot is shared with siblings. Moving the store earlier must
+  // preserve lanes needed at the copy. If the slot already holds a value at
+  // the new store point, it must also preserve lanes needed before the copy.
+  assert(StackInt && "No stack slot assigned yet.");
+  LiveInterval &OrigLI = LIS.getInterval(Original);
+  LaneBitmask OrigLiveLanes = getLiveLaneMaskAt(OrigLI, Idx.getRegSlot(), MRI);
+  bool HasEarlierSlotValue = StackInt->liveAt(SrcVNI->def.getBaseIndex());
+  if (HasEarlierSlotValue)
+    OrigLiveLanes |= getLiveLaneMaskAt(OrigLI, SrcVNI->def, MRI);
+  if ((OrigLiveLanes & ~getLiveLaneMaskAt(SrcLI, SrcVNI->def, MRI)).any())
+    return false;
+  // With subregister liveness disabled, a live main range cannot tell us
+  // whether an undef partial def actually provided all of these lanes.
+  if (HasEarlierSlotValue && !SrcLI.hasSubRanges() && !SrcVNI->isPHIDef()) {
+    MachineInstr *DefMI = LIS.getInstructionFromIndex(SrcVNI->def);
+    if (DefMI) {
+      auto [UsedLanes, DefinedLanes] =
+          AnalyzeVirtRegLanesInBundle(*DefMI, SrcReg, MRI, TRI);
+      if ((OrigLiveLanes & ~(UsedLanes | DefinedLanes)).any())
+        return false;
+    }
+  }
+
   MachineBasicBlock *MBB = DefMBB;
   MachineBasicBlock::iterator MII;
   if (SrcVNI->isPHIDef())
@@ -485,8 +522,6 @@ bool InlineSpiller::hoistSpillInsideBB(LiveInterval &SpillLI,
   // Conservatively extend the stack slot range to the range of the original
   // value. We may be able to do better with stack slot coloring by being more
   // careful here.
-  assert(StackInt && "No stack slot assigned yet.");
-  LiveInterval &OrigLI = LIS.getInterval(Original);
   VNInfo *OrigVNI = OrigLI.getVNInfoAt(Idx);
   StackInt->MergeValueInAsValue(OrigLI, OrigVNI, StackInt->getValNumInfo(0));
   LLVM_DEBUG(dbgs() << "\tmerged orig valno " << OrigVNI->id << ": "
@@ -1275,7 +1310,7 @@ static bool isRealSpill(const MachineInstr &Def) {
 
 /// insertSpill - Insert a spill of NewVReg after MI.
 void InlineSpiller::insertSpill(Register NewVReg, bool isKill,
-                                 MachineBasicBlock::iterator MI) {
+                                MachineBasicBlock::iterator MI, bool CanHoist) {
   // Spill are not terminators, so inserting spills after terminators will
   // violate invariants in MachineVerifier.
   assert(!MI->isTerminator() && "Inserting a spill after a terminator");
@@ -1307,7 +1342,7 @@ void InlineSpiller::insertSpill(Register NewVReg, bool isKill,
   // If there is only 1 store instruction is required for spill, add it
   // to mergeable list. In X86 AMX, 2 intructions are required to store.
   // We disable the merge for this case.
-  if (IsRealSpill && std::distance(Spill, MIS.end()) <= 1)
+  if (IsRealSpill && CanHoist && std::distance(Spill, MIS.end()) <= 1)
     HSpiller.addToMergeableSpills(*Spill, StackSlot, Original);
 }
 
@@ -1382,28 +1417,44 @@ void InlineSpiller::spillAroundUses(Register Reg) {
     // FIXME: Infer regclass from instruction alone.
     Register NewVReg = Edit->createFrom(Reg);
 
-    if (RI.Reads)
+    bool hasLiveDef = any_of(Ops, [](const auto &OpPair) {
+      const MachineOperand &MO = OpPair.first->getOperand(OpPair.second);
+      return MO.isDef() && !MO.isDead();
+    });
+
+    // Reload before an undef partial def so the full-width store doesn't
+    // clobber lanes of the shared slot that are still live.
+    bool NeedsPreserve = false;
+    if (hasLiveDef && StackInt->liveAt(Idx.getBaseIndex())) {
+      auto [UsedLanes, DefinedLanes] =
+          AnalyzeVirtRegLanesInBundle(MI, Reg, MRI, TRI);
+      LaneBitmask LiveLanes =
+          getLiveLaneMaskAt(LIS.getInterval(Original), Idx, MRI);
+      NeedsPreserve = (LiveLanes & ~(UsedLanes | DefinedLanes)).any();
+    }
+
+    if (RI.Reads || NeedsPreserve)
       insertReload(NewVReg, Idx, &MI);
 
     // Rewrite instruction operands.
-    bool hasLiveDef = false;
     for (const auto &OpPair : Ops) {
       MachineOperand &MO = OpPair.first->getOperand(OpPair.second);
       MO.setReg(NewVReg);
+      if (NeedsPreserve && MO.isDef())
+        MO.setIsUndef(false);
       if (MO.isUse()) {
         if (!OpPair.first->isRegTiedToDefOperand(OpPair.second))
           MO.setIsKill();
-      } else {
-        if (!MO.isDead())
-          hasLiveDef = true;
       }
     }
     LLVM_DEBUG(dbgs() << "\trewrite: " << Idx << '\t' << MI << '\n');
 
     // FIXME: Use a second vreg if instruction has no tied ops.
-    if (RI.Writes)
-      if (hasLiveDef)
-        insertSpill(NewVReg, true, &MI);
+    if (hasLiveDef) {
+      // A merged value must stay here: a later spill-hoist cannot substitute
+      // another (possibly partial) sibling for this full-width store.
+      insertSpill(NewVReg, true, &MI, /*CanHoist=*/!NeedsPreserve);
+    }
   }
 }
 
