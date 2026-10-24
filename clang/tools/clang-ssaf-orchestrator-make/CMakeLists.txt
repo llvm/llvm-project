@@ -14,6 +14,7 @@ set(SsafOrchestratorMakeLib
 
 set(SsafOrchestratorMakeShimLib
     "__init__.py"
+    "ar.py"
     "clang.py"
     "commands.py"
     "driver_jobs.py"

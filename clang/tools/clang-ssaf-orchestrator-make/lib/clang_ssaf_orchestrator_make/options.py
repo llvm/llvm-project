@@ -20,7 +20,7 @@ def build_parser():
         prog=PROGRAM,
         usage="%(prog)s [options] [--] <build command>",
         description="Run an SSAF analysis over a project as it builds. The "
-        "build is executed normally; each compilation and link step "
+        "build is executed normally; each compilation, archive and link step "
         "is paired with an SSAF step that produces the corresponding summary.",
     )
     parser.add_argument("--version", action="version", version="%(prog)s " + VERSION)

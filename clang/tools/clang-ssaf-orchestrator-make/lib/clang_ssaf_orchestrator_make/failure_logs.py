@@ -16,6 +16,7 @@ class SSAFFailureKind(enum.Enum):
     EXTRACT = "extract"
     TRANSFORM = "transform"
     LINK = "link"
+    ARCHIVE = "archive"
     MERGE = "merge"
     FORWARD = "forward"
     MISSING = "missing"

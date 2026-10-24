@@ -1,7 +1,7 @@
 # clang-ssaf-orchestrator-make
 
 Runs a Scalable Static Analysis Framework analysis over a project by riding
-along with its `make` build. Each compilation and link step the build
+along with its `make` build. Each compilation, archive and link step the build
 performs is paired with an SSAF step that produces the corresponding summary,
 and the summaries are linked into one whole-program view.
 
