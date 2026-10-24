@@ -72,9 +72,9 @@ disk latency/throughput, your results may vary.
 
 ## Build
 
-If you have already checked out LLVM using SVN, you can check out LLD
-under `tools` directory just like you probably did for clang. For the
-details, see [Getting Started with the LLVM System](https://llvm.org/docs/GettingStarted.html).
+If you have already checked out LLVM using git, you can check out LLD
+under the `lld` directory just like you probably did for clang with the `clang`
+directory. For the details, see [Getting Started with the LLVM System](https://llvm.org/docs/GettingStarted.html).
 
 If you haven't checked out LLVM, the easiest way to build LLD is to
 check out the entire LLVM projects/sub-projects from a git mirror and
