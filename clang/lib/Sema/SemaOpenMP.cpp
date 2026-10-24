@@ -28148,7 +28148,10 @@ ExprResult SemaOpenMP::ActOnOMPIteratorExpr(Scope *S,
     }
 
     // Iterator declaration.
-    assert(D.DeclIdent && "Identifier expected.");
+    if (!D.DeclIdent) {
+      IsCorrect = false;
+      continue;
+    }
     // Always try to create iterator declarator to avoid extra error messages
     // about unknown declarations use.
     auto *VD =
