@@ -327,7 +327,8 @@ GDBRemoteCommunication::WaitForPacketNoLock(StringExtractorGDBRemote &packet,
           if (echo_packet_result == PacketResult::Success) {
             const uint32_t max_retries = 3;
             uint32_t successful_responses = 0;
-            for (uint32_t i = 0; i < max_retries; ++i) {
+            uint32_t retries_left = max_retries;
+            while (retries_left-- > 0) {
               StringExtractorGDBRemote echo_response;
               echo_packet_result =
                   WaitForPacketNoLock(echo_response, timeout, false);
@@ -343,6 +344,10 @@ GDBRemoteCommunication::WaitForPacketNoLock(StringExtractorGDBRemote &packet,
                   // success and continue to try to get the qEcho response
                   packet = echo_response;
                   got_actual_response = true;
+                  // The echo reply follows right behind it. Don't let the
+                  // reads spent waiting for the response count against the
+                  // retry counter.
+                  retries_left = max_retries;
                 }
               } else if (echo_packet_result == PacketResult::ErrorReplyTimeout)
                 continue; // Packet timed out, continue waiting for a response
