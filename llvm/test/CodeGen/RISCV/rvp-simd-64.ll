@@ -9092,20 +9092,20 @@ define <8 x i8> @test_pslideupx_v8i8(<8 x i8> %rd, <8 x i8> %rs1, i32 %rs2) {
 ; RV32-NEXT:    slli a0, a4, 29
 ; RV32-NEXT:    srli a6, a0, 31
 ; RV32-NEXT:    slli a4, a4, 3
-; RV32-NEXT:    bnez a6, .LBB533_2
+; RV32-NEXT:    bnez a6, .LBB536_2
 ; RV32-NEXT:  # %bb.1:
 ; RV32-NEXT:    mv a0, a5
 ; RV32-NEXT:    mv a5, a1
 ; RV32-NEXT:    slx a5, a0, a4
-; RV32-NEXT:    beqz a6, .LBB533_3
-; RV32-NEXT:    j .LBB533_4
-; RV32-NEXT:  .LBB533_2:
+; RV32-NEXT:    beqz a6, .LBB536_3
+; RV32-NEXT:    j .LBB536_4
+; RV32-NEXT:  .LBB536_2:
 ; RV32-NEXT:    mv a0, a3
 ; RV32-NEXT:    slx a5, a3, a4
-; RV32-NEXT:    bnez a6, .LBB533_4
-; RV32-NEXT:  .LBB533_3:
+; RV32-NEXT:    bnez a6, .LBB536_4
+; RV32-NEXT:  .LBB536_3:
 ; RV32-NEXT:    mv a2, a3
-; RV32-NEXT:  .LBB533_4:
+; RV32-NEXT:  .LBB536_4:
 ; RV32-NEXT:    slx a0, a2, a4
 ; RV32-NEXT:    mv a1, a5
 ; RV32-NEXT:    ret
@@ -9130,17 +9130,17 @@ define <8 x i8> @test_pslidedownx_v8i8(<8 x i8> %rd, <8 x i8> %rs1,
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    slli a5, a4, 3
 ; RV32-NEXT:    andi a6, a5, 32
-; RV32-NEXT:    bnez a6, .LBB534_2
+; RV32-NEXT:    bnez a6, .LBB537_2
 ; RV32-NEXT:  # %bb.1:
 ; RV32-NEXT:    mv a3, a2
 ; RV32-NEXT:    mv a2, a1
-; RV32-NEXT:  .LBB534_2:
+; RV32-NEXT:  .LBB537_2:
 ; RV32-NEXT:    mv a4, a2
 ; RV32-NEXT:    srx a4, a3, a5
-; RV32-NEXT:    beqz a6, .LBB534_4
+; RV32-NEXT:    beqz a6, .LBB537_4
 ; RV32-NEXT:  # %bb.3:
 ; RV32-NEXT:    mv a0, a1
-; RV32-NEXT:  .LBB534_4:
+; RV32-NEXT:  .LBB537_4:
 ; RV32-NEXT:    srx a0, a2, a5
 ; RV32-NEXT:    mv a1, a4
 ; RV32-NEXT:    ret
@@ -9167,20 +9167,20 @@ define <4 x i16> @test_pslideupx_v4i16(<4 x i16> %rd, <4 x i16> %rs1,
 ; RV32-NEXT:    slli a0, a4, 30
 ; RV32-NEXT:    srli a6, a0, 31
 ; RV32-NEXT:    slli a4, a4, 4
-; RV32-NEXT:    bnez a6, .LBB535_2
+; RV32-NEXT:    bnez a6, .LBB538_2
 ; RV32-NEXT:  # %bb.1:
 ; RV32-NEXT:    mv a0, a5
 ; RV32-NEXT:    mv a5, a1
 ; RV32-NEXT:    slx a5, a0, a4
-; RV32-NEXT:    beqz a6, .LBB535_3
-; RV32-NEXT:    j .LBB535_4
-; RV32-NEXT:  .LBB535_2:
+; RV32-NEXT:    beqz a6, .LBB538_3
+; RV32-NEXT:    j .LBB538_4
+; RV32-NEXT:  .LBB538_2:
 ; RV32-NEXT:    mv a0, a3
 ; RV32-NEXT:    slx a5, a3, a4
-; RV32-NEXT:    bnez a6, .LBB535_4
-; RV32-NEXT:  .LBB535_3:
+; RV32-NEXT:    bnez a6, .LBB538_4
+; RV32-NEXT:  .LBB538_3:
 ; RV32-NEXT:    mv a2, a3
-; RV32-NEXT:  .LBB535_4:
+; RV32-NEXT:  .LBB538_4:
 ; RV32-NEXT:    slx a0, a2, a4
 ; RV32-NEXT:    mv a1, a5
 ; RV32-NEXT:    ret
@@ -9205,17 +9205,17 @@ define <4 x i16> @test_pslidedownx_v4i16(<4 x i16> %rd, <4 x i16> %rs1,
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    slli a5, a4, 4
 ; RV32-NEXT:    andi a6, a5, 32
-; RV32-NEXT:    bnez a6, .LBB536_2
+; RV32-NEXT:    bnez a6, .LBB539_2
 ; RV32-NEXT:  # %bb.1:
 ; RV32-NEXT:    mv a3, a2
 ; RV32-NEXT:    mv a2, a1
-; RV32-NEXT:  .LBB536_2:
+; RV32-NEXT:  .LBB539_2:
 ; RV32-NEXT:    mv a4, a2
 ; RV32-NEXT:    srx a4, a3, a5
-; RV32-NEXT:    beqz a6, .LBB536_4
+; RV32-NEXT:    beqz a6, .LBB539_4
 ; RV32-NEXT:  # %bb.3:
 ; RV32-NEXT:    mv a0, a1
-; RV32-NEXT:  .LBB536_4:
+; RV32-NEXT:  .LBB539_4:
 ; RV32-NEXT:    srx a0, a2, a5
 ; RV32-NEXT:    mv a1, a4
 ; RV32-NEXT:    ret
@@ -9239,11 +9239,11 @@ define <2 x i32> @test_pslideupx_v2i32(<2 x i32> %rd, <2 x i32> %rs1,
 ; RV32-LABEL: test_pslideupx_v2i32:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    andi a4, a4, 1
-; RV32-NEXT:    beqz a4, .LBB537_2
+; RV32-NEXT:    beqz a4, .LBB540_2
 ; RV32-NEXT:  # %bb.1:
 ; RV32-NEXT:    mv a1, a0
 ; RV32-NEXT:    mv a0, a3
-; RV32-NEXT:  .LBB537_2:
+; RV32-NEXT:  .LBB540_2:
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_pslideupx_v2i32:
@@ -9266,11 +9266,11 @@ define <2 x i32> @test_pslidedownx_v2i32(<2 x i32> %rd, <2 x i32> %rs1,
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    slli a4, a4, 31
 ; RV32-NEXT:    srli a4, a4, 26
-; RV32-NEXT:    bnez a4, .LBB538_2
+; RV32-NEXT:    bnez a4, .LBB541_2
 ; RV32-NEXT:  # %bb.1:
 ; RV32-NEXT:    mv a2, a1
 ; RV32-NEXT:    mv a1, a0
-; RV32-NEXT:  .LBB538_2:
+; RV32-NEXT:  .LBB541_2:
 ; RV32-NEXT:    mv a0, a1
 ; RV32-NEXT:    mv a1, a2
 ; RV32-NEXT:    ret
