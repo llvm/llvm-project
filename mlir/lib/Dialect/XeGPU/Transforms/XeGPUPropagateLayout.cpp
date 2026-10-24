@@ -1571,6 +1571,23 @@ static xegpu::CreateNdDescOp getDefiningCreateNdDescOp(Value tdescValue) {
   return nullptr;
 }
 
+// Walks back through a chain of convert_layout ops from value and returns
+// the first source already in wantedLayout which contains the same data or null
+// if none.
+static Value
+findEquivalentValueWithLayout(Value value,
+                              xegpu::DistributeLayoutAttr wantedLayout) {
+  Value current = value;
+  while (auto convert = current.getDefiningOp<xegpu::ConvertLayoutOp>()) {
+    Value source = convert.getSource();
+    auto sourceLayout = xegpu::getDistributeLayoutAttr(source);
+    if (sourceLayout && sourceLayout.isEqualTo(wantedLayout))
+      return source;
+    current = source;
+  }
+  return nullptr;
+}
+
 struct ResolveLayoutConflicts {
   ResolveLayoutConflicts(Operation *parentOp)
       : parentOp(parentOp), builder(parentOp->getContext()) {}
@@ -1698,6 +1715,16 @@ ResolveLayoutConflicts::resolveVectorConsumer(OpOperand &operand) {
   if (auto consumerConvert = dyn_cast<xegpu::ConvertLayoutOp>(consumerOp)) {
     consumerConvert.setInputLayoutAttr(producerLayout);
     return success();
+  }
+
+  // Producer convert has other users, read an earlier value in the convert-
+  // chain that is already in the consumer's layout instead of a new convert.
+  if (!vectorValue.hasOneUse()) {
+    if (Value equivalent =
+            findEquivalentValueWithLayout(vectorValue, consumerLayout)) {
+      operand.set(equivalent);
+      return success();
+    }
   }
 
   // Producer is a convert_layout feeding only this use: retarget its
