@@ -1948,6 +1948,15 @@ namespace AMDGPU {
   LLVM_READONLY
   int32_t getIfAddr64Inst(uint32_t Opcode);
 
+  /// Returns the GFX9GFX10Async sibling of a load-to-LDS opcode (MUBUF or
+  /// FLAT), or -1 if \p Opcode has no such sibling.
+  LLVM_READONLY
+  int32_t getGFX9GFX10AsyncOp(uint32_t Opcode);
+
+  /// Inverse of getGFX9GFX10AsyncOp.
+  LLVM_READONLY
+  int32_t getGFX9GFX10NonAsyncOp(uint32_t Opcode);
+
   LLVM_READONLY
   int32_t getSOPKOp(uint32_t Opcode);
 
