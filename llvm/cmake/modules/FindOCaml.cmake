@@ -46,12 +46,10 @@ if( OCAMLFIND )
   # ocamlmklib names shared stub libraries with OCaml's ext_dll, which can
   # differ from CMAKE_SHARED_LIBRARY_SUFFIX (e.g. .so rather than .dylib on
   # macOS).
-  # parses -config because -config-var requires OCaml 4.08.
   execute_process(
-    COMMAND ${OCAMLFIND} ocamlc -config
-    OUTPUT_VARIABLE ocaml_config)
-  string(REGEX MATCH "ext_dll: ([^\n]*)" ocaml_ext_dll_match "${ocaml_config}")
-  set(OCAML_EXT_DLL "${CMAKE_MATCH_1}")
+    COMMAND ${OCAMLFIND} ocamlc -config-var ext_dll
+    OUTPUT_VARIABLE OCAML_EXT_DLL
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
 
   execute_process(
     COMMAND ${OCAMLFIND} ocamlc -version
