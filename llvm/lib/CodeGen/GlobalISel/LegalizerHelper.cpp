@@ -1637,6 +1637,14 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     if (TypeIdx != 1)
       return UnableToLegalize;
 
+    LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+    if (DstTy.getScalarSizeInBits() < NarrowTy.getScalarSizeInBits()) {
+      auto Trunc = MIRBuilder.buildTrunc(NarrowTy, MI.getOperand(1));
+      MIRBuilder.buildTrunc(MI.getOperand(0), Trunc);
+      MI.eraseFromParent();
+      return Legalized;
+    }
+
     uint64_t SizeOp1 = MRI.getType(MI.getOperand(1).getReg()).getSizeInBits();
     if (NarrowTy.getSizeInBits() * 2 != SizeOp1) {
       LLVM_DEBUG(dbgs() << "Can't narrow trunc to type " << NarrowTy << "\n");

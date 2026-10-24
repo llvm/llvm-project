@@ -3248,6 +3248,36 @@ TEST_F(AArch64GISelMITest, LibcallFNearbyInt) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
+TEST_F(AArch64GISelMITest, NarrowScalarTruncVector) {
+  setUp();
+  if (!TM)
+    GTEST_SKIP();
+
+  DefineLegalizerInfo(A,
+                      { getActionDefinitionsBuilder(G_TRUNC).alwaysLegal(); });
+
+  LLT V2S16 = LLT::fixed_vector(2, 16);
+  LLT V2S32 = LLT::fixed_vector(2, 32);
+  LLT V2S64 = LLT::fixed_vector(2, 64);
+  auto Src = B.buildUndef(V2S64);
+  auto Trunc = B.buildTrunc(V2S16, Src);
+
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, Info, Observer, B);
+
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.narrowScalar(*Trunc, 1, V2S32));
+
+  const auto *CheckStr = R"(
+  CHECK: [[SRC:%[0-9]+]]:_(<2 x s64>) = G_IMPLICIT_DEF
+  CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<2 x s32>) = G_TRUNC [[SRC]]:_(<2 x s64>)
+  CHECK-NEXT: {{%[0-9]+}}:_(<2 x s16>) = G_TRUNC [[TRUNC]]:_(<2 x s32>)
+  )";
+
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
+
 TEST_F(AArch64GISelMITest, NarrowScalarExtract) {
   setUp();
   if (!TM)
