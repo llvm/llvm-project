@@ -626,7 +626,9 @@ LoadInst *AtomicExpandImpl::convertAtomicLoadToIntegerType(LoadInst *LI) {
 
   Value *Addr = LI->getPointerOperand();
 
-  auto *NewLI = Builder.CreateLoad(NewTy, Addr, LI->getProperties());
+  auto Props = LI->getProperties();
+  Props.IsElementwise = false;
+  auto *NewLI = Builder.CreateLoad(NewTy, Addr, Props);
   LLVM_DEBUG(dbgs() << "Replaced " << *LI << " with " << *NewLI << "\n");
 
   Value *NewVal = LI->getType()->isPtrOrPtrVectorTy()
@@ -670,11 +672,9 @@ AtomicExpandImpl::convertAtomicXchgToIntegerType(AtomicRMWInst *RMWI) {
 /// normal atomic expansion pipeline. The target's shouldExpandAtomicRMWInIR()
 /// is re-queried at the halved width and may return any expansion kind there
 /// (e.g. None to preserve as a native vector atomic, Expand to keep halving,
-/// CmpXChg to emit one wide cmpxchg loop at the halved width). Two cases:
-///   N == 1: collapse directly to one scalar atomicrmw T
-///   N  > 1: split into two atomicrmw elementwise <N/2 x T> (low at Ptr, high
-///           at gep inbounds <N/2 x T>, Ptr, 1); reassemble via a
-///           shufflevector.
+/// CmpXChg to emit one wide cmpxchg loop at the halved width). Split into two
+/// atomicrmw elementwise <N/2 x T> (low at Ptr, high at gep inbounds
+/// <N/2 x T>, Ptr, 1); reassemble via a shufflevector.
 /// Note that halving works because the vectors must always be a power of two.
 ///
 /// Each new atomicrmw inherits the original ordering/syncscope/volatility and
@@ -692,38 +692,23 @@ void AtomicExpandImpl::expandElementwiseAtomicRMW(AtomicRMWInst *AI) {
   IntegerType *IdxTy =
       DL->getIndexType(AI->getContext(), AI->getPointerAddressSpace());
 
-  auto CreateRMWInstruction = [&](Value *HalfPtr, Value *HalfVal, Align A,
-                                  bool Elementwise) -> AtomicRMWInst * {
+  auto CreateRMWInstruction = [&](Value *HalfPtr, Value *HalfVal,
+                                  Align A) -> AtomicRMWInst * {
     auto *NewAI =
         Builder.CreateAtomicRMW(AI->getOperation(), HalfPtr, HalfVal, A,
                                 AI->getOrdering(), AI->getSyncScopeID());
     NewAI->setVolatile(AI->isVolatile());
-    NewAI->setElementwise(Elementwise);
+    NewAI->setElementwise(true);
     copyMetadataForAtomic(*NewAI, *AI);
     return NewAI;
   };
 
-  Constant *IdxZero = ConstantInt::get(IdxTy, 0);
   Constant *IdxOne = ConstantInt::get(IdxTy, 1);
-
-  // N == 1: collapse to a single scalar atomicrmw T and wrap the result back
-  // into a <1 x T> vector.
-  if (NumLanes == 1) {
-    Value *LaneVal = Builder.CreateExtractElement(Val, IdxZero, "lane.val");
-    AtomicRMWInst *LaneRMW = CreateRMWInstruction(Ptr, LaneVal, AI->getAlign(),
-                                                  /*Elementwise=*/false);
-    Value *Result = Builder.CreateInsertElement(PoisonValue::get(VecTy),
-                                                LaneRMW, IdxZero, "lane.old");
-    AI->replaceAllUsesWith(Result);
-    AI->eraseFromParent();
-    processAtomicInstr(LaneRMW);
-    return;
-  }
 
   // N > 1: split into two <N/2 x T> elementwise atomicrmws and recurse via
   // processAtomicInstr().
-  assert(isPowerOf2_32(NumLanes) &&
-         "elementwise atomicrmw vector length must be a power of two");
+  assert(NumLanes > 1 && isPowerOf2_32(NumLanes) &&
+         "Expected a multi-lane elementwise atomicrmw");
   const unsigned HalfLanes = NumLanes / 2;
   auto *HalfVecTy = FixedVectorType::get(LaneTy, HalfLanes);
   const uint64_t HalfBytes = DL->getTypeStoreSize(HalfVecTy).getFixedValue();
@@ -737,10 +722,8 @@ void AtomicExpandImpl::expandElementwiseAtomicRMW(AtomicRMWInst *AI) {
   Align LoAlign = AI->getAlign();
   Align HiAlign = commonAlignment(LoAlign, HalfBytes);
 
-  AtomicRMWInst *LoRMW =
-      CreateRMWInstruction(Ptr, LoVal, LoAlign, /*Elementwise=*/true);
-  AtomicRMWInst *HiRMW =
-      CreateRMWInstruction(HiPtr, HiVal, HiAlign, /*Elementwise=*/true);
+  AtomicRMWInst *LoRMW = CreateRMWInstruction(Ptr, LoVal, LoAlign);
+  AtomicRMWInst *HiRMW = CreateRMWInstruction(HiPtr, HiVal, HiAlign);
 
   Value *Result = concatenateVectors(Builder, {LoRMW, HiRMW});
   Result->setName("old");
@@ -942,6 +925,10 @@ void AtomicExpandImpl::expandAtomicSubToAdd(AtomicRMWInst *AI) {
 
   AI->setOperation(NewOp);
   AI->setOperand(1, NewVal);
+
+  // Re-query the target for the addition, which may be native or require
+  // further expansion, including splitting an elementwise vector.
+  processAtomicInstr(AI);
 }
 
 bool AtomicExpandImpl::tryExpandAtomicRMW(AtomicRMWInst *AI) {
@@ -1013,11 +1000,13 @@ bool AtomicExpandImpl::tryExpandAtomicRMW(AtomicRMWInst *AI) {
     return true;
   }
   case TargetLoweringBase::AtomicExpansionKind::Expand:
-    if (AI->isElementwise()) {
-      expandElementwiseAtomicRMW(AI);
+    if (AI->getOperation() == AtomicRMWInst::Sub ||
+        AI->getOperation() == AtomicRMWInst::FSub) {
+      expandAtomicSubToAdd(AI);
       return true;
     }
-    expandAtomicSubToAdd(AI);
+    assert(AI->isElementwise() && "Expected an elementwise atomicrmw");
+    expandElementwiseAtomicRMW(AI);
     return true;
   case TargetLoweringBase::AtomicExpansionKind::NotAtomic:
     return lowerAtomicRMWInst(AI);
@@ -1184,6 +1173,20 @@ static Value *insertMaskedValue(IRBuilderBase &Builder, Value *WideWord,
   return Or;
 }
 
+/// Whether a masked operation can use a shifted operand without extracting the
+/// subword value on each iteration.
+static bool canUseShiftedOperand(AtomicRMWInst::BinOp Op, Type *ValueType) {
+  if (Op == AtomicRMWInst::Xchg || Op == AtomicRMWInst::Nand)
+    return true;
+  if (Op != AtomicRMWInst::Add && Op != AtomicRMWInst::Sub)
+    return false;
+
+  // Whole-word arithmetic is safe with one lane. With multiple lanes, carries
+  // or borrows could cross lane boundaries.
+  auto *VecTy = dyn_cast<VectorType>(ValueType);
+  return !VecTy || VecTy->getElementCount() == ElementCount::getFixed(1);
+}
+
 /// Emit IR to implement a masked version of a given atomicrmw
 /// operation. (That is, only the bits under the Mask should be
 /// affected by the operation)
@@ -1209,18 +1212,15 @@ static Value *performMaskedAtomicOp(AtomicRMWInst::BinOp Op,
     return FinalVal;
   }
 
-  if (Op == AtomicRMWInst::Nand ||
-      (!PMV.ValueType->isVectorTy() &&
-       (Op == AtomicRMWInst::Add || Op == AtomicRMWInst::Sub))) {
-    // For `Nand` and non-vector `Add` and `Sub`, we can perform the operation
+  if (canUseShiftedOperand(Op, PMV.ValueType)) {
+    // For `Nand` and single-lane `Add` and `Sub`, we can perform the operation
     // on the entire word because the extra bits in the unmasked region don't
     // affect the computation in the masked region. The operation might still
     // overwrite the unmasked region (e.g. from integer overflow or underflow),
     // so we have to reapply the unmasked region afterwards.
     //
-    // This trick doesn't work for vector `Add` and `Sub` because we use a
-    // scalar operation on the entire word. Scalarizing vector `Add` and `Sub`
-    // isn't legal because the vector versions may have element-wise overflows.
+    // This trick doesn't work for multi-lane vector `Add` and `Sub` because
+    // scalar arithmetic on the entire word could carry or borrow across lanes.
     // TODO: For these, can we use a wider vector op with additional lanes?
 
     // Atomic operation across the entire word.
@@ -1269,12 +1269,7 @@ void AtomicExpandImpl::expandPartwordAtomicRMW(
                        AI->getAlign(), TLI->getMinCmpXchgSizeInBits() / 8);
 
   Value *ValOperand_Shifted = nullptr;
-  bool NeedsShiftedOperand =
-      Op == AtomicRMWInst::Xchg || Op == AtomicRMWInst::Nand ||
-      (!PMV.ValueType->isVectorTy() &&
-       (Op == AtomicRMWInst::Add || Op == AtomicRMWInst::Sub));
-
-  if (NeedsShiftedOperand) {
+  if (canUseShiftedOperand(Op, PMV.ValueType)) {
     Value *ValOp = Builder.CreateBitCast(AI->getValOperand(), PMV.IntValueType);
     ValOperand_Shifted =
         Builder.CreateShl(Builder.CreateZExt(ValOp, PMV.WordType), PMV.ShiftAmt,

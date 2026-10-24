@@ -108,3 +108,165 @@ entry:
   %old = atomicrmw nand ptr %addr, <2 x i8> %val monotonic
   ret <2 x i8> %old
 }
+
+; One-lane vectors use the scalar expansion policy. Native
+; operations stay vectors until SelectionDAG type legalization.
+define <1 x float> @fadd_v1f32_shared(ptr addrspace(3) %addr, <1 x float> %val) {
+; CHECK-LABEL: @fadd_v1f32_shared(
+; CHECK-NEXT:    [[OLD:%.*]] = atomicrmw fadd ptr addrspace(3) [[ADDR:%.*]], <1 x float> [[VAL:%.*]] acq_rel, align 4
+; CHECK-NEXT:    ret <1 x float> [[OLD]]
+;
+  %old = atomicrmw fadd ptr addrspace(3) %addr, <1 x float> %val acq_rel, align 4
+  ret <1 x float> %old
+}
+
+; Subtraction must be rewritten before deciding whether to split the vector,
+; and reprocessed as addition without unnecessary surrounding fences.
+define <1 x float> @fsub_v1f32_shared(ptr addrspace(3) %addr, <1 x float> %val) {
+; CHECK-LABEL: @fsub_v1f32_shared(
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg <1 x float> [[VAL:%.*]]
+; CHECK-NEXT:    [[OLD:%.*]] = atomicrmw fadd ptr addrspace(3) [[ADDR:%.*]], <1 x float> [[FNEG]] acq_rel, align 4
+; CHECK-NEXT:    ret <1 x float> [[OLD]]
+;
+  %old = atomicrmw fsub ptr addrspace(3) %addr, <1 x float> %val acq_rel, align 4
+  ret <1 x float> %old
+}
+
+; Unsupported scalar operations still expand in IR at their original width.
+define <1 x float> @fmin_v1f32(ptr addrspace(1) %addr, <1 x float> %val) {
+; CHECK-LABEL: @fmin_v1f32(
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic <1 x float>, ptr addrspace(1) [[ADDR:%.*]] monotonic, align 4
+; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; CHECK:       atomicrmw.start:
+; CHECK-NEXT:    [[LOADED:%.*]] = phi <1 x float> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = call <1 x float> @llvm.minnum.v1f32(<1 x float> [[LOADED]], <1 x float> [[VAL:%.*]])
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <1 x float> [[TMP2]] to i32
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <1 x float> [[LOADED]] to i32
+; CHECK-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[ADDR]], i32 [[TMP4]], i32 [[TMP3]] monotonic monotonic, align 4
+; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; CHECK-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; CHECK-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to <1 x float>
+; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; CHECK:       atomicrmw.end:
+; CHECK-NEXT:    ret <1 x float> [[TMP6]]
+;
+  %old = atomicrmw elementwise fmin ptr addrspace(1) %addr, <1 x float> %val monotonic, align 4
+  ret <1 x float> %old
+}
+
+; Whole-word arithmetic is safe for one lane. The loop need not repeatedly
+; extract and reinsert a vector element; mask off carries into adjacent bytes.
+define <1 x i8> @add_v1i8_partword(ptr %addr, <1 x i8> %val) {
+; CHECK-LABEL: @add_v1i8_partword(
+; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[ADDR:%.*]], i64 -4)
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[ADDR]] to i64
+; CHECK-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP1]], 3
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[PTRLSB]], 3
+; CHECK-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
+; CHECK-NEXT:    [[MASK:%.*]] = shl i32 255, [[SHIFTAMT]]
+; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <1 x i8> [[VAL:%.*]] to i8
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i8 [[TMP3]] to i32
+; CHECK-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP4]], [[SHIFTAMT]]
+; CHECK-NEXT:    [[TMP5:%.*]] = load atomic i32, ptr [[ALIGNEDADDR]] monotonic, align 4
+; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; CHECK:       atomicrmw.start:
+; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP5]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
+; CHECK-NEXT:    [[NEW:%.*]] = add i32 [[LOADED]], [[VALOPERAND_SHIFTED]]
+; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[NEW]], [[MASK]]
+; CHECK-NEXT:    [[TMP7:%.*]] = and i32 [[LOADED]], [[INV_MASK]]
+; CHECK-NEXT:    [[TMP8:%.*]] = or i32 [[TMP7]], [[TMP6]]
+; CHECK-NEXT:    [[TMP9:%.*]] = cmpxchg ptr [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[TMP8]] monotonic monotonic, align 4
+; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP9]], 1
+; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP9]], 0
+; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; CHECK:       atomicrmw.end:
+; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[NEWLOADED]], [[SHIFTAMT]]
+; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i8
+; CHECK-NEXT:    [[TMP10:%.*]] = bitcast i8 [[EXTRACTED]] to <1 x i8>
+; CHECK-NEXT:    ret <1 x i8> [[TMP10]]
+;
+  %old = atomicrmw elementwise add ptr %addr, <1 x i8> %val monotonic, align 1
+  ret <1 x i8> %old
+}
+
+define <1 x i16> @sub_v1i16_partword(ptr %addr, <1 x i16> %val) {
+; CHECK-LABEL: @sub_v1i16_partword(
+; CHECK-NEXT:    fence release
+; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[ADDR:%.*]], i64 -4)
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[ADDR]] to i64
+; CHECK-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP1]], 3
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[PTRLSB]], 3
+; CHECK-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
+; CHECK-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
+; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <1 x i16> [[VAL:%.*]] to i16
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i16 [[TMP3]] to i32
+; CHECK-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP4]], [[SHIFTAMT]]
+; CHECK-NEXT:    [[TMP5:%.*]] = load atomic i32, ptr [[ALIGNEDADDR]] monotonic, align 4
+; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; CHECK:       atomicrmw.start:
+; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP5]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
+; CHECK-NEXT:    [[NEW:%.*]] = sub i32 [[LOADED]], [[VALOPERAND_SHIFTED]]
+; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[NEW]], [[MASK]]
+; CHECK-NEXT:    [[TMP7:%.*]] = and i32 [[LOADED]], [[INV_MASK]]
+; CHECK-NEXT:    [[TMP8:%.*]] = or i32 [[TMP7]], [[TMP6]]
+; CHECK-NEXT:    [[TMP9:%.*]] = cmpxchg ptr [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[TMP8]] monotonic monotonic, align 4
+; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP9]], 1
+; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP9]], 0
+; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; CHECK:       atomicrmw.end:
+; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[NEWLOADED]], [[SHIFTAMT]]
+; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
+; CHECK-NEXT:    [[TMP10:%.*]] = bitcast i16 [[EXTRACTED]] to <1 x i16>
+; CHECK-NEXT:    fence acquire
+; CHECK-NEXT:    ret <1 x i16> [[TMP10]]
+;
+  %old = atomicrmw elementwise sub ptr %addr, <1 x i16> %val acq_rel, align 2
+  ret <1 x i16> %old
+}
+
+; Exchanges must handle the scalar FP policy query before casting the vector
+; to an integer. Four-byte exchanges are native; halfword exchanges are masked.
+define <1 x float> @xchg_v1f32(ptr %addr, <1 x float> %val) {
+; CHECK-LABEL: @xchg_v1f32(
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x float> [[VAL:%.*]] to i32
+; CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw xchg ptr [[ADDR:%.*]], i32 [[TMP1]] monotonic, align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32 [[TMP2]] to <1 x float>
+; CHECK-NEXT:    ret <1 x float> [[TMP3]]
+;
+  %old = atomicrmw elementwise xchg ptr %addr, <1 x float> %val monotonic, align 4
+  ret <1 x float> %old
+}
+
+define <1 x half> @xchg_v1f16(ptr %addr, <1 x half> %val) {
+; CHECK-LABEL: @xchg_v1f16(
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x half> [[VAL:%.*]] to i16
+; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[ADDR:%.*]], i64 -4)
+; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[ADDR]] to i64
+; CHECK-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP2]], 3
+; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[PTRLSB]], 3
+; CHECK-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP3]] to i32
+; CHECK-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
+; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i16 [[TMP1]] to i32
+; CHECK-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP4]], [[SHIFTAMT]]
+; CHECK-NEXT:    [[TMP5:%.*]] = load atomic i32, ptr [[ALIGNEDADDR]] monotonic, align 4
+; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; CHECK:       atomicrmw.start:
+; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP5]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[LOADED]], [[INV_MASK]]
+; CHECK-NEXT:    [[TMP7:%.*]] = or i32 [[TMP6]], [[VALOPERAND_SHIFTED]]
+; CHECK-NEXT:    [[TMP8:%.*]] = cmpxchg ptr [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[TMP7]] monotonic monotonic, align 4
+; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP8]], 1
+; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP8]], 0
+; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; CHECK:       atomicrmw.end:
+; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[NEWLOADED]], [[SHIFTAMT]]
+; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i16 [[EXTRACTED]] to <1 x half>
+; CHECK-NEXT:    ret <1 x half> [[TMP9]]
+;
+  %old = atomicrmw elementwise xchg ptr %addr, <1 x half> %val monotonic, align 2
+  ret <1 x half> %old
+}
