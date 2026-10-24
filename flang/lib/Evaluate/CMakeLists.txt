@@ -21,11 +21,52 @@ if (LIBPGMATH_DIR)
   endif()
 endif()
 
-check_library_exists(quadmath sinq "" FOUND_QUADMATH_LIB)
-if (FLANG_INCLUDE_QUADMATH_H AND FOUND_QUADMATH_LIB)
-  configure_file("${FLANG_SOURCE_DIR}/cmake/quadmath_wrapper.h.in" "${CMAKE_CURRENT_BINARY_DIR}/quadmath_wrapper.h")
-  add_compile_definitions(HAS_QUADMATHLIB)
-  set(QUADMATHLIB quadmath)
+# Compile-time folding of REAL(16) constants needs a binary128 math library on
+# the host. Which one is not a separate question from which one the runtime
+# uses: before this was tied to FLANG_RUNTIME_F128_MATH_LIB, the folder was
+# enabled purely by libquadmath being installed on the build machine, so every
+# flang binary linked it - including one configured for the libm route, and one
+# configured with REAL(16) disabled entirely, where the table was unreachable
+# dead weight.
+#
+# Worse, on the libm route the two halves then disagreed about who computes:
+# `parameter :: v = sin(x)` folded through sinq while `y = sin(x)` ran through
+# sinf128. They agree on every point measured, but nothing makes them agree in
+# the last place.
+if (FLANG_RUNTIME_F128_MATH_LIB STREQUAL "libquadmath")
+  check_library_exists(quadmath sinq "" FOUND_QUADMATH_LIB)
+  if (FLANG_INCLUDE_QUADMATH_H AND FOUND_QUADMATH_LIB)
+    configure_file("${FLANG_SOURCE_DIR}/cmake/quadmath_wrapper.h.in" "${CMAKE_CURRENT_BINARY_DIR}/quadmath_wrapper.h")
+    add_compile_definitions(HAS_QUADMATHLIB)
+    set(QUADMATHLIB quadmath)
+  else()
+    # BEHAVIOUR CHANGE, and a deliberate one. Previously this condition was
+    # silent: the folding table was simply not built, configuration carried on,
+    # and the resulting compiler evaluated REAL(16) constant expressions at run
+    # time instead of folding them - with no message at any point saying so.
+    #
+    # That silence is only harmless while nobody asked. Here the user has named
+    # libquadmath explicitly, so the absence of quadmath.h or of the library is
+    # a request that cannot be honoured, and continuing would hand back a
+    # compiler quietly missing the capability that was asked for. The same
+    # reasoning does not apply when the option is left empty: REAL(16) is then
+    # disabled outright and there is nothing to be quiet about.
+    #
+    # A configuration that relied on the old behaviour - naming libquadmath on
+    # a machine that does not have it - will now stop here. The fix is to leave
+    # FLANG_RUNTIME_F128_MATH_LIB empty, which is what such a build was
+    # effectively getting anyway.
+    message(FATAL_ERROR
+      "FLANG_RUNTIME_F128_MATH_LIB=libquadmath but quadmath.h or libquadmath "
+      "was not found; the compiler could not fold REAL(16) constants")
+  endif()
+elseif (FLANG_RUNTIME_F128_MATH_LIB STREQUAL "libm")
+  # glibc 2.26 and later carry the same functions as *f128 in libm, which is
+  # linked anyway. The macro that reveals their prototypes has to be on the
+  # command line for the same reason as in flang-rt: no header can guarantee it
+  # is seen before <cmath> in every translation unit.
+  add_compile_definitions(HAS_LIBMF128_HOST)
+  add_compile_definitions(__STDC_WANT_IEC_60559_TYPES_EXT__=1)
 endif ()
 
 add_flang_library(FortranEvaluate

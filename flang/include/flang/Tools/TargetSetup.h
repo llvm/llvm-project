@@ -57,12 +57,13 @@ namespace Fortran::tools {
     break;
   }
 
-  // Check for kind=16 support. See flang/runtime/Float128Math/math-entries.h.
+  // Check for kind=16 support. See flang-rt/lib/quadmath/math-entries.h.
   // TODO: Take this from TargetInfo::getLongDoubleFormat for cross compilation.
 #ifdef FLANG_RUNTIME_F128_MATH_LIB
-  constexpr bool f128Support = true; // use libquadmath wrappers
+  // libquadmath, or libm on a glibc that exports the *f128 entry points.
+  constexpr bool f128Support = true;
 #elif HAS_LDBL128
-  constexpr bool f128Support = true; // use libm wrappers
+  constexpr bool f128Support = true; // long double is itself binary128
 #else
   constexpr bool f128Support = false;
 #endif
