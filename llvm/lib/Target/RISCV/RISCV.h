@@ -51,8 +51,14 @@ public:
 FunctionPass *createRISCVDeadRegisterDefinitionsLegacyPass();
 void initializeRISCVDeadRegisterDefinitionsLegacyPass(PassRegistry &);
 
-FunctionPass *createRISCVIndirectBranchTrackingPass();
-void initializeRISCVIndirectBranchTrackingPass(PassRegistry &);
+class RISCVIndirectBranchTrackingPass
+    : public RequiredPassInfoMixin<RISCVIndirectBranchTrackingPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+FunctionPass *createRISCVIndirectBranchTrackingLegacyPass();
+void initializeRISCVIndirectBranchTrackingLegacyPass(PassRegistry &);
 
 FunctionPass *createRISCVLandingPadSetupPass();
 void initializeRISCVLandingPadSetupPass(PassRegistry &);
