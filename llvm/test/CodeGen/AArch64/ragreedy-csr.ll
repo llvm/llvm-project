@@ -111,7 +111,7 @@ define fastcc i32 @prune_match(ptr nocapture readonly %a, ptr nocapture readonly
 ; CHECK-NEXT:    cbnz w8, LBB0_23
 ; CHECK-NEXT:  ; %bb.10: ; %if.then23
 ; CHECK-NEXT:    ldr x12, [x0, #16]
-; CHECK-NEXT:    ldrb w8, [x9, x11]
+; CHECK-NEXT:    ldrb w8, [x11, x9]
 ; CHECK-NEXT:    ldrb w13, [x12]
 ; CHECK-NEXT:    cmp w13, #83
 ; CHECK-NEXT:    b.eq LBB0_18
@@ -150,12 +150,12 @@ define fastcc i32 @prune_match(ptr nocapture readonly %a, ptr nocapture readonly
 ; CHECK-NEXT:    cmp w8, #112
 ; CHECK-NEXT:    b.ne LBB0_12
 ; CHECK-NEXT:  ; %bb.20: ; %land.lhs.true35
-; CHECK-NEXT:    ldrb w13, [x10, x11]
+; CHECK-NEXT:    ldrb w13, [x11, x10]
 ; CHECK-NEXT:    cmp w13, #112
 ; CHECK-NEXT:    b.ne LBB0_12
 ; CHECK-NEXT:  ; %bb.21: ; %land.lhs.true43
-; CHECK-NEXT:    sub x12, x9, x12
-; CHECK-NEXT:    add x12, x12, x11
+; CHECK-NEXT:    sub x12, x11, x12
+; CHECK-NEXT:    add x12, x9, x12
 ; CHECK-NEXT:    cmp x12, #1
 ; CHECK-NEXT:    b.ne LBB0_41
 ; CHECK-NEXT:  LBB0_22:
@@ -168,7 +168,7 @@ define fastcc i32 @prune_match(ptr nocapture readonly %a, ptr nocapture readonly
 ; CHECK-NEXT:    cmp w13, #2
 ; CHECK-NEXT:    b.ne LBB0_34
 ; CHECK-NEXT:  ; %bb.25: ; %while.cond95.preheader
-; CHECK-NEXT:    ldrb w12, [x9, x11]
+; CHECK-NEXT:    ldrb w12, [x11, x9]
 ; CHECK-NEXT:    cbz w12, LBB0_22
 ; CHECK-NEXT:  ; %bb.26: ; %land.rhs99.preheader
 ; CHECK-NEXT:    mov x8, xzr
@@ -212,7 +212,7 @@ define fastcc i32 @prune_match(ptr nocapture readonly %a, ptr nocapture readonly
 ; CHECK-NEXT:    cmp w12, #2
 ; CHECK-NEXT:    b.ne LBB0_33
 ; CHECK-NEXT:  ; %bb.36: ; %while.cond130.preheader
-; CHECK-NEXT:    ldrb w12, [x9, x11]
+; CHECK-NEXT:    ldrb w12, [x11, x9]
 ; CHECK-NEXT:    cbz w12, LBB0_22
 ; CHECK-NEXT:  ; %bb.37: ; %land.rhs134.preheader
 ; CHECK-NEXT:    mov x8, xzr
@@ -241,7 +241,7 @@ define fastcc i32 @prune_match(ptr nocapture readonly %a, ptr nocapture readonly
 ; CHECK-NEXT:    cmp x12, #2
 ; CHECK-NEXT:    b.ne LBB0_11
 ; CHECK-NEXT:  ; %bb.42: ; %land.lhs.true52
-; CHECK-NEXT:    add x12, x9, x11
+; CHECK-NEXT:    add x12, x11, x9
 ; CHECK-NEXT:    mov w0, #1 ; =0x1
 ; CHECK-NEXT:    ldurb w12, [x12, #-1]
 ; CHECK-NEXT:    cmp w12, #73

@@ -120,6 +120,9 @@
 ; SPIRV-Opt-NEXT:      Scalar Evolution Analysis
 ; SPIRV-Opt-NEXT:      Loop Pass Manager
 ; SPIRV-Opt-NEXT:        Canonicalize Freeze Instructions in Loops
+; SPIRV-Opt-NEXT:      LCSSA Verifier
+; SPIRV-Opt-NEXT:      Loop-Closed SSA Form Pass
+; SPIRV-Opt-NEXT:      Loop Pass Manager
 ; SPIRV-Opt-NEXT:        Induction Variable Users
 ; SPIRV-Opt-NEXT:        Loop Strength Reduction
 ; SPIRV-Opt-NEXT:      Lower Garbage Collection Instructions

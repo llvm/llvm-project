@@ -13,14 +13,12 @@ define void @test() {
 ; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i32 [ [[LSR_IV_NEXT:%.*]], [[BB7]] ], [ 16, [[BB]] ]
 ; CHECK-NEXT:    br label [[BB4:%.*]]
 ; CHECK:       bb4:
-; CHECK-NEXT:    [[LSR_IV3:%.*]] = phi i32 [ [[LSR_IV_NEXT4:%.*]], [[BB6:%.*]] ], [ [[LSR_IV1]], [[BB3]] ]
-; CHECK-NEXT:    br i1 true, label [[BB7]], label [[BB6]]
+; CHECK-NEXT:    br i1 true, label [[BB7]], label [[BB6:%.*]]
 ; CHECK:       bb6:
-; CHECK-NEXT:    [[LSR_IV_NEXT4]] = add i32 [[LSR_IV3]], 268435456
 ; CHECK-NEXT:    br label [[BB4]]
 ; CHECK:       bb7:
-; CHECK-NEXT:    [[MUL9:%.*]] = mul i32 [[LSR_IV3]], [[LSR_IV3]]
-; CHECK-NEXT:    [[MUL10:%.*]] = mul i32 [[MUL9]], [[LSR_IV3]]
+; CHECK-NEXT:    [[MUL9:%.*]] = mul i32 [[LSR_IV1]], [[LSR_IV1]]
+; CHECK-NEXT:    [[MUL10:%.*]] = mul i32 [[MUL9]], [[LSR_IV1]]
 ; CHECK-NEXT:    call void @foo(i32 [[MUL10]])
 ; CHECK-NEXT:    [[SEXT:%.*]] = sext i32 [[MUL10]] to i64
 ; CHECK-NEXT:    [[LSR_IV_NEXT]] = add i32 [[LSR_IV]], 32

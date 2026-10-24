@@ -3097,6 +3097,9 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
 
   // TODO: Handle scalar type.
   if (!LT.second.isVector()) {
+    if (ISDOpcode == ISD::MUL && !ST->hasStdExtZmmul())
+      return TTI::TCC_Expensive * LT.first;
+
     static const CostTblEntry DivTbl[]{
         {ISD::UDIV, MVT::i32, TTI::TCC_Expensive},
         {ISD::UDIV, MVT::i64, TTI::TCC_Expensive},

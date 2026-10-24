@@ -1782,9 +1782,17 @@ bool ComplexDeinterleavingGraph::collectPotentialReductions(BasicBlock *B) {
       FinalReduction = dyn_cast<Instruction>(U);
     }
 
-    if (NumUsers != 2 || !FinalReduction || FinalReduction->getParent() == B ||
-        isa<PHINode>(FinalReduction))
+    if (NumUsers != 2 || !FinalReduction || FinalReduction->getParent() == B)
       continue;
+
+    if (auto *LCSSAPHI = dyn_cast<PHINode>(FinalReduction)) {
+      if (LCSSAPHI->getNumIncomingValues() != 1 || !LCSSAPHI->hasOneUse())
+        continue;
+      FinalReduction = dyn_cast<Instruction>(*LCSSAPHI->user_begin());
+      if (!FinalReduction || FinalReduction->getParent() == B ||
+          isa<PHINode>(FinalReduction))
+        continue;
+    }
 
     ReductionInfo[ReductionOp] = {&PHI, FinalReduction};
     BackEdge = B;
@@ -2494,12 +2502,27 @@ void ComplexDeinterleavingGraph::processReductionOperation(
                                                OperationReplacement->getType(),
                                                OperationReplacement);
 
+  auto ReplaceReductionUse = [](Instruction *FinalReduction, Instruction *Op,
+                                Value *NewVal, PHINode *LoopPHI) {
+    for (User *U : llvm::make_early_inc_range(Op->users())) {
+      if (U == LoopPHI)
+        continue;
+      if (auto *LCSSAPHI = dyn_cast<PHINode>(U)) {
+        LCSSAPHI->replaceAllUsesWith(NewVal);
+        LCSSAPHI->eraseFromParent();
+      } else {
+        assert(U == FinalReduction);
+        FinalReduction->replaceUsesOfWith(Op, NewVal);
+      }
+    }
+  };
+
   auto *NewReal = Builder.CreateExtractValue(Deinterleave, (uint64_t)0);
-  FinalReductionReal->replaceUsesOfWith(Real, NewReal);
+  ReplaceReductionUse(FinalReductionReal, Real, NewReal, OldPHIReal);
 
   Builder.SetInsertPoint(FinalReductionImag);
   auto *NewImag = Builder.CreateExtractValue(Deinterleave, 1);
-  FinalReductionImag->replaceUsesOfWith(Imag, NewImag);
+  ReplaceReductionUse(FinalReductionImag, Imag, NewImag, OldPHIImag);
 }
 
 void ComplexDeinterleavingGraph::replaceNodes() {

@@ -44,7 +44,7 @@ define i32 @t(i32 %a, i32 %b) nounwind {
 ; CHECK-NEXT:  .LBB0_5: # %cond_false
 ; CHECK-NEXT:    # in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:    subl %edx, %ecx
-; CHECK-NEXT:    cmpl %edx, %ecx
+; CHECK-NEXT:    cmpl %ecx, %edx
 ; CHECK-NEXT:    movl %edx, %eax
 ; CHECK-NEXT:    jne .LBB0_2
 ; CHECK-NEXT:  .LBB0_6: # %bb17
