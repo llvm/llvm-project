@@ -1386,6 +1386,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 #### Crash and bug fixes
 
+- Fixed a false positive `unix.Malloc` leak report for identity operations on
+  integers converted from pointers. (GH#220972)
+
 % comment:
 % This is for the Static Analyzer.
 % Use `####` headings for subsections:
