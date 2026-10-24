@@ -58,6 +58,12 @@ public:
     const Scope &scope{context_.FindScope(source_)};
     bool isFirstSymbol{isFirstSymbol_};
     isFirstSymbol_ = false;
+    if (IsAutomatic(symbol) &&
+        symbol.owner().IsParameterizedDerivedTypeInstantiation()) {
+      context_.Say(source_,
+          "DATA statement initialization of a component in a parameterized derived type instance"_todo_en_US);
+      return false;
+    }
     // Ordered so that most egregious errors are first
     if (const char *whyNot{IsProcedure(symbol) && !IsPointer(symbol)
                 ? "Procedure"
