@@ -25,6 +25,24 @@
 // precxx20-error@-3 {{does not have the constexpr builtin}}
 // c-error@-4 {{does not have the constexpr builtin}}
 
+#if __has_builtin(__builtin_meta_is_type)
+#error has the builtin
+#else
+#error does not have the builtin
+#endif
+// cxx20-cxx26-error@-4 {{has the builtin}}
+// precxx20-error@-3 {{does not have the builtin}}
+// c-error@-4 {{does not have the builtin}}
+
+#if __has_constexpr_builtin(__builtin_meta_is_type)
+#error has the constexpr builtin
+#else
+#error does not have the constexpr builtin
+#endif
+// cxx20-cxx26-error@-4 {{has the constexpr builtin}}
+// precxx20-error@-3 {{does not have the constexpr builtin}}
+// c-error@-4 {{does not have the constexpr builtin}}
+
 #if __cplusplus < 201103L
 #define static_assert __extension__ _Static_assert
 #define CONSTEXPR11
