@@ -82,10 +82,7 @@ bool mentionsMainFile(const Diag &D) {
   // Fixes are always in the main file.
   if (!D.Fixes.empty())
     return true;
-  for (auto &N : D.Notes) {
-    if (N.InsideMainFile)
-      return true;
-  }
+
   return false;
 }
 
