@@ -178,6 +178,8 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
   movq  $X86_64_GET_FSBASE,%rdi
   leaq  152(%rbx),%rsi
   syscall
+  # FreeBSD reports errors in CF with a positive errno in rax; Linux returns
+  # a negative errno in rax. Check the appropriate convention after each call.
 #if defined(__FreeBSD__)
   jc    9f
 #else

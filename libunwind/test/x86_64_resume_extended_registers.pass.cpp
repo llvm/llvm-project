@@ -57,6 +57,8 @@ extern "C" void verify_resume() {
 // Record state before any flag-changing instruction or C call. Restore the
 // original TLS bases with raw syscalls before entering C again.
 extern "C" __attribute__((naked)) void resumed() {
+  // Keep one assembly instruction per line despite stringification macros.
+  // clang-format off
   __asm__(
       "pushfq\n"
       "popq %rax\n"
@@ -74,44 +76,34 @@ extern "C" __attribute__((naked)) void resumed() {
       "movq %gs:0, %rax\n"
       "movq %rax, 32(%r12)\n"
 #if defined(__FreeBSD__)
-      "movq $" STRINGIFY(
-          SYS_sysarch) ", %rax\n"
-                       "movq $" STRINGIFY(
-                           AMD64_SET_FSBASE) ", %rdi\n"
-                                             "leaq 40(%r12), %rsi\n"
-                                             "syscall\n"
-                                             "jc 1f\n"
-                                             "movq $" STRINGIFY(
-                                                 SYS_sysarch) ", %rax\n"
-                                                              "movq "
-                                                              "$" STRINGIFY(
-                                                                  AMD64_SET_GSBASE) ", %rdi\n"
-                                                                                    "leaq 48(%r12), %rsi\n"
-                                                                                    "syscall\n"
-                                                                                    "jc 1f\n"
+      "movq $" STRINGIFY(SYS_sysarch) ", %rax\n"
+      "movq $" STRINGIFY(AMD64_SET_FSBASE) ", %rdi\n"
+      "leaq 40(%r12), %rsi\n"
+      "syscall\n"
+      "jc 1f\n"
+      "movq $" STRINGIFY(SYS_sysarch) ", %rax\n"
+      "movq $" STRINGIFY(AMD64_SET_GSBASE) ", %rdi\n"
+      "leaq 48(%r12), %rsi\n"
+      "syscall\n"
+      "jc 1f\n"
 #else
-      "movq $" STRINGIFY(
-          SYS_arch_prctl) ", %rax\n"
-                          "movq $" STRINGIFY(
-                              ARCH_SET_FS) ", %rdi\n"
-                                           "movq 40(%r12), %rsi\n"
-                                           "syscall\n"
-                                           "testq %rax, %rax\n"
-                                           "js 1f\n"
-                                           "movq $" STRINGIFY(
-                                               SYS_arch_prctl) ", %rax\n"
-                                                               "movq "
-                                                               "$" STRINGIFY(
-                                                                   ARCH_SET_GS) ", %rdi\n"
-                                                                                "movq 48(%r12), %rsi\n"
-                                                                                "syscall\n"
-                                                                                "testq %rax, %rax\n"
-                                                                                "js 1f\n"
+      "movq $" STRINGIFY(SYS_arch_prctl) ", %rax\n"
+      "movq $" STRINGIFY(ARCH_SET_FS) ", %rdi\n"
+      "movq 40(%r12), %rsi\n"
+      "syscall\n"
+      "testq %rax, %rax\n"
+      "js 1f\n"
+      "movq $" STRINGIFY(SYS_arch_prctl) ", %rax\n"
+      "movq $" STRINGIFY(ARCH_SET_GS) ", %rdi\n"
+      "movq 48(%r12), %rsi\n"
+      "syscall\n"
+      "testq %rax, %rax\n"
+      "js 1f\n"
 #endif
 #endif
-                                                                                    "jmp " SYMBOL(
-                                                                                        verify_resume) "\n"
-                                                                                                       "1: ud2\n");
+      "jmp " SYMBOL(verify_resume) "\n"
+      "1: ud2\n");
+  // clang-format on
 }
 
 static unw_word_t get(unw_cursor_t &cursor, int reg) {

@@ -18,6 +18,7 @@
 
 #if defined(__FreeBSD__) && defined(__x86_64__) &&                             \
     !defined(_LIBUNWIND_IS_BAREMETAL)
+#include <signal.h>
 #include <ucontext.h>
 #endif
 
@@ -41,6 +42,8 @@ using namespace libunwind;
     !defined(_LIBUNWIND_IS_BAREMETAL)
 // Changing FS/GS selectors can clear their bases, while sysarch base setters
 // replace the selectors. Let sigreturn restore the complete state atomically.
+// use sigreturn() over setcontext() as setcontext() intentionally leaves CS
+// unchanged.
 extern "C" _LIBUNWIND_HIDDEN void
 __libunwind_Registers_x86_64_jumpto(Registers_x86_64 *registers) {
   ucontext_t context;
@@ -76,8 +79,8 @@ __libunwind_Registers_x86_64_jumpto(Registers_x86_64 *registers) {
   RESTORE(GS_BASE, mc_gsbase);
 #undef RESTORE
   mc.mc_flags |= _MC_HASSEGS | _MC_HASBASES;
-  setcontext(&context);
-  _LIBUNWIND_ABORT("setcontext failed");
+  sigreturn(&context);
+  _LIBUNWIND_ABORT("sigreturn failed");
 }
 #endif
 

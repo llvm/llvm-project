@@ -639,6 +639,8 @@ UnwindCursor<A, R>::UnwindCursor(unw_context_t *context, A &as)
   _msContext.R14 = r.getRegister(UNW_X86_64_R14);
   _msContext.R15 = r.getRegister(UNW_X86_64_R15);
   _msContext.Rip = r.getRegister(UNW_REG_IP);
+  // ARM64EC getcontext leaves these fields zero. Keep the values supplied by
+  // RtlCaptureContext instead of replacing them with uncaptured x86 state.
 #if !defined(__arm64ec__)
   _msContext.EFlags = static_cast<DWORD>(r.getRegister(UNW_X86_64_RFLAGS));
   _msContext.SegEs = static_cast<WORD>(r.getRegister(UNW_X86_64_ES));
