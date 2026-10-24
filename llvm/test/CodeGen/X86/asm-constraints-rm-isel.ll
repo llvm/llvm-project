@@ -21,7 +21,7 @@ define void @input_i32(i32 %x) {
 define void @input_i64(i64 %x) {
 ; CHECK-LABEL: name: input_i64
 ; X64: INLINEASM {{.*}}, reguse:GR64{{[_A-Z0-9]*}} foldable, %{{[0-9]+}}
-; X86: INLINEASM {{.*}}, mem:m, %stack.0,
+; X86: INLINEASM {{.*}}, mem:m ops:5, %stack.0,
   call void asm sideeffect "# $0", "rm"(i64 %x)
   ret void
 }
@@ -29,14 +29,14 @@ define void @input_i64(i64 %x) {
 define void @input_double(double %x) {
 ; CHECK-LABEL: name: input_double
 ; X64: INLINEASM {{.*}}, reguse:GR64{{[_A-Z0-9]*}} foldable, %{{[0-9]+}}
-; X86: INLINEASM {{.*}}, mem:m, %stack.0,
+; X86: INLINEASM {{.*}}, mem:m ops:5, %stack.0,
   call void asm sideeffect "# $0", "rm"(double %x)
   ret void
 }
 
 define void @input_i128(i128 %x) {
 ; CHECK-LABEL: name: input_i128
-; CHECK: INLINEASM {{.*}}, mem:m, %stack.0,
+; CHECK: INLINEASM {{.*}}, mem:m ops:5, %stack.0,
   call void asm sideeffect "# $0", "rm"(i128 %x)
   ret void
 }
@@ -45,14 +45,14 @@ define void @input_i128(i128 %x) {
 ; register too wide for the value, so they keep using memory.
 define void @input_half(half %x) {
 ; CHECK-LABEL: name: input_half
-; CHECK: INLINEASM {{.*}}, mem:m, %stack.0,
+; CHECK: INLINEASM {{.*}}, mem:m ops:5, %stack.0,
   call void asm sideeffect "# $0", "rm"(half %x)
   ret void
 }
 
 define void @input_bfloat(bfloat %x) {
 ; CHECK-LABEL: name: input_bfloat
-; CHECK: INLINEASM {{.*}}, mem:m, %stack.0,
+; CHECK: INLINEASM {{.*}}, mem:m ops:5, %stack.0,
   call void asm sideeffect "# $0", "rm"(bfloat %x)
   ret void
 }
@@ -60,14 +60,14 @@ define void @input_bfloat(bfloat %x) {
 ; No 'r' register can hold these at all.
 define void @input_x86_fp80(x86_fp80 %x) {
 ; CHECK-LABEL: name: input_x86_fp80
-; CHECK: INLINEASM {{.*}}, mem:m, %stack.0,
+; CHECK: INLINEASM {{.*}}, mem:m ops:5, %stack.0,
   call void asm sideeffect "# $0", "rm"(x86_fp80 %x)
   ret void
 }
 
 define void @input_v4f32(<4 x float> %x) {
 ; CHECK-LABEL: name: input_v4f32
-; CHECK: INLINEASM {{.*}}, mem:m, %stack.0,
+; CHECK: INLINEASM {{.*}}, mem:m ops:5, %stack.0,
   call void asm sideeffect "# $0", "rm"(<4 x float> %x)
   ret void
 }
@@ -76,14 +76,14 @@ define void @input_v4f32(<4 x float> %x) {
 ; of aggregate type and for every "=rm" output.
 define void @input_indirect(ptr %p) {
 ; CHECK-LABEL: name: input_indirect
-; CHECK: INLINEASM {{.*}}, mem:m, {{(killed )?}}%0,
+; CHECK: INLINEASM {{.*}}, mem:m ops:5, {{(killed )?}}%0,
   call void asm sideeffect "# $0", "*rm"(ptr elementtype(%struct.S) %p)
   ret void
 }
 
 define void @output_indirect(ptr %p) {
 ; CHECK-LABEL: name: output_indirect
-; CHECK: INLINEASM {{.*}}, mem:m, {{(killed )?}}%0,
+; CHECK: INLINEASM {{.*}}, mem:m ops:5, {{(killed )?}}%0,
   call void asm sideeffect "# $0", "=*rm"(ptr elementtype(i64) %p)
   ret void
 }
@@ -138,14 +138,14 @@ define void @input_mri_i32(i32 %x) {
 
 define void @input_g_i128(i128 %x) {
 ; CHECK-LABEL: name: input_g_i128
-; CHECK: INLINEASM {{.*}}, mem:m, %stack.0,
+; CHECK: INLINEASM {{.*}}, mem:m ops:5, %stack.0,
   call void asm sideeffect "# $0", "imr"(i128 %x)
   ret void
 }
 
 define void @input_g_indirect(ptr %p) {
 ; CHECK-LABEL: name: input_g_indirect
-; CHECK: INLINEASM {{.*}}, mem:m, {{(killed )?}}%0,
+; CHECK: INLINEASM {{.*}}, mem:m ops:5, {{(killed )?}}%0,
   call void asm sideeffect "# $0", "*imr"(ptr elementtype(i32) %p)
   ret void
 }
@@ -167,7 +167,7 @@ define i32 @inout_g_i32(i32 %x) {
 ; Another register class besides 'r' leaves the usual choice of memory.
 define void @input_qmr_i32(i32 %x) {
 ; CHECK-LABEL: name: input_qmr_i32
-; CHECK: INLINEASM {{.*}}, mem:m, %stack.0,
+; CHECK: INLINEASM {{.*}}, mem:m ops:5, %stack.0,
   call void asm sideeffect "# $0", "qmr"(i32 %x)
   ret void
 }
