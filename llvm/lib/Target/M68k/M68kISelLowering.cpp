@@ -1570,7 +1570,7 @@ static bool isOverflowArithmetic(unsigned Opcode) {
 
 static void lowerOverflowArithmetic(SDValue Op, SelectionDAG &DAG,
                                     SDValue &Result, SDValue &CCR,
-                                    unsigned &CC) {
+                                    M68k::CondCode &CC) {
   SDNode *N = Op.getNode();
   EVT VT = N->getValueType(0);
   SDValue LHS = N->getOperand(0);
@@ -1652,7 +1652,7 @@ SDValue M68kTargetLowering::LowerXALUO(SDValue Op, SelectionDAG &DAG) const {
   // Lower the "add/sub/mul with overflow" instruction into a regular ins plus
   // a "setcc" instruction that checks the overflow flag.
   SDValue Result, CCR;
-  unsigned CC;
+  M68k::CondCode CC;
   lowerOverflowArithmetic(Op, DAG, Result, CCR, CC);
 
   SDValue Overflow;
@@ -2328,7 +2328,7 @@ SDValue M68kTargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   } else if (isOverflowArithmetic(CondOpcode)) {
     // Result is unused here.
     SDValue Result;
-    unsigned CCode;
+    M68k::CondCode CCode;
     lowerOverflowArithmetic(Cond, DAG, Result, Cond, CCode);
     CC = DAG.getConstant(CCode, DL, MVT::i8);
     addTest = false;
@@ -2491,11 +2491,11 @@ SDValue M68kTargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
   CondOpcode = Cond.getOpcode();
   if (isOverflowArithmetic(CondOpcode)) {
     SDValue Result;
-    unsigned CCode;
+    M68k::CondCode CCode;
     lowerOverflowArithmetic(Cond, DAG, Result, Cond, CCode);
 
     if (Inverted)
-      CCode = M68k::GetOppositeBranchCondition((M68k::CondCode)CCode);
+      CCode = M68k::GetOppositeBranchCondition(CCode);
     CC = DAG.getConstant(CCode, DL, MVT::i8);
 
     AddTest = false;
