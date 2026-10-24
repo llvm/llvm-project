@@ -635,20 +635,18 @@ private:
   bool canUncountableExitConditionLoadBeMoved(BasicBlock *ExitingBlock);
 
   struct SafeAccessInfo {
-    // Fixed and scalable sizes need separate maxima: neither a larger fixed
-    // size nor a smaller scalable size necessarily covers the other.
-    TypeSize MaxFixedSize = TypeSize::getFixed(0);
-    TypeSize MaxScalableSize = TypeSize::getScalable(0);
+    uint64_t MaxSize = 0;
     Align Alignment = Align(1);
   };
 
-  /// Maps a pointer to maximum access sizes and alignment known to be safe.
+  /// Maps a pointer to its maximum fixed access size and safe alignment.
   using SafeAccessesTy = SmallDenseMap<Value *, SafeAccessInfo, 8>;
 
   /// Return true if all of the instructions in the block can be speculatively
   /// executed, and record the loads/stores that require masking.
   /// \p SafeAccesses records pointers that can be accessed unconditionally,
-  /// together with the access sizes and alignments justified for each pointer.
+  /// together with the fixed access sizes and alignments justified for each
+  /// pointer. Scalable accesses are not recorded.
   /// \p MaskedOp is a list of instructions that have to be transformed into
   /// calls to the appropriate masked intrinsic when the loop is vectorized
   /// or dropped if the instruction is a conditional assume intrinsic.
