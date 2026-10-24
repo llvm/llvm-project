@@ -876,6 +876,20 @@ _BUILTINS = {
     "GetValueAsUnsigned": "@get_value_as_unsigned",
 }
 
+_BINOPS = {
+    ast.Add: "+",
+    ast.Sub: "-",
+    ast.Mult: "*",
+    # The bytecode has only integer division, which truncates.
+    ast.FloorDiv: "/",
+    ast.Mod: "%",
+    ast.LShift: "<<",
+    ast.RShift: ">>",
+    ast.BitAnd: "&",
+    ast.BitOr: "|",
+    ast.BitXor: "^",
+}
+
 _COMPS = {
     ast.Eq: "=",
     ast.NotEq: "!=",
@@ -929,8 +943,9 @@ class Compiler(ast.NodeVisitor):
     [x] Return statements
     [x] String, integer, float, boolean, and None literals
     [x] Binary comparisons
+    [x] Unary operators (-, +, ~)
     [ ] Boolean operators
-    [ ] Math operations
+    [x] Math operations (+, -, *, //, %, <<, >>, &, |, ^)
 
     # Unsupported Features
 
@@ -1095,6 +1110,38 @@ class Compiler(ast.NodeVisitor):
         if node.value:
             self.visit(node.value)
         self._output("return")
+
+    def visit_BinOp(self, node: ast.BinOp) -> None:
+        if op := _BINOPS.get(type(node.op)):
+            self.visit(node.left)
+            self.visit(node.right)
+            self._output(op)
+        else:
+            raise CompilerError(
+                f"unsupported binary operator: {type(node.op).__name__}", node
+            )
+
+    def visit_UnaryOp(self, node: ast.UnaryOp) -> None:
+        operand = node.operand
+        if isinstance(node.op, ast.USub):
+            # Fold negative integer literals.
+            if (
+                isinstance(operand, ast.Constant)
+                and isinstance(operand.value, int)
+                and not isinstance(operand.value, bool)
+            ):
+                self._output(-operand.value)
+                return
+            self._output(0)
+            self.visit(operand)
+            self._output("-")
+        elif isinstance(node.op, ast.UAdd):
+            self.visit(operand)
+        elif isinstance(node.op, ast.Invert):
+            self.visit(operand)
+            self._output("~")
+        else:
+            raise CompilerError("unsupported unary operator", node)
 
     def visit_Constant(self, node: ast.Constant) -> None:
         if isinstance(node.value, str):
@@ -1653,6 +1700,20 @@ if __name__ == "__main__":
                 )
                 return methods["get_child_index"]
 
+        def test_unary(self):
+            methods = self.compile_methods(
+                """
+                class Synthetic:
+                    def get_child_index(self, name):
+                        return -1
+
+                    def num_children(self):
+                        return -(-5) + ~0 + +1
+                """
+            )
+            self.assertEqual(interpret(methods["get_child_index"], [], [{}, "x"]), -1)
+            self.assertEqual(interpret(methods["get_num_children"], [], [{}]), 5)
+
             def run(expr, name="x", valobj=None):
                 self_dict = {"valobj": valobj or self.FakeValue(42)}
                 return interpret(compile_fstring(expr), [], [self_dict, name])
@@ -1714,6 +1775,14 @@ if __name__ == "__main__":
                         def num_children(self):
                             self.count = 1
                             return 1
+                    """
+                )
+            with self.assertRaisesRegex(CompilerError, "unsupported binary operator"):
+                self.compile_methods(
+                    """
+                    class Synthetic:
+                        def num_children(self):
+                            return 1 / 2
                     """
                 )
 
