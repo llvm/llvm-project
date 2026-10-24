@@ -1484,7 +1484,7 @@ void MatcherTableEmitter::EmitValueTypeFunction(raw_ostream &OS) {
       OS << "    switch (HwMode) {\n";
       if (!VTs.hasDefault())
         OS << "    default:\n      return MVT();\n";
-      for (const auto [Mode, VT] : VTs) {
+      for (const auto &[Mode, VT] : VTs) {
         if (Mode == DefaultMode)
           OS << "    default:\n";
         else
