@@ -339,13 +339,13 @@ lookupBuiltin(StringRef DemangledCall,
     }
 
     // If argument-type name prefix was added, look up the builtin again.
-    if (!Prefix.empty() &&
-        (Builtin = SPIRV::lookupBuiltin((Prefix + BuiltinName).str(), Set)))
+    if (!Prefix.empty() && (Builtin = SPIRV::lookupBuiltin(
+                                (Twine(Prefix) + BuiltinName).str(), Set)))
       return std::make_unique<SPIRV::IncomingCall>(
           BuiltinName, Builtin, ReturnRegister, ReturnType, Arguments);
 
-    if (!Suffix.empty() &&
-        (Builtin = SPIRV::lookupBuiltin((BuiltinName + Suffix).str(), Set)))
+    if (!Suffix.empty() && (Builtin = SPIRV::lookupBuiltin(
+                                (Twine(BuiltinName) + Suffix).str(), Set)))
       return std::make_unique<SPIRV::IncomingCall>(
           BuiltinName, Builtin, ReturnRegister, ReturnType, Arguments);
   }
