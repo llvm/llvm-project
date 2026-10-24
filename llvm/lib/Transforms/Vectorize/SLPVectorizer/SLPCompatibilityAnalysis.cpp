@@ -16,6 +16,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/bit.h"
+#include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/InstrTypes.h"
@@ -512,6 +513,11 @@ Constant *CmpSamePredicateHelper::getAdjustedConstant(const Instruction *I,
   const auto &[IsComplement, K] = *Family;
   return ConstantInt::get(I->getOperand(0)->getType(),
                           getFamilyConstant(IsComplement, K, Pred));
+}
+
+bool isFMAOrFMulAdd(const Instruction *I) {
+  return match(I, m_CombineOr(m_Intrinsic<Intrinsic::fma>(),
+                              m_Intrinsic<Intrinsic::fmuladd>()));
 }
 
 bool InstructionsState::isSameOperation(const Instruction *I,
