@@ -574,9 +574,32 @@ Keep undefined symbols, even if they would otherwise be stripped.
 
 ## COFF-SPECIFIC OPTIONS
 
+:::{option} --dump-resource <type>/<name>[/<language>]=<file>
+Dump the contents of the resource of a PE image with the given integer type,
+name and language IDs into the file `<file>`. If `<language>` is omitted, the
+resource's first language is used.
+:::
+
 :::{option} --subsystem <name>[:<version>]
 Set the PE subsystem, and optionally subsystem version.
 :::
+
+:::{option} --update-resource <type>/<name>[/<language>]=<file>
+Replace the contents of the resource of a PE image with the given integer type,
+name and language IDs with the contents of the file `<file>`, adding the
+resource if it does not exist. If `<language>` is omitted, the new resource
+replaces the resources with the given type and name of all languages. It keeps
+their language if there is exactly one, and is language-neutral otherwise.
+
+If the resource section has to grow beyond its current address range, the
+sections following it are moved, which is only possible if they are
+discardable (like `.reloc`). A resource section is added after the last
+non-discardable section if the image does not have one.
+:::
+
+Note that modifying a PE image invalidates its Authenticode signature. The
+attribute certificate table holding the signature is not copied and its data
+directory entry is cleared.
 
 ## SUPPORTED FORMATS
 

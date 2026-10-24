@@ -574,6 +574,37 @@ static Error loadNewSectionData(StringRef ArgValue, StringRef OptionName,
   return Error::success();
 }
 
+// Parses the "<type>/<name>[/<language>]" part of the value of a resource
+// option.
+static Error parseResourceIdentifier(StringRef Value, StringRef OptionName,
+                                     COFFResourceIdentifier &Resource) {
+  SmallVector<StringRef, 3> Parts;
+  Value.split(Parts, '/');
+  if (Parts.size() < 2 || Parts.size() > 3)
+    return createStringError(
+        errc::invalid_argument,
+        "bad format for " + OptionName +
+            ": expected <type>/<name>[/<language>]=<file>");
+  if (Parts[0].getAsInteger(0, Resource.Type))
+    return createStringError(errc::invalid_argument,
+                             "bad format for " + OptionName + ": '" + Parts[0] +
+                                 "' is not a valid resource type ID");
+  if (Parts[1].getAsInteger(0, Resource.Name))
+    return createStringError(errc::invalid_argument,
+                             "bad format for " + OptionName + ": '" + Parts[1] +
+                                 "' is not a valid resource name ID");
+  if (Parts.size() == 3) {
+    uint16_t Language;
+    if (Parts[2].getAsInteger(0, Language))
+      return createStringError(errc::invalid_argument,
+                               "bad format for " + OptionName + ": '" +
+                                   Parts[2] +
+                                   "' is not a valid resource language ID");
+    Resource.Language = Language;
+  }
+  return Error::success();
+}
+
 static Expected<int64_t> parseChangeSectionLMA(StringRef ArgValue,
                                                StringRef OptionName) {
   StringRef StringValue;
@@ -819,6 +850,38 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> ArgsArr,
                                  Minor.str().c_str());
       COFFConfig.MinorSubsystemVersion = Number;
     }
+  }
+
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_dump_resource)) {
+    auto [Spec, FileName] = StringRef(Arg->getValue()).split('=');
+    if (FileName.empty())
+      return createStringError(
+          errc::invalid_argument,
+          "bad format for --dump-resource: missing file name");
+    COFFResourceDump Dump;
+    if (Error E =
+            parseResourceIdentifier(Spec, "--dump-resource", Dump.Resource))
+      return std::move(E);
+    Dump.FileName = FileName;
+    COFFConfig.DumpResource.push_back(Dump);
+  }
+
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_update_resource)) {
+    auto [Spec, FileName] = StringRef(Arg->getValue()).split('=');
+    if (FileName.empty())
+      return createStringError(
+          errc::invalid_argument,
+          "bad format for --update-resource: missing file name");
+    COFFResourceUpdate Update;
+    if (Error E =
+            parseResourceIdentifier(Spec, "--update-resource", Update.Resource))
+      return std::move(E);
+    ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
+        MemoryBuffer::getFile(FileName);
+    if (!BufOrErr)
+      return createFileError(FileName, errorCodeToError(BufOrErr.getError()));
+    Update.Data = std::move(*BufOrErr);
+    COFFConfig.UpdateResource.push_back(std::move(Update));
   }
 
   Config.OutputFormat = StringSwitch<FileFormat>(OutputFormat)

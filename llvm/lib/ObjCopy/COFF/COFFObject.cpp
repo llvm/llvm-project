@@ -74,6 +74,12 @@ void Object::addSections(ArrayRef<Section> NewSections) {
   updateSections();
 }
 
+void Object::insertSection(size_t Index, Section NewSection) {
+  NewSection.UniqueId = NextSectionUniqueId++;
+  Sections.insert(Sections.begin() + Index, std::move(NewSection));
+  updateSections();
+}
+
 void Object::updateSections() {
   SectionMap = DenseMap<ssize_t, Section *>(Sections.size());
   size_t Index = 1;

@@ -1,0 +1,192 @@
+## Test --dump-resource, which dumps a resource of a PE image into a file.
+
+# RUN: split-file %s %t
+# RUN: yaml2obj %t/resources.yaml -o %t/resources.exe
+# RUN: yaml2obj %t/offset.yaml -o %t/offset.exe
+# RUN: yaml2obj %t/noresources.yaml -o %t/noresources.exe
+
+# RUN: llvm-objcopy --dump-resource=24/1=%t/dumped.txt %t/resources.exe %t/copy.exe
+# RUN: FileCheck %s --check-prefix=DATA --input-file=%t/dumped.txt --match-full-lines
+# RUN: llvm-objcopy --dump-resource=24/1/0=%t/dumped2.txt %t/resources.exe %t/copy.exe
+# RUN: cmp %t/dumped.txt %t/dumped2.txt
+
+## Resource directory offsets are relative to the resource table data directory,
+## which does not have to be at the start of its section.
+# RUN: llvm-objcopy --dump-resource=24/1=%t/offset.txt %t/offset.exe %t/copy.exe
+# RUN: cmp %t/dumped.txt %t/offset.txt
+
+## Updating such a resource preserves the bytes preceding the directory.
+# RUN: llvm-objcopy --update-resource=24/1=%t/updated.txt %t/offset.exe %t/updated.exe
+# RUN: llvm-objcopy --dump-resource=24/1=%t/updated.dump %t/updated.exe %t/copy.exe
+# RUN: cmp %t/updated.txt %t/updated.dump
+# RUN: llvm-readobj --file-headers --sections --hex-dump=.rsrc %t/updated.exe | \
+# RUN:   FileCheck %s --check-prefix=OFFSET
+
+# OFFSET:      ResourceTableRVA: 0x2004
+# OFFSET-NEXT: ResourceTableSize: 0x67
+# OFFSET:      Name: .rsrc
+# OFFSET-NEXT: VirtualSize: 0x6B
+# OFFSET:      Hex dump of section '.rsrc':
+# OFFSET-NEXT: 0x40002000 deadbeef
+# OFFSET:      0x40002050 0f000000 b0040000 78563412
+
+# DATA: ABCD
+
+## Dumping a resource that does not exist fails.
+# RUN: not llvm-objcopy --dump-resource=24/2=%t/out.txt %t/resources.exe %t/copy.exe 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=NO-NAME
+# RUN: not llvm-objcopy --dump-resource=25/1=%t/out.txt %t/resources.exe %t/copy.exe 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=NO-TYPE
+# RUN: not llvm-objcopy --dump-resource=24/1/1033=%t/out.txt %t/resources.exe %t/copy.exe 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=NO-LANGUAGE
+# RUN: not llvm-objcopy --dump-resource=24/1=%t/out.txt %t/noresources.exe %t/copy.exe 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=NO-RESOURCES
+
+# NO-NAME: error: '{{.*}}.exe': resource with type 24 and name 2 not found
+# NO-TYPE: error: '{{.*}}.exe': resource with type 25 and name 1 not found
+# NO-LANGUAGE: error: '{{.*}}.exe': resource with type 24, name 1 and language 1033 not found
+# NO-RESOURCES: error: '{{.*}}noresources.exe': resource with type 24 and name 1 not found
+
+## Resources can only be dumped from PE images.
+# RUN: yaml2obj %t/object.yaml -o %t/object.o
+# RUN: not llvm-objcopy --dump-resource=24/1=%t/out.txt %t/object.o %t/object2.o 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=NOT-PE
+
+# NOT-PE: error: '{{.*}}object.o': resources can only be dumped from or updated in PE images
+
+## Invalid option values.
+# RUN: not llvm-objcopy --dump-resource=24/1 %t/resources.exe %t/copy.exe 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=NO-FILE
+# RUN: not llvm-objcopy --dump-resource=24=%t/out.txt %t/resources.exe %t/copy.exe 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=BAD-FORMAT
+# RUN: not llvm-objcopy --dump-resource=24/1/x=%t/out.txt %t/resources.exe %t/copy.exe 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=BAD-LANGUAGE
+
+# NO-FILE: error: bad format for --dump-resource: missing file name
+# BAD-FORMAT: error: bad format for --dump-resource: expected <type>/<name>[/<language>]=<file>
+# BAD-LANGUAGE: error: bad format for --dump-resource: 'x' is not a valid resource language ID
+
+## An image with a resource section holding a single resource of type 24,
+## name 1 and language 0 with the data "ABCD" (at RVA 0x2058).
+#--- resources.yaml
+--- !COFF
+OptionalHeader:
+  AddressOfEntryPoint: 4096
+  ImageBase:       1073741824
+  SectionAlignment: 4096
+  FileAlignment:   512
+  MajorOperatingSystemVersion: 6
+  MinorOperatingSystemVersion: 0
+  MajorImageVersion: 0
+  MinorImageVersion: 0
+  MajorSubsystemVersion: 6
+  MinorSubsystemVersion: 0
+  Subsystem:       IMAGE_SUBSYSTEM_WINDOWS_CUI
+  DLLCharacteristics: [ ]
+  SizeOfStackReserve: 1048576
+  SizeOfStackCommit: 4096
+  SizeOfHeapReserve: 1048576
+  SizeOfHeapCommit: 4096
+  ResourceTable:
+    RelativeVirtualAddress: 8192
+    Size:            92
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [ IMAGE_FILE_EXECUTABLE_IMAGE, IMAGE_FILE_LARGE_ADDRESS_AWARE ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  4096
+    VirtualSize:     4
+    SectionData:     C3C3C3C3
+  - Name:            .rsrc
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  8192
+    VirtualSize:     92
+    SectionData:     000000000000000000000000000001001800000018000080000000000000000000000000000001000100000030000080000000000000000000000000000001000000000048000000582000000400000000000000000000004142434400000000
+symbols:         []
+...
+#--- offset.yaml
+--- !COFF
+OptionalHeader:
+  AddressOfEntryPoint: 4096
+  ImageBase:       1073741824
+  SectionAlignment: 4096
+  FileAlignment:   512
+  MajorOperatingSystemVersion: 6
+  MinorOperatingSystemVersion: 0
+  MajorImageVersion: 0
+  MinorImageVersion: 0
+  MajorSubsystemVersion: 6
+  MinorSubsystemVersion: 0
+  Subsystem:       IMAGE_SUBSYSTEM_WINDOWS_CUI
+  DLLCharacteristics: [ ]
+  SizeOfStackReserve: 1048576
+  SizeOfStackCommit: 4096
+  SizeOfHeapReserve: 1048576
+  SizeOfHeapCommit: 4096
+  ResourceTable:
+    RelativeVirtualAddress: 8196
+    Size:            92
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [ IMAGE_FILE_EXECUTABLE_IMAGE, IMAGE_FILE_LARGE_ADDRESS_AWARE ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  4096
+    VirtualSize:     4
+    SectionData:     C3C3C3C3
+  - Name:            .rsrc
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  8192
+    VirtualSize:     96
+    ## Four unrelated bytes precede the resource directory. The resource data
+    ## is at RVA 0x205c.
+    SectionData:     DEADBEEF0000000000000000000000000000010018000000180000800000000000000000000000000000010001000000300000800000000000000000000000000000010000000000480000005C20000004000000B0040000785634124142434400000000
+symbols:         []
+...
+#--- updated.txt
+0123456789ABCD
+#--- noresources.yaml
+--- !COFF
+OptionalHeader:
+  AddressOfEntryPoint: 4096
+  ImageBase:       1073741824
+  SectionAlignment: 4096
+  FileAlignment:   512
+  MajorOperatingSystemVersion: 6
+  MinorOperatingSystemVersion: 0
+  MajorImageVersion: 0
+  MinorImageVersion: 0
+  MajorSubsystemVersion: 6
+  MinorSubsystemVersion: 0
+  Subsystem:       IMAGE_SUBSYSTEM_WINDOWS_CUI
+  DLLCharacteristics: [ ]
+  SizeOfStackReserve: 1048576
+  SizeOfStackCommit: 4096
+  SizeOfHeapReserve: 1048576
+  SizeOfHeapCommit: 4096
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [ IMAGE_FILE_EXECUTABLE_IMAGE, IMAGE_FILE_LARGE_ADDRESS_AWARE ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  4096
+    VirtualSize:     4
+    SectionData:     C3C3C3C3
+symbols:         []
+...
+#--- object.yaml
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     C3C3C3C3
+symbols:         []
+...
