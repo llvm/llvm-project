@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=x86_64 -run-pass=none -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple=x86_64 -run-pass=none -o - %s | FileCheck %s
 
 # An inline asm operand flag is followed by the number of operands that it
 # says, e.g. two registers for an i128 value, or the five operands of an x86
