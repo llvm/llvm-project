@@ -99,8 +99,7 @@ bool SeedContainer::erase(Instruction *I) {
 }
 
 SeedContainer::SeedContainer(ScalarEvolution &SE) : SE(SE) {
-  const VectorizeOptions &Opts =
-      SE.getContext().getLibraryOptions().get<VectorizeOptions>();
+  const VectorizeOptions &Opts = getVectorizeOptions(SE.getContext());
   BundleSizeLimit = Opts.sbvec_seed_bundle_size_limit;
 }
 
@@ -179,8 +178,7 @@ SeedCollector::SeedCollector(BasicBlock *BB, ScalarEvolution &SE,
   });
 
   // Actually collect the seeds.
-  const VectorizeOptions &Opts =
-      Ctx.getLibraryOptions().get<VectorizeOptions>();
+  const VectorizeOptions &Opts = getVectorizeOptions(Ctx);
   for (auto &I : *BB) {
     if (StoreInst *SI = dyn_cast<StoreInst>(&I))
       if (CollectStores && isValidMemSeed(SI))

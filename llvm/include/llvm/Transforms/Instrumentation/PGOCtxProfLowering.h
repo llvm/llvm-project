@@ -25,7 +25,7 @@ public:
   explicit PGOCtxProfLoweringPass() = default;
   // True if contextual instrumentation is enabled.
   LLVM_ABI static bool
-  isCtxIRPGOInstrEnabled(const cl::LibraryOptionsContext *LibraryOptions);
+  isCtxIRPGOInstrEnabled(const cl::LibraryOptionsContext &LibraryOptions);
 
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 };

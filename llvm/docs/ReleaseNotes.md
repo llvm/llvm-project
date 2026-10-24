@@ -177,6 +177,9 @@ Makes programs 10x faster by doing Special New Thing.
 * Removed `TargetOptions::FloatABIType`. The soft float ABI should be
   controlled by setting the `"float-abi"` module flag.
 
+* Removed `TargetOptions::ExceptionModel`. The exception model should
+  be controlled by setting the `"exception-model"` module flag.
+
 * Removed `TargetOptions::EABIVersion` and the `llc`/`opt` `-meabi` flag. The
   GNU-vs-EABI distinction is now derived entirely from the target triple's
   environment (e.g. `arm-none-gnueabi` vs `arm-none-eabi`).
@@ -228,6 +231,12 @@ Makes programs 10x faster by doing Special New Thing.
   dependency, its build-tree `MLIRConfig.cmake` now reports the package as not
   found with an explanatory message instead of succeeding with no targets;
   such a build never provided a usable MLIR SDK.
+
+* When Clang is in the `LLVM_ENABLE_PROJECTS` list, it now compiles the
+  experimental MLIR-Generator ClangIR by default. This functionality can
+  increase the compile time and binary size of Clang significantly.  This can be
+  disabled with `CLANG_ENABLE_CIR=OFF`, which wil disable the `-fclangir` flag
+  in Clang.
 
 * LLVM's documentation has largely been rewritten from [reStructuredText] to
   Markdown, and our Sphinx documentation build now has a hard dependency on the
@@ -304,6 +313,12 @@ Makes programs 10x faster by doing Special New Thing.
   still emitting the hard-float ABI attribute tag.
 
 ### Changes to the AVR Backend
+
+### Changes to the BPF Backend
+
+* Added `-mcpu=v5`, which includes the v4 instruction set and enables unsigned
+  and signed high-half multiply instructions (`UHMUL` and `SHMUL`). Use
+  `-disable-hmul` to disable their generation.
 
 ### Changes to the DirectX Backend
 
@@ -384,6 +399,8 @@ Makes programs 10x faster by doing Special New Thing.
   point, instruction, or block, respectively. The context is implied by the
   insertion point.
 
+* `builder` now takes an `llmodule` argument, instead of `llcontext`.
+
 ### Changes to the Python bindings
 
 ### Changes to the C API
@@ -406,6 +423,12 @@ Makes programs 10x faster by doing Special New Thing.
 * Added `LLVMIsDSOLocal()` and `LLVMSetDSOLocal()` to query and set the
   `dso_local` runtime preemption specifier on global values (global variables,
   functions and aliases).
+
+* Deprecated `LLVMCreateBuilderInContext()` in favor of
+  `LLVMCreateBuilderForModule()`, which takes a `LLVMModuleRef` instead of
+  `LLVMContextRef`. When using the old API, an insertion point (connected to a
+  module) must be set using a `LLVMPositionBuilder*()` API before building any
+  instructions, otherwise an error will be generated.
 
 ### Changes to the CodeGen infrastructure
 

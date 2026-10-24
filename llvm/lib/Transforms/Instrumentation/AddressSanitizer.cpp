@@ -354,9 +354,8 @@ void llvm::getAddressSanitizerParams(const LLVMContext &Ctx,
                                      const Triple &TargetTriple, int LongSize,
                                      bool IsKasan, uint64_t *ShadowBase,
                                      int *MappingScale, bool *OrShadowOffset) {
-  auto Mapping =
-      getShadowMapping(Ctx.getLibraryOptions().get<InstrumentationOptions>(),
-                       TargetTriple, LongSize, IsKasan);
+  auto Mapping = getShadowMapping(getInstrumentationOptions(Ctx), TargetTriple,
+                                  LongSize, IsKasan);
   *ShadowBase = Mapping.Offset;
   *MappingScale = Mapping.Scale;
   *OrShadowOffset = Mapping.OrShadowOffset;
@@ -1059,8 +1058,7 @@ PreservedAnalyses AddressSanitizerPass::run(Module &M,
   if (checkIfAlreadyInstrumented(M, "nosanitize_address"))
     return PreservedAnalyses::all();
 
-  const InstrumentationOptions &Opts =
-      M.getContext().getLibraryOptions().get<InstrumentationOptions>();
+  const InstrumentationOptions &Opts = getInstrumentationOptions(M);
   ModuleAddressSanitizer ModuleSanitizer(Opts, M, Options.InsertVersionCheck,
                                          Options.CompileKernel, Options.Recover,
                                          UseGlobalGC, UseOdrIndicator,

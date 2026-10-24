@@ -1,13 +1,12 @@
 ; RUN: opt -force-target-supports-scalable-vectors -scalable-vectorization=always -passes=loop-vectorize -S %s | FileCheck %s
 ;
-; Clang lowers "#pragma clang loop vectorize_width(4)" and
-; "interleave_count(1)" to width 4, scalable.disable, and interleave count 1.
-; -scalable-vectorization=always overrides scalable.disable and forces vectorization with VF=vscale x 4.
+; vectorize.width and vectorize.scalable.disable metadata are used to force a fixed VF=4.
+; -scalable-vectorization=always must not override scalable.disable and force a scalable VF.
 ;
 ; CHECK-LABEL: define void @repro(
 ; CHECK: vector.body:
-; CHECK: load <vscale x 4 x i8>
-; CHECK: store <vscale x 4 x i8>
+; CHECK: load <4 x i8>
+; CHECK: store <4 x i8>
 
 define void @repro(ptr %out, ptr %in, i32 %tc) {
 entry:
