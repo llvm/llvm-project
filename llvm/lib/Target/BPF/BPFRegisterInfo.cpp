@@ -54,6 +54,7 @@ BitVector BPFRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   BitVector Reserved(getNumRegs());
   markSuperRegs(Reserved, BPF::W10); // [W|R]10 is read only frame pointer
   markSuperRegs(Reserved, BPF::W11); // [W|R]11 is pseudo stack pointer
+  markSuperRegs(Reserved, BPF::W12); // [W|R]12 is the stack pointer in arena
   return Reserved;
 }
 
@@ -98,11 +99,18 @@ bool BPFRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   Register FrameReg = getFrameRegister(MF);
   int FrameIndex = MI.getOperand(i).getIndex();
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
+  // The object is in the stack in arena.
+  bool Arena =
+      MF.getFrameInfo().getStackID(FrameIndex) == TargetStackID::BPFArena;
+
+  if (Arena)
+    FrameReg = BPF::R12;
 
   if (MI.getOpcode() == BPF::MOV_rr) {
     int Offset = MF.getFrameInfo().getObjectOffset(FrameIndex);
 
-    WarnSize(Offset, MF, DL, MBB);
+    if (!Arena)
+      WarnSize(Offset, MF, DL, MBB);
     MI.getOperand(i).ChangeToRegister(FrameReg, false);
     Register reg = MI.getOperand(i - 1).getReg();
     BuildMI(MBB, ++II, DL, TII.get(BPF::ADD_ri), reg)
@@ -117,7 +125,8 @@ bool BPFRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   if (!isInt<32>(Offset))
     llvm_unreachable("bug in frame offset");
 
-  WarnSize(Offset, MF, DL, MBB);
+  if (!Arena)
+    WarnSize(Offset, MF, DL, MBB);
 
   if (MI.getOpcode() == BPF::FI_ri) {
     // architecture does not really support FI_ri, replace it with
