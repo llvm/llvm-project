@@ -453,6 +453,7 @@ private:
   bool
   propagateEquality(Value *LHS, Value *RHS,
                     const std::variant<BasicBlockEdge, Instruction *> &Root);
+  bool foldOutsideConstExpr(Value *LHS, Value *RHS, const BasicBlockEdge &Root);
   bool processFoldableCondBr(CondBrInst *BI);
   void addDeadBlock(BasicBlock *BB);
   void assignValNumForDeadCode();
@@ -3425,6 +3426,197 @@ void GVNPassImpl::assignBlockRPONumber(Function &F) {
   InvalidBlockRPONumbers = false;
 }
 
+/// Casts, binary operators, and unary operators are the expressions this fold
+/// rebuilds with substituted operands. PHIs are excluded, so the operand
+/// graph is acyclic.
+static bool isFoldableOutsideExpr(const Value *V) {
+  return isa<CastInst, BinaryOperator, UnaryOperator>(V);
+}
+
+/// Try to constant-fold \p Expr under the substitutions recorded in
+/// \p SimplifiedExprs, extending the map with a result for every expression
+/// visited on the way: either the constant it folds to, or the expression
+/// itself when it does not fold. Never returns null, so a caller can test for
+/// success with \p Expr itself.
+static Value *trySimplifyExpr(Instruction &Expr,
+                              DenseMap<Value *, Value *> &SimplifiedExprs,
+                              const SimplifyQuery &SQ) {
+  if (Value *Cached = SimplifiedExprs.lookup(&Expr))
+    return Cached;
+
+  if (!isFoldableOutsideExpr(&Expr)) {
+    SimplifiedExprs[&Expr] = &Expr;
+    return &Expr;
+  }
+
+  // Post-order walk of the operand DAG. Push every supported operand that
+  // does not yet have a map entry; simplify this instruction once none
+  // remain. A shared operand may be pushed once per incoming edge — the map
+  // check drops the extras. Because the new frames sit above this one, a
+  // cross-edge (C uses sibling B, and B is not simplified yet) finishes B
+  // before C.
+  SmallVector<Instruction *, 8> Stack;
+  Stack.push_back(&Expr);
+
+  while (!Stack.empty()) {
+    Instruction *I = Stack.back();
+    if (SimplifiedExprs.contains(I)) {
+      Stack.pop_back();
+      continue;
+    }
+
+    bool PushedOperand = false;
+    for (Value *Op : I->operands()) {
+      if (SimplifiedExprs.contains(Op))
+        continue;
+      auto *OpI = dyn_cast<Instruction>(Op);
+      if (!OpI || !isFoldableOutsideExpr(OpI))
+        continue;
+      Stack.push_back(OpI);
+      PushedOperand = true;
+    }
+    if (PushedOperand)
+      continue;
+
+    // Operands with no entry in the map stand for themselves.
+    SmallVector<Value *, 4> NewOps;
+    for (Value *Op : I->operands()) {
+      Value *NewOp = SimplifiedExprs.lookup(Op);
+      NewOps.push_back(NewOp ? NewOp : Op);
+    }
+
+    // InstSimplify never creates instructions, so there is nothing to clean up
+    // when an expression does not fold.
+    Value *Folded = simplifyInstructionWithOperands(I, NewOps, SQ);
+    // Only a constant is usable at the eventual use: any other value would
+    // still have to dominate it.
+    SimplifiedExprs[I] = (Folded && isa<Constant>(Folded)) ? Folded : I;
+    Stack.pop_back();
+  }
+
+  return SimplifiedExprs[&Expr];
+}
+
+/// Given that 'LHS' and 'RHS' are known to be equal in the region dominated
+/// by 'Root'.
+/// For each expression defined outside the dominated region, if substituting
+/// 'RHS' for 'LHS' simplifies the expression to a constant, replace its uses
+/// in the dominated region with that constant. Returns whether a change was
+/// made.
+///
+/// For example, '%x' and 5 are equal on the edge into if.true:
+///
+///   %a = add i32 %x, 1
+///   %c = icmp eq i32 %x, 5
+///   br i1 %c, label %if.true, label %if.false
+/// if.true:
+///   ret i32 %a ; replaced with 6
+///
+/// %a stays intact because it is defined outside if.true.
+bool GVNPassImpl::foldOutsideConstExpr(Value *LHS, Value *RHS,
+                                       const BasicBlockEdge &Root) {
+  if (!Opts->enable_fold_outside_const_expr)
+    return false;
+
+  if (!LHS || !RHS || !DT)
+    return false;
+
+  // Restrict to integer type for now.
+  if (!LHS->getType()->isIntegerTy() || !RHS->getType()->isIntegerTy())
+    return false;
+
+  // Exactly one of the two should be a constant.
+  if (isa<Constant>(LHS) == isa<Constant>(RHS))
+    return false;
+
+  // Prefer RHS to be the constant.
+  if (!isa<Constant>(RHS))
+    std::swap(LHS, RHS);
+
+  if (!isOnlyReachableViaThisEdge(Root, DT))
+    return false;
+
+  // Only an expression that transitively uses LHS can fold under this
+  // substitution, so walk that user DAG instead of the dominated blocks.
+  // propagateEquality runs on every single-predecessor edge, and each such
+  // edge's region is a suffix of the function. Scanning those suffixes
+  // revisits the same instructions once per edge (quadratic in function
+  // size) even when the equality cannot reach them.
+  const BasicBlock *Region = Root.getEnd();
+  SmallVector<Instruction *, 8> OutsideExprs;
+  SmallVector<Instruction *, 16> Work;
+  SmallPtrSet<Instruction *, 16> Seen;
+
+  auto enqueue = [&](Instruction *I) {
+    if (!isFoldableOutsideExpr(I))
+      return;
+    // Defined inside the region: propagateEquality rewrites direct uses of
+    // LHS there, and an outside expression cannot use an inside one.
+    if (DT->dominates(Region, I->getParent()))
+      return;
+    if (!Seen.insert(I).second)
+      return;
+    OutsideExprs.push_back(I);
+    Work.push_back(I);
+  };
+
+  for (User *U : LHS->users())
+    if (auto *I = dyn_cast<Instruction>(U))
+      enqueue(I);
+  while (!Work.empty()) {
+    Instruction *I = Work.pop_back_val();
+    for (User *U : I->users())
+      if (auto *UI = dyn_cast<Instruction>(U))
+        enqueue(UI);
+  }
+
+  if (OutsideExprs.empty())
+    return false;
+
+  // The equality holds throughout the dominated region, so a single
+  // substitution map and simplification context serve all of its uses. No
+  // context instruction is passed, so a fold can never depend on where in the
+  // region it was discovered. Operands are rewritten, not the expressions
+  // themselves, so keys in SimplifiedExprs stay alive for the whole walk.
+  DenseMap<Value *, Value *> SimplifiedExprs;
+  SimplifiedExprs[LHS] = RHS;
+  SimplifyQuery SQ(Region->getParent()->getDataLayout(), TLI, DT, AC);
+
+  bool Changed = false;
+  for (Instruction *Expr : OutsideExprs) {
+    bool Tried = false;
+    Value *Folded = nullptr;
+    for (Use &U : make_early_inc_range(Expr->uses())) {
+      auto *UserI = dyn_cast<Instruction>(U.getUser());
+      if (!UserI || isa<PHINode>(UserI))
+        continue;
+      if (auto *II = dyn_cast<IntrinsicInst>(UserI))
+        if (II->getIntrinsicID() == Intrinsic::fake_use)
+          continue;
+      if (!DT->dominates(Region, UserI->getParent()))
+        continue;
+
+      if (!Tried) {
+        Folded = trySimplifyExpr(*Expr, SimplifiedExprs, SQ);
+        Tried = true;
+        if (Folded == Expr)
+          break;
+      }
+
+      LLVM_DEBUG(dbgs() << "ConstPropExpr: From: " << *UserI);
+      U.set(Folded);
+      LLVM_DEBUG(dbgs() << "\nConstPropExpr: To: " << *UserI << "\n");
+      ++NumGVNEqProp;
+      Changed = true;
+    }
+  }
+
+  if (Changed)
+    LLVM_DEBUG(dbgs() << "ConstPropExpr: With " << *LHS << " == " << *RHS
+                      << "\n");
+  return Changed;
+}
+
 /// The given values are known to be equal in every use
 /// dominated by 'Root'.  Exploit this, for example by replacing 'LHS' with
 /// 'RHS' everywhere in the scope.  Returns whether a change was made.
@@ -3488,6 +3680,13 @@ bool GVNPassImpl::propagateEquality(
 
     if (!Visited.insert({LHS, RHS}).second)
       continue;
+
+    // One fold per equality. DominatedBlocks is non-empty for an edge only
+    // when that edge is the successor's only predecessor, which is exactly
+    // when the equality holds throughout the region.
+    if (const BasicBlockEdge *Edge = std::get_if<BasicBlockEdge>(&Root))
+      if (!DominatedBlocks.empty())
+        Changed |= foldOutsideConstExpr(LHS, RHS, *Edge);
 
     // If value numbering later sees that an instruction in the scope is equal
     // to 'LHS' then ensure it will be turned into 'RHS'.  In order to preserve
