@@ -259,12 +259,15 @@ static void addTrivialDefaultFunctionAttributes(
 
     // TODO(cir): a number of other attribute 1-offs based on codegen/lang opts
     // should be done here: less-recise-fpmad null-pointer-is-valid
-    // no-trapping-math
     // various inf/nan/nsz/etc work here.
-    //
-    // TODO(cir): set stack-protector buffer size attribute (sorted oddly in
-    // classic compiler inside of the above region, but should be done on its
-    // own).
+    if (langOpts.getDefaultExceptionMode() == LangOptions::FPE_Ignore)
+      attrs.set(cir::CIRDialect::getNoTrappingMathAttrName(),
+                mlir::UnitAttr::get(mlirCtx));
+
+    attrs.set(cir::CIRDialect::getStackProtectorBufferSizeAttrName(),
+              mlir::IntegerAttr::get(mlir::IntegerType::get(mlirCtx, 32),
+                                     codeGenOpts.SSPBufferSize));
+
     // TODO(cir): other attributes here:
     // reciprocal estimates, prefer-vector-width, stackrealign, backchain,
     // split-stack, speculative-load-hardening.

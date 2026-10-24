@@ -212,7 +212,7 @@ _BitInt(128) get_bi(void) { return l128[1].bi; }
 // LLVM: load i128, ptr getelementptr inbounds nuw (i8, ptr @l128, i64 32), align 8
 
 _BitInt(128) get_bi2(void) { return arrMem[1].bi[1]; }
-// CIR-LABEL: cir.func no_inline dso_local @get_bi2() -> !s128i_bitint attributes {"cir.target-features" = "+cx8,+mmx,+sse,+sse2,+x87", nothrow, optnone} {
+// CIR-LABEL: cir.func no_inline dso_local @get_bi2() -> !s128i_bitint attributes {"cir.target-features" = "+cx8,+mmx,+sse,+sse2,+x87", no_trapping_math, nothrow, optnone, stack_protector_buffer_size = 8 : i32} {
 // CIR-NEXT: %[[RET_ALLOC:.*]] = cir.alloca "__retval" align(8) : !cir.ptr<!s128i_bitint>
 // CIR-NEXT: %[[GET_GLOB:.*]] = cir.get_global @arrMem : !cir.ptr<!cir.array<!rec_ArrMem x 2>>
 // CIR-NEXT: %[[ONE_2:.*]] = cir.const #cir.int<1> : !s64i

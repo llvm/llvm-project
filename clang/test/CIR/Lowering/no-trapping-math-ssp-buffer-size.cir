@@ -1,0 +1,33 @@
+// RUN: cir-opt %s -cir-to-llvm -o - | FileCheck %s -check-prefix=MLIR
+// RUN: cir-translate %s -cir-to-llvmir --disable-cc-lowering | FileCheck %s -check-prefix=LLVM
+
+// The `no_trapping_math` and `stack_protector_buffer_size` CIR function
+// attributes should be lowered to `llvm.func` `passthrough` entries, and then
+// translated to the "no-trapping-math" and "stack-protector-buffer-size" LLVM
+// IR string attributes.
+
+module {
+  cir.func @both_fn() attributes {no_trapping_math, stack_protector_buffer_size = 16 : i32} {
+    cir.return
+  }
+
+  cir.func private @decl_fn() attributes {no_trapping_math, stack_protector_buffer_size = 8 : i32}
+
+  cir.func @plain_fn() {
+    cir.return
+  }
+}
+
+// MLIR-LABEL: llvm.func @both_fn()
+// MLIR-SAME:    passthrough = {{\[}}["no-trapping-math", "true"], ["stack-protector-buffer-size", "16"]]
+// MLIR-LABEL: llvm.func @decl_fn()
+// MLIR-SAME:    passthrough = {{\[}}["no-trapping-math", "true"], ["stack-protector-buffer-size", "8"]]
+// MLIR-LABEL: llvm.func @plain_fn()
+// MLIR-NOT:     passthrough
+
+// LLVM:       define void @both_fn() #[[BOTH:[0-9]+]]
+// LLVM:       declare void @decl_fn() #[[DECL:[0-9]+]]
+// LLVM-LABEL: define void @plain_fn()
+// LLVM-NOT:     #
+// LLVM:       attributes #[[BOTH]] = { "no-trapping-math"="true" "stack-protector-buffer-size"="16" }
+// LLVM:       attributes #[[DECL]] = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
