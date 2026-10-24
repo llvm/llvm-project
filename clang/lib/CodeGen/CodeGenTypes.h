@@ -100,7 +100,7 @@ class CodeGenTypes {
       unsigned X86ABIAVXLevel, const FunctionType::ExtInfo &info,
       ArrayRef<FunctionProtoType::ExtParameterInfo> paramInfos,
       RequiredArgs required, CanQualType resultType,
-      ArrayRef<CanQualType> argTypes);
+      ArrayRef<CanQualType> argTypes, ArrayRef<unsigned> gridConstantArgs = {});
 
 public:
   CodeGenTypes(CodeGenModule &cgm);
@@ -294,7 +294,8 @@ public:
       CanQualType returnType, FnInfoOpts opts, ArrayRef<CanQualType> argTypes,
       FunctionType::ExtInfo info,
       ArrayRef<FunctionProtoType::ExtParameterInfo> paramInfos,
-      RequiredArgs args, const FunctionDecl *ABIInfoFD);
+      RequiredArgs args, const FunctionDecl *ABIInfoFD,
+      ArrayRef<unsigned> gridConstantArgs = {});
 
   /// Compute a new LLVM record layout object for the given record.
   std::unique_ptr<CGRecordLayout> ComputeRecordLayout(const RecordDecl *D,
