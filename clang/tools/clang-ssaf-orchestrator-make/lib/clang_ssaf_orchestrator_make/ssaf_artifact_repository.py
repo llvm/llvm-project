@@ -14,6 +14,7 @@ class SSAFArtifactKind(enum.Enum):
     EDITS = ".edits.yaml"
     CONFLICTS = ".conflicts.sarif"
     REPORT = ".report.sarif"
+    CONFLICT_REPORT = ".conflict-report.sarif"
 
 
 class SSAFArtifactId:
@@ -54,6 +55,11 @@ class SSAFArtifactRepository:
     def has_artifact(self, ssaf_artifact_id):
         return os.path.exists(self.get_path_for_artifact(ssaf_artifact_id))
 
+    def get_path_if_present(self, ssaf_artifact_id):
+        if not self.has_artifact(ssaf_artifact_id):
+            return None
+        return self.get_path_for_artifact(ssaf_artifact_id)
+
     def _all_paths_of_kind(self, ssaf_artifact_kind):
         return find_with_suffix(self.ssaf_artifact_dir, ssaf_artifact_kind.value)
 
@@ -68,11 +74,3 @@ class SSAFArtifactRepository:
 
     def count_summaries(self):
         return len(self._all_paths_of_kind(SSAFArtifactKind.SUMMARY))
-
-    def get_conflicts(self):
-        found = []
-        for path in self._all_paths_of_kind(SSAFArtifactKind.CONFLICTS):
-            document = read_json(path)
-            if document and any(run.get("results") for run in document.get("runs", [])):
-                found.append(path)
-        return sorted(found)
