@@ -178,6 +178,14 @@ void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     Features.push_back("+unaligned-vector-mem");
   }
 
+  if (const Arg *A =
+          Args.getLastArg(options::OPT_mvector_index_load_overlap,
+                          options::OPT_mno_vector_index_load_overlap)) {
+    if (A->getOption().matches(options::OPT_mno_vector_index_load_overlap))
+      Features.push_back("+no-vector-index-load-overlap");
+    else
+      Features.push_back("-no-vector-index-load-overlap");
+  }
   if (Triple.isRISCV32()) {
     // Handle `-mzilsd-word-align` and `-mzilsd-strict-align` on rv32. These
     // interact with the scalar alignment options - if unaligned scalar memory
