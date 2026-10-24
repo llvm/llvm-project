@@ -638,7 +638,7 @@ body:             |
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GCN-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GCN-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
-    ; GCN-NEXT: [[COPY4:%[0-9]+]]:vreg_64 = COPY $vgpr0
+    ; GCN-NEXT: [[COPY4:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
     ; GCN-NEXT: [[BUFFER_LOAD_DWORDX2_BOTHEN:%[0-9]+]]:vreg_64 = BUFFER_LOAD_DWORDX2_BOTHEN [[COPY4]], [[REG_SEQUENCE]], 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 4)
     ; GCN-NEXT: [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_BOTHEN]].sub0
@@ -647,7 +647,7 @@ body:             |
     %1:sgpr_32 = COPY $sgpr1
     %2:sgpr_32 = COPY $sgpr2
     %3:sgpr_32 = COPY $sgpr3
-    %4:vreg_64 = COPY $vgpr0
+    %4:vreg_64 = COPY $vgpr0_vgpr1
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vgpr_32 = BUFFER_LOAD_DWORD_BOTHEN %4, %5:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     %8:vgpr_32 = BUFFER_LOAD_DWORD_BOTHEN %4, %5:sgpr_128, 0, 4, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -662,7 +662,7 @@ body:             |
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GCN-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GCN-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
-    ; GCN-NEXT: [[COPY4:%[0-9]+]]:vreg_64 = COPY $vgpr0
+    ; GCN-NEXT: [[COPY4:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
     ; GCN-NEXT: [[BUFFER_LOAD_DWORDX3_BOTHEN:%[0-9]+]]:vreg_96 = BUFFER_LOAD_DWORDX3_BOTHEN [[COPY4]], [[REG_SEQUENCE]], 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 4)
     ; GCN-NEXT: [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX3_BOTHEN]].sub0
@@ -671,7 +671,7 @@ body:             |
     %1:sgpr_32 = COPY $sgpr1
     %2:sgpr_32 = COPY $sgpr2
     %3:sgpr_32 = COPY $sgpr3
-    %4:vreg_64 = COPY $vgpr0
+    %4:vreg_64 = COPY $vgpr0_vgpr1
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vgpr_32 = BUFFER_LOAD_DWORD_BOTHEN %4, %5:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     %8:vreg_64 = BUFFER_LOAD_DWORDX2_BOTHEN %4, %5:sgpr_128, 0, 4, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -686,7 +686,7 @@ body:             |
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GCN-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GCN-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
-    ; GCN-NEXT: [[COPY4:%[0-9]+]]:vreg_64 = COPY $vgpr0
+    ; GCN-NEXT: [[COPY4:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
     ; GCN-NEXT: [[BUFFER_LOAD_DWORDX4_BOTHEN:%[0-9]+]]:vreg_128 = BUFFER_LOAD_DWORDX4_BOTHEN [[COPY4]], [[REG_SEQUENCE]], 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 4)
     ; GCN-NEXT: [[COPY5:%[0-9]+]]:vreg_64 = COPY [[BUFFER_LOAD_DWORDX4_BOTHEN]].sub0_sub1
@@ -695,7 +695,7 @@ body:             |
     %1:sgpr_32 = COPY $sgpr1
     %2:sgpr_32 = COPY $sgpr2
     %3:sgpr_32 = COPY $sgpr3
-    %4:vreg_64 = COPY $vgpr0
+    %4:vreg_64 = COPY $vgpr0_vgpr1
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vreg_64 = BUFFER_LOAD_DWORDX2_BOTHEN %4, %5:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     %8:vreg_64 = BUFFER_LOAD_DWORDX2_BOTHEN %4, %5:sgpr_128, 0, 8, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -710,7 +710,7 @@ body:             |
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GCN-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GCN-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
-    ; GCN-NEXT: [[COPY4:%[0-9]+]]:vreg_64 = COPY $vgpr0
+    ; GCN-NEXT: [[COPY4:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
     ; GCN-NEXT: [[BUFFER_LOAD_DWORDX4_BOTHEN:%[0-9]+]]:vreg_128 = BUFFER_LOAD_DWORDX4_BOTHEN [[COPY4]], [[REG_SEQUENCE]], 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 4)
     ; GCN-NEXT: [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX4_BOTHEN]].sub0
@@ -719,7 +719,7 @@ body:             |
     %1:sgpr_32 = COPY $sgpr1
     %2:sgpr_32 = COPY $sgpr2
     %3:sgpr_32 = COPY $sgpr3
-    %4:vreg_64 = COPY $vgpr0
+    %4:vreg_64 = COPY $vgpr0_vgpr1
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vgpr_32 = BUFFER_LOAD_DWORD_BOTHEN %4, %5:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     %8:vreg_96 = BUFFER_LOAD_DWORDX3_BOTHEN %4, %5:sgpr_128, 0, 4, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -883,7 +883,7 @@ body:             |
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GCN-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GCN-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
-    ; GCN-NEXT: [[COPY4:%[0-9]+]]:vreg_64 = COPY $vgpr0
+    ; GCN-NEXT: [[COPY4:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
     ; GCN-NEXT: [[BUFFER_LOAD_DWORDX2_BOTHEN_exact:%[0-9]+]]:vreg_64 = BUFFER_LOAD_DWORDX2_BOTHEN_exact [[COPY4]], [[REG_SEQUENCE]], 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 4)
     ; GCN-NEXT: [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_BOTHEN_exact]].sub0
@@ -892,7 +892,7 @@ body:             |
     %1:sgpr_32 = COPY $sgpr1
     %2:sgpr_32 = COPY $sgpr2
     %3:sgpr_32 = COPY $sgpr3
-    %4:vreg_64 = COPY $vgpr0
+    %4:vreg_64 = COPY $vgpr0_vgpr1
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vgpr_32 = BUFFER_LOAD_DWORD_BOTHEN_exact %4, %5:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     %8:vgpr_32 = BUFFER_LOAD_DWORD_BOTHEN_exact %4, %5:sgpr_128, 0, 4, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -907,7 +907,7 @@ body:             |
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GCN-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GCN-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
-    ; GCN-NEXT: [[COPY4:%[0-9]+]]:vreg_64 = COPY $vgpr0
+    ; GCN-NEXT: [[COPY4:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
     ; GCN-NEXT: [[BUFFER_LOAD_DWORDX3_BOTHEN_exact:%[0-9]+]]:vreg_96 = BUFFER_LOAD_DWORDX3_BOTHEN_exact [[COPY4]], [[REG_SEQUENCE]], 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 4)
     ; GCN-NEXT: [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX3_BOTHEN_exact]].sub0
@@ -916,7 +916,7 @@ body:             |
     %1:sgpr_32 = COPY $sgpr1
     %2:sgpr_32 = COPY $sgpr2
     %3:sgpr_32 = COPY $sgpr3
-    %4:vreg_64 = COPY $vgpr0
+    %4:vreg_64 = COPY $vgpr0_vgpr1
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vgpr_32 = BUFFER_LOAD_DWORD_BOTHEN_exact %4, %5:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     %8:vreg_64 = BUFFER_LOAD_DWORDX2_BOTHEN_exact %4, %5:sgpr_128, 0, 4, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -932,7 +932,7 @@ body:             |
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GCN-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GCN-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
-    ; GCN-NEXT: [[COPY4:%[0-9]+]]:vreg_64 = COPY $vgpr0
+    ; GCN-NEXT: [[COPY4:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
     ; GCN-NEXT: [[BUFFER_LOAD_DWORDX4_BOTHEN_exact:%[0-9]+]]:vreg_128 = BUFFER_LOAD_DWORDX4_BOTHEN_exact [[COPY4]], [[REG_SEQUENCE]], 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 4)
     ; GCN-NEXT: [[COPY5:%[0-9]+]]:vreg_64 = COPY [[BUFFER_LOAD_DWORDX4_BOTHEN_exact]].sub0_sub1
@@ -941,7 +941,7 @@ body:             |
     %1:sgpr_32 = COPY $sgpr1
     %2:sgpr_32 = COPY $sgpr2
     %3:sgpr_32 = COPY $sgpr3
-    %4:vreg_64 = COPY $vgpr0
+    %4:vreg_64 = COPY $vgpr0_vgpr1
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vreg_64 = BUFFER_LOAD_DWORDX2_BOTHEN_exact %4, %5:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     %8:vreg_64 = BUFFER_LOAD_DWORDX2_BOTHEN_exact %4, %5:sgpr_128, 0, 8, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -957,7 +957,7 @@ body:             |
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GCN-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GCN-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
-    ; GCN-NEXT: [[COPY4:%[0-9]+]]:vreg_64 = COPY $vgpr0
+    ; GCN-NEXT: [[COPY4:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
     ; GCN-NEXT: [[BUFFER_LOAD_DWORDX4_BOTHEN_exact:%[0-9]+]]:vreg_128 = BUFFER_LOAD_DWORDX4_BOTHEN_exact [[COPY4]], [[REG_SEQUENCE]], 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 4)
     ; GCN-NEXT: [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX4_BOTHEN_exact]].sub0
@@ -966,7 +966,7 @@ body:             |
     %1:sgpr_32 = COPY $sgpr1
     %2:sgpr_32 = COPY $sgpr2
     %3:sgpr_32 = COPY $sgpr3
-    %4:vreg_64 = COPY $vgpr0
+    %4:vreg_64 = COPY $vgpr0_vgpr1
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vgpr_32 = BUFFER_LOAD_DWORD_BOTHEN_exact %4, %5:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     %8:vreg_96 = BUFFER_LOAD_DWORDX3_BOTHEN_exact %4, %5:sgpr_128, 0, 4, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -981,7 +981,7 @@ body:             |
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GCN-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GCN-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
-    ; GCN-NEXT: [[COPY4:%[0-9]+]]:vreg_64 = COPY $vgpr0
+    ; GCN-NEXT: [[COPY4:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
     ; GCN-NEXT: [[BUFFER_LOAD_DWORDX3_BOTHEN_exact:%[0-9]+]]:vreg_96 = BUFFER_LOAD_DWORDX3_BOTHEN_exact [[COPY4]], [[REG_SEQUENCE]], 0, 4, 0, 0, implicit $exec :: (dereferenceable load (s96), align 1, addrspace 4)
     ; GCN-NEXT: [[COPY5:%[0-9]+]]:vreg_64 = COPY [[BUFFER_LOAD_DWORDX3_BOTHEN_exact]].sub0_sub1
@@ -992,7 +992,7 @@ body:             |
     %1:sgpr_32 = COPY $sgpr1
     %2:sgpr_32 = COPY $sgpr2
     %3:sgpr_32 = COPY $sgpr3
-    %4:vreg_64 = COPY $vgpr0
+    %4:vreg_64 = COPY $vgpr0_vgpr1
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vgpr_32 = BUFFER_LOAD_DWORD_BOTHEN_exact %4, %5:sgpr_128, 0, 4, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     %8:vgpr_32 = BUFFER_LOAD_DWORD_BOTHEN_exact %4, %5:sgpr_128, 0, 8, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -1008,7 +1008,7 @@ body:             |
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GCN-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GCN-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
-    ; GCN-NEXT: [[COPY4:%[0-9]+]]:vreg_64 = COPY $vgpr0
+    ; GCN-NEXT: [[COPY4:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
     ; GCN-NEXT: [[BUFFER_LOAD_DWORD_BOTHEN_exact:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_BOTHEN_exact [[COPY4]], [[REG_SEQUENCE]], 0, 4, 0, 1, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     ; GCN-NEXT: [[BUFFER_LOAD_DWORDX2_BOTHEN_exact:%[0-9]+]]:vreg_64 = BUFFER_LOAD_DWORDX2_BOTHEN_exact [[COPY4]], [[REG_SEQUENCE]], 0, 8, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 4)
@@ -1018,7 +1018,7 @@ body:             |
     %1:sgpr_32 = COPY $sgpr1
     %2:sgpr_32 = COPY $sgpr2
     %3:sgpr_32 = COPY $sgpr3
-    %4:vreg_64 = COPY $vgpr0
+    %4:vreg_64 = COPY $vgpr0_vgpr1
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vgpr_32 = BUFFER_LOAD_DWORD_BOTHEN_exact %4, %5:sgpr_128, 0, 4, 0, 1, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     %8:vgpr_32 = BUFFER_LOAD_DWORD_BOTHEN_exact %4, %5:sgpr_128, 0, 8, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -1034,8 +1034,8 @@ body:             |
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GCN-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GCN-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
-    ; GCN-NEXT: [[COPY4:%[0-9]+]]:vreg_64 = COPY $vgpr0
-    ; GCN-NEXT: [[COPY5:%[0-9]+]]:vreg_64 = COPY $vgpr1
+    ; GCN-NEXT: [[COPY4:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; GCN-NEXT: [[COPY5:%[0-9]+]]:vreg_64 = COPY $vgpr1_vgpr2
     ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
     ; GCN-NEXT: [[BUFFER_LOAD_DWORDX2_BOTHEN_exact:%[0-9]+]]:vreg_64 = BUFFER_LOAD_DWORDX2_BOTHEN_exact [[COPY4]], [[REG_SEQUENCE]], 0, 4, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     ; GCN-NEXT: [[BUFFER_LOAD_DWORDX2_BOTHEN_exact1:%[0-9]+]]:vreg_64 = BUFFER_LOAD_DWORDX2_BOTHEN_exact [[COPY5]], [[REG_SEQUENCE]], 0, 12, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -1043,8 +1043,8 @@ body:             |
     %1:sgpr_32 = COPY $sgpr1
     %2:sgpr_32 = COPY $sgpr2
     %3:sgpr_32 = COPY $sgpr3
-    %4:vreg_64 = COPY $vgpr0
-    %5:vreg_64 = COPY $vgpr1
+    %4:vreg_64 = COPY $vgpr0_vgpr1
+    %5:vreg_64 = COPY $vgpr1_vgpr2
     %6:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %8:vreg_64 = BUFFER_LOAD_DWORDX2_BOTHEN_exact %4, %6:sgpr_128, 0, 4, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     %9:vreg_64 = BUFFER_LOAD_DWORDX2_BOTHEN_exact %5, %6:sgpr_128, 0, 12, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -1060,7 +1060,7 @@ body:             |
     ; GCN-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GCN-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
     ; GCN-NEXT: [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr4
-    ; GCN-NEXT: [[COPY5:%[0-9]+]]:vreg_64 = COPY $vgpr0
+    ; GCN-NEXT: [[COPY5:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
     ; GCN-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY4]], %subreg.sub3
     ; GCN-NEXT: [[BUFFER_LOAD_DWORDX2_BOTHEN_exact:%[0-9]+]]:vreg_64 = BUFFER_LOAD_DWORDX2_BOTHEN_exact [[COPY5]], [[REG_SEQUENCE]], 0, 4, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -1070,7 +1070,7 @@ body:             |
     %2:sgpr_32 = COPY $sgpr2
     %3:sgpr_32 = COPY $sgpr3
     %4:sgpr_32 = COPY $sgpr4
-    %5:vreg_64 = COPY $vgpr0
+    %5:vreg_64 = COPY $vgpr0_vgpr1
     %6:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:sgpr_128 = REG_SEQUENCE %1:sgpr_32, %subreg.sub0, %2:sgpr_32, %subreg.sub1, %3:sgpr_32, %subreg.sub2, %4:sgpr_32, %subreg.sub3
     %8:vreg_64 = BUFFER_LOAD_DWORDX2_BOTHEN_exact %5, %6:sgpr_128, 0, 4, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
