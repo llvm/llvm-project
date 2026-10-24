@@ -120,6 +120,18 @@ namespace llvm {
     /// Remove information related to this value from the cache.
     LLVM_ABI void forgetValue(Value *V);
 
+    /// Remove information related to the one-use chain starting at \p V from
+    /// the cache, not including \p V itself.
+    ///
+    /// A range returned by getConstantRangeAtUse() may only hold at the queried
+    /// use, because the value was refined with conditions that only hold at the
+    /// end of that chain. Replacing \p V based on such a range changes the
+    /// value the instructions on the chain compute, so what has been cached for
+    /// them describes the old value. Clients performing such a replacement must
+    /// call this *before* modifying the IR, while the use list of \p V is
+    /// intact.
+    LLVM_ABI void forgetOneUseChain(Value *V);
+
     /// Inform the analysis cache that we have erased a block.
     LLVM_ABI void eraseBlock(BasicBlock *BB);
 
