@@ -572,6 +572,14 @@ GlobalVariable *IRLinker::copyGlobalVariableProto(const GlobalVariable *SGVar) {
                          SGVar->getAddressSpace());
   NewDGV->setAlignment(SGVar->getAlign());
   NewDGV->copyAttributesFrom(SGVar);
+  const NamedMDNode *DstModFlags = DstM.getModuleFlagsMetadata();
+  bool HasDstFlags = DstModFlags && DstModFlags->getNumOperands() > 0;
+  if (!SGVar->getCodeModel() && (HasDstFlags || IsPerformingImport) &&
+      (SrcM->getCodeModel() != DstM.getCodeModel() ||
+       SrcM->getLargeDataThreshold() != DstM.getLargeDataThreshold())) {
+    NewDGV->setCodeModel(SGVar->isLargeGlobalValue() ? CodeModel::Large
+                                                     : CodeModel::Small);
+  }
   return NewDGV;
 }
 
@@ -1369,6 +1377,9 @@ Error IRLinker::linkModuleFlagsMetadata() {
       continue;
     }
     case Module::Warning: {
+      break;
+    }
+    case Module::Ignore: {
       break;
     }
     case Module::Max: {
