@@ -2045,7 +2045,7 @@ bool isGlobalLValue(const ValueDecl *D, const Expr *E) {
     return false;
   case Expr::CompoundLiteralExprClass: {
     const CompoundLiteralExpr *CLE = cast<CompoundLiteralExpr>(E);
-    return CLE->isFileScope() && CLE->isLValue();
+    return CLE->hasStaticStorage() && CLE->isLValue();
   }
   case Expr::MaterializeTemporaryExprClass:
     // A materialized temporary might have been lifetime-extended to static
@@ -4744,7 +4744,6 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
   }
 
   bool IsAccess = isAnyAccess(AK);
-
   // C++11 DR1311: An lvalue-to-rvalue conversion on a volatile-qualified type
   // is not a constant expression (even if the object is non-volatile). We also
   // apply this rule to C++98, in order to conform to the expected 'volatile'
@@ -4822,11 +4821,6 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
     }
 
     bool IsConstant = BaseType.isConstant(Info.Ctx);
-    bool ConstexprVar = false;
-    if (const auto *VD = dyn_cast_if_present<VarDecl>(
-            Info.EvaluatingDecl.dyn_cast<const ValueDecl *>()))
-      ConstexprVar = VD->isConstexpr();
-
     // Unless we're looking at a local variable or argument in a constexpr call,
     // the variable we're reading must be const (unless we are binding to a
     // reference).
@@ -4846,7 +4840,8 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
         return CompleteObject();
       } else if (VD->isConstexpr()) {
         // OK, we can read this variable.
-      } else if (Info.getLangOpts().C23 && ConstexprVar) {
+      } else if (Info.getLangOpts().C23 &&
+                 Info.EvalMode == EvaluationMode::ConstantExpression) {
         Info.FFDiag(E);
         return CompleteObject();
       } else if (VD->isCXXForRangeImplicitVar()) {
@@ -4930,6 +4925,15 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
   // within its lifetime.
   else if (AK != clang::AK_Dereference) {
     const Expr *Base = LVal.Base.dyn_cast<const Expr*>();
+
+    if (Info.getLangOpts().C23 &&
+        Info.EvalMode == EvaluationMode::ConstantExpression &&
+        (AK == AK_Read || AK == AK_ReadObjectRepresentation)) {
+      if (const auto *CLE = dyn_cast_or_null<CompoundLiteralExpr>(Base);
+          CLE && !CLE->isConstexpr()) {
+        Info.CCEDiag(E, diag::note_constexpr_non_constexpr_compound_literal);
+      }
+    }
 
     if (!Frame) {
       if (const MaterializeTemporaryExpr *MTE =
@@ -9890,6 +9894,12 @@ bool
 LValueExprEvaluator::VisitCompoundLiteralExpr(const CompoundLiteralExpr *E) {
   assert((!Info.getLangOpts().CPlusPlus || E->isFileScope()) &&
          "lvalue compound literal in c++?");
+  // A thread-local lvalue cannot be the result of constant evaluation.
+  if (E->hasThreadStorage()) {
+    Info.FFDiag(E);
+    return false;
+  }
+
   APValue *Lit;
   // If CompountLiteral has static storage, its value can be used outside
   // this expression. So evaluate it once and store it in ASTContext.
@@ -9908,6 +9918,10 @@ LValueExprEvaluator::VisitCompoundLiteralExpr(const CompoundLiteralExpr *E) {
   // FIXME: Evaluating in place isn't always right. We should figure out how to
   // use appropriate evaluation context here, see
   // clang/test/AST/static-compound-literals-reeval.cpp for a failure.
+  llvm::SaveAndRestore SavedMode(Info.EvalMode);
+  if (Info.getLangOpts().C23 && !E->isConstexpr() &&
+      Info.EvalMode == EvaluationMode::ConstantExpression)
+    Info.EvalMode = EvaluationMode::ConstantFold;
   if (!EvaluateInPlace(*Lit, Info, Result, E->getInitializer())) {
     *Lit = APValue();
     return false;
@@ -22969,6 +22983,27 @@ static ICEDiag CheckEvalInICE(const Expr* E, const ASTContext &Ctx) {
   return NoDiag();
 }
 
+static const Expr *getMemberAccess(const Expr *E) {
+  E = E->IgnoreParenImpCasts();
+  while (const auto *ME = dyn_cast<MemberExpr>(E)) {
+    if (ME->isArrow())
+      return nullptr;
+    E = ME->getBase()->IgnoreParenImpCasts();
+  }
+  return E;
+}
+
+static bool isConstexprNamedConstant(const Expr *E) {
+  const auto *DRE = dyn_cast_or_null<DeclRefExpr>(getMemberAccess(E));
+  const auto *VD = DRE ? dyn_cast<VarDecl>(DRE->getDecl()) : nullptr;
+  return VD && VD->isConstexpr();
+}
+
+static bool isCompoundLiteralConstant(const Expr *E) {
+  const auto *CLE = dyn_cast_or_null<CompoundLiteralExpr>(getMemberAccess(E));
+  return CLE && CLE->isConstexpr();
+}
+
 static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
   assert(!E->isValueDependent() && "Should not see value dependent exprs!");
   if (!E->getType()->isIntegralOrEnumerationType())
@@ -22979,6 +23014,13 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
 #define STMT(Node, Base) case Expr::Node##Class:
 #define EXPR(Node, Base)
 #include "clang/AST/StmtNodes.inc"
+  case Expr::CompoundLiteralExprClass: {
+    const CompoundLiteralExpr *CLE = cast<CompoundLiteralExpr>(E);
+    if (CLE->isConstexpr())
+      return CheckEvalInICE(E, Ctx);
+    return ICEDiag(IK_NotICE, E->getBeginLoc());
+  }
+
   case Expr::PredefinedExprClass:
   case Expr::FloatingLiteralClass:
   case Expr::ImaginaryLiteralClass:
@@ -22990,7 +23032,6 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
   case Expr::OMPArrayShapingExprClass:
   case Expr::OMPIteratorExprClass:
   case Expr::CompoundAssignOperatorClass:
-  case Expr::CompoundLiteralExprClass:
   case Expr::ExtVectorElementExprClass:
   case Expr::MatrixElementExprClass:
   case Expr::DesignatedInitExprClass:
@@ -23069,20 +23110,9 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
     return ICEDiag(IK_NotICE, E->getBeginLoc());
 
   case Expr::MemberExprClass: {
-    if (Ctx.getLangOpts().C23) {
-      const Expr *ME = E->IgnoreParenImpCasts();
-      while (const auto *M = dyn_cast<MemberExpr>(ME)) {
-        if (M->isArrow())
-          return ICEDiag(IK_NotICE, E->getBeginLoc());
-        ME = M->getBase()->IgnoreParenImpCasts();
-      }
-      const auto *DRE = dyn_cast<DeclRefExpr>(ME);
-      if (DRE) {
-        if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl());
-            VD && VD->isConstexpr())
-          return CheckEvalInICE(E, Ctx);
-      }
-    }
+    if (Ctx.getLangOpts().C23 &&
+        (isConstexprNamedConstant(E) || isCompoundLiteralConstant(E)))
+      return CheckEvalInICE(E, Ctx);
     return ICEDiag(IK_NotICE, E->getBeginLoc());
   }
 
@@ -23321,8 +23351,8 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
   case Expr::ObjCBridgedCastExprClass: {
     const Expr *SubExpr = cast<CastExpr>(E)->getSubExpr();
     if (isa<ExplicitCastExpr>(E)) {
-      if (const FloatingLiteral *FL
-            = dyn_cast<FloatingLiteral>(SubExpr->IgnoreParenImpCasts())) {
+      const Expr *Sub = SubExpr->IgnoreParenImpCasts();
+      if (const FloatingLiteral *FL = dyn_cast<FloatingLiteral>(Sub)) {
         unsigned DestWidth = Ctx.getIntWidth(E->getType());
         bool DestSigned = E->getType()->isSignedIntegerOrEnumerationType();
         APSInt IgnoredVal(DestWidth, !DestSigned);
@@ -23336,6 +23366,9 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
           return ICEDiag(IK_NotICE, E->getBeginLoc());
         return NoDiag();
       }
+      if (Ctx.getLangOpts().C23 && Sub->getType()->isArithmeticType() &&
+          (isConstexprNamedConstant(Sub) || isCompoundLiteralConstant(Sub)))
+        return CheckEvalInICE(E, Ctx);
     }
     switch (cast<CastExpr>(E)->getCastKind()) {
     case CK_LValueToRValue:

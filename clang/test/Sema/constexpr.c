@@ -36,7 +36,7 @@ constexpr static const auto V6 = 1;
 constexpr static const int V7 = 1;
 constexpr static int V8 = 1;
 constexpr auto Ulong = 1L;
-constexpr auto CompoundLiteral = (int){13};
+constexpr auto CompoundLiteral = (constexpr int){13};
 constexpr auto DoubleCast = (double)(1 / 3);
 constexpr auto String = "this is a string"; // expected-error {{constexpr pointer initializer is not null}}
 constexpr signed auto Long = 1L; // expected-error {{illegal storage class on file-scoped variable}}
@@ -473,3 +473,41 @@ static_assert(s2[0].L[2] == 'x');// expected-warning {{folding it to a constant 
 
 x y; // expected-error{{unknown type name 'x'}}
 constexpr int *p = (int*){y};
+
+struct S12 { int n; };
+union U4 { int n; double f; };
+enum E2 { E2A = 1 };
+const int C1 = 1;
+
+constexpr int C2 = (int){1};                // expected-warning {{reading a non-constexpr compound literal}}
+constexpr enum E2 C3 = (enum E2){E2A};      // expected-warning {{reading a non-constexpr compound literal}}
+constexpr double C4 = (double){1.0};        // expected-warning {{reading a non-constexpr compound literal}}
+constexpr struct S12 C5 = (struct S12){1};  // expected-warning {{reading a non-constexpr compound literal}}
+constexpr union U4 C6 = (union U4){.n = 1}; // expected-warning {{reading a non-constexpr compound literal}}
+constexpr int C7 = (struct S12){1}.n;       // expected-warning {{reading a non-constexpr compound literal}}
+constexpr int C8 = (union U4){.n = 1}.n;    // expected-warning {{reading a non-constexpr compound literal}}
+constexpr int C9 = (int){C1};               // expected-warning {{reading a non-constexpr compound literal}}
+static_assert(C2 == 1 && C3 == E2A && (int)C4 == 1 && C5.n == 1 && C6.n == 1);
+
+constexpr enum E2 C10 = (constexpr enum E2){E2A};
+constexpr double C11 = (constexpr double){1.0};
+constexpr struct S12 C12 = (constexpr struct S12){1};
+constexpr union U4 C13 = (constexpr union U4){.n = 1};
+static_assert(C10 == E2A && (int)C11 == 1 && C12.n == 1 && C13.n == 1);
+
+void compound_literals(void) {
+  constexpr int a = (int){1};                // expected-warning {{reading a non-constexpr compound literal}}
+  constexpr enum E2 b = (enum E2){E2A};      // expected-warning {{reading a non-constexpr compound literal}}
+  constexpr double c = (double){1.0};        // expected-warning {{reading a non-constexpr compound literal}}
+  constexpr struct S12 d = (struct S12){1};  // expected-warning {{reading a non-constexpr compound literal}}
+  constexpr union U4 e = (union U4){.n = 1}; // expected-warning {{reading a non-constexpr compound literal}}
+  constexpr int f = (struct S12){1}.n;       // expected-warning {{reading a non-constexpr compound literal}}
+  constexpr int g = (union U4){.n = 1}.n;    // expected-warning {{reading a non-constexpr compound literal}}
+  constexpr int h = (int){C1};               // expected-warning {{reading a non-constexpr compound literal}}
+  (void)(constexpr int){(int){1}};           // expected-warning {{reading a non-constexpr compound literal}}
+  (void)(constexpr int){(static int){1}};    // expected-warning {{reading a non-constexpr compound literal}}
+  static_assert(a == 1 && b == E2A && (int)c == 1 && d.n == 1 && e.n == 1);
+  const int i = 1;
+  constexpr int j = (int){i};                // expected-warning {{reading a non-constexpr compound literal}}
+  static_assert(j == 1);
+}

@@ -262,9 +262,9 @@ _Static_assert(_Generic(stdc_load8_les32(le8_u), __INT_LEAST32_TYPE__ : 1, defau
 _Static_assert(_Generic(stdc_load8_les64(le8_u), __INT_LEAST64_TYPE__ : 1, default : 0) == 1, "wrong return type");
 
 void test_compound_literal(void) {
-  constexpr __UINT_LEAST16_TYPE__ ok = stdc_load8_leu16((const unsigned char[]){0x34, 0x12});
+  constexpr __UINT_LEAST16_TYPE__ ok = stdc_load8_leu16((constexpr unsigned char[]){0x34, 0x12});
   static_assert(ok == 0x1234, "");
-  constexpr __UINT_LEAST8_TYPE__ aligned_ok = stdc_load8_aligned_leu8((const unsigned char[]){0xAB});
+  constexpr __UINT_LEAST8_TYPE__ aligned_ok = stdc_load8_aligned_leu8((constexpr unsigned char[]){0xAB});
   static_assert(aligned_ok == 0xAB, "");
-  constexpr __UINT_LEAST16_TYPE__ aligned_fail = stdc_load8_aligned_leu16((const unsigned char[]){0x34, 0x12}); // expected-error{{must be initialized by a constant expression}} expected-note{{requires a pointer aligned to 2 bytes, but the given pointer is only aligned to 1 byte}}
+  constexpr __UINT_LEAST16_TYPE__ aligned_fail = stdc_load8_aligned_leu16((constexpr unsigned char[]){0x34, 0x12}); // expected-error{{must be initialized by a constant expression}} expected-note{{requires a pointer aligned to 2 bytes, but the given pointer is only aligned to 1 byte}}
 }
