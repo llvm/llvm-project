@@ -7800,6 +7800,12 @@ static bool getMaddPatterns(MachineInstr &Root,
   };
 
   auto setShfFound = [&](int Opcode, unsigned ZeroReg, unsigned Pattern) {
+    const AArch64Subtarget &STI =
+        MBB.getParent()->getSubtarget<AArch64Subtarget>();
+    // As observed empirically, this combine is not beneficial on Apple silicon
+    if (STI.isAppleMLike())
+      return;
+
     unsigned ShiftImm = Root.getOperand(3).getImm();
     AArch64_AM::ShiftExtendType ShiftTy = AArch64_AM::getShiftType(ShiftImm);
 
