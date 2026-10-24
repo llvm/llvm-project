@@ -71,11 +71,10 @@ llc -march=bpf -mcpu=v4 -bpf-min-jump-table-entries=3 < test.ll \
 ; CHECK: 	w2 = 18
 ; CHECK: 	r1 <<= 3
 ; CHECK: 	r3 = BPF.JT.0.0 ll
-; CHECK: 	r4 = BPF.JT.0.0 ll
-; CHECK: 	r4 += r1
-; CHECK: 	r1 = *(u64 *)(r4 + 0)
-; CHECK: 	r3 += r1
-; CHECK: 	gotox r3
+; CHECK: 	r1 += r3
+; CHECK: 	r1 = *(u64 *)(r1 + 0)
+; CHECK: 	r1 += r3
+; CHECK: 	gotox r1
 ; CHECK: .LBB0_2:                                # %sw.bb1
 ; CHECK: 	w2 = 6
 ; CHECK: 	goto .LBB0_4
