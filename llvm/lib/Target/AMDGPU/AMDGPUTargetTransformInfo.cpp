@@ -1668,8 +1668,9 @@ InstructionCost GCNTTIImpl::getShuffleCost(
   // A v_pk_*_f32 operand is an aligned register pair. A lane already in its
   // half of a source pair is read in place, and a splat of the low half is an
   // op_sel_hi. Every other lane costs a v_mov_b32 to move it into place.
-  if (ScalarSize == 32 && ST->hasAnyPackedFP32Ops() &&
-      SrcTy->getElementType()->isFloatTy() && !Mask.empty()) {
+  if (ScalarSize == 32 && CostKind == TTI::TCK_RecipThroughput &&
+      ST->hasAnyPackedFP32Ops() && SrcTy->getElementType()->isFloatTy() &&
+      !Mask.empty()) {
     const int NumSrcElts = cast<FixedVectorType>(SrcTy)->getNumElements();
     // Source pairs of the second operand are numbered after the first.
     auto GetPair = [&](int Idx) {
