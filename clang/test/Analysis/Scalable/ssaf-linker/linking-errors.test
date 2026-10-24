@@ -18,6 +18,26 @@
 // DUP-MEMBER-NEXT: failed to link member BuildNamespace(CompilationUnit, tu1.cpp) of static library BuildNamespace(StaticLibrary, libtwo)
 // DUP-MEMBER-NEXT: failed to link TU summary: duplicate BuildNamespace(CompilationUnit, tu1.cpp)
 
+// Linking the same shared library twice produces an error.
+// RUN: not clang-ssaf-linker %S/Inputs/lu-arm64.json %S/Inputs/lu-arm64.json -o %t/lu.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=DUP-NS-SHARED
+// DUP-NS-SHARED:      clang-ssaf-linker: error: Linking artifact '{{.*}}lu-arm64.json'
+// DUP-NS-SHARED-NEXT: failed to link shared library: duplicate NestedBuildNamespace([BuildNamespace(LinkUnit, libshared)])
+
+// A member of a multi-arch shared library collides with the same shared library
+// linked directly: both carry the same namespace.
+// RUN: clang-ssaf-linker multi-arch create %S/Inputs/lu-arm64.json -o %t/libshared-1arch.json
+// RUN: not clang-ssaf-linker %S/Inputs/lu-arm64.json %t/libshared-1arch.json -o %t/lu.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=DUP-SHARED-MEMBER
+// DUP-SHARED-MEMBER:      clang-ssaf-linker: error: Linking artifact '{{.*}}libshared-1arch.json'
+// DUP-SHARED-MEMBER-NEXT: failed to link shared library: duplicate NestedBuildNamespace([BuildNamespace(LinkUnit, libshared)])
+
+// A shared library cannot be linked into a link unit of the same name.
+// RUN: not clang-ssaf-linker %S/Inputs/lu-arm64.json -o %t/libshared.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=SHARED-INTO-ITSELF
+// SHARED-INTO-ITSELF:      clang-ssaf-linker: error: Linking artifact '{{.*}}lu-arm64.json'
+// SHARED-INTO-ITSELF-NEXT: failed to link shared library: NestedBuildNamespace([BuildNamespace(LinkUnit, libshared)]) is the namespace of the link unit being linked
+
 // Entity ID object in summary data blob with '@' key alongside extra keys is a fatal error.
 // RUN: not clang-ssaf-linker %S/Inputs/tu-invalid-entity-id-multikey.json -o %t/lu.json 2>&1 \
 // RUN:   | FileCheck %s --match-full-lines --check-prefix=INVALID-ID-MULTIKEY
@@ -35,6 +55,12 @@
 // RUN:   | FileCheck %s --match-full-lines --check-prefix=INVALID-ID-REF
 // INVALID-ID-REF:      clang-ssaf-linker: error: Linking artifact '{{.*}}tu-invalid-entity-id-ref.json'
 // INVALID-ID-REF-NEXT: failed to patch EntityId: 'EntityId(99)' not found in entity resolution table
+
+// The same dangling reference inside a shared library.
+// RUN: not clang-ssaf-linker %S/Inputs/lu-invalid-entity-id-ref.json -o %t/lu.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=SHARED-INVALID-ID-REF
+// SHARED-INVALID-ID-REF:      clang-ssaf-linker: error: Linking artifact '{{.*}}lu-invalid-entity-id-ref.json'
+// SHARED-INVALID-ID-REF-NEXT: failed to patch EntityId: 'EntityId(99)' not found in entity resolution table
 
 // ============================================================================
 // Target triple mismatches
@@ -56,11 +82,22 @@
 // TRIPLE-MISMATCH-LIB:      clang-ssaf-linker: error: Linking artifact '{{.*}}lib-x86_64.json'
 // TRIPLE-MISMATCH-LIB-NEXT: target triple 'x86_64-apple-macosx' of BuildNamespace(StaticLibrary, libmulti) does not match link unit target triple 'arm64-apple-macosx'
 
+// A shared library disagreeing with a preceding input.
+// RUN: not clang-ssaf-linker %S/Inputs/tu-1.json %S/Inputs/lu-x86_64.json -o %t/lu.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=TRIPLE-MISMATCH-SHARED
+// TRIPLE-MISMATCH-SHARED:      clang-ssaf-linker: error: Linking artifact '{{.*}}lu-x86_64.json'
+// TRIPLE-MISMATCH-SHARED-NEXT: target triple 'x86_64-apple-macosx' of NestedBuildNamespace([BuildNamespace(LinkUnit, libshared)]) does not match link unit target triple 'arm64-apple-macosx'
+
 // A TU summary disagreeing with a triple inferred from a preceding library,
 // rather than from a preceding TU summary or --target-triple.
 // RUN: not clang-ssaf-linker %S/Inputs/lib-x86_64.json %S/Inputs/tu-1.json -o %t/lu.json 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=TRIPLE-FROM-LIB
 // TRIPLE-FROM-LIB: target triple 'arm64-apple-macosx' of BuildNamespace(CompilationUnit, tu1.cpp) does not match link unit target triple 'x86_64-apple-macosx'
+
+// The same, with the triple inferred from a preceding shared library.
+// RUN: not clang-ssaf-linker %S/Inputs/lu-x86_64.json %S/Inputs/tu-1.json -o %t/lu.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=TRIPLE-FROM-SHARED
+// TRIPLE-FROM-SHARED: target triple 'arm64-apple-macosx' of BuildNamespace(CompilationUnit, tu1.cpp) does not match link unit target triple 'x86_64-apple-macosx'
 
 // A multi-arch static library carrying no member for the link unit's triple
 // reports the members it does carry.
@@ -73,6 +110,16 @@
 // RUN: not clang-ssaf-linker --target-triple arm64-apple-macosx %S/Inputs/libmulti-empty-wrapper.json -o %t/lu.json 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=EMPTY-BUNDLE
 // EMPTY-BUNDLE: multi-arch static library BuildNamespace(MultiArchStaticLibrary, libmulti) has no member for target triple 'arm64-apple-macosx' (available: none)
+
+// The same two failures for a multi-arch shared library.
+// RUN: not clang-ssaf-linker --target-triple arm64-apple-ios %S/Inputs/libfoo-2arch.json -o %t/lu.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=SHARED-MEMBER-MISSING
+// SHARED-MEMBER-MISSING:      clang-ssaf-linker: error: Linking artifact '{{.*}}libfoo-2arch.json'
+// SHARED-MEMBER-MISSING-NEXT: multi-arch shared library NestedBuildNamespace([BuildNamespace(LinkUnit, libfoo)]) has no member for target triple 'arm64-apple-ios' (available: arm64-apple-macosx, x86_64-apple-macosx)
+
+// RUN: not clang-ssaf-linker --target-triple arm64-apple-macosx %S/Inputs/libshared-empty-wrapper.json -o %t/lu.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=SHARED-EMPTY-BUNDLE
+// SHARED-EMPTY-BUNDLE: multi-arch shared library NestedBuildNamespace([BuildNamespace(LinkUnit, libshared)]) has no member for target triple 'arm64-apple-macosx' (available: none)
 
 // ============================================================================
 // Target triple inference failures
@@ -88,27 +135,14 @@
 // RUN:   | FileCheck %s --check-prefix=INFER-NO-MEMBERS
 // INFER-NO-MEMBERS: cannot infer target triple from '{{.*}}libmulti-empty-wrapper.json': multi-arch static library has no members; pass --target-triple
 
-// ============================================================================
-// Shared-library inputs are not linkable yet
-// ============================================================================
-
-// RUN: not clang-ssaf-linker %S/Inputs/lu-arm64.json -o %t/lu.json 2>&1 \
-// RUN:   | FileCheck %s --check-prefix=LU-FIRST
-// LU-FIRST: '{{.*}}lu-arm64.json' is a link unit summary: linking against shared libraries is not yet supported
-
+// The same two failures for a multi-arch shared library.
 // RUN: not clang-ssaf-linker %S/Inputs/libfoo-2arch.json -o %t/lu.json 2>&1 \
-// RUN:   | FileCheck %s --check-prefix=MULTI-ARCH-SHARED-FIRST
-// MULTI-ARCH-SHARED-FIRST: '{{.*}}libfoo-2arch.json' is a multi-arch shared library: linking against shared libraries is not yet supported
+// RUN:   | FileCheck %s --check-prefix=SHARED-AMBIGUOUS-MEMBERS
+// SHARED-AMBIGUOUS-MEMBERS: cannot infer target triple from '{{.*}}libfoo-2arch.json': multi-arch shared library has 2 members; pass --target-triple to select one
 
-// Rejected wherever they appear, not just in first position: a later input is
-// turned away by linkInput rather than by target triple resolution.
-// RUN: not clang-ssaf-linker %S/Inputs/tu-1.json %S/Inputs/lu-arm64.json -o %t/lu.json 2>&1 \
-// RUN:   | FileCheck %s --check-prefix=LU-SECOND
-// LU-SECOND: '{{.*}}lu-arm64.json' is a link unit summary: linking against shared libraries is not yet supported
-
-// RUN: not clang-ssaf-linker %S/Inputs/tu-1.json %S/Inputs/libfoo-2arch.json -o %t/lu.json 2>&1 \
-// RUN:   | FileCheck %s --check-prefix=MULTI-ARCH-SHARED-SECOND
-// MULTI-ARCH-SHARED-SECOND: '{{.*}}libfoo-2arch.json' is a multi-arch shared library: linking against shared libraries is not yet supported
+// RUN: not clang-ssaf-linker %S/Inputs/libshared-empty-wrapper.json -o %t/lu.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=SHARED-INFER-NO-MEMBERS
+// SHARED-INFER-NO-MEMBERS: cannot infer target triple from '{{.*}}libshared-empty-wrapper.json': multi-arch shared library has no members; pass --target-triple
 
 // ============================================================================
 // Malformed --target-triple

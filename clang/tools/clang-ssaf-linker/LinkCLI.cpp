@@ -27,7 +27,6 @@
 #include "clang/ScalableStaticAnalysis/Core/Support/FormatProviders.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/Support/Path.h"
-#include <cassert>
 #include <memory>
 #include <utility>
 #include <variant>
@@ -51,42 +50,15 @@ constexpr const char *NoInputs =
     "no input artifacts: at least one input is required";
 
 constexpr const char *NoMembersToInferFrom =
-    "cannot infer target triple from '{0}': multi-arch static library has no "
-    "members; pass --target-triple";
+    "cannot infer target triple from '{0}': multi-arch {1} has no members; "
+    "pass --target-triple";
 
 constexpr const char *AmbiguousMembersToInferFrom =
-    "cannot infer target triple from '{0}': multi-arch static library has {1} "
-    "members; pass --target-triple to select one";
+    "cannot infer target triple from '{0}': multi-arch {1} has {2} members; "
+    "pass --target-triple to select one";
 
-constexpr const char *UnsupportedSharedInput =
-    "'{0}' is a {1}: linking against shared libraries is not yet supported";
-
-constexpr const char *LinkUnitSummaryName = "link unit summary";
-constexpr const char *MultiArchSharedLibraryName = "multi-arch shared library";
-
-//===----------------------------------------------------------------------===//
-// ArtifactEncoding Helpers
-//===----------------------------------------------------------------------===//
-
-/// Returns the human readable kind of an artifact the linker cannot consume.
-///
-/// Only the shared-library family reaches this: every linkable alternative is
-/// handled before it is called. The static_assert makes a new alternative a
-/// compile error here rather than an unhandled case at runtime.
-llvm::StringRef unsupportedInputKindName(const ArtifactEncoding &E) {
-  static_assert(std::variant_size_v<ArtifactEncoding> == 5,
-                "unsupportedInputKindName must cover every ArtifactEncoding "
-                "alternative the linker cannot consume");
-
-  if (std::holds_alternative<LUSummaryEncoding>(E)) {
-    return LinkUnitSummaryName;
-  }
-
-  assert(
-      std::holds_alternative<MultiArchSharedLibrary>(E) &&
-      "linkable ArtifactEncoding alternatives must be handled by the caller");
-  return MultiArchSharedLibraryName;
-}
+constexpr const char *StaticLibraryKindName = "static library";
+constexpr const char *SharedLibraryKindName = "shared library";
 
 } // namespace
 
@@ -176,6 +148,8 @@ LUSummaryEncoding LinkCLI::link(unsigned Level, llvm::Timer &TRead,
 
   info(Verbose, InputLevel, "Linked {0} translation unit(s).",
        EL.getLinkedTUCount());
+  info(Verbose, InputLevel, "Linked {0} shared library(ies).",
+       EL.getLinkedSharedLibraryCount());
   info(Verbose, InputLevel, "Target namespace: '{0}'.", LUNamespace);
 
   return std::move(EL).takeOutput();
@@ -207,6 +181,10 @@ llvm::Triple LinkCLI::resolveTargetTriple(const ArtifactEncoding &First,
   }
 
   auto Inferred = [&]() -> llvm::Triple {
+    static_assert(std::variant_size_v<ArtifactEncoding> == 5,
+                  "resolveTargetTriple must cover every ArtifactEncoding "
+                  "alternative");
+
     if (const auto *TU = std::get_if<TUSummaryEncoding>(&First)) {
       return TU->getTargetTriple();
     }
@@ -216,18 +194,15 @@ llvm::Triple LinkCLI::resolveTargetTriple(const ArtifactEncoding &First,
     }
 
     if (const auto *MASL = std::get_if<MultiArchStaticLibrary>(&First)) {
-      // A single member names the target unambiguously; anything else needs the
-      // architecture to be chosen on the command line.
-      if (MASL->Members.empty()) {
-        fail(NoMembersToInferFrom, SourceFile);
-      }
-      if (MASL->Members.size() > 1) {
-        fail(AmbiguousMembersToInferFrom, SourceFile, MASL->Members.size());
-      }
-      return (*MASL->Members.begin())->TargetTriple;
+      return inferFromSoleMember(*MASL, StaticLibraryKindName, SourceFile);
     }
 
-    fail(UnsupportedSharedInput, SourceFile, unsupportedInputKindName(First));
+    if (const auto *LU = std::get_if<LUSummaryEncoding>(&First)) {
+      return LU->TargetTriple;
+    }
+
+    return inferFromSoleMember(std::get<MultiArchSharedLibrary>(First),
+                               SharedLibraryKindName, SourceFile);
   }();
 
   info(Verbose, Level, "Target triple: '{0}' (inferred from '{1}').", Inferred,
@@ -236,9 +211,26 @@ llvm::Triple LinkCLI::resolveTargetTriple(const ArtifactEncoding &First,
   return Inferred;
 }
 
+template <typename MultiArchLibraryT>
+llvm::Triple LinkCLI::inferFromSoleMember(const MultiArchLibraryT &Library,
+                                          llvm::StringRef KindName,
+                                          llvm::StringRef SourceFile) {
+  if (Library.Members.empty()) {
+    fail(NoMembersToInferFrom, SourceFile, KindName);
+  }
+  if (Library.Members.size() > 1) {
+    fail(AmbiguousMembersToInferFrom, SourceFile, KindName,
+         Library.Members.size());
+  }
+  return (*Library.Members.begin())->TargetTriple;
+}
+
 void LinkCLI::linkInput(EntityLinker &EL, ArtifactEncoding Encoding,
                         llvm::StringRef SourceFile, size_t Index,
                         unsigned Level, llvm::Timer &TLink) {
+  static_assert(std::variant_size_v<ArtifactEncoding> == 5,
+                "linkInput must cover every ArtifactEncoding alternative");
+
   auto failOnError = [&](llvm::Error Err) {
     if (Err) {
       fail(ErrorBuilder::wrap(std::move(Err))
@@ -277,7 +269,23 @@ void LinkCLI::linkInput(EntityLinker &EL, ArtifactEncoding Encoding,
     return;
   }
 
-  fail(UnsupportedSharedInput, SourceFile, unsupportedInputKindName(Encoding));
+  if (auto *LU = std::get_if<LUSummaryEncoding>(&Encoding)) {
+    info(Verbose, Level, "[{0}/{1}] Linking '{2}' (shared library).", Index + 1,
+         InputFiles.size(), SourceFile);
+    llvm::TimeRegion _(Time ? &TLink : nullptr);
+
+    failOnError(EL.link(std::make_unique<LUSummaryEncoding>(std::move(*LU))));
+    return;
+  }
+
+  auto &MASharedL = std::get<MultiArchSharedLibrary>(Encoding);
+  info(Verbose, Level,
+       "[{0}/{1}] Linking '{2}' (multi-arch shared library, {3} member(s)).",
+       Index + 1, InputFiles.size(), SourceFile, MASharedL.Members.size());
+  llvm::TimeRegion _(Time ? &TLink : nullptr);
+
+  failOnError(
+      EL.link(std::make_unique<MultiArchSharedLibrary>(std::move(MASharedL))));
 }
 
 void LinkCLI::write(const LUSummaryEncoding &Output, unsigned Level,

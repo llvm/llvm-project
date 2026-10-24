@@ -26,6 +26,7 @@
 
 namespace clang::ssaf {
 
+class LinkCLI;
 class MultiArchCreateCLI;
 
 /// Represents a link unit summary in its serialized encoding.
@@ -35,6 +36,7 @@ class MultiArchCreateCLI;
 /// entity linker and contains deduplicated and patched entity summaries.
 class LUSummaryEncoding {
   friend class EntityLinker;
+  friend class LinkCLI;
   friend class MultiArchCreateCLI;
   friend class MultiArchSharedLibrary;
   friend class SerializationFormat;
