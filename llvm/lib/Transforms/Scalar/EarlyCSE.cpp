@@ -1436,35 +1436,42 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
       // If this is a boolean not of an integer comparison, check whether the
       // inverse comparison is already available and reuse it.
       Value *CmpOp;
-      if (match(&Inst, m_Not(m_Value(CmpOp)))) {
-        if (auto *Cmp = dyn_cast<ICmpInst>(CmpOp)) {
-          // The temporary instruction is inserted before Inst so that it has
-          // a parent: hashing a SimpleValue requires the containing function
-          // (for per-context options), even though it is only used for a
-          // lookup.
-          ICmpInst *InvCmp =
-              new ICmpInst(Inst.getIterator(), Cmp->getInversePredicate(),
-                           Cmp->getOperand(0), Cmp->getOperand(1));
-          Value *V = AvailableValues.lookup(InvCmp);
-          InvCmp->eraseFromParent();
-          if (V) {
-            // The available comparison must not introduce poison that the
-            // original comparison does not, e.g. through samesign.
-            if (Cmp->hasSameSign() || !cast<ICmpInst>(V)->hasSameSign()) {
-              LLVM_DEBUG(dbgs()
-                         << "EarlyCSE CSE: " << Inst << "  to: " << *V << '\n');
-              if (!DebugCounter::shouldExecute(CSECounter)) {
-                LLVM_DEBUG(dbgs() << "Skipping due to debug counter\n");
-                continue;
-              }
-              Inst.replaceAllUsesWith(V);
-              salvageKnowledge(&Inst, &AC);
-              removeMSSA(Inst);
-              Inst.eraseFromParent();
-              Changed = true;
-              ++NumCSE;
+      ICmpInst *Cmp = match(&Inst, m_Not(m_Value(CmpOp)))
+                          ? dyn_cast<ICmpInst>(CmpOp)
+                          : nullptr;
+      if (Cmp) {
+        // The temporary instruction is inserted before Inst so that it has
+        // a parent: hashing a SimpleValue requires the containing function
+        // (for per-context options), even though it is only used for a
+        // lookup.
+        ICmpInst *InvCmp =
+            new ICmpInst(Inst.getIterator(), Cmp->getInversePredicate(),
+                         Cmp->getOperand(0), Cmp->getOperand(1));
+        Value *V = AvailableValues.lookup(InvCmp);
+        InvCmp->eraseFromParent();
+        if (V) {
+          // The available value may be a boolean constant (the comparison is
+          // implied by a dominating assume or branch condition) rather than
+          // the comparison itself. A constant carries no poison-generating
+          // flags; a comparison must not introduce poison that the original
+          // comparison does not, e.g. through samesign.
+          auto *FoundICmp = dyn_cast<ICmpInst>(V);
+          bool IntroducesPoison =
+              FoundICmp && FoundICmp->hasSameSign() && !Cmp->hasSameSign();
+          if (!IntroducesPoison) {
+            LLVM_DEBUG(dbgs()
+                       << "EarlyCSE CSE: " << Inst << "  to: " << *V << '\n');
+            if (!DebugCounter::shouldExecute(CSECounter)) {
+              LLVM_DEBUG(dbgs() << "Skipping due to debug counter\n");
               continue;
             }
+            Inst.replaceAllUsesWith(V);
+            salvageKnowledge(&Inst, &AC);
+            removeMSSA(Inst);
+            Inst.eraseFromParent();
+            Changed = true;
+            ++NumCSE;
+            continue;
           }
         }
       }

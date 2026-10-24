@@ -1294,3 +1294,20 @@ use:
 exit:
   ret i1 %cmp
 }
+
+; The inverse comparison may be available as a constant: it can be implied by
+; a dominating assume, in which case the not can be replaced with the constant.
+define i1 @not_of_inverse_cmp_implied_by_assume(i8 %a, i8 %b) {
+; CHECK-LABEL: @not_of_inverse_cmp_implied_by_assume(
+; CHECK-NEXT:    [[NE:%.*]] = icmp ne i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NE]])
+; CHECK-NEXT:    ret i1 true
+;
+  %ne = icmp ne i8 %a, %b
+  call void @llvm.assume(i1 %ne)
+  %eq = icmp eq i8 %a, %b
+  %not = xor i1 %eq, true
+  ret i1 %not
+}
+
+declare void @llvm.assume(i1)
