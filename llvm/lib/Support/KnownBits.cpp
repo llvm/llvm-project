@@ -1154,6 +1154,23 @@ KnownBits KnownBits::mul(const KnownBits &LHS, const KnownBits &RHS,
   Res.Zero |= (~BottomKnown).getLoBits(ResultBitsKnown);
   Res.One = BottomKnown.getLoBits(ResultBitsKnown);
 
+  // If all bits of one operand are known zero except bit K, that operand is
+  // either zero or 1 << K, so the product is either zero or the other operand
+  // shifted left by K. Any bit that is zero in the shifted operand is zero in
+  // the result, even if the known bits are not contiguous. If bit K is known
+  // one, the product is exactly the shifted operand.
+  auto AddBitsForPow2OrZero = [&](const KnownBits &Pow2OrZero,
+                                  const KnownBits &Other) {
+    if (Pow2OrZero.Zero.popcount() != BitWidth - 1)
+      return;
+    unsigned K = Pow2OrZero.Zero.countr_one();
+    Res.Zero |= Other.Zero.shl(K) | APInt::getLowBitsSet(BitWidth, K);
+    if (!Pow2OrZero.One.isZero())
+      Res.One |= Other.One.shl(K);
+  };
+  AddBitsForPow2OrZero(LHS, RHS);
+  AddBitsForPow2OrZero(RHS, LHS);
+
   if (NoUndefSelfMultiply) {
     // If X has at least TZ trailing zeroes, then bit (2 * TZ + 1) must be zero.
     unsigned TwoTZP1 = 2 * TrailZeroLHS + 1;
