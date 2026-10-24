@@ -1,14 +1,4 @@
-#if defined(USE_LIBSTDCPP)
-#include <bits/c++config.h>
-// glibc++ >= 11 and c++20
-#if defined(_GLIBCXX_RELEASE) && _GLIBCXX_RELEASE >= 11
-#include <coroutine>
-#define HAS_CPP_COROUTINES 1
-#endif
-#endif
-
-// libc++ always has 'coroutine' feature.
-#if defined(USE_LIBCPP)
+#if __has_include(<coroutine>)
 #include <coroutine>
 #define HAS_CPP_COROUTINES 1
 #endif
