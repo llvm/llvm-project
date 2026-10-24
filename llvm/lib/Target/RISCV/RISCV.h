@@ -86,8 +86,14 @@ public:
 FunctionPass *createRISCVLateBranchOptLegacyPass();
 void initializeRISCVLateBranchOptLegacyPass(PassRegistry &);
 
-FunctionPass *createRISCVMakeCompressibleOptPass();
-void initializeRISCVMakeCompressibleOptPass(PassRegistry &);
+class RISCVMakeCompressiblePass
+    : public OptionalPassInfoMixin<RISCVMakeCompressiblePass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+FunctionPass *createRISCVMakeCompressibleLegacyPass();
+void initializeRISCVMakeCompressibleLegacyPass(PassRegistry &);
 
 class RISCVGatherScatterLoweringPass
     : public OptionalPassInfoMixin<RISCVGatherScatterLoweringPass> {
