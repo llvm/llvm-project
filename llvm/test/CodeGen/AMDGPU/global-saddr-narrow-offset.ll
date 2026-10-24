@@ -11,16 +11,13 @@ define amdgpu_kernel void @variable_shift(ptr addrspace(1) %p, i32 %n) {
 ; GFX9-SDAG:       ; %bb.0:
 ; GFX9-SDAG-NEXT:    s_load_dword s2, s[8:9], 0x8
 ; GFX9-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
-; GFX9-SDAG-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-SDAG-NEXT:    v_and_b32_e32 v0, 0xff, v0
+; GFX9-SDAG-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-SDAG-NEXT:    s_and_b32 s3, s2, 3
 ; GFX9-SDAG-NEXT:    v_lshlrev_b64 v[0:1], s3, v[0:1]
-; GFX9-SDAG-NEXT:    v_mov_b32_e32 v2, s1
-; GFX9-SDAG-NEXT:    v_add_co_u32_e32 v0, vcc, s0, v0
-; GFX9-SDAG-NEXT:    v_addc_co_u32_e32 v1, vcc, v2, v1, vcc
-; GFX9-SDAG-NEXT:    v_mov_b32_e32 v2, s2
-; GFX9-SDAG-NEXT:    global_store_dword v[0:1], v2, off
+; GFX9-SDAG-NEXT:    v_mov_b32_e32 v1, s2
+; GFX9-SDAG-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX9-SDAG-NEXT:    s_endpgm
 ;
 ; GFX12-SDAG-LABEL: variable_shift:
@@ -29,13 +26,10 @@ define amdgpu_kernel void @variable_shift(ptr addrspace(1) %p, i32 %n) {
 ; GFX12-SDAG-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_and_b32 v0, 0xff, v0
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-NEXT:    s_and_b32 s3, s2, 3
-; GFX12-SDAG-NEXT:    v_mov_b32_e32 v2, s2
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-SDAG-NEXT:    v_lshlrev_b64_e32 v[0:1], s3, v[0:1]
-; GFX12-SDAG-NEXT:    v_add_co_u32 v0, vcc_lo, s0, v0
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, s1, v1, vcc_lo
-; GFX12-SDAG-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX12-SDAG-NEXT:    v_mov_b32_e32 v1, s2
+; GFX12-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX12-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1250-SDAG-LABEL: variable_shift:
@@ -46,30 +40,27 @@ define amdgpu_kernel void @variable_shift(ptr addrspace(1) %p, i32 %n) {
 ; GFX1250-SDAG-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-SDAG-NEXT:    s_load_b96 s[0:2], s[4:5], 0x0 nv
 ; GFX1250-SDAG-NEXT:    s_mov_b32 s3, 0xff
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(VALU_DEP_2)
+; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_bitop2_b32 v0, s3, v0 bitop3:0x40
 ; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-SDAG-NEXT:    s_and_b32 s3, s2, 3
-; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v2, s2
-; GFX1250-SDAG-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], s3, s[0:1]
-; GFX1250-SDAG-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
+; GFX1250-SDAG-NEXT:    v_lshlrev_b64_e32 v[0:1], s3, v[0:1]
+; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1250-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
 ; GFX9-GISEL-LABEL: variable_shift:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_load_dword s2, s[8:9], 0x8
 ; GFX9-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
-; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-GISEL-NEXT:    v_and_b32_e32 v0, 0xff, v0
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    s_and_b32 s3, s2, 3
 ; GFX9-GISEL-NEXT:    v_lshlrev_b64 v[0:1], s3, v[0:1]
-; GFX9-GISEL-NEXT:    v_mov_b32_e32 v2, s0
-; GFX9-GISEL-NEXT:    v_mov_b32_e32 v3, s1
-; GFX9-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
-; GFX9-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, v3, v1, vcc
-; GFX9-GISEL-NEXT:    v_mov_b32_e32 v2, s2
-; GFX9-GISEL-NEXT:    global_store_dword v[0:1], v2, off
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, s2
+; GFX9-GISEL-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX9-GISEL-NEXT:    s_endpgm
 ;
 ; GFX12-GISEL-LABEL: variable_shift:
@@ -78,14 +69,10 @@ define amdgpu_kernel void @variable_shift(ptr addrspace(1) %p, i32 %n) {
 ; GFX12-GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_and_b32 v0, 0xff, v0
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GISEL-NEXT:    s_and_b32 s3, s2, 3
-; GFX12-GISEL-NEXT:    v_dual_mov_b32 v3, s1 :: v_dual_mov_b32 v2, s0
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-GISEL-NEXT:    v_lshlrev_b64_e32 v[0:1], s3, v[0:1]
-; GFX12-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v2, v0
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, v3, v1, vcc_lo
-; GFX12-GISEL-NEXT:    v_mov_b32_e32 v2, s2
-; GFX12-GISEL-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v1, s2
+; GFX12-GISEL-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX12-GISEL-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-LABEL: variable_shift:
@@ -96,13 +83,14 @@ define amdgpu_kernel void @variable_shift(ptr addrspace(1) %p, i32 %n) {
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_load_b96 s[0:2], s[4:5], 0x0 nv
 ; GFX1250-GISEL-NEXT:    s_mov_b32 s3, 0xff
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(VALU_DEP_2)
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_bitop2_b32 v0, s3, v0 bitop3:0x40
 ; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-GISEL-NEXT:    s_and_b32 s3, s2, 3
-; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v2, s2
-; GFX1250-GISEL-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], s3, s[0:1]
-; GFX1250-GISEL-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
+; GFX1250-GISEL-NEXT:    v_lshlrev_b64_e32 v[0:1], s3, v[0:1]
+; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1250-GISEL-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-GISEL-NEXT:    s_endpgm
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   %m = and i32 %id, 255
@@ -182,9 +170,8 @@ define amdgpu_kernel void @sext_across_block(ptr addrspace(1) %p, ptr addrspace(
 ; GFX1250-SDAG-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
 ; GFX1250-SDAG-NEXT:    s_cbranch_scc1 .LBB1_2
 ; GFX1250-SDAG-NEXT:  ; %bb.1: ; %then
-; GFX1250-SDAG-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], 2, s[0:1]
-; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v2, s6
-; GFX1250-SDAG-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v1, s6
+; GFX1250-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
 ; GFX1250-SDAG-NEXT:  .LBB1_2: ; %exit
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
@@ -457,13 +444,11 @@ define amdgpu_kernel void @uniform_narrow_offset(ptr addrspace(1) %p, i32 %n, i3
 ; GFX9-SDAG:       ; %bb.0:
 ; GFX9-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX9-SDAG-NEXT:    s_mov_b32 s5, 0
-; GFX9-SDAG-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-SDAG-NEXT:    s_and_b32 s4, s2, 0xff
 ; GFX9-SDAG-NEXT:    s_and_b32 s2, s3, 3
 ; GFX9-SDAG-NEXT:    s_lshl_b64 s[2:3], s[4:5], s2
-; GFX9-SDAG-NEXT:    s_add_u32 s0, s0, s2
-; GFX9-SDAG-NEXT:    s_addc_u32 s1, s1, s3
+; GFX9-SDAG-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX9-SDAG-NEXT:    global_store_dword v1, v0, s[0:1]
 ; GFX9-SDAG-NEXT:    s_endpgm
 ;
@@ -471,13 +456,12 @@ define amdgpu_kernel void @uniform_narrow_offset(ptr addrspace(1) %p, i32 %n, i3
 ; GFX12-SDAG:       ; %bb.0:
 ; GFX12-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
 ; GFX12-SDAG-NEXT:    s_mov_b32 s5, 0
-; GFX12-SDAG-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_and_b32 v0, 0x3ff, v0
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-NEXT:    s_and_b32 s4, s2, 0xff
 ; GFX12-SDAG-NEXT:    s_and_b32 s2, s3, 3
 ; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-SDAG-NEXT:    s_lshl_b64 s[2:3], s[4:5], s2
-; GFX12-SDAG-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[2:3]
+; GFX12-SDAG-NEXT:    v_dual_mov_b32 v1, s2 :: v_dual_and_b32 v0, 0x3ff, v0
 ; GFX12-SDAG-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX12-SDAG-NEXT:    s_endpgm
 ;
@@ -490,15 +474,13 @@ define amdgpu_kernel void @uniform_narrow_offset(ptr addrspace(1) %p, i32 %n, i3
 ; GFX1250-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0 nv
 ; GFX1250-SDAG-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-SDAG-NEXT:    s_mov_b32 s5, 0
-; GFX1250-SDAG-NEXT:    s_mov_b32 s4, 0x3ff
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(SALU_CYCLE_1)
-; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_bitop2_b32 v0, s4, v0 bitop3:0x40
 ; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-SDAG-NEXT:    s_and_b32 s4, s2, 0xff
 ; GFX1250-SDAG-NEXT:    s_and_b32 s2, s3, 3
+; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX1250-SDAG-NEXT:    s_lshl_b64 s[2:3], s[4:5], s2
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-SDAG-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[2:3]
+; GFX1250-SDAG-NEXT:    s_mov_b32 s3, 0x3ff
+; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v1, s2 :: v_dual_bitop2_b32 v0, s3, v0 bitop3:0x40
 ; GFX1250-SDAG-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
@@ -506,13 +488,11 @@ define amdgpu_kernel void @uniform_narrow_offset(ptr addrspace(1) %p, i32 %n, i3
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX9-GISEL-NEXT:    s_mov_b32 s5, 0
-; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    s_and_b32 s4, s2, 0xff
 ; GFX9-GISEL-NEXT:    s_and_b32 s2, s3, 3
 ; GFX9-GISEL-NEXT:    s_lshl_b64 s[2:3], s[4:5], s2
-; GFX9-GISEL-NEXT:    s_add_u32 s0, s0, s2
-; GFX9-GISEL-NEXT:    s_addc_u32 s1, s1, s3
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX9-GISEL-NEXT:    global_store_dword v1, v0, s[0:1]
 ; GFX9-GISEL-NEXT:    s_endpgm
 ;
@@ -520,14 +500,12 @@ define amdgpu_kernel void @uniform_narrow_offset(ptr addrspace(1) %p, i32 %n, i3
 ; GFX12-GISEL:       ; %bb.0:
 ; GFX12-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
 ; GFX12-GISEL-NEXT:    s_mov_b32 s5, 0
-; GFX12-GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_and_b32 v0, 0x3ff, v0
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GISEL-NEXT:    s_and_b32 s4, s2, 0xff
 ; GFX12-GISEL-NEXT:    s_and_b32 s2, s3, 3
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-GISEL-NEXT:    s_lshl_b64 s[2:3], s[4:5], s2
-; GFX12-GISEL-NEXT:    s_add_co_u32 s0, s0, s2
-; GFX12-GISEL-NEXT:    s_add_co_ci_u32 s1, s1, s3
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v1, s2 :: v_dual_and_b32 v0, 0x3ff, v0
 ; GFX12-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX12-GISEL-NEXT:    s_endpgm
 ;
@@ -540,16 +518,13 @@ define amdgpu_kernel void @uniform_narrow_offset(ptr addrspace(1) %p, i32 %n, i3
 ; GFX1250-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0 nv
 ; GFX1250-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-GISEL-NEXT:    s_mov_b32 s5, 0
-; GFX1250-GISEL-NEXT:    s_mov_b32 s4, 0x3ff
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(SALU_CYCLE_1)
-; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_bitop2_b32 v0, s4, v0 bitop3:0x40
 ; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-GISEL-NEXT:    s_and_b32 s4, s2, 0xff
 ; GFX1250-GISEL-NEXT:    s_and_b32 s2, s3, 3
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX1250-GISEL-NEXT:    s_lshl_b64 s[2:3], s[4:5], s2
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-GISEL-NEXT:    s_add_co_u32 s0, s0, s2
-; GFX1250-GISEL-NEXT:    s_add_co_ci_u32 s1, s1, s3
+; GFX1250-GISEL-NEXT:    s_mov_b32 s3, 0x3ff
+; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v1, s2 :: v_dual_bitop2_b32 v0, s3, v0 bitop3:0x40
 ; GFX1250-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX1250-GISEL-NEXT:    s_endpgm
   %a = and i32 %n, 255

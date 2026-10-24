@@ -26,29 +26,30 @@ define amdgpu_kernel void @test_smfmac_f32_32x32x32_f16__vgpr(ptr addrspace(1) %
 ; CHECK-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; CHECK-NEXT:    v_mov_b32_e32 v3, v1
 ; CHECK-NEXT:    s_mov_b32 s3, 6
-; CHECK-NEXT:    v_lshlrev_b64 v[2:3], s3, v[2:3]
+; CHECK-NEXT:    v_lshlrev_b64 v[4:5], s3, v[2:3]
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    v_lshl_add_u64 v[2:3], s[0:1], 0, v[2:3]
-; CHECK-NEXT:    global_load_dwordx4 v[4:7], v[2:3], off offset:16
+; CHECK-NEXT:    v_lshl_add_u64 v[2:3], s[0:1], 0, v[4:5]
+; CHECK-NEXT:    v_mov_b32_e32 v1, v4
+; CHECK-NEXT:    global_load_dwordx4 v[4:7], v1, s[0:1] offset:16
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    v_mov_b32_e32 v1, v7
-; CHECK-NEXT:    v_mov_b32_e32 v12, v6
-; CHECK-NEXT:    v_mov_b32_e32 v13, v5
-; CHECK-NEXT:    v_mov_b32_e32 v14, v4
-; CHECK-NEXT:    global_load_dwordx4 v[4:7], v[2:3], off
+; CHECK-NEXT:    v_mov_b32_e32 v12, v7
+; CHECK-NEXT:    v_mov_b32_e32 v13, v6
+; CHECK-NEXT:    v_mov_b32_e32 v14, v5
+; CHECK-NEXT:    v_mov_b32_e32 v15, v4
+; CHECK-NEXT:    global_load_dwordx4 v[4:7], v1, s[0:1]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    v_mov_b32_e32 v15, v7
-; CHECK-NEXT:    v_mov_b32_e32 v16, v6
-; CHECK-NEXT:    v_mov_b32_e32 v17, v5
+; CHECK-NEXT:    v_mov_b32_e32 v16, v7
+; CHECK-NEXT:    v_mov_b32_e32 v17, v6
+; CHECK-NEXT:    v_mov_b32_e32 v18, v5
 ; CHECK-NEXT:    ; kill: def $vgpr4 killed $vgpr4 killed $vgpr4_vgpr5_vgpr6_vgpr7 killed $exec
 ; CHECK-NEXT:    ; kill: def $vgpr4 killed $vgpr4 def $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11 killed $exec
-; CHECK-NEXT:    v_mov_b32_e32 v5, v17
-; CHECK-NEXT:    v_mov_b32_e32 v6, v16
-; CHECK-NEXT:    v_mov_b32_e32 v7, v15
-; CHECK-NEXT:    v_mov_b32_e32 v8, v14
-; CHECK-NEXT:    v_mov_b32_e32 v9, v13
-; CHECK-NEXT:    v_mov_b32_e32 v10, v12
-; CHECK-NEXT:    v_mov_b32_e32 v11, v1
+; CHECK-NEXT:    v_mov_b32_e32 v5, v18
+; CHECK-NEXT:    v_mov_b32_e32 v6, v17
+; CHECK-NEXT:    v_mov_b32_e32 v7, v16
+; CHECK-NEXT:    v_mov_b32_e32 v8, v15
+; CHECK-NEXT:    v_mov_b32_e32 v9, v14
+; CHECK-NEXT:    v_mov_b32_e32 v10, v13
+; CHECK-NEXT:    v_mov_b32_e32 v11, v12
 ; CHECK-NEXT:    v_mov_b32_e32 v25, v11
 ; CHECK-NEXT:    v_mov_b32_e32 v26, v10
 ; CHECK-NEXT:    v_mov_b32_e32 v27, v9
@@ -57,7 +58,7 @@ define amdgpu_kernel void @test_smfmac_f32_32x32x32_f16__vgpr(ptr addrspace(1) %
 ; CHECK-NEXT:    v_mov_b32_e32 v30, v6
 ; CHECK-NEXT:    v_mov_b32_e32 v31, v5
 ; CHECK-NEXT:    v_mov_b32_e32 v8, v4
-; CHECK-NEXT:    global_load_dwordx4 v[10:13], v[2:3], off offset:32
+; CHECK-NEXT:    global_load_dwordx4 v[10:13], v1, s[0:1] offset:32
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v5, v13
 ; CHECK-NEXT:    v_mov_b32_e32 v6, v12
