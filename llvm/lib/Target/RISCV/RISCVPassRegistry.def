@@ -33,6 +33,7 @@ FUNCTION_PASS("riscv-zacas-abi-fix", RISCVZacasABIFixPass(this))
 #define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
 MACHINE_FUNCTION_PASS("riscv-asm-printer", RISCVAsmPrinterPass())
+MACHINE_FUNCTION_PASS("riscv-dead-defs", RISCVDeadRegisterDefinitionsPass())
 MACHINE_FUNCTION_PASS("riscv-expand-pseudo-atomics",
                       RISCVExpandPseudoAtomicsPass())
 MACHINE_FUNCTION_PASS("riscv-expand-pseudo-post-ra",
@@ -42,7 +43,10 @@ MACHINE_FUNCTION_PASS("riscv-expand-pseudo-pre-emit",
 MACHINE_FUNCTION_PASS("riscv-expand-pseudo-pre-ra",
                       RISCVExpandPseudoPreRAPass())
 MACHINE_FUNCTION_PASS("riscv-fold-mem-offset", RISCVFoldMemOffsetPass())
+MACHINE_FUNCTION_PASS("riscv-indirect-branch-tracking",
+                      RISCVIndirectBranchTrackingPass())
 MACHINE_FUNCTION_PASS("riscv-isel", RISCVISelDAGToDAGPass(*this, getOptLevel()))
+MACHINE_FUNCTION_PASS("riscv-lpad-setup", RISCVLandingPadSetupPass())
 MACHINE_FUNCTION_PASS("riscv-opt-w-instrs", RISCVOptWInstrsPass())
 MACHINE_FUNCTION_PASS("riscv-vector-peephole", RISCVVectorPeepholePass())
 MACHINE_FUNCTION_PASS("riscv-vl-optimizer", RISCVVLOptimizerPass())
