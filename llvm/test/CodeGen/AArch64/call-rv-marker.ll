@@ -83,131 +83,63 @@ entry:
 }
 
 define dso_local void @rv_marker_3() personality ptr @__gxx_personality_v0 {
-; CHECK-SD-LABEL: rv_marker_3:
-; CHECK-SD:       Lfunc_begin0:
-; CHECK-SD-NEXT:    .cfi_startproc
-; CHECK-SD-NEXT:    .cfi_personality 155, ___gxx_personality_v0
-; CHECK-SD-NEXT:    .cfi_lsda 16, Lexception0
-; CHECK-SD-NEXT:  ; %bb.0: ; %entry
-; CHECK-SD-NEXT:    stp x20, x19, [sp, #-32]! ; 16-byte Folded Spill
-; CHECK-SD-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-SD-NEXT:    .cfi_offset w30, -8
-; CHECK-SD-NEXT:    .cfi_offset w29, -16
-; CHECK-SD-NEXT:    .cfi_offset w19, -24
-; CHECK-SD-NEXT:    .cfi_offset w20, -32
-; CHECK-SD-NEXT:    bl _foo1
-; CHECK-SD-NEXT:    mov x29, x29
-; CHECK-SD-NEXT:    bl _objc_retainAutoreleasedReturnValue
-; CHECK-SD-NEXT:    mov x19, x0
-; CHECK-SD-NEXT:  Ltmp0: ; EH_LABEL
-; CHECK-SD-NEXT:    bl _objc_object
-; CHECK-SD-NEXT:  Ltmp1: ; EH_LABEL
-; CHECK-SD-NEXT:  ; %bb.1: ; %invoke.cont
-; CHECK-SD-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
-; CHECK-SD-NEXT:    mov x0, x19
-; CHECK-SD-NEXT:    ldp x20, x19, [sp], #32 ; 16-byte Folded Reload
-; CHECK-SD-NEXT:    b _objc_release
-; CHECK-SD-NEXT:  LBB3_2: ; %lpad
-; CHECK-SD-NEXT:  Ltmp2: ; EH_LABEL
-; CHECK-SD-NEXT:    mov x20, x0
-; CHECK-SD-NEXT:    mov x0, x19
-; CHECK-SD-NEXT:    bl _objc_release
-; CHECK-SD-NEXT:    mov x0, x20
-; CHECK-SD-NEXT:    bl __Unwind_Resume
-; CHECK-SD-NEXT:  Lfunc_end0:
-; CHECK-SD-NEXT:    .cfi_endproc
-; CHECK-SD-NEXT:    .section __TEXT,__gcc_except_tab
-; CHECK-SD-NEXT:    .p2align 2, 0x0
-; CHECK-SD-NEXT:  GCC_except_table3:
-; CHECK-SD-NEXT:  Lexception0:
-; CHECK-SD-NEXT:    .byte 255 ; @LPStart Encoding = omit
-; CHECK-SD-NEXT:    .byte 255 ; @TType Encoding = omit
-; CHECK-SD-NEXT:    .byte 1 ; Call site Encoding = uleb128
-; CHECK-SD-NEXT:    .uleb128 Lcst_end0-Lcst_begin0
-; CHECK-SD-NEXT:  Lcst_begin0:
-; CHECK-SD-NEXT:    .uleb128 Lfunc_begin0-Lfunc_begin0 ; >> Call Site 1 <<
-; CHECK-SD-NEXT:    .uleb128 Ltmp0-Lfunc_begin0 ; Call between Lfunc_begin0 and Ltmp0
-; CHECK-SD-NEXT:    .byte 0 ; has no landing pad
-; CHECK-SD-NEXT:    .byte 0 ; On action: cleanup
-; CHECK-SD-NEXT:    .uleb128 Ltmp0-Lfunc_begin0 ; >> Call Site 2 <<
-; CHECK-SD-NEXT:    .uleb128 Ltmp1-Ltmp0 ; Call between Ltmp0 and Ltmp1
-; CHECK-SD-NEXT:    .uleb128 Ltmp2-Lfunc_begin0 ; jumps to Ltmp2
-; CHECK-SD-NEXT:    .byte 0 ; On action: cleanup
-; CHECK-SD-NEXT:    .uleb128 Ltmp1-Lfunc_begin0 ; >> Call Site 3 <<
-; CHECK-SD-NEXT:    .uleb128 Lfunc_end0-Ltmp1 ; Call between Ltmp1 and Lfunc_end0
-; CHECK-SD-NEXT:    .byte 0 ; has no landing pad
-; CHECK-SD-NEXT:    .byte 0 ; On action: cleanup
-; CHECK-SD-NEXT:  Lcst_end0:
-; CHECK-SD-NEXT:    .p2align 2, 0x0
-;
-; CHECK-GI-LABEL: rv_marker_3:
-; CHECK-GI:       Lfunc_begin0:
-; CHECK-GI-NEXT:    .cfi_startproc
-; CHECK-GI-NEXT:    .cfi_personality 155, ___gxx_personality_v0
-; CHECK-GI-NEXT:    .cfi_lsda 16, Lexception0
-; CHECK-GI-NEXT:  ; %bb.0: ; %entry
-; CHECK-GI-NEXT:    stp x20, x19, [sp, #-32]! ; 16-byte Folded Spill
-; CHECK-GI-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
-; CHECK-GI-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-GI-NEXT:    .cfi_offset w30, -8
-; CHECK-GI-NEXT:    .cfi_offset w29, -16
-; CHECK-GI-NEXT:    .cfi_offset w19, -24
-; CHECK-GI-NEXT:    .cfi_offset w20, -32
-; CHECK-GI-NEXT:    bl _foo1
-; CHECK-GI-NEXT:    mov x29, x29
-; CHECK-GI-NEXT:    bl _objc_retainAutoreleasedReturnValue
-; CHECK-GI-NEXT:    mov x19, x0
-; CHECK-GI-NEXT:  Ltmp0: ; EH_LABEL
-; CHECK-GI-NEXT:    bl _objc_object
-; CHECK-GI-NEXT:  Ltmp1: ; EH_LABEL
-; CHECK-GI-NEXT:  ; %bb.1: ; %invoke.cont
-; CHECK-GI-NEXT:  Lloh0:
-; CHECK-GI-NEXT:    adrp x1, _objc_release@GOTPAGE
-; CHECK-GI-NEXT:    mov x0, x19
-; CHECK-GI-NEXT:  Lloh1:
-; CHECK-GI-NEXT:    ldr x1, [x1, _objc_release@GOTPAGEOFF]
-; CHECK-GI-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
-; CHECK-GI-NEXT:    ldp x20, x19, [sp], #32 ; 16-byte Folded Reload
-; CHECK-GI-NEXT:    br x1
-; CHECK-GI-NEXT:  LBB3_2: ; %lpad
-; CHECK-GI-NEXT:  Ltmp2: ; EH_LABEL
-; CHECK-GI-NEXT:  Lloh2:
-; CHECK-GI-NEXT:    adrp x8, _objc_release@GOTPAGE
-; CHECK-GI-NEXT:    mov x20, x0
-; CHECK-GI-NEXT:    mov x0, x19
-; CHECK-GI-NEXT:  Lloh3:
-; CHECK-GI-NEXT:    ldr x8, [x8, _objc_release@GOTPAGEOFF]
-; CHECK-GI-NEXT:    blr x8
-; CHECK-GI-NEXT:    mov x0, x20
-; CHECK-GI-NEXT:    bl __Unwind_Resume
-; CHECK-GI-NEXT:    .loh AdrpLdrGot Lloh0, Lloh1
-; CHECK-GI-NEXT:    .loh AdrpLdrGot Lloh2, Lloh3
-; CHECK-GI-NEXT:  Lfunc_end0:
-; CHECK-GI-NEXT:    .cfi_endproc
-; CHECK-GI-NEXT:    .section __TEXT,__gcc_except_tab
-; CHECK-GI-NEXT:    .p2align 2, 0x0
-; CHECK-GI-NEXT:  GCC_except_table3:
-; CHECK-GI-NEXT:  Lexception0:
-; CHECK-GI-NEXT:    .byte 255 ; @LPStart Encoding = omit
-; CHECK-GI-NEXT:    .byte 255 ; @TType Encoding = omit
-; CHECK-GI-NEXT:    .byte 1 ; Call site Encoding = uleb128
-; CHECK-GI-NEXT:    .uleb128 Lcst_end0-Lcst_begin0
-; CHECK-GI-NEXT:  Lcst_begin0:
-; CHECK-GI-NEXT:    .uleb128 Lfunc_begin0-Lfunc_begin0 ; >> Call Site 1 <<
-; CHECK-GI-NEXT:    .uleb128 Ltmp0-Lfunc_begin0 ; Call between Lfunc_begin0 and Ltmp0
-; CHECK-GI-NEXT:    .byte 0 ; has no landing pad
-; CHECK-GI-NEXT:    .byte 0 ; On action: cleanup
-; CHECK-GI-NEXT:    .uleb128 Ltmp0-Lfunc_begin0 ; >> Call Site 2 <<
-; CHECK-GI-NEXT:    .uleb128 Ltmp1-Ltmp0 ; Call between Ltmp0 and Ltmp1
-; CHECK-GI-NEXT:    .uleb128 Ltmp2-Lfunc_begin0 ; jumps to Ltmp2
-; CHECK-GI-NEXT:    .byte 0 ; On action: cleanup
-; CHECK-GI-NEXT:    .uleb128 Ltmp1-Lfunc_begin0 ; >> Call Site 3 <<
-; CHECK-GI-NEXT:    .uleb128 Lfunc_end0-Ltmp1 ; Call between Ltmp1 and Lfunc_end0
-; CHECK-GI-NEXT:    .byte 0 ; has no landing pad
-; CHECK-GI-NEXT:    .byte 0 ; On action: cleanup
-; CHECK-GI-NEXT:  Lcst_end0:
-; CHECK-GI-NEXT:    .p2align 2, 0x0
+; CHECK-LABEL: rv_marker_3:
+; CHECK:       Lfunc_begin0:
+; CHECK-NEXT:    .cfi_startproc
+; CHECK-NEXT:    .cfi_personality 155, ___gxx_personality_v0
+; CHECK-NEXT:    .cfi_lsda 16, Lexception0
+; CHECK-NEXT:  ; %bb.0: ; %entry
+; CHECK-NEXT:    stp x20, x19, [sp, #-32]! ; 16-byte Folded Spill
+; CHECK-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    .cfi_offset w30, -8
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    .cfi_offset w19, -24
+; CHECK-NEXT:    .cfi_offset w20, -32
+; CHECK-NEXT:    bl _foo1
+; CHECK-NEXT:    mov x29, x29
+; CHECK-NEXT:    bl _objc_retainAutoreleasedReturnValue
+; CHECK-NEXT:    mov x19, x0
+; CHECK-NEXT:  Ltmp0: ; EH_LABEL
+; CHECK-NEXT:    bl _objc_object
+; CHECK-NEXT:  Ltmp1: ; EH_LABEL
+; CHECK-NEXT:  ; %bb.1: ; %invoke.cont
+; CHECK-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
+; CHECK-NEXT:    mov x0, x19
+; CHECK-NEXT:    ldp x20, x19, [sp], #32 ; 16-byte Folded Reload
+; CHECK-NEXT:    b _objc_release
+; CHECK-NEXT:  LBB3_2: ; %lpad
+; CHECK-NEXT:  Ltmp2: ; EH_LABEL
+; CHECK-NEXT:    mov x20, x0
+; CHECK-NEXT:    mov x0, x19
+; CHECK-NEXT:    bl _objc_release
+; CHECK-NEXT:    mov x0, x20
+; CHECK-NEXT:    bl __Unwind_Resume
+; CHECK-NEXT:  Lfunc_end0:
+; CHECK-NEXT:    .cfi_endproc
+; CHECK-NEXT:    .section __TEXT,__gcc_except_tab
+; CHECK-NEXT:    .p2align 2, 0x0
+; CHECK-NEXT:  GCC_except_table3:
+; CHECK-NEXT:  Lexception0:
+; CHECK-NEXT:    .byte 255 ; @LPStart Encoding = omit
+; CHECK-NEXT:    .byte 255 ; @TType Encoding = omit
+; CHECK-NEXT:    .byte 1 ; Call site Encoding = uleb128
+; CHECK-NEXT:    .uleb128 Lcst_end0-Lcst_begin0
+; CHECK-NEXT:  Lcst_begin0:
+; CHECK-NEXT:    .uleb128 Lfunc_begin0-Lfunc_begin0 ; >> Call Site 1 <<
+; CHECK-NEXT:    .uleb128 Ltmp0-Lfunc_begin0 ; Call between Lfunc_begin0 and Ltmp0
+; CHECK-NEXT:    .byte 0 ; has no landing pad
+; CHECK-NEXT:    .byte 0 ; On action: cleanup
+; CHECK-NEXT:    .uleb128 Ltmp0-Lfunc_begin0 ; >> Call Site 2 <<
+; CHECK-NEXT:    .uleb128 Ltmp1-Ltmp0 ; Call between Ltmp0 and Ltmp1
+; CHECK-NEXT:    .uleb128 Ltmp2-Lfunc_begin0 ; jumps to Ltmp2
+; CHECK-NEXT:    .byte 0 ; On action: cleanup
+; CHECK-NEXT:    .uleb128 Ltmp1-Lfunc_begin0 ; >> Call Site 3 <<
+; CHECK-NEXT:    .uleb128 Lfunc_end0-Ltmp1 ; Call between Ltmp1 and Lfunc_end0
+; CHECK-NEXT:    .byte 0 ; has no landing pad
+; CHECK-NEXT:    .byte 0 ; On action: cleanup
+; CHECK-NEXT:  Lcst_end0:
+; CHECK-NEXT:    .p2align 2, 0x0
 entry:
   %call = call ptr @foo1() [ "clang.arc.attachedcall"(ptr @objc_retainAutoreleasedReturnValue) ]
   invoke void @objc_object(ptr %call) #5
@@ -225,162 +157,79 @@ lpad:                                             ; preds = %entry
 }
 
 define dso_local void @rv_marker_4() personality ptr @__gxx_personality_v0 {
-; CHECK-SD-LABEL: rv_marker_4:
-; CHECK-SD:       Lfunc_begin1:
-; CHECK-SD-NEXT:    .cfi_startproc
-; CHECK-SD-NEXT:    .cfi_personality 155, ___gxx_personality_v0
-; CHECK-SD-NEXT:    .cfi_lsda 16, Lexception1
-; CHECK-SD-NEXT:  ; %bb.0: ; %entry
-; CHECK-SD-NEXT:    sub sp, sp, #48
-; CHECK-SD-NEXT:    stp x20, x19, [sp, #16] ; 16-byte Folded Spill
-; CHECK-SD-NEXT:    stp x29, x30, [sp, #32] ; 16-byte Folded Spill
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-SD-NEXT:    .cfi_offset w30, -8
-; CHECK-SD-NEXT:    .cfi_offset w29, -16
-; CHECK-SD-NEXT:    .cfi_offset w19, -24
-; CHECK-SD-NEXT:    .cfi_offset w20, -32
-; CHECK-SD-NEXT:  Ltmp3: ; EH_LABEL
-; CHECK-SD-NEXT:    bl _foo1
-; CHECK-SD-NEXT:    mov x29, x29
-; CHECK-SD-NEXT:    bl _objc_retainAutoreleasedReturnValue
-; CHECK-SD-NEXT:  Ltmp4: ; EH_LABEL
-; CHECK-SD-NEXT:  ; %bb.1: ; %invoke.cont
-; CHECK-SD-NEXT:  Ltmp6: ; EH_LABEL
-; CHECK-SD-NEXT:    mov x19, x0
-; CHECK-SD-NEXT:    bl _objc_object
-; CHECK-SD-NEXT:  Ltmp7: ; EH_LABEL
-; CHECK-SD-NEXT:  ; %bb.2: ; %invoke.cont2
-; CHECK-SD-NEXT:    mov x0, x19
-; CHECK-SD-NEXT:    bl _objc_release
-; CHECK-SD-NEXT:    add x0, sp, #15
-; CHECK-SD-NEXT:    bl __ZN1SD1Ev
-; CHECK-SD-NEXT:    ldp x29, x30, [sp, #32] ; 16-byte Folded Reload
-; CHECK-SD-NEXT:    ldp x20, x19, [sp, #16] ; 16-byte Folded Reload
-; CHECK-SD-NEXT:    add sp, sp, #48
-; CHECK-SD-NEXT:    ret
-; CHECK-SD-NEXT:  LBB4_3: ; %lpad1
-; CHECK-SD-NEXT:  Ltmp8: ; EH_LABEL
-; CHECK-SD-NEXT:    mov x1, x19
-; CHECK-SD-NEXT:    mov x19, x0
-; CHECK-SD-NEXT:    mov x0, x1
-; CHECK-SD-NEXT:    bl _objc_release
-; CHECK-SD-NEXT:    b LBB4_5
-; CHECK-SD-NEXT:  LBB4_4: ; %lpad
-; CHECK-SD-NEXT:  Ltmp5: ; EH_LABEL
-; CHECK-SD-NEXT:    mov x19, x0
-; CHECK-SD-NEXT:  LBB4_5: ; %ehcleanup
-; CHECK-SD-NEXT:    add x0, sp, #15
-; CHECK-SD-NEXT:    bl __ZN1SD1Ev
-; CHECK-SD-NEXT:    mov x0, x19
-; CHECK-SD-NEXT:    bl __Unwind_Resume
-; CHECK-SD-NEXT:  Lfunc_end1:
-; CHECK-SD-NEXT:    .cfi_endproc
-; CHECK-SD-NEXT:    .section __TEXT,__gcc_except_tab
-; CHECK-SD-NEXT:    .p2align 2, 0x0
-; CHECK-SD-NEXT:  GCC_except_table4:
-; CHECK-SD-NEXT:  Lexception1:
-; CHECK-SD-NEXT:    .byte 255 ; @LPStart Encoding = omit
-; CHECK-SD-NEXT:    .byte 255 ; @TType Encoding = omit
-; CHECK-SD-NEXT:    .byte 1 ; Call site Encoding = uleb128
-; CHECK-SD-NEXT:    .uleb128 Lcst_end1-Lcst_begin1
-; CHECK-SD-NEXT:  Lcst_begin1:
-; CHECK-SD-NEXT:    .uleb128 Ltmp3-Lfunc_begin1 ; >> Call Site 1 <<
-; CHECK-SD-NEXT:    .uleb128 Ltmp4-Ltmp3 ; Call between Ltmp3 and Ltmp4
-; CHECK-SD-NEXT:    .uleb128 Ltmp5-Lfunc_begin1 ; jumps to Ltmp5
-; CHECK-SD-NEXT:    .byte 0 ; On action: cleanup
-; CHECK-SD-NEXT:    .uleb128 Ltmp6-Lfunc_begin1 ; >> Call Site 2 <<
-; CHECK-SD-NEXT:    .uleb128 Ltmp7-Ltmp6 ; Call between Ltmp6 and Ltmp7
-; CHECK-SD-NEXT:    .uleb128 Ltmp8-Lfunc_begin1 ; jumps to Ltmp8
-; CHECK-SD-NEXT:    .byte 0 ; On action: cleanup
-; CHECK-SD-NEXT:    .uleb128 Ltmp7-Lfunc_begin1 ; >> Call Site 3 <<
-; CHECK-SD-NEXT:    .uleb128 Lfunc_end1-Ltmp7 ; Call between Ltmp7 and Lfunc_end1
-; CHECK-SD-NEXT:    .byte 0 ; has no landing pad
-; CHECK-SD-NEXT:    .byte 0 ; On action: cleanup
-; CHECK-SD-NEXT:  Lcst_end1:
-; CHECK-SD-NEXT:    .p2align 2, 0x0
-;
-; CHECK-GI-LABEL: rv_marker_4:
-; CHECK-GI:       Lfunc_begin1:
-; CHECK-GI-NEXT:    .cfi_startproc
-; CHECK-GI-NEXT:    .cfi_personality 155, ___gxx_personality_v0
-; CHECK-GI-NEXT:    .cfi_lsda 16, Lexception1
-; CHECK-GI-NEXT:  ; %bb.0: ; %entry
-; CHECK-GI-NEXT:    sub sp, sp, #48
-; CHECK-GI-NEXT:    stp x20, x19, [sp, #16] ; 16-byte Folded Spill
-; CHECK-GI-NEXT:    stp x29, x30, [sp, #32] ; 16-byte Folded Spill
-; CHECK-GI-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-GI-NEXT:    .cfi_offset w30, -8
-; CHECK-GI-NEXT:    .cfi_offset w29, -16
-; CHECK-GI-NEXT:    .cfi_offset w19, -24
-; CHECK-GI-NEXT:    .cfi_offset w20, -32
-; CHECK-GI-NEXT:  Ltmp3: ; EH_LABEL
-; CHECK-GI-NEXT:    bl _foo1
-; CHECK-GI-NEXT:    mov x29, x29
-; CHECK-GI-NEXT:    bl _objc_retainAutoreleasedReturnValue
-; CHECK-GI-NEXT:  Ltmp4: ; EH_LABEL
-; CHECK-GI-NEXT:  ; %bb.1: ; %invoke.cont
-; CHECK-GI-NEXT:  Ltmp6: ; EH_LABEL
-; CHECK-GI-NEXT:    mov x19, x0
-; CHECK-GI-NEXT:    bl _objc_object
-; CHECK-GI-NEXT:  Ltmp7: ; EH_LABEL
-; CHECK-GI-NEXT:  ; %bb.2: ; %invoke.cont2
-; CHECK-GI-NEXT:  Lloh4:
-; CHECK-GI-NEXT:    adrp x8, _objc_release@GOTPAGE
-; CHECK-GI-NEXT:    mov x0, x19
-; CHECK-GI-NEXT:  Lloh5:
-; CHECK-GI-NEXT:    ldr x8, [x8, _objc_release@GOTPAGEOFF]
-; CHECK-GI-NEXT:    blr x8
-; CHECK-GI-NEXT:    add x0, sp, #15
-; CHECK-GI-NEXT:    bl __ZN1SD1Ev
-; CHECK-GI-NEXT:    ldp x29, x30, [sp, #32] ; 16-byte Folded Reload
-; CHECK-GI-NEXT:    ldp x20, x19, [sp, #16] ; 16-byte Folded Reload
-; CHECK-GI-NEXT:    add sp, sp, #48
-; CHECK-GI-NEXT:    ret
-; CHECK-GI-NEXT:  LBB4_3: ; %lpad1
-; CHECK-GI-NEXT:  Ltmp8: ; EH_LABEL
-; CHECK-GI-NEXT:  Lloh6:
-; CHECK-GI-NEXT:    adrp x8, _objc_release@GOTPAGE
-; CHECK-GI-NEXT:    mov x20, x0
-; CHECK-GI-NEXT:    mov x0, x19
-; CHECK-GI-NEXT:  Lloh7:
-; CHECK-GI-NEXT:    ldr x8, [x8, _objc_release@GOTPAGEOFF]
-; CHECK-GI-NEXT:    blr x8
-; CHECK-GI-NEXT:    b LBB4_5
-; CHECK-GI-NEXT:  LBB4_4: ; %lpad
-; CHECK-GI-NEXT:  Ltmp5: ; EH_LABEL
-; CHECK-GI-NEXT:    mov x20, x0
-; CHECK-GI-NEXT:  LBB4_5: ; %ehcleanup
-; CHECK-GI-NEXT:    add x0, sp, #15
-; CHECK-GI-NEXT:    bl __ZN1SD1Ev
-; CHECK-GI-NEXT:    mov x0, x20
-; CHECK-GI-NEXT:    bl __Unwind_Resume
-; CHECK-GI-NEXT:    .loh AdrpLdrGot Lloh4, Lloh5
-; CHECK-GI-NEXT:    .loh AdrpLdrGot Lloh6, Lloh7
-; CHECK-GI-NEXT:  Lfunc_end1:
-; CHECK-GI-NEXT:    .cfi_endproc
-; CHECK-GI-NEXT:    .section __TEXT,__gcc_except_tab
-; CHECK-GI-NEXT:    .p2align 2, 0x0
-; CHECK-GI-NEXT:  GCC_except_table4:
-; CHECK-GI-NEXT:  Lexception1:
-; CHECK-GI-NEXT:    .byte 255 ; @LPStart Encoding = omit
-; CHECK-GI-NEXT:    .byte 255 ; @TType Encoding = omit
-; CHECK-GI-NEXT:    .byte 1 ; Call site Encoding = uleb128
-; CHECK-GI-NEXT:    .uleb128 Lcst_end1-Lcst_begin1
-; CHECK-GI-NEXT:  Lcst_begin1:
-; CHECK-GI-NEXT:    .uleb128 Ltmp3-Lfunc_begin1 ; >> Call Site 1 <<
-; CHECK-GI-NEXT:    .uleb128 Ltmp4-Ltmp3 ; Call between Ltmp3 and Ltmp4
-; CHECK-GI-NEXT:    .uleb128 Ltmp5-Lfunc_begin1 ; jumps to Ltmp5
-; CHECK-GI-NEXT:    .byte 0 ; On action: cleanup
-; CHECK-GI-NEXT:    .uleb128 Ltmp6-Lfunc_begin1 ; >> Call Site 2 <<
-; CHECK-GI-NEXT:    .uleb128 Ltmp7-Ltmp6 ; Call between Ltmp6 and Ltmp7
-; CHECK-GI-NEXT:    .uleb128 Ltmp8-Lfunc_begin1 ; jumps to Ltmp8
-; CHECK-GI-NEXT:    .byte 0 ; On action: cleanup
-; CHECK-GI-NEXT:    .uleb128 Ltmp7-Lfunc_begin1 ; >> Call Site 3 <<
-; CHECK-GI-NEXT:    .uleb128 Lfunc_end1-Ltmp7 ; Call between Ltmp7 and Lfunc_end1
-; CHECK-GI-NEXT:    .byte 0 ; has no landing pad
-; CHECK-GI-NEXT:    .byte 0 ; On action: cleanup
-; CHECK-GI-NEXT:  Lcst_end1:
-; CHECK-GI-NEXT:    .p2align 2, 0x0
+; CHECK-LABEL: rv_marker_4:
+; CHECK:       Lfunc_begin1:
+; CHECK-NEXT:    .cfi_startproc
+; CHECK-NEXT:    .cfi_personality 155, ___gxx_personality_v0
+; CHECK-NEXT:    .cfi_lsda 16, Lexception1
+; CHECK-NEXT:  ; %bb.0: ; %entry
+; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    stp x20, x19, [sp, #16] ; 16-byte Folded Spill
+; CHECK-NEXT:    stp x29, x30, [sp, #32] ; 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    .cfi_offset w30, -8
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    .cfi_offset w19, -24
+; CHECK-NEXT:    .cfi_offset w20, -32
+; CHECK-NEXT:  Ltmp3: ; EH_LABEL
+; CHECK-NEXT:    bl _foo1
+; CHECK-NEXT:    mov x29, x29
+; CHECK-NEXT:    bl _objc_retainAutoreleasedReturnValue
+; CHECK-NEXT:  Ltmp4: ; EH_LABEL
+; CHECK-NEXT:  ; %bb.1: ; %invoke.cont
+; CHECK-NEXT:  Ltmp6: ; EH_LABEL
+; CHECK-NEXT:    mov x19, x0
+; CHECK-NEXT:    bl _objc_object
+; CHECK-NEXT:  Ltmp7: ; EH_LABEL
+; CHECK-NEXT:  ; %bb.2: ; %invoke.cont2
+; CHECK-NEXT:    mov x0, x19
+; CHECK-NEXT:    bl _objc_release
+; CHECK-NEXT:    add x0, sp, #15
+; CHECK-NEXT:    bl __ZN1SD1Ev
+; CHECK-NEXT:    ldp x29, x30, [sp, #32] ; 16-byte Folded Reload
+; CHECK-NEXT:    ldp x20, x19, [sp, #16] ; 16-byte Folded Reload
+; CHECK-NEXT:    add sp, sp, #48
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  LBB4_3: ; %lpad1
+; CHECK-NEXT:  Ltmp8: ; EH_LABEL
+; CHECK-NEXT:    mov x1, x19
+; CHECK-NEXT:    mov x19, x0
+; CHECK-NEXT:    mov x0, x1
+; CHECK-NEXT:    bl _objc_release
+; CHECK-NEXT:    b LBB4_5
+; CHECK-NEXT:  LBB4_4: ; %lpad
+; CHECK-NEXT:  Ltmp5: ; EH_LABEL
+; CHECK-NEXT:    mov x19, x0
+; CHECK-NEXT:  LBB4_5: ; %ehcleanup
+; CHECK-NEXT:    add x0, sp, #15
+; CHECK-NEXT:    bl __ZN1SD1Ev
+; CHECK-NEXT:    mov x0, x19
+; CHECK-NEXT:    bl __Unwind_Resume
+; CHECK-NEXT:  Lfunc_end1:
+; CHECK-NEXT:    .cfi_endproc
+; CHECK-NEXT:    .section __TEXT,__gcc_except_tab
+; CHECK-NEXT:    .p2align 2, 0x0
+; CHECK-NEXT:  GCC_except_table4:
+; CHECK-NEXT:  Lexception1:
+; CHECK-NEXT:    .byte 255 ; @LPStart Encoding = omit
+; CHECK-NEXT:    .byte 255 ; @TType Encoding = omit
+; CHECK-NEXT:    .byte 1 ; Call site Encoding = uleb128
+; CHECK-NEXT:    .uleb128 Lcst_end1-Lcst_begin1
+; CHECK-NEXT:  Lcst_begin1:
+; CHECK-NEXT:    .uleb128 Ltmp3-Lfunc_begin1 ; >> Call Site 1 <<
+; CHECK-NEXT:    .uleb128 Ltmp4-Ltmp3 ; Call between Ltmp3 and Ltmp4
+; CHECK-NEXT:    .uleb128 Ltmp5-Lfunc_begin1 ; jumps to Ltmp5
+; CHECK-NEXT:    .byte 0 ; On action: cleanup
+; CHECK-NEXT:    .uleb128 Ltmp6-Lfunc_begin1 ; >> Call Site 2 <<
+; CHECK-NEXT:    .uleb128 Ltmp7-Ltmp6 ; Call between Ltmp6 and Ltmp7
+; CHECK-NEXT:    .uleb128 Ltmp8-Lfunc_begin1 ; jumps to Ltmp8
+; CHECK-NEXT:    .byte 0 ; On action: cleanup
+; CHECK-NEXT:    .uleb128 Ltmp7-Lfunc_begin1 ; >> Call Site 3 <<
+; CHECK-NEXT:    .uleb128 Lfunc_end1-Ltmp7 ; Call between Ltmp7 and Lfunc_end1
+; CHECK-NEXT:    .byte 0 ; has no landing pad
+; CHECK-NEXT:    .byte 0 ; On action: cleanup
+; CHECK-NEXT:  Lcst_end1:
+; CHECK-NEXT:    .p2align 2, 0x0
 entry:
   %s = alloca %struct.S, align 1
   call void @llvm.lifetime.start.p0(i64 1, ptr nonnull %s) #2
@@ -416,53 +265,29 @@ ehcleanup:                                        ; preds = %lpad1, %lpad
 }
 
 define dso_local ptr @rv_marker_5_indirect_call() {
-; CHECK-SD-LABEL: rv_marker_5_indirect_call:
-; CHECK-SD:       ; %bb.0: ; %entry
-; CHECK-SD-NEXT:    stp x20, x19, [sp, #-32]! ; 16-byte Folded Spill
-; CHECK-SD-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-SD-NEXT:    .cfi_offset w30, -8
-; CHECK-SD-NEXT:    .cfi_offset w29, -16
-; CHECK-SD-NEXT:    .cfi_offset w19, -24
-; CHECK-SD-NEXT:    .cfi_offset w20, -32
-; CHECK-SD-NEXT:  Lloh0:
-; CHECK-SD-NEXT:    adrp x8, _fptr@PAGE
-; CHECK-SD-NEXT:  Lloh1:
-; CHECK-SD-NEXT:    ldr x8, [x8, _fptr@PAGEOFF]
-; CHECK-SD-NEXT:    blr x8
-; CHECK-SD-NEXT:    mov x29, x29
-; CHECK-SD-NEXT:    bl _objc_retainAutoreleasedReturnValue
-; CHECK-SD-NEXT:    mov x19, x0
-; CHECK-SD-NEXT:    bl _foo2
-; CHECK-SD-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
-; CHECK-SD-NEXT:    mov x0, x19
-; CHECK-SD-NEXT:    ldp x20, x19, [sp], #32 ; 16-byte Folded Reload
-; CHECK-SD-NEXT:    ret
-; CHECK-SD-NEXT:    .loh AdrpLdr Lloh0, Lloh1
-;
-; CHECK-GI-LABEL: rv_marker_5_indirect_call:
-; CHECK-GI:       ; %bb.0: ; %entry
-; CHECK-GI-NEXT:    stp x20, x19, [sp, #-32]! ; 16-byte Folded Spill
-; CHECK-GI-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
-; CHECK-GI-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-GI-NEXT:    .cfi_offset w30, -8
-; CHECK-GI-NEXT:    .cfi_offset w29, -16
-; CHECK-GI-NEXT:    .cfi_offset w19, -24
-; CHECK-GI-NEXT:    .cfi_offset w20, -32
-; CHECK-GI-NEXT:  Lloh8:
-; CHECK-GI-NEXT:    adrp x8, _fptr@PAGE
-; CHECK-GI-NEXT:  Lloh9:
-; CHECK-GI-NEXT:    ldr x8, [x8, _fptr@PAGEOFF]
-; CHECK-GI-NEXT:    blr x8
-; CHECK-GI-NEXT:    mov x29, x29
-; CHECK-GI-NEXT:    bl _objc_retainAutoreleasedReturnValue
-; CHECK-GI-NEXT:    mov x19, x0
-; CHECK-GI-NEXT:    bl _foo2
-; CHECK-GI-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
-; CHECK-GI-NEXT:    mov x0, x19
-; CHECK-GI-NEXT:    ldp x20, x19, [sp], #32 ; 16-byte Folded Reload
-; CHECK-GI-NEXT:    ret
-; CHECK-GI-NEXT:    .loh AdrpLdr Lloh8, Lloh9
+; CHECK-LABEL: rv_marker_5_indirect_call:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    stp x20, x19, [sp, #-32]! ; 16-byte Folded Spill
+; CHECK-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    .cfi_offset w30, -8
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    .cfi_offset w19, -24
+; CHECK-NEXT:    .cfi_offset w20, -32
+; CHECK-NEXT:  Lloh0:
+; CHECK-NEXT:    adrp x8, _fptr@PAGE
+; CHECK-NEXT:  Lloh1:
+; CHECK-NEXT:    ldr x8, [x8, _fptr@PAGEOFF]
+; CHECK-NEXT:    blr x8
+; CHECK-NEXT:    mov x29, x29
+; CHECK-NEXT:    bl _objc_retainAutoreleasedReturnValue
+; CHECK-NEXT:    mov x19, x0
+; CHECK-NEXT:    bl _foo2
+; CHECK-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
+; CHECK-NEXT:    mov x0, x19
+; CHECK-NEXT:    ldp x20, x19, [sp], #32 ; 16-byte Folded Reload
+; CHECK-NEXT:    ret
+; CHECK-NEXT:    .loh AdrpLdr Lloh0, Lloh1
 entry:
   %0 = load ptr, ptr @fptr, align 8
   %call = call ptr %0() [ "clang.arc.attachedcall"(ptr @objc_retainAutoreleasedReturnValue) ]

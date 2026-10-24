@@ -193,7 +193,8 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
   }
 
   if (const Function *F = dyn_cast<Function>(CalleeV)) {
-    if (F->hasFnAttribute(Attribute::NonLazyBind)) {
+    if (F->hasFnAttribute(Attribute::NonLazyBind) &&
+        shouldCallNonLazyBindViaGOT(MF, *F)) {
       LLT Ty = getLLTForType(*F->getType(), DL);
       Register Reg = MIRBuilder.buildGlobalValue(Ty, F).getReg(0);
       Info.Callee = MachineOperand::CreateReg(Reg, false);
