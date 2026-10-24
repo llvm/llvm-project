@@ -1430,8 +1430,6 @@ public:
   /// OffloadArch::getUnused().
   virtual OffloadArch getOffloadArch() const;
 
-  virtual OffloadArch getOffloadArch() const;
-
   virtual ParsedTargetAttr parseTargetAttr(StringRef Str) const;
 
   /// Determine whether this TargetInfo supports tune in target attribute.
