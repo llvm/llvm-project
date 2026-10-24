@@ -14,6 +14,7 @@
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
+#include <cassert>
 
 namespace llvm {
 
@@ -62,53 +63,26 @@ namespace SIInstrFlags {
 namespace DontUseRawTSFlags {
 // This needs to be kept in sync with the field bits in InstSI.
 enum : uint64_t {
-  // Low bits - basic encoding information.
-  SALU = 1 << 0,
-  VALU = 1 << 1,
+  // Bits 4-0: instruction format enum, see the InstFormat enum below.
+  Format_Bits = 5,
+  Format_Mask = (UINT64_C(1) << Format_Bits) - 1,
 
-  // SALU instruction formats.
-  SOP1 = 1 << 2,
-  SOP2 = 1 << 3,
-  SOPC = 1 << 4,
-  SOPK = 1 << 5,
-  SOPP = 1 << 6,
+  // Bits 6-5: operand-encoding modifier, see the FormatModifier enum below.
+  FormatModifier_Shift = 5,
+  FormatModifier_Bits = 2,
+  FormatModifier_Mask = ((UINT64_C(1) << FormatModifier_Bits) - 1)
+                        << FormatModifier_Shift,
 
-  // VALU instruction formats.
-  VOP1 = 1 << 7,
-  VOP2 = 1 << 8,
-  VOPC = 1 << 9,
+  // Basic encoding class.
+  SALU = 1 << 7,
+  VALU = 1 << 8,
 
-  // TODO: Should this be spilt into VOP3 a and b?
-  VOP3 = 1 << 10,
-  VOP3P = 1 << 12,
+  // Remaining modifiers that layer on top of a base format.
+  TRANS = 1 << 9,
+  VOP3P = 1 << 10,
+  VINTERP = 1 << 11,
 
-  VINTRP = 1 << 13,
-  SDWA = 1 << 14,
-  DPP = 1 << 15,
-  TRANS = 1 << 16,
-
-  // Memory instruction formats.
-  MUBUF = 1 << 17,
-  MTBUF = 1 << 18,
-  SMRD = 1 << 19,
-  MIMG = 1 << 20,
-  VIMAGE = 1 << 21,
-  VSAMPLE = 1 << 22,
-  EXP = 1 << 23,
-  FLAT = 1 << 24,
-  DS = 1 << 25,
-
-  // Combined SGPR/VGPR Spill bit
-  // Logic to separate them out is done in isSGPRSpill and isVGPRSpill
-  Spill = 1 << 26,
-
-  // LDSDIR instruction format.
-  LDSDIR = 1 << 28,
-
-  // VINTERP instruction format.
-  VINTERP = 1 << 29,
-
-  VOPD3 = 1 << 30,
+  // Bits 30-12 are free.
 
   // High bits - other information.
   VM_CNT = UINT64_C(1) << 32,
@@ -203,6 +177,56 @@ inline uint64_t getTSFlags(const MCInstrInfo &MII, const MCInst &Inst) {
   return MII.get(Inst.getOpcode()).TSFlags;
 }
 
+// Instruction format, keep in sync with AMDGPUInstrFormat in SIInstrFormats.td.
+enum class InstFormat : uint64_t {
+  NONE = 0,
+  SOP1,
+  SOP2,
+  SOPC,
+  SOPK,
+  SOPP,
+  VOP1,
+  VOP2,
+  VOPC,
+  VOP3,
+  VINTRP,
+  VOPD3,
+  LDSDIR,
+  MUBUF,
+  MTBUF,
+  SMRD,
+  MIMG,
+  VIMAGE,
+  VSAMPLE,
+  EXP,
+  FLAT,
+  DS,
+  Spill,
+};
+
+template <typename... T> constexpr InstFormat getFormat(const T &...O) {
+  return static_cast<InstFormat>(getTSFlags(O...) &
+                                 DontUseRawTSFlags::Format_Mask);
+}
+template <typename... T> constexpr bool isFormat(InstFormat F, const T &...O) {
+  return getFormat(O...) == F;
+}
+
+// Operand-encoding modifier, keep in sync with AMDGPUFormatModifier in
+// SIInstrFormats.td. Packed into TSFlags{6-5}.
+enum class FormatModifier : uint64_t {
+  None = 0,
+  DPP,
+  SDWA,
+};
+
+template <typename... T>
+constexpr FormatModifier getFormatModifier(const T &...O) {
+  return static_cast<FormatModifier>(
+      (getTSFlags(O...) & DontUseRawTSFlags::FormatModifier_Mask) >>
+      DontUseRawTSFlags::FormatModifier_Shift);
+}
+
 template <typename... T> constexpr bool isSALU(const T &...O) {
   return getTSFlags(O...) & DontUseRawTSFlags::SALU;
 }
@@ -210,87 +234,102 @@ template <typename... T> constexpr bool isVALU(const T &...O) {
   return getTSFlags(O...) & DontUseRawTSFlags::VALU;
 }
 template <typename... T> constexpr bool isSOP1(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::SOP1;
+  return getFormat(O...) == InstFormat::SOP1;
 }
 template <typename... T> constexpr bool isSOP2(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::SOP2;
+  return getFormat(O...) == InstFormat::SOP2;
 }
 template <typename... T> constexpr bool isSOPC(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::SOPC;
+  return getFormat(O...) == InstFormat::SOPC;
 }
 template <typename... T> constexpr bool isSOPK(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::SOPK;
+  return getFormat(O...) == InstFormat::SOPK;
 }
 template <typename... T> constexpr bool isSOPP(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::SOPP;
+  return getFormat(O...) == InstFormat::SOPP;
 }
 template <typename... T> constexpr bool isVOP1(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::VOP1;
+  return getFormat(O...) == InstFormat::VOP1;
 }
 template <typename... T> constexpr bool isVOP2(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::VOP2;
+  return getFormat(O...) == InstFormat::VOP2;
 }
 template <typename... T> constexpr bool isVOPC(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::VOPC;
+  return getFormat(O...) == InstFormat::VOPC;
 }
 template <typename... T> constexpr bool isVOP3(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::VOP3;
+  return getFormat(O...) == InstFormat::VOP3;
 }
 template <typename... T> constexpr bool isVOP3P(const T &...O) {
   return getTSFlags(O...) & DontUseRawTSFlags::VOP3P;
 }
 template <typename... T> constexpr bool isVOP3Like(const T &...O) {
-  return getTSFlags(O...) &
-         (DontUseRawTSFlags::VOP3 | DontUseRawTSFlags::VOP3P);
+  return isVOP3(O...) || isVOP3P(O...);
 }
 template <typename... T> constexpr bool isVINTRP(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::VINTRP;
+  return getFormat(O...) == InstFormat::VINTRP;
 }
 template <typename... T> constexpr bool isSDWA(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::SDWA;
+  bool R = getFormatModifier(O...) == FormatModifier::SDWA;
+  // SDWA layers on a base VOP format. The VOP1/VOP2 e32 sdwa forms currently
+  // carry Format::NONE instead of their base format.
+  // TODO: tag VOP1/VOP2 sdwa forms with VOP1/VOP2 (see VOP_SDWA_Pseudo) so this
+  //       can assert getFormat() is VOP1/VOP2 rather than NONE.
+  assert((!R || getFormat(O...) == InstFormat::NONE) &&
+         "unexpected base format for SDWA");
+  return R;
 }
 template <typename... T> constexpr bool isDPP(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::DPP;
+  bool R = getFormatModifier(O...) == FormatModifier::DPP;
+  // DPP layers on VOP3 and VOPC (VOP3P instructions carry Format::VOP3 here).
+  // The VOP1/VOP2 e32 dpp forms currently carry Format::NONE instead of their
+  // base format.
+  // TODO: tag VOP1/VOP2 e32 dpp forms with VOP1/VOP2 (see VOP_DPP_Pseudo) so
+  //       NONE can be dropped from this assert.
+  assert((!R || getFormat(O...) == InstFormat::VOP3 ||
+          getFormat(O...) == InstFormat::VOPC ||
+          getFormat(O...) == InstFormat::NONE) &&
+         "unexpected base format for DPP");
+  return R;
 }
 template <typename... T> constexpr bool isTRANS(const T &...O) {
   return getTSFlags(O...) & DontUseRawTSFlags::TRANS;
 }
 template <typename... T> constexpr bool isMUBUF(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::MUBUF;
+  return getFormat(O...) == InstFormat::MUBUF;
 }
 template <typename... T> constexpr bool isMTBUF(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::MTBUF;
+  return getFormat(O...) == InstFormat::MTBUF;
 }
 template <typename... T> constexpr bool isBuffer(const T &...O) {
-  return getTSFlags(O...) &
-         (DontUseRawTSFlags::MUBUF | DontUseRawTSFlags::MTBUF);
+  return isMUBUF(O...) || isMTBUF(O...);
 }
 template <typename... T> constexpr bool isSMRD(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::SMRD;
+  return getFormat(O...) == InstFormat::SMRD;
 }
 template <typename... T> constexpr bool isMIMG(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::MIMG;
+  return getFormat(O...) == InstFormat::MIMG;
 }
 template <typename... T> constexpr bool isVIMAGE(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::VIMAGE;
+  return getFormat(O...) == InstFormat::VIMAGE;
 }
 template <typename... T> constexpr bool isVSAMPLE(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::VSAMPLE;
+  return getFormat(O...) == InstFormat::VSAMPLE;
 }
 template <typename... T> constexpr bool isEXP(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::EXP;
+  return getFormat(O...) == InstFormat::EXP;
 }
 template <typename... T> constexpr bool isFLAT(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::FLAT;
+  return getFormat(O...) == InstFormat::FLAT;
 }
 template <typename... T> constexpr bool isDS(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::DS;
+  return getFormat(O...) == InstFormat::DS;
 }
 template <typename... T> constexpr bool isSpill(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::Spill;
+  return getFormat(O...) == InstFormat::Spill;
 }
 template <typename... T> constexpr bool isLDSDIR(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::LDSDIR;
+  return getFormat(O...) == InstFormat::LDSDIR;
 }
 template <typename... T> constexpr bool isVINTERP(const T &...O) {
   return getTSFlags(O...) & DontUseRawTSFlags::VINTERP;
@@ -377,7 +416,7 @@ template <typename... T> constexpr bool isSWMMAC(const T &...O) {
   return getTSFlags(O...) & DontUseRawTSFlags::IsSWMMAC;
 }
 template <typename... T> constexpr bool isVOPD3(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::VOPD3;
+  return getFormat(O...) == InstFormat::VOPD3;
 }
 template <typename... T> constexpr bool usesVM_CNT(const T &...O) {
   return getTSFlags(O...) & DontUseRawTSFlags::VM_CNT;
