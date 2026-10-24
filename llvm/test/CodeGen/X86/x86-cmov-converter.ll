@@ -127,7 +127,7 @@ define void @CmovInHotPath(i32 %n, i32 %a, i32 %b, ptr nocapture %c, ptr nocaptu
 ; CHECK-NEXT:    imull %r8d, %r9d
 ; CHECK-NEXT:    movl %r9d, (%rcx,%rdi,4)
 ; CHECK-NEXT:    addq $1, %rdi
-; CHECK-NEXT:    cmpq %rdi, %rax
+; CHECK-NEXT:    cmpl %edi, %eax
 ; CHECK-NEXT:    jne .LBB0_2
 ; CHECK-NEXT:  .LBB0_5: # %for.cond.cleanup
 ; CHECK-NEXT:    retq
@@ -155,7 +155,7 @@ define void @CmovInHotPath(i32 %n, i32 %a, i32 %b, ptr nocapture %c, ptr nocaptu
 ; CHECK-FORCEALL-NEXT:    imull %r8d, %r9d
 ; CHECK-FORCEALL-NEXT:    movl %r9d, (%rcx,%rdi,4)
 ; CHECK-FORCEALL-NEXT:    addq $1, %rdi
-; CHECK-FORCEALL-NEXT:    cmpq %rdi, %rax
+; CHECK-FORCEALL-NEXT:    cmpl %edi, %eax
 ; CHECK-FORCEALL-NEXT:    jne .LBB0_2
 ; CHECK-FORCEALL-NEXT:  .LBB0_5: # %for.cond.cleanup
 ; CHECK-FORCEALL-NEXT:    retq
@@ -208,7 +208,7 @@ define void @CmovNotInHotPath(i32 %n, i32 %a, i32 %b, ptr nocapture %c, ptr noca
 ; CHECK-NEXT:    idivl %r9d
 ; CHECK-NEXT:    movl %eax, (%r8,%r10,4)
 ; CHECK-NEXT:    addq $1, %r10
-; CHECK-NEXT:    cmpq %r10, %rdi
+; CHECK-NEXT:    cmpl %r10d, %edi
 ; CHECK-NEXT:    jne .LBB1_2
 ; CHECK-NEXT:  .LBB1_3: # %for.cond.cleanup
 ; CHECK-NEXT:    retq
@@ -240,7 +240,7 @@ define void @CmovNotInHotPath(i32 %n, i32 %a, i32 %b, ptr nocapture %c, ptr noca
 ; CHECK-FORCEALL-NEXT:    idivl %r9d
 ; CHECK-FORCEALL-NEXT:    movl %eax, (%r8,%r10,4)
 ; CHECK-FORCEALL-NEXT:    addq $1, %r10
-; CHECK-FORCEALL-NEXT:    cmpq %r10, %rdi
+; CHECK-FORCEALL-NEXT:    cmpl %r10d, %edi
 ; CHECK-FORCEALL-NEXT:    jne .LBB1_2
 ; CHECK-FORCEALL-NEXT:  .LBB1_5: # %for.cond.cleanup
 ; CHECK-FORCEALL-NEXT:    retq
@@ -296,7 +296,7 @@ define i32 @MaxIndex(i32 %n, ptr nocapture readonly %a) #0 {
 ; CHECK-NEXT:    # in Loop: Header=BB2_2 Depth=1
 ; CHECK-NEXT:    addq $1, %rdx
 ; CHECK-NEXT:    movl %eax, %edi
-; CHECK-NEXT:    cmpq %rdx, %rcx
+; CHECK-NEXT:    cmpl %edx, %ecx
 ; CHECK-NEXT:    jne .LBB2_2
 ; CHECK-NEXT:  .LBB2_5: # %for.cond.cleanup
 ; CHECK-NEXT:    retq
@@ -324,7 +324,7 @@ define i32 @MaxIndex(i32 %n, ptr nocapture readonly %a) #0 {
 ; CHECK-FORCEALL-NEXT:    # in Loop: Header=BB2_2 Depth=1
 ; CHECK-FORCEALL-NEXT:    addq $1, %rdx
 ; CHECK-FORCEALL-NEXT:    movl %eax, %edi
-; CHECK-FORCEALL-NEXT:    cmpq %rdx, %rcx
+; CHECK-FORCEALL-NEXT:    cmpl %edx, %ecx
 ; CHECK-FORCEALL-NEXT:    jne .LBB2_2
 ; CHECK-FORCEALL-NEXT:  .LBB2_5: # %for.cond.cleanup
 ; CHECK-FORCEALL-NEXT:    retq
@@ -374,7 +374,7 @@ define i32 @MaxIndex_unpredictable(i32 %n, ptr nocapture readonly %a) #0 {
 ; CHECK-NEXT:    cmpl (%rsi,%rax,4), %edi
 ; CHECK-NEXT:    cmovgl %edx, %eax
 ; CHECK-NEXT:    addq $1, %rdx
-; CHECK-NEXT:    cmpq %rdx, %rcx
+; CHECK-NEXT:    cmpl %edx, %ecx
 ; CHECK-NEXT:    jne .LBB3_2
 ; CHECK-NEXT:  .LBB3_3: # %for.cond.cleanup
 ; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
@@ -396,7 +396,7 @@ define i32 @MaxIndex_unpredictable(i32 %n, ptr nocapture readonly %a) #0 {
 ; CHECK-FORCEALL-NEXT:    cmpl (%rsi,%rax,4), %edi
 ; CHECK-FORCEALL-NEXT:    cmovgl %edx, %eax
 ; CHECK-FORCEALL-NEXT:    addq $1, %rdx
-; CHECK-FORCEALL-NEXT:    cmpq %rdx, %rcx
+; CHECK-FORCEALL-NEXT:    cmpl %edx, %ecx
 ; CHECK-FORCEALL-NEXT:    jne .LBB3_2
 ; CHECK-FORCEALL-NEXT:  .LBB3_3: # %for.cond.cleanup
 ; CHECK-FORCEALL-NEXT:    # kill: def $eax killed $eax killed $rax
@@ -444,36 +444,36 @@ define i32 @MaxValue(i32 %n, ptr nocapture readonly %a) #0 {
 ; CHECK-NEXT:    cmpl %eax, %edi
 ; CHECK-NEXT:    cmovgl %edi, %eax
 ; CHECK-NEXT:    addq $1, %rdx
-; CHECK-NEXT:    cmpq %rdx, %rcx
+; CHECK-NEXT:    cmpl %edx, %ecx
 ; CHECK-NEXT:    jne .LBB4_2
 ; CHECK-NEXT:  .LBB4_3: # %for.cond.cleanup
 ; CHECK-NEXT:    retq
 ;
 ; CHECK-FORCEALL-LABEL: MaxValue:
 ; CHECK-FORCEALL:       # %bb.0: # %entry
-; CHECK-FORCEALL-NEXT:    movl (%rsi), %edx
+; CHECK-FORCEALL-NEXT:    movl (%rsi), %r8d
 ; CHECK-FORCEALL-NEXT:    cmpl $2, %edi
 ; CHECK-FORCEALL-NEXT:    jge .LBB4_3
 ; CHECK-FORCEALL-NEXT:  # %bb.1:
-; CHECK-FORCEALL-NEXT:    movl %edx, %eax
+; CHECK-FORCEALL-NEXT:    movl %r8d, %eax
 ; CHECK-FORCEALL-NEXT:  .LBB4_2: # %for.cond.cleanup
 ; CHECK-FORCEALL-NEXT:    retq
 ; CHECK-FORCEALL-NEXT:  .LBB4_3: # %for.body.preheader
 ; CHECK-FORCEALL-NEXT:    movl %edi, %ecx
-; CHECK-FORCEALL-NEXT:    movl $1, %edi
+; CHECK-FORCEALL-NEXT:    movl $1, %edx
 ; CHECK-FORCEALL-NEXT:  .LBB4_4: # %for.body
 ; CHECK-FORCEALL-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-FORCEALL-NEXT:    movl (%rsi,%rdi,4), %eax
-; CHECK-FORCEALL-NEXT:    cmpl %edx, %eax
+; CHECK-FORCEALL-NEXT:    movl (%rsi,%rdx,4), %eax
+; CHECK-FORCEALL-NEXT:    cmpl %r8d, %eax
 ; CHECK-FORCEALL-NEXT:    jg .LBB4_6
 ; CHECK-FORCEALL-NEXT:  # %bb.5: # %for.body
 ; CHECK-FORCEALL-NEXT:    # in Loop: Header=BB4_4 Depth=1
-; CHECK-FORCEALL-NEXT:    movl %edx, %eax
+; CHECK-FORCEALL-NEXT:    movl %r8d, %eax
 ; CHECK-FORCEALL-NEXT:  .LBB4_6: # %for.body
 ; CHECK-FORCEALL-NEXT:    # in Loop: Header=BB4_4 Depth=1
-; CHECK-FORCEALL-NEXT:    addq $1, %rdi
-; CHECK-FORCEALL-NEXT:    movl %eax, %edx
-; CHECK-FORCEALL-NEXT:    cmpq %rdi, %rcx
+; CHECK-FORCEALL-NEXT:    addq $1, %rdx
+; CHECK-FORCEALL-NEXT:    movl %eax, %r8d
+; CHECK-FORCEALL-NEXT:    cmpl %edx, %ecx
 ; CHECK-FORCEALL-NEXT:    je .LBB4_2
 ; CHECK-FORCEALL-NEXT:    jmp .LBB4_4
 entry:

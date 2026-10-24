@@ -299,6 +299,7 @@ class SelectionDAG {
     MDNode *HeapAllocSite = nullptr;
     MDNode *PCSections = nullptr;
     MDNode *MMRA = nullptr;
+    const MDNode *Ranges = nullptr;
     CalledGlobalInfo CalledGlobal{};
     bool NoMerge = false;
   };
@@ -2705,6 +2706,15 @@ public:
   bool getNoMergeSiteInfo(const SDNode *Node) const {
     auto I = SDEI.find(Node);
     return I != SDEI.end() ? I->second.NoMerge : false;
+  }
+  /// Set range metadata to be associated with Node.
+  void setNodeRanges(const SDNode *Node, const MDNode *Ranges) {
+    SDEI[Node].Ranges = Ranges;
+  }
+  /// Return range metadata associated with Node, or nullptr if none exists.
+  const MDNode *getNodeRanges(const SDNode *Node) const {
+    auto I = SDEI.find(Node);
+    return I != SDEI.end() ? I->second.Ranges : nullptr;
   }
 
   /// Copy extra info associated with one node to another.

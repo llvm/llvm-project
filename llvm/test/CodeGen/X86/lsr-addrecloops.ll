@@ -74,7 +74,7 @@ define void @in4dob_(ptr nocapture writeonly %0, ptr nocapture readonly %1, ptr 
 ; CHECK-NEXT:    leaq (%r9,%r10), %r11
 ; CHECK-NEXT:    vmovups %ymm0, (%rax,%r11)
 ; CHECK-NEXT:    incq %r10
-; CHECK-NEXT:    cmpq %r10, %rsi
+; CHECK-NEXT:    cmpl %r10d, %esi
 ; CHECK-NEXT:    jne .LBB0_9
 ; CHECK-NEXT:  .LBB0_10: # %.lr.ph373
 ; CHECK-NEXT:    testb $1, %r8b
@@ -123,7 +123,7 @@ define void @in4dob_(ptr nocapture writeonly %0, ptr nocapture readonly %1, ptr 
 ; CHECK-NEXT:    leaq (%rcx,%rdx), %rdi
 ; CHECK-NEXT:    vmovups %ymm0, (%rax,%rdi)
 ; CHECK-NEXT:    incq %rdx
-; CHECK-NEXT:    cmpq %rdx, %rsi
+; CHECK-NEXT:    cmpl %edx, %esi
 ; CHECK-NEXT:    jne .LBB0_17
 ; CHECK-NEXT:  .LBB0_18: # %common.ret
 ; CHECK-NEXT:    vzeroupper

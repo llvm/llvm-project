@@ -4215,6 +4215,10 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
                        UndefPoisonKind::UndefOrPoison, Depth + 1);
     Known = KnownBits::add(Known, Known2, Flags.hasNoSignedWrap(),
                            Flags.hasNoUnsignedWrap(), SelfAdd);
+
+    // If range metadata exists, use it to refine KnownBits
+    if (const MDNode *Ranges = getNodeRanges(Op.getNode()))
+      computeKnownBitsFromRangeMetadata(*Ranges, Known);
     break;
   }
   case ISD::SUB: {

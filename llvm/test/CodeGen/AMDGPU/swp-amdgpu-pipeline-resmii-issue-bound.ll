@@ -2,11 +2,11 @@
 ; REQUIRES: asserts
 
 ; Resource-bound II set by the aggregate micro-op issue width, not by any single
-; functional unit. The body issues 13 single-micro-op instructions across three
-; unit classes (VALU=6, SALU=4, VMEM=3), so no one unit reaches 13, but at an
-; issue width of 1 the 13 micro-ops force res=13. That dominates the short
+; functional unit. The body issues 14 single-micro-op instructions across three
+; unit classes (VALU=6, SALU=5, VMEM=3), so no one unit reaches 14, but at an
+; issue width of 1 the 14 micro-ops force res=14. That dominates the short
 ; recurrence (rec=3), so the II is resource-bound on issue, not recurrence-bound.
-; CHECK: MII = 13 MAX_II = 23 (rec=3, res=13)
+; CHECK: MII = 14 MAX_II = 24 (rec=3, res=14)
 
 define amdgpu_kernel void @swp_amdgpu_pipeline_resmii_issue_bound(i1 %arg, ptr addrspace(1) %out) {
 bb:
@@ -31,8 +31,8 @@ bb1:                                              ; preds = %bb1, %bb
   %fadd2 = fadd float %fadd1, %sel1
   %fadd3 = fadd float %fadd2, %sel2
   %iv.next = add i32 %iv, 1
-  %icmp = icmp eq i32 %iv, 0
-  br i1 %icmp, label %exit, label %bb1
+  %icmp = icmp ult i32 %iv.next, 100
+  br i1 %icmp, label %bb1, label %exit
 
 exit:                                             ; preds = %bb1
   %lcssa = phi float [ %fadd3, %bb1 ]

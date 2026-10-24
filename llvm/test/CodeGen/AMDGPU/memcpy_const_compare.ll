@@ -70,10 +70,10 @@ define amdgpu_kernel void @_start() {
 ; CHECK-NEXT:    s_add_u32 s0, s0, 1
 ; CHECK-NEXT:    s_addc_u32 s1, s1, 0
 ; CHECK-NEXT:    v_pk_mov_b32 v[0:1], s[6:7], s[6:7] op_sel:[0,1]
-; CHECK-NEXT:    v_cmp_lt_u64_e64 vcc, s[0:1], 13
+; CHECK-NEXT:    s_cmp_lt_u32 s0, 13
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    flat_store_byte v[0:1], v2
-; CHECK-NEXT:    s_cbranch_vccnz .LBB0_4
+; CHECK-NEXT:    s_cbranch_scc1 .LBB0_4
 ; CHECK-NEXT:  .LBB0_5: ; %dynamic-memcpy-post-expansion
 ; CHECK-NEXT:    s_endpgm
 ; FIXME: Compare should be evaluated at compile time
