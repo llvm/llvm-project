@@ -1438,9 +1438,16 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
       Value *CmpOp;
       if (match(&Inst, m_Not(m_Value(CmpOp)))) {
         if (auto *Cmp = dyn_cast<ICmpInst>(CmpOp)) {
-          ICmpInst InvCmp(Cmp->getInversePredicate(), Cmp->getOperand(0),
-                          Cmp->getOperand(1));
-          if (Value *V = AvailableValues.lookup(&InvCmp)) {
+          // The temporary instruction is inserted before Inst so that it has
+          // a parent: hashing a SimpleValue requires the containing function
+          // (for per-context options), even though it is only used for a
+          // lookup.
+          ICmpInst *InvCmp =
+              new ICmpInst(Inst.getIterator(), Cmp->getInversePredicate(),
+                           Cmp->getOperand(0), Cmp->getOperand(1));
+          Value *V = AvailableValues.lookup(InvCmp);
+          InvCmp->eraseFromParent();
+          if (V) {
             // The available comparison must not introduce poison that the
             // original comparison does not, e.g. through samesign.
             if (Cmp->hasSameSign() || !cast<ICmpInst>(V)->hasSameSign()) {
