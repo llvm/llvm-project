@@ -33,6 +33,9 @@ enum MachineCombinerPattern : unsigned {
   REASSOC_XA_BY,
   REASSOC_XA_YB,
   ACC_CHAIN,
+  // Reassociation of an FP accumulation (FMA) chain into two shorter chains
+  // combined by a single add, to expose more ILP.
+  FMA_CHAIN,
 
   TARGET_PATTERN_START
 };
