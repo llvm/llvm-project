@@ -625,15 +625,15 @@ define void @test_guard_and_assume(ptr nocapture readonly %data, i64 %count) {
 ; CHECK-LABEL: 'test_guard_and_assume'
 ; CHECK-NEXT:  Classifying expressions for: @test_guard_and_assume
 ; CHECK-NEXT:    %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
-; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,4) S: [0,4) Exits: (-1 + %count) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,4) S: [0,4) Exits: (-1 + %count)<nsw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %idx = getelementptr inbounds i32, ptr %data, i64 %iv
-; CHECK-NEXT:    --> {%data,+,4}<nuw><%loop> U: full-set S: full-set Exits: (-4 + (4 * %count) + %data) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%data,+,4}<nuw><%loop> U: full-set S: full-set Exits: (-4 + (4 * %count)<nuw><nsw> + %data) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add nuw i64 %iv, 1
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,5) S: [1,5) Exits: %count LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_guard_and_assume
-; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %count)
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %count)<nsw>
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 3
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %count)
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %count)<nsw>
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:

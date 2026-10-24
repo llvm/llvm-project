@@ -514,9 +514,9 @@ define void @swapped_predicate(i32 %n) {
 ; Prove that (n s>= 1) ===> (0 s>= -n / 2).
 ; CHECK-LABEL: 'swapped_predicate'
 ; CHECK-NEXT:  Determining loop execution counts for: @swapped_predicate
-; CHECK-NEXT:  Loop %header: backedge-taken count is (1 + %n.div.2)<nuw><nsw>
+; CHECK-NEXT:  Loop %header: backedge-taken count is (1 + (%n /u 2))<nuw><nsw>
 ; CHECK-NEXT:  Loop %header: constant max backedge-taken count is i32 1073741824
-; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (1 + %n.div.2)<nuw><nsw>
+; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (1 + (%n /u 2))<nuw><nsw>
 ; CHECK-NEXT:  Loop %header: Trip multiple is 1
 ;
 entry:
