@@ -96,6 +96,5 @@ Linking of output with dynamic debugging has a significant impact on memory usag
 
 # Future work
 
-* LLD support for `--gc-sections` is limited and therefore has reduced output size savings.
 * LTO isn't supported with the feature.
 * An inline instance of a function may have its instructions completely optimized away which also removes the debug metadata specifying that there's an inline scope. In this situation a debugger wouldn't be able to patch the parent function when a breakpoint is set on the inlinee. It could be possible for LLVM to preserve the inline scope metadata in order to emit an empty inline scope in DWARF (inline subroutine without any PC ranges), which would be a useful signal to the debugger that this has happened.
