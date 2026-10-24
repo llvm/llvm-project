@@ -5,6 +5,10 @@ import lit.util
 
 
 class TestFormat:
+    def getTestRequirements(self, test):
+        """Return requirement expressions, or None if they cannot be exposed."""
+        return None
+
     def getTestsForPath(self, testSuite, path_in_suite, litConfig, localConfig):
         """
         Given the path to a test in the test suite, generates the Lit tests associated
