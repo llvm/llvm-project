@@ -73,7 +73,11 @@ void MipsRegInfoRecord::SetPhysRegUsed(MCRegister Reg,
 
   for (const MCPhysReg &SubReg : MCRegInfo->subregs_inclusive(Reg)) {
     unsigned EncVal = MCRegInfo->getEncodingValue(SubReg);
-    Value |= 1 << EncVal;
+    // COP0 HWEncoding packs REG and SEL, but the 32-bit ri_cprmask has one
+    // bit per REG regardless of SEL. Unpack REG before using it as a shift.
+    if (COP0RegClass->contains(SubReg))
+      EncVal = MIPS_MC::getCOP0RegNum(EncVal);
+    Value |= 1U << EncVal;
 
     if (GPR32RegClass->contains(SubReg) || GPR64RegClass->contains(SubReg))
       ri_gprmask |= Value;
