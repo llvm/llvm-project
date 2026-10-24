@@ -398,6 +398,9 @@ if config.run_nvptx_tests:
 if config.run_rocm_tests:
     config.available_features.add("host-supports-amdgpu")
 
+if config.run_xevm_tests:
+    config.available_features.add("host-supports-spirv")
+
 if config.arm_emulator_executable:
     config.available_features.add("arm-emulator")
 

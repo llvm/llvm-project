@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Driver/Driver.h"
+#include "ClangCLArgs.h"
 #include "ToolChains/AIX.h"
 #include "ToolChains/AMDGPU.h"
 #include "ToolChains/AVR.h"
@@ -108,7 +109,6 @@
 #include "llvm/Support/TarWriter.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/TargetParser/AMDGPUTargetParser.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
 #include <cstdlib> // ::getenv
@@ -460,9 +460,14 @@ Arg *clang::driver::makeInputArg(DerivedArgList &Args, const OptTable &Opts,
   return A;
 }
 
-DerivedArgList *Driver::TranslateInputArgs(const InputArgList &Args) const {
+DerivedArgList *Driver::TranslateInputArgs(const InputArgList &Args,
+                                           const llvm::Triple &Triple) const {
   const llvm::opt::OptTable &Opts = getOpts();
   DerivedArgList *DAL = new DerivedArgList(Args);
+
+  std::optional<ClangCLArgs> CLArgs;
+  if (IsCLMode())
+    CLArgs.emplace(Args, Triple);
 
   bool HasNostdlib = Args.hasArg(options::OPT_nostdlib);
   bool HasNostdlibxx = Args.hasArg(options::OPT_nostdlibxx);
@@ -478,6 +483,21 @@ DerivedArgList *Driver::TranslateInputArgs(const InputArgList &Args) const {
     }
     if (A->getOption().matches(options::OPT_end_no_unused_arguments)) {
       IgnoreUnused = false;
+      continue;
+    }
+
+    if (CLArgs && CLArgs->translateArg(A, *DAL))
+      continue;
+
+    // Preserve MSVC macro syntax for Clang's other driver modes as well.
+    if ((CLArgs || Triple.isWindowsMSVCEnvironment()) &&
+        A->getOption().matches(options::OPT_D)) {
+      const char *Value =
+          ClangCLArgs::translateMacroDefinition(A->getValue(), Args);
+      if (Value == A->getValue())
+        DAL->append(A);
+      else
+        DAL->AddJoinedArg(A, Opts.getOption(options::OPT_D), Value);
       continue;
     }
 
@@ -734,8 +754,10 @@ static llvm::Triple computeTargetTriple(const Driver &D, StringRef TargetTriple,
   }
 #endif
 
-  // Currently the only architecture supported by *-uefi triples are x86_64.
-  if (Target.isUEFI() && Target.getArch() != llvm::Triple::x86_64)
+  // Currently the only architectures supported by *-uefi triples are x86_64
+  // and aarch64.
+  if (Target.isUEFI() && Target.getArch() != llvm::Triple::x86_64 &&
+      Target.getArch() != llvm::Triple::aarch64)
     D.Diag(diag::err_target_unknown_triple) << Target.str();
 
   // The `-maix[32|64]` flags are only valid for AIX targets.
@@ -1784,7 +1806,7 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   }
 
   // Perform the default argument translations.
-  DerivedArgList *TranslatedArgs = TranslateInputArgs(*UArgs);
+  DerivedArgList *TranslatedArgs = TranslateInputArgs(*UArgs, TC.getTriple());
 
   // Check if the environment version is valid except wasm case.
   llvm::Triple Triple = TC.getTriple();
@@ -3386,27 +3408,25 @@ void Driver::handleArguments(Compilation &C, DerivedArgList &Args,
                              const InputList &Inputs,
                              ActionList &Actions) const {
 
-  // Diagnose misuse of /Fo.
-  if (Arg *A = Args.getLastArg(options::OPT__SLASH_Fo)) {
-    StringRef V = A->getValue();
-    if (Inputs.size() > 1 && !V.empty() &&
-        !llvm::sys::path::is_separator(V.back())) {
-      // Check whether /Fo tries to name an output file for multiple inputs.
-      Diag(clang::diag::err_drv_out_file_argument_with_multiple_sources)
-          << A->getSpelling() << V;
-      Args.eraseArg(options::OPT__SLASH_Fo);
-    }
-  }
+  // Diagnose misuse of /Fo and /Fa.
+  if (Arg *FoArg = Args.getLastArg(options::OPT__SLASH_Fo),
+      *FaArg = Args.getLastArg(options::OPT__SLASH_Fa);
+      FoArg || FaArg) {
+    // Linker inputs do not produce the outputs named by /Fo and /Fa.
+    unsigned NumCompiledInputs = llvm::count_if(
+        Inputs, [](const InputTy &I) { return I.first != types::TY_Object; });
 
-  // Diagnose misuse of /Fa.
-  if (Arg *A = Args.getLastArg(options::OPT__SLASH_Fa)) {
-    StringRef V = A->getValue();
-    if (Inputs.size() > 1 && !V.empty() &&
-        !llvm::sys::path::is_separator(V.back())) {
-      // Check whether /Fa tries to name an asm file for multiple inputs.
-      Diag(clang::diag::err_drv_out_file_argument_with_multiple_sources)
-          << A->getSpelling() << V;
-      Args.eraseArg(options::OPT__SLASH_Fa);
+    for (Arg *A : {FoArg, FaArg}) {
+      if (!A)
+        continue;
+      StringRef V = A->getValue();
+      if (NumCompiledInputs > 1 && !V.empty() &&
+          !llvm::sys::path::is_separator(V.back())) {
+        // Check whether /Fo or /Fa names an output file for multiple inputs.
+        Diag(clang::diag::err_drv_out_file_argument_with_multiple_sources)
+            << A->getSpelling() << V;
+        Args.eraseArg(A->getOption().getID());
+      }
     }
   }
 
@@ -3934,21 +3954,14 @@ static StringRef getCanonicalArchString(Compilation &C,
   if (Arch.isNVPTX())
     return Args.MakeArgStringRef(OffloadArchToString(Arch));
 
-  // AMDGCN target IDs carry a processor and xnack/sramecc modifiers to
-  // canonicalize. Other AMD offload arches (e.g. the amdgcnspirv pseudo-arch on
-  // a SPIR-V triple) have no target-id features and pass through unchanged.
-  if (Arch.isAMDGPU() && Triple.isAMDGCN()) {
-    StringRef TargetIDStr = ArchStr;
-    if (llvm::Triple::parseSubArch(ArchStr) != llvm::Triple::NoSubArch)
-      TargetIDStr = getProcessorFromTargetID(Triple, ArchStr);
-
-    std::optional<llvm::AMDGPU::TargetID> ID =
-        llvm::AMDGPU::TargetID::parse(Triple, TargetIDStr);
-    if (!ID) {
+  if (Arch.isAMDGPU() || Arch.isAMDGCNSPIRV()) {
+    llvm::StringMap<bool> Features;
+    std::optional<StringRef> Arch = parseTargetID(Triple, ArchStr, &Features);
+    if (!Arch) {
       C.getDriver().Diag(clang::diag::err_drv_bad_target_id) << ArchStr;
       return StringRef();
     }
-    return Args.MakeArgStringRef(ID->getCanonicalTargetIDString());
+    return Args.MakeArgStringRef(getCanonicalTargetID(*Arch, Features));
   }
 
   // If the input isn't CUDA or HIP just return the architecture.
@@ -3959,18 +3972,13 @@ static StringRef getCanonicalArchString(Compilation &C,
 /// incompatible pair if a conflict occurs.
 static std::optional<std::pair<llvm::StringRef, llvm::StringRef>>
 getConflictOffloadArchCombination(const llvm::DenseSet<StringRef> &Archs,
-                                  const llvm::Triple &Triple) {
+                                  llvm::Triple Triple) {
   if (!Triple.isAMDGPU())
     return std::nullopt;
 
-  // Sort for a deterministic conflicting pair in the diagnostic.
-  llvm::SmallVector<StringRef> ArchList(Archs.begin(), Archs.end());
-  llvm::sort(ArchList);
-
-  llvm::SmallVector<clang::TargetIDEntry> Entries;
-  for (StringRef Arch : ArchList)
-    Entries.emplace_back(Triple, Arch);
-  return getConflictTargetIDCombination(Entries);
+  std::set<StringRef> ArchSet;
+  llvm::copy(Archs, std::inserter(ArchSet, ArchSet.begin()));
+  return getConflictTargetIDCombination(ArchSet);
 }
 
 llvm::SmallVector<BoundArch>
@@ -4543,7 +4551,8 @@ Action *Driver::ConstructPhaseAction(
 
 static bool isOffloadDeviceCC1JobCandidate(Command &Job) {
   const Action &Source = Job.getSource();
-  if (!isa<CompileJobAction>(Source) && !isa<BackendJobAction>(Source))
+  if (!isa<CompileJobAction>(Source) && !isa<BackendJobAction>(Source) &&
+      !isa<AssembleJobAction>(Source))
     return false;
 
   if (Job.getBoundArch().empty() && !Source.getOffloadingArch().empty())
@@ -5194,6 +5203,16 @@ static void handleTimeTrace(Compilation &C, const ArgList &Args,
         /*CreatePrefixForHost=*/true);
   }
 
+  StringRef DefaultExt = ".json";
+  StringRef DefaultExtNoDot = "json";
+  if (const Arg *CompressArg =
+          Args.getLastArgNoClaim(options::OPT_ftime_trace_compress_EQ)) {
+    if (StringRef(CompressArg->getValue()) == "zstd") {
+      DefaultExt = ".json.zst";
+      DefaultExtNoDot = "json.zst";
+    }
+  }
+
   SmallString<128> Path;
   if (A->getOption().matches(options::OPT_ftime_trace_EQ)) {
     Path = A->getValue();
@@ -5202,7 +5221,7 @@ static void handleTimeTrace(Compilation &C, const ArgList &Args,
                                ? llvm::sys::path::stem(Result.getFilename())
                                : llvm::sys::path::stem(BaseInput));
       Tmp += OffloadingPrefix;
-      Tmp += ".json";
+      Tmp += DefaultExt;
       llvm::sys::path::append(Path, Tmp);
     }
   } else {
@@ -5212,7 +5231,7 @@ static void handleTimeTrace(Compilation &C, const ArgList &Args,
       Path = DumpDir->getValue();
       Path += llvm::sys::path::stem(BaseInput);
       Path += OffloadingPrefix;
-      Path += ".json";
+      Path += DefaultExt;
     } else if (!OffloadingPrefix.empty()) {
       // For offloading, derive path from -o output directory combined with
       // the input filename and offload prefix.
@@ -5221,10 +5240,10 @@ static void handleTimeTrace(Compilation &C, const ArgList &Args,
       if (Arg *FinalOutput = Args.getLastArg(options::OPT_o))
         Path = llvm::sys::path::parent_path(FinalOutput->getValue());
       llvm::sys::path::append(Path, TraceName);
-      Path += ".json";
+      Path += DefaultExt;
     } else {
       Path = Result.getFilename();
-      llvm::sys::path::replace_extension(Path, "json");
+      llvm::sys::path::replace_extension(Path, DefaultExtNoDot);
     }
   }
   const char *ResultFile = C.getArgs().MakeArgString(Path);
