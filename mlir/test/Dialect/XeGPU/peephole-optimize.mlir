@@ -564,3 +564,23 @@ gpu.func @transpose_dynamic_offset(%arg0: memref<64x64xf16, strided<[64, 1], off
   gpu.return %2 : vector<16x16xf16>
 }
 }
+
+// -----
+// The memref offset of an i4 source counts elements, two per byte.
+#l = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 8], order = [0, 1]>
+// CHECK-LABEL: gpu.func @i4_transpose_memref_offset(
+// CHECK-DAG:     %[[C4:.*]] = arith.constant 4 : index
+// CHECK-DAG:     %[[C8:.*]] = arith.constant 8 : index
+// CHECK:         %[[BASE:.*]], %[[OFFSET:.*]], %{{.+}}:2, %{{.+}}:2 = memref.extract_strided_metadata
+// CHECK:         %[[PTR:.*]] = memref.extract_aligned_pointer_as_index %[[BASE]]
+// CHECK:         %[[BITS:.*]] = arith.muli %[[OFFSET]], %[[C4]] : index
+// CHECK:         %[[BYTES:.*]] = arith.divui %[[BITS]], %[[C8]] : index
+// CHECK:         arith.addi %[[PTR]], %[[BYTES]] : index
+// CHECK:         xegpu.create_nd_tdesc {{.*}} -> !xegpu.tensor_desc<32x8xi32
+gpu.module @xevm_module {
+gpu.func @i4_transpose_memref_offset(%src: memref<512x2048xi4, strided<[2048, 1], offset: ?>>, %i: index, %j: index) -> vector<32x64xi4> {
+  %t = xegpu.create_nd_tdesc %src : memref<512x2048xi4, strided<[2048, 1], offset: ?>> -> !xegpu.tensor_desc<32x64xi4, #l>
+  %v = xegpu.load_nd %t[%i, %j] <{layout = #l}> : !xegpu.tensor_desc<32x64xi4, #l> -> vector<32x64xi4>
+  gpu.return %v : vector<32x64xi4>
+}
+}
