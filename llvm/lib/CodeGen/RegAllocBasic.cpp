@@ -225,6 +225,7 @@ bool RABasic::runOnMachineFunction(MachineFunction &mf) {
   auto &MBFI = getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
   auto &LiveStks = getAnalysis<LiveStacksWrapperLegacy>().getLS();
   auto &MDT = getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  auto &DebugVars = getAnalysis<LiveDebugVariablesWrapperLegacy>().getLDV();
 
   RegAllocBase::init(getAnalysis<VirtRegMapWrapperLegacy>().getVRM(),
                      getAnalysis<LiveIntervalsWrapperPass>().getLIS(),
@@ -234,8 +235,8 @@ bool RABasic::runOnMachineFunction(MachineFunction &mf) {
                       &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI());
   VRAI.calculateSpillWeightsAndHints();
 
-  SpillerInstance.reset(
-      createInlineSpiller({*LIS, LiveStks, MDT, MBFI}, *MF, *VRM, VRAI));
+  SpillerInstance.reset(createInlineSpiller(
+      {*LIS, LiveStks, MDT, MBFI, &DebugVars}, *MF, *VRM, VRAI));
 
   allocatePhysRegs();
   postOptimization();
