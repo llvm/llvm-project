@@ -39,6 +39,15 @@ struct TransferReadOpSubsetExtractionOpInterface
   OpOperand &getSourceOperand(Operation *op) const {
     return cast<vector::TransferReadOp>(op).getBaseMutable();
   }
+
+  bool isCompatibleWithInsertion(Operation *op,
+                                 SubsetInsertionOpInterface insertion) const {
+    auto read = cast<vector::TransferReadOp>(op);
+    auto write = dyn_cast<vector::TransferWriteOp>(insertion.getOperation());
+    return write && read.getVectorType() == write.getVectorType() &&
+           read.getMask() == write.getMask() &&
+           read.getPermutationMap() == write.getPermutationMap();
+  }
 };
 
 struct TransferWriteOpSubsetInsertionOpInterface
