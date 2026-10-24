@@ -1,0 +1,193 @@
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu -dwarf-version=5 -start-after=live-debug-values -verify-machineinstrs %s -o - | FileCheck %s
+#
+# Use MIR to keep the entry control flow and source locations intact.
+--- |
+  declare void @callee()
+  define void @line_zero() !dbg !4 { ret void }
+  define void @different_locations() !dbg !5 { ret void }
+  define void @branch_call() !dbg !6 { ret void }
+  define void @entry_call() !dbg !7 { ret void }
+  define void @cycle() !dbg !8 { ret void }
+  define void @early_return() !dbg !9 { ret void }
+  define void @conditional_location() !dbg !10 { ret void }
+  define void @inline_asm() !dbg !11 { ret void }
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!2}
+  !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "test", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug)
+  !1 = !DIFile(filename: "entry.c", directory: "/")
+  !2 = !{i32 2, !"Debug Info Version", i32 3}
+  !3 = !DISubroutineType(types: !{null})
+  !4 = distinct !DISubprogram(name: "line_zero", scope: !1, file: !1, line: 1, type: !3, scopeLine: 1, spFlags: DISPFlagDefinition, unit: !0)
+  !5 = distinct !DISubprogram(name: "different_locations", scope: !1, file: !1, line: 10, type: !3, scopeLine: 10, spFlags: DISPFlagDefinition, unit: !0)
+  !6 = distinct !DISubprogram(name: "branch_call", scope: !1, file: !1, line: 20, type: !3, scopeLine: 20, spFlags: DISPFlagDefinition, unit: !0)
+  !7 = distinct !DISubprogram(name: "entry_call", scope: !1, file: !1, line: 30, type: !3, scopeLine: 30, spFlags: DISPFlagDefinition, unit: !0)
+  !8 = distinct !DISubprogram(name: "cycle", scope: !1, file: !1, line: 40, type: !3, scopeLine: 40, spFlags: DISPFlagDefinition, unit: !0)
+  !9 = distinct !DISubprogram(name: "early_return", scope: !1, file: !1, line: 50, type: !3, scopeLine: 50, spFlags: DISPFlagDefinition, unit: !0)
+  !10 = distinct !DISubprogram(name: "conditional_location", scope: !1, file: !1, line: 60, type: !3, scopeLine: 60, spFlags: DISPFlagDefinition, unit: !0)
+  !11 = distinct !DISubprogram(name: "inline_asm", scope: !1, file: !1, line: 70, type: !3, scopeLine: 70, spFlags: DISPFlagDefinition, unit: !0)
+  !12 = !DILocation(line: 0, scope: !4)
+  !13 = !DILocation(line: 3, column: 1, scope: !4)
+  !14 = !DILocation(line: 11, column: 1, scope: !5)
+  !15 = !DILocation(line: 12, column: 1, scope: !5)
+  !16 = !DILocation(line: 0, scope: !6)
+  !17 = !DILocation(line: 22, column: 1, scope: !6)
+  !18 = !DILocation(line: 32, column: 1, scope: !7)
+  !19 = !DILocation(line: 42, column: 1, scope: !8)
+  !20 = !DILocation(line: 52, column: 1, scope: !9)
+  !21 = !DILocation(line: 61, column: 1, scope: !10)
+  !22 = !DILocation(line: 62, column: 1, scope: !10)
+  !23 = !DILocation(line: 72, column: 1, scope: !11)
+...
+---
+# Line-zero setup may branch and reconverge more than once. The first source
+# instruction is in a loop header, but no backedge is crossed to reach it.
+# CHECK-LABEL: line_zero:
+# CHECK-NOT: prologue_end
+# CHECK: .loc 0 3 1 prologue_end
+# CHECK-NEXT: addl
+name: line_zero
+body: |
+  bb.0:
+    TEST32rr undef $edi, undef $edi, implicit-def $eflags, debug-location !12
+    JCC_1 %bb.2, 4, implicit $eflags, debug-location !12
+  bb.1:
+    JMP_1 %bb.2, debug-location !12
+  bb.2:
+    TEST32rr undef $edi, undef $edi, implicit-def $eflags, debug-location !12
+    JCC_1 %bb.4, 4, implicit $eflags, debug-location !12
+  bb.3:
+    JMP_1 %bb.4, debug-location !12
+  bb.4:
+    $eax = ADD32ri8 undef $eax, 1, implicit-def $eflags, debug-location !13
+    JCC_1 %bb.4, 4, implicit $eflags
+    RET64
+...
+---
+# The arms have the same source line, but different first source instructions.
+# A breakpoint at the join would skip both of them.
+# CHECK-LABEL: different_locations:
+# CHECK: .loc 0 10 0 prologue_end
+# CHECK-NEXT: testl
+# CHECK-NOT: prologue_end
+# CHECK: .size different_locations
+name: different_locations
+body: |
+  bb.0:
+    TEST32rr undef $edi, undef $edi, implicit-def $eflags
+    JCC_1 %bb.2, 4, implicit $eflags
+  bb.1:
+    $eax = ADD32ri8 undef $eax, 1, implicit-def $eflags, debug-location !14
+    JMP_1 %bb.3
+  bb.2:
+    $eax = ADD32ri8 undef $eax, 2, implicit-def $eflags, debug-location !14
+  bb.3:
+    RET64 debug-location !15
+...
+---
+# Do not skip a call on one arm, even if it has line zero.
+# CHECK-LABEL: branch_call:
+# CHECK: .loc 0 20 0 prologue_end
+# CHECK-NEXT: testl
+# CHECK-NOT: prologue_end
+# CHECK: .size branch_call
+name: branch_call
+body: |
+  bb.0:
+    TEST32rr undef $edi, undef $edi, implicit-def $eflags
+    JCC_1 %bb.2, 4, implicit $eflags
+  bb.1:
+    CALL64pcrel32 @callee, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, debug-location !16
+  bb.2:
+    RET64 debug-location !17
+...
+---
+# A locationless call before the branch also prevents a later breakpoint.
+# CHECK-LABEL: entry_call:
+# CHECK: .loc 0 30 0 prologue_end
+# CHECK-NEXT: callq
+# CHECK-NOT: prologue_end
+# CHECK: .size entry_call
+name: entry_call
+body: |
+  bb.0:
+    CALL64pcrel32 @callee, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp
+    TEST32rr undef $edi, undef $edi, implicit-def $eflags
+    JCC_1 %bb.2, 4, implicit $eflags
+  bb.1:
+    JMP_1 %bb.2
+  bb.2:
+    RET64 debug-location !18
+...
+---
+# A postdominating exit need not be reached: the locationless loop may not end.
+# CHECK-LABEL: cycle:
+# CHECK: .loc 0 40 0 prologue_end
+# CHECK-NEXT: testl
+# CHECK-NOT: prologue_end
+# CHECK: .size cycle
+name: cycle
+body: |
+  bb.0:
+    TEST32rr undef $edi, undef $edi, implicit-def $eflags
+    JCC_1 %bb.2, 4, implicit $eflags
+  bb.1:
+    TEST32rr undef $edi, undef $edi, implicit-def $eflags
+    JCC_1 %bb.1, 4, implicit $eflags
+  bb.2:
+    RET64 debug-location !19
+...
+---
+# One path returns without reaching any source location.
+# CHECK-LABEL: early_return:
+# CHECK: .loc 0 50 0 prologue_end
+# CHECK-NEXT: testl
+# CHECK-NOT: prologue_end
+# CHECK: .size early_return
+name: early_return
+body: |
+  bb.0:
+    TEST32rr undef $edi, undef $edi, implicit-def $eflags
+    JCC_1 %bb.2, 4, implicit $eflags
+  bb.1:
+    RET64
+  bb.2:
+    RET64 debug-location !20
+...
+---
+# A source-located instruction after a conditional branch can be bypassed,
+# even though it is in the same machine block.
+# CHECK-LABEL: conditional_location:
+# CHECK: .loc 0 60 0 prologue_end
+# CHECK-NEXT: testl
+# CHECK-NOT: prologue_end
+# CHECK: .size conditional_location
+name: conditional_location
+body: |
+  bb.0:
+    TEST32rr undef $edi, undef $edi, implicit-def $eflags
+    JCC_1 %bb.2, 4, implicit $eflags
+  bb.1:
+    TEST32rr undef $edi, undef $edi, implicit-def $eflags
+    JCC_1 %bb.2, 4, implicit $eflags
+    JMP_1 %bb.2, debug-location !21
+  bb.2:
+    RET64 debug-location !22
+...
+---
+# Inline assembly may contain calls or control flow not represented in the CFG.
+# CHECK-LABEL: inline_asm:
+# CHECK: .loc 0 70 0 prologue_end
+# CHECK-NEXT: testl
+# CHECK-NOT: prologue_end
+# CHECK: .size inline_asm
+name: inline_asm
+body: |
+  bb.0:
+    TEST32rr undef $edi, undef $edi, implicit-def $eflags
+    JCC_1 %bb.2, 4, implicit $eflags
+  bb.1:
+    INLINEASM &"", 1
+  bb.2:
+    RET64 debug-location !23
+...

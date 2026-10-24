@@ -2350,6 +2350,73 @@ void DwarfDebug::recordTargetSourceLine(const DebugLoc &DL, unsigned Flags) {
                    LocationString);
 }
 
+// Find a common first source location after acyclic, call-free entry setup.
+// Postdominance alone is insufficient: it can skip earlier source locations or
+// a loop that never reaches the candidate.
+static const MachineInstr *
+findPrologueEndAcrossBlocks(const MachineFunction &MF) {
+  enum class VisitState { Active, Complete };
+  DenseMap<const MachineBasicBlock *, VisitState> Visited;
+  SmallVector<std::pair<const MachineBasicBlock *, VisitState>> Worklist;
+  Worklist.emplace_back(&MF.front(), VisitState::Active);
+  const MachineInstr *Candidate = nullptr;
+
+  while (!Worklist.empty()) {
+    auto [MBB, State] = Worklist.pop_back_val();
+    if (State == VisitState::Complete) {
+      Visited[MBB] = State;
+      continue;
+    }
+    auto [It, Inserted] = Visited.try_emplace(MBB, VisitState::Active);
+    if (!Inserted) {
+      if (It->second == VisitState::Active)
+        return nullptr;
+      continue;
+    }
+    if (MBB->isEHPad())
+      return nullptr;
+
+    const MachineInstr *FirstLoc = nullptr;
+    bool SeenTerminator = false;
+    for (const MachineInstr &MI : *MBB) {
+      if (MI.isMetaInstruction())
+        continue;
+      // Bundle members may have source locations not present on the header.
+      if (MI.isBundled())
+        return nullptr;
+      if (!MI.getFlag(MachineInstr::FrameSetup) && MI.getDebugLoc() &&
+          MI.getDebugLoc().getLine()) {
+        // An earlier conditional branch could bypass this instruction.
+        if (SeenTerminator)
+          return nullptr;
+        FirstLoc = &MI;
+        break;
+      }
+      if (MI.isCall() || MI.isInlineAsm() || MI.isIndirectBranch() ||
+          (MI.isBarrier() && !MI.isBranch()) ||
+          (MI.isTerminator() && !MI.isBranch()))
+        return nullptr;
+      SeenTerminator |= MI.isTerminator();
+    }
+
+    if (FirstLoc) {
+      if (Candidate && Candidate != FirstLoc)
+        return nullptr;
+      Candidate = FirstLoc;
+      Visited[MBB] = VisitState::Complete;
+      continue;
+    }
+    if (MBB->succ_empty())
+      return nullptr;
+
+    Worklist.emplace_back(MBB, VisitState::Complete);
+    for (const MachineBasicBlock *Succ : MBB->successors())
+      Worklist.emplace_back(Succ, VisitState::Active);
+  }
+
+  return Candidate;
+}
+
 // Returns the position where we should place prologue_end, potentially nullptr,
 // which means "no good place to put prologue_end". Returns true in the second
 // return value if there are no setup instructions in this function at all,
@@ -2400,8 +2467,8 @@ findPrologueEndLoc(const MachineFunction *MF) {
   // Examine all the instructions at the start of the function. This doesn't
   // necessarily mean just the entry block: unoptimised code can fall-through
   // into an initial loop, and it makes sense to put the initial breakpoint on
-  // the first instruction of such a loop. However, if we pass branches, we're
-  // better off synthesising an early prologue_end.
+  // the first instruction of such a loop. Branching setup is handled separately
+  // if this initial sequence has no source location.
   auto CurBlock = MF->begin();
   auto CurInst = CurBlock->begin();
 
@@ -2416,9 +2483,7 @@ findPrologueEndLoc(const MachineFunction *MF) {
   auto getNextInst = [&CurBlock, &CurInst, MF]() -> bool {
     // We've reached the end of the block. Did we just look at a terminator?
     if (CurInst->isTerminator()) {
-      // Some kind of "real" control flow is occurring. At the very least
-      // we would have to start exploring the CFG, a good signal that the
-      // prologue is over.
+      // Leave control-flow exploration to findPrologueEndAcrossBlocks.
       return false;
     }
 
@@ -2482,6 +2547,9 @@ findPrologueEndLoc(const MachineFunction *MF) {
     if (!getNextInst())
       break;
   }
+
+  if (const MachineInstr *MI = findPrologueEndAcrossBlocks(*MF))
+    return std::make_pair(MI, false);
 
   // We couldn't find any source-location, suggesting all meaningful information
   // got optimised away. Set the prologue_end to be the first non-trivial
