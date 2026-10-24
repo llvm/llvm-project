@@ -36,3 +36,35 @@ llvm.func @atomic_buffer_rejects_gfx12(%rsrc : vector<4xi32>,
   %0 = rocdl.raw.buffer.atomic.smax %vdata, %rsrc, %offset, %soffset, gfx12<nt> : i32
   llvm.return
 }
+
+// -----
+
+llvm.func @buffer_inv_rejects_nt() {
+  // expected-error@+1 {{failed to satisfy constraint: gfx942 buffer cache policy bits with no bits other than sc0 and sc1 set}}
+  rocdl.buffer.inv nt
+  llvm.return
+}
+
+// -----
+
+llvm.func @buffer_inv_rejects_swz() {
+  // expected-error@+1 {{failed to satisfy constraint: gfx942 buffer cache policy bits with no bits other than sc0 and sc1 set}}
+  rocdl.buffer.inv swz
+  llvm.return
+}
+
+// -----
+
+llvm.func @buffer_inv_rejects_volatile() {
+  // expected-error@+1 {{failed to satisfy constraint: gfx942 buffer cache policy bits with no bits other than sc0 and sc1 set}}
+  rocdl.buffer.inv volatile
+  llvm.return
+}
+
+// -----
+
+llvm.func @buffer_inv_rejects_mixed_policy() {
+  // expected-error@+1 {{failed to satisfy constraint: gfx942 buffer cache policy bits with no bits other than sc0 and sc1 set}}
+  rocdl.buffer.inv sc0|nt
+  llvm.return
+}
