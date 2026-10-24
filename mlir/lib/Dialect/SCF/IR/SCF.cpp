@@ -3028,8 +3028,8 @@ struct ParallelOpSingleOrZeroIterationDimsFolder
     for (auto [lb, ub, step, iv] :
          llvm::zip(op.getLowerBound(), op.getUpperBound(), op.getStep(),
                    op.getInductionVars())) {
-      auto numIterations =
-          constantTripCount(lb, ub, step, !op.getUnsignedCmp(), computeUbMinusLb);
+      auto numIterations = constantTripCount(lb, ub, step, !op.getUnsignedCmp(),
+                                             computeUbMinusLb);
       if (numIterations.has_value()) {
         // Remove the loop if it performs zero iterations.
         if (*numIterations == 0) {
@@ -3077,9 +3077,9 @@ struct ParallelOpSingleOrZeroIterationDimsFolder
       return success();
     }
     // Replace the parallel loop by lower-dimensional parallel loop.
-    auto newOp =
-        ParallelOp::create(rewriter, op.getLoc(), newLowerBounds,
-                           newUpperBounds, newSteps, op.getInitVals(), nullptr, op.getUnsignedCmp());
+    auto newOp = ParallelOp::create(rewriter, op.getLoc(), newLowerBounds,
+                                    newUpperBounds, newSteps, op.getInitVals(),
+                                    nullptr, op.getUnsignedCmp());
     // Erase the empty block that was inserted by the builder.
     rewriter.eraseBlock(newOp.getBody());
     // Clone the loop body and remap the block arguments of the collapsed loops
@@ -3103,8 +3103,8 @@ struct MergeNestedParallelLoops : public OpRewritePattern<ParallelOp> {
     auto innerOp = dyn_cast<ParallelOp>(outerBody.front());
     if (!innerOp)
       return failure();
-    
-    if(op.getUnsignedCmp() != innerOp.getUnsignedCmp())
+
+    if (op.getUnsignedCmp() != innerOp.getUnsignedCmp())
       return failure();
 
     for (auto val : outerBody.getArguments())
