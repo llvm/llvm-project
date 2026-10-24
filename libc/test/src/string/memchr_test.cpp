@@ -131,6 +131,31 @@ TEST(LlvmLibcMemChrTest, SignedCharacterFound) {
   ASSERT_EQ(actual[0], c);
 }
 
+TEST(LlvmLibcMemChrTest, MatchesAtOddAndEvenOffsets) {
+  alignas(32) unsigned char buf[64];
+  for (size_t i = 0; i < sizeof(buf); ++i)
+    buf[i] = 'x';
+
+  for (size_t offset = 0; offset < sizeof(buf); ++offset) {
+    buf[offset] = 'A';
+    const char *actual = call_memchr(buf, 'A', sizeof(buf));
+    ASSERT_EQ(actual, reinterpret_cast<const char *>(buf + offset));
+    buf[offset] = 'x';
+  }
+}
+
+TEST(LlvmLibcMemChrTest, NoFalseMatchWithZeroOrNegativeByteAtOddOffset) {
+  alignas(32) unsigned char buf[64];
+  for (size_t i = 0; i < sizeof(buf); ++i)
+    buf[i] = 0x11;
+
+  // Odd offset has 0x00 and 0xFF; searching for 'A' (0x41) must not
+  // false-match.
+  buf[1] = 0x00;
+  buf[3] = 0xFF;
+  ASSERT_STREQ(call_memchr(buf, 'A', sizeof(buf)), nullptr);
+}
+
 #if defined(LIBC_ADD_NULL_CHECKS)
 
 TEST(LlvmLibcMemChrTest, CrashOnNullPtr) {
