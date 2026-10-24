@@ -22,7 +22,7 @@ body: |
   ; CHECK-NEXT:   S_BRANCH %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   $vgpr0 = COPY [[REG_SEQUENCE]]
+  ; CHECK-NEXT:   $vgpr0_vgpr1 = COPY [[REG_SEQUENCE]]
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -40,7 +40,7 @@ body: |
     S_BRANCH %bb.2
 
   bb.2:
-    $vgpr0 = COPY %3
+    $vgpr0_vgpr1 = COPY %3
     S_ENDPGM 0
 
 ...
@@ -66,7 +66,7 @@ body: |
   ; CHECK-NEXT:   S_BRANCH %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   $vgpr0 = COPY [[REG_SEQUENCE]]
+  ; CHECK-NEXT:   $vgpr0_vgpr1 = COPY [[REG_SEQUENCE]]
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -85,7 +85,7 @@ body: |
     S_BRANCH %bb.2
 
   bb.2:
-    $vgpr0 = COPY %3
+    $vgpr0_vgpr1 = COPY %3
     S_ENDPGM 0
 
 ...
