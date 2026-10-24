@@ -30,8 +30,8 @@ Clang has the ability to generate compilation database fragments via
 fragments together between `[` and `]` to create a compilation database.
 
 Currently [CMake](https://cmake.org) (since 2.8.5) supports generation
-of compilation databases for Unix Makefile builds (Ninja builds in the
-works) with the option `CMAKE_EXPORT_COMPILE_COMMANDS`.
+of compilation databases for `Unix Makefile` and `Ninja` builds with
+the option `CMAKE_EXPORT_COMPILE_COMMANDS`.
 
 For projects on Linux, there is an alternative to intercept compiler
 calls with a tool called [Bear](https://github.com/rizsotto/Bear).
