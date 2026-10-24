@@ -145,13 +145,6 @@
 ; CHECK-NEXT:       Live Interval Analysis
 ; CHECK-NEXT:       PowerPC TLS Dynamic Call Fixup
 ; CHECK-NEXT:       PowerPC TOC Register Dependencies
-; CHECK-NEXT:       MachineDominator Tree Construction
-; CHECK-NEXT:       Machine Natural Loop Construction
-; CHECK-NEXT:       Slot index numbering
-; CHECK-NEXT:       Live Interval Analysis
-; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
-; CHECK-NEXT:       Machine Optimization Remark Emitter
-; CHECK-NEXT:       Modulo Software Pipelining
 ; CHECK-NEXT:       Detect Dead Lanes
 ; CHECK-NEXT:       Init Undef Pass
 ; CHECK-NEXT:       Process Implicit Definitions

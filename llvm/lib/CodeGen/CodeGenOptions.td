@@ -153,6 +153,8 @@ defm : BoolField<"enable-implicit-null-checks", "false",
   "Fold null checks into faulting memory operations">;
 defm : OptionalBoolField<"enable-ipra",
   "Enable interprocedural register allocation to reduce load/store at procedure calls">;
+defm : OptionalBoolField<"enable-pipeliner",
+  "Enable the MachinePipeliner (overrides the target's default)">;
 defm : EnumField<"function-splitting", "std::optional<FunctionSplittingMode>", "std::nullopt",
   "none,bbsections,all",
   ["FunctionSplittingMode::None", "FunctionSplittingMode::BBSectionsOnly",
