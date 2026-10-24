@@ -1512,9 +1512,9 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
         llvm::IntelGPU::IGCATarget IGCA = Arch.igcaTarget();
 
         Builder.defineMacro("__OFFLOAD_ARCH_IGCA__", Twine(IGCA.getTarget()));
-        if (IGCA.isCompute())
+        if (IGCA.isAnyCompute())
           Builder.defineMacro("__OFFLOAD_ARCH_IGCA_COMPUTE__");
-        else if (IGCA.isRender())
+        else if (IGCA.isAnyRender())
           Builder.defineMacro("__OFFLOAD_ARCH_IGCA_RENDER__");
 
         if (IGCA.isComputeExact())
