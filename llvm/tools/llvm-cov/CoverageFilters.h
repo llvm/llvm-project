@@ -18,6 +18,7 @@
 #include <vector>
 
 namespace llvm {
+class CoverageExclusions;
 class SpecialCaseList;
 
 namespace coverage {
@@ -32,7 +33,8 @@ public:
 
   /// Return true if the function passes the requirements of this filter.
   virtual bool matches(const coverage::CoverageMapping &CM,
-                       const coverage::FunctionRecord &Function) const {
+                       const coverage::FunctionRecord &Function,
+                       const CoverageExclusions *Exclusions = nullptr) const {
     return true;
   }
 
@@ -50,7 +52,8 @@ public:
   NameCoverageFilter(StringRef Name) : Name(Name) {}
 
   bool matches(const coverage::CoverageMapping &CM,
-               const coverage::FunctionRecord &Function) const override;
+               const coverage::FunctionRecord &Function,
+               const CoverageExclusions *Exclusions = nullptr) const override;
 };
 
 /// Matches functions whose name matches a certain regular expression.
@@ -71,7 +74,8 @@ public:
       : Regex(Regex), Type(Type) {}
 
   bool matches(const coverage::CoverageMapping &CM,
-               const coverage::FunctionRecord &Function) const override;
+               const coverage::FunctionRecord &Function,
+               const CoverageExclusions *Exclusions = nullptr) const override;
 
   bool matchesFilename(StringRef Filename) const override;
 };
@@ -86,7 +90,8 @@ public:
       : Allowlist(Allowlist) {}
 
   bool matches(const coverage::CoverageMapping &CM,
-               const coverage::FunctionRecord &Function) const override;
+               const coverage::FunctionRecord &Function,
+               const CoverageExclusions *Exclusions = nullptr) const override;
 };
 
 /// Matches numbers that pass a certain threshold.
@@ -123,7 +128,8 @@ public:
       : StatisticThresholdFilter(Op, Threshold) {}
 
   bool matches(const coverage::CoverageMapping &CM,
-               const coverage::FunctionRecord &Function) const override;
+               const coverage::FunctionRecord &Function,
+               const CoverageExclusions *Exclusions = nullptr) const override;
 };
 
 /// Matches functions whose line coverage percentage
@@ -135,7 +141,8 @@ public:
       : StatisticThresholdFilter(Op, Threshold) {}
 
   bool matches(const coverage::CoverageMapping &CM,
-               const coverage::FunctionRecord &Function) const override;
+               const coverage::FunctionRecord &Function,
+               const CoverageExclusions *Exclusions = nullptr) const override;
 };
 
 /// A collection of filters.
@@ -152,7 +159,8 @@ public:
   bool empty() const { return Filters.empty(); }
 
   bool matches(const coverage::CoverageMapping &CM,
-               const coverage::FunctionRecord &Function) const override;
+               const coverage::FunctionRecord &Function,
+               const CoverageExclusions *Exclusions = nullptr) const override;
 
   bool matchesFilename(StringRef Filename) const override;
 };
@@ -163,7 +171,8 @@ public:
 class CoverageFiltersMatchAll : public CoverageFilters {
 public:
   bool matches(const coverage::CoverageMapping &CM,
-               const coverage::FunctionRecord &Function) const override;
+               const coverage::FunctionRecord &Function,
+               const CoverageExclusions *Exclusions = nullptr) const override;
 };
 
 } // namespace llvm
