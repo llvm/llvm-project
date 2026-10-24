@@ -33,3 +33,15 @@ define i32 @multi_alt() {
   %r = call i32 asm "# $0", "=m|r"()
   ret i32 %r
 }
+
+; A label is a branch target, which isn't in memory either. It isn't an
+; output, so the error says so.
+; CHECK: error: cannot handle memory constraint 'm' for a label
+define void @label_mem() {
+  callbr void asm "# $0", "!m"()
+    to label %fallthrough [label %indirect]
+fallthrough:
+  ret void
+indirect:
+  ret void
+}

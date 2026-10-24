@@ -1440,7 +1440,8 @@ public:
   }
   /// Returns true if the register operand can be folded with a load or store
   /// into a frame index. Does so by checking the InlineAsm::Flag immediate
-  /// operand at OpId - 1.
+  /// operand at OpId - 1, and that the register (or subregister) starts at the
+  /// beginning of the stack slot.
   LLVM_ABI bool mayFoldInlineAsmRegOp(unsigned OpId) const;
 
   LLVM_ABI bool isStackAligningInlineAsm() const;

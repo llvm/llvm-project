@@ -1,0 +1,29 @@
+# RUN: llc -mtriple=x86_64 -run-pass=none -verify-machineinstrs -o - %s | FileCheck %s
+
+# An inline asm operand flag is followed by the number of operands that it
+# says, e.g. two registers for an i128 value, or the five operands of an x86
+# memory reference. A count other than 1 is written as "ops:N". Check that it
+# survives a print/parse round trip, whether it was written symbolically
+# (including on a tied use) or as part of a numeric flag. The machine verifier
+# walks the operands by their flags' counts, so it rejects a wrong count.
+
+---
+name: operand_count
+tracksRegLiveness: true
+stack:
+  - { id: 0, size: 16, alignment: 16 }
+body: |
+  bb.0:
+    liveins: $rdi, $rsi
+
+    ; CHECK-LABEL: name: operand_count
+    ; CHECK: INLINEASM &"", sideeffect mayload attdialect, regdef:GR64 ops:2, def %2, def %3, mem:m ops:5, %stack.0, 1, $noreg, 0, $noreg, reguse:GR64 foldable ops:2, %0, %1, reguse tiedto:$0 ops:2, %2(tied-def 3), %3(tied-def 4)
+    ; CHECK: INLINEASM &"", sideeffect attdialect, reguse:GR64 foldable ops:2, %0, %1, reguse:GR64, %0
+    %0:gr64 = COPY $rdi
+    %1:gr64 = COPY $rsi
+    %2:gr64 = COPY %0
+    %3:gr64 = COPY %1
+    INLINEASM &"", sideeffect mayload attdialect, regdef:GR64 ops:2, def %2, def %3, mem:m ops:5, %stack.0, 1, $noreg, 0, $noreg, reguse:GR64 foldable ops:2, %0, %1, reguse tiedto:$0 ops:2, %2(tied-def 3), %3(tied-def 4)
+    INLINEASM &"", sideeffect attdialect, 1078525969 /* reguse:GR64 foldable ops:2 */, %0, %1, reguse:GR64, %0
+    RET 0, implicit %2, implicit %3
+...

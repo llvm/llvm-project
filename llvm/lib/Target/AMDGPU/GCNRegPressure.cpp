@@ -736,7 +736,7 @@ void GCNDownwardRPTrackerBase::addDefs(const MachineInstr &MI) {
 }
 
 bool GCNDownwardRPTracker::advanceBeforeNext() {
-  if (!LastTrackedMI)
+  if (!LastTrackedMI.isValid())
     return NextMI == MBBEnd;
   assert(NextMI == MBBEnd || !NextMI->isDebugInstr());
 
@@ -750,7 +750,7 @@ bool GCNDownwardRPTracker::advanceBeforeNext() {
 }
 
 void GCNDownwardRPTracker::advanceToNext() {
-  LastTrackedMI = &*NextMI++;
+  LastTrackedMI = NextMI++;
   NextMI = skipDebugInstructionsForward(NextMI, MBBEnd);
   GCNDownwardRPTrackerBase::addDefs(*LastTrackedMI);
 }
@@ -824,7 +824,7 @@ GCNRegPressure GCNDownwardRPTrackerBase::bumpDownwardPressure(
   SlotIndex CurrIdx;
   const MachineBasicBlock *MBB = MI->getParent();
   MachineBasicBlock::const_iterator StartPos =
-      LastTrackedMI ? std::next(LastTrackedMI->getIterator()) : MBB->begin();
+      LastTrackedMI.isValid() ? std::next(LastTrackedMI) : MBB->begin();
   MachineBasicBlock::const_iterator IdxPos =
       skipDebugInstructionsForward(StartPos, MBB->end());
   if (IdxPos == MBB->end()) {
