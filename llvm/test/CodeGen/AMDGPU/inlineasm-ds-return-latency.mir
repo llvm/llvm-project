@@ -1,0 +1,47 @@
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -run-pass=postmisched -verify-machineinstrs -verify-misched -debug-only=machine-scheduler %s -o /dev/null 2>&1 | FileCheck %s
+# REQUIRES: asserts
+
+# Explicit inline-asm inputs retain native DS return latency, including LDS
+# atomics, configurable GDS operations, and fixed-GDS results.
+
+---
+name: atomic_lds_result
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: atomic_lds_result:%bb.0
+  ; CHECK: SU(0): {{.*}}DS_ADD_RTN_U32_gfx9
+  ; CHECK: SU(1): Data Latency=5 Reg=$vgpr2
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $exec
+    $vgpr2 = DS_ADD_RTN_U32_gfx9 $vgpr0, $vgpr1, 0, 0, implicit $exec :: (load store (s32), addrspace 3)
+    INLINEASM &"v_mov_b32 $0, $1", attdialect, regdef:VGPR_32, def $vgpr12, reguse:VGPR_32, $vgpr2
+    S_ENDPGM 0
+...
+
+---
+name: atomic_configurable_gds_result
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: atomic_configurable_gds_result:%bb.0
+  ; CHECK: SU(0): {{.*}}DS_ADD_RTN_U32
+  ; CHECK: SU(1): Data Latency=5 Reg=$vgpr2
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $m0, $exec
+    $vgpr2 = DS_ADD_RTN_U32 $vgpr0, $vgpr1, 0, 1, implicit $m0, implicit $exec :: (load store (s32), addrspace 2)
+    INLINEASM &"v_mov_b32 $0, $1", attdialect, regdef:VGPR_32, def $vgpr12, reguse:VGPR_32, $vgpr2
+    S_ENDPGM 0
+...
+
+---
+name: fixed_gds_ordered_count_result
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: fixed_gds_ordered_count_result:%bb.0
+  ; CHECK: SU(0): {{.*}}DS_ORDERED_COUNT
+  ; CHECK: SU(1): Data Latency=5 Reg=$vgpr2
+  bb.0:
+    liveins: $vgpr0, $m0, $exec
+    $vgpr2 = DS_ORDERED_COUNT $vgpr0, 772, implicit $m0, implicit $exec :: (load store (s32), addrspace 2)
+    INLINEASM &"v_mov_b32 $0, $1", attdialect, regdef:VGPR_32, def $vgpr12, reguse:VGPR_32, $vgpr2
+    S_ENDPGM 0
+...

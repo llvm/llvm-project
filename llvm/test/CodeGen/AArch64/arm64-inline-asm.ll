@@ -367,13 +367,13 @@ entry:
 define void @test_zero_reg(ptr %addr) {
 ; CHECK-LABEL: test_zero_reg:
 ; CHECK:       ; %bb.0:
+; CHECK-NEXT:    mov w8, #1 ; =0x1
 ; CHECK-NEXT:    ; InlineAsm Start
 ; CHECK-NEXT:    USE(xzr)
 ; CHECK-NEXT:    ; InlineAsm End
 ; CHECK-NEXT:    ; InlineAsm Start
 ; CHECK-NEXT:    USE(wzr)
 ; CHECK-NEXT:    ; InlineAsm End
-; CHECK-NEXT:    mov w8, #1 ; =0x1
 ; CHECK-NEXT:    ; InlineAsm Start
 ; CHECK-NEXT:    USE(w8)
 ; CHECK-NEXT:    ; InlineAsm End

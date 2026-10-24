@@ -97,9 +97,6 @@ define void @test_vector_reg_clobber() nounwind {
 ; RV64-NEXT:    add a0, sp, a0
 ; RV64-NEXT:    addi a0, a0, 16
 ; RV64-NEXT:    vl1r.v v1, (a0) # vscale x 8-byte Folded Reload
-; RV64-NEXT:    #APP
-; RV64-NEXT:    # use v1
-; RV64-NEXT:    #NO_APP
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    slli a0, a0, 1
 ; RV64-NEXT:    mv a1, a0
@@ -108,52 +105,55 @@ define void @test_vector_reg_clobber() nounwind {
 ; RV64-NEXT:    add a0, sp, a0
 ; RV64-NEXT:    addi a0, a0, 16
 ; RV64-NEXT:    vl1r.v v2, (a0) # vscale x 8-byte Folded Reload
-; RV64-NEXT:    #APP
-; RV64-NEXT:    # use v2
-; RV64-NEXT:    #NO_APP
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    slli a1, a0, 2
 ; RV64-NEXT:    add a0, a1, a0
 ; RV64-NEXT:    add a0, sp, a0
 ; RV64-NEXT:    addi a0, a0, 16
 ; RV64-NEXT:    vl1r.v v3, (a0) # vscale x 8-byte Folded Reload
-; RV64-NEXT:    #APP
-; RV64-NEXT:    # use v3
-; RV64-NEXT:    #NO_APP
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    slli a0, a0, 2
 ; RV64-NEXT:    add a0, sp, a0
 ; RV64-NEXT:    addi a0, a0, 16
 ; RV64-NEXT:    vl1r.v v4, (a0) # vscale x 8-byte Folded Reload
-; RV64-NEXT:    #APP
-; RV64-NEXT:    # use v4
-; RV64-NEXT:    #NO_APP
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    slli a1, a0, 1
 ; RV64-NEXT:    add a0, a1, a0
 ; RV64-NEXT:    add a0, sp, a0
 ; RV64-NEXT:    addi a0, a0, 16
 ; RV64-NEXT:    vl1r.v v5, (a0) # vscale x 8-byte Folded Reload
-; RV64-NEXT:    #APP
-; RV64-NEXT:    # use v5
-; RV64-NEXT:    #NO_APP
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    slli a0, a0, 1
 ; RV64-NEXT:    add a0, sp, a0
 ; RV64-NEXT:    addi a0, a0, 16
 ; RV64-NEXT:    vl1r.v v6, (a0) # vscale x 8-byte Folded Reload
-; RV64-NEXT:    #APP
-; RV64-NEXT:    # use v6
-; RV64-NEXT:    #NO_APP
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    add a0, sp, a0
 ; RV64-NEXT:    addi a0, a0, 16
 ; RV64-NEXT:    vl1r.v v7, (a0) # vscale x 8-byte Folded Reload
+; RV64-NEXT:    addi a0, sp, 16
+; RV64-NEXT:    vl1r.v v8, (a0) # vscale x 8-byte Folded Reload
+; RV64-NEXT:    #APP
+; RV64-NEXT:    # use v1
+; RV64-NEXT:    #NO_APP
+; RV64-NEXT:    #APP
+; RV64-NEXT:    # use v2
+; RV64-NEXT:    #NO_APP
+; RV64-NEXT:    #APP
+; RV64-NEXT:    # use v3
+; RV64-NEXT:    #NO_APP
+; RV64-NEXT:    #APP
+; RV64-NEXT:    # use v4
+; RV64-NEXT:    #NO_APP
+; RV64-NEXT:    #APP
+; RV64-NEXT:    # use v5
+; RV64-NEXT:    #NO_APP
+; RV64-NEXT:    #APP
+; RV64-NEXT:    # use v6
+; RV64-NEXT:    #NO_APP
 ; RV64-NEXT:    #APP
 ; RV64-NEXT:    # use v7
 ; RV64-NEXT:    #NO_APP
-; RV64-NEXT:    addi a0, sp, 16
-; RV64-NEXT:    vl1r.v v8, (a0) # vscale x 8-byte Folded Reload
 ; RV64-NEXT:    #APP
 ; RV64-NEXT:    # use v8
 ; RV64-NEXT:    #NO_APP
@@ -249,9 +249,6 @@ define void @test_vector_reg_clobber() nounwind {
 ; RV32-NEXT:    add a0, sp, a0
 ; RV32-NEXT:    addi a0, a0, 16
 ; RV32-NEXT:    vl1r.v v1, (a0) # vscale x 8-byte Folded Reload
-; RV32-NEXT:    #APP
-; RV32-NEXT:    # use v1
-; RV32-NEXT:    #NO_APP
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    slli a0, a0, 1
 ; RV32-NEXT:    mv a1, a0
@@ -260,52 +257,55 @@ define void @test_vector_reg_clobber() nounwind {
 ; RV32-NEXT:    add a0, sp, a0
 ; RV32-NEXT:    addi a0, a0, 16
 ; RV32-NEXT:    vl1r.v v2, (a0) # vscale x 8-byte Folded Reload
-; RV32-NEXT:    #APP
-; RV32-NEXT:    # use v2
-; RV32-NEXT:    #NO_APP
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    slli a1, a0, 2
 ; RV32-NEXT:    add a0, a1, a0
 ; RV32-NEXT:    add a0, sp, a0
 ; RV32-NEXT:    addi a0, a0, 16
 ; RV32-NEXT:    vl1r.v v3, (a0) # vscale x 8-byte Folded Reload
-; RV32-NEXT:    #APP
-; RV32-NEXT:    # use v3
-; RV32-NEXT:    #NO_APP
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    slli a0, a0, 2
 ; RV32-NEXT:    add a0, sp, a0
 ; RV32-NEXT:    addi a0, a0, 16
 ; RV32-NEXT:    vl1r.v v4, (a0) # vscale x 8-byte Folded Reload
-; RV32-NEXT:    #APP
-; RV32-NEXT:    # use v4
-; RV32-NEXT:    #NO_APP
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    slli a1, a0, 1
 ; RV32-NEXT:    add a0, a1, a0
 ; RV32-NEXT:    add a0, sp, a0
 ; RV32-NEXT:    addi a0, a0, 16
 ; RV32-NEXT:    vl1r.v v5, (a0) # vscale x 8-byte Folded Reload
-; RV32-NEXT:    #APP
-; RV32-NEXT:    # use v5
-; RV32-NEXT:    #NO_APP
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    slli a0, a0, 1
 ; RV32-NEXT:    add a0, sp, a0
 ; RV32-NEXT:    addi a0, a0, 16
 ; RV32-NEXT:    vl1r.v v6, (a0) # vscale x 8-byte Folded Reload
-; RV32-NEXT:    #APP
-; RV32-NEXT:    # use v6
-; RV32-NEXT:    #NO_APP
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    add a0, sp, a0
 ; RV32-NEXT:    addi a0, a0, 16
 ; RV32-NEXT:    vl1r.v v7, (a0) # vscale x 8-byte Folded Reload
+; RV32-NEXT:    addi a0, sp, 16
+; RV32-NEXT:    vl1r.v v8, (a0) # vscale x 8-byte Folded Reload
+; RV32-NEXT:    #APP
+; RV32-NEXT:    # use v1
+; RV32-NEXT:    #NO_APP
+; RV32-NEXT:    #APP
+; RV32-NEXT:    # use v2
+; RV32-NEXT:    #NO_APP
+; RV32-NEXT:    #APP
+; RV32-NEXT:    # use v3
+; RV32-NEXT:    #NO_APP
+; RV32-NEXT:    #APP
+; RV32-NEXT:    # use v4
+; RV32-NEXT:    #NO_APP
+; RV32-NEXT:    #APP
+; RV32-NEXT:    # use v5
+; RV32-NEXT:    #NO_APP
+; RV32-NEXT:    #APP
+; RV32-NEXT:    # use v6
+; RV32-NEXT:    #NO_APP
 ; RV32-NEXT:    #APP
 ; RV32-NEXT:    # use v7
 ; RV32-NEXT:    #NO_APP
-; RV32-NEXT:    addi a0, sp, 16
-; RV32-NEXT:    vl1r.v v8, (a0) # vscale x 8-byte Folded Reload
 ; RV32-NEXT:    #APP
 ; RV32-NEXT:    # use v8
 ; RV32-NEXT:    #NO_APP

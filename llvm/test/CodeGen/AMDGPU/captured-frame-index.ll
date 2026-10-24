@@ -273,10 +273,10 @@ define void @func_alloca_offset_use_asm_sgpr() {
 ; GCN: v_lshr_b32_e64 [[V_FI:v[0-9]+]], s32, 6
 ; GCN: s_movk_i32 vcc_lo, 0x4010
 ; GCN: s_add_i32 [[S_FI]], [[S_FI]], 16
+; GCN-NEXT: v_add_i32_e32 [[V_FI]], vcc, vcc_lo, [[V_FI]]
 ; GCN-NEXT: ;;#ASMSTART
 ; GCN-NEXT: ; use [[S_FI]]
 ; GCN-NEXT: ;;#ASMEND
-; GCN-NEXT: v_add_i32_e32 [[V_FI:v[0-9]+]], vcc, vcc_lo, [[V_FI]]
 ; GCN-NEXT: ;;#ASMSTART
 ; GCN-NEXT: ; use [[V_FI]]
 ; GCN-NEXT: ;;#ASMEND
@@ -295,7 +295,7 @@ define void @func_alloca_offset_use_asm_vgpr() {
 ; GCN-NEXT: ; use [[FI0]]
 ; GCN-NEXT: ;;#ASMEND
 ; GCN: s_movk_i32 [[FI1:s[0-9]+]], 0x4010
-; GCN-NEXT: ;;#ASMSTART
+; GCN: ;;#ASMSTART
 ; GCN-NEXT: ; use [[FI1]]
 ; GCN-NEXT: ;;#ASMEND
 define amdgpu_kernel void @kernel_alloca_offset_use_asm_sgpr() {
@@ -314,7 +314,7 @@ define amdgpu_kernel void @kernel_alloca_offset_use_asm_sgpr() {
 ; GCN-NEXT: ;;#ASMEND
 
 ; GCN: v_mov_b32_e32 v0, 0x4010
-; GCN-NEXT: ;;#ASMSTART
+; GCN: ;;#ASMSTART
 ; GCN-NEXT: ; use v0
 ; GCN-NEXT: ;;#ASMEND
 define amdgpu_kernel void @kernel_alloca_offset_use_asm_vgpr() {
