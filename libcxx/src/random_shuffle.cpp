@@ -42,10 +42,9 @@ __rs_default::~__rs_default() {
 #endif
 }
 
-__rs_default::result_type __rs_default::operator()() {
-  static mt19937 __rs_g;
-  return __rs_g();
-}
+static constinit mt19937 __global_mersenne_twister;
+
+__rs_default::result_type __rs_default::operator()() { return __global_mersenne_twister(); }
 
 __rs_default __rs_get() { return __rs_default(); }
 
