@@ -4933,9 +4933,9 @@ add_header_library(
 )
 
 add_header_library(
-  sinhbf16coshbf16_utils
+  sinhcoshbf16_utils
   HDRS
-    sinhbf16coshbf16_utils.h
+    sinhcoshbf16_utils.h
   DEPENDS
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.polyeval
@@ -5387,7 +5387,7 @@ add_header_library(
   HDRS
     sinhbf16.h
   DEPENDS
-    .sinhbf16coshbf16_utils
+    .sinhcoshbf16_utils
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.bfloat16

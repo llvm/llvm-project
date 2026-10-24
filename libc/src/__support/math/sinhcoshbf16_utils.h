@@ -11,8 +11,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_MATH_SINHBF16COSHBF16_UTILS_H
-#define LLVM_LIBC_SRC___SUPPORT_MATH_SINHBF16COSHBF16_UTILS_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_MATH_SINHCOSHBF16_UTILS_H
+#define LLVM_LIBC_SRC___SUPPORT_MATH_SINHCOSHBF16_UTILS_H
 
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
@@ -25,7 +25,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-namespace sinhbf16coshbf16_internal {
+namespace sinhcoshbf16_internal {
 
 LIBC_INLINE_VAR constexpr float LOG2F_E = 0x1.715476p+0f;
 
@@ -162,10 +162,10 @@ LIBC_INLINE float exp_half(float xf) {
   return result;
 }
 
-} // namespace sinhbf16coshbf16_internal
+} // namespace sinhcoshbf16_internal
 
 } // namespace math
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC___SUPPORT_MATH_SINHBF16COSHBF16_UTILS_H
+#endif // LLVM_LIBC_SRC___SUPPORT_MATH_SINHCOSHBF16_UTILS_H
