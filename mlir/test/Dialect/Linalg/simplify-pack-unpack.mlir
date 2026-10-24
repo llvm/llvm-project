@@ -16,11 +16,11 @@ func.func @single_dim_packing(%arg0: tensor<256xf32>) -> tensor<8x32xf32> {
 
 // -----
 
-// CHECK-LABEL: func.func @single_dim_packing_with_padding(
+// CHECK-LABEL: func.func @negative_single_dim_packing_with_padding(
 // CHECK-SAME:    %[[ARG0:.+]]: tensor<255xf32>)
 // CHECK-NOT:     tensor.expand_shape
 // CHECK:         linalg.pack
-func.func @single_dim_packing_with_padding(%arg0: tensor<255xf32>) -> tensor<8x32xf32> {
+func.func @negative_single_dim_packing_with_padding(%arg0: tensor<255xf32>) -> tensor<8x32xf32> {
   %empty = tensor.empty() : tensor<8x32xf32>
   %cst = arith.constant 0.000000e+00 : f32
   %0 = linalg.pack %arg0 padding_value(%cst : f32) inner_dims_pos = [0] inner_tiles = [32] into %empty : tensor<255xf32> -> tensor<8x32xf32>
@@ -69,10 +69,10 @@ func.func @single_last_inner_dim_packing_with_identity_outer_dims_perm(%arg0: te
 
 // -----
 
-// CHECK-LABEL: func.func @packing_with_outer_dims_perm(
+// CHECK-LABEL: func.func @negative_packing_with_outer_dims_perm(
 // CHECK-NOT:     tensor.expand_shape
 // CHECK:         linalg.pack
-func.func @packing_with_outer_dims_perm(%arg0: tensor<5x256xf32>) -> tensor<8x5x32xf32> {
+func.func @negative_packing_with_outer_dims_perm(%arg0: tensor<5x256xf32>) -> tensor<8x5x32xf32> {
   %empty = tensor.empty() : tensor<8x5x32xf32>
   %0 = linalg.pack %arg0 outer_dims_perm = [1, 0] inner_dims_pos = [1] inner_tiles = [32] into %empty : tensor<5x256xf32> -> tensor<8x5x32xf32>
   return %0 : tensor<8x5x32xf32>
@@ -80,13 +80,26 @@ func.func @packing_with_outer_dims_perm(%arg0: tensor<5x256xf32>) -> tensor<8x5x
 
 // -----
 
-// CHECK-LABEL: func.func @single_first_inner_dim_packing(
+// This sort of packing requires transposition.
+// CHECK-LABEL: func.func @negative_packing_non_trailing_dim(
 // CHECK-NOT:     tensor.expand_shape
 // CHECK:         linalg.pack
-func.func @single_first_inner_dim_packing(%arg0: tensor<256x5xf32>) -> tensor<8x5x32xf32> {
+func.func @negative_packing_non_trailing_dim(%arg0: tensor<256x5xf32>) -> tensor<8x5x32xf32> {
   %empty = tensor.empty() : tensor<8x5x32xf32>
   %0 = linalg.pack %arg0 inner_dims_pos = [0] inner_tiles = [32] into %empty : tensor<256x5xf32> -> tensor<8x5x32xf32>
   return %0 : tensor<8x5x32xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @negative_pack_with_non_unit_packed_dims(
+// CHECK-SAME:    %[[ARG0:.+]]: tensor<4x4xf32>)
+// CHECK-NOT:     tensor.expand_shape
+// CHECK:         linalg.pack
+func.func @negative_pack_with_non_unit_packed_dims(%arg0: tensor<4x4xf32>) -> tensor<2x2x2x2xf32> {
+  %empty = tensor.empty() : tensor<2x2x2x2xf32>
+  %0 = linalg.pack %arg0 inner_dims_pos = [0, 1] inner_tiles = [2, 2] into %empty : tensor<4x4xf32> -> tensor<2x2x2x2xf32>
+  return %0 : tensor<2x2x2x2xf32>
 }
 
 // -----
@@ -134,14 +147,29 @@ func.func @pack_32x1_to_16x1x2x1(%arg0 : tensor<32x1xf32>) -> tensor<1x16x2x1xf3
 
 // -----
 
-// CHECK-LABEL: func.func @pack_32x1_to_16x1x1x2
+// Impossible to compute a re-association map.
+// CHECK-LABEL: func.func @negative_pack_32x1_to_16x1x1x2
 // CHECK-NOT:     tensor.expand_shape
 // CHECK:         linalg.pack
-func.func @pack_32x1_to_16x1x1x2(%arg0 : tensor<32x1xf32>) -> tensor<16x1x1x2xf32> {
+func.func @negative_pack_32x1_to_16x1x1x2(%arg0 : tensor<32x1xf32>) -> tensor<16x1x1x2xf32> {
   %empty = tensor.empty() : tensor<16x1x1x2xf32>
   %pack = linalg.pack %arg0 inner_dims_pos = [1, 0] inner_tiles = [1, 2] into %empty
     : tensor<32x1xf32> -> tensor<16x1x1x2xf32>
   return %pack : tensor<16x1x1x2xf32>
+}
+
+// -----
+
+// The non-packed outer dims are not unit-size and permuted.
+// CHECK-LABEL: func.func @negative_pack_with_non_unit_non_packed_outer_tile_dims_perm(
+// CHECK-SAME:    %[[ARG0:.+]]: tensor<3x3x32x64xf32>)
+// CHECK-NOT:     tensor.expand_shape
+// CHECK:         linalg.pack
+func.func @negative_pack_with_non_unit_non_packed_outer_tile_dims_perm(%arg0: tensor<3x3x32x64xf32>) -> tensor<3x3x1x1x32x64xf32> {
+  %empty = tensor.empty() : tensor<3x3x1x1x32x64xf32>
+  %0 = linalg.pack %arg0 outer_dims_perm = [1, 0, 2, 3] inner_dims_pos = [2, 3] inner_tiles = [32, 64] into %empty : tensor<3x3x32x64xf32> -> tensor<3x3x1x1x32x64xf32>
+  return %0 : tensor<3x3x1x1x32x64xf32>
+
 }
 
 // -----
@@ -162,10 +190,10 @@ func.func @unpack_1d_to_collapse(%arg0: tensor<8x32xf32>) -> tensor<256xf32> {
 
 // -----
 
-// CHECK-LABEL: func.func @unpack_to_partial_slice
+// CHECK-LABEL: func.func @negative_unpack_to_partial_slice
 // CHECK-NOT:     tensor.collapse
 // CHECK:         linalg.unpack
-func.func @unpack_to_partial_slice(%arg0: tensor<8x32xf32>) -> tensor<255xf32> {
+func.func @negative_unpack_to_partial_slice(%arg0: tensor<8x32xf32>) -> tensor<255xf32> {
   %empty = tensor.empty() : tensor<255xf32>
   %0 = linalg.unpack %arg0 inner_dims_pos = [0] inner_tiles = [32] into %empty : tensor<8x32xf32> -> tensor<255xf32>
   return %0 : tensor<255xf32>
@@ -173,10 +201,10 @@ func.func @unpack_to_partial_slice(%arg0: tensor<8x32xf32>) -> tensor<255xf32> {
 
 // -----
 
-// CHECK-LABEL: func.func @unpack_dynamic
+// CHECK-LABEL: func.func @negative_unpack_dynamic
 // CHECK:     tensor.collapse
 // CHECK-NOT:         linalg.unpack
-func.func @unpack_dynamic(%arg0: tensor<?x32xf32>) -> tensor<?xf32> {
+func.func @negative_unpack_dynamic(%arg0: tensor<?x32xf32>) -> tensor<?xf32> {
   %c32 = arith.constant 32 : index
   %c0 = arith.constant 0 : index
   %d0 = tensor.dim %arg0, %c0 : tensor<?x32xf32>
@@ -216,10 +244,10 @@ func.func @single_last_inner_dim_unpacking_with_identity_outer_dims_perm(%arg0: 
 
 // -----
 
-// CHECK-LABEL: func.func @unpacking_with_outer_dims_perm(
+// CHECK-LABEL: func.func @negative_unpacking_with_outer_dims_perm(
 // CHECK-NOT:     tensor.collpase_shape
 // CHECK:         linalg.unpack
-func.func @unpacking_with_outer_dims_perm(%arg0: tensor<8x5x32xf32>) -> tensor<5x256xf32> {
+func.func @negative_unpacking_with_outer_dims_perm(%arg0: tensor<8x5x32xf32>) -> tensor<5x256xf32> {
   %empty = tensor.empty() : tensor<5x256xf32>
   %0 = linalg.unpack %arg0 outer_dims_perm = [1, 0] inner_dims_pos = [1] inner_tiles = [32] into %empty : tensor<8x5x32xf32> -> tensor<5x256xf32>
   return %0 : tensor<5x256xf32>
@@ -227,10 +255,10 @@ func.func @unpacking_with_outer_dims_perm(%arg0: tensor<8x5x32xf32>) -> tensor<5
 
 // -----
 
-// CHECK-LABEL: func.func @single_first_inner_dim_unpacking(
+// CHECK-LABEL: func.func @negative_packed_non_trailing_dim(
 // CHECK-NOT:     tensor.collapse_shape
 // CHECK:         linalg.unpack
-func.func @single_first_inner_dim_unpacking(%arg0: tensor<8x5x32xf32>) -> tensor<256x5xf32> {
+func.func @negative_packed_non_trailing_dim(%arg0: tensor<8x5x32xf32>) -> tensor<256x5xf32> {
   %empty = tensor.empty() : tensor<256x5xf32>
   %0 = linalg.unpack %arg0 inner_dims_pos = [0] inner_tiles = [32] into %empty : tensor<8x5x32xf32> -> tensor<256x5xf32>
   return %0 : tensor<256x5xf32>
@@ -277,14 +305,54 @@ func.func @unpack_16x1x2x1_to_32x1(%arg0 : tensor<1x16x2x1xf32>) -> tensor<32x1x
 
 // -----
 
-// CHECK-LABEL: func.func @unpack_16x1x1x2_to_32x1
+// CHECK-LABEL: func.func @negative_unpack_16x1x1x2_to_32x1
 // CHECK-NOT:     tensor.collapse_shape
 // CHECK:         linalg.unpack
-func.func @unpack_16x1x1x2_to_32x1(%arg0 : tensor<16x1x1x2xf32>) -> tensor<32x1xf32> {
+func.func @negative_unpack_16x1x1x2_to_32x1(%arg0 : tensor<16x1x1x2xf32>) -> tensor<32x1xf32> {
   %empty = tensor.empty() : tensor<32x1xf32>
   %unpack = linalg.unpack %arg0 inner_dims_pos = [1, 0] inner_tiles = [1, 2] into %empty
     : tensor<16x1x1x2xf32> -> tensor<32x1xf32>
   return %unpack : tensor<32x1xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @negative_unpack_with_non_unit_packed_dims(
+// CHECK-SAME:    %[[ARG0:.+]]: tensor<2x2x2x2xf32>)
+// CHECK-NOT:     tensor.collapse_shape
+// CHECK:         linalg.unpack
+func.func @negative_unpack_with_non_unit_packed_dims(%arg0: tensor<2x2x2x2xf32>) -> tensor<4x4xf32> {
+  %empty = tensor.empty() : tensor<4x4xf32>
+  %0 = linalg.unpack %arg0 inner_dims_pos = [0, 1] inner_tiles = [2, 2] into %empty : tensor<2x2x2x2xf32> -> tensor<4x4xf32>
+  return %0 : tensor<4x4xf32>
+}
+
+// -----
+
+// Dynamic shape is not supported.
+// CHECK-LABEL: func.func @negative_unpack_dynamic_input_shape(
+// CHECK-SAME:    %[[ARG0:.+]]: tensor<1x63x1x16xf32>)
+// CHECK-NOT:     tensor.collapse_shape
+// CHECK:         linalg.unpack
+func.func @negative_unpack_dynamic_input_shape(%arg0: tensor<1x63x1x16xf32>) -> tensor<1x1000xf32> {
+  %dynamic_arg0 = tensor.cast %arg0 : tensor<1x63x1x16xf32> to tensor<1x?x1x16xf32>
+  %empty = tensor.empty() : tensor<1x1000xf32>
+  %unpack = linalg.unpack %dynamic_arg0 outer_dims_perm = [0, 1] inner_dims_pos = [0, 1] inner_tiles = [1, 16] into %empty : tensor<1x?x1x16xf32> -> tensor<1x1000xf32>
+  return %unpack : tensor<1x1000xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @negative_unpack_dynamic_output_shape(
+// CHECK-SAME:    %[[ARG0:.+]]: tensor<1x63x1x16xf32>)
+// CHECK-NOT:     tensor.collapse_shape
+// CHECK:         linalg.unpack
+func.func @negative_unpack_dynamic_output_shape(%arg0: tensor<1x63x1x16xf32>) -> tensor<1x1000xf32> {
+  %empty = tensor.empty() : tensor<1x1000xf32>
+  %dynamic_empty = tensor.cast %empty : tensor<1x1000xf32> to tensor<1x?xf32>
+  %unpack = linalg.unpack %arg0 outer_dims_perm = [0, 1] inner_dims_pos = [0, 1] inner_tiles = [1, 16] into %dynamic_empty : tensor<1x63x1x16xf32> -> tensor<1x?xf32>
+  %result = tensor.cast %unpack : tensor<1x?xf32> to tensor<1x1000xf32>
+  return %result : tensor<1x1000xf32>
 }
 
 // -----
@@ -360,6 +428,19 @@ func.func @pad_like_pack_with_transpose(%arg0: tensor<32x64x16xf32>) -> tensor<3
 
 // -----
 
+// The non-unit inner dims are permuted.
+// CHECK-LABEL: func.func @negative_pack_with_non_unit_inner_tile_dims_perm(
+// CHECK-SAME:    %[[ARG0:.+]]: tensor<32x32xf32>)
+// CHECK-NOT:     tensor.expand_shape
+// CHECK:         linalg.pack
+func.func @negative_pack_with_non_unit_inner_tile_dims_perm(%arg0: tensor<32x32xf32>) -> tensor<1x1x32x32xf32> {
+  %empty = tensor.empty() : tensor<1x1x32x32xf32>
+  %0 = linalg.pack %arg0 outer_dims_perm = [0, 1] inner_dims_pos = [1, 0] inner_tiles = [32, 32] into %empty : tensor<32x32xf32> -> tensor<1x1x32x32xf32>
+  return %0 : tensor<1x1x32x32xf32>
+}
+
+// -----
+
 //===========================================================================//
 // Un-Packing: Un-Pad-like unpack
 //
@@ -427,4 +508,28 @@ func.func @unpad_like_unpack_with_transpose(%arg0: tensor<32x1x16x64xf32>) -> te
   %empty = tensor.empty() : tensor<32x64x16xf32>
   %0 = linalg.unpack %arg0 inner_dims_pos = [1] inner_tiles = [64] into %empty : tensor<32x1x16x64xf32> -> tensor<32x64x16xf32>
   return %0 : tensor<32x64x16xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @negative_unpack_with_non_unit_outer_tile_dims_perm(
+// CHECK-SAME:    %[[ARG0:.+]]: tensor<3x3x1x1x32x64xf32>)
+// CHECK-NOT:     tensor.collapse_shape
+// CHECK:         linalg.unpack
+func.func @negative_unpack_with_non_unit_outer_tile_dims_perm(%arg0: tensor<3x3x1x1x32x64xf32>) -> tensor<3x3x32x64xf32> {
+  %empty = tensor.empty() : tensor<3x3x32x64xf32>
+  %0 = linalg.unpack %arg0 outer_dims_perm = [1, 0, 2, 3] inner_dims_pos = [2, 3] inner_tiles = [32, 64] into %empty : tensor<3x3x1x1x32x64xf32> -> tensor<3x3x32x64xf32>
+  return %0 : tensor<3x3x32x64xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @negative_unpack_with_non_unit_inner_tile_dims_perm(
+// CHECK-SAME:    %[[ARG0:.+]]: tensor<1x1x32x32xf32>)
+// CHECK-NOT:     tensor.collapse_shape
+// CHECK:         linalg.unpack
+func.func @negative_unpack_with_non_unit_inner_tile_dims_perm(%arg0: tensor<1x1x32x32xf32>) -> tensor<32x32xf32> {
+  %empty = tensor.empty() : tensor<32x32xf32>
+  %0 = linalg.unpack %arg0 outer_dims_perm = [0, 1] inner_dims_pos = [1, 0] inner_tiles = [32, 32] into %empty : tensor<1x1x32x32xf32> -> tensor<32x32xf32>
+  return %0 : tensor<32x32xf32>
 }
