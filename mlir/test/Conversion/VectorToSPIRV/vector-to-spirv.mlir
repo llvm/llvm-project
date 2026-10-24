@@ -1064,6 +1064,20 @@ func.func @shape_cast_size1_vector(%arg0 : vector<f32>) -> vector<1xf32> {
 
 // -----
 
+// Transpose is unrolled to element-wise extracts/inserts, which fold away
+// entirely for this static case.
+// CHECK-LABEL: @transpose
+//  CHECK-SAME: (%[[A:.+]]: f32, %[[B:.+]]: f32, %[[C:.+]]: f32, %[[D:.+]]: f32)
+//       CHECK:   return %[[A]], %[[C]], %[[B]], %[[D]]
+func.func @transpose(%a: f32, %b: f32, %c: f32, %d: f32) -> (f32, f32, f32, f32) {
+  %v = vector.from_elements %a, %b, %c, %d : vector<2x2xf32>
+  %t = vector.transpose %v, [1, 0] : vector<2x2xf32> to vector<2x2xf32>
+  %r:4 = vector.to_elements %t : vector<2x2xf32>
+  return %r#0, %r#1, %r#2, %r#3 : f32, f32, f32, f32
+}
+
+// -----
+
 // CHECK-LABEL: @step()
 //       CHECK:   %[[CST0:.*]] = spirv.Constant 0 : i32
 //       CHECK:   %[[CST1:.*]] = spirv.Constant 1 : i32
