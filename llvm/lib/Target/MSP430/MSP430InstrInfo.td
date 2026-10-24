@@ -441,6 +441,16 @@ def MOV8mn  : I8mn<0b0100, (outs), (ins memdst:$dst, indreg:$rs),
 def MOV16mn : I16mn<0b0100, (outs), (ins memdst:$dst, indreg:$rs),
                     "mov\t{$rs, $dst}", []>;
 
+let mayLoad = 1, mayStore = 1, hasExtraDefRegAllocReq = 1,
+    Constraints = "$rs = $wb" in {
+def MOV8mp  : I8mp<0b0100, 
+                   (outs GR16:$wb), (ins memdst: $dst, postreg:$rs),
+                   "mov.b\t{$rs, $dst}", []>;
+def MOV16mp : I16mp<0b0100,
+                   (outs GR16:$wb), (ins memdst: $dst, postreg:$rs),
+                    "mov\t{$rs, $dst}", []>;
+}
+
 //===----------------------------------------------------------------------===//
 // Arithmetic Instructions
 

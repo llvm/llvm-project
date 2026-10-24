@@ -23,6 +23,7 @@ namespace targets {
 
 class LLVM_LIBRARY_VISIBILITY MSP430TargetInfo : public TargetInfo {
   static const char *const GCCRegNames[];
+  std::string CPU;
 
 public:
   MSP430TargetInfo(const llvm::Triple &Triple, const TargetOptions &)
@@ -55,10 +56,25 @@ public:
     return {};
   }
 
+  bool isValidCPUName(StringRef Name) const override {
+    return Name == "msp430" || Name == "msp430x";
+  }
+
+  void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override {
+    Values.append({"msp430", "msp430x"});
+  }
+
+  bool setCPU(StringRef Name) override {
+    if (!isValidCPUName(Name))
+      return false;
+    CPU = Name;
+    return true;
+  }
+
   bool allowsLargerPreferedTypeAlignment() const override { return false; }
 
   bool hasFeature(StringRef Feature) const override {
-    return Feature == "msp430";
+    return Feature == "msp430" || (Feature == "msp430x" && CPU == "msp430x");
   }
 
   ArrayRef<const char *> getGCCRegNames() const override;
