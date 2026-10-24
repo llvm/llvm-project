@@ -192,7 +192,7 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
         static_cast<const SIRegisterInfo *>(MRI.getTargetRegisterInfo());
     // There is no 16 bit SGPR register class. Extra size check is required
     // since getSGPRClassForBitWidth returns SReg_32RegClass for Size 16.
-    unsigned LLTSize = MRI.getType(Reg).getSizeInBits();
+    unsigned LLTSize = static_cast<unsigned>(MRI.getType(Reg).getSizeInBits());
     return LLTSize >= 32 && TRI->getSGPRClassForBitWidth(LLTSize);
   }
   case DivS1:
@@ -282,13 +282,14 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
     // Check if there is VGPR register class of same size as the LLT.
     const SIRegisterInfo *TRI =
         static_cast<const SIRegisterInfo *>(MRI.getTargetRegisterInfo());
-    return TRI->getSGPRClassForBitWidth(MRI.getType(Reg).getSizeInBits());
+    return TRI->getSGPRClassForBitWidth(
+        static_cast<unsigned>(MRI.getType(Reg).getSizeInBits()));
   }
   case BRC: {
     // Check if there is SGPR and VGPR register class of same size as the LLT.
     const SIRegisterInfo *TRI =
         static_cast<const SIRegisterInfo *>(MRI.getTargetRegisterInfo());
-    unsigned LLTSize = MRI.getType(Reg).getSizeInBits();
+    unsigned LLTSize = static_cast<unsigned>(MRI.getType(Reg).getSizeInBits());
     return LLTSize >= 32 && TRI->getSGPRClassForBitWidth(LLTSize) &&
            TRI->getVGPRClassForBitWidth(LLTSize);
   }
@@ -510,8 +511,8 @@ private:
     // and swap TJumpOffset and FJumpOffset (&& becomes ||, || becomes &&).
     std::function<bool(const MachineInstr &)> Pred;
     bool Neg; // Neg of Pred is calculated before jump
-    unsigned TJumpOffset;
-    unsigned FJumpOffset;
+    size_t TJumpOffset;
+    size_t FJumpOffset;
   };
 
   SmallVector<Elt, 8> Expression;
@@ -524,8 +525,8 @@ public:
   };
 
   bool operator()(const MachineInstr &MI) const {
-    unsigned Idx = 0;
-    unsigned ResultIdx = Expression.size();
+    size_t Idx = 0;
+    size_t ResultIdx = Expression.size();
     bool Result;
     do {
       Result = Expression[Idx].Pred(MI);
@@ -552,8 +553,8 @@ public:
   Predicate operator&&(const Predicate &RHS) const {
     SmallVector<Elt, 8> AndExpression = Expression;
 
-    unsigned RHSSize = RHS.Expression.size();
-    unsigned ResultIdx = Expression.size();
+    size_t RHSSize = RHS.Expression.size();
+    size_t ResultIdx = Expression.size();
     for (unsigned i = 0; i < ResultIdx; ++i) {
       // LHS results in false, whole expression results in false.
       if (i + AndExpression[i].FJumpOffset == ResultIdx)
@@ -568,8 +569,8 @@ public:
   Predicate operator||(const Predicate &RHS) const {
     SmallVector<Elt, 8> OrExpression = Expression;
 
-    unsigned RHSSize = RHS.Expression.size();
-    unsigned ResultIdx = Expression.size();
+    size_t RHSSize = RHS.Expression.size();
+    size_t ResultIdx = Expression.size();
     for (unsigned i = 0; i < ResultIdx; ++i) {
       // LHS results in true, whole expression results in true.
       if (i + OrExpression[i].TJumpOffset == ResultIdx)
@@ -1072,7 +1073,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
 
   Predicate is8Or16BitMMO([](const MachineInstr &MI) -> bool {
     const MachineMemOperand *MMO = *MI.memoperands_begin();
-    const unsigned MemSize = 8 * MMO->getSize().getValue();
+    const TypeSize MemSize = 8 * MMO->getSize().getValue();
     return MemSize == 16 || MemSize == 8;
   });
 

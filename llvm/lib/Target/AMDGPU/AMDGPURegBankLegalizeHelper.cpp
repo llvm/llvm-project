@@ -107,7 +107,7 @@ bool RegBankLegalizeHelper::executeInWaterfallLoop(MachineIRBuilder &B,
   const AMDGPU::LaneMaskConstants &LMC = AMDGPU::LaneMaskConstants::get(ST);
 
 #ifndef NDEBUG
-  const int OrigRangeSize = std::distance(BeginIt, EndIt);
+  const ptrdiff_t OrigRangeSize = std::distance(BeginIt, EndIt);
 #endif
 
   MachineRegisterInfo &MRI = *B.getMRI();
@@ -225,10 +225,10 @@ bool RegBankLegalizeHelper::executeInWaterfallLoop(MachineIRBuilder &B,
       buildReadFirstLane(B, CurrentLaneReg, OpReg, RBI);
 
       // Build the comparison(s), CurrentLaneReg == OpReg.
-      unsigned OpSize = OpTy.getSizeInBits();
+      TypeSize OpSize = OpTy.getSizeInBits();
       unsigned PartSize = (OpSize % 64 == 0) ? 64 : 32;
       LLT PartTy = LLT::integer(PartSize);
-      unsigned NumParts = OpSize / PartSize;
+      uint64_t NumParts = OpSize / PartSize;
       SmallVector<Register, 8> OpParts;
       SmallVector<Register, 8> CurrentLaneParts;
 
@@ -311,7 +311,8 @@ unsigned RegBankLegalizeHelper::setBufferOffsets(
   if (std::optional<int64_t> Imm =
           getIConstantVRegSExtVal(CombinedOffset, MRI)) {
     uint32_t SOffset, ImmOffset;
-    if (TII.splitMUBUFOffset(*Imm, SOffset, ImmOffset, Alignment)) {
+    if (TII.splitMUBUFOffset(static_cast<uint32_t>(*Imm), SOffset, ImmOffset,
+                             Alignment)) {
       VOffsetReg = B.buildConstant(VgprRB_I32, 0).getReg(0);
       SOffsetReg = B.buildConstant(SgprRB_I32, SOffset).getReg(0);
       InstOffsetVal = ImmOffset;
@@ -379,10 +380,10 @@ bool RegBankLegalizeHelper::splitLoad(MachineInstr &MI,
   Register Base = MI.getOperand(1).getReg();
   LLT PtrTy = MRI.getType(Base);
   const RegisterBank *PtrRB = MRI.getRegBankOrNull(Base);
-  LLT OffsetTy = LLT::integer(PtrTy.getSizeInBits());
+  LLT OffsetTy = LLT::integer(static_cast<unsigned>(PtrTy.getSizeInBits()));
   SmallVector<Register, 4> LoadPartRegs;
 
-  unsigned ByteOffset = 0;
+  uint64_t ByteOffset = 0;
   for (LLT PartTy : LLTBreakdown) {
     Register BasePlusOffset;
     if (ByteOffset == 0) {
@@ -439,7 +440,7 @@ bool RegBankLegalizeHelper::widenLoad(MachineInstr &MI, LLT WideTy,
     auto Unmerge = B.buildUnmerge({DstRB, MergeTy}, WideLoad);
 
     LLT DstTy = MRI.getType(Dst);
-    unsigned NumElts = DstTy.getSizeInBits() / MergeTy.getSizeInBits();
+    uint64_t NumElts = DstTy.getSizeInBits() / MergeTy.getSizeInBits();
     for (unsigned i = 0; i < NumElts; ++i) {
       MergeTyParts.push_back(Unmerge.getReg(i));
     }
@@ -453,7 +454,7 @@ bool RegBankLegalizeHelper::widenMMOToS32(GAnyLoad &MI) const {
   Register Dst = MI.getDstReg();
   Register Ptr = MI.getPointerReg();
   MachineMemOperand &MMO = MI.getMMO();
-  unsigned MemSize = 8 * MMO.getSize().getValue();
+  unsigned MemSize = 8 * static_cast<unsigned>(MMO.getSize().getValue());
 
   MachineMemOperand *WideMMO = B.getMF().getMachineMemOperand(&MMO, 0, S32);
 
@@ -463,7 +464,8 @@ bool RegBankLegalizeHelper::widenMMOToS32(GAnyLoad &MI) const {
     auto Load = B.buildLoad(SgprRB_I32, Ptr, *WideMMO);
 
     if (MI.getOpcode() == G_ZEXTLOAD) {
-      APInt Mask = APInt::getLowBitsSet(S32.getSizeInBits(), MemSize);
+      APInt Mask = APInt::getLowBitsSet(
+          static_cast<unsigned>(S32.getSizeInBits()), MemSize);
       auto MaskCst = B.buildConstant(SgprRB_I32, Mask);
       B.buildAnd(Dst, Load, MaskCst);
     } else {
@@ -640,7 +642,7 @@ bool RegBankLegalizeHelper::lowerSBufToBuf(MachineInstr &MI,
   Register Dst = MI.getOperand(0).getReg();
   LLT Ty = MRI.getType(Dst);
   const RegisterBank *RSrcBank = MRI.getRegBank(MI.getOperand(1).getReg());
-  unsigned LoadSize = Ty.getSizeInBits();
+  unsigned LoadSize = static_cast<unsigned>(Ty.getSizeInBits());
   int NumLoads = 1;
   SmallVector<Register, 4> LoadParts;
   if (LoadSize == 256 || LoadSize == 512) {
@@ -657,7 +659,7 @@ bool RegBankLegalizeHelper::lowerSBufToBuf(MachineInstr &MI,
   int64_t ImmOffset = 0;
   unsigned MMOOffset = setBufferOffsets(B, MI.getOperand(2).getReg(), VOffset,
                                         SOffset, ImmOffset, Alignment);
-  const unsigned MemSize = divideCeil(OrigMMO->getSize().getValue(), NumLoads);
+  const uint64_t MemSize = divideCeil(OrigMMO->getSize().getValue(), NumLoads);
   MachineMemOperand *BaseMMO = MF.getMachineMemOperand(OrigMMO, 0, MemSize);
   if (MMOOffset != 0)
     BaseMMO = MF.getMachineMemOperand(BaseMMO, MMOOffset, MemSize);
@@ -665,7 +667,7 @@ bool RegBankLegalizeHelper::lowerSBufToBuf(MachineInstr &MI,
   // instead. We can assume that the buffer is unswizzled.
   Register RSrc = MI.getOperand(1).getReg();
   Register VIndex = B.buildConstant(VgprRB_I32, 0).getReg(0);
-  unsigned CachePolicy = MI.getOperand(3).getImm();
+  int64_t CachePolicy = MI.getOperand(3).getImm();
   unsigned Opc = AMDGPU::G_AMDGPU_BUFFER_LOAD;
   switch (MI.getOpcode()) {
   case AMDGPU::G_AMDGPU_S_BUFFER_LOAD_SBYTE:
@@ -963,7 +965,7 @@ bool RegBankLegalizeHelper::lowerSplitTo32Select(MachineInstr &MI) {
 
 bool RegBankLegalizeHelper::lowerSplitTo32SExtInReg(MachineInstr &MI) {
   auto Op1 = B.buildUnmerge(VgprRB_I32, MI.getOperand(1).getReg());
-  int Amt = MI.getOperand(2).getImm();
+  int64_t Amt = MI.getOperand(2).getImm();
   Register Lo, Hi;
   // Hi|Lo: s sign bit, ?/x bits changed/not changed by sign-extend
   if (Amt <= 32) {
@@ -1348,7 +1350,7 @@ bool RegBankLegalizeHelper::lowerSetRounding(MachineInstr &MI) {
 
   // N.B. The setreg will be later folded into s_round_mode on supported
   // targets.
-  uint32_t BothRoundHwReg =
+  uint64_t BothRoundHwReg =
       AMDGPU::Hwreg::HwregEncoding::encode(AMDGPU::Hwreg::ID_MODE, 0, 4);
   B.buildIntrinsic(Intrinsic::amdgcn_s_setreg, ArrayRef<DstOp>(),
                    /*HasSideEffects=*/true, /*isConvergent=*/false)
@@ -1364,7 +1366,7 @@ bool RegBankLegalizeHelper::lowerSetRounding(MachineInstr &MI) {
 bool RegBankLegalizeHelper::lowerGetRounding(MachineInstr &MI) {
   Register Dst = MI.getOperand(0).getReg();
 
-  uint32_t BothRoundHwReg =
+  uint64_t BothRoundHwReg =
       AMDGPU::Hwreg::HwregEncoding::encode(AMDGPU::Hwreg::ID_MODE, 0, 4);
   auto GetReg =
       B.buildIntrinsic(Intrinsic::amdgcn_s_getreg, {SgprRB_I32},
@@ -1561,13 +1563,14 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
     return lowerSBufToBuf(MI, WFI);
   case SplitLoad: {
     LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
-    unsigned Size = DstTy.getSizeInBits();
+    TypeSize Size = DstTy.getSizeInBits();
     // Even split to 128-bit loads
     if (Size > 128) {
       LLT B128;
       if (DstTy.isVector()) {
         LLT EltTy = DstTy.getElementType();
-        B128 = LLT::fixed_vector(128 / EltTy.getSizeInBits(), EltTy);
+        unsigned EltSize = static_cast<unsigned>(EltTy.getSizeInBits());
+        B128 = LLT::fixed_vector(128 / EltSize, EltTy);
       } else {
         B128 = LLT::integer(128);
       }
@@ -1973,7 +1976,7 @@ LLT RegBankLegalizeHelper::getBTyFromID(RegBankLLTMappingApplyID ID, LLT Ty) {
   case SgprBRC: {
     const SIRegisterInfo *TRI =
         static_cast<const SIRegisterInfo *>(MRI.getTargetRegisterInfo());
-    unsigned LLTSize = Ty.getSizeInBits();
+    unsigned LLTSize = static_cast<unsigned>(Ty.getSizeInBits());
     if (LLTSize >= 32 && TRI->getSGPRClassForBitWidth(LLTSize))
       return Ty;
     return LLT();
@@ -1981,7 +1984,7 @@ LLT RegBankLegalizeHelper::getBTyFromID(RegBankLLTMappingApplyID ID, LLT Ty) {
   case VgprBRC: {
     const SIRegisterInfo *TRI =
         static_cast<const SIRegisterInfo *>(MRI.getTargetRegisterInfo());
-    if (TRI->getSGPRClassForBitWidth(Ty.getSizeInBits()))
+    if (TRI->getSGPRClassForBitWidth(static_cast<unsigned>(Ty.getSizeInBits())))
       return Ty;
     return LLT();
   }
@@ -2199,7 +2202,7 @@ bool RegBankLegalizeHelper::applyMappingDst(
       break;
     }
     case VgprOrAgprAnyTy: {
-      const unsigned NumRegs = Ty.getSizeInBits() / 32;
+      const unsigned NumRegs = static_cast<unsigned>(Ty.getSizeInBits()) / 32;
       const RegisterBank *DstRB =
           MFI->selectAGPRFormMFMA(NumRegs) ? AgprRB : VgprRB;
       if (RB == DstRB)
@@ -2431,7 +2434,7 @@ bool RegBankLegalizeHelper::applyMappingSrc(
       break;
     }
     case VgprOrAgprAnyTy: {
-      const unsigned NumRegs = Ty.getSizeInBits() / 32;
+      const unsigned NumRegs = static_cast<unsigned>(Ty.getSizeInBits()) / 32;
       const RegisterBank *SrcRB =
           MFI->selectAGPRFormMFMA(NumRegs) ? AgprRB : VgprRB;
       if (RB != SrcRB)
