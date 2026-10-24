@@ -306,6 +306,38 @@ ConstRecordAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 }
 
 //===----------------------------------------------------------------------===//
+// LoopHintAttr definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult LoopHintAttr::verify(
+    function_ref<InFlightDiagnostic()> emitError, mlir::UnitAttr mustProgress,
+    mlir::UnitAttr vectorizeEnable, uint32_t vectorizeWidth,
+    mlir::BoolAttr vectorizeScalable, mlir::BoolAttr vectorizePredicate,
+    uint32_t interleaveCount, std::optional<cir::LoopUnrollMode> unroll,
+    uint32_t unrollCount, std::optional<cir::LoopUnrollMode> unrollAndJam,
+    uint32_t unrollAndJamCount, mlir::BoolAttr distribute,
+    mlir::UnitAttr pipelineDisabled, uint32_t pipelineInitiationInterval,
+    mlir::UnitAttr licmDisabled, mlir::UnitAttr parallel, uint32_t codeAlign,
+    mlir::UnitAttr vectorized, mlir::DistinctAttr loopId,
+    mlir::Attribute unrollAndJamInner) {
+  if (!unrollAndJamInner)
+    return success();
+
+  auto inner = mlir::dyn_cast<LoopHintAttr>(unrollAndJamInner);
+  if (!inner)
+    return emitError() << "'unroll_and_jam_inner' must be a '#cir.loop_hint'";
+
+  if (!unrollAndJam && !unrollAndJamCount)
+    return emitError() << "'unroll_and_jam_inner' requires the loop to be "
+                          "unrolled and jammed";
+
+  if (inner.getUnrollAndJamInner())
+    return emitError() << "'unroll_and_jam_inner' can't have its own "
+                          "'unroll_and_jam_inner'";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // OptInfoAttr definitions
 //===----------------------------------------------------------------------===//
 

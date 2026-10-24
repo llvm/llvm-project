@@ -2624,6 +2624,31 @@ public:
   cir::LoopHintAttr getLoopHints(llvm::ArrayRef<const Attr *> attrs,
                                  bool mustProgress);
 
+  /// Keeps track of a loop while its body is emitted. A loop that is unrolled
+  /// and jammed by the loop around it only has the hints for what happens
+  /// before the jam. What happens after it is kept by the outer loop.
+  class LoopHintsScope {
+    CIRGenFunction &cgf;
+    LoopHintsScope *parent;
+    cir::LoopHintAttr hints;
+    cir::LoopHintAttr unrollAndJamInnerHints;
+    mlir::DistinctAttr loopId;
+    bool unrollAndJams = false;
+
+  public:
+    LoopHintsScope(CIRGenFunction &cgf, llvm::ArrayRef<const Attr *> attrs,
+                   bool mustProgress);
+    ~LoopHintsScope() { cgf.currentLoopHintsScope = parent; }
+    LoopHintsScope(const LoopHintsScope &) = delete;
+    LoopHintsScope &operator=(const LoopHintsScope &) = delete;
+
+    /// Attaches the hints, and the id that identifies the loop, to the loop
+    /// once its body has been emitted. The loop doesn't get anything if it has
+    /// no hints.
+    void setLoopHints(cir::LoopOpInterface loopOp) const;
+  };
+  LoopHintsScope *currentLoopHintsScope = nullptr;
+
   std::optional<mlir::Value> emitRISCVBuiltinExpr(unsigned builtinID,
                                                   const CallExpr *expr);
   cir::GetGlobalOp createGetCpuModel(mlir::Location loc);

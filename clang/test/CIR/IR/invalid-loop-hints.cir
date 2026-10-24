@@ -139,3 +139,39 @@ cir.func @loop_id_not_distinct(%c: !cir.bool) {
   } loop_id 4 : i32
   cir.return
 }
+
+// -----
+
+cir.func @inner_hints_not_loop_hints(%c: !cir.bool) {
+  cir.while {
+    cir.condition(%c)
+  } do {
+    cir.yield
+  // expected-error@+1 {{'unroll_and_jam_inner' must be a '#cir.loop_hint'}}
+  } loop_id distinct[0]<> loop_hints < unroll_and_jam_count = 2 unroll_and_jam_inner = 4 : i32>
+  cir.return
+}
+
+// -----
+
+cir.func @inner_hints_without_unroll_and_jam(%c: !cir.bool) {
+  cir.while {
+    cir.condition(%c)
+  } do {
+    cir.yield
+  // expected-error@+1 {{'unroll_and_jam_inner' requires the loop to be unrolled and jammed}}
+  } loop_id distinct[0]<> loop_hints < unroll_count = 2 unroll_and_jam_inner = #cir.loop_hint< unroll_count = 4>>
+  cir.return
+}
+
+// -----
+
+cir.func @inner_hints_nested(%c: !cir.bool) {
+  cir.while {
+    cir.condition(%c)
+  } do {
+    cir.yield
+  // expected-error@+1 {{'unroll_and_jam_inner' can't have its own 'unroll_and_jam_inner'}}
+  } loop_id distinct[0]<> loop_hints < unroll_and_jam_count = 2 unroll_and_jam_inner = #cir.loop_hint< unroll_and_jam_count = 2 unroll_and_jam_inner = #cir.loop_hint< unroll_count = 4>>>
+  cir.return
+}
