@@ -126,10 +126,11 @@ define amdgpu_ps <4 x half> @raw_ptr_buffer_load_format_v4i16(ptr addrspace(8) i
 ; GFX8-SDAG-NEXT:    s_mov_b32 s5, s3
 ; GFX8-SDAG-NEXT:    s_mov_b32 s4, s2
 ; GFX8-SDAG-NEXT:    buffer_load_format_d16_xyzw v[0:3], v0, s[4:7], 0 offen
-; GFX8-SDAG-NEXT:    s_mov_b32 s0, 0x1000504
 ; GFX8-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX8-SDAG-NEXT:    v_perm_b32 v0, v0, v1, s0
-; GFX8-SDAG-NEXT:    v_perm_b32 v1, v2, v3, s0
+; GFX8-SDAG-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX8-SDAG-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
+; GFX8-SDAG-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_or_b32_sdwa v1, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; GFX8-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX8-GISEL-LABEL: raw_ptr_buffer_load_format_v4i16:

@@ -15,14 +15,14 @@ define protected amdgpu_kernel void @test(ptr addrspace(1) %in, ptr addrspace(1)
 ; GFX942-NEXT:    v_mov_b64_e32 v[12:13], v[2:3]
 ; GFX942-NEXT:    v_mov_b64_e32 v[10:11], v[0:1]
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-NEXT:    v_mov_b32_e32 v8, s4
-; GFX942-NEXT:    v_mov_b32_e32 v9, s5
+; GFX942-NEXT:    v_mov_b64_e32 v[14:15], s[4:5]
 ; GFX942-NEXT:    v_mov_b32_e32 v4, s6
 ; GFX942-NEXT:    v_mov_b32_e32 v5, s7
 ; GFX942-NEXT:    v_mov_b32_e32 v6, s7
 ; GFX942-NEXT:    v_mov_b32_e32 v7, s7
+; GFX942-NEXT:    v_mov_b32_e32 v8, s5
 ; GFX942-NEXT:    s_nop 1
-; GFX942-NEXT:    v_smfmac_i32_16x16x64_i8 v[10:13], v[8:9], v[4:7], v9
+; GFX942-NEXT:    v_smfmac_i32_16x16x64_i8 v[10:13], v[14:15], v[4:7], v8
 ; GFX942-NEXT:    s_nop 6
 ; GFX942-NEXT:    global_store_dword v0, v13, s[2:3] offset:12
 ; GFX942-NEXT:    s_endpgm

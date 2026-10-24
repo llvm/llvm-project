@@ -201,7 +201,7 @@ define amdgpu_kernel void @ashr_v2i16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 2, @8, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 0 @6
-; EG-NEXT:    ALU 14, @11, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    ALU 12, @11, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.X, T7.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
@@ -212,19 +212,17 @@ define amdgpu_kernel void @ashr_v2i16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ; EG-NEXT:     ADD_INT * T0.X, KC0[2].Z, PV.W,
 ; EG-NEXT:    ALU clause starting at 11:
-; EG-NEXT:     LSHR * T0.W, T0.X, literal.x,
-; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
-; EG-NEXT:     BFE_INT T1.Y, PV.W, 0.0, literal.x,
-; EG-NEXT:     LSHR T0.Z, T0.Y, literal.x,
-; EG-NEXT:     BFE_INT T0.W, T0.X, 0.0, literal.x,
-; EG-NEXT:     AND_INT * T1.W, T0.Y, literal.y,
+; EG-NEXT:     BFE_INT T1.Y, T0.X, 0.0, literal.x,
+; EG-NEXT:     AND_INT T0.Z, T0.Y, literal.y,
+; EG-NEXT:     ASHR T0.W, T0.X, literal.x,
+; EG-NEXT:     LSHR * T1.W, T0.Y, literal.x,
 ; EG-NEXT:    16(2.242078e-44), 65535(9.183409e-41)
 ; EG-NEXT:     ASHR T0.W, PV.W, PS,
 ; EG-NEXT:     ASHR * T1.W, PV.Y, PV.Z,
-; EG-NEXT:     LSHL T1.W, PS, literal.x,
-; EG-NEXT:     AND_INT * T0.W, PV.W, literal.y,
-; EG-NEXT:    16(2.242078e-44), 65535(9.183409e-41)
-; EG-NEXT:     OR_INT T0.X, PS, PV.W,
+; EG-NEXT:     AND_INT T1.W, PS, literal.x,
+; EG-NEXT:     LSHL * T0.W, PV.W, literal.y,
+; EG-NEXT:    65535(9.183409e-41), 16(2.242078e-44)
+; EG-NEXT:     OR_INT T0.X, PV.W, PS,
 ; EG-NEXT:     LSHR * T7.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -1309,21 +1307,21 @@ define amdgpu_kernel void @ashr_v4i16_uniform(ptr addrspace(1) %out, <4 x i16> %
 ; VI-NEXT:    s_mov_b32 s7, 0xf000
 ; VI-NEXT:    s_mov_b32 s6, -1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_lshr_b32 s8, s3, 16
-; VI-NEXT:    s_ashr_i32 s9, s1, 16
+; VI-NEXT:    s_ashr_i32 s10, s1, 16
 ; VI-NEXT:    s_sext_i32_i16 s1, s1
-; VI-NEXT:    s_ashr_i32 s8, s9, s8
+; VI-NEXT:    s_lshr_b32 s8, s2, 16
+; VI-NEXT:    s_lshr_b32 s9, s3, 16
 ; VI-NEXT:    s_ashr_i32 s1, s1, s3
-; VI-NEXT:    s_lshl_b32 s8, s8, 16
-; VI-NEXT:    s_and_b32 s1, s1, 0xffff
-; VI-NEXT:    s_or_b32 s1, s1, s8
-; VI-NEXT:    s_lshr_b32 s3, s2, 16
-; VI-NEXT:    s_ashr_i32 s8, s0, 16
+; VI-NEXT:    s_ashr_i32 s3, s0, 16
 ; VI-NEXT:    s_sext_i32_i16 s0, s0
-; VI-NEXT:    s_ashr_i32 s3, s8, s3
+; VI-NEXT:    s_ashr_i32 s9, s10, s9
+; VI-NEXT:    s_ashr_i32 s3, s3, s8
 ; VI-NEXT:    s_ashr_i32 s0, s0, s2
+; VI-NEXT:    s_lshl_b32 s9, s9, 16
+; VI-NEXT:    s_and_b32 s1, s1, 0xffff
 ; VI-NEXT:    s_lshl_b32 s3, s3, 16
 ; VI-NEXT:    s_and_b32 s0, s0, 0xffff
+; VI-NEXT:    s_or_b32 s1, s1, s9
 ; VI-NEXT:    s_or_b32 s0, s0, s3
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
