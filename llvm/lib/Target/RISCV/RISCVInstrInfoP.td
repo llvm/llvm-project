@@ -2672,6 +2672,16 @@ let append Predicates = [IsRV32] in {
   def : Pat<(i32 (mul (sra GPR:$rs1, (XLenVT 16)), (sra GPR:$rs2, (XLenVT 16)))),
             (MUL_H11 GPR:$rs1, GPR:$rs2)>;
 
+  // zexti16 also matches (srl X, 16), so these need extra complexity to be
+  // preferred over the MULU_H00 pattern above and to have MULU_H11 preferred
+  // over MULU_H01.
+  let AddedComplexity = 1 in
+  def : Pat<(i32 (mul zexti16:$rs1, (srl GPR:$rs2, (XLenVT 16)))),
+            (MULU_H01 zexti16:$rs1, GPR:$rs2)>;
+  let AddedComplexity = 2 in
+  def : Pat<(i32 (mul (srl GPR:$rs1, (XLenVT 16)), (srl GPR:$rs2, (XLenVT 16)))),
+            (MULU_H11 GPR:$rs1, GPR:$rs2)>;
+
   def : Pat<(i32 (add GPR:$rd, (mul_oneuse sexti16:$rs1,
                                            (sra GPR:$rs2, (XLenVT 16))))),
             (MACC_H01 GPR:$rd, sexti16:$rs1, GPR:$rs2)>;
