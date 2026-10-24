@@ -2098,9 +2098,9 @@ define i32 @sext_cond_br_not_cond(i1 %a) {
 ; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[A]], true
 ; CHECK-NEXT:    br i1 [[NOT]], label [[FALSE:%.*]], label [[TRUE:%.*]]
 ; CHECK:       true:
-; CHECK-NEXT:    ret i32 [[B]]
+; CHECK-NEXT:    ret i32 -1
 ; CHECK:       false:
-; CHECK-NEXT:    ret i32 [[B]]
+; CHECK-NEXT:    ret i32 0
 ;
   %b = sext i1 %a to i32
   %not = xor i1 %a , true
