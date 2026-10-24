@@ -57,6 +57,10 @@ LIBC_INLINE static void *calculate_find_first_character_return(
 
 LIBC_NO_SANITIZE_OOB_ACCESS LIBC_INLINE static void *
 find_first_character(const unsigned char *s, unsigned char c, size_t n) {
+  // s doesn't have to be dereferenceable if there is nothing to search.
+  if (n == 0)
+    return nullptr;
+
   using Vector = cpp::simd<char>;
   using Mask = cpp::simd_mask<char>;
   Vector c_byte = c;
