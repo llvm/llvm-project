@@ -139,6 +139,38 @@ def FastMathFlags : I32BitEnumAttr<
   let cppNamespace = "::mlir::arith";
   let genSpecializedAttr = 0;
   let printBitEnumPrimaryGroups = 1;
+  let description = [{
+    Floating-point fast math flags. Each flag lets transformations assume
+    something about the operation, or rewrite it into a different sequence of
+    operations.
+
+    * `nnan`: the operands and the result are assumed not to be NaN. If an
+      operand is NaN, or the result would be NaN, the result is poison.
+    * `ninf`: the operands and the result are assumed not to be +/-Inf. If an
+      operand is +/-Inf, or the result would be +/-Inf, the result is poison.
+    * `nsz`: the sign of a zero operand may be flipped non-deterministically.
+      This does not make `-0.0` poison.
+    * `arcp`: a division may be treated as a multiplication by the reciprocal,
+      e.g. `a / b` as `a * (1.0 / b)`.
+    * `contract`: the operation may be fused with a neighbouring operation into
+      one operation with a single rounding, e.g. a `mulf` feeding an `addf`
+      into an `fma`. This does not allow reassociation to form a fusion.
+    * `afn`: the operation may be replaced by an approximation. This applies to
+      the `math` operations that carry this attribute.
+    * `reassoc`: the operation may be replaced by an algebraically equivalent
+      expression, e.g. reassociated with neighbouring operations, even though
+      floating-point arithmetic is not associative.
+    * `fast`: all of the above.
+
+    `arcp`, `contract`, `afn` and `reassoc` are rewrite-based: a rewrite that
+    involves several operations needs the flag on all of them, and the
+    operations it creates generally carry the intersection of the flags of the
+    operations they replace. The other flags apply to each operation on its
+    own.
+
+    These are the LLVM IR fast-math flags of the same name, which is what
+    `convert-arith-to-llvm` lowers them to.
+  }];
 }
 
 def Arith_FastMathAttr :
