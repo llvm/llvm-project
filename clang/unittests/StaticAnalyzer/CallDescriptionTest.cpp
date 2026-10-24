@@ -61,7 +61,7 @@ class CallDescriptionConsumer : public ExprEngineConsumer {
     using namespace ast_matchers;
     using T = MatchedExprT;
 
-    if (!D->hasBody())
+    if (!D->getBody())
       return;
 
     const StackFrame *SF =
