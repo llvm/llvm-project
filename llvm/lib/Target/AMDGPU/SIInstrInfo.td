@@ -317,13 +317,20 @@ def SIdenorm_mode : SDNode<"AMDGPUISD::DENORM_MODE",
 >;
 
 
-// Optimize v_mfma_scale* instructions to avoid the scale if the
-// scales are known 0.
-class UnscaledMFMAOptimizationPat<SDPatternOperator intrin> : PatFrag<
+// Select the unscaled v_mfma instruction instead of v_mfma_scale:
+// - Both scales are 127 with op_sel 0. This is E8M0 1.0, so the result is
+//   unchanged.
+// - Both scales are the constant 0. E8M0 0 is 2^-127, so this is NOT unscaled.
+//   It is kept because there is no unscaled intrinsic, and frontends
+//   pass constant 0 scales expecting an unscaled instruction.
+// TODO: Remove the s=0 pattern or add a supported unscaled intrinsic.
+class UnscaledMFMAOptimizationPat<SDPatternOperator intrin> : PatFrags<
   (ops node:$srca, node:$srcb, node:$srcc,
        node:$cbsz, node:$blgp),
-  (intrin $srca, $srcb, $srcc, $cbsz, $blgp,
-          srcvalue, 0, srcvalue, 0)
+  [(intrin $srca, $srcb, $srcc, $cbsz, $blgp,
+           0, 127, 0, 127),
+   (intrin $srca, $srcb, $srcc, $cbsz, $blgp,
+           srcvalue, 0, srcvalue, 0)]
 >;
 
 def mfma_f32_16x16x128_f8f6f4 : UnscaledMFMAOptimizationPat<int_amdgcn_mfma_scale_f32_16x16x128_f8f6f4>;
