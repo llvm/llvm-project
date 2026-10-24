@@ -1,0 +1,255 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-gsymutil --convert %t --merged-functions --dwarf-callsites --output-version=2 -o %t.gsym
+# RUN: llvm-gsymutil --statistics %t.gsym 2>&1 | FileCheck %s --check-prefix=STATS
+# RUN: llvm-gsymutil --statistics=json %t.gsym 2>&1 | FileCheck %s --check-prefix=STATS-JSON
+# RUN: llvm-gsymutil --statistics=pretty-json %t.gsym 2>&1 | FileCheck %s --check-prefix=STATS-PRETTY
+
+# STATS: path: {{.*}}
+# STATS-NEXT: uuid: 01234567-89AB-CDEF-FEDC-BA9876543210
+# STATS-NEXT: num_addresses: 1
+# STATS-NEXT: byte-sizes {
+# STATS-NEXT:   file_size: 473
+# STATS-NEXT:   header: 20
+# STATS-NEXT:   global_data_directory: 140
+# STATS-NEXT:   uuid_section: 16
+# STATS-NEXT:   padding: 8
+# STATS-NEXT:   address_table: 1
+# STATS-NEXT:   addr_info_offsets: 8
+# STATS-NEXT:   file_table: 52
+# STATS-NEXT:   string_table: 43
+# STATS-NEXT:   function_info_data: 185
+# STATS-NEXT:   function_info_type_sizes {
+# STATS-NEXT:     size_and_name: 12
+# STATS-NEXT:     line_table_info: 32
+# STATS-NEXT:     inline_info: 0
+# STATS-NEXT:     call_site_info: 0
+# STATS-NEXT:     merged_func_info: 133
+# STATS-NEXT:     end_of_list: 8
+# STATS-NEXT:     padding: 0
+# STATS-NEXT:     merged_func_info_type_sizes {
+# STATS-NEXT:       infotype_infolength_count_and_fnsize: 16
+# STATS-NEXT:       size_and_name: 12
+# STATS-NEXT:       line_table_info: 32
+# STATS-NEXT:       inline_info: 40
+# STATS-NEXT:       call_site_info: 25
+# STATS-NEXT:       merged_func_info: 0
+# STATS-NEXT:       end_of_list: 8
+# STATS-NEXT:     }
+# STATS-NEXT:   }
+# STATS-NEXT: }
+
+# STATS-JSON: {"path":"{{.*}}","uuid":"01234567-89AB-CDEF-FEDC-BA9876543210","num_addresses":1,"byte-sizes":{"file_size":473,"header":20,"global_data_directory":140,"uuid_section":16,"padding":8,"address_table":1,"addr_info_offsets":8,"file_table":52,"string_table":43,"function_info_data":185,"function_info_type_sizes":{"size_and_name":12,"line_table_info":32,"inline_info":0,"call_site_info":0,"merged_func_info":133,"end_of_list":8,"padding":0,"merged_func_info_type_sizes":{"infotype_infolength_count_and_fnsize":16,"size_and_name":12,"line_table_info":32,"inline_info":40,"call_site_info":25,"merged_func_info":0,"end_of_list":8}}}}
+
+# STATS-PRETTY:      {
+# STATS-PRETTY-NEXT:   "path": "{{.*}}",
+# STATS-PRETTY-NEXT:   "uuid": "01234567-89AB-CDEF-FEDC-BA9876543210",
+# STATS-PRETTY-NEXT:   "num_addresses": 1,
+# STATS-PRETTY-NEXT:   "byte-sizes": {
+# STATS-PRETTY-NEXT:     "file_size": 473,
+# STATS-PRETTY-NEXT:     "header": 20,
+# STATS-PRETTY-NEXT:     "global_data_directory": 140,
+# STATS-PRETTY-NEXT:     "uuid_section": 16,
+# STATS-PRETTY-NEXT:     "padding": 8,
+# STATS-PRETTY-NEXT:     "address_table": 1,
+# STATS-PRETTY-NEXT:     "addr_info_offsets": 8,
+# STATS-PRETTY-NEXT:     "file_table": 52,
+# STATS-PRETTY-NEXT:     "string_table": 43,
+# STATS-PRETTY-NEXT:     "function_info_data": 185,
+# STATS-PRETTY-NEXT:     "function_info_type_sizes": {
+# STATS-PRETTY-NEXT:       "size_and_name": 12,
+# STATS-PRETTY-NEXT:       "line_table_info": 32,
+# STATS-PRETTY-NEXT:       "inline_info": 0,
+# STATS-PRETTY-NEXT:       "call_site_info": 0,
+# STATS-PRETTY-NEXT:       "merged_func_info": 133,
+# STATS-PRETTY-NEXT:       "end_of_list": 8,
+# STATS-PRETTY-NEXT:       "padding": 0,
+# STATS-PRETTY-NEXT:       "merged_func_info_type_sizes": {
+# STATS-PRETTY-NEXT:         "infotype_infolength_count_and_fnsize": 16,
+# STATS-PRETTY-NEXT:         "size_and_name": 12,
+# STATS-PRETTY-NEXT:         "line_table_info": 32,
+# STATS-PRETTY-NEXT:         "inline_info": 40,
+# STATS-PRETTY-NEXT:         "call_site_info": 25,
+# STATS-PRETTY-NEXT:         "merged_func_info": 0,
+# STATS-PRETTY-NEXT:         "end_of_list": 8
+# STATS-PRETTY-NEXT:       }
+# STATS-PRETTY-NEXT:     }
+# STATS-PRETTY-NEXT:   }
+# STATS-PRETTY-NEXT: }
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .note.gnu.build-id
+    Type:            SHT_NOTE
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x0000000000000900
+    AddressAlign:    0x0000000000000004
+    Notes:
+      - Name:            GNU
+        Desc:            0123456789ABCDEFFEDCBA9876543210
+        Type:            0x00000003
+DWARF:
+  debug_str:
+    - ''
+    - /tmp/main.c
+    - main
+    - inline1
+    - dupfunc
+  debug_abbrev:
+    - Table:
+        - Code:            0x00000001
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_data4
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+            - Attribute:       DW_AT_stmt_list
+              Form:            DW_FORM_sec_offset
+        - Code:            0x00000002
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_data4
+        - Code:            0x00000003
+          Tag:             DW_TAG_inlined_subroutine
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_data4
+            - Attribute:       DW_AT_call_file
+              Form:            DW_FORM_data4
+            - Attribute:       DW_AT_call_line
+              Form:            DW_FORM_data4
+        - Code:            0x00000004
+          Tag:             DW_TAG_call_site
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_call_return_pc
+              Form:            DW_FORM_addr
+        - Code:            0x00000005
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_data4
+  debug_info:
+    - Version:         4
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x00000001
+          Values:
+            - Value:           0x0000000000000001
+            - Value:           0x0000000000001000
+            - Value:           0x0000000000001000
+            - Value:           0x0000000000000004
+            - Value:           0x0000000000000000
+        - AbbrCode:        0x00000002
+          Values:
+            - Value:           0x000000000000000D
+            - Value:           0x0000000000001000
+            - Value:           0x0000000000001000
+        - AbbrCode:        0x00000003
+          Values:
+            - Value:           0x0000000000000012
+            - Value:           0x0000000000001100
+            - Value:           0x0000000000000100
+            - Value:           0x0000000000000001
+            - Value:           0x000000000000000A
+        - AbbrCode:        0x00000004
+          Values:
+            - Value:           0x0000000000001010
+        - AbbrCode:        0x00000000
+        - AbbrCode:        0x00000005
+          Values:
+            - Value:           0x000000000000001A
+            - Value:           0x0000000000001000
+            - Value:           0x0000000000001000
+        - AbbrCode:        0x00000000
+  debug_line:
+    - Length:          96
+      Version:         2
+      PrologueLength:  46
+      MinInstLength:   1
+      DefaultIsStmt:   1
+      LineBase:        251
+      LineRange:       14
+      OpcodeBase:      13
+      StandardOpcodeLengths: [ 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 ]
+      IncludeDirs:
+        - /tmp
+      Files:
+        - Name:            main.c
+          DirIdx:          1
+          ModTime:         0
+          Length:          0
+        - Name:            inline.h
+          DirIdx:          1
+          ModTime:         0
+          Length:          0
+      Opcodes:
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          9
+          SubOpcode:       DW_LNE_set_address
+          Data:            4096
+        - Opcode:          DW_LNS_advance_line
+          SData:           9
+          Data:            4096
+        - Opcode:          DW_LNS_copy
+          Data:            4096
+        - Opcode:          DW_LNS_advance_pc
+          Data:            256
+        - Opcode:          DW_LNS_set_file
+          Data:            2
+        - Opcode:          DW_LNS_advance_line
+          SData:           10
+          Data:            2
+        - Opcode:          DW_LNS_copy
+          Data:            2
+        - Opcode:          DW_LNS_advance_pc
+          Data:            128
+        - Opcode:          DW_LNS_advance_line
+          SData:           1
+          Data:            128
+        - Opcode:          DW_LNS_copy
+          Data:            128
+        - Opcode:          DW_LNS_advance_pc
+          Data:            128
+        - Opcode:          DW_LNS_set_file
+          Data:            1
+        - Opcode:          DW_LNS_advance_line
+          SData:           -10
+          Data:            1
+        - Opcode:          DW_LNS_copy
+          Data:            1
+        - Opcode:          DW_LNS_advance_pc
+          Data:            3584
+        - Opcode:          DW_LNS_advance_line
+          SData:           1
+          Data:            3584
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          1
+          SubOpcode:       DW_LNE_end_sequence
+          Data:            3584
