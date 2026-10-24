@@ -1109,6 +1109,11 @@ math_mpfr_test(name = "log2p1f16")
 
 math_mpfr_test(name = "log10f16")
 
+math_mpfr_test(
+    name = "log10p1bf16",
+    deps = ["//libc:__support_fputil_bfloat16"],
+)
+
 math_mpfr_test(name = "log10p1f16")
 
 math_mpfr_test(name = "lgammaf16")
