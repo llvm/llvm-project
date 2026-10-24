@@ -1,0 +1,2 @@
+# REQUIRES: Half || Int16
+# RUN: echo or
