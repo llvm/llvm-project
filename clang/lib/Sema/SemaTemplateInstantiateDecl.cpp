@@ -6405,8 +6405,13 @@ VarTemplateSpecializationDecl *Sema::CompleteVarTemplateSpecializationDecl(
   if (!TSI)
     return nullptr;
 
-  // Update the type of this variable template specialization.
-  VarSpec->setType(TSI->getType());
+  // Update the type of this variable template specialization. HLSL assigns
+  // the address space when the specialization is declared, so keep it.
+  QualType T = TSI->getType();
+  if (getLangOpts().HLSL && VarSpec->getType().hasAddressSpace() &&
+      !T.hasAddressSpace())
+    T = Context.getAddrSpaceQualType(T, VarSpec->getType().getAddressSpace());
+  VarSpec->setType(T);
 
   // Convert the declaration into a definition now.
   VarSpec->setCompleteDefinition();
@@ -6466,6 +6471,10 @@ void Sema::BuildVariableInstantiation(
   }
 
   InstantiateAttrs(TemplateArgs, OldVar, NewVar, LateAttrs, StartingScope);
+
+  if (getLangOpts().HLSL && isa<VarTemplateSpecializationDecl>(NewVar) &&
+      !isa<VarTemplatePartialSpecializationDecl>(NewVar))
+    HLSL().ActOnVariableDeclarator(NewVar);
 
   LookupResult Previous(
       *this, NewVar->getDeclName(), NewVar->getLocation(),
