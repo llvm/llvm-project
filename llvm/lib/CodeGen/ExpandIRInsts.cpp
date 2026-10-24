@@ -1043,15 +1043,31 @@ static void expandIToFP(Instruction *IToFP) {
   Value *A1 = Builder.CreateLShr(A0, Builder.getInt32(2));
   Value *A2 = Builder.CreateAnd(A1, Builder.getInt32(1));
   Value *Conv16 = Builder.CreateZExt(A2, IntTy);
-  Value *Or17 = Builder.CreateOr(AAddr0, Conv16);
-  Value *Inc = Builder.CreateAdd(Or17, Builder.getIntN(BitWidth, 1));
+  bool RoundToOdd = IToFP->getType()->isBFloatTy();
+  Value *Inc = AAddr0;
+  if (!RoundToOdd) {
+    Value *Or17 = Builder.CreateOr(AAddr0, Conv16);
+    Inc = Builder.CreateAdd(Or17, Builder.getIntN(BitWidth, 1));
+  }
   Value *Shr18 = nullptr;
-  if (IsSigned)
+  if (RoundToOdd) {
+    // Keep a non-zero discarded portion sticky and force the retained
+    // significand's least-significant bit to one. The subsequent conversion
+    // from float to bfloat then rounds only once.
+    Value *LowBits = Builder.CreateAnd(AAddr0, Builder.getIntN(BitWidth, 3));
+    Value *Sticky = Builder.CreateZExt(
+        Builder.CreateICmpNE(LowBits, Builder.getIntN(BitWidth, 0)), IntTy);
+    Shr18 = Builder.CreateLShr(AAddr0, Builder.getIntN(BitWidth, 2));
+    Shr18 = Builder.CreateOr(Shr18, Sticky);
+  } else if (IsSigned)
     Shr18 = Builder.CreateAShr(Inc, Builder.getIntN(BitWidth, 2));
   else
     Shr18 = Builder.CreateLShr(Inc, Builder.getIntN(BitWidth, 2));
-  Value *A3 = Builder.CreateAnd(Inc, Temp1, "a3");
-  Value *PosOrNeg = Builder.CreateICmpEQ(A3, Builder.getIntN(BitWidth, 0));
+  Value *PosOrNeg = Builder.getTrue();
+  if (!RoundToOdd) {
+    Value *A3 = Builder.CreateAnd(Inc, Temp1, "a3");
+    PosOrNeg = Builder.CreateICmpEQ(A3, Builder.getIntN(BitWidth, 0));
+  } // The carry-out path is unreachable with round-to-odd.
   Value *ExtractT60 = Builder.CreateTrunc(Shr18, Builder.getIntNTy(FloatWidth));
   Value *Extract63 = Builder.CreateLShr(Shr18, Builder.getIntN(BitWidth, 32));
   Value *ExtractT64 = nullptr;
