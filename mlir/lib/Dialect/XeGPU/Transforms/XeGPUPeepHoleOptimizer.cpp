@@ -565,12 +565,12 @@ private:
     assert(layout.isForSubgroup() && "Must know the lane layout");
     assert(reductionDims.size() == 2 && "Expected 2D reduction");
     int64_t intra = -1, cross = -1;
-    xegpu::LayoutAttr layoutAttr = dyn_cast<xegpu::LayoutAttr>(layout);
+    // reductionDims index the source layout (the slice's parent), not the
+    // flattened root.
+    xegpu::DistributeLayoutAttr srcLayout = layout;
     if (auto layoutSliceAttr = dyn_cast<xegpu::SliceAttr>(layout))
-      layoutAttr =
-          dyn_cast<xegpu::LayoutAttr>(layoutSliceAttr.flatten().getParent());
-    assert(layoutAttr);
-    SmallVector<int64_t> laneLayout = layoutAttr.getEffectiveLaneLayoutAsInt();
+      srcLayout = layoutSliceAttr.getParent();
+    SmallVector<int64_t> laneLayout = srcLayout.getEffectiveLaneLayoutAsInt();
 
     assert(laneLayout.size() && "Expected a non-empty layout");
     // try to pick a dim that does not communicate
