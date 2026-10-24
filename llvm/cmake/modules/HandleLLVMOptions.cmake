@@ -788,10 +788,10 @@ if (MSVC)
       # any code that uses the LLVM_ALIGNAS macro), so this is must be disabled to
       # avoid unwanted alignment warnings.
       -wd4324 # Suppress 'structure was padded due to __declspec(align())'
-      # This is triggered for every variable that is a template type of a class even 
+      # This is triggered for every variable that is a template type of a class even
       # if there private when the class is dllexport'ed
       -wd4251 # Suppress 'needs to have dll-interface to be used by clients'
-      # We only putting dll export on classes with out of line members so this 
+      # We only putting dll export on classes with out of line members so this
       # warning gets triggered a lot for bases we haven't exported'
       -wd4275 # non dll-interface class used as base for dll-interface class
 
@@ -1373,6 +1373,34 @@ endif()
 # This option is handled below and is defined here as it impacts the PCH status.
 set(LLVM_CCACHE_BUILD OFF CACHE BOOL "Set to ON for a ccache enabled build")
 
+if(LLVM_CCACHE_BUILD)
+  find_program(CCACHE_PROGRAM ccache)
+  if(NOT CCACHE_PROGRAM)
+    message(FATAL_ERROR "Unable to find the program ccache. Set LLVM_CCACHE_BUILD to OFF")
+  endif()
+  message(STATUS "CCache program: ${CCACHE_PROGRAM}")
+
+  if(CMAKE_HOST_WIN32)
+    execute_process(COMMAND ${CCACHE_PROGRAM} --version
+      OUTPUT_VARIABLE CCACHE_VERSION_OUT
+      OUTPUT_STRIP_TRAILING_WHITESPACE)
+    string(REPLACE "\n" ";" CCACHE_VERSION_OUT_LIST "${CCACHE_VERSION_OUT}")
+    list(GET CCACHE_VERSION_OUT_LIST 0 CCACHE_VERSION_OUT_FIRST)
+    if (CCACHE_VERSION_OUT_FIRST MATCHES "^ccache version ([0-9]+\.[0-9]+.*)")
+      set(CCACHE_VERSION ${CMAKE_MATCH_1})
+    endif()
+    set(CCACHE_VERSION ${CCACHE_VERSION} CACHE STRING "CCache version number" FORCE)
+    message(STATUS "CCache version: ${CCACHE_VERSION}")
+    if (CCACHE_VERSION VERSION_GREATER_EQUAL "4.8")
+      message(STATUS "CCache supports command line configuration")
+      # We store this as a separate option to support command line configuration on windows without PCH
+      set(CCACHE_SUPPORTS_CLI_CONFIG TRUE)
+    else()
+      set(CCACHE_SUPPORTS_CLI_CONFIG FALSE)
+    endif()
+  endif()
+endif()
+
 if(NOT DEFINED CMAKE_DISABLE_PRECOMPILE_HEADERS)
   if(LLVM_ENABLE_MODULES)
     # PCH with modules is difficult to get right and modules should make PCH
@@ -1443,13 +1471,11 @@ if(NOT DEFINED CMAKE_DISABLE_PRECOMPILE_HEADERS)
         "Set CMAKE_DISABLE_PRECOMPILE_HEADERS to ON/OFF to silence this warning.")
       set(CMAKE_DISABLE_PRECOMPILE_HEADERS ON)
     endif()
-    if (CMAKE_HOST_WIN32)
-      # Until a way to reliably configure ccache on Windows is found,
-      # disable precompiled headers for Windows + ccache builds
-      message(WARNING "Using ccache with precompiled headers on Windows is "
-        "currently not supported. "
-        "Pass -DCMAKE_DISABLE_PRECOMPILE_HEADERS=OFF to override.")
+    if(CMAKE_HOST_WIN32 AND NOT CCACHE_SUPPORTS_CLI_CONFIG)
       set(CMAKE_DISABLE_PRECOMPILE_HEADERS ON)
+      message(WARNING "Using ccache with precompiled headers on Windows is "
+        "not supported with ccache versions older than 4.8 "
+        "Pass -DCMAKE_DISABLE_PRECOMPILE_HEADERS=OFF to override.")
     endif()
   endif()
 endif()
@@ -1473,57 +1499,68 @@ endif()
 
 # Support for ccache builds. This must be placed after we determined whether PCH
 # is enabled.
+set(LLVM_CCACHE_MAXSIZE "" CACHE STRING "Size of ccache")
+set(LLVM_CCACHE_DIR "" CACHE STRING "Directory to keep ccached data")
 if(LLVM_CCACHE_BUILD)
-  find_program(CCACHE_PROGRAM ccache)
-  if(CCACHE_PROGRAM)
-    set(LLVM_CCACHE_MAXSIZE "" CACHE STRING "Size of ccache")
-    set(LLVM_CCACHE_DIR "" CACHE STRING "Directory to keep ccached data")
+  if(NOT CMAKE_HOST_WIN32)
     set(LLVM_CCACHE_PARAMS "CCACHE_CPP2=yes CCACHE_HASHDIR=yes CCACHE_SLOPPINESS=pch_defines,time_macros"
         CACHE STRING "Parameters to pass through to ccache")
-
-    if(NOT CMAKE_HOST_WIN32)
-      set(CCACHE_PROGRAM "${LLVM_CCACHE_PARAMS} ${CCACHE_PROGRAM}")
-      if (NOT CMAKE_DISABLE_PRECOMPILE_HEADERS)
-        # ccache's preprocessor mode yields false postives for changes in macro
-        # definitions, as changes in macro definitions are not captured. While
-        # ccache _usually_ disables the preprocessor mode for Clang+PCH, there
-        # are rare (but no less annoying) circumstances where this is not
-        # enough. Therefore enable "depend mode" where instead of preprocessing
-        # dependencies are tracked as emitted by the compiler. This might
-        # slightly increase false negatives for .cpp files that don't use a PCH
-        # when PCH is enabled.
-        # See: https://github.com/ccache/ccache/issues/1668
-        # See: https://github.com/llvm/llvm-project/issues/225047
-        #
-        # Prepend the option so that users can override this default by adding
-        # "CCACHE_NODEPEND=1" to LLVM_CCACHE_PARAMS. We don't store this in a
-        # cache variable so that changes to CMAKE_DISABLE_PRECOMPILE_HEADERS (in
-        # particular changing from ON to OFF) updates the default.
-        #
-        # Note that this is currently not relevant on Windows, as we disable PCH
-        # there by default (see above).
-        set(CCACHE_PROGRAM "CCACHE_DEPEND=1 ${CCACHE_PROGRAM}")
-      endif()
+    set(CCACHE_PROGRAM "${LLVM_CCACHE_PARAMS} ${CCACHE_PROGRAM}")
+    if (NOT CMAKE_DISABLE_PRECOMPILE_HEADERS)
+      # ccache's preprocessor mode yields false postives for changes in macro
+      # definitions, as changes in macro definitions are not captured. While
+      # ccache _usually_ disables the preprocessor mode for Clang+PCH, there
+      # are rare (but no less annoying) circumstances where this is not
+      # enough. Therefore enable "depend mode" where instead of preprocessing
+      # dependencies are tracked as emitted by the compiler. This might
+      # slightly increase false negatives for .cpp files that don't use a PCH
+      # when PCH is enabled.
+      # See: https://github.com/ccache/ccache/issues/1668
+      # See: https://github.com/llvm/llvm-project/issues/225047
+      #
+      # Prepend the option so that users can override this default by adding
+      # "CCACHE_NODEPEND=1" to LLVM_CCACHE_PARAMS. We don't store this in a
+      # cache variable so that changes to CMAKE_DISABLE_PRECOMPILE_HEADERS (in
+      # particular changing from ON to OFF) updates the default.
+      set(CCACHE_PROGRAM "CCACHE_DEPEND=1 ${CCACHE_PROGRAM}")
+    endif()
+    if (LLVM_CCACHE_MAXSIZE)
+      set(CCACHE_PROGRAM "CCACHE_MAXSIZE=${LLVM_CCACHE_MAXSIZE} ${CCACHE_PROGRAM}")
+    endif()
+    if (LLVM_CCACHE_DIR)
+      set(CCACHE_PROGRAM "CCACHE_DIR=${LLVM_CCACHE_DIR} ${CCACHE_PROGRAM}")
+    endif()
+    set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ${CCACHE_PROGRAM})
+  else()
+    set(LLVM_CCACHE_PARAMS "run_second_cpp=true;hash_dir=true;sloppiness=pch_defines,time_macros"
+        CACHE STRING "Parameters to pass through to ccache")
+    if (CCACHE_SUPPORTS_CLI_CONFIG)
+      # configure ccache with the command line configuration syntax
       if (LLVM_CCACHE_MAXSIZE)
-        set(CCACHE_PROGRAM "CCACHE_MAXSIZE=${LLVM_CCACHE_MAXSIZE} ${CCACHE_PROGRAM}")
+        list(APPEND LLVM_CCACHE_PARAMS "cache_maxsize=${LLVM_CCACHE_MAXSIZE}")
       endif()
       if (LLVM_CCACHE_DIR)
-        set(CCACHE_PROGRAM "CCACHE_DIR=${LLVM_CCACHE_DIR} ${CCACHE_PROGRAM}")
+        list(APPEND LLVM_CCACHE_PARAMS "cache_dir=${LLVM_CCACHE_DIR}")
       endif()
-      set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ${CCACHE_PROGRAM})
-    else()
-      if(LLVM_CCACHE_MAXSIZE OR LLVM_CCACHE_DIR OR
-         NOT LLVM_CCACHE_PARAMS MATCHES "CCACHE_CPP2=yes CCACHE_HASHDIR=yes CCACHE_SLOPPINESS=pch_defines,time_macros")
-        message(FATAL_ERROR "Ccache configuration through CMake is not supported on Windows. Please use environment variables.")
+      if (NOT CMAKE_DISABLE_PRECOMPILE_HEADERS)
+        # prepend depend mode so that it can be disabled by the user with depend_mode=false
+        # see above for reasoning
+        list(PREPEND LLVM_CCACHE_PARAMS "depend_mode=true")
       endif()
+
+      # Since ccache 4.8 it is possible to pass options as arguments
+      set(CCACHE_PROGRAM ${CCACHE_PROGRAM} ${LLVM_CCACHE_PARAMS})
+
       # RULE_LAUNCH_COMPILE should work with Ninja but currently has issues
       # with cmd.exe and some MSVC tools other than cl.exe
       set(CMAKE_C_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
       set(CMAKE_CXX_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
+    else()
+      if(LLVM_CCACHE_MAXSIZE OR LLVM_CCACHE_DIR OR
+         NOT LLVM_CCACHE_PARAMS MATCHES "run_second_cpp=true;hash_dir=true;sloppiness=pch_defines,time_macros")
+        message(FATAL_ERROR "CCache configuration through CMake is not supported on Windows with ccache older than 4.8")
+      endif()
     endif()
-    message(STATUS "ccache program: ${CCACHE_PROGRAM}")
-  else()
-    message(FATAL_ERROR "Unable to find the program ccache. Set LLVM_CCACHE_BUILD to OFF")
   endif()
 endif()
 
