@@ -540,6 +540,10 @@ void SelectionDAGLegalize::LegalizeStoreOps(SDNode *Node) {
       ReplaceNode(SDValue(Node, 0), Result);
       break;
     }
+    case TargetLowering::Expand:
+      assert(VT.isVector() && "Cannot expand a scalar store");
+      ReplaceNode(SDValue(Node, 0), TLI.scalarizeVectorStore(ST, DAG));
+      break;
     }
     return;
   }
@@ -719,6 +723,10 @@ void SelectionDAGLegalize::LegalizeLoadOps(SDNode *Node) {
       RChain = Res.getValue(1);
       break;
     }
+    case TargetLowering::Expand:
+      assert(VT.isVector() && "Cannot expand a scalar load");
+      std::tie(RVal, RChain) = TLI.scalarizeVectorLoad(LD, DAG);
+      break;
     }
     if (RChain.getNode() != Node) {
       assert(RVal.getNode() != Node && "Load must be completely replaced");

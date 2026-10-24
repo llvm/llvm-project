@@ -2529,7 +2529,7 @@ public:
   }
 
   NamedDecl *getFriendDecl() const override {
-    if (NamedDecl *ND = Friend.dyn_cast<NamedDecl *>())
+    if (NamedDecl *ND = dyn_cast_if_present<NamedDecl *>(Friend))
       return ND;
     return Template.getAsTemplateDecl();
   }

@@ -8046,7 +8046,8 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     TargetLowering::ArgListTy Args;
     if (Intrinsic == Intrinsic::ubsantrap) {
       Value *Arg = I.getArgOperand(0);
-      Args.emplace_back(Arg, getValue(Arg));
+      Args.emplace_back(Arg, getValue(Arg),
+                        LibInfo->getExtAttrForI8Param(/*Signed=*/false));
     }
 
     TargetLowering::CallLoweringInfo CLI(DAG);
@@ -9296,7 +9297,8 @@ SDValue SelectionDAGBuilder::lowerStartEH(SDValue Chain,
 
   // Skip emitting EH_LABEL on targets whose exception tables don't reference
   // them (32-bit x86 SEH, Wasm).
-  if (!MF.getContext().getAsmInfo().usesPerInvokeEHLabels()) {
+  if (!MF.getContext().getAsmInfo().usesPerInvokeEHLabels(
+          FuncInfo.ExceptionModel)) {
     BeginLabel = nullptr;
     return Chain;
   }
@@ -10569,14 +10571,20 @@ computeConstraintToUse(ConstraintDecisionInfo &Info, const CallBase &Call,
       OpInfo.ConstraintType = TargetLowering::C_Address;
     }
 
-    // If this is a memory input, and if the operand is not indirect, do what we
-    // need to provide an address for the memory input.
+    // A direct operand with a memory constraint needs an address. Only an
+    // input has a value that can be stored to a stack slot to provide one. A
+    // direct output, which Clang never emits with a memory constraint but
+    // other IR can, would need a stack slot to be reloaded after the asm. That
+    // includes an output whose chosen alternative is memory, e.g. "=m|r". A
+    // label (e.g. "!m") is a branch target, which has no value in memory.
     if (OpInfo.ConstraintType == TargetLowering::C_Memory &&
         !OpInfo.isIndirect) {
-      // Only an input has a value to store to memory. A direct output, which
-      // Clang never emits with a memory constraint but other IR can, would
-      // need a stack slot to be reloaded after the asm. That includes an
-      // output whose chosen alternative is memory, e.g. "=m|r".
+      if (OpInfo.Type == InlineAsm::isLabel) {
+        Info.ErrorMsg << "cannot handle memory constraint '"
+                      << OpInfo.ConstraintCode << "' for a label";
+        return true;
+      }
+
       if (OpInfo.Type != InlineAsm::isInput) {
         Info.ErrorMsg << "cannot handle direct memory outputs for constraint '"
                       << OpInfo.ConstraintCode << "'";
@@ -12768,8 +12776,8 @@ void SelectionDAGBuilder::lowerWorkItem(SwitchWorkListItem W, Value *Cond,
     if (I == W.LastCluster) {
       // For the last cluster, fall through to the default destination.
       Fallthrough = DefaultMBB;
-      FallthroughUnreachable = isa<UnreachableInst>(
-          DefaultMBB->getBasicBlock()->getFirstNonPHIOrDbg());
+      FallthroughUnreachable =
+          isa<UnreachableInst>(DefaultMBB->getBasicBlock()->getFirstNonPHIIt());
     } else {
       Fallthrough = CurMF->CreateMachineBasicBlock(CurMBB->getBasicBlock());
       CurMF->insert(BBI, Fallthrough);

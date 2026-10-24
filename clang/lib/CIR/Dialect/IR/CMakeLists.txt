@@ -14,6 +14,11 @@ add_clang_library(MLIRCIR
   MLIRCIREnumsGen
   MLIRCIROpInterfacesIncGen
   MLIRCIRLoopOpInterfaceIncGen
+  MLIRBuiltinLocationAttributesIncGen
+  MLIRBytecodeOpInterfaceIncGen
+
+  LINK_COMPONENTS
+  TargetParser
 
   LINK_LIBS PUBLIC
   MLIRIR
