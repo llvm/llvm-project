@@ -2786,13 +2786,22 @@ bool MachineInstr::mayFoldInlineAsmRegOp(unsigned OpId) const {
   if (!getOperand(OpId).isReg())
     return false;
 
+  if (isRegTiedToDefOperand(OpId))
+    return false;
+
   const MachineOperand &MD = getOperand(OpId - 1);
   if (!MD.isImm())
     return false;
 
+  // A memory operand replaces exactly one register, so one register of a
+  // multi-register operand (e.g. an i128 in two GR64s) can't be folded.
   InlineAsm::Flag F(MD.getImm());
+  if (F.getNumOperandRegisters() != 1)
+    return false;
+
   if (F.isRegUseKind() || F.isRegDefKind() || F.isRegDefEarlyClobberKind())
     return F.getRegMayBeFolded();
+
   return false;
 }
 

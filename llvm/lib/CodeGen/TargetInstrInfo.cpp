@@ -738,13 +738,7 @@ static MachineInstr *foldInlineAsmMemOperand(MachineInstr &MI,
            "folded operands must hold the same register");
 
     // A tied use is only ever folded along with its def.
-    if (MI.isRegTiedToDefOperand(Op) || !MI.mayFoldInlineAsmRegOp(Op))
-      return nullptr;
-
-    // A memory operand replaces exactly one register, so one register of a
-    // multi-register operand (e.g. an i128 in two GR64s) can't be folded.
-    if (InlineAsm::Flag(MI.getOperand(Op - 1).getImm())
-            .getNumOperandRegisters() != 1)
+    if (!MI.mayFoldInlineAsmRegOp(Op))
       return nullptr;
 
     Reads |= MO.readsReg();
