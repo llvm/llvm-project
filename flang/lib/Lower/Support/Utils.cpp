@@ -268,7 +268,7 @@ public:
   template <Fortran::common::TypeCategory TC>
   static unsigned getHashValue(
       const Fortran::evaluate::Relational<Fortran::evaluate::Type<TC>> &x) {
-    const int kind{x.kind()};
+    const int kind{x.left().kind()};
     return (getHashValue(x.left()) + getHashValue(x.right())) * 71u +
            static_cast<unsigned>(TC) + static_cast<unsigned>(kind) +
            static_cast<unsigned>(x.opr) * 11u;
