@@ -823,7 +823,8 @@ struct CUDADeviceTy : public GenericDeviceTy {
 
   /// Submit data to the device (host to device transfer).
   Error dataSubmitImpl(void *TgtPtr, const void *HstPtr, int64_t Size,
-                       AsyncInfoWrapperTy &AsyncInfoWrapper) override {
+                       AsyncInfoWrapperTy &AsyncInfoWrapper,
+                       DataSubmitFlagsTy Flags) override {
     if (auto Err = setContext())
       return Err;
 

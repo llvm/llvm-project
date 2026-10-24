@@ -14,8 +14,10 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <deque>
 #include <functional>
+#include <map>
 #include <mutex>
 #include <string>
 #include <system_error>
@@ -76,6 +78,19 @@
 #include "hsa/hsa_ext_amd.h"
 #endif
 
+#if defined(__GNUC__)
+#if defined(__i386__) || defined(__x86_64__)
+#include <x86intrin.h>
+#elif defined(__powerpc64__) || defined(__PPC64__)
+// PowerPC compatibility shim for x86 intrinsics
+#define NO_WARN_X86_INTRINSICS
+#include <x86intrin.h>
+#endif
+#endif
+#if defined(_MSC_VER) && (defined(_M_IX86) || defined(_M_X64))
+#include "intrin.h"
+#endif
+
 using namespace llvm::offload::debug;
 using namespace error;
 
@@ -97,6 +112,44 @@ struct AMDGPUMemoryManagerTy;
 struct AMDGPUMemoryPoolTy;
 
 namespace hsa_utils {
+
+/// Copied from HSA-runtime.
+static void storeFence() {
+#if defined(_MSC_VER) || defined(__x86_64__) || defined(__i386__) ||           \
+    defined(__powerpc64__)
+  _mm_sfence();
+#elif __has_builtin(__builtin_arm_dmb)
+  __builtin_arm_dmb(0x2); // oshst
+#elif defined(__riscv)
+  __asm__ __volatile__("fence ow, ow" ::: "memory");
+#else
+  __atomic_thread_fence(__ATOMIC_SEQ_CST);
+#endif
+}
+
+/// Copied from HSA-runtime.
+static void memoryFence() {
+#if defined(_MSC_VER) || defined(__x86_64__) || defined(__i386__) ||           \
+    defined(__powerpc64__)
+  _mm_mfence();
+#elif __has_builtin(__builtin_arm_dsb)
+  __builtin_arm_dsb(0xf); // sy
+#elif defined(__riscv)
+  __asm__ __volatile__("fence iorw, iorw" ::: "memory");
+#else
+  __atomic_thread_fence(__ATOMIC_SEQ_CST);
+#endif
+}
+
+/// Copied from HSA-runtime.
+/// Force a WC flush on PCIe devices by doing a write and then read-back
+static void flushPcieWc(void *Ptr, size_t Size) {
+  storeFence();
+  *((uint8_t *)Ptr + Size - 1) = *((uint8_t *)Ptr + Size - 1);
+  memoryFence();
+  auto Readback = *(reinterpret_cast<volatile uint8_t *>(Ptr) + Size - 1);
+  (void)Readback;
+}
 
 /// Iterate elements using an HSA iterate function. Do not use this function
 /// directly but the specialized ones below instead.
@@ -236,6 +289,23 @@ static std::optional<llvm::VersionTuple> getAMDExtensionVersion() {
           HSA_STATUS_SUCCESS)
     return std::nullopt;
   return llvm::VersionTuple(Major, Minor);
+}
+
+/// Whether the host can write \p Size bytes at \p Ptr directly: they must lie
+/// within an ordinary allocation of this device. On a large BAR system ROCr
+/// maps all of those for the host, which HIP relies on as well. Memory mapped
+/// through hsa_amd_vmem_* (such as the record-replay slab) is an example for
+/// something the host cannot write to directly.
+static bool isHostWritable(hsa_agent_t Agent, const void *Ptr, int64_t Size) {
+  hsa_amd_pointer_info_t Info;
+  Info.size = sizeof(hsa_amd_pointer_info_t);
+  if (hsa_amd_pointer_info(Ptr, &Info, nullptr, nullptr, nullptr) !=
+      HSA_STATUS_SUCCESS)
+    return false;
+  return Info.type == HSA_EXT_POINTER_TYPE_HSA &&
+         Info.agentOwner.handle == Agent.handle &&
+         utils::getPtrDiff(Ptr, Info.agentBaseAddress) + Size <=
+             int64_t(Info.sizeInBytes);
 }
 } // namespace hsa_utils
 
@@ -381,6 +451,25 @@ struct AMDGPUMemoryPoolTy {
             Agent, MemoryPool, HSA_AMD_AGENT_MEMORY_POOL_INFO_ACCESS, &Access))
       return false;
     return Access != HSA_AMD_MEMORY_POOL_ACCESS_NEVER_ALLOWED;
+  }
+
+  /// Returns if the \p Agent reaches the memory pool over XGMI only, i.e.,
+  /// without any PCIe (or other) hop along the way.
+  bool isLinkedOverXGMI(hsa_agent_t Agent) {
+    uint32_t NumHops = 0;
+    if (hsa_amd_agent_memory_pool_get_info(
+            Agent, MemoryPool, HSA_AMD_AGENT_MEMORY_POOL_INFO_NUM_LINK_HOPS,
+            &NumHops) ||
+        NumHops == 0)
+      return false;
+    llvm::SmallVector<hsa_amd_memory_pool_link_info_t> Links(NumHops);
+    if (hsa_amd_agent_memory_pool_get_info(
+            Agent, MemoryPool, HSA_AMD_AGENT_MEMORY_POOL_INFO_LINK_INFO,
+            Links.data()))
+      return false;
+    return llvm::all_of(Links, [](const hsa_amd_memory_pool_link_info_t &L) {
+      return L.link_type == HSA_AMD_LINK_INFO_TYPE_XGMI;
+    });
   }
 
   /// Allow the device to access a specific allocation.
@@ -529,6 +618,22 @@ private:
   /// Reference to the actual memory manager.
   MemoryManagerTy *MemoryManager;
 };
+
+/// Largest size for direct host to device transfer.
+static constexpr int64_t MaxDirectWriteSize = 2 * 4096;
+
+/// Copy \p Size bytes from \p Src to the device memory at \p Dst.
+/// \p OverXGMI tells whether the host reaches that memory over XGMI.
+///
+/// Without XGMI, this needs a WC flush. With XGMI, this isn't necessary
+/// (according to the code in HSA-runtime).
+static void publishToDeviceMemory(void *Dst, const void *Src, size_t Size,
+                                  bool OverXGMI) {
+  std::memcpy(Dst, Src, Size);
+  if (OverXGMI)
+    return;
+  hsa_utils::flushPcieWc(Dst, Size);
+}
 
 /// Class implementing the AMDGPU device images' properties.
 struct AMDGPUDeviceImageTy : public DeviceImageTy {
@@ -2293,6 +2398,15 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     if (auto Err = initMemoryPools())
       return Err;
 
+    HostWritesDeviceMemory =
+        !CoarseGrainedMemoryPools.empty() &&
+        CoarseGrainedMemoryPools[0]->canAccess(HostDevice.getAgent());
+    // The writing thread may run on any host agent, so all of them must reach
+    // the device over XGMI.
+    HostLinkIsXGMI =
+        HostWritesDeviceMemory &&
+        CoarseGrainedMemoryPools[0]->isLinkedOverXGMI(HostDevice.getAgent());
+
     char GPUName[64];
     if (auto Err = getDeviceAttr(HSA_AGENT_INFO_NAME, GPUName))
       return Err;
@@ -2846,11 +2960,26 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     return true;
   }
 
+  /// Whether a transfer of \p Size bytes should be done via direct H2D
+  /// transfer.
+  bool allowsDirectWrite(const void *Ptr, int64_t Size) const {
+    return HostWritesDeviceMemory && Size > 0 && Size <= MaxDirectWriteSize &&
+           hsa_utils::isHostWritable(Agent, Ptr, Size);
+  }
+
   /// Submit data to the device (host to device transfer).
   Error dataSubmitImpl(void *TgtPtr, const void *HstPtr, int64_t Size,
-                       AsyncInfoWrapperTy &AsyncInfoWrapper) override {
+                       AsyncInfoWrapperTy &AsyncInfoWrapper,
+                       DataSubmitFlagsTy Flags) override {
     AMDGPUStreamTy *Stream = nullptr;
     void *PinnedPtr = nullptr;
+
+    // The direct H2D write is independent of any queueing, so the caller has
+    // to allow it.
+    if (Flags.DirectWrite && allowsDirectWrite(TgtPtr, Size)) {
+      publishToDeviceMemory(TgtPtr, HstPtr, Size, HostLinkIsXGMI);
+      return Plugin::success();
+    }
 
     // Use one-step asynchronous operation when host memory is already pinned.
     if (void *PinnedPtr =
@@ -3731,6 +3860,13 @@ private:
 
   /// Reference to the host device.
   AMDHostDeviceTy &HostDevice;
+
+  /// Whether the host can map this device's memory (large BAR) and write small
+  /// transfers into it directly.
+  bool HostWritesDeviceMemory = false;
+
+  /// Whether the host reaches this device's memory over XGMI rather than PCIe.
+  bool HostLinkIsXGMI = false;
 
   /// The current size of the stack that will be used in cases where it could
   /// not be statically determined.

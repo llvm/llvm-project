@@ -261,7 +261,8 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
 
   /// Submit data to the device (host to device transfer).
   Error dataSubmitImpl(void *TgtPtr, const void *HstPtr, int64_t Size,
-                       AsyncInfoWrapperTy &AsyncInfoWrapper) override {
+                       AsyncInfoWrapperTy &AsyncInfoWrapper,
+                       DataSubmitFlagsTy Flags) override {
     std::memcpy(TgtPtr, HstPtr, Size);
     return Plugin::success();
   }

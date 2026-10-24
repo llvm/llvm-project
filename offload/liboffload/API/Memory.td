@@ -230,6 +230,42 @@ def olMemcpy : Function {
     let returns = [];
 }
 
+def ol_memcpy_flags_t : Typedef {
+  let desc = "Flags controlling a memcpy operation.";
+  let value = "uint32_t";
+}
+
+def ol_memcpy_flag_t : Enum {
+  let desc = "Flags controlling a memcpy operation.";
+  let is_bit_field = 1;
+  let etors = [
+    Etor<"DIRECT_WRITE", "The memcpy may be issued as a direct write, which can land ahead of earlier work on the queue; that work must not access this memory">,
+  ];
+}
+
+def olMemcpyWithFlags : Function {
+    let desc = "Enqueue a memcpy operation with flags.";
+    let details = [
+        "Behaves like `olMemcpy` when `Flags` is 0.",
+        "With `OL_MEMCPY_FLAG_DIRECT_WRITE`, the memcpy may be issued as a direct write and completed before this call returns; otherwise it is enqueued as usual. Work enqueued afterwards observes it either way.",
+        "If a queue is not specified, the memcpy happens synchronously"
+    ];
+    let params = [
+        Param<"ol_queue_handle_t", "Queue", "handle of the queue.", PARAM_IN_OPTIONAL>,
+        Param<"void*", "DstPtr", "pointer to copy to", PARAM_IN>,
+        Param<"ol_device_handle_t", "DstDevice", "device that DstPtr belongs to", PARAM_IN_OPTIONAL>,
+        Param<"const void*", "SrcPtr", "pointer to copy from", PARAM_IN>,
+        Param<"ol_device_handle_t", "SrcDevice", "device that SrcPtr belongs to", PARAM_IN_OPTIONAL>,
+        Param<"size_t", "Size", "size in bytes of data to copy", PARAM_IN>,
+        Param<"ol_memcpy_flags_t", "Flags", "flags controlling the memcpy", PARAM_IN>,
+    ];
+    let returns = [
+      Return<"OL_ERRC_INVALID_ENUMERATION", [
+        "`(Flags & ~OL_MEMCPY_FLAG_DIRECT_WRITE) != 0`"
+      ]>,
+    ];
+}
+
 def olMemFill : Function {
   let desc = "Fill memory with copies of the given pattern";
   let details = [
