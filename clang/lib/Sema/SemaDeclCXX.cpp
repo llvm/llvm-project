@@ -8405,6 +8405,8 @@ private:
     ///   resolution [...]
     CandidateSet.exclude(FD);
 
+   auto &Fns = this->Fns;
+
     if (Args[0]->getType()->isOverloadableType())
       S.LookupOverloadedBinOp(CandidateSet, OO, Fns, Args);
     else
@@ -9056,6 +9058,9 @@ bool Sema::CheckExplicitlyDefaultedComparison(Scope *S, FunctionDecl *FD,
 
   // Perform any unqualified lookups we're going to need to default this
   // function.
+  if (!S)
+    S = getScopeForContext(FD->getLexicalDeclContext());
+
   if (S) {
     UnresolvedSet<32> Operators;
     lookupOperatorsForDefaultedComparison(*this, S, Operators,
