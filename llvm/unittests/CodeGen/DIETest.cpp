@@ -260,4 +260,57 @@ TEST(DIETest, GetUnitDieWithoutUnit) {
   EXPECT_EQ(nullptr, Struct.getUnit());
 }
 
+TEST(DIETest, RemoveAndTakeChildren) {
+  BumpPtrAllocator Alloc;
+  auto CreateDIE = [&Alloc](dwarf::Tag Tag) { return DIE::get(Alloc, Tag); };
+  auto GetTags = [](const DIE &Parent) {
+    SmallVector<dwarf::Tag, 4> Tags;
+    for (const DIE &Child : Parent.children()) {
+      EXPECT_EQ(Child.getParent(), &Parent);
+      Tags.push_back(Child.getTag());
+    }
+    return Tags;
+  };
+
+  DIE *Parent = CreateDIE(dwarf::DW_TAG_subprogram);
+  DIE *Var = CreateDIE(dwarf::DW_TAG_variable);
+  Parent->addChild(Var);
+  DIE *Label = CreateDIE(dwarf::DW_TAG_label);
+  Parent->addChild(Label);
+
+  DIE *Pending = CreateDIE(dwarf::DW_TAG_lexical_block);
+  Pending->addChild(CreateDIE(dwarf::DW_TAG_structure_type));
+  Pending->addChild(CreateDIE(dwarf::DW_TAG_typedef));
+
+  // Move to the front.
+  Parent->takeChildren(*Pending, /*AtFront=*/true);
+  EXPECT_FALSE(Pending->hasChildren());
+  EXPECT_EQ(GetTags(*Parent),
+            (SmallVector<dwarf::Tag, 4>{
+                dwarf::DW_TAG_structure_type, dwarf::DW_TAG_typedef,
+                dwarf::DW_TAG_variable, dwarf::DW_TAG_label}));
+
+  // Remove the first child, a middle child and the last child.
+  Parent->removeChild(*Parent->children().begin());
+  Parent->removeChild(*Var);
+  Parent->removeChild(*Label);
+  EXPECT_EQ(Var->getParent(), nullptr);
+  EXPECT_EQ(Label->getParent(), nullptr);
+  EXPECT_EQ(GetTags(*Parent),
+            (SmallVector<dwarf::Tag, 4>{dwarf::DW_TAG_typedef}));
+
+  // Move to the back.
+  Pending->addChild(Var);
+  Pending->addChild(Label);
+  Parent->takeChildren(*Pending);
+  EXPECT_FALSE(Pending->hasChildren());
+  EXPECT_EQ(GetTags(*Parent), (SmallVector<dwarf::Tag, 4>{
+                                  dwarf::DW_TAG_typedef, dwarf::DW_TAG_variable,
+                                  dwarf::DW_TAG_label}));
+
+  // Moving from a DIE without children does nothing.
+  Parent->takeChildren(*Pending, /*AtFront=*/true);
+  EXPECT_EQ(GetTags(*Parent).size(), 3u);
+}
+
 } // end namespace
