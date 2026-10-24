@@ -13,6 +13,7 @@
 
 #include "AMDGPU.h"
 #include "AMDGPUCombinerHelper.h"
+#include "AMDGPUInstrInfo.h"
 #include "AMDGPULegalizerInfo.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
@@ -76,6 +77,9 @@ public:
                            FMinFMaxLegacyInfo &Info) const;
   void applySelectFCmpToFMinFMaxLegacy(MachineInstr &MI,
                                        const FMinFMaxLegacyInfo &Info) const;
+
+  bool matchPackedF8UnusedOld(MachineInstr &MI) const;
+  void applyPackedF8UnusedOld(MachineInstr &MI) const;
 
   bool matchUCharToFloat(MachineInstr &MI) const;
   void applyUCharToFloat(MachineInstr &MI) const;
@@ -276,6 +280,78 @@ void AMDGPUPostLegalizerCombinerImpl::applyFDivSqrtToRsqF16(
                      .getReg(0);
   B.buildFMul(Dst, RSQ, Y, Flags);
   MI.eraseFromParent();
+}
+
+// Operands: result, intrinsic ID, src0, src1, old, selector.
+static constexpr unsigned PackedF8OldIdx = 4;
+static constexpr unsigned PackedF8SelectorIdx = 5;
+
+static bool isPackedF8Conversion(const MachineInstr &MI) {
+  return MI.getOpcode() == TargetOpcode::G_INTRINSIC &&
+         AMDGPU::isPackedF8ConversionIntrinsic(
+             cast<GIntrinsic>(MI).getIntrinsicID());
+}
+
+static APInt getPackedF8PreservedOldBits(const MachineInstr &MI) {
+  return MI.getOperand(PackedF8SelectorIdx).getImm()
+             ? APInt::getLowBitsSet(32, 16)
+             : APInt::getHighBitsSet(32, 16);
+}
+
+static APInt getPackedF8UserDemandedBits(const MachineOperand &Use,
+                                         const MachineRegisterInfo &MRI) {
+  const MachineInstr &User = *Use.getParent();
+
+  if (isPackedF8Conversion(User) && &Use == &User.getOperand(PackedF8OldIdx))
+    return getPackedF8PreservedOldBits(User);
+
+  switch (User.getOpcode()) {
+  case TargetOpcode::G_TRUNC:
+    return APInt::getLowBitsSet(
+        32, MRI.getType(User.getOperand(0).getReg()).getSizeInBits());
+  case TargetOpcode::G_AND: {
+    unsigned OtherIdx = &Use == &User.getOperand(1) ? 2 : 1;
+    if (std::optional<ValueAndVReg> Mask = getIConstantVRegValWithLookThrough(
+            User.getOperand(OtherIdx).getReg(), MRI))
+      return Mask->Value.zextOrTrunc(32);
+    break;
+  }
+  default:
+    break;
+  }
+
+  return APInt::getAllOnes(32);
+}
+
+bool AMDGPUPostLegalizerCombinerImpl::matchPackedF8UnusedOld(
+    MachineInstr &MI) const {
+  Register Old = MI.getOperand(PackedF8OldIdx).getReg();
+  if (MRI.getVRegDef(Old)->getOpcode() == TargetOpcode::G_IMPLICIT_DEF)
+    return false;
+
+  Register Dst = MI.getOperand(0).getReg();
+  if (MRI.use_nodbg_empty(Dst))
+    return false;
+
+  APInt PreservedOldBits = getPackedF8PreservedOldBits(MI);
+  APInt UsersDemandedBits(32, 0);
+  for (const MachineOperand &Use : MRI.use_nodbg_operands(Dst)) {
+    if (!Use.isUndef())
+      UsersDemandedBits |= getPackedF8UserDemandedBits(Use, MRI);
+    if (UsersDemandedBits.intersects(PreservedOldBits))
+      return false;
+  }
+  return true;
+}
+
+void AMDGPUPostLegalizerCombinerImpl::applyPackedF8UnusedOld(
+    MachineInstr &MI) const {
+  B.setInstrAndDebugLoc(MI);
+  Register Old = MI.getOperand(PackedF8OldIdx).getReg();
+  Register Undef = B.buildUndef(MRI.getType(Old)).getReg(0);
+  Observer.changingInstr(MI);
+  MI.getOperand(PackedF8OldIdx).setReg(Undef);
+  Observer.changedInstr(MI);
 }
 
 bool AMDGPUPostLegalizerCombinerImpl::matchCvtF32UByteN(

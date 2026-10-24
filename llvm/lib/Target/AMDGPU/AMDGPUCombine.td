@@ -76,6 +76,18 @@ def fdiv_by_sqrt_to_rsq_f16 : GICombineRule<
          [{ return matchFDivSqrtToRsqF16(*${root}); }]),
   (apply [{ applyFDivSqrtToRsqF16(*${root}, ${x}.getReg()); }])>;
 
+def packed_f8_conversions : GICombinePatFrag<
+  (outs root:$dst), (ins),
+  !foreach(op, [int_amdgcn_cvt_pk_fp8_f32, int_amdgcn_cvt_pk_bf8_f32,
+                int_amdgcn_cvt_pk_fp8_f32_e5m3],
+           (pattern (op $dst, $src0, $src1, $old, $sel)))>;
+
+def packed_f8_unused_old : GICombineRule<
+  (defs root:$dst),
+  (match (packed_f8_conversions $dst):$root,
+         [{ return matchPackedF8UnusedOld(*${root}); }]),
+  (apply [{ applyPackedF8UnusedOld(*${root}); }])>;
+
 def cvt_f32_ubyteN_matchdata : GIDefMatchData<"CvtF32UByteMatchInfo">;
 
 def cvt_f32_ubyteN_frags : GICombinePatFrag<
@@ -342,7 +354,7 @@ def AMDGPUPreLegalizerCombiner: GICombiner<
 def AMDGPUPostLegalizerCombiner: GICombiner<
   "AMDGPUPostLegalizerCombinerImpl",
   [all_combines, gfx6gfx7_combines, gfx8_combines, combine_fmul_with_select_to_fldexp,
-   uchar_to_float, cvt_f32_ubyteN, remove_fcanonicalize, foldable_fneg,
+   uchar_to_float, packed_f8_unused_old, cvt_f32_ubyteN, remove_fcanonicalize, foldable_fneg,
    fold_fabs_fptrunc, rcp_sqrt_to_rsq, fdiv_by_sqrt_to_rsq_f16,
    sign_extension_in_reg, smulu64, trunc_lshr16_to_unmerge,
    binop_s64_with_s32_mask_combines, combine_or_s64_s32,
