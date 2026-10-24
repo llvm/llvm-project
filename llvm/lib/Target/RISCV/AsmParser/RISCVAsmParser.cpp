@@ -1410,6 +1410,11 @@ static MCRegister convertFPR64ToFPR256(MCRegister Reg) {
   return Reg - RISCV::F0_D + RISCV::F0_Q2;
 }
 
+static bool regClassIsYGPR(const MCRegisterClass &RC) {
+  assert(RC.getNumRegs() > 0);
+  return getRISCVMCRegisterClass(RISCV::YGPRRegClassID).contains(*RC.begin());
+}
+
 unsigned RISCVAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
                                                     unsigned Kind) {
   RISCVOperand &Op = static_cast<RISCVOperand &>(AsmOp);
@@ -1423,10 +1428,18 @@ unsigned RISCVAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
       getRISCVMCRegisterClass(RISCV::FPR64CRegClassID).contains(Reg);
   bool IsRegVR = getRISCVMCRegisterClass(RISCV::VRRegClassID).contains(Reg);
 
-  if (Op.isGPR() && Kind == MCK_YGPR) {
-    // GPR and capability GPR use the same register names, convert if required.
-    Op.Reg.Reg = convertGPRToYGPR(Reg);
-    return Match_Success;
+  // YGPR and GPR use the same register names in assembly, so convert GPR
+  // operands to YGPR when matching a YGPR register class (such as YGPRNoX0).
+  if (Op.isGPR()) {
+    const MCRegisterClass *RC =
+        getRegClassFromMatchKind(static_cast<MatchClassKind>(Kind));
+    if (RC && regClassIsYGPR(*RC)) {
+      MCRegister YReg = convertGPRToYGPR(Reg);
+      if (RC->contains(YReg)) {
+        Op.Reg.Reg = YReg;
+        return Match_Success;
+      }
+    }
   }
   if (IsRegFPR64 && Kind == MCK_FPR256) {
     Op.Reg.Reg = convertFPR64ToFPR256(Reg);
@@ -3368,6 +3381,10 @@ bool RISCVAsmParser::parseDirectiveOption() {
       auto Ext = llvm::lower_bound(AllFeatures, Feature);
       if (Ext == std::end(AllFeatures) || StringRef(Ext->key()) != Feature)
         return Error(Loc, "unknown extension feature");
+
+      if (Ext->Value == RISCV::FeatureStdExtY)
+        return Error(Loc, "passing '+y'/'-y' is not supported yet; specify a "
+                          "full arch string instead");
 
       Args.emplace_back(Type, Arch.str());
 
