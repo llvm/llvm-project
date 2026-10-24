@@ -404,6 +404,10 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FASIN(SDNode *N) {
   return SoftenFloatRes_Unary(N, RTLIB::getASIN(N->getValueType(0)));
 }
 
+SDValue DAGTypeLegalizer::SoftenFloatRes_FHYPOT(SDNode *N) {
+  return SoftenFloatRes_Binary(N, RTLIB::getHYPOT(N->getValueType(0)));
+}
+
 SDValue DAGTypeLegalizer::SoftenFloatRes_FATAN(SDNode *N) {
   return SoftenFloatRes_Unary(N, RTLIB::getATAN(N->getValueType(0)));
 }
@@ -1782,6 +1786,11 @@ void DAGTypeLegalizer::ExpandFloatRes_FASIN(SDNode *N, SDValue &Lo,
 void DAGTypeLegalizer::ExpandFloatRes_FATAN(SDNode *N, SDValue &Lo,
                                             SDValue &Hi) {
   ExpandFloatRes_Unary(N, RTLIB::getATAN(N->getValueType(0)), Lo, Hi);
+}
+
+void DAGTypeLegalizer::ExpandFloatRes_FHYPOT(SDNode *N, SDValue &Lo,
+                                             SDValue &Hi) {
+  ExpandFloatRes_Binary(N, RTLIB::getHYPOT(N->getValueType(0)), Lo, Hi);
 }
 
 void DAGTypeLegalizer::ExpandFloatRes_FATAN2(SDNode *N, SDValue &Lo,

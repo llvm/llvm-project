@@ -1068,6 +1068,7 @@ enum NodeType {
   FASIN,
   FACOS,
   FATAN,
+  FHYPOT,
   FSINH,
   FCOSH,
   FTANH,
