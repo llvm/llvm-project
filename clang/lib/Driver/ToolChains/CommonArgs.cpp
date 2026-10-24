@@ -810,6 +810,9 @@ std::string tools::getCPUName(const Driver &D, const ArgList &Args,
     return std::string(CPUName);
   }
 
+  case llvm::Triple::msp430:
+    return msp430::getMSP430TargetCPU(Args);
+
   case llvm::Triple::nvptx:
   case llvm::Triple::nvptx64:
     if (const Arg *A = Args.getLastArg(options::OPT_march_EQ))
