@@ -17,10 +17,13 @@
 #include "L0Trace.h"
 #include "PluginInterface.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MathExtras.h"
 
 #include <algorithm>
+#include <cstddef>
+#include <cstdint>
 #include <vector>
 
 namespace llvm::omp::target::plugin {
@@ -56,15 +59,25 @@ Error L0QueueTy::dispatchLaunchKernel(ze_kernel_handle_t Kernel,
   // Unlock KEnv lock after launching the kernel.
   llvm::scope_exit UnlockGuard([&KEnv]() { KEnv.Lock.unlock(); });
 
+  llvm::ArrayRef<void *> ArgsArr(KEnv.ArgPtrs, KEnv.NumArgs);
+  llvm::ArrayRef<int64_t> SizesArr(KEnv.ArgSizes, KEnv.NumArgs);
+  size_t SharedLocalMemorySize = KEnv.SharedLocalMemorySize;
+  auto &KernelProperties = KEnv.KernelPR;
+
   bool AppendLaunchKernelWithArgsAvailable =
       Device.getL0Context().LaunchKernelWithArguments.available();
 
   if (AppendLaunchKernelWithArgsAvailable &&
       Device.getL0Context().AppendLaunchKernelWithArgsSupported.load(
           std::memory_order_acquire)) {
+    auto ArgsVec = llvm::SmallVector<void *>(ArgsArr);
+    if (KEnv.SharedLocalMemorySize > 0) {
+      ArgsVec.push_back(&SharedLocalMemorySize);
+    }
+
     auto Err = CmdList->appendLaunchKernelWithArgs(
-        Kernel, &KEnv.GroupCounts, &KEnv.GroupSizes, KEnv.ArgPtrs, SignalEvent,
-        NumWaitEvents, WaitEvents, KEnv.IsCooperative);
+        Kernel, &KEnv.GroupCounts, &KEnv.GroupSizes, ArgsVec.data(),
+        SignalEvent, NumWaitEvents, WaitEvents, KEnv.IsCooperative);
 
     if (!Err)
       return Plugin::success();
@@ -80,7 +93,6 @@ Error L0QueueTy::dispatchLaunchKernel(ze_kernel_handle_t Kernel,
     // No Err - it was ErrorCode::UNSUPPORTED, continue into fallback
   }
 
-  auto &KernelProperties = KEnv.KernelPR;
   if (KernelProperties.NumKernelArgs > 0 &&
       (KEnv.ArgPtrs == nullptr || KEnv.ArgSizes == nullptr))
     return error::createOffloadError(
@@ -95,13 +107,14 @@ Error L0QueueTy::dispatchLaunchKernel(ze_kernel_handle_t Kernel,
   CALL_ZE_RET_ERROR(zeKernelSetGroupSize, Kernel, GroupSizes.groupSizeX,
                     GroupSizes.groupSizeY, GroupSizes.groupSizeZ);
 
-  for (uint32_t KernelArg = 0; KernelArg < KernelProperties.NumKernelArgs;
-       KernelArg++) {
-    uint32_t ArgSize = KEnv.ArgSizes[KernelArg];
+  for (uint32_t KernelArg = 0; KernelArg < KEnv.NumArgs; KernelArg++)
+    CALL_ZE_RET_ERROR(zeKernelSetArgumentValue, Kernel, KernelArg,
+                      SizesArr[KernelArg], ArgsArr[KernelArg]);
 
-    CALL_ZE_RET_ERROR(zeKernelSetArgumentValue, Kernel, KernelArg, ArgSize,
-                      KEnv.ArgPtrs[KernelArg]);
-  }
+  // Set SLM size as last kernel argument
+  if (SharedLocalMemorySize > 0)
+    CALL_ZE_RET_ERROR(zeKernelSetArgumentValue, Kernel, KEnv.NumArgs,
+                      SharedLocalMemorySize, nullptr);
 
   return CmdList->appendLaunchKernel(Kernel, &KEnv.GroupCounts, SignalEvent,
                                      NumWaitEvents, WaitEvents,

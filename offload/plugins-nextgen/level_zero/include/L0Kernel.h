@@ -44,12 +44,16 @@ struct L0LaunchEnvTy {
   bool IsCooperative = false;
   void **ArgPtrs = nullptr;
   int64_t *ArgSizes = nullptr;
+  uint32_t NumArgs = 0;
+  size_t SharedLocalMemorySize = 0;
   std::unique_lock<std::mutex> Lock;
 
   L0LaunchEnvTy(KernelPropertiesTy &KernelPR,
                 const KernelLaunchArgsTy &LaunchArgs)
       : KernelPR(KernelPR), IsCooperative(LaunchArgs.Flags.Cooperative),
         ArgPtrs(LaunchArgs.Args), ArgSizes(LaunchArgs.ArgSizes),
+        NumArgs(LaunchArgs.NumArgs),
+        SharedLocalMemorySize(LaunchArgs.DynCGroupMem),
         Lock(KernelPR.Mtx, std::defer_lock) {}
 };
 
