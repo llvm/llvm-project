@@ -186,8 +186,7 @@ computeNewReturnType(mlir::Type origRetTy, const ArgClassification &retInfo,
                 << "it in EmitFunctionEpilog)";
     return nullptr;
   case ArgKind::IndirectAliased:
-    emitError() << "IndirectAliased return is not allowed (classic codegen "
-                << "rejects it in EmitFunctionEpilog)";
+    emitError() << "IndirectAliased return is not supported";
     return nullptr;
   case ArgKind::Extend:
     // Same convention as Extend args: keep the original return type in the

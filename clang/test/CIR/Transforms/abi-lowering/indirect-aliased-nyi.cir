@@ -18,8 +18,7 @@ module attributes {
   cir.func private @ret_big() -> !rec_Big
       attributes { test_classify = #byref_return }
 
-  // CHECK: error: 'cir.func' op IndirectAliased return is not allowed
-  // CHECK-SAME: (classic codegen rejects it in EmitFunctionEpilog)
+  // CHECK: error: 'cir.func' op IndirectAliased return is not supported
 
 }
 
