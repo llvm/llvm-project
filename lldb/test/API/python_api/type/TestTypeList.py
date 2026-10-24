@@ -293,7 +293,6 @@ class TypeAndTypeListTestCase(TestBase):
         self.assertTrue(the_typedef)
         self.assertEqual(the_typedef.GetTypedefedType().GetName(), "int")
 
-    @expectedFailureWindows  # Dynamic type resolution not implemented
     def test_dynamic_values(self):
         """Test FindDirectNestedType on dynamic values"""
 

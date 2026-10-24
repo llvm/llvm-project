@@ -30,7 +30,6 @@ class DynamicValueChildCountTestCase(TestBase):
         )
 
     @add_test_categories(["pyapi"])
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24663")
     def test_get_dynamic_vals(self):
         """Test fetching C++ dynamic values from pointers & references."""
         """Get argument vals for the call stack when stopped on a breakpoint."""
@@ -65,12 +64,13 @@ class DynamicValueChildCountTestCase(TestBase):
         process = target.LaunchSimple(None, None, self.get_process_working_directory())
 
         self.assertState(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
-
+        self.runCmd("log enable lldb object")
         b = self.frame().FindVariable("b").GetDynamicValue(lldb.eDynamicCanRunTarget)
         self.assertEqual(b.GetNumChildren(), 0, "b has 0 children")
         self.runCmd("continue")
         self.assertEqual(b.GetNumChildren(), 0, "b still has 0 children")
         self.runCmd("continue")
+        print(b)
         self.assertNotEqual(b.GetNumChildren(), 0, "b now has 1 child")
         self.runCmd("continue")
         self.assertEqual(b.GetNumChildren(), 0, "b didn't go back to 0 children")
