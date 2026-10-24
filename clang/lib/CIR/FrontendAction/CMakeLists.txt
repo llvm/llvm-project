@@ -16,6 +16,7 @@ add_clang_library(clangCIRFrontendAction
   MLIRBuiltinLocationAttributesIncGen
   MLIRBytecodeOpInterfaceIncGen
   MLIRBuiltinOpsIncGen
+  mlir-headers
 
   LINK_LIBS
   clangAST
