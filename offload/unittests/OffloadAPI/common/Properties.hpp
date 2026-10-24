@@ -191,14 +191,14 @@ inline bool defaultCheckIsNonZero(char *Buffer) {
 template <typename T>
 inline std::string defaultPropertyTestPrinter(
     const ::testing::TestParamInfo<OffloadParam<SizedProperty<T>>> &info) {
-  auto Device = std::get<0>(info.param);
+  auto &Devices = std::get<0>(info.param);
   auto ParamData = std::get<1>(info.param);
 
   std::string TempStr;
   llvm::raw_string_ostream FinalName(TempStr);
 
   auto Prop = ParamData.Property;
-  FinalName << Device.Name << "__" << Prop;
+  FinalName << getDevicesName(Devices) << "__" << Prop;
 
   return SanitizeString(FinalName.str());
 }
@@ -219,8 +219,9 @@ struct olPropertyTest : OffloadDeviceTestWithParam<SizedProperty<T>> {
 };
 
 struct olGetHostDeviceInfoPropertyTest : olPropertyTest<ol_device_info_t> {
-  // Used when the fixture has been instantiated with getDevicesAndHost() in
-  // Fixtures.hpp instead of TestEnvironment::getDevices()
+  // Used when the fixture has been instantiated with
+  // allDevicesSeparatelyWithHost() in Fixtures.hpp instead of
+  // TestEnvironment::getDevices()
   bool isHost() { return Host == this->Device; }
 };
 

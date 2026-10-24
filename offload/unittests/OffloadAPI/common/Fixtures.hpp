@@ -8,10 +8,12 @@
 
 #include <OffloadAPI.h>
 #include <OffloadPrint.hpp>
+#include <algorithm>
 #include <gtest/gtest.h>
 #include <optional>
 #include <string>
 #include <thread>
+#include <vector>
 
 #include "Environment.hpp"
 #include "Shared/EnvironmentVar.h"
@@ -191,7 +193,9 @@ struct OffloadTest : ::testing::Test {
   ol_device_handle_t Host = TestEnvironment::getHostDevice();
 };
 
-template <class T> using OffloadParam = std::tuple<TestEnvironment::Device, T>;
+using DevicesVec = std::vector<TestEnvironment::Device>;
+
+template <class T> using OffloadParam = std::tuple<DevicesVec, T>;
 
 template <class T>
 struct OffloadDeviceTestWithParam
@@ -200,12 +204,16 @@ struct OffloadDeviceTestWithParam
   void SetUp() override {
     RETURN_ON_FATAL_FAILURE(OffloadTest::SetUp());
 
-    auto &DeviceParam = std::get<0>(this->GetParam());
-    Device = DeviceParam.Handle;
-    if (Device == nullptr)
+    for (const auto &DeviceParam : std::get<0>(this->GetParam())) {
+      if (DeviceParam.Handle == nullptr)
+        GTEST_SKIP() << "No available devices.";
+      Devices.push_back(DeviceParam.Handle);
+    }
+    if (Devices.empty())
       GTEST_SKIP() << "No available devices.";
+    Device = Devices.front();
 
-    ASSERT_SUCCESS(olCreateContext(1, &Device, &Context));
+    ASSERT_SUCCESS(olCreateContext(Devices.size(), Devices.data(), &Context));
   }
 
   void TearDown() override {
@@ -230,7 +238,8 @@ struct OffloadDeviceTestWithParam
 
   const T &getTestParam() { return std::get<1>(getParamTuple()); }
 
-  ol_device_handle_t Device = nullptr;
+  std::vector<ol_device_handle_t> Devices;
+  ol_device_handle_t Device = nullptr; // For single GPU tests
   ol_context_handle_t Context = nullptr;
 };
 
@@ -238,7 +247,7 @@ struct OffloadDeviceTestWithParam
 // are aliases for parameterized fixtures, with `int` type chosen arbitrarily as
 // an ignored parameter type. The single mock parameter of value `0` is combined
 // with the devices in the provided macros, yielding tuples
-// `std::tuple<TestEnvironment::Device, int>`. The hidden `int` parameter is not
+// `std::tuple<DevicesVec, int>`. The hidden `int` parameter is not
 // used, but it enables users to instantiate unparameterized tests without the
 // knowledge about the details related to the implementation of fixtures.
 // Moreover, it allows for modifying only one version of the fixture, without
@@ -388,36 +397,78 @@ struct LaunchSingleKernelTestBase : LaunchKernelTestBase {
   ol_symbol_handle_t Kernel = nullptr;
 };
 
-using DevicesVec = std::vector<TestEnvironment::Device>;
+using DeviceSetsVec = std::vector<DevicesVec>;
 
-inline DevicesVec getDevicesAndHost() {
-  DevicesVec Res(TestEnvironment::getDevices());
+// Every device as a separate, single-device set.
+inline DeviceSetsVec allDevicesSeparately() {
+  DeviceSetsVec Res;
+  for (const auto &Device : TestEnvironment::getDevices())
+    Res.push_back({Device});
+  return Res;
+}
+
+inline DeviceSetsVec allDevicesSeparatelyWithHost() {
+  DeviceSetsVec Res = allDevicesSeparately();
   TestEnvironment::Device Host{TestEnvironment::getHostDevice(), "HOST"};
 
-  Res.push_back(Host);
+  Res.push_back({Host});
 
   return Res;
+}
+
+// Vectors of devices that are compatible with one another
+inline DeviceSetsVec groupedCompatibleDevices() {
+  using KeyT = std::pair<ol_platform_handle_t, uint32_t>;
+  std::vector<std::pair<KeyT, DevicesVec>> Groups;
+  for (const auto &Device : TestEnvironment::getDevices()) {
+    KeyT Key{nullptr, 0};
+    if (olGetDeviceInfo(Device.Handle, OL_DEVICE_INFO_PLATFORM,
+                        sizeof(Key.first), &Key.first) ||
+        olGetDeviceInfo(Device.Handle, OL_DEVICE_INFO_DRIVER_ID,
+                        sizeof(Key.second), &Key.second))
+      continue;
+    auto It = std::find_if(Groups.begin(), Groups.end(),
+                           [&](const auto &G) { return G.first == Key; });
+    if (It == Groups.end())
+      Groups.push_back({Key, {Device}});
+    else
+      It->second.push_back(Device);
+  }
+
+  DeviceSetsVec Res;
+  for (auto &[Key, Devices] : Groups)
+    if (Devices.size() > 1)
+      Res.push_back(std::move(Devices));
+  return Res;
+}
+
+inline std::string getDevicesName(const DevicesVec &Devices) {
+  std::string Name;
+  for (const auto &Device : Devices) {
+    if (!Name.empty())
+      Name += "__";
+    Name += Device.Name;
+  }
+  return Name;
 }
 
 template <class T>
 inline std::string
 defaultPrinterWithParam(const ::testing::TestParamInfo<OffloadParam<T>> &info) {
-  auto device = std::get<0>(info.param);
+  auto &Devices = std::get<0>(info.param);
   auto param = std::get<1>(info.param);
 
   std::string placeholder;
   llvm::raw_string_ostream ss(placeholder);
 
-  ss << device.Name << "__" << param;
+  ss << getDevicesName(Devices) << "__" << param;
 
   return SanitizeString(ss.str());
 }
 
 inline std::string
 defaultPrinter(const ::testing::TestParamInfo<OffloadParam<int>> &info) {
-  auto device = std::get<0>(info.param);
-
-  return SanitizeString(device.Name);
+  return SanitizeString(getDevicesName(std::get<0>(info.param)));
 }
 
 // Devices might not be available for offload testing, so allow uninstantiated
@@ -431,26 +482,34 @@ defaultPrinter(const ::testing::TestParamInfo<OffloadParam<int>> &info) {
   GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(FIXTURE)
 
 #define OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(FIXTURE)                      \
-  OFFLOAD_TESTS_INSTANTIATE_WITH_DEVICES(FIXTURE, TestEnvironment::getDevices())
+  OFFLOAD_TESTS_INSTANTIATE_WITH_DEVICES(FIXTURE, allDevicesSeparately())
 
 #define OFFLOAD_TESTS_INSTANTIATE_HOST_DEVICE_FIXTURE(FIXTURE)                 \
-  OFFLOAD_TESTS_INSTANTIATE_WITH_DEVICES(FIXTURE, getDevicesAndHost())
+  OFFLOAD_TESTS_INSTANTIATE_WITH_DEVICES(FIXTURE,                              \
+                                         allDevicesSeparatelyWithHost())
+
+#define OFFLOAD_TESTS_INSTANTIATE_MULTI_DEVICE_FIXTURE(FIXTURE)                \
+  OFFLOAD_TESTS_INSTANTIATE_WITH_DEVICES(FIXTURE, groupedCompatibleDevices())
 
 #define OFFLOAD_TESTS_INSTANTIATE_WITH_DEVICES_WITH_PARAM(FIXTURE, VALUES,     \
                                                           DEVICES, PRINTER)    \
-  INSTANTIATE_TEST_SUITE_P(                                                    \
-      , FIXTURE,                                                               \
-      testing::Combine(::testing::ValuesIn(TestEnvironment::getDevices()),     \
-                       ::testing::ValuesIn(VALUES)),                           \
-      PRINTER);                                                                \
+  INSTANTIATE_TEST_SUITE_P(, FIXTURE,                                          \
+                           testing::Combine(::testing::ValuesIn(DEVICES),      \
+                                            ::testing::ValuesIn(VALUES)),      \
+                           PRINTER);                                           \
   GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(FIXTURE)
 
 #define OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE_WITH_PARAM(FIXTURE, VALUES,   \
                                                             PRINTER)           \
   OFFLOAD_TESTS_INSTANTIATE_WITH_DEVICES_WITH_PARAM(                           \
-      FIXTURE, VALUES, TestEnvironment::getDevices(), PRINTER)
+      FIXTURE, VALUES, allDevicesSeparately(), PRINTER)
 
 #define OFFLOAD_TESTS_INSTANTIATE_HOST_DEVICE_FIXTURE_WITH_PARAM(              \
     FIXTURE, VALUES, PRINTER)                                                  \
   OFFLOAD_TESTS_INSTANTIATE_WITH_DEVICES_WITH_PARAM(                           \
-      FIXTURE, VALUES, getDevicesAndHost(), PRINTER)
+      FIXTURE, VALUES, allDevicesSeparatelyWithHost(), PRINTER)
+
+#define OFFLOAD_TESTS_INSTANTIATE_MULTI_DEVICE_FIXTURE_WITH_PARAM(             \
+    FIXTURE, VALUES, PRINTER)                                                  \
+  OFFLOAD_TESTS_INSTANTIATE_WITH_DEVICES_WITH_PARAM(                           \
+      FIXTURE, VALUES, groupedCompatibleDevices(), PRINTER)

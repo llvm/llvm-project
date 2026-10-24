@@ -41,6 +41,26 @@ struct olMemcpyGlobalTest : OffloadGlobalTest {
 };
 OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olMemcpyGlobalTest);
 
+struct olMemcpyMultiDeviceTest : OffloadDeviceTest {
+  void SetUp() override {
+    RETURN_ON_FATAL_FAILURE(OffloadDeviceTest::SetUp());
+    for (auto D : Devices) {
+      ol_queue_handle_t Queue = nullptr;
+      ASSERT_SUCCESS(olCreateQueue(Context, D, &Queue));
+      Queues.push_back(Queue);
+    }
+  }
+
+  void TearDown() override {
+    for (auto Queue : Queues)
+      olDestroyQueue(Queue);
+    RETURN_ON_FATAL_FAILURE(OffloadDeviceTest::TearDown());
+  }
+
+  std::vector<ol_queue_handle_t> Queues;
+};
+OFFLOAD_TESTS_INSTANTIATE_MULTI_DEVICE_FIXTURE(olMemcpyMultiDeviceTest);
+
 TEST_P(olMemcpyTest, SuccessHtoD) {
   constexpr size_t Size = 1024;
   void *Alloc;
@@ -307,4 +327,108 @@ TEST_P(olMemcpyGlobalTest, SuccessRead) {
     ASSERT_EQ(DestData[I], I * 2);
 
   ASSERT_SUCCESS(olMemFree(Context, DestMem));
+}
+
+TEST_P(olMemcpyMultiDeviceTest, SuccessDtoD) {
+  constexpr size_t Size = 1024;
+
+  for (size_t Src = 0; Src < Devices.size(); ++Src) {
+    for (size_t Dst = 0; Dst < Devices.size(); ++Dst) {
+      if (Src == Dst)
+        continue;
+      SCOPED_TRACE("Device #" + std::to_string(Src) + " -> Device #" +
+                   std::to_string(Dst));
+      ol_device_handle_t SrcDevice = Devices[Src];
+      ol_device_handle_t DstDevice = Devices[Dst];
+      ol_queue_handle_t Queue = Queues[Src];
+
+      void *SrcAlloc;
+      void *DstAlloc;
+      std::vector<uint8_t> Input(Size, static_cast<uint8_t>(Src + 1));
+      std::vector<uint8_t> Output(Size, 0);
+
+      ASSERT_SUCCESS(olMemAlloc(Context, SrcDevice, OL_ALLOC_TYPE_DEVICE, Size,
+                                &SrcAlloc));
+      ASSERT_SUCCESS(olMemAlloc(Context, DstDevice, OL_ALLOC_TYPE_DEVICE, Size,
+                                &DstAlloc));
+      ASSERT_SUCCESS(
+          olMemcpy(Queue, SrcAlloc, SrcDevice, Input.data(), Host, Size));
+      ASSERT_SUCCESS(
+          olMemcpy(Queue, DstAlloc, DstDevice, SrcAlloc, SrcDevice, Size));
+      ASSERT_SUCCESS(
+          olMemcpy(Queue, Output.data(), Host, DstAlloc, DstDevice, Size));
+      ASSERT_SUCCESS(olSyncQueue(Queue));
+      for (uint8_t Val : Output)
+        ASSERT_EQ(Val, Src + 1);
+
+      ASSERT_SUCCESS(olMemFree(Context, DstAlloc));
+      ASSERT_SUCCESS(olMemFree(Context, SrcAlloc));
+    }
+  }
+}
+
+TEST_P(olMemcpyMultiDeviceTest, SuccessDtoDSync) {
+  constexpr size_t Size = 1024;
+
+  for (size_t Src = 0; Src < Devices.size(); ++Src) {
+    for (size_t Dst = 0; Dst < Devices.size(); ++Dst) {
+      if (Src == Dst)
+        continue;
+      SCOPED_TRACE("Device #" + std::to_string(Src) + " -> Device #" +
+                   std::to_string(Dst));
+      ol_device_handle_t SrcDevice = Devices[Src];
+      ol_device_handle_t DstDevice = Devices[Dst];
+
+      void *SrcAlloc;
+      void *DstAlloc;
+      std::vector<uint8_t> Input(Size, static_cast<uint8_t>(Src + 1));
+      std::vector<uint8_t> Output(Size, 0);
+
+      ASSERT_SUCCESS(olMemAlloc(Context, SrcDevice, OL_ALLOC_TYPE_DEVICE, Size,
+                                &SrcAlloc));
+      ASSERT_SUCCESS(olMemAlloc(Context, DstDevice, OL_ALLOC_TYPE_DEVICE, Size,
+                                &DstAlloc));
+      ASSERT_SUCCESS(
+          olMemcpy(nullptr, SrcAlloc, SrcDevice, Input.data(), Host, Size));
+      ASSERT_SUCCESS(
+          olMemcpy(nullptr, DstAlloc, DstDevice, SrcAlloc, SrcDevice, Size));
+      ASSERT_SUCCESS(
+          olMemcpy(nullptr, Output.data(), Host, DstAlloc, DstDevice, Size));
+      for (uint8_t Val : Output)
+        ASSERT_EQ(Val, Src + 1);
+
+      ASSERT_SUCCESS(olMemFree(Context, DstAlloc));
+      ASSERT_SUCCESS(olMemFree(Context, SrcAlloc));
+    }
+  }
+}
+
+TEST_P(olMemcpyMultiDeviceTest, SuccessDtoDChain) {
+  constexpr size_t Size = 1024;
+  std::vector<void *> Allocs(Devices.size(), nullptr);
+  std::vector<uint8_t> Input(Size, 42);
+  std::vector<uint8_t> Output(Size, 0);
+
+  for (size_t I = 0; I < Devices.size(); ++I)
+    ASSERT_SUCCESS(olMemAlloc(Context, Devices[I], OL_ALLOC_TYPE_DEVICE, Size,
+                              &Allocs[I]));
+
+  // Pass the data through every device in turn, each copy enqueued on the queue
+  // of the source device and synchronized before the next one starts.
+  ASSERT_SUCCESS(
+      olMemcpy(Queues[0], Allocs[0], Devices[0], Input.data(), Host, Size));
+  ASSERT_SUCCESS(olSyncQueue(Queues[0]));
+  for (size_t I = 1; I < Devices.size(); ++I) {
+    ASSERT_SUCCESS(olMemcpy(Queues[I - 1], Allocs[I], Devices[I], Allocs[I - 1],
+                            Devices[I - 1], Size));
+    ASSERT_SUCCESS(olSyncQueue(Queues[I - 1]));
+  }
+  ASSERT_SUCCESS(olMemcpy(Queues.back(), Output.data(), Host, Allocs.back(),
+                          Devices.back(), Size));
+  ASSERT_SUCCESS(olSyncQueue(Queues.back()));
+  for (uint8_t Val : Output)
+    ASSERT_EQ(Val, 42);
+
+  for (void *Alloc : Allocs)
+    ASSERT_SUCCESS(olMemFree(Context, Alloc));
 }
