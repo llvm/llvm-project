@@ -11,38 +11,38 @@
 ## so .plt is writable and DT_PLTGOT points at it, and .rela.plt names .plt in
 ## its sh_info.
 # CHECK: [ 5] .rela.plt RELA {{[0-9a-f]+}} {{[0-9a-f]+}} 000048 18 AI 1 7 8
-# CHECK: [ 7] .plt PROGBITS 0000000000300320 {{[0-9a-f]+}} 0000e0 00 WAX
-# CHECK: (PLTGOT) 0x300320
+# CHECK: [ 7] .plt PROGBITS 0000000000300400 {{[0-9a-f]+}} 0000e0 00 WAX 0 0 256
+# CHECK: (PLTGOT) 0x300400
 
 ## R_SPARC_JMP_SLOT applies to the PLT entry rather than to a .got.plt slot.
 # CHECK:      Relocation section '.rela.plt' {{.*}} contains 3 entries:
-# CHECK:      00000000003003a0 {{.*}} R_SPARC_JMP_SLOT {{.*}} weak + 0
-# CHECK-NEXT: 00000000003003c0 {{.*}} R_SPARC_JMP_SLOT {{.*}} bar + 0
-# CHECK-NEXT: 00000000003003e0 {{.*}} R_SPARC_JMP_SLOT {{.*}} foo + 0
+# CHECK:      0000000000300480 {{.*}} R_SPARC_JMP_SLOT {{.*}} weak + 0
+# CHECK-NEXT: 00000000003004a0 {{.*}} R_SPARC_JMP_SLOT {{.*}} bar + 0
+# CHECK-NEXT: 00000000003004c0 {{.*}} R_SPARC_JMP_SLOT {{.*}} foo + 0
 
 # CHECK:      0000000000000000 0 FUNC WEAK   DEFAULT UND weak
 # CHECK-NEXT: 0000000000000000 0 FUNC GLOBAL DEFAULT UND bar
-# CHECK-NEXT: 00000000003003e0 0 FUNC GLOBAL DEFAULT UND foo
+# CHECK-NEXT: 00000000003004c0 0 FUNC GLOBAL DEFAULT UND foo
 
 # DIS:      <_start>:
-# DIS-NEXT:   call 0x3003c0
+# DIS-NEXT:   call 0x3004a0
 # DIS-NEXT:   nop
-# DIS-NEXT:   call 0x3003a0
+# DIS-NEXT:   call 0x300480
 # DIS-NEXT:   nop
 
 ## The four reserved entries are left zeroed, as GNU ld leaves them. The
 ## dynamic linker writes the resolver code into .PLT0 and .PLT1 at startup.
-# DIS:          0000000000300320 <.plt>:
+# DIS:          0000000000300400 <.plt>:
 # DIS-COUNT-32:   unimp 0
 
 ## Each entry puts its own offset from .plt into %g1 and branches to .PLT1,
 ## which the dynamic linker redirects to the resolver.
-# DIS-NEXT:   3003a0: 03 00 00 80 sethi 128, %g1
-# DIS-NEXT:           30 6f ff e7 ba,a %xcc, 0x300340
-# DIS:        3003c0: 03 00 00 a0 sethi 160, %g1
-# DIS-NEXT:           30 6f ff df ba,a %xcc, 0x300340
-# DIS:        3003e0: 03 00 00 c0 sethi 192, %g1
-# DIS-NEXT:           30 6f ff d7 ba,a %xcc, 0x300340
+# DIS-NEXT:   300480: 03 00 00 80 sethi 128, %g1
+# DIS-NEXT:           30 6f ff e7 ba,a %xcc, 0x300420
+# DIS:        3004a0: 03 00 00 a0 sethi 160, %g1
+# DIS-NEXT:           30 6f ff df ba,a %xcc, 0x300420
+# DIS:        3004c0: 03 00 00 c0 sethi 192, %g1
+# DIS-NEXT:           30 6f ff d7 ba,a %xcc, 0x300420
 
 #--- a.s
 .globl _start
