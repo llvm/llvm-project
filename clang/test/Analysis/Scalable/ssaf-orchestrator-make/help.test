@@ -7,10 +7,12 @@
 # CHECK: --extract-summaries
 # CHECK: --ssaf-clang
 # CHECK: --analysis
+# CHECK: --transformation
 
 # RUN: %clang-ssaf-orchestrator-make --help | FileCheck %s --check-prefix=SSAF
 # SSAF: --ssaf-linker
 # SSAF: --ssaf-analyzer
+# SSAF: --ssaf-src-edit-merge
 # SSAF: --ssaf-extra-clang-arg
 # SSAF: --keep-going
 # SSAF: --verbose

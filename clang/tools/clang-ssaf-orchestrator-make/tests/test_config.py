@@ -13,6 +13,9 @@ from . import configs
 class Passes(unittest.TestCase):
     def test_a_pass_names_its_own_configuration_file(self):
         self.assertEqual("config-analysis.json", configs.analysis_config().file_name)
+        self.assertEqual(
+            "config-transformation.json", configs.transformation_config().file_name
+        )
 
     def test_a_pass_kind_is_stored_as_its_plain_string(self):
         written = json.loads(json.dumps(configs.analysis_config().to_json()))
@@ -30,10 +33,36 @@ class Passes(unittest.TestCase):
             },
             set(configs.analysis_config().to_json()),
         )
+        self.assertEqual(
+            {
+                "pass_kind",
+                "ssaf_clang",
+                "ssaf_extra_clang_args",
+                "ssaf_src_edit_merge",
+                "transformation",
+                "link_unit_id",
+            },
+            set(configs.transformation_config().to_json()),
+        )
 
     def test_a_pass_knows_nothing_of_the_run_it_belongs_to(self):
         run_only = config.SSAFWorkflowConfig.written_field_names()
-        self.assertEqual(set(), run_only & set(configs.analysis_config().to_json()))
+        for pass_config in configs.pass_configs():
+            self.assertEqual(set(), run_only & set(pass_config.to_json()), pass_config)
+
+    def test_both_passes_compile_so_both_carry_the_clang(self):
+        for pass_config in (
+            configs.analysis_config(ssaf_extra_clang_args=["-DX"]),
+            configs.transformation_config(ssaf_extra_clang_args=["-DX"]),
+        ):
+            self.assertEqual("/bin/clang", pass_config.ssaf_clang)
+            self.assertEqual(["-DX"], pass_config.ssaf_extra_clang_args)
+
+    def test_the_link_unit_is_named_after_the_analysis_build(self):
+        transformation_config = configs.transformation_config()
+        self.assertIsNone(transformation_config.link_unit_id)
+        transformation_config.name_link_unit("build/prg")
+        self.assertEqual("build/prg", transformation_config.link_unit_id)
 
 
 class OutputDirPaths(unittest.TestCase):
@@ -80,6 +109,25 @@ class WorkflowConfig(unittest.TestCase):
 
     def test_an_absent_path_is_empty_so_the_live_path_is_never_searched(self):
         self.assertEqual("", config.SSAFWorkflowConfig().restored_path_env_var)
+
+
+class Serialization(unittest.TestCase):
+    def test_each_pass_file_carries_only_that_pass(self):
+        analysis_config, transformation_config = configs.pass_configs()
+        first = analysis_config.to_json()
+        second = transformation_config.to_json()
+        self.assertEqual(
+            {"extractors", "ssaf_linker", "analyses"}, set(first) - set(second)
+        )
+        self.assertEqual(
+            {"ssaf_src_edit_merge", "transformation", "link_unit_id"},
+            set(second) - set(first),
+        )
+        self.assertEqual(
+            {"pass_kind", "ssaf_clang", "ssaf_extra_clang_args"},
+            set(first) & set(second),
+        )
+        self.assertNotEqual(first["pass_kind"], second["pass_kind"])
 
 
 if __name__ == "__main__":

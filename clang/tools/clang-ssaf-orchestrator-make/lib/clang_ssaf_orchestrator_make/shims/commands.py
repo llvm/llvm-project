@@ -32,9 +32,13 @@ def filter_build_artifacts(build_graph, ssaf_artifact_repo, cwd, files):
     kept = []
     for each in files:
         build_artifact_id = BuildArtifactId(os.path.join(cwd, each))
-        if artifact_of(
-            ssaf_artifact_repo, build_artifact_id, SSAFArtifactKind.SUMMARY
-        ) or build_graph.was_built(build_artifact_id):
+        if (
+            artifact_of(ssaf_artifact_repo, build_artifact_id, SSAFArtifactKind.SUMMARY)
+            or artifact_of(
+                ssaf_artifact_repo, build_artifact_id, SSAFArtifactKind.EDITS
+            )
+            or build_graph.was_built(build_artifact_id)
+        ):
             kept.append(build_artifact_id)
     return kept
 
