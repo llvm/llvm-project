@@ -149,7 +149,8 @@ TEST(LlvmLibcMemChrTest, NoFalseMatchWithZeroOrNegativeByteAtOddOffset) {
   for (size_t i = 0; i < sizeof(buf); ++i)
     buf[i] = 0x11;
 
-  // Odd offset has 0x00 and 0xFF; searching for 'A' (0x41) must not false-match.
+  // Odd offset has 0x00 and 0xFF; searching for 'A' (0x41) must not
+  // false-match.
   buf[1] = 0x00;
   buf[3] = 0xFF;
   ASSERT_STREQ(call_memchr(buf, 'A', sizeof(buf)), nullptr);
