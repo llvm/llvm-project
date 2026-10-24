@@ -392,7 +392,7 @@ std::optional<APInt> constantTripCount(
 
     /// Non-constant bound, let's try to compute the difference between the
     /// upper and lower bound
-    std::optional<llvm::APInt> maybeDiff =
+    std::optional<llvm::APSInt> maybeDiff =
         computeUbMinusLb(cast<Value>(lb), cast<Value>(ub), isSigned);
     if (!maybeDiff)
       return std::nullopt;
