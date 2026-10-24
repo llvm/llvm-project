@@ -28,6 +28,7 @@
 
 #include "AGX.h"
 #include "Utils/AGXBaseInfo.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
@@ -75,6 +76,41 @@ static uint64_t tagOf(unsigned AS) {
   return 0;
 }
 
+/// Address-space inference can put casts in constants, including comparison
+/// operands, vectors and phi incoming values. Give these the same lowering as
+/// instruction casts, rather than leaving an unselectable addrspacecast DAG.
+static bool expandConstantLocalCasts(Function &F) {
+  SmallVector<Constant *, 16> Work;
+  SmallPtrSet<Constant *, 16> Seen;
+  SmallVector<Constant *, 8> Casts;
+  auto Push = [&](Value *V) {
+    if (auto *C = dyn_cast<Constant>(V);
+        C && (isa<ConstantExpr>(C) || isa<ConstantAggregate>(C)) &&
+        Seen.insert(C).second)
+      Work.push_back(C);
+  };
+  for (Instruction &I : instructions(F))
+    for (Value *V : I.operands())
+      Push(V);
+  while (!Work.empty()) {
+    Constant *C = Work.pop_back_val();
+    if (auto *CE = dyn_cast<ConstantExpr>(C);
+        CE && CE->getOpcode() == Instruction::AddrSpaceCast &&
+        CE->getType()->isPointerTy()) {
+      unsigned Src = CE->getOperand(0)->getType()->getPointerAddressSpace();
+      unsigned Dst = CE->getType()->getPointerAddressSpace();
+      if ((Dst == Generic && tagOf(Src)) || (Src == Generic && tagOf(Dst)))
+        Casts.push_back(CE);
+    }
+    for (Value *V : C->operands())
+      Push(V);
+  }
+  // Selected expressions may use each other. Keep the constant DAG alive
+  // while the helper walks the roots; normal constant cleanup can reclaim it.
+  return convertUsersOfConstantsToInstructions(
+      Casts, &F, /*RemoveDeadConstants=*/false, /*IncludeSelf=*/true);
+}
+
 /// The pointer operand of a generic memory access, or null.
 static Value *genericPointer(Instruction &I) {
   Value *P = nullptr;
@@ -107,7 +143,8 @@ bool AGXLowerGenericAddresses::runOnFunction(Function &F) {
   for (GlobalVariable &G : F.getParent()->globals())
     if (G.getAddressSpace() == AGX::THREADGROUP_ADDRESS)
       Consts.push_back(&G);
-  convertUsersOfConstantsToInstructions(Consts, &F);
+  bool Changed = convertUsersOfConstantsToInstructions(Consts, &F);
+  Changed |= expandConstantLocalCasts(F);
 
   SmallVector<AddrSpaceCastInst *, 8> ToGeneric, FromGeneric;
   bool HasShared = false, HasPrivate = false;
@@ -122,7 +159,7 @@ bool AGXLowerGenericAddresses::runOnFunction(Function &F) {
       }
     }
   if (ToGeneric.empty() && FromGeneric.empty())
-    return false;
+    return Changed;
 
   LLVMContext &Ctx = F.getContext();
   Type *I64 = Type::getInt64Ty(Ctx), *I32 = Type::getInt32Ty(Ctx);
