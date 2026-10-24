@@ -4070,21 +4070,14 @@ define i64 @slx_i64(i64 %a, i64 %b, i64 %shamt) {
 ; RV32-LABEL: slx_i64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    slli a5, a4, 26
-; RV32-NEXT:    srli a6, a5, 31
-; RV32-NEXT:    mv a5, a0
-; RV32-NEXT:    bnez a6, .LBB215_2
-; RV32-NEXT:  # %bb.1:
-; RV32-NEXT:    mv a2, a3
-; RV32-NEXT:    mv a3, a5
-; RV32-NEXT:  .LBB215_2:
-; RV32-NEXT:    mv a0, a3
-; RV32-NEXT:    slx a0, a2, a4
-; RV32-NEXT:    bnez a6, .LBB215_4
-; RV32-NEXT:  # %bb.3:
-; RV32-NEXT:    mv a5, a1
-; RV32-NEXT:  .LBB215_4:
-; RV32-NEXT:    slx a5, a3, a4
-; RV32-NEXT:    mv a1, a5
+; RV32-NEXT:    mv a6, a0
+; RV32-NEXT:    slx a1, a0, a4
+; RV32-NEXT:    slx a6, a3, a4
+; RV32-NEXT:    slx a3, a2, a4
+; RV32-NEXT:    srai a5, a5, 31
+; RV32-NEXT:    mv a0, a5
+; RV32-NEXT:    merge a0, a6, a3
+; RV32-NEXT:    mvm a1, a6, a5
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: slx_i64:
@@ -4136,24 +4129,15 @@ define i64 @slxi_i64_large(i64 %a, i64 %b) {
 define i64 @srx_i64(i64 %a, i64 %b, i64 %shamt) {
 ; RV32-LABEL: srx_i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    andi a6, a4, 32
-; RV32-NEXT:    beqz a6, .LBB218_2
-; RV32-NEXT:  # %bb.1:
-; RV32-NEXT:    mv a5, a0
+; RV32-NEXT:    srx a2, a3, a4
 ; RV32-NEXT:    srx a3, a0, a4
-; RV32-NEXT:    bnez a6, .LBB218_3
-; RV32-NEXT:    j .LBB218_4
-; RV32-NEXT:  .LBB218_2:
-; RV32-NEXT:    mv a5, a3
-; RV32-NEXT:    mv a3, a2
-; RV32-NEXT:    srx a3, a5, a4
-; RV32-NEXT:    beqz a6, .LBB218_4
-; RV32-NEXT:  .LBB218_3:
-; RV32-NEXT:    mv a0, a1
-; RV32-NEXT:  .LBB218_4:
-; RV32-NEXT:    srx a5, a0, a4
-; RV32-NEXT:    mv a0, a3
+; RV32-NEXT:    slli a5, a4, 26
+; RV32-NEXT:    srai a5, a5, 31
+; RV32-NEXT:    srx a0, a1, a4
+; RV32-NEXT:    mvm a2, a3, a5
 ; RV32-NEXT:    mv a1, a5
+; RV32-NEXT:    merge a1, a3, a0
+; RV32-NEXT:    mv a0, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: srx_i64:
