@@ -16,69 +16,52 @@ define void @pr43326() {
 ; CHECK:       [[OUTER_PREHEADER]]:
 ; CHECK-NEXT:    [[D_PROMOTED:%.*]] = load i32, ptr @d, align 4
 ; CHECK-NEXT:    [[A_PROMOTED:%.*]] = load i32, ptr @a, align 4
-; CHECK-NEXT:    br label %[[OUTER_HEADER:.*]]
-; CHECK:       [[OUTER_HEADER]]:
-; CHECK-NEXT:    [[INC1312:%.*]] = phi i32 [ [[A_PROMOTED]], %[[OUTER_PREHEADER]] ], [ [[INC13:%.*]], %[[FOR_INC12:.*]] ]
-; CHECK-NEXT:    [[XOR_LCSSA_LCSSA11:%.*]] = phi i32 [ [[D_PROMOTED]], %[[OUTER_PREHEADER]] ], [ [[XOR_LCSSA_LCSSA:%.*]], %[[FOR_INC12]] ]
 ; CHECK-NEXT:    br label %[[INNER1_HEADER_PREHEADER:.*]]
 ; CHECK:       [[INNER1_HEADER_PREHEADER]]:
+; CHECK-NEXT:    [[INC1312:%.*]] = phi i32 [ [[A_PROMOTED]], %[[OUTER_PREHEADER]] ], [ [[INC13:%.*]], %[[FOR_INC12:.*]] ]
+; CHECK-NEXT:    [[XOR_LCSSA_LCSSA11:%.*]] = phi i32 [ [[D_PROMOTED]], %[[OUTER_PREHEADER]] ], [ [[XOR_LCSSA_LCSSA:%.*]], %[[FOR_INC12]] ]
 ; CHECK-NEXT:    br label %[[INNER1_HEADER:.*]]
 ; CHECK:       [[INNER1_HEADER]]:
-; CHECK-NEXT:    [[J:%.*]] = phi i8 [ [[TMP5:%.*]], %[[FOR_INC10_SPLIT:.*]] ], [ 0, %[[INNER1_HEADER_PREHEADER]] ]
-; CHECK-NEXT:    [[INTERCHANGE_IV7:%.*]] = phi i8 [ 0, %[[INNER1_HEADER_PREHEADER]] ], [ [[TMP7:%.*]], %[[FOR_INC10_SPLIT]] ]
-; CHECK-NEXT:    [[XOR_LCSSA9:%.*]] = phi i32 [ [[XOR_LCSSA:%.*]], %[[FOR_INC10_SPLIT]] ], [ [[XOR_LCSSA_LCSSA11]], %[[INNER1_HEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[XOR_LCSSA9:%.*]] = phi i32 [ [[XOR_LCSSA_LCSSA11]], %[[INNER1_HEADER_PREHEADER]] ], [ [[XOR_LCSSA:%.*]], %[[FOR_INC_SPLIT:.*]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV:%.*]] = phi i32 [ [[INTERCHANGE_IV_NEXT:%.*]], %[[FOR_INC_SPLIT]] ], [ 0, %[[INNER1_HEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[K:%.*]] = phi i32 [ [[K_NEXT5:%.*]], %[[FOR_INC_SPLIT]] ], [ 0, %[[INNER1_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[INNER2_HEADER_PREHEADER:.*]]
-; CHECK:       [[INNER1_HEADER_SPLIT:.*]]:
-; CHECK-NEXT:    [[IDXPROM8:%.*]] = sext i8 [[J]] to i64
-; CHECK-NEXT:    br label %[[INNER2_HEADER_SPLIT:.*]]
 ; CHECK:       [[INNER2_HEADER_PREHEADER]]:
-; CHECK-NEXT:    br label %[[INNER2_HEADER:.*]]
-; CHECK:       [[INNER2_HEADER]]:
-; CHECK-NEXT:    [[K:%.*]] = phi i32 [ [[TMP2:%.*]], %[[FOR_INC_SPLIT:.*]] ], [ 0, %[[INNER2_HEADER_PREHEADER]] ]
-; CHECK-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i32 [ [[TMP8:%.*]], %[[FOR_INC_SPLIT]] ], [ 0, %[[INNER2_HEADER_PREHEADER]] ]
-; CHECK-NEXT:    [[INTERCHANGE_IV4:%.*]] = phi i32 [ 0, %[[INNER2_HEADER_PREHEADER]] ], [ [[INTERCHANGE_IV_NEXT5:%.*]], %[[FOR_INC_SPLIT]] ]
-; CHECK-NEXT:    [[XOR5:%.*]] = phi i32 [ [[XOR:%.*]], %[[FOR_INC_SPLIT]] ], [ [[XOR_LCSSA9]], %[[INNER2_HEADER_PREHEADER]] ]
-; CHECK-NEXT:    br label %[[INNER1_HEADER_SPLIT]]
-; CHECK:       [[INNER2_HEADER_SPLIT]]:
+; CHECK-NEXT:    [[XOR5:%.*]] = phi i32 [ [[XOR_LCSSA9]], %[[INNER1_HEADER]] ], [ [[XOR:%.*]], %[[FOR_END:.*]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i8 [ [[INTERCHANGE_IV_NEXT2:%.*]], %[[FOR_END]] ], [ 0, %[[INNER1_HEADER]] ]
+; CHECK-NEXT:    [[J:%.*]] = phi i8 [ [[J_NEXT4:%.*]], %[[FOR_END]] ], [ 0, %[[INNER1_HEADER]] ]
+; CHECK-NEXT:    [[IDXPROM8:%.*]] = sext i8 [[J]] to i64
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[K]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds [1 x [1 x i32]], ptr @e, i64 0, i64 [[IDXPROM]], i64 [[IDXPROM8]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX9]], align 4
 ; CHECK-NEXT:    [[XOR]] = xor i32 [[XOR5]], [[TMP1]]
-; CHECK-NEXT:    br label %[[FOR_INC:.*]]
-; CHECK:       [[FOR_INC]]:
-; CHECK-NEXT:    [[K_NEXT:%.*]] = add nsw i32 [[K]], 1
-; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT2:%.*]] = add i32 [[INTERCHANGE_IV1]], 1
-; CHECK-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp ne i32 [[INTERCHANGE_IV1]], 41
-; CHECK-NEXT:    br label %[[FOR_END:.*]]
-; CHECK:       [[FOR_INC_SPLIT]]:
-; CHECK-NEXT:    [[TMP8]] = add i32 [[INTERCHANGE_IV1]], 1
-; CHECK-NEXT:    [[TMP2]] = add nsw i32 [[K]], 1
-; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT5]] = add i32 [[INTERCHANGE_IV4]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[INTERCHANGE_IV4]], 41
-; CHECK-NEXT:    br i1 [[TMP3]], label %[[INNER2_HEADER]], label %[[FOR_INC10_SPLIT]]
+; CHECK-NEXT:    br label %[[FOR_END]]
 ; CHECK:       [[FOR_END]]:
-; CHECK-NEXT:    br label %[[FOR_INC10:.*]]
-; CHECK:       [[FOR_INC10]]:
-; CHECK-NEXT:    [[J_NEXT:%.*]] = add i8 [[J]], -1
-; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT8:%.*]] = add i8 [[INTERCHANGE_IV7]], 1
-; CHECK-NEXT:    [[INTERCHANGE_EXITCOND9:%.*]] = icmp ne i8 [[INTERCHANGE_IV7]], 9
+; CHECK-NEXT:    [[TMP2:%.*]] = add nsw i32 [[K]], 1
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT2]] = add i8 [[INTERCHANGE_IV1]], 1
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp ne i8 [[INTERCHANGE_IV1]], 9
+; CHECK-NEXT:    [[J_NEXT4]] = add nsw i8 [[J]], -1
+; CHECK-NEXT:    br i1 [[INTERCHANGE_EXITCOND3]], label %[[INNER2_HEADER_PREHEADER]], label %[[FOR_END1:.*]]
+; CHECK:       [[FOR_END1]]:
+; CHECK-NEXT:    [[J_LCSSA:%.*]] = phi i8 [ [[J]], %[[FOR_END]] ]
+; CHECK-NEXT:    [[XOR_LCSSA]] = phi i32 [ [[XOR]], %[[FOR_END]] ]
+; CHECK-NEXT:    [[INC_LCSSA:%.*]] = phi i32 [ [[TMP2]], %[[FOR_END]] ]
 ; CHECK-NEXT:    br label %[[FOR_INC_SPLIT]]
-; CHECK:       [[FOR_INC10_SPLIT]]:
-; CHECK-NEXT:    [[XOR_LCSSA]] = phi i32 [ [[XOR]], %[[FOR_INC_SPLIT]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = phi i32 [ [[TMP2]], %[[FOR_INC_SPLIT]] ]
-; CHECK-NEXT:    [[TMP7]] = add i8 [[INTERCHANGE_IV7]], 1
-; CHECK-NEXT:    [[TMP5]] = add i8 [[J]], -1
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne i8 [[INTERCHANGE_IV7]], 9
+; CHECK:       [[FOR_INC_SPLIT]]:
+; CHECK-NEXT:    [[J_NEXT1:%.*]] = add i8 [[J_LCSSA]], -1
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT]] = add i32 [[INTERCHANGE_IV]], 1
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne i32 [[INTERCHANGE_IV]], 41
+; CHECK-NEXT:    [[K_NEXT5]] = add nuw nsw i32 [[K]], 1
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[INNER1_HEADER]], label %[[FOR_END11:.*]]
 ; CHECK:       [[FOR_END11]]:
-; CHECK-NEXT:    [[XOR_LCSSA_LCSSA]] = phi i32 [ [[XOR_LCSSA]], %[[FOR_INC10_SPLIT]] ]
-; CHECK-NEXT:    [[DEC_LCSSA:%.*]] = phi i8 [ [[TMP5]], %[[FOR_INC10_SPLIT]] ]
-; CHECK-NEXT:    [[INC_LCSSA_LCSSA:%.*]] = phi i32 [ [[TMP4]], %[[FOR_INC10_SPLIT]] ]
+; CHECK-NEXT:    [[XOR_LCSSA_LCSSA]] = phi i32 [ [[XOR_LCSSA]], %[[FOR_INC_SPLIT]] ]
+; CHECK-NEXT:    [[DEC_LCSSA:%.*]] = phi i8 [ [[J_NEXT1]], %[[FOR_INC_SPLIT]] ]
+; CHECK-NEXT:    [[INC_LCSSA_LCSSA:%.*]] = phi i32 [ [[INC_LCSSA]], %[[FOR_INC_SPLIT]] ]
 ; CHECK-NEXT:    br label %[[FOR_INC12]]
 ; CHECK:       [[FOR_INC12]]:
 ; CHECK-NEXT:    [[INC13]] = add nsw i32 [[INC1312]], 1
 ; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp slt i32 [[INC13]], 42
-; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label %[[OUTER_HEADER]], label %[[FOR_COND_FOR_END14_CRIT_EDGE:.*]]
+; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label %[[INNER1_HEADER_PREHEADER]], label %[[FOR_COND_FOR_END14_CRIT_EDGE:.*]]
 ; CHECK:       [[FOR_COND_FOR_END14_CRIT_EDGE]]:
 ; CHECK-NEXT:    [[INC13_LCSSA:%.*]] = phi i32 [ [[INC13]], %[[FOR_INC12]] ]
 ; CHECK-NEXT:    [[INC_LCSSA_LCSSA_LCSSA:%.*]] = phi i32 [ [[INC_LCSSA_LCSSA]], %[[FOR_INC12]] ]

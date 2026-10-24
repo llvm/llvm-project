@@ -45,21 +45,15 @@ define void @f(ptr noalias %A) {
 ;
 ; CHECK-RATIO-100-LABEL: define void @f(
 ; CHECK-RATIO-100-SAME: ptr noalias [[A:%.*]]) {
-; CHECK-RATIO-100-NEXT:  [[ENTRY:.*:]]
-; CHECK-RATIO-100-NEXT:    br label %[[LOOP_J_PREHEADER:.*]]
-; CHECK-RATIO-100:       [[LOOP_I_HEADER_PREHEADER:.*]]:
-; CHECK-RATIO-100-NEXT:    br label %[[LOOP_I_HEADER:.*]]
-; CHECK-RATIO-100:       [[LOOP_I_HEADER]]:
-; CHECK-RATIO-100-NEXT:    [[I:%.*]] = phi i64 [ [[I_INC:%.*]], %[[LOOP_I_LATCH:.*]] ], [ 0, %[[LOOP_I_HEADER_PREHEADER]] ]
-; CHECK-RATIO-100-NEXT:    [[INTERCHANGE_IV:%.*]] = phi i64 [ [[INTERCHANGE_IV_NEXT:%.*]], %[[LOOP_I_LATCH]] ], [ 0, %[[LOOP_I_HEADER_PREHEADER]] ]
-; CHECK-RATIO-100-NEXT:    br label %[[LOOP_J_SPLIT1:.*]]
-; CHECK-RATIO-100:       [[LOOP_J_PREHEADER]]:
+; CHECK-RATIO-100-NEXT:  [[LOOP_J_PREHEADER:.*]]:
 ; CHECK-RATIO-100-NEXT:    br label %[[LOOP_J:.*]]
 ; CHECK-RATIO-100:       [[LOOP_J]]:
-; CHECK-RATIO-100-NEXT:    [[J:%.*]] = phi i64 [ [[TMP0:%.*]], %[[LOOP_J_SPLIT:.*]] ], [ 0, %[[LOOP_J_PREHEADER]] ]
-; CHECK-RATIO-100-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i64 [ [[TMP2:%.*]], %[[LOOP_J_SPLIT]] ], [ 0, %[[LOOP_J_PREHEADER]] ]
-; CHECK-RATIO-100-NEXT:    br label %[[LOOP_I_HEADER_PREHEADER]]
-; CHECK-RATIO-100:       [[LOOP_J_SPLIT1]]:
+; CHECK-RATIO-100-NEXT:    [[INTERCHANGE_IV:%.*]] = phi i64 [ [[INTERCHANGE_IV_NEXT:%.*]], %[[LOOP_I_LATCH:.*]] ], [ 0, %[[LOOP_J_PREHEADER]] ]
+; CHECK-RATIO-100-NEXT:    [[J:%.*]] = phi i64 [ [[J_INC:%.*]], %[[LOOP_I_LATCH]] ], [ 0, %[[LOOP_J_PREHEADER]] ]
+; CHECK-RATIO-100-NEXT:    br label %[[LOOP_I_HEADER_PREHEADER:.*]]
+; CHECK-RATIO-100:       [[LOOP_I_HEADER_PREHEADER]]:
+; CHECK-RATIO-100-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i64 [ [[INTERCHANGE_IV_NEXT2:%.*]], %[[LOOP_I_HEADER_PREHEADER]] ], [ 0, %[[LOOP_J]] ]
+; CHECK-RATIO-100-NEXT:    [[I:%.*]] = phi i64 [ [[I_INC:%.*]], %[[LOOP_I_HEADER_PREHEADER]] ], [ 0, %[[LOOP_J]] ]
 ; CHECK-RATIO-100-NEXT:    [[GEP:%.*]] = getelementptr [10 x i8], ptr [[A]], i64 [[J]], i64 [[I]]
 ; CHECK-RATIO-100-NEXT:    store i8 0, ptr [[GEP]], align 1
 ; CHECK-RATIO-100-NEXT:    store i8 0, ptr [[GEP]], align 1
@@ -71,40 +65,29 @@ define void @f(ptr noalias %A) {
 ; CHECK-RATIO-100-NEXT:    store i8 0, ptr [[GEP]], align 1
 ; CHECK-RATIO-100-NEXT:    store i8 0, ptr [[GEP]], align 1
 ; CHECK-RATIO-100-NEXT:    store i8 0, ptr [[GEP]], align 1
-; CHECK-RATIO-100-NEXT:    [[J_INC:%.*]] = add i64 [[J]], 1
-; CHECK-RATIO-100-NEXT:    [[INTERCHANGE_IV_NEXT2:%.*]] = add i64 [[INTERCHANGE_IV1]], 1
+; CHECK-RATIO-100-NEXT:    [[INTERCHANGE_IV_NEXT2]] = add i64 [[INTERCHANGE_IV1]], 1
 ; CHECK-RATIO-100-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp eq i64 [[INTERCHANGE_IV1]], 9
-; CHECK-RATIO-100-NEXT:    br label %[[LOOP_I_LATCH]]
-; CHECK-RATIO-100:       [[LOOP_J_SPLIT]]:
-; CHECK-RATIO-100-NEXT:    [[TMP2]] = add i64 [[INTERCHANGE_IV1]], 1
-; CHECK-RATIO-100-NEXT:    [[TMP0]] = add i64 [[J]], 1
-; CHECK-RATIO-100-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[INTERCHANGE_IV1]], 9
-; CHECK-RATIO-100-NEXT:    br i1 [[TMP1]], label %[[EXIT:.*]], label %[[LOOP_J]]
+; CHECK-RATIO-100-NEXT:    [[I_INC]] = add nuw nsw i64 [[I]], 1
+; CHECK-RATIO-100-NEXT:    br i1 [[INTERCHANGE_EXITCOND3]], label %[[LOOP_I_LATCH]], label %[[LOOP_I_HEADER_PREHEADER]]
 ; CHECK-RATIO-100:       [[LOOP_I_LATCH]]:
-; CHECK-RATIO-100-NEXT:    [[I_INC]] = add i64 [[I]], 1
 ; CHECK-RATIO-100-NEXT:    [[INTERCHANGE_IV_NEXT]] = add i64 [[INTERCHANGE_IV]], 1
-; CHECK-RATIO-100-NEXT:    [[EC_I:%.*]] = icmp eq i64 [[INTERCHANGE_IV]], 9
-; CHECK-RATIO-100-NEXT:    br i1 [[EC_I]], label %[[LOOP_J_SPLIT]], label %[[LOOP_I_HEADER]]
+; CHECK-RATIO-100-NEXT:    [[INTERCHANGE_EXITCOND:%.*]] = icmp eq i64 [[INTERCHANGE_IV]], 9
+; CHECK-RATIO-100-NEXT:    [[J_INC]] = add nuw nsw i64 [[J]], 1
+; CHECK-RATIO-100-NEXT:    br i1 [[INTERCHANGE_EXITCOND]], label %[[EXIT:.*]], label %[[LOOP_J]]
 ; CHECK-RATIO-100:       [[EXIT]]:
 ; CHECK-RATIO-100-NEXT:    ret void
 ;
 ; CHECK-RATIO-2147483648-LABEL: define void @f(
 ; CHECK-RATIO-2147483648-SAME: ptr noalias [[A:%.*]]) {
-; CHECK-RATIO-2147483648-NEXT:  [[ENTRY:.*:]]
-; CHECK-RATIO-2147483648-NEXT:    br label %[[LOOP_J_PREHEADER:.*]]
-; CHECK-RATIO-2147483648:       [[LOOP_I_HEADER_PREHEADER:.*]]:
-; CHECK-RATIO-2147483648-NEXT:    br label %[[LOOP_I_HEADER:.*]]
-; CHECK-RATIO-2147483648:       [[LOOP_I_HEADER]]:
-; CHECK-RATIO-2147483648-NEXT:    [[I:%.*]] = phi i64 [ [[I_INC:%.*]], %[[LOOP_I_LATCH:.*]] ], [ 0, %[[LOOP_I_HEADER_PREHEADER]] ]
-; CHECK-RATIO-2147483648-NEXT:    [[INTERCHANGE_IV:%.*]] = phi i64 [ [[INTERCHANGE_IV_NEXT:%.*]], %[[LOOP_I_LATCH]] ], [ 0, %[[LOOP_I_HEADER_PREHEADER]] ]
-; CHECK-RATIO-2147483648-NEXT:    br label %[[LOOP_J_SPLIT1:.*]]
-; CHECK-RATIO-2147483648:       [[LOOP_J_PREHEADER]]:
+; CHECK-RATIO-2147483648-NEXT:  [[LOOP_J_PREHEADER:.*]]:
 ; CHECK-RATIO-2147483648-NEXT:    br label %[[LOOP_J:.*]]
 ; CHECK-RATIO-2147483648:       [[LOOP_J]]:
-; CHECK-RATIO-2147483648-NEXT:    [[J:%.*]] = phi i64 [ [[TMP0:%.*]], %[[LOOP_J_SPLIT:.*]] ], [ 0, %[[LOOP_J_PREHEADER]] ]
-; CHECK-RATIO-2147483648-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i64 [ [[TMP2:%.*]], %[[LOOP_J_SPLIT]] ], [ 0, %[[LOOP_J_PREHEADER]] ]
-; CHECK-RATIO-2147483648-NEXT:    br label %[[LOOP_I_HEADER_PREHEADER]]
-; CHECK-RATIO-2147483648:       [[LOOP_J_SPLIT1]]:
+; CHECK-RATIO-2147483648-NEXT:    [[INTERCHANGE_IV:%.*]] = phi i64 [ [[INTERCHANGE_IV_NEXT:%.*]], %[[LOOP_I_LATCH:.*]] ], [ 0, %[[LOOP_J_PREHEADER]] ]
+; CHECK-RATIO-2147483648-NEXT:    [[J:%.*]] = phi i64 [ [[J_INC:%.*]], %[[LOOP_I_LATCH]] ], [ 0, %[[LOOP_J_PREHEADER]] ]
+; CHECK-RATIO-2147483648-NEXT:    br label %[[LOOP_I_HEADER_PREHEADER:.*]]
+; CHECK-RATIO-2147483648:       [[LOOP_I_HEADER_PREHEADER]]:
+; CHECK-RATIO-2147483648-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i64 [ [[INTERCHANGE_IV_NEXT2:%.*]], %[[LOOP_I_HEADER_PREHEADER]] ], [ 0, %[[LOOP_J]] ]
+; CHECK-RATIO-2147483648-NEXT:    [[I:%.*]] = phi i64 [ [[I_INC:%.*]], %[[LOOP_I_HEADER_PREHEADER]] ], [ 0, %[[LOOP_J]] ]
 ; CHECK-RATIO-2147483648-NEXT:    [[GEP:%.*]] = getelementptr [10 x i8], ptr [[A]], i64 [[J]], i64 [[I]]
 ; CHECK-RATIO-2147483648-NEXT:    store i8 0, ptr [[GEP]], align 1
 ; CHECK-RATIO-2147483648-NEXT:    store i8 0, ptr [[GEP]], align 1
@@ -116,20 +99,15 @@ define void @f(ptr noalias %A) {
 ; CHECK-RATIO-2147483648-NEXT:    store i8 0, ptr [[GEP]], align 1
 ; CHECK-RATIO-2147483648-NEXT:    store i8 0, ptr [[GEP]], align 1
 ; CHECK-RATIO-2147483648-NEXT:    store i8 0, ptr [[GEP]], align 1
-; CHECK-RATIO-2147483648-NEXT:    [[J_INC:%.*]] = add i64 [[J]], 1
-; CHECK-RATIO-2147483648-NEXT:    [[INTERCHANGE_IV_NEXT2:%.*]] = add i64 [[INTERCHANGE_IV1]], 1
+; CHECK-RATIO-2147483648-NEXT:    [[INTERCHANGE_IV_NEXT2]] = add i64 [[INTERCHANGE_IV1]], 1
 ; CHECK-RATIO-2147483648-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp eq i64 [[INTERCHANGE_IV1]], 9
-; CHECK-RATIO-2147483648-NEXT:    br label %[[LOOP_I_LATCH]]
-; CHECK-RATIO-2147483648:       [[LOOP_J_SPLIT]]:
-; CHECK-RATIO-2147483648-NEXT:    [[TMP2]] = add i64 [[INTERCHANGE_IV1]], 1
-; CHECK-RATIO-2147483648-NEXT:    [[TMP0]] = add i64 [[J]], 1
-; CHECK-RATIO-2147483648-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[INTERCHANGE_IV1]], 9
-; CHECK-RATIO-2147483648-NEXT:    br i1 [[TMP1]], label %[[EXIT:.*]], label %[[LOOP_J]]
+; CHECK-RATIO-2147483648-NEXT:    [[I_INC]] = add nuw nsw i64 [[I]], 1
+; CHECK-RATIO-2147483648-NEXT:    br i1 [[INTERCHANGE_EXITCOND3]], label %[[LOOP_I_LATCH]], label %[[LOOP_I_HEADER_PREHEADER]]
 ; CHECK-RATIO-2147483648:       [[LOOP_I_LATCH]]:
-; CHECK-RATIO-2147483648-NEXT:    [[I_INC]] = add i64 [[I]], 1
 ; CHECK-RATIO-2147483648-NEXT:    [[INTERCHANGE_IV_NEXT]] = add i64 [[INTERCHANGE_IV]], 1
-; CHECK-RATIO-2147483648-NEXT:    [[EC_I:%.*]] = icmp eq i64 [[INTERCHANGE_IV]], 9
-; CHECK-RATIO-2147483648-NEXT:    br i1 [[EC_I]], label %[[LOOP_J_SPLIT]], label %[[LOOP_I_HEADER]]
+; CHECK-RATIO-2147483648-NEXT:    [[INTERCHANGE_EXITCOND:%.*]] = icmp eq i64 [[INTERCHANGE_IV]], 9
+; CHECK-RATIO-2147483648-NEXT:    [[J_INC]] = add nuw nsw i64 [[J]], 1
+; CHECK-RATIO-2147483648-NEXT:    br i1 [[INTERCHANGE_EXITCOND]], label %[[EXIT:.*]], label %[[LOOP_J]]
 ; CHECK-RATIO-2147483648:       [[EXIT]]:
 ; CHECK-RATIO-2147483648-NEXT:    ret void
 ;

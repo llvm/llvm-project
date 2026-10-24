@@ -16,12 +16,12 @@
 ;     for (s2 = 0; s2 < 4; s2++);   // sibling
 ;   }
 
-; The interchanged pair (new outer header %pair.k, new inner header %pair.j)
-; stays first, ahead of sib1 and sib2.
+; The interchanged pair stays first, ahead of sib1 and sib2. The interchange
+; swaps the iteration spaces of the pair without changing the loop structure.
 ; CHECK-LABEL: Loop info for function 'f':
 ; CHECK:         Loop at depth 1 containing: %outer.header<header>
-; CHECK-NEXT:      Loop at depth 2 containing: %pair.k<header>
-; CHECK-NEXT:        Loop at depth 3 containing: %pair.j<header>
+; CHECK-NEXT:      Loop at depth 2 containing: %pair.j<header>
+; CHECK-NEXT:        Loop at depth 3 containing: %pair.k<header>
 ; CHECK-NEXT:      Loop at depth 2 containing: %sib1.header<header>
 ; CHECK-NEXT:      Loop at depth 2 containing: %sib2.header<header>
 

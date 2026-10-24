@@ -171,39 +171,28 @@ define void @test2(i32 %N) {
 ;
 ; CHECK-DELIN-LABEL: define void @test2(
 ; CHECK-DELIN-SAME: i32 [[N:%.*]]) {
-; CHECK-DELIN-NEXT:  [[BB:.*:]]
-; CHECK-DELIN-NEXT:    [[TMP3:%.*]] = sext i32 [[N]] to i64
-; CHECK-DELIN-NEXT:    [[TMP4:%.*]] = add nsw i64 [[TMP3]], -1
-; CHECK-DELIN-NEXT:    br label %[[INNER_PREHEADER:.*]]
-; CHECK-DELIN:       [[OUTER_HEADER_PREHEADER:.*]]:
-; CHECK-DELIN-NEXT:    br label %[[OUTER_HEADER:.*]]
-; CHECK-DELIN:       [[OUTER_HEADER]]:
-; CHECK-DELIN-NEXT:    [[OUTER_IV:%.*]] = phi i64 [ [[OUTER_IV_NEXT:%.*]], %[[OUTER_LATCH:.*]] ], [ 0, %[[OUTER_HEADER_PREHEADER]] ]
-; CHECK-DELIN-NEXT:    [[INTERCHANGE_IV:%.*]] = phi i64 [ [[INTERCHANGE_IV_NEXT:%.*]], %[[OUTER_LATCH]] ], [ 0, %[[OUTER_HEADER_PREHEADER]] ]
-; CHECK-DELIN-NEXT:    br label %[[INNER_SPLIT1:.*]]
-; CHECK-DELIN:       [[INNER_PREHEADER]]:
+; CHECK-DELIN-NEXT:  [[OUTER_HEADER:.*]]:
+; CHECK-DELIN-NEXT:    [[N_EXT:%.*]] = sext i32 [[N]] to i64
+; CHECK-DELIN-NEXT:    [[TMP1:%.*]] = add nsw i64 [[N_EXT]], -1
 ; CHECK-DELIN-NEXT:    br label %[[INNER:.*]]
 ; CHECK-DELIN:       [[INNER]]:
-; CHECK-DELIN-NEXT:    [[INNER_IV:%.*]] = phi i64 [ [[TMP0:%.*]], %[[INNER_SPLIT:.*]] ], [ 0, %[[INNER_PREHEADER]] ]
-; CHECK-DELIN-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i64 [ [[TMP2:%.*]], %[[INNER_SPLIT]] ], [ 0, %[[INNER_PREHEADER]] ]
-; CHECK-DELIN-NEXT:    br label %[[OUTER_HEADER_PREHEADER]]
-; CHECK-DELIN:       [[INNER_SPLIT1]]:
+; CHECK-DELIN-NEXT:    [[INTERCHANGE_IV:%.*]] = phi i64 [ [[INTERCHANGE_IV_NEXT:%.*]], %[[OUTER_LATCH:.*]] ], [ 0, %[[OUTER_HEADER]] ]
+; CHECK-DELIN-NEXT:    [[INNER_IV:%.*]] = phi i64 [ [[INNER_IV_NEXT1:%.*]], %[[OUTER_LATCH]] ], [ 0, %[[OUTER_HEADER]] ]
+; CHECK-DELIN-NEXT:    br label %[[OUTER_HEADER_PREHEADER:.*]]
+; CHECK-DELIN:       [[OUTER_HEADER_PREHEADER]]:
+; CHECK-DELIN-NEXT:    [[INNER_IV_NEXT:%.*]] = phi i64 [ [[INTERCHANGE_IV_NEXT2:%.*]], %[[OUTER_HEADER_PREHEADER]] ], [ 0, %[[INNER]] ]
+; CHECK-DELIN-NEXT:    [[OUTER_IV:%.*]] = phi i64 [ [[OUTER_IV_NEXT:%.*]], %[[OUTER_HEADER_PREHEADER]] ], [ 0, %[[INNER]] ]
 ; CHECK-DELIN-NEXT:    [[GEP:%.*]] = getelementptr inbounds [2 x i16], ptr @global, i64 [[INNER_IV]], i64 [[OUTER_IV]]
 ; CHECK-DELIN-NEXT:    store i16 0, ptr [[GEP]], align 2
-; CHECK-DELIN-NEXT:    [[INNER_IV_NEXT:%.*]] = add nsw i64 [[INNER_IV]], 1
-; CHECK-DELIN-NEXT:    [[INTERCHANGE_IV_NEXT2:%.*]] = add i64 [[INTERCHANGE_IV1]], 1
-; CHECK-DELIN-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp ne i64 [[INTERCHANGE_IV1]], [[TMP4]]
-; CHECK-DELIN-NEXT:    br label %[[OUTER_LATCH]]
-; CHECK-DELIN:       [[INNER_SPLIT]]:
-; CHECK-DELIN-NEXT:    [[TMP2]] = add i64 [[INTERCHANGE_IV1]], 1
-; CHECK-DELIN-NEXT:    [[TMP0]] = add nsw i64 [[INNER_IV]], 1
-; CHECK-DELIN-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[INTERCHANGE_IV1]], [[TMP4]]
-; CHECK-DELIN-NEXT:    br i1 [[TMP1]], label %[[INNER]], label %[[EXIT:.*]]
+; CHECK-DELIN-NEXT:    [[INTERCHANGE_IV_NEXT2]] = add i64 [[INNER_IV_NEXT]], 1
+; CHECK-DELIN-NEXT:    [[C_1:%.*]] = icmp ne i64 [[INNER_IV_NEXT]], [[N_EXT]]
+; CHECK-DELIN-NEXT:    [[OUTER_IV_NEXT]] = add nuw nsw i64 [[OUTER_IV]], 1
+; CHECK-DELIN-NEXT:    br i1 [[C_1]], label %[[OUTER_HEADER_PREHEADER]], label %[[OUTER_LATCH]]
 ; CHECK-DELIN:       [[OUTER_LATCH]]:
-; CHECK-DELIN-NEXT:    [[OUTER_IV_NEXT]] = add nsw i64 [[OUTER_IV]], 1
 ; CHECK-DELIN-NEXT:    [[INTERCHANGE_IV_NEXT]] = add i64 [[INTERCHANGE_IV]], 1
-; CHECK-DELIN-NEXT:    [[C_2:%.*]] = icmp ne i64 [[INTERCHANGE_IV]], [[TMP3]]
-; CHECK-DELIN-NEXT:    br i1 [[C_2]], label %[[OUTER_HEADER]], label %[[INNER_SPLIT]]
+; CHECK-DELIN-NEXT:    [[INTERCHANGE_EXITCOND:%.*]] = icmp ne i64 [[INTERCHANGE_IV]], [[TMP1]]
+; CHECK-DELIN-NEXT:    [[INNER_IV_NEXT1]] = add nuw nsw i64 [[INNER_IV]], 1
+; CHECK-DELIN-NEXT:    br i1 [[INTERCHANGE_EXITCOND]], label %[[INNER]], label %[[EXIT:.*]]
 ; CHECK-DELIN:       [[EXIT]]:
 ; CHECK-DELIN-NEXT:    ret void
 ;

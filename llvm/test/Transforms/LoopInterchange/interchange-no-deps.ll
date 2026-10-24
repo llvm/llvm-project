@@ -10,26 +10,23 @@ define i32 @no_deps_interchange(ptr nocapture %Arr) {
 ; STATS-SAME: ptr captures(none) [[ARR:%.*]]) {
 ; STATS-NEXT:  [[ENTRY:.*]]:
 ; STATS-NEXT:    br label %[[FOR2:.*]]
-; STATS:       [[FOR1_HEADER:.*]]:
-; STATS-NEXT:    [[INDVARS_IV19:%.*]] = phi i64 [ [[INDVARS_IV_NEXT20:%.*]], %[[FOR1_HEADER]] ], [ 0, %[[FOR2]] ]
-; STATS-NEXT:    [[INTERCHANGE_IV:%.*]] = phi i64 [ [[INTERCHANGE_IV_NEXT:%.*]], %[[FOR1_HEADER]] ], [ 0, %[[FOR2]] ]
-; STATS-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds [1024 x i32], ptr [[ARR]], i64 [[INDVARS_IV:%.*]], i64 [[INDVARS_IV19]]
-; STATS-NEXT:    store i32 0, ptr [[ARRAYIDX6]], align 4
-; STATS-NEXT:    [[INDVARS_IV_NEXT:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; STATS-NEXT:    [[INTERCHANGE_IV_NEXT2:%.*]] = add i64 [[INTERCHANGE_IV1:%.*]], 1
-; STATS-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp ne i64 [[INTERCHANGE_IV1]], 1023
-; STATS-NEXT:    [[INDVARS_IV_NEXT20]] = add nuw nsw i64 [[INDVARS_IV19]], 1
-; STATS-NEXT:    [[INTERCHANGE_IV_NEXT]] = add i64 [[INTERCHANGE_IV]], 1
-; STATS-NEXT:    [[EXITCOND21:%.*]] = icmp ne i64 [[INTERCHANGE_IV]], 1023
-; STATS-NEXT:    br i1 [[EXITCOND21]], label %[[FOR1_HEADER]], label %[[FOR2_SPLIT:.*]]
 ; STATS:       [[FOR2]]:
-; STATS-NEXT:    [[INDVARS_IV]] = phi i64 [ [[TMP0:%.*]], %[[FOR2_SPLIT]] ], [ 0, %[[ENTRY]] ]
-; STATS-NEXT:    [[INTERCHANGE_IV1]] = phi i64 [ [[TMP2:%.*]], %[[FOR2_SPLIT]] ], [ 0, %[[ENTRY]] ]
-; STATS-NEXT:    br label %[[FOR1_HEADER]]
+; STATS-NEXT:    [[INTERCHANGE_IV:%.*]] = phi i64 [ [[INTERCHANGE_IV_NEXT:%.*]], %[[FOR2_SPLIT:.*]] ], [ 0, %[[ENTRY]] ]
+; STATS-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[TMP0:%.*]], %[[FOR2_SPLIT]] ], [ 0, %[[ENTRY]] ]
+; STATS-NEXT:    br label %[[FOR1_HEADER:.*]]
+; STATS:       [[FOR1_HEADER]]:
+; STATS-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i64 [ [[INTERCHANGE_IV_NEXT2:%.*]], %[[FOR1_HEADER]] ], [ 0, %[[FOR2]] ]
+; STATS-NEXT:    [[INDVARS_IV19:%.*]] = phi i64 [ [[INDVARS_IV_NEXT20:%.*]], %[[FOR1_HEADER]] ], [ 0, %[[FOR2]] ]
+; STATS-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds [1024 x i32], ptr [[ARR]], i64 [[INDVARS_IV]], i64 [[INDVARS_IV19]]
+; STATS-NEXT:    store i32 0, ptr [[ARRAYIDX6]], align 4
+; STATS-NEXT:    [[INTERCHANGE_IV_NEXT2]] = add i64 [[INTERCHANGE_IV1]], 1
+; STATS-NEXT:    [[EXITCOND21:%.*]] = icmp ne i64 [[INTERCHANGE_IV1]], 1023
+; STATS-NEXT:    [[INDVARS_IV_NEXT20]] = add nuw nsw i64 [[INDVARS_IV19]], 1
+; STATS-NEXT:    br i1 [[EXITCOND21]], label %[[FOR1_HEADER]], label %[[FOR2_SPLIT]]
 ; STATS:       [[FOR2_SPLIT]]:
-; STATS-NEXT:    [[TMP2]] = add i64 [[INTERCHANGE_IV1]], 1
+; STATS-NEXT:    [[INTERCHANGE_IV_NEXT]] = add i64 [[INTERCHANGE_IV]], 1
+; STATS-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[INTERCHANGE_IV]], 1023
 ; STATS-NEXT:    [[TMP0]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; STATS-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[INTERCHANGE_IV1]], 1023
 ; STATS-NEXT:    br i1 [[TMP1]], label %[[FOR2]], label %[[EXIT:.*]]
 ; STATS:       [[EXIT]]:
 ; STATS-NEXT:    ret i32 0

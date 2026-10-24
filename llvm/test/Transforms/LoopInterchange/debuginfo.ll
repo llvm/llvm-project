@@ -12,43 +12,32 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 define void @interchange_01(i64 %k, i64 %N) !dbg !5 {
 ; CHECK-LABEL: define void @interchange_01(
 ; CHECK-SAME: i64 [[K:%.*]], i64 [[N:%.*]]) !dbg [[DBG5:![0-9]+]] {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br label %[[FOR2_PREHEADER:.*]]
-; CHECK:       [[FOR1_HEADER_PREHEADER:.*]]:
-; CHECK-NEXT:    br label %[[FOR1_HEADER:.*]]
-; CHECK:       [[FOR1_HEADER]]:
-; CHECK-NEXT:    [[J23:%.*]] = phi i64 [ [[J_NEXT24:%.*]], %[[FOR1_INC10:.*]] ], [ 0, %[[FOR1_HEADER_PREHEADER]] ]
-; CHECK-NEXT:    [[INTERCHANGE_IV:%.*]] = phi i64 [ [[INTERCHANGE_IV_NEXT:%.*]], %[[FOR1_INC10]] ], [ 0, %[[FOR1_HEADER_PREHEADER]] ]
-; CHECK-NEXT:      #dbg_value(i64 [[J:%.*]], [[META13:![0-9]+]], !DIExpression(), [[META14:![0-9]+]])
-; CHECK-NEXT:    br label %[[FOR2_SPLIT1:.*]]
-; CHECK:       [[FOR2_PREHEADER]]:
+; CHECK-NEXT:  [[FOR2_PREHEADER:.*]]:
 ; CHECK-NEXT:    br label %[[FOR2:.*]]
 ; CHECK:       [[FOR2]]:
-; CHECK-NEXT:    [[J]] = phi i64 [ [[TMP0:%.*]], %[[FOR2_SPLIT:.*]] ], [ 0, %[[FOR2_PREHEADER]] ]
-; CHECK-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i64 [ [[TMP2:%.*]], %[[FOR2_SPLIT]] ], [ 0, %[[FOR2_PREHEADER]] ]
-; CHECK-NEXT:    br label %[[FOR1_HEADER_PREHEADER]]
-; CHECK:       [[FOR2_SPLIT1]]:
+; CHECK-NEXT:    [[INTERCHANGE_IV:%.*]] = phi i64 [ [[INTERCHANGE_IV_NEXT:%.*]], %[[FOR1_INC10:.*]] ], [ 0, %[[FOR2_PREHEADER]] ]
+; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[J_NEXT:%.*]], %[[FOR1_INC10]] ], [ 0, %[[FOR2_PREHEADER]] ]
+; CHECK-NEXT:      #dbg_value(i64 [[J]], [[META13:![0-9]+]], !DIExpression(), [[META14:![0-9]+]])
+; CHECK-NEXT:    br label %[[FOR1_HEADER_PREHEADER:.*]]
+; CHECK:       [[FOR1_HEADER_PREHEADER]]:
+; CHECK-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i64 [ [[INTERCHANGE_IV_NEXT2:%.*]], %[[FOR1_HEADER_PREHEADER]] ], [ 0, %[[FOR2]] ]
+; CHECK-NEXT:    [[J23:%.*]] = phi i64 [ [[J_NEXT24:%.*]], %[[FOR1_HEADER_PREHEADER]] ], [ 0, %[[FOR2]] ]
 ; CHECK-NEXT:      #dbg_value(i64 [[J]], [[META13]], !DIExpression(), [[META14]])
 ; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds [100 x [100 x i64]], ptr @A, i64 0, i64 [[J]], i64 [[J23]]
 ; CHECK-NEXT:    [[LV:%.*]] = load i64, ptr [[ARRAYIDX5]], align 8
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[LV]], [[K]]
 ; CHECK-NEXT:    store i64 [[ADD]], ptr [[ARRAYIDX5]], align 8
-; CHECK-NEXT:    [[J_NEXT:%.*]] = add nuw nsw i64 [[J]], 1
 ; CHECK-NEXT:      #dbg_value(i64 [[J]], [[META13]], !DIExpression(), [[META14]])
-; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT2:%.*]] = add i64 [[INTERCHANGE_IV1]], 1
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT2]] = add i64 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp eq i64 [[INTERCHANGE_IV1]], 99
-; CHECK-NEXT:    br label %[[FOR1_INC10]]
-; CHECK:       [[FOR2_SPLIT]]:
-; CHECK-NEXT:    [[TMP2]] = add i64 [[INTERCHANGE_IV1]], 1
-; CHECK-NEXT:    [[TMP0]] = add nuw nsw i64 [[J]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[INTERCHANGE_IV1]], 99
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[FOR_END12:.*]], label %[[FOR2]]
-; CHECK:       [[FOR1_INC10]]:
 ; CHECK-NEXT:    [[J_NEXT24]] = add nuw nsw i64 [[J23]], 1
+; CHECK-NEXT:    br i1 [[INTERCHANGE_EXITCOND3]], label %[[FOR1_INC10]], label %[[FOR1_HEADER_PREHEADER]]
+; CHECK:       [[FOR1_INC10]]:
 ; CHECK-NEXT:      #dbg_value(i64 [[J]], [[META13]], !DIExpression(), [[META14]])
 ; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT]] = add i64 [[INTERCHANGE_IV]], 1
-; CHECK-NEXT:    [[EXITCOND26:%.*]] = icmp eq i64 [[INTERCHANGE_IV]], 99
-; CHECK-NEXT:    br i1 [[EXITCOND26]], label %[[FOR2_SPLIT]], label %[[FOR1_HEADER]]
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND:%.*]] = icmp eq i64 [[INTERCHANGE_IV]], 99
+; CHECK-NEXT:    [[J_NEXT]] = add nuw nsw i64 [[J]], 1
+; CHECK-NEXT:    br i1 [[INTERCHANGE_EXITCOND]], label %[[FOR_END12:.*]], label %[[FOR2]]
 ; CHECK:       [[FOR_END12]]:
 ; CHECK-NEXT:    ret void
 ;

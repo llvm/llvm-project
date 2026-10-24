@@ -19,21 +19,15 @@
 
 define void @interchange_necessary_for_vectorization() {
 ; CHECK-LABEL: define void @interchange_necessary_for_vectorization() {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br label %[[FOR_J_BODY_PREHEADER:.*]]
-; CHECK:       [[FOR_I_HEADER_PREHEADER:.*]]:
-; CHECK-NEXT:    br label %[[FOR_I_HEADER:.*]]
-; CHECK:       [[FOR_I_HEADER]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[FOR_I_INC:.*]] ], [ 1, %[[FOR_I_HEADER_PREHEADER]] ]
-; CHECK-NEXT:    [[INTERCHANGE_IV:%.*]] = phi i64 [ [[INTERCHANGE_IV_NEXT:%.*]], %[[FOR_I_INC]] ], [ 0, %[[FOR_I_HEADER_PREHEADER]] ]
-; CHECK-NEXT:    br label %[[FOR_J_BODY_SPLIT1:.*]]
-; CHECK:       [[FOR_J_BODY_PREHEADER]]:
+; CHECK-NEXT:  [[FOR_J_BODY_PREHEADER:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_J_BODY:.*]]
 ; CHECK:       [[FOR_J_BODY]]:
-; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[TMP0:%.*]], %[[FOR_J_BODY_SPLIT:.*]] ], [ 1, %[[FOR_J_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i64 [ [[TMP2:%.*]], %[[FOR_J_BODY_SPLIT]] ], [ 0, %[[FOR_J_BODY_PREHEADER]] ]
-; CHECK-NEXT:    br label %[[FOR_I_HEADER_PREHEADER]]
-; CHECK:       [[FOR_J_BODY_SPLIT1]]:
+; CHECK-NEXT:    [[INTERCHANGE_IV:%.*]] = phi i64 [ [[INTERCHANGE_IV_NEXT:%.*]], %[[FOR_I_INC:.*]] ], [ 0, %[[FOR_J_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[J_NEXT:%.*]], %[[FOR_I_INC]] ], [ 1, %[[FOR_J_BODY_PREHEADER]] ]
+; CHECK-NEXT:    br label %[[FOR_I_HEADER_PREHEADER:.*]]
+; CHECK:       [[FOR_I_HEADER_PREHEADER]]:
+; CHECK-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i64 [ [[INTERCHANGE_IV_NEXT2:%.*]], %[[FOR_I_HEADER_PREHEADER]] ], [ 0, %[[FOR_J_BODY]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[FOR_I_HEADER_PREHEADER]] ], [ 1, %[[FOR_J_BODY]] ]
 ; CHECK-NEXT:    [[J_DEC:%.*]] = add nsw i64 [[J]], -1
 ; CHECK-NEXT:    [[A_LOAD_INDEX:%.*]] = getelementptr inbounds nuw [256 x [256 x float]], ptr @A, i64 0, i64 [[I]], i64 [[J_DEC]]
 ; CHECK-NEXT:    [[B_INDEX:%.*]] = getelementptr inbounds nuw [256 x [256 x float]], ptr @B, i64 0, i64 [[I]], i64 [[J]]
@@ -46,20 +40,15 @@ define void @interchange_necessary_for_vectorization() {
 ; CHECK-NEXT:    store float [[ADD_0]], ptr [[A_STORE_INDEX]], align 4
 ; CHECK-NEXT:    [[ADD_1:%.*]] = fadd float [[C]], 1.000000e+00
 ; CHECK-NEXT:    store float [[ADD_1]], ptr [[C_INDEX]], align 4
-; CHECK-NEXT:    [[J_NEXT:%.*]] = add nuw nsw i64 [[J]], 1
-; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT2:%.*]] = add i64 [[INTERCHANGE_IV1]], 1
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT2]] = add i64 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp eq i64 [[INTERCHANGE_IV1]], 254
-; CHECK-NEXT:    br label %[[FOR_I_INC]]
-; CHECK:       [[FOR_J_BODY_SPLIT]]:
-; CHECK-NEXT:    [[TMP2]] = add i64 [[INTERCHANGE_IV1]], 1
-; CHECK-NEXT:    [[TMP0]] = add nuw nsw i64 [[J]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[INTERCHANGE_IV1]], 254
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[EXIT:.*]], label %[[FOR_J_BODY]]
-; CHECK:       [[FOR_I_INC]]:
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
+; CHECK-NEXT:    br i1 [[INTERCHANGE_EXITCOND3]], label %[[FOR_I_INC]], label %[[FOR_I_HEADER_PREHEADER]]
+; CHECK:       [[FOR_I_INC]]:
 ; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT]] = add i64 [[INTERCHANGE_IV]], 1
-; CHECK-NEXT:    [[CMP_I:%.*]] = icmp eq i64 [[INTERCHANGE_IV]], 254
-; CHECK-NEXT:    br i1 [[CMP_I]], label %[[FOR_J_BODY_SPLIT]], label %[[FOR_I_HEADER]]
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND:%.*]] = icmp eq i64 [[INTERCHANGE_IV]], 254
+; CHECK-NEXT:    [[J_NEXT]] = add nuw nsw i64 [[J]], 1
+; CHECK-NEXT:    br i1 [[INTERCHANGE_EXITCOND]], label %[[EXIT:.*]], label %[[FOR_J_BODY]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -178,22 +167,16 @@ exit:
 
 define void @interchange_necessary_for_vectorization2() {
 ; CHECK-LABEL: define void @interchange_necessary_for_vectorization2() {
-; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_J_BODY_PREHEADER:.*]]
-; CHECK:       [[FOR_I_HEADER_PREHEADER:.*]]:
+; CHECK:       [[FOR_J_BODY_PREHEADER]]:
+; CHECK-NEXT:    [[INTERCHANGE_IV:%.*]] = phi i64 [ [[INTERCHANGE_IV_NEXT:%.*]], %[[FOR_I_INC:.*]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[J_NEXT:%.*]], %[[FOR_I_INC]] ], [ 1, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[FOR_I_HEADER:.*]]
 ; CHECK:       [[FOR_I_HEADER]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[FOR_I_INC:.*]] ], [ 1, %[[FOR_I_HEADER_PREHEADER]] ]
-; CHECK-NEXT:    [[INTERCHANGE_IV:%.*]] = phi i64 [ [[INTERCHANGE_IV_NEXT:%.*]], %[[FOR_I_INC]] ], [ 0, %[[FOR_I_HEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i64 [ [[INTERCHANGE_IV_NEXT2:%.*]], %[[FOR_I_HEADER]] ], [ 0, %[[FOR_J_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[FOR_I_HEADER]] ], [ 1, %[[FOR_J_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[I_INC:%.*]] = add nuw nsw i64 [[I]], 1
-; CHECK-NEXT:    br label %[[FOR_J_BODY_SPLIT1:.*]]
-; CHECK:       [[FOR_J_BODY_PREHEADER]]:
-; CHECK-NEXT:    br label %[[FOR_J_BODY:.*]]
-; CHECK:       [[FOR_J_BODY]]:
-; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[TMP0:%.*]], %[[FOR_J_BODY_SPLIT:.*]] ], [ 1, %[[FOR_J_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i64 [ [[TMP2:%.*]], %[[FOR_J_BODY_SPLIT]] ], [ 0, %[[FOR_J_BODY_PREHEADER]] ]
-; CHECK-NEXT:    br label %[[FOR_I_HEADER_PREHEADER]]
-; CHECK:       [[FOR_J_BODY_SPLIT1]]:
 ; CHECK-NEXT:    [[J_DEC:%.*]] = add nsw i64 [[J]], -1
 ; CHECK-NEXT:    [[A_LOAD_INDEX:%.*]] = getelementptr inbounds [256 x [256 x float]], ptr @A, i64 0, i64 [[I]], i64 [[J_DEC]]
 ; CHECK-NEXT:    [[B_INDEX:%.*]] = getelementptr inbounds [256 x [256 x float]], ptr @B, i64 0, i64 [[I]], i64 [[J]]
@@ -208,20 +191,15 @@ define void @interchange_necessary_for_vectorization2() {
 ; CHECK-NEXT:    store float [[ADD_0]], ptr [[A_STORE_INDEX]], align 4
 ; CHECK-NEXT:    [[ADD_1:%.*]] = fadd float [[C0]], [[C1]]
 ; CHECK-NEXT:    store float [[ADD_1]], ptr [[C_STORE_INDEX]], align 4
-; CHECK-NEXT:    [[J_NEXT:%.*]] = add nuw nsw i64 [[J]], 1
-; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT2:%.*]] = add i64 [[INTERCHANGE_IV1]], 1
-; CHECK-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp eq i64 [[INTERCHANGE_IV1]], 254
-; CHECK-NEXT:    br label %[[FOR_I_INC]]
-; CHECK:       [[FOR_J_BODY_SPLIT]]:
-; CHECK-NEXT:    [[TMP2]] = add i64 [[INTERCHANGE_IV1]], 1
-; CHECK-NEXT:    [[TMP0]] = add nuw nsw i64 [[J]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[INTERCHANGE_IV1]], 254
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[EXIT:.*]], label %[[FOR_J_BODY]]
-; CHECK:       [[FOR_I_INC]]:
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT2]] = add i64 [[INTERCHANGE_IV1]], 1
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp eq i64 [[INTERCHANGE_IV1]], 253
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
+; CHECK-NEXT:    br i1 [[INTERCHANGE_EXITCOND3]], label %[[FOR_I_INC]], label %[[FOR_I_HEADER]]
+; CHECK:       [[FOR_I_INC]]:
 ; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT]] = add i64 [[INTERCHANGE_IV]], 1
-; CHECK-NEXT:    [[CMP_I:%.*]] = icmp eq i64 [[INTERCHANGE_IV]], 253
-; CHECK-NEXT:    br i1 [[CMP_I]], label %[[FOR_J_BODY_SPLIT]], label %[[FOR_I_HEADER]]
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND:%.*]] = icmp eq i64 [[INTERCHANGE_IV]], 254
+; CHECK-NEXT:    [[J_NEXT]] = add nuw nsw i64 [[J]], 1
+; CHECK-NEXT:    br i1 [[INTERCHANGE_EXITCOND]], label %[[EXIT:.*]], label %[[FOR_J_BODY_PREHEADER]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
