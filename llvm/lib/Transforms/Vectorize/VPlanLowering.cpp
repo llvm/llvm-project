@@ -108,8 +108,8 @@ void VPlanTransforms::replaceWideCanonicalIVWithWideIV(
       InductionDescriptor::getCanonicalIntInduction(CanIVTy, SE);
   VPValue *StepV = Plan.getConstantInt(CanIVTy, 1);
   auto *NewWideIV = new VPWidenIntOrFpInductionRecipe(
-      /*IV=*/nullptr, Plan.getZero(CanIVTy), StepV, &Plan.getVF(), ID,
-      WideCanIV->getNoWrapFlags(), WideCanIV->getDebugLoc());
+      /*IVPhi=*/nullptr, /*UVPhi=*/nullptr, Plan.getZero(CanIVTy), StepV,
+      &Plan.getVF(), ID, WideCanIV->getNoWrapFlags(), WideCanIV->getDebugLoc());
   NewWideIV->insertBefore(&*Header->getFirstNonPhi());
   WideCanIV->replaceAllUsesWith(NewWideIV);
   WideCanIV->eraseFromParent();
