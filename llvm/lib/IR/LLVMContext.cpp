@@ -58,6 +58,8 @@ static StringRef knownBundleName(unsigned BundleTagID) {
     return "convergencectrl";
   case LLVMContext::OB_deactivation_symbol:
     return "deactivation-symbol";
+  case LLVMContext::OB_atomicity:
+    return "atomicity";
   default:
     llvm_unreachable("unknown bundle id");
   }

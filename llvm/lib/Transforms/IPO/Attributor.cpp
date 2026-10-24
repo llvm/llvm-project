@@ -1338,10 +1338,11 @@ SubsumingPositionIterator::SubsumingPositionIterator(const IRPosition &IRP) {
   IRPositions.emplace_back(IRP);
 
   // Helper to determine if operand bundles on a call site are benign or
-  // potentially problematic. We handle only llvm.assume for now.
+  // potentially problematic. We handle llvm.assume and "atomicity".
   auto CanIgnoreOperandBundles = [](const CallBase &CB) {
-    return (isa<IntrinsicInst>(CB) &&
-            cast<IntrinsicInst>(CB).getIntrinsicID() == Intrinsic ::assume);
+    return !CB.hasOperandBundlesOtherThan(LLVMContext::OB_atomicity) ||
+           (isa<IntrinsicInst>(CB) &&
+            cast<IntrinsicInst>(CB).getIntrinsicID() == Intrinsic::assume);
   };
 
   const auto *CB = dyn_cast<CallBase>(&IRP.getAnchorValue());
@@ -1358,7 +1359,7 @@ SubsumingPositionIterator::SubsumingPositionIterator(const IRPosition &IRP) {
     assert(CB && "Expected call site!");
     // TODO: We need to look at the operand bundles similar to the redirection
     //       in CallBase.
-    if (!CB->hasOperandBundles() || CanIgnoreOperandBundles(*CB))
+    if (CanIgnoreOperandBundles(*CB))
       if (auto *Callee = dyn_cast_if_present<Function>(CB->getCalledOperand()))
         IRPositions.emplace_back(IRPosition::function(*Callee));
     return;
@@ -1366,7 +1367,7 @@ SubsumingPositionIterator::SubsumingPositionIterator(const IRPosition &IRP) {
     assert(CB && "Expected call site!");
     // TODO: We need to look at the operand bundles similar to the redirection
     //       in CallBase.
-    if (!CB->hasOperandBundles() || CanIgnoreOperandBundles(*CB)) {
+    if (CanIgnoreOperandBundles(*CB)) {
       if (auto *Callee =
               dyn_cast_if_present<Function>(CB->getCalledOperand())) {
         IRPositions.emplace_back(IRPosition::returned(*Callee));
@@ -1387,7 +1388,7 @@ SubsumingPositionIterator::SubsumingPositionIterator(const IRPosition &IRP) {
     assert(CB && "Expected call site!");
     // TODO: We need to look at the operand bundles similar to the redirection
     //       in CallBase.
-    if (!CB->hasOperandBundles() || CanIgnoreOperandBundles(*CB)) {
+    if (CanIgnoreOperandBundles(*CB)) {
       auto *Callee = dyn_cast_if_present<Function>(CB->getCalledOperand());
       if (Callee) {
         if (Argument *Arg = IRP.getAssociatedArgument())
