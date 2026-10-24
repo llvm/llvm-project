@@ -54,13 +54,14 @@ define i64 @test_pr58039() {
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    br i1 false, label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
+; CHECK-NEXT:    [[IV_NEXT_LCSSA2:%.*]] = phi i64 [ [[IV_NEXT]], [[LOOP]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = udiv i64 82, 12
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw nsw i64 [[TMP0]], 12
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nuw nsw i64 [[TMP1]], 4294967221
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 1, [[TMP4]]
+; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[IV_NEXT_LCSSA2]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP:%.*]] = trunc i64 [[TMP3]] to i32
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp ult i32 [[TMP]], 32
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[CMP3]], i64 0, i64 1
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[CMP3]], i64 0, i64 [[IV_NEXT_LCSSA2]]
 ; CHECK-NEXT:    ret i64 [[SPEC_SELECT]]
 ;
 entry:
@@ -101,8 +102,9 @@ define i32 @test_pr62852() {
 ; CHECK-NEXT:    [[CMP6_1:%.*]] = icmp sgt i32 [[TMP]], 0
 ; CHECK-NEXT:    br i1 [[CMP6_1]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
+; CHECK-NEXT:    [[INC_1_LCSSA:%.*]] = phi i64 [ [[INC_1]], [[LOOP]] ]
 ; CHECK-NEXT:    [[LSR_IV_NEXT_LCSSA:%.*]] = phi i64 [ [[LSR_IV_NEXT]], [[LOOP]] ]
-; CHECK-NEXT:    [[LSR_IV_NEXT2:%.*]] = add i64 2, -1
+; CHECK-NEXT:    [[LSR_IV_NEXT2:%.*]] = add i64 [[INC_1_LCSSA]], -1
 ; CHECK-NEXT:    call void @use(i64 [[LSR_IV_NEXT_LCSSA]])
 ; CHECK-NEXT:    call void @use(i64 [[LSR_IV_NEXT2]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = urem i32 -1, 53
