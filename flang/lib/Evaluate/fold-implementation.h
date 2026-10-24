@@ -2378,7 +2378,7 @@ Expr<T> FoldOperation(FoldingContext &context, Multiply<T> &&x) {
   } else if constexpr (T::category == TypeCategory::Integer) {
     if (auto c{GetScalarConstantValue<T>(kind, x.right())}) {
       x.right() = std::move(x.left());
-      x.left() =  MakeConstantExpr<T>(kind, *c);
+      x.left() = MakeConstantExpr<T>(kind, *c);
     }
     if (auto c{GetScalarConstantValue<T>(kind, x.left())}) {
       if (c->IsZero() && x.right().Rank() == 0) {

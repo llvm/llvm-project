@@ -701,8 +701,7 @@ SameKindExprs<CAT, 2> AsSameKindExprs(
   if (xKind == yKind) {
     return {SameExprs<Type<CAT>>{std::move(kx), std::move(ky)}};
   } else if (xKind < yKind) {
-    return {SameExprs<Type<CAT>>{
-        ConvertTo(ky, std::move(kx)), std::move(ky)}};
+    return {SameExprs<Type<CAT>>{ConvertTo(ky, std::move(kx)), std::move(ky)}};
   } else {
     auto converted{ConvertTo(kx, std::move(ky))};
     return {SameExprs<Type<CAT>>{std::move(kx), std::move(converted)}};
