@@ -7237,18 +7237,11 @@ static Value *simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
     // copysign X, X --> X
     if (Op0 == Op1)
       return Op0;
-    
-    // Match only a real fneg instruction. m_FNeg also matches
-    // 'fsub -0.0, X', but that may quiet a SNaN
-    auto IsFNegOf = [](Value *V, Value *X) {
-      auto *UO = dyn_cast<UnaryOperator>(V);
-      return UO && UO->getOpcode() == Instruction::FNeg && 
-             UO->getOperand(0) == X;
-    };
 
     // copysign -X, X --> X
     // copysign X, -X --> -X
-    if (IsFNegOf(Op0, Op1) || IsFNegOf(Op1, Op0))
+    if (match(Op0, m_FNeg(m_Specific(Op1))) ||
+        match(Op1, m_FNeg(m_Specific(Op0))))
       return Op1;
     break;
   }

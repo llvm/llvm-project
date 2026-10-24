@@ -1251,30 +1251,14 @@ template <typename Op_t> struct FNeg_match {
     if (FPMO->getOpcode() == Instruction::FNeg)
       return X.match(FPMO->getOperand(0));
 
-    if (FPMO->getOpcode() == Instruction::FSub) {
-      if (FPMO->hasNoSignedZeros()) {
-        // With 'nsz', any zero goes.
-        if (!cstfp_pred_ty<is_any_zero_fp>().match(FPMO->getOperand(0)))
-          return false;
-      } else {
-        // Without 'nsz', we need fsub -0.0, X exactly.
-        if (!cstfp_pred_ty<is_neg_zero_fp>().match(FPMO->getOperand(0)))
-          return false;
-      }
-
-      return X.match(FPMO->getOperand(1));
-    }
-
     return false;
   }
 };
 
-/// Match 'fneg X' as 'fsub -0.0, X'.
 template <typename OpTy> inline FNeg_match<OpTy> m_FNeg(const OpTy &X) {
   return FNeg_match<OpTy>(X);
 }
 
-/// Match 'fneg X' as 'fsub +-0.0, X'.
 template <typename RHS>
 inline BinaryOp_match<cstfp_pred_ty<is_any_zero_fp>, RHS, Instruction::FSub>
 m_FNegNSZ(const RHS &X) {
