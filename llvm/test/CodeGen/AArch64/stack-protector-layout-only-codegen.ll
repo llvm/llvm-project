@@ -3,7 +3,8 @@
 ; RUN: llc -mtriple=aarch64-unknown-linux-gnu -stack-symbol-ordering=0 -O0 -o - %s | FileCheck %s --check-prefixes=CHECK,O0
 
 ; Check that no stack protector is emitted for functions with
-; "stack-protector-layout-only", with and without GlobalISel.
+; "stack-protector-layout-only" and that the return address is spilled, with
+; and without GlobalISel.
 
 declare void @use(ptr, ptr, ptr)
 declare void @sink(i32)
@@ -100,10 +101,59 @@ define void @layout_ssp(i32 %n) ssp "stack-protector-layout-only" {
   ret void
 }
 
+define void @layout_leaf(i8 %c) sspstrong "stack-protector-layout-only" {
+; OPT-LABEL: layout_leaf:
+; OPT:       // %bb.0:
+; OPT-NEXT:    sub sp, sp, #32
+; OPT-NEXT:    str x30, [sp, #16] // 8-byte Spill
+; OPT-NEXT:    .cfi_def_cfa_offset 32
+; OPT-NEXT:    .cfi_offset w30, -16
+; OPT-NEXT:    strb w0, [sp], #32
+; OPT-NEXT:    ret
+;
+; O0-LABEL: layout_leaf:
+; O0:       // %bb.0:
+; O0-NEXT:    sub sp, sp, #32
+; O0-NEXT:    str x30, [sp, #16] // 8-byte Spill
+; O0-NEXT:    .cfi_def_cfa_offset 32
+; O0-NEXT:    .cfi_offset w30, -16
+; O0-NEXT:    strb w0, [sp]
+; O0-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
+; O0-NEXT:    add sp, sp, #32
+; O0-NEXT:    ret
+  %large = alloca [16 x i8], align 16
+  store volatile i8 %c, ptr %large
+  ret void
+}
+
 define void @req_empty() sspreq "stack-protector-layout-only" {
 ; CHECK-LABEL: req_empty:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
+  ret void
+}
+
+define void @control_leaf(i8 %c) {
+; OPT-LABEL: control_leaf:
+; OPT:       // %bb.0:
+; OPT-NEXT:    sub sp, sp, #16
+; OPT-NEXT:    .cfi_def_cfa_offset 16
+; OPT-NEXT:    strb w0, [sp], #16
+; OPT-NEXT:    ret
+;
+; O0-LABEL: control_leaf:
+; O0:       // %bb.0:
+; O0-NEXT:    sub sp, sp, #16
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    strb w0, [sp]
+; O0-NEXT:    add sp, sp, #16
+; O0-NEXT:    ret
+  %large = alloca [16 x i8], align 16
+  store volatile i8 %c, ptr %large
   ret void
 }
 
@@ -128,12 +178,12 @@ define void @cookie(i32 %n) sspstrong {
 ; OPT-NEXT:    ldr x9, [sp, #40]
 ; OPT-NEXT:    ldr x8, [x8, :lo12:__stack_chk_guard]
 ; OPT-NEXT:    cmp x8, x9
-; OPT-NEXT:    b.ne .LBB3_2
+; OPT-NEXT:    b.ne .LBB5_2
 ; OPT-NEXT:  // %bb.1:
 ; OPT-NEXT:    ldr x30, [sp, #48] // 8-byte Reload
 ; OPT-NEXT:    add sp, sp, #64
 ; OPT-NEXT:    ret
-; OPT-NEXT:  .LBB3_2:
+; OPT-NEXT:  .LBB5_2:
 ; OPT-NEXT:    bl __stack_chk_fail
 ;
 ; O0-LABEL: cookie:
@@ -157,11 +207,11 @@ define void @cookie(i32 %n) sspstrong {
 ; O0-NEXT:    adrp x8, __stack_chk_guard
 ; O0-NEXT:    ldr x8, [x8, :lo12:__stack_chk_guard]
 ; O0-NEXT:    subs x8, x8, x9
-; O0-NEXT:    b.ne .LBB3_1
-; O0-NEXT:    b .LBB3_2
-; O0-NEXT:  .LBB3_1:
+; O0-NEXT:    b.ne .LBB5_1
+; O0-NEXT:    b .LBB5_2
+; O0-NEXT:  .LBB5_1:
 ; O0-NEXT:    bl __stack_chk_fail
-; O0-NEXT:  .LBB3_2:
+; O0-NEXT:  .LBB5_2:
 ; O0-NEXT:    ldr x30, [sp, #48] // 8-byte Reload
 ; O0-NEXT:    add sp, sp, #64
 ; O0-NEXT:    ret

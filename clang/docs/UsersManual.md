@@ -3040,9 +3040,12 @@ feature exists to guard against. Clang applies the C++ rule in both languages.
 :::{option} -f[no-]stack-protector-layout-only
 
 When specified, stack protectors will not be inserted, but stack variables will
-continue to be rearranged as if they were. This allows targets that have
-features that can act as pseudo-stack-protectors, like RISC-V's shadow stack,
-to benefit from the protection added by reordering stack variables.
+continue to be rearranged as if they were, and the return address will be
+spilled to the stack in every function that would have had a stack protector.
+This allows targets that have features that can act as pseudo-stack-protectors,
+like RISC-V's shadow stack, to benefit from the protection added by reordering
+stack variables, with the spilled return address taking the place of the stack
+protector.
 
 This option depends on at least `-fstack-protector`, so it will be overridden to
 being enabled with a warning, even if `-fno-stack-protector` is given.

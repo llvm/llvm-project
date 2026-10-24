@@ -2853,7 +2853,9 @@ fn -> other_fn -> other_fn ; fn is norecurse
 :   This attribute is only meaningful in conjunction with one of the stack
     protector attributes above. It indicates that only the changes to the
     stack frame layout that are made for a stack protector are applied,
-    and no stack protectors are actually inserted.
+    and no stack protectors are actually inserted. The return address is
+    also forced to be spilled to the stack in functions in which a stack
+    protector would have been inserted.
 
     If a function with this attribute is inlined into a calling function, the
     attribute will not be added to the calling function.

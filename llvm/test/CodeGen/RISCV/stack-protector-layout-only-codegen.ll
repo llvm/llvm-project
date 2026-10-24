@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=riscv64 -o - %s | FileCheck %s
 
 ; Check that no stack protector is emitted for functions with
-; "stack-protector-layout-only".
+; "stack-protector-layout-only", and that the return address is spilled.
 
 declare void @use(ptr, ptr, ptr)
 declare void @sink(i32)
@@ -67,10 +67,50 @@ define void @layout_ssp(i32 %n) ssp "stack-protector-layout-only" {
   ret void
 }
 
+define void @layout_leaf(i8 %c) sspstrong "stack-protector-layout-only" {
+; CHECK-LABEL: layout_leaf:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -32
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_offset ra, -8
+; CHECK-NEXT:    sb a0, 0(sp)
+; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    .cfi_restore ra
+; CHECK-NEXT:    addi sp, sp, 32
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    ret
+  %large = alloca [16 x i8], align 16
+  store volatile i8 %c, ptr %large
+  ret void
+}
+
 define void @req_empty() sspreq "stack-protector-layout-only" {
 ; CHECK-LABEL: req_empty:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_offset ra, -8
+; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    .cfi_restore ra
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
+  ret void
+}
+
+define void @control_leaf(i8 %c) {
+; CHECK-LABEL: control_leaf:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    sb a0, 0(sp)
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    ret
+  %large = alloca [16 x i8], align 16
+  store volatile i8 %c, ptr %large
   ret void
 }
 
@@ -96,7 +136,7 @@ define void @cookie(i32 %n) sspstrong {
 ; CHECK-NEXT:    call sink
 ; CHECK-NEXT:    ld a0, %lo(__stack_chk_guard)(s0)
 ; CHECK-NEXT:    ld a1, 40(sp)
-; CHECK-NEXT:    bne a0, a1, .LBB3_2
+; CHECK-NEXT:    bne a0, a1, .LBB5_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
@@ -105,7 +145,7 @@ define void @cookie(i32 %n) sspstrong {
 ; CHECK-NEXT:    addi sp, sp, 64
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB3_2:
+; CHECK-NEXT:  .LBB5_2:
 ; CHECK-NEXT:    .cfi_restore_state
 ; CHECK-NEXT:    call __stack_chk_fail
   %scalar = alloca i32, align 4

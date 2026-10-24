@@ -87,10 +87,12 @@ bool SSPLayoutInfo::shouldEmitSDCheck(const BasicBlock &BB) const {
 }
 
 void SSPLayoutInfo::copyToMachineFrameInfo(MachineFrameInfo &MFI) const {
+  if (RequireStackProtector && LayoutOnly)
+    MFI.setStackProtectorLayoutOnly();
+
   if (Layout.empty())
     return;
 
-  bool HasLayout = false;
   for (int I = 0, E = MFI.getObjectIndexEnd(); I != E; ++I) {
     if (MFI.isDeadObjectIndex(I))
       continue;
@@ -104,11 +106,7 @@ void SSPLayoutInfo::copyToMachineFrameInfo(MachineFrameInfo &MFI) const {
       continue;
 
     MFI.setObjectSSPLayout(I, LI->second);
-    HasLayout = true;
   }
-
-  if (HasLayout && LayoutOnly)
-    MFI.setStackProtectorLayoutOnly();
 }
 
 /// Return true if F's stack objects should be laid out as if it had a stack
@@ -223,7 +221,9 @@ bool StackProtector::runOnFunction(Function &Fn) {
 
   LayoutInfo.SSPBufferSize = Fn.getFnAttributeAsParsedInteger(
       "stack-protector-buffer-size", SSPLayoutInfo::DefaultSSPBufferSize);
-  if (!requiresStackProtector(F, &LayoutInfo.Layout))
+  LayoutInfo.RequireStackProtector =
+      requiresStackProtector(F, &LayoutInfo.Layout);
+  if (!LayoutInfo.RequireStackProtector)
     return false;
 
   if (LayoutInfo.LayoutOnly) {

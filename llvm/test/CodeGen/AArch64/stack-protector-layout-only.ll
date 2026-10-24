@@ -2,7 +2,8 @@
 ; RUN: llc -mtriple=aarch64-unknown-linux-gnu -stack-symbol-ordering=0 -O0 -stop-after=prolog-epilog -o - %s | FileCheck %s
 
 ; Check that with "stack-protector-layout-only" the stack objects are ordered
-; as if there were a stack protector, but one is not inserted.
+; as if there were a stack protector, but one is not inserted, and the return
+; address is spilled.
 
 declare void @use(ptr, ptr, ptr)
 declare void @sink(i32)
@@ -47,9 +48,25 @@ define void @layout_ssp(i32 %n) ssp "stack-protector-layout-only" {
   ret void
 }
 
+; CHECK-LABEL: name: layout_leaf
+; CHECK:       stackProtector:  ''
+; CHECK-NEXT:  stackProtectorLayoutOnly: true
+; CHECK:       stack:
+; CHECK-NEXT:    - { id: 0, name: large, type: default,
+; CHECK:         - { id: 1, name: '', type: spill-slot,
+; CHECK:           callee-saved-register: '$lr'
+define void @layout_leaf(i8 %c) sspstrong "stack-protector-layout-only" {
+  %large = alloca [16 x i8], align 16
+  store volatile i8 %c, ptr %large
+  ret void
+}
+
 ; CHECK-LABEL: name: req_empty
 ; CHECK:       stackProtector:  ''
-; CHECK-NEXT:  stackProtectorLayoutOnly: false
+; CHECK-NEXT:  stackProtectorLayoutOnly: true
+; CHECK:       stack:
+; CHECK-NEXT:    - { id: 0, name: '', type: spill-slot,
+; CHECK:           callee-saved-register: '$lr'
 define void @req_empty() sspreq "stack-protector-layout-only" {
   ret void
 }
@@ -73,6 +90,19 @@ define void @control(i32 %n) {
   call void @use(ptr %large, ptr %small, ptr %addrof)
   %v = load i32, ptr %scalar
   call void @sink(i32 %v)
+  ret void
+}
+
+; Control: without a stack protector attribute the return address is not
+; spilled.
+; CHECK-LABEL: name: control_leaf
+; CHECK:       stackProtector:  ''
+; CHECK-NEXT:  stackProtectorLayoutOnly: false
+; CHECK-NOT:   callee-saved-register: '$lr'
+; CHECK:       body:
+define void @control_leaf(i8 %c) {
+  %large = alloca [16 x i8], align 16
+  store volatile i8 %c, ptr %large
   ret void
 }
 

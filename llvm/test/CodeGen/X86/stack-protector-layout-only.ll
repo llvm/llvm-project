@@ -48,10 +48,13 @@ define void @layout_ssp(i32 %n) ssp "stack-protector-layout-only" {
   ret void
 }
 
-; Nothing to lay out, so stackProtectorLayoutOnly stays false.
+; Nothing to lay out, but a stack protector would have been inserted. x86 has
+; no return address register to spill.
 ; CHECK-LABEL: name: req_empty
 ; CHECK:       stackProtector:  ''
-; CHECK-NEXT:  stackProtectorLayoutOnly: false
+; CHECK-NEXT:  stackProtectorLayoutOnly: true
+; CHECK-NOT:   callee-saved-register
+; CHECK:       body:
 define void @req_empty() sspreq "stack-protector-layout-only" {
   ret void
 }
