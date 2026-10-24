@@ -424,6 +424,7 @@ std::optional<APInt> constantTripCount(
   llvm::APInt remainder = diff.urem(stepCst);
   if (!remainder.isZero())
     tripCount = tripCount + 1;
+
   LDBG() << "constantTripCount found: " << tripCount;
   return tripCount;
 }
