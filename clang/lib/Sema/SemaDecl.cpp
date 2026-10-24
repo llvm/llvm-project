@@ -15134,17 +15134,22 @@ void Sema::addLifetimeBoundToImplicitThis(CXXMethodDecl *MD) {
     TLB.pushFullCopy(TSI->getTypeLoc());
   } else {
     // The written type-source info can disagree with the method's type. For
-    // example, a deduced 'auto' return type in a template instantiation keeps
-    // the 'auto' placeholder in its TypeSourceInfo while the method's type has
-    // already been resolved to the deduced type. Pushing the stale TypeLoc
-    // would make the wrapping AttributedTypeLoc's inner type inconsistent with
-    // MethodType. Build a trivial TypeLoc that matches MethodType instead.
-    TLB.pushTrivial(Context, MethodType, MD->getLocation());
+    // example, a deduced 'auto' return type keeps the 'auto' placeholder in its
+    // TypeSourceInfo while the method's type has already been resolved to the
+    // deduced type. Pushing the stale TypeLoc would make the wrapping
+    // AttributedTypeLoc's inner type inconsistent with MethodType. Build a
+    // trivial TypeLoc that matches MethodType instead.
+    TLB.pushTrivial(Context, MethodType,
+                    TSI ? TSI->getTypeLoc().getBeginLoc() : MD->getLocation());
   }
   AttributedTypeLoc TyLoc = TLB.push<AttributedTypeLoc>(AttributedType);
   TyLoc.setAttr(Attr);
   MD->setType(AttributedType);
   MD->setTypeSourceInfo(TLB.getTypeSourceInfo(Context, AttributedType));
+  // A trivial TypeLoc has no parameter decls, but AST visitors rely on them.
+  if (FunctionTypeLoc FTL = MD->getFunctionTypeLoc())
+    for (unsigned I = 0, E = MD->getNumParams(); I != E; ++I)
+      FTL.setParam(I, MD->getParamDecl(I));
 }
 
 void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
