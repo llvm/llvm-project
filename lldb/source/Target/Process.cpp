@@ -1335,6 +1335,98 @@ StateType Process::GetState() {
   return GetPublicState();
 }
 
+StateType Process::GetPublicState() const {
+  if (!m_current_private_state_thread_sp)
+    return eStateUnloaded;
+  if (StopHandlingContextSP context_sp =
+          GetStopHandlingContextForCurrentThread())
+    return context_sp->m_public_state;
+  return m_current_private_state_thread_sp->GetPublicState();
+}
+
+bool Process::SetPublicRunLockToStopped() {
+  if (StopHandlingContextSP context_sp =
+          GetStopHandlingContextForCurrentThread()) {
+    context_sp->m_run_lock_running = false;
+    return context_sp->m_public_run_lock.SetStopped();
+  }
+  assert(m_current_private_state_thread_sp);
+  if (m_current_private_state_thread_sp)
+    return m_current_private_state_thread_sp->SetPublicRunLockToStopped();
+  return false;
+}
+
+bool Process::SetPublicRunLockToRunning() {
+  if (StopHandlingContextSP context_sp =
+          GetStopHandlingContextForCurrentThread()) {
+    const bool was_stopped = context_sp->m_public_run_lock.SetRunning();
+    context_sp->m_run_lock_running = true;
+    context_sp->m_resumed |= was_stopped;
+    return was_stopped;
+  }
+  assert(m_current_private_state_thread_sp);
+  if (m_current_private_state_thread_sp)
+    return m_current_private_state_thread_sp->SetPublicRunLockToRunning();
+  return false;
+}
+
+Process::StopHandlingContextSP Process::GetStopHandlingContext() const {
+  std::lock_guard<std::mutex> guard(m_stop_handling_mutex);
+  return m_stop_handling_context_sp;
+}
+
+Process::StopHandlingContextSP
+Process::GetStopHandlingContextForCurrentThread() const {
+  if (PolicyStack::Get().Current().view != Policy::View::HandlingStop)
+    return nullptr;
+  StopHandlingContextSP context_sp = GetStopHandlingContext();
+  // The policy stack belongs to the host thread, and one host thread can
+  // handle stops of several processes: the debugger's event handler thread
+  // pulls the stop events of every process in the debugger. While it handles
+  // a stop of one process, its view is HandlingStop even when an action calls
+  // into another process. So the view alone isn't enough: return this
+  // process's context only if this thread opened it. Otherwise this process's
+  // public state and run lock come from its PrivateStateThread, as for any
+  // thread that isn't handling its stop.
+  if (context_sp && context_sp->m_owner == std::this_thread::get_id())
+    return context_sp;
+  return nullptr;
+}
+
+bool Process::IsHandlingStopOnOtherThread() const {
+  StopHandlingContextSP context_sp = GetStopHandlingContext();
+  return context_sp && context_sp->m_owner != std::this_thread::get_id();
+}
+
+Process::StopHandlingScope::StopHandlingScope(Process &process)
+    : m_process(process), m_context_sp(std::make_shared<StopHandlingContext>(
+                              std::this_thread::get_id())),
+      m_policy_guard(PolicyStack::Get().PushHandlingStop()) {
+  std::lock_guard<std::mutex> guard(m_process.m_stop_handling_mutex);
+  m_enclosing_context_sp =
+      std::exchange(m_process.m_stop_handling_context_sp, m_context_sp);
+}
+
+Process::StopHandlingScope::~StopHandlingScope() {
+  std::lock_guard<std::mutex> guard(m_process.m_stop_handling_mutex);
+  // The slot only holds another thread's context if two threads pull this
+  // process's events from its primary listener, and the other one started
+  // handling a second stop while this one was still handling the first, which
+  // takes an action resuming the process asynchronously. Leave the slot alone
+  // then: that thread's scope clears it when it ends, because our context
+  // isn't one that thread opened.
+  if (m_process.m_stop_handling_context_sp != m_context_sp)
+    return;
+  // Reinstall the enclosing context only if this thread opened it too. This
+  // thread's scopes nest, so its enclosing scope is still open. Another
+  // thread's scope may already have ended, and reinstalling its context would
+  // leave a context in the slot that no scope ever removes.
+  if (m_enclosing_context_sp &&
+      m_enclosing_context_sp->m_owner != m_context_sp->m_owner)
+    m_enclosing_context_sp.reset();
+  m_process.m_stop_handling_context_sp = std::move(m_enclosing_context_sp);
+}
+
 void Process::SetPublicState(StateType new_state, bool restarted) {
   const bool new_state_is_stopped = StateIsStoppedState(new_state, false);
   if (new_state_is_stopped) {
@@ -1351,7 +1443,11 @@ void Process::SetPublicState(StateType new_state, bool restarted) {
   LLDB_LOGF(log, "(plugin = %s, state = %s, restarted = %i)",
            GetPluginName().data(), StateAsCString(new_state), restarted);
   const StateType old_state = GetPublicState();
-  m_current_private_state_thread_sp->SetPublicState(new_state);
+  if (StopHandlingContextSP context_sp =
+          GetStopHandlingContextForCurrentThread())
+    context_sp->m_public_state = new_state;
+  else
+    m_current_private_state_thread_sp->SetPublicState(new_state);
 
   // On the transition from Run to Stopped, we unlock the writer end of the run
   // lock.  The lock gets locked in Resume, which is the public API to tell the
@@ -3643,6 +3739,13 @@ Status Process::PrivateResume() {
 }
 
 Status Process::Halt(bool clear_thread_plans, bool use_run_lock) {
+  // The process is already stopped: the stop isn't public yet only because
+  // another thread is running its StopInfo actions and stop hooks. An async
+  // interrupt would halt the expressions those run, so refuse instead.
+  if (IsHandlingStopOnOtherThread())
+    return Status::FromErrorString(
+        "process is stopped, but another thread is still handling the stop");
+
   if (!StateIsRunningState(GetPublicState()))
     return Status::FromErrorString("Process is not running.");
 
@@ -3749,8 +3852,12 @@ Status Process::StopForDestroyOrDetach(lldb::EventSP &exit_event_sp) {
 
   // Check both the public & private states here.  If we're hung evaluating an
   // expression, for instance, then the public state will be stopped, but we
-  // still need to interrupt.
-  if (GetPublicState() == eStateRunning || GetPrivateState() == eStateRunning) {
+  // still need to interrupt. While another thread handles a stop,
+  // GetPublicState() returns eStateRunning to this thread although the
+  // process is stopped, so only the private state says whether it runs.
+  const bool public_running =
+      GetPublicState() == eStateRunning && !IsHandlingStopOnOtherThread();
+  if (public_running || GetPrivateState() == eStateRunning) {
     Log *log = GetLog(LLDBLog::Process);
     LLDB_LOGF(log, "Process::%s() About to stop.", __FUNCTION__);
 
@@ -3885,12 +3992,14 @@ Status Process::DestroyImpl(bool force_kill) {
       error = StopForDestroyOrDetach(exit_event_sp);
     }
 
-    if (GetPublicState() == eStateStopped) {
+    if (GetPublicState() == eStateStopped || IsHandlingStopOnOtherThread()) {
       // Ditch all thread plans, and remove all our breakpoints: in case we
       // have to restart the target to kill it, we don't want it hitting a
       // breakpoint... Only do this if we've stopped, however, since if we
       // didn't manage to halt it above, then we're not going to have much luck
-      // doing this now.
+      // doing this now. The process is also stopped while another thread
+      // handles a stop, even though GetPublicState() returns eStateRunning to
+      // this thread.
       m_thread_list.DiscardThreadPlans();
       DisableAllBreakpointSites();
       if (auto error = FlushDelayedBreakpoints())
@@ -4716,8 +4825,41 @@ void Process::ProcessEventData::DoOnRemoval(Event *event_ptr) {
     return;
   m_update_state++;
 
-  process_sp->SetPublicState(
-      m_state, Process::ProcessEventData::GetRestartedFromEvent(event_ptr));
+  // Skip the StopInfo actions and stop hooks when:
+  // - m_state isn't eStateStopped: running, exited and the other states have
+  //   nothing to handle.
+  // - m_restarted is set: the private state thread already resumed the
+  //   process after this stop, so the actions would run against a running
+  //   process.
+  // - m_interrupted is set: the stop comes from a halt, and running the
+  //   actions could restart the process, even when it stopped for another
+  //   reason (e.g. we had already stopped for a breakpoint when the halt
+  //   request came through).
+  const bool should_perform_stop_actions =
+      m_state == eStateStopped && !m_restarted && !m_interrupted;
+
+  // Make a stop handled here public only after its StopInfo actions and stop
+  // hooks are done. Until then this thread's view is HandlingStop and it
+  // reads a StopHandlingContext whose state is eStateStopped, while every
+  // other thread still gets eStateRunning from GetState() and finds the public
+  // run lock set to running. So no other thread can take the run lock,
+  // Resume() the process or run an expression while the actions run.
+  //
+  // Stops consumed while this thread evaluates an expression are made public
+  // right away: UserExpression, FunctionCaller and the IR interpreter push
+  // PushPublicStateRunningExpression() around RunThreadPlan, which withdraws
+  // can_run_breakpoint_actions, so no breakpoint or watchpoint commands run
+  // for them, and their hijacked event skips the stop hooks. So are stops
+  // that RunThreadPlan consumes on the private state thread, whose view stays
+  // Private.
+  const Policy policy = PolicyStack::Get().Current();
+  const bool keep_private_until_handled =
+      should_perform_stop_actions && policy.view != Policy::View::Private &&
+      policy.capabilities.can_run_breakpoint_actions;
+
+  if (!keep_private_until_handled)
+    process_sp->SetPublicState(
+        m_state, Process::ProcessEventData::GetRestartedFromEvent(event_ptr));
 
   if (m_state == eStateStopped && !m_restarted) {
     // Let process subclasses know we are about to do a public stop and do
@@ -4726,18 +4868,34 @@ void Process::ProcessEventData::DoOnRemoval(Event *event_ptr) {
     process_sp->WillPublicStop();
   }
 
-  // If this is a halt event, even if the halt stopped with some reason other
-  // than a plain interrupt (e.g. we had already stopped for a breakpoint when
-  // the halt request came through) don't do the StopInfo actions, as they may
-  // end up restarting the process.
-  if (m_interrupted)
+  if (!should_perform_stop_actions)
     return;
 
-  // If we're not stopped or have restarted, then skip the StopInfo actions:
-  if (m_state != eStateStopped || m_restarted) {
+  if (!keep_private_until_handled) {
+    PerformStopActions(*process_sp, event_ptr);
     return;
   }
 
+  bool make_public;
+  StateType final_state;
+  {
+    StopHandlingScope scope(*process_sp);
+    PerformStopActions(*process_sp, event_ptr);
+    // If handling the stop resumed the process, through Resume() in an action
+    // or PrivateResume() in PerformStopActions, it is running: leave the
+    // enclosing context at running. The exception is ResumeSynchronous(): it
+    // waited for the next stop on this thread, so the process is stopped again,
+    // and that stop's event went to the ResumeSynchronous hijack listener
+    // without reaching any client. Make the final state public.
+    make_public = !m_restarted || scope.StoppedAgainAfterResume();
+    final_state = scope.GetPublicState();
+  }
+  if (make_public)
+    process_sp->SetPublicState(final_state, /*restarted=*/false);
+}
+
+void Process::ProcessEventData::PerformStopActions(Process &process,
+                                                   Event *event_ptr) {
   bool does_anybody_have_an_opinion = false;
   bool still_should_stop = ShouldStop(event_ptr, does_anybody_have_an_opinion);
 
@@ -4750,10 +4908,10 @@ void Process::ProcessEventData::DoOnRemoval(Event *event_ptr) {
     SetRestarted(true);
     // Use the private resume method here, since we aren't changing the run
     // lock state.
-    process_sp->PrivateResume();
+    process.PrivateResume();
   } else {
-    bool hijacked = process_sp->IsHijackedForEvent(eBroadcastBitStateChanged) &&
-                    !process_sp->StateChangedIsHijackedForSynchronousResume();
+    bool hijacked = process.IsHijackedForEvent(eBroadcastBitStateChanged) &&
+                    !process.StateChangedIsHijackedForSynchronousResume();
 
     if (!hijacked) {
       // If we didn't restart, run the Stop Hooks here.
@@ -4761,7 +4919,7 @@ void Process::ProcessEventData::DoOnRemoval(Event *event_ptr) {
       // public (or SyncResume) broadcasters.  StopHooks are just for
       // real public stops.  They might also restart the target,
       // so watch for that.
-      if (process_sp->GetTarget().RunStopHooks())
+      if (process.GetTarget().RunStopHooks())
         SetRestarted(true);
     }
   }
@@ -5427,6 +5585,18 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
     thread->QueueThreadPlan(stopper_base_plan_sp, false);
     // Have to make sure our public state is stopped, since otherwise the
     // reporting logic below doesn't work correctly.
+    //
+    // FIXME: While the override private state thread is installed, every
+    // thread reads its public state and public run lock, not only the private
+    // state threads. Both start at stopped, and the expression's events update
+    // the state, so other threads can take the run lock and Resume() or Halt()
+    // the process underneath this expression, although the stop being handled
+    // hasn't been broadcast yet. Public states that other threads set in the
+    // meantime go into the override and are lost when it's swapped out.
+    // Threads whose view isn't Private should keep using the public state and
+    // run lock of the private state thread being replaced. Forcing its public
+    // state to stopped dates from when ShouldBroadcastEvent coalesced running
+    // events against the public state; it uses m_last_broadcast_state now.
     old_state = GetPublicState();
     m_current_private_state_thread_sp->SetPublicStateNoLock(eStateStopped);
 
@@ -6267,6 +6437,13 @@ void Process::ClearPreResumeAction(PreResumeActionCallback callback, void *baton
 }
 
 ProcessRunLock &Process::GetRunLock() {
+  // Returning a reference into the context is safe: the StopHandlingScope
+  // that installed it holds it until the scope ends, only this thread is
+  // handed it, and the SB API calls that take the run lock on this thread
+  // return before the scope ends.
+  if (StopHandlingContextSP context_sp =
+          GetStopHandlingContextForCurrentThread())
+    return context_sp->m_public_run_lock;
   return m_current_private_state_thread_sp->GetRunLock();
 }
 
