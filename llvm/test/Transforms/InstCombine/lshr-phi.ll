@@ -21,7 +21,8 @@ define i32 @hash_string(ptr nocapture %key) nounwind readonly {
 ; CHECK-NEXT:    [[T7:%.*]] = xor i32 [[T2]], [[T6]]
 ; CHECK-NEXT:    [[T8]] = and i32 [[T7]], 16383
 ; CHECK-NEXT:    [[T]] = add i64 [[INDVAR]], 1
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[KEY]], i64 [[T]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[KEY]], i64 [[INDVAR]]
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[TMP0]], i64 1
 ; CHECK-NEXT:    [[T9:%.*]] = load i8, ptr [[SCEVGEP]], align 1
 ; CHECK-NEXT:    [[T10:%.*]] = icmp eq i8 [[T9]], 0
 ; CHECK-NEXT:    br i1 [[T10]], label [[BB2]], label [[BB]]

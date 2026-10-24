@@ -126,3 +126,6 @@
 
 ; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='function(infer-address-spaces,infer-address-spaces<assume-default-is-flat-addrspace>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-39
 ; CHECK-39: function(infer-address-spaces,infer-address-spaces<assume-default-is-flat-addrspace>)
+
+; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='function(instcombine<post-loop-vectorizer>,instcombine<no-post-loop-vectorizer>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-40
+; CHECK-40: function(instcombine<max-iterations=1;verify-fixpoint;post-loop-vectorizer>,instcombine<max-iterations=1;verify-fixpoint>)

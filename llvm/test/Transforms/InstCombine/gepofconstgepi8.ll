@@ -241,10 +241,10 @@ define ptr @test_nonzero_multiuse_index(ptr %base, i64 %a) {
 ; CHECK-LABEL: define ptr @test_nonzero_multiuse_index(
 ; CHECK-SAME: ptr [[BASE:%.*]], i64 [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[BASE]], i64 -4
 ; CHECK-NEXT:    [[INDEX:%.*]] = add i64 [[A]], 2
 ; CHECK-NEXT:    call void @use64(i64 [[INDEX]])
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr [4 x i8], ptr [[P1]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr [4 x i8], ptr [[BASE]], i64 [[A]]
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[TMP0]], i64 4
 ; CHECK-NEXT:    ret ptr [[P2]]
 ;
 entry:
