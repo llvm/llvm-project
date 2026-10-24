@@ -167,8 +167,9 @@ struct DeviceTy {
   /// Free memory allocated with allocCtxMem.
   llvm::Error freeCtxMem(void *Ptr);
 
-  // Data transfer. When AsyncInfo is nullptr, the transfer will be
-  // synchronous.
+  // Data transfer. The transfer is enqueued on the queue associated with
+  // \p AsyncInfo; the *Sync variants below do not need a queue and always
+  // transfer the data synchronously.
   // Copy data from host to device
   int32_t submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
                      AsyncInfoTy &AsyncInfo,
@@ -183,8 +184,19 @@ struct DeviceTy {
                        MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr = nullptr,
                        const ident_t *Loc = nullptr);
 
-  // Return true if data can be copied to DstDevice directly
-  bool isDataExchangable(const DeviceTy &DstDevice);
+  // Copy data from host to device synchronously
+  int32_t submitDataSync(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
+                         HostDataToTargetTy *Entry = nullptr,
+                         MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr = nullptr,
+                         const ident_t *Loc = nullptr,
+                         const char *Name = nullptr);
+
+  // Copy data from device back to host synchronously
+  int32_t
+  retrieveDataSync(void *HstPtrBegin, void *TgtPtrBegin, int64_t Size,
+                   HostDataToTargetTy *Entry = nullptr,
+                   MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr = nullptr,
+                   const ident_t *Loc = nullptr);
 
   // Copy data from current device to destination device directly
   int32_t dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
@@ -328,6 +340,20 @@ struct DeviceTy {
 private:
   /// Query the properties used to compute the launch geometry of a kernel.
   llvm::Error initGeometryProps();
+
+  /// Copy data from host to device. A null \p Queue means the transfer is
+  /// performed synchronously.
+  int32_t submitDataImpl(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
+                         ol_queue_handle_t Queue, HostDataToTargetTy *Entry,
+                         MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr,
+                         const ident_t *Loc, const char *Name);
+
+  /// Copy data from device back to host. A null \p Queue means the transfer is
+  /// performed synchronously.
+  int32_t retrieveDataImpl(void *HstPtrBegin, void *TgtPtrBegin, int64_t Size,
+                           ol_queue_handle_t Queue, HostDataToTargetTy *Entry,
+                           MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr,
+                           const ident_t *Loc);
 
   /// Unique identifier of the device.
   llvm::SmallString<32> Uid;
