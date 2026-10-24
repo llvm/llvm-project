@@ -4343,13 +4343,17 @@ void DAGTypeLegalizer::ExpandIntRes_FP_TO_XINT(SDNode *N, SDValue &Lo,
   SDValue Op = N->getOperand(IsStrict ? 1 : 0);
 
   // If every finite input fits in the half-width type, convert to that type and
-  // extend. Soft-promoted inputs are left to the existing path below.
+  // extend. A soft-promoted input qualifies when f32 is legal, since it will be
+  // extended to f32 for the narrower conversion.
   EVT SrcVT = Op.getValueType();
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
   // Unsigned conversions may also use FP_TO_SINT, so require the signed width.
   unsigned MinIntBits = APFloat::semanticsIntSizeInBits(SrcVT.getFltSemantics(),
                                                         /*isSigned=*/true);
-  if (TLI.isTypeLegal(SrcVT) && MinIntBits <= NVT.getSizeInBits()) {
+  bool SoftPromoted =
+      getTypeAction(SrcVT) == TargetLowering::TypeSoftPromoteHalf;
+  if (MinIntBits <= NVT.getSizeInBits() &&
+      (TLI.isTypeLegal(SrcVT) || (SoftPromoted && TLI.isTypeLegal(MVT::f32)))) {
     unsigned NewOpc = TLI.getPreferredFPToIntOpcode(N->getOpcode(), SrcVT, NVT);
     if (IsStrict) {
       Lo = DAG.getNode(NewOpc, dl, {NVT, MVT::Other}, {Chain, Op});
