@@ -376,6 +376,14 @@ Makes programs 10x faster by doing Special New Thing.
   and the memory operations access only memory through their pointer
   argument. Before, each one could read and write any memory, so loads of
   loop-invariant values weren't hoisted out of loops of tile operations.
+* Masked gathers and scatters are now costed by the number of instructions
+  CodeGen emits, rather than by the number of legalized registers their
+  operands occupy. The index width that count depends on is derived on every
+  subtarget with a hardware gather, and is read from the range of values the
+  index carries and from the GEP's stride, which costs nothing when the scale
+  field can apply it. The address space the pointers live in and a mask known
+  at compile time are both honoured. These costs mostly go down, so some loops
+  vectorize at a wider factor and more gathers survive at `-Os`.
 
 ### Changes to the OCaml bindings
 
