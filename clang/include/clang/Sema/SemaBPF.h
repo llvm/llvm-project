@@ -15,6 +15,7 @@
 
 #include "clang/AST/ASTFwd.h"
 #include "clang/Sema/SemaBase.h"
+#include "llvm/ADT/MapVector.h"
 
 namespace clang {
 class ParsedAttr;
@@ -27,6 +28,15 @@ public:
 
   void handlePreserveAIRecord(RecordDecl *RD);
   void handlePreserveAccessIndexAttr(Decl *D, const ParsedAttr &AL);
+  void DiagnoseAnonymousPreserveAIEnums();
+  Expr *BuildPreserveAIEnumeratorRef(DeclRefExpr *E);
+  static bool isPreserveAIEnumeratorRef(const Expr *E);
+  void notePreserveAIEnumerator(const Expr *E);
+  void notePreserveAIEnumeratorInArraySizes(QualType T);
+
+private:
+  llvm::MapVector<EnumDecl *, const BPFPreserveAccessIndexAttr *>
+      AnonPreserveAIEnums;
 };
 } // namespace clang
 

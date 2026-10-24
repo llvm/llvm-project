@@ -8724,6 +8724,35 @@ static bool handleLValueToRValueBitCast(EvalInfo &Info, APValue &DestValue,
   return handleRValueToRValueBitCast(Info, DestValue, SourceRValue, BCE);
 }
 
+/// Diagnose a reference to an enumerator of a BPF enum with the
+/// preserve_access_index attribute, whose value may be relocated by libbpf at
+/// load time, so it is not a constant expression. Return true if diagnosed.
+static bool diagnoseBPFPreserveAIEnumerator(EvalInfo &Info,
+                                            const PseudoObjectExpr *E) {
+  const auto *DRE = dyn_cast<DeclRefExpr>(E->getSyntacticForm());
+  if (!DRE)
+    return false;
+  const auto *ECD = dyn_cast<EnumConstantDecl>(DRE->getDecl());
+  if (!ECD)
+    return false;
+  const auto *ED = dyn_cast<EnumDecl>(ECD->getDeclContext());
+  if (!ED || !ED->hasAttr<BPFPreserveAccessIndexAttr>())
+    return false;
+
+  // An anonymous enum is only relocated through its typedef name.
+  QualType EnumTy;
+  if (ED->getDeclName())
+    EnumTy = Info.Ctx.getCanonicalTagType(ED);
+  else if (const TypedefNameDecl *TD = ED->getTypedefNameForAnonDecl())
+    EnumTy = Info.Ctx.getTypeDeclType(TD);
+  else
+    return false;
+
+  Info.FFDiag(E, diag::note_constexpr_bpf_preserve_ai_enumerator)
+      << ECD << EnumTy << E->getSourceRange();
+  return true;
+}
+
 template <class Derived>
 class ExprEvaluatorBase
   : public ConstStmtVisitor<Derived, bool> {
@@ -8974,6 +9003,8 @@ public:
   }
 
   bool VisitPseudoObjectExpr(const PseudoObjectExpr *E) {
+    if (diagnoseBPFPreserveAIEnumerator(Info, E))
+      return false;
     for (const Expr *SemE : E->semantics()) {
       if (auto *OVE = dyn_cast<OpaqueValueExpr>(SemE)) {
         // FIXME: We can't handle the case where an OpaqueValueExpr is also the

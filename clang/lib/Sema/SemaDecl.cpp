@@ -48,6 +48,7 @@
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaAMDGPU.h"
 #include "clang/Sema/SemaARM.h"
+#include "clang/Sema/SemaBPF.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaInternal.h"
@@ -6934,8 +6935,10 @@ bool Sema::tryToFixVariablyModifiedVarType(TypeSourceInfo *&TInfo,
     Diag(Loc, diag::err_array_too_large) << toString(
         Oversized, 10, Oversized.isSigned(), /*formatAsCLiteral=*/false,
         /*UpperCase=*/false, /*InsertSeparators=*/true);
-  else if (FailedFoldDiagID)
+  else if (FailedFoldDiagID) {
     Diag(Loc, FailedFoldDiagID);
+    BPF().notePreserveAIEnumeratorInArraySizes(T);
+  }
   return false;
 }
 
@@ -7046,9 +7049,10 @@ Sema::CheckTypedefForVariablyModifiedType(Scope *S, TypedefNameDecl *NewTD) {
       } else {
         if (SizeIsNegative)
           Diag(NewTD->getLocation(), diag::err_typecheck_negative_array_size);
-        else if (T->isVariableArrayType())
+        else if (T->isVariableArrayType()) {
           Diag(NewTD->getLocation(), diag::err_vla_decl_in_file_scope);
-        else if (Oversized.getBoolValue())
+          BPF().notePreserveAIEnumeratorInArraySizes(T);
+        } else if (Oversized.getBoolValue())
           Diag(NewTD->getLocation(), diag::err_array_too_large)
             << toString(Oversized, 10);
         else
@@ -9267,6 +9271,7 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
       else
         Diag(NewVD->getLocation(), diag::err_vla_decl_has_extern_linkage)
         << SizeRange;
+      BPF().notePreserveAIEnumeratorInArraySizes(T);
       NewVD->setInvalidDecl();
       return;
     }
@@ -13160,6 +13165,7 @@ bool Sema::CheckForConstantInitializer(Expr *Init, unsigned DiagID) {
   }
 
   Diag(Culprit->getExprLoc(), DiagID) << Culprit->getSourceRange();
+  BPF().notePreserveAIEnumerator(Culprit);
   return true;
 }
 

@@ -41,6 +41,9 @@ def note_constexpr_lshift_discards : Note<"signed left shift discards bits">;
 def note_constexpr_invalid_function : Note<
   "%select{non-constexpr|undefined}0 %select{function|constructor}1 %2 cannot "
   "be used in a constant expression">;
+def note_constexpr_bpf_preserve_ai_enumerator : Note<
+  "enumerator %0 is not a constant expression since %1 has the "
+  "'preserve_access_index' attribute">;
 def note_constexpr_invalid_inhctor : Note<
   "constructor inherited from base class %0 cannot be used in a "
   "constant expression; derived class cannot be implicitly initialized">;
