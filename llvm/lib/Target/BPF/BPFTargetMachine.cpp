@@ -48,8 +48,13 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeBPFTarget() {
 
   PassRegistry &PR = *PassRegistry::getPassRegistry();
   initializeGlobalISel(PR);
+  initializeBPFArenaCastLegacyPass(PR);
+  initializeBPFArenaDataLegacyPass(PR);
+  initializeBPFArenaKptrLegacyPass(PR);
+  initializeBPFArenaStackLegacyPass(PR);
   initializeBPFAsmPrinterPass(PR);
   initializeBPFCheckAndAdjustIRLegacyPass(PR);
+  initializeBPFFuncTableLegacyPass(PR);
   initializeBPFMIPeepholeLegacyPass(PR);
   initializeBPFMIExpandStackArgPseudosLegacyPass(PR);
   initializeBPFMIPreEmitPeepholeLegacyPass(PR);
@@ -113,11 +118,24 @@ TargetPassConfig *BPFTargetMachine::createPassConfig(PassManagerBase &PM) {
 }
 
 void BPFPassConfig::addIRPasses() {
+  const BPFSubtarget *Subtarget = getBPFTargetMachine().getSubtargetImpl();
+
   addPass(createAtomicExpandLegacyPass());
   addPass(createBPFCheckAndAdjustIRLegacyPass());
+  if (Subtarget->hasFuncTable())
+    addPass(createBPFFuncTablePass());
+  // Pointers to functions in data are indices by now.
+  if (Subtarget->hasArenaData())
+    addPass(createBPFArenaDataPass());
 
   TargetPassConfig::addIRPasses();
   addPass(createBPFUnwindPreparePass());
+  if (Subtarget->hasArenaStack()) {
+    addPass(createBPFArenaKptrPass());
+    addPass(createBPFArenaStackPass());
+  }
+  if (Subtarget->hasArenaCast())
+    addPass(createBPFArenaCastPass());
 }
 
 TargetTransformInfo

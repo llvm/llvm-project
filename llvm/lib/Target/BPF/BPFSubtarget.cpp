@@ -74,6 +74,10 @@ void BPFSubtarget::initializeEnvironment() {
   HasGotox = false;
   HasHmul = false;
   AllowsMisalignedMemAccess = false;
+  HasFuncTable = false;
+  HasArenaCast = false;
+  HasArenaStack = false;
+  HasArenaData = false;
 }
 
 void BPFSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {

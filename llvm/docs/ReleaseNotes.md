@@ -320,6 +320,25 @@ Makes programs 10x faster by doing Special New Thing.
   and signed high-half multiply instructions (`UHMUL` and `SHMUL`). Use
   `-disable-hmul` to disable their generation.
 
+* Added `-mattr=+func-table`: a pointer to a function is an index into
+  a read-only table of functions, and an indirect call is `callx` through
+  the table. It is for programs that keep pointers to functions in arena.
+
+* Added register `r12`, the pointer to the frame of a function in a stack in
+  arena. It is reserved.
+
+* Added `-mattr=+arena-cast`: every pointer that is dereferenced is cast with
+  `addr_space_cast`. It is for languages without address spaces whose
+  programs keep their memory in arena.
+
+* Added `-mattr=+arena-stack`: locals are kept in a stack in arena and are
+  accessed through `r12`. Spilled registers and what is passed to helpers and
+  kfuncs stay in the stack of the program.
+
+* Added `-mattr=+arena-data`: global variables and constants are placed into
+  `.addr_space.1` and `.bss.addr_space.1`, the sections that a loader puts into
+  arena.
+
 ### Changes to the DirectX Backend
 
 * The DirectX backend has been promoted from experimental to an official,

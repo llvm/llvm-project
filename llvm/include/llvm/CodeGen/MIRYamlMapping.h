@@ -413,6 +413,7 @@ struct ScalarEnumerationTraits<TargetStackID::Value> {
                 TargetStackID::ScalablePredicateVector);
     IO.enumCase(ID, "wasm-local", TargetStackID::WasmLocal);
     IO.enumCase(ID, "avr-align", TargetStackID::AvrAlign);
+    IO.enumCase(ID, "bpf-arena", TargetStackID::BPFArena);
     IO.enumCase(ID, "noalloc", TargetStackID::NoAlloc);
   }
 };

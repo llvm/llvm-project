@@ -20,6 +20,7 @@
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
+class TargetLibraryInfo;
 class BPFRegisterBankInfo;
 class BPFSubtarget;
 class BPFTargetMachine;
@@ -37,6 +38,60 @@ public:
 ModulePass *createBPFCheckAndAdjustIRLegacyPass();
 ModulePass *createBPFUnwindPreparePass();
 FunctionPass *createBPFUnwindLowerPass();
+
+class BPFFuncTablePass : public RequiredPassInfoMixin<BPFFuncTablePass> {
+public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+};
+
+ModulePass *createBPFFuncTablePass();
+
+/// Metadata of an alloca that is in the stack in arena.
+inline constexpr StringLiteral BPFArenaStackMD = "bpf.arena.stack";
+
+class BPFArenaCastPass : public RequiredPassInfoMixin<BPFArenaCastPass> {
+public:
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
+
+FunctionPass *createBPFArenaCastPass();
+
+class BPFArenaStackPass : public RequiredPassInfoMixin<BPFArenaStackPass> {
+public:
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
+
+FunctionPass *createBPFArenaStackPass();
+
+class BPFArenaDataPass : public RequiredPassInfoMixin<BPFArenaDataPass> {
+public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+};
+
+ModulePass *createBPFArenaDataPass();
+
+/// The call of a helper or of a kfunc.
+bool isBPFKernelFunc(const CallBase &CB, const TargetLibraryInfo &TLI);
+
+/// The kfunc wants a pointer to arena in this argument.
+bool isBPFArenaArg(const CallBase &CB, const Use &U);
+
+/// Metadata of an alloca that must not go to the stack in arena.
+inline constexpr StringLiteral BPFStackKeepMD = "bpf.stack.keep";
+/// Attribute of a parameter that points to the stack of the program.
+inline constexpr StringLiteral BPFStackPtrAttr = "bpf-stack-ptr";
+/// Metadata of a load that yields such a pointer.
+inline constexpr StringLiteral BPFStackPtrMD = "bpf.stack.ptr";
+
+/// The local is passed to helpers or kfuncs.
+bool bpfStaysOnStack(const AllocaInst &AI, const TargetLibraryInfo &TLI);
+
+class BPFArenaKptrPass : public RequiredPassInfoMixin<BPFArenaKptrPass> {
+public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+};
+
+ModulePass *createBPFArenaKptrPass();
 
 class BPFISelDAGToDAGPass : public SelectionDAGISelPass {
 public:
@@ -93,9 +148,14 @@ InstructionSelector *createBPFInstructionSelector(const BPFTargetMachine &,
                                                   const BPFSubtarget &,
                                                   const BPFRegisterBankInfo &);
 
+void initializeBPFArenaCastLegacyPass(PassRegistry &);
+void initializeBPFArenaDataLegacyPass(PassRegistry &);
+void initializeBPFArenaKptrLegacyPass(PassRegistry &);
+void initializeBPFArenaStackLegacyPass(PassRegistry &);
 void initializeBPFAsmPrinterPass(PassRegistry &);
 void initializeBPFCheckAndAdjustIRLegacyPass(PassRegistry &);
 void initializeBPFDAGToDAGISelLegacyPass(PassRegistry &);
+void initializeBPFFuncTableLegacyPass(PassRegistry &);
 void initializeBPFMIPeepholeLegacyPass(PassRegistry &);
 void initializeBPFMIPreEmitCheckingLegacyPass(PassRegistry &);
 void initializeBPFMIExpandStackArgPseudosLegacyPass(PassRegistry &);
