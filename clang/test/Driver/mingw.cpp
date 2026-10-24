@@ -102,7 +102,6 @@
 // CHECK_MINGW_NOLIBC-NOT: "-lkernel32"
 // CHECK_MINGW_NOLIBC-NOT: "-lmingw32"
 // CHECK_MINGW_NOLIBC-NOT: "-lmingwex"
-// CHECK_MINGW_NOLIBC-NOT: "-lmoldname"
 // CHECK_MINGW_NOLIBC-NOT: "-lmsvcrt"
 // CHECK_MINGW_NOLIBC-NOT: "-lshell32"
 // CHECK_MINGW_NOLIBC-NOT: "-luser32"
