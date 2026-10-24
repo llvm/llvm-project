@@ -1052,9 +1052,10 @@ private:
           Tok = Tok->Next;
         } while (Tok);
 
-        // Last, check that the third line starts with a closing brace.
+        // Last, check that the third line starts with a closing brace at the
+        // same level as the opening line.
         Tok = I[2]->First;
-        if (Tok->isNot(tok::r_brace))
+        if (Tok->isNot(tok::r_brace) || I[2]->Level != Line.Level)
           return 0;
 
         // Don't merge "if (a) { .. } else {".
