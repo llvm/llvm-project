@@ -13,8 +13,8 @@ void test(int i) {
 
   float f = 42;
 
-  // Loading from a floating point value results in unknown,
-  // which later materializes as a conjured value.
+  // A bit cast involving a float is unknown, which later materializes as a
+  // conjured value.
   auto g = __builtin_bit_cast(unsigned int, f);
   clang_analyzer_dump(g);
   // expected-warning-re@-1 {{{{^conj_\$[0-9]+{unsigned int,}}}}
@@ -30,6 +30,20 @@ void test(int i) {
   auto g4 = __builtin_bit_cast(unsigned long, &i);
   clang_analyzer_dump(g4);
   // expected-warning@-1 {{&i [as 64 bit integer]}}
+}
+
+// Bit casts involving floats should be declined in both directions. Dumping to
+// avoid the conjured value.
+void test_float_bitcast(int i) {
+  int one = 1;
+  clang_analyzer_dump(__builtin_bit_cast(float, one));
+  // expected-warning@-1 {{Unknown}}
+  clang_analyzer_dump(__builtin_bit_cast(float, i));
+  // expected-warning@-1 {{Unknown}}
+
+  float f = 1.5f;
+  clang_analyzer_dump(__builtin_bit_cast(unsigned int, f));
+  // expected-warning@-1 {{Unknown}}
 }
 
 struct A {
