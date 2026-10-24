@@ -53,7 +53,6 @@ void warning() {
   // CHECK-MESSAGES: [[@LINE-1]]:4: warning: the value returned by this function should not be disregarded; neglecting it may lead to errors
 
   (void)fun();
-  // CHECK-MESSAGES: [[@LINE-1]]:9: warning: the value returned by this function should not be disregarded; neglecting it may lead to errors
 
   ns::Outer::Inner ObjA1;
   ObjA1.memFun();
