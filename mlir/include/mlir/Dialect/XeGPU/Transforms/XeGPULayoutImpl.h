@@ -470,7 +470,7 @@ DistributeLayoutAttr getConsumerLayoutAt(OpOperand &operand);
 /// layout, i.e. `rematerialize` would succeed: a bounded chain of pure vector
 /// generators (`vector.step`, splat `arith.constant`, `vector.create_mask`,
 /// scalar `vector.broadcast`) and layout-preserving elementwise ops.
-bool isCheaplyRematerializable(Operation *op);
+bool isTriviallyRematerializable(Operation *op);
 
 /// Clone a bounded chain of pure vector generators and layout-preserving
 /// elementwise ops without layout attributes. Each producer is cloned once,

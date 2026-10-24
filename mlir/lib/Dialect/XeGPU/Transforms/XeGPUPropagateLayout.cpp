@@ -1890,7 +1890,7 @@ void xegpu::sinkElementwiseConversions(OpBuilder &builder,
       // another layout.
       if (!operandConversionOp) {
         Operation *definingOp = operandValue.getDefiningOp();
-        if (!definingOp || !xegpu::isCheaplyRematerializable(definingOp))
+        if (!definingOp || !xegpu::isTriviallyRematerializable(definingOp))
           return;
         continue;
       }
@@ -1933,7 +1933,7 @@ void xegpu::sinkElementwiseConversions(OpBuilder &builder,
       if (rewiredOpIdxs.contains(operand.getOperandNumber()))
         continue;
       Operation *definingOp = operandValue.getDefiningOp();
-      assert(definingOp && xegpu::isCheaplyRematerializable(definingOp) &&
+      assert(definingOp && xegpu::isTriviallyRematerializable(definingOp) &&
              "operand should have been rejected above");
       // Rematerialize with uniform source layout.
       builder.setInsertionPointAfter(definingOp);
