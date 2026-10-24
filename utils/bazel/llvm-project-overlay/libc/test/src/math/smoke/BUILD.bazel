@@ -242,6 +242,14 @@ math_test(
 )
 
 math_test(
+    name = "copysignf80",
+    hdrs = ["CopySignTest.h"],
+    deps = [
+        "//libc:__support_fputil_float80",
+    ],
+)
+
+math_test(
     name = "copysignf16",
     hdrs = ["CopySignTest.h"],
 )
@@ -577,6 +585,14 @@ math_test(
     hdrs = ["FAbsTest.h"],
     deps = [
         "//libc:__support_fputil_float128",
+    ],
+)
+
+math_test(
+    name = "fabsf80",
+    hdrs = ["FAbsTest.h"],
+    deps = [
+        "//libc:__support_fputil_float80",
     ],
 )
 

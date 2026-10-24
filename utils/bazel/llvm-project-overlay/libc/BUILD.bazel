@@ -6767,6 +6767,16 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_copysignf80",
+    hdrs = ["src/__support/math/copysignf80.h"],
+    deps = [
+        ":__support_fputil_float80",
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_copysignf16",
     hdrs = ["src/__support/math/copysignf16.h"],
     deps = [
@@ -9264,6 +9274,16 @@ libc_support_library(
     deps = [
         ":__support_fputil_basic_operations",
         ":__support_fputil_float128",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fabsf80",
+    hdrs = ["src/__support/math/fabsf80.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_fputil_float80",
         ":__support_macros_config",
     ],
 )
@@ -12943,6 +12963,15 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "copysignf80",
+    additional_deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_float80",
+        ":__support_math_copysignf80",
+    ],
+)
+
+libc_math_function(
     name = "copysignf16",
     additional_deps = [
         ":__support_math_copysignf16",
@@ -13406,6 +13435,15 @@ libc_math_function(
         ":__support_cpp_bit",
         ":__support_fputil_float128",
         ":__support_math_fabsf128",
+    ],
+)
+
+libc_math_function(
+    name = "fabsf80",
+    additional_deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_float80",
+        ":__support_math_fabsf80",
     ],
 )
 
