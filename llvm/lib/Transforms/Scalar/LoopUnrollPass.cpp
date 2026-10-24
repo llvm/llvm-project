@@ -94,8 +94,7 @@ TargetTransformInfo::UnrollingPreferences llvm::gatherUnrollingPreferences(
     std::optional<unsigned> UserThreshold, std::optional<bool> UserAllowPartial,
     std::optional<bool> UserRuntime, std::optional<bool> UserUpperBound,
     std::optional<unsigned> UserFullUnrollMaxCount) {
-  const ScalarOptions &Opts =
-      L->getHeader()->getContext().getLibraryOptions().get<ScalarOptions>();
+  const ScalarOptions &Opts = getScalarOptions(*L);
   TargetTransformInfo::UnrollingPreferences UP;
 
   // Set up the defaults
@@ -687,11 +686,7 @@ static unsigned unrollCountPragmaValue(const Loop *L) {
 }
 
 UnrollPragmaInfo::UnrollPragmaInfo(const Loop *L)
-    : UserUnrollCount(L->getHeader()
-                          ->getContext()
-                          .getLibraryOptions()
-                          .get<ScalarOptions>()
-                          .unroll_count.has_value()),
+    : UserUnrollCount(getScalarOptions(*L).unroll_count.has_value()),
       PragmaFullUnroll(hasUnrollFullPragma(L)),
       PragmaCount(unrollCountPragmaValue(L)),
       PragmaEnableUnroll(hasUnrollEnablePragma(L)),
@@ -927,8 +922,7 @@ unsigned llvm::computeUnrollCount(
     const unsigned TripMultiple, const UnrollCostEstimator &UCE,
     TargetTransformInfo::UnrollingPreferences &UP,
     TargetTransformInfo::PeelingPreferences &PP) {
-  const ScalarOptions &Opts =
-      L->getHeader()->getContext().getLibraryOptions().get<ScalarOptions>();
+  const ScalarOptions &Opts = getScalarOptions(*L);
 
   unsigned LoopSize = UCE.getRolledLoopSize();
 
@@ -1552,8 +1546,7 @@ PreservedAnalyses LoopFullUnrollPass::run(Loop &L, LoopAnalysisManager &AM,
   // pass. Function analyses need to be preserved across loop transformations
   // but ORE cannot be preserved (see comment before the pass definition).
   OptimizationRemarkEmitter ORE(L.getHeader()->getParent());
-  const ScalarOptions &Opts =
-      L.getHeader()->getContext().getLibraryOptions().get<ScalarOptions>();
+  const ScalarOptions &Opts = getScalarOptions(L);
 
   // Keep track of the previous loop structure so we can identify new loops
   // created by unrolling.

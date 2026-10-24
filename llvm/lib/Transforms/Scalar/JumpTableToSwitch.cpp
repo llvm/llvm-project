@@ -204,8 +204,7 @@ PreservedAnalyses JumpTableToSwitchPass::run(Function &F,
   DominatorTree *DT = AM.getCachedResult<DominatorTreeAnalysis>(F);
   PostDominatorTree *PDT = AM.getCachedResult<PostDominatorTreeAnalysis>(F);
   DomTreeUpdater DTU(DT, PDT, DomTreeUpdater::UpdateStrategy::Lazy);
-  const ScalarOptions &Opts =
-      F.getContext().getLibraryOptions().get<ScalarOptions>();
+  const ScalarOptions &Opts = getScalarOptions(F);
   bool Changed = false;
   auto FuncToGuid = [&](const Function &Fct) {
     if (const auto MaybeGUID = Fct.getGUIDIfAssigned(); MaybeGUID)

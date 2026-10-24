@@ -2110,6 +2110,156 @@ define i32 @macc_h00_multiple_uses(i16 %a, i16 %b, i32 %c, ptr %out) nounwind {
   ret i32 %result
 }
 
+define i32 @macc_h01(i32 %rd, i16 %a, i32 %b) nounwind {
+; RV32-LABEL: macc_h01:
+; RV32:       # %bb.0:
+; RV32-NEXT:    macc.h01 a0, a1, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: macc_h01:
+; RV64:       # %bb.0:
+; RV64-NEXT:    sext.h a1, a1
+; RV64-NEXT:    sraiw a2, a2, 16
+; RV64-NEXT:    mul a1, a1, a2
+; RV64-NEXT:    addw a0, a0, a1
+; RV64-NEXT:    ret
+  %aext = sext i16 %a to i32
+  %bhi = ashr i32 %b, 16
+  %mul = mul i32 %aext, %bhi
+  %result = add i32 %rd, %mul
+  ret i32 %result
+}
+
+define i32 @macc_h01_commute(i32 %rd, i16 %a, i32 %b) nounwind {
+; RV32-LABEL: macc_h01_commute:
+; RV32:       # %bb.0:
+; RV32-NEXT:    macc.h01 a0, a1, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: macc_h01_commute:
+; RV64:       # %bb.0:
+; RV64-NEXT:    sext.h a1, a1
+; RV64-NEXT:    sraiw a2, a2, 16
+; RV64-NEXT:    mul a1, a1, a2
+; RV64-NEXT:    addw a0, a1, a0
+; RV64-NEXT:    ret
+  %aext = sext i16 %a to i32
+  %bhi = ashr i32 %b, 16
+  %mul = mul i32 %aext, %bhi
+  %result = add i32 %mul, %rd
+  ret i32 %result
+}
+
+; The high halfword operand comes first in the mul.
+define i32 @macc_h01_swap_operands(i32 %rd, i16 %a, i32 %b) nounwind {
+; RV32-LABEL: macc_h01_swap_operands:
+; RV32:       # %bb.0:
+; RV32-NEXT:    macc.h01 a0, a1, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: macc_h01_swap_operands:
+; RV64:       # %bb.0:
+; RV64-NEXT:    sext.h a1, a1
+; RV64-NEXT:    sraiw a2, a2, 16
+; RV64-NEXT:    mul a1, a2, a1
+; RV64-NEXT:    addw a0, a0, a1
+; RV64-NEXT:    ret
+  %aext = sext i16 %a to i32
+  %bhi = ashr i32 %b, 16
+  %mul = mul i32 %bhi, %aext
+  %result = add i32 %rd, %mul
+  ret i32 %result
+}
+
+define i32 @macc_h11(i32 %rd, i32 %a, i32 %b) nounwind {
+; RV32-LABEL: macc_h11:
+; RV32:       # %bb.0:
+; RV32-NEXT:    macc.h11 a0, a1, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: macc_h11:
+; RV64:       # %bb.0:
+; RV64-NEXT:    sraiw a1, a1, 16
+; RV64-NEXT:    sraiw a2, a2, 16
+; RV64-NEXT:    mul a1, a1, a2
+; RV64-NEXT:    addw a0, a0, a1
+; RV64-NEXT:    ret
+  %ahi = ashr i32 %a, 16
+  %bhi = ashr i32 %b, 16
+  %mul = mul i32 %ahi, %bhi
+  %result = add i32 %rd, %mul
+  ret i32 %result
+}
+
+define i32 @macc_h11_commute(i32 %rd, i32 %a, i32 %b) nounwind {
+; RV32-LABEL: macc_h11_commute:
+; RV32:       # %bb.0:
+; RV32-NEXT:    macc.h11 a0, a1, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: macc_h11_commute:
+; RV64:       # %bb.0:
+; RV64-NEXT:    sraiw a1, a1, 16
+; RV64-NEXT:    sraiw a2, a2, 16
+; RV64-NEXT:    mul a1, a1, a2
+; RV64-NEXT:    addw a0, a1, a0
+; RV64-NEXT:    ret
+  %ahi = ashr i32 %a, 16
+  %bhi = ashr i32 %b, 16
+  %mul = mul i32 %ahi, %bhi
+  %result = add i32 %mul, %rd
+  ret i32 %result
+}
+
+; Negative test: multiply result has multiple uses, should not combine to macc
+define i32 @macc_h11_multiple_uses(i32 %a, i32 %b, i32 %c, ptr %out) nounwind {
+; RV32-LABEL: macc_h11_multiple_uses:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mul.h11 a1, a0, a1
+; RV32-NEXT:    add a0, a2, a1
+; RV32-NEXT:    sw a1, 0(a3)
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: macc_h11_multiple_uses:
+; RV64:       # %bb.0:
+; RV64-NEXT:    sraiw a0, a0, 16
+; RV64-NEXT:    sraiw a1, a1, 16
+; RV64-NEXT:    mul a1, a0, a1
+; RV64-NEXT:    addw a0, a2, a1
+; RV64-NEXT:    sw a1, 0(a3)
+; RV64-NEXT:    ret
+  %ahi = ashr i32 %a, 16
+  %bhi = ashr i32 %b, 16
+  %mul = mul i32 %ahi, %bhi
+  %result = add i32 %c, %mul
+  store i32 %mul, ptr %out
+  ret i32 %result
+}
+
+; Negative test: shift amount is not 16, should not use macc.h11
+define i32 @macc_h11_wrong_shamt(i32 %rd, i32 %a, i32 %b) nounwind {
+; RV32-LABEL: macc_h11_wrong_shamt:
+; RV32:       # %bb.0:
+; RV32-NEXT:    srai a1, a1, 15
+; RV32-NEXT:    srai a2, a2, 16
+; RV32-NEXT:    mul a1, a1, a2
+; RV32-NEXT:    add a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: macc_h11_wrong_shamt:
+; RV64:       # %bb.0:
+; RV64-NEXT:    sraiw a1, a1, 15
+; RV64-NEXT:    sraiw a2, a2, 16
+; RV64-NEXT:    mul a1, a1, a2
+; RV64-NEXT:    addw a0, a0, a1
+; RV64-NEXT:    ret
+  %ahi = ashr i32 %a, 15
+  %bhi = ashr i32 %b, 16
+  %mul = mul i32 %ahi, %bhi
+  %result = add i32 %rd, %mul
+  ret i32 %result
+}
+
 define i32 @mhacc(i32 %rd, i32 %a, i32 %b) nounwind {
 ; RV32-LABEL: mhacc:
 ; RV32:       # %bb.0:
@@ -3062,6 +3212,78 @@ define i32 @mul_h00_sexti16_sext_inreg_commute(i16 signext %a, i32 %b) nounwind 
   %b_ext = trunc i32 %b to i16
   %b_ext2 = sext i16 %b_ext to i32
   %mul = mul i32 %b_ext2, %b_sext
+  ret i32 %mul
+}
+
+define i32 @mul_h01(i16 signext %a, i32 %b) nounwind {
+; RV32-LABEL: mul_h01:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mul.h01 a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: mul_h01:
+; RV64:       # %bb.0:
+; RV64-NEXT:    sraiw a1, a1, 16
+; RV64-NEXT:    mul a0, a0, a1
+; RV64-NEXT:    ret
+  %aext = sext i16 %a to i32
+  %bhi = ashr i32 %b, 16
+  %mul = mul i32 %aext, %bhi
+  ret i32 %mul
+}
+
+define i32 @mul_h01_commute(i16 signext %a, i32 %b) nounwind {
+; RV32-LABEL: mul_h01_commute:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mul.h01 a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: mul_h01_commute:
+; RV64:       # %bb.0:
+; RV64-NEXT:    sraiw a1, a1, 16
+; RV64-NEXT:    mul a0, a1, a0
+; RV64-NEXT:    ret
+  %aext = sext i16 %a to i32
+  %bhi = ashr i32 %b, 16
+  %mul = mul i32 %bhi, %aext
+  ret i32 %mul
+}
+
+; Low halfword comes from a sext_inreg rather than a signext argument.
+define i32 @mul_h01_sext_inreg(i32 %a, i32 %b) nounwind {
+; RV32-LABEL: mul_h01_sext_inreg:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mul.h01 a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: mul_h01_sext_inreg:
+; RV64:       # %bb.0:
+; RV64-NEXT:    sext.h a0, a0
+; RV64-NEXT:    sraiw a1, a1, 16
+; RV64-NEXT:    mul a0, a0, a1
+; RV64-NEXT:    ret
+  %atrunc = trunc i32 %a to i16
+  %aext = sext i16 %atrunc to i32
+  %bhi = ashr i32 %b, 16
+  %mul = mul i32 %aext, %bhi
+  ret i32 %mul
+}
+
+define i32 @mul_h11(i32 %a, i32 %b) nounwind {
+; RV32-LABEL: mul_h11:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mul.h11 a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: mul_h11:
+; RV64:       # %bb.0:
+; RV64-NEXT:    sraiw a0, a0, 16
+; RV64-NEXT:    sraiw a1, a1, 16
+; RV64-NEXT:    mul a0, a0, a1
+; RV64-NEXT:    ret
+  %ahi = ashr i32 %a, 16
+  %bhi = ashr i32 %b, 16
+  %mul = mul i32 %ahi, %bhi
   ret i32 %mul
 }
 
