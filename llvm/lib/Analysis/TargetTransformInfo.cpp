@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/LoopIterator.h"
@@ -21,6 +22,7 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
+#include <functional>
 #include <optional>
 #include <utility>
 
@@ -310,6 +312,13 @@ bool llvm::TargetTransformInfo::isValidAddrSpaceCast(unsigned FromAS,
 bool llvm::TargetTransformInfo::addrspacesMayAlias(unsigned FromAS,
                                                    unsigned ToAS) const {
   return TTIImpl->addrspacesMayAlias(FromAS, ToAS);
+}
+
+SmallVector<unsigned, 8> TargetTransformInfo::getAddressSpaces() const {
+  SmallVector<unsigned, 8> AddrSpaces = TTIImpl->getAddressSpaces();
+  assert(is_sorted(AddrSpaces, std::less_equal<>()) &&
+         "target reported address spaces out of order or duplicated");
+  return AddrSpaces;
 }
 
 unsigned TargetTransformInfo::getFlatAddressSpace() const {
