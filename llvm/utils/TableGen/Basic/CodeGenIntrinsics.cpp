@@ -632,6 +632,24 @@ void CodeGenIntrinsic::setProperty(const Record *R) {
       }
     }
     addPrettyPrintFunction(ArgNo - 1, ArgName, FuncName);
+  } else if (R->isSubClassOf("CapturesAddress")) {
+    unsigned ArgNo = R->getValueAsInt("ArgNo");
+    addArgAttribute(ArgNo, CapturesAddress);
+  } else if (R->isSubClassOf("AllocatedPointer")) {
+    unsigned ArgNo = R->getValueAsInt("ArgNo");
+    addArgAttribute(ArgNo, AllocatedPointer);
+  } else if (R->isSubClassOf("IntrAllocKind")) {
+    AllocKind = R->getValueAsString("Kind");
+    if (getAllocKindEnumName(AllocKind).empty())
+      PrintFatalError(R->getLoc(), "Unknown allockind on " + Name);
+  } else if (R->isSubClassOf("IntrAllocSize")) {
+    unsigned ArgNo = R->getValueAsInt("ArgNo");
+    if (ArgNo < 1)
+      PrintFatalError(R->getLoc(),
+                      "IntrAllocSize requires ArgNo >= 1 (0 is return value)");
+    AllocSize = ArgNo - 1;
+  } else if (R->isSubClassOf("IntrAllocFamily")) {
+    AllocFamily = R->getValueAsString("Name");
   } else {
     llvm_unreachable("Unknown property!");
   }
@@ -652,6 +670,14 @@ CodeGenIntrinsic::getValueAsIRMemLocation(const Record *R) const {
     PrintFatalError(R->getLoc(), "unknown IRMemLocation: " + Name);
 
   return Loc;
+}
+
+StringRef CodeGenIntrinsic::getAllocKindEnumName(StringRef Kind) {
+  // TODO: Extend accordingly, should we ever need to support other allockinds.
+  return StringSwitch<StringRef>(Kind)
+      .Case("alloc", "Alloc")
+      .Case("free", "Free")
+      .Default("");
 }
 
 bool CodeGenIntrinsic::isParamAPointer(unsigned ParamIdx) const {
