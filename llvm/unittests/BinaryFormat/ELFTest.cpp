@@ -13,6 +13,16 @@ using namespace llvm;
 using namespace llvm::ELF;
 
 namespace {
+TEST(ELFTest, LSTMachine) {
+  EXPECT_EQ(271u, EM_LST);
+
+  EXPECT_EQ(EM_LST, convertArchNameToEMachine("lst"));
+  EXPECT_EQ(EM_LST, convertArchNameToEMachine("LST"));
+  EXPECT_EQ(EM_LST, convertArchNameToEMachine("Lst"));
+
+  EXPECT_EQ("lst", convertEMachineToArchName(271));
+}
+
 TEST(ELFTest, OSABI) {
   EXPECT_EQ(ELFOSABI_GNU, convertNameToOSABI("gnu"));
   EXPECT_EQ(ELFOSABI_FREEBSD, convertNameToOSABI("freebsd"));
