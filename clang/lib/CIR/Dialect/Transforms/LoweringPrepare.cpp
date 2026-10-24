@@ -929,15 +929,27 @@ static mlir::Type higherPrecisionElementTypeForComplexArithmetic(
     const clang::LangOptions &langOpts, CIRBaseBuilderTy &builder,
     mlir::Type elementType) {
 
-  auto getHigherPrecisionFPType = [&context](mlir::Type type) -> mlir::Type {
+  auto getHigherPrecisionFPType = [&context,
+                                   &targetInfo](mlir::Type type) -> mlir::Type {
     if (mlir::isa<cir::FP16Type>(type))
       return cir::SingleType::get(&context);
 
     if (mlir::isa<cir::SingleType>(type) || mlir::isa<cir::BF16Type>(type))
       return cir::DoubleType::get(&context);
 
-    if (mlir::isa<cir::DoubleType>(type))
-      return cir::LongDoubleType::get(&context, type);
+    if (mlir::isa<cir::DoubleType>(type)) {
+      const llvm::fltSemantics &format = targetInfo.getLongDoubleFormat();
+      mlir::Type underlying;
+      if (&format == &llvm::APFloat::IEEEdouble())
+        underlying = cir::DoubleType::get(&context);
+      else if (&format == &llvm::APFloat::x87DoubleExtended())
+        underlying = cir::FP80Type::get(&context);
+      else if (&format == &llvm::APFloat::IEEEquad())
+        underlying = cir::FP128Type::get(&context);
+      else
+        llvm_unreachable("NYI: unsupported long double format");
+      return cir::LongDoubleType::get(&context, underlying);
+    }
 
     return type;
   };
