@@ -554,6 +554,11 @@ static cl::opt<bool> EnableSetWavePriority("amdgpu-set-wave-priority",
                                            cl::desc("Adjust wave priority"),
                                            cl::init(false), cl::Hidden);
 
+static cl::opt<bool> EnableStaticSimulator(
+    "amdgpu-enable-static-simulator",
+    cl::desc("Enable static performance simulator for AMDGPU kernels"),
+    cl::init(false), cl::Hidden);
+
 static cl::opt<bool> EnableScalarIRPasses(
   "amdgpu-scalar-ir-passes",
   cl::desc("Enable scalar IR passes"),
@@ -740,6 +745,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPULowerVGPREncodingLegacyPass(*PR);
   initializeSIInsertHardClausesLegacyPass(*PR);
   initializeSIInsertWaitcntsLegacyPass(*PR);
+  initializeAMDGPUStaticSimulatorLegacyPass(*PR);
   initializeSIModeRegisterLegacyPass(*PR);
   initializeSIWholeQuadModeLegacyPass(*PR);
   initializeSILowerControlFlowLegacyPass(*PR);
@@ -2067,6 +2073,9 @@ void GCNPassConfig::addPreEmitPass() {
     addPass(&AMDGPUInsertDelayAluID);
 
   addPass(&BranchRelaxationPassID);
+
+  if (isPassEnabled(EnableStaticSimulator, CodeGenOptLevel::Less))
+    addPass(createAMDGPUStaticSimulatorPass());
 }
 
 void GCNPassConfig::addPostBBSections() {
