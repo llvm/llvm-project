@@ -2280,6 +2280,13 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val,
       // checked earlier in isLiteralImm()
 
       Val = FPLiteral.bitcastToAPInt().getZExtValue();
+      if (OpTy == AMDGPU::OPERAND_REG_IMM_V2FP16_SPLAT &&
+          Lit == LitModifier::None) {
+        // Use the splat only when this target's inline encoding produces it.
+        uint32_t Packed = Val | (Val << 16);
+        if (AMDGPU::isPKFMACF16InlineConstant(Packed, AsmParser->isGFX11Plus()))
+          Val = Packed;
+      }
       break;
     }
     default:
