@@ -61,8 +61,8 @@ body:             |
     ; CHECK-NEXT: [[DEF]].sub_16bit:gr64_nosp = COPY [[COPY3]]
     ; CHECK-NEXT: [[DEF1:%[0-9]+]]:gr64_nosp = IMPLICIT_DEF
     ; CHECK-NEXT: [[DEF1]].sub_16bit:gr64_nosp = COPY [[COPY4]]
-    ; CHECK-NEXT: [[LEA64_32r:%[0-9]+]]:gr32 = LEA64_32r killed [[DEF]], 1, killed [[DEF1]], 0, $noreg
-    ; CHECK-NEXT: [[COPY5:%[0-9]+]]:gr16 = COPY killed [[LEA64_32r]].sub_16bit
+    ; CHECK-NEXT: [[LEA64_32r:%[0-9]+]]:gr32 = LEA64_32r [[DEF]], 1, [[DEF1]], 0, $noreg
+    ; CHECK-NEXT: [[COPY5:%[0-9]+]]:gr16 = COPY [[LEA64_32r]].sub_16bit
     ; CHECK-NEXT: [[MOVSX32rr16_:%[0-9]+]]:gr32 = MOVSX32rr16 killed [[COPY5]]
     ; CHECK-NEXT: [[COPY6:%[0-9]+]]:gr32 = COPY [[MOVSX32rr16_]]
     ; CHECK-NEXT: [[SAR32ri:%[0-9]+]]:gr32 = SAR32ri [[SAR32ri]], 15, implicit-def dead $eflags
