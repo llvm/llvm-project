@@ -2,6 +2,7 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
 load("@bazel_skylib//rules:copy_file.bzl", "copy_file")
 load("@bazel_skylib//rules:run_binary.bzl", "run_binary")
 load("@bazel_skylib//rules:write_file.bzl", "write_file")
@@ -26,6 +27,18 @@ package(
 )
 
 licenses(["notice"])
+
+bool_flag(
+    name = "enable_cir",
+    build_setting_default = False,
+)
+
+config_setting(
+    name = "cir_enabled",
+    flag_values = {
+        ":enable_cir": "true",
+    },
+)
 
 cc_binary(
     name = "clang-tblgen",
@@ -833,6 +846,10 @@ cc_library(
         "include/clang/Basic/Version.inc",
         "include/clang/Config/config.h",
     ],
+    defines = select({
+        ":cir_enabled": ["CLANG_ENABLE_CIR=1"],
+        "//conditions:default": ["CLANG_ENABLE_CIR=0"],
+    }),
     includes = ["include"],
     deps = [
         # We rely on the LLVM config library to provide configuration defines.
@@ -2386,7 +2403,15 @@ cc_library(
         ":static_analyzer_frontend",
         "//llvm:Option",
         "//llvm:Support",
-    ],
+    ] + select({
+        ":cir_enabled": [
+            ":cir_frontend_action",
+            ":cir_transforms",
+            "//mlir:IR",
+            "//mlir:Pass",
+        ],
+        "//conditions:default": [],
+    }),
 )
 
 cc_library(
@@ -3089,13 +3114,10 @@ cc_library(
 
 cc_library(
     name = "cir_dialect",
-    srcs = glob(
-        [
-            "lib/CIR/Dialect/IR/*.cpp",
-            "lib/CIR/Dialect/IR/*.h",
-        ],
-        exclude = ["lib/CIR/Dialect/IR/CIRMemorySlot.cpp"],
-    ),
+    srcs = glob([
+        "lib/CIR/Dialect/IR/*.cpp",
+        "lib/CIR/Dialect/IR/*.h",
+    ]),
     hdrs = glob([
         "include/clang/CIR/Dialect/IR/*.h",
         "include/clang/CIR/Dialect/Builder/*.h",
@@ -3240,6 +3262,7 @@ cc_library(
         ":MLIRCIRPassIncGen",
         ":ast",
         ":basic",
+        ":cir_analysis",
         ":cir_dialect",
         ":cir_headers",
         ":cir_interfaces",
