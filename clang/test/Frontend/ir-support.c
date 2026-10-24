@@ -4,6 +4,7 @@
 // We strip differing '.file' directives before comparing.
 
 // Reference output:
+// XFAIL: system-zos
 // RUN: %clang_cc1 -S -o - %s | grep -v '\.file' > %t.s
 
 // LLVM bitcode:

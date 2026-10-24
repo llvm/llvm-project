@@ -10,14 +10,29 @@ private: ~SecretDestructor(); // expected-note + {{private}}
 };
 
 SecretDestructor sd1; // all-dtors-error{{private}}
-thread_local SecretDestructor sd2; // thread-local-dtors-error{{private}}
+thread_local SecretDestructor sd2;
+#ifdef __MVS__
+  // expected-error@-2 {{thread-local storage is not supported for the current target}}
+  // all-dtors-error@-3 {{private}}
+#else
+  // thread-local-dtors-error@-5 {{private}}
+#endif
 void locals() {
   static SecretDestructor sd3; // all-dtors-error{{private}}
-  thread_local SecretDestructor sd4; // thread-local-dtors-error{{private}}
+  thread_local SecretDestructor sd4;
+#ifdef __MVS__
+  // expected-error@-2 {{thread-local storage is not supported for the current target}}
+  // expected-error@-3 {{private}}
+#else
+  // thread-local-dtors-error@-5 {{private}}
+#endif
 }
 
 [[clang::always_destroy]] SecretDestructor sd6; // expected-error{{private}}
 [[clang::always_destroy]] thread_local SecretDestructor sd7; // expected-error{{private}}
+#ifdef __MVS__
+  // expected-error@-2 {{thread-local storage is not supported for the current target}}
+#endif
 
 [[clang::no_destroy]] SecretDestructor sd8;
 
@@ -45,6 +60,9 @@ void local_arrays() {
   static SecretDestructor arr2[10];
   // expected-error@+1 {{temporary of type 'SecretDestructor' has private destructor}}
   thread_local SecretDestructor arr3[10];
+#ifdef __MVS__
+  // expected-error@-2 {{thread-local storage is not supported for the current target}}
+#endif
 }
 
 struct Base {

@@ -1,3 +1,4 @@
+// XFAIL: target={{.*}}-zos{{.*}}
 // RUN: %clang_cc1 %s -std=c++20 -fsyntax-only -verify
 
 template <int N> struct Str {

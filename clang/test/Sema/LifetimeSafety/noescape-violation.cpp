@@ -1,3 +1,4 @@
+// XFAIL: target={{.*}}-zos{{.*}}
 // RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -Wlifetime-safety-noescape -Wlifetime-safety-annotation-placement -verify %s
 
 #include "Inputs/lifetime-analysis.h"

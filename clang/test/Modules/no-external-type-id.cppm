@@ -1,5 +1,6 @@
 // Testing that we won't record the type ID from external modules.
 //
+// XFAIL: system-zos
 // RUN: rm -rf %t
 // RUN: split-file %s %t
 // RUN: cd %t

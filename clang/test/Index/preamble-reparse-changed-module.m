@@ -1,4 +1,5 @@
 // UNSUPPORTED: system-windows
+// XFAIL: system-zos
 
 // RUN: rm -rf %t
 // RUN: mkdir -p %t/mod

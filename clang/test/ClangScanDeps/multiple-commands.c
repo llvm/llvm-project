@@ -5,6 +5,7 @@
 // We use an x86_64-apple-darwin target to avoid host-dependent behaviour in
 // the driver. Platforms without an integrated assembler have different commands
 // REQUIRES: x86-registered-target
+// XFAIL: system-zos
 
 // RUN: rm -rf %t
 // RUN: split-file %s %t

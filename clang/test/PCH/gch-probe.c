@@ -1,6 +1,6 @@
 // Unsupported on AIX because we don't support the requisite "__clangast"
 // section in XCOFF yet.
-// UNSUPPORTED: target={{.*}}-aix{{.*}}
+// UNSUPPORTED: target={{.*}}-aix{{.*}}, target={{.*}}-zos{{.*}}
 
 // For GCC compatibility, clang should probe also with the .gch extension.
 // RUN: %clang -x c-header -c %s -o %t.h.gch

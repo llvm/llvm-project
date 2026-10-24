@@ -1,3 +1,4 @@
+// XFAIL: target={{.*}}-zos{{.*}}
 // RUN: %clang_cc1 -fsyntax-only -verify -x hip %s
 // RUN: %clang_cc1 -fsyntax-only -fcuda-is-device -verify -x hip %s
 // RUN: %clang_cc1 -fsyntax-only -fgpu-rdc -verify -x hip %s

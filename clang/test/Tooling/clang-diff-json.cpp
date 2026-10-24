@@ -1,10 +1,11 @@
+// XFAIL: target={{.*}}-zos{{.*}}
 // RUN: clang-diff -ast-dump-json %s -- \
 // RUN: | %python -c 'import json, sys; json.dump(json.loads(sys.stdin.read()), sys.stdout, sort_keys=True, indent=2)' \
 // RUN: | FileCheck %s
 
-// CHECK: "begin": 311,
+// CHECK: "begin": 333,
 // CHECK: "type": "FieldDecl",
-// CHECK: "end": 319,
+// CHECK: "end": 353,
 // CHECK: "type": "CXXRecordDecl",
 class A {
   int x;

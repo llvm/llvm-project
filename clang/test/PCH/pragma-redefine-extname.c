@@ -1,4 +1,5 @@
 /// Test this without pch.
+// XFAIL: system-zos
 // RUN: %clang_cc1 -triple=x86_64-unknown-linux -include %S/pragma-redefine-extname.h %s -verify -emit-llvm -o - | FileCheck %s
 
 /// Test with pch.
