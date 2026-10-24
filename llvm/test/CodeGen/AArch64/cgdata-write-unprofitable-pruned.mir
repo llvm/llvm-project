@@ -1,0 +1,119 @@
+# RUN: llc -mtriple=aarch64-apple-darwin -enable-machine-outliner \
+# RUN:   -start-before=machine-outliner -machine-outliner-reruns=0 \
+# RUN:   -codegen-data-generate -machine-outliner-publish-unprofitable-candidates \
+# RUN:   -verify-machineinstrs -filetype=obj %s -o %t.zero.o
+# RUN: llvm-cgdata --merge %t.zero.o -o %t.zero.cgdata
+# RUN: llvm-cgdata --convert --format text %t.zero.cgdata -o %t.zero.txt
+# RUN: FileCheck %s --check-prefix=COUNTS \
+# RUN:   --implicit-check-not='Terminals: {{[1-9]}}' < %t.zero.txt
+# RUN: llc -mtriple=aarch64-apple-darwin -enable-machine-outliner \
+# RUN:   -start-before=machine-outliner -machine-outliner-reruns=1 \
+# RUN:   -codegen-data-generate -machine-outliner-publish-unprofitable-candidates \
+# RUN:   -verify-machineinstrs -filetype=obj %s -o %t.one.o
+# RUN: llvm-cgdata --merge %t.one.o -o %t.one.cgdata
+# RUN: llvm-cgdata --convert --format text %t.one.cgdata -o %t.one.txt
+# RUN: diff %t.zero.txt %t.one.txt
+# RUN: llvm-objdump -d %t.one.o | FileCheck %s --check-prefix=OUTLINE
+
+# Discovery finds six A-B sites, four B-C sites, and three A-B-C sites, all
+# profitable. A-B has the highest priority, so it is outlined first. This
+# consumes three B-C sites and all A-B-C sites. Record B-C when overlap pruning
+# makes it unprofitable, and publish its single surviving site. A rerun cannot
+# rediscover B-C as a repeated substring. A-B-C has no surviving sites to record.
+#
+# COUNTS-DAG: Terminals:       1
+# COUNTS-DAG: Terminals:       6
+#
+# OUTLINE-COUNT-6: {{[[:space:]]bl[[:space:]]}}
+# OUTLINE-NOT: {{[[:space:]]bl[[:space:]]}}
+# OUTLINE-LABEL: <_bc>:
+# OUTLINE-NEXT: orr w1, wzr, #0x7
+# OUTLINE-NEXT: orr w2, wzr, #0xf
+# OUTLINE-NEXT: ret
+# OUTLINE-LABEL: <_OUTLINED_FUNCTION_0.content.{{[0-9]+}}>:
+# OUTLINE-NEXT: orr w0, wzr, #0x3
+# OUTLINE-NEXT: orr w1, wzr, #0x7
+# OUTLINE-NEXT: ret
+
+--- |
+  define void @abc() noredzone { unreachable }
+  define void @abc2() noredzone { unreachable }
+  define void @abc3() noredzone { unreachable }
+  define void @ab1() noredzone { unreachable }
+  define void @ab2() noredzone { unreachable }
+  define void @ab3() noredzone { unreachable }
+  define void @bc() noredzone { unreachable }
+...
+---
+name: abc
+tracksRegLiveness: true
+body: |
+  bb.0:
+    $w0 = ORRWri $wzr, 1
+    $w1 = ORRWri $wzr, 2
+    $w2 = ORRWri $wzr, 3
+    INLINEASM &"", sideeffect attdialect
+    RET undef $lr
+...
+---
+name: ab1
+tracksRegLiveness: true
+body: |
+  bb.0:
+    $w0 = ORRWri $wzr, 1
+    $w1 = ORRWri $wzr, 2
+    INLINEASM &"", sideeffect attdialect
+    RET undef $lr
+...
+---
+name: ab2
+tracksRegLiveness: true
+body: |
+  bb.0:
+    $w0 = ORRWri $wzr, 1
+    $w1 = ORRWri $wzr, 2
+    INLINEASM &"", sideeffect attdialect
+    RET undef $lr
+...
+---
+name: ab3
+tracksRegLiveness: true
+body: |
+  bb.0:
+    $w0 = ORRWri $wzr, 1
+    $w1 = ORRWri $wzr, 2
+    INLINEASM &"", sideeffect attdialect
+    RET undef $lr
+...
+---
+name: bc
+tracksRegLiveness: true
+body: |
+  bb.0:
+    $w1 = ORRWri $wzr, 2
+    $w2 = ORRWri $wzr, 3
+    INLINEASM &"", sideeffect attdialect
+    RET undef $lr
+...
+---
+name: abc2
+tracksRegLiveness: true
+body: |
+  bb.0:
+    $w0 = ORRWri $wzr, 1
+    $w1 = ORRWri $wzr, 2
+    $w2 = ORRWri $wzr, 3
+    INLINEASM &"", sideeffect attdialect
+    RET undef $lr
+...
+---
+name: abc3
+tracksRegLiveness: true
+body: |
+  bb.0:
+    $w0 = ORRWri $wzr, 1
+    $w1 = ORRWri $wzr, 2
+    $w2 = ORRWri $wzr, 3
+    INLINEASM &"", sideeffect attdialect
+    RET undef $lr
+...
