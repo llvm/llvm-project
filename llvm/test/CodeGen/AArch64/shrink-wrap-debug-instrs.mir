@@ -1,0 +1,210 @@
+# RUN: llc -mtriple=aarch64-unknown-linux-gnu -run-pass=shrink-wrap -verify-machineinstrs -o - %s | FileCheck %s
+
+# Debug register and frame-index operands must not prevent the call path from
+# being selected as the save and restore region. Real register/frame-index
+# uses in the shared return block must still disable shrink wrapping.
+# Keeping debug locations valid across the resulting epilogue is a debug-info
+# concern and must not change code generation.
+
+--- |
+  declare void @g()
+
+  define void @f_reg(i32 %c) !dbg !5 {
+    ret void
+  }
+
+  define void @f_dbg_phi(i32 %c) {
+    ret void
+  }
+
+  define void @f_dbg_value_fi(i32 %c) !dbg !11 {
+    ret void
+  }
+
+  define void @f_real_reg_use(i32 %c) {
+    ret void
+  }
+
+  define void @f_real_fi_use(i32 %c) {
+    ret void
+  }
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!2}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, emissionKind: FullDebug)
+  !1 = !DIFile(filename: "t.c", directory: "/")
+  !2 = !{i32 2, !"Debug Info Version", i32 3}
+  !5 = distinct !DISubprogram(name: "f_reg", scope: !1, file: !1, line: 1, type: !6, unit: !0, spFlags: DISPFlagDefinition, retainedNodes: !10)
+  !6 = !DISubroutineType(types: !{})
+  !7 = !DILocalVariable(name: "x", scope: !5, file: !1, line: 1, type: !8)
+  !8 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !9 = !DILocation(line: 1, scope: !5)
+  !10 = !{!7}
+  !11 = distinct !DISubprogram(name: "f_dbg_value_fi", scope: !1, file: !1, line: 2, type: !6, unit: !0, spFlags: DISPFlagDefinition, retainedNodes: !14)
+  !12 = !DILocalVariable(name: "y", scope: !11, file: !1, line: 2, type: !8)
+  !13 = !DILocation(line: 2, scope: !11)
+  !14 = !{!12}
+...
+---
+name:            f_reg
+tracksRegLiveness: true
+frameInfo:
+  adjustsStack:    true
+  hasCalls:        true
+# CHECK-LABEL: name:{{ +}}f_reg
+# CHECK:       savePoint:
+# CHECK-NEXT:    - point:{{ +}}'%bb.1'
+# CHECK:       restorePoint:
+# CHECK-NEXT:    - point:{{ +}}'%bb.1'
+# CHECK:       body:
+# CHECK:         DBG_VALUE $x19
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $w0
+
+    CBZW killed $w0, %bb.2
+
+  bb.1:
+    successors: %bb.2
+
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+    BL @g, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+
+  bb.2:
+    DBG_VALUE $x19, $noreg, !7, !DIExpression(), debug-location !9
+    RET_ReallyLR
+...
+---
+name:            f_dbg_phi
+tracksRegLiveness: true
+frameInfo:
+  adjustsStack:    true
+  hasCalls:        true
+stack:
+  - { id: 0, size: 4, alignment: 4 }
+# CHECK-LABEL: name:{{ +}}f_dbg_phi
+# CHECK:       savePoint:
+# CHECK-NEXT:    - point:{{ +}}'%bb.1'
+# CHECK:       restorePoint:
+# CHECK-NEXT:    - point:{{ +}}'%bb.1'
+# CHECK:       body:
+# CHECK:         DBG_PHI %stack.0
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $w0
+
+    CBZW killed $w0, %bb.2
+
+  bb.1:
+    successors: %bb.2
+
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+    STRWui $wzr, %stack.0, 0 :: (store (s32))
+    BL @g, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+
+  bb.2:
+    DBG_PHI %stack.0, 1, 32
+    RET_ReallyLR
+...
+---
+name:            f_dbg_value_fi
+tracksRegLiveness: true
+frameInfo:
+  adjustsStack:    true
+  hasCalls:        true
+stack:
+  - { id: 0, size: 4, alignment: 4 }
+# CHECK-LABEL: name:{{ +}}f_dbg_value_fi
+# CHECK:       savePoint:
+# CHECK-NEXT:    - point:{{ +}}'%bb.1'
+# CHECK:       restorePoint:
+# CHECK-NEXT:    - point:{{ +}}'%bb.1'
+# CHECK:       body:
+# CHECK:         DBG_VALUE %stack.0
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $w0
+
+    CBZW killed $w0, %bb.2
+
+  bb.1:
+    successors: %bb.2
+
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+    STRWui $wzr, %stack.0, 0 :: (store (s32))
+    BL @g, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+
+  bb.2:
+    DBG_VALUE %stack.0, $noreg, !12, !DIExpression(), debug-location !13
+    RET_ReallyLR
+...
+---
+name:            f_real_reg_use
+tracksRegLiveness: true
+frameInfo:
+  adjustsStack:    true
+  hasCalls:        true
+# CHECK-LABEL: name:{{ +}}f_real_reg_use
+# CHECK-NOT:   savePoint:
+# CHECK-NOT:   restorePoint:
+# CHECK:       body:
+# CHECK:         STRXui killed $x19, $sp, 0
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $w0, $x19
+
+    CBZW killed $w0, %bb.2
+
+  bb.1:
+    successors: %bb.2
+    liveins: $x19
+
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+    BL @g, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+
+  bb.2:
+    liveins: $x19
+
+    STRXui killed $x19, $sp, 0 :: (store (s64))
+    RET_ReallyLR
+...
+---
+name:            f_real_fi_use
+tracksRegLiveness: true
+frameInfo:
+  adjustsStack:    true
+  hasCalls:        true
+stack:
+  - { id: 0, size: 4, alignment: 4 }
+# CHECK-LABEL: name:{{ +}}f_real_fi_use
+# CHECK-NOT:   savePoint:
+# CHECK-NOT:   restorePoint:
+# CHECK:       body:
+# CHECK:         STRWui $wzr, %stack.0, 0
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $w0
+
+    CBZW killed $w0, %bb.2
+
+  bb.1:
+    successors: %bb.2
+
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+    BL @g, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+
+  bb.2:
+    STRWui $wzr, %stack.0, 0 :: (store (s32))
+    RET_ReallyLR
+...
