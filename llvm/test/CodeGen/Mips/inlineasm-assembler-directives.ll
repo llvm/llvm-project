@@ -1,7 +1,14 @@
 ; RUN: llc -mtriple=mips < %s | FileCheck %s
+; RUN: llc -mtriple=mips -no-integrated-as < %s | FileCheck %s --check-prefix=RAW
 
 ; Check for the emission of appropriate assembler directives before and
 ; after the inline assembly code.
+; Unparsed inline assembly still needs the assembler to fill delay slots.
+; RAW:      #APP
+; RAW-NEXT: .set push
+; RAW-NEXT: .set at
+; RAW-NEXT: .set macro
+; RAW-NEXT: .set reorder
 define void @f() nounwind {
 entry:
 ; CHECK:      #APP
