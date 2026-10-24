@@ -797,6 +797,98 @@ func.func @negative_ternary_op_select(%C: tensor<?x?xi1>, %T: tensor<?x?xf32>,
 
 // -----
 
+// One select operand is a scalar captured from outside the generic
+#map = affine_map<(d0) -> (d0)>
+func.func @negative_binary_op_select_captured_scalar(%A: tensor<?xi32>, %C: tensor<?xi1>,
+                                                     %Out: tensor<?xi32>, %s: i32)
+                                                     -> tensor<?xi32> {
+  %0 = linalg.generic
+    {indexing_maps = [#map, #map, #map],
+    iterator_types = ["parallel"]}
+    ins(%A, %C : tensor<?xi32>, tensor<?xi1>)
+    outs(%Out : tensor<?xi32>) {
+  ^bb0(%in: i32, %in_0: i1, %out: i32):
+    %v = arith.select %in_0, %s, %in : i32
+    linalg.yield %v : i32
+  } -> tensor<?xi32>
+  return %0 : tensor<?xi32>
+}
+
+// ALL-LABEL: negative_binary_op_select_captured_scalar
+// ALL: linalg.generic
+// ALL-NOT: linalg.elementwise <select>
+
+// -----
+
+// The select mask is a scalar captured from outside the generic
+#map = affine_map<(d0) -> (d0)>
+func.func @negative_binary_op_select_captured_mask(%T: tensor<?xi32>, %F: tensor<?xi32>,
+                                                   %Out: tensor<?xi32>, %m: i1)
+                                                   -> tensor<?xi32> {
+  %0 = linalg.generic
+    {indexing_maps = [#map, #map, #map],
+    iterator_types = ["parallel"]}
+    ins(%T, %F : tensor<?xi32>, tensor<?xi32>)
+    outs(%Out : tensor<?xi32>) {
+  ^bb0(%in: i32, %in_0: i32, %out: i32):
+    %v = arith.select %m, %in, %in_0 : i32
+    linalg.yield %v : i32
+  } -> tensor<?xi32>
+  return %0 : tensor<?xi32>
+}
+
+// ALL-LABEL: negative_binary_op_select_captured_mask
+// ALL: linalg.generic
+// ALL-NOT: linalg.elementwise <select>
+
+// -----
+
+// The mask is not the first select operand
+#map = affine_map<(d0) -> (d0)>
+func.func @negative_ternary_op_select_mask_not_first(%C: tensor<?xi1>, %T: tensor<?xi1>,
+                                                     %F: tensor<?xi1>, %Out: tensor<?xi1>)
+                                                     -> tensor<?xi1> {
+  %0 = linalg.generic
+    {indexing_maps = [#map, #map, #map, #map],
+    iterator_types = ["parallel"]}
+    ins(%C, %T, %F : tensor<?xi1>, tensor<?xi1>, tensor<?xi1>)
+    outs(%Out : tensor<?xi1>) {
+  ^bb0(%in: i1, %in_0: i1, %in_1: i1, %out: i1):
+    %v = arith.select %in_0, %in, %in_1 : i1
+    linalg.yield %v : i1
+  } -> tensor<?xi1>
+  return %0 : tensor<?xi1>
+}
+
+// ALL-LABEL: negative_ternary_op_select_mask_not_first
+// ALL: linalg.generic
+// ALL-NOT: linalg.elementwise <select>
+
+// -----
+
+// The select operands are a permutation that is neither canonical nor swapped
+#map = affine_map<(d0) -> (d0)>
+func.func @negative_ternary_op_select_permuted(%C: tensor<?xi1>, %T: tensor<?xi1>,
+                                               %F: tensor<?xi1>, %Out: tensor<?xi1>)
+                                               -> tensor<?xi1> {
+  %0 = linalg.generic
+    {indexing_maps = [#map, #map, #map, #map],
+    iterator_types = ["parallel"]}
+    ins(%C, %T, %F : tensor<?xi1>, tensor<?xi1>, tensor<?xi1>)
+    outs(%Out : tensor<?xi1>) {
+  ^bb0(%in: i1, %in_0: i1, %in_1: i1, %out: i1):
+    %v = arith.select %in_1, %in_0, %in : i1
+    linalg.yield %v : i1
+  } -> tensor<?xi1>
+  return %0 : tensor<?xi1>
+}
+
+// ALL-LABEL: negative_ternary_op_select_permuted
+// ALL: linalg.generic
+// ALL-NOT: linalg.elementwise <select>
+
+// -----
+
 ///----------------------------------------------------------------------------------------
 /// Tests for linalg.matmul
 ///----------------------------------------------------------------------------------------
