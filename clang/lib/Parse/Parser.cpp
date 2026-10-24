@@ -304,6 +304,79 @@ static bool HasFlagsSet(Parser::SkipUntilFlags L, Parser::SkipUntilFlags R) {
 }
 
 bool Parser::SkipUntil(ArrayRef<tok::TokenKind> Toks, SkipUntilFlags Flags) {
+  // Unknown-attribute arguments only. The loop below is unchanged.
+  if (HasFlagsSet(Flags, StopAtUnbalanced)) {
+    bool Unbalanced = false;
+    unsigned ParenDepth = 0, BracketDepth = 0, BraceDepth = 0;
+    while (true) {
+      if (Tok.is(tok::eof))
+        return false;
+
+      if (ParenDepth == 0 && BracketDepth == 0 && BraceDepth == 0) {
+        for (unsigned I = 0, E = Toks.size(); I != E; ++I) {
+          if (Tok.is(Toks[I])) {
+            if (!HasFlagsSet(Flags, StopBeforeMatch))
+              ConsumeAnyToken();
+            return !Unbalanced;
+          }
+        }
+      }
+
+      // ']]' closes the attribute. Do not treat it as a bracket we opened.
+      if (Tok.is(tok::r_square) && NextToken().is(tok::r_square) &&
+          BracketDepth <= 1)
+        return false;
+
+      switch (Tok.getKind()) {
+      case tok::l_paren:
+        ++ParenDepth;
+        ConsumeParen();
+        break;
+      case tok::l_square:
+        ++BracketDepth;
+        ConsumeBracket();
+        break;
+      case tok::l_brace:
+        ++BraceDepth;
+        ConsumeBrace();
+        break;
+      case tok::r_paren:
+        if (ParenDepth == 0) {
+          Unbalanced = true;
+          ConsumeParen();
+          break;
+        }
+        --ParenDepth;
+        ConsumeParen();
+        break;
+      case tok::r_square:
+        if (BracketDepth == 0) {
+          Unbalanced = true;
+          ConsumeBracket();
+          break;
+        }
+        --BracketDepth;
+        ConsumeBracket();
+        break;
+      case tok::r_brace:
+        if (BraceDepth == 0) {
+          Unbalanced = true;
+          ConsumeBrace();
+          break;
+        }
+        --BraceDepth;
+        ConsumeBrace();
+        break;
+      case tok::code_completion:
+        if (!HasFlagsSet(Flags, StopAtCodeCompletion))
+          handleUnexpectedCodeCompletionToken();
+        return false;
+      default:
+        ConsumeAnyToken();
+        break;
+      }
+    }
+  }
   // We always want this function to skip at least one token if the first token
   // isn't T and if not at EOF.
   bool isFirstTokenSkipped = true;
@@ -404,17 +477,17 @@ bool Parser::SkipUntil(ArrayRef<tok::TokenKind> Toks, SkipUntilFlags Flags) {
     // and return it.  Otherwise, this is a spurious RHS token, which we skip.
     case tok::r_paren:
       if (ParenCount && !isFirstTokenSkipped)
-        return false;  // Matches something.
+        return false; // Matches something.
       ConsumeParen();
       break;
     case tok::r_square:
       if (BracketCount && !isFirstTokenSkipped)
-        return false;  // Matches something.
+        return false; // Matches something.
       ConsumeBracket();
       break;
     case tok::r_brace:
       if (BraceCount && !isFirstTokenSkipped)
-        return false;  // Matches something.
+        return false; // Matches something.
       ConsumeBrace();
       break;
 
