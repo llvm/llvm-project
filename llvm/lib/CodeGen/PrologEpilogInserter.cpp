@@ -17,6 +17,8 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -171,16 +173,26 @@ using SavedDbgValuesMap =
     SmallDenseMap<MachineBasicBlock *, SmallVector<MachineInstr *, 4>, 4>;
 
 /// Stash DBG_VALUEs that describe parameters and which are placed at the start
-/// of the block. Later on, after the prologue code has been emitted, the
-/// stashed DBG_VALUEs will be reinserted at the start of the block.
+/// of the block. In the entry block, also stash the DBG_PHIs of argument
+/// registers and the DBG_INSTR_REFs of parameters there, which
+/// MachineFunction::finalizeDebugInstrRefs places at the start of the function.
+/// Later on, after the prologue code has been emitted, the stashed instructions
+/// will be reinserted at the start of the block, except for DBG_PHIs of
+/// registers the prologue code modifies (see sinkClobberedEntryDbgPHIs).
 static void stashEntryDbgValues(MachineBasicBlock &MBB,
                                 SavedDbgValuesMap &EntryDbgValues) {
   SmallVector<const MachineInstr *, 4> FrameIndexValues;
+  bool IsEntry = &MBB == &MBB.getParent()->front();
 
   for (auto &MI : MBB) {
     if (!MI.isDebugInstr())
       break;
-    if (!MI.isDebugValue() || !MI.getDebugVariable()->isParameter())
+    if (IsEntry && MI.isDebugPHI() && MI.getOperand(0).isReg()) {
+      EntryDbgValues[&MBB].push_back(&MI);
+      continue;
+    }
+    if (!(MI.isDebugValue() || (IsEntry && MI.isDebugRef())) ||
+        !MI.getDebugVariable()->isParameter())
       continue;
     if (any_of(MI.debug_operands(),
                [](const MachineOperand &MO) { return MO.isFI(); })) {
@@ -208,6 +220,74 @@ static void stashEntryDbgValues(MachineBasicBlock &MBB,
       MI->removeFromParent();
 }
 
+/// The stashed DBG_PHIs of the entry block read the argument registers at the
+/// function entry. If the prologue code modifies such a register, for example
+/// to pass the frame size to a stack probe, LiveDebugValues cannot tell that a
+/// later reload restores the value, so the value would be lost from there on.
+/// Move such DBG_PHIs back after the prologue code, along with the stashed
+/// debug instructions referring to them and any later ones of the same
+/// variables, which must not be reordered with them.
+static void sinkClobberedEntryDbgPHIs(MachineBasicBlock &MBB,
+                                      ArrayRef<MachineInstr *> Stashed) {
+  MachineFunction &MF = *MBB.getParent();
+  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+
+  // The prologue code follows the reinserted debug instructions.
+  SmallVector<const MachineInstr *, 8> PrologInstrs;
+  MachineBasicBlock::iterator PrologEnd = MBB.begin();
+  for (auto I = MBB.begin(), E = MBB.end(); I != E; ++I) {
+    if (I->isDebugInstr() || I->isCFIInstruction())
+      continue;
+    if (!I->getFlag(MachineInstr::FrameSetup))
+      break;
+    PrologInstrs.push_back(&*I);
+    PrologEnd = std::next(I);
+  }
+  if (PrologInstrs.empty())
+    return;
+
+  DenseMap<unsigned, unsigned> Substitutions;
+  for (const MachineFunction::DebugSubstitution &Sub :
+       MF.DebugValueSubstitutions)
+    if (Sub.Src.second == 0 && Sub.Dest.second == 0)
+      Substitutions[Sub.Src.first] = Sub.Dest.first;
+  auto RefersToSunkPHI = [&](const MachineOperand &MO,
+                             const SmallDenseSet<unsigned, 4> &SunkPHIs) {
+    if (!MO.isDbgInstrRef() || MO.getInstrRefOpIndex() != 0)
+      return false;
+    unsigned Num = MO.getInstrRefInstrIndex();
+    for (auto It = Substitutions.find(Num); It != Substitutions.end();
+         It = Substitutions.find(Num))
+      Num = It->second;
+    return SunkPHIs.contains(Num);
+  };
+
+  SmallDenseSet<unsigned, 4> SunkPHIs;
+  SmallDenseSet<DebugVariable, 4> SunkVars;
+  for (MachineInstr *MI : Stashed) {
+    bool Sink;
+    if (MI->isDebugPHI()) {
+      Register Reg = MI->getOperand(0).getReg();
+      Sink = any_of(PrologInstrs, [&](const MachineInstr *PI) {
+        return PI->modifiesRegister(Reg, TRI);
+      });
+      if (Sink)
+        SunkPHIs.insert(MI->getOperand(1).getImm());
+    } else {
+      DebugVariable Var(MI->getDebugVariable(), std::nullopt,
+                        MI->getDebugLoc()->getInlinedAt());
+      Sink = SunkVars.contains(Var) ||
+             any_of(MI->debug_operands(), [&](const MachineOperand &MO) {
+               return RefersToSunkPHI(MO, SunkPHIs);
+             });
+      if (Sink)
+        SunkVars.insert(Var);
+    }
+    if (Sink)
+      MBB.splice(PrologEnd, &MBB, MI);
+  }
+}
+
 bool PEIImpl::run(MachineFunction &MF) {
   NumFuncSeen++;
   const Function &F = MF.getFunction();
@@ -230,7 +310,8 @@ bool PEIImpl::run(MachineFunction &MF) {
   // place all spills in the entry block, all restores in return blocks.
   calculateSaveRestoreBlocks(MF);
 
-  // Stash away DBG_VALUEs that should not be moved by insertion of prolog code.
+  // Stash away debug instructions that should not be moved by insertion of
+  // prolog code.
   SavedDbgValuesMap EntryDbgValues;
   for (MachineBasicBlock *SaveBlock : SaveBlocks)
     stashEntryDbgValues(*SaveBlock, EntryDbgValues);
@@ -255,8 +336,11 @@ bool PEIImpl::run(MachineFunction &MF) {
     insertPrologEpilogCode(MF);
 
   // Reinsert stashed debug values at the start of the entry blocks.
-  for (auto &I : EntryDbgValues)
+  for (auto &I : EntryDbgValues) {
     I.first->insert(I.first->begin(), I.second.begin(), I.second.end());
+    if (I.first == &MF.front())
+      sinkClobberedEntryDbgPHIs(*I.first, I.second);
+  }
 
   // Allow the target machine to make final modifications to the function
   // before the frame layout is finalized.

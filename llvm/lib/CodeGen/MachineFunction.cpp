@@ -17,6 +17,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -45,6 +46,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/Function.h"
@@ -1324,6 +1326,80 @@ auto MachineFunction::salvageCopySSAImpl(MachineInstr &MI)
   return ApplySubregisters({NewNum, 0u});
 }
 
+static void
+hoistEntryParamDbgInstrRefs(MachineFunction &MF,
+                            ArrayRef<MachineInstr *> FirstParamLocs) {
+  // A parameter whose first location is a value live into the function, such
+  // as the i8 a bool parameter is stored as, is in that location from the
+  // function entry on. Its DBG_INSTR_REF, however, is after the copies of the
+  // argument registers, which end up past the prologue, so the parameter would
+  // have no location at the function entry. Hoist such DBG_INSTR_REFs to the
+  // start of the function, as is done for a DBG_VALUE of an Argument.
+  if (FirstParamLocs.empty())
+    return;
+
+  // The values live into the function are those read by the DBG_PHIs at the
+  // start of the entry block, and their subregisters (see salvageCopySSAImpl).
+  // Map them to the registers they are read from.
+  MachineBasicBlock &EntryMBB = MF.front();
+  auto InsertPt = EntryMBB.begin();
+  SmallDenseMap<unsigned, Register, 8> EntryRegs;
+  for (; InsertPt != EntryMBB.end() && InsertPt->isDebugPHI(); ++InsertPt)
+    if (InsertPt->getOperand(0).isReg())
+      EntryRegs[InsertPt->getOperand(1).getImm()] =
+          InsertPt->getOperand(0).getReg();
+  if (EntryRegs.empty())
+    return;
+  for (const MachineFunction::DebugSubstitution &Sub :
+       MF.DebugValueSubstitutions) {
+    if (Sub.Src.second != 0 || Sub.Dest.second != 0)
+      continue;
+    if (Register Reg = EntryRegs.lookup(Sub.Dest.first))
+      EntryRegs[Sub.Src.first] = Reg;
+  }
+
+  // The argument register a parameter location refers to at the function
+  // entry, if any.
+  auto GetEntryReg = [&](const MachineInstr &MI) -> Register {
+    if (MI.getNumDebugOperands() != 1)
+      return Register();
+    const MachineOperand &MO = MI.getDebugOperand(0);
+    if (MO.isReg() && MO.getReg().isPhysical())
+      return MO.getReg();
+    if (MO.isDbgInstrRef() && MO.getInstrRefOpIndex() == 0)
+      return EntryRegs.lookup(MO.getInstrRefInstrIndex());
+    return Register();
+  };
+  SmallVector<std::pair<MachineInstr *, Register>, 8> Locs;
+  for (MachineInstr *MI : FirstParamLocs)
+    Locs.push_back({MI, GetEntryReg(*MI)});
+
+  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+  for (auto [MI, Reg] : Locs) {
+    if (!Reg || !MI->isDebugRef())
+      continue;
+
+    // Only hoist a plain location: a complex expression may describe a later
+    // assignment to the parameter rather than its incoming value.
+    const DIExpression *Expr = MI->getDebugExpression();
+    if (!Expr->isSingleLocationExpression() || Expr->isComplex())
+      continue;
+
+    // As for a DBG_VALUE of an Argument (see EmitFuncArgumentDbgValue), an
+    // argument register describes at most one parameter: if another parameter
+    // is first located in it as well, this one was likely assigned from that
+    // parameter, such as a = (int)b, and the location of its incoming value
+    // was dropped.
+    if (any_of(Locs, [&, MI = MI, Reg = Reg](const auto &Other) {
+          return Other.first != MI && Other.second &&
+                 TRI->regsOverlap(Other.second, Reg);
+        }))
+      continue;
+
+    EntryMBB.splice(InsertPt, &EntryMBB, MI);
+  }
+}
+
 void MachineFunction::finalizeDebugInstrRefs() {
   auto *TII = getSubtarget().getInstrInfo();
 
@@ -1333,9 +1409,25 @@ void MachineFunction::finalizeDebugInstrRefs() {
     MI.setDebugValueUndef();
   };
 
+  // The first location of each parameter of this function in the entry block,
+  // see hoistEntryParamDbgInstrRefs.
+  MachineBasicBlock &EntryMBB = front();
+  SmallVector<MachineInstr *, 4> FirstParamLocs;
+  SmallPtrSet<const DILocalVariable *, 8> SeenParams;
+
   DenseMap<Register, DebugInstrOperandPair> ArgDbgPHIs;
   for (auto &MBB : *this) {
     for (auto &MI : MBB) {
+      bool IsFirstParamLoc = false;
+      if (&MBB == &EntryMBB && MI.isDebugValueLike() &&
+          !MI.getDebugLoc()->getInlinedAt()) {
+        const DILocalVariable *Var = MI.getDebugVariable();
+        IsFirstParamLoc = Var->isParameter() && SeenParams.insert(Var).second;
+      }
+
+      if (IsFirstParamLoc)
+        FirstParamLocs.push_back(&MI);
+
       if (!MI.isDebugRef())
         continue;
 
@@ -1384,6 +1476,8 @@ void MachineFunction::finalizeDebugInstrRefs() {
         MakeUndefDbgValue(MI);
     }
   }
+
+  hoistEntryParamDbgInstrRefs(*this, FirstParamLocs);
 }
 
 bool MachineFunction::shouldUseDebugInstrRef() const {
