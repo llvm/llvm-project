@@ -631,6 +631,10 @@ public:
   ///   >0: number of right braces
   int8_t BraceCount = 0;
 
+  /// Whether the left brace was already inserted after this token when an
+  /// earlier run was analyzed.
+  bool LBraceInserted = false;
+
   /// If this token starts a block, this contains all the unwrapped lines
   /// in it.
   SmallVector<AnnotatedLine *, 1> Children;
