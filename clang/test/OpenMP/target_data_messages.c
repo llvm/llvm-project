@@ -54,3 +54,19 @@ int main(int argc, char **argv) {
   {}
   return 0;
 }
+
+extern int omp_is_initial_device(void);
+
+void gh140257(void) {
+  int i = 0, a[2];
+  #pragma omp target device(omp_is_initial_device) // expected-error {{expression must have integral or unscoped enumeration type, not 'int (void)'}}
+  i++;
+  #pragma omp target data map(i) device(omp_is_initial_device) // expected-error {{expression must have integral or unscoped enumeration type, not 'int (void)'}}
+  i++;
+  #pragma omp target map(a[omp_is_initial_device:1]) // expected-error {{expression must have integral or unscoped enumeration type, not 'int (void)'}} expected-error {{array section lower bound is not an integer}}
+  i++;
+  #pragma omp target device(omp_is_initial_device())
+  i++;
+  #pragma omp target device(1)
+  i++;
+}

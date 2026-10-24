@@ -7001,7 +7001,7 @@ diagnoseAmbiguousConversion(Sema &SemaRef, SourceLocation Loc, Expr *From,
     QualType ConvTy = Conv->getConversionType().getNonReferenceType();
     Converter.noteAmbiguous(SemaRef, Conv, ConvTy);
   }
-  return From;
+  return ExprError();
 }
 
 static bool
@@ -7081,9 +7081,12 @@ static bool recordConversion(Sema &SemaRef, SourceLocation Loc, Expr *&From,
 static ExprResult finishContextualImplicitConversion(
     Sema &SemaRef, SourceLocation Loc, Expr *From,
     Sema::ContextualImplicitConverter &Converter) {
-  if (!Converter.match(From->getType()) && !Converter.Suppress)
-    Converter.diagnoseNoMatch(SemaRef, Loc, From->getType())
-        << From->getSourceRange();
+  if (!Converter.match(From->getType())) {
+    if (!Converter.Suppress)
+      Converter.diagnoseNoMatch(SemaRef, Loc, From->getType())
+          << From->getSourceRange();
+    return ExprError();
+  }
 
   return SemaRef.DefaultLvalueConversion(From);
 }
@@ -7159,7 +7162,7 @@ ExprResult Sema::PerformContextualImplicitConversion(
   if (!RecordTy || !getLangOpts().CPlusPlus) {
     if (!Converter.Suppress)
       Converter.diagnoseNoMatch(*this, Loc, T) << From->getSourceRange();
-    return From;
+    return ExprError();
   }
 
   // We must have a complete class type.
@@ -7177,7 +7180,7 @@ ExprResult Sema::PerformContextualImplicitConversion(
 
   if (Converter.Suppress ? !isCompleteType(Loc, T)
                          : RequireCompleteType(Loc, T, IncompleteDiagnoser))
-    return From;
+    return ExprError();
 
   // Look for a conversion to an integral or enumeration type.
   UnresolvedSet<4>
