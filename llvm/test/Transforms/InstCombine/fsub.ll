@@ -974,3 +974,134 @@ define <2 x float> @fdiv_c1_use(<2 x float> %x, <2 x float> %y) {
   %r = fsub <2 x float> %y, %m
   ret <2 x float> %r
 }
+
+define float @fneg_from_pos_zero(float nofpclass(pzero) %x) {
+; CHECK-LABEL: @fneg_from_pos_zero(
+; CHECK-NEXT:    [[R:%.*]] = fneg float [[X:%.*]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %r = fsub float 0.0, %x
+  ret float %r
+}
+
+define half @fneg_from_pos_zero_half(half nofpclass(pzero) %x) {
+; CHECK-LABEL: @fneg_from_pos_zero_half(
+; CHECK-NEXT:    [[R:%.*]] = fneg half [[X:%.*]]
+; CHECK-NEXT:    ret half [[R]]
+;
+  %r = fsub half 0.0, %x
+  ret half %r
+}
+
+define <2 x float> @fneg_from_pos_zero_vec(<2 x float> nofpclass(pzero) %x) {
+; CHECK-LABEL: @fneg_from_pos_zero_vec(
+; CHECK-NEXT:    [[R:%.*]] = fneg <2 x float> [[X:%.*]]
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %r = fsub <2 x float> zeroinitializer, %x
+  ret <2 x float> %r
+}
+
+define float @fneg_from_pos_zero_fmf(float nofpclass(pzero) %x) {
+; CHECK-LABEL: @fneg_from_pos_zero_fmf(
+; CHECK-NEXT:    [[R:%.*]] = fneg ninf float [[X:%.*]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %r = fsub ninf float 0.0, %x
+  ret float %r
+}
+
+; negative test - X may be +0.0
+
+define float @fneg_from_pos_zero_maybe_pos_zero(float %x) {
+; CHECK-LABEL: @fneg_from_pos_zero_maybe_pos_zero(
+; CHECK-NEXT:    [[R:%.*]] = fsub float 0.000000e+00, [[X:%.*]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %r = fsub float 0.0, %x
+  ret float %r
+}
+
+; negative test - a subnormal X is flushed to +0.0
+
+define float @fneg_from_pos_zero_daz(float nofpclass(pzero) %x) #0 {
+; CHECK-LABEL: @fneg_from_pos_zero_daz(
+; CHECK-NEXT:    [[R:%.*]] = fsub float 0.000000e+00, [[X:%.*]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %r = fsub float 0.0, %x
+  ret float %r
+}
+
+define float @fneg_from_pos_zero_daz_never_subnormal(float nofpclass(pzero sub) %x) #0 {
+; CHECK-LABEL: @fneg_from_pos_zero_daz_never_subnormal(
+; CHECK-NEXT:    [[R:%.*]] = fneg float [[X:%.*]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %r = fsub float 0.0, %x
+  ret float %r
+}
+
+; negative test - a positive subnormal X is flushed to +0.0
+
+define float @fneg_from_pos_zero_daz_preserve_sign(float nofpclass(pzero) %x) #1 {
+; CHECK-LABEL: @fneg_from_pos_zero_daz_preserve_sign(
+; CHECK-NEXT:    [[R:%.*]] = fsub float 0.000000e+00, [[X:%.*]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %r = fsub float 0.0, %x
+  ret float %r
+}
+
+; negative test - a negative subnormal X is flushed to -0.0 by the fsub, but kept by the fneg
+
+define float @fneg_from_pos_zero_daz_preserve_sign_never_pos_subnormal(float nofpclass(pzero psub) %x) #1 {
+; CHECK-LABEL: @fneg_from_pos_zero_daz_preserve_sign_never_pos_subnormal(
+; CHECK-NEXT:    [[R:%.*]] = fsub float 0.000000e+00, [[X:%.*]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %r = fsub float 0.0, %x
+  ret float %r
+}
+
+; TODO: a subnormal X is flushed to a zero by the fsub, but kept by the fneg
+
+define float @fneg_from_neg_zero_daz(float %x) #0 {
+; CHECK-LABEL: @fneg_from_neg_zero_daz(
+; CHECK-NEXT:    [[R:%.*]] = fneg float [[X:%.*]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %r = fsub float -0.0, %x
+  ret float %r
+}
+
+define float @fneg_from_neg_zero_daz_preserve_sign(float %x) #1 {
+; CHECK-LABEL: @fneg_from_neg_zero_daz_preserve_sign(
+; CHECK-NEXT:    [[R:%.*]] = fneg float [[X:%.*]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %r = fsub float -0.0, %x
+  ret float %r
+}
+
+define float @fneg_from_pos_zero_daz_dynamic(float nofpclass(pzero) %x) #2 {
+; CHECK-LABEL: @fneg_from_pos_zero_daz_dynamic(
+; CHECK-NEXT:    [[R:%.*]] = fsub float 0.000000e+00, [[X:%.*]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %r = fsub float 0.0, %x
+  ret float %r
+}
+
+define float @fneg_from_pos_zero_daz_dynamic_never_subnormal(float nofpclass(pzero sub) %x) #2 {
+; CHECK-LABEL: @fneg_from_pos_zero_daz_dynamic_never_subnormal(
+; CHECK-NEXT:    [[R:%.*]] = fneg float [[X:%.*]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %r = fsub float 0.0, %x
+  ret float %r
+}
+
+attributes #0 = { denormal_fpenv(ieee|positivezero) }
+attributes #1 = { denormal_fpenv(ieee|preservesign) }
+attributes #2 = { denormal_fpenv(ieee|dynamic) }
