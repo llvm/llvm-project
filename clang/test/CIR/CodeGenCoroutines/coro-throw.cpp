@@ -22,14 +22,14 @@ TaskWithEH throw_in_body(bool b) {
 // CIR:         }, body : {
 // CIR:           cir.try {
 // CIR:             cir.if %{{.*}} {
-// CIR:               cir.throw %{{.*}} : !cir.ptr<!s32i>, @_ZTIi
+// CIR:               cir.throw %{{.*}}, %{{.*}}, %{{.*}} : !cir.ptr<!s32i>, !cir.ptr<!u8i>, !cir.ptr<!void>
 // CIR-NEXT:          cir.unreachable
 // CIR:             cir.co_return
 // CIR:           } catch all (%{{.*}}: !cir.eh_token {{.*}}) {
 // CIR:             cir.call @_ZN10TaskWithEH12promise_type19unhandled_exceptionEv
 
 // CIR-FLAT-LABEL: cir.func {{.*}} @_Z13throw_in_bodyb(
-// CIR-FLAT:         cir.try_throw %{{.*}} : !cir.ptr<!s32i>, @_ZTIi ^[[UNREACH:bb[0-9]+]], ^[[LPAD:bb[0-9]+]]
+// CIR-FLAT:         cir.try_throw %{{.*}}, %{{.*}}, %{{.*}} : !cir.ptr<!s32i>, !cir.ptr<!u8i>, !cir.ptr<!void> ^[[UNREACH:bb[0-9]+]], ^[[LPAD:bb[0-9]+]]
 // CIR-FLAT-NEXT:  ^[[UNREACH]]:
 // CIR-FLAT-NEXT:    cir.unreachable
 // CIR-FLAT:       ^[[LPAD]]:
@@ -65,7 +65,7 @@ TaskWithEH throw_in_cleanup_in_body(bool b) {
 // CIR:             %[[S:.*]] = cir.alloca "s"
 // CIR:             cir.cleanup.scope {
 // CIR:               cir.if %{{.*}} {
-// CIR:                 cir.throw %{{.*}} : !cir.ptr<!s32i>, @_ZTIi
+// CIR:                 cir.throw %{{.*}}, %{{.*}}, %{{.*}} : !cir.ptr<!s32i>, !cir.ptr<!u8i>, !cir.ptr<!void>
 // CIR-NEXT:            cir.unreachable
 // CIR:             } cleanup all {
 // CIR-NEXT:          cir.call @_ZN1SD1Ev(%[[S]])
@@ -75,7 +75,7 @@ TaskWithEH throw_in_cleanup_in_body(bool b) {
 
 // CIR-FLAT-LABEL: cir.func {{.*}} @_Z24throw_in_cleanup_in_bodyb(
 // CIR-FLAT:         %[[S:.*]] = cir.alloca "s"
-// CIR-FLAT:         cir.try_throw %{{.*}} : !cir.ptr<!s32i>, @_ZTIi ^[[UNREACH:bb[0-9]+]], ^[[LPAD:bb[0-9]+]]
+// CIR-FLAT:         cir.try_throw %{{.*}}, %{{.*}}, %{{.*}} : !cir.ptr<!s32i>, !cir.ptr<!u8i>, !cir.ptr<!void> ^[[UNREACH:bb[0-9]+]], ^[[LPAD:bb[0-9]+]]
 // CIR-FLAT-NEXT:  ^[[UNREACH]]:
 // CIR-FLAT-NEXT:    cir.unreachable
 // CIR-FLAT:       ^[[LPAD]]:
