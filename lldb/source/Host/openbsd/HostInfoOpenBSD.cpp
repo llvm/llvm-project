@@ -8,12 +8,14 @@
 
 #include "lldb/Host/openbsd/HostInfoOpenBSD.h"
 
+#include <climits>
 #include <cstdio>
 #include <cstring>
 #include <optional>
 #include <sys/sysctl.h>
 #include <sys/types.h>
 #include <sys/utsname.h>
+#include <unistd.h>
 
 using namespace lldb_private;
 
@@ -48,5 +50,12 @@ std::optional<std::string> HostInfoOpenBSD::GetOSBuildString() {
 
 FileSpec HostInfoOpenBSD::GetProgramFileSpec() {
   static FileSpec g_program_filespec;
+
+  if (!g_program_filespec) {
+    char path[PATH_MAX];
+
+    if (getexecpath(path, sizeof(path)) != -1)
+      g_program_filespec.SetFile(path, FileSpec::Style::native);
+  }
   return g_program_filespec;
 }
