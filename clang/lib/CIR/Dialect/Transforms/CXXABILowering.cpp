@@ -420,6 +420,11 @@ static mlir::TypedAttr lowerInitialValue(const LowerModule *lowerModule,
   if (mlir::isa_and_present<cir::PoisonAttr>(initVal))
     return cir::PoisonAttr::get(tc.convertType(ty));
 
+  // An external member-pointer global may have no initializer.
+  if (!initVal &&
+      mlir::isa<cir::DataMemberType, cir::MethodType>(ty))
+    return {};
+
   if (mlir::isa<cir::DataMemberType>(ty)) {
     // Members without a CIR field index (e.g. no_unique_address empty fields)
     // are represented by an explicit byte offset instead of a field path.
