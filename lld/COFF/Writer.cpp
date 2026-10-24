@@ -1583,11 +1583,21 @@ void Writer::createSymbolAndStringTable() {
   // solution where discardable sections have long names preserved and
   // non-discardable sections have their names truncated, to ensure that any
   // section which is mapped at runtime also has its name mapped at runtime.
+  
+  // LLVM offloading sections are an exception: sections prefixed with ".llvm."
+  // or "llvm_" contain LLVM-specific metadata and bitcode that are only
+  // consumed by LLVM tools and libraries. These consumers resolve a loaded
+  // DLL handle to its corresponding file on disk and use LLVM's COFF reader to
+  // locate and read the sections by their full names. Since these sections are
+  // never consumed directly from the mapped image or by standard Windows
+  // tooling, their full names are preserved in the string table.
   SmallVector<OutputSection *> longNameSections;
   for (OutputSection *sec : ctx.outputSections) {
     if (sec->name.size() <= COFF::NameSize)
       continue;
-    if ((sec->header.Characteristics & IMAGE_SCN_MEM_DISCARDABLE) == 0)
+    if (!((sec->name).starts_with(".llvm.") ||
+          (sec->name).starts_with("llvm_")) &&
+        (sec->header.Characteristics & IMAGE_SCN_MEM_DISCARDABLE) == 0)
       continue;
     if (ctx.config.warnLongSectionNames) {
       Warn(ctx)
