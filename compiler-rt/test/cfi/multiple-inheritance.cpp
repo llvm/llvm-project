@@ -52,8 +52,8 @@ int main(int argc, char **argv) {
   C *c = new C;
   break_optimization(c);
 
-  // CFI: 1
-  // NCFI: 1
+  // CFI: {{^1$}}
+  // NCFI: {{^1$}}
   fprintf(stderr, "1\n");
 
   if (argc > 1) {
