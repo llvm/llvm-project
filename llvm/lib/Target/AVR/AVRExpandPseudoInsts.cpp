@@ -801,6 +801,8 @@ bool AVRExpandPseudo::expand<AVR::LDDRdPtrQ>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   const AVRSubtarget &STI = MBB.getParent()->getSubtarget<AVRSubtarget>();
 
+  // LDDRdPtrQ is a real instruction on ordinary AVR devices, but we treat it
+  // as a pseudo instruction on AVR tiny devices.
   if (!STI.hasTinyEncoding())
     return false;
 
@@ -1337,6 +1339,8 @@ bool AVRExpandPseudo::expand<AVR::STDPtrQRr>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   const AVRSubtarget &STI = MBB.getParent()->getSubtarget<AVRSubtarget>();
 
+  // STDPtrQRr is a real instruction on ordinary AVR devices, but we treat it
+  // as a pseudo instruction on AVR tiny devices.
   if (!STI.hasTinyEncoding())
     return false;
 
