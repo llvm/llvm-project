@@ -121,9 +121,13 @@ bool GCNPreRALongBranchReg::run(MachineFunction &MF) {
   // shift down to a lower unused pair of SGPRs
   // If all registers are used, then findUnusedRegister will return
   // AMDGPU::NoRegister.
+  // Branch relaxation writes the pair after the callee-saved registers have
+  // been determined, so it must not be a register the caller expects to be
+  // preserved.
   constexpr bool ReserveHighestRegister = true;
   Register LongBranchReservedReg = TRI->findUnusedRegister(
-      MRI, &AMDGPU::SGPR_64RegClass, MF, ReserveHighestRegister);
+      MRI, &AMDGPU::SGPR_64RegClass, MF, ReserveHighestRegister,
+      /*ExcludeCalleeSaved=*/true);
   if (!LongBranchReservedReg)
     return false;
 
