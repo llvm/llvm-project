@@ -454,6 +454,7 @@ public:
                             std::optional<unsigned> &TiedDefIdx,
                             bool IsDef = false);
   bool parseImmediateOperand(MachineOperand &Dest);
+  bool parseInlineAsmOperandCount(InlineAsm::Flag &F);
   bool parseSymbolicInlineAsmOperand(unsigned OpIdx, MachineOperand &Dest);
   bool parseIRConstant(StringRef::iterator Loc, StringRef StringValue,
                        const Constant *&C);
@@ -1798,6 +1799,32 @@ bool MIParser::parseImmediateOperand(MachineOperand &Dest) {
   return false;
 }
 
+/// Parse the optional "ops:N" that ends an inline asm operand flag, giving the
+/// number of operands that follow it. It's omitted when there's one operand.
+bool MIParser::parseInlineAsmOperandCount(InlineAsm::Flag &F) {
+  if (Token.isNot(MIToken::Identifier) || Token.stringValue() != "ops")
+    return false;
+
+  lex();
+  if (Token.isNot(MIToken::colon))
+    return error("expected ':' after 'ops'");
+
+  lex();
+  if (Token.isNot(MIToken::IntegerLiteral))
+    return error("expected an operand count after 'ops:'");
+
+  unsigned NumOps;
+  if (getUnsigned(NumOps))
+    return true;
+
+  if (NumOps > InlineAsm::Flag::getMaxNumOperandRegisters())
+    return error("invalid inline asm operand count");
+
+  F.setNumOperandRegisters(NumOps);
+  lex();
+  return false;
+}
+
 bool MIParser::parseSymbolicInlineAsmOperand(unsigned OpIdx,
                                              MachineOperand &Dest) {
   assert(OpIdx >= InlineAsm::MIOp_ExtraInfo);
@@ -1853,32 +1880,6 @@ bool MIParser::parseSymbolicInlineAsmOperand(unsigned OpIdx,
   // Create the flag with default of 1 operand.
   InlineAsm::Flag F(K, 1);
 
-  // Parse the optional count of operands that follow the flag, ops:N, which
-  // ends the flag's description. It's omitted when there's one operand.
-  auto ParseNumOperands = [&]() {
-    if (Token.isNot(MIToken::Identifier) || Token.stringValue() != "ops")
-      return false;
-
-    lex();
-    if (Token.isNot(MIToken::colon))
-      return error("expected ':' after 'ops'");
-
-    lex();
-    if (Token.isNot(MIToken::IntegerLiteral))
-      return error("expected an operand count after 'ops:'");
-
-    unsigned NumOps;
-    if (getUnsigned(NumOps))
-      return true;
-
-    if (NumOps > InlineAsm::Flag::getMaxNumOperandRegisters())
-      return error("invalid inline asm operand count");
-
-    F.setNumOperandRegisters(NumOps);
-    lex();
-    return false;
-  };
-
   // Parse optional tiedto constraint: tiedto:$N.
   if (Token.is(MIToken::Identifier) && Token.stringValue() == "tiedto") {
     lex();
@@ -1893,7 +1894,7 @@ bool MIParser::parseSymbolicInlineAsmOperand(unsigned OpIdx,
     lex();
 
     F.setMatchingOp(OperandNo);
-    if (ParseNumOperands())
+    if (parseInlineAsmOperandCount(F))
       return true;
 
     Dest = MachineOperand::CreateImm(F);
@@ -1967,7 +1968,7 @@ bool MIParser::parseSymbolicInlineAsmOperand(unsigned OpIdx,
     lex();
   }
 
-  if (ParseNumOperands())
+  if (parseInlineAsmOperandCount(F))
     return true;
 
   Dest = MachineOperand::CreateImm(F);
