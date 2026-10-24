@@ -807,17 +807,36 @@ static uint32_t getEffectiveNumThreads(const DeviceGeometryPropsTy &Props,
                                                : KernelEnv.PreferredNumThreads);
 }
 
+/// Get the number of teams the user set with OMP_NUM_TEAMS, or zero.
+static uint32_t getOMPNumTeams() {
+  static Int32Envar OMP_NumTeams("OMP_NUM_TEAMS");
+  return OMP_NumTeams > 0 ? uint32_t(OMP_NumTeams) : 0;
+}
+
 /// Get the maximum number of blocks the device can launch for a kernel using
 /// \p NumThreads threads per block, further limited by OMP_NUM_TEAMS if the
 /// user set it.
 static uint32_t getDeviceBlockLimit(GenericDeviceTy &GenericDevice,
                                     uint32_t NumThreads) {
-  static Int32Envar OMP_NumTeams("OMP_NUM_TEAMS");
-
   uint32_t BlockLimit = GenericDevice.getBlockLimit(NumThreads);
-  if (OMP_NumTeams > 0)
-    return std::min(BlockLimit, uint32_t(OMP_NumTeams));
+  if (uint32_t NumTeams = getOMPNumTeams())
+    return std::min(BlockLimit, NumTeams);
   return BlockLimit;
+}
+
+/// Get the default number of blocks for a kernel in Generic-SPMD mode.
+static uint32_t
+getDefaultNumBlocksGenericSPMD(const DeviceGeometryPropsTy &Props) {
+  // Envar to set the default number of blocks per compute unit for a kernel in
+  // Generic-SPMD mode. Currently only used on AMDGPU devices. Zero uses the
+  // default number of blocks of other kernels.
+  static UInt32Envar OMPX_GenericSPMDTeamsPerCU(
+      "LIBOMPTARGET_GENERIC_SPMD_TEAMS_PER_CU", 6);
+
+  if (Props.Backend != OL_PLATFORM_BACKEND_AMDGPU ||
+      !OMPX_GenericSPMDTeamsPerCU.get() || !Props.NumComputeUnits)
+    return Props.DefaultNumBlocks;
+  return Props.NumComputeUnits * OMPX_GenericSPMDTeamsPerCU.get();
 }
 
 /// Get the effective number of blocks for the kernel based on the
@@ -846,7 +865,9 @@ static uint32_t getEffectiveNumBlocks(
     return LoopTripCount > 0 ? (((LoopTripCount - 1) / EffectiveNumThreads) + 1)
                              : 1;
 
-  uint64_t DefaultNumBlocks = Props.DefaultNumBlocks;
+  uint64_t DefaultNumBlocks = KernelEnv.isGenericSPMDMode()
+                                  ? getDefaultNumBlocksGenericSPMD(Props)
+                                  : Props.DefaultNumBlocks;
   uint64_t TripCountNumBlocks = std::numeric_limits<uint64_t>::max();
   if (LoopTripCount > 0) {
     if (KernelEnv.isSPMDMode()) {
@@ -922,6 +943,21 @@ static uint32_t getEffectiveNumBlocks(
       "LIBOMPTARGET_REUSE_BLOCKS_FOR_HIGH_TRIP_COUNT", true);
   if (OMPX_ReuseBlocksForHighTripCount.get())
     PreferredNumBlocks = std::min(TripCountNumBlocks, DefaultNumBlocks);
+
+  // In Generic-SPMD mode, the threads of a block run the iterations of the
+  // inner parallel loops, whose trip counts are unknown. If they are lower than
+  // the number of threads, most threads idle. So trade threads for blocks, down
+  // to one warp per block, as long as the distribute loop has an iteration for
+  // every block. This keeps the device as busy if the inner trip counts are
+  // high. Neither is done if the user set the number of threads or teams.
+  if (KernelEnv.isGenericSPMDMode() && !IsNumThreadsFromUser &&
+      !IsNumThreadsStrict && !getOMPNumTeams()) {
+    while (uint64_t(PreferredNumBlocks) * 2 <= LoopTripCount &&
+           EffectiveNumThreads > Props.WarpSize) {
+      EffectiveNumThreads /= 2;
+      PreferredNumBlocks *= 2;
+    }
+  }
   return std::min(PreferredNumBlocks,
                   getDeviceBlockLimit(GenericDevice, EffectiveNumThreads));
 }
