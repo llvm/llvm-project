@@ -6308,13 +6308,13 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
     // Check that the sorted loads are consecutive.
     if (static_cast<uint64_t>(Diff) == Sz - 1)
       return LoadsState::Vectorize;
-    if (isMaskedLoadCompress(
-            VL, PointerOps, Order, *TTI, *DL, *SE, *AC, *DT, *TLI, CostKind,
-            [&](Value *V) {
-              return areAllUsersVectorized(cast<Instruction>(V),
-                                           UserIgnoreList);
-            },
-            Opts.slp_revec, Cache))
+    auto [CanCompress, _] = isMaskedLoadCompress(
+        VL, PointerOps, Order, *TTI, *DL, *SE, *AC, *DT, *TLI, CostKind,
+        [&](Value *V) {
+          return areAllUsersVectorized(cast<Instruction>(V), UserIgnoreList);
+        },
+        Opts.slp_revec, Cache);
+    if (CanCompress)
       return LoadsState::CompressVectorize;
     // Widened strided loads must be legal for every group, not just the first
     // pointer, which may have a stronger alignment than the remaining loads.
@@ -14584,13 +14584,11 @@ void BoUpSLP::convertCompressedLoadToStrided(TreeEntry &E) {
     return;
 
   auto *LI0 = cast<LoadInst>(E.Scalars.front());
-  std::optional<CompressedLoadInfo> CompressInfo = isMaskedLoadCompress(
+  auto [_, CompressInfo] = isMaskedLoadCompress(
       E.Scalars, PointerOps, {}, *TTI, *DL, *SE, *AC, *DT, *TLI, CostKind,
       [](Value *) { return true; }, Opts.slp_revec, Cache);
-  if (!CompressInfo)
-    return;
   InstructionCost CompressedCost =
-      getCompressedLoadCost(*TTI, LI0, *CompressInfo, CostKind);
+      getCompressedLoadCost(*TTI, LI0, CompressInfo, CostKind);
 
   auto *VecTy =
       cast<FixedVectorType>(getWidenedType(ScalarTy, E.getVectorFactor()));
@@ -17907,13 +17905,12 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         SmallVector<Value *> PointerOps(Scalars.size());
         for (auto [I, V] : enumerate(Scalars))
           PointerOps[I] = cast<LoadInst>(V)->getPointerOperand();
-        std::optional<CompressedLoadInfo> CompressInfo = isMaskedLoadCompress(
+        auto [_, CompressInfo] = isMaskedLoadCompress(
             Scalars, PointerOps, E->ReorderIndices, *TTI, *DL, *SE, *AC, *DT,
             *TLI, CostKind, [](Value *) { return true; }, Opts.slp_revec,
             Cache);
-        assert(CompressInfo && "Expected compressed load candidate.");
-        CompressEntryToData.try_emplace(E, *CompressInfo);
-        VecLdCost = getCompressedLoadCost(*TTI, LI0, *CompressInfo, CostKind);
+        CompressEntryToData.try_emplace(E, CompressInfo);
+        VecLdCost = getCompressedLoadCost(*TTI, LI0, CompressInfo, CostKind);
         break;
       }
       case TreeEntry::ScatterVectorize: {
