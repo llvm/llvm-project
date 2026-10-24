@@ -13,7 +13,6 @@
 
 #include "hdr/errno_macros.h"
 #include "hdr/fcntl_macros.h"
-#include "hdr/sys_stat_macros.h"
 #include "hdr/types/off64_t.h"
 #include "src/__support/CPP/scope.h"
 #include "src/fcntl/creat.h"

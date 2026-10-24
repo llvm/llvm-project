@@ -174,6 +174,11 @@ hlsl::getAvailableStages(dxbc::PSV::SemanticKind SemanticKind) {
     };
     return Stages;
   }
+  case dxbc::PSV::SemanticKind::Barycentrics: {
+    static constexpr SemanticStageInfo Stages[] = {
+        {Triple::Pixel, IOType::In, SemanticInterpretation::NotPacked}};
+    return Stages;
+  }
   case dxbc::PSV::SemanticKind::Target: {
     static constexpr SemanticStageInfo Stages[] = {
         {Triple::Pixel, IOType::Out, SemanticInterpretation::Target}};
@@ -189,6 +194,17 @@ hlsl::getAvailableStages(dxbc::PSV::SemanticKind SemanticKind) {
     static constexpr SemanticStageInfo Stages[] = {
         {Triple::Geometry, IOType::Out, SemanticInterpretation::SGV},
         {Triple::Pixel, IOType::In, SemanticInterpretation::SGV}};
+    return Stages;
+  }
+  case dxbc::PSV::SemanticKind::ShadingRate: {
+    static constexpr SemanticStageInfo Stages[] = {
+        {Triple::Vertex, IOType::Out, SemanticInterpretation::SV},
+        {Triple::Hull, IOType::InOut, SemanticInterpretation::SV},
+        {Triple::Domain, IOType::InOut, SemanticInterpretation::SV},
+        {Triple::Geometry, IOType::InOut, SemanticInterpretation::SV},
+        {Triple::Pixel, IOType::In, SemanticInterpretation::SV},
+        {Triple::Mesh, IOType::PatchConstantOrPrimitive,
+         SemanticInterpretation::SV}};
     return Stages;
   }
   case dxbc::PSV::SemanticKind::Position: {

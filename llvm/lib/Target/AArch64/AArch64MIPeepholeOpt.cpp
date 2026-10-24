@@ -301,7 +301,12 @@ bool AArch64MIPeepholeOptImpl::visitORR(MachineInstr &MI) {
   if (MI.getOperand(2).getSubReg())
     return false;
 
-  MachineInstr *SrcMI = MRI->getUniqueVRegDef(MI.getOperand(2).getReg());
+  Register DefReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(2).getReg();
+  if (!DefReg.isVirtual() || !SrcReg.isVirtual())
+    return false;
+
+  MachineInstr *SrcMI = MRI->getVRegDef(SrcReg);
   if (!SrcMI)
     return false;
 
@@ -344,8 +349,6 @@ bool AArch64MIPeepholeOptImpl::visitORR(MachineInstr &MI) {
   else if (SrcMI->getOpcode() <= TargetOpcode::GENERIC_OP_END)
     return false;
 
-  Register DefReg = MI.getOperand(0).getReg();
-  Register SrcReg = MI.getOperand(2).getReg();
   MRI->replaceRegWith(DefReg, SrcReg);
   MRI->clearKillFlags(SrcReg);
   LLVM_DEBUG(dbgs() << "Removed: " << MI << "\n");
@@ -773,7 +776,6 @@ static bool is64bitDefwithZeroHigh64bit(MachineInstr *MI,
                 TII->get(TargetOpcode::COPY), NewSrc)
             .addReg(SrcReg, getKillRegState(SrcKill));
         SrcReg = NewSrc;
-        SrcKill = true;
       }
     } else if (!AArch64::GPR64RegClass.contains(SrcReg)) {
       return false;

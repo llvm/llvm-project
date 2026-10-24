@@ -1115,6 +1115,55 @@ func.func @alloca_several() -> !fir.ref<i32> {
 
 // -----
 
+// Test fir.alloca with a requested alignment
+
+func.func @alloca_aligned() -> !fir.ref<!fir.array<10xf32>> {
+  %1 = fir.alloca !fir.array<10xf32> {alignment = 64 : i64}
+  return %1 : !fir.ref<!fir.array<10xf32>>
+}
+
+// CHECK-LABEL: llvm.func @alloca_aligned() -> !llvm.ptr
+// CHECK: [[N:%.*]] = llvm.mlir.constant(1 : i64) : i64
+// GENERIC: [[A:%.*]] = llvm.alloca [[N]] x !llvm.array<10 x f32> {alignment = 64 : i64}
+// AMDGPU: [[AA:%.*]] = llvm.alloca [[N]] x !llvm.array<10 x f32> {alignment = 64 : i64} : (i64) -> !llvm.ptr<5>
+// AMDGPU: [[A:%.*]] = llvm.addrspacecast [[AA]] : !llvm.ptr<5> to !llvm.ptr
+// CHECK: llvm.return [[A]] : !llvm.ptr
+
+// -----
+
+// A requested alignment below the ABI alignment of the type is raised to it.
+
+func.func @alloca_underaligned() -> !fir.ref<i32> {
+  %1 = fir.alloca i32 {alignment = 2 : i64}
+  return %1 : !fir.ref<i32>
+}
+
+// CHECK-LABEL: llvm.func @alloca_underaligned() -> !llvm.ptr
+// CHECK: [[N:%.*]] = llvm.mlir.constant(1 : i64) : i64
+// GENERIC: [[A:%.*]] = llvm.alloca [[N]] x i32 {alignment = 4 : i64}
+// AMDGPU: [[AA:%.*]] = llvm.alloca [[N]] x i32 {alignment = 4 : i64} : (i64) -> !llvm.ptr<5>
+// AMDGPU: [[A:%.*]] = llvm.addrspacecast [[AA]] : !llvm.ptr<5> to !llvm.ptr
+// CHECK: llvm.return [[A]] : !llvm.ptr
+
+// -----
+
+// Test fir.global with a requested alignment
+
+fir.global @g_aligned {alignment = 64 : i64} : !fir.array<16xi32>
+
+// CHECK: llvm.mlir.global external @g_aligned() {{.*}}alignment = 64 : i64{{.*}} : !llvm.array<16 x i32>
+
+// -----
+
+// A requested global alignment below the ABI alignment of the type is raised
+// to it.
+
+fir.global @g_underaligned {alignment = 2 : i64} : i32
+
+// CHECK: llvm.mlir.global external @g_underaligned() {{.*}}alignment = 4 : i64{{.*}} : i32
+
+// -----
+
 // Test fir.alloca of pointer to array
 
 func.func @alloca_ptr_to_array() -> !fir.ref<!fir.ptr<!fir.array<?xi32>>> {
