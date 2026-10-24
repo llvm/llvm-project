@@ -354,6 +354,14 @@ struct CastedValue {
     return CastedValue(NewV, ZExtBits, SExtBits + ExtendBy, 0, IsNonNegative);
   }
 
+  /// Replace V with trunc(NewV).
+  CastedValue withTruncOfValue(const Value *NewV) const {
+    unsigned TruncateBy = NewV->getType()->getPrimitiveSizeInBits() -
+                          V->getType()->getPrimitiveSizeInBits();
+    return CastedValue(NewV, ZExtBits, SExtBits, TruncBits + TruncateBy,
+                       IsNonNegative);
+  }
+
   APInt evaluateWith(APInt N) const {
     assert(N.getBitWidth() == V->getType()->getPrimitiveSizeInBits() &&
            "Incompatible bit width");
@@ -445,9 +453,10 @@ struct LinearExpression {
 
 /// Analyzes the specified value as a linear expression: "A*V + B", where A and
 /// B are constant integers.
-static LinearExpression GetLinearExpression(
-    const CastedValue &Val,  const DataLayout &DL, unsigned Depth,
-    AssumptionCache *AC, DominatorTree *DT) {
+static LinearExpression GetLinearExpression(const CastedValue &Val,
+                                            const DataLayout &DL,
+                                            unsigned Depth, AssumptionCache *AC,
+                                            DominatorTree *DT) {
   // Limit our recursion depth.
   if (Depth == 6)
     return Val;
@@ -528,6 +537,17 @@ static LinearExpression GetLinearExpression(
     }
   }
 
+  if (const auto *Trunc = dyn_cast<TruncInst>(Val.V)) {
+    LinearExpression E = GetLinearExpression(
+        Val.withTruncOfValue(Trunc->getOperand(0)), DL, Depth + 1, AC, DT);
+    // Do not introduce a residual truncation into the expression. Inequality
+    // proofs need to compare values at the original width. If the expression
+    // is already truncated, further truncations can be composed as usual.
+    if (!Val.TruncBits && E.Val.TruncBits)
+      return Val;
+    return E;
+  }
+
   if (const auto *ZExt = dyn_cast<ZExtInst>(Val.V))
     return GetLinearExpression(
         Val.withZExtOfValue(ZExt->getOperand(0), ZExt->hasNonNeg()), DL,
@@ -535,10 +555,24 @@ static LinearExpression GetLinearExpression(
 
   if (isa<SExtInst>(Val.V))
     return GetLinearExpression(
-        Val.withSExtOfValue(cast<CastInst>(Val.V)->getOperand(0)),
-        DL, Depth + 1, AC, DT);
+        Val.withSExtOfValue(cast<CastInst>(Val.V)->getOperand(0)), DL,
+        Depth + 1, AC, DT);
 
   return Val;
+}
+
+/// Decompose V at its own width, including an explicit truncation.
+static LinearExpression GetLinearExpressionForOffset(const Value *V,
+                                                     const DataLayout &DL,
+                                                     AssumptionCache *AC,
+                                                     DominatorTree *DT) {
+  CastedValue Val(V);
+  unsigned Depth = 0;
+  if (const auto *Trunc = dyn_cast<TruncInst>(V)) {
+    Val = Val.withTruncOfValue(Trunc->getOperand(0));
+    ++Depth;
+  }
+  return GetLinearExpression(Val, DL, Depth, AC, DT);
 }
 
 namespace {
@@ -2113,19 +2147,17 @@ bool BasicAAResult::computeConstantOffsetHeuristic(const DecomposedGEP &GEP,
 
   const VariableGEPIndex &Var0 = GEP.VarIndices[0], &Var1 = GEP.VarIndices[1];
 
-  if (Var0.Val.TruncBits != 0 || !Var0.Val.hasSameCastsAs(Var1.Val) ||
-      !Var0.hasNegatedScaleOf(Var1) ||
+  if (!Var0.Val.hasSameCastsAs(Var1.Val) || !Var0.hasNegatedScaleOf(Var1) ||
       Var0.Val.V->getType() != Var1.Val.V->getType())
     return false;
 
   // We'll strip off the Extensions of Var0 and Var1 and do another round
   // of GetLinearExpression decomposition. In the example above, if Var0
   // is zext(%x + 1) we should get V1 == %x and V1Offset == 1.
-
-  LinearExpression E0 =
-      GetLinearExpression(CastedValue(Var0.Val.V), DL, 0, AC, DT);
-  LinearExpression E1 =
-      GetLinearExpression(CastedValue(Var1.Val.V), DL, 0, AC, DT);
+  // Analyze the difference at the truncated width without changing the values
+  // used by the initial GEP decomposition.
+  LinearExpression E0 = GetLinearExpressionForOffset(Var0.Val.V, DL, AC, DT);
+  LinearExpression E1 = GetLinearExpressionForOffset(Var1.Val.V, DL, AC, DT);
   if (E0.Scale != E1.Scale || !E0.Val.hasSameCastsAs(E1.Val) ||
       !isValueEqualInPotentialCycles(E0.Val.V, E1.Val.V, AAQI))
     return false;
@@ -2137,8 +2169,10 @@ bool BasicAAResult::computeConstantOffsetHeuristic(const DecomposedGEP &GEP,
   // minimum difference between the two. The minimum distance may occur due to
   // wrapping; consider "add i3 %i, 5": if %i == 7 then 7 + 5 mod 8 == 4, and so
   // the minimum distance between %i and %i + 5 is 3.
-  APInt MinDiff = E0.Offset - E1.Offset, Wrapped = -MinDiff;
-  MinDiff = APIntOps::umin(MinDiff, Wrapped);
+  APInt MinDiff = E0.Offset - E1.Offset;
+  if (Var0.Val.TruncBits)
+    MinDiff = MinDiff.trunc(MinDiff.getBitWidth() - Var0.Val.TruncBits);
+  MinDiff = APIntOps::umin(MinDiff, -MinDiff);
   APInt MinDiffBytes =
     MinDiff.zextOrTrunc(Var0.Scale.getBitWidth()) * Var0.Scale.abs();
 
