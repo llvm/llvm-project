@@ -8,6 +8,7 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
+// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=200000000
 
 // XFAIL: availability-fp_to_chars-missing
 
@@ -67,12 +68,26 @@ auto test_exception = []<class CharT, class... Args>(std::string_view, std::basi
   // The exceptions are tested by other functions that don't use the basic-format-string as fmt argument.
 };
 
+#if TEST_STD_VER >= 26
+constexpr bool test_constexpr() {
+  format_tests_constexpr<char>(test, test_exception);
+#  ifndef TEST_HAS_NO_WIDE_CHARACTERS
+  format_tests_constexpr<wchar_t>(test, test_exception);
+#  endif
+  return true;
+}
+#endif
+
 int main(int, char**) {
   format_tests<char, execution_modus::partial>(test, test_exception);
 
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
   format_tests_char_to_wchar_t(test);
   format_tests<wchar_t, execution_modus::partial>(test, test_exception);
+#endif
+
+#if TEST_STD_VER >= 26
+  static_assert(test_constexpr());
 #endif
 
   return 0;
