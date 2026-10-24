@@ -3463,14 +3463,8 @@ static bool handleUncountableExitsWithSideEffects(
   // Create a mask to represent all lanes that fully execute in the vector loop,
   // stopping short of any early exit.
   VPBuilder MaskBuilder(HeaderVPBB, InsertIt);
-  VPValue *FirstActive = MaskBuilder.createFirstActiveLane(Cond);
-  Type *IVScalarTy = IV->getScalarType();
-  VPValue *Zero = Plan.getZero(IVScalarTy);
-  FirstActive =
-      MaskBuilder.createScalarZExtOrTrunc(FirstActive, IVScalarTy, DebugLoc());
-  VPValue *Mask = MaskBuilder.createNaryOp(VPInstruction::ActiveLaneMask,
-                                           {Zero, FirstActive}, DebugLoc(),
-                                           "uncountable.exit.mask");
+  VPValue *Mask = MaskBuilder.createNaryOp(VPInstruction::MaskBeforeFirst, Cond,
+                                           DebugLoc(), "uncountable.exit.mask");
 
   // Convert all other memory operations to use the mask.
   for (VPBasicBlock *VPBB : vp_rpo_plain_cfg_loop_body(HeaderVPBB))
@@ -3494,6 +3488,10 @@ static bool handleUncountableExitsWithSideEffects(
   assert(match(MiddleVPBB->getTerminator(), m_BranchOnCond()) &&
          "Expected BranchOnCond terminator for MiddleVPBB");
   VPBuilder MiddleBuilder(MiddleVPBB->getTerminator());
+  Type *IVScalarTy = IV->getScalarType();
+  VPValue *Zero = Plan.getZero(IVScalarTy);
+  VPValue *FirstActive = MiddleBuilder.createScalarZExtOrTrunc(
+      MiddleBuilder.createFirstActiveLane(Cond), IVScalarTy, DebugLoc());
   VPValue *ScalarIV = MiddleBuilder.createNaryOp(VPInstruction::ExtractLane,
                                                  {Zero, IV}, DebugLoc());
   VPValue *ExitIV = MiddleBuilder.createAdd(ScalarIV, FirstActive);
