@@ -796,6 +796,24 @@ def OMP_Cancel : Directive<[Spelling<"cancel">]> {
   let association = AS_None;
   let category = CA_Executable;
 }
+def OMP_BeginMetadirective : Directive<[Spelling<"begin metadirective">]> {
+  let allowedClauses = [
+    VersionedClause<OMPC_When>,
+  ];
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_DefaultVariant, 50, 51>,
+    VersionedClause<OMPC_Otherwise, 52>,
+  ];
+  let association = AS_Delimited;
+  let category = CA_Meta;
+  let pureSince = 52;
+}
+def OMP_EndMetadirective : Directive<[Spelling<"end metadirective">]> {
+  let association = AS_Delimited;
+  let category = OMP_BeginMetadirective.category;
+  let languages = OMP_BeginMetadirective.languages;
+  let pureSince = OMP_BeginMetadirective.pureSince;
+}
 def OMP_CancellationPoint : Directive<[Spelling<"cancellation point", 1, 52>,
                                        Spelling<"cancellation_point", 60>]> {
   let allowedOnceClauses = [
