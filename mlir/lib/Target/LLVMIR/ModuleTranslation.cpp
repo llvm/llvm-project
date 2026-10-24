@@ -1378,6 +1378,7 @@ LogicalResult ModuleTranslation::convertGlobalsAndAliases() {
       var->setUnnamedAddr(convertUnnamedAddrToLLVM(*op.getUnnamedAddr()));
 
     var->setVisibility(convertVisibilityToLLVM(op.getVisibility_()));
+    addRuntimePreemptionSpecifier(op.getDsoLocal(), var);
 
     aliasesMapping.try_emplace(op, var);
   }

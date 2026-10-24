@@ -55,10 +55,10 @@ extern void weak_func_alias(void) __attribute__((weak, alias("weak_func_target")
 // LLVM-DAG: @alias_var = alias i32, ptr @alias_target
 // LLVM-DAG: @prior_decl_var = alias i32, ptr @prior_decl_var_target
 // LLVM-DAG: @weak_var_alias = weak alias i32, ptr @weak_var_target
-// LLVM-DAG: @alias_func = alias void (), ptr @alias_func_target
-// LLVM-DAG: @prior_decl_func = alias void (), ptr @prior_decl_func_target
+// LLVM-DAG: @alias_func = dso_local alias void (), ptr @alias_func_target
+// LLVM-DAG: @prior_decl_func = dso_local alias void (), ptr @prior_decl_func_target
 // LLVM-DAG: @weak_func_alias = weak alias void (), ptr @weak_func_target
-// LLVM-DAG: @test13_alias = alias void (i32), ptr @test13
+// LLVM-DAG: @test13_alias = dso_local alias void (i32), ptr @test13
 // LLVM: define {{.*}}void @alias_func_target()
 
 // OGCG-DAG: @alias_target = {{.*}}global i32 42

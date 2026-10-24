@@ -11,7 +11,7 @@ struct B {
 B::B() {
 }
 
-// LLVM: @_ZN1BC1Ev = alias void (ptr), ptr @_ZN1BC2Ev
+// LLVM: @_ZN1BC1Ev = dso_local alias void (ptr), ptr @_ZN1BC2Ev
 
 // OGCG: @_ZN1BC1Ev = unnamed_addr alias void (ptr), ptr @_ZN1BC2Ev
 
