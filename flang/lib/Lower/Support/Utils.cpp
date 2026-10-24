@@ -258,7 +258,8 @@ public:
     return 149u;
   }
   static unsigned getHashValue(const Fortran::evaluate::Not &x) {
-    return getHashValue(x.left()) * 61u;
+    const int kind{x.kind()};
+    return getHashValue(x.left()) * 61u + static_cast<unsigned>(kind);
   }
   static unsigned getHashValue(const Fortran::evaluate::LogicalOperation &x) {
     unsigned result = getHashValue(x.left()) + getHashValue(x.right());
@@ -401,32 +402,32 @@ public:
   template <typename A>
   static bool isEqual(const Fortran::evaluate::Add<A> &x,
                       const Fortran::evaluate::Add<A> &y) {
-    return x.kind() == y.kind() && isBinaryEqual(x, y);
+    return isBinaryEqual(x, y);
   }
   template <typename A>
   static bool isEqual(const Fortran::evaluate::Subtract<A> &x,
                       const Fortran::evaluate::Subtract<A> &y) {
-    return x.kind() == y.kind() && isBinaryEqual(x, y);
+    return isBinaryEqual(x, y);
   }
   template <typename A>
   static bool isEqual(const Fortran::evaluate::Multiply<A> &x,
                       const Fortran::evaluate::Multiply<A> &y) {
-    return x.kind() == y.kind() && isBinaryEqual(x, y);
+    return isBinaryEqual(x, y);
   }
   template <typename A>
   static bool isEqual(const Fortran::evaluate::Divide<A> &x,
                       const Fortran::evaluate::Divide<A> &y) {
-    return x.kind() == y.kind() && isBinaryEqual(x, y);
+    return isBinaryEqual(x, y);
   }
   template <typename A>
   static bool isEqual(const Fortran::evaluate::Power<A> &x,
                       const Fortran::evaluate::Power<A> &y) {
-    return x.kind() == y.kind() && isBinaryEqual(x, y);
+    return isBinaryEqual(x, y);
   }
   template <typename A>
   static bool isEqual(const Fortran::evaluate::Extremum<A> &x,
                       const Fortran::evaluate::Extremum<A> &y) {
-    return x.kind() == y.kind() && isBinaryEqual(x, y);
+    return isBinaryEqual(x, y);
   }
   template <typename T>
   static bool isEqual(const Fortran::evaluate::ConditionalExpr<T> &x,
@@ -438,19 +439,19 @@ public:
   template <typename A>
   static bool isEqual(const Fortran::evaluate::RealToIntPower<A> &x,
                       const Fortran::evaluate::RealToIntPower<A> &y) {
-    return x.kind() == y.kind() && isBinaryEqual(x, y);
+    return isBinaryEqual(x, y);
   }
   static bool isEqual(const Fortran::evaluate::ComplexConstructor &x,
                       const Fortran::evaluate::ComplexConstructor &y) {
-    return x.kind() == y.kind() && isBinaryEqual(x, y);
+    return isBinaryEqual(x, y);
   }
   static bool isEqual(const Fortran::evaluate::Concat &x,
                       const Fortran::evaluate::Concat &y) {
-    return x.kind() == y.kind() && isBinaryEqual(x, y);
+    return isBinaryEqual(x, y);
   }
   static bool isEqual(const Fortran::evaluate::SetLength &x,
                       const Fortran::evaluate::SetLength &y) {
-    return x.kind() == y.kind() && isBinaryEqual(x, y);
+    return isBinaryEqual(x, y);
   }
   static bool isEqual(const Fortran::semantics::SymbolRef &x,
                       const Fortran::semantics::SymbolRef &y) {
@@ -474,7 +475,7 @@ public:
   template <typename A>
   static bool isEqual(const Fortran::evaluate::Constant<A> &x,
                       const Fortran::evaluate::Constant<A> &y) {
-    return x.kind() == y.kind() && x == y;
+    return x == y;
   }
   static bool isEqual(const Fortran::evaluate::ActualArgument &x,
                       const Fortran::evaluate::ActualArgument &y) {
@@ -525,7 +526,7 @@ public:
   }
   static bool isEqual(const Fortran::evaluate::SubscriptInteger &x,
                       const Fortran::evaluate::SubscriptInteger &y) {
-    return x.kind() == y.kind() && x == y;
+    return x == y;
   }
   template <typename A>
   static bool isEqual(const Fortran::evaluate::ArrayConstructor<A> &x,
@@ -624,7 +625,7 @@ public:
   }
   static bool isEqual(const Fortran::evaluate::NullPointer &x,
                       const Fortran::evaluate::NullPointer &y) {
-    return x.kind() == y.kind() && true;
+    return true;
   }
   template <typename A, typename B,
             std::enable_if_t<!std::is_same_v<A, B>, bool> = true>
