@@ -131,12 +131,12 @@ static ScanfSpecifierResult ParseScanfSpecifier(FormatStringHandler &H,
   if (Amt.getHowSpecified() != OptionalAmount::NotSpecified) {
     assert(Amt.getHowSpecified() == OptionalAmount::Constant);
     FS.setFieldWidth(Amt);
+  }
 
-    if (I == E) {
-      // No more characters left?
-      H.HandleIncompleteSpecifier(Start, E - Start);
-      return true;
-    }
+  // No more characters left.
+  if (I == E) {
+    H.HandleIncompleteSpecifier(Start, E - Start);
+    return true;
   }
 
   // Look for the length modifier.

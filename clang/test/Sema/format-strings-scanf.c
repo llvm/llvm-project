@@ -306,3 +306,22 @@ void test_promotion(void) {
   scanf("%hhd", &c); // Pedantic warning?
   scanf("%hhd", vp); // expected-warning{{format specifies type 'char *' but the argument has type 'void *'}}
 }
+
+// GH227616: field width running to end-of-string must be diagnosed as
+// incomplete, not over-read past the literal.
+void test_incomplete_scanf_width(FILE *f, int *i, char *buf) {
+  fscanf(f, "%*2"); // expected-warning{{incomplete format specifier}}
+  fscanf(f, "%*12"); // expected-warning{{incomplete format specifier}}
+  fscanf(f, "a" "%*2", 0); // expected-warning{{incomplete format specifier}}
+  scanf("%*2"); // expected-warning{{incomplete format specifier}}
+  scanf("%2"); // expected-warning{{incomplete format specifier}}
+  scanf("%*"); // expected-warning{{incomplete format specifier}}
+  scanf("a" "%2"); // expected-warning{{incomplete format specifier}}
+
+  // Valid uses with a field width must not warn.
+  scanf("%2d", i); // no-warning
+  scanf("%*2d"); // no-warning
+  fscanf(f, "%*2d"); // no-warning
+  fscanf(f, "a" "%*2d"); // no-warning
+  sscanf(buf, "%*12d"); // no-warning
+}
