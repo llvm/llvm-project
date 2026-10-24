@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TargetParser/IntelGPUTargetParser.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include <cassert>
 
@@ -62,4 +63,20 @@ std::string llvm::IntelGPU::getNumericArchName(uint32_t GPUIPVersion) {
   const uint32_t Revision = GPUIPVersion & GPUIPRevisionMask;
   return ("xe_" + Twine(Major) + "." + Twine(Minor) + "." + Twine(Revision))
       .str();
+}
+
+IGCATarget llvm::IntelGPU::parseIGCATarget(StringRef MaybeTarget) {
+  return StringSwitch<IGCATarget>(MaybeTarget)
+#define INTEL_IGCA_TARGET(NAME, TARGET, FEATURE_SET)                           \
+  .Case(NAME, IGCATarget(TARGET, IGCAFeatureSet::FEATURE_SET))
+#include "llvm/TargetParser/IntelGPUTargetParser.def"
+      .Default(IGCATarget::invalid());
+}
+
+StringRef llvm::IntelGPU::getIGCATargetName(IGCATarget T) {
+#define INTEL_IGCA_TARGET(NAME, TARGET, FEATURE_SET)                           \
+  if (T == IGCATarget(TARGET, IGCAFeatureSet::FEATURE_SET))                    \
+    return NAME;
+#include "llvm/TargetParser/IntelGPUTargetParser.def"
+  return "";
 }

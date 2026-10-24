@@ -3949,6 +3949,19 @@ static StringRef getCanonicalArchString(Compilation &C,
         return StringRef();
       }
     }
+  } else if (Triple.isSPIRV() && ArchStr.starts_with("igca")) {
+    if (Triple.getOS() == llvm::Triple::AMDHSA) {
+      C.getDriver().Diag(clang::diag::err_drv_offload_bad_gpu_arch)
+          << "HIP" << ArchStr;
+      return StringRef();
+    }
+    // FIXME(IGCA): This only checks ArchStr's starting with "igca". Typos such
+    // as IGCA_20ca still fall through this check.
+    if (!StringToOffloadArch(ArchStr).isIntelIGCA()) {
+      C.getDriver().Diag(clang::diag::err_drv_offload_bad_gpu_arch)
+          << "IGCA" << ArchStr;
+      return StringRef();
+    }
   }
 
   if (Arch.isNVPTX())

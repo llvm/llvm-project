@@ -17,7 +17,7 @@
 //                         GK_<KIND>.
 //     MAJOR             - Major component of the device's GPU IP version.
 //     MINOR             - Minor component of the device's GPU IP version.
-//     IGCA_TARGET       - Numeric IGCA target.
+//     IGCA_TARGET       - Numeric IGCA target, e.g. 60.
 //     IGCA_FEATURE_SETS - Token naming the IGCA feature sets the device
 //                         implements: Core (none), Compute ("c"),
 //                         Render ("r"), ComputeExact ("ca") or
@@ -37,8 +37,65 @@
 // Several devices can share a major and a minor version. The rows are ordered
 // so that the name to print for such a group comes first.
 //
+// This file also derives an INTEL_IGCA_TARGET table, which lists the valid
+// IGCA targets derived from the INTEL_GPU and INTEL_GPU_COMPAT rows. A row with
+// target N and feature set FS implies:
+//   - igca_N,        Core feature set, which every device implements;
+//   - igca_N<c|r>,   non-exact form of FS, unless FS is Core;
+//   - igca_N<ca|ra>, exact form of FS, if FS is exact.
+// E.g. (15, RenderExact) implies igca_15, igca_15r and igca_15ra.
+// Targets come out in row order, once per row that implies them, so the table
+// is unsorted and contains duplicates.
+//
+//   INTEL_IGCA_TARGET(NAME, TARGET, FEATURE_SET)
+//     NAME        - Readable string representing the target, e.g. "igca_15ra".
+//     TARGET      - Numeric IGCA target, e.g. 15.
+//     FEATURE_SET - IGCAFeatureSet enumerator, e.g. RenderExact.
+//
 //===----------------------------------------------------------------------===//
 
+// Derive INTEL_IGCA_TARGET table from the rows in INTEL_GPU and
+// INTEL_GPU_COMPAT below; see the top of this file.
+//
+//   INTEL_IGCA_TARGET(NAME, TARGET, FEATURE_SET)
+//
+// Note that this derivation produces UNSORTED, DUPLICATE entries. Sorting and
+// deduping needs to be done in code.
+#ifdef INTEL_IGCA_TARGET
+
+#if defined(INTEL_GPU) || defined(INTEL_GPU_COMPAT)
+// This block defines INTEL_GPU and INTEL_GPU_COMPAT macros itself, which would
+// overwrite an includer's own definitions of e.g. INTEL_GPU below. To use both
+// INTEL_GPU and INTEL_IGCA_TARGET tables, include this file once for each use.
+#error "INTEL_IGCA_TARGET cannot be used together with INTEL_GPU(_COMPAT)"
+#endif
+
+#define INTEL_IGCA_IMPLIED_Core(TARGET)                                        \
+  INTEL_IGCA_TARGET("igca_" #TARGET     , TARGET, Core)
+
+#define INTEL_IGCA_IMPLIED_Compute(TARGET)                                     \
+  INTEL_IGCA_IMPLIED_Core(TARGET)                                              \
+  INTEL_IGCA_TARGET("igca_" #TARGET "c" , TARGET, Compute)
+
+#define INTEL_IGCA_IMPLIED_ComputeExact(TARGET)                                \
+  INTEL_IGCA_IMPLIED_Compute(TARGET)                                           \
+  INTEL_IGCA_TARGET("igca_" #TARGET "ca", TARGET, ComputeExact)
+
+#define INTEL_IGCA_IMPLIED_Render(TARGET)                                      \
+  INTEL_IGCA_IMPLIED_Core(TARGET)                                              \
+  INTEL_IGCA_TARGET("igca_" #TARGET "r" , TARGET, Render)
+
+#define INTEL_IGCA_IMPLIED_RenderExact(TARGET)                                 \
+  INTEL_IGCA_IMPLIED_Render(TARGET)                                            \
+  INTEL_IGCA_TARGET("igca_" #TARGET "ra", TARGET, RenderExact)
+
+#define INTEL_GPU(NAME, KIND, MAJOR, MINOR, IGCA_TARGET, IGCA_FEATURE_SETS)    \
+  INTEL_IGCA_IMPLIED_##IGCA_FEATURE_SETS(IGCA_TARGET)
+#define INTEL_GPU_COMPAT(NAME, KIND, IGCA_TARGET, IGCA_FEATURE_SETS)           \
+  INTEL_IGCA_IMPLIED_##IGCA_FEATURE_SETS(IGCA_TARGET)
+#endif
+
+// Intel GPU definitions
 #ifndef INTEL_GPU
 #define INTEL_GPU(NAME, KIND, MAJOR, MINOR, IGCA_TARGET, IGCA_FEATURE_SETS)
 #endif
@@ -94,3 +151,9 @@ INTEL_GPU_COMPAT("xe-dg2", XE_DG2, 15, RenderExact)
 
 #undef INTEL_GPU
 #undef INTEL_GPU_COMPAT
+#undef INTEL_IGCA_TARGET
+#undef INTEL_IGCA_IMPLIED_Core
+#undef INTEL_IGCA_IMPLIED_Compute
+#undef INTEL_IGCA_IMPLIED_ComputeExact
+#undef INTEL_IGCA_IMPLIED_Render
+#undef INTEL_IGCA_IMPLIED_RenderExact

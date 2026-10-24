@@ -22,6 +22,9 @@ enum GPUKind : uint8_t;
 namespace AMDGPU {
 enum GPUKind : uint8_t;
 }
+namespace IntelGPU {
+class IGCATarget;
+}
 } // namespace llvm
 
 namespace clang {
@@ -39,6 +42,7 @@ public:
     AMDGCNSPIRV, // The 'amdgcnspirv' pseudo target.
     IntelCPU,    // Kind is an IntelArch.
     IntelGPU,    // Kind is an IntelArch.
+    IntelIGCA,   // Kind is an llvm::IntelGPU::IGCATarget.
     Generic,     // The 'generic' processor model.
   };
 
@@ -64,6 +68,7 @@ public:
   static OffloadArch getAMDGPU(llvm::AMDGPU::GPUKind K) {
     return {TargetArch::AMDGPU, static_cast<uint32_t>(K)};
   }
+  static OffloadArch getIntelIGCA(llvm::IntelGPU::IGCATarget T);
   static constexpr OffloadArch getIntel(TargetArch V, IntelArch A) {
     return {V, static_cast<uint32_t>(A)};
   }
@@ -85,18 +90,20 @@ public:
   bool isAMDGCNSPIRV() const { return V == TargetArch::AMDGCNSPIRV; }
   bool isIntelCPU() const { return V == TargetArch::IntelCPU; }
   bool isIntelGPU() const { return V == TargetArch::IntelGPU; }
-  bool isIntel() const { return isIntelCPU() || isIntelGPU(); }
+  bool isIntelIGCA() const { return V == TargetArch::IntelIGCA; }
+  bool isIntel() const { return isIntelCPU() || isIntelGPU() || isIntelIGCA(); }
   bool isGeneric() const { return V == TargetArch::Generic; }
   bool isUnused() const { return V == TargetArch::Unused; }
   bool isUnknown() const { return V == TargetArch::Unknown; }
 
-  // Only valid when isNVPTX() / isAMDGPU() respectively.
+  // Only valid when isNVPTX() / isAMDGPU() / isIntelIGCA() respectively.
   llvm::NVPTX::GPUKind nvptxKind() const {
     return static_cast<llvm::NVPTX::GPUKind>(Kind);
   }
   llvm::AMDGPU::GPUKind amdgpuKind() const {
     return static_cast<llvm::AMDGPU::GPUKind>(Kind);
   }
+  llvm::IntelGPU::IGCATarget igcaTarget() const;
 
   bool operator==(const OffloadArch &Other) const {
     return V == Other.V && Kind == Other.Kind;
