@@ -1,11 +1,7 @@
 # RUN: llc -mtriple=x86_64 -run-pass=none -o - %s | FileCheck %s
 
-# An inline asm operand flag is followed by the number of operands that it
-# says, e.g. two registers for an i128 value, or the five operands of an x86
-# memory reference. A count other than 1 is written as "ops:N". Check that it
-# survives a print/parse round trip, whether it was written symbolically
-# (including on a tied use) or as part of a numeric flag. The machine verifier
-# walks the operands by their flags' counts, so it rejects a wrong count.
+# Test that an inline asm operand count other than 1 round-trips as "ops:N",
+# whether it's written symbolically or as a numeric flag.
 
 ---
 name: operand_count
