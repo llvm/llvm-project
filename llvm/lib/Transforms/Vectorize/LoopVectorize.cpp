@@ -3558,6 +3558,55 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
 
   assert(IC > 0 && "Interleave count must be greater than 0.");
 
+  // FIXME: VF is required to be a vector only because there are several recipes
+  // whose computeCost function asserts that the VF is a vector.
+  if (Opts.enable_interleave_to_reduce_stalls && VF.isVector()) {
+    LLVM_DEBUG(dbgs() << "LV: Interleaving to reduce stall cycles due to "
+                         "instruction latency.\n");
+    // Interleaving a replicator region means we get extra copies of the blocks
+    // in the region. Vector values used in those blocks are expected to later
+    // be sunk to just before them, negating any reduction in stalls. Therefore
+    // there's no gain to be had from interleaving.
+    if (hasReplicatorRegion(Plan)) {
+      LLVM_DEBUG(dbgs() << "LV: Not interleaving due to replicator region.\n");
+      return 1;
+    }
+    VPCostContext LatencyCtx(*TLI, Plan, *CM, Config,
+                             /*ReusePrintingSlotTracker=*/true);
+    LatencyCtx.CostKind = TTI::TCK_Latency;
+    VPCostContext ThroughputCtx(*TLI, Plan, *CM, Config,
+                                /*ReusePrintingSlotTracker=*/true);
+    ThroughputCtx.CostKind = TTI::TCK_RecipThroughput;
+    // Find the largest interleave count that will help with reducing stalls.
+    unsigned StallsIC = 1;
+    for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+             vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
+      for (VPRecipeBase &R : *VPBB) {
+        // Assuming that each value will be needed as soon as it's generated the
+        // number of stall cycles is one less than the latency.
+        InstructionCost StallCycles = R.cost(VF, LatencyCtx) - 1;
+        if (Opts.force_target_load_latency > 0 && R.mayReadFromMemory())
+          StallCycles = Opts.force_target_load_latency - 1;
+        // Each interleaving above 1 will reduce the stalls by RecipThroughput,
+        // so pick the interleaving that will reduce stalls to zero.
+        InstructionCost RecipThroughput = R.cost(VF, ThroughputCtx);
+        if (StallCycles.isValid() && RecipThroughput.isValid() &&
+            StallCycles > 0 && RecipThroughput > 0) {
+          unsigned ThisIC = bit_floor<uint64_t>(
+              1 + (StallCycles / RecipThroughput).getValue());
+          StallsIC = std::max(StallsIC, ThisIC);
+        }
+      }
+    }
+    if (StallsIC <= 1) {
+      LLVM_DEBUG(
+          dbgs() << "LV: Not interleaving as it wouldn't reduce stalls.\n");
+      return 1;
+    }
+    IC = std::min(IC, StallsIC);
+    return IC;
+  }
+
   // Interleave if we vectorized this loop and there is a reduction that could
   // benefit from interleaving.
   if (VF.isVector() && HasReductions) {
