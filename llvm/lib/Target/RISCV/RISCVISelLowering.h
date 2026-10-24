@@ -62,8 +62,8 @@ public:
   bool shouldScalarizeBinop(SDValue VecOp) const override;
   bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
   int getLegalZfaFPImm(const APFloat &Imm, EVT VT) const;
-  bool isFPImmLegal(const APFloat &Imm, EVT VT,
-                    bool ForCodeSize) const override;
+  FPImmAction getFPImmAction(const APFloat &Imm, EVT VT,
+                             bool ForCodeSize) const override;
   ExtractSubvectorCost getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
                                                unsigned Index) const override;
 

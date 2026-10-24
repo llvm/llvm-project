@@ -75,7 +75,7 @@ struct CompilerInstance {
         [&] { return PluginInlineAdvisorAnalysis(fooOnlyFactory); });
   }
 
-  CompilerInstance() {
+  CompilerInstance() : PB(Ctx) {
     IP = getInlineParamsFromOptLevel(3);
     PB.registerModuleAnalyses(MAM);
     PB.registerCGSCCAnalyses(CGAM);

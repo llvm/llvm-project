@@ -634,6 +634,54 @@ void NVVM::FmaOp::lowerFmaToLLVMIR(Operation &op, LLVM::ModuleTranslation &mt,
   }
 }
 
+// Returns the LLVM type the sp{de}compress intrinsics use for metadata: i32 for
+// a single register (including vector<1xi32>) and a vector of i32 otherwise.
+static llvm::Type *getSPMetadataType(Type type, llvm::IRBuilderBase &builder) {
+  auto vecTy = dyn_cast<VectorType>(type);
+  if (!vecTy || vecTy.getNumElements() == 1)
+    return builder.getInt32Ty();
+  return llvm::FixedVectorType::get(builder.getInt32Ty(),
+                                    vecTy.getNumElements());
+}
+
+void NVVM::SparseCompressOp::lowerToLLVMIR(Operation &op,
+                                           LLVM::ModuleTranslation &mt,
+                                           llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::SparseCompressOp>(op);
+  Value metadata = thisOp.getMetadata();
+  Value compressedData = thisOp.getCompressedData();
+  llvm::Type *resultTy =
+      llvm::StructType::get(getSPMetadataType(metadata.getType(), builder),
+                            mt.convertType(compressedData.getType()));
+
+  llvm::Value *result = createIntrinsicCall(
+      builder, llvm::Intrinsic::nvvm_spcompress, resultTy,
+      {mt.lookupValue(thisOp.getData()), mt.lookupValue(thisOp.getSpDesc()),
+       builder.getInt32(thisOp.getIdxSize()),
+       // spcompress only supports the 2:4 sparsity factor.
+       builder.getInt32(4)});
+
+  mt.mapValue(metadata) =
+      builder.CreateBitCast(builder.CreateExtractValue(result, 0),
+                            mt.convertType(metadata.getType()));
+  mt.mapValue(compressedData) = builder.CreateExtractValue(result, 1);
+}
+
+void NVVM::SparseDecompressOp::lowerToLLVMIR(Operation &op,
+                                             LLVM::ModuleTranslation &mt,
+                                             llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::SparseDecompressOp>(op);
+  Value metadata = thisOp.getMetadata();
+  mt.mapValue(thisOp.getData()) = createIntrinsicCall(
+      builder, llvm::Intrinsic::nvvm_spdecompress,
+      mt.convertType(thisOp.getData().getType()),
+      {builder.CreateBitCast(mt.lookupValue(metadata),
+                             getSPMetadataType(metadata.getType(), builder)),
+       mt.lookupValue(thisOp.getCompressedData()),
+       builder.getInt32(thisOp.getIdxSize()),
+       builder.getInt32(thisOp.getNumTgt())});
+}
+
 namespace {
 /// Implementation of the dialect interface that converts operations belonging
 /// to the NVVM dialect to LLVM IR.

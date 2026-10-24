@@ -2089,7 +2089,7 @@ let AddedComplexity = 20 in {
 let AddedComplexity = 20 in {
   def : GCNPat<
     (i32 (UniformBinFrag<uaddsat> i32:$src0, i32:$src1)),
-    (S_ADD_U32 (S_MIN_U32 $src0, (S_NOT_B32 $src1)), $src1)
+    (S_ADD_I32 (S_MIN_U32 $src0, (S_NOT_B32 $src1)), $src1)
   >;
   def : GCNPat<
     (i32 (UniformBinFrag<usubsat> i32:$src0, i32:$src1)),

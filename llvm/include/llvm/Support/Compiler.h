@@ -198,14 +198,10 @@
 #define LLVM_ABI_EXPORT __declspec(dllexport)
 #elif __has_attribute(visibility)
 #if defined(__ELF__) || defined(__MINGW32__) || defined(_AIX) ||               \
-    defined(__MVS__) || defined(__CYGWIN__)
+    defined(__MVS__) || defined(__CYGWIN__) || defined(__MACH__) ||            \
+    defined(__wasm__) || defined(__EMSCRIPTEN__)
 #define LLVM_ABI __attribute__((visibility("default")))
 #define LLVM_TEMPLATE_ABI LLVM_ABI
-#define LLVM_EXPORT_TEMPLATE
-#define LLVM_ABI_EXPORT LLVM_ABI
-#elif defined(__MACH__) || defined(__wasm__) || defined(__EMSCRIPTEN__)
-#define LLVM_ABI __attribute__((visibility("default")))
-#define LLVM_TEMPLATE_ABI
 #define LLVM_EXPORT_TEMPLATE
 #define LLVM_ABI_EXPORT LLVM_ABI
 #endif
