@@ -13556,6 +13556,9 @@ def err_preserve_enum_value_invalid : Error<
   "__builtin_preserve_enum_value argument %0 invalid">;
 def err_preserve_enum_value_not_const: Error<
   "__builtin_preserve_enum_value argument %0 not a constant">;
+def warn_preserve_access_index_anon_enum : Warning<
+  "%0 attribute has no effect on an anonymous enum without a typedef name">,
+  InGroup<IgnoredAttributes>, DefaultError;
 
 def err_bit_cast_non_trivially_copyable : Error<
   "'__builtin_bit_cast' %select{source|destination}0 type must be trivially copyable">;
