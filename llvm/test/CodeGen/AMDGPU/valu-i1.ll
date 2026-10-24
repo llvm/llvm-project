@@ -30,12 +30,13 @@ define amdgpu_kernel void @test_if(i32 %b, ptr addrspace(1) %src, ptr addrspace(
 ; SI-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; SI-NEXT:  .LBB0_3: ; %Flow6
 ; SI-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
+; SI-NEXT:    s_cbranch_execz .LBB0_5
 ; SI-NEXT:  ; %bb.4: ; %LeafBlock
 ; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 1, v0
 ; SI-NEXT:    s_andn2_b64 s[2:3], s[2:3], exec
 ; SI-NEXT:    s_mov_b64 s[10:11], exec
 ; SI-NEXT:    s_or_b64 s[2:3], s[2:3], vcc
-; SI-NEXT:  ; %bb.5: ; %Flow8
+; SI-NEXT:  .LBB0_5: ; %Flow8
 ; SI-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; SI-NEXT:    s_and_saveexec_b64 s[4:5], s[2:3]
 ; SI-NEXT:    s_xor_b64 s[2:3], exec, s[4:5]

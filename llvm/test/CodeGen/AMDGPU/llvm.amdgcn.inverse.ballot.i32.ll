@@ -124,10 +124,11 @@ define amdgpu_cs void @inverse_ballot_branch(i32 inreg %s0_1, i32 inreg %s2, ptr
 ; GISEL-NEXT:    s_mov_b32 s2, exec_lo
 ; GISEL-NEXT:    s_xor_b32 s2, s1, s2
 ; GISEL-NEXT:    s_and_saveexec_b32 s1, s2
+; GISEL-NEXT:    s_cbranch_execz .LBB6_2
 ; GISEL-NEXT:  ; %bb.1: ; %if
 ; GISEL-NEXT:    s_add_i32 s0, s0, 1
 ; GISEL-NEXT:    v_mov_b32_e32 v2, s0
-; GISEL-NEXT:  ; %bb.2: ; %endif
+; GISEL-NEXT:  .LBB6_2: ; %endif
 ; GISEL-NEXT:    s_or_b32 exec_lo, exec_lo, s1
 ; GISEL-NEXT:    global_store_b32 v[0:1], v2, off
 ; GISEL-NEXT:    s_endpgm
@@ -137,10 +138,11 @@ define amdgpu_cs void @inverse_ballot_branch(i32 inreg %s0_1, i32 inreg %s2, ptr
 ; SDAG-NEXT:    v_mov_b32_e32 v2, s0
 ; SDAG-NEXT:    s_xor_b32 s2, s1, -1
 ; SDAG-NEXT:    s_and_saveexec_b32 s1, s2
+; SDAG-NEXT:    s_cbranch_execz .LBB6_2
 ; SDAG-NEXT:  ; %bb.1: ; %if
 ; SDAG-NEXT:    s_add_i32 s0, s0, 1
 ; SDAG-NEXT:    v_mov_b32_e32 v2, s0
-; SDAG-NEXT:  ; %bb.2: ; %endif
+; SDAG-NEXT:  .LBB6_2: ; %endif
 ; SDAG-NEXT:    s_or_b32 exec_lo, exec_lo, s1
 ; SDAG-NEXT:    global_store_b32 v[0:1], v2, off
 ; SDAG-NEXT:    s_endpgm

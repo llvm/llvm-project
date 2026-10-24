@@ -468,6 +468,12 @@ bool SIPreEmitPeephole::mustRetainExeczBranch(
       if (TII->hasUnwantedEffectsWhenEXECEmpty(MI))
         return true;
 
+      // Retain the branch unless the instruction is a harmless no-op when
+      // EXEC == 0.
+      if (SIInstrInfo::isSALU(MI) ||
+          !SIInstrInfo::isVALU(MI, /*AllowLDSDMA=*/false))
+        return true;
+
       if (!CostModel.isProfitable(MI))
         return true;
     }

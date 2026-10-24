@@ -4838,6 +4838,7 @@ define amdgpu_kernel void @divergent_cfg_i64(ptr addrspace(1) %out, i64 %in, i64
 ; GFX1064DAGISEL-NEXT:    v_mov_b32_e32 v0, s8
 ; GFX1064DAGISEL-NEXT:    v_mov_b32_e32 v1, s9
 ; GFX1064DAGISEL-NEXT:    s_xor_b64 exec, exec, s[2:3]
+; GFX1064DAGISEL-NEXT:    s_cbranch_execz .LBB11_4
 ; GFX1064DAGISEL-NEXT:  ; %bb.3: ; %if
 ; GFX1064DAGISEL-NEXT:    s_mov_b64 s[4:5], exec
 ; GFX1064DAGISEL-NEXT:    s_bcnt1_i32_b64 s4, s[4:5]
@@ -4851,7 +4852,7 @@ define amdgpu_kernel void @divergent_cfg_i64(ptr addrspace(1) %out, i64 %in, i64
 ; GFX1064DAGISEL-NEXT:    s_add_u32 s5, s7, s5
 ; GFX1064DAGISEL-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX1064DAGISEL-NEXT:    v_mov_b32_e32 v1, s5
-; GFX1064DAGISEL-NEXT:  ; %bb.4: ; %endif
+; GFX1064DAGISEL-NEXT:  .LBB11_4: ; %endif
 ; GFX1064DAGISEL-NEXT:    s_or_b64 exec, exec, s[2:3]
 ; GFX1064DAGISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1064DAGISEL-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
@@ -4933,6 +4934,7 @@ define amdgpu_kernel void @divergent_cfg_i64(ptr addrspace(1) %out, i64 %in, i64
 ; GFX1032DAGISEL-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX1032DAGISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX1032DAGISEL-NEXT:    s_xor_b32 exec_lo, exec_lo, s2
+; GFX1032DAGISEL-NEXT:    s_cbranch_execz .LBB11_4
 ; GFX1032DAGISEL-NEXT:  ; %bb.3: ; %if
 ; GFX1032DAGISEL-NEXT:    s_mov_b32 s3, exec_lo
 ; GFX1032DAGISEL-NEXT:    s_bcnt1_i32_b32 s3, s3
@@ -4946,7 +4948,7 @@ define amdgpu_kernel void @divergent_cfg_i64(ptr addrspace(1) %out, i64 %in, i64
 ; GFX1032DAGISEL-NEXT:    s_add_u32 s5, s5, s8
 ; GFX1032DAGISEL-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX1032DAGISEL-NEXT:    v_mov_b32_e32 v1, s5
-; GFX1032DAGISEL-NEXT:  ; %bb.4: ; %endif
+; GFX1032DAGISEL-NEXT:  .LBB11_4: ; %endif
 ; GFX1032DAGISEL-NEXT:    s_or_b32 exec_lo, exec_lo, s2
 ; GFX1032DAGISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1032DAGISEL-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
@@ -5032,12 +5034,13 @@ define amdgpu_kernel void @divergent_cfg_i64(ptr addrspace(1) %out, i64 %in, i64
 ; GFX1164DAGISEL-NEXT:    v_mov_b32_e32 v0, s8
 ; GFX1164DAGISEL-NEXT:    v_mov_b32_e32 v1, s9
 ; GFX1164DAGISEL-NEXT:    s_xor_b64 exec, exec, s[2:3]
+; GFX1164DAGISEL-NEXT:    s_cbranch_execz .LBB11_4
 ; GFX1164DAGISEL-NEXT:  ; %bb.3: ; %if
-; GFX1164DAGISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1164DAGISEL-NEXT:    s_mov_b64 s[6:7], exec
-; GFX1164DAGISEL-NEXT:    s_bcnt1_i32_b64 s6, s[6:7]
 ; GFX1164DAGISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX1164DAGISEL-NEXT:    s_bcnt1_i32_b64 s6, s[6:7]
 ; GFX1164DAGISEL-NEXT:    s_sub_i32 s6, 0, s6
+; GFX1164DAGISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1164DAGISEL-NEXT:    s_ashr_i32 s7, s6, 31
 ; GFX1164DAGISEL-NEXT:    s_mul_hi_u32 s8, s4, s6
 ; GFX1164DAGISEL-NEXT:    s_mul_i32 s5, s5, s6
@@ -5047,7 +5050,7 @@ define amdgpu_kernel void @divergent_cfg_i64(ptr addrspace(1) %out, i64 %in, i64
 ; GFX1164DAGISEL-NEXT:    s_add_u32 s5, s5, s7
 ; GFX1164DAGISEL-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX1164DAGISEL-NEXT:    v_mov_b32_e32 v1, s5
-; GFX1164DAGISEL-NEXT:  ; %bb.4: ; %endif
+; GFX1164DAGISEL-NEXT:  .LBB11_4: ; %endif
 ; GFX1164DAGISEL-NEXT:    s_or_b64 exec, exec, s[2:3]
 ; GFX1164DAGISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1164DAGISEL-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
@@ -5138,12 +5141,13 @@ define amdgpu_kernel void @divergent_cfg_i64(ptr addrspace(1) %out, i64 %in, i64
 ; GFX1132DAGISEL-NEXT:    s_or_saveexec_b32 s2, s8
 ; GFX1132DAGISEL-NEXT:    v_dual_mov_b32 v0, s6 :: v_dual_mov_b32 v1, s7
 ; GFX1132DAGISEL-NEXT:    s_xor_b32 exec_lo, exec_lo, s2
+; GFX1132DAGISEL-NEXT:    s_cbranch_execz .LBB11_4
 ; GFX1132DAGISEL-NEXT:  ; %bb.3: ; %if
-; GFX1132DAGISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1132DAGISEL-NEXT:    s_mov_b32 s3, exec_lo
-; GFX1132DAGISEL-NEXT:    s_bcnt1_i32_b32 s3, s3
 ; GFX1132DAGISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX1132DAGISEL-NEXT:    s_bcnt1_i32_b32 s3, s3
 ; GFX1132DAGISEL-NEXT:    s_sub_i32 s3, 0, s3
+; GFX1132DAGISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1132DAGISEL-NEXT:    s_ashr_i32 s6, s3, 31
 ; GFX1132DAGISEL-NEXT:    s_mul_hi_u32 s7, s4, s3
 ; GFX1132DAGISEL-NEXT:    s_mul_i32 s5, s5, s3
@@ -5153,7 +5157,7 @@ define amdgpu_kernel void @divergent_cfg_i64(ptr addrspace(1) %out, i64 %in, i64
 ; GFX1132DAGISEL-NEXT:    s_add_u32 s5, s5, s6
 ; GFX1132DAGISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1132DAGISEL-NEXT:    v_dual_mov_b32 v0, s4 :: v_dual_mov_b32 v1, s5
-; GFX1132DAGISEL-NEXT:  ; %bb.4: ; %endif
+; GFX1132DAGISEL-NEXT:  .LBB11_4: ; %endif
 ; GFX1132DAGISEL-NEXT:    s_or_b32 exec_lo, exec_lo, s2
 ; GFX1132DAGISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1132DAGISEL-NEXT:    global_store_b64 v2, v[0:1], s[0:1]

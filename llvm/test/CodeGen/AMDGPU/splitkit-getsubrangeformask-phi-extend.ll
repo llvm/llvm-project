@@ -620,12 +620,13 @@ define void @f(ptr %p, <16 x i1> %m, <16 x i63> %pt, <16 x i1> %sc,
 ; CHECK-NEXT:    ; implicit-def: $vgpr22
 ; CHECK-NEXT:  .LBB0_4: ; %Flow51
 ; CHECK-NEXT:    s_andn2_saveexec_b64 s[48:49], s[48:49]
+; CHECK-NEXT:    s_cbranch_execz .LBB0_6
 ; CHECK-NEXT:  ; %bb.5: ; %LeafBlock
 ; CHECK-NEXT:    v_cmp_ne_u32_e64 s[38:39], 2, v22
 ; CHECK-NEXT:    s_andn2_b64 s[52:53], s[52:53], exec
 ; CHECK-NEXT:    s_mov_b64 s[50:51], exec
 ; CHECK-NEXT:    s_or_b64 s[52:53], s[52:53], s[38:39]
-; CHECK-NEXT:  ; %bb.6: ; %Flow53
+; CHECK-NEXT:  .LBB0_6: ; %Flow53
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[48:49]
 ; CHECK-NEXT:    s_and_saveexec_b64 s[48:49], s[52:53]
 ; CHECK-NEXT:    s_mov_b64 s[38:39], s[50:51]

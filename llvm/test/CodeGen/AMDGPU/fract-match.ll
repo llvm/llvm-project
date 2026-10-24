@@ -5282,13 +5282,14 @@ define float @safe_math_fract_f32_swapped_edge_case_split_block(float %x, i1 %co
 ; GFX6-NEXT:    v_sub_f32_e32 v1, v0, v1
 ; GFX6-NEXT:    v_min_f32_e32 v1, 0x3f7fffff, v1
 ; GFX6-NEXT:    s_and_saveexec_b64 s[4:5], vcc
+; GFX6-NEXT:    s_cbranch_execz .LBB58_2
 ; GFX6-NEXT:  ; %bb.1: ; %edge_cases
 ; GFX6-NEXT:    s_mov_b32 s6, 0x7f800000
 ; GFX6-NEXT:    v_cmp_neq_f32_e64 vcc, |v0|, s6
 ; GFX6-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
 ; GFX6-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
 ; GFX6-NEXT:    v_cndmask_b32_e32 v1, v0, v1, vcc
-; GFX6-NEXT:  ; %bb.2: ; %UnifiedReturnBlock
+; GFX6-NEXT:  .LBB58_2: ; %UnifiedReturnBlock
 ; GFX6-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX6-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
