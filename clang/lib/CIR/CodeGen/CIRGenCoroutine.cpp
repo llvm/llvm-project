@@ -340,7 +340,7 @@ CIRGenFunction::emitCoroutineBody(const CoroutineBodyStmt &s) {
   cir::ConstantOp nullPtrCst = builder.getNullPtr(voidPtrTy, openCurlyLoc);
 
   auto fn = mlir::cast<cir::FuncOp>(curFn);
-  fn.setCoroutine(true);
+  fn.setCoroutineKind(cir::CoroutineKind::Coroutine);
   const TargetInfo &ti = cgm.getASTContext().getTargetInfo();
   unsigned newAlign = ti.getNewAlign() / ti.getCharWidth();
 
@@ -566,6 +566,8 @@ CIRGenFunction::emitCoroutineBody(const CoroutineBodyStmt &s) {
 
     // Builds `exit`: coro.end(/*unwind*/ false) followed by the actual return
     // to the caller.
+
+    assert(!cir::MissingFeatures::coroGetRetObjManager());
     auto exitBuilder = [&]() {
       cir::ConstantOp nullHandler =
           builder.getNullPtr(builder.getVoidPtrTy(), openCurlyLoc);

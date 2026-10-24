@@ -38,6 +38,7 @@
 #include "llvm/IR/NVVMIntrinsicUtils.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
 #include "llvm/Support/raw_ostream.h"
 #include <array>
@@ -7066,6 +7067,96 @@ LogicalResult Tcgen05LdRedOp::verify() {
   if (redVal.isInteger() && (getAbs() || getNan())) {
     return emitError("abs or nan is only applicable for f32 type");
   }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// sparse.compress and sparse.decompress Ops
+//===----------------------------------------------------------------------===//
+
+// Returns the number of 32-bit registers in a metadata register bundle, which
+// is either an i32 or a vector of i32.
+static unsigned getNumSPRegisters(Type type) {
+  if (auto vecTy = dyn_cast<VectorType>(type))
+    return vecTy.getNumElements();
+  return 1;
+}
+
+// The repeat factor of spcompress and spdecompress is a power of two up to 64.
+static bool isValidSPRepFactor(unsigned repFactor) {
+  return llvm::isPowerOf2_32(repFactor) && repFactor <= 64;
+}
+
+LogicalResult SparseCompressOp::verify() {
+  auto dataTy = cast<VectorType>(getData().getType());
+  auto compressedTy = cast<VectorType>(getCompressedData().getType());
+  if (dataTy.getElementType() != compressedTy.getElementType())
+    return emitOpError(
+        "expects data and compressed data to have the same element type");
+
+  // data occupies 2 * repFactor 32-bit registers.
+  unsigned elemSize = dataTy.getElementTypeBitWidth();
+  unsigned dataBits = dataTy.getNumElements() * elemSize;
+  unsigned repFactor = dataBits / 64;
+  if (dataBits % 64 != 0 || !isValidSPRepFactor(repFactor))
+    return emitOpError("expects data to occupy 2 * repFactor 32-bit "
+                       "registers, where repFactor is a power of two up to 64");
+
+  // spcompress only supports the 2:4 sparsity factor.
+  if (2 * compressedTy.getNumElements() != dataTy.getNumElements())
+    return emitOpError(
+        "expects compressed data to have half as many elements as data");
+
+  unsigned numMetadataRegs =
+      llvm::divideCeil(repFactor * getIdxSize(), elemSize);
+  if (getNumSPRegisters(getMetadata().getType()) != numMetadataRegs)
+    return emitOpError("expects metadata to occupy ")
+           << numMetadataRegs << " 32-bit register(s)";
+
+  return success();
+}
+
+LogicalResult SparseDecompressOp::verify() {
+  auto dataTy = cast<VectorType>(getData().getType());
+  auto compressedTy = cast<VectorType>(getCompressedData().getType());
+  if (dataTy.getElementType() != compressedTy.getElementType())
+    return emitOpError(
+        "expects data and compressed data to have the same element type");
+
+  // data holds repFactor groups of numTgt elements, and compressed data holds
+  // numSrc elements for each of those groups.
+  unsigned idxSize = getIdxSize();
+  unsigned numTgt = getNumTgt();
+  unsigned numData = dataTy.getNumElements();
+  unsigned numCompressed = compressedTy.getNumElements();
+  unsigned repFactor = numData / numTgt;
+  if (numData % numTgt != 0 || !isValidSPRepFactor(repFactor))
+    return emitOpError("expects data to have repFactor * num_tgt elements, "
+                       "where repFactor is a power of two up to 64");
+
+  unsigned numSrc = numCompressed / repFactor;
+  if (numCompressed % repFactor != 0 ||
+      !llvm::is_contained({1u, 2u, 4u}, numSrc) || numSrc >= numTgt)
+    return emitOpError("unsupported sparsity factor: compressed data has ")
+           << numCompressed << " elements for " << repFactor << " group(s) of "
+           << numTgt << " elements";
+
+  unsigned elemSize = dataTy.getElementTypeBitWidth();
+  unsigned dataBits = numData * elemSize;
+  if (dataBits < 32 || dataBits > 4096)
+    return emitOpError("expects data to be between 32 and 4096 bits");
+
+  if (numSrc * elemSize > 32)
+    return emitOpError("expects at most 32 bits of compressed data per group");
+
+  if (idxSize == 2 && numTgt > 4)
+    return emitOpError("expects num_tgt to be at most 4 if idx_size is 2");
+
+  unsigned numMetadataRegs = llvm::divideCeil(numSrc * idxSize * repFactor, 32);
+  if (getNumSPRegisters(getMetadata().getType()) != numMetadataRegs)
+    return emitOpError("expects metadata to occupy ")
+           << numMetadataRegs << " 32-bit register(s)";
+
   return success();
 }
 

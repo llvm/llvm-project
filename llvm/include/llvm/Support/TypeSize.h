@@ -321,6 +321,10 @@ public:
   constexpr bool isVector() const {
     return (isScalable() && getKnownMinValue() != 0) || getKnownMinValue() > 1;
   }
+  constexpr bool isPowerOf2() const {
+    // VScale is a power of two, which just leaves the known minimum to test.
+    return isPowerOf2_32(getKnownMinValue());
+  }
 };
 
 inline hash_code hash_value(const ElementCount &EC) {
