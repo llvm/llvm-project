@@ -78,6 +78,27 @@ TEST(IntrinsicNameLookup, Basic) {
   EXPECT_EQ(memcpy_inline, lookupIntrinsicID("llvm.memcpy.inline.p0.p0.i1024"));
 }
 
+TEST(IntrinsicAttributes, ImmArg) {
+  using namespace Intrinsic;
+  EXPECT_FALSE(isImmArg(not_intrinsic, 0));
+  EXPECT_FALSE(isImmArg(donothing, 0));
+  EXPECT_FALSE(isImmArg(bswap, 0));
+  EXPECT_FALSE(isImmArg(ctlz, 0));
+  EXPECT_TRUE(isImmArg(ctlz, 1));
+  EXPECT_FALSE(isImmArg(ctlz, 2));
+  EXPECT_TRUE(isImmArg(frameaddress, 0));
+  EXPECT_FALSE(isImmArg(expect_with_probability, 1));
+  EXPECT_TRUE(isImmArg(expect_with_probability, 2));
+  EXPECT_TRUE(isImmArg(experimental_patchpoint_void, 0));
+  EXPECT_TRUE(isImmArg(experimental_patchpoint_void, 1));
+  EXPECT_FALSE(isImmArg(experimental_patchpoint_void, 2));
+  EXPECT_TRUE(isImmArg(experimental_patchpoint_void, 3));
+  EXPECT_FALSE(isImmArg(experimental_patchpoint_void, 4));
+  EXPECT_FALSE(isImmArg(x86_avx_dp_ps_256, 1));
+  EXPECT_TRUE(isImmArg(x86_avx_dp_ps_256, 2));
+  EXPECT_TRUE(isImmArg(amdgcn_s_sleep, 0));
+}
+
 TEST(IntrinsicNameLookup, NonNullterminatedStringRef) {
   using namespace Intrinsic;
   // This reproduces an issue where lookupIntrinsicID() can access memory beyond

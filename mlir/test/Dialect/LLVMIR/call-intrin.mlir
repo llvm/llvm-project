@@ -146,3 +146,57 @@ llvm.func @read_named_register() -> i32 {
       : (!llvm.metadata) -> i32
   llvm.return %r : i32
 }
+
+// -----
+
+llvm.func @dynamic_immediate(%x: vector<4xf32>, %mode: i32) {
+  // expected-error@below {{intrinsic call argument #2 must be an immediate integer or floating-point constant}}
+  // expected-error@below {{LLVM Translation failed for operation: llvm.call_intrinsic}}
+  %r = llvm.call_intrinsic "llvm.x86.sse41.round.ss"(%x, %x, %mode) : (vector<4xf32>, vector<4xf32>, i32) -> vector<4xf32>
+  llvm.return
+}
+
+// -----
+
+llvm.func @wrong_immediate_type(%x: vector<4xf32>) {
+  // expected-error@below {{intrinsic call operand #2 has type i64 but "llvm.x86.sse41.round.ss" expects i32}}
+  // expected-error@below {{LLVM Translation failed for operation: llvm.call_intrinsic}}
+  %r = llvm.call_intrinsic "llvm.x86.sse41.round.ss"(%x, %x) {
+    immarg_positions = array<i32: 2>, immarg_values = [1 : i64]
+  } : (vector<4xf32>, vector<4xf32>) -> vector<4xf32>
+  llvm.return
+}
+
+// -----
+
+llvm.func @unexpected_immediate() {
+  // expected-error@below {{intrinsic call argument #0 is marked as immediate but "llvm.bswap" does not have an immarg parameter at that position}}
+  // expected-error@below {{LLVM Translation failed for operation: llvm.call_intrinsic}}
+  %r = llvm.call_intrinsic "llvm.bswap"() {
+    immarg_positions = array<i32: 0>, immarg_values = [1 : i32]
+  } : () -> i32
+  llvm.return
+}
+
+// -----
+
+llvm.func @missing_fixed_arguments() {
+  // expected-error@below {{intrinsic has incorrect number of args. Expected 4, but got 1}}
+  // expected-error@below {{LLVM Translation failed for operation: llvm.call_intrinsic}}
+  %r = llvm.call_intrinsic "llvm.experimental.patchpoint"() {
+    immarg_positions = array<i32: 0>, immarg_values = [42 : i64]
+  } : () -> i64
+  llvm.return
+}
+
+// -----
+
+llvm.func @wrong_fixed_argument_type(%target: !llvm.ptr, %live: i64) {
+  // expected-error@below {{call intrinsic signature i64 (i64, i64, ptr, i32, ...) to overloaded intrinsic "llvm.experimental.patchpoint" does not match any of the overloads}}
+  // expected-error@below {{LLVM Translation failed for operation: llvm.call_intrinsic}}
+  %r = llvm.call_intrinsic "llvm.experimental.patchpoint"(%target, %live) {
+    immarg_positions = array<i32: 0, 1, 3>,
+    immarg_values = [42 : i64, 16 : i64, 0 : i32]
+  } : (!llvm.ptr, i64) -> i64
+  llvm.return
+}

@@ -160,6 +160,10 @@ public:
   /// `convertValue` method, or returns failure if the conversion fails.
   FailureOr<SmallVector<Value>> convertValues(ArrayRef<llvm::Value *> values);
 
+  /// Converts a scalar integer or floating-point constant to an attribute
+  /// without materializing an SSA constant. Returns null for other constants.
+  TypedAttr convertScalarConstant(llvm::Constant *constant);
+
   /// Converts `value` to an integer attribute. Asserts if the matching fails.
   IntegerAttr matchIntegerAttr(llvm::Value *value);
 

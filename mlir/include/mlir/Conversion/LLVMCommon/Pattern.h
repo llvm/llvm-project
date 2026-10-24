@@ -18,6 +18,13 @@ namespace mlir {
 class CallOpInterface;
 
 namespace LLVM {
+/// Returns arguments for building a CallIntrinsicOp, representing constant
+/// immarg parameters as attributes. The intrinsic name may be overloaded.
+/// Operands that are not scalar constants or are not immarg parameters remain
+/// SSA values.
+SmallVector<OpFoldResult> getIntrinsicArguments(StringRef intrinsic,
+                                                ValueRange operands);
+
 namespace detail {
 /// Replaces the given operation "op" with a new operation of type "targetOp"
 /// and given operands.
@@ -44,7 +51,8 @@ LogicalResult oneToOneRewrite(Operation *op, StringRef targetOp,
 /// %res = llvm.call_intrinsic "intrinsic"(%val)
 /// ```
 ///
-/// The provided operands must be LLVM-compatible.
+/// The provided operands must be LLVM-compatible. Constant immarg parameters
+/// are represented as attributes on the call.
 ///
 /// Upholds a convention that multi-result operations get converted into an
 /// operation returning the LLVM IR structure type, in which case individual

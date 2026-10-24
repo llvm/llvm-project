@@ -21,32 +21,62 @@ LogicalResult mlir::LLVMImportInterface::convertUnregisteredIntrinsic(
     OpBuilder &builder, llvm::CallInst *inst,
     LLVM::ModuleImport &moduleImport) {
   StringRef intrinName = inst->getCalledFunction()->getName();
+  Location loc = moduleImport.translateLoc(inst->getDebugLoc());
 
-  SmallVector<llvm::Value *> args(inst->args());
-  ArrayRef<llvm::Value *> llvmOperands(args);
+  SmallVector<Value> args;
+  SmallVector<int32_t> positions;
+  SmallVector<Attribute> values;
+  for (auto [index, arg] : llvm::enumerate(inst->args())) {
+    // paramHasAttr also checks the intrinsic declaration's attributes.
+    if (inst->paramHasAttr(index, llvm::Attribute::ImmArg)) {
+      auto *constant = dyn_cast<llvm::Constant>(arg.get());
+      TypedAttr attr =
+          constant ? moduleImport.convertScalarConstant(constant) : TypedAttr{};
+      if (!attr)
+        return emitError(loc) << "expected a scalar integer or floating-point "
+                                 "constant for intrinsic argument #"
+                              << index;
+      positions.push_back(index);
+      values.push_back(attr);
+      continue;
+    }
+    FailureOr<Value> value = moduleImport.convertValue(arg.get());
+    if (failed(value))
+      return failure();
+    args.push_back(*value);
+  }
 
-  SmallVector<llvm::OperandBundleUse> llvmOpBundles;
-  llvmOpBundles.reserve(inst->getNumOperandBundles());
-  for (unsigned i = 0; i < inst->getNumOperandBundles(); ++i)
-    llvmOpBundles.push_back(inst->getOperandBundleAt(i));
-
-  SmallVector<Value> mlirOperands;
-  SmallVector<NamedAttribute> mlirAttrs;
-  if (failed(moduleImport.convertIntrinsicArguments(
-          llvmOperands, llvmOpBundles, /*requiresOpBundles=*/false,
-          /*immArgPositions=*/{}, /*immArgAttrNames=*/{}, mlirOperands,
-          mlirAttrs)))
-    return failure();
+  SmallVector<SmallVector<Value>> bundleOperands;
+  SmallVector<Attribute> bundleTags;
+  for (unsigned i = 0; i < inst->getNumOperandBundles(); ++i) {
+    llvm::OperandBundleUse bundle = inst->getOperandBundleAt(i);
+    SmallVector<Value> operands;
+    for (const llvm::Use &operand : bundle.Inputs) {
+      FailureOr<Value> value = moduleImport.convertValue(operand.get());
+      if (failed(value))
+        return failure();
+      operands.push_back(*value);
+    }
+    bundleOperands.push_back(std::move(operands));
+    bundleTags.push_back(builder.getStringAttr(bundle.getTagName()));
+  }
+  SmallVector<ValueRange> bundles;
+  for (const SmallVector<Value> &operands : bundleOperands)
+    bundles.push_back(operands);
 
   Type resultType = moduleImport.convertType(inst->getType());
   auto op = CallIntrinsicOp::create(
-      builder, moduleImport.translateLoc(inst->getDebugLoc()),
+      builder, loc,
       isa<LLVMVoidType>(resultType) ? TypeRange{} : TypeRange{resultType},
-      StringAttr::get(builder.getContext(), intrinName),
-      ValueRange{mlirOperands}, FastmathFlagsAttr{});
+      builder.getStringAttr(intrinName), args, FastmathFlagsAttr{}, bundles,
+      bundleTags.empty() ? ArrayAttr{} : builder.getArrayAttr(bundleTags),
+      /*arg_attrs=*/ArrayAttr{},
+      /*res_attrs=*/ArrayAttr{}, builder.getDenseI32ArrayAttr(positions),
+      builder.getArrayAttr(values));
 
   moduleImport.setFastmathFlagsAttr(inst, op);
-  moduleImport.convertArgAndResultAttrs(inst, op);
+  SmallVector<unsigned> immArgPositions(positions.begin(), positions.end());
+  moduleImport.convertArgAndResultAttrs(inst, op, immArgPositions);
 
   // Update importer tracking of results.
   unsigned numRes = op.getNumResults();
