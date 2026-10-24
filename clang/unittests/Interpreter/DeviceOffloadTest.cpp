@@ -19,6 +19,7 @@
 #include "clang/Interpreter/Interpreter.h"
 
 #include "llvm/Bitcode/BitcodeWriter.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
@@ -218,6 +219,38 @@ TEST_F(DeviceOffloadTest, BuiltinBitcodeLinkedIntoEveryModule) {
     EXPECT_FALSE(PTX.contains(".extern")) << PTX;
     EXPECT_TRUE(PTX.contains("twice")) << PTX;
   }
+}
+
+TEST_F(DeviceOffloadTest, DeviceBinaryRegisteredBeforeInitializers) {
+  IncrementalCompilerBuilder CB;
+  CB.SetCompilerArgs({"-nocudainc", "-nocudalib"});
+  auto DeviceCI = CB.CreateDevice(OffloadType::CUDA);
+  ASSERT_THAT_EXPECTED(DeviceCI, llvm::Succeeded());
+  auto HostCI = CB.CreateHost(OffloadType::CUDA);
+  ASSERT_THAT_EXPECTED(HostCI, llvm::Succeeded());
+  auto Interp = Interpreter::createWithDevice(
+      std::move(*HostCI), std::move(*DeviceCI), OffloadType::CUDA);
+  ASSERT_THAT_EXPECTED(Interp, llvm::Succeeded());
+
+  // The module ctor is ordered ahead of the PTU's dynamic initializer.
+  // The kernel's host stub needs cudaLaunchKernel declared.
+  auto PTU = (*Interp)->Parse(R"(
+    struct dim3 { unsigned x, y, z; };
+    extern "C" int cudaLaunchKernel(const void *, dim3, dim3, void **,
+                                    __SIZE_TYPE__, void *);
+    __attribute__((global)) void kernel() {}
+    struct S { S() {} } s;
+  )");
+  ASSERT_THAT_EXPECTED(PTU, llvm::Succeeded());
+
+  auto *Ctors = PTU->TheModule->getGlobalVariable("llvm.global_ctors");
+  ASSERT_TRUE(Ctors);
+  auto *List = llvm::cast<llvm::ConstantArray>(Ctors->getInitializer());
+  ASSERT_EQ(List->getNumOperands(), 2u);
+  EXPECT_EQ(List->getOperand(0)->getOperand(1)->getName(),
+            "__cuda_module_ctor");
+  llvm::StringRef Init = List->getOperand(1)->getOperand(1)->getName();
+  EXPECT_TRUE(Init.starts_with("_GLOBAL__sub_I_")) << Init;
 }
 
 } // end anonymous namespace
