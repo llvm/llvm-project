@@ -1,0 +1,68 @@
+# The trampoline is in its own section with no symbols. "previous" ends at
+# the section boundary immediately before it, so resolving trampoline - 1
+# succeeds while resolving trampoline fails. PE/COFF does not synthesize symbols
+# from FDEs.
+#
+# .eh_frame contains ordinary FDEs for leaf (0x1000), caller (0x1010), and
+# previous (0x1ff0), followed by a zRS CIE and an FDE for the trampoline (0x2000).
+# The ordinary CIE has CFA=rsp+8 and rip=[CFA-8]. caller marks rip undefined.
+# The trampoline FDE is equivalent to:
+#   .cfi_startproc
+#   .cfi_signal_frame
+#   .cfi_def_cfa_offset 16
+#   nop
+#   .cfi_def_cfa_offset 24
+#   .space 15
+#   .cfi_endproc
+--- !COFF
+OptionalHeader:
+  AddressOfEntryPoint: 4096
+  ImageBase:       5368709120
+  SectionAlignment: 4096
+  FileAlignment:   512
+  MajorOperatingSystemVersion: 6
+  MajorSubsystemVersion: 6
+  Subsystem:       IMAGE_SUBSYSTEM_WINDOWS_CUI
+  SizeOfStackReserve: 1048576
+  SizeOfStackCommit: 4096
+  SizeOfHeapReserve: 1048576
+  SizeOfHeapCommit: 4096
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [ IMAGE_FILE_EXECUTABLE_IMAGE, IMAGE_FILE_LARGE_ADDRESS_AWARE ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  4096
+    VirtualSize:     4096
+    SectionData:     C3909090909090909090909090909090C3
+  - Name:            .tramp
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  8192
+    VirtualSize:     16
+    SectionData:     90909090909090909090909090909090
+  - Name:            .eh_frame
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  12288
+    VirtualSize:     132
+    SectionData:     1400000000000000017A5200017810011B0C070890010000100000001C000000E0DFFFFF10000000000000001000000030000000DCDFFFFF10000000000710001000000044000000A8EFFFFF10000000000000001400000000000000017A525300017810011B0C0708900100140000001C0000008CEFFFFF10000000000E10410E180000
+symbols:
+  - Name:            leaf
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            caller
+    Value:           16
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            previous
+    Value:           4080
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+...

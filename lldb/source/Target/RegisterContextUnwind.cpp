@@ -256,10 +256,8 @@ void RegisterContextUnwind::InitializeZerothFrame() {
   }
 
   bool is_signal_frame = IsSignalFrameAtRawPC();
-  if (is_signal_frame && !m_current_offset) {
-    m_current_offset = 0;
+  if (is_signal_frame && !m_current_offset)
     m_current_offset_backed_up_one = 0;
-  }
   if (is_signal_frame)
     m_frame_type = eTrapHandlerFrame;
 

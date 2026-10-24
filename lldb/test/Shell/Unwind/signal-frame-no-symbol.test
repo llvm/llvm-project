@@ -1,0 +1,39 @@
+# Signal-frame CFI must be recognized at the raw PC even when no function or
+# symbol covers it. Use PE/COFF because ELF synthesizes symbols from .eh_frame.
+# PC - 1 belongs to "previous", so retrying symbol lookup there would select
+# the wrong function. The trampoline's second CFI row also describes a different
+# stack layout, making it necessary to select the row at the raw PC.
+
+# REQUIRES: x86
+
+# RUN: mkdir -p %t.dir
+# RUN: yaml2obj %S/Inputs/signal-frame-no-symbol.exe.yaml -o %t.dir/signal-frame-no-symbol.exe
+# RUN: yaml2obj %S/Inputs/signal-frame-no-symbol.dmp.yaml -o %t.dir/signal-frame-no-symbol.dmp
+# RUN: %lldb -O "log enable -f %t.log 'lldb' unwind" \
+# RUN:   %t.dir/signal-frame-no-symbol.exe -c %t.dir/signal-frame-no-symbol.dmp \
+# RUN:   -s %s -o exit | FileCheck %s
+# RUN: FileCheck %s --check-prefix=UNWIND < %t.log
+
+image lookup -v -a 0x140001fff
+# CHECK-LABEL: image lookup -v -a 0x140001fff
+# CHECK: Symbol: {{.*}}name="previous"
+
+image lookup -v -a 0x140002000
+# CHECK-LABEL: image lookup -v -a 0x140002000
+# CHECK: Address: signal-frame-no-symbol.exe[0x0000000140002000]
+# CHECK-NOT: Function:
+# CHECK-NOT: Symbol:
+
+thread backtrace -u
+# CHECK-LABEL: thread backtrace -u
+# CHECK: frame #0: 0x0000000140001000 signal-frame-no-symbol.exe`leaf
+# CHECK-NEXT: frame #1: 0x0000000140002000 signal-frame-no-symbol.exe`{{$}}
+# CHECK-NEXT: frame #2: 0x0000000140001010 signal-frame-no-symbol.exe`caller
+# CHECK-NOT: frame #3:
+
+# Check that the unwinder itself failed symbol lookup but still used the
+# signal-frame CFI and its first row.
+# UNWIND: with pc value of 0x140002000, no symbol/function name is known.
+# UNWIND: This frame is marked as a trap handler via its UnwindPlan
+# UNWIND: Using full unwind plan 'eh_frame CFI'
+# UNWIND: active row: 0x0000000140002000: CFA=rsp+16 => rip=[CFA-8]
