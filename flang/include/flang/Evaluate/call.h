@@ -418,9 +418,13 @@ public:
   CLASS_BOILERPLATE(FunctionRef)
 
   explicit FunctionRef(int kind, ProcedureRef &&pr)
-      : ProcedureRef{std::move(pr)}, kind_{kind} {}
+      : ProcedureRef{std::move(pr)}, kind_{kind} {
+    CHECK_KIND(kind, A);
+  }
   FunctionRef(int kind, ProcedureDesignator &&p, ActualArguments &&a)
-      : ProcedureRef{std::move(p), std::move(a)}, kind_{kind} {}
+      : ProcedureRef{std::move(p), std::move(a)}, kind_{kind} {
+    CHECK_KIND(kind, A);
+  }
 
   std::optional<DynamicType> GetType() const {
     if constexpr (IsLengthlessIntrinsicType<A>) {

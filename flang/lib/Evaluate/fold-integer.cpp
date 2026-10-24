@@ -1097,9 +1097,8 @@ Expr<Type<TypeCategory::Integer>> FoldIntrinsicFunction(FoldingContext &context,
             using TR = typename std::decay_t<decltype(x)>::Result;
             return FoldElementalIntrinsic<T, TR>(kind, {x.kind()}, context,
                 std::move(funcRef),
-                ScalarFunc<T, TR>{[kind](const Scalar<TR> &x) {
-                  return x.EXPONENT(kind);
-                }});
+                ScalarFunc<T, TR>{
+                    [kind](const Scalar<TR> &x) { return x.EXPONENT(kind); }});
           },
           sx->u);
     } else {

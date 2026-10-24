@@ -182,6 +182,7 @@ template <typename RESULT, typename ELEMENT>
 std::size_t ConstantBase<RESULT, ELEMENT>::CopyFrom(
     const ConstantBase<RESULT, ELEMENT> &source, std::size_t count,
     ConstantSubscripts &resultSubscripts, const std::vector<int> *dimOrder) {
+  CHECK(kind() == source.kind());
   std::size_t copied{0};
   ConstantSubscripts sourceSubscripts{source.lbounds()};
   while (copied < count) {
@@ -235,6 +236,7 @@ Constant<Type<TypeCategory::Character>>::Constant(int kind,
   values_.assign(kind, strings.size() * length_, ' ');
   ConstantSubscript at{0};
   for (const auto &str : strings) {
+    CHECK(str.kind() == kind);
     auto strLen{static_cast<ConstantSubscript>(str.size())};
     if (strLen > length_) {
       values_.replace(at, length_, str.substr(0, length_));
@@ -311,6 +313,7 @@ auto Constant<Type<TypeCategory::Character>>::Reshape(
 std::size_t Constant<Type<TypeCategory::Character>>::CopyFrom(
     const Constant<Type<TypeCategory::Character>> &source, std::size_t count,
     ConstantSubscripts &resultSubscripts, const std::vector<int> *dimOrder) {
+  CHECK(kind() == source.kind());
   CHECK(length_ == source.length_);
   if (length_ == 0) {
     // It's possible that the array of strings consists of all empty strings.

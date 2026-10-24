@@ -289,7 +289,9 @@ template <TypeCategory CATEGORY> struct TypeBase {
   constexpr int kind() const { return kind_; }
 
   static constexpr TypeCategory category{CATEGORY};
-  explicit constexpr TypeBase(int kind) : kind_{kind} {}
+  explicit constexpr TypeBase(int kind) : kind_{kind} {
+    CHECK(common::IsValidKindOfIntrinsicType(CATEGORY, kind));
+  }
   constexpr bool operator==(const TypeBase &that) const {
     return kind_ == that.kind_;
   }
@@ -533,15 +535,9 @@ bool AreSameDerivedTypeIgnoringSequence(
         std::is_same_v<TY, SomeKind<TypeCategory::Derived>> || \
         std::is_same_v<TY, SomeType>) { \
       CHECK((KIND) == 0 && "Type does not have a kind"); \
-    } else if constexpr (std::is_same_v<TY, Type<TypeCategory::Integer>> || \
-        std::is_same_v<TY, Type<TypeCategory::Unsigned>> || \
-        std::is_same_v<TY, Type<TypeCategory::Real>> || \
-        std::is_same_v<TY, Type<TypeCategory::Complex>> || \
-        std::is_same_v<TY, Type<TypeCategory::Logical>> || \
-        std::is_same_v<TY, Type<TypeCategory::Character>>) { \
-      CHECK((KIND) != 0 && "Type must come with a kind"); \
     } else { \
-      static_assert(!sizeof(TY), "Don't know whether TY should have a kind"); \
+      CHECK(common::IsValidKindOfIntrinsicType(TY::category, (KIND)) && \
+          "Type must come with a supported kind"); \
     } \
   }
 
