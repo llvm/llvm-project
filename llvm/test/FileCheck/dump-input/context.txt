@@ -70,6 +70,8 @@
 ; C0-NEXT:label:1'1     ^~~~
 ; C0-NEXT:next:2'0         {         search range start (exclusive)
 ; C0-NEXT:next:2'1           !~~~~   error: match on wrong line
+; C0-NEXT:next:2'2                   for: CHECK-NEXT: hello
+; C0-NEXT:next:2'3                   at: [[CHK_FILE]]:2
 ; C1-NEXT:          10: foo1 
 ; C2-NEXT:          11: foo2 
 ; C3-NEXT:          12: foo3 
@@ -89,7 +91,7 @@
 ; C1-NEXT:          23: foo1 
 ; C0-NEXT:          24: lab2 world 
 ; C0-NEXT:label:3       ^~~~
-; C0-NEXT:next:2'2          }        search range end (exclusive)
+; C0-NEXT:next:2'4          }        search range end (exclusive)
 ; C1-NEXT:          25: foo1 
 ; C2-NEXT:          26: foo2 
 ; C3-NEXT:          27: foo3 
@@ -122,9 +124,11 @@
 ; W5-NEXT:dag:2              ^~~~~~
 ; W5-NEXT:dag:3'0          {         search range start (exclusive)
 ; W5-NEXT:dag:3'1                    error: no match found in search range
+; W5-NEXT:dag:3'2                    for: CHECK-DAG: goodbye
+; W5-NEXT:dag:3'3                    at: [[CHK_FILE]]:3
 ; W5-NEXT:          10: foo1 
 ; W5-NEXT:dag:2         ~~~~~
-; W5-NEXT:dag:3'2       ?      possible intended match
+; W5-NEXT:dag:3'4       ?      possible intended match
 ; W5-NEXT:          11: foo2 
 ; W5-NEXT:dag:2         ~~~~~
 ; W5-NEXT:          12: foo3 
@@ -156,7 +160,7 @@
 ; W5-NEXT:dag:2         ~~~~~
 ; W5-NEXT:          24: lab2 world 
 ; W5-NEXT:label:4       ^~~~
-; W5-NEXT:dag:3'3           }        search range end (exclusive)
+; W5-NEXT:dag:3'5           }        search range end (exclusive)
 ; W5-NEXT:next:5'0         {         search range start (exclusive)
 ; W5-NEXT:next:5'1           !~~~~   error: match on wrong line
 
@@ -183,52 +187,60 @@ BADVAL:{{F|f}}ile{{C|c}}heck{{.*}}: for the --dump-input-context option: '[[VAL]
 ; 0 is an important boundary case.
 ; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -dump-input=fail -vv  %t.chk < %t.in 2>&1 \
-; RUN:               -dump-input-context=0 \
-; RUN: | FileCheck %s -match-full-lines -check-prefixes=C0,CS,CM,CE
+; RUN:               -dump-input-context=0 | \
+; RUN:   FileCheck %s -match-full-lines -DCHK_FILE=%t.chk \
+; RUN:             -check-prefixes=C0,CS,CM,CE
 
 ; 1 is an important boundary case.
 ; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -dump-input=fail -vv %t.chk < %t.in 2>&1 \
-; RUN:               -dump-input-context=1 \
-; RUN: | FileCheck %s -match-full-lines -check-prefixes=C0,C1,CS,CM,CE
+; RUN:               -dump-input-context=1 | \
+; RUN:   FileCheck %s -match-full-lines -DCHK_FILE=%t.chk \
+; RUN:             -check-prefixes=C0,C1,CS,CM,CE
 
 ; 4 is the boundary case at which all ellipses are present in our test.
 ; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -dump-input=fail -vv %t.chk < %t.in 2>&1 \
-; RUN:               -dump-input-context=4 \
-; RUN: | FileCheck %s -match-full-lines -check-prefixes=C0,C1,C2,C3,C4,CS,CM,CE
+; RUN:               -dump-input-context=4 | \
+; RUN:   FileCheck %s -match-full-lines -DCHK_FILE=%t.chk \
+; RUN:             -check-prefixes=C0,C1,C2,C3,C4,CS,CM,CE
 
 ; 5 is the boundary case at which the start ellipsis is useless.
 ; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -dump-input=fail -vv %t.chk < %t.in 2>&1 \
-; RUN:               -dump-input-context=5 \
-; RUN: | FileCheck %s -match-full-lines -check-prefixes=C0,C1,C2,C3,C4,C5,CM,CE
+; RUN:               -dump-input-context=5 | \
+; RUN:   FileCheck %s -match-full-lines -DCHK_FILE=%t.chk \
+; RUN:             -check-prefixes=C0,C1,C2,C3,C4,C5,CM,CE
 
 ; 6 is the boundary case at which the middle ellipsis is useless.
 ; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -dump-input=fail -vv %t.chk < %t.in 2>&1 \
-; RUN:               -dump-input-context=6 \
-; RUN: | FileCheck %s -match-full-lines -check-prefixes=C0,C1,C2,C3,C4,C5,C6,CE
+; RUN:               -dump-input-context=6 | \
+; RUN:   FileCheck %s -match-full-lines -DCHK_FILE=%t.chk \
+; RUN:             -check-prefixes=C0,C1,C2,C3,C4,C5,C6,CE
 
 ; 7 is the boundary case at which the end ellipsis is useless.
 ; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -dump-input=fail -vv %t.chk < %t.in 2>&1 \
-; RUN:               -dump-input-context=7 \
-; RUN: | FileCheck %s -match-full-lines -check-prefixes=C0,C1,C2,C3,C4,C5,C6,C7
+; RUN:               -dump-input-context=7 | \
+; RUN:   FileCheck %s -match-full-lines -DCHK_FILE=%t.chk \
+; RUN:             -check-prefixes=C0,C1,C2,C3,C4,C5,C6,C7
 
 ; Make sure all is fine when -dump-input-context is far larger than the input.
 ; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -dump-input=fail -vv %t.chk < %t.in 2>&1 \
-; RUN:               -dump-input-context=200 \
-; RUN: | FileCheck %s -match-full-lines -check-prefixes=C0,C1,C2,C3,C4,C5,C6,C7
+; RUN:               -dump-input-context=200 | \
+; RUN:   FileCheck %s -match-full-lines -DCHK_FILE=%t.chk \
+; RUN:             -check-prefixes=C0,C1,C2,C3,C4,C5,C6,C7
 
 ;--------------------------------------------------
 ; Check that -dump-input-context default is 5.
 ;--------------------------------------------------
 
 ; RUN: %ProtectFileCheckOutput \
-; RUN: not FileCheck -dump-input=fail -vv %t.chk < %t.in 2>&1 \
-; RUN: | FileCheck %s -match-full-lines -check-prefixes=C0,C1,C2,C3,C4,C5,CM,CE
+; RUN: not FileCheck -dump-input=fail -vv %t.chk < %t.in 2>&1 | \
+; RUN:   FileCheck %s -match-full-lines -DCHK_FILE=%t.chk \
+; RUN:             -check-prefixes=C0,C1,C2,C3,C4,C5,CM,CE
 
 ;--------------------------------------------------
 ; Check multiple -dump-input-context options.
@@ -246,8 +258,9 @@ BADVAL:{{F|f}}ile{{C|c}}heck{{.*}}: for the --dump-input-context option: '[[VAL]
 
 ; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -dump-input=fail -vv %t.chk < %t.in 2>&1 \
-; RUN:               -dump-input-context=1 -dump-input-context=1 \
-; RUN: | FileCheck %s -match-full-lines -check-prefixes=C0,C1,CS,CM,CE
+; RUN:               -dump-input-context=1 -dump-input-context=1 | \
+; RUN:   FileCheck %s -match-full-lines -DCHK_FILE=%t.chk \
+; RUN:             -check-prefixes=C0,C1,CS,CM,CE
 
 ;- - - - - - - - - - - - - - - - - - - - - - - - -
 ; Check precedence.
@@ -255,13 +268,15 @@ BADVAL:{{F|f}}ile{{C|c}}heck{{.*}}: for the --dump-input-context option: '[[VAL]
 
 ; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -dump-input=fail -vv %t.chk < %t.in 2>&1 \
-; RUN:               -dump-input-context=0 -dump-input-context=1 \
-; RUN: | FileCheck %s -match-full-lines -check-prefixes=C0,C1,CS,CM,CE
+; RUN:               -dump-input-context=0 -dump-input-context=1 | \
+; RUN:   FileCheck %s -match-full-lines -DCHK_FILE=%t.chk \
+; RUN:             -check-prefixes=C0,C1,CS,CM,CE
 
 ; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -dump-input=fail -vv %t.chk < %t.in 2>&1 \
-; RUN:               -dump-input-context=1 -dump-input-context=0 \
-; RUN: | FileCheck %s -match-full-lines -check-prefixes=C0,C1,CS,CM,CE
+; RUN:               -dump-input-context=1 -dump-input-context=0 | \
+; RUN:   FileCheck %s -match-full-lines -DCHK_FILE=%t.chk \
+; RUN:             -check-prefixes=C0,C1,CS,CM,CE
 
 ;- - - - - - - - - - - - - - - - - - - - - - - - -
 ; Check that FILECHECK_OPTS isn't handled differently.
@@ -269,13 +284,15 @@ BADVAL:{{F|f}}ile{{C|c}}heck{{.*}}: for the --dump-input-context option: '[[VAL]
 
 ; RUN: %ProtectFileCheckOutput FILECHECK_OPTS=-dump-input-context=0 \
 ; RUN: not FileCheck -dump-input=fail -vv %t.chk < %t.in 2>&1 \
-; RUN:               -dump-input-context=1 \
-; RUN: | FileCheck %s -match-full-lines -check-prefixes=C0,C1,CS,CM,CE
+; RUN:               -dump-input-context=1 | \
+; RUN:   FileCheck %s -match-full-lines -DCHK_FILE=%t.chk \
+; RUN:             -check-prefixes=C0,C1,CS,CM,CE
 
 ; RUN: %ProtectFileCheckOutput FILECHECK_OPTS=-dump-input-context=1 \
 ; RUN: not FileCheck -dump-input=fail -vv %t.chk < %t.in 2>&1 \
-; RUN:               -dump-input-context=0 \
-; RUN: | FileCheck %s -match-full-lines -check-prefixes=C0,C1,CS,CM,CE
+; RUN:               -dump-input-context=0 | \
+; RUN:   FileCheck %s -match-full-lines -DCHK_FILE=%t.chk \
+; RUN:             -check-prefixes=C0,C1,CS,CM,CE
 
 ;--------------------------------------------------
 ; Check how annotations on input lines that might be elided by ellipses affect
@@ -286,12 +303,14 @@ BADVAL:{{F|f}}ile{{C|c}}heck{{.*}}: for the --dump-input-context option: '[[VAL]
 ; elided input lines are considered.
 ; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -dump-input=fail -vv %t.wide.chk < %t.wide.in 2>&1 \
-; RUN:               -dump-input-context=5 \
-; RUN: | FileCheck %s -match-full-lines -check-prefixes=W5,WM
+; RUN:               -dump-input-context=5 | \
+; RUN:   FileCheck %s -match-full-lines -DCHK_FILE=%t.wide.chk \
+; RUN:             -check-prefixes=W5,WM
 
 ; At -dump-input-context=6, the ellipsis is not useful even when annotations on
 ; elided input lines are considered.
 ; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -dump-input=fail -vv %t.wide.chk < %t.wide.in 2>&1 \
-; RUN:               -dump-input-context=6 \
-; RUN: | FileCheck %s -match-full-lines -check-prefixes=W5,W6
+; RUN:               -dump-input-context=6 | \
+; RUN:   FileCheck %s -match-full-lines -DCHK_FILE=%t.wide.chk \
+; RUN:             -check-prefixes=W5,W6
