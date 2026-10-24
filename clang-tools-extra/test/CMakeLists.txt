@@ -7,10 +7,16 @@
 set(CLANG_TOOLS_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/..")
 set(CLANG_TOOLS_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/..")
 
+set(CLANG_TIDY_PLUGIN_AVAILABLE OFF)
+if(TARGET clangTidyPlugin)
+  set(CLANG_TIDY_PLUGIN_AVAILABLE ON)
+endif()
+
 llvm_canonicalize_cmake_booleans(
   CLANG_TIDY_ENABLE_STATIC_ANALYZER
   CLANG_TIDY_ENABLE_QUERY_BASED_CUSTOM_CHECKS
   CLANG_PLUGIN_SUPPORT
+  CLANG_TIDY_PLUGIN_AVAILABLE
   LLVM_INSTALL_TOOLCHAIN_ONLY
   )
 
@@ -74,6 +80,10 @@ if(TARGET CTTestTidyModule)
         Support
       )
     endif()
+endif()
+
+if(TARGET clangTidyPlugin)
+  list(APPEND CLANG_TOOLS_TEST_DEPS clangTidyPlugin)
 endif()
 
 add_lit_testsuite(check-clang-extra "Running clang-tools-extra/test"
