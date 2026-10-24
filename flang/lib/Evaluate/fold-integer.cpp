@@ -519,9 +519,10 @@ private:
       if constexpr (T::category == TypeCategory::Logical) {
         // array(at) .EQV. value?
         static_assert(WHICH == WhichLocation::Findloc);
-        cmp.emplace(Expr<LogicalResult>{LogicalOperation{LogicalOperator::Eqv,
-            MakeConstantExpr<T>(kind, element),
-            MakeConstantExpr<T>(kind, *value)}});
+        cmp.emplace(ConvertToType<LogicalResult>(LogicalResultKind,
+            Expr<LogicalResult>{LogicalOperation{LogicalOperator::Eqv,
+                MakeConstantExpr<T>(kind, element),
+                MakeConstantExpr<T>(kind, *value)}}));
       } else { // compare array(at) to value
         if constexpr (T::category == TypeCategory::Real &&
             (WHICH == WhichLocation::Maxloc ||
