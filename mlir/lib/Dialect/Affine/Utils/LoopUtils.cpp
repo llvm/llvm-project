@@ -1652,6 +1652,16 @@ LogicalResult mlir::affine::coalesceLoops(MutableArrayRef<AffineForOp> loops) {
         loop.getConstantLowerBound() != 0)
       return failure();
   }
+
+  // The iter_args of the inner loops are replaced by their initial values
+  // below, which is only correct if they are yielded unchanged.
+  for (AffineForOp loop : loops.drop_front()) {
+    if (loop.getNumIterOperands() == 0)
+      continue;
+    auto yield = cast<AffineYieldOp>(loop.getBody()->getTerminator());
+    if (!llvm::equal(yield.getOperands(), loop.getRegionIterArgs()))
+      return failure();
+  }
   SmallVector<Value, 4> upperBoundSymbols;
   SmallVector<Value, 4> ubOperands(ub.getOperands().begin(),
                                    ub.getOperands().end());
@@ -1745,12 +1755,15 @@ LogicalResult mlir::affine::coalesceLoops(MutableArrayRef<AffineForOp> loops) {
   outermost.getBody()->getOperations().splice(
       Block::iterator(secondOutermostLoop.getOperation()),
       innermost.getBody()->getOperations());
-  for (auto [iter, init] :
-       llvm::zip_equal(secondOutermostLoop.getRegionIterArgs(),
-                       secondOutermostLoop.getInits())) {
-    iter.replaceAllUsesWith(init);
-    iter.dropAllUses();
+  // Go from outer to inner so that an inner loop's init
+  // that refers to an enclosing loop's iter_arg is updated first.
+  for (AffineForOp loop : loops.drop_front()) {
+    for (auto [iter, init] :
+         llvm::zip_equal(loop.getRegionIterArgs(), loop.getInits()))
+      iter.replaceAllUsesWith(init);
   }
+
+  secondOutermostLoop->replaceAllUsesWith(secondOutermostLoop.getInits());
   secondOutermostLoop.erase();
   return success();
 }
