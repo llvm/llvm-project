@@ -9,9 +9,12 @@
 #ifndef LLD_MACHO_OBJC_H
 #define LLD_MACHO_OBJC_H
 
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/MemoryBuffer.h"
 
 namespace lld::macho {
+
+class InputSection;
 
 namespace objc {
 
@@ -37,6 +40,7 @@ constexpr const char categoryProtocols[] = "__OBJC_CATEGORY_PROTOCOLS_$_";
 // Check for duplicate method names within related categories / classes.
 void checkCategories();
 void mergeCategories();
+llvm::SmallVector<InputSection *> getLoadMethodSections();
 
 void doCleanup();
 } // namespace objc
