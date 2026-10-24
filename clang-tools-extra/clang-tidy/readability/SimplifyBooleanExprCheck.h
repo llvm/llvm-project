@@ -36,6 +36,8 @@ private:
   class Visitor;
 
   void reportBinOp(const ASTContext &Context, const BinaryOperator *Op);
+  void reportConjunctionWithComparison(const ASTContext &Context,
+                                       const BinaryOperator *Op);
 
   void replaceWithThenStatement(const ASTContext &Context,
                                 const IfStmt *IfStatement,

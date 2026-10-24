@@ -415,9 +415,14 @@ infrastructure are described first, followed by tool-specific sections.
     `decltype((x))` and in the initializers and return statements of
     `decltype(auto)` declarations.
 
-- Fixed {doc}`readability-simplify-boolean-expr
-  <clang-tidy/checks/readability/simplify-boolean-expr>` producing invalid
-  fixes when applying De Morgan's theorem to overloaded comparison operators.
+- Improved {doc}`readability-simplify-boolean-expr
+  <clang-tidy/checks/readability/simplify-boolean-expr>` check:
+
+  - Fixed producing invalid fixes when applying De Morgan's theorem to
+    overloaded comparison operators.
+
+  - Simplified redundant equality comparisons in logical conjunctions (such as
+    `a && a != b` to `a && !b`, and `a == b && !a` to `!b && !a`).
 
 - Improved {doc}`readability-suspicious-call-argument
   <clang-tidy/checks/readability/suspicious-call-argument>` check by fixing the

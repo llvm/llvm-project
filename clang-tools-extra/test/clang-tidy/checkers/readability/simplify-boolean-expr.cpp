@@ -1035,3 +1035,81 @@ void instantiate() {
   ignoreInstantiations<true>();
   ignoreInstantiations<false>();
 }
+
+bool conj_comp1(bool a, bool b) {
+  return a && a != b;
+}
+// CHECK-MESSAGES: :[[@LINE-2]]:17: warning: redundant comparison in boolean expression [readability-simplify-boolean-expr]
+// CHECK-FIXES: return a && !b;{{$}}
+
+bool conj_comp2(bool a, bool b) {
+  return a == b && !a;
+}
+// CHECK-MESSAGES: :[[@LINE-2]]:12: warning: redundant comparison in boolean expression [readability-simplify-boolean-expr]
+// CHECK-FIXES: return !b && !a;{{$}}
+
+bool conj_comp3(bool a, bool b) {
+  return a && a == b;
+}
+// CHECK-MESSAGES: :[[@LINE-2]]:17: warning: redundant comparison in boolean expression [readability-simplify-boolean-expr]
+// CHECK-FIXES: return a && b;{{$}}
+
+bool conj_comp4(bool a, bool b) {
+  return !a && a != b;
+}
+// CHECK-MESSAGES: :[[@LINE-2]]:18: warning: redundant comparison in boolean expression [readability-simplify-boolean-expr]
+// CHECK-FIXES: return !a && b;{{$}}
+
+bool conj_comp5(bool a, bool b) {
+  return !a && a == b;
+}
+// CHECK-MESSAGES: :[[@LINE-2]]:18: warning: redundant comparison in boolean expression [readability-simplify-boolean-expr]
+// CHECK-FIXES: return !a && !b;{{$}}
+
+bool conj_comp6(bool a, bool b) {
+  return (a != b) && a;
+}
+// CHECK-MESSAGES: :[[@LINE-2]]:13: warning: redundant comparison in boolean expression [readability-simplify-boolean-expr]
+// CHECK-FIXES: return !b && a;{{$}}
+
+bool conj_comp7(bool a, bool b) {
+  return (a == b) && a;
+}
+// CHECK-MESSAGES: :[[@LINE-2]]:13: warning: redundant comparison in boolean expression [readability-simplify-boolean-expr]
+// CHECK-FIXES: return b && a;{{$}}
+
+bool conj_comp8(bool a, bool b) {
+  return (a != b) && !a;
+}
+// CHECK-MESSAGES: :[[@LINE-2]]:13: warning: redundant comparison in boolean expression [readability-simplify-boolean-expr]
+// CHECK-FIXES: return b && !a;{{$}}
+
+bool conj_comp9(bool a, bool b) {
+  return b != a && a;
+}
+// CHECK-MESSAGES: :[[@LINE-2]]:12: warning: redundant comparison in boolean expression [readability-simplify-boolean-expr]
+// CHECK-FIXES: return !b && a;{{$}}
+
+bool conj_comp10(bool a, bool b) {
+  return b == a && !a;
+}
+// CHECK-MESSAGES: :[[@LINE-2]]:12: warning: redundant comparison in boolean expression [readability-simplify-boolean-expr]
+// CHECK-FIXES: return !b && !a;{{$}}
+
+bool conj_comp11(bool a, bool b) {
+  return a && (a != b);
+}
+// CHECK-MESSAGES: :[[@LINE-2]]:18: warning: redundant comparison in boolean expression [readability-simplify-boolean-expr]
+// CHECK-FIXES: return a && !b;{{$}}
+
+bool conj_comp_neg1(bool a, bool b) {
+  return a && b;
+}
+
+bool conj_comp_neg2(bool a, bool b, bool c) {
+  return a && b == c;
+}
+
+bool conj_comp_neg3(int a, int b) {
+  return a && a != b;
+}

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SimplifyBooleanExprCheck.h"
+#include "../utils/ASTUtils.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/DiagnosticIDs.h"
@@ -38,6 +39,8 @@ static constexpr char SimplifyConditionDiagnostic[] =
     "redundant boolean literal in if statement condition";
 static constexpr char SimplifyConditionalReturnDiagnostic[] =
     "redundant boolean literal in conditional return statement";
+static constexpr char SimplifyConjunctionDiagnostic[] =
+    "redundant comparison in boolean expression";
 
 static bool needsParensAfterUnaryNegation(const Expr *E) {
   E = E->IgnoreImpCasts();
@@ -305,6 +308,7 @@ public:
 
   bool VisitBinaryOperator(const BinaryOperator *Op) const {
     Check->reportBinOp(Context, Op);
+    Check->reportConjunctionWithComparison(Context, Op);
     return true;
   }
 
@@ -649,15 +653,14 @@ void SimplifyBooleanExprCheck::reportBinOp(const ASTContext &Context,
 
   const bool BoolValue = Bool->getValue();
 
-  const auto ReplaceWithExpression = [this, &Context, LHS, RHS,
-                                      Bool](const Expr *ReplaceWith,
-                                            bool Negated) {
-    const std::string Replacement =
-        replacementExpression(Context, Negated, ReplaceWith);
-    const SourceRange Range(LHS->getBeginLoc(), RHS->getEndLoc());
-    issueDiag(Context, Bool->getBeginLoc(), SimplifyOperatorDiagnostic, Range,
-              Replacement);
-  };
+  const auto ReplaceWithExpression =
+      [this, &Context, LHS, RHS, Bool](const Expr *ReplaceWith, bool Negated) {
+        const std::string Replacement =
+            replacementExpression(Context, Negated, ReplaceWith);
+        const SourceRange Range(LHS->getBeginLoc(), RHS->getEndLoc());
+        issueDiag(Context, Bool->getBeginLoc(), SimplifyOperatorDiagnostic,
+                  Range, Replacement);
+      };
 
   switch (Op->getOpcode()) {
   case BO_LAnd:
@@ -687,6 +690,71 @@ void SimplifyBooleanExprCheck::reportBinOp(const ASTContext &Context,
   default:
     break;
   }
+}
+
+static std::pair<const Expr *, bool> parseCondition(const Expr *E) {
+  E = E->IgnoreParenImpCasts();
+  if (const auto *UnOp = dyn_cast<UnaryOperator>(E);
+      UnOp && UnOp->getOpcode() == UO_LNot)
+    return {UnOp->getSubExpr()->IgnoreParenImpCasts(), true};
+  return {E, false};
+}
+
+void SimplifyBooleanExprCheck::reportConjunctionWithComparison(
+    const ASTContext &Context, const BinaryOperator *Op) {
+  if (canBeBypassed(Op))
+    return;
+
+  if (Op->getOpcode() != BO_LAnd || !Op->getType()->isBooleanType())
+    return;
+
+  const auto CheckOperands = [this, &Context](const Expr *CondExpr,
+                                              const Expr *CompRaw) -> bool {
+    const auto [ExprA, CondNegated] = parseCondition(CondExpr);
+    if (!ExprA->getType()->isBooleanType() || ExprA->HasSideEffects(Context))
+      return false;
+
+    const Expr *CompUnwrapped = CompRaw->IgnoreParenImpCasts();
+    const auto *BinOp = dyn_cast<BinaryOperator>(CompUnwrapped);
+    if (!BinOp || (BinOp->getOpcode() != BO_EQ && BinOp->getOpcode() != BO_NE))
+      return false;
+
+    const Expr *CompLHS = BinOp->getLHS()->IgnoreParenImpCasts();
+    const Expr *CompRHS = BinOp->getRHS()->IgnoreParenImpCasts();
+
+    if (!CompLHS->getType()->isBooleanType() ||
+        !CompRHS->getType()->isBooleanType())
+      return false;
+
+    if (CompLHS->HasSideEffects(Context) || CompRHS->HasSideEffects(Context))
+      return false;
+
+    if (isa<CXXBoolLiteralExpr>(ExprA) || isa<CXXBoolLiteralExpr>(CompLHS) ||
+        isa<CXXBoolLiteralExpr>(CompRHS))
+      return false;
+
+    if (utils::areStatementsIdentical(CompLHS, CompRHS, Context, true))
+      return false;
+
+    const Expr *ExprB = nullptr;
+    if (utils::areStatementsIdentical(CompLHS, ExprA, Context, true))
+      ExprB = CompRHS;
+    else if (utils::areStatementsIdentical(CompRHS, ExprA, Context, true))
+      ExprB = CompLHS;
+    else
+      return false;
+
+    const bool CompNeedsNegation = (BinOp->getOpcode() == BO_NE) ^ CondNegated;
+    const std::string Replacement =
+        replacementExpression(Context, CompNeedsNegation, ExprB);
+
+    return issueDiag(Context, BinOp->getOperatorLoc(),
+                     SimplifyConjunctionDiagnostic, CompRaw->getSourceRange(),
+                     Replacement);
+  };
+
+  if (!CheckOperands(Op->getLHS(), Op->getRHS()))
+    CheckOperands(Op->getRHS(), Op->getLHS());
 }
 
 void SimplifyBooleanExprCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
