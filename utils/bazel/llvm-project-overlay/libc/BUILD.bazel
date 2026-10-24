@@ -5110,6 +5110,7 @@ cc_library(
         ":__support_fputil_except_value_utils",
         ":__support_fputil_fenv_impl",
         ":__support_fputil_float128",
+        ":__support_fputil_float80",
         ":__support_fputil_fma",
         ":__support_fputil_fp_bits",
         ":__support_fputil_fp_bitwise",
