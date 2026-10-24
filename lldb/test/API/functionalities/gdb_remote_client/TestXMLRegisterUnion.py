@@ -747,11 +747,21 @@ class TestXMLRegisterUnion(GDBRemoteTestBase):
         try:
             for command in [
                 "register read v0[9].f32",
-                "register read v0[4294967296]",
                 "v $v0[9].f32",
-                "v $v0[4294967296]",
             ]:
                 self.expect(command, error=True, substrs=["array index"])
+            for command in [
+                "register read v0[4294967296]",
+                "v $v0[4294967296]",
+            ]:
+                self.expect(
+                    command,
+                    error=True,
+                    patterns=[
+                        r"(array index 4294967296 is not valid|"
+                        r"invalid index expression \"\")"
+                    ],
+                )
             for command in [
                 "register read u0.raw[64]",
                 "register read u0.raw[64-64]",
