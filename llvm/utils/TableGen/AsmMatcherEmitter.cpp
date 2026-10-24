@@ -3619,6 +3619,14 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
                     "'ReportMultipleNearMisses' to be set");
   }
 
+  bool CheckAmbiguousMatches =
+      AsmParser->getValueAsBit("CheckAmbiguousMatches");
+  if (CheckAmbiguousMatches && ReportMultipleNearMisses) {
+    PrintFatalError(AsmParser->getLoc(),
+                    "'CheckAmbiguousMatches' is not compatible with "
+                    "'ReportMultipleNearMisses'");
+  }
+
   // Write the output.
 
   // Information for the class declaration.
@@ -4002,6 +4010,17 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
     OS << "  // more than one operand. Used only if no opcode yields a\n";
     OS << "  // near-miss of its own (see below).\n";
     OS << "  SmallVector<NearMissInfo, 4> MultiMismatchFallback;\n\n";
+  }
+
+  if (CheckAmbiguousMatches) {
+    OS << "  // The first complete match found, if any. We keep searching\n";
+    OS << "  // after it to check that no other entry also matches.\n";
+    OS << "  const MatchEntry *FirstMatch = nullptr;\n";
+    if (HasOptionalOperands) {
+      OS << "  SmallBitVector FirstMatchOptionalOperandsMask;\n";
+      OS << "  SmallVector<unsigned> FirstMatchDefaultsOffset;\n";
+    }
+    OS << "\n";
   }
 
   OS << "  for (const MatchEntry *it = MnemonicRange.first, "
@@ -4440,7 +4459,15 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
             "Operands,\n";
       OS << "                                         ErrorInfo))\n";
     }
-    OS << "      return Match_InvalidTiedOperand;\n";
+    if (CheckAmbiguousMatches) {
+      OS << "    {\n";
+      OS << "      if (!FirstMatch)\n";
+      OS << "        return Match_InvalidTiedOperand;\n";
+      OS << "      continue;\n";
+      OS << "    }\n";
+    } else {
+      OS << "      return Match_InvalidTiedOperand;\n";
+    }
     OS << "\n";
   }
 
@@ -4448,8 +4475,51 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   OS << "        \"asm-matcher\",\n";
   OS << "        dbgs() << \"Opcode result: complete match, selecting this "
         "opcode\\n\");\n";
-  OS << "    return Match_Success;\n";
+  if (CheckAmbiguousMatches) {
+    OS << "    if (FirstMatch) {\n";
+    OS << "      // Report the ambiguity but carry on with the first match,\n";
+    OS << "      // so that assembly of the rest of the file can continue.\n";
+    OS << "      SMLoc Loc = ((" << Target.getName()
+       << "Operand &)*Operands[0]).getStartLoc();\n";
+    OS << "      getParser().printError(Loc, \"ambiguous match for '\" + "
+          "Mnemonic +\n";
+    OS << "                                      \"': \" + "
+          "MII.getName(FirstMatch->Opcode) +\n";
+    OS << "                                      \" and \" + "
+          "MII.getName(it->Opcode));\n";
+    OS << "      continue;\n";
+    OS << "    }\n";
+    OS << "    FirstMatch = it;\n";
+    if (HasOptionalOperands) {
+      OS << "    FirstMatchOptionalOperandsMask = OptionalOperandsMask;\n";
+      OS << "    FirstMatchDefaultsOffset.assign(std::begin(DefaultsOffset),\n";
+      OS << "                                    std::end(DefaultsOffset));\n";
+    }
+    OS << "    continue;\n";
+  } else {
+    OS << "    return Match_Success;\n";
+  }
   OS << "  }\n\n";
+
+  if (CheckAmbiguousMatches) {
+    OS << "  if (FirstMatch) {\n";
+    OS << "    // Convert the first match again. Restoring a saved copy of the\n";
+    OS << "    // MCInst is not enough, because converting the later candidates\n";
+    OS << "    // may also have updated target-specific state in the parsed\n";
+    OS << "    // operands.\n";
+    OS << "    Inst.clear();\n";
+    if (HasOptionalOperands) {
+      OS << "    convertToMCInst(FirstMatch->ConvertFn, Inst, "
+            "FirstMatch->Opcode, Operands,\n";
+      OS << "                    FirstMatchOptionalOperandsMask, "
+            "FirstMatchDefaultsOffset);\n";
+    } else {
+      OS << "    convertToMCInst(FirstMatch->ConvertFn, Inst, "
+            "FirstMatch->Opcode, Operands);\n";
+    }
+    OS << "    return Match_Success;\n";
+    OS << "  }\n\n";
+  }
 
   if (ReportMultipleNearMisses) {
     OS << "  // No instruction variants matched exactly. If nothing produced\n";

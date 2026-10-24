@@ -37,6 +37,9 @@ def AMDGPUAsmParser : AsmParser {
   // Call the custom operand parser for all operands.
   let OperandParserMethod = "parseCustomOperand";
   let CallCustomParserForAllOperands = true;
+
+  // Report an error if more than one encoding matches an instruction.
+  let CheckAmbiguousMatches = true;
 }
 
 def AMDGPUAsmWriter : AsmWriter {
