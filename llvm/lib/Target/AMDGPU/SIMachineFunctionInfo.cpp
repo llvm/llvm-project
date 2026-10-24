@@ -191,7 +191,10 @@ MachineFunctionInfo *SIMachineFunctionInfo::clone(
     BumpPtrAllocator &Allocator, MachineFunction &DestMF,
     const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB)
     const {
-  return DestMF.cloneInfo<SIMachineFunctionInfo>(*this);
+  auto *MFI = DestMF.cloneInfo<SIMachineFunctionInfo>(*this);
+  // The keys point into the source function.
+  MFI->FusedDebugLocs.clear();
+  return MFI;
 }
 
 void SIMachineFunctionInfo::limitOccupancy(const MachineFunction &MF) {
