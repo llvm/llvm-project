@@ -243,9 +243,11 @@ static bool generateCode(Scop &S, IslAstInfo &AI, LoopInfo &LI,
   // parameters they reference. Afterwards, for the remaining parameters that
   // might reference the hoisted loads. Finally, build the runtime check
   // that might reference both hoisted loads as well as parameters.
-  // If the hoisting fails we have to bail and execute the original code.
+  // If the hoisting fails or AST expressions exceed the target's legal
+  // bitwidth, we have to bail and execute the original code.
   Builder.SetInsertPoint(SplitBlock->getTerminator()->getIterator());
-  if (!NodeBuilder.preloadInvariantLoads()) {
+  if (NodeBuilder.hasExceedingBitWidth(AstRoot.get()) ||
+      !NodeBuilder.preloadInvariantLoads()) {
     // Patch the introduced branch condition to ensure that we always execute
     // the original SCoP.
     auto *FalseI1 = Builder.getFalse();
