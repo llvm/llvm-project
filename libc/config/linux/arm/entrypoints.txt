@@ -684,6 +684,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.hypotbf16
   libc.src.math.ilogbbf16
   libc.src.math.iscanonicalbf16
+  libc.src.math.isnanbf16
   libc.src.math.issignalingbf16
   libc.src.math.ldexpbf16
   libc.src.math.llogbbf16
