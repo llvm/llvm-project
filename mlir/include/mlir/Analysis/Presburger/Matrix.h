@@ -210,7 +210,9 @@ public:
 
   /// Print the matrix.
   void print(raw_ostream &os) const;
-  void dump() const;
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  LLVM_DUMP_METHOD void dump() const;
+#endif
 
   /// Return whether the Matrix is in a consistent state with all its
   /// invariants satisfied.

@@ -3499,7 +3499,6 @@ IntrinsicLibrary::genChdir(std::optional<mlir::Type> resultType,
     // Subroutine form, store status and return none.
     if (!isStaticallyAbsent(args[1])) {
       mlir::Value statusAddr = fir::getBase(args[1]);
-      statusAddr.dump();
       mlir::Value statusIsPresentAtRuntime =
           builder.genIsNotNullAddr(loc, statusAddr);
       builder.genIfThen(loc, statusIsPresentAtRuntime)

@@ -30,7 +30,10 @@ void mlirIntegerSetPrint(MlirIntegerSet set, MlirStringCallback callback,
   unwrap(set).print(stream);
 }
 
-void mlirIntegerSetDump(MlirIntegerSet set) { unwrap(set).dump(); }
+void mlirIntegerSetDump(MlirIntegerSet set) {
+  unwrap(set).print(llvm::errs());
+  llvm::errs() << "\n";
+}
 
 MlirIntegerSet mlirIntegerSetEmptyGet(MlirContext context, intptr_t numDims,
                                       intptr_t numSymbols) {

@@ -159,7 +159,9 @@ public:
   /// Print the current type.
   void print(raw_ostream &os) const;
   void print(raw_ostream &os, AsmState &state) const;
-  void dump() const;
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  LLVM_DUMP_METHOD void dump() const;
+#endif
 
   friend ::llvm::hash_code hash_value(Type arg);
 
