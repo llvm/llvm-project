@@ -140,7 +140,7 @@ define amdgpu_kernel void @volatile_raw_buffer(ptr addrspace(1) %out, <4 x i32> 
 ; IR-LABEL: define amdgpu_kernel void @volatile_raw_buffer(
 ; IR-SAME: ptr addrspace(1) [[OUT:%.*]], <4 x i32> inreg [[INOUT:%.*]]) {
 ; IR-NEXT:  [[ENTRY:.*:]]
-; IR-NEXT:    [[OLD:%.*]] = call i32 @llvm.amdgcn.raw.buffer.atomic.add.i32(i32 5, <4 x i32> [[INOUT]], i32 0, i32 0, i32 -2147483648)
+; IR-NEXT:    [[OLD:%.*]] = call i32 @llvm.amdgcn.raw.buffer.atomic.add.i32.v4i32(i32 5, <4 x i32> [[INOUT]], i32 0, i32 0, i32 -2147483648)
 ; IR-NEXT:    store i32 [[OLD]], ptr addrspace(1) [[OUT]], align 4
 ; IR-NEXT:    ret void
 ;
@@ -154,7 +154,7 @@ define amdgpu_kernel void @volatile_struct_buffer(ptr addrspace(1) %out, <4 x i3
 ; IR-LABEL: define amdgpu_kernel void @volatile_struct_buffer(
 ; IR-SAME: ptr addrspace(1) [[OUT:%.*]], <4 x i32> inreg [[INOUT:%.*]]) {
 ; IR-NEXT:  [[ENTRY:.*:]]
-; IR-NEXT:    [[OLD:%.*]] = call i32 @llvm.amdgcn.struct.buffer.atomic.add.i32(i32 5, <4 x i32> [[INOUT]], i32 0, i32 0, i32 0, i32 -2147483648)
+; IR-NEXT:    [[OLD:%.*]] = call i32 @llvm.amdgcn.struct.buffer.atomic.add.i32.v4i32(i32 5, <4 x i32> [[INOUT]], i32 0, i32 0, i32 0, i32 -2147483648)
 ; IR-NEXT:    store i32 [[OLD]], ptr addrspace(1) [[OUT]], align 4
 ; IR-NEXT:    ret void
 ;
