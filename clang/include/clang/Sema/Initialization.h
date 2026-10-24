@@ -1107,6 +1107,9 @@ public:
     /// Reference binding failed.
     FK_ReferenceInitFailed,
 
+    /// A reference cannot bind directly to a WebAssembly global.
+    FK_WasmGlobalReferenceBinding,
+
     /// Implicit conversion failed.
     FK_ConversionFailed,
 
