@@ -33,6 +33,7 @@ set(ANALYSIS_TEST_SOURCES
   GraphWriterTest.cpp
   GlobalsModRefTest.cpp
   FunctionPropertiesAnalysisTest.cpp
+  IndirectCallPromotionAnalysisTest.cpp
   InlineCostTest.cpp
   IR2VecTest.cpp
   IVDescriptorsTest.cpp
