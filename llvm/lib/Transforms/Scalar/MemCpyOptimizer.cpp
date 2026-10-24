@@ -31,6 +31,8 @@
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/Argument.h"
+#include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
@@ -71,6 +73,7 @@ STATISTIC(NumMoveToCpy, "Number of memmoves converted to memcpy");
 STATISTIC(NumCpyToSet, "Number of memcpys converted to memset");
 STATISTIC(NumCallSlot, "Number of call slot optimizations performed");
 STATISTIC(NumStackMove, "Number of stack-move optimizations performed");
+STATISTIC(NumStoreToMemCpy, "Number of stores forwarded through memcpy");
 
 namespace {
 
@@ -339,6 +342,33 @@ static bool writtenBetween(MemorySSA *MSSA, BatchAAResults &AA,
   MemoryAccess *Clobber = MSSA->getWalker()->getClobberingMemoryAccess(
       End->getDefiningAccess(), Loc, AA);
   return !MSSA->dominates(Clobber, Start);
+}
+
+/// Update argument attributes after advancing a pointer by \p PtrOffset.
+static void adjustArgAttributesForOffset(CallBase *Call, unsigned ArgNo,
+                                         uint64_t PtrOffset) {
+  AttributeSet OldAttrs = Call->getParamAttributes(ArgNo);
+  AttributeMask AttrsToRemove;
+  for (Attribute Attr : OldAttrs) {
+    if (Attr.hasKindAsEnum()) {
+      switch (Attr.getKindAsEnum()) {
+      default:
+        break;
+      case Attribute::Alignment:
+        if (isAligned(Attr.getAlignment().valueOrOne(), PtrOffset))
+          continue;
+        break;
+      case Attribute::Dereferenceable:
+      case Attribute::DereferenceableOrNull:
+        break;
+      case Attribute::NonNull:
+      case Attribute::NoUndef:
+        continue;
+      }
+    }
+    AttrsToRemove.addAttribute(Attr);
+  }
+  Call->removeParamAttrs(ArgNo, AttrsToRemove);
 }
 
 /// When scanning forward over instructions, we look for some other patterns to
@@ -1259,6 +1289,104 @@ bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
   return true;
 }
 
+/// Forward a store to the beginning of a memcpy source through the memcpy.
+///
+///     store V, src
+///     memcpy(dst, src, N)
+///
+/// becomes
+///
+///     store V, src
+///     store V, dst
+///     memcpy(dst + sizeof(V), src + sizeof(V), N - sizeof(V))
+///
+/// This transform is limited to source ranges that are dead on return, so a
+/// following DSE invocation can remove the first store.
+bool MemCpyOptPass::processStoreMemCpyDependence(MemCpyInst *MemCpy,
+                                                 StoreInst *Store) {
+  if (!Store->isSimple() || Store->getMetadata(LLVMContext::MD_nontemporal))
+    return false;
+
+  auto *CopySize = dyn_cast<ConstantInt>(MemCpy->getLength());
+  if (!CopySize || CopySize->getValue().getActiveBits() > 64)
+    return false;
+
+  const DataLayout &DL = MemCpy->getDataLayout();
+  TypeSize StoreSize = DL.getTypeStoreSize(Store->getValueOperand()->getType());
+  if (StoreSize.isScalable())
+    return false;
+
+  uint64_t StoreSizeBytes = StoreSize.getFixedValue();
+  uint64_t CopySizeBytes = CopySize->getZExtValue();
+  if (StoreSizeBytes == 0 || StoreSizeBytes >= CopySizeBytes)
+    return false;
+
+  std::optional<int64_t> StoreOffset =
+      Store->getPointerOperand()->getPointerOffsetFrom(MemCpy->getSource(), DL);
+  if (!StoreOffset || *StoreOffset != 0)
+    return false;
+
+  auto *SourceArg =
+      dyn_cast<Argument>(getUnderlyingObject(MemCpy->getSource()));
+  if (!SourceArg)
+    return false;
+
+  const DeadOnReturnInfo &DeadInfo = SourceArg->getDeadOnReturnInfo();
+  bool SourceStoreIsDead = SourceArg->hasPassPointeeByValueCopyAttr() ||
+                           DeadInfo.coversAllReachableMemory();
+  if (!SourceStoreIsDead && !DeadInfo.isZeroSized()) {
+    std::optional<int64_t> SourceOffset =
+        MemCpy->getSource()->getPointerOffsetFrom(SourceArg, DL);
+    if (SourceOffset && *SourceOffset >= 0) {
+      uint64_t DeadBytes = DeadInfo.getNumberOfDeadBytes();
+      uint64_t Offset = *SourceOffset;
+      SourceStoreIsDead =
+          Offset <= DeadBytes && StoreSizeBytes <= DeadBytes - Offset;
+    }
+  }
+  if (!SourceStoreIsDead)
+    return false;
+
+  auto *OldDef = dyn_cast_or_null<MemoryDef>(MSSA->getMemoryAccess(MemCpy));
+  if (!OldDef)
+    return false;
+
+  IRBuilder<> Builder(MemCpy);
+  Builder.SetCurrentDebugLocation(MemCpy->getDebugLoc());
+  Value *Offset = Builder.getInt64(StoreSizeBytes);
+  Value *NewDest = Builder.CreateInBoundsPtrAdd(MemCpy->getRawDest(), Offset);
+  Value *NewSource =
+      Builder.CreateInBoundsPtrAdd(MemCpy->getRawSource(), Offset);
+
+  StoreInst *NewStore =
+      Builder.CreateAlignedStore(Store->getValueOperand(), MemCpy->getRawDest(),
+                                 MemCpy->getDestAlign().valueOrOne());
+
+  auto *NewMemCpy = cast<MemCpyInst>(MemCpy->clone());
+  NewMemCpy->insertBefore(MemCpy->getIterator());
+  NewMemCpy->setDest(NewDest);
+  NewMemCpy->setSource(NewSource);
+  NewMemCpy->setLength(CopySizeBytes - StoreSizeBytes);
+  NewMemCpy->setDestAlignment(
+      commonAlignment(MemCpy->getDestAlign().valueOrOne(), StoreSizeBytes));
+  NewMemCpy->setSourceAlignment(
+      commonAlignment(MemCpy->getSourceAlign().valueOrOne(), StoreSizeBytes));
+  adjustArgAttributesForOffset(NewMemCpy, 0, StoreSizeBytes);
+  adjustArgAttributesForOffset(NewMemCpy, 1, StoreSizeBytes);
+  NewMemCpy->setMetadata(LLVMContext::MD_tbaa_struct, nullptr);
+
+  auto *NewStoreAccess =
+      MSSAU->createMemoryAccessBefore(NewStore, nullptr, OldDef);
+  MSSAU->insertDef(cast<MemoryDef>(NewStoreAccess), /*RenameUses=*/true);
+  auto *NewMemCpyAccess =
+      MSSAU->createMemoryAccessBefore(NewMemCpy, nullptr, OldDef);
+  MSSAU->insertDef(cast<MemoryDef>(NewMemCpyAccess), /*RenameUses=*/true);
+
+  eraseInstruction(MemCpy);
+  ++NumStoreToMemCpy;
+  return true;
+}
+
 /// We've found that the (upward scanning) memory dependence of \p MemCpy is
 /// \p MemSet.  Try to simplify \p MemSet to only set the trailing bytes that
 /// weren't copied over by \p MemCpy.
@@ -1886,6 +2014,9 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
       }
       if (auto *MDep = dyn_cast<MemCpyInst>(MI))
         if (processMemCpyMemCpyDependence(M, MDep, BAA))
+          return true;
+      if (auto *SDep = dyn_cast<StoreInst>(MI))
+        if (processStoreMemCpyDependence(M, SDep))
           return true;
       if (auto *MDep = dyn_cast<MemSetInst>(MI)) {
         if (performMemCpyToMemSetOptzn(M, MDep, BAA)) {
