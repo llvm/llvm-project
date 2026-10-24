@@ -91,23 +91,24 @@ define i1 @test4() nounwind {
 ; CHECK-NEXT:    movzbl g_100(%rip), %ecx
 ; CHECK-NEXT:  .LBB3_2: # %func_4.exit.i
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    xorl %esi, %esi
+; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    sete %sil
+; CHECK-NEXT:    xorl %edi, %edi
 ; CHECK-NEXT:    testb %dl, %dl
 ; CHECK-NEXT:    setne %bl
 ; CHECK-NEXT:    movzbl %al, %ecx
-; CHECK-NEXT:    cmovnel %esi, %ecx
-; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    je .LBB3_5
-; CHECK-NEXT:  # %bb.3: # %func_4.exit.i
-; CHECK-NEXT:    testb %bl, %bl
-; CHECK-NEXT:    jne .LBB3_5
-; CHECK-NEXT:  # %bb.4: # %bb.i.i
+; CHECK-NEXT:    cmovnel %edi, %ecx
+; CHECK-NEXT:    orb %bl, %sil
+; CHECK-NEXT:    je .LBB3_4
+; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:    movl %ecx, %eax
+; CHECK-NEXT:    jmp .LBB3_5
+; CHECK-NEXT:  .LBB3_4: # %bb.i.i
 ; CHECK-NEXT:    movzbl g_100(%rip), %ecx
 ; CHECK-NEXT:    xorl %ebx, %ebx
-; CHECK-NEXT:    movl %eax, %ecx
 ; CHECK-NEXT:  .LBB3_5: # %func_1.exit
-; CHECK-NEXT:    movb %cl, g_96(%rip)
-; CHECK-NEXT:    movzbl %cl, %esi
+; CHECK-NEXT:    movb %al, g_96(%rip)
+; CHECK-NEXT:    movzbl %al, %esi
 ; CHECK-NEXT:    movl $_2E_str, %edi
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    callq printf@PLT
