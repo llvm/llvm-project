@@ -5486,11 +5486,20 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
       // FIXME: This should check isGuaranteedNotToBeUndef
       if (II->getArgOperand(0) == II->getArgOperand(1)) {
+        FPClassTest InterestedSquared = InterestedClasses;
+        FPClassTest InterestedAddend = InterestedClasses;
+        // Only fma(+inf, +inf, -inf) and fma(-inf, -inf, -inf) produce NaN when
+        // squaring.
+        if (InterestedClasses & fcQNan) {
+          InterestedSquared |= fcSNan | fcInf;
+          InterestedAddend |= fcSNan | fcNegInf;
+        }
+
         KnownFPClass KnownSrc, KnownAddend;
         computeKnownFPClass(II->getArgOperand(2), DemandedElts,
-                            InterestedClasses, KnownAddend, Q, Depth + 1);
+                            InterestedAddend, KnownAddend, Q, Depth + 1);
         computeKnownFPClass(II->getArgOperand(0), DemandedElts,
-                            InterestedClasses, KnownSrc, Q, Depth + 1);
+                            InterestedSquared, KnownSrc, Q, Depth + 1);
 
         const Function *F = II->getFunction();
         const fltSemantics &FltSem =
