@@ -37,11 +37,11 @@ static cl::opt<float>
                             cl::desc("Threshold for infer stale profile"),
                             cl::init(0.6));
 
-static cl::opt<bool>
-    PropellerMatchBBID("propeller-match-bbid",
-                       cl::desc("Match basic blocks using BBIDs instead of "
-                                "hashes for Propeller inference"),
-                       cl::init(false), cl::Optional);
+cl::opt<bool> llvm::PropellerMatchBBID(
+    "propeller-match-bbid",
+    cl::desc("Match basic blocks using BBIDs instead of "
+             "hashes for Propeller inference"),
+    cl::init(false));
 
 /// The object is used to identify and match basic blocks given their hashes.
 class StaleMatcher {
@@ -167,17 +167,17 @@ BasicBlockMatchingAndInference::initWeightInfoByMatching(MachineFunction &MF) {
 BasicBlockMatchingAndInference::WeightInfo
 BasicBlockMatchingAndInference::initWeightInfoByBBID(MachineFunction &MF,
                                                      const CFGProfile &CFG) {
-  // Path cloning does not run before matching and inference, so blocks are
-  // identified by their base IDs. The counts of clones in the profile are
+  // Match blocks by their full UniqueBBID (including CloneID). If a cloned
+  // block in the profile does not exist in MF (e.g., because its cloning path
+  // was rejected), fall back to the original block so its counts are
   // attributed to the original block.
-  DenseMap<unsigned, MachineBasicBlock *> BaseIDToMBB;
-  for (auto &MBB : MF) {
-    unsigned BaseID = MBB.getBBID() ? MBB.getBBID()->BaseID
-                                    : static_cast<unsigned>(MBB.getNumber());
-    BaseIDToMBB[BaseID] = &MBB;
-  }
+  DenseMap<UniqueBBID, MachineBasicBlock *> BBIDToMBB;
+  for (auto &MBB : MF)
+    BBIDToMBB[*MBB.getBBID()] = &MBB;
   auto FindMBB = [&](const UniqueBBID &BBID) {
-    return BaseIDToMBB.lookup(BBID.BaseID);
+    if (MachineBasicBlock *MBB = BBIDToMBB.lookup(BBID))
+      return MBB;
+    return BBIDToMBB.lookup(UniqueBBID{BBID.BaseID, 0});
   };
 
   // A basic block is matched only if it exists in CFG.NodeCounts and all of its
