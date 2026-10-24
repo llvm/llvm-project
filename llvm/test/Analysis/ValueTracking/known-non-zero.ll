@@ -1547,3 +1547,41 @@ define i1 @vec_reverse_non_zero_demanded_fail(<4 x i8> %xx) {
 }
 
 declare i32 @llvm.experimental.get.vector.length.i32(i32, i32, i1)
+
+define i1 @assume_masked_nonzero(i8 %x) {
+; CHECK-LABEL: @assume_masked_nonzero(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TWICE_MASK:%.*]] = and i8 [[X:%.*]], 127
+; CHECK-NEXT:    [[TWICE_NZ:%.*]] = icmp ne i8 [[TWICE_MASK]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TWICE_NZ]])
+; CHECK-NEXT:    [[DEC:%.*]] = add i8 [[X]], -1
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[DEC]], 7
+; CHECK-NEXT:    ret i1 [[R]]
+;
+entry:
+  %twice.mask = and i8 %x, 127
+  %twice.nz = icmp ne i8 %twice.mask, 0
+  call void @llvm.assume(i1 %twice.nz)
+  %dec = add i8 %x, -1
+  %r = icmp ult i8 %dec, 7
+  ret i1 %r
+}
+
+define i1 @assume_masked_nonzero_commuted(i8 %x) {
+; CHECK-LABEL: @assume_masked_nonzero_commuted(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TWICE_MASK:%.*]] = and i8 127, [[X:%.*]]
+; CHECK-NEXT:    [[TWICE_NZ:%.*]] = icmp ne i8 [[TWICE_MASK]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TWICE_NZ]])
+; CHECK-NEXT:    [[DEC:%.*]] = add i8 [[X]], -1
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[DEC]], 7
+; CHECK-NEXT:    ret i1 [[R]]
+;
+entry:
+  %twice.mask = and i8 127, %x
+  %twice.nz = icmp ne i8 %twice.mask, 0
+  call void @llvm.assume(i1 %twice.nz)
+  %dec = add i8 %x, -1
+  %r = icmp ult i8 %dec, 7
+  ret i1 %r
+}
