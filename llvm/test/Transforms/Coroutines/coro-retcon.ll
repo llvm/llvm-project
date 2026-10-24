@@ -12,12 +12,14 @@ define ptr @f(ptr %buffer, i32 %n) {
 ;
 ; CORO-LABEL: @f(
 ; CORO-NEXT:  entry:
+; CORO-NEXT:    [[CORO_RET:%.*]] = alloca ptr, align 8
 ; CORO-NEXT:    store i32 [[N:%.*]], ptr [[N_VAL_SPILL_ADDR:%.*]], align 4
 ; CORO-NEXT:    call void @print(i32 [[N]])
 ; CORO-NEXT:    ret ptr @f.resume.0
 ;
 entry:
-  %id = call token @llvm.coro.id.retcon(i32 8, i32 4, ptr %buffer, ptr @prototype, ptr @allocate, ptr @deallocate)
+  %coro.ret = alloca ptr
+  %id = call token @llvm.coro.id.retcon(i32 8, i32 4, ptr %buffer, ptr @prototype, ptr @allocate, ptr @deallocate, ptr %coro.ret)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
   br label %loop
 
@@ -33,7 +35,8 @@ resume:
 
 cleanup:
   call void @llvm.coro.end(ptr %hdl, i1 0, token none)
-  unreachable
+  %coro.ret.load = load ptr, ptr %coro.ret
+  ret ptr %coro.ret.load
 }
 
 
@@ -43,9 +46,9 @@ define i32 @main() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    tail call void @print(i32 4)
 ; CHECK-NEXT:    tail call void @llvm.experimental.noalias.scope.decl(metadata [[META0:![0-9]+]])
-; CHECK-NEXT:    tail call void @print(i32 5), !noalias [[META0]]
-; CHECK-NEXT:    tail call void @llvm.experimental.noalias.scope.decl(metadata [[META3:![0-9]+]])
-; CHECK-NEXT:    tail call void @print(i32 6), !noalias [[META3]]
+; CHECK-NEXT:    tail call void @print(i32 5), !noalias [[META0]], !inline_history [[META3:![0-9]+]]
+; CHECK-NEXT:    tail call void @llvm.experimental.noalias.scope.decl(metadata [[META4:![0-9]+]])
+; CHECK-NEXT:    tail call void @print(i32 6), !noalias [[META4]], !inline_history [[META3]]
 ; CHECK-NEXT:    ret i32 0
 ;
 ; CORO-LABEL: @main(
@@ -81,6 +84,7 @@ define hidden { ptr, ptr } @g(ptr %buffer, ptr %ptr) {
 ;
 ; CORO-LABEL: @g(
 ; CORO-NEXT:  entry:
+; CORO-NEXT:    [[CORO_RET:%.*]] = alloca { ptr, ptr }, align 8
 ; CORO-NEXT:    [[TMP0:%.*]] = call ptr @allocate(i32 8)
 ; CORO-NEXT:    store ptr [[TMP0]], ptr [[BUFFER:%.*]], align 8
 ; CORO-NEXT:    store ptr [[PTR:%.*]], ptr [[TMP0]], align 8
@@ -91,7 +95,8 @@ define hidden { ptr, ptr } @g(ptr %buffer, ptr %ptr) {
 ; CORO-NEXT:    ret { ptr, ptr } [[TMP2]]
 ;
 entry:
-  %id = call token @llvm.coro.id.retcon(i32 8, i32 4, ptr %buffer, ptr @g_prototype, ptr @allocate, ptr @deallocate)
+  %coro.ret = alloca { ptr, ptr }
+  %id = call token @llvm.coro.id.retcon(i32 8, i32 4, ptr %buffer, ptr @g_prototype, ptr @allocate, ptr @deallocate, ptr %coro.ret)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
   br label %loop
 
@@ -104,7 +109,8 @@ resume:
 
 cleanup:
   call void @llvm.coro.end(ptr %hdl, i1 0, token none)
-  unreachable
+  %coro.ret.load = load { ptr, ptr }, ptr %coro.ret
+  ret { ptr, ptr } %coro.ret.load
 }
 
 define ptr @nosuspend(ptr %buffer, i32 %n) {
@@ -119,6 +125,7 @@ define ptr @nosuspend(ptr %buffer, i32 %n) {
 ;
 ; CORO-LABEL: @nosuspend(
 ; CORO-NEXT:  entry:
+; CORO-NEXT:    [[CORO_RET:%.*]] = alloca ptr, align 8
 ; CORO-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; CORO-NEXT:    store i32 [[N:%.*]], ptr [[A]], align 4
 ; CORO-NEXT:    call void @use_var_ptr(ptr [[A]])
@@ -127,7 +134,8 @@ define ptr @nosuspend(ptr %buffer, i32 %n) {
 ; CORO-NEXT:    ret ptr null
 ;
 entry:
-  %id = call token @llvm.coro.id.retcon(i32 8, i32 4, ptr %buffer, ptr @prototype, ptr @allocate, ptr @deallocate)
+  %coro.ret = alloca ptr
+  %id = call token @llvm.coro.id.retcon(i32 8, i32 4, ptr %buffer, ptr @prototype, ptr @allocate, ptr @deallocate, ptr %coro.ret)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
   %a = alloca i32
   store i32 %n, ptr %a
@@ -138,10 +146,11 @@ cleanup:
   %al = load i32, ptr %a
   call void @use_var(i32 %al)
   call void @llvm.coro.end(ptr %hdl, i1 0, token none)
-  ret ptr %hdl
+  %coro.ret.load = load ptr, ptr %coro.ret
+  ret ptr %coro.ret.load
 }
 
-declare token @llvm.coro.id.retcon(i32, i32, ptr, ptr, ptr, ptr)
+declare token @llvm.coro.id.retcon(i32, i32, ptr, ptr, ptr, ptr, ptr)
 declare ptr @llvm.coro.begin(token, ptr)
 declare i1 @llvm.coro.suspend.retcon.i1(...)
 declare void @llvm.coro.end(ptr, i1, token)

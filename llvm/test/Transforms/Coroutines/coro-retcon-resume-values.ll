@@ -10,7 +10,8 @@ define ptr @f(ptr %buffer, i32 %n) {
 ; CHECK-NEXT:    ret ptr @f.resume.0
 ;
 entry:
-  %id = call token @llvm.coro.id.retcon(i32 8, i32 4, ptr %buffer, ptr @prototype, ptr @allocate, ptr @deallocate)
+  %coro.ret = alloca ptr
+  %id = call token @llvm.coro.id.retcon(i32 8, i32 4, ptr %buffer, ptr @prototype, ptr @allocate, ptr @deallocate, ptr %coro.ret)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
   br label %loop
 
@@ -28,7 +29,8 @@ resume:
 cleanup:
   call void @print(i32 %n.val)
   call void @llvm.coro.end(ptr %hdl, i1 0, token none)
-  unreachable
+  %coro.ret.load = load ptr, ptr %coro.ret
+  ret ptr %coro.ret.load
 }
 
 
@@ -63,7 +65,7 @@ entry:
 ;   Unfortunately, we don't seem to fully optimize this right now due
 ;   to some sort of phase-ordering thing.
 
-declare token @llvm.coro.id.retcon(i32, i32, ptr, ptr, ptr, ptr)
+declare token @llvm.coro.id.retcon(i32, i32, ptr, ptr, ptr, ptr, ptr)
 declare ptr @llvm.coro.begin(token, ptr)
 declare { i32, i1 } @llvm.coro.suspend.retcon.sl_i32i1s(...)
 declare void @llvm.coro.end(ptr, i1, token)
@@ -75,4 +77,3 @@ declare noalias ptr @allocate(i32 %size)
 declare void @deallocate(ptr %ptr)
 
 declare void @print(i32)
-

@@ -17,7 +17,8 @@ define {ptr, ptr, i32} @f(ptr %buffer, i32 %n, { i32 } %dummy) {
 ; CHECK-NEXT:    ret { ptr, ptr, i32 } [[TMP2]]
 ;
 entry:
-  %id = call token @llvm.coro.id.retcon(i32 1024, i32 8, ptr %buffer, ptr @prototype_f, ptr @allocate, ptr @deallocate)
+  %coro.ret = alloca {ptr, ptr, i32}
+  %id = call token @llvm.coro.id.retcon(i32 1024, i32 8, ptr %buffer, ptr @prototype_f, ptr @allocate, ptr @deallocate, ptr %coro.ret)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
   br label %loop
 
@@ -35,7 +36,8 @@ resume:
 
 cleanup:
   call void @llvm.coro.end(ptr %hdl, i1 0, token none)
-  unreachable
+  %coro.ret.load = load {ptr, ptr, i32}, ptr %coro.ret
+  ret {ptr, ptr, i32} %coro.ret.load
 }
 
 
@@ -46,12 +48,13 @@ define {ptr, i32} @g(ptr %buffer, i32 %n) {
 ; CHECK-NEXT:    store i32 [[N:%.*]], ptr [[BUFFER:%.*]], align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i8, i64 [[TMP0]], align 8
-; CHECK-NEXT:    tail call void @use(ptr nonnull [[TMP1]])
+; CHECK-NEXT:    call void @use(ptr nonnull [[TMP1]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { ptr, i32 } { ptr @g.resume.0, i32 poison }, i32 [[N]], 1
 ; CHECK-NEXT:    ret { ptr, i32 } [[TMP2]]
 ;
 entry:
-  %id = call token @llvm.coro.id.retcon(i32 1024, i32 8, ptr %buffer, ptr @prototype_g, ptr @allocate, ptr @deallocate)
+  %coro.ret = alloca {ptr, i32}
+  %id = call token @llvm.coro.id.retcon(i32 1024, i32 8, ptr %buffer, ptr @prototype_g, ptr @allocate, ptr @deallocate, ptr %coro.ret)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
   br label %loop
 
@@ -70,10 +73,11 @@ resume:
 
 cleanup:
   call void @llvm.coro.end(ptr %hdl, i1 0, token none)
-  unreachable
+  %coro.ret.load = load {ptr, i32}, ptr %coro.ret
+  ret {ptr, i32} %coro.ret.load
 }
 
-declare token @llvm.coro.id.retcon(i32, i32, ptr, ptr, ptr, ptr)
+declare token @llvm.coro.id.retcon(i32, i32, ptr, ptr, ptr, ptr, ptr)
 declare ptr @llvm.coro.begin(token, ptr)
 declare i1 @llvm.coro.suspend.retcon.i1(...)
 declare void @llvm.coro.suspend.retcon.isVoid(...)
