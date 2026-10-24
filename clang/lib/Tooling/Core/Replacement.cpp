@@ -543,10 +543,13 @@ std::vector<Range> Replacements::getAffectedRanges() const {
   return combineAndSortRanges(ChangedRanges);
 }
 
-unsigned Replacements::getShiftedCodePosition(unsigned Position) const {
+unsigned Replacements::getShiftedCodePosition(unsigned Position,
+                                              bool includeInsAtPos) const {
   unsigned Offset = 0;
   for (const auto &R : Replaces) {
-    if (R.getOffset() + R.getLength() <= Position) {
+    unsigned End = R.getOffset() + R.getLength();
+    if (End <= Position &&
+        (includeInsAtPos || (End < Position || R.getLength() > 0))) {
       Offset += R.getReplacementText().size() - R.getLength();
       continue;
     }
