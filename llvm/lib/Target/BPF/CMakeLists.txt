@@ -24,11 +24,15 @@ add_llvm_target(BPFCodeGen
   GISel/BPFLegalizerInfo.cpp
   BPFAbstractMemberAccess.cpp
   BPFAdjustOpt.cpp
+  BPFArenaCast.cpp
+  BPFArenaData.cpp
+  BPFArenaStack.cpp
   BPFAsmPrinter.cpp
   BPFASpaceCastSimplifyPass.cpp
   BPFCheckAndAdjustIR.cpp
   BPFCodeGenPassBuilder.cpp
   BPFFrameLowering.cpp
+  BPFFuncTable.cpp
   BPFInstrInfo.cpp
   BPFIRPeephole.cpp
   BPFISelDAGToDAG.cpp

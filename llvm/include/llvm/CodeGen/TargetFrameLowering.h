@@ -35,6 +35,7 @@ enum Value {
   WasmLocal = 3,
   ScalablePredicateVector = 4,
   AvrAlign = 5,
+  BPFArena = 6,
   NoAlloc = 255
 };
 }
