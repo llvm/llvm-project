@@ -9292,7 +9292,8 @@ SDValue SelectionDAGBuilder::lowerStartEH(SDValue Chain,
 
   // Skip emitting EH_LABEL on targets whose exception tables don't reference
   // them (32-bit x86 SEH, Wasm).
-  if (!MF.getContext().getAsmInfo().usesPerInvokeEHLabels()) {
+  if (!MF.getContext().getAsmInfo().usesPerInvokeEHLabels(
+          FuncInfo.ExceptionModel)) {
     BeginLabel = nullptr;
     return Chain;
   }

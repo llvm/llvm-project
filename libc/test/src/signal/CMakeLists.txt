@@ -129,6 +129,25 @@ add_libc_test(
 )
 
 add_libc_test(
+  sigismember_test
+  SUITE
+    libc-signal-tests
+  SRCS
+    sigismember_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.signal_macros
+    libc.hdr.types.sigset_t
+    libc.src.errno.errno
+    libc.src.signal.sigaddset
+    libc.src.signal.sigdelset
+    libc.src.signal.sigemptyset
+    libc.src.signal.sigfillset
+    libc.src.signal.sigismember
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
   sigaltstack_test
   SUITE
     libc-signal-tests
