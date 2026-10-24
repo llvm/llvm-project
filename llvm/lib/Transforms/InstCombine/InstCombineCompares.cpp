@@ -8026,22 +8026,6 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
   if (Value *V = simplifyICmpInst(I.getCmpPredicate(), Op0, Op1, Q))
     return replaceInstUsesWith(I, V);
 
-  // Comparing -val or val with non-zero is the same as just comparing val
-  // ie, abs(val) != 0 -> val != 0
-  if (I.getPredicate() == ICmpInst::ICMP_NE && match(Op1, m_Zero())) {
-    Value *Cond, *SelectTrue, *SelectFalse;
-    if (match(Op0, m_Select(m_Value(Cond), m_Value(SelectTrue),
-                            m_Value(SelectFalse)))) {
-      if (Value *V = dyn_castNegVal(SelectTrue)) {
-        if (V == SelectFalse)
-          return CmpInst::Create(Instruction::ICmp, I.getPredicate(), V, Op1);
-      } else if (Value *V = dyn_castNegVal(SelectFalse)) {
-        if (V == SelectTrue)
-          return CmpInst::Create(Instruction::ICmp, I.getPredicate(), V, Op1);
-      }
-    }
-  }
-
   if (Instruction *Res = foldICmpTruncWithTruncOrExt(I, Q))
     return Res;
 

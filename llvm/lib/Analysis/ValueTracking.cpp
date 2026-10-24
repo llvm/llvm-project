@@ -11082,6 +11082,14 @@ const Value *llvm::stripNullTest(const Value *V) {
         return X;
     }
   }
+
+  // select(cond, X, -X)
+  {
+    const Value *X;
+    if (match(V, m_c_Select(m_Value(X), m_Neg(m_Deferred(X)))))
+      return X;
+  }
+
   return nullptr;
 }
 
