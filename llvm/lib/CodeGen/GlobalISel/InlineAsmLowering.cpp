@@ -393,6 +393,14 @@ bool InlineAsmLowering::lowerInlineAsm(
           // tied operands that can use the regclass information from the def.
           const TargetRegisterClass *RC = MRI->getRegClass(OpInfo.Regs.front());
           Flag.setRegClass(RC->getID());
+
+          // An "rm" operand that preferred a register may still be folded to
+          // a stack slot by the register allocator.
+          if (OpInfo.MayFoldRegister) {
+            assert(OpInfo.Regs.size() == 1 &&
+                   "only a single register can be folded");
+            Flag.setRegMayBeFolded(true);
+          }
         }
 
         Inst.addImm(Flag);
@@ -576,6 +584,11 @@ bool InlineAsmLowering::lowerInlineAsm(
         // Put the register class of the virtual registers in the flag word.
         const TargetRegisterClass *RC = MRI->getRegClass(OpInfo.Regs.front());
         Flag.setRegClass(RC->getID());
+        if (OpInfo.MayFoldRegister) {
+          assert(OpInfo.Regs.size() == 1 &&
+                 "only a single register can be folded");
+          Flag.setRegMayBeFolded(true);
+        }
       }
       Inst.addImm(Flag);
       if (!buildAnyextOrCopy(OpInfo.Regs[0], SourceRegs[0], MIRBuilder))

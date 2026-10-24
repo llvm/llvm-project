@@ -6314,6 +6314,57 @@ unsigned TargetLowering::AsmOperandInfo::getMatchedOperand() const {
   return atoi(ConstraintCode.c_str());
 }
 
+/// Return true if \p OpInfo is an "rm" operand that should prefer a register,
+/// leaving the register allocator to fold it to a stack slot if it runs out of
+/// registers (see AsmOperandInfo::MayFoldRegister). This includes "g", which
+/// Clang expands to "imr": immediate codes are still tried first for a
+/// constant, so they don't affect the choice between 'r' and 'm'.
+static bool
+shouldPreferFoldableRegister(const TargetLowering &TLI,
+                             const TargetRegisterInfo *TRI,
+                             const TargetLowering::AsmOperandInfo &OpInfo) {
+  // Without a fold to fall back on, 'm' is the only choice that can't run out
+  // of registers. Above -O0 only, which leaves -O0 code as it was.
+  if (!TLI.supportsRegMemInlineAsmFolding() ||
+      TLI.getTargetMachine().getOptLevel() == CodeGenOptLevel::None)
+    return false;
+
+  // An indirect operand is already in memory: a register would only add a
+  // load or store around the asm, and isn't supported for an indirect input.
+  if (OpInfo.isIndirect)
+    return false;
+
+  // Codes stays empty for a constraint with alternatives ("r|m") until one is
+  // selected, so this only ever matches a plain "rm" plus immediate codes. Any
+  // other code (e.g. a specific register or another register class) leaves
+  // the choice to the usual preference order.
+  if (!is_contained(OpInfo.Codes, "r") || !is_contained(OpInfo.Codes, "m"))
+    return false;
+
+  for (StringRef Code : OpInfo.Codes) {
+    if (Code == "r" || Code == "m")
+      continue;
+
+    TargetLowering::ConstraintType CType = TLI.getConstraintType(Code);
+    if (CType != TargetLowering::C_Immediate &&
+        CType != TargetLowering::C_Other)
+      return false;
+  }
+
+  // The register allocator folds one register operand, so the value must be
+  // in a single register, and some types (e.g. x87 and vector types) can't go
+  // in an 'r' register at all. The value must also fill the register: X86
+  // gives a half or bfloat value a GR64 (GR32 on i686), so the asm would see
+  // a register name too wide for the value, where memory works.
+  MVT VT = OpInfo.ConstraintVT;
+  if (VT == MVT::Other || VT.isScalableVector())
+    return false;
+
+  const TargetRegisterClass *RC =
+      TLI.getRegForInlineAsmConstraint(TRI, "r", VT).second;
+  return RC && VT.getFixedSizeInBits() == TRI->getRegSizeInBits(*RC);
+}
+
 /// Split up the constraint string from the inline assembly value into the
 /// specific constraints and their prefixes, and also tie in the associated
 /// operand values.
@@ -6412,6 +6463,8 @@ TargetLowering::ParseConstraints(const DataLayout &DL,
       OpInfo.ConstraintVT = VT.isSimple() ? VT.getSimpleVT() : MVT::Other;
       ArgNo++;
     }
+
+    OpInfo.MayFoldRegister = shouldPreferFoldableRegister(*this, TRI, OpInfo);
   }
 
   // If we have multiple alternative constraints, select the best alternative.
@@ -6510,7 +6563,8 @@ TargetLowering::ParseConstraints(const DataLayout &DL,
 /// preferrable (when they can be emitted). A higher return value means a
 /// stronger preference for one constraint type relative to another.
 /// FIXME: We should prefer registers over memory but doing so may lead to
-/// unrecoverable register exhaustion later.
+/// unrecoverable register exhaustion later, unless the register allocator can
+/// fold the register to memory (see AsmOperandInfo::MayFoldRegister).
 /// https://github.com/llvm/llvm-project/issues/20571
 static unsigned getConstraintPiority(TargetLowering::ConstraintType CT) {
   switch (CT) {
@@ -6624,7 +6678,10 @@ TargetLowering::ConstraintWeight
 ///  1) If there is an 'other' constraint, and if the operand is valid for
 ///     that constraint, use it.  This makes us take advantage of 'i'
 ///     constraints when available.
-///  2) Otherwise, pick the most general constraint present.  This prefers
+///  2) For an "rm" (or "g") operand that the register allocator can fold to a
+///     stack slot (see AsmOperandInfo::MayFoldRegister), pick 'r': the
+///     allocator still falls back to memory if it runs out of registers.
+///  3) Otherwise, pick the most general constraint present.  This prefers
 ///     'm' over 'r', for example.
 ///
 TargetLowering::ConstraintGroup TargetLowering::getConstraintPreferences(
@@ -6632,6 +6689,24 @@ TargetLowering::ConstraintGroup TargetLowering::getConstraintPreferences(
   ConstraintGroup Ret;
 
   Ret.reserve(OpInfo.Codes.size());
+
+  if (OpInfo.MayFoldRegister) {
+    // Keep any immediate codes first, as below, so that a "g" operand with a
+    // constant value still becomes an immediate.
+    for (StringRef Code : OpInfo.Codes) {
+      TargetLowering::ConstraintType CType = getConstraintType(Code);
+      if (CType == TargetLowering::C_Immediate ||
+          CType == TargetLowering::C_Other)
+        Ret.emplace_back(Code, CType);
+    }
+
+    // As below, an operand with a matching input can only be a register.
+    Ret.emplace_back("r", getConstraintType("r"));
+    if (!OpInfo.hasMatchingInput())
+      Ret.emplace_back("m", getConstraintType("m"));
+    return Ret;
+  }
+
   for (StringRef Code : OpInfo.Codes) {
     TargetLowering::ConstraintType CType = getConstraintType(Code);
 
