@@ -288,6 +288,12 @@ infrastructure are described first, followed by tool-specific sections.
   `std::initializer_list` constructor, as the braced form could select a
   different constructor.
 
+- Improved {doc}`modernize-type-traits
+  <clang-tidy/checks/modernize/type-traits>` check to no longer suggest
+  `std::tuple_size_v` and `std::variant_size_v` inside requires-expressions,
+  concept definitions and requires-clauses, where they are not equivalent to
+  the `::value` form because they are not SFINAE-friendly.
+
 - Fixed a crash in {doc}`modernize-use-designated-initializers
   <clang-tidy/checks/modernize/use-designated-initializers>` when analyzing
   malformed code with nested classes and ambiguous initializer.
