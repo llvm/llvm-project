@@ -777,20 +777,22 @@ func.func @fuse_scalar_constant(%arg0 : tensor<?x?xf32>) -> (tensor<?x?xf32>, te
 
 // -----
 
-// Fusing the broadcast into a reduction would require to insert extra knowledge
-// about the size of the reduction dimension. As long, as this is not
-// implemented, we check that two linalg operations remain.
-// TODO: Support this case in element-wise fusion.
+// The producer output is preserved because its indexing map is needed to
+// compute the reduction dimension's bound after fusion.
 
 #map0 = affine_map<(d0, d1) -> ()>
 #map1 = affine_map<(d0, d1) -> (d0, d1)>
 #map2 = affine_map<(d0, d1) -> (d1, d0)>
 #map3 = affine_map<(d0, d1) -> (d0)>
 
-// CHECK-LABEL: @no_fusion_missing_reduction_shape
-// CHECK: linalg.generic
-// CHECK: linalg.generic
-func.func @no_fusion_missing_reduction_shape(%arg0: tensor<f32>, %arg1: index) -> tensor<?xf32> {
+// CHECK-LABEL: @fusion_reduction_shape_from_preserved_out
+// CHECK: %[[FUSED:.+]]:2 = linalg.generic
+// CHECK-SAME: ins(%{{.+}} : tensor<f32>)
+// CHECK-SAME: outs(%{{.+}}, %{{.+}} : tensor<?x?xf32>, tensor<?xf32>)
+// CHECK-NOT: linalg.generic
+// CHECK: return %[[FUSED]]#1
+func.func @fusion_reduction_shape_from_preserved_out(
+    %arg0: tensor<f32>, %arg1: index) -> tensor<?xf32> {
   %cst = arith.constant 0xFF800000 : f32
   %4 = tensor.empty(%arg1, %arg1) : tensor<?x?xf32>
   %5 = linalg.generic {
@@ -811,6 +813,42 @@ func.func @no_fusion_missing_reduction_shape(%arg0: tensor<f32>, %arg1: index) -
     linalg.yield %9 : f32
   } -> tensor<?xf32>
   return %8 : tensor<?xf32>
+}
+
+// -----
+
+#map0 = affine_map<(d0, d1) -> (d0)>
+#map1 = affine_map<(d0, d1) -> (d0, d1)>
+
+// CHECK-LABEL: @fusion_reduction_shape_from_used_producer_out
+// CHECK-SAME: %[[ARG0:.+]]: tensor<4xf32>,
+// CHECK-SAME: %[[ARG1:.+]]: tensor<4x8xf32>,
+// CHECK-SAME: %[[ARG2:.+]]: tensor<4xf32>
+// CHECK: %[[FUSED:.+]]:2 = linalg.generic
+// CHECK-SAME: ins(%[[ARG0]] : tensor<4xf32>)
+// CHECK-SAME: outs(%[[ARG1]], %[[ARG2]] : tensor<4x8xf32>, tensor<4xf32>)
+// CHECK-NOT: linalg.generic
+// CHECK: return %[[FUSED]]#1
+func.func @fusion_reduction_shape_from_used_producer_out(
+    %arg0: tensor<4xf32>, %arg1: tensor<4x8xf32>,
+    %arg2: tensor<4xf32>) -> tensor<4xf32> {
+  %0 = linalg.generic {
+      indexing_maps = [#map0, #map1],
+      iterator_types = ["parallel", "parallel"]}
+      ins(%arg0 : tensor<4xf32>) outs(%arg1 : tensor<4x8xf32>) {
+    ^bb0(%in: f32, %out: f32):
+      %2 = arith.addf %in, %out : f32
+      linalg.yield %2 : f32
+  } -> tensor<4x8xf32>
+  %1 = linalg.generic {
+      indexing_maps = [#map1, #map0],
+      iterator_types = ["parallel", "reduction"]}
+      ins(%0 : tensor<4x8xf32>) outs(%arg2 : tensor<4xf32>) {
+    ^bb0(%in: f32, %out: f32):
+      %2 = arith.addf %in, %out : f32
+      linalg.yield %2 : f32
+  } -> tensor<4xf32>
+  return %1 : tensor<4xf32>
 }
 
 // -----
