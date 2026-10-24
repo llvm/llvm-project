@@ -152,7 +152,6 @@ getUnrollOrder(unsigned numLoops, Operation *op,
 }
 
 namespace {
-
 struct UnrollTransferReadPattern
     : public OpRewritePattern<vector::TransferReadOp> {
   UnrollTransferReadPattern(MLIRContext *context,
@@ -290,10 +289,12 @@ struct UnrollContractionPattern
 
   LogicalResult matchAndRewrite(vector::ContractionOp contractOp,
                                 PatternRewriter &rewriter) const override {
+    Type targetType = contractOp.getResultType();
+    bool scalarResult = !isa<VectorType>(targetType);
     auto targetShape = getTargetShape(options, contractOp);
     if (!targetShape)
       return failure();
-    auto dstVecType = cast<VectorType>(contractOp.getResultType());
+    auto dstVecType = dyn_cast<VectorType>(targetType);
     SmallVector<int64_t> originalSize = *contractOp.getIterationShapeToUnroll();
 
     Location loc = contractOp.getLoc();
@@ -343,20 +344,28 @@ struct UnrollContractionPattern
       auto *accIt = accCache.find(accOffets);
       if (accIt != accCache.end())
         slicesOperands[2] = accIt->second;
+      else if (scalarResult)
+        slicesOperands[2] = contractOp.getAcc();
       else
         extractOperand(2, contractOp.getAcc(), accPermutationMap, accOffets);
-
-      SmallVector<int64_t> dstShape =
-          applyPermutationMap(dstAffineMap, ArrayRef<int64_t>(*targetShape));
-      auto targetType = VectorType::get(dstShape, dstVecType.getElementType());
+      if (!scalarResult) {
+        SmallVector<int64_t> dstShape =
+            applyPermutationMap(dstAffineMap, ArrayRef<int64_t>(*targetShape));
+        targetType = VectorType::get(dstShape, dstVecType.getElementType());
+      }
       Operation *newOp = cloneOpWithOperandsAndTypes(
           rewriter, loc, contractOp, slicesOperands, targetType);
-
       SmallVector<int64_t> dstOffets =
           applyPermutationMap(dstAffineMap, ArrayRef<int64_t>(offsets));
       // Save the accumulated value untill all the loops are unrolled since
       // reduction loop keep updating the accumulator.
       accCache[dstOffets] = newOp->getResult(0);
+    }
+    if (scalarResult) {
+      // With a scalar result, the last tile's value replaces the op
+      // and we return since there is nothing to reassemble.
+      rewriter.replaceOp(contractOp, accCache.begin()->second);
+      return success();
     }
     // Assemble back the accumulator into a single vector.
     Value result = arith::ConstantOp::create(rewriter, loc, dstVecType,
@@ -1728,7 +1737,6 @@ struct UnrollDeinterleavePattern
 private:
   vector::UnrollVectorOptions options;
 };
-
 } // namespace
 
 void mlir::vector::populateVectorUnrollPatterns(
