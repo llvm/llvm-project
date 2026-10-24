@@ -1055,6 +1055,15 @@ public:
     return ScratchRSrcReg;
   }
 
+  /// Scratch resource register of a callee with calling convention \p CC when
+  /// flat scratch is unavailable. Call argument assignment must reserve this
+  /// register. It is not the caller's getScratchRSrcReg(), which is still the
+  /// PRIVATE_RSRC_REG placeholder for an entry function.
+  static Register getCalleeScratchRSrcReg(CallingConv::ID CC) {
+    return AMDGPU::isChainCC(CC) ? AMDGPU::SGPR48_SGPR49_SGPR50_SGPR51
+                                 : AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3;
+  }
+
   void setScratchRSrcReg(Register Reg) {
     assert(Reg != 0 && "Should never be unset");
     ScratchRSrcReg = Reg;

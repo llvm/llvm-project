@@ -1263,9 +1263,8 @@ void AMDGPUCallLowering::handleImplicitCallArguments(
     auto ScratchRSrcReg = MIRBuilder.buildCopy(LLT::fixed_vector(4, 32),
                                                FuncInfo.getScratchRSrcReg());
 
-    auto CalleeRSrcReg = AMDGPU::isChainCC(CalleeCC)
-                             ? AMDGPU::SGPR48_SGPR49_SGPR50_SGPR51
-                             : AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3;
+    auto CalleeRSrcReg =
+        SIMachineFunctionInfo::getCalleeScratchRSrcReg(CalleeCC);
 
     MIRBuilder.buildCopy(CalleeRSrcReg, ScratchRSrcReg);
     CallInst.addReg(CalleeRSrcReg, RegState::Implicit);
@@ -1462,10 +1461,11 @@ bool AMDGPUCallLowering::lowerTailCall(
       return false;
   }
 
-  // Mark the scratch resource descriptor as allocated so the CC analysis
-  // does not assign user arguments to these registers, matching the callee.
+  // Reserve the callee's scratch resource descriptor so user arguments are not
+  // assigned to it. See SIMachineFunctionInfo::getCalleeScratchRSrcReg.
   if (!ST.hasFlatScratchEnabled())
-    CCInfo.AllocateReg(FuncInfo->getScratchRSrcReg());
+    CCInfo.AllocateReg(
+        SIMachineFunctionInfo::getCalleeScratchRSrcReg(Info.CallConv));
 
   OutgoingValueAssigner Assigner(AssignFnFixed, AssignFnVarArg);
 
@@ -1691,12 +1691,11 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
       return false;
   }
 
-  // Mark the scratch resource descriptor as allocated so the CC analysis
-  // does not assign user arguments to these registers, matching the callee.
-  if (!ST.hasFlatScratchEnabled()) {
-    const SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
-    CCInfo.AllocateReg(FuncInfo->getScratchRSrcReg());
-  }
+  // Reserve the callee's scratch resource descriptor so user arguments are not
+  // assigned to it. See SIMachineFunctionInfo::getCalleeScratchRSrcReg.
+  if (!ST.hasFlatScratchEnabled())
+    CCInfo.AllocateReg(
+        SIMachineFunctionInfo::getCalleeScratchRSrcReg(Info.CallConv));
 
   // Do the actual argument marshalling.
   OutgoingValueAssigner Assigner(AssignFnFixed, AssignFnVarArg);
