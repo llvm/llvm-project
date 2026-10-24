@@ -87,13 +87,14 @@ class MemoryManagerTy {
     ODBG(OLDT_Alloc) << "findBucket: Size " << Size << " is floored to " << F
                      << ".";
 
-    int L = 0, H = NumBuckets - 1;
+    // Search in half open range [L, H)
+    int L = 0, H = NumBuckets;
     while (H - L > 1) {
       int M = (L + H) >> 1;
       if (BucketSize[M] == F)
         return M;
       if (BucketSize[M] > F)
-        H = M - 1;
+        H = M;
       else
         L = M;
     }
