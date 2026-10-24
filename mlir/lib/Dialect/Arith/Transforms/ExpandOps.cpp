@@ -591,11 +591,17 @@ struct F8E5M2ExtFOpConverter : public OpRewritePattern<arith::ExtFOp> {
 
     Value result = f16;
     if (!resultETy.isF16()) {
-      if (resultETy.getIntOrFloatBitWidth() < 16)
-        result = arith::TruncFOp::create(b, resultTy, f16, nullptr,
+      if (resultETy.getIntOrFloatBitWidth() <= 16) {
+        // There is no direct extf/truncf between F16 and another 16-bit type
+        // such as BF16, so go through F32. Every F8E5M2 value is exactly
+        // representable in F32 and in BF16, so this does not round.
+        Type f32Ty = cloneToShapedType(operandTy, b.getF32Type());
+        Value f32 = arith::ExtFOp::create(b, f32Ty, f16, op.getFastmathAttr());
+        result = arith::TruncFOp::create(b, resultTy, f32, nullptr,
                                          op.getFastmathAttr());
-      else
+      } else {
         result = arith::ExtFOp::create(b, resultTy, f16, op.getFastmathAttr());
+      }
     }
     rewriter.replaceOp(op, result);
     return success();
@@ -631,9 +637,20 @@ struct F8E5M2TruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
     Type f16Ty = cloneToShapedType(operandTy, b.getF16Type());
 
     Value h16 = operand;
-    if (!operandETy.isF16())
+    if (!operandETy.isF16()) {
+      // There is no direct truncf from another 16-bit type such as BF16 to
+      // F16, so go through F32. BF16 to F16 only rounds values that are below
+      // half the smallest F8E5M2 subnormal (they become 0 either way) or above
+      // the F8E5M2 overflow threshold (they become infinity either way), so
+      // this does not introduce double rounding.
+      if (operandETy.getIntOrFloatBitWidth() <= 16) {
+        Type f32Ty = cloneToShapedType(operandTy, b.getF32Type());
+        operand =
+            arith::ExtFOp::create(b, f32Ty, operand, op.getFastmathAttr());
+      }
       h16 = arith::TruncFOp::create(b, f16Ty, operand, nullptr,
                                     op.getFastmathAttr());
+    }
 
     Value isNan = arith::CmpFOp::create(b, arith::CmpFPredicate::UNE, h16, h16);
     Value h16Bits = arith::BitcastOp::create(b, i16Ty, h16);
