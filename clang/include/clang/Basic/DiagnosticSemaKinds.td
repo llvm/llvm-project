@@ -6999,6 +6999,11 @@ def warn_cpp_compat_goto_into_protected_scope : Warning<
 def err_overflow_handler_into_protected_scope : Error<
   "cannot jump from this overflow-checked operation to its overflow handler "
   "label">;
+def note_overflow_handler_exits_context : Note<
+  "jump leaves %select{a variable length array size|the initializer of a "
+  "static local variable|a constructor initializer|the initializer of a new "
+  "expression|the operand of a throw expression|a __finally block|an __except "
+  "filter}0">;
 def warn_cxx98_compat_overflow_handler_into_protected_scope : Warning<
   "jump from this overflow-checked operation to its overflow handler label is "
   "incompatible with C++98">,
@@ -7007,6 +7012,9 @@ def warn_cpp_compat_overflow_handler_into_protected_scope : Warning<
   "jump from this overflow-checked operation to its overflow handler label is "
   "incompatible with C++">,
   InGroup<JumpBypassesInit>, DefaultIgnore;
+def err_overflow_goto_invalid_operand : Error<
+  "operand of '__builtin_overflow_goto' must have integer or void type "
+  "(%0 invalid)">;
 def err_switch_into_protected_scope : Error<
   "cannot jump from switch statement to this case label">;
 def warn_cxx98_compat_switch_into_protected_scope : Warning<
