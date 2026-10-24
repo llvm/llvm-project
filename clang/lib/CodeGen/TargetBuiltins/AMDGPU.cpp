@@ -2283,6 +2283,20 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_permlane_xor:
     return emitBuiltinWithOneOverloadedType<3>(*this, E,
                                                Intrinsic::amdgcn_permlane_xor);
+  case AMDGPU::BI__builtin_amdgcn_sched_bank: {
+    llvm::Value *Val = EmitScalarExpr(E->getArg(0));
+    llvm::Value *Bank = EmitScalarExpr(E->getArg(1));
+    llvm::Value *Strict;
+    if (E->getNumArgs() > 2) {
+      Strict = EmitScalarExpr(E->getArg(2));
+    } else {
+      // Default: strict
+      Strict = Builder.getInt1(true);
+    }
+    llvm::Function *F =
+        CGM.getIntrinsic(Intrinsic::amdgcn_sched_bank, Val->getType());
+    return Builder.CreateCall(F, {Val, Bank, Strict});
+  }
   default:
     return nullptr;
   }
