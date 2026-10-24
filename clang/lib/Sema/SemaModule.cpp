@@ -815,13 +815,16 @@ void Sema::ActOnAnnotModuleEnd(SourceLocation EomLoc, Module *Mod) {
   // ImportDecl as we would for an imported module.
   FileID File = getSourceManager().getFileID(EomLoc);
   SourceLocation DirectiveLoc;
-  if (EomLoc == getSourceManager().getLocForEndOfFile(File)) {
+  SourceLocation IncludeLoc = getSourceManager().getIncludeLoc(File);
+  if (EomLoc == getSourceManager().getLocForEndOfFile(File) &&
+      IncludeLoc.isValid()) {
     // We reached the end of a #included module header. Use the #include loc.
     assert(File != getSourceManager().getMainFileID() &&
-           "end of submodule in main source file");
-    DirectiveLoc = getSourceManager().getIncludeLoc(File);
+           "included module header should not be the main source file");
+    DirectiveLoc = IncludeLoc;
   } else {
-    // We reached an EOM pragma. Use the pragma location.
+    // We reached an EOM pragma, possibly synthesized at EOF for recovery. Use
+    // the annotation location.
     DirectiveLoc = EomLoc;
   }
   BuildModuleInclude(DirectiveLoc, Mod);
