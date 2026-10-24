@@ -46,22 +46,20 @@ private:
   const char_type* __delim_;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI ostream_iterator(ostream_type& __s) _NOEXCEPT
-      : __out_stream_(std::addressof(__s)),
-        __delim_(nullptr) {}
-  _LIBCPP_HIDE_FROM_ABI ostream_iterator(ostream_type& __s, const _CharT* __delimiter) _NOEXCEPT
+  ostream_iterator(ostream_type& __s) _NOEXCEPT : __out_stream_(std::addressof(__s)), __delim_(nullptr) {}
+  ostream_iterator(ostream_type& __s, const _CharT* __delimiter) _NOEXCEPT
       : __out_stream_(std::addressof(__s)),
         __delim_(__delimiter) {}
-  _LIBCPP_HIDE_FROM_ABI ostream_iterator& operator=(const _Tp& __value) {
+  ostream_iterator& operator=(const _Tp& __value) {
     *__out_stream_ << __value;
     if (__delim_)
       *__out_stream_ << __delim_;
     return *this;
   }
 
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI ostream_iterator& operator*() { return *this; }
-  _LIBCPP_HIDE_FROM_ABI ostream_iterator& operator++() { return *this; }
-  _LIBCPP_HIDE_FROM_ABI ostream_iterator& operator++(int) { return *this; }
+  [[__nodiscard__]] ostream_iterator& operator*() { return *this; }
+  ostream_iterator& operator++() { return *this; }
+  ostream_iterator& operator++(int) { return *this; }
 };
 
 _LIBCPP_END_NAMESPACE_STD

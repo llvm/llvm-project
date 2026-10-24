@@ -50,20 +50,18 @@ public:
   template <class _Up,
             class = __void_t<decltype(__fun(std::declval<_Up>()))>,
             __enable_if_t<!is_same<__remove_cvref_t<_Up>, reference_wrapper>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reference_wrapper(_Up&& __u)
-      _NOEXCEPT_(noexcept(__fun(std::declval<_Up>()))) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 reference_wrapper(_Up&& __u) _NOEXCEPT_(noexcept(__fun(std::declval<_Up>()))) {
     type& __f = static_cast<_Up&&>(__u);
     __f_      = std::addressof(__f);
   }
 
   // access
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 operator type&() const _NOEXCEPT { return *__f_; }
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 type& get() const _NOEXCEPT { return *__f_; }
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 operator type&() const _NOEXCEPT { return *__f_; }
+  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 type& get() const _NOEXCEPT { return *__f_; }
 
   // invoke
   template <class... _ArgTypes>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __invoke_result_t<type&, _ArgTypes...>
-  operator()(_ArgTypes&&... __args) const
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 __invoke_result_t<type&, _ArgTypes...> operator()(_ArgTypes&&... __args) const
 #if _LIBCPP_STD_VER >= 17
       // Since is_nothrow_invocable requires C++17 LWG3764 is not backported
       // to earlier versions.
@@ -77,7 +75,7 @@ public:
 
   // [refwrap.comparisons], comparisons
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(reference_wrapper __x, reference_wrapper __y)
+  friend constexpr bool operator==(reference_wrapper __x, reference_wrapper __y)
     requires requires {
       { __x.get() == __y.get() } -> __core_convertible_to<bool>;
     }
@@ -85,7 +83,7 @@ public:
     return __x.get() == __y.get();
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(reference_wrapper __x, const _Tp& __y)
+  friend constexpr bool operator==(reference_wrapper __x, const _Tp& __y)
     requires requires {
       { __x.get() == __y } -> __core_convertible_to<bool>;
     }
@@ -93,7 +91,7 @@ public:
     return __x.get() == __y;
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(reference_wrapper __x, reference_wrapper<const _Tp> __y)
+  friend constexpr bool operator==(reference_wrapper __x, reference_wrapper<const _Tp> __y)
     requires(!is_const_v<_Tp>) && requires {
       { __x.get() == __y.get() } -> __core_convertible_to<bool>;
     }
@@ -101,19 +99,19 @@ public:
     return __x.get() == __y.get();
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator<=>(reference_wrapper __x, reference_wrapper __y)
+  friend constexpr auto operator<=>(reference_wrapper __x, reference_wrapper __y)
     requires requires { std::__synth_three_way(__x.get(), __y.get()); }
   {
     return std::__synth_three_way(__x.get(), __y.get());
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator<=>(reference_wrapper __x, const _Tp& __y)
+  friend constexpr auto operator<=>(reference_wrapper __x, const _Tp& __y)
     requires requires { std::__synth_three_way(__x.get(), __y); }
   {
     return std::__synth_three_way(__x.get(), __y);
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator<=>(reference_wrapper __x, reference_wrapper<const _Tp> __y)
+  friend constexpr auto operator<=>(reference_wrapper __x, reference_wrapper<const _Tp> __y)
     requires(!is_const_v<_Tp>) && requires { std::__synth_three_way(__x.get(), __y.get()); }
   {
     return std::__synth_three_way(__x.get(), __y.get());
@@ -128,25 +126,23 @@ reference_wrapper(_Tp&) -> reference_wrapper<_Tp>;
 #endif
 
 template <class _Tp>
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI
-_LIBCPP_CONSTEXPR_SINCE_CXX20 reference_wrapper<_Tp> ref(_Tp& __t) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX20 reference_wrapper<_Tp> ref(_Tp& __t) _NOEXCEPT {
   return reference_wrapper<_Tp>(__t);
 }
 
 template <class _Tp>
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reference_wrapper<_Tp>
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX20 reference_wrapper<_Tp>
 ref(reference_wrapper<_Tp> __t) _NOEXCEPT {
   return __t;
 }
 
 template <class _Tp>
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reference_wrapper<const _Tp>
-cref(const _Tp& __t) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX20 reference_wrapper<const _Tp> cref(const _Tp& __t) _NOEXCEPT {
   return reference_wrapper<const _Tp>(__t);
 }
 
 template <class _Tp>
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reference_wrapper<const _Tp>
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX20 reference_wrapper<const _Tp>
 cref(reference_wrapper<_Tp> __t) _NOEXCEPT {
   return __t;
 }
