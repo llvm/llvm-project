@@ -54,28 +54,6 @@ ValueWithRealFlags<REAL> TimesIntPowerOf(const REAL &factor, const REAL &base,
   return result;
 }
 
-#if 0
-template <typename W, int P, typename INT>
-ValueWithRealFlags<value::Real<W, P>> IntPower(const value::Real<W, P> &base,
-    const INT &power,
-    Rounding rounding = TargetCharacteristics::defaultRounding) {
-  using REAL = value::Real<W, P>;
-  REAL one{REAL::FromInteger(INT{1}).value};
-  ValueWithRealFlags<REAL> result{
-      TimesIntPowerOf(one, base, power, /*forceMultiply=*/false, rounding)};
-  if (result.flags.test(RealFlag::Overflow) && power.IsNegative() &&
-      !base.IsZero() && base.ABS().Compare(one) == Relation::Greater) {
-    ValueWithRealFlags<REAL> retry;
-    REAL recip{one.Divide(base, rounding).AccumulateFlags(retry.flags)};
-    retry.value =
-        TimesIntPowerOf(one, recip, power, /*forceMultiply=*/true, rounding)
-            .AccumulateFlags(retry.flags);
-    return retry;
-  }
-  return result;
-}
-#endif
-
 template <typename REAL, typename INT>
 ValueWithRealFlags<REAL> IntPower(const REAL &base, const INT &power,
     Rounding rounding = TargetCharacteristics::defaultRounding) {
@@ -90,7 +68,9 @@ ValueWithRealFlags<REAL> IntPower(const REAL &base, const INT &power,
     retry.value =
         TimesIntPowerOf(one, recip, power, /*forceMultiply=*/true, rounding)
             .AccumulateFlags(retry.flags);
-    return retry;
+    if (!retry.flags.test(RealFlag::Overflow)) {
+      return retry;
+    }
   }
   return result;
 }
