@@ -59,11 +59,8 @@ static cl::opt<int> CSPreinlMultiplierForPrevInl(
 
 CSPreInliner::CSPreInliner(SampleContextTracker &Tracker,
                            ProfiledBinary &Binary, ProfileSummary *Summary)
-    : UseContextCost(UseContextCostForPreInliner),
-      // TODO: Pass in a guid-to-name map in order for
-      // ContextTracker.getFuncNameFor to work, if `Profiles` can have md5 codes
-      // as their profile context.
-      ContextTracker(Tracker), Binary(Binary), Summary(Summary) {
+    : UseContextCost(UseContextCostForPreInliner), ContextTracker(Tracker),
+      Binary(Binary), Summary(Summary) {
   // Set default preinliner hot/cold call site threshold tuned with CSSPGO.
   // for good performance with reasonable profile size.
   if (!SampleHotCallSiteThreshold.getNumOccurrences())

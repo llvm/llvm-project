@@ -196,7 +196,7 @@ public:
                      const ContextSampleCounterMap *Counters)
       : ProfileGeneratorBase(Binary, Counters){};
   CSProfileGenerator(ProfiledBinary *Binary, SampleProfileMap &Profiles)
-      : ProfileGeneratorBase(Binary), ContextTracker(Profiles, nullptr){};
+      : ProfileGeneratorBase(Binary), ContextTracker(Profiles) {};
   void generateProfile() override;
 
   // Trim the context stack at a given depth.
