@@ -8,18 +8,15 @@ declare ptr @llvm.structured.gep.p0(ptr, ...)
 
 %S = type { i32, { i32, i32 } }
 
-; TODO: It is fine to split the nested struct and discard the second element.
-; simply not implemented yet.
 define i32 @test_nested_struct() {
 ; CHECK-LABEL: define i32 @test_nested_struct() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call elementtype(i32) ptr @llvm.structured.alloca.p0()
-; CHECK-NEXT:    [[TMP1:%.*]] = call elementtype({ i32, i32 }) ptr @llvm.structured.alloca.p0()
-; CHECK-NEXT:    [[TMP2:%.*]] = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype({ i32, i32 }) [[TMP1]], i32 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = call elementtype(i32) ptr @llvm.structured.alloca.p0()
 ; CHECK-NEXT:    store i32 0, ptr [[TMP0]], align 4
-; CHECK-NEXT:    store i32 1, ptr [[TMP2]], align 4
+; CHECK-NEXT:    store i32 1, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[TMP0]], align 4
-; CHECK-NEXT:    [[B:%.*]] = load i32, ptr [[TMP2]], align 4
+; CHECK-NEXT:    [[B:%.*]] = load i32, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[C:%.*]] = add i32 [[A]], [[B]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
@@ -28,7 +25,6 @@ entry:
   %0 = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype(%S) %tmp, i32 0)
   %1 = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype(%S) %tmp, i32 1, i32 0)
 
-
   store i32 0, ptr %0
   store i32 1, ptr %1
   %a = load i32, ptr %0
@@ -36,4 +32,34 @@ entry:
 
   %c = add i32 %a, %b
   ret i32 %c
+}
+
+%S2 = type { i32, [5 x %S] }
+
+define i32 @test_array_and_struct_nested() {
+; CHECK-LABEL: define i32 @test_array_and_struct_nested() {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call elementtype({ i32, i32 }) ptr @llvm.structured.alloca.p0()
+; CHECK-NEXT:    [[TMP0:%.*]] = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype({ i32, i32 }) [[TMP1]], i32 1)
+; CHECK-NEXT:    [[P2:%.*]] = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype({ i32, i32 }) [[TMP1]], i32 0)
+; CHECK-NEXT:    store i32 0, ptr [[TMP0]], align 4
+; CHECK-NEXT:    store i32 1, ptr [[P2]], align 4
+; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[TMP0]], align 4
+; CHECK-NEXT:    [[B:%.*]] = load i32, ptr [[P2]], align 4
+; CHECK-NEXT:    [[C:%.*]] = add i32 [[A]], [[B]]
+; CHECK-NEXT:    ret i32 [[A]]
+;
+entry:
+  %tmp = call elementtype(%S2) ptr @llvm.structured.alloca.p0()
+  %p0 = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype(%S2) %tmp, i32 1, i32 1, i32 1, i32 1)
+  %p1 = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype(%S2) %tmp, i32 1, i32 1, i32 1)
+  %p2 = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype({ i32, i32 }) %p1, i32 0)
+
+  store i32 0, ptr %p0
+  store i32 1, ptr %p2
+  %a = load i32, ptr %p0
+  %b = load i32, ptr %p2
+
+  %c = add i32 %a, %b
+  ret i32 %a
 }
