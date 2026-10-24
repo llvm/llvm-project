@@ -53,3 +53,14 @@
 
 ; CHECK-DAG: .b8 nonpow2vec_arr_pad[32] = {1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 5, 0, 0, 0, 6};
 @nonpow2vec_arr_pad = global [2 x <3 x i32>] [<3 x i32> <i32 1, i32 2, i32 3>, <3 x i32> <i32 4, i32 5, i32 6>]
+
+; Vector splats nested in an array or a struct must be emitted, and keep their
+; tail padding (<3 x float> store=12 alloc=16, <3 x i16> store=6 alloc=8).
+; CHECK-DAG: .b8 splat_arr[32] = {0, 0, 128, 63, 0, 0, 128, 63, 0, 0, 128, 63, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 0, 64, 0, 0, 0, 64, 0, 0, 0, 64};
+@splat_arr = global [2 x <4 x float>] [<4 x float> splat(float 1.0), <4 x float> splat(float 2.0)]
+
+; CHECK-DAG: .b8 splat_field_pad[32] = {0, 0, 128, 63, 0, 0, 128, 63, 0, 0, 128, 63, 0, 0, 0, 0, 254, 255, 255, 255};
+@splat_field_pad = global {<3 x float>, i32} {<3 x float> splat(float 1.0), i32 -2}
+
+; CHECK-DAG: .b8 splat_arr_pad[16] = {205, 171, 205, 171, 205, 171, 0, 0, 1, 1, 1, 1, 1, 1};
+@splat_arr_pad = global [2 x <3 x i16>] [<3 x i16> splat(i16 43981), <3 x i16> splat(i16 257)]
