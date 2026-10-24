@@ -56,11 +56,11 @@ static void CompareReturnTypes(const ObjCMethodDecl *MethDerived,
        << "', defines the instance method '";
     MethDerived->getSelector().print(os);
     os << "' whose return type is '" << ResDerived
-       << "'.  A method with the same name (same selector) is also defined in "
+       << "'. A method with the same name (same selector) is also defined in "
           "class '"
        << *MethAncestor->getClassInterface() << "' and has a return type of '"
        << ResAncestor
-       << "'.  These two types are incompatible, and may result in undefined "
+       << "'. These two types are incompatible, and may result in undefined "
           "behavior for clients of these classes.";
 
     PathDiagnosticLocation MethDLoc =

@@ -14,8 +14,8 @@ void fn1() {
   A a;
   A *b = &a;
 
-  for (;;) { // expected-note{{Loop condition is true.  Entering loop body}}
-             // expected-note@-1{{Loop condition is true.  Entering loop body}}
+  for (;;) { // expected-note{{Loop condition is true. Entering loop body}}
+             // expected-note@-1{{Loop condition is true. Entering loop body}}
              // expected-note@-2{{Value assigned to 'b'}}
              // no crash during bug report construction
 

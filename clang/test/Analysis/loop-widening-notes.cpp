@@ -7,7 +7,7 @@ int test_for_bug_25609() {
   if (p_a == 0) // expected-note {{Assuming 'p_a' is equal to null}} 
                 // expected-note@-1 {{Taking true branch}}
     bar();
-  for (int i = 0;  // expected-note {{Loop condition is true.  Entering loop body}}                    
+  for (int i = 0;  // expected-note {{Loop condition is true. Entering loop body}}                    
                    // expected-note@-1 {{Loop condition is false. Execution continues on line 16}}
        ++i,        // expected-note {{Value assigned to 'p_a'}} 
        i < flag_a;
@@ -22,7 +22,7 @@ int flag_b;
 int while_analyzer_output() {
   flag_b = 100;
   int num = 10;
-  while (flag_b-- > 0) { // expected-note {{Loop condition is true.  Entering loop body}} 
+  while (flag_b-- > 0) { // expected-note {{Loop condition is true. Entering loop body}} 
                          // expected-note@-1 {{Value assigned to 'num'}} 
                          // expected-note@-2 {{Loop condition is false. Execution continues on line 30}}
     num = flag_b;
@@ -43,7 +43,7 @@ int flag_c;
 int do_while_analyzer_output() {
   int num = 10;
   do {   // expected-note {{Loop condition is true. Execution continues on line 47}} 
-         // expected-note@-1 {{Loop condition is false.  Exiting loop}}
+         // expected-note@-1 {{Loop condition is false. Exiting loop}}
     num--;
   } while (flag_c-- > 0); //expected-note {{Value assigned to 'num'}}
   int local = 0;
@@ -57,7 +57,7 @@ int do_while_analyzer_output() {
 int flag_d;
 int test_for_loop() {
   int num = 10;
-  for (int i = 0;    // expected-note {{Loop condition is true.  Entering loop body}} 
+  for (int i = 0;    // expected-note {{Loop condition is true. Entering loop body}} 
                      // expected-note@-1 {{Loop condition is false. Execution continues on line 67}}
        new int(10),  // expected-note {{Value assigned to 'num'}}
        i < flag_d;

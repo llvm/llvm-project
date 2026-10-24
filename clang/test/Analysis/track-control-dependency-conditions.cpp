@@ -858,7 +858,7 @@ void f(int flag) {
   bar();
   assert(cond1); // expected-note-re{{{{^}}Assuming 'cond1' is not equal to 0{{$}}}}
                  // expected-note-re@-1{{{{^}}Taking false branch{{$}}}}
-                 // expected-note-re@-2{{{{^}}Loop condition is false.  Exiting loop{{$}}}}
+                 // expected-note-re@-2{{{{^}}Loop condition is false. Exiting loop{{$}}}}
 
   if (flag) // expected-note-re{{{{^}}Assuming 'flag' is not equal to 0{{$}}}}
             // expected-note-re@-1{{{{^}}Taking true branch{{$}}}}
@@ -902,7 +902,7 @@ void f(int flag) {
   // expected-note-re@-2{{{{^}}Left side of '&&' is true{{$}}}}
   // expected-note-re@-3{{{{^}}Assuming the condition is false{{$}}}}
   // expected-note-re@-4{{{{^}}Taking false branch{{$}}}}
-  // expected-note-re@-5{{{{^}}Loop condition is false.  Exiting loop{{$}}}}
+  // expected-note-re@-5{{{{^}}Loop condition is false. Exiting loop{{$}}}}
 
   if (flag) // expected-note-re{{{{^}}Assuming 'flag' is not equal to 0{{$}}}}
             // expected-note-re@-1{{{{^}}Taking true branch{{$}}}}
@@ -945,7 +945,7 @@ void f(int flag) {
   // expected-note-re@-1{{{{^}}Assuming 'cond1' is not equal to 0{{$}}}}
   // expected-note-re@-2{{{{^}}Left side of '||' is true{{$}}}}
   // expected-note-re@-3{{{{^}}Taking false branch{{$}}}}
-  // expected-note-re@-4{{{{^}}Loop condition is false.  Exiting loop{{$}}}}
+  // expected-note-re@-4{{{{^}}Loop condition is false. Exiting loop{{$}}}}
 
   if (flag) // expected-note-re{{{{^}}Assuming 'flag' is not equal to 0{{$}}}}
             // expected-note-re@-1{{{{^}}Taking true branch{{$}}}}
