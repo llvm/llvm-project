@@ -184,8 +184,8 @@ IndexedReference::hasSpacialReuse(const IndexedReference &Other, unsigned CLS,
     }
   }
 
-  // the difference between the last subscripts must be less than the cache line
-  // size.
+  // the distance between the last subscripts must be less than the cache line
+  // size, in either direction.
   const SCEV *LastSubscript = getLastSubscript();
   const SCEV *OtherLastSubscript = Other.getLastSubscript();
   const SCEVConstant *Diff = dyn_cast<SCEVConstant>(
@@ -199,7 +199,12 @@ IndexedReference::hasSpacialReuse(const IndexedReference &Other, unsigned CLS,
     return std::nullopt;
   }
 
-  bool InSameCacheLine = (Diff->getValue()->getSExtValue() < CLS);
+  // The subscripts count elements, whereas CLS is in bytes.
+  const auto *ElemSize = dyn_cast<SCEVConstant>(Sizes.back());
+  if (!ElemSize || ElemSize->isZero())
+    return std::nullopt;
+  uint64_t MaxDist = divideCeil(CLS, ElemSize->getAPInt().getZExtValue());
+  bool InSameCacheLine = Diff->getAPInt().abs().ult(MaxDist);
 
   LLVM_DEBUG({
     if (InSameCacheLine)
@@ -256,7 +261,7 @@ IndexedReference::hasTemporalReuse(const IndexedReference &Other,
                  << "No temporal reuse: distance is not zero at depth=" << Level
                  << "\n");
       return false;
-    } else if (Level == LoopDepth && CI.getSExtValue() > MaxDistance) {
+    } else if (Level == LoopDepth && CI.getValue().abs().ugt(MaxDistance)) {
       LLVM_DEBUG(
           dbgs().indent(2)
           << "No temporal reuse: distance is greater than MaxDistance at depth="
