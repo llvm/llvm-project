@@ -57,8 +57,7 @@ bool LoadStoreVec::acceptOrRevert() {
   LLVM_DEBUG(dbgs() << DEBUG_PREFIX_LOCAL << "CostGain=" << CostGain
                     << " (After=" << CostAfter << " Before=" << CostBefore
                     << ")\n");
-  const VectorizeOptions &Opts =
-      Ctx->getLibraryOptions().get<VectorizeOptions>();
+  const VectorizeOptions &Opts = getVectorizeOptions(*Ctx);
   if (CostGain > Opts.sbvec_cost_threshold) {
     LLVM_DEBUG(dbgs() << DEBUG_PREFIX_LOCAL << "Not profitable, reverting.\n");
     Ctx->revert();

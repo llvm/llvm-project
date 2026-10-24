@@ -13353,6 +13353,10 @@ Instruction *PPCTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
   return nullptr;
 }
 
+bool PPCTargetLowering::fenceClearsLoadLinkedReservation() const {
+  return !Subtarget.fenceKeepsReservation();
+}
+
 MachineBasicBlock *PPCTargetLowering::EmitAtomicBinary(MachineInstr &MI,
                                                        MachineBasicBlock *BB,
                                                        unsigned BinOpcode,
