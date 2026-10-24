@@ -50,6 +50,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeBPFTarget() {
   initializeGlobalISel(PR);
   initializeBPFArenaCastLegacyPass(PR);
   initializeBPFArenaDataLegacyPass(PR);
+  initializeBPFArenaKptrLegacyPass(PR);
   initializeBPFArenaStackLegacyPass(PR);
   initializeBPFAsmPrinterPass(PR);
   initializeBPFCheckAndAdjustIRLegacyPass(PR);
@@ -129,8 +130,10 @@ void BPFPassConfig::addIRPasses() {
 
   TargetPassConfig::addIRPasses();
   addPass(createBPFUnwindPreparePass());
-  if (Subtarget->hasArenaStack())
+  if (Subtarget->hasArenaStack()) {
+    addPass(createBPFArenaKptrPass());
     addPass(createBPFArenaStackPass());
+  }
   if (Subtarget->hasArenaCast())
     addPass(createBPFArenaCastPass());
 }

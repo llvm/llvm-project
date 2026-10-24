@@ -83,7 +83,7 @@ bool llvm::isBPFKernelFunc(const CallBase &CB, const TargetLibraryInfo &TLI) {
 }
 
 /// Helpers and kfuncs take memory that the kernel knows about.
-static bool staysOnStack(const AllocaInst &AI, const TargetLibraryInfo &TLI) {
+bool llvm::bpfStaysOnStack(const AllocaInst &AI, const TargetLibraryInfo &TLI) {
   SmallVector<const Value *, 8> Work = {&AI};
 
   while (!Work.empty()) {
@@ -141,7 +141,7 @@ static bool markAllocas(Function &F, const TargetLibraryInfo &TLI) {
 
     // Dynamic allocas are not supported on either stack.
     if (AI && AI->isStaticAlloca() && !AI->hasMetadata(BPFArenaStackMD) &&
-        !staysOnStack(*AI, TLI))
+        !AI->hasMetadata(BPFStackKeepMD) && !bpfStaysOnStack(*AI, TLI))
       Allocas.push_back(AI);
   }
   for (AllocaInst *AI : Allocas)

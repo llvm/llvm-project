@@ -139,6 +139,12 @@ void ArenaCast::collect(Instruction &I, unsigned Idx, bool Plain) {
   // It is cast already, or there is nothing to access.
   if (isa<AddrSpaceCastInst, ConstantPointerNull, UndefValue>(Ptr))
     return;
+  if (auto *Arg = dyn_cast<Argument>(Ptr))
+    if (Arg->hasAttribute(BPFStackPtrAttr))
+      return;
+  if (auto *LI = dyn_cast<LoadInst>(Ptr))
+    if (LI->hasMetadata(BPFStackPtrMD))
+      return;
   if (auto *AI = dyn_cast<AllocaInst>(Ptr)) {
     if (!AI->hasMetadata(BPFArenaStackMD))
       return;

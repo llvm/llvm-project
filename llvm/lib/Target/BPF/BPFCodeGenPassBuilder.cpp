@@ -72,8 +72,11 @@ void BPFCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
     addModulePass(BPFArenaDataPass(), PMW);
 
   Base::addIRPasses(PMW);
-  if (Subtarget->hasArenaStack())
+  if (Subtarget->hasArenaStack()) {
+    flushFPMsToMPM(PMW);
+    addModulePass(BPFArenaKptrPass(), PMW);
     addFunctionPass(BPFArenaStackPass(), PMW);
+  }
   if (Subtarget->hasArenaCast())
     addFunctionPass(BPFArenaCastPass(), PMW);
 }

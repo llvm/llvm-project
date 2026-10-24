@@ -76,6 +76,23 @@ bool isBPFKernelFunc(const CallBase &CB, const TargetLibraryInfo &TLI);
 /// The kfunc wants a pointer to arena in this argument.
 bool isBPFArenaArg(const CallBase &CB, const Use &U);
 
+/// Metadata of an alloca that must not go to the stack in arena.
+inline constexpr StringLiteral BPFStackKeepMD = "bpf.stack.keep";
+/// Attribute of a parameter that points to the stack of the program.
+inline constexpr StringLiteral BPFStackPtrAttr = "bpf-stack-ptr";
+/// Metadata of a load that yields such a pointer.
+inline constexpr StringLiteral BPFStackPtrMD = "bpf.stack.ptr";
+
+/// The local is passed to helpers or kfuncs.
+bool bpfStaysOnStack(const AllocaInst &AI, const TargetLibraryInfo &TLI);
+
+class BPFArenaKptrPass : public RequiredPassInfoMixin<BPFArenaKptrPass> {
+public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+};
+
+ModulePass *createBPFArenaKptrPass();
+
 class BPFISelDAGToDAGPass : public SelectionDAGISelPass {
 public:
   BPFISelDAGToDAGPass(BPFTargetMachine &TM);
@@ -133,6 +150,7 @@ InstructionSelector *createBPFInstructionSelector(const BPFTargetMachine &,
 
 void initializeBPFArenaCastLegacyPass(PassRegistry &);
 void initializeBPFArenaDataLegacyPass(PassRegistry &);
+void initializeBPFArenaKptrLegacyPass(PassRegistry &);
 void initializeBPFArenaStackLegacyPass(PassRegistry &);
 void initializeBPFAsmPrinterPass(PassRegistry &);
 void initializeBPFCheckAndAdjustIRLegacyPass(PassRegistry &);

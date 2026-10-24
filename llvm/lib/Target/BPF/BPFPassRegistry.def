@@ -17,6 +17,7 @@
 #define MODULE_PASS(NAME, CREATE_PASS)
 #endif
 MODULE_PASS("bpf-arena-data", BPFArenaDataPass())
+MODULE_PASS("bpf-arena-kptr", BPFArenaKptrPass())
 MODULE_PASS("bpf-asm-printer-begin", BPFAsmPrinterBeginPass())
 MODULE_PASS("bpf-asm-printer-end", BPFAsmPrinterEndPass())
 MODULE_PASS("bpf-check-and-opt-ir", BPFCheckAndAdjustIRPass())
