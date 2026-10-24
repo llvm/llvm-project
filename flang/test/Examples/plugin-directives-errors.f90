@@ -37,6 +37,8 @@ contains
     !dir$ example watch(x, priority=1)
     ! CHECK: error: Argument 'priority' must be an integer
     !dir$ example callback(handler=s, priority=high)
+    ! CHECK: error: Argument 'priority' must be an integer
+    !dir$ example callback(handler=s, priority=1.5)
     ! CHECK: error: Argument 'handler' appears more than once
     !dir$ example callback(handler=s, handler=s)
     ! CHECK: error: Only the first argument of a 'example callback' directive may be positional

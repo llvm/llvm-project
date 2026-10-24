@@ -8,8 +8,11 @@
 //
 // Compiler directives defined by plugins:
 //
-//   !DIR$ prefix keyword [ ( arg [, arg]... ) ]
-//   arg -> [ name = ] value,  value -> name | integer | character-literal
+//   !DIR$ prefix keyword [ ( arg [, arg]... ) ] [ name ( value ) ]...
+//   arg -> [ name = ] value
+//   value -> name | /common-block/ | integer | [sign] real | character-literal
+//
+// A trailing `name(value)` is the same as a `name=value` argument.
 //
 // A plugin loaded with `flang -fc1 -load` registers the directives it defines
 // from a static initializer. The parser accepts the form above only for a
@@ -17,6 +20,21 @@
 // them against the registered argument kinds; lowering attaches the resolved
 // directive to its subject (a procedure or a variable) as an MLIR attribute,
 // for the plugin's own passes to interpret.
+//
+// A directive whose subject is a loop goes in the execution part, in front of
+// a DO or DO WHILE loop, as !DIR$ UNROLL does. Its positional arguments are
+// variables (or COMMON blocks). Lowering attaches it to the loop itself, as
+// an entry of the `fir.directives` attribute of its fir.do_loop or
+// scf.while, or, for an unstructured loop, of the branch back to its header:
+//
+//   {prefix = "...", keyword = "...", args = {...},
+//    variables = [@_QMmEu, "_QFsEv", @blk_, ...]}
+//
+// whose `args` are the other arguments, as for procedures and variables. A
+// variable of a module and a COMMON block are references to their global, and
+// any other variable is the unique name of its declaration (the `uniq_name`
+// of its hlfir.declare); the plugin's passes evaluate them where they need
+// them.
 //
 // A plugin may also register a comment sentinel for its prefix, so that
 //
@@ -40,6 +58,7 @@ enum class PluginDirectiveArgKind {
   Procedure, ///< A name resolving to a procedure.
   Variable, ///< A name resolving to a variable.
   Integer, ///< An integer literal.
+  Real, ///< A real or integer literal, possibly signed.
   String, ///< A character literal, or a name taken as its spelling.
 };
 
@@ -59,6 +78,9 @@ enum class PluginDirectiveSubject {
   Variable,
   /// Either, as for Procedure.
   Any,
+  /// The DO or DO WHILE loop that follows the directive. The positional
+  /// arguments are variables or COMMON blocks.
+  Loop,
 };
 
 struct PluginDirectiveSpec {
@@ -67,6 +89,8 @@ struct PluginDirectiveSpec {
   PluginDirectiveSubject subject{PluginDirectiveSubject::Procedure};
   /// The arguments after the (optional) positional subject.
   std::vector<PluginDirectiveArg> args;
+  /// For a Loop directive, the least number of positional arguments.
+  unsigned minPositional{0};
 };
 
 /// Register a directive. Call from a static initializer in a plugin.
