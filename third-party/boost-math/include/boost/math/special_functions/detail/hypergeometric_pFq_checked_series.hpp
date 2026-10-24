@@ -23,6 +23,7 @@
      unsigned set_crossover_locations(const Seq& aj, const Seq& bj, const Real& z, unsigned int* crossover_locations)
      {
         BOOST_MATH_STD_USING
+        using nothrow_policy = typename boost::math::policies::normalise<boost::math::policies::policy<>, boost::math::policies::rounding_error<boost::math::policies::ignore_error>>::type;
         unsigned N_terms = 0;
 
         if(aj.size() == 1 && bj.size() == 1)
@@ -55,13 +56,13 @@
               Real t = (-sqrt(sq) - b + z) / 2;
               if (t >= 0)
               {
-                 crossover_locations[N_terms] = itrunc(t);
+                 crossover_locations[N_terms] = itrunc(t, nothrow_policy());
                  ++N_terms;
               }
               t = (sqrt(sq) - b + z) / 2;
               if (t >= 0)
               {
-                 crossover_locations[N_terms] = itrunc(t);
+                 crossover_locations[N_terms] = itrunc(t, nothrow_policy());
                  ++N_terms;
               }
            }
@@ -71,13 +72,13 @@
               Real t = (-sqrt(sq) - b - z) / 2;
               if (t >= 0)
               {
-                 crossover_locations[N_terms] = itrunc(t);
+                 crossover_locations[N_terms] = itrunc(t, nothrow_policy());
                  ++N_terms;
               }
               t = (sqrt(sq) - b - z) / 2;
               if (t >= 0)
               {
-                 crossover_locations[N_terms] = itrunc(t);
+                 crossover_locations[N_terms] = itrunc(t, nothrow_policy());
                  ++N_terms;
               }
            }
@@ -110,7 +111,7 @@
            unsigned n = 0;
            for (auto bi = bj.begin(); bi != bj.end(); ++bi, ++n)
            {
-              crossover_locations[n] = *bi >= 0 ? 0 : itrunc(-*bi) + 1;
+              crossover_locations[n] = *bi >= 0 ? 0 : itrunc(-*bi, nothrow_policy()) + 1;
            }
            std::sort(crossover_locations, crossover_locations + bj.size(), std::less<Real>());
            N_terms = (unsigned)bj.size();
@@ -122,6 +123,7 @@
      std::pair<Real, Real> hypergeometric_pFq_checked_series_impl(const Seq& aj, const Seq& bj, const Real& z, const Policy& pol, const Terminal& termination, long long& log_scale)
      {
         BOOST_MATH_STD_USING
+        using nothrow_policy = typename boost::math::policies::normalise<Policy, boost::math::policies::rounding_error<boost::math::policies::ignore_error>>::type;
         Real result = 1;
         Real abs_result = 1;
         Real term = 1;
@@ -129,8 +131,19 @@
         Real tol = boost::math::policies::get_epsilon<Real, Policy>();
         std::uintmax_t k = 0;
         Real upper_limit(sqrt(boost::math::tools::max_value<Real>())), diff;
+        if ((tools::max_value<Real>() / fabs(z) < upper_limit))
+        {
+           upper_limit = tools::max_value<Real>() / fabs(z);
+        }
+        for (auto pa = aj.begin(); pa != aj.end(); ++pa)
+        {
+            if (tools::max_value<Real>() / fabs(*pa) < upper_limit)
+            {
+               upper_limit = tools::max_value<Real>() / fabs(*pa);
+            }
+        }
         Real lower_limit(1 / upper_limit);
-        long long log_scaling_factor = lltrunc(boost::math::tools::log_max_value<Real>()) - 2;
+        long long log_scaling_factor = lltrunc(boost::math::tools::log_max_value<Real>(), nothrow_policy()) - 2;
         Real scaling_factor = exp(Real(log_scaling_factor));
         Real term_m1;
         long long local_scaling = 0;
@@ -234,7 +247,10 @@
               log_scale += log_scaling_factor;
               local_scaling += log_scaling_factor;
            }
-           if (fabs(abs_result) < lower_limit)
+           /*
+           * rescaling to avoid underflow is pointless here, given that the first term is 1.
+           * 
+           else if ((fabs(abs_result) < lower_limit) && (fabs(abs_result) * scaling_factor < upper_limit))
            {
               abs_result *= scaling_factor;
               result *= scaling_factor;
@@ -242,7 +258,7 @@
               log_scale -= log_scaling_factor;
               local_scaling -= log_scaling_factor;
            }
-
+           */
            if ((abs(result * tol) > abs(term)) && (abs(term0) > abs(term)))
               break;
            if (abs_result * tol > abs(result))
@@ -321,7 +337,7 @@
                  else
                  {
                     int ls = 1;
-                    Real p = log_pochhammer(*ai, s, pol, &ls);
+                    Real p = log_pochhammer(static_cast<Real>(*ai), s, pol, &ls);
                     s1 *= ls;
                     term += p;
                     loop_error_scale = (std::max)(p, loop_error_scale);
@@ -334,7 +350,7 @@
               for (auto bi = bj.begin(); bi != bj.end(); ++bi)
               {
                  int ls = 1;
-                 Real p = log_pochhammer(*bi, s, pol, &ls);
+                 Real p = log_pochhammer(static_cast<Real>(*bi), s, pol, &ls);
                  s2 *= ls;
                  term -= p;
                  loop_error_scale = (std::max)(p, loop_error_scale);
@@ -371,13 +387,13 @@
               if (term <= tools::log_min_value<Real>())
               {
                  // rescale if we can:
-                 long long scale = lltrunc(floor(term - tools::log_min_value<Real>()) - 2);
+                 long long scale = lltrunc(floor(term - tools::log_min_value<Real>()) - 2, nothrow_policy());
                  term -= scale;
                  loop_scale += scale;
               }
                if (term > 10)
                {
-                  int scale = itrunc(floor(term));
+                  long long scale = lltrunc(floor(term), nothrow_policy());
                   term -= scale;
                   loop_scale += scale;
                }
@@ -402,7 +418,7 @@
                      term /= scaling_factor;
                      loop_scale += log_scaling_factor;
                   }
-                  if (fabs(loop_result) < lower_limit)
+                  else if ((fabs(loop_result) < lower_limit) && (fabs(loop_result) * scaling_factor < upper_limit))
                   {
                      loop_result *= scaling_factor;
                      loop_abs_result *= scaling_factor;

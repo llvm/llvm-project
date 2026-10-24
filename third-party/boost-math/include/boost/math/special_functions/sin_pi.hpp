@@ -94,7 +94,6 @@ inline typename tools::promote_args<T>::type sin_pi(T x)
 {
    return boost::math::sin_pi(x, policies::policy<>());
 }
-
 } // namespace math
 } // namespace boost
 
