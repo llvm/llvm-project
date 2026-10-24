@@ -1,0 +1,37 @@
+# RUN: llc -mtriple=mips-unknown-linux-gnu -start-after=machineverifier -verify-machineinstrs %s -o - | FileCheck %s
+#
+# A source instruction in a branch's delay slot must not be skipped when
+# looking for a common first source instruction.
+# CHECK-LABEL: delay_slot:
+# CHECK: .loc 1 1 0 prologue_end
+# CHECK-NOT: prologue_end
+# CHECK: .end delay_slot
+--- |
+  define void @delay_slot() !dbg !4 { ret void }
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!2}
+  !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "test", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug)
+  !1 = !DIFile(filename: "entry.c", directory: "/")
+  !2 = !{i32 2, !"Debug Info Version", i32 3}
+  !3 = !DISubroutineType(types: !{null})
+  !4 = distinct !DISubprogram(name: "delay_slot", scope: !1, file: !1, line: 1, type: !3, scopeLine: 1, spFlags: DISPFlagDefinition, unit: !0)
+  !5 = !DILocation(line: 2, scope: !4)
+  !6 = !DILocation(line: 3, scope: !4)
+...
+---
+name: delay_slot
+body: |
+  bb.0:
+    BEQ undef $r4, $r0, %bb.2, implicit-def $r1 {
+      NOP
+    }
+  bb.1:
+    B %bb.2, implicit-def $r1 {
+      $r2 = ADDiu $r0, 1, debug-location !5
+    }
+  bb.2:
+    $r2 = ADDiu $r0, 2, debug-location !6
+    PseudoReturn undef $r31 {
+      NOP
+    }
+...
