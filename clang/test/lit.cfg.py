@@ -194,6 +194,34 @@ def run_clang_repl(args):
 def have_host_jit_feature_support(feature_name):
     return "true" in run_clang_repl("--host-supports-" + feature_name)
 
+
+def have_host_clang_repl_thread_local():
+    clang_repl_exe = lit.util.which("clang-repl", config.clang_tools_dir)
+
+    if not clang_repl_exe:
+        return False
+
+    testcode = b"\n".join(
+        [
+            b'extern "C" int puts(const char *s);',
+            b"thread_local int tl = 42;",
+            b'puts(tl == 42 ? "success" : "failure");',
+            b"%quit",
+        ]
+    )
+    try:
+        clang_repl_cmd = subprocess.run(
+            [clang_repl_exe],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            input=testcode,
+        )
+    except OSError:
+        return False
+
+    return clang_repl_cmd.returncode == 0 and b"success" in clang_repl_cmd.stdout
+
+
 def have_host_clang_repl_cuda():
     clang_repl_exe = lit.util.which('clang-repl', config.clang_tools_dir)
 
@@ -234,6 +262,10 @@ if not skip_clang_repl_checks and have_host_jit_feature_support("jit"):
 
     if have_host_clang_repl_cuda():
         config.available_features.add('host-supports-cuda')
+
+    if have_host_clang_repl_thread_local():
+        config.available_features.add("host-supports-jit-thread-local")
+
     hosttriple = run_clang_repl("--host-jit-triple")
     config.available_features.add("host-jit-triple=" + hosttriple.strip())
     config.substitutions.append(("%host-jit-triple", hosttriple.strip()))

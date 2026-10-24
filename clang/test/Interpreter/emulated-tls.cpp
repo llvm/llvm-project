@@ -4,6 +4,10 @@
 // Emulated TLS is not supported by the LoongArch backend.
 // UNSUPPORTED: target=loongarch{{.*}}
 //
+// Some hosts have no __emutls_get_address at all (its compiler runtime does not
+// ship one), so no thread_local can execute in clang-repl there.
+// REQUIRES: host-supports-jit-thread-local
+//
 // An inline function that odr-uses a non-zero-initialized thread_local is
 // emitted as a weak (linkonce_odr) definition into every PartialTranslationUnit
 // that references it. With emulated TLS that set includes an __emutls_t.<var>
