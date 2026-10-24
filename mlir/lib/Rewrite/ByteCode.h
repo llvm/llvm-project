@@ -167,6 +167,20 @@ public:
 
   /// Initialize the given state such that it can be used to execute the current
   /// bytecode.
+
+  /// Set the type converter registry for PDLL dialect conversion patterns
+  void setTypeConverters(const llvm::StringMap<const void *> &converters) {
+    typeConverters.clear();
+    for (const auto &entry : converters)
+      typeConverters.try_emplace(entry.getKey(), entry.getValue());
+  }
+
+  /// Get a registered type converter by name
+  const void *getTypeConverter(StringRef name) const {
+    auto it = typeConverters.find(name);
+    return it != typeConverters.end() ? it->second : nullptr;
+  }
+
   void initializeMutableState(PDLByteCodeMutableState &state) const;
 
   /// Run the pattern matcher on the given root operation, collecting the
@@ -209,6 +223,9 @@ private:
   /// A set of user defined functions invoked via PDL.
   std::vector<PDLConstraintFunction> constraintFunctions;
   std::vector<PDLRewriteFunction> rewriteFunctions;
+
+  /// Type converters for PDLL dialect conversion patterns
+  llvm::StringMap<const void *> typeConverters;
 
   /// The maximum memory index used by a value.
   ByteCodeField maxValueMemoryIndex = 0;
