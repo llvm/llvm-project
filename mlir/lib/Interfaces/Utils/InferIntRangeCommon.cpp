@@ -884,7 +884,11 @@ mlir::intrange::inferAffineExpr(AffineExpr expr,
         inferAffineExpr(binExpr.getLHS(), dimRanges, symbolRanges);
     ConstantIntRanges rhs =
         inferAffineExpr(binExpr.getRHS(), dimRanges, symbolRanges);
-    // Affine floordiv requires strictly positive divisor (> 0).
+    // Affine floordiv requires a strictly positive divisor. Bail out when the
+    // divisor's maximum is zero (e.g. a literal zero): clamping it would build
+    // an inverted range and divide by zero below; return the full range.
+    if (rhs.smax().isZero())
+      return ConstantIntRanges::maxRange(rhs.smin().getBitWidth());
     // Clamp divisor lower bound to 1 for tighter range inference.
     ConstantIntRanges clampedRhs = clampToPositive(rhs);
     std::array<ConstantIntRanges, 2> operands = {std::move(lhs),
@@ -897,7 +901,11 @@ mlir::intrange::inferAffineExpr(AffineExpr expr,
         inferAffineExpr(binExpr.getLHS(), dimRanges, symbolRanges);
     ConstantIntRanges rhs =
         inferAffineExpr(binExpr.getRHS(), dimRanges, symbolRanges);
-    // Affine ceildiv requires strictly positive divisor (> 0).
+    // Affine ceildiv requires a strictly positive divisor. Bail out when the
+    // divisor's maximum is zero (e.g. a literal zero): clamping it would build
+    // an inverted range and divide by zero below; return the full range.
+    if (rhs.smax().isZero())
+      return ConstantIntRanges::maxRange(rhs.smin().getBitWidth());
     // Clamp divisor lower bound to 1 for tighter range inference.
     ConstantIntRanges clampedRhs = clampToPositive(rhs);
     std::array<ConstantIntRanges, 2> operands = {std::move(lhs),
