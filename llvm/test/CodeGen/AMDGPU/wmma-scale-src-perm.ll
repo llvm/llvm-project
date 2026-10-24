@@ -65,17 +65,17 @@ define amdgpu_ps <8 x float> @wmma_scale_src_extra_use(<16 x i32> %a, <16 x i32>
 ; CHECK-NEXT:    v_nop
 ; CHECK-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; CHECK-NEXT:    v_perm_b32 v40, s0, s1, 4
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; CHECK-NEXT:    v_wmma_scale_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:31], v[32:39], v40, v40 matrix_a_fmt:MATRIX_FMT_BF8 matrix_b_fmt:MATRIX_FMT_BF8
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use v40
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(TRANS32_DEP_1)
-; CHECK-NEXT:    v_wmma_scale_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:31], v[32:39], v40, v40 matrix_a_fmt:MATRIX_FMT_BF8 matrix_b_fmt:MATRIX_FMT_BF8
 ; CHECK-NEXT:    v_nop
 ; CHECK-NEXT:    v_nop
 ; CHECK-NEXT:    v_nop
 ; CHECK-NEXT:    v_nop
-; CHECK-NEXT:    v_dual_mov_b32 v0, v32 :: v_dual_mov_b32 v1, v33
 ; CHECK-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instskip(NEXT) | instid1(TRANS32_DEP_1)
+; CHECK-NEXT:    v_dual_mov_b32 v0, v32 :: v_dual_mov_b32 v1, v33
 ; CHECK-NEXT:    v_dual_mov_b32 v2, v34 :: v_dual_mov_b32 v3, v35
 ; CHECK-NEXT:    v_dual_mov_b32 v4, v36 :: v_dual_mov_b32 v5, v37
 ; CHECK-NEXT:    v_dual_mov_b32 v6, v38 :: v_dual_mov_b32 v7, v39
