@@ -43,8 +43,8 @@ define float @v_fdot2_f32_bf16_neg_a_lo(<2 x bfloat> %a, <2 x bfloat> %b, float 
 ; GFX950-GISEL:  ; %bb.0:
 ; GFX950-GISEL:    v_xor_b32_e32 v3, 0x8000, v0
 ; GFX950-GISEL:    v_bfe_u32 v3, v3, 0, 16
-; GFX950-GISEL:    v_mov_b32_e32 v4, 0xffff0000
-; GFX950-GISEL:    v_and_or_b32 v0, v0, v4, v3
+; GFX950-GISEL:    s_mov_b32 s0, 0xffff0000
+; GFX950-GISEL:    v_and_or_b32 v0, v0, s0, v3
 ; GFX950-GISEL:    v_dot2c_f32_bf16_e32 v2, v0, v1
 ; GFX950-GISEL:    v_mov_b32_e32 v0, v2
 ;
@@ -94,8 +94,8 @@ define float @v_fdot2_f32_bf16_neg_a_hi(<2 x bfloat> %a, <2 x bfloat> %b, float 
 ; GFX950-GISEL:    v_xor_b32_sdwa v3, s0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX950-GISEL:    v_mov_b32_e32 v4, 16
 ; GFX950-GISEL:    v_lshlrev_b32_sdwa v3, v4, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
-; GFX950-GISEL:    v_mov_b32_e32 v4, 0xffff
-; GFX950-GISEL:    v_and_or_b32 v0, v0, v4, v3
+; GFX950-GISEL:    s_mov_b32 s0, 0xffff
+; GFX950-GISEL:    v_and_or_b32 v0, v0, s0, v3
 ; GFX950-GISEL:    v_dot2c_f32_bf16_e32 v2, v0, v1
 ; GFX950-GISEL:    v_mov_b32_e32 v0, v2
 ;
@@ -153,8 +153,8 @@ define float @v_fdot2_f32_bf16_neg_b_lo(<2 x bfloat> %a, <2 x bfloat> %b, float 
 ; GFX950-GISEL:  ; %bb.0:
 ; GFX950-GISEL:    v_xor_b32_e32 v3, 0x8000, v1
 ; GFX950-GISEL:    v_bfe_u32 v3, v3, 0, 16
-; GFX950-GISEL:    v_mov_b32_e32 v4, 0xffff0000
-; GFX950-GISEL:    v_and_or_b32 v1, v1, v4, v3
+; GFX950-GISEL:    s_mov_b32 s0, 0xffff0000
+; GFX950-GISEL:    v_and_or_b32 v1, v1, s0, v3
 ; GFX950-GISEL:    v_dot2c_f32_bf16_e32 v2, v0, v1
 ; GFX950-GISEL:    v_mov_b32_e32 v0, v2
 ;
@@ -204,8 +204,8 @@ define float @v_fdot2_f32_bf16_neg_b_hi(<2 x bfloat> %a, <2 x bfloat> %b, float 
 ; GFX950-GISEL:    v_xor_b32_sdwa v3, s0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX950-GISEL:    v_mov_b32_e32 v4, 16
 ; GFX950-GISEL:    v_lshlrev_b32_sdwa v3, v4, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
-; GFX950-GISEL:    v_mov_b32_e32 v4, 0xffff
-; GFX950-GISEL:    v_and_or_b32 v1, v1, v4, v3
+; GFX950-GISEL:    s_mov_b32 s0, 0xffff
+; GFX950-GISEL:    v_and_or_b32 v1, v1, s0, v3
 ; GFX950-GISEL:    v_dot2c_f32_bf16_e32 v2, v0, v1
 ; GFX950-GISEL:    v_mov_b32_e32 v0, v2
 ;
@@ -502,15 +502,10 @@ define float @v_fdot2_f32_bf16_opsel_hi_b_clamp(<2 x bfloat> %a, <2 x bfloat> %b
 }
 
 define float @v_fdot2_f32_bf16_inline_literal_a_clamp(<2 x bfloat> %b, float %c) {
-; GFX950-SDAG-LABEL: v_fdot2_f32_bf16_inline_literal_a_clamp:
-; GFX950-SDAG:  ; %bb.0:
-; GFX950-SDAG:    s_mov_b32 s0, 0x40004000
-; GFX950-SDAG:    v_dot2_f32_bf16 v0, s0, v0, v1 clamp
-;
-; GFX950-GISEL-LABEL: v_fdot2_f32_bf16_inline_literal_a_clamp:
-; GFX950-GISEL:  ; %bb.0:
-; GFX950-GISEL:    v_mov_b32_e32 v2, 0x40004000
-; GFX950-GISEL:    v_dot2_f32_bf16 v0, v2, v0, v1 clamp
+; GFX950-LABEL: v_fdot2_f32_bf16_inline_literal_a_clamp:
+; GFX950:  ; %bb.0:
+; GFX950:    s_mov_b32 s0, 0x40004000
+; GFX950:    v_dot2_f32_bf16 v0, s0, v0, v1 clamp
 ;
 ; GFX11PLUS-LABEL: v_fdot2_f32_bf16_inline_literal_a_clamp:
 ; GFX11PLUS:  ; %bb.0:
@@ -520,15 +515,10 @@ define float @v_fdot2_f32_bf16_inline_literal_a_clamp(<2 x bfloat> %b, float %c)
 }
 
 define float @v_fdot2_f32_bf16_inline_literal_b_clamp(<2 x bfloat> %a, float %c) {
-; GFX950-SDAG-LABEL: v_fdot2_f32_bf16_inline_literal_b_clamp:
-; GFX950-SDAG:  ; %bb.0:
-; GFX950-SDAG:    s_mov_b32 s0, 0x40004000
-; GFX950-SDAG:    v_dot2_f32_bf16 v0, v0, s0, v1 clamp
-;
-; GFX950-GISEL-LABEL: v_fdot2_f32_bf16_inline_literal_b_clamp:
-; GFX950-GISEL:  ; %bb.0:
-; GFX950-GISEL:    v_mov_b32_e32 v2, 0x40004000
-; GFX950-GISEL:    v_dot2_f32_bf16 v0, v0, v2, v1 clamp
+; GFX950-LABEL: v_fdot2_f32_bf16_inline_literal_b_clamp:
+; GFX950:  ; %bb.0:
+; GFX950:    s_mov_b32 s0, 0x40004000
+; GFX950:    v_dot2_f32_bf16 v0, v0, s0, v1 clamp
 ;
 ; GFX11PLUS-LABEL: v_fdot2_f32_bf16_inline_literal_b_clamp:
 ; GFX11PLUS:  ; %bb.0:
@@ -709,8 +699,8 @@ define float @v_fdot2_f32_bf16_neg_a_lo_dual(<2 x bfloat> %a, <2 x bfloat> %b, f
 ; GFX950-GISEL:  ; %bb.0:
 ; GFX950-GISEL:    v_xor_b32_e32 v6, 0x8000, v0
 ; GFX950-GISEL:    v_bfe_u32 v6, v6, 0, 16
-; GFX950-GISEL:    v_mov_b32_e32 v7, 0xffff0000
-; GFX950-GISEL:    v_and_or_b32 v0, v0, v7, v6
+; GFX950-GISEL:    s_mov_b32 s0, 0xffff0000
+; GFX950-GISEL:    v_and_or_b32 v0, v0, s0, v6
 ; GFX950-GISEL:    v_dot2c_f32_bf16_e32 v2, v0, v1
 ; GFX950-GISEL:    v_dot2c_f32_bf16_e32 v5, v3, v4
 ; GFX950-GISEL:    v_add_f32_e32 v0, v2, v5
@@ -770,8 +760,8 @@ define float @v_fdot2_f32_bf16_neg_a_hi_dual(<2 x bfloat> %a, <2 x bfloat> %b, f
 ; GFX950-GISEL:    v_xor_b32_sdwa v6, s0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX950-GISEL:    v_mov_b32_e32 v7, 16
 ; GFX950-GISEL:    v_lshlrev_b32_sdwa v6, v7, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
-; GFX950-GISEL:    v_mov_b32_e32 v7, 0xffff
-; GFX950-GISEL:    v_and_or_b32 v0, v0, v7, v6
+; GFX950-GISEL:    s_mov_b32 s0, 0xffff
+; GFX950-GISEL:    v_and_or_b32 v0, v0, s0, v6
 ; GFX950-GISEL:    v_dot2c_f32_bf16_e32 v2, v0, v1
 ; GFX950-GISEL:    v_dot2c_f32_bf16_e32 v5, v3, v4
 ; GFX950-GISEL:    v_add_f32_e32 v0, v2, v5
@@ -849,8 +839,8 @@ define float @v_fdot2_f32_bf16_neg_b_lo_dual(<2 x bfloat> %a, <2 x bfloat> %b, f
 ; GFX950-GISEL:  ; %bb.0:
 ; GFX950-GISEL:    v_xor_b32_e32 v6, 0x8000, v1
 ; GFX950-GISEL:    v_bfe_u32 v6, v6, 0, 16
-; GFX950-GISEL:    v_mov_b32_e32 v7, 0xffff0000
-; GFX950-GISEL:    v_and_or_b32 v1, v1, v7, v6
+; GFX950-GISEL:    s_mov_b32 s0, 0xffff0000
+; GFX950-GISEL:    v_and_or_b32 v1, v1, s0, v6
 ; GFX950-GISEL:    v_dot2c_f32_bf16_e32 v2, v0, v1
 ; GFX950-GISEL:    v_dot2c_f32_bf16_e32 v5, v3, v4
 ; GFX950-GISEL:    v_add_f32_e32 v0, v2, v5
@@ -910,8 +900,8 @@ define float @v_fdot2_f32_bf16_neg_b_hi_dual(<2 x bfloat> %a, <2 x bfloat> %b, f
 ; GFX950-GISEL:    v_xor_b32_sdwa v6, s0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX950-GISEL:    v_mov_b32_e32 v7, 16
 ; GFX950-GISEL:    v_lshlrev_b32_sdwa v6, v7, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
-; GFX950-GISEL:    v_mov_b32_e32 v7, 0xffff
-; GFX950-GISEL:    v_and_or_b32 v1, v1, v7, v6
+; GFX950-GISEL:    s_mov_b32 s0, 0xffff
+; GFX950-GISEL:    v_and_or_b32 v1, v1, s0, v6
 ; GFX950-GISEL:    v_dot2c_f32_bf16_e32 v2, v0, v1
 ; GFX950-GISEL:    v_dot2c_f32_bf16_e32 v5, v3, v4
 ; GFX950-GISEL:    v_add_f32_e32 v0, v2, v5

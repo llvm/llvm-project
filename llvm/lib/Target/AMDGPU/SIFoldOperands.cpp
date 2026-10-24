@@ -1425,6 +1425,12 @@ bool SIFoldOperandsImpl::foldOperand(
     if (DestReg.isPhysical() && SrcRC->contains(DestReg))
       return Changed;
 
+    // Prefer folding the copy's SGPR source into its users later over
+    // materializing a literal in a VGPR they can't encode.
+    if (OpToFold.isImm() && TII->shouldFoldSGPRInsteadOfLiteral(
+                                *UseMI, *OpToFold.getEffectiveImmVal(), *MRI))
+      return Changed;
+
     const TargetRegisterClass *DestRC = TRI->getRegClassForReg(*MRI, DestReg);
     // In order to fold immediates into copies, we need to change the copy to a
     // MOV. Find a compatible mov instruction with the value.

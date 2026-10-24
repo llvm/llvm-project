@@ -12,18 +12,18 @@ define i16 @v_clamp_i64_i16(i64 %in) #0 {
 ; GFX678:       ; %bb.0: ; %entry
 ; GFX678-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX678-NEXT:    v_cvt_pk_i16_i32_e32 v0, v0, v1
+; GFX678-NEXT:    s_movk_i32 s4, 0x7fff
 ; GFX678-NEXT:    v_mov_b32_e32 v1, 0xffff8000
-; GFX678-NEXT:    v_mov_b32_e32 v2, 0x7fff
-; GFX678-NEXT:    v_med3_i32 v0, v1, v0, v2
+; GFX678-NEXT:    v_med3_i32 v0, v1, v0, s4
 ; GFX678-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_clamp_i64_i16:
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_cvt_pk_i16_i32 v0, v0, v1
+; GFX9-NEXT:    s_movk_i32 s4, 0x7fff
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0xffff8000
-; GFX9-NEXT:    v_mov_b32_e32 v2, 0x7fff
-; GFX9-NEXT:    v_med3_i32 v0, v1, v0, v2
+; GFX9-NEXT:    v_med3_i32 v0, v1, v0, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_clamp_i64_i16:
@@ -54,18 +54,18 @@ define i16 @v_clamp_i64_i16_reverse(i64 %in) #0 {
 ; GFX678:       ; %bb.0: ; %entry
 ; GFX678-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX678-NEXT:    v_cvt_pk_i16_i32_e32 v0, v0, v1
+; GFX678-NEXT:    s_movk_i32 s4, 0x7fff
 ; GFX678-NEXT:    v_mov_b32_e32 v1, 0xffff8000
-; GFX678-NEXT:    v_mov_b32_e32 v2, 0x7fff
-; GFX678-NEXT:    v_med3_i32 v0, v1, v0, v2
+; GFX678-NEXT:    v_med3_i32 v0, v1, v0, s4
 ; GFX678-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_clamp_i64_i16_reverse:
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_cvt_pk_i16_i32 v0, v0, v1
+; GFX9-NEXT:    s_movk_i32 s4, 0x7fff
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0xffff8000
-; GFX9-NEXT:    v_mov_b32_e32 v2, 0x7fff
-; GFX9-NEXT:    v_med3_i32 v0, v1, v0, v2
+; GFX9-NEXT:    v_med3_i32 v0, v1, v0, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_clamp_i64_i16_reverse:
@@ -220,18 +220,18 @@ define i16 @v_clamp_i64_i16_lower_than_short(i64 %in) #0 {
 ; GFX678:       ; %bb.0: ; %entry
 ; GFX678-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX678-NEXT:    v_cvt_pk_i16_i32_e32 v0, v0, v1
+; GFX678-NEXT:    s_movk_i32 s4, 0x100
 ; GFX678-NEXT:    v_mov_b32_e32 v1, 0xffffff01
-; GFX678-NEXT:    v_mov_b32_e32 v2, 0x100
-; GFX678-NEXT:    v_med3_i32 v0, v1, v0, v2
+; GFX678-NEXT:    v_med3_i32 v0, v1, v0, s4
 ; GFX678-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_clamp_i64_i16_lower_than_short:
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_cvt_pk_i16_i32 v0, v0, v1
+; GFX9-NEXT:    s_movk_i32 s4, 0x100
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0xffffff01
-; GFX9-NEXT:    v_mov_b32_e32 v2, 0x100
-; GFX9-NEXT:    v_med3_i32 v0, v1, v0, v2
+; GFX9-NEXT:    v_med3_i32 v0, v1, v0, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_clamp_i64_i16_lower_than_short:
@@ -262,18 +262,18 @@ define i16 @v_clamp_i64_i16_lower_than_short_reverse(i64 %in) #0 {
 ; GFX678:       ; %bb.0: ; %entry
 ; GFX678-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX678-NEXT:    v_cvt_pk_i16_i32_e32 v0, v0, v1
+; GFX678-NEXT:    s_movk_i32 s4, 0x100
 ; GFX678-NEXT:    v_mov_b32_e32 v1, 0xffffff01
-; GFX678-NEXT:    v_mov_b32_e32 v2, 0x100
-; GFX678-NEXT:    v_med3_i32 v0, v1, v0, v2
+; GFX678-NEXT:    v_med3_i32 v0, v1, v0, s4
 ; GFX678-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_clamp_i64_i16_lower_than_short_reverse:
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_cvt_pk_i16_i32 v0, v0, v1
+; GFX9-NEXT:    s_movk_i32 s4, 0x100
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0xffffff01
-; GFX9-NEXT:    v_mov_b32_e32 v2, 0x100
-; GFX9-NEXT:    v_med3_i32 v0, v1, v0, v2
+; GFX9-NEXT:    v_med3_i32 v0, v1, v0, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_clamp_i64_i16_lower_than_short_reverse:
@@ -318,9 +318,9 @@ define i16 @clamp_i64_i16_uniform(i64 inreg %in) #0 {
 ; GFX678-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX678-NEXT:    v_mov_b32_e32 v0, s17
 ; GFX678-NEXT:    v_cvt_pk_i16_i32_e32 v0, s16, v0
+; GFX678-NEXT:    s_movk_i32 s4, 0x7fff
 ; GFX678-NEXT:    v_mov_b32_e32 v1, 0xffff8000
-; GFX678-NEXT:    v_mov_b32_e32 v2, 0x7fff
-; GFX678-NEXT:    v_med3_i32 v0, v1, v0, v2
+; GFX678-NEXT:    v_med3_i32 v0, v1, v0, s4
 ; GFX678-NEXT:    v_readfirstlane_b32 s4, v0
 ; GFX678-NEXT:    s_add_i32 s4, s4, s4
 ; GFX678-NEXT:    v_mov_b32_e32 v0, s4
@@ -331,9 +331,9 @@ define i16 @clamp_i64_i16_uniform(i64 inreg %in) #0 {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s17
 ; GFX9-NEXT:    v_cvt_pk_i16_i32 v0, s16, v0
+; GFX9-NEXT:    s_movk_i32 s4, 0x7fff
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0xffff8000
-; GFX9-NEXT:    v_mov_b32_e32 v2, 0x7fff
-; GFX9-NEXT:    v_med3_i32 v0, v1, v0, v2
+; GFX9-NEXT:    v_med3_i32 v0, v1, v0, s4
 ; GFX9-NEXT:    v_readfirstlane_b32 s4, v0
 ; GFX9-NEXT:    s_add_i32 s4, s4, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4

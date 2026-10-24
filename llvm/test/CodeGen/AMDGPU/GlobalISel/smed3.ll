@@ -191,8 +191,8 @@ define i32 @test_non_inline_constant_i32(i32 %a) {
 ; GFX89-LABEL: test_non_inline_constant_i32:
 ; GFX89:       ; %bb.0:
 ; GFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX89-NEXT:    v_mov_b32_e32 v1, 0x41
-; GFX89-NEXT:    v_med3_i32 v0, v0, -12, v1
+; GFX89-NEXT:    s_movk_i32 s4, 0x41
+; GFX89-NEXT:    v_med3_i32 v0, v0, -12, s4
 ; GFX89-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: test_non_inline_constant_i32:

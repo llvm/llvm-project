@@ -3795,121 +3795,121 @@ define float @v_fdiv_f32_constrhs0_dynamic(float %x) #0 {
 ; GFX6-IEEE-FASTFMA-LABEL: v_fdiv_f32_constrhs0_dynamic:
 ; GFX6-IEEE-FASTFMA:       ; %bb.0:
 ; GFX6-IEEE-FASTFMA-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-IEEE-FASTFMA-NEXT:    v_mov_b32_e32 v1, 0x4640e400
-; GFX6-IEEE-FASTFMA-NEXT:    v_div_scale_f32 v2, s[4:5], v1, v1, v0
-; GFX6-IEEE-FASTFMA-NEXT:    v_rcp_f32_e32 v3, v2
-; GFX6-IEEE-FASTFMA-NEXT:    v_div_scale_f32 v4, vcc, v0, v1, v0
+; GFX6-IEEE-FASTFMA-NEXT:    s_mov_b32 s6, 0x4640e400
+; GFX6-IEEE-FASTFMA-NEXT:    v_div_scale_f32 v1, s[4:5], s6, s6, v0
+; GFX6-IEEE-FASTFMA-NEXT:    v_rcp_f32_e32 v2, v1
+; GFX6-IEEE-FASTFMA-NEXT:    v_div_scale_f32 v3, vcc, v0, s6, v0
 ; GFX6-IEEE-FASTFMA-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 4, 2)
 ; GFX6-IEEE-FASTFMA-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 3
-; GFX6-IEEE-FASTFMA-NEXT:    v_fma_f32 v5, -v2, v3, 1.0
-; GFX6-IEEE-FASTFMA-NEXT:    v_fma_f32 v3, v5, v3, v3
-; GFX6-IEEE-FASTFMA-NEXT:    v_mul_f32_e32 v5, v4, v3
-; GFX6-IEEE-FASTFMA-NEXT:    v_fma_f32 v6, -v2, v5, v4
-; GFX6-IEEE-FASTFMA-NEXT:    v_fma_f32 v5, v6, v3, v5
-; GFX6-IEEE-FASTFMA-NEXT:    v_fma_f32 v2, -v2, v5, v4
+; GFX6-IEEE-FASTFMA-NEXT:    v_fma_f32 v4, -v1, v2, 1.0
+; GFX6-IEEE-FASTFMA-NEXT:    v_fma_f32 v2, v4, v2, v2
+; GFX6-IEEE-FASTFMA-NEXT:    v_mul_f32_e32 v4, v3, v2
+; GFX6-IEEE-FASTFMA-NEXT:    v_fma_f32 v5, -v1, v4, v3
+; GFX6-IEEE-FASTFMA-NEXT:    v_fma_f32 v4, v5, v2, v4
+; GFX6-IEEE-FASTFMA-NEXT:    v_fma_f32 v1, -v1, v4, v3
 ; GFX6-IEEE-FASTFMA-NEXT:    s_setreg_b32 hwreg(HW_REG_MODE, 4, 2), s4
-; GFX6-IEEE-FASTFMA-NEXT:    v_div_fmas_f32 v2, v2, v3, v5
-; GFX6-IEEE-FASTFMA-NEXT:    v_div_fixup_f32 v0, v2, v1, v0
+; GFX6-IEEE-FASTFMA-NEXT:    v_div_fmas_f32 v1, v1, v2, v4
+; GFX6-IEEE-FASTFMA-NEXT:    v_div_fixup_f32 v0, v1, s6, v0
 ; GFX6-IEEE-FASTFMA-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX6-FLUSH-FASTFMA-LABEL: v_fdiv_f32_constrhs0_dynamic:
 ; GFX6-FLUSH-FASTFMA:       ; %bb.0:
 ; GFX6-FLUSH-FASTFMA-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-FLUSH-FASTFMA-NEXT:    v_mov_b32_e32 v1, 0x4640e400
-; GFX6-FLUSH-FASTFMA-NEXT:    v_div_scale_f32 v2, s[4:5], v1, v1, v0
-; GFX6-FLUSH-FASTFMA-NEXT:    v_rcp_f32_e32 v3, v2
-; GFX6-FLUSH-FASTFMA-NEXT:    v_div_scale_f32 v4, vcc, v0, v1, v0
+; GFX6-FLUSH-FASTFMA-NEXT:    s_mov_b32 s6, 0x4640e400
+; GFX6-FLUSH-FASTFMA-NEXT:    v_div_scale_f32 v1, s[4:5], s6, s6, v0
+; GFX6-FLUSH-FASTFMA-NEXT:    v_rcp_f32_e32 v2, v1
+; GFX6-FLUSH-FASTFMA-NEXT:    v_div_scale_f32 v3, vcc, v0, s6, v0
 ; GFX6-FLUSH-FASTFMA-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 4, 2)
 ; GFX6-FLUSH-FASTFMA-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 3
-; GFX6-FLUSH-FASTFMA-NEXT:    v_fma_f32 v5, -v2, v3, 1.0
-; GFX6-FLUSH-FASTFMA-NEXT:    v_fma_f32 v3, v5, v3, v3
-; GFX6-FLUSH-FASTFMA-NEXT:    v_mul_f32_e32 v5, v4, v3
-; GFX6-FLUSH-FASTFMA-NEXT:    v_fma_f32 v6, -v2, v5, v4
-; GFX6-FLUSH-FASTFMA-NEXT:    v_fma_f32 v5, v6, v3, v5
-; GFX6-FLUSH-FASTFMA-NEXT:    v_fma_f32 v2, -v2, v5, v4
+; GFX6-FLUSH-FASTFMA-NEXT:    v_fma_f32 v4, -v1, v2, 1.0
+; GFX6-FLUSH-FASTFMA-NEXT:    v_fma_f32 v2, v4, v2, v2
+; GFX6-FLUSH-FASTFMA-NEXT:    v_mul_f32_e32 v4, v3, v2
+; GFX6-FLUSH-FASTFMA-NEXT:    v_fma_f32 v5, -v1, v4, v3
+; GFX6-FLUSH-FASTFMA-NEXT:    v_fma_f32 v4, v5, v2, v4
+; GFX6-FLUSH-FASTFMA-NEXT:    v_fma_f32 v1, -v1, v4, v3
 ; GFX6-FLUSH-FASTFMA-NEXT:    s_setreg_b32 hwreg(HW_REG_MODE, 4, 2), s4
-; GFX6-FLUSH-FASTFMA-NEXT:    v_div_fmas_f32 v2, v2, v3, v5
-; GFX6-FLUSH-FASTFMA-NEXT:    v_div_fixup_f32 v0, v2, v1, v0
+; GFX6-FLUSH-FASTFMA-NEXT:    v_div_fmas_f32 v1, v1, v2, v4
+; GFX6-FLUSH-FASTFMA-NEXT:    v_div_fixup_f32 v0, v1, s6, v0
 ; GFX6-FLUSH-FASTFMA-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX6-IEEE-SLOWFMA-LABEL: v_fdiv_f32_constrhs0_dynamic:
 ; GFX6-IEEE-SLOWFMA:       ; %bb.0:
 ; GFX6-IEEE-SLOWFMA-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-IEEE-SLOWFMA-NEXT:    v_mov_b32_e32 v1, 0x4640e400
-; GFX6-IEEE-SLOWFMA-NEXT:    v_div_scale_f32 v2, s[4:5], v1, v1, v0
-; GFX6-IEEE-SLOWFMA-NEXT:    v_div_scale_f32 v3, vcc, v0, v1, v0
+; GFX6-IEEE-SLOWFMA-NEXT:    s_mov_b32 s6, 0x4640e400
+; GFX6-IEEE-SLOWFMA-NEXT:    v_div_scale_f32 v1, s[4:5], s6, s6, v0
+; GFX6-IEEE-SLOWFMA-NEXT:    v_div_scale_f32 v2, vcc, v0, s6, v0
 ; GFX6-IEEE-SLOWFMA-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 4, 2)
-; GFX6-IEEE-SLOWFMA-NEXT:    v_rcp_f32_e32 v4, v2
+; GFX6-IEEE-SLOWFMA-NEXT:    v_rcp_f32_e32 v3, v1
 ; GFX6-IEEE-SLOWFMA-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 3
-; GFX6-IEEE-SLOWFMA-NEXT:    v_fma_f32 v5, -v2, v4, 1.0
-; GFX6-IEEE-SLOWFMA-NEXT:    v_fma_f32 v4, v5, v4, v4
-; GFX6-IEEE-SLOWFMA-NEXT:    v_mul_f32_e32 v5, v3, v4
-; GFX6-IEEE-SLOWFMA-NEXT:    v_fma_f32 v6, -v2, v5, v3
-; GFX6-IEEE-SLOWFMA-NEXT:    v_fma_f32 v5, v6, v4, v5
-; GFX6-IEEE-SLOWFMA-NEXT:    v_fma_f32 v2, -v2, v5, v3
+; GFX6-IEEE-SLOWFMA-NEXT:    v_fma_f32 v4, -v1, v3, 1.0
+; GFX6-IEEE-SLOWFMA-NEXT:    v_fma_f32 v3, v4, v3, v3
+; GFX6-IEEE-SLOWFMA-NEXT:    v_mul_f32_e32 v4, v2, v3
+; GFX6-IEEE-SLOWFMA-NEXT:    v_fma_f32 v5, -v1, v4, v2
+; GFX6-IEEE-SLOWFMA-NEXT:    v_fma_f32 v4, v5, v3, v4
+; GFX6-IEEE-SLOWFMA-NEXT:    v_fma_f32 v1, -v1, v4, v2
 ; GFX6-IEEE-SLOWFMA-NEXT:    s_setreg_b32 hwreg(HW_REG_MODE, 4, 2), s4
-; GFX6-IEEE-SLOWFMA-NEXT:    v_div_fmas_f32 v2, v2, v4, v5
-; GFX6-IEEE-SLOWFMA-NEXT:    v_div_fixup_f32 v0, v2, v1, v0
+; GFX6-IEEE-SLOWFMA-NEXT:    v_div_fmas_f32 v1, v1, v3, v4
+; GFX6-IEEE-SLOWFMA-NEXT:    v_div_fixup_f32 v0, v1, s6, v0
 ; GFX6-IEEE-SLOWFMA-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX6-FLUSH-SLOWFMA-LABEL: v_fdiv_f32_constrhs0_dynamic:
 ; GFX6-FLUSH-SLOWFMA:       ; %bb.0:
 ; GFX6-FLUSH-SLOWFMA-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-FLUSH-SLOWFMA-NEXT:    v_mov_b32_e32 v1, 0x4640e400
-; GFX6-FLUSH-SLOWFMA-NEXT:    v_div_scale_f32 v2, s[4:5], v1, v1, v0
-; GFX6-FLUSH-SLOWFMA-NEXT:    v_div_scale_f32 v3, vcc, v0, v1, v0
+; GFX6-FLUSH-SLOWFMA-NEXT:    s_mov_b32 s6, 0x4640e400
+; GFX6-FLUSH-SLOWFMA-NEXT:    v_div_scale_f32 v1, s[4:5], s6, s6, v0
+; GFX6-FLUSH-SLOWFMA-NEXT:    v_div_scale_f32 v2, vcc, v0, s6, v0
 ; GFX6-FLUSH-SLOWFMA-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 4, 2)
-; GFX6-FLUSH-SLOWFMA-NEXT:    v_rcp_f32_e32 v4, v2
+; GFX6-FLUSH-SLOWFMA-NEXT:    v_rcp_f32_e32 v3, v1
 ; GFX6-FLUSH-SLOWFMA-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 3
-; GFX6-FLUSH-SLOWFMA-NEXT:    v_fma_f32 v5, -v2, v4, 1.0
-; GFX6-FLUSH-SLOWFMA-NEXT:    v_fma_f32 v4, v5, v4, v4
-; GFX6-FLUSH-SLOWFMA-NEXT:    v_mul_f32_e32 v5, v3, v4
-; GFX6-FLUSH-SLOWFMA-NEXT:    v_fma_f32 v6, -v2, v5, v3
-; GFX6-FLUSH-SLOWFMA-NEXT:    v_fma_f32 v5, v6, v4, v5
-; GFX6-FLUSH-SLOWFMA-NEXT:    v_fma_f32 v2, -v2, v5, v3
+; GFX6-FLUSH-SLOWFMA-NEXT:    v_fma_f32 v4, -v1, v3, 1.0
+; GFX6-FLUSH-SLOWFMA-NEXT:    v_fma_f32 v3, v4, v3, v3
+; GFX6-FLUSH-SLOWFMA-NEXT:    v_mul_f32_e32 v4, v2, v3
+; GFX6-FLUSH-SLOWFMA-NEXT:    v_fma_f32 v5, -v1, v4, v2
+; GFX6-FLUSH-SLOWFMA-NEXT:    v_fma_f32 v4, v5, v3, v4
+; GFX6-FLUSH-SLOWFMA-NEXT:    v_fma_f32 v1, -v1, v4, v2
 ; GFX6-FLUSH-SLOWFMA-NEXT:    s_setreg_b32 hwreg(HW_REG_MODE, 4, 2), s4
-; GFX6-FLUSH-SLOWFMA-NEXT:    v_div_fmas_f32 v2, v2, v4, v5
-; GFX6-FLUSH-SLOWFMA-NEXT:    v_div_fixup_f32 v0, v2, v1, v0
+; GFX6-FLUSH-SLOWFMA-NEXT:    v_div_fmas_f32 v1, v1, v3, v4
+; GFX6-FLUSH-SLOWFMA-NEXT:    v_div_fixup_f32 v0, v1, s6, v0
 ; GFX6-FLUSH-SLOWFMA-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX89-IEEE-LABEL: v_fdiv_f32_constrhs0_dynamic:
 ; GFX89-IEEE:       ; %bb.0:
 ; GFX89-IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX89-IEEE-NEXT:    v_mov_b32_e32 v1, 0x4640e400
-; GFX89-IEEE-NEXT:    v_div_scale_f32 v2, s[4:5], v1, v1, v0
-; GFX89-IEEE-NEXT:    v_div_scale_f32 v3, vcc, v0, v1, v0
+; GFX89-IEEE-NEXT:    s_mov_b32 s6, 0x4640e400
+; GFX89-IEEE-NEXT:    v_div_scale_f32 v1, s[4:5], s6, s6, v0
+; GFX89-IEEE-NEXT:    v_div_scale_f32 v2, vcc, v0, s6, v0
 ; GFX89-IEEE-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 4, 2)
-; GFX89-IEEE-NEXT:    v_rcp_f32_e32 v4, v2
+; GFX89-IEEE-NEXT:    v_rcp_f32_e32 v3, v1
 ; GFX89-IEEE-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 3
-; GFX89-IEEE-NEXT:    v_fma_f32 v5, -v2, v4, 1.0
-; GFX89-IEEE-NEXT:    v_fma_f32 v4, v5, v4, v4
-; GFX89-IEEE-NEXT:    v_mul_f32_e32 v5, v3, v4
-; GFX89-IEEE-NEXT:    v_fma_f32 v6, -v2, v5, v3
-; GFX89-IEEE-NEXT:    v_fma_f32 v5, v6, v4, v5
-; GFX89-IEEE-NEXT:    v_fma_f32 v2, -v2, v5, v3
+; GFX89-IEEE-NEXT:    v_fma_f32 v4, -v1, v3, 1.0
+; GFX89-IEEE-NEXT:    v_fma_f32 v3, v4, v3, v3
+; GFX89-IEEE-NEXT:    v_mul_f32_e32 v4, v2, v3
+; GFX89-IEEE-NEXT:    v_fma_f32 v5, -v1, v4, v2
+; GFX89-IEEE-NEXT:    v_fma_f32 v4, v5, v3, v4
+; GFX89-IEEE-NEXT:    v_fma_f32 v1, -v1, v4, v2
 ; GFX89-IEEE-NEXT:    s_setreg_b32 hwreg(HW_REG_MODE, 4, 2), s4
-; GFX89-IEEE-NEXT:    v_div_fmas_f32 v2, v2, v4, v5
-; GFX89-IEEE-NEXT:    v_div_fixup_f32 v0, v2, v1, v0
+; GFX89-IEEE-NEXT:    v_div_fmas_f32 v1, v1, v3, v4
+; GFX89-IEEE-NEXT:    v_div_fixup_f32 v0, v1, s6, v0
 ; GFX89-IEEE-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX89-FLUSH-LABEL: v_fdiv_f32_constrhs0_dynamic:
 ; GFX89-FLUSH:       ; %bb.0:
 ; GFX89-FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX89-FLUSH-NEXT:    v_mov_b32_e32 v1, 0x4640e400
-; GFX89-FLUSH-NEXT:    v_div_scale_f32 v2, s[4:5], v1, v1, v0
-; GFX89-FLUSH-NEXT:    v_div_scale_f32 v3, vcc, v0, v1, v0
+; GFX89-FLUSH-NEXT:    s_mov_b32 s6, 0x4640e400
+; GFX89-FLUSH-NEXT:    v_div_scale_f32 v1, s[4:5], s6, s6, v0
+; GFX89-FLUSH-NEXT:    v_div_scale_f32 v2, vcc, v0, s6, v0
 ; GFX89-FLUSH-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 4, 2)
-; GFX89-FLUSH-NEXT:    v_rcp_f32_e32 v4, v2
+; GFX89-FLUSH-NEXT:    v_rcp_f32_e32 v3, v1
 ; GFX89-FLUSH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 3
-; GFX89-FLUSH-NEXT:    v_fma_f32 v5, -v2, v4, 1.0
-; GFX89-FLUSH-NEXT:    v_fma_f32 v4, v5, v4, v4
-; GFX89-FLUSH-NEXT:    v_mul_f32_e32 v5, v3, v4
-; GFX89-FLUSH-NEXT:    v_fma_f32 v6, -v2, v5, v3
-; GFX89-FLUSH-NEXT:    v_fma_f32 v5, v6, v4, v5
-; GFX89-FLUSH-NEXT:    v_fma_f32 v2, -v2, v5, v3
+; GFX89-FLUSH-NEXT:    v_fma_f32 v4, -v1, v3, 1.0
+; GFX89-FLUSH-NEXT:    v_fma_f32 v3, v4, v3, v3
+; GFX89-FLUSH-NEXT:    v_mul_f32_e32 v4, v2, v3
+; GFX89-FLUSH-NEXT:    v_fma_f32 v5, -v1, v4, v2
+; GFX89-FLUSH-NEXT:    v_fma_f32 v4, v5, v3, v4
+; GFX89-FLUSH-NEXT:    v_fma_f32 v1, -v1, v4, v2
 ; GFX89-FLUSH-NEXT:    s_setreg_b32 hwreg(HW_REG_MODE, 4, 2), s4
-; GFX89-FLUSH-NEXT:    v_div_fmas_f32 v2, v2, v4, v5
-; GFX89-FLUSH-NEXT:    v_div_fixup_f32 v0, v2, v1, v0
+; GFX89-FLUSH-NEXT:    v_div_fmas_f32 v1, v1, v3, v4
+; GFX89-FLUSH-NEXT:    v_div_fixup_f32 v0, v1, s6, v0
 ; GFX89-FLUSH-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-IEEE-LABEL: v_fdiv_f32_constrhs0_dynamic:
@@ -4165,121 +4165,121 @@ define float @v_fdiv_f32_constlhs0_dynamic(float %x) #0 {
 ; GFX6-IEEE-FASTFMA-LABEL: v_fdiv_f32_constlhs0_dynamic:
 ; GFX6-IEEE-FASTFMA:       ; %bb.0:
 ; GFX6-IEEE-FASTFMA-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-IEEE-FASTFMA-NEXT:    v_mov_b32_e32 v1, 0x4640e400
-; GFX6-IEEE-FASTFMA-NEXT:    v_div_scale_f32 v2, s[4:5], v0, v0, v1
-; GFX6-IEEE-FASTFMA-NEXT:    v_rcp_f32_e32 v3, v2
-; GFX6-IEEE-FASTFMA-NEXT:    v_div_scale_f32 v4, vcc, v1, v0, v1
+; GFX6-IEEE-FASTFMA-NEXT:    s_mov_b32 s6, 0x4640e400
+; GFX6-IEEE-FASTFMA-NEXT:    v_div_scale_f32 v1, s[4:5], v0, v0, s6
+; GFX6-IEEE-FASTFMA-NEXT:    v_rcp_f32_e32 v2, v1
+; GFX6-IEEE-FASTFMA-NEXT:    v_div_scale_f32 v3, vcc, s6, v0, s6
 ; GFX6-IEEE-FASTFMA-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 4, 2)
 ; GFX6-IEEE-FASTFMA-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 3
-; GFX6-IEEE-FASTFMA-NEXT:    v_fma_f32 v5, -v2, v3, 1.0
-; GFX6-IEEE-FASTFMA-NEXT:    v_fma_f32 v3, v5, v3, v3
-; GFX6-IEEE-FASTFMA-NEXT:    v_mul_f32_e32 v5, v4, v3
-; GFX6-IEEE-FASTFMA-NEXT:    v_fma_f32 v6, -v2, v5, v4
-; GFX6-IEEE-FASTFMA-NEXT:    v_fma_f32 v5, v6, v3, v5
-; GFX6-IEEE-FASTFMA-NEXT:    v_fma_f32 v2, -v2, v5, v4
+; GFX6-IEEE-FASTFMA-NEXT:    v_fma_f32 v4, -v1, v2, 1.0
+; GFX6-IEEE-FASTFMA-NEXT:    v_fma_f32 v2, v4, v2, v2
+; GFX6-IEEE-FASTFMA-NEXT:    v_mul_f32_e32 v4, v3, v2
+; GFX6-IEEE-FASTFMA-NEXT:    v_fma_f32 v5, -v1, v4, v3
+; GFX6-IEEE-FASTFMA-NEXT:    v_fma_f32 v4, v5, v2, v4
+; GFX6-IEEE-FASTFMA-NEXT:    v_fma_f32 v1, -v1, v4, v3
 ; GFX6-IEEE-FASTFMA-NEXT:    s_setreg_b32 hwreg(HW_REG_MODE, 4, 2), s4
-; GFX6-IEEE-FASTFMA-NEXT:    v_div_fmas_f32 v2, v2, v3, v5
-; GFX6-IEEE-FASTFMA-NEXT:    v_div_fixup_f32 v0, v2, v0, v1
+; GFX6-IEEE-FASTFMA-NEXT:    v_div_fmas_f32 v1, v1, v2, v4
+; GFX6-IEEE-FASTFMA-NEXT:    v_div_fixup_f32 v0, v1, v0, s6
 ; GFX6-IEEE-FASTFMA-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX6-FLUSH-FASTFMA-LABEL: v_fdiv_f32_constlhs0_dynamic:
 ; GFX6-FLUSH-FASTFMA:       ; %bb.0:
 ; GFX6-FLUSH-FASTFMA-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-FLUSH-FASTFMA-NEXT:    v_mov_b32_e32 v1, 0x4640e400
-; GFX6-FLUSH-FASTFMA-NEXT:    v_div_scale_f32 v2, s[4:5], v0, v0, v1
-; GFX6-FLUSH-FASTFMA-NEXT:    v_rcp_f32_e32 v3, v2
-; GFX6-FLUSH-FASTFMA-NEXT:    v_div_scale_f32 v4, vcc, v1, v0, v1
+; GFX6-FLUSH-FASTFMA-NEXT:    s_mov_b32 s6, 0x4640e400
+; GFX6-FLUSH-FASTFMA-NEXT:    v_div_scale_f32 v1, s[4:5], v0, v0, s6
+; GFX6-FLUSH-FASTFMA-NEXT:    v_rcp_f32_e32 v2, v1
+; GFX6-FLUSH-FASTFMA-NEXT:    v_div_scale_f32 v3, vcc, s6, v0, s6
 ; GFX6-FLUSH-FASTFMA-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 4, 2)
 ; GFX6-FLUSH-FASTFMA-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 3
-; GFX6-FLUSH-FASTFMA-NEXT:    v_fma_f32 v5, -v2, v3, 1.0
-; GFX6-FLUSH-FASTFMA-NEXT:    v_fma_f32 v3, v5, v3, v3
-; GFX6-FLUSH-FASTFMA-NEXT:    v_mul_f32_e32 v5, v4, v3
-; GFX6-FLUSH-FASTFMA-NEXT:    v_fma_f32 v6, -v2, v5, v4
-; GFX6-FLUSH-FASTFMA-NEXT:    v_fma_f32 v5, v6, v3, v5
-; GFX6-FLUSH-FASTFMA-NEXT:    v_fma_f32 v2, -v2, v5, v4
+; GFX6-FLUSH-FASTFMA-NEXT:    v_fma_f32 v4, -v1, v2, 1.0
+; GFX6-FLUSH-FASTFMA-NEXT:    v_fma_f32 v2, v4, v2, v2
+; GFX6-FLUSH-FASTFMA-NEXT:    v_mul_f32_e32 v4, v3, v2
+; GFX6-FLUSH-FASTFMA-NEXT:    v_fma_f32 v5, -v1, v4, v3
+; GFX6-FLUSH-FASTFMA-NEXT:    v_fma_f32 v4, v5, v2, v4
+; GFX6-FLUSH-FASTFMA-NEXT:    v_fma_f32 v1, -v1, v4, v3
 ; GFX6-FLUSH-FASTFMA-NEXT:    s_setreg_b32 hwreg(HW_REG_MODE, 4, 2), s4
-; GFX6-FLUSH-FASTFMA-NEXT:    v_div_fmas_f32 v2, v2, v3, v5
-; GFX6-FLUSH-FASTFMA-NEXT:    v_div_fixup_f32 v0, v2, v0, v1
+; GFX6-FLUSH-FASTFMA-NEXT:    v_div_fmas_f32 v1, v1, v2, v4
+; GFX6-FLUSH-FASTFMA-NEXT:    v_div_fixup_f32 v0, v1, v0, s6
 ; GFX6-FLUSH-FASTFMA-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX6-IEEE-SLOWFMA-LABEL: v_fdiv_f32_constlhs0_dynamic:
 ; GFX6-IEEE-SLOWFMA:       ; %bb.0:
 ; GFX6-IEEE-SLOWFMA-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-IEEE-SLOWFMA-NEXT:    v_mov_b32_e32 v1, 0x4640e400
-; GFX6-IEEE-SLOWFMA-NEXT:    v_div_scale_f32 v2, s[4:5], v0, v0, v1
-; GFX6-IEEE-SLOWFMA-NEXT:    v_div_scale_f32 v3, vcc, v1, v0, v1
+; GFX6-IEEE-SLOWFMA-NEXT:    s_mov_b32 s6, 0x4640e400
+; GFX6-IEEE-SLOWFMA-NEXT:    v_div_scale_f32 v1, s[4:5], v0, v0, s6
+; GFX6-IEEE-SLOWFMA-NEXT:    v_div_scale_f32 v2, vcc, s6, v0, s6
 ; GFX6-IEEE-SLOWFMA-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 4, 2)
-; GFX6-IEEE-SLOWFMA-NEXT:    v_rcp_f32_e32 v4, v2
+; GFX6-IEEE-SLOWFMA-NEXT:    v_rcp_f32_e32 v3, v1
 ; GFX6-IEEE-SLOWFMA-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 3
-; GFX6-IEEE-SLOWFMA-NEXT:    v_fma_f32 v5, -v2, v4, 1.0
-; GFX6-IEEE-SLOWFMA-NEXT:    v_fma_f32 v4, v5, v4, v4
-; GFX6-IEEE-SLOWFMA-NEXT:    v_mul_f32_e32 v5, v3, v4
-; GFX6-IEEE-SLOWFMA-NEXT:    v_fma_f32 v6, -v2, v5, v3
-; GFX6-IEEE-SLOWFMA-NEXT:    v_fma_f32 v5, v6, v4, v5
-; GFX6-IEEE-SLOWFMA-NEXT:    v_fma_f32 v2, -v2, v5, v3
+; GFX6-IEEE-SLOWFMA-NEXT:    v_fma_f32 v4, -v1, v3, 1.0
+; GFX6-IEEE-SLOWFMA-NEXT:    v_fma_f32 v3, v4, v3, v3
+; GFX6-IEEE-SLOWFMA-NEXT:    v_mul_f32_e32 v4, v2, v3
+; GFX6-IEEE-SLOWFMA-NEXT:    v_fma_f32 v5, -v1, v4, v2
+; GFX6-IEEE-SLOWFMA-NEXT:    v_fma_f32 v4, v5, v3, v4
+; GFX6-IEEE-SLOWFMA-NEXT:    v_fma_f32 v1, -v1, v4, v2
 ; GFX6-IEEE-SLOWFMA-NEXT:    s_setreg_b32 hwreg(HW_REG_MODE, 4, 2), s4
-; GFX6-IEEE-SLOWFMA-NEXT:    v_div_fmas_f32 v2, v2, v4, v5
-; GFX6-IEEE-SLOWFMA-NEXT:    v_div_fixup_f32 v0, v2, v0, v1
+; GFX6-IEEE-SLOWFMA-NEXT:    v_div_fmas_f32 v1, v1, v3, v4
+; GFX6-IEEE-SLOWFMA-NEXT:    v_div_fixup_f32 v0, v1, v0, s6
 ; GFX6-IEEE-SLOWFMA-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX6-FLUSH-SLOWFMA-LABEL: v_fdiv_f32_constlhs0_dynamic:
 ; GFX6-FLUSH-SLOWFMA:       ; %bb.0:
 ; GFX6-FLUSH-SLOWFMA-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-FLUSH-SLOWFMA-NEXT:    v_mov_b32_e32 v1, 0x4640e400
-; GFX6-FLUSH-SLOWFMA-NEXT:    v_div_scale_f32 v2, s[4:5], v0, v0, v1
-; GFX6-FLUSH-SLOWFMA-NEXT:    v_div_scale_f32 v3, vcc, v1, v0, v1
+; GFX6-FLUSH-SLOWFMA-NEXT:    s_mov_b32 s6, 0x4640e400
+; GFX6-FLUSH-SLOWFMA-NEXT:    v_div_scale_f32 v1, s[4:5], v0, v0, s6
+; GFX6-FLUSH-SLOWFMA-NEXT:    v_div_scale_f32 v2, vcc, s6, v0, s6
 ; GFX6-FLUSH-SLOWFMA-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 4, 2)
-; GFX6-FLUSH-SLOWFMA-NEXT:    v_rcp_f32_e32 v4, v2
+; GFX6-FLUSH-SLOWFMA-NEXT:    v_rcp_f32_e32 v3, v1
 ; GFX6-FLUSH-SLOWFMA-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 3
-; GFX6-FLUSH-SLOWFMA-NEXT:    v_fma_f32 v5, -v2, v4, 1.0
-; GFX6-FLUSH-SLOWFMA-NEXT:    v_fma_f32 v4, v5, v4, v4
-; GFX6-FLUSH-SLOWFMA-NEXT:    v_mul_f32_e32 v5, v3, v4
-; GFX6-FLUSH-SLOWFMA-NEXT:    v_fma_f32 v6, -v2, v5, v3
-; GFX6-FLUSH-SLOWFMA-NEXT:    v_fma_f32 v5, v6, v4, v5
-; GFX6-FLUSH-SLOWFMA-NEXT:    v_fma_f32 v2, -v2, v5, v3
+; GFX6-FLUSH-SLOWFMA-NEXT:    v_fma_f32 v4, -v1, v3, 1.0
+; GFX6-FLUSH-SLOWFMA-NEXT:    v_fma_f32 v3, v4, v3, v3
+; GFX6-FLUSH-SLOWFMA-NEXT:    v_mul_f32_e32 v4, v2, v3
+; GFX6-FLUSH-SLOWFMA-NEXT:    v_fma_f32 v5, -v1, v4, v2
+; GFX6-FLUSH-SLOWFMA-NEXT:    v_fma_f32 v4, v5, v3, v4
+; GFX6-FLUSH-SLOWFMA-NEXT:    v_fma_f32 v1, -v1, v4, v2
 ; GFX6-FLUSH-SLOWFMA-NEXT:    s_setreg_b32 hwreg(HW_REG_MODE, 4, 2), s4
-; GFX6-FLUSH-SLOWFMA-NEXT:    v_div_fmas_f32 v2, v2, v4, v5
-; GFX6-FLUSH-SLOWFMA-NEXT:    v_div_fixup_f32 v0, v2, v0, v1
+; GFX6-FLUSH-SLOWFMA-NEXT:    v_div_fmas_f32 v1, v1, v3, v4
+; GFX6-FLUSH-SLOWFMA-NEXT:    v_div_fixup_f32 v0, v1, v0, s6
 ; GFX6-FLUSH-SLOWFMA-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX89-IEEE-LABEL: v_fdiv_f32_constlhs0_dynamic:
 ; GFX89-IEEE:       ; %bb.0:
 ; GFX89-IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX89-IEEE-NEXT:    v_mov_b32_e32 v1, 0x4640e400
-; GFX89-IEEE-NEXT:    v_div_scale_f32 v2, s[4:5], v0, v0, v1
-; GFX89-IEEE-NEXT:    v_div_scale_f32 v3, vcc, v1, v0, v1
+; GFX89-IEEE-NEXT:    s_mov_b32 s6, 0x4640e400
+; GFX89-IEEE-NEXT:    v_div_scale_f32 v1, s[4:5], v0, v0, s6
+; GFX89-IEEE-NEXT:    v_div_scale_f32 v2, vcc, s6, v0, s6
 ; GFX89-IEEE-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 4, 2)
-; GFX89-IEEE-NEXT:    v_rcp_f32_e32 v4, v2
+; GFX89-IEEE-NEXT:    v_rcp_f32_e32 v3, v1
 ; GFX89-IEEE-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 3
-; GFX89-IEEE-NEXT:    v_fma_f32 v5, -v2, v4, 1.0
-; GFX89-IEEE-NEXT:    v_fma_f32 v4, v5, v4, v4
-; GFX89-IEEE-NEXT:    v_mul_f32_e32 v5, v3, v4
-; GFX89-IEEE-NEXT:    v_fma_f32 v6, -v2, v5, v3
-; GFX89-IEEE-NEXT:    v_fma_f32 v5, v6, v4, v5
-; GFX89-IEEE-NEXT:    v_fma_f32 v2, -v2, v5, v3
+; GFX89-IEEE-NEXT:    v_fma_f32 v4, -v1, v3, 1.0
+; GFX89-IEEE-NEXT:    v_fma_f32 v3, v4, v3, v3
+; GFX89-IEEE-NEXT:    v_mul_f32_e32 v4, v2, v3
+; GFX89-IEEE-NEXT:    v_fma_f32 v5, -v1, v4, v2
+; GFX89-IEEE-NEXT:    v_fma_f32 v4, v5, v3, v4
+; GFX89-IEEE-NEXT:    v_fma_f32 v1, -v1, v4, v2
 ; GFX89-IEEE-NEXT:    s_setreg_b32 hwreg(HW_REG_MODE, 4, 2), s4
-; GFX89-IEEE-NEXT:    v_div_fmas_f32 v2, v2, v4, v5
-; GFX89-IEEE-NEXT:    v_div_fixup_f32 v0, v2, v0, v1
+; GFX89-IEEE-NEXT:    v_div_fmas_f32 v1, v1, v3, v4
+; GFX89-IEEE-NEXT:    v_div_fixup_f32 v0, v1, v0, s6
 ; GFX89-IEEE-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX89-FLUSH-LABEL: v_fdiv_f32_constlhs0_dynamic:
 ; GFX89-FLUSH:       ; %bb.0:
 ; GFX89-FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX89-FLUSH-NEXT:    v_mov_b32_e32 v1, 0x4640e400
-; GFX89-FLUSH-NEXT:    v_div_scale_f32 v2, s[4:5], v0, v0, v1
-; GFX89-FLUSH-NEXT:    v_div_scale_f32 v3, vcc, v1, v0, v1
+; GFX89-FLUSH-NEXT:    s_mov_b32 s6, 0x4640e400
+; GFX89-FLUSH-NEXT:    v_div_scale_f32 v1, s[4:5], v0, v0, s6
+; GFX89-FLUSH-NEXT:    v_div_scale_f32 v2, vcc, s6, v0, s6
 ; GFX89-FLUSH-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 4, 2)
-; GFX89-FLUSH-NEXT:    v_rcp_f32_e32 v4, v2
+; GFX89-FLUSH-NEXT:    v_rcp_f32_e32 v3, v1
 ; GFX89-FLUSH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 3
-; GFX89-FLUSH-NEXT:    v_fma_f32 v5, -v2, v4, 1.0
-; GFX89-FLUSH-NEXT:    v_fma_f32 v4, v5, v4, v4
-; GFX89-FLUSH-NEXT:    v_mul_f32_e32 v5, v3, v4
-; GFX89-FLUSH-NEXT:    v_fma_f32 v6, -v2, v5, v3
-; GFX89-FLUSH-NEXT:    v_fma_f32 v5, v6, v4, v5
-; GFX89-FLUSH-NEXT:    v_fma_f32 v2, -v2, v5, v3
+; GFX89-FLUSH-NEXT:    v_fma_f32 v4, -v1, v3, 1.0
+; GFX89-FLUSH-NEXT:    v_fma_f32 v3, v4, v3, v3
+; GFX89-FLUSH-NEXT:    v_mul_f32_e32 v4, v2, v3
+; GFX89-FLUSH-NEXT:    v_fma_f32 v5, -v1, v4, v2
+; GFX89-FLUSH-NEXT:    v_fma_f32 v4, v5, v3, v4
+; GFX89-FLUSH-NEXT:    v_fma_f32 v1, -v1, v4, v2
 ; GFX89-FLUSH-NEXT:    s_setreg_b32 hwreg(HW_REG_MODE, 4, 2), s4
-; GFX89-FLUSH-NEXT:    v_div_fmas_f32 v2, v2, v4, v5
-; GFX89-FLUSH-NEXT:    v_div_fixup_f32 v0, v2, v0, v1
+; GFX89-FLUSH-NEXT:    v_div_fmas_f32 v1, v1, v3, v4
+; GFX89-FLUSH-NEXT:    v_div_fixup_f32 v0, v1, v0, s6
 ; GFX89-FLUSH-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-IEEE-LABEL: v_fdiv_f32_constlhs0_dynamic:
