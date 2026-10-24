@@ -5999,7 +5999,8 @@ void LSRInstance::RewriteForPHI(PHINode *PN, const LSRUse &LU,
           } else {
             SmallVector<BasicBlock *, 2> NewBBs;
             DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
-            SplitLandingPadPredecessors(Parent, BB, "", "", NewBBs, &DTU, &LI);
+            SplitLandingPadPredecessors(Parent, BB, "", "", NewBBs, &DTU, &LI,
+                                        MSSAU, ShouldPreserveLCSSA);
             NewBB = NewBBs[0];
           }
           // If NewBB==NULL, then SplitCriticalEdge refused to split because all
