@@ -2441,6 +2441,18 @@ func.func @vector_multi_reduction_unit_dimensions(%source: vector<5x1x4x1x20xf32
 
 // -----
 
+// CHECK-LABEL: func @vector_multi_reduction_unit_dimensions_fastmath(
+//  CHECK-SAME: %[[SOURCE:.+]]: vector<5x1x4xf32>, %[[ACC:.+]]: vector<5x4xf32>
+func.func @vector_multi_reduction_unit_dimensions_fastmath(%source: vector<5x1x4xf32>, %acc: vector<5x4xf32>) -> vector<5x4xf32> {
+//       CHECK:   %[[CAST:.+]] = vector.shape_cast %[[SOURCE]] : vector<5x1x4xf32> to vector<5x4xf32>
+//       CHECK:   %[[RESULT:.+]] = arith.maximumf %[[ACC]], %[[CAST]] fastmath<nnan,nsz> : vector<5x4xf32>
+    %0 = vector.multi_reduction <maximumf>, %source, %acc fastmath<nnan,nsz> [1] : vector<5x1x4xf32> to vector<5x4xf32>
+//       CHECK:   return %[[RESULT]] : vector<5x4xf32>
+    return %0 : vector<5x4xf32>
+}
+
+// -----
+
 // CHECK-LABEL:   func.func @vector_multi_reduction_scalable(
 // CHECK-SAME:     %[[VAL_0:.*]]: vector<1x[4]x1xf32>,
 // CHECK-SAME:     %[[VAL_1:.*]]: vector<1x[4]xf32>,

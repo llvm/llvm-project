@@ -643,13 +643,15 @@ struct SgToLaneVectorReduction
     Value laneValVec = adaptor.getVector();
 
     // Distribute and reduce across lanes in the subgroup.
-    Value fullReduce = xegpu::subgroupReduction(
-        op.getLoc(), rewriter, laneValVec, op.getKind(), sgSize);
+    Value fullReduce =
+        xegpu::subgroupReduction(op.getLoc(), rewriter, laneValVec,
+                                 op.getKind(), sgSize, op.getFastmathAttr());
 
     // If there's an accumulator, combine it with the reduced value.
     if (adaptor.getAcc())
       fullReduce = vector::makeArithReduction(
-          rewriter, op.getLoc(), op.getKind(), fullReduce, adaptor.getAcc());
+          rewriter, op.getLoc(), op.getKind(), fullReduce, adaptor.getAcc(),
+          op.getFastmathAttr());
 
     rewriter.replaceOp(op, fullReduce);
     return success();
@@ -690,13 +692,14 @@ struct SgToLaneMultiDimReduction
       VectorType origSourceType = op.getSourceVectorType();
       int64_t reductionDimSize = origSourceType.getShape()[reductionDim];
       // Local reduction to scalar, then cross-lane butterfly shuffles.
-      result =
-          xegpu::subgroupReduction(op.getLoc(), rewriter, adaptor.getSource(),
-                                   op.getKind(), reductionDimSize);
+      result = xegpu::subgroupReduction(op.getLoc(), rewriter,
+                                        adaptor.getSource(), op.getKind(),
+                                        reductionDimSize, op.getFastmathAttr());
       // Combine with accumulator if present.
       if (adaptor.getAcc())
         result = vector::makeArithReduction(rewriter, op.getLoc(), op.getKind(),
-                                            result, adaptor.getAcc());
+                                            result, adaptor.getAcc(),
+                                            op.getFastmathAttr());
     } else if (isReductionLaneLocal(op)) {
       // For lane-local reduction, lower to a sequence of vector.reduction ops
       // over 1D slices extracted from the distributed source vector. This is
@@ -705,7 +708,7 @@ struct SgToLaneMultiDimReduction
       result = xegpu::lowerToVectorReductions(
           cast<TypedValue<VectorType>>(adaptor.getSource()),
           cast<TypedValue<VectorType>>(adaptor.getAcc()), op.getKind(),
-          reductionDim, op.getLoc(), rewriter);
+          reductionDim, op.getLoc(), rewriter, op.getFastmathAttr());
     } else {
       auto reductionDim = reductionDims[0];
       VectorType sourceType = op.getSourceVectorType();
@@ -713,7 +716,8 @@ struct SgToLaneMultiDimReduction
       result = xegpu::lowerCrossLaneReductionToShuffles(
           cast<TypedValue<VectorType>>(adaptor.getSource()),
           cast<TypedValue<VectorType>>(adaptor.getAcc()), op.getKind(),
-          reductionDim, reductionDimSize, op.getLoc(), rewriter);
+          reductionDim, reductionDimSize, op.getLoc(), rewriter,
+          op.getFastmathAttr());
     }
     rewriter.replaceOp(op, result);
     return success();

@@ -1129,11 +1129,11 @@ struct WgToSgMultiDimReductionOp
     for (auto sgSrc : sgSrcs) {
       // Create neutral accumulator for local reduction
       Value neutralLocalAcc = xegpu::createReductionNeutralValue(
-          rewriter, loc, sgDstType, op.getKind());
+          rewriter, loc, sgDstType, op.getKind(), op.getFastmathAttr());
       // Local reduction with neutral accumulator
       auto localReduce = vector::MultiDimReductionOp::create(
           rewriter, loc, sgDstType, op.getKind(), sgSrc, neutralLocalAcc,
-          reductionDims);
+          reductionDims, op.getFastmath());
       localReductions.push_back(localReduce.getResult());
     }
 
@@ -1154,7 +1154,8 @@ struct WgToSgMultiDimReductionOp
       SmallVector<Value> results;
       for (auto localResult : localReductions) {
         auto finalResult = vector::makeArithReduction(
-            rewriter, loc, op.getKind(), localResult, adaptor.getAcc()[0]);
+            rewriter, loc, op.getKind(), localResult, adaptor.getAcc()[0],
+            op.getFastmathAttr());
         results.push_back(finalResult);
       }
       rewriter.replaceOpWithMultiple(op, {results});
@@ -1243,17 +1244,17 @@ struct WgToSgMultiDimReductionOp
     // Step 5: Perform final reduction with neutral accumulator and add the
     // original accumulator at the end
     Value neutralFinalAcc = xegpu::createReductionNeutralValue(
-        rewriter, loc, sgDstType, op.getKind());
+        rewriter, loc, sgDstType, op.getKind(), op.getFastmathAttr());
 
     SmallVector<Value> finalResults;
     for (size_t i = 0; i < slmLoadData.size(); ++i) {
       auto loaded = slmLoadData[i];
       auto finalReduce = vector::MultiDimReductionOp::create(
           rewriter, loc, sgDstType, op.getKind(), loaded, neutralFinalAcc,
-          reductionDims);
+          reductionDims, op.getFastmath());
       finalResults.push_back(vector::makeArithReduction(
           rewriter, loc, op.getKind(), finalReduce.getResult(),
-          adaptor.getAcc()[i]));
+          adaptor.getAcc()[i], op.getFastmathAttr()));
     }
     rewriter.replaceOpWithMultiple(op, {finalResults});
     return success();

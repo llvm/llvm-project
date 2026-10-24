@@ -1809,3 +1809,30 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
+
+// -----
+
+// The fast-math flags of the combiner are kept on the reduction.
+
+func.func @generic_reduction_fastmath(%arg0: tensor<4x8xf32>, %init: tensor<4xf32>) -> tensor<4xf32> {
+  %0 = linalg.generic { indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
+                                         affine_map<(d0, d1) -> (d0)>],
+                        iterator_types = ["parallel", "reduction"]}
+    ins(%arg0 : tensor<4x8xf32>)
+    outs(%init : tensor<4xf32>) {
+  ^bb0(%in: f32, %out: f32):
+    %1 = arith.maximumf %in, %out fastmath<nnan,nsz> : f32
+    linalg.yield %1 : f32
+  } -> tensor<4xf32>
+  return %0 : tensor<4xf32>
+}
+// CHECK-LABEL: func.func @generic_reduction_fastmath(
+//       CHECK:   vector.multi_reduction <maximumf>, %{{.*}}, %{{.*}} fastmath<nnan,nsz> [1] : vector<4x8xf32> to vector<4xf32>
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 : !transform.any_op
+    transform.yield
+  }
+}
