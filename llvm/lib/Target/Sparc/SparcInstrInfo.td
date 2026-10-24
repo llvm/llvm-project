@@ -1022,6 +1022,17 @@ multiclass IPredBranch<string regstr, list<dag> CCPattern> {
 } // let isBranch = 1, isTerminator = 1, hasDelaySlot = 1
 
 
+// This is for using the CALL instruction as a longer unconditional branch.
+let Defs = [O7], isBranch = 1, isCall = 0, isCodeGenOnly = 1,
+  isTerminator = 1, hasDelaySlot = 1, isBarrier = 1 in {
+  def CALL_LONGJUMP : InstSP<(outs), (ins calltarget:$disp, variable_ops),
+                  "call $disp", []> {
+    bits<30> disp;
+    let op = 1;
+    let Inst{29-0} = disp;
+  }
+}
+
 // Indirect branch instructions.
 let isTerminator = 1, isBarrier = 1,  hasDelaySlot = 1, isBranch =1,
      isIndirectBranch = 1, rd = 0, isCodeGenOnly = 1 in {

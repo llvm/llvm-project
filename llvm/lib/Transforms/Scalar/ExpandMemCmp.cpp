@@ -1063,8 +1063,7 @@ static PreservedAnalyses runImpl(Function &F, const TargetLibraryInfo *TLI,
     }
   }
 
-  const ScalarOptions &Opts =
-      F.getContext().getLibraryOptions().get<ScalarOptions>();
+  const ScalarOptions &Opts = getScalarOptions(F);
   bool MadeChanges = false;
   for (const auto &[CI, Func] : MemCmpCalls) {
     if (expandMemCmp(Opts, CI, TTI, &DL, PSI, BFI, DTU ? &*DTU : nullptr,
