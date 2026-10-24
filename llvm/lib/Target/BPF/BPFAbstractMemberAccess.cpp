@@ -77,6 +77,7 @@
 #include "BPF.h"
 #include "BPFCORE.h"
 #include "BPFTargetMachine.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -95,7 +96,7 @@
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include <stack>
+#include <optional>
 
 #define DEBUG_TYPE "bpf-abstract-member-access"
 
@@ -132,7 +133,6 @@ public:
     MDNode *Metadata;
     WeakTrackingVH Base;
   };
-  typedef std::stack<std::pair<CallInst *, CallInfo>> CallInfoStack;
 
 private:
   enum : uint32_t {
@@ -175,14 +175,19 @@ private:
   bool IsValidAIChain(const MDNode *ParentMeta, uint32_t ParentAI,
                       const MDNode *ChildMeta);
   bool removePreserveAccessIndexIntrinsic(Function &F);
-  bool HasPreserveFieldInfoCall(CallInfoStack &CallStack);
   void GetStorageBitRange(DIDerivedType *MemberTy, Align RecordAlignment,
                           uint32_t &StartBitOffset, uint32_t &EndBitOffset);
   uint32_t GetFieldInfo(uint32_t InfoKind, DICompositeType *CTy,
                         uint32_t AccessIndex, uint32_t PatchImm,
                         MaybeAlign RecordAlignment);
 
-  Value *computeBaseAndAccessKey(CallInst *Call, CallInfo &CInfo,
+  struct AccessRoot {
+    DIType *Type;
+    uint32_t Index;
+  };
+  static std::optional<AccessRoot>
+  consumeAccessRoot(SmallVectorImpl<CallInfo> &CallStack);
+  Value *computeBaseAndAccessKey(CallInst *Call, const CallInfo &Terminal,
                                  std::string &AccessKey, MDNode *&BaseMeta);
   struct EnumAccess {
     size_t Index;
@@ -191,7 +196,7 @@ private:
   static EnumAccess computeEnumAccess(const CallInst *Call, const DIType *Ty);
   MDNode *computeAccessKey(CallInst *Call, const CallInfo &CInfo,
                            std::string &AccessKey);
-  bool transformGEPChain(CallInst *Call, CallInfo &CInfo);
+  bool transformGEPChain(CallInst *Call, const CallInfo &CInfo);
 };
 
 std::map<std::string, GlobalVariable *> BPFAbstractMemberAccess::GEPGlobals;
@@ -817,153 +822,108 @@ uint32_t BPFAbstractMemberAccess::GetFieldInfo(uint32_t InfoKind,
   llvm_unreachable("Unknown llvm.bpf.preserve.field.info info kind");
 }
 
-bool BPFAbstractMemberAccess::HasPreserveFieldInfoCall(CallInfoStack &CallStack) {
-  // This is called in error return path, no need to maintain CallStack.
-  while (CallStack.size()) {
-    auto StackElem = CallStack.top();
-    if (StackElem.second.Kind == BPFPreserveFieldInfoAI)
-      return true;
-    CallStack.pop();
+/// Consume leading array accesses, leaving the first record access on the
+/// stack.
+std::optional<BPFAbstractMemberAccess::AccessRoot>
+BPFAbstractMemberAccess::consumeAccessRoot(
+    SmallVectorImpl<CallInfo> &CallStack) {
+  uint32_t FirstIndex = 0;
+  for (;;) {
+    const CallInfo &CInfo = CallStack.back();
+    auto *Metadata = cast<DIType>(CInfo.Metadata);
+    switch (CInfo.Kind) {
+    case BPFPreserveStructAI:
+    case BPFPreserveUnionAI:
+      // A typedef may be the only name the loader can match for this record.
+      return AccessRoot{stripQualifiers(Metadata, /*skipTypedef=*/false),
+                        FirstIndex};
+    case BPFPreserveArrayAI:
+      break;
+    default:
+      llvm_unreachable("Expected an array, struct, or union access");
+    }
+
+    const uint32_t Index = CInfo.AccessIndex;
+    CallStack.pop_back();
+    auto *Ty = stripQualifiers(Metadata);
+    DIType *ElementTy;
+    switch (Ty->getTag()) {
+    case dwarf::DW_TAG_array_type: {
+      auto *Array = cast<DICompositeType>(Ty);
+      FirstIndex += Index * calcArraySize(Array, 1);
+      if (Array->getElements().size() != 1 && !CallStack.empty())
+        continue;
+      ElementTy = stripQualifiers(Array->getBaseType());
+      break;
+    }
+    case dwarf::DW_TAG_pointer_type: {
+      auto *Pointee = stripQualifiers(cast<DIDerivedType>(Ty)->getBaseType());
+      if (Pointee->getTag() != dwarf::DW_TAG_array_type) {
+        FirstIndex += Index;
+        ElementTy = Pointee;
+        break;
+      }
+      auto *Array = cast<DICompositeType>(Pointee);
+      FirstIndex += Index * calcArraySize(Array, 0);
+      if (!CallStack.empty())
+        continue;
+      ElementTy = stripQualifiers(Array->getBaseType());
+      break;
+    }
+    default:
+      llvm_unreachable("Expected an array or pointer type");
+    }
+
+    // A chain ending at a subarray already has its index in units of the
+    // innermost element, which can supply the relocation root.
+    switch (ElementTy->getTag()) {
+    case dwarf::DW_TAG_structure_type:
+    case dwarf::DW_TAG_union_type:
+      return AccessRoot{ElementTy, FirstIndex};
+    default:
+      return std::nullopt;
+    }
   }
-  return false;
 }
 
 /// Compute the base of the whole preserve_* intrinsics chains, i.e., the base
 /// pointer of the first preserve_*_access_index call, and construct the access
 /// string, which will be the name of a global variable.
-Value *BPFAbstractMemberAccess::computeBaseAndAccessKey(CallInst *Call,
-                                                        CallInfo &CInfo,
-                                                        std::string &AccessKey,
-                                                        MDNode *&TypeMeta) {
-  Value *Base = nullptr;
-  std::string TypeName;
-  CallInfoStack CallStack;
-
+Value *BPFAbstractMemberAccess::computeBaseAndAccessKey(
+    CallInst *Call, const CallInfo &Terminal, std::string &AccessKey,
+    MDNode *&TypeMeta) {
   // Put the access chain into a stack with the top as the head of the chain.
-  while (Call) {
-    CallStack.push(std::make_pair(Call, CInfo));
-    auto &Chain = AIChain[Call];
-    CInfo = Chain.second;
-    Call = Chain.first;
+  SmallVector<CallInfo, 4> CallStack{Terminal};
+  for (auto It = AIChain.find(Call); It != AIChain.end();
+       It = AIChain.find(It->second.first))
+    CallStack.push_back(It->second.second);
+
+  Value *const Base = CallStack.back().Base;
+  const auto Root = consumeAccessRoot(CallStack);
+  const bool IsFieldInfo = Terminal.Kind == BPFPreserveFieldInfoAI;
+  if (!Root) {
+    if (IsFieldInfo)
+      report_fatal_error(
+          "Invalid field access for llvm.preserve.field.info intrinsic");
+    // With no record root, accesses such as &p[4] (int *p) or &a[2][3]
+    // (int a[10][20]) lower to ordinary GEPs.
+    return nullptr;
   }
+  assert(!Root->Type->getName().empty());
+  const uint32_t InfoKind =
+      IsFieldInfo ? Terminal.AccessIndex : BTF::FIELD_BYTE_OFFSET;
+  uint32_t PatchImm =
+      Root->Index * (stripQualifiers(Root->Type)->getSizeInBits() >> 3);
+  AccessKey = std::to_string(Root->Index);
 
-  // The access offset from the base of the head of chain is also
-  // calculated here as all debuginfo types are available.
-
-  // Get type name and calculate the first index.
-  // We only want to get type name from typedef, structure or union.
-  // If user wants a relocation like
-  //    int *p; ... __builtin_preserve_access_index(&p[4]) ...
-  // or
-  //    int a[10][20]; ... __builtin_preserve_access_index(&a[2][3]) ...
-  // we will skip them.
-  uint32_t FirstIndex = 0;
-  uint32_t PatchImm = 0; // AccessOffset or the requested field info
-  uint32_t InfoKind = BTF::FIELD_BYTE_OFFSET;
-  while (CallStack.size()) {
-    auto StackElem = CallStack.top();
-    Call = StackElem.first;
-    CInfo = StackElem.second;
-
-    if (!Base)
-      Base = CInfo.Base;
-
-    DIType *PossibleTypeDef = stripQualifiers(cast<DIType>(CInfo.Metadata),
-                                              false);
-    DIType *Ty = stripQualifiers(PossibleTypeDef);
-    if (CInfo.Kind == BPFPreserveUnionAI ||
-        CInfo.Kind == BPFPreserveStructAI) {
-      // struct or union type. If the typedef is in the metadata, always
-      // use the typedef.
-      TypeName = std::string(PossibleTypeDef->getName());
-      TypeMeta = PossibleTypeDef;
-      PatchImm += FirstIndex * (Ty->getSizeInBits() >> 3);
-      break;
-    }
-
-    assert(CInfo.Kind == BPFPreserveArrayAI);
-
-    // Array entries will always be consumed for accumulative initial index.
-    CallStack.pop();
-
-    // BPFPreserveArrayAI
-    uint64_t AccessIndex = CInfo.AccessIndex;
-
-    DIType *BaseTy = nullptr;
-    bool CheckElemType = false;
-    if (const auto *CTy = dyn_cast<DICompositeType>(Ty)) {
-      // array type
-      assert(CTy->getTag() == dwarf::DW_TAG_array_type);
-
-
-      FirstIndex += AccessIndex * calcArraySize(CTy, 1);
-      BaseTy = stripQualifiers(CTy->getBaseType());
-      CheckElemType = CTy->getElements().size() == 1;
-    } else {
-      // pointer type
-      auto *DTy = cast<DIDerivedType>(Ty);
-      assert(DTy->getTag() == dwarf::DW_TAG_pointer_type);
-
-      BaseTy = stripQualifiers(DTy->getBaseType());
-      CTy = dyn_cast<DICompositeType>(BaseTy);
-      if (!CTy) {
-        CheckElemType = true;
-      } else if (CTy->getTag() != dwarf::DW_TAG_array_type) {
-        FirstIndex += AccessIndex;
-        CheckElemType = true;
-      } else {
-        FirstIndex += AccessIndex * calcArraySize(CTy, 0);
-      }
-    }
-
-    if (CheckElemType) {
-      auto *CTy = dyn_cast<DICompositeType>(BaseTy);
-      if (!CTy) {
-        if (HasPreserveFieldInfoCall(CallStack))
-          report_fatal_error("Invalid field access for llvm.preserve.field.info intrinsic");
-        return nullptr;
-      }
-
-      unsigned CTag = CTy->getTag();
-      if (CTag == dwarf::DW_TAG_structure_type || CTag == dwarf::DW_TAG_union_type) {
-        TypeName = std::string(CTy->getName());
-      } else {
-        if (HasPreserveFieldInfoCall(CallStack))
-          report_fatal_error("Invalid field access for llvm.preserve.field.info intrinsic");
-        return nullptr;
-      }
-      TypeMeta = CTy;
-      PatchImm += FirstIndex * (CTy->getSizeInBits() >> 3);
-      break;
-    }
-  }
-  assert(TypeName.size());
-  AccessKey += std::to_string(FirstIndex);
-
-  // Traverse the rest of access chain to complete offset calculation
-  // and access key construction.
-  while (CallStack.size()) {
-    auto StackElem = CallStack.top();
-    CInfo = StackElem.second;
-    CallStack.pop();
-
-    if (CInfo.Kind == BPFPreserveFieldInfoAI) {
-      InfoKind = CInfo.AccessIndex;
-      if (InfoKind == BTF::FIELD_EXISTENCE)
-        PatchImm = 1;
-      break;
-    }
-
-    // If the next Call (the top of the stack) is a BPFPreserveFieldInfoAI,
-    // the action will be extracting field info.
-    if (CallStack.size()) {
-      auto StackElem2 = CallStack.top();
-      CallInfo CInfo2 = StackElem2.second;
-      if (CInfo2.Kind == BPFPreserveFieldInfoAI) {
-        InfoKind = CInfo2.AccessIndex;
-        assert(CallStack.size() == 1);
-      }
-    }
+  // Build the access string and compute the local byte offset or requested
+  // field property while each access still has its debug type.
+  ArrayRef<CallInfo> Fields = CallStack;
+  if (IsFieldInfo)
+    Fields = Fields.drop_front();
+  while (!Fields.empty()) {
+    const CallInfo &CInfo = Fields.back();
+    Fields = Fields.drop_back();
 
     // Access Index
     uint64_t AccessIndex = CInfo.AccessIndex;
@@ -987,9 +947,16 @@ Value *BPFAbstractMemberAccess::computeBaseAndAccessKey(CallInst *Call,
     }
     AccessKey += ":" + std::to_string(BTFIndex);
 
-    PatchImm = GetFieldInfo(InfoKind, CTy, AccessIndex, PatchImm,
+    // Earlier accesses contribute byte offsets. Only the final field supplies
+    // the property requested by preserve_field_info.
+    const uint32_t FieldKind =
+        Fields.empty() ? InfoKind : BTF::FIELD_BYTE_OFFSET;
+    PatchImm = GetFieldInfo(FieldKind, CTy, AccessIndex, PatchImm,
                             CInfo.RecordAlignment);
   }
+
+  if (InfoKind == BTF::FIELD_EXISTENCE)
+    PatchImm = 1;
 
   // Access key is the
   //   "llvm." + type name + ":" + reloc type + ":" + patched imm + "$" +
@@ -997,8 +964,10 @@ Value *BPFAbstractMemberAccess::computeBaseAndAccessKey(CallInst *Call,
   // uniquely identifying one relocation.
   // The prefix "llvm." indicates this is a temporary global, which should
   // not be emitted to ELF file.
-  AccessKey = "llvm." + TypeName + ":" + std::to_string(InfoKind) + ":" +
-              std::to_string(PatchImm) + "$" + AccessKey;
+  TypeMeta = Root->Type;
+  AccessKey = "llvm." + Root->Type->getName().str() + ":" +
+              std::to_string(InfoKind) + ":" + std::to_string(PatchImm) + "$" +
+              AccessKey;
 
   return Base;
 }
@@ -1065,7 +1034,7 @@ MDNode *BPFAbstractMemberAccess::computeAccessKey(CallInst *Call,
 /// Call/Kind is the base preserve_*_access_index() call. Attempts to do
 /// transformation to a chain of relocable GEPs.
 bool BPFAbstractMemberAccess::transformGEPChain(CallInst *Call,
-                                                CallInfo &CInfo) {
+                                                const CallInfo &CInfo) {
   std::string AccessKey;
   MDNode *TypeMeta;
   Value *Base = nullptr;
