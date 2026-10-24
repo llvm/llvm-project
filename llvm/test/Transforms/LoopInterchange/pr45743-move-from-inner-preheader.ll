@@ -19,42 +19,33 @@
 ;
 define void @test1() local_unnamed_addr #0 {
 ; CHECK-LABEL: define void @test1() local_unnamed_addr {
-; CHECK-NEXT:  [[BB:.*:]]
-; CHECK-NEXT:    br label %[[INNER_PH:.*]]
-; CHECK:       [[OUTER_HEADER_PREHEADER:.*]]:
-; CHECK-NEXT:    br label %[[OUTER_HEADER:.*]]
-; CHECK:       [[OUTER_HEADER]]:
-; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i64 [ [[OUTER_IV_NEXT:%.*]], %[[OUTER_LATCH:.*]] ], [ 0, %[[OUTER_HEADER_PREHEADER]] ]
-; CHECK-NEXT:    [[INTERCHANGE_IV:%.*]] = phi i64 [ [[INTERCHANGE_IV_NEXT:%.*]], %[[OUTER_LATCH]] ], [ 0, %[[OUTER_HEADER_PREHEADER]] ]
-; CHECK-NEXT:    [[INNER_RED:%.*]] = phi i32 [ [[OUTER_RED:%.*]], %[[OUTER_HEADER_PREHEADER]] ], [ [[RED_NEXT:%.*]], %[[OUTER_LATCH]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = add nsw i64 [[OUTER_IV]], 9
+; CHECK-NEXT:  [[OUTER_HEADER:.*]]:
 ; CHECK-NEXT:    br label %[[INNER_SPLIT1:.*]]
-; CHECK:       [[INNER_PH]]:
+; CHECK:       [[INNER_SPLIT1]]:
+; CHECK-NEXT:    [[OUTER_RED:%.*]] = phi i32 [ 0, %[[OUTER_HEADER]] ], [ [[RED_NEXT_LCSSA:%.*]], %[[OUTER_LATCH:.*]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV:%.*]] = phi i64 [ [[INTERCHANGE_IV_NEXT:%.*]], %[[OUTER_LATCH]] ], [ 0, %[[OUTER_HEADER]] ]
+; CHECK-NEXT:    [[INNER_IV:%.*]] = phi i64 [ [[INNER_IV_NEXT:%.*]], %[[OUTER_LATCH]] ], [ 0, %[[OUTER_HEADER]] ]
 ; CHECK-NEXT:    br label %[[INNER:.*]]
 ; CHECK:       [[INNER]]:
-; CHECK-NEXT:    [[INNER_IV:%.*]] = phi i64 [ 0, %[[INNER_PH]] ], [ [[TMP0:%.*]], %[[INNER_SPLIT:.*]] ]
-; CHECK-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i64 [ [[TMP2:%.*]], %[[INNER_SPLIT]] ], [ 0, %[[INNER_PH]] ]
-; CHECK-NEXT:    [[OUTER_RED]] = phi i32 [ [[RED_NEXT_LCSSA:%.*]], %[[INNER_SPLIT]] ], [ 0, %[[INNER_PH]] ]
-; CHECK-NEXT:    br label %[[OUTER_HEADER_PREHEADER]]
-; CHECK:       [[INNER_SPLIT1]]:
+; CHECK-NEXT:    br label %[[OUTER_HEADER_PREHEADER:.*]]
+; CHECK:       [[OUTER_HEADER_PREHEADER]]:
+; CHECK-NEXT:    [[INNER_RED:%.*]] = phi i32 [ [[OUTER_RED]], %[[INNER]] ], [ [[RED_NEXT:%.*]], %[[OUTER_HEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i64 [ [[INTERCHANGE_IV_NEXT2:%.*]], %[[OUTER_HEADER_PREHEADER]] ], [ 0, %[[INNER]] ]
+; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i64 [ [[OUTER_IV_NEXT:%.*]], %[[OUTER_HEADER_PREHEADER]] ], [ 0, %[[INNER]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = add nsw i64 [[OUTER_IV]], 9
 ; CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds [400 x [400 x i32]], ptr @global, i64 0, i64 [[INNER_IV]], i64 [[TMP4]]
 ; CHECK-NEXT:    store i32 0, ptr [[PTR]], align 4
 ; CHECK-NEXT:    [[RED_NEXT]] = or i32 [[INNER_RED]], 20
-; CHECK-NEXT:    [[INNER_IV_NEXT:%.*]] = add nsw i64 [[INNER_IV]], 1
-; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT2:%.*]] = add i64 [[INTERCHANGE_IV1]], 1
-; CHECK-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp eq i64 [[INTERCHANGE_IV1]], 399
-; CHECK-NEXT:    br label %[[OUTER_LATCH]]
-; CHECK:       [[INNER_SPLIT]]:
-; CHECK-NEXT:    [[RED_NEXT_LCSSA]] = phi i32 [ [[RED_NEXT]], %[[OUTER_LATCH]] ]
-; CHECK-NEXT:    [[TMP2]] = add i64 [[INTERCHANGE_IV1]], 1
-; CHECK-NEXT:    [[TMP0]] = add nsw i64 [[INNER_IV]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[INTERCHANGE_IV1]], 399
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[EXIT:.*]], label %[[INNER]]
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT2]] = add i64 [[INTERCHANGE_IV1]], 1
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp eq i64 [[INTERCHANGE_IV1]], 390
+; CHECK-NEXT:    [[OUTER_IV_NEXT]] = add nuw nsw i64 [[OUTER_IV]], 1
+; CHECK-NEXT:    br i1 [[INTERCHANGE_EXITCOND3]], label %[[OUTER_LATCH]], label %[[OUTER_HEADER_PREHEADER]]
 ; CHECK:       [[OUTER_LATCH]]:
-; CHECK-NEXT:    [[OUTER_IV_NEXT]] = add nsw i64 [[OUTER_IV]], 1
+; CHECK-NEXT:    [[RED_NEXT_LCSSA]] = phi i32 [ [[RED_NEXT]], %[[OUTER_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT]] = add i64 [[INTERCHANGE_IV]], 1
-; CHECK-NEXT:    [[EC_2:%.*]] = icmp eq i64 [[INTERCHANGE_IV]], 390
-; CHECK-NEXT:    br i1 [[EC_2]], label %[[INNER_SPLIT]], label %[[OUTER_HEADER]]
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND:%.*]] = icmp eq i64 [[INTERCHANGE_IV]], 399
+; CHECK-NEXT:    [[INNER_IV_NEXT]] = add nuw nsw i64 [[INNER_IV]], 1
+; CHECK-NEXT:    br i1 [[INTERCHANGE_EXITCOND]], label %[[EXIT:.*]], label %[[INNER_SPLIT1]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;

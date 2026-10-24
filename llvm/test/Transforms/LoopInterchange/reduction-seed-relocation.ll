@@ -39,44 +39,35 @@ define i64 @reduction_seed_in_guarded_preheader(ptr noalias readonly %Arr, ptr n
 ; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i64 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label [[FOR_INC15]], label [[FOR_BODY8_PREHEADER:%.*]]
 ; CHECK:       if.then:
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw i64 [[K_032]], 7
 ; CHECK-NEXT:    br label [[FOR_COND5_PREHEADER:%.*]]
 ; CHECK:       for.cond5.preheader:
-; CHECK-NEXT:    [[J_030:%.*]] = phi i64 [ 0, [[IF_THEN:%.*]] ], [ [[INC12:%.*]], [[FOR_COND_CLEANUP7:%.*]] ]
-; CHECK-NEXT:    [[INTERCHANGE_IV:%.*]] = phi i64 [ [[INTERCHANGE_IV_NEXT:%.*]], [[FOR_COND_CLEANUP7]] ], [ 0, [[IF_THEN]] ]
-; CHECK-NEXT:    [[ACC_127:%.*]] = phi i64 [ [[ADD:%.*]], [[FOR_COND_CLEANUP7]] ], [ [[ACC_029:%.*]], [[IF_THEN]] ]
-; CHECK-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[ARR:%.*]], i64 [[J_030]]
-; CHECK-NEXT:    br label [[FOR_BODY8_SPLIT1:%.*]]
-; CHECK:       for.body8.preheader:
-; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw i64 [[K_032]], 7
+; CHECK-NEXT:    [[ACC_029:%.*]] = phi i64 [ [[MUL]], [[FOR_BODY8_PREHEADER]] ], [ [[ADD_LCSSA:%.*]], [[FOR_BODY8_SPLIT:%.*]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV:%.*]] = phi i64 [ [[INTERCHANGE_IV_NEXT:%.*]], [[FOR_BODY8_SPLIT]] ], [ 0, [[FOR_BODY8_PREHEADER]] ]
+; CHECK-NEXT:    [[J_030:%.*]] = phi i64 [ [[INC12:%.*]], [[FOR_BODY8_SPLIT]] ], [ 0, [[FOR_BODY8_PREHEADER]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY8:%.*]]
 ; CHECK:       for.cond.cleanup3:
-; CHECK-NEXT:    [[ADD_LCSSA_LCSSA:%.*]] = phi i64 [ [[ADD_LCSSA:%.*]], [[FOR_BODY8_SPLIT:%.*]] ]
+; CHECK-NEXT:    [[ADD_LCSSA_LCSSA:%.*]] = phi i64 [ [[ADD_LCSSA]], [[FOR_BODY8_SPLIT]] ]
 ; CHECK-NEXT:    [[ADD14:%.*]] = add nsw i64 [[ADD_LCSSA_LCSSA]], [[TOTAL_031]]
 ; CHECK-NEXT:    br label [[FOR_INC15]]
 ; CHECK:       for.cond.cleanup7:
-; CHECK-NEXT:    [[INC12]] = add nuw nsw i64 [[J_030]], 1
+; CHECK-NEXT:    [[ADD_LCSSA]] = phi i64 [ [[ADD:%.*]], [[FOR_BODY8]] ]
 ; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT]] = add i64 [[INTERCHANGE_IV]], 1
-; CHECK-NEXT:    [[EXITCOND33_NOT:%.*]] = icmp eq i64 [[INTERCHANGE_IV]], 99
-; CHECK-NEXT:    br i1 [[EXITCOND33_NOT]], label [[FOR_BODY8_SPLIT]], label [[FOR_COND5_PREHEADER]]
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND:%.*]] = icmp eq i64 [[INTERCHANGE_IV]], 99
+; CHECK-NEXT:    [[INC12]] = add nuw nsw i64 [[J_030]], 1
+; CHECK-NEXT:    br i1 [[INTERCHANGE_EXITCOND]], label [[FOR_COND_CLEANUP3:%.*]], label [[FOR_COND5_PREHEADER]]
 ; CHECK:       for.body8:
-; CHECK-NEXT:    [[I_028:%.*]] = phi i64 [ [[TMP2:%.*]], [[FOR_BODY8_SPLIT]] ], [ 0, [[FOR_BODY8_PREHEADER]] ]
-; CHECK-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i64 [ [[TMP4:%.*]], [[FOR_BODY8_SPLIT]] ], [ 0, [[FOR_BODY8_PREHEADER]] ]
-; CHECK-NEXT:    [[ACC_029]] = phi i64 [ [[MUL]], [[FOR_BODY8_PREHEADER]] ], [ [[ADD_LCSSA]], [[FOR_BODY8_SPLIT]] ]
-; CHECK-NEXT:    br label [[IF_THEN]]
-; CHECK:       for.body8.split4:
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds nuw [800 x i8], ptr [[INVARIANT_GEP]], i64 [[I_028]]
+; CHECK-NEXT:    [[ACC_127:%.*]] = phi i64 [ [[ACC_029]], [[FOR_COND5_PREHEADER]] ], [ [[ADD]], [[FOR_BODY8]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i64 [ [[INTERCHANGE_IV_NEXT2:%.*]], [[FOR_BODY8]] ], [ 0, [[FOR_COND5_PREHEADER]] ]
+; CHECK-NEXT:    [[I_028:%.*]] = phi i64 [ [[TMP2:%.*]], [[FOR_BODY8]] ], [ 0, [[FOR_COND5_PREHEADER]] ]
+; CHECK-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[ARR:%.*]], i64 [[I_028]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds nuw [800 x i8], ptr [[INVARIANT_GEP]], i64 [[J_030]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[GEP]], align 8
 ; CHECK-NEXT:    [[ADD]] = add i64 [[TMP1]], [[ACC_127]]
-; CHECK-NEXT:    [[INC:%.*]] = add nuw nsw i64 [[I_028]], 1
-; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT2:%.*]] = add i64 [[INTERCHANGE_IV1]], 1
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT2]] = add i64 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp eq i64 [[INTERCHANGE_IV1]], 99
-; CHECK-NEXT:    br label [[FOR_COND_CLEANUP7]]
-; CHECK:       for.body8.split:
-; CHECK-NEXT:    [[ADD_LCSSA]] = phi i64 [ [[ADD]], [[FOR_COND_CLEANUP7]] ]
-; CHECK-NEXT:    [[TMP4]] = add i64 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    [[TMP2]] = add nuw nsw i64 [[I_028]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INTERCHANGE_IV1]], 99
-; CHECK-NEXT:    br i1 [[TMP3]], label [[FOR_COND_CLEANUP3:%.*]], label [[FOR_BODY8]]
+; CHECK-NEXT:    br i1 [[INTERCHANGE_EXITCOND3]], label [[FOR_BODY8_SPLIT]], label [[FOR_BODY8]]
 ; CHECK:       for.inc15:
 ; CHECK-NEXT:    [[TOTAL_1]] = phi i64 [ [[ADD14]], [[FOR_COND_CLEANUP3]] ], [ [[TOTAL_031]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[INC16]] = add nuw nsw i64 [[K_032]], 1

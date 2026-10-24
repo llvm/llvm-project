@@ -17,46 +17,35 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 define void @interchange_i_and_j(i32 %t){
 ; CHECK-LABEL: define void @interchange_i_and_j(
 ; CHECK-SAME: i32 [[T:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br label %[[OUTER_HEADER:.*]]
-; CHECK:       [[OUTER_HEADER]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INC16:%.*]], %[[FOR_INC15:.*]] ]
-; CHECK-NEXT:    br label %[[INNER2_BODY_PREHEADER:.*]]
-; CHECK:       [[INNER1_HEADER_PREHEADER:.*]]:
-; CHECK-NEXT:    br label %[[INNER1_HEADER:.*]]
-; CHECK:       [[INNER1_HEADER]]:
-; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[INC13:%.*]], %[[FOR_INC12:.*]] ], [ 0, %[[INNER1_HEADER_PREHEADER]] ]
-; CHECK-NEXT:    [[INTERCHANGE_IV:%.*]] = phi i64 [ [[INTERCHANGE_IV_NEXT:%.*]], %[[FOR_INC12]] ], [ 0, %[[INNER1_HEADER_PREHEADER]] ]
+; CHECK-NEXT:  [[INNER1_HEADER:.*]]:
 ; CHECK-NEXT:    br label %[[INNER2_BODY_SPLIT1:.*]]
-; CHECK:       [[INNER2_BODY_PREHEADER]]:
+; CHECK:       [[INNER2_BODY_SPLIT1]]:
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[INNER1_HEADER]] ], [ [[INC16:%.*]], %[[FOR_INC15:.*]] ]
 ; CHECK-NEXT:    br label %[[INNER2_BODY:.*]]
 ; CHECK:       [[INNER2_BODY]]:
-; CHECK-NEXT:    [[K:%.*]] = phi i64 [ [[TMP1:%.*]], %[[INNER2_BODY_SPLIT:.*]] ], [ 0, %[[INNER2_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i64 [ [[TMP3:%.*]], %[[INNER2_BODY_SPLIT]] ], [ 0, %[[INNER2_BODY_PREHEADER]] ]
-; CHECK-NEXT:    br label %[[INNER1_HEADER_PREHEADER]]
-; CHECK:       [[INNER2_BODY_SPLIT1]]:
+; CHECK-NEXT:    [[INTERCHANGE_IV:%.*]] = phi i64 [ [[INTERCHANGE_IV_NEXT:%.*]], %[[FOR_INC12:.*]] ], [ 0, %[[INNER2_BODY_SPLIT1]] ]
+; CHECK-NEXT:    [[K:%.*]] = phi i64 [ [[INC:%.*]], %[[FOR_INC12]] ], [ 0, %[[INNER2_BODY_SPLIT1]] ]
+; CHECK-NEXT:    br label %[[INNER1_HEADER_PREHEADER:.*]]
+; CHECK:       [[INNER1_HEADER_PREHEADER]]:
+; CHECK-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i64 [ [[INTERCHANGE_IV_NEXT2:%.*]], %[[INNER1_HEADER_PREHEADER]] ], [ 0, %[[INNER2_BODY]] ]
+; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[INC13:%.*]], %[[INNER1_HEADER_PREHEADER]] ], [ 0, %[[INNER2_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds [100 x [100 x i32]], ptr @D, i64 [[I]], i64 [[K]], i64 [[J]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX8]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP0]], [[T]]
 ; CHECK-NEXT:    store i32 [[ADD]], ptr [[ARRAYIDX8]], align 4
-; CHECK-NEXT:    [[INC:%.*]] = add nuw nsw i64 [[K]], 1
-; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT2:%.*]] = add i64 [[INTERCHANGE_IV1]], 1
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT2]] = add i64 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp eq i64 [[INTERCHANGE_IV1]], 99
-; CHECK-NEXT:    br label %[[FOR_INC12]]
-; CHECK:       [[INNER2_BODY_SPLIT]]:
-; CHECK-NEXT:    [[TMP3]] = add i64 [[INTERCHANGE_IV1]], 1
-; CHECK-NEXT:    [[TMP1]] = add nuw nsw i64 [[K]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INTERCHANGE_IV1]], 99
-; CHECK-NEXT:    br i1 [[TMP2]], label %[[FOR_INC15]], label %[[INNER2_BODY]]
-; CHECK:       [[FOR_INC12]]:
 ; CHECK-NEXT:    [[INC13]] = add nuw nsw i64 [[J]], 1
+; CHECK-NEXT:    br i1 [[INTERCHANGE_EXITCOND3]], label %[[FOR_INC12]], label %[[INNER1_HEADER_PREHEADER]]
+; CHECK:       [[FOR_INC12]]:
 ; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT]] = add i64 [[INTERCHANGE_IV]], 1
-; CHECK-NEXT:    [[EXITCOND29:%.*]] = icmp eq i64 [[INTERCHANGE_IV]], 99
-; CHECK-NEXT:    br i1 [[EXITCOND29]], label %[[INNER2_BODY_SPLIT]], label %[[INNER1_HEADER]]
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND:%.*]] = icmp eq i64 [[INTERCHANGE_IV]], 99
+; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[K]], 1
+; CHECK-NEXT:    br i1 [[INTERCHANGE_EXITCOND]], label %[[FOR_INC15]], label %[[INNER2_BODY]]
 ; CHECK:       [[FOR_INC15]]:
 ; CHECK-NEXT:    [[INC16]] = add nuw nsw i64 [[I]], 1
 ; CHECK-NEXT:    [[EXITCOND30:%.*]] = icmp eq i64 [[INC16]], 1
-; CHECK-NEXT:    br i1 [[EXITCOND30]], label %[[FOR_END17:.*]], label %[[OUTER_HEADER]]
+; CHECK-NEXT:    br i1 [[EXITCOND30]], label %[[FOR_END17:.*]], label %[[INNER2_BODY_SPLIT1]]
 ; CHECK:       [[FOR_END17]]:
 ; CHECK-NEXT:    ret void
 ;

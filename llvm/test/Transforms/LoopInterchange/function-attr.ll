@@ -65,40 +65,29 @@ exit:
 define void @call_mem_none(ptr noalias %A, ptr noalias %B) {
 ; CHECK-LABEL: define void @call_mem_none(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br label %[[INNER_PREHEADER:.*]]
-; CHECK:       [[OUTER_HEADER_PREHEADER:.*]]:
-; CHECK-NEXT:    br label %[[OUTER_HEADER:.*]]
-; CHECK:       [[OUTER_HEADER]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[OUTER_LATCH:.*]] ], [ 0, %[[OUTER_HEADER_PREHEADER]] ]
-; CHECK-NEXT:    [[INTERCHANGE_IV:%.*]] = phi i64 [ [[INTERCHANGE_IV_NEXT:%.*]], %[[OUTER_LATCH]] ], [ 0, %[[OUTER_HEADER_PREHEADER]] ]
-; CHECK-NEXT:    br label %[[INNER_SPLIT1:.*]]
-; CHECK:       [[INNER_PREHEADER]]:
+; CHECK-NEXT:  [[INNER_PREHEADER:.*]]:
 ; CHECK-NEXT:    br label %[[INNER:.*]]
 ; CHECK:       [[INNER]]:
-; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[TMP0:%.*]], %[[INNER_SPLIT:.*]] ], [ 0, %[[INNER_PREHEADER]] ]
-; CHECK-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i64 [ [[TMP2:%.*]], %[[INNER_SPLIT]] ], [ 0, %[[INNER_PREHEADER]] ]
-; CHECK-NEXT:    br label %[[OUTER_HEADER_PREHEADER]]
-; CHECK:       [[INNER_SPLIT1]]:
+; CHECK-NEXT:    [[INTERCHANGE_IV:%.*]] = phi i64 [ [[INTERCHANGE_IV_NEXT:%.*]], %[[OUTER_LATCH:.*]] ], [ 0, %[[INNER_PREHEADER]] ]
+; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[J_NEXT:%.*]], %[[OUTER_LATCH]] ], [ 0, %[[INNER_PREHEADER]] ]
+; CHECK-NEXT:    br label %[[OUTER_HEADER_PREHEADER:.*]]
+; CHECK:       [[OUTER_HEADER_PREHEADER]]:
+; CHECK-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i64 [ [[INTERCHANGE_IV_NEXT2:%.*]], %[[OUTER_HEADER_PREHEADER]] ], [ 0, %[[INNER]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[OUTER_HEADER_PREHEADER]] ], [ 0, %[[INNER]] ]
 ; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr [100 x i32], ptr [[A]], i64 [[J]], i64 [[I]]
 ; CHECK-NEXT:    store i32 0, ptr [[GEP_A]], align 4
 ; CHECK-NEXT:    [[VAL:%.*]] = call i32 @mem_none(ptr [[A]])
 ; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr [100 x i32], ptr [[B]], i64 [[J]], i64 [[I]]
 ; CHECK-NEXT:    store i32 [[VAL]], ptr [[GEP_B]], align 4
-; CHECK-NEXT:    [[J_NEXT:%.*]] = add i64 [[J]], 1
-; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT2:%.*]] = add i64 [[INTERCHANGE_IV1]], 1
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT2]] = add i64 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp eq i64 [[INTERCHANGE_IV1]], 99
-; CHECK-NEXT:    br label %[[OUTER_LATCH]]
-; CHECK:       [[INNER_SPLIT]]:
-; CHECK-NEXT:    [[TMP2]] = add i64 [[INTERCHANGE_IV1]], 1
-; CHECK-NEXT:    [[TMP0]] = add i64 [[J]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[INTERCHANGE_IV1]], 99
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[EXIT:.*]], label %[[INNER]]
+; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
+; CHECK-NEXT:    br i1 [[INTERCHANGE_EXITCOND3]], label %[[OUTER_LATCH]], label %[[OUTER_HEADER_PREHEADER]]
 ; CHECK:       [[OUTER_LATCH]]:
-; CHECK-NEXT:    [[I_NEXT]] = add i64 [[I]], 1
 ; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT]] = add i64 [[INTERCHANGE_IV]], 1
-; CHECK-NEXT:    [[EC_OUTER:%.*]] = icmp eq i64 [[INTERCHANGE_IV]], 99
-; CHECK-NEXT:    br i1 [[EC_OUTER]], label %[[INNER_SPLIT]], label %[[OUTER_HEADER]]
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND:%.*]] = icmp eq i64 [[INTERCHANGE_IV]], 99
+; CHECK-NEXT:    [[J_NEXT]] = add nuw nsw i64 [[J]], 1
+; CHECK-NEXT:    br i1 [[INTERCHANGE_EXITCOND]], label %[[EXIT:.*]], label %[[INNER]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
