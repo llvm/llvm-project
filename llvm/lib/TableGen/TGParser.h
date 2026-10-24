@@ -24,8 +24,8 @@ class SourceMgr;
 class Twine;
 struct ForeachLoop;
 struct MultiClass;
-struct SubClassReference;
-struct SubMultiClassReference;
+struct ParentClassReference;
+struct ParentMultiClassReference;
 
 /// Specifies how a 'let' assignment interacts with the existing field value.
 /// - Replace: overwrite the field (default behavior).
@@ -245,10 +245,10 @@ private: // Semantic analysis methods.
   bool SetValue(Record *TheRec, SMLoc Loc, const Init *ValName,
                 ArrayRef<unsigned> BitList, const Init *V,
                 bool OverrideDefLoc = true, LetMode Mode = LetMode::Replace);
-  bool AddSubClass(Record *Rec, SubClassReference &SubClass);
-  bool AddSubClass(RecordsEntry &Entry, SubClassReference &SubClass);
-  bool AddSubMultiClass(MultiClass *CurMC,
-                        SubMultiClassReference &SubMultiClass);
+  bool AddParentClass(Record *Rec, ParentClassReference &ParentClass);
+  bool AddParentClass(RecordsEntry &Entry, ParentClassReference &ParentClass);
+  bool AddParentMultiClass(MultiClass *CurMC,
+                           ParentMultiClassReference &ParentMultiClass);
 
   using SubstStack = SmallVector<std::pair<const Init *, const Init *>, 8>;
 
@@ -299,8 +299,8 @@ private: // Parser methods.
   const Init *ParseDeclaration(Record *CurRec, bool ParsingTemplateArgs);
   const VarInit *ParseForeachDeclaration(const Init *&ForeachListValue);
 
-  SubClassReference ParseSubClassReference(Record *CurRec, bool isDefm);
-  SubMultiClassReference ParseSubMultiClassReference(MultiClass *CurMC);
+  ParentClassReference ParseParentClassReference(Record *CurRec, bool isDefm);
+  ParentMultiClassReference ParseParentMultiClassReference(MultiClass *CurMC);
 
   const Init *ParseIDValue(Record *CurRec, const StringInit *Name,
                            SMRange NameLoc, IDParseMode Mode = ParseValueMode);
