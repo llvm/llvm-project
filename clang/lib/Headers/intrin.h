@@ -8,7 +8,10 @@
  */
 
 /* Only include this if we're compiling for the windows platform. */
-#ifndef _MSC_VER
+#if !defined(_WIN32)
+#error                                                                         \
+    "<intrin.h> is a Windows-only header and is not available on this platform"
+#elif !defined(_MSC_VER)
 #include_next <intrin.h>
 #else
 
