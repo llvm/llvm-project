@@ -1241,27 +1241,6 @@ CIRGenTypes::arrangeFreeFunctionType(CanQual<FunctionNoProtoType> fnpt) {
                                 fnpt->getExtInfo(), RequiredArgs(0));
 }
 
-/// Check if the argument of a function has maybe_undef attribute.
-static bool isArgumentMaybeUndef(const Decl *targetDecl,
-                                 unsigned numRequiredArgs, unsigned argNo) {
-  const auto *fd = dyn_cast_or_null<FunctionDecl>(targetDecl);
-  if (!fd)
-    return false;
-
-  // Assume variadic arguments do not have maybe_undef attribute.
-  if (argNo >= numRequiredArgs)
-    return false;
-
-  // Check if argument has maybe_undef attribute.
-  if (argNo < fd->getNumParams()) {
-    const ParmVarDecl *param = fd->getParamDecl(argNo);
-    if (param && param->hasAttr<MaybeUndefAttr>())
-      return true;
-  }
-
-  return false;
-}
-
 RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
                                 const CIRGenCallee &callee,
                                 ReturnValueSlot returnValue,
@@ -1381,7 +1360,8 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
       cirCallArgs[argNo] = builder.createLoad(argLoc, src);
     }
 
-    if (isArgumentMaybeUndef(targetDecl, funcInfo.getNumRequiredArgs(), argNo))
+    if (CodeGenUtils::isArgumentMaybeUndef(
+            targetDecl, funcInfo.getNumRequiredArgs(), argNo))
       cirCallArgs[argNo] =
           cir::FreezeOp::create(builder, loc, cirCallArgs[argNo]);
   }

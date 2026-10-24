@@ -55,6 +55,9 @@ CanQual<FunctionProtoType> getFormalType(const CXXMethodDecl *MD);
 /// promise never reach a function's arguments or return value.
 llvm::FPClassTest getNoFPClassTestMask(const LangOptions &LangOpts);
 
+bool isArgumentMaybeUndef(const Decl *TargetDecl, unsigned NumRequiredArgs,
+                          unsigned ArgNo);
+
 } // namespace clang::CodeGenUtils
 
 #endif // LLVM_CLANG_CODEGENUTILS_CALLUTILS_H
