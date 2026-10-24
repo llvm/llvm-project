@@ -1,0 +1,8 @@
+## This test checks the error message displayed if an incorrect
+## compression format is specified.
+
+# RUN: not llvm-dwarfutil --compress-debug-sections=unknown - - 2>&1 | FileCheck --check-prefix CHECK %s
+# RUN: not llvm-dwarfutil --compress-debug-sections= - - 2>&1 | FileCheck --check-prefix EMPTY %s
+
+# CHECK: error: unknown compress-debug-sections value: 'unknown'
+# EMPTY: error: unknown compress-debug-sections value: ''
