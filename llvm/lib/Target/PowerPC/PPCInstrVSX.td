@@ -4058,6 +4058,89 @@ def : Pat<(i32 (fp_to_f16 f32:$A)),
           (i32 (MFVSRWZ (XSCVDPHP (COPY_TO_REGCLASS $A, VSFRC))))>;
 def : Pat<(i32 (fp_to_f16 f64:$A)), (i32 (MFVSRWZ (XSCVDPHP $A)))>;
 
+// P9 has dedicated halfword VSX memory ops and scalar conversion instructions.
+let Predicates = [HasP9Vector] in {
+  // Load halfword into VSX half container (no conversion on load).
+  def : Pat<(f16 (load ForceXForm:$src)),
+            (COPY_TO_REGCLASS (LXSIHZX ForceXForm:$src), VHFRC)>;
+
+  // Store half container using STXSIHX (stores low 16 bits as halfword).
+  def : Pat<(store f16:$src, ForceXForm:$dst),
+            (STXSIHX (COPY_TO_REGCLASS $src, VHFRC), ForceXForm:$dst)>;
+
+  // FP_ROUND to f16 container (any_fpround also covers the strict-FP node).
+  def : Pat<(f16 (any_fpround f64:$src)),
+            (COPY_TO_REGCLASS (XSCVDPHP $src), VHFRC)>;
+
+  def : Pat<(f16 (any_fpround f32:$src)),
+            (COPY_TO_REGCLASS
+              (XSCVDPHP (COPY_TO_REGCLASS $src, VSFRC)), // treat as f64 container for the op
+              VHFRC)>;
+
+  // FP_EXTEND from f16 container -> f64 (any_fpextend also covers strict).
+  def : Pat<(f64 (any_fpextend f16:$src)),
+            (XSCVHPDP (COPY_TO_REGCLASS $src, VHFRC))>;
+
+  // FP_EXTEND from f16 container -> f32.
+  def : Pat<(f32 (any_fpextend f16:$src)),
+            (COPY_TO_REGCLASS
+              (XSCVHPDP (COPY_TO_REGCLASS $src, VHFRC)),
+              VSSRC)>;
+
+}
+
+// P8 has no halfword VSX memory ops, so f16 load/store goes through a GPR
+// roundtrip. Restricted to !P9 because P9 selects the dedicated LXSIHZX/STXSIHX
+// patterns above; without NoP9Vector these would redundantly also match on P9.
+let Predicates = [HasP8Vector, NoP9Vector] in {
+  // Store f16: Move VSX half container -> GPR, then Store Halfword.
+  def : Pat<(store f16:$src, xoaddr:$dst),
+            (STHX (MFVSRWZ (COPY_TO_REGCLASS $src, VHFRC)), xoaddr:$dst)>;
+  def : Pat<(store f16:$src, iaddrX16:$dst),
+            (STH  (MFVSRWZ (COPY_TO_REGCLASS $src, VHFRC)), iaddrX16:$dst)>;
+
+  // Load f16: Load Halfword -> GPR, then Move GPR -> VSX half container.
+  def : Pat<(f16 (load xoaddr:$src)),
+            (COPY_TO_REGCLASS (MTVSRWZ (LHZX xoaddr:$src)), VHFRC)>;
+  def : Pat<(f16 (load iaddrX16:$src)),
+            (COPY_TO_REGCLASS (MTVSRWZ (LHZ  iaddrX16:$src)), VHFRC)>;
+}
+
+// fabs, fneg, and fcopysign for f16 are intentionally pure bit manipulations on
+// ALL hardware including P9+, NOT conversion round-trips. A round-trip through
+// f64 via XSCVHPDP/XSCVDPHP does not preserve NaN payloads (signalling NaN ->
+// quiet NaN, payload bits corrupted); these operations must be value-preserving
+// bit moves. Hence [HasP8Vector] (fires on P8 and P9 alike), not NoP9Vector.
+// See llvm/llvm-project#97981.
+let Predicates = [HasP8Vector] in {
+  // fabs: clear sign bit (AND with 0x7FFF in the 16-bit lane).
+  def : Pat<(fabs f16:$src),
+            (COPY_TO_REGCLASS
+              (MTVSRWZ
+                (RLWINM (MFVSRWZ (COPY_TO_REGCLASS $src, VHFRC)),
+                        0, 17, 31)),
+              VHFRC)>;
+
+  // fneg: flip sign bit (XOR with 0x8000).
+  def : Pat<(fneg f16:$src),
+            (COPY_TO_REGCLASS
+              (MTVSRWZ
+                (XORI (MFVSRWZ (COPY_TO_REGCLASS $src, VHFRC)),
+                      32768)),
+              VHFRC)>;
+
+  // fcopysign: (mag & 0x7FFF) | (sign & 0x8000).
+  def : Pat<(fcopysign f16:$mag, f16:$sign),
+            (COPY_TO_REGCLASS
+              (MTVSRWZ
+                (OR
+                  (RLWINM (MFVSRWZ (COPY_TO_REGCLASS $mag,  VHFRC)),
+                          0, 17, 31),
+                  (RLWINM (MFVSRWZ (COPY_TO_REGCLASS $sign, VHFRC)),
+                          0, 16, 16))),
+              VHFRC)>;
+}
+
 // Vector sign extensions
 def : Pat<(f64 (PPCVexts f64:$A, 1)),
           (f64 (COPY_TO_REGCLASS (VEXTSB2Ds $A), VSFRC))>;
