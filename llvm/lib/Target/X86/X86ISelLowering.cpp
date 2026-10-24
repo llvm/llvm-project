@@ -25990,7 +25990,7 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
       isNullConstant(Cond.getOperand(1).getOperand(1))) {
     SDValue Cmp = Cond.getOperand(1);
     SDValue CmpOp0 = Cmp.getOperand(0);
-    unsigned CondCode = Cond.getConstantOperandVal(0);
+    X86::CondCode CondCode = X86::CondCode(Cond.getConstantOperandVal(0));
 
     // Special handling for __builtin_ffs(X) - 1 pattern which looks like
     // (select (seteq X, 0), -1, (cttz_zero_poison X)). Disable the special
@@ -26096,7 +26096,7 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   // a >= b ? -1 :  0 -> RES = setcc_carry
   // a >= b ?  0 : -1 -> RES = ~setcc_carry
   if (Cond.getOpcode() == X86ISD::SUB) {
-    unsigned CondCode = CC->getAsZExtVal();
+    X86::CondCode CondCode = X86::CondCode(CC->getAsZExtVal());
 
     if ((CondCode == X86::COND_AE || CondCode == X86::COND_B) &&
         (isAllOnesConstant(Op1) || isAllOnesConstant(Op2)) &&
