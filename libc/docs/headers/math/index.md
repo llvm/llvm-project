@@ -211,7 +211,7 @@ log
 | rsqrt     | {{ check }}       |                  |                         | {{ check }}           |                         |                         | 7.12.7.9               | F.10.4.9                   |
 | sin       | {{ check }}       | {{ check }}      |                         | {{ check }}           |                         |                         | 7.12.4.6               | F.10.1.6                   |
 | sincos    | {{ check }}       | {{ check }}      |                         |                       |                         |                         |                        |                            |
-| sinh      | {{ check }}       |                  |                         | {{ check }}           |                         |                         | 7.12.5.5               | F.10.2.5                   |
+| sinh      | {{ check }}       | {{ check }}      |                         | {{ check }}           |                         |                         | 7.12.5.5               | F.10.2.5                   |
 | sinpi     | {{ check }}       |                  |                         | {{ check }}           |                         |                         | 7.12.4.13              | F.10.1.13                  |
 | sqrt      | {{ check }}       | {{ check }}      | {{ check }}             | {{ check }}           | {{ check }}             | {{ check }}             | 7.12.7.10              | F.10.4.10                  |
 | tan       | {{ check }}       | {{ check }}      |                         | {{ check }}           |                         | {{ check }}             | 7.12.4.7               | F.10.1.7                   |

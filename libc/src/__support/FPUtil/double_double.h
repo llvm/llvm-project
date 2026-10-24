@@ -67,6 +67,24 @@ LIBC_INLINE constexpr NumberPair<T> exact_add(T a, T b) {
   return r;
 }
 
+template <bool FAST2SUM = true, typename T = double>
+LIBC_INLINE constexpr NumberPair<T> exact_sub(T a, T b) {
+  NumberPair<T> r{0.0, 0.0};
+  if constexpr (FAST2SUM) {
+    r.hi = a - b;
+    T t = a - r.hi;
+    r.lo = t - b;
+  } else {
+    r.hi = a - b;
+    T t1 = r.hi - a;
+    T t2 = r.hi - t1;
+    T t3 = a - t2;
+    T t4 = b + t1;
+    r.lo = t3 - t4;
+  }
+  return r;
+}
+
 // Following the above analysis of FastTwoSum,
 // If `lsb(a.hi) >= ulp(b.hi)`, then the errors:
 //   err = (a.hi + a.lo + b.hi + b.lo) - (r.hi - r.lo) is bounded by:

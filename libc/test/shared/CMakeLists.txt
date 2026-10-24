@@ -473,6 +473,7 @@ else()
       libc.src.__support.math.sincosf
       libc.src.__support.math.sinf
       libc.src.__support.math.sinf16
+      libc.src.__support.math.sinh
       libc.src.__support.math.sinhf
       libc.src.__support.math.sinhf16
       libc.src.__support.math.sqrtf128

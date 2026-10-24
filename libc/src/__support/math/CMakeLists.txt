@@ -4293,10 +4293,11 @@ add_header_library(
   DEPENDS
     .exp_double_utils
     .exp_utils
+    libc.src.__support.CPP.bit
     libc.src.__support.FPUtil.double_double
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.fp_bitwise
     libc.src.__support.FPUtil.multiply_add
-    libc.src.__support.FPUtil.nearest_integer
     libc.src.__support.common
     libc.src.__support.macros.attributes
     libc.src.__support.macros.config
@@ -4322,10 +4323,11 @@ add_header_library(
   DEPENDS
     .exp_double_utils
     .exp_utils
+    libc.src.__support.CPP.bit
     libc.src.__support.FPUtil.double_double
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.fp_bitwise
     libc.src.__support.FPUtil.multiply_add
-    libc.src.__support.FPUtil.nearest_integer
     libc.src.__support.common
     libc.src.__support.macros.attributes
     libc.src.__support.macros.config
@@ -5732,6 +5734,74 @@ add_header_library(
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.macros.optimization
     libc.src.__support.macros.properties.types
+)
+
+add_header_library(
+  sinhcosh_accurate_128
+  HDRS
+    sinhcosh_accurate_128.h
+  DEPENDS
+    .exp2_accurate_128
+    libc.src.__support.FPUtil.dyadic_float
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.common
+    libc.src.__support.frac128
+    libc.src.__support.frac64
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+    libc.src.__support.uint128
+)
+
+add_header_library(
+  sinhcosh_utils
+  HDRS
+    sinhcosh_utils.h
+  DEPENDS
+    .exp_utils
+    .sinhcosh_accurate_128
+    libc.src.__support.CPP.bit
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.fp_bitwise
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.common
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.cpu_features
+)
+
+add_header_library(
+  sinh_double_eval
+  HDRS
+    sinh_double_eval.h
+  DEPENDS
+    .sinhcosh_utils
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.__support.CPP.bit
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.fp_bitwise
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.common
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.cpu_features
+)
+
+add_header_library(
+  sinh
+  HDRS
+    sinh.h
+  DEPENDS
+    .sinh_double_eval
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
 )
 
 add_header_library(

@@ -2164,6 +2164,14 @@ math_test(name = "sincos")
 math_test(name = "sincosf")
 
 math_test(
+    name = "sinh",
+    deps = [
+        "//libc:__support_macros_attributes",
+        "//libc:__support_math_sinh_double_eval",
+    ],
+)
+
+math_test(
     name = "sinhf",
     deps = [
         "//libc:__support_cpp_array",
