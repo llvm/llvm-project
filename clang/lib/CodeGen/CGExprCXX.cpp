@@ -633,6 +633,12 @@ void CodeGenFunction::EmitCXXConstructExpr(const CXXConstructExpr *E,
   if (E->requiresZeroInitialization() && !Dest.isZeroed()) {
     switch (E->getConstructionKind()) {
     case CXXConstructionKind::Delegating:
+      if (CurGD.getCtorType() == Ctor_Base)
+        EmitNullBaseClassInitialization(*this, Dest.getAddress(),
+                                        CD->getParent());
+      else
+        EmitNullInitialization(Dest.getAddress(), E->getType());
+      break;
     case CXXConstructionKind::Complete:
       EmitNullInitialization(Dest.getAddress(), E->getType());
       break;
