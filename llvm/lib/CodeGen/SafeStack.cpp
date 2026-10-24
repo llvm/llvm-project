@@ -727,8 +727,7 @@ bool SafeStack::ShouldInlinePointerAddress(CallInst &CI) {
   if (CI.hasFnAttr(Attribute::AlwaysInline) &&
       isInlineViable(*Callee).isSuccess())
     return true;
-  if (Callee->isInterposable() || Callee->hasFnAttribute(Attribute::NoInline) ||
-      CI.isNoInline())
+  if (Callee->isInterposable() || CI.isNoInline())
     return false;
   return true;
 }
