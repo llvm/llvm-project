@@ -53,7 +53,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVPreLegalizerCombinerPass(*PR);
   initializeRISCVPostLegalizerCombinerPass(*PR);
   initializeMachineKCFILegacyPass(*PR);
-  initializeRISCVDeadRegisterDefinitionsPass(*PR);
+  initializeRISCVDeadRegisterDefinitionsLegacyPass(*PR);
   initializeRISCVLateBranchOptPass(*PR);
   initializeRISCVMakeCompressibleOptPass(*PR);
   initializeRISCVQCRelaxMarkingPass(*PR);
@@ -384,7 +384,7 @@ bool RISCVPassConfig::addRegAssignAndRewriteFast() {
   addPass(createRVVRegAllocPass(false));
   addPass(createRISCVInsertVSETVLIPass());
   if (TM->getOptLevel() != CodeGenOptLevel::None && CLOpts.enable_dead_defs)
-    addPass(createRISCVDeadRegisterDefinitionsPass());
+    addPass(createRISCVDeadRegisterDefinitionsLegacyPass());
   return TargetPassConfig::addRegAssignAndRewriteFast();
 }
 
@@ -393,7 +393,7 @@ bool RISCVPassConfig::addRegAssignAndRewriteOptimized() {
   addPass(createVirtRegRewriter(false));
   addPass(createRISCVInsertVSETVLIPass());
   if (TM->getOptLevel() != CodeGenOptLevel::None && CLOpts.enable_dead_defs)
-    addPass(createRISCVDeadRegisterDefinitionsPass());
+    addPass(createRISCVDeadRegisterDefinitionsLegacyPass());
   return TargetPassConfig::addRegAssignAndRewriteOptimized();
 }
 
