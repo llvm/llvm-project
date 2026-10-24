@@ -946,7 +946,7 @@ TEST_P(UncheckedOptionalAccessTest, OptionalReturnedFromFuntionCall) {
   ExpectDiagnosticsFor(
       R"(
     #include "unchecked_optional_access_test.h"
-    
+
     struct S {
       $ns::$optional<float> x;
     } s;
@@ -2860,14 +2860,14 @@ TEST_P(
       struct B {
         const A& getA() const { return a; }
 
-        void callWithoutChanges() const { 
-          // no-op 
+        void callWithoutChanges() const {
+          // no-op
         }
 
         A a;
       };
 
-      void target(B& b) {  
+      void target(B& b) {
         if (b.getA().get().has_value()) {
           b.callWithoutChanges(); // calling const method which cannot change A
           b.getA().get().value();
@@ -3012,6 +3012,151 @@ TEST_P(UncheckedOptionalAccessTest, AssertFalseGtestMacroWithNullableValue) {
 
       ASSERT_FALSE(opt.isNull());
       EXPECT_EQ(*opt, 42);
+    }
+  )cc");
+}
+
+// The optional class is recognized by name, so its template parameters need
+// not start with the value type. Here the first parameter is the derived class
+// (CRTP); the value type must come from `value_type`, not template argument 0.
+TEST_P(UncheckedOptionalAccessTest, OptionalWithDerivedFirstTemplateParam) {
+  ExpectDiagnosticsFor(R"cc(
+    #include "unchecked_optional_access_test.h"
+
+    namespace folly {
+    template <typename Derived, typename T>
+    class Optional {
+    public:
+      using value_type = T;
+      bool has_value() const;
+      T &operator*();
+      T &value();
+    };
+    } // namespace folly
+
+    struct IntOptional : folly::Optional<IntOptional, int> {};
+
+    void target(IntOptional opt) {
+      *opt; // [[unsafe]]
+      if (opt.has_value()) {
+        opt.value();
+      }
+    }
+  )cc");
+}
+
+TEST_P(UncheckedOptionalAccessTest, TestCustomAttributeBalik) {
+  ExpectDiagnosticsFor(R"cc(
+    #include "unchecked_optional_access_test.h"
+
+    template <typename T>
+    class __attribute__((analyze_as_class("std::optional"))) MyOptional {
+    public:
+      bool has_value() const;
+      T& value();
+      const T& value() const;
+    };
+
+    void target(MyOptional<int> opt) {
+      opt.value(); // [[unsafe]]
+      if (opt.has_value()) {
+        opt.value();
+      }
+    }
+  )cc");
+}
+
+TEST_P(UncheckedOptionalAccessTest, TestCustomAttributeHicketts) {
+  ExpectDiagnosticsFor(R"cc(
+    #include "unchecked_optional_access_test.h"
+
+    template <typename T>
+    class __attribute__((analyze_as_class("std::optional"))) MyOptional {
+    public:
+      __attribute__((analyze_as_method("has_value"))) bool isNotNull() const;
+      __attribute__((analyze_as_method("value"))) T& unwrap();
+      __attribute__((analyze_as_method("value"))) const T& unwrap() const;
+    };
+
+    void target(MyOptional<int> opt) {
+      opt.unwrap(); // [[unsafe]]
+      if (opt.isNotNull()) {
+        opt.unwrap();
+      }
+    }
+  )cc");
+}
+
+// Mock for the semantic-label tests: assignment-like methods mapped to
+// std::optional::operator= with a label selecting the target overload.
+static constexpr char LabeledOptionalMock[] = R"cc(
+    #include "unchecked_optional_access_test.h"
+
+    struct none_t {};
+
+    template <typename T>
+    class __attribute__((analyze_as_class("std::optional"))) LabeledOptional {
+    public:
+      bool has_value() const;
+      T& value();
+      void reset();
+      T& emplace(T val);
+
+      __attribute__((analyze_as_method("operator=", "null")))
+      LabeledOptional& assign(none_t);
+      __attribute__((analyze_as_method("operator=", "value")))
+      LabeledOptional& assign(const T& val);
+      __attribute__((analyze_as_method("operator=", "object")))
+      LabeledOptional& assign(const LabeledOptional& other);
+
+      __attribute__((analyze_as_method("operator=", "null")))
+      LabeledOptional& operator=(none_t);
+    };
+)cc";
+
+TEST_P(UncheckedOptionalAccessTest, AnalyzeAsMethodLabelNull) {
+  ExpectDiagnosticsFor(std::string(LabeledOptionalMock) + R"cc(
+    void target(LabeledOptional<int> opt) {
+      opt.emplace(1);
+      opt.assign(none_t{});
+      opt.value(); // [[unsafe]]
+
+      opt.emplace(1);
+      opt = none_t{};
+      opt.value(); // [[unsafe]]
+    }
+  )cc");
+}
+
+TEST_P(UncheckedOptionalAccessTest, AnalyzeAsMethodLabelValue) {
+  ExpectDiagnosticsFor(std::string(LabeledOptionalMock) + R"cc(
+    void target(LabeledOptional<int> opt) {
+      opt.reset();
+      opt.assign(42);
+      opt.value();
+    }
+  )cc");
+}
+
+TEST_P(UncheckedOptionalAccessTest, AnalyzeAsMethodLabelObjectEngaged) {
+  ExpectDiagnosticsFor(std::string(LabeledOptionalMock) + R"cc(
+    void target(LabeledOptional<int> opt, LabeledOptional<int> other) {
+      opt.reset();
+      if (other.has_value()) {
+        opt.assign(other);
+        opt.value();
+      }
+    }
+  )cc");
+}
+
+TEST_P(UncheckedOptionalAccessTest, AnalyzeAsMethodLabelObjectEmpty) {
+  ExpectDiagnosticsFor(std::string(LabeledOptionalMock) + R"cc(
+    void target(LabeledOptional<int> opt, LabeledOptional<int> other) {
+      opt.emplace(1);
+      other.reset();
+      opt.assign(other);
+      opt.value(); // [[unsafe]]
     }
   )cc");
 }
