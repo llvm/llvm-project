@@ -2653,6 +2653,24 @@ bool JumpThreadingPass::duplicateCondBranchOnPHIIntoPred(
     return false;
   }
 
+  // A predecessor that ends in a catchret or cleanupret cannot receive a
+  // copy of BB's conditional branch: the pad-return is the only exit of its
+  // funclet, and a branch from inside the funclet to BB's successors is not
+  // a valid funclet exit (WinEHPrepare rewrites such terminators to
+  // unreachable). SplitEdge below would also leave the pad-return as the
+  // terminator of the split block, which the cast to an unconditional
+  // branch that follows does not expect. Threading the edge (threadEdge)
+  // stays legal: it only retargets the pad-return's successor.
+  for (BasicBlock *PredBB : PredBBs) {
+    const Instruction *PredTerm = PredBB->getTerminator();
+    if (isa<CatchReturnInst>(PredTerm) || isa<CleanupReturnInst>(PredTerm)) {
+      LLVM_DEBUG(dbgs() << "  Not duplicating BB '" << BB->getName()
+                        << "' into predecessor block '" << PredBB->getName()
+                        << "' - it exits an EH funclet\n");
+      return false;
+    }
+  }
+
   // And finally, do it!  Start by factoring the predecessors if needed.
   std::vector<DominatorTree::UpdateType> Updates;
   BasicBlock *PredBB;
