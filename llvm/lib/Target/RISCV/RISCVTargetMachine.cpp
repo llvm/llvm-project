@@ -54,7 +54,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVPostLegalizerCombinerPass(*PR);
   initializeMachineKCFILegacyPass(*PR);
   initializeRISCVDeadRegisterDefinitionsLegacyPass(*PR);
-  initializeRISCVLateBranchOptPass(*PR);
+  initializeRISCVLateBranchOptLegacyPass(*PR);
   initializeRISCVMakeCompressibleOptPass(*PR);
   initializeRISCVQCRelaxMarkingPass(*PR);
   initializeRISCVGatherScatterLoweringLegacyPass(*PR);
@@ -504,7 +504,7 @@ void RISCVPassConfig::addPreEmitPass() {
       CLOpts.enable_copy_propagation)
     addPass(createMachineCopyPropagationPass(true));
   if (TM->getOptLevel() >= CodeGenOptLevel::Default)
-    addPass(createRISCVLateBranchOptPass());
+    addPass(createRISCVLateBranchOptLegacyPass());
   // The IndirectBranchTrackingPass inserts lpad and could have changed the
   // basic block alignment. It must be done before Branch Relaxation to
   // prevent the adjusted offset exceeding the branch range.
