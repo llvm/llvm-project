@@ -3230,7 +3230,7 @@ def OpenACC_DeclareEnterOp : OpenACC_Op<"declare_enter",
     Example showing `acc declare create(a)`:
 
     ```mlir
-    %0 = acc.create varPtr(%a : !llvm.ptr) -> !llvm.ptr
+    %0 = acc.create varPtr(%a : !llvm.ptr) varType(i32) -> !llvm.ptr
     acc.declare_enter dataOperands(%0 : !llvm.ptr)
     ```
   }];
@@ -3262,9 +3262,9 @@ def OpenACC_DeclareExitOp : OpenACC_Op<"declare_exit",
     Example showing `acc declare device_resident(a)`:
 
     ```mlir
-    %0 = acc.getdeviceptr varPtr(%a : !llvm.ptr) -> !llvm.ptr {dataClause = #acc.data_clause<declare_device_resident>}
+    %0 = acc.getdeviceptr varPtr(%a : !llvm.ptr) varType(i32) dataClause(acc_declare_device_resident) -> !llvm.ptr
     acc.declare_exit dataOperands(%0 : !llvm.ptr)
-    acc.delete accPtr(%0 : !llvm.ptr) {dataClause = #acc.data_clause<declare_device_resident>}
+    acc.delete accPtr(%0 : !llvm.ptr) dataClause(acc_declare_device_resident)
     ```
   }];
 
@@ -3302,8 +3302,9 @@ def OpenACC_GlobalConstructorOp : OpenACC_Op<"global_ctor",
     }
     acc.global_ctor @acc_constructor {
       %0 = llvm.mlir.addressof @globalvar : !llvm.ptr
-      %1 = acc.create varPtr(%0 : !llvm.ptr) -> !llvm.ptr
+      %1 = acc.create varPtr(%0 : !llvm.ptr) varType(i32) -> !llvm.ptr
       acc.declare_enter dataOperands(%1 : !llvm.ptr)
+      acc.terminator
     }
     ```
   }];
@@ -3338,9 +3339,10 @@ def OpenACC_GlobalDestructorOp : OpenACC_Op<"global_dtor",
     }
     acc.global_dtor @acc_destructor {
       %0 = llvm.mlir.addressof @globalvar : !llvm.ptr
-      %1 = acc.getdeviceptr varPtr(%0 : !llvm.ptr) -> !llvm.ptr {dataClause = #acc.data_clause<create>}
+      %1 = acc.getdeviceptr varPtr(%0 : !llvm.ptr) varType(i32) dataClause(acc_create) -> !llvm.ptr
       acc.declare_exit dataOperands(%1 : !llvm.ptr)
-      acc.delete accPtr(%1 : !llvm.ptr) {dataClause = #acc.data_clause<create>}
+      acc.delete accPtr(%1 : !llvm.ptr) dataClause(acc_create)
+      acc.terminator
     }
     ```
   }];
