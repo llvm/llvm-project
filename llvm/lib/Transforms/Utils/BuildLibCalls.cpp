@@ -205,7 +205,13 @@ static bool setDoesNotSync(Function &F) {
 }
 
 static bool setOnlyReadsMemory(Function &F, unsigned ArgNo) {
-  if (F.hasParamAttribute(ArgNo, Attribute::ReadOnly))
+  // readnone, readonly, and writeonly are mutually exclusive.  In particular,
+  // a frontend can add readnone to a const variadic function's fixed pointer
+  // arguments before libcall inference runs.  Do not add a conflicting
+  // inferred attribute.
+  if (F.hasParamAttribute(ArgNo, Attribute::ReadNone) ||
+      F.hasParamAttribute(ArgNo, Attribute::ReadOnly) ||
+      F.hasParamAttribute(ArgNo, Attribute::WriteOnly))
     return false;
   F.addParamAttr(ArgNo, Attribute::ReadOnly);
   ++NumReadOnlyArg;
@@ -213,7 +219,11 @@ static bool setOnlyReadsMemory(Function &F, unsigned ArgNo) {
 }
 
 static bool setOnlyWritesMemory(Function &F, unsigned ArgNo) {
-  if (F.hasParamAttribute(ArgNo, Attribute::WriteOnly))
+  // See setOnlyReadsMemory above.  Preserve an existing access attribute
+  // rather than creating an invalid combination with an inferred one.
+  if (F.hasParamAttribute(ArgNo, Attribute::ReadNone) ||
+      F.hasParamAttribute(ArgNo, Attribute::ReadOnly) ||
+      F.hasParamAttribute(ArgNo, Attribute::WriteOnly))
     return false;
   F.addParamAttr(ArgNo, Attribute::WriteOnly);
   ++NumWriteOnlyArg;
