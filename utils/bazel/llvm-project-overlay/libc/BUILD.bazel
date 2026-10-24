@@ -10374,7 +10374,6 @@ libc_support_library(
     name = "__support_math_log10p1bf16",
     hdrs = ["src/__support/math/log10p1bf16.h"],
     deps = [
-        ":__support_common",
         ":__support_fputil_bfloat16",
         ":__support_fputil_cast",
         ":__support_fputil_fenv_impl",
