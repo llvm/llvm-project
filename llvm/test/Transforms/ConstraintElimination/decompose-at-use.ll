@@ -122,3 +122,157 @@ then:
 exit:
   ret i1 false
 }
+
+define i16 @sub_nuw_after_unsigned_sub_becomes_decomposable(i16 %y, i16 %z, i16 %w) {
+; CHECK-LABEL: define i16 @sub_nuw_after_unsigned_sub_becomes_decomposable(
+; CHECK-SAME: i16 [[Y:%.*]], i16 [[Z:%.*]], i16 [[W:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[S:%.*]] = sub i16 [[Y]], [[Z]]
+; CHECK-NEXT:    [[C:%.*]] = icmp uge i16 [[S]], [[W]]
+; CHECK-NEXT:    br i1 [[C]], label %[[THEN:.*]], label %[[EXIT:.*]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    [[PRE:%.*]] = icmp uge i16 [[Y]], [[Z]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[PRE]])
+; CHECK-NEXT:    [[R:%.*]] = sub nuw i16 [[S]], [[W]]
+; CHECK-NEXT:    ret i16 [[R]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret i16 0
+;
+entry:
+  %s = sub i16 %y, %z
+  %c = icmp uge i16 %s, %w
+  br i1 %c, label %then, label %exit
+
+then:
+  %pre = icmp uge i16 %y, %z
+  call void @llvm.assume(i1 %pre)
+  %r = sub i16 %s, %w
+  ret i16 %r
+
+exit:
+  ret i16 0
+}
+
+define i16 @sub_swapped_after_unsigned_sub_becomes_decomposable(i16 %y, i16 %z, i16 %w) {
+; CHECK-LABEL: define i16 @sub_swapped_after_unsigned_sub_becomes_decomposable(
+; CHECK-SAME: i16 [[Y:%.*]], i16 [[Z:%.*]], i16 [[W:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[S:%.*]] = sub i16 [[Y]], [[Z]]
+; CHECK-NEXT:    [[C:%.*]] = icmp uge i16 [[S]], [[W]]
+; CHECK-NEXT:    br i1 [[C]], label %[[THEN:.*]], label %[[EXIT:.*]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    [[PRE:%.*]] = icmp uge i16 [[Y]], [[Z]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[PRE]])
+; CHECK-NEXT:    [[R:%.*]] = sub i16 [[W]], [[S]]
+; CHECK-NEXT:    ret i16 [[R]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret i16 0
+;
+entry:
+  %s = sub i16 %y, %z
+  %c = icmp uge i16 %s, %w
+  br i1 %c, label %then, label %exit
+
+then:
+  %pre = icmp uge i16 %y, %z
+  call void @llvm.assume(i1 %pre)
+  %r = sub i16 %w, %s
+  ret i16 %r
+
+exit:
+  ret i16 0
+}
+
+define i16 @add_const_nuw_after_unsigned_sub_becomes_decomposable(i16 %y, i16 %z) {
+; CHECK-LABEL: define i16 @add_const_nuw_after_unsigned_sub_becomes_decomposable(
+; CHECK-SAME: i16 [[Y:%.*]], i16 [[Z:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[S:%.*]] = sub i16 [[Y]], [[Z]]
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i16 [[S]], -100
+; CHECK-NEXT:    br i1 [[C]], label %[[THEN:.*]], label %[[EXIT:.*]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    [[PRE:%.*]] = icmp uge i16 [[Y]], [[Z]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[PRE]])
+; CHECK-NEXT:    [[R:%.*]] = add nuw i16 [[S]], 1
+; CHECK-NEXT:    ret i16 [[R]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret i16 0
+;
+entry:
+  %s = sub i16 %y, %z
+  %c = icmp ult i16 %s, -100
+  br i1 %c, label %then, label %exit
+
+then:
+  %pre = icmp uge i16 %y, %z
+  call void @llvm.assume(i1 %pre)
+  %r = add i16 %s, 1
+  ret i16 %r
+
+exit:
+  ret i16 0
+}
+
+define i1 @add_neg_const_after_unsigned_sub_becomes_decomposable(i16 %y, i16 %z) {
+; CHECK-LABEL: define i1 @add_neg_const_after_unsigned_sub_becomes_decomposable(
+; CHECK-SAME: i16 [[Y:%.*]], i16 [[Z:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[S:%.*]] = sub i16 [[Y]], [[Z]]
+; CHECK-NEXT:    [[C:%.*]] = icmp uge i16 [[S]], 5
+; CHECK-NEXT:    br i1 [[C]], label %[[THEN:.*]], label %[[EXIT:.*]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    [[PRE:%.*]] = icmp uge i16 [[Y]], [[Z]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[PRE]])
+; CHECK-NEXT:    [[A:%.*]] = add i16 [[S]], -5
+; CHECK-NEXT:    ret i1 true
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %s = sub i16 %y, %z
+  %c = icmp uge i16 %s, 5
+  br i1 %c, label %then, label %exit
+
+then:
+  %pre = icmp uge i16 %y, %z
+  call void @llvm.assume(i1 %pre)
+  %a = add i16 %s, -5
+  %r = icmp ult i16 %a, %s
+  ret i1 %r
+
+exit:
+  ret i1 false
+}
+
+define i1 @sext_after_signed_add_becomes_decomposable(i16 %b) {
+; CHECK-LABEL: define i1 @sext_after_signed_add_becomes_decomposable(
+; CHECK-SAME: i16 [[B:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i16 [[B]], 1
+; CHECK-NEXT:    [[C:%.*]] = icmp sge i16 [[ADD]], 0
+; CHECK-NEXT:    br i1 [[C]], label %[[THEN:.*]], label %[[EXIT:.*]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    [[PRE:%.*]] = icmp slt i16 [[B]], 100
+; CHECK-NEXT:    call void @llvm.assume(i1 [[PRE]])
+; CHECK-NEXT:    [[S:%.*]] = sext i16 [[ADD]] to i32
+; CHECK-NEXT:    [[E:%.*]] = zext i16 [[ADD]] to i32
+; CHECK-NEXT:    ret i1 true
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %add = add i16 %b, 1
+  %c = icmp sge i16 %add, 0
+  br i1 %c, label %then, label %exit
+
+then:
+  %pre = icmp slt i16 %b, 100
+  call void @llvm.assume(i1 %pre)
+  %s = sext i16 %add to i32
+  %e = zext i16 %add to i32
+  %r = icmp eq i32 %s, %e
+  ret i1 %r
+
+exit:
+  ret i1 false
+}
