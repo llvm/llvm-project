@@ -110,6 +110,7 @@
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/IntelGPUTargetParser.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
 #include <cstdlib> // ::getenv
 #include <map>
@@ -3948,6 +3949,23 @@ static StringRef getCanonicalArchString(Compilation &C,
             << ArchStr << Triple.getArchName();
         return StringRef();
       }
+    }
+  } else if (Triple.isSPIRV() && ArchStr.starts_with("igca")) {
+    if (Triple.getOS() == llvm::Triple::AMDHSA) {
+      C.getDriver().Diag(clang::diag::err_drv_offload_bad_gpu_arch)
+          << "HIP" << ArchStr;
+      return StringRef();
+    }
+    // FIXME(IGCA): This only checks ArchStr's starting with "igca". Typos such
+    // as IGCA_20ca still fall through this check.
+    if (!StringToOffloadArch(ArchStr).isIntelIGCA()) {
+      C.getDriver().Diag(clang::diag::err_drv_offload_bad_gpu_arch)
+          << "IGCA" << ArchStr;
+      SmallVector<StringRef, 32> ValidList;
+      llvm::IntelGPU::fillValidIGCATargetList(ValidList);
+      C.getDriver().Diag(clang::diag::note_valid_options)
+          << llvm::join(ValidList, ", ");
+      return StringRef();
     }
   }
 
