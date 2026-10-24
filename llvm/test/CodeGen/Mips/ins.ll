@@ -3,6 +3,10 @@
 ; RUN:   | FileCheck %s --check-prefixes=MIPS32R2
 ; RUN: llc -O3 -mcpu=mips64r2 -mtriple=mips64el  < %s \
 ; RUN:   | FileCheck %s --check-prefixes=MIPS64R2
+; RUN: llc -O3 -mcpu=mips64r6 -mtriple=mips64el < %s \
+; RUN:   | FileCheck %s --check-prefix=MIPS64R6
+; RUN: llc -O3 -mcpu=mips3 -mtriple=mips64el < %s \
+; RUN:   | FileCheck %s --check-prefix=MIPS3
 
 define i32 @or_and_shl(i32 %a, i32 %b) {
 ; MIPS32R2-LABEL: or_and_shl:
@@ -91,4 +95,224 @@ entry:
   %and = and i64 %a, 34359738367
   %or = or i64 %shl, %and
   ret i64 %or
+}
+
+; The masked field can appear on either side of OR.
+define i32 @masked_insert32(i32 %a, i32 %b) {
+; MIPS32R2-LABEL: masked_insert32:
+; MIPS32R2:       ins $2, $5, 15, 16
+; MIPS64R2-LABEL: masked_insert32:
+; MIPS64R2:       ins $2, $1, 15, 16
+  %keep = and i32 %a, 2147516415
+  %shift = shl i32 %b, 15
+  %field = and i32 %shift, 2147450880
+  %result = or i32 %keep, %field
+  ret i32 %result
+}
+
+define i32 @masked_insert32_commuted(i32 %a, i32 %b) {
+; MIPS32R2-LABEL: masked_insert32_commuted:
+; MIPS32R2:       ins $2, $5, 15, 16
+; MIPS64R2-LABEL: masked_insert32_commuted:
+; MIPS64R2:       ins $2, $1, 15, 16
+  %keep = and i32 %a, 2147516415
+  %shift = shl i32 %b, 15
+  %field = and i32 %shift, 2147450880
+  %result = or i32 %field, %keep
+  ret i32 %result
+}
+
+define i64 @masked_insert64(i64 %a, i64 %b) {
+; MIPS64R2-LABEL: masked_insert64:
+; MIPS64R2:       dins $2, $5, 15, 16
+; MIPS64R6-LABEL: masked_insert64:
+; MIPS64R6:       dins $2, $5, 15, 16
+  %keep = and i64 %a, 18446744071562100735
+  %shift = shl i64 %b, 15
+  %field = and i64 %shift, 2147450880
+  %result = or i64 %keep, %field
+  ret i64 %result
+}
+
+define i64 @masked_insert64_commuted(i64 %a, i64 %b) {
+; MIPS64R2-LABEL: masked_insert64_commuted:
+; MIPS64R2:       dins $2, $5, 15, 16
+; MIPS64R6-LABEL: masked_insert64_commuted:
+; MIPS64R6:       dins $2, $5, 15, 16
+; MIPS3-LABEL: masked_insert64_commuted:
+; MIPS3-NOT:   dins
+; MIPS3:       jr $ra
+  %keep = and i64 %a, 18446744071562100735
+  %shift = shl i64 %b, 15
+  %field = and i64 %shift, 2147450880
+  %result = or i64 %field, %keep
+  ret i64 %result
+}
+
+; Exercise the DINSM and DINSU encodings across the 32-bit boundary.
+define i64 @masked_insert_middle_commuted(i64 %a, i64 %b) {
+; MIPS64R2-LABEL: masked_insert_middle_commuted:
+; MIPS64R2:       dinsm $2, $5, 31, 32
+; MIPS64R6-LABEL: masked_insert_middle_commuted:
+; MIPS64R6:       dinsm $2, $5, 31, 32
+  %keep = and i64 %a, 9223372039002259455
+  %shift = shl i64 %b, 31
+  %field = and i64 %shift, 9223372034707292160
+  %result = or i64 %field, %keep
+  ret i64 %result
+}
+
+define i64 @masked_insert_middle(i64 %a, i64 %b) {
+; MIPS64R2-LABEL: masked_insert_middle:
+; MIPS64R2:       dinsm $2, $5, 31, 32
+; MIPS64R6-LABEL: masked_insert_middle:
+; MIPS64R6:       dinsm $2, $5, 31, 32
+  %keep = and i64 %a, 9223372039002259455
+  %shift = shl i64 %b, 31
+  %field = and i64 %shift, 9223372034707292160
+  %result = or i64 %keep, %field
+  ret i64 %result
+}
+
+define i64 @masked_insert_upper_commuted(i64 %a, i64 %b) {
+; MIPS64R2-LABEL: masked_insert_upper_commuted:
+; MIPS64R2:       dinsu $2, $5, 32, 16
+; MIPS64R6-LABEL: masked_insert_upper_commuted:
+; MIPS64R6:       dinsu $2, $5, 32, 16
+  %keep = and i64 %a, 18446462603027808255
+  %shift = shl i64 %b, 32
+  %field = and i64 %shift, 281470681743360
+  %result = or i64 %field, %keep
+  ret i64 %result
+}
+
+define i64 @masked_insert_upper(i64 %a, i64 %b) {
+; MIPS64R2-LABEL: masked_insert_upper:
+; MIPS64R2:       dinsu $2, $5, 32, 16
+; MIPS64R6-LABEL: masked_insert_upper:
+; MIPS64R6:       dinsu $2, $5, 32, 16
+  %keep = and i64 %a, 18446462603027808255
+  %shift = shl i64 %b, 32
+  %field = and i64 %shift, 281470681743360
+  %result = or i64 %keep, %field
+  ret i64 %result
+}
+
+; A field extending to bit 63 has a different DINSM immediate encoding.
+define i64 @masked_insert_tail(i64 %a, i64 %b) {
+; MIPS64R2-LABEL: masked_insert_tail:
+; MIPS64R2:       dinsm $2, $5, 1, 63
+  %keep = and i64 %a, 1
+  %shift = shl i64 %b, 1
+  %field = and i64 %shift, 18446744073709551614
+  %result = or i64 %keep, %field
+  ret i64 %result
+}
+
+define i64 @masked_insert_tail_commuted(i64 %a, i64 %b) {
+; MIPS64R2-LABEL: masked_insert_tail_commuted:
+; MIPS64R2:       dinsm $2, $5, 1, 63
+  %keep = and i64 %a, 1
+  %shift = shl i64 %b, 1
+  %field = and i64 %shift, 18446744073709551614
+  %result = or i64 %field, %keep
+  ret i64 %result
+}
+
+; The field can be positioned already, or supplied as a constant.
+define i64 @masked_insert_positioned_commuted(i64 %a, i64 %b) {
+; MIPS64R2-LABEL: masked_insert_positioned_commuted:
+; MIPS64R2:       dinsu $2, $1, 32, 16
+  %keep = and i64 %a, -281470681743361
+  %field = and i64 %b, 281470681743360
+  %result = or i64 %field, %keep
+  ret i64 %result
+}
+
+define i64 @masked_insert_positioned(i64 %a, i64 %b) {
+; MIPS64R2-LABEL: masked_insert_positioned:
+; MIPS64R2:       dinsu $2, $1, 32, 16
+  %keep = and i64 %a, -281470681743361
+  %field = and i64 %b, 281470681743360
+  %result = or i64 %keep, %field
+  ret i64 %result
+}
+
+define i64 @masked_insert_constant(i64 %a) {
+; MIPS64R2-LABEL: masked_insert_constant:
+; MIPS64R2:       dinsu $2, $1, 32, 16
+  %keep = and i64 %a, -281470681743361
+  %result = or i64 %keep, 20014547599360
+  ret i64 %result
+}
+
+; The inputs remain live after insertion.
+define i64 @masked_insert_live_inputs(i64 %a, i64 %b) {
+; MIPS64R2-LABEL: masked_insert_live_inputs:
+; MIPS64R2:       dinsm $1, $5, 31, 32
+  %keep = and i64 %a, -9223372034707292161
+  %shift = shl i64 %b, 31
+  %field = and i64 %shift, 9223372034707292160
+  %insert = or i64 %field, %keep
+  %x = xor i64 %insert, %a
+  %result = xor i64 %x, %b
+  ret i64 %result
+}
+
+; Do not insert when the masks overlap or when ANDi is cheaper.
+define i64 @masked_insert_overlap(i64 %a, i64 %b) {
+; MIPS64R2-LABEL: masked_insert_overlap:
+; MIPS64R2-NOT:   dins
+; MIPS64R2:       jr $ra
+  %keep = and i64 %a, -8323073
+  %shift = shl i64 %b, 16
+  %field = and i64 %shift, 16711680
+  %result = or i64 %field, %keep
+  ret i64 %result
+}
+
+define i64 @masked_insert_misaligned(i64 %a, i64 %b) {
+; MIPS64R2-LABEL: masked_insert_misaligned:
+; MIPS64R2-NOT:   dins
+; MIPS64R2:       jr $ra
+  %keep = and i64 %a, -16711681
+  %shift = shl i64 %b, 17
+  %field = and i64 %shift, 16711680
+  %result = or i64 %field, %keep
+  ret i64 %result
+}
+
+define i64 @masked_insert_sparse(i64 %a, i64 %b) {
+; MIPS64R2-LABEL: masked_insert_sparse:
+; MIPS64R2-NOT:   dins
+; MIPS64R2:       jr $ra
+  %keep = and i64 %a, -5570561
+  %shift = shl i64 %b, 16
+  %field = and i64 %shift, 5570560
+  %result = or i64 %field, %keep
+  ret i64 %result
+}
+
+define i64 @masked_insert_small(i64 %a, i64 %b) {
+; MIPS64R2-LABEL: masked_insert_small:
+; MIPS64R2-NOT:   dins
+; MIPS64R2:       andi $2, $5, 2
+; MIPS64R2-NOT:   dins
+; MIPS64R2:       jr $ra
+  %keep = and i64 %a, -3
+  %field = and i64 %b, 2
+  %result = or i64 %field, %keep
+  ret i64 %result
+}
+
+define i64 @masked_insert_small_wider(i64 %a, i64 %b) {
+; MIPS64R2-LABEL: masked_insert_small_wider:
+; MIPS64R2-NOT:   dins
+; MIPS64R2:       andi $2, $5, 6
+; MIPS64R2-NOT:   dins
+; MIPS64R2:       jr $ra
+  %keep = and i64 %a, -7
+  %field = and i64 %b, 6
+  %result = or i64 %field, %keep
+  ret i64 %result
 }
