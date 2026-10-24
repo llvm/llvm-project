@@ -785,9 +785,15 @@ getKernelLaunchEnvironment(DeviceTy &Device, uint32_t OmpABIVersion,
        DPxPTR(&LocalKLE), DPxPTR(*AllocOrErr),
        sizeof(KernelLaunchEnvironmentTy));
 
-  if (auto Err = GenericDevice.dataSubmit(
-          *AllocOrErr, &LocalKLE, sizeof(KernelLaunchEnvironmentTy), AsyncInfo))
-    return Err;
+  // The allocation is fresh, so no work pending on the queue accesses it.
+  if (const auto *Res = olMemcpyWithFlags(
+          AsyncInfo.getQueue(), *AllocOrErr, Device.DeviceHandle, &LocalKLE,
+          /*DstDevice=*/nullptr, sizeof(KernelLaunchEnvironmentTy),
+          OL_MEMCPY_FLAG_DIRECT_WRITE))
+    return createError(ErrorCode::BackendFailure,
+                       "failed to copy the kernel launch environment to "
+                       "device %d: %s",
+                       Device.DeviceID, Res->Details);
   return static_cast<KernelLaunchEnvironmentTy *>(*AllocOrErr);
 }
 
