@@ -1,4 +1,4 @@
-//===--- CIRGenMicrosoftCXXABI.cpp - Emit CIR Code for MS C++ ABI --------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This provides C++ code generation targeting the Microsoft C++ ABI.
+// This provides C++ code generation targeting the Microsoft C++ ABI.  The class
+// in this file generates structures that follow the Microsoft C++ ABI, which is
+// documented at:
+//  https://learn.microsoft.com/en-us/cpp/build/x64-calling-convention?view=msvc-170
 //
 //===----------------------------------------------------------------------===//
 
@@ -14,9 +17,14 @@
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
 
+#include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/Mangle.h"
+#include "clang/Basic/TargetInfo.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -27,23 +35,71 @@ class CIRGenMicrosoftCXXABI : public CIRGenCXXABI {
 public:
   CIRGenMicrosoftCXXABI(CIRGenModule &cgm) : CIRGenCXXABI(cgm) {}
 
+  bool hasThisReturn(GlobalDecl gd) const override {
+    return isa<CXXConstructorDecl>(gd.getDecl());
+  }
+
+  bool hasMostDerivedReturn(GlobalDecl gd) const override { return false; }
+
+  StringRef getPureVirtualCallName() override { return "_purecall"; }
+  StringRef getDeletedVirtualCallName() override { return "_purecall"; }
+
+  bool canSpeculativelyEmitVTable(const CXXRecordDecl *rd) const override {
+    return false;
+  }
+
+  bool doStructorsInitializeVPtrs(const CXXRecordDecl *vtableClass) override {
+    return !vtableClass->hasAttr<MSNoVTableAttr>();
+  }
+
+  bool exportThunk() override { return false; }
+
+  bool useThunkForDtorVariant(const CXXDestructorDecl *dtor,
+                              CXXDtorType dt) const override {
+    return false;
+  }
+
+  bool isZeroInitializable(const MemberPointerType *mpt) override {
+    return true;
+  }
+
+  CharUnits getArrayCookieSizeImpl(QualType elementType) override {
+    return CharUnits::Zero();
+  }
+
+  Address initializeArrayCookie(CIRGenFunction &cgf, Address newPtr,
+                                mlir::Value numElements, const CXXNewExpr *e,
+                                QualType elementType) override {
+    cgf.cgm.errorNYI(e->getSourceRange(), "initializeArrayCookie: MSVC ABI");
+    return newPtr;
+  }
+
+  void setThunkLinkage(cir::FuncOp thunk, bool forVTable, GlobalDecl gd,
+                       bool returnAdjustment) override {
+    cgm.errorNYI("setThunkLinkage: MSVC ABI");
+  }
+
   AddedStructorArgCounts
   buildStructorSignature(GlobalDecl gd,
                          SmallVectorImpl<CanQualType> &argTys) override {
-    cgm.errorNYI(gd.getDecl()->getSourceRange(),
-                 "buildStructorSignature: MSVC ABI");
     return AddedStructorArgCounts{};
   }
 
   void addImplicitStructorParams(CIRGenFunction &cgf, QualType &resTy,
-                                 FunctionArgList &params) override {
-    cgf.cgm.errorNYI(cgf.curGD.getDecl()->getSourceRange(),
-                     "addImplicitStructorParams: MSVC ABI");
-  }
+                                 FunctionArgList &params) override {}
 
   void emitInstanceFunctionProlog(SourceLocation loc,
                                   CIRGenFunction &cgf) override {
-    cgf.cgm.errorNYI(loc, "emitInstanceFunctionProlog: MSVC ABI");
+    if (cgf.curFuncDecl && cgf.curFuncDecl->hasAttr<NakedAttr>())
+      return;
+
+    mlir::Value thisVal = loadIncomingCXXThis(cgf);
+    setCXXABIThisValue(cgf, thisVal);
+
+    if (hasThisReturn(cgf.curGD)) {
+      if (cgf.returnValue.isValid())
+        cgf.getBuilder().createStore(cgf.getLoc(loc), thisVal, cgf.returnValue);
+    }
   }
 
   AddedStructorArgs getImplicitConstructorArgs(CIRGenFunction &cgf,
@@ -51,8 +107,6 @@ public:
                                                CXXCtorType type,
                                                bool forVirtualBase,
                                                bool delegating) override {
-    cgf.cgm.errorNYI(d->getSourceRange(),
-                     "getImplicitConstructorArgs: MSVC ABI");
     return AddedStructorArgs{};
   }
 
@@ -61,13 +115,11 @@ public:
                                             CXXDtorType type,
                                             bool forVirtualBase,
                                             bool delegating) override {
-    cgf.cgm.errorNYI(dd->getSourceRange(),
-                     "getCXXDestructorImplicitParam: MSVC ABI");
     return nullptr;
   }
 
   void emitCXXConstructors(const CXXConstructorDecl *d) override {
-    cgm.errorNYI(d->getSourceRange(), "emitCXXConstructors: MSVC ABI");
+    cgm.emitGlobal(GlobalDecl(d, Ctor_Complete));
   }
 
   void emitCXXDestructors(const CXXDestructorDecl *d) override {
@@ -75,6 +127,11 @@ public:
   }
 
   void emitCXXStructor(GlobalDecl gd) override {
+    if (auto *ctor = dyn_cast<CXXConstructorDecl>(gd.getDecl())) {
+      auto fn = cgm.codegenCXXStructor(gd.getWithCtorType(Ctor_Complete));
+      cgm.maybeSetTrivialComdat(*ctor, fn);
+      return;
+    }
     cgm.errorNYI(gd.getDecl()->getSourceRange(), "emitCXXStructor: MSVC ABI");
   }
 
@@ -102,36 +159,16 @@ public:
 
   size_t getSrcArgforCopyCtor(const CXXConstructorDecl *cd,
                               FunctionArgList &args) const override {
-    cgm.errorNYI(cd->getSourceRange(), "getSrcArgforCopyCtor: MSVC ABI");
-    assert(args.size() >= 2 &&
-           "expected the arglist to have at least two args!");
-    // The 'most_derived' parameter goes second if the ctor is variadic and
-    // has v-bases.
-    if (cd->getParent()->getNumVBases() > 0 &&
-        cd->getType()->castAs<FunctionProtoType>()->isVariadic())
-      return 2;
     return 1;
   }
 
   const CXXRecordDecl *
   getThisArgumentTypeForMethod(const CXXMethodDecl *md) override {
-    cgm.errorNYI(md->getSourceRange(),
-                 "getThisArgumentTypeForMethod: MSVC ABI");
     return md->getParent();
-  }
-
-  Address adjustThisArgumentForVirtualFunctionCall(CIRGenFunction &cgf,
-                                                   GlobalDecl gd,
-                                                   Address thisAddr,
-                                                   bool virtualCall) override {
-    cgf.cgm.errorNYI(gd.getDecl()->getSourceRange(),
-                     "adjustThisArgumentForVirtualFunctionCall: MSVC ABI");
-    return thisAddr;
   }
 
   bool isVirtualOffsetNeededForVTableField(CIRGenFunction &cgf,
                                            CIRGenFunction::VPtr vptr) override {
-    cgf.cgm.errorNYI("isVirtualOffsetNeededForVTableField: MSVC ABI");
     return false;
   }
 
@@ -181,13 +218,6 @@ public:
                  "emitVirtualInheritanceTables: MSVC ABI");
   }
 
-  void
-  initializeHiddenVirtualInheritanceMembers(CIRGenFunction &cgf,
-                                            const CXXRecordDecl *rd) override {
-    cgf.cgm.errorNYI(rd->getSourceRange(),
-                     "initializeHiddenVirtualInheritanceMembers: MSVC ABI");
-  }
-
   mlir::Value
   getVirtualBaseClassOffset(mlir::Location loc, CIRGenFunction &cgf,
                             Address thisAddr, const CXXRecordDecl *classDecl,
@@ -199,7 +229,7 @@ public:
   cir::MethodAttr buildVirtualMethodAttr(cir::MethodType methodTy,
                                          const CXXMethodDecl *md) override {
     cgm.errorNYI(md->getSourceRange(), "buildVirtualMethodAttr: MSVC ABI");
-    return cir::MethodAttr();
+    return {};
   }
 
   mlir::Value performThisAdjustment(CIRGenFunction &cgf, Address thisAddr,
@@ -216,65 +246,12 @@ public:
     return ret.emitRawPointer();
   }
 
-  bool canSpeculativelyEmitVTable(const CXXRecordDecl *rd) const override {
-    return false;
-  }
-
-  bool doStructorsInitializeVPtrs(const CXXRecordDecl *vtableClass) override {
-    cgm.errorNYI(vtableClass->getSourceRange(),
-                 "doStructorsInitializeVPtrs: MSVC ABI");
-    return false;
-  }
-
-  bool exportThunk() override { return false; }
-
-  bool useThunkForDtorVariant(const CXXDestructorDecl *dtor,
-                              CXXDtorType dt) const override {
-    cgm.errorNYI(dtor->getSourceRange(), "useThunkForDtorVariant: MSVC ABI");
-    return false;
-  }
-
-  void setThunkLinkage(cir::FuncOp thunk, bool forVTable, GlobalDecl gd,
-                       bool returnAdjustment) override {
-    cgm.errorNYI(gd.getDecl()->getSourceRange(), "setThunkLinkage: MSVC ABI");
-  }
-
-  StringRef getPureVirtualCallName() override { return "_purecall"; }
-  StringRef getDeletedVirtualCallName() override { return "_purecall"; }
-
-  bool isZeroInitializable(const MemberPointerType *mpt) override {
-    cgm.errorNYI("isZeroInitializable: MSVC ABI");
-    return true;
-  }
-
-  bool requiresArrayCookie(const CXXNewExpr *e) override {
-    cgm.errorNYI(e->getSourceRange(), "requiresArrayCookie: MSVC ABI");
-    return false;
-  }
-
-  CharUnits getArrayCookieSizeImpl(QualType elementType) override {
-    cgm.errorNYI("getArrayCookieSizeImpl: MSVC ABI");
-    return CharUnits::Zero();
-  }
-
-  Address initializeArrayCookie(CIRGenFunction &cgf, Address newPtr,
-                                mlir::Value numElements, const CXXNewExpr *e,
-                                QualType elementType) override {
-    cgf.cgm.errorNYI(e->getSourceRange(), "initializeArrayCookie: MSVC ABI");
-    return newPtr;
-  }
-
-  bool shouldTypeidBeNullChecked(QualType srcTy) override {
-    cgm.errorNYI("shouldTypeidBeNullChecked: MSVC ABI");
-    return false;
-  }
+  bool shouldTypeidBeNullChecked(QualType srcTy) override { return false; }
 
   mlir::Value emitTypeid(CIRGenFunction &cgf, QualType srcTy, Address thisPtr,
                          mlir::Type typeInfoPtrTy) override {
-    cgf.cgm.errorNYI(cgf.getLoc(srcTy->getAsCXXRecordDecl()->getLocation()),
-                     "emitTypeid: MSVC ABI");
-    return cgf.getBuilder().getNullPtr(
-        typeInfoPtrTy, cgf.getLoc(srcTy->getAsCXXRecordDecl()->getLocation()));
+    cgf.cgm.errorNYI("emitTypeid: MSVC ABI");
+    return nullptr;
   }
 
   void emitBadTypeidCall(CIRGenFunction &cgf, mlir::Location loc) override {
@@ -282,7 +259,7 @@ public:
   }
 
   void emitBadCastCall(CIRGenFunction &cgf, mlir::Location loc) override {
-    cgm.errorNYI(loc, "emitBadCastCall: MSVC ABI");
+    cgf.cgm.errorNYI(loc, "emitBadCastCall: MSVC ABI");
   }
 
   mlir::Value emitDynamicCast(CIRGenFunction &cgf, mlir::Location loc,
@@ -299,20 +276,15 @@ public:
     return nullptr;
   }
 
-  CatchTypeInfo getCatchAllTypeInfo() override {
-    cgm.errorNYI("getCatchAllTypeInfo: MSVC ABI");
-    return CatchTypeInfo{nullptr, 0};
-  }
-
   CatchTypeInfo
   getAddrOfCXXCatchHandlerType(mlir::Location loc, QualType ty,
                                QualType catchHandlerType) override {
     cgm.errorNYI(loc, "getAddrOfCXXCatchHandlerType: MSVC ABI");
-    return CatchTypeInfo{nullptr, 0};
+    return {};
   }
 
   void emitRethrow(CIRGenFunction &cgf, bool isNoReturn) override {
-    cgm.errorNYI("emitRethrow: MSVC ABI");
+    cgf.cgm.errorNYI("emitRethrow: MSVC ABI");
   }
 
   void emitThrow(CIRGenFunction &cgf, const CXXThrowExpr *e) override {

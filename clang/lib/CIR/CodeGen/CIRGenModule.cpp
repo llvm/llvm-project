@@ -2188,7 +2188,7 @@ cir::GlobalLinkageKind CIRGenModule::getFunctionLinkage(GlobalDecl gd) {
 
 static cir::GlobalOp
 generateStringLiteral(mlir::Location loc, mlir::TypedAttr c,
-                      cir::GlobalLinkageKind lt, CIRGenModule &cgm,
+                      cir::GlobalLinkageKind linkageKind, CIRGenModule &cgm,
                       StringRef globalName, CharUnits alignment) {
   LangAS as = CodeGenUtils::getGlobalConstantAddressSpace(cgm.getLangOpts(),
                                                           cgm.getTarget());
@@ -2203,8 +2203,8 @@ generateStringLiteral(mlir::Location loc, mlir::TypedAttr c,
 
   // Set up extra information and add to the module
   gv.setAlignmentAttr(cgm.getSize(alignment));
-  gv.setLinkageAttr(
-      cir::GlobalLinkageKindAttr::get(cgm.getBuilder().getContext(), lt));
+  gv.setLinkageAttr(cir::GlobalLinkageKindAttr::get(
+      cgm.getBuilder().getContext(), linkageKind));
   assert(!cir::MissingFeatures::opGlobalThreadLocal());
   assert(!cir::MissingFeatures::opGlobalUnnamedAddr());
   CIRGenModule::setInitializer(gv, c);
@@ -2256,27 +2256,38 @@ cir::GlobalOp CIRGenModule::getGlobalForStringLiteral(const StringLiteral *s,
         uint64_t(alignment.getQuantity()) > *gv.getAlignment())
       gv.setAlignmentAttr(getSize(alignment));
   } else {
+    std::string globalVariableName;
+    cir::GlobalLinkageKind linkageKind;
+
     // Mangle the string literal if that's how the ABI merges duplicate strings.
     // Don't do it if they are writable, since we don't want writes in one TU to
     // affect strings in another.
     if (getCXXABI().getMangleContext().shouldMangleStringLiteral(s) &&
         !getLangOpts().WritableStrings) {
-      errorNYI(s->getSourceRange(),
-               "getGlobalForStringLiteral: mangle string literals");
+      llvm::raw_string_ostream out(globalVariableName);
+      getCXXABI().getMangleContext().mangleStringLiteral(s, out);
+      linkageKind = cir::GlobalLinkageKind::LinkOnceODRLinkage;
+    } else {
+      linkageKind = cir::GlobalLinkageKind::PrivateLinkage;
+      // Unlike LLVM IR, CIR doesn't automatically unique names for globals, so
+      // we need to do that explicitly.
+      globalVariableName = getUniqueGlobalName(name.str());
     }
 
-    // Unlike LLVM IR, CIR doesn't automatically unique names for globals, so
-    // we need to do that explicitly.
-    std::string uniqueName = getUniqueGlobalName(name.str());
+    if (auto existingGV = getGlobalValue(globalVariableName)) {
+      gv = cast<cir::GlobalOp>(existingGV);
+      constantStringMap[c] = gv;
+      return gv;
+    }
+
     // Synthetic string literals (e.g., from SourceLocExpr) may not have valid
     // source locations. Use unknown location in those cases.
     mlir::Location loc = s->getBeginLoc().isValid()
                              ? getLoc(s->getSourceRange())
                              : builder.getUnknownLoc();
     auto typedC = llvm::cast<mlir::TypedAttr>(c);
-    gv = generateStringLiteral(loc, typedC,
-                               cir::GlobalLinkageKind::PrivateLinkage, *this,
-                               uniqueName, alignment);
+    gv = generateStringLiteral(loc, typedC, linkageKind, *this,
+                               globalVariableName, alignment);
     setDSOLocal(static_cast<mlir::Operation *>(gv));
     constantStringMap[c] = gv;
 
@@ -2917,9 +2928,10 @@ StringRef CIRGenModule::getMangledName(GlobalDecl gd) {
   // constructors get mangled the same.
   if (const auto *cd = dyn_cast<CXXConstructorDecl>(canonicalGd.getDecl())) {
     if (!getTarget().getCXXABI().hasConstructorVariants()) {
-      errorNYI(cd->getSourceRange(),
-               "getMangledName: C++ constructor without variants");
-      return cast<NamedDecl>(gd.getDecl())->getIdentifier()->getName();
+      CXXCtorType origCtorType = gd.getCtorType();
+      assert(origCtorType == Ctor_Base || origCtorType == Ctor_Complete);
+      if (origCtorType == Ctor_Base)
+        canonicalGd = GlobalDecl(cd, Ctor_Complete);
     }
   }
 
@@ -3755,12 +3767,13 @@ cir::FuncOp CIRGenModule::getOrCreateCIRFunction(
   }
 
   // All MSVC dtors other than the base dtor are linkonce_odr and delegate to
-  // each other bottoming out wiht the base dtor. Therefore we emit non-base
+  // each other bottoming out with the base dtor. Therefore we emit non-base
   // dtors on usage, even if there is no dtor definition in the TU.
   if (isa_and_nonnull<CXXDestructorDecl>(d) &&
       getCXXABI().useThunkForDtorVariant(cast<CXXDestructorDecl>(d),
                                          gd.getDtorType()))
-    errorNYI(d->getSourceRange(), "getOrCreateCIRFunction: dtor");
+    errorNYI(d->getSourceRange(),
+             "getOrCreateCIRFunction: MSVC non-base destructor thunk");
 
   // This is the first use or definition of a mangled name. If there is a
   // deferred decl with this name, remember that we need to emit it at the end

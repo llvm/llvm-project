@@ -1082,9 +1082,9 @@ clang::QualType CIRGenFunction::buildFunctionArgList(clang::GlobalDecl gd,
   const auto *md = dyn_cast<CXXMethodDecl>(fd);
   if (md && md->isImplicitObjectMemberFunction()) {
     if (cgm.getCXXABI().hasThisReturn(gd))
-      cgm.errorNYI(fd->getSourceRange(), "this return");
+      retTy = md->getThisType();
     else if (cgm.getCXXABI().hasMostDerivedReturn(gd))
-      cgm.errorNYI(fd->getSourceRange(), "most derived return");
+      retTy = getContext().VoidPtrTy;
     cgm.getCXXABI().buildThisParam(*this, args);
   }
 
