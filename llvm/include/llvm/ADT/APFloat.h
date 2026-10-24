@@ -1271,6 +1271,35 @@ public:
   /// \param Semantics - type float semantics
   LLVM_ABI static APFloat getAllOnesValue(const fltSemantics &Semantics);
 
+  /// Constants from C++20 <numbers>
+  enum class MathConstant {
+    e,
+    log2e,
+    log10e,
+    pi,
+    inv_pi,
+    inv_sqrtpi,
+    ln2,
+    ln10,
+    sqrt2,
+    sqrt3,
+    inv_sqrt3,
+    egamma,
+    phi,
+  };
+
+  /// Returns the mathematical constant \p C rounded to the given semantics.
+  ///
+  /// TODO: ppc_fp128 constants are currently limited to 106 bits of precision.
+  ///
+  /// \param C - the constant to materialize
+  /// \param Sem - type float semantics
+  /// \param Negative - True iff the number should be negative
+  /// \param RM - the rounding mode used to round the exact value to \p Sem
+  LLVM_ABI static APFloat getConstant(MathConstant C, const fltSemantics &Sem,
+                                      bool Negative = false,
+                                      roundingMode RM = rmNearestTiesToEven);
+
   /// Returns true if the given semantics has actual significand.
   ///
   /// \param Sem - type float semantics
