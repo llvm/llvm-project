@@ -4411,6 +4411,18 @@ bool SIRegisterInfo::isRegWithinOccupancyBudget(
          MaxVGPRsForCurrentOccupancy;
 }
 
+unsigned SIRegisterInfo::getNumNeededRegs(
+    const TargetRegisterClass &RC, const RegisterClassInfo &RCI,
+    const LiveRegMatrix &LRM, const MachineRegisterInfo &MRI) const {
+  unsigned MaxIdx = 0;
+  for (MCPhysReg Reg : RCI.getOrder(&RC)) {
+    if (LRM.isPhysRegUsed(Reg) ||
+        MRI.isPhysRegUsed(Reg, /*SkipRegMaskTest=*/true))
+      MaxIdx = std::max(MaxIdx, getHWRegIndex(Reg) + 1);
+  }
+  return MaxIdx;
+}
+
 void SIRegisterInfo::filterAndSortForAntiHintedRegs(
     Register VirtReg, MutableArrayRef<MCPhysReg> CustomOrder,
     const BitVector &AntiHintedRegUnits, const MachineFunction &MF,
@@ -4424,22 +4436,12 @@ void SIRegisterInfo::filterAndSortForAntiHintedRegs(
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   assert(hasVectorRegisters(MRI.getRegClass(VirtReg)) &&
          "SGPR anti-hints are not handled");
-  unsigned NumVGPRs = 0;
-  unsigned NumAGPRs = 0;
-
   assert(Matrix && "LiveRegMatrix required to compute occupancy");
   assert(RegClassInfo && "RegClassInfo required to compute occupancy");
-  for (MCPhysReg Reg : RegClassInfo->getOrder(&AMDGPU::VGPR_32RegClass)) {
-    if (Matrix->isPhysRegUsed(Reg) ||
-        MRI.isPhysRegUsed(Reg, /*SkipRegMaskTest=*/true))
-      NumVGPRs = std::max(NumVGPRs, getHWRegIndex(Reg) + 1);
-  }
-
-  for (MCPhysReg Reg : RegClassInfo->getOrder(&AMDGPU::AGPR_32RegClass)) {
-    if (Matrix->isPhysRegUsed(Reg) ||
-        MRI.isPhysRegUsed(Reg, /*SkipRegMaskTest=*/true))
-      NumAGPRs = std::max(NumAGPRs, getHWRegIndex(Reg) + 1);
-  }
+  unsigned NumVGPRs =
+      getNumNeededRegs(AMDGPU::VGPR_32RegClass, *RegClassInfo, *Matrix, MRI);
+  unsigned NumAGPRs =
+      getNumNeededRegs(AMDGPU::AGPR_32RegClass, *RegClassInfo, *Matrix, MRI);
 
   unsigned NumAllocatedVGPRs =
       AMDGPU::getTotalNumVGPRs(ST.hasGFX90AInsts(), NumAGPRs, NumVGPRs);
