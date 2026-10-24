@@ -1,0 +1,3103 @@
+Args: /home/jacques.guan/code/llvm-project/build/bin/llc -mtriple=riscv32 -mattr=+v -target-abi=ilp32d -global-isel -verify-machineinstrs -print-after-all --debug 
+Number of GV that must be kept:  0
+
+Features:+v
+CPU:generic-rv32
+TuneCPU:generic-rv32
+
+AAResults register BasicAA
+AAResults register ScopedNoAliasAA
+AAResults register TypeBasedAA
+*** IR Dump After ObjC ARC contraction (objc-arc-contract) ***
+define <vscale x 16 x i8> @insertelt_nxv16i8_idx(<vscale x 16 x i8> %v, i8 signext %elt, i32 signext %idx) #0 {
+  %r = insertelement <vscale x 16 x i8> %v, i8 %elt, i32 %idx
+  ret <vscale x 16 x i8> %r
+}
+*** IR Dump After Pre-ISel Intrinsic Lowering (pre-isel-intrinsic-lowering) ***
+; ModuleID = '<stdin>'
+source_filename = "<stdin>"
+target datalayout = "e-m:e-p:32:32-i64:64-n32-S128"
+target triple = "riscv32"
+
+define <vscale x 16 x i8> @insertelt_nxv16i8_idx(<vscale x 16 x i8> %v, i8 signext %elt, i32 signext %idx) #0 {
+  %r = insertelement <vscale x 16 x i8> %v, i8 %elt, i32 %idx
+  ret <vscale x 16 x i8> %r
+}
+
+attributes #0 = { "target-features"="+v" }
+*** IR Dump After Expand IR instructions (expand-ir-insts) ***
+define <vscale x 16 x i8> @insertelt_nxv16i8_idx(<vscale x 16 x i8> %v, i8 signext %elt, i32 signext %idx) #0 {
+  %r = insertelement <vscale x 16 x i8> %v, i8 %elt, i32 %idx
+  ret <vscale x 16 x i8> %r
+}
+*** IR Dump After Expand Atomic instructions (atomic-expand) ***
+define <vscale x 16 x i8> @insertelt_nxv16i8_idx(<vscale x 16 x i8> %v, i8 signext %elt, i32 signext %idx) #0 {
+  %r = insertelement <vscale x 16 x i8> %v, i8 %elt, i32 %idx
+  ret <vscale x 16 x i8> %r
+}
+*** IR Dump After Canonicalize natural loops (loop-simplify) ***
+define <vscale x 16 x i8> @insertelt_nxv16i8_idx(<vscale x 16 x i8> %v, i8 signext %elt, i32 signext %idx) #0 {
+  %r = insertelement <vscale x 16 x i8> %v, i8 %elt, i32 %idx
+  ret <vscale x 16 x i8> %r
+}
+Please set both PrefetchDistance and CacheLineSize for loop data prefetch.
+*** IR Dump After Loop Data Prefetch (loop-data-prefetch) ***
+define <vscale x 16 x i8> @insertelt_nxv16i8_idx(<vscale x 16 x i8> %v, i8 signext %elt, i32 signext %idx) #0 {
+  %r = insertelement <vscale x 16 x i8> %v, i8 %elt, i32 %idx
+  ret <vscale x 16 x i8> %r
+}
+*** IR Dump After RISC-V gather/scatter lowering (riscv-gather-scatter-lowering) ***
+define <vscale x 16 x i8> @insertelt_nxv16i8_idx(<vscale x 16 x i8> %v, i8 signext %elt, i32 signext %idx) #0 {
+  %r = insertelement <vscale x 16 x i8> %v, i8 %elt, i32 %idx
+  ret <vscale x 16 x i8> %r
+}
+*** Interleaved Access Pass: insertelt_nxv16i8_idx
+*** IR Dump After Interleaved Access Pass (interleaved-access) ***
+define <vscale x 16 x i8> @insertelt_nxv16i8_idx(<vscale x 16 x i8> %v, i8 signext %elt, i32 signext %idx) #0 {
+  %r = insertelement <vscale x 16 x i8> %v, i8 %elt, i32 %idx
+  ret <vscale x 16 x i8> %r
+}
+*** IR Dump After RISC-V CodeGenPrepare (riscv-codegenprepare) ***
+define <vscale x 16 x i8> @insertelt_nxv16i8_idx(<vscale x 16 x i8> %v, i8 signext %elt, i32 signext %idx) #0 {
+  %r = insertelement <vscale x 16 x i8> %v, i8 %elt, i32 %idx
+  ret <vscale x 16 x i8> %r
+}
+*** IR Dump After Module Verifier (verify) ***
+define <vscale x 16 x i8> @insertelt_nxv16i8_idx(<vscale x 16 x i8> %v, i8 signext %elt, i32 signext %idx) #0 {
+  %r = insertelement <vscale x 16 x i8> %v, i8 %elt, i32 %idx
+  ret <vscale x 16 x i8> %r
+}
+*** IR Dump After Canonicalize natural loops (loop-simplify) ***
+define <vscale x 16 x i8> @insertelt_nxv16i8_idx(<vscale x 16 x i8> %v, i8 signext %elt, i32 signext %idx) #0 {
+  %r = insertelement <vscale x 16 x i8> %v, i8 %elt, i32 %idx
+  ret <vscale x 16 x i8> %r
+}
+*** IR Dump After Lower Garbage Collection Instructions (gc-lowering) ***
+define <vscale x 16 x i8> @insertelt_nxv16i8_idx(<vscale x 16 x i8> %v, i8 signext %elt, i32 signext %idx) #0 {
+  %r = insertelement <vscale x 16 x i8> %v, i8 %elt, i32 %idx
+  ret <vscale x 16 x i8> %r
+}
+*** IR Dump After Shadow Stack GC Lowering (shadow-stack-gc-lowering) ***
+define <vscale x 16 x i8> @insertelt_nxv16i8_idx(<vscale x 16 x i8> %v, i8 signext %elt, i32 signext %idx) #0 {
+  %r = insertelement <vscale x 16 x i8> %v, i8 %elt, i32 %idx
+  ret <vscale x 16 x i8> %r
+}
+*** IR Dump After Remove unreachable blocks from the CFG (unreachableblockelim) ***
+define <vscale x 16 x i8> @insertelt_nxv16i8_idx(<vscale x 16 x i8> %v, i8 signext %elt, i32 signext %idx) #0 {
+  %r = insertelement <vscale x 16 x i8> %v, i8 %elt, i32 %idx
+  ret <vscale x 16 x i8> %r
+}
+		Looking for trivial roots
+Found a new trivial root: %0
+Last visited node: %0
+		Looking for non-trivial roots
+Total: 1, Num: 2
+Discovered CFG nodes:
+0: nullptr
+1: nullptr
+2: %0
+Found roots: %0 
+---- Branch Probability Info : insertelt_nxv16i8_idx ----
+
+Computing probabilities for 
+
+block-frequency: insertelt_nxv16i8_idx
+======================================
+reverse-post-order-traversal
+ - 0: 
+loop-detection
+compute-mass-in-function
+ - node: 
+  => mass:  ffffffffffffffff
+float-to-int: min = 1.0, max = 1.0, factor = 18014398509481984.0
+ - : float = 1.0, scaled = 18014398509481984.0, int = 18014398509481984
+block-frequency-info: insertelt_nxv16i8_idx
+ - : float = 1.0, int = 18014398509481984
+
+********** Begin Constant Hoisting **********
+********** Function: insertelt_nxv16i8_idx
+********** End Constant Hoisting **********
+*** IR Dump After Constant Hoisting (consthoist) ***
+define <vscale x 16 x i8> @insertelt_nxv16i8_idx(<vscale x 16 x i8> %v, i8 signext %elt, i32 signext %idx) #0 {
+  %r = insertelement <vscale x 16 x i8> %v, i8 %elt, i32 %idx
+  ret <vscale x 16 x i8> %r
+}
+*** IR Dump After Replace intrinsics with calls to vector library (replace-with-veclib) ***
+define <vscale x 16 x i8> @insertelt_nxv16i8_idx(<vscale x 16 x i8> %v, i8 signext %elt, i32 signext %idx) #0 {
+  %r = insertelement <vscale x 16 x i8> %v, i8 %elt, i32 %idx
+  ret <vscale x 16 x i8> %r
+}
+*** IR Dump After Partially inline calls to library functions (partially-inline-libcalls) ***
+define <vscale x 16 x i8> @insertelt_nxv16i8_idx(<vscale x 16 x i8> %v, i8 signext %elt, i32 signext %idx) #0 {
+  %r = insertelement <vscale x 16 x i8> %v, i8 %elt, i32 %idx
+  ret <vscale x 16 x i8> %r
+}
+*** IR Dump After Instrument function entry/exit with calls to e.g. mcount() (post inlining) (post-inline-ee-instrument) ***
+define <vscale x 16 x i8> @insertelt_nxv16i8_idx(<vscale x 16 x i8> %v, i8 signext %elt, i32 signext %idx) #0 {
+  %r = insertelement <vscale x 16 x i8> %v, i8 %elt, i32 %idx
+  ret <vscale x 16 x i8> %r
+}
+*** IR Dump After Scalarize Masked Memory Intrinsics (scalarize-masked-mem-intrin) ***
+define <vscale x 16 x i8> @insertelt_nxv16i8_idx(<vscale x 16 x i8> %v, i8 signext %elt, i32 signext %idx) #0 {
+  %r = insertelement <vscale x 16 x i8> %v, i8 %elt, i32 %idx
+  ret <vscale x 16 x i8> %r
+}
+*** IR Dump After Expand reduction intrinsics (expand-reductions) ***
+define <vscale x 16 x i8> @insertelt_nxv16i8_idx(<vscale x 16 x i8> %v, i8 signext %elt, i32 signext %idx) #0 {
+  %r = insertelement <vscale x 16 x i8> %v, i8 %elt, i32 %idx
+  ret <vscale x 16 x i8> %r
+}
+IR Promotion: Running on insertelt_nxv16i8_idx
+*** IR Dump After Type Promotion (type-promotion) ***
+define <vscale x 16 x i8> @insertelt_nxv16i8_idx(<vscale x 16 x i8> %v, i8 signext %elt, i32 signext %idx) #0 {
+  %r = insertelement <vscale x 16 x i8> %v, i8 %elt, i32 %idx
+  ret <vscale x 16 x i8> %r
+}
+		Looking for trivial roots
+Found a new trivial root: %0
+Last visited node: %0
+		Looking for non-trivial roots
+Total: 1, Num: 2
+Discovered CFG nodes:
+0: nullptr
+1: nullptr
+2: %0
+Found roots: %0 
+---- Branch Probability Info : insertelt_nxv16i8_idx ----
+
+Computing probabilities for 
+
+block-frequency: insertelt_nxv16i8_idx
+======================================
+reverse-post-order-traversal
+ - 0: 
+loop-detection
+compute-mass-in-function
+ - node: 
+  => mass:  ffffffffffffffff
+float-to-int: min = 1.0, max = 1.0, factor = 18014398509481984.0
+ - : float = 1.0, scaled = 18014398509481984.0, int = 18014398509481984
+block-frequency-info: insertelt_nxv16i8_idx
+ - : float = 1.0, int = 18014398509481984
+
+*** IR Dump After CodeGen Prepare (codegenprepare) ***
+define <vscale x 16 x i8> @insertelt_nxv16i8_idx(<vscale x 16 x i8> %v, i8 signext %elt, i32 signext %idx) #0 {
+  %r = insertelement <vscale x 16 x i8> %v, i8 %elt, i32 %idx
+  ret <vscale x 16 x i8> %r
+}
+*** IR Dump After Exception handling preparation (dwarf-eh-prepare) ***
+define <vscale x 16 x i8> @insertelt_nxv16i8_idx(<vscale x 16 x i8> %v, i8 signext %elt, i32 signext %idx) #0 {
+  %r = insertelement <vscale x 16 x i8> %v, i8 %elt, i32 %idx
+  ret <vscale x 16 x i8> %r
+}
+*** IR Dump After RISC-V Promote Constants (riscv-promote-const) ***
+; ModuleID = '<stdin>'
+source_filename = "<stdin>"
+target datalayout = "e-m:e-p:32:32-i64:64-n32-S128"
+target triple = "riscv32"
+
+define <vscale x 16 x i8> @insertelt_nxv16i8_idx(<vscale x 16 x i8> %v, i8 signext %elt, i32 signext %idx) #0 {
+  %r = insertelement <vscale x 16 x i8> %v, i8 %elt, i32 %idx
+  ret <vscale x 16 x i8> %r
+}
+
+attributes #0 = { "target-features"="+v" }
+*** IR Dump After A No-Op Barrier Pass (barrier) ***
+; ModuleID = '<stdin>'
+source_filename = "<stdin>"
+target datalayout = "e-m:e-p:32:32-i64:64-n32-S128"
+target triple = "riscv32"
+
+define <vscale x 16 x i8> @insertelt_nxv16i8_idx(<vscale x 16 x i8> %v, i8 signext %elt, i32 signext %idx) #0 {
+  %r = insertelement <vscale x 16 x i8> %v, i8 %elt, i32 %idx
+  ret <vscale x 16 x i8> %r
+}
+
+attributes #0 = { "target-features"="+v" }
+*** IR Dump After Merge internal globals (global-merge) ***
+define <vscale x 16 x i8> @insertelt_nxv16i8_idx(<vscale x 16 x i8> %v, i8 signext %elt, i32 signext %idx) #0 {
+  %r = insertelement <vscale x 16 x i8> %v, i8 %elt, i32 %idx
+  ret <vscale x 16 x i8> %r
+}
+*** IR Dump After Prepare inline asm insts (inline-asm-prepare) ***
+define <vscale x 16 x i8> @insertelt_nxv16i8_idx(<vscale x 16 x i8> %v, i8 signext %elt, i32 signext %idx) #0 {
+  %r = insertelement <vscale x 16 x i8> %v, i8 %elt, i32 %idx
+  ret <vscale x 16 x i8> %r
+}
+[SafeStack] Function: insertelt_nxv16i8_idx
+[SafeStack]     safestack is not requested for this function
+*** IR Dump After Safe Stack instrumentation pass (safe-stack) ***
+define <vscale x 16 x i8> @insertelt_nxv16i8_idx(<vscale x 16 x i8> %v, i8 signext %elt, i32 signext %idx) #0 {
+  %r = insertelement <vscale x 16 x i8> %v, i8 %elt, i32 %idx
+  ret <vscale x 16 x i8> %r
+}
+*** IR Dump After Module Verifier (verify) ***
+define <vscale x 16 x i8> @insertelt_nxv16i8_idx(<vscale x 16 x i8> %v, i8 signext %elt, i32 signext %idx) #0 {
+  %r = insertelement <vscale x 16 x i8> %v, i8 %elt, i32 %idx
+  ret <vscale x 16 x i8> %r
+}
+		Looking for trivial roots
+Found a new trivial root: %0
+Last visited node: %0
+		Looking for non-trivial roots
+Total: 1, Num: 2
+Discovered CFG nodes:
+0: nullptr
+1: nullptr
+2: %0
+Found roots: %0 
+---- Branch Probability Info : insertelt_nxv16i8_idx ----
+
+Computing probabilities for 
+AAResults register BasicAA
+AAResults register ScopedNoAliasAA
+AAResults register TypeBasedAA
+Checking DILocation from   %r = insertelement <vscale x 16 x i8> %v, i8 %elt, i32 %idx was copied to G_INSERT_VECTOR_ELT
+Checking DILocation from   ret <vscale x 16 x i8> %r was copied to COPY
+Checking DILocation from   ret <vscale x 16 x i8> %r was copied to PseudoRET implicit $v8m2
+# *** IR Dump After IRTranslator (irtranslator) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.1 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:_(<vscale x 16 x s8>) = COPY $v8m2
+  %3:_(s32) = COPY $x10
+  %4:_(s32) = G_ASSERT_SEXT %3:_, 8
+  %1:_(s8) = G_TRUNC %4:_(s32)
+  %2:_(s32) = COPY $x11
+  %5:_(<vscale x 16 x s8>) = G_INSERT_VECTOR_ELT %0:_, %1:_(s8), %2:_(s32)
+  $v8m2 = COPY %5:_(<vscale x 16 x s8>)
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+# *** IR Dump After Verify generated machine code (machineverifier) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.1 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:_(<vscale x 16 x s8>) = COPY $v8m2
+  %3:_(s32) = COPY $x10
+  %4:_(s32) = G_ASSERT_SEXT %3:_, 8
+  %1:_(s8) = G_TRUNC %4:_(s32)
+  %2:_(s32) = COPY $x11
+  %5:_(<vscale x 16 x s8>) = G_INSERT_VECTOR_ELT %0:_, %1:_(s8), %2:_(s32)
+  $v8m2 = COPY %5:_(<vscale x 16 x s8>)
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+CSEInfo::Add MI: %1:_(s8) = G_TRUNC %4:_(s32)
+Generic MI Combiner for: insertelt_nxv16i8_idx
+
+
+Combiner iteration #1
+
+Try combining %0:_(<vscale x 16 x s8>) = COPY $v8m2
+10: GIM_SwitchOpcode(MIs[0], [20, 284), Default=9235, JumpTable...) // Got=20
+1067: Begin try-block
+1074: GIM_CheckSimplePredicate(Predicate=20)
+1077: GIR_DoneWithCustomAction(FnID=6)
+1077: Rejected
+1077: Resume at 1077 (1 try-blocks remain)
+1078: GIM_Reject
+1078: Rejected
+9235: Resume at 9235 (0 try-blocks remain)
+9236: GIM_Reject
+9236: Rejected
+
+Try combining %3:_(s32) = COPY $x10
+10: GIM_SwitchOpcode(MIs[0], [20, 284), Default=9235, JumpTable...) // Got=20
+1067: Begin try-block
+1074: GIM_CheckSimplePredicate(Predicate=20)
+1077: GIR_DoneWithCustomAction(FnID=6)
+1077: Rejected
+1077: Resume at 1077 (1 try-blocks remain)
+1078: GIM_Reject
+1078: Rejected
+9235: Resume at 9235 (0 try-blocks remain)
+9236: GIM_Reject
+9236: Rejected
+
+Try combining %4:_(s32) = G_ASSERT_SEXT %3:_, 8
+
+Try combining %1:_(s8) = G_TRUNC %4:_(s32)
+10: GIM_SwitchOpcode(MIs[0], [20, 284), Default=9235, JumpTable...) // Got=144
+4844: Begin try-block
+4851: GIM_CheckSimplePredicate(Predicate=104)
+4854: GIR_DoneWithCustomAction(FnID=50)
+4854: Rejected
+4854: Resume at 4854 (1 try-blocks remain)
+4855: Begin try-block
+4862: GIM_CheckSimplePredicate(Predicate=105)
+4865: GIR_DoneWithCustomAction(FnID=51)
+4865: Rejected
+4865: Resume at 4865 (1 try-blocks remain)
+4866: Begin try-block
+4873: GIM_CheckSimplePredicate(Predicate=140)
+4876: GIR_DoneWithCustomAction(FnID=78)
+4876: Rejected
+4876: Resume at 4876 (1 try-blocks remain)
+4877: Begin try-block
+4884: GIM_CheckSimplePredicate(Predicate=63)
+4888: MIs[1] = GIM_RecordInsn(0, 1)
+4892: GIM_CheckOpcode(MIs[1], ExpectedOpcode=166) // Got=20
+4892: Rejected
+4897: Resume at 4897 (1 try-blocks remain)
+4898: Begin try-block
+4905: GIM_CheckSimplePredicate(Predicate=65)
+4909: MIs[1] = GIM_RecordInsn(0, 1)
+4913: GIM_CheckOpcode(MIs[1], ExpectedOpcode=55) // Got=20
+4913: Rejected
+4926: Resume at 4926 (1 try-blocks remain)
+4927: Begin try-block
+4934: GIM_CheckSimplePredicate(Predicate=68)
+4938: MIs[1] = GIM_RecordInsn(0, 1)
+4942: GIM_CheckOpcode(MIs[1], ExpectedOpcode=64) // Got=20
+4942: Rejected
+4955: Resume at 4955 (1 try-blocks remain)
+4956: Begin try-block
+4963: GIM_CheckSimplePredicate(Predicate=67)
+4967: MIs[1] = GIM_RecordInsn(0, 1)
+4971: GIM_CheckOpcode(MIs[1], ExpectedOpcode=57) // Got=20
+4971: Rejected
+4984: Resume at 4984 (1 try-blocks remain)
+4985: Begin try-block
+4992: GIM_CheckSimplePredicate(Predicate=69)
+4996: MIs[1] = GIM_RecordInsn(0, 1)
+5000: GIM_CheckOpcode(MIs[1], ExpectedOpcode=65) // Got=20
+5000: Rejected
+5013: Resume at 5013 (1 try-blocks remain)
+5014: Begin try-block
+5021: GIM_CheckSimplePredicate(Predicate=66)
+5025: MIs[1] = GIM_RecordInsn(0, 1)
+5029: GIM_CheckOpcode(MIs[1], ExpectedOpcode=56) // Got=20
+5029: Rejected
+5042: Resume at 5042 (1 try-blocks remain)
+5043: Begin try-block
+5050: GIM_CheckSimplePredicate(Predicate=241)
+5054: MIs[1] = GIM_RecordInsn(0, 1)
+5058: GIM_CheckOpcode(MIs[1], ExpectedOpcode=244) // Got=20
+5058: Rejected
+5074: Resume at 5074 (1 try-blocks remain)
+5075: Begin try-block
+5082: GIM_CheckSimplePredicate(Predicate=70)
+5086: MIs[1] = GIM_RecordInsn(0, 1)
+5090: GIM_CheckOpcode(MIs[1], ExpectedOpcode=66) // Got=20
+5090: Rejected
+5103: Resume at 5103 (1 try-blocks remain)
+5104: Begin try-block
+5111: GIM_CheckSimplePredicate(Predicate=52)
+5115: MIs[1] = GIM_RecordInsn(0, 1)
+5119: GIM_CheckOpcode(MIs[1], ExpectedOpcode=143) // Got=20
+5119: Rejected
+5124: Resume at 5124 (1 try-blocks remain)
+5125: Begin try-block
+5132: GIM_CheckSimplePredicate(Predicate=64)
+5136: MIs[1] = GIM_RecordInsn(0, 1)
+5140: GIM_CheckOpcode(MIs[1], ExpectedOpcode=83) // Got=20
+5140: Rejected
+5148: Resume at 5148 (1 try-blocks remain)
+5149: Begin try-block
+5156: GIM_CheckSimplePredicate(Predicate=51)
+5160: MIs[1] = GIM_RecordInsn(0, 1)
+5164: GIM_CheckOpcode(MIs[1], ExpectedOpcode=152) // Got=20
+5164: Rejected
+5169: Resume at 5169 (1 try-blocks remain)
+5170: Begin try-block
+5177: GIM_CheckSimplePredicate(Predicate=50)
+5181: MIs[1] = GIM_RecordInsn(0, 1)
+5185: GIM_CheckOpcode(MIs[1], ExpectedOpcode=154) // Got=20
+5185: Rejected
+5190: Resume at 5190 (1 try-blocks remain)
+5191: Begin try-block
+5198: GIM_CheckSimplePredicate(Predicate=84)
+5202: MIs[1] = GIM_RecordInsn(0, 1)
+5206: GIM_CheckOpcode(MIs[1], ExpectedOpcode=73) // Got=20
+5206: Rejected
+5211: Resume at 5211 (1 try-blocks remain)
+5212: Begin try-block
+5219: GIM_CheckSimplePredicate(Predicate=71)
+5223: MIs[1] = GIM_RecordInsn(0, 1)
+5227: GIM_CheckOpcode(MIs[1], ExpectedOpcode=148) // Got=20
+5227: Rejected
+5232: Resume at 5232 (1 try-blocks remain)
+5233: Begin try-block
+5240: GIM_CheckSimplePredicate(Predicate=239)
+5243: GIR_DoneWithCustomAction(FnID=155)
+Applying legalizer ruleset to: Opcode=145, Tys={s8, s32, }, MMOs={}
+.. fallback to legacy rules (no rules defined)
+.. (legacy) Type 0 Action=NotFound, LLT_invalid
+5243: Rejected
+5243: Resume at 5243 (1 try-blocks remain)
+5244: Begin try-block
+5251: GIM_CheckSimplePredicate(Predicate=240)
+5254: GIR_DoneWithCustomAction(FnID=156)
+Applying legalizer ruleset to: Opcode=146, Tys={s8, s32, }, MMOs={}
+.. fallback to legacy rules (no rules defined)
+.. (legacy) Type 0 Action=NotFound, LLT_invalid
+5254: Rejected
+5254: Resume at 5254 (1 try-blocks remain)
+5255: GIM_Reject
+5255: Rejected
+9235: Resume at 9235 (0 try-blocks remain)
+9236: GIM_Reject
+9236: Rejected
+
+Try combining %2:_(s32) = COPY $x11
+10: GIM_SwitchOpcode(MIs[0], [20, 284), Default=9235, JumpTable...) // Got=20
+1067: Begin try-block
+1074: GIM_CheckSimplePredicate(Predicate=20)
+1077: GIR_DoneWithCustomAction(FnID=6)
+1077: Rejected
+1077: Resume at 1077 (1 try-blocks remain)
+1078: GIM_Reject
+1078: Rejected
+9235: Resume at 9235 (0 try-blocks remain)
+9236: GIM_Reject
+9236: Rejected
+
+Try combining %5:_(<vscale x 16 x s8>) = G_INSERT_VECTOR_ELT %0:_, %1:_(s8), %2:_(s32)
+10: GIM_SwitchOpcode(MIs[0], [20, 284), Default=9235, JumpTable...) // Got=254
+8359: Begin try-block
+8366: GIM_CheckSimplePredicate(Predicate=31)
+8369: GIR_DoneWithCustomAction(FnID=11)
+8369: Rejected
+8369: Resume at 8369 (1 try-blocks remain)
+8370: Begin try-block
+8377: GIM_CheckSimplePredicate(Predicate=72)
+8380: GIR_DoneWithCustomAction(FnID=28)
+8380: Rejected
+8380: Resume at 8380 (1 try-blocks remain)
+8381: Begin try-block
+8388: GIM_CheckSimplePredicate(Predicate=89)
+8391: GIR_DoneWithCustomAction(FnID=44)
+8391: Rejected
+8391: Resume at 8391 (1 try-blocks remain)
+8392: Begin try-block
+8399: GIM_CheckSimplePredicate(Predicate=43)
+8403: MIs[1] = GIM_RecordInsn(0, 2)
+8407: GIM_CheckOpcode(MIs[1], ExpectedOpcode=255) // Got=144
+8407: Rejected
+8430: Resume at 8430 (1 try-blocks remain)
+8431: Begin try-block
+8438: GIM_CheckSimplePredicate(Predicate=29)
+8442: MIs[1] = GIM_RecordInsn(0, 2)
+8446: GIM_CheckOpcode(MIs[1], ExpectedOpcode=73) // Got=144
+8446: Rejected
+8463: Resume at 8463 (1 try-blocks remain)
+8464: Begin try-block
+8471: GIM_CheckSimplePredicate(Predicate=28)
+8475: MIs[1] = GIM_RecordInsn(0, 3)
+8479: GIM_CheckOpcode(MIs[1], ExpectedOpcode=73) // Got=20
+8479: Rejected
+8487: Resume at 8487 (1 try-blocks remain)
+8488: GIM_Reject
+8488: Rejected
+9235: Resume at 9235 (0 try-blocks remain)
+9236: GIM_Reject
+9236: Rejected
+
+Try combining $v8m2 = COPY %5:_(<vscale x 16 x s8>)
+10: GIM_SwitchOpcode(MIs[0], [20, 284), Default=9235, JumpTable...) // Got=20
+1067: Begin try-block
+1074: GIM_CheckSimplePredicate(Predicate=20)
+1077: GIR_DoneWithCustomAction(FnID=6)
+1077: Rejected
+1077: Resume at 1077 (1 try-blocks remain)
+1078: GIM_Reject
+1078: Rejected
+9235: Resume at 9235 (0 try-blocks remain)
+9236: GIM_Reject
+9236: Rejected
+
+Try combining PseudoRET implicit $v8m2
+
+Combiner reached fixed-point after iteration #1
+# *** IR Dump After RISCVPreLegalizerCombiner (riscv-prelegalizer-combiner) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.1 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:_(<vscale x 16 x s8>) = COPY $v8m2
+  %3:_(s32) = COPY $x10
+  %4:_(s32) = G_ASSERT_SEXT %3:_, 8
+  %1:_(s8) = G_TRUNC %4:_(s32)
+  %2:_(s32) = COPY $x11
+  %5:_(<vscale x 16 x s8>) = G_INSERT_VECTOR_ELT %0:_, %1:_(s8), %2:_(s32)
+  $v8m2 = COPY %5:_(<vscale x 16 x s8>)
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+# *** IR Dump After Verify generated machine code (machineverifier) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.1 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:_(<vscale x 16 x s8>) = COPY $v8m2
+  %3:_(s32) = COPY $x10
+  %4:_(s32) = G_ASSERT_SEXT %3:_, 8
+  %1:_(s8) = G_TRUNC %4:_(s32)
+  %2:_(s32) = COPY $x11
+  %5:_(<vscale x 16 x s8>) = G_INSERT_VECTOR_ELT %0:_, %1:_(s8), %2:_(s32)
+  $v8m2 = COPY %5:_(<vscale x 16 x s8>)
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+Legalize Machine IR for: insertelt_nxv16i8_idx
+=== New Iteration ===
+
+Legalizing: %5:_(<vscale x 16 x s8>) = G_INSERT_VECTOR_ELT %0:_, %1:_(s8), %2:_(s32)
+Applying legalizer ruleset to: Opcode=254, Tys={<vscale x 16 x s8>, s8, s32, }, MMOs={}
+.. match
+.. .. Custom, 0, LLT_invalid
+.. Custom legalization
+CSEInfo::Recording new MI G_CONSTANT
+CSEInfo::Recording new MI G_IMPLICIT_DEF
+CSEInfo::Recording new MI G_CONSTANT
+CSEInfo::Recording new MI G_ADD
+.. .. Erasing: %5:_(<vscale x 16 x s8>) = G_INSERT_VECTOR_ELT %0:_, %1:_(s8), %2:_(s32)
+.. .. New MI: %6:_(s32) = G_CONSTANT i32 -1
+.. .. New MI: %7:_(<vscale x 16 x s1>) = G_VMSET_VL %6:_(s32)
+.. .. New MI: %8:_(<vscale x 16 x s8>) = G_IMPLICIT_DEF
+.. .. New MI: %9:_(<vscale x 16 x s8>) = G_VMV_S_VL %8:_, %1:_, %6:_(s32)
+.. .. New MI: %10:_(s32) = G_CONSTANT i32 1
+.. .. New MI: %11:_(s32) = G_ADD %2:_, %10:_
+.. .. New MI: %5:_(<vscale x 16 x s8>) = G_VSLIDEUP_VL %0:_, %9:_, %2:_(s32), %7:_(<vscale x 16 x s1>), %11:_(s32), 0
+.. No debug info was present
+
+Legalizing: %11:_(s32) = G_ADD %2:_, %10:_
+Applying legalizer ruleset to: Opcode=55, Tys={s32, }, MMOs={}
+.. match
+.. .. Legal, 0, LLT_invalid
+.. Already legal
+.. No debug info was present
+
+Legalizing: %10:_(s32) = G_CONSTANT i32 1
+Applying legalizer ruleset to: Opcode=148, Tys={s32, }, MMOs={}
+.. no match
+.. match
+.. .. Legal, 0, LLT_invalid
+.. Already legal
+.. No debug info was present
+
+Legalizing: %8:_(<vscale x 16 x s8>) = G_IMPLICIT_DEF
+Applying legalizer ruleset to: Opcode=73, Tys={<vscale x 16 x s8>, }, MMOs={}
+.. no match
+.. no match
+.. match
+.. .. Legal, 0, LLT_invalid
+.. Already legal
+.. No debug info was present
+
+Legalizing: %6:_(s32) = G_CONSTANT i32 -1
+Applying legalizer ruleset to: Opcode=148, Tys={s32, }, MMOs={}
+.. no match
+.. match
+.. .. Legal, 0, LLT_invalid
+.. Already legal
+.. No debug info was present
+.. No debug info was present
+Trying to combine: %1:_(s8) = G_TRUNC %4:_(s32)
+.. Not combined, moving to instructions list
+=== New Iteration ===
+
+Legalizing: %1:_(s8) = G_TRUNC %4:_(s32)
+Applying legalizer ruleset to: Opcode=144, Tys={s8, s32, }, MMOs={}
+.. match
+.. .. Legal, 0, LLT_invalid
+.. Already legal
+.. No debug info was present
+.. No debug info was present
+# *** IR Dump After Legalizer (legalizer) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.1 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:_(<vscale x 16 x s8>) = COPY $v8m2
+  %3:_(s32) = COPY $x10
+  %4:_(s32) = G_ASSERT_SEXT %3:_, 8
+  %1:_(s8) = G_TRUNC %4:_(s32)
+  %2:_(s32) = COPY $x11
+  %6:_(s32) = G_CONSTANT i32 -1
+  %7:_(<vscale x 16 x s1>) = G_VMSET_VL %6:_(s32)
+  %8:_(<vscale x 16 x s8>) = G_IMPLICIT_DEF
+  %9:_(<vscale x 16 x s8>) = G_VMV_S_VL %8:_, %1:_, %6:_(s32)
+  %10:_(s32) = G_CONSTANT i32 1
+  %11:_(s32) = G_ADD %2:_, %10:_
+  %5:_(<vscale x 16 x s8>) = G_VSLIDEUP_VL %0:_, %9:_, %2:_(s32), %7:_(<vscale x 16 x s1>), %11:_(s32), 0
+  $v8m2 = COPY %5:_(<vscale x 16 x s8>)
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+# *** IR Dump After Verify generated machine code (machineverifier) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.1 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:_(<vscale x 16 x s8>) = COPY $v8m2
+  %3:_(s32) = COPY $x10
+  %4:_(s32) = G_ASSERT_SEXT %3:_, 8
+  %1:_(s8) = G_TRUNC %4:_(s32)
+  %2:_(s32) = COPY $x11
+  %6:_(s32) = G_CONSTANT i32 -1
+  %7:_(<vscale x 16 x s1>) = G_VMSET_VL %6:_(s32)
+  %8:_(<vscale x 16 x s8>) = G_IMPLICIT_DEF
+  %9:_(<vscale x 16 x s8>) = G_VMV_S_VL %8:_, %1:_, %6:_(s32)
+  %10:_(s32) = G_CONSTANT i32 1
+  %11:_(s32) = G_ADD %2:_, %10:_
+  %5:_(<vscale x 16 x s8>) = G_VSLIDEUP_VL %0:_, %9:_, %2:_(s32), %7:_(<vscale x 16 x s1>), %11:_(s32), 0
+  $v8m2 = COPY %5:_(<vscale x 16 x s8>)
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+Generic MI Combiner for: insertelt_nxv16i8_idx
+
+
+Combiner iteration #1
+
+Try combining %0:_(<vscale x 16 x s8>) = COPY $v8m2
+
+Try combining %3:_(s32) = COPY $x10
+
+Try combining %4:_(s32) = G_ASSERT_SEXT %3:_, 8
+
+Try combining %1:_(s8) = G_TRUNC %4:_(s32)
+10: GIM_SwitchOpcode(MIs[0], [55, 246), Default=2356, JumpTable...) // Got=144
+1566: Begin try-block
+1573: GIM_CheckSimplePredicate(Predicate=19)
+1576: GIR_DoneWithCustomAction(FnID=10)
+1576: Rejected
+1576: Resume at 1576 (1 try-blocks remain)
+1577: Begin try-block
+1584: GIM_CheckSimplePredicate(Predicate=20)
+1587: GIR_DoneWithCustomAction(FnID=11)
+1587: Rejected
+1587: Resume at 1587 (1 try-blocks remain)
+1588: GIM_Reject
+1588: Rejected
+2356: Resume at 2356 (0 try-blocks remain)
+2357: GIM_Reject
+2357: Rejected
+
+Try combining %2:_(s32) = COPY $x11
+
+Try combining %6:_(s32) = G_CONSTANT i32 -1
+
+Try combining %7:_(<vscale x 16 x s1>) = G_VMSET_VL %6:_(s32)
+
+Try combining %8:_(<vscale x 16 x s8>) = G_IMPLICIT_DEF
+
+Try combining %9:_(<vscale x 16 x s8>) = G_VMV_S_VL %8:_, %1:_, %6:_(s32)
+Creating: G_EXTRACT_SUBVECTOR
+Creating: G_EXTRACT_SUBVECTOR
+Creating: G_VMV_S_VL
+Creating: G_VMV_S_VL
+CSEInfo::Found Instr %8:_(<vscale x 16 x s8>) = G_IMPLICIT_DEF
+Creating: G_INSERT_SUBVECTOR
+Creating: G_INSERT_SUBVECTOR
+Erasing: %9:_(<vscale x 16 x s8>) = G_VMV_S_VL %8:_, %1:_, %6:_(s32)
+Created: %13:_(<vscale x 8 x s8>) = G_EXTRACT_SUBVECTOR %8:_(<vscale x 16 x s8>), 0
+Created: %14:_(<vscale x 8 x s8>) = G_VMV_S_VL %13:_, %1:_, %6:_(s32)
+Created: %9:_(<vscale x 16 x s8>) = G_INSERT_SUBVECTOR %8:_, %14:_(<vscale x 8 x s8>), 0
+
+Try combining %9:_(<vscale x 16 x s8>) = G_INSERT_SUBVECTOR %8:_, %14:_(<vscale x 8 x s8>), 0
+
+Try combining %14:_(<vscale x 8 x s8>) = G_VMV_S_VL %13:_, %1:_, %6:_(s32)
+
+Try combining %13:_(<vscale x 8 x s8>) = G_EXTRACT_SUBVECTOR %8:_(<vscale x 16 x s8>), 0
+
+Try combining %10:_(s32) = G_CONSTANT i32 1
+
+Try combining %11:_(s32) = G_ADD %2:_, %10:_
+10: GIM_SwitchOpcode(MIs[0], [55, 246), Default=2356, JumpTable...) // Got=55
+775: Begin try-block
+782: GIM_CheckSimplePredicate(Predicate=27)
+785: GIR_DoneWithCustomAction(FnID=14)
+785: Rejected
+785: Resume at 785 (1 try-blocks remain)
+786: Begin try-block
+793: GIM_CheckSimplePredicate(Predicate=17)
+797: MIs[1] = GIM_RecordInsn(0, 1)
+801: GIM_CheckOpcode(MIs[1], ExpectedOpcode=56) // Got=20
+801: Rejected
+819: Resume at 819 (1 try-blocks remain)
+820: Begin try-block
+827: GIM_CheckSimplePredicate(Predicate=17)
+831: MIs[1] = GIM_RecordInsn(0, 2)
+835: GIM_CheckOpcode(MIs[1], ExpectedOpcode=56) // Got=148
+835: Rejected
+853: Resume at 853 (1 try-blocks remain)
+854: Begin try-block
+861: GIM_CheckSimplePredicate(Predicate=6)
+865: GIM_CheckConstantInt(MIs[0]->getOperand(2), Value=0)
+865: Rejected
+876: Resume at 876 (1 try-blocks remain)
+877: GIM_Reject
+877: Rejected
+2356: Resume at 2356 (0 try-blocks remain)
+2357: GIM_Reject
+2357: Rejected
+
+Try combining %5:_(<vscale x 16 x s8>) = G_VSLIDEUP_VL %0:_, %9:_, %2:_(s32), %7:_(<vscale x 16 x s1>), %11:_(s32), 0
+
+Try combining $v8m2 = COPY %5:_(<vscale x 16 x s8>)
+
+Try combining PseudoRET implicit $v8m2
+
+
+Combiner iteration #2
+
+Try combining %0:_(<vscale x 16 x s8>) = COPY $v8m2
+
+Try combining %3:_(s32) = COPY $x10
+
+Try combining %4:_(s32) = G_ASSERT_SEXT %3:_, 8
+
+Try combining %13:_(<vscale x 8 x s8>) = G_EXTRACT_SUBVECTOR %8:_(<vscale x 16 x s8>), 0
+
+Try combining %14:_(<vscale x 8 x s8>) = G_VMV_S_VL %13:_, %1:_, %6:_(s32)
+
+Try combining %8:_(<vscale x 16 x s8>) = G_IMPLICIT_DEF
+
+Try combining %9:_(<vscale x 16 x s8>) = G_INSERT_SUBVECTOR %8:_, %14:_(<vscale x 8 x s8>), 0
+
+Try combining %1:_(s8) = G_TRUNC %4:_(s32)
+10: GIM_SwitchOpcode(MIs[0], [55, 246), Default=2356, JumpTable...) // Got=144
+1566: Begin try-block
+1573: GIM_CheckSimplePredicate(Predicate=19)
+1576: GIR_DoneWithCustomAction(FnID=10)
+1576: Rejected
+1576: Resume at 1576 (1 try-blocks remain)
+1577: Begin try-block
+1584: GIM_CheckSimplePredicate(Predicate=20)
+1587: GIR_DoneWithCustomAction(FnID=11)
+1587: Rejected
+1587: Resume at 1587 (1 try-blocks remain)
+1588: GIM_Reject
+1588: Rejected
+2356: Resume at 2356 (0 try-blocks remain)
+2357: GIM_Reject
+2357: Rejected
+
+Try combining %2:_(s32) = COPY $x11
+
+Try combining %6:_(s32) = G_CONSTANT i32 -1
+
+Try combining %7:_(<vscale x 16 x s1>) = G_VMSET_VL %6:_(s32)
+
+Try combining %10:_(s32) = G_CONSTANT i32 1
+
+Try combining %11:_(s32) = G_ADD %2:_, %10:_
+10: GIM_SwitchOpcode(MIs[0], [55, 246), Default=2356, JumpTable...) // Got=55
+775: Begin try-block
+782: GIM_CheckSimplePredicate(Predicate=27)
+785: GIR_DoneWithCustomAction(FnID=14)
+785: Rejected
+785: Resume at 785 (1 try-blocks remain)
+786: Begin try-block
+793: GIM_CheckSimplePredicate(Predicate=17)
+797: MIs[1] = GIM_RecordInsn(0, 1)
+801: GIM_CheckOpcode(MIs[1], ExpectedOpcode=56) // Got=20
+801: Rejected
+819: Resume at 819 (1 try-blocks remain)
+820: Begin try-block
+827: GIM_CheckSimplePredicate(Predicate=17)
+831: MIs[1] = GIM_RecordInsn(0, 2)
+835: GIM_CheckOpcode(MIs[1], ExpectedOpcode=56) // Got=148
+835: Rejected
+853: Resume at 853 (1 try-blocks remain)
+854: Begin try-block
+861: GIM_CheckSimplePredicate(Predicate=6)
+865: GIM_CheckConstantInt(MIs[0]->getOperand(2), Value=0)
+865: Rejected
+876: Resume at 876 (1 try-blocks remain)
+877: GIM_Reject
+877: Rejected
+2356: Resume at 2356 (0 try-blocks remain)
+2357: GIM_Reject
+2357: Rejected
+
+Try combining %5:_(<vscale x 16 x s8>) = G_VSLIDEUP_VL %0:_, %9:_, %2:_(s32), %7:_(<vscale x 16 x s1>), %11:_(s32), 0
+
+Try combining $v8m2 = COPY %5:_(<vscale x 16 x s8>)
+
+Try combining PseudoRET implicit $v8m2
+
+Combiner reached fixed-point after iteration #2
+CSEInfo::CSE Hit for Opc 73 : 1
+# *** IR Dump After RISCVPostLegalizerCombiner (riscv-postlegalizer-combiner) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.1 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:_(<vscale x 16 x s8>) = COPY $v8m2
+  %3:_(s32) = COPY $x10
+  %4:_(s32) = G_ASSERT_SEXT %3:_, 8
+  %13:_(<vscale x 8 x s8>) = G_EXTRACT_SUBVECTOR %8:_(<vscale x 16 x s8>), 0
+  %14:_(<vscale x 8 x s8>) = G_VMV_S_VL %13:_, %1:_, %6:_(s32)
+  %8:_(<vscale x 16 x s8>) = G_IMPLICIT_DEF
+  %9:_(<vscale x 16 x s8>) = G_INSERT_SUBVECTOR %8:_, %14:_(<vscale x 8 x s8>), 0
+  %1:_(s8) = G_TRUNC %4:_(s32)
+  %2:_(s32) = COPY $x11
+  %6:_(s32) = G_CONSTANT i32 -1
+  %7:_(<vscale x 16 x s1>) = G_VMSET_VL %6:_(s32)
+  %10:_(s32) = G_CONSTANT i32 1
+  %11:_(s32) = G_ADD %2:_, %10:_
+  %5:_(<vscale x 16 x s8>) = G_VSLIDEUP_VL %0:_, %9:_, %2:_(s32), %7:_(<vscale x 16 x s1>), %11:_(s32), 0
+  $v8m2 = COPY %5:_(<vscale x 16 x s8>)
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+# *** IR Dump After Verify generated machine code (machineverifier) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.1 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:_(<vscale x 16 x s8>) = COPY $v8m2
+  %3:_(s32) = COPY $x10
+  %4:_(s32) = G_ASSERT_SEXT %3:_, 8
+  %13:_(<vscale x 8 x s8>) = G_EXTRACT_SUBVECTOR %8:_(<vscale x 16 x s8>), 0
+  %14:_(<vscale x 8 x s8>) = G_VMV_S_VL %13:_, %1:_, %6:_(s32)
+  %8:_(<vscale x 16 x s8>) = G_IMPLICIT_DEF
+  %9:_(<vscale x 16 x s8>) = G_INSERT_SUBVECTOR %8:_, %14:_(<vscale x 8 x s8>), 0
+  %1:_(s8) = G_TRUNC %4:_(s32)
+  %2:_(s32) = COPY $x11
+  %6:_(s32) = G_CONSTANT i32 -1
+  %7:_(<vscale x 16 x s1>) = G_VMSET_VL %6:_(s32)
+  %10:_(s32) = G_CONSTANT i32 1
+  %11:_(s32) = G_ADD %2:_, %10:_
+  %5:_(<vscale x 16 x s8>) = G_VSLIDEUP_VL %0:_, %9:_, %2:_(s32), %7:_(<vscale x 16 x s1>), %11:_(s32), 0
+  $v8m2 = COPY %5:_(<vscale x 16 x s8>)
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+Assign register banks for: insertelt_nxv16i8_idx
+Applying legalizer ruleset to: Opcode=253, Tys={<vscale x 8 x s8>, <vscale x 16 x s8>, }, MMOs={}
+.. no match
+.. match
+.. .. Custom, 0, LLT_invalid
+Applying legalizer ruleset to: Opcode=73, Tys={<vscale x 16 x s8>, }, MMOs={}
+.. no match
+.. no match
+.. match
+.. .. Legal, 0, LLT_invalid
+Applying legalizer ruleset to: Opcode=252, Tys={<vscale x 16 x s8>, <vscale x 8 x s8>, }, MMOs={}
+.. no match
+.. match
+.. .. Custom, 0, LLT_invalid
+Applying legalizer ruleset to: Opcode=144, Tys={s8, s32, }, MMOs={}
+.. match
+.. .. Legal, 0, LLT_invalid
+Applying legalizer ruleset to: Opcode=148, Tys={s32, }, MMOs={}
+.. no match
+.. match
+.. .. Legal, 0, LLT_invalid
+Applying legalizer ruleset to: Opcode=148, Tys={s32, }, MMOs={}
+.. no match
+.. match
+.. .. Legal, 0, LLT_invalid
+Applying legalizer ruleset to: Opcode=55, Tys={s32, }, MMOs={}
+.. match
+.. .. Legal, 0, LLT_invalid
+Assign: %0:_(<vscale x 16 x s8>) = COPY $v8m2
+Evaluating mapping cost for: %0:_(<vscale x 16 x s8>) = COPY $v8m2
+With: ID: 4294967295 Cost: 1 Mapping: { Idx: 0 Map: #BreakDown: 1 [[0, 127], RegBank = VRB]}
+Opd0
+Does assignment already match: none against VRB
+=> is free (simple assignment).
+Total cost is: 1 * 1 + 0
+Best Mapping: ID: 4294967295 Cost: 1 Mapping: { Idx: 0 Map: #BreakDown: 1 [[0, 127], RegBank = VRB]}
+Assign: %3:_(s32) = COPY $x10
+Evaluating mapping cost for: %3:_(s32) = COPY $x10
+With: ID: 4294967295 Cost: 1 Mapping: { Idx: 0 Map: #BreakDown: 1 [[0, 31], RegBank = GPRB]}
+Opd0
+Does assignment already match: none against GPRB
+=> is free (simple assignment).
+Total cost is: 1 * 1 + 0
+Best Mapping: ID: 4294967295 Cost: 1 Mapping: { Idx: 0 Map: #BreakDown: 1 [[0, 31], RegBank = GPRB]}
+Assign: %4:_(s32) = G_ASSERT_SEXT %3:gprb, 8
+... Hint always uses source's register bank.
+Assign: %13:_(<vscale x 8 x s8>) = G_EXTRACT_SUBVECTOR %8:_(<vscale x 16 x s8>), 0
+Evaluating mapping cost for: %13:_(<vscale x 8 x s8>) = G_EXTRACT_SUBVECTOR %8:_(<vscale x 16 x s8>), 0
+With: ID: 4294967295 Cost: 1 Mapping: { Idx: 0 Map: #BreakDown: 1 [[0, 63], RegBank = VRB]}, { Idx: 1 Map: #BreakDown: 1 [[0, 127], RegBank = VRB]}, { Idx: 2 Map: #BreakDown: 0 }
+Opd0
+Does assignment already match: none against VRB
+=> is free (simple assignment).
+Opd1
+Does assignment already match: none against VRB
+=> is free (simple assignment).
+Total cost is: 1 * 1 + 0
+Best Mapping: ID: 4294967295 Cost: 1 Mapping: { Idx: 0 Map: #BreakDown: 1 [[0, 63], RegBank = VRB]}, { Idx: 1 Map: #BreakDown: 1 [[0, 127], RegBank = VRB]}, { Idx: 2 Map: #BreakDown: 0 }
+Assign: %14:_(<vscale x 8 x s8>) = G_VMV_S_VL %13:vrb, %1:_, %6:_(s32)
+Evaluating mapping cost for: %14:_(<vscale x 8 x s8>) = G_VMV_S_VL %13:vrb, %1:_, %6:_(s32)
+With: ID: 4294967295 Cost: 1 Mapping: { Idx: 0 Map: #BreakDown: 1 [[0, 63], RegBank = VRB]}, { Idx: 1 Map: #BreakDown: 1 [[0, 63], RegBank = VRB]}, { Idx: 2 Map: #BreakDown: 1 [[0, 31], RegBank = GPRB]}, { Idx: 3 Map: #BreakDown: 1 [[0, 31], RegBank = GPRB]}
+Opd0
+Does assignment already match: none against VRB
+=> is free (simple assignment).
+Opd1
+Does assignment already match: VRB against VRB
+=> is free (match).
+Opd2
+Does assignment already match: none against GPRB
+=> is free (simple assignment).
+Opd3
+Does assignment already match: none against GPRB
+=> is free (simple assignment).
+Total cost is: 1 * 1 + 0
+Best Mapping: ID: 4294967295 Cost: 1 Mapping: { Idx: 0 Map: #BreakDown: 1 [[0, 63], RegBank = VRB]}, { Idx: 1 Map: #BreakDown: 1 [[0, 63], RegBank = VRB]}, { Idx: 2 Map: #BreakDown: 1 [[0, 31], RegBank = GPRB]}, { Idx: 3 Map: #BreakDown: 1 [[0, 31], RegBank = GPRB]}
+Assign: %8:vrb(<vscale x 16 x s8>) = G_IMPLICIT_DEF
+Evaluating mapping cost for: %8:vrb(<vscale x 16 x s8>) = G_IMPLICIT_DEF
+With: ID: 4294967295 Cost: 1 Mapping: { Idx: 0 Map: #BreakDown: 1 [[0, 127], RegBank = VRB]}
+Opd0
+Does assignment already match: VRB against VRB
+=> is free (match).
+Total cost is: 1 * 1 + 0
+Best Mapping: ID: 4294967295 Cost: 1 Mapping: { Idx: 0 Map: #BreakDown: 1 [[0, 127], RegBank = VRB]}
+Assign: %9:_(<vscale x 16 x s8>) = G_INSERT_SUBVECTOR %8:vrb, %14:vrb(<vscale x 8 x s8>), 0
+Evaluating mapping cost for: %9:_(<vscale x 16 x s8>) = G_INSERT_SUBVECTOR %8:vrb, %14:vrb(<vscale x 8 x s8>), 0
+With: ID: 4294967295 Cost: 1 Mapping: { Idx: 0 Map: #BreakDown: 1 [[0, 127], RegBank = VRB]}, { Idx: 1 Map: #BreakDown: 1 [[0, 127], RegBank = VRB]}, { Idx: 2 Map: #BreakDown: 1 [[0, 63], RegBank = VRB]}, { Idx: 3 Map: #BreakDown: 0 }
+Opd0
+Does assignment already match: none against VRB
+=> is free (simple assignment).
+Opd1
+Does assignment already match: VRB against VRB
+=> is free (match).
+Opd2
+Does assignment already match: VRB against VRB
+=> is free (match).
+Total cost is: 1 * 1 + 0
+Best Mapping: ID: 4294967295 Cost: 1 Mapping: { Idx: 0 Map: #BreakDown: 1 [[0, 127], RegBank = VRB]}, { Idx: 1 Map: #BreakDown: 1 [[0, 127], RegBank = VRB]}, { Idx: 2 Map: #BreakDown: 1 [[0, 63], RegBank = VRB]}, { Idx: 3 Map: #BreakDown: 0 }
+Assign: %1:gprb(s8) = G_TRUNC %4:gprb(s32)
+Evaluating mapping cost for: %1:gprb(s8) = G_TRUNC %4:gprb(s32)
+With: ID: 4294967295 Cost: 1 Mapping: { Idx: 0 Map: #BreakDown: 1 [[0, 31], RegBank = GPRB]}, { Idx: 1 Map: #BreakDown: 1 [[0, 31], RegBank = GPRB]}
+Opd0
+Does assignment already match: GPRB against GPRB
+=> is free (match).
+Opd1
+Does assignment already match: GPRB against GPRB
+=> is free (match).
+Total cost is: 1 * 1 + 0
+Best Mapping: ID: 4294967295 Cost: 1 Mapping: { Idx: 0 Map: #BreakDown: 1 [[0, 31], RegBank = GPRB]}, { Idx: 1 Map: #BreakDown: 1 [[0, 31], RegBank = GPRB]}
+Assign: %2:_(s32) = COPY $x11
+Evaluating mapping cost for: %2:_(s32) = COPY $x11
+With: ID: 4294967295 Cost: 1 Mapping: { Idx: 0 Map: #BreakDown: 1 [[0, 31], RegBank = GPRB]}
+Opd0
+Does assignment already match: none against GPRB
+=> is free (simple assignment).
+Total cost is: 1 * 1 + 0
+Best Mapping: ID: 4294967295 Cost: 1 Mapping: { Idx: 0 Map: #BreakDown: 1 [[0, 31], RegBank = GPRB]}
+Assign: %6:gprb(s32) = G_CONSTANT i32 -1
+Evaluating mapping cost for: %6:gprb(s32) = G_CONSTANT i32 -1
+With: ID: 4294967295 Cost: 1 Mapping: { Idx: 0 Map: #BreakDown: 1 [[0, 31], RegBank = GPRB]}, { Idx: 1 Map: #BreakDown: 0 }
+Opd0
+Does assignment already match: GPRB against GPRB
+=> is free (match).
+Total cost is: 1 * 1 + 0
+Best Mapping: ID: 4294967295 Cost: 1 Mapping: { Idx: 0 Map: #BreakDown: 1 [[0, 31], RegBank = GPRB]}, { Idx: 1 Map: #BreakDown: 0 }
+Assign: %7:_(<vscale x 16 x s1>) = G_VMSET_VL %6:gprb(s32)
+Evaluating mapping cost for: %7:_(<vscale x 16 x s1>) = G_VMSET_VL %6:gprb(s32)
+With: ID: 4294967295 Cost: 1 Mapping: { Idx: 0 Map: #BreakDown: 1 [[0, 63], RegBank = VRB]}, { Idx: 1 Map: #BreakDown: 1 [[0, 31], RegBank = GPRB]}
+Opd0
+Does assignment already match: none against VRB
+=> is free (simple assignment).
+Opd1
+Does assignment already match: GPRB against GPRB
+=> is free (match).
+Total cost is: 1 * 1 + 0
+Best Mapping: ID: 4294967295 Cost: 1 Mapping: { Idx: 0 Map: #BreakDown: 1 [[0, 63], RegBank = VRB]}, { Idx: 1 Map: #BreakDown: 1 [[0, 31], RegBank = GPRB]}
+Assign: %10:_(s32) = G_CONSTANT i32 1
+Evaluating mapping cost for: %10:_(s32) = G_CONSTANT i32 1
+With: ID: 4294967295 Cost: 1 Mapping: { Idx: 0 Map: #BreakDown: 1 [[0, 31], RegBank = GPRB]}, { Idx: 1 Map: #BreakDown: 0 }
+Opd0
+Does assignment already match: none against GPRB
+=> is free (simple assignment).
+Total cost is: 1 * 1 + 0
+Best Mapping: ID: 4294967295 Cost: 1 Mapping: { Idx: 0 Map: #BreakDown: 1 [[0, 31], RegBank = GPRB]}, { Idx: 1 Map: #BreakDown: 0 }
+Assign: %11:_(s32) = G_ADD %2:gprb, %10:gprb
+Evaluating mapping cost for: %11:_(s32) = G_ADD %2:gprb, %10:gprb
+With: ID: 4294967295 Cost: 1 Mapping: { Idx: 0 Map: #BreakDown: 1 [[0, 31], RegBank = GPRB]}, { Idx: 1 Map: #BreakDown: 1 [[0, 31], RegBank = GPRB]}, { Idx: 2 Map: #BreakDown: 1 [[0, 31], RegBank = GPRB]}
+Opd0
+Does assignment already match: none against GPRB
+=> is free (simple assignment).
+Opd1
+Does assignment already match: GPRB against GPRB
+=> is free (match).
+Opd2
+Does assignment already match: GPRB against GPRB
+=> is free (match).
+Total cost is: 1 * 1 + 0
+Best Mapping: ID: 4294967295 Cost: 1 Mapping: { Idx: 0 Map: #BreakDown: 1 [[0, 31], RegBank = GPRB]}, { Idx: 1 Map: #BreakDown: 1 [[0, 31], RegBank = GPRB]}, { Idx: 2 Map: #BreakDown: 1 [[0, 31], RegBank = GPRB]}
+Assign: %5:_(<vscale x 16 x s8>) = G_VSLIDEUP_VL %0:vrb, %9:vrb, %2:gprb(s32), %7:vrb(<vscale x 16 x s1>), %11:gprb(s32), 0
+Evaluating mapping cost for: %5:_(<vscale x 16 x s8>) = G_VSLIDEUP_VL %0:vrb, %9:vrb, %2:gprb(s32), %7:vrb(<vscale x 16 x s1>), %11:gprb(s32), 0
+With: ID: 4294967295 Cost: 1 Mapping: { Idx: 0 Map: #BreakDown: 1 [[0, 127], RegBank = VRB]}, { Idx: 1 Map: #BreakDown: 1 [[0, 127], RegBank = VRB]}, { Idx: 2 Map: #BreakDown: 1 [[0, 127], RegBank = VRB]}, { Idx: 3 Map: #BreakDown: 1 [[0, 31], RegBank = GPRB]}, { Idx: 4 Map: #BreakDown: 1 [[0, 63], RegBank = VRB]}, { Idx: 5 Map: #BreakDown: 1 [[0, 31], RegBank = GPRB]}, { Idx: 6 Map: #BreakDown: 0 }
+Opd0
+Does assignment already match: none against VRB
+=> is free (simple assignment).
+Opd1
+Does assignment already match: VRB against VRB
+=> is free (match).
+Opd2
+Does assignment already match: VRB against VRB
+=> is free (match).
+Opd3
+Does assignment already match: GPRB against GPRB
+=> is free (match).
+Opd4
+Does assignment already match: VRB against VRB
+=> is free (match).
+Opd5
+Does assignment already match: GPRB against GPRB
+=> is free (match).
+Total cost is: 1 * 1 + 0
+Best Mapping: ID: 4294967295 Cost: 1 Mapping: { Idx: 0 Map: #BreakDown: 1 [[0, 127], RegBank = VRB]}, { Idx: 1 Map: #BreakDown: 1 [[0, 127], RegBank = VRB]}, { Idx: 2 Map: #BreakDown: 1 [[0, 127], RegBank = VRB]}, { Idx: 3 Map: #BreakDown: 1 [[0, 31], RegBank = GPRB]}, { Idx: 4 Map: #BreakDown: 1 [[0, 63], RegBank = VRB]}, { Idx: 5 Map: #BreakDown: 1 [[0, 31], RegBank = GPRB]}, { Idx: 6 Map: #BreakDown: 0 }
+Assign: $v8m2 = COPY %5:vrb(<vscale x 16 x s8>)
+Evaluating mapping cost for: $v8m2 = COPY %5:vrb(<vscale x 16 x s8>)
+With: ID: 4294967295 Cost: 1 Mapping: { Idx: 0 Map: #BreakDown: 1 [[0, 127], RegBank = VRB]}
+Total cost is: 1 * 1 + 0
+Best Mapping: ID: 4294967295 Cost: 1 Mapping: { Idx: 0 Map: #BreakDown: 1 [[0, 127], RegBank = VRB]}
+# *** IR Dump After RegBankSelect (regbankselect) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized, RegBankSelected
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.1 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrb(<vscale x 16 x s8>) = COPY $v8m2
+  %3:gprb(s32) = COPY $x10
+  %4:gprb(s32) = G_ASSERT_SEXT %3:gprb, 8
+  %13:vrb(<vscale x 8 x s8>) = G_EXTRACT_SUBVECTOR %8:vrb(<vscale x 16 x s8>), 0
+  %14:vrb(<vscale x 8 x s8>) = G_VMV_S_VL %13:vrb, %1:gprb, %6:gprb(s32)
+  %8:vrb(<vscale x 16 x s8>) = G_IMPLICIT_DEF
+  %9:vrb(<vscale x 16 x s8>) = G_INSERT_SUBVECTOR %8:vrb, %14:vrb(<vscale x 8 x s8>), 0
+  %1:gprb(s8) = G_TRUNC %4:gprb(s32)
+  %2:gprb(s32) = COPY $x11
+  %6:gprb(s32) = G_CONSTANT i32 -1
+  %7:vrb(<vscale x 16 x s1>) = G_VMSET_VL %6:gprb(s32)
+  %10:gprb(s32) = G_CONSTANT i32 1
+  %11:gprb(s32) = G_ADD %2:gprb, %10:gprb
+  %5:vrb(<vscale x 16 x s8>) = G_VSLIDEUP_VL %0:vrb, %9:vrb, %2:gprb(s32), %7:vrb(<vscale x 16 x s1>), %11:gprb(s32), 0
+  $v8m2 = COPY %5:vrb(<vscale x 16 x s8>)
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+# *** IR Dump After Verify generated machine code (machineverifier) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized, RegBankSelected
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.1 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrb(<vscale x 16 x s8>) = COPY $v8m2
+  %3:gprb(s32) = COPY $x10
+  %4:gprb(s32) = G_ASSERT_SEXT %3:gprb, 8
+  %13:vrb(<vscale x 8 x s8>) = G_EXTRACT_SUBVECTOR %8:vrb(<vscale x 16 x s8>), 0
+  %14:vrb(<vscale x 8 x s8>) = G_VMV_S_VL %13:vrb, %1:gprb, %6:gprb(s32)
+  %8:vrb(<vscale x 16 x s8>) = G_IMPLICIT_DEF
+  %9:vrb(<vscale x 16 x s8>) = G_INSERT_SUBVECTOR %8:vrb, %14:vrb(<vscale x 8 x s8>), 0
+  %1:gprb(s8) = G_TRUNC %4:gprb(s32)
+  %2:gprb(s32) = COPY $x11
+  %6:gprb(s32) = G_CONSTANT i32 -1
+  %7:vrb(<vscale x 16 x s1>) = G_VMSET_VL %6:gprb(s32)
+  %10:gprb(s32) = G_CONSTANT i32 1
+  %11:gprb(s32) = G_ADD %2:gprb, %10:gprb
+  %5:vrb(<vscale x 16 x s8>) = G_VSLIDEUP_VL %0:vrb, %9:vrb, %2:gprb(s32), %7:vrb(<vscale x 16 x s1>), %11:gprb(s32), 0
+  $v8m2 = COPY %5:vrb(<vscale x 16 x s8>)
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+Selecting function: insertelt_nxv16i8_idx
+Applying legalizer ruleset to: Opcode=253, Tys={<vscale x 8 x s8>, <vscale x 16 x s8>, }, MMOs={}
+.. no match
+.. match
+.. .. Custom, 0, LLT_invalid
+Applying legalizer ruleset to: Opcode=73, Tys={<vscale x 16 x s8>, }, MMOs={}
+.. no match
+.. no match
+.. match
+.. .. Legal, 0, LLT_invalid
+Applying legalizer ruleset to: Opcode=252, Tys={<vscale x 16 x s8>, <vscale x 8 x s8>, }, MMOs={}
+.. no match
+.. match
+.. .. Custom, 0, LLT_invalid
+Applying legalizer ruleset to: Opcode=144, Tys={s8, s32, }, MMOs={}
+.. match
+.. .. Legal, 0, LLT_invalid
+Applying legalizer ruleset to: Opcode=148, Tys={s32, }, MMOs={}
+.. no match
+.. match
+.. .. Legal, 0, LLT_invalid
+Applying legalizer ruleset to: Opcode=148, Tys={s32, }, MMOs={}
+.. no match
+.. match
+.. .. Legal, 0, LLT_invalid
+Applying legalizer ruleset to: Opcode=55, Tys={s32, }, MMOs={}
+.. match
+.. .. Legal, 0, LLT_invalid
+
+Select:  PseudoRET implicit $v8m2
+Created no instructions.
+
+Select:  $v8m2 = COPY %5:vrb(<vscale x 16 x s8>)
+Created no instructions.
+
+Select:  %5:vrb(<vscale x 16 x s8>) = G_VSLIDEUP_VL %0:vrb, %9:vrb, %2:gprb(s32), %7:vrb(<vscale x 16 x s1>), %11:gprb(s32), 0
+10: GIM_SwitchOpcode(MIs[0], [55, 646), Default=3041240, JumpTable...) // Got=645
+3031145: GIM_SwitchType(MIs[0]->getOperand(0), [12, 39), Default=3041239, JumpTable...) // Got=<vscale x 16 x s8>
+3032486: Begin try-block
+3032493: GIM_CheckType(MIs[0]->getOperand(1), TypeID=18)
+3032496: GIM_CheckType(MIs[0]->getOperand(2), TypeID=18)
+3032507: GIM_SwitchType(MIs[0]->getOperand(3), [1, 3), Default=3032791, JumpTable...) // Got=s32
+3032516: Begin try-block
+3032523: GIM_CheckType(MIs[0]->getOperand(4), TypeID=9)
+3032526: GIM_CheckType(MIs[0]->getOperand(5), TypeID=1)
+3032530: GIM_CheckRegBankForClass(MIs[0]->getOperand(0), RCEnum=108)
+3032534: GIM_CheckRegBankForClass(MIs[0]->getOperand(1), RCEnum=107)
+3032538: GIM_CheckRegBankForClass(MIs[0]->getOperand(2), RCEnum=107)
+3032539: Begin try-block
+3032546: GIM_CheckFeatures(ExpectedBitsetID=54)
+3032550: MIs[1] = GIM_RecordInsn(0, 3)
+3032554: GIM_CheckOpcode(MIs[1], ExpectedOpcode=148) // Got=20
+3032554: Rejected
+3032600: Resume at 3032600 (5 try-blocks remain)
+3032601: Begin try-block
+3032608: GIM_CheckFeatures(ExpectedBitsetID=54)
+3032612: GIM_CheckRegBankForClass(MIs[0]->getOperand(3), RCEnum=9)
+3032616: GIM_CheckRegBankForClass(MIs[0]->getOperand(4), RCEnum=99)
+3032619: GIM_CheckIsImm(MIs[0]->getOperand(6))
+3032626: State.Renderers[0] = GIM_CheckComplexPattern(MIs[0]->getOperand(5), ComplexPredicateID=4)
+Creating:  PseudoVSLIDEUP_VX_M2_MASK
+3032629: GIR_BuildMI(OutMIs[0], 10652)
+3032631: GIR_Copy(OutMIs[0], MIs[0], 0)
+3032633: GIR_Copy(OutMIs[0], MIs[0], 1)
+3032635: GIR_Copy(OutMIs[0], MIs[0], 2)
+3032637: GIR_Copy(OutMIs[0], MIs[0], 3)
+3032639: GIR_Copy(OutMIs[0], MIs[0], 4)
+3032644: GIR_ComplexSubOperandRenderer(OutMIs[0], 0, 0)
+3032647: GIR_AddImm(OutMIs[0], 3)
+3032649: GIR_Copy(OutMIs[0], MIs[0], 6)
+Converting operand: early-clobber %5:vrb
+Converting operand: %0:vrb(tied-def 0)
+Converting operand: %9:vrb
+Converting operand: %2:gprb
+Converting operand: %7:vrb
+Converting operand: %11:gprb
+3032650: GIR_ConstrainSelectedInstOperands(OutMIs[0])
+3032651: GIR_EraseRootFromParent_Done
+Erasing:   %5:vrm2nov0(<vscale x 16 x s8>) = G_VSLIDEUP_VL %0:vrm2nov0, %9:vrm2, %2:gpr(s32), %7:vmv0(<vscale x 16 x s1>), %11:gprnox0(s32), 0
+Created:
+  early-clobber %5:vrm2nov0(<vscale x 16 x s8>) = PseudoVSLIDEUP_VX_M2_MASK %0:vrm2nov0(tied-def 0)(<vscale x 16 x s8>), %9:vrm2(<vscale x 16 x s8>), %2:gpr(s32), %7:vmv0(<vscale x 16 x s1>), %11:gprnox0(s32), 3, 0
+
+Select:  %11:gprnox0(s32) = G_ADD %2:gpr, %10:gprb
+10: GIM_SwitchOpcode(MIs[0], [55, 646), Default=3041240, JumpTable...) // Got=55
+2385: GIM_SwitchType(MIs[0]->getOperand(0), [1, 39), Default=63681, JumpTable...) // Got=s32
+2538: Begin try-block
+2545: GIM_CheckType(MIs[0]->getOperand(1), TypeID=1)
+2548: GIM_CheckType(MIs[0]->getOperand(2), TypeID=1)
+2549: Begin try-block
+2557: GIM_CheckRegBankForClass(MIs[0]->getOperand(0), RCEnum=9)
+2558: Begin try-block
+2565: GIM_CheckFeatures(ExpectedBitsetID=127)
+2565: Rejected
+2620: Resume at 2620 (4 try-blocks remain)
+2621: Begin try-block
+2628: GIM_CheckFeatures(ExpectedBitsetID=127)
+2628: Rejected
+2683: Resume at 2683 (4 try-blocks remain)
+2684: Begin try-block
+2691: GIM_CheckFeatures(ExpectedBitsetID=30)
+2691: Rejected
+2760: Resume at 2760 (4 try-blocks remain)
+2761: Begin try-block
+2768: GIM_CheckFeatures(ExpectedBitsetID=30)
+2768: Rejected
+2837: Resume at 2837 (4 try-blocks remain)
+2838: GIM_Reject
+2838: Rejected
+2838: Resume at 2838 (3 try-blocks remain)
+2839: Begin try-block
+2846: GIM_CheckFeatures(ExpectedBitsetID=20)
+2846: Rejected
+2886: Resume at 2886 (3 try-blocks remain)
+2887: Begin try-block
+2894: GIM_CheckFeatures(ExpectedBitsetID=20)
+2894: Rejected
+2934: Resume at 2934 (3 try-blocks remain)
+2935: Begin try-block
+2942: GIM_CheckFeatures(ExpectedBitsetID=20)
+2942: Rejected
+2982: Resume at 2982 (3 try-blocks remain)
+2983: Begin try-block
+2990: GIM_CheckFeatures(ExpectedBitsetID=92)
+2990: Rejected
+3033: Resume at 3033 (3 try-blocks remain)
+3034: Begin try-block
+3041: GIM_CheckFeatures(ExpectedBitsetID=92)
+3041: Rejected
+3084: Resume at 3084 (3 try-blocks remain)
+3085: Begin try-block
+3092: GIM_CheckFeatures(ExpectedBitsetID=92)
+3092: Rejected
+3135: Resume at 3135 (3 try-blocks remain)
+3136: Begin try-block
+3143: GIM_CheckFeatures(ExpectedBitsetID=68)
+3143: Rejected
+3183: Resume at 3183 (3 try-blocks remain)
+3184: Begin try-block
+3191: GIM_CheckFeatures(ExpectedBitsetID=68)
+3191: Rejected
+3231: Resume at 3231 (3 try-blocks remain)
+3232: Begin try-block
+3239: GIM_CheckFeatures(ExpectedBitsetID=68)
+3239: Rejected
+3279: Resume at 3279 (3 try-blocks remain)
+3280: Begin try-block
+3287: GIM_CheckFeatures(ExpectedBitsetID=20)
+3287: Rejected
+3327: Resume at 3327 (3 try-blocks remain)
+3328: Begin try-block
+3335: GIM_CheckFeatures(ExpectedBitsetID=20)
+3335: Rejected
+3375: Resume at 3375 (3 try-blocks remain)
+3376: Begin try-block
+3383: GIM_CheckFeatures(ExpectedBitsetID=20)
+3383: Rejected
+3423: Resume at 3423 (3 try-blocks remain)
+3424: Begin try-block
+3431: GIM_CheckFeatures(ExpectedBitsetID=92)
+3431: Rejected
+3474: Resume at 3474 (3 try-blocks remain)
+3475: Begin try-block
+3482: GIM_CheckFeatures(ExpectedBitsetID=92)
+3482: Rejected
+3525: Resume at 3525 (3 try-blocks remain)
+3526: Begin try-block
+3533: GIM_CheckFeatures(ExpectedBitsetID=92)
+3533: Rejected
+3576: Resume at 3576 (3 try-blocks remain)
+3577: Begin try-block
+3584: GIM_CheckFeatures(ExpectedBitsetID=68)
+3584: Rejected
+3624: Resume at 3624 (3 try-blocks remain)
+3625: Begin try-block
+3632: GIM_CheckFeatures(ExpectedBitsetID=68)
+3632: Rejected
+3672: Resume at 3672 (3 try-blocks remain)
+3673: Begin try-block
+3680: GIM_CheckFeatures(ExpectedBitsetID=68)
+3680: Rejected
+3720: Resume at 3720 (3 try-blocks remain)
+3721: Begin try-block
+3728: GIM_CheckFeatures(ExpectedBitsetID=20)
+3728: Rejected
+3788: Resume at 3788 (3 try-blocks remain)
+3789: Begin try-block
+3796: GIM_CheckFeatures(ExpectedBitsetID=20)
+3796: Rejected
+3856: Resume at 3856 (3 try-blocks remain)
+3857: Begin try-block
+3864: GIM_CheckFeatures(ExpectedBitsetID=20)
+3864: Rejected
+3924: Resume at 3924 (3 try-blocks remain)
+3925: Begin try-block
+3932: GIM_CheckFeatures(ExpectedBitsetID=68)
+3932: Rejected
+3992: Resume at 3992 (3 try-blocks remain)
+3993: Begin try-block
+4000: GIM_CheckFeatures(ExpectedBitsetID=68)
+4000: Rejected
+4060: Resume at 4060 (3 try-blocks remain)
+4061: Begin try-block
+4068: GIM_CheckFeatures(ExpectedBitsetID=68)
+4068: Rejected
+4128: Resume at 4128 (3 try-blocks remain)
+4129: Begin try-block
+4136: GIM_CheckFeatures(ExpectedBitsetID=20)
+4136: Rejected
+4196: Resume at 4196 (3 try-blocks remain)
+4197: Begin try-block
+4204: GIM_CheckFeatures(ExpectedBitsetID=20)
+4204: Rejected
+4264: Resume at 4264 (3 try-blocks remain)
+4265: Begin try-block
+4272: GIM_CheckFeatures(ExpectedBitsetID=20)
+4272: Rejected
+4332: Resume at 4332 (3 try-blocks remain)
+4333: Begin try-block
+4340: GIM_CheckFeatures(ExpectedBitsetID=68)
+4340: Rejected
+4400: Resume at 4400 (3 try-blocks remain)
+4401: Begin try-block
+4408: GIM_CheckFeatures(ExpectedBitsetID=68)
+4408: Rejected
+4468: Resume at 4468 (3 try-blocks remain)
+4469: Begin try-block
+4476: GIM_CheckFeatures(ExpectedBitsetID=68)
+4476: Rejected
+4536: Resume at 4536 (3 try-blocks remain)
+4537: Begin try-block
+4544: GIM_CheckFeatures(ExpectedBitsetID=92)
+4544: Rejected
+4615: Resume at 4615 (3 try-blocks remain)
+4616: Begin try-block
+4623: GIM_CheckFeatures(ExpectedBitsetID=231)
+4623: Rejected
+4694: Resume at 4694 (3 try-blocks remain)
+4695: Begin try-block
+4702: GIM_CheckFeatures(ExpectedBitsetID=92)
+4702: Rejected
+4773: Resume at 4773 (3 try-blocks remain)
+4774: Begin try-block
+4781: GIM_CheckFeatures(ExpectedBitsetID=231)
+4781: Rejected
+4852: Resume at 4852 (3 try-blocks remain)
+4853: Begin try-block
+4860: GIM_CheckFeatures(ExpectedBitsetID=231)
+4860: Rejected
+4919: Resume at 4919 (3 try-blocks remain)
+4920: Begin try-block
+4927: GIM_CheckFeatures(ExpectedBitsetID=2)
+4931: GIM_CheckRegBankForClass(MIs[0]->getOperand(0), RCEnum=9)
+4935: MIs[1] = GIM_RecordInsn(0, 1)
+4939: GIM_CheckOpcode(MIs[1], ExpectedOpcode=75) // Got=20
+4939: Rejected
+4968: Resume at 4968 (3 try-blocks remain)
+4969: Begin try-block
+4976: GIM_CheckFeatures(ExpectedBitsetID=231)
+4976: Rejected
+5035: Resume at 5035 (3 try-blocks remain)
+5036: Begin try-block
+5044: GIM_CheckRegBankForClass(MIs[0]->getOperand(0), RCEnum=9)
+5045: Begin try-block
+5053: GIM_CheckRegBankForClass(MIs[0]->getOperand(2), RCEnum=9)
+5054: Begin try-block
+5061: GIM_CheckFeatures(ExpectedBitsetID=127)
+5061: Rejected
+5108: Resume at 5108 (5 try-blocks remain)
+5109: Begin try-block
+5116: GIM_CheckFeatures(ExpectedBitsetID=127)
+5116: Rejected
+5163: Resume at 5163 (5 try-blocks remain)
+5164: GIM_Reject
+5164: Rejected
+5164: Resume at 5164 (4 try-blocks remain)
+5165: Begin try-block
+5173: GIM_CheckRegBankForClass(MIs[0]->getOperand(1), RCEnum=9)
+5174: Begin try-block
+5181: GIM_CheckFeatures(ExpectedBitsetID=127)
+5181: Rejected
+5228: Resume at 5228 (5 try-blocks remain)
+5229: Begin try-block
+5236: GIM_CheckFeatures(ExpectedBitsetID=127)
+5236: Rejected
+5283: Resume at 5283 (5 try-blocks remain)
+5284: Begin try-block
+5291: GIM_CheckFeatures(ExpectedBitsetID=2)
+5295: MIs[1] = GIM_RecordInsn(0, 2)
+5299: GIM_CheckOpcode(MIs[1], ExpectedOpcode=148) // Got=148
+5303: GIM_CheckImmPredicate(MIs[1]->getOperand(1), Predicate=1)
+5303: Rejected
+5347: Resume at 5347 (5 try-blocks remain)
+5348: Begin try-block
+5355: GIM_CheckFeatures(ExpectedBitsetID=2)
+5359: MIs[1] = GIM_RecordInsn(0, 2)
+5363: GIM_CheckOpcode(MIs[1], ExpectedOpcode=148) // Got=148
+5367: GIM_CheckImmPredicate(MIs[1]->getOperand(1), Predicate=40)
+5369: GIM_CheckIsSafeToFold(N = 1)
+Creating:  ADDI
+5372: GIR_BuildMI(OutMIs[0], 13794)
+5374: GIR_Copy(OutMIs[0], MIs[0], 0)
+5376: GIR_Copy(OutMIs[0], MIs[0], 1)
+5379: GIR_CopyConstantAsSImm(OutMIs[0], MIs[1])
+Converting operand: %11:gprnox0
+Converting operand: %2:gpr
+5380: GIR_ConstrainSelectedInstOperands(OutMIs[0])
+5381: GIR_EraseRootFromParent_Done
+Erasing:   %11:gprnox0(s32) = G_ADD %2:gpr, %10:gprb
+Created:
+  %11:gprnox0(s32) = ADDI %2:gpr(s32), 1
+
+Select:  %10:gprb(s32) = G_CONSTANT i32 1
+Is dead.
+Erasing:   %10:gprb(s32) = G_CONSTANT i32 1
+Created no instructions.
+
+Select:  %7:vmv0(<vscale x 16 x s1>) = G_VMSET_VL %6:gprb(s32)
+10: GIM_SwitchOpcode(MIs[0], [55, 646), Default=3041240, JumpTable...) // Got=640
+3014657: GIM_SwitchType(MIs[0]->getOperand(0), [5, 12), Default=3015315, JumpTable...) // Got=<vscale x 16 x s1>
+3015056: GIM_SwitchType(MIs[0]->getOperand(1), [1, 3), Default=3015134, JumpTable...) // Got=s32
+3015065: Begin try-block
+3015072: GIM_CheckFeatures(ExpectedBitsetID=54)
+3015076: GIM_CheckRegBankForClass(MIs[0]->getOperand(0), RCEnum=67)
+3015083: State.Renderers[0] = GIM_CheckComplexPattern(MIs[0]->getOperand(1), ComplexPredicateID=4)
+Creating:  PseudoVMSET_M_B4
+3015086: GIR_BuildMI(OutMIs[0], 8782)
+3015088: GIR_Copy(OutMIs[0], MIs[0], 0)
+3015093: GIR_ComplexSubOperandRenderer(OutMIs[0], 0, 0)
+3015096: GIR_AddImm(OutMIs[0], 0)
+Converting operand: %7:vmv0
+3015097: GIR_ConstrainSelectedInstOperands(OutMIs[0])
+3015098: GIR_EraseRootFromParent_Done
+Erasing:   %7:vmv0(<vscale x 16 x s1>) = G_VMSET_VL %6:gprb(s32)
+Created:
+  %7:vmv0(<vscale x 16 x s1>) = PseudoVMSET_M_B4 -1, 0
+
+Select:  %6:gprb(s32) = G_CONSTANT i32 -1
+10: GIM_SwitchOpcode(MIs[0], [55, 646), Default=3041240, JumpTable...) // Got=148
+3041241: GIM_Reject
+3041241: Rejected
+Creating:  ADDI
+Converting operand: %6:gprb
+Converting operand: $x0
+Erasing:   %6:gpr(s32) = G_CONSTANT i32 -1
+Created:
+  %6:gpr(s32) = ADDI $x0, -1
+
+Select:  %2:gpr(s32) = COPY $x11
+Created no instructions.
+
+Select:  %1:gprb(s8) = G_TRUNC %4:gprb(s32)
+10: GIM_SwitchOpcode(MIs[0], [55, 646), Default=3041240, JumpTable...) // Got=144
+3041241: GIM_Reject
+3041241: Rejected
+Created no instructions.
+
+Select:  %9:vrm2(<vscale x 16 x s8>) = G_INSERT_SUBVECTOR %8:vrb, %14:vrb(<vscale x 8 x s8>), 0
+10: GIM_SwitchOpcode(MIs[0], [55, 646), Default=3041240, JumpTable...) // Got=252
+3041241: GIM_Reject
+3041241: Rejected
+Creating:  INSERT_SUBREG
+Erasing:   %9:vrm2(<vscale x 16 x s8>) = G_INSERT_SUBVECTOR %8:vrb, %14:vrb(<vscale x 8 x s8>), 0
+Converting operand: %9:vrm2
+Converting operand: %8:vrb(tied-def 0)
+Converting operand: %14:vrb
+Created:
+  %9:vrm2(<vscale x 16 x s8>) = INSERT_SUBREG %8:vrb(tied-def 0)(<vscale x 16 x s8>), %14:vrb(<vscale x 8 x s8>), %subreg.sub_vrm1_0
+
+Select:  %8:vrb(<vscale x 16 x s8>) = G_IMPLICIT_DEF
+10: GIM_SwitchOpcode(MIs[0], [55, 646), Default=3041240, JumpTable...) // Got=73
+3041241: GIM_Reject
+3041241: Rejected
+Created no instructions.
+
+Select:  %14:vrb(<vscale x 8 x s8>) = G_VMV_S_VL %13:vrb, %1:gpr, %6:gpr(s32)
+Creating:  COPY
+10: GIM_SwitchOpcode(MIs[0], [55, 646), Default=3041240, JumpTable...) // Got=642
+3015327: GIM_SwitchType(MIs[0]->getOperand(0), [12, 36), Default=3016713, JumpTable...) // Got=<vscale x 8 x s8>
+3015811: Begin try-block
+3015818: GIM_CheckType(MIs[0]->getOperand(1), TypeID=17)
+3015829: GIM_SwitchType(MIs[0]->getOperand(2), [1, 3), Default=3015937, JumpTable...) // Got=s32
+3015838: Begin try-block
+3015845: GIM_CheckFeatures(ExpectedBitsetID=54)
+3015848: GIM_CheckType(MIs[0]->getOperand(3), TypeID=1)
+3015852: GIM_CheckRegBankForClass(MIs[0]->getOperand(0), RCEnum=67)
+3015856: GIM_CheckRegBankForClass(MIs[0]->getOperand(1), RCEnum=67)
+3015860: GIM_CheckRegBankForClass(MIs[0]->getOperand(2), RCEnum=9)
+3015867: State.Renderers[0] = GIM_CheckComplexPattern(MIs[0]->getOperand(3), ComplexPredicateID=4)
+Creating:  PseudoVMV_S_X
+3015870: GIR_BuildMI(OutMIs[0], 9173)
+3015872: GIR_Copy(OutMIs[0], MIs[0], 0)
+3015874: GIR_Copy(OutMIs[0], MIs[0], 1)
+3015876: GIR_Copy(OutMIs[0], MIs[0], 2)
+3015881: GIR_ComplexSubOperandRenderer(OutMIs[0], 0, 0)
+3015884: GIR_AddImm(OutMIs[0], 3)
+Converting operand: %14:vrb
+Converting operand: %13:vrb(tied-def 0)
+Converting operand: %15:gpr
+Converting operand: %6:gpr
+3015885: GIR_ConstrainSelectedInstOperands(OutMIs[0])
+3015886: GIR_EraseRootFromParent_Done
+Erasing:   %14:vr(<vscale x 8 x s8>) = G_VMV_S_X_VL %13:vr, %15:gpr, %6:gprnox0(s32)
+Created:
+  %15:gpr(s32) = COPY %1:gpr(s8)
+  %14:vr(<vscale x 8 x s8>) = PseudoVMV_S_X %13:vr(tied-def 0)(<vscale x 8 x s8>), %15:gpr(s32), %6:gprnox0(s32), 3
+
+Select:  %13:vr(<vscale x 8 x s8>) = G_EXTRACT_SUBVECTOR %8:vrm2(<vscale x 16 x s8>), 0
+10: GIM_SwitchOpcode(MIs[0], [55, 646), Default=3041240, JumpTable...) // Got=253
+3041241: GIM_Reject
+3041241: Rejected
+Creating:  COPY
+Erasing:   %13:vr(<vscale x 8 x s8>) = G_EXTRACT_SUBVECTOR %8:vrm2(<vscale x 16 x s8>), 0
+Created:
+  %13:vr(<vscale x 8 x s8>) = COPY %8.sub_vrm1_0:vrm2(<vscale x 16 x s8>)
+
+Select:  %4:gprb(s32) = G_ASSERT_SEXT %3:gprb, 8
+Erasing:   %4:gprb(s32) = G_ASSERT_SEXT %3:gprb, 8
+Created no instructions.
+
+Select:  %3:gprb(s32) = COPY $x10
+Created no instructions.
+
+Select:  %0:vrm2nov0(<vscale x 16 x s8>) = COPY $v8m2
+Created no instructions.
+Rules covered by selecting function: insertelt_nxv16i8_idx:
+
+# *** IR Dump After InstructionSelect (instruction-select) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.1 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrm2nov0 = COPY $v8m2
+  %3:gpr = COPY $x10
+  %13:vr = COPY %8.sub_vrm1_0:vrm2
+  %14:vr = PseudoVMV_S_X %13:vr(tied-def 0), %3:gpr, %6:gprnox0, 3
+  %8:vrm2 = IMPLICIT_DEF
+  %9:vrm2 = INSERT_SUBREG %8:vrm2(tied-def 0), %14:vr, %subreg.sub_vrm1_0
+  %2:gpr = COPY $x11
+  %6:gprnox0 = ADDI $x0, -1
+  %7:vmv0 = PseudoVMSET_M_B4 -1, 0
+  %11:gprnox0 = ADDI %2:gpr, 1
+  early-clobber %5:vrm2nov0 = PseudoVSLIDEUP_VX_M2_MASK %0:vrm2nov0(tied-def 0), %9:vrm2, %2:gpr, %7:vmv0, %11:gprnox0, 3, 0
+  $v8m2 = COPY %5:vrm2nov0
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+# *** IR Dump After Verify generated machine code (machineverifier) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.1 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrm2nov0 = COPY $v8m2
+  %3:gpr = COPY $x10
+  %13:vr = COPY %8.sub_vrm1_0:vrm2
+  %14:vr = PseudoVMV_S_X %13:vr(tied-def 0), %3:gpr, %6:gprnox0, 3
+  %8:vrm2 = IMPLICIT_DEF
+  %9:vrm2 = INSERT_SUBREG %8:vrm2(tied-def 0), %14:vr, %subreg.sub_vrm1_0
+  %2:gpr = COPY $x11
+  %6:gprnox0 = ADDI $x0, -1
+  %7:vmv0 = PseudoVMSET_M_B4 -1, 0
+  %11:gprnox0 = ADDI %2:gpr, 1
+  early-clobber %5:vrm2nov0 = PseudoVSLIDEUP_VX_M2_MASK %0:vrm2nov0(tied-def 0), %9:vrm2, %2:gpr, %7:vmv0, %11:gprnox0, 3, 0
+  $v8m2 = COPY %5:vrm2nov0
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+# *** IR Dump After Finalize ISel and expand pseudo-instructions (finalize-isel) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.1 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrm2nov0 = COPY $v8m2
+  %3:gpr = COPY $x10
+  %13:vr = COPY %8.sub_vrm1_0:vrm2
+  %14:vr = PseudoVMV_S_X %13:vr(tied-def 0), %3:gpr, %6:gprnox0, 3
+  %8:vrm2 = IMPLICIT_DEF
+  %9:vrm2 = INSERT_SUBREG %8:vrm2(tied-def 0), %14:vr, %subreg.sub_vrm1_0
+  %2:gpr = COPY $x11
+  %6:gprnox0 = ADDI $x0, -1
+  %7:vmv0 = PseudoVMSET_M_B4 -1, 0
+  %11:gprnox0 = ADDI %2:gpr, 1
+  early-clobber %5:vrm2nov0 = PseudoVSLIDEUP_VX_M2_MASK %0:vrm2nov0(tied-def 0), %9:vrm2, %2:gpr, %7:vmv0, %11:gprnox0, 3, 0
+  $v8m2 = COPY %5:vrm2nov0
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+# *** IR Dump After Verify generated machine code (machineverifier) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.1 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrm2nov0 = COPY $v8m2
+  %3:gpr = COPY $x10
+  %13:vr = COPY %8.sub_vrm1_0:vrm2
+  %14:vr = PseudoVMV_S_X %13:vr(tied-def 0), %3:gpr, %6:gprnox0, 3
+  %8:vrm2 = IMPLICIT_DEF
+  %9:vrm2 = INSERT_SUBREG %8:vrm2(tied-def 0), %14:vr, %subreg.sub_vrm1_0
+  %2:gpr = COPY $x11
+  %6:gprnox0 = ADDI $x0, -1
+  %7:vmv0 = PseudoVMSET_M_B4 -1, 0
+  %11:gprnox0 = ADDI %2:gpr, 1
+  early-clobber %5:vrm2nov0 = PseudoVSLIDEUP_VX_M2_MASK %0:vrm2nov0(tied-def 0), %9:vrm2, %2:gpr, %7:vmv0, %11:gprnox0, 3, 0
+  $v8m2 = COPY %5:vrm2nov0
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+  Checking user: $v8m2 = COPY %5:vrm2nov0
+
+    Abort due to lack of SEW operand
+  Abort because user is passthru in instruction with demanded tail
+  Checking user: early-clobber %5:vrm2nov0 = PseudoVSLIDEUP_VX_M2_MASK %0:vrm2nov0(tied-def 0), %9:vrm2, %2:gpr, %7:vmv0, %11:gprnox0, 3, 0
+
+  Abort due to lack of VL, assume that use VLMAX
+  Abort due to lack of VL, assume that use VLMAX
+  Abort because user is passthru in instruction with demanded tail
+  Abort due to lack of VL, assume that use VLMAX
+Found a candidate for VL reduction: early-clobber %5:vrm2nov0 = PseudoVSLIDEUP_VX_M2_MASK %0:vrm2nov0(tied-def 0), %9:vrm2, %2:gpr, %7:vmv0, %11:gprnox0, 3, 0
+
+Trying to reduce VL for early-clobber %5:vrm2nov0 = PseudoVSLIDEUP_VX_M2_MASK %0:vrm2nov0(tied-def 0), %9:vrm2, %2:gpr, %7:vmv0, %11:gprnox0, 3, 0
+  Abort due to CommonVL not <= VLOp.
+Found a candidate for VL reduction: %7:vmv0 = PseudoVMSET_M_B4 -1, 0
+
+Trying to reduce VL for %7:vmv0 = PseudoVMSET_M_B4 -1, 0
+  Reduce VL from -1 to %11 for %7:vmv0 = PseudoVMSET_M_B4 -1, 0
+
+Not a candidate due to unsupported instruction: %14:vr = PseudoVMV_S_X %13:vr(tied-def 0), %3:gpr, %6:gprnox0, 3
+# *** IR Dump After RISC-V VL Optimizer (riscv-vl-optimizer) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.1 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrm2nov0 = COPY $v8m2
+  %3:gpr = COPY $x10
+  %13:vr = COPY %8.sub_vrm1_0:vrm2
+  %14:vr = PseudoVMV_S_X %13:vr(tied-def 0), %3:gpr, %6:gprnox0, 3
+  %8:vrm2 = IMPLICIT_DEF
+  %9:vrm2 = INSERT_SUBREG %8:vrm2(tied-def 0), %14:vr, %subreg.sub_vrm1_0
+  %2:gpr = COPY $x11
+  %6:gprnox0 = ADDI $x0, -1
+  %11:gprnox0 = ADDI %2:gpr, 1
+  %7:vmv0 = PseudoVMSET_M_B4 %11:gprnox0, 0
+  early-clobber %5:vrm2nov0 = PseudoVSLIDEUP_VX_M2_MASK %0:vrm2nov0(tied-def 0), %9:vrm2, %2:gpr, %7:vmv0, %11:gprnox0, 3, 0
+  $v8m2 = COPY %5:vrm2nov0
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+# *** IR Dump After Verify generated machine code (machineverifier) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.1 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrm2nov0 = COPY $v8m2
+  %3:gpr = COPY $x10
+  %13:vr = COPY %8.sub_vrm1_0:vrm2
+  %14:vr = PseudoVMV_S_X %13:vr(tied-def 0), %3:gpr, %6:gprnox0, 3
+  %8:vrm2 = IMPLICIT_DEF
+  %9:vrm2 = INSERT_SUBREG %8:vrm2(tied-def 0), %14:vr, %subreg.sub_vrm1_0
+  %2:gpr = COPY $x11
+  %6:gprnox0 = ADDI $x0, -1
+  %11:gprnox0 = ADDI %2:gpr, 1
+  %7:vmv0 = PseudoVMSET_M_B4 %11:gprnox0, 0
+  early-clobber %5:vrm2nov0 = PseudoVSLIDEUP_VX_M2_MASK %0:vrm2nov0(tied-def 0), %9:vrm2, %2:gpr, %7:vmv0, %11:gprnox0, 3, 0
+  $v8m2 = COPY %5:vrm2nov0
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+# *** IR Dump After RISC-V Vector Peephole Optimization (riscv-vector-peephole) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.1 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrm2 = COPY $v8m2
+  %3:gpr = COPY $x10
+  %13:vr = COPY %8.sub_vrm1_0:vrm2
+  %14:vr = PseudoVMV_S_X %13:vr(tied-def 0), %3:gpr, %6:gprnox0, 3
+  %8:vrm2 = IMPLICIT_DEF
+  %9:vrm2 = INSERT_SUBREG %8:vrm2(tied-def 0), %14:vr, %subreg.sub_vrm1_0
+  %2:gpr = COPY $x11
+  %6:gprnox0 = ADDI $x0, -1
+  %11:gprnox0 = ADDI %2:gpr, 1
+  %7:vmv0 = PseudoVMSET_M_B4 %11:gprnox0, 0
+  early-clobber %5:vrm2 = PseudoVSLIDEUP_VX_M2 %0:vrm2(tied-def 0), %9:vrm2, %2:gpr, %11:gprnox0, 3, 0
+  $v8m2 = COPY %5:vrm2
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+# *** IR Dump After Verify generated machine code (machineverifier) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.1 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrm2 = COPY $v8m2
+  %3:gpr = COPY $x10
+  %13:vr = COPY %8.sub_vrm1_0:vrm2
+  %14:vr = PseudoVMV_S_X %13:vr(tied-def 0), %3:gpr, %6:gprnox0, 3
+  %8:vrm2 = IMPLICIT_DEF
+  %9:vrm2 = INSERT_SUBREG %8:vrm2(tied-def 0), %14:vr, %subreg.sub_vrm1_0
+  %2:gpr = COPY $x11
+  %6:gprnox0 = ADDI $x0, -1
+  %11:gprnox0 = ADDI %2:gpr, 1
+  %7:vmv0 = PseudoVMSET_M_B4 %11:gprnox0, 0
+  early-clobber %5:vrm2 = PseudoVSLIDEUP_VX_M2 %0:vrm2(tied-def 0), %9:vrm2, %2:gpr, %11:gprnox0, 3, 0
+  $v8m2 = COPY %5:vrm2
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+# *** IR Dump After RISC-V Fold Memory Offset (riscv-fold-mem-offset) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.1 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrm2 = COPY $v8m2
+  %3:gpr = COPY $x10
+  %13:vr = COPY %8.sub_vrm1_0:vrm2
+  %14:vr = PseudoVMV_S_X %13:vr(tied-def 0), %3:gpr, %6:gprnox0, 3
+  %8:vrm2 = IMPLICIT_DEF
+  %9:vrm2 = INSERT_SUBREG %8:vrm2(tied-def 0), %14:vr, %subreg.sub_vrm1_0
+  %2:gpr = COPY $x11
+  %6:gprnox0 = ADDI $x0, -1
+  %11:gprnox0 = ADDI %2:gpr, 1
+  %7:vmv0 = PseudoVMSET_M_B4 %11:gprnox0, 0
+  early-clobber %5:vrm2 = PseudoVSLIDEUP_VX_M2 %0:vrm2(tied-def 0), %9:vrm2, %2:gpr, %11:gprnox0, 3, 0
+  $v8m2 = COPY %5:vrm2
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+# *** IR Dump After Verify generated machine code (machineverifier) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.1 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrm2 = COPY $v8m2
+  %3:gpr = COPY $x10
+  %13:vr = COPY %8.sub_vrm1_0:vrm2
+  %14:vr = PseudoVMV_S_X %13:vr(tied-def 0), %3:gpr, %6:gprnox0, 3
+  %8:vrm2 = IMPLICIT_DEF
+  %9:vrm2 = INSERT_SUBREG %8:vrm2(tied-def 0), %14:vr, %subreg.sub_vrm1_0
+  %2:gpr = COPY $x11
+  %6:gprnox0 = ADDI $x0, -1
+  %11:gprnox0 = ADDI %2:gpr, 1
+  %7:vmv0 = PseudoVMSET_M_B4 %11:gprnox0, 0
+  early-clobber %5:vrm2 = PseudoVSLIDEUP_VX_M2 %0:vrm2(tied-def 0), %9:vrm2, %2:gpr, %11:gprnox0, 3, 0
+  $v8m2 = COPY %5:vrm2
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+# *** IR Dump After Early Tail Duplication (early-tailduplication) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.1 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrm2 = COPY $v8m2
+  %3:gpr = COPY $x10
+  %13:vr = COPY %8.sub_vrm1_0:vrm2
+  %14:vr = PseudoVMV_S_X %13:vr(tied-def 0), %3:gpr, %6:gprnox0, 3
+  %8:vrm2 = IMPLICIT_DEF
+  %9:vrm2 = INSERT_SUBREG %8:vrm2(tied-def 0), %14:vr, %subreg.sub_vrm1_0
+  %2:gpr = COPY $x11
+  %6:gprnox0 = ADDI $x0, -1
+  %11:gprnox0 = ADDI %2:gpr, 1
+  %7:vmv0 = PseudoVMSET_M_B4 %11:gprnox0, 0
+  early-clobber %5:vrm2 = PseudoVSLIDEUP_VX_M2 %0:vrm2(tied-def 0), %9:vrm2, %2:gpr, %11:gprnox0, 3, 0
+  $v8m2 = COPY %5:vrm2
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+# *** IR Dump After Verify generated machine code (machineverifier) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.1 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrm2 = COPY $v8m2
+  %3:gpr = COPY $x10
+  %13:vr = COPY %8.sub_vrm1_0:vrm2
+  %14:vr = PseudoVMV_S_X %13:vr(tied-def 0), %3:gpr, %6:gprnox0, 3
+  %8:vrm2 = IMPLICIT_DEF
+  %9:vrm2 = INSERT_SUBREG %8:vrm2(tied-def 0), %14:vr, %subreg.sub_vrm1_0
+  %2:gpr = COPY $x11
+  %6:gprnox0 = ADDI $x0, -1
+  %11:gprnox0 = ADDI %2:gpr, 1
+  %7:vmv0 = PseudoVMSET_M_B4 %11:gprnox0, 0
+  early-clobber %5:vrm2 = PseudoVSLIDEUP_VX_M2 %0:vrm2(tied-def 0), %9:vrm2, %2:gpr, %11:gprnox0, 3, 0
+  $v8m2 = COPY %5:vrm2
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+# *** IR Dump After Optimize machine instruction PHIs (opt-phis) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.1 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrm2 = COPY $v8m2
+  %3:gpr = COPY $x10
+  %13:vr = COPY %8.sub_vrm1_0:vrm2
+  %14:vr = PseudoVMV_S_X %13:vr(tied-def 0), %3:gpr, %6:gprnox0, 3
+  %8:vrm2 = IMPLICIT_DEF
+  %9:vrm2 = INSERT_SUBREG %8:vrm2(tied-def 0), %14:vr, %subreg.sub_vrm1_0
+  %2:gpr = COPY $x11
+  %6:gprnox0 = ADDI $x0, -1
+  %11:gprnox0 = ADDI %2:gpr, 1
+  %7:vmv0 = PseudoVMSET_M_B4 %11:gprnox0, 0
+  early-clobber %5:vrm2 = PseudoVSLIDEUP_VX_M2 %0:vrm2(tied-def 0), %9:vrm2, %2:gpr, %11:gprnox0, 3, 0
+  $v8m2 = COPY %5:vrm2
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+# *** IR Dump After Verify generated machine code (machineverifier) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.1 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrm2 = COPY $v8m2
+  %3:gpr = COPY $x10
+  %13:vr = COPY %8.sub_vrm1_0:vrm2
+  %14:vr = PseudoVMV_S_X %13:vr(tied-def 0), %3:gpr, %6:gprnox0, 3
+  %8:vrm2 = IMPLICIT_DEF
+  %9:vrm2 = INSERT_SUBREG %8:vrm2(tied-def 0), %14:vr, %subreg.sub_vrm1_0
+  %2:gpr = COPY $x11
+  %6:gprnox0 = ADDI $x0, -1
+  %11:gprnox0 = ADDI %2:gpr, 1
+  %7:vmv0 = PseudoVMSET_M_B4 %11:gprnox0, 0
+  early-clobber %5:vrm2 = PseudoVSLIDEUP_VX_M2 %0:vrm2(tied-def 0), %9:vrm2, %2:gpr, %11:gprnox0, 3, 0
+  $v8m2 = COPY %5:vrm2
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Function Live Ins: $v8m2, $x10, $x11
+
+0B	bb.1 (%ir-block.0):
+	  liveins: $x10, $x11, $v8m2
+16B	  %0:vrm2 = COPY $v8m2
+32B	  %3:gpr = COPY $x10
+48B	  %13:vr = COPY %8.sub_vrm1_0:vrm2
+64B	  %14:vr = PseudoVMV_S_X %13:vr(tied-def 0), %3:gpr, %6:gprnox0, 3
+80B	  %8:vrm2 = IMPLICIT_DEF
+96B	  %9:vrm2 = INSERT_SUBREG %8:vrm2(tied-def 0), %14:vr, %subreg.sub_vrm1_0
+112B	  %2:gpr = COPY $x11
+128B	  %6:gprnox0 = ADDI $x0, -1
+144B	  %11:gprnox0 = ADDI %2:gpr, 1
+160B	  %7:vmv0 = PseudoVMSET_M_B4 %11:gprnox0, 0
+176B	  early-clobber %5:vrm2 = PseudoVSLIDEUP_VX_M2 %0:vrm2(tied-def 0), %9:vrm2, %2:gpr, %11:gprnox0, 3, 0
+192B	  $v8m2 = COPY %5:vrm2
+208B	  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+# *** IR Dump After Slot index numbering (slotindexes) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Function Live Ins: $v8m2, $x10, $x11
+
+0B	bb.1 (%ir-block.0):
+	  liveins: $x10, $x11, $v8m2
+16B	  %0:vrm2 = COPY $v8m2
+32B	  %3:gpr = COPY $x10
+48B	  %13:vr = COPY %8.sub_vrm1_0:vrm2
+64B	  %14:vr = PseudoVMV_S_X %13:vr(tied-def 0), %3:gpr, %6:gprnox0, 3
+80B	  %8:vrm2 = IMPLICIT_DEF
+96B	  %9:vrm2 = INSERT_SUBREG %8:vrm2(tied-def 0), %14:vr, %subreg.sub_vrm1_0
+112B	  %2:gpr = COPY $x11
+128B	  %6:gprnox0 = ADDI $x0, -1
+144B	  %11:gprnox0 = ADDI %2:gpr, 1
+160B	  %7:vmv0 = PseudoVMSET_M_B4 %11:gprnox0, 0
+176B	  early-clobber %5:vrm2 = PseudoVSLIDEUP_VX_M2 %0:vrm2(tied-def 0), %9:vrm2, %2:gpr, %11:gprnox0, 3, 0
+192B	  $v8m2 = COPY %5:vrm2
+208B	  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+********** Stack Coloring **********
+********** Function: insertelt_nxv16i8_idx
+# *** IR Dump After Merge disjoint stack slots (stack-coloring) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.1 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrm2 = COPY $v8m2
+  %3:gpr = COPY $x10
+  %13:vr = COPY %8.sub_vrm1_0:vrm2
+  %14:vr = PseudoVMV_S_X %13:vr(tied-def 0), %3:gpr, %6:gprnox0, 3
+  %8:vrm2 = IMPLICIT_DEF
+  %9:vrm2 = INSERT_SUBREG %8:vrm2(tied-def 0), %14:vr, %subreg.sub_vrm1_0
+  %2:gpr = COPY $x11
+  %6:gprnox0 = ADDI $x0, -1
+  %11:gprnox0 = ADDI %2:gpr, 1
+  %7:vmv0 = PseudoVMSET_M_B4 %11:gprnox0, 0
+  early-clobber %5:vrm2 = PseudoVSLIDEUP_VX_M2 %0:vrm2(tied-def 0), %9:vrm2, %2:gpr, %11:gprnox0, 3, 0
+  $v8m2 = COPY %5:vrm2
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+# *** IR Dump After Verify generated machine code (machineverifier) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.1 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrm2 = COPY $v8m2
+  %3:gpr = COPY $x10
+  %13:vr = COPY %8.sub_vrm1_0:vrm2
+  %14:vr = PseudoVMV_S_X %13:vr(tied-def 0), %3:gpr, %6:gprnox0, 3
+  %8:vrm2 = IMPLICIT_DEF
+  %9:vrm2 = INSERT_SUBREG %8:vrm2(tied-def 0), %14:vr, %subreg.sub_vrm1_0
+  %2:gpr = COPY $x11
+  %6:gprnox0 = ADDI $x0, -1
+  %11:gprnox0 = ADDI %2:gpr, 1
+  %7:vmv0 = PseudoVMSET_M_B4 %11:gprnox0, 0
+  early-clobber %5:vrm2 = PseudoVSLIDEUP_VX_M2 %0:vrm2(tied-def 0), %9:vrm2, %2:gpr, %11:gprnox0, 3, 0
+  $v8m2 = COPY %5:vrm2
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+# *** IR Dump After Local Stack Slot Allocation (localstackalloc) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.1 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrm2 = COPY $v8m2
+  %3:gpr = COPY $x10
+  %13:vr = COPY %8.sub_vrm1_0:vrm2
+  %14:vr = PseudoVMV_S_X %13:vr(tied-def 0), %3:gpr, %6:gprnox0, 3
+  %8:vrm2 = IMPLICIT_DEF
+  %9:vrm2 = INSERT_SUBREG %8:vrm2(tied-def 0), %14:vr, %subreg.sub_vrm1_0
+  %2:gpr = COPY $x11
+  %6:gprnox0 = ADDI $x0, -1
+  %11:gprnox0 = ADDI %2:gpr, 1
+  %7:vmv0 = PseudoVMSET_M_B4 %11:gprnox0, 0
+  early-clobber %5:vrm2 = PseudoVSLIDEUP_VX_M2 %0:vrm2(tied-def 0), %9:vrm2, %2:gpr, %11:gprnox0, 3, 0
+  $v8m2 = COPY %5:vrm2
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+# *** IR Dump After Verify generated machine code (machineverifier) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.1 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrm2 = COPY $v8m2
+  %3:gpr = COPY $x10
+  %13:vr = COPY %8.sub_vrm1_0:vrm2
+  %14:vr = PseudoVMV_S_X %13:vr(tied-def 0), %3:gpr, %6:gprnox0, 3
+  %8:vrm2 = IMPLICIT_DEF
+  %9:vrm2 = INSERT_SUBREG %8:vrm2(tied-def 0), %14:vr, %subreg.sub_vrm1_0
+  %2:gpr = COPY $x11
+  %6:gprnox0 = ADDI $x0, -1
+  %11:gprnox0 = ADDI %2:gpr, 1
+  %7:vmv0 = PseudoVMSET_M_B4 %11:gprnox0, 0
+  early-clobber %5:vrm2 = PseudoVSLIDEUP_VX_M2 %0:vrm2(tied-def 0), %9:vrm2, %2:gpr, %11:gprnox0, 3, 0
+  $v8m2 = COPY %5:vrm2
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+DeadMachineInstructionElim: DELETING: %7:vmv0 = PseudoVMSET_M_B4 %11:gprnox0, 0
+# *** IR Dump After Remove dead machine instructions (dead-mi-elimination) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.1 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrm2 = COPY $v8m2
+  %3:gpr = COPY $x10
+  %13:vr = COPY %8.sub_vrm1_0:vrm2
+  %14:vr = PseudoVMV_S_X %13:vr(tied-def 0), %3:gpr, %6:gprnox0, 3
+  %8:vrm2 = IMPLICIT_DEF
+  %9:vrm2 = INSERT_SUBREG %8:vrm2(tied-def 0), %14:vr, %subreg.sub_vrm1_0
+  %2:gpr = COPY $x11
+  %6:gprnox0 = ADDI $x0, -1
+  %11:gprnox0 = ADDI %2:gpr, 1
+  early-clobber %5:vrm2 = PseudoVSLIDEUP_VX_M2 %0:vrm2(tied-def 0), %9:vrm2, %2:gpr, %11:gprnox0, 3, 0
+  $v8m2 = COPY %5:vrm2
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+# *** IR Dump After Verify generated machine code (machineverifier) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.1 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrm2 = COPY $v8m2
+  %3:gpr = COPY $x10
+  %13:vr = COPY %8.sub_vrm1_0:vrm2
+  %14:vr = PseudoVMV_S_X %13:vr(tied-def 0), %3:gpr, %6:gprnox0, 3
+  %8:vrm2 = IMPLICIT_DEF
+  %9:vrm2 = INSERT_SUBREG %8:vrm2(tied-def 0), %14:vr, %subreg.sub_vrm1_0
+  %2:gpr = COPY $x11
+  %6:gprnox0 = ADDI $x0, -1
+  %11:gprnox0 = ADDI %2:gpr, 1
+  early-clobber %5:vrm2 = PseudoVSLIDEUP_VX_M2 %0:vrm2(tied-def 0), %9:vrm2, %2:gpr, %11:gprnox0, 3, 0
+  $v8m2 = COPY %5:vrm2
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+Machine InstCombiner: insertelt_nxv16i8_idx
+Combining MBB 
+# *** IR Dump After Machine InstCombiner (machine-combiner) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.1 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrm2 = COPY $v8m2
+  %3:gpr = COPY $x10
+  %13:vr = COPY %8.sub_vrm1_0:vrm2
+  %14:vr = PseudoVMV_S_X %13:vr(tied-def 0), %3:gpr, %6:gprnox0, 3
+  %8:vrm2 = IMPLICIT_DEF
+  %9:vrm2 = INSERT_SUBREG %8:vrm2(tied-def 0), %14:vr, %subreg.sub_vrm1_0
+  %2:gpr = COPY $x11
+  %6:gprnox0 = ADDI $x0, -1
+  %11:gprnox0 = ADDI %2:gpr, 1
+  early-clobber %5:vrm2 = PseudoVSLIDEUP_VX_M2 %0:vrm2(tied-def 0), %9:vrm2, %2:gpr, %11:gprnox0, 3, 0
+  $v8m2 = COPY %5:vrm2
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+# *** IR Dump After Verify generated machine code (machineverifier) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.1 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrm2 = COPY $v8m2
+  %3:gpr = COPY $x10
+  %13:vr = COPY %8.sub_vrm1_0:vrm2
+  %14:vr = PseudoVMV_S_X %13:vr(tied-def 0), %3:gpr, %6:gprnox0, 3
+  %8:vrm2 = IMPLICIT_DEF
+  %9:vrm2 = INSERT_SUBREG %8:vrm2(tied-def 0), %14:vr, %subreg.sub_vrm1_0
+  %2:gpr = COPY $x11
+  %6:gprnox0 = ADDI $x0, -1
+  %11:gprnox0 = ADDI %2:gpr, 1
+  early-clobber %5:vrm2 = PseudoVSLIDEUP_VX_M2 %0:vrm2(tied-def 0), %9:vrm2, %2:gpr, %11:gprnox0, 3, 0
+  $v8m2 = COPY %5:vrm2
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+
+block-frequency: insertelt_nxv16i8_idx
+======================================
+reverse-post-order-traversal
+ - 0: BB1[]
+loop-detection
+compute-mass-in-function
+ - node: BB1[]
+  => mass:  ffffffffffffffff
+float-to-int: min = 1.0, max = 1.0, factor = 18014398509481984.0
+ - BB1[]: float = 1.0, scaled = 18014398509481984.0, int = 18014398509481984
+block-frequency-info: insertelt_nxv16i8_idx
+ - BB1[]: float = 1.0, int = 18014398509481984
+
+******** Pre-regalloc Machine LICM: insertelt_nxv16i8_idx ********
+# *** IR Dump After Early Machine Loop Invariant Code Motion (early-machinelicm) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.1 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrm2 = COPY $v8m2
+  %3:gpr = COPY $x10
+  %13:vr = COPY %8.sub_vrm1_0:vrm2
+  %14:vr = PseudoVMV_S_X %13:vr(tied-def 0), %3:gpr, %6:gprnox0, 3
+  %8:vrm2 = IMPLICIT_DEF
+  %9:vrm2 = INSERT_SUBREG %8:vrm2(tied-def 0), %14:vr, %subreg.sub_vrm1_0
+  %2:gpr = COPY $x11
+  %6:gprnox0 = ADDI $x0, -1
+  %11:gprnox0 = ADDI %2:gpr, 1
+  early-clobber %5:vrm2 = PseudoVSLIDEUP_VX_M2 %0:vrm2(tied-def 0), %9:vrm2, %2:gpr, %11:gprnox0, 3, 0
+  $v8m2 = COPY %5:vrm2
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+# *** IR Dump After Verify generated machine code (machineverifier) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.1 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrm2 = COPY $v8m2
+  %3:gpr = COPY $x10
+  %13:vr = COPY %8.sub_vrm1_0:vrm2
+  %14:vr = PseudoVMV_S_X %13:vr(tied-def 0), %3:gpr, %6:gprnox0, 3
+  %8:vrm2 = IMPLICIT_DEF
+  %9:vrm2 = INSERT_SUBREG %8:vrm2(tied-def 0), %14:vr, %subreg.sub_vrm1_0
+  %2:gpr = COPY $x11
+  %6:gprnox0 = ADDI $x0, -1
+  %11:gprnox0 = ADDI %2:gpr, 1
+  early-clobber %5:vrm2 = PseudoVSLIDEUP_VX_M2 %0:vrm2(tied-def 0), %9:vrm2, %2:gpr, %11:gprnox0, 3, 0
+  $v8m2 = COPY %5:vrm2
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+
+block-frequency: insertelt_nxv16i8_idx
+======================================
+reverse-post-order-traversal
+ - 0: BB1[]
+loop-detection
+compute-mass-in-function
+ - node: BB1[]
+  => mass:  ffffffffffffffff
+float-to-int: min = 1.0, max = 1.0, factor = 18014398509481984.0
+ - BB1[]: float = 1.0, scaled = 18014398509481984.0, int = 18014398509481984
+block-frequency-info: insertelt_nxv16i8_idx
+ - BB1[]: float = 1.0, int = 18014398509481984
+
+Entering: 
+Exiting: 
+# *** IR Dump After Machine Common Subexpression Elimination (machine-cse) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.1 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrm2 = COPY $v8m2
+  %3:gpr = COPY $x10
+  %13:vr = COPY %8.sub_vrm1_0:vrm2
+  %14:vr = PseudoVMV_S_X %13:vr(tied-def 0), %3:gpr, %6:gprnox0, 3
+  %8:vrm2 = IMPLICIT_DEF
+  %9:vrm2 = INSERT_SUBREG %8:vrm2(tied-def 0), %14:vr, %subreg.sub_vrm1_0
+  %2:gpr = COPY $x11
+  %6:gprnox0 = ADDI $x0, -1
+  %11:gprnox0 = ADDI %2:gpr, 1
+  early-clobber %5:vrm2 = PseudoVSLIDEUP_VX_M2 %0:vrm2(tied-def 0), %9:vrm2, %2:gpr, %11:gprnox0, 3, 0
+  $v8m2 = COPY %5:vrm2
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+# *** IR Dump After Verify generated machine code (machineverifier) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.1 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrm2 = COPY $v8m2
+  %3:gpr = COPY $x10
+  %13:vr = COPY %8.sub_vrm1_0:vrm2
+  %14:vr = PseudoVMV_S_X %13:vr(tied-def 0), %3:gpr, %6:gprnox0, 3
+  %8:vrm2 = IMPLICIT_DEF
+  %9:vrm2 = INSERT_SUBREG %8:vrm2(tied-def 0), %14:vr, %subreg.sub_vrm1_0
+  %2:gpr = COPY $x11
+  %6:gprnox0 = ADDI $x0, -1
+  %11:gprnox0 = ADDI %2:gpr, 1
+  early-clobber %5:vrm2 = PseudoVSLIDEUP_VX_M2 %0:vrm2(tied-def 0), %9:vrm2, %2:gpr, %11:gprnox0, 3, 0
+  $v8m2 = COPY %5:vrm2
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+		Looking for trivial roots
+Found a new trivial root: %bb.1
+Last visited node: %bb.1
+		Looking for non-trivial roots
+Total: 1, Num: 2
+Discovered CFG nodes:
+0: nullptr
+1: nullptr
+2: %bb.1
+Found roots: %bb.1 
+Computing cycles for function: insertelt_nxv16i8_idx
+Entry block: bb.1 (%ir-block.0)
+DFS visiting block: bb.1 (%ir-block.0)
+  first encountered at depth 1
+  preorder number: 1
+DFS visiting block: bb.1 (%ir-block.0)
+  ended at 1
+Preorder:
+  bb.1 (%ir-block.0): 0
+******** Machine Sinking ********
+# *** IR Dump After Machine code sinking (machine-sink) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.1 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrm2 = COPY $v8m2
+  %3:gpr = COPY $x10
+  %13:vr = COPY %8.sub_vrm1_0:vrm2
+  %14:vr = PseudoVMV_S_X %13:vr(tied-def 0), %3:gpr, %6:gprnox0, 3
+  %8:vrm2 = IMPLICIT_DEF
+  %9:vrm2 = INSERT_SUBREG %8:vrm2(tied-def 0), %14:vr, %subreg.sub_vrm1_0
+  %2:gpr = COPY $x11
+  %6:gprnox0 = ADDI $x0, -1
+  %11:gprnox0 = ADDI %2:gpr, 1
+  early-clobber %5:vrm2 = PseudoVSLIDEUP_VX_M2 %0:vrm2(tied-def 0), %9:vrm2, %2:gpr, %11:gprnox0, 3, 0
+  $v8m2 = COPY %5:vrm2
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+# *** IR Dump After Verify generated machine code (machineverifier) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.1 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrm2 = COPY $v8m2
+  %3:gpr = COPY $x10
+  %13:vr = COPY %8.sub_vrm1_0:vrm2
+  %14:vr = PseudoVMV_S_X %13:vr(tied-def 0), %3:gpr, %6:gprnox0, 3
+  %8:vrm2 = IMPLICIT_DEF
+  %9:vrm2 = INSERT_SUBREG %8:vrm2(tied-def 0), %14:vr, %subreg.sub_vrm1_0
+  %2:gpr = COPY $x11
+  %6:gprnox0 = ADDI $x0, -1
+  %11:gprnox0 = ADDI %2:gpr, 1
+  early-clobber %5:vrm2 = PseudoVSLIDEUP_VX_M2 %0:vrm2(tied-def 0), %9:vrm2, %2:gpr, %11:gprnox0, 3, 0
+  $v8m2 = COPY %5:vrm2
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+********** PEEPHOLE OPTIMIZER **********
+********** Function: insertelt_nxv16i8_idx
+# *** IR Dump After Peephole Optimizations (peephole-opt) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.1 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrm2 = COPY $v8m2
+  %3:gpr = COPY $x10
+  %13:vr = COPY %8.sub_vrm1_0:vrm2
+  %14:vr = PseudoVMV_S_X %13:vr(tied-def 0), %3:gpr, %6:gprnox0, 3
+  %8:vrm2 = IMPLICIT_DEF
+  %9:vrm2 = INSERT_SUBREG %8:vrm2(tied-def 0), %14:vr, %subreg.sub_vrm1_0
+  %2:gpr = COPY $x11
+  %6:gprnox0 = ADDI $x0, -1
+  %11:gprnox0 = ADDI %2:gpr, 1
+  early-clobber %5:vrm2 = PseudoVSLIDEUP_VX_M2 %0:vrm2(tied-def 0), %9:vrm2, %2:gpr, %11:gprnox0, 3, 0
+  $v8m2 = COPY %5:vrm2
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+# *** IR Dump After Verify generated machine code (machineverifier) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.1 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrm2 = COPY $v8m2
+  %3:gpr = COPY $x10
+  %13:vr = COPY %8.sub_vrm1_0:vrm2
+  %14:vr = PseudoVMV_S_X %13:vr(tied-def 0), %3:gpr, %6:gprnox0, 3
+  %8:vrm2 = IMPLICIT_DEF
+  %9:vrm2 = INSERT_SUBREG %8:vrm2(tied-def 0), %14:vr, %subreg.sub_vrm1_0
+  %2:gpr = COPY $x11
+  %6:gprnox0 = ADDI $x0, -1
+  %11:gprnox0 = ADDI %2:gpr, 1
+  early-clobber %5:vrm2 = PseudoVSLIDEUP_VX_M2 %0:vrm2(tied-def 0), %9:vrm2, %2:gpr, %11:gprnox0, 3, 0
+  $v8m2 = COPY %5:vrm2
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+# *** IR Dump After Remove dead machine instructions (dead-mi-elimination) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.1 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrm2 = COPY $v8m2
+  %3:gpr = COPY $x10
+  %13:vr = COPY %8.sub_vrm1_0:vrm2
+  %14:vr = PseudoVMV_S_X %13:vr(tied-def 0), %3:gpr, %6:gprnox0, 3
+  %8:vrm2 = IMPLICIT_DEF
+  %9:vrm2 = INSERT_SUBREG %8:vrm2(tied-def 0), %14:vr, %subreg.sub_vrm1_0
+  %2:gpr = COPY $x11
+  %6:gprnox0 = ADDI $x0, -1
+  %11:gprnox0 = ADDI %2:gpr, 1
+  early-clobber %5:vrm2 = PseudoVSLIDEUP_VX_M2 %0:vrm2(tied-def 0), %9:vrm2, %2:gpr, %11:gprnox0, 3, 0
+  $v8m2 = COPY %5:vrm2
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+# *** IR Dump After Verify generated machine code (machineverifier) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.1 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrm2 = COPY $v8m2
+  %3:gpr = COPY $x10
+  %13:vr = COPY %8.sub_vrm1_0:vrm2
+  %14:vr = PseudoVMV_S_X %13:vr(tied-def 0), %3:gpr, %6:gprnox0, 3
+  %8:vrm2 = IMPLICIT_DEF
+  %9:vrm2 = INSERT_SUBREG %8:vrm2(tied-def 0), %14:vr, %subreg.sub_vrm1_0
+  %2:gpr = COPY $x11
+  %6:gprnox0 = ADDI $x0, -1
+  %11:gprnox0 = ADDI %2:gpr, 1
+  early-clobber %5:vrm2 = PseudoVSLIDEUP_VX_M2 %0:vrm2(tied-def 0), %9:vrm2, %2:gpr, %11:gprnox0, 3, 0
+  $v8m2 = COPY %5:vrm2
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+# *** IR Dump After RISC-V Pre-RA pseudo instruction expansion pass (riscv-prera-expand-pseudo) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.1 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrm2 = COPY $v8m2
+  %3:gpr = COPY $x10
+  %13:vr = COPY %8.sub_vrm1_0:vrm2
+  %14:vr = PseudoVMV_S_X %13:vr(tied-def 0), %3:gpr, %6:gprnox0, 3
+  %8:vrm2 = IMPLICIT_DEF
+  %9:vrm2 = INSERT_SUBREG %8:vrm2(tied-def 0), %14:vr, %subreg.sub_vrm1_0
+  %2:gpr = COPY $x11
+  %6:gprnox0 = ADDI $x0, -1
+  %11:gprnox0 = ADDI %2:gpr, 1
+  early-clobber %5:vrm2 = PseudoVSLIDEUP_VX_M2 %0:vrm2(tied-def 0), %9:vrm2, %2:gpr, %11:gprnox0, 3, 0
+  $v8m2 = COPY %5:vrm2
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+# *** IR Dump After Verify generated machine code (machineverifier) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.1 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrm2 = COPY $v8m2
+  %3:gpr = COPY $x10
+  %13:vr = COPY %8.sub_vrm1_0:vrm2
+  %14:vr = PseudoVMV_S_X %13:vr(tied-def 0), %3:gpr, %6:gprnox0, 3
+  %8:vrm2 = IMPLICIT_DEF
+  %9:vrm2 = INSERT_SUBREG %8:vrm2(tied-def 0), %14:vr, %subreg.sub_vrm1_0
+  %2:gpr = COPY $x11
+  %6:gprnox0 = ADDI $x0, -1
+  %11:gprnox0 = ADDI %2:gpr, 1
+  early-clobber %5:vrm2 = PseudoVSLIDEUP_VX_M2 %0:vrm2(tied-def 0), %9:vrm2, %2:gpr, %11:gprnox0, 3, 0
+  $v8m2 = COPY %5:vrm2
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+MBB: 
+# *** IR Dump After RISC-V Merge Base Offset (riscv-merge-base-offset) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.1 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrm2 = COPY $v8m2
+  %3:gpr = COPY $x10
+  %13:vr = COPY %8.sub_vrm1_0:vrm2
+  %14:vr = PseudoVMV_S_X %13:vr(tied-def 0), %3:gpr, %6:gprnox0, 3
+  %8:vrm2 = IMPLICIT_DEF
+  %9:vrm2 = INSERT_SUBREG %8:vrm2(tied-def 0), %14:vr, %subreg.sub_vrm1_0
+  %2:gpr = COPY $x11
+  %6:gprnox0 = ADDI $x0, -1
+  %11:gprnox0 = ADDI %2:gpr, 1
+  early-clobber %5:vrm2 = PseudoVSLIDEUP_VX_M2 %0:vrm2(tied-def 0), %9:vrm2, %2:gpr, %11:gprnox0, 3, 0
+  $v8m2 = COPY %5:vrm2
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+# *** IR Dump After Verify generated machine code (machineverifier) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.1 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrm2 = COPY $v8m2
+  %3:gpr = COPY $x10
+  %13:vr = COPY %8.sub_vrm1_0:vrm2
+  %14:vr = PseudoVMV_S_X %13:vr(tied-def 0), %3:gpr, %6:gprnox0, 3
+  %8:vrm2 = IMPLICIT_DEF
+  %9:vrm2 = INSERT_SUBREG %8:vrm2(tied-def 0), %14:vr, %subreg.sub_vrm1_0
+  %2:gpr = COPY $x11
+  %6:gprnox0 = ADDI $x0, -1
+  %11:gprnox0 = ADDI %2:gpr, 1
+  early-clobber %5:vrm2 = PseudoVSLIDEUP_VX_M2 %0:vrm2(tied-def 0), %9:vrm2, %2:gpr, %11:gprnox0, 3, 0
+  $v8m2 = COPY %5:vrm2
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+# *** IR Dump After RISC-V pre-allocation Zilsd load/store optimization (riscv-prera-zilsd-opt) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.1 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrm2 = COPY $v8m2
+  %3:gpr = COPY $x10
+  %13:vr = COPY %8.sub_vrm1_0:vrm2
+  %14:vr = PseudoVMV_S_X %13:vr(tied-def 0), %3:gpr, %6:gprnox0, 3
+  %8:vrm2 = IMPLICIT_DEF
+  %9:vrm2 = INSERT_SUBREG %8:vrm2(tied-def 0), %14:vr, %subreg.sub_vrm1_0
+  %2:gpr = COPY $x11
+  %6:gprnox0 = ADDI $x0, -1
+  %11:gprnox0 = ADDI %2:gpr, 1
+  early-clobber %5:vrm2 = PseudoVSLIDEUP_VX_M2 %0:vrm2(tied-def 0), %9:vrm2, %2:gpr, %11:gprnox0, 3, 0
+  $v8m2 = COPY %5:vrm2
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+# *** IR Dump After Verify generated machine code (machineverifier) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.1 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrm2 = COPY $v8m2
+  %3:gpr = COPY $x10
+  %13:vr = COPY %8.sub_vrm1_0:vrm2
+  %14:vr = PseudoVMV_S_X %13:vr(tied-def 0), %3:gpr, %6:gprnox0, 3
+  %8:vrm2 = IMPLICIT_DEF
+  %9:vrm2 = INSERT_SUBREG %8:vrm2(tied-def 0), %14:vr, %subreg.sub_vrm1_0
+  %2:gpr = COPY $x11
+  %6:gprnox0 = ADDI $x0, -1
+  %11:gprnox0 = ADDI %2:gpr, 1
+  early-clobber %5:vrm2 = PseudoVSLIDEUP_VX_M2 %0:vrm2(tied-def 0), %9:vrm2, %2:gpr, %11:gprnox0, 3, 0
+  $v8m2 = COPY %5:vrm2
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+# *** IR Dump After RISC-V Insert Read/Write CSR Pass (riscv-insert-read-write-csr) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.1 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrm2 = COPY $v8m2
+  %3:gpr = COPY $x10
+  %13:vr = COPY %8.sub_vrm1_0:vrm2
+  %14:vr = PseudoVMV_S_X %13:vr(tied-def 0), %3:gpr, %6:gprnox0, 3
+  %8:vrm2 = IMPLICIT_DEF
+  %9:vrm2 = INSERT_SUBREG %8:vrm2(tied-def 0), %14:vr, %subreg.sub_vrm1_0
+  %2:gpr = COPY $x11
+  %6:gprnox0 = ADDI $x0, -1
+  %11:gprnox0 = ADDI %2:gpr, 1
+  early-clobber %5:vrm2 = PseudoVSLIDEUP_VX_M2 %0:vrm2(tied-def 0), %9:vrm2, %2:gpr, %11:gprnox0, 3, 0
+  $v8m2 = COPY %5:vrm2
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+# *** IR Dump After Verify generated machine code (machineverifier) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.1 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrm2 = COPY $v8m2
+  %3:gpr = COPY $x10
+  %13:vr = COPY %8.sub_vrm1_0:vrm2
+  %14:vr = PseudoVMV_S_X %13:vr(tied-def 0), %3:gpr, %6:gprnox0, 3
+  %8:vrm2 = IMPLICIT_DEF
+  %9:vrm2 = INSERT_SUBREG %8:vrm2(tied-def 0), %14:vr, %subreg.sub_vrm1_0
+  %2:gpr = COPY $x11
+  %6:gprnox0 = ADDI $x0, -1
+  %11:gprnox0 = ADDI %2:gpr, 1
+  early-clobber %5:vrm2 = PseudoVSLIDEUP_VX_M2 %0:vrm2(tied-def 0), %9:vrm2, %2:gpr, %11:gprnox0, 3, 0
+  $v8m2 = COPY %5:vrm2
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+# *** IR Dump After RISC-V Insert Write VXRM Pass (riscv-insert-write-vxrm) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.1 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrm2 = COPY $v8m2
+  %3:gpr = COPY $x10
+  %13:vr = COPY %8.sub_vrm1_0:vrm2
+  %14:vr = PseudoVMV_S_X %13:vr(tied-def 0), %3:gpr, %6:gprnox0, 3
+  %8:vrm2 = IMPLICIT_DEF
+  %9:vrm2 = INSERT_SUBREG %8:vrm2(tied-def 0), %14:vr, %subreg.sub_vrm1_0
+  %2:gpr = COPY $x11
+  %6:gprnox0 = ADDI $x0, -1
+  %11:gprnox0 = ADDI %2:gpr, 1
+  early-clobber %5:vrm2 = PseudoVSLIDEUP_VX_M2 %0:vrm2(tied-def 0), %9:vrm2, %2:gpr, %11:gprnox0, 3, 0
+  $v8m2 = COPY %5:vrm2
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+# *** IR Dump After Verify generated machine code (machineverifier) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.1 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrm2 = COPY $v8m2
+  %3:gpr = COPY $x10
+  %13:vr = COPY %8.sub_vrm1_0:vrm2
+  %14:vr = PseudoVMV_S_X %13:vr(tied-def 0), %3:gpr, %6:gprnox0, 3
+  %8:vrm2 = IMPLICIT_DEF
+  %9:vrm2 = INSERT_SUBREG %8:vrm2(tied-def 0), %14:vr, %subreg.sub_vrm1_0
+  %2:gpr = COPY $x11
+  %6:gprnox0 = ADDI $x0, -1
+  %11:gprnox0 = ADDI %2:gpr, 1
+  early-clobber %5:vrm2 = PseudoVSLIDEUP_VX_M2 %0:vrm2(tied-def 0), %9:vrm2, %2:gpr, %11:gprnox0, 3, 0
+  $v8m2 = COPY %5:vrm2
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+# *** IR Dump After Verify generated machine code (machineverifier) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.1 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrm2 = COPY $v8m2
+  %3:gpr = COPY $x10
+  %13:vr = COPY %8.sub_vrm1_0:vrm2
+  %14:vr = PseudoVMV_S_X %13:vr(tied-def 0), %3:gpr, %6:gprnox0, 3
+  %8:vrm2 = IMPLICIT_DEF
+  %9:vrm2 = INSERT_SUBREG %8:vrm2(tied-def 0), %14:vr, %subreg.sub_vrm1_0
+  %2:gpr = COPY $x11
+  %6:gprnox0 = ADDI $x0, -1
+  %11:gprnox0 = ADDI %2:gpr, 1
+  early-clobber %5:vrm2 = PseudoVSLIDEUP_VX_M2 %0:vrm2(tied-def 0), %9:vrm2, %2:gpr, %11:gprnox0, 3, 0
+  $v8m2 = COPY %5:vrm2
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+# *** IR Dump After RISC-V VMV0 Elimination (riscv-vmv0-elimination) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.1 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrm2 = COPY $v8m2
+  %3:gpr = COPY $x10
+  %13:vr = COPY %8.sub_vrm1_0:vrm2
+  %14:vr = PseudoVMV_S_X %13:vr(tied-def 0), %3:gpr, %6:gprnox0, 3
+  %8:vrm2 = IMPLICIT_DEF
+  %9:vrm2 = INSERT_SUBREG %8:vrm2(tied-def 0), %14:vr, %subreg.sub_vrm1_0
+  %2:gpr = COPY $x11
+  %6:gprnox0 = ADDI $x0, -1
+  %11:gprnox0 = ADDI %2:gpr, 1
+  early-clobber %5:vrm2 = PseudoVSLIDEUP_VX_M2 %0:vrm2(tied-def 0), %9:vrm2, %2:gpr, %11:gprnox0, 3, 0
+  $v8m2 = COPY %5:vrm2
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+# *** IR Dump After Verify generated machine code (machineverifier) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.1 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrm2 = COPY $v8m2
+  %3:gpr = COPY $x10
+  %13:vr = COPY %8.sub_vrm1_0:vrm2
+  %14:vr = PseudoVMV_S_X %13:vr(tied-def 0), %3:gpr, %6:gprnox0, 3
+  %8:vrm2 = IMPLICIT_DEF
+  %9:vrm2 = INSERT_SUBREG %8:vrm2(tied-def 0), %14:vr, %subreg.sub_vrm1_0
+  %2:gpr = COPY $x11
+  %6:gprnox0 = ADDI $x0, -1
+  %11:gprnox0 = ADDI %2:gpr, 1
+  early-clobber %5:vrm2 = PseudoVSLIDEUP_VX_M2 %0:vrm2(tied-def 0), %9:vrm2, %2:gpr, %11:gprnox0, 3, 0
+  $v8m2 = COPY %5:vrm2
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+Defined/Used lanes:
+%0 Used: 0000000000000006 Def: 0000000000000006
+%1 Used: 0000000000000000 Def: FFFFFFFFFFFFFFFF
+%2 Used: 0000000000000001 Def: 0000000000000001
+%3 Used: 0000000000000001 Def: 0000000000000001
+%4 Used: 0000000000000000 Def: FFFFFFFFFFFFFFFF
+%5 Used: 0000000000000006 Def: 0000000000000006
+%6 Used: 0000000000000001 Def: 0000000000000001
+%7 Used: 0000000000000000 Def: FFFFFFFFFFFFFFFF
+%8 Used: 0000000000000006 Def: 0000000000000000
+%9 Used: 0000000000000006 Def: 0000000000000002
+%10 Used: 0000000000000000 Def: FFFFFFFFFFFFFFFF
+%11 Used: 0000000000000001 Def: 0000000000000001
+%12 Used: 0000000000000000 Def: FFFFFFFFFFFFFFFF
+%13 Used: 0000000000000001 Def: 0000000000000000
+%14 Used: 0000000000000001 Def: 0000000000000001
+%15 Used: 0000000000000000 Def: FFFFFFFFFFFFFFFF
+
+Marking operand '%8.sub_vrm1_0:vrm2' as undef in %13:vr = COPY %8.sub_vrm1_0:vrm2
+Marking operand '%13:vr(tied-def 0)' as undef in %14:vr = PseudoVMV_S_X %13:vr(tied-def 0), %3:gpr, %6:gprnox0, 3
+Marking operand '%8:vrm2(tied-def 0)' as undef in %9:vrm2 = INSERT_SUBREG %8:vrm2(tied-def 0), %14:vr, %subreg.sub_vrm1_0
+# *** IR Dump After Detect Dead Lanes (detect-dead-lanes) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.1 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrm2 = COPY $v8m2
+  %3:gpr = COPY $x10
+  %13:vr = COPY undef %8.sub_vrm1_0:vrm2
+  %14:vr = PseudoVMV_S_X undef %13:vr(tied-def 0), %3:gpr, %6:gprnox0, 3
+  %8:vrm2 = IMPLICIT_DEF
+  %9:vrm2 = INSERT_SUBREG undef %8:vrm2(tied-def 0), %14:vr, %subreg.sub_vrm1_0
+  %2:gpr = COPY $x11
+  %6:gprnox0 = ADDI $x0, -1
+  %11:gprnox0 = ADDI %2:gpr, 1
+  early-clobber %5:vrm2 = PseudoVSLIDEUP_VX_M2 %0:vrm2(tied-def 0), %9:vrm2, %2:gpr, %11:gprnox0, 3, 0
+  $v8m2 = COPY %5:vrm2
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+# *** IR Dump After Verify generated machine code (machineverifier) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.1 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrm2 = COPY $v8m2
+  %3:gpr = COPY $x10
+  %13:vr = COPY undef %8.sub_vrm1_0:vrm2
+  %14:vr = PseudoVMV_S_X undef %13:vr(tied-def 0), %3:gpr, %6:gprnox0, 3
+  %8:vrm2 = IMPLICIT_DEF
+  %9:vrm2 = INSERT_SUBREG undef %8:vrm2(tied-def 0), %14:vr, %subreg.sub_vrm1_0
+  %2:gpr = COPY $x11
+  %6:gprnox0 = ADDI $x0, -1
+  %11:gprnox0 = ADDI %2:gpr, 1
+  early-clobber %5:vrm2 = PseudoVSLIDEUP_VX_M2 %0:vrm2(tied-def 0), %9:vrm2, %2:gpr, %11:gprnox0, 3, 0
+  $v8m2 = COPY %5:vrm2
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+Defined/Used lanes:
+%0 Used: 0000000000000006 Def: 0000000000000006
+%1 Used: 0000000000000000 Def: FFFFFFFFFFFFFFFF
+%2 Used: 0000000000000001 Def: 0000000000000001
+%3 Used: 0000000000000001 Def: 0000000000000001
+%4 Used: 0000000000000000 Def: FFFFFFFFFFFFFFFF
+%5 Used: 0000000000000006 Def: 0000000000000006
+%6 Used: 0000000000000001 Def: 0000000000000001
+%7 Used: 0000000000000000 Def: FFFFFFFFFFFFFFFF
+%8 Used: 0000000000000000 Def: 0000000000000000
+%9 Used: 0000000000000006 Def: 0000000000000002
+%10 Used: 0000000000000000 Def: FFFFFFFFFFFFFFFF
+%11 Used: 0000000000000001 Def: 0000000000000001
+%12 Used: 0000000000000000 Def: FFFFFFFFFFFFFFFF
+%13 Used: 0000000000000000 Def: 0000000000000000
+%14 Used: 0000000000000001 Def: 0000000000000001
+%15 Used: 0000000000000000 Def: FFFFFFFFFFFFFFFF
+
+Instruction has undef subregister.
+%9 Used: 0000000000000006 Def: 0000000000000002 Need Def: 0000000000000004
+Register Class ID80
+# *** IR Dump After Init Undef Pass (init-undef) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.1 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrm2 = COPY $v8m2
+  %3:gpr = COPY $x10
+  %13:vr = COPY undef %8.sub_vrm1_0:vrm2
+  %14:vr = PseudoVMV_S_X undef %13:vr(tied-def 0), %3:gpr, %6:gprnox0, 3
+  %8:vrm2 = IMPLICIT_DEF
+  %9:vrm2 = INSERT_SUBREG undef %8:vrm2(tied-def 0), %14:vr, %subreg.sub_vrm1_0
+  %2:gpr = COPY $x11
+  %6:gprnox0 = ADDI $x0, -1
+  %11:gprnox0 = ADDI %2:gpr, 1
+  %16:zzz_vrmf8nov0 = INIT_UNDEF
+  %17:vrm2 = INSERT_SUBREG %9:vrm2(tied-def 0), %16:zzz_vrmf8nov0, %subreg.sub_vrm1_1
+  early-clobber %5:vrm2 = PseudoVSLIDEUP_VX_M2 %0:vrm2(tied-def 0), %17:vrm2, %2:gpr, %11:gprnox0, 3, 0
+  $v8m2 = COPY %5:vrm2
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+# *** IR Dump After Verify generated machine code (machineverifier) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.1 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrm2 = COPY $v8m2
+  %3:gpr = COPY $x10
+  %13:vr = COPY undef %8.sub_vrm1_0:vrm2
+  %14:vr = PseudoVMV_S_X undef %13:vr(tied-def 0), %3:gpr, %6:gprnox0, 3
+  %8:vrm2 = IMPLICIT_DEF
+  %9:vrm2 = INSERT_SUBREG undef %8:vrm2(tied-def 0), %14:vr, %subreg.sub_vrm1_0
+  %2:gpr = COPY $x11
+  %6:gprnox0 = ADDI $x0, -1
+  %11:gprnox0 = ADDI %2:gpr, 1
+  %16:zzz_vrmf8nov0 = INIT_UNDEF
+  %17:vrm2 = INSERT_SUBREG %9:vrm2(tied-def 0), %16:zzz_vrmf8nov0, %subreg.sub_vrm1_1
+  early-clobber %5:vrm2 = PseudoVSLIDEUP_VX_M2 %0:vrm2(tied-def 0), %17:vrm2, %2:gpr, %11:gprnox0, 3, 0
+  $v8m2 = COPY %5:vrm2
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+********** PROCESS IMPLICIT DEFS **********
+********** Function: insertelt_nxv16i8_idx
+%bb.1 has 1 implicit defs.
+Processing %8:vrm2 = IMPLICIT_DEF
+Converting to IMPLICIT_DEF: %13:vr = COPY undef %8.sub_vrm1_0:vrm2
+Processing %13:vr = IMPLICIT_DEF undef %8.sub_vrm1_0:vrm2
+# *** IR Dump After Process Implicit Definitions (processimpdefs) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.1 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrm2 = COPY $v8m2
+  %3:gpr = COPY $x10
+  %14:vr = PseudoVMV_S_X undef %13:vr(tied-def 0), %3:gpr, %6:gprnox0, 3
+  %9:vrm2 = INSERT_SUBREG undef %8:vrm2(tied-def 0), %14:vr, %subreg.sub_vrm1_0
+  %2:gpr = COPY $x11
+  %6:gprnox0 = ADDI $x0, -1
+  %11:gprnox0 = ADDI %2:gpr, 1
+  %16:zzz_vrmf8nov0 = INIT_UNDEF
+  %17:vrm2 = INSERT_SUBREG %9:vrm2(tied-def 0), %16:zzz_vrmf8nov0, %subreg.sub_vrm1_1
+  early-clobber %5:vrm2 = PseudoVSLIDEUP_VX_M2 %0:vrm2(tied-def 0), %17:vrm2, %2:gpr, %11:gprnox0, 3, 0
+  $v8m2 = COPY %5:vrm2
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+# *** IR Dump After Verify generated machine code (machineverifier) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.1 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrm2 = COPY $v8m2
+  %3:gpr = COPY $x10
+  %14:vr = PseudoVMV_S_X undef %13:vr(tied-def 0), %3:gpr, %6:gprnox0, 3
+  %9:vrm2 = INSERT_SUBREG undef %8:vrm2(tied-def 0), %14:vr, %subreg.sub_vrm1_0
+  %2:gpr = COPY $x11
+  %6:gprnox0 = ADDI $x0, -1
+  %11:gprnox0 = ADDI %2:gpr, 1
+  %16:zzz_vrmf8nov0 = INIT_UNDEF
+  %17:vrm2 = INSERT_SUBREG %9:vrm2(tied-def 0), %16:zzz_vrmf8nov0, %subreg.sub_vrm1_1
+  early-clobber %5:vrm2 = PseudoVSLIDEUP_VX_M2 %0:vrm2(tied-def 0), %17:vrm2, %2:gpr, %11:gprnox0, 3, 0
+  $v8m2 = COPY %5:vrm2
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+# *** IR Dump After Remove unreachable machine basic blocks (unreachable-mbb-elimination) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.0 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrm2 = COPY $v8m2
+  %3:gpr = COPY $x10
+  %14:vr = PseudoVMV_S_X undef %13:vr(tied-def 0), %3:gpr, %6:gprnox0, 3
+  %9:vrm2 = INSERT_SUBREG undef %8:vrm2(tied-def 0), %14:vr, %subreg.sub_vrm1_0
+  %2:gpr = COPY $x11
+  %6:gprnox0 = ADDI $x0, -1
+  %11:gprnox0 = ADDI %2:gpr, 1
+  %16:zzz_vrmf8nov0 = INIT_UNDEF
+  %17:vrm2 = INSERT_SUBREG %9:vrm2(tied-def 0), %16:zzz_vrmf8nov0, %subreg.sub_vrm1_1
+  early-clobber %5:vrm2 = PseudoVSLIDEUP_VX_M2 %0:vrm2(tied-def 0), %17:vrm2, %2:gpr, %11:gprnox0, 3, 0
+  $v8m2 = COPY %5:vrm2
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+# *** IR Dump After Verify generated machine code (machineverifier) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.0 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrm2 = COPY $v8m2
+  %3:gpr = COPY $x10
+  %14:vr = PseudoVMV_S_X undef %13:vr(tied-def 0), %3:gpr, %6:gprnox0, 3
+  %9:vrm2 = INSERT_SUBREG undef %8:vrm2(tied-def 0), %14:vr, %subreg.sub_vrm1_0
+  %2:gpr = COPY $x11
+  %6:gprnox0 = ADDI $x0, -1
+  %11:gprnox0 = ADDI %2:gpr, 1
+  %16:zzz_vrmf8nov0 = INIT_UNDEF
+  %17:vrm2 = INSERT_SUBREG %9:vrm2(tied-def 0), %16:zzz_vrmf8nov0, %subreg.sub_vrm1_1
+  early-clobber %5:vrm2 = PseudoVSLIDEUP_VX_M2 %0:vrm2(tied-def 0), %17:vrm2, %2:gpr, %11:gprnox0, 3, 0
+  $v8m2 = COPY %5:vrm2
+  PseudoRET implicit $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+# *** IR Dump After Live Variable Analysis (livevars) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.0 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrm2 = COPY killed $v8m2
+  %3:gpr = COPY killed $x10
+  %14:vr = PseudoVMV_S_X undef %13:vr(tied-def 0), killed %3:gpr, %6:gprnox0, 3
+  %9:vrm2 = INSERT_SUBREG undef %8:vrm2(tied-def 0), killed %14:vr, %subreg.sub_vrm1_0
+  %2:gpr = COPY killed $x11
+  dead %6:gprnox0 = ADDI $x0, -1
+  %11:gprnox0 = ADDI %2:gpr, 1
+  %16:zzz_vrmf8nov0 = INIT_UNDEF
+  %17:vrm2 = INSERT_SUBREG killed %9:vrm2(tied-def 0), killed %16:zzz_vrmf8nov0, %subreg.sub_vrm1_1
+  early-clobber %5:vrm2 = PseudoVSLIDEUP_VX_M2 killed %0:vrm2(tied-def 0), killed %17:vrm2, killed %2:gpr, killed %11:gprnox0, 3, 0
+  $v8m2 = COPY killed %5:vrm2
+  PseudoRET implicit killed $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+# *** IR Dump After Verify generated machine code (machineverifier) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.0 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrm2 = COPY killed $v8m2
+  %3:gpr = COPY killed $x10
+  %14:vr = PseudoVMV_S_X undef %13:vr(tied-def 0), killed %3:gpr, %6:gprnox0, 3
+  %9:vrm2 = INSERT_SUBREG undef %8:vrm2(tied-def 0), killed %14:vr, %subreg.sub_vrm1_0
+  %2:gpr = COPY killed $x11
+  dead %6:gprnox0 = ADDI $x0, -1
+  %11:gprnox0 = ADDI %2:gpr, 1
+  %16:zzz_vrmf8nov0 = INIT_UNDEF
+  %17:vrm2 = INSERT_SUBREG killed %9:vrm2(tied-def 0), killed %16:zzz_vrmf8nov0, %subreg.sub_vrm1_1
+  early-clobber %5:vrm2 = PseudoVSLIDEUP_VX_M2 killed %0:vrm2(tied-def 0), killed %17:vrm2, killed %2:gpr, killed %11:gprnox0, 3, 0
+  $v8m2 = COPY killed %5:vrm2
+  PseudoRET implicit killed $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+# *** IR Dump After Verify generated machine code (machineverifier) ***:
+# Machine code for function insertelt_nxv16i8_idx: IsSSA, TracksLiveness, Legalized, RegBankSelected, Selected
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.0 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrm2 = COPY killed $v8m2
+  %3:gpr = COPY killed $x10
+  %14:vr = PseudoVMV_S_X undef %13:vr(tied-def 0), killed %3:gpr, %6:gprnox0, 3
+  %9:vrm2 = INSERT_SUBREG undef %8:vrm2(tied-def 0), killed %14:vr, %subreg.sub_vrm1_0
+  %2:gpr = COPY killed $x11
+  dead %6:gprnox0 = ADDI $x0, -1
+  %11:gprnox0 = ADDI %2:gpr, 1
+  %16:zzz_vrmf8nov0 = INIT_UNDEF
+  %17:vrm2 = INSERT_SUBREG killed %9:vrm2(tied-def 0), killed %16:zzz_vrmf8nov0, %subreg.sub_vrm1_1
+  early-clobber %5:vrm2 = PseudoVSLIDEUP_VX_M2 killed %0:vrm2(tied-def 0), killed %17:vrm2, killed %2:gpr, killed %11:gprnox0, 3, 0
+  $v8m2 = COPY killed %5:vrm2
+  PseudoRET implicit killed $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+# *** IR Dump After Eliminate PHI nodes for register allocation (phi-node-elimination) ***:
+# Machine code for function insertelt_nxv16i8_idx: NoPHIs, TracksLiveness, Legalized, RegBankSelected, Selected
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.0 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrm2 = COPY killed $v8m2
+  %3:gpr = COPY killed $x10
+  %14:vr = PseudoVMV_S_X undef %13:vr(tied-def 0), killed %3:gpr, %6:gprnox0, 3
+  %9:vrm2 = INSERT_SUBREG undef %8:vrm2(tied-def 0), killed %14:vr, %subreg.sub_vrm1_0
+  %2:gpr = COPY killed $x11
+  dead %6:gprnox0 = ADDI $x0, -1
+  %11:gprnox0 = ADDI %2:gpr, 1
+  %16:zzz_vrmf8nov0 = INIT_UNDEF
+  %17:vrm2 = INSERT_SUBREG killed %9:vrm2(tied-def 0), killed %16:zzz_vrmf8nov0, %subreg.sub_vrm1_1
+  early-clobber %5:vrm2 = PseudoVSLIDEUP_VX_M2 killed %0:vrm2(tied-def 0), killed %17:vrm2, killed %2:gpr, killed %11:gprnox0, 3, 0
+  $v8m2 = COPY killed %5:vrm2
+  PseudoRET implicit killed $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+# *** IR Dump After Verify generated machine code (machineverifier) ***:
+# Machine code for function insertelt_nxv16i8_idx: NoPHIs, TracksLiveness, Legalized, RegBankSelected, Selected
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.0 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrm2 = COPY killed $v8m2
+  %3:gpr = COPY killed $x10
+  %14:vr = PseudoVMV_S_X undef %13:vr(tied-def 0), killed %3:gpr, %6:gprnox0, 3
+  %9:vrm2 = INSERT_SUBREG undef %8:vrm2(tied-def 0), killed %14:vr, %subreg.sub_vrm1_0
+  %2:gpr = COPY killed $x11
+  dead %6:gprnox0 = ADDI $x0, -1
+  %11:gprnox0 = ADDI %2:gpr, 1
+  %16:zzz_vrmf8nov0 = INIT_UNDEF
+  %17:vrm2 = INSERT_SUBREG killed %9:vrm2(tied-def 0), killed %16:zzz_vrmf8nov0, %subreg.sub_vrm1_1
+  early-clobber %5:vrm2 = PseudoVSLIDEUP_VX_M2 killed %0:vrm2(tied-def 0), killed %17:vrm2, killed %2:gpr, killed %11:gprnox0, 3, 0
+  $v8m2 = COPY killed %5:vrm2
+  PseudoRET implicit killed $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+********** REWRITING TWO-ADDR INSTRS **********
+********** Function: insertelt_nxv16i8_idx
+		rewrite undef:	%14:vr = PseudoVMV_S_X undef %14:vr(tied-def 0), killed %3:gpr, %6:gprnox0, 3
+	%14:vr = PseudoVMV_S_X undef %14:vr(tied-def 0), killed %3:gpr, %6:gprnox0, 3
+		rewrite undef:	%9:vrm2 = INSERT_SUBREG undef %9:vrm2(tied-def 0), killed %14:vr, %subreg.sub_vrm1_0
+	%9:vrm2 = INSERT_SUBREG undef %9:vrm2(tied-def 0), killed %14:vr, %subreg.sub_vrm1_0
+		convert to:	undef %9.sub_vrm1_0:vrm2 = COPY killed %14:vr
+	%17:vrm2 = INSERT_SUBREG killed %9:vrm2(tied-def 0), killed %16:zzz_vrmf8nov0, %subreg.sub_vrm1_1
+		prepend:	%17:vrm2 = COPY %9:vrm2
+		rewrite to:	%17:vrm2 = INSERT_SUBREG %17:vrm2(tied-def 0), killed %16:zzz_vrmf8nov0, %subreg.sub_vrm1_1
+		convert to:	%17.sub_vrm1_1:vrm2 = COPY killed %16:zzz_vrmf8nov0
+	early-clobber %5:vrm2 = PseudoVSLIDEUP_VX_M2 killed %0:vrm2(tied-def 0), killed %17:vrm2, killed %2:gpr, killed %11:gprnox0, 3, 0
+		prepend:	%5:vrm2 = COPY %0:vrm2
+		rewrite to:	early-clobber %5:vrm2 = PseudoVSLIDEUP_VX_M2 %5:vrm2(tied-def 0), killed %17:vrm2, killed %2:gpr, killed %11:gprnox0, 3, 0
+# *** IR Dump After Two-Address instruction pass (twoaddressinstruction) ***:
+# Machine code for function insertelt_nxv16i8_idx: NoPHIs, TracksLiveness, Legalized, RegBankSelected, Selected, TiedOpsRewritten
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.0 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrm2 = COPY killed $v8m2
+  %3:gpr = COPY killed $x10
+  %14:vr = PseudoVMV_S_X undef %14:vr(tied-def 0), killed %3:gpr, %6:gprnox0, 3
+  undef %9.sub_vrm1_0:vrm2 = COPY killed %14:vr
+  %2:gpr = COPY killed $x11
+  dead %6:gprnox0 = ADDI $x0, -1
+  %11:gprnox0 = ADDI %2:gpr, 1
+  %16:zzz_vrmf8nov0 = INIT_UNDEF
+  %17:vrm2 = COPY killed %9:vrm2
+  %17.sub_vrm1_1:vrm2 = COPY killed %16:zzz_vrmf8nov0
+  %5:vrm2 = COPY killed %0:vrm2
+  early-clobber %5:vrm2 = PseudoVSLIDEUP_VX_M2 %5:vrm2(tied-def 0), killed %17:vrm2, killed %2:gpr, killed %11:gprnox0, 3, 0
+  $v8m2 = COPY killed %5:vrm2
+  PseudoRET implicit killed $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+# *** IR Dump After Verify generated machine code (machineverifier) ***:
+# Machine code for function insertelt_nxv16i8_idx: NoPHIs, TracksLiveness, Legalized, RegBankSelected, Selected, TiedOpsRewritten
+Function Live Ins: $v8m2, $x10, $x11
+
+bb.0 (%ir-block.0):
+  liveins: $x10, $x11, $v8m2
+  %0:vrm2 = COPY killed $v8m2
+  %3:gpr = COPY killed $x10
+  %14:vr = PseudoVMV_S_X undef %14:vr(tied-def 0), killed %3:gpr, %6:gprnox0, 3
+  undef %9.sub_vrm1_0:vrm2 = COPY killed %14:vr
+  %2:gpr = COPY killed $x11
+  dead %6:gprnox0 = ADDI $x0, -1
+  %11:gprnox0 = ADDI %2:gpr, 1
+  %16:zzz_vrmf8nov0 = INIT_UNDEF
+  %17:vrm2 = COPY killed %9:vrm2
+  %17.sub_vrm1_1:vrm2 = COPY killed %16:zzz_vrmf8nov0
+  %5:vrm2 = COPY killed %0:vrm2
+  early-clobber %5:vrm2 = PseudoVSLIDEUP_VX_M2 %5:vrm2(tied-def 0), killed %17:vrm2, killed %2:gpr, killed %11:gprnox0, 3, 0
+  $v8m2 = COPY killed %5:vrm2
+  PseudoRET implicit killed $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+# Machine code for function insertelt_nxv16i8_idx: NoPHIs, TracksLiveness, Legalized, RegBankSelected, Selected, TiedOpsRewritten
+Function Live Ins: $v8m2, $x10, $x11
+
+0B	bb.0 (%ir-block.0):
+	  liveins: $x10, $x11, $v8m2
+16B	  %0:vrm2 = COPY killed $v8m2
+32B	  %3:gpr = COPY killed $x10
+48B	  %14:vr = PseudoVMV_S_X undef %14:vr(tied-def 0), killed %3:gpr, %6:gprnox0, 3
+64B	  undef %9.sub_vrm1_0:vrm2 = COPY killed %14:vr
+80B	  %2:gpr = COPY killed $x11
+96B	  dead %6:gprnox0 = ADDI $x0, -1
+112B	  %11:gprnox0 = ADDI %2:gpr, 1
+128B	  %16:zzz_vrmf8nov0 = INIT_UNDEF
+144B	  %17:vrm2 = COPY killed %9:vrm2
+160B	  %17.sub_vrm1_1:vrm2 = COPY killed %16:zzz_vrmf8nov0
+176B	  %5:vrm2 = COPY killed %0:vrm2
+192B	  early-clobber %5:vrm2 = PseudoVSLIDEUP_VX_M2 %5:vrm2(tied-def 0), killed %17:vrm2, killed %2:gpr, killed %11:gprnox0, 3, 0
+208B	  $v8m2 = COPY killed %5:vrm2
+224B	  PseudoRET implicit killed $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+# *** IR Dump After Slot index numbering (slotindexes) ***:
+# Machine code for function insertelt_nxv16i8_idx: NoPHIs, TracksLiveness, Legalized, RegBankSelected, Selected, TiedOpsRewritten
+Function Live Ins: $v8m2, $x10, $x11
+
+0B	bb.0 (%ir-block.0):
+	  liveins: $x10, $x11, $v8m2
+16B	  %0:vrm2 = COPY killed $v8m2
+32B	  %3:gpr = COPY killed $x10
+48B	  %14:vr = PseudoVMV_S_X undef %14:vr(tied-def 0), killed %3:gpr, %6:gprnox0, 3
+64B	  undef %9.sub_vrm1_0:vrm2 = COPY killed %14:vr
+80B	  %2:gpr = COPY killed $x11
+96B	  dead %6:gprnox0 = ADDI $x0, -1
+112B	  %11:gprnox0 = ADDI %2:gpr, 1
+128B	  %16:zzz_vrmf8nov0 = INIT_UNDEF
+144B	  %17:vrm2 = COPY killed %9:vrm2
+160B	  %17.sub_vrm1_1:vrm2 = COPY killed %16:zzz_vrmf8nov0
+176B	  %5:vrm2 = COPY killed %0:vrm2
+192B	  early-clobber %5:vrm2 = PseudoVSLIDEUP_VX_M2 %5:vrm2(tied-def 0), killed %17:vrm2, killed %2:gpr, killed %11:gprnox0, 3, 0
+208B	  $v8m2 = COPY killed %5:vrm2
+224B	  PseudoRET implicit killed $v8m2
+
+# End machine code for function insertelt_nxv16i8_idx.
+
+Use of %6 does not have a corresponding definition on every path:
+48r %14:vr = PseudoVMV_S_X undef %14:vr(tied-def 0), %3:gpr, %6:gprnox0, 3
+LLVM ERROR: Use not jointly dominated by defs.
+PLEASE submit a bug report to https://github.com/llvm/llvm-project/issues/ and include the crash backtrace and instructions to reproduce the bug.
+Stack dump:
+0.	Program arguments: /home/jacques.guan/code/llvm-project/build/bin/llc -mtriple=riscv32 -mattr=+v -target-abi=ilp32d -global-isel -verify-machineinstrs -print-after-all --debug
+1.	Running pass 'Function Pass Manager' on module '<stdin>'.
+2.	Running pass 'Live Interval Analysis' on function '@insertelt_nxv16i8_idx'
+ #0 0x000062e40ad75eb0 llvm::sys::PrintStackTrace(llvm::raw_ostream&, int) /home/jacques.guan/code/llvm-project/llvm/lib/Support/Unix/Signals.inc:880:22
+ #1 0x000062e40ad7632d PrintStackTraceSignalHandler(void*) /home/jacques.guan/code/llvm-project/llvm/lib/Support/Unix/Signals.inc:962:1
+ #2 0x000062e40ad73321 llvm::sys::RunSignalHandlers() /home/jacques.guan/code/llvm-project/llvm/lib/Support/Signals.cpp:108:20
+ #3 0x000062e40ad755f8 SignalHandler(int, siginfo_t*, void*) /home/jacques.guan/code/llvm-project/llvm/lib/Support/Unix/Signals.inc:448:14
+ #4 0x0000776582a42520 (/lib/x86_64-linux-gnu/libc.so.6+0x42520)
+ #5 0x0000776582a969fc __pthread_kill_implementation ./nptl/pthread_kill.c:44:76
+ #6 0x0000776582a969fc __pthread_kill_internal ./nptl/pthread_kill.c:78:10
+ #7 0x0000776582a969fc pthread_kill ./nptl/pthread_kill.c:89:10
+ #8 0x0000776582a42476 gsignal ./signal/../sysdeps/posix/raise.c:27:6
+ #9 0x0000776582a287f3 abort ./stdlib/abort.c:81:7
+#10 0x000062e40ac7009d llvm::report_fatal_error(llvm::Twine const&, bool) /home/jacques.guan/code/llvm-project/llvm/lib/Support/ErrorHandling.cpp:137:9
+#11 0x000062e40ac6fe77 llvm::report_fatal_error(llvm::StringRef, bool) /home/jacques.guan/code/llvm-project/llvm/lib/Support/ErrorHandling.cpp:99:68
+#12 0x000062e4092d24e9 llvm::LiveRangeCalc::findReachingDefs(llvm::LiveRange&, llvm::MachineBasicBlock&, llvm::SlotIndex, llvm::Register, llvm::ArrayRef<llvm::SlotIndex>) /home/jacques.guan/code/llvm-project/llvm/lib/CodeGen/LiveRangeCalc.cpp:218:27
+#13 0x000062e4092d1b32 llvm::LiveRangeCalc::extend(llvm::LiveRange&, llvm::SlotIndex, llvm::Register, llvm::ArrayRef<llvm::SlotIndex>) /home/jacques.guan/code/llvm-project/llvm/lib/CodeGen/LiveRangeCalc.cpp:103:23
+#14 0x000062e4092d73d0 llvm::LiveIntervalCalc::extendToUses(llvm::LiveRange&, llvm::Register, llvm::LaneBitmask, llvm::LiveInterval*) /home/jacques.guan/code/llvm-project/llvm/lib/CodeGen/LiveIntervalCalc.cpp:192:11
+#15 0x000062e4092d6c5c llvm::LiveIntervalCalc::calculate(llvm::LiveInterval&, bool) /home/jacques.guan/code/llvm-project/llvm/lib/CodeGen/LiveIntervalCalc.cpp:103:1
+#16 0x000062e4092acb3d llvm::LiveIntervals::computeVirtRegInterval(llvm::LiveInterval&) /home/jacques.guan/code/llvm-project/llvm/lib/CodeGen/LiveIntervals.cpp:233:27
+#17 0x000062e4092acbfe llvm::LiveIntervals::computeVirtRegs() /home/jacques.guan/code/llvm-project/llvm/lib/CodeGen/LiveIntervals.cpp:242:44
+#18 0x000062e4092ac5f5 llvm::LiveIntervals::analyze(llvm::MachineFunction&) /home/jacques.guan/code/llvm-project/llvm/lib/CodeGen/LiveIntervals.cpp:172:18
+#19 0x000062e4092ac0ed llvm::LiveIntervalsWrapperPass::runOnMachineFunction(llvm::MachineFunction&) /home/jacques.guan/code/llvm-project/llvm/lib/CodeGen/LiveIntervals.cpp:95:3
+#20 0x000062e4093ec344 llvm::MachineFunctionPass::runOnFunction(llvm::Function&) /home/jacques.guan/code/llvm-project/llvm/lib/CodeGen/MachineFunctionPass.cpp:112:30
+#21 0x000062e409daa6c0 llvm::FPPassManager::runOnFunction(llvm::Function&) /home/jacques.guan/code/llvm-project/llvm/lib/IR/LegacyPassManager.cpp:1385:20
+#22 0x000062e409daa996 llvm::FPPassManager::runOnModule(llvm::Module&) /home/jacques.guan/code/llvm-project/llvm/lib/IR/LegacyPassManager.cpp:1431:13
+#23 0x000062e409daadf5 (anonymous namespace)::MPPassManager::runOnModule(llvm::Module&) /home/jacques.guan/code/llvm-project/llvm/lib/IR/LegacyPassManager.cpp:1500:20
+#24 0x000062e409da6190 llvm::legacy::PassManagerImpl::run(llvm::Module&) /home/jacques.guan/code/llvm-project/llvm/lib/IR/LegacyPassManager.cpp:531:13
+#25 0x000062e409dab6eb llvm::legacy::PassManager::run(llvm::Module&) /home/jacques.guan/code/llvm-project/llvm/lib/IR/LegacyPassManager.cpp:1628:1
+#26 0x000062e4077b66de compileModule(char**, llvm::SmallVectorImpl<llvm::PassPlugin>&, llvm::LLVMContext&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char>>&) /home/jacques.guan/code/llvm-project/llvm/tools/llc/llc.cpp:882:34
+#27 0x000062e4077b381e main /home/jacques.guan/code/llvm-project/llvm/tools/llc/llc.cpp:460:35
+#28 0x0000776582a29d90 __libc_start_call_main ./csu/../sysdeps/nptl/libc_start_call_main.h:58:16
+#29 0x0000776582a29e40 call_init ./csu/../csu/libc-start.c:128:20
+#30 0x0000776582a29e40 __libc_start_main ./csu/../csu/libc-start.c:379:5
+#31 0x000062e4077b20a5 _start (/home/jacques.guan/code/llvm-project/build/bin/llc+0x8e50a5)
