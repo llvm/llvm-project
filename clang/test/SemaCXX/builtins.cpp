@@ -48,6 +48,13 @@ namespace addressof {
   int *pbf = __builtin_addressof(u.n); // expected-error {{address of bit-field requested}}
 
   S *ptmp = __builtin_addressof(S{}); // expected-error {{taking the address of a temporary}} expected-warning {{temporary whose address is used as value of local variable 'ptmp' will be destroyed at the end of the full-expression}}
+
+  template <typename T> void tmpl(T) {}
+  static_assert(__builtin_addressof(tmpl<int>) == &tmpl<int>, "");
+
+  void ovl(int); // expected-note {{possible target for call}}
+  void ovl(long); // expected-note {{possible target for call}}
+  void (*povl)(int) = __builtin_addressof(ovl); // expected-error {{reference to overloaded function could not be resolved; did you mean to call it?}}
 }
 
 namespace function_start {

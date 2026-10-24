@@ -1144,6 +1144,10 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed a bug where Clang could ignore lambda constraints in return-type
   requirements.
 
+- Fixed a crash when the operand of `__builtin_addressof` is an overload set.
+  A function template specialization such as `f<int>` is now resolved like the
+  argument of `std::addressof`, and an unresolvable overload set is diagnosed.
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made

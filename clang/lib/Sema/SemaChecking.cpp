@@ -272,6 +272,14 @@ static bool BuiltinAddressof(Sema &S, CallExpr *TheCall) {
     return true;
 
   ExprResult Arg(TheCall->getArg(0));
+
+  // Unlike '&', nothing resolves the overload set later, so resolve it now.
+  if (Arg.get()->getType() == S.Context.OverloadTy) {
+    Arg = S.CheckPlaceholderExpr(Arg.get());
+    if (Arg.isInvalid())
+      return true;
+  }
+
   QualType ResultType = S.CheckAddressOfOperand(Arg, TheCall->getBeginLoc());
   if (ResultType.isNull())
     return true;
