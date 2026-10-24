@@ -19,6 +19,7 @@
 #include "clang/AST/DeclContextInternals.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclVisitor.h"
+#include "clang/CodeGen/ModuleBuilder.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Interpreter/PartialTranslationUnit.h"
 #include "clang/Parse/Parser.h"
@@ -199,6 +200,7 @@ void IncrementalParser::withdrawMostRecentTU(
 class ASTDeclUnmerger : public DeclVisitor<ASTDeclUnmerger> {
   Sema &S;
   TranslationUnitDecl *DiscardedTU;
+  CodeGenerator *CodeGen;
 
   /// The newest declaration of whatever D redeclares that still lives outside
   /// the DiscardedTU, or null if DiscardedTU introduced the name.
@@ -260,9 +262,17 @@ class ASTDeclUnmerger : public DeclVisitor<ASTDeclUnmerger> {
     }
   }
 
+  void forgetMangledNames(std::initializer_list<GlobalDecl> GDs) {
+    if (!CodeGen)
+      return;
+    for (GlobalDecl GD : GDs)
+      CodeGen->forgetDecl(GD);
+  }
+
 public:
-  ASTDeclUnmerger(Sema &S, TranslationUnitDecl *DiscardedTU)
-      : S(S), DiscardedTU(DiscardedTU) {}
+  ASTDeclUnmerger(Sema &S, TranslationUnitDecl *DiscardedTU,
+                  CodeGenerator *CodeGen = nullptr)
+      : S(S), DiscardedTU(DiscardedTU), CodeGen(CodeGen) {}
 
   void VisitDecl(Decl *D) {
     if (auto *DC = dyn_cast<DeclContext>(D))
@@ -301,11 +311,29 @@ public:
     return Prev;
   }
 
-  void VisitFunctionDecl(FunctionDecl *D) { VisitRedeclarable(D); }
+  void VisitFunctionDecl(FunctionDecl *D) {
+    forgetMangledNames({GlobalDecl(D)});
+    VisitRedeclarable(D);
+  }
   void VisitNamespaceAliasDecl(NamespaceAliasDecl *D) { VisitRedeclarable(D); }
   void VisitTypedefNameDecl(TypedefNameDecl *D) { VisitRedeclarable(D); }
   void VisitUsingShadowDecl(UsingShadowDecl *D) { VisitRedeclarable(D); }
-  void VisitVarDecl(VarDecl *D) { VisitRedeclarable(D); }
+  void VisitVarDecl(VarDecl *D) {
+    forgetMangledNames({GlobalDecl(D)});
+    VisitRedeclarable(D);
+  }
+
+  void VisitCXXConstructorDecl(CXXConstructorDecl *D) {
+    forgetMangledNames({GlobalDecl(D, Ctor_Complete), GlobalDecl(D, Ctor_Base),
+                        GlobalDecl(D, Ctor_Comdat)});
+    VisitRedeclarable(D);
+  }
+  void VisitCXXDestructorDecl(CXXDestructorDecl *D) {
+    forgetMangledNames({GlobalDecl(D, Dtor_Deleting),
+                        GlobalDecl(D, Dtor_Complete), GlobalDecl(D, Dtor_Base),
+                        GlobalDecl(D, Dtor_Comdat)});
+    VisitRedeclarable(D);
+  }
 
   void VisitTagDecl(TagDecl *D) {
     // Some members of a definition are visible outside of it: the enumerators
@@ -345,7 +373,8 @@ public:
 };
 
 void IncrementalParser::CleanUpPTU(TranslationUnitDecl *MostRecentTU) {
-  ASTDeclUnmerger(S, MostRecentTU).Visit(MostRecentTU);
+  ASTDeclUnmerger(S, MostRecentTU, Act ? Act->getCodeGen() : nullptr)
+      .Visit(MostRecentTU);
 
   // Lookup alone is not enough: the redeclaration chain still reaches these.
   withdrawMostRecentTU(MostRecentTU);
