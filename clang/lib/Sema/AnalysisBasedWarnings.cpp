@@ -1276,11 +1276,13 @@ public:
         continue; // Switch statement, good.
 
       const SwitchCase *SW = dyn_cast_or_null<SwitchCase>(P->getLabel());
-      if (SW && SW->getSubStmt() == B.getLabel() && P->begin() == P->end())
+      if (SW && stripAttributedStmts(SW->getSubStmt()) == B.getLabel() &&
+          P->begin() == P->end())
         continue; // Previous case label has no statements, good.
 
       const LabelStmt *L = dyn_cast_or_null<LabelStmt>(P->getLabel());
-      if (L && L->getSubStmt() == B.getLabel() && P->begin() == P->end())
+      if (L && stripAttributedStmts(L->getSubStmt()) == B.getLabel() &&
+          P->begin() == P->end())
         continue; // Case label is preceded with a normal label, good.
 
       if (!ReachableBlocks.count(P)) {
@@ -1354,6 +1356,12 @@ public:
     }
 
   private:
+
+    static const Stmt *stripAttributedStmts(const Stmt *S) {
+      while (const auto *AS = dyn_cast_or_null<AttributedStmt>(S))
+        S = AS->getSubStmt();
+      return S;
+    }
 
     static const AttributedStmt *asFallThroughAttr(const Stmt *S) {
       if (const AttributedStmt *AS = dyn_cast_or_null<AttributedStmt>(S)) {
