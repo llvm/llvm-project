@@ -718,7 +718,7 @@ void SourceMgrDiagnosticVerifierHandler::process(LocationAttr loc,
   std::optional<Verifier::Location> verifierLoc;
   if (FileLineColLoc fileLoc = loc.findInstanceOf<FileLineColLoc>())
     verifierLoc = Verifier::Location{getBufferForFile(fileLoc.getFilename()),
-                                     fileLoc.getLine()};
+                                     fileLoc.getLine(), fileLoc.getColumn()};
   bool reportUnexpected = impl->level != Level::OnlyExpected;
 
   Verifier::MatchResult result = impl->verifier.process(
