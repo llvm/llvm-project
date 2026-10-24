@@ -312,20 +312,18 @@ void BPFMISimplifyPatchableImpl::processInst(MachineRegisterInfo *MRI,
   if (DisableCOREOptimization)
     return;
 
+  // The target enum value may need all 64 bits, regardless of its local value.
+  // Keep its relocation on the LD_imm64 instruction.
+  auto Reloc = BPFCoreSharedInfo::AmaRelocation::decode(GVal->getName());
+  if (Reloc.Kind == BTF::ENUM_VALUE)
+    return;
+
   switch (Opcode) {
-  case BPF::ADD_rr: {
-    // If the struct offset is greater than INT16_MAX, skip optimization.
-    StringRef AccessPattern = GVal->getName();
-    size_t FirstDollar = AccessPattern.find_first_of('$');
-    size_t FirstColon = AccessPattern.find_first_of(':');
-    size_t SecondColon = AccessPattern.find_first_of(':', FirstColon + 1);
-    StringRef PatchImmStr =
-        AccessPattern.substr(SecondColon + 1, FirstDollar - SecondColon);
-    int PatchImm = std::stoll(std::string(PatchImmStr));
-    if (PatchImm <= INT16_MAX)
+  case BPF::ADD_rr:
+    if (Reloc.Kind == BTF::FIELD_BYTE_OFFSET && Reloc.PatchImm >= 0 &&
+        Reloc.PatchImm <= INT16_MAX)
       checkADDrr(MRI, Inst, RelocOpNo, GVal);
     break;
-  }
   case BPF::SLL_rr:
     checkShift(MRI, Inst, RelocOpNo, GVal, BPF::SLL_ri);
     break;
