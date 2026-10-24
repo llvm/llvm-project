@@ -1739,9 +1739,6 @@ public:
   /// Unused in current implementation.
   int32_t supports_empty_images();
 
-  /// Returns the number of processors available on the device.
-  int number_of_team_procs(int DeviceId);
-
   /// Returns if this device is an APU.
   bool has_apu_device(int32_t DeviceId);
 
