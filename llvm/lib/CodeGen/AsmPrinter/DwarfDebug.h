@@ -725,6 +725,11 @@ protected:
   void setUseRangesSection(bool V) { UseRangesSection = V; }
   void setUseSectionsAsReferences(bool V) { UseSectionsAsReferences = V; }
 
+  /// Select \p DwarfVersion and (re)compute all state derived from it. Called
+  /// by the constructor; a target subclass may call it again to change the
+  /// version, which keeps the derived state consistent with the emitted one.
+  void applyDwarfVersion(unsigned DwarfVersion);
+
   /// Whether to attach ranges/low_pc to the compile unit DIE in endModule.
   virtual bool shouldAttachCompileUnitRanges() const { return true; }
 
