@@ -31,9 +31,17 @@ void DeallocateChecker::Leave(const parser::DeallocateStmt &deallocateStmt) {
                 context_.Say(
                     "STAT may not be duplicated in a DEALLOCATE statement"_err_en_US);
               }
+              statSource = parser::Unwrap<parser::Variable>(var)->GetSource();
+              if (const auto *expr{GetExpr(context_, var)}) {
+                if (auto type{expr->GetType()}; type &&
+                    type->category() == TypeCategory::Integer &&
+                    type->kind() < 2) { // F2023 9.7.4 p1
+                  context_.Warn(common::UsageWarning::StatKind, *statSource,
+                      "The stat-variable should have a decimal exponent range of at least four"_warn_en_US);
+                }
+              }
               gotStat = true;
               statVar = GetExpr(context_, var);
-              statSource = parser::Unwrap<parser::Variable>(var)->GetSource();
             },
             [&](const parser::MsgVariable &var) {
               WarnOnDeferredLengthCharacterScalar(context_,
