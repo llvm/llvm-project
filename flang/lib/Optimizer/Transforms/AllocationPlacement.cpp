@@ -215,9 +215,15 @@ void AllocationPlacementPass::runOnOperation() {
             ? placementHook(info, basePolicy, stackBytesUsed)
             : fir::decideAllocationPlacement(info, basePolicy, stackBytesUsed);
 
-    // Account for the decision in the running stack budget.
-    if (endsUpOnStack(placement, info.isCurrentlyOnStack) && info.byteSize)
+    // Account for the decision in the running stack budget, including the
+    // worst-case padding a requested alignment may need.
+    if (endsUpOnStack(placement, info.isCurrentlyOnStack) && info.byteSize) {
       stackBytesUsed += static_cast<std::size_t>(*info.byteSize);
+      std::optional<std::int64_t> alignment =
+          alloca ? alloca.getAlignment() : allocmem.getAlignment();
+      if (alignment && *alignment > 1)
+        stackBytesUsed += static_cast<std::size_t>(*alignment - 1);
+    }
 
     LLVM_DEBUG({
       llvm::dbgs() << "allocation-placement: "
