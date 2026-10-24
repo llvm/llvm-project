@@ -254,8 +254,8 @@ std::pair<FunctionType *, AttributeList>
 RuntimeLibcallsInfo::getDefaultFunctionTy(
     LLVMContext &Ctx, const Triple &TT, const DataLayout &DL,
     RTLIB::LibcallImpl LibcallImpl) const {
-  Libcall LC = getLibcallFromImpl(LibcallImpl);
-  const FuncArgTypeID *ProtoTypes = &SignatureTable[SignatureOffset[LC]];
+  const FuncArgTypeID *ProtoTypes =
+      &SignatureTable[SignatureOffset[LibcallImpl]];
 
   if (ProtoTypes[0] == NoFuncArgType)
     return {};

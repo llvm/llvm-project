@@ -491,8 +491,11 @@ void RuntimeLibcallEmitter::emitGetInitRuntimeLibcallSignatures(
     raw_ostream &OS) const {
   SequenceToOffsetTable<Signature> SignatureTable("NoFuncArgType");
 
-  for (const RuntimeLibcall &LC : Libcalls.getRuntimeLibcallDefList())
-    SignatureTable.add(getSignature(LC.getDef()));
+  const Signature NoSignature;
+  SignatureTable.add(NoSignature);
+  for (const RuntimeLibcallImpl &LibCallImpl :
+       Libcalls.getRuntimeLibcallImplDefList())
+    SignatureTable.add(getSignature(LibCallImpl.getDef()));
   SignatureTable.layout();
 
   IfDefEmitter IfDef(OS, "GET_INIT_RUNTIME_LIBCALL_SIGNATURES");
@@ -506,11 +509,16 @@ const FuncArgTypeID RTLIB::RuntimeLibcallsInfo::SignatureTable[] = {
   OS << R"(
 const uint16_t RTLIB::RuntimeLibcallsInfo::SignatureOffset[] = {
 )";
-  for (const RuntimeLibcall &LC : Libcalls.getRuntimeLibcallDefList()) {
-    const Record *LibcallDef = LC.getDef();
-    OS << formatv("  {}, // {}\n", SignatureTable.get(getSignature(LibcallDef)),
-                  LibcallDef->getName());
+  OS << formatv("  {}, // RTLIB::Unsupported\n",
+                SignatureTable.get(NoSignature));
+  for (const RuntimeLibcallImpl &LibCallImpl :
+       Libcalls.getRuntimeLibcallImplDefList()) {
+    OS << formatv("  {}, // ",
+                  SignatureTable.get(getSignature(LibCallImpl.getDef())));
+    LibCallImpl.emitEnumEntry(OS);
+    OS << '\n';
   }
+
   OS << "};\n";
 }
 
