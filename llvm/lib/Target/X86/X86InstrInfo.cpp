@@ -6474,11 +6474,13 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     return expandNOVLXStore(MIB, &getRegisterInfo(), get(X86::VMOVUPSYmr),
                             get(X86::VEXTRACTF64X4Zmri), X86::sub_ymm);
   case X86::MOV32ri64: {
-    Register Reg = MIB.getReg(0);
-    Register Reg32 = RI.getSubReg(Reg, X86::sub_32bit);
+    MachineOperand &DefMO = MIB->getOperand(0);
+    Register Reg32 = RI.getSubReg(DefMO.getReg(), X86::sub_32bit);
     MI.setDesc(get(X86::MOV32ri));
-    MIB->getOperand(0).setReg(Reg32);
-    MIB.addReg(Reg, RegState::ImplicitDefine);
+    DefMO.setReg(Reg32);
+    DefMO.setIsDead(none_of(MI.all_defs(), [=](const MachineOperand &MO) {
+      return MO.getReg() == Reg32 && !MO.isDead();
+    }));
     return true;
   }
 
