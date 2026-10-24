@@ -10,11 +10,13 @@
 #include "ScalarOptions.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/EquivalenceClasses.h"
+#include "llvm/ADT/GenericUniformityImpl.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/CycleAnalysis.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/RegionInfo.h"
 #include "llvm/Analysis/RegionIterator.h"
@@ -362,6 +364,9 @@ public:
 
 class StructurizeCFGLegacyPass : public RegionPass {
   bool SkipUniformRegions;
+  CycleInfo CI;
+  UniformityInfo UI;
+  bool UniformityInitialized = false;
 
 public:
   static char ID;
@@ -371,15 +376,35 @@ public:
     initializeStructurizeCFGLegacyPassPass(*PassRegistry::getPassRegistry());
   }
 
+  bool doFinalization() override {
+    UI = UniformityInfo{};
+    CI.clear();
+    UniformityInitialized = false;
+    return false;
+  }
+
   bool runOnRegion(Region *R, RGPassManager &RGM) override {
     StructurizeCFG SCFG;
     SCFG.init(R);
     const ScalarOptions &Opts =
         R->getEntry()->getContext().getLibraryOptions().get<ScalarOptions>();
     if (valueOr(Opts.structurizecfg_skip_uniform_regions, SkipUniformRegions)) {
-      UniformityInfo &UA =
-          getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
-      if (SCFG.makeUniformRegion(R, UA))
+      // Analyze the original function once, before the first region is
+      // rewritten. When all regions are structurized, no analysis is needed.
+      if (!UniformityInitialized) {
+        Function &F = *R->getEntry()->getParent();
+        const TargetTransformInfo &TTI =
+            getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
+        if (TTI.hasBranchDivergence(&F)) {
+          CI.compute(F);
+          DominatorTree &DT =
+              getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+          UI = UniformityInfo{DT, CI, &TTI};
+          UI.compute();
+        }
+        UniformityInitialized = true;
+      }
+      if (SCFG.makeUniformRegion(R, UI))
         return false;
     }
     Function *F = R->getEntry()->getParent();
@@ -392,7 +417,6 @@ public:
   StringRef getPassName() const override { return "Structurize control flow"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<UniformityInfoWrapperPass>();
     AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
 
@@ -407,7 +431,6 @@ char StructurizeCFGLegacyPass::ID = 0;
 
 INITIALIZE_PASS_BEGIN(StructurizeCFGLegacyPass, "structurizecfg",
                       "Structurize the CFG", false, false)
-INITIALIZE_PASS_DEPENDENCY(UniformityInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(RegionInfoPass)
