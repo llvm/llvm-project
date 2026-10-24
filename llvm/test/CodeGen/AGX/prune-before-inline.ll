@@ -6,9 +6,9 @@
 ; externally reachable root. Prune it before always-inline expands its bodies.
 ; Keep the live call and externally visible global data.
 ;
+; PRUNED: @keep = global i32 42
 ; PRUNED-NOT: define {{.*}}@dead_leaf
 ; PRUNED-NOT: define {{.*}}@dead_middle
-; PRUNED: @keep = global i32 42
 ; PRUNED: define internal i32 @live_helper
 ; PRUNED: define agx_kernel void @kernel
 ; BASE: define internal i32 @dead_leaf
