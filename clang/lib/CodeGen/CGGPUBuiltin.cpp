@@ -13,6 +13,7 @@
 
 #include "CodeGenFunction.h"
 #include "clang/Basic/Builtins.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/Transforms/Utils/AMDGPUEmitPrintf.h"
@@ -180,6 +181,16 @@ RValue CodeGenFunction::EmitAMDGPUDevicePrintfCallExpr(const CallExpr *E) {
     llvm::Value *Arg = A.getRValue(*this).getScalarVal();
     Args.push_back(Arg);
   }
+
+  // The expansion reads the format from the initializer of the global it points
+  // to, which may not be emitted yet for a deferred constant array. Pass a copy
+  // of the evaluated format instead.
+  StringRef FmtStr;
+  if (!llvm::getConstantStringInfo(Args[0], FmtStr))
+    if (std::optional<std::string> Fmt =
+            E->getArg(0)->tryEvaluateString(getContext()))
+      Args[0] = CGM.performAddrSpaceCast(
+          CGM.GetAddrOfConstantCString(*Fmt).getPointer(), Args[0]->getType());
 
   llvm::IRBuilder<> IRB(Builder.GetInsertPoint());
   IRB.SetCurrentDebugLocation(Builder.getCurrentDebugLocation());
