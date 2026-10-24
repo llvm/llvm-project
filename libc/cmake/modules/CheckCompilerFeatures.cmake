@@ -4,6 +4,7 @@
 
 set(
   ALL_COMPILER_FEATURES
+    "bfloat16"
     "builtin_ceil_floor_rint_trunc"
     "builtin_fmax_fmin"
     "builtin_fmaxf16_fminf16"
@@ -129,6 +130,8 @@ foreach(feature IN LISTS ALL_COMPILER_FEATURES)
       set(LIBC_TYPES_HAS_CFLOAT16 TRUE)
     elseif(${feature} STREQUAL "cfloat128")
       set(LIBC_TYPES_HAS_CFLOAT128 TRUE)
+    elseif(${feature} STREQUAL "bfloat16")
+      set(LIBC_TYPES_HAS_BUILTIN_BFLOAT16 TRUE)
     elseif(${feature} STREQUAL "builtin_ceil_floor_rint_trunc")
       set(LIBC_COMPILER_HAS_BUILTIN_CEIL_FLOOR_RINT_TRUNC TRUE)
     elseif(${feature} STREQUAL "builtin_fmax_fmin")
