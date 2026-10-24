@@ -1,0 +1,27 @@
+@LIT_SITE_CFG_IN_HEADER@
+
+config.inter_obj_root = "@PROJECT_BINARY_DIR@"
+config.llvm_tools_dir = "@LLVM_TOOLS_BINARY_DIR@"
+config.inter_test_source_root = "@INTER_TEST_SOURCE_ROOT@"
+config.inter_test_exec_root = "@INTER_TEST_EXEC_ROOT@"
+config.inter_test_is_integration = @INTER_TEST_IS_INTEGRATION@
+config.inter_opt = "@PROJECT_BINARY_DIR@/tools/inter-opt/inter-opt"
+config.inter_pipelines = "@INTER_PIPELINES_FILE@"
+config.inter_translate = "@PROJECT_BINARY_DIR@/tools/inter-translate/inter-translate"
+config.inter_alias_dump = "@CMAKE_CURRENT_BINARY_DIR@/inter-alias-dump"
+config.inter_compile_api_test = "@CMAKE_CURRENT_BINARY_DIR@/inter-compile-api-test"
+config.inter_timing_dump = "@CMAKE_CURRENT_BINARY_DIR@/inter-timing-dump"
+config.inter_target_info = "@CMAKE_CURRENT_BINARY_DIR@/inter-target-info"
+config.inter_ged_dump = "@CMAKE_CURRENT_BINARY_DIR@/inter-ged-dump"
+config.filecheck = "@LLVM_TOOLS_BINARY_DIR@/FileCheck"
+config.llvm_objcopy = "@LLVM_TOOLS_BINARY_DIR@/llvm-objcopy"
+config.llvm_readobj = "@LLVM_TOOLS_BINARY_DIR@/llvm-readobj"
+config.inter_runner = "@CMAKE_CURRENT_BINARY_DIR@/Integration/inter-runner"
+config.inter_matmul_runner = "@CMAKE_CURRENT_BINARY_DIR@/Integration/inter-matmul-runner"
+config.inter_device_name = "@INTER_INTEGRATION_DEVICE_NAME@"
+config.inter_ocloc = "@INTER_OCLOC_EXECUTABLE@"
+
+import lit.llvm
+lit.llvm.initialize(lit_config, config)
+
+lit_config.load_config(config, "@CMAKE_CURRENT_SOURCE_DIR@/lit.cfg.py")
