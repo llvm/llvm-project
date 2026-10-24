@@ -304,7 +304,7 @@ public:
               evaluate::Expr<evaluate::SubscriptInteger>{vecExpr->value()})};
           if (const auto *con{
                   evaluate::UnwrapConstantValue<evaluate::SubscriptInteger>(
-                      folded)}) {
+                      evaluate::SubscriptIntegerKind, folded)}) {
             std::set<std::int64_t> values;
             for (const auto &j : con->values()) {
               if (auto pair{values.emplace(j.ToInt64())}; !pair.second) {

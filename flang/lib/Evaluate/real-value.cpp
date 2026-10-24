@@ -143,7 +143,9 @@ ValueWithRealFlags<RealValue> RealValue::KahanSummation(
   return FromImpl(impl().KahanSummation(y.impl(), correction.impl(), rounding));
 }
 
-IntegerValue RealValue::EXPONENT() const { return impl().EXPONENT(); }
+IntegerValue RealValue::EXPONENT(int kind) const {
+  return impl().EXPONENT(kind);
+}
 
 RealValue RealValue::EPSILON(int kind) {
   return FromImpl(RealValueImpl::EPSILON(kind));

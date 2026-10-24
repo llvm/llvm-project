@@ -2996,8 +2996,9 @@ void OmpStructureChecker::Enter(const parser::OmpErrorDirective &x) {
   std::optional<std::string> message;
   if (args.message) {
     if (auto expr{GetEvaluateExpr(*args.message)}) {
-      if (auto val{evaluate::GetScalarConstantValue<evaluate::Ascii>(*expr)}) {
-        message = *val;
+      if (auto val{evaluate::GetScalarConstantValue<evaluate::Ascii>(
+              evaluate::AsciiKind, *expr)}) {
+        message = val->AsStdString();
       }
     }
   }

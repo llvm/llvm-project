@@ -159,7 +159,7 @@ public:
       RealValue &correction,
       Rounding rounding = TargetCharacteristics::defaultRounding) const;
 
-  IntegerValue EXPONENT() const;
+  IntegerValue EXPONENT(int kind) const;
 
   static RealValue EPSILON(int kind);
 
