@@ -9,6 +9,7 @@
 #include "clang/Tooling/Syntax/Tokens.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/DiagnosticOptions.h"
@@ -23,20 +24,19 @@
 #include "clang/Driver/CreateInvocationFromArgs.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendAction.h"
+#include "clang/Frontend/FrontendActions.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Lex/Token.h"
+#include "clang/Testing/TestAST.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/VirtualFileSystem.h"
-#include "llvm/Support/raw_os_ostream.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Testing/Annotations/Annotations.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include <cassert>
@@ -45,7 +45,6 @@
 #include <gtest/gtest.h>
 #include <memory>
 #include <optional>
-#include <ostream>
 #include <string>
 
 using namespace clang;
@@ -581,20 +580,244 @@ TEST_F(TokenCollectorTest, SpecialTokens) {
 }
 
 TEST_F(TokenCollectorTest, LateBoundTokens) {
-  // The parser eventually breaks the first '>>' into two tokens ('>' and '>'),
-  // but we choose to record them as a single token (for now).
+  // The parser breaks the first '>>' into two '>' tokens. The second '>>' is a
+  // shift operator and stays a single token.
   llvm::Annotations Code(R"cpp(
     template <class T>
     struct foo { int a; };
-    int bar = foo<foo<int$br[[>>]]().a;
+    int bar = foo<foo<int$gt1[[>]]$gt2[[>]]().a;
     int baz = 10 $op[[>>]] 2;
   )cpp");
   recordTokens(Code.code());
+  EXPECT_THAT(
+      std::vector<syntax::Token>(
+          Buffer.spelledTokens(SourceMgr->getMainFileID())),
+      AllOf(Contains(AllOf(Kind(tok::greater), RangeIs(Code.range("gt1")))),
+            Contains(AllOf(Kind(tok::greater), RangeIs(Code.range("gt2")))),
+            Contains(
+                AllOf(Kind(tok::greatergreater), RangeIs(Code.range("op"))))));
+  // The first '>' of the expanded split has the location the parser gave it,
+  // which is not a file location, so only the second '>' is checked by range.
+  EXPECT_THAT(
+      std::vector<syntax::Token>(Buffer.expandedTokens()),
+      AllOf(Contains(AllOf(Kind(tok::greater), RangeIs(Code.range("gt2")))),
+            Contains(Kind(tok::greatergreater)).Times(1),
+            Contains(
+                AllOf(Kind(tok::greatergreater), RangeIs(Code.range("op"))))));
+}
+
+TEST_F(TokenCollectorTest, SplitGreaterGreater) {
+  LangStandard = "-std=c++11";
+  std::pair</*Input*/ std::string, /*Expected*/ std::string> TestCases[] = {
+      {R"cpp(
+    template <class T> struct S {};
+    S<S<int>> x;
+  )cpp",
+       R"(expanded tokens:
+  template < class T > struct S { } ; S < S < int > > x ;
+file './input.cpp'
+  spelled tokens:
+    template < class T > struct S { } ; S < S < int > > x ;
+  no mappings.
+)"},
+      // '>>>' is lexed as '>>' '>'.
+      {R"cpp(
+    template <class T> struct S {};
+    S<S<S<int>>> x;
+  )cpp",
+       R"(expanded tokens:
+  template < class T > struct S { } ; S < S < S < int > > > x ;
+file './input.cpp'
+  spelled tokens:
+    template < class T > struct S { } ; S < S < S < int > > > x ;
+  no mappings.
+)"},
+      // '>>>>' is lexed as '>>' '>>'. The remainder of the first '>>' is split
+      // again by the parser, so that it does not merge with the next '>>'.
+      {R"cpp(
+    template <class T> struct S {};
+    S<S<S<S<int>>>> x;
+  )cpp",
+       R"(expanded tokens:
+  template < class T > struct S { } ; S < S < S < S < int > > > > x ;
+file './input.cpp'
+  spelled tokens:
+    template < class T > struct S { } ; S < S < S < S < int > > > > x ;
+  no mappings.
+)"},
+      // Member function bodies are parsed after the class is complete.
+      {R"cpp(
+    template <class T> struct S {};
+    struct A { void m() { S<S<int>> y; } };
+  )cpp",
+       R"(expanded tokens:
+  template < class T > struct S { } ; struct A { void m ( ) { S < S < int > > y ; } } ;
+file './input.cpp'
+  spelled tokens:
+    template < class T > struct S { } ; struct A { void m ( ) { S < S < int > > y ; } } ;
+  no mappings.
+)"},
+      // The '>>' is spelled in a macro body. The '#define' keeps the spelled
+      // '>>', and only the expanded tokens of the macro are split.
+      {R"cpp(
+    template <class T> struct S {};
+    #define CLOSE >>
+    S<S<int CLOSE x;
+  )cpp",
+       R"(expanded tokens:
+  template < class T > struct S { } ; S < S < int > > x ;
+file './input.cpp'
+  spelled tokens:
+    template < class T > struct S { } ; # define CLOSE >> S < S < int CLOSE x ;
+  mappings:
+    ['#'_10, 'S'_14) => ['S'_10, 'S'_10)
+    ['CLOSE'_19, 'x'_20) => ['>'_15, 'x'_17)
+)"},
+      // The '>>' is spelled in a macro argument, so the spelled '>>' is split.
+      {R"cpp(
+    template <class T> struct S {};
+    #define ID(X) X
+    ID(S<S<int>> x;)
+  )cpp",
+       R"(expanded tokens:
+  template < class T > struct S { } ; S < S < int > > x ;
+file './input.cpp'
+  spelled tokens:
+    template < class T > struct S { } ; # define ID ( X ) X ID ( S < S < int > > x ; )
+  mappings:
+    ['#'_10, 'ID'_17) => ['S'_10, 'S'_10)
+    ['ID'_17, '<eof>'_29) => ['S'_10, '<eof>'_19)
+)"},
+  };
+  for (auto &Test : TestCases)
+    EXPECT_EQ(Test.second, collectAndDump(Test.first))
+        << "input: " << Test.first;
+}
+
+TEST_F(TokenCollectorTest, SplitOtherTokens) {
+  LangStandard = "-std=c++17";
+  // The '>=' and '>>=' cases are errors that the parser recovers from.
+  AllowErrors = true;
+  struct {
+    std::vector<const char *> Args;
+    std::string Input;
+    std::string Expected;
+  } TestCases[] = {
+      // CUDA lexes '>>>' as one token. The parser splits it into '>' and '>>',
+      // then splits the '>>' into '>' and '>'.
+      {{"-x", "cuda", "-nocudainc", "-nocudalib", "--cuda-host-only"},
+       R"cpp(
+    template <class T> struct S {};
+    S<S<S<int>>> x;
+  )cpp",
+       R"(expanded tokens:
+  template < class T > struct S { } ; S < S < S < int > > > x ;
+file './input.cpp'
+  spelled tokens:
+    template < class T > struct S { } ; S < S < S < int > > > x ;
+  no mappings.
+)"},
+      // '>=' is split into '>' and '='.
+      {{},
+       R"cpp(
+    template <class T> int v = 0;
+    int y = v<int>=1;
+  )cpp",
+       R"(expanded tokens:
+  template < class T > int v = 0 ; int y = v < int > = 1 ;
+file './input.cpp'
+  spelled tokens:
+    template < class T > int v = 0 ; int y = v < int > = 1 ;
+  no mappings.
+)"},
+      // '>>=' is split into '>' and '>=', then the '>=' into '>' and '='.
+      {{},
+       R"cpp(
+    template <class T> struct S {};
+    template <class T> int v = 0;
+    int y = v<S<int>>=1;
+  )cpp",
+       R"(expanded tokens:
+  template < class T > struct S { } ; template < class T > int v = 0 ; int y = v < S < int > > = 1 ;
+file './input.cpp'
+  spelled tokens:
+    template < class T > struct S { } ; template < class T > int v = 0 ; int y = v < S < int > > = 1 ;
+  no mappings.
+)"},
+      // CUDA lexes '<<<' as one token. After 'operator', the parser splits it
+      // into '<<' and '<'.
+      {{"-x", "cuda", "-nocudainc", "-nocudalib", "--cuda-host-only"},
+       R"cpp(
+    struct A {};
+    template <class T> void operator<<(A, T);
+    void f(A a) { operator<<<int>(a, 1); }
+  )cpp",
+       R"(expanded tokens:
+  struct A { } ; template < class T > void operator << ( A , T ) ; void f ( A a ) { operator << < int > ( a , 1 ) ; }
+file './input.cpp'
+  spelled tokens:
+    struct A { } ; template < class T > void operator << ( A , T ) ; void f ( A a ) { operator << < int > ( a , 1 ) ; }
+  no mappings.
+)"},
+  };
+  for (auto &Test : TestCases) {
+    recordTokens(Test.Input, Test.Args);
+    EXPECT_EQ(Test.Expected, Buffer.dumpForTests()) << "input: " << Test.Input;
+  }
+}
+
+TEST_F(TokenCollectorTest, SplitGreaterGreaterWithEscapedNewline) {
+  LangStandard = "-std=c++11";
+  // The escaped newline is between the spelled tokens, as for any other pair
+  // of tokens.
+  llvm::Annotations Code(R"cpp(
+    template <class T> struct S {};
+    S<S<int$gt1[[>]]\
+$gt2[[>]] x;
+  )cpp");
+  recordTokens(Code.code());
+  EXPECT_THAT(
+      std::vector<syntax::Token>(
+          Buffer.spelledTokens(SourceMgr->getMainFileID())),
+      AllOf(Contains(AllOf(Kind(tok::greater), RangeIs(Code.range("gt1")))),
+            Contains(AllOf(Kind(tok::greater), RangeIs(Code.range("gt2"))))));
+  // The expanded first '>' does not include the escaped newline either.
   EXPECT_THAT(std::vector<syntax::Token>(Buffer.expandedTokens()),
-              AllOf(Contains(AllOf(Kind(tok::greatergreater),
-                                   RangeIs(Code.range("br")))),
-                    Contains(AllOf(Kind(tok::greatergreater),
-                                   RangeIs(Code.range("op"))))));
+              Not(Contains(AllOf(Kind(tok::greater), Not(HasText(">"))))));
+}
+
+TEST_F(TokenCollectorTest, SplitGreaterGreaterWithTrigraphEscapedNewline) {
+  LangStandard = "-std=c++11";
+  // '??/' is a trigraph for '\', so '??/' followed by a newline is an escaped
+  // newline.
+  llvm::Annotations Code(R"cpp(
+    template <class T> struct S {};
+    S<S<int$gt1[[>]]??/
+$gt2[[>]] x;
+  )cpp");
+  recordTokens(Code.code(), {"-trigraphs"});
+  EXPECT_THAT(
+      std::vector<syntax::Token>(
+          Buffer.spelledTokens(SourceMgr->getMainFileID())),
+      AllOf(Contains(AllOf(Kind(tok::greater), RangeIs(Code.range("gt1")))),
+            Contains(AllOf(Kind(tok::greater), RangeIs(Code.range("gt2"))))));
+}
+
+TEST_F(TokenCollectorTest, SplitDoesNotAffectShiftOperator) {
+  LangStandard = "-std=c++11";
+  std::string Code = R"cpp(
+    template <int N> struct I {};
+    I<(8>>2)> v;
+    int s = 8 >> 2;
+  )cpp";
+  std::string Expected = R"(expanded tokens:
+  template < int N > struct I { } ; I < ( 8 >> 2 ) > v ; int s = 8 >> 2 ;
+file './input.cpp'
+  spelled tokens:
+    template < int N > struct I { } ; I < ( 8 >> 2 ) > v ; int s = 8 >> 2 ;
+  no mappings.
+)";
+  EXPECT_EQ(Expected, collectAndDump(Code));
 }
 
 TEST_F(TokenCollectorTest, DelayedParsing) {
@@ -1209,5 +1432,152 @@ TEST_F(TokenCollectorTest, CXX20ModuleImportPartition) {
                           Kind(tok::kw_import), Kind(tok::colon),
                           Kind(tok::annot_module_name), Kind(tok::semi),
                           Kind(tok::eof)));
+}
+
+TEST_F(TokenBufferTest, SpelledForExpandedSplitGreaterGreater) {
+  LangStandard = "-std=c++11";
+  recordTokens(R"cpp(
+    template <class T> struct S {};
+    S<S<int>> x;
+  )cpp");
+  // findExpanded() aborts when it finds no match.
+  ASSERT_THAT(Buffer.expandedTokens(),
+              Not(Contains(Kind(tok::greatergreater))));
+
+  auto Inner = Buffer.spelledForExpanded(findExpanded("S < int >"));
+  ASSERT_TRUE(Inner);
+  EXPECT_THAT(*Inner, SameRange(findSpelled("S < int >")));
+  EXPECT_EQ(syntax::Token::range(*SourceMgr, Inner->front(), Inner->back())
+                .text(*SourceMgr),
+            "S<int>");
+
+  EXPECT_THAT(Buffer.spelledForExpanded(findExpanded("S < S < int > >")),
+              ValueIs(SameRange(findSpelled("S < S < int > >"))));
+}
+
+TEST_F(TokenBufferTest, ExpandedForSpelledSplitGreaterGreater) {
+  LangStandard = "-std=c++11";
+  recordTokens(R"cpp(
+    template <class T> struct S {};
+    S<S<int>> x;
+  )cpp");
+  // findSpelled() aborts when it finds no match.
+  ASSERT_THAT(Buffer.spelledTokens(SourceMgr->getMainFileID()),
+              Not(Contains(Kind(tok::greatergreater))));
+
+  EXPECT_THAT(Buffer.expandedForSpelled(findSpelled("S < int >")),
+              ElementsAre(SameRange(findExpanded("S < int >"))));
+  EXPECT_THAT(Buffer.expandedForSpelled(findSpelled("S < S < int > >")),
+              ElementsAre(SameRange(findExpanded("S < S < int > >"))));
+}
+
+TEST_F(TokenBufferTest, SpelledForExpandedSplitGreaterGreaterInMacroArg) {
+  LangStandard = "-std=c++11";
+  recordTokens(R"cpp(
+    template <class T> struct S {};
+    #define ID(X) X
+    ID(S<S<int>> x;)
+  )cpp");
+  ASSERT_THAT(Buffer.expandedTokens(),
+              Not(Contains(Kind(tok::greatergreater))));
+  ASSERT_THAT(Buffer.spelledTokens(SourceMgr->getMainFileID()),
+              Not(Contains(Kind(tok::greatergreater))));
+
+  EXPECT_THAT(Buffer.spelledForExpanded(findExpanded("S < int >")),
+              ValueIs(SameRange(findSpelled("S < int >"))));
+  EXPECT_THAT(Buffer.spelledForExpanded(findExpanded("S < S < int > >")),
+              ValueIs(SameRange(findSpelled("S < S < int > >"))));
+}
+
+TEST_F(TokenBufferTest, SpelledForExpandedCUDASplitGreaterInMacroArg) {
+  LangStandard = "-std=c++17";
+  // CUDA lexes '>>>>' as '>>>' '>'. The parser splits '>>>' into '>' and '>>',
+  // then the '>>' into '>' and '>'. The location of the last '>' is inside the
+  // buffer of the split '>>', not at its start.
+  recordTokens(R"cpp(
+    template <class T> struct S {};
+    #define ID(X) X
+    ID(S<S<S<S<int>>>> x;)
+  )cpp",
+               {"-x", "cuda", "-nocudainc", "-nocudalib", "--cuda-host-only"});
+  ASSERT_THAT(Buffer.spelledTokens(SourceMgr->getMainFileID()),
+              Not(Contains(Kind(tok::greatergreatergreater))));
+
+  for (llvm::StringRef Toks :
+       {"S < int >", "S < S < int > >", "S < S < S < int > > >",
+        "S < S < S < S < int > > > >"})
+    EXPECT_THAT(Buffer.spelledForExpanded(findExpanded(Toks)),
+                ValueIs(SameRange(findSpelled(Toks))))
+        << Toks;
+}
+
+TEST_F(TokenBufferTest, ExpandedTokensForRangeEndingInSplit) {
+  LangStandard = "-std=c++11";
+  recordTokens(R"cpp(
+    template <class T> struct S {};
+    S<S<S<S<int>>>> x;
+  )cpp");
+  // findExpanded() aborts when it finds no match.
+  ASSERT_THAT(Buffer.expandedTokens(),
+              Not(Contains(Kind(tok::greatergreater))));
+
+  // The closed range from the first to the last of Toks. Three of the four
+  // template-ids below end on a '>' that the parser split from a '>>'.
+  auto RangeOf = [](llvm::ArrayRef<syntax::Token> Toks) {
+    return SourceRange(Toks.front().location(), Toks.back().location());
+  };
+  auto Expanded = findExpanded("S < S < S < S < int > > > >");
+  EXPECT_THAT(Buffer.expandedTokens(RangeOf(Expanded)), SameRange(Expanded));
+  Expanded = findExpanded("S < S < S < int > > >");
+  EXPECT_THAT(Buffer.expandedTokens(RangeOf(Expanded)), SameRange(Expanded));
+  Expanded = findExpanded("S < S < int > >");
+  EXPECT_THAT(Buffer.expandedTokens(RangeOf(Expanded)), SameRange(Expanded));
+  Expanded = findExpanded("S < int >");
+  EXPECT_THAT(Buffer.expandedTokens(RangeOf(Expanded)), SameRange(Expanded));
+}
+
+struct RegisterCollectorAction : SyntaxOnlyAction {
+  RegisterCollectorAction(std::optional<TokenCollector> &Collector)
+      : Collector(Collector) {}
+  bool BeginSourceFileAction(CompilerInstance &CI) override {
+    Collector.emplace(CI.getPreprocessor());
+    return SyntaxOnlyAction::BeginSourceFileAction(CI);
+  }
+
+  std::optional<TokenCollector> &Collector;
+};
+
+// Checks that the AST's location for the closing '>' of each template-id is the
+// location of an expanded token, including for a '>>' split more than once.
+TEST(TokenBufferASTTest, TemplateIdRAngleLocsAreExpandedTokens) {
+  std::optional<TokenCollector> Collector;
+  TestInputs Inputs(R"cpp(
+    namespace n { template <class T> inline constexpr bool v = false; }
+    template <class T> struct S {};
+    S<S<S<S<int>>>> x;
+    // The parser splits this '>>' while parsing tentatively, then again after
+    // backtracking.
+    template <> inline constexpr bool n::v<S<int>> = true;
+  )cpp");
+  Inputs.Language = TestLanguage::Lang_CXX17;
+  Inputs.MakeAction = [&] {
+    return std::make_unique<RegisterCollectorAction>(Collector);
+  };
+  TestAST AST(Inputs);
+  ASSERT_TRUE(Collector);
+  TokenBuffer Buffer = std::move(*Collector).consume();
+
+  struct Visitor : RecursiveASTVisitor<Visitor> {
+    bool VisitTemplateSpecializationTypeLoc(TemplateSpecializationTypeLoc L) {
+      RAngleLocs.push_back(L.getRAngleLoc());
+      return true;
+    }
+    std::vector<SourceLocation> RAngleLocs;
+  } V;
+  V.TraverseAST(AST.context());
+  // Four in the declaration of x, and S<int> in the specialization of v.
+  ASSERT_EQ(V.RAngleLocs.size(), 5u);
+  for (SourceLocation Loc : V.RAngleLocs)
+    EXPECT_THAT(Buffer.expandedTokens(Loc), Not(IsEmpty()));
 }
 } // namespace
