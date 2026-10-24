@@ -139,6 +139,10 @@ infrastructure are described first, followed by tool-specific sections.
   piping from {program}`git` to {program}`clang-tidy-diff.py`, where slashes
   will now be automatically normalized.
 
+- Fixed a crash in {program}`clang-tidy` when `HeaderFileExtensions` or
+  `ImplementationFileExtensions` contains an invalid entry, such as one with a
+  leading dot. The invalid option is now reported as a warning.
+
 #### New checks
 
 - New {doc}`bugprone-unchecked-expected-access
@@ -186,6 +190,11 @@ infrastructure are described first, followed by tool-specific sections.
 #### New check aliases
 
 #### Changes in existing checks
+
+- Improved {doc}`bugprone-assignment-in-if-condition
+  <clang-tidy/checks/bugprone/assignment-in-if-condition>` check by ignoring
+  assignments inside GNU statement expressions unless they form the value of
+  the statement expression.
 
 - Improved {doc}`bugprone-easily-swappable-parameters
   <clang-tidy/checks/bugprone/easily-swappable-parameters>` check by no longer
@@ -259,9 +268,13 @@ infrastructure are described first, followed by tool-specific sections.
 
   - No longer diagnoses variables declared with `decltype(auto)`, where the
     suggested `const` does not compile.
-    
+
   - No longer diagnoses parameters of `main`, whose signature is fixed by the
     standard.
+
+  - No longer diagnoses variables used as operands of `std::move` in template
+    instantiations, where the suggested `const` would break the move for
+    instantiations with real move semantics.
 
 - Fixed an infinite loop in {doc}`misc-multiple-inheritance
   <clang-tidy/checks/misc/multiple-inheritance>` when checking a class that
@@ -331,6 +344,10 @@ infrastructure are described first, followed by tool-specific sections.
   <clang-tidy/checks/performance/no-automatic-move>` check by no longer
   warning when returning a variable captured by a lambda or a block, which is
   never implicitly moved from.
+
+- Improved {doc}`performance-noexcept-move-constructor
+  <clang-tidy/checks/performance/noexcept-move-constructor>` check by fixing
+  false negatives for implicitly `noexcept(false)` move operations.
 
 - Improved {doc}`performance-prefer-single-char-overloads
   <clang-tidy/checks/performance/prefer-single-char-overloads>` check to
@@ -423,7 +440,7 @@ infrastructure are described first, followed by tool-specific sections.
   - Ignored preprocessor directives such as `#endif` that appear immediately
     before an enum's closing brace, which previously produced a false positive
     and a fix-it that inserted a comma after the directive.
-    
+
   - Fixed a false positive on empty brace initializers of types with default
     member initializers.
 

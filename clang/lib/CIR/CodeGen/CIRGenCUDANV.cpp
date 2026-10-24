@@ -355,9 +355,15 @@ void CIRGenNVCUDARuntime::emitDeviceStub(CIRGenFunction &cgf, cir::FuncOp fn,
     auto gv = cir::GlobalViewAttr::get(fnPtrTy, sym);
 
     globalOp->setAttr("initial_value", gv);
-    globalOp->removeAttr("sym_visibility");
     globalOp->setAttr("alignment", builder.getI64IntegerAttr(
                                        cgm.getPointerAlign().getQuantity()));
+
+    // The stub's linkage is only final once it is defined, so the handle
+    // takes it over here.
+    globalOp.setLinkage(fn.getLinkage());
+    mlir::SymbolTable::setSymbolVisibility(
+        globalOp, cgm.getMLIRVisibilityFromCIRLinkage(fn.getLinkage()));
+    cgm.setDSOLocal(static_cast<mlir::Operation *>(globalOp));
   }
 
   // CUDA 9.0 changed the way to launch kernels.
@@ -417,6 +423,13 @@ mlir::Operation *CIRGenNVCUDARuntime::getKernelHandle(cir::FuncOp fn,
 
   globalOp->setAttr("alignment", builder.getI64IntegerAttr(
                                      cgm.getPointerAlign().getQuantity()));
+
+  // Inherit visibility and comdat from the kernel's declaration.
+  auto *fd = cast<FunctionDecl>(gd.getDecl());
+  cgm.setGVProperties(globalOp, fd);
+  FunctionTemplateDecl *ft = fd->getPrimaryTemplate();
+  if (!ft || ft->isThisDeclarationADefinition())
+    cgm.maybeSetTrivialComdat(*fd, globalOp);
 
   // Store references
   kernelHandles[fn.getSymName()] = globalOp;
@@ -525,15 +538,19 @@ void CIRGenNVCUDARuntime::handleGlobalReplace(cir::GlobalOp oldGV,
 }
 
 /// Whether this translation unit has anything for the CUDA runtime to register.
-/// These are the same two attributes LoweringPrepare collects to decide whether
-/// to build a module ctor, so both sides answer the question from one source.
+/// Like LoweringPrepare, count only kernel stub definitions and device
+/// variables carrying registration metadata, not kernel declarations or
+/// launch-site calls.
 static bool hasEntitiesToRegister(mlir::ModuleOp module) {
   // A walk, not a scan of the module body, so this stays in agreement with the
   // recursive walk LoweringPrepare collects them with.
   return module
       ->walk([](mlir::Operation *op) {
-        if (op->hasAttr(cir::CUDAKernelNameAttr::getMnemonic()) ||
-            op->hasAttr(cir::CUDAVarRegistrationInfoAttr::getMnemonic()))
+        if (auto fn = mlir::dyn_cast<cir::FuncOp>(op);
+            fn && !fn.isDeclaration() &&
+            fn->hasAttr(cir::CUDAKernelNameAttr::getMnemonic()))
+          return mlir::WalkResult::interrupt();
+        if (op->hasAttr(cir::CUDAVarRegistrationInfoAttr::getMnemonic()))
           return mlir::WalkResult::interrupt();
         return mlir::WalkResult::advance();
       })

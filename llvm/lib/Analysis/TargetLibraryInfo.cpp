@@ -1085,9 +1085,13 @@ static bool isValidProtoForSizeReturningNew(const FunctionType &FTy, LibFunc F,
 
   auto &Context = M.getContext();
   PointerType *PtrTy = PointerType::get(Context, 0);
-  StructType *SizedPtrTy = StructType::get(
-      Context, {PtrTy, Type::getIntNTy(Context, SizeTSizeBits)});
-  return FTy.getReturnType() == SizedPtrTy;
+  Type *SizeTTy = Type::getIntNTy(Context, SizeTSizeBits);
+  Type *RetTy = FTy.getReturnType();
+  // Return type struct __sized_ptr_t { void*, size_t } is lowered to
+  // { ptr, iN } on some targets (e.g. x86_64) and [2 x iN] on others (e.g.
+  // AArch64).
+  return RetTy == StructType::get(Context, {PtrTy, SizeTTy}) ||
+         RetTy == ArrayType::get(SizeTTy, 2);
 }
 
 bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
