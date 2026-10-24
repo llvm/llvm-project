@@ -48,6 +48,8 @@ template <class Tr>
 RegionBase<Tr>::~RegionBase() {
   // Only clean the cache for this Region. Caches of child Regions will be
   // cleaned when the child Regions are deleted.
+  if (!BBNodeMap.empty())
+    RI->CachedRegions.erase(this);
   BBNodeMap.clear();
 }
 
@@ -341,6 +343,8 @@ typename Tr::RegionNodeT *RegionBase<Tr>::getBBNode(BlockT *BB) const {
   auto [at, Inserted] = BBNodeMap.try_emplace(BB);
   if (Inserted) {
     auto Deconst = const_cast<RegionBase<Tr> *>(this);
+    if (BBNodeMap.size() == 1)
+      RI->CachedRegions.insert(Deconst);
     at->second =
         std::make_unique<RegionNodeT>(static_cast<RegionT *>(Deconst), BB);
   }
@@ -504,6 +508,8 @@ void RegionBase<Tr>::dump() const {
 
 template <class Tr>
 void RegionBase<Tr>::clearNodeCache() {
+  if (!BBNodeMap.empty())
+    RI->CachedRegions.erase(this);
   BBNodeMap.clear();
   for (std::unique_ptr<RegionT> &R : *this)
     R->clearNodeCache();
@@ -760,6 +766,7 @@ void RegionInfoBase<Tr>::dump() const { print(dbgs()); }
 #endif
 
 template <class Tr> void RegionInfoBase<Tr>::releaseMemory() {
+  clearNodeCache();
   BBtoRegion.clear();
   if (TopLevelRegion) {
     delete TopLevelRegion;

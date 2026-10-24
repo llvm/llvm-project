@@ -40,6 +40,7 @@
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/PassManager.h"
@@ -675,6 +676,7 @@ template <class Tr>
 class RegionInfoBase {
   friend class RegionInfo;
   friend class MachineRegionInfo;
+  friend class RegionBase<Tr>;
 
   using BlockT = typename Tr::BlockT;
   using FuncT = typename Tr::FuncT;
@@ -697,16 +699,21 @@ class RegionInfoBase {
   RegionInfoBase(RegionInfoBase &&Arg)
     : DT(std::move(Arg.DT)), PDT(std::move(Arg.PDT)), DF(std::move(Arg.DF)),
       TopLevelRegion(std::move(Arg.TopLevelRegion)),
-      BBtoRegion(std::move(Arg.BBtoRegion)) {
+      BBtoRegion(std::move(Arg.BBtoRegion)),
+      CachedRegions(std::move(Arg.CachedRegions)) {
     Arg.wipe();
   }
 
   RegionInfoBase &operator=(RegionInfoBase &&RHS) {
+    if (this == &RHS)
+      return *this;
+    releaseMemory();
     DT = std::move(RHS.DT);
     PDT = std::move(RHS.PDT);
     DF = std::move(RHS.DF);
     TopLevelRegion = std::move(RHS.TopLevelRegion);
     BBtoRegion = std::move(RHS.BBtoRegion);
+    CachedRegions = std::move(RHS.CachedRegions);
     RHS.wipe();
     return *this;
   }
@@ -723,6 +730,10 @@ class RegionInfoBase {
   /// Map every BB to the smallest region, that contains BB.
   BBtoRegionMap BBtoRegion;
 
+  // Regions with nonempty node caches. Global invalidation need not walk
+  // every region in the function after each region-pass invocation.
+  SmallPtrSet<RegionBase<Tr> *, 16> CachedRegions;
+
 protected:
   /// Update refences to a RegionInfoT held by the RegionT managed here
   ///
@@ -730,14 +741,21 @@ protected:
   /// RegionInfo object. After a move these need to be fixed.
   template<typename TheRegionT>
   void updateRegionTree(RegionInfoT &RI, TheRegionT *R) {
+    for (auto *Cached : CachedRegions)
+      Cached->RI = &RI;
+    updateRegionTreeImpl(RI, R);
+  }
+
+private:
+  template<typename TheRegionT>
+  void updateRegionTreeImpl(RegionInfoT &RI, TheRegionT *R) {
     if (!R)
       return;
     R->RI = &RI;
     for (auto &SubR : *R)
-      updateRegionTree(RI, SubR.get());
+      updateRegionTreeImpl(RI, SubR.get());
   }
 
-private:
   /// Wipe this region tree's state without releasing any resources.
   ///
   /// This is essentially a post-move helper only. It leaves the object in an
@@ -748,6 +766,7 @@ private:
     DF = nullptr;
     TopLevelRegion = nullptr;
     BBtoRegion.clear();
+    CachedRegions.clear();
   }
 
   // Check whether the entries of BBtoRegion for the BBs of region
@@ -867,8 +886,9 @@ public:
   ///
   /// @see Region::clearNodeCache()
   void clearNodeCache() {
-    if (TopLevelRegion)
-      TopLevelRegion->clearNodeCache();
+    for (auto *R : CachedRegions)
+      R->BBNodeMap.clear();
+    CachedRegions.clear();
   }
 
   void verifyAnalysis() const;
