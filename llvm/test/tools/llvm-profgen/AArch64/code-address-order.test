@@ -1,0 +1,225 @@
+# REQUIRES: aarch64-registered-target
+
+# RUN: split-file %s %t
+# RUN: yaml2obj %t/binary.yaml -o %t/code-address-order.exe
+# RUN: llvm-profgen --binary=%t/code-address-order.exe \
+# RUN:   --perfscript=%t/perfscript --format=text --output=%t/profile
+# RUN: FileCheck %s --check-prefix=LOW --input-file=%t/profile
+# RUN: FileCheck %s --check-prefix=HIGH --input-file=%t/profile
+
+## The executable sections are listed in decreasing virtual-address order.
+## Verify that symbolization traverses both functions in address order, which
+## requires ProfiledBinary::disassemble() to sort CodeAddressVec.
+# LOW-LABEL: low:
+# LOW-NEXT:   0: 1
+# LOW-NEXT:   1: 1
+# LOW-NEXT:   2: 1
+# LOW-NEXT:   3: 1
+# LOW-NEXT:   4: 2 low:2
+# HIGH-LABEL: high:
+# HIGH-NEXT:   0: 1
+# HIGH-NEXT:   1: 1
+# HIGH-NEXT:   2: 1
+# HIGH-NEXT:   3: 1
+# HIGH-NEXT:   4: 2 high:2
+
+#--- binary.yaml
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_AARCH64
+  Entry:   0x1000
+Sections:
+  - Name:         .text.low
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x1000
+    Offset:       0x1000
+    AddressAlign: 0x4
+    ## nop; nop; nop; nop; b 0x1000
+    Content:      1F2003D51F2003D51F2003D51F2003D5FCFFFF17
+  - Name:         .text.high
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x2000
+    Offset:       0x2000
+    AddressAlign: 0x4
+    ## nop; nop; nop; nop; b 0x2000
+    Content:      1F2003D51F2003D51F2003D51F2003D5FCFFFF17
+  ## Keep file layout valid while presenting executable sections to consumers
+  ## in decreasing virtual-address order.
+  - Type: SectionHeaderTable
+    Sections:
+      - Name: .text.high
+      - Name: .text.low
+      - Name: .debug_line
+      - Name: .debug_abbrev
+      - Name: .debug_info
+      - Name: .symtab
+      - Name: .strtab
+      - Name: .shstrtab
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    Offset:   0
+    VAddr:    0
+    FileSize: 0x2014
+    MemSize:  0x3000
+    Align:    0x10000
+Symbols:
+  - Name:    high
+    Type:    STT_FUNC
+    Section: .text.high
+    Binding: STB_GLOBAL
+    Value:   0x2000
+    Size:    0x14
+  - Name:    low
+    Type:    STT_FUNC
+    Section: .text.low
+    Binding: STB_GLOBAL
+    Value:   0x1000
+    Size:    0x14
+DWARF:
+  debug_abbrev:
+    - ID: 0
+      Table:
+        - Code:     1
+          Tag:      DW_TAG_compile_unit
+          Children: DW_CHILDREN_yes
+          Attributes:
+            - Attribute: DW_AT_name
+              Form:      DW_FORM_string
+            - Attribute: DW_AT_stmt_list
+              Form:      DW_FORM_sec_offset
+            - Attribute: DW_AT_low_pc
+              Form:      DW_FORM_addr
+            - Attribute: DW_AT_high_pc
+              Form:      DW_FORM_data8
+        - Code:     2
+          Tag:      DW_TAG_subprogram
+          Children: DW_CHILDREN_no
+          Attributes:
+            - Attribute: DW_AT_name
+              Form:      DW_FORM_string
+            - Attribute: DW_AT_low_pc
+              Form:      DW_FORM_addr
+            - Attribute: DW_AT_high_pc
+              Form:      DW_FORM_data8
+            - Attribute: DW_AT_decl_file
+              Form:      DW_FORM_data1
+            - Attribute: DW_AT_decl_line
+              Form:      DW_FORM_data1
+  debug_info:
+    - Version:       4
+      AbbrevTableID: 0
+      AddrSize:      8
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: unordered.c
+            - Value: 0
+            ## DW_FORM_data8 makes high_pc an offset from low_pc. The resulting
+            ## half-open range [0x1000, 0x2014) covers both text sections.
+            - Value: 0x1000
+            - Value: 0x1014
+        - AbbrCode: 2
+          Values:
+            - CStr:  low
+            - Value: 0x1000
+            - Value: 0x14
+            - Value: 1
+            - Value: 10
+        - AbbrCode: 2
+          Values:
+            - CStr:  high
+            - Value: 0x2000
+            - Value: 0x14
+            - Value: 1
+            - Value: 20
+        - AbbrCode: 0
+  debug_line:
+    - Version:               4
+      MinInstLength:         1
+      MaxOpsPerInst:         1
+      DefaultIsStmt:         1
+      LineBase:              251
+      LineRange:             14
+      OpcodeBase:            13
+      StandardOpcodeLengths: [ 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 ]
+      Files:
+        - Name:    unordered.c
+          DirIdx:  0
+          ModTime: 0
+          Length:  0
+      Opcodes:
+        - Opcode:    DW_LNS_extended_op
+          ExtLen:    9
+          SubOpcode: DW_LNE_set_address
+          Data:      0x1000
+        - Opcode:    DW_LNS_advance_line
+          SData:     9
+        - Opcode:    DW_LNS_copy
+        - Opcode:    DW_LNS_advance_pc
+          Data:      4
+        - Opcode:    DW_LNS_advance_line
+          SData:     1
+        - Opcode:    DW_LNS_copy
+        - Opcode:    DW_LNS_advance_pc
+          Data:      4
+        - Opcode:    DW_LNS_advance_line
+          SData:     1
+        - Opcode:    DW_LNS_copy
+        - Opcode:    DW_LNS_advance_pc
+          Data:      4
+        - Opcode:    DW_LNS_advance_line
+          SData:     1
+        - Opcode:    DW_LNS_copy
+        - Opcode:    DW_LNS_advance_pc
+          Data:      4
+        - Opcode:    DW_LNS_advance_line
+          SData:     1
+        - Opcode:    DW_LNS_copy
+        - Opcode:    DW_LNS_advance_pc
+          Data:      4
+        - Opcode:    DW_LNS_extended_op
+          ExtLen:    1
+          SubOpcode: DW_LNE_end_sequence
+        - Opcode:    DW_LNS_extended_op
+          ExtLen:    9
+          SubOpcode: DW_LNE_set_address
+          Data:      0x2000
+        - Opcode:    DW_LNS_advance_line
+          SData:     19
+        - Opcode:    DW_LNS_copy
+        - Opcode:    DW_LNS_advance_pc
+          Data:      4
+        - Opcode:    DW_LNS_advance_line
+          SData:     1
+        - Opcode:    DW_LNS_copy
+        - Opcode:    DW_LNS_advance_pc
+          Data:      4
+        - Opcode:    DW_LNS_advance_line
+          SData:     1
+        - Opcode:    DW_LNS_copy
+        - Opcode:    DW_LNS_advance_pc
+          Data:      4
+        - Opcode:    DW_LNS_advance_line
+          SData:     1
+        - Opcode:    DW_LNS_copy
+        - Opcode:    DW_LNS_advance_pc
+          Data:      4
+        - Opcode:    DW_LNS_advance_line
+          SData:     1
+        - Opcode:    DW_LNS_copy
+        - Opcode:    DW_LNS_advance_pc
+          Data:      4
+        - Opcode:    DW_LNS_extended_op
+          ExtLen:    1
+          SubOpcode: DW_LNE_end_sequence
+
+#--- perfscript
+PERF_RECORD_MMAP2 1/1: [0x700000000000(0x3000) @ 0 00:00 0 0]: r-xp /tmp/code-address-order.exe
+700000001010 0x700000001010/0x700000001000/P/-/-/0 0x700000001010/0x700000001000/P/-/-/0
+700000002010 0x700000002010/0x700000002000/P/-/-/0 0x700000002010/0x700000002000/P/-/-/0
