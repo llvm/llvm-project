@@ -1046,8 +1046,10 @@ struct ForOpTensorCastFolder : public OpRewritePattern<ForOp> {
         continue;
       if (!std::get<1>(it).hasOneUse())
         continue;
-      // The fold casts the yielded value to the static type, which is only
-      // valid if every iteration yields a value of that type.
+      // The fold casts the yielded value to the cast's source type, which is
+      // only valid if every iteration yields a value of that type. A dynamic
+      // dimension of that type stays dynamic, so its size may still change
+      // between iterations; only the static sizes are asserted.
       int64_t resultNumber = std::get<1>(it).getResultNumber();
       auto yieldedCast =
           op.getYieldedValues()[resultNumber].getDefiningOp<tensor::CastOp>();
