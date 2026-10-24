@@ -6238,6 +6238,19 @@ void SemaHLSL::handleGlobalStructOrArrayOfWithResources(VarDecl *VD) {
 }
 
 void SemaHLSL::ActOnVariableDeclarator(VarDecl *VD) {
+  // Variable templates are handled when their specializations are
+  // instantiated.
+  if (VD->getDescribedVarTemplate() ||
+      isa<VarTemplatePartialSpecializationDecl>(VD))
+    return;
+
+  // An explicit specialization cannot have a storage class of its own, so it is
+  // static if the variable template it specializes is.
+  if (auto *VTSD = dyn_cast<VarTemplateSpecializationDecl>(VD))
+    if (VTSD->getSpecializedTemplate()->getTemplatedDecl()->getStorageClass() ==
+        SC_Static)
+      VD->setStorageClass(SC_Static);
+
   if (VD->hasGlobalStorage()) {
     // make sure the declaration has a complete type
     if (SemaRef.RequireCompleteType(
