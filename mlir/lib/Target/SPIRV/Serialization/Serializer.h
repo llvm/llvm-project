@@ -479,8 +479,12 @@ private:
   /// Map from type used in SPIR-V module to their <id>s.
   DenseMap<Type, uint32_t> typeIDMap;
 
-  /// Map from constant values to their <id>s.
+  /// Map from scalar constant values to their <id>s.
   DenseMap<Attribute, uint32_t> constIDMap;
+
+  /// Map from composite constant values and types to their <id>s. The same
+  /// attribute can represent constants with different SPIR-V types.
+  DenseMap<std::pair<Attribute, Type>, uint32_t> constCompositeIDMap;
 
   /// Map from a replicated composite constant's value and type to their <id>s.
   DenseMap<std::pair<Attribute, Type>, uint32_t> constCompositeReplicateIDMap;

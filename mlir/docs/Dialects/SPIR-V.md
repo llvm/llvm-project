@@ -180,6 +180,11 @@ instructions are represented in the SPIR-V dialect:
     generate SSA values. Instead they have symbols and should be referenced via
     symbols. To use global variables in a function block, `spirv.mlir.addressof` is
     needed to turn the symbol into an SSA value.
+*   A global variable can have an initializer, which is either the symbol of a
+    specialization constant or the value of a normal constant. Normal constants
+    are not placed in `spirv.module`'s region and have no symbols, so the value
+    is attached to the `spirv.GlobalVariable` op as an attribute, following the
+    same rules as the value of `spirv.Constant`.
 *   Specialization constants are defined with the `spirv.SpecConstant` op. Similar
     to global variables, they do not generate SSA values and have symbols for
     reference, too. `spirv.mlir.referenceof` is needed to turn the symbol into an SSA
@@ -1142,7 +1147,8 @@ the representational differences between SPIR-V dialect and binary format:
 *   Types are serialized into `OpType*` instructions in the SPIR-V binary module
     section for types, constants, and global variables.
 *   `spirv.Constant`s are unified and placed in the SPIR-V binary module section
-    for types, constants, and global variables.
+    for types, constants, and global variables. So are the constant values used
+    as initializers of `spirv.GlobalVariable`s.
 *   Attributes on ops, if not part of the op's binary encoding, are emitted as
     `OpDecorate*` instructions in the SPIR-V binary module section for
     decorations.
@@ -1158,7 +1164,8 @@ Similarly, a few transformations are performed during deserialization:
     on `spirv.module`.
 *   `OpType*` instructions will be converted into proper `mlir::Type`s.
 *   `OpConstant*` instructions are materialized as `spirv.Constant` at each use
-    site.
+    site. When used as the initializer of a module-level `OpVariable`, their
+    value becomes the initializer of the `spirv.GlobalVariable` op instead.
 *   `OpVariable` instructions will be converted to `spirv.GlobalVariable` ops if
     in module-level; otherwise they will be converted into `spirv.Variable` ops.
 *   Every use of a module-level `OpVariable` instruction will materialize a

@@ -743,21 +743,31 @@ Serializer::processGlobalVariableOp(spirv::GlobalVariableOp varOp) {
 
   // Encode initialization.
   StringRef initAttrName = varOp.getInitializerAttrName().getValue();
-  if (std::optional<StringRef> initSymbolName = varOp.getInitializer()) {
+  if (Attribute initializer = varOp.getInitializerAttr()) {
     uint32_t initializerID = 0;
-    FlatSymbolRefAttr initRef = varOp.getInitializerAttr();
-    Operation *initOp = SymbolTable::lookupNearestSymbolFrom(
-        varOp->getParentOp(), initRef.getAttr());
+    if (auto initRef = dyn_cast<FlatSymbolRefAttr>(initializer)) {
+      StringRef initSymbolName = initRef.getValue();
+      Operation *initOp = SymbolTable::lookupNearestSymbolFrom(
+          varOp->getParentOp(), initRef.getAttr());
 
-    // Check if initializer is GlobalVariable or SpecConstant* cases.
-    if (isa<spirv::GlobalVariableOp>(initOp))
-      initializerID = getVariableID(*initSymbolName);
-    else
-      initializerID = getSpecConstID(*initSymbolName);
+      // Check if initializer is GlobalVariable or SpecConstant* cases.
+      if (isa<spirv::GlobalVariableOp>(initOp))
+        initializerID = getVariableID(initSymbolName);
+      else
+        initializerID = getSpecConstID(initSymbolName);
 
-    if (!initializerID)
-      return emitError(varOp.getLoc(),
-                       "invalid usage of undefined variable as initializer");
+      if (!initializerID)
+        return emitError(varOp.getLoc(),
+                         "invalid usage of undefined variable as initializer");
+    } else {
+      // The initializer is the value of a normal constant, whose type is the
+      // pointee type of the variable.
+      Type pointeeType =
+          cast<spirv::PointerType>(varOp.getType()).getPointeeType();
+      initializerID = prepareConstant(varOp.getLoc(), pointeeType, initializer);
+      if (!initializerID)
+        return failure();
+    }
 
     operands.push_back(initializerID);
     elidedAttrs.push_back(initAttrName);

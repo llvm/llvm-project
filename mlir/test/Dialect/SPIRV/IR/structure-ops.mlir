@@ -642,12 +642,25 @@ spirv.module Logical GLSL450 {
   spirv.GlobalVariable @var0 : !spirv.ptr<f32, Input>
 }
 
-// TODO: Fix test case after initialization with normal constant is addressed
-// spirv.module Logical GLSL450 {
-//   %0 = spirv.Constant 4.0 : f32
-//   COM: CHECK: spirv.Variable init(%0) : !spirv.ptr<f32, Private>
-//   spirv.GlobalVariable @var1 init(%0) : !spirv.ptr<f32, Private>
-// }
+// -----
+
+// Allow normal constants as initializers
+spirv.module Logical GLSL450 {
+  // CHECK: spirv.GlobalVariable @var0 initializer(4.000000e+00 : f32) : !spirv.ptr<f32, Private>
+  spirv.GlobalVariable @var0 initializer(4.0 : f32) : !spirv.ptr<f32, Private>
+  // CHECK: spirv.GlobalVariable @var1 initializer(42 : i32) : !spirv.ptr<i32, Private>
+  spirv.GlobalVariable @var1 initializer(42 : i32) : !spirv.ptr<i32, Private>
+  // CHECK: spirv.GlobalVariable @var2 initializer(true) : !spirv.ptr<i1, Private>
+  spirv.GlobalVariable @var2 initializer(true) : !spirv.ptr<i1, Private>
+  // CHECK: spirv.GlobalVariable @var3 initializer(dense<[1, 2, 3]> : vector<3xi32>) : !spirv.ptr<vector<3xi32>, Private>
+  spirv.GlobalVariable @var3 initializer(dense<[1, 2, 3]> : vector<3xi32>) : !spirv.ptr<vector<3xi32>, Private>
+  // CHECK: spirv.GlobalVariable @var4 initializer([1 : i32, 2 : i32, 3 : i32, 4 : i32]) : !spirv.ptr<!spirv.array<4 x i32>, Private>
+  spirv.GlobalVariable @var4 initializer([1 : i32, 2 : i32, 3 : i32, 4 : i32]) : !spirv.ptr<!spirv.array<4 x i32>, Private>
+  // CHECK: spirv.GlobalVariable @var5 initializer(dense<[1, 2, 3, 4]> : tensor<4xi32>) : !spirv.ptr<!spirv.array<4 x i32>, Private>
+  spirv.GlobalVariable @var5 initializer(dense<[1, 2, 3, 4]> : tensor<4xi32>) : !spirv.ptr<!spirv.array<4 x i32>, Private>
+  // CHECK: spirv.GlobalVariable @var6 initializer([1 : i32, 2.000000e+00 : f32]) : !spirv.ptr<!spirv.struct<(i32, f32)>, Private>
+  spirv.GlobalVariable @var6 initializer([1 : i32, 2.0 : f32]) : !spirv.ptr<!spirv.struct<(i32, f32)>, Private>
+}
 
 // -----
 
@@ -684,12 +697,12 @@ spirv.module Logical GLSL450 {
   spirv.GlobalVariable @var0 bind(1, 2) : !spirv.ptr<f32, Uniform>
 }
 
-// TODO: Fix test case after initialization with constant is addressed
-// spirv.module Logical GLSL450 {
-//   %0 = spirv.Constant 4.0 : f32
-//   COM: CHECK: spirv.GlobalVariable @var1 initializer(%0) {binding = 5 : i32} : !spirv.ptr<f32, Private>
-//   spirv.GlobalVariable @var1 initializer(%0) {binding = 5 : i32} : !spirv.ptr<f32, Private>
-// }
+// -----
+
+spirv.module Logical GLSL450 {
+  // CHECK: spirv.GlobalVariable @var1 initializer(4.000000e+00 : f32) bind(0, 5) : !spirv.ptr<f32, Private>
+  spirv.GlobalVariable @var1 initializer(4.0 : f32) bind(0, 5) : !spirv.ptr<f32, Private>
+}
 
 // -----
 
@@ -745,6 +758,55 @@ spirv.module Logical GLSL450 {
 // -----
 
 spirv.module Logical GLSL450 {
+  // expected-error @+1 {{pointee type ('i32') does not match value type ('i64')}}
+  spirv.GlobalVariable @var0 initializer(42) : !spirv.ptr<i32, Private>
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+  // expected-error @+1 {{pointee type ('f32') does not match value type ('i32')}}
+  spirv.GlobalVariable @var0 initializer(42 : i32) : !spirv.ptr<f32, Private>
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+  // expected-error @+1 {{pointee or element type ('vector<3xi32>') does not match value type ('vector<4xi32>')}}
+  spirv.GlobalVariable @var0 initializer(dense<[1, 2, 3, 4]> : vector<4xi32>) : !spirv.ptr<vector<3xi32>, Private>
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+  // expected-error @+1 {{pointee number of elements (4) does not match value number of elements (3)}}
+  spirv.GlobalVariable @var0 initializer(dense<[1, 2, 3]> : tensor<3xi32>) : !spirv.ptr<!spirv.array<4 x i32>, Private>
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+  // expected-error @+1 {{pointee type ('i32') does not match value type ('f32')}}
+  spirv.GlobalVariable @var0 initializer([1 : i32, 2.0 : f32]) : !spirv.ptr<!spirv.array<2 x i32>, Private>
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+  // expected-error @+1 {{must have spirv.array or spirv.struct pointee type for array value}}
+  spirv.GlobalVariable @var0 initializer([1 : i32, 2 : i32]) : !spirv.ptr<vector<2xi32>, Private>
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+  // expected-error @+1 {{cannot have attribute: unit}}
+  spirv.GlobalVariable @var0 initializer(unit) : !spirv.ptr<i32, Private>
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
   // expected-error @+1 {{storage class cannot be 'Generic'}}
   spirv.GlobalVariable @var0 : !spirv.ptr<f32, Generic>
 }
@@ -762,6 +824,18 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
   spirv.SpecConstant @sc = 1.0 : f32
   // expected-error @+1 {{op with Import linkage type must not have an initializer}}
   spirv.GlobalVariable @var0 initializer(@sc) {
+    linkage_attributes = #spirv.linkage_attributes<
+      linkage_name = "importedVar",
+      linkage_type = <Import>
+    >
+  } : !spirv.ptr<f32, Private>
+}
+
+// -----
+
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
+  // expected-error @+1 {{op with Import linkage type must not have an initializer}}
+  spirv.GlobalVariable @var0 initializer(1.0 : f32) {
     linkage_attributes = #spirv.linkage_attributes<
       linkage_name = "importedVar",
       linkage_type = <Import>
@@ -1371,4 +1445,25 @@ spirv.module Logical GLSL450 {
 
     spirv.Return
   }
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+  // expected-error @+1 {{number of constituents (1) does not match number of array elements (2)}}
+  spirv.GlobalVariable @short initializer([1 : i32]) : !spirv.ptr<!spirv.array<2 x i32>, Private>
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+  // expected-error @+1 {{number of constituents (3) does not match number of array elements (2)}}
+  spirv.GlobalVariable @long initializer([1 : i32, 2 : i32, 3 : i32]) : !spirv.ptr<!spirv.array<2 x i32>, Private>
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+  // expected-error @+1 {{number of constituents (1) does not match number of array elements (2)}}
+  spirv.GlobalVariable @nested initializer([[1 : i32]]) : !spirv.ptr<!spirv.array<1 x !spirv.array<2 x i32>>, Private>
 }

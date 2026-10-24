@@ -878,8 +878,8 @@ public:
   LogicalResult
   matchAndRewrite(spirv::GlobalVariableOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    // Currently, there is no support of initialization with a constant value in
-    // SPIR-V dialect. Specialization constants are not considered as well.
+    // Currently, initialization is not supported, be it with a constant value
+    // or with a specialization constant.
     if (op.getInitializer())
       return failure();
 
