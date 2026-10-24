@@ -4,7 +4,18 @@
 
 #include <cstdio>
 
+#if defined(__OpenBSD__)
+// OpenBSD's libedit provides the readline compatibility API but does not
+// install <editline/readline.h>, and <readline/readline.h> is GNU readline.
+extern "C" {
+char *readline(const char *);
+int add_history(const char *);
+extern FILE *rl_instream;
+extern FILE *rl_outstream;
+}
+#else
 #include <editline/readline.h>
+#endif
 
 // Simple implementation of the Python readline module using libedit.
 // In the event that libedit is excluded from the build, this turns
@@ -34,9 +45,10 @@ static struct PyModuleDef readline_module = {
     nullptr,               // m_free
 };
 
-static char *simple_readline(FILE *stdin, FILE *stdout, const char *prompt) {
-  rl_instream = stdin;
-  rl_outstream = stdout;
+static char *simple_readline(FILE *sys_stdin, FILE *sys_stdout,
+                             const char *prompt) {
+  rl_instream = sys_stdin;
+  rl_outstream = sys_stdout;
   char *line = readline(prompt);
   if (!line) {
     char *ret = (char *)PyMem_RawMalloc(1);
