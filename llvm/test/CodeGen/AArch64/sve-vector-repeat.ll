@@ -66,9 +66,7 @@ define <vscale x 16 x i8> @repeat_wide_i16(<8 x i16> %a.lo, <8 x i16> %a.hi) {
 ; CHECK-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    mov z1.q, q2
 ; CHECK-NEXT:    mov z0.q, q0
-; CHECK-NEXT:    zip2 z2.h, z0.h, z1.h
-; CHECK-NEXT:    zip1 z0.h, z0.h, z1.h
-; CHECK-NEXT:    uzp1 z0.b, z0.b, z2.b
+; CHECK-NEXT:    trn1 z0.b, z0.b, z1.b
 ; CHECK-NEXT:    ret
   %a = shufflevector <8 x i16> %a.lo, <8 x i16> %a.hi,
                      <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -192,9 +190,7 @@ define <vscale x 4 x i32> @repeat_v4i64_to_nxv4i64(<vscale x 2 x i64> %a.legal) 
 ; CHECK-NEXT:    zip1 v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    mov z1.q, q2
 ; CHECK-NEXT:    mov z0.q, q0
-; CHECK-NEXT:    zip2 z2.d, z0.d, z1.d
-; CHECK-NEXT:    zip1 z0.d, z0.d, z1.d
-; CHECK-NEXT:    uzp1 z0.s, z0.s, z2.s
+; CHECK-NEXT:    trn1 z0.s, z0.s, z1.s
 ; CHECK-NEXT:    ret
   %a = call <4 x i64> @llvm.vector.extract.v4i64.nxv2i64(<vscale x 2 x i64> %a.legal, i64 0)
   %r = call <vscale x 4 x i64> @llvm.vector.repeat.nxv4i64.v4i64(<4 x i64> %a)
