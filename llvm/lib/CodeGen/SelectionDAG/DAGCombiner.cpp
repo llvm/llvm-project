@@ -10027,6 +10027,32 @@ static std::optional<bool> isBigEndian(ArrayRef<int64_t> ByteOffsets,
   return BigEndian;
 }
 
+
+
+// Check if the byte offsets match a rotated little-endian load.
+// Returns the rotation amount in bytes if matched.
+static std::optional<unsigned> isRotatedLoad(ArrayRef<int64_t> ByteOffsets,
+                                             int64_t FirstOffset) {
+  unsigned Width = ByteOffsets.size();
+  if (Width < 2)
+    return std::nullopt;
+
+  int64_t FirstByteOffset = ByteOffsets[0] - FirstOffset;
+  if (FirstByteOffset <= 0 || FirstByteOffset >= Width)
+    return std::nullopt;
+
+  unsigned Rot = FirstByteOffset;
+  for (unsigned i = 0; i < Width; i++) {
+    int64_t CurrentByteOffset = ByteOffsets[i] - FirstOffset;
+    if (CurrentByteOffset != (int64_t)((i + Rot) % Width))
+      return std::nullopt;
+  }
+
+  return Rot;
+}
+
+
+
 // Look through one layer of truncate or extend.
 static SDValue stripTruncAndExt(SDValue Value) {
   switch (Value.getOpcode()) {
@@ -10405,8 +10431,14 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
   // little endian value load
   std::optional<bool> IsBigEndian = isBigEndian(
       ArrayRef(ByteOffsets).drop_back(ZeroExtendedBytes), FirstOffset);
-  if (!IsBigEndian)
-    return SDValue();
+  std::optional<unsigned> RotatedBytes;
+  if (!IsBigEndian) {
+    if (!IsBigEndianTarget && ZeroExtendedBytes == 0)
+      RotatedBytes = isRotatedLoad(ByteOffsets, FirstOffset);
+    if (!RotatedBytes)
+      return SDValue();
+  }
+
 
   assert(FirstByteProvider && "must be set");
 
@@ -10431,7 +10463,7 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
   // needed.
 
   // If the load needs byte swap check if the target supports it
-  bool NeedsBswap = IsBigEndianTarget != *IsBigEndian;
+   bool NeedsBswap = IsBigEndian && (IsBigEndianTarget != *IsBigEndian);
 
   // Before legalize we can introduce illegal bswaps which will be later
   // converted to an explicit bswap sequence. This way we end up with a single
@@ -10441,6 +10473,12 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
   if (NeedsBswap && (LegalOperations || NeedsZext) &&
       !TLI.isOperationLegal(ISD::BSWAP, VT))
     return SDValue();
+
+
+  if (RotatedBytes && LegalOperations &&
+    !TLI.isOperationLegalOrCustom(ISD::ROTR, VT))
+  return SDValue();
+
 
   // If we need to bswap and zero extend, we have to insert a shift. Check that
   // it is legal.
@@ -10475,6 +10513,15 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
     CombinedMask |= (uint64_t)ByteMasks[i] << (i * 8);
     if (ByteMasks[i] != 0xFF)
       HasPartialMask = true;
+  }
+
+  if (RotatedBytes) {
+    SDValue RotAmt = DAG.getShiftAmountConstant(*RotatedBytes * 8, VT, SDLoc(N));
+    SDValue Result = DAG.getNode(ISD::ROTR, SDLoc(N), VT, NewLoad, RotAmt);
+    if (HasPartialMask)
+      Result = DAG.getNode(ISD::AND, SDLoc(N), VT, Result,
+                          DAG.getConstant(CombinedMask, SDLoc(N), VT));
+    return Result;
   }
 
   if (!NeedsBswap) {
