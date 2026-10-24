@@ -2657,7 +2657,10 @@ BasicBlock *llvm::changeToInvokeAndSplitBasicBlock(CallInst *CI,
   II->setDebugLoc(CI->getDebugLoc());
   II->setCallingConv(CI->getCallingConv());
   II->setAttributes(CI->getAttributes());
-  II->setMetadata(LLVMContext::MD_prof, CI->getMetadata(LLVMContext::MD_prof));
+  // Some call metadata, such as !tbaa, is not valid on invokes.
+  II->copyMetadata(*CI, {LLVMContext::MD_prof, LLVMContext::MD_alias_scope,
+                         LLVMContext::MD_noalias, LLVMContext::MD_access_group,
+                         LLVMContext::MD_mem_parallel_loop_access});
 
   if (DTU)
     DTU->applyUpdates({{DominatorTree::Insert, BB, UnwindEdge}});
