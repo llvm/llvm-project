@@ -30,9 +30,9 @@ define amdgpu_kernel void @uniform_conditional_max_short_forward_branch(ptr addr
 ; GCN-NEXT:    s_cbranch_scc1 .LBB0_2
 ; GCN-NEXT:  ; %bb.1: ; %bb2
 ; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:    v_nop
-; GCN-NEXT:    v_nop
-; GCN-NEXT:    v_nop
+; GCN-NEXT:    v_nop_e64
+; GCN-NEXT:    v_nop_e64
+; GCN-NEXT:    v_nop_e64
 ; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:    s_sleep 0
 ; GCN-NEXT:  .LBB0_2: ; %bb3
@@ -61,9 +61,9 @@ define amdgpu_kernel void @uniform_conditional_max_short_forward_branch(ptr addr
 ; GFX11-NEXT:    s_setpc_b64 s[2:3]
 ; GFX11-NEXT:  .LBB0_1: ; %bb2
 ; GFX11-NEXT:    ;;#ASMSTART
-; GFX11-NEXT:    v_nop
-; GFX11-NEXT:    v_nop
-; GFX11-NEXT:    v_nop
+; GFX11-NEXT:    v_nop_e64
+; GFX11-NEXT:    v_nop_e64
+; GFX11-NEXT:    v_nop_e64
 ; GFX11-NEXT:    ;;#ASMEND
 ; GFX11-NEXT:    s_sleep 0
 ; GFX11-NEXT:  .LBB0_2: ; %bb3
@@ -91,9 +91,9 @@ define amdgpu_kernel void @uniform_conditional_max_short_forward_branch(ptr addr
 ; GFX12-NEXT:    s_setpc_b64 s[2:3]
 ; GFX12-NEXT:  .LBB0_1: ; %bb2
 ; GFX12-NEXT:    ;;#ASMSTART
-; GFX12-NEXT:    v_nop
-; GFX12-NEXT:    v_nop
-; GFX12-NEXT:    v_nop
+; GFX12-NEXT:    v_nop_e64
+; GFX12-NEXT:    v_nop_e64
+; GFX12-NEXT:    v_nop_e64
 ; GFX12-NEXT:    ;;#ASMEND
 ; GFX12-NEXT:    s_sleep 0
 ; GFX12-NEXT:  .LBB0_2: ; %bb3
@@ -136,10 +136,10 @@ define amdgpu_kernel void @uniform_conditional_min_long_forward_branch(ptr addrs
 ; GCN-NEXT:    s_setpc_b64 s[2:3]
 ; GCN-NEXT:  .LBB1_1: ; %bb2
 ; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:    v_nop
-; GCN-NEXT:    v_nop
-; GCN-NEXT:    v_nop
-; GCN-NEXT:    v_nop
+; GCN-NEXT:    v_nop_e64
+; GCN-NEXT:    v_nop_e64
+; GCN-NEXT:    v_nop_e64
+; GCN-NEXT:    v_nop_e64
 ; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:  .LBB1_2: ; %bb3
 ; GCN-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x9
@@ -167,10 +167,10 @@ define amdgpu_kernel void @uniform_conditional_min_long_forward_branch(ptr addrs
 ; GFX11-NEXT:    s_setpc_b64 s[2:3]
 ; GFX11-NEXT:  .LBB1_1: ; %bb2
 ; GFX11-NEXT:    ;;#ASMSTART
-; GFX11-NEXT:    v_nop
-; GFX11-NEXT:    v_nop
-; GFX11-NEXT:    v_nop
-; GFX11-NEXT:    v_nop
+; GFX11-NEXT:    v_nop_e64
+; GFX11-NEXT:    v_nop_e64
+; GFX11-NEXT:    v_nop_e64
+; GFX11-NEXT:    v_nop_e64
 ; GFX11-NEXT:    ;;#ASMEND
 ; GFX11-NEXT:  .LBB1_2: ; %bb3
 ; GFX11-NEXT:    s_load_b64 s[2:3], s[4:5], 0x24
@@ -197,10 +197,10 @@ define amdgpu_kernel void @uniform_conditional_min_long_forward_branch(ptr addrs
 ; GFX12-NEXT:    s_setpc_b64 s[2:3]
 ; GFX12-NEXT:  .LBB1_1: ; %bb2
 ; GFX12-NEXT:    ;;#ASMSTART
-; GFX12-NEXT:    v_nop
-; GFX12-NEXT:    v_nop
-; GFX12-NEXT:    v_nop
-; GFX12-NEXT:    v_nop
+; GFX12-NEXT:    v_nop_e64
+; GFX12-NEXT:    v_nop_e64
+; GFX12-NEXT:    v_nop_e64
+; GFX12-NEXT:    v_nop_e64
 ; GFX12-NEXT:    ;;#ASMEND
 ; GFX12-NEXT:  .LBB1_2: ; %bb3
 ; GFX12-NEXT:    s_load_b64 s[2:3], s[4:5], 0x24
@@ -242,11 +242,11 @@ define amdgpu_kernel void @uniform_conditional_min_long_forward_vcnd_branch(ptr 
 ; GCN-NEXT:    s_setpc_b64 s[2:3]
 ; GCN-NEXT:  .LBB2_1: ; %bb2
 ; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:     ; 32 bytes
-; GCN-NEXT:    v_nop
-; GCN-NEXT:    v_nop
-; GCN-NEXT:    v_nop
-; GCN-NEXT:    v_nop
+; GCN-NEXT:    ; 32 bytes
+; GCN-NEXT:    v_nop_e64
+; GCN-NEXT:    v_nop_e64
+; GCN-NEXT:    v_nop_e64
+; GCN-NEXT:    v_nop_e64
 ; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:  .LBB2_2: ; %bb3
 ; GCN-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x9
@@ -274,11 +274,11 @@ define amdgpu_kernel void @uniform_conditional_min_long_forward_vcnd_branch(ptr 
 ; GFX11-NEXT:    s_setpc_b64 s[2:3]
 ; GFX11-NEXT:  .LBB2_1: ; %bb2
 ; GFX11-NEXT:    ;;#ASMSTART
-; GFX11-NEXT:     ; 32 bytes
-; GFX11-NEXT:    v_nop
-; GFX11-NEXT:    v_nop
-; GFX11-NEXT:    v_nop
-; GFX11-NEXT:    v_nop
+; GFX11-NEXT:    ; 32 bytes
+; GFX11-NEXT:    v_nop_e64
+; GFX11-NEXT:    v_nop_e64
+; GFX11-NEXT:    v_nop_e64
+; GFX11-NEXT:    v_nop_e64
 ; GFX11-NEXT:    ;;#ASMEND
 ; GFX11-NEXT:  .LBB2_2: ; %bb3
 ; GFX11-NEXT:    s_load_b64 s[2:3], s[4:5], 0x24
@@ -305,11 +305,11 @@ define amdgpu_kernel void @uniform_conditional_min_long_forward_vcnd_branch(ptr 
 ; GFX12-NEXT:    s_setpc_b64 s[2:3]
 ; GFX12-NEXT:  .LBB2_1: ; %bb2
 ; GFX12-NEXT:    ;;#ASMSTART
-; GFX12-NEXT:     ; 32 bytes
-; GFX12-NEXT:    v_nop
-; GFX12-NEXT:    v_nop
-; GFX12-NEXT:    v_nop
-; GFX12-NEXT:    v_nop
+; GFX12-NEXT:    ; 32 bytes
+; GFX12-NEXT:    v_nop_e64
+; GFX12-NEXT:    v_nop_e64
+; GFX12-NEXT:    v_nop_e64
+; GFX12-NEXT:    v_nop_e64
 ; GFX12-NEXT:    ;;#ASMEND
 ; GFX12-NEXT:  .LBB2_2: ; %bb3
 ; GFX12-NEXT:    s_load_b64 s[2:3], s[4:5], 0x24
@@ -360,11 +360,11 @@ define amdgpu_kernel void @min_long_forward_vbranch(ptr addrspace(1) %arg) #0 {
 ; GCN-NEXT:    s_setpc_b64 s[4:5]
 ; GCN-NEXT:  .LBB3_1: ; %bb2
 ; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:     ; 32 bytes
-; GCN-NEXT:    v_nop
-; GCN-NEXT:    v_nop
-; GCN-NEXT:    v_nop
-; GCN-NEXT:    v_nop
+; GCN-NEXT:    ; 32 bytes
+; GCN-NEXT:    v_nop_e64
+; GCN-NEXT:    v_nop_e64
+; GCN-NEXT:    v_nop_e64
+; GCN-NEXT:    v_nop_e64
 ; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:  .LBB3_2: ; %bb3
 ; GCN-NEXT:    s_or_b64 exec, exec, s[0:1]
@@ -398,11 +398,11 @@ define amdgpu_kernel void @min_long_forward_vbranch(ptr addrspace(1) %arg) #0 {
 ; GFX11-NEXT:    s_setpc_b64 s[2:3]
 ; GFX11-NEXT:  .LBB3_1: ; %bb2
 ; GFX11-NEXT:    ;;#ASMSTART
-; GFX11-NEXT:     ; 32 bytes
-; GFX11-NEXT:    v_nop
-; GFX11-NEXT:    v_nop
-; GFX11-NEXT:    v_nop
-; GFX11-NEXT:    v_nop
+; GFX11-NEXT:    ; 32 bytes
+; GFX11-NEXT:    v_nop_e64
+; GFX11-NEXT:    v_nop_e64
+; GFX11-NEXT:    v_nop_e64
+; GFX11-NEXT:    v_nop_e64
 ; GFX11-NEXT:    ;;#ASMEND
 ; GFX11-NEXT:  .LBB3_2: ; %bb3
 ; GFX11-NEXT:    s_or_b64 exec, exec, s[0:1]
@@ -435,11 +435,11 @@ define amdgpu_kernel void @min_long_forward_vbranch(ptr addrspace(1) %arg) #0 {
 ; GFX12-NEXT:    s_setpc_b64 s[2:3]
 ; GFX12-NEXT:  .LBB3_1: ; %bb2
 ; GFX12-NEXT:    ;;#ASMSTART
-; GFX12-NEXT:     ; 32 bytes
-; GFX12-NEXT:    v_nop
-; GFX12-NEXT:    v_nop
-; GFX12-NEXT:    v_nop
-; GFX12-NEXT:    v_nop
+; GFX12-NEXT:    ; 32 bytes
+; GFX12-NEXT:    v_nop_e64
+; GFX12-NEXT:    v_nop_e64
+; GFX12-NEXT:    v_nop_e64
+; GFX12-NEXT:    v_nop_e64
 ; GFX12-NEXT:    ;;#ASMEND
 ; GFX12-NEXT:  .LBB3_2: ; %bb3
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
@@ -477,9 +477,9 @@ define amdgpu_kernel void @long_backward_sbranch(ptr addrspace(1) %arg) #0 {
 ; GCN-NEXT:    s_add_i32 s0, s0, 1
 ; GCN-NEXT:    s_cmp_lt_i32 s0, 10
 ; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:    v_nop
-; GCN-NEXT:    v_nop
-; GCN-NEXT:    v_nop
+; GCN-NEXT:    v_nop_e64
+; GCN-NEXT:    v_nop_e64
+; GCN-NEXT:    v_nop_e64
 ; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:    s_cbranch_scc0 .LBB4_2
 ; GCN-NEXT:  ; %bb.3: ; %bb2
@@ -501,9 +501,9 @@ define amdgpu_kernel void @long_backward_sbranch(ptr addrspace(1) %arg) #0 {
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_add_i32 s0, s0, 1
 ; GFX11-NEXT:    ;;#ASMSTART
-; GFX11-NEXT:    v_nop
-; GFX11-NEXT:    v_nop
-; GFX11-NEXT:    v_nop
+; GFX11-NEXT:    v_nop_e64
+; GFX11-NEXT:    v_nop_e64
+; GFX11-NEXT:    v_nop_e64
 ; GFX11-NEXT:    ;;#ASMEND
 ; GFX11-NEXT:    s_cmp_lt_i32 s0, 10
 ; GFX11-NEXT:    s_cbranch_scc0 .LBB4_2
@@ -527,9 +527,9 @@ define amdgpu_kernel void @long_backward_sbranch(ptr addrspace(1) %arg) #0 {
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_add_co_i32 s0, s0, 1
 ; GFX12-NEXT:    ;;#ASMSTART
-; GFX12-NEXT:    v_nop
-; GFX12-NEXT:    v_nop
-; GFX12-NEXT:    v_nop
+; GFX12-NEXT:    v_nop_e64
+; GFX12-NEXT:    v_nop_e64
+; GFX12-NEXT:    v_nop_e64
 ; GFX12-NEXT:    ;;#ASMEND
 ; GFX12-NEXT:    s_cmp_lt_i32 s0, 10
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB4_2
@@ -592,10 +592,10 @@ define amdgpu_kernel void @uniform_unconditional_min_long_forward_branch(ptr add
 ; GCN-NEXT:    s_setpc_b64 s[0:1]
 ; GCN-NEXT:  .LBB5_2: ; %bb3
 ; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:    v_nop
-; GCN-NEXT:    v_nop
-; GCN-NEXT:    v_nop
-; GCN-NEXT:    v_nop
+; GCN-NEXT:    v_nop_e64
+; GCN-NEXT:    v_nop_e64
+; GCN-NEXT:    v_nop_e64
+; GCN-NEXT:    v_nop_e64
 ; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:  .LBB5_3: ; %bb4
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
@@ -628,10 +628,10 @@ define amdgpu_kernel void @uniform_unconditional_min_long_forward_branch(ptr add
 ; GFX11-NEXT:    s_setpc_b64 s[0:1]
 ; GFX11-NEXT:  .LBB5_2: ; %bb3
 ; GFX11-NEXT:    ;;#ASMSTART
-; GFX11-NEXT:    v_nop
-; GFX11-NEXT:    v_nop
-; GFX11-NEXT:    v_nop
-; GFX11-NEXT:    v_nop
+; GFX11-NEXT:    v_nop_e64
+; GFX11-NEXT:    v_nop_e64
+; GFX11-NEXT:    v_nop_e64
+; GFX11-NEXT:    v_nop_e64
 ; GFX11-NEXT:    ;;#ASMEND
 ; GFX11-NEXT:  .LBB5_3: ; %bb4
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
@@ -662,10 +662,10 @@ define amdgpu_kernel void @uniform_unconditional_min_long_forward_branch(ptr add
 ; GFX12-NEXT:    s_setpc_b64 s[0:1]
 ; GFX12-NEXT:  .LBB5_2: ; %bb3
 ; GFX12-NEXT:    ;;#ASMSTART
-; GFX12-NEXT:    v_nop
-; GFX12-NEXT:    v_nop
-; GFX12-NEXT:    v_nop
-; GFX12-NEXT:    v_nop
+; GFX12-NEXT:    v_nop_e64
+; GFX12-NEXT:    v_nop_e64
+; GFX12-NEXT:    v_nop_e64
+; GFX12-NEXT:    v_nop_e64
 ; GFX12-NEXT:    ;;#ASMEND
 ; GFX12-NEXT:  .LBB5_3: ; %bb4
 ; GFX12-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
@@ -703,10 +703,10 @@ define amdgpu_kernel void @uniform_unconditional_min_long_backward_branch(ptr ad
 ; GCN-NEXT:  .LBB6_1: ; %loop
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:    v_nop
-; GCN-NEXT:    v_nop
-; GCN-NEXT:    v_nop
-; GCN-NEXT:    v_nop
+; GCN-NEXT:    v_nop_e64
+; GCN-NEXT:    v_nop_e64
+; GCN-NEXT:    v_nop_e64
+; GCN-NEXT:    v_nop_e64
 ; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:    s_mov_b64 vcc, vcc
 ; GCN-NEXT:    s_cbranch_vccz .LBB6_2
@@ -727,10 +727,10 @@ define amdgpu_kernel void @uniform_unconditional_min_long_backward_branch(ptr ad
 ; GFX11-NEXT:  .LBB6_1: ; %loop
 ; GFX11-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX11-NEXT:    ;;#ASMSTART
-; GFX11-NEXT:    v_nop
-; GFX11-NEXT:    v_nop
-; GFX11-NEXT:    v_nop
-; GFX11-NEXT:    v_nop
+; GFX11-NEXT:    v_nop_e64
+; GFX11-NEXT:    v_nop_e64
+; GFX11-NEXT:    v_nop_e64
+; GFX11-NEXT:    v_nop_e64
 ; GFX11-NEXT:    ;;#ASMEND
 ; GFX11-NEXT:    s_cbranch_vccz .LBB6_2
 ; GFX11-NEXT:  ; %bb.3: ; %loop
@@ -751,10 +751,10 @@ define amdgpu_kernel void @uniform_unconditional_min_long_backward_branch(ptr ad
 ; GFX12-NEXT:  .LBB6_1: ; %loop
 ; GFX12-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-NEXT:    ;;#ASMSTART
-; GFX12-NEXT:    v_nop
-; GFX12-NEXT:    v_nop
-; GFX12-NEXT:    v_nop
-; GFX12-NEXT:    v_nop
+; GFX12-NEXT:    v_nop_e64
+; GFX12-NEXT:    v_nop_e64
+; GFX12-NEXT:    v_nop_e64
+; GFX12-NEXT:    v_nop_e64
 ; GFX12-NEXT:    ;;#ASMEND
 ; GFX12-NEXT:    s_cbranch_vccz .LBB6_2
 ; GFX12-NEXT:  ; %bb.3: ; %loop
@@ -810,17 +810,17 @@ define amdgpu_kernel void @expand_requires_expand(i32 %cond0) #0 {
 ; GCN-NEXT:    s_setpc_b64 s[0:1]
 ; GCN-NEXT:  .LBB7_2: ; %bb2
 ; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:    v_nop
-; GCN-NEXT:    v_nop
-; GCN-NEXT:    v_nop
-; GCN-NEXT:    v_nop
+; GCN-NEXT:    v_nop_e64
+; GCN-NEXT:    v_nop_e64
+; GCN-NEXT:    v_nop_e64
+; GCN-NEXT:    v_nop_e64
 ; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:  .LBB7_3: ; %bb3
 ; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:    v_nop
+; GCN-NEXT:    v_nop_e64
 ; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:    v_nop
+; GCN-NEXT:    v_nop_e64
 ; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:    s_endpgm
 ;
@@ -845,17 +845,17 @@ define amdgpu_kernel void @expand_requires_expand(i32 %cond0) #0 {
 ; GFX11-NEXT:    s_setpc_b64 s[0:1]
 ; GFX11-NEXT:  .LBB7_2: ; %bb2
 ; GFX11-NEXT:    ;;#ASMSTART
-; GFX11-NEXT:    v_nop
-; GFX11-NEXT:    v_nop
-; GFX11-NEXT:    v_nop
-; GFX11-NEXT:    v_nop
+; GFX11-NEXT:    v_nop_e64
+; GFX11-NEXT:    v_nop_e64
+; GFX11-NEXT:    v_nop_e64
+; GFX11-NEXT:    v_nop_e64
 ; GFX11-NEXT:    ;;#ASMEND
 ; GFX11-NEXT:  .LBB7_3: ; %bb3
 ; GFX11-NEXT:    ;;#ASMSTART
-; GFX11-NEXT:    v_nop
+; GFX11-NEXT:    v_nop_e64
 ; GFX11-NEXT:    ;;#ASMEND
 ; GFX11-NEXT:    ;;#ASMSTART
-; GFX11-NEXT:    v_nop
+; GFX11-NEXT:    v_nop_e64
 ; GFX11-NEXT:    ;;#ASMEND
 ; GFX11-NEXT:    s_endpgm
 ;
@@ -880,17 +880,17 @@ define amdgpu_kernel void @expand_requires_expand(i32 %cond0) #0 {
 ; GFX12-NEXT:    s_setpc_b64 s[0:1]
 ; GFX12-NEXT:  .LBB7_2: ; %bb2
 ; GFX12-NEXT:    ;;#ASMSTART
-; GFX12-NEXT:    v_nop
-; GFX12-NEXT:    v_nop
-; GFX12-NEXT:    v_nop
-; GFX12-NEXT:    v_nop
+; GFX12-NEXT:    v_nop_e64
+; GFX12-NEXT:    v_nop_e64
+; GFX12-NEXT:    v_nop_e64
+; GFX12-NEXT:    v_nop_e64
 ; GFX12-NEXT:    ;;#ASMEND
 ; GFX12-NEXT:  .LBB7_3: ; %bb3
 ; GFX12-NEXT:    ;;#ASMSTART
-; GFX12-NEXT:    v_nop
+; GFX12-NEXT:    v_nop_e64
 ; GFX12-NEXT:    ;;#ASMEND
 ; GFX12-NEXT:    ;;#ASMSTART
-; GFX12-NEXT:    v_nop
+; GFX12-NEXT:    v_nop_e64
 ; GFX12-NEXT:    ;;#ASMEND
 ; GFX12-NEXT:    s_endpgm
 bb0:
@@ -1052,14 +1052,14 @@ define amdgpu_kernel void @analyze_mask_branch() #0 {
 ; GCN-NEXT:  .LBB9_4: ; %loop
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:    v_nop
-; GCN-NEXT:    v_nop
+; GCN-NEXT:    v_nop_e64
+; GCN-NEXT:    v_nop_e64
 ; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:    v_nop
-; GCN-NEXT:    v_nop
-; GCN-NEXT:    v_nop
-; GCN-NEXT:    v_nop
+; GCN-NEXT:    v_nop_e64
+; GCN-NEXT:    v_nop_e64
+; GCN-NEXT:    v_nop_e64
+; GCN-NEXT:    v_nop_e64
 ; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:    s_mov_b64 vcc, vcc
 ; GCN-NEXT:    s_cbranch_vccz .LBB9_5
@@ -1103,14 +1103,14 @@ define amdgpu_kernel void @analyze_mask_branch() #0 {
 ; GFX11-NEXT:  .LBB9_4: ; %loop
 ; GFX11-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX11-NEXT:    ;;#ASMSTART
-; GFX11-NEXT:    v_nop
-; GFX11-NEXT:    v_nop
+; GFX11-NEXT:    v_nop_e64
+; GFX11-NEXT:    v_nop_e64
 ; GFX11-NEXT:    ;;#ASMEND
 ; GFX11-NEXT:    ;;#ASMSTART
-; GFX11-NEXT:    v_nop
-; GFX11-NEXT:    v_nop
-; GFX11-NEXT:    v_nop
-; GFX11-NEXT:    v_nop
+; GFX11-NEXT:    v_nop_e64
+; GFX11-NEXT:    v_nop_e64
+; GFX11-NEXT:    v_nop_e64
+; GFX11-NEXT:    v_nop_e64
 ; GFX11-NEXT:    ;;#ASMEND
 ; GFX11-NEXT:    s_cbranch_vccz .LBB9_5
 ; GFX11-NEXT:  ; %bb.8: ; %loop
@@ -1154,14 +1154,14 @@ define amdgpu_kernel void @analyze_mask_branch() #0 {
 ; GFX12-NEXT:  .LBB9_4: ; %loop
 ; GFX12-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-NEXT:    ;;#ASMSTART
-; GFX12-NEXT:    v_nop
-; GFX12-NEXT:    v_nop
+; GFX12-NEXT:    v_nop_e64
+; GFX12-NEXT:    v_nop_e64
 ; GFX12-NEXT:    ;;#ASMEND
 ; GFX12-NEXT:    ;;#ASMSTART
-; GFX12-NEXT:    v_nop
-; GFX12-NEXT:    v_nop
-; GFX12-NEXT:    v_nop
-; GFX12-NEXT:    v_nop
+; GFX12-NEXT:    v_nop_e64
+; GFX12-NEXT:    v_nop_e64
+; GFX12-NEXT:    v_nop_e64
+; GFX12-NEXT:    v_nop_e64
 ; GFX12-NEXT:    ;;#ASMEND
 ; GFX12-NEXT:    s_cbranch_vccz .LBB9_5
 ; GFX12-NEXT:  ; %bb.8: ; %loop
@@ -1236,10 +1236,10 @@ define amdgpu_kernel void @long_branch_hang(ptr addrspace(1) nocapture %arg, i32
 ; GCN-NEXT:  .LBB10_2: ; %bb13
 ; GCN-NEXT:    s_and_b64 vcc, exec, s[6:7]
 ; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:    v_nop
-; GCN-NEXT:    v_nop
-; GCN-NEXT:    v_nop
-; GCN-NEXT:    v_nop
+; GCN-NEXT:    v_nop_e64
+; GCN-NEXT:    v_nop_e64
+; GCN-NEXT:    v_nop_e64
+; GCN-NEXT:    v_nop_e64
 ; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:    s_cbranch_vccz .LBB10_3
 ; GCN-NEXT:  ; %bb.10: ; %bb13
@@ -1314,10 +1314,10 @@ define amdgpu_kernel void @long_branch_hang(ptr addrspace(1) nocapture %arg, i32
 ; GFX11-NEXT:  .LBB10_2: ; %bb13
 ; GFX11-NEXT:    s_and_b64 vcc, exec, s[6:7]
 ; GFX11-NEXT:    ;;#ASMSTART
-; GFX11-NEXT:    v_nop
-; GFX11-NEXT:    v_nop
-; GFX11-NEXT:    v_nop
-; GFX11-NEXT:    v_nop
+; GFX11-NEXT:    v_nop_e64
+; GFX11-NEXT:    v_nop_e64
+; GFX11-NEXT:    v_nop_e64
+; GFX11-NEXT:    v_nop_e64
 ; GFX11-NEXT:    ;;#ASMEND
 ; GFX11-NEXT:    s_cbranch_vccnz .LBB10_4
 ; GFX11-NEXT:  .LBB10_3: ; %bb14
@@ -1389,10 +1389,10 @@ define amdgpu_kernel void @long_branch_hang(ptr addrspace(1) nocapture %arg, i32
 ; GFX12-NEXT:  .LBB10_2: ; %bb13
 ; GFX12-NEXT:    s_and_b32 vcc_lo, exec_lo, s0
 ; GFX12-NEXT:    ;;#ASMSTART
-; GFX12-NEXT:    v_nop
-; GFX12-NEXT:    v_nop
-; GFX12-NEXT:    v_nop
-; GFX12-NEXT:    v_nop
+; GFX12-NEXT:    v_nop_e64
+; GFX12-NEXT:    v_nop_e64
+; GFX12-NEXT:    v_nop_e64
+; GFX12-NEXT:    v_nop_e64
 ; GFX12-NEXT:    ;;#ASMEND
 ; GFX12-NEXT:    s_cbranch_vccnz .LBB10_4
 ; GFX12-NEXT:  .LBB10_3: ; %bb14
