@@ -11,6 +11,7 @@
 #include "ErrorHandling.h"
 #include "ProfiledBinary.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
@@ -245,6 +246,8 @@ struct UnwindState {
       return It->second.get();
     }
     void recordRangeCount(uint64_t Start, uint64_t End, uint64_t Count) {
+      if (Start > End)
+        return;
       RangeSamples.emplace_back(std::make_tuple(Start, End, Count));
     }
     void recordBranchCount(uint64_t Source, uint64_t Target, uint64_t Count) {
@@ -377,25 +380,32 @@ using BranchSample = std::map<std::pair<uint64_t, uint64_t>, uint64_t>;
 // The counter of range samples for one function indexed by the range,
 // which is represented as the start and end offset pair.
 using RangeSample = std::map<std::pair<uint64_t, uint64_t>, uint64_t>;
-// <<inst-addr, vtable-data-symbol>, count> map for data access samples.
+// <<inst-addr, vtable-data-symbol>, count> map for vtable access samples.
 // The instruction address is the virtual address in the binary.
-using DataAccessSample = std::map<std::pair<uint64_t, StringRef>, uint64_t>;
+using VTableAccessSample = std::map<std::pair<uint64_t, StringRef>, uint64_t>;
+// <data-addr, count> map for data access samples.
+using DataAccessSample = MapVector<uint64_t, uint64_t>;
 // Wrapper for sample counters including range counter and branch counter
 struct SampleCounter {
   RangeSample RangeCounter;
   BranchSample BranchCounter;
+  VTableAccessSample VTableAccessCounter;
   DataAccessSample DataAccessCounter;
 
   void recordRangeCount(uint64_t Start, uint64_t End, uint64_t Repeat) {
-    assert(Start <= End && "Invalid instruction range");
+    if (Start > End)
+      return;
     RangeCounter[{Start, End}] += Repeat;
   }
   void recordBranchCount(uint64_t Source, uint64_t Target, uint64_t Repeat) {
     BranchCounter[{Source, Target}] += Repeat;
   }
-  void recordDataAccessCount(uint64_t InstAddr, StringRef DataSymbol,
-                             uint64_t Repeat) {
-    DataAccessCounter[{InstAddr, DataSymbol}] += Repeat;
+  void recordVTableAccessCount(uint64_t InstAddr, StringRef DataSymbol,
+                               uint64_t Repeat) {
+    VTableAccessCounter[{InstAddr, DataSymbol}] += Repeat;
+  }
+  void recordDataAccessCount(uint64_t DataAddr, uint64_t Repeat) {
+    DataAccessCounter[DataAddr] += Repeat;
   }
 };
 
@@ -735,16 +745,20 @@ private:
 
 class ETMReader {
 public:
-  ETMReader(ProfiledBinary *Binary, StringRef TraceFile, uint8_t TraceID)
-      : Binary(Binary), TraceFile(TraceFile), TraceID(TraceID) {}
+  ETMReader(ProfiledBinary *Binary, StringRef TraceFile, uint8_t ETMTraceID,
+            uint8_t ITMTraceID)
+      : Binary(Binary), TraceFile(TraceFile), ETMTraceID(ETMTraceID),
+        ITMTraceID(ITMTraceID) {}
   void parseETMTraces();
-  void recordProcessedRange(uint64_t Start, uint64_t End, uint64_t Count);
+  void recordInstructionRange(uint64_t Start, uint64_t End, uint64_t Count);
+  void recordDataAddress(uint64_t Address, uint64_t Count);
   const ContextSampleCounterMap &getSampleCounters() const { return Counters; }
 
 private:
   ProfiledBinary *Binary = nullptr;
   StringRef TraceFile;
-  uint8_t TraceID;
+  uint8_t ETMTraceID;
+  uint8_t ITMTraceID;
   ContextSampleCounterMap Counters;
 };
 
