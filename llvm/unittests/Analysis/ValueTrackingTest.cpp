@@ -699,6 +699,74 @@ TEST(ValueTracking, GuaranteedToTransferExecutionToSuccessor) {
   }
 }
 
+TEST_F(ValueTrackingTest, hasNUsesOrMoreIgnoringAssumes) {
+  parseAssembly(R"(
+    declare void @llvm.assume(i1)
+    declare void @use(i1)
+    define i32 @test(i32 %x, i32 %y, i32 %n) {
+      %A = add i32 %x, 1
+      %lo = icmp sgt i32 %A, 0
+      %hi = icmp slt i32 %A, %n
+      %inb = and i1 %lo, %hi
+      call void @llvm.assume(i1 %inb)
+      call void @llvm.assume(i1 true) ["align"(ptr null, i32 %A)]
+      %A2 = add i32 %A, %y
+      ret i32 %A2
+    }
+  )");
+  const Use &U = A2->getOperandUse(0);
+  EXPECT_TRUE(hasNUsesOrMoreIgnoringAssumes(U, 0));
+  EXPECT_TRUE(hasNUsesOrMoreIgnoringAssumes(U, 1));
+  EXPECT_FALSE(hasNUsesOrMoreIgnoringAssumes(U, 2));
+  // When the use asked about only feeds an assume, all uses count.
+  auto *Lo = cast<Instruction>(findInstructionByNameOrNull(F, "lo"));
+  EXPECT_TRUE(hasNUsesOrMoreIgnoringAssumes(Lo->getOperandUse(0), 4));
+  EXPECT_FALSE(hasNUsesOrMoreIgnoringAssumes(Lo->getOperandUse(0), 5));
+}
+
+TEST_F(ValueTrackingTest, hasNUsesOrMoreIgnoringAssumesRealUses) {
+  parseAssembly(R"(
+    declare void @llvm.assume(i1)
+    declare void @use(i1)
+    define i32 @test(i1 %c, i32 %x, i32 %n) {
+    entry:
+      %A = add i32 %x, 1
+      %cmp = icmp slt i32 %A, %n
+      call void @llvm.assume(i1 %cmp)
+      call void @use(i1 %cmp)
+      %A2 = add i32 %A, %A
+      br i1 %c, label %bb, label %exit
+    bb:
+      br label %exit
+    exit:
+      %A3 = phi i32 [ %A, %entry ], [ 0, %bb ]
+      %phicmp = icmp slt i32 %A3, %n
+      call void @llvm.assume(i1 %phicmp)
+      ret i32 %A2
+    }
+  )");
+  const Use &U = A2->getOperandUse(0);
+  // A comparison that is also used elsewhere, the other operand of %A2, and
+  // the PHI all count.
+  EXPECT_TRUE(hasNUsesOrMoreIgnoringAssumes(U, 4));
+  EXPECT_FALSE(hasNUsesOrMoreIgnoringAssumes(U, 5));
+}
+
+TEST_F(ValueTrackingTest, hasNUsesOrMoreIgnoringAssumesBudget) {
+  std::string Assembly = "declare void @llvm.assume(i1)\n"
+                         "define i32 @test(i32 %x) {\n"
+                         "  %A = add i32 %x, 1\n";
+  for (int I = 0; I < 32; ++I)
+    Assembly +=
+        "  call void @llvm.assume(i1 true) [\"align\"(ptr null, i32 %A)]\n";
+  Assembly += "  %A2 = add i32 %A, 1\n"
+              "  ret i32 %A2\n"
+              "}\n";
+  parseAssembly(Assembly);
+  // Once the walk gives up, the remaining uses count.
+  EXPECT_TRUE(hasNUsesOrMoreIgnoringAssumes(A2->getOperandUse(0), 2));
+}
+
 TEST_F(ValueTrackingTest, ComputeNumSignBits_PR32045) {
   parseAssembly(
       "define i32 @test(i32 %a) {\n"

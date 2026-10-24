@@ -47,6 +47,94 @@ loop:
   br label %loop
 }
 
+; Hoist ADD and keep old op only for the fact about it.
+define void @add_two_uses_assume(i64 %c1, i64 %c2, i64 %n) {
+; CHECK-LABEL: @add_two_uses_assume(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = add i64 [[C1:%.*]], [[C2:%.*]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT_REASS:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = add i64 [[INDEX]], [[C1]]
+; CHECK-NEXT:    [[INB:%.*]] = icmp ult i64 [[STEP_ADD]], [[N:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[INB]])
+; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = add i64 [[INDEX]], [[INVARIANT_OP]]
+; CHECK-NEXT:    call void @use(i64 [[INDEX_NEXT_REASS]])
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %loop ]
+  %step.add = add i64 %index, %c1
+  %inb = icmp ult i64 %step.add, %n
+  call void @llvm.assume(i1 %inb)
+  %index.next = add i64 %step.add, %c2
+  call void @use(i64 %index.next)
+  br label %loop
+}
+
+define void @add_two_uses_assume_and(i64 %c1, i64 %c2, i64 %n) {
+; CHECK-LABEL: @add_two_uses_assume_and(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = add i64 [[C1:%.*]], [[C2:%.*]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT_REASS:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = add i64 [[INDEX]], [[C1]]
+; CHECK-NEXT:    [[LO:%.*]] = icmp sge i64 [[STEP_ADD]], 1
+; CHECK-NEXT:    [[HI:%.*]] = icmp sle i64 [[STEP_ADD]], [[N:%.*]]
+; CHECK-NEXT:    [[INB:%.*]] = and i1 [[LO]], [[HI]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[INB]])
+; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = add i64 [[INDEX]], [[INVARIANT_OP]]
+; CHECK-NEXT:    call void @use(i64 [[INDEX_NEXT_REASS]])
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %loop ]
+  %step.add = add i64 %index, %c1
+  %lo = icmp sge i64 %step.add, 1
+  %hi = icmp sle i64 %step.add, %n
+  %inb = and i1 %lo, %hi
+  call void @llvm.assume(i1 %inb)
+  %index.next = add i64 %step.add, %c2
+  call void @use(i64 %index.next)
+  br label %loop
+}
+
+; Don't hoist if the comparison has another use.
+define void @add_two_uses_assume_and_use(i64 %c1, i64 %c2, i64 %n) {
+; CHECK-LABEL: @add_two_uses_assume_and_use(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = add i64 [[INDEX]], [[C1:%.*]]
+; CHECK-NEXT:    [[INB:%.*]] = icmp ult i64 [[STEP_ADD]], [[N:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[INB]])
+; CHECK-NEXT:    call void @use.i1(i1 [[INB]])
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[STEP_ADD]], [[C2:%.*]]
+; CHECK-NEXT:    call void @use(i64 [[INDEX_NEXT]])
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %loop ]
+  %step.add = add i64 %index, %c1
+  %inb = icmp ult i64 %step.add, %n
+  call void @llvm.assume(i1 %inb)
+  call void @use.i1(i1 %inb)
+  %index.next = add i64 %step.add, %c2
+  call void @use(i64 %index.next)
+  br label %loop
+}
+
 ; Hoist MUL and remove old op if unused.
 define void @mul_one_use(i64 %c1, i64 %c2) {
 ; CHECK-LABEL: @mul_one_use(
@@ -1228,3 +1316,4 @@ declare void @llvm.assume(i1)
 declare void @use.i32(i32)
 declare void @use.v2i32(<2 x i32>)
 declare void @use()
+declare void @use.i1(i1)
