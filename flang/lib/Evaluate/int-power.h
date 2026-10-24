@@ -54,6 +54,7 @@ ValueWithRealFlags<REAL> TimesIntPowerOf(const REAL &factor, const REAL &base,
   return result;
 }
 
+#if 0
 template <typename W, int P, typename INT>
 ValueWithRealFlags<value::Real<W, P>> IntPower(const value::Real<W, P> &base,
     const INT &power,
@@ -73,6 +74,7 @@ ValueWithRealFlags<value::Real<W, P>> IntPower(const value::Real<W, P> &base,
   }
   return result;
 }
+#endif
 
 template <typename REAL, typename INT>
 ValueWithRealFlags<REAL> IntPower(const REAL &base, const INT &power,
@@ -80,7 +82,17 @@ ValueWithRealFlags<REAL> IntPower(const REAL &base, const INT &power,
   const int realKind{base.kind()};
   const int intKind{power.kind()};
   REAL one{REAL::FromInteger(realKind, INT{intKind, 1}).value};
-  return TimesIntPowerOf(one, base, power, /*forceMultiply=*/false, rounding);
+  ValueWithRealFlags<REAL> result{
+      TimesIntPowerOf(one, base, power, /*forceMultiply=*/false, rounding)};
+  if (result.flags.test(RealFlag::Overflow) && power.IsNegative()) {
+    ValueWithRealFlags<REAL> retry;
+    REAL recip{one.Divide(base, rounding).AccumulateFlags(retry.flags)};
+    retry.value =
+        TimesIntPowerOf(one, recip, power, /*forceMultiply=*/true, rounding)
+            .AccumulateFlags(retry.flags);
+    return retry;
+  }
+  return result;
 }
 } // namespace Fortran::evaluate
 #endif // FORTRAN_EVALUATE_INT_POWER_H_
