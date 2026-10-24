@@ -366,8 +366,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::ROTL, ISD::ROTR}, XLenVT, Expand);
   }
 
-  if (Subtarget.hasStdExtP())
+  if (Subtarget.hasStdExtP()) {
     setOperationAction({ISD::FSHL, ISD::FSHR}, XLenVT, Legal);
+    if (!Subtarget.is64Bit())
+      setOperationAction({ISD::FSHL, ISD::FSHR}, MVT::i64, Custom);
+  }
 
   setOperationAction(ISD::BSWAP, XLenVT,
                      Subtarget.hasREV8Like() ? Legal : Expand);
@@ -17564,6 +17567,65 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     }
 
     break;
+  }
+  case ISD::FSHL:
+  case ISD::FSHR: {
+    assert(!Subtarget.is64Bit() && Subtarget.hasStdExtP() &&
+           N->getValueType(0) == MVT::i64 &&
+           "Unexpected custom funnel shift legalization");
+
+    auto [XLo, XHi] = DAG.SplitScalar(N->getOperand(0), DL, MVT::i32, MVT::i32);
+    auto [YLo, YHi] = DAG.SplitScalar(N->getOperand(1), DL, MVT::i32, MVT::i32);
+    SDValue Shamt = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, N->getOperand(2));
+    unsigned Opc = N->getOpcode();
+    auto Funnel = [&](SDValue Lo, SDValue Hi) {
+      return DAG.getNode(Opc, DL, MVT::i32, Lo, Hi, Shamt);
+    };
+
+    // For constant shifts, select the adjacent halves using bit 5 and use the
+    // low 5 bits as the i32 shift amount, avoiding the dynamic merge sequence.
+    if (auto *C = dyn_cast<ConstantSDNode>(N->getOperand(2))) {
+      bool High = C->getZExtValue() & 32;
+      Shamt = DAG.getConstant(C->getZExtValue() & 31, DL, MVT::i32);
+      SDValue Lo, Hi;
+      if (Opc == ISD::FSHL) {
+        Lo = High ? Funnel(YHi, YLo) : Funnel(XLo, YHi);
+        Hi = High ? Funnel(XLo, YHi) : Funnel(XHi, XLo);
+      } else {
+        Lo = High ? Funnel(XLo, YHi) : Funnel(YHi, YLo);
+        Hi = High ? Funnel(XHi, XLo) : Funnel(XLo, YHi);
+      }
+      Results.push_back(DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64, Lo, Hi));
+      return;
+    }
+
+    // The i32 funnel shifts use the low 5 shift bits. Convert bit 5 into a
+    // mask and use packed merge instructions to select the adjacent results.
+    SDValue Mask = DAG.getNode(ISD::SRA, DL, MVT::i32,
+                               DAG.getNode(ISD::SHL, DL, MVT::i32, Shamt,
+                                           DAG.getConstant(26, DL, MVT::i32)),
+                               DAG.getConstant(31, DL, MVT::i32));
+    auto Merge = [&](SDValue Lo, SDValue Hi) {
+      return DAG.getNode(RISCVISD::MERGE, DL, MVT::i32, Mask, Lo, Hi);
+    };
+
+    SDValue Part0, Part1, Part2;
+    // Form the three adjacent 32-bit funnel shifts. The mask then selects the
+    // two parts corresponding to shifts below or above 32 bits.
+    if (Opc == ISD::FSHL) {
+      Part0 = Funnel(XLo, YHi);
+      Part1 = Funnel(XHi, XLo);
+      Part2 = Funnel(YHi, YLo);
+    } else {
+      Part0 = Funnel(YHi, YLo);
+      Part1 = Funnel(XLo, YHi);
+      Part2 = Funnel(XHi, XLo);
+    }
+
+    SDValue Lo = Merge(Part0, Opc == ISD::FSHL ? Part2 : Part1);
+    SDValue Hi = Merge(Part1, Opc == ISD::FSHL ? Part0 : Part2);
+    Results.push_back(DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64, Lo, Hi));
+    return;
   }
   case ISD::ROTL:
   case ISD::ROTR:
