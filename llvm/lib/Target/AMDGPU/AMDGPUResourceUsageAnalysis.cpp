@@ -35,20 +35,6 @@ char llvm::AMDGPUResourceUsageAnalysisWrapperPass::ID = 0;
 char &llvm::AMDGPUResourceUsageAnalysisID =
     AMDGPUResourceUsageAnalysisWrapperPass::ID;
 
-// In code object v4 and older, we need to tell the runtime some amount ahead of
-// time if we don't know the true stack size. Assume a smaller number if this is
-// only due to dynamic / non-entry block allocas.
-static cl::opt<uint32_t> clAssumedStackSizeForExternalCall(
-    "amdgpu-assume-external-call-stack-size",
-    cl::desc("Assumed stack use of any external call (in bytes)"), cl::Hidden,
-    cl::init(16384));
-
-static cl::opt<uint32_t> clAssumedStackSizeForDynamicSizeObjects(
-    "amdgpu-assume-dynamic-stack-object-size",
-    cl::desc("Assumed extra stack use if there are any "
-             "variable sized objects (in bytes)"),
-    cl::Hidden, cl::init(4096));
-
 INITIALIZE_PASS(AMDGPUResourceUsageAnalysisWrapperPass, DEBUG_TYPE,
                 "Function register usage analysis", true, true)
 
@@ -81,17 +67,14 @@ bool AMDGPUResourceUsageAnalysisWrapperPass::runOnMachineFunction(
 
   // By default, for code object v5 and later, track only the minimum scratch
   // size
+  const AMDGPUOptions &CLOpts = MF.getSubtarget<GCNSubtarget>().getCLOpts();
+  bool MinScratch = AMDGPU::getAMDHSACodeObjectVersion(
+                        *MF.getFunction().getParent()) >= AMDGPU::AMDHSA_COV5 ||
+                    STI.getTargetTriple().getOS() == Triple::AMDPAL;
   uint32_t AssumedStackSizeForDynamicSizeObjects =
-      clAssumedStackSizeForDynamicSizeObjects;
-  uint32_t AssumedStackSizeForExternalCall = clAssumedStackSizeForExternalCall;
-  if (AMDGPU::getAMDHSACodeObjectVersion(*MF.getFunction().getParent()) >=
-          AMDGPU::AMDHSA_COV5 ||
-      STI.getTargetTriple().getOS() == Triple::AMDPAL) {
-    if (!clAssumedStackSizeForDynamicSizeObjects.getNumOccurrences())
-      AssumedStackSizeForDynamicSizeObjects = 0;
-    if (!clAssumedStackSizeForExternalCall.getNumOccurrences())
-      AssumedStackSizeForExternalCall = 0;
-  }
+      CLOpts.assume_dynamic_stack_object_size.value_or(MinScratch ? 0 : 4096);
+  uint32_t AssumedStackSizeForExternalCall =
+      CLOpts.assume_external_call_stack_size.value_or(MinScratch ? 0 : 16384);
 
   ResourceInfo = AMDGPUResourceUsageAnalysisImpl().analyzeResourceUsage(
       MF, AssumedStackSizeForDynamicSizeObjects,
@@ -108,17 +91,14 @@ AMDGPUResourceUsageAnalysis::run(MachineFunction &MF,
 
   // By default, for code object v5 and later, track only the minimum scratch
   // size
+  const AMDGPUOptions &CLOpts = MF.getSubtarget<GCNSubtarget>().getCLOpts();
+  bool MinScratch = AMDGPU::getAMDHSACodeObjectVersion(
+                        *MF.getFunction().getParent()) >= AMDGPU::AMDHSA_COV5 ||
+                    STI.getTargetTriple().getOS() == Triple::AMDPAL;
   uint32_t AssumedStackSizeForDynamicSizeObjects =
-      clAssumedStackSizeForDynamicSizeObjects;
-  uint32_t AssumedStackSizeForExternalCall = clAssumedStackSizeForExternalCall;
-  if (AMDGPU::getAMDHSACodeObjectVersion(*MF.getFunction().getParent()) >=
-          AMDGPU::AMDHSA_COV5 ||
-      STI.getTargetTriple().getOS() == Triple::AMDPAL) {
-    if (!clAssumedStackSizeForDynamicSizeObjects.getNumOccurrences())
-      AssumedStackSizeForDynamicSizeObjects = 0;
-    if (!clAssumedStackSizeForExternalCall.getNumOccurrences())
-      AssumedStackSizeForExternalCall = 0;
-  }
+      CLOpts.assume_dynamic_stack_object_size.value_or(MinScratch ? 0 : 4096);
+  uint32_t AssumedStackSizeForExternalCall =
+      CLOpts.assume_external_call_stack_size.value_or(MinScratch ? 0 : 16384);
 
   return AMDGPUResourceUsageAnalysisImpl().analyzeResourceUsage(
       MF, AssumedStackSizeForDynamicSizeObjects,

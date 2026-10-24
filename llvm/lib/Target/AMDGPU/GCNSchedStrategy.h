@@ -90,6 +90,8 @@ protected:
                             const GCNUpwardRPTracker &UpwardTracker,
                             ScheduleDAGMI *DAG, const SIRegisterInfo *SRI);
 
+  const AMDGPUOptions &CLOpts;
+
   std::vector<unsigned> Pressure;
 
   std::vector<unsigned> MaxPressure;

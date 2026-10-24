@@ -44,17 +44,6 @@ using HWEvents = AMDGPU::HWEvents;
 
 #define DEBUG_TYPE "si-insert-waitcnts"
 
-static cl::opt<bool>
-    ForceEmitZeroFlag("amdgpu-waitcnt-forcezero",
-                      cl::desc("Force all waitcnt instrs to be emitted as "
-                               "s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)"),
-                      cl::init(false), cl::Hidden);
-
-static cl::opt<bool> ForceEmitZeroLoadFlag(
-    "amdgpu-waitcnt-load-forcezero",
-    cl::desc("Force all waitcnt load counters to wait until 0"),
-    cl::init(false), cl::Hidden);
-
 namespace {
 
 template <typename EmitWaitcntFn>
@@ -2603,7 +2592,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
 
   // When forcing emit, we need to skip terminators because that would break the
   // terminators of the MBB if we emit a waitcnt between terminators.
-  if (ForceEmitZeroFlag && !MI.isTerminator())
+  if (ST.getCLOpts().waitcnt_forcezero && !MI.isTerminator())
     Wait = WCG->getAllZeroWaitcnt(/*IncludeVSCnt=*/false);
 
   // If we force waitcnt then update Wait accordingly.
@@ -2622,7 +2611,8 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
   if (FlushFlags.FlushDsCnt && ScoreBrackets.hasPendingEvent(AMDGPU::DS_CNT))
     Wait.set(AMDGPU::DS_CNT, 0);
 
-  if (ForceEmitZeroLoadFlag && Wait.get(AMDGPU::LOAD_CNT) != ~0u)
+  if (ST.getCLOpts().waitcnt_load_forcezero &&
+      Wait.get(AMDGPU::LOAD_CNT) != ~0u)
     Wait.set(AMDGPU::LOAD_CNT, 0);
 
   return generateWaitcnt(Wait, MI.getIterator(), *MI.getParent(), ScoreBrackets,

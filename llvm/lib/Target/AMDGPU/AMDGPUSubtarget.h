@@ -21,6 +21,35 @@
 
 namespace llvm {
 
+namespace AMDGPU {
+// DPP/Iterative option enables the atomic optimizer with given strategy
+// whereas None disables the atomic optimizer.
+enum class ScanOptions { DPP, Iterative, None };
+
+enum class AntiHintRule {
+  None,
+  MFMAWAW,
+  MFMAWAR,
+  WMMAWARAB,
+  SWMMACWARIndex,
+  WMMAWAW,
+  TransWAR,
+  MemAddrWAR,
+  VAVdstWAR,
+  All,
+};
+
+enum class CarriedLatency { Off, Fence, All };
+
+enum class LDSLoweringKind { module, table, kernel, hybrid };
+} // namespace AMDGPU
+} // namespace llvm
+
+#define OPTIONS_STRUCT_DECL
+#include "AMDGPUOptions.inc"
+
+namespace llvm {
+
 enum AMDGPUDwarfFlavour : unsigned;
 class Function;
 class Instruction;
@@ -46,6 +75,7 @@ public:
   };
 
 private:
+  const AMDGPUOptions &CLOpts;
   const Triple &TargetTriple;
 
 protected:
@@ -65,7 +95,10 @@ protected:
   unsigned FlatOffsetBitWidth = 0;
 
 public:
-  AMDGPUSubtarget(const Triple &TT) : TargetTriple(TT) {}
+  AMDGPUSubtarget(const Triple &TT, const AMDGPUOptions &CLOpts)
+      : CLOpts(CLOpts), TargetTriple(TT) {}
+
+  const AMDGPUOptions &getCLOpts() const { return CLOpts; }
 
   static const AMDGPUSubtarget &get(const MachineFunction &MF);
   static const AMDGPUSubtarget &get(const TargetMachine &TM,

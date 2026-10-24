@@ -52,26 +52,12 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "amdgpu-rewrite-out-arguments"
 
 using namespace llvm;
-
-static cl::opt<bool> AnyAddressSpace(
-  "amdgpu-any-address-space-out-arguments",
-  cl::desc("Replace pointer out arguments with "
-           "struct returns for non-private address space"),
-  cl::Hidden,
-  cl::init(false));
-
-static cl::opt<unsigned> MaxNumRetRegs(
-  "amdgpu-max-return-arg-num-regs",
-  cl::desc("Approximately limit number of return registers for replacing out arguments"),
-  cl::Hidden,
-  cl::init(16));
 
 STATISTIC(NumOutArgumentsReplaced,
           "Number out arguments moved to struct return values");
@@ -82,6 +68,7 @@ namespace {
 
 class AMDGPURewriteOutArguments : public FunctionPass {
 private:
+  const AMDGPUOptions *CLOpts = nullptr;
   const DataLayout *DL = nullptr;
   MemorySSA *MSSA = nullptr;
   MemorySSAUpdater *MSSAU = nullptr;
@@ -153,12 +140,13 @@ Type *AMDGPURewriteOutArguments::getStoredType(Value &Arg) const {
 }
 
 Type *AMDGPURewriteOutArguments::getOutArgumentType(Argument &Arg) const {
-  const unsigned MaxOutArgSizeBytes = 4 * MaxNumRetRegs;
+  const unsigned MaxOutArgSizeBytes = 4 * CLOpts->max_return_arg_num_regs;
   PointerType *ArgTy = dyn_cast<PointerType>(Arg.getType());
 
   // TODO: It might be useful for any out arguments, not just privates.
-  if (!ArgTy || (ArgTy->getAddressSpace() != DL->getAllocaAddrSpace() &&
-                 !AnyAddressSpace) ||
+  if (!ArgTy ||
+      (ArgTy->getAddressSpace() != DL->getAllocaAddrSpace() &&
+       !CLOpts->any_address_space_out_arguments) ||
       Arg.hasByValAttr() || Arg.hasStructRetAttr()) {
     return nullptr;
   }
@@ -220,6 +208,9 @@ static StoreInst *findStoreForOutArgument(BasicBlock *BB, Argument *OutArg,
 bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
   if (skipFunction(F))
     return false;
+
+  CLOpts = &F.getContext().getLibraryOptions().get<AMDGPUOptions>();
+  const unsigned MaxNumRetRegs = CLOpts->max_return_arg_num_regs;
 
   // TODO: Could probably handle variadic functions.
   if (F.isVarArg() || F.hasStructRetAttr() ||

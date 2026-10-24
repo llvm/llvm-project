@@ -47,7 +47,6 @@
 #include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/ModRef.h"
 #include "llvm/TargetParser/AtomicScope.h"
@@ -60,16 +59,6 @@ using namespace llvm::SDPatternMatch;
 #define DEBUG_TYPE "si-lower"
 
 STATISTIC(NumTailCalls, "Number of tail calls");
-
-static cl::opt<bool>
-    DisableLoopAlignment("amdgpu-disable-loop-alignment",
-                         cl::desc("Do not align and prefetch loops"),
-                         cl::init(false));
-
-static cl::opt<bool> UseDivergentRegisterIndexing(
-    "amdgpu-use-divergent-register-indexing", cl::Hidden,
-    cl::desc("Use indirect register addressing for divergent indexes"),
-    cl::init(false));
 
 static DenormalFPEnv getDenormalFPEnv(const MachineFunction &MF) {
   return MF.getInfo<SIMachineFunctionInfo>()->getMode().getDenormalFPEnv();
@@ -17125,7 +17114,7 @@ bool SITargetLowering::shouldExpandVectorDynExt(unsigned EltSize,
                                                 unsigned NumElem,
                                                 bool IsDivergentIdx,
                                                 const GCNSubtarget *Subtarget) {
-  if (UseDivergentRegisterIndexing)
+  if (Subtarget->getCLOpts().use_divergent_register_indexing)
     return false;
 
   unsigned VecSize = EltSize * NumElem;
@@ -20710,7 +20699,7 @@ Align SITargetLowering::getPrefLoopAlignment(
   // significant fetch delay after a backward branch. We use 32-byte alignment
   // with max padding of 4 bytes (one s_nop), see
   // getMaxPermittedBytesForAlignment().
-  if (ML && !DisableLoopAlignment &&
+  if (ML && getSubtarget()->getCLOpts().loop_alignment &&
       getSubtarget()->hasLoopHeadInstSplitSensitivity()) {
     // Loop rotation can make the backedge destination a block other than the
     // LoopInfo header, so prefer the block the caller is actually aligning.
@@ -20724,7 +20713,8 @@ Align SITargetLowering::getPrefLoopAlignment(
   }
 
   // Pre-GFX10 target did not benefit from loop alignment
-  if (!ML || DisableLoopAlignment || !getSubtarget()->hasInstPrefetch() ||
+  if (!ML || !getSubtarget()->getCLOpts().loop_alignment ||
+      !getSubtarget()->hasInstPrefetch() ||
       getSubtarget()->hasInstFwdPrefetchBug())
     return PrefAlign;
 

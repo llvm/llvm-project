@@ -76,11 +76,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "si-fix-sgpr-copies"
 
-static cl::opt<bool> EnableM0Merge(
-  "amdgpu-enable-merge-m0",
-  cl::desc("Merge and hoist M0 initializations"),
-  cl::init(true));
-
 namespace {
 
 class V2SCopyInfo {
@@ -818,7 +813,8 @@ bool SIFixSGPRCopies::run(MachineFunction &MF) {
   while (!Relegalize.empty())
     TII->legalizeOperands(*Relegalize.pop_back_val(), MDT);
 
-  if (MF.getTarget().getOptLevel() > CodeGenOptLevel::None && EnableM0Merge)
+  if (MF.getTarget().getOptLevel() > CodeGenOptLevel::None &&
+      ST.getCLOpts().enable_merge_m0)
     hoistAndMergeSGPRInits(AMDGPU::M0, RegMaskInstrs, *MRI, TRI, *MDT, TII);
 
   SiblingPenalty.clear();

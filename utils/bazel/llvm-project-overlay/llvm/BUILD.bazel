@@ -2921,6 +2921,7 @@ llvm_target_lib_list = [lib for lib in [
             ),
         ],
         "tbl_deps": [
+            ":AMDGPUOptionsTableGen",
             ":amdgpu_isel_target_gen",
             ":r600_target_gen",
         ],
@@ -4134,6 +4135,15 @@ gentbl_cc_library(
         ":CommonTargetTdFiles",
         ":RISCVTargetTdFiles",
     ],
+)
+
+gentbl_cc_library(
+    name = "AMDGPUOptionsTableGen",
+    strip_include_prefix = "lib/Target/AMDGPU",
+    tbl_outs = {"lib/Target/AMDGPU/AMDGPUOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/AMDGPU/AMDGPUOptions.td",
+    deps = [":OptParserTdFiles"],
 )
 
 gentbl_cc_library(

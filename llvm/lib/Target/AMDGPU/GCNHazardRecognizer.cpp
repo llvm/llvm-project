@@ -58,15 +58,6 @@ static cl::opt<unsigned, false, MFMAPaddingRatioParser>
                      cl::desc("Fill a percentage of the latency between "
                               "neighboring MFMA with s_nops."));
 
-// This is intended for debugging purposes only.
-static cl::opt<unsigned>
-    NopPadding("amdgpu-snop-padding", cl::init(0), cl::Hidden,
-               cl::desc("Insert a s_nop x before every instruction"));
-
-static cl::opt<bool> EnableWMMAVnopHoisting(
-    "amdgpu-wmma-vnop-hoisting", cl::init(true), cl::Hidden,
-    cl::desc("Hoist WMMA hazard V_NOPs from loops to preheaders"));
-
 //===----------------------------------------------------------------------===//
 // Hazard Recognizer Implementation
 //===----------------------------------------------------------------------===//
@@ -221,7 +212,7 @@ bool GCNHazardRecognizer::hasCoExecWindowModel() const {
     return true;
 
   if (ST.hasGFX950Insts() &&
-      AMDGPU::getSchedStrategy(MF.getFunction()) == "coexec")
+      AMDGPU::getSchedStrategy(ST.getCLOpts(), MF.getFunction()) == "coexec")
     return true;
 
   return false;
@@ -706,7 +697,7 @@ unsigned GCNHazardRecognizer::PreEmitNoops(MachineInstr *MI) {
   unsigned W = PreEmitNoopsCommon(MI);
   fixHazards(MI);
   CurrCycleInstr = nullptr;
-  return std::max(W, NopPadding.getValue());
+  return std::max(W, ST.getCLOpts().snop_padding);
 }
 
 unsigned GCNHazardRecognizer::getHazardWaitStates(MachineInstr *MI) const {
@@ -2957,7 +2948,8 @@ bool GCNHazardRecognizer::fixWMMACoexecutionHazards(MachineInstr *MI) {
   if (WaitStatesNeeded <= 0)
     return false;
 
-  if (EnableWMMAVnopHoisting && tryHoistWMMAVnopsFromLoop(MI, WaitStatesNeeded))
+  if (ST.getCLOpts().wmma_vnop_hoisting &&
+      tryHoistWMMAVnopsFromLoop(MI, WaitStatesNeeded))
     return true;
 
   emitVNops(*MI->getParent(), MI->getIterator(), WaitStatesNeeded);

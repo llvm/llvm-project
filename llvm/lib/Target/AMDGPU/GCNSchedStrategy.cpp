@@ -48,62 +48,6 @@
 
 using namespace llvm;
 
-static cl::opt<bool> DisableUnclusterHighRP(
-    "amdgpu-disable-unclustered-high-rp-reschedule", cl::Hidden,
-    cl::desc("Disable unclustered high register pressure "
-             "reduction scheduling stage."),
-    cl::init(false));
-
-static cl::opt<bool> DisableClusteredLowOccupancy(
-    "amdgpu-disable-clustered-low-occupancy-reschedule", cl::Hidden,
-    cl::desc("Disable clustered low occupancy "
-             "rescheduling for ILP scheduling stage."),
-    cl::init(false));
-
-static cl::opt<unsigned> ScheduleMetricBias(
-    "amdgpu-schedule-metric-bias", cl::Hidden,
-    cl::desc(
-        "Sets the bias which adds weight to occupancy vs latency. Set it to "
-        "100 to chase the occupancy only."),
-    cl::init(10));
-
-static cl::opt<bool>
-    RelaxedOcc("amdgpu-schedule-relaxed-occupancy", cl::Hidden,
-               cl::desc("Relax occupancy targets for kernels which are memory "
-                        "bound (amdgpu-membound-threshold), or "
-                        "Wave Limited (amdgpu-limit-wave-threshold)."),
-               cl::init(false));
-
-static cl::opt<bool> GCNTrackers(
-    "amdgpu-use-amdgpu-trackers", cl::Hidden,
-    cl::desc("Use the AMDGPU specific RPTrackers during scheduling"),
-    cl::init(false));
-
-static cl::opt<unsigned> PendingQueueLimit(
-    "amdgpu-scheduler-pending-queue-limit", cl::Hidden,
-    cl::desc(
-        "Max (Available+Pending) size to inspect pending queue (0 disables)"),
-    cl::init(256));
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-#define DUMP_MAX_REG_PRESSURE
-static cl::opt<bool> PrintMaxRPRegUsageBeforeScheduler(
-    "amdgpu-print-max-reg-pressure-regusage-before-scheduler", cl::Hidden,
-    cl::desc("Print a list of live registers along with their def/uses at the "
-             "point of maximum register pressure before scheduling."),
-    cl::init(false));
-
-static cl::opt<bool> PrintMaxRPRegUsageAfterScheduler(
-    "amdgpu-print-max-reg-pressure-regusage-after-scheduler", cl::Hidden,
-    cl::desc("Print a list of live registers along with their def/uses at the "
-             "point of maximum register pressure after scheduling."),
-    cl::init(false));
-#endif
-
-static cl::opt<bool> DisableRewriteMFMAFormSchedStage(
-    "amdgpu-disable-rewrite-mfma-form-sched-stage", cl::Hidden,
-    cl::desc("Disable rewrite mfma rewrite scheduling stage"), cl::init(true));
-
 bool VGPRThresholdParser::parse(cl::Option &O, StringRef ArgName, StringRef Arg,
                                 unsigned &Value) {
   if (Arg.getAsInteger(0, Value))
@@ -127,10 +71,12 @@ cl::opt<unsigned, false, VGPRThresholdParser> llvm::VGPRThresholdPercentOpt(
 const unsigned ScheduleMetrics::ScaleFactor = 100;
 
 GCNSchedStrategy::GCNSchedStrategy(const MachineSchedContext *C)
-    : GenericScheduler(C), TargetOccupancy(0), MF(nullptr),
-      DownwardTracker(*C->LIS), UpwardTracker(*C->LIS), HasHighPressure(false) {
-  if (GCNTrackers.getNumOccurrences() > 0)
-    GCNTrackersOverride = GCNTrackers;
+    : GenericScheduler(C),
+      CLOpts(C->MF->getSubtarget<GCNSubtarget>().getCLOpts()),
+      TargetOccupancy(0), MF(nullptr), DownwardTracker(*C->LIS),
+      UpwardTracker(*C->LIS), HasHighPressure(false) {
+  if (CLOpts.use_amdgpu_trackers != BoolOrDefault::Default)
+    GCNTrackersOverride = CLOpts.use_amdgpu_trackers == BoolOrDefault::True;
   VGPRThresholdPercent = VGPRThresholdPercentOpt;
 }
 
@@ -154,8 +100,9 @@ void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
   // 'Critical' register limits in the scheduler.
   // Allow for lower occupancy targets if kernel is wave limited or memory
   // bound, and using the relaxed occupancy feature.
-  TargetOccupancy =
-      RelaxedOcc ? MFI.getMinAllowedOccupancy() : MFI.getOccupancy();
+  TargetOccupancy = CLOpts.schedule_relaxed_occupancy
+                        ? MFI.getMinAllowedOccupancy()
+                        : MFI.getOccupancy();
   SGPRCriticalLimit =
       std::min(ST.getMaxNumSGPRs(TargetOccupancy, true), SGPRExcessLimit);
 
@@ -426,7 +373,7 @@ void GCNSchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,
   }
 }
 
-static bool shouldCheckPending(SchedBoundary &Zone,
+static bool shouldCheckPending(unsigned PendingQueueLimit, SchedBoundary &Zone,
                                const TargetSchedModel *SchedModel) {
   bool HasBufferedModel =
       SchedModel->hasInstrSchedModel() && SchedModel->getMicroOpBufferSize();
@@ -434,11 +381,12 @@ static bool shouldCheckPending(SchedBoundary &Zone,
   return Combined <= PendingQueueLimit && HasBufferedModel;
 }
 
-static SUnit *pickOnlyChoice(SchedBoundary &Zone,
+static SUnit *pickOnlyChoice(unsigned PendingQueueLimit, SchedBoundary &Zone,
                              const TargetSchedModel *SchedModel) {
   // pickOnlyChoice() releases pending instructions and checks for new hazards.
   SUnit *OnlyChoice = Zone.pickOnlyChoice();
-  if (!shouldCheckPending(Zone, SchedModel) || Zone.Pending.empty())
+  if (!shouldCheckPending(PendingQueueLimit, Zone, SchedModel) ||
+      Zone.Pending.empty())
     return OnlyChoice;
 
   return nullptr;
@@ -508,7 +456,8 @@ void GCNSchedStrategy::pickNodeFromQueue(SchedBoundary &Zone,
     }
   }
 
-  if (!shouldCheckPending(Zone, SchedModel))
+  if (!shouldCheckPending(CLOpts.scheduler_pending_queue_limit, Zone,
+                          SchedModel))
     return;
 
   LLVM_DEBUG(dbgs() << "Pending Q:\n");
@@ -540,11 +489,13 @@ SUnit *GCNSchedStrategy::pickNodeBidirectional(bool &IsTopNode,
                                                bool &PickedPending) {
   // Schedule as far as possible in the direction of no choice. This is most
   // efficient, but also provides the best heuristics for CriticalPSets.
-  if (SUnit *SU = pickOnlyChoice(Bot, SchedModel)) {
+  if (SUnit *SU = pickOnlyChoice(CLOpts.scheduler_pending_queue_limit, Bot,
+                                 SchedModel)) {
     IsTopNode = false;
     return SU;
   }
-  if (SUnit *SU = pickOnlyChoice(Top, SchedModel)) {
+  if (SUnit *SU = pickOnlyChoice(CLOpts.scheduler_pending_queue_limit, Top,
+                                 SchedModel)) {
     IsTopNode = true;
     return SU;
   }
@@ -644,7 +595,8 @@ SUnit *GCNSchedStrategy::pickNode(bool &IsTopNode) {
   do {
     PickedPending = false;
     if (RegionPolicy.OnlyTopDown) {
-      SU = pickOnlyChoice(Top, SchedModel);
+      SU =
+          pickOnlyChoice(CLOpts.scheduler_pending_queue_limit, Top, SchedModel);
       if (!SU) {
         CandPolicy NoPolicy;
         TopCand.reset(NoPolicy);
@@ -656,7 +608,8 @@ SUnit *GCNSchedStrategy::pickNode(bool &IsTopNode) {
       }
       IsTopNode = true;
     } else if (RegionPolicy.OnlyBottomUp) {
-      SU = pickOnlyChoice(Bot, SchedModel);
+      SU =
+          pickOnlyChoice(CLOpts.scheduler_pending_queue_limit, Bot, SchedModel);
       if (!SU) {
         CandPolicy NoPolicy;
         BotCand.reset(NoPolicy);
@@ -771,7 +724,7 @@ GCNMaxOccupancySchedStrategy::GCNMaxOccupancySchedStrategy(
     const MachineSchedContext *C, bool IsLegacyScheduler)
     : GCNSchedStrategy(C) {
   SchedStages.push_back(GCNSchedStageID::OccInitialSchedule);
-  if (!DisableRewriteMFMAFormSchedStage)
+  if (CLOpts.rewrite_mfma_form_sched_stage)
     SchedStages.push_back(GCNSchedStageID::RewriteMFMAForm);
   SchedStages.push_back(GCNSchedStageID::UnclusteredHighRPReschedule);
   SchedStages.push_back(GCNSchedStageID::ClusteredLowOccupancyReschedule);
@@ -1017,7 +970,7 @@ GCNScheduleDAGMILive::GCNScheduleDAGMILive(
   // (e.g., rematerialization).
   ScheduleSingleMIRegions = true;
   LLVM_DEBUG(dbgs() << "Starting occupancy is " << StartingOccupancy << ".\n");
-  if (RelaxedOcc) {
+  if (ST.getCLOpts().schedule_relaxed_occupancy) {
     MinOccupancy = std::min(MFI.getMinAllowedOccupancy(), StartingOccupancy);
     if (MinOccupancy != StartingOccupancy)
       LLVM_DEBUG(dbgs() << "Allowing Occupancy drops to " << MinOccupancy
@@ -1215,8 +1168,8 @@ void GCNScheduleDAGMILive::runSchedStages() {
       RegionLiveOuts.buildLiveRegMap();
   }
 
-#ifdef DUMP_MAX_REG_PRESSURE
-  if (PrintMaxRPRegUsageBeforeScheduler) {
+#ifndef NDEBUG
+  if (ST.getCLOpts().print_max_reg_pressure_regusage_before_scheduler) {
     dumpMaxRegPressure(MF, GCNRegPressure::VGPR, *LIS, MLI);
     dumpMaxRegPressure(MF, GCNRegPressure::SGPR, *LIS, MLI);
     LIS->dump();
@@ -1254,8 +1207,8 @@ void GCNScheduleDAGMILive::runSchedStages() {
     Stage->finalizeGCNSchedStage();
   }
 
-#ifdef DUMP_MAX_REG_PRESSURE
-  if (PrintMaxRPRegUsageAfterScheduler) {
+#ifndef NDEBUG
+  if (ST.getCLOpts().print_max_reg_pressure_regusage_after_scheduler) {
     dumpMaxRegPressure(MF, GCNRegPressure::VGPR, *LIS, MLI);
     dumpMaxRegPressure(MF, GCNRegPressure::SGPR, *LIS, MLI);
     LIS->dump();
@@ -1410,7 +1363,7 @@ bool RewriteMFMAFormStage::initGCNSchedStage() {
 }
 
 bool UnclusteredHighRPStage::initGCNSchedStage() {
-  if (DisableUnclusterHighRP)
+  if (!ST.getCLOpts().unclustered_high_rp_reschedule)
     return false;
 
   if (!GCNSchedStage::initGCNSchedStage())
@@ -1443,7 +1396,7 @@ bool UnclusteredHighRPStage::initGCNSchedStage() {
 }
 
 bool ClusteredLowOccStage::initGCNSchedStage() {
-  if (DisableClusteredLowOccupancy)
+  if (!ST.getCLOpts().clustered_low_occupancy_reschedule)
     return false;
 
   if (!GCNSchedStage::initGCNSchedStage())
@@ -2218,6 +2171,7 @@ bool UnclusteredHighRPStage::shouldRevertScheduling(unsigned WavesAfter) {
   ScheduleMetrics MAfter = getScheduleMetrics(DAG);
   unsigned OldMetric = MBefore.getMetric();
   unsigned NewMetric = MAfter.getMetric();
+  unsigned ScheduleMetricBias = ST.getCLOpts().schedule_metric_bias;
   unsigned WavesBefore = std::min(
       S.getTargetOccupancy(),
       PressureBefore.getOccupancy(ST, DAG.MFI.getDynamicVGPRBlockSize()));
@@ -2261,31 +2215,8 @@ bool MemoryClauseInitialScheduleStage::shouldRevertScheduling(
   return mayCauseSpilling(WavesAfter);
 }
 
-static cl::opt<bool> EnableLiveIntervalRPReschedule(
-    "amdgpu-lirp-reschedule", cl::Hidden,
-    cl::desc("Enable live interval RP reschedule stage"), cl::init(true));
-
-static cl::opt<unsigned> LiveIntervalRPThreshold(
-    "amdgpu-lirp-threshold", cl::Hidden,
-    cl::desc("Percent increase of live interval RP over instant pressure to "
-             "trigger rescheduling"),
-    cl::init(10));
-
-static cl::opt<unsigned> LiveIntervalRPVGPRReduction(
-    "amdgpu-lirp-vgpr-reduction", cl::Hidden,
-    cl::desc(
-        "Reduction factor (percent) for VGPR threshold during live interval RP "
-        "reschedule stage"),
-    cl::init(90));
-
-static cl::opt<unsigned> LiveIntervalRPInstantLowerBound(
-    "amdgpu-lirp-instant-lower-bound", cl::Hidden,
-    cl::desc("Lower bound (percent of the VGPR excess limit) on instant RP, "
-             "below which a region is skipped"),
-    cl::init(10));
-
 bool LiveIntervalRPStage::initGCNSchedStage() {
-  if (!EnableLiveIntervalRPReschedule)
+  if (!ST.getCLOpts().lirp_reschedule)
     return false;
 
   if (!GCNSchedStage::initGCNSchedStage())
@@ -2301,6 +2232,7 @@ bool LiveIntervalRPStage::initGCNSchedStage() {
 }
 
 bool LiveIntervalRPStage::initGCNRegion() {
+  const AMDGPUOptions &CLOpts = ST.getCLOpts();
   unsigned InstantRP = DAG.Pressure[RegionIdx].getArchVGPRNum();
   auto [RegionBegin, RegionEnd] = DAG.Regions[RegionIdx];
   if (RegionBegin == RegionEnd)
@@ -2311,7 +2243,7 @@ bool LiveIntervalRPStage::initGCNRegion() {
       DAG.MF.getRegInfo(), static_cast<const SIRegisterInfo &>(*DAG.TRI));
 
   unsigned NewVGPRThresholdPercent =
-      (S.VGPRThresholdPercent * LiveIntervalRPVGPRReduction + 99) / 100;
+      (S.VGPRThresholdPercent * CLOpts.lirp_vgpr_reduction + 99) / 100;
 
   LLVM_DEBUG(dbgs() << "LIRP: Region " << RegionIdx
                     << ", VGPRThresholdPercent: " << S.VGPRThresholdPercent
@@ -2323,16 +2255,16 @@ bool LiveIntervalRPStage::initGCNRegion() {
   bool DoRescheduling = false;
   // Lower bound on InstantRP to skip over tiny regions.
   unsigned InstantRPLowerBound =
-      S.VGPRExcessLimit * LiveIntervalRPInstantLowerBound / 100;
+      S.VGPRExcessLimit * CLOpts.lirp_instant_lower_bound / 100;
   if (LIRP > S.VGPRExcessLimit) {
     LLVM_DEBUG(dbgs() << " [LIRP exceeds the limit (" << S.VGPRExcessLimit
                       << "), rescheduling]");
     DoRescheduling = true;
   } else if (LIRP > InstantRP && InstantRP > InstantRPLowerBound) {
     unsigned IncreasePercent = ((LIRP - InstantRP) * 100) / InstantRP;
-    if (IncreasePercent > LiveIntervalRPThreshold) {
+    if (IncreasePercent > CLOpts.lirp_threshold) {
       LLVM_DEBUG(dbgs() << " [" << IncreasePercent << "% > "
-                        << LiveIntervalRPThreshold << "%, rescheduling]");
+                        << CLOpts.lirp_threshold << "%, rescheduling]");
       DoRescheduling = true;
     }
   }

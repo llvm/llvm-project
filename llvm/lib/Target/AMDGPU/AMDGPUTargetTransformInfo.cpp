@@ -35,57 +35,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "AMDGPUtti"
 
-static cl::opt<unsigned> UnrollThresholdPrivate(
-  "amdgpu-unroll-threshold-private",
-  cl::desc("Unroll threshold for AMDGPU if private memory used in a loop"),
-  cl::init(2700), cl::Hidden);
-
-static cl::opt<unsigned> UnrollThresholdLocal(
-  "amdgpu-unroll-threshold-local",
-  cl::desc("Unroll threshold for AMDGPU if local memory used in a loop"),
-  cl::init(1000), cl::Hidden);
-
-static cl::opt<unsigned> UnrollThresholdIf(
-  "amdgpu-unroll-threshold-if",
-  cl::desc("Unroll threshold increment for AMDGPU for each if statement inside loop"),
-  cl::init(200), cl::Hidden);
-
-static cl::opt<bool> UnrollRuntimeLocal(
-  "amdgpu-unroll-runtime-local",
-  cl::desc("Allow runtime unroll for AMDGPU if local memory used in a loop"),
-  cl::init(true), cl::Hidden);
-
-static cl::opt<unsigned> UnrollMaxBlockToAnalyze(
-    "amdgpu-unroll-max-block-to-analyze",
-    cl::desc("Inner loop block size threshold to analyze in unroll for AMDGPU"),
-    cl::init(32), cl::Hidden);
-
-static cl::opt<unsigned> ArgAllocaCost("amdgpu-inline-arg-alloca-cost",
-                                       cl::Hidden, cl::init(4000),
-                                       cl::desc("Cost of alloca argument"));
-
-// If the amount of scratch memory to eliminate exceeds our ability to allocate
-// it into registers we gain nothing by aggressively inlining functions for that
-// heuristic.
-static cl::opt<unsigned>
-    ArgAllocaCutoff("amdgpu-inline-arg-alloca-cutoff", cl::Hidden,
-                    cl::init(256),
-                    cl::desc("Maximum alloca size to use for inline cost"));
-
-// Inliner constraint to achieve reasonable compilation time.
-static cl::opt<size_t> InlineMaxBB(
-    "amdgpu-inline-max-bb", cl::Hidden, cl::init(1100),
-    cl::desc("Maximum number of BBs allowed in a function after inlining"
-             " (compile time constraint)"));
-
-// This default unroll factor is based on microbenchmarks on gfx1030.
-static cl::opt<unsigned> MemcpyLoopUnroll(
-    "amdgpu-memcpy-loop-unroll",
-    cl::desc("Unroll factor (affecting 4x32-bit operations) to use for memory "
-             "operations when lowering statically-sized memcpy, memmove, or"
-             "memset as a loop"),
-    cl::init(16), cl::Hidden);
-
 static bool dependsOnLocalPhi(const Loop *L, const Value *Cond,
                               unsigned Depth = 0) {
   const Instruction *I = dyn_cast<Instruction>(Cond);
@@ -106,7 +55,7 @@ static bool dependsOnLocalPhi(const Loop *L, const Value *Cond,
 }
 
 AMDGPUTTIImpl::AMDGPUTTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
-    : BaseT(TM, F.getDataLayout()),
+    : BaseT(TM, F.getDataLayout()), CLOpts(TM->getCLOpts()),
       TargetTriple(F.getParent()->getTargetTriple()),
       ST(static_cast<const GCNSubtarget *>(TM->getSubtargetImpl(F))),
       TLI(ST->getTargetLowering()) {}
@@ -135,8 +84,8 @@ void AMDGPUTTIImpl::getUnrollingPreferences(
 
   // Maximum alloca size than can fit registers. Reserve 16 registers.
   const unsigned MaxAlloca = (256 - 16) * 4;
-  unsigned ThresholdPrivate = UnrollThresholdPrivate;
-  unsigned ThresholdLocal = UnrollThresholdLocal;
+  unsigned ThresholdPrivate = CLOpts.unroll_threshold_private;
+  unsigned ThresholdLocal = CLOpts.unroll_threshold_local;
 
   // If this loop has the amdgpu.loop.unroll.threshold metadata we will use the
   // provided threshold value as the default for Threshold
@@ -181,7 +130,7 @@ void AMDGPUTTIImpl::getUnrollingPreferences(
               (L->contains(Succ1) && L->isLoopExiting(Succ1)))
             continue;
           if (dependsOnLocalPhi(L, Br->getCondition())) {
-            UP.Threshold += UnrollThresholdIf;
+            UP.Threshold += CLOpts.unroll_threshold_if;
             LLVM_DEBUG(dbgs() << "Set unroll threshold " << UP.Threshold
                               << " for loop:\n"
                               << *L << " due to " << *Br << '\n');
@@ -230,7 +179,7 @@ void AMDGPUTTIImpl::getUnrollingPreferences(
           continue;
         LLVM_DEBUG(dbgs() << "Allow unroll runtime for loop:\n"
                           << *L << " due to LDS use.\n");
-        UP.Runtime = UnrollRuntimeLocal;
+        UP.Runtime = CLOpts.unroll_runtime_local;
       }
 
       // Check if GEP depends on a value defined by this loop itself.
@@ -272,7 +221,7 @@ void AMDGPUTTIImpl::getUnrollingPreferences(
 
     // If we got a GEP in a small BB from inner loop then increase max trip
     // count to analyze for better estimation cost in unroll
-    if (L->isInnermost() && BB->size() < UnrollMaxBlockToAnalyze)
+    if (L->isInnermost() && BB->size() < CLOpts.unroll_max_block_to_analyze)
       UP.MaxIterationsCountToAnalyze = 32;
   }
 }
@@ -287,7 +236,7 @@ uint64_t AMDGPUTTIImpl::getMaxMemIntrinsicInlineSizeThreshold() const {
 }
 
 GCNTTIImpl::GCNTTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
-    : BaseT(TM, F.getDataLayout()),
+    : BaseT(TM, F.getDataLayout()), CLOpts(TM->getCLOpts()),
       ST(static_cast<const GCNSubtarget *>(TM->getSubtargetImpl(F))),
       TLI(ST->getTargetLowering()), CommonTTI(TM, F),
       IsGraphics(AMDGPU::isGraphics(F.getCallingConv())) {
@@ -440,9 +389,9 @@ Type *GCNTTIImpl::getMemcpyLoopLoweringType(
   // total size of the type returned here. Mitigating that would require a more
   // complex lowering for variable-length memcpy and memmove.
   unsigned I32EltsInVector = 4;
-  if (MemcpyLoopUnroll > 0 && isa<ConstantInt>(Length))
+  if (CLOpts.memcpy_loop_unroll > 0 && isa<ConstantInt>(Length))
     return FixedVectorType::get(Type::getInt32Ty(Context),
-                                MemcpyLoopUnroll * I32EltsInVector);
+                                CLOpts.memcpy_loop_unroll * I32EltsInVector);
 
   return FixedVectorType::get(Type::getInt32Ty(Context), I32EltsInVector);
 }
@@ -1881,17 +1830,17 @@ bool GCNTTIImpl::areInlineCompatible(const Function *Caller,
     return true;
 
   // Hack to make compile times reasonable.
-  if (InlineMaxBB) {
+  if (CLOpts.inline_max_bb) {
     // Single BB does not increase total BB amount.
     if (Callee->size() == 1)
       return true;
     size_t BBSize = Caller->size() + Callee->size() - 1;
-    if (BBSize > InlineMaxBB) {
+    if (BBSize > CLOpts.inline_max_bb) {
       LLVM_DEBUG(dbgs() << "AMDGPU inline max-BB rejected inlining "
                         << Callee->getName() << " into " << Caller->getName()
                         << ": caller BBs=" << Caller->size() << ", callee BBs="
                         << Callee->size() << ", combined BBs=" << BBSize
-                        << ", max BBs=" << InlineMaxBB << '\n');
+                        << ", max BBs=" << CLOpts.inline_max_bb << '\n');
       return false;
     }
   }
@@ -1987,7 +1936,7 @@ unsigned GCNTTIImpl::adjustInliningThreshold(const CallBase *CB) const {
   // is not inlined. Increase the inline threshold to promote inlining.
   TypeSize AllocaSize = getCallArgsTotalAllocaSize(CB, DL);
   if (AllocaSize.getFixedValue() > 0)
-    Threshold += ArgAllocaCost;
+    Threshold += CLOpts.inline_arg_alloca_cost;
   return Threshold;
 }
 
@@ -1997,7 +1946,7 @@ unsigned GCNTTIImpl::getCallerAllocaCost(const CallBase *CB,
   // Below the cutoff, assume that the private memory objects would be
   // optimized
   auto AllocaSize = getCallArgsTotalAllocaSize(CB, DL).getFixedValue();
-  if (AllocaSize <= ArgAllocaCutoff)
+  if (AllocaSize <= CLOpts.inline_arg_alloca_cutoff)
     return 0;
 
   // Above the cutoff, we give a cost to each private memory object
@@ -2015,7 +1964,8 @@ unsigned GCNTTIImpl::getCallerAllocaCost(const CallBase *CB,
   // We compensate the first two multipliers, by repeating logic from the
   // inliner-cost in here. The vector-bonus is 0 on AMDGPU.
   static_assert(InlinerVectorBonusPercent == 0, "vector bonus assumed to be 0");
-  unsigned Threshold = ArgAllocaCost * getInliningThresholdMultiplier();
+  unsigned Threshold =
+      CLOpts.inline_arg_alloca_cost * getInliningThresholdMultiplier();
 
   bool SingleBB = none_of(*CB->getCalledFunction(), [](const BasicBlock &BB) {
     return BB.getTerminator()->getNumSuccessors() > 1;

@@ -924,11 +924,6 @@ Printable llvm::print(const GCNRPTracker::LiveRegSet &LiveRegs,
 
 void GCNRegPressure::dump() const { dbgs() << print(*this); }
 
-static cl::opt<bool> UseDownwardTracker(
-    "amdgpu-print-rp-downward",
-    cl::desc("Use GCNDownwardRPTracker for GCNRegPressurePrinter pass"),
-    cl::init(false), cl::Hidden);
-
 char llvm::GCNRegPressurePrinter::ID = 0;
 char &llvm::GCNRegPressurePrinterID = GCNRegPressurePrinter::ID;
 
@@ -966,6 +961,8 @@ bool GCNRegPressurePrinter::runOnMachineFunction(MachineFunction &MF) {
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
   LiveIntervals &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
+  const bool UseDownwardTracker =
+      MF.getSubtarget<GCNSubtarget>().getCLOpts().print_rp_downward;
 
   auto &OS = dbgs();
 
