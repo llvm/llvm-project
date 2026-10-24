@@ -326,12 +326,14 @@ define i64 @early_exit_countdown_iv_via_latch_phi(i64 %n, i64 %mask) {
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.early.exit:
-; CHECK-NEXT:    EMIT vp<%first.active.lane> = first-active-lane vp<[[VP6]]>
-; CHECK-NEXT:    EMIT vp<%early.exit.value> = extract-lane vp<%first.active.lane>, ir<%iv.next>
+; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = first-active-lane vp<[[VP6]]>
+; CHECK-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = add vp<[[VP5]]>, vp<[[VP11]]>
+; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = add vp<[[VP12]]>, ir<1>
+; CHECK-NEXT:    vp<[[VP14:%[0-9]+]]> = DERIVED-IV ir<%n> + vp<[[VP13]]> * ir<-1>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<exit>:
-; CHECK-NEXT:    IR   %res = phi i64 [ %iv.next, %loop.header ], [ 0, %loop.latch ] (extra operands: ir<0> from middle.block, vp<%early.exit.value> from vector.early.exit)
+; CHECK-NEXT:    IR   %res = phi i64 [ %iv.next, %loop.header ], [ 0, %loop.latch ] (extra operands: ir<0> from middle.block, vp<[[VP14]]> from vector.early.exit)
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
@@ -389,7 +391,6 @@ define i32 @early_exit_two_ivs_via_latch_phis(i32 %n, i32 %w, ptr %count.out) {
 ; CHECK-NEXT:  vp<[[VP5:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      ir<%cnt> = WIDEN-INDUCTION nsw ir<%n>, ir<-1>, vp<[[VP0]]>
 ; CHECK-NEXT:      ir<%x> = WIDEN-INDUCTION nsw ir<0>, ir<4>, vp<[[VP0]]>
 ; CHECK-NEXT:      WIDEN ir<%x.next> = add nsw ir<%x>, ir<4>
 ; CHECK-NEXT:      WIDEN ir<%c> = icmp sge ir<%x.next>, ir<%w>
@@ -408,15 +409,17 @@ define i32 @early_exit_two_ivs_via_latch_phis(i32 %n, i32 %w, ptr %count.out) {
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.early.exit:
-; CHECK-NEXT:    WIDEN ir<%cnt.next> = add nsw ir<%cnt>, ir<-1>
-; CHECK-NEXT:    EMIT vp<%first.active.lane> = first-active-lane vp<[[VP6]]>
-; CHECK-NEXT:    EMIT vp<%early.exit.value> = extract-lane vp<%first.active.lane>, ir<%x.next>
-; CHECK-NEXT:    EMIT vp<%early.exit.value>.1 = extract-lane vp<%first.active.lane>, ir<%cnt.next>
+; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = first-active-lane vp<[[VP6]]>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP12:%[0-9]+]]> = trunc vp<[[VP11]]> to i32
+; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = add vp<[[VP5]]>, vp<[[VP12]]>
+; CHECK-NEXT:    EMIT vp<[[VP14:%[0-9]+]]> = add vp<[[VP13]]>, ir<1>
+; CHECK-NEXT:    vp<[[VP15:%[0-9]+]]> = DERIVED-IV ir<0> + vp<[[VP14]]> * ir<4>
+; CHECK-NEXT:    vp<[[VP16:%[0-9]+]]> = DERIVED-IV ir<%n> + vp<[[VP14]]> * ir<-1>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<exit>:
-; CHECK-NEXT:    IR   %res.x = phi i32 [ %x.next, %loop.header ], [ %x.latch, %loop.latch ] (extra operands: vp<[[VP4]]> from middle.block, vp<%early.exit.value> from vector.early.exit)
-; CHECK-NEXT:    IR   %res.cnt = phi i32 [ %cnt.next, %loop.header ], [ 0, %loop.latch ] (extra operands: ir<0> from middle.block, vp<%early.exit.value>.1 from vector.early.exit)
+; CHECK-NEXT:    IR   %res.x = phi i32 [ %x.next, %loop.header ], [ %x.latch, %loop.latch ] (extra operands: vp<[[VP4]]> from middle.block, vp<[[VP15]]> from vector.early.exit)
+; CHECK-NEXT:    IR   %res.cnt = phi i32 [ %cnt.next, %loop.header ], [ 0, %loop.latch ] (extra operands: ir<0> from middle.block, vp<[[VP16]]> from vector.early.exit)
 ; CHECK-NEXT:    IR   store i32 %res.cnt, ptr %count.out, align 4
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
