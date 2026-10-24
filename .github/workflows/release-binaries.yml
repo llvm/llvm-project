@@ -159,11 +159,6 @@ jobs:
           target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_BOOTSTRAP_DARWIN_osx_ARCHS=$arches -DBOOTSTRAP_BOOTSTRAP_DARWIN_osx_BUILTIN_ARCHS=$arches"
         fi
 
-        if [ "$RUNNER_OS" = "Windows" ]; then
-          # The build times out on Windows, so we need to disable LTO.
-          target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_LTO=OFF"
-        fi
-
         case "$INPUTS_RUNS_ON" in
           ubuntu-22.04* | windows-2022)
             build_runs_on="depot-$INPUTS_RUNS_ON-16"
@@ -227,6 +222,10 @@ jobs:
     - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
       with:
         python-version: '3.14.8'
+
+    - name: Install Python psutil (Windows)
+      if: runner.os == 'Windows'
+      run: python -m pip install --disable-pip-version-check --no-input psutil
 
     # For some reason this is needed on Windows or else the build system can't find python3.lib.
     - name: Setup Python library path
@@ -329,6 +328,25 @@ jobs:
         release_dir=`find "$BUILD_PREFIX/build" -iname 'stage2-bins'`
         mv "$release_dir/$RELEASE_BINARY_FILENAME" .
 
+    - name: Enable NetFx3 (Windows ARM64)
+      if: runner.os == 'Windows' && runner.arch == 'ARM64'
+      shell: pwsh
+      run: |
+        $feature = Get-WindowsOptionalFeature -Online -FeatureName NetFx3
+        if ($feature.State -ne 'Enabled') {
+          $result = Enable-WindowsOptionalFeature -Online -FeatureName NetFx3 `
+            -All -NoRestart -ErrorAction Stop
+          if ($result.RestartNeeded) {
+            throw 'Enabling NetFx3 requires a restart; the runner image must have it pre-enabled.'
+          }
+        }
+        $framework = Get-ItemProperty `
+          -LiteralPath 'HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP\v3.5' `
+          -ErrorAction SilentlyContinue
+        if ($null -eq $framework -or $framework.Install -ne 1) {
+          throw 'NetFx3 did not register as installed after enabling the Windows feature.'
+        }
+
     # Wix is not installed by default on Windows ARM64
     - name: Install Wix (Windows ARM64)
       env:
@@ -342,23 +360,154 @@ jobs:
     - name: Build Windows
       id: build-windows
       if: runner.os == 'Windows'
+      shell: pwsh
       env:
         INPUTS_RUNS_ON: ${{ inputs.runs-on }}
         LLVM_VERSION: ${{ needs.prepare.outputs.release-version }}
-        EXTRA_ARGS: ${{ case(needs.prepare.outputs.build-runs-on == 'windows-11-arm', '--fast-build', '--fast-build') }}
       run: |
-        subst S: ${{ github.workspace }}
+        Add-Type -TypeDefinition @'
+        using System;
+        using System.IO;
+        using System.Runtime.InteropServices;
+        using System.Text;
+
+        public static class RestartManager {
+          private const int ErrorMoreData = 234;
+
+          [StructLayout(LayoutKind.Sequential)]
+          public struct UniqueProcess {
+            public int ProcessId;
+            public System.Runtime.InteropServices.ComTypes.FILETIME ProcessStartTime;
+          }
+
+          public enum ApplicationType : int {
+            Unknown = 0, MainWindow = 1, OtherWindow = 2, Service = 3,
+            Explorer = 4, Console = 5, Critical = 1000
+          }
+
+          [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+          public struct ProcessInfo {
+            public UniqueProcess Process;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 256)]
+            public string ApplicationName;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 64)]
+            public string ServiceName;
+            public ApplicationType Type;
+            public uint Status;
+            public uint SessionId;
+            [MarshalAs(UnmanagedType.Bool)]
+            public bool Restartable;
+          }
+
+          [DllImport("rstrtmgr.dll", CharSet = CharSet.Unicode)]
+          private static extern int RmStartSession(out uint sessionHandle, int flags, StringBuilder sessionKey);
+
+          [DllImport("rstrtmgr.dll", CharSet = CharSet.Unicode)]
+          private static extern int RmRegisterResources(uint sessionHandle, uint fileCount,
+            [MarshalAs(UnmanagedType.LPArray, ArraySubType = UnmanagedType.LPWStr)] string[] fileNames,
+            uint applicationCount, IntPtr applications, uint serviceCount, IntPtr services);
+
+          [DllImport("rstrtmgr.dll")]
+          private static extern int RmGetList(uint sessionHandle, ref uint needed,
+            ref uint count, [Out] ProcessInfo[] processes, ref uint rebootReasons);
+
+          [DllImport("rstrtmgr.dll")]
+          private static extern int RmEndSession(uint sessionHandle);
+
+          public static ProcessInfo[] GetLockingProcesses(string path) {
+            uint sessionHandle;
+            var sessionKey = new StringBuilder(33);
+            int result = RmStartSession(out sessionHandle, 0, sessionKey);
+            if (result != 0) throw new InvalidOperationException("RmStartSession failed: " + result);
+
+            try {
+              string[] files = new[] { Path.GetFullPath(path) };
+              result = RmRegisterResources(sessionHandle, 1, files, 0, IntPtr.Zero, 0, IntPtr.Zero);
+              if (result != 0) throw new InvalidOperationException("RmRegisterResources failed: " + result);
+
+              uint needed = 0, count = 0, rebootReasons = 0;
+              result = RmGetList(sessionHandle, ref needed, ref count, null, ref rebootReasons);
+              if (result == 0 && needed == 0) return new ProcessInfo[0];
+              if (result != ErrorMoreData) throw new InvalidOperationException("RmGetList failed: " + result);
+
+              for (int attempt = 0; attempt < 3; ++attempt) {
+                var processes = new ProcessInfo[needed];
+                count = needed;
+                result = RmGetList(sessionHandle, ref needed, ref count, processes, ref rebootReasons);
+                if (result == 0) {
+                  Array.Resize(ref processes, (int)count);
+                  return processes;
+                }
+                if (result != ErrorMoreData) throw new InvalidOperationException("RmGetList failed: " + result);
+              }
+              throw new InvalidOperationException("The locking process list kept changing.");
+            } finally {
+              RmEndSession(sessionHandle);
+            }
+          }
+        }
+        '@
+
+        function Write-FileLockOwners {
+          param([Parameter(Mandatory)][string]$Path)
+          Write-Host "Checking which processes are using '$Path'..."
+          try {
+            $owners = [RestartManager]::GetLockingProcesses($Path)
+            if ($owners.Count -eq 0) {
+              Write-Host 'Restart Manager did not report a process using this file.'
+              return
+            }
+            foreach ($owner in $owners) {
+              $processId = $owner.Process.ProcessId
+              $process = Get-Process -Id $processId -ErrorAction SilentlyContinue
+              $processName = if ($process) { $process.ProcessName } else { 'unknown process' }
+              $processPath = if ($process) { try { $process.Path } catch { $null } } else { $null }
+              $details = @("$processName (PID $processId)", "Restart Manager: $($owner.ApplicationName)")
+              if ($processPath) { $details += "Path: $processPath" }
+              if ($owner.ServiceName) { $details += "Service: $($owner.ServiceName)" }
+              Write-Host "  $($details -join '; ')"
+            }
+          } catch {
+            Write-Warning "Could not identify the process using '$Path': $($_.Exception.Message)"
+          }
+        }
+
+        function Move-Artifact {
+          param(
+            [Parameter(Mandatory)][string]$Source,
+            [Parameter(Mandatory)][string]$DestinationDirectory
+          )
+          try {
+            Move-Item -LiteralPath $Source -Destination $DestinationDirectory -ErrorAction Stop
+          } catch {
+            $moveError = $_.Exception.Message
+            Write-Warning "Could not move artifact '$Source': $moveError"
+            Write-FileLockOwners -Path $Source
+            $destination = Join-Path $DestinationDirectory (Split-Path -Path $Source -Leaf)
+            if (Test-Path -LiteralPath $destination -PathType Leaf) {
+              Write-FileLockOwners -Path $destination
+            }
+            throw "Could not move artifact '$Source': $moveError"
+          }
+        }
+
+        subst S: "${{ github.workspace }}"
         cd S:\llvm\utils\release\
-        .\build_llvm_release.bat "--$($env:RUNNER_ARCH.ToLower())" --version $env:LLVM_VERSION --local-python --skip-checkout $env:EXTRA_ARGS
+        $buildArgs = @{
+          Version = $env:LLVM_VERSION;
+          FastBuild = $true;
+          Unattended = $true
+        }
+        & .\build_windows_llvm_release.ps1 @buildArgs
         if ($env:INPUTS_RUNS_ON -eq "windows-11-arm") {
           $zstd = (Get-ChildItem -Recurse -Filter "zstd.exe" | Select-Object -First 1).fullName
-          mv $zstd $env:GITHUB_WORKSPACE
+          Move-Artifact -Source $zstd -DestinationDirectory $env:GITHUB_WORKSPACE
         }
         $installer = (Get-ChildItem -Recurse -Filter "LLVM-*.msi" | Select-Object -First 1).fullName
         $tarball = (Get-ChildItem -Recurse -Filter "*.tar.xz" | Select-Object -First 1).fullName
         # Move installer to top-level directory so it is easier to upload.
-        mv $installer $env:GITHUB_WORKSPACE
-        mv $tarball $env:GITHUB_WORKSPACE
+        Move-Artifact -Source $installer -DestinationDirectory $env:GITHUB_WORKSPACE
+        Move-Artifact -Source $tarball -DestinationDirectory $env:GITHUB_WORKSPACE
         echo "windows-installer-filename=$(Split-Path -Path $installer -Leaf)" >> $env:GITHUB_OUTPUT
     
     - name: Dump Wix logs
@@ -367,7 +516,7 @@ jobs:
         LLVM_VERSION: ${{ needs.prepare.outputs.release-version }}
         BUILD_DIR_SUFFIX: ${{ case(runner.arch == 'ARM64', 'arm64', 'amd64') }}
       run: |
-        cat S:/llvm/utils/release/llvm_package_$($env:LLVM_VERSION)/build_$($env:BUILD_DIR_SUFFIX)/_CPack_Packages/win64/WIX/wix.log
+        cat S:/llvm/utils/release/llvm_package_$($env:LLVM_VERSION)/build_$($env:BUILD_DIR_SUFFIX)_stage2/_CPack_Packages/win64/WIX/wix.log
 
     - name: Create zstd compressed tarball
       shell: bash
