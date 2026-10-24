@@ -64,6 +64,13 @@ void test_death() {
   TEST_LIBCPP_ASSERT_FAILURE(oob[0], "__bounded_iter::operator[]: Attempt to index an iterator at or past the end");
   TEST_LIBCPP_ASSERT_FAILURE(oob[1], "__bounded_iter::operator[]: Attempt to index an iterator at or past the end");
   TEST_LIBCPP_ASSERT_FAILURE(oob[-6], "__bounded_iter::operator[]: Attempt to index an iterator past the start");
+
+  // A default-constructed iterator points past the end of an empty range, so it is not dereferenceable.
+  std::__bounded_iter<Iter> const singular;
+  TEST_LIBCPP_ASSERT_FAILURE(*singular, "__bounded_iter::operator*: Attempt to dereference an iterator at the end");
+  TEST_LIBCPP_ASSERT_FAILURE(singular->x, "__bounded_iter::operator->: Attempt to dereference an iterator at the end");
+  TEST_LIBCPP_ASSERT_FAILURE(
+      singular[0], "__bounded_iter::operator[]: Attempt to index an iterator at or past the end");
 }
 
 int main(int, char**) {

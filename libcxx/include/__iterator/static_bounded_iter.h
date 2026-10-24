@@ -37,7 +37,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Iterator, size_t _Size>
 struct __static_bounded_iter_storage {
-  __static_bounded_iter_storage() = default;
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 __static_bounded_iter_storage() _NOEXCEPT : __current_(), __begin_() {}
 
   _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit __static_bounded_iter_storage(_Iterator __current, _Iterator __begin)
       : __current_(__current), __begin_(__begin) {}
@@ -54,7 +54,7 @@ private:
 
 template <class _Iterator>
 struct __static_bounded_iter_storage<_Iterator, 0> {
-  __static_bounded_iter_storage() = default;
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 __static_bounded_iter_storage() _NOEXCEPT : __current_() {}
 
   _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit __static_bounded_iter_storage(_Iterator __current, _Iterator /* __begin */)
       : __current_(__current) {}
