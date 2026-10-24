@@ -64,6 +64,12 @@ def get_line2func_list(args, clang_args, globals_name_prefix):
     # TODO: Should we add checks for global variables being emitted?
     def parse_clang_ast_json(node, loc, search):
         node_kind = node["kind"]
+        if node_kind == "FunctionTemplateDecl":
+            # The template pattern has no mangled name; its instantiations do.
+            for inner in node.get("inner", []):
+                if inner.get("kind") == "FunctionDecl" and inner.get("mangledName"):
+                    parse_clang_ast_json(inner, node["loc"], search)
+            return
         # Recurse for the following nodes that can contain nested function decls:
         if node_kind in (
             "NamespaceDecl",
