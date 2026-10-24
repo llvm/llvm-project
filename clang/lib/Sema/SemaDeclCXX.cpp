@@ -86,15 +86,6 @@ public:
   bool VisitPseudoObjectExpr(const PseudoObjectExpr *POE);
   bool VisitCoawaitExpr(const CoawaitExpr *E);
   bool VisitCoyieldExpr(const CoyieldExpr *E);
-  bool VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *E);
-  bool VisitCXXNoexceptExpr(const CXXNoexceptExpr *E);
-  bool VisitCXXTypeidExpr(const CXXTypeidExpr *E);
-
-private:
-  bool CheckLambdaBody(const Stmt *S);
-  bool VisitOperand(const Expr *Node, bool Unevaluated);
-  SmallVector<const CXXMethodDecl *, 2> LambdaCallOperators;
-  unsigned UnevaluatedDepth = 0;
 };
 
 /// VisitExpr - Visit all of the children of this expression.
@@ -114,10 +105,6 @@ bool CheckDefaultArgumentVisitor::VisitDeclRefExpr(const DeclRefExpr *DRE) {
 
   if (!isa<VarDecl, BindingDecl>(Decl))
     return false;
-
-  for (const CXXMethodDecl *CallOp : LambdaCallOperators)
-    if (CallOp->Encloses(Decl->getDeclContext()))
-      return false;
 
   if (const auto *Param = dyn_cast<ParmVarDecl>(Decl)) {
     // C++ [dcl.fct.default]p9:
@@ -192,50 +179,7 @@ bool CheckDefaultArgumentVisitor::VisitLambdaExpr(const LambdaExpr *Lambda) {
     auto *D = cast<VarDecl>(LC.getCapturedVar());
     Invalid |= Visit(D->getInit());
   }
-  // The body of a lambda inside an unevaluated operand is not potentially
-  // evaluated, so parameters named there are fine.
-  if (UnevaluatedDepth)
-    return Invalid;
-  LambdaCallOperators.push_back(Lambda->getCallOperator());
-  Invalid |= CheckLambdaBody(Lambda->getBody());
-  LambdaCallOperators.pop_back();
   return Invalid;
-}
-
-bool CheckDefaultArgumentVisitor::CheckLambdaBody(const Stmt *S) {
-  if (!S)
-    return false;
-  if (isa<Expr>(S))
-    return Visit(S);
-  bool Invalid = false;
-  for (const Stmt *Child : S->children())
-    Invalid |= CheckLambdaBody(Child);
-  return Invalid;
-}
-
-bool CheckDefaultArgumentVisitor::VisitOperand(const Expr *Node,
-                                               bool Unevaluated) {
-  if (Unevaluated)
-    ++UnevaluatedDepth;
-  bool Invalid = VisitExpr(Node);
-  if (Unevaluated)
-    --UnevaluatedDepth;
-  return Invalid;
-}
-
-bool CheckDefaultArgumentVisitor::VisitUnaryExprOrTypeTraitExpr(
-    const UnaryExprOrTypeTraitExpr *E) {
-  // The operand of sizeof/alignof is unevaluated, except for VLAs.
-  return VisitOperand(E, !E->getTypeOfArgument()->isVariablyModifiedType());
-}
-
-bool CheckDefaultArgumentVisitor::VisitCXXNoexceptExpr(
-    const CXXNoexceptExpr *E) {
-  return VisitOperand(E, /*Unevaluated=*/true);
-}
-
-bool CheckDefaultArgumentVisitor::VisitCXXTypeidExpr(const CXXTypeidExpr *E) {
-  return VisitOperand(E, !E->isPotentiallyEvaluated());
 }
 
 bool CheckDefaultArgumentVisitor::VisitCoawaitExpr(const CoawaitExpr *E) {

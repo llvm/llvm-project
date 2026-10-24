@@ -134,7 +134,7 @@ void pr42587() {
   (void)[](auto... args, int = args) {}; // expected-error {{default argument contains unexpanded parameter pack}}
   (void)[](auto... args, decltype(args)) {}; // expected-error {{type contains unexpanded parameter pack}}
   (void)[](auto... args, decltype(args)...) {}; // (ok)
-  (void)[](auto... args, int = [=] { return args; }()) {}; // expected-error {{default argument contains unexpanded parameter pack}}
+  (void)[](auto... args, int = [=] { return args; }()) {}; // expected-error {{default argument contains unexpanded parameter pack}} expected-error {{default argument references parameter 'args'}}
   (void)([]<typename ...T> (T t) {} + ...); // expected-error {{contains unexpanded parameter pack 'T'}} expected-error {{does not contain any unexpanded}} expected-warning 0-2{{extension}}
   (void)([]<int ...N> (int k = N) {} + ...); // expected-error {{contains unexpanded parameter pack 'N'}} expected-error {{does not contain any unexpanded}} expected-warning 0-2{{extension}}
   (void)([]<template<typename> typename ...T> (T<int>) {} + ...); // expected-error {{contains unexpanded parameter pack 'T'}} expected-error {{does not contain any unexpanded}} expected-warning 0-3{{extension}}
