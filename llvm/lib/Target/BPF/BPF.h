@@ -38,6 +38,20 @@ ModulePass *createBPFCheckAndAdjustIRLegacyPass();
 ModulePass *createBPFUnwindPreparePass();
 FunctionPass *createBPFUnwindLowerPass();
 
+class BPFFuncTablePass : public RequiredPassInfoMixin<BPFFuncTablePass> {
+public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+};
+
+ModulePass *createBPFFuncTablePass();
+
+class BPFArenaCastPass : public RequiredPassInfoMixin<BPFArenaCastPass> {
+public:
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
+
+FunctionPass *createBPFArenaCastPass();
+
 class BPFISelDAGToDAGPass : public SelectionDAGISelPass {
 public:
   BPFISelDAGToDAGPass(BPFTargetMachine &TM);
@@ -93,9 +107,11 @@ InstructionSelector *createBPFInstructionSelector(const BPFTargetMachine &,
                                                   const BPFSubtarget &,
                                                   const BPFRegisterBankInfo &);
 
+void initializeBPFArenaCastLegacyPass(PassRegistry &);
 void initializeBPFAsmPrinterPass(PassRegistry &);
 void initializeBPFCheckAndAdjustIRLegacyPass(PassRegistry &);
 void initializeBPFDAGToDAGISelLegacyPass(PassRegistry &);
+void initializeBPFFuncTableLegacyPass(PassRegistry &);
 void initializeBPFMIPeepholeLegacyPass(PassRegistry &);
 void initializeBPFMIPreEmitCheckingLegacyPass(PassRegistry &);
 void initializeBPFMIExpandStackArgPseudosLegacyPass(PassRegistry &);

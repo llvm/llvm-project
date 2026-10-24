@@ -60,11 +60,17 @@ public:
 };
 
 void BPFCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
+  const BPFSubtarget *Subtarget = getTM().getSubtargetImpl();
+
   addFunctionPass(AtomicExpandPass(TM), PMW);
   flushFPMsToMPM(PMW);
   addModulePass(BPFCheckAndAdjustIRPass(), PMW);
+  if (Subtarget->hasFuncTable())
+    addModulePass(BPFFuncTablePass(), PMW);
 
   Base::addIRPasses(PMW);
+  if (Subtarget->hasArenaCast())
+    addFunctionPass(BPFArenaCastPass(), PMW);
 }
 
 Error BPFCodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) {
