@@ -752,6 +752,18 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   `-Wunsafe-buffer-usage` to control warnings on `main`'s `argv` parameter,
   allowing users to suppress them with `-Wno-unsafe-buffer-usage-main-argv`.
 
+- `-Wno-unsafe-buffer-usage-in-libc-call` no longer turns off
+  `-Wunsafe-buffer-usage-in-format-attr-call`, and
+  `-Wunsafe-buffer-usage-in-format-attr-call` now works when it is the only
+  Safe Buffers warning enabled.
+
+- Added one diagnostic group per family of libc functions under
+  `-Wunsafe-buffer-usage-in-libc-call`, named by the suffixes
+  `-numeric-conversion`, `-string-manipulation`, `-string-examination`,
+  `-memory`, `-io`, `-printf` and `-scanf`. For example,
+  `-Wno-unsafe-buffer-usage-in-libc-call-string-examination` silences `strlen`
+  while `memcpy` is still diagnosed. (#GH127849)
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
