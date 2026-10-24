@@ -11,7 +11,7 @@
 
 #include "lldb/Host/Config.h"
 
-#if LLDB_ENABLE_LIBEDIT && defined(__linux__)
+#if LLDB_ENABLE_LIBEDIT && (defined(__linux__) || defined(__OpenBSD__))
 // NOTE: Since Python may define some pre-processor definitions which affect the
 // standard headers on some systems, you must include Python.h before any
 // standard headers are included.
