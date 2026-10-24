@@ -7255,8 +7255,10 @@ Expr *Sema::BuildBuiltinCallExpr(SourceLocation Loc, Builtin::ID Id,
   auto *BuiltInDecl = R.getAsSingle<FunctionDecl>();
   assert(BuiltInDecl && "failed to find builtin declaration");
 
-  ExprResult DeclRef =
-      BuildDeclRefExpr(BuiltInDecl, BuiltInDecl->getType(), VK_LValue, Loc);
+  // Refer to the builtin as if it were written in the source, so that the
+  // call is handled the same as an explicit one.
+  ExprResult DeclRef = BuildDeclarationNameExpr(
+      CXXScopeSpec(), R.getLookupNameInfo(), BuiltInDecl);
   assert(DeclRef.isUsable() && "Builtin reference cannot fail");
 
   ExprResult Call =
