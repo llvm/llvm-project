@@ -57,6 +57,8 @@ public:
 
   /// \name Vector TTI Implementations
   /// @{
+  /// Return the preferred tail folding style for the target.
+  TailFoldingStyle getPreferredTailFoldingStyle() const override;
 
   unsigned getNumberOfRegisters(unsigned ClassID) const override;
   unsigned getRegisterClassForType(bool Vector, Type *Ty) const override;
