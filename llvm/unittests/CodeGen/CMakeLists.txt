@@ -31,6 +31,7 @@ add_llvm_unittest(CodeGenTests
   DwarfStringPoolEntryRefTest.cpp
   GCMetadata.cpp
   InstrRefLDVTest.cpp
+  LaneBitmaskTest.cpp
   LowLevelTypeTest.cpp
   LexicalScopesTest.cpp
   MachineBasicBlockTest.cpp
