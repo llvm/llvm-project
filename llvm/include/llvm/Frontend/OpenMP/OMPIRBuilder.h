@@ -30,6 +30,7 @@
 #include "llvm/Support/VirtualFileSystemFwd.h"
 #include "llvm/TargetParser/Triple.h"
 #include <forward_list>
+#include <functional>
 #include <map>
 #include <optional>
 
@@ -3022,6 +3023,34 @@ public:
     MapHasAttachPtrArrayTy HasAttachPtr;
     StructNonContiguousInfo NonContigInfo;
 
+    /// Represents a group of mapper sub-components produced by an `iterator`
+    /// modifier on a `declare mapper`'s map clause: the component count is
+    /// only known at runtime, so these are pushed one at a time via
+    /// __tgt_push_mapper_component from inside a generated loop, rather than
+    /// being added to the arrays above. Only consumed by
+    /// emitUserDefinedMapper; emitOffloadingArrays ignores this field.
+    struct DynamicSegment {
+      /// Runtime (i64) trip count for this segment.
+      Value *Count = nullptr;
+      /// Emits the code computing one iteration's (BasePointer, Pointer,
+      /// Size) triple, given the loop's linear induction variable (0-based,
+      /// i64). Owning (not function_ref): the callable is typically a
+      /// lambda temporary assigned in after construction, which would
+      /// otherwise dangle by the time this is invoked. Returns an Error if the
+      /// entry could not be computed, e.g. on region conversion failure.
+      std::function<Expected<SmallVector<Value *, 3>>(IRBuilderBase &, Value *)>
+          GenEntry;
+      /// Map type/HasAttachPtr, constant across the segment.
+      omp::OpenMPOffloadMappingFlags Type =
+          omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE;
+      bool HasAttachPtr = false;
+      /// User-defined mapper to invoke for this segment's component, if the
+      /// underlying map clause carries one (mirrors CustomMapperCB for the
+      /// statically-known components above).
+      Function *ChildMapperFn = nullptr;
+    };
+    SmallVector<DynamicSegment, 0> DynamicSegments;
+
     /// Append arrays in \a CurInfo.
     void append(MapInfosTy &CurInfo) {
       BasePointers.append(CurInfo.BasePointers.begin(),
@@ -3042,6 +3071,8 @@ public:
                                   CurInfo.NonContigInfo.Counts.end());
       NonContigInfo.Strides.append(CurInfo.NonContigInfo.Strides.begin(),
                                    CurInfo.NonContigInfo.Strides.end());
+      DynamicSegments.append(CurInfo.DynamicSegments.begin(),
+                             CurInfo.DynamicSegments.end());
     }
   };
   using MapInfosOrErrorTy = Expected<MapInfosTy &>;
