@@ -1149,8 +1149,7 @@ bool TailRecursionEliminator::eliminate(
   if (F.getFnAttribute("disable-tail-calls").getValueAsBool())
     return false;
 
-  const ScalarOptions &Opts =
-      F.getContext().getLibraryOptions().get<ScalarOptions>();
+  const ScalarOptions &Opts = getScalarOptions(F);
   bool MadeChange = false;
   MadeChange |= markTails(Opts, F, ORE, PSI, BFI);
 

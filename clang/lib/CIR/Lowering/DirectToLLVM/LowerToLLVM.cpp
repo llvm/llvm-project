@@ -145,6 +145,7 @@ lowerCIRVisibilityToLLVMVisibility(cir::VisibilityKind visibilityKind) {
   case cir::VisibilityKind::Protected:
     return ::mlir::LLVM::Visibility::Protected;
   }
+  llvm_unreachable("fully covered switch");
 }
 
 static mlir::Value

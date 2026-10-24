@@ -340,7 +340,7 @@ CIRGenFunction::emitCoroutineBody(const CoroutineBodyStmt &s) {
   cir::ConstantOp nullPtrCst = builder.getNullPtr(voidPtrTy, openCurlyLoc);
 
   auto fn = mlir::cast<cir::FuncOp>(curFn);
-  fn.setCoroutine(true);
+  fn.setCoroutineKind(cir::CoroutineKind::Coroutine);
   const TargetInfo &ti = cgm.getASTContext().getTargetInfo();
   unsigned newAlign = ti.getNewAlign() / ti.getCharWidth();
 

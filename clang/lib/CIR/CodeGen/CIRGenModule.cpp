@@ -179,6 +179,9 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
       !sdkVersion.empty())
     getModule()->setAttr(cir::CIRDialect::getSDKVersionAttrName(),
                          builder.getStringAttr(sdkVersion.getAsString()));
+  if (langOpts.CUDA && !langOpts.CUID.empty())
+    getModule()->setAttr(cir::CIRDialect::getCUIDHashAttrName(),
+                         builder.getStringAttr(astContext.getCUIDHash()));
   // TODO(CIR): These attributes should eventually be replaced by
   // TypeSizeInfoAttr once it is upstreamed.
   getModule()->setAttr(cir::CIRDialect::getSizeTypeWidthAttrName(),
