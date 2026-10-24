@@ -373,6 +373,15 @@ PPCMCCodeEmitter::getDispRI34Encoding(const MCInst &MI, unsigned OpNo,
 }
 
 unsigned
+PPCMCCodeEmitter::getDispPSQEncoding(const MCInst &MI, unsigned OpNo,
+                                     SmallVectorImpl<MCFixup> &Fixups,
+                                     const MCSubtargetInfo &STI) const {
+  const MCOperand &MO = MI.getOperand(OpNo);
+  assert(MO.isImm());
+  return getMachineOpValue(MI, MO, Fixups, STI) & 0xFFF;
+}
+
+unsigned
 PPCMCCodeEmitter::getDispSPE8Encoding(const MCInst &MI, unsigned OpNo,
                                       SmallVectorImpl<MCFixup> &Fixups,
                                       const MCSubtargetInfo &STI) const {
