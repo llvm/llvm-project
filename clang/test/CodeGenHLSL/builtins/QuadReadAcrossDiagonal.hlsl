@@ -78,59 +78,59 @@ uint64_t3 test_uint64_t3(uint64_t3 expr) { return QuadReadAcrossDiagonal(expr); 
 // CHECK: ret <4 x i64> %[[RET]]
 uint64_t4 test_uint64_t4(uint64_t4 expr) { return QuadReadAcrossDiagonal(expr); }
 
-// CHECK: %[[RET:.*]] = call reassoc nnan ninf nsz arcp afn float @llvm.[[TARGET]].quad.read.across.diagonal.f32(float %[[#]])
+// CHECK: %[[RET:.*]] = call fast float @llvm.[[TARGET]].quad.read.across.diagonal.f32(float %[[#]])
 // CHECK: ret float %[[RET]]
 float test_float(float expr) { return QuadReadAcrossDiagonal(expr); }
 
-// CHECK: %[[RET:.*]] = call reassoc nnan ninf nsz arcp afn <2 x float> @llvm.[[TARGET]].quad.read.across.diagonal.v2f32(<2 x float> %[[#]])
+// CHECK: %[[RET:.*]] = call fast <2 x float> @llvm.[[TARGET]].quad.read.across.diagonal.v2f32(<2 x float> %[[#]])
 // CHECK: ret <2 x float> %[[RET]]
 float2 test_float2(float2 expr) { return QuadReadAcrossDiagonal(expr); }
 
-// CHECK: %[[RET:.*]] = call reassoc nnan ninf nsz arcp afn <3 x float> @llvm.[[TARGET]].quad.read.across.diagonal.v3f32(<3 x float> %[[#]])
+// CHECK: %[[RET:.*]] = call fast <3 x float> @llvm.[[TARGET]].quad.read.across.diagonal.v3f32(<3 x float> %[[#]])
 // CHECK: ret <3 x float> %[[RET]]
 float3 test_float3(float3 expr) { return QuadReadAcrossDiagonal(expr); }
 
-// CHECK: %[[RET:.*]] = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.[[TARGET]].quad.read.across.diagonal.v4f32(<4 x float> %[[#]])
+// CHECK: %[[RET:.*]] = call fast <4 x float> @llvm.[[TARGET]].quad.read.across.diagonal.v4f32(<4 x float> %[[#]])
 // CHECK: ret <4 x float> %[[RET]]
 float4 test_float4(float4 expr) { return QuadReadAcrossDiagonal(expr); }
 
-// CHECK: %[[RET:.*]] = call reassoc nnan ninf nsz arcp afn double @llvm.[[TARGET]].quad.read.across.diagonal.f64(double %[[#]])
+// CHECK: %[[RET:.*]] = call fast double @llvm.[[TARGET]].quad.read.across.diagonal.f64(double %[[#]])
 // CHECK: ret double %[[RET]]
 double test_double(double expr) { return QuadReadAcrossDiagonal(expr); }
 
-// CHECK: %[[RET:.*]] = call reassoc nnan ninf nsz arcp afn <2 x double> @llvm.[[TARGET]].quad.read.across.diagonal.v2f64(<2 x double> %[[#]])
+// CHECK: %[[RET:.*]] = call fast <2 x double> @llvm.[[TARGET]].quad.read.across.diagonal.v2f64(<2 x double> %[[#]])
 // CHECK: ret <2 x double> %[[RET]]
 double2 test_double2(double2 expr) { return QuadReadAcrossDiagonal(expr); }
 
-// CHECK: %[[RET:.*]] = call reassoc nnan ninf nsz arcp afn <3 x double> @llvm.[[TARGET]].quad.read.across.diagonal.v3f64(<3 x double> %[[#]])
+// CHECK: %[[RET:.*]] = call fast <3 x double> @llvm.[[TARGET]].quad.read.across.diagonal.v3f64(<3 x double> %[[#]])
 // CHECK: ret <3 x double> %[[RET]]
 double3 test_double3(double3 expr) { return QuadReadAcrossDiagonal(expr); }
 
-// CHECK: %[[RET:.*]] = call reassoc nnan ninf nsz arcp afn <4 x double> @llvm.[[TARGET]].quad.read.across.diagonal.v4f64(<4 x double> %[[#]])
+// CHECK: %[[RET:.*]] = call fast <4 x double> @llvm.[[TARGET]].quad.read.across.diagonal.v4f64(<4 x double> %[[#]])
 // CHECK: ret <4 x double> %[[RET]]
 double4 test_double4(double4 expr) { return QuadReadAcrossDiagonal(expr); }
 
-// CHECK-NATIVE_HALF: %[[RET:.*]] = call reassoc nnan ninf nsz arcp afn half @llvm.[[TARGET]].quad.read.across.diagonal.f16(half %[[#]])
+// CHECK-NATIVE_HALF: %[[RET:.*]] = call fast half @llvm.[[TARGET]].quad.read.across.diagonal.f16(half %[[#]])
 // CHECK-NATIVE_HALF: ret half %[[RET]]
-// CHECK-NO_HALF: %[[RET:.*]] = call reassoc nnan ninf nsz arcp afn float @llvm.[[TARGET]].quad.read.across.diagonal.f32(float %[[#]])
+// CHECK-NO_HALF: %[[RET:.*]] = call fast float @llvm.[[TARGET]].quad.read.across.diagonal.f32(float %[[#]])
 // CHECK-NO_HALF: ret float %[[RET]]
 half test_half(half expr) { return QuadReadAcrossDiagonal(expr); }
 
-// CHECK-NATIVE_HALF: %[[RET:.*]] = call reassoc nnan ninf nsz arcp afn <2 x half> @llvm.[[TARGET]].quad.read.across.diagonal.v2f16(<2 x half> %[[#]])
+// CHECK-NATIVE_HALF: %[[RET:.*]] = call fast <2 x half> @llvm.[[TARGET]].quad.read.across.diagonal.v2f16(<2 x half> %[[#]])
 // CHECK-NATIVE_HALF: ret <2 x half> %[[RET]]
-// CHECK-NO_HALF: %[[RET:.*]] = call reassoc nnan ninf nsz arcp afn <2 x float> @llvm.[[TARGET]].quad.read.across.diagonal.v2f32(<2 x float> %[[#]])
+// CHECK-NO_HALF: %[[RET:.*]] = call fast <2 x float> @llvm.[[TARGET]].quad.read.across.diagonal.v2f32(<2 x float> %[[#]])
 // CHECK-NO_HALF: ret <2 x float> %[[RET]]
 half2 test_half2(half2 expr) { return QuadReadAcrossDiagonal(expr); }
 
-// CHECK-NATIVE_HALF: %[[RET:.*]] = call reassoc nnan ninf nsz arcp afn <3 x half> @llvm.[[TARGET]].quad.read.across.diagonal.v3f16(<3 x half> %[[#]])
+// CHECK-NATIVE_HALF: %[[RET:.*]] = call fast <3 x half> @llvm.[[TARGET]].quad.read.across.diagonal.v3f16(<3 x half> %[[#]])
 // CHECK-NATIVE_HALF: ret <3 x half> %[[RET]]
-// CHECK-NO_HALF: %[[RET:.*]] = call reassoc nnan ninf nsz arcp afn <3 x float> @llvm.[[TARGET]].quad.read.across.diagonal.v3f32(<3 x float> %[[#]])
+// CHECK-NO_HALF: %[[RET:.*]] = call fast <3 x float> @llvm.[[TARGET]].quad.read.across.diagonal.v3f32(<3 x float> %[[#]])
 // CHECK-NO_HALF: ret <3 x float> %[[RET]]
 half3 test_half3(half3 expr) { return QuadReadAcrossDiagonal(expr); }
 
-// CHECK-NATIVE_HALF: %[[RET:.*]] = call reassoc nnan ninf nsz arcp afn <4 x half> @llvm.[[TARGET]].quad.read.across.diagonal.v4f16(<4 x half> %[[#]])
+// CHECK-NATIVE_HALF: %[[RET:.*]] = call fast <4 x half> @llvm.[[TARGET]].quad.read.across.diagonal.v4f16(<4 x half> %[[#]])
 // CHECK-NATIVE_HALF: ret <4 x half> %[[RET]]
-// CHECK-NO_HALF: %[[RET:.*]] = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.[[TARGET]].quad.read.across.diagonal.v4f32(<4 x float> %[[#]])
+// CHECK-NO_HALF: %[[RET:.*]] = call fast <4 x float> @llvm.[[TARGET]].quad.read.across.diagonal.v4f32(<4 x float> %[[#]])
 // CHECK-NO_HALF: ret <4 x float> %[[RET]]
 half4 test_half4(half4 expr) { return QuadReadAcrossDiagonal(expr); }
 

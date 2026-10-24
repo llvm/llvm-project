@@ -369,196 +369,196 @@ uint64_t4x3 test_max_ulong4x3(uint64_t4x3 p0, uint64_t4x3 p1) { return max(p0, p
 uint64_t4x4 test_max_ulong4x4(uint64_t4x4 p0, uint64_t4x4 p1) { return max(p0, p1); }
 
 // CHECK-LABEL: test_max_half1x2
-// NATIVE_HALF: call reassoc nnan ninf nsz arcp afn <2 x half> @llvm.maxnum.v2f16(<2 x half> %{{.*}}, <2 x half> %{{.*}})
-// NO_HALF: call reassoc nnan ninf nsz arcp afn <2 x float> @llvm.maxnum.v2f32(<2 x float> %{{.*}}, <2 x float> %{{.*}})
+// NATIVE_HALF: call fast <2 x half> @llvm.maxnum.v2f16(<2 x half> %{{.*}}, <2 x half> %{{.*}})
+// NO_HALF: call fast <2 x float> @llvm.maxnum.v2f32(<2 x float> %{{.*}}, <2 x float> %{{.*}})
 half1x2 test_max_half1x2(half1x2 p0, half1x2 p1) { return max(p0, p1); }
 
 // CHECK-LABEL: test_max_half1x3
-// NATIVE_HALF: call reassoc nnan ninf nsz arcp afn <3 x half> @llvm.maxnum.v3f16(<3 x half> %{{.*}}, <3 x half> %{{.*}})
-// NO_HALF: call reassoc nnan ninf nsz arcp afn <3 x float> @llvm.maxnum.v3f32(<3 x float> %{{.*}}, <3 x float> %{{.*}})
+// NATIVE_HALF: call fast <3 x half> @llvm.maxnum.v3f16(<3 x half> %{{.*}}, <3 x half> %{{.*}})
+// NO_HALF: call fast <3 x float> @llvm.maxnum.v3f32(<3 x float> %{{.*}}, <3 x float> %{{.*}})
 half1x3 test_max_half1x3(half1x3 p0, half1x3 p1) { return max(p0, p1); }
 
 // CHECK-LABEL: test_max_half1x4
-// NATIVE_HALF: call reassoc nnan ninf nsz arcp afn <4 x half> @llvm.maxnum.v4f16(<4 x half> %{{.*}}, <4 x half> %{{.*}})
-// NO_HALF: call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.maxnum.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}})
+// NATIVE_HALF: call fast <4 x half> @llvm.maxnum.v4f16(<4 x half> %{{.*}}, <4 x half> %{{.*}})
+// NO_HALF: call fast <4 x float> @llvm.maxnum.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}})
 half1x4 test_max_half1x4(half1x4 p0, half1x4 p1) { return max(p0, p1); }
 
 // CHECK-LABEL: test_max_half2x1
-// NATIVE_HALF: call reassoc nnan ninf nsz arcp afn <2 x half> @llvm.maxnum.v2f16(<2 x half> %{{.*}}, <2 x half> %{{.*}})
-// NO_HALF: call reassoc nnan ninf nsz arcp afn <2 x float> @llvm.maxnum.v2f32(<2 x float> %{{.*}}, <2 x float> %{{.*}})
+// NATIVE_HALF: call fast <2 x half> @llvm.maxnum.v2f16(<2 x half> %{{.*}}, <2 x half> %{{.*}})
+// NO_HALF: call fast <2 x float> @llvm.maxnum.v2f32(<2 x float> %{{.*}}, <2 x float> %{{.*}})
 half2x1 test_max_half2x1(half2x1 p0, half2x1 p1) { return max(p0, p1); }
 
 // CHECK-LABEL: test_max_half2x2
-// NATIVE_HALF: call reassoc nnan ninf nsz arcp afn <4 x half> @llvm.maxnum.v4f16(<4 x half> %{{.*}}, <4 x half> %{{.*}})
-// NO_HALF: call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.maxnum.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}})
+// NATIVE_HALF: call fast <4 x half> @llvm.maxnum.v4f16(<4 x half> %{{.*}}, <4 x half> %{{.*}})
+// NO_HALF: call fast <4 x float> @llvm.maxnum.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}})
 half2x2 test_max_half2x2(half2x2 p0, half2x2 p1) { return max(p0, p1); }
 
 // CHECK-LABEL: test_max_half2x3
-// NATIVE_HALF: call reassoc nnan ninf nsz arcp afn <6 x half> @llvm.maxnum.v6f16(<6 x half> %{{.*}}, <6 x half> %{{.*}})
-// NO_HALF: call reassoc nnan ninf nsz arcp afn <6 x float> @llvm.maxnum.v6f32(<6 x float> %{{.*}}, <6 x float> %{{.*}})
+// NATIVE_HALF: call fast <6 x half> @llvm.maxnum.v6f16(<6 x half> %{{.*}}, <6 x half> %{{.*}})
+// NO_HALF: call fast <6 x float> @llvm.maxnum.v6f32(<6 x float> %{{.*}}, <6 x float> %{{.*}})
 half2x3 test_max_half2x3(half2x3 p0, half2x3 p1) { return max(p0, p1); }
 
 // CHECK-LABEL: test_max_half2x4
-// NATIVE_HALF: call reassoc nnan ninf nsz arcp afn <8 x half> @llvm.maxnum.v8f16(<8 x half> %{{.*}}, <8 x half> %{{.*}})
-// NO_HALF: call reassoc nnan ninf nsz arcp afn <8 x float> @llvm.maxnum.v8f32(<8 x float> %{{.*}}, <8 x float> %{{.*}})
+// NATIVE_HALF: call fast <8 x half> @llvm.maxnum.v8f16(<8 x half> %{{.*}}, <8 x half> %{{.*}})
+// NO_HALF: call fast <8 x float> @llvm.maxnum.v8f32(<8 x float> %{{.*}}, <8 x float> %{{.*}})
 half2x4 test_max_half2x4(half2x4 p0, half2x4 p1) { return max(p0, p1); }
 
 // CHECK-LABEL: test_max_half3x1
-// NATIVE_HALF: call reassoc nnan ninf nsz arcp afn <3 x half> @llvm.maxnum.v3f16(<3 x half> %{{.*}}, <3 x half> %{{.*}})
-// NO_HALF: call reassoc nnan ninf nsz arcp afn <3 x float> @llvm.maxnum.v3f32(<3 x float> %{{.*}}, <3 x float> %{{.*}})
+// NATIVE_HALF: call fast <3 x half> @llvm.maxnum.v3f16(<3 x half> %{{.*}}, <3 x half> %{{.*}})
+// NO_HALF: call fast <3 x float> @llvm.maxnum.v3f32(<3 x float> %{{.*}}, <3 x float> %{{.*}})
 half3x1 test_max_half3x1(half3x1 p0, half3x1 p1) { return max(p0, p1); }
 
 // CHECK-LABEL: test_max_half3x2
-// NATIVE_HALF: call reassoc nnan ninf nsz arcp afn <6 x half> @llvm.maxnum.v6f16(<6 x half> %{{.*}}, <6 x half> %{{.*}})
-// NO_HALF: call reassoc nnan ninf nsz arcp afn <6 x float> @llvm.maxnum.v6f32(<6 x float> %{{.*}}, <6 x float> %{{.*}})
+// NATIVE_HALF: call fast <6 x half> @llvm.maxnum.v6f16(<6 x half> %{{.*}}, <6 x half> %{{.*}})
+// NO_HALF: call fast <6 x float> @llvm.maxnum.v6f32(<6 x float> %{{.*}}, <6 x float> %{{.*}})
 half3x2 test_max_half3x2(half3x2 p0, half3x2 p1) { return max(p0, p1); }
 
 // CHECK-LABEL: test_max_half3x3
-// NATIVE_HALF: call reassoc nnan ninf nsz arcp afn <9 x half> @llvm.maxnum.v9f16(<9 x half> %{{.*}}, <9 x half> %{{.*}})
-// NO_HALF: call reassoc nnan ninf nsz arcp afn <9 x float> @llvm.maxnum.v9f32(<9 x float> %{{.*}}, <9 x float> %{{.*}})
+// NATIVE_HALF: call fast <9 x half> @llvm.maxnum.v9f16(<9 x half> %{{.*}}, <9 x half> %{{.*}})
+// NO_HALF: call fast <9 x float> @llvm.maxnum.v9f32(<9 x float> %{{.*}}, <9 x float> %{{.*}})
 half3x3 test_max_half3x3(half3x3 p0, half3x3 p1) { return max(p0, p1); }
 
 // CHECK-LABEL: test_max_half3x4
-// NATIVE_HALF: call reassoc nnan ninf nsz arcp afn <12 x half> @llvm.maxnum.v12f16(<12 x half> %{{.*}}, <12 x half> %{{.*}})
-// NO_HALF: call reassoc nnan ninf nsz arcp afn <12 x float> @llvm.maxnum.v12f32(<12 x float> %{{.*}}, <12 x float> %{{.*}})
+// NATIVE_HALF: call fast <12 x half> @llvm.maxnum.v12f16(<12 x half> %{{.*}}, <12 x half> %{{.*}})
+// NO_HALF: call fast <12 x float> @llvm.maxnum.v12f32(<12 x float> %{{.*}}, <12 x float> %{{.*}})
 half3x4 test_max_half3x4(half3x4 p0, half3x4 p1) { return max(p0, p1); }
 
 // CHECK-LABEL: test_max_half4x1
-// NATIVE_HALF: call reassoc nnan ninf nsz arcp afn <4 x half> @llvm.maxnum.v4f16(<4 x half> %{{.*}}, <4 x half> %{{.*}})
-// NO_HALF: call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.maxnum.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}})
+// NATIVE_HALF: call fast <4 x half> @llvm.maxnum.v4f16(<4 x half> %{{.*}}, <4 x half> %{{.*}})
+// NO_HALF: call fast <4 x float> @llvm.maxnum.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}})
 half4x1 test_max_half4x1(half4x1 p0, half4x1 p1) { return max(p0, p1); }
 
 // CHECK-LABEL: test_max_half4x2
-// NATIVE_HALF: call reassoc nnan ninf nsz arcp afn <8 x half> @llvm.maxnum.v8f16(<8 x half> %{{.*}}, <8 x half> %{{.*}})
-// NO_HALF: call reassoc nnan ninf nsz arcp afn <8 x float> @llvm.maxnum.v8f32(<8 x float> %{{.*}}, <8 x float> %{{.*}})
+// NATIVE_HALF: call fast <8 x half> @llvm.maxnum.v8f16(<8 x half> %{{.*}}, <8 x half> %{{.*}})
+// NO_HALF: call fast <8 x float> @llvm.maxnum.v8f32(<8 x float> %{{.*}}, <8 x float> %{{.*}})
 half4x2 test_max_half4x2(half4x2 p0, half4x2 p1) { return max(p0, p1); }
 
 // CHECK-LABEL: test_max_half4x3
-// NATIVE_HALF: call reassoc nnan ninf nsz arcp afn <12 x half> @llvm.maxnum.v12f16(<12 x half> %{{.*}}, <12 x half> %{{.*}})
-// NO_HALF: call reassoc nnan ninf nsz arcp afn <12 x float> @llvm.maxnum.v12f32(<12 x float> %{{.*}}, <12 x float> %{{.*}})
+// NATIVE_HALF: call fast <12 x half> @llvm.maxnum.v12f16(<12 x half> %{{.*}}, <12 x half> %{{.*}})
+// NO_HALF: call fast <12 x float> @llvm.maxnum.v12f32(<12 x float> %{{.*}}, <12 x float> %{{.*}})
 half4x3 test_max_half4x3(half4x3 p0, half4x3 p1) { return max(p0, p1); }
 
 // CHECK-LABEL: test_max_half4x4
-// NATIVE_HALF: call reassoc nnan ninf nsz arcp afn <16 x half> @llvm.maxnum.v16f16(<16 x half> %{{.*}}, <16 x half> %{{.*}})
-// NO_HALF: call reassoc nnan ninf nsz arcp afn <16 x float> @llvm.maxnum.v16f32(<16 x float> %{{.*}}, <16 x float> %{{.*}})
+// NATIVE_HALF: call fast <16 x half> @llvm.maxnum.v16f16(<16 x half> %{{.*}}, <16 x half> %{{.*}})
+// NO_HALF: call fast <16 x float> @llvm.maxnum.v16f32(<16 x float> %{{.*}}, <16 x float> %{{.*}})
 half4x4 test_max_half4x4(half4x4 p0, half4x4 p1) { return max(p0, p1); }
 
 // CHECK-LABEL: test_max_float1x2
-// CHECK: call reassoc nnan ninf nsz arcp afn <2 x float> @llvm.maxnum.v2f32(<2 x float> %{{.*}}, <2 x float> %{{.*}})
+// CHECK: call fast <2 x float> @llvm.maxnum.v2f32(<2 x float> %{{.*}}, <2 x float> %{{.*}})
 float1x2 test_max_float1x2(float1x2 p0, float1x2 p1) { return max(p0, p1); }
 
 // CHECK-LABEL: test_max_float1x3
-// CHECK: call reassoc nnan ninf nsz arcp afn <3 x float> @llvm.maxnum.v3f32(<3 x float> %{{.*}}, <3 x float> %{{.*}})
+// CHECK: call fast <3 x float> @llvm.maxnum.v3f32(<3 x float> %{{.*}}, <3 x float> %{{.*}})
 float1x3 test_max_float1x3(float1x3 p0, float1x3 p1) { return max(p0, p1); }
 
 // CHECK-LABEL: test_max_float1x4
-// CHECK: call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.maxnum.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}})
+// CHECK: call fast <4 x float> @llvm.maxnum.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}})
 float1x4 test_max_float1x4(float1x4 p0, float1x4 p1) { return max(p0, p1); }
 
 // CHECK-LABEL: test_max_float2x1
-// CHECK: call reassoc nnan ninf nsz arcp afn <2 x float> @llvm.maxnum.v2f32(<2 x float> %{{.*}}, <2 x float> %{{.*}})
+// CHECK: call fast <2 x float> @llvm.maxnum.v2f32(<2 x float> %{{.*}}, <2 x float> %{{.*}})
 float2x1 test_max_float2x1(float2x1 p0, float2x1 p1) { return max(p0, p1); }
 
 // CHECK-LABEL: test_max_float2x2
-// CHECK: call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.maxnum.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}})
+// CHECK: call fast <4 x float> @llvm.maxnum.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}})
 float2x2 test_max_float2x2(float2x2 p0, float2x2 p1) { return max(p0, p1); }
 
 // CHECK-LABEL: test_max_float2x3
-// CHECK: call reassoc nnan ninf nsz arcp afn <6 x float> @llvm.maxnum.v6f32(<6 x float> %{{.*}}, <6 x float> %{{.*}})
+// CHECK: call fast <6 x float> @llvm.maxnum.v6f32(<6 x float> %{{.*}}, <6 x float> %{{.*}})
 float2x3 test_max_float2x3(float2x3 p0, float2x3 p1) { return max(p0, p1); }
 
 // CHECK-LABEL: test_max_float2x4
-// CHECK: call reassoc nnan ninf nsz arcp afn <8 x float> @llvm.maxnum.v8f32(<8 x float> %{{.*}}, <8 x float> %{{.*}})
+// CHECK: call fast <8 x float> @llvm.maxnum.v8f32(<8 x float> %{{.*}}, <8 x float> %{{.*}})
 float2x4 test_max_float2x4(float2x4 p0, float2x4 p1) { return max(p0, p1); }
 
 // CHECK-LABEL: test_max_float3x1
-// CHECK: call reassoc nnan ninf nsz arcp afn <3 x float> @llvm.maxnum.v3f32(<3 x float> %{{.*}}, <3 x float> %{{.*}})
+// CHECK: call fast <3 x float> @llvm.maxnum.v3f32(<3 x float> %{{.*}}, <3 x float> %{{.*}})
 float3x1 test_max_float3x1(float3x1 p0, float3x1 p1) { return max(p0, p1); }
 
 // CHECK-LABEL: test_max_float3x2
-// CHECK: call reassoc nnan ninf nsz arcp afn <6 x float> @llvm.maxnum.v6f32(<6 x float> %{{.*}}, <6 x float> %{{.*}})
+// CHECK: call fast <6 x float> @llvm.maxnum.v6f32(<6 x float> %{{.*}}, <6 x float> %{{.*}})
 float3x2 test_max_float3x2(float3x2 p0, float3x2 p1) { return max(p0, p1); }
 
 // CHECK-LABEL: test_max_float3x3
-// CHECK: call reassoc nnan ninf nsz arcp afn <9 x float> @llvm.maxnum.v9f32(<9 x float> %{{.*}}, <9 x float> %{{.*}})
+// CHECK: call fast <9 x float> @llvm.maxnum.v9f32(<9 x float> %{{.*}}, <9 x float> %{{.*}})
 float3x3 test_max_float3x3(float3x3 p0, float3x3 p1) { return max(p0, p1); }
 
 // CHECK-LABEL: test_max_float3x4
-// CHECK: call reassoc nnan ninf nsz arcp afn <12 x float> @llvm.maxnum.v12f32(<12 x float> %{{.*}}, <12 x float> %{{.*}})
+// CHECK: call fast <12 x float> @llvm.maxnum.v12f32(<12 x float> %{{.*}}, <12 x float> %{{.*}})
 float3x4 test_max_float3x4(float3x4 p0, float3x4 p1) { return max(p0, p1); }
 
 // CHECK-LABEL: test_max_float4x1
-// CHECK: call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.maxnum.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}})
+// CHECK: call fast <4 x float> @llvm.maxnum.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}})
 float4x1 test_max_float4x1(float4x1 p0, float4x1 p1) { return max(p0, p1); }
 
 // CHECK-LABEL: test_max_float4x2
-// CHECK: call reassoc nnan ninf nsz arcp afn <8 x float> @llvm.maxnum.v8f32(<8 x float> %{{.*}}, <8 x float> %{{.*}})
+// CHECK: call fast <8 x float> @llvm.maxnum.v8f32(<8 x float> %{{.*}}, <8 x float> %{{.*}})
 float4x2 test_max_float4x2(float4x2 p0, float4x2 p1) { return max(p0, p1); }
 
 // CHECK-LABEL: test_max_float4x3
-// CHECK: call reassoc nnan ninf nsz arcp afn <12 x float> @llvm.maxnum.v12f32(<12 x float> %{{.*}}, <12 x float> %{{.*}})
+// CHECK: call fast <12 x float> @llvm.maxnum.v12f32(<12 x float> %{{.*}}, <12 x float> %{{.*}})
 float4x3 test_max_float4x3(float4x3 p0, float4x3 p1) { return max(p0, p1); }
 
 // CHECK-LABEL: test_max_float4x4
-// CHECK: call reassoc nnan ninf nsz arcp afn <16 x float> @llvm.maxnum.v16f32(<16 x float> %{{.*}}, <16 x float> %{{.*}})
+// CHECK: call fast <16 x float> @llvm.maxnum.v16f32(<16 x float> %{{.*}}, <16 x float> %{{.*}})
 float4x4 test_max_float4x4(float4x4 p0, float4x4 p1) { return max(p0, p1); }
 
 // CHECK-LABEL: test_max_double1x2
-// CHECK: call reassoc nnan ninf nsz arcp afn <2 x double> @llvm.maxnum.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}})
+// CHECK: call fast <2 x double> @llvm.maxnum.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}})
 double1x2 test_max_double1x2(double1x2 p0, double1x2 p1) { return max(p0, p1); }
 
 // CHECK-LABEL: test_max_double1x3
-// CHECK: call reassoc nnan ninf nsz arcp afn <3 x double> @llvm.maxnum.v3f64(<3 x double> %{{.*}}, <3 x double> %{{.*}})
+// CHECK: call fast <3 x double> @llvm.maxnum.v3f64(<3 x double> %{{.*}}, <3 x double> %{{.*}})
 double1x3 test_max_double1x3(double1x3 p0, double1x3 p1) { return max(p0, p1); }
 
 // CHECK-LABEL: test_max_double1x4
-// CHECK: call reassoc nnan ninf nsz arcp afn <4 x double> @llvm.maxnum.v4f64(<4 x double> %{{.*}}, <4 x double> %{{.*}})
+// CHECK: call fast <4 x double> @llvm.maxnum.v4f64(<4 x double> %{{.*}}, <4 x double> %{{.*}})
 double1x4 test_max_double1x4(double1x4 p0, double1x4 p1) { return max(p0, p1); }
 
 // CHECK-LABEL: test_max_double2x1
-// CHECK: call reassoc nnan ninf nsz arcp afn <2 x double> @llvm.maxnum.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}})
+// CHECK: call fast <2 x double> @llvm.maxnum.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}})
 double2x1 test_max_double2x1(double2x1 p0, double2x1 p1) { return max(p0, p1); }
 
 // CHECK-LABEL: test_max_double2x2
-// CHECK: call reassoc nnan ninf nsz arcp afn <4 x double> @llvm.maxnum.v4f64(<4 x double> %{{.*}}, <4 x double> %{{.*}})
+// CHECK: call fast <4 x double> @llvm.maxnum.v4f64(<4 x double> %{{.*}}, <4 x double> %{{.*}})
 double2x2 test_max_double2x2(double2x2 p0, double2x2 p1) { return max(p0, p1); }
 
 // CHECK-LABEL: test_max_double2x3
-// CHECK: call reassoc nnan ninf nsz arcp afn <6 x double> @llvm.maxnum.v6f64(<6 x double> %{{.*}}, <6 x double> %{{.*}})
+// CHECK: call fast <6 x double> @llvm.maxnum.v6f64(<6 x double> %{{.*}}, <6 x double> %{{.*}})
 double2x3 test_max_double2x3(double2x3 p0, double2x3 p1) { return max(p0, p1); }
 
 // CHECK-LABEL: test_max_double2x4
-// CHECK: call reassoc nnan ninf nsz arcp afn <8 x double> @llvm.maxnum.v8f64(<8 x double> %{{.*}}, <8 x double> %{{.*}})
+// CHECK: call fast <8 x double> @llvm.maxnum.v8f64(<8 x double> %{{.*}}, <8 x double> %{{.*}})
 double2x4 test_max_double2x4(double2x4 p0, double2x4 p1) { return max(p0, p1); }
 
 // CHECK-LABEL: test_max_double3x1
-// CHECK: call reassoc nnan ninf nsz arcp afn <3 x double> @llvm.maxnum.v3f64(<3 x double> %{{.*}}, <3 x double> %{{.*}})
+// CHECK: call fast <3 x double> @llvm.maxnum.v3f64(<3 x double> %{{.*}}, <3 x double> %{{.*}})
 double3x1 test_max_double3x1(double3x1 p0, double3x1 p1) { return max(p0, p1); }
 
 // CHECK-LABEL: test_max_double3x2
-// CHECK: call reassoc nnan ninf nsz arcp afn <6 x double> @llvm.maxnum.v6f64(<6 x double> %{{.*}}, <6 x double> %{{.*}})
+// CHECK: call fast <6 x double> @llvm.maxnum.v6f64(<6 x double> %{{.*}}, <6 x double> %{{.*}})
 double3x2 test_max_double3x2(double3x2 p0, double3x2 p1) { return max(p0, p1); }
 
 // CHECK-LABEL: test_max_double3x3
-// CHECK: call reassoc nnan ninf nsz arcp afn <9 x double> @llvm.maxnum.v9f64(<9 x double> %{{.*}}, <9 x double> %{{.*}})
+// CHECK: call fast <9 x double> @llvm.maxnum.v9f64(<9 x double> %{{.*}}, <9 x double> %{{.*}})
 double3x3 test_max_double3x3(double3x3 p0, double3x3 p1) { return max(p0, p1); }
 
 // CHECK-LABEL: test_max_double3x4
-// CHECK: call reassoc nnan ninf nsz arcp afn <12 x double> @llvm.maxnum.v12f64(<12 x double> %{{.*}}, <12 x double> %{{.*}})
+// CHECK: call fast <12 x double> @llvm.maxnum.v12f64(<12 x double> %{{.*}}, <12 x double> %{{.*}})
 double3x4 test_max_double3x4(double3x4 p0, double3x4 p1) { return max(p0, p1); }
 
 // CHECK-LABEL: test_max_double4x1
-// CHECK: call reassoc nnan ninf nsz arcp afn <4 x double> @llvm.maxnum.v4f64(<4 x double> %{{.*}}, <4 x double> %{{.*}})
+// CHECK: call fast <4 x double> @llvm.maxnum.v4f64(<4 x double> %{{.*}}, <4 x double> %{{.*}})
 double4x1 test_max_double4x1(double4x1 p0, double4x1 p1) { return max(p0, p1); }
 
 // CHECK-LABEL: test_max_double4x2
-// CHECK: call reassoc nnan ninf nsz arcp afn <8 x double> @llvm.maxnum.v8f64(<8 x double> %{{.*}}, <8 x double> %{{.*}})
+// CHECK: call fast <8 x double> @llvm.maxnum.v8f64(<8 x double> %{{.*}}, <8 x double> %{{.*}})
 double4x2 test_max_double4x2(double4x2 p0, double4x2 p1) { return max(p0, p1); }
 
 // CHECK-LABEL: test_max_double4x3
-// CHECK: call reassoc nnan ninf nsz arcp afn <12 x double> @llvm.maxnum.v12f64(<12 x double> %{{.*}}, <12 x double> %{{.*}})
+// CHECK: call fast <12 x double> @llvm.maxnum.v12f64(<12 x double> %{{.*}}, <12 x double> %{{.*}})
 double4x3 test_max_double4x3(double4x3 p0, double4x3 p1) { return max(p0, p1); }
 
 // CHECK-LABEL: test_max_double4x4
-// CHECK: call reassoc nnan ninf nsz arcp afn <16 x double> @llvm.maxnum.v16f64(<16 x double> %{{.*}}, <16 x double> %{{.*}})
+// CHECK: call fast <16 x double> @llvm.maxnum.v16f64(<16 x double> %{{.*}}, <16 x double> %{{.*}})
 double4x4 test_max_double4x4(double4x4 p0, double4x4 p1) { return max(p0, p1); }

@@ -23,7 +23,7 @@ double test_uint(uint low, uint high) {
   // CHECK-SPV-SAME: {{.*}} <i32 0, i32 1>
   // CHECK-SPV:      bitcast <2 x i32> %[[SHUFFLE0]] to double
 
-  // CHECK-DXIL: call reassoc nnan ninf nsz arcp afn double @llvm.dx.asdouble.i32(i32 %[[LOW]], i32 %[[HIGH]])
+  // CHECK-DXIL: call fast double @llvm.dx.asdouble.i32(i32 %[[LOW]], i32 %[[HIGH]])
   return asdouble(low, high);
 }
 
@@ -40,7 +40,7 @@ double3 test_vuint(uint3 low, uint3 high) {
   // CHECK-SPV-SAME: {{.*}} <i32 0, i32 3, i32 1, i32 4, i32 2, i32 5>
   // CHECK-SPV:      bitcast <6 x i32> %[[SHUFFLE1]] to <3 x double>
 
-  // CHECK-DXIL: call reassoc nnan ninf nsz arcp afn <3 x double> @llvm.dx.asdouble.v3i32(<3 x i32> %[[V3_LOW]], <3 x i32> %[[V3_HIGH]])
+  // CHECK-DXIL: call fast <3 x double> @llvm.dx.asdouble.v3i32(<3 x i32> %[[V3_LOW]], <3 x i32> %[[V3_HIGH]])
   return asdouble(low, high);
 }
 
@@ -57,7 +57,7 @@ vector<double, 5> test_vuint5(vector<uint, 5> low, vector<uint, 5> high) {
   // CHECK-SPV-SAME: {{.*}} <i32 0, i32 5, i32 1, i32 6, i32 2, i32 7, i32 3, i32 8, i32 4, i32 9>
   // CHECK-SPV:      bitcast <10 x i32> %[[SHUFFLE2]] to <5 x double>
 
-  // CHECK-DXIL: call reassoc nnan ninf nsz arcp afn <5 x double> @llvm.dx.asdouble.v5i32(<5 x i32> %[[V5_LOW]], <5 x i32> %[[V5_HIGH]])
+  // CHECK-DXIL: call fast <5 x double> @llvm.dx.asdouble.v5i32(<5 x i32> %[[V5_LOW]], <5 x i32> %[[V5_HIGH]])
   return asdouble(low, high);
 }
 
