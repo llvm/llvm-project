@@ -102,6 +102,25 @@ SampleContextTracker::moveContextSamples(ContextTrieNode &ToNodeParent,
   return NewNode;
 }
 
+void SampleContextTracker::invalidateContextNodesInMap(ContextTrieNode &Node) {
+  std::queue<ContextTrieNode *> NodeToInvalidate;
+  NodeToInvalidate.push(&Node);
+  while (!NodeToInvalidate.empty()) {
+    ContextTrieNode *N = NodeToInvalidate.front();
+    NodeToInvalidate.pop();
+    if (FunctionSamples *FSamples = N->getFunctionSamples()) {
+      auto I = ProfileToNodeMap.find(FSamples);
+      // Only drop the mapping if it still points at the node being destroyed.
+      // A relocated profile already had its mapping repointed to the live copy
+      // by moveContextSamples/mergeContextNode and must be preserved.
+      if (I != ProfileToNodeMap.end() && I->second == N)
+        ProfileToNodeMap.erase(I);
+    }
+    for (auto &It : N->getAllChildContext())
+      NodeToInvalidate.push(&It.second);
+  }
+}
+
 void ContextTrieNode::removeChildContext(const LineLocation &CallSite,
                                          FunctionId CalleeName) {
   uint64_t Hash = FunctionSamples::getCallSiteHash(CalleeName, CallSite);
@@ -340,7 +359,13 @@ FunctionSamples *SampleContextTracker::getBaseSamplesFor(FunctionId Name,
         continue;
 
       ContextTrieNode *FromNode = getContextNodeForProfile(CSamples);
-      if (FromNode == Node)
+      // A previous promotion in this loop may have merged and freed this
+      // context's node (e.g. a self-recursive context nested under one already
+      // promoted). Its map entry is cleared when the node is destroyed, so a
+      // null result here means the node is gone; skip it to avoid a
+      // use-after-free. Distinct callee contexts merely relocated under another
+      // function's base stay live and are still promoted.
+      if (!FromNode || FromNode == Node)
         continue;
 
       ContextTrieNode &ToNode = promoteMergeContextSamplesTree(*FromNode);
@@ -608,13 +633,18 @@ ContextTrieNode &SampleContextTracker::promoteMergeContextSamplesTree(
       promoteMergeContextSamplesTree(FromChildNode, *ToNode);
     }
 
-    // Remove children once they're all merged
+    // Remove children once they're all merged. Drop their map entries first so
+    // no FunctionSamples keeps pointing at a node that clear() destroys.
+    for (auto &It : FromNode.getAllChildContext())
+      invalidateContextNodesInMap(It.second);
     FromNode.getAllChildContext().clear();
   }
 
   // For root of subtree, remove itself from old parent too
-  if (MoveToRoot)
+  if (MoveToRoot) {
+    invalidateContextNodesInMap(FromNode);
     FromNodeParent.removeChildContext(OldCallSiteLoc, ToNode->getFuncName());
+  }
 
   return *ToNode;
 }
