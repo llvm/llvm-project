@@ -1,0 +1,150 @@
+; Test that missing frames inferred through a cycle of tail calls do not
+; depend on the order in which frames are inferred.
+; REQUIRES: x86_64-linux, lld
+; RUN: split-file %s %t
+; RUN: llvm-mc -triple=x86_64-unknown-linux -filetype=obj %t/cycle.s -o %t/cycle.o
+; RUN: ld.lld --image-base=0 -Ttext=0x1000 -e call_a %t/cycle.o -o %t/cycle
+; RUN: llvm-profgen --binary=%t/cycle --perfscript=%t/a-first.script --output=%t/a-first --format=text --csspgo-preinliner=0 --gen-cs-nested-profile=0 --profile-summary-hot-count=0
+; RUN: FileCheck %s --input-file=%t/a-first --check-prefix=A-FIRST
+; RUN: llvm-profgen --binary=%t/cycle --perfscript=%t/b-first.script --output=%t/b-first --format=text --csspgo-preinliner=0 --gen-cs-nested-profile=0 --profile-summary-hot-count=0
+; RUN: FileCheck %s --input-file=%t/b-first --check-prefix=B-FIRST
+
+;; A tail calls B and T, and B tail calls A. The only simple path of tail
+;; calls from A to T is A -> T, and from B to T it is B -> A -> T. One sample
+;; is in T, called from call_a through A and from call_b through B, with T
+;; calling call_b or call_a in between, so that the frames from A and from B
+;; are inferred one after the other, in either order. Inferring the frames
+;; from A first must not change those inferred from B: a search from A visits
+;; B while A is on the searched path, where B has no path to T that does not
+;; go through A.
+
+; A-FIRST: [call_a:2 @ A:3 @ T:2 @ call_b:2 @ B:2 @ A:3 @ T]:
+; B-FIRST: [call_b:2 @ B:2 @ A:3 @ T:3 @ call_a:2 @ A:3 @ T]:
+
+;--- cycle.s
+.text
+# Fixed offsets keep the traces independent of the encoding of instructions.
+# Two nops avoid llvm-profgen's heuristic prologue filtering.
+.macro func name, offset, guid
+.org \offset, 0x90
+.globl \name
+.type \name,@function
+\name:
+  nop
+  nop
+  .pseudoprobe \guid 1 0 0 \name
+.endm
+.macro endfunc name, guid
+.size \name, .-\name
+.pushsection .pseudo_probe_desc,"",@progbits
+.quad \guid
+.quad 1
+.uleb128 .Lend\name-.Lname\name
+.Lname\name:
+.ascii "\name"
+.Lend\name:
+.popsection
+.endm
+
+# GUIDs are MD5 hashes of the function names.
+func T, 0x0, 18085060366066379961
+  nop
+  jmp T+2
+  .pseudoprobe 18085060366066379961 2 2 0 T
+  call call_b
+  .pseudoprobe 18085060366066379961 3 2 0 T
+  call call_a
+  ret
+endfunc T, 18085060366066379961
+func A, 0x20, 12110082535487358335
+  .pseudoprobe 12110082535487358335 2 2 0 A
+  jmp B
+  .pseudoprobe 12110082535487358335 3 2 0 A
+  jmp T
+endfunc A, 12110082535487358335
+func B, 0x40, 14608648041743670941
+  .pseudoprobe 14608648041743670941 2 2 0 B
+  jmp A
+endfunc B, 14608648041743670941
+func call_a, 0x60, 7553626939437852507
+  .pseudoprobe 7553626939437852507 2 2 0 call_a
+  call A
+  ret
+endfunc call_a, 7553626939437852507
+func call_b, 0x80, 1423541398775040199
+  .pseudoprobe 1423541398775040199 2 2 0 call_b
+  call B
+  ret
+endfunc call_b, 1423541398775040199
+
+;--- a-first.script
+1
+  1003
+  1087
+  100d
+  1067
+0x1003/0x1002/P/-/-/0 0x1003/0x1002/P/-/-/0
+
+1
+  1022
+0x1062/0x1020/P/-/-/0
+
+1
+  1042
+0x1082/0x1040/P/-/-/0
+
+1
+  1082
+0x1008/0x1080/P/-/-/0
+
+1
+  1062
+0x100d/0x1060/P/-/-/0
+
+1
+  1042
+0x1022/0x1040/P/-/-/0
+
+1
+  1002
+0x1027/0x1000/P/-/-/0
+
+1
+  1022
+0x1042/0x1020/P/-/-/0
+
+;--- b-first.script
+1
+  1003
+  1067
+  1012
+  1087
+0x1003/0x1002/P/-/-/0 0x1003/0x1002/P/-/-/0
+
+1
+  1022
+0x1062/0x1020/P/-/-/0
+
+1
+  1042
+0x1082/0x1040/P/-/-/0
+
+1
+  1082
+0x1008/0x1080/P/-/-/0
+
+1
+  1062
+0x100d/0x1060/P/-/-/0
+
+1
+  1042
+0x1022/0x1040/P/-/-/0
+
+1
+  1002
+0x1027/0x1000/P/-/-/0
+
+1
+  1022
+0x1042/0x1020/P/-/-/0

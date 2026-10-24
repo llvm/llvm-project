@@ -47,19 +47,16 @@ private:
   bool inferMissingFrames(uint64_t From, uint64_t To,
                           SmallVectorImpl<uint64_t> &UniquePath);
 
-  // Compute a unique tail call path from the source frame address to the target
-  // function. Output the unique path prefix (not including `To`) in
-  // `UniquePath` if exists. Return the number of possibly availabe tail call
-  // paths.
-  uint64_t computeUniqueTailCallPath(uint64_t From, BinaryFunction *To,
-                                     SmallVectorImpl<uint64_t> &UniquePath);
-
   // Compute a unique tail call path from the source function to the target
   // function. Output the unique path prefix (not including `To`) in
   // `UniquePath` if exists. Return the number of possibly availabe tail call
   // paths.
   uint64_t computeUniqueTailCallPath(BinaryFunction *From, BinaryFunction *To,
                                      SmallVectorImpl<uint64_t> &UniquePath);
+  // Count the simple paths of tail calls from \p From to \p To within the
+  // maximum search depth, up to two, and output the path if there is one.
+  uint64_t countTailCallPaths(BinaryFunction *From, BinaryFunction *To,
+                              SmallVectorImpl<uint64_t> &UniquePath);
 
   ProfiledBinary *Binary;
 
@@ -89,10 +86,6 @@ private:
   DenseMap<CallerCalleePair, std::vector<uint64_t>> UniquePaths;
   // Cached results from CallerCalleePair to the number of available call paths.
   DenseMap<CallerCalleePair, uint64_t> NonUniquePaths;
-
-  DenseSet<BinaryFunction *> Visiting;
-
-  uint32_t CurSearchingDepth = 0;
 
 #if LLVM_ENABLE_STATS
   DenseSet<std::pair<uint64_t, uint64_t>> ReachableViaUniquePaths;
