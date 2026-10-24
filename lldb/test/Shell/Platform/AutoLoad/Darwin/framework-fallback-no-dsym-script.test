@@ -1,0 +1,23 @@
+# REQUIRES: python, system-darwin
+#
+# Test that when a dSYM exists but has no Python script inside,
+# the script inside the .framework bundle is loaded as a fallback.
+
+# RUN: split-file %s %t
+# RUN: mkdir -p %t/TestFramework.framework/Resources/Python
+# RUN: %clang_host -g %t/main.c -o %t/TestFramework.framework/TestFramework
+
+# RUN: cp %t/framework_script.py %t/TestFramework.framework/Resources/Python/TestFramework.py
+# RUN: %lldb -b \
+# RUN:   -o 'settings set target.load-script-from-symbol-file true' \
+# RUN:   -o 'target create %t/TestFramework.framework/TestFramework' 2>&1 | FileCheck %s
+
+# CHECK: FRAMEWORK_FALLBACK
+
+#--- main.c
+int main() { return 0; }
+
+#--- framework_script.py
+import sys
+def __lldb_init_module(debugger, internal_dict):
+    print("FRAMEWORK_FALLBACK", file=sys.stderr)
