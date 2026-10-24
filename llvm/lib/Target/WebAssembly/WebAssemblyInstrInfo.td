@@ -57,6 +57,9 @@ def HasMultiMemory :
     Predicate<"Subtarget->hasMultiMemory()">,
     AssemblerPredicate<(all_of FeatureMultiMemory), "multimemory">;
 
+def HasMemtag :
+    Predicate<"Subtarget->hasMemtag()">,
+    AssemblerPredicate<(all_of FeatureMemtag), "memtag">;
 def HasMultivalue :
     Predicate<"Subtarget->hasMultivalue()">,
     AssemblerPredicate<(all_of FeatureMultivalue), "multivalue">;
@@ -483,3 +486,4 @@ include "WebAssemblyInstrSIMD.td"
 include "WebAssemblyInstrRef.td"
 include "WebAssemblyInstrBulkMemory.td"
 include "WebAssemblyInstrTable.td"
+include "WebAssemblyInstrMemtag.td"
