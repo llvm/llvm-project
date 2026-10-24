@@ -287,35 +287,6 @@ public:
     return true;
   }
 
-  bool VisitVarDecl(VarDecl *VD) override {
-    if (!Opts.IsNaiveCTUEnabled)
-      return true;
-
-    if (VD->hasExternalStorage() || VD->isStaticDataMember()) {
-      if (!cross_tu::shouldImport(VD, *Ctx))
-        return true;
-    } else {
-      // Cannot be initialized in another TU.
-      return true;
-    }
-
-    if (VD->getAnyInitializer())
-      return true;
-
-    llvm::Expected<const VarDecl *> CTUDeclOrError =
-      CTU.getCrossTUDefinition(VD, Opts.CTUDir, Opts.CTUIndexName,
-                               Opts.DisplayCTUProgress);
-
-    if (!CTUDeclOrError) {
-      handleAllErrors(CTUDeclOrError.takeError(),
-                      [&](const cross_tu::IndexError &IE) {
-                        CTU.emitCrossTUDiagnostics(IE, VD->getLocation());
-                      });
-    }
-
-    return true;
-  }
-
   bool VisitFunctionDecl(FunctionDecl *FD) override {
     IdentifierInfo *II = FD->getIdentifier();
     if (II && II->getName().starts_with("__inline"))
@@ -730,6 +701,11 @@ void AnalysisConsumer::HandleCode(Decl *D, AnalysisMode Mode,
   // Ignore autosynthesized code.
   if (Mgr->getAnalysisDeclContext(D)->isBodyAutosynthesized())
     return;
+
+  // CFG pruning and AST-based checks need these values before Store reads.
+  if (Opts.IsNaiveCTUEnabled && (Mode & AM_Syntax))
+    CTU.importReferencedInitializers(
+        D->getBody(), Opts.CTUDir, Opts.CTUIndexName, Opts.DisplayCTUProgress);
 
   CFG *DeclCFG = Mgr->getCFG(D);
   if (DeclCFG)
