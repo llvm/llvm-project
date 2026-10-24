@@ -1370,7 +1370,7 @@ static void parseClangOption(Ctx &ctx, StringRef opt, const Twine &msg) {
   const char *argv[] = {ctx.arg.progName.data(), opt.data()};
   // Called after initLLVM() to ensure target-specific RegisterLibraryOptions
   // have been called.
-  if (cl::ParseCommandLineOptions(2, argv, "", &os))
+  if (cl::parseCommandLineOptions(ctx.arg.libraryOptions, argv, "", &os))
     return;
   ErrAlways(ctx) << msg << ": " << StringRef(err).trim();
 }

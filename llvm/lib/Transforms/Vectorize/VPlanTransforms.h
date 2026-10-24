@@ -225,11 +225,12 @@ struct VPlanTransforms {
 
   /// Model the blocks the executed \p MainPlan generated for the main vector
   /// loop in \p EpiPlan during epilogue vectorization, wrapping each in a
-  /// VPIRBasicBlock, with \p EnteredFrom the block \p EpiPlan is entered from.
-  /// Edges from blocks bypassing both vector loops are redirected to \p
-  /// EpiPlan's scalar preheader, all others are mirrored.
-  static void modelGeneratedMainLoopBlocks(VPlan &EpiPlan, VPlan &MainPlan,
-                                           VPIRBasicBlock *EnteredFrom);
+  /// VPIRBasicBlock. Bypass edges are redirected to \p EpiPlan's scalar
+  /// preheader, or its vector preheader if only bypassing the main vector loop.
+  /// Returns the block wrapping \p MainPlan's scalar preheader, which becomes
+  /// the epilogue iteration check.
+  static VPIRBasicBlock *modelGeneratedMainLoopBlocks(VPlan &EpiPlan,
+                                                      VPlan &MainPlan);
 
   /// Replaces the VPInstructions in \p Plan with corresponding
   /// widen recipes. Returns false if any VPInstructions could not be converted
@@ -441,7 +442,7 @@ struct VPlanTransforms {
   static bool removeBranchOnConst(VPlan &Plan, bool OnlyLatches = false);
 
   /// Perform common-subexpression-elimination on \p Plan.
-  static void cse(VPlan &Plan);
+  static void cse(VPlan &Plan, const VPDominatorTree &VPDT);
 
   /// Replace each VPExpandSCEVRecipe in \p Plan's entry block with an earlier
   /// VPExpandSCEVRecipe there expanding the same SCEV, if any.

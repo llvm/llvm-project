@@ -399,8 +399,8 @@ define void @ldg(ptr %p0, ptr addrspace(1) %p1) {
 define i32 @atomics(ptr %p0, i32 %a, float %b, double %c) {
 ; CHECK: %1 = atomicrmw uinc_wrap ptr %p0, i32 %a syncscope("device") monotonic
 ; CHECK: %2 = atomicrmw udec_wrap ptr %p0, i32 %a syncscope("device") monotonic
-; CHECK: %3 = atomicrmw fadd ptr %p0, float %b syncscope("device") monotonic
-; CHECK: %4 = atomicrmw fadd ptr %p0, double %c syncscope("device") monotonic
+; CHECK: %3 = atomicrmw fadd ptr %p0, float %b syncscope("device") monotonic, align 4, !atomic.ignore.denormal.mode !0
+; CHECK: %4 = atomicrmw fadd ptr %p0, double %c syncscope("device") monotonic, align 8, !atomic.ignore.denormal.mode !0
 
   %r1 = call i32 @llvm.nvvm.atomic.load.inc.32.p0(ptr %p0, i32 %a)
   %r2 = call i32 @llvm.nvvm.atomic.load.dec.32.p0(ptr %p0, i32 %a)
@@ -501,13 +501,13 @@ define void @atomics_scoped(ptr %p, i32 %a, i64 %b, float %c, double %d) {
 ; CHECK: [[CAS_sys_i64:%.*]] = cmpxchg ptr %p, i64 %b, i64 %b monotonic monotonic
 ; CHECK: extractvalue { i64, i1 } [[CAS_sys_i64]], 0
   %cas.i.sys.i64 = call i64 @llvm.nvvm.atomic.cas.gen.i.sys.i64.p0(ptr %p, i64 %b, i64 %b)
-; CHECK: atomicrmw fadd ptr %p, float %c syncscope("block") monotonic
+; CHECK: atomicrmw fadd ptr %p, float %c syncscope("block") monotonic, align 4, !atomic.ignore.denormal.mode !0
   %add.f.cta.f32 = call float @llvm.nvvm.atomic.add.gen.f.cta.f32.p0(ptr %p, float %c)
-; CHECK: atomicrmw fadd ptr %p, double %d syncscope("block") monotonic
+; CHECK: atomicrmw fadd ptr %p, double %d syncscope("block") monotonic, align 8, !atomic.ignore.denormal.mode !0
   %add.f.cta.f64 = call double @llvm.nvvm.atomic.add.gen.f.cta.f64.p0(ptr %p, double %d)
-; CHECK: atomicrmw fadd ptr %p, float %c monotonic
+; CHECK: atomicrmw fadd ptr %p, float %c monotonic, align 4, !atomic.ignore.denormal.mode !0
   %add.f.sys.f32 = call float @llvm.nvvm.atomic.add.gen.f.sys.f32.p0(ptr %p, float %c)
-; CHECK: atomicrmw fadd ptr %p, double %d monotonic
+; CHECK: atomicrmw fadd ptr %p, double %d monotonic, align 8, !atomic.ignore.denormal.mode !0
   %add.f.sys.f64 = call double @llvm.nvvm.atomic.add.gen.f.sys.f64.p0(ptr %p, double %d)
   ret void
 }
