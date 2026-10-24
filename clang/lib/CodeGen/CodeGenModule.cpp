@@ -5082,7 +5082,10 @@ bool CodeGenModule::shouldEmitFunction(GlobalDecl GD) {
     //
     // TODO: Maybe it is better to give it a warning if we call a non-inline
     // function from other module units which is marked as always-inline.
-    if (!F->isTemplateInstantiation() || !F->hasAttr<AlwaysInlineAttr>()) {
+    // GNU-inline definitions in the global module fragment are also needed
+    // for inlining, but definitions owned by named modules remain restricted.
+    if ((!F->isTemplateInstantiation() || !F->hasAttr<AlwaysInlineAttr>()) &&
+        !(M->isGlobalModule() && F->hasAttr<GNUInlineAttr>())) {
       return false;
     }
   }
