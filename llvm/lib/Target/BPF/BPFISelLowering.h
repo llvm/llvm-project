@@ -68,6 +68,9 @@ public:
 
   unsigned getJumpTableEncoding() const override;
 
+  /// The entries are addresses of blocks, also in position independent code.
+  bool isJumpTableRelative() const override { return false; }
+
 private:
   // Control Instruction Selection Features
   bool HasAlu32;
