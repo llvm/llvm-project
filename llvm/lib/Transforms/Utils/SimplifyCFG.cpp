@@ -200,6 +200,11 @@ static cl::opt<unsigned> MaxSwitchCasesPerResult(
     "max-switch-cases-per-result", cl::Hidden, cl::init(16),
     cl::desc("Limit cases to analyze when converting a switch to select"));
 
+static cl::opt<unsigned> MaxLoopHeaderThreadingSearchBlocks(
+    "simplifycfg-max-loop-header-threading-search", cl::Hidden, cl::init(1024),
+    cl::desc("Limit number of blocks searched to prove that threading through "
+             "a loop header keeps the loop canonical"));
+
 static cl::opt<unsigned> MaxJumpThreadingLiveBlocks(
     "max-jump-threading-live-blocks", cl::Hidden, cl::init(24),
     cl::desc("Limit number of blocks a define in a threaded block is allowed "
@@ -3534,6 +3539,33 @@ static bool findReaching(BasicBlock *BB, BasicBlock *DefBB,
   return true;
 }
 
+/// Return true if threading \p PredBBs through \p Header to \p RealDest
+/// eliminates the loop's single backedge. \p Header must have two predecessors
+/// (one entry and one backedge), the threaded predecessor must be dominated by
+/// \p Header, and \p RealDest must not reach it without passing through
+/// \p Header.
+static bool isSafeToThreadThroughLoopHeader(BasicBlock *Header,
+                                            ArrayRef<BasicBlock *> PredBBs,
+                                            BasicBlock *RealDest) {
+  if (!Header->hasNPredecessors(2))
+    return false;
+  BlocksSet Visited;
+  SmallVector<BasicBlock *, 8> Worklist(PredBBs);
+  while (!Worklist.empty()) {
+    BasicBlock *BB = Worklist.pop_back_val();
+    if (BB == Header || !Visited.insert(BB).second)
+      continue;
+    if (BB == RealDest)
+      return false;
+    if (Visited.size() > MaxLoopHeaderThreadingSearchBlocks)
+      return false;
+    if (pred_empty(BB))
+      return false;
+    append_range(Worklist, predecessors(BB));
+  }
+  return true;
+}
+
 /// Return true if we can thread a branch across this block.
 static bool blockIsSimpleEnoughToThreadThrough(BasicBlock *BB,
                                                BlocksSet &NonLocalUseBlocks) {
@@ -3662,7 +3694,7 @@ static bool reachesUncontrolledConvergentCallBeforeBlock(BasicBlock *From,
 /// from the predecessor to their ultimate destination.
 static std::optional<bool> foldCondBranchOnValueKnownInPredecessorImpl(
     CondBrInst *BI, const TargetTransformInfo &TTI, DomTreeUpdater *DTU,
-    AssumptionCache *AC, const DataLayout &DL) {
+    AssumptionCache *AC, const DataLayout &DL, bool KeepCanonicalLoop) {
   SmallMapVector<ConstantInt *, SmallSetVector<BasicBlock *, 2>, 2> KnownValues;
   BasicBlock *BB = BI->getParent();
   Value *Cond = BI->getCondition();
@@ -3730,6 +3762,10 @@ static std::optional<bool> foldCondBranchOnValueKnownInPredecessorImpl(
 
     // Only revector to RealDest if no values defined in BB are live.
     if (ReachesNonLocalUseBlocks.contains(RealDest))
+      continue;
+
+    if (KeepCanonicalLoop &&
+        !isSafeToThreadThroughLoopHeader(BB, PredBBs, RealDest))
       continue;
 
     // Threading through a branch can bypass a reconvergence point. If the
@@ -3851,18 +3887,17 @@ static std::optional<bool> foldCondBranchOnValueKnownInPredecessorImpl(
 }
 
 bool SimplifyCFGOpt::foldCondBranchOnValueKnownInPredecessor(CondBrInst *BI) {
-  // Note: If BB is a loop header then there is a risk that threading introduces
-  // a non-canonical loop by moving a back edge. So we avoid this optimization
-  // for loop headers if NeedCanonicalLoop is set.
-  if (Options.NeedCanonicalLoop && is_contained(LoopHeaders, BI->getParent()))
-    return false;
+  // Threading through a loop header can introduce a cycle that bypasses the
+  // header.
+  bool KeepCanonicalLoop =
+      Options.NeedCanonicalLoop && is_contained(LoopHeaders, BI->getParent());
 
   std::optional<bool> Result;
   bool EverChanged = false;
   do {
     // Note that None means "we changed things, but recurse further."
-    Result = foldCondBranchOnValueKnownInPredecessorImpl(BI, TTI, DTU,
-                                                         Options.AC, DL);
+    Result = foldCondBranchOnValueKnownInPredecessorImpl(
+        BI, TTI, DTU, Options.AC, DL, KeepCanonicalLoop);
     EverChanged |= Result == std::nullopt || *Result;
   } while (Result == std::nullopt);
   return EverChanged;
