@@ -1908,17 +1908,6 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
           if (IndPhi) {
             if (!checkIsIndPhi(IndPhi, L, SE, ID))
               continue;
-            // This is an induction PHI. Check that the only users are PHI
-            // nodes, and induction variable update binary operators.
-            if (llvm::any_of(Inst->users(), [&](User *U) {
-                  if (!isa<PHINode>(U) && !isa<BinaryOperator>(U))
-                    return true;
-                  BinaryOperator *B = dyn_cast<BinaryOperator>(U);
-                  if (B && B != ID.getInductionBinOp())
-                    return true;
-                  return false;
-                }))
-              continue;
           } else {
             // If it is not an induction phi, it must be an induction update
             // binary operator with an induction phi user.
@@ -1927,14 +1916,29 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
               continue;
             if (llvm::any_of(Inst->users(), [&](User *U) {
                   PHINode *Phi = dyn_cast<PHINode>(U);
-                  if (Phi != PN && !checkIsIndPhi(Phi, L, SE, ID))
+                  if (Phi == PN)
+                    return false;
+                  if (!checkIsIndPhi(Phi, L, SE, ID))
                     return true;
+                  IndPhi = Phi;
                   return false;
                 }))
               continue;
-            if (B != ID.getInductionBinOp())
+            if (!IndPhi || B != ID.getInductionBinOp())
               continue;
           }
+
+          // This is an induction PHI. Check that the only users are PHI
+          // nodes, and induction variable update binary operators.
+          if (llvm::any_of(IndPhi->users(), [&](User *U) {
+                if (!isa<PHINode>(U) && !isa<BinaryOperator>(U))
+                  return true;
+                BinaryOperator *B = dyn_cast<BinaryOperator>(U);
+                if (B && B != ID.getInductionBinOp())
+                  return true;
+                return false;
+              }))
+            continue;
         }
 
         // Okay, this instruction has a user outside of the current loop
