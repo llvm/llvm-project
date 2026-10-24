@@ -33,6 +33,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachinePassRegistry.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineSchedSearch.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/RegisterPressure.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
@@ -1304,6 +1305,8 @@ void ScheduleDAGMI::schedule() {
   }
   assert(CurrentTop == CurrentBottom && "Nonempty unscheduled zone.");
 
+  runPostScheduleOptimizer();
+
   placeDebugValues();
 
   LLVM_DEBUG({
@@ -1923,6 +1926,8 @@ void ScheduleDAGMILive::schedule() {
     updateQueues(SU, IsTopNode);
   }
   assert(CurrentTop == CurrentBottom && "Nonempty unscheduled zone.");
+
+  runPostScheduleOptimizer();
 
   placeDebugValues();
 
