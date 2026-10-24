@@ -756,6 +756,15 @@ void Output::blockScalarString(StringRef &S) {
   if (!StateStack.empty())
     newLineCheck();
   output(" |");
+  // The default chomping keeps exactly one trailing line break, so strip or
+  // keep them explicitly to preserve the value.
+  if (!S.empty()) {
+    size_t LineBreaks = S.size() - S.rtrim('\n').size();
+    if (LineBreaks == 0)
+      output("-");
+    else if (LineBreaks > 1)
+      output("+");
+  }
 
   unsigned Indent = StateStack.empty() ? 1 : StateStack.size();
 
