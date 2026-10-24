@@ -995,6 +995,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
     TrigActions.customFor({F16});
     FDIVActions.customFor({F16});
+    FDIVActions.customFor(ST.hasBF16TransInsts(), {BF16});
   }
 
   if (ST.hasBF16PackedInsts()) {
@@ -1012,6 +1013,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     FPOpActions.widenScalarFor({BF16}, changeElementTo(0, F32));
     FCanonicalizeActions.widenScalarFor({BF16}, changeElementTo(0, F32));
   }
+
+  FDIVActions.widenScalarFor({BF16}, changeElementTo(0, F32));
 
   if (ST.hasAnyPackedFP32Ops()) {
     FPOpActions.legalFor({V2F32});
@@ -2412,7 +2415,7 @@ bool AMDGPULegalizerInfo::legalizeCustom(
   case TargetOpcode::G_FMAD:
     return legalizeFMad(MI, MRI, B);
   case TargetOpcode::G_FDIV:
-    return legalizeFDIV(MI, MRI, B);
+    return legalizeFDIV(Helper, MI);
   case TargetOpcode::G_FFREXP:
     return legalizeFFREXP(MI, MRI, B);
   case TargetOpcode::G_FSQRT:
@@ -5289,14 +5292,15 @@ bool AMDGPULegalizerInfo::legalizeKernargMemParameter(MachineInstr &MI,
   return true;
 }
 
-bool AMDGPULegalizerInfo::legalizeFDIV(MachineInstr &MI,
-                                       MachineRegisterInfo &MRI,
-                                       MachineIRBuilder &B) const {
+bool AMDGPULegalizerInfo::legalizeFDIV(LegalizerHelper &Helper,
+                                       MachineInstr &MI) const {
+  MachineIRBuilder &B = Helper.MIRBuilder;
+  MachineRegisterInfo &MRI = *B.getMRI();
   Register Dst = MI.getOperand(0).getReg();
   LLT DstTy = MRI.getType(Dst);
 
-  if (DstTy == F16)
-    return legalizeFDIV16(MI, MRI, B);
+  if (DstTy == F16 || DstTy == BF16)
+    return legalizeFDIV16(Helper, MI);
   if (DstTy == F32)
     return legalizeFDIV32(MI, MRI, B);
   if (DstTy == F64)
@@ -5625,7 +5629,7 @@ bool AMDGPULegalizerInfo::legalizeFastUnsafeFDIV(MachineInstr &MI,
   bool AllowInaccurateRcp = MI.getFlag(MachineInstr::FmAfn);
 
   if (const auto *CLHS = getConstantFPVRegVal(LHS, MRI)) {
-    if (!AllowInaccurateRcp && ResTy != F16)
+    if (!AllowInaccurateRcp && ResTy != F16 && ResTy != BF16)
       return false;
 
     // v_rcp_f32 and v_rsq_f32 do not support denormals, and according to
@@ -5657,10 +5661,10 @@ bool AMDGPULegalizerInfo::legalizeFastUnsafeFDIV(MachineInstr &MI,
     }
   }
 
-  // For f16 require afn or arcp.
+  // For f16 and bf16 require afn or arcp.
   // For f32 require afn.
   if (!AllowInaccurateRcp &&
-      (ResTy != F16 || !MI.getFlag(MachineInstr::FmArcp)))
+      ((ResTy != F16 && ResTy != BF16) || !MI.getFlag(MachineInstr::FmArcp)))
     return false;
 
   // x / y -> x * (1.0 / y)
@@ -5724,15 +5728,21 @@ bool AMDGPULegalizerInfo::legalizeFastUnsafeFDIV64(MachineInstr &MI,
   return true;
 }
 
-bool AMDGPULegalizerInfo::legalizeFDIV16(MachineInstr &MI,
-                                         MachineRegisterInfo &MRI,
-                                         MachineIRBuilder &B) const {
+bool AMDGPULegalizerInfo::legalizeFDIV16(LegalizerHelper &Helper,
+                                         MachineInstr &MI) const {
+  MachineIRBuilder &B = Helper.MIRBuilder;
+  MachineRegisterInfo &MRI = *B.getMRI();
   if (legalizeFastUnsafeFDIV(MI, MRI, B))
     return true;
 
   Register Res = MI.getOperand(0).getReg();
   Register LHS = MI.getOperand(1).getReg();
   Register RHS = MI.getOperand(2).getReg();
+
+  // For bf16, use the generic promotion to f32 when the fast math lowering
+  // above does not apply.
+  if (MRI.getType(Res) == BF16)
+    return Helper.widenScalar(MI, 0, F32) == LegalizerHelper::Legalized;
 
   uint16_t Flags = MI.getFlags();
 
