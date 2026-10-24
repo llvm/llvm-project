@@ -5647,6 +5647,11 @@ def march_EQ : Joined<["-"], "march=">, Group<m_Group>,
   Flags<[TargetSpecific]>, Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>,
   HelpText<"For a list of available architectures for the target use '-mcpu=help'">;
 def mzos_target_EQ : Joined<["-"], "mzos-target=">, Group<m_Group>, Visibility<[ClangOption, CC1Option]>, HelpText<"Set the z/OS release of the runtime environment">;
+def mcsect_EQ : Joined<["-"], "mcsect=">, Group<m_Group>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Set CSECT names in the output object module">;
+def mcsect : Flag<["-"], "mcsect">, Group<m_Group>, Visibility<[ClangOption, CC1Option]>, Alias<mcsect_EQ>;
+def mno_csect : Flag<["-"], "mno-csect">, Group<m_Group>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Do not set CSECT names in the output object module">;
 def masm_EQ : Joined<["-"], "masm=">, Group<m_Group>, Visibility<[ClangOption, FlangOption]>;
 def inline_asm_EQ : Joined<["-"], "inline-asm=">, Group<m_Group>,
   Visibility<[ClangOption, CC1Option]>,

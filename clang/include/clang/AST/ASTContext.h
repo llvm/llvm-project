@@ -3971,6 +3971,10 @@ public:
 
   llvm::StringMap<SectionInfo> SectionInfos;
 
+  /// Names set by '#pragma csect(code/static, "name")' on z/OS.
+  std::string PragmaCsectStatic;
+  std::string PragmaCsectCode;
+
   /// Return a new OMPTraitInfo object owned by this context.
   OMPTraitInfo &getNewOMPTraitInfo();
 

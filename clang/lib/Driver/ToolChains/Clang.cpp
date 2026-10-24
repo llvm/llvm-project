@@ -5960,6 +5960,31 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
+  if (RawTriple.isOSzOS()) {
+    if (Args.hasFlag(options::OPT_mcsect_EQ, options::OPT_mno_csect, false)) {
+      SmallString<256> CsectArg("-mcsect=");
+      StringRef Qualifier;
+      if (const Arg *A = Args.getLastArg(options::OPT_mcsect_EQ))
+        Qualifier = A->getValue();
+      if (!Qualifier.empty()) {
+        CsectArg += Qualifier;
+        CsectArg += "#";
+      }
+
+      SmallString<64> OutputName;
+      if (Arg *OutputOpt = Args.getLastArg(options::OPT_o))
+        OutputName = OutputOpt->getValue();
+      else if (Output.isFilename())
+        OutputName = Output.getFilename();
+
+      CsectArg += llvm::sys::path::stem(OutputName);
+      CsectArg += "#";
+      CmdArgs.push_back(Args.MakeArgString(CsectArg));
+    } else {
+      CmdArgs.push_back("-mno-csect");
+    }
+  }
+
   llvm::Reloc::Model RelocationModel;
   unsigned PICLevel;
   bool IsPIE;

@@ -1296,6 +1296,10 @@ def note_surrounding_namespace_starts_here : Note<
 def warn_failed_to_resolve_pragma : Warning<
   "failed to resolve '#pragma %0' to a declaration">,
   InGroup<IgnoredPragmas>;
+def warn_duplicate_pragma : Warning<"duplicate '#pragma %0' is ignored">,
+  InGroup<IgnoredPragmas>;
+def err_conflicting_pragma : Error<
+  "external name '%0' in pragma %1 conflicts with another csect name">;
 def warn_pragma_not_applied : Warning<
   "#pragma %0 is applicable to symbols with external linkage only; "
   "not applied to %1">,

@@ -1834,6 +1834,11 @@ void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
     break;
   }
 
+  if (Opts.CsectName)
+    GenerateArg(Consumer, OPT_mcsect_EQ, Twine(*Opts.CsectName));
+  else
+    GenerateArg(Consumer, OPT_mno_csect);
+
   if (Opts.StaticClosure)
     GenerateArg(Consumer, OPT_static_libclosure);
 }
@@ -2336,6 +2341,11 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
       options::OPT_mamdgpu_ieee, options::OPT_mno_amdgpu_ieee, true);
   if (!Opts.EmitIEEENaNCompliantInsts && !LangOptsRef.NoHonorNaNs)
     Diags.Report(diag::err_drv_amdgpu_ieee_without_no_honor_nans);
+
+  if (Args.hasFlag(OPT_mcsect_EQ, OPT_mno_csect, false)) {
+    const Arg *A = Args.getLastArg(OPT_mcsect_EQ);
+    Opts.CsectName = A->getValue();
+  }
 
   Opts.StaticClosure = Args.hasArg(options::OPT_static_libclosure);
 

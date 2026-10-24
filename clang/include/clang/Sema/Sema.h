@@ -2391,6 +2391,10 @@ public:
   void ActOnPragmaExport(IdentifierInfo *IdentId, SourceLocation ExportNameLoc,
                          Scope *curScope);
 
+  /// ActOnPragmaCsect - called on well-formed '\#pragma csect'
+  void ActOnPragmaCsect(StringRef SectionKind, SourceLocation SectionLoc,
+                        StringRef SectionName);
+
   /// Only called on function definitions; if there is a pragma in scope
   /// with the effect of a range-based optnone, consider marking the function
   /// with attribute optnone.
