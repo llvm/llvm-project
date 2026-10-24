@@ -1048,6 +1048,7 @@ private:
   void SkipFunctionBody();
 
   struct ParsedTemplateInfo;
+  class TemplateParameterDepthRAII;
 
   /// ParseFunctionDefinition - We parsed and verified that the specified
   /// Declarator is well formed.  If this is a K&R-style function, read the
@@ -1347,10 +1348,6 @@ private:
   /// entities.
   typedef SmallVector<LateParsedDeclaration *, 2>
       LateParsedDeclarationsContainer;
-
-  /// Utility to re-enter a possibly-templated scope while parsing its
-  /// late-parsed components.
-  struct ReenterTemplateScopeRAII;
 
   /// Utility to re-enter a class scope while parsing its late-parsed
   /// components.
@@ -2811,9 +2808,9 @@ private:
   void ParseParameterDeclarationClause(
       Declarator &D, ParsedAttributes &attrs,
       SmallVectorImpl<DeclaratorChunk::ParamInfo> &ParamInfo,
-      SourceLocation &EllipsisLoc) {
+      SourceLocation &EllipsisLoc, TemplateParameterDepthRAII &TemplateDepth) {
     return ParseParameterDeclarationClause(
-        D.getContext(), attrs, ParamInfo, EllipsisLoc,
+        D.getContext(), attrs, ParamInfo, EllipsisLoc, TemplateDepth,
         D.getCXXScopeSpec().isSet() &&
             D.isFunctionDeclaratorAFunctionDeclaration());
   }
@@ -2856,7 +2853,8 @@ private:
   void ParseParameterDeclarationClause(
       DeclaratorContext DeclaratorContext, ParsedAttributes &attrs,
       SmallVectorImpl<DeclaratorChunk::ParamInfo> &ParamInfo,
-      SourceLocation &EllipsisLoc, bool IsACXXFunctionDeclaration = false);
+      SourceLocation &EllipsisLoc, TemplateParameterDepthRAII &TemplateDepth,
+      bool IsACXXFunctionDeclaration = false);
 
   /// \verbatim
   /// [C90]   direct-declarator '[' constant-expression[opt] ']'
@@ -7970,6 +7968,10 @@ private:
     explicit TemplateParameterDepthRAII(unsigned &Depth)
         : Depth(Depth), AddedLevels(0) {}
 
+    TemplateParameterDepthRAII(const TemplateParameterDepthRAII &) = delete;
+    TemplateParameterDepthRAII &
+    operator=(const TemplateParameterDepthRAII &) = delete;
+
     ~TemplateParameterDepthRAII() { Depth -= AddedLevels; }
 
     void operator++() {
@@ -7980,13 +7982,22 @@ private:
       Depth += D;
       AddedLevels += D;
     }
-    void setAddedDepth(unsigned D) {
-      Depth = Depth - AddedLevels + D;
-      AddedLevels = D;
-    }
-
     unsigned getDepth() const { return Depth; }
-    unsigned getOriginalDepth() const { return Depth - AddedLevels; }
+  };
+
+  /// Utility to re-enter a possibly-templated scope while parsing its
+  /// late-parsed components.
+  struct ReenterTemplateScopeRAII {
+    MultiParseScope Scopes;
+    TemplateParameterDepthRAII CurTemplateDepthTracker;
+
+    ReenterTemplateScopeRAII(Parser &P, Decl *MaybeTemplated,
+                             bool Enter = true);
+    ReenterTemplateScopeRAII(Parser &P, const Declarator &D);
+
+    ReenterTemplateScopeRAII(const ReenterTemplateScopeRAII &) = delete;
+    ReenterTemplateScopeRAII &
+    operator=(const ReenterTemplateScopeRAII &) = delete;
   };
 
   /// Gathers and cleans up TemplateIdAnnotations when parsing of a

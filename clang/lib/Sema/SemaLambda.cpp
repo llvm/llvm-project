@@ -1064,6 +1064,7 @@ void Sema::AddTemplateParametersToLambdaCallOperator(
       TemplateParams, CallOperator);
   TemplateMethod->setAccess(AS_public);
   CallOperator->setDescribedFunctionTemplate(TemplateMethod);
+  Class->setLambdaIsGeneric(true);
 }
 
 void Sema::CompleteLambdaCallOperator(
@@ -1097,7 +1098,6 @@ void Sema::CompleteLambdaCallOperator(
   } else {
     LSI->Lambda->addDecl(Method);
   }
-  LSI->Lambda->setLambdaIsGeneric(TemplateParams);
   LSI->Lambda->setLambdaTypeInfo(MethodTyInfo);
 
   Method->setLexicalDeclContext(DC);
@@ -1153,32 +1153,8 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
   // once the bug is fixed.
   CXXRecordDecl::LambdaDependencyKind LambdaDependencyKind =
       CXXRecordDecl::LDK_Unknown;
-  if (CurScope->getTemplateParamParent() != nullptr) {
+  if (CurrentScope->getTemplateParamParent())
     LambdaDependencyKind = CXXRecordDecl::LDK_AlwaysDependent;
-  } else if (Scope *ParentScope = CurScope->getParent()) {
-    // Given a lambda defined inside a requires expression,
-    //
-    // struct S {
-    //   S(auto var) requires requires { [&] -> decltype(var) { }; }
-    //   {}
-    // };
-    //
-    // The parameter var is not injected into the function Decl at the point of
-    // parsing lambda. In such scenarios, perceiving it as dependent could
-    // result in the constraint being evaluated, which matches what GCC does.
-    Scope *LookupScope = ParentScope;
-    while (LookupScope->getEntity() &&
-           LookupScope->getEntity()->isRequiresExprBody())
-      LookupScope = LookupScope->getParent();
-
-    if (LookupScope != ParentScope &&
-        LookupScope->isFunctionDeclarationScope() &&
-        llvm::any_of(LookupScope->decls(), [](Decl *D) {
-          return isa<ParmVarDecl>(D) &&
-                 cast<ParmVarDecl>(D)->getType()->isTemplateTypeParmType();
-        }))
-      LambdaDependencyKind = CXXRecordDecl::LDK_AlwaysDependent;
-  }
 
   CXXRecordDecl *Class = createLambdaClosureType(
       Intro.Range, /*Info=*/nullptr, LambdaDependencyKind, Intro.Default);
@@ -1458,7 +1434,6 @@ void Sema::ActOnLambdaClosureParameters(
   if (TemplateParams) {
     AddTemplateParametersToLambdaCallOperator(LSI->CallOperator, LSI->Lambda,
                                               TemplateParams);
-    LSI->Lambda->setLambdaIsGeneric(true);
     LSI->ContainsUnexpandedParameterPack |=
         TemplateParams->containsUnexpandedParameterPack();
   }
