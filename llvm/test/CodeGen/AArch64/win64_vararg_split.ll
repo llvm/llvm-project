@@ -165,6 +165,81 @@ define void @call_split_win64cc([2 x i64] %a, [2 x i64] %b, [2 x i64] %c, [2 x i
   ret void
 }
 
+; Same for [2 x ptr], which clang uses for a struct of two pointers.
+define void @call_split_ptr([2 x ptr] %a, [2 x ptr] %b, [2 x ptr] %c, [2 x ptr] %d) nounwind {
+; DAGISEL-LABEL: call_split_ptr:
+; DAGISEL:       // %bb.0:
+; DAGISEL-NEXT:    sub sp, sp, #32
+; DAGISEL-NEXT:    mov x8, x7
+; DAGISEL-NEXT:    mov x7, x6
+; DAGISEL-NEXT:    mov x6, x5
+; DAGISEL-NEXT:    mov x5, x4
+; DAGISEL-NEXT:    mov x4, x3
+; DAGISEL-NEXT:    mov x3, x2
+; DAGISEL-NEXT:    mov x2, x1
+; DAGISEL-NEXT:    mov x1, x0
+; DAGISEL-NEXT:    mov w0, #4 // =0x4
+; DAGISEL-NEXT:    str x30, [sp, #16] // 8-byte Spill
+; DAGISEL-NEXT:    str x8, [sp]
+; DAGISEL-NEXT:    bl sink
+; DAGISEL-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
+; DAGISEL-NEXT:    add sp, sp, #32
+; DAGISEL-NEXT:    ret
+;
+; GISEL-LABEL: call_split_ptr:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    sub sp, sp, #80
+; GISEL-NEXT:    str x30, [sp, #64] // 8-byte Spill
+; GISEL-NEXT:    str x0, [sp, #8] // 8-byte Spill
+; GISEL-NEXT:    mov x0, x1
+; GISEL-NEXT:    ldr x1, [sp, #8] // 8-byte Reload
+; GISEL-NEXT:    str x0, [sp, #16] // 8-byte Spill
+; GISEL-NEXT:    mov x0, x2
+; GISEL-NEXT:    ldr x2, [sp, #16] // 8-byte Reload
+; GISEL-NEXT:    str x0, [sp, #24] // 8-byte Spill
+; GISEL-NEXT:    mov x0, x3
+; GISEL-NEXT:    ldr x3, [sp, #24] // 8-byte Reload
+; GISEL-NEXT:    str x0, [sp, #32] // 8-byte Spill
+; GISEL-NEXT:    mov x0, x4
+; GISEL-NEXT:    ldr x4, [sp, #32] // 8-byte Reload
+; GISEL-NEXT:    str x0, [sp, #40] // 8-byte Spill
+; GISEL-NEXT:    mov x0, x5
+; GISEL-NEXT:    ldr x5, [sp, #40] // 8-byte Reload
+; GISEL-NEXT:    str x0, [sp, #48] // 8-byte Spill
+; GISEL-NEXT:    mov x0, x6
+; GISEL-NEXT:    ldr x6, [sp, #48] // 8-byte Reload
+; GISEL-NEXT:    str x0, [sp, #56] // 8-byte Spill
+; GISEL-NEXT:    mov x8, x7
+; GISEL-NEXT:    ldr x7, [sp, #56] // 8-byte Reload
+; GISEL-NEXT:    mov w0, #4 // =0x4
+; GISEL-NEXT:    mov x9, sp
+; GISEL-NEXT:    str x8, [x9]
+; GISEL-NEXT:    bl sink
+; GISEL-NEXT:    ldr x30, [sp, #64] // 8-byte Reload
+; GISEL-NEXT:    add sp, sp, #80
+; GISEL-NEXT:    ret
+;
+; LINUX-LABEL: call_split_ptr:
+; LINUX:       // %bb.0:
+; LINUX-NEXT:    sub sp, sp, #32
+; LINUX-NEXT:    mov x8, x6
+; LINUX-NEXT:    mov x6, x5
+; LINUX-NEXT:    mov x5, x4
+; LINUX-NEXT:    mov x4, x3
+; LINUX-NEXT:    mov x3, x2
+; LINUX-NEXT:    mov x2, x1
+; LINUX-NEXT:    mov x1, x0
+; LINUX-NEXT:    mov w0, #4 // =0x4
+; LINUX-NEXT:    stp x7, x30, [sp, #8] // 8-byte Folded Spill
+; LINUX-NEXT:    str x8, [sp]
+; LINUX-NEXT:    bl sink
+; LINUX-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
+; LINUX-NEXT:    add sp, sp, #32
+; LINUX-NEXT:    ret
+  call void (i32, ...) @sink(i32 4, [2 x ptr] %a, [2 x ptr] %b, [2 x ptr] %c, [2 x ptr] %d)
+  ret void
+}
+
 ; A named [2 x i64] parameter of a variadic function starting at x7.
 define void @call_fixed_split([2 x i64] %p) nounwind {
 ; DAGISEL-LABEL: call_fixed_split:
@@ -439,7 +514,85 @@ define void @call_no_regs_left([2 x i64] %a, [2 x i64] %b, [2 x i64] %c, [2 x i6
   ret void
 }
 
-; Unchanged: a byval array is copied to the stack, not split into registers.
+; Unchanged: i128, which clang uses for a 16-byte aligned struct, starts at an
+; even register, so with only x7 left it goes on the stack, 16-byte aligned,
+; and x7 stays unused.
+define void @call_i128(i128 %a) nounwind {
+; DAGISEL-LABEL: call_i128:
+; DAGISEL:       // %bb.0:
+; DAGISEL-NEXT:    sub sp, sp, #48
+; DAGISEL-NEXT:    mov w9, #99 // =0x63
+; DAGISEL-NEXT:    mov x8, x0
+; DAGISEL-NEXT:    mov w0, wzr
+; DAGISEL-NEXT:    stp x1, x9, [sp, #8]
+; DAGISEL-NEXT:    mov w1, #1 // =0x1
+; DAGISEL-NEXT:    mov w2, #2 // =0x2
+; DAGISEL-NEXT:    mov w3, #3 // =0x3
+; DAGISEL-NEXT:    mov w4, #4 // =0x4
+; DAGISEL-NEXT:    mov w5, #5 // =0x5
+; DAGISEL-NEXT:    mov w6, #6 // =0x6
+; DAGISEL-NEXT:    str x30, [sp, #32] // 8-byte Spill
+; DAGISEL-NEXT:    str x8, [sp]
+; DAGISEL-NEXT:    bl sink
+; DAGISEL-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
+; DAGISEL-NEXT:    add sp, sp, #48
+; DAGISEL-NEXT:    ret
+;
+; GISEL-LABEL: call_i128:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    sub sp, sp, #48
+; GISEL-NEXT:    str x30, [sp, #32] // 8-byte Spill
+; GISEL-NEXT:    mov x11, x0
+; GISEL-NEXT:    mov x10, x1
+; GISEL-NEXT:    mov w0, wzr
+; GISEL-NEXT:    mov w8, #1 // =0x1
+; GISEL-NEXT:    mov w1, w8
+; GISEL-NEXT:    mov w8, #2 // =0x2
+; GISEL-NEXT:    mov w2, w8
+; GISEL-NEXT:    mov w8, #3 // =0x3
+; GISEL-NEXT:    mov w3, w8
+; GISEL-NEXT:    mov w8, #4 // =0x4
+; GISEL-NEXT:    mov w4, w8
+; GISEL-NEXT:    mov w8, #5 // =0x5
+; GISEL-NEXT:    mov w5, w8
+; GISEL-NEXT:    mov w8, #6 // =0x6
+; GISEL-NEXT:    mov w6, w8
+; GISEL-NEXT:    mov w8, #99 // =0x63
+; GISEL-NEXT:    // kill: def $x8 killed $w8
+; GISEL-NEXT:    mov x9, sp
+; GISEL-NEXT:    str x11, [x9]
+; GISEL-NEXT:    str x10, [x9, #8]
+; GISEL-NEXT:    str x8, [x9, #16]
+; GISEL-NEXT:    bl sink
+; GISEL-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
+; GISEL-NEXT:    add sp, sp, #48
+; GISEL-NEXT:    ret
+;
+; LINUX-LABEL: call_i128:
+; LINUX:       // %bb.0:
+; LINUX-NEXT:    sub sp, sp, #48
+; LINUX-NEXT:    mov w9, #99 // =0x63
+; LINUX-NEXT:    mov x8, x0
+; LINUX-NEXT:    mov w0, wzr
+; LINUX-NEXT:    stp x1, x9, [sp, #8]
+; LINUX-NEXT:    mov w1, #1 // =0x1
+; LINUX-NEXT:    mov w2, #2 // =0x2
+; LINUX-NEXT:    mov w3, #3 // =0x3
+; LINUX-NEXT:    mov w4, #4 // =0x4
+; LINUX-NEXT:    mov w5, #5 // =0x5
+; LINUX-NEXT:    mov w6, #6 // =0x6
+; LINUX-NEXT:    str x30, [sp, #32] // 8-byte Spill
+; LINUX-NEXT:    str x8, [sp]
+; LINUX-NEXT:    bl sink
+; LINUX-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
+; LINUX-NEXT:    add sp, sp, #48
+; LINUX-NEXT:    ret
+  call void (i32, ...) @sink(i32 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i128 %a, i64 99)
+  ret void
+}
+
+; Unchanged: byval is only lowered as a stack argument, so a byval array is
+; still copied to the stack rather than split into registers.
 define void @call_byval(ptr %p) nounwind {
 ; DAGISEL-LABEL: call_byval:
 ; DAGISEL:       // %bb.0:
