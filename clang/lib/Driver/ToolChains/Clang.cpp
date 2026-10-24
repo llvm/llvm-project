@@ -7625,6 +7625,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                    TC.getArch() == llvm::Triple::hexagon || Triple.isOSzOS()))
     CmdArgs.push_back("-fshort-enums");
 
+  if (Args.hasFlag(options::OPT_fint64_is_long_long,
+                   options::OPT_fno_int64_is_long_long, false))
+    CmdArgs.push_back("-fint64-is-long-long");
+
   RenderCharacterOptions(Args, AuxTriple ? *AuxTriple : RawTriple, CmdArgs);
 
   // -fuse-cxa-atexit is default.

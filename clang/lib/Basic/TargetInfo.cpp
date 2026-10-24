@@ -562,6 +562,9 @@ void TargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
     }
   }
 
+  if (Opts.Int64LongLong)
+    Int64Type = SignedLongLong;
+
   if (Opts.NewAlignOverride)
     NewAlign = Opts.NewAlignOverride * getCharWidth();
 

@@ -1385,6 +1385,19 @@
 // X86_64_LINUX:WINT_MAX_ 4294967295U
 //
 //
+// RUN: %clang_cc1 -E -ffreestanding -triple=x86_64-none-none -fint64-is-long-long %s | FileCheck -check-prefix X86_64_INT64_LONG_LONG %s
+//
+// X86_64_INT64_LONG_LONG:typedef long long int int64_t;
+// X86_64_INT64_LONG_LONG:typedef long long unsigned int uint64_t;
+//
+// X86_64_INT64_LONG_LONG:INT64_MAX_ 9223372036854775807LL
+// X86_64_INT64_LONG_LONG:INT64_MIN_ (-9223372036854775807LL -1)
+// X86_64_INT64_LONG_LONG:UINT64_MAX_ 18446744073709551615ULL
+//
+// X86_64_INT64_LONG_LONG:INT64_C_(0) 0LL
+// X86_64_INT64_LONG_LONG:UINT64_C_(0) 0ULL
+//
+//
 // RUN: %clang_cc1 -E -ffreestanding -triple=i386-mingw32 %s | FileCheck -check-prefix I386_MINGW32 %s
 //
 // I386_MINGW32:WCHAR_MAX_ 65535

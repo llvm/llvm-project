@@ -657,3 +657,8 @@
 // RUN: %clang -### --target=x86_64-pc-windows-msvc -fno-strict-aliasing %s 2>&1 | FileCheck -check-prefix=CHECK-NO-STRICT-ALIASING %s
 // CHECK-STRICT-ALIASING-NOT: -relaxed-aliasing
 // CHECK-NO-STRICT-ALIASING: -relaxed-aliasing
+//
+// RUN: %clang -### -S -fint64-is-long-long %s 2>&1 | FileCheck -check-prefix=CHECK-INT64-IS-LONG-LONG %s
+// RUN: %clang -### -S -fno-int64-is-long-long %s 2>&1 | FileCheck -check-prefix=CHECK-NO-INT64-IS-LONG-LONG %s
+// CHECK-INT64-IS-LONG-LONG: "-fint64-is-long-long"
+// CHECK-NO-INT64-IS-LONG-LONG-NOT: "-fint64-is-long-long"
