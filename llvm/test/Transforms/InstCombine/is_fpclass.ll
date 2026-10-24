@@ -2550,7 +2550,7 @@ define i1 @test_class_is_inf_or_nan_noinf_src(float nofpclass(inf) %arg) {
 define i1 @test_class_is_inf_or_nan_nonan_src(float nofpclass(nan) %arg) {
 ; CHECK-LABEL: @test_class_is_inf_or_nan_nonan_src(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    [[CLASS:%.*]] = fcmp ueq float [[TMP1]], +inf
+; CHECK-NEXT:    [[CLASS:%.*]] = fcmp nnan ueq float [[TMP1]], +inf
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %class = call i1 @llvm.is.fpclass.f32(float %arg, i32 519)
