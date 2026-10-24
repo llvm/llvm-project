@@ -184,3 +184,59 @@ define amdgpu_kernel void @store_as4_2xdouble(ptr addrspace(4) %p, <2 x double> 
   store <2 x double> %v, ptr addrspace(4) %p
   ret void
 }
+
+define amdgpu_kernel void @store_as4_32xi8(ptr addrspace(4) %dst, <32 x i8> %value) {
+; CHECK-LABEL: store_as4_32xi8:
+; CHECK-COUNT-2: global_store_dwordx4
+  store <32 x i8> %value, ptr addrspace(4) %dst, align 32
+  ret void
+}
+
+define amdgpu_kernel void @store_as4_16xi16(ptr addrspace(4) %dst, <16 x i16> %value) {
+; CHECK-LABEL: store_as4_16xi16:
+; CHECK-COUNT-2: global_store_dwordx4
+  store <16 x i16> %value, ptr addrspace(4) %dst, align 32
+  ret void
+}
+
+define amdgpu_kernel void @store_as4_8xi32(ptr addrspace(4) %dst, <8 x i32> %value) {
+; CHECK-LABEL: store_as4_8xi32:
+; CHECK-COUNT-2: global_store_dwordx4
+  store <8 x i32> %value, ptr addrspace(4) %dst, align 32
+  ret void
+}
+
+define amdgpu_kernel void @store_as4_v4i64(ptr addrspace(4) %dst, <4 x i64> %value) {
+; CHECK-LABEL: store_as4_v4i64:
+; CHECK-COUNT-2: global_store_dwordx4
+  store <4 x i64> %value, ptr addrspace(4) %dst, align 32
+  ret void
+}
+
+define amdgpu_kernel void @store_as4_16xhalf(ptr addrspace(4) %dst, <16 x half> %value) {
+; CHECK-LABEL: store_as4_16xhalf:
+; CHECK-COUNT-2: global_store_dwordx4
+  store <16 x half> %value, ptr addrspace(4) %dst, align 32
+  ret void
+}
+
+define amdgpu_kernel void @store_as4_8xfloat(ptr addrspace(4) %dst, <8 x float> %value) {
+; CHECK-LABEL: store_as4_8xfloat:
+; CHECK-COUNT-2: global_store_dwordx4
+  store <8 x float> %value, ptr addrspace(4) %dst, align 32
+  ret void
+}
+
+define amdgpu_kernel void @store_as4_4xdouble(ptr addrspace(4) %dst, <4 x double> %value) {
+; CHECK-LABEL: store_as4_4xdouble:
+; CHECK-COUNT-2: global_store_dwordx4
+  store <4 x double> %value, ptr addrspace(4) %dst, align 32
+  ret void
+}
+
+define amdgpu_kernel void @store_as6_v4i64(<4 x i64> %value) {
+; CHECK-LABEL: store_as6_v4i64:
+; CHECK-COUNT-2: global_store_dwordx4
+  store <4 x i64> %value, ptr addrspace(6) inttoptr (i32 4096 to ptr addrspace(6)), align 32
+  ret void
+}
