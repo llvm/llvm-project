@@ -35973,7 +35973,15 @@ static bool tryToVectorizeSequence(
     // 3. Final attempt to try to vectorize all instructions with the
     // same/alternate ops only, this may result in some extra final
     // vectorization.
-    if (NumElts > 1 && TryToVectorizeHelper(ArrayRef(VL), MaxVFOnly)) {
+    const bool IsSmallGroup =
+        NumElts < std::max(2U, R.getMaxVecRegSize() /
+                                   R.getVectorElementSize(*IncIt)) &&
+        (Candidates.empty() ||
+         Candidates.front()->getType() == (*IncIt)->getType());
+    // The small groups of phis are postponed, otherwise they may take the lanes
+    // of the wider vectors.
+    if (NumElts > 1 && !(MaxVFOnly && IsSmallGroup && isa<PHINode>(*IncIt)) &&
+        TryToVectorizeHelper(ArrayRef(VL), MaxVFOnly)) {
       // Success start over because instructions might have been changed.
       Changed = true;
       VL.swap(Candidates);
@@ -35982,21 +35990,10 @@ static bool tryToVectorizeSequence(
         if (auto *I = dyn_cast<Instruction>(V); I && !R.isDeleted(I))
           Candidates.push_back(V);
       }
-    } else {
-      /// \Returns the minimum number of elements that we will attempt to
-      /// vectorize.
-      auto GetMinNumElements = [&R](Value *V) {
-        unsigned EltSize = R.getVectorElementSize(V);
-        return std::max(2U, R.getMaxVecRegSize() / EltSize);
-      };
-      if (NumElts < GetMinNumElements(*IncIt) &&
-          (Candidates.empty() ||
-           Candidates.front()->getType() == (*IncIt)->getType())) {
-        for (T *V : VL) {
-          if (auto *I = dyn_cast<Instruction>(V); I && !R.isDeleted(I))
-            Candidates.push_back(V);
-        }
-      }
+    } else if (IsSmallGroup) {
+      for (Instruction *I : make_isa_range<Instruction>(VL))
+        if (!R.isDeleted(I))
+          Candidates.push_back(cast<T>(I));
     }
     // Final attempt to vectorize instructions with the same types.
     if (Candidates.size() > 1 &&
@@ -36509,7 +36506,8 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(
   // node. Allows better to identify the chains that can be vectorized in the
   // better way.
   DenseMap<Value *, SmallVector<Value *, 4>> PHIToOpcodes;
-  auto PHICompare = [this, &PHIToOpcodes](Value *V1, Value *V2) {
+  auto PHICompare = [this, &PHIToOpcodes, &R](Value *V1, Value *V2,
+                                              bool PrefixFirst = false) {
     assert(isValidElementType(V1->getType(), Opts->slp_revec) &&
            isValidElementType(V2->getType(), Opts->slp_revec) &&
            "Expected vectorizable types only.");
@@ -36529,15 +36527,18 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(
       return false;
     ArrayRef<Value *> Opcodes1 = PHIToOpcodes[V1];
     ArrayRef<Value *> Opcodes2 = PHIToOpcodes[V2];
-    if (Opcodes1.size() < Opcodes2.size())
-      return true;
-    if (Opcodes1.size() > Opcodes2.size())
-      return false;
-    for (int I = 0, E = Opcodes1.size(); I < E; ++I) {
+    if (!PrefixFirst && Opcodes1.size() != Opcodes2.size())
+      return Opcodes1.size() < Opcodes2.size();
+    for (int I : seq<int>(std::min(Opcodes1.size(), Opcodes2.size()))) {
       {
-        // Instructions come first.
+        // Instructions come first. The instructions, vectorized by the previous
+        // attempts, are compared as the other values.
         auto *I1 = dyn_cast<Instruction>(Opcodes1[I]);
         auto *I2 = dyn_cast<Instruction>(Opcodes2[I]);
+        if (I1 && R.isDeleted(I1))
+          I1 = nullptr;
+        if (I2 && R.isDeleted(I2))
+          I2 = nullptr;
         if (I1 && I2) {
           DomTreeNodeBase<BasicBlock> *NodeI1 = DT->getNode(I1->getParent());
           DomTreeNodeBase<BasicBlock> *NodeI2 = DT->getNode(I2->getParent());
@@ -36638,7 +36639,7 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(
       // Undefs come last.
       assert(U1 && U2 && "The only thing left should be undef & undef.");
     }
-    return false;
+    return Opcodes1.size() < Opcodes2.size();
   };
   auto AreCompatiblePHIs = [&PHIToOpcodes, this, &R](ArrayRef<Value *> VL,
                                                      Value *V1) {
@@ -36717,7 +36718,18 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(
 
     HaveVectorizedPhiNodes = tryToVectorizeSequence<Value>(
         *Opts, Incoming, PHICompare, AreCompatiblePHIs,
-        [this, &R](ArrayRef<Value *> Candidates, bool MaxVFOnly) {
+        [this, &R, &PHICompare](ArrayRef<Value *> Candidates, bool MaxVFOnly) {
+          // If the whole register vectors are not built in the original order,
+          // the phis from the different groups, matching in the leading values,
+          // are tried together.
+          SmallVector<Value *> Sorted(Candidates);
+          stable_sort(Sorted, [&](Value *V1, Value *V2) {
+            return PHICompare(V1, V2, /*PrefixFirst=*/true);
+          });
+          if (!equal(Sorted, Candidates) &&
+              (tryToVectorizeList(Candidates, R, /*MaxVFOnly=*/true) ||
+               tryToVectorizeList(Sorted, R, /*MaxVFOnly=*/true)))
+            return true;
           return tryToVectorizeList(Candidates, R, MaxVFOnly);
         },
         /*MaxVFOnly=*/true, R);
