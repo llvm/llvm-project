@@ -21,6 +21,7 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
@@ -101,24 +102,6 @@ static bool CheckAsmLValue(Expr *E, Sema &S) {
 
   // None of the above, just randomly invalid non-lvalue.
   return true;
-}
-
-/// isOperandMentioned - Return true if the specified operand # is mentioned
-/// anywhere in the decomposed asm string.
-static bool
-isOperandMentioned(unsigned OpNo,
-                   ArrayRef<GCCAsmStmt::AsmStringPiece> AsmStrPieces) {
-  for (unsigned p = 0, e = AsmStrPieces.size(); p != e; ++p) {
-    const GCCAsmStmt::AsmStringPiece &Piece = AsmStrPieces[p];
-    if (!Piece.isOperand())
-      continue;
-
-    // If this is a reference to the input and if the input was the smaller
-    // one, then we have to reject this asm.
-    if (Piece.getOperandNo() == OpNo)
-      return true;
-  }
-  return false;
 }
 
 static bool CheckNakedParmReference(Expr *E, Sema &S) {
@@ -560,7 +543,11 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
     return NS;
   }
 
-  // Validate constraints and modifiers.
+  // Validate constraints and modifiers, and (cheaply, piggybacking on this
+  // same walk over Pieces rather than doing a second pass over the asm
+  // string) track which operands the template string actually references,
+  // so unreferenced ones can be flagged below.
+  llvm::SmallBitVector UsedOperands(NumOutputs + NumInputs);
   for (unsigned i = 0, e = Pieces.size(); i != e; ++i) {
     GCCAsmStmt::AsmStringPiece &Piece = Pieces[i];
     if (!Piece.isOperand()) continue;
@@ -585,6 +572,8 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
       assert(I != E && "Invalid operand number should have been caught in "
                        " AnalyzeAsmString");
     }
+
+    UsedOperands.set(ConstraintIdx);
 
     // Now that we have the right indexes go ahead and check.
     Expr *Constraint = constraints[ConstraintIdx];
@@ -611,6 +600,25 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
         }
       }
     }
+  }
+
+  // Warn about output/input operands the asm template string never
+  // references. Skip tied inputs (matched by a numeric constraint, e.g.
+  // "0"): by convention only the output's own number is used to reference
+  // that storage, so the tied input's own index is never expected to be
+  // referenced on its own.
+  if (!UsedOperands.all()) {
+    for (unsigned i = 0; i != NumOutputs; ++i)
+      if (!UsedOperands[i])
+        targetDiag(Exprs[i]->getBeginLoc(), diag::warn_unused_asm_operand)
+            << diag::AsmOperandKind::Output;
+
+    for (unsigned i = 0; i != NumInputs; ++i)
+      if (!UsedOperands[NumOutputs + i] &&
+          !InputConstraintInfos[i].hasTiedOperand())
+        targetDiag(Exprs[NumOutputs + i]->getBeginLoc(),
+                   diag::warn_unused_asm_operand)
+            << diag::AsmOperandKind::Input;
   }
 
   // Validate tied input operands for type mismatches.
@@ -713,13 +721,13 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
 
     // If this is a reference to the input and if the input was the smaller
     // one, then we have to reject this asm.
-    if (isOperandMentioned(InputOpNo, Pieces)) {
+    if (UsedOperands[InputOpNo]) {
       // This is a use in the asm string of the smaller operand.  Since we
       // codegen this by promoting to a wider value, the asm will get printed
       // "wrong".
       SmallerValueMentioned |= InSize < OutSize;
     }
-    if (isOperandMentioned(TiedTo, Pieces)) {
+    if (UsedOperands[TiedTo]) {
       // If this is a reference to the output, and if the output is the larger
       // value, then it's ok because we'll promote the input to the larger type.
       SmallerValueMentioned |= OutSize < InSize;
@@ -754,8 +762,7 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
     // integer, unmentioned, and is a constant, then we'll allow truncating it
     // down to the size of the destination.
     if (InputDomain == AD_Int && OutputDomain == AD_Int &&
-        !isOperandMentioned(InputOpNo, Pieces) &&
-        InputExpr->isEvaluatable(Context)) {
+        !UsedOperands[InputOpNo] && InputExpr->isEvaluatable(Context)) {
       CastKind castKind =
         (OutTy->isBooleanType() ? CK_IntegralToBoolean : CK_IntegralCast);
       InputExpr = ImpCastExprToType(InputExpr, OutTy, castKind).get();
