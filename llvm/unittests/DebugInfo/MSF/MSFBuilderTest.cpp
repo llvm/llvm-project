@@ -393,3 +393,50 @@ TEST_F(MSFBuilderTest, StreamDoesntUseFpmBlocks) {
     EXPECT_THAT(Blocks, Not(Contains(2 + I * 4096)));
   }
 }
+
+TEST_F(MSFBuilderTest, StreamDoesntUseFpmBlocksAfterGrowth) {
+  // FPM blocks must remain marked as used and excluded from streams and the
+  // directory, even when adding or growing a stream extends the file starting
+  // exactly at the first block of an FPM pair.
+  for (uint32_t BlockSize : {512U, 4096U}) {
+    SCOPED_TRACE(BlockSize);
+    for (bool GrowExistingStream : {false, true}) {
+      SCOPED_TRACE(GrowExistingStream);
+      auto ExpectedMsf = MSFBuilder::create(Allocator, BlockSize);
+      ASSERT_THAT_EXPECTED(ExpectedMsf, Succeeded());
+      auto &Msf = *ExpectedMsf;
+
+      // Stop immediately before the next pair of reserved FPM blocks.
+      uint32_t InitialStreamSize =
+          (BlockSize + 1 - msf::getMinimumBlockCount()) * BlockSize;
+      auto SN = Msf.addStream(InitialStreamSize);
+      ASSERT_THAT_EXPECTED(SN, Succeeded());
+      ASSERT_EQ(BlockSize + 1, Msf.getTotalBlockCount());
+
+      if (GrowExistingStream) {
+        ASSERT_THAT_ERROR(
+            Msf.setStreamSize(*SN, InitialStreamSize + 2 * BlockSize),
+            Succeeded());
+      } else {
+        SN = Msf.addStream(2 * BlockSize);
+        ASSERT_THAT_EXPECTED(SN, Succeeded());
+      }
+
+      EXPECT_THAT(Msf.getStreamBlocks(*SN).take_back(2),
+                  ElementsAre(BlockSize + 3, BlockSize + 4));
+      EXPECT_EQ(BlockSize + 5, Msf.getTotalBlockCount());
+
+      auto ExpectedLayout = Msf.generateLayout();
+      ASSERT_THAT_EXPECTED(ExpectedLayout, Succeeded());
+      auto &L = *ExpectedLayout;
+      EXPECT_FALSE(L.FreePageMap.test(BlockSize + 1));
+      EXPECT_FALSE(L.FreePageMap.test(BlockSize + 2));
+      for (auto Blocks : L.StreamMap) {
+        EXPECT_THAT(Blocks, Not(Contains(BlockSize + 1)));
+        EXPECT_THAT(Blocks, Not(Contains(BlockSize + 2)));
+      }
+      EXPECT_THAT(L.DirectoryBlocks, Not(Contains(BlockSize + 1)));
+      EXPECT_THAT(L.DirectoryBlocks, Not(Contains(BlockSize + 2)));
+    }
+  }
+}
