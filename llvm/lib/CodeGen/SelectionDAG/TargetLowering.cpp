@@ -11113,7 +11113,7 @@ SDValue TargetLowering::CTTZTableLookup(SDNode *Node, SelectionDAG &DAG,
 }
 
 SDValue TargetLowering::expandCTTZWithFP(SDNode *Node,
-                                           SelectionDAG &DAG) const {
+                                         SelectionDAG &DAG) const {
   // For nonzero x: ctz(x) == log2(x & -x). The isolated lowest set bit is a
   // power of two, so its conversion to f64 is exact and log2 can be read off
   // the f64 exponent:
@@ -11162,16 +11162,16 @@ SDValue TargetLowering::expandCTTZWithFP(SDNode *Node,
     SDValue Float = DAG.getBuildVector(FloatVT, dl, FloatElts);
     EVT FloatBitsVT = FloatVT.changeVectorElementTypeToInteger();
     SDValue FloatBits = DAG.getNode(ISD::BITCAST, dl, FloatBitsVT, Float);
-    SDValue Exp = DAG.getNode(ISD::SRL, dl, FloatBitsVT, FloatBits,
-                              DAG.getShiftAmountConstant(MantissaBits,
-                                                         FloatBitsVT, dl));
+    SDValue Exp =
+        DAG.getNode(ISD::SRL, dl, FloatBitsVT, FloatBits,
+                    DAG.getShiftAmountConstant(MantissaBits, FloatBitsVT, dl));
     ExpTrunc = DAG.getNode(ISD::TRUNCATE, dl, VT, Exp);
   } else {
     SDValue Float = DAG.getNode(ISD::UINT_TO_FP, dl, MVT::f64, LowBit);
     SDValue FloatBits = DAG.getNode(ISD::BITCAST, dl, MVT::i64, Float);
-    SDValue Exp = DAG.getNode(ISD::SRL, dl, MVT::i64, FloatBits,
-                              DAG.getShiftAmountConstant(MantissaBits,
-                                                         MVT::i64, dl));
+    SDValue Exp =
+        DAG.getNode(ISD::SRL, dl, MVT::i64, FloatBits,
+                    DAG.getShiftAmountConstant(MantissaBits, MVT::i64, dl));
     ExpTrunc = DAG.getNode(ISD::TRUNCATE, dl, VT, Exp);
   }
   SDValue NonZeroRes = DAG.getNode(ISD::SUB, dl, VT, ExpTrunc,
