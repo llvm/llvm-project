@@ -713,7 +713,6 @@ void read(bool sf) {
 
 } // end namespace ContinueICETest
 
-
 namespace StatusUseCaseTests {
 
 class CONSUMABLE(unconsumed)
@@ -947,8 +946,96 @@ void test6() {
 
 } // end namespace TestParens
 
-} // end namespace InitializerAssertionFailTest
+} // end namespace StatusUseCaseTests
 
+namespace ConstructorTests {
+  struct CONSUMABLE(unconsumed) DefaultConstructible {
+    static ConsumableClass<int>& get() {
+      static ConsumableClass<int> Foo{5};
+      return Foo;
+    };
+
+    DefaultConstructible(
+      PARAM_TYPESTATE(unconsumed) RETURN_TYPESTATE(consumed)
+      ConsumableClass<int>& Bar = get()) {
+      Bar.consume();
+    }
+  };
+
+  void testDefaultHandlesArgs() {
+    DefaultConstructible var0;
+
+    ConsumableClass<int> var1{5};
+    DefaultConstructible var2(var1);
+    DefaultConstructible var3(var1); // expected-warning {{argument not in expected state; expected 'unconsumed', observed 'consumed'}}
+  }
+
+  struct CONSUMABLE(unconsumed) ConsumesArg {
+    ConsumesArg(PARAM_TYPESTATE(unconsumed) RETURN_TYPESTATE(consumed)
+      ConsumableClass<int>& Foo) { Foo.consume(); };
+  };
+
+  struct ConsumesArgButNotConsumable {
+    ConsumesArgButNotConsumable(PARAM_TYPESTATE(unconsumed) RETURN_TYPESTATE(consumed)
+      ConsumableClass<int>& Foo) { Foo.consume(); };
+  };
+
+  void testConstructionChangesArgState() {
+    ConsumableClass<int> Foo(5);
+    ConsumesArg Bar(Foo);
+    Foo.unconsumedCall(); // expected-warning {{invalid invocation of method 'unconsumedCall' on object 'Foo' while it is in the 'consumed' state}}
+
+    Foo.unconsume();
+    ConsumesArgButNotConsumable Baz(Foo);
+    Foo.unconsumedCall(); // expected-warning {{invalid invocation of method 'unconsumedCall' on object 'Foo' while it is in the 'consumed' state}}
+  }
+
+  struct CONSUMABLE(unconsumed) OverridenSpecialConstructors {
+    OverridenSpecialConstructors() = default;
+    OverridenSpecialConstructors(int);
+
+    RETURN_TYPESTATE(consumed)
+    OverridenSpecialConstructors(
+      RETURN_TYPESTATE(consumed) OverridenSpecialConstructors&);
+
+    RETURN_TYPESTATE(consumed)
+    OverridenSpecialConstructors(
+      RETURN_TYPESTATE(unconsumed) OverridenSpecialConstructors&&);
+
+    void assert_unconsumed() CALLABLE_WHEN("unconsumed");
+    void assert_consumed() CALLABLE_WHEN("consumed");
+  };
+
+  void testOverridenSpecialConstructors() {
+    OverridenSpecialConstructors var0(0);
+    OverridenSpecialConstructors var1(var0);
+    var0.assert_unconsumed(); // expected-warning {{invalid invocation of method 'assert_unconsumed' on object 'var0' while it is in the 'consumed' state}}
+    var1.assert_unconsumed(); // expected-warning {{invalid invocation of method 'assert_unconsumed' on object 'var1' while it is in the 'consumed' state}}
+
+    OverridenSpecialConstructors var2(0);
+    OverridenSpecialConstructors var3( (OverridenSpecialConstructors&&) var2 );
+    var2.assert_consumed();   // expected-warning {{invalid invocation of method 'assert_consumed' on object 'var2' while it is in the 'unconsumed' state}}
+    var3.assert_unconsumed(); // expected-warning {{invalid invocation of method 'assert_unconsumed' on object 'var3' while it is in the 'consumed' state}}
+
+  }
+
+  struct Base {
+    Base();
+    Base(const Base&);
+  };
+
+  struct CONSUMABLE(unconsumed) Derived : Base {
+    Derived(int);
+    void assert_unconsumed() CALLABLE_WHEN("unconsumed");
+  };
+
+  void testInheritance() {
+    Derived d(1);
+    Base b(d);
+    d.assert_unconsumed();
+  }
+
+} // namespace ConstructorTests
 
 namespace std {
   void move();
