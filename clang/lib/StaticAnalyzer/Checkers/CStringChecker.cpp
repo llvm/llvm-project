@@ -12,6 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "InterCheckerAPI.h"
+#include "clang/AST/Decl.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/OperationKinds.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
@@ -1399,6 +1401,67 @@ bool CStringChecker::SummarizeRegion(raw_ostream &os, ASTContext &Ctx,
   }
 }
 
+// Bind a zero-initialized aggregate without affecting adjacent objects.
+static bool tryBindTypedObjectZero(CheckerContext &C, ProgramStateRef &State,
+                                   const MemRegion *MR, SVal Dst, NonLoc SizeNL,
+                                   ConstCFGElementRef Elem) {
+  const auto *SR = dyn_cast<SymbolicRegion>(MR->StripCasts());
+  if (!SR)
+    return false;
+
+  QualType Ty = SR->getPointeeStaticType();
+  ASTContext &Ctx = C.getASTContext();
+  QualType ElemTy = Ty;
+  while (const ArrayType *AT = Ctx.getAsArrayType(ElemTy))
+    ElemTy = AT->getElementType();
+  if (const auto *RD = ElemTy->getAsRecordDecl()) {
+    const RecordDecl *Def = RD->getDefinition();
+    // sizeof does not include a flexible array member.
+    if (Def && Def->hasFlexibleArrayMember())
+      return false;
+    // Inherited fields are loaded through CXXBaseObjectRegion and cannot be
+    // recovered from a LazyCompoundVal bound to the complete object.
+    if (const auto *Class = dyn_cast_or_null<CXXRecordDecl>(Def))
+      if (Class->getNumBases() != 0 || Class->getNumVBases() != 0)
+        return false;
+  }
+
+  std::optional<CharUnits> ObjSize = Ctx.getTypeSizeInCharsIfKnown(Ty);
+  if (!ObjSize)
+    return false;
+
+  SValBuilder &SVB = C.getSValBuilder();
+  // Compare in size_t. Size->getType() may be narrower, and makeIntVal
+  // truncates a value that does not fit.
+  SVal ObjSizeVal = SVB.makeIntVal(
+      static_cast<uint64_t>(ObjSize->getQuantity()), Ctx.getSizeType());
+  std::optional<DefinedOrUnknownSVal> Cmp =
+      SVB.evalEQ(State, SizeNL, ObjSizeVal).getAs<DefinedOrUnknownSVal>();
+  if (!Cmp)
+    return false;
+
+  ProgramStateRef Eq, Neq;
+  std::tie(Eq, Neq) = State->assume(*Cmp);
+  if (!Eq || Neq)
+    return false;
+
+  // Records and arrays cannot be conjured directly. A pointer yields a fresh
+  // SymbolicRegion whose cluster is independent of the caller's region.
+  static const char TypedObjectZeroTag = 0;
+  const StackFrame *SF = C.getStackFrame();
+  SVal TempPtr = SVB.conjureSymbolVal(&TypedObjectZeroTag, Elem, SF,
+                                      Ctx.getPointerType(Ty), C.blockCount());
+  Loc TempLoc = TempPtr.castAs<Loc>();
+
+  ProgramStateRef NewState = State->bindDefaultZero(TempPtr, SF);
+  SVal Agg = NewState->getSVal(TempLoc, Ty);
+  if (Agg.isUnknownOrUndef())
+    return false;
+
+  State = NewState->bindLoc(Dst, Agg, SF);
+  return true;
+}
+
 bool CStringChecker::memsetAux(const Expr *DstBuffer, ConstCFGElementRef Elem,
                                SVal CharVal, const Expr *Size,
                                CheckerContext &C, ProgramStateRef &State) {
@@ -1451,9 +1514,8 @@ bool CStringChecker::memsetAux(const Expr *DstBuffer, ConstCFGElementRef Elem,
       // the binding of non-zero value in the case of whole region.
       State =
           State->bindDefaultZero(svalBuilder.makeLoc(BR), C.getStackFrame());
-    } else {
-      // If the destination buffer's extent is not equal to the value of
-      // third argument, just invalidate buffer.
+    } else if (!(StateNullChar && !StateNonNullChar &&
+                 tryBindTypedObjectZero(C, State, MR, MemVal, *SizeNL, Elem))) {
       State = invalidateDestinationBufferBySize(
           C, State, DstBuffer, Elem, MemVal, SizeVal, Size->getType());
     }
