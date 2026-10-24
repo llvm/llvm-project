@@ -303,3 +303,58 @@ define <4 x i32> @udiv_div_by_104_exact(<4 x i32> %x)
   %udiv = udiv exact <4 x i32> %x, <i32 104, i32 72, i32 104, i32 72>
   ret <4 x i32> %udiv
 }
+define <8 x i32> @combine_vec_udiv_nonuniform_v8i32(<8 x i32> %x) {
+; SDAG-LABEL: combine_vec_udiv_nonuniform_v8i32:
+; SDAG:       // %bb.0:
+; SDAG-NEXT:    adrp x8, .LCPI9_0
+; SDAG-NEXT:    movi v6.4s, #128, lsl #24
+; SDAG-NEXT:    ldr q2, [x8, :lo12:.LCPI9_0]
+; SDAG-NEXT:    umull2 v3.2d, v0.4s, v2.4s
+; SDAG-NEXT:    umull v4.2d, v0.2s, v2.2s
+; SDAG-NEXT:    umull2 v5.2d, v1.4s, v2.4s
+; SDAG-NEXT:    umull v2.2d, v1.2s, v2.2s
+; SDAG-NEXT:    uzp2 v3.4s, v4.4s, v3.4s
+; SDAG-NEXT:    fneg v4.2d, v6.2d
+; SDAG-NEXT:    uzp2 v2.4s, v2.4s, v5.4s
+; SDAG-NEXT:    sub v0.4s, v0.4s, v3.4s
+; SDAG-NEXT:    sub v1.4s, v1.4s, v2.4s
+; SDAG-NEXT:    umull2 v5.2d, v0.4s, v4.4s
+; SDAG-NEXT:    umull v0.2d, v0.2s, v4.2s
+; SDAG-NEXT:    umull2 v6.2d, v1.4s, v4.4s
+; SDAG-NEXT:    umull v1.2d, v1.2s, v4.2s
+; SDAG-NEXT:    uzp2 v0.4s, v0.4s, v5.4s
+; SDAG-NEXT:    uzp2 v1.4s, v1.4s, v6.4s
+; SDAG-NEXT:    add v0.4s, v0.4s, v3.4s
+; SDAG-NEXT:    add v1.4s, v1.4s, v2.4s
+; SDAG-NEXT:    ushr v0.4s, v0.4s, #2
+; SDAG-NEXT:    ushr v1.4s, v1.4s, #2
+; SDAG-NEXT:    ret
+;
+; GISEL-LABEL: combine_vec_udiv_nonuniform_v8i32:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    adrp x8, .LCPI9_0
+; GISEL-NEXT:    movi v6.4s, #128, lsl #24
+; GISEL-NEXT:    ldr q2, [x8, :lo12:.LCPI9_0]
+; GISEL-NEXT:    umull2 v3.2d, v0.4s, v2.4s
+; GISEL-NEXT:    umull v4.2d, v0.2s, v2.2s
+; GISEL-NEXT:    umull2 v5.2d, v1.4s, v2.4s
+; GISEL-NEXT:    umull v2.2d, v1.2s, v2.2s
+; GISEL-NEXT:    uzp2 v3.4s, v4.4s, v3.4s
+; GISEL-NEXT:    fneg v4.2d, v6.2d
+; GISEL-NEXT:    uzp2 v2.4s, v2.4s, v5.4s
+; GISEL-NEXT:    sub v0.4s, v0.4s, v3.4s
+; GISEL-NEXT:    sub v1.4s, v1.4s, v2.4s
+; GISEL-NEXT:    umull2 v5.2d, v0.4s, v4.4s
+; GISEL-NEXT:    umull v0.2d, v0.2s, v4.2s
+; GISEL-NEXT:    umull2 v6.2d, v1.4s, v4.4s
+; GISEL-NEXT:    umull v1.2d, v1.2s, v4.2s
+; GISEL-NEXT:    uzp2 v0.4s, v0.4s, v5.4s
+; GISEL-NEXT:    uzp2 v1.4s, v1.4s, v6.4s
+; GISEL-NEXT:    add v0.4s, v0.4s, v3.4s
+; GISEL-NEXT:    add v1.4s, v1.4s, v2.4s
+; GISEL-NEXT:    ushr v0.4s, v0.4s, #2
+; GISEL-NEXT:    ushr v1.4s, v1.4s, #2
+; GISEL-NEXT:    ret
+  %r = udiv <8 x i32> %x, <i32 7, i32 6, i32 7, i32 6, i32 7, i32 6, i32 7, i32 6>
+  ret <8 x i32> %r
+}
