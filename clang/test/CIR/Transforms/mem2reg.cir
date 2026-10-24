@@ -1,5 +1,7 @@
 // RUN: cir-opt %s -cir-flatten-cfg -mem2reg -o - | FileCheck %s
+// RUN: cir-opt %s -cir-flatten-cfg -cir-goto-solver -mem2reg -o - | FileCheck %s --check-prefix=SOLVED
 
+!void = !cir.void
 !s32i = !cir.int<s, 32>
 !u8i = !cir.int<u, 8>
 !u16i = !cir.int<u, 16>
@@ -93,5 +95,59 @@ module {
     cir.copy %src to %slot skip_tail_padding : !cir.ptr<!rec_AllPad>
     %v = cir.load %slot : !cir.ptr<!rec_AllPad>, !rec_AllPad
     cir.return %v : !rec_AllPad
+  }
+
+  // An unresolved cir.goto (direct or indirect) is not a predecessor of the
+  // block holding its cir.label, so promoting here would return the value
+  // stored on the dead fallthrough path (or undef) instead of %arg0. Once
+  // GotoSolver has turned the goto into a branch, the slot promotes.
+
+  // CHECK-LABEL: cir.func @do_not_promote_across_goto
+  // SOLVED-LABEL: cir.func @do_not_promote_across_goto
+  cir.func @do_not_promote_across_goto(%arg0: !s32i) -> !s32i {
+    // CHECK: %[[SLOT:.*]] = cir.alloca "e" align(4) : !cir.ptr<!s32i>
+    // CHECK: cir.goto "out"
+    // CHECK: cir.label "out"
+    // CHECK: %[[RET:.+]] = cir.load %[[SLOT]] : !cir.ptr<!s32i>, !s32i
+    // CHECK: cir.return %[[RET]] : !s32i
+    // SOLVED-NOT: cir.alloca
+    // SOLVED: cir.return %arg0 : !s32i
+    %0 = cir.alloca "e" align(4) : !cir.ptr<!s32i>
+    cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
+    cir.goto "out"
+  ^bb1:
+    %1 = cir.const #cir.int<7> : !s32i
+    cir.store %1, %0 : !s32i, !cir.ptr<!s32i>
+    cir.br ^bb2
+  ^bb2:
+    cir.label "out"
+    %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+    cir.return %2 : !s32i
+  }
+
+  // CHECK-LABEL: cir.func @do_not_promote_across_indirect_goto
+  // SOLVED-LABEL: cir.func @do_not_promote_across_indirect_goto
+  cir.func @do_not_promote_across_indirect_goto(%arg0: !s32i) -> !s32i {
+    // CHECK: %[[SLOT:.*]] = cir.alloca "e" align(4) : !cir.ptr<!s32i>
+    // CHECK: cir.indirect_goto
+    // CHECK: cir.label "out"
+    // CHECK: %[[RET:.+]] = cir.load %[[SLOT]] : !cir.ptr<!s32i>, !s32i
+    // CHECK: cir.return %[[RET]] : !s32i
+    // SOLVED-NOT: cir.alloca
+    // SOLVED: cir.label "out"
+    // SOLVED-NEXT: cir.return %arg0 : !s32i
+    // SOLVED: cir.indirect_br
+    %0 = cir.alloca "e" align(4) : !cir.ptr<!s32i>
+    cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
+    %1 = cir.block_address <@do_not_promote_across_indirect_goto, "out"> : !cir.ptr<!void>
+    cir.indirect_goto %1 : !cir.ptr<!void>
+  ^bb1:
+    %2 = cir.const #cir.int<7> : !s32i
+    cir.store %2, %0 : !s32i, !cir.ptr<!s32i>
+    cir.br ^bb2
+  ^bb2:
+    cir.label "out"
+    %3 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+    cir.return %3 : !s32i
   }
 }
