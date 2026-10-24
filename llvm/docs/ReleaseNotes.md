@@ -331,6 +331,10 @@ Makes programs 10x faster by doing Special New Thing.
   `addr_space_cast`. It is for languages without address spaces whose
   programs keep their memory in arena.
 
+* Added `-mattr=+arena-stack`: locals are kept in a stack in arena and are
+  accessed through `r12`. Spilled registers and what is passed to helpers and
+  kfuncs stay in the stack of the program.
+
 ### Changes to the DirectX Backend
 
 * The DirectX backend has been promoted from experimental to an official,

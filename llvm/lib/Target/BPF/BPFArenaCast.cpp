@@ -27,6 +27,10 @@
 // that on pointers to arena. Unless the result of the arithmetic is needed as
 // a value as well. Then it's computed once and cast.
 //
+// Locals that are in the stack in arena (see BPFArenaStack.cpp) are accessed
+// through r12 without a cast where the offset is a constant and the insn
+// is a plain load or store.
+//
 //===----------------------------------------------------------------------===//
 
 #include "BPF.h"
@@ -58,13 +62,15 @@ class ArenaCast {
   Function &F;
   /// Pointers to cast and what is accessed through them.
   MapVector<Value *, SmallVector<Access, 4>> Roots;
+  /// Accesses through r12 whose address is computed in another block.
+  SmallVector<std::pair<AllocaInst *, Access>, 4> Locals;
   /// Address arithmetic that is done on top of a cast in a block already.
   DenseMap<std::pair<Value *, BasicBlock *>, DenseMap<Value *, Value *>> Clones;
   DenseMap<Value *, bool> OnlyDeref;
 
   bool onlyDeref(GetElementPtrInst *GEP);
   Value *makeCast(IRBuilderBase &B, Value *V);
-  void collect(Instruction &I, unsigned Idx);
+  void collect(Instruction &I, unsigned Idx, bool Plain);
   void use(Access &A, Value *K);
   void castConstant(Constant *C, MutableArrayRef<Access> As);
   void castValue(Value *V, MutableArrayRef<Access> As);
@@ -112,22 +118,40 @@ bool ArenaCast::onlyDeref(GetElementPtrInst *GEP) {
   return OnlyDeref[GEP] = Res;
 }
 
-void ArenaCast::collect(Instruction &I, unsigned Idx) {
+/// \p Plain: a load or a store that is not atomic.
+void ArenaCast::collect(Instruction &I, unsigned Idx, bool Plain) {
   Value *Ptr = I.getOperand(Idx);
   Access A = {&I, Idx, {}};
+  bool ConstOff = true;
 
   if (Ptr->getType()->getPointerAddressSpace() != 0)
     return;
   while (auto *GEP = dyn_cast<GetElementPtrInst>(Ptr)) {
-    // It is computed anyway. A constant offset costs nothing to add again.
-    if (!GEP->hasAllConstantIndices() && !onlyDeref(GEP))
-      break;
+    if (!GEP->hasAllConstantIndices()) {
+      // It is computed anyway. A constant offset costs nothing to add again.
+      if (!onlyDeref(GEP))
+        break;
+      ConstOff = false;
+    }
     A.Chain.push_back(GEP);
     Ptr = GEP->getPointerOperand();
   }
-  // It is the stack, it is cast already, or there is nothing to access.
-  if (isa<AllocaInst, AddrSpaceCastInst, ConstantPointerNull, UndefValue>(Ptr))
+  // It is cast already, or there is nothing to access.
+  if (isa<AddrSpaceCastInst, ConstantPointerNull, UndefValue>(Ptr))
     return;
+  if (auto *AI = dyn_cast<AllocaInst>(Ptr)) {
+    if (!AI->hasMetadata(BPFArenaStackMD))
+      return;
+    if (Plain && ConstOff) {
+      // Insns are selected block by block: the offset gets into the insn when
+      // it is added in the block of the access.
+      if (any_of(A.Chain, [&](GetElementPtrInst *GEP) {
+            return GEP->getParent() != I.getParent();
+          }))
+        Locals.push_back({AI, std::move(A)});
+      return;
+    }
+  }
   Roots[Ptr].push_back(std::move(A));
 }
 
@@ -204,23 +228,29 @@ void ArenaCast::castValue(Value *V, MutableArrayRef<Access> As) {
 
 bool ArenaCast::run() {
   for (Instruction &I : instructions(F)) {
-    if (isa<LoadInst>(I)) {
-      collect(I, LoadInst::getPointerOperandIndex());
-    } else if (isa<StoreInst>(I)) {
-      collect(I, StoreInst::getPointerOperandIndex());
+    if (auto *LI = dyn_cast<LoadInst>(&I)) {
+      collect(I, LoadInst::getPointerOperandIndex(), !LI->isAtomic());
+    } else if (auto *SI = dyn_cast<StoreInst>(&I)) {
+      collect(I, StoreInst::getPointerOperandIndex(), !SI->isAtomic());
     } else if (isa<AtomicRMWInst>(I)) {
-      collect(I, AtomicRMWInst::getPointerOperandIndex());
+      collect(I, AtomicRMWInst::getPointerOperandIndex(), false);
     } else if (isa<AtomicCmpXchgInst>(I)) {
-      collect(I, AtomicCmpXchgInst::getPointerOperandIndex());
+      collect(I, AtomicCmpXchgInst::getPointerOperandIndex(), false);
     } else if (isa<MemIntrinsic>(I)) {
-      collect(I, 0);
+      // memset is expanded into stores or is a call that takes the address.
+      // memcpy is expanded into loads and stores through registers.
+      collect(I, 0, isa<MemSetInst>(I));
       if (isa<MemTransferInst>(I))
-        collect(I, 1);
+        collect(I, 1, false);
     }
   }
 
   SmallVector<WeakTrackingVH, 32> Old;
 
+  for (auto &[AI, A] : Locals) {
+    Old.append(A.Chain.begin(), A.Chain.end());
+    use(A, AI);
+  }
   for (auto &[Root, As] : Roots) {
     for (Access &A : As)
       Old.append(A.Chain.begin(), A.Chain.end());
@@ -234,7 +264,7 @@ bool ArenaCast::run() {
   for (WeakTrackingVH &VH : Old)
     if (VH)
       RecursivelyDeleteTriviallyDeadInstructions(VH);
-  return !Roots.empty();
+  return !Roots.empty() || !Locals.empty();
 }
 
 namespace {

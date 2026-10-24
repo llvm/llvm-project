@@ -26,6 +26,7 @@ MODULE_PASS("bpf-func-table", BPFFuncTablePass())
 #define FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
 FUNCTION_PASS("bpf-arena-cast", BPFArenaCastPass())
+FUNCTION_PASS("bpf-arena-stack", BPFArenaStackPass())
 FUNCTION_PASS("bpf-aspace-simplify", BPFASpaceCastSimplifyPass())
 FUNCTION_PASS("bpf-ir-peephole", BPFIRPeepholePass())
 #undef FUNCTION_PASS

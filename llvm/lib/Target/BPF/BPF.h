@@ -20,6 +20,7 @@
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
+class TargetLibraryInfo;
 class BPFRegisterBankInfo;
 class BPFSubtarget;
 class BPFTargetMachine;
@@ -45,12 +46,28 @@ public:
 
 ModulePass *createBPFFuncTablePass();
 
+/// Metadata of an alloca that is in the stack in arena.
+inline constexpr StringLiteral BPFArenaStackMD = "bpf.arena.stack";
+
 class BPFArenaCastPass : public RequiredPassInfoMixin<BPFArenaCastPass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 FunctionPass *createBPFArenaCastPass();
+
+class BPFArenaStackPass : public RequiredPassInfoMixin<BPFArenaStackPass> {
+public:
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
+
+FunctionPass *createBPFArenaStackPass();
+
+/// The call of a helper or of a kfunc.
+bool isBPFKernelFunc(const CallBase &CB, const TargetLibraryInfo &TLI);
+
+/// The kfunc wants a pointer to arena in this argument.
+bool isBPFArenaArg(const CallBase &CB, const Use &U);
 
 class BPFISelDAGToDAGPass : public SelectionDAGISelPass {
 public:
@@ -108,6 +125,7 @@ InstructionSelector *createBPFInstructionSelector(const BPFTargetMachine &,
                                                   const BPFRegisterBankInfo &);
 
 void initializeBPFArenaCastLegacyPass(PassRegistry &);
+void initializeBPFArenaStackLegacyPass(PassRegistry &);
 void initializeBPFAsmPrinterPass(PassRegistry &);
 void initializeBPFCheckAndAdjustIRLegacyPass(PassRegistry &);
 void initializeBPFDAGToDAGISelLegacyPass(PassRegistry &);
