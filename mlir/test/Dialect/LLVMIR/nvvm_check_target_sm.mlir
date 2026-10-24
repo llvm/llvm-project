@@ -433,3 +433,180 @@ gpu.module @mbarrier_try_wait_parity_sm80 [#nvvm.target<chip = "sm_80">] {
     return
   }
 }
+
+// -----
+
+// The tcgen05.mma ops narrow their requirement depending on the kind and on
+// the collector_b and scale qualifiers, mirroring the NVPTX backend.
+
+gpu.module @tcgen05_mma_i8_sm103a [#nvvm.target<chip = "sm_103a">] {
+  func.func @tcgen05_mma_i8_sm103a(%d: !llvm.ptr<6>, %a: i64, %b: i64, %idesc: i32, %en: i1) {
+    // expected-error @below {{'nvvm.tcgen05.mma' op is not supported on sm_103a}}
+    nvvm.tcgen05.mma %d, %a, %b, %idesc, %en
+      , kind = i8, cta_group = <cta_1> : (!llvm.ptr<6>, i64, i64, i32, i1)
+    return
+  }
+}
+
+// -----
+
+gpu.module @tcgen05_mma_i8_sm100a [#nvvm.target<chip = "sm_100a">] {
+  func.func @tcgen05_mma_i8_sm100a(%d: !llvm.ptr<6>, %a: i64, %b: i64, %idesc: i32, %en: i1) {
+    nvvm.tcgen05.mma %d, %a, %b, %idesc, %en
+      , kind = i8, cta_group = <cta_1> : (!llvm.ptr<6>, i64, i64, i32, i1)
+    return
+  }
+}
+
+// -----
+
+gpu.module @tcgen05_mma_ti16_sm100a [#nvvm.target<chip = "sm_100a">] {
+  func.func @tcgen05_mma_ti16_sm100a(%d: !llvm.ptr<6>, %a: i64, %b: i64, %idesc: i32, %en: i1) {
+    // expected-error @below {{'nvvm.tcgen05.mma' op is not supported on sm_100a}}
+    nvvm.tcgen05.mma %d, %a, %b, %idesc, %en
+      , kind = ti16, cta_group = <cta_1> : (!llvm.ptr<6>, i64, i64, i32, i1)
+    return
+  }
+}
+
+// -----
+
+gpu.module @tcgen05_mma_ti16_sm107a [#nvvm.target<chip = "sm_107a">] {
+  func.func @tcgen05_mma_ti16_sm107a(%d: !llvm.ptr<6>, %a: i64, %b: i64, %idesc: i32, %en: i1) {
+    nvvm.tcgen05.mma %d, %a, %b, %idesc, %en
+      , kind = ti16, cta_group = <cta_1> : (!llvm.ptr<6>, i64, i64, i32, i1)
+    return
+  }
+}
+
+// -----
+
+gpu.module @tcgen05_mma_collector_b_sm100a [#nvvm.target<chip = "sm_100a">] {
+  func.func @tcgen05_mma_collector_b_sm100a(%d: !llvm.ptr<6>, %a: i64, %b: i64, %idesc: i32, %en: i1) {
+    // expected-error @below {{'nvvm.tcgen05.mma' op is not supported on sm_100a}}
+    nvvm.tcgen05.mma %d, %a, %b, %idesc, %en
+      , kind = f16, cta_group = <cta_1> collector_b = lastuse : (!llvm.ptr<6>, i64, i64, i32, i1)
+    return
+  }
+}
+
+// -----
+
+gpu.module @tcgen05_mma_collector_b_sm107f [#nvvm.target<chip = "sm_107f">] {
+  func.func @tcgen05_mma_collector_b_sm107f(%d: !llvm.ptr<6>, %a: i64, %b: i64, %idesc: i32, %en: i1) {
+    nvvm.tcgen05.mma %d, %a, %b, %idesc, %en
+      , kind = f16, cta_group = <cta_1> collector_b = lastuse : (!llvm.ptr<6>, i64, i64, i32, i1)
+    return
+  }
+}
+
+// -----
+
+// No target supports both collector_b and kind::i8.
+
+gpu.module @tcgen05_mma_collector_b_i8_sm107a [#nvvm.target<chip = "sm_107a">] {
+  func.func @tcgen05_mma_collector_b_i8_sm107a(%d: !llvm.ptr<6>, %a: i64, %b: i64, %idesc: i32, %en: i1) {
+    // expected-error @below {{'nvvm.tcgen05.mma' op is not supported on sm_107a}}
+    nvvm.tcgen05.mma %d, %a, %b, %idesc, %en
+      , kind = i8, cta_group = <cta_1> collector_b = lastuse : (!llvm.ptr<6>, i64, i64, i32, i1)
+    return
+  }
+}
+
+// -----
+
+gpu.module @tcgen05_mma_scale_d_sm110a [#nvvm.target<chip = "sm_110a">] {
+  func.func @tcgen05_mma_scale_d_sm110a(%d: !llvm.ptr<6>, %a: i64, %b: i64, %idesc: i32, %en: i1) {
+    %scale = llvm.mlir.constant(0 : i64) : i64
+    // expected-error @below {{'nvvm.tcgen05.mma' op is not supported on sm_110a}}
+    nvvm.tcgen05.mma %d, %a, %b, %idesc, %en scale = %scale
+      , kind = f16, cta_group = <cta_1> : (!llvm.ptr<6>, i64, i64, i32, i1, i64)
+    return
+  }
+}
+
+// -----
+
+gpu.module @tcgen05_mma_scale_d_sm103a [#nvvm.target<chip = "sm_103a">] {
+  func.func @tcgen05_mma_scale_d_sm103a(%d: !llvm.ptr<6>, %a: i64, %b: i64, %idesc: i32, %en: i1) {
+    %scale = llvm.mlir.constant(0 : i64) : i64
+    nvvm.tcgen05.mma %d, %a, %b, %idesc, %en scale = %scale
+      , kind = f16, cta_group = <cta_1> : (!llvm.ptr<6>, i64, i64, i32, i1, i64)
+    return
+  }
+}
+
+// -----
+
+gpu.module @tcgen05_mma_f16_sm103f [#nvvm.target<chip = "sm_103f">] {
+  func.func @tcgen05_mma_f16_sm103f(%d: !llvm.ptr<6>, %a: i64, %b: i64, %idesc: i32, %en: i1) {
+    nvvm.tcgen05.mma %d, %a, %b, %idesc, %en
+      , kind = f16, cta_group = <cta_1> : (!llvm.ptr<6>, i64, i64, i32, i1)
+    return
+  }
+}
+
+// -----
+
+gpu.module @tcgen05_mma_sp_i8_sm103a [#nvvm.target<chip = "sm_103a">] {
+  func.func @tcgen05_mma_sp_i8_sm103a(%d: !llvm.ptr<6>, %a: i64, %b: i64, %idesc: i32, %en: i1, %sp: !llvm.ptr<6>) {
+    // expected-error @below {{'nvvm.tcgen05.mma.sp' op is not supported on sm_103a}}
+    nvvm.tcgen05.mma.sp %d, %a, %b, %idesc, %en, %sp
+      , kind = i8, cta_group = <cta_1> : (!llvm.ptr<6>, i64, i64, i32, i1, !llvm.ptr<6>)
+    return
+  }
+}
+
+// -----
+
+gpu.module @tcgen05_mma_block_scale_collector_b_sm103a [#nvvm.target<chip = "sm_103a">] {
+  func.func @tcgen05_mma_block_scale_collector_b_sm103a(%d: !llvm.ptr<6>, %a: i64, %b: i64, %idesc: i32, %en: i1, %sa: !llvm.ptr<6>, %sb: !llvm.ptr<6>) {
+    // expected-error @below {{'nvvm.tcgen05.mma.block_scale' op is not supported on sm_103a}}
+    nvvm.tcgen05.mma.block_scale %d, %a, %b, %idesc, %en, %sa, %sb
+      , kind = mxf8f6f4, cta_group = <cta_1> collector_b = lastuse : (!llvm.ptr<6>, i64, i64, i32, i1, !llvm.ptr<6>, !llvm.ptr<6>)
+    return
+  }
+}
+
+// -----
+
+gpu.module @tcgen05_mma_sp_block_scale_mxf4_sm100f [#nvvm.target<chip = "sm_100f">] {
+  func.func @tcgen05_mma_sp_block_scale_mxf4_sm100f(%d: !llvm.ptr<6>, %a: i64, %b: i64, %idesc: i32, %en: i1, %sp: !llvm.ptr<6>, %sa: !llvm.ptr<6>, %sb: !llvm.ptr<6>) {
+    // expected-error @below {{'nvvm.tcgen05.mma.sp.block_scale' op is not supported on sm_100f}}
+    nvvm.tcgen05.mma.sp.block_scale %d, %a, %b, %idesc, %en, %sp, %sa, %sb
+      , kind = mxf4, cta_group = <cta_1> : (!llvm.ptr<6>, i64, i64, i32, i1, !llvm.ptr<6>, !llvm.ptr<6>, !llvm.ptr<6>)
+    return
+  }
+}
+
+// -----
+
+gpu.module @tcgen05_mma_sp_block_scale_mxf4_sm103a [#nvvm.target<chip = "sm_103a">] {
+  func.func @tcgen05_mma_sp_block_scale_mxf4_sm103a(%d: !llvm.ptr<6>, %a: i64, %b: i64, %idesc: i32, %en: i1, %sp: !llvm.ptr<6>, %sa: !llvm.ptr<6>, %sb: !llvm.ptr<6>) {
+    nvvm.tcgen05.mma.sp.block_scale %d, %a, %b, %idesc, %en, %sp, %sa, %sb
+      , kind = mxf4, cta_group = <cta_1> : (!llvm.ptr<6>, i64, i64, i32, i1, !llvm.ptr<6>, !llvm.ptr<6>, !llvm.ptr<6>)
+    return
+  }
+}
+
+// -----
+
+gpu.module @tcgen05_mma_ws_i8_sm103a [#nvvm.target<chip = "sm_103a">] {
+  func.func @tcgen05_mma_ws_i8_sm103a(%d: !llvm.ptr<6>, %a: i64, %b: i64, %idesc: i32, %en: i1) {
+    // expected-error @below {{'nvvm.tcgen05.mma.ws' op is not supported on sm_103a}}
+    nvvm.tcgen05.mma.ws %d, %a, %b, %idesc, %en
+      kind = i8 : (!llvm.ptr<6>, i64, i64, i32, i1)
+    return
+  }
+}
+
+// -----
+
+gpu.module @tcgen05_mma_ws_sp_i8_sm103a [#nvvm.target<chip = "sm_103a">] {
+  func.func @tcgen05_mma_ws_sp_i8_sm103a(%d: !llvm.ptr<6>, %a: i64, %b: i64, %idesc: i32, %en: i1, %sp: !llvm.ptr<6>) {
+    // expected-error @below {{'nvvm.tcgen05.mma.ws.sp' op is not supported on sm_103a}}
+    nvvm.tcgen05.mma.ws.sp %d, %a, %b, %idesc, %en, %sp
+      kind = i8 : (!llvm.ptr<6>, i64, i64, i32, i1, !llvm.ptr<6>)
+    return
+  }
+}
