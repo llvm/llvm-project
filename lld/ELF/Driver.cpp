@@ -458,6 +458,12 @@ static void checkOptions(Ctx &ctx) {
     ErrAlways(ctx) << "-z force-ibt may not be used with -z retpolineplt";
 }
 
+static const char *getEmulationOption(opt::InputArgList &args) {
+  if (auto *arg = args.getLastArg(OPT_m))
+    return arg->getValue();
+  return getenv("LDEMULATION");
+}
+
 static const char *getReproduceOption(opt::InputArgList &args) {
   if (auto *arg = args.getLastArg(OPT_reproduce))
     return arg->getValue();
@@ -1934,8 +1940,8 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
            "intend to set the base address";
 
   // Parse ELF{32,64}{LE,BE} and CPU type.
-  if (auto *arg = args.getLastArg(OPT_m)) {
-    StringRef s = arg->getValue();
+  if (auto *p = getEmulationOption(args)) {
+    StringRef s(p);
     std::tie(ctx.arg.ekind, ctx.arg.emachine, ctx.arg.osabi) =
         parseEmulation(ctx, s);
     ctx.arg.mipsN32Abi =
