@@ -1521,38 +1521,40 @@ define i64 @stest_f16i64(half %x) {
 ;
 ; VFP2-LABEL: stest_f16i64:
 ; VFP2:       @ %bb.0: @ %entry
-; VFP2-NEXT:    .save {r4, r5, r7, lr}
-; VFP2-NEXT:    push {r4, r5, r7, lr}
+; VFP2-NEXT:    .save {r4, lr}
+; VFP2-NEXT:    push {r4, lr}
 ; VFP2-NEXT:    vmov r0, s0
 ; VFP2-NEXT:    bl __aeabi_h2f
 ; VFP2-NEXT:    vmov s0, r0
-; VFP2-NEXT:    bl __fixsfti
-; VFP2-NEXT:    subs.w r4, r0, #-1
-; VFP2-NEXT:    mvn lr, #-2147483648
-; VFP2-NEXT:    sbcs.w r4, r1, lr
+; VFP2-NEXT:    mvn r1, #-2147483648
+; VFP2-NEXT:    mov.w lr, #-2147483648
 ; VFP2-NEXT:    mov.w r12, #0
-; VFP2-NEXT:    sbcs r4, r2, #0
-; VFP2-NEXT:    sbcs r4, r3, #0
-; VFP2-NEXT:    mov.w r4, #0
+; VFP2-NEXT:    vcvt.s32.f32 s0, s0
+; VFP2-NEXT:    vmov r0, s0
+; VFP2-NEXT:    subs.w r3, r0, #-1
+; VFP2-NEXT:    asr.w r2, r0, #31
+; VFP2-NEXT:    sbcs.w r3, r2, r1
+; VFP2-NEXT:    sbcs r3, r2, #0
+; VFP2-NEXT:    sbcs r2, r2, #0
+; VFP2-NEXT:    mov.w r3, #0
 ; VFP2-NEXT:    it lt
-; VFP2-NEXT:    movlt r4, #1
-; VFP2-NEXT:    cmp r4, #0
-; VFP2-NEXT:    itet eq
-; VFP2-NEXT:    moveq r3, r4
-; VFP2-NEXT:    movne r4, r2
-; VFP2-NEXT:    moveq r1, lr
+; VFP2-NEXT:    asrlt r1, r0, #31
+; VFP2-NEXT:    it lt
+; VFP2-NEXT:    movlt r3, #1
+; VFP2-NEXT:    cmp r3, #0
+; VFP2-NEXT:    it ne
+; VFP2-NEXT:    asrne r3, r0, #31
 ; VFP2-NEXT:    mov.w r2, #-1
 ; VFP2-NEXT:    it eq
 ; VFP2-NEXT:    moveq r0, r2
-; VFP2-NEXT:    rsbs r5, r0, #0
-; VFP2-NEXT:    mov.w lr, #-2147483648
-; VFP2-NEXT:    sbcs.w r5, lr, r1
-; VFP2-NEXT:    sbcs.w r4, r2, r4
+; VFP2-NEXT:    rsbs r4, r0, #0
+; VFP2-NEXT:    sbcs.w r4, lr, r1
+; VFP2-NEXT:    sbcs.w r4, r2, r3
 ; VFP2-NEXT:    sbcs r2, r3
 ; VFP2-NEXT:    itt ge
 ; VFP2-NEXT:    movge r0, r12
 ; VFP2-NEXT:    movge r1, lr
-; VFP2-NEXT:    pop {r4, r5, r7, pc}
+; VFP2-NEXT:    pop {r4, pc}
 ;
 ; FULL-LABEL: stest_f16i64:
 ; FULL:       @ %bb.0: @ %entry
@@ -1623,13 +1625,9 @@ define i64 @utesth_f16i64(half %x) {
 ; VFP2-NEXT:    vmov r0, s0
 ; VFP2-NEXT:    bl __aeabi_h2f
 ; VFP2-NEXT:    vmov s0, r0
-; VFP2-NEXT:    bl __fixunssfti
-; VFP2-NEXT:    subs r2, #1
-; VFP2-NEXT:    mov.w r12, #0
-; VFP2-NEXT:    sbcs r2, r3, #0
-; VFP2-NEXT:    itt hs
-; VFP2-NEXT:    movhs r0, r12
-; VFP2-NEXT:    movhs r1, r12
+; VFP2-NEXT:    movs r1, #0
+; VFP2-NEXT:    vcvt.s32.f32 s0, s0
+; VFP2-NEXT:    vmov r0, s0
 ; VFP2-NEXT:    pop {r7, pc}
 ;
 ; FULL-LABEL: utesth_f16i64:
@@ -1685,17 +1683,17 @@ define i64 @ustest_f16i64(half %x) {
 ; VFP2-NEXT:    vmov r0, s0
 ; VFP2-NEXT:    bl __aeabi_h2f
 ; VFP2-NEXT:    vmov s0, r0
-; VFP2-NEXT:    bl __fixsfti
-; VFP2-NEXT:    subs r2, #1
-; VFP2-NEXT:    mov.w r12, #0
-; VFP2-NEXT:    sbcs r2, r3, #0
-; VFP2-NEXT:    itt ge
-; VFP2-NEXT:    movge r3, r12
-; VFP2-NEXT:    movge r0, r12
-; VFP2-NEXT:    it ge
-; VFP2-NEXT:    movge r1, r12
-; VFP2-NEXT:    bic.w r0, r0, r3, asr #31
-; VFP2-NEXT:    bic.w r1, r1, r3, asr #31
+; VFP2-NEXT:    movs r2, #1
+; VFP2-NEXT:    vcvt.s32.f32 s0, s0
+; VFP2-NEXT:    vmov r1, s0
+; VFP2-NEXT:    rsbs r2, r2, r1, asr #31
+; VFP2-NEXT:    asr.w r0, r1, #31
+; VFP2-NEXT:    sbcs r0, r0, #0
+; VFP2-NEXT:    mov.w r0, #0
+; VFP2-NEXT:    itt lt
+; VFP2-NEXT:    movlt r0, r1
+; VFP2-NEXT:    biclt.w r0, r0, r1, asr #31
+; VFP2-NEXT:    movs r1, #0
 ; VFP2-NEXT:    pop {r7, pc}
 ;
 ; FULL-LABEL: ustest_f16i64:
@@ -3281,41 +3279,42 @@ define i64 @stest_f16i64_mm(half %x) {
 ;
 ; VFP2-LABEL: stest_f16i64_mm:
 ; VFP2:       @ %bb.0: @ %entry
-; VFP2-NEXT:    .save {r4, r5, r7, lr}
-; VFP2-NEXT:    push {r4, r5, r7, lr}
+; VFP2-NEXT:    .save {r4, lr}
+; VFP2-NEXT:    push {r4, lr}
 ; VFP2-NEXT:    vmov r0, s0
 ; VFP2-NEXT:    bl __aeabi_h2f
 ; VFP2-NEXT:    vmov s0, r0
-; VFP2-NEXT:    bl __fixsfti
-; VFP2-NEXT:    subs.w r4, r0, #-1
-; VFP2-NEXT:    mvn lr, #-2147483648
-; VFP2-NEXT:    sbcs.w r4, r1, lr
-; VFP2-NEXT:    mov.w r12, #0
-; VFP2-NEXT:    sbcs r4, r2, #0
-; VFP2-NEXT:    sbcs r4, r3, #0
-; VFP2-NEXT:    mov.w r4, #0
-; VFP2-NEXT:    it lt
-; VFP2-NEXT:    movlt r4, #1
-; VFP2-NEXT:    cmp r4, #0
-; VFP2-NEXT:    itet eq
-; VFP2-NEXT:    moveq r3, r4
-; VFP2-NEXT:    movne r4, r2
-; VFP2-NEXT:    moveq r1, lr
-; VFP2-NEXT:    mov.w r2, #-1
-; VFP2-NEXT:    it eq
-; VFP2-NEXT:    moveq r0, r2
-; VFP2-NEXT:    rsbs r5, r0, #0
+; VFP2-NEXT:    mvn r1, #-2147483648
 ; VFP2-NEXT:    mov.w lr, #-2147483648
-; VFP2-NEXT:    sbcs.w r5, lr, r1
-; VFP2-NEXT:    sbcs.w r4, r2, r4
-; VFP2-NEXT:    sbcs r2, r3
+; VFP2-NEXT:    movs r0, #0
+; VFP2-NEXT:    vcvt.s32.f32 s0, s0
+; VFP2-NEXT:    vmov r2, s0
+; VFP2-NEXT:    subs.w r3, r2, #-1
+; VFP2-NEXT:    asr.w r12, r2, #31
+; VFP2-NEXT:    sbcs.w r3, r12, r1
+; VFP2-NEXT:    sbcs r3, r12, #0
+; VFP2-NEXT:    sbcs r3, r12, #0
+; VFP2-NEXT:    mov.w r12, #-1
+; VFP2-NEXT:    mov.w r3, #0
 ; VFP2-NEXT:    it lt
-; VFP2-NEXT:    movlt.w r12, #1
-; VFP2-NEXT:    cmp.w r12, #0
-; VFP2-NEXT:    itt eq
-; VFP2-NEXT:    moveq r0, r12
+; VFP2-NEXT:    movlt r3, #1
+; VFP2-NEXT:    cmp r3, #0
+; VFP2-NEXT:    itt ne
+; VFP2-NEXT:    asrne r3, r2, #31
+; VFP2-NEXT:    asrne r1, r2, #31
+; VFP2-NEXT:    it eq
+; VFP2-NEXT:    moveq r2, r12
+; VFP2-NEXT:    rsbs r4, r2, #0
+; VFP2-NEXT:    sbcs.w r4, lr, r1
+; VFP2-NEXT:    sbcs.w r4, r12, r3
+; VFP2-NEXT:    sbcs.w r3, r12, r3
+; VFP2-NEXT:    it lt
+; VFP2-NEXT:    movlt r0, #1
+; VFP2-NEXT:    cmp r0, #0
+; VFP2-NEXT:    ite ne
+; VFP2-NEXT:    movne r0, r2
 ; VFP2-NEXT:    moveq r1, lr
-; VFP2-NEXT:    pop {r4, r5, r7, pc}
+; VFP2-NEXT:    pop {r4, pc}
 ;
 ; FULL-LABEL: stest_f16i64_mm:
 ; FULL:       @ %bb.0: @ %entry
@@ -3391,16 +3390,9 @@ define i64 @utesth_f16i64_mm(half %x) {
 ; VFP2-NEXT:    vmov r0, s0
 ; VFP2-NEXT:    bl __aeabi_h2f
 ; VFP2-NEXT:    vmov s0, r0
-; VFP2-NEXT:    bl __fixunssfti
-; VFP2-NEXT:    subs r2, #1
-; VFP2-NEXT:    mov.w r12, #0
-; VFP2-NEXT:    sbcs r2, r3, #0
-; VFP2-NEXT:    it lo
-; VFP2-NEXT:    movlo.w r12, #1
-; VFP2-NEXT:    cmp.w r12, #0
-; VFP2-NEXT:    itt eq
-; VFP2-NEXT:    moveq r0, r12
-; VFP2-NEXT:    moveq r1, r12
+; VFP2-NEXT:    movs r1, #0
+; VFP2-NEXT:    vcvt.s32.f32 s0, s0
+; VFP2-NEXT:    vmov r0, s0
 ; VFP2-NEXT:    pop {r7, pc}
 ;
 ; FULL-LABEL: utesth_f16i64_mm:
@@ -3475,21 +3467,24 @@ define i64 @ustest_f16i64_mm(half %x) {
 ; VFP2-NEXT:    vmov r0, s0
 ; VFP2-NEXT:    bl __aeabi_h2f
 ; VFP2-NEXT:    vmov s0, r0
-; VFP2-NEXT:    bl __fixsfti
-; VFP2-NEXT:    subs r2, #1
-; VFP2-NEXT:    mov.w r12, #0
-; VFP2-NEXT:    sbcs r2, r3, #0
+; VFP2-NEXT:    movs r3, #1
+; VFP2-NEXT:    movs r2, #0
+; VFP2-NEXT:    vcvt.s32.f32 s0, s0
+; VFP2-NEXT:    vmov r1, s0
+; VFP2-NEXT:    rsbs r3, r3, r1, asr #31
+; VFP2-NEXT:    asr.w r0, r1, #31
+; VFP2-NEXT:    sbcs r0, r0, #0
 ; VFP2-NEXT:    it lt
-; VFP2-NEXT:    movlt.w r12, #1
-; VFP2-NEXT:    cmp.w r12, #0
-; VFP2-NEXT:    itte eq
-; VFP2-NEXT:    moveq r1, r12
-; VFP2-NEXT:    moveq r0, r12
-; VFP2-NEXT:    movne r12, r3
-; VFP2-NEXT:    cmp.w r12, #0
-; VFP2-NEXT:    itt mi
+; VFP2-NEXT:    movlt r2, #1
+; VFP2-NEXT:    mov r0, r2
+; VFP2-NEXT:    cmp r2, #0
+; VFP2-NEXT:    itt ne
+; VFP2-NEXT:    movne r0, r1
+; VFP2-NEXT:    asrne r2, r1, #31
+; VFP2-NEXT:    bic.w r1, r2, r2, asr #31
+; VFP2-NEXT:    cmp r2, #0
+; VFP2-NEXT:    it mi
 ; VFP2-NEXT:    movmi r0, #0
-; VFP2-NEXT:    movmi r1, #0
 ; VFP2-NEXT:    pop {r7, pc}
 ;
 ; FULL-LABEL: ustest_f16i64_mm:
