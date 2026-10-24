@@ -117,12 +117,12 @@ int main() {
   });
   runTestsForMemCpyFunc<false>([&](queue &Q, event Dep, auto... OtherArgs) {
     (void)Dep;
-    return Q.submit([&](sycl::handler &CGH) { Q.memcpy(OtherArgs...); });
+    return Q.submit([&](sycl::handler &CGH) { CGH.memcpy(OtherArgs...); });
   });
   runTestsForMemCpyFunc<true>([&](queue &Q, event Dep, auto... OtherArgs) {
     return Q.submit([&](sycl::handler &CGH) {
       CGH.depends_on(Dep);
-      Q.memcpy(OtherArgs...);
+      CGH.memcpy(OtherArgs...);
     });
   });
 

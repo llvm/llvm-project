@@ -140,6 +140,45 @@ TEST(Handler, SubmitCannotBeNested) {
   EXPECT_TRUE(Thrown);
 }
 
+template <typename QueueOpT>
+static void expectNestedQueueOpThrows(QueueOpT Op) {
+  mock::MockWrapper Mock;
+  queue Q;
+
+  bool Thrown = false;
+  try {
+    Q.submit([&](handler &CGH) {
+      (void)CGH;
+      Op(Q);
+    });
+  } catch (const sycl::exception &E) {
+    Thrown = true;
+    EXPECT_EQ(E.code(), sycl::errc::invalid);
+    EXPECT_NE(std::string(E.what()).find("cannot be nested"),
+              std::string::npos);
+    EXPECT_TRUE(E.has_context());
+    EXPECT_EQ(E.get_context(), Q.get_context());
+  }
+
+  EXPECT_TRUE(Thrown);
+}
+
+TEST(Handler, QueueShortcutsCannotBeNested) {
+  int Src = 1;
+  int Dst = 0;
+  expectNestedQueueOpThrows(
+      [&](queue &Q) { Q.memcpy(&Dst, &Src, sizeof(int)); });
+  expectNestedQueueOpThrows([&](queue &Q) { Q.memset(&Dst, 0, sizeof(int)); });
+  expectNestedQueueOpThrows([&](queue &Q) { Q.prefetch(&Dst, sizeof(int)); });
+  expectNestedQueueOpThrows([](queue &Q) {
+    Q.single_task<class UTNestedShortcutSingleTask>([]() {});
+  });
+  expectNestedQueueOpThrows([](queue &Q) {
+    Q.parallel_for<class UTNestedShortcutParallelFor>(range<1>{1},
+                                                      [](item<1>) {});
+  });
+}
+
 TEST(Handler, ParallelForNDRangeRejectsNonDivisibleRange) {
   mock::MockWrapper Mock;
   queue Q;
