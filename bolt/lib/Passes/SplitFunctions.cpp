@@ -703,6 +703,14 @@ struct SplitAll final : public SplitStrategy {
 namespace llvm {
 namespace bolt {
 
+/// Whether the EH ranges of \p BF may span fragments. A function whose LSDA
+/// type table comes from dynamic relocations has to keep its EH call sites in
+/// one fragment: every fragment emits a copy of the table, and .rela.dyn
+/// cannot grow to hold a relocation per copy.
+static bool canSplitEHFor(const BinaryFunction &BF) {
+  return opts::SplitEH && !BF.hasLSDATypeTableDynRelocs();
+}
+
 bool SplitFunctions::shouldOptimize(const BinaryFunction &BF) const {
   // Apply execution count threshold
   if (BF.getKnownExecutionCount() < opts::ExecutionCountThreshold)
@@ -818,7 +826,7 @@ void SplitFunctions::splitFunction(BinaryFunction &BF, SplitStrategy &S) {
       continue;
     }
 
-    if (BF.hasEHRanges() && !opts::SplitEH) {
+    if (BF.hasEHRanges() && !canSplitEHFor(BF)) {
       // We cannot move landing pads (or rather entry points for landing pads).
       if (BB->isLandingPad()) {
         BB->setCanOutline(false);
@@ -861,7 +869,7 @@ void SplitFunctions::splitFunction(BinaryFunction &BF, SplitStrategy &S) {
                                      const BinaryBasicBlock *const B) {
       return A->getFragmentNum() < B->getFragmentNum();
     });
-  } else if (BF.hasEHRanges() && !opts::SplitEH) {
+  } else if (BF.hasEHRanges() && !canSplitEHFor(BF)) {
     // Typically functions with exception handling have landing pads at the end.
     // We cannot move beginning of landing pads, but we can move 0-count blocks
     // comprising landing pads to the end and thus facilitate splitting.
