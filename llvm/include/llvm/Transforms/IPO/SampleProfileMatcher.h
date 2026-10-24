@@ -37,8 +37,6 @@ class SampleProfileMatcher {
   // mapping from the source location of current build to the source location
   // in the profile.
   StringMap<LocToLocMap> FuncMappings;
-  // Hash mapping cache for matched anchor pairs in stale profile matching
-  DenseMap<FunctionId, const Function *> MatchedAnchorCache;
 
   // Match state for an anchor/callsite.
   enum class MatchState {
@@ -71,6 +69,11 @@ class SampleProfileMatcher {
   // the new(renamed) function pointer and the value is old(unused) profile
   // name.
   MapVector<Function *, FunctionId> FuncToProfileNameMap;
+  // Mapping from matched(renamed) profile name to IR function to during call
+  // graph matching. This is a reversed FuncToProfileNameMap to track duplicated
+  // profile matching and resolve multiple IR functions being mapped to a single
+  // profile.
+  DenseMap<FunctionId, const Function *> ProfileNameToFuncMap;
 
   // A map pointer to the FuncNameToProfNameMap in SampleProfileLoader,
   // which maps the function name to the matched profile name. This is used
@@ -232,6 +235,15 @@ private:
   // which are supposed to be new functions. We use them as the targets for
   // call graph matching.
   void findFunctionsWithoutProfile();
+  // Setter function for recording stale profile matching results into
+  // `FuncToProfileNameMap` and `ProfileNameToFuncMap`. The IR function and
+  // Profile function are checked and guaranteed to be 1:1 mapping. A new
+  // profile clone will be created in the SampleReader if multiple IR
+  // functions are found to be mapping to one Profile. Return the updated
+  // profile name that is mapped to the IR function. And update
+  // FuncProfileMatchCache correspondingly.
+  FunctionId recordMatchedStaleProfile(Function *IRFunc,
+                                       FunctionId ProfFuncName);
   // Match orphan IR functions to unused top-level profile entries by demangled
   // basename, without requiring a matched caller in the call graph.
   void matchFunctionsWithoutProfileByBasename();

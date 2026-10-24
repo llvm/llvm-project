@@ -396,62 +396,38 @@ void SampleProfileMatcher::runStaleProfileMatching(
 
   // Scan through the matched anchors to make sure functions and profiles are
   // 1:1 mapped. If the profile has already been mapped to another function
-  // during previous fuzzy matching, create a new profile with the same sample
-  // counts and assumed to be pre-inlined.
+  // during previous fuzzy matching, create a new profile the same as the
+  // flattened profile as a top-level function.
   for (const auto &IR : IRAnchors) {
     bool ProfileConflicted = false;
-    const auto &Loc = IR.first;
-    Function *Callee = M.getFunction(IR.second.stringRef());
-    if (!Callee)
+    const auto &IRLoc = IR.first;
+    Function *IRFunc = M.getFunction(IR.second.stringRef());
+    if (!IRFunc)
       continue;
-    FunctionId ProfAnchor;
-    auto AnchorLoc = MatchedAnchors.find(Loc);
-    if (AnchorLoc == MatchedAnchors.end()) {
-      // Search within the module and find if we have conflicts in pre-matched
-      // profiles for this anchor
-      auto PreMatched = FuncToProfileNameMap.find(Callee);
-      if (PreMatched == FuncToProfileNameMap.end())
-        continue;
-      ProfAnchor = PreMatched->second;
-    } else {
-      const auto &Prof = ProfileAnchors.find(AnchorLoc->second);
-      if (Prof == ProfileAnchors.end())
-        continue;
-      ProfAnchor = Prof->second;
-    }
+    FunctionId ProfId;
+    auto MatchedLoc = MatchedAnchors.find(IRLoc);
+    if (MatchedLoc == MatchedAnchors.end())
+      continue;
 
-    // Conflicting profile previously matched
-    auto Cached = MatchedAnchorCache.find(ProfAnchor);
-    if (Cached == MatchedAnchorCache.end())
-      MatchedAnchorCache[ProfAnchor] = Callee;
-    else if (Cached->second != Callee)
-      ProfileConflicted = true;
-
-    if (ProfileConflicted) {
-      // Create a flattened profile using the IR function name to avoid profile
-      // name conflicts
-      const auto *FSForMatching = getFlattenedSamplesFor(ProfAnchor);
-      if (!FSForMatching)
-        FSForMatching = Reader.getSamplesFor(ProfAnchor.stringRef());
-      if (!FSForMatching)
-        continue;
-
-      FunctionId NewAnchor(
-          FunctionSamples::getCanonicalFnName(IR.second.stringRef()));
-      auto R = FuncProfileMatchCache.find({Callee, NewAnchor});
-      if (R != FuncProfileMatchCache.end() && R->second)
-        continue;
-      FunctionSamples &NewFS = FlattenedProfiles.create(NewAnchor);
-      NewFS.merge(*FSForMatching);
-      FuncToProfileNameMap[Callee] = NewAnchor;
-      FuncProfileMatchCache[{Callee, NewAnchor}] = true;
-
-      // Update profile in the sample profile reader
-      SampleProfileMap &Profiles = Reader.getProfiles();
-      SampleContext FContext(NewAnchor);
-      auto Res = Profiles.try_emplace(FContext.getHashCode(), FContext, NewFS);
-      FunctionSamples &FProfile = Res.first->second;
-      FProfile.setContext(FContext);
+    const auto &ProfAnchor = ProfileAnchors.find(MatchedLoc->second);
+    if (ProfAnchor == ProfileAnchors.end())
+      continue;
+    ProfId = recordMatchedStaleProfile(IRFunc, ProfAnchor->second);
+    if (ProfId != ProfAnchor->second) {
+      // Only load the flattened profile if a new profile is created in the
+      // SampleProfReader
+      FunctionSamples &NewFS = FlattenedProfiles.create(ProfId);
+      SampleProfileMap UpdatedProfile;
+      if (const auto *FS = Reader.getSamplesFor(ProfId.stringRef())) {
+        UpdatedProfile.create(ProfId).merge(*FS);
+        ProfileConverter::flattenProfile(UpdatedProfile,
+                                         FunctionSamples::ProfileIsCS);
+        auto It = UpdatedProfile.find(ProfId);
+        if (It != UpdatedProfile.end()) {
+          FunctionSamples &NewFlatFS = FlattenedProfiles.create(ProfId);
+          NewFlatFS.merge(It->second);
+        }
+      }
     }
   }
 
@@ -832,6 +808,62 @@ void SampleProfileMatcher::findFunctionsWithoutProfile() {
   }
 }
 
+FunctionId
+SampleProfileMatcher::recordMatchedStaleProfile(Function *IRFunc,
+                                                FunctionId ProfFuncName) {
+  // Early return if an IR function has already been matched
+  StringRef IRFuncName = FunctionSamples::getCanonicalFnName(IRFunc->getName());
+  if (IRFuncName == ProfFuncName.stringRef())
+    return ProfFuncName;
+  auto PreMatched = FuncToProfileNameMap.find(IRFunc);
+  if (PreMatched != FuncToProfileNameMap.end())
+    return ProfFuncName;
+
+  // Detect conflicting profile previously matched
+  auto PrevMatched = ProfileNameToFuncMap.find(ProfFuncName);
+  if (PrevMatched == ProfileNameToFuncMap.end()) {
+    FuncProfileMatchCache[{IRFunc, ProfFuncName}] = true;
+    FuncToProfileNameMap[IRFunc] = ProfFuncName;
+    ProfileNameToFuncMap[ProfFuncName] = IRFunc;
+
+    LLVM_DEBUG(dbgs() << "Function:" << IRFunc->getName()
+                      << " matches profile:" << ProfFuncName << "\n");
+
+  } else if (PrevMatched->second != IRFunc) {
+    // Create a flattened profile using the IR function name to avoid profile
+    // name conflicts
+    const auto *FSForMatching = getFlattenedSamplesFor(ProfFuncName);
+    if (!FSForMatching)
+      FSForMatching = Reader.getSamplesFor(ProfFuncName.stringRef());
+    if (!FSForMatching)
+      return ProfFuncName;
+
+    FunctionId NewProfId(IRFuncName);
+    auto R = FuncProfileMatchCache.find({IRFunc, NewProfId});
+    if (R != FuncProfileMatchCache.end() && R->second)
+      return ProfFuncName;
+
+    // Update profile in the sample profile reader
+    SampleProfileMap &Profiles = Reader.getProfiles();
+    SampleContext FContext(NewProfId);
+    auto Res = Profiles.try_emplace(FContext.getHashCode(), FContext,
+                                    FunctionSamples());
+    FunctionSamples &NewFS = Res.first->second;
+    NewFS.setContext(FContext);
+    NewFS.merge(*FSForMatching);
+
+    FuncProfileMatchCache[{IRFunc, ProfFuncName}] = false;
+
+    LLVM_DEBUG(dbgs() << "Function:" << IRFunc->getName()
+                      << " encounters conflicting profile matchings, "
+                         "remapping to new profile:"
+                      << NewProfId << "\n");
+
+    return NewProfId;
+  }
+  return ProfFuncName;
+}
+
 // Demangle \p FName and return the base function name (stripping namespaces,
 // templates, and parameter types). Returns an empty string on failure.
 static std::string getDemangledBaseName(ItaniumPartialDemangler &Demangler,
@@ -870,6 +902,9 @@ void SampleProfileMatcher::matchFunctionsWithoutProfileByBasename() {
   StringMap<Function *> OrphansByBaseName;
   StringSet<> AmbiguousBaseNames;
   for (auto &[FuncId, Func] : FunctionsWithoutProfile) {
+    // Skip functions that already been matched through stale profile matching
+    if (FuncToProfileNameMap.contains(Func))
+      continue;
     std::string BaseName = getDemangledBaseName(Demangler, Func->getName());
     if (BaseName.empty() || AmbiguousBaseNames.count(BaseName))
       continue;
@@ -927,8 +962,8 @@ void SampleProfileMatcher::matchFunctionsWithoutProfileByBasename() {
     if (!OrphanFunc)
       continue;
 
-    FuncToProfileNameMap[OrphanFunc] = ProfId;
-    MatchedAnchorCache[ProfId] = OrphanFunc;
+    ProfId = recordMatchedStaleProfile(OrphanFunc, ProfId);
+
     if (const auto *FS = Reader.getSamplesFor(ProfId.stringRef()))
       NewlyLoadedProfiles.create(FS->getFunction()).merge(*FS);
     MatchCount++;
@@ -953,18 +988,6 @@ bool SampleProfileMatcher::functionMatchesProfileHelper(
   // The value is in the range [0, 1]. The bigger the value is, the more similar
   // two sequences are.
   float Similarity = 0.0;
-
-  // Match the functions if they have the same base name(after demangling) and
-  // skip the similarity check.
-  ItaniumPartialDemangler Demangler;
-  auto IRBaseName = getDemangledBaseName(Demangler, IRFunc.getName());
-  auto ProfBaseName = getDemangledBaseName(Demangler, ProfFunc.stringRef());
-  if (!IRBaseName.empty() && IRBaseName == ProfBaseName) {
-    LLVM_DEBUG(dbgs() << "The functions " << IRFunc.getName() << "(IR) and "
-                      << ProfFunc << "(Profile) share the same base name: "
-                      << IRBaseName << ".\n");
-    return true;
-  }
 
   const auto *FSForMatching = getFlattenedSamplesFor(ProfFunc);
   // With extbinary profile format, initial profile loading only reads profile
@@ -1063,11 +1086,20 @@ bool SampleProfileMatcher::functionMatchesProfile(Function &IRFunc,
     return false;
 
   bool Matched = functionMatchesProfileHelper(IRFunc, ProfFunc);
-  FuncProfileMatchCache[{&IRFunc, ProfFunc}] = Matched;
-  if (Matched) {
-    FuncToProfileNameMap[&IRFunc] = ProfFunc;
-    LLVM_DEBUG(dbgs() << "Function:" << IRFunc.getName()
-                      << " matches profile:" << ProfFunc << "\n");
+  if (!Matched) {
+    // Match the functions if they have the same base name(after demangling) and
+    // skip the similarity check.
+    ItaniumPartialDemangler Demangler;
+    auto IRBaseName = getDemangledBaseName(Demangler, IRFunc.getName());
+    auto ProfBaseName = getDemangledBaseName(Demangler, ProfFunc.stringRef());
+    if (!IRBaseName.empty() && IRBaseName == ProfBaseName) {
+      LLVM_DEBUG(dbgs() << "The functions " << IRFunc.getName() << "(IR) and "
+                        << ProfFunc << "(Profile) share the same base name: "
+                        << IRBaseName << ".\n");
+      return true;
+    }
+    // Cache IR/Prof function pairs that don't match
+    FuncProfileMatchCache[{&IRFunc, ProfFunc}] = Matched;
   }
 
   return Matched;
@@ -1111,11 +1143,11 @@ void SampleProfileMatcher::runOnModule() {
 
   if (SalvageUnusedProfile) {
     findFunctionsWithoutProfile();
-    matchFunctionsWithoutProfileByBasename();
   }
 
   // Process the matching in top-down order so that the caller matching result
   // can be used to the callee matching.
+  DenseSet<Function *> FunctionProcessedInStage1;
   std::vector<Function *> TopDownFunctionList;
   TopDownFunctionList.reserve(M.size());
   buildTopDownFuncOrder(CG, TopDownFunctionList);
@@ -1123,6 +1155,21 @@ void SampleProfileMatcher::runOnModule() {
     if (skipProfileForFunction(*F))
       continue;
     runOnFunction(*F);
+    if (getFlattenedSamplesFor(*F) || FuncToProfileNameMap.contains(F))
+      FunctionProcessedInStage1.insert(F);
+  }
+
+  // Stage 2 stale profile matching after rematching all the remaining functions
+  // without profile with fuzzy basename matching
+  if (SalvageUnusedProfile) {
+    matchFunctionsWithoutProfileByBasename();
+    for (auto *F : TopDownFunctionList) {
+      if (skipProfileForFunction(*F))
+        continue;
+      if (FunctionProcessedInStage1.contains(F))
+        continue;
+      runOnFunction(*F);
+    }
   }
 
   if (SalvageUnusedProfile)
