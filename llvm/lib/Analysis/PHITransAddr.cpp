@@ -127,6 +127,17 @@ static void RemoveInstInputs(Value *V,
       RemoveInstInputs(OpInst, InstInputs);
 }
 
+void PHITransAddr::collectIntermediates() {
+  Intermediates.clear();
+  SmallVector<Value *, 8> Worklist = {Addr};
+  while (!Worklist.empty()) {
+    auto *I = dyn_cast<Instruction>(Worklist.pop_back_val());
+    if (!I || is_contained(InstInputs, I) || !Intermediates.insert(I).second)
+      continue;
+    append_range(Worklist, I->operands());
+  }
+}
+
 Value *PHITransAddr::translateSubExpr(Value *V, BasicBlock *CurBB,
                                       BasicBlock *PredBB,
                                       const DominatorTree *DT, Value *Cond,
@@ -136,7 +147,8 @@ Value *PHITransAddr::translateSubExpr(Value *V, BasicBlock *CurBB,
   if (!Inst) return V;
 
   // Determine whether 'Inst' is an input to our PHI translatable expression.
-  bool isInput = is_contained(InstInputs, Inst);
+  bool isInput =
+      is_contained(InstInputs, Inst) && !Intermediates.contains(Inst);
 
   // Handle inputs instructions if needed.
   if (isInput) {
@@ -323,10 +335,12 @@ Value *PHITransAddr::translateValue(BasicBlock *CurBB, BasicBlock *PredBB,
                                     bool MustDominate) {
   assert(DT || !MustDominate);
   assert(verify() && "Invalid PHITransAddr!");
-  if (DT && DT->isReachableFromEntry(PredBB))
+  if (DT && DT->isReachableFromEntry(PredBB)) {
+    collectIntermediates();
     Addr = translateSubExpr(Addr, CurBB, PredBB, DT);
-  else
+  } else {
     Addr = nullptr;
+  }
   assert(verify() && "Invalid PHITransAddr!");
 
   if (MustDominate)
@@ -348,6 +362,7 @@ SelectAddr::SelectAddrs PHITransAddr::translateValue(BasicBlock *CurBB,
   if (!DT || !DT->isReachableFromEntry(PredBB))
     return {nullptr, nullptr};
 
+  collectIntermediates();
   auto TranslateSide = [&](bool CondVal) -> Value * {
     // Work on a copy so that the original address state is preserved and the
     // other side can be translated independently.
