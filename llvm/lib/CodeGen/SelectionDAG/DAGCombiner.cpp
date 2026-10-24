@@ -10666,7 +10666,24 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
   // Avoid breaking: and (not(setcc x, y, cc), z) -> andn for vec
   unsigned N0Opcode = N0.getOpcode();
   SDValue LHS, RHS, CC;
-  if (TLI.isConstTrueVal(N1) &&
+  // Keep a shared comparison instead of materializing both condition codes.
+  // Scalar SETCCs with custom lowering or native i1 results may fold into
+  // flag-based instructions.
+  bool KeepNotOfSetCC = false;
+  if (N0Opcode == ISD::SETCC && !N0.hasOneUse()) {
+    EVT OpVT = N0.getOperand(0).getValueType();
+    if (TLI.getTypeAction(*DAG.getContext(), OpVT) ==
+        TargetLowering::TypePromoteInteger)
+      OpVT = TLI.getTypeToTransformTo(*DAG.getContext(), OpVT);
+    EVT XorVT = VT.isScalarInteger()
+                    ? TLI.getLegalTypeToTransformTo(*DAG.getContext(), VT)
+                    : VT;
+    KeepNotOfSetCC =
+        (OpVT.isVector() ||
+         (XorVT != MVT::i1 && TLI.isOperationLegal(ISD::SETCC, OpVT))) &&
+        TLI.isOperationLegalOrCustom(ISD::XOR, XorVT);
+  }
+  if (!KeepNotOfSetCC && TLI.isConstTrueVal(N1) &&
       isSetCCEquivalent(N0, LHS, RHS, CC, /*MatchStrict*/ true) &&
       !(VT.isVector() && TLI.hasAndNot(SDValue(N, 0)) && N->hasOneUse() &&
         N->use_begin()->getUser()->getOpcode() == ISD::AND)) {

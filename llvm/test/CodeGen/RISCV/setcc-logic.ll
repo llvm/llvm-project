@@ -1321,3 +1321,72 @@ define void @or_ule_lt1(i32 signext %0, i32 signext %1, i32 signext %2) {
 8:                                                ; preds = %8, %4
   ret void
 }
+
+define i1 @not_shared_icmp_sle(i32 signext %a, ptr %p) {
+; RV32I-LABEL: not_shared_icmp_sle:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a2, 1
+; RV32I-NEXT:    slli a2, a2, 11
+; RV32I-NEXT:    slt a2, a0, a2
+; RV32I-NEXT:    xori a0, a2, 1
+; RV32I-NEXT:    sb a2, 0(a1)
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: not_shared_icmp_sle:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a2, 1
+; RV64I-NEXT:    slli a2, a2, 11
+; RV64I-NEXT:    slt a2, a0, a2
+; RV64I-NEXT:    xori a0, a2, 1
+; RV64I-NEXT:    sb a2, 0(a1)
+; RV64I-NEXT:    ret
+  %cmp = icmp sle i32 %a, 2047
+  store i1 %cmp, ptr %p
+  %not = xor i1 %cmp, true
+  ret i1 %not
+}
+
+define i1 @not_shared_icmp_sle_multiple_uses(i32 signext %a, ptr %p, ptr %q) {
+; RV32I-LABEL: not_shared_icmp_sle_multiple_uses:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a3, 1
+; RV32I-NEXT:    slli a3, a3, 11
+; RV32I-NEXT:    slt a3, a0, a3
+; RV32I-NEXT:    xori a0, a3, 1
+; RV32I-NEXT:    sb a3, 0(a1)
+; RV32I-NEXT:    sw a3, 0(a2)
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: not_shared_icmp_sle_multiple_uses:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a3, 1
+; RV64I-NEXT:    slli a3, a3, 11
+; RV64I-NEXT:    slt a3, a0, a3
+; RV64I-NEXT:    xori a0, a3, 1
+; RV64I-NEXT:    sb a3, 0(a1)
+; RV64I-NEXT:    sw a3, 0(a2)
+; RV64I-NEXT:    ret
+  %cmp = icmp sle i32 %a, 2047
+  store i1 %cmp, ptr %p
+  %ext = zext i1 %cmp to i32
+  store i32 %ext, ptr %q
+  %not = xor i1 %cmp, true
+  ret i1 %not
+}
+
+define i1 @not_single_use_icmp_sle(i32 signext %a) {
+; RV32I-LABEL: not_single_use_icmp_sle:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 2047
+; RV32I-NEXT:    slt a0, a1, a0
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: not_single_use_icmp_sle:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, 2047
+; RV64I-NEXT:    slt a0, a1, a0
+; RV64I-NEXT:    ret
+  %cmp = icmp sle i32 %a, 2047
+  %not = xor i1 %cmp, true
+  ret i1 %not
+}

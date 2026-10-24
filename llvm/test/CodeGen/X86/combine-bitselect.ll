@@ -1035,11 +1035,11 @@ define <4 x i1> @bitselect_v4i1_loop(<4 x i32> %a0, <4 x i32> %a1) {
 ; AVX512F:       # %bb.0: # %bb
 ; AVX512F-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
 ; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512F-NEXT:    vpcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm1, %k1
-; AVX512F-NEXT:    vpcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm1, %k2
-; AVX512F-NEXT:    vptestnmd %zmm0, %zmm0, %k0 {%k2}
-; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k1 {%k1}
-; AVX512F-NEXT:    korw %k0, %k1, %k1
+; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k1
+; AVX512F-NEXT:    vpcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm1, %k0 {%k1}
+; AVX512F-NEXT:    knotw %k1, %k1
+; AVX512F-NEXT:    vpcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm1, %k1 {%k1}
+; AVX512F-NEXT:    korw %k1, %k0, %k1
 ; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
 ; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512F-NEXT:    vzeroupper
@@ -1047,11 +1047,11 @@ define <4 x i1> @bitselect_v4i1_loop(<4 x i32> %a0, <4 x i32> %a1) {
 ;
 ; AVX512VL-LABEL: bitselect_v4i1_loop:
 ; AVX512VL:       # %bb.0: # %bb
-; AVX512VL-NEXT:    vpcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %k1
-; AVX512VL-NEXT:    vpcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %k2
-; AVX512VL-NEXT:    vptestnmd %xmm0, %xmm0, %k0 {%k2}
-; AVX512VL-NEXT:    vptestmd %xmm0, %xmm0, %k1 {%k1}
-; AVX512VL-NEXT:    korw %k0, %k1, %k1
+; AVX512VL-NEXT:    vptestmd %xmm0, %xmm0, %k1
+; AVX512VL-NEXT:    vpcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %k0 {%k1}
+; AVX512VL-NEXT:    knotw %k1, %k1
+; AVX512VL-NEXT:    vpcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %k1 {%k1}
+; AVX512VL-NEXT:    korw %k1, %k0, %k1
 ; AVX512VL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512VL-NEXT:    retq
