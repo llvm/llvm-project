@@ -5146,7 +5146,7 @@ LogicalResult cir::AtomicFetchOp::verify() {
        getBinop() == cir::AtomicFetchKind::Minimum ||
        getBinop() == cir::AtomicFetchKind::MaximumNum ||
        getBinop() == cir::AtomicFetchKind::MinimumNum) &&
-      !mlir::isa<cir::FPTypeInterface>(getVal().getType()))
+      !cir::isFPOrVectorOfFPType(getVal().getType()))
     return emitError("atomic maximum, minimum, maximum_num, and minimum_num "
                      "operation could only operate on floating-point values");
 
