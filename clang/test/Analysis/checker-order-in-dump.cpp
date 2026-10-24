@@ -1,5 +1,5 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,cplusplus.Move \
-// RUN:   -analyzer-checker=core.LifetimeModeling,debug.ExprInspection \
+// RUN:   -analyzer-checker=alpha.core.LifetimeModeling,debug.ExprInspection \
 // RUN:   -analyzer-config cfg-lifetime=true \
 // RUN:   -verify %s 2>&1 | FileCheck %s
 
@@ -24,7 +24,7 @@ void testCheckersOrderInCFGDump() {
     clang_analyzer_printState();
     (void)p;
 // CHECK:      "checker_messages": [
-// CHECK-NEXT:   { "checker": "core.LifetimeModeling", "messages": [
+// CHECK-NEXT:   { "checker": "alpha.core.LifetimeModeling", "messages": [
 // CHECK-NEXT:     "LifetimeBound bindings:",
 // CHECK-NEXT:     " Origin &a contains Loan a",
 // CHECK-NEXT:     ""
