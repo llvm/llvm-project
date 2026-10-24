@@ -12,53 +12,25 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/Unicode.h"
+#include "UnicodeCharSetsGenerated.h"
 #include "llvm/Support/ConvertUTF.h"
-#include "llvm/Support/UnicodeCharRanges.h"
 
 namespace llvm {
 namespace sys {
 namespace unicode {
 
-extern const UnicodeCharSet::CharRanges GeneratedCharacterRanges;
-extern const UnicodeCharSet::CharRanges GeneratedPrintableRanges;
-extern const UnicodeCharSet::CharRanges GeneratedControlCharacterRanges;
-extern const UnicodeCharSet::CharRanges GeneratedFormatCharacterRanges;
-extern const UnicodeCharSet::CharRanges GeneratedCombiningCharacterRanges;
-extern const UnicodeCharSet::CharRanges GeneratedDoubleWidthCharacterRanges;
+const CharProperties &charProperties(int UCS) {
+  // We know 0x10FFFF is a non-character and treat any out-of-range code point
+  // the same.
+  UCS = std::min<unsigned>(UCS, 0x10FFFF);
 
-/// Unicode code points that are considered characters. This function
-/// returns true for any code point defined by Unicode as a character, false for
-/// any code point defined as a non-character, as reserved, as a surrogate code
-/// point, or not defined at all.
-bool isCharacter(int UCS) {
-  static const UnicodeCharSet Character(GeneratedCharacterRanges);
-  return Character.contains(UCS);
-}
-
-/// Unicode code points of the categories L, M, N, P, S and Zs are considered
-/// printable.
-/// In addition, U+00AD SOFT HYPHEN is also considered printable, as
-/// it's actually displayed on most terminals. \return true if the character is
-/// considered printable.
-bool isPrintable(int UCS) {
-  static const UnicodeCharSet Printables(GeneratedPrintableRanges);
-  // Clang special cases 0x00AD (SOFT HYPHEN) which is rendered as an actual
-  // hyphen in most terminals.
-  return UCS == 0x00AD || Printables.contains(UCS);
-}
-
-/// Unicode code points of the Cc category are considered
-/// control characters.
-bool isControl(int UCS) {
-  static const UnicodeCharSet Control(GeneratedControlCharacterRanges);
-  return Control.contains(UCS);
-}
-
-/// Unicode code points of the Cf category are considered
-/// formatting characters.
-bool isFormatting(int UCS) {
-  static const UnicodeCharSet Format(GeneratedFormatCharacterRanges);
-  return Format.contains(UCS);
+  namespace T = CharPropertyTables;
+  auto A = T::Lookup1[UCS >> 12];
+  auto B = T::Lookup2[A][(UCS >> 8) & 0xf];
+  auto C = T::Lookup3[B][(UCS >> 4) & 0xf];
+  auto D = T::Lookup4[C][(UCS >> 2) & 0x3];
+  auto E = T::Lookup5[D][UCS & 0x3];
+  return T::Lookup6[E];
 }
 
 /// Gets the number of positions a character is likely to occupy when output
@@ -76,17 +48,13 @@ static inline int charWidth(int UCS) {
   if (!isPrintable(UCS))
     return ErrorNonPrintableCharacter;
 
-  static const UnicodeCharSet CombiningCharacters(
-      GeneratedCombiningCharacterRanges);
-
-  if (CombiningCharacters.contains(UCS))
+  const CharProperties &P = charProperties(UCS);
+  if (P.isCombining())
     return 0;
 
-  static const UnicodeCharSet DoubleWidthCharacters(
-      GeneratedDoubleWidthCharacterRanges);
-
-  if (DoubleWidthCharacters.contains(UCS))
+  if (P.isDoubleWidth())
     return 2;
+
   return 1;
 }
 

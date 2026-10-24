@@ -1613,12 +1613,9 @@ static bool isUnicodeWhitespace(uint32_t Codepoint) {
 // https://www.unicode.org/reports/tr31/#Mathematical_Compatibility_Notation
 static bool isMathematicalExtensionID(uint32_t C, const LangOptions &LangOpts,
                                       bool IsStart, bool &IsExtension) {
-  static const llvm::sys::UnicodeCharSet MathStartChars(
-      GeneratedMathematicalNotationProfileIDStartRanges);
-  static const llvm::sys::UnicodeCharSet MathContinueChars(
-      GeneratedMathematicalNotationProfileIDContinueRanges);
-  if (MathStartChars.contains(C) ||
-      (!IsStart && MathContinueChars.contains(C))) {
+  const llvm::sys::unicode::CharProperties P =
+      llvm::sys::unicode::charProperties(C);
+  if (P.MathStart || (!IsStart && P.MathContinue)) {
     IsExtension = true;
     return true;
   }
@@ -1632,15 +1629,11 @@ static bool isAllowedIDChar(uint32_t C, const LangOptions &LangOpts,
   } else if (LangOpts.DollarIdents && '$' == C) {
     return true;
   } else if (LangOpts.CPlusPlus || LangOpts.C23) {
-    // A non-leading codepoint must have the XID_Continue property.
-    // GeneratedXIDContinueRanges doesn't contain characters also in
-    // GeneratedXIDStartRanges, so we need to check both tables.
-    // '_' doesn't have the XID_Continue property but is allowed in C and C++.
-    static const llvm::sys::UnicodeCharSet XIDStartChars(
-        GeneratedXIDStartRanges);
-    static const llvm::sys::UnicodeCharSet XIDContinueChars(
-        GeneratedXIDContinueRanges);
-    if (C == '_' || XIDStartChars.contains(C) || XIDContinueChars.contains(C))
+    // A non-leading codepoint must have the XID_Start or XID_Continue property.
+    // '_' doesn't have either property but is allowed in C and C++.
+    llvm::sys::unicode::CharProperties P =
+        llvm::sys::unicode::charProperties(C);
+    if (C == '_' || P.XIDStart || P.XIDContinue)
       return true;
     return isMathematicalExtensionID(C, LangOpts, /*IsStart=*/false,
                                      IsExtension);
@@ -1663,9 +1656,11 @@ static bool isAllowedInitiallyIDChar(uint32_t C, const LangOptions &LangOpts,
     return false;
   }
   if (LangOpts.CPlusPlus || LangOpts.C23) {
-    static const llvm::sys::UnicodeCharSet XIDStartChars(
-        GeneratedXIDStartRanges);
-    if (XIDStartChars.contains(C))
+    // A leading codepoint must have the XID_Start property.
+    // '_' doesn't have the property but is allowed in C and C++.
+    llvm::sys::unicode::CharProperties P =
+        llvm::sys::unicode::charProperties(C);
+    if (C == '_' || P.XIDStart)
       return true;
     return isMathematicalExtensionID(C, LangOpts, /*IsStart=*/true,
                                      IsExtension);
@@ -1687,14 +1682,8 @@ diagnoseMathematicalNotationInIdentifier(DiagnosticsEngine &Diags,
                                          const LangOptions &LangOpts,
                                          uint32_t C, CharSourceRange Range) {
 
-  static const llvm::sys::UnicodeCharSet MathStartChars(
-      GeneratedMathematicalNotationProfileIDStartRanges);
-  static const llvm::sys::UnicodeCharSet MathContinueChars(
-      GeneratedMathematicalNotationProfileIDContinueRanges);
-
-  (void)MathStartChars;
-  (void)MathContinueChars;
-  assert((MathStartChars.contains(C) || MathContinueChars.contains(C)) &&
+  assert((llvm::sys::unicode::charProperties(C).MathStart ||
+          llvm::sys::unicode::charProperties(C).MathContinue) &&
          "Unexpected mathematical notation codepoint");
   unsigned DiagID = LangOpts.CPlusPlus
                         ? DiagnosticIDs::getCompatDiagId(
