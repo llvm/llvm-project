@@ -56,7 +56,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVDeadRegisterDefinitionsLegacyPass(*PR);
   initializeRISCVLateBranchOptLegacyPass(*PR);
   initializeRISCVMakeCompressibleLegacyPass(*PR);
-  initializeRISCVQCRelaxMarkingPass(*PR);
+  initializeRISCVQCRelaxMarkingLegacyPass(*PR);
   initializeRISCVGatherScatterLoweringLegacyPass(*PR);
   initializeRISCVCodeGenPrepareLegacyPass(*PR);
   initializeRISCVZacasABIFixLegacyPass(*PR);
@@ -525,7 +525,7 @@ void RISCVPassConfig::addPreEmitPass2() {
   // Add QC Relaxation Markers as late as possible, and only for RV32
   if (TM->getOptLevel() != CodeGenOptLevel::None &&
       TM->getTargetTriple().isRISCV32())
-    addPass(createRISCVQCRelaxMarkingPass());
+    addPass(createRISCVQCRelaxMarkingLegacyPass());
 
   // Schedule the expansion of AMOs at the last possible moment, avoiding the
   // possibility for other passes to break the requirements for forward
