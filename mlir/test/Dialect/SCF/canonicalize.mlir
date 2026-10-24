@@ -2734,7 +2734,7 @@ func.func private @consume_pair(i32, i32)
 
 // -----
 
-// B1: bounds that look like ub < lb when read as signed must not erase an
+// bounds that look like ub < lb when read as signed must not erase an
 // unsigned scf.parallel. The unsigned trip count is 4.
 // CHECK-LABEL: func @unsigned_parallel_not_erased
 // CHECK-SAME: (%[[A:.*]]: memref<4xi64>)
@@ -2761,8 +2761,7 @@ func.func @unsigned_parallel_not_erased(%arg0: memref<4xi64>) {
 
 // -----
 
-// B2: removing the single-iteration dim must keep `unsigned` on the rebuilt
-// loop.
+// removing the single-iteration dim must keep `unsigned` on the rebuilt loop.
 // CHECK-LABEL: func @unsigned_parallel_single_iter_dim_keeps_unsigned
 // CHECK-SAME: (%[[A:.*]]: memref<4xi64>, %[[LB:.*]]: index, %[[UB:.*]]: index)
 // CHECK: %[[C1:.*]] = arith.constant 1 : index
@@ -2787,7 +2786,7 @@ func.func @unsigned_parallel_single_iter_dim_keeps_unsigned(
 
 // -----
 
-// B3: a signed outer loop and an unsigned inner loop must not be merged.
+// a signed outer loop and an unsigned inner loop must not be merged.
 // CHECK-LABEL: func @mixed_signedness_parallel_not_merged
 // CHECK-SAME: (%[[A:.*]]: memref<2x4xi64>, %[[LB:.*]]: index, %[[UB:.*]]: index)
 // CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
