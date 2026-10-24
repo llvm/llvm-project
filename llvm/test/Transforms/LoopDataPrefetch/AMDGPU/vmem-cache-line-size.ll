@@ -10,7 +10,7 @@ define amdgpu_kernel void @prefetch_two_streams_80B(ptr addrspace(1) nocapture %
 ; GFX1250-NEXT:    br label %[[FOR_BODY:.*]]
 ; GFX1250:       [[FOR_BODY]]:
 ; GFX1250-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; GFX1250-NEXT:    [[TMP0:%.*]] = shl i64 [[IV]], 2
+; GFX1250-NEXT:    [[TMP0:%.*]] = shl nuw nsw i64 [[IV]], 2
 ; GFX1250-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], 28
 ; GFX1250-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr addrspace(1) [[B]], i64 [[TMP1]]
 ; GFX1250-NEXT:    [[IDX0:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[B]], i64 [[IV]]
@@ -34,7 +34,7 @@ define amdgpu_kernel void @prefetch_two_streams_80B(ptr addrspace(1) nocapture %
 ; GFX1200-NEXT:    br label %[[FOR_BODY:.*]]
 ; GFX1200:       [[FOR_BODY]]:
 ; GFX1200-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; GFX1200-NEXT:    [[TMP0:%.*]] = shl i64 [[IV]], 2
+; GFX1200-NEXT:    [[TMP0:%.*]] = shl nuw nsw i64 [[IV]], 2
 ; GFX1200-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], 28
 ; GFX1200-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr addrspace(1) [[B]], i64 [[TMP1]]
 ; GFX1200-NEXT:    [[IDX0:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[B]], i64 [[IV]]
@@ -100,10 +100,10 @@ define amdgpu_kernel void @prefetch_two_streams_160B(ptr addrspace(1) nocapture 
 ; GFX1250-NEXT:    br label %[[FOR_BODY:.*]]
 ; GFX1250:       [[FOR_BODY]]:
 ; GFX1250-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; GFX1250-NEXT:    [[TMP0:%.*]] = shl i64 [[IV]], 2
+; GFX1250-NEXT:    [[TMP0:%.*]] = shl nuw nsw i64 [[IV]], 2
 ; GFX1250-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], 188
 ; GFX1250-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr addrspace(1) [[B]], i64 [[TMP1]]
-; GFX1250-NEXT:    [[TMP2:%.*]] = shl i64 [[IV]], 2
+; GFX1250-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[IV]], 2
 ; GFX1250-NEXT:    [[TMP3:%.*]] = add i64 [[TMP2]], 28
 ; GFX1250-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr addrspace(1) [[B]], i64 [[TMP3]]
 ; GFX1250-NEXT:    [[IDX0:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[B]], i64 [[IV]]
@@ -128,10 +128,10 @@ define amdgpu_kernel void @prefetch_two_streams_160B(ptr addrspace(1) nocapture 
 ; GFX1200-NEXT:    br label %[[FOR_BODY:.*]]
 ; GFX1200:       [[FOR_BODY]]:
 ; GFX1200-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; GFX1200-NEXT:    [[TMP0:%.*]] = shl i64 [[IV]], 2
+; GFX1200-NEXT:    [[TMP0:%.*]] = shl nuw nsw i64 [[IV]], 2
 ; GFX1200-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], 188
 ; GFX1200-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr addrspace(1) [[B]], i64 [[TMP1]]
-; GFX1200-NEXT:    [[TMP2:%.*]] = shl i64 [[IV]], 2
+; GFX1200-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[IV]], 2
 ; GFX1200-NEXT:    [[TMP3:%.*]] = add i64 [[TMP2]], 28
 ; GFX1200-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr addrspace(1) [[B]], i64 [[TMP3]]
 ; GFX1200-NEXT:    [[IDX0:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[B]], i64 [[IV]]
@@ -198,10 +198,10 @@ define amdgpu_kernel void @prefetch_two_streams_320B(ptr addrspace(1) nocapture 
 ; GFX1250-NEXT:    br label %[[FOR_BODY:.*]]
 ; GFX1250:       [[FOR_BODY]]:
 ; GFX1250-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; GFX1250-NEXT:    [[TMP0:%.*]] = shl i64 [[IV]], 2
+; GFX1250-NEXT:    [[TMP0:%.*]] = shl nuw nsw i64 [[IV]], 2
 ; GFX1250-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], 348
 ; GFX1250-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr addrspace(1) [[B]], i64 [[TMP1]]
-; GFX1250-NEXT:    [[TMP2:%.*]] = shl i64 [[IV]], 2
+; GFX1250-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[IV]], 2
 ; GFX1250-NEXT:    [[TMP3:%.*]] = add i64 [[TMP2]], 28
 ; GFX1250-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr addrspace(1) [[B]], i64 [[TMP3]]
 ; GFX1250-NEXT:    [[IDX0:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[B]], i64 [[IV]]
@@ -226,10 +226,10 @@ define amdgpu_kernel void @prefetch_two_streams_320B(ptr addrspace(1) nocapture 
 ; GFX1200-NEXT:    br label %[[FOR_BODY:.*]]
 ; GFX1200:       [[FOR_BODY]]:
 ; GFX1200-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; GFX1200-NEXT:    [[TMP0:%.*]] = shl i64 [[IV]], 2
+; GFX1200-NEXT:    [[TMP0:%.*]] = shl nuw nsw i64 [[IV]], 2
 ; GFX1200-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], 348
 ; GFX1200-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr addrspace(1) [[B]], i64 [[TMP1]]
-; GFX1200-NEXT:    [[TMP2:%.*]] = shl i64 [[IV]], 2
+; GFX1200-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[IV]], 2
 ; GFX1200-NEXT:    [[TMP3:%.*]] = add i64 [[TMP2]], 28
 ; GFX1200-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr addrspace(1) [[B]], i64 [[TMP3]]
 ; GFX1200-NEXT:    [[IDX0:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[B]], i64 [[IV]]
