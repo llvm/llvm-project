@@ -5451,22 +5451,24 @@ let Constraints = "$src1 = $dst" in
 
 multiclass SS41I_insert32<bits<8> opc, string asm, bit Is2Addr = 1> {
   def rri : SS4AIi8<opc, MRMSrcReg, (outs VR128:$dst),
-      (ins VR128:$src1, GR32:$src2, u8imm:$src3),
+      (ins VR128:$src1, GR32:$src2, vecidximm:$src3),
       !if(Is2Addr,
         !strconcat(asm, "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
         !strconcat(asm,
                    "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}")),
       [(set VR128:$dst,
-        (v4i32 (insertelt VR128:$src1, GR32:$src2, imm:$src3)))]>,
+        (v4i32 (insertelt VR128:$src1, GR32:$src2,
+                          (X86VecIdxVT imm:$src3))))]>,
       Sched<[WriteVecInsert, ReadDefault, ReadInt2Fpu]>;
   def rmi : SS4AIi8<opc, MRMSrcMem, (outs VR128:$dst),
-      (ins VR128:$src1, i32mem:$src2, u8imm:$src3),
+      (ins VR128:$src1, i32mem:$src2, vecidximm:$src3),
       !if(Is2Addr,
         !strconcat(asm, "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
         !strconcat(asm,
                    "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}")),
       [(set VR128:$dst,
-        (v4i32 (insertelt VR128:$src1, (loadi32 addr:$src2), imm:$src3)))]>,
+        (v4i32 (insertelt VR128:$src1, (loadi32 addr:$src2),
+                          (X86VecIdxVT imm:$src3))))]>,
                    Sched<[WriteVecInsert.Folded, WriteVecInsert.ReadAfterFold]>;
 }
 
@@ -5477,22 +5479,24 @@ let Constraints = "$src1 = $dst" in
 
 multiclass SS41I_insert64<bits<8> opc, string asm, bit Is2Addr = 1> {
   def rri : SS4AIi8<opc, MRMSrcReg, (outs VR128:$dst),
-      (ins VR128:$src1, GR64:$src2, u8imm:$src3),
+      (ins VR128:$src1, GR64:$src2, vecidximm:$src3),
       !if(Is2Addr,
         !strconcat(asm, "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
         !strconcat(asm,
                    "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}")),
       [(set VR128:$dst,
-        (v2i64 (insertelt VR128:$src1, GR64:$src2, imm:$src3)))]>,
+        (v2i64 (insertelt VR128:$src1, GR64:$src2,
+                          (X86VecIdxVT imm:$src3))))]>,
       Sched<[WriteVecInsert, ReadDefault, ReadInt2Fpu]>;
   def rmi : SS4AIi8<opc, MRMSrcMem, (outs VR128:$dst),
-      (ins VR128:$src1, i64mem:$src2, u8imm:$src3),
+      (ins VR128:$src1, i64mem:$src2, vecidximm:$src3),
       !if(Is2Addr,
         !strconcat(asm, "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
         !strconcat(asm,
                    "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}")),
       [(set VR128:$dst,
-        (v2i64 (insertelt VR128:$src1, (loadi64 addr:$src2), imm:$src3)))]>,
+        (v2i64 (insertelt VR128:$src1, (loadi64 addr:$src2),
+                          (X86VecIdxVT imm:$src3))))]>,
                    Sched<[WriteVecInsert.Folded, WriteVecInsert.ReadAfterFold]>;
 }
 
