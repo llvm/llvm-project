@@ -651,6 +651,9 @@ public:
 void initializeAMDGPURewriteAGPRCopyMFMALegacyPass(PassRegistry &);
 extern char &AMDGPURewriteAGPRCopyMFMALegacyID;
 
+void initializeAMDGPUSchedGPRPass(PassRegistry &);
+extern char &AMDGPUSchedGPRID;
+
 void initializeAMDGPUUniformIntrinsicCombineLegacyPass(PassRegistry &);
 extern char &AMDGPUUniformIntrinsicCombineLegacyPassID;
 FunctionPass *createAMDGPUUniformIntrinsicCombineLegacyPass();

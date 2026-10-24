@@ -129,6 +129,23 @@ def V_CNDMASK_B64_PSEUDO : VOP3Common <(outs VReg_64:$vdst),
   let usesCustomInserter = 1;
 }
 
+// Exact VGPR register hint pseudos. Identity copies carrying a target VGPR
+// register number and strict flag. The pre-RA AMDGPUSchedBank pass reads
+// these operands, sets a register allocation hint, and replaces with COPY.
+let isAsCheapAsAMove = 1, isReMaterializable = 1, hasSideEffects = 0,
+    mayLoad = 0, mayStore = 0, Size = 0 in {
+  def V_SCHEDULE_VGPR_B32  : VPseudoInstSI<(outs VGPR_32:$vdst),
+                                            (ins VGPR_32:$src, i32imm:$regnum, i32imm:$strict)>;
+  def V_SCHEDULE_VGPR_B64  : VPseudoInstSI<(outs VReg_64:$vdst),
+                                            (ins VReg_64:$src, i32imm:$regnum, i32imm:$strict)>;
+  def V_SCHEDULE_VGPR_B128 : VPseudoInstSI<(outs VReg_128:$vdst),
+                                            (ins VReg_128:$src, i32imm:$regnum, i32imm:$strict)>;
+  def V_SCHEDULE_VGPR_B256 : VPseudoInstSI<(outs VReg_256:$vdst),
+                                            (ins VReg_256:$src, i32imm:$regnum, i32imm:$strict)>;
+  def V_SCHEDULE_VGPR_B512 : VPseudoInstSI<(outs VReg_512:$vdst),
+                                            (ins VReg_512:$src, i32imm:$regnum, i32imm:$strict)>;
+}
+
 // 64-bit vector move instruction. This is mainly used by the
 // SIFoldOperands pass to enable folding of inline immediates.
 def V_MOV_B64_PSEUDO : VPseudoInstSI <(outs VReg_64:$vdst),
@@ -216,6 +233,37 @@ def STRICT_WQM : PseudoInstSI <(outs unknown:$vdst), (ins unknown:$src0)>;
 }
 
 } // End let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Uses = [EXEC]
+
+// Exact SGPR register hint pseudos. Placed outside the Uses = [EXEC] block
+// because SGPR operations do not use EXEC.
+let isAsCheapAsAMove = 1, isReMaterializable = 1, hasSideEffects = 0,
+    mayLoad = 0, mayStore = 0, Size = 0 in {
+  def S_SCHEDULE_SGPR_B32  : SPseudoInstSI<(outs SGPR_32:$sdst),
+                                            (ins SGPR_32:$src, i32imm:$regnum, i32imm:$strict)>;
+  def S_SCHEDULE_SGPR_B64  : SPseudoInstSI<(outs SGPR_64:$sdst),
+                                            (ins SGPR_64:$src, i32imm:$regnum, i32imm:$strict)>;
+  def S_SCHEDULE_SGPR_B128 : SPseudoInstSI<(outs SGPR_128:$sdst),
+                                            (ins SGPR_128:$src, i32imm:$regnum, i32imm:$strict)>;
+  def S_SCHEDULE_SGPR_B256 : SPseudoInstSI<(outs SGPR_256:$sdst),
+                                            (ins SGPR_256:$src, i32imm:$regnum, i32imm:$strict)>;
+  def S_SCHEDULE_SGPR_B512 : SPseudoInstSI<(outs SGPR_512:$sdst),
+                                            (ins SGPR_512:$src, i32imm:$regnum, i32imm:$strict)>;
+}
+
+// Exact AGPR register hint pseudos. Only valid on targets with MAI instructions.
+let isAsCheapAsAMove = 1, isReMaterializable = 1, hasSideEffects = 0,
+    mayLoad = 0, mayStore = 0, Size = 0 in {
+  def A_SCHEDULE_AGPR_B32  : VPseudoInstSI<(outs AGPR_32:$vdst),
+                                            (ins AGPR_32:$src, i32imm:$regnum, i32imm:$strict)>;
+  def A_SCHEDULE_AGPR_B64  : VPseudoInstSI<(outs AReg_64:$vdst),
+                                            (ins AReg_64:$src, i32imm:$regnum, i32imm:$strict)>;
+  def A_SCHEDULE_AGPR_B128 : VPseudoInstSI<(outs AReg_128:$vdst),
+                                            (ins AReg_128:$src, i32imm:$regnum, i32imm:$strict)>;
+  def A_SCHEDULE_AGPR_B256 : VPseudoInstSI<(outs AReg_256:$vdst),
+                                            (ins AReg_256:$src, i32imm:$regnum, i32imm:$strict)>;
+  def A_SCHEDULE_AGPR_B512 : VPseudoInstSI<(outs AReg_512:$vdst),
+                                            (ins AReg_512:$src, i32imm:$regnum, i32imm:$strict)>;
+}
 
 def WWM_COPY : SPseudoInstSI <
   (outs unknown:$dst), (ins unknown:$src)> {

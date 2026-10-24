@@ -465,6 +465,40 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(const TargetInfo &TI,
                                            /*High=*/0) ||
            SemaRef.BuiltinConstantArgRange(TheCall, /*ArgNum=*/2, /*Low=*/0,
                                            /*High=*/0);
+  case AMDGPU::BI__builtin_amdgcn_sched_vgpr:
+  case AMDGPU::BI__builtin_amdgcn_sched_sgpr:
+  case AMDGPU::BI__builtin_amdgcn_sched_agpr: {
+    if (SemaRef.checkArgCountRange(TheCall, 2, 3))
+      return true;
+    Expr *DataArg = TheCall->getArg(0);
+    QualType DataTy = DataArg->getType();
+    if (DataTy->isAnyComplexType() ||
+        !(DataTy->isArithmeticType() ||
+          (DataTy->isVectorType() && DataTy->castAs<VectorType>()
+                                         ->getElementType()
+                                         ->isArithmeticType()))) {
+      SemaRef.Diag(DataArg->getBeginLoc(),
+                   diag::err_typecheck_cond_expect_int_float)
+          << DataTy << DataArg->getSourceRange();
+      return true;
+    }
+    TheCall->setType(DataTy);
+    int MaxReg;
+    switch (BuiltinID) {
+    case AMDGPU::BI__builtin_amdgcn_sched_vgpr:
+      MaxReg = 1023;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_sched_sgpr:
+      MaxReg = 105;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_sched_agpr:
+      MaxReg = 255;
+      break;
+    default:
+      llvm_unreachable("unexpected builtin");
+    }
+    return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, MaxReg);
+  }
   default:
     return false;
   }
