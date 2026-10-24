@@ -130,7 +130,9 @@ void DAGTypeLegalizer::SoftenFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::FP_EXTEND:   R = SoftenFloatRes_FP_EXTEND(N); break;
     case ISD::STRICT_FP_ROUND:
     case ISD::FP_ROUND:    R = SoftenFloatRes_FP_ROUND(N); break;
+    case ISD::STRICT_FP16_TO_FP:
     case ISD::FP16_TO_FP:  R = SoftenFloatRes_FP16_TO_FP(N); break;
+    case ISD::STRICT_BF16_TO_FP:
     case ISD::BF16_TO_FP:  R = SoftenFloatRes_BF16_TO_FP(N); break;
     case ISD::STRICT_FPOW:
     case ISD::FPOW:        R = SoftenFloatRes_FPOW(N); break;
@@ -582,10 +584,8 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FP_EXTEND(SDNode *N) {
     }
   }
 
-  if (Op.getValueType() == MVT::bf16) {
-    // FIXME: Need ReplaceValueWith on chain in strict case
+  if (Op.getValueType() == MVT::bf16)
     return SoftenFloatRes_BF16_TO_FP(N);
-  }
 
   RTLIB::Libcall LC = RTLIB::getFPEXT(Op.getValueType(), N->getValueType(0));
   if (LC == RTLIB::UNKNOWN_LIBCALL) {
@@ -610,20 +610,27 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FP_EXTEND(SDNode *N) {
 // FIXME: Should we just use 'normal' FP_EXTEND / FP_TRUNC instead of special
 // nodes?
 SDValue DAGTypeLegalizer::SoftenFloatRes_FP16_TO_FP(SDNode *N) {
+  bool IsStrict = N->isStrictFPOpcode();
   EVT MidVT = TLI.getTypeToTransformTo(*DAG.getContext(), MVT::f32);
-  SDValue Op = N->getOperand(0);
+  SDValue Chain = IsStrict ? N->getOperand(0) : SDValue();
+  SDValue Op = N->getOperand(IsStrict ? 1 : 0);
   TargetLowering::MakeLibCallOptions CallOptions;
-  EVT OpsVT[1] = { N->getOperand(0).getValueType() };
+  EVT OpsVT[1] = {Op.getValueType()};
   CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0));
-  SDValue Res32 = TLI.makeLibCall(DAG, RTLIB::FPEXT_F16_F32, MidVT, Op,
-                                  CallOptions, SDLoc(N)).first;
-  if (N->getValueType(0) == MVT::f32)
-    return Res32;
+  std::pair<SDValue, SDValue> Tmp = TLI.makeLibCall(
+      DAG, RTLIB::FPEXT_F16_F32, MidVT, Op, CallOptions, SDLoc(N), Chain);
 
-  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
-  RTLIB::Libcall LC = RTLIB::getFPEXT(MVT::f32, N->getValueType(0));
-  assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unsupported FP_EXTEND!");
-  return TLI.makeLibCall(DAG, LC, NVT, Res32, CallOptions, SDLoc(N)).first;
+  if (N->getValueType(0) != MVT::f32) {
+    EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
+    RTLIB::Libcall LC = RTLIB::getFPEXT(MVT::f32, N->getValueType(0));
+    assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unsupported FP_EXTEND!");
+    Tmp = TLI.makeLibCall(DAG, LC, NVT, Tmp.first, CallOptions, SDLoc(N),
+                          IsStrict ? Tmp.second : SDValue());
+  }
+
+  if (IsStrict)
+    ReplaceValueWith(SDValue(N, 1), Tmp.second);
+  return Tmp.first;
 }
 
 // FIXME: Should we just use 'normal' FP_EXTEND / FP_TRUNC instead of special
@@ -631,13 +638,18 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FP16_TO_FP(SDNode *N) {
 SDValue DAGTypeLegalizer::SoftenFloatRes_BF16_TO_FP(SDNode *N) {
   assert(N->getValueType(0) == MVT::f32 &&
          "Can only soften BF16_TO_FP with f32 result");
+  bool IsStrict = N->isStrictFPOpcode();
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), MVT::f32);
-  SDValue Op = N->getOperand(0);
+  SDValue Op = N->getOperand(IsStrict ? 1 : 0);
   SDLoc DL(N);
   Op = DAG.getNode(ISD::ANY_EXTEND, DL, NVT,
                    DAG.getNode(ISD::BITCAST, DL, MVT::i16, Op));
   SDValue Res = DAG.getNode(ISD::SHL, DL, NVT, Op,
                             DAG.getShiftAmountConstant(16, NVT, DL));
+  // As in the non-strict case, this does not quiet signaling NaNs or raise
+  // exceptions, so the chain passes through.
+  if (IsStrict)
+    ReplaceValueWith(SDValue(N, 1), N->getOperand(0));
   return Res;
 }
 
