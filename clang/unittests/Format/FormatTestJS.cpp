@@ -238,7 +238,8 @@ TEST_F(FormatTestJS, UnderstandsJavaScriptOperators) {
   verifyFormat("aaaaaaa ===\n    b;", getGoogleJSStyleWithColumns(10));
   verifyFormat("a !== b;");
   verifyFormat("aaaaaaa !==\n    b;", getGoogleJSStyleWithColumns(10));
-  verifyFormat("if (a + b + c +\n"
+  verifyFormat("if (\n"
+               "    a + b + c +\n"
                "        d !==\n"
                "    e + f + g)\n"
                "  q();",
@@ -250,7 +251,8 @@ TEST_F(FormatTestJS, UnderstandsJavaScriptOperators) {
   verifyFormat("aaaaaaa >>>\n    b;", getGoogleJSStyleWithColumns(10));
   verifyFormat("a >>>= b;");
   verifyFormat("aaaaaaa >>>=\n    b;", getGoogleJSStyleWithColumns(10));
-  verifyFormat("if (a + b + c +\n"
+  verifyFormat("if (\n"
+               "    a + b + c +\n"
                "        d >>>\n"
                "    e + f + g)\n"
                "  q();",
@@ -1273,10 +1275,10 @@ TEST_F(FormatTestJS, ArrowFunctions) {
   verifyFormat("var x = (a) => a;");
   verifyFormat("return () => [];");
   verifyFormat("var aaaaaaaaaaaaaaaaaaaa = {\n"
-               "  aaaaaaaaaaaaaaaaaaaaaaaaaaaa:\n"
-               "      (aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
-               "       aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa) =>\n"
-               "          aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
+               "  aaaaaaaaaaaaaaaaaaaaaaaaaaaa: (\n"
+               "      aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
+               "      aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa) =>\n"
+               "      aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
                "};");
   verifyFormat("var a = a.aaaaaaa(\n"
                "    (a: a) => aaaaaaaaaaaaaaaaaaaaaaaaa(bbbbbbbbb) &&\n"
