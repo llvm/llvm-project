@@ -610,6 +610,10 @@ template <typename Op> static LogicalResult verifyArrayCtorDtor(Op op) {
       return op.emitOpError(
           "block argument pointee type must match the innermost array "
           "element type");
+
+    if (expectedEltPtrTy.getAddrSpace() != ptrTy.getAddrSpace())
+      return op.emitOpError(
+          "block argument address space must match the 'addr' address space");
   }
 
   return success();

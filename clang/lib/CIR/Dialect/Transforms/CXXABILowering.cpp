@@ -680,7 +680,7 @@ mlir::LogicalResult CIRDeleteArrayOpABILowering::matchAndRewrite(
   // total-size computation), so it must dominate both regions.
   mlir::Value deletePtr;
   mlir::Value numElements;
-  cir::PointerType ptrTy;
+  auto ptrTy = mlir::cast<cir::PointerType>(loweredAddress.getType());
   clang::CharUnits cookieSize;
   mlir::DataLayout dl(op->getParentOfType<mlir::ModuleOp>());
   unsigned ptrWidth =
@@ -688,14 +688,14 @@ mlir::LogicalResult CIRDeleteArrayOpABILowering::matchAndRewrite(
   cir::IntType sizeTy = cirBuilder.getUIntNTy(ptrWidth);
 
   if (cookieRequired) {
-    ptrTy = mlir::cast<cir::PointerType>(loweredAddress.getType());
     clang::CharUnits elementAlign =
         clang::CharUnits::fromQuantity(op.getElementAlign());
     cxxABI.readArrayCookie(loc, loweredAddress, elementAlign, dl, cirBuilder,
                            numElements, deletePtr, cookieSize);
   } else {
-    deletePtr = cir::CastOp::create(rewriter, loc, cirBuilder.getVoidPtrTy(),
-                                    cir::CastKind::bitcast, loweredAddress);
+    deletePtr = cir::CastOp::create(
+        rewriter, loc, cirBuilder.getVoidPtrTy(ptrTy.getAddrSpace()),
+        cir::CastKind::bitcast, loweredAddress);
   }
 
   // Create a cleanup scope to wrap the ArrayDtor operation (if needed) and
@@ -722,12 +722,11 @@ mlir::LogicalResult CIRDeleteArrayOpABILowering::matchAndRewrite(
       /*bodyBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location l) {
         if (dtorFn) {
-          auto eltPtrTy = cir::PointerType::get(ptrTy.getPointee());
           auto arrayDtor = cir::ArrayDtor::create(
               b, l, loweredAddress, numElements,
               [&](mlir::OpBuilder &bb, mlir::Location ll) {
                 mlir::Value arg =
-                    bb.getInsertionBlock()->addArgument(eltPtrTy, ll);
+                    bb.getInsertionBlock()->addArgument(ptrTy, ll);
                 auto dtorCall = cir::CallOp::create(
                     bb, ll, dtorFn, cir::VoidType(), mlir::ValueRange{arg});
                 dtorCall.setCallingConv(getCalleeCallingConv(dtorFn));

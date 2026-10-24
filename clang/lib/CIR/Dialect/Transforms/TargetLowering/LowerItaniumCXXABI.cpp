@@ -916,7 +916,9 @@ mlir::Value LowerItaniumCXXABI::readArrayCookieImpl(
     clang::CharUnits cookieAlignment, const mlir::DataLayout &dataLayout,
     CIRBaseBuilderTy &builder) const {
   unsigned ptrSizeInBits = getPtrSizeInBits();
-  auto u8PtrTy = builder.getPointerTo(builder.getUIntNTy(8));
+  mlir::ptr::MemorySpaceAttrInterface addrSpace =
+      mlir::cast<cir::PointerType>(allocPtr.getType()).getAddrSpace();
+  auto u8PtrTy = builder.getPointerTo(builder.getUIntNTy(8), addrSpace);
   auto ptrDiffTy = builder.getSIntNTy(ptrSizeInBits);
   auto sizeTy = builder.getUIntNTy(ptrSizeInBits);
 
@@ -935,7 +937,7 @@ mlir::Value LowerItaniumCXXABI::readArrayCookieImpl(
     countAlignment = cookieAlignment.alignmentAtOffset(countOffset);
   }
 
-  auto countPtrTy = cir::PointerType::get(sizeTy);
+  auto countPtrTy = cir::PointerType::get(sizeTy, addrSpace);
   mlir::Value countPtr = cir::CastOp::create(
       builder, loc, countPtrTy, cir::CastKind::bitcast, countBytePtr);
   return cir::LoadOp::create(
