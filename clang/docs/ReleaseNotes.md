@@ -239,6 +239,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   and deprecate `memory_order::consume`) by removing support for the
   `[[carries_dependency]]` attribute.
 
+- Clang now supports iterating expansion statements, which is part of [P1306R5](https://wg21.link/P1306R5) Expansion Statements. This
+  means that all three types of expansion statements (enumerating, iterating, and destructuring) are now supported.
+
 #### C++23 Feature Support
 
 #### C++20 Feature Support

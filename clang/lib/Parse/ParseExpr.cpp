@@ -844,6 +844,7 @@ Parser::ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand,
     Res = Actions.ActOnCXXNullPtrLiteral(ConsumeToken());
     break;
 
+  case tok::annot_expr:
   case tok::annot_primary_expr:
   case tok::annot_overload_set:
     Res = getExprAnnotation(Tok);
@@ -869,6 +870,14 @@ Parser::ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand,
     return ParseCastExpression(ParseKind, isAddressOfOperand,
                                CorrectionBehavior, isVectorLiteral,
                                NotPrimaryExpression);
+  }
+
+  case tok::annot_value_decl: {
+    auto *VD = static_cast<ValueDecl *>(Tok.getAnnotationValue());
+    SourceLocation Loc = Tok.getLocation();
+    ConsumeAnnotationToken();
+    return Actions.BuildDeclRefExpr(VD, VD->getType().getNonReferenceType(),
+                                    VK_LValue, Loc);
   }
 
   case tok::kw___super:
