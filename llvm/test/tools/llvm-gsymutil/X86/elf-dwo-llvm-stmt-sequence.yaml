@@ -1,0 +1,156 @@
+# RUN: rm -rf %t && split-file %s %t
+# RUN: sed -e "s|DIR|%/t|g" %t/main.yaml > %t/main2.yaml
+# RUN: yaml2obj %t/main2.yaml -o %t/main.o
+# RUN: yaml2obj %t/my_dwo.yaml -o %t/my_dwo.o
+# RUN: llvm-objcopy --rename-section .debug_info=.debug_info.dwo --rename-section .debug_abbrev=.debug_abbrev.dwo %t/my_dwo.o %t/my_dwo.dwo
+# RUN: llvm-gsymutil --convert %t/main.o -o %t/main.gsym 2>&1 | FileCheck %s --check-prefix=CONVERT
+# RUN: llvm-gsymutil %t/main.gsym 2>&1 | FileCheck %s --check-prefix=DUMP
+
+# CONVERT-NOT: error:
+# CONVERT: Loaded 1 functions from DWARF.
+
+# DUMP:      FunctionInfo @ {{0x[0-9a-f]+}}: [0x0000000000001000 - 0x0000000000001100) "bar"
+# DUMP-NEXT: LineTable:
+# DUMP-NEXT:   0x0000000000001000 {{.*}}main.cpp:10
+# DUMP-NEXT:   0x0000000000001010 {{.*}}main.cpp:11
+
+#--- main.yaml
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+DWARF:
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_string
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_udata
+            - Attribute:       DW_AT_stmt_list
+              Form:            DW_FORM_sec_offset
+            - Attribute:       DW_AT_comp_dir
+              Form:            DW_FORM_string
+            - Attribute:       DW_AT_GNU_dwo_name
+              Form:            DW_FORM_string
+            - Attribute:       DW_AT_GNU_dwo_id
+              Form:            DW_FORM_data8
+  debug_info:
+    - Version:         4
+      AbbrevTableID:   0
+      AbbrOffset:      0x0
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x1
+          Values:
+            - CStr:            'main.cpp'
+            - Value:           0x4 # DW_LANG_C_plus_plus
+            - Value:           0x1d # DW_AT_stmt_list (offset of second line table)
+            - CStr:            'DIR'
+            - CStr:            'my_dwo.dwo'
+            - Value:           0x1122334455667788 # DWO ID
+  debug_line:
+    # Line table 1 (dummy)
+    - Version:         2
+      MinInstLength:   1
+      DefaultIsStmt:   1
+      LineBase:        251
+      LineRange:       14
+      OpcodeBase:      13
+      StandardOpcodeLengths: [ 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 ]
+      Files:           []
+      Opcodes:         []
+    # Line table 2 (real)
+    - Version:         2
+      MinInstLength:   1
+      DefaultIsStmt:   1
+      LineBase:        251
+      LineRange:       14
+      OpcodeBase:      13
+      StandardOpcodeLengths: [ 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 ]
+      Files:
+        - Name:            main.cpp
+          DirIdx:          0
+          ModTime:         0
+          Length:          0
+      Opcodes:
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          9
+          SubOpcode:       DW_LNE_set_address
+          Data:            0x1000
+        - Opcode:          DW_LNS_advance_line
+          SData:           9
+          Data:            0
+        - Opcode:          DW_LNS_copy
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            16
+        - Opcode:          DW_LNS_advance_line
+          SData:           1
+          Data:            0
+        - Opcode:          DW_LNS_copy
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            240
+        - Opcode:          DW_LNS_advance_line
+          SData:           2
+          Data:            0
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          1
+          SubOpcode:       DW_LNE_end_sequence
+          Data:            0
+
+#--- my_dwo.yaml
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+DWARF:
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_udata
+            - Attribute:       DW_AT_GNU_dwo_id
+              Form:            DW_FORM_data8
+        - Code:            0x2
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_string
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_LLVM_stmt_sequence
+              Form:            DW_FORM_sec_offset
+  debug_info:
+    - Version:         4
+      AbbrevTableID:   0
+      AbbrOffset:      0x0
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x1
+          Values:
+            - Value:           0x4 # DW_LANG_C_plus_plus
+            - Value:           0x1122334455667788 # DWO ID
+        - AbbrCode:        0x2
+          Values:
+            - CStr:            'bar'
+            - Value:           0x1000
+            - Value:           0x1100
+            - Value:           0x29 # StmtSeqOffset relative to CU line table
+        - AbbrCode:        0x0
