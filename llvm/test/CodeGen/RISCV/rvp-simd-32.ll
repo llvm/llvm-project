@@ -4244,8 +4244,7 @@ define <2 x i16> @test_pslidedownx_v2i16(<2 x i16> %rd, <2 x i16> %rs1,
 define i32 @test_pm2adda_v2i16_i32(i32 %rd, <2 x i16> %a, <2 x i16> %b) {
 ; RV32-LABEL: test_pm2adda_v2i16_i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    pm2add.h a1, a1, a2
-; RV32-NEXT:    add a0, a0, a1
+; RV32-NEXT:    pm2adda.h a0, a1, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_pm2adda_v2i16_i32:
@@ -4260,8 +4259,7 @@ define i32 @test_pm2adda_v2i16_i32(i32 %rd, <2 x i16> %a, <2 x i16> %b) {
 define i32 @test_pm2adda_x_v2i16_i32(i32 %rd, <2 x i16> %a,
 ; RV32-LABEL: test_pm2adda_x_v2i16_i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    pm2add.hx a1, a1, a2
-; RV32-NEXT:    add a0, a0, a1
+; RV32-NEXT:    pm2adda.hx a0, a1, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_pm2adda_x_v2i16_i32:
@@ -4278,8 +4276,7 @@ define i32 @test_pm2adda_x_v2i16_i32(i32 %rd, <2 x i16> %a,
 define i32 @test_pm2addau_v2i16_i32(i32 %rd, <2 x i16> %a, <2 x i16> %b) {
 ; RV32-LABEL: test_pm2addau_v2i16_i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    pm2addu.h a1, a1, a2
-; RV32-NEXT:    add a0, a0, a1
+; RV32-NEXT:    pm2addau.h a0, a1, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_pm2addau_v2i16_i32:
@@ -4295,8 +4292,7 @@ define i32 @test_pm2addau_v2i16_i32(i32 %rd, <2 x i16> %a, <2 x i16> %b) {
 define i32 @test_pmq2adda_v2i16_i32(i32 %rd, <2 x i16> %a,
 ; RV32-LABEL: test_pmq2adda_v2i16_i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    pmq2add.h a1, a1, a2
-; RV32-NEXT:    add a0, a0, a1
+; RV32-NEXT:    pmq2adda.h a0, a1, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_pmq2adda_v2i16_i32:
@@ -4313,8 +4309,7 @@ define i32 @test_pmq2adda_v2i16_i32(i32 %rd, <2 x i16> %a,
 define i32 @test_pmqr2adda_v2i16_i32(i32 %rd, <2 x i16> %a,
 ; RV32-LABEL: test_pmqr2adda_v2i16_i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    pmqr2add.h a1, a1, a2
-; RV32-NEXT:    add a0, a0, a1
+; RV32-NEXT:    pmqr2adda.h a0, a1, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_pmqr2adda_v2i16_i32:
@@ -4331,8 +4326,7 @@ define i32 @test_pmqr2adda_v2i16_i32(i32 %rd, <2 x i16> %a,
 define i32 @test_pm2suba_v2i16_i32(i32 %rd, <2 x i16> %a, <2 x i16> %b) {
 ; RV32-LABEL: test_pm2suba_v2i16_i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    pm2sub.h a1, a1, a2
-; RV32-NEXT:    add a0, a0, a1
+; RV32-NEXT:    pm2suba.h a0, a1, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_pm2suba_v2i16_i32:
@@ -4348,8 +4342,7 @@ define i32 @test_pm2suba_v2i16_i32(i32 %rd, <2 x i16> %a, <2 x i16> %b) {
 define i32 @test_pm2suba_x_v2i16_i32(i32 %rd, <2 x i16> %a,
 ; RV32-LABEL: test_pm2suba_x_v2i16_i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    pm2sub.hx a1, a1, a2
-; RV32-NEXT:    add a0, a0, a1
+; RV32-NEXT:    pm2suba.hx a0, a1, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_pm2suba_x_v2i16_i32:
@@ -4366,8 +4359,7 @@ define i32 @test_pm2suba_x_v2i16_i32(i32 %rd, <2 x i16> %a,
 define i32 @test_pm2addasu_v2i16_i32(i32 %rd, <2 x i16> %a,
 ; RV32-LABEL: test_pm2addasu_v2i16_i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    pm2addsu.h a1, a1, a2
-; RV32-NEXT:    add a0, a0, a1
+; RV32-NEXT:    pm2addasu.h a0, a1, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_pm2addasu_v2i16_i32:
