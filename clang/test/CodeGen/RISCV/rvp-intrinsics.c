@@ -8025,6 +8025,7 @@ uint32x2_t test_pnclipup_u32x2(uint64_t rs1, uint64_t rs2) {
 int32_t test_mqacc_h00_i32(int32_t rd, int16x2_t rs1, int16x2_t rs2) {
   return __riscv_mqacc_h00_i32(rd, rs1, rs2);
 }
+
 // RV32-LABEL: define dso_local i32 @test_mqacc_h01_i32(
 // RV32-SAME: i32 noundef [[RD:%.*]], i32 noundef [[RS1_COERCE:%.*]], i32 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
 // RV32-NEXT:  [[ENTRY:.*:]]
