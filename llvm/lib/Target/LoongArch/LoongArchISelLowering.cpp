@@ -12014,7 +12014,48 @@ void LoongArchTargetLowering::computeKnownBitsForTargetNode(
     Known.Zero.setBitsFrom(VTBits);
     break;
   }
+  case LoongArchISD::BSTRINS: {
+    // BSTRINS X, Y, msb, lsb: replace X[msb:lsb] with Y[msb-lsb:0].
+    unsigned Msb = Op.getConstantOperandVal(2);
+    unsigned Lsb = Op.getConstantOperandVal(3);
+    Known = DAG.computeKnownBits(Op.getOperand(0), Depth + 1);
+    KnownBits Known2 = DAG.computeKnownBits(Op.getOperand(1), Depth + 1);
+    Known.insertBits(Known2.trunc(Msb - Lsb + 1), Lsb);
+    break;
   }
+  case LoongArchISD::BSTRPICK: {
+    // BSTRPICK X, msb, lsb: zero-extend X[msb:lsb].
+    unsigned BitWidth = Known.getBitWidth();
+    unsigned Msb = Op.getConstantOperandVal(1);
+    unsigned Lsb = Op.getConstantOperandVal(2);
+    Known = DAG.computeKnownBits(Op.getOperand(0), Depth + 1);
+    Known = Known.extractBits(Msb - Lsb + 1, Lsb).zext(BitWidth);
+    break;
+  }
+  }
+}
+
+unsigned LoongArchTargetLowering::ComputeNumSignBitsForTargetNode(
+    SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
+    unsigned Depth) const {
+  switch (Op.getOpcode()) {
+  default:
+    break;
+  case LoongArchISD::BSTRINS: {
+    unsigned BitWidth = Op.getScalarValueSizeInBits();
+    unsigned Msb = Op.getConstantOperandVal(2);
+    unsigned Lsb = Op.getConstantOperandVal(3);
+    // The bits above msb come from X.
+    if (Msb != BitWidth - 1) {
+      unsigned Tmp = DAG.ComputeNumSignBits(Op.getOperand(0), Depth + 1);
+      return std::min(Tmp, BitWidth - 1 - Msb);
+    }
+    // The high bits come from Y shifted left by lsb.
+    unsigned Tmp = DAG.ComputeNumSignBits(Op.getOperand(1), Depth + 1);
+    return Tmp > Lsb ? Tmp - Lsb : 1;
+  }
+  }
+  return 1;
 }
 
 bool LoongArchTargetLowering::SimplifyDemandedBitsForTargetNode(

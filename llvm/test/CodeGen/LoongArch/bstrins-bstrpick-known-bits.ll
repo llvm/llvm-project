@@ -19,7 +19,6 @@ define i32 @utf8_rev_col(ptr %begin, ptr %end) nounwind {
 ; CHECK-NEXT:  # %bb.2: # %one
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    addi.d $a1, $a1, -1
-; CHECK-NEXT:    addi.w $a4, $a4, 0
 ; CHECK-NEXT:    bne $a4, $a3, .LBB0_4
 ; CHECK-NEXT:    b .LBB0_5
 ; CHECK-NEXT:    .p2align 4, , 16
@@ -29,7 +28,6 @@ define i32 @utf8_rev_col(ptr %begin, ptr %end) nounwind {
 ; CHECK-NEXT:    addi.d $a1, $a1, -2
 ; CHECK-NEXT:    andi $a5, $a5, 31
 ; CHECK-NEXT:    bstrins.d $a4, $a5, 63, 6
-; CHECK-NEXT:    addi.w $a4, $a4, 0
 ; CHECK-NEXT:    beq $a4, $a3, .LBB0_5
 ; CHECK-NEXT:  .LBB0_4: # %latch
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
@@ -90,8 +88,7 @@ define i32 @bstrins_low_sext(i1 %c, i32 signext %x, i64 %y, i32 signext %z) noun
 ; CHECK-NEXT:    bstrins.d $a1, $a0, 7, 0
 ; CHECK-NEXT:    move $a3, $a1
 ; CHECK-NEXT:  .LBB1_2: # %b
-; CHECK-NEXT:    addi.w $a0, $a3, 0
-; CHECK-NEXT:    addi.d $a0, $a0, -10
+; CHECK-NEXT:    addi.d $a0, $a3, -10
 ; CHECK-NEXT:    sltui $a0, $a0, 1
 ; CHECK-NEXT:    ret
 entry:
@@ -122,7 +119,6 @@ define i64 @bstrpick_zext(i1 %c, i64 %x, i64 %y) nounwind {
 ; CHECK-NEXT:  # %bb.1: # %a
 ; CHECK-NEXT:    bstrpick.d $a0, $a1, 23, 8
 ; CHECK-NEXT:  .LBB2_2: # %b
-; CHECK-NEXT:    bstrpick.d $a0, $a0, 31, 0
 ; CHECK-NEXT:    ret
 entry:
   br i1 %c, label %a, label %b
