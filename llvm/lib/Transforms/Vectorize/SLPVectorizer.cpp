@@ -509,6 +509,7 @@ public:
     TransformedToGatherNodes.clear();
     OperandsToTreeEntry.clear();
     ScalarsInSplitNodes.clear();
+    CopyableLoadsToTreeEntries.clear();
     MustGather.clear();
     ReassocScalarToTreeEntries.clear();
     KeptReassocScalars.clear();
@@ -2943,6 +2944,14 @@ private:
 
     Instruction *getAltOp() const { return S.getAltOp(); }
 
+    /// Returns the first load of the loads node, the base of the wide load.
+    /// The main op of the copyable loads may be not the first load.
+    LoadInst *getFirstLoad() const {
+      if (!hasCopyableElements())
+        return cast<LoadInst>(getMainOp());
+      return cast<LoadInst>(*find_if(Scalars, IsaPred<LoadInst>));
+    }
+
     /// The main/alternate opcodes for the list of instructions.
     unsigned getOpcode() const { return S.getOpcode(); }
 
@@ -3239,8 +3248,10 @@ private:
                     return UndefValue::get(VL.front()->getType());
                   return VL[Idx];
                 });
-      InstructionsState S = getSameOpcode(Last->Scalars, *TLI);
-      if (S)
+      // The main op of the copyable loads stays in the block of the wide load.
+      if (S && S.areInstructionsWithCopyableElements())
+        Last->setOperations(S);
+      else if (InstructionsState S = getSameOpcode(Last->Scalars, *TLI))
         Last->setOperations(S);
       Last->ReorderIndices.append(ReorderIndices.begin(), ReorderIndices.end());
     }
@@ -3271,6 +3282,9 @@ private:
                VL, [](Value *V) { return !isa<PoisonValue>(V); })) {
         if (S.isCopyableElement(V)) {
           Last->addCopyableElement(V);
+          if (isa<LoadInst>(V) && S.getOpcode() == Instruction::Load &&
+              Processed.insert(V).second)
+            CopyableLoadsToTreeEntries[V].push_back(Last);
           continue;
         }
         auto It = ScalarToTreeEntries.find(V);
@@ -3426,6 +3440,9 @@ private:
   /// Scalars, used in split vectorize nodes.
   SmallDenseMap<Value *, SmallVector<TreeEntry *>> ScalarsInSplitNodes;
 
+  /// Copyable loads from the predecessor block, covered by the wide loads.
+  SmallDenseMap<Value *, SmallVector<TreeEntry *>> CopyableLoadsToTreeEntries;
+
   /// Maps a value to the proposed vectorizable size.
   SmallDenseMap<Value *, unsigned> InstrElementSize;
 
@@ -3562,6 +3579,21 @@ private:
     // Store the result in the cache.
     Res.first->getSecond() = Aliased;
     return Aliased;
+  }
+
+  /// Checks if the memory of the simple load \p LI may be modified after it
+  /// in its block or anywhere in the successor block \p BB.
+  bool isLoadMemoryModified(LoadInst *LI, BasicBlock *BB) {
+    MemoryLocation Loc = MemoryLocation::get(LI);
+    unsigned NumWrites = 0;
+    return any_of(concat<Instruction>(make_range(std::next(LI->getIterator()),
+                                                 LI->getParent()->end()),
+                                      *BB),
+                  [&](Instruction &I) {
+                    return I.mayWriteToMemory() &&
+                           (++NumWrites > MaxMemDepDistance ||
+                            isAliased(Loc, LI, &I));
+                  });
   }
 
   /// Returns true if the may-alias dependency between simple load/store
@@ -8116,8 +8148,20 @@ void BoUpSLP::buildExternalUses(
           continue;
         }
 
+        // The wide load of the copyable loads uses the pointer of the first
+        // load.
+        auto CIt = CopyableLoadsToTreeEntries.find(UserInst);
+        const bool IsCopyableBasePtr =
+            CIt != CopyableLoadsToTreeEntries.end() &&
+            cast<LoadInst>(UserInst)->getPointerOperand() == Scalar &&
+            any_of(CIt->second, [&](const TreeEntry *UseEntry) {
+              return UseEntry->getFirstLoad() == UserInst &&
+                     !DeletedNodes.contains(UseEntry) &&
+                     !TransformedToGatherNodes.contains(UseEntry);
+            });
         // Skip in-tree scalars that become vectors
         if (ArrayRef<TreeEntry *> UseEntries = getTreeEntries(U);
+            IsCopyableBasePtr ||
             any_of(UseEntries, [this](const TreeEntry *UseEntry) {
               return !DeletedNodes.contains(UseEntry) &&
                      !TransformedToGatherNodes.contains(UseEntry);
@@ -8125,18 +8169,19 @@ void BoUpSLP::buildExternalUses(
           // Some in-tree scalars will remain as scalar in vectorized
           // instructions. If that is the case, the one in FoundLane will
           // be used.
-          if (!((Scalar->getType()->getScalarType()->isPointerTy() &&
-                 isa<LoadInst, StoreInst>(UserInst)) ||
-                isa<CallInst>(UserInst)) ||
-              all_of(UseEntries, [&](TreeEntry *UseEntry) {
-                if (DeletedNodes.contains(UseEntry) ||
-                    TransformedToGatherNodes.contains(UseEntry))
-                  return true;
-                return UseEntry->State == TreeEntry::ScatterVectorize ||
-                       !doesInTreeUserNeedToExtract(
-                           Scalar, getRootEntryInstruction(*UseEntry), TLI,
-                           TTI);
-              })) {
+          if (!IsCopyableBasePtr &&
+              (!((Scalar->getType()->getScalarType()->isPointerTy() &&
+                  isa<LoadInst, StoreInst>(UserInst)) ||
+                 isa<CallInst>(UserInst)) ||
+               all_of(UseEntries, [&](TreeEntry *UseEntry) {
+                 if (DeletedNodes.contains(UseEntry) ||
+                     TransformedToGatherNodes.contains(UseEntry))
+                   return true;
+                 return UseEntry->State == TreeEntry::ScatterVectorize ||
+                        !doesInTreeUserNeedToExtract(
+                            Scalar, getRootEntryInstruction(*UseEntry), TLI,
+                            TTI);
+               }))) {
             LLVM_DEBUG(dbgs() << "SLP: \tInternal user will be removed:" << *U
                               << ".\n");
             assert(none_of(UseEntries,
@@ -8449,8 +8494,7 @@ static void gatherPossiblyVectorizableLoads(
         for (auto [Idx, Data] :
              make_filter_range(enumerate(GatheredLoads), IsFromStart)) {
           ToAdd.clear();
-          if (LI->getParent() != Data.front().first->getParent() ||
-              LI->getType() != Data.front().first->getType())
+          if (LI->getType() != Data.front().first->getType())
             continue;
           std::optional<int64_t> Dist =
               R.getPointersDiff(LI->getType(), LI->getPointerOperand(),
@@ -8519,19 +8563,17 @@ static void gatherPossiblyVectorizableLoads(
           };
       if (!AddNew) {
         LoadInst *LI = Data.front().first;
-        It = find_if(
-            GatheredLoads, [&](ArrayRef<std::pair<LoadInst *, int64_t>> PD) {
-              return PD.front().first->getParent() == LI->getParent() &&
-                     PD.front().first->getType() == LI->getType();
-            });
+        It = find_if(GatheredLoads,
+                     [&](ArrayRef<std::pair<LoadInst *, int64_t>> PD) {
+                       return PD.front().first->getType() == LI->getType();
+                     });
         while (It != GatheredLoads.end()) {
           AddNewLoads(*It);
-          It = std::find_if(
-              std::next(It), GatheredLoads.end(),
-              [&](ArrayRef<std::pair<LoadInst *, int64_t>> PD) {
-                return PD.front().first->getParent() == LI->getParent() &&
-                       PD.front().first->getType() == LI->getType();
-              });
+          It = std::find_if(std::next(It), GatheredLoads.end(),
+                            [&](ArrayRef<std::pair<LoadInst *, int64_t>> PD) {
+                              return PD.front().first->getType() ==
+                                     LI->getType();
+                            });
         }
       }
       GatheredLoads.emplace_back().append(Data.begin(), Data.end());
@@ -9543,7 +9585,16 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
         });
       });
     };
-    switch (canVectorizeLoads(VL, VL0, CurrentOrder, PointerOps, SPtrInfo)) {
+    LoadsState LS =
+        canVectorizeLoads(VL, VL0, CurrentOrder, PointerOps, SPtrInfo);
+    // The copyable loads from the predecessor block are covered only by the
+    // consecutive wide load in the successor block.
+    for (auto *LI : make_isa_range<LoadInst>(VL))
+      if (S.isCopyableElement(LI) &&
+          (LS != LoadsState::Vectorize ||
+           isLoadMemoryModified(LI, VL0->getParent())))
+        return TreeEntry::NeedToGather;
+    switch (LS) {
     case LoadsState::Vectorize:
       return TreeEntry::Vectorize;
     case LoadsState::CompressVectorize:
@@ -11313,6 +11364,25 @@ public:
       if (Loads.size() > 1 && allSameBlock(Loads)) {
         auto *LI = cast<LoadInst>(Loads.front());
         return InstructionsState(LI, LI, /*HasCopyables=*/true);
+      }
+    }
+    // The loads from the single predecessor block are the copyable elements,
+    // covered by a single wide load in the successor block.
+    if (!S && R.Opts.slp_copyable_elements && all_of(VL, IsaPred<LoadInst>)) {
+      auto *LI = cast<LoadInst>(VL.front());
+      const auto *It = find_if(VL, [&](Value *V) {
+        return cast<LoadInst>(V)->getParent() != LI->getParent();
+      });
+      if (It != VL.end()) {
+        if (LI->getParent()->getSinglePredecessor() !=
+            cast<LoadInst>(*It)->getParent())
+          LI = cast<LoadInst>(*It);
+        BasicBlock *Pred = LI->getParent()->getSinglePredecessor();
+        if (Pred && all_of(VL, [&](Value *V) {
+              BasicBlock *BB = cast<LoadInst>(V)->getParent();
+              return BB == LI->getParent() || BB == Pred;
+            }))
+          return InstructionsState(LI, LI, /*HasCopyables=*/true);
       }
     }
     if (S && S.isAltShuffle()) {
@@ -14212,7 +14282,7 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
           SrcTE->ReorderIndices.empty() && SrcTE->ReuseShuffleIndices.empty() &&
           SrcTE->getOpcode() == Instruction::Load && !SrcTE->isAltShuffle() &&
           all_of(SrcTE->Scalars, [](Value *V) { return V->hasOneUse(); })) {
-        auto *LI = cast<LoadInst>(SrcTE->getMainOp());
+        LoadInst *LI = SrcTE->getFirstLoad();
         IntrinsicCostAttributes CostAttrs(Intrinsic::bswap, SrcType, {SrcType});
         InstructionCost BSwapCost =
             TTI->getMemoryOpCost(Instruction::Load, SrcType, LI->getAlign(),
@@ -14236,7 +14306,7 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
         SrcTE->ReuseShuffleIndices.empty() &&
         SrcTE->getOpcode() == Instruction::Load && !SrcTE->isAltShuffle() &&
         all_of(SrcTE->Scalars, [](Value *V) { return V->hasOneUse(); })) {
-      auto *LI = cast<LoadInst>(SrcTE->getMainOp());
+      LoadInst *LI = SrcTE->getFirstLoad();
       BitcastCost =
           TTI->getMemoryOpCost(Instruction::Load, SrcType, LI->getAlign(),
                                LI->getPointerAddressSpace(), CostKind,
@@ -15263,16 +15333,27 @@ void BoUpSLP::transformNodes() {
                                     return !isVectorized(LI) && !isDeleted(LI);
                                   }))) &&
         !isSplat(E.Scalars)) {
+      // The loads from the single predecessor block are gathered with the
+      // loads from the block of the user node, if the wide load there may
+      // cover them.
+      BasicBlock *UserBB =
+          E.UserTreeIndex && E.UserTreeIndex.UserTE->hasState()
+              ? E.UserTreeIndex.UserTE->getMainOp()->getParent()
+              : nullptr;
       for (Value *V : E.Scalars) {
         auto *LI = dyn_cast<LoadInst>(V);
         if (!LI)
           continue;
         if (isDeleted(LI) || isVectorized(LI) || !LI->isSimple())
           continue;
+        BasicBlock *BB = LI->getParent();
+        if (UserBB && UserBB->getSinglePredecessor() == BB &&
+            !isLoadMemoryModified(LI, UserBB))
+          BB = UserBB;
         gatherPossiblyVectorizableLoads(
             *this, V, *DL, *SE, *TTI,
             GatheredLoads[std::make_tuple(
-                LI->getParent(),
+                BB,
                 getUnderlyingObject(LI->getPointerOperand(),
                                     Opts.slp_recursion_max_depth),
                 LI->getType())]);
@@ -17596,7 +17677,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     auto GetVectorCost = [&, &TTI = *TTI](InstructionCost CommonCost) {
       const TreeEntry *LhsTE = getOperandEntry(E, /*Idx=*/0);
       const TreeEntry *LoadTE = getOperandEntry(LhsTE, /*Idx=*/0);
-      auto *LI0 = cast<LoadInst>(LoadTE->getMainOp());
+      LoadInst *LI0 = LoadTE->getFirstLoad();
       auto *SrcType = IntegerType::getIntNTy(
           ScalarTy->getContext(),
           DL->getTypeSizeInBits(LI0->getType()) * EntryVF);
@@ -17843,11 +17924,13 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
               LI0->getPointerAddressSpace(), CostKind);
 
         } else {
+          LoadInst *FirstLI = E->getFirstLoad();
           VecLdCost = TTI->getMemoryOpCost(
               Instruction::Load, VecTy,
-              commonAlignment(LI0->getAlign(), getVectorLoadShift(E->Scalars)),
-              LI0->getPointerAddressSpace(), CostKind,
-              TTI::getOperandInfo(LI0->getPointerOperand()));
+              commonAlignment(FirstLI->getAlign(),
+                              getVectorLoadShift(E->Scalars)),
+              FirstLI->getPointerAddressSpace(), CostKind,
+              TTI::getOperandInfo(FirstLI->getPointerOperand()));
         }
         break;
       case TreeEntry::StridedVectorize: {
@@ -21705,7 +21788,12 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
         VToTEs.insert(VTE);
       }
     }
-    if (ArrayRef<TreeEntry *> VTEs = getTreeEntries(V); !VTEs.empty()) {
+    ArrayRef<TreeEntry *> VTEs = getTreeEntries(V);
+    // The wide loads also hold the copyable loads.
+    if (auto It = CopyableLoadsToTreeEntries.find(V);
+        VTEs.empty() && It != CopyableLoadsToTreeEntries.end())
+      VTEs = It->second;
+    if (!VTEs.empty()) {
       const auto *It = find_if(VTEs, [&, MainTE = TE](const TreeEntry *TE) {
         return TE != MainTE && !DeletedNodes.contains(TE) &&
                !TransformedToGatherNodes.contains(TE);
@@ -25219,6 +25307,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       FixedVectorType *StridedLoadTy = nullptr;
       Value *PO = LI->getPointerOperand();
       if (E->State == TreeEntry::Vectorize) {
+        LI = E->getFirstLoad();
+        PO = LI->getPointerOperand();
         const uint64_t Shift = getVectorLoadShift(E->Scalars);
         if (Shift)
           PO = Builder.CreatePtrAdd(
@@ -25350,6 +25440,9 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
                   E->State == TreeEntry::BlendedLoadVectorize || HasUndefLanes)
                      ? NewLI
                      : PropagateIRFlags(NewLI);
+      // The wide load also reads the memory of the copyable loads.
+      if (E->hasCopyableElements() && !HasUndefLanes)
+        V = ::propagateMetadata(NewLI, E->Scalars);
 
       if (StridedLoadTy != VecTy)
         V = createWidenedStridedCast(Builder, V, VecTy, *DL);
@@ -25788,7 +25881,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
           Const->Scalars.front()->getType(), Const->getVectorFactor()));
       Load->VectorizedValue = PoisonValue::get(getWidenedType(
           Load->getMainOp()->getType(), Load->getVectorFactor()));
-      LoadInst *LI = cast<LoadInst>(Load->getMainOp());
+      LoadInst *LI = Load->getFirstLoad();
       Value *PO = LI->getPointerOperand();
       auto *SrcTy = IntegerType::get(
           ScalarTy->getContext(),
