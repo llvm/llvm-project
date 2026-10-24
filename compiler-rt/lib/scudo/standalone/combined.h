@@ -139,7 +139,9 @@ public:
     SizeClassAllocatorT &SizeClassAllocator;
   };
 
-  typedef GlobalQuarantine<QuarantineCallback, void> QuarantineT;
+  typedef GlobalQuarantine<QuarantineCallback, void,
+                           AllocatorConfig::getQuarantineDisabled()>
+      QuarantineT;
   typedef typename QuarantineT::CacheT QuarantineCacheT;
 
   void init() {
@@ -1221,7 +1223,7 @@ private:
   GlobalStats Stats;
   PrimaryT Primary;
   SecondaryT Secondary;
-  QuarantineT Quarantine;
+  [[no_unique_address]] QuarantineT Quarantine;
   TSDRegistryT TSDRegistry;
   pthread_once_t PostInitNonce = PTHREAD_ONCE_INIT;
 
