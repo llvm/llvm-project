@@ -9,6 +9,9 @@ tablegen(LLVM DirectXGenRegisterInfo.inc -gen-register-info)
 set(LLVM_TARGET_DEFINITIONS DXIL.td)
 tablegen(LLVM DXILOperation.inc -gen-dxil-operation)
 
+set(LLVM_TARGET_DEFINITIONS MCTargetDesc/DirectXMCOptions.td)
+tablegen(LLVM DirectXMCOptions.inc -gen-opt-parser-defs)
+
 add_public_tablegen_target(DirectXCommonTableGen)
 
 add_llvm_target(DirectXCodeGen
