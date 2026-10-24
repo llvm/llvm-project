@@ -152,10 +152,9 @@ static bool canBeFeederToNewValueJump(const HexagonInstrInfo *QII,
   }
   assert(HadDef);
 
-  // Make sure there is no 'def' or 'use' of any of the uses of
-  // feeder insn between its definition, this MI and jump, jmpInst
-  // skipping compare, cmpInst.
-  // Here's the example.
+  // Do not move the feeder past a read or write of one of its operands.
+  // The compare is excluded because it moves with the feeder.
+  // Here's the example:
   //    r21=memub(r22+r24<<#0)
   //    p0 = cmp.eq(r21, #0)
   //    r4=memub(r3+r21<<#0)
@@ -174,7 +173,7 @@ static bool canBeFeederToNewValueJump(const HexagonInstrInfo *QII,
       Register Reg = II->getOperand(i).getReg();
       for (MachineBasicBlock::iterator localBegin = localII; localBegin != end;
            ++localBegin) {
-        if (localBegin == skip)
+        if (localBegin->isDebugInstr() || localBegin == skip)
           continue;
         // Check for Subregisters too.
         if (localBegin->modifiesRegister(Reg, TRI) ||
