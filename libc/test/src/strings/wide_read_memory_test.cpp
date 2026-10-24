@@ -120,4 +120,37 @@ TEST_F(LlvmLibcWideAccessMemoryTest, FindFirstChar) {
   });
 }
 
+TEST_F(LlvmLibcWideAccessMemoryTest, FindFirstCharAfterRange) {
+  // All implementations, since the configured one is usually not vectorized.
+  static constexpr void *(*kImpls[])(const unsigned char *, unsigned char,
+                                     size_t) = {
+      internal::element::find_first_character,
+      internal::word::find_first_character,
+#if LIBC_HAS_VECTOR_TYPE
+      clang_vector::find_first_character,
+#endif
+#ifdef LIBC_TARGET_ARCH_IS_X86
+      internal::arch_vector::find_first_character,
+#endif
+  };
+  // 1.5 k long vector of a's.
+  TwoKilobyteBuffer buf;
+  inline_memset(buf.data(), 'a', buf.size());
+  buf[buf.size() - 1] = 'b';
+  this->TestMemoryAccess(buf, [buf](const char *test_data) {
+    const unsigned char *b =
+        reinterpret_cast<const unsigned char *>(test_data) + buf.size() - 1;
+    for (auto find_first_character : kImpls) {
+      // The 'b' right after the searched range must not be found.
+      for (size_t n = 0; n < 128; ++n)
+        ASSERT_EQ(
+            reinterpret_cast<const void *>(find_first_character(b - n, 'b', n)),
+            nullptr);
+      ASSERT_EQ(reinterpret_cast<const void *>(find_first_character(
+                    b - (buf.size() - 1), 'b', buf.size() - 1)),
+                nullptr);
+    }
+  });
+}
+
 } // namespace LIBC_NAMESPACE_DECL
