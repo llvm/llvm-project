@@ -2542,18 +2542,16 @@ define amdgpu_kernel void @udot4_acc8_vecMul(ptr addrspace(1) %src1,
 ; GFX8-NEXT:    s_waitcnt vmcnt(1)
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v6, 16, v2
 ; GFX8-NEXT:    v_mul_lo_u16_sdwa v7, v3, v2 dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:BYTE_3 src1_sel:BYTE_3
-; GFX8-NEXT:    v_mul_lo_u16_e32 v9, v5, v6
-; GFX8-NEXT:    v_or_b32_sdwa v7, v9, v7 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
-; GFX8-NEXT:    v_mul_lo_u16_sdwa v8, v3, v2 dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:BYTE_1 src1_sel:BYTE_1
-; GFX8-NEXT:    v_lshlrev_b32_e32 v9, 16, v7
-; GFX8-NEXT:    v_or_b32_e32 v8, v8, v9
-; GFX8-NEXT:    v_lshrrev_b32_e32 v8, 8, v8
+; GFX8-NEXT:    v_mul_lo_u16_e32 v8, v5, v6
+; GFX8-NEXT:    v_lshrrev_b32_e32 v9, 8, v7
+; GFX8-NEXT:    v_or_b32_sdwa v7, v8, v7 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; GFX8-NEXT:    v_mul_lo_u16_sdwa v7, v3, v2 dst_sel:BYTE_1 dst_unused:UNUSED_PRESERVE src0_sel:BYTE_1 src1_sel:BYTE_1
+; GFX8-NEXT:    v_lshrrev_b32_e32 v7, 8, v7
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    v_mad_u16 v2, v3, v2, v4
-; GFX8-NEXT:    v_add_u16_e32 v2, v2, v8
-; GFX8-NEXT:    v_lshrrev_b32_e32 v7, 8, v7
-; GFX8-NEXT:    v_mad_u16 v2, v5, v6, v2
 ; GFX8-NEXT:    v_add_u16_e32 v2, v2, v7
+; GFX8-NEXT:    v_mad_u16 v2, v5, v6, v2
+; GFX8-NEXT:    v_add_u16_e32 v2, v2, v9
 ; GFX8-NEXT:    flat_store_byte v[0:1], v2
 ; GFX8-NEXT:    s_endpgm
 ;
