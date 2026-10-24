@@ -27,40 +27,31 @@
 define float @fminimum_f32(float %a, float %b) nounwind {
 ; RV32IF-LABEL: fminimum_f32:
 ; RV32IF:       # %bb.0:
-; RV32IF-NEXT:    feq.s a0, fa0, fa0
-; RV32IF-NEXT:    fmv.s fa5, fa1
-; RV32IF-NEXT:    beqz a0, .LBB0_3
+; RV32IF-NEXT:    feq.s a0, fa1, fa1
+; RV32IF-NEXT:    feq.s a1, fa0, fa0
+; RV32IF-NEXT:    and a0, a1, a0
+; RV32IF-NEXT:    beqz a0, .LBB0_2
 ; RV32IF-NEXT:  # %bb.1:
-; RV32IF-NEXT:    feq.s a0, fa1, fa1
-; RV32IF-NEXT:    beqz a0, .LBB0_4
-; RV32IF-NEXT:  .LBB0_2:
-; RV32IF-NEXT:    fmin.s fa0, fa0, fa5
+; RV32IF-NEXT:    fmin.s fa0, fa0, fa1
 ; RV32IF-NEXT:    ret
-; RV32IF-NEXT:  .LBB0_3:
-; RV32IF-NEXT:    fmv.s fa5, fa0
-; RV32IF-NEXT:    feq.s a0, fa1, fa1
-; RV32IF-NEXT:    bnez a0, .LBB0_2
-; RV32IF-NEXT:  .LBB0_4:
-; RV32IF-NEXT:    fmin.s fa0, fa1, fa5
+; RV32IF-NEXT:  .LBB0_2:
+; RV32IF-NEXT:    lui a0, 523264
+; RV32IF-NEXT:    fmv.w.x fa0, a0
 ; RV32IF-NEXT:    ret
 ;
 ; RV32IZFINX-LABEL: fminimum_f32:
 ; RV32IZFINX:       # %bb.0:
+; RV32IZFINX-NEXT:    feq.s a2, a1, a1
 ; RV32IZFINX-NEXT:    feq.s a3, a0, a0
-; RV32IZFINX-NEXT:    mv a2, a1
-; RV32IZFINX-NEXT:    beqz a3, .LBB0_3
+; RV32IZFINX-NEXT:    and a2, a3, a2
+; RV32IZFINX-NEXT:    beqz a2, .LBB0_2
 ; RV32IZFINX-NEXT:  # %bb.1:
-; RV32IZFINX-NEXT:    feq.s a3, a1, a1
-; RV32IZFINX-NEXT:    beqz a3, .LBB0_4
-; RV32IZFINX-NEXT:  .LBB0_2:
-; RV32IZFINX-NEXT:    fmin.s a0, a0, a2
+; RV32IZFINX-NEXT:    fmin.s a0, a0, a1
+; RV32IZFINX-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
 ; RV32IZFINX-NEXT:    ret
-; RV32IZFINX-NEXT:  .LBB0_3:
-; RV32IZFINX-NEXT:    mv a2, a0
-; RV32IZFINX-NEXT:    feq.s a3, a1, a1
-; RV32IZFINX-NEXT:    bnez a3, .LBB0_2
-; RV32IZFINX-NEXT:  .LBB0_4:
-; RV32IZFINX-NEXT:    fmin.s a0, a1, a2
+; RV32IZFINX-NEXT:  .LBB0_2:
+; RV32IZFINX-NEXT:    lui a0, 523264
+; RV32IZFINX-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
 ; RV32IZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: fminimum_f32:
@@ -74,40 +65,31 @@ define float @fminimum_f32(float %a, float %b) nounwind {
 ;
 ; RV64IF-LABEL: fminimum_f32:
 ; RV64IF:       # %bb.0:
-; RV64IF-NEXT:    feq.s a0, fa0, fa0
-; RV64IF-NEXT:    fmv.s fa5, fa1
-; RV64IF-NEXT:    beqz a0, .LBB0_3
+; RV64IF-NEXT:    feq.s a0, fa1, fa1
+; RV64IF-NEXT:    feq.s a1, fa0, fa0
+; RV64IF-NEXT:    and a0, a1, a0
+; RV64IF-NEXT:    beqz a0, .LBB0_2
 ; RV64IF-NEXT:  # %bb.1:
-; RV64IF-NEXT:    feq.s a0, fa1, fa1
-; RV64IF-NEXT:    beqz a0, .LBB0_4
-; RV64IF-NEXT:  .LBB0_2:
-; RV64IF-NEXT:    fmin.s fa0, fa0, fa5
+; RV64IF-NEXT:    fmin.s fa0, fa0, fa1
 ; RV64IF-NEXT:    ret
-; RV64IF-NEXT:  .LBB0_3:
-; RV64IF-NEXT:    fmv.s fa5, fa0
-; RV64IF-NEXT:    feq.s a0, fa1, fa1
-; RV64IF-NEXT:    bnez a0, .LBB0_2
-; RV64IF-NEXT:  .LBB0_4:
-; RV64IF-NEXT:    fmin.s fa0, fa1, fa5
+; RV64IF-NEXT:  .LBB0_2:
+; RV64IF-NEXT:    lui a0, 523264
+; RV64IF-NEXT:    fmv.w.x fa0, a0
 ; RV64IF-NEXT:    ret
 ;
 ; RV64IZFINX-LABEL: fminimum_f32:
 ; RV64IZFINX:       # %bb.0:
+; RV64IZFINX-NEXT:    feq.s a2, a1, a1
 ; RV64IZFINX-NEXT:    feq.s a3, a0, a0
-; RV64IZFINX-NEXT:    mv a2, a1
-; RV64IZFINX-NEXT:    beqz a3, .LBB0_3
+; RV64IZFINX-NEXT:    and a2, a3, a2
+; RV64IZFINX-NEXT:    beqz a2, .LBB0_2
 ; RV64IZFINX-NEXT:  # %bb.1:
-; RV64IZFINX-NEXT:    feq.s a3, a1, a1
-; RV64IZFINX-NEXT:    beqz a3, .LBB0_4
-; RV64IZFINX-NEXT:  .LBB0_2:
-; RV64IZFINX-NEXT:    fmin.s a0, a0, a2
+; RV64IZFINX-NEXT:    fmin.s a0, a0, a1
+; RV64IZFINX-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
 ; RV64IZFINX-NEXT:    ret
-; RV64IZFINX-NEXT:  .LBB0_3:
-; RV64IZFINX-NEXT:    mv a2, a0
-; RV64IZFINX-NEXT:    feq.s a3, a1, a1
-; RV64IZFINX-NEXT:    bnez a3, .LBB0_2
-; RV64IZFINX-NEXT:  .LBB0_4:
-; RV64IZFINX-NEXT:    fmin.s a0, a1, a2
+; RV64IZFINX-NEXT:  .LBB0_2:
+; RV64IZFINX-NEXT:    lui a0, 523264
+; RV64IZFINX-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
 ; RV64IZFINX-NEXT:    ret
 ;
 ; RV64I-LABEL: fminimum_f32:
@@ -125,40 +107,31 @@ define float @fminimum_f32(float %a, float %b) nounwind {
 define float @fmaximum_f32(float %a, float %b) nounwind {
 ; RV32IF-LABEL: fmaximum_f32:
 ; RV32IF:       # %bb.0:
-; RV32IF-NEXT:    feq.s a0, fa0, fa0
-; RV32IF-NEXT:    fmv.s fa5, fa1
-; RV32IF-NEXT:    beqz a0, .LBB1_3
+; RV32IF-NEXT:    feq.s a0, fa1, fa1
+; RV32IF-NEXT:    feq.s a1, fa0, fa0
+; RV32IF-NEXT:    and a0, a1, a0
+; RV32IF-NEXT:    beqz a0, .LBB1_2
 ; RV32IF-NEXT:  # %bb.1:
-; RV32IF-NEXT:    feq.s a0, fa1, fa1
-; RV32IF-NEXT:    beqz a0, .LBB1_4
-; RV32IF-NEXT:  .LBB1_2:
-; RV32IF-NEXT:    fmax.s fa0, fa0, fa5
+; RV32IF-NEXT:    fmax.s fa0, fa0, fa1
 ; RV32IF-NEXT:    ret
-; RV32IF-NEXT:  .LBB1_3:
-; RV32IF-NEXT:    fmv.s fa5, fa0
-; RV32IF-NEXT:    feq.s a0, fa1, fa1
-; RV32IF-NEXT:    bnez a0, .LBB1_2
-; RV32IF-NEXT:  .LBB1_4:
-; RV32IF-NEXT:    fmax.s fa0, fa1, fa5
+; RV32IF-NEXT:  .LBB1_2:
+; RV32IF-NEXT:    lui a0, 523264
+; RV32IF-NEXT:    fmv.w.x fa0, a0
 ; RV32IF-NEXT:    ret
 ;
 ; RV32IZFINX-LABEL: fmaximum_f32:
 ; RV32IZFINX:       # %bb.0:
+; RV32IZFINX-NEXT:    feq.s a2, a1, a1
 ; RV32IZFINX-NEXT:    feq.s a3, a0, a0
-; RV32IZFINX-NEXT:    mv a2, a1
-; RV32IZFINX-NEXT:    beqz a3, .LBB1_3
+; RV32IZFINX-NEXT:    and a2, a3, a2
+; RV32IZFINX-NEXT:    beqz a2, .LBB1_2
 ; RV32IZFINX-NEXT:  # %bb.1:
-; RV32IZFINX-NEXT:    feq.s a3, a1, a1
-; RV32IZFINX-NEXT:    beqz a3, .LBB1_4
-; RV32IZFINX-NEXT:  .LBB1_2:
-; RV32IZFINX-NEXT:    fmax.s a0, a0, a2
+; RV32IZFINX-NEXT:    fmax.s a0, a0, a1
+; RV32IZFINX-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
 ; RV32IZFINX-NEXT:    ret
-; RV32IZFINX-NEXT:  .LBB1_3:
-; RV32IZFINX-NEXT:    mv a2, a0
-; RV32IZFINX-NEXT:    feq.s a3, a1, a1
-; RV32IZFINX-NEXT:    bnez a3, .LBB1_2
-; RV32IZFINX-NEXT:  .LBB1_4:
-; RV32IZFINX-NEXT:    fmax.s a0, a1, a2
+; RV32IZFINX-NEXT:  .LBB1_2:
+; RV32IZFINX-NEXT:    lui a0, 523264
+; RV32IZFINX-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
 ; RV32IZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: fmaximum_f32:
@@ -172,40 +145,31 @@ define float @fmaximum_f32(float %a, float %b) nounwind {
 ;
 ; RV64IF-LABEL: fmaximum_f32:
 ; RV64IF:       # %bb.0:
-; RV64IF-NEXT:    feq.s a0, fa0, fa0
-; RV64IF-NEXT:    fmv.s fa5, fa1
-; RV64IF-NEXT:    beqz a0, .LBB1_3
+; RV64IF-NEXT:    feq.s a0, fa1, fa1
+; RV64IF-NEXT:    feq.s a1, fa0, fa0
+; RV64IF-NEXT:    and a0, a1, a0
+; RV64IF-NEXT:    beqz a0, .LBB1_2
 ; RV64IF-NEXT:  # %bb.1:
-; RV64IF-NEXT:    feq.s a0, fa1, fa1
-; RV64IF-NEXT:    beqz a0, .LBB1_4
-; RV64IF-NEXT:  .LBB1_2:
-; RV64IF-NEXT:    fmax.s fa0, fa0, fa5
+; RV64IF-NEXT:    fmax.s fa0, fa0, fa1
 ; RV64IF-NEXT:    ret
-; RV64IF-NEXT:  .LBB1_3:
-; RV64IF-NEXT:    fmv.s fa5, fa0
-; RV64IF-NEXT:    feq.s a0, fa1, fa1
-; RV64IF-NEXT:    bnez a0, .LBB1_2
-; RV64IF-NEXT:  .LBB1_4:
-; RV64IF-NEXT:    fmax.s fa0, fa1, fa5
+; RV64IF-NEXT:  .LBB1_2:
+; RV64IF-NEXT:    lui a0, 523264
+; RV64IF-NEXT:    fmv.w.x fa0, a0
 ; RV64IF-NEXT:    ret
 ;
 ; RV64IZFINX-LABEL: fmaximum_f32:
 ; RV64IZFINX:       # %bb.0:
+; RV64IZFINX-NEXT:    feq.s a2, a1, a1
 ; RV64IZFINX-NEXT:    feq.s a3, a0, a0
-; RV64IZFINX-NEXT:    mv a2, a1
-; RV64IZFINX-NEXT:    beqz a3, .LBB1_3
+; RV64IZFINX-NEXT:    and a2, a3, a2
+; RV64IZFINX-NEXT:    beqz a2, .LBB1_2
 ; RV64IZFINX-NEXT:  # %bb.1:
-; RV64IZFINX-NEXT:    feq.s a3, a1, a1
-; RV64IZFINX-NEXT:    beqz a3, .LBB1_4
-; RV64IZFINX-NEXT:  .LBB1_2:
-; RV64IZFINX-NEXT:    fmax.s a0, a0, a2
+; RV64IZFINX-NEXT:    fmax.s a0, a0, a1
+; RV64IZFINX-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
 ; RV64IZFINX-NEXT:    ret
-; RV64IZFINX-NEXT:  .LBB1_3:
-; RV64IZFINX-NEXT:    mv a2, a0
-; RV64IZFINX-NEXT:    feq.s a3, a1, a1
-; RV64IZFINX-NEXT:    bnez a3, .LBB1_2
-; RV64IZFINX-NEXT:  .LBB1_4:
-; RV64IZFINX-NEXT:    fmax.s a0, a1, a2
+; RV64IZFINX-NEXT:  .LBB1_2:
+; RV64IZFINX-NEXT:    lui a0, 523264
+; RV64IZFINX-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
 ; RV64IZFINX-NEXT:    ret
 ;
 ; RV64I-LABEL: fmaximum_f32:
@@ -349,26 +313,33 @@ define float @fminimum_nnan_attr_f32(float %a, float %b) nounwind {
 define float @fminimum_nnan_op_f32(float %a, float %b) nounwind {
 ; RV32IF-LABEL: fminimum_nnan_op_f32:
 ; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    fadd.s fa5, fa0, fa0
 ; RV32IF-NEXT:    feq.s a0, fa0, fa0
-; RV32IF-NEXT:    bnez a0, .LBB5_2
+; RV32IF-NEXT:    feq.s a1, fa5, fa5
+; RV32IF-NEXT:    and a0, a0, a1
+; RV32IF-NEXT:    beqz a0, .LBB5_2
 ; RV32IF-NEXT:  # %bb.1:
-; RV32IF-NEXT:    fmin.s fa0, fa0, fa0
+; RV32IF-NEXT:    fmin.s fa0, fa0, fa5
 ; RV32IF-NEXT:    ret
 ; RV32IF-NEXT:  .LBB5_2:
-; RV32IF-NEXT:    fadd.s fa5, fa0, fa0
-; RV32IF-NEXT:    fmin.s fa0, fa0, fa5
+; RV32IF-NEXT:    lui a0, 523264
+; RV32IF-NEXT:    fmv.w.x fa0, a0
 ; RV32IF-NEXT:    ret
 ;
 ; RV32IZFINX-LABEL: fminimum_nnan_op_f32:
 ; RV32IZFINX:       # %bb.0:
-; RV32IZFINX-NEXT:    feq.s a1, a0, a0
-; RV32IZFINX-NEXT:    bnez a1, .LBB5_2
+; RV32IZFINX-NEXT:    fadd.s a1, a0, a0
+; RV32IZFINX-NEXT:    feq.s a2, a0, a0
+; RV32IZFINX-NEXT:    feq.s a3, a1, a1
+; RV32IZFINX-NEXT:    and a2, a2, a3
+; RV32IZFINX-NEXT:    beqz a2, .LBB5_2
 ; RV32IZFINX-NEXT:  # %bb.1:
-; RV32IZFINX-NEXT:    fmin.s a0, a0, a0
+; RV32IZFINX-NEXT:    fmin.s a0, a0, a1
+; RV32IZFINX-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
 ; RV32IZFINX-NEXT:    ret
 ; RV32IZFINX-NEXT:  .LBB5_2:
-; RV32IZFINX-NEXT:    fadd.s a1, a0, a0
-; RV32IZFINX-NEXT:    fmin.s a0, a0, a1
+; RV32IZFINX-NEXT:    lui a0, 523264
+; RV32IZFINX-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
 ; RV32IZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: fminimum_nnan_op_f32:
@@ -389,26 +360,33 @@ define float @fminimum_nnan_op_f32(float %a, float %b) nounwind {
 ;
 ; RV64IF-LABEL: fminimum_nnan_op_f32:
 ; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    fadd.s fa5, fa0, fa0
 ; RV64IF-NEXT:    feq.s a0, fa0, fa0
-; RV64IF-NEXT:    bnez a0, .LBB5_2
+; RV64IF-NEXT:    feq.s a1, fa5, fa5
+; RV64IF-NEXT:    and a0, a0, a1
+; RV64IF-NEXT:    beqz a0, .LBB5_2
 ; RV64IF-NEXT:  # %bb.1:
-; RV64IF-NEXT:    fmin.s fa0, fa0, fa0
+; RV64IF-NEXT:    fmin.s fa0, fa0, fa5
 ; RV64IF-NEXT:    ret
 ; RV64IF-NEXT:  .LBB5_2:
-; RV64IF-NEXT:    fadd.s fa5, fa0, fa0
-; RV64IF-NEXT:    fmin.s fa0, fa0, fa5
+; RV64IF-NEXT:    lui a0, 523264
+; RV64IF-NEXT:    fmv.w.x fa0, a0
 ; RV64IF-NEXT:    ret
 ;
 ; RV64IZFINX-LABEL: fminimum_nnan_op_f32:
 ; RV64IZFINX:       # %bb.0:
-; RV64IZFINX-NEXT:    feq.s a1, a0, a0
-; RV64IZFINX-NEXT:    bnez a1, .LBB5_2
+; RV64IZFINX-NEXT:    fadd.s a1, a0, a0
+; RV64IZFINX-NEXT:    feq.s a2, a0, a0
+; RV64IZFINX-NEXT:    feq.s a3, a1, a1
+; RV64IZFINX-NEXT:    and a2, a2, a3
+; RV64IZFINX-NEXT:    beqz a2, .LBB5_2
 ; RV64IZFINX-NEXT:  # %bb.1:
-; RV64IZFINX-NEXT:    fmin.s a0, a0, a0
+; RV64IZFINX-NEXT:    fmin.s a0, a0, a1
+; RV64IZFINX-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
 ; RV64IZFINX-NEXT:    ret
 ; RV64IZFINX-NEXT:  .LBB5_2:
-; RV64IZFINX-NEXT:    fadd.s a1, a0, a0
-; RV64IZFINX-NEXT:    fmin.s a0, a0, a1
+; RV64IZFINX-NEXT:    lui a0, 523264
+; RV64IZFINX-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
 ; RV64IZFINX-NEXT:    ret
 ;
 ; RV64I-LABEL: fminimum_nnan_op_f32:

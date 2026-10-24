@@ -10561,6 +10561,7 @@ SDValue TargetLowering::expandFMINIMUM_FMAXIMUM(SDNode *N,
   // available, use plain select with setcc instead.
   SDValue MinMax;
   unsigned CompOpcIeee = IsMax ? ISD::FMAXNUM_IEEE : ISD::FMINNUM_IEEE;
+  unsigned CompOpcMinimumNum = IsMax ? ISD::FMAXIMUMNUM : ISD::FMINIMUMNUM;
   unsigned CompOpc = IsMax ? ISD::FMAXNUM : ISD::FMINNUM;
 
   // FIXME: We should probably define fminnum/fmaxnum variants with correct
@@ -10569,6 +10570,9 @@ SDValue TargetLowering::expandFMINIMUM_FMAXIMUM(SDNode *N,
 
   if (isOperationLegalOrCustom(CompOpcIeee, VT)) {
     MinMax = DAG.getNode(CompOpcIeee, DL, VT, LHS, RHS, Flags);
+    MinMaxMustRespectOrderedZero = true;
+  } else if (isOperationLegalOrCustom(CompOpcMinimumNum, VT)) {
+    MinMax = DAG.getNode(CompOpcMinimumNum, DL, VT, LHS, RHS, Flags);
     MinMaxMustRespectOrderedZero = true;
   } else if (isOperationLegalOrCustom(CompOpc, VT)) {
     MinMax = DAG.getNode(CompOpc, DL, VT, LHS, RHS, Flags);

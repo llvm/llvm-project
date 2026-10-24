@@ -261,23 +261,21 @@ define bfloat @vreduce_fminimum_nxv32bf16(<vscale x 32 x bfloat> %v) {
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vmfne.vv v8, v16, v16
 ; CHECK-NEXT:    vcpop.m a0, v8
-; CHECK-NEXT:    bnez a0, .LBB13_5
+; CHECK-NEXT:    beqz a0, .LBB13_5
 ; CHECK-NEXT:  # %bb.4:
-; CHECK-NEXT:    vfredmin.vs v8, v16, v16
-; CHECK-NEXT:    vfmv.f.s fa5, v8
-; CHECK-NEXT:  .LBB13_5:
-; CHECK-NEXT:    feq.s a0, fa5, fa5
-; CHECK-NEXT:    fmv.s fa3, fa4
-; CHECK-NEXT:    bnez a0, .LBB13_7
-; CHECK-NEXT:  # %bb.6:
 ; CHECK-NEXT:    fmv.s fa3, fa5
-; CHECK-NEXT:  .LBB13_7:
+; CHECK-NEXT:    j .LBB13_6
+; CHECK-NEXT:  .LBB13_5:
+; CHECK-NEXT:    vfredmin.vs v8, v16, v16
+; CHECK-NEXT:    vfmv.f.s fa3, v8
+; CHECK-NEXT:  .LBB13_6:
 ; CHECK-NEXT:    feq.s a0, fa4, fa4
-; CHECK-NEXT:    bnez a0, .LBB13_9
-; CHECK-NEXT:  # %bb.8:
-; CHECK-NEXT:    fmv.s fa5, fa4
-; CHECK-NEXT:  .LBB13_9:
-; CHECK-NEXT:    fmin.s fa5, fa5, fa3
+; CHECK-NEXT:    feq.s a1, fa3, fa3
+; CHECK-NEXT:    and a0, a1, a0
+; CHECK-NEXT:    beqz a0, .LBB13_8
+; CHECK-NEXT:  # %bb.7:
+; CHECK-NEXT:    fmin.s fa5, fa3, fa4
+; CHECK-NEXT:  .LBB13_8:
 ; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
 ; CHECK-NEXT:    ret
   %red = call bfloat @llvm.vector.reduce.fminimum.nxv32bf16(<vscale x 32 x bfloat> %v)
@@ -307,23 +305,21 @@ define bfloat @vreduce_fmaximum_nxv32bf16(<vscale x 32 x bfloat> %v) {
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vmfne.vv v8, v16, v16
 ; CHECK-NEXT:    vcpop.m a0, v8
-; CHECK-NEXT:    bnez a0, .LBB14_5
+; CHECK-NEXT:    beqz a0, .LBB14_5
 ; CHECK-NEXT:  # %bb.4:
-; CHECK-NEXT:    vfredmax.vs v8, v16, v16
-; CHECK-NEXT:    vfmv.f.s fa5, v8
-; CHECK-NEXT:  .LBB14_5:
-; CHECK-NEXT:    feq.s a0, fa5, fa5
-; CHECK-NEXT:    fmv.s fa3, fa4
-; CHECK-NEXT:    bnez a0, .LBB14_7
-; CHECK-NEXT:  # %bb.6:
 ; CHECK-NEXT:    fmv.s fa3, fa5
-; CHECK-NEXT:  .LBB14_7:
+; CHECK-NEXT:    j .LBB14_6
+; CHECK-NEXT:  .LBB14_5:
+; CHECK-NEXT:    vfredmax.vs v8, v16, v16
+; CHECK-NEXT:    vfmv.f.s fa3, v8
+; CHECK-NEXT:  .LBB14_6:
 ; CHECK-NEXT:    feq.s a0, fa4, fa4
-; CHECK-NEXT:    bnez a0, .LBB14_9
-; CHECK-NEXT:  # %bb.8:
-; CHECK-NEXT:    fmv.s fa5, fa4
-; CHECK-NEXT:  .LBB14_9:
-; CHECK-NEXT:    fmax.s fa5, fa5, fa3
+; CHECK-NEXT:    feq.s a1, fa3, fa3
+; CHECK-NEXT:    and a0, a1, a0
+; CHECK-NEXT:    beqz a0, .LBB14_8
+; CHECK-NEXT:  # %bb.7:
+; CHECK-NEXT:    fmax.s fa5, fa3, fa4
+; CHECK-NEXT:  .LBB14_8:
 ; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
 ; CHECK-NEXT:    ret
   %red = call bfloat @llvm.vector.reduce.fmaximum.nxv32bf16(<vscale x 32 x bfloat> %v)
