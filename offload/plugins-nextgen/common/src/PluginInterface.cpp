@@ -1318,14 +1318,6 @@ bool GenericPluginTy::is_gfx90a_coarse_grain_usm_map_enabled(int32_t DeviceId) {
   return R;
 }
 
-int32_t GenericPluginTy::is_data_exchangable(int32_t SrcDeviceId,
-                                             int32_t DstDeviceId) {
-  auto T = logger::log<int32_t>(__func__, SrcDeviceId, DstDeviceId);
-  auto R = [&]() { return isDataExchangable(SrcDeviceId, DstDeviceId); }();
-  T.res(R);
-  return R;
-}
-
 int32_t GenericPluginTy::initialize_record_replay(
     int32_t DeviceId, int64_t MemorySize, void *VAddr, bool IsRecord,
     bool IsNative, bool SaveOutput, bool EmitReport, const char *ReportFilename,
@@ -1376,97 +1368,6 @@ int32_t GenericPluginTy::data_delete(int32_t DeviceId, void *TgtPtr,
             Device, TgtPtr, static_cast<TargetAllocTy>(Kind), ProfilerPtr)) {
       REPORT() << "Failure to deallocate device pointer " << TgtPtr << ": "
                << toString(std::move(Err));
-      return OFFLOAD_FAIL;
-    }
-
-    return OFFLOAD_SUCCESS;
-  }();
-  T.res(R);
-  return R;
-}
-
-int32_t GenericPluginTy::data_submit(int32_t DeviceId, void *TgtPtr,
-                                     void *HstPtr, int64_t Size) {
-  auto T = logger::log<int32_t>(__func__, DeviceId, TgtPtr, HstPtr, Size);
-  auto R = [&]() {
-    return data_submit_async(DeviceId, TgtPtr, HstPtr, Size,
-                             /*AsyncInfoPtr=*/nullptr);
-  }();
-  T.res(R);
-  return R;
-}
-
-int32_t GenericPluginTy::data_submit_async(int32_t DeviceId, void *TgtPtr,
-                                           void *HstPtr, int64_t Size,
-                                           __tgt_async_info *AsyncInfoPtr) {
-  auto T = logger::log<int32_t>(__func__, DeviceId, TgtPtr, HstPtr, Size,
-                                AsyncInfoPtr);
-  auto R = [&]() {
-    auto Err =
-        getDevice(DeviceId).dataSubmit(TgtPtr, HstPtr, Size, AsyncInfoPtr);
-    if (Err) {
-      REPORT() << "Failure to copy data from host to device. Pointers: host "
-               << "= " << HstPtr << ", device = " << TgtPtr << ", size = " << Size
-               << ": " << toString(std::move(Err));
-      return OFFLOAD_FAIL;
-    }
-
-    return OFFLOAD_SUCCESS;
-  }();
-  T.res(R);
-  return R;
-}
-
-int32_t GenericPluginTy::data_retrieve_async(int32_t DeviceId, void *HstPtr,
-                                             void *TgtPtr, int64_t Size,
-                                             __tgt_async_info *AsyncInfoPtr) {
-  auto T = logger::log<int32_t>(__func__, DeviceId, HstPtr, TgtPtr, Size,
-                                AsyncInfoPtr);
-  auto R = [&]() {
-    auto Err =
-        getDevice(DeviceId).dataRetrieve(HstPtr, TgtPtr, Size, AsyncInfoPtr);
-    if (Err) {
-      REPORT() << "Failure to copy data from device to host. Pointers: host "
-               << "= " << HstPtr << ", device = " << TgtPtr << ", size = " << Size
-               << ": " << toString(std::move(Err));
-      return OFFLOAD_FAIL;
-    }
-
-    return OFFLOAD_SUCCESS;
-  }();
-  T.res(R);
-  return R;
-}
-
-int32_t GenericPluginTy::data_exchange(int32_t SrcDeviceId, void *SrcPtr,
-                                       int32_t DstDeviceId, void *DstPtr,
-                                       int64_t Size) {
-  auto T = logger::log<int32_t>(__func__, SrcDeviceId, SrcPtr, DstDeviceId,
-                                DstPtr, Size);
-  auto R = [&]() {
-    return data_exchange_async(SrcDeviceId, SrcPtr, DstDeviceId, DstPtr, Size,
-                               /*AsyncInfoPtr=*/nullptr);
-  }();
-  T.res(R);
-  return R;
-}
-
-int32_t GenericPluginTy::data_exchange_async(int32_t SrcDeviceId, void *SrcPtr,
-                                             int DstDeviceId, void *DstPtr,
-                                             int64_t Size,
-                                             __tgt_async_info *AsyncInfo) {
-  auto T = logger::log<int32_t>(__func__, SrcDeviceId, SrcPtr, DstDeviceId,
-                                DstPtr, Size, AsyncInfo);
-  auto R = [&]() {
-    GenericDeviceTy &SrcDevice = getDevice(SrcDeviceId);
-    GenericDeviceTy &DstDevice = getDevice(DstDeviceId);
-    auto Err =
-        SrcDevice.dataExchange(SrcPtr, DstDevice, DstPtr, Size, AsyncInfo);
-    if (Err) {
-      REPORT() << "Failure to copy data from device (" << SrcDeviceId
-               << ") to device (" << DstDeviceId
-               << "). Pointers: host = " << SrcPtr << ", device = " << DstPtr
-               << ", size = " << Size << ": " << toString(std::move(Err));
       return OFFLOAD_FAIL;
     }
 

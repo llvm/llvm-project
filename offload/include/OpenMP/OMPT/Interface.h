@@ -490,6 +490,9 @@ public:
                       ompt_callbacks_t EventType, ArgsTy... Args)
       : Arguments(Args...), beginFunction(std::get<0>(Callbacks)) {
     __tgt_async_info *AI = AsyncInfo;
+    // Transfers without a queue are synchronous and are not traced.
+    if (!AI)
+      return;
 
     // Actively prevent further tracing of this event. This is only revised
     // below, if a trace record was assigned for it. Hence, a non-null
