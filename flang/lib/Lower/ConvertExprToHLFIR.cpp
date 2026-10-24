@@ -1328,7 +1328,9 @@ struct BinaryOp<Fortran::evaluate::Relational<
                                          fir::FirOpBuilder &builder,
                                          const Op &op, hlfir::Entity lhs,
                                          hlfir::Entity rhs) {
-    int bits = 8 * op.left().GetType().value().kind();
+    const int kind = op.left().kind();
+    int bits = Fortran::evaluate::Type<
+        Fortran::common::TypeCategory::Integer>::Scalar::bits(kind);
     auto signlessType = mlir::IntegerType::get(
         builder.getContext(), bits,
         mlir::IntegerType::SignednessSemantics::Signless);
