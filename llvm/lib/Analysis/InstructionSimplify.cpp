@@ -7233,16 +7233,18 @@ static Value *simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
     break;
   case Intrinsic::ldexp:
     return simplifyLdexp(Op0, Op1, Q, false);
-  case Intrinsic::copysign:
+  case Intrinsic::copysign: {
     // copysign X, X --> X
     if (Op0 == Op1)
       return Op0;
+
     // copysign -X, X --> X
     // copysign X, -X --> -X
     if (match(Op0, m_FNeg(m_Specific(Op1))) ||
         match(Op1, m_FNeg(m_Specific(Op0))))
       return Op1;
     break;
+  }
   case Intrinsic::is_fpclass: {
     uint64_t Mask = cast<ConstantInt>(Op1)->getZExtValue();
     // If all tests are made, it doesn't matter what the value is.
