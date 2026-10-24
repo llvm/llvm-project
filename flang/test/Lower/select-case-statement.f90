@@ -190,7 +190,8 @@
     ! CHECK-NEXT: cf.cond_br
     if (lge(s,'00')) then
 
-      ! CHECK: fir.call @_FortranATrim
+      ! CHECK-O0: fir.call @_FortranATrim
+      ! CHECK-O1: fir.iterate_while
 
       ! All the strings in SELECT CASE
       ! CHECK: %[[STR11:[0-9]+]] = fir.declare {{.*}} uniq_name("_QQclX3131")
@@ -284,7 +285,8 @@
     ! CHECK: %[[N:[0-9]+]] = fir.declare {{.*}} uniq_name("_QFscharacter2En")
     ! CHECK: fir.store %c-10_i32 to %[[N]] : !fir.ref<i32>
     n = -10
-    ! CHECK: fir.call @_FortranATrim(
+    ! CHECK-O0: fir.call @_FortranATrim(
+    ! CHECK-O1: fir.iterate_while
     select case(trim(s))
     case default
       ! CHECK: fir.store %c9_i32 to %[[N]] : !fir.ref<i32>
@@ -297,7 +299,8 @@
     ! CHECK:  fir.store %c-2_i32 to %[[N]] : !fir.ref<i32>
     n = -2
 
-    ! CHECK: fir.call @_FortranATrim(
+    ! CHECK-O0: fir.call @_FortranATrim(
+    ! CHECK-O1: fir.iterate_while
     select case(trim(s))
     end select
     ! CHECK: fir.call @_FortranAioBeginExternalListOutput(
@@ -427,7 +430,8 @@
 
     ! CHECK: fir.is_present
     if (present(str)) then
-      ! CHECK: fir.call @_FortranATrim
+      ! CHECK-O0: fir.call @_FortranATrim
+      ! CHECK-O1: fir.iterate_while
       select case (trim(str))
         ! == 'a'
         ! CHECK-O0: fir.call @_FortranACharacterCompareScalar1
