@@ -31,6 +31,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/IPO/AlwaysInliner.h"
 #include "llvm/Transforms/IPO/GlobalDCE.h"
 #include "llvm/Transforms/Scalar.h"
@@ -39,6 +40,10 @@
 #include "llvm/Transforms/Vectorize/LoadStoreVectorizer.h"
 
 using namespace llvm;
+
+static cl::opt<bool> AGXPruneBeforeInline(
+    "agx-prune-before-inline", cl::init(true), cl::Hidden,
+    cl::desc("Prune unreachable AGX device functions before forced inlining"));
 
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAGXTarget() {
   RegisterTargetMachine<AGXTargetMachine> X(getTheAGXTarget());
@@ -194,6 +199,10 @@ void AGXPassConfig::addIRPasses() {
   // Inline by default; the experimental leaf-call option leaves eligible
   // functions outlined.
   addPass(createAGXAlwaysInlinePass());
+  // Internalization can leave entire unused call chains alive: the inliner
+  // otherwise expands their bodies before discovering they have no roots.
+  if (AGXPruneBeforeInline)
+    addPass(createGlobalDCEPass());
   addPass(createAlwaysInlinerLegacyPass());
   // Inlining non-callable wrappers can leave outlined leaves with no users.
   // Removing them before per-function codegen is material for large PTX
