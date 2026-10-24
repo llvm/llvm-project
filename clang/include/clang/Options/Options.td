@@ -1154,6 +1154,12 @@ defm offload_uniform_block : BoolFOption<"offload-uniform-block",
   NegFlag<SetFalse, [], [ClangOption, CC1Option], "Don't assume">,
   BothFlags<[], [ClangOption], " that kernels are launched with uniform block sizes (default true for CUDA/HIP and false otherwise)">>;
 
+defm private_atomics_undefined : BoolFOption<"private-atomics-undefined",
+  LangOpts<"PrivateAtomicsUndefined">, Default<"LangOpts->CUDA || LangOpts->OpenCL">,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option], "Assume">,
+  NegFlag<SetFalse, [], [ClangOption, CC1Option], "Don't assume">,
+  BothFlags<[], [ClangOption], " that atomics on thread private memory are undefined behavior (default true for HIP/OpenCL)">>;
+
 def fcomplex_arithmetic_EQ : Joined<["-"], "fcomplex-arithmetic=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   Values<"full,improved,promoted,basic">, NormalizedValuesScope<"LangOptions">,

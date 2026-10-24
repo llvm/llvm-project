@@ -266,6 +266,7 @@ LANGOPT(GPUDeferDiag, 1, 0, NotCompatible, "defer host/device related diagnostic
 LANGOPT(GPUExcludeWrongSideOverloads, 1, 0, NotCompatible, "always exclude wrong side overloads in overloading resolution for CUDA/HIP")
 LANGOPT(OffloadViaLLVM, 1, 0, NotCompatible, "target LLVM/Offload as portable offloading runtime.")
 LANGOPT(CUDANVCCABI, 1, 0, NotCompatible, "emit the NVCC-compatible host registration ABI for CUDA")
+LANGOPT(PrivateAtomicsUndefined, 1, 0, NotCompatible, "atomics on thread private memory are undefined behavior")
 
 LANGOPT(SYCLIsDevice      , 1, 0, NotCompatible, "Generate code for SYCL device")
 LANGOPT(SYCLIsHost        , 1, 0, NotCompatible, "SYCL host compilation")
