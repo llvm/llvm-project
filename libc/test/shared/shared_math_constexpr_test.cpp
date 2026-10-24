@@ -10,9 +10,11 @@
 
 #include "shared/math.h"
 #include "src/__support/FPUtil/float128.h"
+#include "src/__support/FPUtil/float80.h"
 #include "test/UnitTest/Test.h"
 
 using LIBC_NAMESPACE::fputil::Float128;
+using LIBC_NAMESPACE::fputil::Float80;
 
 #ifdef LIBC_USE_CONSTEXPR
 

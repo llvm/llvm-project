@@ -10,10 +10,12 @@
 #include "shared/math.h"
 #include "shared/static_rounding_math.h"
 #include "src/__support/FPUtil/float128.h"
+#include "src/__support/FPUtil/float80.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
 using LIBC_NAMESPACE::fputil::Float128;
+using LIBC_NAMESPACE::fputil::Float80;
 
 #ifdef LIBC_TYPES_HAS_FLOAT16
 
