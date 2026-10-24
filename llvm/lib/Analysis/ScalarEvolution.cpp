@@ -12255,48 +12255,21 @@ bool ScalarEvolution::isImpliedCondBalancedTypes(
     return false;
   }
 
+  // Try the query as is and with its operands swapped. E.g. "x >s -1" is
+  // tried as "-1 <s x" too, to match the found condition "x <u y".
   auto IsSignFlippedPredicate = [](CmpInst::Predicate P1,
                                    CmpInst::Predicate P2) {
-    assert(P1 != P2 && "Handled earlier!");
     return CmpInst::isRelational(P2) &&
            P1 == ICmpInst::getFlippedSignednessPredicate(P2);
   };
-  if (IsSignFlippedPredicate(Pred, FoundPred)) {
-    // Unsigned comparison is the same as signed comparison when both the
-    // operands are non-negative or negative.
-    if (haveSameSign(FoundLHS, FoundRHS))
-      return isImpliedCondOperands(Pred, LHS, RHS, FoundLHS, FoundRHS, CtxI);
-    // Create local copies that we can freely swap and canonicalize our
-    // conditions to "le/lt".
-    CmpPredicate CanonicalPred = Pred, CanonicalFoundPred = FoundPred;
-    const SCEV *CanonicalLHS = LHS, *CanonicalRHS = RHS,
-               *CanonicalFoundLHS = FoundLHS, *CanonicalFoundRHS = FoundRHS;
-    if (ICmpInst::isGT(CanonicalPred) || ICmpInst::isGE(CanonicalPred)) {
-      CanonicalPred = ICmpInst::getSwappedCmpPredicate(CanonicalPred);
-      CanonicalFoundPred = ICmpInst::getSwappedCmpPredicate(CanonicalFoundPred);
-      std::swap(CanonicalLHS, CanonicalRHS);
-      std::swap(CanonicalFoundLHS, CanonicalFoundRHS);
-    }
-    assert((ICmpInst::isLT(CanonicalPred) || ICmpInst::isLE(CanonicalPred)) &&
-           "Must be!");
-    assert((ICmpInst::isLT(CanonicalFoundPred) ||
-            ICmpInst::isLE(CanonicalFoundPred)) &&
-           "Must be!");
-    if (ICmpInst::isSigned(CanonicalPred) && isKnownNonNegative(CanonicalRHS))
-      // Use implication:
-      // x <u y && y >=s 0 --> x <s y.
-      // If we can prove the left part, the right part is also proven.
-      return isImpliedCondOperands(CanonicalFoundPred, CanonicalLHS,
-                                   CanonicalRHS, CanonicalFoundLHS,
-                                   CanonicalFoundRHS);
-    if (ICmpInst::isUnsigned(CanonicalPred) && isKnownNegative(CanonicalRHS))
-      // Use implication:
-      // x <s y && y <s 0 --> x <u y.
-      // If we can prove the left part, the right part is also proven.
-      return isImpliedCondOperands(CanonicalFoundPred, CanonicalLHS,
-                                   CanonicalRHS, CanonicalFoundLHS,
-                                   CanonicalFoundRHS);
-  }
+  if (IsSignFlippedPredicate(Pred, FoundPred) &&
+      isImpliedCondViaSignFlippedPred(Pred, LHS, RHS, FoundLHS, FoundRHS, CtxI))
+    return true;
+  CmpPredicate SwappedPred = ICmpInst::getSwappedCmpPredicate(Pred);
+  if (IsSignFlippedPredicate(SwappedPred, FoundPred) &&
+      isImpliedCondViaSignFlippedPred(SwappedPred, RHS, LHS, FoundLHS, FoundRHS,
+                                      CtxI))
+    return true;
 
   // Check if we can make progress by sharpening ranges.
   if (FoundPred == ICmpInst::ICMP_NE &&
@@ -12389,6 +12362,63 @@ bool ScalarEvolution::isImpliedCondBalancedTypes(
     return true;
 
   // Otherwise assume the worst.
+  return false;
+}
+
+bool ScalarEvolution::isImpliedCondViaSignFlippedPred(
+    CmpPredicate Pred, const SCEV *LHS, const SCEV *RHS, const SCEV *FoundLHS,
+    const SCEV *FoundRHS, const Instruction *CtxI) {
+  CmpPredicate FoundPred = ICmpInst::getFlippedSignednessPredicate(Pred);
+  // Unsigned comparison is the same as signed comparison when both the
+  // operands are non-negative or negative.
+  if (haveSameSign(FoundLHS, FoundRHS) &&
+      isImpliedCondOperands(Pred, LHS, RHS, FoundLHS, FoundRHS, CtxI))
+    return true;
+  // Canonicalize both conditions to "le/lt".
+  if (ICmpInst::isGT(Pred) || ICmpInst::isGE(Pred)) {
+    Pred = ICmpInst::getSwappedCmpPredicate(Pred);
+    FoundPred = ICmpInst::getSwappedCmpPredicate(FoundPred);
+    std::swap(LHS, RHS);
+    std::swap(FoundLHS, FoundRHS);
+  }
+  assert((ICmpInst::isLT(Pred) || ICmpInst::isLE(Pred)) && "Must be!");
+  assert((ICmpInst::isLT(FoundPred) || ICmpInst::isLE(FoundPred)) &&
+         "Must be!");
+  if (ICmpInst::isSigned(Pred)) {
+    // Use implication:
+    // x <u y && y <=u 2^(n-1) --> x >=s 0,
+    // x <=u y && y <u 2^(n-1) --> x >=s 0,
+    // where n is the bit width of x and y.
+    // In both cases x <u 2^(n-1), so x >=s 0.
+    // y <=u 2^(n-1) means y >=s 0 or y == INT_MIN.
+    // If the implication's left part holds, try proving the query from x >=s
+    // 0.
+    Type *Ty = FoundLHS->getType();
+    unsigned BitWidth = getTypeSizeInBits(Ty);
+    const SCEV *SignedMin = getConstant(APInt::getSignedMinValue(BitWidth));
+    CmpPredicate BoundPred =
+        ICmpInst::isLT(FoundPred) ? ICmpInst::ICMP_ULE : ICmpInst::ICMP_ULT;
+    if (isKnownViaNonRecursiveReasoning(BoundPred, FoundRHS, SignedMin)) {
+      // x >=s 0, written as 0 <=s x, or as -1 <s x to match a strict query.
+      const SCEV *Bound = ICmpInst::isLE(Pred) ? getZero(Ty) : getMinusOne(Ty);
+      if (isImpliedCondOperands(Pred, LHS, RHS, Bound, FoundLHS, CtxI))
+        return true;
+    }
+  }
+  if (ICmpInst::isSigned(Pred) && isKnownNonNegative(RHS)) {
+    // Use implication:
+    // x <u y && y >=s 0 --> x <s y.
+    // If we can prove the left part, the right part is also proven.
+    if (isImpliedCondOperands(FoundPred, LHS, RHS, FoundLHS, FoundRHS))
+      return true;
+  }
+  if (ICmpInst::isUnsigned(Pred) && isKnownNegative(RHS)) {
+    // Use implication:
+    // x <s y && y <s 0 --> x <u y.
+    // If we can prove the left part, the right part is also proven.
+    if (isImpliedCondOperands(FoundPred, LHS, RHS, FoundLHS, FoundRHS))
+      return true;
+  }
   return false;
 }
 

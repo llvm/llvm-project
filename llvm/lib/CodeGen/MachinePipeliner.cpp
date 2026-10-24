@@ -113,10 +113,6 @@ STATISTIC(NumFailZeroStage, "Pipeliner abort due to zero stage");
 STATISTIC(NumFailLargeMaxStage, "Pipeliner abort due to too many stages");
 STATISTIC(NumFailTooManyStores, "Pipeliner abort due to too many stores");
 
-/// A command line option to turn software pipelining on or off.
-static cl::opt<bool> EnableSWP("enable-pipeliner", cl::Hidden, cl::init(true),
-                               cl::desc("Enable Software Pipelining"));
-
 /// A command line option to enable SWP at -Os.
 static cl::opt<bool> EnableSWPOptSize("enable-pipeliner-opt-size",
                                       cl::desc("Enable SWP at Os."), cl::Hidden,
@@ -433,9 +429,6 @@ static bool runMachinePipeliner(
     function_ref<LiveIntervals &()> GetLIS, function_ref<AAResults &()> GetAA,
     function_ref<MachineOptimizationRemarkEmitter &()> GetORE,
     function_ref<RegisterClassInfo &()> GetRCI) {
-  if (!EnableSWP)
-    return false;
-
   if (MF.getFunction().getAttributes().hasFnAttr(Attribute::OptimizeForSize) &&
       !EnableSWPOptSize.getPosition())
     return false;
