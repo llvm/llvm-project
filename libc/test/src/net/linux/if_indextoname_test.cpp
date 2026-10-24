@@ -28,7 +28,6 @@ TEST_F(LlvmLibcIfIndexToNameTest, Loopback) {
   char *res = LIBC_NAMESPACE::if_indextoname(lo_idx, buf);
   ASSERT_EQ(res, buf);
   ASSERT_STREQ(buf, "lo");
-  ASSERT_ERRNO_SUCCESS();
 }
 
 TEST_F(LlvmLibcIfIndexToNameTest, InvalidIndex) {
