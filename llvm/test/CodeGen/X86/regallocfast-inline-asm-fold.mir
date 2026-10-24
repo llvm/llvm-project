@@ -64,7 +64,7 @@ body: |
 
     ; CHECK-LABEL: name: tied_input_lives
     ; CHECK: MOV64mr %stack.[[SLOT:[0-9]+]], 1, $noreg, 0, $noreg, renamable [[INPUT:\$[a-z0-9]+]]
-    ; CHECK-NEXT: INLINEASM &"", sideeffect mayload maystore attdialect, mem:m, %stack.[[SLOT]], 1, $noreg, 0, $noreg, {{.*}}, mem:m, %stack.[[SLOT]], 1, $noreg, 0, $noreg, clobber,
+    ; CHECK-NEXT: INLINEASM &"", sideeffect mayload maystore attdialect, mem:m ops:5, %stack.[[SLOT]], 1, $noreg, 0, $noreg, {{.*}}, mem:m ops:5, %stack.[[SLOT]], 1, $noreg, 0, $noreg, clobber,
     ; CHECK-NEXT: renamable [[DEF:\$[a-z0-9]+]] = MOV64rm %stack.[[SLOT]], 1, $noreg, 0, $noreg
     ; CHECK-NEXT: ADD64rr killed renamable [[DEF]], killed renamable [[INPUT]]
     %0:gr64 = COPY $rdi
