@@ -405,6 +405,118 @@ void AMDGPUDAGToDAGISel::PreprocessISelDAG() {
     LLVM_DEBUG(dbgs() << "After PreProcess:\n";
                CurDAG->dump(););
   }
+
+  computeSharedConstantUses();
+}
+
+/// 32-bit pattern of the constant behind \p Op. Looks through bitcasts and
+/// splats, so v2i16 and v2f16 constants count too.
+static std::optional<uint32_t> getSplatConstant32(SDValue Op) {
+  Op = peekThroughBitcasts(Op);
+  if (auto *C = dyn_cast<ConstantSDNode>(Op)) {
+    if (C->getValueType(0) != MVT::i32)
+      return std::nullopt;
+    return C->getZExtValue();
+  }
+
+  APInt SplatValue, SplatUndef;
+  unsigned SplatBitSize;
+  bool HasAnyUndefs;
+  auto *BV = dyn_cast<BuildVectorSDNode>(Op);
+  if (BV &&
+      BV->isConstantSplat(SplatValue, SplatUndef, SplatBitSize, HasAnyUndefs,
+                          /*MinSplatBits=*/32) &&
+      SplatBitSize == 32 && !HasAnyUndefs)
+    return SplatValue.getZExtValue();
+  return std::nullopt;
+}
+
+/// Integer pairs ThreeOpFragSDAG selects to a full rate VOP3. Fusing mul and
+/// add is excluded, as it selects the quarter rate MAD.
+static bool isFullRateThreeOpPair(const SDNode *Outer, const SDNode *Inner) {
+  unsigned Op1 = Inner->getOpcode();
+  bool Matches;
+  switch (Outer->getOpcode()) {
+  case ISD::ADD:
+    Matches = Op1 == ISD::ADD || Op1 == ISD::SHL || Op1 == ISD::XOR;
+    break;
+  case ISD::SHL:
+    // Only the shifted value can be fused.
+    Matches = Op1 == ISD::ADD && Outer->getOperand(0).getNode() == Inner;
+    break;
+  case ISD::OR:
+    Matches = Op1 == ISD::AND || Op1 == ISD::OR || Op1 == ISD::SHL;
+    break;
+  default:
+    return false;
+  }
+
+  // v2i32 selects one instruction per half, from the same operand pair. Only
+  // its bitwise ops are legal.
+  EVT VT = Outer->getValueType(0);
+  return Matches && (VT == MVT::i32 || VT == MVT::v2i32);
+}
+
+void AMDGPUDAGToDAGISel::computeSharedConstantUses() {
+  SharedConstantUses.clear();
+
+  // No three operand VOP3 below gfx9. From a limit of 2 only uniform fragments
+  // go over budget, and those are never fused.
+  if (Subtarget->getGeneration() < AMDGPUSubtarget::GFX9 ||
+      Subtarget->getConstantBusLimit(AMDGPU::V_ADD3_U32_e64) > 1)
+    return;
+
+  for (SDNode &N : CurDAG->allnodes()) {
+    if (!N.isDivergent() || N.getNumOperands() != 2)
+      continue;
+
+    // Either operand can be the inner half.
+    for (unsigned I : {0u, 1u}) {
+      SDValue Inner = N.getOperand(I);
+      if (!Inner->hasOneUse() || !isFullRateThreeOpPair(&N, Inner.getNode()))
+        continue;
+
+      SDValue Ops[] = {Inner.getOperand(0), Inner.getOperand(1),
+                       N.getOperand(1 - I)};
+      if (fitsConstantBusLimit(Ops))
+        continue;
+
+      // Every 32-bit half is an instruction that shares the materialized value.
+      unsigned Lanes = N.getValueSizeInBits(0) / 32;
+
+      // A constant in two slots is still one sharer.
+      SmallSet<uint32_t, 3> Counted;
+      for (SDValue Op : Ops)
+        if (std::optional<uint32_t> C = getSplatConstant32(Op))
+          if (Counted.insert(*C).second)
+            SharedConstantUses[*C] += Lanes;
+    }
+  }
+}
+
+bool AMDGPUDAGToDAGISel::fitsConstantBusLimit(ArrayRef<SDValue> Ops) const {
+  // All three operand instructions have the same limit.
+  return count_if(Ops, [this](SDValue Op) { return usesConstantBus(Op); }) <=
+         Subtarget->getConstantBusLimit(AMDGPU::V_ADD3_U32_e64);
+}
+
+bool AMDGPUDAGToDAGISel::checkThreeOpFragConstantBus(
+    const SDNode *N, ArrayRef<SDValue> Ops) const {
+  if (fitsConstantBusLimit(Ops))
+    return true;
+  // Past the limit operands come from a register, which pays only if shared.
+  SDValue Inner =
+      N->getOperand(0) == Ops[2] ? N->getOperand(1) : N->getOperand(0);
+  if (!isFullRateThreeOpPair(N, Inner.getNode()))
+    return false;
+
+  return all_of(Ops, [this](SDValue Op) {
+    if (!usesConstantBus(Op))
+      return true;
+    // Two users only break even, and cost a register on top.
+    std::optional<uint32_t> C = getSplatConstant32(Op);
+    return C && SharedConstantUses.lookup(*C) >= 3;
+  });
 }
 
 bool AMDGPUDAGToDAGISel::isInlineImmediate(const SDNode *N) const {
