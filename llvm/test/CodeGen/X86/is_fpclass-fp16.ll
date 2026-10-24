@@ -130,7 +130,34 @@ define <4 x i1> @isinf_v4f16(<4 x half> %x) {
   ret <4 x i1> %r
 }
 
+;; Tests for narrow v2f16 vectors
+
+define <2 x i1> @isinf_v2f16(<2 x half> %x) {
+; AVX512FP16-LABEL: isinf_v2f16:
+; AVX512FP16:       # %bb.0:
+; AVX512FP16-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512FP16-NEXT:    vpcmpeqw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512FP16-NEXT:    vpmovzxwq %xmm0, %xmm0 # xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
+; AVX512FP16-NEXT:    retq
+;
+; AVX512FP16VL-LABEL: isinf_v2f16:
+; AVX512FP16VL:       # %bb.0:
+; AVX512FP16VL-NEXT:    vfpclassph $24, %xmm0, %k1 # k1 = isPositiveInfinity(xmm0) | isNegativeInfinity(xmm0)
+; AVX512FP16VL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512FP16VL-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
+; AVX512FP16VL-NEXT:    retq
+;
+; AVX10_2-LABEL: isinf_v2f16:
+; AVX10_2:       # %bb.0:
+; AVX10_2-NEXT:    vfpclassph $24, %xmm0, %k0 # k0 = isPositiveInfinity(xmm0) | isNegativeInfinity(xmm0)
+; AVX10_2-NEXT:    vpmovm2q %k0, %xmm0
+; AVX10_2-NEXT:    retq
+  %r = call <2 x i1> @llvm.is.fpclass.v2f16(<2 x half> %x, i32 516)
+  ret <2 x i1> %r
+}
+
 declare <32 x i1> @llvm.is.fpclass.v32f16(<32 x half>, i32)
 declare <16 x i1> @llvm.is.fpclass.v16f16(<16 x half>, i32)
 declare <8 x i1> @llvm.is.fpclass.v8f16(<8 x half>, i32)
 declare <4 x i1> @llvm.is.fpclass.v4f16(<4 x half>, i32)
+declare <2 x i1> @llvm.is.fpclass.v2f16(<2 x half>, i32)

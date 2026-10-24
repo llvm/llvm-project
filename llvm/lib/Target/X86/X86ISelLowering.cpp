@@ -2496,7 +2496,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::LRINT, MVT::v8f16, Legal);
       setOperationAction(ISD::LRINT, MVT::v16f16, Legal);
 
-      for (auto VT : {MVT::v8f16, MVT::v16f16, MVT::v4f16})
+      for (auto VT : {MVT::v8f16, MVT::v16f16, MVT::v4f16, MVT::v2f16})
         setOperationAction(ISD::IS_FPCLASS, VT, Custom);
     }
   }
@@ -2623,7 +2623,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
     if (Subtarget.useAVX512Regs())
       setOperationAction(ISD::IS_FPCLASS, MVT::v32bf16, Custom);
-    for (auto VT : {MVT::v8bf16, MVT::v16bf16, MVT::v2bf16})
+    for (auto VT : {MVT::v8bf16, MVT::v16bf16, MVT::v4bf16, MVT::v2bf16})
       setOperationAction(ISD::IS_FPCLASS, VT, Custom);
   }
 
