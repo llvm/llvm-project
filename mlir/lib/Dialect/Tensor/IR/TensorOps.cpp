@@ -2092,6 +2092,9 @@ static LogicalResult verifyTensorReshapeOp(TensorReshapeOp op,
 }
 
 LogicalResult ExpandShapeOp::verify() {
+  if (failed(verifyReassociationIndicesNotEmpty(*this)))
+    return failure();
+
   RankedTensorType srcType = getSrc().getType();
   RankedTensorType resultType = getResult().getType();
 
@@ -2127,10 +2130,9 @@ LogicalResult ExpandShapeOp::verify() {
 
 LogicalResult CollapseShapeOp::verify() {
   CollapseShapeOp op = *this;
-  if (llvm::any_of(op.getReassociationIndices(),
-                   [](ReassociationIndices group) { return group.empty(); })) {
-    return op.emitOpError("reassociation indices must not be empty");
-  }
+  if (failed(verifyReassociationIndicesNotEmpty(op)))
+    return failure();
+
   RankedTensorType srcType = op.getSrc().getType();
   RankedTensorType resultType = op.getResult().getType();
 
@@ -3250,6 +3252,11 @@ void PadOp::getAsmResultNames(function_ref<void(Value, StringRef)> setNameFn) {
 }
 
 LogicalResult PadOp::verify() {
+  for (ArrayRef<int64_t> padding : {getStaticLow(), getStaticHigh()})
+    for (int64_t size : padding)
+      if (!ShapedType::isDynamic(size) && size < 0)
+        return emitOpError("padding must be non-negative, got ") << size;
+
   auto sourceType = llvm::cast<RankedTensorType>(getSource().getType());
   auto resultType = llvm::cast<RankedTensorType>(getResult().getType());
   auto expectedType =
@@ -3671,12 +3678,15 @@ struct FoldStaticPadding : public OpRewritePattern<PadOp> {
 
     auto outputDims = oldResultType.getShape();
 
-    // Extract the static info from the high and low operands.
+    // Extract the static info from the high and low operands. A negative
+    // constant is not folded, since the attribute must be non-negative.
+    // TODO: we should consider folding to a poison value in this case.
     SmallVector<int64_t> constOperandsLow;
     SmallVector<Value> newLows;
     for (auto operand : padTensorOp.getLow()) {
       APSInt intOp;
-      if (!matchPattern(operand, m_ConstantInt(&intOp))) {
+      if (!matchPattern(operand, m_ConstantInt(&intOp)) ||
+          intOp.getExtValue() < 0) {
         constOperandsLow.push_back(ShapedType::kDynamic);
         newLows.push_back(operand);
         continue;
@@ -3687,7 +3697,8 @@ struct FoldStaticPadding : public OpRewritePattern<PadOp> {
     SmallVector<Value> newHighs;
     for (auto operand : padTensorOp.getHigh()) {
       APSInt intOp;
-      if (!matchPattern(operand, m_ConstantInt(&intOp))) {
+      if (!matchPattern(operand, m_ConstantInt(&intOp)) ||
+          intOp.getExtValue() < 0) {
         constOperandsHigh.push_back(ShapedType::kDynamic);
         newHighs.push_back(operand);
         continue;

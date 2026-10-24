@@ -239,6 +239,7 @@ public:
   bool VisitCXXTypeidExpr(const CXXTypeidExpr *E);
   bool VisitObjCDictionaryLiteral(const ObjCDictionaryLiteral *E);
   bool VisitObjCArrayLiteral(const ObjCArrayLiteral *E);
+  bool VisitCXXReflectExpr(const CXXReflectExpr *E);
   bool VisitDesignatedInitUpdateExpr(const DesignatedInitUpdateExpr *E);
 
   // Statements.
@@ -259,6 +260,8 @@ public:
   bool visitCXXTryStmt(const CXXTryStmt *S);
   bool
   visitCXXExpansionStmtInstantiation(const CXXExpansionStmtInstantiation *S);
+
+  bool registerRedecl(const VarDecl *VD, const APValue &V);
 
 protected:
   bool visitStmt(const Stmt *S);

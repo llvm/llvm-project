@@ -506,9 +506,6 @@ private:
   bool SingleCU;
   bool IsDarwin;
 
-  /// Map for tracking Fortran deferred CHARACTER lengths.
-  DenseMap<const DIStringType *, unsigned> StringTypeLocMap;
-
   AddressPool AddrPool;
 
   /// Accelerator tables.
@@ -960,16 +957,6 @@ public:
   /// Find the matching DwarfCompileUnit for the given SP referenced from SrcCU.
   DwarfCompileUnit &getOrCreateAbstractSubprogramCU(const DISubprogram *SP,
                                                     DwarfCompileUnit &SrcCU);
-
-  unsigned getStringTypeLoc(const DIStringType *ST) const {
-    return StringTypeLocMap.lookup(ST);
-  }
-
-  void addStringTypeLoc(const DIStringType *ST, unsigned Loc) {
-    assert(ST);
-    if (Loc)
-      StringTypeLocMap[ST] = Loc;
-  }
 
   /// \defgroup DebuggerTuning Predicates to tune DWARF for a given debugger.
   ///

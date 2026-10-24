@@ -1623,6 +1623,7 @@ defm S_CBRANCH_EXECNZ : SOPP_With_Relaxation <
 >;
 } // End Uses = [EXEC]
 
+let hasSideEffects = 1 in {
 defm S_CBRANCH_CDBGSYS : SOPP_With_Relaxation <
   "s_cbranch_cdbgsys" , (ins SOPPBrTarget:$simm16),
   "$simm16"
@@ -1642,6 +1643,7 @@ defm S_CBRANCH_CDBGUSER : SOPP_With_Relaxation <
   "s_cbranch_cdbguser" , (ins SOPPBrTarget:$simm16),
   "$simm16"
 >;
+} // End hasSideEffects = 1
 
 } // End isBranch = 1
 } // End isTerminator = 1
@@ -2087,7 +2089,7 @@ let AddedComplexity = 20 in {
 let AddedComplexity = 20 in {
   def : GCNPat<
     (i32 (UniformBinFrag<uaddsat> i32:$src0, i32:$src1)),
-    (S_ADD_U32 (S_MIN_U32 $src0, (S_NOT_B32 $src1)), $src1)
+    (S_ADD_I32 (S_MIN_U32 $src0, (S_NOT_B32 $src1)), $src1)
   >;
   def : GCNPat<
     (i32 (UniformBinFrag<usubsat> i32:$src0, i32:$src1)),

@@ -13,6 +13,7 @@
 #include "lldb/API/SBBroadcaster.h"
 #include "lldb/API/SBEvent.h"
 #include "lldb/API/SBListener.h"
+#include "lldb/Utility/StringPool.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -93,7 +94,8 @@ const char *SBBroadcaster::GetName() const {
   LLDB_INSTRUMENT_VA(this);
 
   if (m_opaque_ptr)
-    return ConstString(m_opaque_ptr->GetBroadcasterName()).GetCString();
+    return StringPool::GetSystemPool().Intern(
+        m_opaque_ptr->GetBroadcasterName());
   return nullptr;
 }
 

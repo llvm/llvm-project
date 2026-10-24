@@ -106,14 +106,9 @@ define void @versioned_block_check_reuses_no_body_scalars(ptr %arg, ptr nofree r
 ; CHECK-NEXT:    [[RT_GUARD:%.*]] = freeze i1 [[RT_CONFLICT]]
 ; CHECK-NEXT:    br i1 [[RT_GUARD]], label %[[ENTRY_RTSCALAR:.*]], label %[[ENTRY_RTVEC:.*]], !prof [[PROF0]]
 ; CHECK:       [[ENTRY_RTVEC]]:
-; CHECK-NEXT:    [[GEP4_1:%.*]] = getelementptr i8, ptr [[ARG]], i64 4
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x ptr> poison, ptr [[ARG]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x ptr> [[TMP2]], <2 x ptr> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, <2 x ptr> [[TMP3]], <2 x i64> <i64 8, i64 12>
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x ptr> [[TMP3]], <2 x ptr> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x ptr> [[TMP5]], ptr [[GEP4_1]], i64 1
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x ptr> [[TMP4]], <2 x ptr> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x ptr> [[TMP6]], <4 x ptr> [[TMP7]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x ptr> poison, ptr [[ARG]], i64 0
+; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <4 x ptr> [[TMP2]], <4 x ptr> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, <4 x ptr> [[TMP16]], <4 x i64> <i64 0, i64 4, i64 8, i64 12>
 ; CHECK-NEXT:    [[TMP9:%.*]] = ptrtoint <4 x ptr> [[TMP8]] to <4 x i64>
 ; CHECK-NEXT:    [[TMP10:%.*]] = load <4 x i32>, ptr [[ARG2]], align 4
 ; CHECK-NEXT:    [[TMP11:%.*]] = zext <4 x i32> [[TMP10]] to <4 x i64>
@@ -122,8 +117,6 @@ define void @versioned_block_check_reuses_no_body_scalars(ptr %arg, ptr nofree r
 ; CHECK-NEXT:    [[TMP14:%.*]] = zext <4 x i1> [[TMP13]] to <4 x i32>
 ; CHECK-NEXT:    store <4 x i32> [[TMP14]], ptr [[ARG]], align 4
 ; CHECK-NEXT:    [[GEP_4:%.*]] = getelementptr i8, ptr [[ARG2]], i64 16
-; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x ptr> poison, ptr [[ARG]], i64 0
-; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <4 x ptr> [[TMP15]], <4 x ptr> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr i8, <4 x ptr> [[TMP16]], <4 x i64> <i64 16, i64 20, i64 24, i64 28>
 ; CHECK-NEXT:    [[GEP4_4:%.*]] = getelementptr i8, ptr [[ARG]], i64 16
 ; CHECK-NEXT:    [[TMP18:%.*]] = ptrtoint <4 x ptr> [[TMP17]] to <4 x i64>

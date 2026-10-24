@@ -8,7 +8,7 @@
 // CHECK-NOT:     fir.convert
 func.func @load_scalar(%arg0: !fir.ref<f32>) {
   %0 = fir.undefined !fir.dscope
-  %1 = fir.declare %arg0 dummy_scope %0 {uniq_name = "a"} :
+  %1 = fir.declare %arg0 dummy_scope %0 uniq_name("a") :
        (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
   %2 = fir.load %1 : !fir.ref<f32>
   %3 = fir.load %1 : !fir.ref<f32>
@@ -23,7 +23,7 @@ func.func @load_array1d(%arg0: !fir.ref<!fir.array<3xf32>>) {
   %c3 = arith.constant 3 : index
   %0 = fir.undefined !fir.dscope
   %shape = fir.shape %c3 : (index) -> !fir.shape<1>
-  %1 = fir.declare %arg0(%shape) dummy_scope %0 {uniq_name = "a"} :
+  %1 = fir.declare %arg0(%shape) dummy_scope %0 uniq_name("a") :
        (!fir.ref<!fir.array<3xf32>>, !fir.shape<1>, !fir.dscope) ->
        !fir.ref<!fir.array<3xf32>>
   %2 = fir.array_coor %1(%shape) %c1 :
@@ -41,7 +41,7 @@ func.func @load_array1d(%arg0: !fir.ref<!fir.array<3xf32>>) {
 func.func @store_scalar(%arg0: !fir.ref<i32>) {
   %c7_i32 = arith.constant 7 : i32
   %0 = fir.undefined !fir.dscope
-  %1 = fir.declare %arg0 dummy_scope %0 {uniq_name = "a"} :
+  %1 = fir.declare %arg0 dummy_scope %0 uniq_name("a") :
        (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
   fir.store %c7_i32 to %1 : !fir.ref<i32>
   %2 = fir.load %1 : !fir.ref<i32>
@@ -57,7 +57,7 @@ func.func @store_array1d(%arg0: !fir.ref<!fir.array<3xi32>>) {
   %c3 = arith.constant 3 : index
   %0 = fir.undefined !fir.dscope
   %shape = fir.shape %c3 : (index) -> !fir.shape<1>
-  %1 = fir.declare %arg0(%shape) dummy_scope %0 {uniq_name = "a"} :
+  %1 = fir.declare %arg0(%shape) dummy_scope %0 uniq_name("a") :
        (!fir.ref<!fir.array<3xi32>>, !fir.shape<1>, !fir.dscope) ->
        !fir.ref<!fir.array<3xi32>>
   %2 = fir.array_coor %1(%shape) %c1 :
@@ -84,8 +84,8 @@ func.func @optional_optimized(%arg0: !fir.box<!fir.array<?x!fir.logical<4>>> {fi
   %c0 = arith.constant 0 : index
   %0 = fir.undefined !fir.dscope
   %1 = fir.alloca i32 {uniq_name = "i"}
-  %2 = fir.declare %1 {uniq_name = "i"} : (!fir.ref<i32>) -> !fir.ref<i32>
-  %3 = fir.declare %arg0 dummy_scope %0 {uniq_name = "r"} :
+  %2 = fir.declare %1 uniq_name("i") : (!fir.ref<i32>) -> !fir.ref<i32>
+  %3 = fir.declare %arg0 dummy_scope %0 uniq_name("r") :
        (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.dscope) ->
        !fir.box<!fir.array<?x!fir.logical<4>>>
   %6 = fir.is_present %3 : (!fir.box<!fir.array<?x!fir.logical<4>>>) -> i1
@@ -137,11 +137,11 @@ func.func @optional(%arg0: !fir.box<!fir.array<?x!fir.logical<4>>> {fir.optional
   %c3 = arith.constant 3 : index
   %c0 = arith.constant 0 : index
   %0 = fir.undefined !fir.dscope
-  %1 = fir.declare %arg1 dummy_scope %0 {uniq_name = "d"} :
+  %1 = fir.declare %arg1 dummy_scope %0 uniq_name("d") :
        (!fir.ref<!fir.logical<4>>, !fir.dscope) -> !fir.ref<!fir.logical<4>>
   %2 = fir.alloca i32 {uniq_name = "i"}
-  %3 = fir.declare %2 {uniq_name = "i"} : (!fir.ref<i32>) -> !fir.ref<i32>
-  %4 = fir.declare %arg0 dummy_scope %0 {uniq_name = "r"} :
+  %3 = fir.declare %2 uniq_name("i") : (!fir.ref<i32>) -> !fir.ref<i32>
+  %4 = fir.declare %arg0 dummy_scope %0 uniq_name("r") :
        (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.dscope) ->
        !fir.box<!fir.array<?x!fir.logical<4>>>
   %7 = fir.is_present %1 : (!fir.ref<!fir.logical<4>>) -> i1
@@ -190,7 +190,7 @@ func.func @optional_declare() {
   %c0_i32 = arith.constant 0 : i32
   %5 = fir.absent !fir.ref<i32>
   %6 = fir.undefined !fir.dscope
-  %7 = fir.declare %5 dummy_scope %6 {uniq_name = "_QFFtestEd"} :
+  %7 = fir.declare %5 dummy_scope %6 uniq_name("_QFFtestEd") :
        (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
   %9 = fir.is_present %7 : (!fir.ref<i32>) -> i1
   scf.if %9 {

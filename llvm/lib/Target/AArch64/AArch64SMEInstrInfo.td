@@ -327,7 +327,7 @@ def MSRpstatePseudo :
     Sched<[WriteSys]> {
   let hasPostISelHook = 1;
   let Uses = [VG];
-  let Defs = [VG];
+  let Defs = [VG, FPMR];
 }
 
 def : Pat<(AArch64_cond_smstart (i32 svcr_op:$pstate), (i64 timm0_31:$condition), (i64 GPR64:$pstatesm)),
@@ -1134,6 +1134,15 @@ let Predicates = [HasSME_MOP4, HasSMEB16B16] in {
 let Predicates = [HasSME_MOP4, HasSMEF64F64] in {
   defm FMOP4A : sme2_fmop4as_fp64_non_widening<0, "fmop4a", "int_aarch64_sme_mop4a">;
   defm FMOP4S : sme2_fmop4as_fp64_non_widening<1, "fmop4s", "int_aarch64_sme_mop4s">;
+}
+
+// SME2 mixed-precision FP8 instructions
+let Predicates = [HasSMEF16F8F16] in {
+  def FMOPAB_M2ZZZ_BtoH: sme2_fp8_fmop_za16<"fmopab", 0b0>;
+  def FMOPAT_M2ZZZ_BtoH: sme2_fp8_fmop_za16<"fmopat", 0b1>;
+
+  defm FDOT_VG2_M2ZZIZ_BtoH  : sme2_fp8_fdot_za16_vg1x2<"fdot", 0b0>;
+  defm FVDOT_VG2_M2ZZIZ_BtoH : sme2_fp8_fdot_za16_vg1x2<"fvdot", 0b1>;
 }
 
 //===----------------------------------------------------------------------===//

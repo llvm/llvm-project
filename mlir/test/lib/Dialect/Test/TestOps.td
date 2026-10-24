@@ -24,6 +24,7 @@ include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/CallInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/DataLayoutInterfaces.td"
+include "mlir/Dialect/DLTI/DLTIOpInterfaces.td"
 include "mlir/Interfaces/DestinationStyleOpInterface.td"
 include "mlir/Interfaces/InferIntRangeInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
@@ -1132,10 +1133,55 @@ def UpdateAttr : Pat<(I32ElementsAttrOp $attr),
                      (I32ElementsAttrOp ConstantAttr<I32ElementsAttr, "0">),
                      [(IsNotScalar $attr)]>;
 
+def TestGreedyCfgRewriteOp : TEST_Op<"greedy_cfg_rewrite"> {
+  let description = [{
+    Exercises reachability changes while the greedy driver is processing its
+    worklist. The matching test pattern performs the CFG change selected by
+    `mode`, then erases the op:
+
+      observe:           emit a remark; used to observe whether a block is
+                         processed
+      append_unreachable: append a disconnected block holding an observer
+      append_reachable:  append a block holding an observer and branch to it
+                         on `cond`
+      insert_entry:      insert a new entry block, disconnecting the old one
+      move_entry:        move the last block to the front
+      move_entry_away:   insert a block after the entry and move the entry to
+                         the end
+      erase_entry:       erase the entry block; its successor becomes the entry
+      redirect:          retarget the block's branch to the last block
+      double_redirect:   retarget the block's branch to the last block and
+                         replace the entry's branch with a return; for a
+                         conditional branch, keep only the false destination
+      reconnect:         replace the block's branch with a conditional branch
+                         on `cond` to its destination and to the next block
+      disconnect_parent: retarget the entry branch of the parent region
+      move_parent:       move the grandparent operation into a new block
+      move_erase:        retarget the block's branch, then move its old
+                         destination to another region and erase it
+      merge:             merge the branch destination into the block
+      merge_disconnect:  merge, then fold the merged conditional branch
+      redirect_retarget: retarget the block's branch to its destination's
+                         destination, and the destination's branch to an
+                         appended block holding an observer
+
+    Modes that operate on the block's branch expect an unconditional branch
+    without operands as the terminator, except that `double_redirect` also
+    accepts a conditional branch without successor operands.
+  }];
+  let arguments = (ins EnumProp<TestGreedyCfgRewriteMode>:$mode,
+                       Optional<I1>:$cond);
+  let assemblyFormat = "$mode ($cond^)? attr-dict";
+}
+
 def TestBranchOp : TEST_Op<"br",
     [DeclareOpInterfaceMethods<BranchOpInterface>, Terminator]> {
-  let arguments = (ins Variadic<AnyType>:$targetOperands);
+  let arguments = (ins Variadic<AnyType>:$targetOperands,
+                       UnitAttr:$fold_to_last);
   let successors = (successor AnySuccessor:$target);
+  // With `fold_to_last`, the fold retargets the branch in place to the last
+  // block of the region, to exercise CFG changes made by folding.
+  let hasFolder = 1;
 }
 
 def TestProducingBranchOp : TEST_Op<"producing_br",
@@ -2366,6 +2412,11 @@ def BlackHoleOp : TEST_Op<"blackhole">,
 //===----------------------------------------------------------------------===//
 
 def TestRegionBuilderOp : TEST_Op<"region_builder">;
+def TestSegmentedReturnOp : TEST_Op<"segmented_return", [
+    Pure, ReturnLike, Terminator, AttrSizedOperandSegments]> {
+  let arguments = (ins Variadic<AnyType>:$first, Variadic<AnyType>:$second);
+}
+
 def TestReturnOp : TEST_Op<"return", [Pure, ReturnLike, Terminator]> {
   let arguments = (ins Variadic<AnyType>);
   let builders = [OpBuilder<(ins),
@@ -2381,7 +2432,7 @@ def TestCrashingReturnOp : TEST_Op<"crashing_return", [
        ["getMutableSuccessorOperands"]>,
     Terminator]> {
   let arguments = (ins Variadic<AnyType>:$args, UnitAttr:$valid);
-  let assemblyFormat = "($args^ `:` type($args))? attr-dict";
+  let assemblyFormat = "($args^ `:` type($args))? prop-dict attr-dict";
   let hasVerifier = 1;
 }
 def TestCastOp : TEST_Op<"cast">,
@@ -2728,12 +2779,12 @@ def TestValueWithBoundsOp : TEST_Op<"value_with_bounds", [
     Example:
 
     ```mlir
-    %0 = test.value_with_bounds { min = 4 : index, max = 5 : index}
+    %0 = test.value_with_bounds <min = 4, max = 5>
     ```
   }];
   let arguments = (ins IndexAttr:$min, IndexAttr:$max);
   let results = (outs Index:$result);
-  let assemblyFormat = "attr-dict";
+  let assemblyFormat = "prop-dict attr-dict";
 }
 
 
@@ -2796,6 +2847,49 @@ def CompareOp : TEST_Op<"compare"> {
 //===----------------------------------------------------------------------===//
 // Test RegionBranchOpInterface
 //===----------------------------------------------------------------------===//
+
+def SegmentedRegionBranchOp : TEST_Op<"segmented_region_branch", [
+    AttrSizedOperandSegments,
+    DeclareOpInterfaceMethods<RegionBranchOpInterface,
+        ["getEntrySuccessorOperands", "getSuccessorInputs"]>]> {
+  let description = [{
+    Select one of two regions and pass the corresponding operand segment to
+    its block arguments. Each region can branch to either region or exit.
+    The control operands are not successor operands.
+  }];
+  let arguments = (ins I1:$condition, Variadic<AnyType>:$first,
+                       Variadic<AnyType>:$second, Optional<I1>:$exitCondition);
+  let regions = (region SizedRegion<1>:$firstRegion,
+                        SizedRegion<1>:$secondRegion);
+  let hasCanonicalizer = 1;
+}
+
+def SegmentedRegionBranchTerminatorOp
+    : TEST_Op<"segmented_region_branch_terminator", [
+        AttrSizedOperandSegments, Terminator,
+        HasParent<"SegmentedRegionBranchOp">,
+        DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface,
+            ["getMutableSuccessorOperands"]>]> {
+  let arguments = (ins I1:$condition, Variadic<AnyType>:$first,
+                       Variadic<AnyType>:$second, Optional<I1>:$exitCondition);
+}
+
+def IsolatedRegionBranchOp : TEST_Op<"isolated_region_branch", [
+    IsolatedFromAbove, RecursiveMemoryEffects,
+    DeclareOpInterfaceMethods<RegionBranchOpInterface,
+        ["getEntrySuccessorOperands", "getSuccessorInputs"]>]> {
+  let arguments = (ins Variadic<AnyType>:$inputs);
+  let results = (outs Variadic<AnyType>:$outputs);
+  let regions = (region VariadicRegion<SizedRegion<1>>:$branches);
+  let hasCanonicalizer = 1;
+}
+
+def IsolatedRegionYieldOp : TEST_Op<"isolated_region_yield", [
+    Pure, ReturnLike, Terminator,
+    DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface,
+        ["getMutableSuccessorOperands"]>]> {
+  let arguments = (ins Variadic<AnyType>:$values);
+}
 
 def RegionIfYieldOp : TEST_Op<"region_if_yield",
       [NoMemoryEffect, ReturnLike, Terminator]> {
@@ -3119,10 +3213,13 @@ def MakeTupleOp: TEST_Op<"make_tuple"> {
 //===----------------------------------------------------------------------===//
 
 def OpWithDataLayoutOp : TEST_Op<"op_with_data_layout",
-                                 [IsolatedFromAbove, HasDefaultDLTIDataLayout, DataLayoutOpInterface]> {
+                                 [IsolatedFromAbove, HasDefaultDLTIDataLayout,
+                                  DataLayoutOpInterface,
+                                  DLTIQueryOpInterface]> {
   let summary =
       "An op that uses DataLayout implementation from the Target dialect";
   let regions = (region VariadicRegion<AnyRegion>:$regions);
+  let arguments = (ins OptionalAttr<DLTIQueryAttr>:$dlti);
 }
 
 def DataLayoutQueryOp : TEST_Op<"data_layout_query"> {
@@ -3374,12 +3471,12 @@ def TestNVVMRequiresSMArchOrFamilyCondOp :
 
 def TestDefaultStrAttrNoValueOp : TEST_Op<"no_str_value"> {
   let arguments = (ins DefaultValuedAttr<StrAttr, "">:$value);
-  let assemblyFormat = "attr-dict";
+  let assemblyFormat = "prop-dict attr-dict";
 }
 
 def TestDefaultStrAttrHasValueOp : TEST_Op<"has_str_value"> {
   let arguments = (ins DefaultValuedStrAttr<StrAttr, "">:$value);
-  let assemblyFormat = "attr-dict";
+  let assemblyFormat = "prop-dict attr-dict";
 }
 
 def : Pat<(TestDefaultStrAttrNoValueOp $value),
@@ -3415,7 +3512,7 @@ def : Pat<(TestVariadicRewriteSrcOp $arg, $brg, $crg),
 def TestDefaultAttrPrintOp : TEST_Op<"default_value_print"> {
   let arguments = (ins DefaultValuedAttr<I32Attr, "0">:$value_with_default,
                    I32:$operand);
-  let assemblyFormat = "attr-dict $operand";
+  let assemblyFormat = "prop-dict attr-dict $operand";
 }
 
 //===----------------------------------------------------------------------===//
@@ -3506,7 +3603,7 @@ def TestWithBoundsOp : TEST_Op<"with_bounds",
     Example:
 
     ```mlir
-    %0 = test.with_bounds { umin = 4 : index, umax = 5 : index, smin = 4 : index, smax = 5 : index } : index
+    %0 = test.with_bounds <umin = 4 : index, umax = 5 : index, smin = 4 : index, smax = 5 : index> : index
     ```
   }];
 
@@ -3516,7 +3613,7 @@ def TestWithBoundsOp : TEST_Op<"with_bounds",
                        APIntAttr:$smax);
   let results = (outs InferIntRangeType:$fakeVal);
 
-  let assemblyFormat = "attr-dict `:` type($fakeVal)";
+  let assemblyFormat = "prop-dict attr-dict `:` type($fakeVal)";
 }
 
 def TestWithoutBoundsOp : TEST_Op<"without_bounds",
@@ -3567,7 +3664,7 @@ def TestReflectBoundsOp : TEST_Op<"reflect_bounds",
     Example:
 
     ```mlir
-    CHECK: test.reflect_bounds {smax = 7 : index, smin = 0 : index, umax = 7 : index, umin = 0 : index}
+    CHECK: test.reflect_bounds <umin = 0 : index, umax = 7 : index, smin = 0 : index, smax = 7 : index>
     %1 = test.reflect_bounds %0 : index
     ```
   }];
@@ -3579,7 +3676,7 @@ def TestReflectBoundsOp : TEST_Op<"reflect_bounds",
                        OptionalAttr<APIntAttr>:$smax);
   let results = (outs InferIntRangeType:$result);
 
-  let assemblyFormat = "attr-dict $value `:` type($result)";
+  let assemblyFormat = "prop-dict attr-dict $value `:` type($result)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -4382,7 +4479,7 @@ def TestCallAndStoreOp : TEST_Op<"call_and_store",
     Variadic<AnyType>:$results
   );
   let assemblyFormat =
-    "$callee `(` $callee_operands `)` `,` $address attr-dict "
+    "$callee `(` $callee_operands `)` `,` $address prop-dict attr-dict "
     "`:` functional-type(operands, results)";
 }
 
@@ -4400,7 +4497,7 @@ def TestCallOnDeviceOp : TEST_Op<"call_on_device",
   );
   let assemblyFormat =
     "$callee `(` $forwarded_operands `)` `,` $non_forwarded_device_operand "
-    "attr-dict `:` functional-type(operands, results)";
+    "prop-dict attr-dict `:` functional-type(operands, results)";
 }
 
 // A call-like operation whose first result is produced by the operation itself
@@ -4420,7 +4517,7 @@ def TestCallAndProduceOp : TEST_Op<"call_and_produce",
     Variadic<AnyType>:$forwarded
   );
   let assemblyFormat =
-    "$callee `(` $forwarded_operands `)` attr-dict "
+    "$callee `(` $forwarded_operands `)` prop-dict attr-dict "
     "`:` functional-type(operands, results)";
 }
 
@@ -4433,7 +4530,7 @@ def TestStoreWithARegion : TEST_Op<"store_with_a_region",
   );
   let regions = (region AnyRegion:$body);
   let assemblyFormat =
-    "$address attr-dict-with-keyword regions `:` type($address)";
+    "$address prop-dict attr-dict-with-keyword regions `:` type($address)";
 }
 
 def TestStoreWithALoopRegion : TEST_Op<"store_with_a_loop_region",
@@ -4445,7 +4542,7 @@ def TestStoreWithALoopRegion : TEST_Op<"store_with_a_loop_region",
   );
   let regions = (region AnyRegion:$body);
   let assemblyFormat =
-    "$address attr-dict-with-keyword regions `:` type($address)";
+    "$address prop-dict attr-dict-with-keyword regions `:` type($address)";
 }
 
 def TestStoreWithARegionTerminator : TEST_Op<"store_with_a_region_terminator",
@@ -4832,7 +4929,7 @@ def CallWithSegmentsOp : TEST_Op<"call_with_segments",
       return ::mlir::CallInterfaceCallable();
     }
     void $cppClass::setCalleeFromCallable(::mlir::CallInterfaceCallable callee) {
-      if (auto sym = callee.dyn_cast<::mlir::SymbolRefAttr>())
+      if (auto sym = dyn_cast<::mlir::SymbolRefAttr>(callee))
         (*this)->setDiscardableAttr("callee", sym);
       else
         (*this)->removeDiscardableAttr("callee");

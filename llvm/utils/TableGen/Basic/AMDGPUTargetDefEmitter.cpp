@@ -461,44 +461,57 @@ static void emitFeatureNames(raw_ostream &OS, const FeatureNaming &Naming,
      << "#endif // " << Naming.NameTableGuard << "\n\n";
 }
 
-// The set of frontend features that end up in the emitted bitset.
+// Features checked for generic-target compatibility: frontend-visible features
+// and features explicitly opting into the any-covered-GPU rule.
 static SetVector<const Record *>
-collectVisibleFeatures(const Record *GPU,
+collectGenericFeatures(const Record *GPU,
                        const DenseMap<const Record *, unsigned> &FeatureIdx) {
   SetVector<const Record *> Closure;
   collectFeatureClosure(GPU, Closure);
-  SetVector<const Record *> Visible;
+  SetVector<const Record *> Features;
   for (const Record *F : Closure) {
-    if (FeatureIdx.contains(F))
-      Visible.insert(F);
+    if (FeatureIdx.contains(F) || F->isSubClassOf("AMDGPUGenericAnyFeature"))
+      Features.insert(F);
   }
 
-  return Visible;
+  return Features;
 }
 
-// Make sure a "gfxN-generic" processor doesn't expose a frontend-visible
-// feature missing from any covered processor.
-//
-// FIXME: The check should cover all SubtargetFeatures, not just the
-// frontend-visible ones. It is limited to those because a generic legitimately
-// carries some features a covered GPU lacks (bug/hazard workarounds and
-// worst-case-valued features); those cases need to be marked to opt out of the
-// check, plus min-value handling for numeric features.
+// Ordinary frontend-visible features must be present on every covered GPU.
+// AMDGPUGenericAnyFeature features need only be present on one covered GPU.
 static void
 validateGenericFeatures(const Record *GPU,
                         const DenseMap<const Record *, unsigned> &FeatureIdx) {
+  StringRef Name = GPU->getValueAsString("Name");
   std::vector<const Record *> Covered =
       GPU->getValueAsListOfDefs("CoveredGPUs");
-  if (Covered.empty())
+  if (Covered.empty()) {
+    if (Name.starts_with("gfx") && Name.ends_with("-generic")) {
+      PrintFatalError(GPU->getLoc(), "generic target '" + Name +
+                                         "' must cover at least one GPU");
+    }
     return;
+  }
 
   SetVector<const Record *> GenericFeatures =
-      collectVisibleFeatures(GPU, FeatureIdx);
+      collectGenericFeatures(GPU, FeatureIdx);
+  SetVector<const Record *> CoveredFeatures;
   for (const Record *Member : Covered) {
+    if (!Member->isSubClassOf("AMDGPUGPUInfo") ||
+        !Member->isSubClassOf("ProcessorModel") ||
+        Member->getValueAsBit("IsPseudoTarget") || isGenericTarget(Member)) {
+      PrintFatalError(GPU->getLoc(),
+                      "generic target '" + Name + "' covers '" +
+                          Member->getValueAsString("Name") +
+                          "', which is not a concrete AMDGPU GPU");
+    }
+
     SetVector<const Record *> MemberFeatures =
-        collectVisibleFeatures(Member, FeatureIdx);
+        collectGenericFeatures(Member, FeatureIdx);
+    CoveredFeatures.insert_range(MemberFeatures);
     for (const Record *F : GenericFeatures) {
-      if (!MemberFeatures.contains(F)) {
+      if (!F->isSubClassOf("AMDGPUGenericAnyFeature") &&
+          !MemberFeatures.contains(F)) {
         PrintFatalError(GPU->getLoc(),
                         "generic target '" + GPU->getValueAsString("Name") +
                             "' exposes feature '" +
@@ -506,6 +519,15 @@ validateGenericFeatures(const Record *GPU,
                             "' not supported by covered GPU '" +
                             Member->getValueAsString("Name") + "'");
       }
+    }
+  }
+
+  for (const Record *F : GenericFeatures) {
+    if (!CoveredFeatures.contains(F)) {
+      PrintFatalError(GPU->getLoc(),
+                      "generic target '" + GPU->getValueAsString("Name") +
+                          "' exposes feature '" + F->getValueAsString("Name") +
+                          "' not supported by any covered GPU");
     }
   }
 }
