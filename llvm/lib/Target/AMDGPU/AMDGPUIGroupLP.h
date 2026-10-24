@@ -19,6 +19,34 @@ namespace AMDGPU {
 // The current phase of instruction scheduling
 enum class SchedulingPhase { Initial, PreRAReentry, PostRA };
 
+/// IGLP analysis results computed while scheduling a region pre-RA and reused
+/// by its later scheduling phases, whose DAGs differ (e.g. post-RA physical
+/// register dependencies).
+struct IGLPPreRAAnalysis {
+  // MFMASmallGemmSingleWaveOpt (iglp_opt(1)).
+  unsigned DSWCount = 0;
+  unsigned DSWWithPermCount = 0;
+  unsigned DSWWithSharedVMEMCount = 0;
+  // MFMAExpInterleaveOpt (iglp_opt(2)).
+  // The count of TRANS SUs involved in the interleaved pipeline
+  unsigned TransPipeCount = 0;
+  // The count of MFMA SUs involved in the interleaved pipeline
+  unsigned MFMAPipeCount = 0;
+  // The count of Add SUs involved in the interleaved pipeline
+  unsigned AddPipeCount = 0;
+  // The number of transitive MFMA successors for each TRANS SU
+  unsigned MFMAEnablement = 0;
+  // The number of transitive TRANS predecessors for each MFMA SU
+  unsigned ExpRequirement = 0;
+  // The count of independent "chains" of MFMA instructions in the pipeline
+  unsigned MFMAChains = 0;
+  // Whether or not the pipeline has V_CVT instructions
+  bool HasCvt = false;
+  // Whether or not there are instructions between the TRANS instruction and
+  // V_CVT
+  bool HasChainBetweenCvt = false;
+};
+
 /// Operand 0 immediate for IGLP_OPT pseudo instructions.
 enum IGLPStrategyID : int {
   MFMASmallGemmOptID = 0,
