@@ -10,17 +10,16 @@ define zeroext i1 @search(i32 %needle, ptr nocapture readonly %haystack, i32 %co
 ; CHECK-NEXT:    testl %edx, %edx
 ; CHECK-NEXT:    jle LBB0_5
 ; CHECK-NEXT:  ## %bb.1: ## %for.body.preheader
-; CHECK-NEXT:    movslq %edx, %rax
-; CHECK-NEXT:    xorl %ecx, %ecx
+; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  LBB0_2: ## %for.body
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    cmpl %edi, (%rsi,%rcx,4)
+; CHECK-NEXT:    cmpl %edi, (%rsi,%rax,4)
 ; CHECK-NEXT:    je LBB0_6
 ; CHECK-NEXT:  ## %bb.3: ## %for.cond
 ; CHECK-NEXT:    ## in Loop: Header=BB0_2 Depth=1
-; CHECK-NEXT:    incq %rcx
-; CHECK-NEXT:    cmpq %rax, %rcx
+; CHECK-NEXT:    incq %rax
+; CHECK-NEXT:    cmpl %edx, %eax
 ; CHECK-NEXT:    jl LBB0_2
 ; CHECK-NEXT:  LBB0_5:
 ; CHECK-NEXT:    xorl %eax, %eax

@@ -153,11 +153,11 @@ attributes #0 = { nounwind }
 ; SDAG-NEXT:        .vgpr_count:     0x2{{$}}
 ; GISEL-NEXT:        .vgpr_count:     0x3{{$}}
 ; GCN-NEXT:      dynamic_stack_loop:
-; GCN-NEXT:        .backend_stack_size: 0x10{{$}}
+; GCN-NEXT:        .backend_stack_size: 0x14{{$}}
 ; GCN-NEXT:        .lds_size:       0{{$}}
-; GCN-NEXT:        .sgpr_count:     0x25{{$}}
-; GCN-NEXT:        .stack_frame_size_in_bytes: 0x10{{$}}
-; GCN-NEXT:        .vgpr_count:     0x3{{$}}
+; GCN-NEXT:        .sgpr_count:     0x21{{$}}
+; GCN-NEXT:        .stack_frame_size_in_bytes: 0x14{{$}}
+; GCN-NEXT:        .vgpr_count:     0x2{{$}}
 ; GCN-NEXT:      multiple_stack:
 ; GCN-NEXT:        .backend_stack_size: 0x24{{$}}
 ; GCN-NEXT:        .lds_size:       0{{$}}

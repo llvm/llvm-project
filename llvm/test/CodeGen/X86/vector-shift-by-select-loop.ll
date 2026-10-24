@@ -112,7 +112,7 @@ define void @vector_variable_shift_left_loop(ptr nocapture %arr, ptr nocapture r
 ; SSE-NEXT:    movups %xmm2, 96(%rdi,%rcx,4)
 ; SSE-NEXT:    movups %xmm3, 112(%rdi,%rcx,4)
 ; SSE-NEXT:    addq $32, %rcx
-; SSE-NEXT:    cmpq %rcx, %rdx
+; SSE-NEXT:    cmpl %ecx, %edx
 ; SSE-NEXT:    jne .LBB0_4
 ; SSE-NEXT:  # %bb.5: # %middle.block
 ; SSE-NEXT:    cmpl %r9d, %edx
@@ -236,7 +236,7 @@ define void @vector_variable_shift_left_loop(ptr nocapture %arr, ptr nocapture r
 ; AVX1-NEXT:    vmovups %xmm10, 96(%rdi,%rcx,4)
 ; AVX1-NEXT:    vmovups %xmm9, 112(%rdi,%rcx,4)
 ; AVX1-NEXT:    addq $32, %rcx
-; AVX1-NEXT:    cmpq %rcx, %rdx
+; AVX1-NEXT:    cmpl %ecx, %edx
 ; AVX1-NEXT:    jne .LBB0_4
 ; AVX1-NEXT:  # %bb.5: # %middle.block
 ; AVX1-NEXT:    cmpl %r9d, %edx
@@ -310,7 +310,7 @@ define void @vector_variable_shift_left_loop(ptr nocapture %arr, ptr nocapture r
 ; AVX2-NEXT:    vmovdqu %ymm5, 64(%rdi,%rcx,4)
 ; AVX2-NEXT:    vmovdqu %ymm6, 96(%rdi,%rcx,4)
 ; AVX2-NEXT:    addq $32, %rcx
-; AVX2-NEXT:    cmpq %rcx, %rdx
+; AVX2-NEXT:    cmpl %ecx, %edx
 ; AVX2-NEXT:    jne .LBB0_4
 ; AVX2-NEXT:  # %bb.5: # %middle.block
 ; AVX2-NEXT:    cmpl %r9d, %edx
@@ -409,7 +409,7 @@ define void @vector_variable_shift_left_loop(ptr nocapture %arr, ptr nocapture r
 ; XOP-NEXT:    vmovdqu %xmm12, 96(%rdi,%rcx,4)
 ; XOP-NEXT:    vmovdqu %xmm8, 112(%rdi,%rcx,4)
 ; XOP-NEXT:    addq $32, %rcx
-; XOP-NEXT:    cmpq %rcx, %rdx
+; XOP-NEXT:    cmpl %ecx, %edx
 ; XOP-NEXT:    jne .LBB0_4
 ; XOP-NEXT:  # %bb.5: # %middle.block
 ; XOP-NEXT:    cmpl %r9d, %edx

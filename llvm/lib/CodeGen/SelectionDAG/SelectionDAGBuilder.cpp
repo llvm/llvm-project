@@ -3802,6 +3802,10 @@ void SelectionDAGBuilder::visitUnary(const User &I, unsigned Opcode) {
   setValue(&I, UnNodeValue);
 }
 
+static const MDNode *getRangeMetadata(const Instruction &I) {
+  return I.getMetadata(LLVMContext::MD_range);
+}
+
 void SelectionDAGBuilder::visitBinary(const User &I, unsigned Opcode) {
   SDNodeFlags Flags;
   if (auto *OFBinOp = dyn_cast<OverflowingBinaryOperator>(&I)) {
@@ -3820,6 +3824,13 @@ void SelectionDAGBuilder::visitBinary(const User &I, unsigned Opcode) {
   SDValue BinNodeValue = DAG.getNode(Opcode, getCurSDLoc(), Op1.getValueType(),
                                      Op1, Op2, Flags);
   setValue(&I, BinNodeValue);
+
+  // Attach range metadata if present
+  if (const auto *Inst = dyn_cast<Instruction>(&I)) {
+    if (const MDNode *Ranges = getRangeMetadata(*Inst)) {
+      DAG.setNodeRanges(BinNodeValue.getNode(), Ranges);
+    }
+  }
 }
 
 void SelectionDAGBuilder::visitShift(const User &I, unsigned Opcode) {
@@ -4849,10 +4860,6 @@ void SelectionDAGBuilder::visitAlloca(const AllocaInst &I) {
   DAG.setRoot(DSA.getValue(1));
 
   assert(FuncInfo.MF->getFrameInfo().hasVarSizedObjects());
-}
-
-static const MDNode *getRangeMetadata(const Instruction &I) {
-  return I.getMetadata(LLVMContext::MD_range);
 }
 
 static std::optional<ConstantRange> getRange(const Instruction &I) {
