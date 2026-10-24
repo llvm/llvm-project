@@ -780,6 +780,18 @@ static Error verifyNoteSection(StringRef Name, endianness Endianness,
   return Error::success();
 }
 
+// This function returns true iff the Segment should be not processed
+// for LMA-modification. This includes, but is not limited to, the
+// RISCV attribute section.
+
+static bool SkipLMAValSegment(const Segment &Seg, const Object &Obj) {
+  switch (Obj.Machine) {
+  case ELF::EM_RISCV:
+    return Seg.Type == ELF::PT_RISCV_ATTRIBUTES;
+  }
+  return false;
+}
+
 // This function handles the high level operations of GNU objcopy including
 // handling command line options. It's important to outline certain properties
 // we expect to hold of the command line operations. Any operation that "keeps"
@@ -830,7 +842,7 @@ static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
 
   if (Config.ChangeSectionLMAValAll != 0) {
     for (Segment &Seg : Obj.segments()) {
-      if (Seg.MemSize > 0) {
+      if ((Seg.MemSize > 0) && !SkipLMAValSegment(Seg, Obj)) {
         if (Config.ChangeSectionLMAValAll > 0 &&
             Seg.PAddr > std::numeric_limits<uint64_t>::max() -
                             Config.ChangeSectionLMAValAll) {
