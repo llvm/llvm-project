@@ -717,16 +717,14 @@ llvm::StringRef DWARFUnit::PeekDIEName(dw_offset_t die_offset) {
 
 llvm::Expected<std::pair<uint64_t, llvm::dwarf::TypeKind>>
 DWARFUnit::GetDIEBitSizeAndEncoding(uint64_t relative_die_offset) const {
-  // Retrieve the type DIE that the value is being converted to. This
-  // offset is compile unit relative so we need to fix it up.
+  // The referenced base type's offset is compile unit relative.
   const uint64_t abs_die_offset = relative_die_offset + GetOffset();
   // FIXME: the constness has annoying ripple effects.
   DWARFDIE die = const_cast<DWARFUnit *>(this)->GetDIE(abs_die_offset);
   if (!die)
-    return llvm::createStringError("cannot resolve DW_OP_convert type DIE");
+    return llvm::createStringError("cannot resolve type DIE");
   if (die.Tag() != DW_TAG_base_type)
-    return llvm::createStringError(
-        "DW_OP_convert type DIE is not a DW_TAG_base_type");
+    return llvm::createStringError("type DIE is not a DW_TAG_base_type");
   uint64_t encoding =
       die.GetAttributeValueAsUnsigned(DW_AT_encoding, DW_ATE_hi_user);
   uint64_t bit_size = die.GetAttributeValueAsUnsigned(DW_AT_bit_size, 0);

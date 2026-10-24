@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 #include "lldb/Expression/DWARFExpression.h"
 #include "ValueMatcher.h"
+#include <algorithm>
 #include <unordered_map>
 #ifdef ARCH_AARCH64
 #include "Plugins/ABI/AArch64/ABISysV_arm64.h"
@@ -28,9 +29,11 @@
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StackFrame.h"
+#include "lldb/Utility/Endian.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/StreamString.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
@@ -91,6 +94,23 @@ private:
   DebugAddrMap m_debug_addr;
 };
 
+class DerefTypeDelegate : public MockDwarfDelegate {
+public:
+  DerefTypeDelegate(uint64_t bit_size, TypeKind encoding)
+      : m_bit_size(bit_size), m_encoding(encoding) {}
+
+  llvm::Expected<std::pair<uint64_t, TypeKind>>
+  GetDIEBitSizeAndEncoding(uint64_t relative_die_offset) const override {
+    if (relative_die_offset != 0x123)
+      return llvm::createStringError("unknown base type offset");
+    return std::pair{m_bit_size, m_encoding};
+  }
+
+private:
+  uint64_t m_bit_size;
+  TypeKind m_encoding;
+};
+
 /// Mock memory implementation for testing.
 /// Stores predefined memory contents indexed by {address, size} pairs.
 class MockMemory {
@@ -118,9 +138,9 @@ public:
   typedef std::unordered_map<Request, std::vector<uint8_t>, Request::Hash> Map;
   MockMemory() = default;
   MockMemory(Map memory) : m_memory(std::move(memory)) {
-    // Make sure the requested memory size matches the returned value.
+    // Allow short reads, but never return more bytes than requested.
     for ([[maybe_unused]] auto &[req, bytes] : m_memory) {
-      assert(bytes.size() == req.size);
+      assert(bytes.size() <= req.size);
     }
   }
 
@@ -156,9 +176,9 @@ struct MockProcess : Process {
       error = Status::FromError(expected_memory.takeError());
       return 0;
     }
-    assert(expected_memory->size() == size);
-    std::memcpy(buf, expected_memory->data(), expected_memory->size());
-    return size;
+    const size_t bytes_read = expected_memory->size();
+    std::memcpy(buf, expected_memory->data(), bytes_read);
+    return bytes_read;
   }
   size_t ReadMemory(const ProcessAddress &process_addr, void *buf, size_t size,
                     Status &status) override {
@@ -751,8 +771,7 @@ DWARF:
   // Not a DW_TAG_base_type.
   EXPECT_THAT_ERROR(
       t.Eval({DW_OP_const1s, 'X', DW_OP_convert, offs_enum}).takeError(),
-      llvm::FailedWithMessage(
-          "DW_OP_convert type DIE is not a DW_TAG_base_type"));
+      llvm::FailedWithMessage("type DIE is not a DW_TAG_base_type"));
 
   // A non-zero DIE offset with no DWARF unit.
   EXPECT_THAT_ERROR(
@@ -1535,12 +1554,6 @@ TEST(DWARFExpression, DW_OP_regval_type_unimplemented) {
       llvm::FailedWithMessage("unimplemented opcode DW_OP_regval_type"));
 }
 
-TEST(DWARFExpression, DW_OP_deref_type_unimplemented) {
-  EXPECT_THAT_EXPECTED(
-      Evaluate({DW_OP_lit0, DW_OP_deref_type, 0x04, 0x00}),
-      llvm::FailedWithMessage("unimplemented opcode DW_OP_deref_type"));
-}
-
 TEST(DWARFExpression, DW_OP_xderef_type_unimplemented) {
   EXPECT_THAT_EXPECTED(
       Evaluate({DW_OP_lit0, DW_OP_lit0, DW_OP_xderef_type, 0x04, 0x00}),
@@ -1788,6 +1801,346 @@ TEST_F(DWARFExpressionMockProcessTest, DW_OP_deref_address_size) {
       {DW_OP_lit8, DW_OP_deref_size, 1, DW_OP_stack_value}, {}, {}, &exe_ctx);
   ASSERT_THAT_EXPECTED(deref_size_result, ExpectScalar(32, 0xff, false));
   EXPECT_EQ(deref_size_result->GetScalar().GetAPSInt().getBitWidth(), 32u);
+}
+
+TEST_F(DWARFExpressionMockProcessTest, DW_OP_deref_type_integer) {
+  for (const char *triple : {"i386-pc-linux", "powerpc-pc-linux"}) {
+    for (unsigned bit_size : {8, 31, 32, 64, 128, 1024, 2040}) {
+      for (TypeKind encoding : {DW_ATE_signed, DW_ATE_unsigned,
+                                DW_ATE_signed_char, DW_ATE_unsigned_char}) {
+        if (bit_size != 8 && (encoding == DW_ATE_signed_char ||
+                              encoding == DW_ATE_unsigned_char))
+          continue;
+        SCOPED_TRACE(llvm::formatv("{0}, {1} bits, encoding {2}", triple,
+                                   bit_size, static_cast<unsigned>(encoding))
+                         .str());
+        const unsigned byte_size = (bit_size + 7) / 8;
+        std::vector<uint8_t> bytes(byte_size, 0);
+        bytes.front() = 42;
+        bytes.back() |= 1 << ((bit_size - 1) % 8);
+        if (ArchSpec(triple).GetByteOrder() == lldb::eByteOrderBig)
+          std::reverse(bytes.begin(), bytes.end());
+
+        TestContext test_ctx;
+        MockMemory::Map memory = {{{4, byte_size}, bytes}};
+        ASSERT_TRUE(CreateTestContext(&test_ctx, triple, {}, {}, memory));
+        ExecutionContext exe_ctx(test_ctx.process_sp);
+        DerefTypeDelegate unit(bit_size, encoding);
+        const uint8_t expr[] = {
+            DW_OP_lit4, DW_OP_deref_type, static_cast<uint8_t>(byte_size), 0xa3,
+            0x02,       DW_OP_stack_value};
+        auto result = Evaluate(expr, {}, &unit, &exe_ctx);
+        const bool is_signed =
+            encoding == DW_ATE_signed || encoding == DW_ATE_signed_char;
+        llvm::APSInt expected(
+            llvm::APInt::getOneBitSet(bit_size, bit_size - 1) | 42, !is_signed);
+        ASSERT_THAT_EXPECTED(result, ExpectScalar(Scalar(expected)));
+        EXPECT_EQ(result->GetScalar().GetAPSInt().getBitWidth(), bit_size);
+        EXPECT_EQ(result->GetScalar().IsSigned(), is_signed);
+      }
+    }
+  }
+}
+
+TEST_F(DWARFExpressionMockProcessTest, DW_OP_deref_type_float) {
+  struct TestCase {
+    const llvm::fltSemantics &semantics;
+    std::vector<uint8_t> bytes;
+  };
+  const TestCase tests[] = {
+      {llvm::APFloat::IEEEsingle(), {0x00, 0x00, 0x20, 0xc0}},
+      {llvm::APFloat::IEEEdouble(),
+       {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0xc0}},
+      {llvm::APFloat::x87DoubleExtended(),
+       {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xa0, 0x00, 0xc0}},
+  };
+  for (const char *triple : {"i386-pc-linux", "powerpc-pc-linux"}) {
+    for (const TestCase &test : tests) {
+      SCOPED_TRACE(
+          llvm::formatv("{0}, {1} bytes", triple, test.bytes.size()).str());
+      std::vector<uint8_t> bytes = test.bytes;
+      if (ArchSpec(triple).GetByteOrder() == lldb::eByteOrderBig)
+        std::reverse(bytes.begin(), bytes.end());
+      TestContext test_ctx;
+      MockMemory::Map memory = {{{4, bytes.size()}, bytes}};
+      ASSERT_TRUE(CreateTestContext(&test_ctx, triple, {}, {}, memory));
+      ExecutionContext exe_ctx(test_ctx.process_sp);
+      DerefTypeDelegate unit(bytes.size() * 8, DW_ATE_float);
+      const uint8_t expr[] = {DW_OP_lit4,
+                              DW_OP_deref_type,
+                              static_cast<uint8_t>(bytes.size()),
+                              0xa3,
+                              0x02,
+                              DW_OP_stack_value};
+      auto result = Evaluate(expr, {}, &unit, &exe_ctx);
+      ASSERT_THAT_EXPECTED(result, llvm::Succeeded());
+      EXPECT_EQ(result->GetScalar().GetType(), Scalar::e_float);
+      EXPECT_TRUE(result->GetScalar().GetAPFloat().bitwiseIsEqual(
+          llvm::APFloat(test.semantics, "-2.5")));
+    }
+  }
+}
+
+TEST_F(DWARFExpressionMockProcessTest, DW_OP_deref_type_file_address) {
+  const char *yaml = R"(
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_386
+Sections:
+  - Name:    .data
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_WRITE ]
+    Address: 0x1000
+    Content: '78563412'
+)";
+  SubsystemRAII<ObjectFileELF> subsystems;
+  auto file = TestFile::fromYaml(yaml);
+  ASSERT_THAT_EXPECTED(file, llvm::Succeeded());
+  auto module_sp = std::make_shared<Module>(file->moduleSpec());
+  TestContext test_ctx;
+  ASSERT_TRUE(CreateTestContext(&test_ctx, "i386-pc-linux"));
+  ExecutionContext exe_ctx(test_ctx.target_sp, false);
+  DerefTypeDelegate unit(32, DW_ATE_unsigned);
+  const uint8_t expr[] = {
+      DW_OP_addr,       0x00, 0x10, 0x00, 0x00,
+      DW_OP_deref_type, 4,    0xa3, 0x02, DW_OP_stack_value};
+  EXPECT_THAT_EXPECTED(Evaluate(expr, module_sp, &unit, &exe_ctx),
+                       ExpectScalar(32, 0x12345678, false));
+  EXPECT_THAT_EXPECTED(
+      Evaluate(expr, {}, &unit, &exe_ctx),
+      llvm::FailedWithMessage(
+          "need module to resolve file address for DW_OP_deref_type"));
+}
+
+TEST(DWARFExpression, DW_OP_deref_type_host_address) {
+  for (unsigned bit_size : {8, 31, 128, 1024}) {
+    for (TypeKind encoding : {DW_ATE_signed, DW_ATE_unsigned}) {
+      const unsigned byte_size = (bit_size + 7) / 8;
+      std::vector<uint8_t> bytes(byte_size, 0);
+      bytes.front() = 42;
+      bytes.back() |= 1 << ((bit_size - 1) % 8);
+      if (endian::InlHostByteOrder() == lldb::eByteOrderBig)
+        std::reverse(bytes.begin(), bytes.end());
+      DerefTypeDelegate unit(bit_size, encoding);
+      const uint8_t expr[] = {DW_OP_deref_type, static_cast<uint8_t>(byte_size),
+                              0xa3, 0x02, DW_OP_stack_value};
+      DataExtractor extractor(expr, sizeof(expr), endian::InlHostByteOrder(),
+                              sizeof(void *));
+
+      for (bool owns_buffer : {false, true}) {
+        SCOPED_TRACE(llvm::formatv("{0} bits, encoding {1}, owns buffer {2}",
+                                   bit_size, static_cast<unsigned>(encoding),
+                                   owns_buffer)
+                         .str());
+        Value address =
+            owns_buffer
+                ? Value(bytes.data(), bytes.size())
+                : Value(Scalar(reinterpret_cast<uintptr_t>(bytes.data())));
+        address.SetValueType(Value::ValueType::HostAddress);
+        auto result = DWARFExpression::Evaluate(
+            /*exe_ctx=*/nullptr, /*reg_ctx=*/nullptr, /*module_sp=*/{},
+            extractor, &unit, lldb::eRegisterKindLLDB, &address,
+            /*object_address_ptr=*/nullptr);
+        const bool is_signed = encoding == DW_ATE_signed;
+        llvm::APSInt expected(
+            llvm::APInt::getOneBitSet(bit_size, bit_size - 1) | 42, !is_signed);
+        ASSERT_THAT_EXPECTED(result, ExpectScalar(Scalar(expected)));
+        EXPECT_EQ(result->GetScalar().GetAPSInt().getBitWidth(), bit_size);
+        EXPECT_EQ(result->GetScalar().IsSigned(), is_signed);
+      }
+    }
+  }
+}
+
+TEST_F(DWARFExpressionMockProcessTest,
+       DW_OP_deref_type_host_address_byte_order) {
+  for (const char *triple : {"i386-pc-linux", "powerpc-pc-linux"}) {
+    for (unsigned bit_size : {16, 128}) {
+      SCOPED_TRACE(llvm::formatv("{0}, {1} bits", triple, bit_size).str());
+      TestContext test_ctx;
+      ASSERT_TRUE(CreateTestContext(&test_ctx, triple));
+      ExecutionContext exe_ctx(test_ctx.target_sp, false);
+      const lldb::ByteOrder byte_order = ArchSpec(triple).GetByteOrder();
+      const unsigned byte_size = bit_size / 8;
+      DerefTypeDelegate unit(bit_size, DW_ATE_unsigned);
+      const uint8_t expr[] = {DW_OP_push_object_address,
+                              DW_OP_deref_type,
+                              static_cast<uint8_t>(byte_size),
+                              0xa3,
+                              0x02,
+                              DW_OP_stack_value};
+      DataExtractor extractor(expr, sizeof(expr), byte_order, 4);
+      llvm::APSInt expected(
+          llvm::APInt::getOneBitSet(bit_size, bit_size - 1) | 42, true);
+      for (bool register_buffer : {false, true}) {
+        SCOPED_TRACE(register_buffer);
+        std::vector<uint8_t> bytes(byte_size, 0);
+        bytes.front() = 42;
+        bytes.back() = 0x80;
+        const lldb::ByteOrder buffer_order =
+            register_buffer ? endian::InlHostByteOrder() : byte_order;
+        if (buffer_order == lldb::eByteOrderBig)
+          std::reverse(bytes.begin(), bytes.end());
+        Value address(bytes.data(), bytes.size());
+        RegisterInfo reg_info{};
+        reg_info.encoding = lldb::eEncodingUint;
+        reg_info.byte_size = byte_size;
+        if (register_buffer)
+          address.SetContext(Value::ContextType::RegisterInfo, &reg_info);
+        auto result = DWARFExpression::Evaluate(
+            &exe_ctx, /*reg_ctx=*/nullptr, /*module_sp=*/{}, extractor, &unit,
+            lldb::eRegisterKindLLDB, /*initial_value_ptr=*/nullptr, &address);
+        ASSERT_THAT_EXPECTED(result, ExpectScalar(Scalar(expected)));
+        EXPECT_EQ(result->GetContextType(), Value::ContextType::Invalid);
+      }
+    }
+  }
+}
+
+TEST(DWARFExpression, DW_OP_deref_type_host_address_float) {
+  const float number = -2.5f;
+  Value address(&number, sizeof(number));
+  DerefTypeDelegate unit(32, DW_ATE_float);
+  const uint8_t expr[] = {DW_OP_deref_type, 4, 0xa3, 0x02, DW_OP_stack_value};
+  DataExtractor extractor(expr, sizeof(expr), endian::InlHostByteOrder(),
+                          sizeof(void *));
+  auto result = DWARFExpression::Evaluate(
+      /*exe_ctx=*/nullptr, /*reg_ctx=*/nullptr, /*module_sp=*/{}, extractor,
+      &unit, lldb::eRegisterKindLLDB, &address, /*object_address_ptr=*/nullptr);
+  ASSERT_THAT_EXPECTED(result, llvm::Succeeded());
+  EXPECT_EQ(result->GetScalar().GetType(), Scalar::e_float);
+  EXPECT_TRUE(
+      result->GetScalar().GetAPFloat().bitwiseIsEqual(llvm::APFloat(number)));
+}
+
+TEST_F(DWARFExpressionMockProcessTest, DW_OP_deref_type_errors) {
+  TestContext test_ctx;
+  MockMemory::Map memory = {{{4, 4}, {0x00, 0x00}}};
+  ASSERT_TRUE(CreateTestContext(&test_ctx, "i386-pc-linux", {}, {}, memory));
+  ExecutionContext exe_ctx(test_ctx.process_sp);
+  DerefTypeDelegate unit(32, DW_ATE_unsigned);
+
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_deref_type, 4, 0xa3, 0x02}, {}, &unit, &exe_ctx),
+      llvm::FailedWithMessage("DW_OP_deref_type needs at least 1 stack entries "
+                              "(stack has 0 entries)"));
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_lit4, DW_OP_deref_type, 4, 0xa3, 0x02}, {}, {}, &exe_ctx),
+      llvm::FailedWithMessage("DW_OP_deref_type requires a DWARF unit"));
+  // Unlike DW_OP_convert, a zero type offset does not name the generic type.
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_lit4, DW_OP_deref_type, 4, 0}, {}, &unit, &exe_ctx),
+      llvm::FailedWithMessage("unknown base type offset"));
+  for (uint8_t size : {0, 3, 5}) {
+    EXPECT_THAT_EXPECTED(
+        Evaluate({DW_OP_lit4, DW_OP_deref_type, size, 0xa3, 0x02}, {}, &unit,
+                 &exe_ctx),
+        llvm::FailedWithMessage(
+            llvm::formatv("DW_OP_deref_type size ({0}) does not match type "
+                          "size (32 bits)",
+                          size)
+                .str()));
+  }
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_lit4, DW_OP_deref_type, 4, 0xa3, 0x02}, {}, &unit),
+      llvm::FailedWithMessage("no target for DW_OP_deref_type"));
+  // A partial read is an error, even if the memory reader reports no error.
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_lit4, DW_OP_deref_type, 4, 0xa3, 0x02}, {}, &unit,
+               &exe_ctx),
+      llvm::FailedWithMessage("failed to dereference pointer for "
+                              "DW_OP_deref_type: short memory read"));
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_implicit_value, 2, 0x00, 0x00,
+                                 DW_OP_deref_type, 4, 0xa3, 0x02},
+                                {}, &unit),
+                       llvm::FailedWithMessage("insufficient data"));
+
+  DerefTypeDelegate float16(16, DW_ATE_float);
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_lit4, DW_OP_deref_type, 2, 0xa3, 0x02}, {}, &float16,
+               &exe_ctx),
+      llvm::FailedWithMessage("unsupported floating-point type size"));
+
+  DerefTypeDelegate float32(32, DW_ATE_float);
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_lit4, DW_OP_convert, 0xa3, 0x02, DW_OP_deref_type, 4,
+                0xa3, 0x02},
+               {}, &float32, &exe_ctx),
+      llvm::FailedWithMessage("DW_OP_deref_type requires an integral address"));
+
+  for (uint64_t bit_size : {uint64_t{0}, UINT64_MAX}) {
+    DerefTypeDelegate invalid_type(bit_size, DW_ATE_unsigned);
+    EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit4, DW_OP_deref_type, 4, 0xa3, 0x02},
+                                  {}, &invalid_type, &exe_ctx),
+                         llvm::Failed());
+  }
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit8, DW_OP_deref_type, 4, 0xa3, 0x02},
+                                {}, &unit, &exe_ctx),
+                       llvm::Failed());
+}
+
+TEST_F(DWARFExpressionMockProcessTest, DW_OP_deref_type_locations) {
+  DerefTypeDelegate unit(8, DW_ATE_signed_char);
+  TestContext test_ctx;
+  ASSERT_TRUE(CreateTestContext(&test_ctx, "i386-pc-linux",
+                                RegisterValue(uint32_t{0x584})));
+  ExecutionContext exe_ctx(test_ctx.process_sp);
+
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_reg0, DW_OP_deref_type, 1, 0xa3, 0x02, DW_OP_stack_value},
+               {}, &unit, &exe_ctx, test_ctx.reg_ctx_sp.get()),
+      ExpectScalar(8, 0x84, true));
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_const2u, 0x84, 0x05, DW_OP_stack_value, DW_OP_deref_type,
+                1, 0xa3, 0x02, DW_OP_stack_value},
+               {}, &unit),
+      ExpectScalar(8, 0x84, true));
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_implicit_value, 1, 0x84, DW_OP_deref_type, 1, 0xa3, 0x02,
+                DW_OP_stack_value},
+               {}, &unit),
+      ExpectScalar(8, 0x84, true));
+}
+
+TEST(DWARFExpression, DW_OP_deref_type_implicit_byte_order) {
+  const uint8_t expr[] = {DW_OP_implicit_value,
+                          4,
+                          0x12,
+                          0x34,
+                          0x56,
+                          0x78,
+                          DW_OP_deref_type,
+                          4,
+                          0xa3,
+                          0x02,
+                          DW_OP_stack_value};
+  DerefTypeDelegate unit(32, DW_ATE_unsigned);
+  for (lldb::ByteOrder byte_order :
+       {lldb::eByteOrderLittle, lldb::eByteOrderBig}) {
+    DataExtractor extractor(expr, sizeof(expr), byte_order, 4);
+    auto result = DWARFExpression::Evaluate(
+        /*exe_ctx=*/nullptr, /*reg_ctx=*/nullptr, /*module_sp=*/{}, extractor,
+        &unit, lldb::eRegisterKindLLDB, /*initial_value_ptr=*/nullptr,
+        /*object_address_ptr=*/nullptr);
+    EXPECT_THAT_EXPECTED(
+        result, ExpectScalar(32,
+                             byte_order == lldb::eByteOrderLittle ? 0x78563412
+                                                                  : 0x12345678,
+                             false));
+  }
+}
+
+TEST(DWARFExpression, DW_OP_deref_type_operand_size) {
+  // The type reference is ULEB128, not another single-byte operand.
+  const uint8_t expr[] = {
+      DW_OP_deref_type, 4, 0xa3, 0x02, DW_OP_addr, 0x10, 0x20, 0x30, 0x40};
+  DataExtractor extractor(expr, sizeof(expr), lldb::eByteOrderLittle, 4);
+  EXPECT_THAT_EXPECTED(
+      DWARFExpression(extractor).GetLocation_DW_OP_addr(nullptr),
+      llvm::HasValue(0x40302010u));
 }
 
 TEST_F(DWARFExpressionMockProcessTest, WASM_DW_OP_addr) {
