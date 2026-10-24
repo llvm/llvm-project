@@ -220,8 +220,8 @@ public:
   bool tryAddToFoldList(SmallVectorImpl<FoldCandidate> &FoldList,
                         MachineInstr *MI, unsigned OpNo,
                         const FoldableDef &OpToFold) const;
-  bool isUseSafeToFold(const MachineInstr &MI,
-                       const MachineOperand &UseMO) const;
+  bool isUseSafeToFold(const MachineInstr &MI, const MachineOperand &UseMO,
+                       const FoldableDef &OpToFold) const;
   bool isTemporallyDivergentUse(const FoldableDef &OpToFold,
                                 const MachineInstr &UseMI) const;
 
@@ -1033,9 +1033,13 @@ bool SIFoldOperandsImpl::tryAddToFoldList(
 }
 
 bool SIFoldOperandsImpl::isUseSafeToFold(const MachineInstr &MI,
-                                         const MachineOperand &UseMO) const {
-  // Operands of SDWA instructions must be registers.
-  return !TII->isSDWA(MI);
+                                         const MachineOperand &UseMO,
+                                         const FoldableDef &OpToFold) const {
+  if (!TII->isSDWA(MI))
+    return true;
+  // isOperandLegal accepts some SDWA operands that the verifier rejects, so
+  // apply the verifier's restrictions here.
+  return OpToFold.isReg() && ST->hasSDWAScalar();
 }
 
 // Returns true if any instruction in \p L modifies EXEC.
@@ -1303,7 +1307,7 @@ bool SIFoldOperandsImpl::foldOperand(
   bool Changed = false;
   const MachineOperand *UseOp = &UseMI->getOperand(UseOpIdx);
 
-  if (!isUseSafeToFold(*UseMI, *UseOp))
+  if (!isUseSafeToFold(*UseMI, *UseOp, OpToFold))
     return Changed;
 
   if (isTemporallyDivergentUse(OpToFold, *UseMI))
