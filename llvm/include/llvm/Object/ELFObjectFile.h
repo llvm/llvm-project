@@ -982,7 +982,7 @@ ELFObjectFile<ELFT>::dynamic_relocation_sections() const {
         reinterpret_cast<Elf_Dyn *>((uintptr_t)base() + Sec.sh_offset);
     for (; Dynamic->d_tag != ELF::DT_NULL; Dynamic++) {
       if (Dynamic->d_tag == ELF::DT_REL || Dynamic->d_tag == ELF::DT_RELA ||
-          Dynamic->d_tag == ELF::DT_JMPREL) {
+          Dynamic->d_tag == ELF::DT_RELR || Dynamic->d_tag == ELF::DT_JMPREL) {
         Offsets.push_back(Dynamic->d_un.d_val);
       }
     }
