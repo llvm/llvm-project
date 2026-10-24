@@ -47,24 +47,18 @@ define dso_local noundef <4 x float> @ConvertVectors_ByRef(ptr noundef nonnull a
 define noundef <4 x float> @ConvertVectors_ByVal(ptr noundef nonnull align 16 dereferenceable(16) %V) #0 {
 ; SSE-LABEL: @ConvertVectors_ByVal(
 ; SSE-NEXT:  entry:
-; SSE-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[V:%.*]], align 16
+; SSE-NEXT:    [[V_VAL22:%.*]] = load <2 x float>, ptr [[V:%.*]], align 16
 ; SSE-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[V]], i64 8
-; SSE-NEXT:    [[V_VAL421:%.*]] = load i64, ptr [[TMP1]], align 8
-; SSE-NEXT:    [[TMP2:%.*]] = trunc i64 [[V_VAL421]] to i32
-; SSE-NEXT:    [[TMP3:%.*]] = bitcast i32 [[TMP2]] to float
-; SSE-NEXT:    [[VECINIT11:%.*]] = insertelement <4 x float> [[TMP0]], float [[TMP3]], i64 2
-; SSE-NEXT:    [[VECINIT16:%.*]] = insertelement <4 x float> [[VECINIT11]], float [[TMP3]], i64 3
+; SSE-NEXT:    [[V_VAL423:%.*]] = load <2 x float>, ptr [[TMP1]], align 8
+; SSE-NEXT:    [[VECINIT16:%.*]] = shufflevector <2 x float> [[V_VAL22]], <2 x float> [[V_VAL423]], <4 x i32> <i32 0, i32 1, i32 2, i32 2>
 ; SSE-NEXT:    ret <4 x float> [[VECINIT16]]
 ;
 ; AVX-LABEL: @ConvertVectors_ByVal(
 ; AVX-NEXT:  entry:
-; AVX-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[V:%.*]], align 16
+; AVX-NEXT:    [[V_VAL22:%.*]] = load <2 x float>, ptr [[V:%.*]], align 16
 ; AVX-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[V]], i64 8
-; AVX-NEXT:    [[V_VAL421:%.*]] = load i64, ptr [[TMP1]], align 8
-; AVX-NEXT:    [[TMP2:%.*]] = trunc i64 [[V_VAL421]] to i32
-; AVX-NEXT:    [[TMP3:%.*]] = bitcast i32 [[TMP2]] to float
-; AVX-NEXT:    [[VECINIT11:%.*]] = insertelement <4 x float> [[TMP0]], float [[TMP3]], i64 2
-; AVX-NEXT:    [[VECINIT16:%.*]] = insertelement <4 x float> [[VECINIT11]], float [[TMP3]], i64 3
+; AVX-NEXT:    [[V_VAL423:%.*]] = load <2 x float>, ptr [[TMP1]], align 8
+; AVX-NEXT:    [[VECINIT16:%.*]] = shufflevector <2 x float> [[V_VAL22]], <2 x float> [[V_VAL423]], <4 x i32> <i32 0, i32 1, i32 2, i32 2>
 ; AVX-NEXT:    ret <4 x float> [[VECINIT16]]
 ;
 entry:
