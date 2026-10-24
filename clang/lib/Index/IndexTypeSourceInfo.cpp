@@ -81,6 +81,26 @@ public:
     return true;
   }
 
+  bool VisitUsingTypeLoc(UsingTypeLoc TL) {
+    // A type found via a using-declaration, e.g. `ns2::A` after
+    // `namespace ns2 { using ns1::A; }`. Like DeclRefExpr, report the target
+    // declaration rather than the UsingShadowDecl.
+    SourceLocation Loc = TL.getNameLoc();
+    NamedDecl *ND = TL.getDecl()->getTargetDecl();
+    if (IsBase && !isa<TagDecl>(ND)) {
+      TRY_TO(
+          IndexCtx.handleReference(ND, Loc, Parent, ParentDC, SymbolRoleSet()));
+      if (auto *CD = TL.getType()->getAsCXXRecordDecl()) {
+        TRY_TO(IndexCtx.handleReference(CD, Loc, Parent, ParentDC,
+                                        (unsigned)SymbolRole::Implicit,
+                                        Relations));
+      }
+      return true;
+    }
+    return IndexCtx.handleReference(ND, Loc, Parent, ParentDC, SymbolRoleSet(),
+                                    Relations);
+  }
+
   bool VisitAutoTypeLoc(AutoTypeLoc TL) {
     if (auto *C = TL.getNamedConcept().getAsTemplateDecl())
       return IndexCtx.handleReference(C, TL.getConceptNameLoc(), Parent,
