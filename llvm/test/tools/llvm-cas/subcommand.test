@@ -1,0 +1,37 @@
+RUN: rm -rf %t
+RUN: mkdir %t
+
+# The subcommand can be anywhere among the arguments.
+RUN: echo "abc" | llvm-cas make-blob --cas %t/cas --data - > %t/abc.casid
+RUN: llvm-cas --cas %t/cas cat-node-data @%t/abc.casid | FileCheck %s --check-prefix=ABC
+RUN: llvm-cas --cas %t/cas @%t/abc.casid cat-node-data | FileCheck %s --check-prefix=ABC
+ABC: abc
+
+# The legacy option spellings of subcommands are still accepted.
+RUN: llvm-cas --cas %t/cas --cat-node-data @%t/abc.casid | FileCheck %s --check-prefix=ABC
+RUN: llvm-cas -cas %t/cas -cat-node-data @%t/abc.casid | FileCheck %s --check-prefix=ABC
+
+# Only the first subcommand name is the subcommand, later ones are inputs.
+RUN: not llvm-cas --cas %t/cas cat-node-data make-blob 2>&1 \
+RUN:   | FileCheck %s --check-prefix=INPUT
+RUN: not llvm-cas --cas %t/cas --cat-node-data make-blob 2>&1 \
+RUN:   | FileCheck %s --check-prefix=INPUT
+INPUT: invalid cas-id 'make-blob'
+
+RUN: not llvm-cas --cas %t/cas 2>&1 | FileCheck %s --check-prefix=NO-SUBCOMMAND
+RUN: not llvm-cas --cas %t/cas bogus 2>&1 | FileCheck %s --check-prefix=NO-SUBCOMMAND
+NO-SUBCOMMAND: no subcommand is specified
+
+RUN: llvm-cas --help | FileCheck %s --check-prefix=HELP
+HELP:      SUBCOMMANDS:
+HELP:      make-blob - Make blob
+HELP:      OPTIONS:
+HELP-NOT:  -data
+
+RUN: llvm-cas make-blob --help | FileCheck %s --check-prefix=HELP-MAKE-BLOB
+RUN: llvm-cas --make-blob --help | FileCheck %s --check-prefix=HELP-MAKE-BLOB
+HELP-MAKE-BLOB:     Make blob
+HELP-MAKE-BLOB:     OPTIONS:
+HELP-MAKE-BLOB:     -cas <path>
+HELP-MAKE-BLOB:     -data <path>
+HELP-MAKE-BLOB-NOT: -check-hash
