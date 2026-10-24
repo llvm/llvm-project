@@ -34,6 +34,9 @@ public:
                         llvm::opt::ArgStringList &CC1Args, BoundArch BA,
                         Action::OffloadKind DeviceOffloadKind) const override;
 
+  Expected<SmallVector<std::string>>
+  getSystemGPUArchs(const llvm::opt::ArgList &Args) const override;
+
   bool useIntegratedAs() const override { return true; }
   bool isPICDefault() const override { return false; }
   llvm::codegenoptions::DebugInfoFormat getDefaultDebugFormat() const override {

@@ -211,3 +211,29 @@ VersionTuple SYCLToolChain::computeMSVCVersion(const Driver *D,
                                                const ArgList &Args) const {
   return HostTC.computeMSVCVersion(D, Args);
 }
+
+Expected<SmallVector<std::string>>
+SYCLToolChain::getSystemGPUArchs(const ArgList &Args) const {
+  // Detect the Intel GPUs on the system, the only GPUs a SPIR-V SYCL target
+  // runs on.
+  std::string Program;
+  if (Arg *A = Args.getLastArg(options::OPT_offload_arch_tool_EQ))
+    Program = A->getValue();
+  else
+    Program = GetProgramPath("offload-arch");
+
+  auto StdoutOrErr = getDriver().executeProgram({Program, "--only=intel"});
+  if (!StdoutOrErr)
+    return StdoutOrErr.takeError();
+
+  SmallVector<std::string, 1> GPUArchs;
+  for (StringRef Arch : llvm::split((*StdoutOrErr)->getBuffer(), "\n"))
+    if (!Arch.empty())
+      GPUArchs.push_back(Arch.str());
+
+  if (GPUArchs.empty())
+    return llvm::createStringError(std::error_code(),
+                                   "No Intel GPU detected in the system");
+
+  return std::move(GPUArchs);
+}

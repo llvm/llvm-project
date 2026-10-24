@@ -36,10 +36,11 @@ TEST(OffloadArchTest, TargetArchClassification) {
   EXPECT_TRUE(IntelCPU.isIntelCPU());
   EXPECT_FALSE(IntelCPU.isIntelGPU());
 
-  OffloadArch IntelGPU = parse("bmg_g21");
+  OffloadArch IntelGPU = parse("xe-bmg-g21");
   EXPECT_TRUE(IntelGPU.isIntel());
   EXPECT_FALSE(IntelGPU.isIntelCPU());
   EXPECT_TRUE(IntelGPU.isIntelGPU());
+  EXPECT_TRUE(parse("xe-dg2").isIntelGPU());
 
   OffloadArch Generic = parse("generic");
   EXPECT_FALSE(Generic.isNVPTX());
@@ -57,11 +58,23 @@ TEST(OffloadArchTest, Unknown) {
 TEST(OffloadArchTest, RoundTrip) {
   for (const char *Name :
        {"sm_52", "sm_90a", "gfx906", "gfx1201", "gfx12-generic", "amdgcnspirv",
-        "graniterapids", "bmg_g21", "generic"}) {
+        "graniterapids", "xe-bmg-g21", "xe-pvc", "xe-dg2", "generic"}) {
     OffloadArch A = parse(Name);
     EXPECT_FALSE(A.isUnknown()) << Name;
     EXPECT_STREQ(OffloadArchToString(A), Name);
   }
+}
+
+TEST(OffloadArchTest, IntelGPUOtherSpellings) {
+  // An alias and a numeric name denote the device and print as its name.
+  EXPECT_EQ(parse("xe-arl-u"), parse("xe-mtl-u"));
+  EXPECT_EQ(parse("xe_12.60.7"), parse("xe-pvc"));
+  EXPECT_STREQ(OffloadArchToString(parse("xe-tgllp")), "xe-tgl");
+  EXPECT_STREQ(OffloadArchToString(parse("xe_20.1.0")), "xe-bmg-g21");
+
+  // An unlisted numeric name and the old bmg_g21 spelling are unknown.
+  EXPECT_TRUE(parse("xe_40.11.0").isUnknown());
+  EXPECT_TRUE(parse("bmg_g21").isUnknown());
 }
 
 TEST(OffloadArchTest, Defaults) {

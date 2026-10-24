@@ -6,10 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file provides access to the Intel GPU list in IntelGPUTargetParser.def.
-// Only what is needed to name the device a driver reports is declared here; the
-// table itself carries more, and a consumer that needs the rest either declares
-// it here as well or expands the table directly.
+// This file names the Intel GPU a driver reports, and finds the Intel GPU a
+// user names.
 //
 //===----------------------------------------------------------------------===//
 
@@ -22,10 +20,14 @@
 #include <string>
 
 namespace llvm {
+
 namespace IntelGPU {
 
 /// Intel GPU architecture names, covering both physical devices and the
 /// compatibility names that stand for a whole product line.
+///
+/// The underlying type is fixed because clang/Basic/OffloadArch.h forward
+/// declares this enumeration; the two declarations have to agree.
 enum GPUKind : uint8_t {
   GK_NONE = 0,
 #define INTEL_GPU(NAME, KIND, MAJOR, MINOR, IGCA_TARGET, IGCA_FEATURE_SETS)    \
@@ -38,11 +40,23 @@ enum GPUKind : uint8_t {
 /// driver, e.g. "xe-pvc". If the table lists no such device, return an empty
 /// string. Only the major and minor versions are looked at, so every revision
 /// of a device resolves to the same name.
-/// If several rows match, the first one in IntelGPUTargetParser.def wins.
 LLVM_ABI StringRef getArchName(uint32_t GPUIPVersion);
+
+/// \return the human-friendly name of \p Kind, e.g. "xe-pvc", or an empty
+/// string for GK_NONE.
+LLVM_ABI StringRef getArchName(GPUKind Kind);
 
 /// \return the numeric name of \p GPUIPVersion, e.g. "xe_35.11.0".
 LLVM_ABI std::string getNumericArchName(uint32_t GPUIPVersion);
+
+/// \return the device \p Name denotes, or GK_NONE for a name this build does
+/// not know.
+///
+/// \p Name may be a human-friendly name ("xe-pvc"), a compatibility name
+/// ("xe-dg2"), an alias ("xe-arl-u") or a numeric name ("xe_12.60.7"). A
+/// numeric name must end in a revision, which may be any number and is ignored,
+/// so "xe_12.60.0" and "xe_12.60.7" denote the same device.
+LLVM_ABI GPUKind parseArch(StringRef Name);
 
 } // namespace IntelGPU
 } // namespace llvm
