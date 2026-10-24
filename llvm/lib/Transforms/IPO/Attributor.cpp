@@ -2411,7 +2411,10 @@ ChangeStatus Attributor::manifestAttributes() {
         isa<Function>(It.getFirst())
             ? IRPosition::function(*cast<Function>(It.getFirst()))
             : IRPosition::callsite_function(*cast<CallBase>(It.getFirst()));
+    if (IRP.getAttrList() == AL)
+      continue;
     IRP.setAttrList(AL);
+    AttrModifiedFunctions.insert(IRP.getAnchorScope());
   }
 
   return ManifestChange;
@@ -4048,18 +4051,36 @@ static bool runAttributorLightOnFunctions(InformationCache &InfoCache,
     PreservedAnalyses FuncPA;
     // We haven't changed the CFG for modified functions.
     FuncPA.preserveSet<CFGAnalyses>();
-    for (Function *Changed : A.getModifiedFunctions()) {
-      FAM.invalidate(*Changed, FuncPA);
-      // Also invalidate any direct callers of changed functions since analyses
-      // may care about attributes of direct callees. For example, MemorySSA
-      // cares about whether or not a call's callee modifies memory and queries
-      // that through function attributes.
-      for (auto *U : Changed->users()) {
-        if (auto *Call = dyn_cast<CallBase>(U)) {
-          if (Call->getCalledFunction() == Changed)
-            FAM.invalidate(*Call->getFunction(), FuncPA);
-        }
+    // Functions whose instructions did not change do not need to be simplified
+    // again if their SCC is revisited.
+    PreservedAnalyses AttrOnlyPA = FuncPA;
+    AttrOnlyPA.preserve<ShouldNotRunFunctionPassesAnalysis>();
+
+    const auto &IRModified = A.getModifiedFunctions();
+
+    // Also invalidate any direct callers of changed functions since analyses
+    // may care about attributes of direct callees. For example, MemorySSA
+    // cares about whether or not a call's callee modifies memory and queries
+    // that through function attributes.
+    auto InvalidateCallers = [&](Function &Changed) {
+      for (auto *U : Changed.users()) {
+        auto *Call = dyn_cast<CallBase>(U);
+        if (Call && Call->getCalledFunction() == &Changed &&
+            !IRModified.contains(Call->getFunction()))
+          FAM.invalidate(*Call->getFunction(), AttrOnlyPA);
       }
+    };
+
+    for (Function *Changed : IRModified) {
+      FAM.invalidate(*Changed, FuncPA);
+      InvalidateCallers(*Changed);
+    }
+
+    for (Function *Changed : A.getAttrModifiedFunctions()) {
+      if (IRModified.contains(Changed))
+        continue;
+      FAM.invalidate(*Changed, AttrOnlyPA);
+      InvalidateCallers(*Changed);
     }
   }
   LLVM_DEBUG(dbgs() << "[Attributor] Done with " << Functions.size()
