@@ -2128,6 +2128,70 @@ Value TestPartialAlias::projectAliasValueToSlotValue(
 }
 
 //===----------------------------------------------------------------------===//
+// TestOwningAccess
+//===----------------------------------------------------------------------===//
+
+/// Returns the memory operation wrapped by `op`, if it is the only operation
+/// before the terminator.
+static PromotableMemOpInterface getOwnedAccess(TestOwningAccess op) {
+  Block &body = op.getBody().front();
+  if (body.getOperations().size() != 2)
+    return {};
+  return dyn_cast<PromotableMemOpInterface>(body.front());
+}
+
+bool TestOwningAccess::ownsEmbeddedBlockingUses() {
+  return !getDisown() && getOwnedAccess(*this);
+}
+
+bool TestOwningAccess::loadsFrom(const MemorySlot &slot) {
+  PromotableMemOpInterface access = getOwnedAccess(*this);
+  return access && access.loadsFrom(slot);
+}
+
+bool TestOwningAccess::storesTo(const MemorySlot &slot) {
+  PromotableMemOpInterface access = getOwnedAccess(*this);
+  return access && access.storesTo(slot);
+}
+
+Value TestOwningAccess::getStored(const MemorySlot &slot, OpBuilder &builder,
+                                  Value reachingDef,
+                                  const DataLayout &dataLayout) {
+  return getOwnedAccess(*this).getStored(slot, builder, reachingDef,
+                                         dataLayout);
+}
+
+bool TestOwningAccess::canUsesBeRemoved(
+    const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
+  if (getDecline())
+    return false;
+  PromotableMemOpInterface access = getOwnedAccess(*this);
+  if (!access)
+    return false;
+  // The wrapped access can only remove its own uses.
+  for (OpOperand *use : blockingUses)
+    if (use->getOwner() != access)
+      return false;
+  return access.canUsesBeRemoved(slot, blockingUses, newBlockingUses,
+                                 dataLayout);
+}
+
+DeletionKind TestOwningAccess::removeBlockingUses(
+    const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    OpBuilder &builder, Value reachingDefinition,
+    const DataLayout &dataLayout) {
+  getOwnedAccess(*this).removeBlockingUses(slot, blockingUses, builder,
+                                           reachingDefinition, dataLayout);
+  // The wrapped load's result has been replaced with the reaching definition.
+  // Replace the wrapper's results with the updated yield operands.
+  getOperation()->replaceAllUsesWith(
+      getBody().front().getTerminator()->getOperands());
+  return DeletionKind::Delete;
+}
+
+//===----------------------------------------------------------------------===//
 // TestSlotTracker
 //===----------------------------------------------------------------------===//
 
