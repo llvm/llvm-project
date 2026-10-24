@@ -32,11 +32,10 @@ SparcFrameLowering::SparcFrameLowering(const SparcSubtarget &ST)
 void SparcFrameLowering::emitSPAdjustment(MachineFunction &MF,
                                           MachineBasicBlock &MBB,
                                           MachineBasicBlock::iterator MBBI,
-                                          int NumBytes,
+                                          const DebugLoc &dl, int NumBytes,
                                           unsigned ADDrr,
                                           unsigned ADDri) const {
 
-  DebugLoc dl;
   const SparcInstrInfo &TII =
       *static_cast<const SparcInstrInfo *>(MF.getSubtarget().getInstrInfo());
 
@@ -125,7 +124,7 @@ void SparcFrameLowering::emitPrologue(MachineFunction &MF,
   // Update stack size with corrected value.
   MFI.setStackSize(NumBytes);
 
-  emitSPAdjustment(MF, MBB, MBBI, -NumBytes, SAVErr, SAVEri);
+  emitSPAdjustment(MF, MBB, MBBI, DebugLoc(), -NumBytes, SAVErr, SAVEri);
 
   if (MF.needsFrameMoves()) {
     CFIInstBuilder CFIBuilder(MBB, MBBI, MachineInstr::NoFlags);
@@ -145,7 +144,7 @@ eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
       Size = -Size;
 
     if (Size)
-      emitSPAdjustment(MF, MBB, I, Size, SP::ADDrr, SP::ADDri);
+      emitSPAdjustment(MF, MBB, I, DebugLoc(), Size, SP::ADDrr, SP::ADDri);
   }
   return MBB.erase(I);
 }
@@ -170,7 +169,7 @@ void SparcFrameLowering::emitEpilogue(MachineFunction &MF,
 
   int NumBytes = (int) MFI.getStackSize();
   if (NumBytes != 0)
-    emitSPAdjustment(MF, MBB, MBBI, NumBytes, SP::ADDrr, SP::ADDri);
+    emitSPAdjustment(MF, MBB, MBBI, dl, NumBytes, SP::ADDrr, SP::ADDri);
 
   // Preserve return address in %o7
   if (MBBI->getOpcode() == SP::TAIL_CALL) {
