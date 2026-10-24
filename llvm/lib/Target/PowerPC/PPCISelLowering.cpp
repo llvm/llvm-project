@@ -9521,19 +9521,27 @@ SDValue PPCTargetLowering::LowerBITCAST(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getNode(PPCISD::BUILD_FP128, dl, MVT::f128, Lo, Hi);
 }
 
+// Look through bitcasts and scalar_to_vector ops to find the input load.
+// If any of the nodes in the chain have multiple uses, stop searching as
+// the input load won't be removable (due to the other uses).
 static const SDValue *getNormalLoadInput(const SDValue &Op, bool &IsPermuted) {
   const SDValue *InputLoad = &Op;
-  while (InputLoad->getOpcode() == ISD::BITCAST)
+  while (InputLoad->getOpcode() == ISD::BITCAST) {
+    if (!InputLoad->hasOneUse())
+      return nullptr;
     InputLoad = &InputLoad->getOperand(0);
+  }
   if (InputLoad->getOpcode() == ISD::SCALAR_TO_VECTOR ||
       InputLoad->getOpcode() == PPCISD::SCALAR_TO_VECTOR_PERMUTED) {
+    if (!InputLoad->hasOneUse())
+      return nullptr;
     IsPermuted = InputLoad->getOpcode() == PPCISD::SCALAR_TO_VECTOR_PERMUTED;
     InputLoad = &InputLoad->getOperand(0);
   }
   if (InputLoad->getOpcode() != ISD::LOAD)
     return nullptr;
   LoadSDNode *LD = cast<LoadSDNode>(*InputLoad);
-  return ISD::isNormalLoad(LD) ? InputLoad : nullptr;
+  return (ISD::isNormalLoad(LD) && LD->hasOneUse()) ? InputLoad : nullptr;
 }
 
 // Convert the argument APFloat to a single precision APFloat if there is no
@@ -10449,12 +10457,13 @@ SDValue PPCTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
 
   // If this is a load-and-splat, we can do that with a single instruction
   // in some cases. However if the load has multiple uses, we don't want to
-  // combine it because that will just produce multiple loads.
+  // combine it because that will just produce multiple loads. Since we are
+  // looking through bitcasts and scalar_to_vector, we must also ensure that
+  // the intermediate nodes have a single use.
   bool IsPermutedLoad = false;
   const SDValue *InputLoad = getNormalLoadInput(V1, IsPermutedLoad);
   if (InputLoad && Subtarget.hasVSX() && V2.isUndef() &&
-      (PPC::isSplatShuffleMask(SVOp, 4) || PPC::isSplatShuffleMask(SVOp, 8)) &&
-      InputLoad->hasOneUse()) {
+      (PPC::isSplatShuffleMask(SVOp, 4) || PPC::isSplatShuffleMask(SVOp, 8))) {
     bool IsFourByte = PPC::isSplatShuffleMask(SVOp, 4);
     int SplatIdx =
       PPC::getSplatIdxForPPCMnemonics(SVOp, IsFourByte ? 4 : 8, DAG);
