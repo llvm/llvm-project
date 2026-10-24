@@ -2361,8 +2361,8 @@ define i64 @test_chr_23(i64 %v0) !prof !14 {
 ; CHECK-LABEL: @test_chr_23(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[V0_FR:%.*]] = freeze i64 [[V0:%.*]]
-; CHECK-NEXT:    [[TMP0:%.*]] = mul i64 [[V0_FR]], 50
-; CHECK-NEXT:    [[V10_NOT:%.*]] = icmp eq i64 [[TMP0]], -50
+; CHECK-NEXT:    [[TMP0:%.*]] = and i64 [[V0_FR]], 9223372036854775807
+; CHECK-NEXT:    [[V10_NOT:%.*]] = icmp eq i64 [[TMP0]], 9223372036854775807
 ; CHECK-NEXT:    ret i64 99
 ;
 entry:
