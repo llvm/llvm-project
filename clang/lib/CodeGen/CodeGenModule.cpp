@@ -1193,9 +1193,10 @@ void CodeGenModule::Release() {
   DeferredDecls.insert_range(EmittedDeferredDecls);
   EmittedDeferredDecls.clear();
   EmitVTablesOpportunistically();
+  // Multiversion bodies can add deferred definitions and replacements.
+  emitMultiVersionFunctions();
   applyGlobalValReplacements();
   applyReplacements();
-  emitMultiVersionFunctions();
   emitPFPFieldsWithEvaluatedOffset();
   emitGlobalDeleteForwardingBodies();
 
