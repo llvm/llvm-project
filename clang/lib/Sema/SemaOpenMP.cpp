@@ -8701,6 +8701,19 @@ static const StmtExpr *findStmtExpr(const Expr *E) {
   return nullptr;
 }
 
+static ExprResult buildInitListValue(Sema &SemaRef, Expr *E) {
+  auto *ILE = dyn_cast<InitListExpr>(E);
+  if (!ILE)
+    return E;
+  if (ILE->isTransparent())
+    return buildInitListValue(SemaRef, ILE->getInit(0));
+  if (ILE->getNumInits() != 0 || !ILE->getType()->isScalarType())
+    return E;
+  return SemaRef.PerformImplicitConversion(
+      SemaRef.ActOnIntegerConstant(ILE->getLBraceLoc(), 0).get(),
+      ILE->getType(), AssignmentAction::Converting);
+}
+
 bool OpenMPIterationSpaceChecker::checkNonRectangularBound(
     const Expr *E, bool IsInitializer) const {
   // Such a bound is emitted at every use, its declarations cannot be.
@@ -8721,6 +8734,12 @@ bool OpenMPIterationSpaceChecker::setLCDeclAndLB(ValueDecl *NewLCDecl,
          UB == nullptr && Step == nullptr && !TestIsLessOp && !TestIsStrictOp);
   if (!NewLCDecl || !NewLB || NewLB->containsErrors())
     return true;
+  if (!SemaRef.CurContext->isDependentContext()) {
+    ExprResult LBVal = buildInitListValue(SemaRef, NewLB);
+    if (LBVal.isInvalid())
+      return true;
+    NewLB = LBVal.get();
+  }
   LCDecl = getCanonicalDecl(NewLCDecl);
   LCRef = NewLCRefExpr;
   if (auto *CE = dyn_cast_or_null<CXXConstructExpr>(NewLB))
@@ -8765,6 +8784,12 @@ bool OpenMPIterationSpaceChecker::setStep(Expr *NewStep, bool Subtract) {
   assert(LCDecl != nullptr && LB != nullptr && Step == nullptr);
   if (!NewStep || NewStep->containsErrors())
     return true;
+  if (!SemaRef.CurContext->isDependentContext()) {
+    ExprResult StepVal = buildInitListValue(SemaRef, NewStep);
+    if (StepVal.isInvalid())
+      return true;
+    NewStep = StepVal.get();
+  }
   if (!NewStep->isValueDependent()) {
     // Check that the step is integer expression.
     SourceLocation StepLoc = NewStep->getBeginLoc();

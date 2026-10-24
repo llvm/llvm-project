@@ -414,6 +414,21 @@ int test_iteration_spaces() {
   for (int a{0}; a < 10; ++a) {
   }
 
+#pragma omp parallel
+#pragma omp for
+  for (int a = {0}; a < 10; ++a) {
+  }
+
+#pragma omp parallel
+#pragma omp for
+  for (int a = {}; a < 10; ++a) {
+  }
+
+#pragma omp parallel
+#pragma omp for
+  for (int(*p)[4] = {}; p < lb + 8; ++p) {
+  }
+
   return 0;
 }
 
