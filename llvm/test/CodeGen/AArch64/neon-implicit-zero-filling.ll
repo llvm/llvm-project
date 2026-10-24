@@ -22,6 +22,16 @@ define <8 x i8> @reduce_add_v8i8_zero_fill(<8 x i8> %a) {
   ret <8 x i8> %t2
 }
 
+define <8 x i8> @reduce_add_v8i8_v16i8_zero_fill(<16 x i8> %a) {
+; CHECK-LABEL: reduce_add_v8i8_v16i8_zero_fill:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    addv b0, v0.16b
+; CHECK-NEXT:    ret
+  %t1 = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %a)
+  %t2 = insertelement <8 x i8> zeroinitializer, i8 %t1, i64 0
+  ret <8 x i8> %t2
+}
+
 define <16 x i8> @reduce_add_v16i8_zero_fill(<16 x i8> %a) {
 ; CHECK-LABEL: reduce_add_v16i8_zero_fill:
 ; CHECK:       // %bb.0:
@@ -42,6 +52,16 @@ define <4 x i16> @reduce_add_v4i16_zero_fill(<4 x i16> %a) {
   ret <4 x i16> %t2
 }
 
+define <4 x i16> @reduce_add_v4i16_v8i16_zero_fill(<8 x i16> %a) {
+; CHECK-LABEL: reduce_add_v4i16_v8i16_zero_fill:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    addv h0, v0.8h
+; CHECK-NEXT:    ret
+  %t1 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %a)
+  %t2 = insertelement <4 x i16> zeroinitializer, i16 %t1, i64 0
+  ret <4 x i16> %t2
+}
+
 define <8 x i16> @reduce_add_v8i16_zero_fill(<8 x i16> %a) {
 ; CHECK-LABEL: reduce_add_v8i16_zero_fill:
 ; CHECK:       // %bb.0:
@@ -50,6 +70,16 @@ define <8 x i16> @reduce_add_v8i16_zero_fill(<8 x i16> %a) {
   %t1 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %a)
   %t2 = insertelement <8 x i16> zeroinitializer, i16 %t1, i64 0
   ret <8 x i16> %t2
+}
+
+define <2 x i32> @reduce_add_v2i32_v4i32_zero_fill(<4 x i32> %a) {
+; CHECK-LABEL: reduce_add_v2i32_v4i32_zero_fill:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    addv s0, v0.4s
+; CHECK-NEXT:    ret
+  %t1 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %a)
+  %t2 = insertelement <2 x i32> zeroinitializer, i32 %t1, i64 0
+  ret <2 x i32> %t2
 }
 
 define <4 x i32> @reduce_add_v4i32_zero_fill(<4 x i32> %a) {
@@ -84,6 +114,16 @@ define <8 x i8> @reduce_smax_v8i8_zero_fill(<8 x i8> %a) {
   ret <8 x i8> %t2
 }
 
+define <8 x i8> @reduce_smax_v8i8_v16i8_zero_fill(<16 x i8> %a) {
+; CHECK-LABEL: reduce_smax_v8i8_v16i8_zero_fill:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    smaxv b0, v0.16b
+; CHECK-NEXT:    ret
+  %t1 = call i8 @llvm.vector.reduce.smax.v16i8(<16 x i8> %a)
+  %t2 = insertelement <8 x i8> zeroinitializer, i8 %t1, i64 0
+  ret <8 x i8> %t2
+}
+
 define <16 x i8> @reduce_smax_v16i8_zero_fill(<16 x i8> %a) {
 ; CHECK-LABEL: reduce_smax_v16i8_zero_fill:
 ; CHECK:       // %bb.0:
@@ -104,6 +144,16 @@ define <4 x i16> @reduce_smax_v4i16_zero_fill(<4 x i16> %a) {
   ret <4 x i16> %t2
 }
 
+define <4 x i16> @reduce_smax_v4i16_v8i16_zero_fill(<8 x i16> %a) {
+; CHECK-LABEL: reduce_smax_v4i16_v8i16_zero_fill:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    smaxv h0, v0.8h
+; CHECK-NEXT:    ret
+  %t1 = call i16 @llvm.vector.reduce.smax.v8i16(<8 x i16> %a)
+  %t2 = insertelement <4 x i16> zeroinitializer, i16 %t1, i64 0
+  ret <4 x i16> %t2
+}
+
 define <8 x i16> @reduce_smax_v8i16_zero_fill(<8 x i16> %a) {
 ; CHECK-LABEL: reduce_smax_v8i16_zero_fill:
 ; CHECK:       // %bb.0:
@@ -112,6 +162,16 @@ define <8 x i16> @reduce_smax_v8i16_zero_fill(<8 x i16> %a) {
   %t1 = call i16 @llvm.vector.reduce.smax.v8i16(<8 x i16> %a)
   %t2 = insertelement <8 x i16> zeroinitializer, i16 %t1, i64 0
   ret <8 x i16> %t2
+}
+
+define <2 x i32> @reduce_smax_v2i32_v4i32_zero_fill(<4 x i32> %a) {
+; CHECK-LABEL: reduce_smax_v2i32_v4i32_zero_fill:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    smaxv s0, v0.4s
+; CHECK-NEXT:    ret
+  %t1 = call i32 @llvm.vector.reduce.smax.v4i32(<4 x i32> %a)
+  %t2 = insertelement <2 x i32> zeroinitializer, i32 %t1, i64 0
+  ret <2 x i32> %t2
 }
 
 define <4 x i32> @reduce_smax_v4i32_zero_fill(<4 x i32> %a) {
@@ -130,6 +190,16 @@ define <8 x i8> @reduce_umax_v8i8_zero_fill(<8 x i8> %a) {
 ; CHECK-NEXT:    umaxv b0, v0.8b
 ; CHECK-NEXT:    ret
   %t1 = call i8 @llvm.vector.reduce.umax.v8i8(<8 x i8> %a)
+  %t2 = insertelement <8 x i8> zeroinitializer, i8 %t1, i64 0
+  ret <8 x i8> %t2
+}
+
+define <8 x i8> @reduce_umax_v8i8_v16i8_zero_fill(<16 x i8> %a) {
+; CHECK-LABEL: reduce_umax_v8i8_v16i8_zero_fill:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umaxv b0, v0.16b
+; CHECK-NEXT:    ret
+  %t1 = call i8 @llvm.vector.reduce.umax.v16i8(<16 x i8> %a)
   %t2 = insertelement <8 x i8> zeroinitializer, i8 %t1, i64 0
   ret <8 x i8> %t2
 }
@@ -154,6 +224,16 @@ define <4 x i16> @reduce_umax_v4i16_zero_fill(<4 x i16> %a) {
   ret <4 x i16> %t2
 }
 
+define <4 x i16> @reduce_umax_v4i16_v8i16_zero_fill(<8 x i16> %a) {
+; CHECK-LABEL: reduce_umax_v4i16_v8i16_zero_fill:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umaxv h0, v0.8h
+; CHECK-NEXT:    ret
+  %t1 = call i16 @llvm.vector.reduce.umax.v8i16(<8 x i16> %a)
+  %t2 = insertelement <4 x i16> zeroinitializer, i16 %t1, i64 0
+  ret <4 x i16> %t2
+}
+
 define <8 x i16> @reduce_umax_v8i16_zero_fill(<8 x i16> %a) {
 ; CHECK-LABEL: reduce_umax_v8i16_zero_fill:
 ; CHECK:       // %bb.0:
@@ -162,6 +242,16 @@ define <8 x i16> @reduce_umax_v8i16_zero_fill(<8 x i16> %a) {
   %t1 = call i16 @llvm.vector.reduce.umax.v8i16(<8 x i16> %a)
   %t2 = insertelement <8 x i16> zeroinitializer, i16 %t1, i64 0
   ret <8 x i16> %t2
+}
+
+define <2 x i32> @reduce_umax_v2i32_v4i32_zero_fill(<4 x i32> %a) {
+; CHECK-LABEL: reduce_umax_v2i32_v4i32_zero_fill:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umaxv s0, v0.4s
+; CHECK-NEXT:    ret
+  %t1 = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> %a)
+  %t2 = insertelement <2 x i32> zeroinitializer, i32 %t1, i64 0
+  ret <2 x i32> %t2
 }
 
 define <4 x i32> @reduce_umax_v4i32_zero_fill(<4 x i32> %a) {
@@ -184,6 +274,16 @@ define <4 x half> @reduce_fmaximum_v4f16_zero_fill(<4 x half> %a) #0 {
   ret <4 x half> %t2
 }
 
+define <4 x half> @reduce_fmaximum_v4f16_v8f16_zero_fill(<8 x half> %a) #0 {
+; CHECK-LABEL: reduce_fmaximum_v4f16_v8f16_zero_fill:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmaxv h0, v0.8h
+; CHECK-NEXT:    ret
+  %t1 = call half @llvm.vector.reduce.fmaximum.v8f16(<8 x half> %a)
+  %t2 = insertelement <4 x half> zeroinitializer, half %t1, i64 0
+  ret <4 x half> %t2
+}
+
 define <8 x half> @reduce_fmaximum_v8f16_zero_fill(<8 x half> %a) #0 {
 ; CHECK-LABEL: reduce_fmaximum_v8f16_zero_fill:
 ; CHECK:       // %bb.0:
@@ -192,6 +292,16 @@ define <8 x half> @reduce_fmaximum_v8f16_zero_fill(<8 x half> %a) #0 {
   %t1 = call half @llvm.vector.reduce.fmaximum.v8f16(<8 x half> %a)
   %t2 = insertelement <8 x half> zeroinitializer, half %t1, i64 0
   ret <8 x half> %t2
+}
+
+define <2 x float> @reduce_fmaximum_v2f32_v4f32_zero_fill(<4 x float> %a) {
+; CHECK-LABEL: reduce_fmaximum_v2f32_v4f32_zero_fill:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmaxv s0, v0.4s
+; CHECK-NEXT:    ret
+  %t1 = call float @llvm.vector.reduce.fmaximum.v4f32(<4 x float> %a)
+  %t2 = insertelement <2 x float> zeroinitializer, float %t1, i64 0
+  ret <2 x float> %t2
 }
 
 define <4 x float> @reduce_fmaximum_v4f32_zero_fill(<4 x float> %a) {
@@ -214,6 +324,16 @@ define <4 x half> @reduce_fmax_v4f16_zero_fill(<4 x half> %a) #0 {
   ret <4 x half> %t2
 }
 
+define <4 x half> @reduce_fmax_v4f16_v8f16_zero_fill(<8 x half> %a) #0 {
+; CHECK-LABEL: reduce_fmax_v4f16_v8f16_zero_fill:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmaxnmv h0, v0.8h
+; CHECK-NEXT:    ret
+  %t1 = call half @llvm.vector.reduce.fmax.v8f16(<8 x half> %a)
+  %t2 = insertelement <4 x half> zeroinitializer, half %t1, i64 0
+  ret <4 x half> %t2
+}
+
 define <8 x half> @reduce_fmax_v8f16_zero_fill(<8 x half> %a) #0 {
 ; CHECK-LABEL: reduce_fmax_v8f16_zero_fill:
 ; CHECK:       // %bb.0:
@@ -222,6 +342,16 @@ define <8 x half> @reduce_fmax_v8f16_zero_fill(<8 x half> %a) #0 {
   %t1 = call half @llvm.vector.reduce.fmax.v8f16(<8 x half> %a)
   %t2 = insertelement <8 x half> zeroinitializer, half %t1, i64 0
   ret <8 x half> %t2
+}
+
+define <2 x float> @reduce_fmax_v2f32_v4f32_zero_fill(<4 x float> %a) {
+; CHECK-LABEL: reduce_fmax_v2f32_v4f32_zero_fill:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmaxnmv s0, v0.4s
+; CHECK-NEXT:    ret
+  %t1 = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> %a)
+  %t2 = insertelement <2 x float> zeroinitializer, float %t1, i64 0
+  ret <2 x float> %t2
 }
 
 define <4 x float> @reduce_fmax_v4f32_zero_fill(<4 x float> %a) {
@@ -246,6 +376,16 @@ define <8 x i8> @reduce_smin_v8i8_zero_fill(<8 x i8> %a) {
   ret <8 x i8> %t2
 }
 
+define <8 x i8> @reduce_smin_v8i8_v16i8_zero_fill(<16 x i8> %a) {
+; CHECK-LABEL: reduce_smin_v8i8_v16i8_zero_fill:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sminv b0, v0.16b
+; CHECK-NEXT:    ret
+  %t1 = call i8 @llvm.vector.reduce.smin.v16i8(<16 x i8> %a)
+  %t2 = insertelement <8 x i8> zeroinitializer, i8 %t1, i64 0
+  ret <8 x i8> %t2
+}
+
 define <16 x i8> @reduce_smin_v16i8_zero_fill(<16 x i8> %a) {
 ; CHECK-LABEL: reduce_smin_v16i8_zero_fill:
 ; CHECK:       // %bb.0:
@@ -266,6 +406,16 @@ define <4 x i16> @reduce_smin_v4i16_zero_fill(<4 x i16> %a) {
   ret <4 x i16> %t2
 }
 
+define <4 x i16> @reduce_smin_v4i16_v8i16_zero_fill(<8 x i16> %a) {
+; CHECK-LABEL: reduce_smin_v4i16_v8i16_zero_fill:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sminv h0, v0.8h
+; CHECK-NEXT:    ret
+  %t1 = call i16 @llvm.vector.reduce.smin.v8i16(<8 x i16> %a)
+  %t2 = insertelement <4 x i16> zeroinitializer, i16 %t1, i64 0
+  ret <4 x i16> %t2
+}
+
 define <8 x i16> @reduce_smin_v8i16_zero_fill(<8 x i16> %a) {
 ; CHECK-LABEL: reduce_smin_v8i16_zero_fill:
 ; CHECK:       // %bb.0:
@@ -274,6 +424,16 @@ define <8 x i16> @reduce_smin_v8i16_zero_fill(<8 x i16> %a) {
   %t1 = call i16 @llvm.vector.reduce.smin.v8i16(<8 x i16> %a)
   %t2 = insertelement <8 x i16> zeroinitializer, i16 %t1, i64 0
   ret <8 x i16> %t2
+}
+
+define <2 x i32> @reduce_smin_v2i32_v4i32_zero_fill(<4 x i32> %a) {
+; CHECK-LABEL: reduce_smin_v2i32_v4i32_zero_fill:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sminv s0, v0.4s
+; CHECK-NEXT:    ret
+  %t1 = call i32 @llvm.vector.reduce.smin.v4i32(<4 x i32> %a)
+  %t2 = insertelement <2 x i32> zeroinitializer, i32 %t1, i64 0
+  ret <2 x i32> %t2
 }
 
 define <4 x i32> @reduce_smin_v4i32_zero_fill(<4 x i32> %a) {
@@ -292,6 +452,16 @@ define <8 x i8> @reduce_umin_v8i8_zero_fill(<8 x i8> %a) {
 ; CHECK-NEXT:    uminv b0, v0.8b
 ; CHECK-NEXT:    ret
   %t1 = call i8 @llvm.vector.reduce.umin.v8i8(<8 x i8> %a)
+  %t2 = insertelement <8 x i8> zeroinitializer, i8 %t1, i64 0
+  ret <8 x i8> %t2
+}
+
+define <8 x i8> @reduce_umin_v8i8_v16i8_zero_fill(<16 x i8> %a) {
+; CHECK-LABEL: reduce_umin_v8i8_v16i8_zero_fill:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uminv b0, v0.16b
+; CHECK-NEXT:    ret
+  %t1 = call i8 @llvm.vector.reduce.umin.v16i8(<16 x i8> %a)
   %t2 = insertelement <8 x i8> zeroinitializer, i8 %t1, i64 0
   ret <8 x i8> %t2
 }
@@ -316,6 +486,16 @@ define <4 x i16> @reduce_umin_v4i16_zero_fill(<4 x i16> %a) {
   ret <4 x i16> %t2
 }
 
+define <4 x i16> @reduce_umin_v4i16_v8i16_zero_fill(<8 x i16> %a) {
+; CHECK-LABEL: reduce_umin_v4i16_v8i16_zero_fill:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uminv h0, v0.8h
+; CHECK-NEXT:    ret
+  %t1 = call i16 @llvm.vector.reduce.umin.v8i16(<8 x i16> %a)
+  %t2 = insertelement <4 x i16> zeroinitializer, i16 %t1, i64 0
+  ret <4 x i16> %t2
+}
+
 define <8 x i16> @reduce_umin_v8i16_zero_fill(<8 x i16> %a) {
 ; CHECK-LABEL: reduce_umin_v8i16_zero_fill:
 ; CHECK:       // %bb.0:
@@ -324,6 +504,16 @@ define <8 x i16> @reduce_umin_v8i16_zero_fill(<8 x i16> %a) {
   %t1 = call i16 @llvm.vector.reduce.umin.v8i16(<8 x i16> %a)
   %t2 = insertelement <8 x i16> zeroinitializer, i16 %t1, i64 0
   ret <8 x i16> %t2
+}
+
+define <2 x i32> @reduce_umin_v2i32_v4i32_zero_fill(<4 x i32> %a) {
+; CHECK-LABEL: reduce_umin_v2i32_v4i32_zero_fill:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uminv s0, v0.4s
+; CHECK-NEXT:    ret
+  %t1 = call i32 @llvm.vector.reduce.umin.v4i32(<4 x i32> %a)
+  %t2 = insertelement <2 x i32> zeroinitializer, i32 %t1, i64 0
+  ret <2 x i32> %t2
 }
 
 define <4 x i32> @reduce_umin_v4i32_zero_fill(<4 x i32> %a) {
@@ -346,6 +536,16 @@ define <4 x half> @reduce_fminimum_v4f16_zero_fill(<4 x half> %a) #0 {
   ret <4 x half> %t2
 }
 
+define <4 x half> @reduce_fminimum_v4f16_v8f16_zero_fill(<8 x half> %a) #0 {
+; CHECK-LABEL: reduce_fminimum_v4f16_v8f16_zero_fill:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fminv h0, v0.8h
+; CHECK-NEXT:    ret
+  %t1 = call half @llvm.vector.reduce.fminimum.v8f16(<8 x half> %a)
+  %t2 = insertelement <4 x half> zeroinitializer, half %t1, i64 0
+  ret <4 x half> %t2
+}
+
 define <8 x half> @reduce_fminimum_v8f16_zero_fill(<8 x half> %a) #0 {
 ; CHECK-LABEL: reduce_fminimum_v8f16_zero_fill:
 ; CHECK:       // %bb.0:
@@ -354,6 +554,16 @@ define <8 x half> @reduce_fminimum_v8f16_zero_fill(<8 x half> %a) #0 {
   %t1 = call half @llvm.vector.reduce.fminimum.v8f16(<8 x half> %a)
   %t2 = insertelement <8 x half> zeroinitializer, half %t1, i64 0
   ret <8 x half> %t2
+}
+
+define <2 x float> @reduce_fminimum_v2f32_v4f32_zero_fill(<4 x float> %a) {
+; CHECK-LABEL: reduce_fminimum_v2f32_v4f32_zero_fill:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fminv s0, v0.4s
+; CHECK-NEXT:    ret
+  %t1 = call float @llvm.vector.reduce.fminimum.v4f32(<4 x float> %a)
+  %t2 = insertelement <2 x float> zeroinitializer, float %t1, i64 0
+  ret <2 x float> %t2
 }
 
 define <4 x float> @reduce_fminimum_v4f32_zero_fill(<4 x float> %a) {
@@ -376,6 +586,16 @@ define <4 x half> @reduce_fmin_v4f16_zero_fill(<4 x half> %a) #0 {
   ret <4 x half> %t2
 }
 
+define <4 x half> @reduce_fmin_v4f16_v8f16_zero_fill(<8 x half> %a) #0 {
+; CHECK-LABEL: reduce_fmin_v4f16_v8f16_zero_fill:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fminnmv h0, v0.8h
+; CHECK-NEXT:    ret
+  %t1 = call half @llvm.vector.reduce.fmin.v8f16(<8 x half> %a)
+  %t2 = insertelement <4 x half> zeroinitializer, half %t1, i64 0
+  ret <4 x half> %t2
+}
+
 define <8 x half> @reduce_fmin_v8f16_zero_fill(<8 x half> %a) #0 {
 ; CHECK-LABEL: reduce_fmin_v8f16_zero_fill:
 ; CHECK:       // %bb.0:
@@ -384,6 +604,16 @@ define <8 x half> @reduce_fmin_v8f16_zero_fill(<8 x half> %a) #0 {
   %t1 = call half @llvm.vector.reduce.fmin.v8f16(<8 x half> %a)
   %t2 = insertelement <8 x half> zeroinitializer, half %t1, i64 0
   ret <8 x half> %t2
+}
+
+define <2 x float> @reduce_fmin_v2f32_v4f32_zero_fill(<4 x float> %a) {
+; CHECK-LABEL: reduce_fmin_v2f32_v4f32_zero_fill:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fminnmv s0, v0.4s
+; CHECK-NEXT:    ret
+  %t1 = call float @llvm.vector.reduce.fmin.v4f32(<4 x float> %a)
+  %t2 = insertelement <2 x float> zeroinitializer, float %t1, i64 0
+  ret <2 x float> %t2
 }
 
 define <4 x float> @reduce_fmin_v4f32_zero_fill(<4 x float> %a) {
