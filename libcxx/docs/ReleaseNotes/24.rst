@@ -62,6 +62,8 @@ Improvements and New Features
 -----------------------------
 
 - ``basic_filebuf`` now supports files larger than 2GB on 32-bit AIX and 32-bit glibc targets.
+- ``std::fstream`` disables buffering of the underlying C stream now to avoid double buffering and to better respect the
+  users requests, improving performance by up to 2x.
 
 Deprecations and Removals
 -------------------------
