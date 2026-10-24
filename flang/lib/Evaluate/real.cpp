@@ -673,8 +673,14 @@ ValueWithRealFlags<Real<W, P>> Real<W, P>::Read(
     const char *&p, Rounding rounding) {
   auto converted{
       decimal::ConvertToBinary<P>(p, MapRoundingMode(rounding.mode))};
-  const auto *value{reinterpret_cast<Real<W, P> *>(&converted.binary)};
-  return {*value, MapFlags(converted.flags)};
+  // Do not reinterpret the converted binary as a Real: the layouts of the
+  // two types may differ (e.g. REAL(10)).
+  auto raw{converted.binary.raw()};
+  Word word{static_cast<std::uint64_t>(raw)};
+  if constexpr (Word::bits > 64) {
+    word = word.IOR(Word{static_cast<std::uint64_t>(raw >> 64)}.SHIFTL(64));
+  }
+  return {Real{word}, MapFlags(converted.flags)};
 }
 
 template <typename W, int P> std::string Real<W, P>::DumpHexadecimal() const {
