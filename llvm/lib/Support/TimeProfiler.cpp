@@ -232,9 +232,16 @@ struct llvm::TimeTraceProfiler {
                         [](const auto &TTP) { return TTP->Stack.empty(); }) &&
            "All profiler sections should be ended when calling write");
 
-    // Compute floor-rounded microsecond timestamps and clamp child start
-    // times top-down so sub-microsecond start offsets never cause a child
-    // event to overrun its parent's floor-rounded end time.
+    // Compute floor-rounded microsecond timestamps and clamp child start times
+    // top-down. An event's emitted end is floor(start) + floor(dur), which is
+    // floor(end) - 1 when the fractional parts of start and dur sum to >= 1us,
+    // so a parent can lose 1us while a child near its end does not. E.g.:
+    //   Parent [0.5, 3.4] -> ts = 0, dur = 2 -> [0, 2]
+    //   Child1 [1.0, 2.0] -> ts = 1, dur = 1 -> [1, 2]
+    //   Child2 [2.0, 3.0] -> ts = 2, dur = 1 -> [2, 3] (overruns Parent)
+    // Clamping Child2 left to [1, 2] would then overlap Child1, so we walk
+    // non-overlapping siblings right-to-left to shift earlier siblings left
+    // as needed; sum(floor(d_i)) <= floor(d_parent) guarantees they fit.
     auto clampEntries = [](TimeTraceProfiler &TTP) {
       auto &Entries = TTP.Entries;
       for (TimeTraceProfilerEntry &E : Entries) {
