@@ -5604,6 +5604,9 @@ Execute `clang-cl /?` to see a list of supported options:
 >   -fimplicit-module-maps  Implicitly search the file system for module map files.
 >   -finline-max-stacksize=<value>
 >                           Suppress inlining of functions whose stack size exceeds the given value
+>   -finline-stringops[=<value>]
+>                           Prevent compiler-generated out-of-line calls for specified memory operations (supported: memset) in opted-in code
+>   -fno-inline-stringops   Do not inline string operations
 >   -fintegrated-cc1        Run cc1 in-process
 >   -fintegrated-objemitter Use internal machine object code emitter.
 >   -flto=<value>           Set LTO mode
