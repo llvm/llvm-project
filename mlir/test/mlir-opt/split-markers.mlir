@@ -33,6 +33,12 @@ func.func @foo() { return }
 // ----
 func.func @bar2() {return }
 
+// A marker with too many dashes is a near miss too.
+// CHECK-DEFAULT: warning: near miss with file split marker
+// CHECK-DEFAULT: ------
+// ------
+func.func @bar3() {return }
+
 // No error flagged at the end for a near miss.
 // ----
 
