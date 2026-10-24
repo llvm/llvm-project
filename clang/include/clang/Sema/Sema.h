@@ -9211,6 +9211,10 @@ public:
   CreateMaterializeTemporaryExpr(QualType T, Expr *Temporary,
                                  bool BoundToLvalueReference);
 
+  /// Returns true if a temporary of type T cannot be created in the
+  /// address space its type names.
+  bool hasInvalidAddrSpForTemporary(QualType T) const;
+
   /// If \p E is a prvalue denoting an unmaterialized temporary, materialize
   /// it as an xvalue. In C++98, the result will still be a prvalue, because
   /// we don't have xvalues there.

@@ -4977,9 +4977,7 @@ public:
 
   /// Determine the type of an expression that calls a function of
   /// this type.
-  QualType getCallResultType(const ASTContext &Context) const {
-    return getReturnType().getNonLValueExprType(Context);
-  }
+  QualType getCallResultType(const ASTContext &Context) const;
 
   static StringRef getNameForCallConv(CallingConv CC);
 

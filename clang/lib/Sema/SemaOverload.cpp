@@ -15359,7 +15359,7 @@ ExprResult Sema::BuildCXXMemberCallExpr(Expr *E, NamedDecl *FoundDecl,
   CallExpr *CE;
   QualType ResultType = Method->getReturnType();
   ExprValueKind VK = Expr::getValueKindForType(ResultType);
-  ResultType = ResultType.getNonLValueExprType(Context);
+  ResultType = Method->getCallResultType();
   if (Method->isExplicitObjectMemberFunction()) {
     ExprResult FnExpr =
         CreateFunctionRefExpr(*this, Method, FoundDecl, Exp.get(),
@@ -15514,7 +15514,7 @@ Sema::CreateOverloadedUnaryOp(SourceLocation OpLoc, UnaryOperatorKind Opc,
       // Determine the result type.
       QualType ResultTy = FnDecl->getReturnType();
       ExprValueKind VK = Expr::getValueKindForType(ResultTy);
-      ResultTy = ResultTy.getNonLValueExprType(Context);
+      ResultTy = FnDecl->getCallResultType();
 
       Args[0] = Input;
       CallExpr *TheCall = CXXOperatorCallExpr::Create(
@@ -15922,7 +15922,7 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
         // Determine the result type.
         QualType ResultTy = FnDecl->getReturnType();
         ExprValueKind VK = Expr::getValueKindForType(ResultTy);
-        ResultTy = ResultTy.getNonLValueExprType(Context);
+        ResultTy = FnDecl->getCallResultType();
 
         CallExpr *TheCall;
         ArrayRef<const Expr *> ArgsArray(Args, 2);
@@ -16378,7 +16378,7 @@ ExprResult Sema::CreateOverloadedArraySubscriptExpr(SourceLocation LLoc,
         // Determine the result type
         QualType ResultTy = FnDecl->getReturnType();
         ExprValueKind VK = Expr::getValueKindForType(ResultTy);
-        ResultTy = ResultTy.getNonLValueExprType(Context);
+        ResultTy = FnDecl->getCallResultType();
 
         CallExpr *TheCall = CXXOperatorCallExpr::Create(
             Context, OO_Subscript, FnExpr.get(), MethodArgs, ResultTy, VK, RLoc,
@@ -16693,7 +16693,7 @@ ExprResult Sema::BuildCallToMemberFunction(Scope *S, Expr *MemExprE,
 
   QualType ResultType = Method->getReturnType();
   ExprValueKind VK = Expr::getValueKindForType(ResultType);
-  ResultType = ResultType.getNonLValueExprType(Context);
+  ResultType = Method->getCallResultType();
 
   assert(Method && "Member call to something that isn't a method?");
   const auto *Proto = Method->getType()->castAs<FunctionProtoType>();
@@ -17052,7 +17052,7 @@ Sema::BuildCallToObjectOfClassType(Scope *S, Expr *Obj,
   // Once we've built TheCall, all of the expressions are properly owned.
   QualType ResultTy = Method->getReturnType();
   ExprValueKind VK = Expr::getValueKindForType(ResultTy);
-  ResultTy = ResultTy.getNonLValueExprType(Context);
+  ResultTy = Method->getCallResultType();
 
   CallExpr *TheCall = CXXOperatorCallExpr::Create(
       Context, OO_Call, NewFn.get(), MethodArgs, ResultTy, VK, RParenLoc,
@@ -17181,7 +17181,7 @@ ExprResult Sema::BuildOverloadedArrowExpr(Scope *S, Expr *Base,
 
   QualType ResultTy = Method->getReturnType();
   ExprValueKind VK = Expr::getValueKindForType(ResultTy);
-  ResultTy = ResultTy.getNonLValueExprType(Context);
+  ResultTy = Method->getCallResultType();
 
   CallExpr *TheCall =
       CXXOperatorCallExpr::Create(Context, OO_Arrow, FnExpr.get(), Base,
@@ -17255,7 +17255,7 @@ ExprResult Sema::BuildLiteralOperatorCall(LookupResult &R,
 
   QualType ResultTy = FD->getReturnType();
   ExprValueKind VK = Expr::getValueKindForType(ResultTy);
-  ResultTy = ResultTy.getNonLValueExprType(Context);
+  ResultTy = FD->getCallResultType();
 
   UserDefinedLiteral *UDL = UserDefinedLiteral::Create(
       Context, Fn.get(), llvm::ArrayRef(ConvArgs, Args.size()), ResultTy, VK,
