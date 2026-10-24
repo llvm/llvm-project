@@ -257,6 +257,20 @@ protected:
   visitCallableOperation(CallableOpInterface callable,
                          ArrayRef<AbstractSparseLattice *> argLattices);
 
+  /// Visit a program point `point` with predecessors within a region branch
+  /// operation `branch`, which can either be the entry block of one of the
+  /// regions or the parent operation itself, and set either the argument or
+  /// parent result lattices.
+  /// This method can be overridden to control precisely how the region
+  /// successors of `branch` are visited. For example in order to precisely
+  /// control the order in which predecessor operand lattices are propagated
+  /// from. An override is responsible for visiting all the known predecessors
+  /// and propagating therefrom.
+  virtual void
+  visitRegionSuccessors(ProgramPoint *point, RegionBranchOpInterface branch,
+                        RegionSuccessor successor,
+                        ArrayRef<AbstractSparseLattice *> lattices);
+
 private:
   /// Recursively initialize the analysis on nested operations and blocks.
   LogicalResult initializeRecursively(Operation *op);
@@ -272,20 +286,6 @@ private:
   /// region terminators or callable callsites. Otherwise, the values are
   /// determined from block predecessors.
   void visitBlock(Block *block);
-
-  /// Visit a program point `point` with predecessors within a region branch
-  /// operation `branch`, which can either be the entry block of one of the
-  /// regions or the parent operation itself, and set either the argument or
-  /// parent result lattices.
-  /// This method can be overridden to control precisely how the region
-  /// successors of `branch` are visited. For example in order to precisely
-  /// control the order in which predecessor operand lattices are propagated
-  /// from. An override is responsible for visiting all the known predecessors
-  /// and propagating therefrom.
-  virtual void
-  visitRegionSuccessors(ProgramPoint *point, RegionBranchOpInterface branch,
-                        RegionSuccessor successor,
-                        ArrayRef<AbstractSparseLattice *> lattices);
 };
 
 //===----------------------------------------------------------------------===//
