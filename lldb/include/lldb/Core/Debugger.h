@@ -435,12 +435,6 @@ public:
 
   void RunIOHandlers();
 
-  bool IsForwardingEvents();
-
-  void EnableForwardEvents(const lldb::ListenerSP &listener_sp);
-
-  void CancelForwardEvents(const lldb::ListenerSP &listener_sp);
-
   bool IsHandlingEvents() const { return m_event_handler_thread.IsJoinable(); }
 
   Status RunREPL(lldb::LanguageType language, const char *repl_options);
@@ -836,7 +830,6 @@ protected:
   HostThread m_io_handler_thread;
   Broadcaster m_sync_broadcaster; ///< Private debugger synchronization.
   Broadcaster m_broadcaster;      ///< Public Debugger event broadcaster.
-  lldb::ListenerSP m_forward_listener_sp;
   llvm::once_flag m_clear_once;
   lldb::TargetSP m_dummy_target_sp;
 

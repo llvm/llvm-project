@@ -1089,7 +1089,7 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
       m_sync_broadcaster(nullptr, "lldb.debugger.sync"),
       m_broadcaster(m_broadcaster_manager_sp,
                     GetStaticBroadcasterClass().str()),
-      m_forward_listener_sp(), m_clear_once() {
+      m_clear_once() {
   // Initialize the debugger properties as early as possible as other parts of
   // LLDB will start querying them during construction.
   m_collection_sp->Initialize(g_debugger_properties_def);
@@ -2085,79 +2085,75 @@ ProcessSP Debugger::HandleProcessEvent(const EventSP &event_sp) {
 
   StreamUP output_stream_up = GetAsyncOutputStream();
   StreamUP error_stream_up = GetAsyncErrorStream();
-  const bool gui_enabled = IsForwardingEvents();
+  bool pop_process_io_handler = false;
+  assert(process_sp);
 
-  if (!gui_enabled) {
-    bool pop_process_io_handler = false;
-    assert(process_sp);
+  bool state_is_stopped = false;
+  const bool got_state_changed =
+      (event_type & Process::eBroadcastBitStateChanged) != 0;
+  const bool got_stdout = (event_type & Process::eBroadcastBitSTDOUT) != 0;
+  const bool got_stderr = (event_type & Process::eBroadcastBitSTDERR) != 0;
+  const bool got_structured_data =
+      (event_type & Process::eBroadcastBitStructuredData) != 0;
 
-    bool state_is_stopped = false;
-    const bool got_state_changed =
-        (event_type & Process::eBroadcastBitStateChanged) != 0;
-    const bool got_stdout = (event_type & Process::eBroadcastBitSTDOUT) != 0;
-    const bool got_stderr = (event_type & Process::eBroadcastBitSTDERR) != 0;
-    const bool got_structured_data =
-        (event_type & Process::eBroadcastBitStructuredData) != 0;
+  if (got_state_changed) {
+    StateType event_state =
+        Process::ProcessEventData::GetStateFromEvent(event_sp.get());
+    state_is_stopped = StateIsStoppedState(event_state, false);
+  }
 
-    if (got_state_changed) {
-      StateType event_state =
-          Process::ProcessEventData::GetStateFromEvent(event_sp.get());
-      state_is_stopped = StateIsStoppedState(event_state, false);
-    }
+  // Display running state changes first before any STDIO
+  if (got_state_changed && !state_is_stopped) {
+    // This is a public stop which we are going to announce to the user, so
+    // we should force the most relevant frame selection here.
+    Process::HandleProcessStateChangedEvent(event_sp, output_stream_up.get(),
+                                            SelectMostRelevantFrame,
+                                            pop_process_io_handler);
+  }
 
-    // Display running state changes first before any STDIO
-    if (got_state_changed && !state_is_stopped) {
-      // This is a public stop which we are going to announce to the user, so
-      // we should force the most relevant frame selection here.
-      Process::HandleProcessStateChangedEvent(event_sp, output_stream_up.get(),
-                                              SelectMostRelevantFrame,
-                                              pop_process_io_handler);
-    }
+  // Now display STDOUT and STDERR
+  FlushProcessOutput(*process_sp, got_stdout || got_state_changed,
+                     got_stderr || got_state_changed);
 
-    // Now display STDOUT and STDERR
-    FlushProcessOutput(*process_sp, got_stdout || got_state_changed,
-                       got_stderr || got_state_changed);
+  // Give structured data events an opportunity to display.
+  if (got_structured_data) {
+    StructuredDataPluginSP plugin_sp =
+        EventDataStructuredData::GetPluginFromEvent(event_sp.get());
+    if (plugin_sp) {
+      auto structured_data_sp =
+          EventDataStructuredData::GetObjectFromEvent(event_sp.get());
+      StreamString content_stream;
+      Status error =
+          plugin_sp->GetDescription(structured_data_sp, content_stream);
+      if (error.Success()) {
+        if (!content_stream.GetString().empty()) {
+          // Add newline.
+          content_stream.PutChar('\n');
+          content_stream.Flush();
 
-    // Give structured data events an opportunity to display.
-    if (got_structured_data) {
-      StructuredDataPluginSP plugin_sp =
-          EventDataStructuredData::GetPluginFromEvent(event_sp.get());
-      if (plugin_sp) {
-        auto structured_data_sp =
-            EventDataStructuredData::GetObjectFromEvent(event_sp.get());
-        StreamString content_stream;
-        Status error =
-            plugin_sp->GetDescription(structured_data_sp, content_stream);
-        if (error.Success()) {
-          if (!content_stream.GetString().empty()) {
-            // Add newline.
-            content_stream.PutChar('\n');
-            content_stream.Flush();
-
-            // Print it.
-            output_stream_up->PutCString(content_stream.GetString());
-          }
-        } else {
-          error_stream_up->Format("Failed to print structured "
-                                  "data with plugin {0}: {1}",
-                                  plugin_sp->GetPluginName(), error);
+          // Print it.
+          output_stream_up->PutCString(content_stream.GetString());
         }
+      } else {
+        error_stream_up->Format("Failed to print structured "
+                                "data with plugin {0}: {1}",
+                                plugin_sp->GetPluginName(), error);
       }
     }
-
-    // Now display any stopped state changes after any STDIO
-    if (got_state_changed && state_is_stopped) {
-      Process::HandleProcessStateChangedEvent(event_sp, output_stream_up.get(),
-                                              SelectMostRelevantFrame,
-                                              pop_process_io_handler);
-    }
-
-    output_stream_up->Flush();
-    error_stream_up->Flush();
-
-    if (pop_process_io_handler)
-      process_sp->PopProcessIOHandler();
   }
+
+  // Now display any stopped state changes after any STDIO
+  if (got_state_changed && state_is_stopped) {
+    Process::HandleProcessStateChangedEvent(event_sp, output_stream_up.get(),
+                                            SelectMostRelevantFrame,
+                                            pop_process_io_handler);
+  }
+
+  output_stream_up->Flush();
+  error_stream_up->Flush();
+
+  if (pop_process_io_handler)
+    process_sp->PopProcessIOHandler();
   return process_sp;
 }
 
@@ -2176,16 +2172,6 @@ ThreadSP Debugger::HandleThreadEvent(const EventSP &event_sp) {
     }
   }
   return thread_sp;
-}
-
-bool Debugger::IsForwardingEvents() { return (bool)m_forward_listener_sp; }
-
-void Debugger::EnableForwardEvents(const ListenerSP &listener_sp) {
-  m_forward_listener_sp = listener_sp;
-}
-
-void Debugger::CancelForwardEvents(const ListenerSP &listener_sp) {
-  m_forward_listener_sp.reset();
 }
 
 /// Conservative heuristic to detect whether OSC 9;4 progress is supported by
@@ -2368,9 +2354,6 @@ lldb::thread_result_t Debugger::DefaultEventHandler() {
               HandleDiagnosticEvent(event_sp);
           }
         }
-
-        if (m_forward_listener_sp)
-          m_forward_listener_sp->AddEvent(event_sp);
       }
       RedrawStatusline(exe_ctx_ref);
     }
@@ -2642,9 +2625,6 @@ StructuredData::DictionarySP Debugger::GetBuildConfiguration() {
   AddBoolConfigEntry(
       *config_up, "curl", LLVM_ENABLE_CURL,
       "A boolean value that indicates if CURL support is enabled in LLDB");
-  AddBoolConfigEntry(
-      *config_up, "curses", LLDB_ENABLE_CURSES,
-      "A boolean value that indicates if curses support is enabled in LLDB");
   AddBoolConfigEntry(
       *config_up, "editline", LLDB_ENABLE_LIBEDIT,
       "A boolean value that indicates if editline support is enabled in LLDB");

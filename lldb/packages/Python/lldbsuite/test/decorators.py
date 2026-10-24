@@ -1636,10 +1636,6 @@ def skipIfCurlSupportMissing(func):
     return _get_bool_config_skip_if_decorator("curl")(func)
 
 
-def skipIfCursesSupportMissing(func):
-    return _get_bool_config_skip_if_decorator("curses")(func)
-
-
 def skipIfXmlSupportMissing(func):
     return _get_bool_config_skip_if_decorator("xml")(func)
 
