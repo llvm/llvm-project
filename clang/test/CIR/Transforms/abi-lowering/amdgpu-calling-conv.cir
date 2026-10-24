@@ -28,7 +28,7 @@ module attributes {
     cir.return
   }
 
-  // CHECK: cir.func{{.*}} @take_s8(%arg0: !s8i {llvm.signext})
+  // CHECK: cir.func{{.*}} @take_s8(%arg0: !s8i {llvm.noundef, llvm.signext})
 
   // Call site picks up the same extension attribute on the operand.
   cir.func @call_s8(%arg0: !s8i) {
@@ -36,7 +36,7 @@ module attributes {
     cir.return
   }
 
-  // CHECK: cir.call @take_s8(%arg0) : (!s8i {llvm.signext}) -> ()
+  // CHECK: cir.call @take_s8(%arg0) : (!s8i {llvm.noundef, llvm.signext}) -> ()
 
   // A zero-field record classifies as Ignore: the empty argument is dropped
   // and the real argument shifts down to the first slot.

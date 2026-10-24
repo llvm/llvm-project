@@ -1,7 +1,7 @@
 // RUN: cir-opt %s -cir-call-conv-lowering=target=amdgpu | FileCheck %s
 
 // Under HIP a generic pointer kernel argument is passed as a global pointer.
-// The HIP flag comes from the module's lowering_lang_options.
+// The HIP flag comes from the module's lowering_options.
 
 !s32i = !cir.int<s, 32>
 !rec_PtrWrap = !cir.struct<"PtrWrap" {data !cir.ptr<!s32i>}>
@@ -10,10 +10,11 @@ module attributes {
   dlti.dl_spec = #dlti.dl_spec<
     #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
     #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>,
-  cir.lowering_lang_options = #cir.lowering_lang_options<
+  cir.lowering_options = #cir.lowering_options<
     exceptions = false, threadsafe_statics = true, cuda = true,
     cuda_is_device = true, hip = true, hlsl = false, gpu_rdc = false,
-    openmp = false, openmp_is_target_device = false, clang_abi_compat = 17>
+    openmp = false, openmp_is_target_device = false, clang_abi_compat = 17,
+    enable_noundef_attrs = true>
 } {
 
   // The kernel casts the incoming global pointer back to generic before the

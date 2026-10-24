@@ -126,7 +126,7 @@ module attributes {
 
   // CHECK:      cir.func{{.*}} @returns_big_ext(%[[SRET2:.*]]: !cir.ptr<!rec_Big> {
   // CHECK-SAME:     llvm.sret = !rec_Big
-  // CHECK-SAME:   %{{.*}}: !s8i {llvm.signext}
+  // CHECK-SAME:   %{{.*}}: !s8i {llvm.noundef, llvm.signext}
   // CHECK-NOT:    -> !rec_Big
   // CHECK:        cir.store %{{.*}}, %[[SRET2]] : !rec_Big, !cir.ptr<!rec_Big>
   // CHECK:        cir.return
@@ -144,7 +144,7 @@ module attributes {
   // CHECK:        %[[DEST2:.*]] = cir.alloca "s" {{.*}}: !cir.ptr<!rec_Big>
   // CHECK:        cir.call @returns_big_ext(%[[DEST2]], %[[ARG]]) : (!cir.ptr<!rec_Big>
   // CHECK-SAME:     llvm.sret = !rec_Big
-  // CHECK-SAME:   !s8i {llvm.signext}
+  // CHECK-SAME:   !s8i {llvm.noundef, llvm.signext}
   // CHECK-SAME:     -> ()
 
   // Multiple return statements share one __retval alloca (CIR does not merge
