@@ -2786,13 +2786,33 @@ bool MachineInstr::mayFoldInlineAsmRegOp(unsigned OpId) const {
   if (!getOperand(OpId).isReg())
     return false;
 
+  if (isRegTiedToDefOperand(OpId))
+    return false;
+
   const MachineOperand &MD = getOperand(OpId - 1);
   if (!MD.isImm())
     return false;
 
+  // A memory operand replaces exactly one register, so one register of a
+  // multi-register operand (e.g. an i128 in two GR64s) can't be folded.
   InlineAsm::Flag F(MD.getImm());
+  if (F.getNumOperandRegisters() != 1)
+    return false;
+
+  // A memory operand refers to the start of the stack slot, which holds the
+  // whole register. A subregister is found there only if it's at bit offset 0
+  // on a little-endian target; e.g. x86's sub_8bit_hi is at byte 1. (The use
+  // tied to a def, which is folded along with it, has the def's subregister.)
+  if (unsigned SubReg = getOperand(OpId).getSubReg()) {
+    const MachineFunction &MF = *getMF();
+    if (!MF.getDataLayout().isLittleEndian() ||
+        MF.getSubtarget().getRegisterInfo()->getSubRegIdxOffset(SubReg) != 0)
+      return false;
+  }
+
   if (F.isRegUseKind() || F.isRegDefKind() || F.isRegDefEarlyClobberKind())
     return F.getRegMayBeFolded();
+
   return false;
 }
 
