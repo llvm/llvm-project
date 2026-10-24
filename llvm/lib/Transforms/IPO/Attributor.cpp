@@ -1369,10 +1369,14 @@ SubsumingPositionIterator::SubsumingPositionIterator(const IRPosition &IRP) {
     if (!CB->hasOperandBundles() || CanIgnoreOperandBundles(*CB)) {
       if (auto *Callee =
               dyn_cast_if_present<Function>(CB->getCalledOperand())) {
-        IRPositions.emplace_back(IRPosition::returned(*Callee));
+        // The returned position of the callee does not describe the call if
+        // the call uses a different return type.
+        bool SameType = Callee->getReturnType() == CB->getType();
+        if (SameType)
+          IRPositions.emplace_back(IRPosition::returned(*Callee));
         IRPositions.emplace_back(IRPosition::function(*Callee));
         for (const Argument &Arg : Callee->args())
-          if (Arg.hasReturnedAttr()) {
+          if (SameType && Arg.hasReturnedAttr()) {
             IRPositions.emplace_back(
                 IRPosition::callsite_argument(*CB, Arg.getArgNo()));
             IRPositions.emplace_back(
