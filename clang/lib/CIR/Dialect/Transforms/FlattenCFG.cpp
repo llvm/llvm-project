@@ -49,6 +49,35 @@ void lowerTerminator(mlir::Operation *op, mlir::Block *dest,
                                          loopHints, dest);
 }
 
+/// Creates a cir.brcond to `destTrue` if `cond` is true and to `destFalse`
+/// otherwise.  If `cond` is a cir.not, the branch is on its operand with the
+/// destination blocks swapped, repeating for each nested cir.not.  The
+/// cir.not ops are left in place for eraseDeadNots.
+static void createBrCondPeelingNot(mlir::PatternRewriter &rewriter,
+                                   mlir::Location loc, mlir::Value cond,
+                                   mlir::Block *destTrue,
+                                   mlir::Block *destFalse) {
+  while (auto notOp = cond.getDefiningOp<cir::NotOp>()) {
+    cond = notOp.getInput();
+    std::swap(destTrue, destFalse);
+  }
+  cir::BrCondOp::create(rewriter, loc, cond, destTrue, destFalse);
+}
+
+/// Erases `cond` if it is an unused cir.not, then repeats on its operand,
+/// stopping at the first cir.not that still has uses.  Call after the
+/// structured op that used `cond` is replaced, so a cir.not that
+/// createBrCondPeelingNot looked through does not reach LLVM IR as a dead
+/// `xor`.
+static void eraseDeadNots(mlir::PatternRewriter &rewriter, mlir::Value cond) {
+  while (auto notOp = cond.getDefiningOp<cir::NotOp>()) {
+    if (!notOp->use_empty())
+      return;
+    cond = notOp.getInput();
+    rewriter.eraseOp(notOp);
+  }
+}
+
 /// Walks a region while skipping operations of type `Ops`. This ensures the
 /// callback is not applied to said operations and its children.
 template <typename... Ops>
@@ -178,8 +207,8 @@ struct CIRIfFlattening : public mlir::OpRewritePattern<cir::IfOp> {
     }
 
     rewriter.setInsertionPointToEnd(currentBlock);
-    cir::BrCondOp::create(rewriter, loc, ifOp.getCondition(), thenBeforeBody,
-                          elseBeforeBody);
+    mlir::Value cond = ifOp.getCondition();
+    createBrCondPeelingNot(rewriter, loc, cond, thenBeforeBody, elseBeforeBody);
 
     if (!emptyElse) {
       rewriter.setInsertionPointToEnd(elseAfterBody);
@@ -192,6 +221,7 @@ struct CIRIfFlattening : public mlir::OpRewritePattern<cir::IfOp> {
     }
 
     rewriter.replaceOp(ifOp, continueBlock->getArguments());
+    eraseDeadNots(rewriter, cond);
     return mlir::success();
   }
 };
@@ -828,9 +858,11 @@ public:
     rewriter.inlineRegionBefore(falseRegion, continueBlock);
 
     rewriter.setInsertionPointToEnd(condBlock);
-    cir::BrCondOp::create(rewriter, loc, op.getCond(), trueBlock, falseBlock);
+    mlir::Value cond = op.getCond();
+    createBrCondPeelingNot(rewriter, loc, cond, trueBlock, falseBlock);
 
     rewriter.replaceOp(op, continueBlock->getArguments());
+    eraseDeadNots(rewriter, cond);
 
     // Ok, we're done!
     return mlir::success();
@@ -2609,10 +2641,11 @@ void CIRFlattenCFGPass::runOnOperation() {
     changedListener.reset();
 
     // Collect flatten candidates post-order so an inner op is handled before
-    // its parent; op pointers stay valid across the block splits / region
-    // inlines the patterns perform (a pattern only erases the matched op and
-    // its descendants, which are visited first), so the list can be iterated
-    // directly.
+    // its parent.  Patterns erase only the matched op, its descendants, and the
+    // dead cir.not ops that eraseDeadNots removes.  Descendants are visited
+    // before their parent and cir.not ops are never collected, so op pointers
+    // in the list stay valid across the block splits and region inlines the
+    // patterns perform, and the list can be iterated directly.
     llvm::SmallVector<Operation *, 16> ops;
     getOperation()->walk<mlir::WalkOrder::PostOrder>([&](Operation *op) {
       if (isa<IfOp, ScopeOp, SwitchOp, LoopOpInterface, TernaryOp,
