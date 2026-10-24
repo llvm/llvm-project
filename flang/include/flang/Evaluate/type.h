@@ -56,7 +56,7 @@ class TargetCharacteristics;
 // this class template Type<CATEGORY>.
 //
 // TODO: This used to be Type<CATEGORY,KIND>, but now KIND is passed at runtime.
-//       Since they are functionally the same, replace all occurances of Type
+//       Since they are functionally the same, replace all occurrences of Type
 //       with TypeCategory.
 template <TypeCategory CATEGORY> class Type;
 

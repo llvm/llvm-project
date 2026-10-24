@@ -312,12 +312,12 @@ std::optional<Expr<SomeComplex>> ConstructComplex(
 // Extracts the real or imaginary part of the result of a COMPLEX
 // expression, when that expression is simple enough to be duplicated.
 template <bool GET_IMAGINARY> struct ComplexPartExtractor {
-  // NOTE: The the code in this class was dead code; a std/common::visit
+  // NOTE: The code in this class was dead code; a std/common::visit
   // was forgotten such that the overload resolution was looking for a
   // std::variant<...> overload instead for the runtime content of the
   // std::variant. There was no specialization for std::variant so this fallback
   // overload was matched unconditionally. The intended overloads were broken
-  // due to never been checked by the compiler, because they were never
+  // due to never having been checked by the compiler, because they were never
   // instantiated. As a result, the complex expression is just never considered
   // "simple enough".
   template <typename A> static std::optional<Expr<SomeReal>> Get(const A &) {
