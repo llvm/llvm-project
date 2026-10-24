@@ -429,7 +429,15 @@ NaryReassociatePass::tryReassociateGEPAtIndex(GetElementPtrInst *GEP,
   }
   GetElementPtrInst *NewGEP = cast<GetElementPtrInst>(
       Builder.CreateGEP(GEP->getResultElementType(), Candidate, RHS));
-  NewGEP->setIsInBounds(GEP->isInBounds());
+  
+  bool CanBeInBounds = GEP->isInBounds();
+  if (auto *CandidateGEP = dyn_cast<GetElementPtrInst>(Candidate)) {
+    if (!CandidateGEP->isInBounds())
+      CanBeInBounds = false;
+  } else {
+    CanBeInBounds = false;
+  }
+  NewGEP->setIsInBounds(CanBeInBounds);
   NewGEP->takeName(GEP);
   return NewGEP;
 }
