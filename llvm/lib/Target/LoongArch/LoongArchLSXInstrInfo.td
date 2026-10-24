@@ -2956,6 +2956,13 @@ def : Pat<(f32 (vector_extract v4f32:$vj, uimm2:$imm)),
           (f32 (EXTRACT_SUBREG (VREPLVEI_W v4f32:$vj, uimm2:$imm), sub_32))>;
 def : Pat<(f64 (vector_extract v2f64:$vj, uimm1:$imm)),
           (f64 (EXTRACT_SUBREG (VREPLVEI_D v2f64:$vj, uimm1:$imm), sub_64))>;
+// Element 0 of a floating-point vector already lives in the aliased FPR.
+let AddedComplexity = 1 in {
+def : Pat<(f32 (vector_extract v4f32:$vj, 0)),
+          (f32 (EXTRACT_SUBREG v4f32:$vj, sub_32))>;
+def : Pat<(f64 (vector_extract v2f64:$vj, 0)),
+          (f64 (EXTRACT_SUBREG v2f64:$vj, sub_64))>;
+} // AddedComplexity = 1
 
 // Vector extraction with variable index.
 def : Pat<(GRLenVT (vector_extract v16i8:$vj, GRLenVT:$rk)),

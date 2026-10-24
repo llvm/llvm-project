@@ -6,7 +6,6 @@
 define double @extract_v2f64_0(<2 x double> %v, double %a) nounwind {
 ; CHECK-LABEL: extract_v2f64_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vreplvei.d $vr0, $vr0, 0
 ; CHECK-NEXT:    fadd.d $fa0, $fa0, $fa1
 ; CHECK-NEXT:    ret
   %e = extractelement <2 x double> %v, i32 0
@@ -28,9 +27,8 @@ define double @extract_v2f64_1(<2 x double> %v, double %a) nounwind {
 define double @extract_v2f64_sum(<2 x double> %v) nounwind {
 ; CHECK-LABEL: extract_v2f64_sum:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vreplvei.d $vr1, $vr0, 0
-; CHECK-NEXT:    vreplvei.d $vr0, $vr0, 1
-; CHECK-NEXT:    fadd.d $fa0, $fa1, $fa0
+; CHECK-NEXT:    vreplvei.d $vr1, $vr0, 1
+; CHECK-NEXT:    fadd.d $fa0, $fa0, $fa1
 ; CHECK-NEXT:    ret
   %e0 = extractelement <2 x double> %v, i32 0
   %e1 = extractelement <2 x double> %v, i32 1
@@ -41,7 +39,6 @@ define double @extract_v2f64_sum(<2 x double> %v) nounwind {
 define float @extract_v4f32_0(<4 x float> %v, float %a) nounwind {
 ; CHECK-LABEL: extract_v4f32_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vreplvei.w $vr0, $vr0, 0
 ; CHECK-NEXT:    fadd.s $fa0, $fa0, $fa1
 ; CHECK-NEXT:    ret
   %e = extractelement <4 x float> %v, i32 0
