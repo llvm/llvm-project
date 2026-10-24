@@ -736,7 +736,7 @@ void CodeGenVTables::addRelativeComponent(ConstantArrayBuilder &builder,
 llvm::Type *CodeGenModule::getVTableComponentType() const {
   if (getLangOpts().RelativeCXXABIVTables)
     return Int32Ty;
-  return GlobalsInt8PtrTy;
+  return VTableComponentPtrTy;
 }
 
 llvm::Type *CodeGenVTables::getVTableComponentType() const {
@@ -748,7 +748,7 @@ static void AddPointerLayoutOffset(const CodeGenModule &CGM,
                                    CharUnits offset) {
   builder.add(llvm::ConstantExpr::getIntToPtr(
       llvm::ConstantInt::getSigned(CGM.PtrDiffTy, offset.getQuantity()),
-      CGM.GlobalsInt8PtrTy));
+      CGM.VTableComponentPtrTy));
 }
 
 static void AddRelativeLayoutOffset(const CodeGenModule &CGM,
@@ -786,7 +786,8 @@ void CodeGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
                                   vtableHasLocalLinkage,
                                   /*isCompleteDtor=*/false);
     else
-      return builder.add(rtti);
+      return builder.add(llvm::ConstantExpr::getPointerBitCastOrAddrSpaceCast(
+          rtti, CGM.VTableComponentPtrTy));
 
   case VTableComponent::CK_FunctionPointer:
   case VTableComponent::CK_CompleteDtorPointer:
@@ -814,7 +815,7 @@ void CodeGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
         if (IsThunk)
           nextVTableThunkIndex++;
         return builder.add(
-            llvm::ConstantExpr::getNullValue(CGM.GlobalsInt8PtrTy));
+            llvm::ConstantExpr::getNullValue(CGM.VTableComponentPtrTy));
       }
       // Method is acceptable, continue processing as usual.
     }
@@ -891,11 +892,11 @@ void CodeGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
       //       globals;  fixing said issue might be intrusive, and will be done
       //       later.
       unsigned FnAS = fnPtr->getType()->getPointerAddressSpace();
-      unsigned GVAS = CGM.GlobalsInt8PtrTy->getPointerAddressSpace();
+      unsigned GVAS = CGM.VTableComponentPtrTy->getPointerAddressSpace();
 
       if (FnAS != GVAS)
-        fnPtr =
-            llvm::ConstantExpr::getAddrSpaceCast(fnPtr, CGM.GlobalsInt8PtrTy);
+        fnPtr = llvm::ConstantExpr::getAddrSpaceCast(fnPtr,
+                                                     CGM.VTableComponentPtrTy);
       if (const auto &Schema =
           CGM.getCodeGenOpts().PointerAuth.CXXVirtualFunctionPointers)
         return builder.addSignedPointer(fnPtr, Schema, GD, QualType());
@@ -907,7 +908,7 @@ void CodeGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
     if (RelativeCXXABIVTables)
       return builder.add(llvm::ConstantExpr::getNullValue(CGM.Int32Ty));
     else
-      return builder.addNullPointer(CGM.GlobalsInt8PtrTy);
+      return builder.addNullPointer(CGM.VTableComponentPtrTy);
   }
 
   llvm_unreachable("Unexpected vtable component kind");
