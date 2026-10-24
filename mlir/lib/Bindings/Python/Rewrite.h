@@ -82,13 +82,21 @@ private:
 class PyTypeConverter;
 class MLIR_PYTHON_API_EXPORTED PyRewritePatternSet {
 public:
+  // Keep construction and destruction inline so the support library can use
+  // this wrapper without depending on extension-module symbols.
+
   /// Create an owned pattern set.
-  PyRewritePatternSet(MlirContext ctx);
+  PyRewritePatternSet(MlirContext ctx)
+      : patterns(mlirRewritePatternSetCreate(ctx)), owned(true) {}
 
   /// Create a non-owning reference to an existing pattern set.
-  PyRewritePatternSet(MlirRewritePatternSet patterns);
+  PyRewritePatternSet(MlirRewritePatternSet patterns)
+      : patterns(patterns), owned(false) {}
 
-  ~PyRewritePatternSet();
+  ~PyRewritePatternSet() {
+    if (owned && patterns.ptr)
+      mlirRewritePatternSetDestroy(patterns);
+  }
 
   MlirRewritePatternSet get() const;
 
