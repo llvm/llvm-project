@@ -27,3 +27,26 @@ func.func @collapse_to_single() {
 // CHECK:           scf.reduce
 // CHECK-NEXT:    }
 // CHECK-NEXT:    return
+
+// Dynamic bounds: each normalized size is clamped at zero for the flattened
+// bound and at one where it is used as a divisor.
+// CHECK-LABEL: func @collapse_dynamic_bounds
+//  CHECK-SAME:   %[[LB0:.+]]: index, %[[UB0:.+]]: index, %[[LB1:.+]]: index, %[[UB1:.+]]: index)
+//   CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
+//   CHECK-DAG:   %[[C1:.+]] = arith.constant 1 : index
+//       CHECK:   %[[SIZE0:.+]] = affine.apply affine_map<()[s0, s1] -> (-s0 + s1)>()[%[[LB0]], %[[UB0]]]
+//       CHECK:   %[[CL0:.+]] = arith.maxsi %[[SIZE0]], %[[C0]]
+//       CHECK:   %[[SIZE1:.+]] = affine.apply affine_map<()[s0, s1] -> (-s0 + s1)>()[%[[LB1]], %[[UB1]]]
+//       CHECK:   %[[CL1:.+]] = arith.maxsi %[[SIZE1]], %[[C0]]
+//       CHECK:   %[[DIV1:.+]] = arith.maxsi %[[SIZE1]], %[[C1]]
+//       CHECK:   %[[UB:.+]] = arith.muli %[[CL0]], %[[CL1]]
+//       CHECK:   scf.parallel (%[[IV:.+]]) = (%[[C0]]) to (%[[UB]]) step (%[[C1]])
+//       CHECK:     arith.remsi %[[IV]], %[[DIV1]]
+//       CHECK:     arith.divsi %[[IV]], %[[DIV1]]
+func.func @collapse_dynamic_bounds(%lb0: index, %ub0: index, %lb1: index, %ub1: index) {
+  %c1 = arith.constant 1 : index
+  scf.parallel (%i0, %i1) = (%lb0, %lb1) to (%ub0, %ub1) step (%c1, %c1) {
+    %result = "magic.op"(%i0, %i1) : (index, index) -> index
+  }
+  return
+}
