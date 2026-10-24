@@ -422,6 +422,9 @@ struct MachineOutliner : public ModulePass {
   /// outlined hash tree that has been built by the previous codegen.
   CGDataMode OutlinerMode = CGDataMode::None;
 
+  /// Distinct locally unprofitable sequences discovered across all iterations.
+  /// Keep hashes rather than candidates, whose instruction iterators can be
+  /// invalidated by outlining. Their surviving sites are recounted at the end.
   SmallVector<SmallVector<stable_hash>> UnprofitableCandidates;
   // Terminals store one-based indices into UnprofitableCandidates.
   OutlinedHashTree UnprofitableCandidateHashTree;
@@ -508,7 +511,7 @@ struct MachineOutliner : public ModulePass {
   /// of candidates that have identical instruction sequences to \p MF.
   void computeAndPublishHashSequence(MachineFunction &MF, unsigned CandSize);
 
-  /// Remember short sequences rejected by the local profitability check.
+  /// Remember short sequences rejected by any iteration's profitability check.
   void recordUnprofitableCandidate(OutlinedFunction &OF);
 
   /// Recount surviving sites in the final mapper and publish their counts.
@@ -1677,9 +1680,11 @@ bool MachineOutliner::runOnModule(Module &M) {
   unsigned OutlinedFunctionNum = 0;
 
   OutlineRepeatedNum = 0;
+  // Clear once per module so candidates discovered before a rerun are retained,
+  // even if too few sites survive for the suffix tree to rediscover them.
   UnprofitableCandidates.clear();
   UnprofitableCandidateHashTree.clear();
-  // Rebuilt by each doOutline; the last mapping is kept for publishing below.
+  // Each doOutline replaces the mapping; publishing below uses the last one.
   std::optional<InstructionMapper> Mapper;
   const bool OutlinedSomething = doOutline(M, Mapper, OutlinedFunctionNum);
 
@@ -1696,9 +1701,9 @@ bool MachineOutliner::runOnModule(Module &M) {
     }
   }
 
-  // Recount in the final iteration's mapping, which excludes sites consumed by
-  // local outlining. Remapping the module would also count sites inside the
-  // functions outlined by that iteration.
+  // Recount sequences collected across all iterations in the final mapping,
+  // which excludes sites consumed by local outlining. Remapping the module
+  // would also count sites inside the functions outlined by that iteration.
   const bool PublishedUnprofitableCandidates =
       publishUnprofitableCandidates(*Mapper);
   if (!OutlinedSomething && !PublishedUnprofitableCandidates)
