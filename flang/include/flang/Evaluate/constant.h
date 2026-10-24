@@ -151,7 +151,9 @@ public:
       int kind, std::vector<Element> &&, ConstantSubscripts &&, Result);
   template <typename A, typename B, typename C>
   ConstantBase(int kind, const std::map<A, B, C> &x, Result res)
-      : kind_{kind}, result_{res}, values_{x} {}
+      : kind_{kind}, result_{res}, values_{x} {
+    CHECK_KIND(kind, RESULT);
+  }
 
   DEFAULT_CONSTRUCTORS_AND_ASSIGNMENTS(ConstantBase)
   ~ConstantBase();

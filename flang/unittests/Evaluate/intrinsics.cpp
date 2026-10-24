@@ -338,7 +338,7 @@ void TestIntrinsics() {
       .Push(Const(Scalar<Log4>::Zero(4)))
       .DoCall(); // bad type
   TestCall{defaults, table, "team_number"}
-      .Push(Const(Scalar<Complex8>::Zero(4)))
+      .Push(Const(Scalar<Complex8>::Zero(8)))
       .DoCall(); // bad type
   TestCall{defaults, table, "team_number"}
       .Push(Const(Scalar<Real4>::Zero(4)))

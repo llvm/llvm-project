@@ -45,19 +45,17 @@ using common::RelationalOperator;
 // is a std::variant<> discriminated union over all of the representational
 // types for the constants, variables, operations, and other entities that
 // can be valid expressions in that context:
-// - Expr<Type<CATEGORY, KIND>> represents an expression whose result is of a
-//   specific intrinsic type category and kind, e.g. Type<TypeCategory::Real, 4>
+// - Expr<Type<CATEGORY>> represents an expression whose result is of a
+//   specific intrinsic type category, e.g. Type<TypeCategory::Real>
 // - Expr<SomeDerived> wraps data and procedure references that result in an
 //   instance of a derived type (or CLASS(*) unlimited polymorphic)
-// - Expr<SomeKind<CATEGORY>> is a union of Expr<Type<CATEGORY, K>> for each
-//   kind type parameter value K in that intrinsic type category.  It represents
-//   an expression with known category and any kind.
+// - Expr<SomeKind<CATEGORY>> is equivalent to Expr<Type<CATEGORY>>
 // - Expr<SomeType> is a union of Expr<SomeKind<CATEGORY>> over the five
 //   intrinsic type categories of Fortran.  It represents any valid expression.
 //
 // Everything that can appear in, or as, a valid Fortran expression must be
 // represented with an instance of some class containing a Result typedef that
-// maps to some instantiation of Type<CATEGORY, KIND>, SomeKind<CATEGORY>,
+// maps to some instantiation of Type<CATEGORY>, SomeKind<CATEGORY>,
 // or SomeType.  (Exception: BOZ literal constants in generic Expr<SomeType>.)
 template <typename A> using ResultType = typename std::decay_t<A>::Result;
 template <typename A> constexpr int ResultKind = std::decay_t<A>::kind();
@@ -242,8 +240,8 @@ struct Parentheses : public Operation<Parentheses<A>, A, A> {
   using Base = Operation<Parentheses, A, A>;
   using Base::Base;
 
-  Parentheses(const Expr<A> &x) : Base{x.kind(), x} {};
-  Parentheses(Expr<A> &&x) : Base{x.kind(), std::move(x)} {};
+  explicit Parentheses(const Expr<A> &x) : Base{x.kind(), x} {}
+  explicit Parentheses(Expr<A> &&x) : Base{x.kind(), std::move(x)} {}
 };
 
 template <>
@@ -256,8 +254,8 @@ public:
   using Base::Base;
   DynamicType GetType() const;
 
-  Parentheses(const Expr<SomeDerived> &x);
-  Parentheses(Expr<SomeDerived> &&x);
+  explicit Parentheses(const Expr<SomeDerived> &x);
+  explicit Parentheses(Expr<SomeDerived> &&x);
 };
 
 template <typename A> struct Negate : public Operation<Negate<A>, A, A> {
@@ -266,8 +264,8 @@ template <typename A> struct Negate : public Operation<Negate<A>, A, A> {
   using Base = Operation<Negate, A, A>;
   using Base::Base;
 
-  Negate(const Expr<A> &x) : Base{x.kind(), x} {};
-  Negate(Expr<A> &&x) : Base{x.kind(), std::move(x)} {};
+  explicit Negate(const Expr<A> &x) : Base{x.kind(), x} {}
+  explicit Negate(Expr<A> &&x) : Base{x.kind(), std::move(x)} {}
 };
 
 struct ComplexComponent
@@ -915,8 +913,9 @@ public:
 };
 
 // A polymorphic expression of known intrinsic type category, but dynamic
-// kind, represented as a discriminated union over Expr<Type<CAT, K>>
-// for each supported kind K in the category.
+// kind.
+// TODO: Expr<Type<CAT>> now also can old expressions of any kind, so
+// Expr<SomeKind<CAT>> has become redundant can be removed.
 template <TypeCategory CAT>
 class Expr<SomeKind<CAT>> : public ExpressionBase<SomeKind<CAT>> {
 public:
@@ -945,7 +944,7 @@ using CategoryExpression = common::MapTemplate<Expr, SomeCategory>;
 // distinguishable from other integer constants, since they are permitted
 // to be used in only a few situations.
 using BOZLiteralConstant = typename LargestReal::Scalar::Word;
-static constexpr int BOZLiteralConstantKind = LargestRealKind;
+inline constexpr int BOZLiteralConstantKind = LargestRealKind;
 
 // Null pointers without MOLD= arguments are typed by context.
 struct NullPointer {

@@ -1,4 +1,3 @@
-! REQUIRES: x86-registered-target
 ! RUN: %python %S/test_errors.py %s %flang_fc1
 
 subroutine pdt

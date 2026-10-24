@@ -87,12 +87,8 @@ constexpr auto GetScalarConstantValue(const EXPR &expr)
 template <typename T, typename EXPR>
 constexpr auto GetScalarConstantValue(int kind, const EXPR &expr)
     -> std::optional<Scalar<T>> {
-  if (const Constant<T> *constant{UnwrapConstantValue<T>(expr)}) {
-    if (constant->kind() == kind) {
-      return constant->GetScalarValue();
-    } else {
-      return std::nullopt;
-    }
+  if (const Constant<T> *constant{UnwrapConstantValue<T>(kind, expr)}) {
+    return constant->GetScalarValue();
   } else {
     return std::nullopt;
   }

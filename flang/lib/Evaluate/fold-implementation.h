@@ -94,7 +94,7 @@ std::optional<Constant<SubscriptInteger>> GetConstantSubscript(
     FoldingContext &, Subscript &, const NamedEntity &, int dim);
 
 template <typename TR, typename... TA, std::size_t... I>
-static std::optional<std::function<Scalar<TR>(FoldingContext &, Scalar<TA>...)>>
+std::optional<std::function<Scalar<TR>(FoldingContext &, Scalar<TA>...)>>
 GetHostRuntimeWrapperHelper(int resultKind,
     std::array<int, sizeof...(TA)> argKinds, const std::string &name,
     std::index_sequence<I...>) {
@@ -524,10 +524,9 @@ Expr<TR> FoldElementalIntrinsicHelper(int resultKind,
     FunctionRef<TR> &&funcRef, WrapperType<TR, TA...> func,
     bool hasOptionalArgument, std::index_sequence<I...>) {
   CHECK(funcRef.kind() == resultKind);
-  std::array<int, sizeof...(TA)> kinds{argKinds[I]...};
   if (std::optional<std::tuple<const Constant<TA> *...>> args{
-          GetConstantArguments<TA...>(
-              kinds, context, funcRef.arguments(), hasOptionalArgument)}) {
+          GetConstantArguments<TA...>({argKinds[I]...}, context,
+              funcRef.arguments(), hasOptionalArgument)}) {
     // Compute the shape of the result based on shapes of arguments
     ConstantSubscripts shape;
     int rank{0};

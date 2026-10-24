@@ -14,7 +14,6 @@
 #include "flang/Evaluate/real-value.h"
 #include "flang/Evaluate/real.h"
 #include "flang/Evaluate/target.h"
-#include <type_traits>
 
 namespace Fortran::evaluate {
 

@@ -1,6 +1,6 @@
 ! RUN: %python %S/test_folding.py %s %flang_fc1
-  ! FINDLOC on non-default LOGICAL kinds must compare with .EQV. at that
-  ! kind. Folding the comparison as LOGICAL(4) drops the result.
+! FINDLOC on non-default LOGICAL kinds must compare with .EQV. at that
+! kind. Folding the comparison as LOGICAL(4) drops the result.
 module m1
   logical(1), parameter :: la1(*) = [.false._1, .true._1, .false._1, .true._1]
   logical(8), parameter :: la8(*) = [.true._8, .false._8, .true._8]
