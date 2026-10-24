@@ -1,9 +1,11 @@
 ; RUN: llc -O2 -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs -stop-after=finalize-isel -o - %s | FileCheck %s --check-prefixes=CHECK,DEFAULT
 ; RUN: llc -O2 -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs -stop-after=finalize-isel -pick-merged-source-locations -o - %s | FileCheck %s --check-prefixes=CHECK,PICK
 
-;; Keep the first operation's line when its function instance contains all
-;; inputs, including inlined callees. The pick policy only affects merges
-;; across instances; missing locations follow the usual debug-location policy.
+;; Test that when consecutive loads or stores are merged, we keep the first
+;; operation's debug location if all merged operations are in the same function
+;; or inlined call (or in functions inlined into it). Otherwise, merge their
+;; locations with getMergedLocation, where -pick-merged-source-locations takes
+;; effect; if any merged operation has no debug location, the result has none.
 
 ; CHECK-DAG: ![[HELPER:[0-9]+]] = distinct !DISubprogram(name: "helper",
 ; CHECK-DAG: ![[PLAIN:[0-9]+]] = distinct !DISubprogram(name: "plain_lines",
@@ -27,8 +29,8 @@
 ; CHECK-DAG: ![[NESTED_CALL:[0-9]+]] = !DILocation(line: 810, column: 3, scope: ![[#]])
 ; CHECK-DAG: ![[NESTED_FIRST:[0-9]+]] = !DILocation(line: 20, column: 3, scope: ![[HELPER]], inlinedAt: ![[NESTED_CALL]])
 
-;; Different lines in one function: preserve the lowest-addressed store's
-;; location, not the lowest line number, even with the pick policy enabled.
+;; The two i32 stores are on lines 20 and 10 of plain_lines. Keep %p's line 20
+;; on the merged 64-bit store, even with -pick-merged-source-locations.
 ; CHECK-LABEL: name: plain_lines
 ; CHECK: MOV64mi32 {{.*}}, debug-location ![[PLAIN_FIRST]] :: (store (s64)
 define void @plain_lines(ptr %p) !dbg !100 {
@@ -38,8 +40,9 @@ define void @plain_lines(ptr %p) !dbg !100 {
   ret void
 }
 
-;; Four extracted-element stores merge into one 128-bit store. Their lines
-;; differ, but they belong to the same inline instance, so retain line 20.
+;; Four stores of extracted i32 elements come from the inlined function helper
+;; at lines 20 and 10, inlined at the same call site. The merged 128-bit store
+;; keeps %p's line 20, even with -pick-merged-source-locations.
 ; CHECK-LABEL: name: extract_inline_lines
 ; CHECK: debug-location ![[EXTRACT_FIRST]] :: (store (s128)
 define void @extract_inline_lines(ptr %p, <4 x i32> %v) !dbg !110 {
@@ -57,8 +60,10 @@ define void @extract_inline_lines(ptr %p, <4 x i32> %v) !dbg !110 {
   ret void
 }
 
-;; The lowest-addressed store is already in the caller, which contains the
-;; inlined helper. Retain the caller's line, even with the pick policy enabled.
+;; The first store (at %p) is in the outer function caller_first at line 210,
+;; while the second store (at %q) comes from the inlined function helper.
+;; Select %p's line 210 in the outer function for the merged 64-bit store,
+;; even with -pick-merged-source-locations.
 ; CHECK-LABEL: name: caller_first
 ; CHECK: MOV64mi32 {{.*}}, debug-location ![[CALLER_FIRST]] :: (store (s64)
 define void @caller_first(ptr %p) !dbg !120 {
@@ -68,8 +73,10 @@ define void @caller_first(ptr %p) !dbg !120 {
   ret void
 }
 
-;; With the helper at the lower address, retaining its location would put the
-;; entire access in the helper. By default, use line 0 in the caller instead.
+;; The first store (at %p) comes from the inlined function helper, while the
+;; second store (at %q) is in the outer function helper_first. Because %p's
+;; inlined scope does not cover %q, the merged 64-bit store uses line 0 in
+;; helper_first by default, or %p's location with -pick-merged-source-locations.
 ; CHECK-LABEL: name: helper_first
 ; DEFAULT: MOV64mi32 {{.*}}, debug-location !DILocation(line: 0, scope: ![[HELPER_CALLER]]) :: (store (s64)
 ; PICK: MOV64mi32 {{.*}}, debug-location ![[HELPER_PICK]] :: (store (s64)
@@ -80,8 +87,9 @@ define void @helper_first(ptr %p) !dbg !130 {
   ret void
 }
 
-;; The same helper at two call sites is not one function instance. By default,
-;; keep the helper's line but merge its call sites rather than retaining either.
+;; Both stores are at helper line 10, inlined at caller lines 410 and 420.
+;; The merged 64-bit store keeps helper line 10 with call-site line 0.
+;; With -pick-merged-source-locations, keep %q's call site at line 420.
 ; CHECK-LABEL: name: same_helper_two_calls
 ; DEFAULT: MOV64mi32 {{.*}}, debug-location !DILocation(line: 10, column: 3, scope: ![[HELPER]], inlinedAt: !DILocation(line: 0, scope: ![[REPEAT]])) :: (store (s64)
 ; PICK: MOV64mi32 {{.*}}, debug-location ![[REPEAT_PICK]] :: (store (s64)
@@ -92,8 +100,10 @@ define void @same_helper_two_calls(ptr %p) !dbg !140 {
   ret void
 }
 
-;; Select load and store locations independently: the loads stay in one
-;; inline instance, while the stores span two different helpers.
+;; The loads are at helper lines 20 and 10, inlined at the same call site.
+;; The merged 64-bit load keeps %s's line 20. The stores are in the inlined
+;; functions helper and other_helper, so the merged store uses line 0 in
+;; copy_locations, or %d's location with -pick-merged-source-locations.
 ; CHECK-LABEL: name: copy_locations
 ; CHECK: MOV64rm {{.*}}, debug-location ![[COPY_FIRST]] :: (load (s64)
 ; DEFAULT: MOV64mr {{.*}}, debug-location !DILocation(line: 0, scope: ![[COPY]]) :: (store (s64)
@@ -108,8 +118,8 @@ define void @copy_locations(ptr noalias %d, ptr noalias %s) !dbg !150 {
   ret void
 }
 
-;; A missing input location still leaves the merged store without a location,
-;; including with the pick policy enabled.
+;; The store at %p has no debug location; the store at %q does. The merged
+;; 64-bit store has none, even with -pick-merged-source-locations.
 ; CHECK-LABEL: name: missing_first
 ; CHECK: MOV64mi32
 ; CHECK-NOT: debug-location
@@ -121,8 +131,12 @@ define void @missing_first(ptr %p) !dbg !160 {
   ret void
 }
 
-;; A merged call site can equal an input's existing line-0 call site. This
-;; does not make the two inputs one instance: merge their differing lines too.
+;; Both stores are in the inlined function helper (lines 20 and 10), but their
+;; inlinedAt locations are different call sites (!171 at line 0 and !172 at
+;; line 710). Merging those call sites yields !171, which is identical to the
+;; first store's inlinedAt node, but the merged 64-bit store must still merge
+;; the two helper lines to line 0 (or pick %q's location with
+;; -pick-merged-source-locations).
 ; CHECK-LABEL: name: merged_callsite
 ; DEFAULT: MOV64mi32 {{.*}}, debug-location !DILocation(line: 0, scope: ![[HELPER]], inlinedAt: ![[MERGED_CALL]]) :: (store (s64)
 ; PICK: MOV64mi32 {{.*}}, debug-location ![[MERGED_PICK]] :: (store (s64)
@@ -133,8 +147,10 @@ define void @merged_callsite(ptr %p) !dbg !170 {
   ret void
 }
 
-;; The first helper instance also contains its inlined callee. Preserve the
-;; first helper's line rather than selecting the callee's smaller line number.
+;; These two stores are merged, and the second store (at %q, in other_helper)
+;; has a deeper inlining chain than the first (at %p, in helper) under the
+;; same call site (!181). Keep %p's line 20 on the merged 64-bit store, even
+;; with -pick-merged-source-locations.
 ; CHECK-LABEL: name: nested_callee
 ; CHECK: MOV64mi32 {{.*}}, debug-location ![[NESTED_FIRST]] :: (store (s64)
 define void @nested_callee(ptr %p) !dbg !180 {
