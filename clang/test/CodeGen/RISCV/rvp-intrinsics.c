@@ -10302,6 +10302,397 @@ int64_t test_pm2waddasu_i64(int64_t rd, int16x2_t rs1, uint16x2_t rs2) {
   return __riscv_pm2waddasu_i64(rd, rs1, rs2);
 }
 
+/* Packed Slide (32-bit) */
+
+// RV32-LABEL: define dso_local i32 @test_pslideupx_i8x4(
+// RV32-SAME: i32 noundef [[RD_COERCE:%.*]], i32 noundef [[RS1_COERCE:%.*]], i32 noundef [[RS2:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[SHL_I:%.*]] = shl i32 [[RS2]], 3
+// RV32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.fshl.i32(i32 [[RD_COERCE]], i32 [[RS1_COERCE]], i32 [[SHL_I]])
+// RV32-NEXT:    ret i32 [[TMP0]]
+//
+// RV64-LABEL: define dso_local i32 @test_pslideupx_i8x4(
+// RV64-SAME: i32 noundef [[RD_COERCE:%.*]], i32 noundef [[RS1_COERCE:%.*]], i32 noundef signext [[RS2:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[SHL_I:%.*]] = shl i32 [[RS2]], 3
+// RV64-NEXT:    [[TMP0:%.*]] = call i32 @llvm.fshl.i32(i32 [[RD_COERCE]], i32 [[RS1_COERCE]], i32 [[SHL_I]])
+// RV64-NEXT:    ret i32 [[TMP0]]
+//
+int8x4_t test_pslideupx_i8x4(int8x4_t rd, int8x4_t rs1, unsigned rs2) {
+  return __riscv_pslideupx_i8x4(rd, rs1, rs2);
+}
+
+// RV32-LABEL: define dso_local i32 @test_pslideupx_u8x4(
+// RV32-SAME: i32 noundef [[RD_COERCE:%.*]], i32 noundef [[RS1_COERCE:%.*]], i32 noundef [[RS2:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[SHL_I:%.*]] = shl i32 [[RS2]], 3
+// RV32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.fshl.i32(i32 [[RD_COERCE]], i32 [[RS1_COERCE]], i32 [[SHL_I]])
+// RV32-NEXT:    ret i32 [[TMP0]]
+//
+// RV64-LABEL: define dso_local i32 @test_pslideupx_u8x4(
+// RV64-SAME: i32 noundef [[RD_COERCE:%.*]], i32 noundef [[RS1_COERCE:%.*]], i32 noundef signext [[RS2:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[SHL_I:%.*]] = shl i32 [[RS2]], 3
+// RV64-NEXT:    [[TMP0:%.*]] = call i32 @llvm.fshl.i32(i32 [[RD_COERCE]], i32 [[RS1_COERCE]], i32 [[SHL_I]])
+// RV64-NEXT:    ret i32 [[TMP0]]
+//
+uint8x4_t test_pslideupx_u8x4(uint8x4_t rd, uint8x4_t rs1, unsigned rs2) {
+  return __riscv_pslideupx_u8x4(rd, rs1, rs2);
+}
+
+// RV32-LABEL: define dso_local i32 @test_pslideupx_i16x2(
+// RV32-SAME: i32 noundef [[RD_COERCE:%.*]], i32 noundef [[RS1_COERCE:%.*]], i32 noundef [[RS2:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[SHL_I:%.*]] = shl i32 [[RS2]], 4
+// RV32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.fshl.i32(i32 [[RD_COERCE]], i32 [[RS1_COERCE]], i32 [[SHL_I]])
+// RV32-NEXT:    ret i32 [[TMP0]]
+//
+// RV64-LABEL: define dso_local i32 @test_pslideupx_i16x2(
+// RV64-SAME: i32 noundef [[RD_COERCE:%.*]], i32 noundef [[RS1_COERCE:%.*]], i32 noundef signext [[RS2:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[SHL_I:%.*]] = shl i32 [[RS2]], 4
+// RV64-NEXT:    [[TMP0:%.*]] = call i32 @llvm.fshl.i32(i32 [[RD_COERCE]], i32 [[RS1_COERCE]], i32 [[SHL_I]])
+// RV64-NEXT:    ret i32 [[TMP0]]
+//
+int16x2_t test_pslideupx_i16x2(int16x2_t rd, int16x2_t rs1, unsigned rs2) {
+  return __riscv_pslideupx_i16x2(rd, rs1, rs2);
+}
+
+// RV32-LABEL: define dso_local i32 @test_pslideupx_u16x2(
+// RV32-SAME: i32 noundef [[RD_COERCE:%.*]], i32 noundef [[RS1_COERCE:%.*]], i32 noundef [[RS2:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[SHL_I:%.*]] = shl i32 [[RS2]], 4
+// RV32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.fshl.i32(i32 [[RD_COERCE]], i32 [[RS1_COERCE]], i32 [[SHL_I]])
+// RV32-NEXT:    ret i32 [[TMP0]]
+//
+// RV64-LABEL: define dso_local i32 @test_pslideupx_u16x2(
+// RV64-SAME: i32 noundef [[RD_COERCE:%.*]], i32 noundef [[RS1_COERCE:%.*]], i32 noundef signext [[RS2:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[SHL_I:%.*]] = shl i32 [[RS2]], 4
+// RV64-NEXT:    [[TMP0:%.*]] = call i32 @llvm.fshl.i32(i32 [[RD_COERCE]], i32 [[RS1_COERCE]], i32 [[SHL_I]])
+// RV64-NEXT:    ret i32 [[TMP0]]
+//
+uint16x2_t test_pslideupx_u16x2(uint16x2_t rd, uint16x2_t rs1, unsigned rs2) {
+  return __riscv_pslideupx_u16x2(rd, rs1, rs2);
+}
+
+// RV32-LABEL: define dso_local i32 @test_pslidedownx_i8x4(
+// RV32-SAME: i32 noundef [[RD_COERCE:%.*]], i32 noundef [[RS1_COERCE:%.*]], i32 noundef [[RS2:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[SHL_I:%.*]] = shl i32 [[RS2]], 3
+// RV32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.fshr.i32(i32 [[RS1_COERCE]], i32 [[RD_COERCE]], i32 [[SHL_I]])
+// RV32-NEXT:    ret i32 [[TMP0]]
+//
+// RV64-LABEL: define dso_local i32 @test_pslidedownx_i8x4(
+// RV64-SAME: i32 noundef [[RD_COERCE:%.*]], i32 noundef [[RS1_COERCE:%.*]], i32 noundef signext [[RS2:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[SHL_I:%.*]] = shl i32 [[RS2]], 3
+// RV64-NEXT:    [[TMP0:%.*]] = call i32 @llvm.fshr.i32(i32 [[RS1_COERCE]], i32 [[RD_COERCE]], i32 [[SHL_I]])
+// RV64-NEXT:    ret i32 [[TMP0]]
+//
+int8x4_t test_pslidedownx_i8x4(int8x4_t rd, int8x4_t rs1, unsigned rs2) {
+  return __riscv_pslidedownx_i8x4(rd, rs1, rs2);
+}
+
+// RV32-LABEL: define dso_local i32 @test_pslidedownx_u8x4(
+// RV32-SAME: i32 noundef [[RD_COERCE:%.*]], i32 noundef [[RS1_COERCE:%.*]], i32 noundef [[RS2:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[SHL_I:%.*]] = shl i32 [[RS2]], 3
+// RV32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.fshr.i32(i32 [[RS1_COERCE]], i32 [[RD_COERCE]], i32 [[SHL_I]])
+// RV32-NEXT:    ret i32 [[TMP0]]
+//
+// RV64-LABEL: define dso_local i32 @test_pslidedownx_u8x4(
+// RV64-SAME: i32 noundef [[RD_COERCE:%.*]], i32 noundef [[RS1_COERCE:%.*]], i32 noundef signext [[RS2:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[SHL_I:%.*]] = shl i32 [[RS2]], 3
+// RV64-NEXT:    [[TMP0:%.*]] = call i32 @llvm.fshr.i32(i32 [[RS1_COERCE]], i32 [[RD_COERCE]], i32 [[SHL_I]])
+// RV64-NEXT:    ret i32 [[TMP0]]
+//
+uint8x4_t test_pslidedownx_u8x4(uint8x4_t rd, uint8x4_t rs1, unsigned rs2) {
+  return __riscv_pslidedownx_u8x4(rd, rs1, rs2);
+}
+
+// RV32-LABEL: define dso_local i32 @test_pslidedownx_i16x2(
+// RV32-SAME: i32 noundef [[RD_COERCE:%.*]], i32 noundef [[RS1_COERCE:%.*]], i32 noundef [[RS2:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[SHL_I:%.*]] = shl i32 [[RS2]], 4
+// RV32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.fshr.i32(i32 [[RS1_COERCE]], i32 [[RD_COERCE]], i32 [[SHL_I]])
+// RV32-NEXT:    ret i32 [[TMP0]]
+//
+// RV64-LABEL: define dso_local i32 @test_pslidedownx_i16x2(
+// RV64-SAME: i32 noundef [[RD_COERCE:%.*]], i32 noundef [[RS1_COERCE:%.*]], i32 noundef signext [[RS2:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[SHL_I:%.*]] = shl i32 [[RS2]], 4
+// RV64-NEXT:    [[TMP0:%.*]] = call i32 @llvm.fshr.i32(i32 [[RS1_COERCE]], i32 [[RD_COERCE]], i32 [[SHL_I]])
+// RV64-NEXT:    ret i32 [[TMP0]]
+//
+int16x2_t test_pslidedownx_i16x2(int16x2_t rd, int16x2_t rs1, unsigned rs2) {
+  return __riscv_pslidedownx_i16x2(rd, rs1, rs2);
+}
+
+// RV32-LABEL: define dso_local i32 @test_pslidedownx_u16x2(
+// RV32-SAME: i32 noundef [[RD_COERCE:%.*]], i32 noundef [[RS1_COERCE:%.*]], i32 noundef [[RS2:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[SHL_I:%.*]] = shl i32 [[RS2]], 4
+// RV32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.fshr.i32(i32 [[RS1_COERCE]], i32 [[RD_COERCE]], i32 [[SHL_I]])
+// RV32-NEXT:    ret i32 [[TMP0]]
+//
+// RV64-LABEL: define dso_local i32 @test_pslidedownx_u16x2(
+// RV64-SAME: i32 noundef [[RD_COERCE:%.*]], i32 noundef [[RS1_COERCE:%.*]], i32 noundef signext [[RS2:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[SHL_I:%.*]] = shl i32 [[RS2]], 4
+// RV64-NEXT:    [[TMP0:%.*]] = call i32 @llvm.fshr.i32(i32 [[RS1_COERCE]], i32 [[RD_COERCE]], i32 [[SHL_I]])
+// RV64-NEXT:    ret i32 [[TMP0]]
+//
+uint16x2_t test_pslidedownx_u16x2(uint16x2_t rd, uint16x2_t rs1,
+                                  unsigned rs2) {
+  return __riscv_pslidedownx_u16x2(rd, rs1, rs2);
+}
+
+/* Packed Slide (64-bit) */
+
+// RV32-LABEL: define dso_local i64 @test_pslideupx_i8x8(
+// RV32-SAME: i64 noundef [[RD_COERCE:%.*]], i64 noundef [[RS1_COERCE:%.*]], i32 noundef [[RS2:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[CONV_I:%.*]] = zext i32 [[RS2]] to i64
+// RV32-NEXT:    [[SHL_I:%.*]] = shl nuw nsw i64 [[CONV_I]], 3
+// RV32-NEXT:    [[TMP0:%.*]] = call i64 @llvm.fshl.i64(i64 [[RD_COERCE]], i64 [[RS1_COERCE]], i64 [[SHL_I]])
+// RV32-NEXT:    ret i64 [[TMP0]]
+//
+// RV64-LABEL: define dso_local i64 @test_pslideupx_i8x8(
+// RV64-SAME: i64 noundef [[RD_COERCE:%.*]], i64 noundef [[RS1_COERCE:%.*]], i32 noundef signext [[RS2:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[CONV_I:%.*]] = zext i32 [[RS2]] to i64
+// RV64-NEXT:    [[SHL_I:%.*]] = shl nuw nsw i64 [[CONV_I]], 3
+// RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.fshl.i64(i64 [[RD_COERCE]], i64 [[RS1_COERCE]], i64 [[SHL_I]])
+// RV64-NEXT:    ret i64 [[TMP0]]
+//
+int8x8_t test_pslideupx_i8x8(int8x8_t rd, int8x8_t rs1, unsigned rs2) {
+  return __riscv_pslideupx_i8x8(rd, rs1, rs2);
+}
+
+// RV32-LABEL: define dso_local i64 @test_pslideupx_u8x8(
+// RV32-SAME: i64 noundef [[RD_COERCE:%.*]], i64 noundef [[RS1_COERCE:%.*]], i32 noundef [[RS2:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[CONV_I:%.*]] = zext i32 [[RS2]] to i64
+// RV32-NEXT:    [[SHL_I:%.*]] = shl nuw nsw i64 [[CONV_I]], 3
+// RV32-NEXT:    [[TMP0:%.*]] = call i64 @llvm.fshl.i64(i64 [[RD_COERCE]], i64 [[RS1_COERCE]], i64 [[SHL_I]])
+// RV32-NEXT:    ret i64 [[TMP0]]
+//
+// RV64-LABEL: define dso_local i64 @test_pslideupx_u8x8(
+// RV64-SAME: i64 noundef [[RD_COERCE:%.*]], i64 noundef [[RS1_COERCE:%.*]], i32 noundef signext [[RS2:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[CONV_I:%.*]] = zext i32 [[RS2]] to i64
+// RV64-NEXT:    [[SHL_I:%.*]] = shl nuw nsw i64 [[CONV_I]], 3
+// RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.fshl.i64(i64 [[RD_COERCE]], i64 [[RS1_COERCE]], i64 [[SHL_I]])
+// RV64-NEXT:    ret i64 [[TMP0]]
+//
+uint8x8_t test_pslideupx_u8x8(uint8x8_t rd, uint8x8_t rs1, unsigned rs2) {
+  return __riscv_pslideupx_u8x8(rd, rs1, rs2);
+}
+
+// RV32-LABEL: define dso_local i64 @test_pslideupx_i16x4(
+// RV32-SAME: i64 noundef [[RD_COERCE:%.*]], i64 noundef [[RS1_COERCE:%.*]], i32 noundef [[RS2:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[CONV_I:%.*]] = zext i32 [[RS2]] to i64
+// RV32-NEXT:    [[SHL_I:%.*]] = shl nuw nsw i64 [[CONV_I]], 4
+// RV32-NEXT:    [[TMP0:%.*]] = call i64 @llvm.fshl.i64(i64 [[RD_COERCE]], i64 [[RS1_COERCE]], i64 [[SHL_I]])
+// RV32-NEXT:    ret i64 [[TMP0]]
+//
+// RV64-LABEL: define dso_local i64 @test_pslideupx_i16x4(
+// RV64-SAME: i64 noundef [[RD_COERCE:%.*]], i64 noundef [[RS1_COERCE:%.*]], i32 noundef signext [[RS2:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[CONV_I:%.*]] = zext i32 [[RS2]] to i64
+// RV64-NEXT:    [[SHL_I:%.*]] = shl nuw nsw i64 [[CONV_I]], 4
+// RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.fshl.i64(i64 [[RD_COERCE]], i64 [[RS1_COERCE]], i64 [[SHL_I]])
+// RV64-NEXT:    ret i64 [[TMP0]]
+//
+int16x4_t test_pslideupx_i16x4(int16x4_t rd, int16x4_t rs1, unsigned rs2) {
+  return __riscv_pslideupx_i16x4(rd, rs1, rs2);
+}
+
+// RV32-LABEL: define dso_local i64 @test_pslideupx_u16x4(
+// RV32-SAME: i64 noundef [[RD_COERCE:%.*]], i64 noundef [[RS1_COERCE:%.*]], i32 noundef [[RS2:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[CONV_I:%.*]] = zext i32 [[RS2]] to i64
+// RV32-NEXT:    [[SHL_I:%.*]] = shl nuw nsw i64 [[CONV_I]], 4
+// RV32-NEXT:    [[TMP0:%.*]] = call i64 @llvm.fshl.i64(i64 [[RD_COERCE]], i64 [[RS1_COERCE]], i64 [[SHL_I]])
+// RV32-NEXT:    ret i64 [[TMP0]]
+//
+// RV64-LABEL: define dso_local i64 @test_pslideupx_u16x4(
+// RV64-SAME: i64 noundef [[RD_COERCE:%.*]], i64 noundef [[RS1_COERCE:%.*]], i32 noundef signext [[RS2:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[CONV_I:%.*]] = zext i32 [[RS2]] to i64
+// RV64-NEXT:    [[SHL_I:%.*]] = shl nuw nsw i64 [[CONV_I]], 4
+// RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.fshl.i64(i64 [[RD_COERCE]], i64 [[RS1_COERCE]], i64 [[SHL_I]])
+// RV64-NEXT:    ret i64 [[TMP0]]
+//
+uint16x4_t test_pslideupx_u16x4(uint16x4_t rd, uint16x4_t rs1, unsigned rs2) {
+  return __riscv_pslideupx_u16x4(rd, rs1, rs2);
+}
+
+// RV32-LABEL: define dso_local i64 @test_pslideupx_i32x2(
+// RV32-SAME: i64 noundef [[RD_COERCE:%.*]], i64 noundef [[RS1_COERCE:%.*]], i32 noundef [[RS2:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[CONV_I:%.*]] = zext i32 [[RS2]] to i64
+// RV32-NEXT:    [[SHL_I:%.*]] = shl nuw nsw i64 [[CONV_I]], 5
+// RV32-NEXT:    [[TMP0:%.*]] = call i64 @llvm.fshl.i64(i64 [[RD_COERCE]], i64 [[RS1_COERCE]], i64 [[SHL_I]])
+// RV32-NEXT:    ret i64 [[TMP0]]
+//
+// RV64-LABEL: define dso_local i64 @test_pslideupx_i32x2(
+// RV64-SAME: i64 noundef [[RD_COERCE:%.*]], i64 noundef [[RS1_COERCE:%.*]], i32 noundef signext [[RS2:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[CONV_I:%.*]] = zext i32 [[RS2]] to i64
+// RV64-NEXT:    [[SHL_I:%.*]] = shl nuw nsw i64 [[CONV_I]], 5
+// RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.fshl.i64(i64 [[RD_COERCE]], i64 [[RS1_COERCE]], i64 [[SHL_I]])
+// RV64-NEXT:    ret i64 [[TMP0]]
+//
+int32x2_t test_pslideupx_i32x2(int32x2_t rd, int32x2_t rs1, unsigned rs2) {
+  return __riscv_pslideupx_i32x2(rd, rs1, rs2);
+}
+
+// RV32-LABEL: define dso_local i64 @test_pslideupx_u32x2(
+// RV32-SAME: i64 noundef [[RD_COERCE:%.*]], i64 noundef [[RS1_COERCE:%.*]], i32 noundef [[RS2:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[CONV_I:%.*]] = zext i32 [[RS2]] to i64
+// RV32-NEXT:    [[SHL_I:%.*]] = shl nuw nsw i64 [[CONV_I]], 5
+// RV32-NEXT:    [[TMP0:%.*]] = call i64 @llvm.fshl.i64(i64 [[RD_COERCE]], i64 [[RS1_COERCE]], i64 [[SHL_I]])
+// RV32-NEXT:    ret i64 [[TMP0]]
+//
+// RV64-LABEL: define dso_local i64 @test_pslideupx_u32x2(
+// RV64-SAME: i64 noundef [[RD_COERCE:%.*]], i64 noundef [[RS1_COERCE:%.*]], i32 noundef signext [[RS2:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[CONV_I:%.*]] = zext i32 [[RS2]] to i64
+// RV64-NEXT:    [[SHL_I:%.*]] = shl nuw nsw i64 [[CONV_I]], 5
+// RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.fshl.i64(i64 [[RD_COERCE]], i64 [[RS1_COERCE]], i64 [[SHL_I]])
+// RV64-NEXT:    ret i64 [[TMP0]]
+//
+uint32x2_t test_pslideupx_u32x2(uint32x2_t rd, uint32x2_t rs1, unsigned rs2) {
+  return __riscv_pslideupx_u32x2(rd, rs1, rs2);
+}
+
+// RV32-LABEL: define dso_local i64 @test_pslidedownx_i8x8(
+// RV32-SAME: i64 noundef [[RD_COERCE:%.*]], i64 noundef [[RS1_COERCE:%.*]], i32 noundef [[RS2:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[CONV_I:%.*]] = zext i32 [[RS2]] to i64
+// RV32-NEXT:    [[SHL_I:%.*]] = shl nuw nsw i64 [[CONV_I]], 3
+// RV32-NEXT:    [[TMP0:%.*]] = call i64 @llvm.fshr.i64(i64 [[RS1_COERCE]], i64 [[RD_COERCE]], i64 [[SHL_I]])
+// RV32-NEXT:    ret i64 [[TMP0]]
+//
+// RV64-LABEL: define dso_local i64 @test_pslidedownx_i8x8(
+// RV64-SAME: i64 noundef [[RD_COERCE:%.*]], i64 noundef [[RS1_COERCE:%.*]], i32 noundef signext [[RS2:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[CONV_I:%.*]] = zext i32 [[RS2]] to i64
+// RV64-NEXT:    [[SHL_I:%.*]] = shl nuw nsw i64 [[CONV_I]], 3
+// RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.fshr.i64(i64 [[RS1_COERCE]], i64 [[RD_COERCE]], i64 [[SHL_I]])
+// RV64-NEXT:    ret i64 [[TMP0]]
+//
+int8x8_t test_pslidedownx_i8x8(int8x8_t rd, int8x8_t rs1, unsigned rs2) {
+  return __riscv_pslidedownx_i8x8(rd, rs1, rs2);
+}
+
+// RV32-LABEL: define dso_local i64 @test_pslidedownx_u8x8(
+// RV32-SAME: i64 noundef [[RD_COERCE:%.*]], i64 noundef [[RS1_COERCE:%.*]], i32 noundef [[RS2:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[CONV_I:%.*]] = zext i32 [[RS2]] to i64
+// RV32-NEXT:    [[SHL_I:%.*]] = shl nuw nsw i64 [[CONV_I]], 3
+// RV32-NEXT:    [[TMP0:%.*]] = call i64 @llvm.fshr.i64(i64 [[RS1_COERCE]], i64 [[RD_COERCE]], i64 [[SHL_I]])
+// RV32-NEXT:    ret i64 [[TMP0]]
+//
+// RV64-LABEL: define dso_local i64 @test_pslidedownx_u8x8(
+// RV64-SAME: i64 noundef [[RD_COERCE:%.*]], i64 noundef [[RS1_COERCE:%.*]], i32 noundef signext [[RS2:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[CONV_I:%.*]] = zext i32 [[RS2]] to i64
+// RV64-NEXT:    [[SHL_I:%.*]] = shl nuw nsw i64 [[CONV_I]], 3
+// RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.fshr.i64(i64 [[RS1_COERCE]], i64 [[RD_COERCE]], i64 [[SHL_I]])
+// RV64-NEXT:    ret i64 [[TMP0]]
+//
+uint8x8_t test_pslidedownx_u8x8(uint8x8_t rd, uint8x8_t rs1, unsigned rs2) {
+  return __riscv_pslidedownx_u8x8(rd, rs1, rs2);
+}
+
+// RV32-LABEL: define dso_local i64 @test_pslidedownx_i16x4(
+// RV32-SAME: i64 noundef [[RD_COERCE:%.*]], i64 noundef [[RS1_COERCE:%.*]], i32 noundef [[RS2:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[CONV_I:%.*]] = zext i32 [[RS2]] to i64
+// RV32-NEXT:    [[SHL_I:%.*]] = shl nuw nsw i64 [[CONV_I]], 4
+// RV32-NEXT:    [[TMP0:%.*]] = call i64 @llvm.fshr.i64(i64 [[RS1_COERCE]], i64 [[RD_COERCE]], i64 [[SHL_I]])
+// RV32-NEXT:    ret i64 [[TMP0]]
+//
+// RV64-LABEL: define dso_local i64 @test_pslidedownx_i16x4(
+// RV64-SAME: i64 noundef [[RD_COERCE:%.*]], i64 noundef [[RS1_COERCE:%.*]], i32 noundef signext [[RS2:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[CONV_I:%.*]] = zext i32 [[RS2]] to i64
+// RV64-NEXT:    [[SHL_I:%.*]] = shl nuw nsw i64 [[CONV_I]], 4
+// RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.fshr.i64(i64 [[RS1_COERCE]], i64 [[RD_COERCE]], i64 [[SHL_I]])
+// RV64-NEXT:    ret i64 [[TMP0]]
+//
+int16x4_t test_pslidedownx_i16x4(int16x4_t rd, int16x4_t rs1, unsigned rs2) {
+  return __riscv_pslidedownx_i16x4(rd, rs1, rs2);
+}
+
+// RV32-LABEL: define dso_local i64 @test_pslidedownx_u16x4(
+// RV32-SAME: i64 noundef [[RD_COERCE:%.*]], i64 noundef [[RS1_COERCE:%.*]], i32 noundef [[RS2:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[CONV_I:%.*]] = zext i32 [[RS2]] to i64
+// RV32-NEXT:    [[SHL_I:%.*]] = shl nuw nsw i64 [[CONV_I]], 4
+// RV32-NEXT:    [[TMP0:%.*]] = call i64 @llvm.fshr.i64(i64 [[RS1_COERCE]], i64 [[RD_COERCE]], i64 [[SHL_I]])
+// RV32-NEXT:    ret i64 [[TMP0]]
+//
+// RV64-LABEL: define dso_local i64 @test_pslidedownx_u16x4(
+// RV64-SAME: i64 noundef [[RD_COERCE:%.*]], i64 noundef [[RS1_COERCE:%.*]], i32 noundef signext [[RS2:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[CONV_I:%.*]] = zext i32 [[RS2]] to i64
+// RV64-NEXT:    [[SHL_I:%.*]] = shl nuw nsw i64 [[CONV_I]], 4
+// RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.fshr.i64(i64 [[RS1_COERCE]], i64 [[RD_COERCE]], i64 [[SHL_I]])
+// RV64-NEXT:    ret i64 [[TMP0]]
+//
+uint16x4_t test_pslidedownx_u16x4(uint16x4_t rd, uint16x4_t rs1,
+                                  unsigned rs2) {
+  return __riscv_pslidedownx_u16x4(rd, rs1, rs2);
+}
+
+// RV32-LABEL: define dso_local i64 @test_pslidedownx_i32x2(
+// RV32-SAME: i64 noundef [[RD_COERCE:%.*]], i64 noundef [[RS1_COERCE:%.*]], i32 noundef [[RS2:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[CONV_I:%.*]] = zext i32 [[RS2]] to i64
+// RV32-NEXT:    [[SHL_I:%.*]] = shl nuw nsw i64 [[CONV_I]], 5
+// RV32-NEXT:    [[TMP0:%.*]] = call i64 @llvm.fshr.i64(i64 [[RS1_COERCE]], i64 [[RD_COERCE]], i64 [[SHL_I]])
+// RV32-NEXT:    ret i64 [[TMP0]]
+//
+// RV64-LABEL: define dso_local i64 @test_pslidedownx_i32x2(
+// RV64-SAME: i64 noundef [[RD_COERCE:%.*]], i64 noundef [[RS1_COERCE:%.*]], i32 noundef signext [[RS2:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[CONV_I:%.*]] = zext i32 [[RS2]] to i64
+// RV64-NEXT:    [[SHL_I:%.*]] = shl nuw nsw i64 [[CONV_I]], 5
+// RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.fshr.i64(i64 [[RS1_COERCE]], i64 [[RD_COERCE]], i64 [[SHL_I]])
+// RV64-NEXT:    ret i64 [[TMP0]]
+//
+int32x2_t test_pslidedownx_i32x2(int32x2_t rd, int32x2_t rs1, unsigned rs2) {
+  return __riscv_pslidedownx_i32x2(rd, rs1, rs2);
+}
+
+// RV32-LABEL: define dso_local i64 @test_pslidedownx_u32x2(
+// RV32-SAME: i64 noundef [[RD_COERCE:%.*]], i64 noundef [[RS1_COERCE:%.*]], i32 noundef [[RS2:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[CONV_I:%.*]] = zext i32 [[RS2]] to i64
+// RV32-NEXT:    [[SHL_I:%.*]] = shl nuw nsw i64 [[CONV_I]], 5
+// RV32-NEXT:    [[TMP0:%.*]] = call i64 @llvm.fshr.i64(i64 [[RS1_COERCE]], i64 [[RD_COERCE]], i64 [[SHL_I]])
+// RV32-NEXT:    ret i64 [[TMP0]]
+//
+// RV64-LABEL: define dso_local i64 @test_pslidedownx_u32x2(
+// RV64-SAME: i64 noundef [[RD_COERCE:%.*]], i64 noundef [[RS1_COERCE:%.*]], i32 noundef signext [[RS2:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[CONV_I:%.*]] = zext i32 [[RS2]] to i64
+// RV64-NEXT:    [[SHL_I:%.*]] = shl nuw nsw i64 [[CONV_I]], 5
+// RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.fshr.i64(i64 [[RS1_COERCE]], i64 [[RD_COERCE]], i64 [[SHL_I]])
+// RV64-NEXT:    ret i64 [[TMP0]]
+//
+uint32x2_t test_pslidedownx_u32x2(uint32x2_t rd, uint32x2_t rs1,
+                                  unsigned rs2) {
+  return __riscv_pslidedownx_u32x2(rd, rs1, rs2);
+}
+
 /* Packed Byte Multiplication with Horizontal Addition and Accumulate */
 
 // CHECK-LABEL: define dso_local i64 @test_pm4adda_i8x8(

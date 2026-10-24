@@ -273,6 +273,8 @@ struct MissingFeatures {
   static bool msvcBuiltins() { return false; }
   static bool openCL() { return false; }
   static bool openMP() { return false; }
+  static bool openMPLastprivateConditional() { return false; }
+  static bool openMPNontemporalDecl() { return false; }
   static bool sycl() { return false; }
   static bool opTBAA() { return false; }
   static bool peepholeProtection() { return false; }

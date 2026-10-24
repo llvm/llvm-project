@@ -74,8 +74,7 @@
 // RUN: parse-isa-name "amdgpu12.50s-amd-amdhsa--gfx1250-strict:xnack-" SUCCESS
 // RUN: parse-isa-name "amdgpu12.51-amd-amdhsa--gfx1251:xnack+" SUCCESS
 // RUN: parse-isa-name "amdgpu12.51-amd-amdhsa--gfx1251:xnack-" SUCCESS
-// RUN: parse-isa-name "amdgpu12.5-amd-amdhsa--gfx12-5-generic:xnack+" SUCCESS
-// RUN: parse-isa-name "amdgpu12.5-amd-amdhsa--gfx12-5-generic:xnack-" SUCCESS
+// RUN: parse-isa-name "amdgpu12.5-amd-amdhsa--gfx12-5-generic" SUCCESS
 
 // COM: gfx900 supports xnack but not sramecc, so a sramecc feature is rejected
 // COM: regardless of the arch spelling; gfx801 supports neither sramecc nor a

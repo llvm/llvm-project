@@ -1505,6 +1505,47 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
     llvm::Triple::EnvironmentType Stage, std::optional<unsigned> Index,
     SemanticSignatures &Signature, llvm::hlsl::InterpolationMode InterpMode) {
   switch (SemanticKind) {
+  case llvm::dxbc::PSV::SemanticKind::Barycentrics:
+    assert(Stage == llvm::Triple::Pixel &&
+           "SV_Barycentrics is in an unavailable stage and should have been "
+           "diagnosed by Sema");
+    if (CGM.getTarget().getTriple().isSPIRV()) {
+      using llvm::hlsl::InterpolationMode;
+      // Perspective is encoded by the built-in; only sampling decorations
+      // belong on the interface variable.
+      bool NoPerspective = false;
+      switch (InterpMode) {
+      case InterpolationMode::LinearNoperspective:
+        NoPerspective = true;
+        InterpMode = InterpolationMode::Linear;
+        break;
+      case InterpolationMode::LinearNoperspectiveCentroid:
+        NoPerspective = true;
+        InterpMode = InterpolationMode::LinearCentroid;
+        break;
+      case InterpolationMode::LinearNoperspectiveSample:
+        NoPerspective = true;
+        InterpMode = InterpolationMode::LinearSample;
+        break;
+      default:
+        break;
+      }
+      // SPIR-V barycentric built-ins are float3, even for half3 inputs.
+      llvm::Type *BuiltinType = llvm::FixedVectorType::get(CGM.FloatTy, 3);
+      llvm::Value *Barycentrics = createSPIRVInputLoad(
+          B, CGM.getModule(), BuiltinType, Semantic->getSemanticName(),
+          llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn,
+          NoPerspective ? /* BuiltIn::BaryCoordNoPerspKHR */ 5287
+                        : /* BuiltIn::BaryCoordKHR */ 5286,
+          InterpMode);
+      if (Type->getScalarType()->isHalfTy())
+        return B.CreateFPTrunc(Barycentrics, Type);
+      return Barycentrics;
+    }
+    if (CGM.getTarget().getTriple().isDXIL())
+      return emitDXILUserSemanticLoad(B, Type, Decl, Semantic, Index,
+                                      Signature);
+    break;
   case llvm::dxbc::PSV::SemanticKind::GroupIndex: {
     assert(llvm::is_contained({llvm::Triple::Compute, llvm::Triple::Mesh,
                                llvm::Triple::Amplification},

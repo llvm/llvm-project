@@ -2664,6 +2664,21 @@ let append Predicates = [IsRV32] in {
   def : Pat<(i32 (add GPR:$rd, (mul_oneuse sexti16:$rs1, zexti16:$rs2))),
             (MACCSU_H00 GPR:$rd, sexti16:$rs1, zexti16:$rs2)>;
 
+  // Halfword multiply patterns where an operand is the upper halfword
+  // extracted by a shift right of 16. These have a higher complexity than the
+  // sexti16 patterns above so the shift is folded into the instruction.
+  def : Pat<(i32 (mul sexti16:$rs1, (sra GPR:$rs2, (XLenVT 16)))),
+            (MUL_H01 sexti16:$rs1, GPR:$rs2)>;
+  def : Pat<(i32 (mul (sra GPR:$rs1, (XLenVT 16)), (sra GPR:$rs2, (XLenVT 16)))),
+            (MUL_H11 GPR:$rs1, GPR:$rs2)>;
+
+  def : Pat<(i32 (add GPR:$rd, (mul_oneuse sexti16:$rs1,
+                                           (sra GPR:$rs2, (XLenVT 16))))),
+            (MACC_H01 GPR:$rd, sexti16:$rs1, GPR:$rs2)>;
+  def : Pat<(i32 (add GPR:$rd, (mul_oneuse (sra GPR:$rs1, (XLenVT 16)),
+                                           (sra GPR:$rs2, (XLenVT 16))))),
+            (MACC_H11 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+
   def : Pat<(i32 (add GPR:$rd, (binop_oneuse<mulhs> GPR:$rs1, GPR:$rs2))),
             (MHACC GPR:$rd, GPR:$rs1, GPR:$rs2)>;
   def : Pat<(i32 (add GPR:$rd, (binop_oneuse<mulhu> GPR:$rs1, GPR:$rs2))),
