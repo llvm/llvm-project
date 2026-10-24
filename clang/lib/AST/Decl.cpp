@@ -3370,6 +3370,10 @@ bool FunctionDecl::isImmediateEscalating() const {
   //  specifier,
   if (isLambdaCallOperator(this) && !isConsteval())
     return true;
+  // defect: [expr.prim.lambda.closure]/p11 should define that the conversion
+  // operator is immediate if the call operator is immediate (i.e. escalating)
+  if (isLambdaConversionOperator(this) && !isConsteval())
+    return true;
   // - a defaulted special member function that is not declared with the
   // consteval specifier,
   if (isDefaulted() && !isConsteval())

@@ -18598,8 +18598,6 @@ void Sema::PushExpressionEvaluationContextForFunction(
       FD && FD->isConsteval()
           ? ExpressionEvaluationContext::ImmediateFunctionContext
           : NewContext);
-  const Sema::ExpressionEvaluationContextRecord &Parent =
-      parentEvaluationContext();
   Sema::ExpressionEvaluationContextRecord &Current = currentEvaluationContext();
 
   Current.InDiscardedStatement = false;
@@ -18617,12 +18615,7 @@ void Sema::PushExpressionEvaluationContextForFunction(
     Current.InImmediateEscalatingFunctionContext =
         getLangOpts().CPlusPlus20 && FD->isImmediateEscalating();
 
-    if (isLambdaMethod(FD) && !isLambdaCallOperator(FD))
-      Current.InImmediateFunctionContext = FD->isConsteval() ||
-                                           Parent.isConstantEvaluated() ||
-                                           Parent.isImmediateFunctionContext();
-    else
-      Current.InImmediateFunctionContext = FD->isConsteval();
+    Current.InImmediateFunctionContext = FD->isConsteval();
   }
 }
 
