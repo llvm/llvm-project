@@ -1,0 +1,589 @@
+# RUN: llc -mtriple=aarch64-pc-windows-msvc -run-pass=aarch64-win-cfi \
+# RUN:   -verify-machineinstrs %s -o %t.mir
+# RUN: FileCheck %s --check-prefix=MIR --input-file=%t.mir
+# RUN: llc -mtriple=aarch64-pc-windows-msvc -passes=aarch64-win-cfi,verify \
+# RUN:   %s -o - | FileCheck %s --check-prefix=MIR
+# Running range insertion twice must abort instead of accepting existing ranges.
+# RUN: not --crash llc -mtriple=aarch64-pc-windows-msvc \
+# RUN:   -run-pass=aarch64-win-cfi,aarch64-win-cfi -verify-machineinstrs \
+# RUN:   %s -o - 2>&1 | FileCheck %s --check-prefix=REPEATED
+# RUN: not --crash llc -mtriple=aarch64-pc-windows-msvc \
+# RUN:   -passes=aarch64-win-cfi,aarch64-win-cfi,verify \
+# RUN:   %s -o - 2>&1 | FileCheck %s --check-prefix=REPEATED
+# REPEATED: LLVM ERROR: AArch64 Windows unwind range insertion cannot be run twice
+# RUN: llc -mtriple=aarch64-pc-windows-msvc -start-after=aarch64-win-cfi \
+# RUN:   -verify-machineinstrs -filetype=obj %t.mir -o %t-roundtrip.obj
+# RUN: llvm-readobj --unwind %t-roundtrip.obj | FileCheck %s
+# RUN: llc -mtriple=aarch64-linux-gnu -run-pass=aarch64-win-cfi %s -o - \
+# RUN:   | FileCheck %s --check-prefix=UNCHANGED --implicit-check-not=SEH_StartProc
+# RUN: llc -mtriple=arm64ec-pc-windows-msvc -run-pass=aarch64-win-cfi %s -o - \
+# RUN:   | FileCheck %s --check-prefix=UNCHANGED --implicit-check-not=SEH_StartProc
+# UNCHANGED: name: frame_paths
+
+# RUN: llc -mtriple=aarch64-pc-windows-msvc -start-after=unpack-mi-bundles \
+# RUN:   -verify-machineinstrs -filetype=obj %s -o %t.obj
+# RUN: llvm-readobj --unwind %t.obj | FileCheck %s
+# RUN: llc -mtriple=aarch64-pc-windows-msvc -start-after=unpack-mi-bundles \
+# RUN:   -filetype=asm %s -o %t.s
+# RUN: FileCheck %s --check-prefix=ASM --input-file=%t.s
+# RUN: llvm-mc -triple=aarch64-pc-windows-msvc -filetype=obj %t.s -o %t-asm.obj
+# RUN: llvm-readobj --unwind %t-asm.obj | FileCheck %s
+
+# CHECK: RuntimeFunction {
+# CHECK-NEXT: Function: frame_paths +0x4 (0x4)
+# CHECK: FunctionLength: 24
+# CHECK: Prologue [
+# CHECK-NEXT: 0xd600              ; stp x19, lr, [sp, #0]
+# CHECK-NEXT: 0x01                ; sub sp, #16
+# CHECK-NEXT: 0xe4                ; end
+# CHECK: RuntimeFunction {
+# CHECK-NEXT: Function: frame_paths +0x20 (0x20)
+# CHECK: FunctionLength: 32
+# CHECK: EpilogueOffset: 1
+# CHECK: Prologue [
+# CHECK-NEXT: 0xe5                ; end_c
+# CHECK-NEXT: 0xd600              ; stp x19, lr, [sp, #0]
+# CHECK-NEXT: 0x01                ; sub sp, #16
+# CHECK-NEXT: 0xe4                ; end
+# CHECK: Epilogue [
+# CHECK-NEXT: 0xd600              ; ldp x19, lr, [sp, #0]
+
+# CHECK: Function: frame_before_prologue +0x4
+# CHECK: FunctionLength: 12
+# CHECK: Prologue [
+# CHECK-NEXT: 0xe5                ; end_c
+# CHECK-NEXT: 0xd600              ; stp x19, lr, [sp, #0]
+# CHECK-NEXT: 0x01                ; sub sp, #16
+# CHECK-NEXT: 0xe4                ; end
+# CHECK: Function: frame_before_prologue +0x10
+# CHECK: FunctionLength: 12
+# CHECK: Prologue [
+# CHECK-NEXT: 0xd600              ; stp x19, lr, [sp, #0]
+# CHECK-NEXT: 0x01                ; sub sp, #16
+# CHECK-NEXT: 0xe4                ; end
+
+# CHECK: Function: dynamic_frame_paths +0x4
+# CHECK: FunctionLength: 20
+# CHECK: Prologue [
+# CHECK-NEXT: 0xe202              ; add fp, sp, #16
+# CHECK-NEXT: 0x42                ; stp x29, x30, [sp, #16]
+# CHECK-NEXT: 0x02                ; sub sp, #32
+# CHECK-NEXT: 0xe4                ; end
+# CHECK: Function: dynamic_frame_paths +0x1C
+# CHECK: FunctionLength: 16
+# CHECK: EpilogueOffset: 1
+# CHECK: Prologue [
+# CHECK-NEXT: 0xe5                ; end_c
+# CHECK-NEXT: 0xe202              ; add fp, sp, #16
+# CHECK-NEXT: 0x42                ; stp x29, x30, [sp, #16]
+# CHECK-NEXT: 0x02                ; sub sp, #32
+# CHECK-NEXT: 0xe4                ; end
+# CHECK: Epilogue [
+# CHECK-NEXT: 0xe202              ; sub sp, fp, #16
+# CHECK-NEXT: 0x42                ; ldp x29, x30, [sp, #16]
+# CHECK-NEXT: 0x02                ; add sp, #32
+# CHECK-NEXT: 0xe4                ; end
+
+# CHECK: RuntimeFunction {
+# CHECK-NEXT: Function: adjacent_epilogues +0x4
+# CHECK: FunctionLength: 36
+# CHECK: EpilogueScopes: 2
+# CHECK: Prologue [
+# CHECK-NEXT: 0xd600              ; stp x19, lr, [sp, #0]
+# CHECK-NEXT: 0x01                ; sub sp, #16
+# CHECK-NEXT: 0xe4                ; end
+# CHECK: StartOffset: 3
+# CHECK-NEXT: EpilogueStartIndex: 0
+# CHECK-NEXT: Opcodes [
+# CHECK-NEXT: 0xd600              ; ldp x19, lr, [sp, #0]
+# CHECK-NEXT: 0x01                ; add sp, #16
+# CHECK-NEXT: 0xe4                ; end
+# CHECK: StartOffset: 6
+# CHECK-NEXT: EpilogueStartIndex: 0
+# CHECK-NEXT: Opcodes [
+# CHECK-NEXT: 0xd600              ; ldp x19, lr, [sp, #0]
+# CHECK-NEXT: 0x01                ; add sp, #16
+# CHECK-NEXT: 0xe4                ; end
+
+# CHECK: RuntimeFunction {
+# CHECK-NEXT: Function: epilogue_suffix +0x4
+# CHECK: FunctionLength: 20
+# CHECK: EpilogueScopes: 1
+# CHECK: Prologue [
+# CHECK-NEXT: 0xd600              ; stp x19, lr, [sp, #0]
+# CHECK-NEXT: 0x01                ; sub sp, #16
+# CHECK-NEXT: 0xe4                ; end
+# CHECK: StartOffset: 3
+# CHECK-NEXT: EpilogueStartIndex: 0
+# CHECK: RuntimeFunction {
+# CHECK-NEXT: Function: epilogue_suffix +0x24
+# CHECK: FunctionLength: 12
+# CHECK: EpilogueOffset: 1
+# CHECK: Prologue [
+# CHECK-NEXT: 0xe5                ; end_c
+# CHECK-NEXT: 0xd600              ; stp x19, lr, [sp, #0]
+# CHECK-NEXT: 0x01                ; sub sp, #16
+# CHECK-NEXT: 0xe4                ; end
+# CHECK-NOT: RuntimeFunction {
+
+# ASM-LABEL: frame_before_prologue:
+# ASM: DEBUG_LABEL: frame_before_prologue:before_return
+# ASM-NEXT: .pseudoprobe 1234 1 0 0 frame_before_prologue
+# ASM-NEXT: ret
+# ASM-NEXT: .seh_endfunclet
+# ASM-NEXT: .seh_endproc
+# ASM: DEBUG_LABEL: frame_before_prologue:before_branch
+# ASM-NEXT: .pseudoprobe 1234 2 0 0 frame_before_prologue
+# ASM-NEXT: b
+# ASM-NEXT: .seh_endfunclet
+# ASM-NEXT: .seh_endproc
+# ASM-LABEL: epilogue_suffix:
+# ASM: .seh_endepilogue
+# ASM-NEXT: .seh_endfunclet
+# ASM-NEXT: .seh_endproc
+# ASM-NEXT: DEBUG_LABEL: epilogue_suffix:after_epilogue
+# ASM-NEXT: .pseudoprobe 5678 1 0 0 epilogue_suffix
+# ASM-NEXT: add w0, w0, #1
+# ASM-NEXT: add w0, w0, #2
+# ASM-NEXT: b
+# ASM: .seh_proc epilogue_suffix
+# ASM: .seh_end_c
+# ASM: .seh_endepilogue
+# ASM-NEXT: ret
+# ASM-NEXT: .seh_endfunclet
+# ASM-NEXT: .seh_endproc
+# ASM: .section .pseudo_probe_desc
+# ASM-NEXT: .xword 1234
+
+--- |
+  target triple = "aarch64-pc-windows-msvc"
+  define i32 @frame_paths(i32 %x, i32 %y) uwtable {
+    ret i32 0
+  }
+  define void @frame_before_prologue() uwtable !dbg !4 {
+    ret void
+  }
+  define void @dynamic_frame_paths(i64 %size) uwtable {
+    ret void
+  }
+  define void @adjacent_epilogues(i32 %skip, i32 %which) uwtable {
+    ret void
+  }
+  define void @epilogue_suffix(i32 %skip, i32 %which) uwtable !dbg !11 {
+    ret void
+  }
+  declare void @work(i32)
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!2}
+  !llvm.pseudo_probe_desc = !{!10, !14}
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "test", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug)
+  !1 = !DIFile(filename: "win-shrink-wrap-fragments.c", directory: "/")
+  !2 = !{i32 2, !"Debug Info Version", i32 3}
+  !3 = !DISubroutineType(types: !7)
+  !4 = distinct !DISubprogram(name: "frame_before_prologue", scope: !1, file: !1, line: 1, type: !3, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+  !5 = !DILabel(scope: !4, name: "before_return", file: !1, line: 2)
+  !6 = !DILocation(line: 2, column: 1, scope: !4)
+  !7 = !{null}
+  !8 = !DILabel(scope: !4, name: "before_branch", file: !1, line: 3)
+  !9 = !DILocation(line: 3, column: 1, scope: !4)
+  !10 = !{i64 1234, i64 0, !"frame_before_prologue"}
+  !11 = distinct !DISubprogram(name: "epilogue_suffix", scope: !1, file: !1, line: 4, type: !3, scopeLine: 4, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+  !12 = !DILabel(scope: !11, name: "after_epilogue", file: !1, line: 5)
+  !13 = !DILocation(line: 5, column: 1, scope: !11)
+  !14 = !{i64 5678, i64 0, !"epilogue_suffix"}
+...
+---
+# A leaf-style block separating blocks with the prologue in effect in layout
+# must split their unwind records. Re-entry needs a phantom recipe; CFG joins
+# with matching state must share a range, and the leaf return stays uncovered.
+name:            frame_paths
+alignment:       4
+tracksRegLiveness: true
+hasWinCFI:       true
+noPhis:          true
+isSSA:           false
+noVRegs:         true
+registers:       []
+liveins:
+  - { reg: '$w0', virtual-reg: '' }
+  - { reg: '$w1', virtual-reg: '' }
+frameInfo:
+  stackSize:       16
+  maxAlignment:    8
+  adjustsStack:    true
+  hasCalls:        true
+  isCalleeSavedInfoValid: true
+stack:
+  - { id: 0, type: spill-slot, offset: -8, size: 8, alignment: 8,
+      callee-saved-register: '$lr' }
+  - { id: 1, type: spill-slot, offset: -16, size: 8, alignment: 8,
+      callee-saved-register: '$x19' }
+body:             |
+  ; MIR-LABEL: name: frame_paths
+  ; MIR: bb.0:
+  ; MIR-NOT: SEH_StartProc
+  ; MIR: bb.1:
+  ; MIR: SEH_StartProc
+  ; MIR-NEXT: $sp = frame-setup SUBXri $sp, 16, 0
+  ; MIR: B %bb.3 {
+  ; MIR-NEXT: SEH_EndProc
+  ; MIR-NEXT: }
+  ; MIR: bb.2:
+  ; MIR-NOT: SEH_StartProc
+  ; MIR: RET
+  ; MIR: bb.3:
+  ; MIR: SEH_StartProc
+  ; MIR-NEXT: frame-setup SEH_StackAlloc 16
+  ; MIR-NEXT: frame-setup SEH_SaveRegP 19, 30, 0
+  ; MIR-NEXT: SEH_EndC
+  ; MIR-NEXT: SEH_PrologEnd
+  ; MIR-NEXT: $w0 = ORRWrs
+  ; MIR-NOT: SEH_StartProc
+  ; MIR: B %bb.2 {
+  ; MIR-NEXT: SEH_EndProc
+  ; MIR-NEXT: }
+  ; MIR-NOT: SEH_StartProc
+  bb.0:
+    successors: %bb.5(0x30000000), %bb.1(0x50000000)
+    liveins: $w0, $w1, $lr, $x19
+
+    CBZW renamable $w0, %bb.5
+
+  bb.1:
+    successors: %bb.3(0x30000000), %bb.2(0x50000000)
+    liveins: $w0, $w1, $lr, $x19
+
+    $sp = frame-setup SUBXri $sp, 16, 0
+    frame-setup SEH_StackAlloc 16
+    frame-setup STPXi killed $x19, killed $lr, $sp, 0 :: (store (s64) into %stack.0), (store (s64) into %stack.1)
+    frame-setup SEH_SaveRegP 19, 30, 0
+    frame-setup SEH_PrologEnd
+    $w19 = ORRWrs $wzr, killed $w1, 0
+    BL @work, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $w0, implicit-def $sp
+    CBZW renamable $w19, %bb.3
+    B %bb.2
+
+  bb.5:
+    liveins: $w0, $lr, $x19
+
+    RET undef $lr, implicit killed $w0
+
+  bb.2:
+    successors: %bb.4(0x80000000)
+    liveins: $w19
+
+    $w0 = ORRWrs $wzr, killed $w19, 0
+    BL @work, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $w0, implicit-def $sp
+    renamable $w0 = MOVZWi 2, 0
+    B %bb.4
+
+  bb.3:
+    successors: %bb.4(0x80000000)
+
+    renamable $w0 = MOVZWi 1, 0
+
+  bb.4:
+    successors: %bb.5(0x80000000)
+    liveins: $w0
+
+    frame-destroy SEH_EpilogStart
+    $x19, $lr = frame-destroy LDPXi $sp, 0 :: (load (s64) from %stack.0), (load (s64) from %stack.1)
+    frame-destroy SEH_SaveRegP 19, 30, 0
+    $sp = frame-destroy ADDXri $sp, 16, 0
+    frame-destroy SEH_StackAlloc 16
+    frame-destroy SEH_EpilogEnd
+    B %bb.5
+...
+---
+# CFG state, not layout order, determines the recipe: an epilogue laid out
+# before the physical prologue needs a phantom range. Range ends must cover
+# both return and branch terminators without bundling nearby debug/probe pseudos
+# or disrupting their emission.
+name:            frame_before_prologue
+alignment:       4
+hasWinCFI:       true
+noPhis:          true
+isSSA:           false
+noVRegs:         true
+frameInfo:
+  stackSize:       16
+  maxAlignment:    8
+  adjustsStack:    true
+body:             |
+  ; MIR-LABEL: name: frame_before_prologue
+  ; MIR: bb.0:
+  ; MIR-NOT: SEH_StartProc
+  ; MIR: bb.1:
+  ; MIR: SEH_StartProc
+  ; MIR-NEXT: frame-setup SEH_StackAlloc 16
+  ; MIR-NEXT: frame-setup SEH_SaveRegP 19, 30, 0
+  ; MIR-NEXT: SEH_EndC
+  ; MIR-NEXT: SEH_PrologEnd
+  ; MIR-NEXT: frame-destroy SEH_EpilogStart
+  ; MIR: DBG_LABEL
+  ; MIR-NEXT: PSEUDO_PROBE 1234, 1, 0, 0
+  ; MIR: RET undef $lr {
+  ; MIR-NEXT: SEH_EndProc
+  ; MIR-NEXT: }
+  ; MIR: bb.2:
+  ; MIR: SEH_StartProc
+  ; MIR-NEXT: $sp = frame-setup SUBXri $sp, 16, 0
+  ; MIR: DBG_LABEL
+  ; MIR-NEXT: PSEUDO_PROBE 1234, 2, 0, 0
+  ; MIR: B %bb.1 {
+  ; MIR-NEXT: SEH_EndProc
+  ; MIR-NEXT: }
+  ; MIR-NOT: SEH_StartProc
+  bb.0:
+    successors: %bb.2
+    B %bb.2
+
+  bb.1:
+    frame-destroy SEH_EpilogStart
+    $x19, $lr = frame-destroy LDPXi $sp, 0
+    frame-destroy SEH_SaveRegP 19, 30, 0
+    $sp = frame-destroy ADDXri $sp, 16, 0
+    frame-destroy SEH_StackAlloc 16
+    frame-destroy SEH_EpilogEnd
+    DBG_LABEL !5, debug-location !6
+    PSEUDO_PROBE 1234, 1, 0, 0
+    RET undef $lr
+
+  bb.2:
+    successors: %bb.1
+    $sp = frame-setup SUBXri $sp, 16, 0
+    frame-setup SEH_StackAlloc 16
+    frame-setup STPXi $x19, $lr, $sp, 0
+    frame-setup SEH_SaveRegP 19, 30, 0
+    frame-setup SEH_PrologEnd
+    DBG_LABEL !8, debug-location !9
+    PSEUDO_PROBE 1234, 2, 0, 0
+    B %bb.1
+...
+---
+# A range entered with a dynamically adjusted SP must retain the FP recovery
+# operation in its phantom recipe, not copy the dynamic adjustment. The leaf
+# return between ranges remains uncovered, and the epilogue recovers SP from FP.
+name:            dynamic_frame_paths
+alignment:       4
+hasWinCFI:       true
+noPhis:          true
+isSSA:           false
+noVRegs:         true
+frameInfo:
+  stackSize:       32
+  maxAlignment:    16
+  adjustsStack:    true
+stack:
+  - { id: 0, type: variable-sized, alignment: 16 }
+body:             |
+  ; MIR-LABEL: name: dynamic_frame_paths
+  ; MIR: bb.0:
+  ; MIR-NOT: SEH_StartProc
+  ; MIR: bb.1:
+  ; MIR: SEH_StartProc
+  ; MIR-NEXT: $sp = frame-setup SUBXri $sp, 32, 0
+  ; MIR: frame-setup SEH_AddFP 16
+  ; MIR-NEXT: frame-setup SEH_PrologEnd
+  ; MIR-NEXT: $sp = SUBXrx64 $sp, $x0, 28
+  ; MIR-NEXT: B %bb.3 {
+  ; MIR-NEXT: SEH_EndProc
+  ; MIR-NEXT: }
+  ; MIR: bb.2:
+  ; MIR-NOT: SEH_StartProc
+  ; MIR: RET
+  ; MIR: bb.3:
+  ; MIR: SEH_StartProc
+  ; MIR-NEXT: frame-setup SEH_StackAlloc 32
+  ; MIR-NEXT: frame-setup SEH_SaveFPLR 16
+  ; MIR-NEXT: frame-setup SEH_AddFP 16
+  ; MIR-NEXT: SEH_EndC
+  ; MIR-NEXT: SEH_PrologEnd
+  ; MIR-NEXT: frame-destroy SEH_EpilogStart
+  ; MIR-NEXT: $sp = frame-destroy SUBXri $fp, 16, 0
+  bb.0:
+    successors: %bb.1, %bb.2
+    CBZX $x0, %bb.2
+
+  bb.1:
+    successors: %bb.3
+    $sp = frame-setup SUBXri $sp, 32, 0
+    frame-setup SEH_StackAlloc 32
+    frame-setup STPXi $fp, $lr, $sp, 2
+    frame-setup SEH_SaveFPLR 16
+    $fp = frame-setup ADDXri $sp, 16, 0
+    frame-setup SEH_AddFP 16
+    frame-setup SEH_PrologEnd
+    $sp = SUBXrx64 $sp, $x0, 28
+    B %bb.3
+
+  bb.2:
+    RET undef $lr
+
+  bb.3:
+    frame-destroy SEH_EpilogStart
+    $sp = frame-destroy SUBXri $fp, 16, 0
+    frame-destroy SEH_AddFP 16
+    $fp, $lr = frame-destroy LDPXi $sp, 2
+    frame-destroy SEH_SaveFPLR 16
+    $sp = frame-destroy ADDXri $sp, 32, 0
+    frame-destroy SEH_StackAlloc 32
+    frame-destroy SEH_EpilogEnd
+    RET undef $lr
+...
+---
+# Completing an epilogue changes outgoing CFG frame state, not layout coverage.
+# Adjacent epilogue blocks reached with the same frame must share one record,
+# ending only before the shared frameless return block. Metadata before the
+# first epilogue's lone terminator must not cause a spurious split.
+name:            adjacent_epilogues
+alignment:       4
+hasWinCFI:       true
+noPhis:          true
+isSSA:           false
+noVRegs:         true
+frameInfo:
+  stackSize:       16
+  maxAlignment:    16
+  adjustsStack:    true
+body:             |
+  ; MIR-LABEL: name: adjacent_epilogues
+  ; MIR: bb.0:
+  ; MIR-NOT: SEH_StartProc
+  ; MIR: bb.1:
+  ; MIR: SEH_StartProc
+  ; MIR-NEXT: $sp = frame-setup SUBXri $sp, 16, 0
+  ; MIR: bb.2:
+  ; MIR-NOT: SEH_StartProc
+  ; MIR-NOT: SEH_EndProc
+  ; MIR-NOT: SEH_EndC
+  ; MIR: frame-destroy SEH_EpilogEnd
+  ; MIR-NEXT: FAKE_USE $w0
+  ; MIR-NEXT: RET undef $lr
+  ; MIR-NOT: SEH_EndProc
+  ; MIR: bb.3:
+  ; MIR-NOT: SEH_StartProc
+  ; MIR-NOT: SEH_EndProc
+  ; MIR-NOT: SEH_EndC
+  ; MIR: frame-destroy SEH_EpilogStart
+  ; MIR: B %bb.4 {
+  ; MIR-NEXT: SEH_EndProc
+  ; MIR-NEXT: }
+  ; MIR: bb.4:
+  ; MIR-NOT: SEH_StartProc
+  ; MIR-NOT: SEH_EndProc
+  ; MIR: RET
+  ; MIR-NOT: SEH_StartProc
+  ; MIR-NOT: SEH_EndProc
+  bb.0:
+    successors: %bb.1, %bb.4
+    CBZW $w0, %bb.4
+
+  bb.1:
+    successors: %bb.2, %bb.3
+    $sp = frame-setup SUBXri $sp, 16, 0
+    frame-setup SEH_StackAlloc 16
+    frame-setup STPXi $x19, $lr, $sp, 0
+    frame-setup SEH_SaveRegP 19, 30, 0
+    frame-setup SEH_PrologEnd
+    CBZW $w1, %bb.3
+
+  bb.2:
+    frame-destroy SEH_EpilogStart
+    $x19, $lr = frame-destroy LDPXi $sp, 0
+    frame-destroy SEH_SaveRegP 19, 30, 0
+    $sp = frame-destroy ADDXri $sp, 16, 0
+    frame-destroy SEH_StackAlloc 16
+    frame-destroy SEH_EpilogEnd
+    FAKE_USE $w0
+    RET undef $lr
+
+  bb.3:
+    successors: %bb.4
+    frame-destroy SEH_EpilogStart
+    $x19, $lr = frame-destroy LDPXi $sp, 0
+    frame-destroy SEH_SaveRegP 19, 30, 0
+    $sp = frame-destroy ADDXri $sp, 16, 0
+    frame-destroy SEH_StackAlloc 16
+    frame-destroy SEH_EpilogEnd
+    B %bb.4
+
+  bb.4:
+    RET undef $lr
+...
+---
+# Real instructions after an epilogue must be uncovered even within the same
+# block. End the record before the suffix without bundling its instructions or
+# debug/probe pseudos. The next framed block still needs a phantom recipe.
+name:            epilogue_suffix
+alignment:       4
+hasWinCFI:       true
+noPhis:          true
+isSSA:           false
+noVRegs:         true
+frameInfo:
+  stackSize:       16
+  maxAlignment:    16
+  adjustsStack:    true
+body:             |
+  ; MIR-LABEL: name: epilogue_suffix
+  ; MIR: bb.1:
+  ; MIR: SEH_StartProc
+  ; MIR: bb.2:
+  ; MIR: frame-destroy SEH_EpilogEnd
+  ; MIR-NEXT: SEH_EndProc
+  ; MIR-NEXT: DBG_LABEL
+  ; MIR-NEXT: PSEUDO_PROBE 5678, 1, 0, 0
+  ; MIR-NEXT: $w0 = ADDWri $w0, 1, 0
+  ; MIR-NEXT: $w0 = ADDWri $w0, 2, 0
+  ; MIR-NEXT: B %bb.4
+  ; MIR: bb.3:
+  ; MIR: SEH_StartProc
+  ; MIR: SEH_EndC
+  ; MIR: RET undef $lr {
+  ; MIR-NEXT: SEH_EndProc
+  ; MIR-NEXT: }
+  ; MIR: bb.4:
+  ; MIR-NOT: SEH_StartProc
+  ; MIR-NOT: SEH_EndProc
+  ; MIR: RET
+  bb.0:
+    successors: %bb.1, %bb.4
+    CBZW $w0, %bb.4
+
+  bb.1:
+    successors: %bb.2, %bb.3
+    $sp = frame-setup SUBXri $sp, 16, 0
+    frame-setup SEH_StackAlloc 16
+    frame-setup STPXi $x19, $lr, $sp, 0
+    frame-setup SEH_SaveRegP 19, 30, 0
+    frame-setup SEH_PrologEnd
+    CBZW $w1, %bb.3
+
+  bb.2:
+    successors: %bb.4
+    frame-destroy SEH_EpilogStart
+    $x19, $lr = frame-destroy LDPXi $sp, 0
+    frame-destroy SEH_SaveRegP 19, 30, 0
+    $sp = frame-destroy ADDXri $sp, 16, 0
+    frame-destroy SEH_StackAlloc 16
+    frame-destroy SEH_EpilogEnd
+    DBG_LABEL !12, debug-location !13
+    PSEUDO_PROBE 5678, 1, 0, 0
+    $w0 = ADDWri $w0, 1, 0
+    $w0 = ADDWri $w0, 2, 0
+    B %bb.4
+
+  bb.3:
+    frame-destroy SEH_EpilogStart
+    $x19, $lr = frame-destroy LDPXi $sp, 0
+    frame-destroy SEH_SaveRegP 19, 30, 0
+    $sp = frame-destroy ADDXri $sp, 16, 0
+    frame-destroy SEH_StackAlloc 16
+    frame-destroy SEH_EpilogEnd
+    RET undef $lr
+
+  bb.4:
+    RET undef $lr
+...
