@@ -28,7 +28,6 @@ static constexpr StringRef DefaultIncludeTypeRegex =
     "::std::basic_istringstream;::std::basic_stringstream;::std::bitset;"
     "::std::filesystem::path";
 
-AST_MATCHER(VarDecl, isLocalVarDecl) { return Node.isLocalVarDecl(); }
 AST_MATCHER(VarDecl, isReferenced) { return Node.isReferenced(); }
 AST_MATCHER(VarDecl, explicitMarkUnused) {
   // Implementations should not emit a warning that a name-independent
