@@ -1194,6 +1194,12 @@ void* operator new[] (std::size_t size, void* ptr) throw() { return ptr; };
 void operator delete (void* ptr, void*) throw() {};
 void operator delete[] (void* ptr, void*) throw() {};
 
+namespace std {
+template <class T, class... Args> T *construct_at(T *p, Args &&...args) {
+  return ::new (static_cast<void *>(p)) T(static_cast<Args &&>(args)...);
+}
+}
+
 namespace __cxxabiv1 {
 extern "C" {
 extern char *__cxa_demangle(const char *mangled_name,
