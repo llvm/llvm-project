@@ -43,9 +43,9 @@ CreateUnsatisfiedConstraintRecord(const ASTContext &C,
 
 ASTConstraintSatisfaction::ASTConstraintSatisfaction(
     const ASTContext &C, const ConstraintSatisfaction &Satisfaction)
-    : NumRecords{Satisfaction.Details.size()},
-      IsSatisfied{Satisfaction.IsSatisfied}, ContainsErrors{
-                                                 Satisfaction.ContainsErrors} {
+    : NumRecords(Satisfaction.Details.size()),
+      IsSatisfied(Satisfaction.IsSatisfied),
+      ContainsErrors(Satisfaction.ContainsErrors) {
   for (unsigned I = 0; I < NumRecords; ++I)
     CreateUnsatisfiedConstraintRecord(C, Satisfaction.Details[I],
                                       getTrailingObjects() + I);
@@ -53,9 +53,9 @@ ASTConstraintSatisfaction::ASTConstraintSatisfaction(
 
 ASTConstraintSatisfaction::ASTConstraintSatisfaction(
     const ASTContext &C, const ASTConstraintSatisfaction &Satisfaction)
-    : NumRecords{Satisfaction.NumRecords},
-      IsSatisfied{Satisfaction.IsSatisfied},
-      ContainsErrors{Satisfaction.ContainsErrors} {
+    : NumRecords(Satisfaction.NumRecords),
+      IsSatisfied(Satisfaction.IsSatisfied),
+      ContainsErrors(Satisfaction.ContainsErrors) {
   for (unsigned I = 0; I < NumRecords; ++I)
     CreateUnsatisfiedConstraintRecord(C, *(Satisfaction.begin() + I),
                                       getTrailingObjects() + I);
