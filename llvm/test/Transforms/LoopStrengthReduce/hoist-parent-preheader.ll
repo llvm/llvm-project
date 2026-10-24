@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-reduce -verify
+; RUN: opt < %s -passes=loop-reduce -disable-output
 target triple = "x86_64-apple-darwin10"
 
 define void @myquicksort(ptr %a, i1 %arg) nounwind ssp {
