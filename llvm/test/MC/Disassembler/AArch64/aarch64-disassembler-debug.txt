@@ -1,0 +1,21 @@
+# REQUIRES: asserts
+# RUN: llvm-mc -triple=aarch64 -mattr=+v8a -disassemble -debug-only=aarch64-disassembler < %s 2>&1 | FileCheck %s
+
+# blr x0: valid.
+# CHECK: decodeInstruction: insn = 0xd63f0000
+# CHECK: OPC_Decode: opcode {{[0-9]+}}, using decoder {{[0-9]+}}: PASS, decoding complete
+
+# `add (imm)` with shift = 2 fails in DecodeAddSubImmShift. The reported opcode
+# must match OPC_Decode's.
+# CHECK: decodeInstruction: insn = 0x919998e5
+# CHECK: OPC_Decode for opcode [[OPC:[0-9]+]]: insn using DecodeAddSubImmShift : FAIL
+# CHECK-NEXT: OPC_Decode: opcode [[OPC]], using decoder {{[0-9]+}}: FAIL, decoding complete
+
+# Operand failure: field(0,5) of 0xd54ea035 is 21, as OPC_CheckField read.
+# CHECK: decodeInstruction: insn = 0xd54ea035
+# CHECK: OPC_CheckField(0, 5, {{[0-9]+}}): FieldValue = 21, {{.*}}: FAIL
+# CHECK: OPC_Decode for Rt: field(0,5) using DecodeXSeqPairsClassRegisterClass : FAIL
+
+0x0 0x0 0x3f 0xd6
+0xe5 0x98 0x99 0x91
+0x35 0xa0 0x4e 0xd5
