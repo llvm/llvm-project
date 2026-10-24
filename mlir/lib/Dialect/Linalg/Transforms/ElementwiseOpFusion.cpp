@@ -161,9 +161,14 @@ bool mlir::linalg::areElementwiseOpsFusable(OpOperand *fusedOperand) {
   if (producer.getNumParallelLoops() != producer.getNumLoops())
     return false;
 
-  // Only allow fusing the producer of an input operand for now.
-  // TODO: allow fusing the producer of an output operand.
-  if (!consumer.isDpsInput(fusedOperand))
+  bool isInputFusion = consumer.isDpsInput(fusedOperand);
+  bool isOutputFusion = consumer.isDpsInit(fusedOperand);
+  if (!isInputFusion && !isOutputFusion)
+    return false;
+
+  // Only allow fusing the producer of an output operand with all dimension
+  // in consumer is parallel.
+  if (isOutputFusion && consumer.getNumReductionLoops() != 0)
     return false;
 
   // Get the consumer index map. The number of results of the consumer index
@@ -249,12 +254,16 @@ static void generateFusedElementwiseOpRegion(
       mapper.map(indexOp.getResult(), newIndex);
     }
   }
-  // TODO: allow fusing the producer of an output operand.
-  assert(consumer.isDpsInput(fusedOperand) &&
-         "expected producer of input operand");
+  bool isInputFusion = consumer.isDpsInput(fusedOperand);
+  bool isOutputFusion = consumer.isDpsInit(fusedOperand);
+  assert((isInputFusion || isOutputFusion) &&
+         "expected producer of input or output operand");
   // 3. Consumer input operands up to consumerIdx (exclusive).
-  for (BlockArgument bbArg : consumerBlock.getArguments().take_front(
-           fusedOperand->getOperandNumber())) // input assumption.
+  unsigned numConsumerInputsBeforeProducer =
+      isInputFusion ? fusedOperand->getOperandNumber()
+                    : consumer.getNumDpsInputs();
+  for (BlockArgument bbArg :
+       consumerBlock.getArguments().take_front(numConsumerInputsBeforeProducer))
     mapper.map(bbArg, fusedBlock->addArgument(bbArg.getType(), bbArg.getLoc()));
 
   // Replacing consumerIdx requires getting the cloned, yielded, value from
@@ -266,11 +275,14 @@ static void generateFusedElementwiseOpRegion(
     mapper.map(bbArg, fusedBlock->addArgument(bbArg.getType(), bbArg.getLoc()));
 
   // 5. Remaining consumer's input operands (drop past index `consumerIdx`).
-  for (BlockArgument bbArg :
-       consumerBlock.getArguments()
-           .take_front(consumer.getNumDpsInputs())
-           .drop_front(fusedOperand->getOperandNumber() + 1))
-    mapper.map(bbArg, fusedBlock->addArgument(bbArg.getType(), bbArg.getLoc()));
+  if (isInputFusion) {
+    for (BlockArgument bbArg :
+         consumerBlock.getArguments()
+             .take_front(consumer.getNumDpsInputs())
+             .drop_front(fusedOperand->getOperandNumber() + 1))
+      mapper.map(bbArg,
+                 fusedBlock->addArgument(bbArg.getType(), bbArg.getLoc()));
+  }
 
   // 6. All of the producer's output operands
   for (const auto &bbArg : llvm::enumerate(
@@ -282,9 +294,15 @@ static void generateFusedElementwiseOpRegion(
   }
 
   // 7. All of consumer's output operands.
-  for (BlockArgument bbArg :
-       consumerBlock.getArguments().take_back(consumer.getNumDpsInits()))
-    mapper.map(bbArg, fusedBlock->addArgument(bbArg.getType(), bbArg.getLoc()));
+  for (auto [initIndex, consumerOutputArg] : llvm::enumerate(
+           consumerBlock.getArguments().take_back(consumer.getNumDpsInits()))) {
+    BlockArgument fusedOutputArg = fusedBlock->addArgument(
+        consumerOutputArg.getType(), consumerOutputArg.getLoc());
+    bool replaceWithProducerYield =
+        isOutputFusion && consumer.getDpsInitOperand(initIndex) == fusedOperand;
+    if (!replaceWithProducerYield)
+      mapper.map(consumerOutputArg, fusedOutputArg);
+  }
 
   // 8. Clone all producer operations except for the yield and index operations
   // to the fused operation.
@@ -345,9 +363,10 @@ mlir::linalg::fuseElementwiseOps(RewriterBase &rewriter,
   auto producerResult = cast<OpResult>(fusedOperand->get());
   auto producer = cast<GenericOp>(producerResult.getOwner());
   auto consumer = cast<GenericOp>(fusedOperand->getOwner());
-  // TODO: allow fusing the producer of an output operand.
-  assert(consumer.isDpsInput(fusedOperand) &&
-         "expected producer of input operand");
+  bool isInputFusion = consumer.isDpsInput(fusedOperand);
+  bool isOutputFusion = consumer.isDpsInit(fusedOperand);
+  assert((isInputFusion || isOutputFusion) &&
+         "expected producer of input or output operand");
   /// Find the results of the producer that have uses outside of the consumer,
   /// after the fusion.
   llvm::SmallDenseSet<int> preservedProducerResults =
@@ -369,10 +388,10 @@ mlir::linalg::fuseElementwiseOps(RewriterBase &rewriter,
   // In the following, numbering matches that of `generateFusedTensorOpRegion`.
   // 3. Consumer input operands/maps up to consumerIdx (exclusive).
   auto consumerInputs = consumer.getDpsInputOperands();
-  auto *it = llvm::find_if(consumerInputs, [&](OpOperand *operand) {
-    return operand == fusedOperand;
-  });
-  assert(it != consumerInputs.end() && "expected to find the consumer operand");
+  auto it = isInputFusion ? llvm::find(consumerInputs, fusedOperand)
+                          : consumerInputs.end();
+  assert((!isInputFusion || it != consumerInputs.end()) &&
+         "expected to find the consumer input operand");
   for (OpOperand *opOperand : llvm::make_range(consumerInputs.begin(), it)) {
     fusedInputOperands.push_back(opOperand->get());
     fusedIndexMaps.push_back(consumer.getMatchingIndexingMap(opOperand));
@@ -390,10 +409,12 @@ mlir::linalg::fuseElementwiseOps(RewriterBase &rewriter,
   }
   // 5. Remaining consumer's input operands/maps (drop past index
   // `consumerIdx`).
-  for (OpOperand *opOperand :
-       llvm::make_range(std::next(it), consumerInputs.end())) {
-    fusedInputOperands.push_back(opOperand->get());
-    fusedIndexMaps.push_back(consumer.getMatchingIndexingMap(opOperand));
+  if (isInputFusion) {
+    for (OpOperand *opOperand :
+         llvm::make_range(std::next(it), consumerInputs.end())) {
+      fusedInputOperands.push_back(opOperand->get());
+      fusedIndexMaps.push_back(consumer.getMatchingIndexingMap(opOperand));
+    }
   }
 
   // 6. Collect all of the producer outputs.
@@ -411,7 +432,11 @@ mlir::linalg::fuseElementwiseOps(RewriterBase &rewriter,
 
   // 7. All of consumer's output operands (skip operands: added by the builder).
   for (OpOperand &opOperand : consumer.getDpsInitsMutable()) {
-    fusedOutputOperands.push_back(opOperand.get());
+    Value output = opOperand.get();
+    if (&opOperand == fusedOperand)
+      output =
+          producer.getDpsInitOperand(producerResult.getResultNumber())->get();
+    fusedOutputOperands.push_back(output);
     fusedIndexMaps.push_back(consumer.getMatchingIndexingMap(&opOperand));
     Type resultType = opOperand.get().getType();
     if (!isa<MemRefType>(resultType))
