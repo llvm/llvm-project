@@ -14,6 +14,7 @@ add_clang_library(clangCIRFrontendAction
   MLIRCIROpsIncGen
   MLIRCIROpInterfacesIncGen
   MLIRBuiltinLocationAttributesIncGen
+  MLIRBuiltinTypeInterfacesIncGen
   MLIRBytecodeOpInterfaceIncGen
   MLIRBuiltinOpsIncGen
 

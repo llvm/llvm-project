@@ -9,6 +9,7 @@ add_clang_library(clangCIRLoweringCommon
 
   DEPENDS
   MLIRBuiltinLocationAttributesIncGen
+  MLIRBuiltinTypeInterfacesIncGen
   MLIRBytecodeOpInterfaceIncGen
 
   LINK_LIBS

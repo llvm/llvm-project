@@ -22,6 +22,7 @@ add_clang_library(MLIRCIRTransforms
   DEPENDS
   MLIRCIRPassIncGen
   MLIRBuiltinLocationAttributesIncGen
+  MLIRBuiltinTypeInterfacesIncGen
   MLIRBytecodeOpInterfaceIncGen
 
   LINK_COMPONENTS

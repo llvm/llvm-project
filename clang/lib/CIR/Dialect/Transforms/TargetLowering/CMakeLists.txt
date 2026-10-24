@@ -12,6 +12,7 @@ add_clang_library(MLIRCIRTargetLowering
   DEPENDS
   clangBasic
   MLIRBuiltinLocationAttributesIncGen
+  MLIRBuiltinTypeInterfacesIncGen
   MLIRBytecodeOpInterfaceIncGen
 
   LINK_COMPONENTS

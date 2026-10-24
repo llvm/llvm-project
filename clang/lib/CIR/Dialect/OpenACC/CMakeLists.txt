@@ -6,6 +6,7 @@ add_clang_library(CIROpenACCSupport
   MLIRCIRTypeConstraintsIncGen
   MLIRArithOpsIncGen
   MLIRBuiltinLocationAttributesIncGen
+  MLIRBuiltinTypeInterfacesIncGen
   MLIRBytecodeOpInterfaceIncGen
   MLIRCallInterfacesIncGen
 

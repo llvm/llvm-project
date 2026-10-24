@@ -14,6 +14,7 @@ add_clang_library(MLIRCIRInterfaces
   MLIRCIRLoopOpInterfaceIncGen
   MLIRCIROpInterfacesIncGen
   MLIRBuiltinLocationAttributesIncGen
+  MLIRBuiltinTypeInterfacesIncGen
   MLIRBytecodeOpInterfaceIncGen
   MLIRCIROpsIncGen
   MLIRCIRTypeConstraintsIncGen
