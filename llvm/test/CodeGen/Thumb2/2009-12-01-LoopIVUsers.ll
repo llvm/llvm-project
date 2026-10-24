@@ -9,6 +9,10 @@ entry:
 ;    instruction.
 ; CHECK: vldr
 ; CHECK-NOT: adds
+; CHECK-NOT: add.w
+; CHECK: adds
+; CHECK-NOT: adds
+; CHECK-NOT: add.w
 ; CHECK: subsections_via_symbols
 
 
