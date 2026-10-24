@@ -40,6 +40,9 @@ enum FileType : unsigned {
   /// Text-based stub file (.tbd) version 5.0
   TBD_V5 = 1U << 7,
 
+  /// \brief MachO Kernel Extension Bundle file.
+  MachO_KextBundle = 1U << 8,
+
   All = ~0U,
 
   LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/All),
