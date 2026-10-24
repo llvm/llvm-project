@@ -2007,19 +2007,27 @@ void MachineBlockPlacement::buildChain(const MachineBasicBlock *HeadBB,
 // If BB is moved before OldTop, Pred needs a taken branch to BB, and it can't
 // layout the other successor below it, so it can't reduce taken branch.
 // In this case we keep its original layout.
+//
+// Pred may not be BB's only predecessor: several 2-way branches can share the
+// same BB (both sides of `c == ',' || c == '\n'`). Treat any such Pred the
+// same way.
 bool MachineBlockPlacement::canMoveBottomBlockToTop(
     const MachineBasicBlock *BottomBlock, const MachineBasicBlock *OldTop) {
-  if (BottomBlock->pred_size() != 1)
-    return true;
-  MachineBasicBlock *Pred = *BottomBlock->pred_begin();
-  if (Pred->succ_size() != 2)
-    return true;
+  // BB may have several predecessors that share this diamond (e.g. comma and
+  // newline both jump to the same increment). Reject the rotate if any of them
+  // has OldTop as the other successor.
+  for (const MachineBasicBlock *Pred : BottomBlock->predecessors()) {
+    if (Pred == OldTop)
+      continue;
+    if (Pred->succ_size() != 2)
+      continue;
 
-  MachineBasicBlock *OtherBB = *Pred->succ_begin();
-  if (OtherBB == BottomBlock)
-    OtherBB = *Pred->succ_rbegin();
-  if (OtherBB == OldTop)
-    return false;
+    const MachineBasicBlock *OtherBB = *Pred->succ_begin();
+    if (OtherBB == BottomBlock)
+      OtherBB = *Pred->succ_rbegin();
+    if (OtherBB == OldTop)
+      return false;
+  }
 
   return true;
 }
@@ -2227,6 +2235,13 @@ MachineBasicBlock *MachineBlockPlacement::findBestLoopTopHelper(
          (*BestPred->pred_begin())->succ_size() == 1 &&
          *BestPred->pred_begin() != L.getHeader())
     BestPred = *BestPred->pred_begin();
+
+  // The walk-back can land on a block that was not the predecessor FallThrough
+  // gains considered. Re-check the diamond-into-top shape.
+  if (!canMoveBottomBlockToTop(BestPred, OldTop)) {
+    LLVM_DEBUG(dbgs() << "    final top unchanged\n");
+    return OldTop;
+  }
 
   LLVM_DEBUG(dbgs() << "    final top: " << getBlockName(BestPred) << "\n");
   return BestPred;
