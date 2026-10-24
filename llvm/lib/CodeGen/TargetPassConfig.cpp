@@ -335,6 +335,7 @@ CGPassBuilderOption llvm::getCGPassBuilderOption(const TargetMachine &TM) {
     Opt.EnableIPRA = Opts.enable_ipra == BoolOrDefault::True;
   Opt.EnableFastISelOption = toBoolOrDefault(Opts.fast_isel);
   Opt.EnableRegAllocFastTied = toBoolOrDefault(Opts.regalloc_fast_tied);
+  Opt.EnableMachinePipeliner = toBoolOrDefault(Opts.enable_pipeliner);
   Opt.EnableGlobalISelOption = toBoolOrDefault(Opts.global_isel);
   Opt.VerifyMachineCode = computeMachineVerifierMode(
       Opts, valueOr(Opts.verify_machineinstrs, false));
@@ -996,6 +997,10 @@ void TargetPassConfig::addMachinePasses() {
 
   if (TM->Options.EnableIPRA)
     addPass(createRegUsageInfoPropPass());
+
+  if (getOptLevel() != CodeGenOptLevel::None &&
+      valueOr(getOpts(*TM).enable_pipeliner, isMachinePipelinerEnabled()))
+    addPass(&MachinePipelinerID);
 
   // Run pre-ra passes.
   addPreRegAlloc();
