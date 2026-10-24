@@ -1536,6 +1536,15 @@ def : Pat<(extloadi64i8 addr:$src),
 def : Pat<(extloadi64i16 addr:$src),
           (SUBREG_TO_REG (MOVZX32rm16 addr:$src), sub_32bit)>;
 
+// The mask clears all upper bits, so a wider AND also performs the extension.
+foreach suffix = ["", "_ND"] in {
+  let Predicates = [In64BitMode, !if(!eq(suffix, ""), NoNDD, HasNDD)] in
+  def : Pat<(i32 (zext (and_su GR8:$src, imm:$mask))),
+            (!cast<Instruction>(AND32ri#suffix)
+              (INSERT_SUBREG (i32 (IMPLICIT_DEF)), GR8:$src, sub_8bit),
+              (i32 (GetLo32XForm imm:$mask)))>;
+}
+
 // anyext. Define these to do an explicit zero-extend to
 // avoid partial-register updates.
 def : Pat<(i16 (anyext GR8 :$src)), (EXTRACT_SUBREG
