@@ -5,8 +5,8 @@
 ; so @kernel_caller and @ps_caller write the inreg argument to s16 as
 ; @func_caller does. On PAL, the first inreg argument of a shader is the low
 ; half of the GIT pointer.
-; RUN: llc -global-isel=0 -mtriple=amdgpu9.0a-amd-amdpal -mcpu=gfx90a < %s | FileCheck -check-prefixes=CHECK,SDAG %s
-; RUN: llc -global-isel=1 -mtriple=amdgpu9.0a-amd-amdpal -mcpu=gfx90a < %s | FileCheck -check-prefixes=CHECK,GISEL %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu9.00-amd-amdpal -mcpu=gfx900 < %s | FileCheck -check-prefixes=CHECK,SDAG %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu9.00-amd-amdpal -mcpu=gfx900 < %s | FileCheck -check-prefixes=CHECK,GISEL %s
 
 define void @callee(i32 inreg %x, ptr addrspace(1) %out) noinline {
 ; CHECK-LABEL: callee:
@@ -30,19 +30,21 @@ define amdgpu_kernel void @kernel_caller(i32 %x, ptr addrspace(1) %out) {
 ; SDAG-NEXT:    s_load_dword s16, s[4:5], 0x0
 ; SDAG-NEXT:    s_load_dwordx2 s[18:19], s[4:5], 0x8
 ; SDAG-NEXT:    s_mov_b32 s12, s8
-; SDAG-NEXT:    s_mov_b32 s14, s10
-; SDAG-NEXT:    s_mov_b32 s13, s9
+; SDAG-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
+; SDAG-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
 ; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-NEXT:    s_add_u32 s24, s24, s11
 ; SDAG-NEXT:    s_addc_u32 s25, s25, 0
 ; SDAG-NEXT:    s_add_u32 s8, s4, 16
+; SDAG-NEXT:    s_mov_b32 s14, s10
+; SDAG-NEXT:    s_mov_b32 s13, s9
 ; SDAG-NEXT:    s_mov_b64 s[10:11], s[6:7]
 ; SDAG-NEXT:    s_addc_u32 s9, s5, 0
 ; SDAG-NEXT:    s_mov_b32 s21, callee@abs32@hi
 ; SDAG-NEXT:    s_mov_b32 s20, callee@abs32@lo
+; SDAG-NEXT:    v_or3_b32 v31, v0, v1, v2
 ; SDAG-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; SDAG-NEXT:    s_mov_b64 s[6:7], s[2:3]
-; SDAG-NEXT:    v_mov_b32_e32 v31, v0
 ; SDAG-NEXT:    s_mov_b64 s[0:1], s[24:25]
 ; SDAG-NEXT:    s_mov_b64 s[2:3], s[26:27]
 ; SDAG-NEXT:    v_mov_b32_e32 v0, s18
@@ -65,11 +67,13 @@ define amdgpu_kernel void @kernel_caller(i32 %x, ptr addrspace(1) %out) {
 ; GISEL-NEXT:    s_add_u32 s20, s20, s11
 ; GISEL-NEXT:    s_addc_u32 s21, s21, 0
 ; GISEL-NEXT:    s_add_u32 s8, s4, 16
-; GISEL-NEXT:    v_mov_b32_e32 v31, v0
+; GISEL-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
+; GISEL-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
 ; GISEL-NEXT:    s_mov_b32 s14, s10
 ; GISEL-NEXT:    s_mov_b64 s[10:11], s[6:7]
 ; GISEL-NEXT:    s_mov_b64 s[6:7], s[2:3]
 ; GISEL-NEXT:    s_addc_u32 s9, s5, 0
+; GISEL-NEXT:    v_or3_b32 v31, v0, v1, v2
 ; GISEL-NEXT:    s_mov_b32 s18, callee@abs32@lo
 ; GISEL-NEXT:    s_mov_b32 s19, callee@abs32@hi
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s0
