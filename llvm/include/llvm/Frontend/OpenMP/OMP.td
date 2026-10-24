@@ -1367,6 +1367,15 @@ def OMP_Task : Directive<[Spelling<"task">]> {
   let association = AS_Block;
   let category = CA_Executable;
 }
+def OMP_TaskIteration : Directive<[Spelling<"task_iteration">]> {
+  let allowedClauses = [
+    VersionedClause<OMPC_Affinity, 61>,
+    VersionedClause<OMPC_Depend, 61>,
+    VersionedClause<OMPC_If, 61>,
+  ];
+  let association = AS_None;
+  let category = CA_Subsidiary;
+}
 def OMP_Taskgraph : Directive<[Spelling<"taskgraph">]> {
   let allowedClauses = [
     VersionedClause<OMPC_If>,
