@@ -2469,6 +2469,37 @@ Value *InstCombinerImpl::reassociateBooleanAndOr(Value *LHS, Value *X, Value *Y,
   return Folded;
 }
 
+/// Fold Res, Overflow = (umul.with.overflow x c1); (and !Overflow (ult Res c2))
+/// --> (ult x ceil(c2/c1)). This is the dual of
+/// foldOrUnsignedUMulOverflowICmp: the product does not overflow and is below
+/// c2 iff x is below c2 divided by c1, rounded up.
+static Value *
+foldAndUnsignedUMulOverflowICmp(BinaryOperator &I,
+                                InstCombiner::BuilderTy &Builder) {
+  Value *WOV, *X;
+  const APInt *C1, *C2;
+  if (match(&I,
+            m_c_And(m_Not(m_ExtractValue<1>(
+                        m_Value(WOV, m_Intrinsic<Intrinsic::umul_with_overflow>(
+                                         m_Value(X), m_APInt(C1))))),
+                    m_OneUse(m_SpecificCmp(ICmpInst::ICMP_ULT,
+                                           m_ExtractValue<0>(m_Deferred(WOV)),
+                                           m_APInt(C2))))) &&
+      // A zero multiplier would divide by zero, and "ult 0" is always false
+      // (left for other folds to simplify).
+      !C1->isZero() && !C2->isZero()) {
+    APInt Quotient, Remainder;
+    APInt::udivrem(*C2, *C1, Quotient, Remainder);
+    // Quotient < C2 whenever a rounding increment is needed (C1 > 1), so this
+    // cannot wrap.
+    if (!Remainder.isZero())
+      ++Quotient;
+    return Builder.CreateICmp(ICmpInst::ICMP_ULT, X,
+                              ConstantInt::get(X->getType(), Quotient));
+  }
+  return nullptr;
+}
+
 // FIXME: We use commutative matchers (m_c_*) for some, but not all, matches
 // here. We should standardize that construct where it is needed or choose some
 // other way to ensure that commutated variants of patterns are not missed.
@@ -2851,6 +2882,9 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
 
   if (Value *Res =
           foldBooleanAndOr(Op0, Op1, I, /*IsAnd=*/true, /*IsLogical=*/false))
+    return replaceInstUsesWith(I, Res);
+
+  if (Value *Res = foldAndUnsignedUMulOverflowICmp(I, Builder))
     return replaceInstUsesWith(I, Res);
 
   if (match(Op1, m_OneUse(m_LogicalAnd(m_Value(X), m_Value(Y))))) {
