@@ -4329,6 +4329,12 @@ bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
     }
     return false;
   }
+  case AMDGPURI::PreferAGPR:
+    for (MCPhysReg PhysReg : Order) {
+      if (TRI->isAGPR(MRI, PhysReg) && !MRI.isReserved(PhysReg))
+        Hints.push_back(PhysReg);
+    }
+    return false;
   default:
     return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints, MF,
                                                      VRM);
