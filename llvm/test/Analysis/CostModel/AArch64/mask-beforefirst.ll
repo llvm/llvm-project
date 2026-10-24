@@ -24,11 +24,11 @@ define void @mask_beforefirst() {
 ; NEON-NEXT:  Cost Model: Invalid cost for instruction: %4 = call <vscale x 16 x i1> @llvm.mask.beforefirst.nxv16i1(<vscale x 16 x i1> poison)
 ; NEON-NEXT:  Cost Model: Invalid cost for instruction: %5 = call <vscale x 32 x i1> @llvm.mask.beforefirst.nxv32i1(<vscale x 32 x i1> poison)
 ; NEON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %6 = call <1 x i1> @llvm.mask.beforefirst.v1i1(<1 x i1> poison)
-; NEON-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %7 = call <2 x i1> @llvm.mask.beforefirst.v2i1(<2 x i1> poison)
-; NEON-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %8 = call <4 x i1> @llvm.mask.beforefirst.v4i1(<4 x i1> poison)
-; NEON-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %9 = call <8 x i1> @llvm.mask.beforefirst.v8i1(<8 x i1> poison)
-; NEON-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %10 = call <16 x i1> @llvm.mask.beforefirst.v16i1(<16 x i1> poison)
-; NEON-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %11 = call <32 x i1> @llvm.mask.beforefirst.v32i1(<32 x i1> poison)
+; NEON-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %7 = call <2 x i1> @llvm.mask.beforefirst.v2i1(<2 x i1> poison)
+; NEON-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %8 = call <4 x i1> @llvm.mask.beforefirst.v4i1(<4 x i1> poison)
+; NEON-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %9 = call <8 x i1> @llvm.mask.beforefirst.v8i1(<8 x i1> poison)
+; NEON-NEXT:  Cost Model: Found an estimated cost of 39 for instruction: %10 = call <16 x i1> @llvm.mask.beforefirst.v16i1(<16 x i1> poison)
+; NEON-NEXT:  Cost Model: Found an estimated cost of 78 for instruction: %11 = call <32 x i1> @llvm.mask.beforefirst.v32i1(<32 x i1> poison)
 ; NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call <vscale x 2 x i1> @llvm.mask.beforefirst(<vscale x 2 x i1> poison)
