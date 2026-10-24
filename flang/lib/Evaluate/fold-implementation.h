@@ -2227,7 +2227,7 @@ Expr<T> FoldOperation(FoldingContext &context, Negate<T> &&x) {
       auto negated{value->Negate()};
       if (negated.overflow) {
         context.Warn(common::UsageWarning::FoldingException,
-            "INTEGER(%d) negation overflowed"_warn_en_US, value->kind());
+            "INTEGER(%d) negation overflowed"_warn_en_US, kind);
       }
       return Expr<T>{Constant<T>{kind, std::move(negated.value)}};
     } else if constexpr (T::category == TypeCategory::Unsigned) {
@@ -2270,7 +2270,7 @@ Expr<T> FoldOperation(FoldingContext &context, Add<T> &&x) {
       auto sum{folded->first.AddSigned(folded->second)};
       if (sum.overflow) {
         context.Warn(common::UsageWarning::FoldingException,
-            "INTEGER(%d) addition overflowed"_warn_en_US, folded->first.kind());
+            "INTEGER(%d) addition overflowed"_warn_en_US, kind);
       }
       return Expr<T>{Constant<T>{kind, sum.value}};
     } else if constexpr (T::category == TypeCategory::Unsigned) {
@@ -2319,8 +2319,7 @@ Expr<T> FoldOperation(FoldingContext &context, Subtract<T> &&x) {
       auto difference{folded->first.SubtractSigned(folded->second)};
       if (difference.overflow) {
         context.Warn(common::UsageWarning::FoldingException,
-            "INTEGER(%d) subtraction overflowed"_warn_en_US,
-            folded->first.kind());
+            "INTEGER(%d) subtraction overflowed"_warn_en_US, kind);
       }
       return Expr<T>{Constant<T>{kind, difference.value}};
     } else if constexpr (T::category == TypeCategory::Unsigned) {
@@ -2361,8 +2360,7 @@ Expr<T> FoldOperation(FoldingContext &context, Multiply<T> &&x) {
       auto product{folded->first.MultiplySigned(folded->second)};
       if (product.SignedMultiplicationOverflowed()) {
         context.Warn(common::UsageWarning::FoldingException,
-            "INTEGER(%d) multiplication overflowed"_warn_en_US,
-            folded->first.kind());
+            "INTEGER(%d) multiplication overflowed"_warn_en_US, kind);
       }
       return Expr<T>{Constant<T>{kind, product.lower}};
     } else if constexpr (T::category == TypeCategory::Unsigned) {
@@ -2380,7 +2378,7 @@ Expr<T> FoldOperation(FoldingContext &context, Multiply<T> &&x) {
   } else if constexpr (T::category == TypeCategory::Integer) {
     if (auto c{GetScalarConstantValue<T>(kind, x.right())}) {
       x.right() = std::move(x.left());
-      x.left() = Expr<T>{Constant<T>(kind, *c)};
+      x.left() =  MakeConstantExpr<T>(kind, *c);
     }
     if (auto c{GetScalarConstantValue<T>(kind, x.left())}) {
       if (c->IsZero() && x.right().Rank() == 0) {
