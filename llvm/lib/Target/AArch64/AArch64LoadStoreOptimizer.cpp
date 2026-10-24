@@ -2192,8 +2192,6 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
           }
 
           Flags.setMergeForward(false);
-          if (!SameLoadReg)
-            Flags.clearRenameReg();
           return MBBI;
         }
 
@@ -2212,7 +2210,6 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
         if (RtNotModified && !mayAlias(FirstMI, MemInsns, AA)) {
           if (ModifiedRegUnits.available(getLdStRegOp(FirstMI).getReg())) {
             Flags.setMergeForward(true);
-            Flags.clearRenameReg();
             return MBBI;
           }
 
