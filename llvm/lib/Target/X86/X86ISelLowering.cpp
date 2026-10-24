@@ -2844,6 +2844,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
                        ISD::LOAD,
                        ISD::LRINT,
                        ISD::LLRINT,
+                       ISD::LROUND,
+                       ISD::LLROUND,
                        ISD::MLOAD,
                        ISD::STORE,
                        ISD::MSTORE,
@@ -23163,16 +23165,11 @@ SDValue X86TargetLowering::lowerFaddFsub(SDValue Op, SelectionDAG &DAG) const {
   return lowerAddSubToHorizontalOp(Op, SDLoc(Op), DAG, Subtarget);
 }
 
-/// ISD::FROUND is defined to round to nearest with ties rounding away from 0.
-/// This mode isn't supported in hardware on X86. But as long as we aren't
-/// compiling with trapping math, we can emulate this with
-/// trunc(X + copysign(nextafter(0.5, 0.0), X)).
-static SDValue LowerFROUND(SDValue Op, SelectionDAG &DAG) {
-  SDValue N0 = Op.getOperand(0);
-  SDLoc dl(Op);
-  MVT VT = Op.getSimpleValueType();
-
-  // N0 += copysign(nextafter(0.5, 0.0), N0)
+/// Return N0 + copysign(nextafter(0.5, 0.0), N0). Truncating the result rounds
+/// N0 to nearest with ties away from 0.
+static SDValue addPoint5PredWithSign(SDValue N0, const SDLoc &dl,
+                                     SelectionDAG &DAG) {
+  EVT VT = N0.getValueType();
   const fltSemantics &Sem = VT.getFltSemantics();
   bool Ignored;
   APFloat Point5Pred = APFloat(0.5f);
@@ -23181,10 +23178,19 @@ static SDValue LowerFROUND(SDValue Op, SelectionDAG &DAG) {
 
   SDValue Adder = DAG.getNode(ISD::FCOPYSIGN, dl, VT,
                               DAG.getConstantFP(Point5Pred, dl, VT), N0);
-  N0 = DAG.getNode(ISD::FADD, dl, VT, N0, Adder);
+  return DAG.getNode(ISD::FADD, dl, VT, N0, Adder);
+}
+
+/// ISD::FROUND is defined to round to nearest with ties rounding away from 0.
+/// This mode isn't supported in hardware on X86. But as long as we aren't
+/// compiling with trapping math, we can emulate this with
+/// trunc(X + copysign(nextafter(0.5, 0.0), X)).
+static SDValue LowerFROUND(SDValue Op, SelectionDAG &DAG) {
+  SDLoc dl(Op);
+  SDValue N0 = addPoint5PredWithSign(Op.getOperand(0), dl, DAG);
 
   // Truncate the result to remove fraction.
-  return DAG.getNode(ISD::FTRUNC, dl, VT, N0);
+  return DAG.getNode(ISD::FTRUNC, dl, Op.getSimpleValueType(), N0);
 }
 
 /// The only differences between FABS and FNEG are the mask and the logic op.
@@ -56511,6 +56517,35 @@ static SDValue combineLRINT_LLRINT(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(X86ISD::CVTP2SI, DL, VT, Src);
 }
 
+// Expand lround/llround to fp_to_sint(X + copysign(nextafter(0.5, 0.0), X))
+// instead of calling libm. This is the same trick LowerFROUND uses, but the
+// FTRUNC isn't needed as FP_TO_SINT already truncates, so plain SSE2 is enough.
+// Results that don't fit the integer type are unspecified, so the out of range
+// behaviour of FP_TO_SINT is fine.
+static SDValue combineLROUND_LLROUND(SDNode *N, SelectionDAG &DAG,
+                                     TargetLowering::DAGCombinerInfo &DCI,
+                                     const X86Subtarget &Subtarget) {
+  EVT VT = N->getValueType(0);
+  SDValue Src = N->getOperand(0);
+  EVT SrcVT = Src.getValueType();
+  EVT SrcSVT = SrcVT.getScalarType();
+
+  // Expand before type legalization so that vectors are split or widened as
+  // FADD/FP_TO_SINT rather than scalarized into separate lround nodes.
+  if (!DCI.isBeforeLegalize() || Subtarget.useSoftFloat() ||
+      !Subtarget.hasSSE2() || (SrcSVT != MVT::f32 && SrcSVT != MVT::f64))
+    return SDValue();
+
+  // At minsize a scalar libcall is smaller than the inline sequence. Vectors
+  // would need a libcall per element, so they are still expanded.
+  if (!SrcVT.isVector() && DAG.getMachineFunction().getFunction().hasMinSize())
+    return SDValue();
+
+  SDLoc DL(N);
+  SDValue Rounded = addPoint5PredWithSign(Src, DL, DAG);
+  return DAG.getNode(ISD::FP_TO_SINT, DL, VT, Rounded);
+}
+
 // Attempt to fold some (truncate (srl (add/or/xor X, C1), C2)) patterns to
 // (add/or/xor (truncate (srl X, C2)), C1'). C1' will be smaller than C1 so we
 // are able to avoid generating code with MOVABS and large constants in certain
@@ -64291,6 +64326,9 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::FP_TO_SINT:     return combineFPToSInt(N, DAG, Subtarget);
   case ISD::LRINT:
   case ISD::LLRINT:         return combineLRINT_LLRINT(N, DAG, Subtarget);
+  case ISD::LROUND:
+  case ISD::LLROUND:
+    return combineLROUND_LLROUND(N, DAG, DCI, Subtarget);
   case ISD::FADD:
   case ISD::FSUB:           return combineFaddFsub(N, DAG, Subtarget);
   case X86ISD::VFCMULC:
