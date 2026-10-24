@@ -17,4 +17,4 @@
 
 using LIBC_NAMESPACE::fputil::Float80;
 
-LIST_COPYSIGN_TESTS(Float80, LIBC_NAMESPACE::copysignf80)
+LIST_COPYSIGN_TESTS(Copysignf80, Float80, LIBC_NAMESPACE::copysignf80)
