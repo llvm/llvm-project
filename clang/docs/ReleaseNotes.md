@@ -1374,6 +1374,10 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 - visit identifier initializers in lambda capture as VarDecl instead of VariableRef. Warning: this changes behaviour.
 - add unary operator handling to `clang_getCursorSpelling()`.
+- `clang_getCursorReferenced()` now resolves a reference to a member of a
+  dependent base class, such as `this->size()` in a class template deriving
+  from `A<T>`, to the member of the primary template. This also affects
+  `clang_getCursorDefinition()` and `clang_findReferencesInFile()`.
 
 ### Code Completion
 
