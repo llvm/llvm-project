@@ -2711,6 +2711,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  asinh_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    asinh_test.cpp
+  DEPENDS
+    libc.src.math.asinh
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   asinhf_test
   NEED_MPFR
   SUITE
