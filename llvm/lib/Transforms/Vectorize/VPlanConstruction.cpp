@@ -2372,12 +2372,18 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
     assert(MinOrMaxResult &&
            "MinOrMaxResult must be a user of MinOrMaxBackedgeR");
 
-    // Cmp must be used by the select of a FindLastIV chain.
-    VPValue *Sel = dyn_cast<VPSingleDefRecipe>(Cmp->getSingleUser());
+    // Cmp must be used by the select of a FindLastIV chain, possibly through
+    // the freeze added by optimizeFindIVReductions.
+    VPValue *SelCond = Cmp;
+    auto *CmpUser = dyn_cast<VPSingleDefRecipe>(Cmp->getSingleUser());
+    if (CmpUser && match(CmpUser, m_Freeze(m_Specific(Cmp))))
+      SelCond = CmpUser;
+    VPValue *Sel =
+        dyn_cast_or_null<VPSingleDefRecipe>(SelCond->getSingleUser());
     VPValue *IVOp, *FindIV;
     if (!Sel || (Sel->getNumUsers() != (HeaderMask ? 1 : 2)) ||
-        !match(Sel,
-               m_Select(m_Specific(Cmp), m_VPValue(IVOp), m_VPValue(FindIV))))
+        !match(Sel, m_Select(m_Specific(SelCond), m_VPValue(IVOp),
+                             m_VPValue(FindIV))))
       return false;
 
     if (!isa<VPReductionPHIRecipe>(FindIV)) {

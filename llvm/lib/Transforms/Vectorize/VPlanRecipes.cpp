@@ -1402,8 +1402,12 @@ InstructionCost VPRecipeWithIRFlags::getCostForRecipeWithOpcode(
     if (!IsScalarCond && VF.isVector())
       CondTy = VectorType::get(CondTy, VF);
 
+    // A freeze between the compare and the select doesn't prevent folding
+    // them, so look through it.
     llvm::CmpPredicate Pred;
-    if (!match(getOperand(0), m_Cmp(Pred, m_VPValue(), m_VPValue())))
+    if (!match(getOperand(0),
+               m_CombineOr(m_Cmp(Pred, m_VPValue(), m_VPValue()),
+                           m_Freeze(m_Cmp(Pred, m_VPValue(), m_VPValue())))))
       if (auto *CondIRV = dyn_cast<VPIRValue>(getOperand(0)))
         if (auto *Cmp = dyn_cast<CmpInst>(CondIRV->getValue()))
           Pred = Cmp->getPredicate();
@@ -1449,7 +1453,9 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
   switch (getOpcode()) {
   case Instruction::Select: {
     llvm::CmpPredicate Pred = CmpInst::BAD_ICMP_PREDICATE;
-    match(getOperand(0), m_Cmp(Pred, m_VPValue(), m_VPValue()));
+    match(getOperand(0),
+          m_CombineOr(m_Cmp(Pred, m_VPValue(), m_VPValue()),
+                      m_Freeze(m_Cmp(Pred, m_VPValue(), m_VPValue()))));
     auto *CondTy = getOperand(0)->getScalarType();
     auto *VecTy = getOperand(1)->getScalarType();
     if (!vputils::onlyFirstLaneUsed(this)) {

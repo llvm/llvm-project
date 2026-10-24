@@ -5014,11 +5014,10 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
 
     VPValue *NewFindLastSelect = BackedgeVal;
     VPValue *SelectCond = Cond;
+    VPBuilder LoopBuilder(FindLastSelect->getDefiningRecipe());
     if (!SentinelVal || IVOfExpressionToSink) {
       // When we need to create a new select, normalize the condition so that
       // PhiR is the last operand and include the header mask if needed.
-      DebugLoc DL = FindLastSelect->getDefiningRecipe()->getDebugLoc();
-      VPBuilder LoopBuilder(FindLastSelect->getDefiningRecipe());
       if (match(FindLastSelect,
                 m_SelectLike(m_VPValue(Cond), m_Specific(PhiR), m_VPValue())))
         SelectCond = LoopBuilder.createNot(SelectCond);
@@ -5027,13 +5026,22 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
       // propagating poison from inactive lanes in the last vector iteration.
       if (HeaderMask)
         SelectCond = LoopBuilder.createLogicalAnd(HeaderMask, SelectCond);
+    }
 
-      if (SelectCond != Cond || IVOfExpressionToSink) {
-        NewFindLastSelect = LoopBuilder.createSelect(
-            SelectCond,
-            IVOfExpressionToSink ? IVOfExpressionToSink : FindLastExpression,
-            PhiR, DL);
-      }
+    // The min/max reduction combines the selected IVs of all lanes, so a poison
+    // condition in a single lane would poison the whole result. The scalar loop
+    // instead recovers once a later iteration selects a new IV. Freeze the
+    // condition to prevent that.
+    bool NeedsNewSelect = SelectCond != Cond || IVOfExpressionToSink;
+    SelectCond = LoopBuilder.createFreeze(SelectCond);
+    if (NeedsNewSelect) {
+      DebugLoc DL = FindLastSelect->getDefiningRecipe()->getDebugLoc();
+      NewFindLastSelect = LoopBuilder.createSelect(
+          SelectCond,
+          IVOfExpressionToSink ? IVOfExpressionToSink : FindLastExpression,
+          PhiR, DL);
+    } else {
+      FindLastSelect->replaceUsesOfWith(Cond, SelectCond);
     }
 
     // Create the reduction result in the middle block using sentinel directly.
@@ -5078,7 +5086,7 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
           RdxUnordered{1}, {}, /*HasUsesOutsideReductionChain=*/false);
       AnyOfPhi->insertAfter(PhiR);
 
-      VPBuilder LoopBuilder(BackedgeVal->getDefiningRecipe());
+      LoopBuilder.setInsertPoint(BackedgeVal->getDefiningRecipe());
       VPValue *OrVal = LoopBuilder.createOr(AnyOfPhi, SelectCond);
       AnyOfPhi->setOperand(1, OrVal);
 
