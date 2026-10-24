@@ -294,10 +294,6 @@ static mlir::Value genScalarLit(
       auto floatVal = consAPFloat(llvm::APFloatBase::IEEEsingle(), str);
       return genRealConstant(kind, builder, loc, floatVal);
     }
-    case 8: {
-      auto floatVal = consAPFloat(llvm::APFloatBase::IEEEdouble(), str);
-      return genRealConstant(kind, builder, loc, floatVal);
-    }
     case 10: {
       auto floatVal = consAPFloat(llvm::APFloatBase::x87DoubleExtended(), str);
       return genRealConstant(kind, builder, loc, floatVal);
@@ -306,8 +302,11 @@ static mlir::Value genScalarLit(
       auto floatVal = consAPFloat(llvm::APFloatBase::IEEEquad(), str);
       return genRealConstant(kind, builder, loc, floatVal);
     }
-    default:
-      llvm_unreachable("unsupported REAL kind");
+    default: {
+      // convert everything else to double
+      auto floatVal = consAPFloat(llvm::APFloatBase::IEEEdouble(), str);
+      return genRealConstant(kind, builder, loc, floatVal);
+    }
     }
   } else if constexpr (TC == Fortran::common::TypeCategory::Complex) {
     mlir::Value real = genScalarLit<Fortran::common::TypeCategory::Real>(
