@@ -130,6 +130,33 @@ module @constraint_with_result_multiple {
 
 // -----
 
+// CHECK-LABEL: module @constraint_with_result_in_sibling_branches
+module @constraint_with_result_in_sibling_branches {
+  // Check that when the same constraint is generated in sibling branches of the
+  // matcher tree, each branch uses the result of its own apply_constraint.
+
+  // CHECK: func @matcher(%[[ROOT:.*]]: !pdl.operation)
+  // CHECK: pdl_interp.switch_operation_name of %[[ROOT]] to ["test.a", "test.b"](^[[A:.*]], ^[[B:.*]]) -> ^{{.*}}
+  // CHECK: ^[[A]]:
+  // CHECK: %[[ATTR_A:.*]] = pdl_interp.apply_constraint "get_attr"(%[[ROOT]]
+  // CHECK: pdl_interp.record_match @rewriters::@rewrite_a(%[[ROOT]], %[[ATTR_A]] : !pdl.operation, !pdl.attribute)
+  // CHECK: ^[[B]]:
+  // CHECK: %[[ATTR_B:.*]] = pdl_interp.apply_constraint "get_attr"(%[[ROOT]]
+  // CHECK: pdl_interp.record_match @rewriters::@rewrite_b(%[[ROOT]], %[[ATTR_B]] : !pdl.operation, !pdl.attribute)
+  pdl.pattern @rewrite_a : benefit(1) {
+    %root = operation "test.a"
+    %attr = apply_native_constraint "get_attr"(%root : !pdl.operation) : !pdl.attribute
+    rewrite %root with "rewriter"(%attr : !pdl.attribute)
+  }
+  pdl.pattern @rewrite_b : benefit(1) {
+    %root = operation "test.b"
+    %attr = apply_native_constraint "get_attr"(%root : !pdl.operation) : !pdl.attribute
+    rewrite %root with "rewriter"(%attr : !pdl.attribute)
+  }
+}
+
+// -----
+
 // CHECK-LABEL: module @negated_constraint
 module @negated_constraint {
   // CHECK: func @matcher(%[[ROOT:.*]]: !pdl.operation)
