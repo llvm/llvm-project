@@ -41,7 +41,7 @@ define void @PR33706(ptr nocapture readonly %arg, ptr nocapture %arg1, i32 %arg2
 ; CHECK-NEXT:    [[TMP12:%.*]] = add i16 [[TMP8]], [[MUL_RESULT]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = sub i16 [[TMP8]], [[MUL_RESULT]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp ult i16 [[TMP12]], [[TMP8]]
-; CHECK-NEXT:    [[TMP15:%.*]] = icmp ugt i16 [[TMP13]], [[TMP8]]
+; CHECK-NEXT:    [[TMP15:%.*]] = icmp sgt i16 [[TMP13]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = select i1 [[TMP9]], i1 [[TMP15]], i1 [[TMP14]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = or i1 [[TMP16]], [[MUL_OVERFLOW]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = icmp ugt i32 [[TMP5]], 65535
