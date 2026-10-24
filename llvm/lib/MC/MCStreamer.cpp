@@ -339,8 +339,11 @@ static void copyBytesForDefRange(SmallString<20> &BytePrefix,
                                  const T &DefRangeHeader) {
   BytePrefix.resize(2 + sizeof(T));
   codeview::ulittle16_t SymKindLE = codeview::ulittle16_t(SymKind);
-  memcpy(&BytePrefix[0], &SymKindLE, 2);
-  memcpy(&BytePrefix[2], &DefRangeHeader, sizeof(T));
+  llvm::copy(ArrayRef<char>(reinterpret_cast<const char *>(&SymKindLE), 2),
+             &BytePrefix[0]);
+  llvm::copy(ArrayRef<char>(reinterpret_cast<const char *>(&DefRangeHeader),
+                            sizeof(T)),
+             &BytePrefix[2]);
 }
 
 void MCStreamer::emitCVDefRangeDirective(
