@@ -1550,6 +1550,7 @@ enum DebuggerBroadcastBit {
   eBroadcastBitWarning = (1 << 1),
   eBroadcastBitError = (1 << 2),
   eBroadcastSymbolChange = (1 << 3),
+  eBroadcastBitHint = (1 << 7),
   /// Deprecated
   eBroadcastBitProgressCategory = (1 << 4),
   eBroadcastBitExternalProgress = (1 << 5),
@@ -1562,6 +1563,7 @@ enum Severity {
   eSeverityError,
   eSeverityWarning,
   eSeverityInfo, // Equivalent to Remark used in clang.
+  eSeverityHint,
 };
 
 /// Callback return value, indicating whether it handled printing the

@@ -52,6 +52,9 @@ StructuredData::ObjectSP Serialize(llvm::ArrayRef<DiagnosticDetail> details) {
     case lldb::eSeverityInfo:
       severity = "note";
       break;
+    case lldb::eSeverityHint:
+      severity = "hint";
+      break;
     }
     detail_up->AddStringItem("severity", severity);
     detail_up->AddStringItem("message", diag.message);
@@ -78,6 +81,10 @@ static llvm::raw_ostream &PrintSeverity(Stream &stream,
   case lldb::eSeverityInfo:
     color = llvm::HighlightColor::Remark;
     text = "note: ";
+    break;
+  case lldb::eSeverityHint:
+    color = llvm::HighlightColor::Remark;
+    text = "hint: ";
     break;
   }
   return llvm::WithColor(stream.AsRawOstream(), color, llvm::ColorMode::Enable)

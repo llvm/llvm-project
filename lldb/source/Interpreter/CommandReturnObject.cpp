@@ -27,6 +27,12 @@ static llvm::raw_ostream &warning(Stream &strm) {
          << "warning: ";
 }
 
+static llvm::raw_ostream &hint(Stream &strm) {
+  return llvm::WithColor(strm.AsRawOstream(), llvm::HighlightColor::Remark,
+                         llvm::ColorMode::Enable)
+         << "hint: ";
+}
+
 static llvm::raw_ostream &note(Stream &strm) {
   return llvm::WithColor(strm.AsRawOstream(), llvm::HighlightColor::Note,
                          llvm::ColorMode::Enable)
@@ -37,8 +43,8 @@ static llvm::StringRef validate_diagnostic(llvm::StringRef diagnostic) {
   // This class is already adding the prefix.
   assert(!diagnostic.starts_with("warning:") &&
          !diagnostic.starts_with("error:") &&
-         !diagnostic.starts_with("note:") &&
-         "diagnostics shouldn't duplicate error:/warning:/note:");
+         !diagnostic.starts_with("note:") && !diagnostic.starts_with("hint:") &&
+         "diagnostics shouldn't duplicate error:/warning:/note:/hint:");
 
   // https://llvm.org/docs/CodingStandards.html#error-and-warning-messages
   assert(!diagnostic.ends_with('\n') && !diagnostic.ends_with('.') &&
@@ -65,8 +71,9 @@ static void DumpStringToStreamWithNewline(Stream &strm, const std::string &s) {
     strm.EOL();
 }
 
-CommandReturnObject::CommandReturnObject(bool colors)
-    : m_out_stream(colors), m_err_stream(colors), m_colors(colors) {}
+CommandReturnObject::CommandReturnObject(bool colors, bool show_hints)
+    : m_out_stream(colors), m_err_stream(colors), m_colors(colors),
+      m_show_hints(show_hints) {}
 
 void CommandReturnObject::AppendErrorWithFormat(const char *format, ...) {
   SetStatus(eReturnStatusFailed);
@@ -104,6 +111,15 @@ void CommandReturnObject::AppendWarning(llvm::StringRef in_string) {
   if (in_string.empty())
     return;
   warning(GetErrorStream()) << in_string.rtrim() << '\n';
+}
+
+void CommandReturnObject::AppendHint(llvm::StringRef in_string) {
+  if (!m_show_hints)
+    return;
+  in_string = validate_diagnostic(in_string);
+  if (in_string.empty())
+    return;
+  hint(GetErrorStream()) << in_string.rtrim() << '\n';
 }
 
 void CommandReturnObject::AppendError(llvm::StringRef in_string) {
