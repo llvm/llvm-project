@@ -1307,6 +1307,16 @@ Instruction *InstCombinerImpl::foldICmpWithZero(ICmpInst &Cmp) {
     // will fold to a constant elsewhere.
   }
 
+  // (icmp eq/ne (or (add X, Y), Y), 0) -> (icmp eq/ne (or X, Y), 0)
+  if (ICmpInst::isEquality(Pred)) {
+    Value *X, *Y;
+    if (match(Cmp.getOperand(0),
+              m_c_Or(m_c_Add(m_Value(X), m_Value(Y)), m_Deferred(Y)))) {
+      Value *NewOr = Builder.CreateOr(X, Y);
+      return new ICmpInst(Pred, NewOr, Cmp.getOperand(1));
+    }
+  }
+
   // (icmp eq/ne f(X), 0) -> (icmp eq/ne X, 0)
   // where f(X) == 0 if and only if X == 0
   if (ICmpInst::isEquality(Pred))
