@@ -1424,14 +1424,12 @@ public:
   /// Return true if the callsite is an indirect call.
   LLVM_ABI bool isIndirectCall() const;
 
-  /// Decode the exhaustive list of possible callees from !callees metadata.
-  ///
-  /// Return true for a well-formed attachment, including an empty one. Return
-  /// false if the attachment is absent, contains an operand that is not a
-  /// Function, or is on an inline assembly call. \p Callees is cleared on
-  /// failure. On success, duplicate functions are omitted while preserving the
-  /// order of their first occurrence. This does not check whether the called
-  /// operand satisfies the constraint.
+  /// Append the possible callees listed by !callees metadata to \p Callees and
+  /// return true, also for an empty list. Duplicates are omitted, keeping the
+  /// order of their first occurrence. Return false and leave \p Callees
+  /// unchanged if there is no such metadata or one of its operands is not a
+  /// Function, since such a list must be ignored. This does not check whether
+  /// the called operand is in the list.
   LLVM_ABI bool getCalleesMetadata(SmallVectorImpl<Function *> &Callees) const;
 
   /// Determine whether the passed iterator points to the callee operand's Use.

@@ -340,20 +340,15 @@ bool CallBase::isIndirectCall() const {
 }
 
 bool CallBase::getCalleesMetadata(SmallVectorImpl<Function *> &Callees) const {
-  Callees.clear();
-  if (isInlineAsm())
-    return false;
   const MDNode *MD = getMetadata(LLVMContext::MD_callees);
-  if (!MD)
+  if (!MD || !all_of(MD->operands(), [](const MDOperand &Op) {
+        return mdconst::dyn_extract_or_null<Function>(Op);
+      }))
     return false;
 
   SmallPtrSet<Function *, 4> Seen;
   for (const MDOperand &Op : MD->operands()) {
-    Function *Callee = mdconst::dyn_extract_or_null<Function>(Op);
-    if (!Callee) {
-      Callees.clear();
-      return false;
-    }
+    auto *Callee = mdconst::extract<Function>(Op);
     if (Seen.insert(Callee).second)
       Callees.push_back(Callee);
   }

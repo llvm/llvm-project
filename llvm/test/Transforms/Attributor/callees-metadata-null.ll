@@ -1,8 +1,8 @@
 ; RUN: opt -passes='globaldce,attributor' -S %s | FileCheck %s
 
 ; A function referenced only by metadata can be deleted, leaving a raw null
-; operand behind. The resulting malformed !callees attachment must be ignored
-; rather than interpreted as an exhaustive empty set.
+; operand behind. The resulting !callees list must then be ignored rather
+; than read as an empty set.
 
 define void @caller(ptr %callee) {
 ; CHECK-LABEL: define void @caller(
@@ -18,8 +18,8 @@ define internal void @metadata_only_target() {
 
 ; CHECK-NOT: define internal void @metadata_only_target
 
-; A well-formed empty attachment is an exhaustive empty set. Reaching the call
-; is therefore undefined, and Attributor may make the call site unreachable.
+; An empty list is an empty set. Reaching the call is therefore undefined,
+; and Attributor may make the call site unreachable.
 define void @empty_callees(ptr %callee) {
 ; CHECK-LABEL: define void @empty_callees(
 ; CHECK-NEXT:    unreachable
