@@ -14,9 +14,25 @@
 # RUN: llvm-cgdata --convert --format text %t.one.cgdata -o %t.one.txt
 # RUN: diff %t.zero.txt %t.one.txt
 # RUN: llvm-objdump -d %t.one.o | FileCheck %s --check-prefix=OUTLINE
+# RUN: llc -mtriple=aarch64-apple-darwin -enable-machine-outliner \
+# RUN:   -start-before=machine-outliner -machine-outliner-reruns=2 \
+# RUN:   -codegen-data-generate -machine-outliner-publish-unprofitable-candidates \
+# RUN:   -verify-machineinstrs -filetype=obj %s -o %t.two.o
+# RUN: llvm-cgdata --merge %t.two.o -o %t.two.cgdata
+# RUN: llvm-cgdata --convert --format text %t.two.cgdata -o %t.two.txt
+# RUN: diff %t.zero.txt %t.two.txt
+# RUN: llvm-cgdata --merge %t.two.o %t.two.o %t.two.o %t.two.o \
+# RUN:   -o %t.global.cgdata
+# RUN: llc -mtriple=aarch64-apple-darwin -enable-machine-outliner \
+# RUN:   -start-before=machine-outliner -codegen-data-use-path=%t.global.cgdata \
+# RUN:   -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=READ
 
-# Local outlining replaces four A-B sites, leaving one B-C site. Preserve the
-# latter across reruns without republishing the former.
+# The first iteration finds four profitable A-B sites and two unprofitable B-C
+# sites. Outlining A-B consumes one B-C site, so the next iteration cannot
+# rediscover B-C as a repeated substring. Retain its hash from the first
+# iteration and publish its single surviving site, without republishing A-B.
+# Check both exhausting the rerun limit and stopping early on a no-change rerun.
+# Merging four copies makes B-C globally profitable; Read mode must outline it.
 #
 # TREE: :outlined_hash_tree
 # TREE-NEXT: ---
@@ -51,6 +67,15 @@
 # OUTLINE-NEXT: orr w0, wzr, #0x3
 # OUTLINE-NEXT: orr w1, wzr, #0x7
 # OUTLINE-NEXT: ret
+#
+# READ-LABEL: _bc:
+# READ: bl _OUTLINED_FUNCTION_[[BC:[0-9]+]].content.
+# READ-NOT: orr
+# READ: ret
+# READ: _OUTLINED_FUNCTION_[[BC]].content.{{[0-9]+}}:
+# READ: orr w1, wzr, #0x7
+# READ-NEXT: orr w2, wzr, #0xf
+# READ-NEXT: ret
 
 --- |
   define void @abc() noredzone { unreachable }
