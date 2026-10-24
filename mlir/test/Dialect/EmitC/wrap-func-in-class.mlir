@@ -225,3 +225,9 @@ module attributes { } {
 // EXECUTE: execute()
 
 // CLASS-NAME-FORMAT: emitc.class @Custom_foo {
+
+// -----
+
+emitc.func private @external_func()
+
+// CHECK: emitc.func private @external_func()
