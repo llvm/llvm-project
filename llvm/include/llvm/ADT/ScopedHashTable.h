@@ -101,7 +101,7 @@ public:
 
 template <typename K, typename V, typename KInfo = DenseMapInfo<K>,
           typename AllocatorTy = MallocAllocator>
-class ScopedHashTableScope {
+class [[nodiscard]] ScopedHashTableScope {
   /// HT - The hashtable that we are active for.
   ScopedHashTable<K, V, KInfo, AllocatorTy> &HT;
 
