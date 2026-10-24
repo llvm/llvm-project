@@ -6,9 +6,9 @@
 define void @slt_guard_n_pos_and_n_sle_m(ptr %p, i32 %n, i32 %m) {
 ; CHECK-LABEL: 'slt_guard_n_pos_and_n_sle_m'
 ; CHECK-NEXT:  Determining loop execution counts for: @slt_guard_n_pos_and_n_sle_m
-; CHECK-NEXT:  Loop %inner: backedge-taken count is ({-1,+,-1}<nsw><%outer> + ({1,+,1}<nuw><nsw><%outer> smax %n))
+; CHECK-NEXT:  Loop %inner: backedge-taken count is {(-1 + %n),+,-1}<nw><%outer>
 ; CHECK-NEXT:  Loop %inner: constant max backedge-taken count is i32 2147483646
-; CHECK-NEXT:  Loop %inner: symbolic max backedge-taken count is ({-1,+,-1}<nsw><%outer> + ({1,+,1}<nuw><nsw><%outer> smax %n))
+; CHECK-NEXT:  Loop %inner: symbolic max backedge-taken count is {(-1 + %n),+,-1}<nw><%outer>
 ; CHECK-NEXT:  Loop %inner: Trip multiple is 1
 ; CHECK-NEXT:  Loop %outer: backedge-taken count is (-1 + %n)
 ; CHECK-NEXT:  Loop %outer: constant max backedge-taken count is i32 2147483646
@@ -47,9 +47,9 @@ exit:
 define void @ult_guard_n_ne0_and_n_ule_m(ptr %p, i32 %n, i32 %m) {
 ; CHECK-LABEL: 'ult_guard_n_ne0_and_n_ule_m'
 ; CHECK-NEXT:  Determining loop execution counts for: @ult_guard_n_ne0_and_n_ule_m
-; CHECK-NEXT:  Loop %inner: backedge-taken count is ({-1,+,-1}<nsw><%outer> + ({1,+,1}<nuw><nsw><%outer> umax %n))
+; CHECK-NEXT:  Loop %inner: backedge-taken count is {(-1 + %n),+,-1}<nw><%outer>
 ; CHECK-NEXT:  Loop %inner: constant max backedge-taken count is i32 -2
-; CHECK-NEXT:  Loop %inner: symbolic max backedge-taken count is ({-1,+,-1}<nsw><%outer> + ({1,+,1}<nuw><nsw><%outer> umax %n))
+; CHECK-NEXT:  Loop %inner: symbolic max backedge-taken count is {(-1 + %n),+,-1}<nw><%outer>
 ; CHECK-NEXT:  Loop %inner: Trip multiple is 1
 ; CHECK-NEXT:  Loop %outer: backedge-taken count is (-1 + %n)
 ; CHECK-NEXT:  Loop %outer: constant max backedge-taken count is i32 -2
@@ -127,9 +127,9 @@ exit:
 define void @slt_guard_n_sle_m_after_n_pos(ptr %p, i32 %n, i32 %m) {
 ; CHECK-LABEL: 'slt_guard_n_sle_m_after_n_pos'
 ; CHECK-NEXT:  Determining loop execution counts for: @slt_guard_n_sle_m_after_n_pos
-; CHECK-NEXT:  Loop %inner: backedge-taken count is ({-1,+,-1}<nsw><%outer> + ({1,+,1}<nuw><nsw><%outer> smax %n))
+; CHECK-NEXT:  Loop %inner: backedge-taken count is {(-1 + %n),+,-1}<nw><%outer>
 ; CHECK-NEXT:  Loop %inner: constant max backedge-taken count is i32 2147483646
-; CHECK-NEXT:  Loop %inner: symbolic max backedge-taken count is ({-1,+,-1}<nsw><%outer> + ({1,+,1}<nuw><nsw><%outer> smax %n))
+; CHECK-NEXT:  Loop %inner: symbolic max backedge-taken count is {(-1 + %n),+,-1}<nw><%outer>
 ; CHECK-NEXT:  Loop %inner: Trip multiple is 1
 ; CHECK-NEXT:  Loop %outer: backedge-taken count is (-1 + %n)
 ; CHECK-NEXT:  Loop %outer: constant max backedge-taken count is i32 2147483646
