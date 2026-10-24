@@ -3265,7 +3265,7 @@ void DwarfDebug::emitDebugLocEntry(ByteStreamer &Streamer,
   }
 }
 
-void DwarfDebug::emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
+bool DwarfDebug::emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
                                    const DbgValueLoc &Value,
                                    DwarfExpression &DwarfExpr) {
   auto *DIExpr = Value.getExpression();
@@ -3277,7 +3277,7 @@ void DwarfDebug::emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
       any_of(Value.getLocEntries(), [](const DbgValueLocEntry &Entry) {
         return Entry.isGlobalAddress();
       }))
-    return;
+    return true;
 
   DwarfExpr.addFragmentOffset(DIExpr);
 
@@ -3295,9 +3295,8 @@ void DwarfDebug::emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
 
     const TargetRegisterInfo &TRI = *AP.MF->getSubtarget().getRegisterInfo();
     if (!DwarfExpr.addMachineRegExpression(TRI, ExprCursor, Location.getReg()))
-      return;
-    DwarfExpr.addExpression(std::move(ExprCursor));
-    return;
+      return true;
+    return DwarfExpr.addExpression(std::move(ExprCursor));
   }
 
   // Regular entry.
@@ -3386,9 +3385,8 @@ void DwarfDebug::emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
 
   if (!Value.isVariadic()) {
     if (!EmitValueLocEntry(Value.getLocEntries()[0], ExprCursor))
-      return;
-    DwarfExpr.addExpression(std::move(ExprCursor));
-    return;
+      return true;
+    return DwarfExpr.addExpression(std::move(ExprCursor));
   }
 
   // If any of the location entries are registers with the value 0, then the
@@ -3396,9 +3394,9 @@ void DwarfDebug::emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
   if (any_of(Value.getLocEntries(), [](const DbgValueLocEntry &Entry) {
         return Entry.isLocation() && !Entry.getLoc().getReg();
       }))
-    return;
+    return true;
 
-  DwarfExpr.addExpression(
+  return DwarfExpr.addExpression(
       std::move(ExprCursor),
       [EmitValueLocEntry, &Value](unsigned Idx,
                                   DIExpressionCursor &Cursor) -> bool {
@@ -3416,20 +3414,20 @@ void DebugLocEntry::finalize(const AsmPrinter &AP,
   DebugLocStream::EntryBuilder Entry(List, Begin, End);
   BufferByteStreamer Streamer = Entry.getStreamer();
   DebugLocDwarfExpression DwarfExpr(AP.getDwarfVersion(), Streamer, TheCU);
-  const DbgValueLoc &Value = Values[0];
-  if (Value.isFragment()) {
-    // Emit all fragments that belong to the same variable and range.
+  if (Values.front().isFragment()) {
     assert(llvm::all_of(Values, [](DbgValueLoc P) {
           return P.isFragment();
         }) && "all values are expected to be fragments");
     assert(llvm::is_sorted(Values) && "fragments are expected to be sorted");
-
-    for (const auto &Fragment : Values)
-      DwarfDebug::emitDebugLocValue(AP, BT, Fragment, DwarfExpr);
-
   } else {
     assert(Values.size() == 1 && "only fragments may have >1 value");
-    DwarfDebug::emitDebugLocValue(AP, BT, Value, DwarfExpr);
+  }
+
+  for (const auto &Value : Values) {
+    if (!DwarfDebug::emitDebugLocValue(AP, BT, Value, DwarfExpr)) {
+      Entry.discard();
+      return;
+    }
   }
   DwarfExpr.finalize();
   if (DwarfExpr.TagOffset)
