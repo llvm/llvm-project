@@ -1880,7 +1880,14 @@ std::optional<RewriteableMemOps>
 SROA::isSafeSelectToSpeculateOrPredicate(SelectInst &SI, bool PreserveCFG) {
   RewriteableMemOps Ops;
 
-  for (User *U : SI.users()) {
+  SmallVector<User *> Users(SI.users());
+  for (unsigned Idx = 0; Idx != Users.size(); ++Idx) {
+    User *U = Users[Idx];
+    if (isa<AddrSpaceCastInst>(U)) {
+      append_range(Users, U->users());
+      continue;
+    }
+
     if (auto *Store = dyn_cast<StoreInst>(U)) {
       // We don't care about atomicity of stores as they're always predicated.
       if (Store->isVolatile() || PreserveCFG)
@@ -1933,6 +1940,12 @@ static void speculateSelectInstLoads(SelectInst &SI, LoadInst &LI,
 
   IRB.SetInsertPoint(&LI);
 
+  // Casts may separate the load from the select.
+  TV = IRB.CreateAddrSpaceCast(TV, LI.getPointerOperandType(),
+                               LI.getName() + ".sroa.speculate.cast.true");
+  FV = IRB.CreateAddrSpaceCast(FV, LI.getPointerOperandType(),
+                               LI.getName() + ".sroa.speculate.cast.false");
+
   LoadInst *TL =
       IRB.CreateAlignedLoad(LI.getType(), TV, LI.getAlign(),
                             LI.getName() + ".sroa.speculate.load.true");
@@ -1960,7 +1973,7 @@ static void speculateSelectInstLoads(SelectInst &SI, LoadInst &LI,
 
 template <typename T>
 static void rewriteMemOpOfSelect(SelectInst &SI, T &I,
-                                 SelectHandSpeculativity Spec,
+                                 SelectHandSpeculativity Spec, IRBuilderTy &IRB,
                                  DomTreeUpdater &DTU) {
   assert((isa<LoadInst>(I) || isa<StoreInst>(I)) && "Only for load and store!");
   LLVM_DEBUG(dbgs() << "    original mem op: " << I << "\n");
@@ -2001,6 +2014,12 @@ static void rewriteMemOpOfSelect(SelectInst &SI, T &I,
     }
     CondMemOp.insertBefore(NewMemOpBB->getTerminator()->getIterator());
     Value *Ptr = SI.getOperand(1 + SuccIdx);
+    // Casts may separate the memory operation from the select. Keep the
+    // original access pointer type, e.g. its address space.
+    IRB.SetInsertPoint(&CondMemOp);
+    Ptr = IRB.CreateAddrSpaceCast(Ptr, I.getPointerOperandType(),
+                                  I.getName() + (IsThen ? ".then" : ".else") +
+                                      ".cast");
     CondMemOp.setOperand(I.getPointerOperandIndex(), Ptr);
     if (isa<LoadInst>(I)) {
       CondMemOp.setName(I.getName() + (IsThen ? ".then" : ".else") + ".val");
@@ -2016,12 +2035,12 @@ static void rewriteMemOpOfSelect(SelectInst &SI, T &I,
 }
 
 static void rewriteMemOpOfSelect(SelectInst &SelInst, Instruction &I,
-                                 SelectHandSpeculativity Spec,
+                                 SelectHandSpeculativity Spec, IRBuilderTy &IRB,
                                  DomTreeUpdater &DTU) {
   if (auto *LI = dyn_cast<LoadInst>(&I))
-    rewriteMemOpOfSelect(SelInst, *LI, Spec, DTU);
+    rewriteMemOpOfSelect(SelInst, *LI, Spec, IRB, DTU);
   else if (auto *SI = dyn_cast<StoreInst>(&I))
-    rewriteMemOpOfSelect(SelInst, *SI, Spec, DTU);
+    rewriteMemOpOfSelect(SelInst, *SI, Spec, IRB, DTU);
   else
     llvm_unreachable_internal("Only for load and store.");
 }
@@ -2046,14 +2065,14 @@ static bool rewriteSelectInstMemOps(SelectInst &SI,
       speculateSelectInstLoads(SI, cast<LoadInst>(*I), IRB);
     } else {
       assert(DTU && "Should not get here when not allowed to modify the CFG!");
-      rewriteMemOpOfSelect(SI, *I, Spec, *DTU);
+      rewriteMemOpOfSelect(SI, *I, Spec, IRB, *DTU);
       CFGChanged = true;
     }
     I->eraseFromParent();
   }
 
   for (User *U : make_early_inc_range(SI.users()))
-    cast<BitCastInst>(U)->eraseFromParent();
+    cast<AddrSpaceCastInst>(U)->eraseFromParent();
   SI.eraseFromParent();
   return CFGChanged;
 }
