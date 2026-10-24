@@ -387,6 +387,12 @@ public:
   void processIndirectGoto(ExplodedNodeSet &Dst, const Expr *Tgt,
                            const CFGBlock *Dispatch, ExplodedNode *Pred);
 
+  /// processAsmGoto - Called by CoreEngine. Used to generate successor
+  ///  nodes for an asm goto, which may fall through or jump to any of its
+  ///  labels. The operands are invalidated as for a plain asm statement.
+  void processAsmGoto(const GCCAsmStmt *A, const CFGBlock *B,
+                      ExplodedNode *Pred, ExplodedNodeSet &Dst);
+
   /// ProcessSwitch - Called by CoreEngine. Used to generate successor
   ///  nodes by processing the 'effects' of a switch statement.
   void processSwitch(const SwitchStmt *Switch, ExplodedNode *Pred,
@@ -488,6 +494,15 @@ public:
   /// VisitGCCAsmStmt - Transfer function logic for inline asm.
   void VisitGCCAsmStmt(const GCCAsmStmt *A, ExplodedNode *Pred,
                        ExplodedNodeSet &Dst);
+
+  /// Invalidate the regions that the outputs and inputs of an inline asm
+  /// statement refer to. Nothing is known about what the assembly does with
+  /// them.
+  ProgramStateRef invalidateAsmOperands(const GCCAsmStmt *A,
+                                        ProgramStateRef State,
+                                        ConstCFGElementRef Elem,
+                                        unsigned BlockCount,
+                                        const StackFrame *SF);
 
   /// VisitMSAsmStmt - Transfer function logic for MS inline asm.
   void VisitMSAsmStmt(const MSAsmStmt *A, ExplodedNode *Pred,
