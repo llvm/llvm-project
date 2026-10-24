@@ -337,17 +337,27 @@ private:
       }
     }
 
+    // Whether the function body is empty, checking the line after the left
+    // brace, which may be wrapped onto its own line.
+    const bool LBraceWrapped = NextLine.First->is(TT_FunctionLBrace) &&
+                               NextLine.First == NextLine.Last;
+    const bool IsEmptyFunction =
+        LBraceWrapped ? I + 2 != E && I[2]->First->is(tok::r_brace)
+                      : NextLine.First->is(tok::r_brace);
+
     auto ShouldMergeShortFunctions = [&] {
       if (Style.AllowShortFunctionsOnASingleLine.isAll())
         return true;
 
-      if (Style.AllowShortFunctionsOnASingleLine.Empty &&
-          NextLine.First->is(tok::r_brace)) {
+      if (Style.AllowShortFunctionsOnASingleLine.Empty && IsEmptyFunction)
         return true;
-      }
 
-      if (Style.AllowShortFunctionsOnASingleLine.Inline &&
-          !Style.AllowShortFunctionsOnASingleLine.Other) {
+      // Other covers only non-empty functions. Empty functions are left to
+      // Empty and Inline.
+      if (Style.AllowShortFunctionsOnASingleLine.Other && !IsEmptyFunction)
+        return true;
+
+      if (Style.AllowShortFunctionsOnASingleLine.Inline) {
         if (Style.isJavaScript() && TheLine->Last->is(TT_FunctionLBrace))
           return true;
 
@@ -574,10 +584,7 @@ private:
       Limit -= 2;
 
       unsigned MergedLines = 0;
-      if (MergeShortFunctions ||
-          (Style.AllowShortFunctionsOnASingleLine.Empty &&
-           NextLine.First == NextLine.Last && I + 2 != E &&
-           I[2]->First->is(tok::r_brace))) {
+      if (MergeShortFunctions) {
         MergedLines = tryMergeSimpleBlock(I + 1, E, Limit);
         // If we managed to merge the block, count the function header, which is
         // on a separate line.
