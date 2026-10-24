@@ -267,15 +267,15 @@ define i32 @rint(i32 %arg) {
 
 define i32 @trunc(i32 %arg) {
 ; SSE2-LABEL: 'trunc'
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %F32 = call float @llvm.trunc.f32(float undef)
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %V2F32 = call <2 x float> @llvm.trunc.v2f32(<2 x float> undef)
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %V4F32 = call <4 x float> @llvm.trunc.v4f32(<4 x float> undef)
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 86 for instruction: %V8F32 = call <8 x float> @llvm.trunc.v8f32(<8 x float> undef)
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 172 for instruction: %V16F32 = call <16 x float> @llvm.trunc.v16f32(<16 x float> undef)
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %F64 = call double @llvm.trunc.f64(double undef)
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %V2F64 = call <2 x double> @llvm.trunc.v2f64(<2 x double> undef)
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 42 for instruction: %V4F64 = call <4 x double> @llvm.trunc.v4f64(<4 x double> undef)
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 84 for instruction: %V8F64 = call <8 x double> @llvm.trunc.v8f64(<8 x double> undef)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F32 = call float @llvm.trunc.f32(float undef)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2F32 = call <2 x float> @llvm.trunc.v2f32(<2 x float> undef)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4F32 = call <4 x float> @llvm.trunc.v4f32(<4 x float> undef)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8F32 = call <8 x float> @llvm.trunc.v8f32(<8 x float> undef)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16F32 = call <16 x float> @llvm.trunc.v16f32(<16 x float> undef)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F64 = call double @llvm.trunc.f64(double undef)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2F64 = call <2 x double> @llvm.trunc.v2f64(<2 x double> undef)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4F64 = call <4 x double> @llvm.trunc.v4f64(<4 x double> undef)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8F64 = call <8 x double> @llvm.trunc.v8f64(<8 x double> undef)
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE42-LABEL: 'trunc'
