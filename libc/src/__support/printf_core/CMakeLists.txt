@@ -58,7 +58,6 @@ if(LIBC_CONF_PRINTF_DISABLE_WIDE)
 else()
   set(wchar_deps
     libc.hdr.types.wchar_t
-    libc.hdr.types.char32_t
     libc.hdr.types.char8_t
     libc.hdr.types.wint_t
     libc.hdr.wchar_macros
