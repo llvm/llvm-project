@@ -64,6 +64,9 @@ def main():
         if "TEMP" in os.environ:
             env["TEMP"] = os.environ.get("TEMP")
 
+    # Preserve qemu-user configuration from the parent process.
+    env.update({k: v for k, v in os.environ.items() if k.startswith("QEMU_")})
+
     # Run the command line with the given environment in the execution directory.
     return subprocess.call(commandLine, cwd=args.execdir, env=env, shell=False)
 
