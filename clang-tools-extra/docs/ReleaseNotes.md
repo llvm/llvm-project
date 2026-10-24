@@ -10,7 +10,6 @@ myst:
 % ReleaseNotes.md and ReleaseNotesTemplate.txt.
 
 {#extra-clang-tools-release-releasenotestitle}
-
 # Extra Clang Tools {{env.config.release}} {{ (('(In-Progress) ' if env.app.tags.has('PreRelease') else '') ~ 'Release Notes') }}
 
 Written by the [LLVM Team](https://llvm.org/)
@@ -42,7 +41,6 @@ the current one. To see the release notes for a specific release, please
 see the [releases page](https://llvm.org/releases/).
 
 {#what-s-new-in-extra-clang-tools-release}
-
 ## What's New in Extra Clang Tools {{env.config.release}}?
 
 Some of the major new features and improvements to Extra Clang Tools are listed
