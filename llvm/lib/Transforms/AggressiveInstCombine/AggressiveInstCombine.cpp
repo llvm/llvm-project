@@ -2644,6 +2644,61 @@ static bool foldMemSetZeroOrOneLength(Instruction &I, const DataLayout &DL,
   return true;
 }
 
+// Share a scalar floor conversion with an index that must be nonpoison.
+static bool foldFloorIndex(Instruction &I, DominatorTree &DT,
+                           TargetTransformInfo &TTI) {
+  auto *Cast = dyn_cast<FPToSIInst>(&I);
+  if (!Cast)
+    return false;
+  FPToSIInst &FI = *Cast;
+  auto *Floor = dyn_cast<IntrinsicInst>(FI.getOperand(0));
+  if (FI.getType()->isIntegerTy(32) && Floor &&
+      Floor->getIntrinsicID() == Intrinsic::floor &&
+      Floor->getType()->isDoubleTy() && TTI.isTypeLegal(Floor->getType()) &&
+      Floor->hasNUses(2) && !Floor->isStrictFP() &&
+      !FI.getFunction()->hasFnAttribute(Attribute::StrictFP) &&
+      TTI.canFoldFloorIntoFPToSI(Floor->getType(), FI.getType())) {
+    Use *FPUse = nullptr;
+    for (Use &U : Floor->uses())
+      if (U.getUser() != &FI)
+        FPUse = &U;
+
+    // A poisoned index must already cause UB. Freezing, masking or ignoring it
+    // is insufficient. Check all guards before inserting any instructions.
+    if (FPUse && DT.dominates(&FI, *FPUse) && programUndefinedIfPoison(&FI)) {
+      constexpr auto CK = TargetTransformInfo::TCK_RecipThroughput;
+      IntrinsicCostAttributes FloorCost(Intrinsic::floor, *Floor);
+      IntrinsicCostAttributes SignCost(Intrinsic::copysign, Floor->getType(),
+                                       {Floor->getType(), Floor->getType()});
+      InstructionCost OldCost = TTI.getIntrinsicInstrCost(FloorCost, CK);
+      InstructionCost NewCost =
+          TTI.getCastInstrCost(Instruction::SIToFP, Floor->getType(),
+                               FI.getType(),
+                               TargetTransformInfo::CastContextHint::None, CK) +
+          TTI.getIntrinsicInstrCost(SignCost, CK);
+      if (OldCost.isValid() && NewCost.isValid() && NewCost < OldCost) {
+        // Every defined execution has an in-range i32 index, which converts
+        // exactly to double. Preserve floor(-0) without assuming nsz. The same
+        // frozen input feeds both floor and copysign, including undef inputs.
+        Value *X = Floor->getArgOperand(0);
+        IRBuilder<> Builder(Floor);
+        Builder.SetInsertPoint(Floor);
+        Value *Frozen = Builder.CreateFreeze(X, "floor.input");
+        Floor->setArgOperand(0, Frozen);
+        Builder.SetInsertPoint(FI.getParent(), std::next(FI.getIterator()));
+        Value *Converted =
+            Builder.CreateSIToFP(&FI, Floor->getType(), "floor.int");
+        Value *Rebuilt = Builder.CreateBinaryIntrinsic(
+            Intrinsic::copysign, Converted, Frozen, nullptr, "floor.shared");
+        FPUse->set(Rebuilt);
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 /// This is the entry point for folds that could be implemented in regular
 /// InstCombine, but they are separated because they are not expected to
 /// occur frequently and/or have more than a constant-length pattern match.
@@ -2671,6 +2726,7 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
       MadeChange |= tryToRecognizePopCount(I);
       MadeChange |= tryToRecognizePopCount1(I);
       MadeChange |= tryToRecognizePopCount2n3(I);
+      MadeChange |= foldFloorIndex(I, DT, TTI);
       MadeChange |= tryToFPToSat(I, TTI);
       MadeChange |= tryToRecognizeTableBasedPatterns(I, DL, TTI);
       MadeChange |= foldConsecutiveLoads(I, DL, TTI, AA, DT);

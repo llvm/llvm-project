@@ -27,6 +27,13 @@ using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "riscvtti"
 
+bool RISCVTTIImpl::canFoldFloorIntoFPToSI(Type *SrcTy, Type *DestTy) const {
+  // Match the scalar types supported by performFP_TO_INTCombine.
+  return (SrcTy->isFloatTy() || SrcTy->isDoubleTy()) && isTypeLegal(SrcTy) &&
+         (DestTy->isIntegerTy(32) ||
+          (ST->is64Bit() && DestTy->isIntegerTy(64)));
+}
+
 InstructionCost
 RISCVTTIImpl::getRISCVInstructionCost(ArrayRef<unsigned> OpCodes, MVT VT,
                                       TTI::TargetCostKind CostKind) const {
