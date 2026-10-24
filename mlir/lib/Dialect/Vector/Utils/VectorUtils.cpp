@@ -603,23 +603,26 @@ Operation *vector::createWriteOrMaskedWrite(OpBuilder &builder, Location loc,
           ? memref::getMixedSizes(builder, loc, dest)
           : tensor::getMixedSizes(builder, loc, dest);
 
-  // Compute sizes for write-mask: `dim - index` for each dest dim written to,
-  // in increasing order, as the mask dims are.
-  SmallVector<int64_t> writtenDims;
+  // The mask has one dim for each dest dim that the vector is written to, in
+  // increasing order. For each of these "masked" dest dims, collect the mask
+  // size (`dim - index`), the write index and the dest size.
+  SmallVector<int64_t> maskedDestDims;
   for (AffineExpr expr : map.getResults())
-    writtenDims.push_back(cast<AffineDimExpr>(expr).getPosition());
-  llvm::sort(writtenDims);
+    maskedDestDims.push_back(cast<AffineDimExpr>(expr).getPosition());
+  llvm::sort(maskedDestDims);
   SmallVector<OpFoldResult> maskSizes;
-  for (int64_t dim : writtenDims) {
+  SmallVector<Value> maskedDestIndices;
+  SmallVector<int64_t> maskedDestShape;
+  for (int64_t dim : maskedDestDims) {
     Value size = getValueOrCreateConstantIndexOp(builder, loc, destSizes[dim]);
     maskSizes.push_back(
         builder.createOrFold<arith::SubIOp>(loc, size, writeIndices[dim]));
+    maskedDestIndices.push_back(writeIndices[dim]);
+    maskedDestShape.push_back(destShape[dim]);
   }
 
-  // TODO: isMaskTriviallyFoldable checks the trailing dims against the leading
-  // indices. Make it use the dims that the map selects and their indices.
-  if (!permutationMap && isMaskTriviallyFoldable(maskSizes, writeIndices,
-                                                 destShape, vecToStoreShape))
+  if (isMaskTriviallyFoldable(maskSizes, maskedDestIndices, maskedDestShape,
+                              writeMaskType.getShape()))
     return write;
 
   Value maskForWrite =
