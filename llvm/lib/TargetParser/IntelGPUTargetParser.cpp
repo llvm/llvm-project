@@ -74,16 +74,9 @@ IGCATarget llvm::IntelGPU::parseIGCATarget(StringRef MaybeTarget) {
 }
 
 StringRef llvm::IntelGPU::getIGCATargetName(IGCATarget T) {
-  switch (T.pack()) {
 #define INTEL_IGCA_TARGET(NAME, TARGET, FEATURE_SET)                           \
-  case IGCATarget(TARGET, IGCAFeatureSet::FEATURE_SET).pack():                 \
+  if (T == IGCATarget(TARGET, IGCAFeatureSet::FEATURE_SET))                    \
     return NAME;
 #include "llvm/TargetParser/IntelGPUTargetParser.def"
-  default:
-    return "";
-  }
+  return "";
 }
-
-// FIXME(IGCA): Make -fsycl --offload-arch provides a list of valid IGCA
-// targets upon a bad IGCA target, similar to how compiling for an nvptx triple
-// returns a list of valid GPU architectures.

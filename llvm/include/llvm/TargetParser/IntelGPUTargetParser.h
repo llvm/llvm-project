@@ -65,15 +65,12 @@ class IGCATarget {
 
   /// \return true if \p Packed contains a target listed in INTEL_IGCA_TARGET.
   static constexpr bool isKnownIGCATarget(uint32_t Packed) {
-    switch (Packed) {
 #define INTEL_IGCA_TARGET(NAME, TARGET, FEATURE_SET)                           \
-  case uint32_t(TARGET) << TargetShift |                                       \
-      llvm::to_underlying(IGCAFeatureSet::FEATURE_SET):
+  if (Packed == (uint32_t(TARGET) << TargetShift |                             \
+                 llvm::to_underlying(IGCAFeatureSet::FEATURE_SET)))            \
+    return true;
 #include "llvm/TargetParser/IntelGPUTargetParser.def"
-      return true;
-    default:
-      return false;
-    }
+    return false;
   }
 
   constexpr explicit IGCATarget(uint32_t Packed) {
