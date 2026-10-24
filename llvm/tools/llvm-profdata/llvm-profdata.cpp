@@ -789,7 +789,14 @@ static Error loadInput(
                               Filename);
     };
 
-    WC->Writer.addMemProfData(Reader->takeMemProfData(), MemProfError);
+    if (!WC->Writer.addMemProfData(Reader->takeMemProfData(), MemProfError)) {
+      WC->Errors.emplace_back(
+          make_error<StringError>(
+              "MemProf data for this input was not fully merged due to a "
+              "frame/call-stack id mismatch; its records were discarded.",
+              std::error_code()),
+          Filename);
+    }
     return Error::success();
   }
 
@@ -829,7 +836,14 @@ static Error loadInput(
           Filename);
     }
 
-    WC->Writer.addMemProfData(std::move(MemProfData), MemProfError);
+    if (!WC->Writer.addMemProfData(std::move(MemProfData), MemProfError)) {
+      WC->Errors.emplace_back(
+          make_error<StringError>(
+              "MemProf data for this input was not fully merged due to a "
+              "frame/call-stack id mismatch; its records were discarded.",
+              std::error_code()),
+          Filename);
+    }
     WC->Writer.addDataAccessProfData(std::move(DataAccessProfData));
     return Error::success();
   }
