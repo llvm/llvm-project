@@ -176,6 +176,9 @@ LLVM_ABI IGCATarget parseIGCATarget(StringRef MaybeTarget);
 /// \p Target is invalid.
 LLVM_ABI StringRef getIGCATargetName(IGCATarget Target);
 
+/// Append every valid IGCA target spelling to \p Values.
+LLVM_ABI void fillValidIGCATargetList(SmallVectorImpl<StringRef> &Values);
+
 } // namespace IntelGPU
 } // namespace llvm
 
