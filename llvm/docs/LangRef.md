@@ -7915,10 +7915,10 @@ indirect-call promotion.
 An empty node denotes an empty set, so executing the call has undefined
 behavior.
 
-Each operand must refer to a `Function`. If any operand does not, the entire
-attachment provides no information and must be ignored. This includes null
-operands left behind when a function referenced only through metadata is
-deleted. `callees` metadata is not allowed on inline assembly calls.
+If any operand does not refer to a `Function`, the entire attachment provides
+no information and must be ignored. This includes null operands left behind
+when a function referenced only through metadata is deleted. `callees`
+metadata is not allowed on inline assembly calls.
 
 For example, in the code below, the call instruction may only target the
 `add` or `sub` functions:

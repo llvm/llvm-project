@@ -512,9 +512,9 @@ static void computeFunctionSummary(
         if (!CalledValue || isa<Constant>(CalledValue))
           continue;
 
-        // If the instruction has valid callees metadata, add its callees to
-        // CallGraphEdges to reflect the references from the metadata, and to
-        // enable importing for subsequent indirect call promotion and
+        // Check if the instruction has a callees metadata. If so, add callees
+        // to CallGraphEdges to reflect the references from the metadata, and
+        // to enable importing for subsequent indirect call promotion and
         // inlining.
         SmallVector<Function *, 4> Callees;
         if (CB->getCalleesMetadata(Callees))
