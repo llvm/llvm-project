@@ -560,6 +560,25 @@ SPIR-V Dialect op | LLVM Dialect op
 `spirv.Select`      | `llvm.select`
 `spirv.Undef`       | `llvm.mlir.undef`
 
+#### `spirv.KHR.Expect` and `spirv.KHR.AssumeTrue`
+
+The `SPV_KHR_expect_assume` hints map to the corresponding LLVM intrinsics.
+
+SPIR-V Dialect op      | LLVM Dialect op
+:--------------------: | :----------------:
+`spirv.KHR.Expect`     | `llvm.intr.expect`
+`spirv.KHR.AssumeTrue` | `llvm.intr.assume`
+
+`spirv.KHR.Expect` returns its `value` operand unchanged and `expectedValue`
+is only a hint, exactly like `llvm.intr.expect`. Scalar integer and Boolean
+(`i1`) values are supported; `llvm.intr.expect` does not accept vectors, so
+`spirv.KHR.Expect` on vector values is not converted.
+
+```mlir
+%0 = spirv.KHR.Expect %val, %exp : i32  =>  %0 = llvm.intr.expect %val, %exp : i32
+spirv.KHR.AssumeTrue %cond              =>  llvm.intr.assume %cond : i1
+```
+
 ### Shift ops
 
 Shift operates on two operands: `shift` and `base`.

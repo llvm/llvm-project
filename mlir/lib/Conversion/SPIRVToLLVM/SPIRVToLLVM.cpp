@@ -1039,6 +1039,44 @@ public:
   }
 };
 
+/// Converts `spirv.KHR.Expect` to `llvm.intr.expect`. Both are pure hints that
+/// return `value` unchanged; `expectedValue` is only used by the optimizer.
+/// `llvm.intr.expect` only accepts scalar integers, so vector operands are not
+/// converted.
+class KHRExpectPattern : public SPIRVToLLVMConversion<spirv::KHRExpectOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::KHRExpectOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::KHRExpectOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type dstType = getTypeConverter()->convertType(op.getType());
+    if (!dstType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+    if (!isa<IntegerType>(dstType))
+      return rewriter.notifyMatchFailure(
+          op, "llvm.intr.expect only supports scalar integer values");
+
+    rewriter.replaceOpWithNewOp<LLVM::ExpectOp>(op, dstType, adaptor.getValue(),
+                                                adaptor.getExpectedValue());
+    return success();
+  }
+};
+
+/// Converts `spirv.KHR.AssumeTrue` to `llvm.intr.assume`.
+class KHRAssumeTruePattern
+    : public SPIRVToLLVMConversion<spirv::KHRAssumeTrueOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::KHRAssumeTrueOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::KHRAssumeTrueOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<LLVM::AssumeOp>(op, adaptor.getCondition());
+    return success();
+  }
+};
+
 class InverseSqrtPattern
     : public SPIRVToLLVMConversion<spirv::GLInverseSqrtOp> {
 public:
@@ -2405,7 +2443,7 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       CompositeExtractPattern, CompositeInsertPattern,
       DirectConversionPattern<spirv::SelectOp, LLVM::SelectOp>,
       DirectConversionPattern<spirv::UndefOp, LLVM::UndefOp>,
-      VectorShufflePattern,
+      VectorShufflePattern, KHRExpectPattern, KHRAssumeTruePattern,
 
       // Shift ops
       ShiftPattern<spirv::ShiftRightArithmeticOp, LLVM::AShrOp>,
