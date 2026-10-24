@@ -20,6 +20,19 @@ void potential_const_pointer() {
   // CHECK-FIXES: doublePtr const p_local1 = &np_local1[0];
 }
 
+typedef void *PVOID;
+using PointerAlias = void *;
+
+void array_of_pointer_alias() {
+  PVOID direct[3]{};
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'direct' of type 'PVOID[3]' (aka 'void *[3]') can be declared 'const'
+  // CHECK-FIXES: PVOID const direct[3]{};
+
+  PointerAlias alias[3]{};
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'alias' of type 'PointerAlias[3]' (aka 'void *[3]') can be declared 'const'
+  // CHECK-FIXES: PointerAlias const alias[3]{};
+}
+
 void range_for() {
   int np_local0[2] = {1, 2};
   int *p_local0[2] = {&np_local0[0], &np_local0[1]};

@@ -265,6 +265,9 @@ infrastructure are described first, followed by tool-specific sections.
   - No longer diagnoses parameters of `main`, whose signature is fixed by the
     standard.
 
+  - Fixed incorrect pointee-const suggestions for arrays of pointer typedefs or
+    type aliases, where the fix would make the pointers themselves `const`.
+
 - Fixed an infinite loop in {doc}`misc-multiple-inheritance
   <clang-tidy/checks/misc/multiple-inheritance>` when checking a class that
   inherits from itself or has a circular inheritance graph.
