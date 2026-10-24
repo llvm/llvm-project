@@ -75,10 +75,8 @@ define void @fptosi_sat_v4f32_to_v4i16(ptr %res, ptr %a) nounwind {
 ; LA32-NEXT:    movcf2gr $a2, $fcc0
 ; LA32-NEXT:    masknez $a1, $a1, $a2
 ; LA32-NEXT:    vinsgr2vr.h $vr1, $a1, 3
-; LA32-NEXT:    vpickve2gr.w $a1, $vr1, 1
-; LA32-NEXT:    st.w $a1, $a0, 4
-; LA32-NEXT:    vpickve2gr.w $a1, $vr1, 0
-; LA32-NEXT:    st.w $a1, $a0, 0
+; LA32-NEXT:    vstelm.w $vr1, $a0, 4, 1
+; LA32-NEXT:    vstelm.w $vr1, $a0, 0, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: fptosi_sat_v4f32_to_v4i16:

@@ -1079,9 +1079,10 @@ def CIR_UnionType : CIR_Type<"Union", "union", [
      - Anonymous: no name and a known body.
 
     Padded unions carry an explicit tail-padding type to ensure the LLVM struct
-    that models the union has the correct byte size.  That slot is separate
-    from the per-member kinds described by `CIR_RecordMemberKind`, which say
-    what each variant holds.  The parser rejects a mark on that slot.
+    that models the union has the correct byte size.  The padding type is
+    `!u8i` or an array of `!u8i`.  That slot is separate from the
+    per-member kinds described by `CIR_RecordMemberKind`, which say what each
+    variant holds.  The parser rejects a mark on that slot.
 
     Examples:
 

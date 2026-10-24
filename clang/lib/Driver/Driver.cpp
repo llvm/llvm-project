@@ -4551,7 +4551,8 @@ Action *Driver::ConstructPhaseAction(
 
 static bool isOffloadDeviceCC1JobCandidate(Command &Job) {
   const Action &Source = Job.getSource();
-  if (!isa<CompileJobAction>(Source) && !isa<BackendJobAction>(Source))
+  if (!isa<CompileJobAction>(Source) && !isa<BackendJobAction>(Source) &&
+      !isa<AssembleJobAction>(Source))
     return false;
 
   if (Job.getBoundArch().empty() && !Source.getOffloadingArch().empty())

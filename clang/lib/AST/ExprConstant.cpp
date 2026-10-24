@@ -2748,9 +2748,14 @@ static bool HandleFloatToIntCast(EvalInfo &Info, const Expr *E,
   unsigned DestWidth = Info.Ctx.getIntWidth(DestType);
   // Determine whether we are converting to unsigned or signed.
   bool DestSigned = DestType->isSignedIntegerOrEnumerationType();
-
+  // This handles converstion to bool.
+  if (DestType->isBooleanType()) {
+    Result = APSInt(APInt(1, !Value.isZero()), /*isUnsigned=*/true);
+    return true;
+  }
   Result = APSInt(DestWidth, !DestSigned);
   bool ignored;
+
   if (Value.convertToInteger(Result, llvm::APFloat::rmTowardZero, &ignored)
       & APFloat::opInvalidOp)
     return HandleOverflow(Info, E, Value, DestType);
@@ -22797,6 +22802,13 @@ APSInt Expr::EvaluateKnownConstInt(const ASTContext &Ctx) const {
   ExprTimeTraceScope TimeScope(this, Ctx, "EvaluateKnownConstInt");
   EvalResult EVResult;
 
+  bool IsConst;
+  if (FastEvaluateAsRValue(this, EVResult.Val, Ctx, IsConst)) {
+    assert(IsConst);
+    assert(EVResult.Val.isInt() && "Expression did not evaluate to integer");
+    return EVResult.Val.getInt();
+  }
+
   if (Ctx.getLangOpts().EnableNewConstInterp) {
     interp::EvalSettings Settings(EvaluationMode::IgnoreSideEffects, EVResult,
                                   /*SProxy=*/nullptr);
@@ -22829,6 +22841,13 @@ APSInt Expr::EvaluateKnownConstIntCheckOverflow(
   ExprTimeTraceScope TimeScope(this, Ctx, "EvaluateKnownConstIntCheckOverflow");
   EvalResult EVResult;
   EVResult.Diag = Diag;
+
+  bool IsConst;
+  if (FastEvaluateAsRValue(this, EVResult.Val, Ctx, IsConst)) {
+    assert(IsConst);
+    assert(EVResult.Val.isInt() && "Expression did not evaluate to integer");
+    return EVResult.Val.getInt();
+  }
 
   if (Ctx.getLangOpts().EnableNewConstInterp) {
     interp::EvalSettings Settings(EvaluationMode::IgnoreSideEffects, EVResult,

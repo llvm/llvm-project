@@ -3215,9 +3215,46 @@ ArrayRef<const Record *> RecordKeeper::getDefs() const {
   return getSortedRecords(Defs, SortedDefs);
 }
 
+// Return true if R is a subclass of Class, like R->isSubClassOf(Class), and
+// remember the result for each class visited in Memo.
+namespace {
+// Answers R->isSubClassOf(Class) for many records. Many records share
+// superclasses, so remember the answer for each superclass instead of
+// searching its superclasses again.
+class SubClassOfCache {
+  const Record *Class;
+  DenseMap<const Record *, bool> SuperClassResults;
+
+public:
+  explicit SubClassOfCache(const Record *Class) : Class(Class) {}
+
+  // Return true if SC is Class or a subclass of it.
+  bool isSuperClassSubClassOf(const Record *SC) {
+    if (SC == Class)
+      return true;
+    if (auto It = SuperClassResults.find(SC); It != SuperClassResults.end())
+      return It->second;
+
+    // isSubClassOf may add to SuperClassResults, so insert afterwards.
+    bool Result = isSubClassOf(SC);
+    SuperClassResults.try_emplace(SC, Result);
+    return Result;
+  }
+
+  bool isSubClassOf(const Record *R) {
+    for (const Record *SC : make_first_range(R->getDirectSuperClasses())) {
+      if (isSuperClassSubClassOf(SC))
+        return true;
+    }
+
+    return false;
+  }
+};
+} // namespace
+
 std::vector<const Record *>
 RecordKeeper::getAllDerivedDefinitions(ArrayRef<StringRef> ClassNames) const {
-  SmallVector<const Record *, 2> ClassRecs;
+  SmallVector<SubClassOfCache, 2> Classes;
   std::vector<const Record *> Derived;
 
   assert(ClassNames.size() > 0 && "At least one class must be passed.");
@@ -3225,17 +3262,27 @@ RecordKeeper::getAllDerivedDefinitions(ArrayRef<StringRef> ClassNames) const {
     const Record *Class = getClass(ClassName);
     if (!Class)
       PrintFatalError("The class '" + ClassName + "' is not defined\n");
-    ClassRecs.push_back(Class);
+    Classes.emplace_back(Class);
   }
 
-  // The iteration order of Defs doesn't matter since the result is sorted.
-  for (const auto &OneDef : Defs) {
-    const Record *Def = OneDef.second.get();
-    if (all_of(ClassRecs,
-               [Def](const Record *Class) { return Def->isSubClassOf(Class); }))
-      Derived.push_back(Def);
+  // Find the defs derived from the first class through their direct
+  // superclasses, which there are far fewer of than defs. The iteration order
+  // doesn't matter since the result is sorted.
+  for (const auto &[SC, SCDefs] : DefsByDirectSuperClass) {
+    if (!Classes.front().isSuperClassSubClassOf(SC))
+      continue;
+
+    for (const Record *Def : SCDefs) {
+      if (all_of(drop_begin(Classes),
+                 [Def](SubClassOfCache &C) { return C.isSubClassOf(Def); }))
+        Derived.push_back(Def);
+    }
   }
+
+  // A def is found once for each of its direct superclasses derived from the
+  // first class.
   llvm::sort(Derived, LessRecord());
+  Derived.erase(llvm::unique(Derived), Derived.end());
   return Derived;
 }
 

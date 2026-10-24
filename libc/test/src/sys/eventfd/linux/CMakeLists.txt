@@ -1,9 +1,9 @@
-add_custom_target(libc_sys_eventfd_unittests)
+add_libc_testsuite(libc-sys-eventfd-tests)
 
 add_libc_test(
   eventfd_test
   SUITE
-    libc_sys_eventfd_unittests
+    libc-sys-eventfd-tests
   SRCS
     eventfd_test.cpp
   DEPENDS
