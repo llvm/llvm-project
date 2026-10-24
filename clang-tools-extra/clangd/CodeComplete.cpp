@@ -2212,6 +2212,7 @@ clang::CodeCompleteOptions CodeCompleteOptions::getClangCompleteOpts() const {
   // Tell Sema not to deserialize the preamble to look for results.
   Result.LoadExternal = ForceLoadPreamble || !Index;
   Result.IncludeFixIts = IncludeFixIts;
+  Result.IncludeHLSLSwizzleCompletions = true;
 
   return Result;
 }
