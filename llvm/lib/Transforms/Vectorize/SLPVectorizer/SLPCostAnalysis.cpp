@@ -186,6 +186,54 @@ InstructionCost getBlendedLoadCost(const TargetTransformInfo &TTI, Type *VecTy,
                                 CmpInst::BAD_ICMP_PREDICATE, CostKind);
 }
 
+InstructionCost getMergeInputOpsNodeCost(const TargetTransformInfo &TTI,
+                                         const InstructionsState &S,
+                                         ArrayRef<Value *> VL, Type *ScalarTy,
+                                         TTI::TargetCostKind CostKind) {
+  Instruction *MainOp = S.getMainOp();
+  const unsigned Opcode = S.getOpcode();
+  auto *VecTy = getWidenedType(ScalarTy, VL.size());
+  if (auto *LI = dyn_cast<LoadInst>(MainOp))
+    return TTI.getMemoryOpCost(Instruction::Load, VecTy, LI->getAlign(),
+                               LI->getPointerAddressSpace(), CostKind,
+                               TTI::getOperandInfo(LI->getPointerOperand()));
+  // The lanes of a plain same-opcode node read their matching operands as one
+  // vector; copyable and interchangeable lanes do not, and fall back to the
+  // default info.
+  auto GetOperandInfo = [&](unsigned OpIdx) -> TTI::OperandValueInfo {
+    SmallVector<Value *> Column;
+    Column.reserve(VL.size());
+    for (Value *V : VL) {
+      auto *I = dyn_cast<Instruction>(V);
+      if (!I || I->getOpcode() != Opcode)
+        return {};
+      Column.push_back(I->getOperand(OpIdx));
+    }
+    return TTI::getOperandInfo(Column);
+  };
+  if (Instruction::isBinaryOp(Opcode))
+    return TTI.getArithmeticInstrCost(Opcode, VecTy, CostKind,
+                                      GetOperandInfo(0), GetOperandInfo(1), {},
+                                      MainOp);
+  if (Instruction::isUnaryOp(Opcode))
+    return TTI.getArithmeticInstrCost(Opcode, VecTy, CostKind,
+                                      GetOperandInfo(0), {}, {}, MainOp);
+  if (Instruction::isCast(Opcode)) {
+    // The cast folds into its source memory op only if every lane does;
+    // otherwise the vector node just has a plain vector source.
+    TTI::CastContextHint CCH = TTI::getCastContextHint(MainOp);
+    if (any_of(VL, [&](Value *V) {
+          return TTI::getCastContextHint(dyn_cast<Instruction>(V)) != CCH;
+        }))
+      CCH = TTI::CastContextHint::None;
+    return TTI.getCastInstrCost(
+        Opcode, VecTy,
+        getWidenedType(MainOp->getOperand(0)->getType(), VL.size()), CCH,
+        CostKind);
+  }
+  return InstructionCost::getInvalid();
+}
+
 InstructionCost getWidenedStridedCastCost(const TargetTransformInfo &TTI,
                                           Type *SrcTy, Type *DstTy,
                                           const DataLayout &DL,
