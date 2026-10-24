@@ -8604,6 +8604,8 @@ static bool checkBitCastConstexprEligibilityType(SourceLocation Loc,
     return diag(3);
 
   if (RecordDecl *Record = Ty->getAsRecordDecl()) {
+    if (Record->isInvalidDecl())
+      return false;
     if (auto *CXXRD = dyn_cast<CXXRecordDecl>(Record)) {
       for (CXXBaseSpecifier &BS : CXXRD->bases())
         if (!checkBitCastConstexprEligibilityType(Loc, BS.getType(), Info, Ctx,
