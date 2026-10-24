@@ -2,7 +2,7 @@
 ; RUN: opt < %s -passes=loop-vectorize -force-vector-width=1 -force-vector-interleave=4 -mtriple=x86_64-unknown-linux -S -pass-remarks='loop-vectorize' 2>&1 | FileCheck -check-prefix=UNROLLED %s
 ; RUN: opt < %s -passes=loop-vectorize -force-vector-width=1 -force-vector-interleave=1 -mtriple=x86_64-unknown-linux -S -pass-remarks-analysis='loop-vectorize' 2>&1 | FileCheck -check-prefix=NONE %s
 
-; VECTORIZED: remark: vectorization-remarks.c:17:8: vectorized loop (vectorization width: 4, interleaved count: 2)
+; VECTORIZED: remark: vectorization-remarks.c:17:8: vectorized loop (vectorization width: 16, interleaved count: 1)
 ; UNROLLED: remark: vectorization-remarks.c:17:8: interleaved loop (interleaved count: 4)
 ; NONE: remark: vectorization-remarks.c:17:8: loop not vectorized: vectorization and interleaving are explicitly disabled, or the loop has already been vectorized
 
