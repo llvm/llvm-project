@@ -3404,14 +3404,14 @@ Instruction *InstCombinerImpl::visitFSub(BinaryOperator &I) {
   // Op0 - (-X * Y) --> Op0 + (X * Y)
   // Op0 - (Y * -X) --> Op0 + (X * Y)
   if (match(Op1, m_OneUse(m_c_FMul(m_FNeg(m_Value(X)), m_Value(Y))))) {
-    Value *FMul = Builder.CreateFMulFMF(X, Y, &I);
+    Value *FMul = Builder.CreateFMulFMF(X, Y, cast<BinaryOperator>(Op1));
     return BinaryOperator::CreateFAddFMF(Op0, FMul, &I);
   }
   // Op0 - (-X / Y) --> Op0 + (X / Y)
   // Op0 - (X / -Y) --> Op0 + (X / Y)
   if (match(Op1, m_OneUse(m_FDiv(m_FNeg(m_Value(X)), m_Value(Y)))) ||
       match(Op1, m_OneUse(m_FDiv(m_Value(X), m_FNeg(m_Value(Y)))))) {
-    Value *FDiv = Builder.CreateFDivFMF(X, Y, &I);
+    Value *FDiv = Builder.CreateFDivFMF(X, Y, cast<BinaryOperator>(Op1));
     return BinaryOperator::CreateFAddFMF(Op0, FDiv, &I);
   }
 
