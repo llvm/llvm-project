@@ -383,6 +383,10 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   {doc}`Return Address Authentication Hardening <ReturnAddressAuthenticationHardening>`
   for more information.
 
+- Added `-fint64-is-long-long`, which forces `int64_t` to be `long long`. This
+  can be helpful for projects with freestanding environments that define this
+  type differently from the default of the target triple.
+
 ### Deprecated Compiler Flags
 
 ### Modified Compiler Flags
