@@ -709,8 +709,8 @@ def Vector_ExtractOp :
      InferTypeOpAdaptor]> {
   let summary = "extract operation";
   let description = [{
-    Extracts an (n − k)-D result sub-vector from an n-D source vector at a
-    specified k-D position. When n = k, the result degenerates to a scalar
+    Extracts an (n - k)-D result sub-vector from an n-D source vector at a
+    specified k-D position. When n = k, the result degenerates to a scalar
     element.
 
     Static and dynamic indices must be greater or equal to zero and less than

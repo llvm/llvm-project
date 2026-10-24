@@ -669,7 +669,7 @@ def NVVM_MBarrierInitOp : NVVM_PTXBuilder_Op<"mbarrier.init",
       underlying address must be within the shared::cta memory space; otherwise
       the behavior is undefined.
     - `count`: Integer specifying the number of threads that will participate in barrier
-      synchronization. Must be in the range [1, 2²⁰ - 1].
+      synchronization. Must be in the range [1, 2^20 - 1].
     - `layout`: Optional in-memory layout to initialize the *mbarrier object*
       with. Only `0` (`layout::v0`) and `1` (`layout::v1`) are valid values.
       When it is omitted, it defaults to `0`. The layout of an existing
@@ -4698,11 +4698,11 @@ def NVVM_CpAsyncBulkTensorSharedCTAToGlobalOverrideAddrOp :
       which optional operands are provided:
 
       - `override.addr` (`.override::global_address`): only `overrideAddr` is given; the
-        global base address from the tensor-map is replaced. Supported in `TILE` (1D–5D),
-        `IM2COL`/`IM2COL_W` (3D–5D), and `TILE_SCATTER4` (2D, requires 5 coordinates).
+        global base address from the tensor-map is replaced. Supported in `TILE` (1D-5D),
+        `IM2COL`/`IM2COL_W` (3D-5D), and `TILE_SCATTER4` (2D, requires 5 coordinates).
       - `override.addr.dim` (1D, `TILE` only): `overrideAddr` plus `tensorSize` (one
         element); also overrides the tensor global dimension.
-      - `override.addr.dim.stride` (2D–5D, `TILE` only): `overrideAddr` plus `tensorSize`,
+      - `override.addr.dim.stride` (2D-5D, `TILE` only): `overrideAddr` plus `tensorSize`,
         `lowerStride`, and `upperStride`; also overrides the global dimensions and strides.
         The effective global stride is
         `global_stride[i] = ((%stride{i} + (%upper_stride{i} << 32)) << 4)`.
@@ -4728,7 +4728,7 @@ def NVVM_CpAsyncBulkTensorSharedCTAToGlobalOverrideAddrOp :
         l2_cache_hint = %ch mode = im2col : !llvm.ptr, !llvm.ptr<3>, !llvm.ptr<1>
       ```
 
-      // override.addr (TILE_SCATTER4, 2D) — 5 coordinates: x0, y0, y1, y2, y3
+      // override.addr (TILE_SCATTER4, 2D) -- 5 coordinates: x0, y0, y1, y2, y3
       ```mlir
       nvvm.cp.async.bulk.tensor.global.shared.cta.override %tma_desc, %src, %override_addr, box[%x0, %y0, %y1, %y2, %y3]
         mode = tile_scatter4 : !llvm.ptr, !llvm.ptr<3>, !llvm.ptr<1>

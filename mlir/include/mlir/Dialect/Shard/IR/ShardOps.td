@@ -676,7 +676,7 @@ def Shard_AllToAllOp : Shard_CollectiveCommunicationOpBase<"all_to_all", [
      (0)     (1)     (2)
     +-------+-------+-------+  | split and concat along
     | 11 12 | 21 22 | 31 32 |  | tensor axis 0
-    | 13 14 | 23 24 | 33 34 |  ↓
+    | 13 14 | 23 24 | 33 34 |  v
     | 15 16 | 25 26 | 35 36 |
     +-------+-------+-------+
     ```
@@ -733,7 +733,7 @@ def Shard_BroadcastOp : Shard_CollectiveCommunicationOpBase<"broadcast", [
     ```
                      +-------+-------+                   | broadcast
     device (0, 0) -> |  1  2 |  3  4 | <- device (0, 1)  | along axis 0
-                     +-------+-------+                   ↓
+                     +-------+-------+                   v
     device (1, 0) -> |  *  * |  *  * | <- device (1, 1)
                      +-------+-------+
     ```
@@ -918,15 +918,15 @@ def Shard_ReduceScatterOp : Shard_CollectiveCommunicationOpBase<"reduce_scatter"
     ```
                               device
                               (0, 1)
-                                 ↓
+                                 v
                      +-------+-------+  | scatter tensor
     device (0, 0) -> |  1  2 |  5  6 |  | axis 0
-                     |  3  4 |  7  8 |  ↓
+                     |  3  4 |  7  8 |  v
                      +-------+-------+
     device (1, 0) -> |  9 10 | 13 14 |
                      | 11 12 | 15 16 |
                      +-------+-------+
-                                ↑
+                                ^
                               device
                               (1, 1)
     ```
@@ -985,15 +985,15 @@ def Shard_ScatterOp : Shard_CollectiveCommunicationOpBase<"scatter", [
     ```
                               device
                               (0, 1)
-                                 ↓
+                                 v
                      +-------+-------+  | scatter tensor
     device (0, 0) -> |  *  * |  *  * |  | axis 0
-                     |  *  * |  *  * |  ↓
+                     |  *  * |  *  * |  v
                      +-------+-------+
     device (1, 0) -> |  1  2 |  5  6 |
                      |  3  4 |  7  8 |
                      +-------+-------+
-                                ↑
+                                ^
                               device
                               (1, 1)
     ```
@@ -1002,13 +1002,13 @@ def Shard_ScatterOp : Shard_CollectiveCommunicationOpBase<"scatter", [
     ```
                               device
                               (0, 1)
-                                 ↓
+                                 v
                      +-------+-------+
     device (0, 0) -> |  1  2 |  5  6 |
                      +-------+-------+ 
     device (1, 0) -> |  3  4 |  7  8 |
                      +-------+-------+
-                                ↑
+                                ^
                               device
                               (1, 1)
     ```

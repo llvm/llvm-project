@@ -83,7 +83,7 @@ def SPIRV_AtomicAndOp : SPIRV_AtomicUpdateWithValueOp<"AtomicAnd", []> {
 
     3) store the New Value back through Pointer.
 
-    The instruction’s result is the Original Value.
+    The instruction's result is the Original Value.
 
     Result Type must be an integer type scalar.
 
@@ -446,7 +446,7 @@ def SPIRV_AtomicIAddOp : SPIRV_AtomicUpdateWithValueOp<"AtomicIAdd", []> {
 
     3) store the New Value back through Pointer.
 
-    The instruction’s result is the Original Value.
+    The instruction's result is the Original Value.
 
     Result Type must be an integer type scalar.
 
@@ -482,7 +482,7 @@ def SPIRV_AtomicIDecrementOp : SPIRV_AtomicUpdateOp<"AtomicIDecrement", []> {
 
     3) store the New Value back through Pointer.
 
-    The instruction’s result is the Original Value.
+    The instruction's result is the Original Value.
 
     Result Type must be an integer type scalar.  The type of the value
     pointed to by Pointer must be the same as Result Type.
@@ -515,7 +515,7 @@ def SPIRV_AtomicIIncrementOp : SPIRV_AtomicUpdateOp<"AtomicIIncrement", []> {
 
     3) store the New Value back through Pointer.
 
-    The instruction’s result is the Original Value.
+    The instruction's result is the Original Value.
 
     Result Type must be an integer type scalar.  The type of the value
     pointed to by Pointer must be the same as Result Type.
@@ -549,7 +549,7 @@ def SPIRV_AtomicISubOp : SPIRV_AtomicUpdateWithValueOp<"AtomicISub", []> {
 
     3) store the New Value back through Pointer.
 
-    The instruction’s result is the Original Value.
+    The instruction's result is the Original Value.
 
     Result Type must be an integer type scalar.
 
@@ -584,7 +584,7 @@ def SPIRV_AtomicOrOp : SPIRV_AtomicUpdateWithValueOp<"AtomicOr", []> {
 
     3) store the New Value back through Pointer.
 
-    The instruction’s result is the Original Value.
+    The instruction's result is the Original Value.
 
     Result Type must be an integer type scalar.
 
@@ -620,7 +620,7 @@ def SPIRV_AtomicSMaxOp : SPIRV_AtomicUpdateWithValueOp<"AtomicSMax", []> {
 
     3) store the New Value back through Pointer.
 
-    The instruction’s result is the Original Value.
+    The instruction's result is the Original Value.
 
     Result Type must be an integer type scalar.
 
@@ -656,7 +656,7 @@ def SPIRV_AtomicSMinOp : SPIRV_AtomicUpdateWithValueOp<"AtomicSMin", []> {
 
     3) store the New Value back through Pointer.
 
-    The instruction’s result is the Original Value.
+    The instruction's result is the Original Value.
 
     Result Type must be an integer type scalar.
 
@@ -692,7 +692,7 @@ def SPIRV_AtomicUMaxOp : SPIRV_AtomicUpdateWithValueOp<"AtomicUMax", [UnsignedOp
 
     3) store the New Value back through Pointer.
 
-    The instruction’s result is the Original Value.
+    The instruction's result is the Original Value.
 
     Result Type must be an integer type scalar.
 
@@ -728,7 +728,7 @@ def SPIRV_AtomicUMinOp : SPIRV_AtomicUpdateWithValueOp<"AtomicUMin", [UnsignedOp
 
     3) store the New Value back through Pointer.
 
-    The instruction’s result is the Original Value.
+    The instruction's result is the Original Value.
 
     Result Type must be an integer type scalar.
 
@@ -764,7 +764,7 @@ def SPIRV_AtomicXorOp : SPIRV_AtomicUpdateWithValueOp<"AtomicXor", []> {
 
     3) store the New Value back through Pointer.
 
-    The instruction’s result is the Original Value.
+    The instruction's result is the Original Value.
 
     Result Type must be an integer type scalar.
 

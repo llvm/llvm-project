@@ -27,14 +27,14 @@ def Tensor_Dialect : Dialect {
       high-performance numerical computing.
     - representing shapes in the `shape` dialect, which consist of small 1D
       tensors of `index` data type.
-    - representing aggregations of strings or “variant” types.
+    - representing aggregations of strings or "variant" types.
     - representing large, sparse aggregations of primitive types, suitable for
       high-performance numerical computing.
 
     Because of this broad element type support and because of the existence of
     more dedicated dialects, such as the `sparse_tensor` and `linalg` dialects,
     we prefer for now to keep the `tensor` dialect as small as possible. The
-    expectation is that at some point in the future, the `tensor` dialect’s
+    expectation is that at some point in the future, the `tensor` dialect's
     scope may be broadened through a careful discussion of the tradeoffs.
 
     On the `tensor` type itself, note that it is actually a builtin type (it

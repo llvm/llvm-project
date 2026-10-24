@@ -256,7 +256,7 @@ def mif_SyncImagesOp : mif_Op<"sync_images", [AttrSizedOperandSegments]> {
   let summary = "Performs a synchronization of image with each of the other "
                 "images in the `image_set`";
   let description = [{
-    This operation can take an optional argument `⁣image_set`, wich must be an integer expression
+    This operation can take an optional argument `image_set`, wich must be an integer expression
     and must be scalar or rank one. If `image_set` is omitted from the call, this operation will 
     adopt the behavior of the Fortran statement `SYNC IMAGES(*)`.
   }];
