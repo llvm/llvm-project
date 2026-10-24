@@ -1680,6 +1680,11 @@ void StmtProfiler::VisitConvertVectorExpr(const ConvertVectorExpr *S) {
   VisitExpr(S);
 }
 
+void StmtProfiler::VisitElementwiseSaturatingCastExpr(
+    const ElementwiseSaturatingCastExpr *S) {
+  VisitExpr(S);
+}
+
 void StmtProfiler::VisitChooseExpr(const ChooseExpr *S) {
   VisitExpr(S);
 }

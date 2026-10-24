@@ -3876,6 +3876,7 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   case MaterializeTemporaryExprClass:
   case ShuffleVectorExprClass:
   case ConvertVectorExprClass:
+  case ElementwiseSaturatingCastExprClass:
   case AsTypeExprClass:
   case CXXParenListInitExprClass:
     // These have a side-effect if any subexpression does.
@@ -5737,6 +5738,19 @@ ConvertVectorExpr *ConvertVectorExpr::Create(
   void *Mem = C.Allocate(Size, alignof(ConvertVectorExpr));
   return new (Mem) ConvertVectorExpr(SrcExpr, TI, DstType, VK, OK, BuiltinLoc,
                                      RParenLoc, FPFeatures);
+}
+
+ElementwiseSaturatingCastExpr *
+ElementwiseSaturatingCastExpr::CreateEmpty(const ASTContext &C) {
+  return new (C) ElementwiseSaturatingCastExpr(EmptyShell());
+}
+
+ElementwiseSaturatingCastExpr *ElementwiseSaturatingCastExpr::Create(
+    const ASTContext &C, Expr *SrcExpr, TypeSourceInfo *TI, QualType DstType,
+    ExprValueKind VK, ExprObjectKind OK, SourceLocation BuiltinLoc,
+    SourceLocation RParenLoc) {
+  return new (C) ElementwiseSaturatingCastExpr(SrcExpr, TI, DstType, VK, OK,
+                                               BuiltinLoc, RParenLoc);
 }
 
 APValue &CompoundLiteralExpr::getOrCreateStaticValue(ASTContext &Ctx) const {
