@@ -6004,19 +6004,34 @@ SDValue DAGTypeLegalizer::ExpandIntOp_XINT_TO_FP(SDNode *N) {
   SDValue Op = N->getOperand(IsStrict ? 1 : 0);
   EVT DstVT = N->getValueType(0);
 
-  // Convert through f32: compiler-rt has no integer to f16 libcalls, and libgcc
-  // has them only on some targets. Integers below 2^24 are exact in f32 and
-  // larger ones overflow f16 either way, so this rounds only once.
-  if (DstVT == MVT::f16 && TLI.isTypeLegal(DstVT)) {
+  // If the half-width signed bounds overflow the destination type in every
+  // rounding mode, clamp to them and convert from the half-width type, so that
+  // e.g. f16 needs no libcall. Unsigned inputs are clamped to the signed
+  // maximum so that the signed conversion can be used.
+  EVT OpVT = Op.getValueType();
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), OpVT);
+  unsigned NBits = NVT.getSizeInBits();
+  unsigned MinIntBits = APFloat::semanticsIntSizeInBits(DstVT.getFltSemantics(),
+                                                        /*isSigned=*/true);
+  if (MinIntBits < NBits) {
     SDLoc dl(N);
-    SDValue Flt = DAG.getIntPtrConstant(0, dl, /*isTarget=*/true);
+    unsigned OpBits = OpVT.getSizeInBits();
+    SDValue Max =
+        DAG.getConstant(APInt::getSignedMaxValue(NBits).sext(OpBits), dl, OpVT);
+    SDValue Clamped;
+    if (IsSigned) {
+      SDValue Min = DAG.getConstant(
+          APInt::getSignedMinValue(NBits).sext(OpBits), dl, OpVT);
+      Clamped = DAG.getNode(ISD::SMIN, dl, OpVT, Op, Max);
+      Clamped = DAG.getNode(ISD::SMAX, dl, OpVT, Clamped, Min);
+    } else {
+      Clamped = DAG.getNode(ISD::UMIN, dl, OpVT, Op, Max);
+    }
+    Clamped = DAG.getNode(ISD::TRUNCATE, dl, NVT, Clamped);
     if (!IsStrict)
-      return DAG.getNode(ISD::FP_ROUND, dl, DstVT,
-                         DAG.getNode(N->getOpcode(), dl, MVT::f32, Op), Flt);
-    SDValue F32 =
-        DAG.getNode(N->getOpcode(), dl, {MVT::f32, MVT::Other}, {Chain, Op});
-    SDValue Res = DAG.getNode(ISD::STRICT_FP_ROUND, dl, {DstVT, MVT::Other},
-                              {F32.getValue(1), F32, Flt});
+      return DAG.getNode(ISD::SINT_TO_FP, dl, DstVT, Clamped);
+    SDValue Res = DAG.getNode(ISD::STRICT_SINT_TO_FP, dl, {DstVT, MVT::Other},
+                              {Chain, Clamped});
     ReplaceValueWith(SDValue(N, 1), Res.getValue(1));
     ReplaceValueWith(SDValue(N, 0), Res);
     return SDValue();
