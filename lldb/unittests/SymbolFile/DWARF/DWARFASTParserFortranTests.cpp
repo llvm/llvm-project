@@ -209,3 +209,281 @@ DWARF:
   // Ensure all expected DIEs were iterated
   EXPECT_EQ(type_idx, expected_types.size());
 }
+
+TEST_F(DWARFASTParserFortranTests, EnsureFunctionParsingWorks) {
+  const char *yamldata = R"(
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+DWARF:
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+        - Code:            0x2
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_string
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+        - Code:            0x3
+          Tag:             DW_TAG_formal_parameter
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_string
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+        - Code:            0x4
+          Tag:             DW_TAG_base_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_string
+            - Attribute:       DW_AT_encoding
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_byte_size
+              Form:            DW_FORM_data1
+  debug_info:
+    - Version:         4
+      Entries:
+        - AbbrCode:        0x1  # DW_TAG_compile_unit
+          Values:
+            - Value:           0x22  # DW_LANG_Fortran95
+        
+        - AbbrCode:        0x4  # DW_TAG_base_type (Offset: 0x0E)
+          Values:
+            - CStr:            'integer'
+            - Value:           0x5   # DW_ATE_signed
+            - Value:           0x4   # 4 bytes
+
+        - AbbrCode:        0x4  # DW_TAG_base_type (Offset: 0x19)
+          Values:
+            - CStr:            'real'
+            - Value:           0x4   # DW_ATE_float
+            - Value:           0x4   # 4 bytes
+
+        - AbbrCode:        0x4  # DW_TAG_base_type (Offset: 0x21)
+          Values:
+            - CStr:            'logical'
+            - Value:           0x2   # DW_ATE_boolean
+            - Value:           0x4   # 4 bytes
+
+        - AbbrCode:        0x2  # DW_TAG_subprogram
+          Values:
+            - CStr:            'multiply_and_add'
+            - Value:           0x21  # Return type points to 0x21 (logical)
+        
+        # Child 1: Parameter 'a'
+        - AbbrCode:        0x3  # DW_TAG_formal_parameter
+          Values:
+            - CStr:            'a'
+            - Value:           0x0E  # Type points to 0x0E (integer)
+        
+        # Child 2: Parameter 'b'
+        - AbbrCode:        0x3  # DW_TAG_formal_parameter
+          Values:
+            - CStr:            'b'
+            - Value:           0x19  # Type points to 0x19 (real)
+            
+        - AbbrCode:        0x0  # End of subprogram children
+        - AbbrCode:        0x0  # End of compile_unit children
+)";
+
+  DWARFASTParserFortranYAMLTester tester(yamldata);
+  DWARFDIE cu_die = tester.GetCUDIE();
+  DWARFDIE subprogram_die;
+  SymbolContext sc;
+  bool is_new_type;
+  std::string expected_name = "LOGICAL multiply_and_add(INTEGER a, REAL b)";
+  for (DWARFDIE child_die : cu_die.children()) {
+    if (child_die.Tag() == DW_TAG_subprogram) {
+      subprogram_die = child_die;
+      break;
+    }
+  }
+  EXPECT_TRUE(subprogram_die.IsValid());
+  lldb::TypeSP func_type_sp =
+      tester.GetParser().ParseTypeFromDWARF(sc, subprogram_die, &is_new_type);
+  EXPECT_TRUE(is_new_type);
+  EXPECT_TRUE(func_type_sp->IsValidType());
+  CompilerType function_type = func_type_sp->GetForwardCompilerType();
+  EXPECT_TRUE(function_type.IsFunctionType());
+  EXPECT_EQ(function_type.GetTypeName().GetString(), expected_name);
+  EXPECT_EQ(function_type.GetFunctionArgumentCount(), 2);
+  CompilerType arg_1 = function_type.GetFunctionArgumentAtIndex(0);
+  EXPECT_TRUE(arg_1.IsValid());
+  CompilerType arg_2 = function_type.GetFunctionArgumentAtIndex(1);
+  EXPECT_TRUE(arg_2.IsValid());
+  CompilerType return_type = function_type.GetFunctionReturnType();
+  EXPECT_TRUE(return_type.IsValid());
+  EXPECT_EQ(arg_1.GetBasicTypeEnumeration(), eBasicTypeInt);
+  EXPECT_EQ(arg_2.GetBasicTypeEnumeration(), eBasicTypeFloat);
+  EXPECT_EQ(return_type.GetBasicTypeEnumeration(), eBasicTypeBool);
+}
+
+TEST_F(DWARFASTParserFortranTests,
+       EnsureFunctionParsingWithNoParametersOrArgumentsWorks) {
+  const char *yamldata = R"(
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+DWARF:
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+        - Code:            0x2
+          Tag:             DW_TAG_base_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_string
+            - Attribute:       DW_AT_encoding
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_byte_size
+              Form:            DW_FORM_data1
+        - Code:            0x3
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_string
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+        - Code:            0x4
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_string
+        - Code:            0x5
+          Tag:             DW_TAG_formal_parameter
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_string
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+  debug_info:
+    - Version:         4
+      Entries:
+        - AbbrCode:        0x1  # DW_TAG_compile_unit
+          Values:
+            - Value:           0x22  # DW_LANG_Fortran95
+        
+        - AbbrCode:        0x2  # DW_TAG_base_type
+          Values:
+            - CStr:            'integer'
+            - Value:           0x5   # DW_ATE_signed
+            - Value:           0x4   # 4 bytes
+        
+        - AbbrCode:        0x4  # DW_TAG_subprogram (No DW_AT_type)
+          Values:
+            - CStr:            'my_subroutine'
+        - AbbrCode:        0x5  # DW_TAG_formal_parameter
+          Values:
+            - CStr:            'a'
+            - Value:           0x0E
+        - AbbrCode:        0x5  # DW_TAG_formal_parameter
+          Values:
+            - CStr:            'b'
+            - Value:           0x0E
+        - AbbrCode:        0x0  # End of my_subroutine
+        
+        - AbbrCode:        0x3  # DW_TAG_subprogram (Has DW_AT_type)
+          Values:
+            - CStr:            'no_args_func'
+            - Value:           0x0E
+        - AbbrCode:        0x0  # End of no_args_func (0 parameters)
+        
+        - AbbrCode:        0x4  # DW_TAG_subprogram (No DW_AT_type)
+          Values:
+            - CStr:            'empty_sub'
+        - AbbrCode:        0x0  # End of empty_sub
+            
+        - AbbrCode:        0x0  # End of compile_unit
+)";
+
+  DWARFASTParserFortranYAMLTester tester(yamldata);
+  DWARFDIE cu_die = tester.GetCUDIE();
+  SymbolContext sc;
+
+  int subprograms_found = 0;
+
+  for (DWARFDIE child_die : cu_die.children()) {
+    if (child_die.Tag() != DW_TAG_subprogram)
+      continue;
+    subprograms_found++;
+
+    bool is_new_type;
+    lldb::TypeSP func_type_sp =
+        tester.GetParser().ParseTypeFromDWARF(sc, child_die, &is_new_type);
+
+    EXPECT_TRUE(is_new_type);
+    EXPECT_TRUE(func_type_sp->IsValidType());
+
+    CompilerType function_type = func_type_sp->GetForwardCompilerType();
+    EXPECT_TRUE(function_type.IsFunctionType());
+
+    llvm::StringRef name = child_die.GetName();
+
+    if (name == "my_subroutine") {
+      // Subroutine: No return type, 2 arguments
+      EXPECT_EQ(function_type.GetTypeName().GetString(),
+                "my_subroutine(INTEGER a, INTEGER b)");
+      EXPECT_EQ(function_type.GetFunctionArgumentCount(), 2);
+
+      CompilerType arg_1 = function_type.GetFunctionArgumentAtIndex(0);
+      CompilerType arg_2 = function_type.GetFunctionArgumentAtIndex(1);
+      EXPECT_TRUE(arg_1.IsValid());
+      EXPECT_TRUE(arg_2.IsValid());
+      EXPECT_EQ(arg_1.GetBasicTypeEnumeration(), eBasicTypeInt);
+      EXPECT_EQ(arg_2.GetBasicTypeEnumeration(), eBasicTypeInt);
+
+      CompilerType return_type = function_type.GetFunctionReturnType();
+      EXPECT_FALSE(
+          return_type
+              .IsValid()); // Subroutines shouldn't have a valid return type
+
+    } else if (name == "no_args_func") {
+      // Function: Has return type, 0 arguments
+      EXPECT_EQ(function_type.GetTypeName().GetString(),
+                "INTEGER no_args_func()");
+      EXPECT_EQ(function_type.GetFunctionArgumentCount(), 0);
+
+      CompilerType return_type = function_type.GetFunctionReturnType();
+      EXPECT_TRUE(return_type.IsValid());
+      EXPECT_EQ(return_type.GetBasicTypeEnumeration(), eBasicTypeInt);
+
+    } else if (name == "empty_sub") {
+      // Subroutine: No return type, 0 arguments
+      EXPECT_EQ(function_type.GetTypeName().GetString(), "empty_sub()");
+      EXPECT_EQ(function_type.GetFunctionArgumentCount(), 0);
+
+      CompilerType return_type = function_type.GetFunctionReturnType();
+      EXPECT_FALSE(return_type.IsValid());
+    }
+  }
+
+  // Make sure we actually found and tested all 3!
+  EXPECT_EQ(subprograms_found, 3);
+}
