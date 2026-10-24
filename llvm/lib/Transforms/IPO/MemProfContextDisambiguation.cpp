@@ -122,6 +122,15 @@ STATISTIC(NumImplicitCallersUnresolved,
           "left in a function clone calling a conflicting callee clone");
 STATISTIC(AliaseesPrevailingInDiffModuleFromAlias,
           "Number of aliasees prevailing in a different module than its alias");
+STATISTIC(NumClonedCalleeCallsites,
+          "Number of summary callsites assigned to call a cloned callee (thin "
+          "link)");
+STATISTIC(NumClonedCalleeIndirectCallsites,
+          "Number of summary callsites assigned to call a cloned callee with "
+          "an indirect call edge (thin link)");
+STATISTIC(NumClonedCalleeEdgesMarkedRequiresDeclImport,
+          "Number of summary indirect call edges to cloned callees marked as "
+          "requiring a declaration import (thin link)");
 
 static cl::opt<std::string> DotFilePathPrefix(
     "memprof-dot-file-path-prefix", cl::init(""), cl::Hidden,
@@ -234,6 +243,31 @@ static cl::opt<bool> MemProfRequireDefinitionForPromotion(
     "memprof-require-definition-for-promotion", cl::init(false), cl::Hidden,
     cl::desc(
         "Require target function definition when promoting indirect calls"));
+
+// Applying the thin link cloning decisions to indirect calls requires the
+// ThinLTO backend to perform ICP to the profiled target, which requires that
+// the target be available in the caller's module (or in any module the caller
+// is imported into). When the target is defined in a different module it must
+// be imported, but the profiled targets are often synthesized from the MemProf
+// profile with a small count, so their summary edges are not hot and large
+// targets are often not imported. Since the thin link cloning runs before the
+// function importing analysis, we can mark the indirect call edges to callees
+// of callsites that were assigned to call a cloned callee as requiring a
+// declaration import, in which case the function importer imports at least a
+// declaration of the callee into any module containing the caller that
+// doesn't define the callee. Direct calls don't require importing the callee,
+// since the ThinLTO backend can simply call a declaration of the callee clone,
+// so we only do this for edges marked as being from indirect calls in the
+// summary. Note that unlike regular ICP, which by default requires the
+// target's definition (see -icp-allow-decls), MemProf ICP can promote to a
+// declaration of the target (see -memprof-require-definition-for-promotion),
+// since the purpose is to call the assigned clone rather than to inline. This
+// is therefore not done under -memprof-require-definition-for-promotion.
+static cl::opt<bool> MemProfImportClonedIndirectTargets(
+    "memprof-import-cloned-indirect-targets", cl::init(true), cl::Hidden,
+    cl::desc("Import at least a declaration of the indirect call targets of "
+             "callsites assigned to call a cloned callee (needed for MemProf "
+             "ICP in the ThinLTO backend)"));
 
 extern cl::opt<bool> MemProfReportHintedSizes;
 extern cl::opt<unsigned> MinClonedColdBytePercent;
@@ -5257,16 +5291,20 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
     // implicit callers (see assignImplicitCallers).
     ImplicitSourceMap ImplicitSources;
     // Map from each original callsite node in this function to its original
-    // call (clone 0). The Call recorded on an original node is updated to the
-    // call in a function clone if that node is assigned to a function clone,
-    // after which it can no longer be used to index the function clone CallMaps
-    // (which are keyed by the original calls). No node in this function has
-    // been assigned yet at this point.
-    DenseMap<const ContextNode *, CallInfo> OrigNodeToOrigCall;
+    // call and matching calls (clone 0). The calls recorded on an original node
+    // are updated to the calls in a function clone if that node is assigned to
+    // a function clone, after which they can no longer be used to index the
+    // function clone CallMaps (which are keyed by the original calls). No node
+    // in this function has been assigned yet at this point.
+    struct OrigCallsInfo {
+      CallInfo Call;
+      SmallVector<CallInfo, 0> MatchingCalls;
+    };
+    DenseMap<const ContextNode *, OrigCallsInfo> OrigNodeToOrigCalls;
     for (auto &Call : CallsWithMetadata) {
       ContextNode *Node = getNodeForInst(Call);
       if (Node && Node->Call == Call)
-        OrigNodeToOrigCall[Node] = Call;
+        OrigNodeToOrigCalls[Node] = {Call, Node->MatchingCalls};
     }
     for (auto &Call : CallsWithMetadata) {
       ContextNode *Node = getNodeForInst(Call);
@@ -5298,13 +5336,18 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
         if (auto It = CallMap.find(Call); It != CallMap.end())
           CallClone = It->second;
         CallsiteClone->setCall(CallClone);
-        // Need to do the same for all matching calls.
-        for (auto &MatchingCall : Node->MatchingCalls) {
-          CallInfo CallClone(MatchingCall);
-          if (auto It = CallMap.find(MatchingCall); It != CallMap.end())
+        // Need to do the same for all matching calls. Rebuild the list of
+        // CallsiteClone from the original matching calls (it may have been
+        // copied from a node whose calls were already remapped), using the
+        // same mapping as for Call.
+        assert(OrigNodeToOrigCalls.count(Node));
+        CallsiteClone->MatchingCalls.clear();
+        for (const CallInfo &OrigMatchingCall :
+             OrigNodeToOrigCalls[Node].MatchingCalls) {
+          CallInfo CallClone(OrigMatchingCall);
+          if (auto It = CallMap.find(OrigMatchingCall); It != CallMap.end())
             CallClone = It->second;
-          // Updates the call in the list.
-          MatchingCall = CallClone;
+          CallsiteClone->MatchingCalls.push_back(CallClone);
         }
       };
 
@@ -5500,27 +5543,26 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
               // that each caller can only call callsites within the same
               // function, so we are guaranteed that Callee Call is in the
               // current OrigFunc.
-              // CallMap is set up as indexed by original Call at clone 0. Note
-              // that we cannot simply use the Call of Callee's original node,
-              // as that is updated to the call in a function clone if the
-              // original node was itself assigned to a function clone.
-              assert(OrigNodeToOrigCall.count(Callee->getOrigNode()));
-              CallInfo OrigCall = OrigNodeToOrigCall[Callee->getOrigNode()];
+              // CallMap is set up as indexed by original calls at clone 0. Note
+              // that we cannot simply use the calls recorded on Callee's
+              // original node, as those are updated to the calls in a function
+              // clone if the original node was itself assigned to a function
+              // clone.
+              assert(OrigNodeToOrigCalls.count(Callee->getOrigNode()));
+              auto &OrigCalls = OrigNodeToOrigCalls[Callee->getOrigNode()];
               DenseMap<CallInfo, CallInfo> &CallMap =
                   FuncCloneInfos[NewFuncClone.cloneNo()].CallMap;
-              assert(CallMap.count(OrigCall));
-              CallInfo NewCall(CallMap[OrigCall]);
+              assert(CallMap.count(OrigCalls.Call));
+              CallInfo NewCall(CallMap[OrigCalls.Call]);
               assert(NewCall);
               NewClone->setCall(NewCall);
               // Need to do the same for all matching calls.
-              for (auto &MatchingCall : NewClone->MatchingCalls) {
-                CallInfo OrigMatchingCall(MatchingCall);
-                OrigMatchingCall.setCloneNo(0);
+              NewClone->MatchingCalls.clear();
+              for (auto &OrigMatchingCall : OrigCalls.MatchingCalls) {
                 assert(CallMap.count(OrigMatchingCall));
                 CallInfo NewCall(CallMap[OrigMatchingCall]);
                 assert(NewCall);
-                // Updates the call in the list.
-                MatchingCall = NewCall;
+                NewClone->MatchingCalls.push_back(NewCall);
               }
             }
           }
@@ -5783,9 +5825,13 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
           // for all calls.
           assert(false && "Expected to find call in CallMap");
         }
-        // Need to do the same for all matching calls.
-        for (auto &MatchingCall : Node->MatchingCalls) {
-          if (auto It = CallMap.find(MatchingCall); It != CallMap.end()) {
+        // Need to do the same for all matching calls. Use the original
+        // matching calls, as those on Node may have been remapped to the calls
+        // of a function clone if Node was assigned to one.
+        assert(OrigNodeToOrigCalls.count(Node));
+        for (const CallInfo &OrigMatchingCall :
+             OrigNodeToOrigCalls[Node].MatchingCalls) {
+          if (auto It = CallMap.find(OrigMatchingCall); It != CallMap.end()) {
             CallInfo CallClone = It->second;
             CallVector.push_back(CallClone);
           } else {
@@ -6907,6 +6953,70 @@ PreservedAnalyses MemProfContextDisambiguation::run(Module &M,
   return PreservedAnalyses::none();
 }
 
+// After the thin link cloning decisions have been recorded in the summary
+// callsite records, mark the summary indirect call edges to any callee that a
+// callsite was assigned to call a (non-original) clone of as requiring a
+// declaration import.
+// See the comments for the MemProfImportClonedIndirectTargets option.
+static void updateClonedCalleeEdgesForImport(
+    ModuleSummaryIndex &Index,
+    llvm::function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
+        isPrevailing) {
+  // Map from callee to the corresponding call edge in the current function
+  // summary, so that we don't need to walk the function's call edges for each
+  // callsite assigned to call a cloned callee. Note that there is a single call
+  // edge per callee. The map is built lazily, the first time we encounter such
+  // a callsite in a given function summary, since most functions have none
+  // (the map is cleared before processing each function summary). The
+  // pointers into the call edge vector remain valid since it isn't modified
+  // while the map is in use.
+  SmallDenseMap<ValueInfo, CalleeInfo *> CalleeToEdge;
+  for (auto &I : Index) {
+    auto VI = Index.getValueInfo(I);
+    for (auto &S : VI.getSummaryList()) {
+      // Only the prevailing copies were added to the CCG (see the
+      // IndexCallsiteContextGraph constructor).
+      if (!GlobalValue::isLocalLinkage(S->linkage()) &&
+          !isPrevailing(VI.getGUID(), S.get()))
+        continue;
+      auto *FS = dyn_cast<FunctionSummary>(S.get());
+      if (!FS || FS->callsites().empty())
+        continue;
+      CalleeToEdge.clear();
+      for (auto &CI : FS->callsites()) {
+        if (!CI.Callee || llvm::all_of(CI.Clones, [](unsigned CloneNo) {
+              return CloneNo == 0;
+            }))
+          continue;
+        // Note that we mark the edge even if the callee is defined in the
+        // same module as the caller, since the caller may be imported into
+        // other modules. The function importer will skip importing the callee
+        // into any module that already defines it.
+        NumClonedCalleeCallsites++;
+        // Lazily build the map on the first such callsite in this function.
+        if (CalleeToEdge.empty())
+          for (auto &[CalleeVI, Edge] : FS->mutableCalls())
+            CalleeToEdge[CalleeVI] = &Edge;
+        auto It = CalleeToEdge.find(CI.Callee);
+        if (It == CalleeToEdge.end())
+          continue;
+        CalleeInfo *Edge = It->second;
+        // Direct calls don't require importing the callee. Note that the
+        // edge is marked indirect if any call to the callee in this function
+        // is indirect, in which case we can't distinguish whether this
+        // callsite is direct and conservatively treat it as indirect.
+        if (!Edge->hasIndirectCall())
+          continue;
+        NumClonedCalleeIndirectCallsites++;
+        if (!Edge->requiresDeclImport()) {
+          Edge->setRequiresDeclImport(true);
+          NumClonedCalleeEdgesMarkedRequiresDeclImport++;
+        }
+      }
+    }
+  }
+}
+
 void MemProfContextDisambiguation::run(
     ModuleSummaryIndex &Index,
     llvm::function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
@@ -6924,8 +7034,18 @@ void MemProfContextDisambiguation::run(
   bool AllowExtraAnalysis =
       OptimizationRemarkEmitter::allowExtraAnalysis(Ctx, DEBUG_TYPE);
 
-  IndexCallsiteContextGraph CCG(Index, isPrevailing);
-  CCG.process(EmitRemark, AllowExtraAnalysis);
+  bool Changed = false;
+  {
+    IndexCallsiteContextGraph CCG(Index, isPrevailing);
+    Changed = CCG.process(EmitRemark, AllowExtraAnalysis);
+  }
+  // Note this must be done after the CCG is destroyed, which is when the
+  // callsite records synthesized for missing tail call frames are added to the
+  // function summaries. Importing declarations is only useful if MemProf ICP
+  // is allowed to promote to a declaration of the target.
+  if (Changed && MemProfImportClonedIndirectTargets &&
+      !MemProfRequireDefinitionForPromotion)
+    updateClonedCalleeEdgesForImport(Index, isPrevailing);
 }
 
 // Strips MemProf attributes and metadata. Can be invoked by the pass pipeline

@@ -63,6 +63,10 @@ function(_get_common_test_compile_options_impl output_var c_test)
       list(APPEND compile_options "-DLIBC_FULL_BUILD")
       # Only add -ffreestanding flag in full build mode.
       list(APPEND compile_options "-ffreestanding")
+      if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND
+        (LIBC_TARGET_ARCHITECTURE_IS_X86_64 OR LIBC_TARGET_ARCHITECTURE_IS_X86))
+        list(APPEND compile_options "-D_MM_MALLOC_H_INCLUDED")
+      endif()
       list(APPEND compile_options "-fno-exceptions")
       list(APPEND compile_options "-fno-unwind-tables")
       list(APPEND compile_options "-fno-asynchronous-unwind-tables")

@@ -1419,13 +1419,11 @@ AsmPrinter::getFunctionCFISectionType(const Function &F) const {
   if (F.isDeclarationForLinker())
     return CFISection::None;
 
-  // A DwarfCFI module only carries EH unwind info if the target actually uses
-  // CFI for exceptions.
   if (ModuleExceptionModel == ExceptionHandling::DwarfCFI &&
-      MAI.usesCFIForEH() && F.needsUnwindTableEntry())
+      F.needsUnwindTableEntry())
     return CFISection::EH;
 
-  if (MAI.usesCFIWithoutEH() && F.hasUWTable())
+  if (MAI.usesCFIWithoutEH(ModuleExceptionModel) && F.hasUWTable())
     return CFISection::EH;
 
   if (hasDebugInfo() || TM.Options.ForceDwarfFrameSection)
@@ -1440,7 +1438,8 @@ AsmPrinter::getFunctionCFISectionType(const MachineFunction &MF) const {
 }
 
 bool AsmPrinter::usesCFIWithoutEH() const {
-  return MAI.usesCFIWithoutEH() && ModuleCFISection != CFISection::None;
+  return MAI.usesCFIWithoutEH(ModuleExceptionModel) &&
+         ModuleCFISection != CFISection::None;
 }
 
 void AsmPrinter::emitCFIInstruction(const MachineInstr &MI) {

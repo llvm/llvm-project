@@ -5952,11 +5952,14 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
                    const parser::OmpAssumesDirective &assumesConstruct) {
-  // Assumption clauses are hints with no representation in the OpenMP dialect,
-  // so this declarative directive is a no-op.
-  if (!semaCtx.langOptions().OpenMPSimd)
-    TODO(converter.getCurrentLocation(),
-         "assumption clauses on the assumes directive");
+  if (semaCtx.langOptions().OpenMPSimd)
+    return;
+
+  for (const parser::OmpClause &clause : assumesConstruct.v.Clauses().v) {
+    if (!std::holds_alternative<parser::OmpClause::NoOpenmp>(clause.u))
+      TODO(converter.genLocation(clause.source),
+           "assumption clauses on the assumes directive");
+  }
 }
 
 static void
