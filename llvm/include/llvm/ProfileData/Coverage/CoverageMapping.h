@@ -726,6 +726,9 @@ public:
 
   /// Return the number of times that a region of code associated with this
   /// counter was executed.
+  ///
+  /// The result can be negative if the counter values are inconsistent with
+  /// each other. Values that do not fit into int64_t are saturated.
   LLVM_ABI Expected<int64_t> evaluate(const Counter &C) const;
 
   /// Return an MCDC record that indicates executed test vectors and condition
