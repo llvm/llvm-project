@@ -1054,6 +1054,27 @@ func.func @drop_unit_pad_dims_constant_inside_body(%arg0: tensor<1x28x28x1xf32>)
 
 // -----
 
+// The pattern must not modify the IR when there are no unit dims to drop.
+
+func.func @negative_drop_pad_without_unit_dims_constant_inside_body(%arg0: tensor<2xf32>) -> tensor<3xf32>
+{
+  %0 = tensor.pad %arg0 low[0] high[1] {
+    ^bb0(%arg1: index):
+      %cst = arith.constant 0.0 : f32
+      tensor.yield %cst : f32
+  } : tensor<2xf32> to tensor<3xf32>
+  return %0 : tensor<3xf32>
+}
+
+// CHECK-LABEL: func @negative_drop_pad_without_unit_dims_constant_inside_body
+//   CHECK-NOT:   tensor.collapse_shape
+//       CHECK:   %[[CST:.+]] = arith.constant 0.000000e+00 : f32
+//       CHECK:   tensor.pad %{{.*}} low[0] high[1]
+//       CHECK:     tensor.yield %[[CST]]
+//   CHECK-NOT:   tensor.expand_shape
+
+// -----
+
 func.func @do_not_drop_non_constant_padding(%arg0: tensor<1x1x3x1x1xf32>, %pad: f32) -> tensor<1x2x3x1x3xf32>
 {
   %c0 = arith.constant 0 : index
