@@ -733,6 +733,37 @@ enum {
   STO_RISCV_VARIANT_CC = 0x80
 };
 
+// ELF Relocation types for SuperH
+enum {
+#include "ELFRelocs/SuperH.def"
+};
+
+// SuperH Specific e_flags
+enum : unsigned {
+  EF_SH_MACH_MASK = 0x1f,
+  EF_SH_UNKNOWN = 0x0,
+  EF_SH1 = 0x1,
+  EF_SH2 = 0x2,
+  EF_SH3 = 0x3,
+  EF_SH_DSP = 0x4,
+  EF_SH3_DSP = 0x5,
+  EF_SH4AL_DSP = 0x6,
+  EF_SH3E = 0x8,
+  EF_SH4 = 0x9,
+  EF_SH2E = 0xb,
+  EF_SH4A = 0xc,
+  EF_SH2A = 0xd,
+  EF_SH4_NOFPU = 0x10,
+  EF_SH4A_NOFPU = 0x11,
+  EF_SH4_NOMMU_NOFPU = 0x12,
+  EF_SH2A_NOFPU = 0x13,
+  EF_SH3_NOMMU = 0x14,
+  EF_SH2A_SH4_NOFPU = 0x15,
+  EF_SH2A_SH3_NOFPU = 0x16,
+  EF_SH2A_SH4 = 0x17,
+  EF_SH2A_SH3E = 0x18,
+};
+
 // ELF Relocation types for S390/zSeries
 enum {
 #include "ELFRelocs/SystemZ.def"
