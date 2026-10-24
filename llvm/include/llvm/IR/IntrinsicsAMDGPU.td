@@ -3407,12 +3407,18 @@ def int_amdgcn_ds_bpermute_fi_b32 :
   Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
     [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
+// A prefetch cache policy sets th (bits 0-2) to anything but the reserved
+// value 7, scope (bits 3-4) and nv (bit 5).
+defvar PrefetchCachePolicyRanges =
+    !foreach(i, !range(8), [!mul(i, 8), !add(!mul(i, 8), 6)]);
+
 def int_amdgcn_flat_prefetch : ClangBuiltin<"__builtin_amdgcn_flat_prefetch">,
   DefaultAttrsIntrinsic<[],
     [llvm_ptr_ty,  // Pointer
      llvm_i32_ty], // cachepolicy(imm), bits [0-2] = th, bits [3-4] = scope
     [IntrInaccessibleMemOrArgMemOnly, ReadOnly<ArgIndex<0>>,
-     NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<1>>],
+     NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<1>>,
+     RangeSet<ArgIndex<1>, PrefetchCachePolicyRanges>],
     "",
     [SDNPMemOperand]
   >;
@@ -3422,7 +3428,8 @@ def int_amdgcn_global_prefetch : ClangBuiltin<"__builtin_amdgcn_global_prefetch"
     [LLVMQualPointerType<1>, // Pointer
      llvm_i32_ty],           // cachepolicy(imm), bits [0-2] = th, bits [3-4] = scope
     [IntrInaccessibleMemOrArgMemOnly, ReadOnly<ArgIndex<0>>,
-     NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<1>>],
+     NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<1>>,
+     RangeSet<ArgIndex<1>, PrefetchCachePolicyRanges>],
     "",
     [SDNPMemOperand]
   >;

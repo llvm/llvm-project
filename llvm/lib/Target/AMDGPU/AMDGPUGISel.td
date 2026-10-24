@@ -457,6 +457,9 @@ def gi_as_i16timm : GICustomOperandRenderer<"renderTruncTImm">,
 def gi_as_i8timm : GICustomOperandRenderer<"renderTruncTImm">,
   GISDNodeXFormEquiv<as_i8timm>;
 
+def gi_as_prefetch_len : GICustomOperandRenderer<"renderPrefetchLen">,
+  GISDNodeXFormEquiv<as_prefetch_len>;
+
 def gi_as_i1timm : GICustomOperandRenderer<"renderTruncTImm">,
   GISDNodeXFormEquiv<as_i1timm>;
 
