@@ -872,6 +872,16 @@ public:
   /// final addresses functions will have.
   uint64_t LayoutStartAddress{0};
 
+  /// Fixed-address instruction patches awaiting a range check after code
+  /// optimization. Reference.Offset is the original relocation PC (which can
+  /// differ from Address for a PCREL_LO12 instruction).
+  struct PendingInstructionPatch {
+    uint64_t Address;
+    InstructionListType Instructions;
+    Relocation Reference;
+  };
+  std::vector<PendingInstructionPatch> PendingInstructionPatches;
+
   /// Maximum alignment of objects emitted into the main (hot) and cold code
   /// sections, populated by the parallel AlignerPass (updateMaxCodeAlignment).
   std::atomic<uint16_t> MaxMainCodeAlignment{1};

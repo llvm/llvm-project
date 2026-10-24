@@ -34,6 +34,7 @@
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MCValue.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -1668,7 +1669,9 @@ bool BinaryFunction::scanExternalRefs() {
     // Handle calls and branches separately as symbolization doesn't work for
     // them yet.
     MCSymbol *BranchTargetSymbol = nullptr;
-    if (BC.MIB->isCall(Instruction) || BC.MIB->isBranch(Instruction)) {
+    if ((BC.MIB->isCall(Instruction) || BC.MIB->isBranch(Instruction)) &&
+        !(BC.isRISCV() && (BC.MIB->isIndirectCall(Instruction) ||
+                           BC.MIB->isIndirectBranch(Instruction)))) {
       uint64_t TargetAddress = 0;
       BC.MIB->evaluateBranch(Instruction, AbsoluteInstrAddr, Size,
                              TargetAddress);
@@ -1698,7 +1701,7 @@ bool BinaryFunction::scanExternalRefs() {
     if (BranchTargetSymbol) {
       BC.MIB->replaceBranchTarget(Instruction, BranchTargetSymbol,
                                   Emitter.LocalCtx.get());
-    } else {
+    } else if (!BC.isRISCV()) {
       analyzeInstructionForFuncReference(Instruction);
       const bool NeedsPatch = llvm::any_of(
           MCPlus::primeOperands(Instruction), [&](const MCOperand &Op) {
@@ -1707,6 +1710,148 @@ bool BinaryFunction::scanExternalRefs() {
           });
       if (!NeedsPatch)
         continue;
+    }
+
+    if (BC.isRISCV()) {
+      if (!BranchTargetSymbol)
+        analyzeInstructionForFuncReference(Instruction);
+      const Relocation *Rel = getRelocationInRange(Offset, Offset + Size);
+      const bool IsLow =
+          Rel && BC.getRelocationHandler().isInstructionReference(Rel->Type);
+      // A PCREL_LO12 names the AUIPC, not the referenced function. Both
+      // instructions must use the high relocation's target and range check.
+      if (IsLow)
+        Rel = getRelocationAt(Rel->Value - getAddress());
+
+      MCSymbol *Symbol = nullptr;
+      uint64_t Addend = 0;
+      unsigned OperandNum = 0;
+      if (IsLow && Rel) {
+        Symbol = Rel->Symbol;
+        Addend = Rel->Addend;
+      } else {
+        for (MCOperand &Operand : MCPlus::primeOperands(Instruction)) {
+          if (Operand.isExpr()) {
+            const MCExpr *Expr = Operand.getExpr();
+            while (const auto *Specifier = dyn_cast<MCSpecifierExpr>(Expr))
+              Expr = Specifier->getSubExpr();
+            MCValue Value;
+            if (Expr->evaluateAsRelocatable(Value, nullptr) &&
+                !Value.getSubSym()) {
+              Symbol = const_cast<MCSymbol *>(Value.getAddSym());
+              Addend = Value.getConstant();
+            }
+            break;
+          }
+          ++OperandNum;
+        }
+      }
+      if (ignoreReference(Symbol))
+        continue;
+
+      // Linker-defined symbols can move independently of function layout.
+      if (BC.forceSymbolRelocations(Symbol->getName())) {
+        BC.errs()
+            << "BOLT-ERROR: cannot update RISC-V instruction reference to "
+            << Symbol->getName() << " at address 0x"
+            << Twine::utohexstr(AbsoluteInstrAddr) << " in ignored function "
+            << *this << '\n';
+        exit(1);
+      }
+      BinaryFunction *Target = BC.getFunctionForSymbol(Symbol);
+      assert(Target && "expected a function reference");
+
+      uint32_t Type = Rel ? Rel->Type : ELF::R_RISCV_NONE;
+      MCInst Next;
+      uint64_t NextSize = 0;
+      const bool IsCallPair =
+          Size == 4 && Offset + 8 <= getSize() &&
+          !getSizeOfDataInCodeAt(Offset + 4) &&
+          !getRelocationInRange(Offset + 4, Offset + 8) &&
+          BC.DisAsm->getInstruction(Next, NextSize,
+                                    FunctionData.slice(Offset + 4),
+                                    AbsoluteInstrAddr + 4, nulls()) &&
+          NextSize == 4 && BC.MIB->isRISCVCall(Instruction, Next) &&
+          Instruction.getOperand(0).getReg() == Next.getOperand(1).getReg();
+      if (IsCallPair)
+        Type = ELF::R_RISCV_CALL_PLT;
+      else if (BranchTargetSymbol)
+        Type = BC.MIB->isConditionalBranch(Instruction)
+                   ? (Size == 2 ? ELF::R_RISCV_RVC_BRANCH : ELF::R_RISCV_BRANCH)
+                   : (Size == 2 ? ELF::R_RISCV_RVC_JUMP : ELF::R_RISCV_JAL);
+
+      switch (Type) {
+      default:
+        InvalidTargets.insert(Target);
+        continue;
+      case ELF::R_RISCV_CALL:
+      case ELF::R_RISCV_CALL_PLT:
+        if (!IsCallPair) {
+          InvalidTargets.insert(Target);
+          continue;
+        }
+        break;
+      case ELF::R_RISCV_BRANCH:
+      case ELF::R_RISCV_JAL:
+      case ELF::R_RISCV_RVC_BRANCH:
+      case ELF::R_RISCV_RVC_JUMP:
+      case ELF::R_RISCV_PCREL_HI20:
+      case ELF::R_RISCV_HI20:
+      case ELF::R_RISCV_LO12_I:
+      case ELF::R_RISCV_LO12_S:
+        break;
+      }
+
+      // An interior target needs a symbol that follows that instruction.
+      // After CFG construction only previously discovered entries are safe.
+      if (Addend) {
+        ErrorOr<uint64_t> SymbolAddress = BC.getSymbolValue(*Symbol);
+        if (!SymbolAddress || *SymbolAddress + Addend < Target->getAddress() ||
+            *SymbolAddress + Addend >=
+                Target->getAddress() + Target->getSize()) {
+          InvalidTargets.insert(Target);
+          continue;
+        }
+        const uint64_t Address = *SymbolAddress + Addend;
+        Symbol = nullptr;
+        Target->forEachEntryPoint(
+            [&](uint64_t EntryOffset, const MCSymbol *EntrySymbol) {
+              if (Target->getAddress() + EntryOffset == Address)
+                Symbol = const_cast<MCSymbol *>(EntrySymbol);
+              return true;
+            });
+        if (!Symbol && !Target->hasCFG())
+          Symbol = BC.handleExternalBranchTarget(Address, *this, *Target);
+        if (!Symbol) {
+          InvalidTargets.insert(Target);
+          continue;
+        }
+      }
+
+      InstructionListType Instructions;
+      if (IsCallPair) {
+        // Keep the original base and link registers, including t0. Express
+        // the pair as HI20/LO12 so it remains exactly two instructions.
+        MCSymbol *Label = BC.Ctx->createNamedTempSymbol("pcrel_hi");
+        BC.MIB->setOperandToSymbolRef(Instruction, 1, Symbol, 0, BC.Ctx.get(),
+                                      ELF::R_RISCV_PCREL_HI20);
+        BC.MIB->setInstLabel(Instruction, Label);
+        BC.MIB->setOperandToSymbolRef(Next, 2, Label, 0, BC.Ctx.get(),
+                                      ELF::R_RISCV_PCREL_LO12_I);
+        Instructions = {Instruction, Next};
+        Size = 8;
+      } else {
+        if (!IsLow)
+          BC.MIB->setOperandToSymbolRef(Instruction, OperandNum, Symbol, 0,
+                                        BC.Ctx.get(), Type);
+        Instructions = {Instruction};
+      }
+      const uint64_t PC =
+          IsLow ? getAddress() + Rel->Offset : AbsoluteInstrAddr;
+      BC.PendingInstructionPatches.push_back(
+          {AbsoluteInstrAddr, std::move(Instructions),
+           Relocation(PC, Symbol, Type, 0, 0)});
+      continue;
     }
 
     // For AArch64, we need to undo relaxation done by the linker if the target

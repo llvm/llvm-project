@@ -197,6 +197,22 @@ bool RISCVRelocationHandler::canEncodeValue(uint32_t Type, uint64_t Value,
   case ELF::R_RISCV_32:
   case ELF::R_RISCV_64:
     return true;
+  case ELF::R_RISCV_BRANCH:
+    return isInt<13>(Value - PC) && !(Value & 1);
+  case ELF::R_RISCV_JAL:
+    return isInt<21>(Value - PC) && !(Value & 1);
+  case ELF::R_RISCV_RVC_BRANCH:
+    return isInt<9>(Value - PC) && !(Value & 1);
+  case ELF::R_RISCV_RVC_JUMP:
+    return isInt<12>(Value - PC) && !(Value & 1);
+  case ELF::R_RISCV_CALL:
+  case ELF::R_RISCV_CALL_PLT:
+  case ELF::R_RISCV_PCREL_HI20:
+    return isInt<32>(Value - PC + 0x800);
+  case ELF::R_RISCV_HI20:
+  case ELF::R_RISCV_LO12_I:
+  case ELF::R_RISCV_LO12_S:
+    return isInt<32>(Value + 0x800);
   }
 }
 
