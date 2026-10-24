@@ -23,10 +23,12 @@ namespace {
 class SystemZABIInfo : public ABIInfo {
   bool HasVector;
   bool IsSoftFloatABI;
+  bool IsRetSmallStructInRegABI;
 
 public:
-  SystemZABIInfo(CodeGenTypes &CGT, bool HV, bool SF)
-      : ABIInfo(CGT), HasVector(HV), IsSoftFloatABI(SF) {}
+  SystemZABIInfo(CodeGenTypes &CGT, bool HV, bool SF, bool RSR)
+      : ABIInfo(CGT), HasVector(HV), IsSoftFloatABI(SF),
+        IsRetSmallStructInRegABI(RSR) {}
 
   bool isPromotableIntegerTypeForABI(QualType Ty) const;
   bool isCompoundType(QualType Ty) const;
@@ -57,13 +59,17 @@ class SystemZTargetCodeGenInfo : public TargetCodeGenInfo {
   bool isVectorTypeBased(const Type *Ty, bool IsParam) const;
 
 public:
-  SystemZTargetCodeGenInfo(CodeGenTypes &CGT, bool HasVector, bool SoftFloatABI)
-      : TargetCodeGenInfo(
-            std::make_unique<SystemZABIInfo>(CGT, HasVector, SoftFloatABI)),
-            Ctx(CGT.getContext()) {
+  SystemZTargetCodeGenInfo(CodeGenTypes &CGT, bool HasVector, bool SoftFloatABI,
+                           bool RetSmallStructInRegABI)
+      : TargetCodeGenInfo(std::make_unique<SystemZABIInfo>(
+            CGT, HasVector, SoftFloatABI, RetSmallStructInRegABI)),
+        Ctx(CGT.getContext()) {
     SwiftInfo =
         std::make_unique<SwiftABIInfo>(CGT, /*SwiftErrorInRegister=*/false);
   }
+
+  static bool isStructReturnInRegABI(const llvm::Triple &Triple,
+                                     const CodeGenOptions &Opts);
 
   // The vector ABI is different when the vector facility is present and when
   // a module e.g. defines an externally visible vector variable, a flag
@@ -416,6 +422,22 @@ ABIArgInfo SystemZABIInfo::classifyReturnType(QualType RetTy) const {
     return ABIArgInfo::getIgnore();
   if (isVectorArgumentType(RetTy))
     return ABIArgInfo::getDirect();
+
+  if (IsRetSmallStructInRegABI && isAggregateTypeForABI(RetTy) &&
+      !RetTy->isAnyComplexType()) {
+    uint64_t Size = getContext().getTypeSize(RetTy);
+    if (Size == 0)
+      return ABIArgInfo::getIgnore();
+    if (Size <= 128) {
+      if (Size > 64)
+        return ABIArgInfo::getDirect(llvm::StructType::get(
+            llvm::Type::getInt64Ty(getVMContext()),
+            llvm::IntegerType::get(getVMContext(), Size - 64)));
+      return ABIArgInfo::getNoExtend(
+          llvm::IntegerType::get(getVMContext(), Size));
+    }
+  }
+
   if (isCompoundType(RetTy) || getContext().getTypeSize(RetTy) > 64)
     return getNaturalAlignIndirect(RetTy, getDataLayout().getAllocaAddrSpace());
   return (isPromotableIntegerTypeForABI(RetTy) ? ABIArgInfo::getExtend(RetTy)
@@ -493,6 +515,20 @@ void SystemZABIInfo::computeInfo(CGFunctionInfo &FI) const {
       SZCGI.handleExternallyVisibleObjABI(I.type.getTypePtr(), CGT.getCGM(),
                                           /*IsParam*/true);
   }
+}
+
+bool SystemZTargetCodeGenInfo::isStructReturnInRegABI(
+    const llvm::Triple &Triple, const CodeGenOptions &Opts) {
+  assert(Triple.isSystemZ());
+
+  switch (Opts.getStructReturnConvention()) {
+  case CodeGenOptions::SRCK_Default:
+  case CodeGenOptions::SRCK_OnStack: // -fpcc-struct-return
+    return false;
+  case CodeGenOptions::SRCK_InRegs: // -freg-struct-return
+    return true;
+  }
+  llvm_unreachable("unexpected struct return convention");
 }
 
 bool SystemZTargetCodeGenInfo::isVectorTypeBased(const Type *Ty,
@@ -952,8 +988,11 @@ RValue ZOSXPLinkABIInfo::EmitZOSVAArg(CodeGenFunction &CGF, Address VAListAddr,
 std::unique_ptr<TargetCodeGenInfo>
 CodeGen::createSystemZTargetCodeGenInfo(CodeGenModule &CGM, bool HasVector,
                                         bool SoftFloatABI) {
-  return std::make_unique<SystemZTargetCodeGenInfo>(CGM.getTypes(), HasVector,
-                                                    SoftFloatABI);
+  bool RetSmallStructInRegABI =
+      SystemZTargetCodeGenInfo::isStructReturnInRegABI(CGM.getTriple(),
+                                                       CGM.getCodeGenOpts());
+  return std::make_unique<SystemZTargetCodeGenInfo>(
+      CGM.getTypes(), HasVector, SoftFloatABI, RetSmallStructInRegABI);
 }
 
 std::unique_ptr<TargetCodeGenInfo>
