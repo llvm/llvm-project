@@ -1178,8 +1178,8 @@ Expr<T> FoldMINorMAX(
   //   optional arguments that may show up in 3rd + argument.
   // - The code below only accepts more than 2 arguments if all the
   //   arguments are constant (and hence known to be present).
-  // - ConvertExprToHLFIR can't currently handle Extremum<CharacterValue>
-  // - Semantics doesn't currently generate Extremum<CharacterValue>
+  // - ConvertExprToHLFIR can't currently handle Extremum<Character>
+  // - Semantics doesn't currently generate Extremum<Character>
   // The original code did the folding of arguments and the overall extremum
   // operation in a single pass. This was shorter code-wise, but took me
   // a while to tease out all the logic and was doing redundant work.

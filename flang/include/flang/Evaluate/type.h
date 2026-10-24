@@ -75,13 +75,13 @@ inline constexpr int CIntegerKind{4};
 using LargestInt = Type<TypeCategory::Integer>;
 inline constexpr int LargestIntKind{16};
 
-// The type and kind of the result of logical iterations.
-// Be aware that LogicalResult alone matches INTEGER of any kind.
+// The type and kind of the result of relational and logical operations.
+// Be aware that LogicalResult alone matches LOGICAL of any kind.
 using LogicalResult = Type<TypeCategory::Logical>;
 inline constexpr int LogicalResultKind{4};
 
 // The type and kind of the largest supported real.
-// Be aware that LargestInt alone matches REAL of any kind.
+// Be aware that LargestReal alone matches REAL of any kind.
 using LargestReal = Type<TypeCategory::Real>;
 inline constexpr int LargestRealKind{16};
 

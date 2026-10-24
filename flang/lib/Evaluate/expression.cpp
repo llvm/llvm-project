@@ -92,7 +92,7 @@ const typename ExpressionBase<A>::Derived &ExpressionBase<A>::derived() const {
 #endif
 
 template <typename A> int ExpressionBase<A>::kind() const {
-  // Storing/deriving the kind handled by the subclasses
+  // Storing/deriving the kind is handled by the alternatives of u
   return common::visit(
       [&](const auto &x) -> int { return x.kind(); }, derived().u);
 }
