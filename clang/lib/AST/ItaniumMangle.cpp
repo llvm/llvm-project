@@ -908,30 +908,6 @@ void CXXNameMangler::mangleFunctionEncoding(GlobalDecl GD) {
 }
 
 void CXXNameMangler::mangleFunctionEncodingBareType(const FunctionDecl *FD) {
-  if (FD->hasAttr<EnableIfAttr>()) {
-    FunctionTypeDepthState Saved = FunctionTypeDepth.push();
-    Out << "Ua9enable_ifI";
-    for (AttrVec::const_iterator I = FD->getAttrs().begin(),
-                                 E = FD->getAttrs().end();
-         I != E; ++I) {
-      EnableIfAttr *EIA = dyn_cast<EnableIfAttr>(*I);
-      if (!EIA)
-        continue;
-      if (isCompatibleWith(LangOptions::ClangABI::Ver11)) {
-        // Prior to Clang 12, we hardcoded the X/E around enable-if's argument,
-        // even though <template-arg> should not include an X/E around
-        // <expr-primary>.
-        Out << 'X';
-        mangleExpression(EIA->getCond());
-        Out << 'E';
-      } else {
-        mangleTemplateArgExpr(EIA->getCond());
-      }
-    }
-    Out << 'E';
-    FunctionTypeDepth.pop(Saved);
-  }
-
   // When mangling an inheriting constructor, the bare function type used is
   // that of the inherited constructor.
   if (auto *CD = dyn_cast<CXXConstructorDecl>(FD))
@@ -962,6 +938,30 @@ void CXXNameMangler::mangleFunctionEncodingBareType(const FunctionDecl *FD) {
 
     // Mangle the type of the primary template.
     FD = PrimaryTemplate->getTemplatedDecl();
+  }
+
+  if (FD->hasAttr<EnableIfAttr>()) {
+    FunctionTypeDepthState Saved = FunctionTypeDepth.push();
+    Out << "Ua9enable_ifI";
+    for (AttrVec::const_iterator I = FD->getAttrs().begin(),
+                                 E = FD->getAttrs().end();
+         I != E; ++I) {
+      EnableIfAttr *EIA = dyn_cast<EnableIfAttr>(*I);
+      if (!EIA)
+        continue;
+      if (isCompatibleWith(LangOptions::ClangABI::Ver11)) {
+        // Prior to Clang 12, we hardcoded the X/E around enable-if's argument,
+        // even though <template-arg> should not include an X/E around
+        // <expr-primary>.
+        Out << 'X';
+        mangleExpression(EIA->getCond());
+        Out << 'E';
+      } else {
+        mangleTemplateArgExpr(EIA->getCond());
+      }
+    }
+    Out << 'E';
+    FunctionTypeDepth.pop(Saved);
   }
 
   mangleBareFunctionType(FD->getType()->castAs<FunctionProtoType>(),
