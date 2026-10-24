@@ -15,11 +15,13 @@ define void @expand(ptr %src, ptr %dst, i64 %0) {
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add nuw nsw i64 [[TMP4]], 8
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP5]]
-; CHECK-NEXT:    [[SCEVGEP5:%.*]] = getelementptr i8, ptr [[SRC]], i64 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[SMAX6:%.*]] = call i64 @llvm.smax.i64(i64 [[TMP6]], i64 1000)
 ; CHECK-NEXT:    [[TMP7:%.*]] = shl i64 [[SMAX6]], 4
 ; CHECK-NEXT:    [[SCEVGEP7:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = shl i64 [[TMP0]], 4
+; CHECK-NEXT:    [[SCEVGEP9:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP9]]
+; CHECK-NEXT:    [[SCEVGEP8:%.*]] = getelementptr i8, ptr [[SRC]], i64 8
 ; CHECK-NEXT:    br label %[[OUTER_HEADER:.*]]
 ; CHECK:       [[OUTER_HEADER]]:
 ; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[OUTER_IV_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
@@ -42,7 +44,7 @@ define void @expand(ptr %src, ptr %dst, i64 %0) {
 ; CHECK-NEXT:    br i1 [[TMP17]], label %[[SCALAR_PH]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[SRC]], [[SCEVGEP7]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[SCEVGEP]], [[SCEVGEP5]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[SCEVGEP9]], [[SCEVGEP8]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:

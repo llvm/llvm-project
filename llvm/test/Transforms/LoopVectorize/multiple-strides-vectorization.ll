@@ -103,11 +103,11 @@ define void @Test(ptr nocapture %obj, i64 %z) #0 {
 ;
 ; CHECK-HOIST-LABEL: @Test(
 ; CHECK-HOIST-NEXT:    [[SCEVGEP:%.*]] = getelementptr nuw i8, ptr [[OBJ:%.*]], i64 256
+; CHECK-HOIST-NEXT:    [[SCEVGEP5:%.*]] = getelementptr nuw i8, ptr [[OBJ]], i64 128
 ; CHECK-HOIST-NEXT:    [[TMP1:%.*]] = shl i64 [[Z:%.*]], 2
+; CHECK-HOIST-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[OBJ]], i64 [[TMP1]]
 ; CHECK-HOIST-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], 4224
 ; CHECK-HOIST-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[OBJ]], i64 [[TMP2]]
-; CHECK-HOIST-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[OBJ]], i64 [[TMP1]]
-; CHECK-HOIST-NEXT:    [[SCEVGEP3:%.*]] = getelementptr nuw i8, ptr [[OBJ]], i64 128
 ; CHECK-HOIST-NEXT:    br label [[DOTOUTER_PREHEADER:%.*]]
 ; CHECK-HOIST:       .outer.preheader:
 ; CHECK-HOIST-NEXT:    [[I:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[I_NEXT:%.*]], [[DOTOUTER:%.*]] ]
@@ -115,11 +115,10 @@ define void @Test(ptr nocapture %obj, i64 %z) #0 {
 ; CHECK-HOIST-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[Z]], 4
 ; CHECK-HOIST-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK-HOIST:       vector.memcheck:
-; CHECK-HOIST-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[SCEVGEP]], [[SCEVGEP2]]
-; CHECK-HOIST-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[OBJ]], [[SCEVGEP1]]
-; CHECK-HOIST-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; CHECK-HOIST-NEXT:    [[BOUND14:%.*]] = icmp ult ptr [[SCEVGEP3]], [[SCEVGEP1]]
-; CHECK-HOIST-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK-HOIST-NEXT:    [[BOUND08:%.*]] = icmp ult ptr [[SCEVGEP]], [[SCEVGEP2]]
+; CHECK-HOIST-NEXT:    [[BOUND19:%.*]] = icmp ult ptr [[OBJ]], [[SCEVGEP1]]
+; CHECK-HOIST-NEXT:    [[FOUND_CONFLICT10:%.*]] = and i1 [[BOUND08]], [[BOUND19]]
+; CHECK-HOIST-NEXT:    br i1 [[FOUND_CONFLICT10]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK-HOIST:       vector.ph:
 ; CHECK-HOIST-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[Z]], 3
 ; CHECK-HOIST-NEXT:    [[N_VEC:%.*]] = sub i64 [[Z]], [[N_MOD_VF]]

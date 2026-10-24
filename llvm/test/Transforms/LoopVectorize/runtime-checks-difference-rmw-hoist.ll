@@ -7,9 +7,9 @@ define void @rmw_variant_distance(ptr %dst, ptr %src, i64 %rows) {
 ; HOIST-LABEL: define void @rmw_variant_distance(
 ; HOIST-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 [[ROWS:%.*]]) {
 ; HOIST-NEXT:  [[ENTRY:.*]]:
+; HOIST-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[SRC]], i64 64
 ; HOIST-NEXT:    [[TMP0:%.*]] = shl i64 [[ROWS]], 6
 ; HOIST-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP0]]
-; HOIST-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[SRC]], i64 64
 ; HOIST-NEXT:    br label %[[OUTER_HEADER:.*]]
 ; HOIST:       [[OUTER_HEADER]]:
 ; HOIST-NEXT:    [[OUTER_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[OUTER_IV_NEXT:%.*]], [[OUTER_LATCH:%.*]] ]
@@ -79,8 +79,8 @@ define void @rmw_invariant_distance(ptr %dst, ptr %src, i64 %rows) {
 ; HOIST-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 [[ROWS:%.*]]) {
 ; HOIST-NEXT:  [[ENTRY:.*]]:
 ; HOIST-NEXT:    [[TMP0:%.*]] = shl i64 [[ROWS]], 6
-; HOIST-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP0]]
 ; HOIST-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP0]]
+; HOIST-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP0]]
 ; HOIST-NEXT:    br label %[[OUTER_HEADER:.*]]
 ; HOIST:       [[OUTER_HEADER]]:
 ; HOIST-NEXT:    [[OUTER_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[OUTER_IV_NEXT:%.*]], [[OUTER_LATCH:%.*]] ]

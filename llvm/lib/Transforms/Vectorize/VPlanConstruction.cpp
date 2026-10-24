@@ -1582,23 +1582,27 @@ void VPlanTransforms::attachCheckBlock(VPlan &Plan, Value *Cond,
   attachVPCheckBlock(Plan, CondVPV, CheckBlockVPBB, AddBranchWeights);
 }
 
-/// Generate recipes for the memory runtime checks \p Checks using \p Builder
-/// and return the condition that is true if any check fails.
+/// Generate recipes for the memory runtime checks \p Checks of \p TheLoop
+/// using \p Builder and return the condition that is true if any check fails.
 static VPValue *createRuntimeChecks(VPlan &Plan, VPBuilder &Builder,
                                     VPSCEVExpander &Expander,
                                     ArrayRef<RuntimePointerCheck> Checks,
+                                    const Loop *TheLoop, ScalarEvolution &SE,
                                     DebugLoc DL) {
   // Expand each group's bounds once so all checks reuse the same frozen values.
   SmallDenseMap<const RuntimeCheckingPtrGroup *,
-                std::pair<VPValue *, VPValue *>, 8>
+                std::tuple<VPValue *, VPValue *, const SCEV *>, 8>
       GroupToBounds;
   for (const auto &[A, B] : Checks)
     for (const RuntimeCheckingPtrGroup *CG : {A, B}) {
-      auto &[Start, End] = GroupToBounds[CG];
+      auto &[Start, End, Stride] = GroupToBounds[CG];
       if (Start)
         continue;
-      Start = Expander.expand(CG->Low);
-      End = Expander.expand(CG->High);
+      auto [Low, High, StrideToCheck] = getRuntimeCheckBounds(
+          CG, TheLoop, SE, VectorizerParams::HoistRuntimeChecks);
+      Stride = StrideToCheck;
+      Start = Expander.expand(Low);
+      End = Expander.expand(High);
       if (CG->NeedsFreeze) {
         Start = Builder.createFreeze(Start, DL);
         End = Builder.createFreeze(End, DL);
@@ -1606,15 +1610,25 @@ static VPValue *createRuntimeChecks(VPlan &Plan, VPBuilder &Builder,
     }
 
   VPValue *Cond = Plan.getFalse();
+  SmallPtrSet<const SCEV *, 4> CheckedStrides;
   for (const auto &[A, B] : Checks) {
-    auto [AStart, AEnd] = GroupToBounds[A];
-    auto [BStart, BEnd] = GroupToBounds[B];
+    auto [AStart, AEnd, AStride] = GroupToBounds[A];
+    auto [BStart, BEnd, BStride] = GroupToBounds[B];
     VPValue *Bound0 =
         Builder.createICmp(CmpInst::ICMP_ULT, AStart, BEnd, DL, "bound0");
     VPValue *Bound1 =
         Builder.createICmp(CmpInst::ICMP_ULT, BStart, AEnd, DL, "bound1");
     VPValue *IsConflict =
         Builder.createAnd(Bound0, Bound1, DL, "found.conflict");
+    for (const SCEV *Stride : {AStride, BStride}) {
+      if (!Stride || !CheckedStrides.insert(Stride).second)
+        continue;
+      VPValue *StrideV = Expander.expand(Stride);
+      VPValue *IsNegative = Builder.createICmp(
+          CmpInst::ICMP_SLT, StrideV, Plan.getZero(StrideV->getScalarType()),
+          DL, "stride.check");
+      IsConflict = Builder.createOr(IsConflict, IsNegative, DL);
+    }
     Cond = Builder.createOr(Cond, IsConflict, DL, "conflict.rdx");
   }
   return Cond;
@@ -1663,19 +1677,21 @@ static VPValue *createDiffRuntimeChecks(VPlan &Plan, VPBuilder &Builder,
 
 void VPlanTransforms::attachMemoryChecks(
     VPlan &Plan, const RuntimePointerChecking &RtPtrChecking,
-    ScalarEvolution &SE, ElementCount VF, unsigned UF, DebugLoc DL,
+    const Loop *TheLoop, ScalarEvolution &SE, ElementCount VF, unsigned UF,
     bool AddBranchWeights) {
   assert(!RtPtrChecking.getChecks().empty() && "No checks to generate");
 
+  DebugLoc DL = TheLoop->getStartLoc();
   auto *MemCheckVPBB = Plan.createVPBasicBlock("vector.memcheck");
   VPBuilder Builder(MemCheckVPBB);
-  VPSCEVExpander Expander(Builder, SE, DL);
+  VPSCEVExpander Expander(Builder, SE, DL, TheLoop->getParentLoop());
   auto DiffChecks = RtPtrChecking.getDiffChecks();
-  VPValue *Cond = DiffChecks
-                      ? createDiffRuntimeChecks(Plan, Builder, Expander,
-                                                *DiffChecks, SE, VF, UF, DL)
-                      : createRuntimeChecks(Plan, Builder, Expander,
-                                            RtPtrChecking.getChecks(), DL);
+  VPValue *Cond =
+      DiffChecks
+          ? createDiffRuntimeChecks(Plan, Builder, Expander, *DiffChecks, SE,
+                                    VF, UF, DL)
+          : createRuntimeChecks(Plan, Builder, Expander,
+                                RtPtrChecking.getChecks(), TheLoop, SE, DL);
   attachVPCheckBlock(Plan, Cond, MemCheckVPBB, AddBranchWeights);
 }
 
