@@ -2,6 +2,7 @@
 // RUN: mlir-opt -allow-unregistered-dialect %s | mlir-opt -allow-unregistered-dialect | FileCheck %s
 // RUN: mlir-opt -allow-unregistered-dialect -mlir-print-op-generic %s | FileCheck %s -check-prefix GENERIC
 // RUN: mlir-opt -allow-unregistered-dialect %s | mlir-opt -allow-unregistered-dialect -mlir-print-op-generic | FileCheck %s -check-prefix GENERIC
+// RUN: mlir-opt -allow-unregistered-dialect -mlir-print-elementsattrs-with-hex-if-larger=0 %s | mlir-opt -allow-unregistered-dialect | FileCheck %s -check-prefix OCP-HEX
 
 // CHECK-DAG: #map{{[0-9]*}} = affine_map<(d0, d1, d2, d3, d4)[s0] -> (d0, d1, d2, d4, d3)>
 #map = affine_map<(d0, d1, d2, d3, d4)[s0] -> (d0, d1, d2, d4, d3)>
@@ -798,6 +799,13 @@ func.func @sparsetensorattr() -> () {
   "fooi32"(){bar = sparse<> : tensor<1x1xi32>} : () -> ()
 // CHECK: "fooi64"() {bar = sparse<0, -1> : tensor<1xi64>} : () -> ()
   "fooi64"(){bar = sparse<[0], [-1]> : tensor<1xi64>} : () -> ()
+// CHECK: "fooocp_int"() {bar = sparse<{{\[\[}}0, 0], [1, 1]], {{\[}}-128, 127]> : tensor<2x2xocp_int8>} : () -> ()
+// OCP-HEX: "fooocp_int"() {bar = sparse<{{\[\[}}0, 0], [1, 1]], {{\[}}-128, 127]> : tensor<2x2xocp_int8>} : () -> ()
+  "fooocp_int"(){bar = sparse<[[0, 0], [1, 1]], [-128, 127]> : tensor<2x2xocp_int8>} : () -> ()
+// CHECK: "fooocp_int_splat"() {bar = sparse<0, -2> : tensor<1x1xocp_int8>} : () -> ()
+  "fooocp_int_splat"(){bar = sparse<0, -2> : tensor<1x1xocp_int8>} : () -> ()
+// CHECK: "fooocp_int_empty"() {bar = sparse<> : tensor<2x2xocp_int8>} : () -> ()
+  "fooocp_int_empty"(){bar = sparse<> : tensor<2x2xocp_int8>} : () -> ()
 // CHECK: "foo2"() {bar = sparse<> : tensor<0xi32>} : () -> ()
   "foo2"(){bar = sparse<> : tensor<0xi32>} : () -> ()
 // CHECK: "foo3"() {bar = sparse<> : tensor<i32>} : () -> ()
@@ -835,6 +843,8 @@ func.func @sparsevectorattr() -> () {
   "fooi32"(){bar = sparse<> : vector<1x1xi32>} : () -> ()
 // CHECK: "fooi64"() {bar = sparse<0, -1> : vector<1xi64>} : () -> ()
   "fooi64"(){bar = sparse<[[0]], [-1]> : vector<1xi64>} : () -> ()
+// CHECK: "fooocp_int"() {bar = sparse<0, 127> : vector<1xocp_int8>} : () -> ()
+  "fooocp_int"(){bar = sparse<0, 127> : vector<1xocp_int8>} : () -> ()
 
 // CHECK: "foof16"() {bar = sparse<0, -2.000000e+00> : vector<1x1x1xf16>} : () -> ()
   "foof16"(){bar = sparse<0, -2.0> : vector<1x1x1xf16>} : () -> ()

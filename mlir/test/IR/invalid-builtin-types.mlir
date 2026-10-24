@@ -23,6 +23,10 @@ func.func @illegalmemrefelementtype(memref<?xtensor<i8>>) -> () // expected-erro
 
 // -----
 
+func.func @ocp_int8_memref_element(memref<4xocp_int8>) -> () // expected-error {{invalid memref element type}}
+
+// -----
+
 func.func @illegalunrankedmemrefelementtype(memref<*xtensor<i8>>) -> () // expected-error {{invalid memref element type}}
 
 // -----

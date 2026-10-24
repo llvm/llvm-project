@@ -1,5 +1,40 @@
 // RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file -verify-diagnostics
 
+func.func @ocp_int8_dense_wrong_width() -> () {
+  // expected-error @+1 {{incompatible attribute for element type}}
+  "foo"(){bar = dense<tensor<1xocp_int8> : [1 : i16]>} : () -> ()
+}
+
+// -----
+
+func.func @ocp_int8_dense_signed_storage() -> () {
+  // expected-error @+1 {{incompatible attribute for element type}}
+  "foo"(){bar = dense<tensor<1xocp_int8> : [1 : si8]>} : () -> ()
+}
+
+// -----
+
+func.func @ocp_int8_dense_float_storage() -> () {
+  // expected-error @+1 {{incompatible attribute for element type}}
+  "foo"(){bar = dense<tensor<1xocp_int8> : [1.0 : f32]>} : () -> ()
+}
+
+// -----
+
+func.func @ocp_int8_sparse_out_of_range() -> () {
+  // expected-error @+1 {{integer constant out of range for type}}
+  "foo"(){bar = sparse<0, 256> : tensor<1xocp_int8>} : () -> ()
+}
+
+// -----
+
+func.func @ocp_int8_sparse_float_value() -> () {
+  // expected-error @+1 {{expected integer elements, but parsed floating-point}}
+  "foo"(){bar = sparse<0, 1.0> : tensor<1xocp_int8>} : () -> ()
+}
+
+// -----
+
 func.func @elementsattr_non_tensor_type() -> () {
   "foo"(){bar = dense<[4]> : i32} : () -> () // expected-error {{elements literal must be a shaped type}}
 }

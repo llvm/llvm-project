@@ -58,6 +58,7 @@ OptionalParseResult Parser::parseOptionalType(Type &type) {
   case Token::kw_f80:
   case Token::kw_f128:
   case Token::kw_index:
+  case Token::kw_ocp_int8:
   case Token::kw_none:
   case Token::kw_token:
   case Token::exclamation_identifier:
@@ -370,6 +371,10 @@ Type Parser::parseNonFunctionType() {
   case Token::kw_index:
     consumeToken(Token::kw_index);
     return builder.getIndexType();
+
+  case Token::kw_ocp_int8:
+    consumeToken(Token::kw_ocp_int8);
+    return builder.getType<OCPInt8Type>();
 
   // none-type
   case Token::kw_none:

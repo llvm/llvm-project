@@ -55,6 +55,20 @@ module @TestFloat attributes {
 } {}
 
 //===----------------------------------------------------------------------===//
+// OCPInt8Type
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @TestOCPInt8
+module @TestOCPInt8 attributes {
+  // CHECK: bytecode.scalar = ocp_int8,
+  // CHECK: bytecode.tensor = tensor<4xocp_int8>,
+  // CHECK: bytecode.vector = vector<2xocp_int8>
+  bytecode.scalar = ocp_int8,
+  bytecode.tensor = tensor<4xocp_int8>,
+  bytecode.vector = vector<2xocp_int8>
+} {}
+
+//===----------------------------------------------------------------------===//
 // IntegerType
 //===----------------------------------------------------------------------===//
 
