@@ -68,8 +68,7 @@ define <3 x i64> @shl_sub_i64_vec_poison(<3 x i64> %x) {
 
 define i32 @shl_allones_sub_bwm1(i32 %x) {
 ; CHECK-LABEL: @shl_allones_sub_bwm1(
-; CHECK-NEXT:    [[S:%.*]] = sub i32 31, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = shl nsw i32 -1, [[S]]
+; CHECK-NEXT:    [[R:%.*]] = ashr exact i32 -2147483648, [[X:%.*]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %s = sub i32 31, %x
@@ -79,8 +78,7 @@ define i32 @shl_allones_sub_bwm1(i32 %x) {
 
 define i32 @lshr_signmask_sub_bwm1(i32 %x) {
 ; CHECK-LABEL: @lshr_signmask_sub_bwm1(
-; CHECK-NEXT:    [[S:%.*]] = sub i32 31, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = lshr exact i32 -2147483648, [[S]]
+; CHECK-NEXT:    [[R:%.*]] = shl nuw i32 1, [[X:%.*]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %s = sub i32 31, %x
@@ -90,8 +88,7 @@ define i32 @lshr_signmask_sub_bwm1(i32 %x) {
 
 define i32 @ashr_signmask_sub_bwm1(i32 %x) {
 ; CHECK-LABEL: @ashr_signmask_sub_bwm1(
-; CHECK-NEXT:    [[S:%.*]] = sub i32 31, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = ashr exact i32 -2147483648, [[S]]
+; CHECK-NEXT:    [[R:%.*]] = shl nsw i32 -1, [[X:%.*]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %s = sub i32 31, %x
@@ -101,8 +98,7 @@ define i32 @ashr_signmask_sub_bwm1(i32 %x) {
 
 define <2 x i8> @lshr_signmask_sub_bwm1_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @lshr_signmask_sub_bwm1_vec(
-; CHECK-NEXT:    [[S:%.*]] = sub <2 x i8> splat (i8 7), [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = lshr exact <2 x i8> splat (i8 -128), [[S]]
+; CHECK-NEXT:    [[R:%.*]] = shl nuw <2 x i8> splat (i8 1), [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %s = sub <2 x i8> splat (i8 7), %x
@@ -112,8 +108,7 @@ define <2 x i8> @lshr_signmask_sub_bwm1_vec(<2 x i8> %x) {
 
 define <2 x i8> @lshr_signmask_sub_bwm1_vec_poison(<2 x i8> %x) {
 ; CHECK-LABEL: @lshr_signmask_sub_bwm1_vec_poison(
-; CHECK-NEXT:    [[S:%.*]] = sub <2 x i8> splat (i8 7), [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = lshr exact <2 x i8> <i8 -128, i8 poison>, [[S]]
+; CHECK-NEXT:    [[R:%.*]] = shl nuw <2 x i8> splat (i8 1), [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %s = sub <2 x i8> splat (i8 7), %x
