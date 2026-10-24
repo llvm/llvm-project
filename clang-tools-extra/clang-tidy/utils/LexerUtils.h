@@ -23,6 +23,14 @@ class Stmt;
 
 namespace tidy::utils::lexer {
 
+/// Returns the spelling of an identifier token.
+StringRef getTokenName(const Token &Tok);
+
+/// Returns the raw tokens in \p Range. The returned tokens refer to the
+/// source manager's backing buffer.
+std::vector<Token> getRawTokens(CharSourceRange Range, const SourceManager &SM,
+                                const LangOptions &LangOpts);
+
 /// Returns previous token or ``std::nullopt`` if not found.
 std::optional<Token> getPreviousToken(SourceLocation Location,
                                       const SourceManager &SM,
