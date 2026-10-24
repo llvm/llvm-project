@@ -9,25 +9,35 @@ define half @uitofp_i128_to_f16(i128 %x) nounwind {
 ; SSE2-LABEL: uitofp_i128_to_f16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pushq %rax
-; SSE2-NEXT:    callq __floatuntisf@PLT
+; SSE2-NEXT:    movabsq $9223372036854775807, %rax # imm = 0x7FFFFFFFFFFFFFFF
+; SSE2-NEXT:    cmpq %rax, %rdi
+; SSE2-NEXT:    cmovaeq %rax, %rdi
+; SSE2-NEXT:    testq %rsi, %rsi
+; SSE2-NEXT:    cmovneq %rax, %rdi
+; SSE2-NEXT:    cvtsi2ss %rdi, %xmm0
 ; SSE2-NEXT:    callq __truncsfhf2@PLT
 ; SSE2-NEXT:    popq %rax
 ; SSE2-NEXT:    retq
 ;
 ; F16C-LABEL: uitofp_i128_to_f16:
 ; F16C:       # %bb.0:
-; F16C-NEXT:    pushq %rax
-; F16C-NEXT:    callq __floatuntisf@PLT
+; F16C-NEXT:    movabsq $9223372036854775807, %rax # imm = 0x7FFFFFFFFFFFFFFF
+; F16C-NEXT:    cmpq %rax, %rdi
+; F16C-NEXT:    cmovaeq %rax, %rdi
+; F16C-NEXT:    testq %rsi, %rsi
+; F16C-NEXT:    cmovneq %rax, %rdi
+; F16C-NEXT:    vcvtsi2ss %rdi, %xmm15, %xmm0
 ; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; F16C-NEXT:    popq %rax
 ; F16C-NEXT:    retq
 ;
 ; FP16-LABEL: uitofp_i128_to_f16:
 ; FP16:       # %bb.0:
-; FP16-NEXT:    pushq %rax
-; FP16-NEXT:    callq __floatuntisf@PLT
-; FP16-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; FP16-NEXT:    popq %rax
+; FP16-NEXT:    movabsq $9223372036854775807, %rax # imm = 0x7FFFFFFFFFFFFFFF
+; FP16-NEXT:    cmpq %rax, %rdi
+; FP16-NEXT:    cmovaeq %rax, %rdi
+; FP16-NEXT:    testq %rsi, %rsi
+; FP16-NEXT:    cmovneq %rax, %rdi
+; FP16-NEXT:    vcvtsi2sh %rdi, %xmm31, %xmm0
 ; FP16-NEXT:    retq
 ;
 ; WIN-SSE2-LABEL: uitofp_i128_to_f16:
@@ -43,13 +53,12 @@ define half @uitofp_i128_to_f16(i128 %x) nounwind {
 ;
 ; WIN-FP16-LABEL: uitofp_i128_to_f16:
 ; WIN-FP16:       # %bb.0:
-; WIN-FP16-NEXT:    subq $56, %rsp
-; WIN-FP16-NEXT:    movq %rdx, {{[0-9]+}}(%rsp)
-; WIN-FP16-NEXT:    movq %rcx, {{[0-9]+}}(%rsp)
-; WIN-FP16-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; WIN-FP16-NEXT:    callq __floatuntisf
-; WIN-FP16-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; WIN-FP16-NEXT:    addq $56, %rsp
+; WIN-FP16-NEXT:    movabsq $9223372036854775807, %rax # imm = 0x7FFFFFFFFFFFFFFF
+; WIN-FP16-NEXT:    cmpq %rax, %rcx
+; WIN-FP16-NEXT:    cmovaeq %rax, %rcx
+; WIN-FP16-NEXT:    testq %rdx, %rdx
+; WIN-FP16-NEXT:    cmovneq %rax, %rcx
+; WIN-FP16-NEXT:    vcvtsi2sh %rcx, %xmm31, %xmm0
 ; WIN-FP16-NEXT:    retq
   %r = uitofp i128 %x to half
   ret half %r
@@ -59,27 +68,36 @@ define half @uitofp_i128_to_f16_strict(i128 %x) nounwind strictfp {
 ; SSE2-LABEL: uitofp_i128_to_f16_strict:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pushq %rax
-; SSE2-NEXT:    callq __floatuntisf@PLT
+; SSE2-NEXT:    movabsq $9223372036854775807, %rax # imm = 0x7FFFFFFFFFFFFFFF
+; SSE2-NEXT:    cmpq %rax, %rdi
+; SSE2-NEXT:    cmovaeq %rax, %rdi
+; SSE2-NEXT:    testq %rsi, %rsi
+; SSE2-NEXT:    cmovneq %rax, %rdi
+; SSE2-NEXT:    cvtsi2ss %rdi, %xmm0
 ; SSE2-NEXT:    callq __truncsfhf2@PLT
 ; SSE2-NEXT:    popq %rax
 ; SSE2-NEXT:    retq
 ;
 ; F16C-LABEL: uitofp_i128_to_f16_strict:
 ; F16C:       # %bb.0:
-; F16C-NEXT:    pushq %rax
-; F16C-NEXT:    callq __floatuntisf@PLT
-; F16C-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; F16C-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; F16C-NEXT:    movabsq $9223372036854775807, %rax # imm = 0x7FFFFFFFFFFFFFFF
+; F16C-NEXT:    cmpq %rax, %rdi
+; F16C-NEXT:    cmovaeq %rax, %rdi
+; F16C-NEXT:    testq %rsi, %rsi
+; F16C-NEXT:    cmovneq %rax, %rdi
+; F16C-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; F16C-NEXT:    vcvtsi2ss %rdi, %xmm0, %xmm0
 ; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; F16C-NEXT:    popq %rax
 ; F16C-NEXT:    retq
 ;
 ; FP16-LABEL: uitofp_i128_to_f16_strict:
 ; FP16:       # %bb.0:
-; FP16-NEXT:    pushq %rax
-; FP16-NEXT:    callq __floatuntisf@PLT
-; FP16-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; FP16-NEXT:    popq %rax
+; FP16-NEXT:    movabsq $9223372036854775807, %rax # imm = 0x7FFFFFFFFFFFFFFF
+; FP16-NEXT:    cmpq %rax, %rdi
+; FP16-NEXT:    cmovaeq %rax, %rdi
+; FP16-NEXT:    testq %rsi, %rsi
+; FP16-NEXT:    cmovneq %rax, %rdi
+; FP16-NEXT:    vcvtsi2sh %rdi, %xmm31, %xmm0
 ; FP16-NEXT:    retq
 ;
 ; WIN-SSE2-LABEL: uitofp_i128_to_f16_strict:
@@ -95,13 +113,12 @@ define half @uitofp_i128_to_f16_strict(i128 %x) nounwind strictfp {
 ;
 ; WIN-FP16-LABEL: uitofp_i128_to_f16_strict:
 ; WIN-FP16:       # %bb.0:
-; WIN-FP16-NEXT:    subq $56, %rsp
-; WIN-FP16-NEXT:    movq %rdx, {{[0-9]+}}(%rsp)
-; WIN-FP16-NEXT:    movq %rcx, {{[0-9]+}}(%rsp)
-; WIN-FP16-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; WIN-FP16-NEXT:    callq __floatuntisf
-; WIN-FP16-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; WIN-FP16-NEXT:    addq $56, %rsp
+; WIN-FP16-NEXT:    movabsq $9223372036854775807, %rax # imm = 0x7FFFFFFFFFFFFFFF
+; WIN-FP16-NEXT:    cmpq %rax, %rcx
+; WIN-FP16-NEXT:    cmovaeq %rax, %rcx
+; WIN-FP16-NEXT:    testq %rdx, %rdx
+; WIN-FP16-NEXT:    cmovneq %rax, %rcx
+; WIN-FP16-NEXT:    vcvtsi2sh %rcx, %xmm31, %xmm0
 ; WIN-FP16-NEXT:    retq
   %r = call half @llvm.experimental.constrained.uitofp.f16.i128(i128 %x, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
   ret half %r
@@ -110,70 +127,68 @@ define half @uitofp_i128_to_f16_strict(i128 %x) nounwind strictfp {
 define <2 x half> @uitofp_v2i128_to_v2f16(<2 x i128> %x) nounwind {
 ; SSE2-LABEL: uitofp_v2i128_to_v2f16:
 ; SSE2:       # %bb.0:
+; SSE2-NEXT:    pushq %r15
 ; SSE2-NEXT:    pushq %r14
 ; SSE2-NEXT:    pushq %rbx
-; SSE2-NEXT:    subq $24, %rsp
+; SSE2-NEXT:    subq $16, %rsp
 ; SSE2-NEXT:    movq %rcx, %rbx
 ; SSE2-NEXT:    movq %rdx, %r14
-; SSE2-NEXT:    callq __floatuntisf@PLT
+; SSE2-NEXT:    movabsq $9223372036854775807, %r15 # imm = 0x7FFFFFFFFFFFFFFF
+; SSE2-NEXT:    cmpq %r15, %rdi
+; SSE2-NEXT:    cmovaeq %r15, %rdi
+; SSE2-NEXT:    testq %rsi, %rsi
+; SSE2-NEXT:    cmovneq %r15, %rdi
+; SSE2-NEXT:    cvtsi2ss %rdi, %xmm0
 ; SSE2-NEXT:    callq __truncsfhf2@PLT
-; SSE2-NEXT:    movdqa %xmm0, (%rsp) # 16-byte Spill
-; SSE2-NEXT:    movq %r14, %rdi
-; SSE2-NEXT:    movq %rbx, %rsi
-; SSE2-NEXT:    callq __floatuntisf@PLT
+; SSE2-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; SSE2-NEXT:    cmpq %r15, %r14
+; SSE2-NEXT:    cmovaeq %r15, %r14
+; SSE2-NEXT:    testq %rbx, %rbx
+; SSE2-NEXT:    cmovneq %r15, %r14
+; SSE2-NEXT:    xorps %xmm0, %xmm0
+; SSE2-NEXT:    cvtsi2ss %r14, %xmm0
 ; SSE2-NEXT:    callq __truncsfhf2@PLT
 ; SSE2-NEXT:    movdqa (%rsp), %xmm1 # 16-byte Reload
 ; SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
 ; SSE2-NEXT:    movdqa %xmm1, %xmm0
-; SSE2-NEXT:    addq $24, %rsp
+; SSE2-NEXT:    addq $16, %rsp
 ; SSE2-NEXT:    popq %rbx
 ; SSE2-NEXT:    popq %r14
+; SSE2-NEXT:    popq %r15
 ; SSE2-NEXT:    retq
 ;
 ; F16C-LABEL: uitofp_v2i128_to_v2f16:
 ; F16C:       # %bb.0:
-; F16C-NEXT:    pushq %r14
-; F16C-NEXT:    pushq %rbx
-; F16C-NEXT:    subq $24, %rsp
-; F16C-NEXT:    movq %rsi, %rbx
-; F16C-NEXT:    movq %rdi, %r14
-; F16C-NEXT:    movq %rdx, %rdi
-; F16C-NEXT:    movq %rcx, %rsi
-; F16C-NEXT:    callq __floatuntisf@PLT
+; F16C-NEXT:    movabsq $9223372036854775807, %rax # imm = 0x7FFFFFFFFFFFFFFF
+; F16C-NEXT:    cmpq %rax, %rdx
+; F16C-NEXT:    cmovaeq %rax, %rdx
+; F16C-NEXT:    testq %rcx, %rcx
+; F16C-NEXT:    cmovneq %rax, %rdx
+; F16C-NEXT:    vcvtsi2ss %rdx, %xmm15, %xmm0
 ; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; F16C-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; F16C-NEXT:    movq %r14, %rdi
-; F16C-NEXT:    movq %rbx, %rsi
-; F16C-NEXT:    callq __floatuntisf@PLT
-; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; F16C-NEXT:    vpunpcklwd (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
-; F16C-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
-; F16C-NEXT:    addq $24, %rsp
-; F16C-NEXT:    popq %rbx
-; F16C-NEXT:    popq %r14
+; F16C-NEXT:    cmpq %rax, %rdi
+; F16C-NEXT:    cmovaeq %rax, %rdi
+; F16C-NEXT:    testq %rsi, %rsi
+; F16C-NEXT:    cmovneq %rax, %rdi
+; F16C-NEXT:    vcvtsi2ss %rdi, %xmm15, %xmm1
+; F16C-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
+; F16C-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
 ; F16C-NEXT:    retq
 ;
 ; FP16-LABEL: uitofp_v2i128_to_v2f16:
 ; FP16:       # %bb.0:
-; FP16-NEXT:    pushq %r14
-; FP16-NEXT:    pushq %rbx
-; FP16-NEXT:    subq $24, %rsp
-; FP16-NEXT:    movq %rsi, %rbx
-; FP16-NEXT:    movq %rdi, %r14
-; FP16-NEXT:    movq %rdx, %rdi
-; FP16-NEXT:    movq %rcx, %rsi
-; FP16-NEXT:    callq __floatuntisf@PLT
-; FP16-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; FP16-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; FP16-NEXT:    movq %r14, %rdi
-; FP16-NEXT:    movq %rbx, %rsi
-; FP16-NEXT:    callq __floatuntisf@PLT
-; FP16-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; FP16-NEXT:    vpunpcklwd (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
-; FP16-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
-; FP16-NEXT:    addq $24, %rsp
-; FP16-NEXT:    popq %rbx
-; FP16-NEXT:    popq %r14
+; FP16-NEXT:    movabsq $9223372036854775807, %rax # imm = 0x7FFFFFFFFFFFFFFF
+; FP16-NEXT:    cmpq %rax, %rdx
+; FP16-NEXT:    cmovaeq %rax, %rdx
+; FP16-NEXT:    testq %rcx, %rcx
+; FP16-NEXT:    cmovneq %rax, %rdx
+; FP16-NEXT:    vcvtsi2sh %rdx, %xmm31, %xmm0
+; FP16-NEXT:    cmpq %rax, %rdi
+; FP16-NEXT:    cmovaeq %rax, %rdi
+; FP16-NEXT:    testq %rsi, %rsi
+; FP16-NEXT:    cmovneq %rax, %rdi
+; FP16-NEXT:    vcvtsi2sh %rdi, %xmm31, %xmm1
+; FP16-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
 ; FP16-NEXT:    retq
 ;
 ; WIN-SSE2-LABEL: uitofp_v2i128_to_v2f16:
@@ -199,21 +214,18 @@ define <2 x half> @uitofp_v2i128_to_v2f16(<2 x i128> %x) nounwind {
 ;
 ; WIN-FP16-LABEL: uitofp_v2i128_to_v2f16:
 ; WIN-FP16:       # %bb.0:
-; WIN-FP16-NEXT:    subq $88, %rsp
-; WIN-FP16-NEXT:    vmovaps %xmm6, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; WIN-FP16-NEXT:    movq %r9, {{[0-9]+}}(%rsp)
-; WIN-FP16-NEXT:    movq %r8, {{[0-9]+}}(%rsp)
-; WIN-FP16-NEXT:    movq %rdx, {{[0-9]+}}(%rsp)
-; WIN-FP16-NEXT:    movq %rcx, {{[0-9]+}}(%rsp)
-; WIN-FP16-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; WIN-FP16-NEXT:    callq __floatuntisf
-; WIN-FP16-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm6
-; WIN-FP16-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; WIN-FP16-NEXT:    callq __floatuntisf
-; WIN-FP16-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; WIN-FP16-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm6[0],xmm0[1],xmm6[1],xmm0[2],xmm6[2],xmm0[3],xmm6[3]
-; WIN-FP16-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm6 # 16-byte Reload
-; WIN-FP16-NEXT:    addq $88, %rsp
+; WIN-FP16-NEXT:    movabsq $9223372036854775807, %rax # imm = 0x7FFFFFFFFFFFFFFF
+; WIN-FP16-NEXT:    cmpq %rax, %r8
+; WIN-FP16-NEXT:    cmovaeq %rax, %r8
+; WIN-FP16-NEXT:    testq %r9, %r9
+; WIN-FP16-NEXT:    cmovneq %rax, %r8
+; WIN-FP16-NEXT:    vcvtsi2sh %r8, %xmm31, %xmm0
+; WIN-FP16-NEXT:    cmpq %rax, %rcx
+; WIN-FP16-NEXT:    cmovaeq %rax, %rcx
+; WIN-FP16-NEXT:    testq %rdx, %rdx
+; WIN-FP16-NEXT:    cmovneq %rax, %rcx
+; WIN-FP16-NEXT:    vcvtsi2sh %rcx, %xmm31, %xmm1
+; WIN-FP16-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
 ; WIN-FP16-NEXT:    retq
   %r = uitofp <2 x i128> %x to <2 x half>
   ret <2 x half> %r

@@ -306,29 +306,54 @@ define half @uitofp_f16_i64(i64 %x) #0 {
 }
 
 define half @sitofp_f16_i128(i128 %x) #0 {
-; CHECK-LABEL: sitofp_f16_i128:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl __floattisf
-; CHECK-NEXT:    fcvt h0, s0
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NOFP16-LABEL: sitofp_f16_i128:
+; CHECK-NOFP16:       // %bb.0:
+; CHECK-NOFP16-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NOFP16-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NOFP16-NEXT:    .cfi_offset w30, -16
+; CHECK-NOFP16-NEXT:    bl __floattisf
+; CHECK-NOFP16-NEXT:    fcvt h0, s0
+; CHECK-NOFP16-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NOFP16-NEXT:    ret
+;
+; CHECK-FP16-LABEL: sitofp_f16_i128:
+; CHECK-FP16:       // %bb.0:
+; CHECK-FP16-NEXT:    mov x8, #9223372036854775807 // =0x7fffffffffffffff
+; CHECK-FP16-NEXT:    mov x9, #-9223372036854775808 // =0x8000000000000000
+; CHECK-FP16-NEXT:    mov x11, #-1 // =0xffffffffffffffff
+; CHECK-FP16-NEXT:    cmp x0, x8
+; CHECK-FP16-NEXT:    sbcs xzr, x1, xzr
+; CHECK-FP16-NEXT:    csel x8, x0, x8, lt
+; CHECK-FP16-NEXT:    csel x10, x1, xzr, lt
+; CHECK-FP16-NEXT:    cmp x9, x8
+; CHECK-FP16-NEXT:    sbcs xzr, x11, x10
+; CHECK-FP16-NEXT:    csel x8, x8, x9, lt
+; CHECK-FP16-NEXT:    scvtf h0, x8
+; CHECK-FP16-NEXT:    ret
   %val = call half @llvm.experimental.constrained.sitofp.f16.i128(i128 %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret half %val
 }
 
 define half @uitofp_f16_i128(i128 %x) #0 {
-; CHECK-LABEL: uitofp_f16_i128:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl __floatuntisf
-; CHECK-NEXT:    fcvt h0, s0
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NOFP16-LABEL: uitofp_f16_i128:
+; CHECK-NOFP16:       // %bb.0:
+; CHECK-NOFP16-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NOFP16-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NOFP16-NEXT:    .cfi_offset w30, -16
+; CHECK-NOFP16-NEXT:    bl __floatuntisf
+; CHECK-NOFP16-NEXT:    fcvt h0, s0
+; CHECK-NOFP16-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NOFP16-NEXT:    ret
+;
+; CHECK-FP16-LABEL: uitofp_f16_i128:
+; CHECK-FP16:       // %bb.0:
+; CHECK-FP16-NEXT:    mov x8, #9223372036854775807 // =0x7fffffffffffffff
+; CHECK-FP16-NEXT:    cmp x0, x8
+; CHECK-FP16-NEXT:    csel x9, x0, x8, lo
+; CHECK-FP16-NEXT:    cmp x1, #0
+; CHECK-FP16-NEXT:    csel x8, x9, x8, eq
+; CHECK-FP16-NEXT:    scvtf h0, x8
+; CHECK-FP16-NEXT:    ret
   %val = call half @llvm.experimental.constrained.uitofp.f16.i128(i128 %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret half %val
 }
