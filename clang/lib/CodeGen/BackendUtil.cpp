@@ -156,6 +156,19 @@ getProfileGenName(const cl::LibraryOptionsContext &LibraryOptions,
   return FileName;
 }
 
+/// Populate the fast math library mappings on \p TLII according to the
+/// -ffastlib= selection.
+static void addFastMathLibrary(TargetLibraryInfoImpl &TLII,
+                               const CodeGenOptions &CodeGenOpts) {
+  switch (CodeGenOpts.getFastLib()) {
+  case CodeGenOptions::AMDLIBM:
+    TLII.addFastFunctionsFromMathLib(TargetLibraryInfoImpl::AMDLIBM);
+    break;
+  case CodeGenOptions::NoFastLibrary:
+    break;
+  }
+}
+
 namespace {
 
 class EmitAssemblyHelper {
@@ -1003,6 +1016,7 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
   // preset TLI.
   std::unique_ptr<TargetLibraryInfoImpl> TLII(
       llvm::driver::createTLII(TargetTriple, CodeGenOpts.getVecLib()));
+  addFastMathLibrary(*TLII, CodeGenOpts);
   FAM.registerPass([&] { return TargetLibraryAnalysis(*TLII); });
 
   // Register all the basic analyses with the managers.
