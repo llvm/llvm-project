@@ -147,6 +147,45 @@ bool isAAPCS(const TargetInfo &TargetInfo) {
 }
 
 //===----------------------------------------------------------------------===//
+// X86
+//===----------------------------------------------------------------------===//
+
+// Many of MSVC builtins are on x64, ARM and AArch64; to avoid repeating code,
+// we handle them here.
+std::optional<MSVCIntrin>
+translateX86ToMsvcIntrin(unsigned BuiltinID) {
+  switch (BuiltinID) {
+  default:
+    return std::nullopt;
+  case clang::X86::BI_BitScanForward:
+  case clang::X86::BI_BitScanForward64:
+    return MSVCIntrin::_BitScanForward;
+  case clang::X86::BI_BitScanReverse:
+  case clang::X86::BI_BitScanReverse64:
+    return MSVCIntrin::_BitScanReverse;
+  case clang::X86::BI_InterlockedAnd64:
+    return MSVCIntrin::_InterlockedAnd;
+  case clang::X86::BI_InterlockedCompareExchange128:
+    return MSVCIntrin::_InterlockedCompareExchange128;
+  case clang::X86::BI_InterlockedExchange64:
+    return MSVCIntrin::_InterlockedExchange;
+  case clang::X86::BI_InterlockedExchangeAdd64:
+    return MSVCIntrin::_InterlockedExchangeAdd;
+  case clang::X86::BI_InterlockedExchangeSub64:
+    return MSVCIntrin::_InterlockedExchangeSub;
+  case clang::X86::BI_InterlockedOr64:
+    return MSVCIntrin::_InterlockedOr;
+  case clang::X86::BI_InterlockedXor64:
+    return MSVCIntrin::_InterlockedXor;
+  case clang::X86::BI_InterlockedDecrement64:
+    return MSVCIntrin::_InterlockedDecrement;
+  case clang::X86::BI_InterlockedIncrement64:
+    return MSVCIntrin::_InterlockedIncrement;
+  }
+  llvm_unreachable("must return from switch");
+}
+
+//===----------------------------------------------------------------------===//
 // AMDGPU
 //===----------------------------------------------------------------------===//
 
