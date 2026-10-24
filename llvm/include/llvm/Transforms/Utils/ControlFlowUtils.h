@@ -13,15 +13,41 @@
 #ifndef LLVM_TRANSFORMS_UTILS_CONTROLFLOWUTILS_H
 #define LLVM_TRANSFORMS_UTILS_CONTROLFLOWUTILS_H
 
+#include <optional>
+
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace llvm {
 
 class BasicBlock;
+class BlockFrequencyInfo;
 class CallBrInst;
-class LoopInfo;
 class DomTreeUpdater;
+class Function;
+class LoopInfo;
+
+/// Positive entry count, or branch weights on some terminator.
+LLVM_ABI bool functionHasScalableBranchProfile(const Function &F);
+
+/// True when a branch weight needs more than 32 bits.
+/// BranchProbabilityInfo extracts weights as uint32_t and asserts if a weight
+/// needs more bits, so callers skip BlockFrequencyInfo instead of using
+/// truncated probabilities.
+LLVM_ABI bool functionHasBranchWeightsWiderThan32Bits(const Function &F);
+
+/// Blocks that exist now. Ones added later are not in this set.
+LLVM_ABI void recordBlocksBeforeTransform(
+    const Function &F, SmallPtrSetImpl<const BasicBlock *> &BlocksSeenBefore);
+
+/// Frequency analysis together with the set of blocks that existed when it was
+/// computed. Both pointers are null when the function has no usable profile.
+/// The caller owns both and must keep them alive for this object's lifetime.
+struct ProfileInfo {
+  BlockFrequencyInfo *BFI = nullptr;
+  const SmallPtrSetImpl<const BasicBlock *> *KnownBlocks = nullptr;
+};
 
 /// Given a set of branch descriptors [BB, Succ0, Succ1], create a "hub" such
 /// that the control flow from each BB to a successor is now split into two
@@ -78,8 +104,8 @@ class DomTreeUpdater;
 /// Limitations:
 /// -----------
 /// 1. This assumes that all terminators in the CFG are direct branches (the
-///    "br" instruction). The presence of any other control flow such as
-///    indirectbr, switch or callbr will cause an assert.
+///    "br" instruction). indirectbr still asserts. switch and callbr edges
+///    must first be split and added via addSplitTarget().
 ///
 /// 2. The updates to the PHINodes are not sufficient to restore SSA
 ///    form. Consider a definition Def, its use Use, incoming block In2 and
@@ -110,7 +136,20 @@ struct ControlFlowHub {
                  BasicBlock *Succ1 = nullptr) {
     assert(BB);
     assert(Succ0 || Succ1);
+    assert(!SplitTargets.contains(BB) &&
+           "block was already registered as a split target");
     Branches.emplace_back(BB, Succ0, Succ1);
+  }
+
+  /// \p BB was just created by splitting a switch or callbr edge.
+  void addSplitTarget(BasicBlock *BB, BasicBlock *Succ) {
+    assert(!SplitTargets.contains(BB) && "split target already added");
+#ifndef NDEBUG
+    for (const BranchDescriptor &D : Branches)
+      assert(D.BB != BB && "block was already registered with addBranch");
+#endif
+    addBranch(BB, Succ);
+    SplitTargets.insert(BB);
   }
 
   /// Return the unified loop exit block and a flag indicating if the CFG was
@@ -118,9 +157,14 @@ struct ControlFlowHub {
   LLVM_ABI std::pair<BasicBlock *, bool>
   finalize(DomTreeUpdater *DTU, SmallVectorImpl<BasicBlock *> &GuardBlocks,
            const StringRef Prefix,
-           std::optional<unsigned> MaxControlFlowBooleans = std::nullopt);
+           std::optional<unsigned> MaxControlFlowBooleans = std::nullopt,
+           ProfileInfo Profile = {});
 
   SmallVector<BranchDescriptor> Branches;
+
+private:
+  /// Blocks created by splitting switch/callbr edges.
+  SmallPtrSet<BasicBlock *, 8> SplitTargets;
 };
 
 } // end namespace llvm
