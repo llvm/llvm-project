@@ -216,14 +216,9 @@ struct SpecificConstantMatch {
       : RequestedVal(RequestedVal) {}
   bool match(const MachineRegisterInfo &MRI, Register Reg) {
     APInt MatchedVal;
-    if (mi_match(Reg, MRI, m_ICst(MatchedVal))) {
-      if (MatchedVal.getBitWidth() > RequestedVal.getBitWidth())
-        RequestedVal = RequestedVal.sext(MatchedVal.getBitWidth());
-      else
-        MatchedVal = MatchedVal.sext(RequestedVal.getBitWidth());
-
-      return APInt::isSameValue(MatchedVal, RequestedVal);
-    }
+    if (mi_match(Reg, MRI, m_ICst(MatchedVal)))
+      return APInt::isSameValue(MatchedVal, RequestedVal,
+                                /*SignedCompare=*/true);
     return false;
   }
 };
@@ -300,12 +295,7 @@ struct SpecificConstantOrSplatMatch {
   bool match(const MachineRegisterInfo &MRI, Register Reg) {
     APInt MatchedVal;
     if (mi_match(Reg, MRI, m_ICst(MatchedVal))) {
-      if (MatchedVal.getBitWidth() > RequestedVal.getBitWidth())
-        RequestedVal = RequestedVal.sext(MatchedVal.getBitWidth());
-      else
-        MatchedVal = MatchedVal.sext(RequestedVal.getBitWidth());
-
-      if (APInt::isSameValue(MatchedVal, RequestedVal))
+      if (APInt::isSameValue(MatchedVal, RequestedVal, /*SignedCompare=*/true))
         return true;
     }
     return isBuildVectorConstantSplat(Reg, MRI, RequestedVal,
