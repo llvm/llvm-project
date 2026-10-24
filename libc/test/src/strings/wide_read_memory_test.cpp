@@ -40,6 +40,7 @@ using TwoKilobyteBuffer = cpp::array<char, 2048>;
 static constexpr unsigned long kLargestTestVectorSize = 512;
 
 class LlvmLibcWideAccessMemoryTest : public testing::Test {
+protected:
   char *page0_;
   char *page1_;
   char *page2_;
@@ -97,6 +98,26 @@ TEST_F(LlvmLibcWideAccessMemoryTest, StringLength) {
     // -1 for the null character.
     ASSERT_EQ(internal::string_length(test_data), size_t(buf.size() - 1));
   });
+}
+
+TEST_F(LlvmLibcWideAccessMemoryTest, FindFirstCharZeroLength) {
+  // All implementations, since the configured one is usually not vectorized.
+  static constexpr void *(*kImpls[])(const unsigned char *, unsigned char,
+                                     size_t) = {
+      internal::element::find_first_character,
+      internal::word::find_first_character,
+#if LIBC_HAS_VECTOR_TYPE
+      clang_vector::find_first_character,
+#endif
+#ifdef LIBC_TARGET_ARCH_IS_X86
+      internal::arch_vector::find_first_character,
+#endif
+  };
+  // A zero-length search must not read the start of an inaccessible page.
+  for (auto find_first_character : kImpls)
+    ASSERT_EQ(reinterpret_cast<const void *>(find_first_character(
+                  reinterpret_cast<const unsigned char *>(page2_), 'a', 0)),
+              nullptr);
 }
 
 TEST_F(LlvmLibcWideAccessMemoryTest, FindFirstChar) {
