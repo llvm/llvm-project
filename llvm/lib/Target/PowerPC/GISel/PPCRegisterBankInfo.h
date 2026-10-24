@@ -25,19 +25,9 @@ namespace llvm {
 class TargetRegisterInfo;
 
 class PPCGenRegisterBankInfo : public RegisterBankInfo {
+#define GET_TARGET_REGBANK_CLASS
+#include "PPCGenRegisterBank.inc"
 protected:
-  enum PartialMappingIdx {
-    PMI_None = -1,
-    PMI_GPR32 = 1,
-    PMI_GPR64 = 2,
-    PMI_FPR32 = 3,
-    PMI_FPR64 = 4,
-    PMI_VEC128 = 5,
-    PMI_CR = 6,
-    PMI_Min = PMI_GPR32,
-  };
-
-  static const RegisterBankInfo::PartialMapping PartMappings[];
   static const RegisterBankInfo::ValueMapping ValMappings[];
   static const PartialMappingIdx BankIDToCopyMapIdx[];
 
@@ -56,9 +46,6 @@ protected:
   /// register bank with a size of \p Size.
   static const RegisterBankInfo::ValueMapping *
   getCopyMapping(unsigned DstBankID, unsigned SrcBankID, unsigned Size);
-
-#define GET_TARGET_REGBANK_CLASS
-#include "PPCGenRegisterBank.inc"
 };
 
 class PPCRegisterBankInfo final : public PPCGenRegisterBankInfo {

@@ -25,26 +25,9 @@ class TargetRegisterInfo;
 class AArch64RegisterInfo;
 
 class AArch64GenRegisterBankInfo : public RegisterBankInfo {
+#define GET_TARGET_REGBANK_CLASS
+#include "AArch64GenRegisterBank.inc"
 protected:
-  enum PartialMappingIdx {
-    PMI_None = -1,
-    PMI_FPR16 = 1,
-    PMI_FPR32,
-    PMI_FPR64,
-    PMI_FPR128,
-    PMI_FPR256,
-    PMI_FPR512,
-    PMI_GPR32,
-    PMI_GPR64,
-    PMI_GPR128,
-    PMI_FirstGPR = PMI_GPR32,
-    PMI_LastGPR = PMI_GPR128,
-    PMI_FirstFPR = PMI_FPR16,
-    PMI_LastFPR = PMI_FPR512,
-    PMI_Min = PMI_FirstFPR,
-  };
-
-  static const RegisterBankInfo::PartialMapping PartMappings[];
   static const RegisterBankInfo::ValueMapping ValMappings[];
   static const PartialMappingIdx BankIDToCopyMapIdx[];
 
@@ -63,13 +46,8 @@ protected:
     Shift64Imm = 52,
   };
 
-  static bool checkPartialMap(unsigned Idx, unsigned ValStartIdx,
-                              unsigned ValLength, const RegisterBank &RB);
   static bool checkValueMapImpl(unsigned Idx, unsigned FirstInBank,
                                 unsigned Size, unsigned Offset);
-  static bool checkPartialMappingIdx(PartialMappingIdx FirstAlias,
-                                     PartialMappingIdx LastAlias,
-                                     ArrayRef<PartialMappingIdx> Order);
 
   static unsigned getRegBankBaseIdxOffset(unsigned RBIdx, TypeSize Size);
 
@@ -97,9 +75,6 @@ protected:
   /// \return An InstructionMapping with statically allocated OperandsMapping.
   static const RegisterBankInfo::ValueMapping *
   getFPExtMapping(unsigned DstSize, unsigned SrcSize);
-
-#define GET_TARGET_REGBANK_CLASS
-#include "AArch64GenRegisterBank.inc"
 };
 
 /// This class provides the information for the target register banks.
