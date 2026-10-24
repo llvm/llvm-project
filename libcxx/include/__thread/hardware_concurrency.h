@@ -25,8 +25,8 @@ _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 #if _LIBCPP_STD_VER >= 11 && _LIBCPP_HAS_THREADS
 
 // __thread_hardware_concurrency() has the same semantics as std::[j]thread::hardware_concurrency(), but allows querying
-// this information without depending on std::thread itself. Rather than adding a new symbol to the built library, it is
-// declared as an alias of std::thread::hardware_concurrency(), which has always been part of the ABI.
+// this information without depending on std::thread itself. This function is an alias to
+// std::thread::hardware_concurrency(), which is a part of the ABI.
 
 #  ifdef _LIBCPP_ABI_MICROSOFT
 #    define _LIBCPP_THREAD_HARDWARE_CONCURRENCY_SYMBOL                                                                 \
