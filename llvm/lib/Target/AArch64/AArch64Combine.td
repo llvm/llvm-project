@@ -448,6 +448,19 @@ def AArch64PostLegalizerLowering
                         unmerge_duplanes]> {
 }
 
+// Replace a 1-bit G_UBFX of a bit that is a copy of the sign bit with a shift
+// of the sign bit into bit 0, which can fold into users such as G_ADD.
+def ubfx_sign_bit_to_lshr : GICombineRule<
+  (defs root:$root),
+  (match (G_CONSTANT $lsb, $lsbimm),
+         (G_UBFX $dst, $src, $lsb, 1):$root,
+         [{ LLT Ty = MRI.getType(${dst}.getReg());
+            uint64_t Lsb = ${lsbimm}.getCImm()->getZExtValue();
+            return Ty.isScalar() && Lsb < Ty.getSizeInBits() &&
+                   VT->computeNumSignBits(${src}.getReg()) >=
+                       Ty.getSizeInBits() - Lsb; }]),
+  (apply [{ applyUBFXSignBitToLShr(*${root}, MRI, B); }])>;
+
 // Post-legalization combines which are primarily optimizations.
 def AArch64PostLegalizerCombiner
     : GICombiner<"AArch64PostLegalizerCombinerImpl",
@@ -461,7 +474,7 @@ def AArch64PostLegalizerCombiner
                         mul_const, redundant_sext_inreg,
                         redundant_zext_sext_inreg, redundant_aext_sext_inreg,
                         redundant_aext_unmerge_sext_inreg, redundant_zext_unmerge_sext_inreg,
-                        form_bitfield_extract, rotate_out_of_range,
+                        form_bitfield_extract, ubfx_sign_bit_to_lshr, rotate_out_of_range,
                         icmp_to_true_false_known_bits, overflow_combines,
                         select_combines, select_zero_true, select_zero_false, select_not,
                         fold_merge_to_zext, merge_combines,
