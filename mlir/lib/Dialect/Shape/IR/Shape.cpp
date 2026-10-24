@@ -198,6 +198,8 @@ LogicalResult ShapeDialect::verifyOperationAttribute(Operation *op,
         if (!shapeFnLib)
           return op->emitError()
                  << it << " does not refer to FunctionLibraryOp";
+        if (!shapeFnLib.getMapping())
+          continue;
         for (auto mapping : shapeFnLib.getMapping()) {
           if (!key.insert(mapping.getName()).second) {
             return op->emitError("only one op to shape mapping allowed, found "
