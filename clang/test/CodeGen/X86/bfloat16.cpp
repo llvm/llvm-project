@@ -143,3 +143,92 @@ void test_vector(v8bfloat16 a, v8bfloat16 b) {
     c = a * b;
     c = a / b;
 }
+
+// GH170434
+// CHECK-LABEL: define dso_local void @_Z30test_compound_assign_fp16_bf16PDhDF16b
+// CHECK-SAME: (ptr noundef [[P:%.*]], bfloat noundef [[A:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK:         [[P_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca bfloat, align 2
+// CHECK-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8
+// CHECK-NEXT:    store bfloat [[A]], ptr [[A_ADDR]], align 2
+// CHECK-NEXT:    [[TMP0:%.*]] = load bfloat, ptr [[A_ADDR]], align 2
+// CHECK-NEXT:    [[FPEXT:%.*]] = fpext bfloat [[TMP0]] to float
+// CHECK-NEXT:    [[FPTRUNC:%.*]] = fptrunc float [[FPEXT]] to half
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[P_ADDR]], align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = load half, ptr [[TMP1]], align 2
+// CHECK-NEXT:    [[ADD:%.*]] = fadd half [[TMP2]], [[FPTRUNC]]
+// CHECK-NEXT:    store half [[ADD]], ptr [[TMP1]], align 2
+// CHECK-NEXT:    ret void
+//
+// CHECK-NBF16-LABEL: define dso_local void @_Z30test_compound_assign_fp16_bf16PDhDF16b
+// CHECK-NBF16-SAME: (ptr noundef [[P:%.*]], bfloat noundef [[A:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK-NBF16:         [[P_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NBF16-NEXT:    [[A_ADDR:%.*]] = alloca bfloat, align 2
+// CHECK-NBF16-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8
+// CHECK-NBF16-NEXT:    store bfloat [[A]], ptr [[A_ADDR]], align 2
+// CHECK-NBF16-NEXT:    [[TMP0:%.*]] = load bfloat, ptr [[A_ADDR]], align 2
+// CHECK-NBF16-NEXT:    [[FPEXT:%.*]] = fpext bfloat [[TMP0]] to float
+// CHECK-NBF16-NEXT:    [[FPTRUNC:%.*]] = fptrunc float [[FPEXT]] to half
+// CHECK-NBF16-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[P_ADDR]], align 8
+// CHECK-NBF16-NEXT:    [[TMP2:%.*]] = load half, ptr [[TMP1]], align 2
+// CHECK-NBF16-NEXT:    [[ADD:%.*]] = fadd half [[TMP2]], [[FPTRUNC]]
+// CHECK-NBF16-NEXT:    store half [[ADD]], ptr [[TMP1]], align 2
+// CHECK-NBF16-NEXT:    ret void
+//
+void test_compound_assign_fp16_bf16(__fp16 *p, __bf16 a) {
+    *p += a;
+}
+
+typedef _Float16 v8float16 __attribute__((__vector_size__(16)));
+
+// CHECK-LABEL: define dso_local noundef <8 x half> @_Z30test_convertvector_bf16_to_f16Dv8_DF16b
+// CHECK-SAME: (<8 x bfloat> noundef [[A:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK:         [[A_ADDR:%.*]] = alloca <8 x bfloat>, align 16
+// CHECK-NEXT:    store <8 x bfloat> [[A]], ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = load <8 x bfloat>, ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    [[FPEXT:%.*]] = fpext <8 x bfloat> [[TMP0]] to <8 x float>
+// CHECK-NEXT:    [[FPTRUNC:%.*]] = fptrunc <8 x float> [[FPEXT]] to <8 x half>
+// CHECK-NEXT:    ret <8 x half> [[FPTRUNC]]
+//
+// CHECK-NBF16-LABEL: define dso_local noundef <8 x half> @_Z30test_convertvector_bf16_to_f16Dv8_DF16b
+// CHECK-NBF16-SAME: (<8 x bfloat> noundef [[A:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK-NBF16:         [[A_ADDR:%.*]] = alloca <8 x bfloat>, align 16
+// CHECK-NBF16-NEXT:    store <8 x bfloat> [[A]], ptr [[A_ADDR]], align 16
+// CHECK-NBF16-NEXT:    [[TMP0:%.*]] = load <8 x bfloat>, ptr [[A_ADDR]], align 16
+// CHECK-NBF16-NEXT:    [[FPEXT:%.*]] = fpext <8 x bfloat> [[TMP0]] to <8 x float>
+// CHECK-NBF16-NEXT:    [[FPTRUNC:%.*]] = fptrunc <8 x float> [[FPEXT]] to <8 x half>
+// CHECK-NBF16-NEXT:    ret <8 x half> [[FPTRUNC]]
+//
+v8float16 test_convertvector_bf16_to_f16(v8bfloat16 a) {
+    return __builtin_convertvector(a, v8float16);
+}
+
+// CHECK-LABEL: define dso_local noundef zeroext i1 @_Z21test_compare_bf16_f16DF16bDF16_
+// CHECK-SAME: (bfloat noundef [[A:%.*]], half noundef [[B:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK:         [[A_ADDR:%.*]] = alloca bfloat, align 2
+// CHECK-NEXT:    [[B_ADDR:%.*]] = alloca half, align 2
+// CHECK-NEXT:    store bfloat [[A]], ptr [[A_ADDR]], align 2
+// CHECK-NEXT:    store half [[B]], ptr [[B_ADDR]], align 2
+// CHECK-NEXT:    [[TMP0:%.*]] = load bfloat, ptr [[A_ADDR]], align 2
+// CHECK-NEXT:    [[FPEXT:%.*]] = fpext bfloat [[TMP0]] to float
+// CHECK-NEXT:    [[FPTRUNC:%.*]] = fptrunc float [[FPEXT]] to half
+// CHECK-NEXT:    [[TMP1:%.*]] = load half, ptr [[B_ADDR]], align 2
+// CHECK-NEXT:    [[CMP:%.*]] = fcmp olt half [[FPTRUNC]], [[TMP1]]
+// CHECK-NEXT:    ret i1 [[CMP]]
+//
+// CHECK-NBF16-LABEL: define dso_local noundef zeroext i1 @_Z21test_compare_bf16_f16DF16bDF16_
+// CHECK-NBF16-SAME: (bfloat noundef [[A:%.*]], half noundef [[B:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK-NBF16:         [[A_ADDR:%.*]] = alloca bfloat, align 2
+// CHECK-NBF16-NEXT:    [[B_ADDR:%.*]] = alloca half, align 2
+// CHECK-NBF16-NEXT:    store bfloat [[A]], ptr [[A_ADDR]], align 2
+// CHECK-NBF16-NEXT:    store half [[B]], ptr [[B_ADDR]], align 2
+// CHECK-NBF16-NEXT:    [[TMP0:%.*]] = load bfloat, ptr [[A_ADDR]], align 2
+// CHECK-NBF16-NEXT:    [[FPEXT:%.*]] = fpext bfloat [[TMP0]] to float
+// CHECK-NBF16-NEXT:    [[FPTRUNC:%.*]] = fptrunc float [[FPEXT]] to half
+// CHECK-NBF16-NEXT:    [[TMP1:%.*]] = load half, ptr [[B_ADDR]], align 2
+// CHECK-NBF16-NEXT:    [[CMP:%.*]] = fcmp olt half [[FPTRUNC]], [[TMP1]]
+// CHECK-NBF16-NEXT:    ret i1 [[CMP]]
+//
+bool test_compare_bf16_f16(__bf16 a, _Float16 b) {
+    return a < b;
+}

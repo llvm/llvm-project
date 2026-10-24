@@ -440,6 +440,9 @@ public:
   Value *EmitScalarCast(Value *Src, QualType SrcType, QualType DstType,
                         llvm::Type *SrcTy, llvm::Type *DstTy,
                         ScalarConversionOpts Opts);
+  /// Emit fpext or fptrunc, going through float for half <-> bfloat.
+  Value *EmitFloatingCast(Value *Src, llvm::Type *DstTy,
+                          const Twine &Name = "conv");
   Value *
   EmitScalarConversion(Value *Src, QualType SrcTy, QualType DstTy,
                        SourceLocation Loc,
@@ -1620,13 +1623,29 @@ Value *ScalarExprEmitter::EmitScalarCast(Value *Src, QualType SrcType,
     return Builder.CreateFPToUI(Src, DstTy, "conv");
   }
 
-  if ((DstElementTy->is16bitFPTy() && SrcElementTy->is16bitFPTy())) {
-    Value *FloatVal = Builder.CreateFPExt(Src, Builder.getFloatTy(), "fpext");
-    return Builder.CreateFPTrunc(FloatVal, DstTy, "fptrunc");
-  }
-  if (DstElementTy->getTypeID() < SrcElementTy->getTypeID())
-    return Builder.CreateFPTrunc(Src, DstTy, "conv");
-  return Builder.CreateFPExt(Src, DstTy, "conv");
+  return EmitFloatingCast(Src, DstTy);
+}
+
+Value *ScalarExprEmitter::EmitFloatingCast(Value *Src, llvm::Type *DstTy,
+                                           const Twine &Name) {
+  llvm::Type *SrcTy = Src->getType();
+  if (SrcTy == DstTy)
+    return Src;
+
+  unsigned SrcBits = SrcTy->getScalarSizeInBits();
+  unsigned DstBits = DstTy->getScalarSizeInBits();
+  if (SrcBits < DstBits)
+    return Builder.CreateFPExt(Src, DstTy, Name);
+  if (SrcBits > DstBits)
+    return Builder.CreateFPTrunc(Src, DstTy, Name);
+
+  // half and bfloat are the same width; only float holds both exactly.
+  assert(SrcTy->getScalarType()->is16bitFPTy() &&
+         DstTy->getScalarType()->is16bitFPTy() &&
+         "unexpected conversion between floating-point types of equal width");
+  Value *FloatVal =
+      Builder.CreateFPExt(Src, SrcTy->getWithNewType(CGF.FloatTy), "fpext");
+  return Builder.CreateFPTrunc(FloatVal, DstTy, "fptrunc");
 }
 
 /// Emit a conversion from the specified type to the specified destination type,
@@ -1702,7 +1721,7 @@ Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
   if (SrcType->isHalfType() && !CGF.getContext().getLangOpts().NativeHalfType &&
       SrcTy == CGF.CGM.HalfTy && DstTy != CGF.CGM.HalfTy) {
     if (DstTy->isFloatingPointTy())
-      return Builder.CreateFPExt(Src, DstTy, "conv");
+      return EmitFloatingCast(Src, DstTy);
 
     // Cast to other types through float (as opposed to operations on half,
     // available with NativeHalfType).
@@ -1819,7 +1838,7 @@ Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
       DstTy == CGF.CGM.HalfTy) {
     // Make sure we cast in a single step if from another FP type.
     if (SrcTy->isFloatingPointTy())
-      return Builder.CreateFPTrunc(Src, CGF.CGM.HalfTy, "conv");
+      return EmitFloatingCast(Src, DstTy);
 
     DstTy = CGF.FloatTy;
   }
@@ -2137,10 +2156,7 @@ Value *ScalarExprEmitter::VisitConvertVectorExpr(ConvertVectorExpr *E) {
     assert(SrcEltTy->isFloatingPointTy() && DstEltTy->isFloatingPointTy() &&
            "Unknown real conversion");
     CodeGenFunction::CGFPOptionsRAII FPOptions(CGF, E);
-    if (DstEltTy->getTypeID() < SrcEltTy->getTypeID())
-      Res = Builder.CreateFPTrunc(Src, DstTy, "conv");
-    else
-      Res = Builder.CreateFPExt(Src, DstTy, "conv");
+    Res = EmitFloatingCast(Src, DstTy);
   }
 
   return Res;
@@ -3102,12 +3118,7 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
   case CK_FloatingCast: {
     if (E->getType()->isVectorType() && DestTy->isVectorType()) {
       // TODO: Support constrained FP intrinsics.
-      QualType SrcElTy = E->getType()->castAs<VectorType>()->getElementType();
-      QualType DstElTy = DestTy->castAs<VectorType>()->getElementType();
-      if (DstElTy->castAs<BuiltinType>()->getKind() <
-          SrcElTy->castAs<BuiltinType>()->getKind())
-        return Builder.CreateFPTrunc(Visit(E), ConvertType(DestTy), "conv");
-      return Builder.CreateFPExt(Visit(E), ConvertType(DestTy), "conv");
+      return EmitFloatingCast(Visit(E), ConvertType(DestTy));
     }
     CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, CE);
     return EmitScalarConversion(Visit(E), E->getType(), DestTy,
