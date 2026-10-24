@@ -19,7 +19,8 @@ define i64 @test_pr62660() {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[SUB]], 8
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[LSR_IV_NEXT:%.*]] = add i64 1, -1
+; CHECK-NEXT:    [[LSR_IV_NEXT_LCSSA:%.*]] = phi i64 [ [[LSR_IV_NEXT1]], [[LOOP]] ]
+; CHECK-NEXT:    [[LSR_IV_NEXT:%.*]] = add i64 [[LSR_IV_NEXT_LCSSA]], -1
 ; CHECK-NEXT:    ret i64 [[LSR_IV_NEXT]]
 ;
 entry:
