@@ -1,6 +1,8 @@
 import argparse
+import shutil
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -109,6 +111,77 @@ class TestHeaderGenIntegration(unittest.TestCase):
         output_file = self.output_dir / "func_guarding.h"
         self.run_script(yaml_file, output_file)
         self.compare_files(output_file, expected_output_file)
+
+    def test_yaml_to_classes_export_decls(self):
+        output_dir = self.output_dir / "yaml_to_classes"
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        command = [
+            "python3",
+            str(self.source_dir.parent / "yaml_to_classes.py"),
+            str(self.source_dir / "input" / "sorting.yaml"),
+            "--export-decls",
+            "--output_dir",
+            str(output_dir),
+        ]
+
+        result = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+        generated_file = output_dir / "sorting.h"
+        self.assertTrue(generated_file.exists())
+        self.assertIn(
+            "void func_with_aliases(int) __NOEXCEPT;",
+            generated_file.read_text(),
+        )
+
+    def test_yaml_to_classes_add_function_without_arguments(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_dir = Path(temp_dir)
+            yaml_file = temp_dir / "empty.yaml"
+            output_dir = temp_dir / "output"
+            output_dir.mkdir()
+
+            shutil.copy(
+                self.source_dir / "input" / "macro_only.yaml",
+                yaml_file,
+            )
+
+            command = [
+                "python3",
+                str(self.source_dir.parent / "yaml_to_classes.py"),
+                str(yaml_file),
+                "--export-decls",
+                "--output_dir",
+                str(output_dir),
+                "--add_function",
+                "int",
+                "no_args",
+                "",
+                "stdc",
+                "null",
+                "null",
+            ]
+
+            result = subprocess.run(
+                command,
+                capture_output=True,
+                text=True,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+            generated_file = output_dir / "empty.h"
+            self.assertTrue(generated_file.exists())
+            self.assertIn(
+                "int no_args(void) __NOEXCEPT;",
+                generated_file.read_text(),
+            )
 
 
 def main():

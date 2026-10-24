@@ -175,7 +175,7 @@ def parse_function_details(details):
     """
     return_type, name, arguments, standards, guard, attributes = details
     standards = standards.split(",") if standards != "null" else []
-    arguments = [arg.strip() for arg in arguments.split(",")]
+    arguments = [] if not arguments else [arg.strip() for arg in arguments.split(",")]
     attributes = attributes.split(",") if attributes != "null" else []
 
     return Function(
@@ -270,6 +270,11 @@ def main():
         help="Entry point to include",
         dest="entry_points",
     )
+    parser.add_argument(
+        "--export-decls",
+        action="store_true",
+        help="Write the generated declarations to the output file",
+    )
     args = parser.parse_args()
 
     if args.add_function:
@@ -278,7 +283,7 @@ def main():
     header_class = HeaderFile
     header = load_yaml_file(Path(args.yaml_file), header_class, args.entry_points)
 
-    header_str = str(header)
+    header_str = header.public_api()
 
     if args.output_dir:
         output_file_path = Path(args.output_dir)
