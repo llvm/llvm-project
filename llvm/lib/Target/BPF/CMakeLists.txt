@@ -29,6 +29,7 @@ add_llvm_target(BPFCodeGen
   BPFCheckAndAdjustIR.cpp
   BPFCodeGenPassBuilder.cpp
   BPFFrameLowering.cpp
+  BPFFuncTable.cpp
   BPFInstrInfo.cpp
   BPFIRPeephole.cpp
   BPFISelDAGToDAG.cpp
