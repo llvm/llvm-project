@@ -71,6 +71,11 @@ LLVM_ABI StringRef getHostCPUNameForRISCV(StringRef ProcCpuinfoContent);
 LLVM_ABI StringRef getHostCPUNameForSPARC(StringRef ProcCpuinfoContent);
 LLVM_ABI StringRef getHostCPUNameForBPF();
 
+/// Helper function to extract host CPU features from /proc/cpuinfo on ARM and
+/// AArch64 linux.
+LLVM_ABI StringMap<bool, MallocAllocator>
+getHostCPUFeaturesForARM(StringRef ProcCpuinfoContent);
+
 /// Helper functions to extract CPU details from CPUID on x86.
 namespace x86 {
 enum class VendorSignatures {
