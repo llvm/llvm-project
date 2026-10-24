@@ -115,10 +115,10 @@ define double @test_reassoc_big1(double %a0, double %a1, double %a2, double %a3,
 ; CHECK-LABEL: test_reassoc_big1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fadd.d fa5, fa4, fa5
-; CHECK-NEXT:    fadd.d fa4, fa2, fa3
-; CHECK-NEXT:    fadd.d fa3, fa0, fa1
+; CHECK-NEXT:    fadd.d fa2, fa2, fa3
+; CHECK-NEXT:    fadd.d fa0, fa0, fa1
 ; CHECK-NEXT:    fadd.d fa5, fa5, fa6
-; CHECK-NEXT:    fadd.d fa4, fa3, fa4
+; CHECK-NEXT:    fadd.d fa4, fa0, fa2
 ; CHECK-NEXT:    fadd.d fa0, fa4, fa5
 ; CHECK-NEXT:    ret
   %t0 = fadd nsz reassoc double %a0, %a1
@@ -141,9 +141,9 @@ define double @test_reassoc_big2(double %a0, double %a1, i32 %a2, double %a3, i3
 ; CHECK-NEXT:    fmul.d fa5, fa5, fa1
 ; CHECK-NEXT:    fmul.d fa2, fa2, ft1
 ; CHECK-NEXT:    fsub.d fa4, fa4, fa3
-; CHECK-NEXT:    fmul.d fa3, fa0, ft0
+; CHECK-NEXT:    fmul.d fa0, fa0, ft0
 ; CHECK-NEXT:    fmul.d fa5, fa5, fa2
-; CHECK-NEXT:    fmul.d fa4, fa4, fa3
+; CHECK-NEXT:    fmul.d fa4, fa4, fa0
 ; CHECK-NEXT:    fmul.d fa0, fa4, fa5
 ; CHECK-NEXT:    ret
   %cvt1 = sitofp i32 %a2 to double
@@ -744,8 +744,8 @@ define i8 @test_reassoc_minu_i8(i8 %a0, i8 %a1, i8 %a2, i8 %a3) {
 ; CHECK-NEXT:    zext.b a0, a0
 ; CHECK-NEXT:    zext.b a2, a2
 ; CHECK-NEXT:    minu a0, a0, a1
-; CHECK-NEXT:    minu a1, a2, a3
-; CHECK-NEXT:    minu a0, a0, a1
+; CHECK-NEXT:    minu a5, a2, a3
+; CHECK-NEXT:    minu a0, a0, a5
 ; CHECK-NEXT:    ret
   %t0 = call i8 @llvm.umin.i8(i8 %a0, i8 %a1)
   %t1 = call i8 @llvm.umin.i8(i8 %t0, i8 %a2)
@@ -761,8 +761,8 @@ define i16 @test_reassoc_minu_i16(i16 %a0, i16 %a1, i16 %a2, i16 %a3) {
 ; CHECK-NEXT:    zext.h a0, a0
 ; CHECK-NEXT:    zext.h a2, a2
 ; CHECK-NEXT:    minu a0, a0, a1
-; CHECK-NEXT:    minu a1, a2, a3
-; CHECK-NEXT:    minu a0, a0, a1
+; CHECK-NEXT:    minu a5, a2, a3
+; CHECK-NEXT:    minu a0, a0, a5
 ; CHECK-NEXT:    ret
   %t0 = call i16 @llvm.umin.i16(i16 %a0, i16 %a1)
   %t1 = call i16 @llvm.umin.i16(i16 %t0, i16 %a2)
@@ -778,8 +778,8 @@ define i32 @test_reassoc_minu_i32(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 ; CHECK-NEXT:    sext.w a0, a0
 ; CHECK-NEXT:    sext.w a2, a2
 ; CHECK-NEXT:    minu a0, a0, a1
-; CHECK-NEXT:    minu a1, a2, a3
-; CHECK-NEXT:    minu a0, a0, a1
+; CHECK-NEXT:    minu a5, a2, a3
+; CHECK-NEXT:    minu a0, a0, a5
 ; CHECK-NEXT:    ret
   %t0 = call i32 @llvm.umin.i32(i32 %a0, i32 %a1)
   %t1 = call i32 @llvm.umin.i32(i32 %t0, i32 %a2)
@@ -791,8 +791,8 @@ define i64 @test_reassoc_minu_i64(i64 %a0, i64 %a1, i64 %a2, i64 %a3) {
 ; CHECK-LABEL: test_reassoc_minu_i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    minu a0, a0, a1
-; CHECK-NEXT:    minu a1, a2, a3
-; CHECK-NEXT:    minu a0, a0, a1
+; CHECK-NEXT:    minu a5, a2, a3
+; CHECK-NEXT:    minu a0, a0, a5
 ; CHECK-NEXT:    ret
   %t0 = call i64 @llvm.umin.i64(i64 %a0, i64 %a1)
   %t1 = call i64 @llvm.umin.i64(i64 %t0, i64 %a2)
@@ -808,8 +808,8 @@ define i8 @test_reassoc_min_i8(i8 %a0, i8 %a1, i8 %a2, i8 %a3) {
 ; CHECK-NEXT:    sext.b a0, a0
 ; CHECK-NEXT:    sext.b a2, a2
 ; CHECK-NEXT:    min a0, a0, a1
-; CHECK-NEXT:    min a1, a2, a3
-; CHECK-NEXT:    min a0, a0, a1
+; CHECK-NEXT:    min a5, a2, a3
+; CHECK-NEXT:    min a0, a0, a5
 ; CHECK-NEXT:    ret
   %t0 = call i8 @llvm.smin.i8(i8 %a0, i8 %a1)
   %t1 = call i8 @llvm.smin.i8(i8 %t0, i8 %a2)
@@ -825,8 +825,8 @@ define i16 @test_reassoc_min_i16(i16 %a0, i16 %a1, i16 %a2, i16 %a3) {
 ; CHECK-NEXT:    sext.h a0, a0
 ; CHECK-NEXT:    sext.h a2, a2
 ; CHECK-NEXT:    min a0, a0, a1
-; CHECK-NEXT:    min a1, a2, a3
-; CHECK-NEXT:    min a0, a0, a1
+; CHECK-NEXT:    min a5, a2, a3
+; CHECK-NEXT:    min a0, a0, a5
 ; CHECK-NEXT:    ret
   %t0 = call i16 @llvm.smin.i16(i16 %a0, i16 %a1)
   %t1 = call i16 @llvm.smin.i16(i16 %t0, i16 %a2)
@@ -842,8 +842,8 @@ define i32 @test_reassoc_min_i32(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 ; CHECK-NEXT:    sext.w a0, a0
 ; CHECK-NEXT:    sext.w a2, a2
 ; CHECK-NEXT:    min a0, a0, a1
-; CHECK-NEXT:    min a1, a2, a3
-; CHECK-NEXT:    min a0, a0, a1
+; CHECK-NEXT:    min a5, a2, a3
+; CHECK-NEXT:    min a0, a0, a5
 ; CHECK-NEXT:    ret
   %t0 = call i32 @llvm.smin.i32(i32 %a0, i32 %a1)
   %t1 = call i32 @llvm.smin.i32(i32 %t0, i32 %a2)
@@ -855,8 +855,8 @@ define i64 @test_reassoc_min_i64(i64 %a0, i64 %a1, i64 %a2, i64 %a3) {
 ; CHECK-LABEL: test_reassoc_min_i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    min a0, a0, a1
-; CHECK-NEXT:    min a1, a2, a3
-; CHECK-NEXT:    min a0, a0, a1
+; CHECK-NEXT:    min a5, a2, a3
+; CHECK-NEXT:    min a0, a0, a5
 ; CHECK-NEXT:    ret
   %t0 = call i64 @llvm.smin.i64(i64 %a0, i64 %a1)
   %t1 = call i64 @llvm.smin.i64(i64 %t0, i64 %a2)
@@ -872,8 +872,8 @@ define i8 @test_reassoc_maxu_i8(i8 %a0, i8 %a1, i8 %a2, i8 %a3) {
 ; CHECK-NEXT:    zext.b a0, a0
 ; CHECK-NEXT:    zext.b a2, a2
 ; CHECK-NEXT:    maxu a0, a0, a1
-; CHECK-NEXT:    maxu a1, a2, a3
-; CHECK-NEXT:    maxu a0, a0, a1
+; CHECK-NEXT:    maxu a5, a2, a3
+; CHECK-NEXT:    maxu a0, a0, a5
 ; CHECK-NEXT:    ret
   %t0 = call i8 @llvm.umax.i8(i8 %a0, i8 %a1)
   %t1 = call i8 @llvm.umax.i8(i8 %t0, i8 %a2)
@@ -889,8 +889,8 @@ define i16 @test_reassoc_maxu_i16(i16 %a0, i16 %a1, i16 %a2, i16 %a3) {
 ; CHECK-NEXT:    zext.h a0, a0
 ; CHECK-NEXT:    zext.h a2, a2
 ; CHECK-NEXT:    maxu a0, a0, a1
-; CHECK-NEXT:    maxu a1, a2, a3
-; CHECK-NEXT:    maxu a0, a0, a1
+; CHECK-NEXT:    maxu a5, a2, a3
+; CHECK-NEXT:    maxu a0, a0, a5
 ; CHECK-NEXT:    ret
   %t0 = call i16 @llvm.umax.i16(i16 %a0, i16 %a1)
   %t1 = call i16 @llvm.umax.i16(i16 %t0, i16 %a2)
@@ -906,8 +906,8 @@ define i32 @test_reassoc_maxu_i32(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 ; CHECK-NEXT:    sext.w a0, a0
 ; CHECK-NEXT:    sext.w a2, a2
 ; CHECK-NEXT:    maxu a0, a0, a1
-; CHECK-NEXT:    maxu a1, a2, a3
-; CHECK-NEXT:    maxu a0, a0, a1
+; CHECK-NEXT:    maxu a5, a2, a3
+; CHECK-NEXT:    maxu a0, a0, a5
 ; CHECK-NEXT:    ret
   %t0 = call i32 @llvm.umax.i32(i32 %a0, i32 %a1)
   %t1 = call i32 @llvm.umax.i32(i32 %t0, i32 %a2)
@@ -919,8 +919,8 @@ define i64 @test_reassoc_maxu_i64(i64 %a0, i64 %a1, i64 %a2, i64 %a3) {
 ; CHECK-LABEL: test_reassoc_maxu_i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    maxu a0, a0, a1
-; CHECK-NEXT:    maxu a1, a2, a3
-; CHECK-NEXT:    maxu a0, a0, a1
+; CHECK-NEXT:    maxu a5, a2, a3
+; CHECK-NEXT:    maxu a0, a0, a5
 ; CHECK-NEXT:    ret
   %t0 = call i64 @llvm.umax.i64(i64 %a0, i64 %a1)
   %t1 = call i64 @llvm.umax.i64(i64 %t0, i64 %a2)
@@ -936,8 +936,8 @@ define i8 @test_reassoc_max_i8(i8 %a0, i8 %a1, i8 %a2, i8 %a3) {
 ; CHECK-NEXT:    sext.b a0, a0
 ; CHECK-NEXT:    sext.b a2, a2
 ; CHECK-NEXT:    max a0, a0, a1
-; CHECK-NEXT:    max a1, a2, a3
-; CHECK-NEXT:    max a0, a0, a1
+; CHECK-NEXT:    max a5, a2, a3
+; CHECK-NEXT:    max a0, a0, a5
 ; CHECK-NEXT:    ret
   %t0 = call i8 @llvm.smax.i8(i8 %a0, i8 %a1)
   %t1 = call i8 @llvm.smax.i8(i8 %t0, i8 %a2)
@@ -953,8 +953,8 @@ define i16 @test_reassoc_max_i16(i16 %a0, i16 %a1, i16 %a2, i16 %a3) {
 ; CHECK-NEXT:    sext.h a0, a0
 ; CHECK-NEXT:    sext.h a2, a2
 ; CHECK-NEXT:    max a0, a0, a1
-; CHECK-NEXT:    max a1, a2, a3
-; CHECK-NEXT:    max a0, a0, a1
+; CHECK-NEXT:    max a5, a2, a3
+; CHECK-NEXT:    max a0, a0, a5
 ; CHECK-NEXT:    ret
   %t0 = call i16 @llvm.smax.i16(i16 %a0, i16 %a1)
   %t1 = call i16 @llvm.smax.i16(i16 %t0, i16 %a2)
@@ -970,8 +970,8 @@ define i32 @test_reassoc_max_i32(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 ; CHECK-NEXT:    sext.w a0, a0
 ; CHECK-NEXT:    sext.w a2, a2
 ; CHECK-NEXT:    max a0, a0, a1
-; CHECK-NEXT:    max a1, a2, a3
-; CHECK-NEXT:    max a0, a0, a1
+; CHECK-NEXT:    max a5, a2, a3
+; CHECK-NEXT:    max a0, a0, a5
 ; CHECK-NEXT:    ret
   %t0 = call i32 @llvm.smax.i32(i32 %a0, i32 %a1)
   %t1 = call i32 @llvm.smax.i32(i32 %t0, i32 %a2)
@@ -983,8 +983,8 @@ define i64 @test_reassoc_max_i64(i64 %a0, i64 %a1, i64 %a2, i64 %a3) {
 ; CHECK-LABEL: test_reassoc_max_i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    max a0, a0, a1
-; CHECK-NEXT:    max a1, a2, a3
-; CHECK-NEXT:    max a0, a0, a1
+; CHECK-NEXT:    max a5, a2, a3
+; CHECK-NEXT:    max a0, a0, a5
 ; CHECK-NEXT:    ret
   %t0 = call i64 @llvm.smax.i64(i64 %a0, i64 %a1)
   %t1 = call i64 @llvm.smax.i64(i64 %t0, i64 %a2)

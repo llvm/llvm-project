@@ -29,6 +29,7 @@ namespace llvm {
 class MachineBasicBlock;
 class MachineFunction;
 class MachineInstr;
+class MachineLoopInfo;
 class MachineOperand;
 class MachineRegisterInfo;
 class RegisterClassInfo;
@@ -149,6 +150,9 @@ class LLVM_LIBRARY_VISIBILITY AggressiveAntiDepState {
                                    MachineBasicBlock::iterator End,
                                    unsigned InsertPosIndex,
                                    DbgValueVector &DbgValues) override;
+
+    void BreakLoopCarriedAntiDependencies(MachineBasicBlock &MBB,
+                                          const MachineLoopInfo &MLI);
 
     /// Update liveness information to account for the current
     /// instruction, which will not be scheduled.
