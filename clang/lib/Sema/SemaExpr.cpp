@@ -2532,7 +2532,8 @@ Sema::BuildDeclRefExpr(ValueDecl *D, QualType Ty, ExprValueKind VK,
   if (getLangOpts().ObjCWeak && isa<VarDecl>(D) &&
       Ty.getObjCLifetime() == Qualifiers::OCL_Weak && !isUnevaluatedContext() &&
       !Diags.isIgnored(diag::warn_arc_repeated_use_of_weak, E->getBeginLoc()))
-    getCurFunction()->recordUseOfWeak(E);
+    if (FunctionScopeInfo *FSI = getCurFunction())
+      FSI->recordUseOfWeak(E);
 
   const auto *FD = dyn_cast<FieldDecl>(D);
   if (const auto *IFD = dyn_cast<IndirectFieldDecl>(D))
@@ -14927,9 +14928,11 @@ QualType Sema::CheckAssignmentOperands(Expr *LHSExpr, ExprResult &RHS,
         // -Wrepeated-use-of-weak is made flow-sensitive.
         // For ObjCWeak only, we do not warn if the assign is to a non-weak
         // variable, which will be valid for the current autorelease scope.
-        if (!Diags.isIgnored(diag::warn_arc_repeated_use_of_weak,
+        if (!isUnevaluatedContext() &&
+            !Diags.isIgnored(diag::warn_arc_repeated_use_of_weak,
                              RHS.get()->getBeginLoc()))
-          getCurFunction()->markSafeWeakUse(RHS.get());
+          if (FunctionScopeInfo *FSI = getCurFunction())
+            FSI->markSafeWeakUse(RHS.get());
 
       } else if (getLangOpts().ObjCAutoRefCount || getLangOpts().ObjCWeak) {
         checkUnsafeExprAssigns(Loc, LHSExpr, RHS.get());
