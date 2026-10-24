@@ -11,12 +11,11 @@ define void @partial_unroll_forced(i32 %N, ptr %src, ptr noalias %dst) {
 ; CHECK-NEXT:    [[CMP141:%.*]] = icmp sgt i32 [[N]], 0
 ; CHECK-NEXT:    br i1 [[CMP141]], label [[LOOP_LATCH_PREHEADER:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop.latch.preheader:
-; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext nneg i32 [[N]] to i64
-; CHECK-NEXT:    [[XTRAITER:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[N]], 1
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[LOOP_LATCH_EPIL_PREHEADER:%.*]], label [[LOOP_LATCH_PREHEADER_NEW:%.*]]
 ; CHECK:       loop.latch.preheader.new:
-; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 2147483646
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[N]], 2147483646
+; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = zext nneg i32 [[TMP1]] to i64
 ; CHECK-NEXT:    br label [[LOOP_LATCH:%.*]]
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[LOOP_LATCH_PREHEADER_NEW]] ], [ [[INDVARS_IV_NEXT_1:%.*]], [[LOOP_LATCH]] ]
@@ -37,8 +36,8 @@ define void @partial_unroll_forced(i32 %N, ptr %src, ptr noalias %dst) {
 ; CHECK-NEXT:    [[NITER_NCMP_1:%.*]] = icmp eq i64 [[NITER_NEXT_1]], [[UNROLL_ITER]]
 ; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label [[EXIT_LOOPEXIT_UNR_LCSSA:%.*]], label [[LOOP_LATCH]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       exit.loopexit.unr-lcssa:
-; CHECK-NEXT:    [[LCMP_MOD_NOT:%.*]] = icmp eq i64 [[XTRAITER]], 0
-; CHECK-NEXT:    br i1 [[LCMP_MOD_NOT]], label [[EXIT]], label [[LOOP_LATCH_EPIL_PREHEADER]]
+; CHECK-NEXT:    [[LCMP_MOD_NOT:%.*]] = trunc i32 [[N]] to i1
+; CHECK-NEXT:    br i1 [[LCMP_MOD_NOT]], label [[LOOP_LATCH_EPIL_PREHEADER]], label [[EXIT]]
 ; CHECK:       loop.latch.epil.preheader:
 ; CHECK-NEXT:    [[INDVARS_IV_UNR:%.*]] = phi i64 [ 0, [[LOOP_LATCH_PREHEADER]] ], [ [[INDVARS_IV_NEXT_1]], [[EXIT_LOOPEXIT_UNR_LCSSA]] ]
 ; CHECK-NEXT:    [[LCMP_MOD4:%.*]] = trunc i32 [[N]] to i1
@@ -83,12 +82,11 @@ define void @cse_matching_load_from_previous_unrolled_iteration(i32 %N, ptr %src
 ; CHECK-NEXT:    [[CMP141:%.*]] = icmp sgt i32 [[N]], 0
 ; CHECK-NEXT:    br i1 [[CMP141]], label [[LOOP_LATCH_PREHEADER:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop.latch.preheader:
-; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext nneg i32 [[N]] to i64
-; CHECK-NEXT:    [[XTRAITER:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[N]], 1
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[LOOP_LATCH_EPIL_PREHEADER:%.*]], label [[LOOP_LATCH_PREHEADER_NEW:%.*]]
 ; CHECK:       loop.latch.preheader.new:
-; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 2147483646
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[N]], 2147483646
+; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = zext nneg i32 [[TMP1]] to i64
 ; CHECK-NEXT:    br label [[LOOP_LATCH:%.*]]
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[LOOP_LATCH_PREHEADER_NEW]] ], [ [[INDVARS_IV_NEXT_1:%.*]], [[LOOP_LATCH]] ]
@@ -111,8 +109,8 @@ define void @cse_matching_load_from_previous_unrolled_iteration(i32 %N, ptr %src
 ; CHECK-NEXT:    [[NITER_NCMP_1:%.*]] = icmp eq i64 [[NITER_NEXT_1]], [[UNROLL_ITER]]
 ; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label [[EXIT_LOOPEXIT_UNR_LCSSA:%.*]], label [[LOOP_LATCH]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       exit.loopexit.unr-lcssa:
-; CHECK-NEXT:    [[LCMP_MOD_NOT:%.*]] = icmp eq i64 [[XTRAITER]], 0
-; CHECK-NEXT:    br i1 [[LCMP_MOD_NOT]], label [[EXIT]], label [[LOOP_LATCH_EPIL_PREHEADER]]
+; CHECK-NEXT:    [[LCMP_MOD_NOT:%.*]] = trunc i32 [[N]] to i1
+; CHECK-NEXT:    br i1 [[LCMP_MOD_NOT]], label [[LOOP_LATCH_EPIL_PREHEADER]], label [[EXIT]]
 ; CHECK:       loop.latch.epil.preheader:
 ; CHECK-NEXT:    [[INDVARS_IV_UNR:%.*]] = phi i64 [ 0, [[LOOP_LATCH_PREHEADER]] ], [ [[INDVARS_IV_NEXT_1]], [[EXIT_LOOPEXIT_UNR_LCSSA]] ]
 ; CHECK-NEXT:    [[LCMP_MOD4:%.*]] = trunc i32 [[N]] to i1

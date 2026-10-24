@@ -398,7 +398,7 @@ define <2 x i1> @test28vec(<2 x i8> %x) {
 define i8 @test28a(i8 %x, i8 %y) {
 ; CHECK-LABEL: @test28a(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[COND1_NOT:%.*]] = icmp sgt i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[COND1_NOT:%.*]] = icmp slt i8 [[X:%.*]], 0
 ; CHECK-NEXT:    br i1 [[COND1_NOT]], label [[BB2:%.*]], label [[BB1:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    ret i8 1

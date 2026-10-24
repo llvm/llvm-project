@@ -164,8 +164,8 @@ define i32 @knownbits_phi_select_test1(ptr %p1, ptr %p2, i8 %x) {
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i16 [[MASK]], 0
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[BB2]], label [[BB1]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i32 [[INDVAR4]], 0
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp ne i32 [[INDVAR5]], 0
+; CHECK-NEXT:    [[CMP2:%.*]] = trunc nuw i32 [[INDVAR4]] to i1
+; CHECK-NEXT:    [[CMP3:%.*]] = trunc nuw i32 [[INDVAR5]] to i1
 ; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[CMP2]], i1 true, i1 [[CMP3]]
 ; CHECK-NEXT:    br i1 [[OR_COND]], label [[BB2]], label [[EXIT]]
 ; CHECK:       bb2:
