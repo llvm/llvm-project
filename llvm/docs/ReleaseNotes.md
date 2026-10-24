@@ -335,6 +335,10 @@ Makes programs 10x faster by doing Special New Thing.
   accessed through `r12`. Spilled registers and what is passed to helpers and
   kfuncs stay in the stack of the program.
 
+* Added `-mattr=+arena-data`: global variables and constants are placed into
+  `.addr_space.1` and `.bss.addr_space.1`, the sections that a loader puts into
+  arena.
+
 ### Changes to the DirectX Backend
 
 * The DirectX backend has been promoted from experimental to an official,

@@ -77,6 +77,7 @@ void BPFSubtarget::initializeEnvironment() {
   HasFuncTable = false;
   HasArenaCast = false;
   HasArenaStack = false;
+  HasArenaData = false;
 }
 
 void BPFSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {

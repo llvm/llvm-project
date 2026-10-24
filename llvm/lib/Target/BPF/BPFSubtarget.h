@@ -75,6 +75,9 @@ protected:
   // whether locals are in arena
   bool HasArenaStack;
 
+  // whether global data is in arena
+  bool HasArenaData;
+
   // whether cpu v4 insns are enabled.
   bool HasLdsx, HasMovsx, HasBswap, HasSdivSmod, HasGotol, HasStoreImm,
       HasLoadAcqStoreRel, HasGotox;
@@ -108,6 +111,7 @@ public:
   bool hasFuncTable() const { return HasFuncTable; }
   bool hasArenaCast() const { return HasArenaCast; }
   bool hasArenaStack() const { return HasArenaStack; }
+  bool hasArenaData() const { return HasArenaData; }
   bool hasLdsx() const { return HasLdsx; }
   bool hasMovsx() const { return HasMovsx; }
   bool hasBswap() const { return HasBswap; }

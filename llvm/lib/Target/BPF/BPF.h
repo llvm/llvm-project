@@ -63,6 +63,13 @@ public:
 
 FunctionPass *createBPFArenaStackPass();
 
+class BPFArenaDataPass : public RequiredPassInfoMixin<BPFArenaDataPass> {
+public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+};
+
+ModulePass *createBPFArenaDataPass();
+
 /// The call of a helper or of a kfunc.
 bool isBPFKernelFunc(const CallBase &CB, const TargetLibraryInfo &TLI);
 
@@ -125,6 +132,7 @@ InstructionSelector *createBPFInstructionSelector(const BPFTargetMachine &,
                                                   const BPFRegisterBankInfo &);
 
 void initializeBPFArenaCastLegacyPass(PassRegistry &);
+void initializeBPFArenaDataLegacyPass(PassRegistry &);
 void initializeBPFArenaStackLegacyPass(PassRegistry &);
 void initializeBPFAsmPrinterPass(PassRegistry &);
 void initializeBPFCheckAndAdjustIRLegacyPass(PassRegistry &);

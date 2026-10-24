@@ -49,6 +49,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeBPFTarget() {
   PassRegistry &PR = *PassRegistry::getPassRegistry();
   initializeGlobalISel(PR);
   initializeBPFArenaCastLegacyPass(PR);
+  initializeBPFArenaDataLegacyPass(PR);
   initializeBPFArenaStackLegacyPass(PR);
   initializeBPFAsmPrinterPass(PR);
   initializeBPFCheckAndAdjustIRLegacyPass(PR);
@@ -122,6 +123,9 @@ void BPFPassConfig::addIRPasses() {
   addPass(createBPFCheckAndAdjustIRLegacyPass());
   if (Subtarget->hasFuncTable())
     addPass(createBPFFuncTablePass());
+  // Pointers to functions in data are indices by now.
+  if (Subtarget->hasArenaData())
+    addPass(createBPFArenaDataPass());
 
   TargetPassConfig::addIRPasses();
   addPass(createBPFUnwindPreparePass());

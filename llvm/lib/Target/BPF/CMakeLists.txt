@@ -25,6 +25,7 @@ add_llvm_target(BPFCodeGen
   BPFAbstractMemberAccess.cpp
   BPFAdjustOpt.cpp
   BPFArenaCast.cpp
+  BPFArenaData.cpp
   BPFArenaStack.cpp
   BPFAsmPrinter.cpp
   BPFASpaceCastSimplifyPass.cpp
