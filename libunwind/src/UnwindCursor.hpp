@@ -203,24 +203,29 @@ void DwarfFDECache<A>::add(pint_t mh, pint_t ip_start, pint_t ip_end,
     size_t newSize = oldSize * 4;
     // Can't use operator new (we are below it).
     entry *newBuffer = (entry *)malloc(newSize * sizeof(entry));
-    memcpy(newBuffer, _buffer, oldSize * sizeof(entry));
-    if (_buffer != _initialBuffer)
-      free(_buffer);
-    _buffer = newBuffer;
-    _bufferUsed = &newBuffer[oldSize];
-    _bufferEnd = &newBuffer[newSize];
+    if (newBuffer != NULL) {
+      memcpy(newBuffer, _buffer, oldSize * sizeof(entry));
+      if (_buffer != _initialBuffer)
+        free(_buffer);
+      _buffer = newBuffer;
+      _bufferUsed = &newBuffer[oldSize];
+      _bufferEnd = &newBuffer[newSize];
+    }
   }
-  _bufferUsed->mh = mh;
-  _bufferUsed->ip_start = ip_start;
-  _bufferUsed->ip_end = ip_end;
-  _bufferUsed->fde = fde;
-  ++_bufferUsed;
+  // Attempt to append new entry if space is available.
+  if (_bufferUsed < _bufferEnd) {
+    _bufferUsed->mh = mh;
+    _bufferUsed->ip_start = ip_start;
+    _bufferUsed->ip_end = ip_end;
+    _bufferUsed->fde = fde;
+    ++_bufferUsed;
 #ifdef __APPLE__
-  if (!_registeredForDyldUnloads) {
-    _dyld_register_func_for_remove_image(&dyldUnloadHook);
-    _registeredForDyldUnloads = true;
-  }
+    if (!_registeredForDyldUnloads) {
+      _dyld_register_func_for_remove_image(&dyldUnloadHook);
+      _registeredForDyldUnloads = true;
+    }
 #endif
+  }
   _LIBUNWIND_LOG_IF_FALSE(_lock.unlock());
 #endif
 }
