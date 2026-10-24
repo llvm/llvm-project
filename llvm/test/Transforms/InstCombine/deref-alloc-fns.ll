@@ -28,7 +28,7 @@ define noalias ptr @malloc_nonconstant_size(i64 %n) {
 
 define noalias ptr @malloc_constant_size() {
 ; CHECK-LABEL: @malloc_constant_size(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias dereferenceable_or_null(40) ptr @malloc(i64 40)
+; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias align 4 dereferenceable_or_null(40) ptr @malloc(i64 40)
 ; CHECK-NEXT:    ret ptr [[CALL]]
 ;
   %call = tail call noalias ptr @malloc(i64 40)
@@ -135,7 +135,7 @@ define noalias ptr @memalign_unknown_align(i64 %align) {
 
 define noalias ptr @malloc_constant_size2() {
 ; CHECK-LABEL: @malloc_constant_size2(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias dereferenceable_or_null(40) ptr @malloc(i64 40)
+; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias align 4 dereferenceable_or_null(40) ptr @malloc(i64 40)
 ; CHECK-NEXT:    ret ptr [[CALL]]
 ;
   %call = tail call noalias dereferenceable_or_null(80) ptr @malloc(i64 40)
@@ -144,7 +144,7 @@ define noalias ptr @malloc_constant_size2() {
 
 define noalias ptr @malloc_constant_size3() {
 ; CHECK-LABEL: @malloc_constant_size3(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias dereferenceable(80) dereferenceable_or_null(40) ptr @malloc(i64 40)
+; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias align 4 dereferenceable(80) dereferenceable_or_null(40) ptr @malloc(i64 40)
 ; CHECK-NEXT:    ret ptr [[CALL]]
 ;
   %call = tail call noalias dereferenceable(80) ptr @malloc(i64 40)
@@ -262,7 +262,7 @@ define noalias ptr @calloc_constant_zero_size5(i64 %n) {
 
 define noalias ptr @calloc_constant_size() {
 ; CHECK-LABEL: @calloc_constant_size(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias dereferenceable_or_null(128) ptr @calloc(i64 16, i64 8)
+; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias align 4 dereferenceable_or_null(128) ptr @calloc(i64 16, i64 8)
 ; CHECK-NEXT:    ret ptr [[CALL]]
 ;
   %call = tail call noalias ptr @calloc(i64 16, i64 8)

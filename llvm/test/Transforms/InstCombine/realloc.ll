@@ -7,7 +7,7 @@ declare noalias ptr @malloc(i64) allockind("alloc,uninitialized")
 
 define ptr @realloc_null_ptr() #0 {
 ; CHECK-LABEL: @realloc_null_ptr(
-; CHECK-NEXT:    [[MALLOC:%.*]] = call dereferenceable_or_null(100) ptr @malloc(i64 100)
+; CHECK-NEXT:    [[MALLOC:%.*]] = call align 4 dereferenceable_or_null(100) ptr @malloc(i64 100)
 ; CHECK-NEXT:    ret ptr [[MALLOC]]
 ;
   %call = call ptr @realloc(ptr null, i64 100) #2

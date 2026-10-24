@@ -17,6 +17,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/SystemLibraries.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/Triple.h"
 #include <bitset>
@@ -251,6 +252,17 @@ public:
 
   /// Returns the size of the size_t type in bits.
   LLVM_ABI unsigned getSizeTSize(const Module &M) const;
+
+  /// Returns a lower bound on alignof(max_align_t) for the target.
+  LLVM_ABI Align getMaxAlignTAlignment(const Module &M) const;
+
+  /// Returns true if the target has strong alignment for malloc/calloc
+  /// pointers, i.e. aligned to alignof(max_align_t) no matter what size was
+  /// asked for. C23 adopted WG14 N2293, which also allows libcs where
+  /// malloc(1) is only aligned like a char, so we can't assume this
+  /// everywhere. See
+  /// https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2293.htm
+  LLVM_ABI bool hasStrongMallocAlignment(const Module &M) const;
 
   /// Get size of a C-level int or unsigned int, in bits.
   unsigned getIntSize() const {
@@ -596,6 +608,16 @@ public:
 
   /// \copydoc TargetLibraryInfoImpl::getSizeTSize()
   unsigned getSizeTSize(const Module &M) const { return Impl->getSizeTSize(M); }
+
+  /// \copydoc TargetLibraryInfoImpl::getMaxAlignTAlignment()
+  Align getMaxAlignTAlignment(const Module &M) const {
+    return Impl->getMaxAlignTAlignment(M);
+  }
+
+  /// \copydoc TargetLibraryInfoImpl::hasStrongMallocAlignment()
+  bool hasStrongMallocAlignment(const Module &M) const {
+    return Impl->hasStrongMallocAlignment(M);
+  }
 
   /// Returns an IntegerType corresponding to size_t.
   IntegerType *getSizeTType(const Module &M) const {
