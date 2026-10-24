@@ -1,0 +1,7 @@
+# REQUIRES: systemz-registered-target
+## Check that --disassemble --verify recognizes directives in '#' comments even
+## when targeting z/OS (where assembly only allows '*' comments and not '#' or
+## '//').
+# RUN: llvm-mc --triple=s390x-ibm-zos --disassemble --verify %s
+
+0x00 0x00 # expected-warning {{invalid instruction encoding}}
