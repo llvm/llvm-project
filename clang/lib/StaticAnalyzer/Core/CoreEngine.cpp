@@ -472,6 +472,18 @@ void CoreEngine::HandleBlockExit(const CFGBlock * B, ExplodedNode *Pred) {
     return;
   }
 
+  if (B->getTerminator().isOverflowBranch()) {
+    // The overflow condition is not modeled, so follow both edges.
+    for (const CFGBlock *Succ : B->succs()) {
+      if (!Succ)
+        continue;
+      BlockEdge BE(B, Succ, Pred->getStackFrame());
+      if (ExplodedNode *N = makeNode(BE, Pred->State, Pred))
+        WList->enqueue(N);
+    }
+    return;
+  }
+
   assert(B->succ_size() == 1 &&
          "Blocks with no terminator should have at most 1 successor.");
 

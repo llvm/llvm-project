@@ -9717,6 +9717,11 @@ public:
   /// create a new label if the lookup fails.
   LabelDecl *LookupExistingLabel(IdentifierInfo *II, SourceLocation IdentLoc);
 
+  /// Record that the completed full-expression \p E may contain operations
+  /// whose overflow behavior type checks branch to an overflow handler label,
+  /// and mark a handler label already in scope as referenced.
+  void NoteOverflowCheckedOps(Expr *E);
+
   /// Look up the constructors for the given class.
   DeclContextLookupResult LookupConstructors(CXXRecordDecl *Class);
 
