@@ -11,7 +11,7 @@ RUN: llvm-cas --cas %t/cas --validate --check-hash
 RUN: llvm-cas --cas %t/cas --validate
 RUN: llvm-cas --cas %t/cas --validate --check-hash
 
-RUN: rm %t/cas/v1.1/data.v1
+RUN: rm %t/cas/BLAKE3/v1.1/data.v1
 RUN: not llvm-cas --cas %t/cas --validate
 RUN: not llvm-cas --cas %t/cas --validate --check-hash
 
@@ -27,48 +27,48 @@ RUN: llvm-cas --cas %t/ac --put-cache-key @%t/abc.casid @%t/empty.casid
 RUN: llvm-cas --cas %t/ac --validate
 
 # Check that validation passes in an upstream db.
-RUN: mkdir %t/ac/v1.2
+RUN: mkdir %t/ac/BLAKE3/v1.2
 RUN: llvm-cas --cas %t/ac --validate
 # Fault in from upstream DB.
 RUN: llvm-cas --cas %t/ac --get-cache-result @%t/abc.casid
 RUN: llvm-cas --cas %t/ac --validate
 
 # Check that validation fails if the objects referenced are missing.
-RUN: mv %t/ac/v1.1/index.v1 %t/tmp.index.v1
+RUN: mv %t/ac/BLAKE3/v1.1/index.v1 %t/tmp.index.v1
 RUN: not llvm-cas --cas %t/ac --validate
 
-RUN: mv %t/tmp.index.v1 %t/ac/v1.1/index.v1
+RUN: mv %t/tmp.index.v1 %t/ac/BLAKE3/v1.1/index.v1
 RUN: llvm-cas --cas %t/ac --validate
 
 # Note: records are 40 bytes (32 hash bytes + 8 byte value), so trim the last
 # allocated record, leaving it invalid.
 # FIXME: Use `truncate -s -40` once Ubuntu 26.04 is the LTS support baseline,
 # see https://github.com/uutils/coreutils/issues/9128
-RUN: %python -c "with open(r'%t/ac/v1.1/actions.v1', 'r+b') as f: f.truncate(f.seek(0, 2) - 40)"
+RUN: %python -c "with open(r'%t/ac/BLAKE3/v1.1/actions.v1', 'r+b') as f: f.truncate(f.seek(0, 2) - 40)"
 RUN: not llvm-cas --cas %t/ac --validate
 
 # Validation errors are only printed when recovering with --verbose.
 RUN: rm -rf %t/recover
 RUN: llvm-cas --cas %t/recover --make-blob --data /dev/null
-RUN: rm %t/recover/v1.1/data.v1
+RUN: rm %t/recover/BLAKE3/v1.1/data.v1
 RUN: llvm-cas --cas %t/recover --validate-if-needed --force --allow-recovery \
 RUN:   2>%t/recover.err | FileCheck %s --check-prefix=RECOVER
 RUN: count 0 < %t/recover.err
 RUN: llvm-cas --cas %t/recover --make-blob --data /dev/null
-RUN: rm %t/recover/v1.1/data.v1
+RUN: rm %t/recover/BLAKE3/v1.1/data.v1
 RUN: llvm-cas --cas %t/recover --validate-if-needed --force --allow-recovery \
 RUN:   --in-process 2>%t/recover.err | FileCheck %s --check-prefix=RECOVER
 RUN: count 0 < %t/recover.err
 RUN: llvm-cas --cas %t/recover --make-blob --data /dev/null
-RUN: rm %t/recover/v1.1/data.v1
+RUN: rm %t/recover/BLAKE3/v1.1/data.v1
 RUN: llvm-cas --cas %t/recover --validate-if-needed --force --allow-recovery \
 RUN:   --verbose 2>&1 | FileCheck %s --check-prefixes=ERR,RECOVER
 RUN: llvm-cas --cas %t/recover --make-blob --data /dev/null
-RUN: rm %t/recover/v1.1/data.v1
+RUN: rm %t/recover/BLAKE3/v1.1/data.v1
 RUN: llvm-cas --cas %t/recover --validate-if-needed --force --allow-recovery \
 RUN:   --in-process --verbose 2>&1 | FileCheck %s --check-prefixes=ERR,RECOVER
 RUN: llvm-cas --cas %t/recover --make-blob --data /dev/null
-RUN: rm %t/recover/v1.1/data.v1
+RUN: rm %t/recover/BLAKE3/v1.1/data.v1
 RUN: not llvm-cas --cas %t/recover --validate-if-needed --force 2>&1 \
 RUN:   | FileCheck %s --check-prefix=ERR
 

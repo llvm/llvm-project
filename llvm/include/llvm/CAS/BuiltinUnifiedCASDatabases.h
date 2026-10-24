@@ -19,6 +19,10 @@ class ObjectStore;
 
 /// Create on-disk \c ObjectStore and \c ActionCache instances based on
 /// \c ondisk::UnifiedOnDiskCache, with built-in hashing.
+///
+/// The data is stored in the sub-directory of \p Path named after the built-in
+/// hashing algorithm, e.g. '<Path>/BLAKE3', so that on-disk CAS data of
+/// different hashing algorithms can share the same \p Path.
 LLVM_ABI
 Expected<std::pair<std::unique_ptr<ObjectStore>, std::unique_ptr<ActionCache>>>
 createOnDiskUnifiedCASDatabases(StringRef Path);
