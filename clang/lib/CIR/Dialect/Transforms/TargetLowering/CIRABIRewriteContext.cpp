@@ -17,6 +17,7 @@
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/Support/MathExtras.h"
 #include <algorithm>
@@ -1014,6 +1015,12 @@ static void eraseDeadRecordLoads(ArrayRef<cir::LoadOp> loads) {
       load->erase();
 }
 
+/// The old call, their only user, must already be erased.
+static void eraseDeadFreezes(ArrayRef<cir::FreezeOp> freezes) {
+  for (cir::FreezeOp freeze : freezes)
+    freeze->erase();
+}
+
 /// The store that spills indirect parameter \p blockArg, if the parameter's
 /// only use is that store.  Null otherwise.
 static cir::StoreOp maybeFindParamSpill(mlir::BlockArgument blockArg) {
@@ -2006,6 +2013,8 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
   // Indirect argument passes or copies from the address the load read from.
   // The old call still uses them, so erase them only after it is gone.
   SmallVector<cir::LoadOp> deadRecordLoads;
+  // Erased before deadRecordLoads, since a freeze keeps its load alive.
+  SmallVector<cir::FreezeOp> deadFreezes;
 
   // Capture original arg types before building newArgs (an Indirect argument
   // changes the wire argument from T to !cir.ptr<T>, so we save the
@@ -2032,6 +2041,25 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
     if (ac.kind == ArgKind::Ignore)
       continue;
     mlir::Value arg = argOperands[idx];
+
+    // Refreeze after the ABI rewrite, as classic CodeGen does, so padding is
+    // frozen too. Indirect freezes only the pointer, so keep non-load freezes.
+    auto freeze = arg.getDefiningOp<cir::FreezeOp>();
+    if (freeze && freeze->hasOneUse() &&
+        (ac.kind != ArgKind::Indirect ||
+         freeze.getInput().getDefiningOp<cir::LoadOp>())) {
+      arg = freeze.getInput();
+      deadFreezes.push_back(freeze);
+    } else {
+      freeze = {};
+    }
+    llvm::scope_exit refreeze([&, firstNewArg = newArgs.size()] {
+      if (!freeze)
+        return;
+      builder.setInsertionPoint(call);
+      for (mlir::Value &newArg : llvm::drop_begin(newArgs, firstNewArg))
+        newArg = cir::FreezeOp::create(builder, freeze.getLoc(), newArg);
+    });
     if (cir::RecordType flatTy = getFlattenedCoercedType(ac)) {
       // Direct + canFlatten: pass one scalar call argument per field of the
       // ABI-coerced struct.  A non-atomic record load is read in place or
@@ -2202,6 +2230,7 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
                                          origRetTy, origCallArgTypes, builder,
                                          dl)))
       return mlir::failure();
+    eraseDeadFreezes(deadFreezes);
     eraseDeadRecordLoads(deadRecordLoads);
     return mlir::success();
   }
@@ -2268,6 +2297,7 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
   }
 
   call->erase();
+  eraseDeadFreezes(deadFreezes);
   eraseDeadRecordLoads(deadRecordLoads);
 
   return mlir::success();

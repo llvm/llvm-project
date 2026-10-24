@@ -1,0 +1,111 @@
+// RUN: cir-opt %s -cir-call-conv-lowering="classification-attr=test_classify" \
+// RUN:   | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+!rec_Pair = !cir.struct<"Pair" {data !s32i, data !s32i}>
+
+#coerce_pair_to_i64 = {
+  return = { kind = "direct" },
+  args   = [ { kind = "direct", coerced_type = !s64i } ]
+}
+
+#indirect_pair = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 4, byval = false } ]
+}
+
+#byval_pair = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 4, byval = true } ]
+}
+
+#caller_no_args = {
+  return = { kind = "direct" },
+  args   = [ ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  cir.func private @coerced(!rec_Pair)
+      attributes { test_classify = #coerce_pair_to_i64 }
+  cir.func private @indirect(!rec_Pair)
+      attributes { test_classify = #indirect_pair }
+  cir.func private @byval(!rec_Pair)
+      attributes { test_classify = #byval_pair }
+
+  cir.func @freeze_coerced()
+      attributes { test_classify = #caller_no_args } {
+    %0 = cir.alloca "p" align(4) : !cir.ptr<!rec_Pair>
+    %1 = cir.load %0 : !cir.ptr<!rec_Pair>, !rec_Pair
+    %2 = cir.freeze %1 : !rec_Pair
+    cir.call @coerced(%2) : (!rec_Pair) -> ()
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func{{.*}} @freeze_coerced()
+  // CHECK:         %[[P:.*]] = cir.alloca "p" {{.*}} : !cir.ptr<!rec_Pair>
+  // CHECK:         %[[CAST:.*]] = cir.cast bitcast %[[P]] : !cir.ptr<!rec_Pair> -> !cir.ptr<!s64i>
+  // CHECK:         %[[INT:.*]] = cir.load align(4) %[[CAST]] : !cir.ptr<!s64i>, !s64i
+  // CHECK-NEXT:    %[[F:.*]] = cir.freeze %[[INT]] : !s64i
+  // CHECK-NEXT:    cir.call @coerced(%[[F]]) : (!s64i) -> ()
+  // CHECK-NOT:     cir.freeze
+
+  // The freeze no longer hides the load, so the call forwards its storage.
+  cir.func @freeze_indirect()
+      attributes { test_classify = #caller_no_args } {
+    %0 = cir.alloca "p" align(4) : !cir.ptr<!rec_Pair>
+    %1 = cir.load %0 : !cir.ptr<!rec_Pair>, !rec_Pair
+    %2 = cir.freeze %1 : !rec_Pair
+    cir.call @indirect(%2) : (!rec_Pair) -> ()
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func{{.*}} @freeze_indirect()
+  // CHECK:         %[[P:.*]] = cir.alloca "p" {{.*}} : !cir.ptr<!rec_Pair>
+  // CHECK-NEXT:    %[[F:.*]] = cir.freeze %[[P]] : !cir.ptr<!rec_Pair>
+  // CHECK-NEXT:    cir.call @indirect(%[[F]]) : (!cir.ptr<!rec_Pair> {{.*}}) -> ()
+  // CHECK-NOT:     cir.freeze
+
+  // A byval slot stored from a frozen non-load value keeps the value frozen.
+  cir.func @freeze_byval_value()
+      attributes { test_classify = #caller_no_args } {
+    %0 = cir.const #cir.poison : !rec_Pair
+    %1 = cir.freeze %0 : !rec_Pair
+    cir.call @byval(%1) : (!rec_Pair) -> ()
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func{{.*}} @freeze_byval_value()
+  // CHECK:         %[[V:.*]] = cir.const #cir.poison : !rec_Pair
+  // CHECK-NEXT:    %[[F:.*]] = cir.freeze %[[V]] : !rec_Pair
+  // CHECK:         cir.store %[[F]], %[[SLOT:.*]] : !rec_Pair, !cir.ptr<!rec_Pair>
+  // CHECK-NEXT:    cir.call @byval(%[[SLOT]])
+  // CHECK-NOT:     cir.freeze
+
+  // A shared freeze stays put, since all its uses must see one value.
+  cir.func @freeze_shared()
+      attributes { test_classify = #caller_no_args } {
+    %0 = cir.alloca "p" align(4) : !cir.ptr<!rec_Pair>
+    %1 = cir.load %0 : !cir.ptr<!rec_Pair>, !rec_Pair
+    %2 = cir.freeze %1 : !rec_Pair
+    cir.call @coerced(%2) : (!rec_Pair) -> ()
+    cir.call @coerced(%2) : (!rec_Pair) -> ()
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func{{.*}} @freeze_shared()
+  // CHECK:         %[[V:.*]] = cir.load {{.*}} : !cir.ptr<!rec_Pair>, !rec_Pair
+  // CHECK-NEXT:    %[[F:.*]] = cir.freeze %[[V]] : !rec_Pair
+  // CHECK:         cir.store {{.*}}%[[F]], %{{.*}} : !rec_Pair, !cir.ptr<!rec_Pair>
+  // CHECK:         %[[A:.*]] = cir.load {{.*}} : !cir.ptr<!s64i>, !s64i
+  // CHECK-NEXT:    cir.call @coerced(%[[A]]) : (!s64i) -> ()
+  // CHECK:         cir.store {{.*}}%[[F]], %{{.*}} : !rec_Pair, !cir.ptr<!rec_Pair>
+  // CHECK:         %[[B:.*]] = cir.load {{.*}} : !cir.ptr<!s64i>, !s64i
+  // CHECK-NEXT:    cir.call @coerced(%[[B]]) : (!s64i) -> ()
+
+}

@@ -1365,6 +1365,11 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
       assert(!cir::MissingFeatures::lowerAggregateLoadStore());
       cirCallArgs[argNo] = builder.createLoad(argLoc, src);
     }
+
+    if (CodeGenUtils::isArgumentMaybeUndef(
+            targetDecl, funcInfo.getNumRequiredArgs(), argNo))
+      cirCallArgs[argNo] =
+          cir::FreezeOp::create(builder, loc, cirCallArgs[argNo]);
   }
 
   const CIRGenCallee &concreteCallee = callee.prepareConcreteCallee(*this);
