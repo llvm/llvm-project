@@ -1010,7 +1010,7 @@ FailureOr<Value> ContractionOpLowering::lowerParallel(PatternRewriter &rewriter,
                                                       Value mask) const {
   VectorType lhsType = op.getLhsType();
   VectorType rhsType = op.getRhsType();
-  VectorType resType = cast<VectorType>(op.getResultType());
+  Type resType = op.getResultType();
   // Find the iterator type index and result index.
   SmallVector<AffineMap> iMap = op.getIndexingMapsArray();
   int64_t iterIndex = -1;
