@@ -719,7 +719,9 @@ bool HasAllowedCUDADeviceStaticInitializer(SemaCUDA &S, VarDecl *VD,
     if (!Init)
       return true;
     if (const auto *CE = dyn_cast<CXXConstructExpr>(Init)) {
-      return S.isEmptyConstructor(VD->getLocation(), CE->getConstructor());
+      CXXConstructorDecl *CD = CE->getConstructor();
+      return CD->isDefaultConstructor() &&
+             S.isEmptyConstructor(VD->getLocation(), CD);
     }
     return false;
   };
@@ -731,7 +733,8 @@ bool HasAllowedCUDADeviceStaticInitializer(SemaCUDA &S, VarDecl *VD,
                                        VD->getType()->isReferenceType());
   };
   auto HasEmptyDtor = [&](VarDecl *VD) {
-    if (const auto *RD = VD->getType()->getAsCXXRecordDecl())
+    if (const auto *RD =
+            VD->getType()->getBaseElementTypeUnsafe()->getAsCXXRecordDecl())
       return S.isEmptyDestructor(VD->getLocation(), RD->getDestructor());
     return true;
   };
@@ -765,11 +768,35 @@ void SemaCUDA::checkAllowedInitializer(VarDecl *VD) {
   if (VD->isInvalidDecl() || !VD->hasInit() || !VD->hasGlobalStorage() ||
       IsDependentVar(VD))
     return;
+
+  // A function-scope static is a device variable when it is emitted on the
+  // device side, and has the same initialization restrictions.
+  CUDAVariableTarget VT = IdentifyTarget(VD);
+
+  // CVT_Both means the enclosing function is __host__ __device__, so the
+  // variable is emitted on both sides and only the device-side copy is
+  // restricted.
+  const bool IsDeviceCopyOfHDStatic =
+      VT == CVT_Both && getLangOpts().CUDAIsDevice;
+
+  // constexpr implies constant initialization and constant destruction.
+  bool IsDeviceLocalStatic = !IsSharedVar && !IsDeviceOrConstantVar &&
+                             VD->isStaticLocal() && !VD->isConstexpr() &&
+                             (VT == CVT_Device || IsDeviceCopyOfHDStatic);
+
   const Expr *Init = VD->getInit();
-  if (IsDeviceOrConstantVar || IsSharedVar) {
+  if (IsDeviceOrConstantVar || IsSharedVar || IsDeviceLocalStatic) {
     if (HasAllowedCUDADeviceStaticInitializer(
             *this, VD, IsSharedVar ? CICK_Shared : CICK_DeviceOrConstant))
       return;
+    // Defer the diagnostic until we know whether a __host__ __device__
+    // function is emitted on the device side.
+    if (IsDeviceLocalStatic) {
+      if (DiagIfDeviceCode(VD->getLocation(), diag::err_cuda_static_local_var)
+          << CurrentTarget() << Init->getSourceRange())
+        VD->setInvalidDecl();
+      return;
+    }
     Diag(VD->getLocation(),
          IsSharedVar ? diag::err_shared_var_init : diag::err_dynamic_var_init)
         << Init->getSourceRange();
