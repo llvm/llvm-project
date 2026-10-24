@@ -2583,10 +2583,6 @@ static bool collectInstructionDeps(
     SmallMapVector<const Instruction *, bool, 8> *Deps, const Value *V,
     SmallMapVector<const Instruction *, bool, 8> *Necessary = nullptr,
     unsigned Depth = 0) {
-  // Return false if we have an incomplete count.
-  if (Depth >= SelectionDAG::MaxRecursionDepth)
-    return false;
-
   auto *I = dyn_cast<Instruction>(V);
   if (I == nullptr)
     return true;
@@ -2601,6 +2597,12 @@ static bool collectInstructionDeps(
   // Already added this dep.
   if (!Deps->try_emplace(I, false).second)
     return true;
+
+  // Return false if we have an incomplete count. Only give up when the
+  // dependency chain actually goes deeper; operands which are not instructions
+  // are complete at any depth.
+  if (Depth >= SelectionDAG::MaxRecursionDepth)
+    return false;
 
   for (unsigned OpIdx = 0, E = I->getNumOperands(); OpIdx < E; ++OpIdx)
     if (!collectInstructionDeps(Deps, I->getOperand(OpIdx), Necessary,
