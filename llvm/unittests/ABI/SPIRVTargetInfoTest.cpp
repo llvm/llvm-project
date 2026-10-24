@@ -66,8 +66,10 @@ protected:
                                  /*KernelPassAggregatesIndirect=*/true);
   }
 
-  std::unique_ptr<TargetInfo> defaultTarget() {
-    return createSPIRVTargetInfo(TB);
+  /// A target with neither kernel rule, like SPIR, whose default address
+  /// space is \p DefaultAS.
+  std::unique_ptr<TargetInfo> defaultTarget(unsigned DefaultAS) {
+    return createSPIRVTargetInfo(TB, DefaultAS);
   }
 
   /// The classification of a single parameter under calling convention \p CC.
@@ -150,7 +152,7 @@ TEST_F(SPIRVTargetInfoTest, KernelAggregateIsByValOnDevice) {
   expectIndirect(classifyArg(NonTrivial, deviceTarget(GenericAS),
                              CallingConv::SPIR_KERNEL, FI, TI),
                  /*ByVal=*/true);
-  expectIndirect(classifyArg(NonTrivial, defaultTarget(),
+  expectIndirect(classifyArg(NonTrivial, defaultTarget(FunctionAS),
                              CallingConv::SPIR_KERNEL, FI, TI),
                  /*ByVal=*/false);
 }
@@ -180,7 +182,8 @@ TEST_F(SPIRVTargetInfoTest, OtherPointersAreNotCoerced) {
   expectUncoercedDirect(classifyArg(pointerIn(GenericAS),
                                     deviceTarget(GenericAS),
                                     CallingConv::SPIR_FUNC, FI, TI));
-  expectUncoercedDirect(classifyArg(pointerIn(GenericAS), defaultTarget(),
+  expectUncoercedDirect(classifyArg(pointerIn(GenericAS),
+                                    defaultTarget(GenericAS),
                                     CallingConv::SPIR_KERNEL, FI, TI));
 }
 
@@ -222,12 +225,12 @@ TEST_F(SPIRVTargetInfoTest, BitIntWiderThan64IsIndirect) {
     return TB.getIntegerType(Bits, llvm::Align(8), /*Signed=*/true,
                              /*IsBitInt=*/true);
   };
-  EXPECT_TRUE(
-      classifyArg(BitInt(64), defaultTarget(), CallingConv::SPIR_FUNC, FI, TI)
-          .isDirect());
-  EXPECT_TRUE(
-      classifyArg(BitInt(65), defaultTarget(), CallingConv::SPIR_FUNC, FI, TI)
-          .isIndirect());
+  EXPECT_TRUE(classifyArg(BitInt(64), defaultTarget(FunctionAS),
+                          CallingConv::SPIR_FUNC, FI, TI)
+                  .isDirect());
+  EXPECT_TRUE(classifyArg(BitInt(65), defaultTarget(FunctionAS),
+                          CallingConv::SPIR_FUNC, FI, TI)
+                  .isIndirect());
 }
 
 } // namespace
