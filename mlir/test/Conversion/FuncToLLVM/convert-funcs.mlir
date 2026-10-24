@@ -72,9 +72,9 @@ func.func private @target_features() attributes {
 }
 
 // CHECK-LABEL: llvm.func @passthrough_attr()
-// CHECK-SAME: passthrough = ["presplitcoroutine"]
+// CHECK-SAME: passthrough = ["presplitcoroutine", ["llvm.assume", "omp_no_openmp"]]
 func.func private @passthrough_attr() attributes {
-  "llvm.passthrough" = ["presplitcoroutine"]
+  "llvm.passthrough" = ["presplitcoroutine", ["llvm.assume", "omp_no_openmp"]]
 }
 
 // -----

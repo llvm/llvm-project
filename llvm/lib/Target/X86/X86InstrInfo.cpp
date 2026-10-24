@@ -1171,8 +1171,7 @@ bool X86InstrInfo::classifyLEAReg(MachineInstr &MI, const MachineOperand &Src,
             .addReg(NewSrc, RegState::Define | RegState::Undef, X86::sub_32bit)
             .addReg(SrcReg, getKillRegState(isKill), SubReg);
 
-    // Which is obviously going to be dead after we're done with it.
-    isKill = true;
+    isKill = false;
 
     if (LIS) {
       SlotIndex CopyIdx = LIS->InsertMachineInstrInMaps(*Copy);
@@ -1253,25 +1252,25 @@ MachineInstr *X86InstrInfo::convertToThreeAddressWithLEA(unsigned MIOpc,
   CASE_NF(SHL16ri) {
     unsigned ShAmt = MI.getOperand(2).getImm();
     MIB.addReg(0)
-        .addImm(1LL << ShAmt)
-        .addReg(InRegLEA, RegState::Kill)
-        .addImm(0)
-        .addReg(0);
+       .addImm(1LL << ShAmt)
+       .addReg(InRegLEA)
+       .addImm(0)
+       .addReg(0);
     break;
   }
   CASE_NF(INC8r)
   CASE_NF(INC16r)
-    addRegOffset(MIB, InRegLEA, true, 1);
+    addRegOffset(MIB, InRegLEA, false, 1);
     break;
   CASE_NF(DEC8r)
   CASE_NF(DEC16r)
-    addRegOffset(MIB, InRegLEA, true, -1);
+    addRegOffset(MIB, InRegLEA, false, -1);
     break;
   CASE_NF(ADD8ri)
   CASE_NF(ADD16ri)
   case X86::ADD8ri_DB:
   case X86::ADD16ri_DB:
-    addRegOffset(MIB, InRegLEA, true, MI.getOperand(2).getImm());
+    addRegOffset(MIB, InRegLEA, false, MI.getOperand(2).getImm());
     break;
   CASE_NF(ADD8rr)
   CASE_NF(ADD16rr)
@@ -1284,7 +1283,7 @@ MachineInstr *X86InstrInfo::convertToThreeAddressWithLEA(unsigned MIOpc,
     if (Src == Src2) {
       // ADD8rr/ADD16rr killed %reg1028, %reg1028
       // just a single insert_subreg.
-      addRegReg(MIB, InRegLEA, true, X86::NoSubRegister, InRegLEA, false,
+      addRegReg(MIB, InRegLEA, false, X86::NoSubRegister, InRegLEA, false,
                 X86::NoSubRegister);
     } else {
       if (Subtarget.is64Bit())
@@ -1298,7 +1297,7 @@ MachineInstr *X86InstrInfo::convertToThreeAddressWithLEA(unsigned MIOpc,
       InsMI2 = BuildMI(MBB, &*MIB, MI.getDebugLoc(), get(TargetOpcode::COPY))
                    .addReg(InRegLEA2, RegState::Define, SubReg)
                    .addReg(Src2, getKillRegState(IsKill2), Src2SubReg);
-      addRegReg(MIB, InRegLEA, true, X86::NoSubRegister, InRegLEA2, true,
+      addRegReg(MIB, InRegLEA, false, X86::NoSubRegister, InRegLEA2, false,
                 X86::NoSubRegister);
     }
     break;
@@ -1309,7 +1308,7 @@ MachineInstr *X86InstrInfo::convertToThreeAddressWithLEA(unsigned MIOpc,
   MachineInstr *ExtMI =
       BuildMI(MBB, MBBI, MI.getDebugLoc(), get(TargetOpcode::COPY))
           .addReg(Dest, RegState::Define | getDeadRegState(IsDead))
-          .addReg(OutRegLEA, RegState::Kill, SubReg);
+          .addReg(OutRegLEA, {}, SubReg);
 
   if (LIS) {
     LIS->InsertMachineInstrInMaps(*ImpDef);
@@ -4708,7 +4707,6 @@ void X86InstrInfo::loadStoreTileReg(MachineBasicBlock &MBB,
             .addReg(Reg, getKillRegState(isKill));
     MachineOperand &MO = NewMI->getOperand(X86::AddrIndexReg);
     MO.setReg(VirtReg);
-    MO.setIsKill(true);
     break;
   }
   case X86::TILELOADD:
@@ -4721,7 +4719,6 @@ void X86InstrInfo::loadStoreTileReg(MachineBasicBlock &MBB,
         BuildMI(MBB, MI, DebugLoc(), get(Opc), Reg), FrameIdx);
     MachineOperand &MO = NewMI->getOperand(1 + X86::AddrIndexReg);
     MO.setReg(VirtReg);
-    MO.setIsKill(true);
     break;
   }
   }
@@ -11006,11 +11003,9 @@ genAlternativeDpCodeSequence(MachineInstr &Root, const TargetInstrInfo &TII,
   InstrIdxForVirtReg.insert(std::make_pair(NewReg, 0));
   // Create vpaddd.
   Register DstReg = Root.getOperand(0).getReg();
-  bool IsKill = Root.getOperand(1).isKill();
-  MachineInstr *Add =
-      BuildMI(*MF, MIMetadata(Root), TII.get(AddOpc), DstReg)
-          .addReg(Root.getOperand(1).getReg(), getKillRegState(IsKill))
-          .addReg(Madd->getOperand(0).getReg(), getKillRegState(true));
+  MachineInstr *Add = BuildMI(*MF, MIMetadata(Root), TII.get(AddOpc), DstReg)
+                          .addReg(Root.getOperand(1).getReg())
+                          .addReg(Madd->getOperand(0).getReg());
   InsInstrs.push_back(Madd);
   InsInstrs.push_back(Add);
   DelInstrs.push_back(&Root);

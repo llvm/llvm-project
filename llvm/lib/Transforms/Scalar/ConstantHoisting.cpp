@@ -127,8 +127,7 @@ bool ConstantHoistingLegacyPass::runOnFunction(Function &Fn) {
   LLVM_DEBUG(dbgs() << "********** Begin Constant Hoisting **********\n");
   LLVM_DEBUG(dbgs() << "********** Function: " << Fn.getName() << '\n');
 
-  const ScalarOptions &Opts =
-      Fn.getContext().getLibraryOptions().get<ScalarOptions>();
+  const ScalarOptions &Opts = getScalarOptions(Fn);
   bool MadeChange =
       Impl.runImpl(Fn, getAnalysis<TargetTransformInfoWrapperPass>().getTTI(Fn),
                    getAnalysis<DominatorTreeWrapperPass>().getDomTree(),
@@ -912,7 +911,7 @@ void ConstantHoistingPass::deleteDeadCastInst() const {
 bool ConstantHoistingPass::runImpl(Function &Fn, TargetTransformInfo &TTI,
                                    DominatorTree &DT, BlockFrequencyInfo *BFI,
                                    BasicBlock &Entry, ProfileSummaryInfo *PSI) {
-  this->Opts = &Fn.getContext().getLibraryOptions().get<ScalarOptions>();
+  this->Opts = &getScalarOptions(Fn);
   this->TTI = &TTI;
   this->DT = &DT;
   this->BFI = BFI;
@@ -956,8 +955,7 @@ PreservedAnalyses ConstantHoistingPass::run(Function &F,
                                             FunctionAnalysisManager &AM) {
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &TTI = AM.getResult<TargetIRAnalysis>(F);
-  const ScalarOptions &CLOpts =
-      F.getContext().getLibraryOptions().get<ScalarOptions>();
+  const ScalarOptions &CLOpts = getScalarOptions(F);
   auto BFI = CLOpts.consthoist_with_block_frequency
                  ? &AM.getResult<BlockFrequencyAnalysis>(F)
                  : nullptr;

@@ -10,10 +10,13 @@
 from typing import Dict, List, NamedTuple, Optional, Sequence, Tuple
 import argparse
 import common
+import concurrent.futures
+import functools
 import json
 import logging
 import math
 import numpy
+import os
 import pathlib
 import statistics
 import sys
@@ -73,23 +76,90 @@ class Settings(NamedTuple):
     permutations: int
     aggregate: str
 
+    def can_divide(self, series: Sequence[Point]) -> bool:
+        """Whether a series is long enough to be divided into two segments of `min_points`."""
+        return len(series) >= 2 * self.min_points
+
+    def description(self) -> str:
+        return (f'at p <= {self.p_value} using {self.permutations} permutations, with at least '
+                f'{self.min_points} points per segment')
+
+
+class InvalidRecord(ValueError):
+    """A record of the input that can't be part of its series."""
+
 
 class HelpFormatter(argparse.ArgumentDefaultsHelpFormatter,
                     argparse.RawDescriptionHelpFormatter):
     """Show defaults, but keep the paragraphs of the description intact."""
 
 
-def read_series(stream, x: str, y: str, order_by: str) -> List[Point]:
+class SeriesBuilder:
+    """Gathers the records of one series into its points, validating them along the way."""
+
+    def __init__(self, x: str, y: str, order_by: str) -> None:
+        self.x, self.y, self.order_by = x, y, order_by
+        self.points: Dict[str, Point] = {} # in order of first appearance
+        self.has_order: Optional[bool] = None
+
+    def add(self, number: int, record: dict) -> None:
+        """Add the record found on line `number` of the input."""
+        (x, y, order_by) = (self.x, self.y, self.order_by)
+        if y not in record:
+            raise InvalidRecord(f'line {number} has no `{y}` field')
+        value = record[y]
+        if not isinstance(value, (int, float)) or isinstance(value, bool): # bool is a subclass of int
+            raise InvalidRecord(f'line {number}: `{y}` is not a number: {value!r}')
+        value = float(value)
+        if not math.isfinite(value):
+            raise InvalidRecord(f'line {number}: `{y}` is not finite: {record[y]!r}')
+        if value <= 0:
+            raise InvalidRecord(f'line {number}: `{y}` is not positive: {value!r}')
+
+        ordinal = record.get(order_by)
+        if self.has_order is None:
+            self.has_order = ordinal is not None
+        elif (ordinal is not None) != self.has_order:
+            raise InvalidRecord(f'line {number}: `{order_by}` must be given for every record or for none of them.')
+        if ordinal is not None and (isinstance(ordinal, bool) or not isinstance(ordinal, int)):
+            raise InvalidRecord(f'line {number}: `{order_by}` is not an integer: {ordinal!r}')
+
+        if record.get(x) is None:
+            raise InvalidRecord(f'line {number} has no `{x}` field')
+        label = str(record[x])
+        if label in self.points:
+            existing = self.points[label]
+            if existing.ordinal != ordinal:
+                raise InvalidRecord(f'line {number}: {label} appears with two different ordinals '
+                                 f'({existing.ordinal} and {ordinal})')
+            existing.samples.append(value)
+        else:
+            self.points[label] = Point(label=label, ordinal=ordinal, samples=[value])
+
+    def series(self) -> List[Point]:
+        """Return the points of the series, in order."""
+        series = list(self.points.values())
+        if self.has_order:
+            series.sort(key=lambda point: point.ordinal)
+        return series
+
+
+def read_series(stream, x: str, y: str, order_by: str, series_by: Optional[str] = None
+                ) -> Tuple[Dict[Optional[str], List[Point]], Dict[Optional[str], str]]:
     """
-    Read a series from a JSONL stream, grouping the samples of each point together.
+    Read the series in a JSONL stream, grouping the samples of each point together.
 
     The `y` field holds the measurement, and the `x` field labels the points and gathers the
     records that belong to the same one. Both are required. The optional `order_by` field
     places the points in order; without it, the order of the records is the order of the
     series.
+
+    With `series_by`, the records are split into one series per value of that field; without
+    it, they form a single series, under the key None. A series holding an invalid record is
+    left out, and returned along with the error instead.
     """
-    points: Dict[str, Point] = {} # in order of first appearance
-    has_order: Optional[bool] = None
+    builders: Dict[Optional[str], SeriesBuilder] = {}
+    errors: Dict[Optional[str], str] = {}
     for (number, line) in enumerate(stream, start=1):
         line = line.strip()
         if not line:
@@ -101,41 +171,21 @@ def read_series(stream, x: str, y: str, order_by: str) -> List[Point]:
         if not isinstance(record, dict):
             raise ValueError(f'line {number} is not a JSON object, but a {type(record).__name__}')
 
-        if y not in record:
-            raise ValueError(f'line {number} has no `{y}` field')
-        value = record[y]
-        if not isinstance(value, (int, float)) or isinstance(value, bool): # bool is a subclass of int
-            raise ValueError(f'line {number}: `{y}` is not a number: {value!r}')
-        value = float(value)
-        if not math.isfinite(value):
-            raise ValueError(f'line {number}: `{y}` is not finite: {record[y]!r}')
-        if value <= 0:
-            raise ValueError(f'line {number}: `{y}` is not positive: {value!r}')
-
-        ordinal = record.get(order_by)
-        if has_order is None:
-            has_order = ordinal is not None
-        elif (ordinal is not None) != has_order:
-            raise ValueError(f'line {number}: `{order_by}` must be given for every record or for none of them.')
-        if ordinal is not None and (isinstance(ordinal, bool) or not isinstance(ordinal, int)):
-            raise ValueError(f'line {number}: `{order_by}` is not an integer: {ordinal!r}')
-
-        if record.get(x) is None:
-            raise ValueError(f'line {number} has no `{x}` field')
-        label = str(record[x])
-        if label in points:
-            existing = points[label]
-            if existing.ordinal != ordinal:
-                raise ValueError(f'line {number}: {label} appears with two different ordinals '
-                                 f'({existing.ordinal} and {ordinal})')
-            existing.samples.append(value)
-        else:
-            points[label] = Point(label=label, ordinal=ordinal, samples=[value])
-
-    series = list(points.values())
-    if has_order:
-        series.sort(key=lambda point: point.ordinal)
-    return series
+        key = None
+        if series_by is not None:
+            if record.get(series_by) is None:
+                raise ValueError(f'line {number} has no `{series_by}` field')
+            key = str(record[series_by])
+        if key in errors:
+            continue
+        if key not in builders:
+            builders[key] = SeriesBuilder(x, y, order_by)
+        try:
+            builders[key].add(number, record)
+        except InvalidRecord as error:
+            errors[key] = str(error)
+            del builders[key]
+    return ({key: builder.series() for (key, builder) in builders.items()}, errors)
 
 
 def cumulative_distances(values: numpy.ndarray) -> numpy.ndarray:
@@ -302,25 +352,41 @@ def describe(series: Sequence[Point], values: numpy.ndarray,
     return changes
 
 
-def analyze(series: Sequence[Point], settings: Settings,
-            rng: numpy.random.Generator) -> List[Changepoint]:
-    """Find and describe the changes in a series."""
-    if len(series) < 2 * settings.min_points:
-        logging.warning(f'the series has {len(series)} points, which is fewer than the '
-                        f'{2 * settings.min_points} needed to divide it into two segments of '
-                        f'--min-points; not looking for changepoints')
-        return []
+def analyze(series: Sequence[Point], settings: Settings, seed: int) -> List[Changepoint]:
+    """
+    Find and describe the changes in a series that is long enough to be divided.
 
+    Every series gets a random number generator of its own, seeded the same way, so that its
+    changes are the same whatever other series are analyzed with it, and in whatever order.
+    """
     aggregator = AGGREGATORS[settings.aggregate]
     values: numpy.ndarray = numpy.array([aggregator(point.samples) for point in series], dtype=float)
 
     labels = [point.label for point in series]
-    return describe(series, values, detect(values, labels, settings, rng))
+    return describe(series, values, detect(values, labels, settings, numpy.random.default_rng(seed)))
 
 
-def serialize(changes: Sequence[Changepoint]) -> str:
-    """Render the changes as one JSON object per line."""
-    return ''.join(json.dumps(change._asdict(), sort_keys=True) + '\n' for change in changes)
+def analyze_all(all_series: Sequence[Sequence[Point]], settings: Settings, seed: int,
+                jobs: int) -> List[List[Changepoint]]:
+    """Analyze several series, `jobs` at a time."""
+    work = functools.partial(analyze, settings=settings, seed=seed)
+    if jobs == 1: # without worker processes, which is easier to debug
+        return list(map(work, all_series))
+    # The cost of a series varies a lot with the number of changes in it, so hand them out one by
+    # one rather than in chunks that may hold several expensive ones.
+    setup = functools.partial(setup_logging, logging.getLogger().level)
+    with concurrent.futures.ProcessPoolExecutor(max_workers=jobs, initializer=setup) as pool:
+        return list(pool.map(work, all_series))
+
+
+def setup_logging(level: int) -> None:
+    """Set up logging, in this process or in a worker process (which doesn't inherit it)."""
+    logging.basicConfig(format='%(levelname)s: %(message)s', level=level)
+
+
+def serialize(changes: Sequence[Changepoint], fields: Optional[Dict[str, str]] = None) -> str:
+    """Render the changes as one JSON object per line, with `fields` added to each."""
+    return ''.join(json.dumps({**(fields or {}), **change._asdict()}, sort_keys=True) + '\n' for change in changes)
 
 
 def report(series: Sequence[Point], changes: Sequence[Changepoint],
@@ -333,9 +399,7 @@ def report(series: Sequence[Point], changes: Sequence[Changepoint],
     if samples > len(series):
         print(f'Combining the measurements of each point with their '
               f'{settings.aggregate}', file=out)
-    print(f'Detected {len(changes)} changepoint(s) at p <= {settings.p_value} using '
-          f'{settings.permutations} permutations, with at least {settings.min_points} points '
-          f'per segment', file=out)
+    print(f'Detected {len(changes)} changepoint(s) {settings.description()}', file=out)
     if not changes:
         return
 
@@ -360,6 +424,9 @@ def main(argv: List[str]) -> int:
                     'The changepoints are written to standard output as one JSON object per line, '
                     'including the two points the change falls between, the relative change and its '
                     'p-value.\n'
+                    '\n'
+                    'With --series-by, the input can hold several series, such as every test of a machine '
+                    'as returned by LNT\'s `GET /series`, and each series is analyzed on its own.\n'
                     '\n'
                     'The method used by this script is described in "A Nonparametric Approach for '
                     'Multiple Change Point Analysis of Multivariate Data" (Matteson & James, 2014, '
@@ -394,25 +461,41 @@ def main(argv: List[str]) -> int:
     parser.add_argument('--seed', type=int, default=0,
         help='The seed of the random number generator used to permute the points. The default is '
              'fixed to make the output of this script reproducible.')
+    parser.add_argument('--series-by', default=None, metavar='FIELD',
+        help='A field to use to determine which series the line is a part of. For example, --series-by test '
+             'would create a distinct series for each distinct value of the "test" field in the inputs. If not '
+             'provided, the input is assumed to hold a single series.')
+    parser.add_argument('--jobs', type=common.at_least(1), default=os.cpu_count(),
+        help='How many series to analyze at the same time, when there are several.')
     parser.add_argument('--output', type=pathlib.Path, default=None,
         help='Where to write the changepoints. Defaults to standard output.')
     parser.add_argument('-v', '--verbose', action='count', default=0,
         help='Print a human-readable summary to standard error. Pass it twice to enable debugging output.')
     args = parser.parse_args(argv)
 
-    logging.basicConfig(format='%(levelname)s: %(message)s',
-                        level=logging.DEBUG if args.verbose >= 2 else logging.WARNING)
+    setup_logging(logging.DEBUG if args.verbose >= 2 else logging.WARNING)
 
     if not 0 < args.p_value <= 1:
         raise ValueError(f'--p-value must be in (0, 1], got {args.p_value}')
 
-    series = read_series(args.input, x=args.x, y=args.y, order_by=args.order_by)
-    if not series:
-        raise ValueError('the input contains no data')
+    (all_series, errors) = read_series(args.input, x=args.x, y=args.y, order_by=args.order_by,
+                                       series_by=args.series_by)
+    if args.series_by is not None:
+        for (key, error) in sorted(errors.items())[:10]:
+            logging.warning(f'skipped {key}: {error}')
+        if len(errors) > 10:
+            logging.warning(f'skipped {len(errors) - 10} more series with invalid records')
+    if not all_series:
+        if not errors:
+            raise ValueError('the input contains no data')
+        if args.series_by is None:
+            raise ValueError(errors[None])
+        raise ValueError(f'every one of the {len(errors)} series holds invalid records')
 
-    repeated = sum(1 for point in series if len(point.samples) > 1)
+    repeated = sum(1 for series in all_series.values() for point in series if len(point.samples) > 1)
+    points = sum(map(len, all_series.values()))
     if repeated and args.aggregate is None:
-        raise ValueError(f'{repeated} of the {len(series)} points hold more than one measurement, --aggregate '
+        raise ValueError(f'{repeated} of the {points} points hold more than one measurement, --aggregate '
                          f'must be used to say how to combine them.')
     elif args.aggregate is None:
         # default to median when there's nothing to aggregate -- it doesn't change anything anyway
@@ -420,13 +503,35 @@ def main(argv: List[str]) -> int:
 
     settings = Settings(min_points=args.min_points, p_value=args.p_value,
                         permutations=args.permutations, aggregate=args.aggregate)
-    changes = analyze(series, settings, numpy.random.default_rng(args.seed))
+    keys = []
+    short = 0
+    for (key, series) in sorted(all_series.items(), key=lambda item: item[0] or ''):
+        if settings.can_divide(series):
+            keys.append(key)
+        elif args.series_by is None:
+            logging.warning(f'the series has {len(series)} points, which is fewer than the '
+                            f'{2 * settings.min_points} needed to divide it into two segments of '
+                            f'--min-points; not looking for changepoints')
+        else:
+            short += 1
+            logging.debug(f'skipped {key}: fewer than the {2 * settings.min_points} points needed to divide it')
+    results = analyze_all([all_series[key] for key in keys], settings, args.seed, args.jobs)
+    changes = dict(zip(keys, results))
 
-    if args.verbose:
-        report(series, changes, settings)
+    if args.series_by is None:
+        contents = serialize(changes.get(None, []))
+        if args.verbose:
+            report(all_series[None], changes.get(None, []), settings)
+    else:
+        contents = ''.join(serialize(changes[key], {args.series_by: key}) for key in keys)
+        if args.verbose:
+            out = sys.stderr
+            print(f'Series: {len(all_series) + len(errors)} by `{args.series_by}`, {len(keys)} analyzed with '
+                  f'{args.jobs} jobs, {short} too short to divide, {len(errors)} with invalid records', file=out)
+            print(f'Detected {sum(map(len, results))} changepoint(s) in {sum(1 for c in results if c)} series '
+                  f'{settings.description()}', file=out)
 
     # Write the output all at once at the end, to avoid partial output in case of failure.
-    contents = serialize(changes)
     if args.output is None:
         sys.stdout.write(contents)
     else:

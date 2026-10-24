@@ -21,6 +21,7 @@
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
+#include "llvm/CodeGen/BasicBlockMatchingAndInference.h"
 #include "llvm/CodeGen/BasicBlockSectionsProfileReader.h"
 #include "llvm/CodeGen/CSEConfigBase.h"
 #include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
@@ -765,48 +766,51 @@ void TargetPassConfig::addIRPasses() {
 /// Turn exception handling constructs into something the code generators can
 /// handle.
 void TargetPassConfig::addPassesToHandleExceptions() {
-  const MCAsmInfo &MCAI = TM->getMCAsmInfo();
-  switch (MCAI.getExceptionHandlingType()) {
-  case ExceptionHandling::SjLj:
-    // SjLj piggy-backs on dwarf for this bit. The cleanups done apply to both
-    // Dwarf EH prepare needs to be run after SjLj prepare. Otherwise,
-    // catch info can get misplaced when a selector ends up more than one block
-    // removed from the parent invoke(s). This could happen when a landing
-    // pad is shared by multiple invokes and is also a target of a normal
-    // edge from elsewhere.
+  // The module's exception model is not known when the pipeline is built, so
+  // schedule the preparation pass for every model the target supports. Each
+  // pass does nothing for other models.
+  bool HasEHPrep = false;
+
+  // SjLj piggy-backs on dwarf for this bit. The cleanups done apply to both
+  // Dwarf EH prepare needs to be run after SjLj prepare. Otherwise,
+  // catch info can get misplaced when a selector ends up more than one block
+  // removed from the parent invoke(s). This could happen when a landing
+  // pad is shared by multiple invokes and is also a target of a normal
+  // edge from elsewhere.
+  if (TM->supportsExceptionModel(ExceptionHandling::SjLj)) {
     addPass(createSjLjEHPreparePass(TM));
-    [[fallthrough]];
-  case ExceptionHandling::DwarfCFI:
-  case ExceptionHandling::ARM:
-  case ExceptionHandling::AIX:
-  case ExceptionHandling::ZOS:
-    addPass(createDwarfEHPass(getOptLevel()));
-    break;
-  case ExceptionHandling::WinEH:
-    // We support using both GCC-style and MSVC-style exceptions on Windows, so
-    // add both preparation passes. Each pass will only actually run if it
-    // recognizes the personality function.
+    HasEHPrep = true;
+  }
+
+  // We support using both GCC-style and MSVC-style exceptions on Windows, so
+  // WinEHPrepare runs in addition to DwarfEHPrepare below. Each pass will only
+  // actually run if it recognizes the personality function.
+  //
+  // Wasm EH uses Windows EH instructions, but it does not need to demote PHIs
+  // on catchpads and cleanuppads because it does not outline them into
+  // funclets. Catchswitch blocks are not lowered in SelectionDAG, so we
+  // should remove PHIs there. WinEHPrepare derives this from the Wasm
+  // personality, so no explicit flag is needed here.
+  if (TM->supportsExceptionModel(ExceptionHandling::WinEH) ||
+      TM->supportsExceptionModel(ExceptionHandling::Wasm)) {
     addPass(createWinEHPass());
+    HasEHPrep = true;
+  }
+
+  if (TM->supportsExceptionModel(ExceptionHandling::Wasm))
+    addPass(createWasmEHPass());
+
+  if (TM->supportsExceptionModel(ExceptionHandling::DwarfCFI)) {
     addPass(createDwarfEHPass(getOptLevel()));
-    break;
-  case ExceptionHandling::Wasm:
-    // Wasm EH uses Windows EH instructions, but it does not need to demote PHIs
-    // on catchpads and cleanuppads because it does not outline them into
-    // funclets. Catchswitch blocks are not lowered in SelectionDAG, so we
-    // should remove PHIs there. WinEHPrepare derives this from the Wasm
-    // personality, so no explicit flag is needed here.
-    addPass(createWinEHPass());
-    break;
-  case ExceptionHandling::Default:
-  case ExceptionHandling::None:
-  case ExceptionHandling::Emscripten:
-    // Emscripten EH is lowered earlier by WebAssemblyLowerEmscriptenEHSjLj, so
-    // by this point it needs no generic EH preparation, like the None case.
+    HasEHPrep = true;
+  }
+
+  // If the target supports no exception model, nothing else lowers invokes.
+  if (!HasEHPrep) {
     addPass(createLowerInvokePass());
 
     // The lower invoke pass may create unreachable code. Remove it.
     addPass(createUnreachableBlockEliminationPass());
-    break;
   }
 }
 
@@ -1146,12 +1150,12 @@ void TargetPassConfig::addMachinePasses() {
     if (TM->getBBSectionsType() == llvm::BasicBlockSection::List) {
       addPass(llvm::createBasicBlockSectionsProfileReaderWrapperPass(
           TM->getBBSectionsFuncListBuf()));
+      if (!Opts.basic_block_section_match_infer || PropellerMatchBBID)
+        addPass(llvm::createBasicBlockPathCloningPass());
       if (Opts.basic_block_section_match_infer)
         addPass(llvm::createBasicBlockMatchingAndInferencePass());
-      else {
-        addPass(llvm::createBasicBlockPathCloningPass());
+      else
         addPass(llvm::createInsertCodePrefetchPass());
-      }
     }
     addPass(llvm::createBasicBlockSectionsPass(SplitFunctionsWithPGO));
   }

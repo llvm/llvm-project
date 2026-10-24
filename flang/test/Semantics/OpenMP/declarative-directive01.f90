@@ -98,4 +98,27 @@ subroutine declare_red_1()
   print *, "sum of thread numbers is ", my_var
 end subroutine declare_red_1
 
+module assumes_no_openmp_module
+  implicit none
+  !$omp assumes no_openmp
+contains
+  subroutine set_value(value)
+    integer :: value
+    value = 7
+  end subroutine set_value
+end module assumes_no_openmp_module
+
+subroutine assumes_no_openmp_procedure(value)
+  use assumes_no_openmp_module, only: set_value
+  implicit none
+  !$omp assumes no_openmp
+  integer :: value
+  call set_value(value)
+end subroutine assumes_no_openmp_procedure
+
+subroutine assumes_no_openmp_duplicate
+  !ERROR: At most one NO_OPENMP clause can appear on ASSUMES directive
+  !$omp assumes no_openmp no_openmp
+end subroutine assumes_no_openmp_duplicate
+
 end

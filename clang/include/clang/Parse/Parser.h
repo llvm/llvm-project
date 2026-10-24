@@ -5062,10 +5062,15 @@ private:
   /// present will be parsed and stored here, and a null result will be
   /// returned.
   ///
+  /// \param AfterInitStmt Whether an init-statement has already been parsed
+  /// for this condition, so a null \p InitStmt means "the init-statement slot
+  /// is used up" rather than "no init-statement is permitted here".
+  ///
   /// \returns The parsed condition.
   Sema::ConditionResult ParseCondition(StmtResult *InitStmt, SourceLocation Loc,
                                        Sema::ConditionKind CK, bool MissingOK,
-                                       ForRangeInfo *FRI = nullptr);
+                                       ForRangeInfo *FRI = nullptr,
+                                       bool AfterInitStmt = false);
   DeclGroupPtrTy ParseAliasDeclarationInInitStatement(DeclaratorContext Context,
                                                       ParsedAttributes &Attrs);
 
