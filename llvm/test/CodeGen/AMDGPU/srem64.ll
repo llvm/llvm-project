@@ -1122,8 +1122,8 @@ define amdgpu_kernel void @s_test_srem33_64(ptr addrspace(1) %out, i64 %x, i64 %
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_ashr_i64 s[0:1], s[10:11], 31
 ; GCN-NEXT:    s_ashr_i64 s[4:5], s[2:3], 31
-; GCN-NEXT:    s_ashr_i32 s2, s3, 31
-; GCN-NEXT:    s_ashr_i32 s3, s5, 31
+; GCN-NEXT:    s_ashr_i32 s3, s3, 31
+; GCN-NEXT:    s_ashr_i32 s2, s5, 31
 ; GCN-NEXT:    s_add_u32 s4, s4, s2
 ; GCN-NEXT:    s_addc_u32 s5, s5, s3
 ; GCN-NEXT:    s_xor_b64 s[4:5], s[4:5], s[2:3]
