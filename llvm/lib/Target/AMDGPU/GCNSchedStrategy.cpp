@@ -230,16 +230,22 @@ void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
 /// already allows 80% of SUs to take the fast path without changing scheduling
 /// at all. Further changes would either change scheduling, or require a lot
 /// more logic to recover an accurate pressure estimate from the PressureDiffs.
-static bool canUsePressureDiffs(const SUnit &SU) {
+static bool canUsePressureDiffs(const SUnit &SU,
+                                const MachineRegisterInfo &MRI) {
   if (!SU.isInstr())
     return false;
 
-  // Cannot use pressure diffs for subregister defs or with physregs, it's
-  // imprecise in both cases. For a bundle, check the instructions inside it:
-  // the BUNDLE header only has implicit operands.
+  // Cannot use pressure diffs for subregister defs or with tracked physregs,
+  // it's imprecise in both cases. For a bundle, check the instructions inside
+  // it: the BUNDLE header only has implicit operands.
   for (const auto &Op : const_mi_bundle_ops(*SU.getInstr())) {
-    if (!Op.isReg() || Op.isImplicit())
+    if (!Op.isReg())
       continue;
+    if (Op.isImplicit()) {
+      if (Op.getReg().isPhysical() && MRI.isAllocatable(Op.getReg()))
+        return false;
+      continue;
+    }
     if (Op.getReg().isPhysical() ||
         (Op.isDef() && Op.getSubReg() != AMDGPU::NoSubRegister))
       return false;
@@ -308,7 +314,7 @@ void GCNSchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,
   //
   // In EXPENSIVE_CHECKS, we always query RPTracker to verify the results of
   // PressureDiffs.
-  if (AtTop || !canUsePressureDiffs(*SU) || useGCNTrackers()) {
+  if (AtTop || !canUsePressureDiffs(*SU, DAG->MRI) || useGCNTrackers()) {
     getRegisterPressures(AtTop, RPTracker, SU, Pressure, MaxPressure,
                          DownwardTracker, UpwardTracker, DAG, SRI);
   } else {
