@@ -337,13 +337,13 @@ private:
       }
     }
 
-    // The line after the left brace of the function, which may be wrapped
-    // onto its own line.
+    // Whether the function body is empty, checking the line after the left
+    // brace, which may be wrapped onto its own line.
     const bool LBraceWrapped = NextLine.First->is(TT_FunctionLBrace) &&
                                NextLine.First == NextLine.Last;
-    const AnnotatedLine *BodyLine =
-        LBraceWrapped ? (I + 2 != E ? I[2] : nullptr) : &NextLine;
-    const bool IsEmptyFunction = BodyLine && BodyLine->First->is(tok::r_brace);
+    const bool IsEmptyFunction =
+        LBraceWrapped ? I + 2 != E && I[2]->First->is(tok::r_brace)
+                      : NextLine.First->is(tok::r_brace);
 
     auto ShouldMergeShortFunctions = [&] {
       if (Style.AllowShortFunctionsOnASingleLine.isAll())
