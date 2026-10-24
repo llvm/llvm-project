@@ -309,6 +309,8 @@ bool mlir::affine::isValidDim(Value value) {
 // *) It is valid as a symbol.
 // *) It is an induction variable.
 // *) It is the result of an affine apply operation with dimension id operands.
+// *) It is the result of an affine min or max operation with dimension id
+//    operands.
 // *) It is the result of a more specialized index transformation (ex.
 // delinearize_index or linearize_index) with dimension id operands.
 bool mlir::affine::isValidDim(Value value, Region *region) {
@@ -330,6 +332,10 @@ bool mlir::affine::isValidDim(Value value, Region *region) {
   // Affine apply operation is ok if all of its operands are ok.
   if (auto applyOp = dyn_cast<AffineApplyOp>(op))
     return applyOp.isValidDim(region);
+  // Affine min and max results are valid dimensions when their operands are.
+  if (isa<AffineMinOp, AffineMaxOp>(op))
+    return llvm::all_of(op->getOperands(),
+                        [&](Value arg) { return ::isValidDim(arg, region); });
   // delinearize_index and linearize_index are special forms of apply
   // and so are valid dimensions if all their arguments are valid dimensions.
   if (isa<AffineDelinearizeIndexOp, AffineLinearizeIndexOp>(op))
@@ -5090,7 +5096,6 @@ SmallVector<OpFoldResult> AffineDelinearizeIndexOp::getPaddedBasis() {
 }
 
 namespace {
-
 // Drops delinearization indices that correspond to unit-extent basis
 struct DropUnitExtentBasis
     : public OpRewritePattern<affine::AffineDelinearizeIndexOp> {
