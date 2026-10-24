@@ -544,11 +544,14 @@ mlir::LogicalResult CIRGenFunction::emitAsmStmt(const AsmStmt &s) {
         cir::RecordType::getAllDataKinds(resultRegTypes));
 
   bool hasSideEffect = s.isVolatile() || s.getNumOutputs() == 0;
+  // Asm may contain an intrinsically convergent op such as a barrier.
+  bool isConvergent = getLangOpts().assumeFunctionsAreConvergent();
 
   std::vector<mlir::Value> regResults;
   cir::InlineAsmOp ia = cir::InlineAsmOp::create(
       builder, getLoc(s.getAsmLoc()), resultType, operands, asmString,
-      constraints, hasSideEffect, inferFlavor(cgm, s), mlir::ArrayAttr());
+      constraints, hasSideEffect, isConvergent, inferFlavor(cgm, s),
+      mlir::ArrayAttr());
 
   if (isGCCAsmGoto) {
     assert(!cir::MissingFeatures::asmGoto());

@@ -4929,6 +4929,8 @@ void cir::InlineAsmOp::print(OpAsmPrinter &p) {
   p << ')';
   if (getSideEffects())
     p << " side_effects";
+  if (getConvergent())
+    p << " convergent";
 
   p.printOptionalAttrDict(
       getOperation()->getDiscardableAttrDictionary().getValue());
@@ -4940,7 +4942,8 @@ void cir::InlineAsmOp::print(OpAsmPrinter &p) {
 void cir::InlineAsmOp::build(OpBuilder &odsBuilder, OperationState &odsState,
                              ArrayRef<ValueRange> asmOperands,
                              StringRef asmString, StringRef constraints,
-                             bool sideEffects, cir::AsmFlavor asmFlavor,
+                             bool sideEffects, bool convergent,
+                             cir::AsmFlavor asmFlavor,
                              ArrayRef<Attribute> operandAttrs) {
   // Set up the operands_segments for VariadicOfVariadic
   SmallVector<int32_t> segments;
@@ -4959,6 +4962,9 @@ void cir::InlineAsmOp::build(OpBuilder &odsBuilder, OperationState &odsState,
 
   if (sideEffects)
     odsState.addAttribute("side_effects", odsBuilder.getUnitAttr());
+
+  if (convergent)
+    odsState.addAttribute("convergent", odsBuilder.getUnitAttr());
 
   odsState.addAttribute("operand_attrs", odsBuilder.getArrayAttr(operandAttrs));
 }
@@ -5070,6 +5076,9 @@ ParseResult cir::InlineAsmOp::parse(OpAsmParser &parser,
 
   if (parser.parseOptionalKeyword("side_effects").succeeded())
     result.attributes.set("side_effects", UnitAttr::get(ctxt));
+
+  if (parser.parseOptionalKeyword("convergent").succeeded())
+    result.attributes.set("convergent", UnitAttr::get(ctxt));
 
   if (parser.parseOptionalAttrDict(result.attributes).failed())
     return mlir::failure();
