@@ -2,6 +2,7 @@
 // -fsanitize-coverage=inline-8bit-counters,pc-table
 
 // REQUIRES: has_sancovcc,stable-runtime,linux,x86_64-target-arch
+// UNSUPPORTED: rtsan
 
 /// In glibc 2.39+, fprintf has a nonnull attribute. Disable nonnull-attribute,
 /// which would increase counters for ubsan.

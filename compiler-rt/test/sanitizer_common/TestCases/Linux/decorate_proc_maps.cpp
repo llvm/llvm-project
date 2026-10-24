@@ -3,6 +3,7 @@
 
 // REQUIRES: stable-runtime
 // XFAIL: android && asan
+// UNSUPPORTED: rtsan
 
 #include <errno.h>
 #include <fcntl.h>

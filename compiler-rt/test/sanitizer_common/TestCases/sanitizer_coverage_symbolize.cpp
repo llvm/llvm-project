@@ -2,6 +2,7 @@
 //
 // REQUIRES: x86_64-linux
 // XFAIL: tsan
+// UNSUPPORTED: rtsan
 //
 // RUN: rm -rf %t_workdir
 // RUN: mkdir -p %t_workdir
