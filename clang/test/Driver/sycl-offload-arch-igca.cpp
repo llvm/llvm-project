@@ -10,6 +10,7 @@
 // RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=igca_42a \
 // RUN:   -c %s 2>&1 | FileCheck -check-prefix=CHK-INVALID %s
 // CHK-INVALID: error: unsupported IGCA gpu architecture: igca_42a
+// CHK-INVALID-NEXT: note: valid target CPU values are: igca_{{.*}}
 // CHK-INVALID-NOT: llvm-offload-binary
 
 /// IGCA targets should not accept feature suffixes, so a valid target followed
@@ -18,6 +19,7 @@
 // RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=igca_20ca:foo \
 // RUN:   -c %s 2>&1 | FileCheck -check-prefix=CHK-FEATURE %s
 // CHK-FEATURE: error: unsupported IGCA gpu architecture: igca_20ca:foo
+// CHK-FEATURE-NEXT: note: valid target CPU values are: igca_{{.*}}
 // CHK-FEATURE-NOT: llvm-offload-binary
 
 /// A valid IGCA target is still rejected on NVPTX and AMDGPU device triples,

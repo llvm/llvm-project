@@ -190,6 +190,17 @@ TEST(IntelGPUTargetParserTest, IGCATargetName) {
       IntelGPU::getIGCATargetName(IGCATarget(10, IGCAFeatureSet::Compute)), "");
 }
 
+TEST(IntelGPUTargetParserTest, EveryIGCASpellingRoundTrips) {
+  SmallVector<StringRef> Names;
+  IntelGPU::fillValidIGCATargetList(Names);
+  EXPECT_FALSE(Names.empty());
+  for (StringRef Name : Names) {
+    IntelGPU::IGCATarget T = IntelGPU::parseIGCATarget(Name);
+    EXPECT_TRUE(T.isValid()) << Name;
+    EXPECT_EQ(IntelGPU::getIGCATargetName(T), Name);
+  }
+}
+
 // Spell an IGCA target from its fields, independently of the NAME column.
 std::string expectedIGCASpelling(uint16_t Target,
                                  IntelGPU::IGCAFeatureSet FeatureSet) {
