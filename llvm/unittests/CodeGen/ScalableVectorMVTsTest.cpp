@@ -93,7 +93,6 @@ TEST(ScalableVectorMVTsTest, HelperFuncs) {
   ASSERT_FALSE(EltCnt.isScalable());
 }
 
-
 TEST(ScalableVectorMVTsTest, IRToVTTranslation) {
   LLVMContext Ctx;
 
