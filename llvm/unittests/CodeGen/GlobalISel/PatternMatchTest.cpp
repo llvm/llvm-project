@@ -653,6 +653,16 @@ TEST_F(AArch64GISelMITest, MatchSpecificConstant) {
   // No constant on the LHS.
   EXPECT_FALSE(mi_match(MIBAdd.getReg(1), *MRI, m_SpecificICst(42)));
   EXPECT_FALSE(mi_match(MIBAdd.getReg(1), *MRI, m_SpecificICst(APInt(64, 42))));
+
+  for (unsigned Width : {1u, 8u, 128u}) {
+    APInt AllOnes = APInt::getAllOnes(Width);
+    auto Constant = B.buildConstant(LLT::scalar(Width), AllOnes);
+    EXPECT_TRUE(mi_match(Constant.getReg(0), *MRI, m_SpecificICst(-1)));
+    EXPECT_TRUE(mi_match(Constant.getReg(0), *MRI,
+                         m_SpecificICst(APInt::getAllOnes(256))));
+    EXPECT_FALSE(mi_match(Constant.getReg(0), *MRI,
+                          m_SpecificICst(AllOnes.zext(Width + 1))));
+  }
 }
 
 TEST_F(AArch64GISelMITest, MatchSpecificConstantSplat) {
@@ -746,6 +756,20 @@ TEST_F(AArch64GISelMITest, MatchSpecificConstantOrSplat) {
   EXPECT_TRUE(mi_match(Add.getReg(2), *MRI, m_SpecificICstOrSplat(42)));
   EXPECT_TRUE(
       mi_match(Add.getReg(2), *MRI, m_SpecificICstOrSplat(APInt(64, 42))));
+
+  for (unsigned Width : {1u, 8u, 128u}) {
+    LLT Ty = LLT::scalar(Width);
+    APInt AllOnes = APInt::getAllOnes(Width);
+    auto Constant = B.buildConstant(Ty, AllOnes);
+    auto Splat = B.buildSplatBuildVector(LLT::fixed_vector(2, Ty), Constant);
+    for (Register Reg : {Constant.getReg(0), Splat.getReg(0)}) {
+      EXPECT_TRUE(mi_match(Reg, *MRI, m_SpecificICstOrSplat(-1)));
+      EXPECT_TRUE(
+          mi_match(Reg, *MRI, m_SpecificICstOrSplat(APInt::getAllOnes(256))));
+      EXPECT_FALSE(
+          mi_match(Reg, *MRI, m_SpecificICstOrSplat(AllOnes.zext(Width + 1))));
+    }
+  }
 }
 
 TEST_F(AArch64GISelMITest, MatchZeroInt) {

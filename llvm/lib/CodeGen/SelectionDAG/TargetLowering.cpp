@@ -9383,6 +9383,35 @@ SDValue TargetLowering::expandCLMUL(SDNode *Node, SelectionDAG &DAG) const {
   llvm_unreachable("Expected CLMUL, CLMULR, or CLMULH");
 }
 
+bool TargetLowering::expandMODF(SDNode *Node, SelectionDAG &DAG,
+                                SmallVectorImpl<SDValue> &Results) const {
+  SDLoc dl(Node);
+  SDValue Val = Node->getOperand(0);
+  EVT VT = Val.getValueType();
+  SDNodeFlags Flags = Node->getFlags();
+
+  SDValue IntPart = DAG.getNode(ISD::FTRUNC, dl, VT, Val, Flags);
+  SDValue FracPart = DAG.getNode(ISD::FSUB, dl, VT, Val, IntPart, Flags);
+
+  SDValue FracToUse = FracPart;
+  if (!Flags.hasNoInfs()) {
+    SDValue Abs = DAG.getNode(ISD::FABS, dl, VT, Val, Flags);
+    SDValue Inf =
+        DAG.getConstantFP(APFloat::getInf(VT.getFltSemantics()), dl, VT);
+    EVT SetCCVT =
+        getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
+    SDValue IsInf = DAG.getSetCC(dl, SetCCVT, Abs, Inf, ISD::SETOEQ);
+    SDValue Zero = DAG.getConstantFP(0.0, dl, VT);
+    FracToUse = DAG.getSelect(dl, VT, IsInf, Zero, FracPart);
+  }
+
+  SDValue ResultFrac =
+      DAG.getNode(ISD::FCOPYSIGN, dl, VT, FracToUse, Val, Flags);
+  Results.push_back(ResultFrac);
+  Results.push_back(IntPart);
+  return true;
+}
+
 SDValue TargetLowering::expandPEXT(SDNode *Node, SelectionDAG &DAG) const {
   SDLoc DL(Node);
   EVT VT = Node->getValueType(0);

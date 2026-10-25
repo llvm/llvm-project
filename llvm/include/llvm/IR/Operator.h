@@ -551,7 +551,6 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(PtrToIntOperator, Value)
 
 class PtrToAddrOperator
     : public ConcreteOperator<Operator, Instruction::PtrToAddr> {
-  friend class PtrToAddr;
   friend class ConstantExpr;
 
 public:

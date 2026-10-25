@@ -216,14 +216,9 @@ struct SpecificConstantMatch {
       : RequestedVal(RequestedVal) {}
   bool match(const MachineRegisterInfo &MRI, Register Reg) {
     APInt MatchedVal;
-    if (mi_match(Reg, MRI, m_ICst(MatchedVal))) {
-      if (MatchedVal.getBitWidth() > RequestedVal.getBitWidth())
-        RequestedVal = RequestedVal.sext(MatchedVal.getBitWidth());
-      else
-        MatchedVal = MatchedVal.sext(RequestedVal.getBitWidth());
-
-      return APInt::isSameValue(MatchedVal, RequestedVal);
-    }
+    if (mi_match(Reg, MRI, m_ICst(MatchedVal)))
+      return APInt::isSameValue(MatchedVal, RequestedVal,
+                                /*SignedCompare=*/true);
     return false;
   }
 };
@@ -300,12 +295,7 @@ struct SpecificConstantOrSplatMatch {
   bool match(const MachineRegisterInfo &MRI, Register Reg) {
     APInt MatchedVal;
     if (mi_match(Reg, MRI, m_ICst(MatchedVal))) {
-      if (MatchedVal.getBitWidth() > RequestedVal.getBitWidth())
-        RequestedVal = RequestedVal.sext(MatchedVal.getBitWidth());
-      else
-        MatchedVal = MatchedVal.sext(RequestedVal.getBitWidth());
-
-      if (APInt::isSameValue(MatchedVal, RequestedVal))
+      if (APInt::isSameValue(MatchedVal, RequestedVal, /*SignedCompare=*/true))
         return true;
     }
     return isBuildVectorConstantSplat(Reg, MRI, RequestedVal,
@@ -757,6 +747,8 @@ struct BinaryOp_match {
     const MachineInstr *TmpMI;
     if (mi_match(Op, MRI, m_MInstr(TmpMI))) {
       if (TmpMI->getOpcode() == Opcode && TmpMI->getNumOperands() == 3) {
+        if ((TmpMI->getFlags() & Flags) != Flags)
+          return false;
         if ((!L.match(MRI, TmpMI->getOperand(1).getReg()) ||
              !R.match(MRI, TmpMI->getOperand(2).getReg())) &&
             // NOTE: When trying the alternative operand ordering
@@ -766,8 +758,6 @@ struct BinaryOp_match {
             // expected.
             (!Commutable || !L.match(MRI, TmpMI->getOperand(2).getReg()) ||
              !R.match(MRI, TmpMI->getOperand(1).getReg())))
-          return false;
-        if ((TmpMI->getFlags() & Flags) != Flags)
           return false;
         if (FlagsOut)
           *FlagsOut = TmpMI->getFlags();

@@ -2364,8 +2364,35 @@ struct ConditionPropagation : public OpRewritePattern<IfOp> {
                                  [&]() { use.set(constantFalse); });
         break;
       }
-      case Parent::None:
+      case Parent::None: {
+        auto selectOp = dyn_cast<arith::SelectOp>(use.getOwner());
+        if (!selectOp || use.getOperandNumber() != 0)
+          break;
+
+        // Refine captured select results only at uses in the matching branch.
+        // Uses outside the if must retain the select result.
+        rewriter.replaceUsesWithIf(
+            selectOp.getResult(), selectOp.getTrueValue(),
+            [&](OpOperand &selectUse) {
+              bool inThen =
+                  getParentType(selectUse.getOwner()->getParentRegion(), op,
+                                cache, op.getCondition().getParentRegion()) ==
+                  Parent::Then;
+              changed |= inThen;
+              return inThen;
+            });
+        rewriter.replaceUsesWithIf(
+            selectOp.getResult(), selectOp.getFalseValue(),
+            [&](OpOperand &selectUse) {
+              bool inElse =
+                  getParentType(selectUse.getOwner()->getParentRegion(), op,
+                                cache, op.getCondition().getParentRegion()) ==
+                  Parent::Else;
+              changed |= inElse;
+              return inElse;
+            });
         break;
+      }
       }
     }
 
