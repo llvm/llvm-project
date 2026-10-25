@@ -10,19 +10,19 @@
 #define LLVM_LIBC_SRC___SUPPORT_MATH_RSQRTBF16_H
 
 #include "src/__support/FPUtil/bfloat16.h"
+#include "src/__support/FPUtil/cast.h"
 #include "src/__support/FPUtil/sqrt.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
-#include "src/__support/FPUtil/cast.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE bfloat16 rsqrtbf16(bfloat16 x) { 
+LIBC_INLINE bfloat16 rsqrtbf16(bfloat16 x) {
 
-    float xf = fputil::cast<float>(x);
-    return fputil::cast<bfloat16>(1.0f/fputil::sqrt<float>(xf));
- }
+  float xf = fputil::cast<float>(x);
+  return fputil::cast<bfloat16>(1.0f / fputil::sqrt<float>(xf));
+}
 
 } // namespace math
 } // namespace LIBC_NAMESPACE_DECL
