@@ -14,6 +14,50 @@ namespace llvm {
 
 class SelectionDAGAddressAnalysisTest : public SelectionDAGTestBase {};
 
+TEST_F(SelectionDAGAddressAnalysisTest, scalableOffsets) {
+  SDLoc Loc;
+  EVT VT = MVT::nxv4i32;
+  SDValue Base = DAG->getRegister(1, MVT::i64);
+  auto AddOffset = [&](SDValue Ptr, uint64_t Bytes, bool Scalable) {
+    return DAG->getMemBasePlusOffset(Ptr, TypeSize::get(Bytes, Scalable), Loc);
+  };
+  auto Match = [&](SDValue Ptr, bool Scalable = true) {
+    SDValue Load = DAG->getLoad(VT, Loc, DAG->getEntryNode(), Ptr,
+                                MachinePointerInfo(), Align(4));
+    return BaseIndexOffset::match(Load.getNode(), *DAG, Scalable);
+  };
+
+  // Compare nested offsets with different fixed and scalable components.
+  SDValue Ptr0 = AddOffset(AddOffset(Base, 32, true), 8, false);
+  SDValue Ptr1 = AddOffset(AddOffset(Ptr0, 16, true), 4, false);
+  auto Base0 = Match(Ptr0);
+  auto Base1 = Match(Ptr1);
+  StackOffset Diff;
+  ASSERT_TRUE(Base0.equalBaseIndex(Base1, *DAG, Diff));
+  EXPECT_EQ(Diff, StackOffset::get(4, 16));
+  ASSERT_TRUE(Base1.equalBaseIndex(Base0, *DAG, Diff));
+  EXPECT_EQ(Diff, StackOffset::get(-4, -16));
+
+  // The fixed-offset interface must not discard the scalable difference.
+  int64_t FixedDiff;
+  EXPECT_FALSE(Base0.equalBaseIndex(Base1, *DAG, FixedDiff));
+  EXPECT_FALSE(
+      Match(Ptr0, false).equalBaseIndex(Match(Ptr1, false), *DAG, FixedDiff));
+
+  // Reassociation must not affect the result. Equal scalable components
+  // cancel, leaving a difference that the fixed-offset interface can use.
+  SDValue Ptr2 = AddOffset(AddOffset(Base, 48, true), 12, false);
+  EXPECT_TRUE(Base1.equalBaseIndex(Match(Ptr2), *DAG, FixedDiff));
+  EXPECT_EQ(FixedDiff, 0);
+  EXPECT_TRUE(
+      Base1.equalBaseIndex(Match(AddOffset(Ptr2, 4, false)), *DAG, FixedDiff));
+  EXPECT_EQ(FixedDiff, 4);
+
+  SDValue OtherBase = DAG->getRegister(2, MVT::i64);
+  EXPECT_FALSE(
+      Base0.equalBaseIndex(Match(AddOffset(OtherBase, 48, true)), *DAG, Diff));
+}
+
 TEST_F(SelectionDAGAddressAnalysisTest, sameFrameObject) {
   SDLoc Loc;
   auto Int8VT = EVT::getIntegerVT(Context, 8);
