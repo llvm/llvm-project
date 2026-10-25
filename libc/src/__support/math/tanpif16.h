@@ -49,14 +49,13 @@ LIBC_INLINE float16 tanpif16(float16 x) {
     return x + FPBits::quiet_nan().get_val();
   }
 
-  // Handle signed zeros.
-  if (LIBC_UNLIKELY(x_abs == 0U))
-    return x;
-
   // tanpi(x) underflows for 0 < |x| <= 0x1.45p-16.
   if (LIBC_UNLIKELY(x_abs <= 0x0145U)) {
+    // Handle signed zeros.
+    if (x_abs == 0U)
+      return x;
     fputil::set_errno_if_required(ERANGE);
-    fputil::raise_except_if_required(FE_UNDERFLOW | FE_INEXACT);
+    fputil::raise_underflow_except_if_required<float>();
   }
 
   if (LIBC_UNLIKELY(fputil::is_integer(x))) {
@@ -69,7 +68,9 @@ LIBC_INLINE float16 tanpif16(float16 x) {
   // Odd multiples of 1/4 have exact results of +1 or -1.
   float xf = x;
   if (LIBC_UNLIKELY(fputil::is_odd_integer(4.0f * xf)))
-    return fputil::is_odd_integer(2.0f * xf - 0.5f) ? -1.0f16 : 1.0f16;
+    return fputil::is_odd_integer(fputil::multiply_add(2.0f, xf, -0.5f))
+               ? -1.0f16
+               : 1.0f16;
 
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   // Handle exceptional values.

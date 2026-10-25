@@ -58,13 +58,13 @@ LIBC_INLINE float tanpif(float x) {
     return x + FPBits::quiet_nan().get_val();
   }
 
-  // Handle signed zeros.
-  if (LIBC_UNLIKELY(x_abs == 0U))
-    return x;
-
   // tanpi(x) underflows for 0 < |x| <= 0x1.45f3p-128.
-  if (LIBC_UNLIKELY(x_abs <= 0x0028'be60U))
+  if (LIBC_UNLIKELY(x_abs <= 0x0028'be60U)) {
+    // Handle signed zeros.
+    if (x_abs == 0U)
+      return x;
     fputil::set_errno_if_required(ERANGE);
+  }
 
   if (LIBC_UNLIKELY(fputil::is_integer(x))) {
     // Preserve the input sign for even integers and flip it for odd integers.
@@ -76,7 +76,8 @@ LIBC_INLINE float tanpif(float x) {
   // Odd multiples of 1/4 have exact results of +1 or -1.
   double xd = static_cast<double>(x);
   if (LIBC_UNLIKELY(fputil::is_odd_integer(4.0 * xd)))
-    return fputil::is_odd_integer(2.0 * xd - 0.5) ? -1.0f : 1.0f;
+    return fputil::is_odd_integer(fputil::multiply_add(2.0, xd, -0.5)) ? -1.0f
+                                                                       : 1.0f;
 
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   // Handle exceptional values.
