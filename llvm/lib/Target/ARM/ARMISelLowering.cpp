@@ -4571,7 +4571,6 @@ static unsigned getCmpOperandFoldingProfit(SDValue Op, const ARMSubtarget &ST) {
 }
 
 // Return a cheaper value with the same zero/nonzero result as a low-mask AND.
-// Only zero/nonzero is preserved, so this is only suitable for zero tests.
 static SDValue getShiftedLowMaskZeroTest(SDValue Value, SelectionDAG &DAG,
                                          const SDLoc &DL) {
   if (Value.getValueType() != MVT::i32 || Value.getOpcode() != ISD::AND ||
@@ -4598,10 +4597,11 @@ static SDValue getShiftedLowMaskZeroTest(SDValue Value, SelectionDAG &DAG,
 SDValue ARMTargetLowering::getARMCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
                                      SDValue &ARMcc, SelectionDAG &DAG,
                                      const SDLoc &dl) const {
-  // An expanded i64 zero comparison ORs its two i32 halves together. Replace
-  // a low-mask AND in either half with a shift: OR is zero exactly when both
-  // operands are zero. Require single uses to avoid duplicating live work.
-  if (Subtarget->isThumb2() && isIntEqualitySetCC(CC) && isNullConstant(RHS) &&
+  // For a zero test, replace a low-mask AND feeding an OR with a shift. ARM
+  // and Thumb-2 can fold the shift into the OR. Require single uses to avoid
+  // duplicating live work.
+  if (!Subtarget->isThumb1Only() && isIntEqualitySetCC(CC) &&
+      isNullConstant(RHS) &&
       LHS.getValueType() == MVT::i32 && LHS.getOpcode() == ISD::OR &&
       LHS.hasOneUse()) {
     for (unsigned I = 0; I != 2; ++I) {

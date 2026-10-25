@@ -1,5 +1,6 @@
-; RUN: llc -mtriple=thumbv8m.main-none-eabi -mcpu=cortex-m33 -verify-machineinstrs < %s | FileCheck %s
-; RUN: llc -mtriple=thumbv7m-none-eabi -mcpu=cortex-m3 -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=thumbv8m.main-none-eabi -mcpu=cortex-m33 < %s | FileCheck %s
+; RUN: llc -mtriple=thumbv7m-none-eabi < %s | FileCheck %s
+; RUN: llc -mtriple=armv7-none-eabi < %s | FileCheck %s --check-prefix=ARM
 
 ; Shift out the sign bit instead of clearing it with BIC before the zero test.
 define i1 @is_zero_or_int_min_i32(i32 %x) {
@@ -40,6 +41,44 @@ define i1 @is_zero_or_int_min_i64(i64 %x) {
 
 declare void @func_1_i64(i64)
 declare void @func_2_i64(i64)
+declare void @func_1_i32(i32)
+declare void @func_2_i32(i32)
+
+; Exercise the i32 branch path as well as the i64 legalization path.
+define void @branch_on_nonzero_low_31_bits_i32(i32 %x) {
+; CHECK-LABEL: branch_on_nonzero_low_31_bits_i32:
+; CHECK:       lsls{{.*}}r0, #1
+; CHECK:       beq
+  %masked = and i32 %x, 2147483647
+  %cmp = icmp ne i32 %masked, 0
+  br i1 %cmp, label %yes, label %no
+
+yes:
+  tail call void @func_1_i32(i32 %x)
+  ret void
+
+no:
+  tail call void @func_2_i32(i32 %x)
+  ret void
+}
+
+; ARM mode can fold the shift into ORR just like Thumb-2.
+define void @branch_on_nonzero_low_30_bits_or_i32(i32 %x, i32 %y) {
+; ARM-LABEL: branch_on_nonzero_low_30_bits_or_i32:
+; ARM:       orrs{{.*}}lsl #2
+  %masked = and i32 %x, 1073741823
+  %combined = or i32 %y, %masked
+  %cmp = icmp ne i32 %combined, 0
+  br i1 %cmp, label %yes, label %no
+
+yes:
+  tail call void @func_1_i32(i32 %x)
+  ret void
+
+no:
+  tail call void @func_2_i32(i32 %x)
+  ret void
+}
 
 ; Also use the shifted OR when branching on inequality against zero.
 define void @branch_on_nonzero_low_63_bits_i64(i64 %x) {
