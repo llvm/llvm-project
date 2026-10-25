@@ -2751,6 +2751,7 @@ def fir_VolatileCastOp
   let extraClassDeclaration = [{
     // ViewLikeOpInterface methods:
     mlir::Value getViewSource() { return getValue(); }
+    bool mayHaveNonZeroOffset() { return false; }
 
     // FortranObjectViewOpInterface methods:
     mlir::Value getViewSource(mlir::OpResult) { return getValue(); }
@@ -2806,6 +2807,7 @@ def fir_ConvertOp
 
     // ViewLikeOpInterface methods:
     mlir::Value getViewSource() { return getValue(); }
+    bool mayHaveNonZeroOffset() { return false; }
 
     // FortranObjectViewOpInterface methods:
     mlir::Value getViewSource(mlir::OpResult) { return getValue(); }
