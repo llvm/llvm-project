@@ -982,7 +982,13 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     const unsigned IndexBW =
         DL.getIndexTypeSizeInBits(CB.getArgOperand(0)->getType());
     AnyValue Res = PassThru;
+    AnyValue LanePtr = Ptr;
+    GEPNoWrapFlags Flags = GEPNoWrapFlags::none();
     for (auto [I, Lane] : enumerate(Res.asAggregate())) {
+      AnyValue AccumulatedOffset = AnyValue::poison();
+      LanePtr = Ctx.computeScaledPtrAdd(LanePtr, APInt(IndexBW, I == 0 ? I : 1),
+                                        APInt(IndexBW, AccessSize), Flags,
+                                        AccumulatedOffset);
       switch (getMaskLane(Mask, I)) {
       case BooleanKind::False:
         continue;
@@ -998,13 +1004,10 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
         return AnyValue();
       }
 
-      // Lane addresses are computed like a GEP without flags. Only enabled
-      // lanes must be in bounds.
-      const Pointer &PtrVal = Ptr.asPointer();
-      APInt LaneAddr = PtrVal.address();
-      LaneAddr.insertBits(LaneAddr.trunc(IndexBW) + I * AccessSize, 0);
-      Lane = load(PtrVal.getWithNewAddr(LaneAddr), Align(1), ElemTy,
-                  /*NoUndef=*/false);
+      Lane = load(LanePtr, Align(1), ElemTy, /*NoUndef=*/false);
+      // The first enabled base pointer may not be inbounds, but pointers after
+      // that must be inbounds.
+      Flags = GEPNoWrapFlags::inBounds();
     }
     return Res;
   }
