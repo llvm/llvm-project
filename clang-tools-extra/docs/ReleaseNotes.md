@@ -204,6 +204,12 @@ infrastructure are described first, followed by tool-specific sections.
   <clang-tidy/checks/bugprone/macro-parentheses>` by fixing invalid fixes for
   macro arguments used as names in alias declarations.
 
+- Improved {doc}`bugprone-macro-repeated-side-effects
+  <clang-tidy/checks/bugprone/macro-repeated-side-effects>` check by not
+  counting macro arguments that are never evaluated, such as inside `sizeof`
+  or in the false branch of `(1 ? a : b)`. This fixes false positives on
+  `assert` from glibc 2.44.
+
 - Fixed a crash in {doc}`bugprone-misplaced-operator-in-strlen-in-alloc
   <clang-tidy/checks/bugprone/misplaced-operator-in-strlen-in-alloc>` when
   checking an array new expression without a size expression.
