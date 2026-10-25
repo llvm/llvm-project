@@ -1195,6 +1195,19 @@ bool MicrosoftCXXABI::classifyReturnType(CGFunctionInfo &FI) const {
   // MSVC always returns structs indirectly from C++ instance methods.
   bool isIndirectReturn = !isTrivialForABI || FI.isInstanceMethod();
 
+  // With __vectorcall on x86, HVAs (including HFAs) that can be passed in
+  // registers are returned in vector registers, even if they are not C++14
+  // aggregates and even when returned from instance methods.
+  if (isIndirectReturn &&
+      FI.getCallingConvention() == llvm::CallingConv::X86_VectorCall &&
+      RD->canPassInRegisters()) {
+    const Type *Base = nullptr;
+    uint64_t NumElts = 0;
+    if (CGM.getABIInfo().isHomogeneousAggregate(FI.getReturnType(), Base,
+                                                NumElts))
+      isIndirectReturn = false;
+  }
+
   if (isIndirectReturn) {
     CharUnits Align = CGM.getContext().getTypeAlignInChars(FI.getReturnType());
     LangAS SRetAS = CGM.getTargetCodeGenInfo().getSRetAddrSpace(RD);
