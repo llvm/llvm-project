@@ -687,17 +687,24 @@ static void prepareSymbolRelocation(Symbol *sym, const InputSection *isec,
     if (needsBinding(sym))
       in.stubs->addEntry(sym);
   } else if (relocAttrs.hasAttr(RelocAttrBits::GOT)) {
-    if (relocAttrs.hasAttr(RelocAttrBits::POINTER) || needsBinding(sym))
-      addNonLazyPointerEntry(sym);
+    if (relocAttrs.hasAttr(RelocAttrBits::POINTER) || needsBinding(sym)) {
+      if (usesAuthGot(isec))
+        in.authGot->addEntry(sym);
+      else
+        addNonLazyPointerEntry(sym);
+    }
   } else if (relocAttrs.hasAttr(RelocAttrBits::TLV)) {
     if (needsBinding(sym))
       addNonLazyPointerEntry(sym);
   } else if (relocAttrs.hasAttr(RelocAttrBits::UNSIGNED)) {
     // References from thread-local variable sections are treated as offsets
     // relative to the start of the referent section, and therefore have no
-    // need of rebase opcodes.
-    if (!(isThreadLocalVariables(isec->getFlags()) && isa<Defined>(sym)))
-      addNonLazyBindingEntries(sym, isec, r.offset, r.getAddend());
+    // need of rebase opcodes. Authenticated pointers are pointers, not offsets.
+    bool isAuth = relocAttrs.hasAttr(RelocAttrBits::AUTH);
+    if (isAuth ||
+        !(isThreadLocalVariables(isec->getFlags()) && isa<Defined>(sym)))
+      addNonLazyBindingEntries(sym, isec, r.offset, r.getAddend(),
+                               /*forceOutlineAuth=*/isAuth);
   }
 }
 
@@ -1308,7 +1315,8 @@ void Writer::buildFixupChains() {
   TimeTraceScope timeScope("Build fixup chains");
 
   const uint64_t pageSize = target->getPageSize();
-  constexpr uint32_t stride = 4; // for DYLD_CHAINED_PTR_64
+  // All ARM64E userland formats use 8-byte stride; DYLD_CHAINED_PTR_64 uses 4.
+  const uint32_t stride = config->arch() == AK_arm64e ? 8 : 4;
 
   for (size_t i = 0, count = loc.size(); i < count;) {
     const OutputSegment *oseg = loc[i].isec->parent->parent;
@@ -1329,14 +1337,24 @@ void Writer::buildFixupChains() {
 
       if (offset < target->wordSize)
         return fail("fixups overlap");
+      // arm64e ignores -no_fixup_chains, so don't suggest it there.
       if (offset % stride != 0)
-        return fail(
-            "fixups are unaligned (offset " + Twine(offset) +
-            " is not a multiple of the stride). Re-link with -no_fixup_chains");
+        return fail("fixups are unaligned (offset " + Twine(offset) +
+                    " is not a multiple of the stride)" +
+                    (config->arch() == AK_arm64e
+                         ? ""
+                         : ". Re-link with -no_fixup_chains"));
 
       // The "next" field is in the same location for bind and rebase entries.
-      reinterpret_cast<dyld_chained_ptr_64_bind *>(buf + loc[i - 1].offset)
-          ->next = offset / stride;
+      uint8_t *prev = buf + loc[i - 1].offset;
+      if (config->arch() == AK_arm64e) {
+        auto *entry =
+            reinterpret_cast<dyld_chained_ptr_arm64e_auth_bind *>(prev);
+        entry->next = offset / stride;
+      } else {
+        auto *entry = reinterpret_cast<dyld_chained_ptr_64_bind *>(prev);
+        entry->next = offset / stride;
+      }
       ++i;
     }
   }
@@ -1446,6 +1464,8 @@ void macho::createSyntheticSections() {
   }
   in.exports = make<ExportSection>();
   in.got = make<GotSection>();
+  if (config->arch() == AK_arm64e)
+    in.authGot = make<AuthGotSection>();
   in.stubs = make<StubsSection>();
   in.objcStubs = make<ObjCStubsSection>();
   in.unwindInfo = makeUnwindInfoSection();
