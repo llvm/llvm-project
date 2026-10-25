@@ -371,9 +371,8 @@ public:
 using IndirectSubscriptIntegerExpr =
     common::CopyableIndirection<Expr<SubscriptInteger>>;
 
-// For each intrinsic type category CAT, CategoryTypes<CAT> is an instantiation
-// of std::tuple<Type<CAT, K>> that comprises every kind value K in that
-// category that could possibly be supported on any target.
+// For each intrinsic type category CAT, CategoryTypes<CAT> is a singleton
+// tuple containing its runtime-kind Type<CAT>.
 template <TypeCategory CATEGORY>
 using CategoryTypes = std::tuple<Type<CATEGORY>>;
 

@@ -1827,7 +1827,7 @@ public:
   MaybeExpr ToExpr();
 
   // These interfaces allow *this to be used as a type visitor argument to
-  // common::SearchTypes() to convert the array constructor to a typed
+  // evaluate::SearchTypes() to convert the array constructor to a typed
   // expression in ToExpr().
   using Result = MaybeExpr;
   using Types = AllTypes;

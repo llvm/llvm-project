@@ -809,10 +809,9 @@ FOR_EACH_REAL_KIND(extern template class Relational, )
 FOR_EACH_CHARACTER_KIND(extern template class Relational, )
 extern template class Relational<SomeType>;
 
-// Logical expressions of a kind bigger than LogicalResult
-// do not include Relational<> operations as possibilities,
-// since the results of Relationals are always LogicalResult
-// (kind=4).
+// Relational<> operations always have the default logical result kind.
+// They are included in this shared runtime-kind variant, but report
+// LogicalResultKind from their kind() member.
 template <>
 class Expr<Type<TypeCategory::Logical>>
     : public ExpressionBase<Type<TypeCategory::Logical>> {

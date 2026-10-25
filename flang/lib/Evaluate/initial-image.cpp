@@ -81,7 +81,7 @@ bool InitialImage::Incorporate(ConstantSubscript toOffset,
   }
 }
 
-// Classes used with common::SearchTypes() to (re)construct Constant<> values
+// Classes used with evaluate::SearchTypes() to (re)construct Constant<> values
 // of the right type to initialize each symbol from the values that have
 // been placed into its initialization image by DATA statements.
 class AsConstantHelper {

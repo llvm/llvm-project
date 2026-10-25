@@ -116,7 +116,7 @@ template <typename A> common::IfNoLvalue<Expr<ResultType<A>>, A> AsExpr(A &&x) {
 
 template <typename T, typename U = typename Relational<T>::Result>
 Expr<U> AsExpr(Relational<T> &&x) {
-  // The variant in Expr<Type<TypeCategory::Logical, KIND>> only contains
+  // The variant in Expr<Type<TypeCategory::Logical>> only contains
   // Relational<SomeType>, not other Relational<T>s. Wrap the Relational<T>
   // in Relational<SomeType> before creating Expr<>.
   return Expr<U>(Relational<SomeType>{std::move(x)});
@@ -676,9 +676,8 @@ common::IfNoLvalue<Expr<SomeKind<TOCAT>>, VALUE> ConvertToKind(
   return *result;
 }
 
-// Given a type category CAT, SameKindExprs<CAT, N> is a variant that
-// holds an array of expressions of the same supported kind in that
-// category.
+// Given a type category CAT, SameKindExprs<CAT, N> contains an array of
+// expressions in that category. Callers ensure that their runtime kinds match.
 template <typename A, int N = 2> using SameExprs = std::array<Expr<A>, N>;
 template <int N = 2> struct SameKindExprsHelper {
   template <typename A> using SameExprs = std::array<Expr<A>, N>;
@@ -883,7 +882,7 @@ Expr<SomeKind<CAT>> operator/(
   return PromoteAndCombine<Divide, CAT>(std::move(x), std::move(y));
 }
 
-// A utility for use with common::SearchTypes to create generic expressions
+// A utility for use with evaluate::SearchTypes to create generic expressions
 // when an intrinsic type category for (say) a variable is known
 // but the kind parameter value is not.
 template <TypeCategory CAT, template <typename> class TEMPLATE, typename VALUE>
