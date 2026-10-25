@@ -1209,9 +1209,8 @@ static unsigned canFoldIntoCSel(const MachineRegisterInfo &MRI, unsigned VReg,
 bool AArch64InstrInfo::canInsertSelect(const MachineBasicBlock &MBB,
                                        ArrayRef<MachineOperand> Cond,
                                        Register DstReg, Register TrueReg,
-                                       Register FalseReg, int &CondCycles,
-                                       int &TrueCycles,
-                                       int &FalseCycles) const {
+                                       Register FalseReg,
+                                       SelectExpansion &Exp) const {
   // Check register classes.
   const MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
   const TargetRegisterClass *RC =
@@ -1225,20 +1224,24 @@ bool AArch64InstrInfo::canInsertSelect(const MachineBasicBlock &MBB,
   if (!RI.getCommonSubClass(RC, MRI.getRegClass(DstReg)))
     return false;
 
-  // Expanding cbz/tbz requires an extra cycle of latency on the condition.
+  // Expanding cbz/tbz requires a flag setting instruction in addition to the
+  // select, adding an extra cycle of latency on the condition.
   unsigned ExtraCondLat = Cond.size() != 1;
+  Exp.NumInsts = 1 + ExtraCondLat;
+  if (ExtraCondLat)
+    Exp.ClobberedPhysRegs.push_back(AArch64::NZCV);
 
   // GPRs are handled by csel.
   // FIXME: Fold in x+1, -x, and ~x when applicable.
   if (AArch64::GPR64allRegClass.hasSubClassEq(RC) ||
       AArch64::GPR32allRegClass.hasSubClassEq(RC)) {
     // Single-cycle csel, csinc, csinv, and csneg.
-    CondCycles = 1 + ExtraCondLat;
-    TrueCycles = FalseCycles = 1;
+    Exp.CondCycles = 1 + ExtraCondLat;
+    Exp.TrueCycles = Exp.FalseCycles = 1;
     if (canFoldIntoCSel(MRI, TrueReg))
-      TrueCycles = 0;
+      Exp.TrueCycles = 0;
     else if (canFoldIntoCSel(MRI, FalseReg))
-      FalseCycles = 0;
+      Exp.FalseCycles = 0;
     return true;
   }
 
@@ -1246,8 +1249,8 @@ bool AArch64InstrInfo::canInsertSelect(const MachineBasicBlock &MBB,
   // FIXME: Form fabs, fmin, and fmax when applicable.
   if (AArch64::FPR64RegClass.hasSubClassEq(RC) ||
       AArch64::FPR32RegClass.hasSubClassEq(RC)) {
-    CondCycles = 5 + ExtraCondLat;
-    TrueCycles = FalseCycles = 2;
+    Exp.CondCycles = 5 + ExtraCondLat;
+    Exp.TrueCycles = Exp.FalseCycles = 2;
     return true;
   }
 
@@ -1256,8 +1259,9 @@ bool AArch64InstrInfo::canInsertSelect(const MachineBasicBlock &MBB,
   if (AArch64::FPR128RegClass.hasSubClassEq(RC) &&
       Subtarget.isNeonAvailable() &&
       !MBB.getParent()->getFunction().hasMinSize()) {
-    CondCycles = 8 + ExtraCondLat;
-    TrueCycles = FalseCycles = 2;
+    Exp.CondCycles = 8 + ExtraCondLat;
+    Exp.TrueCycles = Exp.FalseCycles = 2;
+    Exp.NumInsts = 3 + ExtraCondLat;
     return true;
   }
 
@@ -2697,7 +2701,7 @@ bool AArch64InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     if (GuardWidth == 4) {
       unsigned Reg32 = TRI->getSubReg(Reg, AArch64::sub_32);
       BuildMI(MBB, MI, DL, get(AArch64::LDRWui))
-          .addDef(Reg32, RegState::Dead)
+          .addDef(Reg32)
           .addUse(Reg, RegState::Kill)
           .addImm(0)
           .addMemOperand(*MI.memoperands_begin())
@@ -2727,7 +2731,7 @@ bool AArch64InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     if (GuardWidth == 4) {
       unsigned Reg32 = TRI->getSubReg(Reg, AArch64::sub_32);
       BuildMI(MBB, MI, DL, get(AArch64::LDRWui))
-          .addDef(Reg32, RegState::Dead)
+          .addDef(Reg32)
           .addUse(Reg, RegState::Kill)
           .addImm(0)
           .addMemOperand(*MI.memoperands_begin())
@@ -2745,7 +2749,7 @@ bool AArch64InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     if (GuardWidth == 4) {
       unsigned Reg32 = TRI->getSubReg(Reg, AArch64::sub_32);
       BuildMI(MBB, MI, DL, get(AArch64::LDRWui))
-          .addDef(Reg32, RegState::Dead)
+          .addDef(Reg32)
           .addUse(Reg, RegState::Kill)
           .addGlobalAddress(GV, 0, LoFlags)
           .addMemOperand(*MI.memoperands_begin())
@@ -3628,11 +3632,9 @@ bool AArch64InstrInfo::isCandidateToMergeOrPair(const MachineInstr &MI) const {
   // prologue/epilogue if the CFI information encoded the operations as separate
   // instructions, as that will cause the size of the actual prologue to mismatch
   // with the prologue size recorded in the Windows CFI.
-  const MCAsmInfo &MAI = MI.getMF()->getTarget().getMCAsmInfo();
-  bool NeedsWinCFI =
-      MAI.usesWindowsCFI() && MI.getMF()->getFunction().needsUnwindTableEntry();
-  if (NeedsWinCFI && (MI.getFlag(MachineInstr::FrameSetup) ||
-                      MI.getFlag(MachineInstr::FrameDestroy)))
+  if ((MI.getFlag(MachineInstr::FrameSetup) ||
+       MI.getFlag(MachineInstr::FrameDestroy)) &&
+      MI.getMF()->needsWinCFI())
     return false;
 
   // On some CPUs quad load/store pairs are slower than two single load/stores.
@@ -7531,6 +7533,7 @@ static bool isCombineInstrCandidate32(unsigned Opc) {
   switch (Opc) {
   case AArch64::ADDWrr:
   case AArch64::ADDWri:
+  case AArch64::ADDWrs:
   case AArch64::SUBWrr:
   case AArch64::ADDSWrr:
   case AArch64::ADDSWri:
@@ -7550,6 +7553,7 @@ static bool isCombineInstrCandidate64(unsigned Opc) {
   switch (Opc) {
   case AArch64::ADDXrr:
   case AArch64::ADDXri:
+  case AArch64::ADDXrs:
   case AArch64::SUBXrr:
   case AArch64::ADDSXrr:
   case AArch64::ADDSXri:
@@ -7795,6 +7799,22 @@ static bool getMaddPatterns(MachineInstr &Root,
     }
   };
 
+  auto setShfFound = [&](int Opcode, unsigned ZeroReg, unsigned Pattern) {
+    unsigned ShiftImm = Root.getOperand(3).getImm();
+    AArch64_AM::ShiftExtendType ShiftTy = AArch64_AM::getShiftType(ShiftImm);
+
+    if ((ShiftTy != AArch64_AM::LSL && ShiftTy != AArch64_AM::LSR &&
+         ShiftTy != AArch64_AM::ASR) ||
+        AArch64_AM::getShiftValue(ShiftImm) == 0)
+      return;
+
+    if (!canCombineWithMUL(MBB, Root.getOperand(1), Opcode, ZeroReg))
+      return;
+
+    Patterns.push_back(Pattern);
+    Found = true;
+  };
+
   auto setVFound = [&](int Opcode, int Operand, unsigned Pattern) {
     if (canCombine(MBB, Root.getOperand(Operand), Opcode)) {
       Patterns.push_back(Pattern);
@@ -7836,6 +7856,12 @@ static bool getMaddPatterns(MachineInstr &Root,
     break;
   case AArch64::SUBXri:
     setFound(AArch64::MADDXrrr, 1, AArch64::XZR, MCP::MULSUBXI_OP1);
+    break;
+  case AArch64::ADDWrs:
+    setShfFound(AArch64::MADDWrrr, AArch64::WZR, MCP::MULADDWS_OP1);
+    break;
+  case AArch64::ADDXrs:
+    setShfFound(AArch64::MADDXrrr, AArch64::XZR, MCP::MULADDXS_OP1);
     break;
   case AArch64::ADDv8i8:
     setVFound(AArch64::MULv8i8, 1, MCP::MULADDv8i8_OP1);
@@ -8589,15 +8615,14 @@ generateGatherLanePattern(MachineInstr &Root,
   // Helper lambda to create a LD1 instruction.
   auto CreateLD1Instruction = [&](MachineInstr *OriginalInstr,
                                   Register SrcRegister, unsigned Lane,
-                                  Register OffsetRegister,
-                                  bool OffsetRegisterKillState) {
+                                  Register OffsetRegister) {
     auto NewRegister = MRI.createVirtualRegister(FPR128RegClass);
     MachineInstrBuilder LoadIndexIntoRegister =
         BuildMI(MF, MIMetadata(*OriginalInstr), TII->get(Root.getOpcode()),
                 NewRegister)
             .addReg(SrcRegister)
             .addImm(Lane)
-            .addReg(OffsetRegister, getKillRegState(OffsetRegisterKillState))
+            .addReg(OffsetRegister)
             .setMemRefs(OriginalInstr->memoperands());
     InstrIdxForVirtReg.insert(std::make_pair(NewRegister, InsInstrs.size()));
     InsInstrs.push_back(LoadIndexIntoRegister);
@@ -8639,8 +8664,7 @@ generateGatherLanePattern(MachineInstr &Root,
   for (auto [Index, LoadInstr] : llvm::enumerate(LanesToLoadToReg0)) {
     const MachineOperand &OffsetRegOperand = LoadInstr->getOperand(3);
     PrevReg = CreateLD1Instruction(LoadInstr, PrevReg, Index + 1,
-                                   OffsetRegOperand.getReg(),
-                                   OffsetRegOperand.isKill());
+                                   OffsetRegOperand.getReg());
     DelInstrs.push_back(LoadInstr);
   }
   Register LastLoadReg0 = PrevReg;
@@ -8686,7 +8710,7 @@ generateGatherLanePattern(MachineInstr &Root,
   auto SubRegToRegInstr =
       BuildMI(MF, MIMetadata(Root), TII->get(SubregToReg->getOpcode()),
               DestRegForSubregToReg)
-          .addReg(DestRegForMiddleIndex, getKillRegState(true))
+          .addReg(DestRegForMiddleIndex)
           .addImm(SubregType);
   InstrIdxForVirtReg.insert(
       std::make_pair(DestRegForSubregToReg, InsInstrs.size()));
@@ -8700,8 +8724,7 @@ generateGatherLanePattern(MachineInstr &Root,
   for (auto [Index, LoadInstr] : llvm::enumerate(LanesToLoadToReg1)) {
     const MachineOperand &OffsetRegOperand = LoadInstr->getOperand(3);
     PrevReg = CreateLD1Instruction(LoadInstr, PrevReg, Index + 1,
-                                   OffsetRegOperand.getReg(),
-                                   OffsetRegOperand.isKill());
+                                   OffsetRegOperand.getReg());
 
     // Do not add the last reg to DelInstrs - it will be removed later.
     if (Index == NumLanes / 2 - 2) {
@@ -8798,20 +8821,10 @@ genFusedMultiply(MachineFunction &MF, MachineRegisterInfo &MRI,
   MachineInstr *MUL = MRI.getUniqueVRegDef(Root.getOperand(IdxMulOpd).getReg());
   Register ResultReg = Root.getOperand(0).getReg();
   Register SrcReg0 = MUL->getOperand(1).getReg();
-  bool Src0IsKill = MUL->getOperand(1).isKill();
   Register SrcReg1 = MUL->getOperand(2).getReg();
-  bool Src1IsKill = MUL->getOperand(2).isKill();
 
-  Register SrcReg2;
-  bool Src2IsKill;
-  if (ReplacedAddend) {
-    // If we just generated a new addend, we must be it's only use.
-    SrcReg2 = *ReplacedAddend;
-    Src2IsKill = true;
-  } else {
-    SrcReg2 = Root.getOperand(IdxOtherOpd).getReg();
-    Src2IsKill = Root.getOperand(IdxOtherOpd).isKill();
-  }
+  Register SrcReg2 =
+      ReplacedAddend ? *ReplacedAddend : Root.getOperand(IdxOtherOpd).getReg();
 
   if (ResultReg.isVirtual())
     MRI.constrainRegClass(ResultReg, RC);
@@ -8825,25 +8838,102 @@ genFusedMultiply(MachineFunction &MF, MachineRegisterInfo &MRI,
   MachineInstrBuilder MIB;
   if (kind == FMAInstKind::Default)
     MIB = BuildMI(MF, MIMetadata(Root), TII->get(MaddOpc), ResultReg)
-              .addReg(SrcReg0, getKillRegState(Src0IsKill))
-              .addReg(SrcReg1, getKillRegState(Src1IsKill))
-              .addReg(SrcReg2, getKillRegState(Src2IsKill));
+              .addReg(SrcReg0)
+              .addReg(SrcReg1)
+              .addReg(SrcReg2);
   else if (kind == FMAInstKind::Indexed)
     MIB = BuildMI(MF, MIMetadata(Root), TII->get(MaddOpc), ResultReg)
-              .addReg(SrcReg2, getKillRegState(Src2IsKill))
-              .addReg(SrcReg0, getKillRegState(Src0IsKill))
-              .addReg(SrcReg1, getKillRegState(Src1IsKill))
+              .addReg(SrcReg2)
+              .addReg(SrcReg0)
+              .addReg(SrcReg1)
               .addImm(MUL->getOperand(3).getImm());
   else if (kind == FMAInstKind::Accumulator)
     MIB = BuildMI(MF, MIMetadata(Root), TII->get(MaddOpc), ResultReg)
-              .addReg(SrcReg2, getKillRegState(Src2IsKill))
-              .addReg(SrcReg0, getKillRegState(Src0IsKill))
-              .addReg(SrcReg1, getKillRegState(Src1IsKill));
+              .addReg(SrcReg2)
+              .addReg(SrcReg0)
+              .addReg(SrcReg1);
   else
     assert(false && "Invalid FMA instruction kind \n");
   // Insert the MADD (MADD, FMA, FMS, FMLA, FMSL)
   InsInstrs.push_back(MIB);
   return MUL;
+}
+
+/// MUL I=A,B,0
+/// ADDrs R,I,C,shift
+/// ==>
+/// SBFM/UBFM J=C,shift
+/// MADD R,A,B,J
+static void genMaddShf(MachineFunction &MF, MachineRegisterInfo &MRI,
+                       const TargetInstrInfo *TII, MachineInstr &Root,
+                       SmallVectorImpl<MachineInstr *> &InsInstrs,
+                       SmallVectorImpl<MachineInstr *> &DelInstrs,
+                       unsigned MaddOpc, bool Is64Bit,
+                       DenseMap<Register, unsigned> &InstrIdxForVirtReg) {
+  const TargetRegisterClass *RC =
+      Is64Bit ? &AArch64::GPR64RegClass : &AArch64::GPR32RegClass;
+  MachineInstr *MUL = MRI.getUniqueVRegDef(Root.getOperand(1).getReg());
+  Register ResultReg = Root.getOperand(0).getReg();
+  Register SrcReg0 = MUL->getOperand(1).getReg();
+  Register SrcReg1 = MUL->getOperand(2).getReg();
+  Register ShiftedReg = Root.getOperand(2).getReg();
+
+  if (ResultReg.isVirtual())
+    MRI.constrainRegClass(ResultReg, RC);
+  if (SrcReg0.isVirtual())
+    MRI.constrainRegClass(SrcReg0, RC);
+  if (SrcReg1.isVirtual())
+    MRI.constrainRegClass(SrcReg1, RC);
+  if (ShiftedReg.isVirtual())
+    MRI.constrainRegClass(ShiftedReg, RC);
+
+  unsigned ShiftImm = Root.getOperand(3).getImm();
+  unsigned ShiftVal = AArch64_AM::getShiftValue(ShiftImm);
+  unsigned RegSize = Is64Bit ? 64 : 32;
+  unsigned BFMOpc;
+  unsigned ImmR, ImmS;
+  switch (AArch64_AM::getShiftType(ShiftImm)) {
+  case AArch64_AM::ASR:
+    BFMOpc = Is64Bit ? AArch64::SBFMXri : AArch64::SBFMWri;
+    ImmR = ShiftVal;
+    ImmS = RegSize - 1;
+    break;
+  case AArch64_AM::LSR:
+    BFMOpc = Is64Bit ? AArch64::UBFMXri : AArch64::UBFMWri;
+    ImmR = ShiftVal;
+    ImmS = RegSize - 1;
+    break;
+  case AArch64_AM::LSL:
+    BFMOpc = Is64Bit ? AArch64::UBFMXri : AArch64::UBFMWri;
+    ImmR = (RegSize - ShiftVal) % RegSize;
+    ImmS = RegSize - 1 - ShiftVal;
+    break;
+  default:
+    llvm_unreachable("Unexpected shift type");
+  }
+
+  Register ShiftReg = MRI.createVirtualRegister(RC);
+  MachineInstrBuilder MIB1 =
+      BuildMI(MF, MIMetadata(Root), TII->get(BFMOpc), ShiftReg)
+          .addReg(ShiftedReg)
+          .addImm(ImmR)
+          .addImm(ImmS);
+  InstrIdxForVirtReg.insert(std::make_pair(ShiftReg, InsInstrs.size()));
+  InsInstrs.push_back(MIB1);
+
+  uint32_t Flags = Root.getFlags() & MUL->getFlags() &
+                   (MachineInstr::NoSWrap | MachineInstr::NoUWrap);
+
+  MachineInstrBuilder MIB2 =
+      BuildMI(MF, MIMetadata(Root), TII->get(MaddOpc), ResultReg)
+          .addReg(SrcReg0)
+          .addReg(SrcReg1)
+          .addReg(ShiftReg)
+          .setMIFlags(Flags);
+
+  InsInstrs.push_back(MIB2);
+  DelInstrs.push_back(MUL);
+  DelInstrs.push_back(&Root);
 }
 
 static MachineInstr *
@@ -8865,9 +8955,6 @@ genFNegatedMAD(MachineFunction &MF, MachineRegisterInfo &MRI,
   Register SrcReg0 = MAD->getOperand(1).getReg();
   Register SrcReg1 = MAD->getOperand(2).getReg();
   Register SrcReg2 = MAD->getOperand(3).getReg();
-  bool Src0IsKill = MAD->getOperand(1).isKill();
-  bool Src1IsKill = MAD->getOperand(2).isKill();
-  bool Src2IsKill = MAD->getOperand(3).isKill();
   if (ResultReg.isVirtual())
     MRI.constrainRegClass(ResultReg, RC);
   if (SrcReg0.isVirtual())
@@ -8879,9 +8966,9 @@ genFNegatedMAD(MachineFunction &MF, MachineRegisterInfo &MRI,
 
   MachineInstrBuilder MIB =
       BuildMI(MF, MIMetadata(Root), TII->get(Opc), ResultReg)
-          .addReg(SrcReg0, getKillRegState(Src0IsKill))
-          .addReg(SrcReg1, getKillRegState(Src1IsKill))
-          .addReg(SrcReg2, getKillRegState(Src2IsKill));
+          .addReg(SrcReg0)
+          .addReg(SrcReg1)
+          .addReg(SrcReg2);
   InsInstrs.push_back(MIB);
 
   return MAD;
@@ -9029,9 +9116,7 @@ static MachineInstr *genMaddR(MachineFunction &MF, MachineRegisterInfo &MRI,
   MachineInstr *MUL = MRI.getUniqueVRegDef(Root.getOperand(IdxMulOpd).getReg());
   Register ResultReg = Root.getOperand(0).getReg();
   Register SrcReg0 = MUL->getOperand(1).getReg();
-  bool Src0IsKill = MUL->getOperand(1).isKill();
   Register SrcReg1 = MUL->getOperand(2).getReg();
-  bool Src1IsKill = MUL->getOperand(2).isKill();
 
   if (ResultReg.isVirtual())
     MRI.constrainRegClass(ResultReg, RC);
@@ -9044,8 +9129,8 @@ static MachineInstr *genMaddR(MachineFunction &MF, MachineRegisterInfo &MRI,
 
   MachineInstrBuilder MIB =
       BuildMI(MF, MIMetadata(Root), TII->get(MaddOpc), ResultReg)
-          .addReg(SrcReg0, getKillRegState(Src0IsKill))
-          .addReg(SrcReg1, getKillRegState(Src1IsKill))
+          .addReg(SrcReg0)
+          .addReg(SrcReg1)
           .addReg(VR);
   // Insert the MADD
   InsInstrs.push_back(MIB);
@@ -9067,11 +9152,8 @@ static void genSubAdd2SubSub(MachineFunction &MF, MachineRegisterInfo &MRI,
 
   Register ResultReg = Root.getOperand(0).getReg();
   Register RegA = Root.getOperand(1).getReg();
-  bool RegAIsKill = Root.getOperand(1).isKill();
   Register RegB = AddMI->getOperand(IdxOpd1).getReg();
-  bool RegBIsKill = AddMI->getOperand(IdxOpd1).isKill();
   Register RegC = AddMI->getOperand(IdxOtherOpd).getReg();
-  bool RegCIsKill = AddMI->getOperand(IdxOtherOpd).isKill();
   Register NewVR =
       MRI.createVirtualRegister(MRI.getRegClass(Root.getOperand(2).getReg()));
 
@@ -9090,13 +9172,13 @@ static void genSubAdd2SubSub(MachineFunction &MF, MachineRegisterInfo &MRI,
 
   MachineInstrBuilder MIB1 =
       BuildMI(MF, MIMetadata(Root), TII->get(Opcode), NewVR)
-          .addReg(RegA, getKillRegState(RegAIsKill))
-          .addReg(RegB, getKillRegState(RegBIsKill))
+          .addReg(RegA)
+          .addReg(RegB)
           .setMIFlags(Flags);
   MachineInstrBuilder MIB2 =
       BuildMI(MF, MIMetadata(Root), TII->get(Opcode), ResultReg)
-          .addReg(NewVR, getKillRegState(true))
-          .addReg(RegC, getKillRegState(RegCIsKill))
+          .addReg(NewVR)
+          .addReg(RegC)
           .setMIFlags(Flags);
 
   InstrIdxForVirtReg.insert(std::make_pair(NewVR, 0));
@@ -9323,6 +9405,14 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
     }
     MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC);
     break;
+  case AArch64MachineCombinerPattern::MULADDWS_OP1:
+    genMaddShf(MF, MRI, TII, Root, InsInstrs, DelInstrs, AArch64::MADDWrrr,
+               false, InstrIdxForVirtReg);
+    return;
+  case AArch64MachineCombinerPattern::MULADDXS_OP1:
+    genMaddShf(MF, MRI, TII, Root, InsInstrs, DelInstrs, AArch64::MADDXrrr,
+               true, InstrIdxForVirtReg);
+    return;
   case AArch64MachineCombinerPattern::MULADDv8i8_OP1:
     Opc = AArch64::MLAv8i8;
     RC = &AArch64::FPR64RegClass;
@@ -10956,17 +11046,8 @@ void AArch64InstrInfo::mergeOutliningCandidateAttributes(
 
 bool AArch64InstrInfo::isFunctionSafeToOutlineFrom(
     MachineFunction &MF, bool OutlineFromLinkOnceODRs) const {
-  const Function &F = MF.getFunction();
-
-  // Can F be deduplicated by the linker? If it can, don't outline from it.
-  if (!OutlineFromLinkOnceODRs && F.hasLinkOnceODRLinkage())
-    return false;
-
-  // Don't outline from functions with section markings; the program could
-  // expect that all the code is in the named section.
-  // FIXME: Allow outlining from multiple functions with the same section
-  // marking.
-  if (F.hasSection())
+  if (!TargetInstrInfo::isFunctionSafeToOutlineFrom(MF,
+                                                    OutlineFromLinkOnceODRs))
     return false;
 
   // Outlining from functions with redzones is unsafe since the outliner may
@@ -10984,7 +11065,7 @@ bool AArch64InstrInfo::isFunctionSafeToOutlineFrom(
     return false;
 
   // FIXME: Teach the outliner to generate/handle Windows unwind info.
-  if (MF.getTarget().getMCAsmInfo().usesWindowsCFI())
+  if (MF.usesWindowsUnwindInfo())
     return false;
 
   // It's safe to outline from MF.

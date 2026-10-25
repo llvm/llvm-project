@@ -9,8 +9,46 @@
 #include "clang/CodeGenUtils/ModuleUtils.h"
 #include "clang/AST/Attr.h"
 #include "clang/Basic/TargetInfo.h"
+#include "llvm/ADT/SetVector.h"
 
 namespace clang::CodeGenUtils {
+
+LangAS getGlobalConstantAddressSpace(const LangOptions &LangOpts,
+                                     const TargetInfo &Target) {
+  // OpenCL v1.2 s6.5.3: a string literal is in the constant address space.
+  if (LangOpts.OpenCL)
+    return LangAS::opencl_constant;
+  if (LangOpts.SYCLIsDevice)
+    return LangAS::sycl_global;
+  if (LangOpts.HIP && LangOpts.CUDAIsDevice && Target.getTriple().isSPIRV())
+    // For HIPSPV map literals to cuda_device (maps to CrossWorkGroup in SPIR-V)
+    // instead of default AS (maps to Generic in SPIR-V). Otherwise, we end up
+    // with OpVariable instructions with Generic storage class which is not
+    // allowed (SPIR-V V1.6 s3.42.8). Also, mapping literals to SPIR-V
+    // UniformConstant storage class is not viable as pointers to it may not be
+    // casted to Generic pointers which are used to model HIP's "flat" pointers.
+    return LangAS::cuda_device;
+  if (auto AS = Target.getConstantAddressSpace())
+    return *AS;
+  return LangAS::Default;
+}
+
+bool hasUnwindExceptions(const LangOptions &LangOpts) {
+  // If exceptions are completely disabled, obviously this is false.
+  if (!LangOpts.Exceptions)
+    return false;
+
+  // If C++ exceptions are enabled, this is true.
+  if (LangOpts.CXXExceptions)
+    return true;
+
+  // If ObjC exceptions are enabled, this depends on the ABI.
+  if (LangOpts.ObjCExceptions) {
+    return LangOpts.ObjCRuntime.hasUnwindExceptions();
+  }
+
+  return true;
+}
 
 bool isVarDeclStrongDefinition(const ASTContext &Ctx, const VarDecl *D,
                                bool NoCommon) {
@@ -109,6 +147,45 @@ bool shouldBeInCOMDAT(const ASTContext &Ctx, const Decl &D) {
     return true;
   }
   llvm_unreachable("No such linkage");
+}
+
+llvm::SmallVector<Module *, 8>
+importedModulesToInitialize(Module *Primary,
+                            llvm::ArrayRef<Module *> Imported) {
+  llvm::SmallSetVector<Module *, 8> Candidates;
+  if (Primary && Primary->isInterfaceOrPartition()) {
+    // The modules the unit exports.
+    for (auto I : Primary->Exports)
+      Candidates.insert(I.first);
+    // The modules it only imports.
+    Candidates.insert_range(Primary->Imports);
+    // The modules it imports in the global module fragment or the private
+    // module fragment.
+    for (Module *SubM : Primary->submodules()) {
+      assert(
+          (SubM->isGlobalModule() || SubM->isPrivateModule()) &&
+          "The sub modules of C++20 module unit should only be global module "
+          "fragments or private module fragments.");
+      assert(SubM->Exports.empty() &&
+             "The global module fragments and the private module fragments are "
+             "not allowed to export import modules.");
+      Candidates.insert_range(SubM->Imports);
+    }
+  } else {
+    Candidates.insert_range(Imported);
+  }
+
+  llvm::SmallVector<Module *, 8> Result;
+  for (Module *M : Candidates) {
+    // No Itanium initializer in header like modules.
+    if (M->isHeaderLikeModule())
+      continue;
+    // The initialization may be skipped when it is sure to do nothing.
+    if (!M->isNamedModuleInterfaceHasInit())
+      continue;
+    Result.push_back(M);
+  }
+  return Result;
 }
 
 } // namespace clang::CodeGenUtils

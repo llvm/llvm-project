@@ -83,6 +83,7 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
@@ -497,6 +498,13 @@ bool InstCombinerImpl::SimplifyAssociativeOrCommutative(BinaryOperator &I) {
         Value *B = Op0->getOperand(1);
         Value *C = I.getOperand(1);
 
+        if (tryReassociateAndFoldSymmetricPair(I, *Op0, A, B, C)) {
+          I.swapOperands();
+          Changed = true;
+          ++NumReassoc;
+          continue;
+        }
+
         // Does "B op C" simplify?
         if (Value *V = simplifyBinOp(Opcode, B, C, SQ.getWithInstruction(&I))) {
           // It simplifies to V.  Form "A op V".
@@ -530,6 +538,13 @@ bool InstCombinerImpl::SimplifyAssociativeOrCommutative(BinaryOperator &I) {
         Value *B = Op1->getOperand(0);
         Value *C = Op1->getOperand(1);
 
+        if (tryReassociateAndFoldSymmetricPair(I, *Op1, C, B, A)) {
+          I.swapOperands();
+          Changed = true;
+          ++NumReassoc;
+          continue;
+        }
+
         // Does "A op B" simplify?
         if (Value *V = simplifyBinOp(Opcode, A, B, SQ.getWithInstruction(&I))) {
           // It simplifies to V.  Form "V op C".
@@ -559,6 +574,12 @@ bool InstCombinerImpl::SimplifyAssociativeOrCommutative(BinaryOperator &I) {
         Value *B = Op0->getOperand(1);
         Value *C = I.getOperand(1);
 
+        if (tryReassociateAndFoldSymmetricPair(I, *Op0, B, A, C)) {
+          Changed = true;
+          ++NumReassoc;
+          continue;
+        }
+
         // Does "C op A" simplify?
         if (Value *V = simplifyBinOp(Opcode, C, A, SQ.getWithInstruction(&I))) {
           // It simplifies to V.  Form "V op B".
@@ -579,6 +600,12 @@ bool InstCombinerImpl::SimplifyAssociativeOrCommutative(BinaryOperator &I) {
         Value *A = I.getOperand(0);
         Value *B = Op1->getOperand(0);
         Value *C = Op1->getOperand(1);
+
+        if (tryReassociateAndFoldSymmetricPair(I, *Op1, B, C, A)) {
+          Changed = true;
+          ++NumReassoc;
+          continue;
+        }
 
         // Does "C op A" simplify?
         if (Value *V = simplifyBinOp(Opcode, C, A, SQ.getWithInstruction(&I))) {
@@ -1321,6 +1348,35 @@ InstCombinerImpl::matchSymmetricPair(Value *LHS, Value *RHS) {
   default:
     return std::nullopt;
   }
+}
+
+bool InstCombinerImpl::tryReassociateAndFoldSymmetricPair(
+    BinaryOperator &OuterOp, BinaryOperator &InnerOp, Value *InnerVal0,
+    Value *InnerVal1, Value *OuterVal) {
+  assert(OuterOp.isCommutative() && OuterOp.isAssociative() &&
+         "OuterOp must be commutative and associative");
+  assert(OuterOp.getOpcode() == InnerOp.getOpcode() &&
+         "OuterOp and InnerOp must have same opcode");
+  if (!InnerOp.isAssociative() || !InnerOp.hasOneUse())
+    return false;
+
+  unsigned OuterValIdx = OuterOp.getOperand(0) == OuterVal ? 0 : 1;
+  assert(OuterOp.getOperand(OuterValIdx) == OuterVal &&
+         "OuterVal must be an operand of OuterOp");
+
+  auto Pair = matchSymmetricPair(InnerVal1, OuterVal);
+  if (!Pair)
+    return false;
+
+  replaceOperand(InnerOp, 0, Pair->first);
+  replaceOperand(InnerOp, 1, Pair->second);
+  InnerOp.dropPoisonGeneratingAnnotations();
+  InnerOp.dropUBImplyingAttrsAndMetadata();
+  replaceOperand(OuterOp, OuterValIdx, InnerVal0);
+  if (!isa<FPMathOperator>(OuterOp))
+    OuterOp.dropPoisonGeneratingFlags();
+  OuterOp.dropUBImplyingAttrsAndMetadata();
+  return true;
 }
 
 Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
@@ -3121,9 +3177,17 @@ Value *InstCombiner::getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
       auto *NotB = getFreelyInvertedImpl(B, B->hasOneUse(), Builder,
                                          LocalDoesConsume, Depth);
       DoesConsume = LocalDoesConsume;
-      if (IsLogical)
-        return Builder ? Builder->CreateLogicalOp(Opcode, NotA, NotB) : NonNull;
-      return Builder ? Builder->CreateBinOp(Opcode, NotA, NotB) : NonNull;
+      if (!Builder)
+        return NonNull;
+      if (IsLogical) {
+        Value *InvertedLogicalOp = Builder->CreateLogicalOp(
+            Opcode, NotA, NotB, "",
+            ProfcheckDisableMetadataFixes ? nullptr : dyn_cast<SelectInst>(V));
+        if (auto *SI = dyn_cast<SelectInst>(InvertedLogicalOp))
+          SI->swapProfMetadata();
+        return InvertedLogicalOp;
+      }
+      return Builder->CreateBinOp(Opcode, NotA, NotB);
     }
 
     return nullptr;
@@ -4227,7 +4291,7 @@ Instruction *InstCombinerImpl::visitUncondBrInst(UncondBrInst &BI) {
     do {
       if (BBI != FirstInstr)
         --BBI;
-    } while (BBI != FirstInstr && BBI->isDebugOrPseudoInst());
+    } while (BBI != FirstInstr && isa<PseudoProbeInst>(BBI));
 
     return dyn_cast<StoreInst>(BBI);
   };
@@ -5321,8 +5385,7 @@ bool InstCombinerImpl::freezeOtherUses(FreezeInst &FI) {
   // replacement below is still necessary.
   BasicBlock::iterator MoveBefore;
   if (isa<Argument>(Op)) {
-    MoveBefore =
-        FI.getFunction()->getEntryBlock().getFirstNonPHIOrDbgOrAlloca();
+    MoveBefore = FI.getFunction()->getEntryBlock().getFirstNonPHIOrAlloca();
   } else {
     auto MoveBeforeOpt = cast<Instruction>(Op)->getInsertionPointAfterDef();
     if (!MoveBeforeOpt)
@@ -5583,20 +5646,29 @@ bool InstCombinerImpl::tryToSinkInstruction(Instruction *I,
         return false;
   }
 
+  SmallVector<AssumeInst *, 2> AssumesToSink;
   I->dropDroppableUses([&](const Use *U) {
-    auto *I = dyn_cast<Instruction>(U->getUser());
-    if (I && I->getParent() != DestBlock) {
-      Worklist.add(I);
+    auto *User = dyn_cast<Instruction>(U->getUser());
+    if (User && User->getParent() != DestBlock) {
+      if (auto *Assume = dyn_cast<AssumeInst>(User);
+          Assume && Assume->getParent() == SrcBlock) {
+        AssumesToSink.push_back(Assume);
+        return false;
+      }
+      Worklist.add(User);
       return true;
     }
     return false;
   });
-  /// FIXME: We could remove droppable uses that are not dominated by
-  /// the new position.
 
   BasicBlock::iterator InsertPos = DestBlock->getFirstInsertionPt();
   I->moveBefore(*DestBlock, InsertPos);
   ++NumSunkInst;
+
+  // Sink the collected assumes right after I in DestBlock so that the
+  // alignment/attribute guarantees they encode remain visible to later passes.
+  for (AssumeInst *Assume : AssumesToSink)
+    Assume->moveAfter(I);
 
   // Also sink all related debug uses from the source basic block. Otherwise we
   // get debug use before the def. Attempt to salvage debug uses first, to
@@ -6103,10 +6175,10 @@ bool InstCombinerImpl::prepareWorklist(Function &F) {
         }
       }
 
-      // Skip processing debug and pseudo intrinsics in InstCombine. Processing
+      // Skip processing pseudo intrinsics in InstCombine. Processing
       // these call instructions consumes non-trivial amount of time and
       // provides no value for the optimization.
-      if (!Inst.isDebugOrPseudoInst()) {
+      if (!isa<PseudoProbeInst>(Inst)) {
         InstrsForInstructionWorklist.push_back(&Inst);
         SeenAliasScopes.analyse(&Inst);
       }
@@ -6205,7 +6277,7 @@ static bool combineInstructionsOverFunction(
 
   // Lower dbg.declare intrinsics otherwise their value may be clobbered
   // by instcombiner.
-  const InstCombineCLOptions &CLOpts = InstCombineCLOptions::Global;
+  const auto &CLOpts = getInstCombineCLOptions(F);
   bool MadeIRChange = false;
   if (CLOpts.lower_dbg_declare)
     MadeIRChange = LowerDbgDeclare(F);

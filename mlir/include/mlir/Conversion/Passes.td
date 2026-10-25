@@ -1483,7 +1483,14 @@ def TosaToLinalgNamed
   let options = [
       Option<"preferConv2DKernelLayoutHWCF", "prefer-conv2d-kernel-layout-hwcf",
            "bool", /*default=*/"false",
-           "Prefer generating linalg.conv_2d_nhwc_hwcf over linalg.conv_2d_nhwc_fhwc">
+           "Prefer generating linalg.conv_2d_nhwc_hwcf over linalg.conv_2d_nhwc_fhwc">,
+      Option<"allowNonFinites", "allow-non-finites", "bool",
+           /*default=*/"false",
+           "When enabled, float max pooling is seeded with the infinite "
+           "identity mandated by the TOSA specification. When disabled "
+           "(default), the largest finite value is used instead. This "
+           "controls only compiler-generated identity values; NaN results "
+           "required by nan_mode are unaffected.">
   ];
 
   let constructor = "tosa::createTosaToLinalgNamed()";
@@ -1561,6 +1568,7 @@ def TosaToSPIRVTosa : Pass<"tosa-to-spirv-tosa"> {
 def TosaToTensorPass : Pass<"tosa-to-tensor"> {
   let summary = "Lower TOSA to the Tensor dialect";
   let dependentDialects = [
+    "cf::ControlFlowDialect",
     "tensor::TensorDialect",
   ];
   let description = [{

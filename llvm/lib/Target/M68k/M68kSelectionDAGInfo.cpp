@@ -23,6 +23,9 @@ void M68kSelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
   case M68kISD::SUBX:
     // result #1 must have type i8, but has type i32
     return;
+  case M68kISD::ADDX:
+    // result #1 must have the same type as operand #2 (glue), but has type i8
+    return;
   case M68kISD::SETCC:
     // operand #1 must have type i8, but has type i32
     return;

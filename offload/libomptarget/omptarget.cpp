@@ -15,7 +15,7 @@
 #include "OffloadPolicy.h"
 #include "OpenMP/OMPT/Callback.h"
 #include "OpenMP/OMPT/Interface.h"
-#include "PluginManager.h"
+#include "OpenMP/OffloadRTL.h"
 #include "Shared/Debug.h"
 #include "Shared/EnvironmentVar.h"
 #include "Shared/Utils.h"
@@ -33,6 +33,7 @@
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Object/ObjectFile.h"
 
+#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <vector>
@@ -127,7 +128,7 @@ void handleTargetOutcome(bool Success, ident_t *Loc) {
       }
 
       SourceInfo Info(Loc);
-      if (Info.isAvailible())
+      if (Info.isAvailable())
         fprintf(stderr, "%s:%d:%d: ", Info.getFilename(), Info.getLine(),
                 Info.getColumn());
       else
@@ -215,20 +216,19 @@ void *targetLockExplicit(void *HostPtr, size_t Size, int DeviceNum,
     return NULL;
   }
 
-  void *RC = NULL;
-
   auto DeviceOrErr = PM->getDevice(DeviceNum);
   if (!DeviceOrErr)
     FATAL_MESSAGE(DeviceNum, "%s", toString(DeviceOrErr.takeError()).c_str());
 
-  int32_t Err = 0;
-  Err = DeviceOrErr->RTL->data_lock(DeviceNum, HostPtr, Size, &RC);
-  if (Err) {
-    ODBG(ODT_Interface) << "Could not lock ptr " << HostPtr;
+  // Register and page-lock the memory.
+  auto LockedPtrOrErr = DeviceOrErr->registerMemory(HostPtr, Size);
+  if (!LockedPtrOrErr) {
+    std::string ErrStr = toString(LockedPtrOrErr.takeError());
+    ODBG(ODT_Interface) << "Could not lock ptr " << HostPtr << ": " << ErrStr;
     return nullptr;
   }
-  ODBG(ODT_Interface) << Name << " returns device ptr " << RC;
-  return RC;
+  ODBG(ODT_Interface) << Name << " returns device ptr " << *LockedPtrOrErr;
+  return *LockedPtrOrErr;
 }
 
 void targetUnlockExplicit(void *HostPtr, int DeviceNum, const char *Name) {
@@ -239,7 +239,11 @@ void targetUnlockExplicit(void *HostPtr, int DeviceNum, const char *Name) {
   if (!DeviceOrErr)
     FATAL_MESSAGE(DeviceNum, "%s", toString(DeviceOrErr.takeError()).c_str());
 
-  DeviceOrErr->RTL->data_unlock(DeviceNum, HostPtr);
+  // Unregister and unlock the memory.
+  if (auto Err = DeviceOrErr->unregisterMemory(HostPtr)) {
+    std::string ErrStr = toString(std::move(Err));
+    ODBG(ODT_Interface) << "Could not unlock ptr " << HostPtr << ": " << ErrStr;
+  }
   ODBG(ODT_Interface) << Name << " returns";
 }
 
@@ -613,7 +617,7 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
         HDTTMap, HstPtrBegin, HstPtrBase, TgtPadding, DataSize, HstPtrName,
         HasFlagTo, HasFlagAlways, IsImplicit, UpdateRef, HasCloseModifier,
         HasPresentModifier, HasHoldModifier, AsyncInfo, PointerTpr.getEntry(),
-        /*ReleaseHDTTMap=*/true, StateInfo);
+        /*ReleaseHDTTMap=*/true, StateInfo, Loc);
     void *TgtPtrBegin = TPR.TargetPointer;
     IsHostPtr = TPR.Flags.IsHostPointer;
     // If data_size==0, then the argument could be a zero-length pointer to
@@ -928,6 +932,11 @@ struct PostProcessingInfo {
         TPR(std::move(TPR)) {}
 };
 
+static bool rangesOverlap(uintptr_t LBegin, uintptr_t LEnd, uintptr_t RBegin,
+                          uintptr_t REnd) {
+  return std::max(LBegin, RBegin) < std::min(LEnd, REnd);
+}
+
 } // namespace
 
 /// Applies the necessary post-processing procedures to entries listed in \p
@@ -1184,7 +1193,8 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
         }
       }
 
-      int Ret = Device.retrieveData(HstPtr, TgtPtr, Size, AsyncInfo, Entry);
+      int Ret = Device.retrieveData(HstPtr, TgtPtr, Size, AsyncInfo, Entry,
+                                    /*HDTTMapPtr=*/nullptr, Loc);
       if (Ret != OFFLOAD_SUCCESS) {
         REPORT() << "Copying data from device failed.";
         return OFFLOAD_FAIL;
@@ -1365,14 +1375,31 @@ static int targetDataContiguous(ident_t *Loc, DeviceTy &Device, void *ArgsBase,
     ODBG(ODT_Mapping) << "Moving " << ArgSize << " bytes (hst:" << HstPtrBegin
                       << ") -> (tgt:" << TgtPtrBegin << ")";
     int Ret = Device.submitData(TgtPtrBegin, HstPtrBegin, ArgSize, AsyncInfo,
-                                TPR.getEntry());
+                                TPR.getEntry(), /*HDTTMapPtr=*/nullptr, Loc);
     if (Ret != OFFLOAD_SUCCESS) {
       REPORT() << "Copying data to device failed.";
       return OFFLOAD_FAIL;
     }
     if (TPR.getEntry()) {
+      uintptr_t UpdatedBegin = reinterpret_cast<uintptr_t>(TgtPtrBegin);
+      uintptr_t UpdatedEnd = UpdatedBegin + ArgSize;
       int Ret = TPR.getEntry()->foreachShadowPointerInfo(
           [&](ShadowPtrInfoTy &ShadowPtr) {
+            uintptr_t ShadowBegin =
+                reinterpret_cast<uintptr_t>(ShadowPtr.TgtPtrAddr);
+            uintptr_t ShadowEnd = ShadowBegin + ShadowPtr.PtrSize;
+
+            // The TO/update path has already issued an H2D memcpy for
+            // [UpdatedBegin, UpdatedEnd). If that memcpy did not touch this
+            // shadow pointer/descriptor slot on the device, there is nothing to
+            // fix up. If it did touch any byte, restore the whole saved target
+            // pointer/descriptor: a partially overwritten pointer/descriptor is
+            // not meaningful, and preserving the device attachment is safer
+            // than leaving mixed host/device descriptor bytes behind.
+            if (!rangesOverlap(UpdatedBegin, UpdatedEnd, ShadowBegin,
+                               ShadowEnd))
+              return OFFLOAD_SUCCESS;
+
             constexpr int64_t VoidPtrSize = sizeof(void *);
             if (ShadowPtr.PtrSize > VoidPtrSize) {
               ODBG(ODT_Mapping)
@@ -1406,7 +1433,7 @@ static int targetDataContiguous(ident_t *Loc, DeviceTy &Device, void *ArgsBase,
     ODBG(ODT_Mapping) << "Moving " << ArgSize << " bytes (tgt:" << TgtPtrBegin
                       << ") -> (hst:" << HstPtrBegin << ")";
     int Ret = Device.retrieveData(HstPtrBegin, TgtPtrBegin, ArgSize, AsyncInfo,
-                                  TPR.getEntry());
+                                  TPR.getEntry(), /*HDTTMapPtr=*/nullptr, Loc);
     if (Ret != OFFLOAD_SUCCESS) {
       REPORT() << "Copying data from device failed.";
       return OFFLOAD_FAIL;
