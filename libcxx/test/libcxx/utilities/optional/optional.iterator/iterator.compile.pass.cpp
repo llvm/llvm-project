@@ -7,11 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: std-at-least-c++26
-// UNSUPPORTED: libcpp-has-no-experimental-optional-iterator
 
 // <optional>
 
-// UNSUPPORTED: libcpp-has-abi-bounded-iterators-in-optional
+// UNSUPPORTED: libcpp-has-abi-bounded-iterators-in-optional, libcpp-has-no-experimental-optional-iterator
 
 // Ensure that a std::optional<T>::iterator can only be converted to a std::optional<T>::iterator.
 

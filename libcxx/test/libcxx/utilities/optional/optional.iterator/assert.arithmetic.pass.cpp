@@ -11,7 +11,6 @@
 // Add to iterator out of bounds.
 
 // REQUIRES: std-at-least-c++26
-// UNSUPPORTED: libcpp-has-no-experimental-optional-iterator
 // REQUIRES: can-test-hardening-assertions-fast
 // UNSUPPORTED: libcpp-has-abi-bounded-iterators-in-optional
 
