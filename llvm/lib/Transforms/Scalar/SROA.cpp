@@ -697,7 +697,6 @@ public:
 #endif
 
 private:
-  template <typename DerivedT, typename RetT = void> class BuilderBase;
   class SliceBuilder;
 
   friend class AllocaSlices::SliceBuilder;

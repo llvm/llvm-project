@@ -1662,7 +1662,10 @@ LazyValueInfoImpl::getEdgeValueLocal(Value *Val, BasicBlock *BBFrom,
         // instructions with many operands.
         if (isa<IntegerType>(Usr->getType()) && isOperationFoldable(Usr)) {
           const DataLayout &DL = BBTo->getDataLayout();
-          if (usesOperand(Usr, Condition)) {
+          Value *TempCond = Condition;
+          if (usesOperand(Usr, Condition) ||
+              (match(Condition, m_Not(m_Value(TempCond))) &&
+               usesOperand(Usr, TempCond))) {
             // If Val has Condition as an operand and Val can be folded into a
             // constant with either Condition == true or Condition == false,
             // propagate the constant.
@@ -1670,8 +1673,8 @@ LazyValueInfoImpl::getEdgeValueLocal(Value *Val, BasicBlock *BBFrom,
             //   ; %Val is true on the edge to %then.
             //   %Val = and i1 %Condition, true.
             //   br %Condition, label %then, label %else
-            APInt ConditionVal(1, isTrueDest ? 1 : 0);
-            Result = constantFoldUser(Usr, Condition, ConditionVal, DL);
+            APInt ConditionVal(1, isTrueDest ^ (TempCond != Condition) ? 1 : 0);
+            Result = constantFoldUser(Usr, TempCond, ConditionVal, DL);
           } else if (isa<TruncInst, ZExtInst, SExtInst>(Usr)) {
             ValueLatticeElement OpLatticeVal =
                 *getValueFromCondition(Usr->getOperand(0), Condition,
