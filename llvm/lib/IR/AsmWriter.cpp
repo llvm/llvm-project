@@ -246,8 +246,12 @@ predictValueUseListOrder(const Value *V, unsigned ID, const OrderMap &OM) {
     }
 
     // LID and RID are equal, so we have different operands of the same user.
-    // Assume operands are added in order for all instructions.
-    if (GetsReversed)
+    // Assume operands are added in order for all instructions. Replacing a
+    // forward reference updates the operands of instructions and globals one
+    // at a time, which reverses their uses, but updates all the operands of
+    // any other constant at once, in operand order, which keeps them in order.
+    const User *U = LU->getUser();
+    if (GetsReversed && (!isa<Constant>(U) || isa<GlobalValue>(U)))
       if (LID <= ID)
         return LU->getOperandNo() < RU->getOperandNo();
     return LU->getOperandNo() > RU->getOperandNo();
