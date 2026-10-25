@@ -51410,12 +51410,20 @@ static SDValue combineIntDivRem(SDNode *N, SelectionDAG &DAG,
   if (!UseExactFPDiv && EltBits != 64)
     return SDValue();
 
+  bool IsStrict = DAG.getMachineFunction().getFunction().hasFnAttribute(
+      Attribute::StrictFP);
+
   // f32 recovers the quotient exactly when both operands fit in 24 bits
   MVT FPSclVT = MVT::f64;
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   EVT FP16VT = VT.changeVectorElementType(*DAG.getContext(), MVT::f16);
+  EVT LegalFP16VT = FP16VT;
+  if (DCI.isBeforeLegalize() && !TLI.isTypeLegal(FP16VT))
+    LegalFP16VT = TLI.getLegalTypeToTransformTo(*DAG.getContext(), FP16VT);
   bool FP16VTUsable =
-      Subtarget.hasFP16() && (DCI.isBeforeLegalize() ||
-                              DAG.getTargetLoweringInfo().isTypeLegal(FP16VT));
+      Subtarget.hasFP16() &&
+      (IsStrict || TLI.isOperationLegal(ISD::FDIV, LegalFP16VT)) &&
+      (DCI.isBeforeLegalize() || TLI.isTypeLegal(FP16VT));
   if (UseExactFPDiv &&
       (EltBits == 8 || BothFitFP(APFloat::IEEEhalf())) &&
       Subtarget.hasFastFP16Div() && FP16VTUsable)
@@ -51423,9 +51431,6 @@ static SDValue combineIntDivRem(SDNode *N, SelectionDAG &DAG,
   else if (UseExactFPDiv &&
            (EltBits <= 16 || BothFitFP(APFloat::IEEEsingle())))
     FPSclVT = MVT::f32;
-
-  bool IsStrict = DAG.getMachineFunction().getFunction().hasFnAttribute(
-      Attribute::StrictFP);
 
   // The SAE forms are 512-bit only. Inputs widen into a zmm below, which
   // requires 512-bit types to be legal.
@@ -51442,7 +51447,7 @@ static SDValue combineIntDivRem(SDNode *N, SelectionDAG &DAG,
   if (Needs512 && !isPowerOf2_32(NumElts)) {
     unsigned MaxWidenedElts = 512 / FPSclVT.getSizeInBits();
     if (IsStrict && FPSclVT == MVT::f16 && EltBits <= 16)
-      MaxWidenedElts = std::min(MaxWidenedElts, 512 / 16);
+      MaxWidenedElts = std::min(MaxWidenedElts, 32u);
     if (NextPowerOf2(NumElts) > MaxWidenedElts)
       return SDValue();
     Dividend = DAG.WidenVector(Dividend, DL);
