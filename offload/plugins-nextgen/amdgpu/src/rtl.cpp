@@ -14,8 +14,10 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <deque>
 #include <functional>
+#include <map>
 #include <mutex>
 #include <string>
 #include <system_error>
@@ -383,6 +385,25 @@ struct AMDGPUMemoryPoolTy {
     return Access != HSA_AMD_MEMORY_POOL_ACCESS_NEVER_ALLOWED;
   }
 
+  /// Returns if the \p Agent reaches the memory pool over XGMI only, i.e.,
+  /// without any PCIe (or other) hop along the way.
+  bool isLinkedOverXGMI(hsa_agent_t Agent) {
+    uint32_t NumHops = 0;
+    if (hsa_amd_agent_memory_pool_get_info(
+            Agent, MemoryPool, HSA_AMD_AGENT_MEMORY_POOL_INFO_NUM_LINK_HOPS,
+            &NumHops) ||
+        NumHops == 0)
+      return false;
+    llvm::SmallVector<hsa_amd_memory_pool_link_info_t> Links(NumHops);
+    if (hsa_amd_agent_memory_pool_get_info(
+            Agent, MemoryPool, HSA_AMD_AGENT_MEMORY_POOL_INFO_LINK_INFO,
+            Links.data()))
+      return false;
+    return llvm::all_of(Links, [](const hsa_amd_memory_pool_link_info_t &L) {
+      return L.link_type == HSA_AMD_LINK_INFO_TYPE_XGMI;
+    });
+  }
+
   /// Allow the device to access a specific allocation.
   Error enableAccess(void *Ptr, int64_t Size,
                      const llvm::SmallVector<hsa_agent_t> &Agents) const {
@@ -529,6 +550,31 @@ private:
   /// Reference to the actual memory manager.
   MemoryManagerTy *MemoryManager;
 };
+
+/// Largest size for direct host to device transfer.
+static constexpr size_t MaxDirectWriteSize = 2 * 4096;
+
+/// Copy \p Size bytes from \p Src to the device memory at \p Dst.
+/// \p OverXGMI tells whether the host reaches that memory over XGMI.
+///
+/// The host writes device memory through a write-combining mapping, which the
+/// release store on the doorbell does not order, so the fence drains it. Over
+/// PCIe the stores are posted and may still be in flight after that; reading
+/// back the last byte, written again after the fence, waits for them to land.
+/// XGMI needs no read-back. HSA exposes no call for this: it is the sequence of
+/// ROCr's internal GpuAgent::PcieWcFlush and of HIP for kernel arguments in
+/// device memory.
+static void publishToDeviceMemory(void *Dst, const void *Src, size_t Size,
+                                  bool OverXGMI) {
+  auto *Last = reinterpret_cast<volatile char *>(Dst) + Size - 1;
+  std::memcpy(Dst, Src, Size);
+  std::atomic_thread_fence(std::memory_order_seq_cst);
+  if (OverXGMI)
+    return;
+  *Last = reinterpret_cast<const char *>(Src)[Size - 1];
+  std::atomic_thread_fence(std::memory_order_seq_cst);
+  (void)*Last;
+}
 
 /// Class implementing the AMDGPU device images' properties.
 struct AMDGPUDeviceImageTy : public DeviceImageTy {
@@ -2226,6 +2272,9 @@ struct AMDHostDeviceTy : public AMDGenericDeviceTy {
   /// Get the host agent.
   hsa_agent_t getAgent() const override { return Agent; }
 
+  /// Get all the host agents.
+  llvm::ArrayRef<hsa_agent_t> getAgents() const { return Agents; }
+
   /// Get a memory pool for fine-grained allocations.
   AMDGPUMemoryPoolTy &getFineGrainedMemoryPool() {
     assert(!FineGrainedMemoryPools.empty() && "No fine-grained mempool");
@@ -2292,6 +2341,17 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     // First setup all the memory pools.
     if (auto Err = initMemoryPools())
       return Err;
+
+    HostWritesDeviceMemory =
+        !CoarseGrainedMemoryPools.empty() &&
+        CoarseGrainedMemoryPools[0]->canAccess(HostDevice.getAgent());
+    // The writing thread may run on any host agent, so all of them must reach
+    // the device over XGMI.
+    HostLinkIsXGMI =
+        HostWritesDeviceMemory &&
+        llvm::all_of(HostDevice.getAgents(), [&](hsa_agent_t HostAgent) {
+          return CoarseGrainedMemoryPools[0]->isLinkedOverXGMI(HostAgent);
+        });
 
     char GPUName[64];
     if (auto Err = getDeviceAttr(HSA_AGENT_INFO_NAME, GPUName))
@@ -2741,6 +2801,11 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
       if (auto Err = PinnedAllocs.unregisterHostBuffer(TgtPtr))
         return Err;
 
+    if (MemoryPool == CoarseGrainedMemoryPools[0] && HostWritesDeviceMemory) {
+      std::lock_guard<std::mutex> Lock(HostMappedAllocsMutex);
+      HostMappedAllocs.erase(TgtPtr);
+    }
+
     if (auto Err = MemoryPool->deallocate(TgtPtr))
       return Err;
 
@@ -2846,11 +2911,38 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     return true;
   }
 
+  /// Whether a transfer of \p Size bytes should be done via direct H2D
+  /// transfer.
+  bool allowsDirectWrite(int64_t Size) const {
+    return HostWritesDeviceMemory && Size > 0 &&
+           Size <= int64_t(MaxDirectWriteSize);
+  }
+
+  /// Whether the host can write \p Size bytes of device memory at \p Ptr,
+  /// i.e., whether they lie within an allocation that allocate() mapped for
+  /// the host.
+  bool isHostWritable(const void *Ptr, int64_t Size) const {
+    std::lock_guard<std::mutex> Lock(HostMappedAllocsMutex);
+    auto It = HostMappedAllocs.upper_bound(Ptr);
+    if (It == HostMappedAllocs.begin())
+      return false;
+    --It;
+    return utils::getPtrDiff(Ptr, It->first) + Size <= int64_t(It->second);
+  }
+
   /// Submit data to the device (host to device transfer).
   Error dataSubmitImpl(void *TgtPtr, const void *HstPtr, int64_t Size,
-                       AsyncInfoWrapperTy &AsyncInfoWrapper) override {
+                       AsyncInfoWrapperTy &AsyncInfoWrapper,
+                       bool Unordered) override {
     AMDGPUStreamTy *Stream = nullptr;
     void *PinnedPtr = nullptr;
+
+    // The direct H2D write is independent of any queueing, so Unordered is a
+    // requirement.
+    if (Unordered && allowsDirectWrite(Size) && isHostWritable(TgtPtr, Size)) {
+      publishToDeviceMemory(TgtPtr, HstPtr, Size, HostLinkIsXGMI);
+      return Plugin::success();
+    }
 
     // Use one-step asynchronous operation when host memory is already pinned.
     if (void *PinnedPtr =
@@ -3731,6 +3823,18 @@ private:
 
   /// Reference to the host device.
   AMDHostDeviceTy &HostDevice;
+
+  /// Whether the host can map this device's memory (large BAR) and write small
+  /// transfers into it directly.
+  bool HostWritesDeviceMemory = false;
+
+  /// Whether the host reaches this device's memory over XGMI rather than PCIe.
+  bool HostLinkIsXGMI = false;
+
+  /// The allocations mapped for the host, by base address, with their sizes.
+  /// Ordered, so that a pointer into one of them finds it.
+  std::map<const void *, size_t> HostMappedAllocs;
+  mutable std::mutex HostMappedAllocsMutex;
 
   /// The current size of the stack that will be used in cases where it could
   /// not be statically determined.
@@ -4635,9 +4739,38 @@ Expected<void *> AMDGPUDeviceTy::allocate(size_t Size, void *,
                     return MemoryPool->canAccess(Agent);
                   });
 
+    // Map small device allocations for the host too, so that it can write
+    // transfers into them directly (see dataSubmitImpl).
+    bool MapForHost =
+        MemoryPool == CoarseGrainedMemoryPools[0] && allowsDirectWrite(Size);
+    if (MapForHost)
+      Agents.push_back(HostDevice.getAgent());
+
     // Enable all valid kernel agents to access the buffer.
-    if (auto Err = MemoryPool->enableAccess(Alloc, Size, Agents))
+    Error Err = MemoryPool->enableAccess(Alloc, Size, Agents);
+
+    // The host mapping is only an optimization. If it fails, e.g., because the
+    // host-visible window of device memory is exhausted, fall back to the
+    // device agents alone.
+    if (Err && MapForHost) {
+      std::string Msg = toString(std::move(Err));
+      ODBG(OLDT_Alloc) << "Failed to map device allocation " << Alloc
+                       << " for the host: " << Msg;
+      MapForHost = false;
+      Agents.pop_back();
+      Err = MemoryPool->enableAccess(Alloc, Size, Agents);
+    }
+
+    if (Err) {
+      if (auto FreeErr = MemoryPool->deallocate(Alloc))
+        return joinErrors(std::move(Err), std::move(FreeErr));
       return std::move(Err);
+    }
+
+    if (MapForHost) {
+      std::lock_guard<std::mutex> Lock(HostMappedAllocsMutex);
+      HostMappedAllocs.insert_or_assign(Alloc, Size);
+    }
 
     // Register host / shared memory as pinned memory, so that transfers reading
     // from it can take a device-accessible path.

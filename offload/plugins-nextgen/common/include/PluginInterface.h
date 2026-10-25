@@ -980,11 +980,14 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
                                          void *&BaseDevAccessiblePtr,
                                          size_t &BaseSize) const = 0;
 
-  /// Submit data to the device (host to device transfer).
+  /// Submit data to the device (host to device transfer). Set \p Unordered if
+  /// no operation pending on the queue accesses \p TgtPtr, so that the
+  /// transfer need not be ordered after them.
   Error dataSubmit(void *TgtPtr, const void *HstPtr, int64_t Size,
-                   __tgt_async_info *AsyncInfo);
+                   __tgt_async_info *AsyncInfo, bool Unordered = false);
   virtual Error dataSubmitImpl(void *TgtPtr, const void *HstPtr, int64_t Size,
-                               AsyncInfoWrapperTy &AsyncInfoWrapper) = 0;
+                               AsyncInfoWrapperTy &AsyncInfoWrapper,
+                               bool Unordered) = 0;
 
   /// Retrieve data from the device (device to host transfer).
   Error dataRetrieve(void *HstPtr, const void *TgtPtr, int64_t Size,
