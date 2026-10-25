@@ -16,8 +16,7 @@ clang_cflags = [config.target_cflags] + config.debug_info_flags
 clang_cxxflags = config.cxx_mode_flags + clang_cflags
 clang_hwasan_common_cflags = clang_cflags + ["-fsanitize=hwaddress", "-fuse-ld=lld"]
 
-enable_aliases = config.target_arch == "x86_64" and config.enable_aliases != "0"
-if enable_aliases:
+if config.target_arch == "x86_64" and config.enable_aliases != "0":
     clang_hwasan_common_cflags += ["-fsanitize-hwaddress-experimental-aliasing"]
 else:
     config.available_features.add("pointer-tagging")
@@ -87,6 +86,5 @@ llvm_config.add_tool_substitutions(
 # Default test suffixes.
 config.suffixes = [".c", ".cpp"]
 
-supported_os = ["Linux"] if enable_aliases else ["Linux", "Android"]
-if config.target_os not in supported_os or not config.has_lld:
+if config.target_os not in ["Linux", "Android"] or not config.has_lld:
     config.unsupported = True

@@ -247,7 +247,7 @@ endfunction()
 
 foreach(arch ${HWASAN_SUPPORTED_ARCH})
   add_hwasan_runtimes(${arch} FALSE)
-  if(${arch} MATCHES "x86_64" AND NOT ANDROID)
+  if(${arch} MATCHES "x86_64")
     add_hwasan_runtimes(${arch} TRUE)
   endif()
 endforeach()
