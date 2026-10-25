@@ -26,3 +26,27 @@ contains
     y = y + 1
   end subroutine
 end subroutine
+
+! A SIMPLE internal function of an impure host is pure (C15109 applies inside
+! it only); its impure sibling and the following external subprogram are not
+subroutine host()
+contains
+  simple integer function f()
+    !ERROR: An image control statement may not appear in a pure subprogram
+    sync all
+    f = 0
+  end function
+  subroutine sibling()
+    sync all
+  end subroutine
+end subroutine
+
+subroutine following()
+  sync all
+end subroutine
+
+! F2023 C15109: An image control statement may not appear in a SIMPLE subprogram
+simple subroutine simple_image_control()
+  !ERROR: An image control statement may not appear in a pure subprogram
+  sync all
+end subroutine
