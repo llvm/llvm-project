@@ -732,6 +732,13 @@ public:
     return createBuiltinIntCast(src.getLoc(), src, newTy);
   }
 
+  /// Casts \p src to the builtin MLIR integer type with the same width as
+  /// its own CIR integer type.
+  mlir::Value createBuiltinIntCast(mlir::Location loc, mlir::Value src) {
+    auto cirIntTy = mlir::cast<cir::IntType>(src.getType());
+    return createBuiltinIntCast(loc, src, getIntegerType(cirIntTy.getWidth()));
+  }
+
   mlir::Value createIntToPtr(mlir::Value src, mlir::Type newTy) {
     return createCast(cir::CastKind::int_to_ptr, src, newTy);
   }
