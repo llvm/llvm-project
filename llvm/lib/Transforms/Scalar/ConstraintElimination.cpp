@@ -2566,12 +2566,26 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
         // If samesign is present on the ICmp, simply flip the sign of the
         // predicate, transferring the information from the signed system to the
         // unsigned system, and viceversa.
-        if (Pred.hasSameSign())
+        if (Pred.hasSameSign()) {
           Info.addFact(ICmpInst::getFlippedSignednessPredicate(Pred), A, B,
                        CB.NumIn, CB.NumOut, DFSInStack);
-        else
+          // The operands also have the same sign: if one of them is known to
+          // be non-negative (or negative), so is the other.
+          for (auto [Known, Other] : {std::pair(A, B), std::pair(B, A)}) {
+            if (!Other->getType()->isIntegerTy())
+              continue;
+            Constant *Zero = Constant::getNullValue(Other->getType());
+            if (Info.isKnownNonNegative(Known))
+              Info.addFact(CmpInst::ICMP_SGE, Other, Zero, CB.NumIn, CB.NumOut,
+                           DFSInStack);
+            else if (::isKnownNegative(Known, F.getDataLayout()))
+              Info.addFact(CmpInst::ICMP_SLT, Other, Zero, CB.NumIn, CB.NumOut,
+                           DFSInStack);
+          }
+        } else {
           Info.transferToOtherSystem(Pred, A, B, CB.NumIn, CB.NumOut,
                                      DFSInStack);
+        }
       }
 
       // (X | Y) >s -1 implies X >s -1 and Y >s -1, because the sign bit of an
