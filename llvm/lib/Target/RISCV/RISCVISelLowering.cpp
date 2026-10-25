@@ -30856,6 +30856,10 @@ unsigned RISCVTargetLowering::getCustomCtpopCost(EVT VT,
   return isCtpopFast(VT) ? 0 : 1;
 }
 
+bool RISCVTargetLowering::hasMultipleConditionRegisters(EVT VT) const {
+  return Subtarget.hasVInstructions() && VT.isVector();
+}
+
 bool RISCVTargetLowering::shouldInsertFencesForAtomic(
     const Instruction *I) const {
   if (Subtarget.hasStdExtZalasr()) {
