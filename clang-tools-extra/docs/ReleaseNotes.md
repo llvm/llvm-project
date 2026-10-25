@@ -261,9 +261,13 @@ infrastructure are described first, followed by tool-specific sections.
 
   - No longer diagnoses variables declared with `decltype(auto)`, where the
     suggested `const` does not compile.
-    
+
   - No longer diagnoses parameters of `main`, whose signature is fixed by the
     standard.
+
+  - No longer diagnoses variables used as operands of `std::move` in template
+    instantiations, where the suggested `const` would break the move for
+    instantiations with real move semantics.
 
 - Fixed an infinite loop in {doc}`misc-multiple-inheritance
   <clang-tidy/checks/misc/multiple-inheritance>` when checking a class that
@@ -429,7 +433,7 @@ infrastructure are described first, followed by tool-specific sections.
   - Ignored preprocessor directives such as `#endif` that appear immediately
     before an enum's closing brace, which previously produced a false positive
     and a fix-it that inserted a comma after the directive.
-    
+
   - Fixed a false positive on empty brace initializers of types with default
     member initializers.
 

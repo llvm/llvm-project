@@ -5473,7 +5473,8 @@ void LoopVectorizationPlanner::clearCostModel() { CM.reset(); }
 DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
     ElementCount BestVF, unsigned BestUF, VPlan &BestVPlan,
     InnerLoopVectorizer &ILV, DominatorTree *DT,
-    EpilogueVectorizationKind EpilogueVecKind) {
+    EpilogueVectorizationKind EpilogueVecKind,
+    MutableArrayRef<VPBasicBlock *> TrackedBlocks) {
   assert(BestVPlan.hasVF(BestVF) &&
          "Trying to execute plan with unsupported VF");
   assert(BestVPlan.hasUF(BestUF) &&
@@ -5678,8 +5679,11 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   if (EpilogueVecKind == EpilogueVectorizationKind::MainLoop)
     for (VPBasicBlock *VPBB : to_vector(VPBlockUtils::blocksAs<VPBasicBlock>(
              vp_depth_first_shallow(BestVPlan.getEntry()))))
-      if (!isa<VPIRBasicBlock>(VPBB))
-        replaceVPBBWithIRVPBB(VPBB, State.CFG.VPBB2IRBB.at(VPBB), &BestVPlan);
+      if (!isa<VPIRBasicBlock>(VPBB)) {
+        VPBasicBlock *IRVPBB = replaceVPBBWithIRVPBB(
+            VPBB, State.CFG.VPBB2IRBB.at(VPBB), &BestVPlan);
+        replace(TrackedBlocks, VPBB, IRVPBB);
+      }
 
   return ExpandedSCEVs;
 }
@@ -7051,7 +7055,8 @@ static void preparePlanForEpilogueVectorLoop(
     VPlan &MainPlan, VPlan &Plan, Loop *L, const SCEV2ValueTy &ExpandedSCEVs,
     ElementCount MainLoopVF, unsigned MainLoopUF, ElementCount EpilogueVF,
     LoopVectorizationPlanner &LVP, VFSelectionContext &Config,
-    ScalarEvolution &SE, const MainPlanResumeMarkers &Markers) {
+    ScalarEvolution &SE, const MainPlanResumeMarkers &Markers,
+    VPBasicBlock *MainCheck) {
   // Build a map from the scalar-header PHI to the ResumeForEpilogue markers
   // from the main plan.
   // TODO: Replace the IR PHI key.
@@ -7060,7 +7065,7 @@ static void preparePlanForEpilogueVectorLoop(
        zip_equal(MainPlan.getScalarHeader()->phis(), Markers.ResumeValues))
     IRPhiToResumeForEpi[&cast<VPIRPhi>(HeaderPhi).getIRPhi()] = ResumeForEpi;
   VPIRBasicBlock *EpilogueCheck = RUN_VPLAN_PASS(
-      VPlanTransforms::modelGeneratedMainLoopBlocks, Plan, MainPlan);
+      VPlanTransforms::modelGeneratedMainLoopBlocks, Plan, MainPlan, MainCheck);
   VPRegionBlock *VectorLoop = Plan.getVectorLoopRegion();
   VPBasicBlock *Header = VectorLoop->getEntryBasicBlock();
   Header->setName("vec.epilog.vector.body");
@@ -7753,9 +7758,14 @@ bool LoopVectorizePass::processLoop(Loop *L) {
              << ", Epilogue Loop VF:" << EpilogueVF << ", Epilogue Loop UF:1\n";
     });
     InnerLoopVectorizer MainILV(L, PSE, LI, DT, TTI, AC, VF.Width, IC, Checks);
+    // Keep track of the iteration count check of the main vector loop.
+    VPBasicBlock *MainBlocks[] = {cast<VPBasicBlock>(
+        BestMainPlan.getVectorPreheader()->getSinglePredecessor())};
     auto ExpandedSCEVs = LVP.executePlan(
         VF.Width, IC, BestMainPlan, MainILV, DT,
-        LoopVectorizationPlanner::EpilogueVectorizationKind::MainLoop);
+        LoopVectorizationPlanner::EpilogueVectorizationKind::MainLoop,
+        MainBlocks);
+    VPBasicBlock *MainCheck = MainBlocks[0];
     ++LoopsVectorized;
     DEBUG_WITH_TYPE(VerboseDebug, {
       dbgs() << "intermediate fn:\n" << *L->getHeader()->getParent() << "\n";
@@ -7772,9 +7782,9 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     // edges from the first pass.
     InnerLoopVectorizer EpilogILV(L, PSE, LI, DT, TTI, AC, EpilogueVF,
                                   /*UnrollFactor=*/1, Checks);
-    preparePlanForEpilogueVectorLoop(BestMainPlan, BestEpiPlan, L,
-                                     ExpandedSCEVs, VF.Width, IC, EpilogueVF,
-                                     LVP, Config, *PSE.getSE(), Markers);
+    preparePlanForEpilogueVectorLoop(
+        BestMainPlan, BestEpiPlan, L, ExpandedSCEVs, VF.Width, IC, EpilogueVF,
+        LVP, Config, *PSE.getSE(), Markers, MainCheck);
     RUN_VPLAN_PASS(VPlanTransforms::simplifyLiveInsWithSCEV, BestEpiPlan, PSE);
     LLVM_DEBUG({
       dbgs() << "Create Skeleton for epilogue vectorized loop (second pass)\n"

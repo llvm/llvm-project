@@ -1281,13 +1281,6 @@ int32_t GenericPluginTy::isDeviceCompatible(int32_t DeviceId, StringRef Image) {
   }
 }
 
-int GenericPluginTy::number_of_team_procs(int DeviceId) {
-  auto T = logger::log<int>(__func__, DeviceId);
-  auto R = [&]() { return getDevice(DeviceId).getNumComputeUnits(); }();
-  T.res(R);
-  return R;
-}
-
 bool GenericPluginTy::has_apu_device(int32_t DeviceId) {
   auto T = logger::log<bool>(__func__, DeviceId);
   auto R = [&]() { return getDevice(DeviceId).hasAPUDevice(); }();

@@ -3321,6 +3321,77 @@ define i32 @mulu_h00_zexti16_and_commute(i16 zeroext %a, i32 %b) nounwind {
   ret i32 %mul
 }
 
+define i32 @mulu_h01(i16 zeroext %a, i32 %b) nounwind {
+; RV32-LABEL: mulu_h01:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mulu.h01 a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: mulu_h01:
+; RV64:       # %bb.0:
+; RV64-NEXT:    srliw a1, a1, 16
+; RV64-NEXT:    mulw a0, a0, a1
+; RV64-NEXT:    ret
+  %aext = zext i16 %a to i32
+  %bhi = lshr i32 %b, 16
+  %mul = mul i32 %aext, %bhi
+  ret i32 %mul
+}
+
+define i32 @mulu_h01_commute(i16 zeroext %a, i32 %b) nounwind {
+; RV32-LABEL: mulu_h01_commute:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mulu.h01 a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: mulu_h01_commute:
+; RV64:       # %bb.0:
+; RV64-NEXT:    srliw a1, a1, 16
+; RV64-NEXT:    mulw a0, a1, a0
+; RV64-NEXT:    ret
+  %aext = zext i16 %a to i32
+  %bhi = lshr i32 %b, 16
+  %mul = mul i32 %bhi, %aext
+  ret i32 %mul
+}
+
+; Low halfword comes from an and rather than a zeroext argument.
+define i32 @mulu_h01_and(i32 %a, i32 %b) nounwind {
+; RV32-LABEL: mulu_h01_and:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mulu.h01 a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: mulu_h01_and:
+; RV64:       # %bb.0:
+; RV64-NEXT:    zext.h a0, a0
+; RV64-NEXT:    srliw a1, a1, 16
+; RV64-NEXT:    mulw a0, a0, a1
+; RV64-NEXT:    ret
+  %alo = and i32 %a, 65535
+  %bhi = lshr i32 %b, 16
+  %mul = mul i32 %alo, %bhi
+  ret i32 %mul
+}
+
+define i32 @mulu_h11(i32 %a, i32 %b) nounwind {
+; RV32-LABEL: mulu_h11:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mulu.h11 a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: mulu_h11:
+; RV64:       # %bb.0:
+; RV64-NEXT:    srliw a0, a0, 16
+; RV64-NEXT:    srliw a1, a1, 16
+; RV64-NEXT:    mulw a0, a0, a1
+; RV64-NEXT:    ret
+  %ahi = lshr i32 %a, 16
+  %bhi = lshr i32 %b, 16
+  %mul = mul i32 %ahi, %bhi
+  ret i32 %mul
+}
+
 define i32 @mulsu_h00_sexti16_and(i16 signext %a, i32 %b) nounwind {
 ; RV32-LABEL: mulsu_h00_sexti16_and:
 ; RV32:       # %bb.0:
