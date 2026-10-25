@@ -280,9 +280,6 @@ void EhFrameSection::addRecords(EhInputSection *sec) {
   for (EhSectionPiece &cie : sec->cies)
     sectionCies.push_back(addCie(cie, rels));
   for (EhSectionPiece &fde : sec->fdes) {
-    if (fde.cie == uint32_t(-1))
-      Fatal(ctx) << sec << ": invalid CIE reference";
-
     if (!isFdeLive(fde, rels))
       continue;
     sectionCies[fde.cie]->fdes.push_back(&fde);
@@ -299,7 +296,7 @@ void EhFrameSection::iterateFDEWithLSDA(
     for (EhSectionPiece &cie : sec->cies)
       ciesWithLSDA.push_back(hasLSDA(cie));
     for (EhSectionPiece &fde : sec->fdes) {
-      if (fde.cie == uint32_t(-1) || !ciesWithLSDA[fde.cie])
+      if (!ciesWithLSDA[fde.cie])
         continue;
 
       // The CIE has a LSDA argument. Call fn with d's section.
