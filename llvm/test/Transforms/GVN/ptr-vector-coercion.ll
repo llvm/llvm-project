@@ -7,9 +7,7 @@ define ptr @v1ptr_store_to_ptr_load(ptr %p, <1 x ptr> %v) {
 ; CHECK-LABEL: define ptr @v1ptr_store_to_ptr_load(
 ; CHECK-SAME: ptr [[P:%.*]], <1 x ptr> [[V:%.*]]) {
 ; CHECK-NEXT:    store <1 x ptr> [[V]], ptr [[P]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint <1 x ptr> [[V]] to <1 x i64>
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <1 x i64> [[TMP1]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[TMP2]] to ptr
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <1 x ptr> [[V]] to ptr
 ; CHECK-NEXT:    ret ptr [[TMP3]]
 ;
   store <1 x ptr> %v, ptr %p
@@ -21,9 +19,7 @@ define <1 x ptr> @ptr_store_to_v1ptr_load(ptr %p, ptr %v) {
 ; CHECK-LABEL: define <1 x ptr> @ptr_store_to_v1ptr_load(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[V:%.*]]) {
 ; CHECK-NEXT:    store ptr [[V]], ptr [[P]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[V]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i64 [[TMP1]] to <1 x i64>
-; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr <1 x i64> [[TMP2]] to <1 x ptr>
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast ptr [[V]] to <1 x ptr>
 ; CHECK-NEXT:    ret <1 x ptr> [[TMP3]]
 ;
   store ptr %v, ptr %p
@@ -35,9 +31,7 @@ define ptr @v1ptr_load_to_ptr_load(ptr %p) {
 ; CHECK-LABEL: define ptr @v1ptr_load_to_ptr_load(
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[A:%.*]] = load <1 x ptr>, ptr [[P]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint <1 x ptr> [[A]] to <1 x i64>
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <1 x i64> [[TMP1]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[TMP2]] to ptr
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <1 x ptr> [[A]] to ptr
 ; CHECK-NEXT:    call void @use(<1 x ptr> [[A]])
 ; CHECK-NEXT:    ret ptr [[TMP3]]
 ;
