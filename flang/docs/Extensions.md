@@ -614,8 +614,9 @@ The following extensions are not classified as `SIMPLE`: `CHDIR`, `DSECNDS`, `ET
 
 ### Extensions supported when enabled by options
 
-* C-style backslash escape sequences in quoted CHARACTER literals
-  (but not Hollerith) [-fbackslash], including Unicode escapes
+* C-style backslash escape sequences in quoted CHARACTER literals and character
+  string edit descriptors in FORMAT statements (but not Hollerith)
+  [-fbackslash], including Unicode escapes
   with `\U`.
 * Logical abbreviations `.T.`, `.F.`, `.N.`, `.A.`, `.O.`, and `.X.`
   [-flogical-abbreviations]

@@ -32,7 +32,9 @@
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Support/InternalNames.h"
+#include "flang/Parser/characters.h"
 #include "flang/Parser/parse-tree.h"
+#include "flang/Parser/provenance.h"
 #include "flang/Runtime/io-api.h"
 #include "flang/Semantics/runtime-type-info.h"
 #include "flang/Semantics/tools.h"
@@ -1418,6 +1420,81 @@ lowerStringLit(Fortran::lower::AbstractConverter &converter, mlir::Location loc,
   return {buff, len, kind};
 }
 
+/// Decode escapes in the quoted strings of a cooked FORMAT statement when
+/// -fbackslash is enabled. Hollerith strings do not process escapes.
+static std::string decodeFormatString(llvm::StringRef text) {
+  std::string result;
+  char quote = '\0';
+  std::uint64_t hollerithCount = 0;
+  while (!text.empty()) {
+    char ch = text.front();
+    if (quote) {
+      if (ch == '\\') {
+        auto decoded = Fortran::parser::DecodeCharacter<
+            Fortran::parser::Encoding::LATIN_1>(text.data(), text.size(),
+                                                /*backslashEscapes=*/true);
+        text = text.drop_front(decoded.bytes);
+        ch = decoded.codepoint;
+        // A decoded quote is part of the string, not its closing delimiter.
+        if (ch == quote)
+          result += quote;
+      } else {
+        text = text.drop_front();
+        if (ch == quote)
+          quote = '\0';
+      }
+      result += ch;
+      continue;
+    }
+
+    result += ch;
+    text = text.drop_front();
+    if (Fortran::parser::IsDecimalDigit(ch)) {
+      hollerithCount = 10 * hollerithCount + ch - '0';
+      continue;
+    }
+    if (ch == ' ')
+      continue;
+    if (ch == '\'' || ch == '"') {
+      quote = ch;
+    } else if (ch == 'h') {
+      // Hollerith counts characters, not bytes, and does not process escapes.
+      for (; hollerithCount && !text.empty(); --hollerithCount) {
+        auto bytes = Fortran::parser::UTF_8CharacterBytes(text.data());
+        result += text.take_front(bytes);
+        text = text.drop_front(bytes);
+      }
+    }
+    hollerithCount = 0;
+  }
+  return result;
+}
+
+/// Undo only the backslashes inserted by the prescanner when escapes are
+/// disabled. Its interpretation of quoted and Hollerith strings can differ
+/// from the FORMAT grammar, so re-lexing the cooked text is not sufficient.
+static std::string
+removeInsertedBackslashes(llvm::StringRef text,
+                          const Fortran::parser::AllCookedSources *cooked) {
+  if (!cooked)
+    return text.str();
+  std::string result;
+  for (const char &ch : text) {
+    if (ch == '\\') {
+      if (auto provenance =
+              cooked->GetProvenanceRange(Fortran::parser::CharBlock{&ch, 1})) {
+        if (!cooked->allSources().GetSourceFile(provenance->start()))
+          continue;
+      }
+    }
+    result += ch;
+  }
+  // FIXME: Macro expansion replaces character provenance, so an inserted
+  // backslash in a macro expansion cannot be distinguished from source text.
+  // Preserve such backslashes until the preprocessor retains that information.
+  return result;
+}
+
 /// Pass the body of the FORMAT statement in as if it were a CHARACTER literal
 /// constant. NB: This is the prescribed manner in which the front-end passes
 /// this information to lowering.
@@ -1427,6 +1504,14 @@ lowerSourceTextAsStringLit(Fortran::lower::AbstractConverter &converter,
                            mlir::Type strTy, mlir::Type lenTy) {
   text = text.drop_front(text.find('('));
   text = text.take_front(text.rfind(')') + 1);
+  bool backslashEscapes =
+      converter.getFoldingContext().languageFeatures().IsEnabled(
+          Fortran::common::LanguageFeature::BackslashEscapes);
+  std::string decoded =
+      backslashEscapes
+          ? decodeFormatString(text)
+          : removeInsertedBackslashes(text, converter.getCookedSource());
+  text = decoded;
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   mlir::Value addrGlobalStringLit =
       fir::getBase(fir::factory::createStringLiteral(builder, loc, text));

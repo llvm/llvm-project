@@ -53,6 +53,7 @@ struct SomeType;
 } // namespace evaluate
 
 namespace parser {
+class AllCookedSources;
 class CharBlock;
 }
 namespace semantics {
@@ -252,6 +253,9 @@ public:
   /// Get FoldingContext that is required for some expression
   /// analysis.
   virtual Fortran::evaluate::FoldingContext &getFoldingContext() = 0;
+
+  /// Get the cooked source and its character provenance, if available.
+  virtual const Fortran::parser::AllCookedSources *getCookedSource() const = 0;
 
   /// Host associated variables are grouped as a tuple. This returns that value,
   /// which is itself a reference. Use bindTuple() to set this value.

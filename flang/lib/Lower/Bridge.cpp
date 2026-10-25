@@ -917,6 +917,11 @@ public:
     return foldingContext;
   }
 
+  const Fortran::parser::AllCookedSources *
+  getCookedSource() const override final {
+    return bridge.getCookedSource();
+  }
+
   mlir::Type genType(const Fortran::lower::SomeExpr &expr) override final {
     return Fortran::lower::translateSomeExprToFIRType(*this, expr);
   }
