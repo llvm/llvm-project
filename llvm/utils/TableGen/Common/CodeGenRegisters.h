@@ -181,7 +181,6 @@ public:
     return this->EnumValue < RHS.EnumValue;
   }
 
-private:
   // Return true if Range has an offset in all NumModes modes. Offsets are
   // never cleared once set, so cache a true result.
   bool hasOffsetInAllModes(unsigned NumModes) {
@@ -195,6 +194,7 @@ private:
     return OffsetInAllModes;
   }
 
+private:
   bool OffsetInAllModes = false;
   CompMap Composed;
   // Composed indexed by the EnumValue of the first index, for compose().
