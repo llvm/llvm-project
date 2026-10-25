@@ -702,6 +702,7 @@ SameKindExprs<CAT, 2> AsSameKindExprs(
   } else if (xKind < yKind) {
     return {SameExprs<Type<CAT>>{ConvertTo(ky, std::move(kx)), std::move(ky)}};
   } else {
+    // Must be computed before kx is moved into the first array element.
     auto converted{ConvertTo(kx, std::move(ky))};
     return {SameExprs<Type<CAT>>{std::move(kx), std::move(converted)}};
   }
