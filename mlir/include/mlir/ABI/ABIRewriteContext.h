@@ -70,6 +70,11 @@ struct ArgClassification {
   /// For Extend: whether to sign-extend (true) or zero-extend (false).
   bool signExtend = false;
 
+  /// For Extend: whether the extension attribute is only added on call sites.
+  /// The caller performs the extension, but the callee does not get to assume
+  /// that it did.
+  bool extendOnCallSiteOnly = false;
+
   /// For Direct: whether a struct coercion can be flattened into
   /// individual register-width arguments.
   bool canFlatten = true;
@@ -103,8 +108,9 @@ struct ArgClassification {
   bool operator==(const ArgClassification &other) const {
     return kind == other.kind && coercedType == other.coercedType &&
            indirectAlign == other.indirectAlign &&
-           signExtend == other.signExtend && canFlatten == other.canFlatten &&
-           byVal == other.byVal &&
+           signExtend == other.signExtend &&
+           extendOnCallSiteOnly == other.extendOnCallSiteOnly &&
+           canFlatten == other.canFlatten && byVal == other.byVal &&
            indirectAddrSpace == other.indirectAddrSpace &&
            directOffset == other.directOffset &&
            neededIntRegs == other.neededIntRegs &&
@@ -143,11 +149,13 @@ struct ArgClassification {
     return c;
   }
 
-  static ArgClassification getExtend(Type coerced, bool signExt) {
+  static ArgClassification getExtend(Type coerced, bool signExt,
+                                     bool onCallSiteOnly = false) {
     ArgClassification c;
     c.kind = ArgKind::Extend;
     c.coercedType = coerced;
     c.signExtend = signExt;
+    c.extendOnCallSiteOnly = onCallSiteOnly;
     return c;
   }
 };

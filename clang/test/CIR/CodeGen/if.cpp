@@ -26,7 +26,7 @@ int if0(bool a) {
 // CIR-NEXT:  }
 
 
-// LLVM: define{{.*}} i32 @_Z3if0b(i1 noundef zeroext %0)
+// LLVM: define{{.*}} i32 @_Z3if0b(i1 noundef %0)
 // LLVM:   br label %[[ENTRY:.*]]
 // LLVM: [[ENTRY]]:
 // LLVM:   %6 = load i8, ptr %3, align 1
@@ -43,7 +43,7 @@ int if0(bool a) {
 // LLVM:   %12 = load i32, ptr %2, align 4
 // LLVM:   ret i32 %12
 
-// OGCG: define{{.*}} i32 @_Z3if0b(i1 noundef zeroext %a)
+// OGCG: define{{.*}} i32 @_Z3if0b(i1 noundef %a)
 // OGCG: entry:
 // OGCG:   %[[RETVAL:.*]] = alloca i32, align 4
 // OGCG:   %[[A_ADDR:.*]] = alloca i8, align 1
@@ -165,7 +165,7 @@ void if2(int a, bool b, bool c) {
 // CIR:   }
 // CIR: }
 
-// LLVM: define{{.*}} void @_Z3if2ibb(i32 noundef %[[A:.*]], i1 noundef zeroext %[[B:.*]], i1 noundef zeroext %[[C:.*]])
+// LLVM: define{{.*}} void @_Z3if2ibb(i32 noundef %[[A:.*]], i1 noundef %[[B:.*]], i1 noundef %[[C:.*]])
 // LLVM:   %[[VARA:.*]] = alloca i32, align 4
 // LLVM:   %[[VARB:.*]] = alloca i8, align 1
 // LLVM:   %[[VARC:.*]] = alloca i8, align 1
@@ -214,7 +214,7 @@ void if2(int a, bool b, bool c) {
 // LLVM: [[LABEL28]]:
 // LLVM:   ret void
 
-// OGCG: define{{.*}} void @_Z3if2ibb(i32 noundef %[[A:.*]], i1 noundef zeroext %[[B:.*]], i1 noundef zeroext %[[C:.*]])
+// OGCG: define{{.*}} void @_Z3if2ibb(i32 noundef %[[A:.*]], i1 noundef %[[B:.*]], i1 noundef %[[C:.*]])
 // OGCG: entry:
 // OGCG:   %[[A_ADDR:.*]] = alloca i32, align 4
 // OGCG:   %[[B_ADDR:.*]] = alloca i8, align 1

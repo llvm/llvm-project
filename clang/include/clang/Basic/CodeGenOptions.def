@@ -553,7 +553,7 @@ CODEGENOPT(ZOSPPA1Name, 1, 1, Benign)
 /// Whether the function should extend small integer parameters: Direct,
 /// Conservative, Assumed, Default.
 ENUM_CODEGENOPT(ExtendIntegerArgs, ExtendIntegerArgsKind, 2,
-                ExtendIntegerArgsKind::Conservative)
+                ExtendIntegerArgsKind::Conservative, Benign)
 
 #undef CODEGENOPT
 #undef ENUM_CODEGENOPT

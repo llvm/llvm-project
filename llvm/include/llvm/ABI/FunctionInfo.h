@@ -36,6 +36,9 @@ public:
     /// Valid only for integer argument types. Same as 'direct' but also emit a
     /// zero/sign extension attribute.
     Extend,
+    /// Valid only for integer argument types. Same as 'Extend', but the callee
+    /// does not get to assume that the caller actually did the extension.
+    ConservativeExtend,
     /// Pass the argument indirectly via a hidden pointer with the specified
     /// alignment and address space.
     Indirect,
@@ -129,6 +132,12 @@ public:
     return AI;
   }
 
+  static ArgInfo getConservativeExtend(const Type *T) {
+    ArgInfo AI = getExtend(T);
+    AI.TheKind = ConservativeExtend;
+    return AI;
+  }
+
   /// Realign: the caller couldn't guarantee sufficient alignment - the callee
   /// must copy the argument to a properly aligned temporary before use.
   static ArgInfo getIndirect(Align Align, bool ByVal, unsigned AddrSpace = 0,
@@ -199,10 +208,12 @@ public:
   bool isIndirectAliased() const { return TheKind == IndirectAliased; }
   bool isIgnore() const { return TheKind == Ignore; }
   bool isExtend() const { return TheKind == Extend; }
+  bool isConservativeExtend() const { return TheKind == ConservativeExtend; }
   bool isCoerceAndExpand() const { return TheKind == CoerceAndExpand; }
 
   unsigned getDirectOffset() const {
-    assert((isDirect() || isExtend()) && "Not a direct or extend kind");
+    assert((isDirect() || isExtend() || isConservativeExtend()) &&
+           "Not a direct or extend kind");
     return DirectAttr.Offset;
   }
 
@@ -219,7 +230,8 @@ public:
   }
 
   MaybeAlign getDirectAlign() const {
-    assert((isDirect() || isExtend()) && "Not a direct or extend kind");
+    assert((isDirect() || isExtend() || isConservativeExtend()) &&
+           "Not a direct or extend kind");
     return Alignment;
   }
 
@@ -254,22 +266,23 @@ public:
   }
 
   bool isSignExt() const {
-    assert(isExtend() && "Invalid Kind!");
+    assert((isExtend() || isConservativeExtend()) && "Invalid Kind!");
     return SignExt;
   }
 
   bool isZeroExt() const {
-    assert(isExtend() && "Invalid Kind!");
+    assert((isExtend() || isConservativeExtend()) && "Invalid Kind!");
     return ZeroExt;
   }
 
   bool isNoExt() const {
-    assert(isExtend() && "Invalid Kind!");
+    assert((isExtend() || isConservativeExtend()) && "Invalid Kind!");
     return !SignExt && !ZeroExt;
   }
 
   const Type *getCoerceToType() const {
-    assert((isDirect() || isExtend() || isCoerceAndExpand()) &&
+    assert((isDirect() || isExtend() || isConservativeExtend() ||
+            isCoerceAndExpand()) &&
            "Invalid Kind!");
     return CoercionType;
   }

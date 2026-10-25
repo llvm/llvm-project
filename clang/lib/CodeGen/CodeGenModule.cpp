@@ -392,7 +392,8 @@ static void initializeCommonABICompatInfo(llvm::abi::ABICompatInfo &CompatInfo,
 
 static void initializeX86ABICompatInfo(llvm::abi::X86ABICompatInfo &CompatInfo,
                                        const llvm::Triple &T,
-                                       const LangOptions::ClangABI Compat) {
+                                       const LangOptions::ClangABI Compat,
+                                       const CodeGenOptions &CGOpts) {
   initializeCommonABICompatInfo(CompatInfo, Compat);
   CompatInfo.ClassifyIntegerMMXAsSSE = Compat > LangOptions::ClangABI::Ver3_8 &&
                                        !T.isOSDarwin() && !T.isPS() &&
@@ -406,6 +407,19 @@ static void initializeX86ABICompatInfo(llvm::abi::X86ABICompatInfo &CompatInfo,
   CompatInfo.Clang11Compat = Compat <= LangOptions::ClangABI::Ver11 || T.isPS();
   CompatInfo.ClassifyUnnamedBitFields =
       Compat > LangOptions::ClangABI::Ver23 && !T.isPS();
+  switch (CGOpts.getExtendIntegerArgs()) {
+  case CodeGenOptions::ExtendIntegerArgsKind::Assumed:
+    CompatInfo.ExtendIntegerArgs = llvm::abi::X86ExtendIntegerArgsKind::Assumed;
+    break;
+  case CodeGenOptions::ExtendIntegerArgsKind::Conservative:
+    CompatInfo.ExtendIntegerArgs =
+        llvm::abi::X86ExtendIntegerArgsKind::Conservative;
+    break;
+  case CodeGenOptions::ExtendIntegerArgsKind::Direct:
+  case CodeGenOptions::ExtendIntegerArgsKind::Default:
+    CompatInfo.ExtendIntegerArgs = llvm::abi::X86ExtendIntegerArgsKind::Direct;
+    break;
+  }
 }
 
 const llvm::abi::TargetInfo &
@@ -462,8 +476,8 @@ CodeGenModule::getLLVMABITargetInfo(llvm::abi::TypeBuilder &TB) {
                         : llvm::abi::X86AVXABILevel::None;
 
     llvm::abi::X86ABICompatInfo CompatInfo;
-    initializeX86ABICompatInfo(CompatInfo, T,
-                               getLangOpts().getClangABICompat());
+    initializeX86ABICompatInfo(CompatInfo, T, getLangOpts().getClangABICompat(),
+                               getCodeGenOpts());
 
     bool Has64BitPointers = getTarget().getPointerWidth(LangAS::Default) == 64;
 

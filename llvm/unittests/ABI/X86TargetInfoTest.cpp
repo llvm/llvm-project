@@ -33,6 +33,7 @@ using llvm::abi::TargetInfo;
 using llvm::abi::TypeBuilder;
 using llvm::abi::X86ABICompatInfo;
 using llvm::abi::X86AVXABILevel;
+using llvm::abi::X86ExtendIntegerArgsKind;
 
 class X86TargetInfoTest : public ::testing::Test {
 protected:
@@ -76,10 +77,10 @@ protected:
             RecordFlags::CanPassInRegisters)) {}
 
   std::unique_ptr<TargetInfo>
-  target(X86AVXABILevel AVXLevel = X86AVXABILevel::None) const {
+  target(X86AVXABILevel AVXLevel = X86AVXABILevel::None,
+         const X86ABICompatInfo &Compat = X86ABICompatInfo()) const {
     return createX86_64TargetInfo(const_cast<TypeBuilder &>(TB), AVXLevel,
-                                  /*Has64BitPointers=*/true,
-                                  X86ABICompatInfo());
+                                  /*Has64BitPointers=*/true, Compat);
   }
 
   const ABIType *makeVector(const ABIType *Elt, unsigned NumElements,
@@ -974,6 +975,52 @@ TEST_F(X86TargetInfoTest, IntReturnExtension) {
   const ABIType *StructInt128 =
       makeRecord({FieldInfo(Int128, 0)}, 128, llvm::Align(16));
   expectDirectInteger(classifyRet(StructInt128, FI, TI), 128);
+}
+
+TEST_F(X86TargetInfoTest, IntArgExtension) {
+  auto ClassifyArg = [&](const ABIType *ArgTy, X86ExtendIntegerArgsKind Kind,
+                         std::unique_ptr<FunctionInfo> &FI,
+                         std::unique_ptr<TargetInfo> &TI) -> const ArgInfo & {
+    X86ABICompatInfo Compat;
+    Compat.ExtendIntegerArgs = Kind;
+    TI = target(X86AVXABILevel::None, Compat);
+    FI = FunctionInfo::create(llvm::CallingConv::C, Void, {ArgTy});
+    TI->computeInfo(*FI);
+    return FI->getArgInfo(0).Info;
+  };
+  std::unique_ptr<FunctionInfo> FI;
+  std::unique_ptr<TargetInfo> TI;
+
+  // Assumed: extend in the caller and assume the extension in the callee.
+  expectExtendInteger(
+      ClassifyArg(I8, X86ExtendIntegerArgsKind::Assumed, FI, TI), I8,
+      /*IsSigned=*/true);
+  expectExtendInteger(
+      ClassifyArg(Bool, X86ExtendIntegerArgsKind::Assumed, FI, TI), Bool,
+      /*IsSigned=*/false);
+
+  // Conservative: extend in the caller, but do not assume it in the callee.
+  for (auto [Ty, IsSigned] :
+       {std::pair(I8, true), std::pair(I16, true), std::pair(Bool, false)}) {
+    const ArgInfo &Info =
+        ClassifyArg(Ty, X86ExtendIntegerArgsKind::Conservative, FI, TI);
+    EXPECT_TRUE(Info.isConservativeExtend());
+    EXPECT_EQ(Info.isSignExt(), IsSigned);
+    EXPECT_EQ(Info.isZeroExt(), !IsSigned);
+    EXPECT_EQ(Info.getCoerceToType(), Ty);
+  }
+
+  // Direct: no extension at all.
+  expectDirectInteger(ClassifyArg(I8, X86ExtendIntegerArgsKind::Direct, FI, TI),
+                      8);
+  expectDirectInteger(
+      ClassifyArg(I16, X86ExtendIntegerArgsKind::Direct, FI, TI), 16);
+
+  // int is never extended.
+  for (auto Kind : {X86ExtendIntegerArgsKind::Assumed,
+                    X86ExtendIntegerArgsKind::Conservative,
+                    X86ExtendIntegerArgsKind::Direct})
+    expectDirectInteger(ClassifyArg(I32, Kind, FI, TI), 32);
 }
 
 } // namespace

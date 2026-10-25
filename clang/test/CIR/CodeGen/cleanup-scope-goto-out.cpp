@@ -38,7 +38,7 @@ end:;
 // CIR:         cir.label "end"
 // CIR:         cir.return
 
-// LLVM-LABEL: define dso_local void @_Z19test_goto_only_exitb(i1 noundef zeroext %{{[^,)]+}})
+// LLVM-LABEL: define dso_local void @_Z19test_goto_only_exitb(i1 noundef %{{[^,)]+}})
 // LLVM:         %[[A_ADDR:.*]] = alloca %struct.StructWithDestructor
 // LLVM:         br i1 %{{.*}}, label %[[IF_THEN:.*]], label %[[IF_END:.*]]
 // LLVM:       [[IF_THEN]]:
@@ -57,7 +57,7 @@ end:;
 // LLVM:       [[END]]:
 // LLVM:         ret void
 
-// OGCG-LABEL: define dso_local void @_Z19test_goto_only_exitb(i1 noundef zeroext %{{.*}})
+// OGCG-LABEL: define dso_local void @_Z19test_goto_only_exitb(i1 noundef %{{.*}})
 // OGCG:         %[[A_ADDR:.*]] = alloca %struct.StructWithDestructor
 // OGCG:         br i1 %{{.*}}, label %if.then, label %if.end
 // OGCG:       if.then:
@@ -101,7 +101,7 @@ end:;
 // CIR:         cir.label "end"
 // CIR:         cir.return
 
-// LLVM-LABEL: define dso_local void @_Z27test_goto_among_other_exitsb(i1 noundef zeroext %{{[^,)]+}})
+// LLVM-LABEL: define dso_local void @_Z27test_goto_among_other_exitsb(i1 noundef %{{[^,)]+}})
 // LLVM:         %[[A_ADDR:.*]] = alloca %struct.StructWithDestructor
 // LLVM:         br i1 %{{.*}}, label %[[GOTO_PATH:.*]], label %[[NORMAL_PATH:.*]]
 // LLVM:       [[GOTO_PATH]]:
@@ -125,7 +125,7 @@ end:;
 // LLVM:       [[END]]:
 // LLVM:         ret void
 
-// OGCG-LABEL: define dso_local void @_Z27test_goto_among_other_exitsb(i1 noundef zeroext %{{.*}})
+// OGCG-LABEL: define dso_local void @_Z27test_goto_among_other_exitsb(i1 noundef %{{.*}})
 // OGCG:         %[[A_ADDR:.*]] = alloca %struct.StructWithDestructor
 // OGCG:         br i1 %{{.*}}, label %if.then, label %if.end
 // OGCG:       if.then:
@@ -186,7 +186,7 @@ skip:
 // CIR:         }
 // CIR:         cir.return
 
-// LLVM-LABEL: define dso_local void @_Z24test_goto_inner_to_outerb(i1 noundef zeroext %{{[^,)]+}})
+// LLVM-LABEL: define dso_local void @_Z24test_goto_inner_to_outerb(i1 noundef %{{[^,)]+}})
 // LLVM:         alloca %struct.StructWithDestructor
 // LLVM:         alloca %struct.StructWithDestructor
 // LLVM:         br i1 %{{.*}}, label %[[GOTO_PATH:.*]], label %[[NORMAL_PATH:.*]]
@@ -217,7 +217,7 @@ skip:
 // LLVM-NOT:     call void @_ZN20StructWithDestructorD1Ev
 // LLVM:         ret void
 
-// OGCG-LABEL: define dso_local void @_Z24test_goto_inner_to_outerb(i1 noundef zeroext %{{.*}})
+// OGCG-LABEL: define dso_local void @_Z24test_goto_inner_to_outerb(i1 noundef %{{.*}})
 // OGCG:         %[[OUTER_ADDR:.*]] = alloca %struct.StructWithDestructor
 // OGCG:         %[[INNER_ADDR:.*]] = alloca %struct.StructWithDestructor
 // OGCG:         br i1 %{{.*}}, label %if.then, label %if.end
@@ -285,7 +285,7 @@ end:;
 // CIR:         cir.label "end"
 // CIR:         cir.return
 
-// LLVM-LABEL: define dso_local void @_Z27test_goto_out_of_two_nestedb(i1 noundef zeroext %{{[^,)]+}})
+// LLVM-LABEL: define dso_local void @_Z27test_goto_out_of_two_nestedb(i1 noundef %{{[^,)]+}})
 // LLVM:         %[[OUTER_ADDR:.*]] = alloca %struct.StructWithDestructor
 // LLVM:         %[[INNER_ADDR:.*]] = alloca %struct.StructWithDestructor
 // LLVM:         br i1 %{{.*}}, label %[[GOTO_PATH:.*]], label %[[NORMAL_PATH:.*]]
@@ -325,7 +325,7 @@ end:;
 // LLVM:       [[END]]:
 // LLVM:         ret void
 
-// OGCG-LABEL: define dso_local void @_Z27test_goto_out_of_two_nestedb(i1 noundef zeroext %{{.*}})
+// OGCG-LABEL: define dso_local void @_Z27test_goto_out_of_two_nestedb(i1 noundef %{{.*}})
 // OGCG:         %[[OUTER_ADDR:.*]] = alloca %struct.StructWithDestructor
 // OGCG:         %[[INNER_ADDR:.*]] = alloca %struct.StructWithDestructor
 // OGCG:         br i1 %{{.*}}, label %if.then, label %if.end

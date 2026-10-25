@@ -1002,7 +1002,8 @@ ABIArgInfo X86_32ABIInfo::classifyArgumentType(QualType Ty, CCState &State,
                  ? ABIArgInfo::getConservativeExtendInReg(Ty, CGT.ConvertType(Ty))
                  : ABIArgInfo::getConservativeExtend(Ty, CGT.ConvertType(Ty));
     case CodeGenOptions::ExtendIntegerArgsKind::Direct:
-    // ExtendIntegerArgsKind::Direct will be handled at the last.
+    case CodeGenOptions::ExtendIntegerArgsKind::Default:
+      // ExtendIntegerArgsKind::Direct will be handled at the last.
       break;
     }
   }

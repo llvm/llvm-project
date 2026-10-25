@@ -650,8 +650,16 @@ X86_64TargetInfo::classifyArgumentType(const Type *Ty, unsigned FreeIntRegs,
     // If we have a sign or zero extended integer, make sure to return Extend
     // so that the parameter gets the right LLVM IR attributes.
     if (Hi == NoClass && ResType->isInteger()) {
-      if (Ty->isInteger() && isPromotableInteger(cast<IntegerType>(Ty)))
-        return ArgInfo::getExtend(Ty);
+      if (Ty->isInteger() && isPromotableInteger(cast<IntegerType>(Ty))) {
+        switch (getX86ABICompatInfo().ExtendIntegerArgs) {
+        case X86ExtendIntegerArgsKind::Assumed:
+          return ArgInfo::getExtend(Ty);
+        case X86ExtendIntegerArgsKind::Conservative:
+          return ArgInfo::getConservativeExtend(Ty);
+        case X86ExtendIntegerArgsKind::Direct:
+          break;
+        }
+      }
     }
 
     if (ResType->isInteger() && ResType->getSizeInBits() == 128) {

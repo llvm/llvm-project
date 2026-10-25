@@ -218,7 +218,10 @@ public:
     AI.setPaddingType(nullptr);
     AI.setDirectOffset(0);
     AI.setDirectAlign(0);
-    AI.setSignExt(Ty->hasSignedIntegerRepresentation());
+    if (Ty->hasSignedIntegerRepresentation())
+      AI.setSignExt(true);
+    else
+      AI.setZeroExt(true);
     return AI;
   }
 
@@ -396,16 +399,18 @@ public:
   }
 
   bool isZeroExt() const {
-    assert(isExtend() && (SignExt + ZeroExt <= 1) && "Invalid kind / flags!");
+    assert((isExtend() || isConservativeExtend()) && (SignExt + ZeroExt <= 1) &&
+           "Invalid kind / flags!");
     return ZeroExt;
   }
   void setZeroExt(bool ZExt) {
-    assert(isExtend() && "Invalid kind!");
+    assert((isExtend() || isConservativeExtend()) && "Invalid kind!");
     ZeroExt = ZExt;
   }
 
   bool isNoExt() const {
-    assert(isExtend() && (SignExt + ZeroExt <= 1) && "Invalid kind / flags!");
+    assert((isExtend() || isConservativeExtend()) && (SignExt + ZeroExt <= 1) &&
+           "Invalid kind / flags!");
     return !SignExt && !ZeroExt;
   }
 

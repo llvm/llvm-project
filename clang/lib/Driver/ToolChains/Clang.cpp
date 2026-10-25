@@ -7462,11 +7462,13 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                      options::OPT_mno_stack_arg_probe);
 
   // TODO: Support 'default' for OPT_mextend_small_integers_EQ
-  if (Args.getLastArgValue(options::OPT_mextend_small_integers_EQ) == "default")
-    D.Diag(diag::err_drv_unsupported_option_argument)
-        << "mextend-small-integers"
-        << "default";
-  Args.AddLastArg(CmdArgs, options::OPT_mextend_small_integers_EQ);
+  if (Arg *A = Args.getLastArg(options::OPT_mextend_small_integers_EQ)) {
+    if (StringRef(A->getValue()) == "default")
+      D.Diag(diag::err_drv_unsupported_option_argument)
+          << A->getSpelling() << A->getValue();
+    else
+      A->render(Args, CmdArgs);
+  }
 
   if (Arg *A = Args.getLastArg(options::OPT_mrestrict_it,
                                options::OPT_mno_restrict_it)) {

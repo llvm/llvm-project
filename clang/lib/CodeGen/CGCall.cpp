@@ -876,6 +876,8 @@ static const char *abiKindToString(ABIArgInfo::Kind K) {
     return "Direct";
   case ABIArgInfo::Extend:
     return "Extend";
+  case ABIArgInfo::ConservativeExtend:
+    return "ConservativeExtend";
   case ABIArgInfo::Indirect:
     return "Indirect";
   case ABIArgInfo::IndirectAliased:
@@ -963,6 +965,7 @@ void CodeGenModule::computeABIInfoUsingLib(CGFunctionInfo &FI) {
 
     switch (Res.getKind()) {
     case ABIArgInfo::Extend:
+    case ABIArgInfo::ConservativeExtend:
       CheckSimple(Target.isSignExt(), Res.isSignExt(), "SignExt");
       CheckSimple(Target.isZeroExt(), Res.isZeroExt(), "ZeroExt");
       [[fallthrough]];
@@ -1039,6 +1042,18 @@ ABIArgInfo CodeGenModule::convertABIArgInfo(const llvm::abi::ArgInfo &AbiInfo,
     return ABIArgInfo::getDirect(CoercedType, AbiInfo.getDirectOffset(),
                                  /*Padding=*/nullptr,
                                  AbiInfo.getCanBeFlattened(), DirectAlign);
+  }
+  case llvm::abi::ArgInfo::ConservativeExtend: {
+    llvm::Type *CoercedType = nullptr;
+    if (AbiInfo.getCoerceToType())
+      CoercedType = AbiReverseMapper->convertType(AbiInfo.getCoerceToType());
+    if (!CoercedType)
+      CoercedType = getTypes().ConvertType(Type);
+    ABIArgInfo AI = ABIArgInfo::getConservativeExtend(
+        useFirstFieldIfTransparentUnion(Type), CoercedType);
+    AI.setSignExt(AbiInfo.isSignExt());
+    AI.setZeroExt(AbiInfo.isZeroExt());
+    return AI;
   }
   case llvm::abi::ArgInfo::Extend: {
     llvm::Type *CoercedType = nullptr;
@@ -2639,7 +2654,9 @@ static bool DetermineNoUndef(QualType QTy, CodeGenTypes &Types,
   if (AI.getKind() == ABIArgInfo::Indirect ||
       AI.getKind() == ABIArgInfo::IndirectAliased)
     return true;
-  if (AI.getKind() == ABIArgInfo::Extend && !AI.isNoExt())
+  if ((AI.getKind() == ABIArgInfo::Extend ||
+       AI.getKind() == ABIArgInfo::ConservativeExtend) &&
+      !AI.isNoExt())
     return true;
   if (!DL.typeSizeEqualsStoreSize(Ty))
     // TODO: This will result in a modest amount of values not marked noundef
