@@ -2138,11 +2138,17 @@ static mlir::TupleType getTypeOfCommonWithInit(
 /// have initializer to generate the common initializer.
 /// This function takes care of adding aliases with initializer to the member
 /// list.
+/// Initialized aliases may overlap each other or the members, while the
+/// common initializer needs non-overlapping entries. Semantics combines the
+/// initial values of each storage association into a compiler created object,
+/// so that object replaces the initialized entities it covers when they
+/// overlap.
 static Fortran::semantics::MutableSymbolVector
 getCommonMembersWithInitAliases(const Fortran::semantics::Symbol &common) {
   const auto &commonDetails =
       common.get<Fortran::semantics::CommonBlockDetails>();
   auto members = commonDetails.objects();
+  Fortran::semantics::MutableSymbolVector combinedInits;
 
   // The number and size of equivalence and common is expected to be small, so
   // no effort is given to optimize this loop of complexity equivalenced
@@ -2150,20 +2156,53 @@ getCommonMembersWithInitAliases(const Fortran::semantics::Symbol &common) {
   for (const Fortran::semantics::EquivalenceSet &set :
        common.owner().equivalenceSets())
     for (const Fortran::semantics::EquivalenceObject &obj : set) {
-      if (!obj.symbol.test(Fortran::semantics::Symbol::Flag::CompilerCreated)) {
-        if (const auto &details =
-                obj.symbol
-                    .detailsIf<Fortran::semantics::ObjectEntityDetails>()) {
-          const Fortran::semantics::Symbol *com =
-              FindCommonBlockContaining(obj.symbol);
-          if (!details->init() || com != &common)
-            continue;
+      if (const auto &details =
+              obj.symbol.detailsIf<Fortran::semantics::ObjectEntityDetails>()) {
+        const Fortran::semantics::Symbol *com =
+            FindCommonBlockContaining(obj.symbol);
+        if (!details->init() || com != &common)
+          continue;
+        if (obj.symbol.test(
+                Fortran::semantics::Symbol::Flag::CompilerCreated)) {
+          combinedInits.emplace_back(obj.symbol);
+        } else if (!llvm::is_contained(members, obj.symbol)) {
           // This is an alias with an init that belongs to the list
-          if (!llvm::is_contained(members, obj.symbol))
-            members.emplace_back(obj.symbol);
+          members.emplace_back(obj.symbol);
         }
       }
     }
+
+  auto hasInit = [](const Fortran::semantics::Symbol &sym) {
+    const auto *details =
+        sym.detailsIf<Fortran::semantics::ObjectEntityDetails>();
+    return details && details->init();
+  };
+  for (const Fortran::semantics::MutableSymbolRef &combined : combinedInits) {
+    std::size_t begin = combined->offset();
+    std::size_t end = begin + combined->size();
+    auto isCovered = [&](const Fortran::semantics::MutableSymbolRef &mem) {
+      return hasInit(*mem) && mem->offset() < end &&
+             mem->offset() + mem->size() > begin;
+    };
+    Fortran::semantics::MutableSymbolVector covered;
+    llvm::copy_if(members, std::back_inserter(covered), isCovered);
+    std::sort(covered.begin(), covered.end(),
+              [](auto &s1, auto &s2) { return s1->offset() < s2->offset(); });
+    bool overlap = false;
+    std::size_t coveredEnd = 0;
+    for (const Fortran::semantics::MutableSymbolRef &mem : covered) {
+      overlap |= mem->offset() < coveredEnd;
+      coveredEnd = std::max(coveredEnd, mem->offset() + mem->size());
+    }
+    // The combined value only holds the initial values of the EQUIVALENCE
+    // objects, so it cannot replace other initialized members.
+    if (!overlap || llvm::any_of(covered, [](const auto &mem) {
+          return !Fortran::semantics::FindEquivalenceSet(*mem);
+        }))
+      continue;
+    llvm::erase_if(members, isCovered);
+    members.emplace_back(combined);
+  }
   return members;
 }
 
