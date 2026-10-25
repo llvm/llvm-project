@@ -1297,6 +1297,7 @@ if(LIBC_COMPILER_HAS_FIXED_POINT)
     libc.src.stdfix.diviulr
     libc.src.stdfix.diviuk
     libc.src.stdfix.diviulk
+    libc.src.stdfix.mulik
   )
 endif()
 

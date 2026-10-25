@@ -990,6 +990,7 @@ if(LIBC_COMPILER_HAS_FIXED_POINT)
     libc.src.stdfix.ulrdivi
     libc.src.stdfix.ukdivi
     libc.src.stdfix.ulkdivi
+    libc.src.stdfix.mulik
   )
 endif()
 
