@@ -5,8 +5,8 @@
 define i64 @load_swap_32_to_64(ptr %p) {
 ; LE-LABEL: load_swap_32_to_64:
 ; LE:       // %bb.0:
-; LE-NEXT:    ldp w9, w8, [x0]
-; LE-NEXT:    orr x0, x8, x9, lsl #32
+; LE-NEXT:    ldr x8, [x0]
+; LE-NEXT:    ror x0, x8, #32
 ; LE-NEXT:    ret
 ;
 ; BE-LABEL: load_swap_32_to_64:
@@ -47,9 +47,8 @@ define i64 @load_swap_32_to_64_be(ptr %p) {
 define i32 @load_swap_16_to_32(ptr %p) {
 ; LE-LABEL: load_swap_16_to_32:
 ; LE:       // %bb.0:
-; LE-NEXT:    ldrh w8, [x0, #2]
-; LE-NEXT:    ldrh w9, [x0]
-; LE-NEXT:    orr w0, w8, w9, lsl #16
+; LE-NEXT:    ldr w8, [x0]
+; LE-NEXT:    ror w0, w8, #16
 ; LE-NEXT:    ret
 ;
 ; BE-LABEL: load_swap_16_to_32:
@@ -69,11 +68,8 @@ define i32 @load_swap_16_to_32(ptr %p) {
 define i64 @load_rot_16_to_64(ptr %p) {
 ; LE-LABEL: load_rot_16_to_64:
 ; LE:       // %bb.0:
-; LE-NEXT:    ldrh w8, [x0, #2]
-; LE-NEXT:    ldrh w9, [x0]
-; LE-NEXT:    ldr w10, [x0, #4]
-; LE-NEXT:    orr x8, x8, x9, lsl #48
-; LE-NEXT:    orr x0, x8, x10, lsl #16
+; LE-NEXT:    ldr x8, [x0]
+; LE-NEXT:    ror x0, x8, #16
 ; LE-NEXT:    ret
 ;
 ; BE-LABEL: load_rot_16_to_64:
@@ -102,11 +98,8 @@ define i64 @load_rot_16_to_64(ptr %p) {
 define i32 @load_rot_8_to_32(ptr %p) {
 ; LE-LABEL: load_rot_8_to_32:
 ; LE:       // %bb.0:
-; LE-NEXT:    ldrb w8, [x0, #1]
-; LE-NEXT:    ldrb w9, [x0]
-; LE-NEXT:    ldrh w10, [x0, #2]
-; LE-NEXT:    orr w8, w8, w9, lsl #24
-; LE-NEXT:    orr w0, w8, w10, lsl #8
+; LE-NEXT:    ldr w8, [x0]
+; LE-NEXT:    ror w0, w8, #8
 ; LE-NEXT:    ret
 ;
 ; BE-LABEL: load_rot_8_to_32:

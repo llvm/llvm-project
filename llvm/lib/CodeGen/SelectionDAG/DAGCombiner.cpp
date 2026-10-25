@@ -10290,6 +10290,29 @@ SDValue DAGCombiner::mergeTruncStores(StoreSDNode *N) {
 /// t33: i32 = or t23, t32
 /// As a possible fix visitLoad can check if the load can be a part of a load
 /// combine pattern and add corresponding OR roots to the worklist.
+
+// Check if the byte offsets match a rotated little-endian load.
+// Returns the rotation amount in bytes if matched.
+static std::optional<unsigned> isRotatedLoad(ArrayRef<int64_t> ByteOffsets,
+                                             int64_t FirstOffset) {
+  unsigned Width = ByteOffsets.size();
+  if (Width < 2)
+    return std::nullopt;
+
+  int64_t FirstByteOffset = ByteOffsets[0] - FirstOffset;
+  if (FirstByteOffset <= 0 || FirstByteOffset >= Width)
+    return std::nullopt;
+
+  unsigned Rot = FirstByteOffset;
+  for (unsigned i = 0; i < Width; i++) {
+    int64_t CurrentByteOffset = ByteOffsets[i] - FirstOffset;
+    if (CurrentByteOffset != static_cast<int64_t>((i + Rot) % Width))
+      return std::nullopt;
+  }
+
+  return Rot;
+}
+
 SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
   assert(N->getOpcode() == ISD::OR &&
          "Can only match load combining against OR nodes");
@@ -10405,8 +10428,15 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
   // little endian value load
   std::optional<bool> IsBigEndian = isBigEndian(
       ArrayRef(ByteOffsets).drop_back(ZeroExtendedBytes), FirstOffset);
-  if (!IsBigEndian)
-    return SDValue();
+
+  // A check if its not big endian but can be solved by rotation
+  std::optional<unsigned> RotatedBytes;
+  if (!IsBigEndian) {
+    if (!IsBigEndianTarget && ZeroExtendedBytes == 0)
+      RotatedBytes = isRotatedLoad(ByteOffsets, FirstOffset);
+    if (!RotatedBytes)
+      return SDValue();
+  }
 
   assert(FirstByteProvider && "must be set");
 
@@ -10431,7 +10461,9 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
   // needed.
 
   // If the load needs byte swap check if the target supports it
-  bool NeedsBswap = IsBigEndianTarget != *IsBigEndian;
+
+  // Added condition so that it doesn't crash
+  bool NeedsBswap = IsBigEndian && (IsBigEndianTarget != *IsBigEndian);
 
   // Before legalize we can introduce illegal bswaps which will be later
   // converted to an explicit bswap sequence. This way we end up with a single
@@ -10441,6 +10473,18 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
   if (NeedsBswap && (LegalOperations || NeedsZext) &&
       !TLI.isOperationLegal(ISD::BSWAP, VT))
     return SDValue();
+
+  // It checks if target supports rotation
+  // Check if target supports rotation (ROTR or ROTL) when rotation is needed.
+  unsigned RotateOp = 0;
+  if (RotatedBytes) {
+    if (TLI.isOperationLegalOrCustom(ISD::ROTR, VT))
+      RotateOp = ISD::ROTR;
+    else if (TLI.isOperationLegalOrCustom(ISD::ROTL, VT))
+      RotateOp = ISD::ROTL;
+    else
+      return SDValue();
+  }
 
   // If we need to bswap and zero extend, we have to insert a shift. Check that
   // it is legal.
@@ -10475,6 +10519,24 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
     CombinedMask |= (uint64_t)ByteMasks[i] << (i * 8);
     if (ByteMasks[i] != 0xFF)
       HasPartialMask = true;
+  }
+
+  // If rotation required then, rotate
+  if (RotatedBytes) {
+    unsigned BitWidth = VT.getSizeInBits();
+    unsigned RotateBits = *RotatedBytes * 8;
+
+    // If using ROTL, invert the rotation distance:
+    if (RotateOp == ISD::ROTL)
+      RotateBits = BitWidth - RotateBits;
+    SDValue RotateAmt = DAG.getShiftAmountConstant(RotateBits, VT, SDLoc(N));
+    SDValue Result = DAG.getNode(RotateOp, SDLoc(N), VT, NewLoad, RotateAmt);
+
+    if (HasPartialMask)
+      Result = DAG.getNode(ISD::AND, SDLoc(N), VT, Result,
+                           DAG.getConstant(CombinedMask, SDLoc(N), VT));
+
+    return Result;
   }
 
   if (!NeedsBswap) {

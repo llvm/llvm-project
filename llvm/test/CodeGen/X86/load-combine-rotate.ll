@@ -7,18 +7,13 @@
 define i64 @load_swap_32_to_64(ptr %p) {
 ; GENERIC-LABEL: load_swap_32_to_64:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    movl (%rdi), %eax
-; GENERIC-NEXT:    movl 4(%rdi), %ecx
-; GENERIC-NEXT:    shlq $32, %rax
-; GENERIC-NEXT:    orq %rcx, %rax
+; GENERIC-NEXT:    movq (%rdi), %rax
+; GENERIC-NEXT:    rorq $32, %rax
 ; GENERIC-NEXT:    retq
 ;
 ; BMI2-LABEL: load_swap_32_to_64:
 ; BMI2:       # %bb.0:
-; BMI2-NEXT:    movl (%rdi), %eax
-; BMI2-NEXT:    movl 4(%rdi), %ecx
-; BMI2-NEXT:    shlq $32, %rax
-; BMI2-NEXT:    orq %rcx, %rax
+; BMI2-NEXT:    rorxq $32, (%rdi), %rax
 ; BMI2-NEXT:    retq
     %p.hi = getelementptr inbounds nuw i8, ptr %p, i64 4
     %lo = load i32, ptr %p
@@ -33,18 +28,13 @@ define i64 @load_swap_32_to_64(ptr %p) {
 define i32 @load_swap_16_to_32(ptr %p) {
 ; GENERIC-LABEL: load_swap_16_to_32:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    movzwl 2(%rdi), %ecx
-; GENERIC-NEXT:    movzwl (%rdi), %eax
-; GENERIC-NEXT:    shll $16, %eax
-; GENERIC-NEXT:    orl %ecx, %eax
+; GENERIC-NEXT:    movl (%rdi), %eax
+; GENERIC-NEXT:    rorl $16, %eax
 ; GENERIC-NEXT:    retq
 ;
 ; BMI2-LABEL: load_swap_16_to_32:
 ; BMI2:       # %bb.0:
-; BMI2-NEXT:    movzwl 2(%rdi), %ecx
-; BMI2-NEXT:    movzwl (%rdi), %eax
-; BMI2-NEXT:    shll $16, %eax
-; BMI2-NEXT:    orl %ecx, %eax
+; BMI2-NEXT:    rorxl $16, (%rdi), %eax
 ; BMI2-NEXT:    retq
     %p.hi = getelementptr inbounds nuw i8, ptr %p, i64 2
     %lo = load i16, ptr %p
@@ -62,24 +52,13 @@ define i32 @load_swap_16_to_32(ptr %p) {
 define i64 @load_rot_16_to_64(ptr %p) {
 ; GENERIC-LABEL: load_rot_16_to_64:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    movzwl 2(%rdi), %ecx
-; GENERIC-NEXT:    movl 4(%rdi), %eax
-; GENERIC-NEXT:    movzwl (%rdi), %edx
-; GENERIC-NEXT:    shlq $48, %rdx
-; GENERIC-NEXT:    orq %rcx, %rdx
-; GENERIC-NEXT:    shlq $16, %rax
-; GENERIC-NEXT:    orq %rdx, %rax
+; GENERIC-NEXT:    movq (%rdi), %rax
+; GENERIC-NEXT:    rorq $16, %rax
 ; GENERIC-NEXT:    retq
 ;
 ; BMI2-LABEL: load_rot_16_to_64:
 ; BMI2:       # %bb.0:
-; BMI2-NEXT:    movzwl 2(%rdi), %ecx
-; BMI2-NEXT:    movl 4(%rdi), %eax
-; BMI2-NEXT:    movzwl (%rdi), %edx
-; BMI2-NEXT:    shlq $48, %rdx
-; BMI2-NEXT:    orq %rcx, %rdx
-; BMI2-NEXT:    shlq $16, %rax
-; BMI2-NEXT:    orq %rdx, %rax
+; BMI2-NEXT:    rorxq $16, (%rdi), %rax
 ; BMI2-NEXT:    retq
     %p2 = getelementptr inbounds nuw i8, ptr %p, i64 2
     %p4 = getelementptr inbounds nuw i8, ptr %p, i64 4
@@ -100,24 +79,13 @@ define i64 @load_rot_16_to_64(ptr %p) {
 define i32 @load_rot_8_to_32(ptr %p) {
 ; GENERIC-LABEL: load_rot_8_to_32:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    movzbl 1(%rdi), %ecx
-; GENERIC-NEXT:    movzwl 2(%rdi), %eax
-; GENERIC-NEXT:    movzbl (%rdi), %edx
-; GENERIC-NEXT:    shll $24, %edx
-; GENERIC-NEXT:    orl %ecx, %edx
-; GENERIC-NEXT:    shll $8, %eax
-; GENERIC-NEXT:    orl %edx, %eax
+; GENERIC-NEXT:    movl (%rdi), %eax
+; GENERIC-NEXT:    rorl $8, %eax
 ; GENERIC-NEXT:    retq
 ;
 ; BMI2-LABEL: load_rot_8_to_32:
 ; BMI2:       # %bb.0:
-; BMI2-NEXT:    movzbl 1(%rdi), %ecx
-; BMI2-NEXT:    movzwl 2(%rdi), %eax
-; BMI2-NEXT:    movzbl (%rdi), %edx
-; BMI2-NEXT:    shll $24, %edx
-; BMI2-NEXT:    orl %ecx, %edx
-; BMI2-NEXT:    shll $8, %eax
-; BMI2-NEXT:    orl %edx, %eax
+; BMI2-NEXT:    rorxl $8, (%rdi), %eax
 ; BMI2-NEXT:    retq
     %p1 = getelementptr inbounds nuw i8, ptr %p, i64 1
     %p2 = getelementptr inbounds nuw i8, ptr %p, i64 2
