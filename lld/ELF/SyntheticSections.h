@@ -68,19 +68,14 @@ public:
   };
 
   ArrayRef<CieRecord *> getCieRecords() const { return cieRecords; }
-  template <class ELFT>
   void iterateFDEWithLSDA(llvm::function_ref<void(InputSection &)> fn);
 
 private:
   // This is used only when parsing EhInputSection. We keep it here to avoid
   // allocating one for each EhInputSection.
-  llvm::DenseMap<size_t, CieRecord *> offsetToCie;
+  SmallVector<CieRecord *, 0> sectionCies;
 
-  template <llvm::endianness E> void addRecords(EhInputSection *s);
-  template <class ELFT>
-  void iterateFDEWithLSDAAux(EhInputSection &sec,
-                             llvm::DenseSet<size_t> &ciesWithLSDA,
-                             llvm::function_ref<void(InputSection &)> fn);
+  void addRecords(EhInputSection *s);
 
   CieRecord *addCie(EhSectionPiece &piece, ArrayRef<Relocation> rels);
   Defined *isFdeLive(EhSectionPiece &piece, ArrayRef<Relocation> rels);
