@@ -131,6 +131,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   UnreachableCodeChecker.cpp
   UnsequencedAccessChecker.cpp
   UseAfterLifetimeEnd.cpp
+  StatsChecker.cpp
   VforkChecker.cpp
   VLASizeChecker.cpp
   VAListChecker.cpp
