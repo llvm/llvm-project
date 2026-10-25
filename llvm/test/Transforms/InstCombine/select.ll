@@ -5212,6 +5212,156 @@ define i32 @src_simplify_2x_at_once_and(i32 %x, i32 %y) {
   ret i32 %cond
 }
 
+; An entry-block freeze must keep the same value across loop iterations.
+; Regression test for https://github.com/llvm/llvm-project/issues/235385.
+define i32 @select_freeze_poison_loop_true() {
+; CHECK-LABEL: define i32 @select_freeze_poison_loop_true() {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[DONE:%.*]] = phi i1 [ false, %[[ENTRY]] ], [ true, %[[LOOP]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ 1, %[[LOOP]] ]
+; CHECK-NEXT:    [[PREVIOUS:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I]], %[[LOOP]] ]
+; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[RESULT:%.*]] = xor i32 [[PREVIOUS]], [[I]]
+; CHECK-NEXT:    ret i32 [[RESULT]]
+;
+entry:
+  %frozen = freeze i32 poison
+  br label %loop
+
+loop:
+  %i = phi i32 [ 0, %entry ], [ 1, %loop ]
+  %previous = phi i32 [ 0, %entry ], [ %selected, %loop ]
+  %selected = select i1 true, i32 %frozen, i32 %i
+  %done = icmp eq i32 %i, 1
+  br i1 %done, label %exit, label %loop
+
+exit:
+  %result = xor i32 %previous, %selected
+  ret i32 %result
+}
+
+; An entry-block freeze must keep the same value across loop iterations.
+; Regression test for https://github.com/llvm/llvm-project/issues/235385.
+define i32 @select_freeze_poison_loop_false() {
+; CHECK-LABEL: define i32 @select_freeze_poison_loop_false() {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[DONE:%.*]] = phi i1 [ false, %[[ENTRY]] ], [ true, %[[LOOP]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ 1, %[[LOOP]] ]
+; CHECK-NEXT:    [[PREVIOUS:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I]], %[[LOOP]] ]
+; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[RESULT:%.*]] = xor i32 [[PREVIOUS]], [[I]]
+; CHECK-NEXT:    ret i32 [[RESULT]]
+;
+entry:
+  %frozen = freeze i32 poison
+  br label %loop
+
+loop:
+  %i = phi i32 [ 0, %entry ], [ 1, %loop ]
+  %previous = phi i32 [ 0, %entry ], [ %selected, %loop ]
+  %selected = select i1 false, i32 %i, i32 %frozen
+  %done = icmp eq i32 %i, 1
+  br i1 %done, label %exit, label %loop
+
+exit:
+  %result = xor i32 %previous, %selected
+  ret i32 %result
+}
+
+; An entry-block freeze must keep the same value across loop iterations.
+; Regression test for https://github.com/llvm/llvm-project/issues/235385.
+define i32 @select_freeze_undef_loop_true() {
+; CHECK-LABEL: define i32 @select_freeze_undef_loop_true() {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[DONE:%.*]] = phi i1 [ false, %[[ENTRY]] ], [ true, %[[LOOP]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ 1, %[[LOOP]] ]
+; CHECK-NEXT:    [[PREVIOUS:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I]], %[[LOOP]] ]
+; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[RESULT:%.*]] = xor i32 [[PREVIOUS]], [[I]]
+; CHECK-NEXT:    ret i32 [[RESULT]]
+;
+entry:
+  %frozen = freeze i32 undef
+  br label %loop
+
+loop:
+  %i = phi i32 [ 0, %entry ], [ 1, %loop ]
+  %previous = phi i32 [ 0, %entry ], [ %selected, %loop ]
+  %selected = select i1 true, i32 %frozen, i32 %i
+  %done = icmp eq i32 %i, 1
+  br i1 %done, label %exit, label %loop
+
+exit:
+  %result = xor i32 %previous, %selected
+  ret i32 %result
+}
+
+; An entry-block freeze must keep the same value across loop iterations.
+; Regression test for https://github.com/llvm/llvm-project/issues/235385.
+define i32 @select_freeze_undef_loop_false() {
+; CHECK-LABEL: define i32 @select_freeze_undef_loop_false() {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[DONE:%.*]] = phi i1 [ false, %[[ENTRY]] ], [ true, %[[LOOP]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ 1, %[[LOOP]] ]
+; CHECK-NEXT:    [[PREVIOUS:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I]], %[[LOOP]] ]
+; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[RESULT:%.*]] = xor i32 [[PREVIOUS]], [[I]]
+; CHECK-NEXT:    ret i32 [[RESULT]]
+;
+entry:
+  %frozen = freeze i32 undef
+  br label %loop
+
+loop:
+  %i = phi i32 [ 0, %entry ], [ 1, %loop ]
+  %previous = phi i32 [ 0, %entry ], [ %selected, %loop ]
+  %selected = select i1 false, i32 %i, i32 %frozen
+  %done = icmp eq i32 %i, 1
+  br i1 %done, label %exit, label %loop
+
+exit:
+  %result = xor i32 %previous, %selected
+  ret i32 %result
+}
+
+; The other arm is available at the freeze.
+define i32 @select_freeze_poison_candidate_before(i32 noundef %x, i1 %cond) {
+; CHECK-LABEL: define i32 @select_freeze_poison_candidate_before(
+; CHECK-SAME: i32 noundef [[X:%.*]], i1 [[COND:%.*]]) {
+; CHECK-NEXT:    [[CANDIDATE:%.*]] = add i32 [[X]], 3
+; CHECK-NEXT:    ret i32 [[CANDIDATE]]
+;
+  %candidate = add i32 %x, 3
+  %frozen = freeze i32 poison
+  %selected = select i1 %cond, i32 %frozen, i32 %candidate
+  ret i32 %selected
+}
+
+; The other arm is not available at the freeze.
+define i32 @select_freeze_poison_candidate_after(i32 noundef %x, i1 %cond) {
+; CHECK-LABEL: define i32 @select_freeze_poison_candidate_after(
+; CHECK-SAME: i32 noundef [[X:%.*]], i1 [[COND:%.*]]) {
+; CHECK-NEXT:    [[CANDIDATE:%.*]] = add i32 [[X]], 3
+; CHECK-NEXT:    ret i32 [[CANDIDATE]]
+;
+  %frozen = freeze i32 poison
+  %candidate = add i32 %x, 3
+  %selected = select i1 %cond, i32 %frozen, i32 %candidate
+  ret i32 %selected
+}
+
 define void @select_freeze_poison_parameter(ptr noundef %addr.src, ptr %addr.tgt, i1 %cond) {
 ; CHECK-LABEL: define void @select_freeze_poison_parameter(
 ; CHECK-SAME: ptr noundef [[ADDR_SRC:%.*]], ptr [[ADDR_TGT:%.*]], i1 [[COND:%.*]]) {
