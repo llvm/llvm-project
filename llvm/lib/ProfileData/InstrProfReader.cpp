@@ -1387,6 +1387,16 @@ Error IndexedInstrProfReader::readHeader() {
   if (HashType > IndexedInstrProf::HashT::Last)
     return error(instrprof_error::unsupported_hash_type);
 
+  // Validate the offset before forming a pointer. The hash table follows the
+  // summary and uses aligned 64-bit reads for its bucket and entry counts.
+  uint64_t BufferSize = DataBuffer->getBufferSize();
+  if (Header->HashOffset < static_cast<uint64_t>(Cur - Start) ||
+      Header->HashOffset % alignof(uint64_t) != 0 ||
+      Header->HashOffset > BufferSize ||
+      BufferSize - Header->HashOffset < 2 * sizeof(uint64_t))
+    return make_error<InstrProfError>(instrprof_error::malformed,
+                                      "corrupt hash table offset");
+
   // The hash table with profile counts comes next.
   auto IndexPtr = std::make_unique<InstrProfReaderIndex<OnDiskHashTableImplV3>>(
       Start + Header->HashOffset, Cur, Start, HashType, Header->Version);
