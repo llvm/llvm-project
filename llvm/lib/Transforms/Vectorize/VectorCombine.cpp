@@ -7074,8 +7074,8 @@ bool VectorCombine::foldContiguousLoads(Instruction &I) {
     if (LI->getParent() != I.getParent())
       return false;
 
-    if (isMemModifiedBetween(std::next(LI->getIterator()), I.getIterator(),
-                             MemoryLocation::get(LI), AA))
+    if (isMemModifiedBetween(Opts, std::next(LI->getIterator()),
+                             I.getIterator(), MemoryLocation::get(LI), AA))
       return false;
 
     // Step 2: Convert the load pointer and selected source lane into a byte

@@ -670,7 +670,7 @@ define <2 x float> @test_wide_index(ptr addrspace(1) %p) {
 !2 = !{!"Simple C/C++ TBAA"}
 !3 = !{!4}
 !4 = distinct !{!4, !5}
-!5 = distinct !{!5}
+!5 = distinct !{!5, i1 false}
 !6 = !{}
 !7 = !{i8 0, i8 2}
 !8 = !{i8 2, i8 4}
@@ -684,7 +684,7 @@ define <2 x float> @test_wide_index(ptr addrspace(1) %p) {
 ; CHECK: [[META2]] = !{!"Simple C/C++ TBAA"}
 ; CHECK: [[META3]] = !{[[META4:![0-9]+]]}
 ; CHECK: [[META4]] = distinct !{[[META4]], [[META5:![0-9]+]]}
-; CHECK: [[META5]] = distinct !{[[META5]]}
+; CHECK: [[META5]] = distinct !{[[META5]], i1 false}
 ; CHECK: [[RNG6]] = !{i8 0, i8 4}
 ; CHECK: [[META7]] = !{}
 ; CHECK: [[META8]] = !{i32 3}
