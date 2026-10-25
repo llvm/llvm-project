@@ -71,6 +71,40 @@ define i32 @function_with_jump_table(i32 %index) {
   ret i32 %result
 }
 
+define i32 @function_with_jump_table_atomic_load(i32 %index) {
+; CHECK-LABEL: define i32 @function_with_jump_table_atomic_load(
+; CHECK-SAME: i32 [[INDEX:%.*]]) {
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [2 x ptr], ptr @func_array, i32 0, i32 [[INDEX]]
+; CHECK-NEXT:    [[FUNC_PTR:%.*]] = load atomic ptr, ptr [[GEP]] monotonic, align 8
+; CHECK-NEXT:    switch i32 [[INDEX]], label [[DEFAULT_SWITCH_CASE_UNREACHABLE:%.*]] [
+; CHECK-NEXT:      i32 0, label [[CALL_0:%.*]]
+; CHECK-NEXT:      i32 1, label [[CALL_1:%.*]]
+; CHECK-NEXT:    ], !prof [[PROF2]]
+; CHECK:       default.switch.case.unreachable:
+; CHECK-NEXT:    unreachable
+; CHECK:       call.0:
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @func0()
+; CHECK-NEXT:    br label [[DOTTAIL:%.*]]
+; CHECK:       call.1:
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @func1()
+; CHECK-NEXT:    br label [[DOTTAIL]]
+; CHECK:       .tail:
+; CHECK-NEXT:    [[TMP3:%.*]] = phi i32 [ [[TMP1]], [[CALL_0]] ], [ [[TMP2]], [[CALL_1]] ]
+; CHECK-NEXT:    ret i32 [[TMP3]]
+;
+; THRESHOLD-0-LABEL: define i32 @function_with_jump_table_atomic_load(
+; THRESHOLD-0-SAME: i32 [[INDEX:%.*]]) {
+; THRESHOLD-0-NEXT:    [[GEP:%.*]] = getelementptr inbounds [2 x ptr], ptr @func_array, i32 0, i32 [[INDEX]]
+; THRESHOLD-0-NEXT:    [[FUNC_PTR:%.*]] = load atomic ptr, ptr [[GEP]] monotonic, align 8
+; THRESHOLD-0-NEXT:    [[RESULT:%.*]] = call i32 [[FUNC_PTR]](), !prof [[PROF2]]
+; THRESHOLD-0-NEXT:    ret i32 [[RESULT]]
+;
+  %gep = getelementptr inbounds [2 x ptr], ptr @func_array, i32 0, i32 %index
+  %func_ptr = load atomic ptr, ptr %gep monotonic, align 8
+  %result = call i32 %func_ptr(), !prof !2
+  ret i32 %result
+}
+
 define i32 @basic_block_splitted_twice(i32 %index) {
 ; CHECK-LABEL: define i32 @basic_block_splitted_twice(
 ; CHECK-SAME: i32 [[INDEX:%.*]]) {
