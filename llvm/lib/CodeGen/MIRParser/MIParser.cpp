@@ -1860,7 +1860,8 @@ bool MIParser::parseSymbolicInlineAsmOperand(unsigned OpIdx,
     return false;
   }
 
-  // Parse symbolic form: kind[:constraint].
+  // Parse symbolic form: kind[:constraint] [foldable] [ops:N], or, for a
+  // tied use, kind tiedto:$N [ops:N].
   StringRef KindStr = Token.stringValue();
   constexpr auto InvalidKind = static_cast<InlineAsm::Kind>(0);
   InlineAsm::Kind K =
@@ -1871,6 +1872,7 @@ bool MIParser::parseSymbolicInlineAsmOperand(unsigned OpIdx,
           .Case("clobber", InlineAsm::Kind::Clobber)
           .Case("imm", InlineAsm::Kind::Imm)
           .Case("mem", InlineAsm::Kind::Mem)
+          .Case("func", InlineAsm::Kind::Func)
           .Default(InvalidKind);
   if (K == InvalidKind)
     return error("unknown inline asm operand kind '" + KindStr + "'");
@@ -1910,7 +1912,7 @@ bool MIParser::parseSymbolicInlineAsmOperand(unsigned OpIdx,
           "expected register class or memory constraint name after ':'");
 
     StringRef ConstraintStr = Token.stringValue();
-    if (F.isMemKind()) {
+    if (F.isMemKind() || F.isFuncKind()) {
       InlineAsm::ConstraintCode CC =
           StringSwitch<InlineAsm::ConstraintCode>(ConstraintStr)
               .Case("es", InlineAsm::ConstraintCode::es)
