@@ -543,9 +543,9 @@ std::optional<Expr<SomeType>> NumericOperation(
                 defaultRealKind);
           },
           [&](Expr<SomeInteger> &&ix, BOZLiteralConstant &&by) {
-            auto cvt{ConvertTo(ix, std::move(by))};
+            auto converted{ConvertTo(ix, std::move(by))};
             return NumericOperation<OPR>(messages, std::move(x),
-                AsGenericExpr(std::move(cvt)), defaultRealKind);
+                AsGenericExpr(std::move(converted)), defaultRealKind);
           },
           [&](Expr<SomeUnsigned> &&ix, BOZLiteralConstant &&by) {
             auto converted{ConvertTo(ix, std::move(by))};
@@ -669,7 +669,7 @@ std::optional<Expr<SomeType>> GetEnumerationOrdinal(Expr<SomeDerived> &expr) {
 
 Expr<SomeType> MakeEnumerationIntCall(Expr<SomeDerived> &&operand) {
   using IntType = Type<TypeCategory::Integer>;
-  const int IntKind{4};
+  const int intKind{4};
   const semantics::DerivedTypeSpec *derived{
       GetDerivedTypeSpec(operand.GetType())};
   CHECK(derived);
@@ -688,7 +688,7 @@ Expr<SomeType> MakeEnumerationIntCall(Expr<SomeDerived> &&operand) {
   ActualArguments intArgs;
   intArgs.emplace_back(AsGenericExpr(std::move(operand)));
   return AsGenericExpr(Expr<SomeInteger>(Expr<IntType>(FunctionRef<IntType>{
-      IntKind, ProcedureDesignator{std::move(intSpec)}, std::move(intArgs)})));
+      intKind, ProcedureDesignator{std::move(intSpec)}, std::move(intArgs)})));
 }
 
 std::optional<Expr<LogicalResult>> Relate(parser::ContextualMessages &messages,
@@ -2087,7 +2087,7 @@ const Symbol *GetBoundSymbol(const Expr<Type<TypeCategory::Integer>> &expr) {
           [kind](const Convert<T, TypeCategory::Integer> &x) {
             return common::visit(
                 [kind](const auto &y) -> const Symbol * {
-                  int yKind{y.GetType() ? y.GetType()->kind() : 0};
+                  int yKind{y.kind()};
                   if (yKind <= kind) {
                     return GetBoundSymbol(y);
                   } else {

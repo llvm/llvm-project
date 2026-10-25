@@ -612,8 +612,8 @@ Expr<Type<TypeCategory::Logical>> FoldIntrinsicFunction(FoldingContext &context,
         IsActuallyConstant(*args[0]->UnwrapExpr())) {
       auto restorer{context.messages().DiscardMessages()};
       using DefaultReal = Type<TypeCategory::Real>;
-      constexpr int DefaultRealKind{4};
-      return FoldElementalIntrinsic<T, DefaultReal>(kind, {DefaultRealKind},
+      constexpr int defaultRealKind{4};
+      return FoldElementalIntrinsic<T, DefaultReal>(kind, {defaultRealKind},
           context, std::move(funcRef),
           ScalarFunc<T, DefaultReal>([kind](const Scalar<DefaultReal> &x) {
             return Scalar<T>{kind, x.IsNotANumber()};
@@ -622,10 +622,10 @@ Expr<Type<TypeCategory::Logical>> FoldIntrinsicFunction(FoldingContext &context,
   } else if (name == "__builtin_ieee_is_negative") {
     auto restorer{context.messages().DiscardMessages()};
     using DefaultReal = Type<TypeCategory::Real>;
-    constexpr int DefaultRealKind{4};
+    constexpr int defaultRealKind{4};
     if (args[0] && args[0]->UnwrapExpr() &&
         IsActuallyConstant(*args[0]->UnwrapExpr())) {
-      return FoldElementalIntrinsic<T, DefaultReal>(kind, {DefaultRealKind},
+      return FoldElementalIntrinsic<T, DefaultReal>(kind, {defaultRealKind},
           context, std::move(funcRef),
           ScalarFunc<T, DefaultReal>([kind](const Scalar<DefaultReal> &x) {
             return Scalar<T>{kind, x.IsNegative()};
@@ -634,15 +634,14 @@ Expr<Type<TypeCategory::Logical>> FoldIntrinsicFunction(FoldingContext &context,
   } else if (name == "__builtin_ieee_is_normal") {
     auto restorer{context.messages().DiscardMessages()};
     using DefaultReal = Type<TypeCategory::Real>;
-    constexpr int DefaultRealKind = 4;
+    constexpr int defaultRealKind{4};
     if (args[0] && args[0]->UnwrapExpr() &&
         IsActuallyConstant(*args[0]->UnwrapExpr())) {
-      return FoldElementalIntrinsic<T, DefaultReal>(kind, {DefaultRealKind},
+      return FoldElementalIntrinsic<T, DefaultReal>(kind, {defaultRealKind},
           context, std::move(funcRef),
           ScalarFunc<T, DefaultReal>([kind](const Scalar<DefaultReal> &x) {
             return Scalar<T>{kind, x.IsNormal()};
-          }),
-          /*hasOptionalArgument=*/false);
+          }));
     }
   } else if (name == "is_contiguous") {
     if (args.at(0)) {

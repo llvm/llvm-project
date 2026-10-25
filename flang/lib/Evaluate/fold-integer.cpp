@@ -724,7 +724,8 @@ std::optional<Expr<T>> FoldIntrinsicFunctionCommon(
     }
     if (const auto *argCon{Folder<T>(kind, context).Folding(args[0])};
         argCon && argCon->empty()) {
-    } else if (const auto *posCon{Folder<Int4>(4, context).Folding(args[1])}) {
+    } else if (const auto *posCon{
+                   Folder<Int4>(/*kind=*/4, context).Folding(args[1])}) {
       for (const auto &scalar : posCon->values()) {
         std::int64_t posVal{scalar.ToInt64()};
         if (posVal < 0) {
@@ -747,8 +748,8 @@ std::optional<Expr<T>> FoldIntrinsicFunctionCommon(
               return std::invoke(fptr, i, static_cast<int>(pos.ToInt64()));
             }));
   } else if (name == "ibits") {
-    const auto *posCon{Folder<Int4>(4, context).Folding(args[1])};
-    const auto *lenCon{Folder<Int4>(4, context).Folding(args[2])};
+    const auto *posCon{Folder<Int4>(/*kind=*/4, context).Folding(args[1])};
+    const auto *lenCon{Folder<Int4>(/*kind=*/4, context).Folding(args[2])};
     if (const auto *argCon{Folder<T>(kind, context).Folding(args[0])};
         argCon && argCon->empty()) {
     } else {
@@ -845,11 +846,11 @@ std::optional<Expr<T>> FoldIntrinsicFunctionCommon(
         context, std::move(funcRef), &Scalar<T>::IEOR, Scalar<T>{kind, 0});
   } else if (name == "ishft" || name == "ishftc") {
     const auto *argCon{Folder<T>(kind, context).Folding(args[0])};
-    const auto *shiftCon{Folder<Int4>(4, context).Folding(args[1])};
+    const auto *shiftCon{Folder<Int4>(/*kind=*/4, context).Folding(args[1])};
     const auto *shiftVals{shiftCon ? &shiftCon->values() : nullptr};
     const auto *sizeCon{args.size() == 3
-            ? Folder<Int4>{4, context, /*forOptionalArgument=*/true}.Folding(
-                  args[2])
+            ? Folder<Int4>{/*kind=*/4, context, /*forOptionalArgument=*/true}
+                  .Folding(args[2])
             : nullptr};
     const auto *sizeVals{sizeCon ? &sizeCon->values() : nullptr};
     if ((argCon && argCon->empty()) || !shiftVals || shiftVals->empty() ||
@@ -994,7 +995,7 @@ std::optional<Expr<T>> FoldIntrinsicFunctionCommon(
     if (const auto *argCon{Folder<T>(kind, context).Folding(args[0])};
         argCon && argCon->empty()) {
     } else if (const auto *shiftCon{
-                   Folder<Int4>(4, context).Folding(args[1])}) {
+                   Folder<Int4>(/*kind=*/4, context).Folding(args[1])}) {
       for (const auto &scalar : shiftCon->values()) {
         std::int64_t shiftVal{scalar.ToInt64()};
         if (shiftVal < 0) {

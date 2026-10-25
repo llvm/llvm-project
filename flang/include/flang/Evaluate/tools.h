@@ -705,12 +705,6 @@ SameKindExprs<CAT, 2> AsSameKindExprs(
     auto converted{ConvertTo(kx, std::move(ky))};
     return {SameExprs<Type<CAT>>{std::move(kx), std::move(converted)}};
   }
-#if !__clang__ && 100 * __GNUC__ + __GNUC_MINOR__ == 801
-        // Silence a bogus warning about a missing return with G++ 8.1.0.
-        // Doesn't execute, but must be correctly typed.
-        CHECK(!"can't happen");
-        return {SameExprs<Type<CAT>>{std::move(kx), std::move(kx)}};
-#endif
 }
 
 // Ensure that both operands of an intrinsic REAL operation (or CMPLX()
