@@ -134,32 +134,25 @@ exit:
 define void @iterator_distance_index(ptr %out, ptr %arr, i1 %skip) {
 ; CHECK-LABEL: define void @iterator_distance_index(
 ; CHECK-SAME: ptr nofree writeonly captures(none) [[OUT:%.*]], ptr [[ARR:%.*]], i1 [[SKIP:%.*]]) local_unnamed_addr #[[ATTR0]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br i1 [[SKIP]], label %[[EARLY_EXIT:.*]], label %[[INNER_PREHEADER:.*]]
 ; CHECK:       [[INNER_PREHEADER]]:
-; CHECK-NEXT:    [[I2:%.*]] = phi i32 [ [[I_NEXT:%.*]], %[[OUTER_LATCH:.*]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    br label %[[INNER_BODY_PREHEADER:.*]]
-; CHECK:       [[INNER_BODY_PREHEADER]]:
-; CHECK-NEXT:    [[J1:%.*]] = phi i32 [ 0, %[[INNER_PREHEADER]] ], [ [[J_NEXT:%.*]], %[[INNER_EXIT:.*]] ]
-; CHECK-NEXT:    [[K_LT_J_PEEL_NOT:%.*]] = icmp eq i32 [[J1]], 0
-; CHECK-NEXT:    br i1 [[K_LT_J_PEEL_NOT]], label %[[INNER_EXIT]], label %[[INNER_BODY_PEEL_NEXT:.*]]
-; CHECK:       [[INNER_BODY_PEEL_NEXT]]:
-; CHECK-NEXT:    [[K_LT_J_NOT:%.*]] = icmp eq i32 [[J1]], 1
-; CHECK-NEXT:    br label %[[INNER_BODY:.*]]
-; CHECK:       [[INNER_BODY]]:
-; CHECK-NEXT:    br i1 [[K_LT_J_NOT]], label %[[INNER_EXIT]], label %[[INNER_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
-; CHECK:       [[INNER_EXIT]]:
-; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i32 [[I2]], [[J1]]
-; CHECK-NEXT:    [[IDX:%.*]] = zext nneg i32 [[SUB]] to i64
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [4 x i8], ptr [[ARR]], i64 [[IDX]]
+; CHECK-NEXT:    store ptr [[ARR]], ptr [[OUT]], align 8
+; CHECK-NEXT:    store i32 0, ptr [[OUT]], align 8
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[ARR]], i64 4
 ; CHECK-NEXT:    store ptr [[GEP]], ptr [[OUT]], align 8
 ; CHECK-NEXT:    store i32 0, ptr [[OUT]], align 8
-; CHECK-NEXT:    [[J_NEXT]] = add nuw nsw i32 [[J1]], 1
-; CHECK-NEXT:    [[J_GT_I_NOT:%.*]] = icmp samesign ult i32 [[J1]], [[I2]]
-; CHECK-NEXT:    br i1 [[J_GT_I_NOT]], label %[[INNER_BODY_PREHEADER]], label %[[OUTER_LATCH]]
+; CHECK-NEXT:    store ptr [[ARR]], ptr [[OUT]], align 8
+; CHECK-NEXT:    store i32 0, ptr [[OUT]], align 8
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[ARR]], i64 8
+; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr i8, ptr [[ARR]], i64 4
+; CHECK-NEXT:    store ptr [[GEP1]], ptr [[OUT]], align 8
+; CHECK-NEXT:    store i32 0, ptr [[OUT]], align 8
+; CHECK-NEXT:    store ptr [[GEP_1]], ptr [[OUT]], align 8
+; CHECK-NEXT:    store i32 0, ptr [[OUT]], align 8
+; CHECK-NEXT:    br label %[[OUTER_LATCH:.*]]
 ; CHECK:       [[OUTER_LATCH]]:
-; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I2]], 1
-; CHECK-NEXT:    br label %[[INNER_PREHEADER]]
+; CHECK-NEXT:    br label %[[OUTER_LATCH]]
 ; CHECK:       [[EARLY_EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
