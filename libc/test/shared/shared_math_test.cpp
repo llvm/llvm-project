@@ -6,7 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/fenv_macros.h"
 #include "shared/math.h"
+#include "shared/static_rounding_math.h"
 #include "src/__support/FPUtil/float128.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -581,6 +583,8 @@ TEST(LlvmLibcSharedMathTest, AllLongDouble) {
 
 // Emulated float128 tests
 TEST(LlvmLibcSharedMathTest, AllEmuFloat128) {
+  using FPBits = LIBC_NAMESPACE::fputil::FPBits<Float128>;
+
   EXPECT_FP_EQ(Float128(0.0),
                LIBC_NAMESPACE::shared::atan2f128(Float128(0.0), Float128(0.0)));
   EXPECT_FP_EQ(Float128(0.0), LIBC_NAMESPACE::shared::ceilf128(Float128(0.0)));
@@ -610,6 +614,11 @@ TEST(LlvmLibcSharedMathTest, AllEmuFloat128) {
                                   Float128(0.0), Float128(0.0)));
   EXPECT_FP_EQ(Float128(0.0), LIBC_NAMESPACE::shared::fminimum_numf128(
                                   Float128(0.0), Float128(0.0)));
+
+  Float128 getpayloadf128_x = Float128(0.0);
+  EXPECT_FP_EQ(Float128(-1.0),
+               LIBC_NAMESPACE::shared::getpayloadf128(&getpayloadf128_x));
+
   EXPECT_EQ(1, LIBC_NAMESPACE::shared::iscanonicalf128(Float128(0.0)));
   EXPECT_EQ(0, LIBC_NAMESPACE::shared::isnanf128(Float128(0.0)));
   EXPECT_EQ(0, LIBC_NAMESPACE::shared::issignalingf128(Float128(0.0)));
@@ -617,12 +626,25 @@ TEST(LlvmLibcSharedMathTest, AllEmuFloat128) {
   EXPECT_EQ(0LL, LIBC_NAMESPACE::shared::llroundf128(Float128(0.0)));
   EXPECT_EQ(0L, LIBC_NAMESPACE::shared::lrintf128(Float128(0.0)));
   EXPECT_EQ(0L, LIBC_NAMESPACE::shared::lroundf128(Float128(0.0)));
+
+  EXPECT_TRUE(FPBits(LIBC_NAMESPACE::shared::nanf128("")).is_nan());
+
   EXPECT_FP_EQ(Float128(0.0),
                LIBC_NAMESPACE::shared::nearbyintf128(Float128(0.0)));
   EXPECT_FP_EQ(Float128(0.0), LIBC_NAMESPACE::shared::rintf128(Float128(0.0)));
   EXPECT_FP_EQ(Float128(0.0),
                LIBC_NAMESPACE::shared::roundevenf128(Float128(0.0)));
   EXPECT_FP_EQ(Float128(0.0), LIBC_NAMESPACE::shared::roundf128(Float128(0.0)));
+
+  Float128 setpayloadf128_res = Float128(0.0);
+  EXPECT_EQ(0, LIBC_NAMESPACE::shared::setpayloadf128(&setpayloadf128_res,
+                                                      Float128(0.0)));
+
+  Float128 setpayloadsigf128_res = Float128(0.0);
+  EXPECT_EQ(1, LIBC_NAMESPACE::shared::setpayloadsigf128(&setpayloadsigf128_res,
+                                                         Float128(0.0)));
+  EXPECT_FP_EQ(Float128(0.0), setpayloadsigf128_res);
+
   EXPECT_FP_EQ(Float128(1.0), LIBC_NAMESPACE::shared::sqrtf128(Float128(1.0)));
   EXPECT_FP_EQ(Float128(0.0), LIBC_NAMESPACE::shared::truncf128(Float128(0.0)));
 }
@@ -681,20 +703,6 @@ TEST(LlvmLibcSharedMathTest, AllFloat128) {
                LIBC_NAMESPACE::shared::faddf128(float128(0.0), float128(0.0)));
   EXPECT_FP_EQ(1.0f,
                LIBC_NAMESPACE::shared::fdivf128(float128(1.0), float128(1.0)));
-
-  float128 getpayloadf128_x = float128(0.0);
-  EXPECT_FP_EQ(float128(-1.0),
-               LIBC_NAMESPACE::shared::getpayloadf128(&getpayloadf128_x));
-
-  float128 setpayloadf128_res = float128(0.0);
-  EXPECT_EQ(0, LIBC_NAMESPACE::shared::setpayloadf128(&setpayloadf128_res,
-                                                      float128(0.0)));
-
-  float128 setpayloadsigf128_res = float128(0.0);
-  EXPECT_EQ(1, LIBC_NAMESPACE::shared::setpayloadsigf128(&setpayloadsigf128_res,
-                                                         float128(0.0)));
-  EXPECT_FP_EQ(float128(0.0), setpayloadsigf128_res);
-
   float128 neg_min_denormal = FPBits::min_subnormal(Sign::NEG).get_val();
   EXPECT_FP_EQ(neg_min_denormal,
                LIBC_NAMESPACE::shared::nextdownf128(float128(0.0)));
@@ -754,7 +762,6 @@ TEST(LlvmLibcSharedMathTest, AllFloat128) {
                LIBC_NAMESPACE::shared::fsubf128(float128(0.0), float128(0.0)));
   EXPECT_FP_EQ(0x0p+0f,
                LIBC_NAMESPACE::shared::fmulf128(float128(0.0), float128(0.0)));
-  EXPECT_TRUE(FPBits(LIBC_NAMESPACE::shared::nanf128("")).is_nan());
 }
 
 #endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
@@ -809,6 +816,7 @@ TEST(LlvmLibcSharedMathTest, AllBFloat16) {
                                                          bfloat16(0.0)));
   EXPECT_FP_EQ(bfloat16(0.0), setpayloadsigbf16_res);
 
+  EXPECT_FP_EQ(bfloat16(1.0), LIBC_NAMESPACE::shared::exp2bf16(bfloat16(0.0)));
   EXPECT_FP_EQ(bfloat16(1.0), LIBC_NAMESPACE::shared::expbf16(bfloat16(0.0)));
   EXPECT_FP_EQ(bfloat16(0.0), LIBC_NAMESPACE::shared::log_bf16(bfloat16(1.0)));
 
@@ -903,4 +911,66 @@ TEST(LlvmLibcSharedMathTest, AllBFloat16) {
                LIBC_NAMESPACE::shared::roundevenbf16(bfloat16(0.0)));
   EXPECT_FP_EQ(bfloat16(0.0), LIBC_NAMESPACE::shared::tanbf16(bfloat16(0.0)));
   EXPECT_FP_EQ(bfloat16(0.0), LIBC_NAMESPACE::shared::truncbf16(bfloat16(0.0)));
+}
+
+TEST(LlvmLibcSharedMathTest, StaticRounding) {
+  using FPBits = LIBC_NAMESPACE::fputil::FPBits<float>;
+
+  EXPECT_FP_EQ(
+      1.0f, LIBC_NAMESPACE::shared::static_rounding::expf(0.0f, FE_TONEAREST));
+  EXPECT_FP_EQ(
+      1.0f, LIBC_NAMESPACE::shared::static_rounding::exp2f(0.0f, FE_TONEAREST));
+
+  EXPECT_FP_EQ(
+      2.0f, LIBC_NAMESPACE::shared::static_rounding::exp2f(1.0f, FE_TONEAREST));
+  EXPECT_FP_EQ(0.5f, LIBC_NAMESPACE::shared::static_rounding::exp2f(
+                         -1.0f, FE_TONEAREST));
+
+  EXPECT_FP_EQ(0x1.5bf0a8p+1f, LIBC_NAMESPACE::shared::static_rounding::expf(
+                                   1.0f, FE_TONEAREST));
+  EXPECT_FP_EQ(0x1.5bf0aap+1f,
+               LIBC_NAMESPACE::shared::static_rounding::expf(1.0f, FE_UPWARD));
+  EXPECT_FP_EQ(0x1.5bf0a8p+1f, LIBC_NAMESPACE::shared::static_rounding::expf(
+                                   1.0f, FE_DOWNWARD));
+  EXPECT_FP_EQ(0x1.5bf0a8p+1f, LIBC_NAMESPACE::shared::static_rounding::expf(
+                                   1.0f, FE_TOWARDZERO));
+
+  EXPECT_FP_EQ(0x1.6a09e6p+0f, LIBC_NAMESPACE::shared::static_rounding::exp2f(
+                                   0.5f, FE_TONEAREST));
+  EXPECT_FP_EQ(0x1.6a09e8p+0f,
+               LIBC_NAMESPACE::shared::static_rounding::exp2f(0.5f, FE_UPWARD));
+  EXPECT_FP_EQ(0x1.6a09e6p+0f, LIBC_NAMESPACE::shared::static_rounding::exp2f(
+                                   0.5f, FE_DOWNWARD));
+  EXPECT_FP_EQ(0x1.6a09e6p+0f, LIBC_NAMESPACE::shared::static_rounding::exp2f(
+                                   0.5f, FE_TOWARDZERO));
+
+  int rounding_modes[] = {FE_TONEAREST, FE_UPWARD, FE_DOWNWARD, FE_TOWARDZERO};
+  for (int rm : rounding_modes) {
+    EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::shared::static_rounding::expf(0.0f, rm));
+    EXPECT_FP_EQ(1.0f,
+                 LIBC_NAMESPACE::shared::static_rounding::expf(-0.0f, rm));
+    EXPECT_FP_EQ(1.0f,
+                 LIBC_NAMESPACE::shared::static_rounding::exp2f(0.0f, rm));
+    EXPECT_FP_EQ(1.0f,
+                 LIBC_NAMESPACE::shared::static_rounding::exp2f(-0.0f, rm));
+
+    EXPECT_TRUE(FPBits(LIBC_NAMESPACE::shared::static_rounding::expf(
+                           FPBits::quiet_nan().get_val(), rm))
+                    .is_nan());
+    EXPECT_TRUE(FPBits(LIBC_NAMESPACE::shared::static_rounding::exp2f(
+                           FPBits::quiet_nan().get_val(), rm))
+                    .is_nan());
+
+    EXPECT_FP_EQ(FPBits::inf(Sign::POS).get_val(),
+                 LIBC_NAMESPACE::shared::static_rounding::expf(
+                     FPBits::inf(Sign::POS).get_val(), rm));
+    EXPECT_FP_EQ(FPBits::inf(Sign::POS).get_val(),
+                 LIBC_NAMESPACE::shared::static_rounding::exp2f(
+                     FPBits::inf(Sign::POS).get_val(), rm));
+
+    EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::shared::static_rounding::expf(
+                           FPBits::inf(Sign::NEG).get_val(), rm));
+    EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::shared::static_rounding::exp2f(
+                           FPBits::inf(Sign::NEG).get_val(), rm));
+  }
 }

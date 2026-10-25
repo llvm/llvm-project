@@ -9237,7 +9237,8 @@ public:
     unsigned N = getNumPrefs();
     Expr *const *E = getTrailingObjects<Expr *>();
     ArrayRef<unsigned> Ends = getAttrEnds();
-    return llvm::map_range(llvm::seq<unsigned>(0, N), [=](unsigned I) {
+    return llvm::map_range(llvm::seq<unsigned>(0, N), [this, E,
+                                                       Ends](unsigned I) {
       unsigned Start = (I == 0) ? 0 : Ends[I - 1];
       return PrefView{
           const_cast<Expr *>(E[1 + I]),

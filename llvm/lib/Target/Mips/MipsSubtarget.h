@@ -14,6 +14,7 @@
 #define LLVM_LIB_TARGET_MIPS_MIPSSUBTARGET_H
 
 #include "MCTargetDesc/MipsABIInfo.h"
+#include "MCTargetDesc/MipsMCOptions.h"
 #include "MipsFrameLowering.h"
 #include "MipsISelLowering.h"
 #include "MipsInstrInfo.h"
@@ -32,19 +33,27 @@
 namespace llvm {
 class StringRef;
 
-enum CompactBranchPolicy {
-  CB_Never,   ///< The policy 'never' may in some circumstances or for some
-              ///< ISAs not be absolutely adhered to.
-  CB_Optimal, ///< Optimal is the default and will produce compact branches
-              ///< when appropriate.
-  CB_Always   ///< 'always' may in some circumstances may not be
-              ///< absolutely adhered to, there may not be a corresponding
-              ///< compact form of a branch.
+enum class CompactBranchPolicy {
+  Never,   ///< The policy 'never' may in some circumstances or for some
+           ///< ISAs not be absolutely adhered to.
+  Optimal, ///< Optimal is the default and will produce compact branches
+           ///< when appropriate.
+  Always   ///< 'always' may in some circumstances may not be
+           ///< absolutely adhered to, there may not be a corresponding
+           ///< compact form of a branch.
 };
+} // namespace llvm
 
+#define OPTIONS_STRUCT_DECL
+#include "MipsOptions.inc"
+
+namespace llvm {
 class MipsTargetMachine;
 
 class MipsSubtarget : public MipsGenSubtargetInfo {
+  const MipsOptions &CLOpts;
+  const MipsMCOptions &MCCLOpts;
+
   virtual void anchor();
 
   enum MipsArchEnum {
@@ -221,7 +230,7 @@ class MipsSubtarget : public MipsGenSubtargetInfo {
 
   const MipsTargetMachine &TM;
 
-  Triple TargetTriple;
+  MipsABIInfo ABI;
 
   std::unique_ptr<const SelectionDAGTargetInfo> TSInfo;
   std::unique_ptr<const MipsInstrInfo> InstrInfo;
@@ -238,7 +247,7 @@ public:
   bool isABI_N64() const;
   bool isABI_N32() const;
   bool isABI_O32() const;
-  const MipsABIInfo &getABI() const;
+  const MipsABIInfo &getABI() const { return ABI; }
   bool isABI_FPXX() const { return isABI_O32() && IsFPXX; }
 
   bool isGPRReservedByUser(unsigned GPR) const {
@@ -248,8 +257,9 @@ public:
 
   /// This constructor initializes the data members to match that
   /// of the specified triple.
-  MipsSubtarget(const Triple &TT, StringRef CPU, StringRef FS, bool little,
-                const MipsTargetMachine &TM, MaybeAlign StackAlignOverride);
+  MipsSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
+                StringRef ABIName, bool little, const MipsTargetMachine &TM,
+                MaybeAlign StackAlignOverride);
 
   ~MipsSubtarget() override;
 
@@ -314,8 +324,8 @@ public:
     return (HasSym32 && isABI_N64()) || isABI_N32() || isABI_O32();
   }
   bool isSingleFloat() const { return IsSingleFloat; }
-  bool isTargetCOFF() const { return TargetTriple.isOSBinFormatCOFF(); }
-  bool isTargetELF() const { return TargetTriple.isOSBinFormatELF(); }
+  bool isTargetCOFF() const { return getTargetTriple().isOSBinFormatCOFF(); }
+  bool isTargetELF() const { return getTargetTriple().isOSBinFormatELF(); }
   bool hasVFPU() const { return HasVFPU; }
   bool inMips16Mode() const { return InMips16Mode; }
   // Hard float for mips16 means essentially to compile as soft float
@@ -361,13 +371,13 @@ public:
   bool hasExtractInsert() const { return !inMips16Mode() && hasMips32r2(); }
   bool hasMTHC1() const { return hasMips32r2(); }
 
-  bool isTargetWindows() const { return TargetTriple.isOSWindows(); }
+  bool isTargetWindows() const { return getTargetTriple().isOSWindows(); }
 
   bool isXRaySupported() const override { return true; }
 
   // for now constant islands are on for the whole compilation unit but we only
   // really use them if in addition we are in mips16 mode
-  static bool useConstantIslands();
+  bool useConstantIslands() const;
 
   Align getStackAlignment() const { return stackAlignment; }
 
@@ -388,6 +398,8 @@ public:
 
   const SelectionDAGTargetInfo *getSelectionDAGInfo() const override;
 
+  const MipsOptions &getCLOpts() const { return CLOpts; }
+  const MipsMCOptions &getMCCLOpts() const { return MCCLOpts; }
   const MipsInstrInfo *getInstrInfo() const override { return InstrInfo.get(); }
   const TargetFrameLowering *getFrameLowering() const override {
     return FrameLowering.get();
@@ -413,6 +425,6 @@ public:
   const RegisterBankInfo *getRegBankInfo() const override;
   InstructionSelector *getInstructionSelector() const override;
 };
-} // End llvm namespace
+} // namespace llvm
 
 #endif
