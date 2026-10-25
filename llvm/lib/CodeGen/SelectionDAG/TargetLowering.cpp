@@ -10290,6 +10290,133 @@ bool TargetLowering::expandFP_TO_SINT(SDNode *Node, SDValue &Result,
   return true;
 }
 
+bool TargetLowering::expandFREXP(SDNode *Node, SelectionDAG &DAG,
+                                 SmallVectorImpl<SDValue> &Results) const {
+  SDLoc dl(Node);
+  SDValue Val = Node->getOperand(0);
+  EVT VT = Val.getValueType();
+  EVT ExpVT = Node->getValueType(1);
+  EVT AsIntVT = VT.changeTypeToInteger();
+  if (AsIntVT == EVT()) // TODO: How to handle f80?
+    return false;
+
+  // The expansion works through the integer-equivalent type; if that is not
+  // legal, bail out and let the caller use a libcall (or diagnose a missing
+  // one).
+  if (!isTypeLegal(AsIntVT))
+    return false;
+
+  const fltSemantics &FltSem = VT.getFltSemantics();
+  const APFloat::ExponentType MinExpVal = APFloat::semanticsMinExponent(FltSem);
+  const unsigned Precision = APFloat::semanticsPrecision(FltSem);
+  const unsigned BitSize = VT.getScalarSizeInBits();
+
+  // TODO: Could introduce control flow and skip over the denormal handling.
+
+  // scale_up = fmul value, scalbn(1.0, precision + 1)
+  // extracted_exp = (bitcast value to uint) >> precision - 1
+  // biased_exp = extracted_exp + min_exp
+  // extracted_fract = (bitcast value to uint) & (fract_mask | sign_mask)
+  //
+  // is_denormal = val < smallest_normalized
+  // computed_fract = is_denormal ? scale_up : extracted_fract
+  // computed_exp = is_denormal ? biased_exp + (-precision - 1) : biased_exp
+  //
+  // result_0 =  (!isfinite(val) || iszero(val)) ? val : computed_fract
+  // result_1 =  (!isfinite(val) || iszero(val)) ? 0 : computed_exp
+
+  SDValue NegSmallestNormalizedInt = DAG.getConstant(
+      APFloat::getSmallestNormalized(FltSem, true).bitcastToAPInt(), dl,
+      AsIntVT);
+
+  SDValue SmallestNormalizedInt = DAG.getConstant(
+      APFloat::getSmallestNormalized(FltSem, false).bitcastToAPInt(), dl,
+      AsIntVT);
+
+  // Masks out the exponent bits.
+  SDValue ExpMask =
+      DAG.getConstant(APFloat::getInf(FltSem).bitcastToAPInt(), dl, AsIntVT);
+
+  // Mask out the exponent part of the value.
+  //
+  // e.g, for f32 FractSignMaskVal = 0x807fffff
+  APInt FractSignMaskVal = APInt::getBitsSet(BitSize, 0, Precision - 1);
+  FractSignMaskVal.setBit(BitSize - 1); // Set the sign bit
+
+  APInt SignMaskVal = APInt::getSignedMaxValue(BitSize);
+  SDValue SignMask = DAG.getConstant(SignMaskVal, dl, AsIntVT);
+
+  SDValue FractSignMask = DAG.getConstant(FractSignMaskVal, dl, AsIntVT);
+
+  const APFloat One(FltSem, "1.0");
+  // Scale a possible denormal input.
+  // e.g., for f64, 0x1p+54
+  APFloat ScaleUpKVal =
+      scalbn(One, Precision + 1, APFloat::rmNearestTiesToEven);
+
+  SDValue ScaleUpK = DAG.getConstantFP(ScaleUpKVal, dl, VT);
+  SDValue ScaleUp = DAG.getNode(ISD::FMUL, dl, VT, Val, ScaleUpK);
+
+  EVT SetCCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
+
+  SDValue AsInt = DAG.getNode(ISD::BITCAST, dl, AsIntVT, Val);
+
+  SDValue Abs = DAG.getNode(ISD::AND, dl, AsIntVT, AsInt, SignMask);
+
+  SDValue AddNegSmallestNormal =
+      DAG.getNode(ISD::ADD, dl, AsIntVT, Abs, NegSmallestNormalizedInt);
+  SDValue DenormOrZero = DAG.getSetCC(dl, SetCCVT, AddNegSmallestNormal,
+                                      NegSmallestNormalizedInt, ISD::SETULE);
+
+  SDValue IsDenormal =
+      DAG.getSetCC(dl, SetCCVT, Abs, SmallestNormalizedInt, ISD::SETULT);
+
+  SDValue MinExp = DAG.getSignedConstant(MinExpVal, dl, ExpVT);
+  SDValue Zero = DAG.getConstant(0, dl, ExpVT);
+
+  SDValue ScaledAsInt = DAG.getNode(ISD::BITCAST, dl, AsIntVT, ScaleUp);
+  SDValue ScaledSelect =
+      DAG.getNode(ISD::SELECT, dl, AsIntVT, IsDenormal, ScaledAsInt, AsInt);
+
+  SDValue ExpMaskScaled =
+      DAG.getNode(ISD::AND, dl, AsIntVT, ScaledAsInt, ExpMask);
+
+  SDValue ScaledValue =
+      DAG.getNode(ISD::SELECT, dl, AsIntVT, IsDenormal, ExpMaskScaled, Abs);
+
+  // Extract the exponent bits.
+  SDValue ExponentShiftAmt =
+      DAG.getShiftAmountConstant(Precision - 1, AsIntVT, dl);
+  SDValue ShiftedExp =
+      DAG.getNode(ISD::SRL, dl, AsIntVT, ScaledValue, ExponentShiftAmt);
+  SDValue Exp = DAG.getSExtOrTrunc(ShiftedExp, dl, ExpVT);
+
+  SDValue NormalBiasedExp = DAG.getNode(ISD::ADD, dl, ExpVT, Exp, MinExp);
+  SDValue DenormalOffset = DAG.getConstant(-Precision - 1, dl, ExpVT);
+  SDValue DenormalExpBias =
+      DAG.getNode(ISD::SELECT, dl, ExpVT, IsDenormal, DenormalOffset, Zero);
+
+  SDValue MaskedFractAsInt =
+      DAG.getNode(ISD::AND, dl, AsIntVT, ScaledSelect, FractSignMask);
+  const APFloat Half(FltSem, "0.5");
+  SDValue FPHalf = DAG.getConstant(Half.bitcastToAPInt(), dl, AsIntVT);
+  SDValue Or = DAG.getNode(ISD::OR, dl, AsIntVT, MaskedFractAsInt, FPHalf);
+  SDValue MaskedFract = DAG.getNode(ISD::BITCAST, dl, VT, Or);
+
+  SDValue ComputedExp =
+      DAG.getNode(ISD::ADD, dl, ExpVT, NormalBiasedExp, DenormalExpBias);
+
+  SDValue Result0 =
+      DAG.getNode(ISD::SELECT, dl, VT, DenormOrZero, Val, MaskedFract);
+
+  SDValue Result1 =
+      DAG.getNode(ISD::SELECT, dl, ExpVT, DenormOrZero, Zero, ComputedExp);
+
+  Results.push_back(Result0);
+  Results.push_back(Result1);
+  return true;
+}
+
 bool TargetLowering::expandFP_TO_UINT(SDNode *Node, SDValue &Result,
                                       SDValue &Chain,
                                       SelectionDAG &DAG) const {
