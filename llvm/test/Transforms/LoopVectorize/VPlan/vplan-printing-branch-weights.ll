@@ -42,8 +42,8 @@ define void @predicated_block(ptr noalias %a, ptr noalias %idx) {
 ; PREDICATE-EMPTY:
 ; PREDICATE-NEXT:    if.then:
 ; PREDICATE-NEXT:      EMIT ir<%add> = add ir<%i>, ir<1>, ir<%cmp> (!vplan.execution.frequency 4611686018427387903 (25%))
-; PREDICATE-NEXT:      EMIT-SCALAR ir<%t> = trunc ir<%add> to i16
-; PREDICATE-NEXT:      EMIT-SCALAR ir<%ext> = sext ir<%t> to i64
+; PREDICATE-NEXT:      EMIT ir<%t> = trunc ir<%add> to i16
+; PREDICATE-NEXT:      EMIT ir<%ext> = sext ir<%t> to i64
 ; PREDICATE-NEXT:      EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%ext>
 ; PREDICATE-NEXT:      EMIT store ir<%add>, ir<%gep.a>, ir<%cmp> (!vplan.execution.frequency 4611686018427387903 (25%))
 ; PREDICATE-NEXT:    Successor(s): latch
@@ -85,8 +85,8 @@ define void @predicated_block(ptr noalias %a, ptr noalias %idx) {
 ; CONSTRUCT-EMPTY:
 ; CONSTRUCT-NEXT:    if.then:
 ; CONSTRUCT-NEXT:      EMIT ir<%add> = add ir<%i>, ir<1>, ir<%cmp> (!vplan.execution.frequency 4611686018427387903 (25%))
-; CONSTRUCT-NEXT:      EMIT-SCALAR ir<%t> = trunc ir<%add> to i16
-; CONSTRUCT-NEXT:      EMIT-SCALAR ir<%ext> = sext ir<%t> to i64
+; CONSTRUCT-NEXT:      EMIT ir<%t> = trunc ir<%add> to i16
+; CONSTRUCT-NEXT:      EMIT ir<%ext> = sext ir<%t> to i64
 ; CONSTRUCT-NEXT:      EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%ext>
 ; CONSTRUCT-NEXT:      REPLICATE store ir<%add>, ir<%gep.a>, ir<%cmp> (!vplan.execution.frequency 4611686018427387903 (25%))
 ; CONSTRUCT-NEXT:    Successor(s): latch
