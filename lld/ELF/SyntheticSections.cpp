@@ -375,20 +375,21 @@ void EhFrameSection::writeTo(uint8_t *buf) {
     size_t cieOffset = rec->cie->outputOff;
     writeCieFde(ctx, buf + cieOffset, rec->cie->data());
 
-    for (EhSectionPiece *fde : rec->fdes) {
+    parallelFor(0, rec->fdes.size(), [&](size_t i) {
+      EhSectionPiece *fde = rec->fdes[i];
       size_t off = fde->outputOff;
       writeCieFde(ctx, buf + off, fde->data());
 
       // FDE's second word should have the offset to an associated CIE.
       // Write it.
       write32(ctx, buf + off + 4, off + 4 - cieOffset);
-    }
+    });
   }
 
   // Apply relocations to .eh_frame entries. This includes CIE personality
   // pointers, FDE initial_location fields, and LSDA pointers.
-  for (EhInputSection *s : sections)
-    ctx.target->relocateEh(*s, buf);
+  parallelForEach(sections,
+                  [&](EhInputSection *s) { ctx.target->relocateEh(*s, buf); });
 
   EhFrameHeader *hdr = ctx.in.ehFrameHdr.get();
   if (!hdr || !hdr->getParent())

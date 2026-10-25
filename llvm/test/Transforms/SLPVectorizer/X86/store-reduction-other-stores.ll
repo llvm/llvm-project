@@ -7,28 +7,8 @@ define void @arg_store(ptr %p, i32 %v) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[G8:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 8
 ; CHECK-NEXT:    store i32 [[V]], ptr [[G8]], align 4
-; CHECK-NEXT:    [[L0:%.*]] = load i32, ptr [[P]], align 4
-; CHECK-NEXT:    [[G1:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 1
-; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[G1]], align 4
-; CHECK-NEXT:    [[G2:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 2
-; CHECK-NEXT:    [[L2:%.*]] = load i32, ptr [[G2]], align 4
-; CHECK-NEXT:    [[G3:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 3
-; CHECK-NEXT:    [[L3:%.*]] = load i32, ptr [[G3]], align 4
-; CHECK-NEXT:    [[G4:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 4
-; CHECK-NEXT:    [[L4:%.*]] = load i32, ptr [[G4]], align 4
-; CHECK-NEXT:    [[G5:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 5
-; CHECK-NEXT:    [[L5:%.*]] = load i32, ptr [[G5]], align 4
-; CHECK-NEXT:    [[G6:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 6
-; CHECK-NEXT:    [[L6:%.*]] = load i32, ptr [[G6]], align 4
-; CHECK-NEXT:    [[G7:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 7
-; CHECK-NEXT:    [[L7:%.*]] = load i32, ptr [[G7]], align 4
-; CHECK-NEXT:    [[A1:%.*]] = add i32 [[L1]], [[L0]]
-; CHECK-NEXT:    [[A2:%.*]] = add i32 [[L2]], [[A1]]
-; CHECK-NEXT:    [[A3:%.*]] = add i32 [[L3]], [[A2]]
-; CHECK-NEXT:    [[A4:%.*]] = add i32 [[L4]], [[A3]]
-; CHECK-NEXT:    [[A5:%.*]] = add i32 [[L5]], [[A4]]
-; CHECK-NEXT:    [[A6:%.*]] = add i32 [[L6]], [[A5]]
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[L7]], [[A6]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i32>, ptr [[P]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP0]])
 ; CHECK-NEXT:    [[G9:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 9
 ; CHECK-NEXT:    store i32 [[TMP1]], ptr [[G9]], align 4
 ; CHECK-NEXT:    ret void
@@ -72,28 +52,8 @@ define void @load_store(ptr %p, ptr %q, i32 %v) {
 ; CHECK-NEXT:    store i32 [[LQ]], ptr [[G10]], align 4
 ; CHECK-NEXT:    [[G8:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 8
 ; CHECK-NEXT:    store i32 [[V]], ptr [[G8]], align 4
-; CHECK-NEXT:    [[L0:%.*]] = load i32, ptr [[P]], align 4
-; CHECK-NEXT:    [[G1:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 1
-; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[G1]], align 4
-; CHECK-NEXT:    [[G2:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 2
-; CHECK-NEXT:    [[L2:%.*]] = load i32, ptr [[G2]], align 4
-; CHECK-NEXT:    [[G3:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 3
-; CHECK-NEXT:    [[L3:%.*]] = load i32, ptr [[G3]], align 4
-; CHECK-NEXT:    [[G4:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 4
-; CHECK-NEXT:    [[L4:%.*]] = load i32, ptr [[G4]], align 4
-; CHECK-NEXT:    [[G5:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 5
-; CHECK-NEXT:    [[L5:%.*]] = load i32, ptr [[G5]], align 4
-; CHECK-NEXT:    [[G6:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 6
-; CHECK-NEXT:    [[L6:%.*]] = load i32, ptr [[G6]], align 4
-; CHECK-NEXT:    [[G7:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 7
-; CHECK-NEXT:    [[L7:%.*]] = load i32, ptr [[G7]], align 4
-; CHECK-NEXT:    [[A1:%.*]] = add i32 [[L1]], [[L0]]
-; CHECK-NEXT:    [[A2:%.*]] = add i32 [[L2]], [[A1]]
-; CHECK-NEXT:    [[A3:%.*]] = add i32 [[L3]], [[A2]]
-; CHECK-NEXT:    [[A4:%.*]] = add i32 [[L4]], [[A3]]
-; CHECK-NEXT:    [[A5:%.*]] = add i32 [[L5]], [[A4]]
-; CHECK-NEXT:    [[A6:%.*]] = add i32 [[L6]], [[A5]]
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[L7]], [[A6]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i32>, ptr [[P]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP0]])
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i32 100, [[TMP1]]
 ; CHECK-NEXT:    [[G9:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 9
 ; CHECK-NEXT:    store i32 [[SUB]], ptr [[G9]], align 4
