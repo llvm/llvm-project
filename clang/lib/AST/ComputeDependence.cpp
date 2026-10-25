@@ -9,6 +9,7 @@
 #include "clang/AST/ComputeDependence.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/DependenceFlags.h"
 #include "clang/AST/Expr.h"
@@ -16,6 +17,8 @@
 #include "clang/AST/ExprConcepts.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/ExprOpenMP.h"
+#include "clang/AST/Reflection.h"
+#include "clang/AST/TypeLoc.h"
 #include "clang/Basic/ExceptionSpecificationType.h"
 #include "llvm/ADT/ArrayRef.h"
 
@@ -313,6 +316,28 @@ ExprDependence clang::computeDependence(CXXUuidofExpr *E) {
         E->getTypeOperandSourceInfo()->getType()->getDependence()));
 
   return turnTypeToValueDependence(E->getExprOperand()->getDependence());
+}
+
+ExprDependence clang::computeDependence(CXXReflectExpr *E) {
+  QualType QT = E->getTypeSourceInfo()->getType();
+  ExprDependence D =
+      turnTypeToValueDependence(toExprDependenceAsWritten(QT->getDependence()));
+  if (isTypeAliasAsReflectionName(QT)) {
+    const NamedDecl *Alias;
+    if (const auto *T = dyn_cast<TypedefType>(QT.getTypePtr())) {
+      Alias = T->getDecl();
+    } else {
+      const auto *TST = cast<TemplateSpecializationType>(QT.getTypePtr());
+      Alias = TST->getTemplateName().getAsTemplateDecl();
+      for (const auto &Arg : TST->template_arguments())
+        if (Arg.isDependent())
+          D |= ExprDependence::ValueInstantiation;
+    }
+    // Member aliases depend on their enclosing template specialization.
+    if (Alias->getDeclContext()->isDependentContext())
+      D |= ExprDependence::ValueInstantiation;
+  }
+  return D;
 }
 
 ExprDependence clang::computeDependence(CXXThisExpr *E) {

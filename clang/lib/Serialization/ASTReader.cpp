@@ -8349,13 +8349,15 @@ ASTRecordReader::readTemplateArgumentLocInfo(TemplateArgument::ArgKind Kind) {
                                    TemplateNameLoc, EllipsisLoc);
   }
   case TemplateArgument::Null:
+    return TemplateArgumentLocInfo();
   case TemplateArgument::Integral:
   case TemplateArgument::Declaration:
   case TemplateArgument::NullPtr:
   case TemplateArgument::StructuralValue:
   case TemplateArgument::Pack:
-    // FIXME: Is this right?
-    return TemplateArgumentLocInfo();
+    // Synthesize a trivial LocInfo for these as TemplateArgumentLoc
+    // will assert otherwise.
+    return TemplateArgumentLocInfo(getASTContext(), SourceLocation());
   }
   llvm_unreachable("unexpected template argument loc");
 }

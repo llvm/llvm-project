@@ -5969,6 +5969,9 @@ bool Compiler<Emitter>::visitAPValue(const APValue &Val, PrimType ValType,
     return this->emitConst(Val.getInt(), ValType, Info);
   if (Val.isFloat())
     return this->emitFloat(Val.getFloat(), Info);
+  if (Val.isReflection())
+    return this->emitReflectValue(Val.getReflectionOperandKind(),
+                                  Val.getReflectionOpaqueOperand(), Info);
 
   if (Val.isMemberPointer()) {
     if (const ValueDecl *MemberDecl = Val.getMemberPointerDecl()) {

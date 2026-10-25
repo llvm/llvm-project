@@ -18633,6 +18633,58 @@ ExprResult Sema::ActOnCXXReflectExpr(SourceLocation CaretCaretLoc,
 
 ExprResult Sema::BuildCXXReflectExpr(SourceLocation CaretCaretLoc,
                                      TypeSourceInfo *TSI) {
+  QualType QT = TSI->getType();
+  SourceLocation TypeLoc = TSI->getTypeLoc().getBeginLoc();
+
+  // Don't bother supporting VLAs here.
+  if (QT->isVariablyModifiedType()) {
+    Diag(TypeLoc, diag::err_reflect_variably_modified_type) << QT;
+    return ExprError();
+  }
+
+  // Canonicalize template arguments of alias template specializations.
+  //
+  // A parsed TST retains template arguments as written. Rebuild it with the
+  // canonical template declaration and normalized arguments so equivalent
+  // alias specializations have the same reflection identity.
+  //
+  // FIXME: This does mean that e.g. ^^A<1+2> becomes ^^A<3>; we might
+  // want to retain the original arguments somehow, but we need to make sure
+  // that doing so doesn't change the fact that ^^A<1+2> == ^^A<3>.
+  if (const auto *T = dyn_cast<TemplateSpecializationType>(QT.getTypePtr());
+      T && isTypeAliasAsReflectionName(QT)) {
+    auto TL = TSI->getTypeLoc().castAs<TemplateSpecializationTypeLoc>();
+    TemplateArgumentListInfo Args(TL.getLAngleLoc(), TL.getRAngleLoc());
+    for (unsigned I = 0; I != TL.getNumArgs(); ++I)
+      Args.addArgument(TL.getArgLoc(I));
+    auto [Name, DefaultArgs] =
+        T->getTemplateName().getTemplateDeclAndDefaultArgs();
+    auto *TD = cast<TypeAliasTemplateDecl>(Name.getAsTemplateDecl());
+    CheckTemplateArgumentInfo CTAI;
+    if (CheckTemplateArgumentList(TD, TL.getTemplateNameLoc(), Args,
+                                  DefaultArgs, /*PartialTemplateArgs=*/false,
+                                  CTAI))
+      return ExprError();
+
+    for (auto &Arg : CTAI.CanonicalConverted)
+      Arg.setIsDefaulted(false);
+    QT = Context.getTemplateSpecializationType(
+        ElaboratedTypeKeyword::None, TemplateName(TD->getCanonicalDecl()),
+        CTAI.CanonicalConverted, /*CanonicalArgs=*/{}, T->getAliasedType());
+    TSI = Context.getTrivialTypeSourceInfo(QT, TypeLoc);
+  }
+
+  // [expr.reflect]/5.1 makes reflection-names found through using-declarations
+  // ill-formed. A cv-qualified or elaborated type-id instead reflects its type.
+  if (const auto *UT = dyn_cast<UsingType>(QT.getTypePtr())) {
+    if (!QT.hasLocalQualifiers() &&
+        UT->getKeyword() == ElaboratedTypeKeyword::None) {
+      Diag(TypeLoc, diag::err_reflect_using_declaration);
+      Diag(UT->getDecl()->getIntroducer()->getLocation(), diag::note_using_decl)
+          << 0;
+      return ExprError();
+    }
+  }
   return CXXReflectExpr::Create(Context, CaretCaretLoc, TSI);
 }
 

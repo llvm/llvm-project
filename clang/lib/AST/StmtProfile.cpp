@@ -81,6 +81,7 @@ namespace {
 
     /// Visit a single template argument.
     void VisitTemplateArgument(const TemplateArgument &Arg);
+    void VisitReflection(ReflectionKind Kind, const void *Operand);
   };
 
   class StmtProfilerWithPointers : public StmtProfiler {
@@ -1450,6 +1451,15 @@ void StmtProfiler::VisitExpr(const Expr *S) {
 }
 
 void StmtProfiler::VisitConstantExpr(const ConstantExpr *S) {
+  if (S->getResultAPValueKind() == APValue::Reflection) {
+    // Substituted reflections have an opaque placeholder subexpression;
+    // profile the reflection instead.
+    HandleStmtClass(Stmt::CXXReflectExprClass);
+    APValue Value = S->getAPValueResult();
+    VisitReflection(Value.getReflectionOperandKind(),
+                    Value.getReflectionOpaqueOperand());
+    return;
+  }
   // Profile exactly as the sub-expression.
   Visit(S->getSubExpr());
 }
@@ -2268,23 +2278,31 @@ StmtProfiler::VisitLambdaExpr(const LambdaExpr *S) {
 }
 
 void StmtProfiler::VisitCXXReflectExpr(const CXXReflectExpr *E) {
-  // TODO(Reflection): Add support for Null, TypeSourceInfo,
-  // TemplateReference and DeclRefExpr
   VisitExpr(E);
-  ID.AddInteger(static_cast<int>(E->getKind()));
-  switch (E->getKind()) {
+  VisitReflection(E->getKind(), E->getOpaqueValue());
+}
+
+void StmtProfiler::VisitReflection(ReflectionKind Kind, const void *Operand) {
+  ID.AddInteger(static_cast<int>(Kind));
+  switch (Kind) {
   case ReflectionKind::Null:
-    assert(false && "null reflection can't be constructed from parsing a "
-                    "reflection operand");
     return;
   case ReflectionKind::Type: {
-    QualType QT = E->getTypeSourceInfo()->getType();
+    QualType QT = static_cast<const TypeSourceInfo *>(Operand)->getType();
     if (isTypeAliasAsReflectionName(QT)) {
-      if (const auto *TDT = QT->getAs<TypedefType>()) {
-        ID.AddBoolean(true);
+      ID.AddBoolean(true);
+      if (const auto *TDT = dyn_cast<TypedefType>(QT.getTypePtr())) {
         VisitDecl(TDT->getDecl()->getCanonicalDecl());
-        return;
+      } else {
+        const auto *TST = cast<TemplateSpecializationType>(QT.getTypePtr());
+        auto *TD = cast<TypeAliasTemplateDecl>(
+            TST->getTemplateName().getAsTemplateDecl()->getCanonicalDecl());
+        VisitDecl(TD);
+        ID.AddInteger(TST->template_arguments().size());
+        for (const auto &Arg : TST->template_arguments())
+          VisitTemplateArgument(Arg);
       }
+      return;
     }
     ID.AddBoolean(false);
     VisitType(QT);
