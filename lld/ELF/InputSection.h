@@ -372,19 +372,22 @@ private:
 };
 
 struct EhSectionPiece {
-  EhSectionPiece(size_t off, InputSectionBase *sec, uint32_t size,
-                 unsigned firstRelocation)
-      : inputOff(off), sec(sec), size(size), firstRelocation(firstRelocation) {}
+  EhSectionPiece(uint32_t off, InputSectionBase *sec, uint32_t size,
+                 unsigned firstRelocation, uint32_t cie)
+      : inputOff(off), size(size), sec(sec), firstRelocation(firstRelocation),
+        cie(cie) {}
 
   ArrayRef<uint8_t> data() const {
     return {sec->content().data() + this->inputOff, size};
   }
 
-  size_t inputOff;
+  uint32_t inputOff;
+  uint32_t size;
   ssize_t outputOff = -1;
   InputSectionBase *sec;
-  uint32_t size;
   unsigned firstRelocation;
+  // For an FDE, the index of its CIE in `cies`, or -1 if invalid.
+  uint32_t cie;
 };
 
 // This corresponds to a .eh_frame section of an input file.
