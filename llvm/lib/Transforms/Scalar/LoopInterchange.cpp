@@ -36,6 +36,7 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/Verifier.h"
@@ -629,6 +630,7 @@ public:
 
 private:
   void adjustLoopBranches();
+  void updateLatchMetadata();
 
   Loop *OuterLoop;
   Loop *InnerLoop;
@@ -2168,6 +2170,26 @@ void LoopInterchangeTransform::restructureLoops(
   SE->forgetLoop(NewOuter);
 }
 
+/// Update the metadata attached to the latch branches of the two loops. The
+/// loop metadata and the branch weights are dropped. Some attributes of the
+/// loop metadata may not hold after interchange (e.g.,
+/// llvm.loop.parallel_accesses of the inner loop doesn't imply that the loop is
+/// parallel when it becomes the outer loop), and no followup attributes are
+/// defined for interchange.
+/// TODO: Preserve the branch weights by swapping them.
+void LoopInterchangeTransform::updateLatchMetadata() {
+  auto *OuterLoopLatchBI =
+      cast<CondBrInst>(OuterLoop->getLoopLatch()->getTerminator());
+  auto *InnerLoopLatchBI =
+      cast<CondBrInst>(InnerLoop->getLoopLatch()->getTerminator());
+
+  for (CondBrInst *BI : {OuterLoopLatchBI, InnerLoopLatchBI}) {
+    BI->setMetadata(LLVMContext::MD_loop, nullptr);
+    BI->setMetadata(LLVMContext::MD_prof, nullptr);
+    setExplicitlyUnknownBranchWeightsIfProfiled(*BI, DEBUG_TYPE);
+  }
+}
+
 ///  User can write, or optimizers can generate the reduction for inner loop.
 ///  To make the interchange valid, apply Reduction2Mem by moving the
 ///  initializer and store instructions into the inner loop. So far we only
@@ -2232,6 +2254,8 @@ void LoopInterchangeTransform::reduction2Memory() {
 void LoopInterchangeTransform::transform(
     ArrayRef<Instruction *> DropNoWrapInsts,
     ArrayRef<Instruction *> DropNoInfInsts) {
+
+  updateLatchMetadata();
 
   ArrayRef<LoopInterchangeLegality::InnerReduction> InnerReductions =
       LIL.getInnerReductions();
