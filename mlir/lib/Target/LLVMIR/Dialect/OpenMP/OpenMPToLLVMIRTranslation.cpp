@@ -7991,6 +7991,98 @@ getOverlappedMembers(llvm::SmallVectorImpl<size_t> &overlapMapDataIdxs,
       overlapMapDataIdxs.push_back(i);
 }
 
+/// Describe a bounded update as a set of contiguous pieces. The runtime uses
+/// byte offsets and strides, with the slowest varying dimension first (the
+/// OpenMPIRBuilder reverses the vectors below when emitting the descriptor).
+static void addNonContiguousUpdate(LLVM::ModuleTranslation &moduleTranslation,
+                                   llvm::IRBuilderBase &builder,
+                                   MapInfoData &mapData, size_t mapDataIdx,
+                                   MapInfosTy &combinedInfo) {
+  auto mapOp = cast<omp::MapInfoOp>(mapData.MapClause[mapDataIdx]);
+  if (mapOp.getBounds().empty() || mapOp.getMapperId() ||
+      mapOp->getParentOfType<omp::DeclareMapperOp>() ||
+      bitEnumContainsAll(mapOp.getMapType(), omp::ClauseMapFlags::attach))
+    return;
+
+  llvm::Type *elementType = mapData.BaseType[mapDataIdx];
+  SmallVector<uint64_t> arrayExtents;
+  while (auto *arrayType = dyn_cast<llvm::ArrayType>(elementType)) {
+    arrayExtents.push_back(arrayType->getNumElements());
+    elementType = arrayType->getElementType();
+  }
+  llvm::Value *elementSize = builder.getInt64(
+      builder.GetInsertBlock()->getModule()->getDataLayout().getTypeAllocSize(
+          elementType));
+
+  // Include a byte dimension so that a non-unit descriptor stride in the
+  // innermost array dimension still transfers one element at a time.
+  llvm::OpenMPIRBuilder::MapValuesArrayTy offsets{builder.getInt64(0)};
+  llvm::OpenMPIRBuilder::MapValuesArrayTy counts{elementSize};
+  llvm::OpenMPIRBuilder::MapValuesArrayTy strides{builder.getInt64(1)};
+  llvm::Value *sourceStride = elementSize;
+  llvm::Value *contiguousSize = elementSize;
+  bool isContiguous = true;
+  for (auto [dim, bound] : llvm::enumerate(mapOp.getBounds())) {
+    auto bounds = cast<omp::MapBoundsOp>(bound.getDefiningOp());
+    auto getInt64 = [&](Value value) {
+      return builder.CreateSExtOrTrunc(moduleTranslation.lookupValue(value),
+                                       builder.getInt64Ty());
+    };
+    llvm::Value *lower = bounds.getLowerBound()
+                             ? getInt64(bounds.getLowerBound())
+                             : builder.getInt64(0);
+    llvm::Value *count = builder.CreateAdd(
+        builder.CreateSub(getInt64(bounds.getUpperBound()), lower),
+        builder.getInt64(1));
+    count =
+        builder.CreateSelect(builder.CreateICmpSGT(count, builder.getInt64(0)),
+                             count, builder.getInt64(0));
+    llvm::Value *stride = sourceStride;
+    if (bounds.getStrideInBytes() && bounds.getStride())
+      stride = getInt64(bounds.getStride());
+    else if (arrayExtents.empty() && bounds.getStride())
+      stride = builder.CreateMul(getInt64(bounds.getStride()), elementSize);
+    offsets.push_back(builder.CreateMul(lower, stride));
+    counts.push_back(count);
+    strides.push_back(stride);
+    isContiguous &= stride == contiguousSize;
+    contiguousSize = builder.CreateMul(contiguousSize, count);
+
+    // Static array types carry the full source shape, including dimensions
+    // selected with scalar subscripts. Otherwise the frontend supplies the
+    // physical stride in elements (or descriptor bytes) for every dimension.
+    if (dim < arrayExtents.size())
+      sourceStride = builder.CreateMul(
+          sourceStride,
+          builder.getInt64(arrayExtents[arrayExtents.size() - dim - 1]));
+    else if (bounds.getExtent())
+      sourceStride =
+          builder.CreateMul(sourceStride, getInt64(bounds.getExtent()));
+  }
+  if (isContiguous)
+    return;
+
+  llvm::Value *base = mapData.OriginalValue[mapDataIdx];
+  if (mapOp.getVarPtrPtr())
+    base = builder.CreateLoad(builder.getPtrTy(), base);
+  // Absent optional arrays and unallocated descriptors must not issue
+  // transfers, including sections with explicit nonempty bounds.
+  counts[1] = builder.CreateSelect(builder.CreateIsNull(base),
+                                   builder.getInt64(0), counts[1]);
+  // The descriptor offsets already locate the first selected element. The
+  // runtime needs the pointee base, not the descriptor or a section address.
+  combinedInfo.BasePointers.back() = base;
+  combinedInfo.Types.back() |=
+      llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NON_CONTIG;
+  auto &nonContig = combinedInfo.NonContigInfo;
+  nonContig.IsNonContiguous = true;
+  nonContig.Dims.resize(combinedInfo.Types.size(), 1);
+  nonContig.Dims.back() = counts.size();
+  nonContig.Offsets.push_back(std::move(offsets));
+  nonContig.Counts.push_back(std::move(counts));
+  nonContig.Strides.push_back(std::move(strides));
+}
+
 /// This function handles the insertion of a single item of map data from
 /// MapInfoData into the OMPIRBuilder's MapInfo list. Utilising this function
 /// means the map being inserted can be treated as a non-parent map entity,
@@ -8000,14 +8092,13 @@ getOverlappedMembers(llvm::SmallVectorImpl<size_t> &overlapMapDataIdxs,
 /// a ref_ptr or ref_ptee map, if it's a member of a record, what construct
 /// the map belongs to and the various map type bit flags that are set for
 /// the map.
-static void
-processIndividualMap(llvm::IRBuilderBase &builder,
-                     llvm::OpenMPIRBuilder &ompBuilder, MapInfoData &mapData,
-                     size_t mapDataIdx, MapInfosTy &combinedInfo,
-                     TargetDirectiveEnumTy targetDirective,
-                     llvm::omp::OpenMPOffloadMappingFlags memberOfFlag =
-                         llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE,
-                     bool isTargetParam = true, int mapDataParentIdx = -1) {
+static void processIndividualMap(
+    LLVM::ModuleTranslation &moduleTranslation, llvm::IRBuilderBase &builder,
+    llvm::OpenMPIRBuilder &ompBuilder, MapInfoData &mapData, size_t mapDataIdx,
+    MapInfosTy &combinedInfo, TargetDirectiveEnumTy targetDirective,
+    llvm::omp::OpenMPOffloadMappingFlags memberOfFlag =
+        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE,
+    bool isTargetParam = true, int mapDataParentIdx = -1) {
   auto mapFlag = mapData.Types[mapDataIdx];
   auto mapInfoOp = llvm::cast<omp::MapInfoOp>(mapData.MapClause[mapDataIdx]);
 
@@ -8100,6 +8191,9 @@ processIndividualMap(llvm::IRBuilderBase &builder,
                 builder.CreateIsNull(mapData.Pointers[mapDataIdx]),
                 builder.getInt64(0), mapData.Sizes[mapDataIdx])
           : mapData.Sizes[mapDataIdx]);
+  if (targetDirective == TargetDirectiveEnumTy::TargetUpdate)
+    addNonContiguousUpdate(moduleTranslation, builder, mapData, mapDataIdx,
+                           combinedInfo);
 }
 
 // This creates two insertions into the MapInfosTy data structure for the
@@ -8389,8 +8483,8 @@ static void processMapWithMembersOf(LLVM::ModuleTranslation &moduleTranslation,
     // currently do), whereas we treat them as arrays in all cases
     // currently.
     processIndividualMap(
-        builder, ompBuilder, mapData, memberDataIdx, combinedInfo,
-        targetDirective,
+        moduleTranslation, builder, ompBuilder, mapData, memberDataIdx,
+        combinedInfo, targetDirective,
         /*MemberOfFlag=*/llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE,
         /*isTargetParam=*/true, mapDataIndex);
     return;
@@ -8430,7 +8524,8 @@ static void processMapWithMembersOf(LLVM::ModuleTranslation &moduleTranslation,
                            targetDirective);
     } else {
       processIndividualMap(
-          builder, ompBuilder, mapData, idx, combinedInfo, targetDirective,
+          moduleTranslation, builder, ompBuilder, mapData, idx, combinedInfo,
+          targetDirective,
           parentIsPrivatizeableAttach
               ? llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE
               : memberOfFlag,
@@ -8559,9 +8654,11 @@ static void genMapInfos(llvm::IRBuilderBase &builder,
       continue;
     }
 
-    processIndividualMap(builder, *ompBuilder, mapData, i, combinedInfo,
-                         targetDirective);
+    processIndividualMap(moduleTranslation, builder, *ompBuilder, mapData, i,
+                         combinedInfo, targetDirective);
   }
+  if (!combinedInfo.NonContigInfo.Dims.empty())
+    combinedInfo.NonContigInfo.Dims.resize(combinedInfo.Types.size(), 1);
 }
 
 static llvm::Expected<llvm::Function *>

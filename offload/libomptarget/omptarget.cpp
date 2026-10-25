@@ -1349,6 +1349,9 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
 static int targetDataContiguous(ident_t *Loc, DeviceTy &Device, void *ArgsBase,
                                 void *HstPtrBegin, int64_t ArgSize,
                                 int64_t ArgType, AsyncInfoTy &AsyncInfo) {
+  // An empty update requires neither a presence check nor a data transfer.
+  if (ArgSize == 0)
+    return OFFLOAD_SUCCESS;
   TargetPointerResultTy TPR = Device.getMappingInfo().getTgtPtrBegin(
       HstPtrBegin, ArgSize, /*UpdateRefCount=*/false,
       /*UseHoldRefCount=*/false, /*MustContain=*/true);
@@ -1485,20 +1488,21 @@ static int targetDataNonContiguous(ident_t *Loc, DeviceTy &Device,
                                    AsyncInfoTy &AsyncInfo) {
   int Ret = OFFLOAD_SUCCESS;
   if (CurrentDim < DimSize) {
-    for (unsigned int I = 0; I < NonContig[CurrentDim].Count; ++I) {
+    // The last dimension describes an already contiguous piece. Visit its
+    // first element once instead of iterating over all of its elements.
+    uint64_t Count = NonContig[CurrentDim].Count;
+    if (CurrentDim == DimSize - 1)
+      Count = std::min(Count, uint64_t(1));
+    for (uint64_t I = 0; I < Count; ++I) {
       uint64_t CurOffset =
           NonContig[CurrentDim].Offset + I * NonContig[CurrentDim].Stride;
-      // we only need to transfer the first element for the last dimension
-      // since we've already got a contiguous piece.
-      if (CurrentDim != DimSize - 1 || I == 0) {
-        Ret = targetDataNonContiguous(Loc, Device, ArgsBase, NonContig, Size,
-                                      ArgType, CurrentDim + 1, DimSize,
-                                      Offset + CurOffset, AsyncInfo);
-        // Stop the whole process if any contiguous piece returns anything
-        // other than OFFLOAD_SUCCESS.
-        if (Ret != OFFLOAD_SUCCESS)
-          return Ret;
-      }
+      Ret = targetDataNonContiguous(Loc, Device, ArgsBase, NonContig, Size,
+                                    ArgType, CurrentDim + 1, DimSize,
+                                    Offset + CurOffset, AsyncInfo);
+      // Stop the whole process if any contiguous piece returns anything
+      // other than OFFLOAD_SUCCESS.
+      if (Ret != OFFLOAD_SUCCESS)
+        return Ret;
     }
   } else {
     void *Ptr = reinterpret_cast<void *>((char *)ArgsBase + Offset);
@@ -1513,9 +1517,12 @@ static int targetDataNonContiguous(ident_t *Loc, DeviceTy &Device,
 static int getNonContigMergedDimension(__tgt_target_non_contig *NonContig,
                                        int32_t DimSize) {
   int RemovedDim = 0;
+  // Only consecutive innermost dimensions form a contiguous transfer.
   for (int I = DimSize - 1; I > 0; --I) {
     if (NonContig[I].Count * NonContig[I].Stride == NonContig[I - 1].Stride)
       RemovedDim++;
+    else
+      break;
   }
   return RemovedDim;
 }
@@ -1559,10 +1566,16 @@ int targetDataUpdate(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
       __tgt_target_non_contig *NonContig = (__tgt_target_non_contig *)Args[I];
       int32_t DimSize = ArgSizes[I];
       ODBG(ODT_DataTransfer) << "Non contig descriptor:";
-      for (int I = 0; I < DimSize; I++)
+      bool IsEmpty = false;
+      for (int I = 0; I < DimSize; I++) {
         ODBG(ODT_DataTransfer)
             << "  Dim " << I << ": Offset " << NonContig[I].Offset << " Count "
             << NonContig[I].Count << " Stride " << NonContig[I].Stride;
+        IsEmpty |= NonContig[I].Count == 0;
+      }
+      // Empty sections require neither a presence check nor a data transfer.
+      if (IsEmpty)
+        continue;
       int32_t MergedDim = getNonContigMergedDimension(NonContig, DimSize);
       ODBG(ODT_DataTransfer) << "Merged " << MergedDim << " dimensions";
       __tgt_target_non_contig &FirstMergedDim =

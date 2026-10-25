@@ -9691,9 +9691,10 @@ static Type *getOffloadingArrayType(Value *V) {
 // %struct.kmp_task_ompbuilder_t is returned.
 static StructType *
 createTaskWithPrivatesTy(OpenMPIRBuilder &OMPIRBuilder,
-                         ArrayRef<Value *> OffloadingArraysToPrivatize) {
+                         ArrayRef<Value *> OffloadingArraysToPrivatize,
+                         ArrayRef<Type *> DescriptorTypes) {
 
-  if (OffloadingArraysToPrivatize.empty())
+  if (OffloadingArraysToPrivatize.empty() && DescriptorTypes.empty())
     return OMPIRBuilder.Task;
 
   SmallVector<Type *, 4> StructFieldTypes;
@@ -9705,6 +9706,7 @@ createTaskWithPrivatesTy(OpenMPIRBuilder &OMPIRBuilder,
     assert(ArrayTy && "ArrayType cannot be nullptr");
     StructFieldTypes.push_back(ArrayTy);
   }
+  llvm::append_range(StructFieldTypes, DescriptorTypes);
   StructType *PrivatesStructTy =
       StructType::create(StructFieldTypes, "struct.privates");
   return StructType::create({OMPIRBuilder.Task, PrivatesStructTy},
@@ -9908,9 +9910,14 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitTargetTask(
       }
     }
   }
+  auto NonContiguousDescriptors = RTArgs.NonContiguousDescriptors;
+  if (!NeedsTargetTask)
+    NonContiguousDescriptors.clear();
   OI->PostOutlineCB = [this, ToBeDeleted, Dependencies, NeedsTargetTask,
-                       DeviceID, OffloadingArraysToPrivatize](
-                          Function &OutlinedFn) mutable {
+                       DeviceID, OffloadingArraysToPrivatize,
+                       NonContiguousDescriptors,
+                       PointersArray =
+                           RTArgs.PointersArray](Function &OutlinedFn) mutable {
     assert(OutlinedFn.hasOneUse() &&
            "there must be a single user for the outlined function");
 
@@ -9934,8 +9941,13 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitTargetTask(
     int SharedArgOperandNo =
         HasShareds ? OffloadingArraysToPrivatize.size() + 1 : 0;
 
-    StructType *TaskWithPrivatesTy =
-        createTaskWithPrivatesTy(*this, OffloadingArraysToPrivatize);
+    // Descriptor storage is not an argument to the outlined function. It is
+    // reached indirectly through the task-private pointer array.
+    SmallVector<Type *, 2> DescriptorTypes;
+    for (const auto &Descriptor : NonContiguousDescriptors)
+      DescriptorTypes.push_back(Descriptor.Storage->getAllocatedType());
+    StructType *TaskWithPrivatesTy = createTaskWithPrivatesTy(
+        *this, OffloadingArraysToPrivatize, DescriptorTypes);
     StructType *PrivatesTy = nullptr;
 
     if (!OffloadingArraysToPrivatize.empty())
@@ -10034,6 +10046,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitTargetTask(
     if (!OffloadingArraysToPrivatize.empty()) {
       Value *Privates =
           Builder.CreateStructGEP(TaskWithPrivatesTy, TaskData, 1);
+      Value *PrivatePointersArray = nullptr;
       for (unsigned int i = 0; i < OffloadingArraysToPrivatize.size(); ++i) {
         Value *PtrToPrivatize = OffloadingArraysToPrivatize[i];
         [[maybe_unused]] Type *ArrayType =
@@ -10049,6 +10062,23 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitTargetTask(
         Builder.CreateMemCpy(
             Dst, Alignment, PtrToPrivatize, Alignment,
             Builder.getInt64(M.getDataLayout().getTypeStoreSize(ElementType)));
+        if (PtrToPrivatize == PointersArray)
+          PrivatePointersArray = Dst;
+      }
+      // Snapshot the encounter-time bounds before enqueueing the task, then
+      // redirect its pointer entries to descriptors owned by that task.
+      for (auto [I, Descriptor] : llvm::enumerate(NonContiguousDescriptors)) {
+        assert(PrivatePointersArray && "missing task-private pointer array");
+        Value *Dst = Builder.CreateStructGEP(
+            PrivatesTy, Privates, OffloadingArraysToPrivatize.size() + I);
+        Builder.CreateMemCpy(
+            Dst, Alignment, Descriptor.Storage, Descriptor.Storage->getAlign(),
+            Builder.getInt64(M.getDataLayout().getTypeStoreSize(
+                Descriptor.Storage->getAllocatedType())));
+        Value *Entry = Builder.CreateConstInBoundsGEP2_32(
+            getOffloadingArrayType(PointersArray), PrivatePointersArray, 0,
+            Descriptor.MapIndex);
+        Builder.CreateAlignedStore(Dst, Entry, Alignment);
       }
     }
 
@@ -10524,6 +10554,7 @@ void OpenMPIRBuilder::emitOffloadingArraysArgument(IRBuilderBase &Builder,
   auto Int64Ty = Type::getInt64Ty(M.getContext());
   auto Int64PtrTy = UnqualPtrTy;
 
+  RTArgs.NonContiguousDescriptors = Info.RTArgs.NonContiguousDescriptors;
   if (!Info.NumberOfPtrs) {
     RTArgs.BasePointersArray = ConstantPointerNull::get(VoidPtrPtrTy);
     RTArgs.PointersArray = ConstantPointerNull::get(VoidPtrPtrTy);
@@ -10603,6 +10634,7 @@ void OpenMPIRBuilder::emitNonContiguousDescriptor(InsertPointTy AllocaIP,
     ArrayType *ArrayTy = ArrayType::get(DimTy, NonContigInfo.Dims[I]);
     AllocaInst *DimsAddr =
         Builder.CreateAlloca(ArrayTy, /* ArraySize = */ nullptr, "dims");
+    Info.RTArgs.NonContiguousDescriptors.push_back({I, DimsAddr});
     Builder.restoreIP(CodeGenIP);
     for (unsigned II = 0, EE = NonContigInfo.Dims[I]; II < EE; ++II) {
       unsigned RevIdx = EE - II - 1;
