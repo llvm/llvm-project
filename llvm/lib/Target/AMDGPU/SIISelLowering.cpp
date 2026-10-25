@@ -4466,8 +4466,10 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   // Mark the scratch resource descriptor as allocated so the CC analysis
   // does not assign user arguments to these registers, matching the callee.
-  if (!Subtarget->hasFlatScratchEnabled())
-    CCInfo.AllocateReg(Info->getScratchRSrcReg());
+  if (!Subtarget->hasFlatScratchEnabled()) {
+    CCInfo.AllocateReg(
+        AMDGPUFunctionArgInfo::getPrivateSegmentBufferReg(CallConv));
+  }
 
   CCInfo.AnalyzeCallOperands(Outs, AssignFn);
 
@@ -4501,10 +4503,9 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
       // In the HSA case, this should be an identity copy.
       SDValue ScratchRSrcReg =
           DAG.getCopyFromReg(Chain, DL, Info->getScratchRSrcReg(), MVT::v4i32);
-      RegsToPass.emplace_back(IsChainCallConv
-                                  ? AMDGPU::SGPR48_SGPR49_SGPR50_SGPR51
-                                  : AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3,
-                              ScratchRSrcReg);
+      RegsToPass.emplace_back(
+          AMDGPUFunctionArgInfo::getPrivateSegmentBufferReg(CallConv),
+          ScratchRSrcReg);
       CopyFromChains.push_back(ScratchRSrcReg.getValue(1));
       Chain = DAG.getTokenFactor(DL, CopyFromChains);
     }
