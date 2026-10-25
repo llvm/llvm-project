@@ -10,6 +10,8 @@
 // RUN: %clang_cc1 -no-enable-noundef-analysis -triple mips -O3 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefixes=MIPS
 // RUN: %clang_cc1 -no-enable-noundef-analysis -triple spir64 -O3 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefixes=SPIR64
 // RUN: %clang_cc1 -no-enable-noundef-analysis -triple spir -O3 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefixes=SPIR
+// RUN: %clang_cc1 -no-enable-noundef-analysis -triple spir64 -fexperimental-abi-lowering -O3 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefixes=SPIR64
+// RUN: %clang_cc1 -no-enable-noundef-analysis -triple spir -fexperimental-abi-lowering -O3 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefixes=SPIR
 // RUN: %clang_cc1 -no-enable-noundef-analysis -triple hexagon -O3 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefixes=HEX
 // RUN: %clang_cc1 -no-enable-noundef-analysis -triple lanai -O3 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefixes=LANAI
 // RUN: %clang_cc1 -no-enable-noundef-analysis -triple r600 -O3 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefixes=R600

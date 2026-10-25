@@ -11,6 +11,11 @@
 // RUN: llvm-dis %t.bc -o %t.ll
 // RUN: FileCheck %s --input-file=%t.ll
 
+// RUN: %clang -emit-llvm --cuda-device-only --offload=spirv64 \
+// RUN:   -Xclang -fexperimental-abi-lowering -nocudalib -nocudainc %s -o %t.bc -c 2>&1
+// RUN: llvm-dis %t.bc -o %t.ll
+// RUN: FileCheck %s --input-file=%t.ll
+
 // CHECK: define
 // CHECK-SAME: spir_kernel void @_Z6kernelPi(ptr addrspace(1) noundef
 
