@@ -3941,9 +3941,10 @@ add_fp_unittest(
   SRCS
     nanf128_test.cpp
   DEPENDS
+    libc.src.__support.FPUtil.float128
+    libc.src.__support.FPUtil.fp_bits
     libc.hdr.signal_macros
     libc.src.math.nanf128
-    libc.src.__support.FPUtil.fp_bits
   # FIXME: The nan tests currently have death tests, which aren't supported for
   # hermetic tests.
 )
@@ -5584,6 +5585,7 @@ add_fp_unittest(
   HDRS
     GetPayloadTest.h
   DEPENDS
+    libc.src.__support.FPUtil.float128
     libc.src.math.getpayloadf128
 )
 
@@ -5657,6 +5659,7 @@ add_fp_unittest(
   HDRS
     SetPayloadTest.h
   DEPENDS
+    libc.src.__support.FPUtil.float128
     libc.src.math.setpayloadf128
 )
 
@@ -5730,6 +5733,7 @@ add_fp_unittest(
   HDRS
     SetPayloadSigTest.h
   DEPENDS
+    libc.src.__support.FPUtil.float128
     libc.src.math.setpayloadsigf128
 )
 
