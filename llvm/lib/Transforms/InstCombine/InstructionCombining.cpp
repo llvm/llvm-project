@@ -90,6 +90,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
@@ -4841,9 +4842,8 @@ Instruction *InstCombinerImpl::visitExtractValueInst(ExtractValueInst &EV) {
     return R;
 
   if (LoadInst *L = dyn_cast<LoadInst>(Agg)) {
-    // Bail out if the aggregate contains scalable vector type
-    if (auto *STy = dyn_cast<StructType>(Agg->getType());
-        STy && STy->isScalableTy())
+    // Bail out if the aggregate contains a scalable type.
+    if (Agg->getType()->isScalableTy())
       return nullptr;
 
     // If the (non-volatile) load only has one use, we can rewrite this to a
@@ -4864,7 +4864,10 @@ Instruction *InstCombinerImpl::visitExtractValueInst(ExtractValueInst &EV) {
       Builder.SetInsertPoint(L);
       Value *GEP = Builder.CreateInBoundsGEP(L->getType(),
                                              L->getPointerOperand(), Indices);
-      Instruction *NL = Builder.CreateLoad(EV.getType(), GEP);
+      uint64_t Offset =
+          getDataLayout().getIndexedOffsetInType(L->getType(), Indices);
+      Instruction *NL = Builder.CreateAlignedLoad(
+          EV.getType(), GEP, commonAlignment(L->getAlign(), Offset));
       // Whatever aliasing information we had for the orignal load must also
       // hold for the smaller load, so propagate the annotations.
       NL->setAAMetadata(L->getAAMetadata());

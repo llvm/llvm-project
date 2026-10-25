@@ -3,6 +3,7 @@
 
 declare void @bar({i32, i32} %a)
 declare i32 @baz(i32 %a)
+declare void @use_pair({i16, i32})
 
 ; Instcombine should fold various combinations of insertvalue and extractvalue
 ; together
@@ -83,7 +84,7 @@ end:
 define i16 @doubleextract2gep(ptr %arg) {
 ; CHECK-LABEL: @doubleextract2gep(
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG:%.*]], i64 8
-; CHECK-NEXT:    [[E2:%.*]] = load i16, ptr [[TMP1]], align 2
+; CHECK-NEXT:    [[E2:%.*]] = load i16, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    ret i16 [[E2]]
 ;
   %L = load {i16, {i32, i16}}, ptr %arg
@@ -118,4 +119,77 @@ define i32 @nogep-volatile(ptr %pair) {
   %L = load volatile {i32, i32}, ptr %pair
   %E = extractvalue {i32, i32} %L, 1
   ret i32 %E
+}
+
+; Narrowing must not increase the alignment to the vector's ABI alignment.
+define <4 x i32> @extract2gep_vector_align1(ptr %p) {
+; CHECK-LABEL: @extract2gep_vector_align1(
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[P:%.*]], i64 16
+; CHECK-NEXT:    [[VALUE:%.*]] = load <4 x i32>, ptr [[TMP1]], align 1
+; CHECK-NEXT:    ret <4 x i32> [[VALUE]]
+;
+  %aggregate = load {i8, <4 x i32>}, ptr %p, align 1
+  %value = extractvalue {i8, <4 x i32>} %aggregate, 1
+  ret <4 x i32> %value
+}
+
+define <4 x i32> @extract2gep_vector_align8(ptr %p) {
+; CHECK-LABEL: @extract2gep_vector_align8(
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[P:%.*]], i64 16
+; CHECK-NEXT:    [[VALUE:%.*]] = load <4 x i32>, ptr [[TMP1]], align 8
+; CHECK-NEXT:    ret <4 x i32> [[VALUE]]
+;
+  %aggregate = load {i8, <4 x i32>}, ptr %p, align 8
+  %value = extractvalue {i8, <4 x i32>} %aggregate, 1
+  ret <4 x i32> %value
+}
+
+; A zero offset preserves alignment stronger than the field's ABI alignment.
+define i32 @extract2gep_zero_offset_align32(ptr %p) {
+; CHECK-LABEL: @extract2gep_zero_offset_align32(
+; CHECK-NEXT:    [[VALUE:%.*]] = load i32, ptr [[P:%.*]], align 32
+; CHECK-NEXT:    ret i32 [[VALUE]]
+;
+  %aggregate = load {i32, i8}, ptr %p, align 32
+  %value = extractvalue {i32, i8} %aggregate, 0
+  ret i32 %value
+}
+
+; The nested field's byte offset is 24, reducing align 16 to align 8.
+define i32 @extract2gep_nested_array_align16(ptr %p) {
+; CHECK-LABEL: @extract2gep_nested_array_align16(
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[P:%.*]], i64 24
+; CHECK-NEXT:    [[VALUE:%.*]] = load i32, ptr [[TMP1]], align 8
+; CHECK-NEXT:    ret i32 [[VALUE]]
+;
+  %aggregate = load {i8, [3 x {i8, i32}]}, ptr %p, align 16
+  %value = extractvalue {i8, [3 x {i8, i32}]} %aggregate, 1, 2, 1
+  ret i32 %value
+}
+
+; A second use of the padded aggregate prevents narrowing a nonvolatile load.
+define i32 @nogep_nonvolatile_multiuse(ptr %p) {
+; CHECK-LABEL: @nogep_nonvolatile_multiuse(
+; CHECK-NEXT:    [[AGGREGATE:%.*]] = load { i16, i32 }, ptr [[P:%.*]], align 1
+; CHECK-NEXT:    call void @use_pair({ i16, i32 } [[AGGREGATE]])
+; CHECK-NEXT:    [[VALUE:%.*]] = extractvalue { i16, i32 } [[AGGREGATE]], 1
+; CHECK-NEXT:    ret i32 [[VALUE]]
+;
+  %aggregate = load {i16, i32}, ptr %p, align 1
+  call void @use_pair({i16, i32} %aggregate)
+  %value = extractvalue {i16, i32} %aggregate, 1
+  ret i32 %value
+}
+
+; Exceed the aggregate-unpacking limit to exercise extraction from a load with
+; a scalable field offset.
+define <vscale x 4 x i32> @nogep_scalable_array(ptr %p) {
+; CHECK-LABEL: @nogep_scalable_array(
+; CHECK-NEXT:    [[AGGREGATE:%.*]] = load [1025 x <vscale x 4 x i32>], ptr [[P:%.*]], align 1
+; CHECK-NEXT:    [[VALUE:%.*]] = extractvalue [1025 x <vscale x 4 x i32>] [[AGGREGATE]], 1
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[VALUE]]
+;
+  %aggregate = load [1025 x <vscale x 4 x i32>], ptr %p, align 1
+  %value = extractvalue [1025 x <vscale x 4 x i32>] %aggregate, 1
+  ret <vscale x 4 x i32> %value
 }
