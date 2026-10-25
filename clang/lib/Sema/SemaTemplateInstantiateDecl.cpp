@@ -876,6 +876,24 @@ attrToRetainOwnershipKind(const Attr *A) {
   }
 }
 
+/// Instantiate \p TmplAttr for \p New in the current instantiation scope and
+/// attach it, if it is still valid there.
+static void
+instantiateAttrOnDecl(Sema &S,
+                      const MultiLevelTemplateArgumentList &TemplateArgs,
+                      const Attr *TmplAttr, Decl *New) {
+  // Allow 'this' within late-parsed attributes.
+  auto *ND = cast<NamedDecl>(New);
+  auto *ThisContext = dyn_cast_or_null<CXXRecordDecl>(ND->getDeclContext());
+  Sema::CXXThisScopeRAII ThisScope(S, ThisContext, Qualifiers(),
+                                   ND->isCXXInstanceMember());
+
+  Attr *NewAttr =
+      sema::instantiateTemplateAttribute(TmplAttr, S.Context, S, TemplateArgs);
+  if (NewAttr && S.checkInstantiatedThreadSafetyAttrs(New, NewAttr))
+    New->addAttr(NewAttr);
+}
+
 // Implementation is down with the rest of the OpenACC Decl instantiations.
 static void instantiateDependentOpenACCRoutineDeclAttr(
     Sema &S, const MultiLevelTemplateArgumentList &TemplateArgs,
@@ -1068,26 +1086,36 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
 
     assert(!TmplAttr->isPackExpansion());
     if (TmplAttr->isLateParsed() && LateAttrs) {
-      // Late parsed attributes must be instantiated and attached after the
-      // enclosing class has been instantiated.  See Sema::InstantiateClass.
-      LocalInstantiationScope *Saved = nullptr;
-      if (CurrentInstantiationScope)
-        Saved = CurrentInstantiationScope->cloneScopes(OuterMostScope);
+      // A late-parsed attribute may name a declaration that is instantiated
+      // after the one it is on: a class member's names a later member, and a
+      // parameter's a later parameter. Defer it, with the scope to instantiate
+      // it in, until they all are; see InstantiateLateAttrs.
+      assert(CurrentInstantiationScope && "no scope to defer the attribute in");
+      LocalInstantiationScope *Saved =
+          CurrentInstantiationScope->cloneScopes(OuterMostScope);
       LateAttrs->push_back(LateInstantiatedAttribute(TmplAttr, Saved, New));
     } else {
-      // Allow 'this' within late-parsed attributes.
-      auto *ND = cast<NamedDecl>(New);
-      auto *ThisContext = dyn_cast_or_null<CXXRecordDecl>(ND->getDeclContext());
-      CXXThisScopeRAII ThisScope(*this, ThisContext, Qualifiers(),
-                                 ND->isCXXInstanceMember());
-
-      Attr *NewAttr = sema::instantiateTemplateAttribute(TmplAttr, Context,
-                                                         *this, TemplateArgs);
-      if (NewAttr && isRelevantAttr(*this, New, TmplAttr) &&
-          checkInstantiatedThreadSafetyAttrs(New, NewAttr))
-        New->addAttr(NewAttr);
+      instantiateAttrOnDecl(*this, TemplateArgs, TmplAttr, New);
     }
   }
+}
+
+void Sema::InstantiateLateAttrs(
+    const MultiLevelTemplateArgumentList &TemplateArgs,
+    LateInstantiatedAttrVec &LateAttrs,
+    LocalInstantiationScope *OuterMostScope) {
+  assert(
+      CurrentInstantiationScope == OuterMostScope &&
+      "late attributes instantiated outside the scope they were deferred in");
+  for (const LateInstantiatedAttribute &LA : LateAttrs) {
+    CurrentInstantiationScope = LA.Scope;
+    instantiateAttrOnDecl(*this, TemplateArgs, LA.TmplAttr, LA.NewDecl);
+    // Exiting the saved scopes restores the outermost one.
+    LocalInstantiationScope::deleteScopes(LA.Scope, OuterMostScope);
+    assert(CurrentInstantiationScope == OuterMostScope &&
+           "deferred scope did not extend the outermost scope");
+  }
+  LateAttrs.clear();
 }
 
 void Sema::updateAttrsForLateParsedTemplate(const Decl *Pattern, Decl *Inst) {
@@ -5493,23 +5521,25 @@ TypeSourceInfo *TemplateDeclInstantiator::SubstFunctionType(
       // the function parameters themselves.
       const FunctionProtoType *OldProto =
           cast<FunctionProtoType>(OldProtoLoc.getType());
-      for (unsigned i = 0, i_end = OldProtoLoc.getNumParams(); i != i_end;
-           ++i) {
-        ParmVarDecl *OldParam = OldProtoLoc.getParam(i);
-        if (!OldParam) {
-          Params.push_back(SemaRef.BuildParmVarDeclForTypedef(
-              D, D->getLocation(), OldProto->getParamType(i)));
-          continue;
-        }
-
-        ParmVarDecl *Parm = SemaRef.SubstParmVarDecl(
-            OldParam, TemplateArgs, /*indexAdjustment=*/0,
-            /*NumExpansions=*/std::nullopt,
-            /*ExpectParameterPack=*/false, EvaluateConstraints);
-        if (!Parm)
-          return nullptr;
-        Params.push_back(Parm);
-      }
+      SmallVector<QualType, 4> ParamTypes;
+      Sema::ExtParameterInfoBuilder ExtParamInfos;
+      if (SemaRef.SubstParmTypes(D->getLocation(), OldProtoLoc.getParams(),
+                                 nullptr, TemplateArgs, ParamTypes, &Params,
+                                 ExtParamInfos, OldProto->param_type_begin(),
+                                 EvaluateConstraints))
+        return nullptr;
+      // Declare a parameter that was only a type in the prototype. A function
+      // declared through a typedef with an attribute that rewrites the
+      // function type in place, such as noreturn, gets a prototype whose
+      // parameters have no ParmVarDecl, so no attribute of the typedef's
+      // parameters reaches it; see TypeSpecLocFiller in SemaType.
+      // FIXME: Keep the typedef's parameters there instead. The dependent
+      // branch above returns null for such a prototype, dropping the member.
+      assert(Params.size() == ParamTypes.size());
+      for (unsigned i = 0, i_end = Params.size(); i != i_end; ++i)
+        if (!Params[i])
+          Params[i] = SemaRef.BuildParmVarDeclForTypedef(D, D->getLocation(),
+                                                         ParamTypes[i]);
     }
   } else {
     // If the type of this function, after ignoring parentheses, is not
@@ -5525,8 +5555,8 @@ TypeSourceInfo *TemplateDeclInstantiator::SubstFunctionType(
     SmallVector<QualType, 4> ParamTypes;
     Sema::ExtParameterInfoBuilder ExtParamInfos;
     if (SemaRef.SubstParmTypes(D->getLocation(), D->parameters(), nullptr,
-                               TemplateArgs, ParamTypes, &Params,
-                               ExtParamInfos))
+                               TemplateArgs, ParamTypes, &Params, ExtParamInfos,
+                               /*OldParamTypes=*/nullptr, EvaluateConstraints))
       return nullptr;
   }
 

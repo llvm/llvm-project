@@ -1544,7 +1544,6 @@ private:
   /// Diagnose a late-parsed attribute naming a parameter that it cannot, and
   /// return true if it must be dropped.
   bool checkLateAttributeParamRefs(const LateParsedAttribute &LPA,
-                                   const Decl *D,
                                    ArrayRef<const DeclRefExpr *> ParamRefs,
                                    bool ReenteredProtoParams);
 
