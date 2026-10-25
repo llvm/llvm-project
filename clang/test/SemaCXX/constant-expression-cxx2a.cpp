@@ -1563,6 +1563,12 @@ namespace GH223064 {
   }
   static_assert(pointer_difference() == 0);
 
+  constexpr auto difference(A *p, A *q) {
+    return p - q; // expected-note {{subtracted pointers are not elements of the same array}}
+  }
+  static_assert(difference(&b[1], &b[0]) == 1); // expected-error {{static assertion expression is not an integral constant expression}} \
+                                                // expected-note {{in call to 'difference(&b[1], &b[0])'}}
+
   struct Padding {
     int pad;
   };
