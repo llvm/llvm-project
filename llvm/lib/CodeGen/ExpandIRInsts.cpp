@@ -480,7 +480,21 @@ Value *FRemExpander::buildFRem(Value *X, Value *Y,
                                std::optional<SimplifyQuery> &SQ) const {
   assert(X->getType() == FremTy && Y->getType() == FremTy);
 
+  IRBuilder<>::FastMathFlagGuard Guard(B);
   FastMathFlags FMF = B.getFastMathFlags();
+
+  // We're going to introduce branches on the operands, so freeze them.
+  if (!isGuaranteedNotToBeUndefOrPoison(X))
+    X = B.CreateFreeze(X, X->getName() + ".fr");
+  if (!isGuaranteedNotToBeUndefOrPoison(Y))
+    Y = B.CreateFreeze(Y, Y->getName() + ".fr");
+
+  // Do not propagate poison-generating flags to the expansion: their
+  // violation must not make the new branches undefined.
+  FastMathFlags ComputeFMF = FMF;
+  ComputeFMF.setNoInfs(false);
+  ComputeFMF.setNoNaNs(false);
+  B.setFastMathFlags(ComputeFMF);
 
   // This function generates the following code structure:
   //   if (abs(x) > abs(y))
@@ -512,18 +526,9 @@ Value *FRemExpander::buildFRem(Value *X, Value *Y,
 
   auto SavedInsertPt = B.GetInsertPoint();
 
-  // Build remainder computation for "then" branch
-  //
-  // The ordered comparison ensures that ax and ay are not NaNs
-  // in the then-branch. Furthermore, y cannot be an infinity and the
-  // check at the end of the function ensures that the result will not
-  // be used if x is an infinity.
-  FastMathFlags ComputeFMF = FMF;
-  ComputeFMF.setNoInfs();
-  ComputeFMF.setNoNaNs();
-
+  // Build remainder computation for "then" branch.
   B.SetInsertPoint(ThenBB);
-  buildRemainderComputation(Ax, Ay, X, RetPhi, FMF);
+  buildRemainderComputation(Ax, Ay, X, RetPhi, ComputeFMF);
   B.CreateBr(RetPhi->getParent());
 
   // Build "else"-branch
