@@ -877,12 +877,16 @@ void BroadcastOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 //===----------------------------------------------------------------------===//
 
 OpFoldResult ConcatOp::fold(FoldAdaptor adaptor) {
-  if (!adaptor.getLhs() || !adaptor.getRhs())
+  // concat(poison, poison) is poison.
+  if (isa_and_present<ub::PoisonAttr>(adaptor.getLhs()) &&
+      isa_and_present<ub::PoisonAttr>(adaptor.getRhs()))
+    return ub::PoisonAttr::get(getContext());
+  auto lhs = llvm::dyn_cast_if_present<DenseIntElementsAttr>(adaptor.getLhs());
+  auto rhs = llvm::dyn_cast_if_present<DenseIntElementsAttr>(adaptor.getRhs());
+  if (!lhs || !rhs)
     return nullptr;
-  auto lhsShape = llvm::to_vector<6>(
-      llvm::cast<DenseIntElementsAttr>(adaptor.getLhs()).getValues<int64_t>());
-  auto rhsShape = llvm::to_vector<6>(
-      llvm::cast<DenseIntElementsAttr>(adaptor.getRhs()).getValues<int64_t>());
+  auto lhsShape = llvm::to_vector<6>(lhs.getValues<int64_t>());
+  auto rhsShape = llvm::to_vector<6>(rhs.getValues<int64_t>());
   SmallVector<int64_t, 6> resultShape;
   resultShape.append(lhsShape.begin(), lhsShape.end());
   resultShape.append(rhsShape.begin(), rhsShape.end());
@@ -983,7 +987,9 @@ void CstrBroadcastableOp::getCanonicalizationPatterns(
 static bool hasAtMostSingleNonScalar(ArrayRef<Attribute> attributes) {
   bool nonScalarSeen = false;
   for (Attribute a : attributes) {
-    if (!a || llvm::cast<DenseIntElementsAttr>(a).getNumElements() != 0) {
+    // Treat non-constant and poison operands as potentially non-scalar.
+    auto dense = llvm::dyn_cast_if_present<DenseIntElementsAttr>(a);
+    if (!dense || dense.getNumElements() != 0) {
       if (nonScalarSeen)
         return false;
       nonScalarSeen = true;
@@ -1000,10 +1006,10 @@ OpFoldResult CstrBroadcastableOp::fold(FoldAdaptor adaptor) {
   if ([&] {
         SmallVector<SmallVector<int64_t, 6>, 6> extents;
         for (const auto &operand : adaptor.getShapes()) {
-          if (!operand)
+          auto dense = llvm::dyn_cast_if_present<DenseIntElementsAttr>(operand);
+          if (!dense)
             return false;
-          extents.push_back(llvm::to_vector<6>(
-              llvm::cast<DenseIntElementsAttr>(operand).getValues<int64_t>()));
+          extents.push_back(llvm::to_vector<6>(dense.getValues<int64_t>()));
         }
         return OpTrait::util::staticallyKnownBroadcastable(extents);
       }())
@@ -1569,14 +1575,18 @@ LogicalResult shape::RankOp::verify() { return verifySizeOrIndexOp(*this); }
 //===----------------------------------------------------------------------===//
 
 OpFoldResult NumElementsOp::fold(FoldAdaptor adaptor) {
+  // num_elements of poison shape is poison.
+  if (isa_and_present<ub::PoisonAttr>(adaptor.getShape()))
+    return ub::PoisonAttr::get(getContext());
 
   // Fold only when argument constant.
-  Attribute shape = adaptor.getShape();
+  auto shape =
+      llvm::dyn_cast_if_present<DenseIntElementsAttr>(adaptor.getShape());
   if (!shape)
     return {};
 
   APInt product(64, 1);
-  for (auto value : llvm::cast<DenseIntElementsAttr>(shape))
+  for (auto value : shape)
     product *= value;
   Builder builder(getContext());
   return builder.getIndexAttr(product.getLimitedValue());
@@ -1913,13 +1923,23 @@ LogicalResult shape::YieldOp::verify() {
 
 LogicalResult SplitAtOp::fold(FoldAdaptor adaptor,
                               SmallVectorImpl<OpFoldResult> &results) {
-  if (!adaptor.getOperand() || !adaptor.getIndex())
+  // Splitting a poison shape, or at a poison index, gives two poison halves.
+  if (isa_and_present<ub::PoisonAttr>(adaptor.getOperand()) ||
+      isa_and_present<ub::PoisonAttr>(adaptor.getIndex())) {
+    auto poison = ub::PoisonAttr::get(getContext());
+    results.push_back(poison);
+    results.push_back(poison);
+    return success();
+  }
+
+  auto shapeAttr =
+      llvm::dyn_cast_if_present<DenseIntElementsAttr>(adaptor.getOperand());
+  auto indexAttr = llvm::dyn_cast_if_present<IntegerAttr>(adaptor.getIndex());
+  if (!shapeAttr || !indexAttr)
     return failure();
-  auto shapeVec =
-      llvm::to_vector<6>(llvm::cast<DenseIntElementsAttr>(adaptor.getOperand())
-                             .getValues<int64_t>());
+  auto shapeVec = llvm::to_vector<6>(shapeAttr.getValues<int64_t>());
   auto shape = llvm::ArrayRef(shapeVec);
-  auto splitPoint = llvm::cast<IntegerAttr>(adaptor.getIndex()).getInt();
+  auto splitPoint = indexAttr.getInt();
   // Verify that the split point is in the correct range.
   // TODO: Constant fold to an "error".
   int64_t rank = shape.size();
@@ -1938,12 +1958,16 @@ LogicalResult SplitAtOp::fold(FoldAdaptor adaptor,
 //===----------------------------------------------------------------------===//
 
 OpFoldResult ToExtentTensorOp::fold(FoldAdaptor adaptor) {
-  if (!adaptor.getInput())
+  // to_extent_tensor of a poison shape is poison.
+  if (isa_and_present<ub::PoisonAttr>(adaptor.getInput()))
+    return ub::PoisonAttr::get(getContext());
+
+  auto inputAttr =
+      llvm::dyn_cast_if_present<DenseIntElementsAttr>(adaptor.getInput());
+  if (!inputAttr)
     return OpFoldResult();
   Builder builder(getContext());
-  auto shape =
-      llvm::to_vector<6>(llvm::cast<DenseIntElementsAttr>(adaptor.getInput())
-                             .getValues<int64_t>());
+  auto shape = llvm::to_vector<6>(inputAttr.getValues<int64_t>());
   auto type = RankedTensorType::get({static_cast<int64_t>(shape.size())},
                                     builder.getIndexType());
   return DenseIntElementsAttr::get(type, shape);
