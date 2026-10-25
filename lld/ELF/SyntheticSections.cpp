@@ -246,6 +246,9 @@ CieRecord *EhFrameSection::addCie(EhSectionPiece &cie,
     rec = make<CieRecord>();
     rec->cie = &cie;
     cieRecords.push_back(rec);
+    uint8_t enc = getFdeEncoding(&cie) & 0x70;
+    if (enc != DW_EH_PE_absptr && enc != DW_EH_PE_pcrel)
+      Err(ctx) << "unknown FDE size encoding";
   }
   return rec;
 }
@@ -427,11 +430,6 @@ bool EhFrameHeader::updateAllocSize(Ctx &ctx) {
   // .eh_frame_hdr's VA.
   fdes.clear();
   for (CieRecord *rec : ehFrame->getCieRecords()) {
-    uint8_t enc = getFdeEncoding(rec->cie);
-    if ((enc & 0x70) != DW_EH_PE_absptr && (enc & 0x70) != DW_EH_PE_pcrel) {
-      Err(ctx) << "unknown FDE size encoding";
-      continue;
-    }
     for (EhSectionPiece *fde : rec->fdes) {
       // The FDE has passed `isFdeLive`, so the first relocation's symbol is a
       // live Defined.
