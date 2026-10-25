@@ -70,6 +70,7 @@ static bool isCombinableLeaf(llvm::omp::Directive dir) {
   case llvm::omp::OMPD_parallel:
   case llvm::omp::OMPD_teams:
   case llvm::omp::OMPD_for:
+  case llvm::omp::OMPD_distribute:
     return true;
   default:
     return false;
@@ -112,6 +113,34 @@ static bool isTargetSPMD(const OMPExecutableDirective &s) {
   default:
     return false;
   }
+}
+
+/// Returns true if \p s is (or is equivalent to) a `target teams distribute`
+/// construct: the combined form, or any mix of explicit nesting and
+/// combined forms of `target`, `teams`, and `distribute`.
+static bool isTargetTeamsDistribute(const OMPExecutableDirective &s) {
+  if (s.getDirectiveKind() == llvm::omp::OMPD_target_teams_distribute)
+    return true;
+
+  const OMPExecutableDirective *teams = nullptr;
+  if (s.getDirectiveKind() == llvm::omp::OMPD_target_teams) {
+    teams = &s;
+  } else if (s.getDirectiveKind() == llvm::omp::OMPD_target) {
+    teams = getSingleNestedOMPDirective(s);
+    if (!teams)
+      return false;
+    if (teams->getDirectiveKind() == llvm::omp::OMPD_teams_distribute)
+      return true;
+    if (teams->getDirectiveKind() != llvm::omp::OMPD_teams)
+      return false;
+  } else {
+    return false;
+  }
+
+  const OMPExecutableDirective *distribute =
+      getSingleNestedOMPDirective(*teams);
+  return distribute &&
+         distribute->getDirectiveKind() == llvm::omp::OMPD_distribute;
 }
 
 static mlir::LogicalResult
@@ -190,7 +219,7 @@ static mlir::LogicalResult emitParallel(
                         emitBody);
 }
 
-/// Evaluates the clauses allowed on an omp.teams leaf; none are supported
+/// Evaluates the clauses allowed on the `teams` directive; none are supported
 /// yet, so every eligible clause is reported as NYI.
 static mlir::LogicalResult
 emitTeamsClauses(CIRGenFunction &cgf, CIRGenModule &cgm,
@@ -383,10 +412,12 @@ createCounterPrivatizer(CIRGenModule &cgm, mlir::Location loc,
   return privatizer;
 }
 
-/// Registers a loop counter as predetermined-private on the omp.wsloop op.
+/// Registers a loop counter as predetermined-private on the enclosing
+/// omp.wsloop/omp.distribute.
+template <typename OperandsTy>
 static Address addPrivateCounter(CIRGenFunction &cgf, CIRGenModule &cgm,
                                  mlir::Location loc, const VarDecl *privateVd,
-                                 mlir::omp::WsloopOperands &clauseOps) {
+                                 OperandsTy &clauseOps) {
   cgf.emitVarDecl(*privateVd);
   Address moldAddr = cgf.getAddrOfLocalVar(privateVd);
 
@@ -421,22 +452,15 @@ emitHostEvalLoopBounds(CIRGenFunction &cgf, const OMPLoopDirective &s) {
   return hev;
 }
 
-/// Lowers an OMPLoopDirective's `for` directive to an omp.wsloop +
-/// omp.loop_nest.
-static mlir::LogicalResult
-emitOMPWorksharingLoop(CIRGenFunction &cgf, const OMPLoopDirective &s,
-                       omp::ConstructQueue::const_iterator item) {
+/// Lowers an OMPLoopDirective to an omp.loop_nest wrapped by an \p OpTy
+/// (omp.wsloop or omp.distribute).
+template <typename OpTy, typename OperandsTy>
+static mlir::LogicalResult emitOMPLoop(CIRGenFunction &cgf,
+                                       const OMPLoopDirective &s,
+                                       OperandsTy &clauseOps) {
   CIRGenBuilderTy &builder = cgf.getBuilder();
   CIRGenModule &cgm = cgf.getCIRGenModule();
   mlir::Location loc = cgf.getLoc(s.getBeginLoc());
-
-  if (mlir::failed(checkSynthesizedClauses(cgf, s, item)))
-    return mlir::failure();
-
-  mlir::omp::WsloopOperands clauseOps;
-  if (emitWsloopClauses(cgf, cgm, builder, loc, item->clauses, clauseOps)
-          .failed())
-    return mlir::failure();
 
   const CapturedStmt *capturedStmt = s.getInnermostCapturedStmt();
   const auto *forStmt = cast<ForStmt>(capturedStmt->getCapturedStmt());
@@ -484,13 +508,13 @@ emitOMPWorksharingLoop(CIRGenFunction &cgf, const OMPLoopDirective &s,
     tripCount = builder.createBuiltinIntCast(loc, tripCountCir);
   }
 
-  auto wsloopOp = mlir::omp::WsloopOp::create(builder, loc, clauseOps);
+  auto loopOp = OpTy::create(builder, loc, clauseOps);
   mlir::Block *innerBlock = new mlir::Block();
   // Ensures the block arguments match BlockArgOpenMPOpInterface's expected
   // order.
   for (auto &counterMold : counterMolds)
     innerBlock->addArgument(counterMold.second.getPointer().getType(), loc);
-  wsloopOp.getRegion().push_back(innerBlock);
+  loopOp.getRegion().push_back(innerBlock);
 
   mlir::OpBuilder::InsertionGuard guard(builder);
   builder.setInsertionPointToStart(innerBlock);
@@ -507,6 +531,58 @@ emitOMPWorksharingLoop(CIRGenFunction &cgf, const OMPLoopDirective &s,
 
   return emitOMPLoopNest(cgf, *forStmt, zero, tripCount, one, ivDecl,
                          s.updates()[0]);
+}
+
+/// Lowers an OMPLoopDirective's `for` directive to an omp.wsloop +
+/// omp.loop_nest.
+static mlir::LogicalResult
+emitOMPWorksharingLoop(CIRGenFunction &cgf, const OMPLoopDirective &s,
+                       omp::ConstructQueue::const_iterator item) {
+  if (mlir::failed(checkSynthesizedClauses(cgf, s, item)))
+    return mlir::failure();
+
+  mlir::omp::WsloopOperands clauseOps;
+  if (emitWsloopClauses(cgf, cgf.getCIRGenModule(), cgf.getBuilder(),
+                        cgf.getLoc(s.getBeginLoc()), item->clauses, clauseOps)
+          .failed())
+    return mlir::failure();
+
+  return emitOMPLoop<mlir::omp::WsloopOp>(cgf, s, clauseOps);
+}
+
+/// Evaluates the clauses allowed on the `distribute` directive; none are
+/// supported yet, so every eligible clause is reported as NYI.
+static mlir::LogicalResult
+emitDistributeClauses(CIRGenFunction &cgf, CIRGenModule &cgm,
+                      CIRGenBuilderTy &builder, mlir::Location loc,
+                      llvm::ArrayRef<const OMPClause *> clauses,
+                      mlir::omp::DistributeOperands &clauseOps) {
+  OpenMPClauseEmitter ce(cgf, cgm, builder, loc, clauses);
+  return ce.emitNYI</*supported=*/>(
+      /*nyi=*/OpenMPNYIClauseList<OMPAllocateClause, OMPCollapseClause,
+                                  OMPDistScheduleClause, OMPFirstprivateClause,
+                                  OMPLastprivateClause, OMPOrderClause,
+                                  OMPPrivateClause>{},
+      llvm::omp::Directive::OMPD_distribute);
+}
+
+/// Lowers an OMPLoopDirective's `distribute` directive to an omp.distribute +
+/// omp.loop_nest, sharing the canonical loop lowering with the worksharing
+/// loop (see emitOMPLoop).
+static mlir::LogicalResult
+emitOMPDistributeLoop(CIRGenFunction &cgf, const OMPLoopDirective &s,
+                      omp::ConstructQueue::const_iterator item) {
+  if (mlir::failed(checkSynthesizedClauses(cgf, s, item)))
+    return mlir::failure();
+
+  mlir::omp::DistributeOperands clauseOps;
+  if (emitDistributeClauses(cgf, cgf.getCIRGenModule(), cgf.getBuilder(),
+                            cgf.getLoc(s.getBeginLoc()), item->clauses,
+                            clauseOps)
+          .failed())
+    return mlir::failure();
+
+  return emitOMPLoop<mlir::omp::DistributeOp>(cgf, s, clauseOps);
 }
 
 mlir::LogicalResult
@@ -746,9 +822,10 @@ emitTargetOp(CIRGenFunction &cgf, const DirectiveTy &s,
 
   const auto &execDir = static_cast<const OMPExecutableDirective &>(s);
   bool isSPMD = isTargetSPMD(execDir);
-
+  bool needsHostEvalTripCount = isSPMD || isTargetTeamsDistribute(execDir);
   std::optional<CIRGenFunction::OMPHostEvalBounds> hostEval;
-  if (isSPMD && !cgf.getCIRGenModule().getLangOpts().OpenMPIsTargetDevice) {
+  if (needsHostEvalTripCount &&
+      !cgf.getCIRGenModule().getLangOpts().OpenMPIsTargetDevice) {
     const auto *loopDir = dyn_cast<OMPLoopDirective>(&execDir);
     if (!loopDir)
       loopDir = findNestedOMPLoopDirective(execDir);
@@ -1030,9 +1107,9 @@ mlir::LogicalResult CIRGenFunction::emitOMPParallelMasterTaskLoopSimdDirective(
 }
 mlir::LogicalResult
 CIRGenFunction::emitOMPDistributeDirective(const OMPDistributeDirective &s) {
-  getCIRGenModule().errorNYI(s.getSourceRange(),
-                             "OpenMP OMPDistributeDirective");
-  return mlir::failure();
+  omp::ConstructQueue queue =
+      omp::buildConstructQueue(getContext().getLangOpts().OpenMP, s);
+  return emitOMPDistributeLoop(*this, s, queue.begin());
 }
 mlir::LogicalResult CIRGenFunction::emitOMPDistributeParallelForDirective(
     const OMPDistributeParallelForDirective &s) {
@@ -1084,9 +1161,25 @@ mlir::LogicalResult CIRGenFunction::emitOMPTargetUpdateDirective(
 }
 mlir::LogicalResult CIRGenFunction::emitOMPTeamsDistributeDirective(
     const OMPTeamsDistributeDirective &s) {
-  getCIRGenModule().errorNYI(s.getSourceRange(),
-                             "OpenMP OMPTeamsDistributeDirective");
-  return mlir::failure();
+  mlir::Location begin = getLoc(s.getBeginLoc());
+  mlir::Location end = getLoc(s.getEndLoc());
+
+  omp::ConstructQueue queue =
+      omp::buildConstructQueue(getContext().getLangOpts().OpenMP, s);
+  omp::ConstructQueue::const_iterator teamsItem = queue.begin();
+  assert(teamsItem->id == llvm::omp::OMPD_teams &&
+         "expected 'teams' to be the outermost directive");
+
+  return emitTeams(*this, s, queue, teamsItem, begin, end,
+                   [&]() -> mlir::LogicalResult {
+                     omp::ConstructQueue::const_iterator distributeItem =
+                         std::next(teamsItem);
+                     assert(distributeItem != queue.end() &&
+                            distributeItem->id == llvm::omp::OMPD_distribute &&
+                            "expected a 'distribute' directive nested in "
+                            "'teams'");
+                     return emitOMPDistributeLoop(*this, s, distributeItem);
+                   });
 }
 mlir::LogicalResult CIRGenFunction::emitOMPTeamsDistributeSimdDirective(
     const OMPTeamsDistributeSimdDirective &s) {
@@ -1142,9 +1235,33 @@ CIRGenFunction::emitOMPTargetTeamsDirective(const OMPTargetTeamsDirective &s) {
 }
 mlir::LogicalResult CIRGenFunction::emitOMPTargetTeamsDistributeDirective(
     const OMPTargetTeamsDistributeDirective &s) {
-  getCIRGenModule().errorNYI(s.getSourceRange(),
-                             "OpenMP OMPTargetTeamsDistributeDirective");
-  return mlir::failure();
+  mlir::Location begin = getLoc(s.getBeginLoc());
+  mlir::Location end = getLoc(s.getEndLoc());
+
+  omp::ConstructQueue queue =
+      omp::buildConstructQueue(getContext().getLangOpts().OpenMP, s);
+  omp::ConstructQueue::const_iterator targetItem = queue.begin();
+  assert(targetItem->id == llvm::omp::OMPD_target &&
+         "expected 'target' to be the outermost directive");
+
+  return emitTarget(
+      *this, s, queue, targetItem, begin, end, [&]() -> mlir::LogicalResult {
+        omp::ConstructQueue::const_iterator teamsItem = std::next(targetItem);
+        assert(teamsItem != queue.end() &&
+               teamsItem->id == llvm::omp::OMPD_teams &&
+               "expected a 'teams' directive nested in 'target'");
+
+        return emitTeams(
+            *this, s, queue, teamsItem, begin, end,
+            [&]() -> mlir::LogicalResult {
+              omp::ConstructQueue::const_iterator distributeItem =
+                  std::next(teamsItem);
+              assert(distributeItem != queue.end() &&
+                     distributeItem->id == llvm::omp::OMPD_distribute &&
+                     "expected a 'distribute' directive nested in 'teams'");
+              return emitOMPDistributeLoop(*this, s, distributeItem);
+            });
+      });
 }
 mlir::LogicalResult
 CIRGenFunction::emitOMPTargetTeamsDistributeParallelForDirective(
