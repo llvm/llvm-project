@@ -17,14 +17,18 @@ define void @interchange_11(i32 %n) {
 ; CHECK-LABEL: define void @interchange_11(
 ; CHECK-SAME: i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
+; CHECK-NEXT:    [[TMP4:%.*]] = add nsw i64 [[TMP0]], -1
 ; CHECK-NEXT:    br label %[[FOR_BODY4_PREHEADER:.*]]
 ; CHECK:       [[FOR_COND1_PREHEADER_PREHEADER:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_COND1_PREHEADER:.*]]
 ; CHECK:       [[FOR_COND_LOOPEXIT:.*]]:
-; CHECK-NEXT:    [[EXITCOND28:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT27:%.*]], 2
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT:%.*]] = add i64 [[INTERCHANGE_IV:%.*]], 1
+; CHECK-NEXT:    [[EXITCOND28:%.*]] = icmp ne i64 [[INTERCHANGE_IV]], 1
 ; CHECK-NEXT:    br i1 [[EXITCOND28]], label %[[FOR_COND1_PREHEADER]], label %[[FOR_BODY4_SPLIT:.*]]
 ; CHECK:       [[FOR_COND1_PREHEADER]]:
-; CHECK-NEXT:    [[INDVARS_IV26:%.*]] = phi i64 [ [[INDVARS_IV_NEXT27]], %[[FOR_COND_LOOPEXIT]] ], [ 0, %[[FOR_COND1_PREHEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[INDVARS_IV26:%.*]] = phi i64 [ [[INDVARS_IV_NEXT27:%.*]], %[[FOR_COND_LOOPEXIT]] ], [ 0, %[[FOR_COND1_PREHEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV]] = phi i64 [ [[INTERCHANGE_IV_NEXT]], %[[FOR_COND_LOOPEXIT]] ], [ 0, %[[FOR_COND1_PREHEADER_PREHEADER]] ]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT27]] = add nuw nsw i64 [[INDVARS_IV26]], 1
 ; CHECK-NEXT:    br label %[[FOR_BODY4_SPLIT1:.*]]
 ; CHECK:       [[FOR_BODY4_PREHEADER]]:
@@ -33,19 +37,20 @@ define void @interchange_11(i32 %n) {
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[FOR_BODY4]]:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[TMP3:%.*]], %[[FOR_BODY4_SPLIT]] ], [ 0, %[[FOR_BODY4_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i64 [ [[TMP5:%.*]], %[[FOR_BODY4_SPLIT]] ], [ 0, %[[FOR_BODY4_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[FOR_COND1_PREHEADER_PREHEADER]]
 ; CHECK:       [[FOR_BODY4_SPLIT1]]:
 ; CHECK-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds [3 x [3 x i32]], ptr @A10, i64 0, i64 [[INDVARS_IV]], i64 [[INDVARS_IV_NEXT27]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[INDVARS_IV]] to i32
 ; CHECK-NEXT:    store i32 [[TMP1]], ptr [[ARRAYIDX10]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[N_WIDE:%.*]] = zext i32 [[N]] to i64
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[N_WIDE]]
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT2:%.*]] = add i64 [[INTERCHANGE_IV1]], 1
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp ne i64 [[INTERCHANGE_IV1]], [[TMP4]]
 ; CHECK-NEXT:    br label %[[FOR_COND_LOOPEXIT]]
 ; CHECK:       [[FOR_BODY4_SPLIT]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
+; CHECK-NEXT:    [[TMP5]] = add i64 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    [[TMP3]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i64 [[TMP3]], [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i64 [[INTERCHANGE_IV1]], [[TMP4]]
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[FOR_BODY4]], label %[[FOR_COND_CLEANUP]]
 ;
 entry:

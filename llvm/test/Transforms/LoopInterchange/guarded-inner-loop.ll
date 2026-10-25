@@ -27,6 +27,7 @@ define i32 @main() {
 ; CHECK-NEXT:    br label %[[FOR_I:.*]]
 ; CHECK:       [[FOR_I]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], %[[FOR_J_INC_SPLIT:.*]] ], [ 0, %[[FOR_I_PREHEADER1]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV:%.*]] = phi i32 [ [[INTERCHANGE_IV_NEXT:%.*]], %[[FOR_J_INC_SPLIT]] ], [ 0, %[[FOR_I_PREHEADER1]] ]
 ; CHECK-NEXT:    [[I_IS_ZERO:%.*]] = icmp eq i32 [[I]], 0
 ; CHECK-NEXT:    [[XBASE:%.*]] = getelementptr [9 x i32], ptr @x, i32 [[I]]
 ; CHECK-NEXT:    [[WBASE:%.*]] = getelementptr [9 x i32], ptr @w, i32 [[I]]
@@ -36,6 +37,7 @@ define i32 @main() {
 ; CHECK-NEXT:    br label %[[FOR_J:.*]]
 ; CHECK:       [[FOR_J]]:
 ; CHECK-NEXT:    [[J:%.*]] = phi i32 [ [[TMP0:%.*]], %[[EXIT:.*]] ], [ 0, %[[FOR_I_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i32 [ [[TMP2:%.*]], %[[EXIT]] ], [ 0, %[[FOR_I_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[FOR_I_PREHEADER1]]
 ; CHECK:       [[FOR_J_PREHEADER]]:
 ; CHECK-NEXT:    br i1 [[I_IS_ZERO]], label %[[FOR_J_INC:.*]], label %[[FOR_K_PH:.*]]
@@ -60,15 +62,18 @@ define i32 @main() {
 ; CHECK-NEXT:    br label %[[FOR_J_INC]]
 ; CHECK:       [[FOR_J_INC]]:
 ; CHECK-NEXT:    [[J_NEXT:%.*]] = add i32 [[J]], 1
-; CHECK-NEXT:    [[J_CMP:%.*]] = icmp eq i32 [[J]], 0
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT2:%.*]] = add i32 [[INTERCHANGE_IV1]], 1
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp ne i32 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    br label %[[FOR_J_INC_SPLIT]]
 ; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[TMP2]] = add i32 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    [[TMP0]] = add i32 [[J]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[J]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[FOR_J]], label %[[FOR_I_INC:.*]]
 ; CHECK:       [[FOR_J_INC_SPLIT]]:
 ; CHECK-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
-; CHECK-NEXT:    [[I_DONE:%.*]] = icmp eq i32 [[I_NEXT]], 3
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT]] = add i32 [[INTERCHANGE_IV]], 1
+; CHECK-NEXT:    [[I_DONE:%.*]] = icmp eq i32 [[INTERCHANGE_IV]], 2
 ; CHECK-NEXT:    br i1 [[I_DONE]], label %[[EXIT]], label %[[FOR_I]]
 ; CHECK:       [[FOR_I_INC]]:
 ; CHECK-NEXT:    ret i32 0

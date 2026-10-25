@@ -32,11 +32,13 @@ define void @interchange_02(i32 %k) {
 ; CHECK-NEXT:    br label %[[FOR1_HEADER:.*]]
 ; CHECK:       [[FOR1_HEADER]]:
 ; CHECK-NEXT:    [[INDVARS_IV23:%.*]] = phi i64 [ [[INDVARS_IV_NEXT24:%.*]], %[[FOR1_INC10:.*]] ], [ 0, %[[FOR1_HEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV:%.*]] = phi i64 [ [[INTERCHANGE_IV_NEXT:%.*]], %[[FOR1_INC10]] ], [ 0, %[[FOR1_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[FOR2_SPLIT1:.*]]
 ; CHECK:       [[FOR2_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[FOR2:.*]]
 ; CHECK:       [[FOR2]]:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[TMP0:%.*]], %[[FOR2_SPLIT:.*]] ], [ 1, %[[FOR2_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i64 [ [[TMP2:%.*]], %[[FOR2_SPLIT]] ], [ 0, %[[FOR2_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[FOR1_HEADER_PREHEADER]]
 ; CHECK:       [[FOR2_SPLIT1]]:
 ; CHECK-NEXT:    call void @bar(i64 [[INDVARS_IV23]])
@@ -45,17 +47,20 @@ define void @interchange_02(i32 %k) {
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[LV]], [[K]]
 ; CHECK-NEXT:    store i32 [[ADD]], ptr [[ARRAYIDX5]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV]], 99
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT2:%.*]] = add i64 [[INTERCHANGE_IV1]], 1
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp eq i64 [[INTERCHANGE_IV1]], 98
 ; CHECK-NEXT:    br label %[[FOR2_LOOPEXIT:.*]]
 ; CHECK:       [[FOR2_SPLIT]]:
+; CHECK-NEXT:    [[TMP2]] = add i64 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    [[TMP0]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[INDVARS_IV]], 99
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[INTERCHANGE_IV1]], 98
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[FOR1_LOOPEXIT:.*]], label %[[FOR2]]
 ; CHECK:       [[FOR2_LOOPEXIT]]:
 ; CHECK-NEXT:    br label %[[FOR1_INC10]]
 ; CHECK:       [[FOR1_INC10]]:
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT24]] = add nuw nsw i64 [[INDVARS_IV23]], 1
-; CHECK-NEXT:    [[EXITCOND26:%.*]] = icmp eq i64 [[INDVARS_IV23]], 99
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT]] = add i64 [[INTERCHANGE_IV]], 1
+; CHECK-NEXT:    [[EXITCOND26:%.*]] = icmp eq i64 [[INTERCHANGE_IV]], 99
 ; CHECK-NEXT:    br i1 [[EXITCOND26]], label %[[FOR2_SPLIT]], label %[[FOR1_HEADER]]
 ; CHECK:       [[FOR1_LOOPEXIT]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
