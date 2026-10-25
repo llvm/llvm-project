@@ -458,9 +458,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 ### Improvements to Clang's diagnostics
 
-- Clang no longer emits a false-positive `-Wimplicit-fallthrough` warning 
-   when consecutive switch labels share a body and are annotated with attributes like 
-   `[[unlikely]]`. (#GH230802)
+- Fixed a false-positive `-Wimplicit-fallthrough` warning when
+  consecutive switch labels share a body and are annotated with
+  attributes like `[[unlikely]]`. (#GH230802)
  
 - Fixed missing `-Wuninitialized-explicit-init` warnings for C file-scope
   tentative definitions of structure types which contain a field marked with
