@@ -533,9 +533,9 @@ bool AreSameDerivedTypeIgnoringSequence(
     if constexpr (std::is_same_v<TY, SomeDerived> || \
         std::is_same_v<TY, SomeKind<TypeCategory::Derived>> || \
         std::is_same_v<TY, SomeType>) { \
-      CHECK((KIND) == 0 && "Type does not have a kind"); \
+      CHECK_MSG((KIND) == 0, "Type does not have a kind"); \
     } else { \
-      CHECK(common::IsValidKindOfIntrinsicType(TY::category, (KIND)) && \
+      CHECK_MSG(common::IsValidKindOfIntrinsicType(TY::category, (KIND)), \
           "Type must come with a supported kind"); \
     } \
   }
