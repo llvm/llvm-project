@@ -1545,9 +1545,12 @@ SectionPiece &MergeInputSection::getSectionPiece(uint64_t offset) {
   // For non-string fixed-size records, piece index = offset / entsize.
   if (!(flags & SHF_STRINGS))
     return pieces[offset / entsize];
-  return partition_point(
-      pieces,
-      [=](const SectionPiece &p) { return p.inputOff <= offset; })[-1];
+  // Find the last piece whose inputOff <= offset. Prefer a conditional move
+  // to a mispredicated branch.
+  SectionPiece *p = pieces.data();
+  for (size_t n = pieces.size(); n > 1; n -= n / 2)
+    p = LLVM_UNPREDICTABLE(p[n / 2].inputOff <= offset) ? p + n / 2 : p;
+  return *p;
 }
 
 // Return the offset in an output section for a given input offset.
