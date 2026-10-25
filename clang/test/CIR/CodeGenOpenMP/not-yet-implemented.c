@@ -10,8 +10,8 @@ void do_things() {
   {}
 
   int i;
-  // A leaf that reports a not-yet-implemented clause emits no op at all, rather
-  // than one that silently ignores the clause.
+  // A directive that reports a not-yet-implemented clause emits no op at all,
+  // rather than one that silently ignores the clause.
   int a, b;
   // expected-error@+2{{ClangIR code gen Not Yet Implemented: OpenMP PARALLEL 'shared' clause}}
   // expected-error@+1{{ClangIR code gen Not Yet Implemented: OpenMP PARALLEL 'firstprivate' clause}}
@@ -19,7 +19,7 @@ void do_things() {
   {}
 
   // A clause routed through construct decomposition but not yet emittable must
-  // still be diagnosed by the leaf emitter's NYI handling.
+  // still be diagnosed by the directive emitter's NYI handling.
   // expected-error@+1{{ClangIR code gen Not Yet Implemented: OpenMP TARGET 'private' clause}}
 #pragma omp target private(i)
   {}
@@ -29,4 +29,14 @@ void do_things() {
   // expected-error@+1{{ClangIR code gen Not Yet Implemented: OpenMP synthesized 'firstprivate' clause from construct decomposition}}
 #pragma omp target
   { i = 1; }
+
+  // The teams construct supports no clauses yet, so every `teams` clause is
+  // reported as not-yet-implemented.
+  // expected-error@+1{{ClangIR code gen Not Yet Implemented: OpenMP TEAMS 'num_teams' clause}}
+#pragma omp teams num_teams(4)
+  {}
+
+  // expected-error@+1{{ClangIR code gen Not Yet Implemented: OpenMP TEAMS 'thread_limit' clause}}
+#pragma omp teams thread_limit(8)
+  {}
 }
