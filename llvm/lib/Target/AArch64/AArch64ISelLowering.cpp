@@ -72,7 +72,6 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/Module.h"
@@ -20031,158 +20030,6 @@ bool AArch64TargetLowering::lowerInterleavedStore(Instruction *Store,
   return true;
 }
 
-bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
-    Instruction *Load, Value *Mask, IntrinsicInst *DI,
-    const APInt &GapMask) const {
-  const unsigned Factor = getDeinterleaveIntrinsicFactor(DI->getIntrinsicID());
-  assert(GapMask.getBitWidth() == Factor);
-  if (Factor != 2 && Factor != 3 && Factor != 4) {
-    LLVM_DEBUG(dbgs() << "Matching ld2, ld3 and ld4 patterns failed\n");
-    return false;
-  }
-  auto *LI = dyn_cast<LoadInst>(Load);
-  if (!LI)
-    return false;
-  assert(!Mask && "Unexpected mask on a load\n");
-
-  // Gap mask is currently not supported.
-  if (!GapMask.isAllOnes())
-    return false;
-
-  VectorType *VTy = getDeinterleavedVectorType(DI);
-
-  const DataLayout &DL = LI->getDataLayout();
-  bool UseScalable;
-  if (!isLegalInterleavedAccessType(VTy, DL, UseScalable))
-    return false;
-
-  // TODO: Add support for using SVE instructions with fixed types later, using
-  // the code from lowerInterleavedLoad to obtain the correct container type.
-  if (UseScalable && !VTy->isScalableTy())
-    return false;
-
-  unsigned NumLoads = getNumInterleavedAccesses(VTy, DL, UseScalable);
-  VectorType *LdTy =
-      VectorType::get(VTy->getElementType(),
-                      VTy->getElementCount().divideCoefficientBy(NumLoads));
-
-  Type *PtrTy = LI->getPointerOperandType();
-  Function *LdNFunc = getStructuredLoadFunction(LI->getModule(), Factor,
-                                                UseScalable, LdTy, PtrTy);
-
-  IRBuilder<> Builder(LI);
-  Value *Pred = nullptr;
-  if (UseScalable)
-    Pred =
-        Builder.CreateVectorSplat(LdTy->getElementCount(), Builder.getTrue());
-
-  Value *BaseAddr = LI->getPointerOperand();
-  Value *Result = nullptr;
-  if (NumLoads > 1) {
-    // Create multiple legal small ldN.
-    SmallVector<Value *, 4> ExtractedLdValues(Factor, PoisonValue::get(VTy));
-    for (unsigned I = 0; I < NumLoads; ++I) {
-      Value *Offset = Builder.getInt64(I * Factor);
-
-      Value *Address = Builder.CreateGEP(LdTy, BaseAddr, {Offset});
-      Value *LdN = nullptr;
-      if (UseScalable)
-        LdN = Builder.CreateCall(LdNFunc, {Pred, Address}, "ldN");
-      else
-        LdN = Builder.CreateCall(LdNFunc, Address, "ldN");
-      Value *Idx =
-          Builder.getInt64(I * LdTy->getElementCount().getKnownMinValue());
-      for (unsigned J = 0; J < Factor; ++J) {
-        ExtractedLdValues[J] = Builder.CreateInsertVector(
-            VTy, ExtractedLdValues[J], Builder.CreateExtractValue(LdN, J), Idx);
-      }
-      LLVM_DEBUG(dbgs() << "LdN4 res: "; LdN->dump());
-    }
-
-    // Merge the values from different factors.
-    Result = PoisonValue::get(DI->getType());
-    for (unsigned J = 0; J < Factor; ++J)
-      Result = Builder.CreateInsertValue(Result, ExtractedLdValues[J], J);
-  } else {
-    if (UseScalable)
-      Result = Builder.CreateCall(LdNFunc, {Pred, BaseAddr}, "ldN");
-    else
-      Result = Builder.CreateCall(LdNFunc, BaseAddr, "ldN");
-  }
-
-  // Replace output of deinterleave2 intrinsic by output of ldN2/ldN4
-  DI->replaceAllUsesWith(Result);
-  return true;
-}
-
-bool AArch64TargetLowering::lowerInterleaveIntrinsicToStore(
-    Instruction *Store, Value *Mask,
-    ArrayRef<Value *> InterleavedValues) const {
-  unsigned Factor = InterleavedValues.size();
-  if (Factor != 2 && Factor != 3 && Factor != 4) {
-    LLVM_DEBUG(dbgs() << "Matching st2, st3 and st4 patterns failed\n");
-    return false;
-  }
-  StoreInst *SI = dyn_cast<StoreInst>(Store);
-  if (!SI)
-    return false;
-  assert(!Mask && "Unexpected mask on plain store");
-
-  VectorType *VTy = cast<VectorType>(InterleavedValues[0]->getType());
-  const DataLayout &DL = SI->getDataLayout();
-
-  bool UseScalable;
-  if (!isLegalInterleavedAccessType(VTy, DL, UseScalable))
-    return false;
-
-  // TODO: Add support for using SVE instructions with fixed types later, using
-  // the code from lowerInterleavedStore to obtain the correct container type.
-  if (UseScalable && !VTy->isScalableTy())
-    return false;
-
-  unsigned NumStores = getNumInterleavedAccesses(VTy, DL, UseScalable);
-
-  VectorType *StTy =
-      VectorType::get(VTy->getElementType(),
-                      VTy->getElementCount().divideCoefficientBy(NumStores));
-
-  Type *PtrTy = SI->getPointerOperandType();
-  Function *StNFunc = getStructuredStoreFunction(SI->getModule(), Factor,
-                                                 UseScalable, StTy, PtrTy);
-
-  IRBuilder<> Builder(SI);
-
-  Value *BaseAddr = SI->getPointerOperand();
-  Value *Pred = nullptr;
-
-  if (UseScalable)
-    Pred =
-        Builder.CreateVectorSplat(StTy->getElementCount(), Builder.getTrue());
-
-  auto ExtractedValues = InterleavedValues;
-  SmallVector<Value *, 4> StoreOperands(InterleavedValues);
-  if (UseScalable)
-    StoreOperands.push_back(Pred);
-  StoreOperands.push_back(BaseAddr);
-  for (unsigned I = 0; I < NumStores; ++I) {
-    Value *Address = BaseAddr;
-    if (NumStores > 1) {
-      Value *Offset = Builder.getInt64(I * Factor);
-      Address = Builder.CreateGEP(StTy, BaseAddr, {Offset});
-      Value *Idx =
-          Builder.getInt64(I * StTy->getElementCount().getKnownMinValue());
-      for (unsigned J = 0; J < Factor; J++) {
-        StoreOperands[J] =
-            Builder.CreateExtractVector(StTy, ExtractedValues[J], Idx);
-      }
-      // update the address
-      StoreOperands[StoreOperands.size() - 1] = Address;
-    }
-    Builder.CreateCall(StNFunc, StoreOperands);
-  }
-  return true;
-}
-
 EVT AArch64TargetLowering::getOptimalMemOpType(
     LLVMContext &Context, const MemOp &Op,
     const AttributeList &FuncAttributes) const {
@@ -28529,14 +28376,24 @@ static SDValue performLegalizedInterleavedStoreCombine(
     return SDValue();
 
   EVT SubVecTy = Interleave->getValueType(0);
-  if (!SubVecTy.is64BitVector() && !SubVecTy.is128BitVector())
+  bool IsScalable = SubVecTy.isScalableVector();
+  bool UseSVE = IsScalable || Subtarget.useSVEForFixedLengthVectors(SubVecTy);
+  if (!DAG.getTargetLoweringInfo().isTypeLegal(SubVecTy))
     return SDValue();
+  if (IsScalable) {
+    if (SubVecTy.getSizeInBits().getKnownMinValue() != 128)
+      return SDValue();
+  } else if (!UseSVE && !SubVecTy.is64BitVector() &&
+             !SubVecTy.is128BitVector()) {
+    return SDValue();
+  }
 
   SmallVector<StoreSDNode *, 4> Stores(NumParts, nullptr);
   for (SDUse &Use : Interleave->uses()) {
     unsigned ResNo = Use.getResNo();
     auto *Store = dyn_cast<StoreSDNode>(Use.getUser());
-    if (Stores[ResNo] || !Store)
+    if (Stores[ResNo] || !Store || !ISD::isNormalStore(Store) ||
+        Store->getMemoryVT() != SubVecTy)
       return SDValue();
     Stores[ResNo] = Store;
   }
@@ -28545,7 +28402,7 @@ static SDValue performLegalizedInterleavedStoreCombine(
     return SDValue();
 
   StoreSDNode *BaseStore = Stores[0];
-  unsigned Bytes = SubVecTy.getStoreSize().getFixedValue();
+  TypeSize Bytes = SubVecTy.getStoreSize();
   for (auto [Idx, Store] : enumerate(Stores)) {
     if (!DAG.areNonVolatileConsecutiveStores(Store, BaseStore, Bytes, Idx))
       return SDValue();
@@ -28559,7 +28416,7 @@ static SDValue performLegalizedInterleavedStoreCombine(
   MachineMemOperand *MMO =
       MF.getMachineMemOperand(BaseStore->getMemOperand(), 0, NumParts * Bytes);
   SmallVector<SDValue, 8> Ops = {BaseStore->getChain()};
-  if (Subtarget.isNeonAvailable()) {
+  if (!UseSVE) {
     static constexpr Intrinsic::ID NEONStores[] = {Intrinsic::aarch64_neon_st2,
                                                    Intrinsic::aarch64_neon_st3,
                                                    Intrinsic::aarch64_neon_st4};
@@ -28571,11 +28428,18 @@ static SDValue performLegalizedInterleavedStoreCombine(
     static constexpr Intrinsic::ID SVEStores[] = {Intrinsic::aarch64_sve_st2,
                                                   Intrinsic::aarch64_sve_st3,
                                                   Intrinsic::aarch64_sve_st4};
-    EVT ContainerVT = getContainerForFixedLengthVector(DAG, SubVecTy);
+    EVT ContainerVT =
+        IsScalable ? SubVecTy : getContainerForFixedLengthVector(DAG, SubVecTy);
     Ops.push_back(DAG.getConstant(SVEStores[NumParts - 2], DL, MVT::i32));
     for (SDValue V : Interleave->op_values())
-      Ops.push_back(convertToScalableVector(DAG, ContainerVT, V));
-    Ops.push_back(getPredicateForFixedLengthVector(DAG, DL, SubVecTy));
+      Ops.push_back(IsScalable ? V
+                               : convertToScalableVector(DAG, ContainerVT, V));
+    SDValue Pred = IsScalable
+                       ? DAG.getConstant(1, DL,
+                                         SubVecTy.changeVectorElementType(
+                                             *DAG.getContext(), MVT::i1))
+                       : getPredicateForFixedLengthVector(DAG, DL, SubVecTy);
+    Ops.push_back(Pred);
     Ops.push_back(BaseStore->getBasePtr());
   }
   SDValue NewStore = DAG.getMemIntrinsicNode(
@@ -31675,19 +31539,29 @@ static SDValue performLegalizedVectorDeinterleaveCombine(
     return SDValue();
 
   EVT SubVecTy = N->getValueType(0);
-  if (!SubVecTy.is64BitVector() && !SubVecTy.is128BitVector())
+  bool IsScalable = SubVecTy.isScalableVector();
+  bool UseSVE = IsScalable || Subtarget.useSVEForFixedLengthVectors(SubVecTy);
+  if (!DAG.getTargetLoweringInfo().isTypeLegal(SubVecTy))
     return SDValue();
+  if (IsScalable) {
+    if (SubVecTy.getSizeInBits().getKnownMinValue() != 128)
+      return SDValue();
+  } else if (!UseSVE && !SubVecTy.is64BitVector() &&
+             !SubVecTy.is128BitVector()) {
+    return SDValue();
+  }
 
   SmallVector<LoadSDNode *, 4> Loads;
   for (const SDValue &Operand : N->op_values()) {
     auto *Load = dyn_cast<LoadSDNode>(Operand);
-    if (!Load || !Operand.hasOneUse())
+    if (!Load || !Operand.hasOneUse() || !ISD::isNormalLoad(Load) ||
+        Load->getMemoryVT() != SubVecTy)
       return SDValue();
     Loads.push_back(Load);
   }
 
   LoadSDNode *BaseLoad = Loads[0];
-  unsigned Bytes = SubVecTy.getStoreSize().getFixedValue();
+  TypeSize Bytes = SubVecTy.getStoreSize();
   for (auto [Idx, Load] : enumerate(Loads)) {
     if (!DAG.areNonVolatileConsecutiveLoads(Load, BaseLoad, Bytes, Idx))
       return SDValue();
@@ -31703,7 +31577,7 @@ static SDValue performLegalizedVectorDeinterleaveCombine(
 
   SmallVector<SDValue, 4> ResOps;
   SDValue NewLoad;
-  if (Subtarget.isNeonAvailable()) {
+  if (!UseSVE) {
     static constexpr Intrinsic::ID NEONLoads[] = {Intrinsic::aarch64_neon_ld2,
                                                   Intrinsic::aarch64_neon_ld3,
                                                   Intrinsic::aarch64_neon_ld4};
@@ -31722,10 +31596,15 @@ static SDValue performLegalizedVectorDeinterleaveCombine(
     static constexpr Intrinsic::ID SVELoads[] = {
         Intrinsic::aarch64_sve_ld2_sret, Intrinsic::aarch64_sve_ld3_sret,
         Intrinsic::aarch64_sve_ld4_sret};
-    EVT ContainerVT = getContainerForFixedLengthVector(DAG, SubVecTy);
+    EVT ContainerVT =
+        IsScalable ? SubVecTy : getContainerForFixedLengthVector(DAG, SubVecTy);
     SmallVector<EVT, 5> ResVTs(NumParts, ContainerVT);
     ResVTs.push_back(MVT::Other);
-    SDValue Pred = getPredicateForFixedLengthVector(DAG, DL, SubVecTy);
+    SDValue Pred = IsScalable
+                       ? DAG.getConstant(1, DL,
+                                         SubVecTy.changeVectorElementType(
+                                             *DAG.getContext(), MVT::i1))
+                       : getPredicateForFixedLengthVector(DAG, DL, SubVecTy);
     NewLoad = DAG.getMemIntrinsicNode(
         ISD::INTRINSIC_W_CHAIN, DL, DAG.getVTList(ResVTs),
         {BaseLoad->getChain(),
@@ -31734,8 +31613,9 @@ static SDValue performLegalizedVectorDeinterleaveCombine(
         MemVT, MMO);
 
     for (unsigned I = 0; I != NumParts; ++I)
-      ResOps.push_back(
-          convertFromScalableVector(DAG, SubVecTy, NewLoad.getValue(I)));
+      ResOps.push_back(IsScalable ? NewLoad.getValue(I)
+                                  : convertFromScalableVector(
+                                        DAG, SubVecTy, NewLoad.getValue(I)));
   }
 
   // Replace uses of the original chain result with the new chain result.
