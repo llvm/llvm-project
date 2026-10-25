@@ -1490,8 +1490,8 @@ static Value *foldAbsDiff(ICmpInst *Cmp, Value *TVal, Value *FVal,
   // With any pair of no-wrap subtracts:
   // (A > B) ? (A - B) : (B - A) --> abs(A - B)
   bool unsignedMatch = ((Pred == CmpInst::ICMP_UGT) &&
-    match(TI, m_Sub(m_ZExtOrSelf(m_Specific(A)), m_ZExtOrSelf(m_Specific(B)))) &&
-    match(FI, m_Sub(m_ZExtOrSelf(m_Specific(B)), m_ZExtOrSelf(m_Specific(A)))));
+    match(TI, m_Sub(m_ZExt(m_Specific(A)), m_ZExt(m_Specific(B)))) &&
+    match(FI, m_Sub(m_ZExt(m_Specific(B)), m_ZExt(m_Specific(A)))));
   
   bool signedMatch = ((Pred == CmpInst::ICMP_SGT) &&
     match(TI, m_Sub(m_SExtOrSelf(m_Specific(A)), m_SExtOrSelf(m_Specific(B)))) &&
