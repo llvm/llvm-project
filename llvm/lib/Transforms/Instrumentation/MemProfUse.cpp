@@ -242,8 +242,7 @@ struct AllocMatchInfo {
 DenseMap<uint64_t, SmallVector<CallEdgeTy, 0>>
 memprof::extractCallsFromIR(Module &M, const TargetLibraryInfo &TLI,
                             function_ref<bool(uint64_t)> IsPresentInProfile) {
-  const InstrumentationOptions &Opts =
-      M.getContext().getLibraryOptions().get<InstrumentationOptions>();
+  const InstrumentationOptions &Opts = getInstrumentationOptions(M);
   DenseMap<uint64_t, SmallVector<CallEdgeTy, 0>> Calls;
 
   for (Function &F : M) {
@@ -838,8 +837,7 @@ MemProfUsePass::MemProfUsePass(std::string MemoryProfileFile,
 }
 
 PreservedAnalyses MemProfUsePass::run(Module &M, ModuleAnalysisManager &AM) {
-  const InstrumentationOptions &Opts =
-      M.getContext().getLibraryOptions().get<InstrumentationOptions>();
+  const InstrumentationOptions &Opts = getInstrumentationOptions(M);
   // Return immediately if the module doesn't contain any function or global
   // variables.
   if (M.empty() && M.globals().empty())

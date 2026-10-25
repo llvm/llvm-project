@@ -55,6 +55,7 @@ target_link_libraries(FlangEvaluateTests
   FortranEvaluate
   FortranDecimal
   FortranSemantics
+  FortranSupport
 )
 
 # GCC -fno-exceptions breaks the fenv.h interfaces needed to capture
