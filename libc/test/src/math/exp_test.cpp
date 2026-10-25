@@ -18,6 +18,7 @@
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/optimization.h"
 #include "src/__support/math/exp_double_eval.h"
+#include "src/__support/math/exp_integer_eval.h"
 #include "src/math/exp.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -168,13 +169,18 @@ public:
   }
 };
 
-#define LIST_EXP_TESTS(suffix, func, ulp_tolerance, all_rounding)              \
+#define LIST_EXP_TESTS(suffix, func, ulp_tolerance, all_rounding,              \
+                       check_exception)                                        \
   using LlvmLibcExpTest##suffix = ExpTest;                                     \
   TEST_F(LlvmLibcExpTest##suffix, SpecialNumbers) {                            \
     test_special_numbers(&func);                                               \
   }                                                                            \
-  TEST_F(LlvmLibcExpTest##suffix, Overflow) { test_overflow(&func); }          \
-  TEST_F(LlvmLibcExpTest##suffix, Underflow) { test_underflow(&func); }        \
+  TEST_F(LlvmLibcExpTest##suffix, OverflowUnderflow) {                         \
+    if (check_exception) {                                                     \
+      test_overflow(&func);                                                    \
+      test_underflow(&func);                                                   \
+    }                                                                          \
+  }                                                                            \
   TEST_F(LlvmLibcExpTest##suffix, TrickyInputs) {                              \
     test_tricky_inputs(&func, ulp_tolerance, all_rounding);                    \
   }                                                                            \
@@ -185,7 +191,19 @@ public:
 
 LIST_EXP_TESTS(Default, LIBC_NAMESPACE::exp,
                /*ulp_tolerance=*/TOLERANCE + 0.5,
-               /*all_rounding=*/ALL_ROUNDING);
+               /*all_rounding=*/ALL_ROUNDING, /*check_exception=*/true);
 LIST_EXP_TESTS(DoubleEval, exp_double_eval,
                /*ulp_tolerance=*/TOLERANCE + 0.5,
-               /*all_rounding=*/ALL_ROUNDING);
+               /*all_rounding=*/ALL_ROUNDING, /*check_exception=*/true);
+LIST_EXP_TESTS(IntegerEval, LIBC_NAMESPACE::math::integer_eval::exp,
+               /*ulp_tolerance=*/1.0, /*all_rounding=*/false,
+               /*check_exception=*/false);
+
+static double exp_static_rounding(double x) {
+  return LIBC_NAMESPACE::math::static_rounding::exp(
+      x, LIBC_NAMESPACE::fputil::quick_get_round());
+}
+
+LIST_EXP_TESTS(StaticRounding, exp_static_rounding,
+               /*ulp_tolerance=*/1.0, /*all_rounding=*/true,
+               /*check_exception=*/false);
