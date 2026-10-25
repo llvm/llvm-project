@@ -172,6 +172,8 @@ protected:
   TargetMachine &TM;
   CGPassBuilderOption Opt;
   PassInstrumentationCallbacks *PIC;
+  /// Whether no -stop-before/-stop-after option ends the pipeline early.
+  bool CompletesPipeline = true;
 
   CodeGenOptLevel getOptLevel() const { return TM.getOptLevel(); }
 
@@ -207,6 +209,10 @@ protected:
   /// This method may be implemented by targets that want to run passes
   /// immediately before register allocation.
   virtual void addPreRegAlloc(PassManagerWrapper &PMW) {}
+
+  /// Return true if the MachinePipeliner should run before addPreRegAlloc by
+  /// default. -enable-pipeliner overrides this.
+  virtual bool isMachinePipelinerEnabled() const { return false; }
 
   /// addPreRewrite - Add passes to the optimized register allocation pipeline
   /// after register allocation is complete, but before virtual registers are

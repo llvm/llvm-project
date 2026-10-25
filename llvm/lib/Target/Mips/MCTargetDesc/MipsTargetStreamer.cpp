@@ -293,21 +293,21 @@ void MipsTargetStreamer::emitEmptyDelaySlot(bool hasShortDelaySlot, SMLoc IDLoc,
   unsigned Opc = Mips::SLL;
   if (isMicroMips(STI) && hasShortDelaySlot) {
     Opc = isMips32r6(STI) ? Mips::MOVE16_MMR6 : Mips::MOVE16_MM;
-    emitRR(Opc, Mips::ZERO, Mips::ZERO, IDLoc, STI);
+    emitRR(Opc, Mips::R0, Mips::R0, IDLoc, STI);
     return;
   }
 
   if (isMicroMips(STI))
     Opc = isMips32r6(STI) ? Mips::SLL_MMR6 : Mips::SLL_MM;
 
-  emitRRI(Opc, Mips::ZERO, Mips::ZERO, 0, IDLoc, STI);
+  emitRRI(Opc, Mips::R0, Mips::R0, 0, IDLoc, STI);
 }
 
 void MipsTargetStreamer::emitNop(SMLoc IDLoc, const MCSubtargetInfo *STI) {
   if (isMicroMips(STI))
-    emitRR(Mips::MOVE16_MM, Mips::ZERO, Mips::ZERO, IDLoc, STI);
+    emitRR(Mips::MOVE16_MM, Mips::R0, Mips::R0, IDLoc, STI);
   else
-    emitRRI(Mips::SLL, Mips::ZERO, Mips::ZERO, 0, IDLoc, STI);
+    emitRRI(Mips::SLL, Mips::R0, Mips::R0, 0, IDLoc, STI);
 }
 
 /// Emit the $gp restore operation for .cprestore.
@@ -344,7 +344,7 @@ void MipsTargetStreamer::emitStoreWithImmOffset(
 
   // Generate the base address in ATReg.
   emitRI(Mips::LUi, ATReg, HiOffset, IDLoc, STI);
-  if (BaseReg != Mips::ZERO)
+  if (BaseReg != Mips::R0)
     emitRRR(Mips::ADDu, ATReg, ATReg, BaseReg, IDLoc, STI);
   // Emit the store with the adjusted base and offset.
   emitRRI(Opcode, SrcReg, ATReg, LoOffset, IDLoc, STI);
@@ -379,7 +379,7 @@ void MipsTargetStreamer::emitLoadWithImmOffset(
 
   // Generate the base address in TmpReg.
   emitRI(Mips::LUi, TmpReg, HiOffset, IDLoc, STI);
-  if (BaseReg != Mips::ZERO)
+  if (BaseReg != Mips::R0)
     emitRRR(Mips::ADDu, TmpReg, TmpReg, BaseReg, IDLoc, STI);
   // Emit the load with the adjusted base and offset.
   emitRRI(Opcode, DstReg, TmpReg, LoOffset, IDLoc, STI);
@@ -1372,7 +1372,7 @@ void MipsTargetELFStreamer::emitDirectiveCpsetup(MCRegister Reg,
   // Either store the old $gp in a register or on the stack
   if (IsReg) {
     // move $save, $gpreg
-    emitRRR(Mips::OR64, RegOrOffset, GPReg, Mips::ZERO, SMLoc(), &STI);
+    emitRRR(Mips::OR64, RegOrOffset, GPReg, Mips::R0, SMLoc(), &STI);
   } else {
     // sd $gpreg, offset($sp)
     emitRRI(Mips::SD, GPReg, Mips::SP, RegOrOffset, SMLoc(), &STI);
@@ -1411,7 +1411,7 @@ void MipsTargetELFStreamer::emitDirectiveCpreturn(unsigned SaveLocation,
     Inst.setOpcode(Mips::OR);
     Inst.addOperand(MCOperand::createReg(GPReg));
     Inst.addOperand(MCOperand::createReg(SaveLocation));
-    Inst.addOperand(MCOperand::createReg(Mips::ZERO));
+    Inst.addOperand(MCOperand::createReg(Mips::R0));
   } else {
     Inst.setOpcode(Mips::LD);
     Inst.addOperand(MCOperand::createReg(GPReg));

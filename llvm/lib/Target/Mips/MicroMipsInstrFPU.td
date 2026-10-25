@@ -285,12 +285,12 @@ let DecoderNamespace = "MicroMips" in {
   }
 }
 
-let DecoderNamespace = "MicroMips",  DecoderMethod = "DecodeFMemMMR2" in {
-  def LDC1_MM_D32 : MMRel, LW_FT<"ldc1", AFGR64Opnd, mem_mm_16, load>,
+let DecoderNamespace = "MicroMips" in {
+  def LDC1_MM_D32 : MMRel, LW_FT<"ldc1", AFGR64MemOpnd, mem_mm_16, load>,
                     LW_FM_MM<0x2f>, ISA_MICROMIPS, FGR_32 {
     let BaseOpcode = "LDC132";
   }
-  def SDC1_MM_D32 : MMRel, SW_FT<"sdc1", AFGR64Opnd, mem_mm_16, store>,
+  def SDC1_MM_D32 : MMRel, SW_FT<"sdc1", AFGR64MemOpnd, mem_mm_16, store>,
                     LW_FM_MM<0x2e>, ISA_MICROMIPS, FGR_32 {
     let BaseOpcode = "SDC164";
   }
@@ -300,7 +300,7 @@ let DecoderNamespace = "MicroMips",  DecoderMethod = "DecodeFMemMMR2" in {
                 LW_FM_MM<0x26>, ISA_MICROMIPS;
 }
 
-let DecoderNamespace = "Mips64", DecoderMethod = "DecodeFMemMMR2" in {
+let DecoderNamespace = "Mips64" in {
   def LDC1_MM_D64 : MMRel, LW_FT<"ldc1", FGR64Opnd, mem_mm_16, load>,
                     LW_FM_MM<0x2f>, ISA_MICROMIPS, FGR_64 {
     let BaseOpcode = "LDC164";
@@ -439,8 +439,8 @@ let AddedComplexity = 40 in {
 def : MipsPat<(MipsMTC1_D64 GPR32Opnd:$src),
               (MTC1_D64_MM GPR32Opnd:$src)>, ISA_MICROMIPS, FGR_64;
 
-def : MipsPat<(f32 fpimm0), (MTC1_MM ZERO)>, ISA_MICROMIPS32_NOT_MIPS32R6;
-def : MipsPat<(f32 fpimm0neg), (FNEG_S_MM (MTC1_MM ZERO))>,
+def : MipsPat<(f32 fpimm0), (MTC1_MM R0)>, ISA_MICROMIPS32_NOT_MIPS32R6;
+def : MipsPat<(f32 fpimm0neg), (FNEG_S_MM (MTC1_MM R0))>,
       ISA_MICROMIPS32_NOT_MIPS32R6;
 
 def : MipsPat<(f32 (fpround FGR64Opnd:$src)),

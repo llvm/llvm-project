@@ -92,8 +92,7 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    if (ScalarOptions::Global.consthoist_with_block_frequency)
-      AU.addRequired<BlockFrequencyInfoWrapperPass>();
+    AU.addRequired<BlockFrequencyInfoWrapperPass>();
     AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<ProfileSummaryInfoWrapperPass>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
@@ -128,10 +127,11 @@ bool ConstantHoistingLegacyPass::runOnFunction(Function &Fn) {
   LLVM_DEBUG(dbgs() << "********** Begin Constant Hoisting **********\n");
   LLVM_DEBUG(dbgs() << "********** Function: " << Fn.getName() << '\n');
 
+  const ScalarOptions &Opts = getScalarOptions(Fn);
   bool MadeChange =
       Impl.runImpl(Fn, getAnalysis<TargetTransformInfoWrapperPass>().getTTI(Fn),
                    getAnalysis<DominatorTreeWrapperPass>().getDomTree(),
-                   ScalarOptions::Global.consthoist_with_block_frequency
+                   Opts.consthoist_with_block_frequency
                        ? &getAnalysis<BlockFrequencyInfoWrapperPass>().getBFI()
                        : nullptr,
                    Fn.getEntryBlock(),
@@ -463,7 +463,7 @@ void ConstantHoistingPass::collectConstantCandidates(
   // Visit constant expressions that have constant integers.
   if (auto ConstExpr = dyn_cast<ConstantExpr>(Opnd)) {
     // Handle constant gep expressions.
-    if (ScalarOptions::Global.consthoist_gep && isa<GEPOperator>(ConstExpr))
+    if (Opts->consthoist_gep && isa<GEPOperator>(ConstExpr))
       collectConstantCandidates(ConstCandMap, Inst, Idx, ConstExpr);
 
     // Only visit constant cast expressions.
@@ -846,8 +846,7 @@ bool ConstantHoistingPass::emitBaseConstants(GlobalVariable *BaseGV) {
 
       // If only few constants depend on this IP of base, skip rebasing,
       // assuming the base and the rebased have the same materialization cost.
-      if (ToBeRebased.size() <
-          ScalarOptions::Global.consthoist_min_num_to_rebase) {
+      if (ToBeRebased.size() < Opts->consthoist_min_num_to_rebase) {
         NotRebasedNum += ToBeRebased.size();
         continue;
       }
@@ -912,6 +911,7 @@ void ConstantHoistingPass::deleteDeadCastInst() const {
 bool ConstantHoistingPass::runImpl(Function &Fn, TargetTransformInfo &TTI,
                                    DominatorTree &DT, BlockFrequencyInfo *BFI,
                                    BasicBlock &Entry, ProfileSummaryInfo *PSI) {
+  this->Opts = &getScalarOptions(Fn);
   this->TTI = &TTI;
   this->DT = &DT;
   this->BFI = BFI;
@@ -955,7 +955,8 @@ PreservedAnalyses ConstantHoistingPass::run(Function &F,
                                             FunctionAnalysisManager &AM) {
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &TTI = AM.getResult<TargetIRAnalysis>(F);
-  auto BFI = ScalarOptions::Global.consthoist_with_block_frequency
+  const ScalarOptions &CLOpts = getScalarOptions(F);
+  auto BFI = CLOpts.consthoist_with_block_frequency
                  ? &AM.getResult<BlockFrequencyAnalysis>(F)
                  : nullptr;
   auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);

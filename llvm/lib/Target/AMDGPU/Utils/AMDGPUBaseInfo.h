@@ -534,6 +534,11 @@ bool isVOPC64DPP(unsigned Opc);
 LLVM_READONLY
 bool isVOPCAsmOnly(unsigned Opc);
 
+/// Returns true if this VOP3P opcode has no op_sel_hi field, in which case
+/// those bits are encoded as zero instead of defaulting to one.
+LLVM_READONLY
+bool hasNoOpSelHi(unsigned Opc);
+
 /// Returns true if MAI operation is a double precision GEMM.
 LLVM_READONLY
 bool getMAIIsDGEMM(unsigned Opc);

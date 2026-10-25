@@ -855,6 +855,8 @@ TEST_F(OpenMPIRBuilderTest, ParallelSimple) {
 
   EXPECT_TRUE(OutlinedFn->hasInternalLinkage());
   EXPECT_EQ(OutlinedFn->arg_size(), 3U);
+  EXPECT_TRUE(OutlinedFn->hasParamAttribute(2, Attribute::NoAlias));
+  EXPECT_TRUE(OutlinedFn->hasParamAttribute(2, Attribute::NoFreeObj));
 
   EXPECT_EQ(&OutlinedFn->getEntryBlock(), PrivAI->getParent());
   EXPECT_TRUE(OutlinedFn->hasOneUse());
@@ -1998,7 +2000,7 @@ TEST_F(OpenMPIRBuilderTest, ApplySimd) {
   OMPBuilder.finalize();
   EXPECT_FALSE(verifyModule(*M, &errs()));
 
-  PassBuilder PB;
+  PassBuilder PB(Ctx);
   FunctionAnalysisManager FAM;
   PB.registerFunctionAnalyses(FAM);
   LoopInfo &LI = FAM.getResult<LoopAnalysis>(*F);
@@ -2042,7 +2044,7 @@ TEST_F(OpenMPIRBuilderTest, ApplySimdCustomAligned) {
   OMPBuilder.finalize();
   EXPECT_FALSE(verifyModule(*M, &errs()));
 
-  PassBuilder PB;
+  PassBuilder PB(Ctx);
   FunctionAnalysisManager FAM;
   PB.registerFunctionAnalyses(FAM);
   LoopInfo &LI = FAM.getResult<LoopAnalysis>(*F);
@@ -2098,7 +2100,7 @@ TEST_F(OpenMPIRBuilderTest, ApplySimdlen) {
   OMPBuilder.finalize();
   EXPECT_FALSE(verifyModule(*M, &errs()));
 
-  PassBuilder PB;
+  PassBuilder PB(Ctx);
   FunctionAnalysisManager FAM;
   PB.registerFunctionAnalyses(FAM);
   LoopInfo &LI = FAM.getResult<LoopAnalysis>(*F);
@@ -2135,7 +2137,7 @@ TEST_F(OpenMPIRBuilderTest, ApplySafelenOrderConcurrent) {
   OMPBuilder.finalize();
   EXPECT_FALSE(verifyModule(*M, &errs()));
 
-  PassBuilder PB;
+  PassBuilder PB(Ctx);
   FunctionAnalysisManager FAM;
   PB.registerFunctionAnalyses(FAM);
   LoopInfo &LI = FAM.getResult<LoopAnalysis>(*F);
@@ -2173,7 +2175,7 @@ TEST_F(OpenMPIRBuilderTest, ApplySafelen) {
   OMPBuilder.finalize();
   EXPECT_FALSE(verifyModule(*M, &errs()));
 
-  PassBuilder PB;
+  PassBuilder PB(Ctx);
   FunctionAnalysisManager FAM;
   PB.registerFunctionAnalyses(FAM);
   LoopInfo &LI = FAM.getResult<LoopAnalysis>(*F);
@@ -2210,7 +2212,7 @@ TEST_F(OpenMPIRBuilderTest, ApplySimdlenSafelen) {
   OMPBuilder.finalize();
   EXPECT_FALSE(verifyModule(*M, &errs()));
 
-  PassBuilder PB;
+  PassBuilder PB(Ctx);
   FunctionAnalysisManager FAM;
   PB.registerFunctionAnalyses(FAM);
   LoopInfo &LI = FAM.getResult<LoopAnalysis>(*F);
@@ -2258,7 +2260,7 @@ TEST_F(OpenMPIRBuilderTest, ApplySimdIf) {
   OMPBuilder.finalize();
   EXPECT_FALSE(verifyModule(*M, &errs()));
 
-  PassBuilder PB;
+  PassBuilder PB(Ctx);
   FunctionAnalysisManager FAM;
   PB.registerFunctionAnalyses(FAM);
   LoopInfo &LI = FAM.getResult<LoopAnalysis>(*F);
@@ -2308,7 +2310,7 @@ TEST_F(OpenMPIRBuilderTest, UnrollLoopFull) {
   OMPBuilder.finalize();
   EXPECT_FALSE(verifyModule(*M, &errs()));
 
-  PassBuilder PB;
+  PassBuilder PB(Ctx);
   FunctionAnalysisManager FAM;
   PB.registerFunctionAnalyses(FAM);
   LoopInfo &LI = FAM.getResult<LoopAnalysis>(*F);
@@ -2336,7 +2338,7 @@ TEST_F(OpenMPIRBuilderTest, UnrollLoopPartial) {
   EXPECT_FALSE(verifyModule(*M, &errs()));
   UnrolledLoop->assertOK();
 
-  PassBuilder PB;
+  PassBuilder PB(Ctx);
   FunctionAnalysisManager FAM;
   PB.registerFunctionAnalyses(FAM);
   LoopInfo &LI = FAM.getResult<LoopAnalysis>(*F);
@@ -2369,7 +2371,7 @@ TEST_F(OpenMPIRBuilderTest, UnrollLoopHeuristic) {
   OMPBuilder.finalize();
   EXPECT_FALSE(verifyModule(*M, &errs()));
 
-  PassBuilder PB;
+  PassBuilder PB(Ctx);
   FunctionAnalysisManager FAM;
   PB.registerFunctionAnalyses(FAM);
   LoopInfo &LI = FAM.getResult<LoopAnalysis>(*F);
@@ -4135,7 +4137,8 @@ TEST_F(OpenMPIRBuilderTest, OMPAtomicUpdateIntr) {
   Type *IntTy = Type::getInt32Ty(M->getContext());
   AllocaInst *XVal = Builder.CreateAlloca(IntTy);
   XVal->setName("AtomicVar");
-  Builder.CreateStore(ConstantInt::get(Type::getInt32Ty(Ctx), 0), XVal);
+  StoreInst *Init =
+      Builder.CreateStore(ConstantInt::get(Type::getInt32Ty(Ctx), 0), XVal);
   OpenMPIRBuilder::AtomicOpValue X = {XVal, IntTy, false, false};
   AtomicOrdering AO = AtomicOrdering::Monotonic;
   Constant *ConstVal = ConstantInt::get(Type::getInt32Ty(Ctx), 1);
@@ -4156,36 +4159,12 @@ TEST_F(OpenMPIRBuilderTest, OMPAtomicUpdateIntr) {
                                                      AO, RMWOp, UpdateOp,
                                                      IsXLHSInRHSPart));
   Builder.restoreIP(AfterIP);
-  BasicBlock *ContBB = EntryBB->getSingleSuccessor();
-  CondBrInst *ContTI = dyn_cast<CondBrInst>(ContBB->getTerminator());
-  EXPECT_NE(ContTI, nullptr);
-  BasicBlock *EndBB = ContTI->getSuccessor(0);
-  EXPECT_EQ(ContTI->getSuccessor(1), ContBB);
-  EXPECT_NE(EndBB, nullptr);
-
-  PHINode *Phi = dyn_cast<PHINode>(&ContBB->front());
-  EXPECT_NE(Phi, nullptr);
-  EXPECT_EQ(Phi->getNumIncomingValues(), 2U);
-  EXPECT_EQ(Phi->getIncomingBlock(0), EntryBB);
-  EXPECT_EQ(Phi->getIncomingBlock(1), ContBB);
-
-  EXPECT_TRUE(Sub->hasOneUse());
-  StoreInst *St = dyn_cast<StoreInst>(Sub->user_back());
-  AllocaInst *UpdateTemp = dyn_cast<AllocaInst>(St->getPointerOperand());
-
-  ExtractValueInst *ExVI1 =
-      dyn_cast<ExtractValueInst>(Phi->getIncomingValueForBlock(ContBB));
-  EXPECT_NE(ExVI1, nullptr);
-  AtomicCmpXchgInst *CmpExchg =
-      dyn_cast<AtomicCmpXchgInst>(ExVI1->getAggregateOperand());
-  EXPECT_NE(CmpExchg, nullptr);
-  EXPECT_EQ(CmpExchg->getPointerOperand(), XVal);
-  EXPECT_EQ(CmpExchg->getCompareOperand(), Phi);
-  EXPECT_EQ(CmpExchg->getSuccessOrdering(), AtomicOrdering::Monotonic);
-
-  LoadInst *Ld = dyn_cast<LoadInst>(CmpExchg->getNewValOperand());
-  EXPECT_NE(Ld, nullptr);
-  EXPECT_EQ(UpdateTemp, Ld->getPointerOperand());
+  EXPECT_EQ(EntryBB->getParent()->size(), 1U);
+  AtomicRMWInst *ARWM = dyn_cast<AtomicRMWInst>(Init->getNextNode());
+  EXPECT_NE(ARWM, nullptr);
+  EXPECT_EQ(ARWM->getPointerOperand(), XVal);
+  EXPECT_EQ(ARWM->getOperation(), RMWOp);
+  EXPECT_EQ(ARWM->getValOperand(), Expr);
 
   Builder.CreateRetVoid();
   OMPBuilder.finalize();
@@ -4753,7 +4732,7 @@ TEST_F(OpenMPIRBuilderTest, CreateTeamsWithThreadLimit) {
       dyn_cast<UncondBrInst>(PushNumTeamsCallInst->getNextNode());
   ASSERT_NE(BrInst, nullptr);
   BasicBlock::iterator NextInstruction =
-      BrInst->getSuccessor(0)->getFirstNonPHIOrDbgOrLifetime();
+      BrInst->getSuccessor(0)->getFirstNonPHIOrLifetime();
   CallInst *ForkTeamsCI = nullptr;
   if (NextInstruction != BrInst->getSuccessor()->end())
     ForkTeamsCI = dyn_cast_if_present<CallInst>(NextInstruction);
@@ -4810,7 +4789,7 @@ TEST_F(OpenMPIRBuilderTest, CreateTeamsWithNumTeamsUpper) {
       dyn_cast<UncondBrInst>(PushNumTeamsCallInst->getNextNode());
   ASSERT_NE(BrInst, nullptr);
   BasicBlock::iterator NextInstruction =
-      BrInst->getSuccessor()->getFirstNonPHIOrDbgOrLifetime();
+      BrInst->getSuccessor()->getFirstNonPHIOrLifetime();
   CallInst *ForkTeamsCI = nullptr;
   if (NextInstruction != BrInst->getSuccessor()->end())
     ForkTeamsCI = dyn_cast_if_present<CallInst>(NextInstruction);
@@ -4870,7 +4849,7 @@ TEST_F(OpenMPIRBuilderTest, CreateTeamsWithNumTeamsBoth) {
       dyn_cast<UncondBrInst>(PushNumTeamsCallInst->getNextNode());
   ASSERT_NE(BrInst, nullptr);
   BasicBlock::iterator NextInstruction =
-      BrInst->getSuccessor()->getFirstNonPHIOrDbgOrLifetime();
+      BrInst->getSuccessor()->getFirstNonPHIOrLifetime();
   CallInst *ForkTeamsCI = nullptr;
   if (NextInstruction != BrInst->getSuccessor()->end())
     ForkTeamsCI = dyn_cast_if_present<CallInst>(NextInstruction);
@@ -4935,7 +4914,7 @@ TEST_F(OpenMPIRBuilderTest, CreateTeamsWithNumTeamsAndThreadLimit) {
       dyn_cast<UncondBrInst>(PushNumTeamsCallInst->getNextNode());
   ASSERT_NE(BrInst, nullptr);
   BasicBlock::iterator NextInstruction =
-      BrInst->getSuccessor()->getFirstNonPHIOrDbgOrLifetime();
+      BrInst->getSuccessor()->getFirstNonPHIOrLifetime();
   CallInst *ForkTeamsCI = nullptr;
   if (NextInstruction != BrInst->getSuccessor()->end())
     ForkTeamsCI = dyn_cast_if_present<CallInst>(NextInstruction);

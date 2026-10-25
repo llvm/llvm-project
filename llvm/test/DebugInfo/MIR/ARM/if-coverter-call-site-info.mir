@@ -118,7 +118,7 @@ stack:
       callee-saved-restored: false }
   - { id: 1, type: spill-slot, offset: -8, size: 4, alignment: 4, callee-saved-register: '$r11' }
 callSites:
-  - { bb: 2, offset: 0, fwdArgRegs: 
+  - { bb: '%bb.2', offset: 0, fwdArgRegs:
       - { arg: 0, reg: '$r0' }
       - { arg: 1, reg: '$r1' } }
 constants:

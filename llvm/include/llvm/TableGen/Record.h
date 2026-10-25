@@ -793,9 +793,6 @@ public:
     return ArrayRef(getTrailingObjects(), NumElements);
   }
 
-  LLVM_DEPRECATED_WITH_FIXIT("Use getElements instead", "getElements")
-  ArrayRef<const Init *> getValues() const { return getElements(); }
-
   const Init *getElement(unsigned Idx) const { return getElements()[Idx]; }
 
   std::pair<ArrayRef<const Init *>, const RecTy *> getKey() const {
@@ -2097,6 +2094,8 @@ public:
   }
 
   void addDef(std::unique_ptr<Record> R) {
+    for (const Record *SC : make_first_range(R->getDirectSuperClasses()))
+      DefsByDirectSuperClass[SC].push_back(R.get());
     bool Ins = Defs.try_emplace(R->getName(), std::move(R)).second;
     (void)Ins;
     assert(Ins && "Record already exists");
@@ -2148,6 +2147,9 @@ private:
   // Classes and Defs sorted by name, built on demand.
   mutable std::vector<const Record *> SortedClasses, SortedDefs;
   mutable std::map<std::string, std::vector<const Record *>> Cache;
+  // The defs that each class is a direct superclass of.
+  DenseMap<const Record *, SmallVector<const Record *, 0>>
+      DefsByDirectSuperClass;
   GlobalMap ExtraGlobals;
 
   /// The internal uniquer implementation of the RecordKeeper.

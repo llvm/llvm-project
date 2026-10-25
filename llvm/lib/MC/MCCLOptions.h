@@ -9,9 +9,16 @@
 #ifndef LLVM_LIB_MC_MCCLOPTIONS_H
 #define LLVM_LIB_MC_MCCLOPTIONS_H
 
+#include "llvm/MC/MCTargetOptions.h"
 #include <optional>
 
 #define OPTIONS_STRUCT_DECL
 #include "MCCLOptions.inc"
+
+namespace llvm {
+inline const MCCLOptions &getMCCLOptions(const MCTargetOptions &Options) {
+  return cl::LibraryOptionsContext::get<MCCLOptions>(Options.LibraryOptions);
+}
+} // namespace llvm
 
 #endif // LLVM_LIB_MC_MCCLOPTIONS_H

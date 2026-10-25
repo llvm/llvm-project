@@ -109,6 +109,11 @@ static cl::opt<bool> ExhaustiveSearch(
              "and interference cutoffs of last chance recoloring"),
     cl::Hidden);
 
+static cl::opt<bool> CompactSlotIndexes(
+    "greedy-compact-slot-indexes", cl::Hidden, cl::init(false),
+    cl::desc("Drop SlotIndexes entries for erased instructions before "
+             "allocating, so live range sizes reflect real code distance"));
+
 // This option should be deprecated!
 // FIXME: Find a good default for this flag and remove the flag.
 static cl::opt<unsigned>
@@ -755,9 +760,11 @@ MCRegister RAGreedy::tryEvict(const LiveInterval &VirtReg,
 /// interference pattern in Physreg and its aliases. Add the constraints to
 /// SpillPlacement and return the static cost of this split in Cost, assuming
 /// that all preferences in SplitConstraints are met.
-/// Return false if there are no bundles with positive bias.
+/// Return false if there are no bundles with positive bias, or if the static
+/// cost reaches MaxCost.
 bool RAGreedy::addSplitConstraints(InterferenceCache::Cursor Intf,
-                                   BlockFrequency &Cost) {
+                                   BlockFrequency &Cost,
+                                   BlockFrequency MaxCost) {
   ArrayRef<SplitAnalysis::BlockInfo> UseBlocks = SA->getUseBlocks();
 
   // Reset interference dependent info.
@@ -818,6 +825,9 @@ bool RAGreedy::addSplitConstraints(InterferenceCache::Cursor Intf,
     // Accumulate the total frequency of inserted spill code.
     while (Ins--)
       StaticCost += SpillPlacer->getBlockFrequency(BC.Number);
+
+    if (StaticCost >= MaxCost)
+      return false;
   }
   Cost = StaticCost;
 
@@ -984,7 +994,7 @@ bool RAGreedy::calcCompactRegion(GlobalSplitCandidate &Cand) {
 
   // The static split cost will be zero since Cand.Intf reports no interference.
   BlockFrequency Cost;
-  if (!addSplitConstraints(Cand.Intf, Cost)) {
+  if (!addSplitConstraints(Cand.Intf, Cost, BlockFrequency::max())) {
     LLVM_DEBUG(dbgs() << ", none.\n");
     return false;
   }
@@ -1288,8 +1298,9 @@ unsigned RAGreedy::calculateRegionSplitCostAroundReg(MCRegister PhysReg,
 
   SpillPlacer->prepare(Cand.LiveBundles);
   BlockFrequency Cost;
-  if (!addSplitConstraints(Cand.Intf, Cost)) {
-    LLVM_DEBUG(dbgs() << printReg(PhysReg, TRI) << "\tno positive bundles\n");
+  if (!addSplitConstraints(Cand.Intf, Cost, BestCost)) {
+    LLVM_DEBUG(dbgs() << printReg(PhysReg, TRI)
+                      << "\tno positive bundles or too expensive\n");
     return BestCand;
   }
   LLVM_DEBUG(dbgs() << printReg(PhysReg, TRI)
@@ -2622,7 +2633,10 @@ BlockFrequency RAGreedy::getBrokenHintFreq(const HintsInfo &List,
 /// For a given live range, profitability is determined by the sum of the
 /// frequencies of the non-identity copies it would introduce with the old
 /// and new register.
-void RAGreedy::tryHintRecoloring(const LiveInterval &VirtReg) {
+/// \p NoRecolorRegs holds registers whose walk is known to recolor nothing.
+/// It is cleared whenever a recoloring happens.
+void RAGreedy::tryHintRecoloring(const LiveInterval &VirtReg,
+                                 DenseSet<Register> &NoRecolorRegs) {
   // We have a broken hint, check if it is possible to fix it by
   // reusing PhysReg for the copy-related live-ranges. Indeed, we evicted
   // some register and PhysReg may be available for the other live-ranges.
@@ -2633,6 +2647,8 @@ void RAGreedy::tryHintRecoloring(const LiveInterval &VirtReg) {
   // it will propagate to the ones that are copy-related with it.
   SmallDenseSet<Register, 8> Visited = {Reg};
   SmallVector<Register, 2> RecoloringCandidates = {Reg};
+  SmallVector<Register, 8> Reached;
+  bool Changed = false;
 
   LLVM_DEBUG(dbgs() << "Trying to reconcile hints for: " << printReg(Reg, TRI)
                     << '(' << printReg(PhysReg, TRI) << ")\n");
@@ -2684,6 +2700,9 @@ void RAGreedy::tryHintRecoloring(const LiveInterval &VirtReg) {
       // Recolor the live-range.
       Matrix->unassign(LI);
       Matrix->assign(LI, PhysReg);
+      Changed = true;
+    } else {
+      Reached.push_back(Reg);
     }
     // Push all copy-related live-ranges to keep reconciling the broken
     // hints.
@@ -2693,6 +2712,11 @@ void RAGreedy::tryHintRecoloring(const LiveInterval &VirtReg) {
         RecoloringCandidates.push_back(HI.Reg);
     }
   } while (!RecoloringCandidates.empty());
+
+  if (Changed)
+    NoRecolorRegs.clear();
+  else
+    NoRecolorRegs.insert_range(Reached);
 }
 
 /// Try to recolor broken hints.
@@ -2732,14 +2756,15 @@ void RAGreedy::tryHintRecoloring(const LiveInterval &VirtReg) {
 /// This is likely that we can assign the same register for b, c, and d,
 /// getting rid of 2 copies.
 void RAGreedy::tryHintsRecoloring() {
+  DenseSet<Register> NoRecolorRegs;
   for (const LiveInterval *LI : SetOfBrokenHints) {
     assert(LI->reg().isVirtual() &&
            "Recoloring is possible only for virtual registers");
     // Some dead defs may be around (e.g., because of debug uses).
     // Ignore those.
-    if (!VRM->hasPhys(LI->reg()))
+    if (!VRM->hasPhys(LI->reg()) || NoRecolorRegs.contains(LI->reg()))
       continue;
-    tryHintRecoloring(*LI);
+    tryHintRecoloring(*LI, NoRecolorRegs);
   }
 }
 
@@ -3057,7 +3082,13 @@ bool RAGreedy::run(MachineFunction &mf) {
 
   // Renumber to get accurate and consistent results from
   // SlotIndexes::getApproxInstrDistance.
-  Indexes->packIndexes();
+  if (CompactSlotIndexes) {
+    // Compaction unlinks what it erases; this is what makes that safe.
+    LIS->removeUnreferencedIntervals();
+    Indexes->compactIndexes();
+  } else {
+    Indexes->packIndexes();
+  }
 
   initializeCSRCost();
 
