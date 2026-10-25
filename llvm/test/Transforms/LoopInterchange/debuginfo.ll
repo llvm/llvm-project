@@ -18,12 +18,14 @@ define void @interchange_01(i64 %k, i64 %N) !dbg !5 {
 ; CHECK-NEXT:    br label %[[FOR1_HEADER:.*]]
 ; CHECK:       [[FOR1_HEADER]]:
 ; CHECK-NEXT:    [[J23:%.*]] = phi i64 [ [[J_NEXT24:%.*]], %[[FOR1_INC10:.*]] ], [ 0, %[[FOR1_HEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV:%.*]] = phi i64 [ [[INTERCHANGE_IV_NEXT:%.*]], %[[FOR1_INC10]] ], [ 0, %[[FOR1_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:      #dbg_value(i64 [[J:%.*]], [[META13:![0-9]+]], !DIExpression(), [[META14:![0-9]+]])
 ; CHECK-NEXT:    br label %[[FOR2_SPLIT1:.*]]
 ; CHECK:       [[FOR2_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[FOR2:.*]]
 ; CHECK:       [[FOR2]]:
 ; CHECK-NEXT:    [[J]] = phi i64 [ [[TMP0:%.*]], %[[FOR2_SPLIT:.*]] ], [ 0, %[[FOR2_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i64 [ [[TMP2:%.*]], %[[FOR2_SPLIT]] ], [ 0, %[[FOR2_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[FOR1_HEADER_PREHEADER]]
 ; CHECK:       [[FOR2_SPLIT1]]:
 ; CHECK-NEXT:      #dbg_value(i64 [[J]], [[META13]], !DIExpression(), [[META14]])
@@ -32,17 +34,20 @@ define void @interchange_01(i64 %k, i64 %N) !dbg !5 {
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[LV]], [[K]]
 ; CHECK-NEXT:    store i64 [[ADD]], ptr [[ARRAYIDX5]], align 8
 ; CHECK-NEXT:    [[J_NEXT:%.*]] = add nuw nsw i64 [[J]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[J]], 99
 ; CHECK-NEXT:      #dbg_value(i64 [[J]], [[META13]], !DIExpression(), [[META14]])
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT2:%.*]] = add i64 [[INTERCHANGE_IV1]], 1
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp eq i64 [[INTERCHANGE_IV1]], 99
 ; CHECK-NEXT:    br label %[[FOR1_INC10]]
 ; CHECK:       [[FOR2_SPLIT]]:
+; CHECK-NEXT:    [[TMP2]] = add i64 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    [[TMP0]] = add nuw nsw i64 [[J]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[J]], 99
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[INTERCHANGE_IV1]], 99
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[FOR_END12:.*]], label %[[FOR2]]
 ; CHECK:       [[FOR1_INC10]]:
 ; CHECK-NEXT:    [[J_NEXT24]] = add nuw nsw i64 [[J23]], 1
 ; CHECK-NEXT:      #dbg_value(i64 [[J]], [[META13]], !DIExpression(), [[META14]])
-; CHECK-NEXT:    [[EXITCOND26:%.*]] = icmp eq i64 [[J23]], 99
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT]] = add i64 [[INTERCHANGE_IV]], 1
+; CHECK-NEXT:    [[EXITCOND26:%.*]] = icmp eq i64 [[INTERCHANGE_IV]], 99
 ; CHECK-NEXT:    br i1 [[EXITCOND26]], label %[[FOR2_SPLIT]], label %[[FOR1_HEADER]]
 ; CHECK:       [[FOR_END12]]:
 ; CHECK-NEXT:    ret void

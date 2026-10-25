@@ -26,6 +26,7 @@ define void @test1() {
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[INDVARS_OUTER:%.*]] = phi i64 [ [[INDVARS_OUTER_NEXT:%.*]], %[[FOR_INC7:.*]] ], [ 0, %[[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV:%.*]] = phi i32 [ [[INTERCHANGE_IV_NEXT:%.*]], %[[FOR_INC7]] ], [ 0, %[[FOR_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[OR_REDUCTION_INNER:%.*]] = phi i32 [ [[OR:%.*]], %[[FOR_INC7]] ], [ [[OR_REDUCTION_OUTER:%.*]], %[[FOR_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[INDEX:%.*]] = add nsw i64 [[INDVARS_OUTER]], 9
 ; CHECK-NEXT:    br label %[[FOR_BODY3_SPLIT1:.*]]
@@ -33,7 +34,7 @@ define void @test1() {
 ; CHECK-NEXT:    br label %[[FOR_BODY3:.*]]
 ; CHECK:       [[FOR_BODY3]]:
 ; CHECK-NEXT:    [[INDVAR0:%.*]] = phi i64 [ [[TMP0:%.*]], %[[FOR_BODY3_SPLIT:.*]] ], [ 5, %[[FOR_BODY3_PREHEADER]] ]
-; CHECK-NEXT:    [[INDVAR1:%.*]] = phi i32 [ [[TMP1:%.*]], %[[FOR_BODY3_SPLIT]] ], [ 5, %[[FOR_BODY3_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i32 [ [[TMP1:%.*]], %[[FOR_BODY3_SPLIT]] ], [ 0, %[[FOR_BODY3_PREHEADER]] ]
 ; CHECK-NEXT:    [[OR_REDUCTION_OUTER]] = phi i32 [ [[OR_LCSSA:%.*]], %[[FOR_BODY3_SPLIT]] ], [ [[A]], %[[FOR_BODY3_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY_PREHEADER]]
 ; CHECK:       [[FOR_BODY3_SPLIT1]]:
@@ -41,19 +42,19 @@ define void @test1() {
 ; CHECK-NEXT:    [[LOAD_VAL:%.*]] = load i32, ptr [[ARRAYIDX5]], align 4
 ; CHECK-NEXT:    [[OR]] = or i32 [[OR_REDUCTION_INNER]], [[LOAD_VAL]]
 ; CHECK-NEXT:    [[INDVAR0_NEXT:%.*]] = add nsw i64 [[INDVAR0]], -1
-; CHECK-NEXT:    [[INDVAR1_NEXT:%.*]] = add nsw i32 [[INDVAR1]], -1
-; CHECK-NEXT:    [[TOBOOL2:%.*]] = icmp eq i32 [[INDVAR1_NEXT]], 0
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT2:%.*]] = add i32 [[INTERCHANGE_IV1]], 1
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp eq i32 [[INTERCHANGE_IV1]], 4
 ; CHECK-NEXT:    br label %[[FOR_INC7]]
 ; CHECK:       [[FOR_BODY3_SPLIT]]:
 ; CHECK-NEXT:    [[OR_LCSSA]] = phi i32 [ [[OR]], %[[FOR_INC7]] ]
+; CHECK-NEXT:    [[TMP1]] = add i32 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    [[TMP0]] = add nsw i64 [[INDVAR0]], -1
-; CHECK-NEXT:    [[TMP1]] = add nsw i32 [[INDVAR1]], -1
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[INTERCHANGE_IV1]], 4
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[FOR_COND_FOR_END8_CRIT_EDGE:.*]], label %[[FOR_BODY3]]
 ; CHECK:       [[FOR_INC7]]:
 ; CHECK-NEXT:    [[INDVARS_OUTER_NEXT]] = add nsw i64 [[INDVARS_OUTER]], 1
-; CHECK-NEXT:    [[INDVARS_OUTER_NEXT_TRUNC:%.*]] = trunc i64 [[INDVARS_OUTER_NEXT]] to i32
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[INDVARS_OUTER_NEXT_TRUNC]], 100
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT]] = add i32 [[INTERCHANGE_IV]], 1
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[INTERCHANGE_IV]], 99
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label %[[FOR_BODY3_SPLIT]], label %[[FOR_BODY]]
 ; CHECK:       [[FOR_COND_FOR_END8_CRIT_EDGE]]:
 ; CHECK-NEXT:    [[OR_LCSSA_LCSSA:%.*]] = phi i32 [ [[OR_LCSSA]], %[[FOR_BODY3_SPLIT]] ]
@@ -121,6 +122,7 @@ define void @test2() {
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[INDVARS_OUTER:%.*]] = phi i64 [ [[INDVARS_OUTER_NEXT:%.*]], %[[FOR_INC7:.*]] ], [ 0, %[[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV:%.*]] = phi i32 [ [[INTERCHANGE_IV_NEXT:%.*]], %[[FOR_INC7]] ], [ 0, %[[FOR_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[OR_REDUCTION_INNER:%.*]] = phi i32 [ [[OR:%.*]], %[[FOR_INC7]] ], [ [[OR_REDUCTION_OUTER:%.*]], %[[FOR_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[INDEX:%.*]] = add nsw i64 [[INDVARS_OUTER]], 9
 ; CHECK-NEXT:    br label %[[FOR_BODY3_SPLIT1:.*]]
@@ -128,7 +130,7 @@ define void @test2() {
 ; CHECK-NEXT:    br label %[[FOR_BODY3:.*]]
 ; CHECK:       [[FOR_BODY3]]:
 ; CHECK-NEXT:    [[INDVAR0:%.*]] = phi i64 [ [[TMP2:%.*]], %[[FOR_BODY3_SPLIT:.*]] ], [ 5, %[[FOR_BODY3_PREHEADER]] ]
-; CHECK-NEXT:    [[INDVAR1:%.*]] = phi i32 [ [[TMP0:%.*]], %[[FOR_BODY3_SPLIT]] ], [ 6, %[[FOR_BODY3_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i64 [ [[TMP0:%.*]], %[[FOR_BODY3_SPLIT]] ], [ 0, %[[FOR_BODY3_PREHEADER]] ]
 ; CHECK-NEXT:    [[OR_REDUCTION_OUTER]] = phi i32 [ [[OR_LCSSA:%.*]], %[[FOR_BODY3_SPLIT]] ], [ [[A]], %[[FOR_BODY3_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY_PREHEADER]]
 ; CHECK:       [[FOR_BODY3_SPLIT1]]:
@@ -136,23 +138,19 @@ define void @test2() {
 ; CHECK-NEXT:    [[LOAD_VAL:%.*]] = load i32, ptr [[ARRAYIDX5]], align 4
 ; CHECK-NEXT:    [[OR]] = or i32 [[OR_REDUCTION_INNER]], [[LOAD_VAL]]
 ; CHECK-NEXT:    [[INDVAR0_NEXT:%.*]] = add nsw i64 [[INDVAR0]], -1
-; CHECK-NEXT:    [[INDVAR1_NEXT:%.*]] = add nsw i32 [[INDVAR1]], -2
-; CHECK-NEXT:    [[INDVAR1_NEXT_EXT:%.*]] = sext i32 [[INDVAR1_NEXT]] to i64
-; CHECK-NEXT:    [[INDVARS_ADD:%.*]] = add nsw i64 [[INDVAR0_NEXT]], [[INDVAR1_NEXT_EXT]]
-; CHECK-NEXT:    [[TOBOOL2:%.*]] = icmp sle i64 [[INDVARS_ADD]], 0
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT2:%.*]] = add i64 [[INTERCHANGE_IV1]], 1
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp eq i64 [[INTERCHANGE_IV1]], 3
 ; CHECK-NEXT:    br label %[[FOR_INC7]]
 ; CHECK:       [[FOR_BODY3_SPLIT]]:
 ; CHECK-NEXT:    [[OR_LCSSA]] = phi i32 [ [[OR]], %[[FOR_INC7]] ]
-; CHECK-NEXT:    [[TMP0]] = add nsw i32 [[INDVAR1]], -2
-; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[TMP0]] to i64
+; CHECK-NEXT:    [[TMP0]] = add i64 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    [[TMP2]] = add nsw i64 [[INDVAR0]], -1
-; CHECK-NEXT:    [[TMP3:%.*]] = add nsw i64 [[TMP2]], [[TMP1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp sle i64 [[TMP3]], 0
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INTERCHANGE_IV1]], 3
 ; CHECK-NEXT:    br i1 [[TMP4]], label %[[FOR_COND_FOR_END8_CRIT_EDGE:.*]], label %[[FOR_BODY3]]
 ; CHECK:       [[FOR_INC7]]:
 ; CHECK-NEXT:    [[INDVARS_OUTER_NEXT]] = add nsw i64 [[INDVARS_OUTER]], 1
-; CHECK-NEXT:    [[INDVARS_OUTER_NEXT_TRUNC:%.*]] = trunc i64 [[INDVARS_OUTER_NEXT]] to i32
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[INDVARS_OUTER_NEXT_TRUNC]], 100
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT]] = add i32 [[INTERCHANGE_IV]], 1
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[INTERCHANGE_IV]], 99
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label %[[FOR_BODY3_SPLIT]], label %[[FOR_BODY]]
 ; CHECK:       [[FOR_COND_FOR_END8_CRIT_EDGE]]:
 ; CHECK-NEXT:    [[OR_LCSSA_LCSSA:%.*]] = phi i32 [ [[OR_LCSSA]], %[[FOR_BODY3_SPLIT]] ]
@@ -223,6 +221,7 @@ define void @test3() {
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[INDVARS_OUTER:%.*]] = phi i64 [ [[INDVARS_OUTER_NEXT:%.*]], %[[FOR_INC7:.*]] ], [ 0, %[[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV:%.*]] = phi i64 [ [[INTERCHANGE_IV_NEXT:%.*]], %[[FOR_INC7]] ], [ 0, %[[FOR_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[OR_REDUCTION_INNER:%.*]] = phi i32 [ [[OR:%.*]], %[[FOR_INC7]] ], [ [[OR_REDUCTION_OUTER:%.*]], %[[FOR_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[INDEX:%.*]] = add nsw i64 [[INDVARS_OUTER]], 9
 ; CHECK-NEXT:    br label %[[FOR_BODY3_SPLIT1:.*]]
@@ -230,7 +229,7 @@ define void @test3() {
 ; CHECK-NEXT:    br label %[[FOR_BODY3:.*]]
 ; CHECK:       [[FOR_BODY3]]:
 ; CHECK-NEXT:    [[INDVAR0:%.*]] = phi i32 [ [[TMP1:%.*]], %[[FOR_BODY3_SPLIT:.*]] ], [ 5, %[[FOR_BODY3_PREHEADER]] ]
-; CHECK-NEXT:    [[INDVAR1:%.*]] = phi i32 [ [[TMP0:%.*]], %[[FOR_BODY3_SPLIT]] ], [ 49, %[[FOR_BODY3_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i32 [ [[TMP0:%.*]], %[[FOR_BODY3_SPLIT]] ], [ 0, %[[FOR_BODY3_PREHEADER]] ]
 ; CHECK-NEXT:    [[OR_REDUCTION_OUTER]] = phi i32 [ [[OR_LCSSA:%.*]], %[[FOR_BODY3_SPLIT]] ], [ [[A]], %[[FOR_BODY3_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY_PREHEADER]]
 ; CHECK:       [[FOR_BODY3_SPLIT1]]:
@@ -238,18 +237,19 @@ define void @test3() {
 ; CHECK-NEXT:    [[LOAD_VAL:%.*]] = load i32, ptr [[ARRAYIDX5]], align 4
 ; CHECK-NEXT:    [[OR]] = or i32 [[OR_REDUCTION_INNER]], [[LOAD_VAL]]
 ; CHECK-NEXT:    [[INDVAR0_NEXT:%.*]] = add nsw i32 [[INDVAR0]], 1
-; CHECK-NEXT:    [[INDVAR1_NEXT:%.*]] = add nsw i32 [[INDVAR1]], -1
-; CHECK-NEXT:    [[TOBOOL2:%.*]] = icmp eq i32 [[INDVAR0_NEXT]], [[INDVAR1_NEXT]]
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT2:%.*]] = add i32 [[INTERCHANGE_IV1]], 1
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp eq i32 [[INTERCHANGE_IV1]], 21
 ; CHECK-NEXT:    br label %[[FOR_INC7]]
 ; CHECK:       [[FOR_BODY3_SPLIT]]:
 ; CHECK-NEXT:    [[OR_LCSSA]] = phi i32 [ [[OR]], %[[FOR_INC7]] ]
-; CHECK-NEXT:    [[TMP0]] = add nsw i32 [[INDVAR1]], -1
+; CHECK-NEXT:    [[TMP0]] = add i32 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    [[TMP1]] = add nsw i32 [[INDVAR0]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[INTERCHANGE_IV1]], 21
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[FOR_COND_FOR_END8_CRIT_EDGE:.*]], label %[[FOR_BODY3]]
 ; CHECK:       [[FOR_INC7]]:
 ; CHECK-NEXT:    [[INDVARS_OUTER_NEXT]] = add nsw i64 [[INDVARS_OUTER]], 1
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[INDVARS_OUTER_NEXT]], 100
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT]] = add i64 [[INTERCHANGE_IV]], 1
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[INTERCHANGE_IV]], 99
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label %[[FOR_BODY3_SPLIT]], label %[[FOR_BODY]]
 ; CHECK:       [[FOR_COND_FOR_END8_CRIT_EDGE]]:
 ; CHECK-NEXT:    [[OR_LCSSA_LCSSA:%.*]] = phi i32 [ [[OR_LCSSA]], %[[FOR_BODY3_SPLIT]] ]

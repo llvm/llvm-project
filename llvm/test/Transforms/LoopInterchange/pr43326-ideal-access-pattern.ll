@@ -22,6 +22,7 @@ define void @pr43326-triply-nested(ptr noalias %e, ptr noalias %f) {
 ; CHECK-NEXT:    br label %[[FOR_OUTERMOST_HEADER:.*]]
 ; CHECK:       [[FOR_OUTERMOST_HEADER]]:
 ; CHECK-NEXT:    [[INDVARS_OUTERMOST:%.*]] = phi i64 [ [[INDVARS_OUTERMOST_NEXT:%.*]], %[[FOR_OUTERMOST_LATCH:.*]] ], [ 0, %[[FOR_MIDDLE_HEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV5:%.*]] = phi i64 [ [[INTERCHANGE_IV_NEXT6:%.*]], %[[FOR_OUTERMOST_LATCH]] ], [ 0, %[[FOR_MIDDLE_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[FOR_INNERMOST_SPLIT1:.*]]
 ; CHECK:       [[FOR_MIDDLE_HEADER_PREHEADER1:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_MIDDLE_HEADER:.*]]
@@ -29,19 +30,24 @@ define void @pr43326-triply-nested(ptr noalias %e, ptr noalias %f) {
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[FOR_MIDDLE_HEADER]]:
 ; CHECK-NEXT:    [[INDVARS_MIDDLE:%.*]] = phi i64 [ [[TMP0:%.*]], %[[FOR_MIDDLE_LATCH:.*]] ], [ 0, %[[FOR_MIDDLE_HEADER_PREHEADER1]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV:%.*]] = phi i64 [ [[INTERCHANGE_IV_NEXT:%.*]], %[[FOR_MIDDLE_LATCH]] ], [ 0, %[[FOR_MIDDLE_HEADER_PREHEADER1]] ]
 ; CHECK-NEXT:    br label %[[FOR_OUTERMOST_HEADER_PREHEADER:.*]]
 ; CHECK:       [[FOR_INNERMOST_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[FOR_INNERMOST:.*]]
 ; CHECK:       [[FOR_OUTERMOST_LATCH]]:
 ; CHECK-NEXT:    [[INDVARS_OUTERMOST_NEXT]] = add nuw nsw i64 [[INDVARS_OUTERMOST]], 1
-; CHECK-NEXT:    [[EXITCOND_OUTERMOST:%.*]] = icmp ne i64 [[INDVARS_OUTERMOST_NEXT]], 10
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT6]] = add i64 [[INTERCHANGE_IV5]], 1
+; CHECK-NEXT:    [[EXITCOND_OUTERMOST:%.*]] = icmp ne i64 [[INTERCHANGE_IV5]], 9
 ; CHECK-NEXT:    br i1 [[EXITCOND_OUTERMOST]], label %[[FOR_OUTERMOST_HEADER]], label %[[FOR_MIDDLE_LATCH_SPLIT:.*]]
 ; CHECK:       [[FOR_MIDDLE_LATCH]]:
 ; CHECK-NEXT:    [[TMP0]] = add nuw nsw i64 [[INDVARS_MIDDLE]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[TMP0]], 10
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT]] = add i64 [[INTERCHANGE_IV]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[INTERCHANGE_IV]], 9
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[FOR_MIDDLE_HEADER]], label %[[FOR_INNERMOST_SPLIT_SPLIT:.*]]
 ; CHECK:       [[FOR_INNERMOST]]:
 ; CHECK-NEXT:    [[INDVARS_INNERMOST:%.*]] = phi i64 [ [[TMP5:%.*]], %[[FOR_MIDDLE_LATCH_SPLIT]] ], [ 0, %[[FOR_INNERMOST_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i64 [ [[TMP4:%.*]], %[[FOR_MIDDLE_LATCH_SPLIT]] ], [ 0, %[[FOR_INNERMOST_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV8:%.*]] = phi i64 [ 0, %[[FOR_INNERMOST_PREHEADER]] ], [ [[TMP7:%.*]], %[[FOR_MIDDLE_LATCH_SPLIT]] ]
 ; CHECK-NEXT:    br label %[[FOR_MIDDLE_HEADER_PREHEADER]]
 ; CHECK:       [[FOR_INNERMOST_SPLIT1]]:
 ; CHECK-NEXT:    br label %[[FOR_MIDDLE_HEADER_PREHEADER1]]
@@ -51,15 +57,20 @@ define void @pr43326-triply-nested(ptr noalias %e, ptr noalias %f) {
 ; CHECK-NEXT:    [[ARRAYIDX18:%.*]] = getelementptr inbounds [10 x [10 x i32]], ptr [[F]], i64 [[INDVARS_INNERMOST]], i64 [[INDVARS_MIDDLE]], i64 [[INDVARS_OUTERMOST]]
 ; CHECK-NEXT:    store i32 [[TMP2]], ptr [[ARRAYIDX18]], align 4
 ; CHECK-NEXT:    [[INDVARS_INNERMOST_NEXT:%.*]] = add nuw nsw i64 [[INDVARS_INNERMOST]], 1
-; CHECK-NEXT:    [[EXITCOND_INNERMOST:%.*]] = icmp ne i64 [[INDVARS_INNERMOST_NEXT]], 10
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT2:%.*]] = add i64 [[INTERCHANGE_IV1]], 1
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp ne i64 [[INTERCHANGE_IV1]], 9
 ; CHECK-NEXT:    br label %[[FOR_MIDDLE_LATCH]]
 ; CHECK:       [[FOR_INNERMOST_SPLIT_SPLIT]]:
+; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[INDVARS_INNERMOST]], 1
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i64 [[TMP3]], 10
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT9:%.*]] = add i64 [[INTERCHANGE_IV8]], 1
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND10:%.*]] = icmp ne i64 [[INTERCHANGE_IV8]], 9
 ; CHECK-NEXT:    br label %[[FOR_OUTERMOST_LATCH]]
 ; CHECK:       [[FOR_MIDDLE_LATCH_SPLIT]]:
+; CHECK-NEXT:    [[TMP7]] = add i64 [[INTERCHANGE_IV8]], 1
+; CHECK-NEXT:    [[TMP4]] = add i64 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    [[TMP5]] = add nuw nsw i64 [[INDVARS_INNERMOST]], 1
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne i64 [[TMP5]], 10
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne i64 [[INTERCHANGE_IV8]], 9
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[FOR_INNERMOST]], label %[[FOR_COND_CLEANUP]]
 ;
 entry:

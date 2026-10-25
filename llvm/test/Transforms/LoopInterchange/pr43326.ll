@@ -25,6 +25,7 @@ define void @pr43326() {
 ; CHECK-NEXT:    br label %[[INNER1_HEADER:.*]]
 ; CHECK:       [[INNER1_HEADER]]:
 ; CHECK-NEXT:    [[J:%.*]] = phi i8 [ [[TMP5:%.*]], %[[FOR_INC10_SPLIT:.*]] ], [ 0, %[[INNER1_HEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV7:%.*]] = phi i8 [ 0, %[[INNER1_HEADER_PREHEADER]] ], [ [[TMP7:%.*]], %[[FOR_INC10_SPLIT]] ]
 ; CHECK-NEXT:    [[XOR_LCSSA9:%.*]] = phi i32 [ [[XOR_LCSSA:%.*]], %[[FOR_INC10_SPLIT]] ], [ [[XOR_LCSSA_LCSSA11]], %[[INNER1_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[INNER2_HEADER_PREHEADER:.*]]
 ; CHECK:       [[INNER1_HEADER_SPLIT:.*]]:
@@ -34,6 +35,8 @@ define void @pr43326() {
 ; CHECK-NEXT:    br label %[[INNER2_HEADER:.*]]
 ; CHECK:       [[INNER2_HEADER]]:
 ; CHECK-NEXT:    [[K:%.*]] = phi i32 [ [[TMP2:%.*]], %[[FOR_INC_SPLIT:.*]] ], [ 0, %[[INNER2_HEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i32 [ [[TMP8:%.*]], %[[FOR_INC_SPLIT]] ], [ 0, %[[INNER2_HEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV4:%.*]] = phi i32 [ 0, %[[INNER2_HEADER_PREHEADER]] ], [ [[INTERCHANGE_IV_NEXT5:%.*]], %[[FOR_INC_SPLIT]] ]
 ; CHECK-NEXT:    [[XOR5:%.*]] = phi i32 [ [[XOR:%.*]], %[[FOR_INC_SPLIT]] ], [ [[XOR_LCSSA9]], %[[INNER2_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[INNER1_HEADER_SPLIT]]
 ; CHECK:       [[INNER2_HEADER_SPLIT]]:
@@ -44,23 +47,28 @@ define void @pr43326() {
 ; CHECK-NEXT:    br label %[[FOR_INC:.*]]
 ; CHECK:       [[FOR_INC]]:
 ; CHECK-NEXT:    [[K_NEXT:%.*]] = add nsw i32 [[K]], 1
-; CHECK-NEXT:    [[CMP5:%.*]] = icmp slt i32 [[K_NEXT]], 42
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT2:%.*]] = add i32 [[INTERCHANGE_IV1]], 1
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp ne i32 [[INTERCHANGE_IV1]], 41
 ; CHECK-NEXT:    br label %[[FOR_END:.*]]
 ; CHECK:       [[FOR_INC_SPLIT]]:
+; CHECK-NEXT:    [[TMP8]] = add i32 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    [[TMP2]] = add nsw i32 [[K]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp slt i32 [[TMP2]], 42
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT5]] = add i32 [[INTERCHANGE_IV4]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[INTERCHANGE_IV4]], 41
 ; CHECK-NEXT:    br i1 [[TMP3]], label %[[INNER2_HEADER]], label %[[FOR_INC10_SPLIT]]
 ; CHECK:       [[FOR_END]]:
 ; CHECK-NEXT:    br label %[[FOR_INC10:.*]]
 ; CHECK:       [[FOR_INC10]]:
 ; CHECK-NEXT:    [[J_NEXT:%.*]] = add i8 [[J]], -1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[J_NEXT]], -10
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT8:%.*]] = add i8 [[INTERCHANGE_IV7]], 1
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND9:%.*]] = icmp ne i8 [[INTERCHANGE_IV7]], 9
 ; CHECK-NEXT:    br label %[[FOR_INC_SPLIT]]
 ; CHECK:       [[FOR_INC10_SPLIT]]:
 ; CHECK-NEXT:    [[XOR_LCSSA]] = phi i32 [ [[XOR]], %[[FOR_INC_SPLIT]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi i32 [ [[TMP2]], %[[FOR_INC_SPLIT]] ]
+; CHECK-NEXT:    [[TMP7]] = add i8 [[INTERCHANGE_IV7]], 1
 ; CHECK-NEXT:    [[TMP5]] = add i8 [[J]], -1
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp sgt i8 [[TMP5]], -10
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne i8 [[INTERCHANGE_IV7]], 9
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[INNER1_HEADER]], label %[[FOR_END11:.*]]
 ; CHECK:       [[FOR_END11]]:
 ; CHECK-NEXT:    [[XOR_LCSSA_LCSSA]] = phi i32 [ [[XOR_LCSSA]], %[[FOR_INC10_SPLIT]] ]

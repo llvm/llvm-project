@@ -17,12 +17,14 @@ define void @reduction_add(ptr %A) {
 ; CHECK-NEXT:    br label %[[FOR_I_HEADER:.*]]
 ; CHECK:       [[FOR_I_HEADER]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_INC:%.*]], %[[FOR_I_LATCH:.*]] ], [ 0, %[[FOR_I_HEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV:%.*]] = phi i32 [ [[INTERCHANGE_IV_NEXT:%.*]], %[[FOR_I_LATCH]] ], [ 0, %[[FOR_I_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    [[SUM_J:%.*]] = phi i32 [ [[SUM_J_NEXT:%.*]], %[[FOR_I_LATCH]] ], [ [[SUM_I:%.*]], %[[FOR_I_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[FOR_J_SPLIT1:.*]]
 ; CHECK:       [[FOR_J_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[FOR_J:.*]]
 ; CHECK:       [[FOR_J]]:
 ; CHECK-NEXT:    [[J:%.*]] = phi i32 [ [[TMP0:%.*]], %[[FOR_J_SPLIT:.*]] ], [ 0, %[[FOR_J_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i32 [ [[TMP2:%.*]], %[[FOR_J_SPLIT]] ], [ 0, %[[FOR_J_PREHEADER]] ]
 ; CHECK-NEXT:    [[SUM_I]] = phi i32 [ [[SUM_I_LCSSA:%.*]], %[[FOR_J_SPLIT]] ], [ 0, %[[FOR_J_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[FOR_I_HEADER_PREHEADER]]
 ; CHECK:       [[FOR_J_SPLIT1]]:
@@ -30,16 +32,19 @@ define void @reduction_add(ptr %A) {
 ; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[IDX]], align 4
 ; CHECK-NEXT:    [[SUM_J_NEXT]] = add i32 [[SUM_J]], [[A]]
 ; CHECK-NEXT:    [[J_INC:%.*]] = add i32 [[J]], 1
-; CHECK-NEXT:    [[CMP_J:%.*]] = icmp slt i32 [[J_INC]], 2
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT2:%.*]] = add i32 [[INTERCHANGE_IV1]], 1
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp ne i32 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    br label %[[FOR_I_LATCH]]
 ; CHECK:       [[FOR_J_SPLIT]]:
 ; CHECK-NEXT:    [[SUM_I_LCSSA]] = phi i32 [ [[SUM_J_NEXT]], %[[FOR_I_LATCH]] ]
+; CHECK-NEXT:    [[TMP2]] = add i32 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    [[TMP0]] = add i32 [[J]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[TMP0]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[FOR_J]], label %[[EXIT:.*]]
 ; CHECK:       [[FOR_I_LATCH]]:
 ; CHECK-NEXT:    [[I_INC]] = add i32 [[I]], 1
-; CHECK-NEXT:    [[CMP_I:%.*]] = icmp slt i32 [[I_INC]], 2
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT]] = add i32 [[INTERCHANGE_IV]], 1
+; CHECK-NEXT:    [[CMP_I:%.*]] = icmp ne i32 [[INTERCHANGE_IV]], 1
 ; CHECK-NEXT:    br i1 [[CMP_I]], label %[[FOR_I_HEADER]], label %[[FOR_J_SPLIT]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
@@ -88,12 +93,14 @@ define void @reduction_mul(ptr %A) {
 ; CHECK-NEXT:    br label %[[FOR_I_HEADER:.*]]
 ; CHECK:       [[FOR_I_HEADER]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_INC:%.*]], %[[FOR_I_LATCH:.*]] ], [ 0, %[[FOR_I_HEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV:%.*]] = phi i32 [ [[INTERCHANGE_IV_NEXT:%.*]], %[[FOR_I_LATCH]] ], [ 0, %[[FOR_I_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    [[PROD_J:%.*]] = phi i32 [ [[PROD_J_NEXT:%.*]], %[[FOR_I_LATCH]] ], [ [[PROD_I:%.*]], %[[FOR_I_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[FOR_J_SPLIT1:.*]]
 ; CHECK:       [[FOR_J_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[FOR_J:.*]]
 ; CHECK:       [[FOR_J]]:
 ; CHECK-NEXT:    [[J:%.*]] = phi i32 [ [[TMP0:%.*]], %[[FOR_J_SPLIT:.*]] ], [ 0, %[[FOR_J_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i32 [ [[TMP2:%.*]], %[[FOR_J_SPLIT]] ], [ 0, %[[FOR_J_PREHEADER]] ]
 ; CHECK-NEXT:    [[PROD_I]] = phi i32 [ [[PROD_I_LCSSA:%.*]], %[[FOR_J_SPLIT]] ], [ 1, %[[FOR_J_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[FOR_I_HEADER_PREHEADER]]
 ; CHECK:       [[FOR_J_SPLIT1]]:
@@ -101,16 +108,19 @@ define void @reduction_mul(ptr %A) {
 ; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[IDX]], align 4
 ; CHECK-NEXT:    [[PROD_J_NEXT]] = mul i32 [[PROD_J]], [[A]]
 ; CHECK-NEXT:    [[J_INC:%.*]] = add i32 [[J]], 1
-; CHECK-NEXT:    [[CMP_J:%.*]] = icmp slt i32 [[J_INC]], 2
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT2:%.*]] = add i32 [[INTERCHANGE_IV1]], 1
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp ne i32 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    br label %[[FOR_I_LATCH]]
 ; CHECK:       [[FOR_J_SPLIT]]:
 ; CHECK-NEXT:    [[PROD_I_LCSSA]] = phi i32 [ [[PROD_J_NEXT]], %[[FOR_I_LATCH]] ]
+; CHECK-NEXT:    [[TMP2]] = add i32 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    [[TMP0]] = add i32 [[J]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[TMP0]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[FOR_J]], label %[[EXIT:.*]]
 ; CHECK:       [[FOR_I_LATCH]]:
 ; CHECK-NEXT:    [[I_INC]] = add i32 [[I]], 1
-; CHECK-NEXT:    [[CMP_I:%.*]] = icmp slt i32 [[I_INC]], 2
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT]] = add i32 [[INTERCHANGE_IV]], 1
+; CHECK-NEXT:    [[CMP_I:%.*]] = icmp ne i32 [[INTERCHANGE_IV]], 1
 ; CHECK-NEXT:    br i1 [[CMP_I]], label %[[FOR_I_HEADER]], label %[[FOR_J_SPLIT]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void

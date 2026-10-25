@@ -34,16 +34,16 @@ define void @f() {
 ; CHECK:       [[LOOP_J_LATCH]]:
 ; CHECK-NEXT:    [[RED_J_NEXT]] = or i8 [[RED_J]], 42
 ; CHECK-NEXT:    [[J_INC:%.*]] = add i64 [[J]], 1
-; CHECK-NEXT:    [[EC_J:%.*]] = icmp eq i64 [[J_INC]], 20
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp eq i64 [[J]], 19
 ; CHECK-NEXT:    br label %[[LOOP_I_LATCH]]
 ; CHECK:       [[LOOP_J_LATCH_SPLIT]]:
 ; CHECK-NEXT:    [[RED_J_NEXT_LCSSA]] = phi i8 [ [[RED_J_NEXT]], %[[LOOP_I_LATCH]] ]
 ; CHECK-NEXT:    [[TMP0]] = add i64 [[J]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[TMP0]], 20
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[J]], 19
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[EXIT:.*]], label %[[LOOP_J_HEADER]]
 ; CHECK:       [[LOOP_I_LATCH]]:
 ; CHECK-NEXT:    [[I_INC]] = add i64 [[I]], 1
-; CHECK-NEXT:    [[EC_I:%.*]] = icmp eq i64 [[I_INC]], 30
+; CHECK-NEXT:    [[EC_I:%.*]] = icmp eq i64 [[I]], 29
 ; CHECK-NEXT:    br i1 [[EC_I]], label %[[LOOP_J_LATCH_SPLIT]], label %[[LOOP_I_HEADER]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void

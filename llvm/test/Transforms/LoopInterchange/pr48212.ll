@@ -10,12 +10,14 @@ define void @pr48212(ptr %filter) {
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[K1_03:%.*]] = phi i32 [ 0, %[[L1]] ], [ [[INC7:%.*]], %[[FOR_INC6:.*]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV:%.*]] = phi i32 [ [[INTERCHANGE_IV_NEXT:%.*]], %[[FOR_INC6]] ], [ 0, %[[L1]] ]
 ; CHECK-NEXT:    [[TEMP_12:%.*]] = phi i32 [ [[TEMP_04:%.*]], %[[L1]] ], [ [[ADD:%.*]], %[[FOR_INC6]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY3_SPLIT:.*]]
 ; CHECK:       [[L2]]:
 ; CHECK-NEXT:    br label %[[FOR_BODY3:.*]]
 ; CHECK:       [[FOR_BODY3]]:
 ; CHECK-NEXT:    [[K2_01:%.*]] = phi i32 [ 0, %[[L2]] ], [ [[TMP1:%.*]], %[[FOR_INC_SPLIT:.*]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i32 [ [[TMP3:%.*]], %[[FOR_INC_SPLIT]] ], [ 0, %[[L2]] ]
 ; CHECK-NEXT:    [[TEMP_04]] = phi i32 [ undef, %[[L2]] ], [ [[TEMP_1_LCSSA:%.*]], %[[FOR_INC_SPLIT]] ]
 ; CHECK-NEXT:    br label %[[L1]]
 ; CHECK:       [[FOR_BODY3_SPLIT]]:
@@ -28,18 +30,21 @@ define void @pr48212(ptr %filter) {
 ; CHECK-NEXT:    br label %[[FOR_INC:.*]]
 ; CHECK:       [[FOR_INC]]:
 ; CHECK-NEXT:    [[INC:%.*]] = add nsw i32 [[K2_01]], 1
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[INC]], 3
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT2:%.*]] = add i32 [[INTERCHANGE_IV1]], 1
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp ne i32 [[INTERCHANGE_IV1]], 2
 ; CHECK-NEXT:    br label %[[FOR_END:.*]]
 ; CHECK:       [[FOR_INC_SPLIT]]:
 ; CHECK-NEXT:    [[TEMP_1_LCSSA]] = phi i32 [ [[ADD]], %[[FOR_INC6]] ]
+; CHECK-NEXT:    [[TMP3]] = add i32 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    [[TMP1]] = add nsw i32 [[K2_01]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[TMP1]], 3
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[INTERCHANGE_IV1]], 2
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[FOR_BODY3]], label %[[FOR_END8:.*]]
 ; CHECK:       [[FOR_END]]:
 ; CHECK-NEXT:    br label %[[FOR_INC6]]
 ; CHECK:       [[FOR_INC6]]:
 ; CHECK-NEXT:    [[INC7]] = add nsw i32 [[K1_03]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[INC7]], 5
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT]] = add i32 [[INTERCHANGE_IV]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[INTERCHANGE_IV]], 4
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_INC_SPLIT]]
 ; CHECK:       [[FOR_END8]]:
 ; CHECK-NEXT:    ret void

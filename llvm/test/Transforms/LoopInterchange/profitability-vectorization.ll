@@ -66,11 +66,13 @@ define void @f() {
 ; PROFIT-VEC-NEXT:    br label %[[FOR_I_HEADER:.*]]
 ; PROFIT-VEC:       [[FOR_I_HEADER]]:
 ; PROFIT-VEC-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[FOR_I_INC:.*]] ], [ 0, %[[FOR_I_HEADER_PREHEADER]] ]
+; PROFIT-VEC-NEXT:    [[INTERCHANGE_IV:%.*]] = phi i64 [ [[INTERCHANGE_IV_NEXT:%.*]], %[[FOR_I_INC]] ], [ 0, %[[FOR_I_HEADER_PREHEADER]] ]
 ; PROFIT-VEC-NEXT:    br label %[[FOR_J_BODY_SPLIT1:.*]]
 ; PROFIT-VEC:       [[FOR_J_BODY_PREHEADER]]:
 ; PROFIT-VEC-NEXT:    br label %[[FOR_J_BODY:.*]]
 ; PROFIT-VEC:       [[FOR_J_BODY]]:
 ; PROFIT-VEC-NEXT:    [[J:%.*]] = phi i64 [ [[TMP0:%.*]], %[[FOR_J_BODY_SPLIT:.*]] ], [ 1, %[[FOR_J_BODY_PREHEADER]] ]
+; PROFIT-VEC-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i64 [ [[TMP2:%.*]], %[[FOR_J_BODY_SPLIT]] ], [ 0, %[[FOR_J_BODY_PREHEADER]] ]
 ; PROFIT-VEC-NEXT:    br label %[[FOR_I_HEADER_PREHEADER]]
 ; PROFIT-VEC:       [[FOR_J_BODY_SPLIT1]]:
 ; PROFIT-VEC-NEXT:    [[J_DEC:%.*]] = add nsw i64 [[J]], -1
@@ -94,15 +96,18 @@ define void @f() {
 ; PROFIT-VEC-NEXT:    [[A_1_INDEX:%.*]] = getelementptr inbounds nuw [256 x float], ptr @A, i64 [[J]], i64 [[I]]
 ; PROFIT-VEC-NEXT:    store float [[ADD_4]], ptr [[A_1_INDEX]], align 4
 ; PROFIT-VEC-NEXT:    [[J_NEXT:%.*]] = add nuw nsw i64 [[J]], 1
-; PROFIT-VEC-NEXT:    [[CMP_J:%.*]] = icmp eq i64 [[J_NEXT]], 256
+; PROFIT-VEC-NEXT:    [[INTERCHANGE_IV_NEXT2:%.*]] = add i64 [[INTERCHANGE_IV1]], 1
+; PROFIT-VEC-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp eq i64 [[INTERCHANGE_IV1]], 254
 ; PROFIT-VEC-NEXT:    br label %[[FOR_I_INC]]
 ; PROFIT-VEC:       [[FOR_J_BODY_SPLIT]]:
+; PROFIT-VEC-NEXT:    [[TMP2]] = add i64 [[INTERCHANGE_IV1]], 1
 ; PROFIT-VEC-NEXT:    [[TMP0]] = add nuw nsw i64 [[J]], 1
-; PROFIT-VEC-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[TMP0]], 256
+; PROFIT-VEC-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[INTERCHANGE_IV1]], 254
 ; PROFIT-VEC-NEXT:    br i1 [[TMP1]], label %[[EXIT:.*]], label %[[FOR_J_BODY]]
 ; PROFIT-VEC:       [[FOR_I_INC]]:
 ; PROFIT-VEC-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
-; PROFIT-VEC-NEXT:    [[CMP_I:%.*]] = icmp eq i64 [[I_NEXT]], 256
+; PROFIT-VEC-NEXT:    [[INTERCHANGE_IV_NEXT]] = add i64 [[INTERCHANGE_IV]], 1
+; PROFIT-VEC-NEXT:    [[CMP_I:%.*]] = icmp eq i64 [[INTERCHANGE_IV]], 255
 ; PROFIT-VEC-NEXT:    br i1 [[CMP_I]], label %[[FOR_J_BODY_SPLIT]], label %[[FOR_I_HEADER]]
 ; PROFIT-VEC:       [[EXIT]]:
 ; PROFIT-VEC-NEXT:    ret void

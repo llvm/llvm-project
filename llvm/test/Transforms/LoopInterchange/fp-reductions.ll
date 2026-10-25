@@ -75,12 +75,14 @@ define void @reduction_reassoc_fadd(ptr %A) {
 ; CHECK-NEXT:    br label %[[FOR_I_HEADER:.*]]
 ; CHECK:       [[FOR_I_HEADER]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_INC:%.*]], %[[FOR_I_LATCH:.*]] ], [ 0, %[[FOR_I_HEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV:%.*]] = phi i32 [ [[INTERCHANGE_IV_NEXT:%.*]], %[[FOR_I_LATCH]] ], [ 0, %[[FOR_I_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    [[SUM_J:%.*]] = phi float [ [[SUM_J_NEXT:%.*]], %[[FOR_I_LATCH]] ], [ [[SUM_I:%.*]], %[[FOR_I_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[FOR_J_SPLIT1:.*]]
 ; CHECK:       [[FOR_J_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[FOR_J:.*]]
 ; CHECK:       [[FOR_J]]:
 ; CHECK-NEXT:    [[J:%.*]] = phi i32 [ [[TMP0:%.*]], %[[FOR_J_SPLIT:.*]] ], [ 0, %[[FOR_J_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i32 [ [[TMP2:%.*]], %[[FOR_J_SPLIT]] ], [ 0, %[[FOR_J_PREHEADER]] ]
 ; CHECK-NEXT:    [[SUM_I]] = phi float [ [[SUM_I_LCSSA:%.*]], %[[FOR_J_SPLIT]] ], [ 0.000000e+00, %[[FOR_J_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[FOR_I_HEADER_PREHEADER]]
 ; CHECK:       [[FOR_J_SPLIT1]]:
@@ -88,16 +90,19 @@ define void @reduction_reassoc_fadd(ptr %A) {
 ; CHECK-NEXT:    [[A:%.*]] = load float, ptr [[IDX]], align 4
 ; CHECK-NEXT:    [[SUM_J_NEXT]] = fadd reassoc float [[SUM_J]], [[A]]
 ; CHECK-NEXT:    [[J_INC:%.*]] = add i32 [[J]], 1
-; CHECK-NEXT:    [[CMP_J:%.*]] = icmp slt i32 [[J_INC]], 2
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT2:%.*]] = add i32 [[INTERCHANGE_IV1]], 1
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp ne i32 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    br label %[[FOR_I_LATCH]]
 ; CHECK:       [[FOR_J_SPLIT]]:
 ; CHECK-NEXT:    [[SUM_I_LCSSA]] = phi float [ [[SUM_J_NEXT]], %[[FOR_I_LATCH]] ]
+; CHECK-NEXT:    [[TMP2]] = add i32 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    [[TMP0]] = add i32 [[J]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[TMP0]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[FOR_J]], label %[[EXIT:.*]]
 ; CHECK:       [[FOR_I_LATCH]]:
 ; CHECK-NEXT:    [[I_INC]] = add i32 [[I]], 1
-; CHECK-NEXT:    [[CMP_I:%.*]] = icmp slt i32 [[I_INC]], 2
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT]] = add i32 [[INTERCHANGE_IV]], 1
+; CHECK-NEXT:    [[CMP_I:%.*]] = icmp ne i32 [[INTERCHANGE_IV]], 1
 ; CHECK-NEXT:    br i1 [[CMP_I]], label %[[FOR_I_HEADER]], label %[[FOR_J_SPLIT]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
@@ -144,12 +149,14 @@ define void @reduction_reassoc_ninf_fadd(ptr %A) {
 ; CHECK-NEXT:    br label %[[FOR_I_HEADER:.*]]
 ; CHECK:       [[FOR_I_HEADER]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_INC:%.*]], %[[FOR_I_LATCH:.*]] ], [ 0, %[[FOR_I_HEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV:%.*]] = phi i32 [ [[INTERCHANGE_IV_NEXT:%.*]], %[[FOR_I_LATCH]] ], [ 0, %[[FOR_I_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    [[SUM_J:%.*]] = phi float [ [[SUM_J_NEXT:%.*]], %[[FOR_I_LATCH]] ], [ [[SUM_I:%.*]], %[[FOR_I_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[FOR_J_SPLIT1:.*]]
 ; CHECK:       [[FOR_J_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[FOR_J:.*]]
 ; CHECK:       [[FOR_J]]:
 ; CHECK-NEXT:    [[J:%.*]] = phi i32 [ [[TMP0:%.*]], %[[FOR_J_SPLIT:.*]] ], [ 0, %[[FOR_J_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i32 [ [[TMP2:%.*]], %[[FOR_J_SPLIT]] ], [ 0, %[[FOR_J_PREHEADER]] ]
 ; CHECK-NEXT:    [[SUM_I]] = phi float [ [[SUM_I_LCSSA:%.*]], %[[FOR_J_SPLIT]] ], [ 0.000000e+00, %[[FOR_J_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[FOR_I_HEADER_PREHEADER]]
 ; CHECK:       [[FOR_J_SPLIT1]]:
@@ -157,16 +164,19 @@ define void @reduction_reassoc_ninf_fadd(ptr %A) {
 ; CHECK-NEXT:    [[A:%.*]] = load float, ptr [[IDX]], align 4
 ; CHECK-NEXT:    [[SUM_J_NEXT]] = fadd reassoc float [[SUM_J]], [[A]]
 ; CHECK-NEXT:    [[J_INC:%.*]] = add i32 [[J]], 1
-; CHECK-NEXT:    [[CMP_J:%.*]] = icmp slt i32 [[J_INC]], 2
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT2:%.*]] = add i32 [[INTERCHANGE_IV1]], 1
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp ne i32 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    br label %[[FOR_I_LATCH]]
 ; CHECK:       [[FOR_J_SPLIT]]:
 ; CHECK-NEXT:    [[SUM_I_LCSSA]] = phi float [ [[SUM_J_NEXT]], %[[FOR_I_LATCH]] ]
+; CHECK-NEXT:    [[TMP2]] = add i32 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    [[TMP0]] = add i32 [[J]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[TMP0]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[FOR_J]], label %[[EXIT:.*]]
 ; CHECK:       [[FOR_I_LATCH]]:
 ; CHECK-NEXT:    [[I_INC]] = add i32 [[I]], 1
-; CHECK-NEXT:    [[CMP_I:%.*]] = icmp slt i32 [[I_INC]], 2
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT]] = add i32 [[INTERCHANGE_IV]], 1
+; CHECK-NEXT:    [[CMP_I:%.*]] = icmp ne i32 [[INTERCHANGE_IV]], 1
 ; CHECK-NEXT:    br i1 [[CMP_I]], label %[[FOR_I_HEADER]], label %[[FOR_J_SPLIT]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
@@ -273,12 +283,14 @@ define void @reduction_reassoc_fmul(ptr %A) {
 ; CHECK-NEXT:    br label %[[FOR_I_HEADER:.*]]
 ; CHECK:       [[FOR_I_HEADER]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_INC:%.*]], %[[FOR_I_LATCH:.*]] ], [ 0, %[[FOR_I_HEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV:%.*]] = phi i32 [ [[INTERCHANGE_IV_NEXT:%.*]], %[[FOR_I_LATCH]] ], [ 0, %[[FOR_I_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    [[PROD_J:%.*]] = phi float [ [[PROD_J_NEXT:%.*]], %[[FOR_I_LATCH]] ], [ [[PROD_I:%.*]], %[[FOR_I_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[FOR_J_SPLIT1:.*]]
 ; CHECK:       [[FOR_J_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[FOR_J:.*]]
 ; CHECK:       [[FOR_J]]:
 ; CHECK-NEXT:    [[J:%.*]] = phi i32 [ [[TMP0:%.*]], %[[FOR_J_SPLIT:.*]] ], [ 0, %[[FOR_J_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i32 [ [[TMP2:%.*]], %[[FOR_J_SPLIT]] ], [ 0, %[[FOR_J_PREHEADER]] ]
 ; CHECK-NEXT:    [[PROD_I]] = phi float [ [[PROD_I_LCSSA:%.*]], %[[FOR_J_SPLIT]] ], [ 1.000000e+00, %[[FOR_J_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[FOR_I_HEADER_PREHEADER]]
 ; CHECK:       [[FOR_J_SPLIT1]]:
@@ -286,16 +298,19 @@ define void @reduction_reassoc_fmul(ptr %A) {
 ; CHECK-NEXT:    [[A:%.*]] = load float, ptr [[IDX]], align 4
 ; CHECK-NEXT:    [[PROD_J_NEXT]] = fmul reassoc float [[PROD_J]], [[A]]
 ; CHECK-NEXT:    [[J_INC:%.*]] = add i32 [[J]], 1
-; CHECK-NEXT:    [[CMP_J:%.*]] = icmp slt i32 [[J_INC]], 2
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT2:%.*]] = add i32 [[INTERCHANGE_IV1]], 1
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp ne i32 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    br label %[[FOR_I_LATCH]]
 ; CHECK:       [[FOR_J_SPLIT]]:
 ; CHECK-NEXT:    [[PROD_I_LCSSA]] = phi float [ [[PROD_J_NEXT]], %[[FOR_I_LATCH]] ]
+; CHECK-NEXT:    [[TMP2]] = add i32 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    [[TMP0]] = add i32 [[J]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[TMP0]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[FOR_J]], label %[[EXIT:.*]]
 ; CHECK:       [[FOR_I_LATCH]]:
 ; CHECK-NEXT:    [[I_INC]] = add i32 [[I]], 1
-; CHECK-NEXT:    [[CMP_I:%.*]] = icmp slt i32 [[I_INC]], 2
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT]] = add i32 [[INTERCHANGE_IV]], 1
+; CHECK-NEXT:    [[CMP_I:%.*]] = icmp ne i32 [[INTERCHANGE_IV]], 1
 ; CHECK-NEXT:    br i1 [[CMP_I]], label %[[FOR_I_HEADER]], label %[[FOR_J_SPLIT]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
@@ -406,12 +421,14 @@ define void @reduction_reassoc_fmuladd(ptr %A, ptr %B) {
 ; CHECK-NEXT:    br label %[[FOR_I_HEADER:.*]]
 ; CHECK:       [[FOR_I_HEADER]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_INC:%.*]], %[[FOR_I_LATCH:.*]] ], [ 0, %[[FOR_I_HEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV:%.*]] = phi i32 [ [[INTERCHANGE_IV_NEXT:%.*]], %[[FOR_I_LATCH]] ], [ 0, %[[FOR_I_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    [[FMULADD_J:%.*]] = phi float [ [[FMULADD_J_NEXT:%.*]], %[[FOR_I_LATCH]] ], [ [[FMULADD_I:%.*]], %[[FOR_I_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[FOR_J_SPLIT1:.*]]
 ; CHECK:       [[FOR_J_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[FOR_J:.*]]
 ; CHECK:       [[FOR_J]]:
 ; CHECK-NEXT:    [[J:%.*]] = phi i32 [ [[TMP0:%.*]], %[[FOR_J_SPLIT:.*]] ], [ 0, %[[FOR_J_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i32 [ [[TMP2:%.*]], %[[FOR_J_SPLIT]] ], [ 0, %[[FOR_J_PREHEADER]] ]
 ; CHECK-NEXT:    [[FMULADD_I]] = phi float [ [[FMULADD_I_LCSSA:%.*]], %[[FOR_J_SPLIT]] ], [ 1.000000e+00, %[[FOR_J_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[FOR_I_HEADER_PREHEADER]]
 ; CHECK:       [[FOR_J_SPLIT1]]:
@@ -421,16 +438,19 @@ define void @reduction_reassoc_fmuladd(ptr %A, ptr %B) {
 ; CHECK-NEXT:    [[B:%.*]] = load float, ptr [[IDX_B]], align 4
 ; CHECK-NEXT:    [[FMULADD_J_NEXT]] = call reassoc float @llvm.fmuladd.f32(float [[A]], float [[B]], float [[FMULADD_J]])
 ; CHECK-NEXT:    [[J_INC:%.*]] = add i32 [[J]], 1
-; CHECK-NEXT:    [[CMP_J:%.*]] = icmp slt i32 [[J_INC]], 2
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT2:%.*]] = add i32 [[INTERCHANGE_IV1]], 1
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp ne i32 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    br label %[[FOR_I_LATCH]]
 ; CHECK:       [[FOR_J_SPLIT]]:
 ; CHECK-NEXT:    [[FMULADD_I_LCSSA]] = phi float [ [[FMULADD_J_NEXT]], %[[FOR_I_LATCH]] ]
+; CHECK-NEXT:    [[TMP2]] = add i32 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    [[TMP0]] = add i32 [[J]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[TMP0]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[FOR_J]], label %[[EXIT:.*]]
 ; CHECK:       [[FOR_I_LATCH]]:
 ; CHECK-NEXT:    [[I_INC]] = add i32 [[I]], 1
-; CHECK-NEXT:    [[CMP_I:%.*]] = icmp slt i32 [[I_INC]], 2
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT]] = add i32 [[INTERCHANGE_IV]], 1
+; CHECK-NEXT:    [[CMP_I:%.*]] = icmp ne i32 [[INTERCHANGE_IV]], 1
 ; CHECK-NEXT:    br i1 [[CMP_I]], label %[[FOR_I_HEADER]], label %[[FOR_J_SPLIT]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
@@ -482,12 +502,14 @@ define void @reduction_fmin(ptr %A, float %init) {
 ; CHECK-NEXT:    br label %[[FOR_I_HEADER:.*]]
 ; CHECK:       [[FOR_I_HEADER]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_INC:%.*]], %[[FOR_I_LATCH:.*]] ], [ 0, %[[FOR_I_HEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV:%.*]] = phi i32 [ [[INTERCHANGE_IV_NEXT:%.*]], %[[FOR_I_LATCH]] ], [ 0, %[[FOR_I_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    [[FMIN_J:%.*]] = phi float [ [[FMIN_J_NEXT:%.*]], %[[FOR_I_LATCH]] ], [ [[FMIN_I:%.*]], %[[FOR_I_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[FOR_J_SPLIT1:.*]]
 ; CHECK:       [[FOR_J_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[FOR_J:.*]]
 ; CHECK:       [[FOR_J]]:
 ; CHECK-NEXT:    [[J:%.*]] = phi i32 [ [[TMP0:%.*]], %[[FOR_J_SPLIT:.*]] ], [ 0, %[[FOR_J_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i32 [ [[TMP2:%.*]], %[[FOR_J_SPLIT]] ], [ 0, %[[FOR_J_PREHEADER]] ]
 ; CHECK-NEXT:    [[FMIN_I]] = phi float [ [[FMIN_I_LCSSA:%.*]], %[[FOR_J_SPLIT]] ], [ [[INIT]], %[[FOR_J_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[FOR_I_HEADER_PREHEADER]]
 ; CHECK:       [[FOR_J_SPLIT1]]:
@@ -496,16 +518,19 @@ define void @reduction_fmin(ptr %A, float %init) {
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp nnan nsz olt float [[A]], [[FMIN_J]]
 ; CHECK-NEXT:    [[FMIN_J_NEXT]] = select nnan nsz i1 [[CMP]], float [[A]], float [[FMIN_J]]
 ; CHECK-NEXT:    [[J_INC:%.*]] = add i32 [[J]], 1
-; CHECK-NEXT:    [[CMP_J:%.*]] = icmp slt i32 [[J_INC]], 2
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT2:%.*]] = add i32 [[INTERCHANGE_IV1]], 1
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp ne i32 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    br label %[[FOR_I_LATCH]]
 ; CHECK:       [[FOR_J_SPLIT]]:
 ; CHECK-NEXT:    [[FMIN_I_LCSSA]] = phi float [ [[FMIN_J_NEXT]], %[[FOR_I_LATCH]] ]
+; CHECK-NEXT:    [[TMP2]] = add i32 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    [[TMP0]] = add i32 [[J]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[TMP0]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[FOR_J]], label %[[EXIT:.*]]
 ; CHECK:       [[FOR_I_LATCH]]:
 ; CHECK-NEXT:    [[I_INC]] = add i32 [[I]], 1
-; CHECK-NEXT:    [[CMP_I:%.*]] = icmp slt i32 [[I_INC]], 2
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT]] = add i32 [[INTERCHANGE_IV]], 1
+; CHECK-NEXT:    [[CMP_I:%.*]] = icmp ne i32 [[INTERCHANGE_IV]], 1
 ; CHECK-NEXT:    br i1 [[CMP_I]], label %[[FOR_I_HEADER]], label %[[FOR_J_SPLIT]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
@@ -551,12 +576,14 @@ define void @reduction_fmininumnum(ptr %A, float %init) {
 ; CHECK-NEXT:    br label %[[FOR_I_HEADER:.*]]
 ; CHECK:       [[FOR_I_HEADER]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_INC:%.*]], %[[FOR_I_LATCH:.*]] ], [ 0, %[[FOR_I_HEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV:%.*]] = phi i32 [ [[INTERCHANGE_IV_NEXT:%.*]], %[[FOR_I_LATCH]] ], [ 0, %[[FOR_I_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    [[FMIN_J:%.*]] = phi float [ [[FMIN_J_NEXT:%.*]], %[[FOR_I_LATCH]] ], [ [[FMIN_I:%.*]], %[[FOR_I_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[FOR_J_SPLIT1:.*]]
 ; CHECK:       [[FOR_J_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[FOR_J:.*]]
 ; CHECK:       [[FOR_J]]:
 ; CHECK-NEXT:    [[J:%.*]] = phi i32 [ [[TMP0:%.*]], %[[FOR_J_SPLIT:.*]] ], [ 0, %[[FOR_J_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i32 [ [[TMP2:%.*]], %[[FOR_J_SPLIT]] ], [ 0, %[[FOR_J_PREHEADER]] ]
 ; CHECK-NEXT:    [[FMIN_I]] = phi float [ [[FMIN_I_LCSSA:%.*]], %[[FOR_J_SPLIT]] ], [ [[INIT]], %[[FOR_J_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[FOR_I_HEADER_PREHEADER]]
 ; CHECK:       [[FOR_J_SPLIT1]]:
@@ -564,16 +591,19 @@ define void @reduction_fmininumnum(ptr %A, float %init) {
 ; CHECK-NEXT:    [[A:%.*]] = load float, ptr [[IDX]], align 4
 ; CHECK-NEXT:    [[FMIN_J_NEXT]] = call float @llvm.minimumnum.f32(float [[A]], float [[FMIN_J]])
 ; CHECK-NEXT:    [[J_INC:%.*]] = add i32 [[J]], 1
-; CHECK-NEXT:    [[CMP_J:%.*]] = icmp slt i32 [[J_INC]], 2
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT2:%.*]] = add i32 [[INTERCHANGE_IV1]], 1
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp ne i32 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    br label %[[FOR_I_LATCH]]
 ; CHECK:       [[FOR_J_SPLIT]]:
 ; CHECK-NEXT:    [[FMIN_I_LCSSA]] = phi float [ [[FMIN_J_NEXT]], %[[FOR_I_LATCH]] ]
+; CHECK-NEXT:    [[TMP2]] = add i32 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    [[TMP0]] = add i32 [[J]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[TMP0]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[FOR_J]], label %[[EXIT:.*]]
 ; CHECK:       [[FOR_I_LATCH]]:
 ; CHECK-NEXT:    [[I_INC]] = add i32 [[I]], 1
-; CHECK-NEXT:    [[CMP_I:%.*]] = icmp slt i32 [[I_INC]], 2
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT]] = add i32 [[INTERCHANGE_IV]], 1
+; CHECK-NEXT:    [[CMP_I:%.*]] = icmp ne i32 [[INTERCHANGE_IV]], 1
 ; CHECK-NEXT:    br i1 [[CMP_I]], label %[[FOR_I_HEADER]], label %[[FOR_J_SPLIT]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
@@ -623,12 +653,14 @@ define void @reduction_fmax(ptr %A, float %init) {
 ; CHECK-NEXT:    br label %[[FOR_I_HEADER:.*]]
 ; CHECK:       [[FOR_I_HEADER]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_INC:%.*]], %[[FOR_I_LATCH:.*]] ], [ 0, %[[FOR_I_HEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV:%.*]] = phi i32 [ [[INTERCHANGE_IV_NEXT:%.*]], %[[FOR_I_LATCH]] ], [ 0, %[[FOR_I_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    [[FMAX_J:%.*]] = phi float [ [[FMAX_J_NEXT:%.*]], %[[FOR_I_LATCH]] ], [ [[FMAX_I:%.*]], %[[FOR_I_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[FOR_J_SPLIT1:.*]]
 ; CHECK:       [[FOR_J_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[FOR_J:.*]]
 ; CHECK:       [[FOR_J]]:
 ; CHECK-NEXT:    [[J:%.*]] = phi i32 [ [[TMP0:%.*]], %[[FOR_J_SPLIT:.*]] ], [ 0, %[[FOR_J_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i32 [ [[TMP2:%.*]], %[[FOR_J_SPLIT]] ], [ 0, %[[FOR_J_PREHEADER]] ]
 ; CHECK-NEXT:    [[FMAX_I]] = phi float [ [[FMAX_I_LCSSA:%.*]], %[[FOR_J_SPLIT]] ], [ [[INIT]], %[[FOR_J_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[FOR_I_HEADER_PREHEADER]]
 ; CHECK:       [[FOR_J_SPLIT1]]:
@@ -637,16 +669,19 @@ define void @reduction_fmax(ptr %A, float %init) {
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp nnan nsz ogt float [[A]], [[FMAX_J]]
 ; CHECK-NEXT:    [[FMAX_J_NEXT]] = select nnan nsz i1 [[CMP]], float [[A]], float [[FMAX_J]]
 ; CHECK-NEXT:    [[J_INC:%.*]] = add i32 [[J]], 1
-; CHECK-NEXT:    [[CMP_J:%.*]] = icmp slt i32 [[J_INC]], 2
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT2:%.*]] = add i32 [[INTERCHANGE_IV1]], 1
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp ne i32 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    br label %[[FOR_I_LATCH]]
 ; CHECK:       [[FOR_J_SPLIT]]:
 ; CHECK-NEXT:    [[FMAX_I_LCSSA]] = phi float [ [[FMAX_J_NEXT]], %[[FOR_I_LATCH]] ]
+; CHECK-NEXT:    [[TMP2]] = add i32 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    [[TMP0]] = add i32 [[J]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[TMP0]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[FOR_J]], label %[[EXIT:.*]]
 ; CHECK:       [[FOR_I_LATCH]]:
 ; CHECK-NEXT:    [[I_INC]] = add i32 [[I]], 1
-; CHECK-NEXT:    [[CMP_I:%.*]] = icmp slt i32 [[I_INC]], 2
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT]] = add i32 [[INTERCHANGE_IV]], 1
+; CHECK-NEXT:    [[CMP_I:%.*]] = icmp ne i32 [[INTERCHANGE_IV]], 1
 ; CHECK-NEXT:    br i1 [[CMP_I]], label %[[FOR_I_HEADER]], label %[[FOR_J_SPLIT]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
@@ -692,12 +727,14 @@ define void @reduction_fmaxinumnum(ptr %A, float %init) {
 ; CHECK-NEXT:    br label %[[FOR_I_HEADER:.*]]
 ; CHECK:       [[FOR_I_HEADER]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_INC:%.*]], %[[FOR_I_LATCH:.*]] ], [ 0, %[[FOR_I_HEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV:%.*]] = phi i32 [ [[INTERCHANGE_IV_NEXT:%.*]], %[[FOR_I_LATCH]] ], [ 0, %[[FOR_I_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    [[FMAX_J:%.*]] = phi float [ [[FMAX_J_NEXT:%.*]], %[[FOR_I_LATCH]] ], [ [[FMAX_I:%.*]], %[[FOR_I_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[FOR_J_SPLIT1:.*]]
 ; CHECK:       [[FOR_J_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[FOR_J:.*]]
 ; CHECK:       [[FOR_J]]:
 ; CHECK-NEXT:    [[J:%.*]] = phi i32 [ [[TMP0:%.*]], %[[FOR_J_SPLIT:.*]] ], [ 0, %[[FOR_J_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i32 [ [[TMP2:%.*]], %[[FOR_J_SPLIT]] ], [ 0, %[[FOR_J_PREHEADER]] ]
 ; CHECK-NEXT:    [[FMAX_I]] = phi float [ [[FMAX_I_LCSSA:%.*]], %[[FOR_J_SPLIT]] ], [ [[INIT]], %[[FOR_J_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[FOR_I_HEADER_PREHEADER]]
 ; CHECK:       [[FOR_J_SPLIT1]]:
@@ -705,16 +742,19 @@ define void @reduction_fmaxinumnum(ptr %A, float %init) {
 ; CHECK-NEXT:    [[A:%.*]] = load float, ptr [[IDX]], align 4
 ; CHECK-NEXT:    [[FMAX_J_NEXT]] = call float @llvm.maximumnum.f32(float [[A]], float [[FMAX_J]])
 ; CHECK-NEXT:    [[J_INC:%.*]] = add i32 [[J]], 1
-; CHECK-NEXT:    [[CMP_J:%.*]] = icmp slt i32 [[J_INC]], 2
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT2:%.*]] = add i32 [[INTERCHANGE_IV1]], 1
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp ne i32 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    br label %[[FOR_I_LATCH]]
 ; CHECK:       [[FOR_J_SPLIT]]:
 ; CHECK-NEXT:    [[FMAX_I_LCSSA]] = phi float [ [[FMAX_J_NEXT]], %[[FOR_I_LATCH]] ]
+; CHECK-NEXT:    [[TMP2]] = add i32 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    [[TMP0]] = add i32 [[J]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[TMP0]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[FOR_J]], label %[[EXIT:.*]]
 ; CHECK:       [[FOR_I_LATCH]]:
 ; CHECK-NEXT:    [[I_INC]] = add i32 [[I]], 1
-; CHECK-NEXT:    [[CMP_I:%.*]] = icmp slt i32 [[I_INC]], 2
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT]] = add i32 [[INTERCHANGE_IV]], 1
+; CHECK-NEXT:    [[CMP_I:%.*]] = icmp ne i32 [[INTERCHANGE_IV]], 1
 ; CHECK-NEXT:    br i1 [[CMP_I]], label %[[FOR_I_HEADER]], label %[[FOR_J_SPLIT]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
