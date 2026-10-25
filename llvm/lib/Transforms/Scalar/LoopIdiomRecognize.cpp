@@ -297,8 +297,7 @@ PreservedAnalyses LoopIdiomRecognizePass::run(Loop &L, LoopAnalysisManager &AM,
   // but ORE cannot be preserved (see comment before the pass definition).
   OptimizationRemarkEmitter ORE(L.getHeader()->getParent());
 
-  const ScalarOptions &Opts =
-      L.getHeader()->getContext().getLibraryOptions().get<ScalarOptions>();
+  const ScalarOptions &Opts = getScalarOptions(L);
   LoopIdiomRecognize LIR(Opts, &AR.AA, &AR.DT, &AR.LI, &AR.SE, &AR.TLI, &AR.TTI,
                          AR.MSSA, DL, ORE);
   if (!LIR.runOnLoop(&L))
@@ -3052,17 +3051,17 @@ void LoopIdiomRecognize::transformLoopToPopcount(BasicBlock *PreCondBB,
 
   // Step 1: Insert the ctpop instruction at the end of the precondition block
   IRBuilder<> Builder(PreCondBr);
-  Value *PopCnt, *PopCntZext, *NewCount, *TripCnt;
+  Value *PopCnt, *NewCount, *TripCnt;
   {
     PopCnt = createPopcntIntrinsic(Builder, Var, DL);
-    NewCount = PopCntZext =
+    NewCount =
         Builder.CreateZExtOrTrunc(PopCnt, cast<IntegerType>(CntPhi->getType()));
 
     if (NewCount != PopCnt)
       (cast<Instruction>(NewCount))->setDebugLoc(DL);
 
     // TripCnt is exactly the number of iterations the loop has
-    TripCnt = NewCount;
+    TripCnt = PopCnt;
 
     // If the population counter's initial value is not zero, insert Add Inst.
     Value *CntInitVal = CntPhi->getIncomingValueForBlock(PreHead);
@@ -3074,14 +3073,14 @@ void LoopIdiomRecognize::transformLoopToPopcount(BasicBlock *PreCondBB,
   }
 
   // Step 2: Replace the precondition from "if (x == 0) goto loop-exit" to
-  //   "if (NewCount == 0) loop-exit". Without this change, the intrinsic
+  //   "if (TripCnt == 0) loop-exit". Without this change, the intrinsic
   //   function would be partial dead code, and downstream passes will drag
   //   it back from the precondition block to the preheader.
   {
     ICmpInst *PreCond = cast<ICmpInst>(PreCondBr->getCondition());
 
-    Value *Opnd0 = PopCntZext;
-    Value *Opnd1 = ConstantInt::get(PopCntZext->getType(), 0);
+    Value *Opnd0 = TripCnt;
+    Value *Opnd1 = ConstantInt::get(TripCnt->getType(), 0);
     if (PreCond->getOperand(0) != Var)
       std::swap(Opnd0, Opnd1);
 
@@ -3123,14 +3122,14 @@ void LoopIdiomRecognize::transformLoopToPopcount(BasicBlock *PreCondBB,
 
     Builder.SetInsertPoint(LbCond);
     Instruction *TcDec = cast<Instruction>(
-        Builder.CreateSub(TcPhi, ConstantInt::get(Ty, 1),
-                          "tcdec", false, true));
+        Builder.CreateSub(TcPhi, ConstantInt::get(Ty, 1), "tcdec",
+                          /*HasNUW=*/true, /*HasNSW=*/false));
 
     TcPhi->addIncoming(TripCnt, PreHead);
     TcPhi->addIncoming(TcDec, Body);
 
     CmpInst::Predicate Pred =
-        (LbBr->getSuccessor(0) == Body) ? CmpInst::ICMP_UGT : CmpInst::ICMP_SLE;
+        (LbBr->getSuccessor(0) == Body) ? CmpInst::ICMP_UGT : CmpInst::ICMP_EQ;
     LbCond->setPredicate(Pred);
     LbCond->setOperand(0, TcDec);
     LbCond->setOperand(1, ConstantInt::get(Ty, 0));

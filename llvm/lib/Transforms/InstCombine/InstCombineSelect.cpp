@@ -1659,6 +1659,24 @@ static Value *foldSelectCttzCtlz(ICmpInst *ICI, Value *TrueVal, Value *FalseVal,
   return nullptr;
 }
 
+/// SPF can match patterns like:
+/// (X <u C1) ? C1 : UMIN(X, C2) ==> UMAX(UMIN(X, C2), C1)
+/// However, if the UMIN has poison-generating annotations, the result may
+/// be more poisonous, because the poison is propagated unconditionally after
+/// the transform. Drop annotations in this case.
+/// FIXME: This is something of a hack that relies on details of patterns
+// supported by SPF.
+static void dropPoisonGeneratingAnnotationsForSPFCanonicalization(Value *Cond,
+                                                                  Value *LHS,
+                                                                  Value *RHS) {
+  if (!impliesPoison(LHS, Cond))
+    if (auto *I = dyn_cast<Instruction>(LHS))
+      I->dropPoisonGeneratingAnnotations();
+  if (!impliesPoison(RHS, Cond))
+    if (auto *I = dyn_cast<Instruction>(RHS))
+      I->dropPoisonGeneratingAnnotations();
+}
+
 static Value *canonicalizeSPF(ICmpInst &Cmp, Value *TrueVal, Value *FalseVal,
                               InstCombinerImpl &IC) {
   Value *LHS, *RHS;
@@ -1688,6 +1706,7 @@ static Value *canonicalizeSPF(ICmpInst &Cmp, Value *TrueVal, Value *FalseVal,
 
   if (SelectPatternResult::isMinOrMax(SPF)) {
     Intrinsic::ID IntrinsicID = getMinMaxIntrinsic(SPF);
+    dropPoisonGeneratingAnnotationsForSPFCanonicalization(&Cmp, LHS, RHS);
     return IC.Builder.CreateBinaryIntrinsic(IntrinsicID, LHS, RHS);
   }
 
@@ -4717,11 +4736,11 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
     return replaceInstUsesWith(SI, FalseVal);
   }
 
-  // If the type of select is not an integer type or if the condition and
-  // the selection type are not both scalar nor both vector types, there is no
-  // point in attempting to match these patterns.
+  // If the condition is a constant or if the condition and the selection
+  // type are not both scalar nor both vector types, there is no point in
+  // attempting to match these patterns.
   Type *CondType = CondVal->getType();
-  if (!isa<Constant>(CondVal) && SelType->isIntOrIntVectorTy() &&
+  if (!isa<Constant>(CondVal) &&
       CondType->isVectorTy() == SelType->isVectorTy()) {
     if (Value *S = simplifyWithOpReplaced(TrueVal, CondVal,
                                           ConstantInt::getTrue(CondType), SQ,
@@ -5113,9 +5132,11 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
         CmpInst::Predicate MinMaxPred = getMinMaxPred(SPF, SPR.Ordered);
 
         Value *Cmp;
-        if (CmpInst::isIntPredicate(MinMaxPred))
+        if (CmpInst::isIntPredicate(MinMaxPred)) {
+          dropPoisonGeneratingAnnotationsForSPFCanonicalization(CondVal, LHS,
+                                                                RHS);
           Cmp = Builder.CreateICmp(MinMaxPred, LHS, RHS);
-        else
+        } else
           Cmp = Builder.CreateFCmpFMF(MinMaxPred, LHS, RHS,
                                       cast<Instruction>(SI.getCondition()));
 

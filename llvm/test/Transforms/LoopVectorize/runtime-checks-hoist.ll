@@ -1635,11 +1635,7 @@ define void @shared_strides(ptr noundef %dst, ptr noundef readonly %src1, ptr no
 ; CHECK-NEXT:    [[BOUND04:%.*]] = icmp ult ptr [[DST]], [[SCEVGEP2]]
 ; CHECK-NEXT:    [[BOUND15:%.*]] = icmp ult ptr [[SRC2]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT6:%.*]] = and i1 [[BOUND04]], [[BOUND15]]
-; CHECK-NEXT:    [[STRIDE_CHECK7:%.*]] = icmp slt i64 [[TMP2]], 0
-; CHECK-NEXT:    [[TMP24:%.*]] = or i1 [[FOUND_CONFLICT6]], [[STRIDE_CHECK7]]
-; CHECK-NEXT:    [[STRIDE_CHECK8:%.*]] = icmp slt i64 [[TMP1]], 0
-; CHECK-NEXT:    [[TMP25:%.*]] = or i1 [[TMP24]], [[STRIDE_CHECK8]]
-; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[TMP11]], [[TMP25]]
+; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[TMP11]], [[FOUND_CONFLICT6]]
 ; CHECK-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP12:%.*]] = and i64 [[TMP0]], 3
