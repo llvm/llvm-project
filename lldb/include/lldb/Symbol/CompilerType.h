@@ -206,8 +206,9 @@ public:
 
   bool HasPointerAuthQualifier() const;
 
-  /// The target address space of this type, if it is not the default one.
-  std::optional<uint32_t> GetTargetAddressSpace() const;
+  /// The target address space ID of this type (matching
+  /// AddressSpaceInfo::space_id), if it is not the default one.
+  std::optional<lldb::addr_space_t> GetTargetAddressSpace() const;
 
   /// This is used when you don't care about the signedness of the integer.
   bool IsInteger() const;
@@ -404,10 +405,11 @@ public:
   CompilerType AddPtrAuthModifier(uint32_t payload) const;
 
   /// Return a new CompilerType that qualifies this type with the given target
-  /// address space (DWARF address class) if this type is valid and the type
-  /// system supports target address spaces. Passing 0 (DW_ADDR_none) returns
-  /// this type unchanged.
-  CompilerType AddAddressSpaceModifier(uint32_t address_space) const;
+  /// address space ID (matching AddressSpaceInfo::space_id) if this type is
+  /// valid and the type system supports target address spaces. Passing
+  /// LLDB_DEFAULT_ADDRESS_SPACE_ID (0 / DW_ADDR_none) returns this type
+  /// unchanged.
+  CompilerType AddAddressSpaceModifier(lldb::addr_space_t address_space) const;
   /// \}
 
   /// Exploring the type.

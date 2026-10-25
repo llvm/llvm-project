@@ -207,9 +207,10 @@ public:
     return false;
   }
 
-  /// Returns the target address space (the DWARF address class) of \p type,
-  /// or std::nullopt if it lives in the default address space.
-  virtual std::optional<uint32_t>
+  /// Returns the target address space ID of \p type (matching
+  /// AddressSpaceInfo::space_id from jAddressSpacesInfo), or std::nullopt
+  /// if it lives in the default address space.
+  virtual std::optional<lldb::addr_space_t>
   GetTargetAddressSpace(lldb::opaque_compiler_type_t type) {
     return std::nullopt;
   }
@@ -317,7 +318,7 @@ public:
 
   virtual CompilerType
   AddAddressSpaceModifier(lldb::opaque_compiler_type_t type,
-                          uint32_t address_space);
+                          lldb::addr_space_t address_space);
 
   /// \param opaque_payload      The m_payload field of Type, which may
   /// carry TypeSystem-specific extra information.

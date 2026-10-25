@@ -2507,7 +2507,7 @@ DWARF:
   ASSERT_TRUE(ct_as3.IsPointerType());
   EXPECT_EQ(ct_as3.GetTargetAddressSpace(), std::nullopt);
   EXPECT_EQ(ct_as3.GetPointeeType().GetTargetAddressSpace(),
-            std::optional<uint32_t>(3U));
+            std::optional<lldb::addr_space_t>(3U));
 
   lldb::TypeSP ptr_as0_type =
       parser.ParseTypeFromDWARF(sc, ptr_as0_die, /*type_is_new_ptr=*/nullptr);
@@ -2530,7 +2530,7 @@ DWARF:
   ASSERT_TRUE(ct_void_as3.IsPointerType());
   EXPECT_EQ(ct_void_as3.GetTargetAddressSpace(), std::nullopt);
   EXPECT_EQ(ct_void_as3.GetPointeeType().GetTargetAddressSpace(),
-            std::optional<uint32_t>(3U));
+            std::optional<lldb::addr_space_t>(3U));
 }
 
 TEST_F(DWARFASTParserClangTests, TestAddressClassUnhandledTags) {

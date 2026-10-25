@@ -726,7 +726,7 @@ public:
 
   bool HasPointerAuthQualifier(lldb::opaque_compiler_type_t type) override;
 
-  std::optional<uint32_t>
+  std::optional<lldb::addr_space_t>
   GetTargetAddressSpace(lldb::opaque_compiler_type_t type) override;
 
   bool CanPassInRegisters(const CompilerType &type) override;
@@ -809,8 +809,9 @@ public:
   CompilerType AddPtrAuthModifier(lldb::opaque_compiler_type_t type,
                                   uint32_t payload) override;
 
-  CompilerType AddAddressSpaceModifier(lldb::opaque_compiler_type_t type,
-                                       uint32_t address_space) override;
+  CompilerType
+  AddAddressSpaceModifier(lldb::opaque_compiler_type_t type,
+                          lldb::addr_space_t address_space) override;
 
   CompilerType AddVolatileModifier(lldb::opaque_compiler_type_t type) override;
 

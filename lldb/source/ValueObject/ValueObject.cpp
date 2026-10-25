@@ -1704,12 +1704,14 @@ std::optional<addr_t> ValueObject::GetStrippedPointerValue(addr_t address) {
   return std::nullopt;
 }
 
-/// Returns the DWARF address class of the pointee of \p type, or 0.
-static uint32_t GetPointeeAddressClass(const CompilerType &type) {
+/// Returns the target address space ID of the pointee of \p type, or
+/// LLDB_DEFAULT_ADDRESS_SPACE_ID.
+static lldb::addr_space_t GetPointeeAddressSpace(const CompilerType &type) {
   CompilerType pointee;
   if (!type.IsPointerOrReferenceType(&pointee))
-    return 0;
-  return pointee.GetTargetAddressSpace().value_or(0);
+    return LLDB_DEFAULT_ADDRESS_SPACE_ID;
+  return pointee.GetTargetAddressSpace().value_or(
+      LLDB_DEFAULT_ADDRESS_SPACE_ID);
 }
 
 ValueObject::AddrAndType
@@ -1722,8 +1724,10 @@ ValueObject::MapPointerToLoadAddress(AddrAndType pointer) {
     return pointer;
   ExecutionContext exe_ctx(GetExecutionContextRef());
   if (Process *process = exe_ctx.GetProcessPtr())
-    pointer.address = process->PointerToLoadAddress(
-        pointer.address, GetPointeeAddressClass(type));
+    pointer.address = process
+                          ->PointerToLoadAddress(pointer.address,
+                                                 GetPointeeAddressSpace(type))
+                          .GetValue();
   return pointer;
 }
 
@@ -3030,8 +3034,12 @@ ValueObjectSP ValueObject::AddressOf(Status &error) {
         // The resulting pointer holds the target's pointer encoding of addr.
         if (address_type == eAddressTypeLoad) {
           if (Process *process = exe_ctx.GetProcessPtr())
-            addr = process->LoadAddressToPointer(
-                addr, GetCompilerType().GetTargetAddressSpace().value_or(0));
+            addr = process
+                       ->LoadAddressToPointer(
+                           addr,
+                           GetCompilerType().GetTargetAddressSpace().value_or(
+                               LLDB_DEFAULT_ADDRESS_SPACE_ID))
+                       .GetValue();
         }
 
         lldb::DataBufferSP buffer(

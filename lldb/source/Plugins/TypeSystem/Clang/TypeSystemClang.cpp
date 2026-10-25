@@ -3750,7 +3750,7 @@ bool TypeSystemClang::HasPointerAuthQualifier(
   return GetCanonicalQualType(type).getPointerAuth().isPresent();
 }
 
-std::optional<uint32_t>
+std::optional<lldb::addr_space_t>
 TypeSystemClang::GetTargetAddressSpace(lldb::opaque_compiler_type_t type) {
   if (!type)
     return std::nullopt;
@@ -4698,13 +4698,18 @@ TypeSystemClang::AddPtrAuthModifier(lldb::opaque_compiler_type_t type,
 
 CompilerType
 TypeSystemClang::AddAddressSpaceModifier(lldb::opaque_compiler_type_t type,
-                                         uint32_t address_space) {
+                                         lldb::addr_space_t address_space) {
   if (type) {
     clang::QualType qual_type = GetQualType(type);
-    if (address_space == 0 || qual_type.hasAddressSpace())
+    constexpr lldb::addr_space_t max_target_as =
+        clang::Qualifiers::MaxAddressSpace -
+        static_cast<unsigned>(clang::LangAS::FirstTargetAddressSpace);
+    if (address_space == LLDB_DEFAULT_ADDRESS_SPACE_ID ||
+        address_space > max_target_as || qual_type.hasAddressSpace())
       return GetType(qual_type);
     return GetType(getASTContext().getAddrSpaceQualType(
-        qual_type, clang::getLangASFromTargetAS(address_space)));
+        qual_type,
+        clang::getLangASFromTargetAS(static_cast<unsigned>(address_space))));
   }
   return CompilerType();
 }

@@ -2035,17 +2035,22 @@ public:
   GetAddressSpaceInfo(lldb::addr_space_t address_space_id);
 
   /// Maps \p pointer, a pointer value read from the target whose pointee is
-  /// in DWARF address class \p address_class (0 for none), to the address
-  /// lldb uses to access the pointee. This is the identity unless the server
-  /// published a flat aperture for that class (see AddressSpaceInfo).
-  lldb::addr_t PointerToLoadAddress(lldb::addr_t pointer,
-                                    uint32_t address_class);
+  /// in target address space \p address_space (LLDB_DEFAULT_ADDRESS_SPACE_ID
+  /// for the default space), to the ProcessAddress lldb uses to access the
+  /// pointee. If the server published a flat aperture for \p address_space
+  /// (see AddressSpaceInfo), this maps \p pointer into the default address
+  /// space at aperture.base + pointer * aperture.pointer_unit; otherwise it
+  /// returns ProcessAddress(pointer, address_space).
+  ProcessAddress PointerToLoadAddress(
+      lldb::addr_t pointer,
+      lldb::addr_space_t address_space = LLDB_DEFAULT_ADDRESS_SPACE_ID);
 
-  /// Inverse of PointerToLoadAddress: returns the target pointer value for
-  /// \p address if it lies in the flat aperture of \p address_class, and
-  /// \p address unchanged otherwise.
-  lldb::addr_t LoadAddressToPointer(lldb::addr_t address,
-                                    uint32_t address_class);
+  /// Inverse of PointerToLoadAddress: returns ProcessAddress(target_pointer,
+  /// address_space) if \p address lies in the flat aperture of
+  /// \p address_space, and ProcessAddress(address, address_space) otherwise.
+  ProcessAddress LoadAddressToPointer(
+      lldb::addr_t address,
+      lldb::addr_space_t address_space = LLDB_DEFAULT_ADDRESS_SPACE_ID);
 
   /// Get the number of watchpoints supported by this target.
   ///

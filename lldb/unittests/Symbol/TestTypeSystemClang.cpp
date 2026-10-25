@@ -1571,12 +1571,14 @@ TEST_F(TestTypeSystemClang, TestAddressSpaceModifier) {
   // Qualifying with a non-zero target address space records it on the type.
   CompilerType as3_int = int_type.AddAddressSpaceModifier(3);
   ASSERT_TRUE(as3_int.IsValid());
-  EXPECT_EQ(as3_int.GetTargetAddressSpace(), std::optional<uint32_t>(3U));
+  EXPECT_EQ(as3_int.GetTargetAddressSpace(),
+            std::optional<lldb::addr_space_t>(3U));
 
   // Re-qualifying an already address-space-qualified type preserves the
   // existing address space.
   CompilerType re_qualified = as3_int.AddAddressSpaceModifier(5);
-  EXPECT_EQ(re_qualified.GetTargetAddressSpace(), std::optional<uint32_t>(3U));
+  EXPECT_EQ(re_qualified.GetTargetAddressSpace(),
+            std::optional<lldb::addr_space_t>(3U));
 
   // A pointer to an address-space-qualified type carries the qualifier on
   // the pointee, while the pointer itself lives in the default space.
@@ -1584,5 +1586,5 @@ TEST_F(TestTypeSystemClang, TestAddressSpaceModifier) {
   ASSERT_TRUE(ptr_to_as3_int.IsPointerType());
   EXPECT_EQ(ptr_to_as3_int.GetTargetAddressSpace(), std::nullopt);
   EXPECT_EQ(ptr_to_as3_int.GetPointeeType().GetTargetAddressSpace(),
-            std::optional<uint32_t>(3U));
+            std::optional<lldb::addr_space_t>(3U));
 }

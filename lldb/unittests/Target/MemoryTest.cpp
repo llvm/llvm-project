@@ -1888,44 +1888,64 @@ TEST_F(MemoryTest, TestPointerToLoadAddressApertures) {
 
   auto *dummy_process = static_cast<DummyProcess *>(process_sp.get());
   dummy_process->SetAddressSpaces({
-      // Byte-addressed bounded aperture for DWARF address class 3.
-      {"local", 1, /*is_thread_specific=*/false, /*dwarf_address_class=*/3U,
-       /*flat_base=*/0x100000ULL, /*flat_size=*/0x1000ULL,
-       /*pointer_unit=*/1ULL},
-      // 4-byte word-addressed bounded aperture for DWARF address class 5.
-      {"vmem", 2, /*is_thread_specific=*/false, /*dwarf_address_class=*/5U,
-       /*flat_base=*/0x200000ULL, /*flat_size=*/0x400ULL,
-       /*pointer_unit=*/4ULL},
+      // Byte-addressed bounded aperture for address space 3.
+      {"local", 3, /*is_thread_specific=*/false,
+       FlatAperture{/*base=*/0x100000ULL, /*size=*/0x1000ULL,
+                    /*pointer_unit=*/1ULL}},
+      // 4-byte word-addressed bounded aperture for address space 5.
+      {"vmem", 5, /*is_thread_specific=*/false,
+       FlatAperture{/*base=*/0x200000ULL, /*size=*/0x400ULL,
+                    /*pointer_unit=*/4ULL}},
+      // Non-flat address space without a flat aperture.
+      {"imem", 7, /*is_thread_specific=*/false, std::nullopt},
   });
 
   // Invalid address is preserved.
-  EXPECT_EQ(process_sp->PointerToLoadAddress(LLDB_INVALID_ADDRESS, 3),
-            LLDB_INVALID_ADDRESS);
-  EXPECT_EQ(process_sp->LoadAddressToPointer(LLDB_INVALID_ADDRESS, 3),
-            LLDB_INVALID_ADDRESS);
+  EXPECT_EQ(
+      process_sp->PointerToLoadAddress(LLDB_INVALID_ADDRESS, 3).GetValue(),
+      LLDB_INVALID_ADDRESS);
+  EXPECT_EQ(
+      process_sp->LoadAddressToPointer(LLDB_INVALID_ADDRESS, 3).GetValue(),
+      LLDB_INVALID_ADDRESS);
 
-  // Default address class (0) or unconfigured class is the identity mapping.
-  EXPECT_EQ(process_sp->PointerToLoadAddress(0x1234, 0), 0x1234ULL);
-  EXPECT_EQ(process_sp->PointerToLoadAddress(0x1234, 99), 0x1234ULL);
-  EXPECT_EQ(process_sp->LoadAddressToPointer(0x100020, 0), 0x100020ULL);
+  // Default address space (0) or non-aperture space preserves value and
+  // address space ID.
+  ProcessAddress default_pa = process_sp->PointerToLoadAddress(0x1234, 0);
+  EXPECT_EQ(default_pa.GetValue(), 0x1234ULL);
+  EXPECT_TRUE(default_pa.IsInDefaultAddressSpace());
 
-  // Byte-addressed aperture (class 3: base 0x100000, size 0x1000, unit 1):
-  // Pointer value 0 maps to flat_base.
-  EXPECT_EQ(process_sp->PointerToLoadAddress(0, 3), 0x100000ULL);
-  EXPECT_EQ(process_sp->PointerToLoadAddress(0xfff, 3), 0x100fffULL);
+  ProcessAddress imem_pa = process_sp->PointerToLoadAddress(0x1234, 7);
+  EXPECT_EQ(imem_pa.GetValue(), 0x1234ULL);
+  EXPECT_EQ(imem_pa.GetAddressSpace(), 7U);
+
+  EXPECT_EQ(process_sp->LoadAddressToPointer(0x100020, 0).GetValue(),
+            0x100020ULL);
+
+  // Byte-addressed aperture (space 3: base 0x100000, size 0x1000, unit 1):
+  // Pointer value 0 maps to aperture.base in the default address space.
+  ProcessAddress local_pa = process_sp->PointerToLoadAddress(0, 3);
+  EXPECT_EQ(local_pa.GetValue(), 0x100000ULL);
+  EXPECT_TRUE(local_pa.IsInDefaultAddressSpace());
+  EXPECT_EQ(process_sp->PointerToLoadAddress(0xfff, 3).GetValue(), 0x100fffULL);
   // Out-of-bounds pointer returns LLDB_INVALID_ADDRESS.
-  EXPECT_EQ(process_sp->PointerToLoadAddress(0x1000, 3), LLDB_INVALID_ADDRESS);
-  // Inverse mapping inside and outside the aperture.
-  EXPECT_EQ(process_sp->LoadAddressToPointer(0x100000, 3), 0ULL);
-  EXPECT_EQ(process_sp->LoadAddressToPointer(0x100040, 3), 0x40ULL);
-  EXPECT_EQ(process_sp->LoadAddressToPointer(0x0fffff, 3), 0x0fffffULL);
-  EXPECT_EQ(process_sp->LoadAddressToPointer(0x101000, 3), 0x101000ULL);
-
-  // Word-addressed aperture (class 5: base 0x200000, size 0x400, unit 4):
-  EXPECT_EQ(process_sp->PointerToLoadAddress(10, 5), 0x200028ULL);
-  EXPECT_EQ(process_sp->PointerToLoadAddress(0xff, 5), 0x2003fcULL);
-  EXPECT_EQ(process_sp->PointerToLoadAddress(0x100, 5), LLDB_INVALID_ADDRESS);
-  EXPECT_EQ(process_sp->PointerToLoadAddress(UINT64_MAX, 5),
+  EXPECT_EQ(process_sp->PointerToLoadAddress(0x1000, 3).GetValue(),
             LLDB_INVALID_ADDRESS);
-  EXPECT_EQ(process_sp->LoadAddressToPointer(0x200028, 5), 10ULL);
+  // Inverse mapping inside and outside the aperture.
+  ProcessAddress local_ptr = process_sp->LoadAddressToPointer(0x100000, 3);
+  EXPECT_EQ(local_ptr.GetValue(), 0ULL);
+  EXPECT_EQ(local_ptr.GetAddressSpace(), 3U);
+  EXPECT_EQ(process_sp->LoadAddressToPointer(0x100040, 3).GetValue(), 0x40ULL);
+  EXPECT_EQ(process_sp->LoadAddressToPointer(0x0fffff, 3).GetValue(),
+            0x0fffffULL);
+  EXPECT_EQ(process_sp->LoadAddressToPointer(0x101000, 3).GetValue(),
+            0x101000ULL);
+
+  // Word-addressed aperture (space 5: base 0x200000, size 0x400, unit 4):
+  EXPECT_EQ(process_sp->PointerToLoadAddress(10, 5).GetValue(), 0x200028ULL);
+  EXPECT_EQ(process_sp->PointerToLoadAddress(0xff, 5).GetValue(), 0x2003fcULL);
+  EXPECT_EQ(process_sp->PointerToLoadAddress(0x100, 5).GetValue(),
+            LLDB_INVALID_ADDRESS);
+  EXPECT_EQ(process_sp->PointerToLoadAddress(UINT64_MAX, 5).GetValue(),
+            LLDB_INVALID_ADDRESS);
+  EXPECT_EQ(process_sp->LoadAddressToPointer(0x200028, 5).GetValue(), 10ULL);
 }
