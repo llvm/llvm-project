@@ -81,6 +81,41 @@ RecordStreamer::const_iterator RecordStreamer::begin() {
 
 RecordStreamer::const_iterator RecordStreamer::end() { return Symbols.end(); }
 
+void RecordStreamer::emitCOFFSymbolIndex(const MCSymbol *Symbol) {
+  visitUsedSymbol(*Symbol);
+}
+
+void RecordStreamer::emitCOFFSectionIndex(const MCSymbol *Symbol) {
+  visitUsedSymbol(*Symbol);
+}
+
+void RecordStreamer::emitCOFFSecRel32(const MCSymbol *Symbol, uint64_t) {
+  visitUsedSymbol(*Symbol);
+}
+
+void RecordStreamer::emitCOFFImgRel32(const MCSymbol *Symbol, int64_t) {
+  visitUsedSymbol(*Symbol);
+}
+
+void RecordStreamer::emitCOFFSecNumber(const MCSymbol *Symbol) {
+  visitUsedSymbol(*Symbol);
+}
+
+void RecordStreamer::emitCOFFSecOffset(const MCSymbol *Symbol) {
+  visitUsedSymbol(*Symbol);
+}
+
+void RecordStreamer::emitCOFFSafeSEH(const MCSymbol *Symbol) {
+  visitUsedSymbol(*Symbol);
+}
+
+void RecordStreamer::emitWinEHHandler(const MCSymbol *Sym, bool Unwind,
+                                      bool Except, SMLoc Loc) {
+  if (Sym)
+    visitUsedSymbol(*Sym);
+  MCStreamer::emitWinEHHandler(Sym, Unwind, Except, Loc);
+}
+
 void RecordStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
   MCStreamer::emitLabel(Symbol);
   markDefined(*Symbol);

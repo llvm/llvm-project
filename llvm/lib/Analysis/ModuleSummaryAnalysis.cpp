@@ -39,6 +39,7 @@
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
@@ -382,6 +383,7 @@ static void computeFunctionSummary(
 #endif
 
   bool HasInlineAsmMaybeReferencingInternal = false;
+  bool HasInlineAsmDefiningSymbols = false;
   bool HasIndirBranchToBlockAddress = false;
   bool HasUnknownCall = false;
   bool MayThrow = false;
@@ -448,6 +450,12 @@ static void computeFunctionSummary(
       // referenced value).
       if (HasLocalsInUsedOrAsm && CI && CI->isInlineAsm())
         HasInlineAsmMaybeReferencingInternal = true;
+
+      // Importing a copy would define the symbol twice.
+      if (CI && CI->isInlineAsm() &&
+          ModuleSymbolTable::inlineAsmMayDefineSymbols(
+              cast<InlineAsm>(CI->getCalledOperand())->getAsmString()))
+        HasInlineAsmDefiningSymbols = true;
 
       // Compute this once per indirect call.
       uint32_t NumCandidates = 0;
@@ -748,7 +756,8 @@ static void computeFunctionSummary(
       F.hasFnAttribute(Attribute::NoRecurse), F.returnDoesNotAlias(),
       // FIXME: refactor this to use the same code that inliner is using.
       // Don't try to import functions with noinline attribute.
-      F.getAttributes().hasFnAttr(Attribute::NoInline),
+      F.getAttributes().hasFnAttr(Attribute::NoInline) ||
+          HasInlineAsmDefiningSymbols,
       F.hasFnAttribute(Attribute::AlwaysInline),
       F.hasFnAttribute(Attribute::NoUnwind), MayThrow, HasUnknownCall,
       mustBeUnreachableFunction(F)};
