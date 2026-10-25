@@ -5,6 +5,7 @@ set(COPYPROF_SOURCES
   copyprof_allocator.cpp
   copyprof_interceptors.cpp
   copyprof_interceptors_memintrinsics.cpp
+  copyprof_malloc_linux.cpp
   copyprof_preinit.cpp
   copyprof_reporting.cpp
   copyprof_shadow.cpp
