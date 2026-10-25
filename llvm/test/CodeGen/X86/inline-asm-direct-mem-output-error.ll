@@ -44,3 +44,14 @@ fallthrough:
 indirect:
   ret void
 }
+
+; The same for an indirect label.
+; CHECK: error: cannot handle memory constraint 'm' for a label
+define void @label_indirect_mem() {
+  callbr void asm "# $0", "!*m"()
+    to label %fallthrough [label %indirect]
+fallthrough:
+  ret void
+indirect:
+  ret void
+}

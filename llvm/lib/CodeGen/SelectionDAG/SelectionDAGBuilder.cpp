@@ -10571,20 +10571,19 @@ computeConstraintToUse(ConstraintDecisionInfo &Info, const CallBase &Call,
       OpInfo.ConstraintType = TargetLowering::C_Address;
     }
 
-    // A direct operand with a memory constraint needs an address. Only an
-    // input has a value that can be stored to a stack slot to provide one. A
-    // direct output, which Clang never emits with a memory constraint but
-    // other IR can, would need a stack slot to be reloaded after the asm. That
-    // includes an output whose chosen alternative is memory, e.g. "=m|r". A
-    // label (e.g. "!m") is a branch target, which has no value in memory.
+    // A label (e.g. "!m") is a branch target, which has no value in memory.
+    if (OpInfo.ConstraintType == TargetLowering::C_Memory &&
+        OpInfo.Type == InlineAsm::isLabel) {
+      Info.ErrorMsg << "cannot handle memory constraint '"
+                    << OpInfo.ConstraintCode << "' for a label";
+      return true;
+    }
+
+    // A direct operand with a memory constraint needs an address. An input's
+    // value is put in memory for one. A direct output would have to be
+    // reloaded from memory after the asm, which isn't supported.
     if (OpInfo.ConstraintType == TargetLowering::C_Memory &&
         !OpInfo.isIndirect) {
-      if (OpInfo.Type == InlineAsm::isLabel) {
-        Info.ErrorMsg << "cannot handle memory constraint '"
-                      << OpInfo.ConstraintCode << "' for a label";
-        return true;
-      }
-
       if (OpInfo.Type != InlineAsm::isInput) {
         Info.ErrorMsg << "cannot handle direct memory outputs for constraint '"
                       << OpInfo.ConstraintCode << "'";
