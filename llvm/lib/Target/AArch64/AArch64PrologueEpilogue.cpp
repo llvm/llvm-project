@@ -55,6 +55,8 @@ static bool isPartOfZPRCalleeSaves(MachineBasicBlock::iterator I) {
     return false;
   case AArch64::LD1B_2Z_IMM:
   case AArch64::ST1B_2Z_IMM:
+  case AArch64::LD1B_4Z_IMM:
+  case AArch64::ST1B_4Z_IMM:
   case AArch64::STR_ZXI:
   case AArch64::LDR_ZXI:
   case AArch64::PTRUE_C_B:
@@ -1765,6 +1767,11 @@ void AArch64EpilogueEmitter::emitCalleeSavedRestores(
 }
 
 void AArch64EpilogueEmitter::finalizeEpilogue() const {
+  // All calls are tail calls in GHC calling conv, and functions have no
+  // prologue/epilogue.
+  if (MF.getFunction().getCallingConv() == CallingConv::GHC)
+    return;
+
   if (AFI->needsShadowCallStackPrologueEpilogue(MF)) {
     emitShadowCallStackEpilogue(MBB.getFirstTerminator(), DL);
     HasWinCFI |= NeedsWinCFI;

@@ -1420,6 +1420,11 @@ defm SlowMaxMinMulI64Insts : AMDGPUSubtargetFeature<"slow-max-min-mul-i64-insts"
   GenPredicate=false
 >;
 
+defm CacheFillSize : AMDGPUSubtargetFeature<"cache-fill-size",
+  "Has a cache fill size field in VMEM instructions indicating how much data is fetched on a cache miss",
+  /*GenPredicate=*/0
+>;
+
 //===------------------------------------------------------------===//
 // Subtarget Features (options and debugging)
 //===------------------------------------------------------------===//
@@ -1921,7 +1926,7 @@ def FeatureGFX13 : GCNSubtargetFeatureGeneration<"GFX13",
    FeatureFlatSignedOffset, FeatureInstCacheLineSize128,
    FeatureMTBUFInsts, FeatureFormattedMUBUFInsts,
    Feature45BitNumRecordsBufferResource,
-   FeatureMaxWavesPerEU16
+   FeatureMaxWavesPerEU16, FeatureCacheFillSize
   ]
 >;
 //===----------------------------------------------------------------------===//
@@ -2192,7 +2197,7 @@ def FeatureISAVersion9_4_2 : FeatureSet<
 def FeatureISAVersion9_4_Generic : FeatureSet<
   !listconcat(FeatureISAVersion9_4_Common.Features,
     [FeatureAddressableLocalMemorySize65536,
-     FeatureLDSAllocGranularity1280,
+     FeatureLDSAllocGranularity512,
      FeatureLDSEncodingGranularity1280,
      FeatureLDSBankCount32,
      FeatureRequiresCOV6])>;
@@ -2700,8 +2705,6 @@ def FeatureISAVersion12_5_Generic: FeatureSet<
    FeatureDataCacheLineSize128,
    FeatureRequiresInitialUnclausedVmem,
    FeatureNeedsTDMDrain,
-   FeatureXNACKOnOffModes,
-   FeatureSupportsXNACK,
    ])>;
 
 def FeatureISAVersion13 : FeatureSet<

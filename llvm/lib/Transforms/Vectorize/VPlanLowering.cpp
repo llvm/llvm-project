@@ -46,7 +46,7 @@ void VPlanTransforms::replaceWideCanonicalIVWithWideIV(
     return;
 
   VPWidenCanonicalIVRecipe *WideCanIV = nullptr;
-  VPIRValue *StartValue = nullptr;
+  VPValue *StartValue = nullptr;
   // Find VPWidenCanonicalIVRecipe among the canonical IV's users,
   // matching Case 1 where it's a direct user of canonicalIV:
   // <x1> vector loop: {
@@ -56,12 +56,14 @@ void VPlanTransforms::replaceWideCanonicalIVWithWideIV(
   //     EMIT vp<%6> = WIDEN-CANONICAL-INDUCTION nuw vp<%4>
   //     ..
   // }
-  // or Case 2 (indirect use through an epilogue resume-value add):
+  // or Case 2 (indirect use through an epilogue resume-value add, where the
+  // resume value is defined outside the loop, e.g. a phi in the vector
+  // preheader):
   // <x1> vector loop: {
   //   vp<%5> = CANONICAL-IV
   //
   //   vec.epilog.vector.body:
-  //     EMIT vp<%7> = add vp<%5>, ir<%vec.epilog.resume.val>
+  //     EMIT vp<%7> = add vp<%5>, vp<%vec.epilog.resume.val>
   //     EMIT vp<%8> = WIDEN-CANONICAL-INDUCTION nuw vp<%7>
   //     ..
   //}
@@ -76,8 +78,10 @@ void VPlanTransforms::replaceWideCanonicalIVWithWideIV(
       auto *It = find_if(UI->users(), IsaPred<VPWidenCanonicalIVRecipe>);
       if (It != UI->user_end()) {
         WideCanIV = cast<VPWidenCanonicalIVRecipe>(*It);
-        if (match(UI, m_c_Add(m_Specific(IV), m_VPIRValue(StartValue))))
+        if (match(UI, m_c_Add(m_Specific(IV), m_VPValue(StartValue))) &&
+            StartValue->isDefinedOutsideLoopRegions())
           break;
+        StartValue = nullptr;
       }
     }
   }
