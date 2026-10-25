@@ -195,7 +195,7 @@ struct HostTypeHelper<TypeKind<TypeCategory::Logical, KIND>> {
 
 template <int KIND>
 struct HostTypeHelper<TypeKind<TypeCategory::Character, KIND>> {
-  using Type = typename TypeKind<TypeCategory::Character, KIND>::Scalar;
+  using Type = typename TypeKind<TypeCategory::Character, KIND>::StringT;
 };
 
 // Type mapping from host types to F18 types. This need to be placed after all
