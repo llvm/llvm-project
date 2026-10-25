@@ -226,13 +226,17 @@ void VirtRegAuxInfo::calculateSpillWeightAndHint(LiveInterval &LI) {
   LI.setWeight(Weight);
 }
 
+/// Return true if the inline asm \p MI can access \p Reg in Reg's stack slot,
+/// which the register allocator would fold its operands to if it spills Reg.
+static bool canMemFoldInlineAsm(const MachineInstr &MI, Register Reg) {
+  return MI.isInlineAsm() && MI.mayFoldInlineAsmReg(Reg);
+}
+
 static bool canMemFoldInlineAsm(LiveInterval &LI,
                                 const MachineRegisterInfo &MRI) {
-  for (const MachineOperand &MO : MRI.reg_operands(LI.reg())) {
-    const MachineInstr *MI = MO.getParent();
-    if (MI->isInlineAsm() && MI->mayFoldInlineAsmRegOp(MI->getOperandNo(&MO)))
+  for (const MachineInstr &MI : MRI.reg_nodbg_instructions(LI.reg()))
+    if (canMemFoldInlineAsm(MI, LI.reg()))
       return true;
-  }
 
   return false;
 }
@@ -315,7 +319,11 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI) {
 
     // Force Weight onto the stack so that x86 doesn't add hidden precision.
     stack_float_t Weight = 1.0f;
-    if (IsSpillable) {
+    // An inline asm that can access the register in its stack slot needs no
+    // reload or spill for it, so it doesn't add to the spill weight. That makes
+    // the register a better choice to spill than the asm's other operands,
+    // which need registers.
+    if (IsSpillable && !canMemFoldInlineAsm(*MI, LI.reg())) {
       // Get loop info for mi.
       if (MI->getParent() != MBB) {
         MBB = MI->getParent();
