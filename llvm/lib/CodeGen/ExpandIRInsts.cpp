@@ -907,6 +907,7 @@ static void expandIToFP(Instruction *IToFP) {
   FPMantissaWidth = FPMantissaWidth == 7 ? 23 : FPMantissaWidth;
   unsigned FloatWidth = PowerOf2Ceil(FPMantissaWidth);
   bool IsSigned = IToFP->getOpcode() == Instruction::SIToFP;
+  bool RoundToOdd = IToFP->getType()->isBFloatTy();
 
   // We're going to introduce branches on the value, so freeze it.
   if (!isGuaranteedNotToBeUndefOrPoison(IntVal))
@@ -940,7 +941,9 @@ static void expandIToFP(Instruction *IToFP) {
   BasicBlock *SwEpilog =
       BasicBlock::Create(Builder.getContext(), "itofp-sw-epilog", F, End);
   BasicBlock *IfThen20 =
-      BasicBlock::Create(Builder.getContext(), "itofp-if-then20", F, End);
+      RoundToOdd ? nullptr
+                 : BasicBlock::Create(Builder.getContext(),
+                                      "itofp-if-then20", F, End);
   BasicBlock *IfElse =
       BasicBlock::Create(Builder.getContext(), "itofp-if-else", F, End);
   BasicBlock *IfEnd26 =
@@ -1039,35 +1042,30 @@ static void expandIToFP(Instruction *IToFP) {
   AAddr0->addIncoming(Or, SwDefault);
   AAddr0->addIncoming(IsSigned ? Sub : IntVal, IfThen4);
   AAddr0->addIncoming(Shl, SwBB);
-  Value *A0 = Builder.CreateTrunc(AAddr0, Builder.getInt32Ty());
-  Value *A1 = Builder.CreateLShr(A0, Builder.getInt32(2));
-  Value *A2 = Builder.CreateAnd(A1, Builder.getInt32(1));
-  Value *Conv16 = Builder.CreateZExt(A2, IntTy);
-  bool RoundToOdd = IToFP->getType()->isBFloatTy();
-  Value *Inc = AAddr0;
+  Value *Inc = nullptr;
+  Value *Shr18 = nullptr;
   if (!RoundToOdd) {
+    Value *A0 = Builder.CreateTrunc(AAddr0, Builder.getInt32Ty());
+    Value *A1 = Builder.CreateLShr(A0, Builder.getInt32(2));
+    Value *A2 = Builder.CreateAnd(A1, Builder.getInt32(1));
+    Value *Conv16 = Builder.CreateZExt(A2, IntTy);
     Value *Or17 = Builder.CreateOr(AAddr0, Conv16);
     Inc = Builder.CreateAdd(Or17, Builder.getIntN(BitWidth, 1));
-  }
-  Value *Shr18 = nullptr;
-  if (RoundToOdd) {
+    if (IsSigned)
+      Shr18 = Builder.CreateAShr(Inc, Builder.getIntN(BitWidth, 2));
+    else
+      Shr18 = Builder.CreateLShr(Inc, Builder.getIntN(BitWidth, 2));
+  } else {
     // Keep a non-zero discarded portion sticky and force the retained
     // significand's least-significant bit to one. The subsequent conversion
     // from float to bfloat then rounds only once.
-    Value *LowBits = Builder.CreateAnd(AAddr0, Builder.getIntN(BitWidth, 3));
+    Value *LowBits = Builder.CreateAnd(
+        Builder.CreateTrunc(AAddr0, Builder.getInt32Ty()), Builder.getInt32(3));
     Value *Sticky = Builder.CreateZExt(
-        Builder.CreateICmpNE(LowBits, Builder.getIntN(BitWidth, 0)), IntTy);
+        Builder.CreateICmpNE(LowBits, Builder.getInt32(0)), IntTy);
     Shr18 = Builder.CreateLShr(AAddr0, Builder.getIntN(BitWidth, 2));
     Shr18 = Builder.CreateOr(Shr18, Sticky);
-  } else if (IsSigned)
-    Shr18 = Builder.CreateAShr(Inc, Builder.getIntN(BitWidth, 2));
-  else
-    Shr18 = Builder.CreateLShr(Inc, Builder.getIntN(BitWidth, 2));
-  Value *PosOrNeg = Builder.getTrue();
-  if (!RoundToOdd) {
-    Value *A3 = Builder.CreateAnd(Inc, Temp1, "a3");
-    PosOrNeg = Builder.CreateICmpEQ(A3, Builder.getIntN(BitWidth, 0));
-  } // The carry-out path is unreachable with round-to-odd.
+  }
   Value *ExtractT60 = Builder.CreateTrunc(Shr18, Builder.getIntNTy(FloatWidth));
   Value *Extract63 = Builder.CreateLShr(Shr18, Builder.getIntN(BitWidth, 32));
   Value *ExtractT64 = nullptr;
@@ -1077,28 +1075,38 @@ static void expandIToFP(Instruction *IToFP) {
     ExtractT64 = Builder.CreateTrunc(Extract63, Builder.getInt32Ty());
   // Rounding usually keeps the exponent within its current magnitude and
   // overflow is rare. The False path is unlikely to be taken.
-  Value *CondBrSwEpilog = Builder.CreateCondBr(PosOrNeg, IfEnd26, IfThen20);
-  applyProfMetadataIfEnabled(CondBrSwEpilog, [&](Instruction *Inst) {
-    Inst->setMetadata(
-        LLVMContext::MD_prof,
-        MDBuilder(Inst->getContext()).createLikelyBranchWeights());
-  });
+  if (RoundToOdd) {
+    Builder.CreateBr(IfEnd26);
+  } else {
+    Value *A3 = Builder.CreateAnd(Inc, Temp1, "a3");
+    Value *PosOrNeg = Builder.CreateICmpEQ(A3, Builder.getIntN(BitWidth, 0));
+    Value *CondBrSwEpilog =
+        Builder.CreateCondBr(PosOrNeg, IfEnd26, IfThen20);
+    applyProfMetadataIfEnabled(CondBrSwEpilog, [&](Instruction *Inst) {
+      Inst->setMetadata(
+          LLVMContext::MD_prof,
+          MDBuilder(Inst->getContext()).createLikelyBranchWeights());
+    });
+  }
 
-  // if.then20
-  Builder.SetInsertPoint(IfThen20);
-  Value *Shr21 = nullptr;
-  if (IsSigned)
-    Shr21 = Builder.CreateAShr(Inc, Builder.getIntN(BitWidth, 3));
-  else
-    Shr21 = Builder.CreateLShr(Inc, Builder.getIntN(BitWidth, 3));
-  Value *ExtractT = Builder.CreateTrunc(Shr21, Builder.getIntNTy(FloatWidth));
-  Value *Extract = Builder.CreateLShr(Shr21, Builder.getIntN(BitWidth, 32));
+  Value *ExtractT = nullptr;
   Value *ExtractT62 = nullptr;
-  if (FloatWidth > 80)
-    ExtractT62 = Builder.CreateTrunc(Sub1, Builder.getInt64Ty());
-  else
-    ExtractT62 = Builder.CreateTrunc(Extract, Builder.getInt32Ty());
-  Builder.CreateBr(IfEnd26);
+  if (!RoundToOdd) {
+    // if.then20
+    Builder.SetInsertPoint(IfThen20);
+    Value *Shr21 = nullptr;
+    if (IsSigned)
+      Shr21 = Builder.CreateAShr(Inc, Builder.getIntN(BitWidth, 3));
+    else
+      Shr21 = Builder.CreateLShr(Inc, Builder.getIntN(BitWidth, 3));
+    ExtractT = Builder.CreateTrunc(Shr21, Builder.getIntNTy(FloatWidth));
+    Value *Extract = Builder.CreateLShr(Shr21, Builder.getIntN(BitWidth, 32));
+    if (FloatWidth > 80)
+      ExtractT62 = Builder.CreateTrunc(Sub1, Builder.getInt64Ty());
+    else
+      ExtractT62 = Builder.CreateTrunc(Extract, Builder.getInt32Ty());
+    Builder.CreateBr(IfEnd26);
+  }
 
   // if.else:
   Builder.SetInsertPoint(IfElse);
@@ -1120,22 +1128,26 @@ static void expandIToFP(Instruction *IToFP) {
 
   // if.end26:
   Builder.SetInsertPoint(IfEnd26);
-  PHINode *AAddr1Off0 = Builder.CreatePHI(Builder.getIntNTy(FloatWidth), 3);
-  AAddr1Off0->addIncoming(ExtractT, IfThen20);
+  PHINode *AAddr1Off0 =
+      Builder.CreatePHI(Builder.getIntNTy(FloatWidth), RoundToOdd ? 2 : 3);
+  if (!RoundToOdd)
+    AAddr1Off0->addIncoming(ExtractT, IfThen20);
   AAddr1Off0->addIncoming(ExtractT60, SwEpilog);
   AAddr1Off0->addIncoming(ExtractT61, IfElse);
   PHINode *AAddr1Off32 = nullptr;
   if (FloatWidth > 32) {
-    AAddr1Off32 =
-        Builder.CreatePHI(Builder.getIntNTy(FloatWidth > 80 ? 64 : 32), 3);
-    AAddr1Off32->addIncoming(ExtractT62, IfThen20);
+    AAddr1Off32 = Builder.CreatePHI(
+        Builder.getIntNTy(FloatWidth > 80 ? 64 : 32), RoundToOdd ? 2 : 3);
+    if (!RoundToOdd)
+      AAddr1Off32->addIncoming(ExtractT62, IfThen20);
     AAddr1Off32->addIncoming(ExtractT64, SwEpilog);
     AAddr1Off32->addIncoming(ExtractT66, IfElse);
   }
   PHINode *E0 = nullptr;
   if (FloatWidth <= 80) {
-    E0 = Builder.CreatePHI(Builder.getIntNTy(BitWidthNew), 3);
-    E0->addIncoming(Sub1, IfThen20);
+    E0 = Builder.CreatePHI(Builder.getIntNTy(BitWidthNew), RoundToOdd ? 2 : 3);
+    if (!RoundToOdd)
+      E0->addIncoming(Sub1, IfThen20);
     E0->addIncoming(Sub2, SwEpilog);
     E0->addIncoming(Sub2, IfElse);
   }
