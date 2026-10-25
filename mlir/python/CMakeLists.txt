@@ -952,6 +952,8 @@ if(MLIR_PYTHON_STUBGEN_ENABLED)
         MLIRPythonModules.extension._mlirPythonTestNanobind.dso
         # You need this one so that ir.py "built" because mlir._mlir_libs.__init__.py import mlir.ir in _site_initialize.
         MLIRPythonModules.sources.MLIRPythonSources.Core.Python
+        # You need this one because _site_initialize also imports _mlirRegisterEverything (a stale copy can crash stubgen).
+        MLIRPythonModules.extension._mlirRegisterEverything.dso
       OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/type_stubs/_mlir_libs"
       OUTPUTS _mlirPythonTestNanobind.pyi
       DEPENDS_TARGET_SRC_DEPS "${_test_extension_srcs}"
