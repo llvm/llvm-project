@@ -7261,7 +7261,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
   case Intrinsic::hypot:
-    setValue(&I, DAG.getNode(ISD::HYPOT, sdl,
+    setValue(&I, DAG.getNode(ISD::FHYPOT, sdl,
                              getValue(I.getArgOperand(0)).getValueType(),
                              getValue(I.getArgOperand(0)),
                              getValue(I.getArgOperand(1)), Flags));
