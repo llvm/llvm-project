@@ -16,6 +16,7 @@
 
 #include "llvm/Analysis/SimplifyQuery.h"
 #include "llvm/Analysis/WithCache.h"
+#include "llvm/IR/ConstantFPRange.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/FMF.h"
@@ -723,6 +724,20 @@ LLVM_ABI ConstantRange computeConstantRange(const Value *V, bool ForSigned,
 /// Combine constant ranges from computeConstantRange() and computeKnownBits().
 LLVM_ABI ConstantRange computeConstantRangeIncludingKnownBits(
     const WithCache<const Value *> &V, bool ForSigned, const SimplifyQuery &SQ);
+
+/// Determine the possible range of a scalar IEEE-like floating-point value.
+/// Returns the full range if nothing is known and the empty range if \p V is
+/// poison. Handles int-to-fp and fp casts, fadd/fsub/fmul/fdiv, canonicalize
+/// and min/max, taking fast-math flags and the function's denormal mode into
+/// account.
+///
+/// The range assumes each instruction is evaluated as written. If \p Used is
+/// non-null, the instructions the range depends on are appended to it; a
+/// caller that relies on the range must clear reassoc, arcp (except on fdiv)
+/// and contract (on fadd/fsub) on them.
+LLVM_ABI ConstantFPRange computeConstantFPRange(
+    const Value *V, const SimplifyQuery &SQ, unsigned Depth = 0,
+    SmallVectorImpl<const Instruction *> *Used = nullptr);
 
 /// Return true if this function can prove that the instruction I will
 /// always transfer execution to one of its successors (including the next
