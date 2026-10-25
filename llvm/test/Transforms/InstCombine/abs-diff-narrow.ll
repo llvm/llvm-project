@@ -7,7 +7,7 @@ define i64 @helper_neon_abdl_u64(i32 noundef %0, i32 noundef %1) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP0]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub nsw i64 [[TMP3]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.abs.i64(i64 [[TMP5]], i1 true)
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.abs.i64(i64 [[TMP5]], i1 false)
 ; CHECK-NEXT:    ret i64 [[TMP6]]
 ;
   %3 = zext i32 %0 to i64
@@ -187,7 +187,9 @@ define i32 @normal_abs_ult_neg(i32 %a, i32 %b) {
 ; CHECK-LABEL: define i32 @normal_abs_ult_neg(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[A]], [[B]]
-; CHECK-NEXT:    [[SEL:%.*]] = call i32 @llvm.abs.i32(i32 [[SUB]], i1 false)
+; CHECK-NEXT:    [[NEG:%.*]] = sub nsw i32 0, [[SUB]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[A]], [[B]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[NEG]], i32 [[SUB]]
 ; CHECK-NEXT:    ret i32 [[SEL]]
 ;
   %sub = sub nsw i32 %a, %b
