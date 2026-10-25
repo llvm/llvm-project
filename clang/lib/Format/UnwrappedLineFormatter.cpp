@@ -1643,11 +1643,16 @@ unsigned UnwrappedLineFormatter::format(
             (!Style.isJavaScript() || !Style.JavaScriptWrapImports)) ||
            (Style.isCSharp() &&
             TheLine.InPPDirective)); // don't split #regions in C#
-      if (Style.ColumnLimit == 0) {
+      if (Style.ColumnLimit == 0 &&
+          !(TheLine.Type == LT_ImportStatement && Style.isJavaScript() &&
+            !Style.JavaScriptWrapImports)) {
         NoColumnLimitLineFormatter(Indenter, Whitespaces, Style, this)
             .formatLine(TheLine, NextStartColumn + Indent,
                         FirstLine ? FirstStartColumn : 0, DryRun);
-      } else if (FitsIntoOneLine) {
+      } else if (FitsIntoOneLine ||
+                 (Style.ColumnLimit == 0 &&
+                  TheLine.Type == LT_ImportStatement && Style.isJavaScript() &&
+                  !Style.JavaScriptWrapImports)) {
         Penalty += NoLineBreakFormatter(Indenter, Whitespaces, Style, this)
                        .formatLine(TheLine, NextStartColumn + Indent,
                                    FirstLine ? FirstStartColumn : 0, DryRun);
