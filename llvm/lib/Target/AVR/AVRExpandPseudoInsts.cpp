@@ -1184,8 +1184,6 @@ bool AVRExpandPseudo::expand<AVR::STWPtrRr>(Block &MBB, BlockIt MBBI) {
   bool SrcIsKill = MI.getOperand(1).isKill();
   const AVRSubtarget &STI = MBB.getParent()->getSubtarget<AVRSubtarget>();
 
-  // TODO: Need to reverse this order like inw and stsw?
-
   if (STI.hasTinyEncoding()) {
     // Handle this case in the expansion of STDWPtrQRr because it is very
     // similar.
