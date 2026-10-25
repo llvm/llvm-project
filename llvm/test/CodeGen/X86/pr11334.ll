@@ -20,14 +20,12 @@ entry:
 define <3 x double> @v3f2d_ext_vec(<3 x float> %v1) nounwind {
 ; SSE-LABEL: v3f2d_ext_vec:
 ; SSE:       # %bb.0: # %entry
-; SSE-NEXT:    cvtps2pd %xmm0, %xmm2
+; SSE-NEXT:    cvtps2pd %xmm0, %xmm1
 ; SSE-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
 ; SSE-NEXT:    cvtps2pd %xmm0, %xmm0
-; SSE-NEXT:    movlps %xmm0, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    movaps %xmm2, %xmm1
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm2[1]
-; SSE-NEXT:    fldl -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    movaps %xmm2, %xmm0
+; SSE-NEXT:    movq %rdi, %rax
+; SSE-NEXT:    movlps %xmm0, 16(%rdi)
+; SSE-NEXT:    movaps %xmm1, (%rdi)
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: v3f2d_ext_vec:
