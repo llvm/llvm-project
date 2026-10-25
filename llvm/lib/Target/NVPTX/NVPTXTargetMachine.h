@@ -68,8 +68,6 @@ public:
 
   TargetTransformInfo getTargetTransformInfo(const Function &F) const override;
 
-  bool isMachineVerifierClean() const override { return false; }
-
   std::pair<const Value *, unsigned>
   getPredicatedAddrSpace(const Value *V) const override;
 }; // NVPTXTargetMachine.

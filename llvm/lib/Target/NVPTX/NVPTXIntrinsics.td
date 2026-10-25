@@ -1618,7 +1618,7 @@ def PREFETCH_GENERIC_L1_32B : PREFETCH_SIZE_INTR<AddrSpaceGeneric>;
 
 //Applypriority intrinsics
 class APPLYPRIORITY_L2_INTRS<string addrspace> :
-          BasicNVPTXInst<(outs), (ins ADDR:$addr, B64:$size),
+          BasicNVPTXInst<(outs), (ins ADDR:$addr, i64imm:$size),
           StrJoin<".", ["applypriority", addrspace , "L2::evict_normal"]>.ret,
           [(!cast<Intrinsic>(StrJoin<"_", ["int_nvvm_applypriority", addrspace , "L2_evict_normal"]>.ret)
           addr:$addr, i64:$size)]>,
@@ -7268,58 +7268,56 @@ foreach NumSrc = SPNumSrcs in {
 //
 
 class TensormapReplaceInst_2<string state_space, string field_name,
-  string regclass_name, NVPTXRegClass val_RC, ValueType ValTy, Intrinsic Intrin,
-  NVPTXAddressSpace as> :
+  RegTyInfo t, Intrinsic Intrin, NVPTXAddressSpace as> :
   BasicNVPTXInst<(outs),
-    (ins ADDR:$addr, val_RC:$val),
-    "tensormap.replace.tile." # field_name # "." # state_space # ".b1024." # regclass_name,
-    [(IntrinsicInAS<Intrin, as> addr:$addr, ValTy:$val)]>;
+    (ins ADDR:$addr, t.RegOrImm:$val),
+    "tensormap.replace.tile." # field_name # "." # state_space # ".b1024." # t.PtxType,
+    [(IntrinsicInAS<Intrin, as> addr:$addr, t.Ty:$val)]>;
 
 class TensormapReplaceInst_3<string state_space, string field_name,
-  string regclass_name, NVPTXRegClass val_RC, ValueType ValTy, Intrinsic Intrin,
-  NVPTXAddressSpace as> :
+  RegTyInfo t, Intrinsic Intrin, NVPTXAddressSpace as> :
   BasicNVPTXInst<(outs),
-    (ins ADDR:$addr, B32:$ord, val_RC:$val),
-    "tensormap.replace.tile." # field_name # "." # state_space # ".b1024." # regclass_name,
-    [(IntrinsicInAS<Intrin, as> addr:$addr, i32:$ord, ValTy:$val)]>;
+    (ins ADDR:$addr, i32imm:$ord, t.RegOrImm:$val),
+    "tensormap.replace.tile." # field_name # "." # state_space # ".b1024." # t.PtxType,
+    [(IntrinsicInAS<Intrin, as> addr:$addr, i32:$ord, t.Ty:$val)]>;
 
 foreach ss = ["GLOBAL", "SHARED_CTA"] in {
   defvar as = !if(!eq(ss, "GLOBAL"), AddrSpaceGlobal, AddrSpaceShared);
   defvar ss_ptx = !tolower(!subst("_", "::", ss));
   let Predicates = [hasTensormapReplaceSupport] in {
     def TENSORMAP_REPLACE_TILE_GLOBAL_ADDRESS_ # ss :
-      TensormapReplaceInst_2<ss_ptx, "global_address", "b64", B64, i64,
+      TensormapReplaceInst_2<ss_ptx, "global_address", I64RT,
         int_nvvm_tensormap_replace_global_address, as>;
 
     foreach field_name = ["INTERLEAVE_LAYOUT", "FILL_MODE", "RANK"] in {
       defvar intrin = !cast<Intrinsic>("int_nvvm_tensormap_replace_" # !tolower(field_name));
       def TENSORMAP_REPLACE_TILE_ # field_name # _ # ss :
-        TensormapReplaceInst_2<ss_ptx, !tolower(field_name), "b32", B32, i32,
+        TensormapReplaceInst_2<ss_ptx, !tolower(field_name), I32RT,
           intrin, as>;
     } // field_name
 
     def TENSORMAP_REPLACE_TILE_GLOBAL_STRIDE_ # ss :
-      TensormapReplaceInst_3<ss_ptx, "global_stride", "b64", B64, i64,
+      TensormapReplaceInst_3<ss_ptx, "global_stride", I64RT,
         int_nvvm_tensormap_replace_global_stride, as>;
 
     foreach field_name = ["BOX_DIM", "GLOBAL_DIM", "ELEMENT_STRIDE"] in {
       defvar intrin = !cast<Intrinsic>("int_nvvm_tensormap_replace_" # !tolower(field_name));
       def TENSORMAP_REPLACE_TILE_ # field_name # _ # ss :
-        TensormapReplaceInst_3<ss_ptx, !tolower(field_name), "b32", B32, i32,
+        TensormapReplaceInst_3<ss_ptx, !tolower(field_name), I32RT,
           intrin, as>;
     } // field_name
   } // hasTensormapReplaceSupport
 
   def TENSORMAP_REPLACE_TILE_ELEMTYPE_ # ss :
-    TensormapReplaceInst_2<ss_ptx, "elemtype", "b32", B32, i32,
+    TensormapReplaceInst_2<ss_ptx, "elemtype", I32RT,
       int_nvvm_tensormap_replace_elemtype, as>;
 
   def TENSORMAP_REPLACE_SWIZZLE_ATOMICITY_ # ss :
-    TensormapReplaceInst_2<ss_ptx, "swizzle_atomicity", "b32", B32, i32,
+    TensormapReplaceInst_2<ss_ptx, "swizzle_atomicity", I32RT,
       int_nvvm_tensormap_replace_swizzle_atomicity, as>,
     Requires<[hasTensormapReplaceSwizzleAtomicitySupport]>;
 
   def TENSORMAP_REPLACE_SWIZZLE_MODE_ # ss :
-    TensormapReplaceInst_2<ss_ptx, "swizzle_mode", "b32", B32, i32,
+    TensormapReplaceInst_2<ss_ptx, "swizzle_mode", I32RT,
       int_nvvm_tensormap_replace_swizzle_mode, as>;
 } // state_space
