@@ -508,6 +508,21 @@ llvm::Function *CodeGenModule::CreateGlobalInitOrCleanUpFunction(
       !isInNoSanitizeList(SanitizerKind::ShadowCallStack, Fn, Loc))
     Fn->addFnAttr(llvm::Attribute::ShadowCallStack);
 
+  // These functions are reached through .init_array, .fini_array or atexit
+  // registrations, i.e. through function pointers of their type, so record
+  // that type for the call graph section like for any address-taken function.
+  if (getCodeGenOpts().CallGraphSection) {
+    SmallVector<QualType, 2> ParamTypes;
+    for (const CGFunctionInfoArgInfo &Arg : FI.arguments())
+      ParamTypes.push_back(Arg.type);
+    QualType FnType = getContext().getFunctionType(
+        FI.getReturnType(), ParamTypes, FunctionProtoType::ExtProtoInfo());
+    Fn->addMetadata(llvm::LLVMContext::MD_callgraph,
+                    *llvm::MDTuple::get(
+                        getLLVMContext(),
+                        {CreateMetadataIdentifierForCallGraphType(FnType)}));
+  }
+
   return Fn;
 }
 
