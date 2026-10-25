@@ -1,0 +1,100 @@
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu -run-pass=peephole-opt %s -o - \
+# RUN:   | FileCheck %s
+
+# The peephole optimizer folds a load from a stack slot into a foldable ("rm")
+# inline asm operand that reads the loaded value, so the asm reads the slot
+# itself.
+
+--- |
+  define void @fold_load() { ret void }
+  define void @asm_may_store() { %x = alloca i64, align 8
+    ret void }
+  define void @invariant_load() { ret void }
+  define void @narrow_load() { ret void }
+  define void @undef_uses() { ret void }
+...
+---
+# CHECK-LABEL: name: fold_load
+# CHECK: INLINEASM &"", sideeffect mayload attdialect, mem:m ops:5, %stack.0, 1, $noreg, 0, $noreg, mem:m ops:5, %stack.0, 1, $noreg, 0, $noreg :: (load (s64) from %stack.0)
+name: fold_load
+tracksRegLiveness: true
+stack:
+  - { id: 0, size: 8, alignment: 8 }
+body: |
+  bb.0:
+    %0:gr64 = MOV64rm %stack.0, 1, $noreg, 0, $noreg :: (load (s64) from %stack.0)
+    INLINEASM &"", sideeffect attdialect, reguse:GR64 foldable, %0, reguse:GR64 foldable, %0
+    RET 0
+...
+---
+# The asm writes x through an early-clobber output before it reads v, so v
+# can't be read from x.
+#
+#   long x;
+#   long v = x;
+#   asm volatile("movq $0, %0; movq %1, %%rax" : "=&m"(x) : "rm"(v) : "rax");
+#
+# CHECK-LABEL: name: asm_may_store
+# CHECK: %0:gr64 = MOV64rm %stack.0.x
+# CHECK-NEXT: INLINEASM {{.*}}, reguse:GR64 foldable, %0,
+name: asm_may_store
+tracksRegLiveness: true
+stack:
+  - { id: 0, name: x, size: 8, alignment: 8 }
+body: |
+  bb.0:
+    %0:gr64 = MOV64rm %stack.0.x, 1, $noreg, 0, $noreg :: (dereferenceable load (s64) from %ir.x)
+    INLINEASM &"movq $$0, $0\0A\09movq $1, %rax", sideeffect mayload maystore attdialect, mem:m ops:5, %stack.0.x, 1, $noreg, 0, $noreg, reguse:GR64 foldable, %0, clobber, implicit-def early-clobber $rax
+    RET 0
+...
+---
+# An asm that stores can't write an invariant slot, such as an incoming
+# argument's.
+#
+# CHECK-LABEL: name: invariant_load
+# CHECK: INLINEASM &"", sideeffect mayload maystore attdialect, mem:m ops:5, %stack.0, 1, $noreg, 0, $noreg, mem:m ops:5, %fixed-stack.0, 1, $noreg, 0, $noreg :: (store unknown-size, align 1), (load (s64) from %fixed-stack.0, align 16)
+name: invariant_load
+tracksRegLiveness: true
+fixedStack:
+  - { id: 0, size: 8, alignment: 16, isImmutable: true }
+stack:
+  - { id: 0, size: 8, alignment: 8 }
+body: |
+  bb.0:
+    %0:gr64 = MOV64rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (load (s64) from %fixed-stack.0, align 16)
+    INLINEASM &"", sideeffect maystore attdialect, mem:m ops:5, %stack.0, 1, $noreg, 0, $noreg, reguse:GR64 foldable, %0
+    RET 0
+...
+---
+# A load that fills only part of the register (here the low 4 bytes of an
+# XMM register, with the rest zeroed) isn't folded, since the asm would read
+# the whole register's width from the slot.
+#
+# CHECK-LABEL: name: narrow_load
+# CHECK: %0:vr128 = MOVSSrm %fixed-stack.0
+# CHECK-NEXT: INLINEASM &"movaps $0, %xmm1", sideeffect attdialect, reguse:VR128 foldable, %0
+name: narrow_load
+tracksRegLiveness: true
+fixedStack:
+  - { id: 0, size: 4, alignment: 16, isImmutable: true }
+body: |
+  bb.0:
+    %0:vr128 = MOVSSrm %fixed-stack.0, 1, $noreg, 0, $noreg :: (load (s32) from %fixed-stack.0, align 16)
+    INLINEASM &"movaps $0, %xmm1", sideeffect attdialect, reguse:VR128 foldable, %0
+    RET 0
+...
+---
+# An asm that doesn't read the loaded value has nothing to fold.
+#
+# CHECK-LABEL: name: undef_uses
+# CHECK: INLINEASM &"", sideeffect attdialect, reguse:GR64 foldable, undef %0, reguse:GR64 foldable, undef %0
+name: undef_uses
+tracksRegLiveness: true
+stack:
+  - { id: 0, size: 8, alignment: 8 }
+body: |
+  bb.0:
+    %0:gr64 = MOV64rm %stack.0, 1, $noreg, 0, $noreg :: (load (s64) from %stack.0)
+    INLINEASM &"", sideeffect attdialect, reguse:GR64 foldable, undef %0, reguse:GR64 foldable, undef %0
+    RET 0
+...
