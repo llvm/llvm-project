@@ -16,6 +16,8 @@
 
 #include "clang/Basic/Version.h"
 
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
@@ -37,6 +39,7 @@
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
@@ -109,24 +112,12 @@ enum ID {
 #undef OPTION
 };
 
-#define OPTTABLE_STR_TABLE_CODE
+#define OPTTABLE_CODE
 #include "NVLinkOpts.inc"
-#undef OPTTABLE_STR_TABLE_CODE
 
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "NVLinkOpts.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-static constexpr OptTable::Info InfoTable[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
-#include "NVLinkOpts.inc"
-#undef OPTION
-};
-
-class WrapperOptTable : public opt::GenericOptTable {
+class WrapperOptTable : public opt::OptTable {
 public:
-  WrapperOptTable()
-      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {}
+  WrapperOptTable() : opt::OptTable(optionTables()) {}
 };
 
 const OptTable &getOptTable() {
@@ -255,6 +246,44 @@ void printCommands(ArrayRef<StringRef> CmdArgs) {
   errs() << join(std::next(CmdArgs.begin()), CmdArgs.end(), " ") << "\n";
 }
 
+Error executeProgram(StringRef Executable, ArrayRef<StringRef> Args,
+                     const ArgList &WrapperArgs) {
+  if (WrapperArgs.hasArg(OPT_dry_run) || WrapperArgs.hasArg(OPT_verbose))
+    printCommands(Args);
+  if (WrapperArgs.hasArg(OPT_dry_run))
+    return Error::success();
+
+  if (sys::commandLineFitsWithinSystemLimits(Executable, Args)) {
+    if (sys::ExecuteAndWait(Executable, Args))
+      return createStringError("'%s' failed",
+                               sys::path::filename(Executable).str().c_str());
+    return Error::success();
+  }
+
+  auto TempFileOrErr = createTempFile(WrapperArgs, "response", "txt");
+  if (!TempFileOrErr)
+    return TempFileOrErr.takeError();
+
+  SmallString<256> Contents;
+  raw_svector_ostream OS(Contents);
+  for (StringRef Arg : llvm::drop_begin(Args)) {
+    sys::printArg(OS, Arg, /*Quote=*/true);
+    OS << " ";
+  }
+
+  if (std::error_code EC = sys::writeFileWithEncoding(*TempFileOrErr, Contents))
+    return createStringError("failed to write response file: %s",
+                             EC.message().c_str());
+
+  // How nvlink spells its response file support.
+  std::string ResponseFile = ("--options-file=" + *TempFileOrErr).str();
+  SmallVector<StringRef, 2> NewArgs = {Args.front(), ResponseFile};
+  if (sys::ExecuteAndWait(Executable, NewArgs))
+    return createStringError("'%s' failed",
+                             sys::path::filename(Executable).str().c_str());
+  return Error::success();
+}
+
 /// A minimum symbol interface that provides the necessary information to
 /// extract archive members and resolve LTO symbols.
 struct Symbol {
@@ -336,19 +365,18 @@ Expected<StringRef> runPTXAs(StringRef File, const ArgList &Args) {
     AssemblerArgs.push_back(A->getValue());
   AssemblerArgs.append({"-o", *TempFileOrErr});
 
-  if (Args.hasArg(OPT_dry_run) || Args.hasArg(OPT_verbose))
-    printCommands(AssemblerArgs);
-  if (Args.hasArg(OPT_dry_run))
-    return Args.MakeArgString(*TempFileOrErr);
-  if (sys::ExecuteAndWait(*PTXAsPath, AssemblerArgs))
-    return createStringError("'" + sys::path::filename(*PTXAsPath) + "'" +
-                             " failed");
+  if (Error Err = executeProgram(*PTXAsPath, AssemblerArgs, Args))
+    return Err;
   return Args.MakeArgString(*TempFileOrErr);
 }
 
-Expected<std::unique_ptr<lto::LTO>> createLTO(const ArgList &Args) {
+Expected<std::unique_ptr<lto::LTO>>
+createLTO(const cl::LibraryOptionsContext &LibraryOptions,
+          const ArgList &Args) {
   const llvm::Triple Triple("nvptx64-nvidia-cuda");
   lto::Config Conf;
+  Conf.LibraryOptions = &LibraryOptions;
+  Conf.PTO = PipelineTuningOptions(&LibraryOptions);
   lto::ThinBackend Backend;
   unsigned Jobs = 0;
   if (auto *Arg = Args.getLastArg(OPT_jobs))
@@ -499,7 +527,8 @@ Expected<bool> getSymbols(MemoryBufferRef Buffer, StringMap<Symbol> &SymTab,
   }
 }
 
-Expected<SmallVector<StringRef>> getInput(const ArgList &Args) {
+Expected<SmallVector<StringRef>>
+getInput(const cl::LibraryOptionsContext &LibraryOptions, const ArgList &Args) {
   SmallVector<StringRef> LibraryPaths;
   for (const opt::Arg *Arg : Args.filtered(OPT_library_path))
     LibraryPaths.push_back(Arg->getValue());
@@ -603,7 +632,7 @@ Expected<SmallVector<StringRef>> getInput(const ArgList &Args) {
   // Run the LTO pipeline on the extracted inputs.
   SmallVector<StringRef> Files;
   if (!BitcodeFiles.empty()) {
-    auto LTOBackendOrErr = createLTO(Args);
+    auto LTOBackendOrErr = createLTO(LibraryOptions, Args);
     if (!LTOBackendOrErr)
       return LTOBackendOrErr.takeError();
     lto::LTO &LTOBackend = **LTOBackendOrErr;
@@ -753,14 +782,7 @@ Error runNVLink(ArrayRef<StringRef> Files, const ArgList &Args) {
   for (StringRef Arg : NewLinkerArgs)
     LinkerArgs.push_back(Arg);
 
-  if (Args.hasArg(OPT_dry_run) || Args.hasArg(OPT_verbose))
-    printCommands(LinkerArgs);
-  if (Args.hasArg(OPT_dry_run))
-    return Error::success();
-  if (sys::ExecuteAndWait(*NVLinkPath, LinkerArgs))
-    return createStringError("'" + sys::path::filename(*NVLinkPath) + "'" +
-                             " failed");
-  return Error::success();
+  return executeProgram(*NVLinkPath, LinkerArgs, Args);
 }
 
 } // namespace
@@ -801,10 +823,11 @@ int main(int argc, char **argv) {
     NewArgv.push_back(Arg->getValue());
   for (const opt::Arg *Arg : Args.filtered(OPT_plugin_opt))
     NewArgv.push_back(Arg->getValue());
-  cl::ParseCommandLineOptions(NewArgv.size(), &NewArgv[0]);
+  cl::LibraryOptionsContext LibraryOptions;
+  cl::parseCommandLineOptions(LibraryOptions, NewArgv);
 
   // Get the input files to pass to 'nvlink'.
-  auto FilesOrErr = getInput(Args);
+  auto FilesOrErr = getInput(LibraryOptions, Args);
   if (!FilesOrErr)
     reportError(FilesOrErr.takeError());
 

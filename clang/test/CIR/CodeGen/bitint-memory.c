@@ -14,14 +14,14 @@ signed _BitInt(17) s17_neg1 = -1;
 unsigned _BitInt(17) u17_100 = 100;
 signed _BitInt(128) s128 = 1234;
 
-// CIR-DAG: cir.global external @s6_neg1 = #cir.int<-1> : !cir.int<s, 6, bitint> {alignment = 1 : i64}
-// CIR-DAG: cir.global external @u6_63 = #cir.int<63> : !cir.int<u, 6, bitint> {alignment = 1 : i64}
-// CIR-DAG: cir.global external @s6_neg2 = #cir.int<-2> : !cir.int<s, 6, bitint> {alignment = 1 : i64}
-// CIR-DAG: cir.global external @s2_neg1 = #cir.int<-1> : !cir.int<s, 2, bitint> {alignment = 1 : i64}
-// CIR-DAG: cir.global external @u4_15 = #cir.int<15> : !cir.int<u, 4, bitint> {alignment = 1 : i64}
-// CIR-DAG: cir.global external @s17_neg1 = #cir.int<-1> : !cir.int<s, 17, bitint> {alignment = 4 : i64}
-// CIR-DAG: cir.global external @u17_100 = #cir.int<100> : !cir.int<u, 17, bitint> {alignment = 4 : i64}
-// CIR-DAG: cir.global external @s128 = #cir.int<1234> : !s128i_bitint {alignment = 8 : i64}
+// CIR-DAG: cir.global external @s6_neg1 = #cir.int<-1> : !cir.int<s, 6, bitint> align(1)
+// CIR-DAG: cir.global external @u6_63 = #cir.int<63> : !cir.int<u, 6, bitint> align(1)
+// CIR-DAG: cir.global external @s6_neg2 = #cir.int<-2> : !cir.int<s, 6, bitint> align(1)
+// CIR-DAG: cir.global external @s2_neg1 = #cir.int<-1> : !cir.int<s, 2, bitint> align(1)
+// CIR-DAG: cir.global external @u4_15 = #cir.int<15> : !cir.int<u, 4, bitint> align(1)
+// CIR-DAG: cir.global external @s17_neg1 = #cir.int<-1> : !cir.int<s, 17, bitint> align(4)
+// CIR-DAG: cir.global external @u17_100 = #cir.int<100> : !cir.int<u, 17, bitint> align(4)
+// CIR-DAG: cir.global external @s128 = #cir.int<1234> : !s128i_bitint align(8)
 
 // A signed _BitInt is sign-extended across its padded storage integer; an
 // unsigned one is zero-extended.  Storage width is the ABI size (i6 -> i8,
@@ -38,12 +38,12 @@ signed _BitInt(128) s128 = 1234;
 struct S { _BitInt(17) m; };
 struct S gs = {-1};
 
-// CIR-DAG: cir.global external @gs = #cir.const_record<{#cir.int<-1> : !cir.int<s, 17, bitint>}> : !rec_S {alignment = 4 : i64}
+// CIR-DAG: cir.global external @gs = #cir.const_record<{#cir.int<-1> : !cir.int<s, 17, bitint>}> : !rec_S align(4)
 // LLVM-DAG: @gs = global %struct.S { i32 -1 }, align 4
 
 signed _BitInt(17) garr[3] = {-1, 2, -3};
 
-// CIR-DAG: cir.global external @garr = #cir.const_array<[#cir.int<-1> : !cir.int<s, 17, bitint>, #cir.int<2> : !cir.int<s, 17, bitint>, #cir.int<-3> : !cir.int<s, 17, bitint>]> : !cir.array<!cir.int<s, 17, bitint> x 3> {alignment = 4 : i64}
+// CIR-DAG: cir.global external @garr = #cir.const_array<[#cir.int<-1> : !cir.int<s, 17, bitint>, #cir.int<2> : !cir.int<s, 17, bitint>, #cir.int<-3> : !cir.int<s, 17, bitint>]> : !cir.array<!cir.int<s, 17, bitint> x 3> align(4)
 // LLVM-DAG: @garr = global [3 x i32] [i32 -1, i32 2, i32 -3], align 4
 
 void store_load(signed _BitInt(17) *p, signed _BitInt(17) v) { *p = v; }

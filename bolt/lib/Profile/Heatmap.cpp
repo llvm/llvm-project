@@ -251,17 +251,17 @@ void Heatmap::print(raw_ostream &OS) const {
   }
 }
 
-void Heatmap::printCDF(StringRef FileName) const {
+void Heatmap::printCDF(StringRef FileName, StringRef Label) const {
   std::error_code EC;
   raw_fd_ostream OS(FileName, EC, sys::fs::OpenFlags::OF_None);
   if (EC) {
     errs() << "error opening output file: " << EC.message() << '\n';
     exit(1);
   }
-  printCDF(OS);
+  printCDF(OS, Label);
 }
 
-void Heatmap::printCDF(raw_ostream &OS) const {
+void Heatmap::printCDF(raw_ostream &OS, StringRef Label) const {
   uint64_t NumTotalCounts = 0;
   std::vector<uint64_t> Counts;
 
@@ -294,7 +294,7 @@ void Heatmap::printCDF(raw_ostream &OS) const {
        << format("%.4f", RatioRightInPercent * (RunningCount)) << "\n";
   }
 
-  outs() << "HEATMAP: working set @ bucket size " << BucketSize << " p"
+  outs() << "HEATMAP: working set @ bucket size " << Label << " p"
          << format("%g", CutOff / 10000.0) << "/total: " << NumBuckets << "/"
          << Counts.size() << '\n';
 }

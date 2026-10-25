@@ -12,3 +12,7 @@
 .align 0x100000000
 # ELF:    error: alignment must be smaller than 2**32
 # DARWIN: error: invalid alignment value
+
+.p2align -1
+# ELF:    error: invalid alignment value
+# DARWIN: error: invalid alignment value

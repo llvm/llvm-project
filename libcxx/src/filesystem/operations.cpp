@@ -40,8 +40,10 @@
 #include <fcntl.h> /* values for fchmodat */
 #include <time.h>
 
-// since Linux 4.5 and FreeBSD 13, but the Linux libc wrapper is only provided by glibc >= 2.27 and musl
-#if _LIBCPP_GLIBC_PREREQ(2, 27) || _LIBCPP_HAS_MUSL_LIBC || defined(__FreeBSD__)
+// Since Linux 4.5 and FreeBSD 13, but the Linux libc wrapper is only provided
+// by glibc >= 2.27, musl, and Bionic.
+#if _LIBCPP_GLIBC_PREREQ(2, 27) || _LIBCPP_HAS_MUSL_LIBC || defined(__FreeBSD__) ||                                    \
+    (defined(__BIONIC__) && __ANDROID_API__ >= 34)
 #  define _LIBCPP_FILESYSTEM_USE_COPY_FILE_RANGE
 #endif
 
@@ -564,7 +566,7 @@ void __create_symlink(path const& from, path const& to, error_code* ec) {
 path __current_path(error_code* ec) {
   ErrorHandler<path> err("current_path", ec);
 
-#if defined(_WIN32) || defined(__GLIBC__) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__GLIBC__) || defined(__APPLE__) || defined(__BIONIC__)
   // Common extension outside of POSIX getcwd() spec, without needing to
   // preallocate a buffer. Also supported by a number of other POSIX libcs.
   int size              = 0;

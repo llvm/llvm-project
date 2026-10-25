@@ -121,6 +121,9 @@ int processDeviceOffloadPrf(void *DeviceOffloadPrf, const char *Target,
 void profRecordDrainedBounds(const void *Data, const void *Counters,
                              const void *Names);
 
+// True when the HSA loader can enumerate resident device images.
+int hsaRuntimeAvailable(void);
+
 // Walk every GPU agent's loaded executables via HSA and drain each
 // __llvm_profile_sections table the host-shadow pass did not already handle.
 int drainDevicesViaHsa(void);

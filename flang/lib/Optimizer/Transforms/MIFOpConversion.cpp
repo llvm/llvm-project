@@ -346,6 +346,65 @@ mlir::Value genTerminationOperationWrapper(fir::FirOpBuilder &builder,
   return fir::AddrOfOp::create(builder, loc, funcType, symbolRef);
 }
 
+// Generates the image index relative to the initial team, regardless of which
+// team is selected. Generates a call to the `prif_initial_team_index` function
+// (analogous to `prif_image_index`) if `cosubcripts` contains at least one
+// value; otherwise, it takes `this_image` from the initial team.
+[[maybe_unused]] static mlir::Value
+getInitialTeamIndex(fir::FirOpBuilder &builder, mlir::Location loc,
+                    mlir::Value coarrayHandle,
+                    llvm::SmallVector<mlir::Value> cosubscripts) {
+  mlir::Type boxTy = fir::BoxType::get(builder.getNoneType());
+  mlir::Type i32Ty = builder.getI32Type();
+  mlir::Type i64Ty = builder.getI64Type();
+  mlir::Type boxArrTy = genBoxedSequenceType(i64Ty);
+  mlir::Value index = builder.createTemporary(loc, i32Ty);
+
+  // If there are no subscripts, the current image index is used.
+  if (cosubscripts.size() == 0) {
+    mlir::Value res = builder.createTemporary(loc, i32Ty);
+    // In iso_fortran_env.f90, INITIAL_TEAM is -2
+    mlir::Value initialTeam =
+        builder.createIntegerConstant(loc, builder.getI32Type(), -2);
+    mlir::Value team = mif::GetTeamOp::create(
+        builder, loc, builder.getRefType(builder.getNoneType()), initialTeam);
+    mlir::Value thisImage = mif::ThisImageOp::create(builder, loc, team);
+    fir::StoreOp::create(builder, loc, thisImage, res);
+    return res;
+  }
+
+  mlir::FunctionType ftype = mlir::FunctionType::get(
+      builder.getContext(),
+      /*inputs*/
+      {boxTy, boxArrTy, builder.getRefType(i32Ty), builder.getRefType(i32Ty)},
+      /*results*/ {});
+  mlir::func::FuncOp funcOp =
+      builder.createFunction(loc, getPRIFProcName("initial_team_index"), ftype);
+
+  // Creation of sub
+  unsigned corank = cosubscripts.size();
+  mlir::Type indexType = builder.getIndexType();
+  mlir::Type arrayType = fir::SequenceType::get(
+      {static_cast<fir::SequenceType::Extent>(corank)}, i64Ty);
+  mlir::Value sub = builder.createTemporary(loc, arrayType);
+  mlir::Type addrType = builder.getRefType(i64Ty);
+  for (unsigned i = 0; i < corank; ++i) {
+    mlir::Value cs = builder.createConvert(loc, i64Ty, cosubscripts[i]);
+    auto cs_index = builder.createIntegerConstant(loc, indexType, i);
+    auto addr =
+        fir::CoordinateOp::create(builder, loc, addrType, sub, cs_index);
+    fir::StoreOp::create(builder, loc, cs, addr);
+  }
+  sub = builder.createBox(loc, sub);
+
+  mlir::Value stat =
+      fir::AbsentOp::create(builder, loc, getPRIFStatType(builder));
+  llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
+      builder, loc, ftype, coarrayHandle, sub, index, stat);
+  fir::CallOp::create(builder, loc, funcOp, args);
+  return index;
+}
+
 /// Convert mif.init operation to runtime call of 'prif_init'
 struct MIFInitOpConversion : public mlir::OpRewritePattern<mif::InitOp> {
   using OpRewritePattern::OpRewritePattern;

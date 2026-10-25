@@ -21,6 +21,7 @@ write_cmake_config("version") {
 diag_groups = [
   "Analysis",
   "AST",
+  "CodeGen",
   "Comment",
   "Common",
   "CrossTU",

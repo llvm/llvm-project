@@ -2,13 +2,12 @@
 Test lldb-dap stack trace response
 """
 
-from lldbsuite.test.decorators import skipIfWasm, skipIfWindows
+from lldbsuite.test.decorators import *
 from lldbsuite.test.tools.lldb_dap.types import LaunchArgs
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 
 
 class TestDAP_stackTraceMissingFunctionName(DAPTestCaseBase):
-    @skipIfWindows
     @skipIfWasm  # a Wasm indirect call traps without transferring control to the callee
     def test_missingFunctionName(self):
         """

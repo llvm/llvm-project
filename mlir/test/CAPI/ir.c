@@ -2051,6 +2051,20 @@ int testClone(void) {
 MlirLogicalResult errorHandler(MlirDiagnostic diagnostic, void *userData) {
   fprintf(stderr, "processing diagnostic (userData: %" PRIdPTR ") <<\n",
           (intptr_t)userData);
+  switch (mlirDiagnosticGetSeverity(diagnostic)) {
+  case MlirDiagnosticError:
+    fprintf(stderr, "severity: Error\n");
+    break;
+  case MlirDiagnosticWarning:
+    fprintf(stderr, "severity: Warning\n");
+    break;
+  case MlirDiagnosticNote:
+    fprintf(stderr, "severity: Note\n");
+    break;
+  case MlirDiagnosticRemark:
+    fprintf(stderr, "severity: Remark\n");
+    break;
+  }
   mlirDiagnosticPrint(diagnostic, printToStderr, NULL);
   fprintf(stderr, "\n");
   MlirLocation loc = mlirDiagnosticGetLocation(diagnostic);
@@ -2378,6 +2392,55 @@ void testExplicitThreadPools(void) {
   mlirLlvmThreadPoolDestroy(threadPool);
 }
 
+void testContextTransientScope(void) {
+  MlirContext ctx = mlirContextCreate();
+  fprintf(stderr, "@test_context_transient_scope\n");
+
+  // CHECK-LABEL: @test_context_transient_scope
+  // CHECK: is_in_transient_scope before: 0
+  fprintf(stderr, "is_in_transient_scope before: %d\n",
+          mlirContextIsInTransientScope(ctx));
+
+  MlirType i32Type =
+      mlirTypeParseGet(ctx, mlirStringRefCreateFromCString("i32"));
+
+  mlirContextBeginTransientScope(ctx);
+
+  // CHECK: is_in_transient_scope during: 1
+  fprintf(stderr, "is_in_transient_scope during: %d\n",
+          mlirContextIsInTransientScope(ctx));
+
+  MlirType transientVectorType =
+      mlirTypeParseGet(ctx, mlirStringRefCreateFromCString("vector<4xi32>"));
+  MlirAttribute transientStrAttr =
+      mlirStringAttrGet(ctx, mlirStringRefCreateFromCString("transient_str"));
+
+  // CHECK: transient vector valid: 1
+  fprintf(stderr, "transient vector valid: %d\n",
+          !mlirTypeIsNull(transientVectorType));
+  // CHECK: transient str attr valid: 1
+  fprintf(stderr, "transient str attr valid: %d\n",
+          !mlirAttributeIsNull(transientStrAttr));
+
+  mlirContextEndTransientScope(ctx);
+
+  // CHECK: is_in_transient_scope after: 0
+  fprintf(stderr, "is_in_transient_scope after: %d\n",
+          mlirContextIsInTransientScope(ctx));
+
+  MlirType postResetI32 =
+      mlirTypeParseGet(ctx, mlirStringRefCreateFromCString("i32"));
+  // CHECK: base i32 equal: 1
+  fprintf(stderr, "base i32 equal: %d\n", mlirTypeEqual(i32Type, postResetI32));
+
+  MlirType newVectorType =
+      mlirTypeParseGet(ctx, mlirStringRefCreateFromCString("vector<4xi32>"));
+  // CHECK: new vector valid: 1
+  fprintf(stderr, "new vector valid: %d\n", !mlirTypeIsNull(newVectorType));
+
+  mlirContextDestroy(ctx);
+}
+
 void testLocation(void) {
   MlirContext ctx = mlirContextCreate();
   fprintf(stderr, "@test_location\n");
@@ -2425,35 +2488,55 @@ void testDiagnostics(void) {
   MlirAttribute nullAttr = {0};
   MlirLocation fusedLoc = mlirLocationFusedGet(ctx, 2, locs, nullAttr);
   mlirEmitError(fusedLoc, "test diagnostics");
+  mlirEmitWarning(unknownLoc, "test warning");
+  mlirEmitRemark(unknownLoc, "test remark");
   mlirContextDetachDiagnosticHandler(ctx, id);
   mlirEmitError(unknownLoc, "more test diagnostics");
   // CHECK-LABEL: @test_diagnostics
   // CHECK: processing diagnostic (userData: 42) <<
+  // CHECK:   severity: Error
   // CHECK:   test diagnostics
   // CHECK:   loc(unknown)
   // CHECK: processing diagnostic (userData: 42) <<
+  // CHECK:   severity: Error
   // CHECK:   test clone
   // CHECK:   loc(unknown)
   // CHECK: >> end of diagnostic (userData: 42)
   // CHECK: processing diagnostic (userData: 42) <<
+  // CHECK:   severity: Error
   // CHECK:   test diagnostics
   // CHECK:   loc("file.c":1:2)
   // CHECK: >> end of diagnostic (userData: 42)
   // CHECK: processing diagnostic (userData: 42) <<
+  // CHECK:   severity: Error
   // CHECK:   test diagnostics
   // CHECK:   loc("other-file.c":1:2 to 3:4)
   // CHECK: >> end of diagnostic (userData: 42)
   // CHECK: processing diagnostic (userData: 42) <<
+  // CHECK:   severity: Error
   // CHECK:   test diagnostics
   // CHECK:   loc(callsite("other-file.c":2:3 at "file.c":1:2))
   // CHECK: >> end of diagnostic (userData: 42)
   // CHECK: processing diagnostic (userData: 42) <<
+  // CHECK:   severity: Error
   // CHECK:   test diagnostics
   // CHECK:   loc("named")
   // CHECK: >> end of diagnostic (userData: 42)
   // CHECK: processing diagnostic (userData: 42) <<
+  // CHECK:   severity: Error
   // CHECK:   test diagnostics
   // CHECK:   loc(fused["named", callsite("other-file.c":2:3 at "file.c":1:2)])
+  // CHECK: >> end of diagnostic (userData: 42)
+  // CHECK: processing diagnostic (userData: 42) <<
+  // CHECK:   severity: Warning
+  // CHECK:   test warning
+  // CHECK:   loc(unknown)
+  // CHECK: >> end of diagnostic (userData: 42)
+  // CHECK: processing diagnostic (userData: 42) <<
+  // CHECK:   severity: Remark
+  // CHECK:   test remark
+  // CHECK:   loc(unknown)
+  // CHECK: >> end of diagnostic (userData: 42)
   // CHECK: deleting user data (userData: 42)
   // CHECK-NOT: processing diagnostic
   // CHECK:     more test diagnostics
@@ -2543,6 +2626,28 @@ static MlirSpeculatability conditionallySpeculatableCallback(MlirOperation op,
   return MlirSpeculatabilityRecursivelySpeculatable;
 }
 
+typedef struct {
+  intptr_t callbackCount;
+  intptr_t effectCount;
+} MemoryEffectsCallbackData;
+
+static void memoryEffectsCallback(intptr_t numEffects,
+                                  MlirMemoryEffectInstance *effects,
+                                  void *userData) {
+  MemoryEffectsCallbackData *data = (MemoryEffectsCallbackData *)userData;
+  ++data->callbackCount;
+  data->effectCount += numEffects;
+  for (intptr_t i = 0; i < numEffects; ++i) {
+    MlirMemoryEffectInstance clone = mlirMemoryEffectInstanceClone(effects[i]);
+    assert(clone.ptr && "expected a cloned memory effect instance");
+    assert(mlirMemoryEffectInstanceGetEffect(clone).ptr &&
+           "expected a memory effect");
+    assert(mlirMemoryEffectInstanceGetResource(clone).ptr &&
+           "expected a side effect resource");
+    mlirMemoryEffectInstanceDestroy(clone);
+  }
+}
+
 int testInterfaces(MlirContext ctx) {
   // CHECK-LABEL: @testInterfaces
   fprintf(stderr, "@testInterfaces\n");
@@ -2590,7 +2695,8 @@ int testInterfaces(MlirContext ctx) {
 
   MlirOperationState storeState = mlirOperationStateGet(storeName, loc);
   MlirValue constantResult = mlirOperationGetResult(constantOp, 0);
-  mlirOperationStateAddOperands(&storeState, 1, &constantResult);
+  MlirValue storeOperands[] = {constantResult, constantResult};
+  mlirOperationStateAddOperands(&storeState, 2, storeOperands);
   MlirOperation storeOp = mlirOperationCreate(&storeState);
   if (mlirOperationImplementsInterface(storeOp, condSpecTypeID)) {
     fprintf(stderr, "ERROR: Expected memref.store instance to not implement "
@@ -2621,6 +2727,23 @@ int testInterfaces(MlirContext ctx) {
   // CHECK: memref.store speculatability: 2
   // CHECK: callback count: 1
 
+  MlirTypeID memoryEffectsTypeID = mlirMemoryEffectsOpInterfaceTypeID();
+  if (!mlirOperationImplementsInterface(storeOp, memoryEffectsTypeID)) {
+    fprintf(
+        stderr,
+        "ERROR: Expected memref.store to implement MemoryEffectsOpInterface\n");
+    return 6;
+  }
+  MemoryEffectsCallbackData memoryEffectsData = {0};
+  mlirMemoryEffectsOpInterfaceGetEffects(storeOp, memoryEffectsCallback,
+                                         &memoryEffectsData);
+  fprintf(stderr, "memory effects callback count: %" PRIdPTR "\n",
+          memoryEffectsData.callbackCount);
+  fprintf(stderr, "memory effects count: %" PRIdPTR "\n",
+          memoryEffectsData.effectCount);
+  // CHECK: memory effects callback count: 1
+  // CHECK: memory effects count: 1
+
   MlirMemoryEffect allocate = mlirMemoryEffectsAllocateGet();
   MlirMemoryEffect free = mlirMemoryEffectsFreeGet();
   MlirMemoryEffect read = mlirMemoryEffectsReadGet();
@@ -2631,6 +2754,27 @@ int testInterfaces(MlirContext ctx) {
     fprintf(stderr, "ERROR: Expected memory effect components\n");
     return 6;
   }
+
+  MlirTypeID effectIDs[] = {
+      mlirMemoryEffectGetEffectID(allocate),
+      mlirMemoryEffectGetEffectID(free),
+      mlirMemoryEffectGetEffectID(read),
+      mlirMemoryEffectGetEffectID(write),
+  };
+  for (intptr_t i = 0; i < 4; ++i) {
+    if (mlirTypeIDIsNull(effectIDs[i])) {
+      fprintf(stderr, "ERROR: Expected a non-null memory effect ID\n");
+      return 6;
+    }
+    for (intptr_t j = 0; j < i; ++j) {
+      if (mlirTypeIDEqual(effectIDs[i], effectIDs[j])) {
+        fprintf(stderr, "ERROR: Expected distinct memory effect IDs\n");
+        return 6;
+      }
+    }
+  }
+  fprintf(stderr, "memory effect IDs are distinct\n");
+  // CHECK: memory effect IDs are distinct
 
   MlirAttribute nullParameters = {NULL};
   MlirOpOperand opOperand = mlirOperationGetOpOperand(storeOp, 0);
@@ -2651,16 +2795,38 @@ int testInterfaces(MlirContext ctx) {
       mlirMemoryEffectInstanceCreateForSymbol(read, symbol, zero, 4, true,
                                               defaultResource),
   };
+  MlirMemoryEffect expectedEffects[] = {allocate, read, write, free, read};
+  MlirValue expectedValues[] = {
+      {NULL}, constantResult, constantResult, blockArgument, {NULL}};
   for (intptr_t i = 0; i < 5; ++i) {
     if (!instances[i].ptr) {
       fprintf(stderr, "ERROR: Expected memory effect instance\n");
       return 7;
     }
-    mlirMemoryEffectInstanceDestroy(instances[i]);
+    if (!mlirTypeIDEqual(mlirMemoryEffectGetEffectID(
+                             mlirMemoryEffectInstanceGetEffect(instances[i])),
+                         mlirMemoryEffectGetEffectID(expectedEffects[i])) ||
+        mlirMemoryEffectInstanceGetStage(instances[i]) != i ||
+        mlirMemoryEffectInstanceGetEffectOnFullRegion(instances[i]) !=
+            (i == 4) ||
+        !mlirValueEqual(mlirMemoryEffectInstanceGetValue(instances[i]),
+                        expectedValues[i])) {
+      fprintf(stderr, "ERROR: Unexpected memory effect instance properties\n");
+      return 7;
+    }
   }
+  if (!mlirAttributeEqual(mlirMemoryEffectInstanceGetSymbolRef(instances[4]),
+                          symbol) ||
+      !mlirAttributeEqual(mlirMemoryEffectInstanceGetParameters(instances[4]),
+                          zero)) {
+    fprintf(stderr, "ERROR: Unexpected symbol memory effect properties\n");
+    return 7;
+  }
+  for (intptr_t i = 0; i < 5; ++i)
+    mlirMemoryEffectInstanceDestroy(instances[i]);
   mlirBlockDestroy(block);
-  fprintf(stderr, "memory effect instances constructed\n");
-  // CHECK: memory effect instances constructed
+  fprintf(stderr, "memory effect instance properties verified\n");
+  // CHECK: memory effect instance properties verified
 
   mlirOperationDestroy(storeOp);
   mlirOperationDestroy(constantOp);
@@ -3215,6 +3381,68 @@ int testOperationEquivalence(MlirContext ctx) {
   return 0;
 }
 
+int testOperationIsAncestor(MlirContext ctx) {
+  fprintf(stderr, "@testOperationIsAncestor\n");
+  // CHECK-LABEL: @testOperationIsAncestor
+
+  mlirContextGetOrLoadDialect(ctx, mlirStringRefCreateFromCString("arith"));
+
+  const char *moduleStr = "func.func @f() {\n"
+                          "  %c0 = arith.constant 0 : i32\n"
+                          "  return\n"
+                          "}\n"
+                          "func.func @g() {\n"
+                          "  %c1 = arith.constant 1 : i32\n"
+                          "  return\n"
+                          "}\n";
+  MlirModule module =
+      mlirModuleCreateParse(ctx, mlirStringRefCreateFromCString(moduleStr));
+  MlirOperation moduleOp = mlirModuleGetOperation(module);
+  MlirBlock moduleBody = mlirModuleGetBody(module);
+  MlirOperation funcOp = mlirBlockGetFirstOperation(moduleBody);
+  MlirRegion funcRegion = mlirOperationGetRegion(funcOp, 0);
+  MlirBlock funcBody = mlirRegionGetFirstBlock(funcRegion);
+  MlirOperation constOp = mlirBlockGetFirstOperation(funcBody);
+
+  // A sibling func @g, and the constant in its own body, are both unrelated to
+  // @f and @f's constant.
+  MlirOperation otherFuncOp = mlirOperationGetNextInBlock(funcOp);
+  MlirRegion otherFuncRegion = mlirOperationGetRegion(otherFuncOp, 0);
+  MlirBlock otherFuncBody = mlirRegionGetFirstBlock(otherFuncRegion);
+  MlirOperation otherConstOp = mlirBlockGetFirstOperation(otherFuncBody);
+
+  // The module and the func both (properly) contain the constant.
+  assert(mlirOperationIsAncestor(moduleOp, constOp));
+  assert(mlirOperationIsProperAncestor(moduleOp, constOp));
+  assert(mlirOperationIsAncestor(funcOp, constOp));
+  assert(mlirOperationIsProperAncestor(funcOp, constOp));
+
+  // An operation is its own ancestor, but not its own proper ancestor.
+  assert(mlirOperationIsAncestor(constOp, constOp));
+  assert(!mlirOperationIsProperAncestor(constOp, constOp));
+
+  // The containment relation is not symmetric.
+  assert(!mlirOperationIsAncestor(constOp, moduleOp));
+
+  // Operations in disjoint subtrees are genuinely unrelated: neither is an
+  // ancestor of the other, in either direction. The sibling funcs, and the
+  // constants living in their separate bodies, share the module as a common
+  // root but do not contain one another -- so an implementation that merely
+  // tested for a shared root would be caught here.
+  assert(!mlirOperationIsAncestor(funcOp, otherFuncOp));
+  assert(!mlirOperationIsAncestor(otherFuncOp, funcOp));
+  assert(!mlirOperationIsProperAncestor(funcOp, otherFuncOp));
+  assert(!mlirOperationIsAncestor(funcOp, otherConstOp));
+  assert(!mlirOperationIsAncestor(otherConstOp, constOp));
+  assert(!mlirOperationIsAncestor(constOp, otherConstOp));
+
+  mlirModuleDestroy(module);
+
+  // CHECK: testOperationIsAncestor: PASSED
+  fprintf(stderr, "testOperationIsAncestor: PASSED\n");
+  return 0;
+}
+
 int main(void) {
   MlirContext ctx = mlirContextCreate();
   registerAllUpstreamDialects(ctx);
@@ -3259,6 +3487,7 @@ int main(void) {
     return 16;
 
   testExplicitThreadPools();
+  testContextTransientScope();
   testLocation();
   testDiagnostics();
 
@@ -3274,6 +3503,8 @@ int main(void) {
     return 21;
   if (testOperationEquivalence(ctx))
     return 22;
+  if (testOperationIsAncestor(ctx))
+    return 23;
 
   // CHECK: DESTROY MAIN CONTEXT
   // CHECK: reportResourceDelete: resource_i64_blob

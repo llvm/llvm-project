@@ -513,10 +513,10 @@ public:
   bool printValue(const Expr *CondVarExpr, raw_ostream &Out,
                   const ExplodedNode *N, bool TookTrue, bool IsAssuming);
 
-  bool patternMatch(const Expr *Ex, const Expr *ParentEx, raw_ostream &Out,
-                    BugReporterContext &BRC, PathSensitiveBugReport &R,
-                    const ExplodedNode *N, std::optional<bool> &prunable,
-                    bool IsSameFieldName);
+  bool patternMatch(const Expr *Ex, const Expr *ParentEx, const Expr *OtherEx,
+                    raw_ostream &Out, BugReporterContext &BRC,
+                    PathSensitiveBugReport &R, const ExplodedNode *N,
+                    std::optional<bool> &prunable, bool IsSameFieldName);
 
   static bool isPieceMessageGeneric(const PathDiagnosticPiece *Piece);
 };

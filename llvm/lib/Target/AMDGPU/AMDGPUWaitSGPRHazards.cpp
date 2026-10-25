@@ -14,9 +14,7 @@
 #include "AMDGPUWaitSGPRHazards.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/TargetParser/AMDGPUTargetParser.h"
 
@@ -202,7 +200,8 @@ public:
     if (It->getOpcode() != AMDGPU::S_WAITCNT_DEPCTR)
       return false;
 
-    It->getOperand(0).setImm(mergeMasks(Mask, It->getOperand(0).getImm()));
+    It->getOperand(0).setImm(
+        mergeMasks(Mask, static_cast<unsigned>(It->getOperand(0).getImm())));
     return true;
   }
 
@@ -245,7 +244,7 @@ public:
 
       // Existing S_WAITALU can clear hazards
       if (MI->getOpcode() == AMDGPU::S_WAITCNT_DEPCTR) {
-        unsigned int Mask = MI->getOperand(0).getImm();
+        unsigned int Mask = static_cast<unsigned>(MI->getOperand(0).getImm());
         if (AMDGPU::DepCtr::decodeFieldVaVcc(Mask) == 0)
           State.VCCHazard &= ~HazardState::VALU;
         if (AMDGPU::DepCtr::decodeFieldSaSdst(Mask) == 0) {
@@ -275,7 +274,7 @@ public:
       }
 
       // Process only VALUs and SALUs
-      bool IsVALU = SIInstrInfo::isVALU(*MI, /*AllowLDSDMA=*/true);
+      bool IsVALU = SIInstrInfo::isVALU(*MI, /*AllowLDSDMA=*/false);
       bool IsSALU = SIInstrInfo::isSALU(*MI);
       if (!IsVALU && !IsSALU)
         continue;
@@ -311,7 +310,7 @@ public:
           return;
         }
 
-        uint8_t SGPRCount =
+        unsigned SGPRCount =
             AMDGPU::getRegBitWidth(*TRI->getRegClassForReg(*MRI, Reg)) / 32;
 
         if (IsUse) {
@@ -325,7 +324,7 @@ public:
             }
           }
           // Compute required waits
-          for (uint8_t RegIdx = 0; RegIdx < SGPRCount; ++RegIdx) {
+          for (unsigned RegIdx = 0; RegIdx < SGPRCount; ++RegIdx) {
             Wait |= State.SALUHazards[RegN + RegIdx] ? WA_SALU : 0;
             Wait |= IsVALU && State.VALUHazards[RegN + RegIdx] ? WA_VALU : 0;
           }
@@ -342,7 +341,7 @@ public:
           if (isVCC(Reg)) {
             State.VCCHazard = IsSALU ? HazardState::SALU : HazardState::VALU;
           } else {
-            for (uint8_t RegIdx = 0; RegIdx < SGPRCount; ++RegIdx) {
+            for (unsigned RegIdx = 0; RegIdx < SGPRCount; ++RegIdx) {
               if (IsSALU)
                 State.SALUHazards.set(RegN + RegIdx);
               else
@@ -484,15 +483,16 @@ public:
           if (PrevWait) {
             // Merge previous wait into this one.
             MachineOperand &MaskOp = MI.getOperand(0);
-            MaskOp.setImm(
-                mergeMasks(PrevWait->getOperand(0).getImm(), MaskOp.getImm()));
+            MaskOp.setImm(mergeMasks(
+                static_cast<unsigned>(PrevWait->getOperand(0).getImm()),
+                static_cast<unsigned>(MaskOp.getImm())));
             PrevWait->eraseFromParent();
             Changed = true;
           } else {
             // Starting a new region using fresh write set.
             WriteSet.reset();
           }
-          CommitWrites(MI.getOperand(0).getImm());
+          CommitWrites(static_cast<unsigned>(MI.getOperand(0).getImm()));
           PrevWait = &MI;
           continue;
         }
@@ -570,9 +570,9 @@ public:
           MF.getFunction().hasFnAttribute("amdgpu-sgpr-hazard-mem-wait-cull");
     if (!GlobalCullSGPRHazardsMemWaitThreshold.getNumOccurrences())
       CullSGPRHazardsMemWaitThreshold =
-          MF.getFunction().getFnAttributeAsParsedInteger(
+          static_cast<unsigned>(MF.getFunction().getFnAttributeAsParsedInteger(
               "amdgpu-sgpr-hazard-mem-wait-cull-threshold",
-              CullSGPRHazardsMemWaitThreshold);
+              CullSGPRHazardsMemWaitThreshold));
 
     TII = ST->getInstrInfo();
     TRI = ST->getRegisterInfo();

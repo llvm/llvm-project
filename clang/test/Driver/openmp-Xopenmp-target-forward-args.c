@@ -6,5 +6,5 @@
 // Flag should only apply to device, not the host.
 
 // CHECK-NOT: -ffinite-math-only
-// CHECK: "-triple" "amdgcn-amd-amdhsa" {{.*}} "-ffinite-math-only"
+// CHECK: "-triple" "amdgpu9.00-amd-amdhsa" {{.*}} "-ffinite-math-only"
 // CHECK-NOT: -ffinite-math-only

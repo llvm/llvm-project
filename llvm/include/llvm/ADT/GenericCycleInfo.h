@@ -35,6 +35,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/Support/Debug.h"
@@ -229,7 +230,7 @@ public:
 
   ArrayRef<BlockT *> getEntries(CycleRef C) const {
     const CycleT &Cyc = deref(C);
-    return ArrayRef(BlockLayout).slice(Cyc.EntryBegin, Cyc.EntrySize);
+    return ArrayRef<BlockT *>(BlockLayout).slice(Cyc.EntryBegin, Cyc.EntrySize);
   }
   bool isEntry(CycleRef C, const BlockT *Block) const {
     return is_contained(getEntries(C), Block);
@@ -313,7 +314,11 @@ public:
   BlockT *getCyclePredecessor(CycleRef C) const;
 
   /// Verify that \p C is actually a well-formed cycle in the CFG.
-  void verifyCycle(CycleRef C) const;
+  ///
+  /// \p Reachable caches the blocks reachable from the function entry. It is
+  /// computed on first use if empty, so that verifying many cycles walks the
+  /// whole function at most once. It must not be reused after the CFG changes.
+  void verifyCycle(CycleRef C, SmallPtrSetImpl<BlockT *> &Reachable) const;
 
   /// Verify the parent-child relations of \p C.
   ///

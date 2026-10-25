@@ -124,6 +124,19 @@ class RegisterCommandsTestCase(TestBase):
         if self.getArchitecture() in ["amd64", "x86_64"]:
             self.expect("expr -- ($rax & 0xffffffff) == $eax", substrs=["true"])
 
+        self.runCmd("expr -- int $not_a_register = 42")
+        self.expect("expr -- $not_a_register", substrs=[" = 42"])
+        self.expect(
+            "register read not_a_register",
+            substrs=["Invalid register expression 'not_a_register'"],
+            error=True,
+        )
+        self.expect(
+            "register read $not_a_register",
+            substrs=["Invalid register expression '$not_a_register'"],
+            error=True,
+        )
+
     @skipIfiOSSimulator
     @skipIf(archs=no_match(["amd64", "x86_64"]))
     @expectedFailureWindowsAndNoLLDBServer(bugnumber="llvm.org/pr37683")
@@ -472,7 +485,7 @@ class RegisterCommandsTestCase(TestBase):
             else:
                 self.expect(
                     "register read ymm0",
-                    substrs=["Invalid register name 'ymm0'"],
+                    substrs=["Invalid register name or identifier 'ymm0'"],
                     error=True,
                 )
 
@@ -493,7 +506,7 @@ class RegisterCommandsTestCase(TestBase):
             else:
                 self.expect(
                     "register read bnd0",
-                    substrs=["Invalid register name 'bnd0'"],
+                    substrs=["Invalid register name or identifier 'bnd0'"],
                     error=True,
                 )
 
@@ -702,7 +715,7 @@ class RegisterCommandsTestCase(TestBase):
             "fs_base does not equal to pthread_self() value.",
         )
 
-    @requireNotWasm  # attaching requires launching the inferior as a host process
+    @requireNotWasm("attaching requires launching the inferior as a host process")
     def test_process_must_be_stopped(self):
         """Check that all register commands error when the process is not stopped."""
         self.build()

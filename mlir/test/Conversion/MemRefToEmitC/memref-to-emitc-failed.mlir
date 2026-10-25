@@ -11,7 +11,7 @@ func.func @alloca_with_dynamic_shape() {
 
 func.func @alloca_with_alignment() {
   // expected-error@+1 {{failed to legalize operation 'memref.alloca'}}
-  %0 = memref.alloca() {alignment = 64 : i64}: memref<4xf32>
+  %0 = memref.alloca() alignment = 64: memref<4xf32>
   return
 }
 

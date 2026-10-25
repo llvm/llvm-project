@@ -78,6 +78,19 @@ def replacereg_nonroot : GICombineRule<
   (match (COPY $dst, $tmp), (COPY $tmp, $src)),
   (apply (GIReplaceReg $dst, $src), (GIReplaceReg $tmp, $src))>;
 
+// CHECK: :[[@LINE+2]]:{{[0-9]+}}: error: 'GIHasOneUse' expected 1 operands, got 0
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: Failed to parse pattern: '(GIHasOneUse)'
+def hasoneuse_noarg : GICombineRule<
+  (defs root:$dst),
+  (match (COPY $dst, $src), (GIHasOneUse)),
+  (apply (GIReplaceReg $dst, $src))>;
+
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: 'GIHasOneUse' cannot be used in a 'apply' pattern
+def hasoneuse_in_apply : GICombineRule<
+  (defs root:$dst),
+  (match (COPY $dst, $src)),
+  (apply (GIReplaceReg $dst, $src), (GIHasOneUse $src))>;
+
 // CHECK: error: Failed to parse one or more rules
 
 def MyCombiner: GICombiner<"GenMyCombiner", [
@@ -90,5 +103,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
   eraseroot_notinstmatch,
   replacereg_in_match,
   replacereg_ops,
-  replacereg_nonroot
+  replacereg_nonroot,
+  hasoneuse_noarg,
+  hasoneuse_in_apply
 ]>;

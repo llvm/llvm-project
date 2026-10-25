@@ -19,24 +19,18 @@
 
 using namespace llvm;
 
-template <typename IRUnitT>
-const IRUnitT *DroppedVariableStatsIR::unwrapIR(const Any &IR) {
-  const IRUnitT *const *IRPtr = llvm::any_cast<const IRUnitT *>(&IR);
-  return IRPtr ? *IRPtr : nullptr;
-}
-
-void DroppedVariableStatsIR::runBeforePass(StringRef P, const Any &IR) {
+void DroppedVariableStatsIR::runBeforePass(StringRef P, IRUnitRef IR) {
   setup();
-  if (const auto *M = unwrapIR<Module>(IR))
+  if (const auto *M = dyn_cast<Module>(IR))
     return this->runOnModule(P, M, true);
-  if (const auto *F = unwrapIR<Function>(IR))
+  if (const auto *F = dyn_cast<Function>(IR))
     return this->runOnFunction(P, F, true);
 }
 
-void DroppedVariableStatsIR::runAfterPass(StringRef P, const Any &IR) {
-  if (const auto *M = unwrapIR<Module>(IR))
+void DroppedVariableStatsIR::runAfterPass(StringRef P, IRUnitRef IR) {
+  if (const auto *M = dyn_cast<Module>(IR))
     runAfterPassModule(P, M);
-  else if (const auto *F = unwrapIR<Function>(IR))
+  else if (const auto *F = dyn_cast<Function>(IR))
     runAfterPassFunction(P, F);
   cleanup();
 }
@@ -92,9 +86,9 @@ void DroppedVariableStatsIR::registerCallbacks(
     return;
 
   PIC.registerBeforeNonSkippedPassCallback(
-      [this](StringRef P, const Any &IR) { return runBeforePass(P, IR); });
+      [this](StringRef P, IRUnitRef IR) { return runBeforePass(P, IR); });
   PIC.registerAfterPassCallback(
-      [this](StringRef P, const Any &IR, const PreservedAnalyses &PA) {
+      [this](StringRef P, IRUnitRef IR, const PreservedAnalyses &PA) {
         return runAfterPass(P, IR);
       });
   PIC.registerAfterPassInvalidatedCallback(

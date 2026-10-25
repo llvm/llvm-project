@@ -6,10 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/FPUtil/float128.h"
 #include "src/math/atan2f128.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
+
+#ifndef LIBC_TYPES_HAS_NATIVE_FLOAT128
+using float128 = LIBC_NAMESPACE::fputil::Float128;
+#endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
 
 using LlvmLibcAtan2f128Test = LIBC_NAMESPACE::testing::FPTest<float128>;
 using LIBC_NAMESPACE::testing::tlog;
@@ -18,15 +23,13 @@ namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 TEST_F(LlvmLibcAtan2f128Test, InQuadRange) {
   constexpr StorageType X_COUNT = 123;
-  constexpr StorageType X_START =
-      FPBits(static_cast<float128>(0.25q)).uintval();
-  constexpr StorageType X_STOP = FPBits(static_cast<float128>(4.0q)).uintval();
+  constexpr StorageType X_START = FPBits(static_cast<float128>(0.25)).uintval();
+  constexpr StorageType X_STOP = FPBits(static_cast<float128>(4.0)).uintval();
   constexpr StorageType X_STEP = (X_STOP - X_START) / X_COUNT;
 
   constexpr StorageType Y_COUNT = 137;
-  constexpr StorageType Y_START =
-      FPBits(static_cast<float128>(0.25q)).uintval();
-  constexpr StorageType Y_STOP = FPBits(static_cast<float128>(4.0q)).uintval();
+  constexpr StorageType Y_START = FPBits(static_cast<float128>(0.25)).uintval();
+  constexpr StorageType Y_STOP = FPBits(static_cast<float128>(4.0)).uintval();
   constexpr StorageType Y_STEP = (Y_STOP - Y_START) / Y_COUNT;
 
   auto test = [&](mpfr::RoundingMode rounding_mode) {
@@ -42,7 +45,7 @@ TEST_F(LlvmLibcAtan2f128Test, InQuadRange) {
 
     for (StorageType i = 0, v = X_START; i <= X_COUNT; ++i, v += X_STEP) {
       float128 x = FPBits(v).get_val();
-      if (FPBits(x).is_inf_or_nan() || x < 0.0q)
+      if (FPBits(x).is_inf_or_nan() || x < float128(0.0))
         continue;
 
       for (StorageType j = 0, w = Y_START; j <= Y_COUNT; ++j, w += Y_STEP) {

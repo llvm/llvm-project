@@ -748,8 +748,12 @@ void SafeStack::TryInlinePointerAddress() {
   if (!ShouldInlinePointerAddress(*CI))
     return;
 
+  // InlineFunction can modify the callers CFG, but it has no DomTreeUpdater
+  // hook. Since SafeStack preserves the DominatorTree, we must rebuild it
+  // after a successful inline instead of leaving the cached tree stale.
   InlineFunctionInfo IFI;
-  InlineFunction(*CI, IFI);
+  if (InlineFunction(*CI, IFI).isSuccess() && DTU)
+    DTU->recalculate(F);
 }
 
 bool SafeStack::run() {
@@ -787,7 +791,7 @@ bool SafeStack::run() {
   if (!StackRestorePoints.empty())
     ++NumUnsafeStackRestorePointsFunctions;
 
-  IRBuilder<> IRB(&F.front(), F.begin()->getFirstInsertionPt());
+  IRBuilder<> IRB(F.begin()->getFirstInsertionPt());
   // Calls must always have a debug location, or else inlining breaks. So
   // we explicitly set a artificial debug location here.
   if (DISubprogram *SP = F.getSubprogram())
@@ -980,7 +984,7 @@ PreservedAnalyses SafeStackPass::run(Function &F,
   }
 
   const LibcallLoweringInfo &Libcalls =
-      LibcallLowering->getLibcallLowering(*Subtarget);
+      getLibcallLowering(*LibcallLowering, *Subtarget);
 
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
 

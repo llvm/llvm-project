@@ -97,8 +97,7 @@ ParseResult function_interface_impl::parseFunctionOp(
 
   // Parse the name as a symbol.
   StringAttr nameAttr;
-  if (parser.parseSymbolName(nameAttr, SymbolTable::getSymbolAttrName(),
-                             result.attributes))
+  if (parser.parseSymbolName(nameAttr, "sym_name", result.attributes))
     return failure();
 
   // Parse the function signature.
@@ -131,8 +130,8 @@ ParseResult function_interface_impl::parseFunctionOp(
   // Disallow attributes that are inferred from elsewhere in the attribute
   // dictionary.
   for (StringRef disallowed :
-       {SymbolTable::getVisibilityAttrName(), SymbolTable::getSymbolAttrName(),
-        typeAttrName.getValue()}) {
+       {SymbolOpInterface::getDefaultVisibilityAttrName(),
+        StringRef("sym_name"), typeAttrName.getValue()}) {
     if (parsedAttributes.get(disallowed))
       return parser.emitError(attributeDictLocation, "'")
              << disallowed
@@ -166,24 +165,29 @@ ParseResult function_interface_impl::parseFunctionOp(
 void function_interface_impl::printFunctionAttributes(
     OpAsmPrinter &p, Operation *op, ArrayRef<StringRef> elided) {
   // Print out function attributes, if present.
-  SmallVector<StringRef, 8> ignoredAttrs = {SymbolTable::getSymbolAttrName()};
+  SmallVector<StringRef, 8> ignoredAttrs = {"sym_name"};
   ignoredAttrs.append(elided.begin(), elided.end());
 
-  p.printOptionalAttrDictWithKeyword(op->getAttrs(), ignoredAttrs);
+  NamedAttrList attrs(op->getDiscardableAttrDictionary().getValue());
+  op->getName().walkInherentAttrs(
+      op, [&](StringRef name, Attribute &attr) { attrs.append(name, attr); });
+  p.printOptionalAttrDictWithKeyword(attrs, ignoredAttrs);
 }
 
 void function_interface_impl::printFunctionOp(
     OpAsmPrinter &p, FunctionOpInterface op, bool isVariadic,
     StringRef typeAttrName, StringAttr argAttrsName, StringAttr resAttrsName) {
   // Print the operation and the function name.
-  auto funcName =
-      op->getAttrOfType<StringAttr>(SymbolTable::getSymbolAttrName())
-          .getValue();
+  auto symbol = cast<SymbolOpInterface>(op.getOperation());
+  StringRef funcName = symbol.getName();
   p << ' ';
 
-  StringRef visibilityAttrName = SymbolTable::getVisibilityAttrName();
-  if (auto visibility = op->getAttrOfType<StringAttr>(visibilityAttrName))
-    p << visibility.getValue() << ' ';
+  StringRef visibilityAttrName =
+      SymbolOpInterface::getDefaultVisibilityAttrName();
+  Attribute visibility =
+      op->getInherentAttr(visibilityAttrName).value_or(Attribute{});
+  if (auto value = dyn_cast_or_null<StringAttr>(visibility))
+    p << value.getValue() << ' ';
   p.printSymbolName(funcName);
 
   ArrayRef<Type> argTypes = op.getArgumentTypes();

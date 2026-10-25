@@ -28,7 +28,7 @@ using LlvmLibcFaccessatTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 TEST_F(LlvmLibcFaccessatTest, WithAtFdcwd) {
   // Test access checks on a file with AT_FDCWD and no flags, equivalent to
   // access().
-  constexpr const char *FILENAME = APPEND_LIBC_TEST("faccessat_basic.test");
+  constexpr const char *FILENAME = "faccessat_basic.test";
   auto TEST_FILE = libc_make_test_file_path(FILENAME);
 
   // Check permissions on a file with full permissions
@@ -71,7 +71,7 @@ TEST_F(LlvmLibcFaccessatTest, AtEaccess) {
   // With AT_EACCESS, faccessat checks permissions using the effective user ID,
   // but the effective and real user ID will be the same here and changing that
   // is not feasible in a test, so this is just a basic sanity check.
-  constexpr const char *FILENAME = APPEND_LIBC_TEST("faccessat_eaccess.test");
+  constexpr const char *FILENAME = "faccessat_eaccess.test";
   auto TEST_FILE = libc_make_test_file_path(FILENAME);
 
   int fd = LIBC_NAMESPACE::open(TEST_FILE, O_WRONLY | O_CREAT, S_IRWXU);
@@ -87,8 +87,7 @@ TEST_F(LlvmLibcFaccessatTest, AtEaccess) {
 }
 
 TEST_F(LlvmLibcFaccessatTest, AtEmptyPath) {
-  constexpr const char *FILENAME =
-      APPEND_LIBC_TEST("faccessat_atemptypath.test");
+  constexpr const char *FILENAME = "faccessat_atemptypath.test";
   auto TEST_FILE = libc_make_test_file_path(FILENAME);
 
   int fd = LIBC_NAMESPACE::open(TEST_FILE, O_WRONLY | O_CREAT, S_IRWXU);

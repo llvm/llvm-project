@@ -493,7 +493,7 @@ static bool checkThreadSafetyAttrSubject(Sema &S, Decl *D, const ParsedAttr &AL,
 bool Sema::checkInstantiatedThreadSafetyAttrs(const Decl *D, const Attr *A) {
   if (!isa<AssertCapabilityAttr, AcquireCapabilityAttr,
            TryAcquireCapabilityAttr, ReleaseCapabilityAttr,
-           RequiresCapabilityAttr, LocksExcludedAttr>(A))
+           RequiresCapabilityAttr, LocksExcludedAttr, LockReturnedAttr>(A))
     return true;
 
   const auto *VD = dyn_cast<ValueDecl>(D);
@@ -502,7 +502,9 @@ bool Sema::checkInstantiatedThreadSafetyAttrs(const Decl *D, const Attr *A) {
 
   // Parameters of template functions need to be re-checked during
   // instantiation because their types might have been dependent.
-  if (const auto *PVD = dyn_cast<ParmVarDecl>(VD)) {
+  // lock_returned does not apply to scoped_lockable references.
+  if (const auto *PVD = dyn_cast<ParmVarDecl>(VD);
+      PVD && !isa<LockReturnedAttr>(A)) {
     if (isCallbackOrDependent(PVD->getType()))
       return true;
     return checkFunParamsAreScopedLockable(*this, PVD, *A);
@@ -684,6 +686,9 @@ static bool checkTryLockFunAttrCommon(Sema &S, Decl *D, const ParsedAttr &AL,
 }
 
 static void handleLockReturnedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  if (!checkThreadSafetyAttrSubject(S, D, AL))
+    return;
+
   // check that the argument is lockable object
   SmallVector<Expr*, 1> Args;
   checkAttrArgsAreCapabilityObjs(S, D, AL, Args);
@@ -1376,6 +1381,16 @@ static void handleNonNullAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
     NonNullArgs.push_back(Idx);
   }
+
+  // If an argument was specified and there was an attribute ignored warning
+  // issued for it, do not apply the nonnull attribute without any arguments as
+  // that has incorrect semantics in a function like:
+  //   __attribute__((nonnull(1))) void f(int val, int *ptr);
+  // because that will signal that 'ptr' is nonnull when it's not intended to
+  // be marked as such. However, continue on if there is at least one valid
+  // parameter index.
+  if (AL.getNumArgs() != 0 && NonNullArgs.empty())
+    return;
 
   // If no arguments were specified to __attribute__((nonnull)) then all pointer
   // arguments have a nonnull attribute; warn if there aren't any. Skip this
@@ -2101,9 +2116,9 @@ static void handleNakedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 // ExprWithCleanups). We could expand this to perform control-flow analysis for
 // more complex patterns.
 static bool isKnownToAlwaysThrow(const FunctionDecl *FD) {
-  if (!FD->hasBody())
-    return false;
   const Stmt *Body = FD->getBody();
+  if (!Body)
+    return false;
   const Stmt *OnlyStmt = nullptr;
 
   if (const auto *Compound = dyn_cast<CompoundStmt>(Body)) {
@@ -2293,21 +2308,6 @@ static void handleVecReturnAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   }
 
   D->addAttr(::new (S.Context) VecReturnAttr(S.Context, AL));
-}
-
-static void handleDependencyAttr(Sema &S, Scope *Scope, Decl *D,
-                                 const ParsedAttr &AL) {
-  if (isa<ParmVarDecl>(D)) {
-    // [[carries_dependency]] can only be applied to a parameter if it is a
-    // parameter of a function declaration or lambda.
-    if (!(Scope->getFlags() & clang::Scope::FunctionDeclarationScope)) {
-      S.Diag(AL.getLoc(),
-             diag::err_carries_dependency_param_not_function_decl);
-      return;
-    }
-  }
-
-  D->addAttr(::new (S.Context) CarriesDependencyAttr(S.Context, AL));
 }
 
 static void handleUnusedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
@@ -3714,13 +3714,18 @@ bool Sema::checkTargetAttr(SourceLocation LiteralLoc, StringRef AttrStr) {
              << Unsupported << None << CurFeature << Target;
   }
 
+  if (ParsedAttrs.BranchProtection.empty()) {
+    if (!ParsedAttrs.SignReturnAddrHardening.empty())
+      return Diag(LiteralLoc,
+                  diag::warn_attribute_harden_pac_ret_requires_pac_ret);
+    return false;
+  }
+
   TargetInfo::BranchProtectionInfo BPI{};
   StringRef DiagMsg;
-  if (ParsedAttrs.BranchProtection.empty())
-    return false;
+
   if (!Context.getTargetInfo().validateBranchProtection(
-          ParsedAttrs.BranchProtection, ParsedAttrs.CPU, BPI,
-          Context.getLangOpts(), DiagMsg)) {
+          ParsedAttrs, BPI, Context.getLangOpts(), DiagMsg)) {
     if (DiagMsg.empty())
       return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
              << Unsupported << None << "branch-protection" << Target;
@@ -3729,6 +3734,19 @@ bool Sema::checkTargetAttr(SourceLocation LiteralLoc, StringRef AttrStr) {
   }
   if (!DiagMsg.empty())
     Diag(LiteralLoc, diag::warn_unsupported_branch_protection_spec) << DiagMsg;
+
+  if (!ParsedAttrs.SignReturnAddrHardening.empty()) {
+    auto SignReturnAddrHardenOpt =
+        Context.getTargetInfo().parseSignReturnAddressHardening(
+            ParsedAttrs.SignReturnAddrHardening);
+    if (!SignReturnAddrHardenOpt)
+      return Diag(LiteralLoc, diag::err_invalid_harden_pac_ret_spec)
+             << ParsedAttrs.SignReturnAddrHardening;
+
+    if (BPI.SignReturnAddr == LangOptions::SignReturnAddressScopeKind::None)
+      return Diag(LiteralLoc,
+                  diag::warn_attribute_harden_pac_ret_requires_pac_ret);
+  }
 
   return false;
 }
@@ -4144,8 +4162,7 @@ static bool handleFormatAttrCommon(Sema &S, Decl *D, const ParsedAttr &AL,
 
   // In C++ the implicit 'this' function parameter also counts, and they are
   // counted from one.
-  bool HasImplicitThisParam = hasImplicitObjectParameter(D);
-  Info->NumArgs = getFunctionOrMethodNumParams(D) + HasImplicitThisParam;
+  Info->NumArgs = getFunctionOrMethodNumParams(D, /*IncludeThis=*/true);
 
   Info->Identifier = AL.getArgAsIdent(0)->getIdentifierInfo();
   StringRef Format = Info->Identifier->getName();
@@ -4181,7 +4198,7 @@ static bool handleFormatAttrCommon(Sema &S, Decl *D, const ParsedAttr &AL,
   // FIXME: Do we need to bounds check?
   unsigned ArgIdx = Info->FormatStringIdx - 1;
 
-  if (HasImplicitThisParam) {
+  if (hasImplicitObjectParameter(D)) {
     if (ArgIdx == 0) {
       S.Diag(AL.getLoc(),
              diag::err_format_attribute_implicit_this_format_string)
@@ -5224,9 +5241,10 @@ void Sema::AddModeAttr(Decl *D, const AttributeCommonInfo &CI,
     NewElemTy = Context.getRealTypeForBitwidth(DestWidth, ExplicitType);
 
   if (NewElemTy.isNull()) {
+    // FIXME: We need to make sure that the target handles correctly the
+    // requested mode.
     // Only emit diagnostic on host for 128-bit mode attribute
-    if (!(DestWidth == 128 &&
-          (getLangOpts().CUDAIsDevice || getLangOpts().SYCLIsDevice)))
+    if (!(DestWidth == 128 && getLangOpts().isTargetDevice()))
       Diag(AttrLoc, diag::err_machine_mode) << 1 /*Unsupported*/ << Name;
     return;
   }
@@ -5464,15 +5482,23 @@ static void handleGlobalAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (FD->isInlineSpecified() && !S.getLangOpts().CUDAIsDevice)
     S.Diag(FD->getBeginLoc(), diag::warn_kern_is_inline) << FD;
 
-  if (AL.getKind() == ParsedAttr::AT_DeviceKernel)
-    D->addAttr(::new (S.Context) DeviceKernelAttr(S.Context, AL));
-  else
-    D->addAttr(::new (S.Context) CUDAGlobalAttr(S.Context, AL));
+  switch (AL.getKind()) {
+  case ParsedAttr::AT_DeviceKernel:
+    if (!D->hasAttr<DeviceKernelAttr>())
+      D->addAttr(::new (S.Context) DeviceKernelAttr(S.Context, AL));
+    break;
+  case ParsedAttr::AT_CUDAGlobal:
+    if (!D->hasAttr<CUDAGlobalAttr>())
+      D->addAttr(::new (S.Context) CUDAGlobalAttr(S.Context, AL));
+    break;
+  default:
+    llvm_unreachable("Unexpected attribute kind");
+  }
   // In host compilation the kernel is emitted as a stub function, which is
   // a helper function for launching the kernel. The instructions in the helper
   // function has nothing to do with the source code of the kernel. Do not emit
   // debug info for the stub function to avoid confusing the debugger.
-  if (S.LangOpts.HIP && !S.LangOpts.CUDAIsDevice)
+  if (S.LangOpts.HIP && !S.LangOpts.CUDAIsDevice && !D->hasAttr<NoDebugAttr>())
     D->addAttr(NoDebugAttr::CreateImplicit(S.Context));
 }
 
@@ -6128,12 +6154,23 @@ Sema::CreateLaunchBoundsAttr(const AttributeCommonInfo &CI, Expr *MaxThreads,
     // We might want to ignore the nvptx arch check, e.g., when processing the
     // launch bounds attribute within ompx_attribute to support other archs.
     if (!IgnoreArch) {
-      // '.maxclusterrank' ptx directive requires .target sm_90 or higher.
-      OffloadArch SM = getOffloadArch(Context.getTargetInfo());
-      if (SM.isUnknown() || llvm::NVPTX::getSmVersion(SM.nvptxKind()) < 900) {
-        Diag(MaxBlocks->getBeginLoc(), diag::warn_cuda_maxclusterrank_sm_90)
-            << OffloadArchToString(SM) << CI << MaxBlocks->getSourceRange();
-        // Ignore it by setting MaxBlocks to null;
+      const TargetInfo &DeviceTI =
+          (!Context.getLangOpts().CUDAIsDevice && Context.getAuxTargetInfo())
+              ? *Context.getAuxTargetInfo()
+              : Context.getTargetInfo();
+      if (DeviceTI.getTriple().isNVPTX()) {
+        // '.maxclusterrank' ptx directive requires .target sm_90 or higher.
+        OffloadArch SM = getOffloadArch(DeviceTI);
+        if (SM.isUnknown() || llvm::NVPTX::getSmVersion(SM.nvptxKind()) < 900) {
+          Diag(MaxBlocks->getBeginLoc(), diag::warn_cuda_maxclusterrank_sm_90)
+              << OffloadArchToString(SM) << CI << MaxBlocks->getSourceRange();
+          // Ignore it by setting MaxBlocks to null;
+          MaxBlocks = nullptr;
+        }
+      } else {
+        // maxclusterrank is only handled for NVPTX; ignore it elsewhere.
+        // TODO: Interpret this for AMDGPU with the "clusters" subtarget
+        // feature.
         MaxBlocks = nullptr;
       }
     }
@@ -6168,7 +6205,10 @@ static void handleLaunchBoundsAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 static std::pair<Expr *, int>
 makeClusterDimsArgExpr(Sema &S, Expr *E, const CUDAClusterDimsAttr &AL,
                        const unsigned Idx) {
-  if (!E || S.DiagnoseUnexpandedParameterPack(E))
+  if (!E)
+    return {nullptr, 1};
+
+  if (S.DiagnoseUnexpandedParameterPack(E))
     return {};
 
   // Accept template arguments for now as they depend on something else.
@@ -6182,18 +6222,23 @@ makeClusterDimsArgExpr(Sema &S, Expr *E, const CUDAClusterDimsAttr &AL,
         << &AL << Idx << AANT_ArgumentIntegerConstant << E->getSourceRange();
     return {};
   }
-  // Make sure we can fit it in 4 bits.
-  if (!I->isIntN(4)) {
-    S.Diag(E->getExprLoc(), diag::err_ice_too_large)
-        << toString(*I, 10, false) << 4 << /*Unsigned=*/1;
-    return {};
-  }
   if (*I < 0) {
     S.Diag(E->getExprLoc(), diag::warn_attribute_argument_n_negative)
         << &AL << Idx << E->getSourceRange();
+    return {};
+  }
+  // Make sure we can fit it in 8 bits, so the product below cannot overflow.
+  if (!I->isIntN(8)) {
+    S.Diag(E->getExprLoc(), diag::err_ice_too_large)
+        << toString(*I, 10, false) << 8 << /*Unsigned=*/1;
+    return {};
   }
 
-  return {ConstantExpr::Create(S.getASTContext(), E, APValue(*I)),
+  ExprResult Result = S.DefaultLvalueConversion(E);
+  if (!Result.isUsable())
+    return {};
+
+  return {ConstantExpr::Create(S.getASTContext(), Result.get(), APValue(*I)),
           I->getZExtValue()};
 }
 
@@ -7221,9 +7266,22 @@ static void handleHandleAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(Attr::Create(S.Context, Argument, AL));
 }
 
-template<typename Attr>
 static void handleUnsafeBufferUsage(Sema &S, Decl *D, const ParsedAttr &AL) {
-  D->addAttr(Attr::Create(S.Context, AL));
+  StringRef Category;
+  if (AL.getAttrName()->getName() == "unsafe_buffer_usage_in_container") {
+    if (!AL.checkExactlyNumArgs(S, 0))
+      return;
+    Category = "container";
+  } else if (AL.getNumArgs() != 0) {
+    SourceLocation Loc;
+    if (!S.checkStringLiteralArgumentAttr(AL, 0, Category, &Loc))
+      return;
+    if (Category != "container") {
+      S.Diag(Loc, diag::warn_attribute_type_not_supported) << AL << Category;
+      return;
+    }
+  }
+  D->addAttr(UnsafeBufferUsageAttr::Create(S.Context, Category, AL));
 }
 
 static void handleCFGuardAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
@@ -7558,7 +7616,7 @@ static void handlePersonalityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 /// the attribute applies to decls.  If the attribute is a type attribute, just
 /// silently ignore it if a GNU attribute.
 static void
-ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
+ProcessDeclAttribute(Sema &S, Decl *D, const ParsedAttr &AL,
                      const Sema::ProcessDeclAttributeOptions &Options) {
   if (AL.isInvalid() || AL.getKind() == ParsedAttr::IgnoredAttribute)
     return;
@@ -7780,9 +7838,6 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_Availability:
     handleAvailabilityAttr(S, D, AL);
-    break;
-  case ParsedAttr::AT_CarriesDependency:
-    handleDependencyAttr(S, scope, D, AL);
     break;
   case ParsedAttr::AT_CPUDispatch:
   case ParsedAttr::AT_CPUSpecific:
@@ -8270,6 +8325,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_HLSLResourceBinding:
     S.HLSL().handleResourceBindingAttr(D, AL);
     break;
+  case ParsedAttr::AT_HLSLInterpolationModifier:
+    S.HLSL().handleInterpolationModifierAttr(D, AL);
+    break;
   case ParsedAttr::AT_HLSLParamModifier:
     S.HLSL().handleParamModifierAttr(D, AL);
     break;
@@ -8452,7 +8510,7 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
 
   case ParsedAttr::AT_UnsafeBufferUsage:
-    handleUnsafeBufferUsage<UnsafeBufferUsageAttr>(S, D, AL);
+    handleUnsafeBufferUsage(S, D, AL);
     break;
 
   case ParsedAttr::AT_UseHandle:
@@ -8557,7 +8615,7 @@ void Sema::ProcessDeclAttributeList(
     return;
 
   for (const ParsedAttr &AL : AttrList)
-    ProcessDeclAttribute(*this, S, D, AL, Options);
+    ProcessDeclAttribute(*this, D, AL, Options);
 
   // FIXME: We should be able to handle these cases in TableGen.
   // GCC accepts
@@ -8678,8 +8736,7 @@ bool Sema::ProcessAccessDeclAttributeList(
     AccessSpecDecl *ASDecl, const ParsedAttributesView &AttrList) {
   for (const ParsedAttr &AL : AttrList) {
     if (AL.getKind() == ParsedAttr::AT_Annotate) {
-      ProcessDeclAttribute(*this, nullptr, ASDecl, AL,
-                           ProcessDeclAttributeOptions());
+      ProcessDeclAttribute(*this, ASDecl, AL, ProcessDeclAttributeOptions());
     } else {
       Diag(AL.getLoc(), diag::err_only_annotate_after_access_spec);
       return true;
@@ -8717,6 +8774,12 @@ void Sema::checkUnusedDeclAttributes(Declarator &D) {
 
 void Sema::DiagnoseUnknownAttribute(const ParsedAttr &AL) {
   SourceRange NR = AL.getNormalizedRange();
+  // Skip the expensive spelling-list typo-correction scan when the
+  // diagnostics it feeds are disabled at this location.
+  if (Diags.isIgnored(diag::warn_unknown_attribute_ignored, NR.getBegin()) &&
+      Diags.isIgnored(diag::warn_unknown_attribute_ignored_suggestion,
+                      NR.getBegin()))
+    return;
   StringRef ScopeName = AL.getNormalizedScopeName();
   std::optional<StringRef> CorrectedScopeName =
       AL.tryGetCorrectedScopeName(ScopeName);

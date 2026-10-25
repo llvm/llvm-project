@@ -613,58 +613,56 @@ define amdgpu_kernel void @idot8_acc16(ptr addrspace(1) %src1,
 ; GFX10-DL-XNACK-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-DL-XNACK-NEXT:    global_load_ushort v3, v0, s[0:1]
 ; GFX10-DL-XNACK-NEXT:    s_waitcnt vmcnt(2)
+; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v9, 4, v1
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v13, 12, v1
+; GFX10-DL-XNACK-NEXT:    s_waitcnt vmcnt(1)
+; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v15, 4, v2
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v16, 12, v2
+; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v8, 8, v1
+; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v17, 8, v2
+; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v13, 12, v13
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v9, 12, v9
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v15, 12, v15
+; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v16, 12, v16
+; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v7, 12, v1
+; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v14, 12, v2
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v8, 12, v8
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v17, 12, v17
+; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v9, 12, v9
+; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v15, 12, v15
+; GFX10-DL-XNACK-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-DL-XNACK-NEXT:    v_mad_u16 v3, v13, v16, v3
+; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v8, 12, v8
+; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v13, 12, v17
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v7, 12, v7
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v14, 12, v14
+; GFX10-DL-XNACK-NEXT:    v_mad_u16 v3, v9, v15, v3
 ; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v4, 28, v1
 ; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v5, 24, v1
 ; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v6, 20, v1
-; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v7, 16, v1
-; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v8, 12, v1
-; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v9, 8, v1
-; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v10, 4, v1
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v1, 12, v1
-; GFX10-DL-XNACK-NEXT:    s_waitcnt vmcnt(1)
-; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v16, 4, v2
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v17, 12, v2
-; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v11, 28, v2
-; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v12, 24, v2
-; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v13, 20, v2
-; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v14, 16, v2
-; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v15, 12, v2
-; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v2, 8, v2
-; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v1, 12, v1
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v10, 12, v10
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v16, 12, v16
-; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v17, 12, v17
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v9, 12, v9
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v2, 12, v2
-; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v10, 12, v10
-; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v16, 12, v16
-; GFX10-DL-XNACK-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-DL-XNACK-NEXT:    v_mad_u16 v1, v1, v17, v3
-; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v3, 12, v9
-; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v2, 12, v2
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v8, 12, v8
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v9, 12, v15
-; GFX10-DL-XNACK-NEXT:    v_mad_u16 v1, v10, v16, v1
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v7, 12, v7
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v10, 12, v14
-; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v8, 12, v8
-; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v9, 12, v9
-; GFX10-DL-XNACK-NEXT:    v_mad_u16 v1, v3, v2, v1
-; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v2, 12, v7
-; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v3, 12, v10
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v6, 12, v6
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v7, 12, v13
-; GFX10-DL-XNACK-NEXT:    v_mad_u16 v1, v8, v9, v1
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v5, 12, v5
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v8, 12, v12
-; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v6, 12, v6
+; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v10, 28, v2
+; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v11, 24, v2
+; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v12, 20, v2
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v1, 12, v1 op_sel:[0,1,0]
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v2, 12, v2 op_sel:[0,1,0]
 ; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v7, 12, v7
-; GFX10-DL-XNACK-NEXT:    v_mad_u16 v1, v2, v3, v1
+; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v9, 12, v14
+; GFX10-DL-XNACK-NEXT:    v_mad_u16 v3, v8, v13, v3
+; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v1, 12, v1
+; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v2, 12, v2
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v6, 12, v6
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v8, 12, v12
+; GFX10-DL-XNACK-NEXT:    v_mad_u16 v3, v7, v9, v3
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v5, 12, v5
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v7, 12, v11
+; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v6, 12, v6
+; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v8, 12, v8
+; GFX10-DL-XNACK-NEXT:    v_mad_u16 v1, v1, v2, v3
 ; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v2, 12, v5
-; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v3, 12, v8
+; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v3, 12, v7
 ; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v4, 12, v4
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v5, 12, v11
-; GFX10-DL-XNACK-NEXT:    v_mad_u16 v1, v6, v7, v1
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v5, 12, v10
+; GFX10-DL-XNACK-NEXT:    v_mad_u16 v1, v6, v8, v1
 ; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v4, 12, v4
 ; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v5, 12, v5
 ; GFX10-DL-XNACK-NEXT:    v_mad_u16 v1, v2, v3, v1
@@ -691,58 +689,56 @@ define amdgpu_kernel void @idot8_acc16(ptr addrspace(1) %src1,
 ; GFX10-DL-NOXNACK-NEXT:    global_load_dword v0, v0, s[10:11]
 ; GFX10-DL-NOXNACK-NEXT:    global_load_ushort v3, v2, s[0:1]
 ; GFX10-DL-NOXNACK-NEXT:    s_waitcnt vmcnt(2)
+; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v9, 4, v1
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v13, 12, v1
+; GFX10-DL-NOXNACK-NEXT:    s_waitcnt vmcnt(1)
+; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v15, 4, v0
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v16, 12, v0
+; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v8, 8, v1
+; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v17, 8, v0
+; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v13, 12, v13
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v9, 12, v9
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v15, 12, v15
+; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v16, 12, v16
+; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v7, 12, v1
+; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v14, 12, v0
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v8, 12, v8
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v17, 12, v17
+; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v9, 12, v9
+; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v15, 12, v15
+; GFX10-DL-NOXNACK-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-DL-NOXNACK-NEXT:    v_mad_u16 v3, v13, v16, v3
+; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v8, 12, v8
+; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v13, 12, v17
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v7, 12, v7
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v14, 12, v14
+; GFX10-DL-NOXNACK-NEXT:    v_mad_u16 v3, v9, v15, v3
 ; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v4, 28, v1
 ; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v5, 24, v1
 ; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v6, 20, v1
-; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v7, 16, v1
-; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v8, 12, v1
-; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v9, 8, v1
-; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v10, 4, v1
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v1, 12, v1
-; GFX10-DL-NOXNACK-NEXT:    s_waitcnt vmcnt(1)
-; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v16, 4, v0
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v17, 12, v0
-; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v11, 28, v0
-; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v12, 24, v0
-; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v13, 20, v0
-; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v14, 16, v0
-; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v15, 12, v0
-; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v0, 8, v0
-; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v1, 12, v1
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v10, 12, v10
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v16, 12, v16
-; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v17, 12, v17
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v9, 12, v9
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v0, 12, v0
-; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v10, 12, v10
-; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v16, 12, v16
-; GFX10-DL-NOXNACK-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-DL-NOXNACK-NEXT:    v_mad_u16 v1, v1, v17, v3
-; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v3, 12, v9
-; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v0, 12, v0
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v8, 12, v8
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v9, 12, v15
-; GFX10-DL-NOXNACK-NEXT:    v_mad_u16 v1, v10, v16, v1
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v7, 12, v7
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v10, 12, v14
-; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v8, 12, v8
-; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v9, 12, v9
-; GFX10-DL-NOXNACK-NEXT:    v_mad_u16 v0, v3, v0, v1
-; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v1, 12, v7
-; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v3, 12, v10
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v6, 12, v6
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v7, 12, v13
-; GFX10-DL-NOXNACK-NEXT:    v_mad_u16 v0, v8, v9, v0
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v5, 12, v5
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v8, 12, v12
-; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v6, 12, v6
+; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v10, 28, v0
+; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v11, 24, v0
+; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v12, 20, v0
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v1, 12, v1 op_sel:[0,1,0]
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v0, 12, v0 op_sel:[0,1,0]
 ; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v7, 12, v7
-; GFX10-DL-NOXNACK-NEXT:    v_mad_u16 v0, v1, v3, v0
+; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v9, 12, v14
+; GFX10-DL-NOXNACK-NEXT:    v_mad_u16 v3, v8, v13, v3
+; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v1, 12, v1
+; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v0, 12, v0
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v6, 12, v6
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v8, 12, v12
+; GFX10-DL-NOXNACK-NEXT:    v_mad_u16 v3, v7, v9, v3
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v5, 12, v5
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v7, 12, v11
+; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v6, 12, v6
+; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v8, 12, v8
+; GFX10-DL-NOXNACK-NEXT:    v_mad_u16 v0, v1, v0, v3
 ; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v1, 12, v5
-; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v3, 12, v8
+; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v3, 12, v7
 ; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v4, 12, v4
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v5, 12, v11
-; GFX10-DL-NOXNACK-NEXT:    v_mad_u16 v0, v6, v7, v0
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v5, 12, v10
+; GFX10-DL-NOXNACK-NEXT:    v_mad_u16 v0, v6, v8, v0
 ; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v4, 12, v4
 ; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v5, 12, v5
 ; GFX10-DL-NOXNACK-NEXT:    v_mad_u16 v0, v1, v3, v0
@@ -1135,58 +1131,56 @@ define amdgpu_kernel void @idot8_acc8(ptr addrspace(1) %src1,
 ; GFX10-DL-XNACK-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-DL-XNACK-NEXT:    global_load_ubyte v3, v0, s[0:1]
 ; GFX10-DL-XNACK-NEXT:    s_waitcnt vmcnt(2)
+; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v9, 4, v1
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v13, 12, v1
+; GFX10-DL-XNACK-NEXT:    s_waitcnt vmcnt(1)
+; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v15, 4, v2
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v16, 12, v2
+; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v8, 8, v1
+; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v17, 8, v2
+; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v13, 12, v13
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v9, 12, v9
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v15, 12, v15
+; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v16, 12, v16
+; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v7, 12, v1
+; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v14, 12, v2
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v8, 12, v8
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v17, 12, v17
+; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v9, 12, v9
+; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v15, 12, v15
+; GFX10-DL-XNACK-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-DL-XNACK-NEXT:    v_mad_u16 v3, v13, v16, v3
+; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v8, 12, v8
+; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v13, 12, v17
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v7, 12, v7
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v14, 12, v14
+; GFX10-DL-XNACK-NEXT:    v_mad_u16 v3, v9, v15, v3
 ; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v4, 28, v1
 ; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v5, 24, v1
 ; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v6, 20, v1
-; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v7, 16, v1
-; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v8, 12, v1
-; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v9, 8, v1
-; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v10, 4, v1
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v1, 12, v1
-; GFX10-DL-XNACK-NEXT:    s_waitcnt vmcnt(1)
-; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v16, 4, v2
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v17, 12, v2
-; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v11, 28, v2
-; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v12, 24, v2
-; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v13, 20, v2
-; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v14, 16, v2
-; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v15, 12, v2
-; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v2, 8, v2
-; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v1, 12, v1
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v10, 12, v10
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v16, 12, v16
-; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v17, 12, v17
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v9, 12, v9
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v2, 12, v2
-; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v10, 12, v10
-; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v16, 12, v16
-; GFX10-DL-XNACK-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-DL-XNACK-NEXT:    v_mad_u16 v1, v1, v17, v3
-; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v3, 12, v9
-; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v2, 12, v2
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v8, 12, v8
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v9, 12, v15
-; GFX10-DL-XNACK-NEXT:    v_mad_u16 v1, v10, v16, v1
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v7, 12, v7
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v10, 12, v14
-; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v8, 12, v8
-; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v9, 12, v9
-; GFX10-DL-XNACK-NEXT:    v_mad_u16 v1, v3, v2, v1
-; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v2, 12, v7
-; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v3, 12, v10
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v6, 12, v6
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v7, 12, v13
-; GFX10-DL-XNACK-NEXT:    v_mad_u16 v1, v8, v9, v1
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v5, 12, v5
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v8, 12, v12
-; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v6, 12, v6
+; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v10, 28, v2
+; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v11, 24, v2
+; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v12, 20, v2
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v1, 12, v1 op_sel:[0,1,0]
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v2, 12, v2 op_sel:[0,1,0]
 ; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v7, 12, v7
-; GFX10-DL-XNACK-NEXT:    v_mad_u16 v1, v2, v3, v1
+; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v9, 12, v14
+; GFX10-DL-XNACK-NEXT:    v_mad_u16 v3, v8, v13, v3
+; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v1, 12, v1
+; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v2, 12, v2
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v6, 12, v6
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v8, 12, v12
+; GFX10-DL-XNACK-NEXT:    v_mad_u16 v3, v7, v9, v3
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v5, 12, v5
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v7, 12, v11
+; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v6, 12, v6
+; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v8, 12, v8
+; GFX10-DL-XNACK-NEXT:    v_mad_u16 v1, v1, v2, v3
 ; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v2, 12, v5
-; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v3, 12, v8
+; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v3, 12, v7
 ; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v4, 12, v4
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v5, 12, v11
-; GFX10-DL-XNACK-NEXT:    v_mad_u16 v1, v6, v7, v1
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v5, 12, v10
+; GFX10-DL-XNACK-NEXT:    v_mad_u16 v1, v6, v8, v1
 ; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v4, 12, v4
 ; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v5, 12, v5
 ; GFX10-DL-XNACK-NEXT:    v_mad_u16 v1, v2, v3, v1
@@ -1213,58 +1207,56 @@ define amdgpu_kernel void @idot8_acc8(ptr addrspace(1) %src1,
 ; GFX10-DL-NOXNACK-NEXT:    global_load_dword v0, v0, s[10:11]
 ; GFX10-DL-NOXNACK-NEXT:    global_load_ubyte v3, v2, s[0:1]
 ; GFX10-DL-NOXNACK-NEXT:    s_waitcnt vmcnt(2)
+; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v9, 4, v1
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v13, 12, v1
+; GFX10-DL-NOXNACK-NEXT:    s_waitcnt vmcnt(1)
+; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v15, 4, v0
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v16, 12, v0
+; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v8, 8, v1
+; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v17, 8, v0
+; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v13, 12, v13
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v9, 12, v9
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v15, 12, v15
+; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v16, 12, v16
+; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v7, 12, v1
+; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v14, 12, v0
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v8, 12, v8
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v17, 12, v17
+; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v9, 12, v9
+; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v15, 12, v15
+; GFX10-DL-NOXNACK-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-DL-NOXNACK-NEXT:    v_mad_u16 v3, v13, v16, v3
+; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v8, 12, v8
+; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v13, 12, v17
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v7, 12, v7
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v14, 12, v14
+; GFX10-DL-NOXNACK-NEXT:    v_mad_u16 v3, v9, v15, v3
 ; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v4, 28, v1
 ; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v5, 24, v1
 ; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v6, 20, v1
-; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v7, 16, v1
-; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v8, 12, v1
-; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v9, 8, v1
-; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v10, 4, v1
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v1, 12, v1
-; GFX10-DL-NOXNACK-NEXT:    s_waitcnt vmcnt(1)
-; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v16, 4, v0
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v17, 12, v0
-; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v11, 28, v0
-; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v12, 24, v0
-; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v13, 20, v0
-; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v14, 16, v0
-; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v15, 12, v0
-; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v0, 8, v0
-; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v1, 12, v1
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v10, 12, v10
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v16, 12, v16
-; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v17, 12, v17
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v9, 12, v9
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v0, 12, v0
-; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v10, 12, v10
-; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v16, 12, v16
-; GFX10-DL-NOXNACK-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-DL-NOXNACK-NEXT:    v_mad_u16 v1, v1, v17, v3
-; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v3, 12, v9
-; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v0, 12, v0
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v8, 12, v8
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v9, 12, v15
-; GFX10-DL-NOXNACK-NEXT:    v_mad_u16 v1, v10, v16, v1
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v7, 12, v7
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v10, 12, v14
-; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v8, 12, v8
-; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v9, 12, v9
-; GFX10-DL-NOXNACK-NEXT:    v_mad_u16 v0, v3, v0, v1
-; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v1, 12, v7
-; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v3, 12, v10
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v6, 12, v6
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v7, 12, v13
-; GFX10-DL-NOXNACK-NEXT:    v_mad_u16 v0, v8, v9, v0
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v5, 12, v5
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v8, 12, v12
-; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v6, 12, v6
+; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v10, 28, v0
+; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v11, 24, v0
+; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v12, 20, v0
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v1, 12, v1 op_sel:[0,1,0]
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v0, 12, v0 op_sel:[0,1,0]
 ; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v7, 12, v7
-; GFX10-DL-NOXNACK-NEXT:    v_mad_u16 v0, v1, v3, v0
+; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v9, 12, v14
+; GFX10-DL-NOXNACK-NEXT:    v_mad_u16 v3, v8, v13, v3
+; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v1, 12, v1
+; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v0, 12, v0
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v6, 12, v6
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v8, 12, v12
+; GFX10-DL-NOXNACK-NEXT:    v_mad_u16 v3, v7, v9, v3
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v5, 12, v5
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v7, 12, v11
+; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v6, 12, v6
+; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v8, 12, v8
+; GFX10-DL-NOXNACK-NEXT:    v_mad_u16 v0, v1, v0, v3
 ; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v1, 12, v5
-; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v3, 12, v8
+; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v3, 12, v7
 ; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v4, 12, v4
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v5, 12, v11
-; GFX10-DL-NOXNACK-NEXT:    v_mad_u16 v0, v6, v7, v0
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v5, 12, v10
+; GFX10-DL-NOXNACK-NEXT:    v_mad_u16 v0, v6, v8, v0
 ; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v4, 12, v4
 ; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v5, 12, v5
 ; GFX10-DL-NOXNACK-NEXT:    v_mad_u16 v0, v1, v3, v0
@@ -2327,69 +2319,63 @@ define amdgpu_kernel void @idot8_acc16_vecMul(ptr addrspace(1) %src1,
 ; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v5, 12, v5
 ; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v12, 12, v12
 ; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v7, 12, v1
-; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v8, 16, v1
 ; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v13, 8, v2
 ; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v14, 12, v2
 ; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v4, 12, v4
 ; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v11, 12, v11
-; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v12, 12, v12
 ; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v5, 12, v5
+; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v12, 12, v12
 ; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v6, 12, v6
 ; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v7, 12, v7
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v8, 12, v8
 ; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v13, 12, v13
 ; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v14, 12, v14
 ; GFX10-DL-XNACK-NEXT:    v_perm_b32 v11, v12, v11, 0x5040100
 ; GFX10-DL-XNACK-NEXT:    v_perm_b32 v4, v5, v4, 0x5040100
 ; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v9, 20, v1
-; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v15, 16, v2
-; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v16, 20, v2
 ; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v6, 12, v6
 ; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v7, 12, v7
-; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v5, 12, v8
-; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v8, 12, v13
-; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v12, 12, v14
+; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v13, 12, v13
+; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v12, 20, v2
+; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v14, 12, v14
 ; GFX10-DL-XNACK-NEXT:    v_pk_mul_lo_u16 v4, v4, v11
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v8, 12, v1 op_sel:[0,1,0]
 ; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v9, 12, v9
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v15, 12, v15
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v16, 12, v16
-; GFX10-DL-XNACK-NEXT:    v_perm_b32 v8, v12, v8, 0x5040100
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v5, 12, v2 op_sel:[0,1,0]
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v11, 12, v12
+; GFX10-DL-XNACK-NEXT:    v_perm_b32 v12, v14, v13, 0x5040100
 ; GFX10-DL-XNACK-NEXT:    v_perm_b32 v6, v7, v6, 0x5040100
-; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v7, 16, v4
 ; GFX10-DL-XNACK-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-DL-XNACK-NEXT:    v_add_nc_u16 v3, v4, v3
 ; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v10, 24, v1
 ; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v1, 28, v1
-; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v17, 24, v2
+; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v8, 12, v8
 ; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v9, 12, v9
-; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v11, 12, v15
+; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v5, 12, v5
+; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v7, 24, v2
 ; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v2, 28, v2
-; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v4, 12, v16
-; GFX10-DL-XNACK-NEXT:    v_pk_mul_lo_u16 v6, v6, v8
-; GFX10-DL-XNACK-NEXT:    v_add_nc_u16 v3, v3, v7
+; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v11, 12, v11
+; GFX10-DL-XNACK-NEXT:    v_pk_mul_lo_u16 v6, v6, v12
+; GFX10-DL-XNACK-NEXT:    v_add_nc_u16 v3, v3, v4 op_sel:[0,1,0]
 ; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v10, 12, v10
 ; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v1, 12, v1
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v12, 12, v17
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v4, 12, v7
 ; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v2, 12, v2
-; GFX10-DL-XNACK-NEXT:    v_perm_b32 v4, v4, v11, 0x5040100
-; GFX10-DL-XNACK-NEXT:    v_perm_b32 v5, v9, v5, 0x5040100
-; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v7, 16, v6
+; GFX10-DL-XNACK-NEXT:    v_perm_b32 v5, v11, v5, 0x5040100
+; GFX10-DL-XNACK-NEXT:    v_perm_b32 v7, v9, v8, 0x5040100
 ; GFX10-DL-XNACK-NEXT:    v_add_nc_u16 v3, v3, v6
 ; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v10, 12, v10
-; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v6, 12, v12
-; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v2, 12, v2
 ; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v1, 12, v1
-; GFX10-DL-XNACK-NEXT:    v_pk_mul_lo_u16 v4, v5, v4
-; GFX10-DL-XNACK-NEXT:    v_add_nc_u16 v3, v3, v7
-; GFX10-DL-XNACK-NEXT:    v_perm_b32 v2, v2, v6, 0x5040100
+; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v4, 12, v4
+; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v2, 12, v2
+; GFX10-DL-XNACK-NEXT:    v_pk_mul_lo_u16 v5, v7, v5
+; GFX10-DL-XNACK-NEXT:    v_add_nc_u16 v3, v3, v6 op_sel:[0,1,0]
 ; GFX10-DL-XNACK-NEXT:    v_perm_b32 v1, v1, v10, 0x5040100
-; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v5, 16, v4
-; GFX10-DL-XNACK-NEXT:    v_add_nc_u16 v3, v3, v4
+; GFX10-DL-XNACK-NEXT:    v_perm_b32 v2, v2, v4, 0x5040100
+; GFX10-DL-XNACK-NEXT:    v_add_nc_u16 v3, v3, v5
 ; GFX10-DL-XNACK-NEXT:    v_pk_mul_lo_u16 v1, v1, v2
-; GFX10-DL-XNACK-NEXT:    v_add_nc_u16 v2, v3, v5
-; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v3, 16, v1
-; GFX10-DL-XNACK-NEXT:    v_add_nc_u16 v1, v2, v1
-; GFX10-DL-XNACK-NEXT:    v_add_nc_u16 v1, v1, v3
+; GFX10-DL-XNACK-NEXT:    v_add_nc_u16 v2, v3, v5 op_sel:[0,1,0]
+; GFX10-DL-XNACK-NEXT:    v_add_nc_u16 v2, v2, v1
+; GFX10-DL-XNACK-NEXT:    v_add_nc_u16 v1, v2, v1 op_sel:[0,1,0]
 ; GFX10-DL-XNACK-NEXT:    global_store_short v0, v1, s[0:1]
 ; GFX10-DL-XNACK-NEXT:    s_endpgm
 ;
@@ -2421,69 +2407,63 @@ define amdgpu_kernel void @idot8_acc16_vecMul(ptr addrspace(1) %src1,
 ; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v5, 12, v5
 ; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v12, 12, v12
 ; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v7, 12, v1
-; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v8, 16, v1
 ; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v13, 8, v0
 ; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v14, 12, v0
 ; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v4, 12, v4
 ; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v11, 12, v11
-; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v12, 12, v12
 ; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v5, 12, v5
+; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v12, 12, v12
 ; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v6, 12, v6
 ; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v7, 12, v7
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v8, 12, v8
 ; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v13, 12, v13
 ; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v14, 12, v14
 ; GFX10-DL-NOXNACK-NEXT:    v_perm_b32 v11, v12, v11, 0x5040100
 ; GFX10-DL-NOXNACK-NEXT:    v_perm_b32 v4, v5, v4, 0x5040100
 ; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v9, 20, v1
-; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v15, 16, v0
-; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v16, 20, v0
 ; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v6, 12, v6
 ; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v7, 12, v7
-; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v5, 12, v8
-; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v8, 12, v13
-; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v12, 12, v14
+; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v13, 12, v13
+; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v12, 20, v0
+; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v14, 12, v14
 ; GFX10-DL-NOXNACK-NEXT:    v_pk_mul_lo_u16 v4, v4, v11
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v8, 12, v1 op_sel:[0,1,0]
 ; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v9, 12, v9
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v15, 12, v15
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v16, 12, v16
-; GFX10-DL-NOXNACK-NEXT:    v_perm_b32 v8, v12, v8, 0x5040100
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v5, 12, v0 op_sel:[0,1,0]
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v11, 12, v12
+; GFX10-DL-NOXNACK-NEXT:    v_perm_b32 v12, v14, v13, 0x5040100
 ; GFX10-DL-NOXNACK-NEXT:    v_perm_b32 v6, v7, v6, 0x5040100
-; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v7, 16, v4
 ; GFX10-DL-NOXNACK-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-DL-NOXNACK-NEXT:    v_add_nc_u16 v3, v4, v3
 ; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v10, 24, v1
 ; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v1, 28, v1
-; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v17, 24, v0
+; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v8, 12, v8
 ; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v9, 12, v9
-; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v11, 12, v15
+; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v5, 12, v5
+; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v7, 24, v0
 ; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v0, 28, v0
-; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v4, 12, v16
-; GFX10-DL-NOXNACK-NEXT:    v_pk_mul_lo_u16 v6, v6, v8
-; GFX10-DL-NOXNACK-NEXT:    v_add_nc_u16 v3, v3, v7
+; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v11, 12, v11
+; GFX10-DL-NOXNACK-NEXT:    v_pk_mul_lo_u16 v6, v6, v12
+; GFX10-DL-NOXNACK-NEXT:    v_add_nc_u16 v3, v3, v4 op_sel:[0,1,0]
 ; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v10, 12, v10
 ; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v1, 12, v1
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v12, 12, v17
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v4, 12, v7
 ; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v0, 12, v0
-; GFX10-DL-NOXNACK-NEXT:    v_perm_b32 v4, v4, v11, 0x5040100
-; GFX10-DL-NOXNACK-NEXT:    v_perm_b32 v5, v9, v5, 0x5040100
-; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v7, 16, v6
+; GFX10-DL-NOXNACK-NEXT:    v_perm_b32 v5, v11, v5, 0x5040100
+; GFX10-DL-NOXNACK-NEXT:    v_perm_b32 v7, v9, v8, 0x5040100
 ; GFX10-DL-NOXNACK-NEXT:    v_add_nc_u16 v3, v3, v6
 ; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v10, 12, v10
-; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v6, 12, v12
-; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v0, 12, v0
 ; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v1, 12, v1
-; GFX10-DL-NOXNACK-NEXT:    v_pk_mul_lo_u16 v4, v5, v4
-; GFX10-DL-NOXNACK-NEXT:    v_add_nc_u16 v3, v3, v7
-; GFX10-DL-NOXNACK-NEXT:    v_perm_b32 v0, v0, v6, 0x5040100
+; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v4, 12, v4
+; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v0, 12, v0
+; GFX10-DL-NOXNACK-NEXT:    v_pk_mul_lo_u16 v5, v7, v5
+; GFX10-DL-NOXNACK-NEXT:    v_add_nc_u16 v3, v3, v6 op_sel:[0,1,0]
 ; GFX10-DL-NOXNACK-NEXT:    v_perm_b32 v1, v1, v10, 0x5040100
-; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v5, 16, v4
-; GFX10-DL-NOXNACK-NEXT:    v_add_nc_u16 v3, v3, v4
+; GFX10-DL-NOXNACK-NEXT:    v_perm_b32 v0, v0, v4, 0x5040100
+; GFX10-DL-NOXNACK-NEXT:    v_add_nc_u16 v3, v3, v5
 ; GFX10-DL-NOXNACK-NEXT:    v_pk_mul_lo_u16 v0, v1, v0
-; GFX10-DL-NOXNACK-NEXT:    v_add_nc_u16 v1, v3, v5
-; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
-; GFX10-DL-NOXNACK-NEXT:    v_add_nc_u16 v0, v1, v0
-; GFX10-DL-NOXNACK-NEXT:    v_add_nc_u16 v0, v0, v3
+; GFX10-DL-NOXNACK-NEXT:    v_add_nc_u16 v1, v3, v5 op_sel:[0,1,0]
+; GFX10-DL-NOXNACK-NEXT:    v_add_nc_u16 v1, v1, v0
+; GFX10-DL-NOXNACK-NEXT:    v_add_nc_u16 v0, v1, v0 op_sel:[0,1,0]
 ; GFX10-DL-NOXNACK-NEXT:    global_store_short v2, v0, s[0:1]
 ; GFX10-DL-NOXNACK-NEXT:    s_endpgm
                                               ptr addrspace(1) %src2,
@@ -2895,84 +2875,82 @@ define amdgpu_kernel void @idot8_acc8_vecMul(ptr addrspace(1) %src1,
 ; GFX10-DL-XNACK-NEXT:    global_load_dword v2, v0, s[10:11]
 ; GFX10-DL-XNACK-NEXT:    global_load_ubyte v3, v4, s[0:1]
 ; GFX10-DL-XNACK-NEXT:    s_waitcnt vmcnt(2)
-; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v8, 12, v1
+; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v7, 12, v1
 ; GFX10-DL-XNACK-NEXT:    s_waitcnt vmcnt(1)
-; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v15, 12, v2
-; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v9, 8, v1
-; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v16, 8, v2
-; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v10, 4, v1
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v8, 12, v8
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v15, 12, v15
-; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v17, 4, v2
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v9, 12, v9
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v16, 12, v16
-; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v8, 12, v8
-; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v15, 12, v15
+; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v13, 12, v2
 ; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v0, 28, v1
-; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v6, 20, v1
-; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v11, 28, v2
-; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v13, 20, v2
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v10, 12, v10
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v17, 12, v17
-; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v9, 12, v9
-; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v16, 12, v16
-; GFX10-DL-XNACK-NEXT:    v_mul_lo_u16 v8, v8, v15
 ; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v5, 24, v1
-; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v7, 16, v1
-; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v12, 24, v2
-; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v14, 16, v2
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v1, 12, v1
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v2, 12, v2
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v6, 12, v6
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v0, 12, v0
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v13, 12, v13
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v11, 12, v11
-; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v10, 12, v10
-; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v15, 12, v17
-; GFX10-DL-XNACK-NEXT:    v_mul_lo_u16 v9, v9, v16
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v8, 8, v8
-; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v1, 12, v1
+; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v6, 20, v1
+; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v8, 8, v1
+; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v9, 4, v1
+; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v10, 28, v2
+; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v11, 24, v2
+; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v12, 20, v2
+; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v14, 8, v2
+; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v15, 4, v2
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v16, 12, v1
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v1, 12, v1 op_sel:[0,1,0]
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v17, 12, v2
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v2, 12, v2 op_sel:[0,1,0]
 ; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v7, 12, v7
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v5, 12, v5
-; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v2, 12, v2
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v13, 12, v13
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v8, 12, v8
+; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v18, 12, v1
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v1, 12, v5
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v5, 12, v15
+; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v15, 12, v17
 ; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v14, 12, v14
+; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v17, 12, v2
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v2, 12, v11
+; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v7, 12, v7
+; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v11, 12, v13
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v9, 12, v9
+; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v8, 12, v8
+; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v13, 12, v14
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v6, 12, v6
+; GFX10-DL-XNACK-NEXT:    v_mul_lo_u16 v7, v7, v11
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v0, 12, v0
 ; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v12, 12, v12
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v10, 12, v10
+; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v9, 12, v9
+; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v11, 12, v1
+; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v1, 12, v5
+; GFX10-DL-XNACK-NEXT:    v_mul_lo_u16 v5, v8, v13
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v7, 8, v7
 ; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v6, 12, v6
 ; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v0, 12, v0
-; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v13, 12, v13
-; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v11, 12, v11
-; GFX10-DL-XNACK-NEXT:    v_mul_lo_u16 v10, v10, v15
-; GFX10-DL-XNACK-NEXT:    v_or_b32_sdwa v8, v9, v8 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
-; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v7, 12, v7
-; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v5, 12, v5
-; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v14, 12, v14
-; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v12, 12, v12
-; GFX10-DL-XNACK-NEXT:    v_mul_lo_u16 v1, v1, v2
-; GFX10-DL-XNACK-NEXT:    v_mul_lo_u16 v2, v0, v11
-; GFX10-DL-XNACK-NEXT:    v_mul_lo_u16 v6, v6, v13
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v9, 8, v10
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b32_e32 v0, 16, v8
-; GFX10-DL-XNACK-NEXT:    v_mul_lo_u16 v10, v5, v12
-; GFX10-DL-XNACK-NEXT:    v_mul_lo_u16 v11, v7, v14
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v13, 8, v2
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v2, 8, v6
-; GFX10-DL-XNACK-NEXT:    v_or_b32_sdwa v6, v0, v9 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
-; GFX10-DL-XNACK-NEXT:    v_or_b32_sdwa v1, v1, v9 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
-; GFX10-DL-XNACK-NEXT:    v_or_b32_sdwa v9, v10, v13 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
-; GFX10-DL-XNACK-NEXT:    v_or_b32_sdwa v2, v11, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
-; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v6, 8, v6
+; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v8, 12, v12
+; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v10, 12, v10
+; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v16, 12, v16
+; GFX10-DL-XNACK-NEXT:    v_mul_lo_u16 v1, v9, v1
+; GFX10-DL-XNACK-NEXT:    v_or_b32_sdwa v5, v5, v7 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v12, 12, v2
+; GFX10-DL-XNACK-NEXT:    v_mul_lo_u16 v7, v0, v10
+; GFX10-DL-XNACK-NEXT:    v_mul_lo_u16 v6, v6, v8
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v1, 8, v1
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b32_e32 v0, 16, v5
+; GFX10-DL-XNACK-NEXT:    v_mul_lo_u16 v8, v16, v15
+; GFX10-DL-XNACK-NEXT:    v_mul_lo_u16 v2, v18, v17
+; GFX10-DL-XNACK-NEXT:    v_mul_lo_u16 v9, v11, v12
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v7, 8, v7
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v6, 8, v6
+; GFX10-DL-XNACK-NEXT:    v_or_b32_sdwa v10, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX10-DL-XNACK-NEXT:    v_or_b32_sdwa v1, v8, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; GFX10-DL-XNACK-NEXT:    v_or_b32_sdwa v8, v9, v7 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; GFX10-DL-XNACK-NEXT:    v_or_b32_sdwa v2, v2, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v6, 8, v10
 ; GFX10-DL-XNACK-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-DL-XNACK-NEXT:    v_add_nc_u16 v3, v1, v3
-; GFX10-DL-XNACK-NEXT:    v_or_b32_sdwa v1, v9, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX10-DL-XNACK-NEXT:    v_or_b32_sdwa v1, v8, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX10-DL-XNACK-NEXT:    v_add_nc_u16 v6, v3, v6
 ; GFX10-DL-XNACK-NEXT:    v_lshrrev_b64 v[2:3], 24, v[0:1]
 ; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v1, 8, v1
-; GFX10-DL-XNACK-NEXT:    v_add_nc_u16 v0, v6, v8
+; GFX10-DL-XNACK-NEXT:    v_add_nc_u16 v0, v6, v5
 ; GFX10-DL-XNACK-NEXT:    v_add_nc_u16 v0, v0, v2
-; GFX10-DL-XNACK-NEXT:    v_mad_u16 v0, v7, v14, v0
+; GFX10-DL-XNACK-NEXT:    v_mad_u16 v0, v18, v17, v0
 ; GFX10-DL-XNACK-NEXT:    v_add_nc_u16 v0, v0, v1
-; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v1, 8, v13
-; GFX10-DL-XNACK-NEXT:    v_mad_u16 v0, v5, v12, v0
+; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v1, 8, v7
+; GFX10-DL-XNACK-NEXT:    v_mad_u16 v0, v11, v12, v0
 ; GFX10-DL-XNACK-NEXT:    v_add_nc_u16 v0, v0, v1
 ; GFX10-DL-XNACK-NEXT:    global_store_byte v4, v0, s[0:1]
 ; GFX10-DL-XNACK-NEXT:    s_endpgm
@@ -2996,84 +2974,82 @@ define amdgpu_kernel void @idot8_acc8_vecMul(ptr addrspace(1) %src1,
 ; GFX10-DL-NOXNACK-NEXT:    global_load_dword v0, v0, s[10:11]
 ; GFX10-DL-NOXNACK-NEXT:    global_load_ubyte v2, v4, s[0:1]
 ; GFX10-DL-NOXNACK-NEXT:    s_waitcnt vmcnt(2)
-; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v8, 12, v1
+; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v7, 12, v1
 ; GFX10-DL-NOXNACK-NEXT:    s_waitcnt vmcnt(1)
-; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v15, 12, v0
-; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v9, 8, v1
-; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v16, 8, v0
-; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v10, 4, v1
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v8, 12, v8
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v15, 12, v15
-; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v17, 4, v0
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v9, 12, v9
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v16, 12, v16
-; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v8, 12, v8
-; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v15, 12, v15
+; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v13, 12, v0
 ; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v3, 28, v1
-; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v6, 20, v1
-; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v11, 28, v0
-; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v13, 20, v0
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v10, 12, v10
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v17, 12, v17
-; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v9, 12, v9
-; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v16, 12, v16
-; GFX10-DL-NOXNACK-NEXT:    v_mul_lo_u16 v8, v8, v15
 ; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v5, 24, v1
-; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v7, 16, v1
-; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v12, 24, v0
-; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v14, 16, v0
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v6, 12, v6
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v3, 12, v3
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v13, 12, v13
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v11, 12, v11
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v1, 12, v1
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v0, 12, v0
-; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v10, 12, v10
-; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v15, 12, v17
-; GFX10-DL-NOXNACK-NEXT:    v_mul_lo_u16 v9, v9, v16
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v8, 8, v8
+; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v6, 20, v1
+; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v8, 8, v1
+; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v9, 4, v1
+; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v10, 28, v0
+; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v11, 24, v0
+; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v12, 20, v0
+; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v14, 8, v0
+; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v15, 4, v0
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v16, 12, v1
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v1, 12, v1 op_sel:[0,1,0]
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v17, 12, v0
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v0, 12, v0 op_sel:[0,1,0]
 ; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v7, 12, v7
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v5, 12, v5
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v13, 12, v13
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v8, 12, v8
+; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v18, 12, v1
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v1, 12, v5
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v5, 12, v15
+; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v15, 12, v17
 ; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v14, 12, v14
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v12, 12, v12
-; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v6, 12, v6
-; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v3, 12, v3
-; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v13, 12, v13
-; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v11, 12, v11
-; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v1, 12, v1
-; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v0, 12, v0
-; GFX10-DL-NOXNACK-NEXT:    v_mul_lo_u16 v10, v10, v15
-; GFX10-DL-NOXNACK-NEXT:    v_or_b32_sdwa v8, v9, v8 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v17, 12, v0
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v0, 12, v11
 ; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v7, 12, v7
-; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v5, 12, v5
-; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v14, 12, v14
-; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v12, 12, v12
-; GFX10-DL-NOXNACK-NEXT:    v_mul_lo_u16 v3, v3, v11
-; GFX10-DL-NOXNACK-NEXT:    v_mul_lo_u16 v6, v6, v13
-; GFX10-DL-NOXNACK-NEXT:    v_mul_lo_u16 v1, v1, v0
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v9, 8, v10
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b32_e32 v0, 16, v8
-; GFX10-DL-NOXNACK-NEXT:    v_mul_lo_u16 v10, v5, v12
-; GFX10-DL-NOXNACK-NEXT:    v_mul_lo_u16 v11, v7, v14
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v13, 8, v3
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v3, 8, v6
-; GFX10-DL-NOXNACK-NEXT:    v_or_b32_sdwa v6, v0, v9 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
-; GFX10-DL-NOXNACK-NEXT:    v_or_b32_sdwa v1, v1, v9 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
-; GFX10-DL-NOXNACK-NEXT:    v_or_b32_sdwa v9, v10, v13 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
-; GFX10-DL-NOXNACK-NEXT:    v_or_b32_sdwa v3, v11, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
-; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v6, 8, v6
+; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v11, 12, v13
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v9, 12, v9
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v3, 12, v3
+; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v8, 12, v8
+; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v13, 12, v14
+; GFX10-DL-NOXNACK-NEXT:    v_mul_lo_u16 v7, v7, v11
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v6, 12, v6
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v12, 12, v12
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v10, 12, v10
+; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v9, 12, v9
+; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v11, 12, v1
+; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v1, 12, v3
+; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v3, 12, v5
+; GFX10-DL-NOXNACK-NEXT:    v_mul_lo_u16 v5, v8, v13
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v7, 8, v7
+; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v6, 12, v6
+; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v8, 12, v12
+; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v10, 12, v10
+; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v16, 12, v16
+; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v12, 12, v0
+; GFX10-DL-NOXNACK-NEXT:    v_mul_lo_u16 v0, v9, v3
+; GFX10-DL-NOXNACK-NEXT:    v_or_b32_sdwa v5, v5, v7 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; GFX10-DL-NOXNACK-NEXT:    v_mul_lo_u16 v1, v1, v10
+; GFX10-DL-NOXNACK-NEXT:    v_mul_lo_u16 v6, v6, v8
+; GFX10-DL-NOXNACK-NEXT:    v_mul_lo_u16 v8, v16, v15
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v7, 8, v0
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b32_e32 v0, 16, v5
+; GFX10-DL-NOXNACK-NEXT:    v_mul_lo_u16 v3, v18, v17
+; GFX10-DL-NOXNACK-NEXT:    v_mul_lo_u16 v9, v11, v12
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v10, 8, v1
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v1, 8, v6
+; GFX10-DL-NOXNACK-NEXT:    v_or_b32_sdwa v6, v0, v7 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX10-DL-NOXNACK-NEXT:    v_or_b32_sdwa v7, v8, v7 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; GFX10-DL-NOXNACK-NEXT:    v_or_b32_sdwa v8, v9, v10 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; GFX10-DL-NOXNACK-NEXT:    v_or_b32_sdwa v1, v3, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v3, 8, v6
 ; GFX10-DL-NOXNACK-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-DL-NOXNACK-NEXT:    v_add_nc_u16 v2, v1, v2
-; GFX10-DL-NOXNACK-NEXT:    v_or_b32_sdwa v1, v9, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
-; GFX10-DL-NOXNACK-NEXT:    v_add_nc_u16 v6, v2, v6
+; GFX10-DL-NOXNACK-NEXT:    v_add_nc_u16 v2, v7, v2
+; GFX10-DL-NOXNACK-NEXT:    v_or_b32_sdwa v1, v8, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX10-DL-NOXNACK-NEXT:    v_add_nc_u16 v6, v2, v3
 ; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b64 v[2:3], 24, v[0:1]
 ; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v1, 8, v1
-; GFX10-DL-NOXNACK-NEXT:    v_add_nc_u16 v0, v6, v8
+; GFX10-DL-NOXNACK-NEXT:    v_add_nc_u16 v0, v6, v5
 ; GFX10-DL-NOXNACK-NEXT:    v_add_nc_u16 v0, v0, v2
-; GFX10-DL-NOXNACK-NEXT:    v_mad_u16 v0, v7, v14, v0
+; GFX10-DL-NOXNACK-NEXT:    v_mad_u16 v0, v18, v17, v0
 ; GFX10-DL-NOXNACK-NEXT:    v_add_nc_u16 v0, v0, v1
-; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v1, 8, v13
-; GFX10-DL-NOXNACK-NEXT:    v_mad_u16 v0, v5, v12, v0
+; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v1, 8, v10
+; GFX10-DL-NOXNACK-NEXT:    v_mad_u16 v0, v11, v12, v0
 ; GFX10-DL-NOXNACK-NEXT:    v_add_nc_u16 v0, v0, v1
 ; GFX10-DL-NOXNACK-NEXT:    global_store_byte v4, v0, s[0:1]
 ; GFX10-DL-NOXNACK-NEXT:    s_endpgm

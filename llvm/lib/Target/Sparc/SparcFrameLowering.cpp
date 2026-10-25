@@ -20,22 +20,18 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Target/TargetOptions.h"
+#include "llvm/CodeGen/RegisterScavenging.h"
 
 using namespace llvm;
 
-static cl::opt<bool>
-DisableLeafProc("disable-sparc-leaf-proc",
-                cl::init(false),
-                cl::desc("Disable Sparc leaf procedure optimization."),
-                cl::Hidden);
+#define DEBUG_TYPE "sparc-frame-lowering"
 
 SparcFrameLowering::SparcFrameLowering(const SparcSubtarget &ST)
     : TargetFrameLowering(TargetFrameLowering::StackGrowsDown,
                           ST.is64Bit() ? Align(16) : Align(8), 0,
                           ST.is64Bit() ? Align(16) : Align(8),
-                          /*StackRealignable=*/false) {}
+                          /*StackRealignable=*/false),
+      STI(ST) {}
 
 void SparcFrameLowering::emitSPAdjustment(MachineFunction &MF,
                                           MachineBasicBlock &MBB,
@@ -202,8 +198,8 @@ bool SparcFrameLowering::hasReservedCallFrame(const MachineFunction &MF) const {
 // allocas or if frame pointer elimination is disabled.
 bool SparcFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  return MF.getTarget().Options.DisableFramePointerElim(MF) ||
-         MFI.hasVarSizedObjects() || MFI.isFrameAddressTaken();
+  return MF.disableFramePointerElim() || MFI.hasVarSizedObjects() ||
+         MFI.isFrameAddressTaken();
 }
 
 StackOffset
@@ -264,12 +260,14 @@ bool SparcFrameLowering::isLeafProc(MachineFunction &MF) const
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
   MachineFrameInfo    &MFI = MF.getFrameInfo();
+  SparcMachineFunctionInfo *SMFI = MF.getInfo<SparcMachineFunctionInfo>();
 
   return !(MFI.hasCalls()               // has calls
            || MRI.isPhysRegUsed(SP::L0) // Too many registers needed
            || MRI.isPhysRegUsed(SP::O6) // %sp is used
            || hasFP(MF)                 // need %fp
-           || MF.hasInlineAsm());       // has inline assembly
+           || MF.hasInlineAsm()         // has inline assembly
+           || SMFI->isLargeProc());     // is a large procedure
 }
 
 void SparcFrameLowering::remapRegsForLeafProc(MachineFunction &MF) const {
@@ -314,15 +312,53 @@ void SparcFrameLowering::remapRegsForLeafProc(MachineFunction &MF) const {
 #endif
 }
 
+static uint64_t estimateFunctionSizeInBytes(const SparcInstrInfo *TII,
+                                            const MachineFunction &MF) {
+  uint64_t FuncSize = 0;
+  for (auto &MBB : MF)
+    for (auto &MI : MBB) {
+      // Be conservative here and count the DS too.
+      uint64_t Multiplier = MI.hasDelaySlot() ? 2 : 1;
+      FuncSize += (TII->getInstSizeInBytes(MI) * Multiplier);
+    }
+  return FuncSize;
+}
+
 void SparcFrameLowering::determineCalleeSaves(MachineFunction &MF,
                                               BitVector &SavedRegs,
                                               RegScavenger *RS) const {
   TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
-  if (!DisableLeafProc && isLeafProc(MF)) {
-    SparcMachineFunctionInfo *MFI = MF.getInfo<SparcMachineFunctionInfo>();
+  SparcMachineFunctionInfo *MFI = MF.getInfo<SparcMachineFunctionInfo>();
+  const SparcInstrInfo *TII = STI.getInstrInfo();
+  const SparcSubtarget &Subtarget = MF.getSubtarget<SparcSubtarget>();
+
+  bool IsLargeFunction = !isInt<23>(estimateFunctionSizeInBytes(TII, MF));
+  MFI->setLargeProc(IsLargeFunction);
+
+  if (!Subtarget.getCLOpts().disable_sparc_leaf_proc && isLeafProc(MF)) {
     MFI->setLeafProc(true);
 
     remapRegsForLeafProc(MF);
   }
+}
 
+void SparcFrameLowering::processFunctionBeforeFrameFinalized(
+    MachineFunction &MF, RegScavenger *RS) const {
+  const SparcRegisterInfo *RI = STI.getRegisterInfo();
+  const TargetRegisterClass &RC =
+      STI.is64Bit() ? SP::I64RegsRegClass : SP::IntRegsRegClass;
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  SparcMachineFunctionInfo *SMFI = MF.getInfo<SparcMachineFunctionInfo>();
+
+  // Far branches beyond 23-bit offset require a spill slot for scratch
+  // register.
+  if (SMFI->isLargeProc()) {
+    int FI =
+        MFI.CreateSpillStackObject(RI->getSpillSize(RC), RI->getSpillAlign(RC));
+    RS->addScavengingFrameIndex(FI);
+    if (SMFI->getBranchRelaxationSpillFrameIndex() == -1)
+      SMFI->setBranchRelaxationSpillFrameIndex(FI);
+    LLVM_DEBUG(dbgs() << "Allocated FI(" << FI
+                      << ") as the emergency spill slot.\n");
+  }
 }

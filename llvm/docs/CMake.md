@@ -318,6 +318,14 @@ sub-projects. Nearly all of these variable names begin with `LLVM_`.
     `BUILD_SHARED_LIBS` is only recommended for use by LLVM developers. If you want to build LLVM as a shared library, you should use the `LLVM_BUILD_LLVM_DYLIB` option.
     :::
 
+**CLANG_ENABLE_CIR**:BOOL
+
+:   Used to disable building the experimental MLIR Code Generator, ClangIR when
+    building Clang. The ClangIR build automatically includes a significant amount
+    of the MLIR project as well, and results in a significant increase in the time
+    required to build Clang and the resulting size of the clang binary. Defaults
+    to ON.
+
 **LLVM_ABI_BREAKING_CHECKS**:STRING
 
 :   Used to decide if LLVM should be built with ABI breaking checks or not.
@@ -607,6 +615,12 @@ sub-projects. Nearly all of these variable names begin with `LLVM_`.
     enabling link-time optimization. Possible values are `Off`, `On`, `Thin`
     and `Full`. Defaults to OFF.
 
+**LLVM_ENABLE_LZMA**:STRING
+
+:   Used to decide if LLVM tools should support decompression of xz streams
+    with liblzma. Allowed values are `OFF`, `ON` (default, enable if liblzma is
+    found), and `FORCE_ON` (error if liblzma is not found).
+
 **LLVM_ENABLE_MODULES**:BOOL
 
 :   Compile with [Clang Header
@@ -638,6 +652,21 @@ sub-projects. Nearly all of these variable names begin with `LLVM_`.
     parallel to llvm instead of nested in `llvm/tools`. This feature allows
     having one build for only LLVM and another for clang+llvm using the same
     source checkout.
+
+    When Flang enables Clang and MLIR automatically as dependencies, they
+    contribute only targets needed by Flang to the default build. Their test
+    suites are disabled by default, and installation includes the libraries,
+    headers, and resources needed by Flang's installed binaries and CMake
+    package. Listing Clang or MLIR explicitly restores that project's complete
+    default build, test, and install behavior. Clang also retains its normal
+    behavior when LLDB or clang-tools-extra is enabled.
+
+    Flang's dependency libraries and headers can be selected in distributions
+    with `flang-dependencies` and `flang-dependency-headers`. Their CMake targets
+    are included in Flang's usual exports; an SDK distribution also needs the
+    corresponding LLVM libraries, headers, and CMake exports. Toolchain-only
+    installations omit dependency SDK libraries and headers, but retain shared
+    libraries, runtime tools, and compiler resource headers.
 
     The full list is:
 
@@ -864,11 +893,12 @@ sub-projects. Nearly all of these variable names begin with `LLVM_`.
 
 **LLVM_LIT_TOOLS_DIR**:PATH
 
-:   The path to GnuWin32 tools for tests. Valid on Windows host. Defaults to
-    the empty string, in which case lit will look for tools needed for tests
-    (e.g., `grep`, `sort`, etc.) in your `%PATH%`. If GnuWin32 is not in your
-    `%PATH%`, then you can set this variable to the GnuWin32 directory so that
-    lit can find tools needed for tests in that directory.
+:   The path to the [Git for Windows](https://git-scm.com/) tools for tests.
+    Valid on Windows host. Defaults to the empty string, in which case lit will
+    look for tools needed for tests (e.g., `grep`, `sort`, etc.) in your
+    `%PATH%`. If Git for Windows is not in your `%PATH%`, then you can set this
+    variable to the Git for Windows `usr/bin` sub-directory so that lit can
+    find tools needed for tests in that directory.
 
 **LLVM_NATIVE_TOOL_DIR**:STRING
 
@@ -910,11 +940,11 @@ sub-projects. Nearly all of these variable names begin with `LLVM_`.
     use during the build. Enabling this option can significantly speed up build
     times, especially when building LLVM in Debug configurations.
 
-**LLVM_PARALLEL\_{COMPILE,LINK,TABLEGEN}\_JOBS**:STRING
+**LLVM_PARALLEL\_{COMPILE,LINK,TABLEGEN,SPHINX}\_JOBS**:STRING
 
-:   Limit the maximum number of concurrent compilation, link or tablegen jobs
-    respectively. The default total number of parallel jobs is determined by
-    the number of logical CPUs.
+:   Limit the maximum number of concurrent compilation, link, tablegen, or
+    `sphinx-build` invocations respectively. These limits are implemented with
+    Ninja job pools and only take effect when using a Ninja generator.
 
 **LLVM_PROFDATA_FILE**:PATH
 
@@ -940,6 +970,13 @@ sub-projects. Nearly all of these variable names begin with `LLVM_`.
     reverse order. This is useful for uncovering non-determinism caused by
     iteration of unordered containers.
 
+**LLVM_SPHINX_THREADS**:STRING
+
+:   Controls `sphinx-build -j`, which is the internal Sphinx worker count.
+    Defaults to half the number of logical cores, rounded up. The default is
+    high because Sphinx is often on the critical path, and rarely uses all
+    available cores. Set to an empty string to omit the Sphinx `-j` option.
+
 **LLVM_STATIC_LINK_CXX_STDLIB**:BOOL
 
 :   Statically link to the C++ standard library if possible. This uses the flag
@@ -952,6 +989,21 @@ sub-projects. Nearly all of these variable names begin with `LLVM_`.
 :   Full path to a native TableGen executable (usually named `llvm-tblgen`).
     This is intended for cross-compiling: if the user sets this variable, no
     native TableGen will be created.
+
+**LLVM_TABLEGEN_LAUNCHER**:STRING
+
+:   Semicolon-separated command prefix to run every TableGen invocation
+    under, analogous to `CMAKE_<LANG>_COMPILER_LAUNCHER`. The TableGen
+    executable remains a dependency of each command. Empty by default.
+
+    This allows TableGen commands to use a caching or remote execution
+    launcher independently of C and C++ compilation. For example,
+    `-DLLVM_TABLEGEN_LAUNCHER="/path/to/launcher;--config=/path/to/config"`
+    runs each command as `/path/to/launcher --config=/path/to/config <tablegen> ...`.
+    The launcher must support the generator being invoked and is responsible
+    for any input discovery and execution environment it requires. This also
+    applies to other generators invoked through the `tablegen()` CMake
+    function, such as MLIR source sharding.
 
 **LLVM_TARGET_ARCH**:STRING
 

@@ -2,6 +2,7 @@
 // RUN: %llvm_jitlink -preload libobjc.A.dylib %t
 //
 // REQUIRES: jit-compatible-osx-swift-runtime
+// UNSUPPORTED: host-jit-triple=arm64e-{{.*}}
 //
 // Test that Objective-C class and instance methods work.
 

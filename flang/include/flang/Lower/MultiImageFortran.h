@@ -63,6 +63,10 @@ void genFormTeamStatement(AbstractConverter &, pft::Evaluation &eval,
 // COARRAY utils
 //===----------------------------------------------------------------------===//
 
+mlir::SmallVector<mlir::Value>
+getCosubscripts(AbstractConverter &converter, mlir::Location loc,
+                const evaluate::CoarrayRef &expr);
+
 mlir::Value genLowerCoBounds(AbstractConverter &converter, mlir::Location loc,
                              const semantics::Symbol &sym);
 

@@ -293,6 +293,8 @@ void JumpScopeChecker::BuildScopeInformation(VarDecl *D,
 /// non-trivial to destruct.
 void JumpScopeChecker::BuildScopeInformation(CompoundLiteralExpr *CLE,
                                              unsigned &ParentScope) {
+  if (!CLE->getType().isDestructedType())
+    return;
   unsigned InDiag = diag::note_enters_compound_literal_scope;
   unsigned OutDiag = diag::note_exits_compound_literal_scope;
   Scopes.push_back(GotoScope(ParentScope, InDiag, OutDiag, CLE->getExprLoc()));

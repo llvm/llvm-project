@@ -36,7 +36,6 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
@@ -207,8 +206,8 @@ static bool simplifyCommonValuePhi(PHINode *P, LazyValueInfo *LVI,
 
 static Value *getValueOnEdge(LazyValueInfo *LVI, Value *Incoming,
                              BasicBlock *From, BasicBlock *To,
-                             Instruction *CxtI) {
-  if (Constant *C = LVI->getConstantOnEdge(Incoming, From, To, CxtI))
+                             Instruction *CtxI) {
+  if (Constant *C = LVI->getConstantOnEdge(Incoming, From, To, CtxI))
     return C;
 
   // Look if the incoming value is a select with a scalar condition for which
@@ -223,7 +222,7 @@ static Value *getValueOnEdge(LazyValueInfo *LVI, Value *Incoming,
   // for vector type constants that are not all zeroes or all ones.
   Value *Condition = SI->getCondition();
   if (!Condition->getType()->isVectorTy()) {
-    if (Constant *C = LVI->getConstantOnEdge(Condition, From, To, CxtI)) {
+    if (Constant *C = LVI->getConstantOnEdge(Condition, From, To, CtxI)) {
       if (C->isOneValue())
         return SI->getTrueValue();
       if (C->isNullValue())
@@ -239,7 +238,7 @@ static Value *getValueOnEdge(LazyValueInfo *LVI, Value *Incoming,
   // The "false" case
   if (auto *C = dyn_cast<Constant>(SI->getFalseValue()))
     if (auto *Res = dyn_cast_or_null<ConstantInt>(
-            LVI->getPredicateOnEdge(ICmpInst::ICMP_EQ, SI, C, From, To, CxtI));
+            LVI->getPredicateOnEdge(ICmpInst::ICMP_EQ, SI, C, From, To, CtxI));
         Res && Res->isZero())
       return SI->getTrueValue();
 
@@ -247,7 +246,7 @@ static Value *getValueOnEdge(LazyValueInfo *LVI, Value *Incoming,
   // similar to the select "false" case, but try the select "true" value
   if (auto *C = dyn_cast<Constant>(SI->getTrueValue()))
     if (auto *Res = dyn_cast_or_null<ConstantInt>(
-            LVI->getPredicateOnEdge(ICmpInst::ICMP_EQ, SI, C, From, To, CxtI));
+            LVI->getPredicateOnEdge(ICmpInst::ICMP_EQ, SI, C, From, To, CtxI));
         Res && Res->isZero())
       return SI->getFalseValue();
 
@@ -1202,6 +1201,46 @@ static NoWrapFlags computeNoWrapFlags(Instruction::BinaryOps Opcode,
   return Flags;
 }
 
+// Try to prove that \p BinOp does not wrap by looking at the operand ranges
+// constrained at each of its use sites, rather than at the definition. This
+// improves results, e.g. when all uses are constrained by a runtime check.
+static NoWrapFlags inferNoWrapFromUses(BinaryOperator *BinOp,
+                                       LazyValueInfo *LVI, bool WantNSW,
+                                       bool WantNUW) {
+  // Skip analysis, when there are too many uses to check or any use is in the
+  // same block.
+  const unsigned MaxUsesToInspect = 4;
+  BasicBlock *DefBB = BinOp->getParent();
+  unsigned NumUses = 0;
+  for (Use &U : BinOp->uses()) {
+    if (++NumUses > MaxUsesToInspect)
+      return {};
+    auto *UserI = cast<Instruction>(U.getUser());
+    if (isa<PHINode>(UserI) || UserI->getParent() == DefBB)
+      return {};
+  }
+  if (NumUses == 0)
+    return {};
+
+  Instruction::BinaryOps Opcode = BinOp->getOpcode();
+  NoWrapFlags Flags;
+  Flags.NSW = WantNSW;
+  Flags.NUW = WantNUW;
+  for (Use &U : BinOp->uses()) {
+    auto *UserI = cast<Instruction>(U.getUser());
+    // Constrain both operands at this use site and see which flags still hold.
+    ConstantRange LRange = LVI->getConstantRange(BinOp->getOperand(0), UserI,
+                                                 /*UndefAllowed=*/false);
+    ConstantRange RRange = LVI->getConstantRange(BinOp->getOperand(1), UserI,
+                                                 /*UndefAllowed=*/false);
+    Flags = computeNoWrapFlags(Opcode, LRange, RRange, Flags.NSW, Flags.NUW);
+    if (!Flags.NSW && !Flags.NUW)
+      return {};
+  }
+
+  return Flags;
+}
+
 static bool processBinOp(BinaryOperator *BinOp, LazyValueInfo *LVI) {
   bool NSW = BinOp->hasNoSignedWrap();
   bool NUW = BinOp->hasNoUnsignedWrap();
@@ -1217,6 +1256,17 @@ static bool processBinOp(BinaryOperator *BinOp, LazyValueInfo *LVI) {
   NoWrapFlags New =
       computeNoWrapFlags(Opcode, LRange, RRange, /*CheckNSW=*/!NSW,
                          /*CheckNUW=*/!NUW);
+
+  // If a still-wanted flag could not be proven at the definition, retry using
+  // the operand ranges constrained at the use sites. This is the more
+  // expensive path, so it only runs when the cheap query above came up short.
+  bool WantNSW = !NSW && !New.NSW;
+  bool WantNUW = !NUW && !New.NUW;
+  if (WantNSW || WantNUW) {
+    NoWrapFlags FromUses = inferNoWrapFromUses(BinOp, LVI, WantNSW, WantNUW);
+    New.NSW |= FromUses.NSW;
+    New.NUW |= FromUses.NUW;
+  }
 
   setDeducedOverflowingFlags(BinOp, Opcode, New.NSW, New.NUW);
 

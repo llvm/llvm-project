@@ -269,6 +269,7 @@ bool ProcessMachCore::LoadBinaryViaLowmemUUID() {
               bin_spec.force_symbol_search = true;
               bin_spec.notify = true;
               bin_spec.set_address_in_target = true;
+              bin_spec.is_main_executable = true;
               llvm::Expected<ModuleSP> module =
                   DynamicLoader::LocateAndLoadBinary(this, bin_spec);
               if (module)
@@ -335,6 +336,7 @@ bool ProcessMachCore::LoadBinariesViaMetadata() {
       bin_spec.force_symbol_search = true;
       bin_spec.notify = true;
       bin_spec.set_address_in_target = true;
+      bin_spec.is_main_executable = true;
       llvm::Expected<ModuleSP> module =
           DynamicLoader::LocateAndLoadBinary(this, bin_spec);
       if (module)
@@ -394,6 +396,7 @@ bool ProcessMachCore::LoadBinariesViaMetadata() {
       bin_spec.force_symbol_search = true;
       bin_spec.notify = true;
       bin_spec.set_address_in_target = true;
+      bin_spec.is_main_executable = true;
       llvm::Expected<ModuleSP> module =
           DynamicLoader::LocateAndLoadBinary(this, bin_spec);
       if (module) {
@@ -721,15 +724,17 @@ bool ProcessMachCore::IsAlive() { return true; }
 bool ProcessMachCore::WarnBeforeDetach() const { return false; }
 
 // Process Memory
-size_t ProcessMachCore::ReadMemory(addr_t addr, void *buf, size_t size,
-                                   Status &error) {
+size_t ProcessMachCore::ReadMemory(const ProcessAddress &process_addr,
+                                   void *buf, size_t size, Status &error) {
+  lldb::addr_t addr = process_addr.GetValue();
   // Don't allow the caching that lldb_private::Process::ReadMemory does since
   // in core files we have it all cached our our core file anyway.
   return DoReadMemory(FixAnyAddress(addr), buf, size, error);
 }
 
-size_t ProcessMachCore::DoReadMemory(addr_t addr, void *buf, size_t size,
-                                     Status &error) {
+size_t ProcessMachCore::DoReadMemory(const ProcessAddress &process_addr,
+                                     void *buf, size_t size, Status &error) {
+  lldb::addr_t addr = process_addr.GetValue();
   ObjectFile *core_objfile = m_core_module_sp->GetObjectFile();
   size_t bytes_read = 0;
 

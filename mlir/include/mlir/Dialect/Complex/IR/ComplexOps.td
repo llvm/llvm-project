@@ -365,7 +365,7 @@ def Log1pOp : ComplexUnaryOp<"log1p", [SameOperandsAndResultType]> {
 // MulOp
 //===----------------------------------------------------------------------===//
 
-def MulOp : ComplexArithmeticOp<"mul"> {
+def MulOp : ComplexArithmeticOp<"mul", [Commutative]> {
   let summary = "complex multiplication";
   let description = [{
     The `mul` operation takes two complex numbers and returns their product:

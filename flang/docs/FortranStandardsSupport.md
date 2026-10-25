@@ -8,11 +8,6 @@
 
 # Flang Fortran Standards Support
 
-```{contents}
----
-local:
----
-```
 
 This document summarizes Fortran standards support in Flang. The information is only provided as a guideline. The
 TODOs/Not Yet Implemented messages emitted by the compiler for unimplemented features should be treated as authoritative.
@@ -58,7 +53,7 @@ status of all important Fortran 2023 features. The table entries are based on th
 | Using integer arrays to specify rank and bound of an array | N      | |
 | Using an integer constant to specify rank                  | Y      | |
 | Reduction specifier for do concurrent                      | P      | |
-| Enumerations                                               | N      | |
+| Enumerations                                               | P      | New non-interoperable ENUMERATION TYPE supported, named interoperable enum types not yet supported |
 
 ## Fortran 2018
 All features except those listed in the following table are supported. Almost all of the unsupported features are related to
@@ -88,7 +83,7 @@ All features except those listed in the following table are supported.
 | Feature                                                    | Status | Comments                                                |
 |------------------------------------------------------------|--------|---------------------------------------------------------|
 | do concurrent                                              | Y      | See [Do Concurrent Conversion To OpenMP](DoConcurrentConversionToOpenMP.md) for implementation details.|
-| Internal procedure as an actual argument or pointer target | Y      | Current implementation requires stack to be executable. See [FAQ](FAQ.md#why-do-i-get-a-warning-or-an-error-about-an-executable-stack) and [Proposal](InternalProcedureTrampolines.md) |
+| Internal procedure as an actual argument or pointer target | Y      | The default implementation requires an executable stack; `-fsafe-trampoline` uses a runtime-managed pool on supported targets. See [FAQ](FAQ.md#why-do-i-get-a-warning-or-an-error-about-an-executable-stack) and [design documentation](InternalProcedureTrampolines.md) |
 | Intrinsic functions this_image, num_images                 | P      | Experimental support via [PRIF](ParallelMultiImageFortranRuntime.md) |
 | Sync all, sync images, sync memory statements              | P      | Experimental support via [PRIF](ParallelMultiImageFortranRuntime.md) |
 | Non-allocatable save coarrays of intrinsic type            | P      | Experimental support via [PRIF](ParallelMultiImageFortranRuntime.md) |
