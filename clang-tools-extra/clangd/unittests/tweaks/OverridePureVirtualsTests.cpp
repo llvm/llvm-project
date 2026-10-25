@@ -102,7 +102,7 @@ public:
     static_assert(false, "Method `F1` is not implemented.");
   }
 
-  void F2(int P1, const int & P2) override {
+  void F2(int P1, const int &P2) override {
     // TODO: Implement this pure virtual method.
     static_assert(false, "Method `F2` is not implemented.");
   }
@@ -209,7 +209,7 @@ public:
 
 class Derived : public Base {
 public:
-  void func(int, const S &, char *) override {
+  void func(int, const S&, char*) override {
     // TODO: Implement this pure virtual method.
     static_assert(false, "Method `func` is not implemented.");
   }
@@ -747,6 +747,155 @@ public:
   foo::bar::S2 bar(int var = 0) override {
     // TODO: Implement this pure virtual method.
     static_assert(false, "Method `bar` is not implemented.");
+  }
+};
+)cpp";
+  auto Applied = apply(Before);
+  EXPECT_EQ(Expected, Applied) << "Applied result:\n" << Applied;
+}
+
+TEST_F(OverridePureVirtualsTests, NoDiscardAttribute) {
+  constexpr auto Before = R"cpp(
+class Base {
+public:
+  <:<:nodiscard:>:> virtual int foo() const = 0;
+};
+
+class ^D : Base {};
+)cpp";
+
+  constexpr auto Expected = R"cpp(
+class Base {
+public:
+  <:<:nodiscard:>:> virtual int foo() const = 0;
+};
+
+class D : Base {
+public:
+  <:<:nodiscard:>:> int foo() const override {
+    // TODO: Implement this pure virtual method.
+    static_assert(false, "Method `foo` is not implemented.");
+  }
+};
+)cpp";
+  auto Applied = apply(Before);
+  EXPECT_EQ(Expected, Applied) << "Applied result:\n" << Applied;
+}
+
+TEST_F(OverridePureVirtualsTests, NoDiscardAttributeWithReason) {
+  ExtraArgs.push_back("-std=c++20");
+
+  constexpr auto Before = R"cpp(
+class Base {
+public:
+  <:<:nodiscard("reason 42"):>:> virtual int foo() const = 0;
+};
+
+class ^D : Base {};
+)cpp";
+
+  constexpr auto Expected = R"cpp(
+class Base {
+public:
+  <:<:nodiscard("reason 42"):>:> virtual int foo() const = 0;
+};
+
+class D : Base {
+public:
+  <:<:nodiscard("reason 42"):>:> int foo() const override {
+    // TODO: Implement this pure virtual method.
+    static_assert(false, "Method `foo` is not implemented.");
+  }
+};
+)cpp";
+  auto Applied = apply(Before);
+  EXPECT_EQ(Expected, Applied) << "Applied result:\n" << Applied;
+}
+
+TEST_F(OverridePureVirtualsTests, CommentsInDeclaration) {
+  constexpr auto Before = R"cpp(
+class Base {
+public:
+  virtual void foo(int /* size */ x) = 0;
+};
+
+class ^D : Base {};
+)cpp";
+
+  constexpr auto Expected = R"cpp(
+class Base {
+public:
+  virtual void foo(int /* size */ x) = 0;
+};
+
+class D : Base {
+public:
+  void foo(int /* size */ x) override {
+    // TODO: Implement this pure virtual method.
+    static_assert(false, "Method `foo` is not implemented.");
+  }
+};
+)cpp";
+  auto Applied = apply(Before);
+  EXPECT_EQ(Expected, Applied) << "Applied result:\n" << Applied;
+}
+
+TEST_F(OverridePureVirtualsTests, MacroGeneratedMethod) {
+  constexpr auto Before = R"cpp(
+#define DECLARE_PURE_VIRTUAL(ReturnType, MethodName) \
+  virtual ReturnType MethodName() = 0;
+
+class Base {
+public:
+  DECLARE_PURE_VIRTUAL(int, foo)
+};
+
+class ^D : public Base {};
+)cpp";
+
+  constexpr auto Expected = R"cpp(
+#define DECLARE_PURE_VIRTUAL(ReturnType, MethodName) \
+  virtual ReturnType MethodName() = 0;
+
+class Base {
+public:
+  DECLARE_PURE_VIRTUAL(int, foo)
+};
+
+class D : public Base {
+public:
+  int foo() override {
+    // TODO: Implement this pure virtual method.
+    static_assert(false, "Method `foo` is not implemented.");
+  }
+};
+)cpp";
+
+  auto Applied = apply(Before);
+  EXPECT_EQ(Expected, Applied) << "Applied result:\n" << Applied;
+}
+
+TEST_F(OverridePureVirtualsTests, SkipCommentsAfterPureSpecifier) {
+  constexpr auto Before = R"cpp(
+class Base {
+public:
+  virtual int foo() const = 0 /* hi */; // random comment.
+};
+
+class ^D : Base {};
+)cpp";
+
+  constexpr auto Expected = R"cpp(
+class Base {
+public:
+  virtual int foo() const = 0 /* hi */; // random comment.
+};
+
+class D : Base {
+public:
+  int foo() const override {
+    // TODO: Implement this pure virtual method.
+    static_assert(false, "Method `foo` is not implemented.");
   }
 };
 )cpp";
