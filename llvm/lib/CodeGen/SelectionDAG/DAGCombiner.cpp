@@ -21924,6 +21924,12 @@ static SDNode *getPostIndexedLoadStoreOp(SDNode *N, bool &IsLoad,
       Ptr->hasOneUse())
     return nullptr;
 
+  // Many memory operations can share a base with no address updates. Cache
+  // that case instead of rescanning the same users for each operation. The
+  // query includes all results, so it can only conservatively keep searching.
+  if (!Ptr->hasAnyAddOrSubUser())
+    return nullptr;
+
   // Try turning it into a post-indexed load / store except when
   // 1) All uses are load / store ops that use it as base ptr (and
   //    it may be folded as addressing mmode).

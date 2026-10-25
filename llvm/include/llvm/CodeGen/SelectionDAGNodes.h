@@ -544,8 +544,10 @@ BEGIN_TWO_BYTE_PACK()
     uint16_t HasDebugValue : 1;
     uint16_t IsMemIntrinsic : 1;
     uint16_t IsDivergent : 1;
+    // Only cache absence: removing users cannot invalidate it.
+    mutable uint16_t HasNoAddOrSubUsers : 1;
   };
-  enum { NumSDNodeBits = 3 };
+  enum { NumSDNodeBits = 4 };
 
   class ConstantSDNodeBitfields {
     friend class ConstantSDNode;
@@ -953,6 +955,10 @@ public:
   /// This method ignores uses of other values defined by this operation.
   LLVM_ABI bool hasAnyUseOfValue(unsigned Value) const;
 
+  /// Return whether any result of this node has an ADD or SUB user.
+  /// Cache only absence; addUse invalidates it when a candidate is introduced.
+  LLVM_ABI bool hasAnyAddOrSubUser() const;
+
   /// Return true if this node is the only use of N.
   LLVM_ABI bool isOnlyUserOf(const SDNode *N) const;
 
@@ -1216,7 +1222,12 @@ public:
                                unsigned depth = 100) const;
 
   /// This method should only be used by the SDUse class.
-  void addUse(SDUse &U) { U.addToList(&UseList); }
+  void addUse(SDUse &U) {
+    U.addToList(&UseList);
+    unsigned Opc = U.getUser()->getOpcode();
+    if (Opc == ISD::ADD || Opc == ISD::SUB)
+      SDNodeBits.HasNoAddOrSubUsers = false;
+  }
 
 protected:
   static SDVTList getSDVTList(MVT VT) {
@@ -1460,7 +1471,7 @@ public:
   /// function should only be used to compute a FoldingSetNodeID value.
   /// The HasDebugValue bit is masked out because CSE map needs to match
   /// nodes with debug info with nodes without debug info. Same is about
-  /// isDivergent bit.
+  /// isDivergent bit and the cached use-list query.
   unsigned getRawSubclassData() const {
     uint16_t Data;
     union {
@@ -1470,6 +1481,7 @@ public:
     memcpy(&RawSDNodeBits, &this->RawSDNodeBits, sizeof(this->RawSDNodeBits));
     SDNodeBits.HasDebugValue = 0;
     SDNodeBits.IsDivergent = false;
+    SDNodeBits.HasNoAddOrSubUsers = false;
     memcpy(&Data, &RawSDNodeBits, sizeof(RawSDNodeBits));
     return Data;
   }
