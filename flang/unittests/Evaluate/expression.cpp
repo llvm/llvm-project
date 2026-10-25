@@ -68,6 +68,13 @@ int main() {
       Fortran::semantics::ObjectEntityDetails{})};
   coarray.get<Fortran::semantics::ObjectEntityDetails>().set_type(integerType);
   status.get<Fortran::semantics::ObjectEntityDetails>().set_type(integerType);
+  Designator<DefaultIntegerExpr::Result> designator4{4, DataRef{coarray}};
+  Designator<DefaultIntegerExpr::Result> anotherDesignator4{
+      4, DataRef{coarray}};
+  Designator<DefaultIntegerExpr::Result> designator8{8, DataRef{coarray}};
+  TEST(designator4 == anotherDesignator4);
+  TEST(!(designator4 == designator8));
+
   auto asExpr{[](const CoarrayRef &ref) {
     return DefaultIntegerExpr{Designator<DefaultIntegerExpr::Result>{
         defaultIntegerKind, DataRef{ref}}};

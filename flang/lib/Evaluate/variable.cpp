@@ -755,7 +755,7 @@ bool ProcedureRef::operator==(const ProcedureRef &that) const {
 }
 template <typename T>
 bool Designator<T>::operator==(const Designator<T> &that) const {
-  return TestVariableEquality(*this, that);
+  return kind() == that.kind() && TestVariableEquality(*this, that);
 }
 bool DescriptorInquiry::operator==(const DescriptorInquiry &that) const {
   return field_ == that.field_ && base_ == that.base_ &&
