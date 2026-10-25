@@ -193,6 +193,117 @@ auto j = std::initializer_list<InitListCtor>{ i };
 #endif
 } // namespace cwg2311
 
+namespace cwg2327 { // cwg2327: 24 drafting P2828R3
+
+#if __cplusplus >= 201703L
+namespace example1 {
+struct Cat {
+  Cat(int);
+  Cat(const Cat&) = delete;
+  Cat(Cat&&) = delete;
+};
+
+struct Dog { operator Cat(); };
+
+Dog d;
+Cat c(d);
+Cat c1 = {d};
+Cat c2{d};
+} // namespace example1
+
+namespace example2 {
+struct X {
+  X(int);
+  X(X&&);
+};
+
+struct Y {
+  operator X();
+  operator int();
+};
+
+X x(Y{});
+} // namespace example2
+
+namespace example4 {
+struct Dog;
+struct Cat {
+  Cat(const Dog&);
+};
+
+struct Dog {
+  operator Cat() = delete;
+};
+
+Cat cat(Dog{});
+} // namespace example4
+
+namespace example5 {
+struct A1 {};
+
+struct A2 {
+  A2(const A1&);
+  A2(const A2&);
+};
+
+struct B : A1 {
+  operator A2() = delete;
+};
+
+A2 a(B{});
+} // namespace example5
+
+namespace example6 {
+struct T {
+  T(T const&);
+};
+
+struct S {
+  operator T() = delete;
+  operator T&();
+};
+
+S s;
+T t(s);
+} // namespace example6
+
+namespace example7 {
+struct Y;
+
+struct X {
+  X(const Y&);
+};
+
+struct A { operator X(); };
+struct B { operator X(); };
+struct Y : A, B {};
+
+X x(Y{});
+} // namespace example7
+#endif // __cplusplus >= 201703L
+
+#if __cplusplus >= 202002L
+namespace example8 {
+template <int i = 0>
+class NonCopyable {
+public:
+  NonCopyable(const NonCopyable&) requires(i != 0);
+
+private:
+  NonCopyable(int x);
+  friend struct Source;
+};
+
+struct Source {
+  operator NonCopyable<0>();
+};
+
+NonCopyable<0> nc(Source{});
+} // namespace example8
+#endif // __cplusplus >= 202002L
+
+} // namespace cwg2327
+
 namespace cwg2338 { // cwg2338: 12
 #if __cplusplus >= 201103L
 namespace B {
