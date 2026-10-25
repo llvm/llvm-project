@@ -40,8 +40,10 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/CallGraph.h"
+#include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -75,6 +77,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -93,6 +96,10 @@ struct ArgPart {
   /// A representative guaranteed-executed load or store instruction for use by
   /// metadata transfer.
   Instruction *MustExecInstr;
+  Constant *ConstantValue = nullptr;
+  /// Direct replacement must not discard metadata that can turn the loaded
+  /// value into poison, such as !range or !nonnull.
+  bool HasPoisonGeneratingMetadata = false;
 };
 
 using OffsetAndArgPart = std::pair<int64_t, ArgPart>;
@@ -524,7 +531,8 @@ static bool isArgUnmodifiedByAllCalls(Argument *Arg,
 static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
                          unsigned MaxElements, bool IsRecursive,
                          SmallVectorImpl<OffsetAndArgPart> &ArgPartsVec,
-                         FunctionAnalysisManager &FAM) {
+                         FunctionAnalysisManager &FAM,
+                         bool IsolatedCallerStorage = false) {
   // Quick exit for unused arguments
   if (Arg->use_empty())
     return true;
@@ -625,6 +633,8 @@ static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
     }
 
     Part.Alignment = std::max(Part.Alignment, I->getAlign());
+    if (auto *Load = dyn_cast<LoadInst>(I))
+      Part.HasPoisonGeneratingMetadata |= Load->hasPoisonGeneratingMetadata();
     return true;
   };
 
@@ -750,6 +760,11 @@ static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
   if (AreStoresAllowed)
     return true;
 
+  // Private caller storage cannot be reached through another argument, so no
+  // operation in the callee can invalidate these loads.
+  if (IsolatedCallerStorage)
+    return true;
+
   // Okay, now we know that the argument is only used by load instructions, and
   // it is safe to unconditionally perform all of them.
 
@@ -801,12 +816,343 @@ static bool areTypesABICompatible(ArrayRef<Type *> Types, const Function &F,
   });
 }
 
+/// Return true if every value passed for Arg is private caller stack storage
+/// whose address does not escape except through the corresponding call.
+static bool isIsolatedCallerStorage(Argument &Arg,
+                                    FunctionAnalysisManager &FAM) {
+  Function &F = *Arg.getParent();
+  for (User *U : F.users()) {
+    auto *Call = cast<CallBase>(U);
+    Value *Root = getUnderlyingObject(Call->getArgOperand(Arg.getArgNo()));
+    if (!isa<AllocaInst>(Root))
+      return false;
+
+    // Follow pointer-manipulating instructions from the alloca. Loads and
+    // stores through the pointer are harmless, but any other use may expose the
+    // storage to code that could change a field before or during the call.
+    SmallVector<Value *, 8> Worklist(1, Root);
+    SmallPtrSet<Value *, 8> Visited;
+    while (!Worklist.empty()) {
+      Value *V = Worklist.pop_back_val();
+      if (!Visited.insert(V).second)
+        continue;
+      for (Use &Use : V->uses()) {
+        User *Usr = Use.getUser();
+        if (isa<GetElementPtrInst>(Usr) || isa<BitCastInst>(Usr) ||
+            isa<AddrSpaceCastInst>(Usr)) {
+          Worklist.push_back(cast<Value>(Usr));
+          continue;
+        }
+        if (isa<LoadInst>(Usr))
+          continue;
+        if (isa<StoreInst>(Usr) &&
+            Use.getOperandNo() == StoreInst::getPointerOperandIndex())
+          continue;
+        if (auto *StorageCall = dyn_cast<CallBase>(Usr)) {
+          // The same private aggregate may feed more than one call to F. A
+          // candidate is transformed only after findArgParts establishes that
+          // F merely reads through this argument.
+          if (StorageCall->getCalledFunction() == &F &&
+              Use.getOperandNo() == Arg.getArgNo())
+            continue;
+        }
+        if (auto *I = dyn_cast<Instruction>(Usr))
+          if (I->isLifetimeStartOrEnd())
+            continue;
+        return false;
+      }
+    }
+
+    // Also reject calls where another pointer argument may refer to the same
+    // object. The callee could otherwise modify the supposedly constant
+    // aggregate through that argument.
+    AAResults &AAR = FAM.getResult<AAManager>(*Call->getCaller());
+    for (unsigned I = 0; I != Call->arg_size(); ++I) {
+      if (I == Arg.getArgNo())
+        continue;
+      Value *Other = Call->getArgOperand(I);
+      if (!Other->getType()->isPointerTy() || isa<PoisonValue>(Other) ||
+          isa<ConstantPointerNull>(Other))
+        continue;
+      const Value *OtherRoot = getUnderlyingObject(Other);
+      if (OtherRoot == Root || AAR.alias(Root, Other) != AliasResult::NoAlias)
+        return false;
+    }
+  }
+  return true;
+}
+
+// Tracks constant and alloca values while walking MemorySSA.
+struct UnanimousValueState {
+  Constant *UnanimousValue = nullptr;
+  // True while all relevant stores yield the same constant.
+  bool IsUnanimousConstant = true;
+  // True while all relevant stores contain alloca pointers.
+  bool IsUnanimousAlloca = true;
+  // True if we encounter a relevant store.
+  bool SawStore = false;
+};
+
+/// This function handles these cases:
+/// 1. Access is a MemoryPhi
+///   Recurse into each incoming use of the MemoryPhi.
+/// 2. Access is a MemoryDef which stores a constant
+///   Set UnanimousValue if it is unset.
+///   If UnanimousValue is already set and does not match the stored
+///   constant, mark IsUnanimousConstant as false.
+/// 3. Access is a MemoryDef containing an alloca pointer store
+///   Set IsUnanimousAlloca to true.
+static bool findNextMemoryDefAndGetUnanimousValue(
+    MemoryAccess *Access, const MemoryLocation &Loc, Type *LoadTy,
+    const DataLayout &DL, MemorySSA &MSSA, BatchAAResults &BAA,
+    SmallPtrSetImpl<MemoryAccess *> &Visited, UnanimousValueState &State) {
+
+  // Limit compile time for large memory graphs.
+  constexpr unsigned MaxMemoryAccesses = 1000;
+  if (!Access || !Visited.insert(Access).second)
+    return Access != nullptr;
+  if (MSSA.isLiveOnEntryDef(Access) || Visited.size() > MaxMemoryAccesses)
+    return false;
+
+  // Recurse through the incoming accesses of a MemoryPhi.
+  if (auto *Phi = dyn_cast<MemoryPhi>(Access)) {
+    for (Use &IncomingUse : Phi->incoming_values()) {
+      auto *Incoming = cast<MemoryAccess>(IncomingUse.get());
+      MemoryAccess *Clobber =
+          MSSA.getWalker()->getClobberingMemoryAccess(Incoming, Loc, BAA);
+      if (!findNextMemoryDefAndGetUnanimousValue(Clobber, Loc, LoadTy, DL, MSSA,
+                                                 BAA, Visited, State))
+        return false;
+    }
+    return true;
+  }
+
+  auto *Def = dyn_cast<MemoryDef>(Access);
+  if (!Def)
+    return false;
+
+  auto *Store = dyn_cast<StoreInst>(Def->getMemoryInst());
+  if (!Store)
+    return false;
+
+  MemoryLocation StoreLoc = MemoryLocation::get(Store);
+  AliasResult AR = BAA.alias(StoreLoc, Loc);
+  // If this store writes to some other object or field, keep looking.
+  if (AR == AliasResult::NoAlias) {
+    MemoryAccess *Clobber = MSSA.getWalker()->getClobberingMemoryAccess(
+        Def->getDefiningAccess(), Loc, BAA);
+    return findNextMemoryDefAndGetUnanimousValue(Clobber, Loc, LoadTy, DL, MSSA,
+                                                 BAA, Visited, State);
+  }
+
+  // This is a store to Loc. Determine whether it stores the unanimous
+  // constant or an alloca pointer.
+  State.SawStore = true;
+  std::optional<int64_t> Offset =
+      Loc.Ptr->getPointerOffsetFrom(StoreLoc.Ptr, DL);
+  auto GetStoredConstant = [&]() -> Constant * {
+    if (!Offset || *Offset < 0 || !StoreLoc.Size.hasValue() ||
+        !Loc.Size.hasValue())
+      return nullptr;
+
+    uint64_t RelativeOffset = *Offset;
+    uint64_t StoreSize = StoreLoc.Size.getValue();
+    uint64_t LoadSize = Loc.Size.getValue();
+    if (RelativeOffset > StoreSize || LoadSize > StoreSize - RelativeOffset)
+      return nullptr;
+
+    auto *StoredValue = dyn_cast<Constant>(Store->getValueOperand());
+    if (!StoredValue)
+      return nullptr;
+
+    return ConstantFoldLoadFromConst(
+        StoredValue, LoadTy,
+        APInt(DL.getIndexTypeSizeInBits(Loc.Ptr->getType()), RelativeOffset),
+        DL);
+  };
+
+  // Get the store's constant with bounds checking.
+  if (State.IsUnanimousConstant) {
+    Constant *LoadedValue = GetStoredConstant();
+    if (!LoadedValue ||
+        (State.UnanimousValue && State.UnanimousValue != LoadedValue))
+      State.IsUnanimousConstant = false;
+    else
+      State.UnanimousValue = LoadedValue;
+  }
+
+  if (State.IsUnanimousAlloca) {
+    // Require an exact field-sized alloca pointer store. Accepting partial or
+    // wider stores would require extracting a pointer from the representation.
+    // Allocas are promoted to parameters later, so they do not need to be
+    // unanimous.
+    State.IsUnanimousAlloca =
+        Offset && *Offset == 0 && StoreLoc.Size.hasValue() &&
+        Loc.Size.hasValue() && StoreLoc.Size == Loc.Size &&
+        Store->getValueOperand()->getType() == LoadTy &&
+        isa<AllocaInst>(getUnderlyingObject(Store->getValueOperand()));
+  }
+  return State.IsUnanimousConstant || State.IsUnanimousAlloca;
+}
+
+// Check whether all MemorySSA paths for Loc resolve to the same constant or
+// to alloca pointer stores.
+static std::optional<UnanimousValueState>
+findUnanimousConstantsFromMemoryAccess(MemoryAccess *Access,
+                                       const MemoryLocation &Loc, Type *LoadTy,
+                                       const DataLayout &DL, MemorySSA &MSSA,
+                                       BatchAAResults &BAA) {
+  SmallPtrSet<MemoryAccess *, 32> Visited;
+  UnanimousValueState State{nullptr, true, LoadTy->isPointerTy(), false};
+  if (!findNextMemoryDefAndGetUnanimousValue(Access, Loc, LoadTy, DL, MSSA, BAA,
+                                             Visited, State) ||
+      !State.SawStore)
+    return std::nullopt;
+  return State;
+}
+
+/// To prove that a caller C is passing in a constant struct,
+/// first use findUnanimousConstantsFromMemoryAccess to check that every
+/// basic block internal to C converges to the same constant for each arg part
+/// when F is called.
+///
+/// Do this for each caller of F and ensure all fields of the struct are
+/// unanimous.
+///
+///  Allocas are permitted as they can be promoted through ordinary
+/// argument promotion.
+static bool findUnanimousConstantsFromArg(
+    Argument &Arg, SmallVectorImpl<OffsetAndArgPart> &Parts,
+    FunctionAnalysisManager &FAM, unsigned &NumAllocaParts) {
+  const DataLayout &DL = Arg.getParent()->getDataLayout();
+  for (auto &[Offset, Part] : Parts) {
+    TypeSize Size = DL.getTypeStoreSize(Part.Ty);
+    Constant *UnanimousValue = nullptr;
+    bool IsUnanimousConstant = true;
+    bool IsUnanimousAlloca = Part.Ty->isPointerTy();
+    for (User *U : Arg.getParent()->users()) {
+      auto *Call = cast<CallBase>(U);
+      Function &Caller = *Call->getFunction();
+      AAResults &AA = FAM.getResult<AAManager>(Caller);
+      BatchAAResults BAA(AA);
+      MemorySSA &MSSA = FAM.getResult<MemorySSAAnalysis>(Caller).getMSSA();
+
+      // Walk backwards through the memory state immediately before the call
+      IRBuilder<> Builder(Call);
+      Value *FieldPtr = Builder.CreatePtrAdd(
+          Call->getArgOperand(Arg.getArgNo()), Builder.getInt64(Offset));
+      auto *TemporaryGEP = dyn_cast<GetElementPtrInst>(FieldPtr);
+      MemoryLocation Loc(FieldPtr, LocationSize::precise(Size), AAMDNodes{});
+      MemoryAccess *CallAccess = MSSA.getMemoryAccess(Call);
+      if (!CallAccess) {
+        if (TemporaryGEP)
+          TemporaryGEP->eraseFromParent();
+        return false;
+      }
+      MemoryAccess *Start =
+          cast<MemoryUseOrDef>(CallAccess)->getDefiningAccess();
+      MemoryAccess *Clobber =
+          MSSA.getWalker()->getClobberingMemoryAccess(Start, Loc, BAA);
+      std::optional<UnanimousValueState> Value =
+          findUnanimousConstantsFromMemoryAccess(Clobber, Loc, Part.Ty, DL,
+                                                 MSSA, BAA);
+      Constant *CallConstant =
+          Value && Value->IsUnanimousConstant ? Value->UnanimousValue : nullptr;
+      if (!CallConstant || (UnanimousValue && UnanimousValue != CallConstant))
+        IsUnanimousConstant = false;
+      else
+        UnanimousValue = CallConstant;
+      if (!Value || !Value->IsUnanimousAlloca)
+        IsUnanimousAlloca = false;
+      if (TemporaryGEP)
+        TemporaryGEP->eraseFromParent();
+    }
+    if (IsUnanimousConstant)
+      Part.ConstantValue = UnanimousValue;
+    else if (IsUnanimousAlloca)
+      // Ordinary argument promotion can handle these remaining fields once
+      // the constant loads no longer count toward its argument limit.
+      ++NumAllocaParts;
+    else {
+      LLVM_DEBUG(dbgs() << "ArgPromotion of " << Arg << " failed: part at "
+                        << Offset << " in " << Arg.getParent()->getName()
+                        << " is neither a constant or stored alloca\n");
+      return false;
+    }
+  }
+  return true;
+}
+
+static bool propagateConstantParts(Argument &Arg,
+                                   ArrayRef<OffsetAndArgPart> Parts) {
+  const DataLayout &DL = Arg.getParent()->getDataLayout();
+
+  SmallVector<std::pair<LoadInst *, Constant *>, 16> LoadsToReplace;
+  SmallVector<WeakTrackingVH, 16> DeadLoads;
+  for (BasicBlock &BB : *Arg.getParent()) {
+    for (Instruction &I : BB) {
+      auto *Load = dyn_cast<LoadInst>(&I);
+      if (!Load)
+        continue;
+      APInt Offset(
+          DL.getIndexTypeSizeInBits(Load->getPointerOperand()->getType()), 0);
+      Value *Base =
+          Load->getPointerOperand()->stripAndAccumulateConstantOffsets(
+              DL, Offset, /*AllowNonInbounds=*/true);
+      if (Base != &Arg || Offset.getSignificantBits() >= 64)
+        continue;
+      Constant *C = nullptr;
+      for (const auto &[PartOffset, Part] : Parts) {
+        if (PartOffset == Offset.getSExtValue()) {
+          C = Part.ConstantValue;
+          break;
+        }
+      }
+      if (!C)
+        continue;
+      assert(C->getType() == Load->getType() &&
+             "constant type does not match promotable load");
+
+      // Do not turn an indirect call into a direct call because this pass does
+      // not update the lazy call graph. Also handle pointer casts by adding
+      // them to the worklist.
+      if (isa<Function>(C->stripPointerCasts())) {
+        SmallVector<Value *, 4> Worklist;
+        SmallPtrSet<Value *, 4> Visited;
+        Worklist.push_back(Load);
+        while (!Worklist.empty()) {
+          Value *V = Worklist.pop_back_val();
+          if (!Visited.insert(V).second)
+            continue;
+          for (Use &U : V->uses()) {
+            if (auto *Call = dyn_cast<CallBase>(U.getUser());
+                Call && Call->isCallee(&U))
+              return false;
+            Value *UserV = U.getUser();
+            if (UserV->stripPointerCasts() == Load)
+              Worklist.push_back(UserV);
+          }
+        }
+      }
+      LoadsToReplace.emplace_back(Load, C);
+    }
+  }
+
+  for (auto [Load, C] : LoadsToReplace) {
+    Load->replaceAllUsesWith(C);
+    DeadLoads.push_back(Load);
+  }
+  RecursivelyDeleteTriviallyDeadInstructions(DeadLoads);
+  return true;
+}
+
 /// PromoteArguments - This method checks the specified function to see if there
 /// are any promotable arguments and if it is safe to promote the function (for
 /// example, all callers are direct).  If safe to promote some arguments, it
 /// calls the DoPromotion method.
 static Function *promoteArguments(Function *F, FunctionAnalysisManager &FAM,
-                                  unsigned MaxElements, bool IsRecursive) {
+                                  unsigned MaxElements, bool IsRecursive,
+                                  bool &CopiedConstants) {
   // Don't rewrite the signature of functions whose ABI must be preserved. For
   // naked functions we can end up removing parameters that are seemingly 'not
   // used' as they are referred to in the assembly.
@@ -870,6 +1216,57 @@ static Function *promoteArguments(Function *F, FunctionAnalysisManager &FAM,
   auto &AAR = FAM.getResult<AAManager>(*F);
   const auto &TTI = FAM.getResult<TargetIRAnalysis>(*F);
 
+  // Large aggregates are deliberately not scalarized into many ABI arguments.
+  // Propagate their constant fields first and leave alloca fields for ordinary
+  // promotion. To avoid blowing up compile time, bail if we have greater than
+  // 10 callers or 20 promotable aggregate fields.
+  SmallVector<std::pair<Argument *, SmallVector<OffsetAndArgPart, 4>>, 2>
+      ConstantAggregates;
+  constexpr unsigned MaxConstantPropagationCalls = 10;
+  constexpr unsigned MaxConstantPropagationFields = 20;
+  if (!F->use_empty() && !F->hasNUsesOrMore(MaxConstantPropagationCalls + 1)) {
+    for (Argument *PtrArg : PointerArgs) {
+      if (PtrArg->getParamByValType() || !isIsolatedCallerStorage(*PtrArg, FAM))
+        continue;
+
+      SmallVector<OffsetAndArgPart, 4> Parts;
+      if (!findArgParts(PtrArg, DL, AAR, MaxConstantPropagationFields,
+                        IsRecursive, Parts, FAM,
+                        /*IsolatedCallerStorage=*/true))
+        continue;
+
+      // Only propagate constants in functions rejected for having too many
+      // promotable fields.
+      if (Parts.size() <= MaxElements)
+        continue;
+
+      // Avoid propagating constants that can generate poison from metadata
+      // constraints.
+      if (any_of(Parts, [](const OffsetAndArgPart &Part) {
+            return Part.second.HasPoisonGeneratingMetadata;
+          }))
+        continue;
+
+      unsigned NumAllocaParts = 0;
+      if (!findUnanimousConstantsFromArg(*PtrArg, Parts, FAM, NumAllocaParts))
+        continue;
+
+      // Constants do not consume ABI parameters. Apply the normal limit only
+      // to the alloca fields that will actually be passed, and avoid this
+      // special path when it would propagate no constants.
+      if (NumAllocaParts > MaxElements || NumAllocaParts == Parts.size())
+        continue;
+
+      ConstantAggregates.emplace_back(PtrArg, std::move(Parts));
+    }
+  }
+  if (!ConstantAggregates.empty()) {
+    for (auto &[Arg, Parts] : ConstantAggregates)
+      CopiedConstants |= propagateConstantParts(*Arg, Parts);
+    if (CopiedConstants)
+      return nullptr;
+  }
+
   // Check to see which arguments are promotable.  If an argument is promotable,
   // add it to ArgsToPromote.
   DenseMap<Argument *, SmallVector<OffsetAndArgPart, 4>> ArgsToPromote;
@@ -930,10 +1327,17 @@ PreservedAnalyses ArgumentPromotionPass::run(LazyCallGraph::SCC &C,
     bool IsRecursive = C.size() > 1;
     for (LazyCallGraph::Node &N : C) {
       Function &OldF = N.getFunction();
-      Function *NewF = promoteArguments(&OldF, FAM, MaxElements, IsRecursive);
-      if (!NewF)
+      bool CopiedConstants = false;
+      Function *NewF = promoteArguments(&OldF, FAM, MaxElements, IsRecursive,
+                                        CopiedConstants);
+      if (!NewF && !CopiedConstants)
         continue;
       LocalChange = true;
+
+      if (CopiedConstants) {
+        FAM.invalidate(OldF, PreservedAnalyses::none());
+        continue;
+      }
 
       // Directly substitute the functions in the call graph. Note that this
       // requires the old function to be completely dead and completely
