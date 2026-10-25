@@ -512,13 +512,6 @@ static KnownFPClass fadd_impl(const KnownFPClass &KnownLHS,
                               const KnownFPClass &KnownRHS, bool IsFMA) {
   KnownFPClass Known;
 
-  // Adding positive and negative infinity produces NaN, but only if both
-  // opposite-sign infinity combinations are possible.
-  if (KnownLHS.isKnownNeverNaN() && KnownRHS.isKnownNeverNaN() &&
-      (KnownLHS.isKnownNever(fcPosInf) || KnownRHS.isKnownNever(fcNegInf)) &&
-      (KnownLHS.isKnownNever(fcNegInf) || KnownRHS.isKnownNever(fcPosInf)))
-    Known.knownNot(fcNan);
-
   if (KnownLHS.cannotBeOrderedLessThanZero() &&
       KnownRHS.cannotBeOrderedLessThanZero()) {
     Known.knownNot(KnownFPClass::OrderedLessThanZeroMask);
@@ -540,11 +533,18 @@ static KnownFPClass fadd_impl(const KnownFPClass &KnownLHS,
   }
 
   if (!IsFMA) {
+    Known.propagateNonSNaN(KnownLHS, KnownRHS);
+
+    // Adding positive and negative infinity produces NaN, but only if both
+    // opposite-sign infinity combinations are possible.
+    if (KnownLHS.isKnownNeverNaN() && KnownRHS.isKnownNeverNaN() &&
+        (KnownLHS.isKnownNever(fcPosInf) || KnownRHS.isKnownNever(fcNegInf)) &&
+        (KnownLHS.isKnownNever(fcNegInf) || KnownRHS.isKnownNever(fcPosInf)))
+      Known.knownNot(fcNan);
+
     // (fadd x, +0.0) is guaranteed to return +0.0, not -0.0.
     if (KnownLHS.isKnownNever(fcNegZero) || KnownRHS.isKnownNever(fcNegZero))
       Known.knownNot(fcNegZero);
-
-    Known.propagateNonSNaN(KnownLHS, KnownRHS);
   }
 
   return Known;
@@ -809,6 +809,41 @@ KnownFPClass KnownFPClass::fma(const KnownFPClass &KnownLHS_,
       KnownAddend.isKnownNever(fcSNan))
     Known.knownNot(fcSNan);
 
+  // Rule out NaN.
+  if (KnownLHS.isKnownNeverNaN() && KnownRHS.isKnownNeverNaN() &&
+      KnownAddend.isKnownNeverNaN()) {
+    // NaN is produced when zero is multiplied by infinity, or when adding two
+    // exact infinities of the opposite sign. An exact infinity requires at
+    // least one infinite operand.
+
+    const bool NeverZeroMulInf =
+        (KnownLHS.isKnownNever(fcInf) || KnownRHS.isKnownNever(fcZero)) &&
+        (KnownRHS.isKnownNever(fcInf) || KnownLHS.isKnownNever(fcZero));
+    // Multiplying infinity by a non-zero finite may change the sign.
+    const bool NeverExactPosInf =
+        (KnownLHS.isKnownNever(fcPosInf) ||
+         KnownRHS.isKnownNever(fcPosInf | fcPosNormal | fcPosSubnormal)) &&
+        (KnownRHS.isKnownNever(fcPosInf) ||
+         KnownLHS.isKnownNever(fcPosInf | fcPosNormal | fcPosSubnormal)) &&
+        (KnownLHS.isKnownNever(fcNegInf) ||
+         KnownRHS.isKnownNever(fcNegInf | fcNegNormal | fcNegSubnormal)) &&
+        (KnownRHS.isKnownNever(fcNegInf) ||
+         KnownLHS.isKnownNever(fcNegInf | fcNegNormal | fcNegSubnormal));
+    const bool NeverExactNegInf =
+        (KnownLHS.isKnownNever(fcPosInf) ||
+         KnownRHS.isKnownNever(fcNegInf | fcNegNormal | fcNegSubnormal)) &&
+        (KnownRHS.isKnownNever(fcPosInf) ||
+         KnownLHS.isKnownNever(fcNegInf | fcNegNormal | fcNegSubnormal)) &&
+        (KnownLHS.isKnownNever(fcNegInf) ||
+         KnownRHS.isKnownNever(fcPosInf | fcPosNormal | fcPosSubnormal)) &&
+        (KnownRHS.isKnownNever(fcNegInf) ||
+         KnownLHS.isKnownNever(fcPosInf | fcPosNormal | fcPosSubnormal));
+    if (NeverZeroMulInf &&
+        (KnownAddend.isKnownNever(fcPosInf) || NeverExactNegInf) &&
+        (KnownAddend.isKnownNever(fcNegInf) || NeverExactPosInf))
+      Known.knownNot(fcNan);
+  }
+
   return applyOutputDenormalMode(Known, Mode);
 }
 
@@ -832,16 +867,13 @@ KnownFPClass KnownFPClass::fma_square(const KnownFPClass &KnownSquared_,
   KnownFPClass Squared = square(KnownSquared, DenormalMode::getIEEE());
   KnownFPClass Known = fadd_impl(Squared, KnownAddend, /*IsFMA=*/true);
 
-  // Since we know the squared input must be positive, the add of opposite sign
-  // infinities nan hazard only applies for negative inf.
-  //
-  // TODO: Alternatively to proving addend is not -inf, we could know Squared is
-  // not pinf. Other than the degenerate always-subnormal input case, we can't
-  // prove that without a known range.
-  if (KnownAddend.isKnownNever(fcNegInf | fcNan) && Squared.isKnownNever(fcNan))
-    Known.knownNot(fcNan);
-
   Known.propagateNonSNaN(KnownSquared, KnownAddend);
+
+  // Only fma(+inf, +inf, -inf) and fma(-inf, -inf, -inf) produce NaN when
+  // squaring.
+  if (KnownSquared.isKnownNeverNaN() && KnownAddend.isKnownNeverNaN() &&
+      (KnownSquared.isKnownNever(fcInf) || KnownAddend.isKnownNever(fcNegInf)))
+    Known.knownNot(fcNan);
 
   return applyOutputDenormalMode(Known, Mode);
 }
