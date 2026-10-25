@@ -186,8 +186,7 @@ static bool isSpillSlotReload(const MachineInstr &MI,
          MFI.isSpillSlotObjectIndex(FI);
 }
 
-// Return true if MI may write the spill slot that Reload reads. A call that
-// does not store cannot write the caller's spill slots.
+// Return true if MI may write the spill slot that Reload reads.
 static bool mayClobberReload(const MachineInstr &MI,
                              const MachineInstr &Reload) {
   return MI.mayStore() && MI.mayAlias(static_cast<AAResults *>(nullptr), Reload,
@@ -198,18 +197,16 @@ static bool mayClobberReload(const MachineInstr &MI,
 // also the register it defines in DefedReg.  A candidate is a simple
 // instruction that has only one register definition and the only reg it may
 // use is FrameReg. Typically this is an immediate load or a load-address
-// instruction. The only memory it may read is invariant memory or a spill slot
-// it reloads, since processBlock() keeps track of stores that may write the
-// slot.
+// instruction. Apart from invariant memory it may read a spill slot,
+// since processBlock() keeps track of stores that may write the slot.
 static bool isCandidate(const MachineInstr *MI, Register &DefedReg,
                         Register FrameReg, const TargetInstrInfo &TII,
                         const MachineFrameInfo &MFI) {
   DefedReg = MCRegister::NoRegister;
   // SawStore makes isSafeToMove() reject every load that is not invariant, on
-  // the grounds that a store may have changed what it reads. That is too blunt
-  // for a spill-slot reload, where only a write to the same slot matters and
-  // processBlock() already drops the reload as soon as it sees one. Clear
-  // SawStore for those reloads to defer to that finer check.
+  // the grounds that a store may have changed what it reads. Spill-slot reloads
+  // are excluded from this check because processBlock() drops such a reload
+  // when it sees an instruction that may write the slot.
   bool SawStore = !isSpillSlotReload(*MI, TII, MFI);
   if (!MI->isSafeToMove(SawStore) || MI->isImplicitDef() || MI->isInlineAsm())
     return false;
