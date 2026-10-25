@@ -119,30 +119,13 @@ define <4 x half> @bitcast_extract_insert_to_shuffle(i32 %a, i32 %b) {
 define void @reconstruct_byte_phis(i32 %initial, ptr %src, i1 %continue) {
 ; CHECK-LABEL: @reconstruct_byte_phis(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INITIAL_BYTES:%.*]] = bitcast i32 [[INITIAL:%.*]] to <4 x i8>
-; CHECK-NEXT:    [[A0:%.*]] = extractelement <4 x i8> [[INITIAL_BYTES]], i64 0
-; CHECK-NEXT:    [[A1:%.*]] = extractelement <4 x i8> [[INITIAL_BYTES]], i64 1
-; CHECK-NEXT:    [[A2:%.*]] = extractelement <4 x i8> [[INITIAL_BYTES]], i64 2
-; CHECK-NEXT:    [[A3:%.*]] = extractelement <4 x i8> [[INITIAL_BYTES]], i64 3
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[P0:%.*]] = phi i8 [ [[A0]], [[ENTRY:%.*]] ], [ [[B0:%.*]], [[LATCH:%.*]] ]
-; CHECK-NEXT:    [[P1:%.*]] = phi i8 [ [[A1]], [[ENTRY]] ], [ [[B1:%.*]], [[LATCH]] ]
-; CHECK-NEXT:    [[P2:%.*]] = phi i8 [ [[A2]], [[ENTRY]] ], [ [[B2:%.*]], [[LATCH]] ]
-; CHECK-NEXT:    [[P3:%.*]] = phi i8 [ [[A3]], [[ENTRY]] ], [ [[B3:%.*]], [[LATCH]] ]
-; CHECK-NEXT:    [[V0:%.*]] = insertelement <4 x i8> poison, i8 [[P0]], i64 0
-; CHECK-NEXT:    [[V1:%.*]] = insertelement <4 x i8> [[V0]], i8 [[P1]], i64 1
-; CHECK-NEXT:    [[V2:%.*]] = insertelement <4 x i8> [[V1]], i8 [[P2]], i64 2
-; CHECK-NEXT:    [[V3:%.*]] = insertelement <4 x i8> [[V2]], i8 [[P3]], i64 3
-; CHECK-NEXT:    [[PACKED:%.*]] = bitcast <4 x i8> [[V3]] to i32
+; CHECK-NEXT:    [[PACKED:%.*]] = phi i32 [ [[INITIAL:%.*]], [[ENTRY:%.*]] ], [ [[NEXT:%.*]], [[LATCH:%.*]] ]
 ; CHECK-NEXT:    call void @use_word(i32 [[PACKED]])
 ; CHECK-NEXT:    br label [[LATCH]]
 ; CHECK:       latch:
-; CHECK-NEXT:    [[NEXT1:%.*]] = load <4 x i8>, ptr [[SRC:%.*]], align 4
-; CHECK-NEXT:    [[B0]] = extractelement <4 x i8> [[NEXT1]], i64 0
-; CHECK-NEXT:    [[B1]] = extractelement <4 x i8> [[NEXT1]], i64 1
-; CHECK-NEXT:    [[B2]] = extractelement <4 x i8> [[NEXT1]], i64 2
-; CHECK-NEXT:    [[B3]] = extractelement <4 x i8> [[NEXT1]], i64 3
+; CHECK-NEXT:    [[NEXT]] = load i32, ptr [[SRC:%.*]], align 4
 ; CHECK-NEXT:    br i1 [[CONTINUE:%.*]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -184,20 +167,13 @@ exit:
 define void @reconstruct_half_phis(<2 x half> %initial, ptr %src, i1 %continue) {
 ; CHECK-LABEL: @reconstruct_half_phis(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A0:%.*]] = extractelement <2 x half> [[INITIAL:%.*]], i64 0
-; CHECK-NEXT:    [[A1:%.*]] = extractelement <2 x half> [[INITIAL]], i64 1
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[P0:%.*]] = phi half [ [[A0]], [[ENTRY:%.*]] ], [ [[B0:%.*]], [[LATCH:%.*]] ]
-; CHECK-NEXT:    [[P1:%.*]] = phi half [ [[A1]], [[ENTRY]] ], [ [[B1:%.*]], [[LATCH]] ]
-; CHECK-NEXT:    [[V0:%.*]] = insertelement <2 x half> poison, half [[P0]], i64 0
-; CHECK-NEXT:    [[V1:%.*]] = insertelement <2 x half> [[V0]], half [[P1]], i64 1
+; CHECK-NEXT:    [[V1:%.*]] = phi <2 x half> [ [[INITIAL:%.*]], [[ENTRY:%.*]] ], [ [[NEXT:%.*]], [[LATCH:%.*]] ]
 ; CHECK-NEXT:    call void @use_reconstruct_half_phis(<2 x half> [[V1]])
 ; CHECK-NEXT:    br label [[LATCH]]
 ; CHECK:       latch:
-; CHECK-NEXT:    [[NEXT:%.*]] = load <2 x half>, ptr [[SRC:%.*]], align 1
-; CHECK-NEXT:    [[B0]] = extractelement <2 x half> [[NEXT]], i64 0
-; CHECK-NEXT:    [[B1]] = extractelement <2 x half> [[NEXT]], i64 1
+; CHECK-NEXT:    [[NEXT]] = load <2 x half>, ptr [[SRC:%.*]], align 1
 ; CHECK-NEXT:    br i1 [[CONTINUE:%.*]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -229,24 +205,13 @@ declare void @use_reconstruct_half_phis(<2 x half>)
 define void @reconstruct_odd_width_phis(<3 x i3> %initial, ptr %src, i1 %continue) {
 ; CHECK-LABEL: @reconstruct_odd_width_phis(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A0:%.*]] = extractelement <3 x i3> [[INITIAL:%.*]], i64 0
-; CHECK-NEXT:    [[A1:%.*]] = extractelement <3 x i3> [[INITIAL]], i64 1
-; CHECK-NEXT:    [[A2:%.*]] = extractelement <3 x i3> [[INITIAL]], i64 2
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[P0:%.*]] = phi i3 [ [[A0]], [[ENTRY:%.*]] ], [ [[B0:%.*]], [[LATCH:%.*]] ]
-; CHECK-NEXT:    [[P1:%.*]] = phi i3 [ [[A1]], [[ENTRY]] ], [ [[B1:%.*]], [[LATCH]] ]
-; CHECK-NEXT:    [[P2:%.*]] = phi i3 [ [[A2]], [[ENTRY]] ], [ [[B2:%.*]], [[LATCH]] ]
-; CHECK-NEXT:    [[V0:%.*]] = insertelement <3 x i3> poison, i3 [[P0]], i64 0
-; CHECK-NEXT:    [[V1:%.*]] = insertelement <3 x i3> [[V0]], i3 [[P1]], i64 1
-; CHECK-NEXT:    [[V2:%.*]] = insertelement <3 x i3> [[V1]], i3 [[P2]], i64 2
+; CHECK-NEXT:    [[V2:%.*]] = phi <3 x i3> [ [[INITIAL:%.*]], [[ENTRY:%.*]] ], [ [[NEXT:%.*]], [[LATCH:%.*]] ]
 ; CHECK-NEXT:    call void @use_reconstruct_odd_width_phis(<3 x i3> [[V2]])
 ; CHECK-NEXT:    br label [[LATCH]]
 ; CHECK:       latch:
-; CHECK-NEXT:    [[NEXT:%.*]] = load <3 x i3>, ptr [[SRC:%.*]], align 1
-; CHECK-NEXT:    [[B0]] = extractelement <3 x i3> [[NEXT]], i64 0
-; CHECK-NEXT:    [[B1]] = extractelement <3 x i3> [[NEXT]], i64 1
-; CHECK-NEXT:    [[B2]] = extractelement <3 x i3> [[NEXT]], i64 2
+; CHECK-NEXT:    [[NEXT]] = load <3 x i3>, ptr [[SRC:%.*]], align 1
 ; CHECK-NEXT:    br i1 [[CONTINUE:%.*]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -651,21 +616,14 @@ declare void @use_reconstruct_scalable_phis(<vscale x 2 x i8>)
 define <2 x i8> @reconstruct_phis_duplicate_edges(<2 x i8> %a, <2 x i8> %b, i32 %cond) {
 ; CHECK-LABEL: @reconstruct_phis_duplicate_edges(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A0:%.*]] = extractelement <2 x i8> [[A:%.*]], i64 0
-; CHECK-NEXT:    [[A1:%.*]] = extractelement <2 x i8> [[A]], i64 1
 ; CHECK-NEXT:    switch i32 [[COND:%.*]], label [[OTHER:%.*]] [
 ; CHECK-NEXT:      i32 0, label [[MERGE:%.*]]
 ; CHECK-NEXT:      i32 1, label [[MERGE]]
 ; CHECK-NEXT:    ]
 ; CHECK:       other:
-; CHECK-NEXT:    [[B0:%.*]] = extractelement <2 x i8> [[B:%.*]], i64 0
-; CHECK-NEXT:    [[B1:%.*]] = extractelement <2 x i8> [[B]], i64 1
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
-; CHECK-NEXT:    [[P0:%.*]] = phi i8 [ [[A0]], [[ENTRY:%.*]] ], [ [[A0]], [[ENTRY]] ], [ [[B0]], [[OTHER]] ]
-; CHECK-NEXT:    [[P1:%.*]] = phi i8 [ [[A1]], [[ENTRY]] ], [ [[A1]], [[ENTRY]] ], [ [[B1]], [[OTHER]] ]
-; CHECK-NEXT:    [[V0:%.*]] = insertelement <2 x i8> poison, i8 [[P0]], i64 0
-; CHECK-NEXT:    [[V1:%.*]] = insertelement <2 x i8> [[V0]], i8 [[P1]], i64 1
+; CHECK-NEXT:    [[V1:%.*]] = phi <2 x i8> [ [[A:%.*]], [[ENTRY:%.*]] ], [ [[A]], [[ENTRY]] ], [ [[B:%.*]], [[OTHER]] ]
 ; CHECK-NEXT:    ret <2 x i8> [[V1]]
 ;
 entry:
@@ -739,23 +697,16 @@ define <2 x i8> @reconstruct_phis_in_successor(<2 x i8> %a, <2 x i8> %b, i1 %con
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[LEFT:%.*]], label [[RIGHT:%.*]]
 ; CHECK:       left:
-; CHECK-NEXT:    [[A0:%.*]] = extractelement <2 x i8> [[A:%.*]], i64 0
-; CHECK-NEXT:    [[A1:%.*]] = extractelement <2 x i8> [[A]], i64 1
 ; CHECK-NEXT:    call void @side_effect()
 ; CHECK-NEXT:    br label [[MERGE:%.*]]
 ; CHECK:       right:
-; CHECK-NEXT:    [[B0:%.*]] = extractelement <2 x i8> [[B:%.*]], i64 0
-; CHECK-NEXT:    [[B1:%.*]] = extractelement <2 x i8> [[B]], i64 1
 ; CHECK-NEXT:    call void @side_effect()
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
-; CHECK-NEXT:    [[P0:%.*]] = phi i8 [ [[A0]], [[LEFT]] ], [ [[B0]], [[RIGHT]] ]
-; CHECK-NEXT:    [[P1:%.*]] = phi i8 [ [[A1]], [[LEFT]] ], [ [[B1]], [[RIGHT]] ]
+; CHECK-NEXT:    [[V1:%.*]] = phi <2 x i8> [ [[A:%.*]], [[LEFT]] ], [ [[B:%.*]], [[RIGHT]] ]
 ; CHECK-NEXT:    call void @side_effect()
 ; CHECK-NEXT:    br label [[END:%.*]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[V0:%.*]] = insertelement <2 x i8> poison, i8 [[P0]], i64 0
-; CHECK-NEXT:    [[V1:%.*]] = insertelement <2 x i8> [[V0]], i8 [[P1]], i64 1
 ; CHECK-NEXT:    ret <2 x i8> [[V1]]
 ;
 entry:
