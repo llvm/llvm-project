@@ -1483,6 +1483,12 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::spirv64, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::ChipStar, T.getOS());
+
+  T = Triple("aarch64-nintendo-nn");
+  EXPECT_EQ(Triple::aarch64, T.getArch());
+  EXPECT_EQ(Triple::Nintendo, T.getVendor());
+  EXPECT_EQ(Triple::NintendoOS, T.getOS());
+  EXPECT_TRUE(T.isNintendoOS());
 }
 
 TEST(TripleTest, EnumConstructor) {
