@@ -3725,3 +3725,42 @@ define i1 @complicated_zero_equality_test(i64 %v1) {
   %v5 = and i1 %v4, %v3
   ret i1 %v5
 }
+
+define i1 @and_masked_icmp_eq_and_const_icmp_1(i16 %x) {
+; CHECK-LABEL: @and_masked_icmp_eq_and_const_icmp_1(
+; CHECK-NEXT:    [[AND:%.*]] = icmp eq i16 [[X:%.*]], 2
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %icmp = icmp ule i16 %x, 5
+  %masked = and i16 %x, 255
+  %eq = icmp eq i16 %masked, 2
+  %and = and i1 %icmp, %eq
+  ret i1 %and
+}
+
+define i1 @and_masked_icmp_eq_and_const_icmp_2(i8 %x) {
+; CHECK-LABEL: @and_masked_icmp_eq_and_const_icmp_2(
+; CHECK-NEXT:    [[EQ:%.*]] = icmp eq i8 [[X:%.*]], 15
+; CHECK-NEXT:    ret i1 [[EQ]]
+;
+  %icmp = icmp ult i8 %x, 79
+  %masked = and i8 %x, 63
+  %eq = icmp eq i8 %masked, 15
+  %and = and i1 %icmp, %eq
+  ret i1 %and
+}
+
+define i1 @and_masked_icmp_eq_and_const_icmp_3(i8 %x) {
+; CHECK-LABEL: @and_masked_icmp_eq_and_const_icmp_3(
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp ult i8 [[X:%.*]], 80
+; CHECK-NEXT:    [[MASKED:%.*]] = and i8 [[X]], 63
+; CHECK-NEXT:    [[EQ:%.*]] = icmp eq i8 [[MASKED]], 15
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[ICMP]], [[EQ]]
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %icmp = icmp ult i8 %x, 80
+  %masked = and i8 %x, 63
+  %eq = icmp eq i8 %masked, 15
+  %and = and i1 %icmp, %eq
+  ret i1 %and
+}

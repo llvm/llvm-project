@@ -3402,6 +3402,47 @@ Value *InstCombinerImpl::matchSelectFromAndOr(Value *A, Value *B, Value *C,
   return nullptr;
 }
 
+// (icmp eq (and X, MASK), C) & (icmp ule X, Y) -> (icmp eq X, C)
+// (icmp eq (and X, MASK), C) & (icmp ult X, Y) -> (icmp eq X, C)
+static Value *foldAndOfMaskedICmpEqAndICmp(CmpPredicate PredL, Value *LHS0,
+                                           Value *LHS1, bool LHSOneUse,
+                                           CmpPredicate PredR, Value *RHS0,
+                                           Value *RHS1, bool RHSOneUse,
+                                           IRBuilderBase &Builder) {
+  if (PredL != ICmpInst::ICMP_EQ) {
+    if (PredR == ICmpInst::ICMP_EQ)
+      return foldAndOfMaskedICmpEqAndICmp(PredR, RHS0, RHS1, RHSOneUse, PredL,
+                                          LHS0, LHS1, LHSOneUse, Builder);
+    return nullptr;
+  }
+
+  const APInt *C;
+  const APInt *Y;
+  const APInt *Mask;
+  if (!(LHSOneUse || RHSOneUse) || !match(RHS1, m_APIntAllowPoison(Y)) ||
+      !match(LHS1, m_APIntAllowPoison(C)) ||
+      !match(LHS0, m_c_And(m_Specific(RHS0), m_APIntAllowPoison(Mask))) ||
+      !(Mask->isMask() && C->ule(*Mask)))
+    return nullptr;
+
+  switch (PredR) {
+  case ICmpInst::ICMP_ULE:
+    if ((*Mask + *C).uge(*Y) && C->ule(*Y)) {
+      return Builder.CreateICmp(ICmpInst::ICMP_EQ, RHS0, LHS1);
+    }
+    break;
+  case ICmpInst::ICMP_ULT:
+    if ((*Mask + *C + 1).uge(*Y) && C->ult(*Y)) {
+      return Builder.CreateICmp(ICmpInst::ICMP_EQ, RHS0, LHS1);
+    }
+    break;
+  default:
+    break;
+  }
+
+  return nullptr;
+}
+
 // (icmp eq X, C) | (icmp ult Other, (X - C)) -> (icmp ule Other, (X - (C + 1)))
 // (icmp ne X, C) & (icmp uge Other, (X - C)) -> (icmp ugt Other, (X - (C + 1)))
 static Value *foldAndOrOfICmpEqConstantAndICmp(CmpPredicate PredL, Value *LHS0,
@@ -3478,6 +3519,10 @@ Value *InstCombinerImpl::foldAndOrOfICmps(Value *LHS, Value *RHS,
       return getNewICmpValue(Code, IsSigned, LHS0, LHS1, Builder);
     }
   }
+
+  if (Value *V = foldAndOfMaskedICmpEqAndICmp(
+          PredL, LHS0, LHS1, LHSOneUse, PredR, RHS0, RHS1, RHSOneUse, Builder))
+    return V;
 
   if (Value *V = foldAndOrOfICmpEqConstantAndICmp(PredL, LHS0, LHS1, LHSOneUse,
                                                   PredR, RHS0, RHS1, RHSOneUse,
