@@ -212,8 +212,10 @@ define <2 x i1> @andn_or_cmp_2_logical_vec(<2 x i16> %a, <2 x i16> %b, <2 x i1> 
 
 define <2 x i1> @andn_or_cmp_2_logical_vec_poison(<2 x i16> %a, <2 x i16> %b, <2 x i1> %y) {
 ; CHECK-LABEL: @andn_or_cmp_2_logical_vec_poison(
-; CHECK-NEXT:    [[X_INV:%.*]] = icmp slt <2 x i16> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = select <2 x i1> [[Y:%.*]], <2 x i1> [[X_INV]], <2 x i1> <i1 poison, i1 false>
+; CHECK-NEXT:    [[X:%.*]] = icmp sge <2 x i16> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[X_INV:%.*]] = icmp slt <2 x i16> [[A]], [[B]]
+; CHECK-NEXT:    [[Y:%.*]] = select <2 x i1> [[Y1:%.*]], <2 x i1> splat (i1 true), <2 x i1> [[X]]
+; CHECK-NEXT:    [[AND:%.*]] = select <2 x i1> [[Y]], <2 x i1> [[X_INV]], <2 x i1> <i1 poison, i1 false>
 ; CHECK-NEXT:    ret <2 x i1> [[AND]]
 ;
   %x = icmp sge <2 x i16> %a, %b
@@ -782,8 +784,10 @@ define <2 x i1> @orn_and_cmp_2_logical_vec(<2 x i16> %a, <2 x i16> %b, <2 x i1> 
 
 define <2 x i1> @orn_and_cmp_2_logical_vec_poison(<2 x i16> %a, <2 x i16> %b, <2 x i1> %y) {
 ; CHECK-LABEL: @orn_and_cmp_2_logical_vec_poison(
-; CHECK-NEXT:    [[X_INV:%.*]] = icmp slt <2 x i16> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = select <2 x i1> [[Y:%.*]], <2 x i1> <i1 poison, i1 true>, <2 x i1> [[X_INV]]
+; CHECK-NEXT:    [[X:%.*]] = icmp sge <2 x i16> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[X_INV:%.*]] = icmp slt <2 x i16> [[A]], [[B]]
+; CHECK-NEXT:    [[Y:%.*]] = select <2 x i1> [[Y1:%.*]], <2 x i1> [[X]], <2 x i1> zeroinitializer
+; CHECK-NEXT:    [[OR:%.*]] = select <2 x i1> [[Y]], <2 x i1> <i1 poison, i1 true>, <2 x i1> [[X_INV]]
 ; CHECK-NEXT:    ret <2 x i1> [[OR]]
 ;
   %x = icmp sge <2 x i16> %a, %b
