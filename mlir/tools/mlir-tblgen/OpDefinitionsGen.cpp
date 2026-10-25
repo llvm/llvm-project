@@ -2096,8 +2096,13 @@ generateNamedOperandGetters(const Operator &op, Class &opClass,
                                     MethodParameter("unsigned", "index"));
   ERROR_IF_PRUNED(m, "getODSOperands", op);
   auto &body = m->body();
-  body << formatv(valueRangeReturnCode, rangeBeginCall,
-                  "getODSOperandIndexAndLength(index)");
+  if (isGenericAdaptorBase) {
+    body << formatv(valueRangeReturnCode, rangeBeginCall,
+                    "getODSOperandIndexAndLength(index)");
+  } else {
+    body << "  auto [start, length] = getODSOperandIndexAndLength(index);\n"
+            "  return getOperation()->getOperands().slice(start, length);\n";
+  }
 
   // Then we emit nicer named getter methods by redirecting to the "sink" getter
   // method.
@@ -2587,33 +2592,22 @@ void OpEmitter::genLegacyPropertiesBuilderHelper() {
   MethodBody &body = method->body();
   body << "  Properties &properties = " << builderOpStateProperties << ";\n"
        << "  populateDefaultProperties(" << builderOpState
-       << ".name, properties);\n"
-       << "  ::llvm::SmallVector<::mlir::NamedAttribute> "
-          "inherentAttributes;\n"
-       << "  for (const ::mlir::NamedAttribute &attr : attributes) {\n"
-       << "    ::llvm::StringRef name = attr.getName().getValue();\n"
-       << "    if (";
-  llvm::interleave(
-      inherentNames,
-      [&](StringRef name) { body << "name == \"" << name << "\""; },
-      [&] { body << " || "; });
-  body << ")\n"
-       << "      inherentAttributes.push_back(attr);\n"
-       << "    else\n"
-       << "      " << builderOpState << ".addAttribute(attr.getName(), "
-       << "attr.getValue());\n"
-       << "  }\n"
-       << "  if (inherentAttributes.empty())\n"
-       << "    return;\n";
-  // TODO: Use `PropertyKind<T>::unfreeze` to populate properties directly once
-  // it is available systematically, avoiding the DictionaryAttr conversion.
-  body << "  if (::mlir::failed(setPropertiesFromAttr(\n"
-       << "          properties,\n"
-       << "          ::mlir::DictionaryAttr::get(" << builderOpState
-       << ".getContext(), inherentAttributes),\n"
-       << "          [&]() { return ::mlir::emitError(" << builderOpState
-       << ".location); })))\n"
-       << "    ::llvm::report_fatal_error(\"Property conversion failed.\");\n";
+       << ".name, properties);\n";
+  if (!inherentNames.empty()) {
+    body << "  const ::llvm::StringRef inherentNames[] = {";
+    llvm::interleaveComma(inherentNames, body,
+                          [&](StringRef name) { body << '"' << name << '"'; });
+    body << "};\n";
+  }
+  body << "  ::mlir::detail::splitPropertiesAndDiscardableAttributes(\n"
+       << "      " << builderOpState << ", attributes, "
+       << (inherentNames.empty() ? "::llvm::ArrayRef<::llvm::StringRef>{}"
+                                 : "inherentNames")
+       << ", [&](::mlir::DictionaryAttr inherentAttrs) {\n"
+       << "        return setPropertiesFromAttr(properties, inherentAttrs,\n"
+       << "            [&]() { return ::mlir::emitError(" << builderOpState
+       << ".location); });\n"
+       << "      });\n";
 }
 
 void OpEmitter::genCodeForAddingPropertiesAndAttributes(

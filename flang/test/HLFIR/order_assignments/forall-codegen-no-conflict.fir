@@ -68,9 +68,9 @@ func.func @split_schedule(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: !fir.box<!f
   %c11 = arith.constant 11 : i64
   %c10 = arith.constant 10 : i64
   %c1 = arith.constant 1 : i64
-  %0:2 = hlfir.declare %arg0 {uniq_name = "x"} : (!fir.box<!fir.array<?xf32>>) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
-  %1:2 = hlfir.declare %arg1 {uniq_name = "y"} : (!fir.box<!fir.array<?xf32>>) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
-  %2:2 = hlfir.declare %arg2 {uniq_name = "z"} : (!fir.box<!fir.array<?x?xf32>>) -> (!fir.box<!fir.array<?x?xf32>>, !fir.box<!fir.array<?x?xf32>>)
+  %0:2 = hlfir.declare %arg0 uniq_name("x") : (!fir.box<!fir.array<?xf32>>) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+  %1:2 = hlfir.declare %arg1 uniq_name("y") : (!fir.box<!fir.array<?xf32>>) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+  %2:2 = hlfir.declare %arg2 uniq_name("z") : (!fir.box<!fir.array<?x?xf32>>) -> (!fir.box<!fir.array<?x?xf32>>, !fir.box<!fir.array<?x?xf32>>)
   hlfir.forall lb {
     hlfir.yield %c1 : i64
   } ub {
@@ -106,9 +106,9 @@ func.func @split_schedule(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: !fir.box<!f
 // CHECK:           %[[VAL_3:.*]] = arith.constant 11 : i64
 // CHECK:           %[[VAL_4:.*]] = arith.constant 10 : i64
 // CHECK:           %[[VAL_5:.*]] = arith.constant 1 : i64
-// CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "x"} : (!fir.box<!fir.array<?xf32>>) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
-// CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "y"} : (!fir.box<!fir.array<?xf32>>) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
-// CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "z"} : (!fir.box<!fir.array<?x?xf32>>) -> (!fir.box<!fir.array<?x?xf32>>, !fir.box<!fir.array<?x?xf32>>)
+// CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %{{.*}} uniq_name("x") : (!fir.box<!fir.array<?xf32>>) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+// CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %{{.*}} uniq_name("y") : (!fir.box<!fir.array<?xf32>>) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+// CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %{{.*}} uniq_name("z") : (!fir.box<!fir.array<?x?xf32>>) -> (!fir.box<!fir.array<?x?xf32>>, !fir.box<!fir.array<?x?xf32>>)
 // CHECK:           %[[VAL_9:.*]] = fir.convert %[[VAL_5]] : (i64) -> index
 // CHECK:           %[[VAL_10:.*]] = fir.convert %[[VAL_4]] : (i64) -> index
 // CHECK:           %[[VAL_11:.*]] = arith.constant 1 : index
@@ -140,9 +140,9 @@ func.func @split_schedule(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: !fir.box<!f
 func.func @test_mask(%arg0: !fir.box<!fir.array<?x?xf32>>, %arg1: !fir.box<!fir.array<?x?xf32>>, %arg2: !fir.box<!fir.array<?x!fir.logical<4>>>) {
   %c10 = arith.constant 10 : i64
   %c1 = arith.constant 1 : i64
-  %0:2 = hlfir.declare %arg2 {uniq_name = "mask"} : (!fir.box<!fir.array<?x!fir.logical<4>>>) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.box<!fir.array<?x!fir.logical<4>>>)
-  %1:2 = hlfir.declare %arg0 {uniq_name = "x"} : (!fir.box<!fir.array<?x?xf32>>) -> (!fir.box<!fir.array<?x?xf32>>, !fir.box<!fir.array<?x?xf32>>)
-  %2:2 = hlfir.declare %arg1 {uniq_name = "y"} : (!fir.box<!fir.array<?x?xf32>>) -> (!fir.box<!fir.array<?x?xf32>>, !fir.box<!fir.array<?x?xf32>>)
+  %0:2 = hlfir.declare %arg2 uniq_name("mask") : (!fir.box<!fir.array<?x!fir.logical<4>>>) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.box<!fir.array<?x!fir.logical<4>>>)
+  %1:2 = hlfir.declare %arg0 uniq_name("x") : (!fir.box<!fir.array<?x?xf32>>) -> (!fir.box<!fir.array<?x?xf32>>, !fir.box<!fir.array<?x?xf32>>)
+  %2:2 = hlfir.declare %arg1 uniq_name("y") : (!fir.box<!fir.array<?x?xf32>>) -> (!fir.box<!fir.array<?x?xf32>>, !fir.box<!fir.array<?x?xf32>>)
   hlfir.forall lb {
     hlfir.yield %c1 : i64
   } ub {
@@ -175,9 +175,9 @@ func.func @test_mask(%arg0: !fir.box<!fir.array<?x?xf32>>, %arg1: !fir.box<!fir.
 // CHECK-LABEL:   func.func @test_mask(
 // CHECK:           %[[VAL_3:.*]] = arith.constant 10 : i64
 // CHECK:           %[[VAL_4:.*]] = arith.constant 1 : i64
-// CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "mask"} : (!fir.box<!fir.array<?x!fir.logical<4>>>) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.box<!fir.array<?x!fir.logical<4>>>)
-// CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "x"} : (!fir.box<!fir.array<?x?xf32>>) -> (!fir.box<!fir.array<?x?xf32>>, !fir.box<!fir.array<?x?xf32>>)
-// CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "y"} : (!fir.box<!fir.array<?x?xf32>>) -> (!fir.box<!fir.array<?x?xf32>>, !fir.box<!fir.array<?x?xf32>>)
+// CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %{{.*}} uniq_name("mask") : (!fir.box<!fir.array<?x!fir.logical<4>>>) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.box<!fir.array<?x!fir.logical<4>>>)
+// CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %{{.*}} uniq_name("x") : (!fir.box<!fir.array<?x?xf32>>) -> (!fir.box<!fir.array<?x?xf32>>, !fir.box<!fir.array<?x?xf32>>)
+// CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %{{.*}} uniq_name("y") : (!fir.box<!fir.array<?x?xf32>>) -> (!fir.box<!fir.array<?x?xf32>>, !fir.box<!fir.array<?x?xf32>>)
 // CHECK:           %[[VAL_8:.*]] = fir.convert %[[VAL_4]] : (i64) -> index
 // CHECK:           %[[VAL_9:.*]] = fir.convert %[[VAL_3]] : (i64) -> index
 // CHECK:           %[[VAL_10:.*]] = arith.constant 1 : index

@@ -11,26 +11,27 @@
 
 #include <detail/event_impl.hpp>
 
+#include <memory>
+#include <vector>
+
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
 event::event() : impl(detail::EventImpl::createDefaultEvent()) {}
 
 backend event::get_backend() const noexcept { return impl->getBackend(); }
 
-void event::wait(const std::vector<event> &EventList) {
-  for (auto Event : EventList) {
-    Event.wait();
-  }
+void event::wait(const std::vector<event> &eventList) {
+  for (const event &Event : eventList)
+    detail::getSyclObjImpl(Event)->wait();
 }
 
 void event::wait() { impl->wait(); }
 
 void event::wait_and_throw() { impl->waitAndThrow(); }
 
-void event::wait_and_throw(const std::vector<event> &EventList) {
-  for (auto E : EventList) {
-    E.wait_and_throw();
-  }
+void event::wait_and_throw(const std::vector<event> &eventList) {
+  for (const event &Event : eventList)
+    detail::getSyclObjImpl(Event)->waitAndThrow();
 }
 
 std::vector<event> event::get_wait_list() {

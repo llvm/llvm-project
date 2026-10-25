@@ -264,18 +264,18 @@ define bfloat @test_phi(ptr %p1) #0 {
 ; CHECK-CVT:       @ %bb.0: @ %entry
 ; CHECK-CVT-NEXT:    .save {r4, r5, r6, lr}
 ; CHECK-CVT-NEXT:    push {r4, r5, r6, lr}
-; CHECK-CVT-NEXT:    ldrh r5, [r0]
+; CHECK-CVT-NEXT:    ldrh r6, [r0]
 ; CHECK-CVT-NEXT:    mov r4, r0
 ; CHECK-CVT-NEXT:  .LBB5_1: @ %loop
 ; CHECK-CVT-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-CVT-NEXT:    mov r0, r4
-; CHECK-CVT-NEXT:    mov r6, r5
-; CHECK-CVT-NEXT:    ldrh r5, [r4]
+; CHECK-CVT-NEXT:    mov r5, r6
+; CHECK-CVT-NEXT:    ldrh r6, [r4]
 ; CHECK-CVT-NEXT:    bl test_dummy
 ; CHECK-CVT-NEXT:    tst r0, #1
 ; CHECK-CVT-NEXT:    bne .LBB5_1
 ; CHECK-CVT-NEXT:  @ %bb.2: @ %return
-; CHECK-CVT-NEXT:    vmov s0, r6
+; CHECK-CVT-NEXT:    vmov s0, r5
 ; CHECK-CVT-NEXT:    pop {r4, r5, r6, pc}
 ;
 ; CHECK-BF16-LABEL: test_phi:

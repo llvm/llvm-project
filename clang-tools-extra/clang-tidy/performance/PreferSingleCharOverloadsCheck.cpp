@@ -11,6 +11,7 @@
 #include "../utils/OptionsUtils.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
 #include <optional>
 
 using namespace clang::ast_matchers;
@@ -101,11 +102,15 @@ void PreferSingleCharOverloadsCheck::check(
   if (!Replacement)
     return;
 
-  diag(Literal->getBeginLoc(), "%0 called with a string literal consisting of "
-                               "a single character; consider using the more "
-                               "efficient overload accepting a character")
-      << FindFunc
-      << FixItHint::CreateReplacement(Literal->getSourceRange(), *Replacement);
+  const auto Diag = diag(Literal->getBeginLoc(),
+                         "%0 called with a string literal consisting of "
+                         "a single character; consider using the more "
+                         "efficient overload accepting a character")
+                    << FindFunc;
+  if (std::none_of(Literal->tokloc_begin(), Literal->tokloc_end(),
+                   [](SourceLocation Loc) { return Loc.isMacroID(); }))
+    Diag << FixItHint::CreateReplacement(Literal->getSourceRange(),
+                                         *Replacement);
 }
 
 } // namespace clang::tidy::performance

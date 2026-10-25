@@ -99,6 +99,9 @@ public:
   BuiltinTypeDeclBuilder &addDefaultHandleConstructor(
       AccessSpecifier Access = AccessSpecifier::AS_public);
   BuiltinTypeDeclBuilder &
+  addHeapResourceInfoConstructor(bool HasCounter = false);
+  BuiltinTypeDeclBuilder &addHeapSamplerInfoConstructor();
+  BuiltinTypeDeclBuilder &
   addCopyConstructor(AccessSpecifier Access = AccessSpecifier::AS_public);
   BuiltinTypeDeclBuilder &addCopyAssignmentOperator(
       AccessSpecifier Access = AccessSpecifier::AS_public);
@@ -151,6 +154,9 @@ public:
   addByteAddressBufferInterlockedMethod(StringRef MethodName, QualType ValueTy,
                                         StringRef BuiltinName,
                                         bool RequiresOriginalValue = false);
+  BuiltinTypeDeclBuilder &addByteAddressBufferInterlockedCompareMethod(
+      StringRef MethodName, QualType ValueTy, StringRef BuiltinName,
+      bool WithOriginalValue = false);
   BuiltinTypeDeclBuilder &addAppendMethod();
   BuiltinTypeDeclBuilder &addConsumeMethod();
 

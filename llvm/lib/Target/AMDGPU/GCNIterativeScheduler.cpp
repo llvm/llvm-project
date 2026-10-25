@@ -15,6 +15,7 @@
 #include "AMDGPUIGroupLP.h"
 #include "GCNSchedStrategy.h"
 #include "SIMachineFunctionInfo.h"
+#include "llvm/CodeGen/RegisterPressure.h"
 
 using namespace llvm;
 
@@ -367,22 +368,10 @@ void GCNIterativeScheduler::scheduleBest(Region &R) {
   R.BestSchedule.reset();
 }
 
-void GCNIterativeScheduler::restoreLivenessFlags(MachineInstr &MI) {
-  assert(!MI.isDebugInstr());
-
-  for (MachineOperand &Op : MI.all_defs())
-    Op.setIsUndef(false);
-
-  RegisterOperands RegOpers;
-  RegOpers.collect(MI, *TRI, MRI, /*ShouldTrackLaneMasks=*/true,
-                   /*IgnoreDead=*/false);
-  RegOpers.adjustLaneLiveness(*LIS, MRI, MI);
-}
-
 void GCNIterativeScheduler::restoreRegionLivenessFlags(const Region &R) {
   for (MachineBasicBlock::iterator I = R.Begin; I != R.End; ++I) {
     if (!I->isDebugInstr())
-      restoreLivenessFlags(*I);
+      RegisterOperands::restoreLivenessFlags(*I, *TRI, MRI, *LIS);
   }
 }
 
@@ -411,7 +400,7 @@ void GCNIterativeScheduler::scheduleRegion(Region &R, Range &&Schedule,
         LIS->handleMove(*MI, true);
     }
     if (!MI->isDebugInstr())
-      restoreLivenessFlags(*MI);
+      RegisterOperands::restoreLivenessFlags(*MI, *TRI, MRI, *LIS);
     Top = std::next(MI->getIterator());
   }
   RegionBegin = getMachineInstr(Schedule.front());

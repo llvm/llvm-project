@@ -289,7 +289,7 @@ define void @call_ret_v16bf16(ptr %ptr) #0 {
 ; CHECK-NEXT:    pushl %edi
 ; CHECK-NEXT:    pushl %esi
 ; CHECK-NEXT:    andl $-32, %esp
-; CHECK-NEXT:    subl $96, %esp
+; CHECK-NEXT:    subl $64, %esp
 ; CHECK-NEXT:    movl 8(%ebp), %esi
 ; CHECK-NEXT:    movzwl 2(%esi), %eax
 ; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill

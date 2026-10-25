@@ -1532,6 +1532,46 @@ TEST_F(PatternMatchTest, VectorOps) {
       SP2, m_Shuffle(m_InsertElt(m_Undef(), m_Value(A), m_Zero()),
                      m_Undef(), m_ZeroMask())));
   EXPECT_TRUE(A == Val);
+
+  // Repeat the above with m_Splat.
+  EXPECT_TRUE(match(SI1, m_Splat(m_SpecificInt(1))));
+  EXPECT_FALSE(match(SI2, m_Splat(m_Value())));
+  EXPECT_FALSE(match(SI3, m_Splat(m_Value())));
+  EXPECT_FALSE(match(SI4, m_Splat(m_Value())));
+
+  A = nullptr;
+  EXPECT_TRUE(match(SP1, m_Splat(m_SpecificInt(2))));
+  EXPECT_TRUE(match(SP2, m_Splat(m_Value(A))));
+  EXPECT_TRUE(A == Val);
+}
+
+TEST_F(PatternMatchTest, BitOps) {
+  //   BI = bitinsert b32 0, i8 1, i32 8
+  //   BE = bitextract i8, b32 %BI, i32 8
+  Value *Base = ConstantByte::get(IRB.getByte32Ty(), 0);
+  Value *Val = IRB.getInt8(1);
+  Value *Off = IRB.getInt32(8);
+  Value *BI = IRB.CreateBitInsert(Base, Val, Off);
+  Value *BE = IRB.CreateBitExtract(IRB.getInt8Ty(), BI, Off);
+
+  Value *A, *B, *C;
+  EXPECT_TRUE(match(BI, m_BitInsert(m_Value(A), m_Value(B), m_Value(C))));
+  EXPECT_EQ(A, Base);
+  EXPECT_EQ(B, Val);
+  EXPECT_EQ(C, Off);
+  EXPECT_TRUE(match(
+      BI, m_BitInsert(m_Specific(Base), m_SpecificInt(1), m_SpecificInt(8))));
+  EXPECT_FALSE(match(BI, m_BitInsert(m_Value(), m_Value(), m_Zero())));
+
+  EXPECT_TRUE(match(BE, m_BitExtract(m_Value(A), m_Value(B))));
+  EXPECT_EQ(A, BI);
+  EXPECT_EQ(B, Off);
+  EXPECT_FALSE(match(BE, m_BitExtract(m_Value(), m_Zero())));
+
+  EXPECT_TRUE(
+      match(BE, m_BitExtract(m_BitInsert(m_Value(), m_Value(), m_Value()),
+                             m_SpecificInt(8))));
+  EXPECT_FALSE(match(BI, m_BitExtract(m_Value(), m_Value())));
 }
 
 TEST_F(PatternMatchTest, UndefPoisonMix) {
@@ -1606,6 +1646,15 @@ TEST_F(PatternMatchTest, VectorUndefInt) {
   EXPECT_TRUE(match(ScalarZero, m_Zero()));
   EXPECT_TRUE(match(VectorZero, m_Zero()));
   EXPECT_TRUE(match(VectorZeroPoison, m_Zero()));
+
+  EXPECT_FALSE(match(ScalarUndef, m_ZeroForbidPoison()));
+  EXPECT_FALSE(match(ScalarPoison, m_ZeroForbidPoison()));
+  EXPECT_FALSE(match(VectorUndef, m_ZeroForbidPoison()));
+  EXPECT_FALSE(match(VectorPoison, m_ZeroForbidPoison()));
+  EXPECT_FALSE(match(VectorZeroUndef, m_ZeroForbidPoison()));
+  EXPECT_TRUE(match(ScalarZero, m_ZeroForbidPoison()));
+  EXPECT_TRUE(match(VectorZero, m_ZeroForbidPoison()));
+  EXPECT_FALSE(match(VectorZeroPoison, m_ZeroForbidPoison()));
 
   const APInt *C;
   // Regardless of whether poison is allowed,

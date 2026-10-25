@@ -16,6 +16,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/SHA1.h"
 #include <numeric>
 #include <optional>
@@ -52,6 +53,25 @@ ParseResult mlir::detail::parseOptionalTypeInto(AsmParser &parser,
     return failure();
   types.push_back(type);
   return success();
+}
+
+void mlir::detail::splitPropertiesAndDiscardableAttributes(
+    OperationState &state, ArrayRef<NamedAttribute> attributes,
+    ArrayRef<StringRef> inherentNames,
+    llvm::function_ref<LogicalResult(DictionaryAttr)> setProperties) {
+  SmallVector<NamedAttribute> inherentAttributes;
+  for (const NamedAttribute &attr : attributes) {
+    StringRef name = attr.getName().getValue();
+    if (llvm::is_contained(inherentNames, name))
+      inherentAttributes.push_back(attr);
+    else
+      state.addAttribute(attr.getName(), attr.getValue());
+  }
+  if (inherentAttributes.empty())
+    return;
+  if (failed(setProperties(
+          DictionaryAttr::get(state.getContext(), inherentAttributes))))
+    llvm::report_fatal_error("Property conversion failed.");
 }
 
 //===----------------------------------------------------------------------===//

@@ -875,14 +875,7 @@ define void @store_atomic_vec2_bfloat(ptr %x, <2 x bfloat> %v) nounwind {
 ;
 ; CHECK-AVX-O0-LABEL: store_atomic_vec2_bfloat:
 ; CHECK-AVX-O0:       # %bb.0:
-; CHECK-AVX-O0-NEXT:    vpextrw $1, %xmm0, %eax
-; CHECK-AVX-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-AVX-O0-NEXT:    vmovd %xmm0, %ecx
-; CHECK-AVX-O0-NEXT:    # kill: def $cx killed $cx killed $ecx
-; CHECK-AVX-O0-NEXT:    movw %cx, -{{[0-9]+}}(%rsp)
-; CHECK-AVX-O0-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; CHECK-AVX-O0-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
-; CHECK-AVX-O0-NEXT:    movl %eax, (%rdi)
+; CHECK-AVX-O0-NEXT:    vmovd %xmm0, (%rdi)
 ; CHECK-AVX-O0-NEXT:    retq
   store atomic <2 x bfloat> %v, ptr %x release, align 4
   ret void
@@ -967,20 +960,7 @@ define void @store_atomic_vec4_bfloat(ptr %x, <4 x bfloat> %v) nounwind {
 ;
 ; CHECK-AVX-O0-LABEL: store_atomic_vec4_bfloat:
 ; CHECK-AVX-O0:       # %bb.0:
-; CHECK-AVX-O0-NEXT:    vpextrw $3, %xmm0, %eax
-; CHECK-AVX-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-AVX-O0-NEXT:    vpextrw $2, %xmm0, %ecx
-; CHECK-AVX-O0-NEXT:    # kill: def $cx killed $cx killed $ecx
-; CHECK-AVX-O0-NEXT:    vpextrw $1, %xmm0, %edx
-; CHECK-AVX-O0-NEXT:    # kill: def $dx killed $dx killed $edx
-; CHECK-AVX-O0-NEXT:    vmovd %xmm0, %esi
-; CHECK-AVX-O0-NEXT:    # kill: def $si killed $si killed $esi
-; CHECK-AVX-O0-NEXT:    movw %si, -{{[0-9]+}}(%rsp)
-; CHECK-AVX-O0-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)
-; CHECK-AVX-O0-NEXT:    movw %cx, -{{[0-9]+}}(%rsp)
-; CHECK-AVX-O0-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; CHECK-AVX-O0-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
-; CHECK-AVX-O0-NEXT:    movq %rax, (%rdi)
+; CHECK-AVX-O0-NEXT:    vmovq %xmm0, (%rdi)
 ; CHECK-AVX-O0-NEXT:    retq
   store atomic <4 x bfloat> %v, ptr %x release, align 8
   ret void
@@ -2560,158 +2540,32 @@ define void @store_atomic_vec16_bfloat_unaligned(ptr %x, <16 x bfloat> %v) nounw
 ;
 ; CHECK-AVX2-O0-LABEL: store_atomic_vec16_bfloat_unaligned:
 ; CHECK-AVX2-O0:       # %bb.0:
-; CHECK-AVX2-O0-NEXT:    pushq %rbp
-; CHECK-AVX2-O0-NEXT:    pushq %r15
-; CHECK-AVX2-O0-NEXT:    pushq %r14
-; CHECK-AVX2-O0-NEXT:    pushq %r13
-; CHECK-AVX2-O0-NEXT:    pushq %r12
-; CHECK-AVX2-O0-NEXT:    pushq %rbx
-; CHECK-AVX2-O0-NEXT:    subq $56, %rsp
+; CHECK-AVX2-O0-NEXT:    subq $40, %rsp
+; CHECK-AVX2-O0-NEXT:    vmovaps %ymm0, %ymm1
 ; CHECK-AVX2-O0-NEXT:    movq %rdi, %rsi
-; CHECK-AVX2-O0-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; CHECK-AVX2-O0-NEXT:    vpextrw $7, %xmm1, %eax
-; CHECK-AVX2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-AVX2-O0-NEXT:    movw %ax, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-AVX2-O0-NEXT:    vpextrw $6, %xmm1, %eax
-; CHECK-AVX2-O0-NEXT:    movw %ax, %cx
-; CHECK-AVX2-O0-NEXT:    vpextrw $5, %xmm1, %eax
-; CHECK-AVX2-O0-NEXT:    movw %ax, %dx
-; CHECK-AVX2-O0-NEXT:    vpextrw $4, %xmm1, %eax
-; CHECK-AVX2-O0-NEXT:    movw %ax, %di
-; CHECK-AVX2-O0-NEXT:    vpextrw $3, %xmm1, %eax
-; CHECK-AVX2-O0-NEXT:    movw %ax, %r8w
-; CHECK-AVX2-O0-NEXT:    vpextrw $2, %xmm1, %eax
-; CHECK-AVX2-O0-NEXT:    movw %ax, %r9w
-; CHECK-AVX2-O0-NEXT:    vpextrw $1, %xmm1, %eax
-; CHECK-AVX2-O0-NEXT:    movw %ax, %r10w
-; CHECK-AVX2-O0-NEXT:    vmovd %xmm1, %eax
-; CHECK-AVX2-O0-NEXT:    movw %ax, %r11w
-; CHECK-AVX2-O0-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
-; CHECK-AVX2-O0-NEXT:    vpextrw $7, %xmm0, %eax
-; CHECK-AVX2-O0-NEXT:    movw %ax, %bx
-; CHECK-AVX2-O0-NEXT:    vpextrw $6, %xmm0, %eax
-; CHECK-AVX2-O0-NEXT:    movw %ax, %bp
-; CHECK-AVX2-O0-NEXT:    vpextrw $5, %xmm0, %eax
-; CHECK-AVX2-O0-NEXT:    movw %ax, %r14w
-; CHECK-AVX2-O0-NEXT:    vpextrw $4, %xmm0, %eax
-; CHECK-AVX2-O0-NEXT:    movw %ax, %r15w
-; CHECK-AVX2-O0-NEXT:    vpextrw $3, %xmm0, %eax
-; CHECK-AVX2-O0-NEXT:    movw %ax, %r12w
-; CHECK-AVX2-O0-NEXT:    vpextrw $2, %xmm0, %eax
-; CHECK-AVX2-O0-NEXT:    movw %ax, %r13w
-; CHECK-AVX2-O0-NEXT:    vpextrw $1, %xmm0, %eax
-; CHECK-AVX2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-AVX2-O0-NEXT:    movw %ax, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-AVX2-O0-NEXT:    vmovd %xmm0, %eax
-; CHECK-AVX2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-AVX2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-AVX2-O0-NEXT:    movw {{[-0-9]+}}(%r{{[sb]}}p), %ax # 2-byte Reload
-; CHECK-AVX2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-AVX2-O0-NEXT:    movw {{[-0-9]+}}(%r{{[sb]}}p), %ax # 2-byte Reload
-; CHECK-AVX2-O0-NEXT:    movw %r13w, {{[0-9]+}}(%rsp)
-; CHECK-AVX2-O0-NEXT:    movw %r12w, {{[0-9]+}}(%rsp)
-; CHECK-AVX2-O0-NEXT:    movw %r15w, {{[0-9]+}}(%rsp)
-; CHECK-AVX2-O0-NEXT:    movw %r14w, {{[0-9]+}}(%rsp)
-; CHECK-AVX2-O0-NEXT:    movw %bp, {{[0-9]+}}(%rsp)
-; CHECK-AVX2-O0-NEXT:    movw %bx, {{[0-9]+}}(%rsp)
-; CHECK-AVX2-O0-NEXT:    movw %r11w, {{[0-9]+}}(%rsp)
-; CHECK-AVX2-O0-NEXT:    movw %r10w, {{[0-9]+}}(%rsp)
-; CHECK-AVX2-O0-NEXT:    movw %r9w, {{[0-9]+}}(%rsp)
-; CHECK-AVX2-O0-NEXT:    movw %r8w, {{[0-9]+}}(%rsp)
-; CHECK-AVX2-O0-NEXT:    movw %di, {{[0-9]+}}(%rsp)
-; CHECK-AVX2-O0-NEXT:    movw %dx, {{[0-9]+}}(%rsp)
-; CHECK-AVX2-O0-NEXT:    movw %cx, {{[0-9]+}}(%rsp)
-; CHECK-AVX2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
+; CHECK-AVX2-O0-NEXT:    vextracti128 $1, %ymm1, %xmm0
+; CHECK-AVX2-O0-NEXT:    # kill: def $xmm1 killed $xmm1 killed $ymm1
+; CHECK-AVX2-O0-NEXT:    vmovaps %xmm1, (%rsp)
+; CHECK-AVX2-O0-NEXT:    vmovaps %xmm0, {{[0-9]+}}(%rsp)
 ; CHECK-AVX2-O0-NEXT:    movl $32, %edi
-; CHECK-AVX2-O0-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
+; CHECK-AVX2-O0-NEXT:    movq %rsp, %rdx
 ; CHECK-AVX2-O0-NEXT:    movl $3, %ecx
 ; CHECK-AVX2-O0-NEXT:    vzeroupper
 ; CHECK-AVX2-O0-NEXT:    callq __atomic_store@PLT
-; CHECK-AVX2-O0-NEXT:    addq $56, %rsp
-; CHECK-AVX2-O0-NEXT:    popq %rbx
-; CHECK-AVX2-O0-NEXT:    popq %r12
-; CHECK-AVX2-O0-NEXT:    popq %r13
-; CHECK-AVX2-O0-NEXT:    popq %r14
-; CHECK-AVX2-O0-NEXT:    popq %r15
-; CHECK-AVX2-O0-NEXT:    popq %rbp
+; CHECK-AVX2-O0-NEXT:    addq $40, %rsp
 ; CHECK-AVX2-O0-NEXT:    retq
 ;
 ; CHECK-AVX512-O0-LABEL: store_atomic_vec16_bfloat_unaligned:
 ; CHECK-AVX512-O0:       # %bb.0:
-; CHECK-AVX512-O0-NEXT:    pushq %rbp
-; CHECK-AVX512-O0-NEXT:    pushq %r15
-; CHECK-AVX512-O0-NEXT:    pushq %r14
-; CHECK-AVX512-O0-NEXT:    pushq %r13
-; CHECK-AVX512-O0-NEXT:    pushq %r12
-; CHECK-AVX512-O0-NEXT:    pushq %rbx
-; CHECK-AVX512-O0-NEXT:    subq $56, %rsp
+; CHECK-AVX512-O0-NEXT:    subq $40, %rsp
 ; CHECK-AVX512-O0-NEXT:    movq %rdi, %rsi
-; CHECK-AVX512-O0-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; CHECK-AVX512-O0-NEXT:    vpextrw $7, %xmm1, %eax
-; CHECK-AVX512-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-AVX512-O0-NEXT:    movw %ax, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-AVX512-O0-NEXT:    vpextrw $6, %xmm1, %eax
-; CHECK-AVX512-O0-NEXT:    movw %ax, %cx
-; CHECK-AVX512-O0-NEXT:    vpextrw $5, %xmm1, %eax
-; CHECK-AVX512-O0-NEXT:    movw %ax, %dx
-; CHECK-AVX512-O0-NEXT:    vpextrw $4, %xmm1, %eax
-; CHECK-AVX512-O0-NEXT:    movw %ax, %di
-; CHECK-AVX512-O0-NEXT:    vpextrw $3, %xmm1, %eax
-; CHECK-AVX512-O0-NEXT:    movw %ax, %r8w
-; CHECK-AVX512-O0-NEXT:    vpextrw $2, %xmm1, %eax
-; CHECK-AVX512-O0-NEXT:    movw %ax, %r9w
-; CHECK-AVX512-O0-NEXT:    vpextrw $1, %xmm1, %eax
-; CHECK-AVX512-O0-NEXT:    movw %ax, %r10w
-; CHECK-AVX512-O0-NEXT:    vmovd %xmm1, %eax
-; CHECK-AVX512-O0-NEXT:    movw %ax, %r11w
-; CHECK-AVX512-O0-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
-; CHECK-AVX512-O0-NEXT:    vpextrw $7, %xmm0, %eax
-; CHECK-AVX512-O0-NEXT:    movw %ax, %bx
-; CHECK-AVX512-O0-NEXT:    vpextrw $6, %xmm0, %eax
-; CHECK-AVX512-O0-NEXT:    movw %ax, %bp
-; CHECK-AVX512-O0-NEXT:    vpextrw $5, %xmm0, %eax
-; CHECK-AVX512-O0-NEXT:    movw %ax, %r14w
-; CHECK-AVX512-O0-NEXT:    vpextrw $4, %xmm0, %eax
-; CHECK-AVX512-O0-NEXT:    movw %ax, %r15w
-; CHECK-AVX512-O0-NEXT:    vpextrw $3, %xmm0, %eax
-; CHECK-AVX512-O0-NEXT:    movw %ax, %r12w
-; CHECK-AVX512-O0-NEXT:    vpextrw $2, %xmm0, %eax
-; CHECK-AVX512-O0-NEXT:    movw %ax, %r13w
-; CHECK-AVX512-O0-NEXT:    vpextrw $1, %xmm0, %eax
-; CHECK-AVX512-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-AVX512-O0-NEXT:    movw %ax, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-AVX512-O0-NEXT:    vmovd %xmm0, %eax
-; CHECK-AVX512-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-AVX512-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-AVX512-O0-NEXT:    movw {{[-0-9]+}}(%r{{[sb]}}p), %ax # 2-byte Reload
-; CHECK-AVX512-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-AVX512-O0-NEXT:    movw {{[-0-9]+}}(%r{{[sb]}}p), %ax # 2-byte Reload
-; CHECK-AVX512-O0-NEXT:    movw %r13w, {{[0-9]+}}(%rsp)
-; CHECK-AVX512-O0-NEXT:    movw %r12w, {{[0-9]+}}(%rsp)
-; CHECK-AVX512-O0-NEXT:    movw %r15w, {{[0-9]+}}(%rsp)
-; CHECK-AVX512-O0-NEXT:    movw %r14w, {{[0-9]+}}(%rsp)
-; CHECK-AVX512-O0-NEXT:    movw %bp, {{[0-9]+}}(%rsp)
-; CHECK-AVX512-O0-NEXT:    movw %bx, {{[0-9]+}}(%rsp)
-; CHECK-AVX512-O0-NEXT:    movw %r11w, {{[0-9]+}}(%rsp)
-; CHECK-AVX512-O0-NEXT:    movw %r10w, {{[0-9]+}}(%rsp)
-; CHECK-AVX512-O0-NEXT:    movw %r9w, {{[0-9]+}}(%rsp)
-; CHECK-AVX512-O0-NEXT:    movw %r8w, {{[0-9]+}}(%rsp)
-; CHECK-AVX512-O0-NEXT:    movw %di, {{[0-9]+}}(%rsp)
-; CHECK-AVX512-O0-NEXT:    movw %dx, {{[0-9]+}}(%rsp)
-; CHECK-AVX512-O0-NEXT:    movw %cx, {{[0-9]+}}(%rsp)
-; CHECK-AVX512-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
+; CHECK-AVX512-O0-NEXT:    vmovups %ymm0, (%rsp)
 ; CHECK-AVX512-O0-NEXT:    movl $32, %edi
-; CHECK-AVX512-O0-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
+; CHECK-AVX512-O0-NEXT:    movq %rsp, %rdx
 ; CHECK-AVX512-O0-NEXT:    movl $3, %ecx
 ; CHECK-AVX512-O0-NEXT:    vzeroupper
 ; CHECK-AVX512-O0-NEXT:    callq __atomic_store@PLT
-; CHECK-AVX512-O0-NEXT:    addq $56, %rsp
-; CHECK-AVX512-O0-NEXT:    popq %rbx
-; CHECK-AVX512-O0-NEXT:    popq %r12
-; CHECK-AVX512-O0-NEXT:    popq %r13
-; CHECK-AVX512-O0-NEXT:    popq %r14
-; CHECK-AVX512-O0-NEXT:    popq %r15
-; CHECK-AVX512-O0-NEXT:    popq %rbp
+; CHECK-AVX512-O0-NEXT:    addq $40, %rsp
 ; CHECK-AVX512-O0-NEXT:    retq
   store atomic <16 x bfloat> %v, ptr %x release, align 4
   ret void
@@ -3141,158 +2995,32 @@ define void @store_atomic_vec16_bfloat_align(ptr %x, <16 x bfloat> %v) nounwind 
 ;
 ; CHECK-AVX2-O0-LABEL: store_atomic_vec16_bfloat_align:
 ; CHECK-AVX2-O0:       # %bb.0:
-; CHECK-AVX2-O0-NEXT:    pushq %rbp
-; CHECK-AVX2-O0-NEXT:    pushq %r15
-; CHECK-AVX2-O0-NEXT:    pushq %r14
-; CHECK-AVX2-O0-NEXT:    pushq %r13
-; CHECK-AVX2-O0-NEXT:    pushq %r12
-; CHECK-AVX2-O0-NEXT:    pushq %rbx
-; CHECK-AVX2-O0-NEXT:    subq $56, %rsp
+; CHECK-AVX2-O0-NEXT:    subq $40, %rsp
+; CHECK-AVX2-O0-NEXT:    vmovaps %ymm0, %ymm1
 ; CHECK-AVX2-O0-NEXT:    movq %rdi, %rsi
-; CHECK-AVX2-O0-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; CHECK-AVX2-O0-NEXT:    vpextrw $7, %xmm1, %eax
-; CHECK-AVX2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-AVX2-O0-NEXT:    movw %ax, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-AVX2-O0-NEXT:    vpextrw $6, %xmm1, %eax
-; CHECK-AVX2-O0-NEXT:    movw %ax, %cx
-; CHECK-AVX2-O0-NEXT:    vpextrw $5, %xmm1, %eax
-; CHECK-AVX2-O0-NEXT:    movw %ax, %dx
-; CHECK-AVX2-O0-NEXT:    vpextrw $4, %xmm1, %eax
-; CHECK-AVX2-O0-NEXT:    movw %ax, %di
-; CHECK-AVX2-O0-NEXT:    vpextrw $3, %xmm1, %eax
-; CHECK-AVX2-O0-NEXT:    movw %ax, %r8w
-; CHECK-AVX2-O0-NEXT:    vpextrw $2, %xmm1, %eax
-; CHECK-AVX2-O0-NEXT:    movw %ax, %r9w
-; CHECK-AVX2-O0-NEXT:    vpextrw $1, %xmm1, %eax
-; CHECK-AVX2-O0-NEXT:    movw %ax, %r10w
-; CHECK-AVX2-O0-NEXT:    vmovd %xmm1, %eax
-; CHECK-AVX2-O0-NEXT:    movw %ax, %r11w
-; CHECK-AVX2-O0-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
-; CHECK-AVX2-O0-NEXT:    vpextrw $7, %xmm0, %eax
-; CHECK-AVX2-O0-NEXT:    movw %ax, %bx
-; CHECK-AVX2-O0-NEXT:    vpextrw $6, %xmm0, %eax
-; CHECK-AVX2-O0-NEXT:    movw %ax, %bp
-; CHECK-AVX2-O0-NEXT:    vpextrw $5, %xmm0, %eax
-; CHECK-AVX2-O0-NEXT:    movw %ax, %r14w
-; CHECK-AVX2-O0-NEXT:    vpextrw $4, %xmm0, %eax
-; CHECK-AVX2-O0-NEXT:    movw %ax, %r15w
-; CHECK-AVX2-O0-NEXT:    vpextrw $3, %xmm0, %eax
-; CHECK-AVX2-O0-NEXT:    movw %ax, %r12w
-; CHECK-AVX2-O0-NEXT:    vpextrw $2, %xmm0, %eax
-; CHECK-AVX2-O0-NEXT:    movw %ax, %r13w
-; CHECK-AVX2-O0-NEXT:    vpextrw $1, %xmm0, %eax
-; CHECK-AVX2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-AVX2-O0-NEXT:    movw %ax, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-AVX2-O0-NEXT:    vmovd %xmm0, %eax
-; CHECK-AVX2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-AVX2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-AVX2-O0-NEXT:    movw {{[-0-9]+}}(%r{{[sb]}}p), %ax # 2-byte Reload
-; CHECK-AVX2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-AVX2-O0-NEXT:    movw {{[-0-9]+}}(%r{{[sb]}}p), %ax # 2-byte Reload
-; CHECK-AVX2-O0-NEXT:    movw %r13w, {{[0-9]+}}(%rsp)
-; CHECK-AVX2-O0-NEXT:    movw %r12w, {{[0-9]+}}(%rsp)
-; CHECK-AVX2-O0-NEXT:    movw %r15w, {{[0-9]+}}(%rsp)
-; CHECK-AVX2-O0-NEXT:    movw %r14w, {{[0-9]+}}(%rsp)
-; CHECK-AVX2-O0-NEXT:    movw %bp, {{[0-9]+}}(%rsp)
-; CHECK-AVX2-O0-NEXT:    movw %bx, {{[0-9]+}}(%rsp)
-; CHECK-AVX2-O0-NEXT:    movw %r11w, {{[0-9]+}}(%rsp)
-; CHECK-AVX2-O0-NEXT:    movw %r10w, {{[0-9]+}}(%rsp)
-; CHECK-AVX2-O0-NEXT:    movw %r9w, {{[0-9]+}}(%rsp)
-; CHECK-AVX2-O0-NEXT:    movw %r8w, {{[0-9]+}}(%rsp)
-; CHECK-AVX2-O0-NEXT:    movw %di, {{[0-9]+}}(%rsp)
-; CHECK-AVX2-O0-NEXT:    movw %dx, {{[0-9]+}}(%rsp)
-; CHECK-AVX2-O0-NEXT:    movw %cx, {{[0-9]+}}(%rsp)
-; CHECK-AVX2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
+; CHECK-AVX2-O0-NEXT:    vextracti128 $1, %ymm1, %xmm0
+; CHECK-AVX2-O0-NEXT:    # kill: def $xmm1 killed $xmm1 killed $ymm1
+; CHECK-AVX2-O0-NEXT:    vmovaps %xmm1, (%rsp)
+; CHECK-AVX2-O0-NEXT:    vmovaps %xmm0, {{[0-9]+}}(%rsp)
 ; CHECK-AVX2-O0-NEXT:    movl $32, %edi
-; CHECK-AVX2-O0-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
+; CHECK-AVX2-O0-NEXT:    movq %rsp, %rdx
 ; CHECK-AVX2-O0-NEXT:    movl $3, %ecx
 ; CHECK-AVX2-O0-NEXT:    vzeroupper
 ; CHECK-AVX2-O0-NEXT:    callq __atomic_store@PLT
-; CHECK-AVX2-O0-NEXT:    addq $56, %rsp
-; CHECK-AVX2-O0-NEXT:    popq %rbx
-; CHECK-AVX2-O0-NEXT:    popq %r12
-; CHECK-AVX2-O0-NEXT:    popq %r13
-; CHECK-AVX2-O0-NEXT:    popq %r14
-; CHECK-AVX2-O0-NEXT:    popq %r15
-; CHECK-AVX2-O0-NEXT:    popq %rbp
+; CHECK-AVX2-O0-NEXT:    addq $40, %rsp
 ; CHECK-AVX2-O0-NEXT:    retq
 ;
 ; CHECK-AVX512-O0-LABEL: store_atomic_vec16_bfloat_align:
 ; CHECK-AVX512-O0:       # %bb.0:
-; CHECK-AVX512-O0-NEXT:    pushq %rbp
-; CHECK-AVX512-O0-NEXT:    pushq %r15
-; CHECK-AVX512-O0-NEXT:    pushq %r14
-; CHECK-AVX512-O0-NEXT:    pushq %r13
-; CHECK-AVX512-O0-NEXT:    pushq %r12
-; CHECK-AVX512-O0-NEXT:    pushq %rbx
-; CHECK-AVX512-O0-NEXT:    subq $56, %rsp
+; CHECK-AVX512-O0-NEXT:    subq $40, %rsp
 ; CHECK-AVX512-O0-NEXT:    movq %rdi, %rsi
-; CHECK-AVX512-O0-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; CHECK-AVX512-O0-NEXT:    vpextrw $7, %xmm1, %eax
-; CHECK-AVX512-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-AVX512-O0-NEXT:    movw %ax, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-AVX512-O0-NEXT:    vpextrw $6, %xmm1, %eax
-; CHECK-AVX512-O0-NEXT:    movw %ax, %cx
-; CHECK-AVX512-O0-NEXT:    vpextrw $5, %xmm1, %eax
-; CHECK-AVX512-O0-NEXT:    movw %ax, %dx
-; CHECK-AVX512-O0-NEXT:    vpextrw $4, %xmm1, %eax
-; CHECK-AVX512-O0-NEXT:    movw %ax, %di
-; CHECK-AVX512-O0-NEXT:    vpextrw $3, %xmm1, %eax
-; CHECK-AVX512-O0-NEXT:    movw %ax, %r8w
-; CHECK-AVX512-O0-NEXT:    vpextrw $2, %xmm1, %eax
-; CHECK-AVX512-O0-NEXT:    movw %ax, %r9w
-; CHECK-AVX512-O0-NEXT:    vpextrw $1, %xmm1, %eax
-; CHECK-AVX512-O0-NEXT:    movw %ax, %r10w
-; CHECK-AVX512-O0-NEXT:    vmovd %xmm1, %eax
-; CHECK-AVX512-O0-NEXT:    movw %ax, %r11w
-; CHECK-AVX512-O0-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
-; CHECK-AVX512-O0-NEXT:    vpextrw $7, %xmm0, %eax
-; CHECK-AVX512-O0-NEXT:    movw %ax, %bx
-; CHECK-AVX512-O0-NEXT:    vpextrw $6, %xmm0, %eax
-; CHECK-AVX512-O0-NEXT:    movw %ax, %bp
-; CHECK-AVX512-O0-NEXT:    vpextrw $5, %xmm0, %eax
-; CHECK-AVX512-O0-NEXT:    movw %ax, %r14w
-; CHECK-AVX512-O0-NEXT:    vpextrw $4, %xmm0, %eax
-; CHECK-AVX512-O0-NEXT:    movw %ax, %r15w
-; CHECK-AVX512-O0-NEXT:    vpextrw $3, %xmm0, %eax
-; CHECK-AVX512-O0-NEXT:    movw %ax, %r12w
-; CHECK-AVX512-O0-NEXT:    vpextrw $2, %xmm0, %eax
-; CHECK-AVX512-O0-NEXT:    movw %ax, %r13w
-; CHECK-AVX512-O0-NEXT:    vpextrw $1, %xmm0, %eax
-; CHECK-AVX512-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-AVX512-O0-NEXT:    movw %ax, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-AVX512-O0-NEXT:    vmovd %xmm0, %eax
-; CHECK-AVX512-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-AVX512-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-AVX512-O0-NEXT:    movw {{[-0-9]+}}(%r{{[sb]}}p), %ax # 2-byte Reload
-; CHECK-AVX512-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-AVX512-O0-NEXT:    movw {{[-0-9]+}}(%r{{[sb]}}p), %ax # 2-byte Reload
-; CHECK-AVX512-O0-NEXT:    movw %r13w, {{[0-9]+}}(%rsp)
-; CHECK-AVX512-O0-NEXT:    movw %r12w, {{[0-9]+}}(%rsp)
-; CHECK-AVX512-O0-NEXT:    movw %r15w, {{[0-9]+}}(%rsp)
-; CHECK-AVX512-O0-NEXT:    movw %r14w, {{[0-9]+}}(%rsp)
-; CHECK-AVX512-O0-NEXT:    movw %bp, {{[0-9]+}}(%rsp)
-; CHECK-AVX512-O0-NEXT:    movw %bx, {{[0-9]+}}(%rsp)
-; CHECK-AVX512-O0-NEXT:    movw %r11w, {{[0-9]+}}(%rsp)
-; CHECK-AVX512-O0-NEXT:    movw %r10w, {{[0-9]+}}(%rsp)
-; CHECK-AVX512-O0-NEXT:    movw %r9w, {{[0-9]+}}(%rsp)
-; CHECK-AVX512-O0-NEXT:    movw %r8w, {{[0-9]+}}(%rsp)
-; CHECK-AVX512-O0-NEXT:    movw %di, {{[0-9]+}}(%rsp)
-; CHECK-AVX512-O0-NEXT:    movw %dx, {{[0-9]+}}(%rsp)
-; CHECK-AVX512-O0-NEXT:    movw %cx, {{[0-9]+}}(%rsp)
-; CHECK-AVX512-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
+; CHECK-AVX512-O0-NEXT:    vmovups %ymm0, (%rsp)
 ; CHECK-AVX512-O0-NEXT:    movl $32, %edi
-; CHECK-AVX512-O0-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
+; CHECK-AVX512-O0-NEXT:    movq %rsp, %rdx
 ; CHECK-AVX512-O0-NEXT:    movl $3, %ecx
 ; CHECK-AVX512-O0-NEXT:    vzeroupper
 ; CHECK-AVX512-O0-NEXT:    callq __atomic_store@PLT
-; CHECK-AVX512-O0-NEXT:    addq $56, %rsp
-; CHECK-AVX512-O0-NEXT:    popq %rbx
-; CHECK-AVX512-O0-NEXT:    popq %r12
-; CHECK-AVX512-O0-NEXT:    popq %r13
-; CHECK-AVX512-O0-NEXT:    popq %r14
-; CHECK-AVX512-O0-NEXT:    popq %r15
-; CHECK-AVX512-O0-NEXT:    popq %rbp
+; CHECK-AVX512-O0-NEXT:    addq $40, %rsp
 ; CHECK-AVX512-O0-NEXT:    retq
   store atomic <16 x bfloat> %v, ptr %x release, align 32
   ret void
