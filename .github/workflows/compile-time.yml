@@ -46,8 +46,6 @@ jobs:
     environment:
       name: main-branch-only
       deployment: false
-    permissions:
-      pull-requests: write
     concurrency:
       group: compile-time-${{ github.event.issue.number }}
       cancel-in-progress: false
@@ -157,12 +155,18 @@ jobs:
             let body = `Failed to create compile-time tracker branch: ${process.env.RUN_URL}`;
             if (fs.existsSync(reasonFile))
               body += '\n\n' + fs.readFileSync(reasonFile, 'utf8');
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.payload.issue.number,
-              body
-            });
+            // Write files in the format expected by issue-write.yml.
+            fs.writeFileSync('comments', JSON.stringify([{ body }]));
+            fs.writeFileSync('pr_number', String(context.payload.issue.number));
+
+      - name: Upload comment and PR number
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: workflow-args
+          path: |
+            comments
+            pr_number
 
   react-to-comment:
     needs:
