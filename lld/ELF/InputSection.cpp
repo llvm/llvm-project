@@ -1421,7 +1421,7 @@ template <class ELFT> void EhInputSection::split() {
     if (relI != rels.size() && rels[relI].offset < off + size)
       firstRel = relI;
     if (id == 0) {
-      cies.emplace_back(off, this, size, firstRel, -1);
+      cies.emplace_back(off, size, firstRel, -1);
     } else {
       auto cieOff = off + 4 - id;
       auto it = partition_point(
@@ -1430,7 +1430,7 @@ template <class ELFT> void EhInputSection::split() {
         msg = "invalid CIE reference";
         break;
       }
-      fdes.emplace_back(off, this, size, firstRel, it - cies.begin());
+      fdes.emplace_back(off, size, firstRel, it - cies.begin());
     }
     d = d.slice(size);
   }
