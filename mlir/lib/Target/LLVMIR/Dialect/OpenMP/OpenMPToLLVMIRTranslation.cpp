@@ -563,6 +563,41 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       result = todo("dyn_groupprivate");
   };
 
+  // `declare_mapper.info` supports a single-dimension iterator whose region
+  // (which may itself span several blocks) yields one member-free omp.map.info
+  // for a locator described by var_ptr + bounds. Descriptor-indirect
+  // (var_ptr_ptr) locators aren't handled yet. Anything else falls back to the
+  // generic (not yet implemented) diagnostic above.
+  auto checkDeclareMapperMap = [&todo](omp::DeclareMapperInfoOp op,
+                                       LogicalResult &result) {
+    if (auto declMapperOp = op->getParentOfType<omp::DeclareMapperOp>())
+      if (!declMapperOp.getRegion().hasOneBlock()) {
+        result = todo("control flow in a declare mapper body");
+        return;
+      }
+
+    for (Value iterVal : op.getMapIterated()) {
+      auto itersOp = iterVal.getDefiningOp<omp::IteratorOp>();
+      bool supported = itersOp && itersOp.getLoopLowerBounds().size() == 1;
+      if (supported) {
+        omp::YieldOp yieldOp = itersOp.getYieldOp();
+        supported = yieldOp && yieldOp.getResults().size() == 1;
+        if (supported) {
+          auto mapInfoOp =
+              yieldOp.getResults()[0].getDefiningOp<omp::MapInfoOp>();
+          supported =
+              mapInfoOp && !mapInfoOp.getVarPtrPtr() &&
+              mapInfoOp.getMembers().empty() &&
+              mapInfoOp.getMapCaptureType() == omp::VariableCaptureKind::ByRef;
+        }
+      }
+      if (!supported) {
+        result = todo("map/motion clause with iterator modifier");
+        return;
+      }
+    }
+  };
+
   LogicalResult result = success();
   llvm::TypeSwitch<Operation &>(op)
       .Case([&](omp::DistributeOp op) {
@@ -657,7 +692,9 @@ static LogicalResult checkImplementationStatus(Operation &op) {
           result = todo("mapper with iterator modifier");
       })
       .Case([&](omp::TargetDataOp op) { checkMap(op, result); })
-      .Case([&](omp::DeclareMapperInfoOp op) { checkMap(op, result); })
+      .Case([&](omp::DeclareMapperInfoOp op) {
+        checkDeclareMapperMap(op, result);
+      })
       .Default([](Operation &) {
         // Assume all clauses for an operation can be translated unless they are
         // checked above.
@@ -8546,9 +8583,91 @@ emitUserDefinedMapper(Operation *op, llvm::IRBuilderBase &builder,
     genMapInfos(builder, moduleTranslation, dl, combinedInfo, mapData,
                 targetDirective);
 
-    // Drop the mapping that is no longer necessary so that the same region
-    // can be processed multiple times.
-    moduleTranslation.forgetMapping(declMapperOp.getRegion());
+    // Components produced by an `iterator` modifier on the mapper's own map
+    // clause: their count is only known at runtime, so they are recorded as
+    // dynamic segments and pushed one at a time (via
+    // __tgt_push_mapper_component) from a generated loop, mirroring how the
+    // depend/affinity clauses already handle iterator-produced entries. Each
+    // per-iteration locator keeps its array base in var_ptr with bounds
+    // selecting the mapped element, the same shape as an ordinary
+    // array-section map, so the existing calculateBoundsOffset helper
+    // computes its address.
+    for (mlir::Value iterVal : declMapperInfoOp.getMapIterated()) {
+      auto itersOp = iterVal.getDefiningOp<mlir::omp::IteratorOp>();
+      assert(itersOp && "map_iterated value must be defined by omp.iterator");
+      // Lowering the locator's indices (e.g. involving LEN_TRIM) can
+      // introduce control flow inside the iterator, so its `omp.yield` is
+      // not necessarily in the region's first block.
+      mlir::omp::YieldOp yieldOp = itersOp.getYieldOp();
+      assert(yieldOp && "expected exactly one omp.yield in the iterator body");
+      auto mapInfoOp =
+          yieldOp.getResults()[0].getDefiningOp<mlir::omp::MapInfoOp>();
+      assert(mapInfoOp && "expected an omp.map.info in the map_iterated body");
+
+      mlir::Type varPtrMlirTy = mapInfoOp.getVarPtrType();
+      mlir::Type elemMlirTy = varPtrMlirTy;
+      if (auto arrTy = mlir::dyn_cast<mlir::LLVM::LLVMArrayType>(varPtrMlirTy))
+        elemMlirTy = arrTy.getElementType();
+      llvm::Type *baseLLVMTy = moduleTranslation.convertType(varPtrMlirTy);
+      llvm::Value *sizeVal = builder.getInt64(dl.getTypeSize(elemMlirTy));
+
+      llvm::omp::OpenMPOffloadMappingFlags mapType =
+          convertClauseMapFlags(mapInfoOp.getMapType());
+      bool hasAttachPtr =
+          (mapType & llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ATTACH) !=
+          llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE;
+
+      IteratorInfo iterInfo(itersOp, moduleTranslation, builder);
+      llvm::Value *count = iterInfo.getTotalTrips();
+
+      combinedInfo.DynamicSegments.push_back(
+          MapInfosTy::DynamicSegment{count, {}, mapType, hasAttachPtr});
+      MapInfosTy::DynamicSegment &seg = combinedInfo.DynamicSegments.back();
+      // Capture `iterInfo` by value: it already holds the lb/ub/step/trip
+      // llvm::Value*s looked up while `declMapperOp`'s region mapping was
+      // still valid. GenEntry runs later (from within
+      // OpenMPIRBuilder::emitUserDefinedMapper), after the mapping for that
+      // region has been dropped below via forgetMapping, so re-deriving a
+      // fresh IteratorInfo from `itersOp` at that point would fail to find
+      // the lb/ub/step values in the (already cleared) ModuleTranslation
+      // value map.
+      seg.GenEntry = [&moduleTranslation, itersOp, mapInfoOp, baseLLVMTy,
+                      sizeVal, iterInfo](llvm::IRBuilderBase &b,
+                                         llvm::Value *linearIV) mutable
+          -> llvm::Expected<llvm::SmallVector<llvm::Value *, 3>> {
+        if (failed(convertIteratorRegion(
+                linearIV, iterInfo, itersOp.getRegion(), b, moduleTranslation)))
+          return llvm::make_error<PreviouslyReportedError>();
+        llvm::Value *base =
+            moduleTranslation.lookupValue(mapInfoOp.getVarPtr());
+        std::vector<llvm::Value *> offsetIdx =
+            calculateBoundsOffset(moduleTranslation, b, baseLLVMTy->isArrayTy(),
+                                  mapInfoOp.getBounds());
+        llvm::Value *addr = base;
+        if (!offsetIdx.empty())
+          addr = b.CreateInBoundsGEP(baseLLVMTy, base, offsetIdx);
+        moduleTranslation.forgetMapping(itersOp.getRegion());
+        return llvm::SmallVector<llvm::Value *, 3>{addr, addr, sizeVal};
+      };
+
+      if (mapInfoOp.getMapperId()) {
+        auto childMapperOp =
+            SymbolTable::lookupNearestSymbolFrom<omp::DeclareMapperOp>(
+                mapInfoOp, mapInfoOp.getMapperIdAttr());
+        // Emitting the child mapper for the first time leaves builder's
+        // insertion point inside the child function; restore it so that
+        // later iterator segments are emitted into this (the parent)
+        // mapper function instead.
+        llvm::IRBuilderBase::InsertPointGuard childMapperIPGuard(builder);
+        llvm::Expected<llvm::Function *> childMapperFn =
+            getOrCreateUserDefinedMapperFunc(
+                childMapperOp, builder, moduleTranslation, targetDirective);
+        if (!childMapperFn)
+          return childMapperFn.takeError();
+        seg.ChildMapperFn = *childMapperFn;
+      }
+    }
+
     return combinedInfo;
   };
 
@@ -8562,6 +8681,11 @@ emitUserDefinedMapper(Operation *op, llvm::IRBuilderBase &builder,
   llvm::Expected<llvm::Function *> newFn = ompBuilder->emitUserDefinedMapper(
       genMapInfoCB, varType, mapperFuncName, customMapperCB,
       /*PreserveMemberOfFlags=*/true);
+  // Only now that emitUserDefinedMapper has fully finished (including running
+  // any iterator-produced DynamicSegment::GenEntry callbacks, which look up
+  // values defined in declMapperOp's region) is it safe to drop the mapping,
+  // so that the same region can be processed multiple times.
+  moduleTranslation.forgetMapping(declMapperOp.getRegion());
   if (!newFn)
     return newFn.takeError();
   if ([[maybe_unused]] llvm::Function *mappedFunc =
