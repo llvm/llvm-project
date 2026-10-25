@@ -1902,7 +1902,7 @@ ParseResult spirv::SpecConstantOp::parse(OpAsmParser &parser,
       parser.parseAttribute(valueAttr, defaultValueAttrName, result.attributes))
     return failure();
 
-  return success();
+  return parser.parseOptionalAttrDict(result.attributes);
 }
 
 void spirv::SpecConstantOp::print(OpAsmPrinter &printer) {
@@ -1914,6 +1914,9 @@ void spirv::SpecConstantOp::print(OpAsmPrinter &printer) {
           (*this)->getDiscardableAttrOfType<IntegerAttr>(kSpecIdAttrName))
     printer << ' ' << kSpecIdAttrName << '(' << specID.getInt() << ')';
   printer << " = " << getDefaultValue();
+  printer.printOptionalAttrDict(
+      (*this)->getDiscardableAttrDictionary().getValue(),
+      /*elidedAttrs=*/{kSpecIdAttrName});
 }
 
 LogicalResult spirv::SpecConstantOp::verify() {
@@ -2009,7 +2012,7 @@ ParseResult spirv::SpecConstantCompositeOp::parse(OpAsmParser &parser,
       spirv::SpecConstantCompositeOp::getTypeAttrName(result.name);
   result.addAttribute(typeAttrName, TypeAttr::get(type));
 
-  return success();
+  return parser.parseOptionalAttrDict(result.attributes);
 }
 
 void spirv::SpecConstantCompositeOp::print(OpAsmPrinter &printer) {
@@ -2019,6 +2022,8 @@ void spirv::SpecConstantCompositeOp::print(OpAsmPrinter &printer) {
   printer.printSymbolName(getSymName());
   printer << " (" << llvm::interleaved(this->getConstituents().getValue())
           << ") : " << getType();
+  printer.printOptionalAttrDict(
+      (*this)->getDiscardableAttrDictionary().getValue());
 }
 
 LogicalResult spirv::SpecConstantCompositeOp::verify() {
@@ -2098,7 +2103,7 @@ spirv::EXTSpecConstantCompositeReplicateOp::parse(OpAsmParser &parser,
       spirv::EXTSpecConstantCompositeReplicateOp::getTypeAttrName(result.name);
   result.addAttribute(typeAttrName, TypeAttr::get(type));
 
-  return success();
+  return parser.parseOptionalAttrDict(result.attributes);
 }
 
 void spirv::EXTSpecConstantCompositeReplicateOp::print(OpAsmPrinter &printer) {
@@ -2107,6 +2112,8 @@ void spirv::EXTSpecConstantCompositeReplicateOp::print(OpAsmPrinter &printer) {
     printer << visibility.getValue() << ' ';
   printer.printSymbolName(getSymName());
   printer << " (" << this->getConstituent() << ") : " << getType();
+  printer.printOptionalAttrDict(
+      (*this)->getDiscardableAttrDictionary().getValue());
 }
 
 LogicalResult spirv::EXTSpecConstantCompositeReplicateOp::verify() {

@@ -1372,3 +1372,17 @@ spirv.module Logical GLSL450 {
     spirv.Return
   }
 }
+
+// -----
+
+// Discardable attributes round-trip through the custom syntax.
+spirv.module Logical GLSL450 {
+  // CHECK: spirv.SpecConstant @sc_attrs spec_id(5) = 1 : i32 {test.marker = "keep"}
+  spirv.SpecConstant @sc_attrs spec_id(5) = 1 : i32 {test.marker = "keep"}
+  // CHECK: spirv.SpecConstant @sc = 1 : i32
+  spirv.SpecConstant @sc = 1 : i32
+  // CHECK: spirv.SpecConstantComposite @scc_attrs (@sc, @sc) : vector<2xi32> {test.marker = "keep"}
+  spirv.SpecConstantComposite @scc_attrs (@sc, @sc) : vector<2xi32> {test.marker = "keep"}
+  // CHECK: spirv.EXT.SpecConstantCompositeReplicate @sccr_attrs (@sc) : vector<2xi32> {test.marker = "keep"}
+  spirv.EXT.SpecConstantCompositeReplicate @sccr_attrs (@sc) : vector<2xi32> {test.marker = "keep"}
+}
