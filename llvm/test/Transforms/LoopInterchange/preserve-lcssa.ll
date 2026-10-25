@@ -212,27 +212,28 @@ exit:                                             ; preds = %outer.latch
 
 
 ; Make sure we do not crash for loops without reachable exits.
-define void @no_reachable_exits() {
-; CHECK-LABEL: define void @no_reachable_exits() {
+define void @no_reachable_exits(i1 %c0, i1 %c1, i1 %c2, ptr %p) {
+; CHECK-LABEL: define void @no_reachable_exits(
+; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]], i1 [[C2:%.*]], ptr [[P:%.*]]) {
 ; CHECK-NEXT:  [[BB:.*:]]
 ; CHECK-NEXT:    br label %[[OUTER_PH:.*]]
 ; CHECK:       [[OUTER_PH]]:
 ; CHECK-NEXT:    br label %[[OUTER_HEADER:.*]]
 ; CHECK:       [[OUTER_HEADER]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = phi i32 [ 0, %[[OUTER_PH]] ], [ [[TMP8:%.*]], %[[OUTER_LATCH:.*]] ]
-; CHECK-NEXT:    br i1 undef, label %[[INNER_PH:.*]], label %[[OUTER_LATCH]]
+; CHECK-NEXT:    br i1 [[C0]], label %[[INNER_PH:.*]], label %[[OUTER_LATCH]]
 ; CHECK:       [[INNER_PH]]:
 ; CHECK-NEXT:    br label %[[INNER_BODY:.*]]
 ; CHECK:       [[INNER_BODY]]:
 ; CHECK-NEXT:    [[TMP31:%.*]] = phi i32 [ 0, %[[INNER_PH]] ], [ [[TMP6:%.*]], %[[INNER_BODY]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = load ptr, ptr undef, align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[P]], align 8
 ; CHECK-NEXT:    [[TMP6]] = add nsw i32 [[TMP31]], 1
-; CHECK-NEXT:    br i1 false, label %[[INNER_BODY]], label %[[OUTER_LATCH_LOOPEXIT:.*]]
+; CHECK-NEXT:    br i1 [[C1]], label %[[INNER_BODY]], label %[[OUTER_LATCH_LOOPEXIT:.*]]
 ; CHECK:       [[OUTER_LATCH_LOOPEXIT]]:
 ; CHECK-NEXT:    br label %[[OUTER_LATCH]]
 ; CHECK:       [[OUTER_LATCH]]:
 ; CHECK-NEXT:    [[TMP8]] = add nsw i32 [[TMP2]], 1
-; CHECK-NEXT:    br i1 false, label %[[OUTER_HEADER]], label %[[EXIT:.*]]
+; CHECK-NEXT:    br i1 [[C2]], label %[[OUTER_HEADER]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    unreachable
 ;
@@ -244,20 +245,20 @@ outer.ph:                              ; preds = %bb
 
 outer.header:                                    ; preds = %outer.ph, %outer.latch
   %tmp2 = phi i32 [ 0, %outer.ph ], [ %tmp8, %outer.latch ]
-  br i1 undef, label %inner.ph, label %outer.latch
+  br i1 %c0, label %inner.ph, label %outer.latch
 
 inner.ph:                                        ; preds = %outer.header
   br label %inner.body
 
 inner.body:                                              ; preds = %inner.ph, %inner.body
   %tmp31 = phi i32 [ 0, %inner.ph ], [ %tmp6, %inner.body]
-  %tmp5 = load ptr, ptr undef, align 8
+  %tmp5 = load ptr, ptr %p, align 8
   %tmp6 = add nsw i32 %tmp31, 1
-  br i1 undef, label %inner.body, label %outer.latch
+  br i1 %c1, label %inner.body, label %outer.latch
 
 outer.latch:                                              ; preds = %inner.body, %outer.header
   %tmp8 = add nsw i32 %tmp2, 1
-  br i1 undef, label %outer.header, label %exit
+  br i1 %c2, label %outer.header, label %exit
 
 exit:                                              ; preds = %outer.latch
   unreachable
