@@ -31,7 +31,9 @@ asm_main:
         .globl  tramp
 tramp:
         .cfi_startproc
+        .ifndef TRAMP_NAME_ONLY
         .cfi_signal_frame
+        .endif
         # Emit cfi to line up with the frame created by asm_main
         .cfi_def_cfa_offset 16
         .cfi_offset %rbp, -16

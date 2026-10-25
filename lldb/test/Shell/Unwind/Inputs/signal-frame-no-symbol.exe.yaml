@@ -1,12 +1,15 @@
-# The trampoline is in its own section with no symbols. "previous" ends at
-# the section boundary immediately before it, so resolving trampoline - 1
-# succeeds while resolving trampoline fails. PE/COFF does not synthesize symbols
-# from FDEs.
+# The unnamed trampoline starts a section before any symbols in that section.
+# "previous" ends at the section boundary immediately before it, so resolving
+# trampoline - 1 succeeds while resolving trampoline fails. PE/COFF does not
+# synthesize symbols from FDEs.
 #
 # .eh_frame contains ordinary FDEs for leaf (0x1000), caller (0x1010), and
 # previous (0x1ff0), followed by a zRS CIE and an FDE for the trampoline (0x2000).
+# A second signal FDE covers the named trampoline tramp (0x2020). Its initial
+# row has CFA=rsp+24, changing to CFA=rsp+16 at offset 1, where thread 3's
+# return PC points. Selecting PC - 1 would therefore read a zero return PC.
 # The ordinary CIE has CFA=rsp+8 and rip=[CFA-8]. caller marks rip undefined.
-# The trampoline FDE is equivalent to:
+# The unnamed trampoline FDE is equivalent to:
 #   .cfi_startproc
 #   .cfi_signal_frame
 #   .cfi_def_cfa_offset 16
@@ -39,14 +42,20 @@ sections:
   - Name:            .tramp
     Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
     VirtualAddress:  8192
-    VirtualSize:     16
-    SectionData:     90909090909090909090909090909090
+    VirtualSize:     48
+    SectionData:     909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090
   - Name:            .eh_frame
     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
     VirtualAddress:  12288
-    VirtualSize:     132
-    SectionData:     1400000000000000017A5200017810011B0C070890010000100000001C000000E0DFFFFF10000000000000001000000030000000DCDFFFFF10000000000710001000000044000000A8EFFFFF10000000000000001400000000000000017A525300017810011B0C0708900100140000001C0000008CEFFFFF10000000000E10410E180000
+    VirtualSize:     156
+    SectionData:     1400000000000000017A5200017810011B0C070890010000100000001C000000E0DFFFFF10000000000000001000000030000000DCDFFFFF10000000000710001000000044000000A8EFFFFF10000000000000001400000000000000017A525300017810011B0C0708900100140000001C0000008CEFFFFF10000000000E10410E180000140000003400000094EFFFFF10000000000E18410E100000
 symbols:
+  - Name:            tramp
+    Value:           32
+    SectionNumber:   2
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
   - Name:            leaf
     Value:           0
     SectionNumber:   1

@@ -256,8 +256,10 @@ void RegisterContextUnwind::InitializeZerothFrame() {
   }
 
   bool is_signal_frame = IsSignalFrameAtRawPC();
-  if (is_signal_frame && !m_current_offset)
+  if (is_signal_frame && !m_current_offset) {
+    m_current_offset = 0;
     m_current_offset_backed_up_one = 0;
+  }
   if (is_signal_frame)
     m_frame_type = eTrapHandlerFrame;
 
@@ -590,10 +592,13 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
 
   bool decr_pc_and_recompute_addr_range;
 
-  if (!m_sym_ctx_valid) {
-    // Signal-frame CFI describes the raw PC even when symbol lookup failed.
-    // Otherwise, preserve the existing behavior of decrementing and retrying.
-    decr_pc_and_recompute_addr_range = !is_signal_frame;
+  if (is_signal_frame) {
+    // Signal-frame CFI describes the raw PC, including at row transitions
+    // inside a function. Do not adjust it before selecting the unwind row.
+    decr_pc_and_recompute_addr_range = false;
+  } else if (!m_sym_ctx_valid) {
+    // Always decrement and recompute if the symbol lookup failed.
+    decr_pc_and_recompute_addr_range = true;
   } else if (GetNextFrame()->m_frame_type == eTrapHandlerFrame ||
              GetNextFrame()->m_frame_type == eDebuggerFrame) {
     // Don't decrement if we're "above" an asynchronous event like
@@ -607,7 +612,7 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
       decr_pc_and_recompute_addr_range = false;
     else
       decr_pc_and_recompute_addr_range = true;
-  } else if (is_signal_frame || IsTrapHandlerSymbol(process, m_sym_ctx)) {
+  } else if (IsTrapHandlerSymbol(process, m_sym_ctx)) {
     // Signal dispatch may set the return address of the handler it calls to
     // point to the first byte of a return trampoline (like __kernel_rt_sigreturn),
     // so do not decrement and recompute if the symbol we already found is a trap

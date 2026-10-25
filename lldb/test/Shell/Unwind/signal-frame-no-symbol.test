@@ -3,6 +3,9 @@
 # PC - 1 belongs to "previous", so retrying symbol lookup there would select
 # the wrong function. The trampoline's second CFI row also describes a different
 # stack layout, making it necessary to select the row at the raw PC.
+# A second thread stops directly in that trampoline to exercise frame zero.
+# A third thread returns into a named trampoline at a CFI row transition, where
+# backing up the PC would select the preceding row and lose the caller.
 
 # REQUIRES: x86
 
@@ -24,10 +27,27 @@ image lookup -v -a 0x140002000
 # CHECK-NOT: Function:
 # CHECK-NOT: Symbol:
 
-thread backtrace -u
-# CHECK-LABEL: thread backtrace -u
+thread backtrace -u 1
+# CHECK-LABEL: thread backtrace -u 1
 # CHECK: frame #0: 0x0000000140001000 signal-frame-no-symbol.exe`leaf
 # CHECK-NEXT: frame #1: 0x0000000140002000 signal-frame-no-symbol.exe`{{$}}
+# CHECK-NEXT: frame #2: 0x0000000140001010 signal-frame-no-symbol.exe`caller
+# CHECK-NOT: frame #3:
+
+thread backtrace -u 2
+# CHECK-LABEL: thread backtrace -u 2
+# CHECK: frame #0: 0x0000000140002000 signal-frame-no-symbol.exe`{{$}}
+# CHECK-NEXT: frame #1: 0x0000000140001010 signal-frame-no-symbol.exe`caller
+# CHECK-NOT: frame #2:
+
+image lookup -v -a 0x140002021
+# CHECK-LABEL: image lookup -v -a 0x140002021
+# CHECK: Symbol: {{.*}}name="tramp"
+
+thread backtrace -u 3
+# CHECK-LABEL: thread backtrace -u 3
+# CHECK: frame #0: 0x0000000140001000 signal-frame-no-symbol.exe`leaf
+# CHECK-NEXT: frame #1: 0x0000000140002021 signal-frame-no-symbol.exe`tramp + 1
 # CHECK-NEXT: frame #2: 0x0000000140001010 signal-frame-no-symbol.exe`caller
 # CHECK-NOT: frame #3:
 
@@ -37,3 +57,10 @@ thread backtrace -u
 # UNWIND: This frame is marked as a trap handler via its UnwindPlan
 # UNWIND: Using full unwind plan 'eh_frame CFI'
 # UNWIND: active row: 0x0000000140002000: CFA=rsp+16 => rip=[CFA-8]
+
+# The named trampoline must keep the raw PC and use the row starting there,
+# rather than the preceding row with CFA=rsp+24.
+# UNWIND: with pc value of 0x140002021, symbol name is 'tramp'
+# UNWIND-NOT: Backing up the pc value of 0x140002021
+# UNWIND: Using full unwind plan 'eh_frame CFI'
+# UNWIND: active row: 0x0000000140002021: CFA=rsp+16 => rip=[CFA-8]
