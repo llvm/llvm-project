@@ -685,3 +685,11 @@ functions:
       - type: unsigned long int
       - type: unsigned long accum
     guard: LIBC_COMPILER_HAS_FIXED_POINT
+  - name: mulik
+    standards:
+      - stdc_ext
+    return_type: int
+    arguments:
+      - type: int
+      - type: accum
+    guard: LIBC_COMPILER_HAS_FIXED_POINT
