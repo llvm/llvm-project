@@ -6,26 +6,26 @@
 ; floating-point type of the same width must be forwarded as a bitcast of the
 ; stored bits, not as an fptrunc (value conversion).
 
-; half 0xH3C01 (~1.00098) reinterpreted as bfloat is 0xR3C01 (~0.00787).
+; The bits f0x3C01 are ~1.00098 as half and ~0.00787 as bfloat.
 define bfloat @half_store_bfloat_load() {
 ; CHECK-LABEL: define noundef nofpclass(nan inf zero sub nnorm) bfloat @half_store_bfloat_load(
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    ret bfloat 7.873530e-03
 ;
   %p = alloca half, align 2
-  store half 0xH3C01, ptr %p, align 2
+  store half f0x3C01, ptr %p, align 2
   %l = load bfloat, ptr %p, align 2
   ret bfloat %l
 }
 
-; bfloat 0xR3F80 (1.0) reinterpreted as half is 0xH3F80 (1.875).
+; The bits f0x3F80 are 1.0 as bfloat and 1.875 as half.
 define half @bfloat_store_half_load() {
 ; CHECK-LABEL: define noundef nofpclass(nan inf zero sub nnorm) half @bfloat_store_half_load(
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:    ret half 1.875000e+00
 ;
   %p = alloca bfloat, align 2
-  store bfloat 0xR3F80, ptr %p, align 2
+  store bfloat f0x3F80, ptr %p, align 2
   %l = load half, ptr %p, align 2
   ret half %l
 }
@@ -41,7 +41,7 @@ define ppc_fp128 @fp128_store_ppc_fp128_load() {
 ; CHECK-NEXT:    ret ppc_fp128 [[L]]
 ;
   %p = alloca fp128, align 16
-  store fp128 0xL00000000000000003FFF000000000000, ptr %p, align 16
+  store fp128 f0x3FFF0000000000000000000000000000, ptr %p, align 16
   %l = load ppc_fp128, ptr %p, align 16
   ret ppc_fp128 %l
 }
@@ -53,7 +53,7 @@ define half @half_store_half_load() {
 ; CHECK-NEXT:    ret half 1.000980e+00
 ;
   %p = alloca half, align 2
-  store half 0xH3C01, ptr %p, align 2
+  store half f0x3C01, ptr %p, align 2
   %l = load half, ptr %p, align 2
   ret half %l
 }
