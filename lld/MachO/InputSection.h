@@ -311,6 +311,8 @@ bool isSelRefsSection(const InputSection *);
 bool isEhFrameSection(const InputSection *);
 bool isGccExceptTabSection(const InputSection *);
 bool usesAuthGot(const InputSection *);
+const AuthInfo *getImplicitAuthInfo(const InputSection *isec,
+                                    const Symbol *sym);
 
 extern std::vector<ConcatInputSection *> inputSections;
 // This is used as a counter for specyfing input order for input sections
