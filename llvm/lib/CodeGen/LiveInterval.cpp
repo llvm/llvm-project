@@ -21,6 +21,7 @@
 #include "LiveRangeUtils.h"
 #include "RegisterCoalescer.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -1336,6 +1337,7 @@ unsigned ConnectedVNInfoEqClasses::Classify(const LiveRange &LR) {
   EqClass.grow(LR.getNumValNums());
 
   const VNInfo *used = nullptr, *unused = nullptr;
+  bool HasPHIDef = false;
 
   // Determine connections.
   for (const VNInfo *VNI : LR.valnos) {
@@ -1348,6 +1350,7 @@ unsigned ConnectedVNInfoEqClasses::Classify(const LiveRange &LR) {
     }
     used = VNI;
     if (VNI->isPHIDef()) {
+      HasPHIDef = true;
       const MachineBasicBlock *MBB = LIS.getMBBFromIndex(VNI->def);
       assert(MBB && "Phi-def has no defining MBB");
       // Connect to values live out of predecessors.
@@ -1367,6 +1370,30 @@ unsigned ConnectedVNInfoEqClasses::Classify(const LiveRange &LR) {
   // Lump all the unused values in with the last used value.
   if (used && unused)
     EqClass.join(used->id, unused->id);
+
+  if (HasPHIDef) {
+    const VNInfo *Defined = nullptr;
+    unsigned NumVals = LR.getNumValNums();
+    BitVector HasDef(NumVals);
+    SmallVector<unsigned, 8> Leaders(NumVals);
+    for (const VNInfo *VNI : LR.valnos) {
+      unsigned Leader = EqClass.findLeader(VNI->id);
+      Leaders[VNI->id] = Leader;
+      if (VNI->isPHIDef())
+        continue;
+      HasDef.set(Leader);
+      Defined = VNI;
+    }
+
+    for (const VNInfo *VNI : LR.valnos) {
+      unsigned Leader = Leaders[VNI->id];
+      if (HasDef.test(Leader))
+        continue;
+      assert(Defined && "phi-def only class with no defined value to join");
+      EqClass.join(Defined->id, VNI->id);
+      HasDef.set(Leader);
+    }
+  }
 
   EqClass.compress();
   return EqClass.getNumClasses();
