@@ -1241,8 +1241,10 @@ inline BinaryOp_match<LHS, RHS, Instruction::FSub> m_FSub(const LHS &L,
 
 template <typename Op_t> struct FNeg_match {
   Op_t X;
+  bool AllowFSubNegZero;
 
-  FNeg_match(const Op_t &Op) : X(Op) {}
+  FNeg_match(const Op_t &Op, bool AllowFSubNegZero = false) : X(Op), 
+  AllowFSubNegZero(AllowFSubNegZero) {}
   template <typename OpTy> bool match(OpTy *V) const {
     auto *FPMO = dyn_cast<FPMathOperator>(V);
     if (!FPMO)
@@ -1251,12 +1253,32 @@ template <typename Op_t> struct FNeg_match {
     if (FPMO->getOpcode() == Instruction::FNeg)
       return X.match(FPMO->getOperand(0));
 
+    if (AllowFSubNegZero && FPMO->getOpcode() == Instruction::FSub) {
+      if (FPMO->hasNoSignedZeros()) {
+        // With 'nsz', any zero goes.
+        if (!cstfp_pred_ty<is_any_zero_fp>().match(FPMO->getOperand(0)))
+          return false;
+      } else {
+        // Without 'nsz', we need fsub -0.0, X exactly.
+        if (!cstfp_pred_ty<is_neg_zero_fp>().match(FPMO->getOperand(0)))
+          return false;
+      }
+
+      return X.match(FPMO->getOperand(1));
+    }
+
     return false;
   }
 };
 
+/// Match fneg X only
 template <typename OpTy> inline FNeg_match<OpTy> m_FNeg(const OpTy &X) {
-  return FNeg_match<OpTy>(X);
+  return FNeg_match<OpTy>(X, false);
+}
+
+/// Match fneg X or fsub -0.0, X
+template <typename OpTy> inline FNeg_match<OpTy> m_FNegOrFSubNegZero(const OpTy &X) {
+  return FNeg_match<OpTy>(X, true);
 }
 
 template <typename RHS>
