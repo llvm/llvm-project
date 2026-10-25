@@ -338,16 +338,13 @@ define i64 @mulwide_u32_mask(i64 %a, i32 %b) {
 ;
 ; NOOPT-LABEL: mulwide_u32_mask(
 ; NOOPT:       {
-; NOOPT-NEXT:    .reg .b32 %r<2>;
-; NOOPT-NEXT:    .reg .b64 %rd<5>;
+; NOOPT-NEXT:    .reg .b64 %rd<4>;
 ; NOOPT-EMPTY:
 ; NOOPT-NEXT:  // %bb.0:
-; NOOPT-NEXT:    ld.param.b32 %r1, [mulwide_u32_mask_param_1];
-; NOOPT-NEXT:    ld.param.b64 %rd1, [mulwide_u32_mask_param_0];
-; NOOPT-NEXT:    and.b64 %rd2, %rd1, 4294967295;
-; NOOPT-NEXT:    cvt.u64.u32 %rd3, %r1;
-; NOOPT-NEXT:    mul.lo.s64 %rd4, %rd2, %rd3;
-; NOOPT-NEXT:    st.param.b64 [func_retval0], %rd4;
+; NOOPT-NEXT:    ld.param.b32 %rd1, [mulwide_u32_mask_param_0];
+; NOOPT-NEXT:    ld.param.b32 %rd2, [mulwide_u32_mask_param_1];
+; NOOPT-NEXT:    mul.lo.s64 %rd3, %rd1, %rd2;
+; NOOPT-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; NOOPT-NEXT:    ret;
   %x = and i64 %a, 4294967295
   %y = zext i32 %b to i64
@@ -370,13 +367,12 @@ define i64 @mulwide_u32_lshr(i64 %a) {
 ;
 ; NOOPT-LABEL: mulwide_u32_lshr(
 ; NOOPT:       {
-; NOOPT-NEXT:    .reg .b64 %rd<4>;
+; NOOPT-NEXT:    .reg .b64 %rd<3>;
 ; NOOPT-EMPTY:
 ; NOOPT-NEXT:  // %bb.0:
-; NOOPT-NEXT:    ld.param.b64 %rd1, [mulwide_u32_lshr_param_0];
-; NOOPT-NEXT:    shr.u64 %rd2, %rd1, 32;
-; NOOPT-NEXT:    mul.lo.s64 %rd3, %rd2, 3528531795;
-; NOOPT-NEXT:    st.param.b64 [func_retval0], %rd3;
+; NOOPT-NEXT:    ld.param.b32 %rd1, [mulwide_u32_lshr_param_0+4];
+; NOOPT-NEXT:    mul.lo.s64 %rd2, %rd1, 3528531795;
+; NOOPT-NEXT:    st.param.b64 [func_retval0], %rd2;
 ; NOOPT-NEXT:    ret;
   %x = lshr i64 %a, 32
   %p = mul i64 %x, 3528531795
@@ -400,16 +396,14 @@ define i64 @mulwide_u32_xor(i64 %a, i64 %b) {
 ;
 ; NOOPT-LABEL: mulwide_u32_xor(
 ; NOOPT:       {
-; NOOPT-NEXT:    .reg .b64 %rd<7>;
+; NOOPT-NEXT:    .reg .b64 %rd<5>;
 ; NOOPT-EMPTY:
 ; NOOPT-NEXT:  // %bb.0:
-; NOOPT-NEXT:    ld.param.b64 %rd2, [mulwide_u32_xor_param_1];
-; NOOPT-NEXT:    ld.param.b64 %rd1, [mulwide_u32_xor_param_0];
-; NOOPT-NEXT:    shr.u64 %rd3, %rd1, 32;
-; NOOPT-NEXT:    and.b64 %rd4, %rd2, 4294967295;
-; NOOPT-NEXT:    xor.b64 %rd5, %rd3, %rd4;
-; NOOPT-NEXT:    mul.lo.s64 %rd6, %rd5, 3449720151;
-; NOOPT-NEXT:    st.param.b64 [func_retval0], %rd6;
+; NOOPT-NEXT:    ld.param.b32 %rd1, [mulwide_u32_xor_param_0+4];
+; NOOPT-NEXT:    ld.param.b32 %rd2, [mulwide_u32_xor_param_1];
+; NOOPT-NEXT:    xor.b64 %rd3, %rd1, %rd2;
+; NOOPT-NEXT:    mul.lo.s64 %rd4, %rd3, 3449720151;
+; NOOPT-NEXT:    st.param.b64 [func_retval0], %rd4;
 ; NOOPT-NEXT:    ret;
   %x = lshr i64 %a, 32
   %y = and i64 %b, 4294967295
@@ -433,16 +427,13 @@ define i64 @mulwide_s32_ashr(i64 %a, i32 %b) {
 ;
 ; NOOPT-LABEL: mulwide_s32_ashr(
 ; NOOPT:       {
-; NOOPT-NEXT:    .reg .b32 %r<2>;
-; NOOPT-NEXT:    .reg .b64 %rd<5>;
+; NOOPT-NEXT:    .reg .b64 %rd<4>;
 ; NOOPT-EMPTY:
 ; NOOPT-NEXT:  // %bb.0:
-; NOOPT-NEXT:    ld.param.b32 %r1, [mulwide_s32_ashr_param_1];
-; NOOPT-NEXT:    ld.param.b64 %rd1, [mulwide_s32_ashr_param_0];
-; NOOPT-NEXT:    shr.s64 %rd2, %rd1, 32;
-; NOOPT-NEXT:    cvt.s64.s32 %rd3, %r1;
-; NOOPT-NEXT:    mul.lo.s64 %rd4, %rd2, %rd3;
-; NOOPT-NEXT:    st.param.b64 [func_retval0], %rd4;
+; NOOPT-NEXT:    ld.param.s32 %rd1, [mulwide_s32_ashr_param_0+4];
+; NOOPT-NEXT:    ld.param.s32 %rd2, [mulwide_s32_ashr_param_1];
+; NOOPT-NEXT:    mul.lo.s64 %rd3, %rd1, %rd2;
+; NOOPT-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; NOOPT-NEXT:    ret;
   %x = ashr i64 %a, 32
   %y = sext i32 %b to i64
@@ -465,16 +456,13 @@ define i64 @mulwide_s32_sext_inreg(i64 %a, i32 %b) {
 ;
 ; NOOPT-LABEL: mulwide_s32_sext_inreg(
 ; NOOPT:       {
-; NOOPT-NEXT:    .reg .b32 %r<2>;
-; NOOPT-NEXT:    .reg .b64 %rd<5>;
+; NOOPT-NEXT:    .reg .b64 %rd<4>;
 ; NOOPT-EMPTY:
 ; NOOPT-NEXT:  // %bb.0:
-; NOOPT-NEXT:    ld.param.b32 %r1, [mulwide_s32_sext_inreg_param_1];
-; NOOPT-NEXT:    ld.param.b64 %rd1, [mulwide_s32_sext_inreg_param_0];
-; NOOPT-NEXT:    cvt.s64.s32 %rd2, %rd1;
-; NOOPT-NEXT:    cvt.s64.s32 %rd3, %r1;
-; NOOPT-NEXT:    mul.lo.s64 %rd4, %rd2, %rd3;
-; NOOPT-NEXT:    st.param.b64 [func_retval0], %rd4;
+; NOOPT-NEXT:    ld.param.s32 %rd1, [mulwide_s32_sext_inreg_param_0];
+; NOOPT-NEXT:    ld.param.s32 %rd2, [mulwide_s32_sext_inreg_param_1];
+; NOOPT-NEXT:    mul.lo.s64 %rd3, %rd1, %rd2;
+; NOOPT-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; NOOPT-NEXT:    ret;
   %hi = shl i64 %a, 32
   %x = ashr i64 %hi, 32
@@ -500,17 +488,14 @@ define i64 @mulwide_s32_nonnegative(i32 %a, i32 %b) {
 ;
 ; NOOPT-LABEL: mulwide_s32_nonnegative(
 ; NOOPT:       {
-; NOOPT-NEXT:    .reg .b32 %r<4>;
-; NOOPT-NEXT:    .reg .b64 %rd<4>;
+; NOOPT-NEXT:    .reg .b64 %rd<5>;
 ; NOOPT-EMPTY:
 ; NOOPT-NEXT:  // %bb.0:
-; NOOPT-NEXT:    ld.param.b32 %r2, [mulwide_s32_nonnegative_param_1];
-; NOOPT-NEXT:    ld.param.b32 %r1, [mulwide_s32_nonnegative_param_0];
-; NOOPT-NEXT:    and.b32 %r3, %r1, 2147483647;
-; NOOPT-NEXT:    cvt.u64.u32 %rd1, %r3;
-; NOOPT-NEXT:    cvt.s64.s32 %rd2, %r2;
-; NOOPT-NEXT:    mul.lo.s64 %rd3, %rd1, %rd2;
-; NOOPT-NEXT:    st.param.b64 [func_retval0], %rd3;
+; NOOPT-NEXT:    ld.param.b32 %rd1, [mulwide_s32_nonnegative_param_0];
+; NOOPT-NEXT:    ld.param.s32 %rd2, [mulwide_s32_nonnegative_param_1];
+; NOOPT-NEXT:    and.b64 %rd3, %rd1, 2147483647;
+; NOOPT-NEXT:    mul.lo.s64 %rd4, %rd3, %rd2;
+; NOOPT-NEXT:    st.param.b64 [func_retval0], %rd4;
 ; NOOPT-NEXT:    ret;
   %nonnegative = and i32 %a, 2147483647
   %x = zext i32 %nonnegative to i64
@@ -533,13 +518,12 @@ define i64 @mulwide_s32_negative_constant(i64 %a) {
 ;
 ; NOOPT-LABEL: mulwide_s32_negative_constant(
 ; NOOPT:       {
-; NOOPT-NEXT:    .reg .b64 %rd<4>;
+; NOOPT-NEXT:    .reg .b64 %rd<3>;
 ; NOOPT-EMPTY:
 ; NOOPT-NEXT:  // %bb.0:
-; NOOPT-NEXT:    ld.param.b64 %rd1, [mulwide_s32_negative_constant_param_0];
-; NOOPT-NEXT:    shr.s64 %rd2, %rd1, 32;
-; NOOPT-NEXT:    mul.lo.s64 %rd3, %rd2, -766435501;
-; NOOPT-NEXT:    st.param.b64 [func_retval0], %rd3;
+; NOOPT-NEXT:    ld.param.s32 %rd1, [mulwide_s32_negative_constant_param_0+4];
+; NOOPT-NEXT:    mul.lo.s64 %rd2, %rd1, -766435501;
+; NOOPT-NEXT:    st.param.b64 [func_retval0], %rd2;
 ; NOOPT-NEXT:    ret;
   %x = ashr i64 %a, 32
   %p = mul i64 %x, -766435501
@@ -565,30 +549,16 @@ define i32 @shl_narrow_mask(i32 %a) {
 
 ; Implicit narrowing of i32 operands should keep ordinary 32-bit multiplies.
 define i32 @mulwide_u16_mask(i32 %a, i16 %b) {
-; OPT-LABEL: mulwide_u16_mask(
-; OPT:       {
-; OPT-NEXT:    .reg .b32 %r<4>;
-; OPT-EMPTY:
-; OPT-NEXT:  // %bb.0:
-; OPT-NEXT:    ld.param.b16 %r1, [mulwide_u16_mask_param_0];
-; OPT-NEXT:    ld.param.b16 %r2, [mulwide_u16_mask_param_1];
-; OPT-NEXT:    mul.lo.s32 %r3, %r1, %r2;
-; OPT-NEXT:    st.param.b32 [func_retval0], %r3;
-; OPT-NEXT:    ret;
-;
-; NOOPT-LABEL: mulwide_u16_mask(
-; NOOPT:       {
-; NOOPT-NEXT:    .reg .b16 %rs<2>;
-; NOOPT-NEXT:    .reg .b32 %r<5>;
-; NOOPT-EMPTY:
-; NOOPT-NEXT:  // %bb.0:
-; NOOPT-NEXT:    ld.param.b16 %rs1, [mulwide_u16_mask_param_1];
-; NOOPT-NEXT:    ld.param.b32 %r1, [mulwide_u16_mask_param_0];
-; NOOPT-NEXT:    and.b32 %r2, %r1, 65535;
-; NOOPT-NEXT:    cvt.u32.u16 %r3, %rs1;
-; NOOPT-NEXT:    mul.lo.s32 %r4, %r2, %r3;
-; NOOPT-NEXT:    st.param.b32 [func_retval0], %r4;
-; NOOPT-NEXT:    ret;
+; CHECK-LABEL: mulwide_u16_mask(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<4>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b16 %r1, [mulwide_u16_mask_param_0];
+; CHECK-NEXT:    ld.param.b16 %r2, [mulwide_u16_mask_param_1];
+; CHECK-NEXT:    mul.lo.s32 %r3, %r1, %r2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
+; CHECK-NEXT:    ret;
   %x = and i32 %a, 65535
   %y = zext i16 %b to i32
   %p = mul i32 %x, %y
@@ -596,30 +566,16 @@ define i32 @mulwide_u16_mask(i32 %a, i16 %b) {
 }
 
 define i32 @mulwide_s16_ashr(i32 %a, i16 %b) {
-; OPT-LABEL: mulwide_s16_ashr(
-; OPT:       {
-; OPT-NEXT:    .reg .b32 %r<4>;
-; OPT-EMPTY:
-; OPT-NEXT:  // %bb.0:
-; OPT-NEXT:    ld.param.s16 %r1, [mulwide_s16_ashr_param_0+2];
-; OPT-NEXT:    ld.param.s16 %r2, [mulwide_s16_ashr_param_1];
-; OPT-NEXT:    mul.lo.s32 %r3, %r1, %r2;
-; OPT-NEXT:    st.param.b32 [func_retval0], %r3;
-; OPT-NEXT:    ret;
-;
-; NOOPT-LABEL: mulwide_s16_ashr(
-; NOOPT:       {
-; NOOPT-NEXT:    .reg .b16 %rs<2>;
-; NOOPT-NEXT:    .reg .b32 %r<5>;
-; NOOPT-EMPTY:
-; NOOPT-NEXT:  // %bb.0:
-; NOOPT-NEXT:    ld.param.b16 %rs1, [mulwide_s16_ashr_param_1];
-; NOOPT-NEXT:    ld.param.b32 %r1, [mulwide_s16_ashr_param_0];
-; NOOPT-NEXT:    shr.s32 %r2, %r1, 16;
-; NOOPT-NEXT:    cvt.s32.s16 %r3, %rs1;
-; NOOPT-NEXT:    mul.lo.s32 %r4, %r2, %r3;
-; NOOPT-NEXT:    st.param.b32 [func_retval0], %r4;
-; NOOPT-NEXT:    ret;
+; CHECK-LABEL: mulwide_s16_ashr(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<4>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.s16 %r1, [mulwide_s16_ashr_param_0+2];
+; CHECK-NEXT:    ld.param.s16 %r2, [mulwide_s16_ashr_param_1];
+; CHECK-NEXT:    mul.lo.s32 %r3, %r1, %r2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
+; CHECK-NEXT:    ret;
   %x = ashr i32 %a, 16
   %y = sext i16 %b to i32
   %p = mul i32 %x, %y
@@ -629,30 +585,16 @@ define i32 @mulwide_s16_ashr(i32 %a, i16 %b) {
 ; A full unsigned 32-bit value and a potentially negative signed one do not
 ; share a 32-bit interpretation.
 define i64 @mulwide_reject_mixed_signedness(i32 %a, i32 %b) {
-; OPT-LABEL: mulwide_reject_mixed_signedness(
-; OPT:       {
-; OPT-NEXT:    .reg .b64 %rd<4>;
-; OPT-EMPTY:
-; OPT-NEXT:  // %bb.0:
-; OPT-NEXT:    ld.param.b32 %rd1, [mulwide_reject_mixed_signedness_param_0];
-; OPT-NEXT:    ld.param.s32 %rd2, [mulwide_reject_mixed_signedness_param_1];
-; OPT-NEXT:    mul.lo.s64 %rd3, %rd1, %rd2;
-; OPT-NEXT:    st.param.b64 [func_retval0], %rd3;
-; OPT-NEXT:    ret;
-;
-; NOOPT-LABEL: mulwide_reject_mixed_signedness(
-; NOOPT:       {
-; NOOPT-NEXT:    .reg .b32 %r<3>;
-; NOOPT-NEXT:    .reg .b64 %rd<4>;
-; NOOPT-EMPTY:
-; NOOPT-NEXT:  // %bb.0:
-; NOOPT-NEXT:    ld.param.b32 %r2, [mulwide_reject_mixed_signedness_param_1];
-; NOOPT-NEXT:    ld.param.b32 %r1, [mulwide_reject_mixed_signedness_param_0];
-; NOOPT-NEXT:    cvt.u64.u32 %rd1, %r1;
-; NOOPT-NEXT:    cvt.s64.s32 %rd2, %r2;
-; NOOPT-NEXT:    mul.lo.s64 %rd3, %rd1, %rd2;
-; NOOPT-NEXT:    st.param.b64 [func_retval0], %rd3;
-; NOOPT-NEXT:    ret;
+; CHECK-LABEL: mulwide_reject_mixed_signedness(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %rd1, [mulwide_reject_mixed_signedness_param_0];
+; CHECK-NEXT:    ld.param.s32 %rd2, [mulwide_reject_mixed_signedness_param_1];
+; CHECK-NEXT:    mul.lo.s64 %rd3, %rd1, %rd2;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd3;
+; CHECK-NEXT:    ret;
   %x = zext i32 %a to i64
   %y = sext i32 %b to i64
   %p = mul i64 %x, %y
@@ -660,31 +602,17 @@ define i64 @mulwide_reject_mixed_signedness(i32 %a, i32 %b) {
 }
 
 define i64 @mulwide_reject_u33_mask(i64 %a, i32 %b) {
-; OPT-LABEL: mulwide_reject_u33_mask(
-; OPT:       {
-; OPT-NEXT:    .reg .b64 %rd<5>;
-; OPT-EMPTY:
-; OPT-NEXT:  // %bb.0:
-; OPT-NEXT:    ld.param.b64 %rd1, [mulwide_reject_u33_mask_param_0];
-; OPT-NEXT:    and.b64 %rd2, %rd1, 8589934591;
-; OPT-NEXT:    ld.param.b32 %rd3, [mulwide_reject_u33_mask_param_1];
-; OPT-NEXT:    mul.lo.s64 %rd4, %rd2, %rd3;
-; OPT-NEXT:    st.param.b64 [func_retval0], %rd4;
-; OPT-NEXT:    ret;
-;
-; NOOPT-LABEL: mulwide_reject_u33_mask(
-; NOOPT:       {
-; NOOPT-NEXT:    .reg .b32 %r<2>;
-; NOOPT-NEXT:    .reg .b64 %rd<5>;
-; NOOPT-EMPTY:
-; NOOPT-NEXT:  // %bb.0:
-; NOOPT-NEXT:    ld.param.b32 %r1, [mulwide_reject_u33_mask_param_1];
-; NOOPT-NEXT:    ld.param.b64 %rd1, [mulwide_reject_u33_mask_param_0];
-; NOOPT-NEXT:    and.b64 %rd2, %rd1, 8589934591;
-; NOOPT-NEXT:    cvt.u64.u32 %rd3, %r1;
-; NOOPT-NEXT:    mul.lo.s64 %rd4, %rd2, %rd3;
-; NOOPT-NEXT:    st.param.b64 [func_retval0], %rd4;
-; NOOPT-NEXT:    ret;
+; CHECK-LABEL: mulwide_reject_u33_mask(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<5>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b64 %rd1, [mulwide_reject_u33_mask_param_0];
+; CHECK-NEXT:    and.b64 %rd2, %rd1, 8589934591;
+; CHECK-NEXT:    ld.param.b32 %rd3, [mulwide_reject_u33_mask_param_1];
+; CHECK-NEXT:    mul.lo.s64 %rd4, %rd2, %rd3;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd4;
+; CHECK-NEXT:    ret;
   %x = and i64 %a, 8589934591
   %y = zext i32 %b to i64
   %p = mul i64 %x, %y
@@ -692,31 +620,17 @@ define i64 @mulwide_reject_u33_mask(i64 %a, i32 %b) {
 }
 
 define i64 @mulwide_reject_s33_ashr(i64 %a, i32 %b) {
-; OPT-LABEL: mulwide_reject_s33_ashr(
-; OPT:       {
-; OPT-NEXT:    .reg .b64 %rd<5>;
-; OPT-EMPTY:
-; OPT-NEXT:  // %bb.0:
-; OPT-NEXT:    ld.param.b64 %rd1, [mulwide_reject_s33_ashr_param_0];
-; OPT-NEXT:    shr.s64 %rd2, %rd1, 31;
-; OPT-NEXT:    ld.param.s32 %rd3, [mulwide_reject_s33_ashr_param_1];
-; OPT-NEXT:    mul.lo.s64 %rd4, %rd2, %rd3;
-; OPT-NEXT:    st.param.b64 [func_retval0], %rd4;
-; OPT-NEXT:    ret;
-;
-; NOOPT-LABEL: mulwide_reject_s33_ashr(
-; NOOPT:       {
-; NOOPT-NEXT:    .reg .b32 %r<2>;
-; NOOPT-NEXT:    .reg .b64 %rd<5>;
-; NOOPT-EMPTY:
-; NOOPT-NEXT:  // %bb.0:
-; NOOPT-NEXT:    ld.param.b32 %r1, [mulwide_reject_s33_ashr_param_1];
-; NOOPT-NEXT:    ld.param.b64 %rd1, [mulwide_reject_s33_ashr_param_0];
-; NOOPT-NEXT:    shr.s64 %rd2, %rd1, 31;
-; NOOPT-NEXT:    cvt.s64.s32 %rd3, %r1;
-; NOOPT-NEXT:    mul.lo.s64 %rd4, %rd2, %rd3;
-; NOOPT-NEXT:    st.param.b64 [func_retval0], %rd4;
-; NOOPT-NEXT:    ret;
+; CHECK-LABEL: mulwide_reject_s33_ashr(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<5>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b64 %rd1, [mulwide_reject_s33_ashr_param_0];
+; CHECK-NEXT:    shr.s64 %rd2, %rd1, 31;
+; CHECK-NEXT:    ld.param.s32 %rd3, [mulwide_reject_s33_ashr_param_1];
+; CHECK-NEXT:    mul.lo.s64 %rd4, %rd2, %rd3;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd4;
+; CHECK-NEXT:    ret;
   %x = ashr i64 %a, 31
   %y = sext i32 %b to i64
   %p = mul i64 %x, %y
@@ -724,57 +638,32 @@ define i64 @mulwide_reject_s33_ashr(i64 %a, i32 %b) {
 }
 
 define i64 @mulwide_reject_u33_constant(i64 %a) {
-; OPT-LABEL: mulwide_reject_u33_constant(
-; OPT:       {
-; OPT-NEXT:    .reg .b64 %rd<3>;
-; OPT-EMPTY:
-; OPT-NEXT:  // %bb.0:
-; OPT-NEXT:    ld.param.b32 %rd1, [mulwide_reject_u33_constant_param_0];
-; OPT-NEXT:    mul.lo.s64 %rd2, %rd1, 5000000001;
-; OPT-NEXT:    st.param.b64 [func_retval0], %rd2;
-; OPT-NEXT:    ret;
-;
-; NOOPT-LABEL: mulwide_reject_u33_constant(
-; NOOPT:       {
-; NOOPT-NEXT:    .reg .b64 %rd<4>;
-; NOOPT-EMPTY:
-; NOOPT-NEXT:  // %bb.0:
-; NOOPT-NEXT:    ld.param.b64 %rd1, [mulwide_reject_u33_constant_param_0];
-; NOOPT-NEXT:    and.b64 %rd2, %rd1, 4294967295;
-; NOOPT-NEXT:    mul.lo.s64 %rd3, %rd2, 5000000001;
-; NOOPT-NEXT:    st.param.b64 [func_retval0], %rd3;
-; NOOPT-NEXT:    ret;
+; CHECK-LABEL: mulwide_reject_u33_constant(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %rd1, [mulwide_reject_u33_constant_param_0];
+; CHECK-NEXT:    mul.lo.s64 %rd2, %rd1, 5000000001;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ret;
   %x = and i64 %a, 4294967295
   %p = mul i64 %x, 5000000001
   ret i64 %p
 }
 
 define i32 @mulwide_reject_u17_mask(i32 %a, i16 %b) {
-; OPT-LABEL: mulwide_reject_u17_mask(
-; OPT:       {
-; OPT-NEXT:    .reg .b32 %r<5>;
-; OPT-EMPTY:
-; OPT-NEXT:  // %bb.0:
-; OPT-NEXT:    ld.param.b32 %r1, [mulwide_reject_u17_mask_param_0];
-; OPT-NEXT:    and.b32 %r2, %r1, 131071;
-; OPT-NEXT:    ld.param.b16 %r3, [mulwide_reject_u17_mask_param_1];
-; OPT-NEXT:    mul.lo.s32 %r4, %r2, %r3;
-; OPT-NEXT:    st.param.b32 [func_retval0], %r4;
-; OPT-NEXT:    ret;
-;
-; NOOPT-LABEL: mulwide_reject_u17_mask(
-; NOOPT:       {
-; NOOPT-NEXT:    .reg .b16 %rs<2>;
-; NOOPT-NEXT:    .reg .b32 %r<5>;
-; NOOPT-EMPTY:
-; NOOPT-NEXT:  // %bb.0:
-; NOOPT-NEXT:    ld.param.b16 %rs1, [mulwide_reject_u17_mask_param_1];
-; NOOPT-NEXT:    ld.param.b32 %r1, [mulwide_reject_u17_mask_param_0];
-; NOOPT-NEXT:    and.b32 %r2, %r1, 131071;
-; NOOPT-NEXT:    cvt.u32.u16 %r3, %rs1;
-; NOOPT-NEXT:    mul.lo.s32 %r4, %r2, %r3;
-; NOOPT-NEXT:    st.param.b32 [func_retval0], %r4;
-; NOOPT-NEXT:    ret;
+; CHECK-LABEL: mulwide_reject_u17_mask(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<5>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [mulwide_reject_u17_mask_param_0];
+; CHECK-NEXT:    and.b32 %r2, %r1, 131071;
+; CHECK-NEXT:    ld.param.b16 %r3, [mulwide_reject_u17_mask_param_1];
+; CHECK-NEXT:    mul.lo.s32 %r4, %r2, %r3;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r4;
+; CHECK-NEXT:    ret;
   %x = and i32 %a, 131071
   %y = zext i16 %b to i32
   %p = mul i32 %x, %y
@@ -782,31 +671,17 @@ define i32 @mulwide_reject_u17_mask(i32 %a, i16 %b) {
 }
 
 define i32 @mulwide_reject_s17_ashr(i32 %a, i16 %b) {
-; OPT-LABEL: mulwide_reject_s17_ashr(
-; OPT:       {
-; OPT-NEXT:    .reg .b32 %r<5>;
-; OPT-EMPTY:
-; OPT-NEXT:  // %bb.0:
-; OPT-NEXT:    ld.param.b32 %r1, [mulwide_reject_s17_ashr_param_0];
-; OPT-NEXT:    shr.s32 %r2, %r1, 15;
-; OPT-NEXT:    ld.param.s16 %r3, [mulwide_reject_s17_ashr_param_1];
-; OPT-NEXT:    mul.lo.s32 %r4, %r2, %r3;
-; OPT-NEXT:    st.param.b32 [func_retval0], %r4;
-; OPT-NEXT:    ret;
-;
-; NOOPT-LABEL: mulwide_reject_s17_ashr(
-; NOOPT:       {
-; NOOPT-NEXT:    .reg .b16 %rs<2>;
-; NOOPT-NEXT:    .reg .b32 %r<5>;
-; NOOPT-EMPTY:
-; NOOPT-NEXT:  // %bb.0:
-; NOOPT-NEXT:    ld.param.b16 %rs1, [mulwide_reject_s17_ashr_param_1];
-; NOOPT-NEXT:    ld.param.b32 %r1, [mulwide_reject_s17_ashr_param_0];
-; NOOPT-NEXT:    shr.s32 %r2, %r1, 15;
-; NOOPT-NEXT:    cvt.s32.s16 %r3, %rs1;
-; NOOPT-NEXT:    mul.lo.s32 %r4, %r2, %r3;
-; NOOPT-NEXT:    st.param.b32 [func_retval0], %r4;
-; NOOPT-NEXT:    ret;
+; CHECK-LABEL: mulwide_reject_s17_ashr(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<5>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [mulwide_reject_s17_ashr_param_0];
+; CHECK-NEXT:    shr.s32 %r2, %r1, 15;
+; CHECK-NEXT:    ld.param.s16 %r3, [mulwide_reject_s17_ashr_param_1];
+; CHECK-NEXT:    mul.lo.s32 %r4, %r2, %r3;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r4;
+; CHECK-NEXT:    ret;
   %x = ashr i32 %a, 15
   %y = sext i16 %b to i32
   %p = mul i32 %x, %y
@@ -817,38 +692,20 @@ define i32 @mulwide_reject_s17_ashr(i32 %a, i16 %b) {
 ; The low half fits a signed wide multiply, but the full unsigned product
 ; also needs the high half when %b is negative.
 define void @mulwide_keep_unsigned_lohi(ptr %out, i32 %a, i32 %b) {
-; OPT-LABEL: mulwide_keep_unsigned_lohi(
-; OPT:       {
-; OPT-NEXT:    .reg .b64 %rd<7>;
-; OPT-EMPTY:
-; OPT-NEXT:  // %bb.0:
-; OPT-NEXT:    ld.param.b64 %rd1, [mulwide_keep_unsigned_lohi_param_0];
-; OPT-NEXT:    ld.param.b32 %rd2, [mulwide_keep_unsigned_lohi_param_1];
-; OPT-NEXT:    ld.param.s32 %rd3, [mulwide_keep_unsigned_lohi_param_2];
-; OPT-NEXT:    and.b64 %rd4, %rd2, 2147483647;
-; OPT-NEXT:    mul.hi.u64 %rd5, %rd4, %rd3;
-; OPT-NEXT:    mul.lo.s64 %rd6, %rd4, %rd3;
-; OPT-NEXT:    st.b64 [%rd1], %rd6;
-; OPT-NEXT:    st.b64 [%rd1+8], %rd5;
-; OPT-NEXT:    ret;
-;
-; NOOPT-LABEL: mulwide_keep_unsigned_lohi(
-; NOOPT:       {
-; NOOPT-NEXT:    .reg .b32 %r<4>;
-; NOOPT-NEXT:    .reg .b64 %rd<6>;
-; NOOPT-EMPTY:
-; NOOPT-NEXT:  // %bb.0:
-; NOOPT-NEXT:    ld.param.b32 %r2, [mulwide_keep_unsigned_lohi_param_2];
-; NOOPT-NEXT:    ld.param.b32 %r1, [mulwide_keep_unsigned_lohi_param_1];
-; NOOPT-NEXT:    ld.param.b64 %rd1, [mulwide_keep_unsigned_lohi_param_0];
-; NOOPT-NEXT:    and.b32 %r3, %r1, 2147483647;
-; NOOPT-NEXT:    cvt.s64.s32 %rd2, %r2;
-; NOOPT-NEXT:    cvt.u64.u32 %rd3, %r3;
-; NOOPT-NEXT:    mul.hi.u64 %rd4, %rd3, %rd2;
-; NOOPT-NEXT:    mul.lo.s64 %rd5, %rd3, %rd2;
-; NOOPT-NEXT:    st.b64 [%rd1], %rd5;
-; NOOPT-NEXT:    st.b64 [%rd1+8], %rd4;
-; NOOPT-NEXT:    ret;
+; CHECK-LABEL: mulwide_keep_unsigned_lohi(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<7>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b64 %rd1, [mulwide_keep_unsigned_lohi_param_0];
+; CHECK-NEXT:    ld.param.b32 %rd2, [mulwide_keep_unsigned_lohi_param_1];
+; CHECK-NEXT:    ld.param.s32 %rd3, [mulwide_keep_unsigned_lohi_param_2];
+; CHECK-NEXT:    and.b64 %rd4, %rd2, 2147483647;
+; CHECK-NEXT:    mul.hi.u64 %rd5, %rd4, %rd3;
+; CHECK-NEXT:    mul.lo.s64 %rd6, %rd4, %rd3;
+; CHECK-NEXT:    st.b64 [%rd1], %rd6;
+; CHECK-NEXT:    st.b64 [%rd1+8], %rd5;
+; CHECK-NEXT:    ret;
   %nonnegative = and i32 %a, 2147483647
   %x64 = zext i32 %nonnegative to i64
   %y64 = sext i32 %b to i64
@@ -866,38 +723,20 @@ define void @mulwide_keep_unsigned_lohi(ptr %out, i32 %a, i32 %b) {
 
 ; Commuting the source product must preserve the same pair.
 define void @mulwide_keep_unsigned_lohi_commuted(ptr %out, i32 %a, i32 %b) {
-; OPT-LABEL: mulwide_keep_unsigned_lohi_commuted(
-; OPT:       {
-; OPT-NEXT:    .reg .b64 %rd<7>;
-; OPT-EMPTY:
-; OPT-NEXT:  // %bb.0:
-; OPT-NEXT:    ld.param.b64 %rd1, [mulwide_keep_unsigned_lohi_commuted_param_0];
-; OPT-NEXT:    ld.param.b32 %rd2, [mulwide_keep_unsigned_lohi_commuted_param_1];
-; OPT-NEXT:    ld.param.s32 %rd3, [mulwide_keep_unsigned_lohi_commuted_param_2];
-; OPT-NEXT:    and.b64 %rd4, %rd2, 2147483647;
-; OPT-NEXT:    mul.hi.u64 %rd5, %rd3, %rd4;
-; OPT-NEXT:    mul.lo.s64 %rd6, %rd3, %rd4;
-; OPT-NEXT:    st.b64 [%rd1], %rd6;
-; OPT-NEXT:    st.b64 [%rd1+8], %rd5;
-; OPT-NEXT:    ret;
-;
-; NOOPT-LABEL: mulwide_keep_unsigned_lohi_commuted(
-; NOOPT:       {
-; NOOPT-NEXT:    .reg .b32 %r<4>;
-; NOOPT-NEXT:    .reg .b64 %rd<6>;
-; NOOPT-EMPTY:
-; NOOPT-NEXT:  // %bb.0:
-; NOOPT-NEXT:    ld.param.b32 %r2, [mulwide_keep_unsigned_lohi_commuted_param_2];
-; NOOPT-NEXT:    ld.param.b32 %r1, [mulwide_keep_unsigned_lohi_commuted_param_1];
-; NOOPT-NEXT:    ld.param.b64 %rd1, [mulwide_keep_unsigned_lohi_commuted_param_0];
-; NOOPT-NEXT:    and.b32 %r3, %r1, 2147483647;
-; NOOPT-NEXT:    cvt.s64.s32 %rd2, %r2;
-; NOOPT-NEXT:    cvt.u64.u32 %rd3, %r3;
-; NOOPT-NEXT:    mul.hi.u64 %rd4, %rd2, %rd3;
-; NOOPT-NEXT:    mul.lo.s64 %rd5, %rd2, %rd3;
-; NOOPT-NEXT:    st.b64 [%rd1], %rd5;
-; NOOPT-NEXT:    st.b64 [%rd1+8], %rd4;
-; NOOPT-NEXT:    ret;
+; CHECK-LABEL: mulwide_keep_unsigned_lohi_commuted(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<7>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b64 %rd1, [mulwide_keep_unsigned_lohi_commuted_param_0];
+; CHECK-NEXT:    ld.param.b32 %rd2, [mulwide_keep_unsigned_lohi_commuted_param_1];
+; CHECK-NEXT:    ld.param.s32 %rd3, [mulwide_keep_unsigned_lohi_commuted_param_2];
+; CHECK-NEXT:    and.b64 %rd4, %rd2, 2147483647;
+; CHECK-NEXT:    mul.hi.u64 %rd5, %rd3, %rd4;
+; CHECK-NEXT:    mul.lo.s64 %rd6, %rd3, %rd4;
+; CHECK-NEXT:    st.b64 [%rd1], %rd6;
+; CHECK-NEXT:    st.b64 [%rd1+8], %rd5;
+; CHECK-NEXT:    ret;
   %nonnegative = and i32 %a, 2147483647
   %x64 = zext i32 %nonnegative to i64
   %y64 = sext i32 %b to i64

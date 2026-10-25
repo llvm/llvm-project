@@ -61,7 +61,7 @@ void mlir::registerConvertMemRefToEmitCInterface(DialectRegistry &registry) {
 
 namespace {
 struct ConvertAlloca final : public OpConversionPattern<memref::AllocaOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(memref::AllocaOp op, OpAdaptor operands,
@@ -185,7 +185,7 @@ static Value computeRowMajorLinearIndex(ImplicitLocOpBuilder &builder,
 }
 
 struct ConvertAlloc final : public OpConversionPattern<memref::AllocOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(memref::AllocOp allocOp, OpAdaptor operands,
                   ConversionPatternRewriter &rewriter) const override {
@@ -241,7 +241,7 @@ struct ConvertAlloc final : public OpConversionPattern<memref::AllocOp> {
 };
 
 struct ConvertDealloc final : public OpConversionPattern<memref::DeallocOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(memref::DeallocOp deallocOp, OpAdaptor operands,
@@ -271,7 +271,7 @@ struct ConvertDealloc final : public OpConversionPattern<memref::DeallocOp> {
 };
 
 struct ConvertCopy final : public OpConversionPattern<memref::CopyOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(memref::CopyOp copyOp, OpAdaptor operands,
@@ -350,7 +350,7 @@ struct ConvertCopy final : public OpConversionPattern<memref::CopyOp> {
 };
 
 struct ConvertGlobal final : public OpConversionPattern<memref::GlobalOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(memref::GlobalOp op, OpAdaptor operands,
@@ -411,7 +411,7 @@ struct ConvertGlobal final : public OpConversionPattern<memref::GlobalOp> {
 
 struct ConvertGetGlobal final
     : public OpConversionPattern<memref::GetGlobalOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(memref::GetGlobalOp op, OpAdaptor operands,
@@ -443,7 +443,7 @@ struct ConvertGetGlobal final
 };
 
 struct ConvertLoad final : public OpConversionPattern<memref::LoadOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(memref::LoadOp op, OpAdaptor operands,
@@ -482,7 +482,7 @@ struct ConvertLoad final : public OpConversionPattern<memref::LoadOp> {
 };
 
 struct ConvertStore final : public OpConversionPattern<memref::StoreOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(memref::StoreOp op, OpAdaptor operands,

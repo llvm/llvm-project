@@ -961,11 +961,10 @@ Value *MemCmpExpansion::getMemCmpExpansion() {
 /// %loadbb3
 ///  %phi.res = phi i32 [ %48, %loadbb3 ], [ %11, %res_block ]
 ///  ret i32 %phi.res
-static bool expandMemCmp(CallInst *CI, const TargetTransformInfo *TTI,
-                         const DataLayout *DL, ProfileSummaryInfo *PSI,
-                         BlockFrequencyInfo *BFI, DomTreeUpdater *DTU,
-                         const bool IsBCmp) {
-  const ScalarOptions &Opts = ScalarOptions::Global;
+static bool expandMemCmp(const ScalarOptions &Opts, CallInst *CI,
+                         const TargetTransformInfo *TTI, const DataLayout *DL,
+                         ProfileSummaryInfo *PSI, BlockFrequencyInfo *BFI,
+                         DomTreeUpdater *DTU, const bool IsBCmp) {
   NumMemCmpCalls++;
 
   // Early exit from expansion if -Oz.
@@ -1064,9 +1063,10 @@ static PreservedAnalyses runImpl(Function &F, const TargetLibraryInfo *TLI,
     }
   }
 
+  const ScalarOptions &Opts = getScalarOptions(F);
   bool MadeChanges = false;
   for (const auto &[CI, Func] : MemCmpCalls) {
-    if (expandMemCmp(CI, TTI, &DL, PSI, BFI, DTU ? &*DTU : nullptr,
+    if (expandMemCmp(Opts, CI, TTI, &DL, PSI, BFI, DTU ? &*DTU : nullptr,
                      Func == LibFunc_bcmp))
       MadeChanges = true;
   }

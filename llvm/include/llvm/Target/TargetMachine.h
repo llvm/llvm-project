@@ -118,6 +118,9 @@ protected: // Can only create subclasses.
   /// MC subtarget keyed by target features and target CPU.
   StringMap<std::unique_ptr<const MCSubtargetInfo>> MCSubtargetMap;
 
+  /// Bit N is set if the target can lower exceptions using model N.
+  unsigned SupportedExceptionModels = 0;
+
   unsigned RequireStructuredCFG : 1;
   unsigned O0WantsFastISel : 1;
   unsigned EnableTiedFastRegAlloc : 1;
@@ -265,16 +268,23 @@ public:
   /// assembly.
   const MCSubtargetInfo &getMCSubtargetInfo(StringRef CPU, StringRef FS);
 
-  /// Return the ExceptionHandling to use. A Default model resolves to the
-  /// triple's default; None means exceptions are disabled.
-  ExceptionHandling getExceptionModel() const {
-    return Options.ExceptionModel == ExceptionHandling::Default
-               ? TargetTriple.getDefaultExceptionHandling()
-               : Options.ExceptionModel;
-  }
-
   bool requiresStructuredCFG() const { return RequireStructuredCFG; }
   void setRequiresStructuredCFG(bool Value) { RequireStructuredCFG = Value; }
+
+  /// Return true if this target can lower exceptions using \p Model. Used to
+  /// guard scheduling of the exception-handling preparation passes.
+  bool supportsExceptionModel(ExceptionHandling Model) const {
+    assert(Model != ExceptionHandling::None && "none is trivially supported");
+    return SupportedExceptionModels & (1u << static_cast<unsigned>(Model));
+  }
+
+  /// Override whether this target can lower exceptions using \p Model. The
+  /// default is derived from the object format and architecture.
+  void setSupportsExceptionModel(ExceptionHandling Model, bool Value = true) {
+    unsigned Bit = 1u << static_cast<unsigned>(Model);
+    SupportedExceptionModels = Value ? SupportedExceptionModels | Bit
+                                     : SupportedExceptionModels & ~Bit;
+  }
 
   bool supportsDefaultOutlining() const { return SupportsDefaultOutlining; }
   void setSupportsDefaultOutlining(bool Enable) {

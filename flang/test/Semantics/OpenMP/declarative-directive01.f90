@@ -21,6 +21,7 @@ end subroutine requires_2
 
 subroutine declare_simd_1(a, b)
   real(8), intent(inout) :: a, b
+  !WARNING: DECLARE SIMD directive is not implemented yet and will be ignored
   !ERROR: 'a' in ALIGNED clause must be of type C_PTR, POINTER or ALLOCATABLE
   !$omp declare simd(declare_simd_1) aligned(a)
   a = 3.14 + b
@@ -38,6 +39,7 @@ end module m1
 subroutine declare_simd_2
   use m1
   procedure (sub) sub1
+  !WARNING: DECLARE SIMD directive is not implemented yet and will be ignored
   !ERROR: INBRANCH and NOTINBRANCH clauses are mutually exclusive and may not appear on the same DECLARE SIMD directive
   !$omp declare simd(sub1) inbranch notinbranch
   procedure (sub), pointer::p
@@ -95,5 +97,28 @@ subroutine declare_red_1()
   !$omp end parallel
   print *, "sum of thread numbers is ", my_var
 end subroutine declare_red_1
+
+module assumes_no_openmp_module
+  implicit none
+  !$omp assumes no_openmp
+contains
+  subroutine set_value(value)
+    integer :: value
+    value = 7
+  end subroutine set_value
+end module assumes_no_openmp_module
+
+subroutine assumes_no_openmp_procedure(value)
+  use assumes_no_openmp_module, only: set_value
+  implicit none
+  !$omp assumes no_openmp
+  integer :: value
+  call set_value(value)
+end subroutine assumes_no_openmp_procedure
+
+subroutine assumes_no_openmp_duplicate
+  !ERROR: At most one NO_OPENMP clause can appear on ASSUMES directive
+  !$omp assumes no_openmp no_openmp
+end subroutine assumes_no_openmp_duplicate
 
 end
