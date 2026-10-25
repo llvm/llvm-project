@@ -43,6 +43,11 @@ public:
     /// but also emit a zero/sign extension attribute.
     Extend,
 
+    /// ConservativeExtend - Valid only for integer argument types. Same as
+    /// 'Extend' but do not assume in the callee that the caller actually did
+    /// the extension
+    ConservativeExtend,
+
     /// Indirect - Pass the argument indirectly via a hidden pointer with the
     /// specified alignment (0 indicates default alignment) and address space.
     Indirect,
@@ -124,7 +129,7 @@ private:
 
   bool canHavePaddingType() const {
     return isDirect() || isExtend() || isIndirect() || isIndirectAliased() ||
-           isExpand() || isTargetSpecific();
+           isExpand() || isTargetSpecific() || isConservativeExtend();
   }
   void setPaddingType(llvm::Type *T) {
     assert(canHavePaddingType());
@@ -202,6 +207,25 @@ public:
     AI.setPaddingType(nullptr);
     AI.setDirectOffset(0);
     AI.setDirectAlign(0);
+    return AI;
+  }
+
+  static ABIArgInfo getConservativeExtend(QualType Ty,
+                                          llvm::Type *T = nullptr) {
+    assert(Ty->isIntegralOrEnumerationType() && "Unexpected QualType");
+    auto AI = ABIArgInfo(ConservativeExtend);
+    AI.setCoerceToType(T);
+    AI.setPaddingType(nullptr);
+    AI.setDirectOffset(0);
+    AI.setDirectAlign(0);
+    AI.setSignExt(Ty->hasSignedIntegerRepresentation());
+    return AI;
+  }
+
+  static ABIArgInfo getConservativeExtendInReg(QualType Ty,
+                                               llvm::Type *T = nullptr) {
+    auto AI = getConservativeExtend(Ty, T);
+    AI.setInReg(true);
     return AI;
   }
 
@@ -327,41 +351,47 @@ public:
   bool isExpand() const { return TheKind == Expand; }
   bool isCoerceAndExpand() const { return TheKind == CoerceAndExpand; }
   bool isTargetSpecific() const { return TheKind == TargetSpecific; }
+  bool isConservativeExtend() const { return TheKind == ConservativeExtend; }
 
   bool canHaveCoerceToType() const {
     return isDirect() || isExtend() || isCoerceAndExpand() ||
-           isTargetSpecific();
+           isTargetSpecific() || isConservativeExtend();
   }
 
-  // Direct/Extend accessors
+  // Direct/Extend/ConservativeExtend accessors
   unsigned getDirectOffset() const {
-    assert((isDirect() || isExtend() || isTargetSpecific()) &&
-           "Not a direct or extend or target specific kind");
+    assert((isDirect() || isExtend() || isTargetSpecific() ||
+            isConservativeExtend()) &&
+           "Invalid kind!");
     return DirectAttr.Offset;
   }
   void setDirectOffset(unsigned Offset) {
-    assert((isDirect() || isExtend() || isTargetSpecific()) &&
-           "Not a direct or extend or target specific kind");
+    assert((isDirect() || isExtend() || isTargetSpecific() ||
+            isConservativeExtend()) &&
+           "Invalid kind");
     DirectAttr.Offset = Offset;
   }
 
   unsigned getDirectAlign() const {
-    assert((isDirect() || isExtend() || isTargetSpecific()) &&
-           "Not a direct or extend or target specific kind");
+    assert((isDirect() || isExtend() || isTargetSpecific() ||
+            isConservativeExtend()) &&
+           "Invalid kind");
     return DirectAttr.Align;
   }
   void setDirectAlign(unsigned Align) {
-    assert((isDirect() || isExtend() || isTargetSpecific()) &&
-           "Not a direct or extend or target specific kind");
+    assert((isDirect() || isExtend() || isTargetSpecific() ||
+            isConservativeExtend()) &&
+           "Invalid kind");
     DirectAttr.Align = Align;
   }
 
   bool isSignExt() const {
-    assert(isExtend() && (SignExt + ZeroExt <= 1) && "Invalid kind / flags!");
+    assert((isExtend() || isConservativeExtend()) &&
+           (SignExt + ZeroExt <= 1) && "Invalid kind / flags!");
     return SignExt;
   }
   void setSignExt(bool SExt) {
-    assert(isExtend() && "Invalid kind!");
+    assert((isExtend() || isConservativeExtend()) && "Invalid kind!");
     SignExt = SExt;
   }
 
@@ -421,13 +451,15 @@ public:
   }
 
   bool getInReg() const {
-    assert((isDirect() || isExtend() || isIndirect() || isTargetSpecific()) &&
+    assert((isDirect() || isExtend() || isIndirect() || isTargetSpecific() ||
+            isConservativeExtend()) &&
            "Invalid kind!");
     return InReg;
   }
 
   void setInReg(bool IR) {
-    assert((isDirect() || isExtend() || isIndirect() || isTargetSpecific()) &&
+    assert((isDirect() || isExtend() || isIndirect() || isTargetSpecific() ||
+            isConservativeExtend()) &&
            "Invalid kind!");
     InReg = IR;
   }

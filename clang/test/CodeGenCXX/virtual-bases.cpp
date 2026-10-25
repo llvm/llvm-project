@@ -20,8 +20,8 @@ struct C : virtual A {
   C(bool);
 };
 
-// CHECK-LABEL: define{{.*}} void @_ZN1CC2Eb(ptr {{[^,]*}} %this, ptr noundef %vtt, i1 noundef zeroext %0) unnamed_addr
-// CHECK-LABEL: define{{.*}} void @_ZN1CC1Eb(ptr {{[^,]*}} %this, i1 noundef zeroext %0) unnamed_addr
+// CHECK-LABEL: define{{.*}} void @_ZN1CC2Eb(ptr {{[^,]*}} %this, ptr noundef %vtt, i1 noundef %0) unnamed_addr
+// CHECK-LABEL: define{{.*}} void @_ZN1CC1Eb(ptr {{[^,]*}} %this, i1 noundef %0) unnamed_addr
 C::C(bool) { }
 
 // PR6251

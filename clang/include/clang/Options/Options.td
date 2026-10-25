@@ -5798,7 +5798,18 @@ def mzos_hlq_clang_EQ : Joined<["-"], "mzos-hlq-clang=">, MetaVarName<"<ClangHLQ
   HelpText<"High level qualifier for z/OS C++RT side deck datasets">;
 def mzos_hlq_csslib_EQ : Joined<["-"], "mzos-hlq-csslib=">, MetaVarName<"<CsslibHLQ>">,
   HelpText<"High level qualifier for z/OS CSSLIB dataset">;
-
+def mextend_small_integers_EQ : Joined<["-"], "mextend-small-integers=">,
+  Group<m_Group>, Flags<[CC1Option]>,
+  HelpText<"How to handle the small integer parameter: "
+           "'none' (Pass the small integer parameter directly in caller) | "
+           "'conservative' (Always extend small integer parameter in the caller but do not assume "
+           "in the callee that the caller actually did the extension) | "
+           "'assumed' (Assume the small integer parameter has been extened in the caller) | "
+           "'default' (Use the default rule for the target, this value is not yet supported)">,
+  Values<"none,conservative,assumed,default">,
+  NormalizedValuesScope<"CodeGenOptions::ExtendIntegerArgsKind">,
+  NormalizedValues<["Direct", "Conservative", "Assumed", "Default"]>,
+  MarshallingInfoEnum<CodeGenOpts<"ExtendIntegerArgs">, "Conservative">;
 def mno_constant_cfstrings : Flag<["-"], "mno-constant-cfstrings">, Group<m_Group>;
 def mno_global_merge : Flag<["-"], "mno-global-merge">, Group<m_Group>,
   Visibility<[ClangOption, CC1Option]>,

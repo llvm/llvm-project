@@ -993,9 +993,18 @@ ABIArgInfo X86_32ABIInfo::classifyArgumentType(QualType Ty, CCState &State,
   bool InReg = shouldPrimitiveUseInReg(Ty, State);
 
   if (isPromotableIntegerTypeForABI(Ty)) {
-    if (InReg)
-      return ABIArgInfo::getExtendInReg(Ty, CGT.ConvertType(Ty));
-    return ABIArgInfo::getExtend(Ty, CGT.ConvertType(Ty));
+    switch (getCodeGenOpts().getExtendIntegerArgs()) {
+    case CodeGenOptions::ExtendIntegerArgsKind::Assumed:
+      return InReg ? ABIArgInfo::getExtendInReg(Ty, CGT.ConvertType(Ty))
+                   : ABIArgInfo::getExtend(Ty, CGT.ConvertType(Ty));
+    case CodeGenOptions::ExtendIntegerArgsKind::Conservative:
+      return InReg
+                 ? ABIArgInfo::getConservativeExtendInReg(Ty, CGT.ConvertType(Ty))
+                 : ABIArgInfo::getConservativeExtend(Ty, CGT.ConvertType(Ty));
+    case CodeGenOptions::ExtendIntegerArgsKind::Direct:
+    // ExtendIntegerArgsKind::Direct will be handled at the last.
+      break;
+    }
   }
 
   if (const auto *EIT = Ty->getAs<BitIntType>()) {
@@ -1118,6 +1127,7 @@ static bool isArgInAlloca(const ABIArgInfo &Info) {
   case ABIArgInfo::Indirect:
   case ABIArgInfo::Direct:
   case ABIArgInfo::Extend:
+  case ABIArgInfo::ConservativeExtend:
     return !Info.getInReg();
   case ABIArgInfo::Expand:
   case ABIArgInfo::CoerceAndExpand:
@@ -2996,10 +3006,15 @@ X86_64ABIInfo::classifyArgumentType(QualType Ty, unsigned freeIntRegs,
       // Treat an enum type as its underlying type.
       if (const auto *ED = Ty->getAsEnumDecl())
         Ty = ED->getIntegerType();
-
+      auto Kind = getCodeGenOpts().getExtendIntegerArgs();
       if (Ty->isIntegralOrEnumerationType() &&
-          isPromotableIntegerTypeForABI(Ty))
+          isPromotableIntegerTypeForABI(Ty)) {
+      // ExtendIntegerArgsKind::Direct will be handled at the last.
+      if (Kind == CodeGenOptions::ExtendIntegerArgsKind::Conservative)
+        return ABIArgInfo::getConservativeExtend(Ty, CGT.ConvertType(Ty));
+      else if (Kind == CodeGenOptions::ExtendIntegerArgsKind::Assumed)
         return ABIArgInfo::getExtend(Ty, CGT.ConvertType(Ty));
+      }
     }
 
     if (ResType->isIntegerTy(128)) {

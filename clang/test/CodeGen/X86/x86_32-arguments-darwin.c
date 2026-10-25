@@ -30,7 +30,7 @@ long double f5(void) {
   return 0;
 }
 
-// CHECK-LABEL: define{{.*}} void @f6(i8 noundef signext %a0, i16 noundef signext %a1, i32 noundef %a2, i64 noundef %a3, ptr noundef %a4)
+// CHECK-LABEL: define{{.*}} void @f6(i8 noundef %a0, i16 noundef %a1, i32 noundef %a2, i64 noundef %a3, ptr noundef %a4)
 void f6(char a0, short a1, int a2, long long a3, void *a4) {}
 
 // CHECK-LABEL: define{{.*}} void @f7(i32 noundef %a0)
@@ -226,7 +226,7 @@ typedef int v4i32 __attribute__((__vector_size__(16)));
 v4i32 f55(v4i32 arg) { return arg+arg; }
 
 // CHECK-LABEL: define{{.*}} void @f56(
-// CHECK: i8 noundef signext %a0, ptr noundef byval(%struct.s56_0) align 4 %a1,
+// CHECK: i8 noundef %a0, ptr noundef byval(%struct.s56_0) align 4 %a1,
 // CHECK: i64 noundef %a2.coerce, ptr noundef byval(%struct.s56_1) align 4 %0,
 // CHECK: i64 noundef %a4.coerce, ptr noundef byval(%struct.s56_2) align 4 %1,
 // CHECK: <4 x i32> noundef %a6, ptr noundef byval(%struct.s56_3) align 16 %a7,

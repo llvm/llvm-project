@@ -5,7 +5,7 @@
 // CHECK:   %[[TOBOOL:.*]] = icmp ne i8 %[[ATOMIC_LOAD]], 0
 // CHECK:   ret i1 %[[TOBOOL]]
 
-// CHECK-LABEL: define internal void @"\01-[A0 setP:]"({{.*}} i1 noundef zeroext {{.*}})
+// CHECK-LABEL: define internal void @"\01-[A0 setP:]"({{.*}} i1 noundef {{.*}})
 // CHECK:   store atomic i8 %{{.*}}, ptr %{{.*}} seq_cst, align 1
 // CHECK:   ret void
 
@@ -14,7 +14,7 @@
 // CHECK:   %[[TOBOOL:.*]] = icmp ne i8 %[[ATOMIC_LOAD]], 0
 // CHECK:   ret i1 %[[TOBOOL]]
 
-// CHECK-LABEL: define internal void @"\01-[A1 setP:]"({{.*}} i1 noundef zeroext %p)
+// CHECK-LABEL: define internal void @"\01-[A1 setP:]"({{.*}} i1 noundef %p)
 // CHECK:   store atomic i8 %{{.*}}, ptr %{{.*}} unordered, align 1
 // CHECK:   ret void
 

@@ -550,6 +550,11 @@ CODEGENOPT(ZOSPPA1Name, 1, 1, Benign)
 /// FIXME: Make DebugOptions its own top-level .def file.
 #include "DebugOptions.def"
 
+/// Whether the function should extend small integer parameters: Direct,
+/// Conservative, Assumed, Default.
+ENUM_CODEGENOPT(ExtendIntegerArgs, ExtendIntegerArgsKind, 2,
+                ExtendIntegerArgsKind::Conservative)
+
 #undef CODEGENOPT
 #undef ENUM_CODEGENOPT
 #undef VALUE_CODEGENOPT

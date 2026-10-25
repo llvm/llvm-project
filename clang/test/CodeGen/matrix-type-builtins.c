@@ -154,7 +154,7 @@ void column_major_load_with_stride_math_int(int *Ptr, int S) {
 }
 
 void column_major_load_with_stride_math_s_int(int *Ptr, short S) {
-  // COMMON-LABEL:  define{{.*}} void @column_major_load_with_stride_math_s_int(ptr %Ptr, i16 signext %S)
+  // COMMON-LABEL:  define{{.*}} void @column_major_load_with_stride_math_s_int(ptr %Ptr, i16 %S)
   // COMMON:         [[S:%.*]] = load i16, ptr %S.addr, align 2
   // COMMON-NEXT:    [[S_EXT:%.*]] = sext i16 [[S]] to i32
   // COMMON-NEXT:    [[STRIDE:%.*]] = add nsw i32 [[S_EXT]], 32
@@ -261,7 +261,7 @@ void column_major_store_with_stride_math_int(int *Ptr, int S) {
 }
 
 void column_major_store_with_stride_math_s_int(int *Ptr, short S) {
-  // COMMON-LABEL: define{{.*}} void @column_major_store_with_stride_math_s_int(ptr %Ptr, i16 signext %S)
+  // COMMON-LABEL: define{{.*}} void @column_major_store_with_stride_math_s_int(ptr %Ptr, i16 %S)
   // COMMON:         [[M:%.*]] = load <80 x i32>, ptr {{.*}}, align 4
   // CHECK32-NEXT:   [[PTR:%.*]] = load ptr, ptr %Ptr.addr, align 4
   // CHECK64-NEXT:   [[PTR:%.*]] = load ptr, ptr %Ptr.addr, align 8

@@ -1982,7 +1982,8 @@ void ClangToLLVMArgMapping::construct(const ASTContext &Context,
     switch (AI.getKind()) {
     case ABIArgInfo::TargetSpecific:
     case ABIArgInfo::Extend:
-    case ABIArgInfo::Direct: {
+    case ABIArgInfo::Direct:
+    case ABIArgInfo::ConservativeExtend: {
       // FIXME: handle sseregparm someday...
       llvm::StructType *STy = dyn_cast<llvm::StructType>(AI.getCoerceToType());
       if (AI.isDirect() && AI.getCanBeFlattened() && STy) {
@@ -2094,6 +2095,7 @@ llvm::FunctionType *CodeGenTypes::GetFunctionType(const CGFunctionInfo &FI) {
   case ABIArgInfo::TargetSpecific:
   case ABIArgInfo::Extend:
   case ABIArgInfo::Direct:
+  case ABIArgInfo::ConservativeExtend:
     resultType = retAI.getCoerceToType();
     break;
 
@@ -2166,7 +2168,8 @@ llvm::FunctionType *CodeGenTypes::GetFunctionType(const CGFunctionInfo &FI) {
       break;
     case ABIArgInfo::TargetSpecific:
     case ABIArgInfo::Extend:
-    case ABIArgInfo::Direct: {
+    case ABIArgInfo::Direct:
+    case ABIArgInfo::ConservativeExtend: {
       // Fast-isel and the optimizer generally like scalar values better than
       // FCAs, so we flatten them if this is safe to do for this argument.
       llvm::Type *argType = ArgInfo.getCoerceToType();
@@ -3033,6 +3036,7 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
 
   switch (RetAI.getKind()) {
   case ABIArgInfo::Extend:
+  case ABIArgInfo::ConservativeExtend:
     if (RetAI.isSignExt())
       RetAttrs.addAttribute(llvm::Attribute::SExt);
     else if (RetAI.isZeroExt())
@@ -3193,12 +3197,17 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
     // sense to do it here because parameters are so messed up.
     switch (AI.getKind()) {
     case ABIArgInfo::Extend:
-      if (AI.isSignExt())
-        Attrs.addAttribute(llvm::Attribute::SExt);
-      else if (AI.isZeroExt())
-        Attrs.addAttribute(llvm::Attribute::ZExt);
-      else
-        Attrs.addAttribute(llvm::Attribute::NoExt);
+    case ABIArgInfo::ConservativeExtend:
+      // Under ConservativeExtend, add sext/zext only on the call site; the
+      // callee does not get to assume extension.
+      if (AttrOnCallSite || AI.getKind() == ABIArgInfo::Extend) {
+        if (AI.isSignExt())
+          Attrs.addAttribute(llvm::Attribute::SExt);
+        else if (AI.isZeroExt())
+          Attrs.addAttribute(llvm::Attribute::ZExt);
+        else
+          Attrs.addAttribute(llvm::Attribute::NoExt);
+      }
       [[fallthrough]];
     case ABIArgInfo::TargetSpecific:
     case ABIArgInfo::Direct:
@@ -3615,7 +3624,8 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
     }
 
     case ABIArgInfo::Extend:
-    case ABIArgInfo::Direct: {
+    case ABIArgInfo::Direct:
+    case ABIArgInfo::ConservativeExtend: {
       auto AI = Fn->getArg(FirstIRArg);
       llvm::Type *LTy = ConvertType(Arg->getType());
 
@@ -4467,6 +4477,7 @@ void CodeGenFunction::EmitFunctionEpilog(
 
   case ABIArgInfo::Extend:
   case ABIArgInfo::Direct:
+  case ABIArgInfo::ConservativeExtend:
     if (RetAI.getCoerceToType() == ConvertType(RetTy) &&
         RetAI.getDirectOffset() == 0) {
       // The internal return value temp always will have pointer-to-return-type
@@ -5976,7 +5987,8 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       break;
 
     case ABIArgInfo::Extend:
-    case ABIArgInfo::Direct: {
+    case ABIArgInfo::Direct:
+    case ABIArgInfo::ConservativeExtend: {
       if (!isa<llvm::StructType>(ArgInfo.getCoerceToType()) &&
           ArgInfo.getCoerceToType() == ConvertType(info_it->type) &&
           ArgInfo.getDirectOffset() == 0) {
@@ -6753,6 +6765,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
         return GetUndefRValue(RetTy);
 
       case ABIArgInfo::Extend:
+      case ABIArgInfo::ConservativeExtend:
       case ABIArgInfo::Direct: {
         llvm::Type *RetIRTy = ConvertType(RetTy);
         if (RetAI.getCoerceToType() == RetIRTy &&

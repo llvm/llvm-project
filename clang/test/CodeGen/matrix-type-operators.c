@@ -321,7 +321,7 @@ void subtract_compound_matrix_matrix_unsigned_long_long(ullx4x2_t a, ullx4x2_t b
 }
 
 void add_matrix_scalar_int_short(ix9x3_t a, short vs) {
-  // CHECK-LABEL: define{{.*}} void @add_matrix_scalar_int_short(<27 x i32> noundef %a, i16 noundef signext %vs)
+  // CHECK-LABEL: define{{.*}} void @add_matrix_scalar_int_short(<27 x i32> noundef %a, i16 noundef %vs)
   // NOOPT:        [[MATRIX:%.*]] = load <27 x i32>, ptr [[MAT_ADDR:%.*]], align 4{{$}}
   // NOOPT-NEXT:   [[SCALAR:%.*]] = load i16, ptr %vs.addr, align 2{{$}}
   // OPT:          [[MATRIX:%.*]] = load <27 x i32>, ptr [[MAT_ADDR:%.*]], align 4, !tbaa !{{[0-9]+}}{{$}}
@@ -336,7 +336,7 @@ void add_matrix_scalar_int_short(ix9x3_t a, short vs) {
 }
 
 void add_compound_matrix_scalar_int_short(ix9x3_t a, short vs) {
-  // CHECK-LABEL: define{{.*}} void @add_compound_matrix_scalar_int_short(<27 x i32> noundef %a, i16 noundef signext %vs)
+  // CHECK-LABEL: define{{.*}} void @add_compound_matrix_scalar_int_short(<27 x i32> noundef %a, i16 noundef %vs)
   // NOOPT:       [[SCALAR:%.*]] = load i16, ptr %vs.addr, align 2{{$}}
   // OPT:         [[SCALAR:%.*]] = load i16, ptr %vs.addr, align 2, !tbaa !{{[0-9]+}}{{$}}
   // CHECK-NEXT:  [[SCALAR_EXT:%.*]] = sext i16 [[SCALAR]] to i32
@@ -351,7 +351,7 @@ void add_compound_matrix_scalar_int_short(ix9x3_t a, short vs) {
 }
 
 void subtract_compound_matrix_scalar_int_short(ix9x3_t a, short vs) {
-  // CHECK-LABEL: define{{.*}} void @subtract_compound_matrix_scalar_int_short(<27 x i32> noundef %a, i16 noundef signext %vs)
+  // CHECK-LABEL: define{{.*}} void @subtract_compound_matrix_scalar_int_short(<27 x i32> noundef %a, i16 noundef %vs)
   // NOOPT:       [[SCALAR:%.*]] = load i16, ptr %vs.addr, align 2{{$}}
   // OPT:         [[SCALAR:%.*]] = load i16, ptr %vs.addr, align 2, !tbaa !{{[0-9]+}}{{$}}
   // CHECK-NEXT:  [[SCALAR_EXT:%.*]] = sext i16 [[SCALAR]] to i32
@@ -456,7 +456,7 @@ void subtract_compound_matrix_scalar_int_unsigned_long_long(ix9x3_t a, unsigned 
 }
 
 void add_matrix_scalar_long_long_int_short(ullx4x2_t b, short vs) {
-  // CHECK-LABEL: define{{.*}} void @add_matrix_scalar_long_long_int_short(<8 x i64> noundef %b, i16 noundef signext %vs)
+  // CHECK-LABEL: define{{.*}} void @add_matrix_scalar_long_long_int_short(<8 x i64> noundef %b, i16 noundef %vs)
   // NOOPT:         [[SCALAR:%.*]] = load i16, ptr %vs.addr, align 2{{$}}
   // OPT:           [[SCALAR:%.*]] = load i16, ptr %vs.addr, align 2, !tbaa !{{[0-9]+}}{{$}}
   // CHECK-NEXT:    [[SCALAR_EXT:%.*]] = sext i16 [[SCALAR]] to i64
@@ -471,7 +471,7 @@ void add_matrix_scalar_long_long_int_short(ullx4x2_t b, short vs) {
 }
 
 void add_compound_matrix_scalar_long_long_int_short(ullx4x2_t b, short vs) {
-  // CHECK-LABEL: define{{.*}} void @add_compound_matrix_scalar_long_long_int_short(<8 x i64> noundef %b, i16 noundef signext %vs)
+  // CHECK-LABEL: define{{.*}} void @add_compound_matrix_scalar_long_long_int_short(<8 x i64> noundef %b, i16 noundef %vs)
   // NOOPT:       [[SCALAR:%.*]] = load i16, ptr %vs.addr, align 2{{$}}
   // OPT:         [[SCALAR:%.*]] = load i16, ptr %vs.addr, align 2, !tbaa !{{[0-9]+}}{{$}}
   // CHECK-NEXT:  [[SCALAR_EXT:%.*]] = sext i16 [[SCALAR]] to i64
@@ -486,7 +486,7 @@ void add_compound_matrix_scalar_long_long_int_short(ullx4x2_t b, short vs) {
 }
 
 void subtract_compound_matrix_scalar_long_long_int_short(ullx4x2_t b, short vs) {
-  // CHECK-LABEL: define{{.*}} void @subtract_compound_matrix_scalar_long_long_int_short(<8 x i64> noundef %b, i16 noundef signext %vs)
+  // CHECK-LABEL: define{{.*}} void @subtract_compound_matrix_scalar_long_long_int_short(<8 x i64> noundef %b, i16 noundef %vs)
   // NOOPT:       [[SCALAR:%.*]] = load i16, ptr %vs.addr, align 2{{$}}
   // OPT:         [[SCALAR:%.*]] = load i16, ptr %vs.addr, align 2, !tbaa !{{[0-9]+}}{{$}}
   // CHECK-NEXT:  [[SCALAR_EXT:%.*]] = sext i16 [[SCALAR]] to i64

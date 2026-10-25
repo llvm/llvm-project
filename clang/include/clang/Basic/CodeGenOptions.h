@@ -283,6 +283,13 @@ public:
     ForceDisable, // Always disable regardless of the target default.
   };
 
+  enum class ExtendIntegerArgsKind {
+    Direct,       // Force the use of Direct.
+    Conservative, // Force the use of ConservativeExtend.
+    Assumed,      // Force the use of Extend.
+    Default, // Use the default rule for the target, which is Extend for now.
+  };
+
   /// The code model to use (-mcmodel).
   std::string CodeModel;
 
