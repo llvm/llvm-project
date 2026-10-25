@@ -2639,6 +2639,8 @@ TEST(APFloatTest, getLargest) {
   EXPECT_EQ(7.5,
             APFloat::getLargest(APFloat::Float6E2M3FN()).convertToDouble());
   EXPECT_EQ(6, APFloat::getLargest(APFloat::Float4E2M1FN()).convertToDouble());
+  EXPECT_EQ(APInt(128, "7ffeffffffffffffffffffffffffffff", 16),
+            APFloat::getLargest(APFloat::IEEEquad()).bitcastToAPInt());
 }
 
 TEST(APFloatTest, getSmallest) {
@@ -11239,4 +11241,342 @@ TEST(APFloatTest, exp_exceptions) {
   EXPECT_FALSE(llvm::exp(APFloat::getZero(APFloat::IEEEhalf())).has_value());
 }
 
+namespace {
+static void initFloat16E6M9(FloatRepr &R, const APInt &api);
+static APInt bitcastFloat16E6M9(const FloatRepr &R);
+
+static const fltSemantics semFloat16E6M9 = {
+    31,  // maxExponent (bias = 31)
+    -30, // minExponent (1 - bias = 1 - 31 = -30)
+    10,  // precision (9 mantissa + 1 implicit integer bit)
+    16,  // sizeInBits
+    fltNonfiniteBehavior::IEEE754,
+    fltNanEncoding::IEEE,
+    true,  // hasZero
+    true,  // hasSignedRepr
+    true,  // hasSignBitInMSB
+    true,  // hasDenormals
+    false, // hasExplicitIntegerBit
+    initFloat16E6M9,
+    bitcastFloat16E6M9,
+};
+
+static void initFloat16E6M9(FloatRepr &R, const APInt &api) {
+  const fltSemantics &Sem = semFloat16E6M9;
+  uint16_t bits = api.getZExtValue();
+
+  // Extract fields
+  unsigned sign = (bits >> 15) & 1;
+  unsigned biasedExp = (bits >> 9) & 0x3F; // 6 bits
+  uint64_t mantissa = bits & 0x1FF;        // 9 bits
+
+  // Initialize the representation with our semantics
+  R.initialize(Sem);
+  R.setNegative(sign);
+
+  if (biasedExp == 0 && mantissa == 0) {
+    // Zero
+    R.setCategory(APFloat::fcZero);
+    R.setExponent(Sem.minExponent - 1);
+    R.setSignificand(APInt(Sem.precision, 0));
+  } else if (biasedExp == 0x3F) {
+    // Infinity or NaN
+    if (mantissa == 0) {
+      R.setCategory(APFloat::fcInfinity);
+      R.setExponent(Sem.maxExponent + 1);
+      R.setSignificand(APInt(Sem.precision, 0));
+    } else {
+      R.setCategory(APFloat::fcNaN);
+      R.setExponent(Sem.maxExponent + 1); // exponentNaN
+      // Set significand with the integer bit
+      R.setSignificand(APInt(Sem.precision, (1ULL << 9) | mantissa));
+    }
+  } else if (biasedExp == 0) {
+    // Denormal
+    R.setCategory(APFloat::fcNormal);
+    R.setExponent(Sem.minExponent);
+    R.setSignificand(APInt(Sem.precision, mantissa));
+  } else {
+    // Normal
+    R.setCategory(APFloat::fcNormal);
+    R.setExponent(biasedExp - 31); // unbias
+    // Set significand with the integer bit (bit 9)
+    R.setSignificand(APInt(Sem.precision, (1ULL << 9) | mantissa));
+  }
+}
+
+static APInt bitcastFloat16E6M9(const FloatRepr &R) {
+  uint16_t bits = 0;
+  const fltSemantics &Sem = semFloat16E6M9;
+  EXPECT_EQ(&R.getSemantics(), &Sem);
+
+  // Get sign
+  if (R.isNegative())
+    bits |= (1 << 15);
+
+  APFloat::fltCategory cat = R.getCategory();
+
+  if (cat == APFloat::fcZero) {
+    // Zero: exp=0, mantissa=0
+    return APInt(16, bits);
+  }
+
+  if (cat == APFloat::fcInfinity) {
+    // Infinity: exp=all 1s, mantissa=0
+    bits |= (0x3F << 9);
+    return APInt(16, bits);
+  }
+
+  if (cat == APFloat::fcNaN) {
+    // NaN: exp=all 1s, mantissa!=0
+    bits |= (0x3F << 9);
+    uint64_t sig = R.getSignificand().getZExtValue() & 0x1FF;
+    if (sig == 0)
+      sig = 1; // Ensure at least one bit set
+    bits |= sig;
+    return APInt(16, bits);
+  }
+
+  // Normal or denormal
+  APFloat::ExponentType exp = R.getExponent();
+  uint64_t sig = R.getSignificand().getZExtValue();
+
+  if (exp == Sem.minExponent && (sig & (1ULL << 9)) == 0) {
+    // Denormal: biasedExp = 0, store raw mantissa
+    bits |= (sig & 0x1FF);
+  } else {
+    // Normal
+    int biasedExp = exp + 31; // add bias
+    bits |= ((biasedExp & 0x3F) << 9);
+    bits |= (sig & 0x1FF); // mask off integer bit
+  }
+
+  return APInt(16, bits);
+}
+} // anonymous namespace
+
+TEST(APFloatTest, UserDefinedSemanticsConversion) {
+  const fltSemantics &Sem = semFloat16E6M9;
+
+  // Positive zero: 0x0000
+  APFloat PosZero(Sem, APInt(16, 0x0000));
+  EXPECT_TRUE(PosZero.isZero());
+  EXPECT_FALSE(PosZero.isNegative());
+  EXPECT_EQ(PosZero.bitcastToAPInt(), APInt(16, 0x0000));
+
+  // Negative zero: 0x8000
+  APFloat NegZero(Sem, APInt(16, 0x8000));
+  EXPECT_TRUE(NegZero.isZero());
+  EXPECT_TRUE(NegZero.isNegative());
+  EXPECT_EQ(NegZero.bitcastToAPInt(), APInt(16, 0x8000));
+
+  // Positive infinity: exp=0x3F (all 1s), mantissa=0 -> 0x7E00
+  APFloat PosInf(Sem, APInt(16, 0x7E00));
+  EXPECT_TRUE(PosInf.isInfinity());
+  EXPECT_FALSE(PosInf.isNegative());
+  EXPECT_EQ(PosInf.bitcastToAPInt(), APInt(16, 0x7E00));
+
+  // Negative infinity: 0xFE00
+  APFloat NegInf(Sem, APInt(16, 0xFE00));
+  EXPECT_TRUE(NegInf.isInfinity());
+  EXPECT_TRUE(NegInf.isNegative());
+  EXPECT_EQ(NegInf.bitcastToAPInt(), APInt(16, 0xFE00));
+
+  APFloat Nan(Sem, APInt(16, 0x7E01));
+  EXPECT_TRUE(Nan.isNaN());
+
+  APFloat One(Sem, APInt(16, 0x3E00));
+  EXPECT_TRUE(One.isFiniteNonZero());
+  EXPECT_FALSE(One.isNegative());
+  bool losesInfo;
+  APFloat OneCopy(One);
+  OneCopy.convert(APFloat::IEEEdouble(), APFloat::rmNearestTiesToEven,
+                  &losesInfo);
+  EXPECT_NEAR(OneCopy.convertToDouble(), 1.0, 1e-6);
+
+  APFloat Two(Sem, APInt(16, 0x4000));
+  EXPECT_TRUE(Two.isFiniteNonZero());
+
+  APFloat TwoCopy(Two);
+  TwoCopy.convert(APFloat::IEEEdouble(), APFloat::rmNearestTiesToEven,
+                  &losesInfo);
+  EXPECT_NEAR(TwoCopy.convertToDouble(), 2.0, 1e-6);
+}
+
+TEST(APFloatTest, UserDefinedSemanticsBitcastRoundtrip) {
+  const fltSemantics &Sem = semFloat16E6M9;
+
+  // Test various bit patterns for roundtrip
+  uint16_t testPatterns[] = {
+      0x0000, // +0
+      0x8000, // -0
+      0x3E00, // 1.0
+      0xBE00, // -1.0
+      0x4000, // 2.0
+      0x7E00, // +inf
+      0xFE00, // -inf
+  };
+
+  for (uint16_t pattern : testPatterns) {
+    APFloat F(Sem, APInt(16, pattern));
+    APInt result = F.bitcastToAPInt();
+    EXPECT_EQ(result, APInt(16, pattern))
+        << "Roundtrip failed for pattern 0x" << std::hex << pattern;
+  }
+}
+
+namespace {
+static void initFloat0NaN(FloatRepr &R, const APInt &API);
+static APInt bitcastFloat0NaN(const FloatRepr &R);
+
+// A type without any bits. Its only value is a quiet NaN.
+static const fltSemantics semFloat0NaN = {
+    0, // maxExponent
+    0, // minExponent
+    1, // precision
+    0, // sizeInBits
+    fltNonfiniteBehavior::NanOnly,
+    fltNanEncoding::AllOnes,
+    false, // hasZero
+    false, // hasSignedRepr
+    false, // hasSignBitInMSB
+    false, // hasDenormals
+    false, // hasExplicitIntegerBit
+    initFloat0NaN,
+    bitcastFloat0NaN,
+};
+
+static void initFloat0NaN(FloatRepr &R, const APInt &API) {
+  const fltSemantics &Sem = semFloat0NaN;
+  R.initialize(Sem);
+  R.setNegative(false);
+  R.setCategory(APFloat::fcNaN);
+  R.setExponent(Sem.maxExponent + 1);
+  R.setSignificand(APInt(Sem.precision, 1));
+}
+
+static APInt bitcastFloat0NaN(const FloatRepr &R) {
+  EXPECT_EQ(&R.getSemantics(), &semFloat0NaN);
+  EXPECT_EQ(R.getCategory(), APFloat::fcNaN);
+  return APInt::getZero(0);
+}
+} // anonymous namespace
+
+TEST(APFloatTest, UserDefinedSemanticsZeroBits) {
+  const fltSemantics &Sem = semFloat0NaN;
+  const APFloat::roundingMode RM = APFloat::rmNearestTiesToEven;
+
+  APFloat FromBits(Sem, APInt::getZero(0));
+  APFloat NaN = APFloat::getNaN(Sem);
+
+  auto ExpectQNaN = [](const APFloat &F) {
+    EXPECT_TRUE(F.isNaN());
+    EXPECT_FALSE(F.isSignaling());
+    EXPECT_FALSE(F.isNegative());
+    EXPECT_EQ(F.bitcastToAPInt(), APInt::getZero(0));
+  };
+
+  ExpectQNaN(FromBits);
+  ExpectQNaN(NaN);
+
+  APFloat Sum = FromBits;
+  EXPECT_EQ(Sum.add(NaN, RM), APFloat::opOK);
+  ExpectQNaN(Sum);
+
+  APFloat Diff = FromBits;
+  EXPECT_EQ(Diff.subtract(NaN, RM), APFloat::opOK);
+  ExpectQNaN(Diff);
+
+  APFloat Prod = FromBits;
+  EXPECT_EQ(Prod.multiply(NaN, RM), APFloat::opOK);
+  ExpectQNaN(Prod);
+
+  APFloat Quot = FromBits;
+  EXPECT_EQ(Quot.divide(NaN, RM), APFloat::opOK);
+  ExpectQNaN(Quot);
+}
+
+namespace {
+static void initFloat1Inf(FloatRepr &R, const APInt &API);
+static APInt bitcastFloat1Inf(const FloatRepr &R);
+
+// A type with only a sign bit. Its only values are +inf and -inf.
+static const fltSemantics semFloat1Inf = {
+    0, // maxExponent
+    0, // minExponent
+    1, // precision
+    1, // sizeInBits
+    fltNonfiniteBehavior::IEEE754,
+    fltNanEncoding::IEEE,
+    false, // hasZero
+    true,  // hasSignedRepr
+    true,  // hasSignBitInMSB
+    false, // hasDenormals
+    false, // hasExplicitIntegerBit
+    initFloat1Inf,
+    bitcastFloat1Inf,
+};
+
+static void initFloat1Inf(FloatRepr &R, const APInt &API) {
+  const fltSemantics &Sem = semFloat1Inf;
+  R.initialize(Sem);
+  R.setNegative(API[0]);
+  R.setCategory(APFloat::fcInfinity);
+  R.setExponent(Sem.maxExponent + 1);
+  R.setSignificand(APInt::getZero(Sem.precision));
+}
+
+static APInt bitcastFloat1Inf(const FloatRepr &R) {
+  EXPECT_EQ(&R.getSemantics(), &semFloat1Inf);
+  EXPECT_EQ(R.getCategory(), APFloat::fcInfinity);
+  return APInt(1, R.isNegative());
+}
+} // anonymous namespace
+
+TEST(APFloatTest, UserDefinedSemanticsOneBit) {
+  const fltSemantics &Sem = semFloat1Inf;
+  const APFloat::roundingMode RM = APFloat::rmNearestTiesToEven;
+
+  APFloat PInf(Sem, APInt(1, 0));
+  APFloat MInf(Sem, APInt(1, 1));
+  EXPECT_TRUE(PInf.bitwiseIsEqual(APFloat::getInf(Sem, false)));
+  EXPECT_TRUE(MInf.bitwiseIsEqual(APFloat::getInf(Sem, true)));
+
+  auto ExpectInf = [](const APFloat &F, bool Negative) {
+    EXPECT_TRUE(F.isInfinity());
+    EXPECT_EQ(F.isNegative(), Negative);
+    EXPECT_EQ(F.bitcastToAPInt(), APInt(1, Negative));
+  };
+
+  ExpectInf(PInf, false);
+  ExpectInf(MInf, true);
+
+  APFloat Sum = PInf;
+  EXPECT_EQ(Sum.add(PInf, RM), APFloat::opOK);
+  ExpectInf(Sum, false);
+
+  Sum = MInf;
+  EXPECT_EQ(Sum.add(MInf, RM), APFloat::opOK);
+  ExpectInf(Sum, true);
+
+  APFloat Diff = PInf;
+  EXPECT_EQ(Diff.subtract(MInf, RM), APFloat::opOK);
+  ExpectInf(Diff, false);
+
+  Diff = MInf;
+  EXPECT_EQ(Diff.subtract(PInf, RM), APFloat::opOK);
+  ExpectInf(Diff, true);
+
+  APFloat Prod = PInf;
+  EXPECT_EQ(Prod.multiply(PInf, RM), APFloat::opOK);
+  ExpectInf(Prod, false);
+
+  Prod = PInf;
+  EXPECT_EQ(Prod.multiply(MInf, RM), APFloat::opOK);
+  ExpectInf(Prod, true);
+
+  Prod = MInf;
+  EXPECT_EQ(Prod.multiply(MInf, RM), APFloat::opOK);
+  ExpectInf(Prod, false);
+}
 } // namespace
