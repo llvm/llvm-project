@@ -5,16 +5,16 @@
 ; --- Positive Tests: Symmetric Half Swaps ---
 
 define i64 @load_swap_32_to_64(ptr %p) {
-; GENERIC-LABEL: load_swap_32_to_64:
-; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    movq (%rdi), %rax
-; GENERIC-NEXT:    rorq $32, %rax
-; GENERIC-NEXT:    retq
-;
-; BMI2-LABEL: load_swap_32_to_64:
-; BMI2:       # %bb.0:
-; BMI2-NEXT:    rorxq $32, (%rdi), %rax
-; BMI2-NEXT:    retq
+    ; GENERIC-LABEL: load_swap_32_to_64:
+    ; GENERIC:       # %bb.0:
+    ; GENERIC-NEXT:    movq (%rdi), %rax
+    ; GENERIC-NEXT:    rorq $32, %rax
+    ; GENERIC-NEXT:    retq
+    ;
+    ; BMI2-LABEL: load_swap_32_to_64:
+    ; BMI2:       # %bb.0:
+    ; BMI2-NEXT:    rorxq $32, (%rdi), %rax
+    ; BMI2-NEXT:    retq
     %p.hi = getelementptr inbounds nuw i8, ptr %p, i64 4
     %lo = load i32, ptr %p
     %hi = load i32, ptr %p.hi
@@ -26,16 +26,16 @@ define i64 @load_swap_32_to_64(ptr %p) {
 }
 
 define i32 @load_swap_16_to_32(ptr %p) {
-; GENERIC-LABEL: load_swap_16_to_32:
-; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    movl (%rdi), %eax
-; GENERIC-NEXT:    rorl $16, %eax
-; GENERIC-NEXT:    retq
-;
-; BMI2-LABEL: load_swap_16_to_32:
-; BMI2:       # %bb.0:
-; BMI2-NEXT:    rorxl $16, (%rdi), %eax
-; BMI2-NEXT:    retq
+    ; GENERIC-LABEL: load_swap_16_to_32:
+    ; GENERIC:       # %bb.0:
+    ; GENERIC-NEXT:    movl (%rdi), %eax
+    ; GENERIC-NEXT:    rorl $16, %eax
+    ; GENERIC-NEXT:    retq
+    ;
+    ; BMI2-LABEL: load_swap_16_to_32:
+    ; BMI2:       # %bb.0:
+    ; BMI2-NEXT:    rorxl $16, (%rdi), %eax
+    ; BMI2-NEXT:    retq
     %p.hi = getelementptr inbounds nuw i8, ptr %p, i64 2
     %lo = load i16, ptr %p
     %hi = load i16, ptr %p.hi
@@ -50,16 +50,16 @@ define i32 @load_swap_16_to_32(ptr %p) {
 
 ; Rotates a 64-bit load by 16 bits (offsets: [2, 3, 4, 5, 6, 7, 0, 1])
 define i64 @load_rot_16_to_64(ptr %p) {
-; GENERIC-LABEL: load_rot_16_to_64:
-; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    movq (%rdi), %rax
-; GENERIC-NEXT:    rorq $16, %rax
-; GENERIC-NEXT:    retq
-;
-; BMI2-LABEL: load_rot_16_to_64:
-; BMI2:       # %bb.0:
-; BMI2-NEXT:    rorxq $16, (%rdi), %rax
-; BMI2-NEXT:    retq
+    ; GENERIC-LABEL: load_rot_16_to_64:
+    ; GENERIC:       # %bb.0:
+    ; GENERIC-NEXT:    movq (%rdi), %rax
+    ; GENERIC-NEXT:    rorq $16, %rax
+    ; GENERIC-NEXT:    retq
+    ;
+    ; BMI2-LABEL: load_rot_16_to_64:
+    ; BMI2:       # %bb.0:
+    ; BMI2-NEXT:    rorxq $16, (%rdi), %rax
+    ; BMI2-NEXT:    retq
     %p2 = getelementptr inbounds nuw i8, ptr %p, i64 2
     %p4 = getelementptr inbounds nuw i8, ptr %p, i64 4
     %lo = load i16, ptr %p
@@ -77,16 +77,16 @@ define i64 @load_rot_16_to_64(ptr %p) {
 
 ; Rotates a 32-bit load by 8 bits (offsets: [1, 2, 3, 0])
 define i32 @load_rot_8_to_32(ptr %p) {
-; GENERIC-LABEL: load_rot_8_to_32:
-; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    movl (%rdi), %eax
-; GENERIC-NEXT:    rorl $8, %eax
-; GENERIC-NEXT:    retq
-;
-; BMI2-LABEL: load_rot_8_to_32:
-; BMI2:       # %bb.0:
-; BMI2-NEXT:    rorxl $8, (%rdi), %eax
-; BMI2-NEXT:    retq
+    ; GENERIC-LABEL: load_rot_8_to_32:
+    ; GENERIC:       # %bb.0:
+    ; GENERIC-NEXT:    movl (%rdi), %eax
+    ; GENERIC-NEXT:    rorl $8, %eax
+    ; GENERIC-NEXT:    retq
+    ;
+    ; BMI2-LABEL: load_rot_8_to_32:
+    ; BMI2:       # %bb.0:
+    ; BMI2-NEXT:    rorxl $8, (%rdi), %eax
+    ; BMI2-NEXT:    retq
     %p1 = getelementptr inbounds nuw i8, ptr %p, i64 1
     %p2 = getelementptr inbounds nuw i8, ptr %p, i64 2
     %b0 = load i8, ptr %p
@@ -106,21 +106,21 @@ define i32 @load_rot_8_to_32(ptr %p) {
 
 ; Volatile loads must never be combined or reordered
 define i64 @negative_volatile(ptr %p) {
-; GENERIC-LABEL: negative_volatile:
-; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    movl (%rdi), %eax
-; GENERIC-NEXT:    movl 4(%rdi), %ecx
-; GENERIC-NEXT:    shlq $32, %rax
-; GENERIC-NEXT:    orq %rcx, %rax
-; GENERIC-NEXT:    retq
-;
-; BMI2-LABEL: negative_volatile:
-; BMI2:       # %bb.0:
-; BMI2-NEXT:    movl (%rdi), %eax
-; BMI2-NEXT:    movl 4(%rdi), %ecx
-; BMI2-NEXT:    shlq $32, %rax
-; BMI2-NEXT:    orq %rcx, %rax
-; BMI2-NEXT:    retq
+    ; GENERIC-LABEL: negative_volatile:
+    ; GENERIC:       # %bb.0:
+    ; GENERIC-NEXT:    movl (%rdi), %eax
+    ; GENERIC-NEXT:    movl 4(%rdi), %ecx
+    ; GENERIC-NEXT:    shlq $32, %rax
+    ; GENERIC-NEXT:    orq %rcx, %rax
+    ; GENERIC-NEXT:    retq
+    ;
+    ; BMI2-LABEL: negative_volatile:
+    ; BMI2:       # %bb.0:
+    ; BMI2-NEXT:    movl (%rdi), %eax
+    ; BMI2-NEXT:    movl 4(%rdi), %ecx
+    ; BMI2-NEXT:    shlq $32, %rax
+    ; BMI2-NEXT:    orq %rcx, %rax
+    ; BMI2-NEXT:    retq
     %p.hi = getelementptr inbounds nuw i8, ptr %p, i64 4
     %lo = load volatile i32, ptr %p
     %hi = load volatile i32, ptr %p.hi
@@ -133,21 +133,21 @@ define i64 @negative_volatile(ptr %p) {
 
 ; Non-contiguous addresses (gap at byte 4)
 define i64 @negative_gap(ptr %p) {
-; GENERIC-LABEL: negative_gap:
-; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    movl (%rdi), %eax
-; GENERIC-NEXT:    movl 5(%rdi), %ecx
-; GENERIC-NEXT:    shlq $32, %rax
-; GENERIC-NEXT:    orq %rcx, %rax
-; GENERIC-NEXT:    retq
-;
-; BMI2-LABEL: negative_gap:
-; BMI2:       # %bb.0:
-; BMI2-NEXT:    movl (%rdi), %eax
-; BMI2-NEXT:    movl 5(%rdi), %ecx
-; BMI2-NEXT:    shlq $32, %rax
-; BMI2-NEXT:    orq %rcx, %rax
-; BMI2-NEXT:    retq
+    ; GENERIC-LABEL: negative_gap:
+    ; GENERIC:       # %bb.0:
+    ; GENERIC-NEXT:    movl (%rdi), %eax
+    ; GENERIC-NEXT:    movl 5(%rdi), %ecx
+    ; GENERIC-NEXT:    shlq $32, %rax
+    ; GENERIC-NEXT:    orq %rcx, %rax
+    ; GENERIC-NEXT:    retq
+    ;
+    ; BMI2-LABEL: negative_gap:
+    ; BMI2:       # %bb.0:
+    ; BMI2-NEXT:    movl (%rdi), %eax
+    ; BMI2-NEXT:    movl 5(%rdi), %ecx
+    ; BMI2-NEXT:    shlq $32, %rax
+    ; BMI2-NEXT:    orq %rcx, %rax
+    ; BMI2-NEXT:    retq
     %p.hi = getelementptr inbounds nuw i8, ptr %p, i64 5
     %lo = load i32, ptr %p
     %hi = load i32, ptr %p.hi
