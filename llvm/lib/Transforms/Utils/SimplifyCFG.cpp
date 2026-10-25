@@ -7733,7 +7733,11 @@ static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
       // wouldFitInRegister.
       // TODO: Consider growing the table also when it doesn't fit in a register
       // if no optsize is specified.
-      const uint64_t UpperBound = CR.getUpper().getLimitedValue();
+      // The full-set upper bound is inclusive. Extend before adding one so
+      // neither the index type nor uint64_t can overflow.
+      const uint64_t UpperBound =
+          (CR.getUpper().zext(CR.getBitWidth() + 1) + CR.isFullSet())
+              .getLimitedValue();
       if (!CR.isUpperWrapped() &&
           all_of(ResultTypes, [&](const auto &ResultType) {
             return SwitchReplacement::wouldFitInRegister(DL, UpperBound,
