@@ -184,10 +184,33 @@ static bool checkCompatibility(const InputFile *input) {
   return true;
 }
 
+// ld64's names for arm64e objects whose ABI marker is not userland version 0.
+static StringRef getArm64eVariantName(uint32_t cpuSubtype) {
+  if (cpuSubtype == CPU_SUBTYPE_ARM64E)
+    return "arm64e.old";
+  if (cpuSubtype == CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(1, false))
+    return "arm64e.v1";
+  if (cpuSubtype == CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(0, true))
+    return "arm64e.kernel";
+  if (cpuSubtype == CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(1, true))
+    return "arm64e.kernel.v1";
+  return "unknown";
+}
+
 template <class Header>
 static bool compatWithTargetArch(const InputFile *file, const Header *hdr) {
   uint32_t cpuType;
   std::tie(cpuType, std::ignore) = getCPUTypeFromArchitecture(config->arch());
+
+  auto reportMismatch = [&](StringRef arch) {
+    auto msg = config->errorForArchMismatch
+                   ? static_cast<void (*)(const Twine &)>(error)
+                   : warn;
+    msg(toString(file) + " has architecture " + arch +
+        " which is incompatible with target architecture " +
+        getArchitectureName(config->arch()));
+    return false;
+  };
 
   // arm64 and arm64e are ABI incompatible. arm64e.x1 has the arm64e ABI but
   // needs a newer CPU, so neither takes it.
@@ -196,18 +219,15 @@ static bool compatWithTargetArch(const InputFile *file, const Header *hdr) {
   if (hdr->cputype != cpuType ||
       (is_contained({AK_arm64, AK_arm64e}, config->arch()) &&
        (subtype == CPU_SUBTYPE_ARM64E_X1 ||
-        isArm64e != (config->arch() == AK_arm64e)))) {
-    Architecture arch =
-        getArchitectureFromCpuType(hdr->cputype, hdr->cpusubtype);
-    auto msg = config->errorForArchMismatch
-                   ? static_cast<void (*)(const Twine &)>(error)
-                   : warn;
+        isArm64e != (config->arch() == AK_arm64e))))
+    return reportMismatch(getArchitectureName(
+        getArchitectureFromCpuType(hdr->cputype, hdr->cpusubtype)));
 
-    msg(toString(file) + " has architecture " + getArchitectureName(arch) +
-        " which is incompatible with target architecture " +
-        getArchitectureName(config->arch()));
-    return false;
-  }
+  // Dynamic links, like ld64's, only take objects with userland ABI version 0,
+  // even though macOS executables are marked version 1.
+  if (isArm64e && hdr->filetype == MH_OBJECT && !config->staticLink &&
+      hdr->cpusubtype != CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(0, false))
+    return reportMismatch(getArm64eVariantName(hdr->cpusubtype));
 
   return checkCompatibility(file);
 }
