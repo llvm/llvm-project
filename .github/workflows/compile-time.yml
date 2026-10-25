@@ -145,17 +145,6 @@ jobs:
               "https://x-access-token:$BOT_TOKEN@github.com/$BOT_REPOSITORY.git" \
               "$COMMIT:refs/heads/perf/pr-$PR_NUMBER"
 
-      - name: Thumbs up comment
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
-        with:
-          script: |
-            await github.rest.reactions.createForIssueComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              comment_id: context.payload.comment.id,
-              content: '+1'
-            });
-
       - name: Comment on failure
         if: failure()
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
@@ -173,4 +162,22 @@ jobs:
               repo: context.repo.repo,
               issue_number: context.payload.issue.number,
               body
+            });
+
+  react-to-comment:
+    needs:
+      - push-branch
+    runs-on: ubuntu-26.04
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Thumbs up comment
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: '+1'
             });
