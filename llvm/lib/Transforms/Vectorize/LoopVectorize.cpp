@@ -7247,9 +7247,23 @@ static void preparePlanForEpilogueVectorLoop(
       }
     } else {
       // Retrieve the induction resume value via ResumeForEpilogue.
-      PHINode *IndPhi = cast<VPWidenInductionRecipe>(&R)->getPHINode();
+      auto *IndR = cast<VPWidenInductionRecipe>(&R);
+      PHINode *IndPhi = IndR->getPHINode();
       ResumeVPV =
           GetResumeValue(IRPhiToResumeForEpi.at(IndPhi), "bc.resume.val");
+      auto *IntOrFpIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(IndR);
+      if (IntOrFpIV && IntOrFpIV->isTruncated()) {
+        // The resume value is for the original induction. Preserve any offset
+        // folded into the truncated induction's start.
+        VPValue *OrigStart = Plan.getOrAddLiveIn(
+            IntOrFpIV->getInductionDescriptor().getStartValue());
+        VPValue *NarrowStart = IntOrFpIV->getStartValue();
+        if (NarrowStart != OrigStart) {
+          VPBuilder OffsetBuilder(VectorPH);
+          VPValue *Offset = OffsetBuilder.createSub(NarrowStart, OrigStart);
+          ResumeVPV = OffsetBuilder.createAdd(ResumeVPV, Offset);
+        }
+      }
     }
     assert(ResumeVPV && "Must have a resume value");
     cast<VPHeaderPHIRecipe>(&R)->setStartValue(ResumeVPV);
