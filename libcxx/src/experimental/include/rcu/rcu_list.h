@@ -66,8 +66,6 @@ public:
 struct rcu_atomic_list_view_entry {
   __rcu_node* head_ = nullptr;
   __rcu_node* tail_ = nullptr;
-
-  bool empty() const { return !head_; }
 };
 
 // Like rcu_singly_list_view, but operations can be done without external synchronization and
@@ -83,7 +81,7 @@ public:
     auto expected_entry = entry_.load(std::memory_order_relaxed);
     while (true) {
       auto new_entry = [&] {
-        if (expected_entry.empty()) {
+        if (!expected_entry.head_) {
           return rcu_atomic_list_view_entry{node, node};
         } else {
           node->__next_ = expected_entry.head_;
@@ -98,10 +96,12 @@ public:
       }
     }
   }
+
+  bool empty() const { return !entry_.load(memory_order_relaxed).head_; }
 };
 
 inline void rcu_singly_list_view::splice_back(rcu_atomic_list_view& other) noexcept {
-  if (other.entry_.load(std::memory_order_relaxed).empty()) {
+  if (other.empty()) {
     return;
   }
   auto entry = other.entry_.exchange(rcu_atomic_list_view_entry{nullptr, nullptr}, std::memory_order_acquire);

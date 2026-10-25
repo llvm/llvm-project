@@ -12,19 +12,16 @@
 // XFAIL: !has-128-bit-atomics
 // REQUIRES: std-at-least-c++26
 
-// https://github.com/mstorsjo/llvm-mingw/issues/538
-// XFAIL: target=x86_64-w64-windows-gnu
-
 // https://github.com/llvm/llvm-project/issues/52942
-// UNSUPPORTED: tsan
+// XFAIL: tsan
 
 // void retire(D d = D(), rcu_domain& dom = rcu_default_domain()) noexcept;
 
 #include <atomic>
 #include <cassert>
+#include <concepts>
 #include <latch>
 #include <rcu>
-#include <stop_token>
 #include <thread>
 #include <vector>
 
@@ -56,23 +53,23 @@ struct Deleter {
   }
 };
 
-struct CustomDeleter : std::rcu_obj_base<CustomDeleter, Deleter> {
+struct WithCustomDeleter : std::rcu_obj_base<WithCustomDeleter, Deleter> {
   int& i_;
   int& destruction_count_;
-  CustomDeleter(int& i, int& destruction_count) : i_(i), destruction_count_(destruction_count) {}
-  ~CustomDeleter() { ++destruction_count_; }
+  WithCustomDeleter(int& i, int& destruction_count) : i_(i), destruction_count_(destruction_count) {}
+  ~WithCustomDeleter() { ++destruction_count_; }
 };
 
 // Test noexcept
 template <class T, class... Args>
-concept NothrowRetireable = requires(T t, Args... args) {
-  { t.retire(args...) } noexcept;
+concept NothrowRetireableReturnVoid = requires(T t, Args... args) {
+  { t.retire(args...) } noexcept -> std::same_as<void>;
 };
 
-static_assert(NothrowRetireable<TestClass1>);
-static_assert(NothrowRetireable<CustomDeleter>);
-static_assert(NothrowRetireable<CustomDeleter, Deleter>);
-static_assert(NothrowRetireable<CustomDeleter, Deleter, std::rcu_domain>);
+static_assert(NothrowRetireableReturnVoid<TestClass1>);
+static_assert(NothrowRetireableReturnVoid<WithCustomDeleter>);
+static_assert(NothrowRetireableReturnVoid<WithCustomDeleter, Deleter>);
+static_assert(NothrowRetireableReturnVoid<WithCustomDeleter, Deleter, std::rcu_domain>);
 
 int main(int, char**) {
   {
@@ -89,7 +86,7 @@ int main(int, char**) {
     // retire(deleter);
     int i                 = 0;
     int destruction_count = 0;
-    auto* ptr             = new CustomDeleter(i, destruction_count);
+    auto* ptr             = new WithCustomDeleter(i, destruction_count);
     ptr->retire(Deleter{42});
     std::rcu_barrier();
     assert(destruction_count == 1);
@@ -100,7 +97,7 @@ int main(int, char**) {
     // retire(deleter, domain);
     int i                 = 0;
     int destruction_count = 0;
-    auto* ptr             = new CustomDeleter(i, destruction_count);
+    auto* ptr             = new WithCustomDeleter(i, destruction_count);
     ptr->retire(Deleter{42}, std::rcu_default_domain());
     std::rcu_barrier();
     assert(destruction_count == 1);
@@ -117,7 +114,7 @@ int main(int, char**) {
       int destruction_count = 0;
       auto* ptr             = new TestClass1(destruction_count);
       ptr->retire();
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      std::this_thread::sleep_for(std::chrono::milliseconds(10)); // increase the chances of failure in case of a bug
 
       // should not be destroyed yet as the main thread is still holding the lock
       assert(destruction_count == 0);

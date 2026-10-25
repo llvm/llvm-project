@@ -12,11 +12,8 @@
 // XFAIL: !has-128-bit-atomics
 // REQUIRES: std-at-least-c++26
 
-// https://github.com/mstorsjo/llvm-mingw/issues/538
-// XFAIL: target=x86_64-w64-windows-gnu
-
 // https://github.com/llvm/llvm-project/issues/52942
-// UNSUPPORTED: tsan
+// XFAIL: tsan
 
 // template<class T, class D = default_delete<T>>
 //   void rcu_retire(T* p, D d = D(), rcu_domain& dom = rcu_default_domain());
@@ -24,12 +21,22 @@
 #include <atomic>
 #include <cassert>
 #include <latch>
+#include <memory>
 #include <rcu>
 #include <thread>
 #include <vector>
 
 #include "make_test_thread.h"
 #include "test_macros.h"
+
+template <class... Args>
+concept RcuRetireReturnVoid = requires(Args... args) {
+  { std::rcu_retire(args...) } -> std::same_as<void>;
+};
+
+static_assert(RcuRetireReturnVoid<int*>);
+static_assert(RcuRetireReturnVoid<int*, std::default_delete<int>>);
+static_assert(RcuRetireReturnVoid<int*, std::default_delete<int>, std::rcu_domain&>);
 
 class TestClass1 {
   int& destruction_count_;
@@ -56,11 +63,11 @@ struct Deleter {
   }
 };
 
-struct CustomDeleter {
+struct WithCustomDeleter {
   int& i_;
   int& destruction_count_;
-  CustomDeleter(int& i, int& destruction_count) : i_(i), destruction_count_(destruction_count) {}
-  ~CustomDeleter() { ++destruction_count_; }
+  WithCustomDeleter(int& i, int& destruction_count) : i_(i), destruction_count_(destruction_count) {}
+  ~WithCustomDeleter() { ++destruction_count_; }
 };
 
 int main(int, char**) {
@@ -77,7 +84,7 @@ int main(int, char**) {
     // rcu_retire(deleter);
     int i                 = 0;
     int destruction_count = 0;
-    auto* ptr             = new CustomDeleter(i, destruction_count);
+    auto* ptr             = new WithCustomDeleter(i, destruction_count);
     std::rcu_retire(ptr, Deleter{42});
     std::rcu_barrier();
     assert(destruction_count == 1);
@@ -88,7 +95,7 @@ int main(int, char**) {
     // rcu_retire(deleter, domain);
     int i                 = 0;
     int destruction_count = 0;
-    auto* ptr             = new CustomDeleter(i, destruction_count);
+    auto* ptr             = new WithCustomDeleter(i, destruction_count);
     std::rcu_retire(ptr, Deleter{42}, std::rcu_default_domain());
     std::rcu_barrier();
     assert(destruction_count == 1);
@@ -105,7 +112,7 @@ int main(int, char**) {
       int destruction_count = 0;
       auto* ptr             = new TestClass1(destruction_count);
       std::rcu_retire(ptr);
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      std::this_thread::sleep_for(std::chrono::milliseconds(10)); // increase the chances of failure in case of a bug
 
       // should not be destroyed yet as the main thread is still holding the lock
       assert(destruction_count == 0);

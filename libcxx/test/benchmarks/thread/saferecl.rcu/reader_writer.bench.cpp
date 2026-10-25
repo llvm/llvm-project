@@ -11,6 +11,10 @@
 // XFAIL: availability-rcu-missing
 // REQUIRES: std-at-least-c++26
 
+// This benchmark measures the throughtput instead of the time.
+// We don't want to run it on a regular basis, only to ensure the code doesn't rot.
+// REQUIRES: enable-benchmarks=dry-run
+
 // <rcu>
 
 #include <atomic>

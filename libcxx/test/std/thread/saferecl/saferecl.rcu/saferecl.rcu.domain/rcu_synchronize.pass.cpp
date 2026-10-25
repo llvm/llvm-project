@@ -28,6 +28,9 @@
 static_assert(noexcept(std::rcu_synchronize()));
 static_assert(noexcept(std::rcu_synchronize(std::rcu_default_domain())));
 
+static_assert(std::same_as<decltype(std::rcu_synchronize()), void>);
+static_assert(std::same_as<decltype(std::rcu_synchronize(std::rcu_default_domain())), void>);
+
 int main(int, char**) {
   {
     // rcu_synchronize();
