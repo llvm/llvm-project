@@ -4601,9 +4601,8 @@ SDValue ARMTargetLowering::getARMCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
   // and Thumb-2 can fold the shift into the OR. Require single uses to avoid
   // duplicating live work.
   if (!Subtarget->isThumb1Only() && isIntEqualitySetCC(CC) &&
-      isNullConstant(RHS) &&
-      LHS.getValueType() == MVT::i32 && LHS.getOpcode() == ISD::OR &&
-      LHS.hasOneUse()) {
+      isNullConstant(RHS) && LHS.getValueType() == MVT::i32 &&
+      LHS.getOpcode() == ISD::OR && LHS.hasOneUse()) {
     for (unsigned I = 0; I != 2; ++I) {
       if (SDValue Shift =
               getShiftedLowMaskZeroTest(LHS.getOperand(I), DAG, dl)) {
