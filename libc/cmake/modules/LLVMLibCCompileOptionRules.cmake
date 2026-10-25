@@ -210,6 +210,10 @@ function(_get_compile_options_from_config output_var)
     list(APPEND config_options "-DLIBC_COPT_SCANF_PROVIDE_ISOC99_ALIASES")
   endif()
 
+  if(LIBC_COPT_PROVIDE_GNU_ALIASES)
+    libc_add_definition(config_options "LIBC_COPT_PROVIDE_GNU_ALIASES")
+  endif()
+
   set(${output_var} ${config_options} PARENT_SCOPE)
 endfunction()
 _get_compile_options_from_config(LIBC_COMPILE_OPTIONS_FROM_CONFIG)

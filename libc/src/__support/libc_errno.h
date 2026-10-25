@@ -46,12 +46,19 @@
 
 #if !defined(LIBC_ERRNO_MODE) || LIBC_ERRNO_MODE == LIBC_ERRNO_MODE_DEFAULT
 #undef LIBC_ERRNO_MODE
-#if defined(LIBC_FULL_BUILD) || !defined(LIBC_COPT_PUBLIC_PACKAGING)
+#if defined(LIBC_FULL_BUILD) || (!defined(LIBC_COPT_PUBLIC_PACKAGING) &&       \
+                                 !defined(LLVM_LIBC_SHARED_LIBC_COMMON_H))
 #define LIBC_ERRNO_MODE LIBC_ERRNO_MODE_THREAD_LOCAL
 #else
 #define LIBC_ERRNO_MODE LIBC_ERRNO_MODE_SYSTEM_INLINE
 #endif
 #endif // LIBC_ERRNO_MODE
+
+#if defined(LLVM_LIBC_SHARED_LIBC_COMMON_H) && !defined(LIBC_FULL_BUILD) &&    \
+    LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_SYSTEM_INLINE
+#error                                                                         \
+    "LIBC_ERRNO_MODE was set to something different from LIBC_ERRNO_MODE_SYSTEM_INLINE."
+#endif
 
 #if LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_DEFAULT &&                              \
     LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_UNDEFINED &&                            \
@@ -77,6 +84,7 @@ LIBC_ERRNO_MODE_SYSTEM_INLINE.
 #else // !LIBC_ERRNO_MODE_SYSTEM_INLINE
 
 #include "hdr/errno_macros.h"
+#include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -84,11 +92,18 @@ namespace LIBC_NAMESPACE_DECL {
 extern "C" int *__llvm_libc_errno() noexcept;
 
 struct Errno {
-  void operator=(int);
-  operator int();
+#if LIBC_ERRNO_MODE == LIBC_ERRNO_MODE_UNDEFINED
+  LIBC_INLINE constexpr void operator=(int) const noexcept {}
+  LIBC_INLINE constexpr operator int() const noexcept { return 0; }
+  LIBC_INLINE constexpr int *operator&() const noexcept { return nullptr; }
+#else
+  LIBC_INLINE void operator=(int a) const noexcept { *__llvm_libc_errno() = a; }
+  LIBC_INLINE operator int() const noexcept { return *__llvm_libc_errno(); }
+  LIBC_INLINE int *operator&() const noexcept { return __llvm_libc_errno(); }
+#endif
 };
 
-extern Errno libc_errno;
+LIBC_INLINE_VAR constexpr Errno libc_errno{};
 
 } // namespace LIBC_NAMESPACE_DECL
 
