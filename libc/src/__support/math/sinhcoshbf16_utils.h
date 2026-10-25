@@ -152,10 +152,10 @@ LIBC_INLINE float exp_half(float xf) {
   constexpr cpp::array<float, 4> COEFFS = {0x1p+0f, 0x1p+0f, 0x1.0004p-1f,
                                            0x1.555778p-3f};
 
-  float p_even = fputil::multiply_add(lo, COEFFS[1], COEFFS[0]);
-  float p_odd = fputil::multiply_add(lo, COEFFS[3], COEFFS[2]);
+  float p0 = fputil::multiply_add(lo, COEFFS[1], COEFFS[0]);
+  float p1 = fputil::multiply_add(lo, COEFFS[3], COEFFS[2]);
 
-  float exp_lo = fputil::multiply_add(lo_sq, p_odd, p_even);
+  float exp_lo = fputil::multiply_add(lo_sq, p1, p0);
 
   // exp(x) / 2 = 2^(hi + mid - 1) * exp(lo).
   float result = exp2_hi_mid_p * exp_lo;
