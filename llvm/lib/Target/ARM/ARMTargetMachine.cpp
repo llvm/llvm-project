@@ -345,6 +345,9 @@ public:
   bool addRegBankSelect() override;
   bool addGlobalInstructionSelect() override;
   void addPreRegAlloc() override;
+  bool isMachinePipelinerEnabled() const override {
+    return getOptLevel() == CodeGenOptLevel::Aggressive;
+  }
   void addPreSched2() override;
   void addPreEmitPass() override;
   void addPreEmitPass2() override;
@@ -492,9 +495,6 @@ bool ARMPassConfig::addGlobalInstructionSelect() {
 
 void ARMPassConfig::addPreRegAlloc() {
   if (getOptLevel() != CodeGenOptLevel::None) {
-    if (getOptLevel() == CodeGenOptLevel::Aggressive)
-      addPass(&MachinePipelinerID);
-
     addPass(createMVETPAndVPTOptimisationsPass());
 
     addPass(createMLxExpansionPass());
@@ -588,7 +588,7 @@ void ARMPassConfig::addPreEmitPass2() {
 
   if (TM->getTargetTriple().isOSWindows()) {
     // Identify valid longjmp targets for Windows Control Flow Guard.
-    addPass(createCFGuardLongjmpPass());
+    addPass(createCFGuardLongjmpLegacyPass());
     // Identify valid eh continuation targets for Windows EHCont Guard.
     addPass(createEHContGuardTargetsLegacy());
   }
