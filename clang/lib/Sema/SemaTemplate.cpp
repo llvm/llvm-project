@@ -1611,6 +1611,8 @@ NamedDecl *Sema::ActOnNonTypeTemplateParameter(Scope *S, Declarator &D,
   if (T.isNull()) {
     T = Context.IntTy; // Recover with an 'int' type.
     Invalid = true;
+  } else if (T->containsErrors()) {
+    Invalid = true;
   }
 
   CheckFunctionOrTemplateParamDeclarator(S, D);
@@ -2462,6 +2464,8 @@ bool Sema::CheckTemplateParameterList(TemplateParameterList *NewParams,
   for (TemplateParameterList::iterator NewParam = NewParams->begin(),
                                     NewParamEnd = NewParams->end();
        NewParam != NewParamEnd; ++NewParam) {
+    Invalid |= (*NewParam)->isInvalidDecl();
+
     // Whether we've seen a duplicate default argument in the same translation
     // unit.
     bool RedundantDefaultArg = false;
