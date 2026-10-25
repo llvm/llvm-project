@@ -904,6 +904,12 @@ static PlatformVersion parsePlatformVersion(const Arg *arg) {
           .Cases({"driverkit", "10"}, PLATFORM_DRIVERKIT)
           .Cases({"xros", "11"}, PLATFORM_XROS)
           .Cases({"xros-simulator", "12"}, PLATFORM_XROS_SIMULATOR)
+          .Cases({"macos-kernelkit", "25"}, PLATFORM_MACOS_KERNELKIT)
+          .Cases({"ios-kernelkit", "26"}, PLATFORM_IOS_KERNELKIT)
+          .Cases({"tvos-kernelkit", "27"}, PLATFORM_TVOS_KERNELKIT)
+          .Cases({"watchos-kernelkit", "28"}, PLATFORM_WATCHOS_KERNELKIT)
+          .Cases({"xros-kernelkit", "29"}, PLATFORM_XROS_KERNELKIT)
+          .Cases({"bridgeos-kernelkit", "30"}, PLATFORM_BRIDGEOS_KERNELKIT)
           .Default(PLATFORM_UNKNOWN);
   if (platformVersion.platform == PLATFORM_UNKNOWN)
     error(Twine("malformed platform: ") + platformStr);
@@ -2228,6 +2234,16 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
   if (const Arg *arg = args.getLastArg(OPT_static, OPT_dynamic))
     config->staticLink = (arg->getOption().getID() == OPT_static);
+
+  // KernelKit platforms only produce object files, kext bundles, or
+  // statically linked output (matches Apple's ld error text).
+  if (config->platformInfo.target.Platform >= PLATFORM_MACOS_KERNELKIT &&
+      config->platformInfo.target.Platform <= PLATFORM_BRIDGEOS_KERNELKIT) {
+    bool allowed = config->outputType == MH_OBJECT ||
+                   config->outputType == MH_KEXT_BUNDLE || config->staticLink;
+    if (!allowed)
+      error("kernelKit can only be used with -r, -kext and -static");
+  }
 
   if (const Arg *arg =
           args.getLastArg(OPT_flat_namespace, OPT_twolevel_namespace))
