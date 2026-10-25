@@ -1951,7 +1951,8 @@ void CXXNameMangler::mangleLocalName(GlobalDecl GD,
     if (D == RD) {
       const NamedDecl *PrefixND = getClosurePrefix(RD);
       if (PrefixND && !isCompatibleWith(LangOptions::ClangABI::Ver18))
-        mangleNestedNameWithClosurePrefix(GD, PrefixND, AdditionalAbiTags, /*NoFunction=*/true);
+        mangleNestedNameWithClosurePrefix(GD, PrefixND, AdditionalAbiTags,
+                                          /*NoFunction=*/true);
       else
         mangleUnqualifiedName(RD, DC, AdditionalAbiTags);
     } else if (const BlockDecl *BD = dyn_cast<BlockDecl>(D)) {
