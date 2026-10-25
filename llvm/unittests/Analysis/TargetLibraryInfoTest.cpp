@@ -107,6 +107,43 @@ TEST_F(TargetLibraryInfoTest, SizeReturningNewInvalidProto) {
   }
 }
 
+TEST_F(TargetLibraryInfoTest, SizeReturningNewArrayProto) {
+  parseAssembly("target datalayout = \"p:64:64:64\"\n"
+                "declare [2 x i64] @__size_returning_new(i64)\n"
+                "declare [2 x i64] @__size_returning_new_hot_cold(i64, i8)\n"
+                "declare [2 x i64] @__size_returning_new_aligned(i64, i64)\n"
+                "declare [2 x i64] @__size_returning_new_aligned_hot_cold(i64, "
+                "i64, i8)\n");
+
+  for (const LibFunc LF :
+       {LibFunc_size_returning_new, LibFunc_size_returning_new_aligned,
+        LibFunc_size_returning_new_hot_cold,
+        LibFunc_size_returning_new_aligned_hot_cold}) {
+    TLII.setAvailable(LF);
+    Function *F = M->getFunction(TLI.getName(LF));
+    ASSERT_NE(F, nullptr);
+    EXPECT_TRUE(isLibFunc(F, LF));
+  }
+
+  // Invalid array element count or element type.
+  parseAssembly("target datalayout = \"p:64:64:64\"\n"
+                "declare [3 x i64] @__size_returning_new(i64)\n"
+                "declare [1 x i64] @__size_returning_new_hot_cold(i64, i8)\n"
+                "declare [2 x i32] @__size_returning_new_aligned(i64, i64)\n"
+                "declare [2 x ptr] @__size_returning_new_aligned_hot_cold(i64, "
+                "i64, i8)\n");
+
+  for (const LibFunc LF :
+       {LibFunc_size_returning_new, LibFunc_size_returning_new_aligned,
+        LibFunc_size_returning_new_hot_cold,
+        LibFunc_size_returning_new_aligned_hot_cold}) {
+    TLII.setAvailable(LF);
+    Function *F = M->getFunction(TLI.getName(LF));
+    ASSERT_NE(F, nullptr);
+    EXPECT_FALSE(isLibFunc(F, LF));
+  }
+}
+
 // Check that we do accept know-correct prototypes.
 TEST_F(TargetLibraryInfoTest, ValidProto) {
   parseAssembly(

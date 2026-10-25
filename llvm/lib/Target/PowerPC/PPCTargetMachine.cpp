@@ -528,9 +528,6 @@ void PPCPassConfig::addPreRegAlloc() {
   }
   if (EnableExtraTOCRegDeps)
     addPass(createPPCTOCRegDepsPass());
-
-  if (getOptLevel() != CodeGenOptLevel::None)
-    addPass(&MachinePipelinerID);
 }
 
 void PPCPassConfig::addPreSched2() {

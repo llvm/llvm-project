@@ -148,8 +148,11 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
   movq  %r11, 88(PTR)
   movq  %r12, 96(PTR)
   movq  %r13,104(PTR)
+# Skip spilling r14/r15 under LFI; reserved by LFI ABI.
+#if !defined(__LFI__)
   movq  %r14,112(PTR)
   movq  %r15,120(PTR)
+#endif
   movq  (%rsp),TMP
   movq  TMP,128(PTR) # store return address as rip
   # Capture flags before any instruction that changes them.

@@ -251,7 +251,14 @@ bool AVRRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
   assert(isUInt<6>(Offset) && "Offset is out of range");
 
-  MI.getOperand(FIOperandNum).ChangeToRegister(AVR::R29R28, false);
+  // STDSPQRr and STDWSPQRr expect an SP-based address and are expanded by
+  // rewriting the base to the frame pointer, so materialize the frame index
+  // as SP for them.
+  if (MI.getOpcode() == AVR::STDSPQRr || MI.getOpcode() == AVR::STDWSPQRr)
+    MI.getOperand(FIOperandNum).ChangeToRegister(AVR::SP, false);
+  else
+    MI.getOperand(FIOperandNum).ChangeToRegister(AVR::R29R28, false);
+
   MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Offset);
 
   // Since we didn't remove an instruction, we return false.

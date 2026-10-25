@@ -167,8 +167,11 @@ DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_x86_64_jumpto)
   movq   88(%rdi), %r11
   movq   96(%rdi), %r12
   movq  104(%rdi), %r13
+# Skip reloading r14/r15 under LFI; reserved by LFI ABI.
+#if !defined(__LFI__)
   movq  112(%rdi), %r14
   movq  120(%rdi), %r15
+#endif
 
 #if defined(_WIN64)
   movdqu 176(%rdi),%xmm0

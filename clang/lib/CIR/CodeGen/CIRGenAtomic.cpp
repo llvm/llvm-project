@@ -178,8 +178,7 @@ static void setAMDGPUAtomicMetadata(CIRGenFunction &cgf, mlir::Operation *op,
 
   // Only a read-modify-write instruction carries these; a plain load, store or
   // cmpxchg does not.
-  auto fetchOp = mlir::dyn_cast<cir::AtomicFetchOp>(op);
-  if (!fetchOp)
+  if (!mlir::isa<cir::AtomicFetchOp, cir::AtomicXchgOp>(op))
     return;
 
   clang::AtomicOptions atomicOpts = cgf.cgm.getAtomicOpts();
@@ -188,7 +187,9 @@ static void setAMDGPUAtomicMetadata(CIRGenFunction &cgf, mlir::Operation *op,
   if (!atomicOpts.getOption(clang::AtomicOptionKind::RemoteMemory))
     op->setAttr(cir::CIRDialect::getAMDGPUNoRemoteMemoryAttrName(), unit);
   // Denormal flushing only matters for a float add.
-  if (atomicOpts.getOption(clang::AtomicOptionKind::IgnoreDenormalMode) &&
+  auto fetchOp = mlir::dyn_cast<cir::AtomicFetchOp>(op);
+  if (fetchOp &&
+      atomicOpts.getOption(clang::AtomicOptionKind::IgnoreDenormalMode) &&
       fetchOp.getBinop() == cir::AtomicFetchKind::Add &&
       mlir::isa<cir::SingleType>(fetchOp.getVal().getType()))
     op->setAttr(cir::CIRDialect::getAMDGPUIgnoreDenormalModeAttrName(), unit);
