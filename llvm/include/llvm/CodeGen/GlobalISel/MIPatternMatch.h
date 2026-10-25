@@ -757,6 +757,8 @@ struct BinaryOp_match {
     const MachineInstr *TmpMI;
     if (mi_match(Op, MRI, m_MInstr(TmpMI))) {
       if (TmpMI->getOpcode() == Opcode && TmpMI->getNumOperands() == 3) {
+        if ((TmpMI->getFlags() & Flags) != Flags)
+          return false;
         if ((!L.match(MRI, TmpMI->getOperand(1).getReg()) ||
              !R.match(MRI, TmpMI->getOperand(2).getReg())) &&
             // NOTE: When trying the alternative operand ordering
@@ -766,8 +768,6 @@ struct BinaryOp_match {
             // expected.
             (!Commutable || !L.match(MRI, TmpMI->getOperand(2).getReg()) ||
              !R.match(MRI, TmpMI->getOperand(1).getReg())))
-          return false;
-        if ((TmpMI->getFlags() & Flags) != Flags)
           return false;
         if (FlagsOut)
           *FlagsOut = TmpMI->getFlags();

@@ -363,7 +363,7 @@ define i32 @s_uaddsat_i32(i32 inreg %lhs, i32 inreg %rhs) {
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    s_not_b32 s4, s17
 ; GFX8-NEXT:    s_min_u32 s4, s16, s4
-; GFX8-NEXT:    s_add_u32 s4, s4, s17
+; GFX8-NEXT:    s_add_i32 s4, s4, s17
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -372,7 +372,7 @@ define i32 @s_uaddsat_i32(i32 inreg %lhs, i32 inreg %rhs) {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_not_b32 s4, s17
 ; GFX9-NEXT:    s_min_u32 s4, s16, s4
-; GFX9-NEXT:    s_add_u32 s4, s4, s17
+; GFX9-NEXT:    s_add_i32 s4, s4, s17
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -381,7 +381,7 @@ define i32 @s_uaddsat_i32(i32 inreg %lhs, i32 inreg %rhs) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_not_b32 s4, s17
 ; GFX10-NEXT:    s_min_u32 s4, s16, s4
-; GFX10-NEXT:    s_add_u32 s4, s4, s17
+; GFX10-NEXT:    s_add_i32 s4, s4, s17
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -391,12 +391,91 @@ define i32 @s_uaddsat_i32(i32 inreg %lhs, i32 inreg %rhs) {
 ; GFX11-NEXT:    s_not_b32 s2, s1
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_min_u32 s0, s0, s2
-; GFX11-NEXT:    s_add_u32 s0, s0, s1
+; GFX11-NEXT:    s_add_i32 s0, s0, s1
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %result = call i32 @llvm.uadd.sat.i32(i32 %lhs, i32 %rhs)
   ret i32 %result
+}
+
+; The uniform uaddsat is selected to SALU instructions, which are moved to the
+; VALU because the result of the load is in a VGPR.
+define amdgpu_ps void @s_uaddsat_i32_vgpr_operand(i32 inreg %lhs, ptr addrspace(8) inreg %rsrc) {
+; GFX6-LABEL: s_uaddsat_i32_vgpr_operand:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_mov_b32 s7, s4
+; GFX6-NEXT:    s_mov_b32 s6, s3
+; GFX6-NEXT:    s_mov_b32 s5, s2
+; GFX6-NEXT:    s_mov_b32 s4, s1
+; GFX6-NEXT:    buffer_load_dword v0, off, s[4:7], 0
+; GFX6-NEXT:    s_waitcnt vmcnt(0)
+; GFX6-NEXT:    v_not_b32_e32 v1, v0
+; GFX6-NEXT:    v_min_u32_e32 v1, s0, v1
+; GFX6-NEXT:    v_add_i32_e32 v0, vcc, v1, v0
+; GFX6-NEXT:    buffer_store_dword v0, off, s[4:7], 0 offset:4
+; GFX6-NEXT:    s_endpgm
+;
+; GFX8-LABEL: s_uaddsat_i32_vgpr_operand:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_mov_b32 s7, s4
+; GFX8-NEXT:    s_mov_b32 s6, s3
+; GFX8-NEXT:    s_mov_b32 s5, s2
+; GFX8-NEXT:    s_mov_b32 s4, s1
+; GFX8-NEXT:    buffer_load_dword v0, off, s[4:7], 0
+; GFX8-NEXT:    s_waitcnt vmcnt(0)
+; GFX8-NEXT:    v_not_b32_e32 v1, v0
+; GFX8-NEXT:    v_min_u32_e32 v1, s0, v1
+; GFX8-NEXT:    v_add_u32_e32 v0, vcc, v1, v0
+; GFX8-NEXT:    buffer_store_dword v0, off, s[4:7], 0 offset:4
+; GFX8-NEXT:    s_endpgm
+;
+; GFX9-LABEL: s_uaddsat_i32_vgpr_operand:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_mov_b32 s7, s4
+; GFX9-NEXT:    s_mov_b32 s6, s3
+; GFX9-NEXT:    s_mov_b32 s5, s2
+; GFX9-NEXT:    s_mov_b32 s4, s1
+; GFX9-NEXT:    buffer_load_dword v0, off, s[4:7], 0
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_not_b32_e32 v1, v0
+; GFX9-NEXT:    v_min_u32_e32 v1, s0, v1
+; GFX9-NEXT:    v_add_u32_e32 v0, v1, v0
+; GFX9-NEXT:    buffer_store_dword v0, off, s[4:7], 0 offset:4
+; GFX9-NEXT:    s_endpgm
+;
+; GFX10-LABEL: s_uaddsat_i32_vgpr_operand:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_mov_b32 s7, s4
+; GFX10-NEXT:    s_mov_b32 s6, s3
+; GFX10-NEXT:    s_mov_b32 s5, s2
+; GFX10-NEXT:    s_mov_b32 s4, s1
+; GFX10-NEXT:    buffer_load_dword v0, off, s[4:7], 0
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    v_not_b32_e32 v1, v0
+; GFX10-NEXT:    v_min_u32_e32 v1, s0, v1
+; GFX10-NEXT:    v_add_nc_u32_e32 v0, v1, v0
+; GFX10-NEXT:    buffer_store_dword v0, off, s[4:7], 0 offset:4
+; GFX10-NEXT:    s_endpgm
+;
+; GFX11-LABEL: s_uaddsat_i32_vgpr_operand:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_mov_b32 s7, s4
+; GFX11-NEXT:    s_mov_b32 s6, s3
+; GFX11-NEXT:    s_mov_b32 s5, s2
+; GFX11-NEXT:    s_mov_b32 s4, s1
+; GFX11-NEXT:    buffer_load_b32 v0, off, s[4:7], 0
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_not_b32_e32 v1, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_min_u32_e32 v1, s0, v1
+; GFX11-NEXT:    v_add_nc_u32_e32 v0, v1, v0
+; GFX11-NEXT:    buffer_store_b32 v0, off, s[4:7], 0 offset:4
+; GFX11-NEXT:    s_endpgm
+  %rhs = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) %rsrc, i32 0, i32 0, i32 0)
+  %result = call i32 @llvm.uadd.sat.i32(i32 %lhs, i32 %rhs)
+  call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 %result, ptr addrspace(8) %rsrc, i32 4, i32 0, i32 0)
+  ret void
 }
 
 define i32 @v_uaddsat_i32(i32 %lhs, i32 %rhs) {

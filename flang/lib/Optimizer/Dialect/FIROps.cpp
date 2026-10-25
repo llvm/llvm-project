@@ -408,7 +408,7 @@ void fir::AllocaOp::build(mlir::OpBuilder &builder,
                           llvm::ArrayRef<mlir::NamedAttribute> attributes) {
   auto nameAttr = builder.getStringAttr(uniqName);
   build(builder, result, wrapAllocaResultType(inType), inType, nameAttr, {},
-        /*pinned=*/false, typeparams, shape);
+        /*pinned=*/false, typeparams, shape, /*alignment=*/{});
   result.addAttributes(attributes);
 }
 
@@ -419,7 +419,7 @@ void fir::AllocaOp::build(mlir::OpBuilder &builder,
                           llvm::ArrayRef<mlir::NamedAttribute> attributes) {
   auto nameAttr = builder.getStringAttr(uniqName);
   build(builder, result, wrapAllocaResultType(inType), inType, nameAttr, {},
-        pinned, typeparams, shape);
+        pinned, typeparams, shape, /*alignment=*/{});
   result.addAttributes(attributes);
 }
 
@@ -433,7 +433,7 @@ void fir::AllocaOp::build(mlir::OpBuilder &builder,
   auto bindcAttr =
       bindcName.empty() ? mlir::StringAttr{} : builder.getStringAttr(bindcName);
   build(builder, result, wrapAllocaResultType(inType), inType, nameAttr,
-        bindcAttr, /*pinned=*/false, typeparams, shape);
+        bindcAttr, /*pinned=*/false, typeparams, shape, /*alignment=*/{});
   result.addAttributes(attributes);
 }
 
@@ -448,7 +448,7 @@ void fir::AllocaOp::build(mlir::OpBuilder &builder,
   auto bindcAttr =
       bindcName.empty() ? mlir::StringAttr{} : builder.getStringAttr(bindcName);
   build(builder, result, wrapAllocaResultType(inType), inType, nameAttr,
-        bindcAttr, pinned, typeparams, shape);
+        bindcAttr, pinned, typeparams, shape, /*alignment=*/{});
   result.addAttributes(attributes);
 }
 
@@ -457,7 +457,7 @@ void fir::AllocaOp::build(mlir::OpBuilder &builder,
                           mlir::ValueRange typeparams, mlir::ValueRange shape,
                           llvm::ArrayRef<mlir::NamedAttribute> attributes) {
   build(builder, result, wrapAllocaResultType(inType), inType, {}, {},
-        /*pinned=*/false, typeparams, shape);
+        /*pinned=*/false, typeparams, shape, /*alignment=*/{});
   result.addAttributes(attributes);
 }
 
@@ -467,7 +467,7 @@ void fir::AllocaOp::build(mlir::OpBuilder &builder,
                           mlir::ValueRange shape,
                           llvm::ArrayRef<mlir::NamedAttribute> attributes) {
   build(builder, result, wrapAllocaResultType(inType), inType, {}, {}, pinned,
-        typeparams, shape);
+        typeparams, shape, /*alignment=*/{});
   result.addAttributes(attributes);
 }
 
@@ -492,6 +492,10 @@ llvm::LogicalResult fir::AllocaOp::verify() {
   mlir::Type outType = getType();
   if (!mlir::isa<fir::ReferenceType>(outType))
     return emitOpError("must be a !fir.ref type");
+  if (std::optional<std::int64_t> alignment = getAlignment()) {
+    if (*alignment <= 0 || (*alignment & (*alignment - 1)) != 0)
+      return emitOpError("alignment must be a positive power of two");
+  }
   return mlir::success();
 }
 
