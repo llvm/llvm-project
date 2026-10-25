@@ -453,6 +453,21 @@ void CIRGenFunction::emitStoreThroughLValue(RValue src, LValue dst,
   emitStoreOfScalar(src.getValue(), dst, isInit);
 }
 
+static Address emitDeclTargetVarDeclLValue(CIRGenFunction &cgf, const Expr *e,
+                                           const VarDecl *vd) {
+  std::optional<OMPDeclareTargetDeclAttr::MapTypeTy> res =
+      OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(vd);
+  // MT_Local, and MT_To/MT_Enter without unified memory, use direct access.
+  if (!res || *res == OMPDeclareTargetDeclAttr::MT_Local ||
+      ((*res == OMPDeclareTargetDeclAttr::MT_To ||
+        *res == OMPDeclareTargetDeclAttr::MT_Enter) &&
+       !cgf.cgm.getOpenMPRuntime().hasRequiresUnifiedSharedMemory()))
+    return Address::invalid();
+  cgf.cgm.errorNYI(e->getSourceRange(),
+                   "emitDeclTargetVarDeclLValue: indirect access");
+  return Address::invalid();
+}
+
 static LValue emitGlobalVarDeclLValue(CIRGenFunction &cgf, const Expr *e,
                                       const VarDecl *vd) {
   QualType t = e->getType();
@@ -463,8 +478,11 @@ static LValue emitGlobalVarDeclLValue(CIRGenFunction &cgf, const Expr *e,
 
   // Check if the variable is marked as declare target with link clause in
   // device codegen.
-  if (cgf.getLangOpts().OpenMP)
-    cgf.cgm.errorNYI(e->getSourceRange(), "emitGlobalVarDeclLValue: OpenMP");
+  if (cgf.getLangOpts().OpenMPIsTargetDevice) {
+    Address addr = emitDeclTargetVarDeclLValue(cgf, e, vd);
+    if (addr.isValid())
+      return cgf.makeAddrLValue(addr, t, AlignmentSource::Decl);
+  }
 
   // Traditional LLVM codegen handles thread local separately, CIR handles
   // as part of getAddrOfGlobalVar.
