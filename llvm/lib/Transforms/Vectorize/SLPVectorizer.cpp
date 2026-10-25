@@ -2253,6 +2253,30 @@ public:
   void analyzedBundle(ArrayRef<Value *> VL) {
     AnalyzedBundles.insert(hash_value(VL));
   }
+  /// Returns the scheduling budget left in \p BB.
+  int getScheduleBudget(BasicBlock *BB) const {
+    auto It = BlocksSchedules.find(BB);
+    if (It == BlocksSchedules.end())
+      return Opts.slp_schedule_budget;
+    const BlockScheduling &BS = *It->second;
+    return BS.ScheduleRegionSizeLimit - BS.ScheduleRegionSize;
+  }
+  /// Gives back to \p BB the scheduling budget used since it had \p Saved
+  /// left. A block gets back at most one budget in total, so the budget
+  /// charged to it at most doubles.
+  void giveBackScheduleBudget(BasicBlock *BB, int Saved) {
+    auto It = BlocksSchedules.find(BB);
+    if (It == BlocksSchedules.end())
+      return;
+    BlockScheduling &BS = *It->second;
+    int Used = Saved - (BS.ScheduleRegionSizeLimit - BS.ScheduleRegionSize);
+    int GiveBack =
+        std::min(Used, Opts.slp_schedule_budget - BS.GivenBackBudget);
+    if (GiveBack <= 0)
+      return;
+    BS.GivenBackBudget += GiveBack;
+    BS.ScheduleRegionSizeLimit += GiveBack;
+  }
   /// Clear the list of the analyzed reduction root instructions.
   void clearReductionData() {
     AnalyzedReductionsRoots.clear();
@@ -5363,6 +5387,10 @@ private:
 
     /// The maximum size allowed for the scheduling region.
     int ScheduleRegionSizeLimit;
+
+    /// The scheduling budget given back to the block so far, see
+    /// BoUpSLP::giveBackScheduleBudget().
+    int GivenBackBudget = 0;
 
     /// Operands that are modeled as copyable elements in a previously built
     /// vectorized node and that are used directly by another,
@@ -32922,6 +32950,15 @@ public:
       return nullptr;
     }
 
+    // An ordered reduction is tried in addition to the other seeds of the
+    // block, and its trees can span the whole chain. If it vectorizes nothing,
+    // it gives back the scheduling budget it used in the block of the root, up
+    // to a limit, so the seeds tried after it can still be scheduled.
+    BasicBlock *RootBB = cast<Instruction>(ReductionRoot)->getParent();
+    int SavedBudget = 0;
+    if (RK == ReductionOrdering::Ordered)
+      SavedBudget = V.getScheduleBudget(RootBB);
+
     IRBuilder<TargetFolder> Builder(
         cast<Instruction>(ReductionRoot)->getIterator(), TargetFolder(DL));
     // The scalar parts (scaled reused values, their combines) are emitted right
@@ -33830,8 +33867,10 @@ public:
              "Unexpected negated reduced values in the ordered reduction");
       // Only the root is a dead end, the leaves may still be the roots of the
       // other reductions.
-      if (!VectorizedTree)
+      if (!VectorizedTree) {
         V.analyzedReductionRoot(cast<Instruction>(ReductionRoot));
+        V.giveBackScheduleBudget(RootBB, SavedBudget);
+      }
       return VectorizedTree;
     }
 
