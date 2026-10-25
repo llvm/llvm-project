@@ -3165,9 +3165,17 @@
 // XTENSA: #define __XTENSA__ 1
 // XTENSA: #define __xtensa__ 1
 
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=x86_64-none-none < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefix X86_64_DEFAULT %s
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=x86_64-none-none -fint64-is-long-long < /dev/null \
 // RUN:   | FileCheck -match-full-lines -check-prefix X86_64_INT64_LONG_LONG %s
 
+// X86_64_DEFAULT: #define __INT64_FMTd__ "ld"
+// X86_64_DEFAULT: #define __INT64_FMTi__ "li"
+// X86_64_DEFAULT: #define __UINT64_FMTX__ "lX"
+// X86_64_DEFAULT: #define __UINT64_FMTo__ "lo"
+// X86_64_DEFAULT: #define __UINT64_FMTu__ "lu"
+// X86_64_DEFAULT: #define __UINT64_FMTx__ "lx"
 // X86_64_INT64_LONG_LONG: #define __INT64_FMTd__ "lld"
 // X86_64_INT64_LONG_LONG: #define __INT64_FMTi__ "lli"
 // X86_64_INT64_LONG_LONG: #define __UINT64_FMTX__ "llX"
