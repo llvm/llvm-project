@@ -331,8 +331,7 @@ protected:
 
   class ExprBitfields {
     friend class ASTStmtReader; // deserialization
-    friend class AtomicExpr; // ctor
-    friend class BlockDeclRefExpr; // ctor
+    friend class AtomicExpr;    // ctor
     friend class CallExpr; // ctor
     friend class CXXConstructExpr; // ctor
     friend class CXXDependentScopeMemberExpr; // ctor
