@@ -34,6 +34,7 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/xxhash.h"
@@ -125,6 +126,21 @@ void HeaderSearch::AddSearchPath(const DirectoryLookup &dir, bool isAngled) {
   if (!isAngled)
     AngledDirIdx++;
   SystemDirIdx++;
+}
+
+bool HeaderSearch::AddExternalDirectoryPrefix(StringRef Path) {
+  // Canonicalize the file path while preserving a trailing path separator.
+  bool HasTrailingPathSep = llvm::sys::path::is_separator(Path.back());
+  SmallString<256> RealPath;
+  SmallString<256> NormalizedPath = Path;
+  if (llvm::sys::path::remove_dots(NormalizedPath, /*remove_dot_dot*/ true)) {
+    // Restore the trailing path separator if necessary.
+    if (HasTrailingPathSep &&
+        !llvm::sys::path::is_separator(NormalizedPath.back()))
+      NormalizedPath += llvm::sys::path::get_separator();
+  }
+  ExternalDirectoryPrefixes.insert(NormalizedPath);
+  return true;
 }
 
 std::vector<bool> HeaderSearch::computeUserEntryUsage() const {
@@ -1192,6 +1208,55 @@ OptionalFileEntryRef HeaderSearch::LookupFile(
         HFI.DirInfo = SystemHeaderPrefixes[j-1].second ? SrcMgr::C_System
                                                        : SrcMgr::C_User;
         break;
+      }
+    }
+
+    // If the file is not already recognized as a system header, check if it
+    // was included in angle brackets and whether the file characteristic
+    // should be promoted.
+    if (HFI.DirInfo == SrcMgr::C_User && isAngled &&
+        HSOpts.AngleBracketsImpliesSystemHeader)
+      HFI.DirInfo = SrcMgr::C_System;
+
+    // If the file is not already recognized as a system header, check if it
+    // matches an external directory prefix and override the file characteristic
+    // accordingly.
+    if (HFI.DirInfo == SrcMgr::C_User && !ExternalDirectoryPrefixes.empty()) {
+      // An external directory prefix is not required to match an existing
+      // directory on disk; the final path component may match the start of
+      // multiple file or directory entries. A string comparison is therefore
+      // required to determine if a prefix matches. External directory prefixes
+      // are normalized, so the header file path must be likewise normalized.
+      SmallString<256> NormalizedPath = File->getName();
+      llvm::sys::path::remove_dots(NormalizedPath, /*remove_dot_dot*/ true);
+      for (const auto &ExtDir : ExternalDirectoryPrefixes) {
+        SmallString<256> HeaderPath = NormalizedPath;
+        SmallString<256> ExternalPath = ExtDir.getKey();
+        if (llvm::sys::path::is_absolute(HeaderPath) !=
+            llvm::sys::path::is_absolute(ExternalPath)) {
+          // One of the paths is absolute and the other isn't. Make them both
+          // absolute so that they can be compared. If this fails, then the
+          // paths are not comparable.
+          // Creating absolute paths probes the filesystem which upsets the
+          // sandbox checker. These paths will only be used to check for
+          // syntactic equivalence, so bypass sandbox checking.
+          auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+          if (llvm::sys::fs::make_absolute(HeaderPath))
+            continue;
+          if (llvm::sys::fs::make_absolute(ExternalPath))
+            continue;
+        }
+        // llvm::sys::path::replace_path_prefix() is used to test for a prefix
+        // match since it will handle case insensitivity and alternate path
+        // separator matching. Note that this operation is destructive to
+        // NormalizedPath if the prefix matches.
+        if (llvm::sys::path::replace_path_prefix(HeaderPath, ExternalPath,
+                                                 "")) {
+          // The external directory prefix is a match; override the file
+          // characteristic and break out of the loop.
+          HFI.DirInfo = SrcMgr::C_System;
+          break;
+        }
       }
     }
 

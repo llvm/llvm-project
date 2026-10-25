@@ -1248,14 +1248,14 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 #### Windows Support
 
-- Clang now accepts ``_except`` as an alias for ``__except`` in SEH handler
-  position when ``-fms-compatibility`` is enabled, matching the existing
-  ``_try``, ``_finally``, and ``_leave`` aliases. ``_except`` remains an ordinary
+- Clang now accepts `_except` as an alias for `__except` in SEH handler
+  position when `-fms-compatibility` is enabled, matching the existing
+  `_try`, `_finally`, and `_leave` aliases. `_except` remains an ordinary
   identifier outside that context.
 
-- Fixed ``setjmp`` on 32-bit Arm passing the frame pointer, rather than the
+- Fixed `setjmp` on 32-bit Arm passing the frame pointer, rather than the
   stack pointer as it was on entry to the function, as the frame value the CRT
-  stores in the ``jmp_buf``. Clang now uses ``llvm.sponentry`` there, as it
+  stores in the `jmp_buf`. Clang now uses `llvm.sponentry` there, as it
   already did on AArch64.
 
 - Fixed a bug where Clang did not match the MSVC ABI on Arm64 when an
@@ -1264,8 +1264,51 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   subsequent base; Clang now does the same.
   ([#210174](https://github.com/llvm/llvm-project/issues/210174))
 
-- Fixed ``/hotpatch`` with LTO, where objects were not marked as hotpatchable,
-  so ``/FUNCTIONPADMIN`` didn't pad their functions.
+- Fixed `/hotpatch` with LTO, where objects were not marked as hotpatchable,
+  so `/FUNCTIONPADMIN` didn't pad their functions.
+
+- Clang now matches MSVC behavior regarding the handling of duplicate header
+  search paths when run via the `clang-cl` driver (by default) or with the
+  `-fheader-search=microsoft` option otherwise. Historically, Clang has
+  mimicked GCC behavior in which user search paths are ordered before system
+  search paths, user search paths that duplicate a (later) system search
+  path are ignored, and search paths that duplicate an earlier search path of
+  the same user/system kind are ignored. This ordering is not compatible with
+  the ordering that MSVC uses when paths are duplicated across `/I` options
+  and the `INCLUDE` environment variable.
+
+  The order that MSVC uses and that Clang now replicates when the
+  `-fheader-search=microsoft` option is enabled follows.
+
+  - Paths specified by the `/I` and `/external:I` options are processed in
+    the order that they appear. Paths specified by `/I` that duplicate a path
+    specified by `/external:I` are ignored regardless of the order of the
+    options. Paths specified by `/I` that duplicate a path from a prior `/I`
+    option are ignored. Paths specified by `/external:I` that duplicate a
+    path from a later `/external:I` option are ignored.
+
+  - Paths specified by `/external:env` are processed in the order that they
+    appear. Paths that duplicate a path from a `/I` or `/external:I` option
+    are ignored regardless of the order of the options. Paths that duplicate a
+    path from a prior `/external:env` option or an earlier path from the same
+    `/external:env` option are ignored.
+
+  - Paths specified by the `INCLUDE` environment variable are processed in
+    the order they appear. Paths that duplicate a path from a `/I`,
+    `/external:I`, or `/external:env` option are ignored. Paths that
+    duplicate an earlier path in the `INCLUDE` environment variable are
+    ignored.
+
+  - Paths specified by the `EXTERNAL_INCLUDE` environment variable are
+    processed in the order they appear. Paths that duplicate a path from a
+    `/I`, `/external:I`, or `/external:env` option are ignored. Paths that
+    duplicate a path from the `INCLUDE` environment variable are ignored.
+    Paths that duplicate an earlier path in the `EXTERNAL_INCLUDE`
+    environment variable are ignored.
+
+  The `-fheader-search=gcc` option can be used to opt in to GCC duplicate
+  header search path handling (which remains the default behavior for the GCC
+  compatible drivers).
 
 - The `__interface` tag specifier now implicitly applies `__declspec(novtable)`
   to the declaration, which matches the documented behavior of the keyword. #GH232046
