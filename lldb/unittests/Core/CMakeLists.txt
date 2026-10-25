@@ -32,6 +32,7 @@ add_lldb_unittest(LLDBCoreTests
     lldbPluginObjectFileMachO
     lldbPluginObjectFilePECOFF
     lldbPluginPlatformMacOSX
+    lldbPluginRustLanguage
     lldbPluginSymbolFileSymtab
     lldbSymbol
     lldbUtilityHelpers
