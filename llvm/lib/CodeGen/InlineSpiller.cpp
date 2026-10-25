@@ -1498,6 +1498,11 @@ void HoistSpillHelper::addToMergeableSpills(MachineInstr &Spill, int StackSlot,
 
   SlotIndex Idx = LIS.getInstructionIndex(Spill);
   VNInfo *OrigVNI = Place->second->getVNInfoAt(Idx.getRegSlot());
+  // StackSlotToOrigLI is not updated when foldMemoryOperand extends the
+  // original interval over CopyMI, so a spill there has no original value.
+  // Leave it out of merging and hoisting.
+  if (!OrigVNI)
+    return;
   std::pair<int, VNInfo *> MIdx = std::make_pair(StackSlot, OrigVNI);
   MergeableSpills[MIdx].insert(&Spill);
 }
