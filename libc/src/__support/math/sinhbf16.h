@@ -81,7 +81,7 @@ LIBC_INLINE bfloat16 sinhbf16(bfloat16 x) {
 #endif // !LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
 
     fputil::set_errno_if_required(ERANGE);
-    fputil::raise_except_if_required(FE_OVERFLOW);
+    fputil::raise_overflow_except_if_required<float>();
 
     uint16_t inf_bits = (x_u & 0x8000) | 0x7f80;
     return fputil::FPBits<bfloat16>(inf_bits).get_val();
