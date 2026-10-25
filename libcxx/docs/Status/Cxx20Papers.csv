@@ -3,7 +3,7 @@
 "`P0674R1 <https://wg21.link/P0674R1>`__","Extending make_shared to Support Arrays","2017-07 (Toronto)","|Complete|","15","`#104000 <https://github.com/llvm/llvm-project/issues/104000>`__",""
 "","","","","","",""
 "`P0020R6 <https://wg21.link/P0020R6>`__","Floating Point Atomic","2017-11 (Albuquerque)","|Complete|","18","`#104001 <https://github.com/llvm/llvm-project/issues/104001>`__","The feature-test macro was not set until LLVM 20."
-"`P0053R7 <https://wg21.link/P0053R7>`__","C++ Synchronized Buffered Ostream","2017-11 (Albuquerque)","|Complete|","18","`#104002 <https://github.com/llvm/llvm-project/issues/104002>`__",""
+"`P0053R7 <https://wg21.link/P0053R7>`__","C++ Synchronized Buffered Ostream","2017-11 (Albuquerque)","|Experimental|","18","`#104002 <https://github.com/llvm/llvm-project/issues/104002>`__",""
 "`P0202R3 <https://wg21.link/P0202R3>`__","Add constexpr modifiers to functions in <algorithm> and <utility> Headers","2017-11 (Albuquerque)","|Complete|","12","`#104003 <https://github.com/llvm/llvm-project/issues/104003>`__",""
 "`P0415R1 <https://wg21.link/P0415R1>`__","Constexpr for ``std::complex``\ ","2017-11 (Albuquerque)","|Complete|","16","`#104004 <https://github.com/llvm/llvm-project/issues/104004>`__",""
 "`P0439R0 <https://wg21.link/P0439R0>`__","Make ``std::memory_order``\  a scoped enumeration","2017-11 (Albuquerque)","|Complete|","","`#104005 <https://github.com/llvm/llvm-project/issues/104005>`__",""
