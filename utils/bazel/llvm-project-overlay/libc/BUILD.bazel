@@ -11399,10 +11399,13 @@ libc_support_library(
         ":__support_fputil_cast",
         ":__support_fputil_fenv_impl",
         ":__support_fputil_fp_bits",
+        ":__support_fputil_rounding_mode",
         ":__support_macros_attributes",
         ":__support_macros_config",
         ":__support_macros_optimization",
         ":__support_math_sinhcoshbf16_utils",
+        ":hdr_errno_macros",
+        ":hdr_fenv_macros",
     ],
 )
 

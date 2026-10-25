@@ -14,14 +14,17 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_SINHBF16_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_SINHBF16_H
 
-#include "sinhcoshbf16_utils.h"
+#include "hdr/errno_macros.h"
+#include "hdr/fenv_macros.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/bfloat16.h"
 #include "src/__support/FPUtil/cast.h"
+#include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
+#include "src/__support/math/sinhcoshbf16_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
