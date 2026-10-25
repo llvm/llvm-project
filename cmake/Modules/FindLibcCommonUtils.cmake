@@ -6,8 +6,36 @@
 #
 #===--------------------------------------------------------------------===//
 
+set(libc_path ${CMAKE_CURRENT_LIST_DIR}/../../libc)
+
+if(CMAKE_SCRIPT_MODE_FILE)
+  if(NOT DEST OR NOT MANIFEST)
+    message(FATAL_ERROR "set DEST and MANIFEST")
+  endif()
+  if(NOT LIBC_ROOT)
+    set(LIBC_ROOT ${libc_path})
+  endif()
+
+  file(STRINGS "${MANIFEST}" _lines)
+  set(_count 0)
+  foreach(_rel IN LISTS _lines)
+    string(STRIP "${_rel}" _rel)
+    if(_rel STREQUAL "" OR _rel MATCHES "^#")
+      continue()
+    endif()
+    if(NOT EXISTS "${LIBC_ROOT}/${_rel}")
+      message(FATAL_ERROR "manifest lists a missing file: ${LIBC_ROOT}/${_rel}")
+    endif()
+    get_filename_component(_dstdir "${DEST}/${_rel}" DIRECTORY)
+    file(MAKE_DIRECTORY "${_dstdir}")
+    configure_file("${LIBC_ROOT}/${_rel}" "${DEST}/${_rel}" COPYONLY)
+    math(EXPR _count "${_count} + 1")
+  endforeach()
+  message(STATUS "exported ${_count} libc headers into ${DEST}")
+  return()
+endif()
+
 if(NOT TARGET llvm-libc-common-utilities)
-  set(libc_path ${CMAKE_CURRENT_LIST_DIR}/../../libc)
   if (EXISTS ${libc_path} AND IS_DIRECTORY ${libc_path})
     add_library(llvm-libc-common-utilities INTERFACE)
     # TODO: Reorganize the libc shared section so that it can be included without
