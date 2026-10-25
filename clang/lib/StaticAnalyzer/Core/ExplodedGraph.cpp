@@ -160,6 +160,7 @@ void ExplodedGraph::collectNode(ExplodedNode *node) {
   FreeNodes.push_back(node);
   Nodes.erase(node);
   --NumNodes;
+  ++NumReclaimedNodes;
   node->~ExplodedNode();
 }
 

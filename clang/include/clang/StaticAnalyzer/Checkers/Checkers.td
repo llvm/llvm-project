@@ -240,6 +240,9 @@ def UnsequencedAccessChecker : Checker<"UnsequencedAccess">,
                   Released>]>,
    Documentation<NotDocumented>;
 
+def StatsChecker : Checker<"Stats">,
+   Documentation<NotDocumented>;
+
 } // end "core"
 
 let ParentPackage = CoreAlpha in {
