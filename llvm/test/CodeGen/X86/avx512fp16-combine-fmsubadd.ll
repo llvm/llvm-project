@@ -11,15 +11,10 @@ define <8 x half> @test_128(<8 x half> %a, <8 x half> %b) {
 ;
 ; NOVL-LABEL: test_128:
 ; NOVL:       # %bb.0:
+; NOVL-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
 ; NOVL-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NOVL-NEXT:    vpshuflw {{.*#+}} xmm2 = xmm1[0,0,2,2,4,5,6,7]
-; NOVL-NEXT:    vpshufhw {{.*#+}} xmm2 = xmm2[0,1,2,3,4,4,6,6]
-; NOVL-NEXT:    vprold $16, %zmm0, %zmm3
-; NOVL-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm1[1,1,3,3,4,5,6,7]
-; NOVL-NEXT:    vpshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,5,5,7,7]
-; NOVL-NEXT:    vmulph %zmm1, %zmm3, %zmm1
-; NOVL-NEXT:    vfmsubadd213ph %zmm1, %zmm2, %zmm0
-; NOVL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; NOVL-NEXT:    vfcmulcph %zmm1, %zmm0, %zmm2
+; NOVL-NEXT:    vmovaps %xmm2, %xmm0
 ; NOVL-NEXT:    vzeroupper
 ; NOVL-NEXT:    retq
   %dup_even_b = shufflevector <8 x half> %b, <8 x half> poison, <8 x i32> <i32 0, i32 0, i32 2, i32 2, i32 4, i32 4, i32 6, i32 6>
@@ -42,15 +37,10 @@ define <16 x half> @test_256(<16 x half> %a, <16 x half> %b) {
 ;
 ; NOVL-LABEL: test_256:
 ; NOVL:       # %bb.0:
+; NOVL-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
 ; NOVL-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NOVL-NEXT:    vpshuflw {{.*#+}} ymm2 = ymm1[0,0,2,2,4,5,6,7,8,8,10,10,12,13,14,15]
-; NOVL-NEXT:    vpshufhw {{.*#+}} ymm2 = ymm2[0,1,2,3,4,4,6,6,8,9,10,11,12,12,14,14]
-; NOVL-NEXT:    vprold $16, %zmm0, %zmm3
-; NOVL-NEXT:    vpshuflw {{.*#+}} ymm1 = ymm1[1,1,3,3,4,5,6,7,9,9,11,11,12,13,14,15]
-; NOVL-NEXT:    vpshufhw {{.*#+}} ymm1 = ymm1[0,1,2,3,5,5,7,7,8,9,10,11,13,13,15,15]
-; NOVL-NEXT:    vmulph %zmm3, %zmm1, %zmm1
-; NOVL-NEXT:    vfmsubadd213ph %zmm1, %zmm2, %zmm0
-; NOVL-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; NOVL-NEXT:    vfcmulcph %zmm1, %zmm0, %zmm2
+; NOVL-NEXT:    vmovaps %ymm2, %ymm0
 ; NOVL-NEXT:    retq
   %dup_even_b = shufflevector <16 x half> %b, <16 x half> poison, <16 x i32> <i32 0, i32 0, i32 2, i32 2, i32 4, i32 4, i32 6, i32 6, i32 8, i32 8, i32 10, i32 10, i32 12, i32 12, i32 14, i32 14>
   %mul_re = fmul contract <16 x half> %dup_even_b, %a
@@ -89,15 +79,10 @@ define <8 x half> @test_mulc_128(<8 x half> %a, <8 x half> %b) {
 ;
 ; NOVL-LABEL: test_mulc_128:
 ; NOVL:       # %bb.0:
+; NOVL-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
 ; NOVL-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NOVL-NEXT:    vpshuflw {{.*#+}} xmm2 = xmm1[0,0,2,2,4,5,6,7]
-; NOVL-NEXT:    vpshufhw {{.*#+}} xmm2 = xmm2[0,1,2,3,4,4,6,6]
-; NOVL-NEXT:    vprold $16, %zmm0, %zmm3
-; NOVL-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm1[1,1,3,3,4,5,6,7]
-; NOVL-NEXT:    vpshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,5,5,7,7]
-; NOVL-NEXT:    vmulph %zmm1, %zmm3, %zmm1
-; NOVL-NEXT:    vfmaddsub213ph %zmm1, %zmm2, %zmm0
-; NOVL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; NOVL-NEXT:    vfmulcph %zmm1, %zmm0, %zmm2
+; NOVL-NEXT:    vmovaps %xmm2, %xmm0
 ; NOVL-NEXT:    vzeroupper
 ; NOVL-NEXT:    retq
   %dup_even_b = shufflevector <8 x half> %b, <8 x half> poison, <8 x i32> <i32 0, i32 0, i32 2, i32 2, i32 4, i32 4, i32 6, i32 6>
@@ -120,15 +105,10 @@ define <16 x half> @test_mulc_256(<16 x half> %a, <16 x half> %b) {
 ;
 ; NOVL-LABEL: test_mulc_256:
 ; NOVL:       # %bb.0:
+; NOVL-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
 ; NOVL-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; NOVL-NEXT:    vpshuflw {{.*#+}} ymm2 = ymm1[0,0,2,2,4,5,6,7,8,8,10,10,12,13,14,15]
-; NOVL-NEXT:    vpshufhw {{.*#+}} ymm2 = ymm2[0,1,2,3,4,4,6,6,8,9,10,11,12,12,14,14]
-; NOVL-NEXT:    vprold $16, %zmm0, %zmm3
-; NOVL-NEXT:    vpshuflw {{.*#+}} ymm1 = ymm1[1,1,3,3,4,5,6,7,9,9,11,11,12,13,14,15]
-; NOVL-NEXT:    vpshufhw {{.*#+}} ymm1 = ymm1[0,1,2,3,5,5,7,7,8,9,10,11,13,13,15,15]
-; NOVL-NEXT:    vmulph %zmm3, %zmm1, %zmm1
-; NOVL-NEXT:    vfmaddsub213ph %zmm1, %zmm2, %zmm0
-; NOVL-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; NOVL-NEXT:    vfmulcph %zmm1, %zmm0, %zmm2
+; NOVL-NEXT:    vmovaps %ymm2, %ymm0
 ; NOVL-NEXT:    retq
   %dup_even_b = shufflevector <16 x half> %b, <16 x half> poison, <16 x i32> <i32 0, i32 0, i32 2, i32 2, i32 4, i32 4, i32 6, i32 6, i32 8, i32 8, i32 10, i32 10, i32 12, i32 12, i32 14, i32 14>
   %mul_re = fmul contract <16 x half> %dup_even_b, %a
@@ -225,6 +205,35 @@ define <8 x half> @test_mulc_no_contract_op2_128(<8 x half> %a, <8 x half> %b) {
   %swap_a = shufflevector <8 x half> %a, <8 x half> poison, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
   %dup_odd_b = shufflevector <8 x half> %b, <8 x half> poison, <8 x i32> <i32 1, i32 1, i32 3, i32 3, i32 5, i32 5, i32 7, i32 7>
   %mul_im = fmul <8 x half> %swap_a, %dup_odd_b
+  %add = fadd contract <8 x half> %mul_re, %mul_im
+  %sub = fsub contract <8 x half> %mul_re, %mul_im
+  %cmul = shufflevector <8 x half> %sub, <8 x half> %add, <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 15>
+  ret <8 x half> %cmul
+}
+
+define <8 x half> @test_mulc_bcst_128(<8 x half> %a, ptr %p) {
+; VL-LABEL: test_mulc_bcst_128:
+; VL:       # %bb.0:
+; VL-NEXT:    vfmulcph (%rdi){1to4}, %xmm0, %xmm1
+; VL-NEXT:    vmovaps %xmm1, %xmm0
+; VL-NEXT:    retq
+;
+; NOVL-LABEL: test_mulc_bcst_128:
+; NOVL:       # %bb.0:
+; NOVL-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; NOVL-NEXT:    vfmulcph (%rdi){1to16}, %zmm0, %zmm1
+; NOVL-NEXT:    vmovaps %xmm1, %xmm0
+; NOVL-NEXT:    vzeroupper
+; NOVL-NEXT:    retq
+  %f = load float, ptr %p
+  %i = insertelement <4 x float> poison, float %f, i64 0
+  %s = shufflevector <4 x float> %i, <4 x float> poison, <4 x i32> zeroinitializer
+  %b = bitcast <4 x float> %s to <8 x half>
+  %dup_even_b = shufflevector <8 x half> %b, <8 x half> poison, <8 x i32> <i32 0, i32 0, i32 2, i32 2, i32 4, i32 4, i32 6, i32 6>
+  %mul_re = fmul contract <8 x half> %a, %dup_even_b
+  %swap_a = shufflevector <8 x half> %a, <8 x half> poison, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
+  %dup_odd_b = shufflevector <8 x half> %b, <8 x half> poison, <8 x i32> <i32 1, i32 1, i32 3, i32 3, i32 5, i32 5, i32 7, i32 7>
+  %mul_im = fmul contract <8 x half> %swap_a, %dup_odd_b
   %add = fadd contract <8 x half> %mul_re, %mul_im
   %sub = fsub contract <8 x half> %mul_re, %mul_im
   %cmul = shufflevector <8 x half> %sub, <8 x half> %add, <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 15>

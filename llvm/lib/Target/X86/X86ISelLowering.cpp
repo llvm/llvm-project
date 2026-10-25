@@ -58699,8 +58699,7 @@ static SDValue combineFMADDSUB(SDNode *N, SelectionDAG &DAG,
   unsigned Opc = N->getOpcode();
   if ((Opc == X86ISD::FMADDSUB || Opc == X86ISD::FMSUBADD) &&
       Subtarget.hasFP16() && N->hasOneUse() &&
-      (VT == MVT::v32f16 ||
-       (Subtarget.hasVLX() && (VT == MVT::v8f16 || VT == MVT::v16f16)))) {
+      (VT == MVT::v8f16 || VT == MVT::v16f16 || VT == MVT::v32f16)) {
     SDValue A, B;
     if (isCFMulFromFMAddSub(SDValue(N, 0), DAG, A, B)) {
       MVT CVT = MVT::getVectorVT(MVT::f32, VT.getVectorNumElements() / 2);

@@ -13835,6 +13835,39 @@ let Uses = [MXCSR] in {
                                          x86vfcmulc, x86vfcmulcRnd, 0>, T_MAP6, XD, EVEX_CD8<32, CD8VF>;
 }
 
+multiclass avx512_cfmaop_lowering<string InstrStr, SDNode OpNode> {
+  let Predicates = [HasFP16, NoVLX] in
+  foreach info = [v4f32x_info, v8f32x_info] in {
+    def : Pat<(info.VT (OpNode info.RC:$src2, info.RC:$src3, info.RC:$src1)),
+              (EXTRACT_SUBREG
+                (!cast<Instruction>(InstrStr # "Zr")
+                  (INSERT_SUBREG (v16f32 (IMPLICIT_DEF)), info.RC:$src1,
+                                 info.SubRegIdx),
+                  (INSERT_SUBREG (v16f32 (IMPLICIT_DEF)), info.RC:$src2,
+                                 info.SubRegIdx),
+                  (INSERT_SUBREG (v16f32 (IMPLICIT_DEF)), info.RC:$src3,
+                                 info.SubRegIdx)),
+                info.SubRegIdx)>;
+
+    def : Pat<(info.VT (OpNode info.RC:$src2,
+                               (info.VT (info.BroadcastLdFrag addr:$src3)),
+                               info.RC:$src1)),
+              (EXTRACT_SUBREG
+                (!cast<Instruction>(InstrStr # "Zmb")
+                  (INSERT_SUBREG (v16f32 (IMPLICIT_DEF)), info.RC:$src1,
+                                 info.SubRegIdx),
+                  (INSERT_SUBREG (v16f32 (IMPLICIT_DEF)), info.RC:$src2,
+                                 info.SubRegIdx),
+                  addr:$src3),
+                info.SubRegIdx)>;
+  }
+}
+
+defm : avx512_cfmaop_lowering<"VFMADDCPH", x86vfmaddc>;
+defm : avx512_cfmaop_lowering<"VFCMADDCPH", x86vfcmaddc>;
+defm : avx512_binary_lowering<"VFMULCPH", x86vfmulc, X86VBroadcastld32, avx512vl_f32_info, HasFP16>;
+defm : avx512_binary_lowering<"VFCMULCPH", x86vfcmulc, X86VBroadcastld32, avx512vl_f32_info, HasFP16>;
+
 
 multiclass avx512_cfmaop_sh_common<bits<8> opc, string OpcodeStr, SDNode OpNode, SDNode OpNodeRnd,
                                    bit IsCommutable> {
