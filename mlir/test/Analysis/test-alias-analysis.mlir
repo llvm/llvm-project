@@ -265,6 +265,30 @@ func.func @view_like_offset() {
 
 // -----
 
+// GEPs keep MustAlias with their base only when all indices are zero.
+
+// CHECK-LABEL: Testing : "gep_offset"
+// CHECK-DAG: alloca_1#0 <-> alloca_2#0: NoAlias
+// CHECK-DAG: alloca_1#0 <-> gep_zero#0: MustAlias
+// CHECK-DAG: alloca_1#0 <-> gep_one#0: MayAlias
+// CHECK-DAG: alloca_1#0 <-> gep_dyn#0: MayAlias
+// CHECK-DAG: alloca_1#0 <-> gep_other#0: NoAlias
+// CHECK-DAG: gep_zero#0 <-> gep_one#0: MayAlias
+// CHECK-DAG: gep_one#0 <-> gep_dyn#0: MayAlias
+// CHECK-DAG: gep_one#0 <-> gep_other#0: NoAlias
+func.func @gep_offset(%idx: i64) {
+  %c1 = llvm.mlir.constant(1 : i32) : i32
+  %0 = llvm.alloca %c1 x !llvm.array<4 x i32> {test.ptr = "alloca_1"} : (i32) -> !llvm.ptr
+  %1 = llvm.alloca %c1 x !llvm.array<4 x i32> {test.ptr = "alloca_2"} : (i32) -> !llvm.ptr
+  %2 = llvm.getelementptr %0[0, 0] {test.ptr = "gep_zero"} : (!llvm.ptr) -> !llvm.ptr, !llvm.array<4 x i32>
+  %3 = llvm.getelementptr %0[0, 1] {test.ptr = "gep_one"} : (!llvm.ptr) -> !llvm.ptr, !llvm.array<4 x i32>
+  %4 = llvm.getelementptr %0[%idx] {test.ptr = "gep_dyn"} : (!llvm.ptr, i64) -> !llvm.ptr, i32
+  %5 = llvm.getelementptr %1[0, 1] {test.ptr = "gep_other"} : (!llvm.ptr) -> !llvm.ptr, !llvm.array<4 x i32>
+  return
+}
+
+// -----
+
 // CHECK-LABEL: Testing : "constants"
 // CHECK-DAG: alloc_1#0 <-> constant_1#0: NoAlias
 // CHECK-DAG: alloc_1#0 <-> constant_2#0: NoAlias

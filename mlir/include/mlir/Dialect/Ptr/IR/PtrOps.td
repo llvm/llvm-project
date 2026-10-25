@@ -410,6 +410,9 @@ def Ptr_PtrAddOp : Pointer_Op<"ptr_add", [
     /// `ViewLikeOp::getViewSource` method.
     Value getViewSource() { return getBase(); }
 
+    /// `ViewLikeOp::mayHaveNonZeroOffset` method.
+    bool mayHaveNonZeroOffset();
+
     /// Returns the ptr type of the operation.
     ptr::PtrType getPtrType();
   }];

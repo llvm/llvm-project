@@ -47,7 +47,7 @@ def ViewLikeOpInterface : OpInterface<"ViewLikeOpInterface"> {
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return false;
+        return true;
       }]
     >
   ];
