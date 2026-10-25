@@ -640,7 +640,6 @@ define i32 @select_not_invert_pred_cond(i8 %x, i32 %t, i32 %f) {
 ; CHECK-LABEL: @select_not_invert_pred_cond(
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ugt i8 [[X:%.*]], 42
 ; CHECK-NEXT:    [[INVCOND:%.*]] = icmp ule i8 [[X]], 42
-; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[INVCOND]], true
 ; CHECK-NEXT:    [[M1:%.*]] = select i1 [[COND]], i32 [[T:%.*]], i32 [[F:%.*]]
 ; CHECK-NEXT:    ret i32 0
 ;
@@ -1184,3 +1183,131 @@ declare <3 x i16> @llvm.umul.fix.sat.v3i16(<3 x i16>, <3 x i16>, i32)
 
 declare float @llvm.fma.f32(float, float, float)
 declare <2 x double> @llvm.fmuladd.v2f64(<2 x double>, <2 x double>, <2 x double>)
+
+define i1 @not_of_inverse_cmp(i8 %a, i8 %b) {
+; CHECK-LABEL: @not_of_inverse_cmp(
+; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp ne i8 [[ADJUSTED]], 0
+; CHECK-NEXT:    call void @use1(i1 [[NOT_NULL]])
+; CHECK-NEXT:    [[EQ:%.*]] = icmp eq i8 [[ADJUSTED]], 0
+; CHECK-NEXT:    ret i1 [[NOT_NULL]]
+;
+  %adjusted = add i8 %a, %b
+  %not_null = icmp ne i8 %adjusted, 0
+  call void @use1(i1 %not_null)
+  %eq = icmp eq i8 %adjusted, 0
+  %not = xor i1 %eq, true
+  ret i1 %not
+}
+
+define i1 @not_of_inverse_cmp_swapped_operands(i8 %a, i8 %b) {
+; CHECK-LABEL: @not_of_inverse_cmp_swapped_operands(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    call void @use1(i1 [[CMP]])
+; CHECK-NEXT:    [[EQ:%.*]] = icmp eq i8 [[A]], [[B]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %cmp = icmp ne i8 %b, %a
+  call void @use1(i1 %cmp)
+  %eq = icmp eq i8 %a, %b
+  %not = xor i1 %eq, true
+  ret i1 %not
+}
+
+define i1 @not_of_inverse_cmp_samesign(i8 %a, i8 %b) {
+; CHECK-LABEL: @not_of_inverse_cmp_samesign(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ne i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    call void @use1(i1 [[CMP]])
+; CHECK-NEXT:    [[EQ:%.*]] = icmp samesign eq i8 [[A]], [[B]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %cmp = icmp samesign ne i8 %a, %b
+  call void @use1(i1 %cmp)
+  %eq = icmp samesign eq i8 %a, %b
+  %not = xor i1 %eq, true
+  ret i1 %not
+}
+
+; Negative test: the available comparison is more poisonous (samesign), so it
+; must not be reused.
+define i1 @not_of_inverse_cmp_samesign_negative(i8 %a, i8 %b) {
+; CHECK-LABEL: @not_of_inverse_cmp_samesign_negative(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ne i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    call void @use1(i1 [[CMP]])
+; CHECK-NEXT:    [[EQ:%.*]] = icmp eq i8 [[A]], [[B]]
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[EQ]], true
+; CHECK-NEXT:    ret i1 [[NOT]]
+;
+  %cmp = icmp samesign ne i8 %a, %b
+  call void @use1(i1 %cmp)
+  %eq = icmp eq i8 %a, %b
+  %not = xor i1 %eq, true
+  ret i1 %not
+}
+
+define i1 @not_of_inverse_cmp_ptr(ptr %p) {
+; CHECK-LABEL: @not_of_inverse_cmp_ptr(
+; CHECK-NEXT:    [[AVAILABLE:%.*]] = icmp eq ptr [[P:%.*]], null
+; CHECK-NEXT:    call void @use1(i1 [[AVAILABLE]])
+; CHECK-NEXT:    [[OPPOSITE:%.*]] = icmp ne ptr [[P]], null
+; CHECK-NEXT:    ret i1 [[AVAILABLE]]
+;
+  %available = icmp eq ptr %p, null
+  call void @use1(i1 %available)
+  %opposite = icmp ne ptr %p, null
+  %not = xor i1 %opposite, true
+  ret i1 %not
+}
+declare void @use1(i1)
+declare void @use_v2i1(<2 x i1>)
+
+define <2 x i1> @not_of_inverse_cmp_vec(<2 x i8> %a, <2 x i8> %b) {
+; CHECK-LABEL: @not_of_inverse_cmp_vec(
+; CHECK-NEXT:    [[NOT:%.*]] = icmp ne <2 x i8> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    call void @use_v2i1(<2 x i1> [[NOT]])
+; CHECK-NEXT:    [[EQ:%.*]] = icmp eq <2 x i8> [[A]], [[B]]
+; CHECK-NEXT:    ret <2 x i1> [[NOT]]
+;
+  %cmp = icmp ne <2 x i8> %a, %b
+  call void @use_v2i1(<2 x i1> %cmp)
+  %eq = icmp eq <2 x i8> %a, %b
+  %not = xor <2 x i1> %eq, <i1 true, i1 true>
+  ret <2 x i1> %not
+}
+
+define i1 @not_of_inverse_cmp_dom_block(i8 %a, i8 %b, i1 %c) {
+; CHECK-LABEL: @not_of_inverse_cmp_dom_block(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[USE:%.*]], label [[EXIT:%.*]]
+; CHECK:       use:
+; CHECK-NEXT:    [[EQ:%.*]] = icmp eq i8 [[A]], [[B]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %cmp = icmp ne i8 %a, %b
+  br i1 %c, label %use, label %exit
+use:
+  %eq = icmp eq i8 %a, %b
+  %not = xor i1 %eq, true
+  ret i1 %not
+exit:
+  ret i1 %cmp
+}
+
+; The inverse comparison may be available as a constant: it can be implied by
+; a dominating assume, in which case the not can be replaced with the constant.
+define i1 @not_of_inverse_cmp_implied_by_assume(i8 %a, i8 %b) {
+; CHECK-LABEL: @not_of_inverse_cmp_implied_by_assume(
+; CHECK-NEXT:    [[NE:%.*]] = icmp ne i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NE]])
+; CHECK-NEXT:    ret i1 true
+;
+  %ne = icmp ne i8 %a, %b
+  call void @llvm.assume(i1 %ne)
+  %eq = icmp eq i8 %a, %b
+  %not = xor i1 %eq, true
+  ret i1 %not
+}
+
+declare void @llvm.assume(i1)
