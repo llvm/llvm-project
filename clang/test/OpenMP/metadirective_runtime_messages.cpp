@@ -60,3 +60,13 @@ void local_decl(int flag) {
     l.v = 1;
   }
 }
+
+// Standalone directive variants are rejected for now.
+void standalone_variant(int flag) {
+  // expected-error@+1 {{standalone directive variants are not supported in a 'metadirective' with non-constant user conditions}}
+#pragma omp metadirective \
+  when(user={condition(flag)}: barrier) \
+  otherwise(single)
+  {
+  }
+}

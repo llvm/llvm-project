@@ -2717,11 +2717,15 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
 
     // Check if we have user conditions with non-constant expressions that
     // require runtime selection.
-    bool HasUserCondition = llvm::any_of(VMIs, [](const VariantMatchInfo &VMI) {
-      return VMI.HasNonConstantUserCondition;
-    });
+    bool HasNonConstUserCondition =
+        llvm::any_of(TraitInfos, [&](OMPTraitInfo *TI) {
+          return TI->anyScoreOrCondition([&](Expr *&E, bool IsScore) {
+            return !IsScore && E && !E->getIntegerConstantExpr(ASTContext);
+          });
+        });
 
-    if (HasUserCondition && getLangOpts().OpenMPMetadirectiveRuntimeSelection) {
+    if (HasNonConstUserCondition &&
+        getLangOpts().OpenMPMetadirectiveRuntimeSelection) {
       // OpenMP 5.2, 7.4: without an 'otherwise' clause the effect is as if one
       // was specified without an associated directive variant. Only
       // 'otherwise' (or the deprecated 'default') has no context selectors.
@@ -2771,6 +2775,13 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
         if (!Variant.isInvalid() && !Variant.isUsable()) {
           ParsingOpenMPDirectiveRAII NormalScope(*this, /*Value=*/false);
           Variant = ParseStatement();
+        }
+        // A standalone variant does not take the associated statement while
+        // the others do; reject the mix until Sema models it.
+        if (auto *D = dyn_cast_or_null<OMPExecutableDirective>(Variant.get());
+            D && !D->hasAssociatedStmt()) {
+          Diag(Loc, diag::err_omp_metadirective_standalone_variant);
+          Variant = StmtError();
         }
 
         if (VariantTPA) {
