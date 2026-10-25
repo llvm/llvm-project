@@ -6493,7 +6493,8 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
 
           CGM.getDiags().Report(Loc, diag::warn_cgs_no_proto) << CST << TypeStr;
         }
-        CGM.createCalleeTypeMetadataForIcall(CST, *callOrInvoke);
+        CGM.createCalleeTypeMetadataForIcall(CST, *callOrInvoke,
+                                             CallInfo.isInstanceMethod());
       }
     }
   }
