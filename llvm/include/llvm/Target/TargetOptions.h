@@ -310,9 +310,6 @@ public:
   VectorLibrary VecLib = VectorLibrary::NoLibrary;
 
 public:
-  /// What exception model to use
-  ExceptionHandling ExceptionModel = ExceptionHandling::Default;
-
   /// Machine level options.
   MCTargetOptions MCOptions;
 

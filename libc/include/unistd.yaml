@@ -598,11 +598,27 @@ functions:
     arguments:
       - type: gid_t
       - type: gid_t
+  - name: setresgid
+    standards:
+      - linux
+    return_type: int
+    arguments:
+      - type: gid_t
+      - type: gid_t
+      - type: gid_t
   - name: setreuid
     standards:
       - posix
     return_type: int
     arguments:
+      - type: uid_t
+      - type: uid_t
+  - name: setresuid
+    standards:
+      - linux
+    return_type: int
+    arguments:
+      - type: uid_t
       - type: uid_t
       - type: uid_t
   - name: setsid

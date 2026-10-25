@@ -2731,10 +2731,7 @@ PreservedAnalyses ReassociatePass::run(Function &F,
 
 PreservedAnalyses ReassociatePass::runImpl(Function &F, UniformityInfo &UI) {
   UA = &UI;
-  UseCSELocal = F.getContext()
-                    .getLibraryOptions()
-                    .get<ScalarOptions>()
-                    .reassociate_use_cse_local;
+  UseCSELocal = getScalarOptions(F).reassociate_use_cse_local;
 
   // Get the functions basic blocks in Reverse Post Order. This order is used by
   // BuildRankMap to pre calculate ranks correctly. It also excludes dead basic
