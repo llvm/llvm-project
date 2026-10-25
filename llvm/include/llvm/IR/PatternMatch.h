@@ -1243,8 +1243,8 @@ template <typename Op_t> struct FNeg_match {
   Op_t X;
   bool AllowFSubNegZero;
 
-  FNeg_match(const Op_t &Op, bool AllowFSubNegZero = false) : X(Op), 
-  AllowFSubNegZero(AllowFSubNegZero) {}
+  FNeg_match(const Op_t &Op, bool AllowFSubNegZero = false)
+      : X(Op), AllowFSubNegZero(AllowFSubNegZero) {}
   template <typename OpTy> bool match(OpTy *V) const {
     auto *FPMO = dyn_cast<FPMathOperator>(V);
     if (!FPMO)
@@ -1277,7 +1277,8 @@ template <typename OpTy> inline FNeg_match<OpTy> m_FNeg(const OpTy &X) {
 }
 
 /// Match fneg X or fsub -0.0, X
-template <typename OpTy> inline FNeg_match<OpTy> m_FNegOrFSubNegZero(const OpTy &X) {
+template <typename OpTy> 
+inline FNeg_match<OpTy> m_FNegOrFSubNegZero(const OpTy &X) {
   return FNeg_match<OpTy>(X, true);
 }
 

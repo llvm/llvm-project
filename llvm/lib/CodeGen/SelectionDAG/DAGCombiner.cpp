@@ -14391,7 +14391,7 @@ SDValue DAGCombiner::foldPartialReduceMLAMulOp(SDNode *N) {
   // After instcombine, negation for FP operations is on the RHS, so implement:
   //   fmul(fpext(a), fneg(fpext(b)))
   //-> fmul(fpext(a), fpext(fneg(b)))
-  if (sd_match(RHS, m_FNeg(m_Value(Tmp)))) {
+  if (sd_match(RHS, m_FNegOrFSubNegZero(m_Value(Tmp)))) {
     RHS = Tmp;
     IsMLS = true;
   }
@@ -14546,7 +14546,7 @@ SDValue DAGCombiner::foldPartialReduceAdd(SDNode *N) {
 
   // Handle negation (sub-reduction).
   bool IsMLS = false;
-  if (sd_match(Op1, m_AnyOf(m_Neg(m_Value(Tmp)), m_FNeg(m_Value(Tmp))))) {
+  if (sd_match(Op1, m_AnyOf(m_Neg(m_Value(Tmp)), m_FNegOrFSubNegZero(m_Value(Tmp))))) {
     Op1 = Tmp;
     Op1Opcode = Op1.getOpcode();
     IsMLS = true;

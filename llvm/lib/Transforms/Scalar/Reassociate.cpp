@@ -257,7 +257,7 @@ unsigned ReassociatePass::getRank(Value *V) {
       // If this is a 'not' or 'neg' instruction, do not count it for rank.
       // This assures us that X and ~X will have the same rank.
       if (!match(I, m_Not(m_Value())) && !match(I, m_Neg(m_Value())) &&
-          !match(I, m_FNeg(m_Value())))
+          !match(I, m_FNegOrFSubNegZero(m_Value())))
         ++Rank;
 
       LLVM_DEBUG(dbgs() << "Calculated Rank[" << I->getName() << "] = " << Rank
@@ -551,8 +551,9 @@ static bool LinearizeExprTree(Instruction *I,
       // further.
       Instruction *Neg;
       if (((Opcode == Instruction::Mul && match(Op, m_Neg(m_Value()))) ||
-           (Opcode == Instruction::FMul && match(Op, m_FNeg(m_Value())))) &&
-           match(Op, m_Instruction(Neg))) {
+           (Opcode == Instruction::FMul && 
+            match(Op, m_FNegOrFSubNegZero(m_Value())))) && 
+            match(Op, m_Instruction(Neg))) {
         LLVM_DEBUG(dbgs()
                    << "MORPH LEAF: " << *Op << " (" << Weight << ") TO ");
         Instruction *Mul = LowerNegateToMultiply(Neg);
@@ -859,7 +860,7 @@ static Value *NegateValue(Value *V, Instruction *BI,
   // Okay, we need to materialize a negated version of V with an instruction.
   // Scan the use lists of V to see if we have one already.
   for (User *U : V->users()) {
-    if (!match(U, m_Neg(m_Value())) && !match(U, m_FNeg(m_Value())))
+    if (!match(U, m_Neg(m_Value())) && !match(U, m_FNegOrFSubNegZero(m_Value())))
       continue;
 
     // We found one!  Now we have to make sure that the definition dominates
@@ -1075,7 +1076,7 @@ static BinaryOperator *BreakUpDistribute(Instruction *Mul,
 /// Return true if we should break up this subtract of X-Y into (X + -Y).
 static bool ShouldBreakUpSubtract(Instruction *Sub) {
   // If this is a negation, we can't split it up!
-  if (match(Sub, m_Neg(m_Value())) || match(Sub, m_FNeg(m_Value()))) 
+  if (match(Sub, m_Neg(m_Value())) || match(Sub, m_FNegOrFSubNegZero(m_Value()))) 
     return false;
 
   // Don't breakup X - undef.
@@ -1649,7 +1650,7 @@ Value *ReassociatePass::OptimizeAdd(Instruction *I,
     // Check for X and -X or X and ~X in the operand list.
     Value *X;
     if (!match(TheOp, m_Neg(m_Value(X))) && !match(TheOp, m_Not(m_Value(X))) &&
-        !match(TheOp, m_FNeg(m_Value(X))))
+        !match(TheOp, m_FNegOrFSubNegZero(m_Value(X))))
       continue;
 
     unsigned FoundX = FindInOperandList(Ops, i, X);
@@ -1658,7 +1659,7 @@ Value *ReassociatePass::OptimizeAdd(Instruction *I,
 
     // Remove X and -X from the operand list.
     if (Ops.size() == 2 &&
-        (match(TheOp, m_Neg(m_Value())) || match(TheOp, m_FNeg(m_Value()))))
+        (match(TheOp, m_Neg(m_Value())) || match(TheOp, m_FNegOrFSubNegZero(m_Value()))))
       return Constant::getNullValue(X->getType());
 
     // Remove X and ~X from the operand list.
@@ -2383,7 +2384,7 @@ void ReassociatePass::OptimizeInst(Instruction *I) {
       RedoInsts.insert(I);
       MadeChange = true;
       I = NI;
-    } else if (match(I, m_FNeg(m_Value()))) {
+    } else if (match(I, m_FNegOrFSubNegZero(m_Value()))) {
       // Otherwise, this is a negation.  See if the operand is a multiply tree
       // and if this is not an inner node of a multiply tree.
       Value *Op = isa<BinaryOperator>(I) ? I->getOperand(1) :

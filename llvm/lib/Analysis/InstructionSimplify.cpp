@@ -5934,7 +5934,7 @@ static Value *simplifyFNegInst(Value *Op, FastMathFlags FMF,
 
   Value *X;
   // fneg (fneg X) ==> X
-  if (match(Op, m_FNeg(m_Value(X))))
+  if (match(Op, m_FNegOrFSubNegZero(m_Value(X))))
     return X;
 
   return nullptr;
@@ -6078,8 +6078,8 @@ simplifyFAddInst(Value *Op0, Value *Op1, FastMathFlags FMF,
         match(Op1, m_FSub(m_AnyZeroFP(), m_Specific(Op0))))
       return ConstantFP::getZero(Op0->getType());
 
-    if (match(Op0, m_FNeg(m_Specific(Op1))) ||
-        match(Op1, m_FNeg(m_Specific(Op0))))
+    if (match(Op0, m_FNegOrFSubNegZero(m_Specific(Op1))) ||
+        match(Op1, m_FNegOrFSubNegZero(m_Specific(Op0))))
       return ConstantFP::getZero(Op0->getType());
   }
 
@@ -6125,7 +6125,7 @@ simplifyFSubInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   // fsub -0.0, (fneg X) ==> X
   Value *X;
   if (canIgnoreSNaN(ExBehavior, FMF))
-    if (match(Op0, m_NegZeroFP()) && match(Op1, m_FNeg(m_Value(X))))
+    if (match(Op0, m_NegZeroFP()) && match(Op1, m_FNegOrFSubNegZero(m_Value(X))))
       return X;
 
   // fsub 0.0, (fsub 0.0, X) ==> X if signed zeros are ignored.
@@ -6133,7 +6133,7 @@ simplifyFSubInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   if (canIgnoreSNaN(ExBehavior, FMF))
     if (FMF.noSignedZeros() && match(Op0, m_AnyZeroFP()) &&
         (match(Op1, m_FSub(m_AnyZeroFP(), m_Value(X))) ||
-         match(Op1, m_FNeg(m_Value(X)))))
+         match(Op1, m_FNegOrFSubNegZero(m_Value(X)))))
       return X;
 
   if (!isDefaultFPEnvironment(ExBehavior, Rounding))

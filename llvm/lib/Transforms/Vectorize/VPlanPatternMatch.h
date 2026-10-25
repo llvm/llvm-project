@@ -561,7 +561,7 @@ m_PtrToAddr(const Op0_t &Op0) {
 }
 
 template <typename Op0_t>
-inline AllRecipe_match<Instruction::FNeg, Op0_t> m_FNeg(const Op0_t &Op0) {
+inline AllRecipe_match<Instruction::FNeg, Op0_t> m_FNegOrFSubNegZero(const Op0_t &Op0) {
   return m_Unary<Instruction::FNeg, Op0_t>(Op0);
 }
 
@@ -577,7 +577,7 @@ template <typename Op0_t> inline auto m_WidenAnyExtend(const Op0_t &Op0) {
 }
 
 template <typename Op0_t> inline auto m_AnyNeg(const Op0_t &Op0) {
-  return m_CombineOr(m_Sub(m_ZeroInt(), Op0), m_FNeg(Op0));
+  return m_CombineOr(m_Sub(m_ZeroInt(), Op0), m_FNegOrFSubNegZero(Op0));
 }
 
 template <typename Op0_t>

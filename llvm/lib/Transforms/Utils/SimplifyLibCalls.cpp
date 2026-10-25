@@ -3155,7 +3155,7 @@ static Value *optimizeSymmetricCall(CallInst *CI, bool IsEven,
   Value *X;
   Value *Src = CI->getArgOperand(0);
 
-  if (match(Src, m_OneUse(m_FNeg(m_Value(X)))) &&
+  if (match(Src, m_OneUse(m_FNegOrFSubNegZero(m_Value(X)))) &&
       (IsEven || !mayFlushDenormalsToPositiveZero(CI))) {
     auto *Call = B.CreateCall(CI->getCalledFunction(), {X}, /*FMFSource=*/CI);
     auto *CallInst = copyFlags(*CI, Call);

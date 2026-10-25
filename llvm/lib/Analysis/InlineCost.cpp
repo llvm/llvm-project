@@ -2315,7 +2315,7 @@ bool CallAnalyzer::visitBinaryOperator(BinaryOperator &I) {
   using namespace llvm::PatternMatch;
   if (I.getType()->isFloatingPointTy() &&
       TTI.getFPOpCost(I.getType()) == TargetTransformInfo::TCC_Expensive &&
-      !match(&I, m_FNeg(m_Value())))
+      !match(&I, m_FNegOrFSubNegZero(m_Value())))
     onCallPenalty();
 
   return false;

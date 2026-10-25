@@ -358,7 +358,7 @@ Instruction *InstCombinerImpl::foldSelectOpOp(SelectInst &SI, Instruction *TI,
   if (TI->hasOneUse() || FI->hasOneUse()) {
     // Cond ? -X : -Y --> -(Cond ? X : Y)
     Value *X, *Y;
-    if (match(TI, m_FNeg(m_Value(X))) && match(FI, m_FNeg(m_Value(Y)))) {
+    if (match(TI, m_FNegOrFSubNegZero(m_Value(X))) && match(FI, m_FNegOrFSubNegZero(m_Value(Y)))) {
       // Intersect FMF from the fneg instructions and union those with the
       // select.
       FastMathFlags FMF = TI->getFastMathFlags();
@@ -3419,7 +3419,7 @@ static Instruction *foldSelectWithFCmpToFabs(SelectInst &SI,
       }
     }
 
-    if (!match(TrueVal, m_FNeg(m_Specific(X))))
+    if (!match(TrueVal, m_FNegOrFSubNegZero(m_Specific(X))))
       return nullptr;
 
     // Forward-propagate nnan and ninf from the fcmp to the select.
@@ -3496,7 +3496,7 @@ static Instruction *foldSelectWithFCmpToFabs(SelectInst &SI,
                m_ICmp(Pred, m_ElementWiseBitCast(m_Specific(X)), m_APInt(C))) ||
         !isSignBitCheck(Pred, *C, TrueIfSigned))
       continue;
-    if (!match(TrueVal, m_FNeg(m_Specific(X))))
+    if (!match(TrueVal, m_FNegOrFSubNegZero(m_Specific(X))))
       return nullptr;
     if (Swap == TrueIfSigned && !CondVal->hasOneUse() && !TrueVal->hasOneUse())
       return nullptr;

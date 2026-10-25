@@ -34546,7 +34546,7 @@ private:
         if (getRdxKind(U) == RdxKind ||
             (RdxKind == RecurKind::FAdd &&
              (match(U, m_FSub(m_Value(), m_Value())) ||
-              match(U, m_FNeg(m_Value())))))
+              match(U, m_FNegOrFSubNegZero(m_Value())))))
           return cast<Instruction>(U);
       return cast<Instruction>(RdxVal);
     };

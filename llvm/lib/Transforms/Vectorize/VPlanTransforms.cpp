@@ -5275,7 +5275,7 @@ createPartialReductionExpression(VPReductionRecipe *Red) {
   // reduce.fadd(fneg(fmul(fpext(a), fpext(b))))
   //  -> VPExpressionRecipe(a, b, fmul, fsub, red)
   if (match(VecOp,
-            m_FNeg(m_FMul(m_FPExt(m_VPValue()), m_FPExt(m_VPValue()))))) {
+            m_FNegOrFSubNegZero(m_FMul(m_FPExt(m_VPValue()), m_FPExt(m_VPValue()))))) {
     auto *FNeg = cast<VPWidenRecipe>(VecOp);
     auto *FMul = cast<VPWidenRecipe>(FNeg->getOperand(0));
     auto *ExtA = cast<VPWidenCastRecipe>(FMul->getOperand(0));
