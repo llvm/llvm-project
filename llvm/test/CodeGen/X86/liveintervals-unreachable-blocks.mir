@@ -1,0 +1,244 @@
+# RUN: llc -mtriple=x86_64-- --passes='print<live-intervals>' -filetype=null %s 2>&1 | FileCheck %s
+# RUN: llc -mtriple=x86_64-- -enable-subreg-liveness --passes='print<live-intervals>' -filetype=null %s 2>&1 | FileCheck -check-prefix=SUBREG %s
+
+# Uses in unreachable blocks get a phi-def at the start of the block instead
+# of failing with "Use not jointly dominated by defs".
+
+# CHECK-LABEL: Live intervals for machine function: use_in_unreachable_block:
+# CHECK: %0 [16r,16d:0)[48B,64r:1) 0@16r 1@48B-phi
+---
+name: use_in_unreachable_block
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $edi
+    %0:gr32 = COPY $edi
+    JMP_1 %bb.2
+
+  bb.1:
+    $eax = COPY %0
+    RET64 $eax
+
+  bb.2:
+    RET64
+...
+
+# CHECK-LABEL: Live intervals for machine function: unreachable_block_into_use:
+# CHECK: %0 [16r,48B:0)[48B,80B:1)[80B,96r:2) 0@16r 1@48B-phi 2@80B-phi
+---
+name: unreachable_block_into_use
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $edi
+    %0:gr32 = COPY $edi
+    JMP_1 %bb.2
+
+  bb.1:
+    JMP_1 %bb.2
+
+  bb.2:
+    $eax = COPY %0
+    RET64 $eax
+...
+
+# CHECK-LABEL: Live intervals for machine function: unreachable_loop:
+# CHECK: %0 [16r,16d:0)[48B,96B:1) 0@16r 1@48B-phi
+---
+name: unreachable_loop
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $edi
+    %0:gr32 = COPY $edi
+    RET64
+
+  bb.1:
+    $eax = COPY %0
+    JMP_1 %bb.1
+...
+
+# CHECK-LABEL: Live intervals for machine function: unreachable_multi_block_loop:
+# CHECK: %0 [16r,16d:0)[48B,96B:1)[96B,128B:2) 0@16r 1@48B-phi 2@96B-phi
+---
+name: unreachable_multi_block_loop
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $edi
+    %0:gr32 = COPY $edi
+    RET64
+
+  bb.1:
+    $eax = COPY %0
+    JMP_1 %bb.2
+
+  bb.2:
+    JMP_1 %bb.1
+...
+
+# CHECK-LABEL: Live intervals for machine function: unreachable_loop_with_preheader:
+# CHECK: %0 [16r,16d:0)[48B,80B:2)[80B,128B:1) 0@16r 1@80B-phi 2@48B-phi
+---
+name: unreachable_loop_with_preheader
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $edi
+    %0:gr32 = COPY $edi
+    RET64
+
+  bb.1:
+    JMP_1 %bb.2
+
+  bb.2:
+    $eax = COPY %0
+    JMP_1 %bb.2
+...
+
+# CHECK-LABEL: Live intervals for machine function: unreachable_loop_exits_to_use:
+# CHECK: %0 [16r,112r:0) 0@16r
+---
+name: unreachable_loop_exits_to_use
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $edi
+    %0:gr32 = COPY $edi
+    JMP_1 %bb.2
+
+  bb.1:
+    successors: %bb.1, %bb.2
+    JCC_1 %bb.1, 4, implicit undef $eflags
+    JMP_1 %bb.2
+
+  bb.2:
+    $eax = COPY %0
+    RET64 $eax
+...
+
+# CHECK-LABEL: Live intervals for machine function: def_and_use_in_unreachable_blocks:
+# CHECK: %0 [48r,96r:0) 0@48r
+---
+name: def_and_use_in_unreachable_blocks
+tracksRegLiveness: true
+body: |
+  bb.0:
+    RET64
+
+  bb.1:
+    %0:gr32 = MOV32ri 1
+    JMP_1 %bb.2
+
+  bb.2:
+    $eax = COPY %0
+    RET64 $eax
+...
+
+# CHECK-LABEL: Live intervals for machine function: redefined_in_unreachable_block:
+# CHECK: %0 [16r,48B:1)[64r,96B:0)[96B,112r:2) 0@64r 1@16r 2@96B-phi
+---
+name: redefined_in_unreachable_block
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $edi
+    %0:gr32 = COPY $edi
+    JMP_1 %bb.2
+
+  bb.1:
+    %0:gr32 = MOV32ri 1
+    JMP_1 %bb.2
+
+  bb.2:
+    $eax = COPY %0
+    RET64 $eax
+...
+
+# CHECK-LABEL: Live intervals for machine function: redefined_in_unreachable_loop:
+# CHECK: %0 [16r,48B:1)[64r,96B:0)[96B,144B:2)[144B,160r:3) 0@64r 1@16r 2@96B-phi 3@144B-phi
+---
+name: redefined_in_unreachable_loop
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $edi
+    %0:gr32 = COPY $edi
+    JMP_1 %bb.3
+
+  bb.1:
+    %0:gr32 = MOV32ri 1
+    JMP_1 %bb.2
+
+  bb.2:
+    successors: %bb.1, %bb.3
+    JCC_1 %bb.1, 4, implicit undef $eflags
+    JMP_1 %bb.3
+
+  bb.3:
+    $eax = COPY %0
+    RET64 $eax
+...
+
+# CHECK-LABEL: Live intervals for machine function: physreg_use_in_unreachable_block:
+# CHECK: DIL [0B,0d:0)[32B,48r:1) 0@0B-phi 1@32B-phi
+---
+name: physreg_use_in_unreachable_block
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $edi
+    RET64
+
+  bb.1:
+    liveins: $edi
+    $eax = COPY $edi
+    RET64 $eax
+...
+
+# CHECK-LABEL: Live intervals for machine function: subreg_use_in_unreachable_block:
+# CHECK: %0 [16r,16d:0)[48B,64r:1) 0@16r 1@48B-phi
+
+# SUBREG-LABEL: Live intervals for machine function: subreg_use_in_unreachable_block:
+# SUBREG: %0 [16r,16d:0)[48B,64r:1) 0@16r 1@48B-phi  L000000000000000F [16r,16d:0)[48B,64r:1) 0@16r 1@48B-phi
+---
+name: subreg_use_in_unreachable_block
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $rdi
+    %0:gr64 = COPY $rdi
+    JMP_1 %bb.2
+
+  bb.1:
+    $eax = COPY %0.sub_32bit
+    RET64 $eax
+
+  bb.2:
+    RET64
+...
+
+# CHECK-LABEL: Live intervals for machine function: separate_phi_component:
+# CHECK: %0 [176r,176d:0) 0@176r
+# CHECK-NEXT: %1 [64r,96B:1)[112r,144B:0)[144B,160r:2) 0@112r 1@64r 2@144B-phi
+---
+name: separate_phi_component
+tracksRegLiveness: true
+body: |
+  bb.0:
+    JCC_1 %bb.2, 4, implicit undef $eflags
+    JMP_1 %bb.1
+
+  bb.1:
+    %0:gr32 = MOV32ri 1
+    JMP_1 %bb.3
+
+  bb.2:
+    %0:gr32 = MOV32ri 2
+    JMP_1 %bb.3
+
+  bb.3:
+    $eax = COPY %0
+    %0:gr32 = MOV32ri 3
+    RET64 $eax
+...
