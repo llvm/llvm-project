@@ -27,4 +27,4 @@ using math::static_rounding::exp;
 } // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SHARED_MATH_STATIC_ROUNDING_EXPF_H
+#endif // LLVM_LIBC_SHARED_MATH_STATIC_ROUNDING_EXP_H
