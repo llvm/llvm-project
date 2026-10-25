@@ -5220,12 +5220,9 @@ define i32 @select_freeze_poison_loop_true() {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[DONE:%.*]] = phi i1 [ false, %[[ENTRY]] ], [ true, %[[LOOP]] ]
-; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ 1, %[[LOOP]] ]
-; CHECK-NEXT:    [[PREVIOUS:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I]], %[[LOOP]] ]
 ; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RESULT:%.*]] = xor i32 [[PREVIOUS]], [[I]]
-; CHECK-NEXT:    ret i32 [[RESULT]]
+; CHECK-NEXT:    ret i32 0
 ;
 entry:
   %frozen = freeze i32 poison
@@ -5251,12 +5248,9 @@ define i32 @select_freeze_poison_loop_false() {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[DONE:%.*]] = phi i1 [ false, %[[ENTRY]] ], [ true, %[[LOOP]] ]
-; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ 1, %[[LOOP]] ]
-; CHECK-NEXT:    [[PREVIOUS:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I]], %[[LOOP]] ]
 ; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RESULT:%.*]] = xor i32 [[PREVIOUS]], [[I]]
-; CHECK-NEXT:    ret i32 [[RESULT]]
+; CHECK-NEXT:    ret i32 0
 ;
 entry:
   %frozen = freeze i32 poison
@@ -5282,12 +5276,9 @@ define i32 @select_freeze_undef_loop_true() {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[DONE:%.*]] = phi i1 [ false, %[[ENTRY]] ], [ true, %[[LOOP]] ]
-; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ 1, %[[LOOP]] ]
-; CHECK-NEXT:    [[PREVIOUS:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I]], %[[LOOP]] ]
 ; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RESULT:%.*]] = xor i32 [[PREVIOUS]], [[I]]
-; CHECK-NEXT:    ret i32 [[RESULT]]
+; CHECK-NEXT:    ret i32 0
 ;
 entry:
   %frozen = freeze i32 undef
@@ -5313,12 +5304,9 @@ define i32 @select_freeze_undef_loop_false() {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[DONE:%.*]] = phi i1 [ false, %[[ENTRY]] ], [ true, %[[LOOP]] ]
-; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ 1, %[[LOOP]] ]
-; CHECK-NEXT:    [[PREVIOUS:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I]], %[[LOOP]] ]
 ; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RESULT:%.*]] = xor i32 [[PREVIOUS]], [[I]]
-; CHECK-NEXT:    ret i32 [[RESULT]]
+; CHECK-NEXT:    ret i32 0
 ;
 entry:
   %frozen = freeze i32 undef
@@ -5354,7 +5342,8 @@ define i32 @select_freeze_poison_candidate_after(i32 noundef %x, i1 %cond) {
 ; CHECK-LABEL: define i32 @select_freeze_poison_candidate_after(
 ; CHECK-SAME: i32 noundef [[X:%.*]], i1 [[COND:%.*]]) {
 ; CHECK-NEXT:    [[CANDIDATE:%.*]] = add i32 [[X]], 3
-; CHECK-NEXT:    ret i32 [[CANDIDATE]]
+; CHECK-NEXT:    [[SELECTED:%.*]] = select i1 [[COND]], i32 0, i32 [[CANDIDATE]]
+; CHECK-NEXT:    ret i32 [[SELECTED]]
 ;
   %frozen = freeze i32 poison
   %candidate = add i32 %x, 3

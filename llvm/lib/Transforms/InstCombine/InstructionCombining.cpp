@@ -5529,7 +5529,10 @@ Instruction *InstCombinerImpl::visitFreeze(FreezeInst &I) {
       else if (match(U, m_Select(m_Specific(&I), m_Constant(), m_Value())))
         V = ConstantInt::getTrue(Ty);
       else if (match(U, m_c_Select(m_Specific(&I), m_Value(V)))) {
-        if (V == &I || !isGuaranteedNotToBeUndefOrPoison(V, &AC, &I, &DT))
+        // The select may execute multiple times for one execution of the
+        // freeze, so its other arm must be available at the freeze.
+        if (V == &I || !DT.dominates(V, &I) ||
+            !isGuaranteedNotToBeUndefOrPoison(V, &AC, &I, &DT))
           V = NullValue;
       } else if (auto *PHI = dyn_cast<PHINode>(U)) {
         if (Value *MaybeV = pickCommonConstantFromPHI(*PHI))
