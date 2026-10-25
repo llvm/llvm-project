@@ -18,6 +18,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/ConstantFolding.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Instruction.h"
@@ -3489,6 +3490,58 @@ static Value *foldCopySignIdioms(BitCastInst &CI,
   return Builder.CreateCopySign(Builder.CreateBitCast(Y, FTy), X);
 }
 
+/// bitcast (bitextract tK, (bitcast x to bM), off) to <L x ty>
+///   -> shufflevector (bitcast x to <M/W x ty>), <off/W, ..., off/W + L - 1>
+/// where ty is W bits wide, if x is a vector and W divides M and off.
+static Instruction *foldBitCastBitExtract(BitCastInst &BitCast,
+                                          InstCombinerImpl &IC) {
+  auto *DestTy = dyn_cast<FixedVectorType>(BitCast.getType());
+  if (!DestTy)
+    return nullptr;
+
+  // A bitextract with more than one use is ignored so foldBitExtractBitCast
+  // turns it into an extractelement instead.
+  Value *X;
+  uint64_t Off;
+  if (!match(BitCast.getOperand(0),
+             m_OneUse(m_BitExtract(m_BitCast(m_Value(X)), m_ConstantInt(Off)))))
+    return nullptr;
+
+  Type *SrcTy = X->getType();
+  Type *EltTy = DestTy->getElementType();
+  if (!isa<FixedVectorType>(SrcTy))
+    return nullptr;
+
+  Type *SrcEltTy = SrcTy->getScalarType();
+  // Pointers can only be bitcast to or from bytes.
+  if (SrcEltTy->isPointerTy() != EltTy->isPointerTy() &&
+      !SrcEltTy->isByteTy() && !EltTy->isByteTy())
+    return nullptr;
+
+  // Pointers cannot be bitcast to other address spaces.
+  if (SrcEltTy->isPointerTy() && EltTy->isPointerTy() && SrcEltTy != EltTy)
+    return nullptr;
+
+  const DataLayout &DL = IC.getDataLayout();
+  uint64_t SrcBits = DL.getTypeSizeInBits(SrcTy);
+  uint64_t EltBits = DL.getTypeSizeInBits(EltTy);
+  if (SrcBits % EltBits != 0 || Off % EltBits != 0)
+    return nullptr;
+
+  // An out of range offset is poison.
+  uint64_t NumElts = SrcBits / EltBits;
+  uint64_t NumLanes = DestTy->getNumElements();
+  uint64_t First = Off / EltBits;
+  if (First + NumLanes > NumElts)
+    return nullptr;
+
+  auto *VecTy = FixedVectorType::get(EltTy, NumElts);
+  if (DL.isBigEndian())
+    First = NumElts - NumLanes - First;
+  Value *Vec = IC.Builder.CreateBitCast(X, VecTy);
+  return new ShuffleVectorInst(Vec, createSequentialMask(First, NumLanes, 0));
+}
+
 Instruction *InstCombinerImpl::visitBitCast(BitCastInst &CI) {
   // If the operands are integer typed then apply the integer transforms,
   // otherwise just apply the common ones.
@@ -3620,6 +3673,9 @@ Instruction *InstCombinerImpl::visitBitCast(BitCastInst &CI) {
       return I;
 
   if (Instruction *I = canonicalizeBitCastExtElt(CI, *this))
+    return I;
+
+  if (Instruction *I = foldBitCastBitExtract(CI, *this))
     return I;
 
   if (Instruction *I = foldBitCastBitwiseLogic(CI, Builder))

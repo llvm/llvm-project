@@ -5,11 +5,17 @@
 declare void @use_b128(b128)
 
 define i64 @i64_from_v4i32(<4 x i32> %v) {
-; CHECK-LABEL: define i64 @i64_from_v4i32(
-; CHECK-SAME: <4 x i32> [[V:%.*]]) {
-; CHECK-NEXT:    [[B:%.*]] = bitcast <4 x i32> [[V]] to b128
-; CHECK-NEXT:    [[R:%.*]] = bitextract i64, b128 [[B]], i32 64
-; CHECK-NEXT:    ret i64 [[R]]
+; LE-LABEL: define i64 @i64_from_v4i32(
+; LE-SAME: <4 x i32> [[V:%.*]]) {
+; LE-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[V]] to <2 x i64>
+; LE-NEXT:    [[R:%.*]] = extractelement <2 x i64> [[TMP1]], i64 1
+; LE-NEXT:    ret i64 [[R]]
+;
+; BE-LABEL: define i64 @i64_from_v4i32(
+; BE-SAME: <4 x i32> [[V:%.*]]) {
+; BE-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[V]] to <2 x i64>
+; BE-NEXT:    [[R:%.*]] = extractelement <2 x i64> [[TMP1]], i64 0
+; BE-NEXT:    ret i64 [[R]]
 ;
   %b = bitcast <4 x i32> %v to b128
   %r = bitextract i64, b128 %b, i32 64
@@ -17,11 +23,15 @@ define i64 @i64_from_v4i32(<4 x i32> %v) {
 }
 
 define i32 @i32_from_v4i32(<4 x i32> %v) {
-; CHECK-LABEL: define i32 @i32_from_v4i32(
-; CHECK-SAME: <4 x i32> [[V:%.*]]) {
-; CHECK-NEXT:    [[B:%.*]] = bitcast <4 x i32> [[V]] to b128
-; CHECK-NEXT:    [[R:%.*]] = bitextract i32, b128 [[B]], i32 32
-; CHECK-NEXT:    ret i32 [[R]]
+; LE-LABEL: define i32 @i32_from_v4i32(
+; LE-SAME: <4 x i32> [[V:%.*]]) {
+; LE-NEXT:    [[R:%.*]] = extractelement <4 x i32> [[V]], i64 1
+; LE-NEXT:    ret i32 [[R]]
+;
+; BE-LABEL: define i32 @i32_from_v4i32(
+; BE-SAME: <4 x i32> [[V:%.*]]) {
+; BE-NEXT:    [[R:%.*]] = extractelement <4 x i32> [[V]], i64 2
+; BE-NEXT:    ret i32 [[R]]
 ;
   %b = bitcast <4 x i32> %v to b128
   %r = bitextract i32, b128 %b, i32 32
@@ -29,11 +39,17 @@ define i32 @i32_from_v4i32(<4 x i32> %v) {
 }
 
 define float @float_from_v2i64(<2 x i64> %v) {
-; CHECK-LABEL: define float @float_from_v2i64(
-; CHECK-SAME: <2 x i64> [[V:%.*]]) {
-; CHECK-NEXT:    [[B:%.*]] = bitcast <2 x i64> [[V]] to b128
-; CHECK-NEXT:    [[R:%.*]] = bitextract float, b128 [[B]], i32 32
-; CHECK-NEXT:    ret float [[R]]
+; LE-LABEL: define float @float_from_v2i64(
+; LE-SAME: <2 x i64> [[V:%.*]]) {
+; LE-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[V]] to <4 x float>
+; LE-NEXT:    [[R:%.*]] = extractelement <4 x float> [[TMP1]], i64 1
+; LE-NEXT:    ret float [[R]]
+;
+; BE-LABEL: define float @float_from_v2i64(
+; BE-SAME: <2 x i64> [[V:%.*]]) {
+; BE-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[V]] to <4 x float>
+; BE-NEXT:    [[R:%.*]] = extractelement <4 x float> [[TMP1]], i64 2
+; BE-NEXT:    ret float [[R]]
 ;
   %b = bitcast <2 x i64> %v to b128
   %r = bitextract float, b128 %b, i32 32
@@ -41,11 +57,17 @@ define float @float_from_v2i64(<2 x i64> %v) {
 }
 
 define i4 @i4_from_v4i8(<4 x i8> %v) {
-; CHECK-LABEL: define i4 @i4_from_v4i8(
-; CHECK-SAME: <4 x i8> [[V:%.*]]) {
-; CHECK-NEXT:    [[B:%.*]] = bitcast <4 x i8> [[V]] to b32
-; CHECK-NEXT:    [[R:%.*]] = bitextract i4, b32 [[B]], i32 4
-; CHECK-NEXT:    ret i4 [[R]]
+; LE-LABEL: define i4 @i4_from_v4i8(
+; LE-SAME: <4 x i8> [[V:%.*]]) {
+; LE-NEXT:    [[TMP1:%.*]] = bitcast <4 x i8> [[V]] to <8 x i4>
+; LE-NEXT:    [[R:%.*]] = extractelement <8 x i4> [[TMP1]], i64 1
+; LE-NEXT:    ret i4 [[R]]
+;
+; BE-LABEL: define i4 @i4_from_v4i8(
+; BE-SAME: <4 x i8> [[V:%.*]]) {
+; BE-NEXT:    [[TMP1:%.*]] = bitcast <4 x i8> [[V]] to <8 x i4>
+; BE-NEXT:    [[R:%.*]] = extractelement <8 x i4> [[TMP1]], i64 6
+; BE-NEXT:    ret i4 [[R]]
 ;
   %b = bitcast <4 x i8> %v to b32
   %r = bitextract i4, b32 %b, i32 4
@@ -53,12 +75,21 @@ define i4 @i4_from_v4i8(<4 x i8> %v) {
 }
 
 define i64 @i64_from_v4i32_multi_use(<4 x i32> %v) {
-; CHECK-LABEL: define i64 @i64_from_v4i32_multi_use(
-; CHECK-SAME: <4 x i32> [[V:%.*]]) {
-; CHECK-NEXT:    [[B:%.*]] = bitcast <4 x i32> [[V]] to b128
-; CHECK-NEXT:    call void @use_b128(b128 [[B]])
-; CHECK-NEXT:    [[R:%.*]] = bitextract i64, b128 [[B]], i32 64
-; CHECK-NEXT:    ret i64 [[R]]
+; LE-LABEL: define i64 @i64_from_v4i32_multi_use(
+; LE-SAME: <4 x i32> [[V:%.*]]) {
+; LE-NEXT:    [[B:%.*]] = bitcast <4 x i32> [[V]] to b128
+; LE-NEXT:    call void @use_b128(b128 [[B]])
+; LE-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[V]] to <2 x i64>
+; LE-NEXT:    [[R:%.*]] = extractelement <2 x i64> [[TMP1]], i64 1
+; LE-NEXT:    ret i64 [[R]]
+;
+; BE-LABEL: define i64 @i64_from_v4i32_multi_use(
+; BE-SAME: <4 x i32> [[V:%.*]]) {
+; BE-NEXT:    [[B:%.*]] = bitcast <4 x i32> [[V]] to b128
+; BE-NEXT:    call void @use_b128(b128 [[B]])
+; BE-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[V]] to <2 x i64>
+; BE-NEXT:    [[R:%.*]] = extractelement <2 x i64> [[TMP1]], i64 0
+; BE-NEXT:    ret i64 [[R]]
 ;
   %b = bitcast <4 x i32> %v to b128
   call void @use_b128(b128 %b)
@@ -67,12 +98,17 @@ define i64 @i64_from_v4i32_multi_use(<4 x i32> %v) {
 }
 
 define double @double_from_v4i32_scalar_bitcast_user(<4 x i32> %v) {
-; CHECK-LABEL: define double @double_from_v4i32_scalar_bitcast_user(
-; CHECK-SAME: <4 x i32> [[V:%.*]]) {
-; CHECK-NEXT:    [[B:%.*]] = bitcast <4 x i32> [[V]] to b128
-; CHECK-NEXT:    [[E:%.*]] = bitextract i64, b128 [[B]], i32 64
-; CHECK-NEXT:    [[R:%.*]] = bitcast i64 [[E]] to double
-; CHECK-NEXT:    ret double [[R]]
+; LE-LABEL: define double @double_from_v4i32_scalar_bitcast_user(
+; LE-SAME: <4 x i32> [[V:%.*]]) {
+; LE-NEXT:    [[BC:%.*]] = bitcast <4 x i32> [[V]] to <2 x double>
+; LE-NEXT:    [[R:%.*]] = extractelement <2 x double> [[BC]], i64 1
+; LE-NEXT:    ret double [[R]]
+;
+; BE-LABEL: define double @double_from_v4i32_scalar_bitcast_user(
+; BE-SAME: <4 x i32> [[V:%.*]]) {
+; BE-NEXT:    [[BC:%.*]] = bitcast <4 x i32> [[V]] to <2 x double>
+; BE-NEXT:    [[R:%.*]] = extractelement <2 x double> [[BC]], i64 0
+; BE-NEXT:    ret double [[R]]
 ;
   %b = bitcast <4 x i32> %v to b128
   %e = bitextract i64, b128 %b, i32 64
@@ -107,11 +143,17 @@ define i64 @neg_i64_from_v2ptr(<2 x ptr> %v) {
 }
 
 define ptr @ptr_from_v4b32(<4 x b32> %v) {
-; CHECK-LABEL: define ptr @ptr_from_v4b32(
-; CHECK-SAME: <4 x b32> [[V:%.*]]) {
-; CHECK-NEXT:    [[B:%.*]] = bitcast <4 x b32> [[V]] to b128
-; CHECK-NEXT:    [[R:%.*]] = bitextract ptr, b128 [[B]], i32 64
-; CHECK-NEXT:    ret ptr [[R]]
+; LE-LABEL: define ptr @ptr_from_v4b32(
+; LE-SAME: <4 x b32> [[V:%.*]]) {
+; LE-NEXT:    [[TMP1:%.*]] = bitcast <4 x b32> [[V]] to <2 x ptr>
+; LE-NEXT:    [[R:%.*]] = extractelement <2 x ptr> [[TMP1]], i64 1
+; LE-NEXT:    ret ptr [[R]]
+;
+; BE-LABEL: define ptr @ptr_from_v4b32(
+; BE-SAME: <4 x b32> [[V:%.*]]) {
+; BE-NEXT:    [[TMP1:%.*]] = bitcast <4 x b32> [[V]] to <2 x ptr>
+; BE-NEXT:    [[R:%.*]] = extractelement <2 x ptr> [[TMP1]], i64 0
+; BE-NEXT:    ret ptr [[R]]
 ;
   %b = bitcast <4 x b32> %v to b128
   %r = bitextract ptr, b128 %b, i32 64
@@ -119,11 +161,17 @@ define ptr @ptr_from_v4b32(<4 x b32> %v) {
 }
 
 define b128 @b128_from_v4ptr(<4 x ptr> %v) {
-; CHECK-LABEL: define b128 @b128_from_v4ptr(
-; CHECK-SAME: <4 x ptr> [[V:%.*]]) {
-; CHECK-NEXT:    [[B:%.*]] = bitcast <4 x ptr> [[V]] to b256
-; CHECK-NEXT:    [[R:%.*]] = bitextract b128, b256 [[B]], i32 128
-; CHECK-NEXT:    ret b128 [[R]]
+; LE-LABEL: define b128 @b128_from_v4ptr(
+; LE-SAME: <4 x ptr> [[V:%.*]]) {
+; LE-NEXT:    [[TMP1:%.*]] = bitcast <4 x ptr> [[V]] to <2 x b128>
+; LE-NEXT:    [[R:%.*]] = extractelement <2 x b128> [[TMP1]], i64 1
+; LE-NEXT:    ret b128 [[R]]
+;
+; BE-LABEL: define b128 @b128_from_v4ptr(
+; BE-SAME: <4 x ptr> [[V:%.*]]) {
+; BE-NEXT:    [[TMP1:%.*]] = bitcast <4 x ptr> [[V]] to <2 x b128>
+; BE-NEXT:    [[R:%.*]] = extractelement <2 x b128> [[TMP1]], i64 0
+; BE-NEXT:    ret b128 [[R]]
 ;
   %b = bitcast <4 x ptr> %v to b256
   %r = bitextract b128, b256 %b, i32 128
@@ -131,11 +179,15 @@ define b128 @b128_from_v4ptr(<4 x ptr> %v) {
 }
 
 define ptr @ptr_from_v2ptr(<2 x ptr> %v) {
-; CHECK-LABEL: define ptr @ptr_from_v2ptr(
-; CHECK-SAME: <2 x ptr> [[V:%.*]]) {
-; CHECK-NEXT:    [[B:%.*]] = bitcast <2 x ptr> [[V]] to b128
-; CHECK-NEXT:    [[R:%.*]] = bitextract ptr, b128 [[B]], i32 64
-; CHECK-NEXT:    ret ptr [[R]]
+; LE-LABEL: define ptr @ptr_from_v2ptr(
+; LE-SAME: <2 x ptr> [[V:%.*]]) {
+; LE-NEXT:    [[R:%.*]] = extractelement <2 x ptr> [[V]], i64 1
+; LE-NEXT:    ret ptr [[R]]
+;
+; BE-LABEL: define ptr @ptr_from_v2ptr(
+; BE-SAME: <2 x ptr> [[V:%.*]]) {
+; BE-NEXT:    [[R:%.*]] = extractelement <2 x ptr> [[V]], i64 0
+; BE-NEXT:    ret ptr [[R]]
 ;
   %b = bitcast <2 x ptr> %v to b128
   %r = bitextract ptr, b128 %b, i32 64
@@ -208,12 +260,15 @@ define i32 @neg_i32_from_v4i32_variable_offset(<4 x i32> %v, i32 %off) {
 }
 
 define <2 x i64> @v2i64_from_v4i64(<4 x i64> %v) {
-; CHECK-LABEL: define <2 x i64> @v2i64_from_v4i64(
-; CHECK-SAME: <4 x i64> [[V:%.*]]) {
-; CHECK-NEXT:    [[B:%.*]] = bitcast <4 x i64> [[V]] to b256
-; CHECK-NEXT:    [[E:%.*]] = bitextract b128, b256 [[B]], i32 128
-; CHECK-NEXT:    [[R:%.*]] = bitcast b128 [[E]] to <2 x i64>
-; CHECK-NEXT:    ret <2 x i64> [[R]]
+; LE-LABEL: define <2 x i64> @v2i64_from_v4i64(
+; LE-SAME: <4 x i64> [[V:%.*]]) {
+; LE-NEXT:    [[R:%.*]] = shufflevector <4 x i64> [[V]], <4 x i64> poison, <2 x i32> <i32 2, i32 3>
+; LE-NEXT:    ret <2 x i64> [[R]]
+;
+; BE-LABEL: define <2 x i64> @v2i64_from_v4i64(
+; BE-SAME: <4 x i64> [[V:%.*]]) {
+; BE-NEXT:    [[R:%.*]] = shufflevector <4 x i64> [[V]], <4 x i64> poison, <2 x i32> <i32 0, i32 1>
+; BE-NEXT:    ret <2 x i64> [[R]]
 ;
   %b = bitcast <4 x i64> %v to b256
   %e = bitextract b128, b256 %b, i32 128
@@ -222,12 +277,17 @@ define <2 x i64> @v2i64_from_v4i64(<4 x i64> %v) {
 }
 
 define <2 x float> @v2f32_from_v4i32(<4 x i32> %v) {
-; CHECK-LABEL: define <2 x float> @v2f32_from_v4i32(
-; CHECK-SAME: <4 x i32> [[V:%.*]]) {
-; CHECK-NEXT:    [[B:%.*]] = bitcast <4 x i32> [[V]] to b128
-; CHECK-NEXT:    [[E:%.*]] = bitextract b64, b128 [[B]], i32 64
-; CHECK-NEXT:    [[R:%.*]] = bitcast b64 [[E]] to <2 x float>
-; CHECK-NEXT:    ret <2 x float> [[R]]
+; LE-LABEL: define <2 x float> @v2f32_from_v4i32(
+; LE-SAME: <4 x i32> [[V:%.*]]) {
+; LE-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[V]] to <4 x float>
+; LE-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
+; LE-NEXT:    ret <2 x float> [[R]]
+;
+; BE-LABEL: define <2 x float> @v2f32_from_v4i32(
+; BE-SAME: <4 x i32> [[V:%.*]]) {
+; BE-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[V]] to <4 x float>
+; BE-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
+; BE-NEXT:    ret <2 x float> [[R]]
 ;
   %b = bitcast <4 x i32> %v to b128
   %e = bitextract b64, b128 %b, i32 64
@@ -236,12 +296,17 @@ define <2 x float> @v2f32_from_v4i32(<4 x i32> %v) {
 }
 
 define <2 x i32> @v2i32_from_v8i16(<8 x i16> %v) {
-; CHECK-LABEL: define <2 x i32> @v2i32_from_v8i16(
-; CHECK-SAME: <8 x i16> [[V:%.*]]) {
-; CHECK-NEXT:    [[B:%.*]] = bitcast <8 x i16> [[V]] to b128
-; CHECK-NEXT:    [[E:%.*]] = bitextract i64, b128 [[B]], i32 64
-; CHECK-NEXT:    [[R:%.*]] = bitcast i64 [[E]] to <2 x i32>
-; CHECK-NEXT:    ret <2 x i32> [[R]]
+; LE-LABEL: define <2 x i32> @v2i32_from_v8i16(
+; LE-SAME: <8 x i16> [[V:%.*]]) {
+; LE-NEXT:    [[TMP1:%.*]] = bitcast <8 x i16> [[V]] to <4 x i32>
+; LE-NEXT:    [[R:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <2 x i32> <i32 2, i32 3>
+; LE-NEXT:    ret <2 x i32> [[R]]
+;
+; BE-LABEL: define <2 x i32> @v2i32_from_v8i16(
+; BE-SAME: <8 x i16> [[V:%.*]]) {
+; BE-NEXT:    [[TMP1:%.*]] = bitcast <8 x i16> [[V]] to <4 x i32>
+; BE-NEXT:    [[R:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <2 x i32> <i32 0, i32 1>
+; BE-NEXT:    ret <2 x i32> [[R]]
 ;
   %b = bitcast <8 x i16> %v to b128
   %e = bitextract i64, b128 %b, i32 64
@@ -250,12 +315,17 @@ define <2 x i32> @v2i32_from_v8i16(<8 x i16> %v) {
 }
 
 define <4 x i16> @v4i16_from_v2i64(<2 x i64> %v) {
-; CHECK-LABEL: define <4 x i16> @v4i16_from_v2i64(
-; CHECK-SAME: <2 x i64> [[V:%.*]]) {
-; CHECK-NEXT:    [[B:%.*]] = bitcast <2 x i64> [[V]] to b128
-; CHECK-NEXT:    [[E:%.*]] = bitextract b64, b128 [[B]], i32 64
-; CHECK-NEXT:    [[R:%.*]] = bitcast b64 [[E]] to <4 x i16>
-; CHECK-NEXT:    ret <4 x i16> [[R]]
+; LE-LABEL: define <4 x i16> @v4i16_from_v2i64(
+; LE-SAME: <2 x i64> [[V:%.*]]) {
+; LE-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[V]] to <8 x i16>
+; LE-NEXT:    [[R:%.*]] = shufflevector <8 x i16> [[TMP1]], <8 x i16> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+; LE-NEXT:    ret <4 x i16> [[R]]
+;
+; BE-LABEL: define <4 x i16> @v4i16_from_v2i64(
+; BE-SAME: <2 x i64> [[V:%.*]]) {
+; BE-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[V]] to <8 x i16>
+; BE-NEXT:    [[R:%.*]] = shufflevector <8 x i16> [[TMP1]], <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; BE-NEXT:    ret <4 x i16> [[R]]
 ;
   %b = bitcast <2 x i64> %v to b128
   %e = bitextract b64, b128 %b, i32 64
@@ -294,12 +364,17 @@ define <2 x i64> @neg_v2i64_from_v4ptr(<4 x ptr> %v) {
 }
 
 define <2 x ptr> @v2ptr_from_v8b32(<8 x b32> %v) {
-; CHECK-LABEL: define <2 x ptr> @v2ptr_from_v8b32(
-; CHECK-SAME: <8 x b32> [[V:%.*]]) {
-; CHECK-NEXT:    [[B:%.*]] = bitcast <8 x b32> [[V]] to b256
-; CHECK-NEXT:    [[E:%.*]] = bitextract b128, b256 [[B]], i32 128
-; CHECK-NEXT:    [[R:%.*]] = bitcast b128 [[E]] to <2 x ptr>
-; CHECK-NEXT:    ret <2 x ptr> [[R]]
+; LE-LABEL: define <2 x ptr> @v2ptr_from_v8b32(
+; LE-SAME: <8 x b32> [[V:%.*]]) {
+; LE-NEXT:    [[TMP1:%.*]] = bitcast <8 x b32> [[V]] to <4 x ptr>
+; LE-NEXT:    [[R:%.*]] = shufflevector <4 x ptr> [[TMP1]], <4 x ptr> poison, <2 x i32> <i32 2, i32 3>
+; LE-NEXT:    ret <2 x ptr> [[R]]
+;
+; BE-LABEL: define <2 x ptr> @v2ptr_from_v8b32(
+; BE-SAME: <8 x b32> [[V:%.*]]) {
+; BE-NEXT:    [[TMP1:%.*]] = bitcast <8 x b32> [[V]] to <4 x ptr>
+; BE-NEXT:    [[R:%.*]] = shufflevector <4 x ptr> [[TMP1]], <4 x ptr> poison, <2 x i32> <i32 0, i32 1>
+; BE-NEXT:    ret <2 x ptr> [[R]]
 ;
   %b = bitcast <8 x b32> %v to b256
   %e = bitextract b128, b256 %b, i32 128
@@ -308,12 +383,17 @@ define <2 x ptr> @v2ptr_from_v8b32(<8 x b32> %v) {
 }
 
 define <4 x b32> @v4b32_from_v4ptr(<4 x ptr> %v) {
-; CHECK-LABEL: define <4 x b32> @v4b32_from_v4ptr(
-; CHECK-SAME: <4 x ptr> [[V:%.*]]) {
-; CHECK-NEXT:    [[B:%.*]] = bitcast <4 x ptr> [[V]] to b256
-; CHECK-NEXT:    [[E:%.*]] = bitextract b128, b256 [[B]], i32 128
-; CHECK-NEXT:    [[R:%.*]] = bitcast b128 [[E]] to <4 x b32>
-; CHECK-NEXT:    ret <4 x b32> [[R]]
+; LE-LABEL: define <4 x b32> @v4b32_from_v4ptr(
+; LE-SAME: <4 x ptr> [[V:%.*]]) {
+; LE-NEXT:    [[TMP1:%.*]] = bitcast <4 x ptr> [[V]] to <8 x b32>
+; LE-NEXT:    [[R:%.*]] = shufflevector <8 x b32> [[TMP1]], <8 x b32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+; LE-NEXT:    ret <4 x b32> [[R]]
+;
+; BE-LABEL: define <4 x b32> @v4b32_from_v4ptr(
+; BE-SAME: <4 x ptr> [[V:%.*]]) {
+; BE-NEXT:    [[TMP1:%.*]] = bitcast <4 x ptr> [[V]] to <8 x b32>
+; BE-NEXT:    [[R:%.*]] = shufflevector <8 x b32> [[TMP1]], <8 x b32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; BE-NEXT:    ret <4 x b32> [[R]]
 ;
   %b = bitcast <4 x ptr> %v to b256
   %e = bitextract b128, b256 %b, i32 128
@@ -322,12 +402,15 @@ define <4 x b32> @v4b32_from_v4ptr(<4 x ptr> %v) {
 }
 
 define <2 x ptr> @v2ptr_from_v4ptr(<4 x ptr> %v) {
-; CHECK-LABEL: define <2 x ptr> @v2ptr_from_v4ptr(
-; CHECK-SAME: <4 x ptr> [[V:%.*]]) {
-; CHECK-NEXT:    [[B:%.*]] = bitcast <4 x ptr> [[V]] to b256
-; CHECK-NEXT:    [[E:%.*]] = bitextract b128, b256 [[B]], i32 128
-; CHECK-NEXT:    [[R:%.*]] = bitcast b128 [[E]] to <2 x ptr>
-; CHECK-NEXT:    ret <2 x ptr> [[R]]
+; LE-LABEL: define <2 x ptr> @v2ptr_from_v4ptr(
+; LE-SAME: <4 x ptr> [[V:%.*]]) {
+; LE-NEXT:    [[R:%.*]] = shufflevector <4 x ptr> [[V]], <4 x ptr> poison, <2 x i32> <i32 2, i32 3>
+; LE-NEXT:    ret <2 x ptr> [[R]]
+;
+; BE-LABEL: define <2 x ptr> @v2ptr_from_v4ptr(
+; BE-SAME: <4 x ptr> [[V:%.*]]) {
+; BE-NEXT:    [[R:%.*]] = shufflevector <4 x ptr> [[V]], <4 x ptr> poison, <2 x i32> <i32 0, i32 1>
+; BE-NEXT:    ret <2 x ptr> [[R]]
 ;
   %b = bitcast <4 x ptr> %v to b256
   %e = bitextract b128, b256 %b, i32 128
@@ -366,13 +449,21 @@ define <1 x i32> @neg_v1i32_from_v3i16(<3 x i16> %v) {
 }
 
 define <2 x i64> @v2i64_from_v4i64_multi_use(<4 x i64> %v) {
-; CHECK-LABEL: define <2 x i64> @v2i64_from_v4i64_multi_use(
-; CHECK-SAME: <4 x i64> [[V:%.*]]) {
-; CHECK-NEXT:    [[B:%.*]] = bitcast <4 x i64> [[V]] to b256
-; CHECK-NEXT:    [[E:%.*]] = bitextract b128, b256 [[B]], i32 128
-; CHECK-NEXT:    call void @use_b128(b128 [[E]])
-; CHECK-NEXT:    [[R:%.*]] = bitcast b128 [[E]] to <2 x i64>
-; CHECK-NEXT:    ret <2 x i64> [[R]]
+; LE-LABEL: define <2 x i64> @v2i64_from_v4i64_multi_use(
+; LE-SAME: <4 x i64> [[V:%.*]]) {
+; LE-NEXT:    [[TMP1:%.*]] = bitcast <4 x i64> [[V]] to <2 x b128>
+; LE-NEXT:    [[E:%.*]] = extractelement <2 x b128> [[TMP1]], i64 1
+; LE-NEXT:    call void @use_b128(b128 [[E]])
+; LE-NEXT:    [[R:%.*]] = bitcast b128 [[E]] to <2 x i64>
+; LE-NEXT:    ret <2 x i64> [[R]]
+;
+; BE-LABEL: define <2 x i64> @v2i64_from_v4i64_multi_use(
+; BE-SAME: <4 x i64> [[V:%.*]]) {
+; BE-NEXT:    [[TMP1:%.*]] = bitcast <4 x i64> [[V]] to <2 x b128>
+; BE-NEXT:    [[E:%.*]] = extractelement <2 x b128> [[TMP1]], i64 0
+; BE-NEXT:    call void @use_b128(b128 [[E]])
+; BE-NEXT:    [[R:%.*]] = bitcast b128 [[E]] to <2 x i64>
+; BE-NEXT:    ret <2 x i64> [[R]]
 ;
   %b = bitcast <4 x i64> %v to b256
   %e = bitextract b128, b256 %b, i32 128
@@ -395,6 +486,3 @@ define <2 x i64> @neg_v2i64_from_i256(i256 %x) {
   %r = bitcast b128 %e to <2 x i64>
   ret <2 x i64> %r
 }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; BE: {{.*}}
-; LE: {{.*}}
