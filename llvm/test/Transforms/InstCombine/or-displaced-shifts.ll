@@ -4,10 +4,9 @@
 define i64 @pair(i64 %x, i64 %y, i64 %s) {
 ; CHECK-LABEL: define i64 @pair(
 ; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]], i64 [[S:%.*]]) {
-; CHECK-NEXT:    [[S1:%.*]] = add i64 [[S]], 8
-; CHECK-NEXT:    [[A:%.*]] = shl i64 [[X]], [[S]]
-; CHECK-NEXT:    [[B:%.*]] = shl i64 [[Y]], [[S1]]
-; CHECK-NEXT:    [[R:%.*]] = or i64 [[A]], [[B]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[Y]], 8
+; CHECK-NEXT:    [[TMP2:%.*]] = or i64 [[X]], [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = shl i64 [[TMP2]], [[S]]
 ; CHECK-NEXT:    ret i64 [[R]]
 ;
   %s1 = add i64 %s, 8
@@ -20,10 +19,9 @@ define i64 @pair(i64 %x, i64 %y, i64 %s) {
 define i64 @pair_commuted(i64 %x, i64 %y, i64 %s) {
 ; CHECK-LABEL: define i64 @pair_commuted(
 ; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]], i64 [[S:%.*]]) {
-; CHECK-NEXT:    [[S1:%.*]] = add i64 [[S]], 8
-; CHECK-NEXT:    [[A:%.*]] = shl i64 [[X]], [[S]]
-; CHECK-NEXT:    [[B:%.*]] = shl i64 [[Y]], [[S1]]
-; CHECK-NEXT:    [[R:%.*]] = or i64 [[B]], [[A]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[Y]], 8
+; CHECK-NEXT:    [[TMP2:%.*]] = or i64 [[X]], [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = shl i64 [[TMP2]], [[S]]
 ; CHECK-NEXT:    ret i64 [[R]]
 ;
   %s1 = add i64 %s, 8
@@ -36,10 +34,9 @@ define i64 @pair_commuted(i64 %x, i64 %y, i64 %s) {
 define i64 @pair_add_commuted(i64 %x, i64 %y, i64 %s) {
 ; CHECK-LABEL: define i64 @pair_add_commuted(
 ; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]], i64 [[S:%.*]]) {
-; CHECK-NEXT:    [[S1:%.*]] = add i64 [[S]], 8
-; CHECK-NEXT:    [[A:%.*]] = shl i64 [[X]], [[S]]
-; CHECK-NEXT:    [[B:%.*]] = shl i64 [[Y]], [[S1]]
-; CHECK-NEXT:    [[R:%.*]] = or i64 [[A]], [[B]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[Y]], 8
+; CHECK-NEXT:    [[TMP2:%.*]] = or i64 [[X]], [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = shl i64 [[TMP2]], [[S]]
 ; CHECK-NEXT:    ret i64 [[R]]
 ;
   %s1 = add i64 8, %s
@@ -52,10 +49,9 @@ define i64 @pair_add_commuted(i64 %x, i64 %y, i64 %s) {
 define i32 @pair_i32(i32 %x, i32 %y, i32 %s) {
 ; CHECK-LABEL: define i32 @pair_i32(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]], i32 [[S:%.*]]) {
-; CHECK-NEXT:    [[S1:%.*]] = add i32 [[S]], 5
-; CHECK-NEXT:    [[A:%.*]] = shl i32 [[X]], [[S]]
-; CHECK-NEXT:    [[B:%.*]] = shl i32 [[Y]], [[S1]]
-; CHECK-NEXT:    [[R:%.*]] = or i32 [[A]], [[B]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[Y]], 5
+; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[X]], [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = shl i32 [[TMP2]], [[S]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %s1 = add i32 %s, 5
@@ -68,10 +64,9 @@ define i32 @pair_i32(i32 %x, i32 %y, i32 %s) {
 define i8 @pair_i8(i8 %x, i8 %y, i8 %s) {
 ; CHECK-LABEL: define i8 @pair_i8(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]], i8 [[S:%.*]]) {
-; CHECK-NEXT:    [[S1:%.*]] = add i8 [[S]], 3
-; CHECK-NEXT:    [[A:%.*]] = shl i8 [[X]], [[S]]
-; CHECK-NEXT:    [[B:%.*]] = shl i8 [[Y]], [[S1]]
-; CHECK-NEXT:    [[R:%.*]] = or i8 [[A]], [[B]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i8 [[Y]], 3
+; CHECK-NEXT:    [[TMP2:%.*]] = or i8 [[X]], [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = shl i8 [[TMP2]], [[S]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %s1 = add i8 %s, 3
@@ -84,10 +79,9 @@ define i8 @pair_i8(i8 %x, i8 %y, i8 %s) {
 define i7 @pair_i7(i7 %x, i7 %y, i7 %s) {
 ; CHECK-LABEL: define i7 @pair_i7(
 ; CHECK-SAME: i7 [[X:%.*]], i7 [[Y:%.*]], i7 [[S:%.*]]) {
-; CHECK-NEXT:    [[S1:%.*]] = add i7 [[S]], 2
-; CHECK-NEXT:    [[A:%.*]] = shl i7 [[X]], [[S]]
-; CHECK-NEXT:    [[B:%.*]] = shl i7 [[Y]], [[S1]]
-; CHECK-NEXT:    [[R:%.*]] = or i7 [[A]], [[B]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i7 [[Y]], 2
+; CHECK-NEXT:    [[TMP2:%.*]] = or i7 [[X]], [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = shl i7 [[TMP2]], [[S]]
 ; CHECK-NEXT:    ret i7 [[R]]
 ;
   %s1 = add i7 %s, 2
@@ -100,12 +94,11 @@ define i7 @pair_i7(i7 %x, i7 %y, i7 %s) {
 define i64 @accumulator(i64 %x, i64 %y, i64 %s, i64 %acc) {
 ; CHECK-LABEL: define i64 @accumulator(
 ; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]], i64 [[S:%.*]], i64 [[ACC:%.*]]) {
-; CHECK-NEXT:    [[S1:%.*]] = add i64 [[S]], 8
-; CHECK-NEXT:    [[A:%.*]] = shl i64 [[X]], [[S]]
-; CHECK-NEXT:    [[B:%.*]] = shl i64 [[Y]], [[S1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[Y]], 8
+; CHECK-NEXT:    [[TMP2:%.*]] = or i64 [[X]], [[TMP1]]
+; CHECK-NEXT:    [[A:%.*]] = shl i64 [[TMP2]], [[S]]
 ; CHECK-NEXT:    [[PREFIX:%.*]] = or i64 [[A]], [[ACC]]
-; CHECK-NEXT:    [[R:%.*]] = or i64 [[PREFIX]], [[B]]
-; CHECK-NEXT:    ret i64 [[R]]
+; CHECK-NEXT:    ret i64 [[PREFIX]]
 ;
   %s1 = add i64 %s, 8
   %a = shl i64 %x, %s
@@ -118,11 +111,10 @@ define i64 @accumulator(i64 %x, i64 %y, i64 %s, i64 %acc) {
 define i64 @accumulator_commuted(i64 %x, i64 %y, i64 %s, i64 %acc) {
 ; CHECK-LABEL: define i64 @accumulator_commuted(
 ; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]], i64 [[S:%.*]], i64 [[ACC:%.*]]) {
-; CHECK-NEXT:    [[S1:%.*]] = add i64 [[S]], 8
-; CHECK-NEXT:    [[A:%.*]] = shl i64 [[X]], [[S]]
-; CHECK-NEXT:    [[B:%.*]] = shl i64 [[Y]], [[S1]]
-; CHECK-NEXT:    [[PREFIX:%.*]] = or i64 [[ACC]], [[A]]
-; CHECK-NEXT:    [[R:%.*]] = or i64 [[B]], [[PREFIX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[Y]], 8
+; CHECK-NEXT:    [[TMP2:%.*]] = or i64 [[X]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP2]], [[S]]
+; CHECK-NEXT:    [[R:%.*]] = or i64 [[TMP3]], [[ACC]]
 ; CHECK-NEXT:    ret i64 [[R]]
 ;
   %s1 = add i64 %s, 8
@@ -136,11 +128,10 @@ define i64 @accumulator_commuted(i64 %x, i64 %y, i64 %s, i64 %acc) {
 define i64 @wrap_flags(i64 %x, i64 %y, i64 %s, i64 %acc) {
 ; CHECK-LABEL: define i64 @wrap_flags(
 ; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]], i64 [[S:%.*]], i64 [[ACC:%.*]]) {
-; CHECK-NEXT:    [[S1:%.*]] = add nuw nsw i64 [[S]], 8
-; CHECK-NEXT:    [[A:%.*]] = shl nuw nsw i64 [[X]], [[S]]
-; CHECK-NEXT:    [[B:%.*]] = shl nuw nsw i64 [[Y]], [[S1]]
-; CHECK-NEXT:    [[PREFIX:%.*]] = or disjoint i64 [[A]], [[ACC]]
-; CHECK-NEXT:    [[R:%.*]] = or disjoint i64 [[PREFIX]], [[B]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[Y]], 8
+; CHECK-NEXT:    [[TMP2:%.*]] = or i64 [[X]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP2]], [[S]]
+; CHECK-NEXT:    [[R:%.*]] = or i64 [[TMP3]], [[ACC]]
 ; CHECK-NEXT:    ret i64 [[R]]
 ;
   %s1 = add nuw nsw i64 %s, 8
@@ -373,10 +364,9 @@ define i64 @both_offsets(i64 %x, i64 %y, i64 %s) {
 ; CHECK-LABEL: define i64 @both_offsets(
 ; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]], i64 [[S:%.*]]) {
 ; CHECK-NEXT:    [[S0:%.*]] = add i64 [[S]], 8
-; CHECK-NEXT:    [[S1:%.*]] = add i64 [[S]], 16
-; CHECK-NEXT:    [[A:%.*]] = shl i64 [[X]], [[S0]]
-; CHECK-NEXT:    [[B:%.*]] = shl i64 [[Y]], [[S1]]
-; CHECK-NEXT:    [[R:%.*]] = or i64 [[A]], [[B]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[Y]], 8
+; CHECK-NEXT:    [[TMP2:%.*]] = or i64 [[X]], [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = shl i64 [[TMP2]], [[S0]]
 ; CHECK-NEXT:    ret i64 [[R]]
 ;
   %s0 = add i64 %s, 8
@@ -392,26 +382,23 @@ define i64 @byte_pack4(ptr %p, i64 %s, i64 %acc) {
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[S:%.*]], i64 [[ACC:%.*]]) {
 ; CHECK-NEXT:    [[B0:%.*]] = load i8, ptr [[P]], align 1
 ; CHECK-NEXT:    [[Z0:%.*]] = zext i8 [[B0]] to i64
-; CHECK-NEXT:    [[V0:%.*]] = shl i64 [[Z0]], [[S]]
-; CHECK-NEXT:    [[A0:%.*]] = or i64 [[V0]], [[ACC]]
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[P]], i64 1
 ; CHECK-NEXT:    [[B1:%.*]] = load i8, ptr [[P1]], align 1
 ; CHECK-NEXT:    [[Z1:%.*]] = zext i8 [[B1]] to i64
-; CHECK-NEXT:    [[S1:%.*]] = add i64 [[S]], 8
-; CHECK-NEXT:    [[V1:%.*]] = shl i64 [[Z1]], [[S1]]
-; CHECK-NEXT:    [[A1:%.*]] = or i64 [[V1]], [[A0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[Z1]], 8
+; CHECK-NEXT:    [[TMP2:%.*]] = or disjoint i64 [[TMP1]], [[Z0]]
 ; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[P]], i64 2
 ; CHECK-NEXT:    [[B2:%.*]] = load i8, ptr [[P2]], align 1
 ; CHECK-NEXT:    [[Z2:%.*]] = zext i8 [[B2]] to i64
-; CHECK-NEXT:    [[S2:%.*]] = add i64 [[S]], 16
-; CHECK-NEXT:    [[V2:%.*]] = shl i64 [[Z2]], [[S2]]
-; CHECK-NEXT:    [[A2:%.*]] = or i64 [[V2]], [[A1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw nsw i64 [[Z2]], 16
+; CHECK-NEXT:    [[TMP4:%.*]] = or disjoint i64 [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    [[P3:%.*]] = getelementptr i8, ptr [[P]], i64 3
 ; CHECK-NEXT:    [[B3:%.*]] = load i8, ptr [[P3]], align 1
 ; CHECK-NEXT:    [[Z3:%.*]] = zext i8 [[B3]] to i64
-; CHECK-NEXT:    [[S3:%.*]] = add i64 [[S]], 24
-; CHECK-NEXT:    [[V3:%.*]] = shl i64 [[Z3]], [[S3]]
-; CHECK-NEXT:    [[A3:%.*]] = or i64 [[V3]], [[A2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw nsw i64 [[Z3]], 24
+; CHECK-NEXT:    [[TMP6:%.*]] = or disjoint i64 [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = shl i64 [[TMP6]], [[S]]
+; CHECK-NEXT:    [[A3:%.*]] = or i64 [[TMP7]], [[ACC]]
 ; CHECK-NEXT:    ret i64 [[A3]]
 ;
   %b0 = load i8, ptr %p, align 1
@@ -443,13 +430,12 @@ define i64 @byte_pack4(ptr %p, i64 %s, i64 %acc) {
 define i64 @descending_offsets(i64 %x, i64 %y, i64 %s, i64 %acc) {
 ; CHECK-LABEL: define i64 @descending_offsets(
 ; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]], i64 [[S:%.*]], i64 [[ACC:%.*]]) {
-; CHECK-NEXT:    [[S0:%.*]] = add i64 [[S]], -8
 ; CHECK-NEXT:    [[S1:%.*]] = add i64 [[S]], -16
-; CHECK-NEXT:    [[A:%.*]] = shl i64 [[X]], [[S0]]
-; CHECK-NEXT:    [[B:%.*]] = shl i64 [[Y]], [[S1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[X]], 8
+; CHECK-NEXT:    [[TMP2:%.*]] = or i64 [[Y]], [[TMP1]]
+; CHECK-NEXT:    [[A:%.*]] = shl i64 [[TMP2]], [[S1]]
 ; CHECK-NEXT:    [[PREFIX:%.*]] = or i64 [[A]], [[ACC]]
-; CHECK-NEXT:    [[R:%.*]] = or i64 [[PREFIX]], [[B]]
-; CHECK-NEXT:    ret i64 [[R]]
+; CHECK-NEXT:    ret i64 [[PREFIX]]
 ;
   %s0 = add i64 %s, -8
   %s1 = add i64 %s, -16
@@ -464,11 +450,10 @@ define i64 @shared_lower_amount(i64 %x, i64 %y, i64 %s, ptr %out) {
 ; CHECK-LABEL: define i64 @shared_lower_amount(
 ; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]], i64 [[S:%.*]], ptr [[OUT:%.*]]) {
 ; CHECK-NEXT:    [[S0:%.*]] = add i64 [[S]], 8
-; CHECK-NEXT:    [[S1:%.*]] = add i64 [[S]], 16
 ; CHECK-NEXT:    store i64 [[S0]], ptr [[OUT]], align 4
-; CHECK-NEXT:    [[A:%.*]] = shl i64 [[X]], [[S0]]
-; CHECK-NEXT:    [[B:%.*]] = shl i64 [[Y]], [[S1]]
-; CHECK-NEXT:    [[R:%.*]] = or i64 [[A]], [[B]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[Y]], 8
+; CHECK-NEXT:    [[TMP2:%.*]] = or i64 [[X]], [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = shl i64 [[TMP2]], [[S0]]
 ; CHECK-NEXT:    ret i64 [[R]]
 ;
   %s0 = add i64 %s, 8
@@ -485,26 +470,23 @@ define i64 @volatile_byte_pack4(ptr %p, i64 %s, i64 %acc) {
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[S:%.*]], i64 [[ACC:%.*]]) {
 ; CHECK-NEXT:    [[B0:%.*]] = load volatile i8, ptr [[P]], align 1
 ; CHECK-NEXT:    [[Z0:%.*]] = zext i8 [[B0]] to i64
-; CHECK-NEXT:    [[V0:%.*]] = shl i64 [[Z0]], [[S]]
-; CHECK-NEXT:    [[A0:%.*]] = or i64 [[V0]], [[ACC]]
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[P]], i64 1
 ; CHECK-NEXT:    [[B1:%.*]] = load volatile i8, ptr [[P1]], align 1
 ; CHECK-NEXT:    [[Z1:%.*]] = zext i8 [[B1]] to i64
-; CHECK-NEXT:    [[S1:%.*]] = add i64 [[S]], 8
-; CHECK-NEXT:    [[V1:%.*]] = shl i64 [[Z1]], [[S1]]
-; CHECK-NEXT:    [[A1:%.*]] = or i64 [[V1]], [[A0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[Z1]], 8
+; CHECK-NEXT:    [[TMP2:%.*]] = or disjoint i64 [[TMP1]], [[Z0]]
 ; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[P]], i64 2
 ; CHECK-NEXT:    [[B2:%.*]] = load volatile i8, ptr [[P2]], align 1
 ; CHECK-NEXT:    [[Z2:%.*]] = zext i8 [[B2]] to i64
-; CHECK-NEXT:    [[S2:%.*]] = add i64 [[S]], 16
-; CHECK-NEXT:    [[V2:%.*]] = shl i64 [[Z2]], [[S2]]
-; CHECK-NEXT:    [[A2:%.*]] = or i64 [[V2]], [[A1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw nsw i64 [[Z2]], 16
+; CHECK-NEXT:    [[TMP4:%.*]] = or disjoint i64 [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    [[P3:%.*]] = getelementptr i8, ptr [[P]], i64 3
 ; CHECK-NEXT:    [[B3:%.*]] = load volatile i8, ptr [[P3]], align 1
 ; CHECK-NEXT:    [[Z3:%.*]] = zext i8 [[B3]] to i64
-; CHECK-NEXT:    [[S3:%.*]] = add i64 [[S]], 24
-; CHECK-NEXT:    [[V3:%.*]] = shl i64 [[Z3]], [[S3]]
-; CHECK-NEXT:    [[A3:%.*]] = or i64 [[V3]], [[A2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw nsw i64 [[Z3]], 24
+; CHECK-NEXT:    [[TMP6:%.*]] = or disjoint i64 [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = shl i64 [[TMP6]], [[S]]
+; CHECK-NEXT:    [[A3:%.*]] = or i64 [[TMP7]], [[ACC]]
 ; CHECK-NEXT:    ret i64 [[A3]]
 ;
   %b0 = load volatile i8, ptr %p, align 1
@@ -537,26 +519,23 @@ define i64 @atomic_byte_pack4(ptr %p, i64 %s, i64 %acc) {
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[S:%.*]], i64 [[ACC:%.*]]) {
 ; CHECK-NEXT:    [[B0:%.*]] = load atomic i8, ptr [[P]] monotonic, align 1
 ; CHECK-NEXT:    [[Z0:%.*]] = zext i8 [[B0]] to i64
-; CHECK-NEXT:    [[V0:%.*]] = shl i64 [[Z0]], [[S]]
-; CHECK-NEXT:    [[A0:%.*]] = or i64 [[V0]], [[ACC]]
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[P]], i64 1
 ; CHECK-NEXT:    [[B1:%.*]] = load atomic i8, ptr [[P1]] monotonic, align 1
 ; CHECK-NEXT:    [[Z1:%.*]] = zext i8 [[B1]] to i64
-; CHECK-NEXT:    [[S1:%.*]] = add i64 [[S]], 8
-; CHECK-NEXT:    [[V1:%.*]] = shl i64 [[Z1]], [[S1]]
-; CHECK-NEXT:    [[A1:%.*]] = or i64 [[V1]], [[A0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[Z1]], 8
+; CHECK-NEXT:    [[TMP2:%.*]] = or disjoint i64 [[TMP1]], [[Z0]]
 ; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[P]], i64 2
 ; CHECK-NEXT:    [[B2:%.*]] = load atomic i8, ptr [[P2]] monotonic, align 1
 ; CHECK-NEXT:    [[Z2:%.*]] = zext i8 [[B2]] to i64
-; CHECK-NEXT:    [[S2:%.*]] = add i64 [[S]], 16
-; CHECK-NEXT:    [[V2:%.*]] = shl i64 [[Z2]], [[S2]]
-; CHECK-NEXT:    [[A2:%.*]] = or i64 [[V2]], [[A1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw nsw i64 [[Z2]], 16
+; CHECK-NEXT:    [[TMP4:%.*]] = or disjoint i64 [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    [[P3:%.*]] = getelementptr i8, ptr [[P]], i64 3
 ; CHECK-NEXT:    [[B3:%.*]] = load atomic i8, ptr [[P3]] monotonic, align 1
 ; CHECK-NEXT:    [[Z3:%.*]] = zext i8 [[B3]] to i64
-; CHECK-NEXT:    [[S3:%.*]] = add i64 [[S]], 24
-; CHECK-NEXT:    [[V3:%.*]] = shl i64 [[Z3]], [[S3]]
-; CHECK-NEXT:    [[A3:%.*]] = or i64 [[V3]], [[A2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw nsw i64 [[Z3]], 24
+; CHECK-NEXT:    [[TMP6:%.*]] = or disjoint i64 [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = shl i64 [[TMP6]], [[S]]
+; CHECK-NEXT:    [[A3:%.*]] = or i64 [[TMP7]], [[ACC]]
 ; CHECK-NEXT:    ret i64 [[A3]]
 ;
   %b0 = load atomic i8, ptr %p monotonic, align 1
@@ -587,10 +566,9 @@ define i64 @atomic_byte_pack4(ptr %p, i64 %s, i64 %acc) {
 define i128 @pair_i128(i128 %x, i128 %y, i128 %s) {
 ; CHECK-LABEL: define i128 @pair_i128(
 ; CHECK-SAME: i128 [[X:%.*]], i128 [[Y:%.*]], i128 [[S:%.*]]) {
-; CHECK-NEXT:    [[S1:%.*]] = add i128 [[S]], 8
-; CHECK-NEXT:    [[A:%.*]] = shl i128 [[X]], [[S]]
-; CHECK-NEXT:    [[B:%.*]] = shl i128 [[Y]], [[S1]]
-; CHECK-NEXT:    [[R:%.*]] = or i128 [[A]], [[B]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i128 [[Y]], 8
+; CHECK-NEXT:    [[TMP2:%.*]] = or i128 [[X]], [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = shl i128 [[TMP2]], [[S]]
 ; CHECK-NEXT:    ret i128 [[R]]
 ;
   %s1 = add i128 %s, 8
@@ -643,13 +621,12 @@ define i64 @variable_ashr_value(i64 %x, i64 %y, i64 %s, i64 %t, i64 %acc) {
 define i64 @constant_lshr_value(i64 %x, i64 %y, i64 %s, i64 %acc) {
 ; CHECK-LABEL: define i64 @constant_lshr_value(
 ; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]], i64 [[S:%.*]], i64 [[ACC:%.*]]) {
-; CHECK-NEXT:    [[EXTRACT:%.*]] = lshr i64 [[Y]], 1
-; CHECK-NEXT:    [[S1:%.*]] = add i64 [[S]], 8
-; CHECK-NEXT:    [[A:%.*]] = shl i64 [[X]], [[S]]
-; CHECK-NEXT:    [[B:%.*]] = shl i64 [[EXTRACT]], [[S1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[Y]], 7
+; CHECK-NEXT:    [[TMP2:%.*]] = and i64 [[TMP1]], -256
+; CHECK-NEXT:    [[TMP3:%.*]] = or i64 [[X]], [[TMP2]]
+; CHECK-NEXT:    [[A:%.*]] = shl i64 [[TMP3]], [[S]]
 ; CHECK-NEXT:    [[P:%.*]] = or i64 [[A]], [[ACC]]
-; CHECK-NEXT:    [[R:%.*]] = or i64 [[P]], [[B]]
-; CHECK-NEXT:    ret i64 [[R]]
+; CHECK-NEXT:    ret i64 [[P]]
 ;
   %extract = lshr i64 %y, 1
   %s1 = add i64 %s, 8
@@ -705,15 +682,14 @@ define i64 @original_issue_load4(ptr %p, i64 %s) {
 ; CHECK-NEXT:    [[Z2:%.*]] = zext i8 [[L2]] to i64
 ; CHECK-NEXT:    [[Z3:%.*]] = zext i8 [[L3]] to i64
 ; CHECK-NEXT:    [[S1:%.*]] = add i64 [[S]], -8
-; CHECK-NEXT:    [[S2:%.*]] = add i64 [[S]], -16
 ; CHECK-NEXT:    [[S3:%.*]] = add i64 [[S]], -24
 ; CHECK-NEXT:    [[V0:%.*]] = shl i64 [[Z0]], [[S]]
 ; CHECK-NEXT:    [[V1:%.*]] = shl i64 [[Z1]], [[S1]]
-; CHECK-NEXT:    [[V2:%.*]] = shl i64 [[Z2]], [[S2]]
-; CHECK-NEXT:    [[V3:%.*]] = shl i64 [[Z3]], [[S3]]
 ; CHECK-NEXT:    [[O1:%.*]] = or i64 [[V0]], [[V1]]
-; CHECK-NEXT:    [[O2:%.*]] = or i64 [[O1]], [[V2]]
-; CHECK-NEXT:    [[R:%.*]] = or i64 [[O2]], [[V3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[Z2]], 8
+; CHECK-NEXT:    [[TMP2:%.*]] = or disjoint i64 [[TMP1]], [[Z3]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP2]], [[S3]]
+; CHECK-NEXT:    [[R:%.*]] = or i64 [[TMP3]], [[O1]]
 ; CHECK-NEXT:    ret i64 [[R]]
 ;
   %p1 = getelementptr i8, ptr %p, i64 1
