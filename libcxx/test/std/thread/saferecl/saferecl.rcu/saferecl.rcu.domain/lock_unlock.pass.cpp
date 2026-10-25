@@ -34,6 +34,10 @@ static_assert(noexcept(std::declval<std::rcu_domain>().lock()));
 static_assert(noexcept(std::declval<std::rcu_domain>().unlock()));
 static_assert(noexcept(std::declval<std::rcu_domain>().try_lock()));
 
+static_assert(std::same_as<decltype(std::declval<std::rcu_domain>().lock()), void>);
+static_assert(std::same_as<decltype(std::declval<std::rcu_domain>().unlock()), void>);
+static_assert(std::same_as<decltype(std::declval<std::rcu_domain>().try_lock()), bool>);
+
 int main(int, char**) {
   {
     // lock opens rcu protected region

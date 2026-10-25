@@ -12,18 +12,15 @@
 // XFAIL: !has-128-bit-atomics
 // REQUIRES: std-at-least-c++26
 
-// https://github.com/mstorsjo/llvm-mingw/issues/538
-// XFAIL: target=x86_64-w64-windows-gnu
-
 // https://github.com/llvm/llvm-project/issues/52942
-// UNSUPPORTED: tsan
+// XFAIL: tsan
 
 // void rcu_barrier(rcu_domain& dom = rcu_default_domain()) noexcept;
 
 #include <atomic>
 #include <cassert>
 #include <chrono>
-#include <latch>
+#include <concepts>
 #include <rcu>
 #include <stop_token>
 #include <thread>
@@ -34,6 +31,9 @@
 
 static_assert(noexcept(std::rcu_barrier()));
 static_assert(noexcept(std::rcu_barrier(std::rcu_default_domain())));
+
+static_assert(std::same_as<decltype(std::rcu_barrier()), void>);
+static_assert(std::same_as<decltype(std::rcu_barrier(std::rcu_default_domain())), void>);
 
 class TestClass1 {
   int& destruction_count_;
