@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/AssumptionCache.h"
+#include "AnalysisOptions.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -30,22 +31,12 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 
 using namespace llvm;
 using namespace llvm::PatternMatch;
-
-static cl::opt<bool>
-    VerifyAssumptionCache("verify-assumption-cache", cl::Hidden,
-                          cl::desc("Enable verification of assumption cache"),
-                          cl::init(false));
-
-static cl::opt<unsigned> MaxAssumesPerValue(
-    "max-assumes-per-value", cl::Hidden, cl::init(1024),
-    cl::desc("Maximum number of assumptions to cache for a single value"));
 
 SmallVector<AssumptionCache::ResultElem, 1> &
 AssumptionCache::getOrInsertAffectedValues(Value *V) {
@@ -112,6 +103,7 @@ void AssumptionCache::updateAffectedValues(AssumeInst *CI) {
   SmallVector<AssumptionCache::ResultElem, 16> Affected;
   findAffectedValues(CI, TTI, Affected);
 
+  unsigned MaxAssumesPerValue = getAnalysisOptions(F).max_assumes_per_value;
   for (auto &AV : Affected) {
     auto &AVV = getOrInsertAffectedValues(AV.Assume);
 
@@ -183,6 +175,7 @@ void AssumptionCache::transferAffectedValuesInCache(Value *OV, Value *NV) {
   if (AVI == AffectedValues.end())
     return;
 
+  unsigned MaxAssumesPerValue = getAnalysisOptions(F).max_assumes_per_value;
   for (auto &A : AVI->second) {
     if (NAVV.size() >= MaxAssumesPerValue)
       break;
@@ -350,11 +343,10 @@ void AssumptionCacheTracker::verifyAnalysis() const {
   // flag. We should either fix all passes to correctly update the assumption
   // cache and enable the verifier unconditionally or somehow arrange for the
   // assumption list to be updated automatically by passes.
-  if (!VerifyAssumptionCache)
-    return;
-
   for (const auto &I : AssumptionCaches) {
     const Function &F = cast<Function>(*I.first);
+    if (!getAnalysisOptions(F).verify_assumption_cache)
+      continue;
 
     SmallPtrSet<const CallInst *, 4> Cached;
     if (const char *Violation =

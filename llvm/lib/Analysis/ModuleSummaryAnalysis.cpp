@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/ModuleSummaryAnalysis.h"
+#include "AnalysisOptions.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
@@ -77,15 +78,6 @@ static cl::opt<FunctionSummary::ForceSummaryHotnessType, true> FSEC(
                clEnumValN(FunctionSummary::FSHT_AllNonCritical,
                           "all-non-critical", "All non-critical edges."),
                clEnumValN(FunctionSummary::FSHT_All, "all", "All edges.")));
-
-static cl::opt<std::string> ModuleSummaryDotFile(
-    "module-summary-dot-file", cl::Hidden, cl::value_desc("filename"),
-    cl::desc("File to emit dot graph of new summary into"));
-
-static cl::opt<bool> EnableMemProfIndirectCallSupport(
-    "enable-memprof-indirect-call-support", cl::init(true), cl::Hidden,
-    cl::desc(
-        "Enable MemProf support for summarizing and cloning indirect calls"));
 
 // This can be used to override the number of callees created from VP metadata
 // normally taken from the -icp-max-prom option with a larger amount, if useful
@@ -339,10 +331,10 @@ static bool mustBeUnreachableFunction(const Function &F) {
 }
 
 static void computeFunctionSummary(
-    ModuleSummaryIndex &Index, const Module &M, const Function &F,
-    BlockFrequencyInfo *BFI, ProfileSummaryInfo *PSI, DominatorTree &DT,
-    bool HasLocalsInUsedOrAsm, DenseSet<GlobalValue::GUID> &CantBePromoted,
-    bool IsThinLTO,
+    const AnalysisOptions &Opts, ModuleSummaryIndex &Index, const Module &M,
+    const Function &F, BlockFrequencyInfo *BFI, ProfileSummaryInfo *PSI,
+    DominatorTree &DT, bool HasLocalsInUsedOrAsm,
+    DenseSet<GlobalValue::GUID> &CantBePromoted, bool IsThinLTO,
     std::function<const StackSafetyInfo *(const Function &F)> GetSSICallback) {
   // Summary not currently supported for anonymous functions, they should
   // have been named.
@@ -541,7 +533,7 @@ static void computeFunctionSummary(
         continue;
 
       // Skip indirect calls if we haven't enabled memprof ICP.
-      if (!CalledFunction && !EnableMemProfIndirectCallSupport)
+      if (!CalledFunction && !Opts.enable_memprof_indirect_call_support)
         continue;
 
       // Ensure we keep this analysis in sync with the handling in the ThinLTO
@@ -636,7 +628,7 @@ static void computeFunctionSummary(
               Index.getOrInsertValueInfo(cast<GlobalValue>(CalledValue));
           Callsites.push_back({CalleeValueInfo, StackIdIndices});
         } else {
-          assert(EnableMemProfIndirectCallSupport);
+          assert(Opts.enable_memprof_indirect_call_support);
           // For indirect callsites, create multiple Callsites, one per target.
           // This enables having a different set of clone versions per target,
           // and we will apply the cloning decisions while speculatively
@@ -973,6 +965,7 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
     ProfileSummaryInfo *PSI,
     std::function<const StackSafetyInfo *(const Function &F)> GetSSICallback) {
   assert(PSI);
+  const AnalysisOptions &Opts = getAnalysisOptions(M);
   bool EnableSplitLTOUnit = false;
   bool UnifiedLTO = false;
   if (auto *MD = mdconst::extract_or_null<ConstantInt>(
@@ -1097,7 +1090,7 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
       }
     }
 
-    computeFunctionSummary(Index, M, F, BFI, PSI, DT,
+    computeFunctionSummary(Opts, Index, M, F, BFI, PSI, DT,
                            !LocalsUsed.empty() || HasLocalInlineAsmSymbol,
                            CantBePromoted, IsThinLTO, GetSSICallback);
   }
@@ -1170,12 +1163,14 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
     }
   }
 
-  if (!ModuleSummaryDotFile.empty()) {
+  if (!Opts.module_summary_dot_file.empty()) {
     std::error_code EC;
-    raw_fd_ostream OSDot(ModuleSummaryDotFile, EC, sys::fs::OpenFlags::OF_Text);
+    raw_fd_ostream OSDot(Opts.module_summary_dot_file, EC,
+                         sys::fs::OpenFlags::OF_Text);
     if (EC)
       report_fatal_error(Twine("Failed to open dot file ") +
-                         ModuleSummaryDotFile + ": " + EC.message() + "\n");
+                         Opts.module_summary_dot_file + ": " + EC.message() +
+                         "\n");
     Index.exportToDot(OSDot, {});
   }
 
@@ -1297,7 +1292,8 @@ bool llvm::mayHaveMemprofSummary(const CallBase *CB) {
       return false;
   } else {
     // Skip indirect calls if we haven't enabled memprof ICP.
-    if (!EnableMemProfIndirectCallSupport)
+    if (!getAnalysisOptions(CB->getContext())
+             .enable_memprof_indirect_call_support)
       return false;
     // Skip inline assembly calls.
     if (CI && CI->isInlineAsm())

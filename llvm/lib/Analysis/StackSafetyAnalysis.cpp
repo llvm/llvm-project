@@ -9,6 +9,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/StackSafetyAnalysis.h"
+#include "AnalysisOptions.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -60,12 +61,6 @@ STATISTIC(NumIndexCalleeMultipleExternal, "Number of index callee non-unique ext
 
 static cl::opt<int> StackSafetyMaxIterations("stack-safety-max-iterations",
                                              cl::init(20), cl::Hidden);
-
-static cl::opt<bool> StackSafetyPrint("stack-safety-print", cl::init(false),
-                                      cl::Hidden);
-
-static cl::opt<bool> StackSafetyRun("stack-safety-run", cl::init(false),
-                                    cl::Hidden);
 
 namespace {
 
@@ -930,7 +925,7 @@ const StackSafetyGlobalInfo::InfoTy &StackSafetyGlobalInfo::getInfo() const {
       }
     }
 
-    if (StackSafetyPrint)
+    if (getAnalysisOptions(*M).stack_safety_print)
       print(errs());
   }
   return *Info;
@@ -982,7 +977,7 @@ StackSafetyGlobalInfo::StackSafetyGlobalInfo(
     Module *M, std::function<const StackSafetyInfo &(Function &F)> GetSSI,
     const ModuleSummaryIndex *Index)
     : M(M), GetSSI(GetSSI), Index(Index) {
-  if (StackSafetyRun)
+  if (getAnalysisOptions(*M).stack_safety_run)
     getInfo();
 }
 
@@ -1122,7 +1117,7 @@ bool StackSafetyGlobalInfoWrapperPass::runOnModule(Module &M) {
 }
 
 bool llvm::needsParamAccessSummary(const Module &M) {
-  if (StackSafetyRun)
+  if (getAnalysisOptions(M).stack_safety_run)
     return true;
   for (const auto &F : M.functions())
     if (F.hasFnAttribute(Attribute::SanitizeMemTag))

@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/Delinearization.h"
+#include "AnalysisOptions.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionDivision.h"
@@ -22,7 +23,6 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -30,11 +30,6 @@ using namespace llvm;
 
 #define DL_NAME "delinearize"
 #define DEBUG_TYPE DL_NAME
-
-static cl::opt<bool> UseFixedSizeArrayHeuristic(
-    "delinearize-use-fixed-size-array-heuristic", cl::init(true), cl::Hidden,
-    cl::desc("When printing analysis, use the heuristic for fixed-size arrays "
-             "if the default delinearizetion fails."));
 
 // Return true when S contains at least an undef value.
 static inline bool containsUndefs(const SCEV *S) {
@@ -802,6 +797,7 @@ void printDelinearization(raw_ostream &O, Function *F, LoopInfo *LI,
                           ScalarEvolution *SE) {
   O << "Printing analysis 'Delinearization' for function '" << F->getName()
     << "':";
+  const AnalysisOptions &Opts = getAnalysisOptions(*F);
   for (Instruction &Inst : instructions(F)) {
     // Only analyze loads and stores.
     if (!isa<StoreInst>(&Inst) && !isa<LoadInst>(&Inst))
@@ -835,7 +831,8 @@ void printDelinearization(raw_ostream &O, Function *F, LoopInfo *LI,
     };
 
     delinearize(*SE, AccessFn, Subscripts, Sizes, SE->getElementSize(&Inst));
-    if (UseFixedSizeArrayHeuristic && IsDelinearizationFailed()) {
+    if (Opts.delinearize_use_fixed_size_array_heuristic &&
+        IsDelinearizationFailed()) {
       Subscripts.clear();
       Sizes.clear();
       delinearizeFixedSizeArray(*SE, AccessFn, Subscripts, Sizes,
