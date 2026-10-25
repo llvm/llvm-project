@@ -624,8 +624,7 @@ TEST(LlvmLibcSharedMathTest, AllEmuFloat128) {
   EXPECT_EQ(0LL, LIBC_NAMESPACE::shared::llroundf128(Float128(0.0)));
   EXPECT_EQ(0L, LIBC_NAMESPACE::shared::lrintf128(Float128(0.0)));
   EXPECT_EQ(0L, LIBC_NAMESPACE::shared::lroundf128(Float128(0.0)));
-  EXPECT_FP_EQ(Float128(0.0),
-               LIBC_NAMESPACE::shared::logbf128(Float128(1.0)));
+  EXPECT_FP_EQ(Float128(0.0), LIBC_NAMESPACE::shared::logbf128(Float128(1.0)));
   EXPECT_FP_EQ(Float128(0.0),
                LIBC_NAMESPACE::shared::nearbyintf128(Float128(0.0)));
   EXPECT_FP_EQ(Float128(0.0), LIBC_NAMESPACE::shared::rintf128(Float128(0.0)));
