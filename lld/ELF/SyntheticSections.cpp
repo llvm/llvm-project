@@ -246,6 +246,9 @@ CieRecord *EhFrameSection::addCie(EhSectionPiece &cie,
     rec = make<CieRecord>();
     rec->cie = &cie;
     cieRecords.push_back(rec);
+    uint8_t enc = getFdeEncoding(&cie) & 0x70;
+    if (enc != DW_EH_PE_absptr && enc != DW_EH_PE_pcrel)
+      Err(ctx) << "unknown FDE size encoding";
   }
   return rec;
 }
@@ -280,9 +283,6 @@ void EhFrameSection::addRecords(EhInputSection *sec) {
   for (EhSectionPiece &cie : sec->cies)
     sectionCies.push_back(addCie(cie, rels));
   for (EhSectionPiece &fde : sec->fdes) {
-    if (fde.cie == uint32_t(-1))
-      Fatal(ctx) << sec << ": invalid CIE reference";
-
     if (!isFdeLive(fde, rels))
       continue;
     sectionCies[fde.cie]->fdes.push_back(&fde);
@@ -299,7 +299,7 @@ void EhFrameSection::iterateFDEWithLSDA(
     for (EhSectionPiece &cie : sec->cies)
       ciesWithLSDA.push_back(hasLSDA(cie));
     for (EhSectionPiece &fde : sec->fdes) {
-      if (fde.cie == uint32_t(-1) || !ciesWithLSDA[fde.cie])
+      if (!ciesWithLSDA[fde.cie])
         continue;
 
       // The CIE has a LSDA argument. Call fn with d's section.
@@ -430,11 +430,6 @@ bool EhFrameHeader::updateAllocSize(Ctx &ctx) {
   // .eh_frame_hdr's VA.
   fdes.clear();
   for (CieRecord *rec : ehFrame->getCieRecords()) {
-    uint8_t enc = getFdeEncoding(rec->cie);
-    if ((enc & 0x70) != DW_EH_PE_absptr && (enc & 0x70) != DW_EH_PE_pcrel) {
-      Err(ctx) << "unknown FDE size encoding";
-      continue;
-    }
     for (EhSectionPiece *fde : rec->fdes) {
       // The FDE has passed `isFdeLive`, so the first relocation's symbol is a
       // live Defined.

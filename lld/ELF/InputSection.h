@@ -386,7 +386,7 @@ struct EhSectionPiece {
   ssize_t outputOff = -1;
   InputSectionBase *sec;
   unsigned firstRelocation;
-  // For an FDE, the index of its CIE in `cies`, or -1 if invalid.
+  // For an FDE, the index of its CIE in `cies`.
   uint32_t cie;
 };
 

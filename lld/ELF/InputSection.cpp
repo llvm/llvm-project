@@ -1426,9 +1426,11 @@ template <class ELFT> void EhInputSection::split() {
       auto cieOff = off + 4 - id;
       auto it = partition_point(
           cies, [=](const EhSectionPiece &p) { return p.inputOff < cieOff; });
-      uint32_t cie =
-          it != cies.end() && it->inputOff == cieOff ? it - cies.begin() : -1;
-      fdes.emplace_back(off, this, size, firstRel, cie);
+      if (it == cies.end() || it->inputOff != cieOff) {
+        msg = "invalid CIE reference";
+        break;
+      }
+      fdes.emplace_back(off, this, size, firstRel, it - cies.begin());
     }
     d = d.slice(size);
   }
