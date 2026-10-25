@@ -501,6 +501,10 @@ Instruction *MemCpyOptPass::tryMergingIntoMemset(Instruction *StartInst,
 // may alias with these.
 // The method returns true if it was successful.
 bool MemCpyOptPass::moveUp(StoreInst *SI, Instruction *P, const LoadInst *LI) {
+  // The hoist crosses P itself, which is not checked by the scan below.
+  if (!isGuaranteedToTransferExecutionToSuccessor(P))
+    return false;
+
   // If the store alias this position, early bail out.
   MemoryLocation StoreLoc = MemoryLocation::get(SI);
   if (isModOrRefSet(AA->getModRefInfo(P, StoreLoc)))
