@@ -350,9 +350,10 @@ static Value *getStoreValueForLoadHelper(Value *SrcVal, unsigned Offset,
     return SrcVal;
   }
 
-  uint64_t StoreSize =
-      (DL.getTypeSizeInBits(SrcVal->getType()).getFixedValue() + 7) / 8;
-  uint64_t LoadSize = (DL.getTypeSizeInBits(LoadTy).getFixedValue() + 7) / 8;
+  unsigned SrcBits = DL.getTypeSizeInBits(SrcTy).getFixedValue();
+  unsigned LoadBits = DL.getTypeSizeInBits(LoadTy).getFixedValue();
+  uint64_t StoreSize = (SrcBits + 7) / 8;
+  uint64_t LoadSize = (LoadBits + 7) / 8;
 
   // Shift the bits to the least significant depending on endianness.
   unsigned ShiftAmt;
@@ -362,10 +363,14 @@ static Value *getStoreValueForLoadHelper(Value *SrcVal, unsigned Offset,
     ShiftAmt = (StoreSize - LoadSize - Offset) * 8;
 
   // Integers drop provenance, and one poison bit poisons the whole value.
+  // A vector tracks poison per lane.
   if (SrcTy->isByteOrByteVectorTy() ||
-      (SrcTy->isPtrOrPtrVectorTy() && LoadTy->isByteOrByteVectorTy())) {
-    unsigned SrcBits = DL.getTypeSizeInBits(SrcTy).getFixedValue();
-    unsigned LoadBits = DL.getTypeSizeInBits(LoadTy).getFixedValue();
+      (SrcTy->isPtrOrPtrVectorTy() && LoadTy->isByteOrByteVectorTy()) ||
+      (SrcTy->isVectorTy() && LoadSize != StoreSize)) {
+    // Fold a constant bitextract, as the builder has no DataLayout.
+    if (auto *C = dyn_cast<Constant>(SrcVal))
+      if (Constant *Res = getConstantValueForLoad(C, Offset, LoadTy, DL))
+        return Res;
     if (LoadBits == SrcBits)
       return Builder.CreateBitCast(SrcVal, LoadTy);
     // bitextract needs a scalar byte source and can't return a vector.
@@ -382,6 +387,10 @@ static Value *getStoreValueForLoadHelper(Value *SrcVal, unsigned Offset,
   if (SrcVal->getType()->isPtrOrPtrVectorTy())
     SrcVal =
         Builder.CreatePtrToInt(SrcVal, DL.getIntPtrType(SrcVal->getType()));
+  // If the load and store are the same size, there is nothing to shift.
+  // If one lane of a vector is poison, an integer cast would poison all lanes.
+  if (LoadSize == StoreSize)
+    return SrcVal;
   if (!SrcVal->getType()->isIntegerTy())
     SrcVal =
         Builder.CreateBitCast(SrcVal, IntegerType::get(Ctx, StoreSize * 8));
@@ -389,11 +398,7 @@ static Value *getStoreValueForLoadHelper(Value *SrcVal, unsigned Offset,
   if (ShiftAmt)
     SrcVal = Builder.CreateLShr(SrcVal,
                                 ConstantInt::get(SrcVal->getType(), ShiftAmt));
-
-  if (LoadSize != StoreSize)
-    SrcVal = Builder.CreateTruncOrBitCast(SrcVal,
-                                          IntegerType::get(Ctx, LoadSize * 8));
-  return SrcVal;
+  return Builder.CreateTrunc(SrcVal, IntegerType::get(Ctx, LoadSize * 8));
 }
 
 Value *VNCoercion::getValueForLoad(Value *SrcVal, unsigned Offset, Type *LoadTy,
