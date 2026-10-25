@@ -619,6 +619,8 @@ public:
   LLVM_ABI bool isSwiftError() const;
 
   /// Strip off pointer casts, all-zero GEPs and address space casts.
+  /// Note: this function might not strip all instructions for long chains for
+  /// performance reasons, i.e. strip(strip(X)) might not be strip(X).
   ///
   /// Returns the original uncasted value.  If this is called on a non-pointer
   /// value, it returns 'this'.
@@ -629,6 +631,8 @@ public:
   }
 
   /// Strip off pointer casts, all-zero GEPs, address space casts, and aliases.
+  /// Note: this function might not strip all instructions for long chains for
+  /// performance reasons, i.e. strip(strip(X)) might not be strip(X).
   ///
   /// Returns the original uncasted value.  If this is called on a non-pointer
   /// value, it returns 'this'.
@@ -640,6 +644,8 @@ public:
 
   /// Strip off pointer casts, all-zero GEPs and address space casts
   /// but ensures the representation of the result stays the same.
+  /// Note: this function might not strip all instructions for long chains for
+  /// performance reasons, i.e. strip(strip(X)) might not be strip(X).
   ///
   /// Returns the original uncasted value with the same representation. If this
   /// is called on a non-pointer value, it returns 'this'.
@@ -651,6 +657,8 @@ public:
 
   /// Strip off pointer casts, all-zero GEPs, single-argument phi nodes and
   /// invariant group info.
+  /// Note: this function might not strip all instructions for long chains for
+  /// performance reasons, i.e. strip(strip(X)) might not be strip(X).
   ///
   /// Returns the original uncasted value.  If this is called on a non-pointer
   /// value, it returns 'this'. This function should be used only in
@@ -662,6 +670,8 @@ public:
   }
 
   /// Strip off pointer casts and all-constant inbounds GEPs.
+  /// Note: this function might not strip all instructions for long chains for
+  /// performance reasons, i.e. strip(strip(X)) might not be strip(X).
   ///
   /// Returns the original pointer value.  If this is called on a non-pointer
   /// value, it returns 'this'.
@@ -695,6 +705,9 @@ public:
   /// If \p LookThroughIntToPtr is true then this method also looks through
   /// IntToPtr and PtrToInt constant expressions. The returned pointer may not
   /// have the same provenance as this value.
+  ///
+  /// Note: this function might not strip all instructions for long chains for
+  /// performance reasons, i.e. strip(strip(X)) might not be strip(X).
   ///
   /// If this is called on a non-pointer value, it returns 'this' and the
   /// \p Offset is not modified.
@@ -738,6 +751,8 @@ public:
   }
 
   /// Strip off pointer casts and inbounds GEPs.
+  /// Note: this function might not strip all instructions for long chains for
+  /// performance reasons, i.e. strip(strip(X)) might not be strip(X).
   ///
   /// Returns the original pointer value.  If this is called on a non-pointer
   /// value, it returns 'this'.
