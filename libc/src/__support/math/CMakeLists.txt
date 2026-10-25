@@ -5792,7 +5792,7 @@ add_header_library(
     libc.src.__support.FPUtil.sqrt
     libc.src.__support.common
     libc.src.__support.macros.config
-    libc.src.__support.FPUtil.cast.h
+    libc.src.__support.FPUtil.cast
 )
 
 add_header_library(
