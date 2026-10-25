@@ -2226,7 +2226,7 @@ InstructionCost GCNTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
   if (AddressSpace == AMDGPUAS::PRIVATE_ADDRESS ||
       AddressSpace == AMDGPUAS::FLAT_ADDRESS)
     HasUnalignedAccess = ST->hasUnalignedScratchAccessEnabled();
-  if (IsDS) {
+  else if (IsDS) {
     HasUnalignedAccess = ST->hasUnalignedDSAccessEnabled();
     if (Alignment >= 4 && Alignment < 8)
       MaxBytes = 8;
