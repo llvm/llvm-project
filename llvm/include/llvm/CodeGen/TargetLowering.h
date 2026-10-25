@@ -5521,11 +5521,11 @@ public:
     /// True if this "rm" (or "g") operand should prefer a register, leaving the
     /// register allocator to fold it to a stack slot if it runs out of
     /// registers. ParseConstraints() sets this for a direct operand whose
-    /// value fits in one register, on a target that can fold it.
+    /// integer value fills one register, on a target that can fold it.
     /// getConstraintPreferences() then picks 'r', and instruction selection
     /// marks the register operand foldable (see
-    /// InlineAsm::Flag::setRegMayBeFolded()). The tied input of a "+rm"
-    /// operand has its own constraint ("0"), so only the output gets this.
+    /// InlineAsm::Flag::setRegMayBeFolded()). An input tied to an "=rm"
+    /// output has its own constraint (e.g. "0"), so only the output gets this.
     bool MayFoldRegister = false;
 
     /// Copy constructor for copying from a ConstraintInfo.

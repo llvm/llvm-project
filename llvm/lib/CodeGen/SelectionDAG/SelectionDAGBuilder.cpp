@@ -1052,10 +1052,8 @@ void RegsForValue::AddInlineAsmOperands(InlineAsm::Kind Code, bool HasMatching,
     const MachineRegisterInfo &MRI = DAG.getMachineFunction().getRegInfo();
     const TargetRegisterClass *RC = MRI.getRegClass(Regs.front());
     Flag.setRegClass(RC->getID());
-    if (MayFoldRegister) {
-      assert(Regs.size() == 1 && "only a single register can be folded");
+    if (MayFoldRegister)
       Flag.setRegMayBeFolded(true);
-    }
   }
 
   SDValue Res = DAG.getTargetConstant(Flag, dl, MVT::i32);

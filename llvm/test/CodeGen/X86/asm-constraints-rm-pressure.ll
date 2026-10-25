@@ -30,16 +30,6 @@ define i64 @test_rm_output_pressure(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 
 ; GREEDY_RA-NEXT:    .cfi_offset %r14, -32
 ; GREEDY_RA-NEXT:    .cfi_offset %r15, -24
 ; GREEDY_RA-NEXT:    .cfi_offset %rbp, -16
-; GREEDY_RA-NEXT:    movq %r9, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; GREEDY_RA-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; GREEDY_RA-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; GREEDY_RA-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; GREEDY_RA-NEXT:    movq %rsi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; GREEDY_RA-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r9 # 8-byte Reload
-; GREEDY_RA-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r8 # 8-byte Reload
-; GREEDY_RA-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
-; GREEDY_RA-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
-; GREEDY_RA-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
 ; GREEDY_RA-NEXT:    #APP # 8-byte Folded Spill
 ; GREEDY_RA-NEXT:    # -{{[0-9]+}}(%rsp) %rdi %rsi %rdx %rcx %r8 %r9
 ; GREEDY_RA-NEXT:    #NO_APP
@@ -125,20 +115,10 @@ define void @test_rm_same_value_twice_pressure(i64 %x, i64 %a, i64 %b, i64 %c, i
 ; GREEDY_RA-NEXT:    .cfi_offset %r14, -32
 ; GREEDY_RA-NEXT:    .cfi_offset %r15, -24
 ; GREEDY_RA-NEXT:    .cfi_offset %rbp, -16
-; GREEDY_RA-NEXT:    movq %r9, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; GREEDY_RA-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; GREEDY_RA-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; GREEDY_RA-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; GREEDY_RA-NEXT:    movq %rsi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; GREEDY_RA-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; GREEDY_RA-NEXT:    movq {{[0-9]+}}(%rsp), %r9
-; GREEDY_RA-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r8 # 8-byte Reload
-; GREEDY_RA-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
-; GREEDY_RA-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
-; GREEDY_RA-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
-; GREEDY_RA-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi # 8-byte Reload
+; GREEDY_RA-NEXT:    movq {{[0-9]+}}(%rsp), %rdi
 ; GREEDY_RA-NEXT:    #APP # 8-byte Folded Reload
-; GREEDY_RA-NEXT:    # -{{[0-9]+}}(%rsp) -{{[0-9]+}}(%rsp) %rdi %rsi %rdx %rcx %r8 %r9
+; GREEDY_RA-NEXT:    # -{{[0-9]+}}(%rsp) -{{[0-9]+}}(%rsp) %rsi %rdx %rcx %r8 %r9 %rdi
 ; GREEDY_RA-NEXT:    #NO_APP
 ; GREEDY_RA-NEXT:    popq %rbx
 ; GREEDY_RA-NEXT:    .cfi_def_cfa_offset 48
@@ -174,9 +154,8 @@ define void @test_rm_same_value_twice_pressure(i64 %x, i64 %a, i64 %b, i64 %c, i
 ; FAST_RA-NEXT:    .cfi_offset %r14, -32
 ; FAST_RA-NEXT:    .cfi_offset %r15, -24
 ; FAST_RA-NEXT:    .cfi_offset %rbp, -16
-; FAST_RA-NEXT:    movq %rdi, %rax
+; FAST_RA-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; FAST_RA-NEXT:    movq {{[0-9]+}}(%rsp), %rdi
-; FAST_RA-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; FAST_RA-NEXT:    #APP # 8-byte Folded Reload
 ; FAST_RA-NEXT:    # -{{[0-9]+}}(%rsp) -{{[0-9]+}}(%rsp) %rsi %rdx %rcx %r8 %r9 %rdi
 ; FAST_RA-NEXT:    #NO_APP
@@ -223,22 +202,12 @@ define i64 @test_rm_before_tied_pressure(i64 %x, i64 %a, i64 %b, i64 %c, i64 %d,
 ; GREEDY_RA-NEXT:    .cfi_offset %r14, -32
 ; GREEDY_RA-NEXT:    .cfi_offset %r15, -24
 ; GREEDY_RA-NEXT:    .cfi_offset %rbp, -16
-; GREEDY_RA-NEXT:    movq %r9, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; GREEDY_RA-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; GREEDY_RA-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; GREEDY_RA-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; GREEDY_RA-NEXT:    movq %rsi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; GREEDY_RA-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; GREEDY_RA-NEXT:    movq {{[0-9]+}}(%rsp), %r9
-; GREEDY_RA-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r8 # 8-byte Reload
-; GREEDY_RA-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
-; GREEDY_RA-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
-; GREEDY_RA-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
-; GREEDY_RA-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi # 8-byte Reload
+; GREEDY_RA-NEXT:    movq {{[0-9]+}}(%rsp), %rdi
 ; GREEDY_RA-NEXT:    #APP # 8-byte Folded Reload
-; GREEDY_RA-NEXT:    # %r9 -{{[0-9]+}}(%rsp) %rdi %rsi %rdx %rcx %r8 %r9
+; GREEDY_RA-NEXT:    # %rdi -{{[0-9]+}}(%rsp) %rsi %rdx %rcx %r8 %r9 %rdi
 ; GREEDY_RA-NEXT:    #NO_APP
-; GREEDY_RA-NEXT:    movq %r9, %rax
+; GREEDY_RA-NEXT:    movq %rdi, %rax
 ; GREEDY_RA-NEXT:    popq %rbx
 ; GREEDY_RA-NEXT:    .cfi_def_cfa_offset 48
 ; GREEDY_RA-NEXT:    popq %r12
@@ -276,8 +245,8 @@ define i64 @test_rm_before_tied_pressure(i64 %x, i64 %a, i64 %b, i64 %c, i64 %d,
 ; FAST_RA-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; FAST_RA-NEXT:    movq %rdi, %rax
 ; FAST_RA-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi # 8-byte Reload
-; FAST_RA-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
 ; FAST_RA-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; FAST_RA-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
 ; FAST_RA-NEXT:    #APP # 8-byte Folded Reload
 ; FAST_RA-NEXT:    # %rcx -{{[0-9]+}}(%rsp) %rsi %rdx %rdi %r8 %r9 %rcx
 ; FAST_RA-NEXT:    #NO_APP
@@ -330,18 +299,17 @@ define { i64, i64 } @test_two_tied_rm_pressure(i64 %x, i64 %y, i64 %a, i64 %b, i
 ; GREEDY_RA-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; GREEDY_RA-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; GREEDY_RA-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; GREEDY_RA-NEXT:    movq %rsi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; GREEDY_RA-NEXT:    movq %rdi, %rdx
+; GREEDY_RA-NEXT:    movq %rsi, %rdx
+; GREEDY_RA-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; GREEDY_RA-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
 ; GREEDY_RA-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r9 # 8-byte Reload
 ; GREEDY_RA-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r8 # 8-byte Reload
 ; GREEDY_RA-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
 ; GREEDY_RA-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi # 8-byte Reload
 ; GREEDY_RA-NEXT:    #APP # 8-byte Folded Reload
-; GREEDY_RA-NEXT:    # %rdx -{{[0-9]+}}(%rsp) %rdi %rcx %r8 %r9 %rsi
+; GREEDY_RA-NEXT:    # -{{[0-9]+}}(%rsp) %rdx %rdi %rcx %r8 %r9 %rsi
 ; GREEDY_RA-NEXT:    #NO_APP
-; GREEDY_RA-NEXT:    movq %rdx, %rax
-; GREEDY_RA-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; GREEDY_RA-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
 ; GREEDY_RA-NEXT:    popq %rbx
 ; GREEDY_RA-NEXT:    .cfi_def_cfa_offset 48
 ; GREEDY_RA-NEXT:    popq %r12
@@ -517,16 +485,14 @@ define void @test_rm_mixed_widths_pressure(i32 %x0, i32 %x1, i32 %x2, i32 %x3, i
 ; GREEDY_RA-NEXT:    .cfi_offset %r14, -32
 ; GREEDY_RA-NEXT:    .cfi_offset %r15, -24
 ; GREEDY_RA-NEXT:    .cfi_offset %rbp, -16
-; GREEDY_RA-NEXT:    movq %r9, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; GREEDY_RA-NEXT:    movl %r8d, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; GREEDY_RA-NEXT:    movq {{[0-9]+}}(%rsp), %rax
+; GREEDY_RA-NEXT:    movq {{[0-9]+}}(%rsp), %r8
 ; GREEDY_RA-NEXT:    movq {{[0-9]+}}(%rsp), %r10
 ; GREEDY_RA-NEXT:    movq {{[0-9]+}}(%rsp), %r11
 ; GREEDY_RA-NEXT:    movq {{[0-9]+}}(%rsp), %r15
-; GREEDY_RA-NEXT:    movq {{[0-9]+}}(%rsp), %r9
-; GREEDY_RA-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r8 # 8-byte Reload
+; GREEDY_RA-NEXT:    movq {{[0-9]+}}(%rsp), %rax
 ; GREEDY_RA-NEXT:    #APP # 4-byte Folded Reload
-; GREEDY_RA-NEXT:    # %edi %esi %edx %ecx -{{[0-9]+}}(%rsp) %r8 %r10 %r11 %r15 %r9 %rax
+; GREEDY_RA-NEXT:    # %edi %esi %edx %ecx -{{[0-9]+}}(%rsp) %r9 %r8 %r10 %r11 %r15 %rax
 ; GREEDY_RA-NEXT:    #NO_APP
 ; GREEDY_RA-NEXT:    popq %rbx
 ; GREEDY_RA-NEXT:    .cfi_def_cfa_offset 48
@@ -562,13 +528,12 @@ define void @test_rm_mixed_widths_pressure(i32 %x0, i32 %x1, i32 %x2, i32 %x3, i
 ; FAST_RA-NEXT:    .cfi_offset %r14, -32
 ; FAST_RA-NEXT:    .cfi_offset %r15, -24
 ; FAST_RA-NEXT:    .cfi_offset %rbp, -16
-; FAST_RA-NEXT:    movl %edi, %ebx
+; FAST_RA-NEXT:    movl %edi, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; FAST_RA-NEXT:    movq {{[0-9]+}}(%rsp), %rax
 ; FAST_RA-NEXT:    movq {{[0-9]+}}(%rsp), %rdi
 ; FAST_RA-NEXT:    movq {{[0-9]+}}(%rsp), %r10
 ; FAST_RA-NEXT:    movq {{[0-9]+}}(%rsp), %r11
 ; FAST_RA-NEXT:    movq {{[0-9]+}}(%rsp), %r15
-; FAST_RA-NEXT:    movl %ebx, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; FAST_RA-NEXT:    #APP # 4-byte Folded Reload
 ; FAST_RA-NEXT:    # -{{[0-9]+}}(%rsp) %esi %edx %ecx %r8d %r9 %rax %rdi %r10 %r11 %r15
 ; FAST_RA-NEXT:    #NO_APP
@@ -615,18 +580,10 @@ define void @test_rm_and_r_same_value_pressure(i64 %x, i64 %y, i64 %a, i64 %b, i
 ; GREEDY_RA-NEXT:    .cfi_offset %r14, -32
 ; GREEDY_RA-NEXT:    .cfi_offset %r15, -24
 ; GREEDY_RA-NEXT:    .cfi_offset %rbp, -16
-; GREEDY_RA-NEXT:    movq %r9, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; GREEDY_RA-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; GREEDY_RA-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; GREEDY_RA-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; GREEDY_RA-NEXT:    movq %rsi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; GREEDY_RA-NEXT:    movq {{[0-9]+}}(%rsp), %r9
-; GREEDY_RA-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r8 # 8-byte Reload
-; GREEDY_RA-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
-; GREEDY_RA-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
-; GREEDY_RA-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; GREEDY_RA-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
 ; GREEDY_RA-NEXT:    #APP # 8-byte Folded Reload
-; GREEDY_RA-NEXT:    # %rdi %rdi -{{[0-9]+}}(%rsp) %rsi %rdx %rcx %r8 %r9
+; GREEDY_RA-NEXT:    # %rdi %rdi -{{[0-9]+}}(%rsp) %rdx %rcx %r8 %r9 %rsi
 ; GREEDY_RA-NEXT:    #NO_APP
 ; GREEDY_RA-NEXT:    popq %rbx
 ; GREEDY_RA-NEXT:    .cfi_def_cfa_offset 48
@@ -662,9 +619,8 @@ define void @test_rm_and_r_same_value_pressure(i64 %x, i64 %y, i64 %a, i64 %b, i
 ; FAST_RA-NEXT:    .cfi_offset %r14, -32
 ; FAST_RA-NEXT:    .cfi_offset %r15, -24
 ; FAST_RA-NEXT:    .cfi_offset %rbp, -16
-; FAST_RA-NEXT:    movq %rsi, %rax
+; FAST_RA-NEXT:    movq %rsi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; FAST_RA-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
-; FAST_RA-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; FAST_RA-NEXT:    #APP # 8-byte Folded Reload
 ; FAST_RA-NEXT:    # %rdi %rdi -{{[0-9]+}}(%rsp) %rdx %rcx %r8 %r9 %rsi
 ; FAST_RA-NEXT:    #NO_APP
@@ -712,20 +668,10 @@ define void @test_g_pressure(i64 %x, i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64
 ; GREEDY_RA-NEXT:    .cfi_offset %r14, -32
 ; GREEDY_RA-NEXT:    .cfi_offset %r15, -24
 ; GREEDY_RA-NEXT:    .cfi_offset %rbp, -16
-; GREEDY_RA-NEXT:    movq %r9, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; GREEDY_RA-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; GREEDY_RA-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; GREEDY_RA-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; GREEDY_RA-NEXT:    movq %rsi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; GREEDY_RA-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; GREEDY_RA-NEXT:    movq {{[0-9]+}}(%rsp), %r9
-; GREEDY_RA-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r8 # 8-byte Reload
-; GREEDY_RA-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
-; GREEDY_RA-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
-; GREEDY_RA-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
-; GREEDY_RA-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi # 8-byte Reload
+; GREEDY_RA-NEXT:    movq {{[0-9]+}}(%rsp), %rdi
 ; GREEDY_RA-NEXT:    #APP # 8-byte Folded Reload
-; GREEDY_RA-NEXT:    # -{{[0-9]+}}(%rsp) $42 %rdi %rsi %rdx %rcx %r8 %r9
+; GREEDY_RA-NEXT:    # -{{[0-9]+}}(%rsp) $42 %rsi %rdx %rcx %r8 %r9 %rdi
 ; GREEDY_RA-NEXT:    #NO_APP
 ; GREEDY_RA-NEXT:    popq %rbx
 ; GREEDY_RA-NEXT:    .cfi_def_cfa_offset 48
@@ -761,9 +707,8 @@ define void @test_g_pressure(i64 %x, i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64
 ; FAST_RA-NEXT:    .cfi_offset %r14, -32
 ; FAST_RA-NEXT:    .cfi_offset %r15, -24
 ; FAST_RA-NEXT:    .cfi_offset %rbp, -16
-; FAST_RA-NEXT:    movq %rdi, %rax
+; FAST_RA-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; FAST_RA-NEXT:    movq {{[0-9]+}}(%rsp), %rdi
-; FAST_RA-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; FAST_RA-NEXT:    #APP # 8-byte Folded Reload
 ; FAST_RA-NEXT:    # -{{[0-9]+}}(%rsp) $42 %rsi %rdx %rcx %r8 %r9 %rdi
 ; FAST_RA-NEXT:    #NO_APP
@@ -872,4 +817,97 @@ entry:
       "=rm,r,r,r,r,r,r,0,~{rax},~{rbx},~{rbp},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"
       (i64 %v, i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %v)
   ret i64 %r
+}
+
+; The "rm" input is %a + 100, which the greedy allocator could recompute into
+; a register right before the asm instead of spilling it, but the asm leaves
+; no register for it, so it's spilled and folded.
+define i64 @test_rm_rematerializable_pressure(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f) {
+; GREEDY_RA-LABEL: test_rm_rematerializable_pressure:
+; GREEDY_RA:       # %bb.0: # %entry
+; GREEDY_RA-NEXT:    pushq %rbp
+; GREEDY_RA-NEXT:    .cfi_def_cfa_offset 16
+; GREEDY_RA-NEXT:    pushq %r15
+; GREEDY_RA-NEXT:    .cfi_def_cfa_offset 24
+; GREEDY_RA-NEXT:    pushq %r14
+; GREEDY_RA-NEXT:    .cfi_def_cfa_offset 32
+; GREEDY_RA-NEXT:    pushq %r13
+; GREEDY_RA-NEXT:    .cfi_def_cfa_offset 40
+; GREEDY_RA-NEXT:    pushq %r12
+; GREEDY_RA-NEXT:    .cfi_def_cfa_offset 48
+; GREEDY_RA-NEXT:    pushq %rbx
+; GREEDY_RA-NEXT:    .cfi_def_cfa_offset 56
+; GREEDY_RA-NEXT:    .cfi_offset %rbx, -56
+; GREEDY_RA-NEXT:    .cfi_offset %r12, -48
+; GREEDY_RA-NEXT:    .cfi_offset %r13, -40
+; GREEDY_RA-NEXT:    .cfi_offset %r14, -32
+; GREEDY_RA-NEXT:    .cfi_offset %r15, -24
+; GREEDY_RA-NEXT:    .cfi_offset %rbp, -16
+; GREEDY_RA-NEXT:    leaq 100(%rdi), %rax
+; GREEDY_RA-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; GREEDY_RA-NEXT:    #APP # 8-byte Folded Reload
+; GREEDY_RA-NEXT:    # -{{[0-9]+}}(%rsp) %rdi %rsi %rdx %rcx %r8 %r9
+; GREEDY_RA-NEXT:    #NO_APP
+; GREEDY_RA-NEXT:    movq %rdi, %rax
+; GREEDY_RA-NEXT:    popq %rbx
+; GREEDY_RA-NEXT:    .cfi_def_cfa_offset 48
+; GREEDY_RA-NEXT:    popq %r12
+; GREEDY_RA-NEXT:    .cfi_def_cfa_offset 40
+; GREEDY_RA-NEXT:    popq %r13
+; GREEDY_RA-NEXT:    .cfi_def_cfa_offset 32
+; GREEDY_RA-NEXT:    popq %r14
+; GREEDY_RA-NEXT:    .cfi_def_cfa_offset 24
+; GREEDY_RA-NEXT:    popq %r15
+; GREEDY_RA-NEXT:    .cfi_def_cfa_offset 16
+; GREEDY_RA-NEXT:    popq %rbp
+; GREEDY_RA-NEXT:    .cfi_def_cfa_offset 8
+; GREEDY_RA-NEXT:    retq
+;
+; FAST_RA-LABEL: test_rm_rematerializable_pressure:
+; FAST_RA:       # %bb.0: # %entry
+; FAST_RA-NEXT:    pushq %rbp
+; FAST_RA-NEXT:    .cfi_def_cfa_offset 16
+; FAST_RA-NEXT:    pushq %r15
+; FAST_RA-NEXT:    .cfi_def_cfa_offset 24
+; FAST_RA-NEXT:    pushq %r14
+; FAST_RA-NEXT:    .cfi_def_cfa_offset 32
+; FAST_RA-NEXT:    pushq %r13
+; FAST_RA-NEXT:    .cfi_def_cfa_offset 40
+; FAST_RA-NEXT:    pushq %r12
+; FAST_RA-NEXT:    .cfi_def_cfa_offset 48
+; FAST_RA-NEXT:    pushq %rbx
+; FAST_RA-NEXT:    .cfi_def_cfa_offset 56
+; FAST_RA-NEXT:    .cfi_offset %rbx, -56
+; FAST_RA-NEXT:    .cfi_offset %r12, -48
+; FAST_RA-NEXT:    .cfi_offset %r13, -40
+; FAST_RA-NEXT:    .cfi_offset %r14, -32
+; FAST_RA-NEXT:    .cfi_offset %r15, -24
+; FAST_RA-NEXT:    .cfi_offset %rbp, -16
+; FAST_RA-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; FAST_RA-NEXT:    movq %rdi, %rax
+; FAST_RA-NEXT:    addq $100, %rax
+; FAST_RA-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; FAST_RA-NEXT:    #APP # 8-byte Folded Reload
+; FAST_RA-NEXT:    # -{{[0-9]+}}(%rsp) %rdi %rsi %rdx %rcx %r8 %r9
+; FAST_RA-NEXT:    #NO_APP
+; FAST_RA-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; FAST_RA-NEXT:    popq %rbx
+; FAST_RA-NEXT:    .cfi_def_cfa_offset 48
+; FAST_RA-NEXT:    popq %r12
+; FAST_RA-NEXT:    .cfi_def_cfa_offset 40
+; FAST_RA-NEXT:    popq %r13
+; FAST_RA-NEXT:    .cfi_def_cfa_offset 32
+; FAST_RA-NEXT:    popq %r14
+; FAST_RA-NEXT:    .cfi_def_cfa_offset 24
+; FAST_RA-NEXT:    popq %r15
+; FAST_RA-NEXT:    .cfi_def_cfa_offset 16
+; FAST_RA-NEXT:    popq %rbp
+; FAST_RA-NEXT:    .cfi_def_cfa_offset 8
+; FAST_RA-NEXT:    retq
+entry:
+  %v = add i64 %a, 100
+  call void asm sideeffect "# $0 $1 $2 $3 $4 $5 $6",
+      "rm,r,r,r,r,r,r,~{rax},~{rbx},~{rbp},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"
+      (i64 %v, i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f)
+  ret i64 %a
 }

@@ -54,8 +54,8 @@ entry:
   ret i32 %5
 }
 
-define dso_local i32 @test_rm_pressure(ptr noundef readonly captures(none) %foo) local_unnamed_addr {
-; FAST_ISEL_GREEDY_RA-LABEL: test_rm_pressure:
+define dso_local i32 @test_rm_input_pressure(ptr noundef readonly captures(none) %foo) local_unnamed_addr {
+; FAST_ISEL_GREEDY_RA-LABEL: test_rm_input_pressure:
 ; FAST_ISEL_GREEDY_RA:    #APP
 ; FAST_ISEL_GREEDY_RA:    # %rax,%rcx,%rdx,%rsi,%rdi,%rbx,%rbp,%r8,%r9,%r10,%r11, %r12, %r13, %r14, %r15
 ; FAST_ISEL_GREEDY_RA:    #NO_APP
@@ -64,7 +64,7 @@ define dso_local i32 @test_rm_pressure(ptr noundef readonly captures(none) %foo)
 ; FAST_ISEL_GREEDY_RA:    # %esi, %edi, %r8d, %r9d, %eax
 ; FAST_ISEL_GREEDY_RA:    #NO_APP
 ;
-; FAST_ISEL_FAST_RA-LABEL: test_rm_pressure:
+; FAST_ISEL_FAST_RA-LABEL: test_rm_input_pressure:
 ; FAST_ISEL_FAST_RA:    #APP
 ; FAST_ISEL_FAST_RA:    # %rax,%rcx,%rdx,%rsi,%rdi,%rbx,%rbp,%r8,%r9,%r10,%r11, %r12, %r13, %r14, %r15
 ; FAST_ISEL_FAST_RA:    #NO_APP
@@ -73,7 +73,7 @@ define dso_local i32 @test_rm_pressure(ptr noundef readonly captures(none) %foo)
 ; FAST_ISEL_FAST_RA:    # %eax, %ecx, %edx, %esi, %edi
 ; FAST_ISEL_FAST_RA:    #NO_APP
 ;
-; GREEDY_RA-LABEL: test_rm_pressure:
+; GREEDY_RA-LABEL: test_rm_input_pressure:
 ; GREEDY_RA:    #APP
 ; GREEDY_RA:    # %rax,%rcx,%rdx,%rsi,%rdi,%rbx,%rbp,%r8,%r9,%r10,%r11, %r12, %r13, %r14, %r15
 ; GREEDY_RA:    #NO_APP
@@ -82,7 +82,7 @@ define dso_local i32 @test_rm_pressure(ptr noundef readonly captures(none) %foo)
 ; GREEDY_RA:    # %esi, %edi, %r8d, %r9d, %eax
 ; GREEDY_RA:    #NO_APP
 ;
-; FAST_RA-LABEL: test_rm_pressure:
+; FAST_RA-LABEL: test_rm_input_pressure:
 ; FAST_RA:    #APP
 ; FAST_RA:    # %rax,%rcx,%rdx,%rsi,%rdi,%rbx,%rbp,%r8,%r9,%r10,%r11, %r12, %r13, %r14, %r15
 ; FAST_RA:    #NO_APP
@@ -652,26 +652,26 @@ entry:
   ret i32 %3
 }
 
-define dso_local i32 @test_mult_m_early_clobber_output_rm_input_no_pressure(ptr noundef %foo) local_unnamed_addr {
-; FAST_ISEL_GREEDY_RA-LABEL: test_mult_m_early_clobber_output_rm_input_no_pressure:
+define dso_local i32 @test_mult_rm_early_clobber_output_rm_input_no_pressure(ptr noundef %foo) local_unnamed_addr {
+; FAST_ISEL_GREEDY_RA-LABEL: test_mult_rm_early_clobber_output_rm_input_no_pressure:
 ; FAST_ISEL_GREEDY_RA:    #APP
 ; FAST_ISEL_GREEDY_RA:    # multiple m output, rm input: no pressure
 ; FAST_ISEL_GREEDY_RA:    # %eax, %esi, %r8d, %ecx, %edx
 ; FAST_ISEL_GREEDY_RA:    #NO_APP
 ;
-; FAST_ISEL_FAST_RA-LABEL: test_mult_m_early_clobber_output_rm_input_no_pressure:
+; FAST_ISEL_FAST_RA-LABEL: test_mult_rm_early_clobber_output_rm_input_no_pressure:
 ; FAST_ISEL_FAST_RA:    #APP
 ; FAST_ISEL_FAST_RA:    # multiple m output, rm input: no pressure
 ; FAST_ISEL_FAST_RA:    # %eax, %edx, %ecx, %esi, %r8d
 ; FAST_ISEL_FAST_RA:    #NO_APP
 ;
-; GREEDY_RA-LABEL: test_mult_m_early_clobber_output_rm_input_no_pressure:
+; GREEDY_RA-LABEL: test_mult_rm_early_clobber_output_rm_input_no_pressure:
 ; GREEDY_RA:    #APP
 ; GREEDY_RA:    # multiple m output, rm input: no pressure
 ; GREEDY_RA:    # %eax, %esi, %r8d, %ecx, %edx
 ; GREEDY_RA:    #NO_APP
 ;
-; FAST_RA-LABEL: test_mult_m_early_clobber_output_rm_input_no_pressure:
+; FAST_RA-LABEL: test_mult_rm_early_clobber_output_rm_input_no_pressure:
 ; FAST_RA:    #APP
 ; FAST_RA:    # multiple m output, rm input: no pressure
 ; FAST_RA:    # %eax, %edx, %ecx, %esi, %r8d
@@ -693,8 +693,8 @@ entry:
   ret i32 %asmresult
 }
 
-define dso_local i32 @test_mult_m_early_clobber_output_rm_input_pressure(ptr noundef %foo) local_unnamed_addr {
-; FAST_ISEL_GREEDY_RA-LABEL: test_mult_m_early_clobber_output_rm_input_pressure:
+define dso_local i32 @test_mult_rm_early_clobber_output_rm_input_pressure(ptr noundef %foo) local_unnamed_addr {
+; FAST_ISEL_GREEDY_RA-LABEL: test_mult_rm_early_clobber_output_rm_input_pressure:
 ; FAST_ISEL_GREEDY_RA:    #APP
 ; FAST_ISEL_GREEDY_RA:    # %rax,%rcx,%rdx,%rsi,%rdi,%rbx,%rbp,%r8,%r9,%r10,%r11, %r12, %r13, %r14, %r15
 ; FAST_ISEL_GREEDY_RA:    #NO_APP
@@ -703,7 +703,7 @@ define dso_local i32 @test_mult_m_early_clobber_output_rm_input_pressure(ptr nou
 ; FAST_ISEL_GREEDY_RA:    # %r8d, %r9d, %eax, %esi, %edi
 ; FAST_ISEL_GREEDY_RA:    #NO_APP
 ;
-; FAST_ISEL_FAST_RA-LABEL: test_mult_m_early_clobber_output_rm_input_pressure:
+; FAST_ISEL_FAST_RA-LABEL: test_mult_rm_early_clobber_output_rm_input_pressure:
 ; FAST_ISEL_FAST_RA:    #APP
 ; FAST_ISEL_FAST_RA:    # %rax,%rcx,%rdx,%rsi,%rdi,%rbx,%rbp,%r8,%r9,%r10,%r11, %r12, %r13, %r14, %r15
 ; FAST_ISEL_FAST_RA:    #NO_APP
@@ -712,7 +712,7 @@ define dso_local i32 @test_mult_m_early_clobber_output_rm_input_pressure(ptr nou
 ; FAST_ISEL_FAST_RA:    # %eax, %edi, %ecx, %edx, %esi
 ; FAST_ISEL_FAST_RA:    #NO_APP
 ;
-; GREEDY_RA-LABEL: test_mult_m_early_clobber_output_rm_input_pressure:
+; GREEDY_RA-LABEL: test_mult_rm_early_clobber_output_rm_input_pressure:
 ; GREEDY_RA:    #APP
 ; GREEDY_RA:    # %rax,%rcx,%rdx,%rsi,%rdi,%rbx,%rbp,%r8,%r9,%r10,%r11, %r12, %r13, %r14, %r15
 ; GREEDY_RA:    #NO_APP
@@ -721,7 +721,7 @@ define dso_local i32 @test_mult_m_early_clobber_output_rm_input_pressure(ptr nou
 ; GREEDY_RA:    # %r8d, %r9d, %eax, %esi, %edi
 ; GREEDY_RA:    #NO_APP
 ;
-; FAST_RA-LABEL: test_mult_m_early_clobber_output_rm_input_pressure:
+; FAST_RA-LABEL: test_mult_rm_early_clobber_output_rm_input_pressure:
 ; FAST_RA:    #APP
 ; FAST_RA:    # %rax,%rcx,%rdx,%rsi,%rdi,%rbx,%rbp,%r8,%r9,%r10,%r11, %r12, %r13, %r14, %r15
 ; FAST_RA:    #NO_APP

@@ -6314,24 +6314,34 @@ unsigned TargetLowering::AsmOperandInfo::getMatchedOperand() const {
   return atoi(ConstraintCode.c_str());
 }
 
-/// Return true if \p OpInfo is an "rm" operand that should prefer a register,
-/// leaving the register allocator to fold it to a stack slot if it runs out of
-/// registers (see AsmOperandInfo::MayFoldRegister). This includes "g", which
-/// Clang expands to "imr": immediate codes are still tried first for a
-/// constant, so they don't affect the choice between 'r' and 'm'.
-static bool
-shouldPreferFoldableRegister(const TargetLowering &TLI,
-                             const TargetRegisterInfo *TRI,
-                             const TargetLowering::AsmOperandInfo &OpInfo) {
+/// Return true if \p OpInfo, an operand of the inline asm \p Call, is an "rm"
+/// operand that should prefer a register, leaving the register allocator to
+/// fold it to a stack slot if it runs out of registers (see
+/// AsmOperandInfo::MayFoldRegister). This includes "g", which Clang expands to
+/// "imr": immediate codes are still tried first for a constant, so they don't
+/// affect the choice between 'r' and 'm'.
+static bool shouldPreferFoldableRegister(
+    const TargetLowering &TLI, const TargetRegisterInfo *TRI,
+    const TargetLowering::AsmOperandInfo &OpInfo, const CallBase &Call) {
   // Without a fold to fall back on, 'm' is the only choice that can't run out
-  // of registers. Above -O0 only, which leaves -O0 code as it was.
-  if (!TLI.supportsRegMemInlineAsmFolding() ||
-      TLI.getTargetMachine().getOptLevel() == CodeGenOptLevel::None)
+  // of registers.
+  if (!TLI.supportsRegMemInlineAsmFolding())
     return false;
 
   // An indirect operand is already in memory: a register would only add a
   // load or store around the asm, and isn't supported for an indirect input.
   if (OpInfo.isIndirect)
+    return false;
+
+  // Leave inputs at -O0 in memory, as they were. A direct output can't be in
+  // memory (see SelectionDAGBuilder), so it takes the register regardless.
+  if (OpInfo.Type != InlineAsm::isOutput &&
+      TLI.getTargetMachine().getOptLevel() == CodeGenOptLevel::None)
+    return false;
+
+  // The greedy allocator reloads a folded asm goto output tied to an input
+  // after the asm, where the indirect targets don't see it.
+  if (isa<CallBrInst>(Call) && OpInfo.hasMatchingInput())
     return false;
 
   // Codes stays empty for a constraint with alternatives ("r|m") until one is
@@ -6352,12 +6362,14 @@ shouldPreferFoldableRegister(const TargetLowering &TLI,
   }
 
   // The register allocator folds one register operand, so the value must be
-  // in a single register, and some types (e.g. x87 and vector types) can't go
-  // in an 'r' register at all. The value must also fill the register: X86
-  // gives a half or bfloat value a GR64 (GR32 on i686), so the asm would see
-  // a register name too wide for the value, where memory works.
+  // an integer that fills a register. A floating-point value would have to
+  // move to a general-purpose register (e.g. a half one to a wider one), and
+  // an aggregate input is tiled to an integer, of which the 'r' path only
+  // copies the first element.
   MVT VT = OpInfo.ConstraintVT;
-  if (VT == MVT::Other || VT.isScalableVector())
+  if (!VT.isScalarInteger() ||
+      (OpInfo.CallOperandVal &&
+       !OpInfo.CallOperandVal->getType()->isIntOrPtrTy()))
     return false;
 
   const TargetRegisterClass *RC =
@@ -6464,7 +6476,8 @@ TargetLowering::ParseConstraints(const DataLayout &DL,
       ArgNo++;
     }
 
-    OpInfo.MayFoldRegister = shouldPreferFoldableRegister(*this, TRI, OpInfo);
+    OpInfo.MayFoldRegister =
+        shouldPreferFoldableRegister(*this, TRI, OpInfo, Call);
   }
 
   // If we have multiple alternative constraints, select the best alternative.
@@ -6561,21 +6574,24 @@ TargetLowering::ParseConstraints(const DataLayout &DL,
 /// Return a number indicating our preference for chosing a type of constraint
 /// over another, for the purpose of sorting them. Immediates are almost always
 /// preferrable (when they can be emitted). A higher return value means a
-/// stronger preference for one constraint type relative to another.
-/// FIXME: We should prefer registers over memory but doing so may lead to
-/// unrecoverable register exhaustion later, unless the register allocator can
-/// fold the register to memory (see AsmOperandInfo::MayFoldRegister).
+/// stronger preference for one constraint type relative to another. Registers
+/// are preferred over memory only if \p PreferRegister, since doing so may
+/// otherwise lead to unrecoverable register exhaustion later; the register
+/// allocator can fold such a register to memory (see
+/// AsmOperandInfo::MayFoldRegister).
+/// FIXME: We should prefer registers over memory in general.
 /// https://github.com/llvm/llvm-project/issues/20571
-static unsigned getConstraintPiority(TargetLowering::ConstraintType CT) {
+static unsigned getConstraintPiority(TargetLowering::ConstraintType CT,
+                                     bool PreferRegister) {
   switch (CT) {
   case TargetLowering::C_Immediate:
   case TargetLowering::C_Other:
     return 4;
   case TargetLowering::C_Memory:
   case TargetLowering::C_Address:
-    return 3;
+    return PreferRegister ? 2 : 3;
   case TargetLowering::C_RegisterClass:
-    return 2;
+    return PreferRegister ? 3 : 2;
   case TargetLowering::C_Register:
     return 1;
   case TargetLowering::C_Unknown:
@@ -6689,24 +6705,6 @@ TargetLowering::ConstraintGroup TargetLowering::getConstraintPreferences(
   ConstraintGroup Ret;
 
   Ret.reserve(OpInfo.Codes.size());
-
-  if (OpInfo.MayFoldRegister) {
-    // Keep any immediate codes first, as below, so that a "g" operand with a
-    // constant value still becomes an immediate.
-    for (StringRef Code : OpInfo.Codes) {
-      TargetLowering::ConstraintType CType = getConstraintType(Code);
-      if (CType == TargetLowering::C_Immediate ||
-          CType == TargetLowering::C_Other)
-        Ret.emplace_back(Code, CType);
-    }
-
-    // As below, an operand with a matching input can only be a register.
-    Ret.emplace_back("r", getConstraintType("r"));
-    if (!OpInfo.hasMatchingInput())
-      Ret.emplace_back("m", getConstraintType("m"));
-    return Ret;
-  }
-
   for (StringRef Code : OpInfo.Codes) {
     TargetLowering::ConstraintType CType = getConstraintType(Code);
 
@@ -6724,8 +6722,9 @@ TargetLowering::ConstraintGroup TargetLowering::getConstraintPreferences(
     Ret.emplace_back(Code, CType);
   }
 
-  llvm::stable_sort(Ret, [](ConstraintPair a, ConstraintPair b) {
-    return getConstraintPiority(a.second) > getConstraintPiority(b.second);
+  llvm::stable_sort(Ret, [&](ConstraintPair a, ConstraintPair b) {
+    return getConstraintPiority(a.second, OpInfo.MayFoldRegister) >
+           getConstraintPiority(b.second, OpInfo.MayFoldRegister);
   });
 
   return Ret;
