@@ -408,6 +408,8 @@ features cannot lower the translation-unit ABI level;
 
 ### Improvements to Clang's diagnostics
 
+- Clang no longer emits a false-positive `-Wimplicit-fallthrough` warning when consecutive switch labels share a body and are annotated with attributes like `[[unlikely]]`. (#GH230802)
+
 - Fixed spurious `-Wimplicit-void-ptr-cast` warnings in C for parenthesized
   null pointer macros such as `(NULL)`. (#GH171874)
 
