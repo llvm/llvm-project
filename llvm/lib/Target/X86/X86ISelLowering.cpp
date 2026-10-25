@@ -2371,7 +2371,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     // AVX512_FP16 scalar operations
     setGroup(MVT::f16);
     SetFPMinMaxAction(MVT::f16);
-    setOperationAction(ISD::FREM,                 MVT::f16, Promote);
+    setOperationAction(ISD::FREM,                 MVT::f16, Custom);
     setOperationAction(ISD::STRICT_FREM,          MVT::f16, Promote);
     setOperationAction(ISD::SELECT_CC,            MVT::f16, Expand);
     setOperationAction(ISD::BR_CC,                MVT::f16, Expand);
@@ -2402,7 +2402,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FP_EXTEND,              MVT::v8f64,  Custom);
       setOperationAction(ISD::STRICT_FP_EXTEND,       MVT::v8f64,  Legal);
       setOperationAction(ISD::INSERT_VECTOR_ELT,      MVT::v32f16, Custom);
-
+      setOperationAction(ISD::FREM,                   MVT::v32f16, Custom);
       setOperationAction(ISD::FP_TO_SINT,             MVT::v32i16, Custom);
       setOperationAction(ISD::STRICT_FP_TO_SINT,      MVT::v32i16, Custom);
       setOperationAction(ISD::FP_TO_UINT,             MVT::v32i16, Custom);
@@ -2462,6 +2462,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::STRICT_FP_EXTEND,   MVT::v8f32, Legal);
       setOperationAction(ISD::FP_EXTEND,          MVT::v4f64, Custom);
       setOperationAction(ISD::STRICT_FP_EXTEND,   MVT::v4f64, Legal);
+      setOperationAction(ISD::FREM,               MVT::v2f16, Custom);
+      setOperationAction(ISD::FREM,               MVT::v4f16, Custom);
+      setOperationAction(ISD::FREM,               MVT::v8f16, Custom);
+      setOperationAction(ISD::FREM,               MVT::v16f16, Custom);
 
       // INSERT_VECTOR_ELT v8f16 extended to VECTOR_SHUFFLE
       setOperationAction(ISD::INSERT_VECTOR_ELT,    MVT::v8f16,  Custom);
@@ -23338,6 +23342,67 @@ static SDValue LowerFGETSIGN(SDValue Op, SelectionDAG &DAG) {
   return Res;
 }
 
+static SDValue LowerFREM(SDValue Op, SelectionDAG &DAG) {
+  SDLoc Dl(Op);
+  MVT VT = Op.getSimpleValueType();
+  assert(VT.getScalarType() == MVT::f16 && "Unexpected type for FREM");
+
+  bool IsVec = VT.isVector();
+  SDValue A = Op.getOperand(0);
+  SDValue B = Op.getOperand(1);
+
+  // f64 widening is only legal up to v8f64, so only the arithmetic is
+  // chunked into 8 elements.
+  unsigned NumElts = IsVec ? VT.getVectorNumElements() : 1;
+  unsigned ChunkElts = std::min(NumElts, 8u);
+  MVT ChunkVT = IsVec ? MVT::getVectorVT(MVT::f16, ChunkElts) : MVT::f16;
+  MVT WideVT = IsVec ? MVT::getVectorVT(MVT::f64, ChunkElts) : MVT::f64;
+
+  SmallVector<SDValue, 4> Parts;
+  for (unsigned I = 0; I != NumElts; I += ChunkElts) {
+    SDValue AC = A, BC = B;
+    if (NumElts > ChunkElts) {
+      AC = DAG.getNode(ISD::EXTRACT_SUBVECTOR, Dl, ChunkVT, A,
+                       DAG.getIntPtrConstant(I, Dl));
+      BC = DAG.getNode(ISD::EXTRACT_SUBVECTOR, Dl, ChunkVT, B,
+                       DAG.getIntPtrConstant(I, Dl));
+    }
+    SDValue X = DAG.getNode(ISD::FP_EXTEND, Dl, WideVT, AC);
+    SDValue Y = DAG.getNode(ISD::FP_EXTEND, Dl, WideVT, BC);
+    SDValue Q = DAG.getNode(ISD::FTRUNC, Dl, WideVT,
+                            DAG.getNode(ISD::FDIV, Dl, WideVT, X, Y));
+    SDValue R = DAG.getNode(ISD::FMA, Dl, WideVT,
+                            DAG.getNode(ISD::FNEG, Dl, WideVT, Q), Y, X);
+    R = DAG.getNode(ISD::FCOPYSIGN, Dl, WideVT, R, X);
+    Parts.push_back(DAG.getNode(ISD::FP_ROUND, Dl, ChunkVT, R,
+                                DAG.getIntPtrConstant(0, Dl, /*isTarget=*/true)));
+  }
+
+  SDNodeFlags Flags = Op->getFlags();
+  SDValue Res = Parts.size() == 1
+                    ? Parts[0]
+                    : DAG.getNode(ISD::CONCAT_VECTORS, Dl, VT, Parts);
+
+  if (Flags.hasNoNaNs() && Flags.hasNoInfs())
+    return Res;
+
+  MVT MaskVT = IsVec ? VT.changeVectorElementType(MVT::i1) : MVT::v1i1;
+  unsigned ClassOpc = IsVec ? X86ISD::VFPCLASS : X86ISD::VFPCLASSS;
+  SDValue AV = IsVec ? A : DAG.getNode(ISD::SCALAR_TO_VECTOR, Dl, MVT::v8f16, A);
+  SDValue BV = IsVec ? B : DAG.getNode(ISD::SCALAR_TO_VECTOR, Dl, MVT::v8f16, B);
+
+  SDValue XNotFinite = DAG.getNode(ClassOpc, Dl, MaskVT, AV,
+                                   DAG.getTargetConstant(0x99, Dl, MVT::i32));
+  SDValue YIsInf = DAG.getNode(ClassOpc, Dl, MaskVT, BV,
+                               DAG.getTargetConstant(0x18, Dl, MVT::i32));
+  SDValue UseX = DAG.getNode(ISD::AND, Dl, MaskVT,
+                             DAG.getNOT(Dl, XNotFinite, MaskVT), YIsInf);
+
+
+  return IsVec ? DAG.getSelect(Dl, VT, UseX, A, Res)
+               : DAG.getNode(X86ISD::SELECTS, Dl, VT, UseX, A, Res);
+}
+
 /// Helper for attempting to create a X86ISD::BT node.
 static SDValue getBT(SDValue Src, SDValue BitNo, const SDLoc &DL, SelectionDAG &DAG) {
   // If Src is i8, promote it to i32 with any_extend.  There is no i8 BT
@@ -34939,6 +35004,7 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FNEG:               return LowerFABSorFNEG(Op, DAG);
   case ISD::FCOPYSIGN:          return LowerFCOPYSIGN(Op, DAG);
   case ISD::FGETSIGN:           return LowerFGETSIGN(Op, DAG);
+  case ISD::FREM:               return LowerFREM(Op, DAG);
   case ISD::LRINT:
   case ISD::LLRINT:             return LowerLRINT_LLRINT(Op, DAG);
   case ISD::SETCC:
@@ -35087,6 +35153,42 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     SDValue Vec =
         DAG.getNode(N->getOpcode(), dl, MVT::v8bf16, VecOps, N->getFlags());
     Results.push_back(DAG.getExtractVectorElt(dl, MVT::bf16, Vec, 0));
+    return;
+  }
+  case ISD::FREM: {
+    MVT VT = N->getSimpleValueType(0);
+
+    if (VT != MVT::v2f16 && VT != MVT::v4f16)
+      return;
+
+    MVT WideVT = VT.changeVectorElementType(MVT::f64);
+    MVT MaskVT = VT.changeVectorElementType(MVT::i1);
+
+    SDValue X = DAG.getNode(ISD::FP_EXTEND, dl, WideVT, N->getOperand(0));
+    SDValue Y = DAG.getNode(ISD::FP_EXTEND, dl, WideVT, N->getOperand(1));
+
+    SDValue Q = DAG.getNode(ISD::FTRUNC, dl, WideVT,
+                            DAG.getNode(ISD::FDIV, dl, WideVT, X, Y));
+    SDValue Res = DAG.getNode(ISD::FMA, dl, WideVT,
+                              DAG.getNode(ISD::FNEG, dl, WideVT, Q), Y, X);
+    Res = DAG.getNode(ISD::FCOPYSIGN, dl, WideVT, Res, X);
+
+    SDValue XNotFinite = DAG.getNode(X86ISD::VFPCLASS, dl, MaskVT, X,
+                                     DAG.getTargetConstant(0x99, dl, MVT::i32));
+    SDValue YIsInf = DAG.getNode(X86ISD::VFPCLASS, dl, MaskVT, Y,
+                                 DAG.getTargetConstant(0x18, dl, MVT::i32));
+    SDValue UseX = DAG.getNode(ISD::AND, dl, MaskVT,
+                               DAG.getNOT(dl, XNotFinite, MaskVT), YIsInf);
+
+    Res = DAG.getSelect(dl, WideVT, UseX, X, Res);
+
+    SDValue Rounded =
+        DAG.getNode(ISD::FP_ROUND, dl, VT, Res,
+                    DAG.getIntPtrConstant(0, dl, /*isTarget=*/true));
+
+    SmallVector<SDValue, 4> Ops(8 / VT.getVectorNumElements(), DAG.getUNDEF(VT));
+    Ops[0] = Rounded;
+    Results.push_back(DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v8f16, Ops));
     return;
   }
   case X86ISD::CVTPH2PS: {
