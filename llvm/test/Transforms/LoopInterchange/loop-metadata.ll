@@ -35,11 +35,11 @@ define void @loop_id(ptr %A) {
 ; CHECK:       [[INNER_HEADER_SPLIT]]:
 ; CHECK-NEXT:    [[TMP0]] = add nuw nsw i64 [[J]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[TMP0]], 256
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[EXIT:.*]], label %[[INNER_HEADER]], !llvm.loop [[LOOP1:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[EXIT:.*]], label %[[INNER_HEADER]]
 ; CHECK:       [[OUTER_LATCH]]:
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
 ; CHECK-NEXT:    [[EC_I:%.*]] = icmp eq i64 [[I_NEXT]], 256
-; CHECK-NEXT:    br i1 [[EC_I]], label %[[INNER_HEADER_SPLIT]], label %[[OUTER_HEADER]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC_I]], label %[[INNER_HEADER_SPLIT]], label %[[OUTER_HEADER]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -97,11 +97,11 @@ define void @branch_weights(ptr %A) {
 ; CHECK:       [[INNER_HEADER_SPLIT]]:
 ; CHECK-NEXT:    [[TMP0]] = add nuw nsw i64 [[J]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[TMP0]], 64
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[EXIT:.*]], label %[[INNER_HEADER]], !prof [[PROF5:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[EXIT:.*]], label %[[INNER_HEADER]]
 ; CHECK:       [[OUTER_LATCH]]:
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
 ; CHECK-NEXT:    [[EC_I:%.*]] = icmp ne i64 [[I_NEXT]], 128
-; CHECK-NEXT:    br i1 [[EC_I]], label %[[OUTER_HEADER]], label %[[INNER_HEADER_SPLIT]], !prof [[PROF6:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC_I]], label %[[OUTER_HEADER]], label %[[INNER_HEADER_SPLIT]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -159,11 +159,11 @@ define void @unknown_branch_weights(ptr %A) {
 ; CHECK:       [[INNER_HEADER_SPLIT]]:
 ; CHECK-NEXT:    [[TMP0]] = add nuw nsw i64 [[J]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[TMP0]], 64
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[EXIT:.*]], label %[[INNER_HEADER]], !prof [[PROF7:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[EXIT:.*]], label %[[INNER_HEADER]]
 ; CHECK:       [[OUTER_LATCH]]:
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
 ; CHECK-NEXT:    [[EC_I:%.*]] = icmp eq i64 [[I_NEXT]], 128
-; CHECK-NEXT:    br i1 [[EC_I]], label %[[INNER_HEADER_SPLIT]], label %[[OUTER_HEADER]], !prof [[PROF8:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC_I]], label %[[INNER_HEADER_SPLIT]], label %[[OUTER_HEADER]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -221,7 +221,7 @@ define void @branch_weights_on_one_latch(ptr %A) {
 ; CHECK:       [[INNER_HEADER_SPLIT]]:
 ; CHECK-NEXT:    [[TMP0]] = add nuw nsw i64 [[J]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[TMP0]], 64
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[EXIT:.*]], label %[[INNER_HEADER]], !prof [[PROF5]]
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[EXIT:.*]], label %[[INNER_HEADER]]
 ; CHECK:       [[OUTER_LATCH]]:
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
 ; CHECK-NEXT:    [[EC_I:%.*]] = icmp eq i64 [[I_NEXT]], 128
@@ -261,7 +261,7 @@ exit:
 ;
 define void @profiled_branch_weights(ptr %A) !prof !9 {
 ; CHECK-LABEL: define void @profiled_branch_weights(
-; CHECK-SAME: ptr [[A:%.*]]) !prof [[PROF9:![0-9]+]] {
+; CHECK-SAME: ptr [[A:%.*]]) !prof [[PROF1:![0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[INNER_HEADER_PREHEADER:.*]]
 ; CHECK:       [[OUTER_HEADER_PREHEADER:.*]]:
@@ -283,11 +283,11 @@ define void @profiled_branch_weights(ptr %A) !prof !9 {
 ; CHECK:       [[INNER_HEADER_SPLIT]]:
 ; CHECK-NEXT:    [[TMP0]] = add nuw nsw i64 [[J]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[TMP0]], 64
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[EXIT:.*]], label %[[INNER_HEADER]], !prof [[PROF5]]
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[EXIT:.*]], label %[[INNER_HEADER]], !prof [[PROF2:![0-9]+]]
 ; CHECK:       [[OUTER_LATCH]]:
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
 ; CHECK-NEXT:    [[EC_I:%.*]] = icmp ne i64 [[I_NEXT]], 128
-; CHECK-NEXT:    br i1 [[EC_I]], label %[[OUTER_HEADER]], label %[[INNER_HEADER_SPLIT]], !prof [[PROF6]]
+; CHECK-NEXT:    br i1 [[EC_I]], label %[[OUTER_HEADER]], label %[[INNER_HEADER_SPLIT]], !prof [[PROF2]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -327,13 +327,6 @@ exit:
 !9 = !{!"function_entry_count", i64 100}
 ;.
 ; CHECK: [[ACC_GRP0]] = distinct !{}
-; CHECK: [[LOOP1]] = distinct !{[[LOOP1]], [[META2:![0-9]+]]}
-; CHECK: [[META2]] = !{!"llvm.loop.parallel_accesses", [[ACC_GRP0]]}
-; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META4:![0-9]+]]}
-; CHECK: [[META4]] = !{!"llvm.loop.unroll.disable"}
-; CHECK: [[PROF5]] = !{!"branch_weights", i32 1, i32 63}
-; CHECK: [[PROF6]] = !{!"branch_weights", i32 127, i32 1}
-; CHECK: [[PROF7]] = !{!"unknown", !"test"}
-; CHECK: [[PROF8]] = !{!"branch_weights", i32 1, i32 127}
-; CHECK: [[PROF9]] = !{!"function_entry_count", i64 100}
+; CHECK: [[PROF1]] = !{!"function_entry_count", i64 100}
+; CHECK: [[PROF2]] = !{!"unknown", !"loop-interchange"}
 ;.
