@@ -863,10 +863,11 @@ Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
   // The syntax only allows a single ref-qualifier prior to the decomposition
   // declarator. No other declarator chunks are permitted. Also check the type
   // specifier here.
-  if (DS.getTypeSpecType() != DeclSpec::TST_auto ||
+  bool HasBadDeclarator =
       D.hasGroupingParens() || D.getNumTypeObjects() > 1 ||
       (D.getNumTypeObjects() == 1 &&
-       D.getTypeObject(0).Kind != DeclaratorChunk::Reference)) {
+       D.getTypeObject(0).Kind != DeclaratorChunk::Reference);
+  if (DS.getTypeSpecType() != DeclSpec::TST_auto || HasBadDeclarator) {
     Diag(Decomp.getLSquareLoc(),
          (D.hasGroupingParens() ||
           (D.getNumTypeObjects() &&
@@ -878,7 +879,9 @@ Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
     // In most cases, there's no actual problem with an explicitly-specified
     // type, but a function type won't work here, and ActOnVariableDeclarator
     // shouldn't be called for such a type.
-    if (R->isFunctionType())
+    // If the declaration is invalid, there is no need to continue with deduction
+    // or binding, as this can lead to extra error messages.
+    if (R->isFunctionType() || HasBadDeclarator)
       D.setInvalidType();
   }
 
@@ -986,6 +989,11 @@ Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
   if (AddToScope) {
     S->AddDecl(New);
     CurContext->addHiddenDecl(New);
+  }
+
+  if (New && New->isInvalidDecl()) {
+    for (auto *B : Bindings)
+      B->setInvalidDecl();
   }
 
   if (OpenMP().isInOpenMPDeclareTargetContext())
