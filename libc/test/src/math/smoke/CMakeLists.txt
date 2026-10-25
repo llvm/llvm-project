@@ -3698,7 +3698,7 @@ add_fp_unittest(
   SRCS
     rsqrtbf16_test.cpp
   HDRS
-    SqrtTest.h
+    RsqrtTest.h
   DEPENDS
     libc.src.math.rsqrtbf16
     libc.src.__support.FPUtil.bfloat16
