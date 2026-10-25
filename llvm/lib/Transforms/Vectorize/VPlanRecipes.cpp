@@ -326,9 +326,11 @@ InstructionCost VPRecipeBase::cost(ElementCount VF, VPCostContext &Ctx) {
   } else {
     RecipeCost = computeCost(VF, Ctx);
     if (Ctx.Opts.force_target_instruction_cost && RecipeCost.isValid()) {
-      // VPDerivedIVRecipe and VPScalarIVStepsRecipe never have underlying
-      // instructions.
-      if (UI || isa<VPDerivedIVRecipe, VPScalarIVStepsRecipe>(this))
+      // VPDerivedIVRecipe, VPScalarIVStepsRecipe and VPBranchOnMaskRecipe never
+      // have underlying instructions.
+      if (UI ||
+          isa<VPDerivedIVRecipe, VPScalarIVStepsRecipe, VPBranchOnMaskRecipe>(
+              this))
         RecipeCost = InstructionCost(*Ctx.Opts.force_target_instruction_cost);
       else
         RecipeCost = InstructionCost(0);
@@ -4290,17 +4292,9 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
 
     const VPRegionBlock *ParentRegion = getRegion();
     if (ParentRegion && ParentRegion->isReplicator()) {
-      if (!PtrSCEV)
-        break;
+      // The cost of the branches is accounted for by the replicate region.
       Cost /= Ctx.getCostDivisor(
           ParentRegion->getEntryBranchOnMask()->getExecutionFrequency());
-      Cost += Ctx.TTI.getCFInstrCost(Instruction::CondBr, Ctx.CostKind);
-
-      auto *VecI1Ty = VectorType::get(
-          IntegerType::getInt1Ty(Ctx.L->getHeader()->getContext()), VF);
-      Cost += Ctx.TTI.getScalarizationOverhead(
-          VecI1Ty, APInt::getAllOnes(VF.getFixedValue()),
-          /*Insert=*/false, /*Extract=*/true, Ctx.CostKind);
 
       if (Ctx.useEmulatedMaskMemRefHack(this, VF)) {
         // Artificially setting to a high enough value to practically disable
@@ -4409,10 +4403,15 @@ void VPBranchOnMaskRecipe::execute(VPTransformState &State) {
 
 InstructionCost VPBranchOnMaskRecipe::computeCost(ElementCount VF,
                                                   VPCostContext &Ctx) const {
-  // The legacy cost model doesn't assign costs to branches for individual
-  // replicate regions. Match the current behavior in the VPlan cost model for
-  // now.
-  return 0;
+  // Replicating isn't supported for scalable vectors.
+  if (VF.isScalable())
+    return InstructionCost::getInvalid();
+  auto *VecI1Ty = VectorType::get(Type::getInt1Ty(Ctx.LLVMCtx), VF);
+  return Ctx.TTI.getScalarizationOverhead(
+             VecI1Ty, APInt::getAllOnes(VF.getFixedValue()),
+             /*Insert=*/false, /*Extract=*/true, Ctx.CostKind) +
+         VF.getFixedValue() *
+             Ctx.TTI.getCFInstrCost(Instruction::CondBr, Ctx.CostKind);
 }
 
 void VPPredInstPHIRecipe::execute(VPTransformState &State) {
