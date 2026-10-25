@@ -892,3 +892,59 @@ static_assert(__is_abstract(U));
 // expected-note@-1 {{because it is not a struct or class type}}
 
 }
+
+namespace is_integral_tests {
+    static_assert(__is_integral(double));
+    // expected-error@-1 {{static assertion failed due to requirement '__is_integral(double)'}} \
+    // expected-note@-1 {{'double' is not an integral type}} \
+    // expected-note@-1 {{because it is a floating-point type}}
+
+    static_assert(__is_integral(int*));
+    // expected-error@-1 {{static assertion failed due to requirement '__is_integral(int *)'}} \
+    // expected-note@-1 {{'int *' is not an integral type}} \
+    // expected-note@-1 {{because it is a pointer type}}
+
+    static_assert(__is_integral(int&));
+    // expected-error@-1 {{static assertion failed due to requirement '__is_integral(int &)'}} \
+    // expected-note@-1 {{'int &' is not an integral type}} \
+    // expected-note@-1 {{because it is a reference type}}
+
+    enum E {};
+    static_assert(__is_integral(E));
+    // expected-error@-1 {{static assertion failed due to requirement '__is_integral(is_integral_tests::E)'}} \
+    // expected-note@-1 {{'E' is not an integral type}} \
+    // expected-note@-1 {{because it is an enum type}}
+
+    static_assert(__is_integral(int[3]));
+    // expected-error@-1 {{static assertion failed due to requirement '__is_integral(int[3])'}} \
+    // expected-note@-1 {{'int[3]' is not an integral type}} \
+    // expected-note@-1 {{because it is an array type}}
+
+    union U {};
+    static_assert(__is_integral(U));
+    // expected-error@-1 {{static assertion failed due to requirement '__is_integral(is_integral_tests::U)'}} \
+    // expected-note@-1 {{'U' is not an integral type}} \
+    // expected-note@-1 {{because it is a union type}}
+
+    struct S {};
+    static_assert(__is_integral(S));
+    // expected-error@-1 {{static assertion failed due to requirement '__is_integral(is_integral_tests::S)'}} \
+    // expected-note@-1 {{'S' is not an integral type}} \
+    // expected-note@-1 {{because it is a class type}}
+
+    static_assert(__is_integral(int S::*));
+    // expected-error@-1 {{static assertion failed due to requirement '__is_integral(int is_integral_tests::S::*)'}} \
+    // expected-note@-1 {{'int S::*' is not an integral type}} \
+    // expected-note@-1 {{because it is a member pointer type}}
+
+    using F = int(char);
+    static_assert(__is_integral(F));
+    // expected-error@-1 {{static assertion failed due to requirement '__is_integral(int (char))'}} \
+    // expected-note@-1 {{'F' (aka 'int (char)') is not an integral type}} \
+    // expected-note@-1 {{because it is a function type}}
+
+    static_assert(__is_integral(void));
+    // expected-error@-1 {{static assertion failed due to requirement '__is_integral(void)'}} \
+    // expected-note@-1 {{'void' is not an integral type}} \
+    // expected-note@-1 {{because it is void}}
+}
