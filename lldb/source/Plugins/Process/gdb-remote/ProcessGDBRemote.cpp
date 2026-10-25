@@ -6630,17 +6630,19 @@ llvm::Expected<bool> ProcessGDBRemote::SaveCore(llvm::StringRef outfile) {
       return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                      "qSaveCore returned no core path");
 
-    // now transfer the core file
     FileSpec remote_core{llvm::StringRef(path)};
+    FileSpec local_core{outfile};
     Platform &platform = *GetTarget().GetPlatform();
-    Status error = platform.GetFile(remote_core, FileSpec(outfile));
 
-    if (platform.IsRemote()) {
-      // NB: we unlink the file on error too
-      platform.Unlink(remote_core);
-      if (error.Fail())
-        return error.ToError();
-    }
+    if (!platform.IsRemote() && remote_core == local_core)
+      return true;
+
+    // now transfer the core file
+    Status error = platform.GetFile(remote_core, local_core);
+    // NB: we unlink the file on error too
+    platform.Unlink(remote_core);
+    if (error.Fail())
+      return error.ToError();
 
     return true;
   }
