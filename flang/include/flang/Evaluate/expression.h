@@ -105,7 +105,7 @@ public:
 // intrinsic type category and kind parameter value).  The classes that
 // represent the operations all inherit from this Operation<> base class
 // template.  Note that Operation has as its first type parameter (DERIVED) a
-// "curiously reoccurring template pattern (CRTP)" reference to the specific
+// "curiously recurring template pattern (CRTP)" reference to the specific
 // operation class being derived from Operation; e.g., Add is defined with
 // struct Add : public Operation<Add, ...>.  Uses of instances of Operation<>,
 // including its own member functions, can access each specific class derived
@@ -914,8 +914,8 @@ public:
 
 // A polymorphic expression of known intrinsic type category, but dynamic
 // kind.
-// TODO: Expr<Type<CAT>> now also can old expressions of any kind, so
-// Expr<SomeKind<CAT>> has become redundant can be removed.
+// TODO: Expr<Type<CAT>> can now also hold expressions of any kind, so
+// Expr<SomeKind<CAT>> has become redundant and can be removed.
 template <TypeCategory CAT>
 class Expr<SomeKind<CAT>> : public ExpressionBase<SomeKind<CAT>> {
 public:

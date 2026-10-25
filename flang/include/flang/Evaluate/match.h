@@ -207,7 +207,7 @@ public:
     // All logical operations (for a given type T) have the same operation
     // type (LogicalOperation<T::kind>), so the type-based matching will not
     // be able to tell specific operations from one another.
-    // Check the operation code first, if that matches then use the the
+    // Check the operation code first, if that matches then use the
     // base class's match.
     if (common::visit([&](auto &&s) { return matchOp(s); }, deparen(input).u)) {
       return Base::match(input);

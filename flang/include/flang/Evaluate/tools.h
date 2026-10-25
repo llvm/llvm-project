@@ -677,7 +677,7 @@ common::IfNoLvalue<Expr<SomeKind<TOCAT>>, VALUE> ConvertToKind(
 }
 
 // Given a type category CAT, SameKindExprs<CAT, N> is a variant that
-// holds an arrays of expressions of the same supported kind in that
+// holds an array of expressions of the same supported kind in that
 // category.
 template <typename A, int N = 2> using SameExprs = std::array<Expr<A>, N>;
 template <int N = 2> struct SameKindExprsHelper {
