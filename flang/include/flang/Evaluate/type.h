@@ -541,7 +541,8 @@ bool AreSameDerivedTypeIgnoringSequence(
   }
 
 // TODO: The kind used to be part of Type<>, but since the FOR_EACH macros only
-// expand to a single entry, there is no use of them anymore.
+//       expand to a single entry, there is no purpose of using these macros
+//       anymore.
 #define FOR_EACH_INTEGER_KIND(PREFIX, SUFFIX) \
   PREFIX<Type<TypeCategory::Integer>> SUFFIX;
 #define FOR_EACH_REAL_KIND(PREFIX, SUFFIX) \

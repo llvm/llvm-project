@@ -25,7 +25,8 @@ namespace Fortran::common {
 // SearchTypeList<PREDICATE, TYPES...> scans a list of types.  The zero-based
 // index of the first type T in the list for which PREDICATE<T>::value() is
 // true is returned, or -1 if the predicate is false for every type in the list.
-// This is a compile-time operation; see SearchTypes below for a run-time form.
+// This is a compile-time operation; see evaluate::SearchTypes for a run-time
+// form.
 template <int N, template <typename> class PREDICATE, typename TUPLE>
 struct SearchTypeListHelper {
   static constexpr int value() {
