@@ -447,7 +447,7 @@ std::string SyntaxTree::Impl::getDeclValue(const Decl *D) const {
 
 std::string SyntaxTree::Impl::getStmtValue(const Stmt *S) const {
   if (auto *U = dyn_cast<UnaryOperator>(S))
-    return std::string(UnaryOperator::getOpcodeStr(U->getOpcode()));
+    return std::string(U->getOpcodeStr());
   if (auto *B = dyn_cast<BinaryOperator>(S))
     return std::string(B->getOpcodeStr());
   if (auto *M = dyn_cast<MemberExpr>(S))
