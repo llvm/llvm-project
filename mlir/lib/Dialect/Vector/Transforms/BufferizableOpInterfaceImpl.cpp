@@ -91,7 +91,7 @@ struct TransferWriteOpInterface
         return true;
     }
 
-    // There is no mask.
+    // No mask operand and not inside a masking op.
     if (writeOp.getMask() || writeOp.isMasked())
       return true;
 
