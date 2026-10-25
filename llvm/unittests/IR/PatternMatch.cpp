@@ -1545,6 +1545,35 @@ TEST_F(PatternMatchTest, VectorOps) {
   EXPECT_TRUE(A == Val);
 }
 
+TEST_F(PatternMatchTest, BitOps) {
+  //   BI = bitinsert b32 0, i8 1, i32 8
+  //   BE = bitextract i8, b32 %BI, i32 8
+  Value *Base = ConstantByte::get(IRB.getByte32Ty(), 0);
+  Value *Val = IRB.getInt8(1);
+  Value *Off = IRB.getInt32(8);
+  Value *BI = IRB.CreateBitInsert(Base, Val, Off);
+  Value *BE = IRB.CreateBitExtract(IRB.getInt8Ty(), BI, Off);
+
+  Value *A, *B, *C;
+  EXPECT_TRUE(match(BI, m_BitInsert(m_Value(A), m_Value(B), m_Value(C))));
+  EXPECT_EQ(A, Base);
+  EXPECT_EQ(B, Val);
+  EXPECT_EQ(C, Off);
+  EXPECT_TRUE(match(
+      BI, m_BitInsert(m_Specific(Base), m_SpecificInt(1), m_SpecificInt(8))));
+  EXPECT_FALSE(match(BI, m_BitInsert(m_Value(), m_Value(), m_Zero())));
+
+  EXPECT_TRUE(match(BE, m_BitExtract(m_Value(A), m_Value(B))));
+  EXPECT_EQ(A, BI);
+  EXPECT_EQ(B, Off);
+  EXPECT_FALSE(match(BE, m_BitExtract(m_Value(), m_Zero())));
+
+  EXPECT_TRUE(
+      match(BE, m_BitExtract(m_BitInsert(m_Value(), m_Value(), m_Value()),
+                             m_SpecificInt(8))));
+  EXPECT_FALSE(match(BI, m_BitExtract(m_Value(), m_Value())));
+}
+
 TEST_F(PatternMatchTest, UndefPoisonMix) {
   Type *ScalarTy = IRB.getInt8Ty();
   ArrayType *ArrTy = ArrayType::get(ScalarTy, 2);
