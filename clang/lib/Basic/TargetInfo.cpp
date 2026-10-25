@@ -562,8 +562,12 @@ void TargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
     }
   }
 
-  if (Opts.Int64LongLong)
-    Int64Type = SignedLongLong;
+  if (Opts.Int64LongLong) {
+    if (getLongLongWidth() > 64)
+      Diags.Report(diag::err_opt_not_valid_on_target) << "-fint64-is-long-long";
+    else
+      Int64Type = SignedLongLong;
+  }
 
   if (Opts.NewAlignOverride)
     NewAlign = Opts.NewAlignOverride * getCharWidth();
