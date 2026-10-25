@@ -682,7 +682,7 @@ public:
 
   using __base::reset;
 
-#  if _LIBCPP_STD_VER >= 26
+#  if _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_EXPERIMENTAL_OPTIONAL_ITERATOR
 
 private:
   using __pointer _LIBCPP_NODEBUG       = add_pointer_t<_Tp>;
@@ -754,7 +754,7 @@ public:
     return begin() + (this->has_value() ? 1 : 0);
   }
 
-#  endif // _LIBCPP_STD_VER >= 26
+#  endif // _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_EXPERIMENTAL_OPTIONAL_ITERATOR
 };
 
 _LIBCPP_END_NAMESPACE_STD

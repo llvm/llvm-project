@@ -10,6 +10,7 @@
 
 // REQUIRES: std-at-least-c++26, libcpp-has-abi-bounded-iterators-in-optional
 // REQUIRES: can-test-hardening-assertions-fast
+// UNSUPPORTED: libcpp-has-no-experimental-optional-iterator
 
 // Test that an assertion fires for invalid uses of the following operators on a bounded iterator:
 
