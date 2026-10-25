@@ -7006,6 +7006,52 @@ LoopVectorizePass::LoopVectorizePass(LoopVectorizeOptions Opts)
     : InterleaveOnlyWhenForced(Opts.InterleaveOnlyWhenForced),
       VectorizeOnlyWhenForced(Opts.VectorizeOnlyWhenForced) {}
 
+/// Returns the ComputeReductionResult for \p RdxPhi.
+static VPInstruction *findReductionResult(VPReductionPHIRecipe *RdxPhi) {
+  using namespace VPlanPatternMatch;
+  return cast<VPInstruction>(vputils::findRecipe(
+      RdxPhi->getBackedgeValue(),
+      match_fn(m_VPInstruction<VPInstruction::ComputeReductionResult>())));
+}
+
+/// Returns the ResumeForEpilogue marker from \p ResumeValues for header phi
+/// \p PhiR, using the index of its resume phi among the incoming values of
+/// \p Plan's scalar header phis.
+static VPInstruction *
+findResumeForEpilogue(VPlan &Plan, VPHeaderPHIRecipe *PhiR,
+                      ArrayRef<VPInstruction *> ResumeValues) {
+  using namespace VPlanPatternMatch;
+  auto FindMarker = [&](auto IsResumePhi) {
+    for (auto [ScalarPhi, ResumeForEpi] :
+         zip_equal(Plan.getScalarHeader()->phis(), ResumeValues))
+      if (IsResumePhi(cast<VPPhi>(ScalarPhi.getOperand(0))))
+        return ResumeForEpi;
+    llvm_unreachable("must have a resume phi");
+  };
+  if (auto *RdxPhi = dyn_cast<VPReductionPHIRecipe>(PhiR)) {
+    VPBasicBlock *ScalarPH = Plan.getScalarPreheader();
+    VPRecipeBase *ResumePhi = vputils::findRecipe(
+        findReductionResult(RdxPhi),
+        [ScalarPH](VPRecipeBase *R) { return R->getParent() == ScalarPH; });
+    return FindMarker([ResumePhi](VPPhi *Phi) { return Phi == ResumePhi; });
+  }
+  auto *WideIV = cast<VPWidenInductionRecipe>(PhiR);
+  VPValue *Start = WideIV->getStartValue();
+  VPValue *Step = WideIV->getStepValue();
+  VPValue *VectorTC = &Plan.getVectorTripCount();
+  auto *FPBinOp = dyn_cast_or_null<FPMathOperator>(
+      WideIV->getInductionDescriptor().getInductionBinOp());
+  return FindMarker([&](VPPhi *ResumePhi) {
+    VPValue *EndV = ResumePhi->getOperand(0);
+    if (EndV == VectorTC)
+      return match(Start, m_ZeroInt()) && match(Step, m_One()) &&
+             Start->getScalarType() == VectorTC->getScalarType();
+    return match(EndV, m_DerivedIV(m_Specific(Start), m_Specific(VectorTC),
+                                   m_Specific(Step))) &&
+           cast<VPDerivedIVRecipe>(EndV)->getFPBinOp() == FPBinOp;
+  });
+}
+
 /// ResumeForEpilogue markers in the main plan, used by the epilogue plan.
 struct MainPlanResumeMarkers {
   VPInstruction *VectorTC;
@@ -7081,13 +7127,6 @@ static void preparePlanForEpilogueVectorLoop(
     ElementCount MainLoopVF, unsigned MainLoopUF, ElementCount EpilogueVF,
     VFSelectionContext &Config, ScalarEvolution &SE,
     const MainPlanResumeMarkers &Markers, VPBasicBlock *MainCheck) {
-  // Build a map from the scalar-header PHI to the ResumeForEpilogue markers
-  // from the main plan.
-  // TODO: Replace the IR PHI key.
-  DenseMap<PHINode *, VPInstruction *> IRPhiToResumeForEpi;
-  for (auto [HeaderPhi, ResumeForEpi] :
-       zip_equal(MainPlan.getScalarHeader()->phis(), Markers.ResumeValues))
-    IRPhiToResumeForEpi[&cast<VPIRPhi>(HeaderPhi).getIRPhi()] = ResumeForEpi;
   VPIRBasicBlock *EpilogueCheck = RUN_VPLAN_PASS(
       VPlanTransforms::modelGeneratedMainLoopBlocks, Plan, MainPlan, MainCheck);
   VPRegionBlock *VectorLoop = Plan.getVectorLoopRegion();
@@ -7165,21 +7204,12 @@ static void preparePlanForEpilogueVectorLoop(
   // Ensure that the start values for all header phi recipes are updated before
   // vectorizing the epilogue loop.
   for (VPRecipeBase &R : Header->phis()) {
+    VPInstruction *ResumeForEpi = findResumeForEpilogue(
+        Plan, cast<VPHeaderPHIRecipe>(&R), Markers.ResumeValues);
     VPValue *ResumeVPV = nullptr;
     // TODO: Move setting of resume values to prepareToExecute.
     if (auto *ReductionPhi = dyn_cast<VPReductionPHIRecipe>(&R)) {
-      // Find the reduction result by searching users of the phi or its backedge
-      // value.
-      auto IsReductionResult = [](VPRecipeBase *R) {
-        auto *VPI = dyn_cast<VPInstruction>(R);
-        return VPI && VPI->getOpcode() == VPInstruction::ComputeReductionResult;
-      };
-      auto *RdxResult = cast<VPInstruction>(
-          vputils::findRecipe(ReductionPhi->getBackedgeValue(), IsReductionResult));
-      assert(RdxResult && "expected to find reduction result");
-
-      VPInstruction *ResumeForEpi = IRPhiToResumeForEpi.at(
-          cast<PHINode>(ReductionPhi->getUnderlyingInstr()));
+      VPInstruction *RdxResult = findReductionResult(ReductionPhi);
 
       // Check for FindIV pattern by looking for icmp user of RdxResult.
       // The pattern is: select(icmp ne RdxResult, Sentinel), RdxResult, Start
@@ -7271,9 +7301,7 @@ static void preparePlanForEpilogueVectorLoop(
       }
     } else {
       // Retrieve the induction resume value via ResumeForEpilogue.
-      PHINode *IndPhi = cast<VPWidenInductionRecipe>(&R)->getPHINode();
-      ResumeVPV =
-          GetResumeValue(IRPhiToResumeForEpi.at(IndPhi), "bc.resume.val");
+      ResumeVPV = GetResumeValue(ResumeForEpi, "bc.resume.val");
     }
     assert(ResumeVPV && "Must have a resume value");
     cast<VPHeaderPHIRecipe>(&R)->setStartValue(ResumeVPV);
