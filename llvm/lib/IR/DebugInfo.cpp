@@ -706,6 +706,8 @@ bool llvm::stripDebugInfo(Function &F) {
         I.setMetadata("heapallocsite", nullptr);
         // DIAssignID are debug info metadata primitives.
         I.setMetadata(LLVMContext::MD_DIAssignID, nullptr);
+        // Call targets point to DISubprograms.
+        I.setMetadata(LLVMContext::MD_call_target, nullptr);
       }
       I.dropDbgRecords();
     }
@@ -1014,9 +1016,13 @@ bool llvm::stripNonLineTableDebugInfo(Module &M) {
           return MD;
         });
 
-        // Strip heapallocsite attachments, they point into the DIType system.
-        if (I.hasMetadataOtherThanDebugLoc())
+        // Strip attachments that refer to non-line-table debug info:
+        // heapallocsite points into the DIType system, call_target to a
+        // DISubprogram.
+        if (I.hasMetadataOtherThanDebugLoc()) {
           I.setMetadata("heapallocsite", nullptr);
+          I.setMetadata(LLVMContext::MD_call_target, nullptr);
+        }
 
         // Strip any DbgRecords attached.
         I.dropDbgRecords();
