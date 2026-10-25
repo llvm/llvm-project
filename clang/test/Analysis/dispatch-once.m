@@ -21,7 +21,7 @@ void dispatch_once(dispatch_once_t *predicate, dispatch_block_t block);
 
 void test_stack(void) {
   dispatch_once_t once;
-  dispatch_once(&once, ^{}); // expected-warning{{Call to 'dispatch_once' uses the local variable 'once' for the predicate value. Using such transient memory for the predicate is potentially dangerous. Perhaps you intended to declare the variable as 'static'?}}
+  dispatch_once(&once, ^{}); // expected-warning{{Call to 'dispatch_once' uses the local variable 'once' for the predicate value. Using such transient memory for the predicate is potentially dangerous; perhaps you intended to declare the variable as 'static'?}}
 }
 
 void test_static_local(void) {

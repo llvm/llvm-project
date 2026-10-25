@@ -61,7 +61,7 @@ static void CompareReturnTypes(const ObjCMethodDecl *MethDerived,
        << *MethAncestor->getClassInterface() << "' and has a return type of '"
        << ResAncestor
        << "'. These two types are incompatible, and may result in undefined "
-          "behavior for clients of these classes.";
+          "behavior for clients of these classes";
 
     PathDiagnosticLocation MethDLoc =
       PathDiagnosticLocation::createBegin(MethDerived,
