@@ -4458,6 +4458,16 @@ struct CastInfo<VPIRMetadata, VPRecipeBase>
     : public ForwardToPointerCast<VPIRMetadata, VPRecipeBase *,
                                   CastInfo<VPIRMetadata, VPRecipeBase *>> {};
 
+/// Support casting from VPSingleDefRecipe -> VPIRMetadata.
+template <>
+struct CastInfo<VPIRMetadata, VPSingleDefRecipe *>
+    : CastInfo<VPIRMetadata, VPRecipeBase *> {};
+template <>
+struct CastInfo<VPIRMetadata, const VPSingleDefRecipe *>
+    : public ConstStrippingForwardingCast<
+          VPIRMetadata, const VPSingleDefRecipe *,
+          CastInfo<VPIRMetadata, VPSingleDefRecipe *>> {};
+
 /// VPBasicBlock serves as the leaf of the Hierarchical Control-Flow Graph. It
 /// holds a sequence of zero or more VPRecipe's each representing a sequence of
 /// output IR instructions. All PHI-like recipes must come before any non-PHI
