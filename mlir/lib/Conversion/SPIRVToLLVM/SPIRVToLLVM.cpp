@@ -1385,6 +1385,62 @@ public:
   }
 };
 
+/// Returns the LLVM atomic ordering denoted by the given SPIR-V memory
+/// semantics, or `std::nullopt` if the semantics set more than one ordering
+/// bit (which the SPIR-V dialect verifier rejects). Only the ordering bits
+/// (`Acquire`, `Release`, `AcquireRelease`, `SequentiallyConsistent`) are
+/// considered: the storage class bits (`UniformMemory`, `WorkgroupMemory`, ...)
+/// have no LLVM counterpart, and `MakeAvailable`/`MakeVisible` are implied by
+/// LLVM's release/acquire semantics. A semantics value with no ordering bit set
+/// is a relaxed atomic, i.e. `monotonic` in LLVM.
+static std::optional<LLVM::AtomicOrdering>
+convertMemorySemanticsToOrdering(spirv::MemorySemantics semantics) {
+  using spirv::MemorySemantics;
+  constexpr MemorySemantics orderingBits =
+      MemorySemantics::Acquire | MemorySemantics::Release |
+      MemorySemantics::AcquireRelease | MemorySemantics::SequentiallyConsistent;
+  switch (semantics & orderingBits) {
+  case MemorySemantics::None:
+    return LLVM::AtomicOrdering::monotonic;
+  case MemorySemantics::Acquire:
+    return LLVM::AtomicOrdering::acquire;
+  case MemorySemantics::Release:
+    return LLVM::AtomicOrdering::release;
+  case MemorySemantics::AcquireRelease:
+    return LLVM::AtomicOrdering::acq_rel;
+  case MemorySemantics::SequentiallyConsistent:
+    return LLVM::AtomicOrdering::seq_cst;
+  default:
+    return std::nullopt;
+  }
+}
+
+/// Converts `spirv.MemoryBarrier` to `llvm.fence`. A memory barrier without
+/// ordering semantics (relaxed) orders nothing and is erased: LLVM has no
+/// monotonic fence.
+class MemoryBarrierPattern
+    : public SPIRVToLLVMConversion<spirv::MemoryBarrierOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::MemoryBarrierOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::MemoryBarrierOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    std::optional<LLVM::AtomicOrdering> ordering =
+        convertMemorySemanticsToOrdering(op.getMemorySemantics());
+    if (!ordering)
+      return rewriter.notifyMatchFailure(op, "unsupported memory semantics");
+    if (*ordering == LLVM::AtomicOrdering::monotonic) {
+      rewriter.eraseOp(op);
+      return success();
+    }
+    // The memory scope is not modelled: there is no portable LLVM syncscope
+    // for SPIR-V scopes, so the fence uses the (conservative) system scope.
+    rewriter.replaceOpWithNewOp<LLVM::FenceOp>(op, *ordering);
+    return success();
+  }
+};
+
 namespace {
 
 StringRef getTypeMangling(Type type, bool isSigned) {
@@ -2422,6 +2478,7 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       ControlBarrierPattern<spirv::ControlBarrierOp>,
       ControlBarrierPattern<spirv::INTELControlBarrierArriveOp>,
       ControlBarrierPattern<spirv::INTELControlBarrierWaitOp>,
+      MemoryBarrierPattern,
 
       // Group reduction operations
       GroupReducePattern<spirv::GroupIAddOp>,
