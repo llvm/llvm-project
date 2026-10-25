@@ -110,6 +110,8 @@ static int sectionOrder(OutputSection *osec) {
     int knownPriority =
         StringSwitch<int>(osec->name)
             .Case(section_names::stubs, -4)
+            // needsThunks() assumes that the stubs follow __text.
+            .Case(section_names::authStubs, -4)
             .Case(section_names::stubHelper, -3)
             .Case(section_names::objcStubs, -2)
             .Case(section_names::initOffsets, -1)
