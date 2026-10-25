@@ -94,11 +94,13 @@ define float @sub_sub_nsz(float %x, float %y, float %z) {
   ret float %t2
 }
 
-; With nsz and reassoc: Y - ((X * 5) + Y) --> X * -5
+; Without reassoc on the fadd, Y - ((X * 5) + Y) must not fold to X * -5.
 
 define float @sub_add_neg_x(float %x, float %y) {
 ; CHECK-LABEL: @sub_add_neg_x(
-; CHECK-NEXT:    [[R:%.*]] = fmul nsz float [[X:%.*]], -5.000000e+00
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X:%.*]], 5.000000e+00
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[MUL]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fsub reassoc nsz float [[Y]], [[ADD]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %mul = fmul float %x, 5.000000e+00

@@ -19821,13 +19821,14 @@ SDValue DAGCombiner::visitFSUB(SDNode *N) {
   }
 
   if (Flags.hasAllowReassociation() && Flags.hasNoSignedZeros() &&
-      N1.getOpcode() == ISD::FADD) {
+      N1.getOpcode() == ISD::FADD && N1->getFlags().hasAllowReassociation()) {
+    SDNodeFlags IntersectFlags = Flags & N1->getFlags();
     // X - (X + Y) -> -Y
     if (N0 == N1->getOperand(0))
-      return DAG.getNode(ISD::FNEG, DL, VT, N1->getOperand(1));
+      return DAG.getNode(ISD::FNEG, DL, VT, N1->getOperand(1), IntersectFlags);
     // X - (Y + X) -> -Y
     if (N0 == N1->getOperand(1))
-      return DAG.getNode(ISD::FNEG, DL, VT, N1->getOperand(0));
+      return DAG.getNode(ISD::FNEG, DL, VT, N1->getOperand(0), IntersectFlags);
   }
 
   // fold (fsub A, (fneg B)) -> (fadd A, B)
