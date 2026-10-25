@@ -274,52 +274,39 @@ Defined *EhFrameSection::isFdeLive(EhSectionPiece &fde,
 // is one CIE record per input object file which is followed by
 // a list of FDEs. This function searches an existing CIE or create a new
 // one and associates FDEs to the CIE.
-template <endianness e> void EhFrameSection::addRecords(EhInputSection *sec) {
+void EhFrameSection::addRecords(EhInputSection *sec) {
   auto rels = sec->rels;
-  offsetToCie.clear();
+  sectionCies.clear();
   for (EhSectionPiece &cie : sec->cies)
-    offsetToCie[cie.inputOff] = addCie(cie, rels);
+    sectionCies.push_back(addCie(cie, rels));
   for (EhSectionPiece &fde : sec->fdes) {
-    uint32_t id = endian::read32<e>(fde.data().data() + 4);
-    CieRecord *rec = offsetToCie[fde.inputOff + 4 - id];
-    if (!rec)
+    if (fde.cie == uint32_t(-1))
       Fatal(ctx) << sec << ": invalid CIE reference";
 
     if (!isFdeLive(fde, rels))
       continue;
-    rec->fdes.push_back(&fde);
+    sectionCies[fde.cie]->fdes.push_back(&fde);
     numFdes++;
   }
 }
 
-// Used by ICF<ELFT>::handleLSDA(). This function is very similar to
-// EhFrameSection::addRecords().
-template <class ELFT>
-void EhFrameSection::iterateFDEWithLSDAAux(
-    EhInputSection &sec, DenseSet<size_t> &ciesWithLSDA,
-    llvm::function_ref<void(InputSection &)> fn) {
-  for (EhSectionPiece &cie : sec.cies)
-    if (hasLSDA(cie))
-      ciesWithLSDA.insert(cie.inputOff);
-  for (EhSectionPiece &fde : sec.fdes) {
-    uint32_t id = endian::read32<ELFT::Endianness>(fde.data().data() + 4);
-    if (!ciesWithLSDA.contains(fde.inputOff + 4 - id))
-      continue;
-
-    // The CIE has a LSDA argument. Call fn with d's section.
-    if (Defined *d = isFdeLive(fde, sec.rels))
-      if (auto *s = dyn_cast_or_null<InputSection>(d->section))
-        fn(*s);
-  }
-}
-
-template <class ELFT>
+// Used by ICF. This function is very similar to EhFrameSection::addRecords().
 void EhFrameSection::iterateFDEWithLSDA(
     llvm::function_ref<void(InputSection &)> fn) {
-  DenseSet<size_t> ciesWithLSDA;
+  SmallVector<bool, 0> ciesWithLSDA;
   for (EhInputSection *sec : sections) {
     ciesWithLSDA.clear();
-    iterateFDEWithLSDAAux<ELFT>(*sec, ciesWithLSDA, fn);
+    for (EhSectionPiece &cie : sec->cies)
+      ciesWithLSDA.push_back(hasLSDA(cie));
+    for (EhSectionPiece &fde : sec->fdes) {
+      if (fde.cie == uint32_t(-1) || !ciesWithLSDA[fde.cie])
+        continue;
+
+      // The CIE has a LSDA argument. Call fn with d's section.
+      if (Defined *d = isFdeLive(fde, sec->rels))
+        if (auto *s = dyn_cast_or_null<InputSection>(d->section))
+          fn(*s);
+    }
   }
 }
 
@@ -332,22 +319,9 @@ static void writeCieFde(Ctx &ctx, uint8_t *buf, ArrayRef<uint8_t> d) {
 void EhFrameSection::finalizeContents() {
   assert(!this->size); // Not finalized.
 
-  switch (ctx.arg.ekind) {
-  case ELFNoneKind:
-    llvm_unreachable("invalid ekind");
-  case ELF32LEKind:
-  case ELF64LEKind:
-    for (EhInputSection *sec : sections)
-      if (sec->isLive())
-        addRecords<endianness::little>(sec);
-    break;
-  case ELF32BEKind:
-  case ELF64BEKind:
-    for (EhInputSection *sec : sections)
-      if (sec->isLive())
-        addRecords<endianness::big>(sec);
-    break;
-  }
+  for (EhInputSection *sec : sections)
+    if (sec->isLive())
+      addRecords(sec);
 
   size_t off = 0;
   for (CieRecord *rec : cieRecords) {
@@ -4706,15 +4680,6 @@ template void elf::splitSections<ELF32LE>(Ctx &);
 template void elf::splitSections<ELF32BE>(Ctx &);
 template void elf::splitSections<ELF64LE>(Ctx &);
 template void elf::splitSections<ELF64BE>(Ctx &);
-
-template void EhFrameSection::iterateFDEWithLSDA<ELF32LE>(
-    function_ref<void(InputSection &)>);
-template void EhFrameSection::iterateFDEWithLSDA<ELF32BE>(
-    function_ref<void(InputSection &)>);
-template void EhFrameSection::iterateFDEWithLSDA<ELF64LE>(
-    function_ref<void(InputSection &)>);
-template void EhFrameSection::iterateFDEWithLSDA<ELF64BE>(
-    function_ref<void(InputSection &)>);
 
 template class elf::SymbolTableSection<ELF32LE>;
 template class elf::SymbolTableSection<ELF32BE>;
