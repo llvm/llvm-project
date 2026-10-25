@@ -1,6 +1,7 @@
 import getopt
 import os
 import pathlib
+from pathlib import Path
 import platform
 import shutil
 import stat
@@ -157,11 +158,23 @@ def executeBuiltinRm(cmd, cmd_shenv):
     except getopt.GetoptError as err:
         raise InternalShellError(cmd, "Unsupported: 'rm':  %s" % str(err))
 
+    isTestPath = False
+    curPath = Path.cwd()
+    testPath = ["test", "unittest"]
+    for part in curPath.parts:
+        if part.lower() in testPath:
+            isTestPath = True
+            break
+
     force = False
     recursive = False
     for o, a in opts:
         if o == "-f":
-            force = True
+            if isTestPath:
+                force = True
+            else:
+                force = False
+                raise InternalShellError(cmd, f"Check your `RUN:` line path and try again. Current path: {curPath}")
         elif o in ("-r", "-R", "--recursive"):
             recursive = True
         else:
