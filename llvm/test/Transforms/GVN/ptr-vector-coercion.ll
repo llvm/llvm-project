@@ -56,17 +56,12 @@ define <1 x ptr> @neg_ptr1_store_to_v1ptr_load(ptr %p, ptr addrspace(1) %v) {
   ret <1 x ptr> %l
 }
 
-; Pointers of different sizes can't be bitcast to each other.
-; FIXME: Going through integers drops provenance, and a poison lane in %v
-; poisons the loaded pointer.
-define ptr @neg_v2ptr_store_to_ptr_load(ptr %p, <2 x ptr> %v) {
-; CHECK-LABEL: define ptr @neg_v2ptr_store_to_ptr_load(
+define ptr @v2ptr_store_to_ptr_load(ptr %p, <2 x ptr> %v) {
+; CHECK-LABEL: define ptr @v2ptr_store_to_ptr_load(
 ; CHECK-SAME: ptr [[P:%.*]], <2 x ptr> [[V:%.*]]) {
 ; CHECK-NEXT:    store <2 x ptr> [[V]], ptr [[P]], align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint <2 x ptr> [[V]] to <2 x i64>
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[TMP1]] to i128
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc i128 [[TMP2]] to i64
-; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x ptr> [[V]] to b128
+; CHECK-NEXT:    [[TMP4:%.*]] = bitextract ptr, b128 [[TMP1]], i32 0
 ; CHECK-NEXT:    ret ptr [[TMP4]]
 ;
   store <2 x ptr> %v, ptr %p
