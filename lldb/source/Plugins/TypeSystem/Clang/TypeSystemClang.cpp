@@ -4306,6 +4306,7 @@ TypeSystemClang::GetTypeClass(lldb::opaque_compiler_type_t type) {
 
   // Matrix types that we're not sure how to display at the moment.
   case clang::Type::ConstantMatrix:
+  case clang::Type::CooperativeMatrix:
   case clang::Type::DependentSizedMatrix:
     break;
 
@@ -5183,6 +5184,7 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type) {
     break;
 
   case clang::Type::ConstantMatrix:
+  case clang::Type::CooperativeMatrix:
   case clang::Type::DependentSizedMatrix:
     break;
 
@@ -5356,6 +5358,7 @@ lldb::Format TypeSystemClang::GetFormat(lldb::opaque_compiler_type_t type) {
 
   // Matrix types we're not sure how to display yet.
   case clang::Type::ConstantMatrix:
+  case clang::Type::CooperativeMatrix:
   case clang::Type::DependentSizedMatrix:
     break;
 

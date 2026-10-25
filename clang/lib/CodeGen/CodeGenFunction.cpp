@@ -261,6 +261,7 @@ TypeEvaluationKind CodeGenFunction::getEvaluationKind(QualType type) {
     case Type::Vector:
     case Type::ExtVector:
     case Type::ConstantMatrix:
+    case Type::CooperativeMatrix:
     case Type::FunctionProto:
     case Type::FunctionNoProto:
     case Type::Enum:
@@ -2590,6 +2591,7 @@ void CodeGenFunction::EmitVariablyModifiedType(QualType type) {
     case Type::Vector:
     case Type::ExtVector:
     case Type::ConstantMatrix:
+    case Type::CooperativeMatrix:
     case Type::Record:
     case Type::Enum:
     case Type::Using:
