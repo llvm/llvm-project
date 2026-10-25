@@ -501,8 +501,9 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
   Value *Placeholder = reinterpret_cast<Value *>(static_cast<uintptr_t>(-1));
 #endif
 
-  // Did we already try to negate this value?
-  auto NegationsCacheIterator = NegationsCache.find(V);
+  // Negations with different NSW requirements may have different results.
+  PointerIntPair<Value *, 1, bool> CacheKey(V, IsNSW);
+  auto NegationsCacheIterator = NegationsCache.find(CacheKey);
   if (NegationsCacheIterator != NegationsCache.end()) {
     ++NegatorNumNegationsFoundInCache;
     Value *NegatedV = NegationsCacheIterator->second;
@@ -514,13 +515,13 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
   // We did not find a cached result for negation of V. While there,
   // let's temporairly cache a placeholder value, with the idea that if later
   // during negation we fetch it from cache, we'll know we're in a cycle.
-  NegationsCache[V] = Placeholder;
+  NegationsCache[CacheKey] = Placeholder;
 #endif
 
   // No luck. Try negating it for real.
   Value *NegatedV = visitImpl(V, IsNSW, Depth);
   // And cache the (real) result for the future.
-  NegationsCache[V] = NegatedV;
+  NegationsCache[CacheKey] = NegatedV;
 
   return NegatedV;
 }

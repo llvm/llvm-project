@@ -16,6 +16,7 @@
 #define LLVM_LIB_TRANSFORMS_INSTCOMBINE_INSTCOMBINEINTERNAL_H
 
 #include "InstCombineCLOptions.h"
+#include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/InstructionSimplify.h"
@@ -902,7 +903,7 @@ class Negator final {
 
   const unsigned MaxDepth;
 
-  SmallDenseMap<Value *, Value *> NegationsCache;
+  SmallDenseMap<PointerIntPair<Value *, 1, bool>, Value *> NegationsCache;
 
   Negator(Module &M, const DominatorTree &DT, bool IsTrulyNegation,
           unsigned MaxDepth);
