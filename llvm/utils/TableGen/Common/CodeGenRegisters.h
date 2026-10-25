@@ -405,8 +405,8 @@ class CodeGenRegisterClass {
   //
   //   R:SubRegIndex in this RC for all R in SuperRC.
   //
-  DenseMap<CodeGenSubRegIndex *, DenseSet<CodeGenRegisterClass *>>
-      SuperRegClasses;
+  // The sets are indexed by CreationIndex.
+  DenseMap<CodeGenSubRegIndex *, BitVector> SuperRegClasses;
 
   // Bit vector of TopoSigs for the registers with super registers in this
   // class. This will be very sparse on regular architectures.
@@ -420,6 +420,9 @@ class CodeGenRegisterClass {
 
 public:
   unsigned EnumValue;
+  // Position in creation order, see CodeGenRegBank::getRegClassByCreationIndex.
+  // Unlike EnumValue, this is known while classes are being inferred.
+  unsigned CreationIndex = ~0u;
   StringRef Namespace;
   SmallVector<ValueTypeByHwMode, 4> VTs;
   RegSizeInfoByHwMode RSI;
@@ -518,15 +521,20 @@ public:
   // getSuperRegClasses - Returns a bit vector of all register classes
   // containing only SubIdx super-registers of this class.
   void getSuperRegClasses(const CodeGenSubRegIndex *SubIdx,
-                          BitVector &Out) const;
+                          const CodeGenRegBank &RegBank, BitVector &Out) const;
 
   // addSuperRegClass - Add a class containing only SubIdx super-registers.
   void addSuperRegClass(CodeGenSubRegIndex *SubIdx,
                         CodeGenRegisterClass *SuperRC) {
-    SuperRegClasses[SubIdx].insert(SuperRC);
+    assert(SuperRC->CreationIndex != ~0u && "CreationIndex is not set");
+    BitVector &Supers = SuperRegClasses[SubIdx];
+    if (Supers.size() <= SuperRC->CreationIndex)
+      Supers.resize(SuperRC->CreationIndex + 1);
+    Supers.set(SuperRC->CreationIndex);
   }
 
-  void extendSuperRegClasses(CodeGenSubRegIndex *SubIdx);
+  void extendSuperRegClasses(CodeGenSubRegIndex *SubIdx,
+                             const CodeGenRegBank &RegBank);
 
   // getSubClasses - Returns a constant BitVector of subclasses indexed by
   // EnumValue.
@@ -727,6 +735,8 @@ class CodeGenRegBank {
 
   // Register classes.
   std::list<CodeGenRegisterClass> RegClasses;
+  // RegClasses in creation order, indexed by CreationIndex.
+  std::vector<CodeGenRegisterClass *> RegClassesByCreationIndex;
   StringSet<> RegClassNames;
   DenseMap<const Record *, CodeGenRegisterClass *> Def2RC;
   using RCKeyMap = std::map<CodeGenRegisterClass::Key, CodeGenRegisterClass *>;
@@ -759,6 +769,12 @@ class CodeGenRegBank {
 
   // Add RC to *2RC maps.
   void addToMaps(CodeGenRegisterClass *);
+
+  // Set the CreationIndex of the newest register class.
+  void setCreationIndex(CodeGenRegisterClass &RC) {
+    RC.CreationIndex = RegClassesByCreationIndex.size();
+    RegClassesByCreationIndex.push_back(&RC);
+  }
 
   // Create a synthetic sub-class if it is missing. Returns (RC, inserted).
   std::pair<CodeGenRegisterClass *, bool>
@@ -899,6 +915,10 @@ public:
 
   const std::list<CodeGenRegisterClass> &getRegClasses() const {
     return RegClasses;
+  }
+
+  CodeGenRegisterClass *getRegClassByCreationIndex(unsigned Idx) const {
+    return RegClassesByCreationIndex[Idx];
   }
 
   std::list<CodeGenRegisterCategory> &getRegCategories() {
