@@ -139,12 +139,22 @@ infrastructure are described first, followed by tool-specific sections.
   piping from {program}`git` to {program}`clang-tidy-diff.py`, where slashes
   will now be automatically normalized.
 
+- Fixed a crash in {program}`clang-tidy` when `HeaderFileExtensions` or
+  `ImplementationFileExtensions` contains an invalid entry, such as one with a
+  leading dot. The invalid option is now reported as a warning.
+
 #### New checks
 
 - New {doc}`llvm-invalid-regex-pattern
   <clang-tidy/checks/llvm/invalid-regex-pattern>` check.
 
   Detects malformed regex patterns defined in a single string literal.
+
+- New {doc}`modernize-use-if-consteval
+  <clang-tidy/checks/modernize/use-if-consteval>` check.
+
+  Replaces direct `std::is_constant_evaluated()` checks in `if` statements
+  with C++23's `if consteval` syntax.
 
 - New {doc}`modernize-use-to-underlying
   <clang-tidy/checks/modernize/use-to-underlying>` check.
@@ -173,6 +183,11 @@ infrastructure are described first, followed by tool-specific sections.
 #### New check aliases
 
 #### Changes in existing checks
+
+- Improved {doc}`bugprone-assignment-in-if-condition
+  <clang-tidy/checks/bugprone/assignment-in-if-condition>` check by ignoring
+  assignments inside GNU statement expressions unless they form the value of
+  the statement expression.
 
 - Fixed a crash in {doc}`bugprone-crtp-constructor-accessibility
   <clang-tidy/checks/bugprone/crtp-constructor-accessibility>` when a
@@ -251,9 +266,13 @@ infrastructure are described first, followed by tool-specific sections.
 
   - No longer diagnoses variables declared with `decltype(auto)`, where the
     suggested `const` does not compile.
-    
+
   - No longer diagnoses parameters of `main`, whose signature is fixed by the
     standard.
+
+  - No longer diagnoses variables used as operands of `std::move` in template
+    instantiations, where the suggested `const` would break the move for
+    instantiations with real move semantics.
 
 - Fixed an infinite loop in {doc}`misc-multiple-inheritance
   <clang-tidy/checks/misc/multiple-inheritance>` when checking a class that
@@ -324,6 +343,10 @@ infrastructure are described first, followed by tool-specific sections.
   warning when returning a variable captured by a lambda or a block, which is
   never implicitly moved from.
 
+- Improved {doc}`performance-noexcept-move-constructor
+  <clang-tidy/checks/performance/noexcept-move-constructor>` check by fixing
+  false negatives for implicitly `noexcept(false)` move operations.
+
 - Improved {doc}`performance-prefer-single-char-overloads
   <clang-tidy/checks/performance/prefer-single-char-overloads>` check to
   avoid offering fix-its for string literals originating from macro
@@ -393,6 +416,10 @@ infrastructure are described first, followed by tool-specific sections.
     in reference non-type template parameter uses, `__builtin_dump_struct` calls,
     and OpenMP `linear` clauses.
 
+  - Fixed false positives on parentheses that determine the deduced type in
+    `decltype((x))` and in the initializers and return statements of
+    `decltype(auto)` declarations.
+
 - Fixed {doc}`readability-simplify-boolean-expr
   <clang-tidy/checks/readability/simplify-boolean-expr>` producing invalid
   fixes when applying De Morgan's theorem to overloaded comparison operators.
@@ -411,7 +438,7 @@ infrastructure are described first, followed by tool-specific sections.
   - Ignored preprocessor directives such as `#endif` that appear immediately
     before an enum's closing brace, which previously produced a false positive
     and a fix-it that inserted a comma after the directive.
-    
+
   - Fixed a false positive on empty brace initializers of types with default
     member initializers.
 

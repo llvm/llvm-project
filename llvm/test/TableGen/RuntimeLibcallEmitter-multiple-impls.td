@@ -36,7 +36,7 @@ def dup1 : RuntimeLibcallImpl<ANOTHER_DUP>;
 // CHECK-NEXT:    };
 
 def LibA : LibcallLibrary<"liba", (add func_b, func_a)>;
-def TheSystemLibraryA : SystemRuntimeLibrary<isTargetArchA, (add LibA)>;
+def TheSystemLibraryA : SystemRuntimeLibrary<isTargetArchA, ["liba"]>;
 
 // CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setAvailableLibFuncs_libb(
 // CHECK:    static const RTLIB::LibcallImpl LibraryCalls[] = {
@@ -46,7 +46,7 @@ def TheSystemLibraryA : SystemRuntimeLibrary<isTargetArchA, (add LibA)>;
 // CHECK-NEXT:    };
 
 def LibB : LibcallLibrary<"libb", (add func_a, other_func, func_b)>;
-def TheSystemLibraryB : SystemRuntimeLibrary<isTargetArchB, (add LibB)>;
+def TheSystemLibraryB : SystemRuntimeLibrary<isTargetArchB, ["libb"]>;
 
 // CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setAvailableLibFuncs_libc(
 // CHECK:     static const RTLIB::LibcallImpl LibraryCalls[] = {
@@ -61,4 +61,4 @@ def TheSystemLibraryB : SystemRuntimeLibrary<isTargetArchB, (add LibB)>;
 def LibC : LibcallLibrary<"libc",
   (add func_a, dup1, other_func, func_b, func_c, dup0)
 >;
-def TheSystemLibraryC : SystemRuntimeLibrary<isTargetArchC, (add LibC)>;
+def TheSystemLibraryC : SystemRuntimeLibrary<isTargetArchC, ["libc"]>;

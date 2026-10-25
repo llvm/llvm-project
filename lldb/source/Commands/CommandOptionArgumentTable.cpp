@@ -7,9 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Interpreter/CommandOptionArgumentTable.h"
+#include "lldb/Core/PluginManager.h"
 #include "lldb/DataFormatters/FormatManager.h"
+#include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Utility/StreamString.h"
+#include "llvm/Support/FormatAdapters.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -178,6 +181,30 @@ llvm::StringRef LanguageTypeHelpTextCallback() {
 
   help_text = std::string(sstr.GetString());
 
+  return help_text;
+}
+
+llvm::StringRef ScriptedExtensionHelpTextCallback() {
+  static std::string help_text;
+
+  llvm::SmallVector<std::pair<llvm::StringRef, llvm::StringRef>> extensions;
+  size_t longest = 0;
+  PluginManager::ForEachScriptedExtension(
+      [&](const ScriptedInterfaceInstance &instance) {
+        llvm::StringRef name =
+            ScriptInterpreter::ExtensionToString(instance.extension);
+        longest = std::max(longest, name.size());
+        extensions.emplace_back(name, instance.description);
+      });
+
+  StreamString sstr;
+  sstr << "The name of a scripting extension. One of the following:\n";
+  for (const auto &[name, description] : extensions)
+    sstr.Format("  {0} - {1}\n",
+                llvm::fmt_align(name, llvm::AlignStyle::Left, longest),
+                description);
+
+  help_text = std::string(sstr.GetString());
   return help_text;
 }
 

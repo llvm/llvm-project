@@ -54,7 +54,7 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   LINK_LIBS PUBLIC
   MLIRAffineDialect
   MLIRAffineUtils
-  MLIRAnalysis
+  MLIRAnalysisBase
   MLIRArithDialect
   MLIRArithTransforms
   MLIRArithUtils

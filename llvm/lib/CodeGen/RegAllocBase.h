@@ -111,6 +111,12 @@ protected:
   void cleanupFailedVReg(Register FailedVReg, MCRegister PhysReg,
                          SmallVectorImpl<Register> &SplitRegs);
 
+  /// Add the defs of \p FailedReg on \p MI to the \p PhysReg regunit live
+  /// ranges, and make the defs of \p PhysReg on \p MI consistently dead or
+  /// live.
+  void cleanupFailedDefs(MachineInstr &MI, Register FailedReg,
+                         MCRegister PhysReg);
+
   // Get a temporary reference to a Spiller instance.
   virtual Spiller &spiller() = 0;
 

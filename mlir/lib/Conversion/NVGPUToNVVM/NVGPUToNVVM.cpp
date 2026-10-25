@@ -319,9 +319,9 @@ struct MmaLdMatrixOpToNVVM : public ConvertOpToLLVMPattern<nvgpu::LdMatrixOp> {
 static FailureOr<NVVM::MMATypes> getNvvmMmaType(Type t) {
   Type elType = getElementTypeOrSelf(t);
   if (elType.isInteger(8))
-    return NVVM::MMATypes::s8;
+    return elType.isUnsignedInteger() ? NVVM::MMATypes::u8 : NVVM::MMATypes::s8;
   if (elType.isInteger(4))
-    return NVVM::MMATypes::s4;
+    return elType.isUnsignedInteger() ? NVVM::MMATypes::u4 : NVVM::MMATypes::s4;
   if (elType.isF16())
     return NVVM::MMATypes::f16;
   if (elType.isBF16())
