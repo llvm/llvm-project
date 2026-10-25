@@ -62,8 +62,7 @@ enum class JSONCommandLineSyntax { Windows, Gnu, AutoDetect };
 class JSONCompilationDatabase : public CompilationDatabase {
 public:
   /// Loads a JSON compilation database from the specified file. A relative
-  /// "directory" is resolved against the directory containing the file, after
-  /// resolving symlinks.
+  /// "directory" is resolved against the directory containing the file.
   ///
   /// Returns NULL and sets ErrorMessage if the database could not be
   /// loaded from the given file.

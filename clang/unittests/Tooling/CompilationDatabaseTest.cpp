@@ -263,24 +263,23 @@ TEST(JSONCompilationDatabase, RelativeDirectoryFromFile) {
   llvm::unittest::TempDir Build(Dir.path("build"));
   llvm::unittest::TempFile File(
       Build.path("compile_commands.json"), "",
-      R"([{"directory": ".", "command": "cc a.cc", "file": "../a.cc"}])");
-  auto Check = [&](StringRef DatabasePath) {
+      R"([{"directory": ".", "command": "cc a.cc", "file": "a.cc"}])");
+  auto Check = [](StringRef DatabasePath, const llvm::unittest::TempDir &Base) {
     std::string ErrorMessage;
     std::unique_ptr<JSONCompilationDatabase> Database =
         JSONCompilationDatabase::loadFromFile(DatabasePath, ErrorMessage,
                                               JSONCommandLineSyntax::Gnu);
     ASSERT_TRUE(Database) << ErrorMessage;
     std::vector<CompileCommand> Commands =
-        Database->getCompileCommands(Dir.path("a.cc"));
+        Database->getCompileCommands(Base.path("a.cc"));
     ASSERT_EQ(1u, Commands.size());
-    EXPECT_EQ(Build.path(), Commands[0].Directory);
+    EXPECT_EQ(Base.path(), Commands[0].Directory);
   };
-  Check(File.path());
-#ifndef _WIN32
-  // A symlink to the database does not change the base directory.
+  Check(File.path(), Build);
+  // Symlinks are not resolved: a link to the database is relative to the
+  // link's directory.
   llvm::unittest::TempLink Link(File.path(), Dir.path("compile_commands.json"));
-  Check(Link.path());
-#endif
+  Check(Link.path(), Dir);
 }
 
 struct FakeComparator : public PathComparator {

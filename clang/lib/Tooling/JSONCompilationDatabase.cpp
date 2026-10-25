@@ -197,10 +197,9 @@ JSONCompilationDatabase::loadFromFile(StringRef FilePath,
     ErrorMessage = "Error while opening JSON database: " + Result.message();
     return nullptr;
   }
-  SmallString<128> RealPath;
-  StringRef BaseDirectory;
-  if (!llvm::sys::fs::real_path(FilePath, RealPath))
-    BaseDirectory = llvm::sys::path::parent_path(RealPath);
+  SmallString<128> BaseDirectory(FilePath);
+  llvm::sys::fs::make_absolute(BaseDirectory);
+  llvm::sys::path::remove_filename(BaseDirectory);
   std::unique_ptr<JSONCompilationDatabase> Database(
       new JSONCompilationDatabase(std::move(*DatabaseBuffer), Syntax));
   if (!Database->parse(BaseDirectory, ErrorMessage))

@@ -247,14 +247,9 @@ DirectoryBasedGlobalCompilationDatabase::DirectoryCache::CachedFile::load(
 
 // Adapt CDB-loading functions to a common interface for DirectoryCache::load().
 static std::unique_ptr<tooling::CompilationDatabase>
-parseJSON(PathRef Path, llvm::StringRef Data, llvm::vfs::FileSystem &FS,
-          std::string &Error) {
-  llvm::SmallString<256> RealPath;
-  llvm::StringRef BaseDirectory;
-  if (!FS.getRealPath(Path, RealPath))
-    BaseDirectory = llvm::sys::path::parent_path(RealPath);
+parseJSON(PathRef Path, llvm::StringRef Data, std::string &Error) {
   if (auto CDB = tooling::JSONCompilationDatabase::loadFromBuffer(
-          BaseDirectory, Data, Error,
+          llvm::sys::path::parent_path(Path), Data, Error,
           tooling::JSONCommandLineSyntax::AutoDetect)) {
     // FS used for expanding response files.
     // FIXME: ExpandResponseFilesDatabase appears not to provide the usual
@@ -270,8 +265,7 @@ parseJSON(PathRef Path, llvm::StringRef Data, llvm::vfs::FileSystem &FS,
   return nullptr;
 }
 static std::unique_ptr<tooling::CompilationDatabase>
-parseFixed(PathRef Path, llvm::StringRef Data, llvm::vfs::FileSystem &,
-           std::string &Error) {
+parseFixed(PathRef Path, llvm::StringRef Data, std::string &Error) {
   return tooling::FixedCompilationDatabase::loadFromBuffer(
       llvm::sys::path::parent_path(Path), Data, Error);
 }
@@ -290,7 +284,7 @@ bool DirectoryBasedGlobalCompilationDatabase::DirectoryCache::load(
     // Wrapper for {Fixed,JSON}CompilationDatabase::loadFromBuffer.
     std::unique_ptr<tooling::CompilationDatabase> (*Parser)(
         PathRef,
-        /*Data*/ llvm::StringRef, llvm::vfs::FileSystem &,
+        /*Data*/ llvm::StringRef,
         /*ErrorMsg*/ std::string &);
   };
   for (const auto &Entry : {CDBFile{&CompileCommandsJson, parseJSON},
@@ -316,8 +310,7 @@ bool DirectoryBasedGlobalCompilationDatabase::DirectoryCache::load(
       return true;
     case CachedFile::LoadResult::FoundNewData:
       // We have a new CDB!
-      CDB =
-          Entry.Parser(Entry.File->Path, Loaded.Buffer->getBuffer(), FS, Error);
+      CDB = Entry.Parser(Entry.File->Path, Loaded.Buffer->getBuffer(), Error);
       if (CDB)
         log("{0} compilation database from {1}", Active ? "Reloaded" : "Loaded",
             Entry.File->Path);
