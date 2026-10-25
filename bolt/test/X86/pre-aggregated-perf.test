@@ -30,6 +30,15 @@ CHECK-WARNING: BOLT-INFO: 4 out of 7 functions in the binary (57.1%) have non-em
 CHECK-WARNING: BOLT-WARNING: BOLT is estimated to optimize better with 2.8x more samples.
 CHECK-WARNING: BOLT-INFO: Functions with density >= 21.7 account for 97.00% total sample counts.
 
+## Instruction-based density uses the attached CFG profile, only in llvm-bolt.
+RUN: llvm-bolt %t.exe -o %t.null --pa -p %p/Inputs/pre-aggregated.txt \
+RUN:   --show-density --profile-density-cutoff-hot=970000 \
+RUN:   | FileCheck %s --check-prefix=CHECK-INST-DENSITY
+CHECK-INST-DENSITY: BOLT-INFO: Functions with density >= 21.7 account for 97.00% total sample counts.
+CHECK-INST-DENSITY: BOLT-INFO: Functions with instruction density >= 53.3 account for 97.00% total sample counts.
+
+CHECK-P2B-NOT: instruction density
+CHECK-WARNING-NOT: instruction density
 RUN: llvm-bolt %t.exe -data %t -o %t.null | FileCheck %s
 RUN: llvm-bolt %t.exe -data %t.new -o %t.null | FileCheck %s
 RUN: llvm-bolt %t.exe -p %p/Inputs/pre-aggregated.txt --pa -o %t.null | FileCheck %s
