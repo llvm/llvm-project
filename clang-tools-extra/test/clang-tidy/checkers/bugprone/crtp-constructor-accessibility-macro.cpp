@@ -11,7 +11,9 @@ class CRTP {
 public:
     CONSTEXPR CRTP() EMPTY_BODY
     // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: public constructor allows the CRTP to be constructed as a regular template class; consider making it private and declaring the derived class as friend [bugprone-crtp-constructor-accessibility]
-    // CHECK-FIXES: private:{{[[:space:]]*}}CONSTEXPR CRTP() EMPTY_BODY{{[[:space:]]*}}public:
+    // CHECK-FIXES: private:
+    // CHECK-FIXES-NEXT: CONSTEXPR CRTP() EMPTY_BODY
+    // CHECK-FIXES-NEXT: public:
     // CHECK-FIXES: friend T;
 };
 
