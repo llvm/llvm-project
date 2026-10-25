@@ -18,6 +18,7 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/math/exp_double_eval.h"
+#include "src/__support/math/exp_integer_eval.h"
 #include "src/math/exp.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -90,15 +91,31 @@ public:
 #define LIST_EXP_FTZ_DAZ_TESTS(suffix, func)
 #endif // LIBC_TEST_FTZ_DAZ
 
-#define LIST_EXP_TESTS(suffix, func, check_snan_invalid)                       \
+#define LIST_EXP_TESTS(suffix, func, check_snan_invalid, check_exception)      \
   using LlvmLibcExpTest##suffix = ExpTest;                                     \
   TEST_F(LlvmLibcExpTest##suffix, SpecialNumbers) {                            \
     test_special_numbers(&func, check_snan_invalid);                           \
   }                                                                            \
-  TEST_F(LlvmLibcExpTest##suffix, Overflow) { test_overflow(&func); }          \
-  TEST_F(LlvmLibcExpTest##suffix, Underflow) { test_underflow(&func); }        \
+  TEST_F(LlvmLibcExpTest##suffix, OverflowUnderflow) {                         \
+    if (check_exception) {                                                     \
+      test_overflow(&func);                                                    \
+      test_underflow(&func);                                                   \
+    }                                                                          \
+  }                                                                            \
   LIST_EXP_FTZ_DAZ_TESTS(suffix, func)                                         \
   static_assert(true, "Require semicolon.")
 
-LIST_EXP_TESTS(Default, LIBC_NAMESPACE::exp, /*check_snan_invalid=*/true);
-LIST_EXP_TESTS(DoubleEval, exp_double_eval, /*check_snan_invalid=*/false);
+LIST_EXP_TESTS(Default, LIBC_NAMESPACE::exp, /*check_snan_invalid=*/true,
+               /*check_exception=*/true);
+LIST_EXP_TESTS(DoubleEval, exp_double_eval, /*check_snan_invalid=*/false,
+               /*check_exception=*/true);
+LIST_EXP_TESTS(IntegerEval, LIBC_NAMESPACE::math::integer_eval::exp,
+               /*check_snan_invalid=*/false, /*check_exception=*/false);
+
+static double exp_static_rounding(double x) {
+  return LIBC_NAMESPACE::math::static_rounding::exp(
+      x, LIBC_NAMESPACE::fputil::quick_get_round());
+}
+
+LIST_EXP_TESTS(StaticRounding, exp_static_rounding,
+               /*check_snan_invalid=*/false, /*check_exception=*/false);
