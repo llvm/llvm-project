@@ -561,6 +561,9 @@ public:
   // getOrder(0).
   const CodeGenRegister::Vec &getMembers() const { return Members; }
 
+  // The members as a bit vector indexed by CodeGenRegBank::getRegIndex().
+  const BitVector &getMemberBV() const { return MemberBV; }
+
   // Get a bit vector of TopoSigs of registers with super registers in this
   // register class.
   const BitVector &getRegsWithSuperRegsTopoSigs() const {
