@@ -58,13 +58,12 @@ void UncheckedOptionalAccessCheck::check(
           dataflow::diagnoseFunction<UncheckedOptionalAccessModel,
                                      UncheckedOptionalAccessDiagnostic>(
               *FuncDecl, *Result.Context, Diagnoser,
-              [this] { return dataflow::createSolver(SolverMode); }))
+              [this] { return dataflow::createSolver(SolverMode); })) {
     for (const UncheckedOptionalAccessDiagnostic &Diag : *Diags) {
       diag(Diag.Range.getBegin(), "unchecked access to optional value")
           << Diag.Range;
     }
-  else {
-    diag(FuncDecl->getBeginLoc(), "timeout in SAT analysis");
+  } else {
     llvm::consumeError(Diags.takeError());
   }
 }

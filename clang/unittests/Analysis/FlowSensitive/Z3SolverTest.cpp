@@ -38,7 +38,8 @@ TEST(Z3SolverSpecificTest, ReuseSolverDoesNotOvercountCumulativeRlimit) {
   }
 }
 
-TEST(Z3SolverSpecificTest, ExhaustingRlimitAcrossMultipleCallsSetsReachedLimit) {
+TEST(Z3SolverSpecificTest,
+     ExhaustingRlimitAcrossMultipleCallsSetsReachedLimit) {
   Arena A;
   auto Constraints = parseFormulas(A, R"(
      (!(V0 | V1) = (!V0 & !V1))
