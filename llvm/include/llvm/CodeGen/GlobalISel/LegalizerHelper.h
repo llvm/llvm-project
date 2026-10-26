@@ -526,7 +526,6 @@ public:
   LLVM_ABI LegalizeResult lowerRotateWithReverseRotate(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerRotate(MachineInstr &MI);
 
-  LLVM_ABI LegalizeResult lowerU64ToF32BitOps(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerU64ToF32WithSITOFP(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerU64ToF64BitFloatOps(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerUITOFP(MachineInstr &MI);
@@ -540,6 +539,8 @@ public:
   LLVM_ABI LegalizeResult lowerFPEXT_BF16(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerFPTRUNC_F64_TO_F16(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerFPTRUNC_F32_TO_BF16(MachineInstr &MI);
+  LLVM_ABI Register lowerRoundInexactToOdd(LLT ResultTy, Register Op);
+  LLVM_ABI LegalizeResult lowerFPTRUNC_F64_TO_BF16(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerFPTRUNC(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerFPOWI(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerFMODF(MachineInstr &MI);
@@ -573,6 +574,7 @@ public:
   LLVM_ABI LegalizeResult lowerAddSubSatToMinMax(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerAddSubSatToAddoSubo(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerShlSat(MachineInstr &MI);
+  LLVM_ABI LegalizeResult lowerTruncSat(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerBswap(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerBitreverse(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerReadWriteRegister(MachineInstr &MI);

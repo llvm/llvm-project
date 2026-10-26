@@ -16,6 +16,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/Basic/AttrKinds.h"
 #include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/StringRef.h"

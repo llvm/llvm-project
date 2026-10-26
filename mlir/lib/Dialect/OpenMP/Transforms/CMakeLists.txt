@@ -1,4 +1,5 @@
 add_mlir_dialect_library(MLIROpenMPTransforms
+  FunctionFiltering.cpp
   HostOpFiltering.cpp
   MarkDeclareTarget.cpp
   OpenMPOffloadPrivatizationPrepare.cpp
@@ -15,6 +16,7 @@ add_mlir_dialect_library(MLIROpenMPTransforms
   MLIROpenMPTypeInterfacesIncGen
 
   LINK_LIBS PUBLIC
+  MLIRAnalysisBase
   MLIRFunctionInterfaces
   MLIRIR
   MLIRLLVMDialect

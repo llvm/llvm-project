@@ -47,12 +47,12 @@ acc.reduction.recipe @reduction_add_memref_index : memref<index> reduction_opera
 
 func.func @private_loc(%arg0: memref<index>) {
   %c1 = arith.constant 1 : index
-  %0 = acc.private varPtr(%arg0 : memref<index>) recipe(@privatization_memref_index) -> memref<index> {implicit = true, name = "priv0"}
+  %0 = acc.private varPtr(%arg0 : memref<index>) recipe(@privatization_memref_index) implicit(true) name("priv0") -> memref<index>
   acc.parallel private(%0 : memref<index>) {
     memref.store %c1, %0[] : memref<index>
     acc.yield
   } attributes {independent = [#acc.device_type<none>]}
-  %1 = acc.private varPtr(%arg0 : memref<index>) recipe(@privatization_memref_index) -> memref<index> {implicit = true, name = "priv1"}
+  %1 = acc.private varPtr(%arg0 : memref<index>) recipe(@privatization_memref_index) implicit(true) name("priv1") -> memref<index>
   acc.parallel private(%1 : memref<index>) {
     memref.store %c1, %1[] : memref<index>
     acc.yield
@@ -73,12 +73,12 @@ func.func @firstprivate_loc() {
   %c1 = arith.constant 1 : index
   %alloca = memref.alloca() : memref<index>
   memref.store %c0, %alloca[] : memref<index>
-  %0 = acc.firstprivate varPtr(%alloca : memref<index>) recipe(@firstprivatization_memref_index) -> memref<index> {implicit = true, name = "firstpriv0"}
+  %0 = acc.firstprivate varPtr(%alloca : memref<index>) recipe(@firstprivatization_memref_index) implicit(true) name("firstpriv0") -> memref<index>
   acc.parallel firstprivate(%0 : memref<index>) {
     memref.store %c1, %0[] : memref<index>
     acc.yield
   }
-  %1 = acc.firstprivate varPtr(%alloca : memref<index>) recipe(@firstprivatization_memref_index) -> memref<index> {implicit = true, name = "firstpriv1"}
+  %1 = acc.firstprivate varPtr(%alloca : memref<index>) recipe(@firstprivatization_memref_index) implicit(true) name("firstpriv1") -> memref<index>
   acc.parallel firstprivate(%1 : memref<index>) {
     memref.store %c1, %1[] : memref<index>
     acc.yield
@@ -99,12 +99,12 @@ func.func @firstprivate_loc() {
 
 func.func @reduction_loc(%arg0: memref<index>) {
   %c1 = arith.constant 1 : index
-  %0 = acc.reduction varPtr(%arg0 : memref<index>) recipe(@reduction_add_memref_index) -> memref<index> {name = "r0"}
+  %0 = acc.reduction varPtr(%arg0 : memref<index>) recipe(@reduction_add_memref_index) name("r0") -> memref<index>
   acc.parallel reduction(%0 : memref<index>) {
     memref.store %c1, %0[] : memref<index>
     acc.yield
   }
-  %1 = acc.reduction varPtr(%arg0 : memref<index>) recipe(@reduction_add_memref_index) -> memref<index> {name = "r1"}
+  %1 = acc.reduction varPtr(%arg0 : memref<index>) recipe(@reduction_add_memref_index) name("r1") -> memref<index>
   acc.parallel reduction(%1 : memref<index>) {
     memref.store %c1, %1[] : memref<index>
     acc.yield

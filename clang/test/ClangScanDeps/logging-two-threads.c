@@ -19,35 +19,45 @@
 // TU2: starting scanning command:{{.*}}tu2.c
 // TU2: finished scanning command:{{.*}}tu2.c
 
-// Each module is compiled once, its pcm written once, and its timestamp written
-// once, regardless of which thread wins the race to build the shared module A.
+// Each module is compiled once and its pcm written once, regardless of which
+// thread wins the race to build the shared module A.
 // RUN: grep -c "pcm_compile:" %t/scan.log | FileCheck %s --check-prefix=COMPILES
 // RUN: grep -c "pcm_write:" %t/scan.log | FileCheck %s --check-prefix=PCMWRITES
-// RUN: grep -c "timestamp_write:" %t/scan.log | FileCheck %s --check-prefix=TSWRITES
 // COMPILES: {{^2$}}
 // PCMWRITES: {{^2$}}
-// TSWRITES: {{^2$}}
+
+// The timestamp records when a worker last validated a module's inputs in this
+// build session. Both threads can notice the shared module A is unvalidated
+// before either records it, so each may validate and record it: A's timestamp
+// is written once or twice. B (imported by a single TU) is always written once.
+// The per-module ordering is checked by ASEQ/BSEQ below.
+// RUN: grep -c "timestamp_write:.*/A-[^/]*\.pcm" %t/scan.log \
+// RUN:   | FileCheck %s --check-prefix=TSA
+// RUN: grep -c "timestamp_write:.*/B-[^/]*\.pcm" %t/scan.log \
+// RUN:   | FileCheck %s --check-prefix=TSB
+// TSA: {{^[12]$}}
+// TSB: {{^1$}}
 
 // Verify A's pcm is written before B's pcm.
 // RUN: grep "pcm_write:" %t/scan.log | FileCheck %s --check-prefix=WRITEORDER
-// WRITEORDER: pcm_write: {{.*}}A-{{.*}}.pcm
-// WRITEORDER-NEXT: pcm_write: {{.*}}B-{{.*}}.pcm
+// WRITEORDER: pcm_write: {{.*}}/A-{{[^/]*}}.pcm
+// WRITEORDER-NEXT: pcm_write: {{.*}}/B-{{[^/]*}}.pcm
 
 // Check the correct sequence for building module A.
-// RUN: grep "A-" %t/scan.log | FileCheck %s --check-prefix=ASEQ
-// ASEQ: timestamp_read: {{.*}}A-{{.*}}.pcm
-// ASEQ: pcm_write: {{.*}}A-{{.*}}.pcm
-// ASEQ: timestamp_write: {{.*}}A-{{.*}}.pcm
-// ASEQ: pcm_add_built: {{.*}}A-{{.*}}.pcm
-// ASEQ: pcm_finalized: {{.*}}A-{{.*}}.pcm
+// RUN: grep "/A-[^/]*\.pcm" %t/scan.log | FileCheck %s --check-prefix=ASEQ
+// ASEQ: timestamp_read: {{.*}}/A-{{[^/]*}}.pcm
+// ASEQ: pcm_write: {{.*}}/A-{{[^/]*}}.pcm
+// ASEQ: timestamp_write: {{.*}}/A-{{[^/]*}}.pcm
+// ASEQ: pcm_add_built: {{.*}}/A-{{[^/]*}}.pcm
+// ASEQ: pcm_finalized: {{.*}}/A-{{[^/]*}}.pcm
 
 // Check the correct sequence for building module B.
-// RUN: grep "B-" %t/scan.log | FileCheck %s --check-prefix=BSEQ
-// BSEQ: timestamp_read: {{.*}}B-{{.*}}.pcm
-// BSEQ: pcm_write: {{.*}}B-{{.*}}.pcm
-// BSEQ: timestamp_write: {{.*}}B-{{.*}}.pcm
-// BSEQ: pcm_add_built: {{.*}}B-{{.*}}.pcm
-// BSEQ: pcm_finalized: {{.*}}B-{{.*}}.pcm
+// RUN: grep "/B-[^/]*\.pcm" %t/scan.log | FileCheck %s --check-prefix=BSEQ
+// BSEQ: timestamp_read: {{.*}}/B-{{[^/]*}}.pcm
+// BSEQ: pcm_write: {{.*}}/B-{{[^/]*}}.pcm
+// BSEQ: timestamp_write: {{.*}}/B-{{[^/]*}}.pcm
+// BSEQ: pcm_add_built: {{.*}}/B-{{[^/]*}}.pcm
+// BSEQ: pcm_finalized: {{.*}}/B-{{[^/]*}}.pcm
 
 //--- cdb.json.template
 [{

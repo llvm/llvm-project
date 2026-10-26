@@ -2,7 +2,7 @@
 // REQUIRES: amdgpu-registered-target
 // RUN: %clang_cc1 -x hip -triple x86_64-unknown-linux-gnu -aux-triple amdgpu-amd-amdhsa -emit-llvm-bc %s -o %t-host.bc
 // RUN: %clang_cc1 -x hip -triple x86_64-unknown-linux-gnu -aux-triple amdgpu-amd-amdhsa -emit-llvm %s -o - | FileCheck %s --check-prefix=HOST
-// RUN: %clang_cc1 -x hip -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-linux-gnu -emit-llvm %s -fcuda-is-device -o - | FileCheck %s --check-prefix=DEVICE
+// RUN: %clang_cc1 -x hip -triple amdgpu-amd-amdhsa -aux-triple x86_64-unknown-linux-gnu -emit-llvm %s -fcuda-is-device -o - | FileCheck %s --check-prefix=DEVICE
 
 #define __device__ __attribute__((device))
 #define __host__ __attribute__((host))

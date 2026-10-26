@@ -62,6 +62,10 @@ v_pk_fma_f32 v[0:1], v[2:3], v[4:5], 1.0
 // GFX12-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1200): v_pk_fma_f32
 // GFX1250: v_pk_fma_f32 v[0:1], v[2:3], v[4:5], 1.0 ; encoding: [0x00,0x40,0x1f,0xcc,0x02,0x09,0xca,0x1b]
 
+v_pk_fma_f32 v[0:1], v[2:3], v[4:5], 0x42C80000
+// GFX12-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1200): v_pk_fma_f32
+// GFX1250: v_pk_fma_f32 v[0:1], v[2:3], v[4:5], 0x42c80000 ; encoding: [0x00,0x40,0x1f,0xcc,0x02,0x09,0xfe,0x1b,0x00,0x00,0xc8,0x42]
+
 v_pk_fma_f32 v[0:1], v[2:3], v[4:5], s[6:7] op_sel_hi:[1,1,0]
 // GFX12-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1200): v_pk_fma_f32
 // GFX1250: v_pk_fma_f32 v[0:1], v[2:3], v[4:5], s[6:7] op_sel_hi:[1,1,0] ; encoding: [0x00,0x00,0x1f,0xcc,0x02,0x09,0x1a,0x18]
@@ -166,6 +170,10 @@ v_pk_mul_f32 v[0:1], v[2:3], 1.0
 // GFX12-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1200): v_pk_mul_f32
 // GFX1250: v_pk_mul_f32 v[0:1], v[2:3], 1.0        ; encoding: [0x00,0x40,0x28,0xcc,0x02,0xe5,0x01,0x1a]
 
+v_pk_mul_f32 v[0:1], v[2:3], 0x42C80000
+// GFX12-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1200): v_pk_mul_f32
+// GFX1250: v_pk_mul_f32 v[0:1], v[2:3], 0x42c80000 ; encoding: [0x00,0x40,0x28,0xcc,0x02,0xff,0x01,0x1a,0x00,0x00,0xc8,0x42]
+
 v_pk_mul_f32 v[0:1], v[2:3], s[2:3] op_sel:[1,0] op_sel_hi:[0,0]
 // GFX12-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1200): v_pk_mul_f32
 // GFX1250: v_pk_mul_f32 v[0:1], v[2:3], s[2:3] op_sel:[1,0] op_sel_hi:[0,0] ; encoding: [0x00,0x48,0x28,0xcc,0x02,0x05,0x00,0x02]
@@ -265,6 +273,10 @@ v_pk_add_f32 v[4:5], v[8:9], v[16:17] clamp
 v_pk_add_f32 v[0:1], v[2:3], 1.0
 // GFX12-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1200): v_pk_add_f32
 // GFX1250: v_pk_add_f32 v[0:1], v[2:3], 1.0        ; encoding: [0x00,0x40,0x29,0xcc,0x02,0xe5,0x01,0x1a]
+
+v_pk_add_f32 v[0:1], v[2:3], 0x42C80000
+// GFX12-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1200): v_pk_add_f32
+// GFX1250: v_pk_add_f32 v[0:1], v[2:3], 0x42c80000 ; encoding: [0x00,0x40,0x29,0xcc,0x02,0xff,0x01,0x1a,0x00,0x00,0xc8,0x42]
 
 v_pk_add_f32 v[0:1], v[2:3], s[2:3] op_sel_hi:[1,0]
 // GFX12-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1200): v_pk_add_f32

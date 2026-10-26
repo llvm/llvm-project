@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgcn-unknown-unknown -target-feature +wavefrontsize64 -emit-llvm -o - %s | FileCheck -enable-var-scope %s
+// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgpu-unknown-unknown -target-feature +wavefrontsize64 -emit-llvm -o - %s | FileCheck -enable-var-scope %s
 // RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgpu9.00-unknown-unknown -emit-llvm -o - %s | FileCheck -enable-var-scope %s
 // RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgpu9.00-unknown-unknown -target-feature +wavefrontsize64 -emit-llvm -o - %s | FileCheck -enable-var-scope %s
 // RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgpu10.10-unknown-unknown -target-feature +wavefrontsize64 -emit-llvm -o - %s | FileCheck -enable-var-scope %s
@@ -37,12 +37,11 @@ void test_read_exec(global ulong* out) {
 }
 
 // CHECK-LABEL: @test_read_exec_lo(
-// CHECK: call i32 @llvm.amdgcn.ballot.i32(i1 true)
+// CHECK: call i64 @llvm.amdgcn.ballot.i64(i1 true)
+// CHECK: and i64 [[A:%.*]], 4294967295
 void test_read_exec_lo(global ulong* out) {
   *out = __builtin_amdgcn_read_exec_lo();
 }
-
-// CHECK: declare i32 @llvm.amdgcn.ballot.i32(i1) #[[$NOUNWIND_READONLY:[0-9]+]]
 
 // CHECK-LABEL: @test_read_exec_hi(
 // CHECK: call i64 @llvm.amdgcn.ballot.i64(i1 true)

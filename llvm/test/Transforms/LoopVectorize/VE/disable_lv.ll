@@ -35,4 +35,4 @@ simd.if.end:
 !6 = distinct !{}
 !7 = distinct !{!7, !8, !9}
 !8 = !{!"llvm.loop.parallel_accesses", !6}
-!9 = !{!"llvm.loop.vectorize.enable", i1 true}
+!9 = !{!"llvm.loop.vectorize.enable"}

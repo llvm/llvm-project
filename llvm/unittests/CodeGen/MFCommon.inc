@@ -92,7 +92,7 @@ public:
 class BogusSubtarget : public TargetSubtargetInfo {
 public:
   BogusSubtarget(TargetMachine &TM)
-      : TargetSubtargetInfo(Triple(""), "", "", "", "", {}, {}, nullptr,
+      : TargetSubtargetInfo(Triple(""), "", "", "", "", {}, {}, {}, nullptr,
                             nullptr, nullptr, nullptr, nullptr, nullptr,
                             nullptr),
         FL(), TL(TM, *this) {}
@@ -138,7 +138,7 @@ class BogusTargetMachine : public CodeGenTargetMachineImpl {
 public:
   BogusTargetMachine()
       : CodeGenTargetMachineImpl(
-            Target(), "", Triple(""), "", "", getTargetOptionsForBogusMachine(),
+            Target(), Triple(""), "", "", getTargetOptionsForBogusMachine(),
             Reloc::Static, CodeModel::Small, CodeGenOptLevel::Default),
         ST(*this) {
     // With an empty Triple, `initAsmInfo` cannot be called. Provide
@@ -148,8 +148,8 @@ public:
     MRI = std::make_unique<MCRegisterInfo>();
     STI = std::make_unique<MCSubtargetInfo>(
         Triple(""), "", "", "", StringTable{""}, ArrayRef<SubtargetFeatureKV>{},
-        ArrayRef<SubtargetSubTypeKV>{}, nullptr, nullptr, nullptr, nullptr,
-        nullptr, nullptr, nullptr);
+        ArrayRef<SubtargetSubTypeKV>{}, ArrayRef<SubtargetSubTypeAliasKV>{},
+        nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
   }
 
   ~BogusTargetMachine() override = default;

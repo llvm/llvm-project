@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple amdgcn-- -verify -S -o - %s
+// RUN: %clang_cc1 -triple amdgpu-- -verify -S -o - %s
 // RUN: %clang_cc1 -triple amdgpu9.00-- -verify=expected,gfx9 -S -o - %s
 // RUN: %clang_cc1 -triple amdgpu9.00-- -target-feature +wavefrontsize64 -verify=expected,wavefront64 -S -o - %s
 // RUN: %clang_cc1 -triple amdgpu10.10-- -target-feature +wavefrontsize64 -verify=expected,wavefront64 -S -o - %s

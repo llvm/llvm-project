@@ -13,6 +13,7 @@
 #include "mlir/Bytecode/Encoding.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Diagnostics.h"
+#include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/OpImplementation.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/CachedHashString.h"
@@ -1015,14 +1016,19 @@ LogicalResult BytecodeWriter::writeOp(EncodingEmitter &emitter, Operation *op) {
   emitter.emitVarInt(numberingState.getNumber(op->getLoc()), "op location");
 
   // Emit the attributes of this operation.
-  DictionaryAttr attrs = op->getDiscardableAttrDictionary();
+  DictionaryAttr attrs = op->getRawDictionaryAttrs();
   // Allow deployment to version <kNativePropertiesEncoding by merging inherent
   // attribute with the discardable ones. We should fail if there are any
   // conflicts. When properties are not used by the op, also store everything as
   // attributes.
-  if (config.bytecodeVersion < bytecode::kNativePropertiesEncoding ||
-      !op->getPropertiesStorage()) {
-    attrs = op->getAttrDictionary();
+  if (config.bytecodeVersion < bytecode::kNativePropertiesEncoding &&
+      op->getPropertiesStorage()) {
+    NamedAttrList allAttrs;
+    op->getName().walkInherentAttrs(op, [&](StringRef name, Attribute &attr) {
+      allAttrs.append(name, attr);
+    });
+    allAttrs.append(op->getDiscardableAttrDictionary().getValue());
+    attrs = allAttrs.getDictionary(op->getContext());
   }
   if (!attrs.empty()) {
     opEncodingMask |= bytecode::OpEncodingMask::kHasAttrs;
@@ -1368,6 +1374,16 @@ void BytecodeWriter::writePropertiesSection(EncodingEmitter &emitter) {
 
 LogicalResult mlir::writeBytecodeToFile(Operation *op, raw_ostream &os,
                                         const BytecodeWriterConfig &config) {
+  // Validate before numbering the IR, which may invoke dialect writers.
+  for (const auto &entry : config.getDialectVersionMap()) {
+    Dialect *dialect = op->getContext()->getLoadedDialect(entry.getKey());
+    if (!dialect)
+      continue;
+    auto *interface =
+        dialect->getRegisteredInterface<BytecodeDialectInterface>();
+    if (interface && failed(interface->verifyVersion(op, *entry.getValue())))
+      return failure();
+  }
   BytecodeWriter writer(op, config);
   return writer.write(op, os);
 }

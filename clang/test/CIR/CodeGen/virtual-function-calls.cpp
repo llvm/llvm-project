@@ -13,12 +13,12 @@ struct A {
 // This should initialize the vtable pointer.
 A::A() {}
 
-// CIR: !rec_A = !cir.struct<"A" {!cir.vptr}>
-// CIR: !rec_anon_struct = !cir.struct<{!cir.array<!cir.ptr<!u8i> x 3>}>
+// CIR: !rec_A = !cir.struct<"A" {data !cir.vptr}>
+// CIR: !rec_anon_struct = !cir.struct<{data !cir.array<!cir.ptr<!u8i> x 3>}>
 
-// CIR: cir.global "private" external @_ZTV1A : !rec_anon_struct
+// CIR: cir.global "private" constant external @_ZTV1A : !rec_anon_struct
 
-// LLVM: @_ZTV1A = external global { [3 x ptr] }
+// LLVM: @_ZTV1A = external constant { [3 x ptr] }
 
 // OGCG: @_ZTV1A = external constant { [3 x ptr] }
 
@@ -41,7 +41,7 @@ A::A() {}
 // OGCG:   %[[THIS_ADDR:.*]] = alloca ptr
 // OGCG:   store ptr %[[ARG0]], ptr %[[THIS_ADDR]]
 // OGCG:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]]
-// OGCG:   store ptr getelementptr inbounds inrange(-16, 8) ({ [3 x ptr] }, ptr @_ZTV1A, i32 0, i32 0, i32 2), ptr %[[THIS]]
+// OGCG:   store ptr getelementptr inbounds inrange(-16, 8) (i8, ptr @_ZTV1A, i64 16), ptr %[[THIS]]
 
 // NOTE: The GEP in OGCG looks very different from the one generated with CIR,
 //       but it is equivalent. The OGCG GEP indexes by base pointer, then
@@ -107,7 +107,7 @@ void call_virtual_fn_in_cleanup_scope() {
 // LLVM:   call void @_ZN1BC2Ev(ptr {{.*}} %[[B]])
 // LLVM:   br label %[[CLEANUP_SCOPE:.*]]
 // LLVM: [[CLEANUP_SCOPE]]:
-// LLVM:    call void @_ZN1B1fEc(ptr {{.*}} %[[B]], i8 noundef 99)
+// LLVM:    call void @_ZN1B1fEc(ptr {{.*}} %[[B]], i8 noundef signext 99)
 // LLVM:    br label %[[NORMAL_CLEANUP:.*]]
 // LLVM: [[NORMAL_CLEANUP]]:
 // LLVM:    call void @_ZN1BD1Ev(ptr {{.*}} %[[B]])

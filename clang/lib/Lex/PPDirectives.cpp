@@ -325,8 +325,8 @@ static bool warnByDefaultOnWrongCase(StringRef Include) {
 ///
 /// \returns a similar string if exists. If no similar string exists,
 /// returns std::nullopt.
-static std::optional<StringRef>
-findSimilarStr(StringRef LHS, const std::vector<StringRef> &Candidates) {
+static std::optional<StringRef> findSimilarStr(StringRef LHS,
+                                               ArrayRef<StringRef> Candidates) {
   // We need to check if `Candidates` has the exact case-insensitive string
   // because the Levenshtein distance match does not care about it.
   for (StringRef C : Candidates) {
@@ -514,11 +514,23 @@ void Preprocessor::SuggestTypoedDirective(const Token &Tok,
   // directives.
   if (getLangOpts().AsmPreprocessor) return;
 
-  std::vector<StringRef> Candidates = {
-      "if", "ifdef", "ifndef", "elif", "else", "endif"
-  };
-  if (LangOpts.C23 || LangOpts.CPlusPlus23)
-    Candidates.insert(Candidates.end(), {"elifdef", "elifndef"});
+  // A known directive (e.g. #include or #define inside a skipped conditional
+  // block) is not a typo of a conditional; don't scan it.
+  if (getIdentifierInfo(Directive)->getPPKeywordID() != tok::pp_not_keyword)
+    return;
+
+  // The scan only feeds this diagnostic; skip it when the diagnostic is
+  // disabled at this location (e.g. -w).
+  if (getDiagnostics().isIgnored(diag::warn_pp_invalid_directive,
+                                 Tok.getLocation()))
+    return;
+
+  static constexpr StringRef AllCandidates[] = {
+      "if", "ifdef", "ifndef", "elif", "else", "endif", "elifdef", "elifndef"};
+  ArrayRef<StringRef> Candidates(AllCandidates);
+  // #elifdef/#elifndef are only suggested in C23/C++23 and later.
+  if (!LangOpts.C23 && !LangOpts.CPlusPlus23)
+    Candidates = Candidates.drop_back(2);
 
   if (std::optional<StringRef> Sugg = findSimilarStr(Directive, Candidates)) {
     // Directive cannot be coming from macro.
@@ -882,14 +894,9 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
 
         // Warn if using `#elifdef` & `#elifndef` in not C23 & C++23 mode even
         // if this branch is in a skipping block.
-        unsigned DiagID;
-        if (LangOpts.CPlusPlus)
-          DiagID = LangOpts.CPlusPlus23 ? diag::warn_cxx23_compat_pp_directive
-                                        : diag::ext_cxx23_pp_directive;
-        else
-          DiagID = LangOpts.C23 ? diag::warn_c23_compat_pp_directive
-                                : diag::ext_c23_pp_directive;
-        Diag(Tok, DiagID) << (IsElifDef ? PED_Elifdef : PED_Elifndef);
+        unsigned DiagID = LangOpts.CPlusPlus ? diag_compat::cxx23_pp_directive
+                                             : diag_compat::c23_pp_directive;
+        DiagCompat(Tok, DiagID) << (IsElifDef ? PED_Elifdef : PED_Elifndef);
 
         // If this is a #elif with a #else before it, report the error.
         if (CondInfo.FoundElse)
@@ -1632,35 +1639,21 @@ void Preprocessor::HandleLineDirective() {
 
   int FilenameID = -1;
   Token StrTok;
-  Lex(StrTok);
+  LexHeaderName(StrTok);
 
   // If the StrTok is "eod", then it wasn't present.  Otherwise, it must be a
   // string followed by eod.
   if (StrTok.is(tok::eod))
     ; // ok
-  else if (StrTok.isNot(tok::string_literal)) {
+  else if (StrTok.isNot(tok::header_name)) {
     Diag(StrTok, diag::err_pp_line_invalid_filename);
     DiscardUntilEndOfDirective();
     return;
-  } else if (StrTok.hasUDSuffix()) {
-    Diag(StrTok, diag::err_invalid_string_udl);
-    DiscardUntilEndOfDirective();
-    return;
   } else {
-    // Parse and validate the string, converting it into a unique ID.
-    StringLiteralParser Literal(StrTok, *this,
-                                StringLiteralEvalMethod::Unevaluated);
-    assert(Literal.isOrdinary() && "Didn't allow wide strings in");
-    if (Literal.hadError) {
-      DiscardUntilEndOfDirective();
-      return;
-    }
-    if (Literal.Pascal) {
-      Diag(StrTok, diag::err_pp_linemarker_invalid_filename);
-      DiscardUntilEndOfDirective();
-      return;
-    }
-    FilenameID = SourceMgr.getLineTableFilenameID(Literal.GetString());
+    SmallString<128> FilenameBuffer;
+    StringRef Filename = getSpelling(StrTok, FilenameBuffer);
+    GetLineDirectiveFilenameSpelling(StrTok.getLocation(), Filename);
+    FilenameID = SourceMgr.getLineTableFilenameID(Filename);
 
     // Verify that there is nothing after the string, other than EOD.  Because
     // of C99 6.10.4p5, macros that expand to empty tokens are ok.
@@ -1778,7 +1771,7 @@ void Preprocessor::HandleDigitDirective(Token &DigitTok) {
     return;
 
   Token StrTok;
-  Lex(StrTok);
+  LexHeaderName(StrTok);
 
   bool IsFileEntry = false, IsFileExit = false;
   int FilenameID = -1;
@@ -1790,29 +1783,14 @@ void Preprocessor::HandleDigitDirective(Token &DigitTok) {
     Diag(StrTok, diag::ext_pp_gnu_line_directive);
     // Treat this like "#line NN", which doesn't change file characteristics.
     FileKind = SourceMgr.getFileCharacteristic(DigitTok.getLocation());
-  } else if (StrTok.isNot(tok::string_literal)) {
+  } else if (StrTok.isNot(tok::header_name)) {
     Diag(StrTok, diag::err_pp_linemarker_invalid_filename);
     DiscardUntilEndOfDirective();
     return;
-  } else if (StrTok.hasUDSuffix()) {
-    Diag(StrTok, diag::err_invalid_string_udl);
-    DiscardUntilEndOfDirective();
-    return;
   } else {
-    // Parse and validate the string, converting it into a unique ID.
-    StringLiteralParser Literal(StrTok, *this,
-                                StringLiteralEvalMethod::Unevaluated);
-    assert(Literal.isOrdinary() && "Didn't allow wide strings in");
-    if (Literal.hadError) {
-      DiscardUntilEndOfDirective();
-      return;
-    }
-    if (Literal.Pascal) {
-      Diag(StrTok, diag::err_pp_linemarker_invalid_filename);
-      DiscardUntilEndOfDirective();
-      return;
-    }
-
+    SmallString<128> FilenameBuffer;
+    StringRef Filename = getSpelling(StrTok, FilenameBuffer);
+    GetLineDirectiveFilenameSpelling(StrTok.getLocation(), Filename);
     // If a filename was present, read any flags that are present.
     if (ReadLineMarkerFlags(IsFileEntry, IsFileExit, FileKind, *this))
       return;
@@ -1821,8 +1799,8 @@ void Preprocessor::HandleDigitDirective(Token &DigitTok) {
 
     // Exiting to an empty string means pop to the including file, so leave
     // FilenameID as -1 in that case.
-    if (!(IsFileExit && Literal.GetString().empty()))
-      FilenameID = SourceMgr.getLineTableFilenameID(Literal.GetString());
+    if (!(IsFileExit && Filename.empty()))
+      FilenameID = SourceMgr.getLineTableFilenameID(Filename);
   }
 
   // Create a line note with this information.
@@ -2012,6 +1990,18 @@ bool Preprocessor::GetIncludeFilenameSpelling(SourceLocation Loc,
   return isAngled;
 }
 
+void Preprocessor::GetLineDirectiveFilenameSpelling(SourceLocation Loc,
+                                                    StringRef &Buffer) {
+  // Get the text form of the filename.
+  assert(!Buffer.empty() && "Can't have tokens with empty spellings!");
+  if (Buffer.size() < 2 || Buffer.front() != '"' || Buffer.back() != '"') {
+    Diag(Loc, diag::err_pp_line_invalid_filename);
+    Buffer = StringRef();
+    return;
+  }
+  Buffer = Buffer.substr(1, Buffer.size() - 2);
+}
+
 /// Push a token onto the token stream containing an annotation.
 void Preprocessor::EnterAnnotationToken(SourceRange Range,
                                         tok::TokenKind Kind,
@@ -2019,11 +2009,7 @@ void Preprocessor::EnterAnnotationToken(SourceRange Range,
   // FIXME: Produce this as the current token directly, rather than
   // allocating a new token for it.
   auto Tok = std::make_unique<Token[]>(1);
-  Tok[0].startToken();
-  Tok[0].setKind(Kind);
-  Tok[0].setLocation(Range.getBegin());
-  Tok[0].setAnnotationEndLoc(Range.getEnd());
-  Tok[0].setAnnotationValue(AnnotationVal);
+  Tok[0] = Token::createAnnotation(Kind, Range, AnnotationVal);
   EnterTokenStream(std::move(Tok), 1, true, /*IsReinject*/ false);
 }
 
@@ -2468,6 +2454,7 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
   // determining valid cases).
 
   enum { Enter, Import, Skip, IncludeLimitReached } Action = Enter;
+  bool DependencyScanModuleImport = false;
 
   if (PPOpts.SingleFileParseMode)
     Action = IncludeLimitReached;
@@ -2532,40 +2519,49 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
     if (!IsImportDecl)
       diagnoseAutoModuleImport(*this, StartLoc, IncludeTok, Path, CharEnd);
 
-    // Load the module to import its macros. We'll make the declarations
-    // visible when the parser gets here.
-    // FIXME: Pass ModuleToImport in here rather than converting it to a path
-    // and making the module loader convert it back again.
-    ModuleLoadResult Imported = TheModuleLoader.loadModule(
-        IncludeTok.getLocation(), Path, Module::Hidden,
-        /*IsInclusionDirective=*/true);
-    assert((Imported == nullptr || Imported == ModuleToImport) &&
-           "the imported module is different than the suggested one");
-
-    if (Imported) {
-      Action = Import;
-    } else if (Imported.isMissingExpected()) {
-      markClangModuleAsAffecting(
-          static_cast<Module *>(Imported)->getTopLevelModule());
-      // We failed to find a submodule that we assumed would exist (because it
-      // was in the directory of an umbrella header, for instance), but no
-      // actual module containing it exists (because the umbrella header is
-      // incomplete).  Treat this as a textual inclusion.
-      ModuleToImport = nullptr;
-    } else if (Imported.isConfigMismatch()) {
-      // On a configuration mismatch, enter the header textually. We still know
-      // that it's part of the corresponding module.
+    if (PPOpts.DependencyScanningModuleMapImports &&
+        ModuleToImport->Kind == Module::ModuleMapModule) {
+      // Dependency scanning only needs the module name. Avoid requiring the
+      // module file, which may not have been built yet.
+      Action = Skip;
+      DependencyScanModuleImport = true;
     } else {
-      // We hit an error processing the import. Bail out.
-      if (hadModuleLoaderFatalFailure()) {
-        // With a fatal failure in the module loader, we abort parsing.
-        Token &Result = IncludeTok;
-        assert(CurLexer && "#include but no current lexer set!");
-        Result.startToken();
-        CurLexer->FormTokenWithChars(Result, CurLexer->BufferEnd, tok::eof);
-        CurLexer->cutOffLexing();
+      // Load the module to import its macros. We'll make the declarations
+      // visible when the parser gets here.
+      // FIXME: Pass ModuleToImport in here rather than converting it to a path
+      // and making the module loader convert it back again.
+      ModuleLoadResult Imported = TheModuleLoader.loadModule(
+          IncludeTok.getLocation(), Path, Module::Hidden,
+          /*IsInclusionDirective=*/true);
+      assert((Imported == nullptr || Imported == ModuleToImport) &&
+             "the imported module is different than the suggested one");
+
+      if (Imported) {
+        Action = Import;
+      } else if (Imported.isMissingExpected()) {
+        markClangModuleAsAffecting(
+            static_cast<Module *>(Imported)->getTopLevelModule());
+        // We failed to find a submodule that we assumed would exist (because it
+        // was in the directory of an umbrella header, for instance), but no
+        // actual module containing it exists (because the umbrella header is
+        // incomplete).  Treat this as a textual inclusion.
+        ModuleToImport = nullptr;
+        UsableClangHeaderModule = false;
+      } else if (Imported.isConfigMismatch()) {
+        // On a configuration mismatch, enter the header textually. We still
+        // know that it's part of the corresponding module.
+      } else {
+        // We hit an error processing the import. Bail out.
+        if (hadModuleLoaderFatalFailure()) {
+          // With a fatal failure in the module loader, we abort parsing.
+          Token &Result = IncludeTok;
+          assert(CurLexer && "#include but no current lexer set!");
+          Result.startToken();
+          CurLexer->FormTokenWithChars(Result, CurLexer->BufferEnd, tok::eof);
+          CurLexer->cutOffLexing();
+        }
+        return {ImportAction::None};
       }
-      return {ImportAction::None};
     }
   }
 
@@ -2607,7 +2603,8 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
     if (UsableHeaderUnit && !getLangOpts().CompilingPCH)
       Action = TrackGMFState.inGMF() ? Import : Skip;
     else
-      Action = (ModuleToImport && !getLangOpts().CompilingPCH) ? Import : Skip;
+      Action = (UsableClangHeaderModule && !getLangOpts().CompilingPCH) ? Import
+                                                                        : Skip;
   }
 
   // Check for circular inclusion of the main file.
@@ -2625,10 +2622,10 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
   if (Callbacks && !IsImportDecl) {
     // Notify the callback object that we've seen an inclusion directive.
     // FIXME: Use a different callback for a pp-import?
-    Callbacks->InclusionDirective(HashLoc, IncludeTok, LookupFilename, isAngled,
-                                  FilenameRange, File, SearchPath, RelativePath,
-                                  SuggestedModule.getModule(), Action == Import,
-                                  FileCharacter);
+    Callbacks->InclusionDirective(
+        HashLoc, IncludeTok, LookupFilename, isAngled, FilenameRange, File,
+        SearchPath, RelativePath, SuggestedModule.getModule(),
+        Action == Import || DependencyScanModuleImport, FileCharacter);
     if (Action == Skip && File)
       Callbacks->FileSkipped(*File, FilenameTok, FileCharacter);
   }
@@ -2900,10 +2897,12 @@ void Preprocessor::HandleImportDirective(SourceLocation HashLoc,
 /// effects on the preprocessor).
 void Preprocessor::HandleIncludeMacrosDirective(SourceLocation HashLoc,
                                                 Token &IncludeMacrosTok) {
-  // This directive should only occur in the predefines buffer.  If not, emit an
+  // This directive should only occur in the predefines buffer or the internal
+  // buffer used to enter deferred implicit inputs in a GMF. If not, emit an
   // error and reject it.
   SourceLocation Loc = IncludeMacrosTok.getLocation();
-  if (SourceMgr.getBufferName(Loc) != "<built-in>") {
+  FileID FID = SourceMgr.getFileID(Loc);
+  if (FID != getPredefinesFileID() && FID != DeferredGMFInputsFileID) {
     Diag(IncludeMacrosTok.getLocation(),
          diag::pp_include_macros_out_of_predefines);
     DiscardUntilEndOfDirective();
@@ -3715,14 +3714,9 @@ void Preprocessor::HandleElifFamilyDirective(Token &ElifToken,
   switch (DirKind) {
   case PED_Elifdef:
   case PED_Elifndef:
-    unsigned DiagID;
-    if (LangOpts.CPlusPlus)
-      DiagID = LangOpts.CPlusPlus23 ? diag::warn_cxx23_compat_pp_directive
-                                    : diag::ext_cxx23_pp_directive;
-    else
-      DiagID = LangOpts.C23 ? diag::warn_c23_compat_pp_directive
-                            : diag::ext_c23_pp_directive;
-    Diag(ElifToken, DiagID) << DirKind;
+    DiagCompat(ElifToken, LangOpts.CPlusPlus ? diag_compat::cxx23_pp_directive
+                                             : diag_compat::c23_pp_directive)
+        << DirKind;
     break;
   default:
     break;
@@ -4077,10 +4071,7 @@ void Preprocessor::HandleEmbedDirectiveImpl(
   Data->BinaryData = BinaryContents;
   Data->FileName = FileName;
 
-  Toks[CurIdx].startToken();
-  Toks[CurIdx].setKind(tok::annot_embed);
-  Toks[CurIdx].setAnnotationRange(HashLoc);
-  Toks[CurIdx++].setAnnotationValue(Data);
+  Toks[CurIdx++] = Token::createAnnotation(tok::annot_embed, HashLoc, Data);
 
   // Now add the suffix tokens, if any.
   if (Params.MaybeSuffixParam) {
@@ -4241,6 +4232,7 @@ void Preprocessor::HandleCXXImportDirective(Token ImportTok) {
     UseLoc = Tok.getLocation();
     Lex(Tok);
     [[fallthrough]];
+  case tok::code_completion:
   case tok::identifier: {
     if (HandleModuleName(ImportTok.getIdentifierInfo()->getName(), UseLoc, Tok,
                          Path, DirToks, /*AllowMacroExpansion=*/true,
@@ -4305,12 +4297,8 @@ void Preprocessor::HandleCXXImportDirective(Token ImportTok) {
 
     case ImportAction::ModuleBegin:
       // Let the parser know we're textually entering the module.
-      DirToks.emplace_back();
-      DirToks.back().startToken();
-      DirToks.back().setKind(tok::annot_module_begin);
-      DirToks.back().setLocation(SemiLoc);
-      DirToks.back().setAnnotationEndLoc(SemiLoc);
-      DirToks.back().setAnnotationValue(Action.ModuleForHeader);
+      DirToks.push_back(Token::createAnnotation(
+          tok::annot_module_begin, SemiLoc, Action.ModuleForHeader));
       [[fallthrough]];
 
     case ImportAction::ModuleImport:
@@ -4420,22 +4408,6 @@ void Preprocessor::HandleCXXModuleDirective(Token ModuleTok) {
     break;
   }
 
-  // Consume the pp-import-suffix and expand any macros in it now, if we're not
-  // at the semicolon already.
-  std::optional<Token> NextPPTok =
-      DirToks.back().is(tok::eod) ? peekNextPPToken() : DirToks.back();
-
-  // Only ';' and '[' are allowed after module name.
-  // We also check 'private' because the previous is not a module name.
-  if (NextPPTok) {
-    if (NextPPTok->is(tok::raw_identifier))
-      LookUpIdentifierInfo(*NextPPTok);
-    if (!NextPPTok->isOneOf(tok::semi, tok::eod, tok::l_square,
-                            tok::kw_private))
-      Diag(*NextPPTok, diag::err_pp_unexpected_tok_after_module_name)
-          << getSpelling(*NextPPTok);
-  }
-
   if (!DirToks.back().isOneOf(tok::semi, tok::eod)) {
     // Consume the pp-import-suffix and expand any macros in it now. We'll add
     // it back into the token stream later.
@@ -4449,7 +4421,12 @@ void Preprocessor::HandleCXXModuleDirective(Token ModuleTok) {
 
           : DirToks.pop_back_val().getLocation();
 
-  if (!IncludeMacroStack.empty()) {
+  bool IsGMFIntroducer = DirToks.size() == 2 && DirToks[0].is(tok::kw_module) &&
+                         DirToks[1].is(tok::semi);
+  bool IsSynthesizedGMF = IsGMFIntroducer && HasSynthesizedGMF &&
+                          CurPPLexer->getFileID() == getPredefinesFileID();
+
+  if (!IncludeMacroStack.empty() && !IsSynthesizedGMF) {
     Diag(StartLoc, diag::err_pp_module_decl_in_header)
         << SourceRange(StartLoc, End);
   }
@@ -4458,6 +4435,15 @@ void Preprocessor::HandleCXXModuleDirective(Token ModuleTok) {
     Diag(StartLoc, diag::err_pp_cond_span_module_decl)
         << SourceRange(StartLoc, End);
   }
+
+  // For the global-module-fragment introducer (`module;`), enter any implicit
+  // macro, PCH, and regular include files that were deferred to the GMF now,
+  // before re-entering the `module;` token stream. Because the include stack is
+  // LIFO, the `module;` tokens are consumed first and the included files are
+  // then lexed inside the fragment (ahead of the rest of the main file).
+  if (IsGMFIntroducer)
+    EnterDeferredGMFInputs(End);
+
   EnterModuleSuffixTokenStream(DirToks);
 }
 

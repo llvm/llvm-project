@@ -27,7 +27,7 @@ define void @test_iv_trunc_crash(ptr %a, ptr %b, i32 %n) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = or i1 [[TMP7]], [[TMP8]]
 ; CHECK-NEXT:    br i1 [[TMP9]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP3]], 8
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[TMP3]], 7
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[N_MOD_VF]], 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = select i1 [[TMP10]], i32 8, i32 [[N_MOD_VF]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP3]], [[TMP11]]
@@ -50,11 +50,11 @@ define void @test_iv_trunc_crash(ptr %a, ptr %b, i32 %n) {
 ; CHECK-NEXT:    br label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi double [ [[TMP13]], %[[MIDDLE_BLOCK]] ], [ [[SUM_0]], %[[ENTRY]] ], [ [[SUM_0]], %[[VECTOR_SCEVCHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi i32 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[SUM_1:%.*]] = phi double [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[SUM_NEXT:%.*]], %[[LOOP_BODY:.*]] ]
-; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[BC_RESUME_VAL2]], %[[SCALAR_PH]] ], [ [[I_NEXT:%.*]], %[[LOOP_BODY]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[BC_RESUME_VAL1]], %[[SCALAR_PH]] ], [ [[I_NEXT:%.*]], %[[LOOP_BODY]] ]
 ; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[I]], [[N]]
 ; CHECK-NEXT:    br i1 [[COND]], label %[[EXIT:.*]], label %[[LOOP_BODY]]
 ; CHECK:       [[LOOP_BODY]]:

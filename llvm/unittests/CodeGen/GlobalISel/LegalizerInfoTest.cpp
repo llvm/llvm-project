@@ -272,6 +272,45 @@ TEST(LegalizerInfoTest, RuleSets) {
     EXPECT_ACTION(WidenScalar, 1, v2s32, LegalityQuery(G_SELECT, {v2p0, v2s1}));
     EXPECT_ACTION(WidenScalar, 1, v2s32, LegalityQuery(G_SELECT, {v2p1, v2s1}));
   }
+
+  // Test immIs
+  {
+    LegalizerInfo LI;
+
+    LI.getActionDefinitionsBuilder(G_SEXT_INREG)
+        .legalIf(all(typeIs(0, s32), immIs(0, 8)));
+
+    EXPECT_ACTION(Legal, 0, LLT(), LegalityQuery(G_SEXT_INREG, {s32}, {}, {8}));
+    EXPECT_ACTION(Unsupported, 0, LLT(),
+                  LegalityQuery(G_SEXT_INREG, {s32}, {}, {16}));
+  }
+
+  // Test immIsNot
+  {
+    LegalizerInfo LI;
+
+    LI.getActionDefinitionsBuilder(G_SEXT_INREG)
+        .legalIf(all(typeIs(0, s32), immIsNot(0, 8)));
+
+    EXPECT_ACTION(Unsupported, 0, LLT(),
+                  LegalityQuery(G_SEXT_INREG, {s32}, {}, {8}));
+    EXPECT_ACTION(Legal, 0, LLT(),
+                  LegalityQuery(G_SEXT_INREG, {s32}, {}, {16}));
+  }
+
+  // Test immIsSet
+  {
+    LegalizerInfo LI;
+
+    LI.getActionDefinitionsBuilder(G_SEXT_INREG)
+        .legalIf(all(typeIs(0, s32), immInSet(0, {8, 16})));
+
+    EXPECT_ACTION(Legal, 0, LLT(), LegalityQuery(G_SEXT_INREG, {s32}, {}, {8}));
+    EXPECT_ACTION(Legal, 0, LLT(),
+                  LegalityQuery(G_SEXT_INREG, {s32}, {}, {16}));
+    EXPECT_ACTION(Unsupported, 0, LLT(),
+                  LegalityQuery(G_SEXT_INREG, {s32}, {}, {5}));
+  }
 }
 
 TEST(LegalizerInfoTest, MMOAlignment) {
@@ -335,4 +374,37 @@ TEST(LegalizerInfoTest, MSVCDebugMiscompile) {
   LegalizerInfo LI;
   auto Builder = LI.getActionDefinitionsBuilder(TargetOpcode::G_PTRTOINT);
   (void)Builder.legalForCartesianProduct({S1}, {P0});
+}
+
+// AArch64GISemMITest instead of LegalizerInfoTest
+// as we need a target machine for MRI.
+//
+// Check that immediates for the query are populated from the MI
+TEST_F(AArch64GISelMITest, ImmediatesFromMI) {
+  setUp();
+  if (!TM)
+    GTEST_SKIP();
+
+  DefineLegalizerInfo(A, {
+    getActionDefinitionsBuilder(G_SEXT_INREG)
+        .legalIf(all(typeIs(0, s32), immIs(0, 8)));
+  });
+
+  AInfo LI(MF->getSubtarget());
+
+  {
+    auto MI =
+        B.buildSExtInReg(LLT::scalar(32), B.buildUndef(LLT::scalar(32)), 8);
+
+    auto Action = LI.getAction(*MI, MF->getRegInfo());
+    EXPECT_EQ(LegalizeActionStep(Legal, 0, LLT()), Action) << Action;
+  }
+
+  {
+    auto MI =
+        B.buildSExtInReg(LLT::scalar(32), B.buildUndef(LLT::scalar(32)), 16);
+
+    auto Action = LI.getAction(*MI, MF->getRegInfo());
+    EXPECT_EQ(LegalizeActionStep(Unsupported, 0, LLT()), Action) << Action;
+  }
 }

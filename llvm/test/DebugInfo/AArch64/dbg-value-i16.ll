@@ -1,4 +1,4 @@
-; RUN: llc -stop-after=livedebugvalues < %s | FileCheck %s
+; RUN: llc -stop-after=live-debug-values < %s | FileCheck %s
 ;
 ; ModuleID = 'dbg-value-i16.ll'
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"

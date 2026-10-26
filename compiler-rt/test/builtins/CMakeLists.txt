@@ -73,6 +73,9 @@ foreach(arch ${BUILTIN_TEST_ARCH})
     elseif("${arch}" MATCHES "nvptx")
       list(APPEND BUILTINS_TEST_TARGET_CFLAGS
            -Wno-multi-gpu -flto -march=native -nogpulib -startfiles -stdlib)
+    elseif("${arch}" MATCHES "spirv64")
+      list(APPEND BUILTINS_TEST_TARGET_CFLAGS
+	       -Wno-multi-gpu -nogpulib -mllvm -spirv-ext=+SPV_EXT_relaxed_printf_string_address_space)
     endif()
     list(APPEND BUILTINS_TEST_TARGET_CFLAGS --target=${COMPILER_RT_DEFAULT_TARGET_TRIPLE})
     string(REPLACE ";" " " BUILTINS_TEST_TARGET_CFLAGS "${BUILTINS_TEST_TARGET_CFLAGS}")

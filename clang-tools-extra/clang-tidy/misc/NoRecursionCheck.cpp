@@ -31,7 +31,7 @@ static CallStackTy pathfindSomeCycle(ArrayRef<CallGraphNode *> SCC) {
       llvm::from_range, SCC);
 
   // Is node N part if the current SCC?
-  auto NodeIsPartOfSCC = [&SCCElts](CallGraphNode *N) {
+  const auto NodeIsPartOfSCC = [&SCCElts](CallGraphNode *N) {
     return SCCElts.contains(N);
   };
 

@@ -1,0 +1,88 @@
+# REQUIRES: aarch64-registered-target
+
+# A DW_AT_high_pc reaching past the code the linker kept for a function must be
+# cut short at the function the linker placed next, otherwise the two overlap in
+# the output and verification fails with "DIEs have overlapping address ranges".
+# A scope nested in the function inherits the overrun and is cut short with it.
+
+# RUN: llvm-mc -triple arm64-apple-darwin -filetype=obj \
+# RUN:   %p/Inputs/subprogram-high-pc-past-symbol.s -o %t.o
+# RUN: echo '---' > %t.map
+# RUN: echo "triple: 'arm64-apple-darwin'" >> %t.map
+# RUN: echo 'objects:' >> %t.map
+# RUN: echo " - filename: '%/t.o'" >> %t.map
+# RUN: echo '   symbols:' >> %t.map
+# RUN: echo '     - { sym: _a, objAddr: 0x0, binAddr: 0x1000, size: 0x4 }' >> %t.map
+# RUN: echo '     - { sym: _b, objAddr: 0x8, binAddr: 0x1004, size: 0x4 }' >> %t.map
+
+# _inside starts within _a's own code, so it must not cut _a short.
+
+# RUN: echo '     - { sym: _inside, binAddr: 0x1002, size: 0x2 }' >> %t.map
+# RUN: echo '...' >> %t.map
+
+# RUN: dsymutil --linker classic -y %t.map -f -o %t-classic.out
+# RUN: llvm-dwarfdump -a %t-classic.out | FileCheck %s
+# RUN: llvm-dwarfdump --verify %t-classic.out | FileCheck %s --check-prefix=VERIFY
+
+# RUN: dsymutil --linker parallel -y %t.map -f -o %t-parallel.out
+# RUN: llvm-dwarfdump -a %t-parallel.out | FileCheck %s
+# RUN: llvm-dwarfdump --verify %t-parallel.out | FileCheck %s --check-prefix=VERIFY
+
+# A compile unit's high_pc spans every symbol in the unit, so it is not a range
+# to constrain. These binary addresses are low enough that constraining it would
+# cut the unit short of _b.
+
+# RUN: echo '---' > %t-unit.map
+# RUN: echo "triple: 'arm64-apple-darwin'" >> %t-unit.map
+# RUN: echo 'objects:' >> %t-unit.map
+# RUN: echo " - filename: '%/t.o'" >> %t-unit.map
+# RUN: echo '   symbols:' >> %t-unit.map
+# RUN: echo '     - { sym: _a, objAddr: 0x0, binAddr: 0x4, size: 0x4 }' >> %t-unit.map
+# RUN: echo '     - { sym: _b, objAddr: 0x8, binAddr: 0x8, size: 0x4 }' >> %t-unit.map
+# RUN: echo '...' >> %t-unit.map
+
+# RUN: dsymutil --linker classic -y %t-unit.map -f -o %t-unit-classic.out
+# RUN: llvm-dwarfdump -a %t-unit-classic.out | FileCheck %s --check-prefix=UNIT
+# RUN: llvm-dwarfdump --verify %t-unit-classic.out | FileCheck %s --check-prefix=VERIFY
+
+# RUN: dsymutil --linker parallel -y %t-unit.map -f -o %t-unit-parallel.out
+# RUN: llvm-dwarfdump -a %t-unit-parallel.out | FileCheck %s --check-prefix=UNIT
+# RUN: llvm-dwarfdump --verify %t-unit-parallel.out | FileCheck %s --check-prefix=VERIFY
+
+# Same again with DW_AT_high_pc as an address rather than a length.
+
+# RUN: llvm-mc -triple arm64-apple-darwin -filetype=obj \
+# RUN:   %p/Inputs/subprogram-high-pc-past-symbol-dwarf2.s -o %t.o
+# RUN: dsymutil --linker classic -y %t.map -f -o %t-classic2.out
+# RUN: llvm-dwarfdump -a %t-classic2.out | FileCheck %s
+# RUN: llvm-dwarfdump --verify %t-classic2.out | FileCheck %s --check-prefix=VERIFY
+
+# RUN: dsymutil --linker parallel -y %t.map -f -o %t-parallel2.out
+# RUN: llvm-dwarfdump -a %t-parallel2.out | FileCheck %s
+# RUN: llvm-dwarfdump --verify %t-parallel2.out | FileCheck %s --check-prefix=VERIFY
+
+# CHECK:      DW_TAG_subprogram
+# CHECK:        DW_AT_name{{.*}}"a"
+# CHECK-NEXT:   DW_AT_low_pc{{.*}}(0x0000000000001000)
+# CHECK-NEXT:   DW_AT_high_pc{{.*}}(0x0000000000001004)
+# CHECK:        DW_TAG_lexical_block
+# CHECK-NEXT:     DW_AT_low_pc{{.*}}(0x0000000000001000)
+# CHECK-NEXT:     DW_AT_high_pc{{.*}}(0x0000000000001004)
+# CHECK:      DW_TAG_subprogram
+# CHECK:        DW_AT_name{{.*}}"b"
+# CHECK-NEXT:   DW_AT_low_pc{{.*}}(0x0000000000001004)
+# CHECK-NEXT:   DW_AT_high_pc{{.*}}(0x0000000000001008)
+
+# UNIT:      DW_TAG_compile_unit
+# UNIT:        DW_AT_low_pc{{.*}}(0x0000000000000004)
+# UNIT-NEXT:   DW_AT_high_pc{{.*}}(0x000000000000000c)
+# UNIT:      DW_TAG_subprogram
+# UNIT:        DW_AT_name{{.*}}"a"
+# UNIT-NEXT:   DW_AT_low_pc{{.*}}(0x0000000000000004)
+# UNIT-NEXT:   DW_AT_high_pc{{.*}}(0x0000000000000008)
+# UNIT:      DW_TAG_subprogram
+# UNIT:        DW_AT_name{{.*}}"b"
+# UNIT-NEXT:   DW_AT_low_pc{{.*}}(0x0000000000000008)
+# UNIT-NEXT:   DW_AT_high_pc{{.*}}(0x000000000000000c)
+
+# VERIFY: No errors.

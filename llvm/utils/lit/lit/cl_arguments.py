@@ -334,6 +334,11 @@ def parse_args():
         type=lit.reports.TimeTraceReport,
         help="Write Chrome tracing compatible JSON to the specified file",
     )
+    execution_group.add_argument(
+        "--wtt-output",
+        type=lit.reports.WttReport,
+        help="Write a WTT (.wtl) log file for Windows test infrastructure consumption",
+    )
     # This option only exists for the benefit of LLVM's Buildkite CI pipelines.
     # As soon as it is not needed, it should be removed. Its help text would be:
     # When enabled, lit will add a unique element to the output file name,
@@ -571,6 +576,7 @@ def parse_args():
                 opts.xunit_xml_output,
                 opts.resultdb_output,
                 opts.time_trace_output,
+                opts.wtt_output,
             ],
         )
     )

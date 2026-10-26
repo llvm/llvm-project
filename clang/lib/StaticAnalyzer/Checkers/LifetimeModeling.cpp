@@ -15,6 +15,7 @@ REGISTER_SET_FACTORY_WITH_PROGRAMSTATE(LifetimeSourceSet, const MemRegion *)
 REGISTER_MAP_WITH_PROGRAMSTATE(LifetimeBoundMap, SVal, LifetimeSourceSet)
 
 REGISTER_SET_WITH_PROGRAMSTATE(DeallocatedSourceSet, const MemRegion *)
+REGISTER_SET_WITH_PROGRAMSTATE(ReportedDeadRegions, const MemRegion *)
 
 namespace {
 
@@ -52,9 +53,14 @@ static bool isDanglingStackSource(const MemRegion *Source,
         })) {
       return false;
     }
-
-    if (SF == CurrentSF || !SF->isParentOf(CurrentSF))
-      return true;
+    // Only a source whose frame is still live on the current stack can
+    // dangle. If that frame is not on the stack then the source outlives
+    // the returned value. The source is still alive when the returned value
+    // is used, so it does not dangle.
+    if (is_contained(make_pointer_range(C.stackframes()), SF)) {
+      if (SF == CurrentSF || !SF->isParentOf(CurrentSF))
+        return true;
+    }
   }
   return false;
 }
@@ -71,9 +77,22 @@ std::vector<const MemRegion *> lifetime_modeling::getDanglingRegionsAfterReturn(
   return Regions;
 }
 
+bool lifetime_modeling::isBoundToLifetimeSource(ProgramStateRef State,
+                                                SVal Val) {
+  return State->get<LifetimeBoundMap>(Val) != nullptr;
+}
+
 bool lifetime_modeling::isDeallocated(ProgramStateRef State,
                                       const MemRegion *Region) {
   return State->contains<DeallocatedSourceSet>(Region->getBaseRegion());
+}
+
+ProgramStateRef lifetime_modeling::markAsReported(ProgramStateRef State,
+                                                  const MemRegion *Region) {
+  ProgramStateRef NewState =
+      State->add<ReportedDeadRegions>(Region->getBaseRegion());
+
+  return (NewState != State) ? NewState : nullptr;
 }
 
 static ProgramStateRef bindSource(ProgramStateRef State, SVal RetVal,
@@ -85,6 +104,14 @@ static ProgramStateRef bindSource(ProgramStateRef State, SVal RetVal,
   Set = F.add(Set, Source);
   State = State->set<LifetimeBoundMap>(RetVal, Set);
   return State;
+}
+
+std::string lifetime_modeling::getRegionName(const MemRegion *Reg) {
+  // FIXME: Once the checker supports heap allocation, more region kinds
+  // should be handled to produce the correct descriptive name.
+  if (const std::string RegName = Reg->getDescriptiveName(); !RegName.empty())
+    return RegName;
+  return "the region";
 }
 
 void LifetimeModeling::checkPostCall(const CallEvent &Call,
@@ -147,6 +174,7 @@ void LifetimeModeling::checkDeadSymbols(SymbolReaper &SymReaper,
   ProgramStateRef State = C.getState();
   LifetimeBoundMapTy LBMap = State->get<LifetimeBoundMap>();
   DeallocatedSourceSetTy Sources = State->get<DeallocatedSourceSet>();
+  ReportedDeadRegionsTy Reported = State->get<ReportedDeadRegions>();
 
   for (SVal Val : llvm::make_first_range(LBMap)) {
     if (const auto *R = Val.getAsRegion(); R && SymReaper.isLiveRegion(R))
@@ -163,20 +191,32 @@ void LifetimeModeling::checkDeadSymbols(SymbolReaper &SymReaper,
     if (!SymReaper.isLiveRegion(Region))
       State = State->remove<DeallocatedSourceSet>(Region);
   }
+
+  for (const MemRegion *Region : Reported) {
+    if (!SymReaper.isLiveRegion(Region))
+      State = State->remove<ReportedDeadRegions>(Region);
+  }
   C.addTransition(State);
 }
 
 void LifetimeModeling::printState(raw_ostream &Out, ProgramStateRef State,
                                   const char *NL, const char *Sep) const {
   auto LBMap = State->get<LifetimeBoundMap>();
+  ReportedDeadRegionsTy Reported = State->get<ReportedDeadRegions>();
 
-  if (LBMap.isEmpty())
-    return;
+  if (!LBMap.isEmpty()) {
+    Out << Sep << "LifetimeBound bindings:" << NL;
+    for (auto &&[OriginSym, SourceSet] : LBMap) {
+      for (const auto *Region : SourceSet)
+        Out << " Origin " << OriginSym << " contains Loan " << Region << NL;
+    }
+  }
 
-  Out << Sep << "LifetimeBound bindings:" << NL;
-  for (auto &&[OriginSym, SourceSet] : LBMap) {
-    for (const auto *Region : SourceSet)
-      Out << " Origin " << OriginSym << " contains Loan " << Region << NL;
+  if (!Reported.isEmpty()) {
+    Out << Sep << "Reported regions: " << NL;
+    for (const auto *Region : Reported) {
+      Out << " " << Region << NL;
+    }
   }
 }
 
@@ -242,8 +282,9 @@ void DebugLifetimeModeling::analyzerDumpLifetimeOriginsOf(
 
     llvm::SmallString<128> Str;
     llvm::raw_svector_ostream OS(Str);
-    OS << " Origin " << ArgSVal << " bound to ";
-    llvm::interleaveComma(RegionNames, OS);
+    OS << " Origin '" << ArgSVal << "' bound to ";
+    llvm::interleaveComma(RegionNames, OS,
+                          [&](StringRef Name) { OS << "'" << Name << "'"; });
     C.emitReport(std::make_unique<PathSensitiveBugReport>(BugMsg, OS.str(), N));
   }
 }

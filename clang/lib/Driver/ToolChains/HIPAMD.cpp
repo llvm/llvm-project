@@ -43,11 +43,6 @@ void AMDGCN::Linker::constructLLVMLinkCommand(
     if (Input.isFilename())
       LinkerInputs.push_back(Input.getFilename());
 
-  // Look for archive of bundled bitcode in arguments, and add temporary files
-  // for the extracted archive of bitcode to inputs.
-  auto TargetID = Args.getLastArgValue(options::OPT_mcpu_EQ);
-  AddStaticDeviceLibsLinking(C, *this, JA, Inputs, Args, LinkerInputs, "amdgcn",
-                             TargetID, /*IsBitCodeSDL=*/true);
   tools::constructLLVMLinkCommand(C, *this, JA, Inputs, LinkerInputs, Output,
                                   Args);
 }
@@ -58,19 +53,19 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
                                          const llvm::opt::ArgList &Args) const {
   // Construct lld command.
   // The output from ld.lld is an HSA code object file.
-  ArgStringList LldArgs{"-flavor",
-                        "gnu",
-                        "-m",
-                        "elf64_amdgpu",
-                        "--no-undefined",
-                        "-shared",
-                        "-plugin-opt=-amdgpu-internalize-symbols"};
+  const ToolChain &TC = getToolChain();
+  LTOKind LTOMode = TC.getLTOMode(Args, Action::OFK_HIP);
+  ArgStringList LldArgs{"-flavor",        "gnu",    "-m", "elf64_amdgpu",
+                        "--no-undefined", "-shared"};
+  // Native object references are invisible when LTO compiles bitcode libraries
+  // in a non-LTO link, so library definitions must remain external.
+  if (LTOMode != LTOK_None)
+    LldArgs.push_back("-plugin-opt=-amdgpu-internalize-symbols");
   if (Args.hasArg(options::OPT_hipstdpar))
     LldArgs.push_back("-plugin-opt=-amdgpu-enable-hipstdpar");
 
-  auto &TC = getToolChain();
   auto &D = TC.getDriver();
-  bool IsThinLTO = TC.getLTOMode(Args, Action::OFK_HIP) == LTOK_Thin;
+  bool IsThinLTO = LTOMode == LTOK_Thin;
   addLTOOptions(TC, Args, LldArgs, Output, Inputs, IsThinLTO);
 
   // Extract all the -m options
@@ -133,12 +128,7 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
   LldArgs.append({"-o", Output.getFilename()});
   for (auto Input : Inputs)
     LldArgs.push_back(Input.getFilename());
-
-  // Look for archive of bundled bitcode in arguments, and add temporary files
-  // for the extracted archive of bitcode to inputs.
-  auto TargetID = Args.getLastArgValue(options::OPT_mcpu_EQ);
-  AddStaticDeviceLibsLinking(C, *this, JA, Inputs, Args, LldArgs, "amdgcn",
-                             TargetID, /*IsBitCodeSDL=*/true);
+  TC.addProfileRTLibs(Args, LldArgs);
 
   LldArgs.push_back("--no-whole-archive");
 
@@ -169,15 +159,15 @@ void AMDGCN::Linker::constructLinkAndEmitSpirvCommand(
   constructLLVMLinkCommand(C, JA, Inputs, LinkedBCFile, Args);
 
   if (UseSPIRVBackend) {
-    // This code handles the case in the new driver when --offload-device-only
-    // is unset and clang-linker-wrapper forwards the bitcode that must be
-    // compiled to SPIR-V.
+    // This code handles the case when --offload-device-only is unset and
+    // clang-linker-wrapper forwards the bitcode that must be compiled to
+    // SPIR-V.
 
     llvm::opt::ArgStringList CmdArgs;
 
     CmdArgs.append({"-cc1", "-triple=spirv64-amd-amdhsa", "-emit-obj",
-                    "-disable-llvm-optzns", "-mllvm", "-spirv-preserve-auxdata",
-                    LinkedBCFile.getFilename(), "-o", Output.getFilename()});
+                    "-disable-llvm-optzns", LinkedBCFile.getFilename(), "-o",
+                    Output.getFilename()});
 
     const Driver &Driver = getToolChain().getDriver();
     const char *Exec = Driver.getDriverProgramPath();
@@ -206,11 +196,6 @@ void AMDGCN::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                   const InputInfoList &Inputs,
                                   const ArgList &Args,
                                   const char *LinkingOutput) const {
-  if (!Inputs.empty() && Inputs[0].getType() == types::TY_Image &&
-      JA.getType() == types::TY_Object)
-    return HIP::constructGenerateObjFileFromHIPFatBinary(C, Output, Inputs,
-                                                         Args, JA, *this);
-
   if (JA.getType() == types::TY_HIP_FATBIN)
     return HIP::constructHIPFatbinCommand(C, JA, Output.getFilename(), Inputs,
                                           Args, *this);

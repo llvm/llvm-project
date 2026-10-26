@@ -11,6 +11,7 @@ subroutine standalone
       ! CHECK:      OpenMPConstruct -> OpenMPStandaloneConstruct
       ! CHECK-NEXT: | OmpDirectiveName -> llvm::omp::Directive = ordered
       ! CHECK-NEXT: | OmpClauseList ->
+      ! CHECK-NEXT: | | Modifier -> OmpDependenceType -> Value = Source
       ! CHECK-NEXT: | Flags = {}
       !$omp ordered depend(source)
       x(i, j) = i + j

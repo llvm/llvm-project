@@ -312,11 +312,11 @@ void test() {
   {
     std::mutex m1;
     std::mutex m2;
-    std::mutex m3;
 
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     std::try_lock(m1, m2);
 #if TEST_STD_VER >= 11
+    std::mutex m3;
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     std::try_lock(m1, m2, m3);
 #endif

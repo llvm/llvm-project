@@ -53,7 +53,7 @@ static std::pair<unsigned, VectorType> legalizeVectorType(const Type &type) {
 
 /// Replace math.cos(v) operation with vcix.v.iv(v).
 struct MathCosToVCIX final : OpRewritePattern<math::CosOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(math::CosOp op,
                                 PatternRewriter &rewriter) const override {
@@ -97,7 +97,7 @@ struct MathCosToVCIX final : OpRewritePattern<math::CosOp> {
 
 // Replace math.sin(v) operation with vcix.v.sv(v, v).
 struct MathSinToVCIX final : OpRewritePattern<math::SinOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(math::SinOp op,
                                 PatternRewriter &rewriter) const override {
@@ -140,7 +140,7 @@ struct MathSinToVCIX final : OpRewritePattern<math::SinOp> {
 
 // Replace math.tan(v) operation with vcix.v.sv(v, 0.0f).
 struct MathTanToVCIX final : OpRewritePattern<math::TanOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(math::TanOp op,
                                 PatternRewriter &rewriter) const override {
@@ -183,7 +183,7 @@ struct MathTanToVCIX final : OpRewritePattern<math::TanOp> {
 
 // Replace math.log(v) operation with vcix.v.sv(v, 0).
 struct MathLogToVCIX final : OpRewritePattern<math::LogOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(math::LogOp op,
                                 PatternRewriter &rewriter) const override {

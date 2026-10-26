@@ -1,5 +1,5 @@
-// RUN: not %clang_cc1 -triple amdgcn -target-feature +wavefrontsize32 -target-feature +wavefrontsize64 -o /dev/null %s 2>&1 | FileCheck --check-prefix=INVALID-PLUS %s
-// RUN: not %clang_cc1 -triple amdgcn -target-feature -wavefrontsize32 -target-feature -wavefrontsize64 -o /dev/null %s 2>&1 | FileCheck --check-prefix=INVALID-MINUS %s
+// RUN: not %clang_cc1 -triple amdgpu -target-feature +wavefrontsize32 -target-feature +wavefrontsize64 -o /dev/null %s 2>&1 | FileCheck --check-prefix=INVALID-PLUS %s
+// RUN: not %clang_cc1 -triple amdgpu -target-feature -wavefrontsize32 -target-feature -wavefrontsize64 -o /dev/null %s 2>&1 | FileCheck --check-prefix=INVALID-MINUS %s
 // RUN: not %clang_cc1 -triple amdgpu11.03 -target-feature +wavefrontsize32 -target-feature +wavefrontsize64 -o /dev/null %s 2>&1 | FileCheck --check-prefix=INVALID-PLUS %s
 // RUN: not %clang_cc1 -triple amdgpu11.03 -target-feature -wavefrontsize32 -target-feature -wavefrontsize64 -o /dev/null %s 2>&1 | FileCheck --check-prefix=INVALID-MINUS %s
 // RUN: not %clang_cc1 -triple amdgpu9.00 -target-feature +wavefrontsize32 -target-feature -wavefrontsize64 -o /dev/null %s 2>&1 | FileCheck %s --check-prefix=GFX9-WAVE32

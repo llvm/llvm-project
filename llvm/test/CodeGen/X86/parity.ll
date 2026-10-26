@@ -662,9 +662,75 @@ define i64 @parity_64_shift(i64 %0) {
   ret i64 %4
 }
 
+; The sub only folds to zero in DAGCombine, after the ctpop+and has already
+; been turned into a PARITY node.
+define i32 @parity_32_constant(i32 %x) nounwind {
+; X86-LABEL: parity_32_constant:
+; X86:       # %bb.0:
+; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: parity_32_constant:
+; X64:       # %bb.0:
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    retq
+  %1 = sub i32 %x, %x
+  %2 = tail call i32 @llvm.ctpop.i32(i32 %1)
+  %3 = and i32 %2, 1
+  ret i32 %3
+}
+
+define i32 @parity_32_constant_odd(i32 %x) nounwind {
+; X86-LABEL: parity_32_constant_odd:
+; X86:       # %bb.0:
+; X86-NEXT:    movl $1, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: parity_32_constant_odd:
+; X64:       # %bb.0:
+; X64-NEXT:    movl $1, %eax
+; X64-NEXT:    retq
+  %1 = sub i32 %x, %x
+  %2 = or i32 %1, 7
+  %3 = tail call i32 @llvm.ctpop.i32(i32 %2)
+  %4 = and i32 %3, 1
+  ret i32 %4
+}
+
+; As above, but the i128 PARITY node is expanded by type legalization, which
+; recreates a narrower PARITY node with an already constant operand.
+define i128 @parity_128_constant(i128 %x) nounwind {
+; X86-LABEL: parity_128_constant:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    movl %esp, %ebp
+; X86-NEXT:    andl $-16, %esp
+; X86-NEXT:    subl $16, %esp
+; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    movl $0, 12(%eax)
+; X86-NEXT:    movl $0, 8(%eax)
+; X86-NEXT:    movl $0, 4(%eax)
+; X86-NEXT:    movl $1, (%eax)
+; X86-NEXT:    movl %ebp, %esp
+; X86-NEXT:    popl %ebp
+; X86-NEXT:    retl $4
+;
+; X64-LABEL: parity_128_constant:
+; X64:       # %bb.0:
+; X64-NEXT:    movl $1, %eax
+; X64-NEXT:    xorl %edx, %edx
+; X64-NEXT:    retq
+  %1 = sub i128 %x, %x
+  %2 = or i128 %1, 7
+  %3 = tail call i128 @llvm.ctpop.i128(i128 %2)
+  %4 = and i128 %3, 1
+  ret i128 %4
+}
+
 declare i4 @llvm.ctpop.i4(i4 %x)
 declare i8 @llvm.ctpop.i8(i8 %x)
 declare i16 @llvm.ctpop.i16(i16 %x)
 declare i17 @llvm.ctpop.i17(i17 %x)
 declare i32 @llvm.ctpop.i32(i32 %x)
 declare i64 @llvm.ctpop.i64(i64 %x)
+declare i128 @llvm.ctpop.i128(i128 %x)
