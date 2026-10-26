@@ -16,6 +16,13 @@
 using namespace lldb;
 using namespace lldb_private;
 
+/// Format \p addr as a zero-padded hex address of \p addr_size bytes.
+static llvm::FormattedNumber FormatAddress(uint64_t addr, uint32_t addr_size) {
+  // The width passed to format_hex includes the "0x" prefix, followed by two
+  // hex digits per byte.
+  return llvm::format_hex(addr, 2 + 2 * addr_size);
+}
+
 bool DWARFExpressionList::IsAlwaysValidSingleExpr() const {
   return GetAlwaysValidExpr() != nullptr;
 }
@@ -192,9 +199,9 @@ bool DWARFExpressionList::DumpLocations(Stream *s, lldb::DescriptionLevel level,
 
     os << separator;
     os << "[";
-    os << llvm::format_hex(load_base, 2 + 2 * addr_size);
+    os << FormatAddress(load_base, addr_size);
     os << ", ";
-    os << llvm::format_hex(load_end, 2 + 2 * addr_size);
+    os << FormatAddress(load_end, addr_size);
     os << ") -> ";
     expr.DumpLocation(s, level, abi);
     if (file_addr != LLDB_INVALID_ADDRESS)
@@ -220,9 +227,9 @@ void DWARFExpressionList::GetDescription(Stream *s,
     os << "\n";
     os.indent(s->GetIndentLevel() + 2);
     os << "[";
-    os << llvm::format_hex(entry.GetRangeBase(), 2 + 2 * addr_size);
+    os << FormatAddress(entry.GetRangeBase(), addr_size);
     os << ", ";
-    os << llvm::format_hex(entry.GetRangeEnd(), 2 + 2 * addr_size);
+    os << FormatAddress(entry.GetRangeEnd(), addr_size);
     os << "): ";
     expr.DumpLocation(s, level, abi);
   }
