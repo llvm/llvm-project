@@ -396,6 +396,7 @@ private:
       llvm::iterator_range<ClauseIterator> beginClauses,
       llvm::iterator_range<ClauseIterator> endClauses);
   void AnalyzeObject(const parser::OmpObject &object);
+  void AnalyzeSubstring(const parser::OmpObject &object);
   std::pair<const parser::OmpClause *, const parser::OmpClause *>
   FindMutuallyExclusiveClauses(llvm::omp::Clauses exclusive,
       const std::vector<const parser::OmpClause *> &clauses);

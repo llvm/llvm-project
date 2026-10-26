@@ -776,7 +776,6 @@ static bool is64bitDefwithZeroHigh64bit(MachineInstr *MI,
                 TII->get(TargetOpcode::COPY), NewSrc)
             .addReg(SrcReg, getKillRegState(SrcKill));
         SrcReg = NewSrc;
-        SrcKill = true;
       }
     } else if (!AArch64::GPR64RegClass.contains(SrcReg)) {
       return false;
