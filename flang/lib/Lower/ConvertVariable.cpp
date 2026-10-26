@@ -3191,13 +3191,15 @@ void Fortran::lower::mapSymbolAttributes(
   // Internal procedures that access it through host association instantiate
   // the same global, but must not allocate it again and must be executed
   // exactly once by every image, in the scope that owns the coarray.
-  bool isHostAssociated = false;
+  bool isHostAssociatedInMainProgram = false;
   if (const Fortran::lower::pft::FunctionLikeUnit *funit =
           converter.getCurrentFunctionUnit()) {
     const Fortran::semantics::Scope &curScope = funit->getScope();
-    isHostAssociated = Fortran::semantics::IsHostAssociated(sym, curScope);
+    isHostAssociatedInMainProgram =
+        Fortran::semantics::IsHostAssociated(sym, curScope) &&
+        (sym.owner().kind() == Fortran::semantics::Scope::Kind::MainProgram);
   }
-  if (Fortran::evaluate::IsCoarray(sym) && !isHostAssociated) {
+  if (Fortran::evaluate::IsCoarray(sym) && !isHostAssociatedInMainProgram) {
     assert(!Fortran::semantics::IsAllocatable(sym) &&
            "must be a non-ALLOCATABLE coarray");
     if (Fortran::semantics::IsSaved(sym) &&
