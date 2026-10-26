@@ -1192,6 +1192,18 @@ bool MicrosoftCXXABI::classifyReturnType(CGFunctionInfo &FI) const {
   bool isTrivialForABI = RD->canPassInRegisters() &&
                          isTrivialForMSVC(RD, FI.getReturnType(), CGM);
 
+  // On x86 and x64, vectorcall returns HVAs and HFAs in registers even if they
+  // are not C++14 aggregates (e.g. they have base classes), as long as they can
+  // still be passed in registers and qualify as homogeneous aggregates.
+  if (!isTrivialForABI && RD->canPassInRegisters() &&
+      FI.getCallingConvention() == llvm::CallingConv::X86_VectorCall) {
+    const Type *Base = nullptr;
+    uint64_t NumElts = 0;
+    if (CGM.getABIInfo().isHomogeneousAggregate(FI.getReturnType(), Base,
+                                                NumElts))
+      isTrivialForABI = true;
+  }
+
   // MSVC always returns structs indirectly from C++ instance methods.
   bool isIndirectReturn = !isTrivialForABI || FI.isInstanceMethod();
 
