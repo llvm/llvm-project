@@ -3,6 +3,7 @@
 // CHECK-DAG: #[[MAP_0:.*]] = affine_map<()[s0] -> (32, s0)>
 // CHECK-DAG: #[[MAP_1:.*]] = affine_map<()[s0, s1] -> (s1, s0)>
 // CHECK-DAG: #[[MAP_2:.*]] = affine_map<()[s0] -> (256, s0)>
+// CHECK-DAG: #[[MAP_MOD:.*]] = affine_map<(d0) -> (-d0 + (d0 floordiv 2) * 2)>
 
 // CHECK: @min_max_full_simplify
 func.func @min_max_full_simplify() -> (index, index) {
@@ -57,4 +58,26 @@ func.func @overlapping_constraints() -> (index, index) {
   %r0 = affine.min affine_map<()[s0, s1, s2] -> (s0, s1, s2)>()[%0, %1, %2]
   %r1 = affine.max affine_map<()[s0, s1, s2] -> (s0, s1, s2)>()[%0, %1, %2]
   return %r0, %r1 : index, index
+}
+
+// CHECK: @affine_min_dim_simplify
+func.func @affine_min_dim_simplify(%bound: index) -> index {
+  // CHECK: affine.for %[[IV:.*]] = 0 to
+  %out = affine.for %iv = 0 to %bound iter_args(%carried = %bound) -> (index) {
+    // CHECK: affine.apply #[[MAP_MOD]](%[[IV]])
+    %result = affine.min affine_map<(d0) -> (0, -(d0 mod 2))>(%iv)
+    affine.yield %result : index
+  }
+  return %out : index
+}
+
+// CHECK: @affine_min_symbol_simplify
+func.func @affine_min_symbol_simplify(%bound: index) -> index {
+  // CHECK: affine.for %[[IV:.*]] = 0 to
+  %out = affine.for %iv = 0 to %bound iter_args(%carried = %bound) -> (index) {
+    // CHECK: affine.apply #[[MAP_MOD]](%[[IV]])
+    %result = affine.min affine_map<()[s0] -> (0, -(s0 mod 2))>()[%iv]
+    affine.yield %result : index
+  }
+  return %out : index
 }
