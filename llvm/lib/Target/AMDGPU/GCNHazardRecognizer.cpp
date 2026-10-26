@@ -1710,8 +1710,8 @@ static bool consumesDstSelForwardingOperand(const MachineInstr *VALU,
 
 // Producer families covered by the zero-wait condition/carry exception in
 // CDNA3 and CDNA4 ISA section 4.5. Unlisted producers retain the wait.
-static bool isConditionOrCarryProducer(const MachineInstr &MI,
-                                       const SIInstrInfo &TII) {
+static bool isFastForwardProducerForSGPR_VCC(const MachineInstr &MI,
+                                             const SIInstrInfo &TII) {
   if (TII.isVOPC(MI) ||
       (SIInstrInfo::isVALU(MI, /*AllowLDSDMA=*/false) && MI.isCompare()))
     return true;
@@ -1771,7 +1771,7 @@ static bool isConditionOrCarryProducer(const MachineInstr &MI,
 
 // Exempt only known condition/carry inputs from the two-state scalar-data
 // wait. Unlisted opcodes retain the wait even if they have Boolean inputs.
-static bool isConditionOrCarryInput(const MachineInstr &MI,
+static bool isFastForwardConsumerForSGPR_VCC(const MachineInstr &MI,
                                     const MachineOperand &Use) {
   switch (MI.getOpcode()) {
   case AMDGPU::V_CNDMASK_B32_e32:
@@ -1888,11 +1888,12 @@ int GCNHazardRecognizer::checkVALUHazards(MachineInstr *VALU) const {
         continue;
       }
 
-      const bool IsConditionOrCarry = isConditionOrCarryInput(*VALU, Use);
+      const bool ConsumerSide = isFastForwardConsumerForSGPR_VCC(
+        *VALU, Use);
       // The lambda is used as producers are scanned in getWaitStatesSince
       auto IsHazardDef = [&](const MachineInstr &MI) {
         return IsVALUDefSGPRFn(MI) &&
-               !(IsConditionOrCarry && isConditionOrCarryProducer(MI, TII));
+               !(ConsumerSide && isFastForwardProducerForSGPR_VCC(MI, TII));
       };
 
       int WaitStatesNeededForDef =
