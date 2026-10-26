@@ -27,6 +27,7 @@ add_clang_library(clangDaemonTweaks OBJECT
   ObjCMemberwiseInitializer.cpp
   OverridePureVirtuals.cpp
   PopulateSwitch.cpp
+  QualifiedNameRewrite.cpp
   RawStringLiteral.cpp
   ReplaceQualifiedWithAlias.cpp
   RemoveUsingNamespace.cpp
