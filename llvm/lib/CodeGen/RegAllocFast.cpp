@@ -2087,6 +2087,14 @@ static unsigned countFreeRegs(ArrayRef<MCPhysReg> Order,
   });
 }
 
+/// Return how many registers of \p Order \p PhysReg overlaps.
+static unsigned countOverlappedRegs(MCPhysReg PhysReg,
+                                    ArrayRef<MCPhysReg> Order,
+                                    const TargetRegisterInfo &TRI) {
+  return count_if(
+      Order, [&](MCPhysReg Other) { return TRI.regsOverlap(PhysReg, Other); });
+}
+
 /// Return how many registers of \p RC, whose allocation order is \p Order, a
 /// register of \p OtherRC can take: one if either class contains the other,
 /// and otherwise as many as any register of OtherRC overlaps.
@@ -2100,11 +2108,26 @@ static unsigned getOverlapWeight(const TargetRegisterClass &RC,
 
   unsigned Max = 0;
   for (MCPhysReg PhysReg : RCI.getOrder(&OtherRC))
-    Max = std::max<unsigned>(Max, count_if(Order, [&](MCPhysReg Other) {
-                               return TRI.regsOverlap(PhysReg, Other);
-                             }));
+    Max = std::max(Max, countOverlappedRegs(PhysReg, Order, TRI));
 
   return Max;
+}
+
+/// Return the fewest registers of \p Order that a register of \p OtherRC can
+/// take, e.g. none for i686's GR16 against GR8, since DI has no byte register.
+static unsigned getMinOverlapWeight(ArrayRef<MCPhysReg> Order,
+                                    const TargetRegisterClass &OtherRC,
+                                    const RegisterClassInfo &RCI,
+                                    const TargetRegisterInfo &TRI) {
+  ArrayRef<MCPhysReg> OtherOrder = RCI.getOrder(&OtherRC);
+  if (OtherOrder.empty())
+    return 0;
+
+  unsigned Min = std::numeric_limits<unsigned>::max();
+  for (MCPhysReg PhysReg : OtherOrder)
+    Min = std::min(Min, countOverlappedRegs(PhysReg, Order, TRI));
+
+  return Min;
 }
 
 /// Count the registers that \p Regs need, given which are folded, while the
@@ -2132,6 +2155,84 @@ countNeededRegs(ArrayRef<AsmOperandReg> Regs, ArrayRef<unsigned> Weight) {
   return {DefsNeeded, UsesNeeded};
 }
 
+/// Fold registers of \p Regs, adding them to \p ToFold, until the rest fit in
+/// the registers of every class that \p DefTaken and \p UseTaken leave while
+/// the asm's defs and uses are assigned. A register counts against another
+/// class as the most registers of it that it can take or, with \p Fewest, the
+/// fewest. Return false if folding can't make them fit.
+static bool foldUntilFit(MutableArrayRef<AsmOperandReg> Regs,
+                         ArrayRef<MCRegister> DefTaken,
+                         ArrayRef<MCRegister> UseTaken, bool Fewest,
+                         const RegisterClassInfo &RCI,
+                         const TargetRegisterInfo &TRI,
+                         SmallVectorImpl<Register> &ToFold) {
+  // Fold within one register class at a time, in operand order. Registers
+  // folded for one class no longer count against the next. Check the class of
+  // every register, not just of the foldable ones: folding a register can
+  // also relieve a narrower class (e.g. the GR64_ABCD of a "Q" operand).
+  SmallVector<const TargetRegisterClass *, 4> Done;
+  for (const AsmOperandReg &Candidate : Regs) {
+    const TargetRegisterClass *RC = Candidate.RC;
+    if (is_contained(Done, RC))
+      continue;
+
+    Done.push_back(RC);
+
+    ArrayRef<MCPhysReg> Order = RCI.getOrder(RC);
+    unsigned DefsFree = countFreeRegs(Order, DefTaken, TRI);
+    unsigned UsesFree = countFreeRegs(Order, UseTaken, TRI);
+
+    // How many registers of RC one register of each AsmOperandReg takes.
+    SmallVector<unsigned, 8> Weight;
+    for (const AsmOperandReg &R : Regs)
+      Weight.push_back(Fewest ? getMinOverlapWeight(Order, *R.RC, RCI, TRI)
+                              : getOverlapWeight(*RC, Order, *R.RC, RCI, TRI));
+
+    while (true) {
+      auto [DefsNeeded, UsesNeeded] = countNeededRegs(Regs, Weight);
+      bool DefsShort = DefsNeeded > DefsFree;
+      bool UsesShort = UsesNeeded > UsesFree;
+      if (!DefsShort && !UsesShort)
+        break;
+
+      // Fold the first register that relieves the most phases that are short.
+      // Folding a tied def can give its input a register back, so count again
+      // rather than just dropping the register's own needs.
+      AsmOperandReg *Best = nullptr;
+      unsigned BestRelief = 0;
+      for (auto [R, W] : zip(Regs, Weight)) {
+        if (R.Folded || !R.Foldable || !W)
+          continue;
+
+        R.Folded = true;
+        auto [DefsAfter, UsesAfter] = countNeededRegs(Regs, Weight);
+        R.Folded = false;
+        unsigned Relief = (DefsShort && DefsAfter < DefsNeeded) +
+                          (UsesShort && UsesAfter < UsesNeeded);
+        // Folding only one of a tied def and an input that shares its register
+        // relieves nothing; folding both does. So, failing any relief, fold
+        // the first register that lowers the total without making a short
+        // phase worse.
+        bool Worse = (DefsShort && DefsAfter > DefsNeeded) ||
+                     (UsesShort && UsesAfter > UsesNeeded);
+        bool Lowers = DefsAfter + UsesAfter < DefsNeeded + UsesNeeded;
+        if (Relief > BestRelief || (!Best && !Worse && Lowers)) {
+          Best = &R;
+          BestRelief = Relief;
+        }
+      }
+
+      if (!Best)
+        return false;
+
+      Best->Folded = true;
+      ToFold.push_back(Best->Reg);
+    }
+  }
+
+  return true;
+}
+
 /// Choose which foldable ("rm") registers of the inline asm \p MI to fold to
 /// stack slots so that the rest of its register operands fit, and add them to
 /// \p ToFold.
@@ -2157,7 +2258,9 @@ countNeededRegs(ArrayRef<AsmOperandReg> Regs, ArrayRef<unsigned> Weight) {
 /// its registers overlaps registers of that class, e.g. once for GR64 against
 /// GR32. That, and keeping physreg uses out of the defs' registers, errs
 /// toward folding more than necessary rather than running out of registers.
-/// Nothing is folded, though, if that can't make the operands fit.
+/// If folding can't make them fit by that estimate, only what they need if
+/// each register takes the fewest registers it can is folded, and if that
+/// can't make them fit either, nothing.
 void RegAllocFastImpl::selectInlineAsmRegsToFold(
     const MachineInstr &MI, SmallVectorImpl<Register> &ToFold) const {
   // Most inline asm has no foldable operand, so skip the analysis below.
@@ -2171,6 +2274,8 @@ void RegAllocFastImpl::selectInlineAsmRegsToFold(
   // Physical registers taken while the defs, and while the uses, are assigned.
   SmallVector<MCRegister, 8> DefTaken;
   SmallVector<MCRegister, 8> UseTaken;
+  // The physical defs, the only registers the defs can't actually take.
+  SmallVector<MCRegister, 8> PhysDefs;
 
   for (unsigned I = InlineAsm::MIOp_FirstOperand, E = MI.getNumOperands();
        I != E; ++I) {
@@ -2181,6 +2286,9 @@ void RegAllocFastImpl::selectInlineAsmRegsToFold(
     Register Reg = MO.getReg();
     if (Reg.isPhysical()) {
       DefTaken.push_back(Reg);
+      if (MO.isDef())
+        PhysDefs.push_back(Reg);
+
       if (MO.isUse() || isLiveThroughDef(MI, MO))
         UseTaken.push_back(Reg);
 
@@ -2248,72 +2356,24 @@ void RegAllocFastImpl::selectInlineAsmRegsToFold(
     R.TiedNeedsOwnReg |= R.InDefs;
   }
 
-  // Fold within one register class at a time, in operand order. Registers
-  // folded for one class no longer count against the next. Check the class of
-  // every register, not just of the foldable ones: folding a register can
-  // also relieve a narrower class (e.g. the GR64_ABCD of a "Q" operand).
-  SmallVector<const TargetRegisterClass *, 4> Done;
-  for (const AsmOperandReg &Candidate : Regs) {
-    const TargetRegisterClass *RC = Candidate.RC;
-    if (is_contained(Done, RC))
-      continue;
+  if (foldUntilFit(Regs, DefTaken, UseTaken, /*Fewest=*/false, RegClassInfo,
+                   *TRI, ToFold))
+    return;
 
-    Done.push_back(RC);
+  // The estimate errs high, so the operands may fit anyway, and folding more
+  // than they need can then keep them from fitting: this allocator assigns
+  // them in order, without looking ahead. So start over, and fold only what
+  // they need if each takes the fewest registers it can and the defs can take
+  // the physreg uses' registers. If even that can't make them fit, fold
+  // nothing, and leave allocation to report the error as it would without
+  // folding.
+  for (AsmOperandReg &R : Regs)
+    R.Folded = false;
 
-    ArrayRef<MCPhysReg> Order = RegClassInfo.getOrder(RC);
-    unsigned DefsFree = countFreeRegs(Order, DefTaken, *TRI);
-    unsigned UsesFree = countFreeRegs(Order, UseTaken, *TRI);
-
-    // How many registers of RC one register of each AsmOperandReg can take.
-    SmallVector<unsigned, 8> Weight;
-    for (const AsmOperandReg &R : Regs)
-      Weight.push_back(getOverlapWeight(*RC, Order, *R.RC, RegClassInfo, *TRI));
-
-    while (true) {
-      auto [DefsNeeded, UsesNeeded] = countNeededRegs(Regs, Weight);
-      bool DefsShort = DefsNeeded > DefsFree;
-      bool UsesShort = UsesNeeded > UsesFree;
-      if (!DefsShort && !UsesShort)
-        break;
-
-      // Fold the first register that relieves the most phases that are short.
-      // Folding a tied def can give its input a register back, so count again
-      // rather than just dropping the register's own needs.
-      AsmOperandReg *Best = nullptr;
-      unsigned BestRelief = 0;
-      for (auto [R, W] : zip(Regs, Weight)) {
-        if (R.Folded || !R.Foldable || !W)
-          continue;
-
-        R.Folded = true;
-        auto [DefsAfter, UsesAfter] = countNeededRegs(Regs, Weight);
-        R.Folded = false;
-        unsigned Relief = (DefsShort && DefsAfter < DefsNeeded) +
-                          (UsesShort && UsesAfter < UsesNeeded);
-        // Folding only one of a tied def and an input that shares its register
-        // relieves nothing; folding both does. So, failing any relief, fold
-        // the first register that lowers the total without making a short
-        // phase worse.
-        bool Worse = (DefsShort && DefsAfter > DefsNeeded) ||
-                     (UsesShort && UsesAfter > UsesNeeded);
-        bool Lowers = DefsAfter + UsesAfter < DefsNeeded + UsesNeeded;
-        if (Relief > BestRelief || (!Best && !Worse && Lowers)) {
-          Best = &R;
-          BestRelief = Relief;
-        }
-      }
-
-      // If folding can't make the operands fit, fold nothing, and leave
-      // allocation to report the error as it would without folding.
-      if (!Best) {
-        ToFold.clear();
-        return;
-      }
-
-      Best->Folded = true;
-      ToFold.push_back(Best->Reg);
-    }
-  }
+  ToFold.clear();
+  if (!foldUntilFit(Regs, PhysDefs, UseTaken, /*Fewest=*/true, RegClassInfo,
+                    *TRI, ToFold))
+    ToFold.clear();
 }
 
 /// Return the virtual register that \p Reg copies, if \p Reg is an input of
