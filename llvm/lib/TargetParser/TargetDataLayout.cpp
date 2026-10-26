@@ -200,16 +200,16 @@ static std::string computePowerDataLayout(const Triple &T, StringRef ABIName) {
   Ret += T.isLittleEndian() ? 'e' : 'E';
   Ret += getManglingComponent(T);
 
-  // PPC32 has 32 bit pointers. The PS3 (OS Lv2) is a PPC64 machine with 32 bit
-  // pointers.
-  if (!is64Bit || T.getOS() == Triple::Lv2)
+  // PPC32 has 32-bit pointers. PS3 and Xbox 360 use the PPC64 ISA with
+  // 32-bit pointers.
+  if (!is64Bit || T.isPPC64ILP32ABI())
     Ret += "-p:32:32";
 
   // If the target ABI uses function descriptors, then the alignment of function
   // pointers depends on the alignment used to emit the descriptor. Otherwise,
   // function pointers are aligned to 32 bits because the instructions must be.
-  if ((T.getArch() == Triple::ppc64 &&
-       (!T.isPPC64ELFv2ABI() && ABIName != "elfv2"))) {
+  if (T.getArch() == Triple::ppc64 && T.getOS() != Triple::Xbox360 &&
+      (!T.isPPC64ELFv2ABI() && ABIName != "elfv2")) {
     Ret += "-Fi64";
   } else if (T.isOSAIX()) {
     Ret += is64Bit ? "-Fi64" : "-Fi32";
