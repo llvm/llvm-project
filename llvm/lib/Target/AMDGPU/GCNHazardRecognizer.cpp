@@ -794,8 +794,7 @@ GCNHazardRecognizer::checkVASSrcVASDstHazards(const MachineInstr &MI) const {
           return true;
 
         if (Reg.isPhysical())
-          ;
-        continue;
+          continue;
 
         const TargetRegisterClass *RC = MRI.getRegClass(Reg);
         if (RC->hasSuperClassEq(TRI.getWaveMaskRegClass()))
