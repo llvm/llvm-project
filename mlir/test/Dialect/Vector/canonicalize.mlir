@@ -4677,3 +4677,557 @@ func.func @interleave_splat() -> vector<[4]xf32> {
   %0 = vector.interleave %cst, %cst : vector<[2]xf32> -> vector<[4]xf32>
   return %0 : vector<[4]xf32>
 }
+
+// -----
+
+// Reduction predicates refine select uses only on paths that require a
+// uniform mask. Opposite branches and outside uses retain elementwise selects.
+// CHECK-LABEL: func.func @and_acc(
+// CHECK-SAME: %[[M:[^:]+]]: vector<4xi1>, %[[OTHER:[^:]+]]: vector<4xi1>, %[[A:[^:]+]]: vector<4xi32>, %[[B:[^:]+]]: vector<4xi32>
+// CHECK: %[[X:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: scf.if
+// CHECK: %[[LOCAL:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: func.call @consume(%[[LOCAL]])
+// CHECK: } else {
+// CHECK: %[[ELSE:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: func.call @consume(%[[ELSE]])
+// CHECK: return %{{.*}} : vector<4xi32>
+func.func @and_acc(%m: vector<4xi1>, %other: vector<4xi1>, %a: vector<4xi32>, %b: vector<4xi32>, %acc: i1, %n: index) -> vector<4xi32> {
+  %r = vector.reduction <and>, %m, %acc : vector<4xi1> into i1
+  %outside = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+  scf.if %r {
+    %x = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+    func.call @consume(%x) : (vector<4xi32>) -> ()
+  } else {
+    %x = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+    func.call @consume(%x) : (vector<4xi32>) -> ()
+  }
+  return %outside : vector<4xi32>
+}
+func.func private @consume(vector<4xi32>)
+
+// -----
+
+// CHECK-LABEL: func.func @and_changed_loop_mask(
+// CHECK-SAME: %[[M:[^:]+]]: vector<4xi1>, %[[OTHER:[^:]+]]: vector<4xi1>, %[[A:[^:]+]]: vector<4xi32>, %[[B:[^:]+]]: vector<4xi32>
+// CHECK: scf.for
+// CHECK: %[[X:.*]] = arith.select %{{.*}}, %[[A]], %[[B]]
+// CHECK: func.call @consume(%[[X]])
+// CHECK: return %{{.*}} : vector<4xi32>
+func.func @and_changed_loop_mask(%m: vector<4xi1>, %other: vector<4xi1>, %a: vector<4xi32>, %b: vector<4xi32>, %acc: i1, %n: index) -> vector<4xi32> {
+  %r = vector.reduction <and>, %m : vector<4xi1> into i1
+  %outside = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  scf.if %r {
+    %result = scf.for %i = %c0 to %n step %c1 iter_args(%iter = %m) -> (vector<4xi1>) {
+      %x = arith.select %iter, %a, %b : vector<4xi1>, vector<4xi32>
+      func.call @consume(%x) : (vector<4xi32>) -> ()
+      scf.yield %other : vector<4xi1>
+    }
+  }
+  return %outside : vector<4xi32>
+}
+func.func private @consume(vector<4xi32>)
+
+// -----
+
+// CHECK-LABEL: func.func @and_execute(
+// CHECK-SAME: %[[M:[^:]+]]: vector<4xi1>, %[[A:[^:]+]]: vector<4xi32>, %[[B:[^:]+]]: vector<4xi32>
+// CHECK: %[[R:.*]] = vector.reduction <and>, %[[M]]
+// CHECK: %[[X:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: scf.if %[[R]]
+// CHECK: func.call @consume(%[[A]])
+// CHECK: } else {
+// CHECK: func.call @consume(%{{.*}})
+func.func @and_execute(%m: vector<4xi1>, %a: vector<4xi32>, %b: vector<4xi32>) {
+  %r = vector.reduction <and>, %m : vector<4xi1> into i1
+  %x = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+  scf.if %r {
+    scf.execute_region {
+      func.call @consume(%x) : (vector<4xi32>) -> ()
+      scf.yield
+    }
+  } else {
+    scf.execute_region {
+      func.call @consume(%x) : (vector<4xi32>) -> ()
+      scf.yield
+    }
+  }
+  return
+}
+func.func private @consume(vector<4xi32>)
+
+// -----
+
+// CHECK-LABEL: func.func @and_freeze(
+// CHECK-SAME: %[[M:[^:]+]]: vector<4xi1>, %[[OTHER:[^:]+]]: vector<4xi1>, %[[A:[^:]+]]: vector<4xi32>, %[[B:[^:]+]]: vector<4xi32>
+// CHECK: %[[X:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: scf.if
+// CHECK: %[[LOCAL:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: func.call @consume(%[[LOCAL]])
+// CHECK: } else {
+// CHECK: %[[ELSE:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: func.call @consume(%[[ELSE]])
+// CHECK: return %{{.*}} : vector<4xi32>
+func.func @and_freeze(%m: vector<4xi1>, %other: vector<4xi1>, %a: vector<4xi32>, %b: vector<4xi32>, %acc: i1, %n: index) -> vector<4xi32> {
+  %r = vector.reduction <and>, %m : vector<4xi1> into i1
+  %f = "llvm.freeze"(%r) : (i1) -> i1
+  %outside = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+  scf.if %f {
+    %x = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+    func.call @consume(%x) : (vector<4xi32>) -> ()
+  } else {
+    %x = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+    func.call @consume(%x) : (vector<4xi32>) -> ()
+  }
+  return %outside : vector<4xi32>
+}
+func.func private @consume(vector<4xi32>)
+
+// -----
+
+// CHECK-LABEL: func.func @and_inside(
+// CHECK-SAME: %[[M:[^:]+]]: vector<4xi1>, %[[OTHER:[^:]+]]: vector<4xi1>, %[[A:[^:]+]]: vector<4xi32>, %[[B:[^:]+]]: vector<4xi32>
+// CHECK: %[[R:.*]] = vector.reduction <and>, %[[M]]
+// CHECK: %[[X:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: scf.if %[[R]]
+// CHECK: func.call @consume(%[[A]])
+// CHECK: } else {
+// CHECK: %[[LOCAL:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: func.call @consume(%[[LOCAL]])
+// CHECK: return %[[X]] : vector<4xi32>
+func.func @and_inside(%m: vector<4xi1>, %other: vector<4xi1>, %a: vector<4xi32>, %b: vector<4xi32>, %acc: i1, %n: index) -> vector<4xi32> {
+  %r = vector.reduction <and>, %m : vector<4xi1> into i1
+  %outside = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+  scf.if %r {
+    %x = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+    func.call @consume(%x) : (vector<4xi32>) -> ()
+  } else {
+    %x = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+    func.call @consume(%x) : (vector<4xi32>) -> ()
+  }
+  return %outside : vector<4xi32>
+}
+func.func private @consume(vector<4xi32>)
+
+// -----
+
+// CHECK-LABEL: func.func @and_loop(
+// CHECK-SAME: %[[M:[^:]+]]: vector<4xi1>, %[[OTHER:[^:]+]]: vector<4xi1>, %[[A:[^:]+]]: vector<4xi32>, %[[B:[^:]+]]: vector<4xi32>
+// CHECK: %[[R:.*]] = vector.reduction <and>, %[[M]]
+// CHECK: %[[X:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: scf.if %[[R]]
+// CHECK: func.call @consume(%[[A]])
+// CHECK: } else {
+// CHECK: %[[LOCAL:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: func.call @consume(%[[LOCAL]])
+// CHECK: return %[[X]] : vector<4xi32>
+func.func @and_loop(%m: vector<4xi1>, %other: vector<4xi1>, %a: vector<4xi32>, %b: vector<4xi32>, %acc: i1, %n: index) -> vector<4xi32> {
+  %r = vector.reduction <and>, %m : vector<4xi1> into i1
+  %outside = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+  scf.if %r {
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
+    scf.for %i = %c0 to %n step %c1 {
+    %x = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+    func.call @consume(%x) : (vector<4xi32>) -> ()
+    }
+  } else {
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
+    scf.for %i = %c0 to %n step %c1 {
+    %x = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+    func.call @consume(%x) : (vector<4xi32>) -> ()
+    }
+  }
+  return %outside : vector<4xi32>
+}
+func.func private @consume(vector<4xi32>)
+
+// -----
+
+// CHECK-LABEL: func.func @and_masked(
+// CHECK-SAME: %[[M:[^:]+]]: vector<4xi1>, %[[OTHER:[^:]+]]: vector<4xi1>, %[[A:[^:]+]]: vector<4xi32>, %[[B:[^:]+]]: vector<4xi32>
+// CHECK: %[[X:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: scf.if
+// CHECK: %[[LOCAL:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: func.call @consume(%[[LOCAL]])
+// CHECK: } else {
+// CHECK: %[[ELSE:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: func.call @consume(%[[ELSE]])
+// CHECK: return %{{.*}} : vector<4xi32>
+func.func @and_masked(%m: vector<4xi1>, %other: vector<4xi1>, %a: vector<4xi32>, %b: vector<4xi32>, %acc: i1, %n: index) -> vector<4xi32> {
+  %r = vector.mask %other { vector.reduction <and>, %m : vector<4xi1> into i1 } : vector<4xi1> -> i1
+  %outside = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+  scf.if %r {
+    %x = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+    func.call @consume(%x) : (vector<4xi32>) -> ()
+  } else {
+    %x = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+    func.call @consume(%x) : (vector<4xi32>) -> ()
+  }
+  return %outside : vector<4xi32>
+}
+func.func private @consume(vector<4xi32>)
+
+// -----
+
+// CHECK-LABEL: func.func @and_nested(
+// CHECK-SAME: %[[M:[^:]+]]: vector<4xi1>, %[[OTHER:[^:]+]]: vector<4xi1>, %[[A:[^:]+]]: vector<4xi32>, %[[B:[^:]+]]: vector<4xi32>
+// CHECK: %[[R:.*]] = vector.reduction <and>, %[[M]]
+// CHECK: %[[X:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: scf.if %[[R]]
+// CHECK: func.call @consume(%[[A]])
+// CHECK: } else {
+// CHECK: %[[LOCAL:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: func.call @consume(%[[LOCAL]])
+// CHECK: return %[[X]] : vector<4xi32>
+func.func @and_nested(%m: vector<4xi1>, %other: vector<4xi1>, %a: vector<4xi32>, %b: vector<4xi32>, %acc: i1, %n: index) -> vector<4xi32> {
+  %r = vector.reduction <and>, %m : vector<4xi1> into i1
+  %outside = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+  scf.if %r {
+    scf.if %acc {
+    %x = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+    func.call @consume(%x) : (vector<4xi32>) -> ()
+    }
+  } else {
+    scf.if %acc {
+    %x = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+    func.call @consume(%x) : (vector<4xi32>) -> ()
+    }
+  }
+  return %outside : vector<4xi32>
+}
+func.func private @consume(vector<4xi32>)
+
+// -----
+
+// CHECK-LABEL: func.func @and_other_mask(
+// CHECK-SAME: %[[M:[^:]+]]: vector<4xi1>, %[[OTHER:[^:]+]]: vector<4xi1>, %[[A:[^:]+]]: vector<4xi32>, %[[B:[^:]+]]: vector<4xi32>
+// CHECK: %[[X:.*]] = arith.select %[[OTHER]], %[[A]], %[[B]]
+// CHECK: func.call @consume(%[[X]])
+// CHECK: func.call @consume(%[[X]])
+// CHECK: return %{{.*}} : vector<4xi32>
+func.func @and_other_mask(%m: vector<4xi1>, %other: vector<4xi1>, %a: vector<4xi32>, %b: vector<4xi32>, %acc: i1, %n: index) -> vector<4xi32> {
+  %r = vector.reduction <and>, %m : vector<4xi1> into i1
+  %outside = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+  scf.if %r {
+    %x = arith.select %other, %a, %b : vector<4xi1>, vector<4xi32>
+    func.call @consume(%x) : (vector<4xi32>) -> ()
+  } else {
+    %x = arith.select %other, %a, %b : vector<4xi1>, vector<4xi32>
+    func.call @consume(%x) : (vector<4xi32>) -> ()
+  }
+  return %outside : vector<4xi32>
+}
+func.func private @consume(vector<4xi32>)
+
+// -----
+
+// CHECK-LABEL: func.func @and_outside(
+// CHECK-SAME: %[[M:[^:]+]]: vector<4xi1>, %[[OTHER:[^:]+]]: vector<4xi1>, %[[A:[^:]+]]: vector<4xi32>, %[[B:[^:]+]]: vector<4xi32>
+// CHECK: %[[R:.*]] = vector.reduction <and>, %[[M]]
+// CHECK: %[[X:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: scf.if %[[R]]
+// CHECK: func.call @consume(%[[A]])
+// CHECK: } else {
+// CHECK: func.call @consume(%{{.*}})
+// CHECK: return %[[X]] : vector<4xi32>
+func.func @and_outside(%m: vector<4xi1>, %other: vector<4xi1>, %a: vector<4xi32>, %b: vector<4xi32>, %acc: i1, %n: index) -> vector<4xi32> {
+  %r = vector.reduction <and>, %m : vector<4xi1> into i1
+  %outside = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+  scf.if %r {
+    func.call @consume(%outside) : (vector<4xi32>) -> ()
+  } else {
+    func.call @consume(%outside) : (vector<4xi32>) -> ()
+  }
+  return %outside : vector<4xi32>
+}
+func.func private @consume(vector<4xi32>)
+
+// -----
+
+// CHECK-LABEL: func.func @while_entry(
+// CHECK-SAME: %[[M:[^:]+]]: vector<4xi1>, %[[A:[^:]+]]: vector<4xi32>, %[[B:[^:]+]]: vector<4xi32>
+// CHECK: %[[X:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: func.call @consume(%[[X]])
+func.func @while_entry(%m: vector<4xi1>, %a: vector<4xi32>, %b: vector<4xi32>, %next: i1) {
+  %r = vector.reduction <and>, %m : vector<4xi1> into i1
+  %x = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+  %result = scf.while (%arg = %r) : (i1) -> i1 {
+    scf.condition(%arg) %arg : i1
+  } do {
+  ^bb0(%arg: i1):
+    func.call @consume(%x) : (vector<4xi32>) -> ()
+    scf.yield %next : i1
+  }
+  return
+}
+func.func private @consume(vector<4xi32>)
+
+// -----
+
+// CHECK-LABEL: func.func @or_acc(
+// CHECK-SAME: %[[M:[^:]+]]: vector<4xi1>, %[[OTHER:[^:]+]]: vector<4xi1>, %[[A:[^:]+]]: vector<4xi32>, %[[B:[^:]+]]: vector<4xi32>
+// CHECK: %[[X:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: scf.if
+// CHECK: %[[LOCAL:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: func.call @consume(%[[LOCAL]])
+// CHECK: } else {
+// CHECK: %[[ELSE:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: func.call @consume(%[[ELSE]])
+// CHECK: return %{{.*}} : vector<4xi32>
+func.func @or_acc(%m: vector<4xi1>, %other: vector<4xi1>, %a: vector<4xi32>, %b: vector<4xi32>, %acc: i1, %n: index) -> vector<4xi32> {
+  %r = vector.reduction <or>, %m, %acc : vector<4xi1> into i1
+  %outside = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+  scf.if %r {
+    %x = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+    func.call @consume(%x) : (vector<4xi32>) -> ()
+  } else {
+    %x = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+    func.call @consume(%x) : (vector<4xi32>) -> ()
+  }
+  return %outside : vector<4xi32>
+}
+func.func private @consume(vector<4xi32>)
+
+// -----
+
+// CHECK-LABEL: func.func @or_changed_loop_mask(
+// CHECK-SAME: %[[M:[^:]+]]: vector<4xi1>, %[[OTHER:[^:]+]]: vector<4xi1>, %[[A:[^:]+]]: vector<4xi32>, %[[B:[^:]+]]: vector<4xi32>
+// CHECK: scf.for
+// CHECK: %[[X:.*]] = arith.select %{{.*}}, %[[A]], %[[B]]
+// CHECK: func.call @consume(%[[X]])
+// CHECK: return %{{.*}} : vector<4xi32>
+func.func @or_changed_loop_mask(%m: vector<4xi1>, %other: vector<4xi1>, %a: vector<4xi32>, %b: vector<4xi32>, %acc: i1, %n: index) -> vector<4xi32> {
+  %r = vector.reduction <or>, %m : vector<4xi1> into i1
+  %outside = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  scf.if %r {
+    %result = scf.for %i = %c0 to %n step %c1 iter_args(%iter = %m) -> (vector<4xi1>) {
+      %x = arith.select %iter, %a, %b : vector<4xi1>, vector<4xi32>
+      func.call @consume(%x) : (vector<4xi32>) -> ()
+      scf.yield %other : vector<4xi1>
+    }
+  }
+  return %outside : vector<4xi32>
+}
+func.func private @consume(vector<4xi32>)
+
+// -----
+
+// CHECK-LABEL: func.func @or_execute(
+// CHECK-SAME: %[[M:[^:]+]]: vector<4xi1>, %[[A:[^:]+]]: vector<4xi32>, %[[B:[^:]+]]: vector<4xi32>
+// CHECK: %[[R:.*]] = vector.reduction <or>, %[[M]]
+// CHECK: %[[X:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: scf.if %[[R]]
+// CHECK: func.call @consume(%{{.*}})
+// CHECK: } else {
+// CHECK: func.call @consume(%[[B]])
+func.func @or_execute(%m: vector<4xi1>, %a: vector<4xi32>, %b: vector<4xi32>) {
+  %r = vector.reduction <or>, %m : vector<4xi1> into i1
+  %x = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+  scf.if %r {
+    scf.execute_region {
+      func.call @consume(%x) : (vector<4xi32>) -> ()
+      scf.yield
+    }
+  } else {
+    scf.execute_region {
+      func.call @consume(%x) : (vector<4xi32>) -> ()
+      scf.yield
+    }
+  }
+  return
+}
+func.func private @consume(vector<4xi32>)
+
+// -----
+
+// CHECK-LABEL: func.func @or_freeze(
+// CHECK-SAME: %[[M:[^:]+]]: vector<4xi1>, %[[OTHER:[^:]+]]: vector<4xi1>, %[[A:[^:]+]]: vector<4xi32>, %[[B:[^:]+]]: vector<4xi32>
+// CHECK: %[[X:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: scf.if
+// CHECK: %[[LOCAL:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: func.call @consume(%[[LOCAL]])
+// CHECK: } else {
+// CHECK: %[[ELSE:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: func.call @consume(%[[ELSE]])
+// CHECK: return %{{.*}} : vector<4xi32>
+func.func @or_freeze(%m: vector<4xi1>, %other: vector<4xi1>, %a: vector<4xi32>, %b: vector<4xi32>, %acc: i1, %n: index) -> vector<4xi32> {
+  %r = vector.reduction <or>, %m : vector<4xi1> into i1
+  %f = "llvm.freeze"(%r) : (i1) -> i1
+  %outside = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+  scf.if %f {
+    %x = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+    func.call @consume(%x) : (vector<4xi32>) -> ()
+  } else {
+    %x = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+    func.call @consume(%x) : (vector<4xi32>) -> ()
+  }
+  return %outside : vector<4xi32>
+}
+func.func private @consume(vector<4xi32>)
+
+// -----
+
+// CHECK-LABEL: func.func @or_inside(
+// CHECK-SAME: %[[M:[^:]+]]: vector<4xi1>, %[[OTHER:[^:]+]]: vector<4xi1>, %[[A:[^:]+]]: vector<4xi32>, %[[B:[^:]+]]: vector<4xi32>
+// CHECK: %[[R:.*]] = vector.reduction <or>, %[[M]]
+// CHECK: %[[X:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: scf.if %[[R]]
+// CHECK: %[[LOCAL:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: func.call @consume(%[[LOCAL]])
+// CHECK: } else {
+// CHECK: func.call @consume(%[[B]])
+// CHECK: return %[[X]] : vector<4xi32>
+func.func @or_inside(%m: vector<4xi1>, %other: vector<4xi1>, %a: vector<4xi32>, %b: vector<4xi32>, %acc: i1, %n: index) -> vector<4xi32> {
+  %r = vector.reduction <or>, %m : vector<4xi1> into i1
+  %outside = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+  scf.if %r {
+    %x = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+    func.call @consume(%x) : (vector<4xi32>) -> ()
+  } else {
+    %x = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+    func.call @consume(%x) : (vector<4xi32>) -> ()
+  }
+  return %outside : vector<4xi32>
+}
+func.func private @consume(vector<4xi32>)
+
+// -----
+
+// CHECK-LABEL: func.func @or_loop(
+// CHECK-SAME: %[[M:[^:]+]]: vector<4xi1>, %[[OTHER:[^:]+]]: vector<4xi1>, %[[A:[^:]+]]: vector<4xi32>, %[[B:[^:]+]]: vector<4xi32>
+// CHECK: %[[R:.*]] = vector.reduction <or>, %[[M]]
+// CHECK: %[[X:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: scf.if %[[R]]
+// CHECK: %[[LOCAL:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: func.call @consume(%[[LOCAL]])
+// CHECK: } else {
+// CHECK: func.call @consume(%[[B]])
+// CHECK: return %[[X]] : vector<4xi32>
+func.func @or_loop(%m: vector<4xi1>, %other: vector<4xi1>, %a: vector<4xi32>, %b: vector<4xi32>, %acc: i1, %n: index) -> vector<4xi32> {
+  %r = vector.reduction <or>, %m : vector<4xi1> into i1
+  %outside = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+  scf.if %r {
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
+    scf.for %i = %c0 to %n step %c1 {
+    %x = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+    func.call @consume(%x) : (vector<4xi32>) -> ()
+    }
+  } else {
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
+    scf.for %i = %c0 to %n step %c1 {
+    %x = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+    func.call @consume(%x) : (vector<4xi32>) -> ()
+    }
+  }
+  return %outside : vector<4xi32>
+}
+func.func private @consume(vector<4xi32>)
+
+// -----
+
+// CHECK-LABEL: func.func @or_masked(
+// CHECK-SAME: %[[M:[^:]+]]: vector<4xi1>, %[[OTHER:[^:]+]]: vector<4xi1>, %[[A:[^:]+]]: vector<4xi32>, %[[B:[^:]+]]: vector<4xi32>
+// CHECK: %[[X:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: scf.if
+// CHECK: %[[LOCAL:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: func.call @consume(%[[LOCAL]])
+// CHECK: } else {
+// CHECK: %[[ELSE:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: func.call @consume(%[[ELSE]])
+// CHECK: return %{{.*}} : vector<4xi32>
+func.func @or_masked(%m: vector<4xi1>, %other: vector<4xi1>, %a: vector<4xi32>, %b: vector<4xi32>, %acc: i1, %n: index) -> vector<4xi32> {
+  %r = vector.mask %other { vector.reduction <or>, %m : vector<4xi1> into i1 } : vector<4xi1> -> i1
+  %outside = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+  scf.if %r {
+    %x = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+    func.call @consume(%x) : (vector<4xi32>) -> ()
+  } else {
+    %x = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+    func.call @consume(%x) : (vector<4xi32>) -> ()
+  }
+  return %outside : vector<4xi32>
+}
+func.func private @consume(vector<4xi32>)
+
+// -----
+
+// CHECK-LABEL: func.func @or_nested(
+// CHECK-SAME: %[[M:[^:]+]]: vector<4xi1>, %[[OTHER:[^:]+]]: vector<4xi1>, %[[A:[^:]+]]: vector<4xi32>, %[[B:[^:]+]]: vector<4xi32>
+// CHECK: %[[R:.*]] = vector.reduction <or>, %[[M]]
+// CHECK: %[[X:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: scf.if %[[R]]
+// CHECK: %[[LOCAL:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: func.call @consume(%[[LOCAL]])
+// CHECK: } else {
+// CHECK: func.call @consume(%[[B]])
+// CHECK: return %[[X]] : vector<4xi32>
+func.func @or_nested(%m: vector<4xi1>, %other: vector<4xi1>, %a: vector<4xi32>, %b: vector<4xi32>, %acc: i1, %n: index) -> vector<4xi32> {
+  %r = vector.reduction <or>, %m : vector<4xi1> into i1
+  %outside = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+  scf.if %r {
+    scf.if %acc {
+    %x = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+    func.call @consume(%x) : (vector<4xi32>) -> ()
+    }
+  } else {
+    scf.if %acc {
+    %x = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+    func.call @consume(%x) : (vector<4xi32>) -> ()
+    }
+  }
+  return %outside : vector<4xi32>
+}
+func.func private @consume(vector<4xi32>)
+
+// -----
+
+// CHECK-LABEL: func.func @or_other_mask(
+// CHECK-SAME: %[[M:[^:]+]]: vector<4xi1>, %[[OTHER:[^:]+]]: vector<4xi1>, %[[A:[^:]+]]: vector<4xi32>, %[[B:[^:]+]]: vector<4xi32>
+// CHECK: %[[X:.*]] = arith.select %[[OTHER]], %[[A]], %[[B]]
+// CHECK: func.call @consume(%[[X]])
+// CHECK: func.call @consume(%[[X]])
+// CHECK: return %{{.*}} : vector<4xi32>
+func.func @or_other_mask(%m: vector<4xi1>, %other: vector<4xi1>, %a: vector<4xi32>, %b: vector<4xi32>, %acc: i1, %n: index) -> vector<4xi32> {
+  %r = vector.reduction <or>, %m : vector<4xi1> into i1
+  %outside = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+  scf.if %r {
+    %x = arith.select %other, %a, %b : vector<4xi1>, vector<4xi32>
+    func.call @consume(%x) : (vector<4xi32>) -> ()
+  } else {
+    %x = arith.select %other, %a, %b : vector<4xi1>, vector<4xi32>
+    func.call @consume(%x) : (vector<4xi32>) -> ()
+  }
+  return %outside : vector<4xi32>
+}
+func.func private @consume(vector<4xi32>)
+
+// -----
+
+// CHECK-LABEL: func.func @or_outside(
+// CHECK-SAME: %[[M:[^:]+]]: vector<4xi1>, %[[OTHER:[^:]+]]: vector<4xi1>, %[[A:[^:]+]]: vector<4xi32>, %[[B:[^:]+]]: vector<4xi32>
+// CHECK: %[[R:.*]] = vector.reduction <or>, %[[M]]
+// CHECK: %[[X:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: scf.if %[[R]]
+// CHECK: func.call @consume(%{{.*}})
+// CHECK: } else {
+// CHECK: func.call @consume(%[[B]])
+// CHECK: return %[[X]] : vector<4xi32>
+func.func @or_outside(%m: vector<4xi1>, %other: vector<4xi1>, %a: vector<4xi32>, %b: vector<4xi32>, %acc: i1, %n: index) -> vector<4xi32> {
+  %r = vector.reduction <or>, %m : vector<4xi1> into i1
+  %outside = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+  scf.if %r {
+    func.call @consume(%outside) : (vector<4xi32>) -> ()
+  } else {
+    func.call @consume(%outside) : (vector<4xi32>) -> ()
+  }
+  return %outside : vector<4xi32>
+}
+func.func private @consume(vector<4xi32>)

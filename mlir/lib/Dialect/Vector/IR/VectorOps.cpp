@@ -37,6 +37,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/IR/ValueRange.h"
+#include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/SubsetOpInterface.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/Support/LLVM.h"
@@ -44,6 +45,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Repeated.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/StringSet.h"
@@ -8690,6 +8692,108 @@ InterleaveOp::getIterationShapeToUnroll() {
 std::optional<SmallVector<int64_t, 4>>
 DeinterleaveOp::getIterationShapeToUnroll() {
   return llvm::to_vector<4>(getResultVectorType().getShape());
+}
+
+//===----------------------------------------------------------------------===//
+// VectorDialect canonicalization
+//===----------------------------------------------------------------------===//
+
+namespace {
+/// Conservatively compute the regions reachable from an operation entry.
+/// Region-to-region edges are included: an entry-only check is insufficient for
+/// loops and operations that enter one region through another.
+static bool isRegionReachable(RegionBranchOpInterface branch, Region *target,
+                              ArrayRef<Attribute> operands) {
+  SmallVector<RegionSuccessor> successors;
+  branch.getEntrySuccessorRegions(operands, successors);
+  SmallVector<Region *> worklist;
+  llvm::SmallPtrSet<Region *, 4> visited;
+  auto append = [&] {
+    for (RegionSuccessor successor : successors)
+      if (Region *region = successor.getSuccessor())
+        if (region->getParentOp() == branch.getOperation() &&
+            visited.insert(region).second)
+          worklist.push_back(region);
+  };
+  append();
+  while (!worklist.empty()) {
+    Region *region = worklist.pop_back_val();
+    if (region == target)
+      return true;
+    successors.clear();
+    branch.getSuccessorRegions(*region, successors);
+    append();
+  }
+  return false;
+}
+
+/// Infer a reduction's value only when the opposite value cannot reach the use.
+struct SelectReductionBranch : OpRewritePattern<arith::SelectOp> {
+  using OpRewritePattern::OpRewritePattern;
+  LogicalResult matchAndRewrite(arith::SelectOp select,
+                                PatternRewriter &rewriter) const override {
+    if (!isa<VectorType>(select.getCondition().getType()))
+      return failure();
+    DenseMap<Region *, Value> replacements;
+    bool changed = false;
+    for (OpOperand &use :
+         llvm::make_early_inc_range(select.getResult().getUses())) {
+      for (Operation *child = use.getOwner();
+           auto *parent = child->getParentOp(); child = parent) {
+        auto branch = dyn_cast<RegionBranchOpInterface>(parent);
+        if (!branch)
+          continue;
+        Region *useRegion = child->getParentRegion();
+        if (!replacements.contains(useRegion)) {
+          replacements[useRegion] = Value();
+          for (Value operand : parent->getOperands()) {
+            auto reduction = operand.getDefiningOp<ReductionOp>();
+            if (!reduction ||
+                !reduction.getDest().getType().isSignlessInteger(1) ||
+                reduction.getAcc() || reduction.isMasked() ||
+                reduction.getVector() != select.getCondition())
+              continue;
+            bool value;
+            if (reduction.getKind() == CombiningKind::AND)
+              value = true;
+            else if (reduction.getKind() == CombiningKind::OR)
+              value = false;
+            else
+              continue;
+            SmallVector<Attribute> knownOperands(parent->getNumOperands());
+            // Every occurrence of this SSA value must have the same constant.
+            for (auto [i, v] : llvm::enumerate(parent->getOperands()))
+              if (v == operand)
+                knownOperands[i] = rewriter.getBoolAttr(!value);
+            if (isRegionReachable(branch, useRegion, knownOperands))
+              continue;
+            for (auto [i, v] : llvm::enumerate(parent->getOperands()))
+              if (v == operand)
+                knownOperands[i] = rewriter.getBoolAttr(value);
+            if (!isRegionReachable(branch, useRegion, knownOperands))
+              continue;
+            Value replacement =
+                value ? select.getTrueValue() : select.getFalseValue();
+            replacements[useRegion] = replacement;
+            break;
+          }
+        }
+        if (Value replacement = replacements.lookup(useRegion)) {
+          rewriter.modifyOpInPlace(use.getOwner(),
+                                   [&] { use.set(replacement); });
+          changed = true;
+          break;
+        }
+      }
+    }
+    return success(changed);
+  }
+};
+} // namespace
+
+void VectorDialect::getCanonicalizationPatterns(
+    RewritePatternSet &results) const {
+  results.add<SelectReductionBranch>(getContext());
 }
 
 //===----------------------------------------------------------------------===//
