@@ -27,6 +27,8 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
+#include "llvm/Support/Path.h"
+#include "llvm/Support/Program.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
@@ -144,6 +146,13 @@ TEST(DeviceOffloadBuilderTest, MultipleOffloadArchsAreRejected) {
 }
 
 TEST_F(DeviceOffloadHIPTest, DeviceObjectIsGenerated) {
+  // The device object is linked into an HSACO with ld.lld.
+  std::string Exe = llvm::sys::fs::getMainExecutable(nullptr, nullptr);
+  if (!llvm::sys::findProgramByName("ld.lld",
+                                    {llvm::sys::path::parent_path(Exe)}) &&
+      !llvm::sys::findProgramByName("ld.lld"))
+    GTEST_SKIP() << "ld.lld not found";
+
   IncrementalCompilerBuilder CB;
   CB.SetCompilerArgs({"--offload-arch=gfx1100", "-nogpulib", "-nogpuinc"});
   auto DeviceCI = CB.CreateDevice(OffloadType::HIP);
