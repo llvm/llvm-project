@@ -228,6 +228,7 @@ add_header_library(
     .type_traits
     .utility
     libc.hdr.types.size_t
+    libc.src.__support.libc_assert
     libc.src.__support.macros.attributes
     libc.src.__support.macros.config
 )

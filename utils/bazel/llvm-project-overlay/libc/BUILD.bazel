@@ -2523,6 +2523,21 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_epoll_create1",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/epoll_create1.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+    ],
+)
+
+libc_support_library(
     name = "__support_osutil_linux_syscall_wrappers_epoll_ctl",
     hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/epoll_ctl.h"],
     target_compatible_with = select({
@@ -19352,7 +19367,7 @@ libc_function(
         ":__support_common",
         ":__support_libc_errno",
         ":__support_macros_config",
-        ":__support_osutil_syscall",
+        ":__support_osutil_linux_syscall_wrappers_epoll_create1",
         ":errno",
     ],
 )

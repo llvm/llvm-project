@@ -3843,6 +3843,19 @@ StmtResult SemaOpenMP::ActOnOpenMPAssumeDirective(ArrayRef<OMPClause *> Clauses,
                                     AStmt);
 }
 
+StmtResult SemaOpenMP::ActOnOpenMPMetaDirective(
+    SourceLocation StartLoc, SourceLocation EndLoc,
+    ArrayRef<OMPTraitInfo *> TraitInfos, ArrayRef<Stmt *> Variants) {
+  assert(TraitInfos.size() == Variants.size() &&
+         "Expected one variant per metadirective clause");
+  // TODO Phase 3: Build OMPMetaDirective AST node holding all variants.
+  // TODO Phase 4: Codegen - generate runtime if-else chain.
+  // Temporary stub: return the first variant until OMPMetaDirective exists.
+  if (Variants.empty())
+    return StmtError();
+  return Variants.front();
+}
+
 OMPRequiresDecl *
 SemaOpenMP::CheckOMPRequiresDecl(SourceLocation Loc,
                                  ArrayRef<OMPClause *> ClauseList) {
