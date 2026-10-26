@@ -247,8 +247,7 @@ private: // Semantic analysis methods.
                 bool OverrideDefLoc = true, LetMode Mode = LetMode::Replace);
   bool AddSubClass(Record *Rec, SubClassReference &SubClass);
   bool AddSubClass(RecordsEntry &Entry, SubClassReference &SubClass);
-  bool AddSubMultiClass(MultiClass *CurMC,
-                        SubMultiClassReference &SubMultiClass);
+  bool AddSubMultiClass(SubMultiClassReference &SubMultiClass);
 
   using SubstStack = SmallVector<std::pair<const Init *, const Init *>, 8>;
 
@@ -273,21 +272,21 @@ private: // Semantic analysis methods.
 
 private: // Parser methods.
   bool consume(tgtok::TokKind K);
-  bool ParseObjectList(MultiClass *MC = nullptr);
-  bool ParseObject(MultiClass *MC);
+  bool ParseObjectList();
+  bool ParseObject();
   bool ParseClass();
   bool ParseMultiClass();
-  bool ParseDefm(MultiClass *CurMultiClass);
-  bool ParseDef(MultiClass *CurMultiClass);
+  bool ParseDefm();
+  bool ParseDef();
   bool ParseDefset();
   bool ParseDeftype();
   bool ParseDefvar(Record *CurRec = nullptr);
-  bool ParseDump(MultiClass *CurMultiClass, Record *CurRec = nullptr);
-  bool ParseForeach(MultiClass *CurMultiClass);
-  bool ParseIf(MultiClass *CurMultiClass);
-  bool ParseIfBody(MultiClass *CurMultiClass, StringRef Kind);
-  bool ParseAssert(MultiClass *CurMultiClass, Record *CurRec = nullptr);
-  bool ParseTopLevelLet(MultiClass *CurMultiClass);
+  bool ParseDump(Record *CurRec = nullptr);
+  bool ParseForeach();
+  bool ParseIf();
+  bool ParseIfBody(StringRef Kind);
+  bool ParseAssert(Record *CurRec = nullptr);
+  bool ParseTopLevelLet();
   LetModeAndName ParseLetModeAndName();
   void ParseLetList(SmallVectorImpl<LetRecord> &Result);
 
@@ -300,7 +299,7 @@ private: // Parser methods.
   const VarInit *ParseForeachDeclaration(const Init *&ForeachListValue);
 
   SubClassReference ParseSubClassReference(Record *CurRec, bool isDefm);
-  SubMultiClassReference ParseSubMultiClassReference(MultiClass *CurMC);
+  SubMultiClassReference ParseSubMultiClassReference();
 
   const Init *ParseIDValue(Record *CurRec, const StringInit *Name,
                            SMRange NameLoc, IDParseMode Mode = ParseValueMode);
@@ -333,7 +332,7 @@ private: // Parser methods.
   std::optional<const RecTy *> resolveInitTypes(ArrayRef<const Init *> Inits,
                                                 const Twine &ErrCtx);
   const RecTy *ParseOperatorType();
-  const Init *ParseObjectName(MultiClass *CurMultiClass);
+  const Init *ParseObjectName();
   const Record *ParseClassID();
   MultiClass *ParseMultiClassID();
   bool ApplyLetStack(Record *CurRec);
