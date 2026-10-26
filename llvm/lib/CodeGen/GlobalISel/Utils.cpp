@@ -1649,6 +1649,7 @@ void llvm::saveUsesAndErase(MachineInstr &MI, MachineRegisterInfo &MRI,
   }
   LLVM_DEBUG(dbgs() << MI << "Is dead; erasing.\n");
   DeadInstChain.remove(&MI);
+  salvageDebugInfo(MRI, MI);
   MI.eraseFromParent();
   if (LocObserver)
     LocObserver->checkpoint(false);
@@ -1690,6 +1691,10 @@ void llvm::salvageDebugInfo(const MachineRegisterInfo &MRI, MachineInstr &MI) {
     if (!DbgUsers.empty()) {
       salvageDebugInfoForDbgValue(MRI, MI, DbgUsers);
     }
+
+    // MI is about to go away, so whatever could not be salvaged would be left
+    // referring to a register without a definition.
+    MRI.markUsesInDebugValueAsUndef(Def.getReg());
   }
 }
 

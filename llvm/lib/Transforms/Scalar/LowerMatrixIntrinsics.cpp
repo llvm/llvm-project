@@ -160,12 +160,8 @@ struct ShapeInfo {
   unsigned NumRows;
   unsigned NumColumns;
 
-  bool IsColumnMajor;
-
   ShapeInfo(unsigned NumRows = 0, unsigned NumColumns = 0)
-      : NumRows(NumRows), NumColumns(NumColumns),
-        IsColumnMajor(ScalarOptions::Global.matrix_default_layout ==
-                      MatrixLayoutTy::ColumnMajor) {}
+      : NumRows(NumRows), NumColumns(NumColumns) {}
 
   ShapeInfo(Value *NumRows, Value *NumColumns)
       : ShapeInfo(cast<ConstantInt>(NumRows)->getZExtValue(),
@@ -181,18 +177,6 @@ struct ShapeInfo {
   operator bool() const {
     assert(NumRows == 0 || NumColumns != 0);
     return NumRows != 0;
-  }
-
-  unsigned getStride() const {
-    if (IsColumnMajor)
-      return NumRows;
-    return NumColumns;
-  }
-
-  unsigned getNumVectors() const {
-    if (IsColumnMajor)
-      return NumColumns;
-    return NumRows;
   }
 
   /// Returns the transposed shape.
@@ -384,13 +368,16 @@ class LowerMatrixIntrinsics {
 
     OpInfoTy OpInfo;
 
-    bool IsColumnMajor = ScalarOptions::Global.matrix_default_layout ==
-                         MatrixLayoutTy::ColumnMajor;
+    bool IsColumnMajor = true;
 
   public:
     MatrixTy() = default;
-    MatrixTy(ArrayRef<Value *> Vectors) : Vectors(Vectors) {}
-    MatrixTy(unsigned NumRows, unsigned NumColumns, Type *EltTy) {
+    explicit MatrixTy(bool IsColumnMajor) : IsColumnMajor(IsColumnMajor) {}
+    MatrixTy(bool IsColumnMajor, ArrayRef<Value *> Vectors)
+        : Vectors(Vectors), IsColumnMajor(IsColumnMajor) {}
+    MatrixTy(bool IsColumnMajor, unsigned NumRows, unsigned NumColumns,
+             Type *EltTy)
+        : IsColumnMajor(IsColumnMajor) {
 
       unsigned D = isColumnMajor() ? NumColumns : NumRows;
       for (unsigned J = 0; J < D; ++J)
@@ -550,11 +537,22 @@ private:
     return FMF;
   }
 
+  bool isColumnMajor() const {
+    return Opts.matrix_default_layout == MatrixLayoutTy::ColumnMajor;
+  }
+
+  unsigned getStride(const ShapeInfo &SI) const {
+    return isColumnMajor() ? SI.NumRows : SI.NumColumns;
+  }
+
+  unsigned getNumVectors(const ShapeInfo &SI) const {
+    return isColumnMajor() ? SI.NumColumns : SI.NumRows;
+  }
+
 public:
-  LowerMatrixIntrinsics(Function &F, TargetTransformInfo &TTI,
-                        FunctionAnalysisManager *AM)
-      : Opts(ScalarOptions::Global), Func(F), DL(F.getDataLayout()), TTI(TTI),
-        AM(AM) {}
+  LowerMatrixIntrinsics(const ScalarOptions &Opts, Function &F,
+                        TargetTransformInfo &TTI, FunctionAnalysisManager *AM)
+      : Opts(Opts), Func(F), DL(F.getDataLayout()), TTI(TTI), AM(AM) {}
 
   unsigned getNumOps(Type *VT) {
     assert(isa<FixedVectorType>(VT) && "Expected vector type");
@@ -623,9 +621,9 @@ public:
     // Otherwise split MatrixVal.
     SmallVector<Value *, 16> SplitVecs;
     for (unsigned MaskStart = 0; MaskStart < VType->getNumElements();
-         MaskStart += SI.getStride()) {
+         MaskStart += getStride(SI)) {
       Value *V = Builder.CreateShuffleVector(
-          MatrixVal, createSequentialMask(MaskStart, SI.getStride(), 0),
+          MatrixVal, createSequentialMask(MaskStart, getStride(SI), 0),
           "split");
       SplitVecs.push_back(V);
     }
@@ -655,7 +653,7 @@ public:
       }
     }
 
-    return {SplitVecs};
+    return {isColumnMajor(), SplitVecs};
   }
 
   /// If \p V already has a known shape return false.  Otherwise set the shape
@@ -1150,7 +1148,7 @@ public:
 
       const ShapeInfo &SI = ShapeMap.at(Inst);
       auto *EltTy = cast<FixedVectorType>(PHI->getType())->getElementType();
-      MatrixTy PhiM(SI.NumRows, SI.NumColumns, EltTy);
+      MatrixTy PhiM(isColumnMajor(), SI.NumRows, SI.NumColumns, EltTy);
 
       IRBuilder<> Builder(Inst);
       for (unsigned VI = 0, VE = PhiM.getNumVectors(); VI != VE; ++VI)
@@ -1247,7 +1245,7 @@ public:
       return LowerColumnMajorStore(Inst, Builder);
     case Intrinsic::abs:
     case Intrinsic::fabs: {
-      MatrixTy Result;
+      MatrixTy Result(isColumnMajor());
       MatrixTy M = getMatrix(Inst->getOperand(0), SI, Builder);
       Builder.setFastMathFlags(getFastMathFlags(Inst));
 
@@ -1320,14 +1318,14 @@ public:
                       bool IsVolatile, ShapeInfo Shape, IRBuilder<> &Builder) {
     auto *VType = cast<FixedVectorType>(Ty);
     Type *EltTy = VType->getElementType();
-    Type *VecTy = FixedVectorType::get(EltTy, Shape.getStride());
+    Type *VecTy = FixedVectorType::get(EltTy, getStride(Shape));
     Value *EltPtr = Ptr;
-    MatrixTy Result;
+    MatrixTy Result(isColumnMajor());
     Stride = castToIndexType(Ptr, Stride, Builder);
-    for (unsigned I = 0, E = Shape.getNumVectors(); I < E; ++I) {
+    for (unsigned I = 0, E = getNumVectors(Shape); I < E; ++I) {
       Value *GEP = computeVectorAddr(
           EltPtr, Builder.getIntN(Stride->getType()->getScalarSizeInBits(), I),
-          Stride, Shape.getStride(), EltTy, Builder);
+          Stride, getStride(Shape), EltTy, Builder);
       Value *Vector = Builder.CreateAlignedLoad(
           VecTy, GEP, getAlignForIndex(I, Stride, EltTy, MAlign),
           IsVolatile, "col.load");
@@ -1345,14 +1343,14 @@ public:
                       ShapeInfo ResultShape, Type *EltTy,
                       IRBuilder<> &Builder) {
     Value *Offset = Builder.CreateAdd(
-        Builder.CreateMul(J, getIndex(MatrixPtr, MatrixShape.getStride())), I);
+        Builder.CreateMul(J, getIndex(MatrixPtr, getStride(MatrixShape))), I);
 
     Value *TileStart = Builder.CreateInBoundsGEP(EltTy, MatrixPtr, Offset);
     auto *TileTy = FixedVectorType::get(EltTy, ResultShape.NumRows *
                                                    ResultShape.NumColumns);
 
     return loadMatrix(TileTy, TileStart, Align,
-                      getIndex(MatrixPtr, MatrixShape.getStride()), IsVolatile,
+                      getIndex(MatrixPtr, getStride(MatrixShape)), IsVolatile,
                       ResultShape, Builder);
   }
 
@@ -1383,14 +1381,14 @@ public:
                    MaybeAlign MAlign, bool IsVolatile, ShapeInfo MatrixShape,
                    Value *I, Value *J, Type *EltTy, IRBuilder<> &Builder) {
     Value *Offset = Builder.CreateAdd(
-        Builder.CreateMul(J, getIndex(MatrixPtr, MatrixShape.getStride())), I);
+        Builder.CreateMul(J, getIndex(MatrixPtr, getStride(MatrixShape))), I);
 
     Value *TileStart = Builder.CreateInBoundsGEP(EltTy, MatrixPtr, Offset);
     auto *TileTy = FixedVectorType::get(EltTy, StoreVal.getNumRows() *
                                                    StoreVal.getNumColumns());
 
     storeMatrix(TileTy, StoreVal, TileStart, MAlign,
-                getIndex(MatrixPtr, MatrixShape.getStride()), IsVolatile,
+                getIndex(MatrixPtr, getStride(MatrixShape)), IsVolatile,
                 Builder);
   }
 
@@ -1414,8 +1412,9 @@ public:
                                                   MAlign),
                                  IsVolatile);
     }
-    return MatrixTy().addNumStores(getNumOps(StoreVal.getVectorTy()) *
-                                   StoreVal.getNumVectors());
+    return MatrixTy(isColumnMajor())
+        .addNumStores(getNumOps(StoreVal.getVectorTy()) *
+                      StoreVal.getNumVectors());
   }
 
   /// Lower a store instruction with shape information.
@@ -1990,7 +1989,7 @@ public:
   }
 
   MatrixTy getZeroMatrix(Type *EltType, unsigned R, unsigned C) {
-    MatrixTy Res;
+    MatrixTy Res(isColumnMajor());
     auto *ColumType = FixedVectorType::get(EltType, R);
     for (unsigned I = 0; I < C; ++I)
       Res.addVector(ConstantAggregateZero::get(ColumType));
@@ -2014,7 +2013,7 @@ public:
 
     Type *TileVecTy = FixedVectorType::get(MatMul->getType()->getScalarType(),
                                            Opts.fuse_matrix_tile_size);
-    MatrixTy TileResult;
+    MatrixTy TileResult(isColumnMajor());
     // Insert in the inner loop header.
     Builder.SetInsertPoint(TI.KLoop.Header->getTerminator());
     // Create PHI nodes for the result columns to accumulate across iterations.
@@ -2183,7 +2182,7 @@ public:
       }
 
       // Initialize the output
-      MatrixTy Result(R, C, EltType);
+      MatrixTy Result(isColumnMajor(), R, C, EltType);
 
       emitMatrixMultiply(Result, MA, MB, Builder, false, true,
                          getFastMathFlags(MatMul));
@@ -2194,7 +2193,7 @@ public:
         ToRemove.push_back(cast<Instruction>(Transpose));
         // TODO: add a fake entry for the folded instruction so that this is
         // included in the expression in the remark.
-        Inst2ColumnMatrix[Transpose] = MatrixTy(M, C, EltType);
+        Inst2ColumnMatrix[Transpose] = MatrixTy(isColumnMajor(), M, C, EltType);
       }
       finalizeLowering(MatMul, Result, Builder);
       return;
@@ -2306,7 +2305,7 @@ public:
     assert(LShape.NumColumns == RShape.NumRows);
 
     // Initialize the output
-    MatrixTy Result(R, C, EltType);
+    MatrixTy Result(isColumnMajor(), R, C, EltType);
     assert(Lhs.getElementType() == Result.getElementType() &&
            "Matrix multiply result element type does not match arguments.");
 
@@ -2317,7 +2316,7 @@ public:
 
   /// Lowers llvm.matrix.transpose.
   MatrixTy LowerTranspose(CallInst *Inst, IRBuilder<> &Builder) {
-    MatrixTy Result;
+    MatrixTy Result(isColumnMajor());
     Value *InputVal = Inst->getArgOperand(0);
     FixedVectorType *VectorTy = cast<FixedVectorType>(InputVal->getType());
     ShapeInfo ArgShape(Inst->getArgOperand(1), Inst->getArgOperand(2));
@@ -2352,14 +2351,14 @@ public:
   /// Lower load instructions.
   MatrixTy VisitLoad(LoadInst *Inst, const ShapeInfo &SI, Value *Ptr,
                      IRBuilder<> &Builder) {
-    return LowerLoad(Inst, Ptr, Inst->getAlign(), getIndex(Ptr, SI.getStride()),
+    return LowerLoad(Inst, Ptr, Inst->getAlign(), getIndex(Ptr, getStride(SI)),
                      Inst->isVolatile(), SI, Builder);
   }
 
   MatrixTy VisitStore(StoreInst *Inst, const ShapeInfo &SI, Value *StoredVal,
                       Value *Ptr, IRBuilder<> &Builder) {
     return LowerStore(Inst, StoredVal, Ptr, Inst->getAlign(),
-                      getIndex(Ptr, SI.getStride()), Inst->isVolatile(), SI,
+                      getIndex(Ptr, getStride(SI)), Inst->isVolatile(), SI,
                       Builder);
   }
 
@@ -2404,7 +2403,7 @@ public:
     Value *Lhs = Inst->getOperand(0);
     Value *Rhs = Inst->getOperand(1);
 
-    MatrixTy Result;
+    MatrixTy Result(isColumnMajor());
     MatrixTy A = getMatrix(Lhs, SI, Builder);
     MatrixTy B = getMatrix(Rhs, SI, Builder);
     assert(A.isColumnMajor() == B.isColumnMajor() &&
@@ -2425,7 +2424,7 @@ public:
                               IRBuilder<> &Builder) {
     Value *Op = Inst->getOperand(0);
 
-    MatrixTy Result;
+    MatrixTy Result(isColumnMajor());
     MatrixTy M = getMatrix(Op, SI, Builder);
 
     Builder.setFastMathFlags(getFastMathFlags(Inst));
@@ -2452,7 +2451,7 @@ public:
                                 IRBuilder<> &Builder) {
     Value *Op = Inst->getOperand(0);
 
-    MatrixTy Result;
+    MatrixTy Result(isColumnMajor());
     MatrixTy M = getMatrix(Op, Shape, Builder);
 
     Builder.setFastMathFlags(getFastMathFlags(Inst));
@@ -2475,7 +2474,7 @@ public:
     Value *OpA = Inst->getOperand(1);
     Value *OpB = Inst->getOperand(2);
 
-    MatrixTy Result;
+    MatrixTy Result(isColumnMajor());
     MatrixTy A = getMatrix(OpA, Shape, Builder);
     MatrixTy B = getMatrix(OpB, Shape, Builder);
 
@@ -2937,7 +2936,8 @@ PreservedAnalyses LowerMatrixIntrinsicsPass::run(Function &F,
                                                  FunctionAnalysisManager &AM) {
   auto &TTI = AM.getResult<TargetIRAnalysis>(F);
 
-  LowerMatrixIntrinsics LMT(F, TTI, Minimal ? nullptr : &AM);
+  const ScalarOptions &Opts = getScalarOptions(F);
+  LowerMatrixIntrinsics LMT(Opts, F, TTI, Minimal ? nullptr : &AM);
   if (LMT.Visit()) {
     PreservedAnalyses PA;
     if (!Minimal) {

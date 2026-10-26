@@ -9,6 +9,8 @@
 #ifndef LLVM_LIB_TRANSFORMS_VECTORIZE_VECTORIZEOPTIONS_H
 #define LLVM_LIB_TRANSFORMS_VECTORIZE_VECTORIZEOPTIONS_H
 
+#include "llvm/IR/Function.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/Transforms/Vectorize/LoopVectorizationLegality.h"
 #include <optional>
 
@@ -35,5 +37,25 @@ constexpr bool VPlanVerifyEachDefault = false;
 
 #define OPTIONS_STRUCT_DECL
 #include "VectorizeOptions.inc"
+
+namespace llvm {
+
+class Loop;
+namespace sandboxir {
+class Context;
+} // namespace sandboxir
+
+inline const VectorizeOptions &getVectorizeOptions(const LLVMContext &C) {
+  return C.getLibraryOptions().get<VectorizeOptions>();
+}
+
+inline const VectorizeOptions &getVectorizeOptions(const Function &F) {
+  return getVectorizeOptions(F.getContext());
+}
+
+const VectorizeOptions &getVectorizeOptions(const Loop &L);
+const VectorizeOptions &getVectorizeOptions(const sandboxir::Context &C);
+
+} // namespace llvm
 
 #endif // LLVM_LIB_TRANSFORMS_VECTORIZE_VECTORIZEOPTIONS_H

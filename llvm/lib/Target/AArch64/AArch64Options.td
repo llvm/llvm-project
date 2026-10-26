@@ -221,11 +221,10 @@ defm : BoolField<"aarch64-macho-enable-nonlazybind", "false",
   "Call nonlazybind functions via direct GOT load for Mach-O">;
 defm : ValueField<"aarch64-min-jump-table-entries", "std::optional<unsigned>", "std::nullopt",
   "Set minimum number of entries to use a jump table on AArch64">;
-defm streaming_hazard_size : ValueField<"aarch64-streaming-hazard-size",
+defm : ValueField<"aarch64-streaming-hazard-size",
   "std::optional<unsigned>", "std::nullopt",
   "Hazard size for streaming mode memory accesses. 0 = disabled">;
-def : SeparateOrEq<["-", "--"], "aarch64-stack-hazard-size">,
-  Alias<streaming_hazard_size>;
+def : AliasOf<"aarch64-stack-hazard-size", "aarch64-streaming-hazard-size">;
 defm : BoolField<"aarch64-use-aa", "true",
   "Enable the use of AA during codegen">;
 // If OS supports TBI, use this flag to enable it.
@@ -280,9 +279,7 @@ defm : BoolField<"aarch64-enable-loop-data-prefetch", "true",
   "Enable the loop data prefetch pass">;
 defm : BoolField<"aarch64-enable-mcr", "true",
   "Enable the machine combiner pass">;
-defm : BoolField<"aarch64-enable-pipeliner", "false",
-  "Enable Machine Pipeliner for AArch64">;
-defm : BoolField<"aarch64-enable-predicate-as-counter-loop-rewrites", "false",
+defm : BoolField<"aarch64-enable-predicate-as-counter-loop-rewrites", "true",
   "Enable rewriting loops with wide loop-carried masks to use predicate-as-counter">;
 defm : BoolField<"aarch64-enable-promote-const", "true",
   "Enable the promote constant pass">;

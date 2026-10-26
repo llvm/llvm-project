@@ -21,6 +21,7 @@ add_mlir_conversion_library(MLIRConvertToLLVMPass
   MLIRConversionPassIncGen
 
   LINK_LIBS PUBLIC
+  MLIRAnalysisBase
   MLIRIR
   MLIRConvertToLLVMInterface
   MLIRLLVMCommonConversion

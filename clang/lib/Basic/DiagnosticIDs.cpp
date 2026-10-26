@@ -976,12 +976,18 @@ bool DiagnosticIDs::isUnrecoverable(unsigned DiagID) const {
     return false;
 
   // All ARC errors are currently considered recoverable, with the exception of
-  // err_arc_may_not_respond. This specific error is treated as unrecoverable
-  // because sending a message with an unknown selector could lead to crashes
-  // within CodeGen if the resulting expression is used to initialize a C++
-  // auto variable, where type deduction is required.
+  // the following errors:
+  // - err_arc_may_not_respond: sending a message with an unknown selector could
+  //   lead to crashes within CodeGen if the resulting expression is used to
+  //   initialize a C++ auto variable, where type deduction is required.
+  // - err_arc_atomic_ownership: CodeGen hits llvm_unreachable on the invalid
+  //   atomic builtin call.
+  // - err_arc_bridge_cast_incompatible: the failed cast leaves a
+  //   value-dependent RecoveryExpr that crashes CodeGen when it is used in a
+  //   condition or comparison.
   if (isARCDiagnostic(DiagID) && DiagID != diag::err_arc_may_not_respond &&
-      DiagID != diag::err_arc_atomic_ownership)
+      DiagID != diag::err_arc_atomic_ownership &&
+      DiagID != diag::err_arc_bridge_cast_incompatible)
     return false;
 
   if (isCodegenABICheckDiagnostic(DiagID))

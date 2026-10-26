@@ -13,6 +13,7 @@
 #ifndef LLVM_LIB_TARGET_CSKY_MCTARGETDESC_CSKYINSTPRINTER_H
 #define LLVM_LIB_TARGET_CSKY_MCTARGETDESC_CSKYINSTPRINTER_H
 
+#include "MCTargetDesc/CSKYMCOptions.h"
 #include "MCTargetDesc/CSKYMCTargetDesc.h"
 #include "llvm/MC/MCInstPrinter.h"
 
@@ -20,12 +21,12 @@ namespace llvm {
 
 class CSKYInstPrinter : public MCInstPrinter {
 private:
+  const CSKYMCOptions &CLOpts;
   bool ABIRegNames = false;
 
 public:
   CSKYInstPrinter(const MCAsmInfo &MAI, const MCInstrInfo &MII,
-                  const MCRegisterInfo &MRI)
-      : MCInstPrinter(MAI, MII, MRI) {}
+                  const MCRegisterInfo &MRI);
 
   bool applyTargetSpecificCLOption(StringRef Opt) override;
 
@@ -65,7 +66,8 @@ public:
                    raw_ostream &O);
   void printFPR(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                 raw_ostream &O);
-  static const char *getRegisterName(MCRegister Reg);
+  static const char *getRegisterName(const CSKYMCOptions &CLOpts,
+                                     MCRegister Reg);
   static const char *getRegisterName(MCRegister Reg, unsigned AltIdx);
 };
 
