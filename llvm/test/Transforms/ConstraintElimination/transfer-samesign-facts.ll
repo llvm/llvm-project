@@ -448,3 +448,51 @@ then:
 else:
   ret <2 x i1> zeroinitializer
 }
+
+define i1 @samesign_sign_from_negative_fact(i8 %end, i8 %start) {
+; CHECK-LABEL: @samesign_sign_from_negative_fact(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[NEG:%.*]] = icmp slt i8 [[END:%.*]], 0
+; CHECK-NEXT:    br i1 [[NEG]], label [[THEN:%.*]], label [[EXIT:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[C:%.*]] = icmp samesign ule i8 [[END]], [[START:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
+; CHECK-NEXT:    ret i1 true
+; CHECK:       exit:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %neg = icmp slt i8 %end, 0
+  br i1 %neg, label %then, label %exit
+then:
+  %c = icmp samesign ule i8 %end, %start
+  call void @llvm.assume(i1 %c)
+  %r = icmp slt i8 %start, 0
+  ret i1 %r
+exit:
+  ret i1 false
+}
+
+define i1 @samesign_sign_from_nonnegative_fact(i8 %end, i8 %start) {
+; CHECK-LABEL: @samesign_sign_from_nonnegative_fact(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[NN:%.*]] = icmp sge i8 [[END:%.*]], 0
+; CHECK-NEXT:    br i1 [[NN]], label [[THEN:%.*]], label [[EXIT:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[C:%.*]] = icmp samesign uge i8 [[END]], [[START:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
+; CHECK-NEXT:    ret i1 true
+; CHECK:       exit:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %nn = icmp sge i8 %end, 0
+  br i1 %nn, label %then, label %exit
+then:
+  %c = icmp samesign uge i8 %end, %start
+  call void @llvm.assume(i1 %c)
+  %r = icmp sge i8 %start, 0
+  ret i1 %r
+exit:
+  ret i1 false
+}
