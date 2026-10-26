@@ -236,6 +236,11 @@ public:
     return Kind >= RegisterClassByHwMode0 && Kind < UserClass0;
   }
 
+  /// Check if this is a register class, either plain or by-hwmode.
+  bool isAnyRegisterClass() const {
+    return isRegisterClass() || isRegisterClassByHwMode();
+  }
+
   /// isUserClass() - Check if this is a user defined class.
   bool isUserClass() const { return Kind >= UserClass0; }
 
@@ -654,6 +659,15 @@ struct MatchableInfo {
     // Compare lexicographically by operand. The matcher validates that other
     // orderings wouldn't be ambiguous using \see couldMatchAmbiguouslyWith().
     for (const auto &[LHSOp, RHSOp] : zip_equal(AsmOperands, RHS.AsmOperands)) {
+      // A RegisterClassByHwMode and a plain RegisterClass in the same slot
+      // accept overlapping registers, but operator< always sorts the former
+      // after the latter, which would defeat the position-order tiebreak below
+      // (e.g. VEX before EVEX on X86). Skip such slots.
+      if (LHSOp.Class->isAnyRegisterClass() &&
+          RHSOp.Class->isAnyRegisterClass() &&
+          LHSOp.Class->isRegisterClassByHwMode() !=
+              RHSOp.Class->isRegisterClassByHwMode())
+        continue;
       if (*LHSOp.Class < *RHSOp.Class)
         return true;
       if (*RHSOp.Class < *LHSOp.Class)
