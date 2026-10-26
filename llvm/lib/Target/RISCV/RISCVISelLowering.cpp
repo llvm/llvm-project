@@ -19367,7 +19367,7 @@ static SDValue transformAddImmMulImm(SDNode *N, SelectionDAG &DAG,
 static SDValue
 combineAddOfExtsAlreadyExtended(SDNode *N, SelectionDAG &DAG,
                                 const RISCVSubtarget &Subtarget) {
-  EVT VT = User->getValueType(0);
+  EVT VT = N->getValueType(0);
   if (!VT.isVector() || !Subtarget.hasVInstructions())
     return SDValue();
 
