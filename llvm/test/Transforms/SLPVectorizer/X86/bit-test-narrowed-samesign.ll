@@ -7,7 +7,7 @@ define void @samesign_ne_sext_mask_sign_bit(ptr noalias %pa, ptr noalias %dst) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i8>, ptr [[PA]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <4 x i8> [[TMP0]], <i8 -128, i8 -128, i8 -128, i8 1>
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp samesign ne <4 x i8> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <4 x i8> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP2]], <4 x i32> splat (i32 3), <4 x i32> splat (i32 5)
 ; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr [[DST]], align 4
 ; CHECK-NEXT:    ret void
@@ -51,7 +51,7 @@ define void @samesign_eq_sext_mask_sign_bit(ptr noalias %pa, ptr noalias %dst) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i8>, ptr [[PA]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <4 x i8> [[TMP0]], <i8 -128, i8 -128, i8 -128, i8 1>
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp samesign eq <4 x i8> [[TMP1]], <i8 0, i8 0, i8 0, i8 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i8> [[TMP1]], <i8 0, i8 0, i8 0, i8 1>
 ; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP2]], <4 x i32> splat (i32 3), <4 x i32> splat (i32 5)
 ; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr [[DST]], align 4
 ; CHECK-NEXT:    ret void
