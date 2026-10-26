@@ -2897,7 +2897,7 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
       isSignaling = !isSignaling;
 
     auto opsTy = cast<cir::VectorType>(ops[0].getType());
-    unsigned numElts = opsTy.getSize();
+    unsigned numElts = opsTy.getFixedSize();
 
     // If the predicate is true or false, or the builtin is mask enabled, and
     // we're using constrained intrinsics, there is no compare operation we can
@@ -2951,7 +2951,7 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
         ops[3] = getMaskVecValue(builder, loc, ops[3], numElts);
         mlir::Value cmp = builder.emitIntrinsicCallOp(
             loc, intrinsicName,
-            cir::VectorType::get(builder.getSIntNTy(1), numElts), ops);
+            cir::VectorType::getFixed(builder.getSIntNTy(1), numElts), ops);
         return emitX86MaskedCompareResult(builder, cmp, numElts, nullptr, loc);
       }
 
@@ -2961,7 +2961,7 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
 
     unsigned width = builder.getCIRIntOrFloatBitWidth(opsTy.getElementType());
     cir::IntType cmpEltTy = builder.getSIntNTy(isMaskFCmp ? 1 : width);
-    auto cmpTy = cir::VectorType::get(cmpEltTy, numElts);
+    auto cmpTy = cir::VectorType::getFixed(cmpEltTy, numElts);
 
     mlir::Value cmp;
     if (isFalse) {
