@@ -159,6 +159,23 @@ define void @factor2_v4i32(ptr %src) {
   ret void
 }
 
+define void @factor2_v4i32_align2(ptr %src) {
+; CHECK-LABEL: factor2_v4i32_align2:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vld20.32 {q0, q1}, [r0]
+; CHECK-NEXT:    vld21.32 {q0, q1}, [r0]
+; CHECK-NEXT:    @ fake_use: $q0
+; CHECK-NEXT:    @ fake_use: $q1
+; CHECK-NEXT:    bx lr
+  %load = load <8 x i32>, ptr %src, align 2
+  %deinterleave = call { <4 x i32>, <4 x i32> } @llvm.vector.deinterleave2.v8i32(<8 x i32> %load)
+  %v0 = extractvalue { <4 x i32>, <4 x i32> } %deinterleave, 0
+  %v1 = extractvalue { <4 x i32>, <4 x i32> } %deinterleave, 1
+  call void (...) @llvm.fake.use(<4 x i32> %v0)
+  call void (...) @llvm.fake.use(<4 x i32> %v1)
+  ret void
+}
+
 define void @factor4_v16i8(ptr %src) {
 ; CHECK-LABEL: factor4_v16i8:
 ; CHECK:       @ %bb.0:
@@ -224,6 +241,33 @@ define void @factor4_v8f16(ptr %src) {
 ; CHECK-NEXT:    @ fake_use: $q0
 ; CHECK-NEXT:    bx lr
   %load = load <32 x half>, ptr %src
+  %deinterleave = call { <8 x half>, <8 x half>, <8 x half>, <8 x half> } @llvm.vector.deinterleave4.v32f16(<32 x half> %load)
+  %v0 = extractvalue { <8 x half>, <8 x half>, <8 x half>, <8 x half> } %deinterleave, 0
+  %v1 = extractvalue { <8 x half>, <8 x half>, <8 x half>, <8 x half> } %deinterleave, 1
+  %v2 = extractvalue { <8 x half>, <8 x half>, <8 x half>, <8 x half> } %deinterleave, 2
+  %v3 = extractvalue { <8 x half>, <8 x half>, <8 x half>, <8 x half> } %deinterleave, 3
+  call void (...) @llvm.fake.use(<8 x half> %v0)
+  call void (...) @llvm.fake.use(<8 x half> %v1)
+  call void (...) @llvm.fake.use(<8 x half> %v2)
+  call void (...) @llvm.fake.use(<8 x half> %v3)
+  ret void
+}
+
+define void @factor4_v8f16_align1(ptr %src) {
+; CHECK-LABEL: factor4_v8f16_align1:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vld40.16 {q0, q1, q2, q3}, [r0]
+; CHECK-NEXT:    vld41.16 {q0, q1, q2, q3}, [r0]
+; CHECK-NEXT:    vld42.16 {q0, q1, q2, q3}, [r0]
+; CHECK-NEXT:    vld43.16 {q0, q1, q2, q3}, [r0]
+; CHECK-NEXT:    @ fake_use: $q0
+; CHECK-NEXT:    @ fake_use: $q1
+; CHECK-NEXT:    vmov q0, q2
+; CHECK-NEXT:    @ fake_use: $q0
+; CHECK-NEXT:    vmov q0, q3
+; CHECK-NEXT:    @ fake_use: $q0
+; CHECK-NEXT:    bx lr
+  %load = load <32 x half>, ptr %src, align 1
   %deinterleave = call { <8 x half>, <8 x half>, <8 x half>, <8 x half> } @llvm.vector.deinterleave4.v32f16(<32 x half> %load)
   %v0 = extractvalue { <8 x half>, <8 x half>, <8 x half>, <8 x half> } %deinterleave, 0
   %v1 = extractvalue { <8 x half>, <8 x half>, <8 x half>, <8 x half> } %deinterleave, 1
