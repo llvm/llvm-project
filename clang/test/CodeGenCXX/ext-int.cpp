@@ -150,9 +150,9 @@ void ManglingInstantiator() {
   // LIN: call void @_Z16ManglingTestNTTPILDB99_993EEvv()
   // WIN: call void @"??$ManglingTestNTTP@$0DOB@@@YAXXZ"()
   ManglingDependent<4>();
-  // LIN: call signext i4 @_Z17ManglingDependentILi4EEDTtlDBT__EEv()
+  // LIN: call i4 @_Z17ManglingDependentILi4EEDTtlDBT__EEv()
   // WIN64: call i4 @"??$ManglingDependent@$03@@YAU?$_BitInt@$03@__clang@@XZ"()
-  // WIN32: call signext i4 @"??$ManglingDependent@$03@@YAU?$_BitInt@$03@__clang@@XZ"()
+  // WIN32: call i4 @"??$ManglingDependent@$03@@YAU?$_BitInt@$03@__clang@@XZ"()
   uint16_t4 V;
   ManglingTestTemplateParam(V);
   // LIN: call void @_Z25ManglingTestTemplateParamIDv4_DU16_EvRT_(ptr

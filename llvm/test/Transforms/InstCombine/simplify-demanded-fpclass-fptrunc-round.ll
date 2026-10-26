@@ -313,7 +313,7 @@ define nofpclass(nan ninf nnorm nsub nzero) half @ret_no_negative_no_nan__fptrun
 define nofpclass(snan) half @ret_no_snan__fptrunc__always_zero() {
 ; CHECK-LABEL: define nofpclass(snan) half @ret_no_snan__fptrunc__always_zero() {
 ; CHECK-NEXT:    [[ZERO:%.*]] = call float @returns_zero_f32()
-; CHECK-NEXT:    [[RESULT:%.*]] = call nnan half @llvm.fptrunc.round.f16.f32(float [[ZERO]], metadata !"round.downward")
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf half @llvm.fptrunc.round.f16.f32(float [[ZERO]], metadata !"round.downward")
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %zero = call float @returns_zero_f32()
@@ -324,7 +324,7 @@ define nofpclass(snan) half @ret_no_snan__fptrunc__always_zero() {
 define nofpclass(snan) half @ret_no_snan__fptrunc__always_zero_or_nan() {
 ; CHECK-LABEL: define nofpclass(snan) half @ret_no_snan__fptrunc__always_zero_or_nan() {
 ; CHECK-NEXT:    [[ZERO_OR_NAN:%.*]] = call float @returns_zero_or_nan_f32()
-; CHECK-NEXT:    [[RESULT:%.*]] = call half @llvm.fptrunc.round.f16.f32(float [[ZERO_OR_NAN]], metadata !"round.downward")
+; CHECK-NEXT:    [[RESULT:%.*]] = call ninf half @llvm.fptrunc.round.f16.f32(float [[ZERO_OR_NAN]], metadata !"round.downward")
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %zero.or.nan = call float @returns_zero_or_nan_f32()
@@ -418,8 +418,7 @@ define nofpclass(inf nan norm pzero psub) half @ret_only_nsub_nzero__fptrunc(flo
 define nofpclass(ninf) half @ret_no_ninf__fptrunc__inf() {
 ; CHECK-LABEL: define nofpclass(ninf) half @ret_no_ninf__fptrunc__inf() {
 ; CHECK-NEXT:    [[INF:%.*]] = call float @returns_inf_f32()
-; CHECK-NEXT:    [[RESULT:%.*]] = call nnan half @llvm.fptrunc.round.f16.f32(float +inf, metadata !"round.downward")
-; CHECK-NEXT:    ret half [[RESULT]]
+; CHECK-NEXT:    ret half +inf
 ;
   %inf = call float @returns_inf_f32()
   %result = call half @llvm.fptrunc.round.f16.f32(float %inf, metadata !"round.downward")
@@ -430,8 +429,7 @@ define nofpclass(ninf) half @ret_no_ninf__fptrunc__inf() {
 define nofpclass(pinf) half @ret_no_pinf__fptrunc__inf() {
 ; CHECK-LABEL: define nofpclass(pinf) half @ret_no_pinf__fptrunc__inf() {
 ; CHECK-NEXT:    [[INF:%.*]] = call float @returns_inf_f32()
-; CHECK-NEXT:    [[RESULT:%.*]] = call nnan half @llvm.fptrunc.round.f16.f32(float -inf, metadata !"round.downward")
-; CHECK-NEXT:    ret half [[RESULT]]
+; CHECK-NEXT:    ret half -inf
 ;
   %inf = call float @returns_inf_f32()
   %result = call half @llvm.fptrunc.round.f16.f32(float %inf, metadata !"round.downward")

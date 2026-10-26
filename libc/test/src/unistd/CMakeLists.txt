@@ -1,11 +1,11 @@
-add_custom_target(libc_unistd_unittests)
+add_libc_testsuite(libc-unistd-tests)
 
 add_subdirectory(testdata)
 
 add_libc_test(
   alarm_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     alarm_test.cpp
   DEPENDS
@@ -20,7 +20,7 @@ add_libc_test(
 add_libc_test(
   access_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     access_test.cpp
   DEPENDS
@@ -38,7 +38,7 @@ add_libc_test(
 add_libc_test(
   chdir_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     chdir_test.cpp
   DEPENDS
@@ -55,7 +55,7 @@ add_libc_test(
 add_libc_test(
   chown_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     chown_test.cpp
   DEPENDS
@@ -76,7 +76,7 @@ add_libc_test(
 add_libc_test(
   chroot_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     chroot_test.cpp
   DEPENDS
@@ -92,7 +92,7 @@ add_libc_test(
 add_libc_test(
   dup_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     dup_test.cpp
   DEPENDS
@@ -112,7 +112,7 @@ add_libc_test(
 add_libc_test(
   dup2_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     dup2_test.cpp
   DEPENDS
@@ -132,7 +132,7 @@ add_libc_test(
 add_libc_test(
   dup3_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     dup3_test.cpp
   DEPENDS
@@ -152,7 +152,7 @@ add_libc_test(
 add_libc_test(
   faccessat_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     faccessat_test.cpp
   DEPENDS
@@ -170,7 +170,7 @@ add_libc_test(
 add_libc_test(
   fchdir_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     fchdir_test.cpp
   DEPENDS
@@ -186,7 +186,7 @@ add_libc_test(
 add_libc_test(
   fchown_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     fchown_test.cpp
   DEPENDS
@@ -207,7 +207,7 @@ add_libc_test(
 add_libc_test(
   fchownat_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     fchownat_test.cpp
   DEPENDS
@@ -229,7 +229,7 @@ add_libc_test(
 add_libc_test(
   fdatasync_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     fdatasync_test.cpp
   DEPENDS
@@ -246,9 +246,35 @@ add_libc_test(
 )
 
 add_libc_test(
+  execlp_test
+  SUITE
+    libc-unistd-tests
+  SRCS
+    execlp_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.unistd.execlp
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
+  fexecve_test
+  SUITE
+    libc-unistd-tests
+  SRCS
+    fexecve_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.unistd.fexecve
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
   ftruncate_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     ftruncate_test.cpp
   DEPENDS
@@ -269,7 +295,7 @@ add_libc_test(
 add_libc_test(
   pread_pwrite_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     pread_pwrite_test.cpp
   DEPENDS
@@ -290,7 +316,7 @@ add_libc_test(
 add_libc_test(
   read_write_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     read_write_test.cpp
   DEPENDS
@@ -307,7 +333,7 @@ add_libc_test(
 add_libc_test(
   lchown_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     lchown_test.cpp
   DEPENDS
@@ -330,7 +356,7 @@ add_libc_test(
 add_libc_test(
   link_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     link_test.cpp
   DEPENDS
@@ -348,7 +374,7 @@ add_libc_test(
 add_libc_test(
   linkat_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     linkat_test.cpp
   DEPENDS
@@ -366,7 +392,7 @@ add_libc_test(
 add_libc_test(
   lseek_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     lseek_test.cpp
   DEPENDS
@@ -383,7 +409,7 @@ add_libc_test(
 add_libc_test(
   nice_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     nice_test.cpp
   DEPENDS
@@ -394,7 +420,7 @@ add_libc_test(
 add_libc_test(
   pipe_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     pipe_test.cpp
   DEPENDS
@@ -409,7 +435,7 @@ add_libc_test(
 add_libc_test(
   pipe2_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     pipe2_test.cpp
   DEPENDS
@@ -424,7 +450,7 @@ add_libc_test(
 add_libc_test(
   rmdir_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     rmdir_test.cpp
   DEPENDS
@@ -440,7 +466,7 @@ add_libc_test(
 add_libc_test(
   swab_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     swab_test.cpp
   DEPENDS
@@ -450,7 +476,7 @@ add_libc_test(
 add_libc_test(
   readlink_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     readlink_test.cpp
   DEPENDS
@@ -468,7 +494,7 @@ add_libc_test(
 add_libc_test(
   readlinkat_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     readlinkat_test.cpp
   DEPENDS
@@ -485,9 +511,39 @@ add_libc_test(
 )
 
 add_libc_test(
+  setegid_test
+  SUITE
+    libc-unistd-tests
+  SRCS
+    setegid_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.unistd.getegid
+    libc.src.unistd.getgid
+    libc.src.unistd.setegid
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
+  seteuid_test
+  SUITE
+    libc-unistd-tests
+  SRCS
+    seteuid_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.unistd.geteuid
+    libc.src.unistd.getuid
+    libc.src.unistd.seteuid
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
   setgid_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     setgid_test.cpp
   DEPENDS
@@ -501,7 +557,7 @@ add_libc_test(
 add_libc_test(
   setpgid_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     setpgid_test.cpp
   DEPENDS
@@ -514,7 +570,7 @@ add_libc_test(
 add_libc_test(
   setregid_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     setregid_test.cpp
   DEPENDS
@@ -527,9 +583,24 @@ add_libc_test(
 )
 
 add_libc_test(
+  setresgid_test
+  SUITE
+    libc-unistd-tests
+  SRCS
+    setresgid_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.unistd.getegid
+    libc.src.unistd.getgid
+    libc.src.unistd.setresgid
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
   setreuid_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     setreuid_test.cpp
   DEPENDS
@@ -542,9 +613,24 @@ add_libc_test(
 )
 
 add_libc_test(
+  setresuid_test
+  SUITE
+    libc-unistd-tests
+  SRCS
+    setresuid_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.unistd.geteuid
+    libc.src.unistd.getuid
+    libc.src.unistd.setresuid
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
   setsid_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     setsid_test.cpp
   DEPENDS
@@ -554,7 +640,7 @@ add_libc_test(
 add_libc_test(
   setuid_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     setuid_test.cpp
   DEPENDS
@@ -568,7 +654,7 @@ add_libc_test(
 add_libc_test(
   sleep_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     sleep_test.cpp
   DEPENDS
@@ -581,7 +667,7 @@ add_libc_test(
 add_libc_test(
   symlink_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     symlink_test.cpp
   DEPENDS
@@ -599,7 +685,7 @@ add_libc_test(
 add_libc_test(
   symlinkat_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     symlinkat_test.cpp
   DEPENDS
@@ -617,7 +703,7 @@ add_libc_test(
 add_libc_test(
   sync_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     sync_test.cpp
   DEPENDS
@@ -625,9 +711,29 @@ add_libc_test(
 )
 
 add_libc_test(
+  syncfs_test
+  SUITE
+    libc-unistd-tests
+  SRCS
+    syncfs_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fcntl_macros
+    libc.hdr.sys_stat_macros
+    libc.src.__support.CPP.scope
+    libc.src.fcntl.open
+    libc.src.unistd.close
+    libc.src.unistd.syncfs
+    libc.src.unistd.unlink
+    libc.src.unistd.write
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
   tcgetpgrp_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     tcgetpgrp_test.cpp
   DEPENDS
@@ -645,7 +751,7 @@ add_libc_test(
 add_libc_test(
   tcsetpgrp_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     tcsetpgrp_test.cpp
   DEPENDS
@@ -663,7 +769,7 @@ add_libc_test(
 add_libc_test(
   truncate_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     truncate_test.cpp
   DEPENDS
@@ -684,7 +790,7 @@ add_libc_test(
 add_libc_test(
   unlink_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     unlink_test.cpp
   DEPENDS
@@ -701,7 +807,7 @@ add_libc_test(
 add_libc_test(
   unlinkat_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     unlinkat_test.cpp
   DEPENDS
@@ -719,7 +825,7 @@ add_libc_test(
 add_libc_test(
   usleep_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     usleep_test.cpp
   DEPENDS
@@ -733,7 +839,7 @@ add_libc_test(
 add_libc_test(
   gethostname_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     gethostname_test.cpp
   DEPENDS
@@ -745,7 +851,7 @@ add_libc_test(
 add_libc_test(
   getpagesize_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     getpagesize_test.cpp
   DEPENDS
@@ -756,7 +862,7 @@ add_libc_test(
 add_libc_test(
   getegid_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     getegid_test.cpp
   DEPENDS
@@ -766,7 +872,7 @@ add_libc_test(
 add_libc_test(
   getgid_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     getgid_test.cpp
   DEPENDS
@@ -776,7 +882,7 @@ add_libc_test(
 add_libc_test(
   getpid_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     getpid_test.cpp
   DEPENDS
@@ -786,7 +892,7 @@ add_libc_test(
 add_libc_test(
   getpgid_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     getpgid_test.cpp
   DEPENDS
@@ -800,7 +906,7 @@ add_libc_test(
 add_libc_test(
   getpgrp_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     getpgrp_test.cpp
   DEPENDS
@@ -812,7 +918,7 @@ add_libc_test(
 add_libc_test(
   getppid_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     getppid_test.cpp
   DEPENDS
@@ -822,7 +928,7 @@ add_libc_test(
 add_libc_test(
   getsid_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     getsid_test.cpp
   DEPENDS
@@ -834,7 +940,7 @@ add_libc_test(
 add_libc_test(
   getuid_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     getuid_test.cpp
   DEPENDS
@@ -844,7 +950,7 @@ add_libc_test(
 add_libc_test(
   isatty_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     isatty_test.cpp
   DEPENDS
@@ -860,7 +966,7 @@ add_libc_test(
 add_libc_test(
   geteuid_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     geteuid_test.cpp
   DEPENDS
@@ -870,7 +976,7 @@ add_libc_test(
 add_libc_test(
   syscall_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     syscall_test.cpp
   DEPENDS
@@ -888,7 +994,7 @@ add_libc_test(
 add_libc_test(
   confstr_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     confstr_test.cpp
   DEPENDS
@@ -902,7 +1008,7 @@ add_libc_test(
 add_libc_test(
   sysconf_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     sysconf_test.cpp
   DEPENDS
@@ -917,7 +1023,7 @@ add_libc_test(
 add_libc_test(
   fpathconf_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     fpathconf_test.cpp
   DEPENDS
@@ -934,7 +1040,7 @@ add_libc_test(
 add_libc_test(
   pathconf_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     pathconf_test.cpp
   DEPENDS
@@ -951,7 +1057,7 @@ add_libc_test(
 add_libc_test(
   pause_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     pause_test.cpp
   DEPENDS
@@ -972,7 +1078,7 @@ add_libc_test(
 add_libc_test(
   getopt_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     getopt_test.cpp
   DEPENDS
@@ -985,7 +1091,7 @@ add_libc_test(
 add_libc_test(
   getentropy_test
   SUITE
-    libc_unistd_unittests
+    libc-unistd-tests
   SRCS
     getentropy_test.cpp
   DEPENDS
@@ -995,11 +1101,31 @@ add_libc_test(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
+add_libc_test(
+  lockf_test
+  SUITE
+    libc-unistd-tests
+  SRCS
+    lockf_test.cpp
+  DEPENDS
+    libc.hdr.fcntl_macros
+    libc.hdr.sys_stat_macros
+    libc.hdr.unistd_macros
+    libc.src.__support.CPP.scope
+    libc.src.errno.errno
+    libc.src.fcntl.open
+    libc.src.unistd.close
+    libc.src.unistd.lockf
+    libc.src.unistd.unlink
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
 if(LLVM_LIBC_FULL_BUILD)
   add_libc_test(
     _exit_test
     SUITE
-      libc_unistd_unittests
+      libc-unistd-tests
     SRCS
       _exit_test.cpp
     DEPENDS

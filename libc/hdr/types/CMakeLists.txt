@@ -24,10 +24,17 @@ add_proxy_header_library(
   mbstate_t
   HDRS
     mbstate_t.h
-  DEPENDS
-    libc.include.llvm-libc-types.mbstate_t
   FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.mbstate_t
     libc.include.uchar
+)
+
+add_proxy_header_library(
+  fpos_t
+  HDRS
+    fpos_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.fpos_t
 )
 
 add_proxy_header_library(
@@ -779,6 +786,14 @@ add_proxy_header_library(
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.struct_udphdr
     libc.include.netinet_udp
+)
+
+add_proxy_header_library(
+  struct_ether_addr
+  HDRS
+    struct_ether_addr.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_ether_addr
 )
 
 add_proxy_header_library(

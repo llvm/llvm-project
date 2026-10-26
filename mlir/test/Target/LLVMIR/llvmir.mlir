@@ -1819,6 +1819,18 @@ llvm.func @invoke_phis() -> i32 attributes { personality = @__gxx_personality_v0
 
 // -----
 
+module attributes {llvm.data_layout = "P4"} {
+  llvm.func @__gxx_personality_v0(...) -> i32
+
+  // CHECK-LABEL: @personality_program_as
+  // CHECK-SAME: personality ptr addrspace(4) @__gxx_personality_v0
+  llvm.func @personality_program_as() attributes { personality = @__gxx_personality_v0 } {
+    llvm.return
+  }
+}
+
+// -----
+
 // CHECK-LABEL: @hasGCFunction
 // CHECK-SAME: gc "statepoint-example"
 llvm.func @hasGCFunction() attributes { garbageCollector = "statepoint-example" } {
@@ -1914,7 +1926,7 @@ llvm.func @callFenceInst() {
 
 // CHECK-LABEL: @passthrough
 // CHECK: #[[ATTR_GROUP:[0-9]*]]
-llvm.func @passthrough() attributes {passthrough = [["alignstack", "4"], "null_pointer_is_valid", ["foo", "bar"]]} {
+llvm.func @passthrough() attributes {passthrough = [["alignstack", "4"], "null_pointer_is_valid", ["foo", "bar"], ["llvm.assume", "omp_no_openmp"]]} {
   llvm.return
 }
 
@@ -1922,6 +1934,7 @@ llvm.func @passthrough() attributes {passthrough = [["alignstack", "4"], "null_p
 // CHECK-DAG: alignstack=4
 // CHECK-DAG: null_pointer_is_valid
 // CHECK-DAG: "foo"="bar"
+// CHECK-DAG: "llvm.assume"="omp_no_openmp"
 
 // -----
 
@@ -1943,30 +1956,6 @@ llvm.func @functionEntryCount() attributes {
 }
 
 // CHECK-DAG: ![[PROF_ID]] = !{!"function_entry_count", i64 4242}
-
-// -----
-
-// CHECK-LABEL: @syntheticFunctionEntryCount
-// CHECK-SAME: !prof ![[SYNTH_PROF_ID:[0-9]+]]
-llvm.func @syntheticFunctionEntryCount() attributes {
-  function_entry_count = #llvm.function_entry_count<entry_count = 7, count_type = synthetic>
-} {
-  llvm.return
-}
-
-// CHECK-DAG: ![[SYNTH_PROF_ID]] = !{!"synthetic_function_entry_count", i64 7}
-
-// -----
-
-// CHECK-LABEL: @syntheticFunctionEntryCountWithImports
-// CHECK-SAME: !prof ![[SYNTH_IMPORTS_PROF_ID:[0-9]+]]
-llvm.func @syntheticFunctionEntryCountWithImports() attributes {
-  function_entry_count = #llvm.function_entry_count<entry_count = 7, count_type = synthetic, imports = 1234, 4, 1234>
-} {
-  llvm.return
-}
-
-// CHECK-DAG: ![[SYNTH_IMPORTS_PROF_ID]] = !{!"synthetic_function_entry_count", i64 7, i64 4, i64 1234}
 
 // -----
 
@@ -2145,6 +2134,17 @@ llvm.func @noundef_load(%ptr : !llvm.ptr) -> i32 {
 }
 
 // CHECK: ![[NODE]] = !{}
+
+// -----
+
+// CHECK-LABEL: @range_load
+llvm.func @range_load(%ptr : !llvm.ptr) -> i32 {
+  // CHECK: load i32, ptr %{{.*}}, align 4, !range ![[RANGE:[0-9]+]]
+  %0 = llvm.load %ptr range<i32, 0, 10> : !llvm.ptr -> i32
+  llvm.return %0 : i32
+}
+
+// CHECK: ![[RANGE]] = !{i32 0, i32 10}
 
 // -----
 

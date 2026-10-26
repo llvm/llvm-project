@@ -780,3 +780,28 @@ define <3 x i8> @bitcast_constexpr_8b3_3i8_crossing_poison() {
   %res = bitcast <8 x b3> <b3 1, b3 2, b3 poison, b3 3, b3 4, b3 5, b3 6, b3 7> to <3 x i8>
   ret <3 x i8> %res
 }
+
+; There is no all-ones pointer constant, so these must not fold.
+define ptr @bitcast_constexpr_allones_b32_ptr() {
+; CHECK-LABEL: @bitcast_constexpr_allones_b32_ptr(
+; CHECK-NEXT:    ret ptr bitcast (b32 -1 to ptr)
+;
+  %res = bitcast b32 -1 to ptr
+  ret ptr %res
+}
+
+define <2 x ptr> @bitcast_constexpr_allones_2b32_2ptr() {
+; CHECK-LABEL: @bitcast_constexpr_allones_2b32_2ptr(
+; CHECK-NEXT:    ret <2 x ptr> <ptr bitcast (b32 -1 to ptr), ptr bitcast (b32 -1 to ptr)>
+;
+  %res = bitcast <2 x b32> splat (b32 -1) to <2 x ptr>
+  ret <2 x ptr> %res
+}
+
+define ptr @bitcast_constexpr_allones_2b16_ptr() {
+; CHECK-LABEL: @bitcast_constexpr_allones_2b16_ptr(
+; CHECK-NEXT:    ret ptr bitcast (<2 x b16> splat (b16 -1) to ptr)
+;
+  %res = bitcast <2 x b16> splat (b16 -1) to ptr
+  ret ptr %res
+}

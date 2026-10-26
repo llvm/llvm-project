@@ -2706,6 +2706,8 @@ Request packet has the fields:
 
 Response is `F`, followed by the number of bytes written (base 16).
 
+lldb-server ignores the offset for a file that cannot seek, such as a pipe.
+
 ### vFile:size
 
 Get the size of a file on the target system, filename in ASCII hex.

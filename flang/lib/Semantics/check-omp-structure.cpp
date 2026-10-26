@@ -653,6 +653,38 @@ void OmpStructureChecker::AnalyzeObject(const parser::OmpObject &object) {
       object.u);
 }
 
+void OmpStructureChecker::AnalyzeSubstring(const parser::OmpObject &object) {
+  const auto *designator{GetDesignatorFromObj(object)};
+  if (!designator) {
+    return;
+  }
+  if (const auto *array{GetArrayElementFromObj(object)}) {
+    // Scalar character substrings can be parsed as array elements, including
+    // scalar components of array-valued parents.
+    const auto *symbol{GetObjectSymbol(object, /*ultimate=*/true)};
+    if (!symbol || symbol->Rank() != 0 || IsProcedure(*symbol) ||
+        IsStmtFunction(*symbol) || !symbol->GetType() ||
+        symbol->GetType()->category() != DeclTypeSpec::Category::Character) {
+      return;
+    }
+    // CheckArraySection already diagnoses substring strides. Do not emit
+    // another diagnostic for the same error.
+    if (llvm::any_of(array->Subscripts(), [](const auto &subscript) {
+          const auto *triplet{
+              std::get_if<parser::SubscriptTriplet>(&subscript.u)};
+          return triplet && std::get<2>(triplet->t).has_value();
+        })) {
+      return;
+    }
+  } else if (!std::holds_alternative<parser::Substring>(designator->u)) {
+    return;
+  }
+  // Keep diagnostics, and only rewrite the parse tree after clause-specific
+  // checks that distinguish ArrayElement from Substring have completed.
+  evaluate::ExpressionAnalyzer ea{context_};
+  ea.Analyze(*designator);
+}
+
 const parser::OpenMPConstruct *
 OmpStructureChecker::GetCurrentConstruct() const {
   for (const LoopOrConstruct &c : llvm::reverse(constructStack_)) {
@@ -926,7 +958,6 @@ void OmpStructureChecker::CheckArgumentObjectKind(const parser::OmpClause &x) {
 
   for (auto &object : DEREF(GetOmpObjectList(x)).v) {
     AnalyzeObject(object);
-    // substring
     const Symbol *symbol{GetObjectSymbol(object, /*ultimate=*/true)};
     if (symbol == nullptr) {
       // This may happen with a blank common block. Skip these cases.
@@ -986,6 +1017,17 @@ void OmpStructureChecker::CheckArgumentObjectKind(const parser::OmpClause &x) {
     if (neededType) {
       context_.SayWithDecl(*symbol, source,
           "'%s' must be %s list item"_err_en_US, symbol->name(), neededType);
+    }
+  }
+
+  // OpenMP 5.2 3.2.1 and 6.0 5.2.1 exclude substrings from variable
+  // list items, and consequently from extended and locator list items.
+  // DEPEND and AFFINITY retain their existing substring extensions and
+  // diagnostics in CheckArraySection and the clause-specific checks.
+  if (version >= 52 && clauseId != llvm::omp::Clause::OMPC_depend &&
+      clauseId != llvm::omp::Clause::OMPC_affinity) {
+    if (const auto *objects{GetOmpObjectList(x)}) {
+      CheckSubstring(*objects, clauseId);
     }
   }
 }
@@ -1569,15 +1611,24 @@ void OmpStructureChecker::CheckIteratorRange(
         "The begin and end expressions in iterator range-specification are "
         "mandatory"_err_en_US);
   }
+  // GetIntValue keeps only the low 64 bits, so skip wider constants.
+  auto getIntValue{[](const auto &e) -> std::optional<int64_t> {
+    if (const auto *expr{GetExpr(nullptr, e)}) {
+      if (auto type{expr->GetType()}; type && type->kind() <= 8) {
+        return evaluate::ToInt64(*expr);
+      }
+    }
+    return std::nullopt;
+  }};
   // [5.2:67:19] In a range-specification, if the step is not specified its
   // value is implicitly defined to be 1.
-  if (auto stepv{step ? GetIntValue(*step) : std::optional<int64_t>{1}}) {
+  if (auto stepv{step ? getIntValue(*step) : std::optional<int64_t>{1}}) {
     if (*stepv == 0) {
       context_.Say(
           x.source, "The step value in the iterator range is 0"_warn_en_US);
     } else if (begin && end) {
-      std::optional<int64_t> beginv{GetIntValue(*begin)};
-      std::optional<int64_t> endv{GetIntValue(*end)};
+      std::optional<int64_t> beginv{getIntValue(*begin)};
+      std::optional<int64_t> endv{getIntValue(*end)};
       if (beginv && endv) {
         if (*stepv > 0 && *beginv > *endv) {
           context_.Say(x.source,
@@ -2191,6 +2242,10 @@ void OmpStructureChecker::Enter(const parser::OmpDeclareSimdDirective &x) {
   const parser::OmpDirectiveName &dirName{x.v.DirName()};
 
   llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
+
+  context_.Say(dirName.source,
+      "%s directive is not implemented yet and will be ignored"_warn_en_US,
+      GetUpperName(dirName.v, version));
 
   const Scope &containingScope = context_.FindScope(dirName.source);
   const Scope &progUnitScope = GetProgramUnitContaining(containingScope);
@@ -2874,7 +2929,9 @@ void OmpStructureChecker::Leave(const parser::OmpDeclareTargetDirective &x) {
                   std::is_same_v<TypeC, parser::OmpClause::Link> ||
                   std::is_same_v<TypeC, parser::OmpClause::To>) {
                 auto &objList{*GetOmpObjectList(c)};
-                CheckVarIsNotPartOfAnotherVar(dirName.source, objList);
+                CheckVarIsNotPartOfAnotherVar(dirName.source, objList, "",
+                    /*checkSubstrings=*/
+                    context_.langOptions().getOpenMPVersion() < 52);
                 CheckThreadprivateOrDeclareTargetVar(objList);
               }
               if constexpr (std::is_same_v<TypeC, parser::OmpClause::Enter>) {
@@ -4226,6 +4283,12 @@ void OmpStructureChecker::CheckReductionObjects(
   SymbolSourceMap symbols;
   GetSymbolsInObjectList(objects, symbols);
 
+  // Earlier versions prohibit parts of variables in reduction clauses too.
+  // From OpenMP 5.2, CheckArgumentObjectKind diagnoses substrings generically.
+  if (version < 52) {
+    CheckSubstring(objects, clauseId);
+  }
+
   // Array sections must be a contiguous storage, have non-zero length.
   for (const parser::OmpObject &object : objects.v) {
     CheckIfContiguous(object);
@@ -4529,6 +4592,19 @@ void OmpStructureChecker::CheckReductionModifier(
   }
 }
 
+void OmpStructureChecker::CheckSubstring(
+    const parser::OmpObjectList &objects, llvm::omp::Clause clauseId) {
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
+  for (const parser::OmpObject &object : objects.v) {
+    if (IsSubstringAndValidate(object, &context_).value_or(false)) {
+      auto source{GetObjectSource(object)};
+      context_.Say(source ? *source : GetContext().clauseSource,
+          "A substring cannot appear in a %s clause"_err_en_US,
+          parser::omp::GetUpperName(clauseId, version));
+    }
+  }
+}
+
 void OmpStructureChecker::CheckReductionArraySection(
     const parser::OmpObjectList &ompObjectList, llvm::omp::Clause clauseId) {
   for (const auto &ompObject : ompObjectList.v) {
@@ -4583,14 +4659,16 @@ void OmpStructureChecker::CheckSharedBindingInOuterContext(
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Shared &x) {
-  CheckVarIsNotPartOfAnotherVar(GetContext().clauseSource, x.v, "SHARED");
+  CheckVarIsNotPartOfAnotherVar(GetContext().clauseSource, x.v, "SHARED",
+      /*checkSubstrings=*/context_.langOptions().getOpenMPVersion() < 52);
   CheckCrayPointee(x.v, "SHARED");
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Private &x) {
   SymbolSourceMap symbols;
   GetSymbolsInObjectList(x.v, symbols);
-  CheckVarIsNotPartOfAnotherVar(GetContext().clauseSource, x.v, "PRIVATE");
+  CheckVarIsNotPartOfAnotherVar(GetContext().clauseSource, x.v, "PRIVATE",
+      /*checkSubstrings=*/context_.langOptions().getOpenMPVersion() < 52);
   CheckIntentInPointer(symbols, llvm::omp::Clause::OMPC_private);
   CheckCrayPointee(x.v, "PRIVATE");
 }
@@ -4619,15 +4697,24 @@ void OmpStructureChecker::CheckTypeParamInquiry(const parser::CharBlock &source,
 
 void OmpStructureChecker::CheckVarIsNotPartOfAnotherVar(
     const parser::CharBlock &source, const parser::OmpObjectList &objList,
-    llvm::StringRef clause) {
+    llvm::StringRef clause, bool checkSubstrings) {
   for (const auto &ompObject : objList.v) {
-    CheckVarIsNotPartOfAnotherVar(source, ompObject, clause);
+    CheckVarIsNotPartOfAnotherVar(source, ompObject, clause, checkSubstrings);
   }
 }
 
 void OmpStructureChecker::CheckVarIsNotPartOfAnotherVar(
     const parser::CharBlock &source, const parser::OmpObject &object,
-    llvm::StringRef clause) {
+    llvm::StringRef clause, bool checkSubstrings) {
+  auto isSubstring{IsSubstringAndValidate(object, &context_)};
+  if (!isSubstring) {
+    return; // Expression analysis has already diagnosed the invalid item.
+  }
+  if (!checkSubstrings && *isSubstring) {
+    // Clause-specific substring checks are needed before OpenMP 5.2 only;
+    // CheckArgumentObjectKind diagnoses them generically in newer versions.
+    return;
+  }
   if (const Symbol *symbol{GetObjectSymbol(object)}) {
     if (IsTypeParamInquiry(*symbol)) {
       return;
@@ -4635,7 +4722,7 @@ void OmpStructureChecker::CheckVarIsNotPartOfAnotherVar(
     llvm::StringRef kind{};
     if (IsStructureComponent(*symbol)) {
       kind = "A structure component";
-    } else if (IsSubstring(object, &context_)) {
+    } else if (*isSubstring) {
       kind = "A substring";
     } else if (IsArrayElement(object, &context_)) {
       kind = "An array element";
@@ -4655,7 +4742,8 @@ void OmpStructureChecker::CheckVarIsNotPartOfAnotherVar(
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Firstprivate &x) {
-  CheckVarIsNotPartOfAnotherVar(GetContext().clauseSource, x.v, "FIRSTPRIVATE");
+  CheckVarIsNotPartOfAnotherVar(GetContext().clauseSource, x.v, "FIRSTPRIVATE",
+      /*checkSubstrings=*/context_.langOptions().getOpenMPVersion() < 52);
   CheckCrayPointee(x.v, "FIRSTPRIVATE");
 
   SymbolSourceMap currSymbols;
@@ -5251,6 +5339,40 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Depend &x) {
             "one locator"_err_en_US);
       }
     }
+    // [5.0:256:1-2], [5.1:288:19-20], [5.2:323:1-2]
+    // With the DEPOBJ dependence type, array sections cannot be specified and
+    // the list items must be depend objects (scalar integer variables of kind
+    // omp_depend_kind, which is c_intptr_t). This does not apply on the DEPOBJ
+    // construct itself, where the DEPOBJ dependence type is already disallowed.
+    bool isDepobjType{dir != llvm::omp::OMPD_depobj &&
+        taskDep->GetTaskDepType() ==
+            parser::OmpTaskDependenceType::Value::Depobj};
+    auto checkDepobjVar = [&](const parser::OmpObject &object) {
+      const parser::Designator *designator{GetDesignatorFromObj(object)};
+      if (!designator) {
+        context_.Say(GetContext().clauseSource,
+            "A list item in a DEPEND clause with the DEPOBJ dependence type must be a depend object"_err_en_US);
+        return;
+      }
+      evaluate::ExpressionAnalyzer ea{context_};
+      auto restore{ea.AllowWholeAssumedSizeArray(true)};
+      MaybeExpr expr{ea.Analyze(*designator)};
+      if (!expr) {
+        return;
+      }
+      // A depend object is a scalar integer of omp_depend_kind (c_intptr_t).
+      // Rank() != 0 also catches whole arrays, not just array sections, so use
+      // a single diagnostic describing the required depend-object type.
+      std::optional<evaluate::DynamicType> type{expr->GetType()};
+      int depobjKind{static_cast<int>(
+          context_.targetCharacteristics().integerKindForPointer())};
+      if (expr->Rank() != 0 || !type ||
+          type->category() != evaluate::TypeCategory::Integer ||
+          type->kind() != depobjKind) {
+        context_.Say(GetContext().clauseSource,
+            "A list item in a DEPEND clause with the DEPOBJ dependence type must be a depend object (a scalar integer variable of kind omp_depend_kind)"_err_en_US);
+      }
+    };
     for (const auto &object : objList.v) {
       if (const auto *name{GetCommonBlockFromObj(object)}) {
         context_.Say(GetContext().clauseSource,
@@ -5258,15 +5380,24 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Depend &x) {
             "clause"_err_en_US,
             name->ToString());
       } else if (auto *dataRef{GetDataRefFromObj(object)}) {
-        CheckDependList(*dataRef);
-        if (const auto *arr{GetArrayElementFromObj(object)}) {
-          CheckArraySection(
-              *arr, GetLastName(*dataRef), llvm::omp::Clause::OMPC_depend);
+        if (isDepobjType) {
+          checkDepobjVar(object);
+        } else {
+          CheckDependList(*dataRef);
+          CheckArraySectionStrides(*dataRef, llvm::omp::Clause::OMPC_depend);
+          if (const auto *arr{GetArrayElementFromObj(object)}) {
+            CheckArraySection(
+                *arr, GetLastName(*dataRef), llvm::omp::Clause::OMPC_depend);
+          }
         }
+      }
+      if (!isDepobjType) {
+        AnalyzeSubstring(object);
       }
     }
     auto &modifiers{OmpGetModifiers(*taskDep)};
-    if (OmpGetUniqueModifier<parser::OmpIterator>(modifiers)) {
+    if (auto *iter{OmpGetUniqueModifier<parser::OmpIterator>(modifiers)}) {
+      CheckIteratorModifier(*iter);
       if (dir == llvm::omp::OMPD_depobj) {
         context_.Say(GetContext().clauseSource,
             "An iterator-modifier may specify multiple locators, a DEPEND clause on a DEPOBJ construct must only specify one locator"_warn_en_US);
@@ -5299,8 +5430,9 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Copyprivate &x) {
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Lastprivate &x) {
   const auto &objectList{*GetOmpObjectList(x)};
-  CheckVarIsNotPartOfAnotherVar(
-      GetContext().clauseSource, objectList, "LASTPRIVATE");
+  CheckVarIsNotPartOfAnotherVar(GetContext().clauseSource, objectList,
+      "LASTPRIVATE",
+      /*checkSubstrings=*/context_.langOptions().getOpenMPVersion() < 52);
   CheckCrayPointee(objectList, "LASTPRIVATE");
 
   DirectivesClauseTriple dirClauseTriple;
@@ -6001,10 +6133,13 @@ void OmpStructureChecker::CheckDependList(const parser::DataRef &d) {
       d.u);
 }
 
-// Called from both Reduction and Depend clause.
+// Check final array sections in REDUCTION, DEPEND, and AFFINITY clauses.
 void OmpStructureChecker::CheckArraySection(
     const parser::ArrayElement &arrayElement, const parser::Name &name,
     const llvm::omp::Clause clause) {
+  if (!name.symbol) {
+    return;
+  }
   llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   // Sometimes substring operations are incorrectly parsed as array accesses.
   // Detect this by looking for array accesses on character variables which are
@@ -6016,17 +6151,22 @@ void OmpStructureChecker::CheckArraySection(
   if (!IsAssumedSizeArray(*name.symbol)) {
     evaluate::ExpressionAnalyzer ea{context_};
     if (MaybeExpr expr = ea.Analyze(arrayElement.Base())) {
-      if (expr->Rank() == 0) {
-        // Not an array: rank 0
+      // Use the final symbol's rank, as in CheckArraySectionStrides. A scalar
+      // character component can have an array-valued parent, making the rank
+      // of the base expression nonzero.
+      if (name.symbol->Rank() == 0) {
         if (std::optional<evaluate::DynamicType> type = expr->GetType()) {
           if (type->category() == evaluate::TypeCategory::Character) {
-            // Substrings are explicitly denied by the standard [6.0:163:9-11].
-            // This is supported as an extension. This restriction was added in
-            // OpenMP 5.2.
             isSubstring = true;
-            context_.Say(GetContext().clauseSource,
-                "The use of substrings in OpenMP argument lists has been disallowed since OpenMP 5.2."_port_en_US);
-          } else {
+            if (version >= 52 &&
+                (clause == llvm::omp::Clause::OMPC_depend ||
+                    clause == llvm::omp::Clause::OMPC_affinity)) {
+              // Preserve the existing substring extensions in DEPEND and
+              // AFFINITY, despite the OpenMP 5.2 list-item restriction.
+              context_.Say(GetContext().clauseSource,
+                  "The use of substrings in OpenMP argument lists has been disallowed since OpenMP 5.2."_port_en_US);
+            }
+          } else if (expr->Rank() == 0) {
             llvm_unreachable(
                 "Array indexing on a variable that isn't an array");
           }
@@ -6034,10 +6174,19 @@ void OmpStructureChecker::CheckArraySection(
       }
     }
   }
+  // AFFINITY and DEPEND reject explicit strides in CheckArraySectionStrides.
+  // TODO: Extend that check to REDUCTION and other applicable clauses.
+  bool checkPositiveStride{isSubstring ||
+      (clause != llvm::omp::Clause::OMPC_affinity &&
+          clause != llvm::omp::Clause::OMPC_depend)};
   if (!arrayElement.Subscripts().empty()) {
     for (const auto &subscript : arrayElement.Subscripts()) {
       if (const auto *triplet{
               std::get_if<parser::SubscriptTriplet>(&subscript.u)}) {
+        if (isSubstring && std::get<2>(triplet->t)) {
+          context_.Say(GetContext().clauseSource,
+              "Cannot specify a step for a substring"_err_en_US);
+        }
         const auto &lower{std::get<0>(triplet->t)};
         const auto &upper{std::get<1>(triplet->t)};
         if (lower && upper) {
@@ -6047,14 +6196,10 @@ void OmpStructureChecker::CheckArraySection(
             // Restrictions: if a stride expression is specified it must be
             // positive. A stride of 0 doesn't make sense.
             strideVal = GetIntValue(strideExpr);
-            if (strideVal && *strideVal < 1) {
+            if (strideVal && *strideVal < 1 && checkPositiveStride) {
               context_.Say(GetContext().clauseSource,
                   "'%s' in %s clause must have a positive stride"_err_en_US,
                   name.ToString(), parser::omp::GetUpperName(clause, version));
-            }
-            if (isSubstring) {
-              context_.Say(GetContext().clauseSource,
-                  "Cannot specify a step for a substring"_err_en_US);
             }
           }
           const auto lval{GetIntValue(lower)};
@@ -6099,6 +6244,42 @@ void OmpStructureChecker::CheckArraySection(
       }
     }
   }
+}
+
+// OpenMP 5.2 3.2.5 forbids explicit strides unless the clause permits them.
+// Check only the locator's base chain, not sections in subscript expressions.
+void OmpStructureChecker::CheckArraySectionStrides(
+    const parser::DataRef &dataRef, llvm::omp::Clause clause) {
+  common::visit(
+      common::visitors{
+          [](const parser::Name &) {},
+          [&](const common::Indirection<parser::StructureComponent> &x) {
+            CheckArraySectionStrides(x.value().Base(), clause);
+          },
+          [&](const common::Indirection<parser::ArrayElement> &x) {
+            const auto &arrayElement{x.value()};
+            const auto &name{GetLastName(arrayElement.Base())};
+            // Scalar character substrings can be parsed as ArrayElement.
+            if (name.symbol && name.symbol->Rank() > 0 &&
+                llvm::any_of(arrayElement.Subscripts(), [](const auto &s) {
+                  const auto *triplet{
+                      std::get_if<parser::SubscriptTriplet>(&s.u)};
+                  return triplet && std::get<2>(triplet->t).has_value();
+                })) {
+              context_.Say(GetContext().clauseSource,
+                  "'%s' in %s clause must not specify a stride"_err_en_US,
+                  name.ToString(),
+                  parser::omp::GetUpperName(
+                      clause, context_.langOptions().getOpenMPVersion()));
+            }
+            CheckArraySectionStrides(arrayElement.Base(), clause);
+          },
+          [&](const common::Indirection<parser::CoindexedNamedObject> &x) {
+            CheckArraySectionStrides(
+                std::get<parser::DataRef>(x.value().t), clause);
+          },
+      },
+      dataRef.u);
 }
 
 void OmpStructureChecker::CheckLastPartRefForArraySection(
@@ -6756,6 +6937,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Affinity &x) {
           CheckArraySection(*arrayElement, GetLastName(*dataRef),
               llvm::omp::Clause::OMPC_affinity);
         }
+        CheckArraySectionStrides(*dataRef, llvm::omp::Clause::OMPC_affinity);
       }
 
       // CheckArraySection handles ArrayElement cases,
@@ -6770,6 +6952,9 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Affinity &x) {
       // last part-ref of the list item must have a section subscript list.
       CheckLastPartRefForArraySection(
           *designator, llvm::omp::Clause::OMPC_affinity);
+      if (!std::holds_alternative<parser::Substring>(designator->u)) {
+        AnalyzeSubstring(object);
+      }
     }
   }
 }
