@@ -5,18 +5,18 @@
 !s64i = !cir.int<s, 64>
 
 // Named source structs.
-!rec_TwoLong  = !cir.struct<"TwoLong"  {!s64i, !s64i}>
-!rec_ThreeInt = !cir.struct<"ThreeInt" {!s32i, !s32i, !s32i}>
+!rec_TwoLong  = !cir.struct<"TwoLong"  {data !s64i, data !s64i}>
+!rec_ThreeInt = !cir.struct<"ThreeInt" {data !s32i, data !s32i, data !s32i}>
 // dim3-equivalent: three i32 fields totalling 12 bytes.
-!rec_Dim3     = !cir.struct<"Dim3"     {!s32i, !s32i, !s32i}>
+!rec_Dim3     = !cir.struct<"Dim3"     {data !s32i, data !s32i, data !s32i}>
 
 // ABI-coerced anonymous structs.  MLIR auto-generates their aliases
 // (!rec_anon_struct, !rec_anon_struct1, etc.) in encounter order.
-!rec_coerced_two   = !cir.struct<{!s64i, !s64i}>
-!rec_coerced_three = !cir.struct<{!s32i, !s32i, !s32i}>
+!rec_coerced_two   = !cir.struct<{data !s64i, data !s64i}>
+!rec_coerced_three = !cir.struct<{data !s32i, data !s32i, data !s32i}>
 // x86-64 SysV packs dim3's first two i32s into an i64; the third i32
 // is a separate half of the second eightbyte.
-!rec_coerced_dim3  = !cir.struct<{!s64i, !s32i}>
+!rec_coerced_dim3  = !cir.struct<{data !s64i, data !s32i}>
 
 #flatten_two = {
   return = { kind = "direct" },
@@ -66,8 +66,8 @@ module attributes {
 } {
 
 // Callee: the single TwoLong arg is replaced by two i64 block args.  At entry
-// the scalars are stored into a coerced-struct alloca, then coerced back to
-// TwoLong for body uses.
+// the scalars are stored into a coerced-struct alloca, which the body reads as
+// TwoLong.
 
 cir.func @takes_two_long(%arg0: !rec_TwoLong)
     attributes { test_classify = #flatten_two } {
@@ -77,20 +77,18 @@ cir.func @takes_two_long(%arg0: !rec_TwoLong)
 }
 
 // CHECK:      cir.func{{.*}} @takes_two_long(%[[F0:.*]]: !s64i, %[[F1:.*]]: !s64i)
-// Two ["coerce"] allocas: the coercion round-trip alloca and the flatSlot.
-// CHECK:        %{{.*}} = cir.alloca "coerce"
+// One "coerce" alloca holds both the coerced struct and TwoLong.
 // CHECK:        %[[FSLOT:.*]] = cir.alloca "coerce"
-// Store each field block arg into the flat slot.
+// CHECK-NOT:    cir.alloca "coerce"
+// Store each field block arg into the slot.
 // CHECK:        %[[P0:.*]] = cir.get_member %[[FSLOT]][0]
 // CHECK:        cir.store %[[F0]], %[[P0]] : !s64i, !cir.ptr<!s64i>
 // CHECK:        %[[P1:.*]] = cir.get_member %[[FSLOT]][1]
 // CHECK:        cir.store %[[F1]], %[[P1]] : !s64i, !cir.ptr<!s64i>
-// Reload the coerced struct, coerce to TwoLong, use in body.
-// CHECK:        %{{.*}} = cir.load %[[FSLOT]]
-// CHECK:        cir.cast bitcast %{{.*}} : !cir.ptr<{{.*}}> -> !cir.ptr<!rec_TwoLong>
-// CHECK:        %[[TVAL:.*]] = cir.load %{{.*}} : !cir.ptr<!rec_TwoLong>, !rec_TwoLong
+// The spill of the parameter is a copy out of the slot viewed as TwoLong.
+// CHECK:        %[[TVIEW:.*]] = cir.cast bitcast %[[FSLOT]] : !cir.ptr<{{.*}}> -> !cir.ptr<!rec_TwoLong>
 // CHECK:        %[[P:.*]] = cir.alloca "p" {{.*}} : !cir.ptr<!rec_TwoLong>
-// CHECK:        cir.store %[[TVAL]], %[[P]] : !rec_TwoLong, !cir.ptr<!rec_TwoLong>
+// CHECK:        cir.copy %[[TVIEW]] align(8) to %[[P]] align(8) : !cir.ptr<!rec_TwoLong>
 
 // Forward declaration: two i64 wire args, no body.
 
@@ -100,8 +98,8 @@ cir.func private @takes_two_long_decl(!rec_TwoLong)
 // CHECK:      cir.func{{.*}} @takes_two_long_decl(!s64i, !s64i)
 // CHECK-NOT:  !rec_TwoLong
 
-// Caller: the TwoLong operand is coerced into a coerced-struct slot via a
-// memory round-trip, then each field is read from that slot with
+// Caller: the TwoLong operand's alloca is as large as the coerced struct, so
+// each field is read in place through a coerced-struct view of it with
 // get_member + load and passed as a separate call argument.
 
 cir.func @caller_two_long() attributes { test_classify = #passthrough } {
@@ -112,16 +110,13 @@ cir.func @caller_two_long() attributes { test_classify = #passthrough } {
 }
 
 // CHECK:      cir.func{{.*}} @caller_two_long()
-// CHECK:        %[[COERCE:.*]] = cir.alloca "coerce"
-// CHECK:        %[[VAL:.*]] = cir.load %{{.*}} : !cir.ptr<!rec_TwoLong>, !rec_TwoLong
-// Store the source value into the coerce slot, then read each field through a
-// coerced-struct view with get_member + load.
-// CHECK:        cir.store %[[VAL]], %[[COERCE]] : !rec_TwoLong, !cir.ptr<!rec_TwoLong>
-// CHECK:        %[[CAST:.*]] = cir.cast bitcast %[[COERCE]] : !cir.ptr<!rec_TwoLong> -> !cir.ptr<{{.*}}>
+// CHECK:        %[[S:.*]] = cir.alloca "s"
+// CHECK-NOT:    cir.alloca "coerce"
+// CHECK:        %[[CAST:.*]] = cir.cast bitcast %[[S]] : !cir.ptr<!rec_TwoLong> -> !cir.ptr<{{.*}}>
 // CHECK:        %[[P0:.*]] = cir.get_member %[[CAST]][0] {{.*}} -> !cir.ptr<!s64i>
-// CHECK:        %[[F0:.*]] = cir.load %[[P0]] : !cir.ptr<!s64i>, !s64i
+// CHECK:        %[[F0:.*]] = cir.load align(8) %[[P0]] : !cir.ptr<!s64i>, !s64i
 // CHECK:        %[[P1:.*]] = cir.get_member %[[CAST]][1] {{.*}} -> !cir.ptr<!s64i>
-// CHECK:        %[[F1:.*]] = cir.load %[[P1]] : !cir.ptr<!s64i>, !s64i
+// CHECK:        %[[F1:.*]] = cir.load align(8) %[[P1]] : !cir.ptr<!s64i>, !s64i
 // CHECK:        cir.call @takes_two_long(%[[F0]], %[[F1]]) : (!s64i, !s64i) -> ()
 
 // Three-field flatten (CUDA dim3 with 3 equal-width fields → 3 scalar args).
@@ -133,9 +128,8 @@ cir.func @takes_three_int(%arg0: !rec_ThreeInt)
 }
 
 // CHECK:      cir.func{{.*}} @takes_three_int(%[[A:.*]]: !s32i, %[[B:.*]]: !s32i, %[[C:.*]]: !s32i)
-// Two ["coerce"] allocas appear; the fields are stored via the second one.
 // CHECK:        cir.alloca "coerce"
-// CHECK:        cir.alloca "coerce"
+// CHECK-NOT:    cir.alloca "coerce"
 // CHECK:        %[[PA:.*]] = cir.get_member %{{.*}}[0]
 // CHECK:        cir.store %[[A]], %[[PA]] : !s32i, !cir.ptr<!s32i>
 // CHECK:        %[[PB:.*]] = cir.get_member %{{.*}}[1]
@@ -151,16 +145,15 @@ cir.func @caller_three_int() attributes { test_classify = #passthrough } {
 }
 
 // CHECK:      cir.func{{.*}} @caller_three_int()
-// CHECK:        %[[COERCE:.*]] = cir.alloca "coerce"
-// CHECK:        %[[VAL:.*]] = cir.load %{{.*}} : !cir.ptr<!rec_ThreeInt>, !rec_ThreeInt
-// CHECK:        cir.store %[[VAL]], %[[COERCE]] : !rec_ThreeInt, !cir.ptr<!rec_ThreeInt>
-// CHECK:        %[[CAST:.*]] = cir.cast bitcast %[[COERCE]] : !cir.ptr<!rec_ThreeInt> -> !cir.ptr<{{.*}}>
+// CHECK:        %[[S:.*]] = cir.alloca "s"
+// CHECK-NOT:    cir.alloca "coerce"
+// CHECK:        %[[CAST:.*]] = cir.cast bitcast %[[S]] : !cir.ptr<!rec_ThreeInt> -> !cir.ptr<{{.*}}>
 // CHECK:        %[[P0:.*]] = cir.get_member %[[CAST]][0] {{.*}} -> !cir.ptr<!s32i>
-// CHECK:        %[[F0:.*]] = cir.load %[[P0]] : !cir.ptr<!s32i>, !s32i
+// CHECK:        %[[F0:.*]] = cir.load align(4) %[[P0]] : !cir.ptr<!s32i>, !s32i
 // CHECK:        %[[P1:.*]] = cir.get_member %[[CAST]][1] {{.*}} -> !cir.ptr<!s32i>
-// CHECK:        %[[F1:.*]] = cir.load %[[P1]] : !cir.ptr<!s32i>, !s32i
+// CHECK:        %[[F1:.*]] = cir.load align(4) %[[P1]] : !cir.ptr<!s32i>, !s32i
 // CHECK:        %[[P2:.*]] = cir.get_member %[[CAST]][2] {{.*}} -> !cir.ptr<!s32i>
-// CHECK:        %[[F2:.*]] = cir.load %[[P2]] : !cir.ptr<!s32i>, !s32i
+// CHECK:        %[[F2:.*]] = cir.load align(4) %[[P2]] : !cir.ptr<!s32i>, !s32i
 // CHECK:        cir.call @takes_three_int(%[[F0]], %[[F1]], %[[F2]]) : (!s32i, !s32i, !s32i) -> ()
 
 // Mixed-packing case (x86-64 SysV dim3 pattern): struct { uint x, y, z; }
@@ -173,9 +166,8 @@ cir.func @takes_dim3(%arg0: !rec_Dim3)
 }
 
 // CHECK:      cir.func{{.*}} @takes_dim3(%[[D0:.*]]: !s64i, %[[D1:.*]]: !s32i)
-// Two ["coerce"] allocas appear; the {i64, i32} fields are stored into the second.
 // CHECK:        cir.alloca "coerce"
-// CHECK:        cir.alloca "coerce"
+// CHECK-NOT:    cir.alloca "coerce"
 // CHECK:        %{{.*}} = cir.get_member %{{.*}}[0]
 // CHECK:        cir.store %[[D0]], %{{.*}} : !s64i
 // CHECK:        %{{.*}} = cir.get_member %{{.*}}[1]
@@ -189,13 +181,13 @@ cir.func @caller_dim3() attributes { test_classify = #passthrough } {
 }
 
 // CHECK:      cir.func{{.*}} @caller_dim3()
-// Coerce Dim3 into the {i64, i32} slot, then read the two fields from the
+// Copy Dim3 into the {i64, i32} slot, then read the two fields from the
 // slot with get_member + load.  The coerced struct is larger than Dim3, so
-// the slot is the coerced type and the bitcast is on the store (source) side.
+// the slot is the coerced type and the bitcast is on the copy's side.
 // CHECK:        %[[COERCE:.*]] = cir.alloca "coerce"
-// CHECK:        %[[VAL:.*]] = cir.load %{{.*}} : !cir.ptr<!rec_Dim3>, !rec_Dim3
+// CHECK:        %[[D:.*]] = cir.alloca "d"
 // CHECK:        %[[CAST:.*]] = cir.cast bitcast %[[COERCE]] : {{.*}} -> !cir.ptr<!rec_Dim3>
-// CHECK:        cir.store %[[VAL]], %[[CAST]] : !rec_Dim3, !cir.ptr<!rec_Dim3>
+// CHECK:        cir.copy %[[D]] align(4) to %[[CAST]] align(8) : !cir.ptr<!rec_Dim3>
 // CHECK:        %[[P0:.*]] = cir.get_member %[[COERCE]][0] {{.*}} -> !cir.ptr<!s64i>
 // CHECK:        %[[E0:.*]] = cir.load %[[P0]] : !cir.ptr<!s64i>, !s64i
 // CHECK:        %[[P1:.*]] = cir.get_member %[[COERCE]][1] {{.*}} -> !cir.ptr<!s32i>
@@ -230,17 +222,16 @@ cir.func @takes_self_flat(%arg0: !rec_coerced_two)
 }
 
 // CHECK:      cir.func{{.*}} @takes_self_flat(%[[A:.*]]: !s64i, %[[B:.*]]: !s64i)
-// Only one "coerce" reassembly slot, and the reloaded coerced struct is stored
-// straight into the parameter alloca with no bitcast -- the arg type already
-// equals the coerced struct type, so there is no back-coercion.
+// Only one "coerce" reassembly slot, and the parameter alloca is copied from
+// it with no bitcast -- the arg type already equals the coerced struct type,
+// so there is no back-coercion.
 // CHECK:        %[[SLOT:.*]] = cir.alloca "coerce"
 // CHECK:        %[[P0:.*]] = cir.get_member %[[SLOT]][0]
 // CHECK:        cir.store %[[A]], %[[P0]] : !s64i, !cir.ptr<!s64i>
 // CHECK:        %[[P1:.*]] = cir.get_member %[[SLOT]][1]
 // CHECK:        cir.store %[[B]], %[[P1]] : !s64i, !cir.ptr<!s64i>
-// CHECK:        %[[RV:.*]] = cir.load %[[SLOT]] : !cir.ptr<!rec_anon_struct>, !rec_anon_struct
 // CHECK:        %[[P:.*]] = cir.alloca "p"
-// CHECK:        cir.store %[[RV]], %[[P]] : !rec_anon_struct, !cir.ptr<!rec_anon_struct>
+// CHECK:        cir.copy %[[SLOT]] align(8) to %[[P]] align(8) : !cir.ptr<!rec_anon_struct>
 
 cir.func @caller_self_flat() attributes { test_classify = #passthrough } {
   %0 = cir.alloca "s" align(8) : !cir.ptr<!rec_coerced_two>

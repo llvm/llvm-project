@@ -8,9 +8,9 @@ define void @tensormap_replace_swizzle_mode(ptr addrspace(1) %global_addr, ptr a
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [tensormap_replace_swizzle_mode_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [tensormap_replace_swizzle_mode_param_0];
 ; CHECK-NEXT:    tensormap.replace.tile.swizzle_mode.global.b1024.b32 [%rd1], 4;
-; CHECK-NEXT:    ld.param.b64 %rd2, [tensormap_replace_swizzle_mode_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [tensormap_replace_swizzle_mode_param_1];
 ; CHECK-NEXT:    tensormap.replace.tile.swizzle_mode.shared::cta.b1024.b32 [%rd2], 4;
 ; CHECK-NEXT:    ret;
   call void @llvm.nvvm.tensormap.replace.swizzle.mode.p1(ptr addrspace(1) %global_addr, /* swizzle_mode=96B swizzling */ i32 4)

@@ -84,8 +84,11 @@ static void specializeForLoopForUnrolling(ForOp op) {
   auto minOp = bound.getDefiningOp<AffineMinOp>();
   if (!minOp)
     return;
+  AffineMap canonicalizedMap = minOp.getMap();
+  SmallVector<Value> operands(minOp.getMapOperands());
+  affine::canonicalizeMapAndOperands(&canonicalizedMap, &operands);
   int64_t minConstant = std::numeric_limits<int64_t>::max();
-  for (AffineExpr expr : minOp.getMap().getResults()) {
+  for (AffineExpr expr : canonicalizedMap.getResults()) {
     if (auto constantIndex = dyn_cast<AffineConstantExpr>(expr))
       minConstant = std::min(minConstant, constantIndex.getValue());
   }
@@ -123,42 +126,86 @@ static void specializeForLoopForUnrolling(ForOp op) {
 static LogicalResult peelForLoop(RewriterBase &b, ForOp forOp,
                                  ForOp &partialIteration, Value &splitBound) {
   RewriterBase::InsertionGuard guard(b);
-  auto lbInt = getConstantIntValue(forOp.getLowerBound());
-  auto ubInt = getConstantIntValue(forOp.getUpperBound());
-  auto stepInt = getConstantIntValue(forOp.getStep());
-
-  // No specialization necessary if step size is 1. Also bail out in case of an
-  // invalid zero or negative step which might have happened during folding.
-  if (stepInt && *stepInt <= 1)
-    return failure();
-
-  // No specialization necessary if step already divides upper bound evenly.
-  // Fast path: lb, ub and step are constants.
-  if (lbInt && ubInt && stepInt && (*ubInt - *lbInt) % *stepInt == 0)
-    return failure();
-  // Slow path: Examine the ops that define lb, ub and step.
-  AffineExpr sym0, sym1, sym2;
-  bindSymbols(b.getContext(), sym0, sym1, sym2);
-  SmallVector<Value> operands{forOp.getLowerBound(), forOp.getUpperBound(),
-                              forOp.getStep()};
-  AffineMap map = AffineMap::get(0, 3, {(sym1 - sym0) % sym2});
-  affine::fullyComposeAffineMapAndOperands(&map, &operands);
-  if (auto constExpr = dyn_cast<AffineConstantExpr>(map.getResult(0)))
-    if (constExpr.getValue() == 0)
-      return failure();
-
-  // New upper bound: %ub - (%ub - %lb) mod %step
-  auto modMap = AffineMap::get(0, 3, {sym1 - ((sym1 - sym0) % sym2)});
+  Value lbVal = forOp.getLowerBound();
+  Value ubVal = forOp.getUpperBound();
+  Value stepVal = forOp.getStep();
   b.setInsertionPoint(forOp);
   auto loc = forOp.getLoc();
-  splitBound = b.createOrFold<AffineApplyOp>(loc, modMap,
+
+  // Check whether we have a unsigned loop
+  if (forOp.getUnsignedCmp()) {
+    IntegerAttr lbAttr, ubAttr, stepAttr;
+    if (matchPattern(lbVal, m_Constant(&lbAttr)) &&
+        matchPattern(ubVal, m_Constant(&ubAttr)) &&
+        matchPattern(stepVal, m_Constant(&stepAttr))) {
+
+      // Get the constants as APInt at the loop’s own bit width
+      APInt lb = lbAttr.getValue();
+      APInt ub = ubAttr.getValue();
+      APInt step = stepAttr.getValue();
+
+      if (step.ule(1) || ub.ule(lb) || (ub - lb).urem(step).isZero())
+        return failure();
+    }
+
+    // split = ub - ((ub - min(lb, ub)) remui step). The min makes an empty loop
+    // (ub <= lb) give a zero remainder, so split = ub and both loops stay
+    // empty. The wrapping subtraction is exact for ub > lb, even above the
+    // signed range.
+    Value lbEff = b.createOrFold<arith::MinUIOp>(loc, lbVal, ubVal);
+    Value diff = b.createOrFold<arith::SubIOp>(loc, ubVal, lbEff);
+    Value rem = b.createOrFold<arith::RemUIOp>(loc, diff, stepVal);
+    splitBound = b.createOrFold<arith::SubIOp>(loc, ubVal, rem);
+
+  } else {
+    auto lbInt = getConstantIntValue(lbVal);
+    auto ubInt = getConstantIntValue(ubVal);
+    auto stepInt = getConstantIntValue(stepVal);
+    // No specialization necessary if step size is 1. Also bail out in case of
+    // an invalid zero or negative step which might have happened during
+    // folding.
+    if (stepInt && *stepInt <= 1)
+      return failure();
+
+    // No specialization necessary if step already divides upper bound evenly.
+    // Fast path: lb, ub and step are constants.
+    if (lbInt && ubInt && stepInt) {
+      int64_t diff;
+      // bail out if the subtraction overflows
+      if (llvm::SubOverflow(*ubInt, *lbInt, diff) || diff % *stepInt == 0)
+        return failure();
+    }
+
+    // Only the dynamic path computes the peeling bound with affine.apply, which
+    // accepts only index operands.
+    if ((!lbInt || !ubInt || !stepInt) &&
+        !forOp.getInductionVar().getType().isIndex())
+      return failure();
+
+    // Slow path: Examine the ops that define lb, ub and step.
+    AffineExpr sym0, sym1, sym2;
+    bindSymbols(b.getContext(), sym0, sym1, sym2);
+    SmallVector<Value> operands{forOp.getLowerBound(), forOp.getUpperBound(),
+                                forOp.getStep()};
+    AffineMap map = AffineMap::get(0, 3, {(sym1 - sym0) % sym2});
+    affine::fullyComposeAffineMapAndOperands(&map, &operands);
+    if (auto constExpr = dyn_cast<AffineConstantExpr>(map.getResult(0)))
+      if (constExpr.getValue() == 0)
+        return failure();
+
+    // New upper bound: max(%lb, %ub - (%ub - %lb) mod %step). Affine `mod` is
+    // non-negative, so without the clamp an empty loop (%lb >= %ub) gets a
+    // split bound below %lb and its partial iteration executes.
+    auto modMap = AffineMap::get(0, 3, {sym1 - ((sym1 - sym0) % sym2), sym0},
+                                 b.getContext());
+    splitBound = b.createOrFold<AffineMaxOp>(loc, modMap,
                                              ValueRange{forOp.getLowerBound(),
                                                         forOp.getUpperBound(),
                                                         forOp.getStep()});
-  if (splitBound.getType() != forOp.getLowerBound().getType())
-    splitBound = b.createOrFold<arith::IndexCastOp>(
-        loc, forOp.getLowerBound().getType(), splitBound);
-
+    if (splitBound.getType() != forOp.getLowerBound().getType())
+      splitBound = b.createOrFold<arith::IndexCastOp>(
+          loc, forOp.getLowerBound().getType(), splitBound);
+  }
   // Create ForOp for partial iteration.
   b.setInsertionPointAfter(forOp);
   partialIteration = cast<ForOp>(b.clone(*forOp.getOperation()));
@@ -207,6 +254,11 @@ LogicalResult mlir::scf::peelForLoopAndSimplifyBounds(RewriterBase &rewriter,
   if (failed(peelForLoop(rewriter, forOp, partialIteration, splitBound)))
     return failure();
 
+  // The affine.min/max simplification relies on signed reasoning, which does
+  // not hold for unsigned loops, so leave those ops untouched.
+  if (forOp.getUnsignedCmp())
+    return success();
+
   // Rewrite affine.min and affine.max ops.
   rewriteAffineOpAfterPeeling(rewriter, forOp, partialIteration, previousUb);
 
@@ -221,27 +273,61 @@ LogicalResult mlir::scf::peelForLoopAndSimplifyBounds(RewriterBase &rewriter,
 LogicalResult mlir::scf::peelForLoopFirstIteration(RewriterBase &b, ForOp forOp,
                                                    ForOp &firstIteration) {
   RewriterBase::InsertionGuard guard(b);
-  auto lbInt = getConstantIntValue(forOp.getLowerBound());
-  auto ubInt = getConstantIntValue(forOp.getUpperBound());
-  auto stepInt = getConstantIntValue(forOp.getStep());
-
-  // Peeling is not needed if there is one or less iteration.
-  if (lbInt && ubInt && stepInt && ceil(float(*ubInt - *lbInt) / *stepInt) <= 1)
-    return failure();
-
-  AffineExpr lbSymbol, stepSymbol;
-  bindSymbols(b.getContext(), lbSymbol, stepSymbol);
-
-  // New lower bound for main loop: %lb + %step
-  auto ubMap = AffineMap::get(0, 2, {lbSymbol + stepSymbol});
-  b.setInsertionPoint(forOp);
+  Value lbVal = forOp.getLowerBound();
+  Value ubVal = forOp.getUpperBound();
+  Value stepVal = forOp.getStep();
   auto loc = forOp.getLoc();
-  Value splitBound = b.createOrFold<AffineApplyOp>(
-      loc, ubMap, ValueRange{forOp.getLowerBound(), forOp.getStep()});
-  if (splitBound.getType() != forOp.getUpperBound().getType())
-    splitBound = b.createOrFold<arith::IndexCastOp>(
-        loc, forOp.getUpperBound().getType(), splitBound);
 
+  Value splitBound;
+  b.setInsertionPoint(forOp);
+
+  // Check whether we have a unsigned loop
+  if (forOp.getUnsignedCmp()) {
+    IntegerAttr lbAttr, ubAttr, stepAttr;
+    if (matchPattern(forOp.getLowerBound(), m_Constant(&lbAttr)) &&
+        matchPattern(forOp.getUpperBound(), m_Constant(&ubAttr)) &&
+        matchPattern(forOp.getStep(), m_Constant(&stepAttr))) {
+
+      // Get the constants as APInt at the loop’s own bit width
+      APInt lb = lbAttr.getValue();
+      APInt ub = ubAttr.getValue();
+      APInt step = stepAttr.getValue();
+
+      // bail out if ub <= lb or ub - lb <= step (unsigned constants)
+      if (ub.ule(lb) || (ub - lb).ule(step))
+        return failure();
+    }
+
+    // split = max(lb, min(lb + step, ub)): the first loop runs one iteration,
+    // or none if the loop is empty. If lb + step wraps, the loop has at most
+    // one iteration and split falls back to lb, so the main loop does the work.
+    // use unsigned ops (MinUIOp, MaxUIOp)
+    Value sum = b.createOrFold<arith::AddIOp>(loc, lbVal, stepVal);
+    Value capped = b.createOrFold<arith::MinUIOp>(loc, sum, ubVal);
+    splitBound = b.createOrFold<arith::MaxUIOp>(loc, lbVal, capped);
+  } else {
+    auto lbInt = getConstantIntValue(lbVal);
+    auto ubInt = getConstantIntValue(ubVal);
+    auto stepInt = getConstantIntValue(stepVal);
+
+    // Peeling is not needed if there is at most one iteration. scf.for requires
+    // a positive step, so the trip count is ceil((UB - LB) / Step) when UB > LB
+    // and 0 otherwise. With a positive step, "UB - LB <= Step" therefore covers
+    // both the empty loop and the single-iteration loop. Bail out if the
+    // subtraction overflows, since we can't reason about the trip count then.
+    if (lbInt && ubInt && stepInt) {
+      int64_t diff;
+      if (llvm::SubOverflow(*ubInt, *lbInt, diff) || diff <= *stepInt)
+        return failure();
+    }
+
+    // split = max(lb, min(lb + step, ub)): the first loop runs one iteration,
+    // or none if the loop is empty. If lb + step wraps, the loop has at most
+    // one iteration and split falls back to lb, so the main loop does the work.
+    Value sum = b.createOrFold<arith::AddIOp>(loc, lbVal, stepVal);
+    Value capped = b.createOrFold<arith::MinSIOp>(loc, sum, ubVal);
+    splitBound = b.createOrFold<arith::MaxSIOp>(loc, lbVal, capped);
+  }
   // Peel the first iteration.
   firstIteration = cast<ForOp>(b.clone(*forOp.getOperation()));
   b.modifyOpInPlace(firstIteration, [&]() {
@@ -267,12 +353,9 @@ struct ForLoopPeelingPattern : public OpRewritePattern<ForOp> {
 
   LogicalResult matchAndRewrite(ForOp forOp,
                                 PatternRewriter &rewriter) const override {
-    if (forOp.getUnsignedCmp())
-      return rewriter.notifyMatchFailure(forOp,
-                                         "unsigned loops are not supported");
 
     // Do not peel already peeled loops.
-    if (forOp->hasAttr(kPeeledLoopLabel))
+    if (forOp->hasDiscardableAttr(kPeeledLoopLabel))
       return failure();
 
     scf::ForOp partialIteration;
@@ -288,7 +371,7 @@ struct ForLoopPeelingPattern : public OpRewritePattern<ForOp> {
         // loop.
         Operation *op = forOp.getOperation();
         while ((op = op->getParentOfType<scf::ForOp>())) {
-          if (op->hasAttr(kPartialIterationLabel))
+          if (op->hasDiscardableAttr(kPartialIterationLabel))
             return failure();
         }
       }
@@ -300,11 +383,13 @@ struct ForLoopPeelingPattern : public OpRewritePattern<ForOp> {
 
     // Apply label, so that the same loop is not rewritten a second time.
     rewriter.modifyOpInPlace(partialIteration, [&]() {
-      partialIteration->setAttr(kPeeledLoopLabel, rewriter.getUnitAttr());
-      partialIteration->setAttr(kPartialIterationLabel, rewriter.getUnitAttr());
+      partialIteration->setDiscardableAttr(kPeeledLoopLabel,
+                                           rewriter.getUnitAttr());
+      partialIteration->setDiscardableAttr(kPartialIterationLabel,
+                                           rewriter.getUnitAttr());
     });
     rewriter.modifyOpInPlace(forOp, [&]() {
-      forOp->setAttr(kPeeledLoopLabel, rewriter.getUnitAttr());
+      forOp->setDiscardableAttr(kPeeledLoopLabel, rewriter.getUnitAttr());
     });
     return success();
   }
@@ -351,8 +436,8 @@ struct ForLoopPeeling : public impl::SCFForLoopPeelingBase<ForLoopPeeling> {
 
     // Drop the markers.
     parentOp->walk([](Operation *op) {
-      op->removeAttr(kPeeledLoopLabel);
-      op->removeAttr(kPartialIterationLabel);
+      op->removeDiscardableAttr(kPeeledLoopLabel);
+      op->removeDiscardableAttr(kPartialIterationLabel);
     });
   }
 };

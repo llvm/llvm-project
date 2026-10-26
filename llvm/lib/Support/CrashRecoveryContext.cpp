@@ -369,8 +369,12 @@ static void CrashRecoverySignalHandler(int Signal) {
     // that the enclosing application will terminate soon, and we won't want to
     // attempt crash recovery again.
     //
-    // This call of Disable isn't thread safe, but it doesn't actually matter.
-    CrashRecoveryContext::Disable();
+    // Uninstall directly rather than through Disable(): a signal handler must
+    // not take a lock, and a lock with static storage duration may already be
+    // destroyed by the time a signal is delivered during exit(). Racing with
+    // another thread here doesn't matter.
+    gCrashRecoveryEnabled = false;
+    uninstallExceptionOrSignalHandlers();
     raise(Signal);
 
     // The signal will be thrown once the signal mask is restored.

@@ -10,30 +10,30 @@
 #define LLVM_LIBC_SRC_SEMAPHORE_LINUX_SEMAPHORE_H
 
 #include "hdr/errno_macros.h"
+#include "hdr/limits_macros.h"
+#include "hdr/offsetof_macros.h"
 #include "hdr/time_macros.h"
 #include "hdr/types/clockid_t.h"
 #include "hdr/types/mode_t.h"
+#include "hdr/types/sem_t.h"
 #include "hdr/types/struct_timespec.h"
 #include "src/__support/CPP/atomic.h"
-#include "src/__support/CPP/limits.h"
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
 #include "src/__support/libc_assert.h"
+#include "src/__support/macros/attributes.h"
+#include "src/__support/macros/null_check.h"
 #include "src/__support/threads/futex_utils.h"
 #include "src/__support/time/abs_timeout.h"
 
 namespace LIBC_NAMESPACE_DECL {
-
-// Define SEM_VALUE_MAX as INT_MAX
-constexpr unsigned int SEM_VALUE_MAX =
-    static_cast<unsigned int>(cpp::numeric_limits<int>::max());
 
 class Semaphore {
   Futex value;
   unsigned int canary;
 
   // Whether the semaphore is shared between processes.
-  bool is_shared;
+  LIBC_PREFERED_TYPE(bool) unsigned int is_shared : 1;
 
   // A private constant canary used to detect use of uninitialized or
   // destroyed semaphores. Chose "SEM1" in ASCII (0x53='S', 0x45='E',
@@ -63,7 +63,20 @@ class Semaphore {
 
 public:
   LIBC_INLINE constexpr Semaphore(unsigned int value, bool shared)
-      : value(value), canary(SEM_CANARY), is_shared(shared) {}
+      : value(value), canary(SEM_CANARY), is_shared(shared) {
+    // The public sem_t mirrors the layout of the internal Semaphore class.
+    // At entrypoints sem_t object operate through a reinterpret_cast,
+    // so they must be the same layout.
+    static_assert(sizeof(Semaphore) == sizeof(sem_t) &&
+                      alignof(Semaphore) == alignof(sem_t),
+                  "The public sem_t type must be of the same size and "
+                  "alignment as the internal semaphore type.");
+    static_assert(offsetof(Semaphore, value) == offsetof(sem_t, __value),
+                  "The semaphore count must be at the offset of "
+                  "sem_t::__value.");
+    static_assert(offsetof(Semaphore, canary) == offsetof(sem_t, __canary),
+                  "The canary must be at the offset of sem_t::__canary.");
+  }
 
   // Sanity check to detect use of uninitialized or destroyed semaphores.
   LIBC_INLINE bool is_valid() const { return canary == SEM_CANARY; }
@@ -152,6 +165,8 @@ public:
     // the clock or dereferencing abstime.
     if (trywait() == 0)
       return 0;
+
+    LIBC_CRASH_ON_NULLPTR(abstime);
 
     bool is_realtime = (clock_id == CLOCK_REALTIME);
     auto timeout =

@@ -344,9 +344,12 @@ LogicalResult insertCasts(Operation *op, PatternRewriter &rewriter) {
   Location loc = op->getLoc();
   SmallVector<Value> operands;
   for (auto operand : op->getOperands())
-    operands.push_back(arith::ExtFOp::create(rewriter, loc, newType, operand));
-  auto result =
-      T::create(rewriter, loc, TypeRange{newType}, operands, op->getAttrs());
+    operands.push_back(arith::ExtFOp::create(rewriter, loc, TypeRange{newType},
+                                             ValueRange{operand},
+                                             arith::ExtFOp::Properties{}));
+  auto result = T::create(rewriter, loc, TypeRange{newType}, operands,
+                          cast<T>(op).getProperties(),
+                          op->getDiscardableAttrDictionary().getValue());
   rewriter.replaceOpWithNewOp<arith::TruncFOp>(op, origType, result);
   return success();
 }
@@ -377,7 +380,7 @@ public:
 namespace {
 struct AtanApproximation : public OpRewritePattern<math::AtanOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(math::AtanOp op,
                                 PatternRewriter &rewriter) const final;
@@ -474,7 +477,7 @@ AtanApproximation::matchAndRewrite(math::AtanOp op,
 namespace {
 struct Atan2Approximation : public OpRewritePattern<math::Atan2Op> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(math::Atan2Op op,
                                 PatternRewriter &rewriter) const final;
@@ -545,7 +548,7 @@ Atan2Approximation::matchAndRewrite(math::Atan2Op op,
 namespace {
 struct TanhApproximation : public OpRewritePattern<math::TanhOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(math::TanhOp op,
                                 PatternRewriter &rewriter) const final;
@@ -779,7 +782,7 @@ struct Log2Approximation : public LogApproximationBase<math::Log2Op> {
 namespace {
 struct Log1pApproximation : public OpRewritePattern<math::Log1pOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(math::Log1pOp op,
                                 PatternRewriter &rewriter) const final;
@@ -834,7 +837,7 @@ Log1pApproximation::matchAndRewrite(math::Log1pOp op,
 namespace {
 struct AsinPolynomialApproximation : public OpRewritePattern<math::AsinOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(math::AsinOp op,
                                 PatternRewriter &rewriter) const final;
@@ -930,7 +933,7 @@ AsinPolynomialApproximation::matchAndRewrite(math::AsinOp op,
 namespace {
 struct AcosPolynomialApproximation : public OpRewritePattern<math::AcosOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(math::AcosOp op,
                                 PatternRewriter &rewriter) const final;
@@ -1259,7 +1262,7 @@ Value clampWithNormals(ImplicitLocOpBuilder &builder,
 
 struct ExpApproximation : public OpRewritePattern<math::ExpOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(math::ExpOp op,
                                 PatternRewriter &rewriter) const final;
@@ -1412,7 +1415,7 @@ namespace {
 
 struct ExpM1Approximation : public OpRewritePattern<math::ExpM1Op> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(math::ExpM1Op op,
                                 PatternRewriter &rewriter) const final;
@@ -1605,7 +1608,7 @@ LogicalResult SinAndCosApproximation<isSine, OpTy>::matchAndRewrite(
 
 namespace {
 struct CbrtApproximation : public OpRewritePattern<math::CbrtOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(math::CbrtOp op,
                                 PatternRewriter &rewriter) const final;
@@ -1698,7 +1701,7 @@ CbrtApproximation::matchAndRewrite(math::CbrtOp op,
 
 namespace {
 struct RsqrtApproximation : public OpRewritePattern<math::RsqrtOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(math::RsqrtOp op,
                                 PatternRewriter &rewriter) const final;

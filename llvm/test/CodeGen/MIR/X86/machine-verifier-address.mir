@@ -16,12 +16,13 @@ body:             |
   bb.1:
     successors: %bb.1(0x80000000)
 
-    %3:vr256 = AVX_SET0
+    %3:vr128 = V_SET0
+    %5:vr256 = SUBREG_TO_REG %3, %subreg.sub_xmm
     %4:vr128 = VPSLLDri %2, 31
-    %5:vr256 = VPMOVSXDQYrr killed %4
+    %7:vr256 = VPMOVSXDQYrr killed %4
     %8:vr256 = IMPLICIT_DEF
     ; CHECK: *** Bad machine code: Scale factor in address must be 1, 2, 4 or 8 ***
-    %6:vr256, %7:vr256 = VGATHERQPDYrm %3, %0, 16, killed %8, 0, $noreg, %5 :: (load unknown-size, align 8)
+    %6:vr256, %7:vr256 = VGATHERQPDYrm %5, %0, 16, killed %8, 0, $noreg, %7 :: (load unknown-size, align 8)
     %9:vr128 = COPY %6.sub_xmm
     ; CHECK: *** Bad machine code: Displacement in address must fit into 32-bit signed integer ***
     VMOVLPDmr $noreg, 1, $noreg, 1111111111111, $noreg, killed %9 :: (store (s64) into `ptr poison`)

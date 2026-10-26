@@ -787,3 +787,111 @@ if.end:                                        ; preds = %if.then, %if.else
   %res = tail call <9 x double> @llvm.matrix.multiply.v9f64.v9f64.v9f64(<9 x double> %C, <9 x double> %merge, i32 3, i32 3, i32 3)
   ret <9 x double> %res
 }
+
+define <4 x float> @matrix_phi_argument_incoming(<4 x float> %arg, i1 %cond) {
+; CHECK-LABEL: @matrix_phi_argument_incoming(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SPLIT:%.*]] = shufflevector <4 x float> [[ARG:%.*]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[SPLIT3:%.*]] = shufflevector <4 x float> [[ARG]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[EXIT:%.*]], label [[BB:%.*]]
+; CHECK:       bb:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[PHI1:%.*]] = phi <2 x float> [ zeroinitializer, [[BB]] ], [ [[SPLIT]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[PHI2:%.*]] = phi <2 x float> [ zeroinitializer, [[BB]] ], [ [[SPLIT3]], [[ENTRY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <2 x float> [[PHI1]], <2 x float> [[PHI2]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    ret <4 x float> [[TMP0]]
+;
+entry:
+  br i1 %cond, label %exit, label %bb
+
+bb:
+  %t = call <4 x float> @llvm.matrix.transpose.v4f32(<4 x float> zeroinitializer, i32 2, i32 2)
+  br label %exit
+
+exit:
+  %phi = phi <4 x float> [ %t, %bb ], [ %arg, %entry ]
+  ret <4 x float> %phi
+}
+
+declare <4 x float> @get_matrix()
+declare i32 @__gxx_personality_v0(...)
+
+define <4 x float> @matrix_phi_invoke_incoming(i1 %cond) personality ptr @__gxx_personality_v0 {
+; CHECK-LABEL: @matrix_phi_invoke_incoming(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[CALL:%.*]], label [[BB:%.*]]
+; CHECK:       call:
+; CHECK-NEXT:    [[INV:%.*]] = invoke <4 x float> @get_matrix()
+; CHECK-NEXT:            to label [[CONT:%.*]] unwind label [[LPAD:%.*]]
+; CHECK:       cont:
+; CHECK-NEXT:    [[SPLIT:%.*]] = shufflevector <4 x float> [[INV]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[SPLIT3:%.*]] = shufflevector <4 x float> [[INV]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       lpad:
+; CHECK-NEXT:    [[L:%.*]] = landingpad { ptr, i32 }
+; CHECK-NEXT:            cleanup
+; CHECK-NEXT:    ret <4 x float> zeroinitializer
+; CHECK:       bb:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[PHI1:%.*]] = phi <2 x float> [ [[SPLIT]], [[CONT]] ], [ zeroinitializer, [[BB]] ]
+; CHECK-NEXT:    [[PHI2:%.*]] = phi <2 x float> [ [[SPLIT3]], [[CONT]] ], [ zeroinitializer, [[BB]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <2 x float> [[PHI1]], <2 x float> [[PHI2]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    ret <4 x float> [[TMP0]]
+;
+entry:
+  br i1 %cond, label %call, label %bb
+
+call:
+  %inv = invoke <4 x float> @get_matrix() to label %cont unwind label %lpad
+
+cont:
+  br label %exit
+
+lpad:
+  %l = landingpad { ptr, i32 } cleanup
+  ret <4 x float> zeroinitializer
+
+bb:
+  %t = call <4 x float> @llvm.matrix.transpose.v4f32(<4 x float> zeroinitializer, i32 2, i32 2)
+  br label %exit
+
+exit:
+  %phi = phi <4 x float> [ %inv, %cont ], [ %t, %bb ]
+  ret <4 x float> %phi
+}
+
+define <4 x float> @matrix_phi_duplicate_predecessor(ptr %arg, i32 %sw) {
+; CHECK-LABEL: @matrix_phi_duplicate_predecessor(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SPLIT:%.*]] = load <2 x float>, ptr [[ARG:%.*]], align 16
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds float, ptr [[ARG]], i64 2
+; CHECK-NEXT:    [[SPLIT3:%.*]] = load <2 x float>, ptr [[VEC_GEP]], align 8
+; CHECK-NEXT:    switch i32 [[SW:%.*]], label [[BB:%.*]] [
+; CHECK-NEXT:      i32 0, label [[EXIT:%.*]]
+; CHECK-NEXT:      i32 1, label [[EXIT]]
+; CHECK-NEXT:    ]
+; CHECK:       bb:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[PHI1:%.*]] = phi <2 x float> [ [[SPLIT]], [[ENTRY:%.*]] ], [ [[SPLIT]], [[ENTRY]] ], [ zeroinitializer, [[BB]] ]
+; CHECK-NEXT:    [[PHI2:%.*]] = phi <2 x float> [ [[SPLIT3]], [[ENTRY]] ], [ [[SPLIT3]], [[ENTRY]] ], [ zeroinitializer, [[BB]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <2 x float> [[PHI1]], <2 x float> [[PHI2]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    ret <4 x float> [[TMP0]]
+;
+entry:
+  %m = load <4 x float>, ptr %arg
+  switch i32 %sw, label %bb [
+  i32 0, label %exit
+  i32 1, label %exit
+  ]
+
+bb:
+  %t = call <4 x float> @llvm.matrix.transpose.v4f32(<4 x float> zeroinitializer, i32 2, i32 2)
+  br label %exit
+
+exit:
+  %phi = phi <4 x float> [ %m, %entry ], [ %m, %entry ], [ %t, %bb ]
+  ret <4 x float> %phi
+}

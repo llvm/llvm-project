@@ -247,3 +247,135 @@ define amdgpu_ps void @fpext_v2f32_to_v2f64_div(<2 x float> %a, ptr addrspace(1)
   store <2 x double> %result, ptr addrspace(1) %ptr
   ret void
 }
+
+define amdgpu_ps float @fpext_bf16_to_f32_uniform(bfloat inreg %a) {
+; GFX11-LABEL: fpext_bf16_to_f32_uniform:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_lshl_b32 s0, s0, 16
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    v_mov_b32_e32 v0, s0
+; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: fpext_bf16_to_f32_uniform:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_lshl_b32 s0, s0, 16
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-NEXT:    ; return to shader part epilog
+  %result = fpext bfloat %a to float
+  ret float %result
+}
+
+define amdgpu_ps float @fpext_bf16_to_f32_div(bfloat %a) {
+; GFX11-LABEL: fpext_bf16_to_f32_div:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: fpext_bf16_to_f32_div:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX12-NEXT:    ; return to shader part epilog
+  %result = fpext bfloat %a to float
+  ret float %result
+}
+
+define amdgpu_ps void @fpext_bf16_to_f64_uniform(bfloat inreg %a, ptr addrspace(1) %ptr) {
+; GFX11-LABEL: fpext_bf16_to_f64_uniform:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_lshl_b32 s0, s0, 16
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    v_cvt_f64_f32_e32 v[2:3], s0
+; GFX11-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: fpext_bf16_to_f64_uniform:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_lshl_b32 s0, s0, 16
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    v_cvt_f64_f32_e32 v[2:3], s0
+; GFX12-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX12-NEXT:    s_endpgm
+  %result = fpext bfloat %a to double
+  store double %result, ptr addrspace(1) %ptr
+  ret void
+}
+
+define amdgpu_ps void @fpext_bf16_to_f64_div(bfloat %a, ptr addrspace(1) %ptr) {
+; GFX11-LABEL: fpext_bf16_to_f64_div:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_cvt_f64_f32_e32 v[3:4], v0
+; GFX11-NEXT:    global_store_b64 v[1:2], v[3:4], off
+; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: fpext_bf16_to_f64_div:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_cvt_f64_f32_e32 v[3:4], v0
+; GFX12-NEXT:    global_store_b64 v[1:2], v[3:4], off
+; GFX12-NEXT:    s_endpgm
+  %result = fpext bfloat %a to double
+  store double %result, ptr addrspace(1) %ptr
+  ret void
+}
+
+define amdgpu_ps <2 x float> @fpext_v2bf16_to_v2f32_uniform(<2 x bfloat> inreg %a) {
+; GFX11-LABEL: fpext_v2bf16_to_v2f32_uniform:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_lshr_b32 s1, s0, 16
+; GFX11-NEXT:    s_lshl_b32 s0, s0, 16
+; GFX11-NEXT:    s_lshl_b32 s1, s1, 16
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: fpext_v2bf16_to_v2f32_uniform:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_lshr_b32 s1, s0, 16
+; GFX12-NEXT:    s_lshl_b32 s0, s0, 16
+; GFX12-NEXT:    s_lshl_b32 s1, s1, 16
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-NEXT:    ; return to shader part epilog
+  %result = fpext <2 x bfloat> %a to <2 x float>
+  ret <2 x float> %result
+}
+
+define amdgpu_ps <2 x float> @fpext_v2bf16_to_v2f32_div(<2 x bfloat> %a) {
+; GFX11-FAKE16-LABEL: fpext_v2bf16_to_v2f32_div:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
+; GFX11-FAKE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX11-FAKE16-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX11-FAKE16-NEXT:    ; return to shader part epilog
+;
+; GFX11-TRUE16-LABEL: fpext_v2bf16_to_v2f32_div:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v0.h
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX11-TRUE16-NEXT:    ; return to shader part epilog
+;
+; GFX12-FAKE16-LABEL: fpext_v2bf16_to_v2f32_div:
+; GFX12-FAKE16:       ; %bb.0:
+; GFX12-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
+; GFX12-FAKE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX12-FAKE16-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX12-FAKE16-NEXT:    ; return to shader part epilog
+;
+; GFX12-TRUE16-LABEL: fpext_v2bf16_to_v2f32_div:
+; GFX12-TRUE16:       ; %bb.0:
+; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v0.h
+; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX12-TRUE16-NEXT:    ; return to shader part epilog
+  %result = fpext <2 x bfloat> %a to <2 x float>
+  ret <2 x float> %result
+}

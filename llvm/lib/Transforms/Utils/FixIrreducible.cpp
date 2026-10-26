@@ -181,10 +181,14 @@ INITIALIZE_PASS_END(FixIrreducible, "fix-irreducible",
 static void reconnectChildLoops(LoopInfo &LI, Loop *ParentLoop, Loop *NewLoop,
                                 BasicBlock *OldHeader) {
   // Any candidate (sibling of NewLoop, or top-level loop if there is no
-  // parent) is a child iff its header is owned by the new loop.
+  // parent) is a child iff its header is owned by the new loop. The new loop's
+  // block list is already populated but its subloops are not yet attached, so
+  // query the block list directly rather than contains(), which would derive
+  // from the not-yet-updated block-to-loop map.
   SmallVector<Loop *, 4> ChildLoops =
       LI.takeChildrenIf(ParentLoop, [&](Loop *L) {
-        return NewLoop != L && NewLoop->contains(L->getHeader());
+        return NewLoop != L &&
+               llvm::is_contained(NewLoop->getBlocks(), L->getHeader());
       });
 
   for (Loop *Child : ChildLoops) {
@@ -410,9 +414,10 @@ static bool fixIrreducible(CycleRef C, CycleInfo &CI, DominatorTree &DT,
   }
   CI.setSingleEntry(C, GuardBlocks[0]);
 
-  CI.verifyCycle(C);
+  SmallPtrSet<BasicBlock *, 32> Reachable;
+  CI.verifyCycle(C, Reachable);
   if (CycleRef Parent = CI.getParentCycle(C))
-    CI.verifyCycle(Parent);
+    CI.verifyCycle(Parent, Reachable);
 
   LLVM_DEBUG(dbgs() << "Finished one cycle:\n"; CI.print(dbgs()););
   return true;
@@ -432,9 +437,8 @@ static bool FixIrreducibleImpl(Function &F, CycleInfo &CI, DominatorTree &DT,
 
 #if defined(EXPENSIVE_CHECKS)
   CI.verify();
-  if (LI) {
-    LI->verify(DT);
-  }
+  if (LI)
+    LI->verify();
 #endif // EXPENSIVE_CHECKS
 
   return true;

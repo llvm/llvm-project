@@ -3,19 +3,16 @@
 ```{program} opt
 ```
 
-```{contents}
-:local:
-```
 
 ## Introduction --- What is a pass?
 
-```{warning}
+:::{warning}
 This document deals with the legacy pass manager. LLVM uses the new pass
 manager for the optimization pipeline (the codegen pipeline
 still uses the legacy pass manager), which has its own way of defining
 passes. For more details, see {doc}`WritingAnLLVMNewPMPass` and
 {doc}`NewPassManager`.
-```
+:::
 
 The LLVM Pass Framework is an important part of the LLVM system, because LLVM
 passes are where most of the interesting parts of the compiler exist.  Passes
@@ -27,8 +24,8 @@ All LLVM passes are subclasses of the [Pass](doxygen:classllvm_1_1Pass.html) cla
 functionality by overriding virtual methods inherited from `Pass`.  Depending
 on how your pass works, you should inherit from the
 {ref}`ModulePass <writing-an-llvm-pass-ModulePass>` , {ref}`CallGraphSCCPass <writing-an-llvm-pass-CallGraphSCCPass>`,
-{ref}`FunctionPass <writing-an-llvm-pass-FunctionPass>` , or {ref}`LoopPass <writing-an-llvm-pass-LoopPass>`, or
-{ref}`RegionPass <writing-an-llvm-pass-RegionPass>` classes, which gives the system more
+{ref}`FunctionPass <writing-an-llvm-pass-FunctionPass>` , or {ref}`LoopPass <writing-an-llvm-pass-LoopPass>`
+classes, which gives the system more
 information about what your pass does, and how it can be combined with other
 passes.  One of the main features of the LLVM Pass Framework is that it
 schedules passes to run in an efficient way based on the constraints that your
@@ -291,57 +288,6 @@ The `doFinalization` method is an infrequently used method that is called
 when the pass framework has finished calling
 {ref}`runOnLoop <writing-an-llvm-pass-runOnLoop>` for every loop in the program being compiled.
 
-(writing-an-llvm-pass-RegionPass)=
-
-### The `RegionPass` class
-
-`RegionPass` is similar to {ref}`LoopPass <writing-an-llvm-pass-LoopPass>`,
-but executes on each single entry single exit region in the function.
-`RegionPass` processes regions in nested order such that the outer most
-region is processed last.
-
-`RegionPass` subclasses are allowed to update the region tree by using the
-`RGPassManager` interface.  You may override three virtual methods of
-`RegionPass` to implement your own region pass.  All these methods should
-return `true` if they modified the program, or `false` if they did not.
-
-#### The `doInitialization(Region *, RGPassManager &)` method
-
-```cpp
-virtual bool doInitialization(Region *, RGPassManager &RGM);
-```
-
-The `doInitialization` method is designed to do simple initialization type of
-stuff that does not depend on the functions being processed.  The
-`doInitialization` method call is not scheduled to overlap with any other
-pass executions (thus it should be very fast).  `RPPassManager` interface
-should be used to access `Function` or `Module` level analysis information.
-
-(writing-an-llvm-pass-runOnRegion)=
-
-#### The `runOnRegion` method
-
-```cpp
-virtual bool runOnRegion(Region *, RGPassManager &RGM) = 0;
-```
-
-The `runOnRegion` method must be implemented by your subclass to do the
-transformation or analysis work of your pass.  As usual, a true value should be
-returned if the region is modified.  `RGPassManager` interface should be used to
-update region tree.
-
-#### The `doFinalization()` method
-
-```cpp
-virtual bool doFinalization();
-```
-
-The `doFinalization` method is an infrequently used method that is called
-when the pass framework has finished calling
-{ref}`runOnRegion <writing-an-llvm-pass-runOnRegion>` for every region in the program being
-compiled.
-
-
 ### The `MachineFunctionPass` class
 
 A `MachineFunctionPass` is a part of the LLVM code generator that executes on
@@ -349,7 +295,7 @@ the machine-dependent representation of each LLVM function in the program.
 
 Code generator passes are registered and initialized specially by
 `TargetMachine::addPassesToEmitFile` and similar routines, so they cannot
-generally be run from the {program}`opt` or {program}`bugpoint` commands.
+generally be run from the {program}`opt`.
 
 A `MachineFunctionPass` is also a `FunctionPass`, so all the restrictions
 that apply to a `FunctionPass` also apply to it.  `MachineFunctionPass`es
@@ -427,12 +373,16 @@ RegisterTargetPassConfigCallback X{[](auto &TM, auto &PM, auto *TPC) {
 }};
 ```
 
-Note that passes still have to be registered:
+Note that passes still have to be registered. This can be done using a
+static object whose constructor runs when the plugin is loaded:
 
 ```cpp
-__attribute__((constructor)) static void initCodeGenPlugin() {
-  initializeExamplePass(*PassRegistry::getPassRegistry());
-}
+struct InitCodeGenPlugin {
+  InitCodeGenPlugin() {
+    initializeExamplePass(*PassRegistry::getPassRegistry());
+  }
+};
+static InitCodeGenPlugin InitCodeGenPluginInstance;
 ```
 
 (writing-an-llvm-pass-interaction)=
@@ -793,14 +743,6 @@ First thing you do is start gdb on the opt process:
 
 ```console
 $ gdb opt
-GNU gdb 5.0
-Copyright 2000 Free Software Foundation, Inc.
-GDB is free software, covered by the GNU General Public License, and you are
-welcome to change it and/or distribute copies of it under certain conditions.
-Type "show copying" to see the conditions.
-There is absolutely no warranty for GDB.  Type "show warranty" for details.
-This GDB was configured as "sparc-sun-solaris2.6"...
-(gdb)
 ```
 
 Note that {program}`opt` has a lot of debugging information in it, so it takes

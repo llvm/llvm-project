@@ -9,15 +9,18 @@
 ; ASM-LABEL: f1:
 
 define void @f1(ptr noundef %x) !kcfi_type !1 {
-; Load and type-hash materialization are combined in one packet.
-; ASM:       r{{[0-9]+}} = memw(r0+#-4)
-; ASM-NEXT:  r{{[0-9]+}} = ##12345678
+; Braces are matched so the grouping is pinned, not just the instructions.
+; Extender placement is invisible here -- `##imm` prints the same either way --
+; so it is checked at the object level in kcfi-packetization.ll.
+; ASM:       r{{[0-9]+}} = ##12345678
+; ASM-NEXT:  r{{[0-9]+}} = memw(r0+#-4)
 ; ASM-NEXT:  }
 ; ASM-NEXT:  {
-; ASM-NEXT:    p0 = cmp.eq(r{{[0-9]+}},r{{[0-9]+}})
-; ASM-NEXT:    if (p0.new) jump:t
+; ASM-NEXT:    p0 = cmp.eq(r{{[0-9]+}},r{{[0-9]+}}); if (p0.new) jump:t
 ; ASM-NEXT:  }
-; ASM:       r{{[0-9]+}}:{{[0-9]+}} = memd(##3134984174)
+; ASM:       {
+; ASM-NEXT:    r{{[0-9]+}}:{{[0-9]+}} = memd(##3134984174)
+; ASM-NEXT:  }
 
 ; After ISel, the call should carry a cfi-type.
 ; ISEL-LABEL: name: f1
@@ -37,12 +40,11 @@ define void @f1(ptr noundef %x) !kcfi_type !1 {
 ; Test with a second call using a different type hash.
 define void @f2(ptr noundef %x) !kcfi_type !2 {
 ; ASM-LABEL: f2:
-; ASM:       r{{[0-9]+}} = memw(r0+#-4)
-; ASM-NEXT:  r{{[0-9]+}} = ##1234
+; ASM:       r{{[0-9]+}} = ##1234
+; ASM-NEXT:  r{{[0-9]+}} = memw(r0+#-4)
 ; ASM-NEXT:  }
 ; ASM-NEXT:  {
-; ASM-NEXT:    p0 = cmp.eq(r{{[0-9]+}},r{{[0-9]+}})
-; ASM-NEXT:    if (p0.new) jump:t
+; ASM-NEXT:    p0 = cmp.eq(r{{[0-9]+}},r{{[0-9]+}}); if (p0.new) jump:t
 ; ASM-NEXT:  }
 ; ASM:       r{{[0-9]+}}:{{[0-9]+}} = memd(##3134984174)
 
@@ -56,12 +58,11 @@ define void @f3(ptr noundef %x) #0 {
 ; ASM-LABEL: f3:
 ; ASM:       nop
 ; ASM:       nop
-; ASM:       r{{[0-9]+}} = memw(r0+#-4)
-; ASM-NEXT:  r{{[0-9]+}} = ##12345678
+; ASM:       r{{[0-9]+}} = ##12345678
+; ASM-NEXT:  r{{[0-9]+}} = memw(r0+#-4)
 ; ASM-NEXT:  }
 ; ASM-NEXT:  {
-; ASM-NEXT:    p0 = cmp.eq(r{{[0-9]+}},r{{[0-9]+}})
-; ASM-NEXT:    if (p0.new) jump:t
+; ASM-NEXT:    p0 = cmp.eq(r{{[0-9]+}},r{{[0-9]+}}); if (p0.new) jump:t
 ; ASM-NEXT:  }
 ; ASM:       r{{[0-9]+}}:{{[0-9]+}} = memd(##3134984174)
 
@@ -74,12 +75,11 @@ define void @f3(ptr noundef %x) #0 {
 ;; -(PrefixNops*4 + 4).
 define void @f4_prefix(ptr noundef %x) #1 !kcfi_type !1 {
 ; ASM-LABEL: f4_prefix:
-; ASM:       r{{[0-9]+}} = memw(r0+#-12)
-; ASM-NEXT:  r{{[0-9]+}} = ##12345678
+; ASM:       r{{[0-9]+}} = ##12345678
+; ASM-NEXT:  r{{[0-9]+}} = memw(r0+#-12)
 ; ASM-NEXT:  }
 ; ASM-NEXT:  {
-; ASM-NEXT:    p0 = cmp.eq(r{{[0-9]+}},r{{[0-9]+}})
-; ASM-NEXT:    if (p0.new) jump:t
+; ASM-NEXT:    p0 = cmp.eq(r{{[0-9]+}},r{{[0-9]+}}); if (p0.new) jump:t
 ; ASM-NEXT:  }
 ; ASM:       r{{[0-9]+}}:{{[0-9]+}} = memd(##3134984174)
 
@@ -90,12 +90,11 @@ define void @f4_prefix(ptr noundef %x) #1 !kcfi_type !1 {
 ;; Test patchable-function-prefix with 3 nops: offset = -(3*4+4) = -16.
 define void @f5_prefix3(ptr noundef %x) #2 !kcfi_type !1 {
 ; ASM-LABEL: f5_prefix3:
-; ASM:       r{{[0-9]+}} = memw(r0+#-16)
-; ASM-NEXT:  r{{[0-9]+}} = ##12345678
+; ASM:       r{{[0-9]+}} = ##12345678
+; ASM-NEXT:  r{{[0-9]+}} = memw(r0+#-16)
 ; ASM-NEXT:  }
 ; ASM-NEXT:  {
-; ASM-NEXT:    p0 = cmp.eq(r{{[0-9]+}},r{{[0-9]+}})
-; ASM-NEXT:    if (p0.new) jump:t
+; ASM-NEXT:    p0 = cmp.eq(r{{[0-9]+}},r{{[0-9]+}}); if (p0.new) jump:t
 ; ASM-NEXT:  }
 ; ASM:       r{{[0-9]+}}:{{[0-9]+}} = memd(##3134984174)
 
@@ -108,10 +107,12 @@ define void @f5_prefix3(ptr noundef %x) #2 !kcfi_type !1 {
 ;; must use R8 instead.
 define void @f6_target_r6() {
 ; ASM-LABEL: f6_target_r6:
-; ASM:       r8 = memw(r6+#-4)
-; ASM-NEXT:  r7 = ##12345678
+; ASM:       r7 = ##12345678
+; ASM-NEXT:  r8 = memw(r6+#-4)
 ; ASM-NEXT:  }
 ; ASM-NEXT:  {
+;; r8 is outside the register range the compare-jump compound can
+;; encode, so these two stay separate instructions in the packet.
 ; ASM-NEXT:    p0 = cmp.eq(r8,r7)
 ; ASM-NEXT:    if (p0.new) jump:t
 ; ASM-NEXT:  }
@@ -132,10 +133,12 @@ define void @f6_target_r6() {
 ;; must use R8 instead.
 define void @f7_target_r7() {
 ; ASM-LABEL: f7_target_r7:
-; ASM:       r6 = memw(r7+#-4)
-; ASM-NEXT:  r8 = ##12345678
+; ASM:       r8 = ##12345678
+; ASM-NEXT:  r6 = memw(r7+#-4)
 ; ASM-NEXT:  }
 ; ASM-NEXT:  {
+;; r8 is outside the register range the compare-jump compound can
+;; encode, so these two stay separate instructions in the packet.
 ; ASM-NEXT:    p0 = cmp.eq(r6,r8)
 ; ASM-NEXT:    if (p0.new) jump:t
 ; ASM-NEXT:  }
@@ -155,12 +158,11 @@ define void @f7_target_r7() {
 ;; Test noreturn indirect call with KCFI (uses PS_callr_nr opcode).
 define void @f8_noreturn(ptr noundef %x) {
 ; ASM-LABEL: f8_noreturn:
-; ASM:       r{{[0-9]+}} = memw(r0+#-4)
-; ASM-NEXT:  r{{[0-9]+}} = ##12345678
+; ASM:       r{{[0-9]+}} = ##12345678
+; ASM-NEXT:  r{{[0-9]+}} = memw(r0+#-4)
 ; ASM-NEXT:  }
 ; ASM-NEXT:  {
-; ASM-NEXT:    p0 = cmp.eq(r{{[0-9]+}},r{{[0-9]+}})
-; ASM-NEXT:    if (p0.new) jump:t
+; ASM-NEXT:    p0 = cmp.eq(r{{[0-9]+}},r{{[0-9]+}}); if (p0.new) jump:t
 ; ASM-NEXT:  }
 ; ASM:       r{{[0-9]+}}:{{[0-9]+}} = memd(##3134984174)
 

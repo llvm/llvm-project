@@ -103,7 +103,7 @@ createAMDGPUMCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS) {
   } else if (IsWave64 && IsWave32) {
     // The wave size is mutually exclusive. If both somehow end up set, wave32
     // wins if supported.
-    STI->ToggleFeature(AMDGPU::supportsWave32(*STI)
+    STI->ToggleFeature(STI->hasFeature(AMDGPU::FeatureSupportsWave32)
                            ? AMDGPU::FeatureWavefrontSize64
                            : AMDGPU::FeatureWavefrontSize32);
 
@@ -216,6 +216,8 @@ LLVMInitializeAMDGPUTargetMC() {
                                         createR600MCCodeEmitter);
   TargetRegistry::RegisterObjectTargetStreamer(
       getTheR600Target(), createAMDGPUObjectTargetStreamer);
+  TargetRegistry::RegisterNullTargetStreamer(getTheR600Target(),
+                                             createAMDGPUNullTargetStreamer);
 
   // GCN specific registration
   for (Target *T : {&getTheGCNTarget(), &getTheGCNLegacyTarget()}) {
