@@ -558,7 +558,7 @@ LLVM_ABI FunctionPass *createCFIInstrInserterLegacy();
 
 /// Creates CFGuard longjmp target identification pass.
 /// \see CFGuardLongjmp.cpp
-LLVM_ABI FunctionPass *createCFGuardLongjmpPass();
+LLVM_ABI FunctionPass *createCFGuardLongjmpLegacyPass();
 
 /// Creates Windows EH Continuation Guard target identification pass.
 /// \see EHContGuardTargets.cpp
@@ -568,7 +568,7 @@ LLVM_ABI FunctionPass *createEHContGuardTargetsLegacy();
 LLVM_ABI FunctionPass *createHardwareLoopsLegacyPass();
 
 /// This pass inserts pseudo probe annotation for callsite profiling.
-LLVM_ABI FunctionPass *createPseudoProbeInserter();
+LLVM_ABI FunctionPass *createPseudoProbeInserterLegacyPass();
 
 /// Create IR Type Promotion pass. \see TypePromotion.cpp
 LLVM_ABI FunctionPass *createTypePromotionLegacyPass();

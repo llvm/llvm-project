@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/Value.h"
+#include "IROptions.h"
 #include "LLVMContextImpl.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
@@ -30,16 +31,11 @@
 #include "llvm/IR/TypedPointerType.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/IR/ValueSymbolTable.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 
 using namespace llvm;
-
-static cl::opt<bool> UseDerefAtPointSemantics(
-    "use-dereferenceable-at-point-semantics", cl::Hidden, cl::init(true),
-    cl::desc("Deref attributes and metadata infer facts at definition only"));
 
 //===----------------------------------------------------------------------===//
 //                                Value Class
@@ -991,7 +987,7 @@ uint64_t Value::getPointerDereferenceableBytes(const DataLayout &DL,
     // Call canBeFreed() only if there are dereferenceable bytes and it's not
     // one of the cases that can never be freed.
     if (!CanNotBeFreed && DerefBytes != 0)
-      *CanBeFreed = UseDerefAtPointSemantics && canBeFreed();
+      *CanBeFreed = canBeFreed();
     else
       *CanBeFreed = false;
   }

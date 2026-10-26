@@ -8,20 +8,16 @@ define i1 @test(i32 %0, i32 %add21.i, i32 %1) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 [[TMP0]], i64 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub <4 x i32> zeroinitializer, [[TMP6]]
-; CHECK-NEXT:    [[TMP3:%.*]] = shl i32 [[TMP0]], 1
-; CHECK-NEXT:    [[DIFF_CHECK134:%.*]] = icmp eq i32 [[TMP3]], 0
-; CHECK-NEXT:    [[DIFF_CHECK138:%.*]] = icmp ult i32 [[TMP3]], [[TMP1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = mul i32 [[TMP0]], [[TMP0]]
-; CHECK-NEXT:    [[DIFF_CHECK142:%.*]] = icmp eq i32 [[TMP5]], 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> <i32 2, i32 2, i32 2, i32 poison>, i32 [[TMP0]], i64 3
+; CHECK-NEXT:    [[TMP13:%.*]] = mul <4 x i32> [[TMP6]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> poison, i32 [[ADD21_I]], i64 0
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i32> [[TMP6]], <4 x i32> [[TMP7]], <4 x i32> <i32 4, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp ugt <4 x i32> [[TMP8]], [[TMP4]]
-; CHECK-NEXT:    [[DIFF_CHECK149:%.*]] = icmp ult i32 [[TMP3]], [[ADD21_I]]
-; CHECK-NEXT:    [[TMP10:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP9]])
-; CHECK-NEXT:    [[CONFLICT_RDX147:%.*]] = or i1 [[TMP10]], [[DIFF_CHECK138]]
-; CHECK-NEXT:    [[DIFF_CHECK148:%.*]] = or i1 [[DIFF_CHECK149]], [[DIFF_CHECK134]]
-; CHECK-NEXT:    [[CONFLICT_RDX149:%.*]] = or i1 [[CONFLICT_RDX147]], [[DIFF_CHECK148]]
-; CHECK-NEXT:    [[OP_RDX3:%.*]] = or i1 [[CONFLICT_RDX149]], [[DIFF_CHECK142]]
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x i32> <i32 poison, i32 poison, i32 1, i32 1>, i32 [[TMP1]], i64 0
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i32> [[TMP10]], i32 [[ADD21_I]], i64 1
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp ult <4 x i32> [[TMP13]], [[TMP11]]
+; CHECK-NEXT:    [[RDX_OP:%.*]] = or <4 x i1> [[TMP9]], [[TMP12]]
+; CHECK-NEXT:    [[OP_RDX3:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[RDX_OP]])
 ; CHECK-NEXT:    ret i1 [[OP_RDX3]]
 ;
 entry:
