@@ -25,6 +25,7 @@
 
 #include "ExclusiveAccess.h"
 #include "OffloadEntry.h"
+#include "OpenMP/BackendConfig.h"
 #include "omptarget.h"
 #include "rtl.h"
 
@@ -135,11 +136,13 @@ struct DeviceTy {
   /// Provide access to the mapping handler.
   MappingInfoTy &getMappingInfo() { return MappingInfo; }
 
-  /// Whether this device executes kernels on the host CPU.
-  bool isHostDevice() const { return IsHostDevice; }
-
   /// Get this device's backend.
   ol_platform_backend_t getBackend() const { return Backend; }
+
+  /// Get the constants of this device's backend.
+  const llvm::omp::target::BackendConfig &getConfig() const {
+    return llvm::omp::target::BackendConfig::get(Backend);
+  }
 
   /// Load \p Img onto the device and return the resulting program.
   llvm::Expected<ProgramTy> loadBinary(__tgt_device_image *Img);
@@ -377,9 +380,6 @@ private:
   /// Launch-geometry properties for each kernel registered on this device.
   using KernelLaunchInfoMapTy = llvm::DenseMap<void *, KernelLaunchInfoTy>;
   ProtectedObj<KernelLaunchInfoMapTy> KernelLaunchInfoMap;
-
-  /// Whether this is a host device.
-  bool IsHostDevice = false;
 
   /// The backend of this device.
   ol_platform_backend_t Backend = OL_PLATFORM_BACKEND_UNKNOWN;
