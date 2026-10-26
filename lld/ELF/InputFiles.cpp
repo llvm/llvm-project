@@ -1199,25 +1199,27 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(uint32_t idx,
 }
 
 template <typename ELFT>
-void ObjFile<ELFT>::visitGlobalRelocSymbolIndices(
-    const object::ELFFile<ELFT> &obj, const Elf_Shdr &sh,
-    llvm::function_ref<void(uint32_t)> fn) const {
-  auto visit = [&](uint32_t symIdx) {
+static void
+visitGlobalRelocSymbolIndices(Ctx &ctx, const ObjFile<ELFT> &elf,
+                              const typename ELFT::Shdr &sh,
+                              llvm::function_ref<void(uint32_t)> fn) {
+  auto visit = [&, firstGlobal = elf.getFirstGlobal()](uint32_t symIdx) {
     if (symIdx >= firstGlobal)
       fn(symIdx);
   };
 
+  object::ELFFile<ELFT> obj = elf.getObj();
   if (sh.sh_type == SHT_CREL) {
-    auto [rels, relas] = CHECK2(obj.crels(sh), this);
-    for (const Elf_Rel &r : rels)
+    auto [rels, relas] = CHECK2(obj.crels(sh), &elf);
+    for (const auto &r : rels)
       visit(r.getSymbol(false));
-    for (const Elf_Rela &r : relas)
+    for (const auto &r : relas)
       visit(r.getSymbol(false));
   } else if (sh.sh_type == SHT_RELA) {
-    for (const Elf_Rela &r : CHECK2(obj.relas(sh), this))
+    for (const auto &r : CHECK2(obj.relas(sh), &elf))
       visit(r.getSymbol(ctx.arg.isMips64EL));
   } else {
-    for (const Elf_Rel &r : CHECK2(obj.rels(sh), this))
+    for (const auto &r : CHECK2(obj.rels(sh), &elf))
       visit(r.getSymbol(ctx.arg.isMips64EL));
   }
 }
@@ -1314,8 +1316,9 @@ template <class ELFT> void ObjFile<ELFT>::initDynDbgSymbols() {
     const Elf_Shdr &target = *CHECK2(obj.getSection(sh.sh_info), &dbgObj);
     if (!(target.sh_flags & SHF_ALLOC))
       continue;
-    dbgObj.visitGlobalRelocSymbolIndices(
-        obj, sh, [&, firstGlobal = dbgObj.firstGlobal](uint32_t symIdx) {
+    visitGlobalRelocSymbolIndices(
+        ctx, dbgObj, sh,
+        [&, firstGlobal = dbgObj.firstGlobal](uint32_t symIdx) {
           globalUsed[symIdx - firstGlobal] = true;
         });
   }
@@ -2182,8 +2185,8 @@ template <typename ELFT> void ObjFile<ELFT>::maybeCreateDynDbgGCInfo() {
     // Find "outer" symbols referenced by the "inner" section and record in the
     // InputSection's DynDbgGCInfo.
     DenseSet<uint32_t> processedSyms;
-    dbgObj.visitGlobalRelocSymbolIndices(
-        obj, dbgShdrs[si.relocIdx], [&](uint32_t symIdx) {
+    visitGlobalRelocSymbolIndices(
+        ctx, dbgObj, dbgShdrs[si.relocIdx], [&](uint32_t symIdx) {
           const Elf_Sym &s = dbgSyms[symIdx];
           if (s.st_shndx != SHN_UNDEF || !processedSyms.insert(symIdx).second)
             return;

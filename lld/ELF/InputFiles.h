@@ -206,6 +206,8 @@ public:
     return getELFSyms<ELFT>().slice(firstGlobal);
   }
 
+  uint32_t getFirstGlobal() const { return firstGlobal; }
+
   // Get cached DWARF information.
   DWARFCache *getDwarf();
 
@@ -283,11 +285,6 @@ public:
 
   // Dynamic debugging info.
   std::unique_ptr<DynDbgInfo> dynDbgInfo;
-
-  void
-  visitGlobalRelocSymbolIndices(const llvm::object::ELFFile<ELFT> &obj,
-                                const Elf_Shdr &relocShdr,
-                                llvm::function_ref<void(uint32_t)> func) const;
   void maybeCreateDynDbgGCInfo();
 
   // SHT_LLVM_CALL_GRAPH_PROFILE section index.
