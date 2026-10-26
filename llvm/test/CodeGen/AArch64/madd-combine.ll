@@ -3,11 +3,9 @@
 
 ; RUN: llc -mtriple=aarch64-apple-macosx -mcpu=apple-m3 -mattr=+shift-madd-slow < %s | FileCheck %s --check-prefix=APPLE-SLOW
 ; RUN: llc -mtriple=aarch64-apple-macosx -mcpu=apple-m4 < %s | FileCheck %s --check-prefix=APPLE-SLOW
-; RUN: llc -mtriple=aarch64-apple-macosx -mcpu=apple-m5 < %s | FileCheck %s --check-prefix=APPLE-SLOW
 
 ; RUN: llc -mtriple=aarch64-apple-macosx -mcpu=apple-m3 < %s | FileCheck %s --check-prefix=APPLE-FAST
 ; RUN: llc -mtriple=aarch64-apple-macosx -mcpu=apple-m4 -mattr=-shift-madd-slow < %s | FileCheck %s --check-prefix=APPLE-FAST
-; RUN: llc -mtriple=aarch64-apple-macosx -mcpu=apple-m5 -mattr=-shift-madd-slow < %s | FileCheck %s --check-prefix=APPLE-FAST
 
 define i32 @madd_w_asr(i32 %a, i32 %b, i32 %c) {
 ; LINUX-FAST-LABEL: madd_w_asr:

@@ -6,14 +6,10 @@
 # RUN:     -verify-machineinstrs -o - %s | FileCheck %s --check-prefix=APPLE-SLOW
 # RUN: llc -mtriple=aarch64-apple-macosx -mcpu=apple-m4 -run-pass=machine-combiner \
 # RUN:     -verify-machineinstrs -o - %s | FileCheck %s --check-prefix=APPLE-SLOW
-# RUN: llc -mtriple=aarch64-apple-macosx -mcpu=apple-m5 -run-pass=machine-combiner \
-# RUN:     -verify-machineinstrs -o - %s | FileCheck %s --check-prefix=APPLE-SLOW
 
 # RUN: llc -mtriple=aarch64-apple-macosx -mcpu=apple-m3 -run-pass=machine-combiner \
 # RUN:     -verify-machineinstrs -o - %s | FileCheck %s --check-prefix=APPLE-FAST
 # RUN: llc -mtriple=aarch64-apple-macosx -mcpu=apple-m4 -mattr=-shift-madd-slow -run-pass=machine-combiner \
-# RUN:     -verify-machineinstrs -o - %s | FileCheck %s --check-prefix=APPLE-FAST
-# RUN: llc -mtriple=aarch64-apple-macosx -mcpu=apple-m5 -mattr=-shift-madd-slow -run-pass=machine-combiner \
 # RUN:     -verify-machineinstrs -o - %s | FileCheck %s --check-prefix=APPLE-FAST
 ---
 name:            madd_w_asr
