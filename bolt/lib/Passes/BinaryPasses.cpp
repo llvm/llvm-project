@@ -172,14 +172,7 @@ cl::opt<bolt::ReorderBasicBlocks::LayoutType> ReorderBlocks(
                    "perform layout optimizing I-cache behavior"),
         clEnumValN(bolt::ReorderBasicBlocks::LT_OPTIMIZE_SHUFFLE,
                    "cluster-shuffle", "perform random layout of clusters")),
-    cl::cat(BoltOptCategory),
-    cl::callback([](const bolt::ReorderBasicBlocks::LayoutType &option) {
-      if (option == bolt::ReorderBasicBlocks::LT_OPTIMIZE_CACHE_PLUS) {
-        errs() << "BOLT-WARNING: '-reorder-blocks=cache+' is deprecated, please"
-               << " use '-reorder-blocks=ext-tsp' instead\n";
-        ReorderBlocks = bolt::ReorderBasicBlocks::LT_OPTIMIZE_EXT_TSP;
-      }
-    }));
+    cl::cat(BoltOptCategory));
 
 static cl::opt<unsigned> ReportBadLayout(
     "report-bad-layout",
@@ -415,6 +408,11 @@ bool ReorderBasicBlocks::shouldOptimize(const BinaryFunction &BF) const {
 }
 
 Error ReorderBasicBlocks::runOnFunctions(BinaryContext &BC) {
+  if (opts::ReorderBlocks == ReorderBasicBlocks::LT_OPTIMIZE_CACHE_PLUS) {
+    BC.errs() << "BOLT-WARNING: '-reorder-blocks=cache+' is deprecated, please"
+              << " use '-reorder-blocks=ext-tsp' instead\n";
+    opts::ReorderBlocks = ReorderBasicBlocks::LT_OPTIMIZE_EXT_TSP;
+  }
   if (opts::ReorderBlocks == ReorderBasicBlocks::LT_NONE)
     return Error::success();
 

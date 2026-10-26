@@ -13,10 +13,10 @@
 #ifndef LLVM_CLANG_AST_INTERP_POINTER_H
 #define LLVM_CLANG_AST_INTERP_POINTER_H
 
+#include "Block.h"
 #include "Descriptor.h"
 #include "Function.h"
 #include "InitMap.h"
-#include "InterpBlock.h"
 #include "clang/AST/ComparisonCategories.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
@@ -303,6 +303,10 @@ struct PtrView {
   }
 
   bool isInitialized() const {
+
+    if (!Pointee->isInitialized())
+      return false;
+
     if (isRoot() && Base == sizeof(GlobalInlineDescriptor) && Offset == Base) {
       const auto &GD = Pointee->getBlockDesc<GlobalInlineDescriptor>();
       return GD.InitState == GlobalInitState::Initialized;
@@ -726,7 +730,7 @@ public:
     case Storage::Block:
       return view().getType();
     case Storage::Fn:
-      return Fn.Func->getDecl()->getType();
+      return Fn.Func->getType();
     case Storage::Typeid:
       return QualType(Typeid.TypeInfoType, 0);
     case Storage::String:
@@ -915,23 +919,21 @@ public:
   }
 
   bool isWeak() const {
-    if (isFunctionPointer()) {
+    switch (StorageKind) {
+    case Storage::Fn:
       if (!Fn.Func || !Fn.Func->getDecl())
         return false;
-
       return Fn.Func->getDecl()->isWeak();
-    }
-
-    if (isOpaquePointer()) {
+    case Storage::Opaque:
       if (const VarDecl *BaseDecl = Opaque.getBaseVarDecl())
         return BaseDecl->isWeak();
       return false;
-    }
-    if (!isBlockPointer())
+    case Storage::Block:
+      return BS.Pointee->isWeak();
+    default:
       return false;
-
-    assert(isBlockPointer());
-    return BS.Pointee->isWeak();
+    }
+    llvm_unreachable("Unhandled storage kind");
   }
   /// Checks if the object is active.
   bool isActive() const {
@@ -1214,7 +1216,13 @@ public:
   /// of a primtive array.
   void initializeAllElements() const;
   /// Checks if an object was initialized.
-  bool isInitialized() const;
+  bool isInitialized() const {
+    if (!isBlockPointer())
+      return true;
+
+    return view().isInitialized();
+  }
+
   /// Like isInitialized(), but for primitive arrays.
   bool isElementInitialized(unsigned Index) const {
     if (!isBlockPointer())

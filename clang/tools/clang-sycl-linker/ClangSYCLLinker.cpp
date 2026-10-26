@@ -1043,8 +1043,10 @@ static Error runSYCLLink(ArrayRef<std::unique_ptr<MemoryBuffer>> Inputs,
     OffloadingImage TheImage{};
     TheImage.TheImageKind = IsAOTCompileNeeded ? IMG_Object : IMG_SPIRV;
     TheImage.TheOffloadKind = OFK_SYCL;
-    TheImage.StringData["triple"] =
-        Args.MakeArgString(Result.TargetTriple.str());
+    // Normalize to the three-part form so that the recorded string does not
+    // depend on how the inputs spelled the target.
+    TheImage.StringData["triple"] = Args.MakeArgString(
+        Result.TargetTriple.normalize(Triple::CanonicalForm::THREE_IDENT));
     TheImage.StringData["arch"] =
         Args.MakeArgString(Args.getLastArgValue(OPT_arch_EQ));
     TheImage.StringData["symbols"] = SI.Symbols;

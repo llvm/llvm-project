@@ -751,9 +751,19 @@ bool needCUDAAlloc(const Fortran::semantics::Symbol &sym) {
         (*details->cudaDataAttr() == Fortran::common::CUDADataAttr::Device ||
          *details->cudaDataAttr() == Fortran::common::CUDADataAttr::Managed ||
          *details->cudaDataAttr() == Fortran::common::CUDADataAttr::Unified ||
-         *details->cudaDataAttr() == Fortran::common::CUDADataAttr::Shared ||
-         *details->cudaDataAttr() == Fortran::common::CUDADataAttr::Pinned))
+         *details->cudaDataAttr() == Fortran::common::CUDADataAttr::Shared))
       return true;
+    // Pinned data is host memory. For an allocatable or pointer, the pinned
+    // allocator is recorded in the descriptor and the descriptor itself stays
+    // in host memory.
+    if (details->cudaDataAttr() &&
+        *details->cudaDataAttr() == Fortran::common::CUDADataAttr::Pinned &&
+        !Fortran::semantics::IsAllocatableOrPointer(sym.GetUltimate()))
+      return true;
+    // Derived-type function result storage is replaced by the caller-provided
+    // buffer in the AbstractResult pass, so it must not be CUDA allocated.
+    if (Fortran::semantics::IsFunctionResult(sym))
+      return false;
     const Fortran::semantics::DeclTypeSpec *type{details->type()};
     const Fortran::semantics::DerivedTypeSpec *derived{type ? type->AsDerived()
                                                             : nullptr};

@@ -2,7 +2,7 @@
 
 #include "ObjectFilePECOFF.h"
 
-#include "Plugins/Process/Utility/lldb-x86-register-enums.h"
+#include "Register/Arch/lldb-x86-register-enums.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "llvm/Support/Win64EH.h"
 

@@ -14,6 +14,7 @@ let Component = "Lex", CategoryName = "Lexical or Preprocessor Issue" in {
 // C23 compatibility with C17 and earlier.
 defm c23_pp_directive : C23Compat<
   "use of a '#%select{<BUG IF SEEN>|elifdef|elifndef}0' directive is", /*ext_warn*/true>;
+defm c23_pp_embed_directive : C23Compat<"#embed is", /*ext_warn*/true>;
 
 // C++11 compatibility with C++98.
 defm empty_fnmacro_arg : CXX11Compat<
@@ -30,6 +31,7 @@ defm cxx23_pp_directive : CXX23Compat<
 // C++26 compatibility with C++23 and earlier.
 defm raw_string_literal_character_set : CXX26Compat<
   "'%0' in a raw string literal delimiter is", /*ext_warn*/false>;
+defm cxx26_pp_embed_directive : CXX26Compat<"#embed is">;
 
 def null_in_char_or_string : Warning<
   "null character(s) preserved in %select{char|string}0 literal">,
@@ -269,26 +271,27 @@ def err_hex_constant_requires : Error<
 def ext_hex_constant_invalid : Extension<
   "hexadecimal floating constants are a C99 feature">, InGroup<C99>;
 def ext_octal_literal : Extension<
-  "octal integer literals are a C2y extension">, InGroup<C2y>;
+  "octal integer literals are a C2y extension">, InGroup<C2y>, SuppressInSystemMacro;
 def ext_cpp_octal_literal : Extension<
   "octal integer literals are a Clang extension">,
-  InGroup<DiagGroup<"octal-prefix-extension">>;
+  InGroup<DiagGroup<"octal-prefix-extension">>, SuppressInSystemMacro;
 def warn_c2y_compat_octal_literal : Warning<
   "octal integer literals are incompatible with standards before C2y">,
-  InGroup<CPre2yCompat>, DefaultIgnore;
+  InGroup<CPre2yCompat>, DefaultIgnore, SuppressInSystemMacro;
 def warn_unprefixed_octal_deprecated : Warning<
   "octal literals without a '0o' prefix are deprecated">,
-  InGroup<DeprecatedOctalLiterals>;
+  InGroup<DeprecatedOctalLiterals>, SuppressInSystemMacro;
 def ext_binary_literal : Extension<
-  "binary integer literals are a C23 extension">, InGroup<C23>;
+  "binary integer literals are a C23 extension">, InGroup<C23>, SuppressInSystemMacro;
 def warn_c23_compat_binary_literal : Warning<
   "binary integer literals are incompatible with C standards before C23">,
-  InGroup<CPre23Compat>, DefaultIgnore;
+  InGroup<CPre23Compat>, DefaultIgnore, SuppressInSystemMacro;
 def ext_binary_literal_cxx14 : Extension<
-  "binary integer literals are a C++14 extension">, InGroup<CXX14BinaryLiteral>;
+  "binary integer literals are a C++14 extension">,
+  InGroup<CXX14BinaryLiteral>, SuppressInSystemMacro;
 def warn_cxx11_compat_binary_literal : Warning<
   "binary integer literals are incompatible with C++ standards before C++14">,
-  InGroup<CXXPre14CompatBinaryLiteral>, DefaultIgnore;
+  InGroup<CXXPre14CompatBinaryLiteral>, DefaultIgnore, SuppressInSystemMacro;
 def err_pascal_string_too_long : Error<"Pascal string is too long">;
 def err_escape_too_large : Error<
   "%select{hex|octal}0 escape sequence out of range">;
@@ -483,12 +486,6 @@ def warn_cxx23_compat_warning_directive : Warning<
   InGroup<CXXPre23Compat>, DefaultIgnore;
 def warn_c23_compat_warning_directive : Warning<
   "#warning is incompatible with C standards before C23">,
-  InGroup<CPre23Compat>, DefaultIgnore;
-def ext_pp_embed_directive : ExtWarn<
-  "#embed is a %select{C23|Clang}0 extension">,
-  InGroup<C23>;
-def warn_compat_pp_embed_directive : Warning<
-  "#embed is incompatible with C standards before C23">,
   InGroup<CPre23Compat>, DefaultIgnore;
 def err_pp_embed_dup_params : Error<
   "cannot specify parameter '%0' twice in the same '#embed' directive">;
