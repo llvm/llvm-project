@@ -4736,11 +4736,11 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
     return replaceInstUsesWith(SI, FalseVal);
   }
 
-  // If the type of select is not an integer type or if the condition and
-  // the selection type are not both scalar nor both vector types, there is no
-  // point in attempting to match these patterns.
+  // If the condition is a constant or if the condition and the selection
+  // type are not both scalar nor both vector types, there is no point in
+  // attempting to match these patterns.
   Type *CondType = CondVal->getType();
-  if (!isa<Constant>(CondVal) && SelType->isIntOrIntVectorTy() &&
+  if (!isa<Constant>(CondVal) &&
       CondType->isVectorTy() == SelType->isVectorTy()) {
     if (Value *S = simplifyWithOpReplaced(TrueVal, CondVal,
                                           ConstantInt::getTrue(CondType), SQ,
