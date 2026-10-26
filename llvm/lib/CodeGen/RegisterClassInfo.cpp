@@ -101,7 +101,11 @@ void RegisterClassInfo::runOnMachineFunction(const MachineFunction &mf,
     IgnoreCSRForAllocOrder = std::move(CSRHintsForAllocOrder);
   }
 
-  RegCosts = TRI->getRegisterCosts(*MF);
+  // Targets may select different register costs for functions using the same
+  // subtarget. MinCost and LastCostChange must follow the selected table.
+  ArrayRef<uint8_t> NewRegCosts = TRI->getRegisterCosts(*MF);
+  Update |= RegCosts.data() != NewRegCosts.data();
+  RegCosts = NewRegCosts;
 
   // Different reserved registers?
   const BitVector &RR = MF->getRegInfo().getReservedRegs();
