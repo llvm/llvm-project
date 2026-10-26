@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=aarch64 -O0 -global-isel -stop-after=irtranslator -o - %s | FileCheck %s
+; RUN: llc -mtriple=aarch64 -O0 -global-isel -stop-after=ir-translator -o - %s | FileCheck %s
 ; RUN: llc -mtriple=aarch64 -O0 -fast-isel -stop-after=finalize-isel -o - %s | FileCheck %s
 ; RUN: llc -mtriple=aarch64 -O2 -stop-after=finalize-isel -o - %s | FileCheck %s
 

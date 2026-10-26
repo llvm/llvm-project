@@ -8,14 +8,15 @@
 # ===----------------------------------------------------------------------===##
 
 import argparse
+import common
 import contextlib
+import datetime
 import json
 import logging
 import os
 import pathlib
 import platform
 import re
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -84,40 +85,49 @@ def gather_lit_features(lit, lit_args, tests):
             reported[REPORTED_FEATURES[name]] = value
     return reported
 
-def gather_run_information(args):
+def gather_commit_information(args):
     """
-    Gather the run information to upload to LNT as part of the submission.
+    Gather the information about the benchmarked commit to upload to LNT as part of the submission.
     """
-    info = {}
-    # TODO: For now, we don't include commit information. This happens to be a long string and
-    #       production instances of LNT dont't accept those as part of submissions for the time being.
-    # info['commit_info'] = subprocess.check_output(['git', '-C', args.git_repo, 'show', args.benchmark_commit, '--no-patch']).decode()
-    info['git_sha'] = subprocess.check_output(['git', '-C', args.git_repo, 'rev-parse', args.benchmark_commit]).decode().strip()
-    return info
+    def git(*command):
+        return subprocess.check_output(['git', '-C', args.git_repo, *command]).decode().strip()
 
-def dict_to_params(d):
-    """
-    Return a list of 'key=value' strings from a dictionary.
-    """
-    res = []
-    for (k, v) in d.items():
-        res.append(f'{k}={v}')
-    return res
+    sha = git('rev-parse', '--verify', f'{args.benchmark_commit}^{{commit}}')
+    (subject, author, timestamp) = git('log', '-1', '--no-show-signature', '--format=%s%x00%an%x00%ct', sha).split('\0')
+    fields = {
+        'short_sha': sha[:12],
+        'title': subject,
+        'author': author,
+        'committed_at': datetime.datetime.fromtimestamp(int(timestamp), datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
+    }
+    commit = {'value': sha, 'fields': fields}
+
+    # Only commits on the main branch get an ordinal so we can order them on time series. Other commits
+    # can exist, but they are not totally ordered with the rest.
+    ancestor = subprocess.run(['git', '-C', args.git_repo, 'merge-base', '--is-ancestor', sha, args.main_branch])
+    if ancestor.returncode == 0:
+        commit['ordinal'] = int(git('rev-list', '--count', sha))
+    elif ancestor.returncode == 1:
+        logging.info(f'{sha} is not on {args.main_branch}: not giving it an ordinal')
+    else:
+        raise RuntimeError(f'could not determine whether {sha} is on {args.main_branch} (does that branch exist?)')
+    return commit
+
+def key_value(string):
+    if '=' not in string:
+        raise argparse.ArgumentTypeError(f'expected KEY=VALUE, got {string!r}')
+    return tuple(string.split('=', 1))
 
 def main(argv):
     parser = argparse.ArgumentParser(
         prog='run-benchmarks',
-        description='Run the libc++ benchmark suite against a Standard Library and produce a LNT JSON report. '
-                    'The library being benchmarked is selected by the testing configuration passed to --test-config.',
-        epilog='This script depends on the modules listed in `libcxx/utils/ci/lnt/requirements.txt`.')
+        description='Benchmark libc++ at the given commit and produce a LNT JSON report.')
     parser.add_argument('--test-config', type=str, required=True,
         help='The Lit testing configuration to use. This has the same meaning as for test-at-commit: either an '
              'absolute path to a Lit configuration file, or a path relative to the libcxx/test/configs directory '
              'of the test suite being used.')
     parser.add_argument('--benchmark-commit', type=str, required=True,
-        help='The SHA that the results are attributed to in LNT. When benchmarking libc++, this is the version '
-             'of the library being benchmarked. When benchmarking another Standard Library, this is merely a label '
-             'placing the results on the LNT time axis.')
+        help='The SHA representing the version of the library to benchmark.')
     parser.add_argument('--test-suite-commit', type=str, required=True,
         help='The SHA representing the version of the test suite to use for benchmarking.')
     parser.add_argument('--compiler', type=str, required=True,
@@ -127,6 +137,11 @@ def main(argv):
     parser.add_argument('--output', type=pathlib.Path, required=True,
         help='Path where the resulting LNT JSON report is written. It is an error for the file to '
              'already exist.')
+    parser.add_argument('--main-branch', type=str, default='origin/main',
+        help='The main branch of the repository. Only commits on that branch are given an ordinal.')
+    parser.add_argument('--run-parameter', type=key_value, action='append', default=[], metavar='KEY=VALUE',
+        help='Additional information about the run to include in the report (e.g. the URL of the CI job). '
+             'This can be passed multiple times.')
     parser.add_argument('lit_options', nargs=argparse.REMAINDER,
         help='Optional arguments passed to Lit when running the benchmarks. Should be provided last and '
                  'separated from other arguments with a `--`.')
@@ -190,8 +205,8 @@ def main(argv):
         sys.exit(f'error: output report {args.output} already exists; not overwriting it')
     if args.artifacts_dir is not None and args.artifacts_dir.exists():
         sys.exit(f'error: artifacts directory {args.artifacts_dir} already exists; not overwriting it')
-    if shutil.which('lnt') is None:
-        sys.exit('error: cannot find `lnt`; install libcxx/utils/ci/lnt/requirements.txt')
+    # Gather the information about the commit up front, since it doesn't depend on the results and can fail.
+    commit = None if args.dry_run else gather_commit_information(args)
 
     with contextlib.ExitStack() as stack:
         # The artifacts are kept in --artifacts-dir when it is given, and stored in a temporary directory otherwise.
@@ -224,27 +239,24 @@ def main(argv):
         if args.filter is not None:
             cmd += ['--filter', args.filter]
         run(cmd, enforce_success=False) # some benchmarks may fail to build/run at some commits, and that's okay
+        measured_at = datetime.datetime.now(datetime.timezone.utc)
 
         consolidate = [args.git_repo / 'libcxx/utils/consolidate-benchmarks', artifacts / 'benchmarks-build']
         if args.dry_run:
             run(consolidate)
-        else:
-            with open(artifacts / 'benchmarks.lnt', 'w') as f:
-                run(consolidate, stdout=f)
+            logging.info('Dry run: not creating a LNT report')
+            return
+        with open(artifacts / 'benchmarks.lnt', 'w') as f:
+            run(consolidate, stdout=f)
 
         logging.info('Creating JSON report for LNT')
-        order = len(subprocess.check_output(['git', '-C', args.git_repo, 'rev-list', args.benchmark_commit]).splitlines())
-        importreport = ['lnt', 'importreport', '--order', str(order), '--machine', args.machine]
-        for arg in dict_to_params(gather_run_information(args)):
-            importreport += ['--run-info', arg]
-        machine_info = {**gather_machine_information(args),
-                        **gather_lit_features(artifacts / 'benchmarks-build/bin/llvm-lit', lit_args,
-                                              artifacts / 'benchmarks-build/libcxx/test/benchmarks')}
-        for arg in dict_to_params(machine_info):
-            importreport += ['--machine-info', arg]
+        machine_fields = {**gather_machine_information(args),
+                          **gather_lit_features(artifacts / 'benchmarks-build/bin/llvm-lit', lit_args,
+                                                artifacts / 'benchmarks-build/libcxx/test/benchmarks')}
+        tests = common.parse_lnt_results((artifacts / 'benchmarks.lnt').read_text().splitlines())
         output = args.output.resolve()
-        importreport += [artifacts / 'benchmarks.lnt', output]
-        run(importreport)
+        common.write_lnt_report(output, args.machine, machine_fields, commit, tests, measured_at,
+                                run_parameters=dict(args.run_parameter))
         logging.info(f'Report written to {output}')
 
 

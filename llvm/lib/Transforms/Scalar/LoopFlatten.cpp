@@ -50,6 +50,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/LoopFlatten.h"
+#include "ScalarOptions.h"
 
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
@@ -83,26 +84,6 @@ using namespace llvm::PatternMatch;
 
 STATISTIC(NumFlattened, "Number of loops flattened");
 
-static cl::opt<unsigned> RepeatedInstructionThreshold(
-    "loop-flatten-cost-threshold", cl::Hidden, cl::init(2),
-    cl::desc("Limit on the cost of instructions that can be repeated due to "
-             "loop flattening"));
-
-static cl::opt<bool>
-    AssumeNoOverflow("loop-flatten-assume-no-overflow", cl::Hidden,
-                     cl::init(false),
-                     cl::desc("Assume that the product of the two iteration "
-                              "trip counts will never overflow"));
-
-static cl::opt<bool>
-    WidenIV("loop-flatten-widen-iv", cl::Hidden, cl::init(true),
-            cl::desc("Widen the loop induction variables, if possible, so "
-                     "overflow checks won't reject flattening"));
-
-static cl::opt<bool>
-    VersionLoops("loop-flatten-version-loops", cl::Hidden, cl::init(true),
-                 cl::desc("Version loops if flattened loop could overflow"));
-
 namespace {
 // We require all uses of both induction variables to match this pattern:
 //
@@ -113,6 +94,7 @@ namespace {
 // checks will be performed in this bookkeeping struct.
 //
 struct FlattenInfo {
+  const ScalarOptions &Opts;
   Loop *OuterLoop = nullptr;  // The loop pair to be flattened.
   Loop *InnerLoop = nullptr;
 
@@ -149,7 +131,8 @@ struct FlattenInfo {
 
   Value *NewTripCount = nullptr; // The tripcount of the flattened loop.
 
-  FlattenInfo(Loop *OL, Loop *IL) : OuterLoop(OL), InnerLoop(IL){};
+  FlattenInfo(const ScalarOptions &Opts, Loop *OL, Loop *IL)
+      : Opts(Opts), OuterLoop(OL), InnerLoop(IL) {}
 
   bool isNarrowInductionPhi(PHINode *Phi) {
     // This can't be the narrow phi if we haven't widened the IV first.
@@ -346,7 +329,8 @@ static bool verifyTripCount(
       const SCEV *SCEVTripCountExt;
       // Find the extended backedge taken count and extended trip count using
       // SCEV. One of these should now match the RHS of the compare.
-      BackedgeTCExt = SE->getZeroExtendExpr(BackedgeTakenCount, RHS->getType());
+      BackedgeTCExt =
+          SE->getNoopOrZeroExtend(BackedgeTakenCount, RHS->getType());
       SCEVTripCountExt = SE->getTripCountFromExitCount(BackedgeTCExt,
                                                        RHS->getType(), L);
       if (SCEVRHS != BackedgeTCExt && SCEVRHS != SCEVTripCountExt) {
@@ -599,7 +583,7 @@ checkOuterLoopInsts(FlattenInfo &FI,
                     << RepeatedInstrCost << "\n");
   // Bail out if flattening the loops would cause instructions in the outer
   // loop but not in the inner loop to be executed extra times.
-  if (RepeatedInstrCost > RepeatedInstructionThreshold) {
+  if (RepeatedInstrCost > FI.Opts.loop_flatten_cost_threshold) {
     LLVM_DEBUG(dbgs() << "checkOuterLoopInsts: not profitable, bailing.\n");
     return false;
   }
@@ -647,7 +631,7 @@ static OverflowResult checkOverflow(FlattenInfo &FI, DominatorTree *DT,
   const DataLayout &DL = F->getDataLayout();
 
   // For debugging/testing.
-  if (AssumeNoOverflow)
+  if (FI.Opts.loop_flatten_assume_no_overflow)
     return OverflowResult::NeverOverflows;
 
   // Check if the multiply could not overflow due to known ranges of the
@@ -838,7 +822,7 @@ static bool DoFlattenLoopPair(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
 static bool CanWidenIV(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
                        ScalarEvolution *SE, AssumptionCache *AC,
                        const TargetTransformInfo *TTI) {
-  if (!WidenIV) {
+  if (!FI.Opts.loop_flatten_widen_iv) {
     LLVM_DEBUG(dbgs() << "Widening the IVs is disabled\n");
     return false;
   }
@@ -949,7 +933,7 @@ static bool FlattenLoopPair(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
   } else if (OR == OverflowResult::MayOverflow) {
     Module *M = FI.OuterLoop->getHeader()->getParent()->getParent();
     const DataLayout &DL = M->getDataLayout();
-    if (!VersionLoops) {
+    if (!FI.Opts.loop_flatten_version_loops) {
       LLVM_DEBUG(dbgs() << "Multiply might overflow, not flattening\n");
       return false;
     } else if (!DL.isLegalInteger(
@@ -1010,11 +994,12 @@ PreservedAnalyses LoopFlattenPass::run(LoopNest &LN, LoopAnalysisManager &LAM,
   // regardless of whether anything ends up being flattened.
   LoopAccessInfoManager LAIM(AR.SE, AR.AA, AR.DT, AR.LI, &AR.TTI, nullptr,
                              &AR.AC);
+  const ScalarOptions &Opts = getScalarOptions(*LN.getParent());
   for (Loop *InnerLoop : LN.getLoops()) {
     auto *OuterLoop = InnerLoop->getParentLoop();
     if (!OuterLoop)
       continue;
-    FlattenInfo FI(OuterLoop, InnerLoop);
+    FlattenInfo FI(Opts, OuterLoop, InnerLoop);
     Changed |=
         FlattenLoopPair(FI, &AR.DT, &AR.LI, &AR.SE, &AR.AC, &AR.TTI, &U,
                         MSSAU ? &*MSSAU : nullptr, LAIM.getInfo(*OuterLoop));

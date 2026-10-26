@@ -3,7 +3,7 @@ REQUIRES: curl || system-windows, http-server
 RUN: rm -rf %t
 RUN: mkdir -p %t/debuginfod-cache
 
-# We hit the timeout because the Python script delays the response by 2 seconds
+# The server will stall until the client exits, so the client should always time out.
 RUN: env DEBUGINFOD_TIMEOUT=1 \
 RUN: env DEBUGINFOD_CACHE_PATH=%t/debuginfod-cache \
 RUN: env DEBUGINFOD_HEADERS_FILE=%S/Inputs/headers \

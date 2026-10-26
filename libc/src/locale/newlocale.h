@@ -1,13 +1,18 @@
-//===-- Implementation header for setlocale ---------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Implementation header for newlocale.
+///
+//===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_LOCALE_SETLOCALE_H
-#define LLVM_LIBC_SRC_LOCALE_SETLOCALE_H
+#ifndef LLVM_LIBC_SRC_LOCALE_NEWLOCALE_H
+#define LLVM_LIBC_SRC_LOCALE_NEWLOCALE_H
 
 #include "hdr/types/locale_t.h"
 #include "src/__support/macros/config.h"
@@ -18,4 +23,4 @@ locale_t newlocale(int category_mask, const char *locale_name, locale_t base);
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_LOCALE_SETLOCALE_H
+#endif // LLVM_LIBC_SRC_LOCALE_NEWLOCALE_H

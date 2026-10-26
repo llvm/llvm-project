@@ -79,11 +79,32 @@ struct CalleeInfo {
   LLVM_PREFERRED_TYPE(bool)
   uint32_t HasTailCall : 1;
 
+  // True if at least one of the calls to the callee is an indirect call, i.e.
+  // the edge was added for a profiled indirect call target (from value profile
+  // metadata) or for a possible target from !callees metadata.
+  LLVM_PREFERRED_TYPE(bool)
+  uint32_t HasIndirectCall : 1;
+
+  // True if the thin link determined that at least a declaration of the callee
+  // must be available in any module containing the caller (including any
+  // module the caller is imported into), e.g. so that the ThinLTO backend can
+  // perform MemProf ICP to it. If the callee definition is not imported into
+  // such a module, a declaration is imported instead. This is only computed
+  // and used within the thin link, and is not serialized.
+  // Note that keeping this in-memory only information here does not increase
+  // the size of CalleeInfo, since it fits in the existing bit-field storage.
+  // If that changes, it could instead be tracked in a side structure computed
+  // by the thin link MemProf context disambiguation and passed to the function
+  // importer.
+  LLVM_PREFERRED_TYPE(bool)
+  uint32_t RequiresDeclImport : 1;
+
   CalleeInfo()
       : Hotness(static_cast<uint32_t>(HotnessType::Unknown)),
-        HasTailCall(false) {}
-  explicit CalleeInfo(HotnessType Hotness, bool HasTC)
-      : Hotness(static_cast<uint32_t>(Hotness)), HasTailCall(HasTC) {}
+        HasTailCall(false), HasIndirectCall(false), RequiresDeclImport(false) {}
+  explicit CalleeInfo(HotnessType Hotness, bool HasTC, bool HasIC = false)
+      : Hotness(static_cast<uint32_t>(Hotness)), HasTailCall(HasTC),
+        HasIndirectCall(HasIC), RequiresDeclImport(false) {}
 
   void updateHotness(const HotnessType OtherHotness) {
     Hotness = std::max(Hotness, static_cast<uint32_t>(OtherHotness));
@@ -92,6 +113,14 @@ struct CalleeInfo {
   bool hasTailCall() const { return HasTailCall; }
 
   void setHasTailCall(const bool HasTC) { HasTailCall = HasTC; }
+
+  bool hasIndirectCall() const { return HasIndirectCall; }
+
+  void setHasIndirectCall(const bool HasIC) { HasIndirectCall = HasIC; }
+
+  bool requiresDeclImport() const { return RequiresDeclImport; }
+
+  void setRequiresDeclImport(const bool RI) { RequiresDeclImport = RI; }
 
   HotnessType getHotness() const { return HotnessType(Hotness); }
 };

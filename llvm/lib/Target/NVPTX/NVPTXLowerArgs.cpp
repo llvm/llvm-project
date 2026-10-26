@@ -214,6 +214,12 @@ struct ArgUseChecker : PtrUseVisitor<ArgUseChecker> {
     return PI;
   }
 
+  // Loads are valid terminal uses of a byval pointer.
+  void visitLoadInst(LoadInst &) {}
+
+  // Conservatively bail out on pointer uses we don't explicitly handle.
+  void visitInstruction(Instruction &I) { PI.setEscapedAndAborted(&I); }
+
   void visitStoreInst(StoreInst &SI) {
     // Storing the pointer escapes it.
     if (U->get() == SI.getValueOperand())
