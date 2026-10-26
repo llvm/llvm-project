@@ -1442,3 +1442,37 @@ define i1 @not_shared_icmp_ult_i128(i128 %a, ptr %p) {
   %not = xor i1 %cmp, true
   ret i1 %not
 }
+
+define void @not_shared_icmp_eq_inverse_exists(i32 %c, ptr %p, ptr %q, ptr %r) {
+; RV32I-LABEL: not_shared_icmp_eq_inverse_exists:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    seqz a4, a0
+; RV32I-NEXT:    sb a4, 0(a1)
+; RV32I-NEXT:    xori a1, a4, 1
+; RV32I-NEXT:    snez a0, a0
+; RV32I-NEXT:    slli a1, a1, 4
+; RV32I-NEXT:    sb a0, 0(a2)
+; RV32I-NEXT:    sw a1, 0(a3)
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: not_shared_icmp_eq_inverse_exists:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    sext.w a0, a0
+; RV64I-NEXT:    seqz a4, a0
+; RV64I-NEXT:    sb a4, 0(a1)
+; RV64I-NEXT:    xori a1, a4, 1
+; RV64I-NEXT:    snez a0, a0
+; RV64I-NEXT:    slli a1, a1, 4
+; RV64I-NEXT:    sb a0, 0(a2)
+; RV64I-NEXT:    sw a1, 0(a3)
+; RV64I-NEXT:    ret
+  %eq = icmp eq i32 %c, 0
+  %ne = icmp ne i32 %c, 0
+  store i1 %eq, ptr %p
+  store i1 %ne, ptr %q
+  %not = xor i1 %eq, true
+  %z = zext i1 %not to i32
+  %sh = shl i32 %z, 4
+  store i32 %sh, ptr %r
+  ret void
+}
