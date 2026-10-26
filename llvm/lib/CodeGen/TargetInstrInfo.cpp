@@ -650,10 +650,9 @@ static MachineInstr *foldPatchpoint(MachineFunction &MF, MachineInstr &MI,
   return NewMI;
 }
 
-/// Rewrite the register operands \p Ops of the inline asm \p MI to refer to
-/// stack slot \p FI. The use tied to a folded def is folded along with it,
-/// since the two name a single location.
-static void foldInlineAsmMemOperands(MachineInstr &MI, ArrayRef<unsigned> Ops,
+/// Rewrite each register operand of the inline asm \p MI that's set in \p Fold
+/// (indexed by operand number) to refer to stack slot \p FI.
+static void foldInlineAsmMemOperands(MachineInstr &MI, ArrayRef<bool> Fold,
                                      int FI, const TargetInstrInfo &TII) {
   SmallVector<MachineOperand, 5> MemOps;
   TII.getFrameIndexOperands(MemOps, FI);
@@ -661,12 +660,11 @@ static void foldInlineAsmMemOperands(MachineInstr &MI, ArrayRef<unsigned> Ops,
   InlineAsm::Flag MemFlag(InlineAsm::Kind::Mem, MemOps.size());
   MemFlag.setMemConstraint(InlineAsm::ConstraintCode::m);
 
-  // Find the uses to fold along with their defs, and the ties to keep. A
-  // folded operand becomes MemOps.size() operands, moving every later one, and
-  // MachineInstr can't move a tied operand. So untie everything (untying a use
-  // also unties its def), re-add the operands from the first folded one on,
-  // and re-tie the pairs that are still registers at their new positions.
-  SmallVector<unsigned, 4> FoldOps(Ops);
+  // A folded operand becomes the operands of a memory reference, moving every
+  // later one, and MachineInstr can't move a tied operand. So untie everything
+  // (untying a use also unties its def), re-add the operands from the first
+  // folded one on, and re-tie the pairs that are still registers at their new
+  // positions.
   SmallVector<std::pair<unsigned, unsigned>, 4> Ties;
   for (unsigned I = InlineAsm::MIOp_FirstOperand, E = MI.getNumOperands();
        I != E; ++I) {
@@ -675,13 +673,14 @@ static void foldInlineAsmMemOperands(MachineInstr &MI, ArrayRef<unsigned> Ops,
       continue;
 
     MI.untieRegOperand(I);
-    if (is_contained(Ops, DefIdx))
-      FoldOps.push_back(I);
-    else
+    if (!Fold[I])
       Ties.emplace_back(DefIdx, I);
   }
 
-  unsigned First = *llvm::min_element(FoldOps);
+  unsigned First = InlineAsm::MIOp_FirstOperand;
+  while (!Fold[First])
+    ++First;
+
   SmallVector<MachineOperand, 16> Tail(MI.operands_begin() + First,
                                        MI.operands_end());
   while (MI.getNumOperands() > First)
@@ -690,7 +689,7 @@ static void foldInlineAsmMemOperands(MachineInstr &MI, ArrayRef<unsigned> Ops,
   SmallVector<unsigned, 16> NewIdx;
   for (auto [I, MO] : enumerate(Tail)) {
     NewIdx.push_back(MI.getNumOperands());
-    if (!is_contained(FoldOps, First + I)) {
+    if (!Fold[First + I]) {
       MI.addOperand(MO);
       continue;
     }
@@ -717,40 +716,52 @@ static MachineInstr *foldInlineAsmMemOperand(MachineInstr &MI,
                                              ArrayRef<unsigned> Ops, int FI,
                                              const TargetInstrInfo &TII) {
   assert(MI.isInlineAsm() && "wrong opcode");
-
-  // Sanity check that there are operands to fold.
   if (Ops.empty())
     return nullptr;
 
-  // Every operand in Ops holds the same register (e.g. one value passed to two
-  // "rm" operands), so they all fold to the same stack slot. The asm reads
-  // the slot through a use, and through a def tied to a use, which need not
-  // be the same virtual register when the allocator lowers ties itself. In
-  // that case the caller must store the tied use's value into the slot before
-  // the asm.
-  bool Reads = false;
-  bool Writes = false;
+  // A tied use is only ever folded along with its def.
+  Register Reg = MI.getOperand(Ops[0]).getReg();
   for (unsigned Op : Ops) {
     assert(Op && "should never be first operand");
-    const MachineOperand &MO = MI.getOperand(Op);
-    assert(MO.isReg() && "shouldn't be folding non-reg operands");
-    assert(MO.getReg() == MI.getOperand(Ops[0]).getReg() &&
+    assert(MI.getOperand(Op).isReg() && MI.getOperand(Op).getReg() == Reg &&
            "folded operands must hold the same register");
-
-    // A tied use is only ever folded along with its def.
-    if (!MI.mayFoldInlineAsmRegOp(Op))
+    if (MI.isRegTiedToDefOperand(Op))
       return nullptr;
+  }
 
+  // The asm can't refer to both Reg and its stack slot, so every operand of
+  // Reg is folded (e.g. one value passed to two "rm" operands), including any
+  // the caller left out, such as an undef use.
+  if (!MI.mayFoldInlineAsmReg(Reg))
+    return nullptr;
+
+  // Find the operands to fold. A use tied to another register's def keeps its
+  // register. The use tied to one of Reg's defs is folded along with the def,
+  // and reads the def's slot. That use need not hold Reg when the allocator
+  // lowers ties itself; the caller must then store the tied use's value into
+  // the slot before the asm.
+  SmallVector<bool, 16> Fold(MI.getNumOperands());
+  bool Reads = false;
+  bool Writes = false;
+  for (unsigned I = InlineAsm::MIOp_FirstOperand, E = MI.getNumOperands();
+       I != E; ++I) {
+    const MachineOperand &MO = MI.getOperand(I);
+    if (!MO.isReg())
+      continue;
+
+    unsigned DefIdx;
+    const MachineOperand &SlotMO =
+        MI.isRegTiedToDefOperand(I, &DefIdx) ? MI.getOperand(DefIdx) : MO;
+    if (SlotMO.getReg() != Reg)
+      continue;
+
+    Fold[I] = true;
     Reads |= MO.readsReg();
-    if (MO.isDef()) {
-      Writes = true;
-      Reads |=
-          MO.isTied() && MI.getOperand(MI.findTiedOperandIdx(Op)).readsReg();
-    }
+    Writes |= MO.isDef();
   }
 
   MachineInstr &NewMI = TII.duplicate(*MI.getParent(), MI.getIterator(), MI);
-  foldInlineAsmMemOperands(NewMI, Ops, FI, TII);
+  foldInlineAsmMemOperands(NewMI, Fold, FI, TII);
 
   // Update mayload/maystore metadata, and memoperands.
   MachineOperand &ExtraMO = NewMI.getOperand(InlineAsm::MIOp_ExtraInfo);
