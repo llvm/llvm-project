@@ -52,10 +52,10 @@ jobs:
       LNT_URL: https://lnt.llvm.org
     steps:
       # The selection only changes as new runs are submitted to LNT, and computing it takes several minutes.
-      # It is cached and recomputed every few hours instead of every time this workflow is called.
+      # It is cached and recomputed every hour instead of every time this workflow is called.
       - name: Compute the cache key
         id: key
-        run: echo "key=lnt-refinement-commits-${MACHINE}-${METRIC}-${DIRECTION}-${MAX_COMMITS}-$(date -u +%F)-$((10#$(date -u +%H) / 3))" >> "${GITHUB_OUTPUT}"
+        run: echo "key=lnt-refinement-commits-${MACHINE}-${METRIC}-${DIRECTION}-${MAX_COMMITS}-$(date -u +%F-%H)" >> "${GITHUB_OUTPUT}"
 
       - name: Try restoring the selection from cache
         id: restore

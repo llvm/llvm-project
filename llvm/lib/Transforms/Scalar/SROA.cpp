@@ -697,7 +697,6 @@ public:
 #endif
 
 private:
-  template <typename DerivedT, typename RetT = void> class BuilderBase;
   class SliceBuilder;
 
   friend class AllocaSlices::SliceBuilder;
@@ -6499,7 +6498,7 @@ bool SROA::promoteAllocas() {
   if (PromotableAllocas.empty())
     return false;
 
-  if (C->getLibraryOptions().get<ScalarOptions>().sroa_skip_mem2reg) {
+  if (getScalarOptions(*C).sroa_skip_mem2reg) {
     LLVM_DEBUG(dbgs() << "Not promoting allocas with mem2reg!\n");
   } else {
     LLVM_DEBUG(dbgs() << "Promoting allocas with mem2reg...\n");

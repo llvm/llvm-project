@@ -551,15 +551,19 @@ void CodeGenRegister::computeSecondarySubRegs(CodeGenRegBank &RegBank) {
   }
 }
 
-CodeGenRegister *
-CodeGenRegister::getSubReg(const CodeGenSubRegIndex *Idx) const {
+CodeGenRegister *CodeGenRegister::getSubReg(const CodeGenSubRegIndex *Idx,
+                                            unsigned &Hint) const {
   assert(SuperRegsComplete && "Must precompute super-registers");
+  if (Hint < FinalSubRegs.size() && FinalSubRegs[Hint].first == Idx)
+    return FinalSubRegs[Hint].second;
+
   auto It = llvm::lower_bound(FinalSubRegs, Idx->EnumValue,
                               [](const auto &Entry, unsigned EnumValue) {
                                 return Entry.first->EnumValue < EnumValue;
                               });
   if (It == FinalSubRegs.end() || It->first != Idx)
     return nullptr;
+  Hint = It - FinalSubRegs.begin();
   return It->second;
 }
 
@@ -1172,6 +1176,12 @@ bool CodeGenRegisterClass::hasSuperRegClass(
   auto FindI = SuperRegClasses.find(SubIdx);
 
   return FindI != SuperRegClasses.end() && FindI->second.contains(RC);
+}
+
+bool CodeGenRegisterClass::hasSuperRegClass(
+    const CodeGenRegisterClass *RC) const {
+  return any_of(SuperRegClasses,
+                [RC](const auto &Entry) { return Entry.second.contains(RC); });
 }
 
 void CodeGenRegisterClass::getSuperRegClasses(const CodeGenSubRegIndex *SubIdx,
@@ -2610,10 +2620,11 @@ void CodeGenRegBank::inferMatchingSuperRegClass(
     // that the list may contain entries with the same Sub but different Supers.
     SubRegs.clear();
     TopoSigs.reset();
+    unsigned Hint = 0;
     for (const CodeGenRegister *Super : RC->getMembers()) {
       if (Super->Artificial)
         continue;
-      const CodeGenRegister *Sub = Super->getSubReg(SubIdx);
+      const CodeGenRegister *Sub = Super->getSubReg(SubIdx, Hint);
       assert(Sub && "Missing sub-register");
       SubRegs.push_back(Sub);
       TopoSigs.set(Sub->getTopoSig());

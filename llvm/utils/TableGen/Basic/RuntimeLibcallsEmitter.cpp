@@ -101,26 +101,26 @@ private:
                       SetVector<PredicateWithCC> &PredicateSorter,
                       unsigned BaseIndent) const;
 
-  // A LibraryRef opt-out: the impls a consumer drops from a shared library,
-  // plus the consumer's triple predicate.
+  // A LibraryExclusion: the impls dropped from a shared library on triples
+  // matching TriplePred.
   struct LibraryExclusion {
     const Record *TriplePred;
     std::vector<const RuntimeLibcallImpl *> Impls;
   };
 
-  // A SystemRuntimeLibrary's default calling convention and the libraries it
-  // dispatches, as (LibraryName, FuncSuffix) pairs.
+  // A SystemRuntimeLibrary's default calling convention and default library
+  // names.
   struct SystemLibraryDispatch {
     const Record *System;
     StringRef DefaultCC;
-    SetVector<std::pair<StringRef, StringRef>> Libs;
+    SmallVector<StringRef> Libs;
   };
 
   // A single LibcallLibrary variant, expanded into its per-predicate impl
   // groups. Unconditional impls are tracked separately for cross-variant
   // deduplication. A variant is Deferred when it re-adds an impl its own
-  // consumer excludes; deferred variants are emitted after the LibraryRef
-  // exclusions so the re-add wins over the opt-out.
+  // consumer excludes; deferred variants are emitted after the
+  // LibraryExclusions so the re-add wins over the opt-out.
   struct ExpandedLibrary {
     const Record *Lib;
     DenseMap<PredicateWithCC, LibcallsWithCC> Pred2Funcs;
@@ -153,10 +153,10 @@ private:
 
   std::vector<SystemLibraryDispatch> collectSystemLibraryDispatch() const;
 
-  void emitSystemRuntimeLibrarySetCalls(
-      raw_ostream &OS, ArrayRef<SystemLibraryDispatch> Systems) const;
+  void emitLibraryFunctions(raw_ostream &OS) const;
 
-  // Emit setAvailableLibraryLibcalls, which enables a library by name.
+  // Emit getDefaultLibcallCallingConv, getDefaultRuntimeLibraries, and
+  // setAvailableLibraryLibcalls, which enables a library by name.
   void emitLibraryByNameSetCalls(raw_ostream &OS,
                                  ArrayRef<SystemLibraryDispatch> Systems) const;
 
@@ -766,9 +766,9 @@ void RuntimeLibcallEmitter::emitLibraryFunction(
   }
 
   // Mark a variant deferred when it re-adds an impl its own consumer excludes
-  // (same triple, via LibraryRef). Such a variant must be emitted after the
-  // exclusion so the re-add wins while the exclusion still suppresses every
-  // other variant's contribution.
+  // (same predicate, via a LibraryExclusion). Such a variant must be emitted
+  // after the exclusion so the re-add wins while the exclusion still suppresses
+  // every other variant's contribution.
   for (ExpandedLibrary &EL : Expanded) {
     const Record *ELPred = EL.Lib->getValueAsDef("Pred");
     SetVector<const RuntimeLibcallImpl *> Impls;
@@ -793,7 +793,7 @@ void RuntimeLibcallEmitter::emitLibraryFunction(
       emitLibraryVariant(OS, EL);
   }
 
-  // Emit each consumer's LibraryRef opt-outs.
+  // Emit each LibraryExclusion.
   for (const LibraryExclusion &Excl : Exclusions) {
     OS << '\n' << indent(2);
     AvailabilityPredicate ExcludePred(Excl.TriplePred);
@@ -809,8 +809,8 @@ void RuntimeLibcallEmitter::emitLibraryFunction(
   }
 
   // Deferred variants: emitted after exclusions so a target's own re-adds
-  // override its own LibraryRef opt-outs (the exclusion still applied above
-  // to every other variant's contributions).
+  // override its own LibraryExclusion opt-outs (the exclusion still applied
+  // above to every other variant's contributions).
   for (ExpandedLibrary &EL : Expanded) {
     if (EL.Deferred)
       emitLibraryVariant(OS, EL);
@@ -857,11 +857,17 @@ void RuntimeLibcallEmitter::emitRuntimeLibcallsInfoMemberDecls(
   OS << "bool setAvailableLibraryLibcalls(RTLIB::RuntimeLibrary Library, "
         "const llvm::Triple &TT, ExceptionHandling ExceptionModel, "
         "FloatABI::ABIType FloatABI, StringRef ABIName, "
+        "LongDoubleFormat LongDoubleFormat);\n"
+        "static CallingConv::ID getDefaultLibcallCallingConv("
+        "const llvm::Triple &TT, ExceptionHandling ExceptionModel, "
+        "FloatABI::ABIType FloatABI, StringRef ABIName, "
         "LongDoubleFormat LongDoubleFormat);\n";
 }
 
 std::vector<RuntimeLibcallEmitter::SystemLibraryDispatch>
 RuntimeLibcallEmitter::collectSystemLibraryDispatch() const {
+  std::vector<StringRef> LibraryNames = collectLibraryNames();
+
   std::vector<SystemLibraryDispatch> Systems;
   for (const Record *R :
        Records.getAllDerivedDefinitions("SystemRuntimeLibrary")) {
@@ -871,138 +877,153 @@ RuntimeLibcallEmitter::collectSystemLibraryDispatch() const {
             R->getValueAsDef("DefaultLibcallCallingConv"))
       S.DefaultCC = DefaultCCClass->getValueAsString("CallingConv").trim();
 
-    // A library referenced more than once is dispatched once.
-    const DagInit *MemberDag =
-        R->getValueAsDef("MemberList")->getValueAsDag("MemberList");
-    for (const Init *Arg : MemberDag->getArgs()) {
-      const auto *DI = dyn_cast<DefInit>(Arg);
-      const Record *Lib = DI ? DI->getDef() : nullptr;
-      if (Lib && Lib->isSubClassOf("LibraryRef"))
-        Lib = Lib->getValueAsDef("Library");
-
-      if (!Lib || !Lib->isSubClassOf("LibcallLibrary")) {
-        PrintError(R, "SystemRuntimeLibrary member `" + Arg->getAsString() +
-                          "` is not a LibcallLibrary or LibraryRef");
+    for (StringRef Name : R->getValueAsListOfStrings("DefaultLibraries")) {
+      if (!llvm::binary_search(LibraryNames, Name)) {
+        PrintError(R, "SystemRuntimeLibrary default library `" + Name +
+                          "` is not the name of a LibcallLibrary");
         continue;
       }
 
-      S.Libs.insert({Lib->getValueAsString("LibraryName"), libFuncKey(Lib)});
+      S.Libs.push_back(Name);
     }
+
+    llvm::sort(S.Libs);
+    S.Libs.erase(llvm::unique(S.Libs), S.Libs.end());
   }
 
   return Systems;
 }
 
-void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
-    raw_ostream &OS, ArrayRef<SystemLibraryDispatch> Systems) const {
-  // Collect each shared library's LibraryRef opt-outs, keyed by library name,
-  // so its library function can emit them.
-  MapVector<StringRef, std::vector<LibraryExclusion>> ExclusionsByLibName;
-  for (const SystemLibraryDispatch &S : Systems) {
-    const Record *R = S.System;
-    const DagInit *MemberDag =
-        R->getValueAsDef("MemberList")->getValueAsDag("MemberList");
-    for (const Init *Arg : MemberDag->getArgs()) {
-      const auto *DI = dyn_cast<DefInit>(Arg);
-      if (!DI || !DI->getDef()->isSubClassOf("LibraryRef"))
-        continue;
-      const Record *Def = DI->getDef();
-      LibraryExclusion Excl{R->getValueAsDef("TriplePred"), {}};
-      for (const Record *ExcludeRec : Def->getValueAsListOfDefs("Exclude")) {
-        if (const RuntimeLibcallImpl *Impl =
-                Libcalls.getRuntimeLibcallImpl(ExcludeRec))
-          Excl.Impls.push_back(Impl);
-      }
+void RuntimeLibcallEmitter::emitLibraryFunctions(raw_ostream &OS) const {
+  std::vector<StringRef> LibraryNames = collectLibraryNames();
 
-      if (!Excl.Impls.empty()) {
-        StringRef LibName =
-            Def->getValueAsDef("Library")->getValueAsString("LibraryName");
-        ExclusionsByLibName[LibName].push_back(std::move(Excl));
-      }
+  // Collect each shared library's LibraryExclusions, keyed by library name, so
+  // its library function can emit them.
+  MapVector<StringRef, std::vector<LibraryExclusion>> ExclusionsByLibName;
+  for (const Record *R : Records.getAllDerivedDefinitions("LibraryExclusion")) {
+    StringRef LibName = R->getValueAsString("LibraryName");
+    if (!llvm::binary_search(LibraryNames, LibName)) {
+      PrintError(R, "LibraryExclusion library `" + LibName +
+                        "` is not the name of a LibcallLibrary");
+      continue;
     }
+
+    LibraryExclusion Excl{R->getValueAsDef("Pred"), {}};
+    for (const Record *ExcludeRec : R->getValueAsListOfDefs("Exclude")) {
+      if (const RuntimeLibcallImpl *Impl =
+              Libcalls.getRuntimeLibcallImpl(ExcludeRec))
+        Excl.Impls.push_back(Impl);
+    }
+
+    if (!Excl.Impls.empty())
+      ExclusionsByLibName[LibName].push_back(std::move(Excl));
   }
 
   for (const auto &[Name, Libs] : collectLibrariesByName())
     emitLibraryFunction(OS, Name, Libs, ExclusionsByLibName.lookup(Name));
-
-  OS << "void llvm::RTLIB::RuntimeLibcallsInfo::setTargetRuntimeLibcallSets("
-        "const llvm::Triple &TT, ExceptionHandling ExceptionModel, "
-        "FloatABI::ABIType FloatABI, "
-        "StringRef ABIName, LongDoubleFormat LongDoubleFormat) {\n";
-
-  for (const SystemLibraryDispatch &S : Systems) {
-    OS << '\n';
-
-    AvailabilityPredicate TopLevelPredicate(
-        S.System->getValueAsDef("TriplePred"));
-
-    OS << indent(2);
-    TopLevelPredicate.emitIf(OS);
-
-    // The default is a property of the target, and is passed to the libraries
-    // as an argument.
-    StringRef DefaultCCArg = "CallingConv::C";
-    if (!S.DefaultCC.empty()) {
-      OS << "    const CallingConv::ID DefaultCC = " << S.DefaultCC << ";\n"
-         << "    for (CallingConv::ID &Entry : LibcallImplCallingConvs) {\n"
-            "      Entry = DefaultCC;\n"
-            "    }\n\n";
-      DefaultCCArg = "DefaultCC";
-    }
-
-    // Dispatch each library to setAvailableLibFuncs_<FuncSuffix> under an
-    // isLibraryAvailable(Name) guard. LibraryRef exclusions are applied inside
-    // the library function.
-    for (auto [Name, FuncSuffix] : S.Libs) {
-      OS << indent(4) << "if (isLibraryAvailable(";
-      emitRuntimeLibraryEnumerator(OS, Name);
-      OS << "))\n" << indent(6) << "setAvailableLibFuncs_";
-      emitLibFuncSuffix(OS, FuncSuffix);
-      OS << "(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat, "
-         << DefaultCCArg << ");\n";
-    }
-    if (!S.Libs.empty())
-      OS << '\n';
-
-    OS << indent(4) << "return;\n" << indent(2);
-    TopLevelPredicate.emitEndIf(OS);
-  }
-
-  // FIXME: This should be a fatal error. A few contexts are improperly relying
-  // on RuntimeLibcalls constructed with fully unknown triples.
-  OS << "  LLVM_DEBUG(dbgs() << \"no system runtime library applied to target "
-        "\\'\" << TT.str() << \"\\'\\n\");\n"
-        "}\n\n";
 }
 
 void RuntimeLibcallEmitter::emitLibraryByNameSetCalls(
     raw_ostream &OS, ArrayRef<SystemLibraryDispatch> Systems) const {
-  // Libraries a SystemRuntimeLibrary uses are enabled by
-  // setTargetRuntimeLibcallSets instead.
-  DenseSet<StringRef> SystemLibNames;
+  constexpr StringLiteral Params =
+      "const llvm::Triple &TT, ExceptionHandling ExceptionModel, "
+      "FloatABI::ABIType FloatABI, StringRef ABIName, "
+      "LongDoubleFormat LongDoubleFormat";
+
+  OS << "CallingConv::ID "
+        "llvm::RTLIB::RuntimeLibcallsInfo::getDefaultLibcallCallingConv("
+     << Params << ") {\n";
   for (const SystemLibraryDispatch &S : Systems) {
-    for (auto [LibName, FuncSuffix] : S.Libs)
-      SystemLibNames.insert(LibName);
+    if (S.DefaultCC.empty())
+      continue;
+
+    AvailabilityPredicate TriplePred(S.System->getValueAsDef("TriplePred"));
+    OS << indent(2);
+    TriplePred.emitIf(OS);
+    OS << indent(4) << "return " << S.DefaultCC << ";\n" << indent(2);
+    TriplePred.emitEndIf(OS);
+  }
+  OS << "  return CallingConv::C;\n"
+        "}\n\n";
+
+  OS << "ArrayRef<RTLIB::RuntimeLibrary> "
+        "llvm::RTLIB::RuntimeLibcallsInfo::getDefaultRuntimeLibraries("
+        "const llvm::Triple &TT) {\n";
+  for (const SystemLibraryDispatch &S : Systems) {
+    if (S.Libs.empty())
+      continue;
+
+    AvailabilityPredicate TriplePred(S.System->getValueAsDef("TriplePred"));
+    OS << indent(2);
+    TriplePred.emitIf(OS);
+    OS << indent(4) << "static constexpr RTLIB::RuntimeLibrary Libs[] = {\n";
+    for (StringRef Name : S.Libs) {
+      OS << indent(6);
+      emitRuntimeLibraryEnumerator(OS, Name);
+      OS << ",\n";
+    }
+    OS << indent(4) << "};\n" << indent(4) << "return Libs;\n" << indent(2);
+    TriplePred.emitEndIf(OS);
+  }
+  OS << "  return {};\n"
+        "}\n\n";
+
+  MapVector<StringRef, std::vector<const Record *>> IsolatedByName;
+  DenseSet<StringRef> MergedNames;
+  for (const Record *Lib : Records.getAllDerivedDefinitions("LibcallLibrary")) {
+    StringRef Name = Lib->getValueAsString("LibraryName");
+    if (!Lib->getValueAsBit("Isolated")) {
+      MergedNames.insert(Name);
+      continue;
+    }
+
+    if (AvailabilityPredicate(Lib->getValueAsDef("Pred")).isAlwaysAvailable())
+      PrintError(Lib, "isolated LibcallLibrary must have a predicate");
+    IsolatedByName[Name].push_back(Lib);
+  }
+
+  for (const auto &[Name, Libs] : IsolatedByName) {
+    if (!MergedNames.contains(Name)) {
+      PrintError(Libs.front(), "isolated LibcallLibrary has no non-isolated "
+                               "library named `" +
+                                   Name + "`");
+    }
   }
 
   OS << "bool llvm::RTLIB::RuntimeLibcallsInfo::setAvailableLibraryLibcalls("
-        "RTLIB::RuntimeLibrary Library, const llvm::Triple &TT, "
-        "ExceptionHandling ExceptionModel, FloatABI::ABIType FloatABI, "
-        "StringRef ABIName, LongDoubleFormat LongDoubleFormat) {\n"
+        "RTLIB::RuntimeLibrary Library, "
+     << Params
+     << ") {\n"
+        "  const CallingConv::ID DefaultCC = getDefaultLibcallCallingConv(TT, "
+        "ExceptionModel, FloatABI, ABIName, LongDoubleFormat);\n"
         "  switch (Library) {\n";
 
+  auto EmitCall = [&OS](unsigned Ind, StringRef FuncSuffix) {
+    OS << indent(Ind) << "setAvailableLibFuncs_";
+    emitLibFuncSuffix(OS, FuncSuffix);
+    OS << "(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat, "
+          "DefaultCC);\n"
+       << indent(Ind) << "return true;\n";
+  };
+
   for (const auto &[Name, Libs] : collectLibrariesByName()) {
-    if (Libs.front()->getValueAsBit("Isolated") ||
-        SystemLibNames.contains(Name))
+    if (Libs.front()->getValueAsBit("Isolated"))
       continue;
 
     OS << "  case ";
     emitRuntimeLibraryEnumerator(OS, Name);
-    OS << ":\n" << indent(4) << "setAvailableLibFuncs_";
-    emitLibFuncSuffix(OS, Name);
-    OS << "(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat, "
-          "CallingConv::C);\n"
-       << indent(4) << "return true;\n";
+    OS << ":\n";
+
+    for (const Record *Isolated : IsolatedByName.lookup(Name)) {
+      AvailabilityPredicate LibPred(Isolated->getValueAsDef("Pred"));
+      OS << indent(4);
+      LibPred.emitIf(OS);
+      EmitCall(6, Isolated->getName());
+      OS << indent(4);
+      LibPred.emitEndIf(OS);
+    }
+
+    EmitCall(4, Name);
   }
 
   OS << "  default:\n"
@@ -1182,7 +1203,7 @@ void RuntimeLibcallEmitter::run(raw_ostream &OS) {
   {
     IfDefEmitter IfDef(OS, "GET_RUNTIME_LIBCALLS_INFO");
     std::vector<SystemLibraryDispatch> Systems = collectSystemLibraryDispatch();
-    emitSystemRuntimeLibrarySetCalls(OS, Systems);
+    emitLibraryFunctions(OS);
     emitLibraryByNameSetCalls(OS, Systems);
   }
 
