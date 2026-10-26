@@ -57,8 +57,9 @@ LLVM_LIBC_FUNCTION(int, regcomp,
     return REG_ESPACE;
   cpp::scope_exit internal_guard([internal] { delete internal; });
 
-  ErrorOr<regex::ExprId> root =
-      regex::parse_ere(cpp::string_view(pattern), cflags, internal->pool);
+  size_t re_nsub = 0;
+  ErrorOr<regex::ExprId> root = regex::parse_ere(
+      cpp::string_view(pattern), cflags, internal->pool, &re_nsub);
   if (!root.has_value())
     return root.error();
 
@@ -66,6 +67,7 @@ LLVM_LIBC_FUNCTION(int, regcomp,
   internal->root = *root;
   internal->cflags = cflags;
   preg->__internal = internal;
+  preg->re_nsub = re_nsub;
   return 0;
 }
 
