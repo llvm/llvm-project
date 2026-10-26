@@ -7,10 +7,9 @@ declare void @sink(<4 x i64>)
 define <4 x i64> @positive(<4 x ptr> %p, <4 x i1> noundef %mask) {
 ; CHECK-LABEL: define <4 x i64> @positive(
 ; CHECK-SAME: <4 x ptr> [[P:%.*]], <4 x i1> noundef [[MASK:%.*]]) {
-; CHECK-NEXT:    [[G:%.*]] = call <4 x i64> @llvm.masked.gather.v4i64.v4p0(<4 x ptr> align 8 [[P]], <4 x i1> [[MASK]], <4 x i64> poison)
-; CHECK-NEXT:    [[F:%.*]] = freeze <4 x i64> [[G]]
-; CHECK-NEXT:    [[S:%.*]] = select <4 x i1> [[MASK]], <4 x i64> [[F]], <4 x i64> zeroinitializer
-; CHECK-NEXT:    ret <4 x i64> [[S]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i64> @llvm.masked.gather.v4i64.v4p0(<4 x ptr> align 8 [[P]], <4 x i1> [[MASK]], <4 x i64> zeroinitializer)
+; CHECK-NEXT:    [[F:%.*]] = freeze <4 x i64> [[TMP1]]
+; CHECK-NEXT:    ret <4 x i64> [[F]]
 ;
   %g = call <4 x i64> @llvm.masked.gather.v4i64.v4p0(<4 x ptr> align 8 %p, <4 x i1> %mask, <4 x i64> poison)
   %f = freeze <4 x i64> %g
@@ -21,10 +20,9 @@ define <4 x i64> @positive(<4 x ptr> %p, <4 x i1> noundef %mask) {
 define <4 x i64> @range(<4 x ptr> %p, <4 x i1> %mask) {
 ; CHECK-LABEL: define <4 x i64> @range(
 ; CHECK-SAME: <4 x ptr> [[P:%.*]], <4 x i1> [[MASK:%.*]]) {
-; CHECK-NEXT:    [[G:%.*]] = call <4 x i64> @llvm.masked.gather.v4i64.v4p0(<4 x ptr> align 8 [[P]], <4 x i1> [[MASK]], <4 x i64> poison), !range [[RNG0:![0-9]+]]
-; CHECK-NEXT:    [[F:%.*]] = freeze <4 x i64> [[G]]
-; CHECK-NEXT:    [[S:%.*]] = select <4 x i1> [[MASK]], <4 x i64> [[F]], <4 x i64> zeroinitializer
-; CHECK-NEXT:    ret <4 x i64> [[S]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i64> @llvm.masked.gather.v4i64.v4p0(<4 x ptr> align 8 [[P]], <4 x i1> [[MASK]], <4 x i64> zeroinitializer)
+; CHECK-NEXT:    [[F:%.*]] = freeze <4 x i64> [[TMP1]]
+; CHECK-NEXT:    ret <4 x i64> [[F]]
 ;
   %g = call <4 x i64> @llvm.masked.gather.v4i64.v4p0(<4 x ptr> align 8 %p, <4 x i1> %mask, <4 x i64> poison), !range !0
   %f = freeze <4 x i64> %g
@@ -35,10 +33,9 @@ define <4 x i64> @range(<4 x ptr> %p, <4 x i1> %mask) {
 define <4 x i64> @range_attr(<4 x ptr> %p, <4 x i1> %mask) {
 ; CHECK-LABEL: define <4 x i64> @range_attr(
 ; CHECK-SAME: <4 x ptr> [[P:%.*]], <4 x i1> [[MASK:%.*]]) {
-; CHECK-NEXT:    [[G:%.*]] = call range(i64 1, 2) <4 x i64> @llvm.masked.gather.v4i64.v4p0(<4 x ptr> align 8 [[P]], <4 x i1> [[MASK]], <4 x i64> poison)
-; CHECK-NEXT:    [[F:%.*]] = freeze <4 x i64> [[G]]
-; CHECK-NEXT:    [[S:%.*]] = select <4 x i1> [[MASK]], <4 x i64> [[F]], <4 x i64> zeroinitializer
-; CHECK-NEXT:    ret <4 x i64> [[S]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i64> @llvm.masked.gather.v4i64.v4p0(<4 x ptr> align 8 [[P]], <4 x i1> [[MASK]], <4 x i64> zeroinitializer)
+; CHECK-NEXT:    [[F:%.*]] = freeze <4 x i64> [[TMP1]]
+; CHECK-NEXT:    ret <4 x i64> [[F]]
 ;
   %g = call range(i64 1, 2) <4 x i64> @llvm.masked.gather.v4i64.v4p0(<4 x ptr> align 8 %p, <4 x i1> %mask, <4 x i64> poison)
   %f = freeze <4 x i64> %g
@@ -123,10 +120,9 @@ define <4 x i64> @defined_passthru(<4 x ptr> %p, <4 x i1> %mask) {
 define <4 x i64> @passthrough_range(<4 x ptr> %p, <4 x i1> %mask) {
 ; CHECK-LABEL: define <4 x i64> @passthrough_range(
 ; CHECK-SAME: <4 x ptr> [[P:%.*]], <4 x i1> [[MASK:%.*]]) {
-; CHECK-NEXT:    [[G:%.*]] = call <4 x i64> @llvm.masked.gather.v4i64.v4p0(<4 x ptr> align 8 [[P]], <4 x i1> [[MASK]], <4 x i64> range(i64 1, 2) poison)
-; CHECK-NEXT:    [[F:%.*]] = freeze <4 x i64> [[G]]
-; CHECK-NEXT:    [[S:%.*]] = select <4 x i1> [[MASK]], <4 x i64> [[F]], <4 x i64> zeroinitializer
-; CHECK-NEXT:    ret <4 x i64> [[S]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i64> @llvm.masked.gather.v4i64.v4p0(<4 x ptr> align 8 [[P]], <4 x i1> [[MASK]], <4 x i64> zeroinitializer)
+; CHECK-NEXT:    [[F:%.*]] = freeze <4 x i64> [[TMP1]]
+; CHECK-NEXT:    ret <4 x i64> [[F]]
 ;
   %g = call <4 x i64> @llvm.masked.gather.v4i64.v4p0(<4 x ptr> align 8 %p, <4 x i1> %mask, <4 x i64> range(i64 1, 2) poison)
   %f = freeze <4 x i64> %g
@@ -140,11 +136,10 @@ define <4 x i64> @passthrough_range(<4 x ptr> %p, <4 x i1> %mask) {
 define <4 x i64> @intervening_store(<4 x ptr> %p, <4 x i1> %mask, ptr %q) {
 ; CHECK-LABEL: define <4 x i64> @intervening_store(
 ; CHECK-SAME: <4 x ptr> [[P:%.*]], <4 x i1> [[MASK:%.*]], ptr [[Q:%.*]]) {
-; CHECK-NEXT:    [[G:%.*]] = call <4 x i64> @llvm.masked.gather.v4i64.v4p0(<4 x ptr> align 8 [[P]], <4 x i1> [[MASK]], <4 x i64> poison)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i64> @llvm.masked.gather.v4i64.v4p0(<4 x ptr> align 8 [[P]], <4 x i1> [[MASK]], <4 x i64> zeroinitializer)
 ; CHECK-NEXT:    store i64 42, ptr [[Q]], align 4
-; CHECK-NEXT:    [[F:%.*]] = freeze <4 x i64> [[G]]
-; CHECK-NEXT:    [[S:%.*]] = select <4 x i1> [[MASK]], <4 x i64> [[F]], <4 x i64> zeroinitializer
-; CHECK-NEXT:    ret <4 x i64> [[S]]
+; CHECK-NEXT:    [[F:%.*]] = freeze <4 x i64> [[TMP1]]
+; CHECK-NEXT:    ret <4 x i64> [[F]]
 ;
   %g = call <4 x i64> @llvm.masked.gather.v4i64.v4p0(<4 x ptr> align 8 %p, <4 x i1> %mask, <4 x i64> poison)
   store i64 42, ptr %q
@@ -158,10 +153,9 @@ define <4 x i64> @partial_undef_mask(<4 x ptr> %p, <4 x i1> %mask) {
 ; CHECK-LABEL: define <4 x i64> @partial_undef_mask(
 ; CHECK-SAME: <4 x ptr> [[P:%.*]], <4 x i1> [[MASK:%.*]]) {
 ; CHECK-NEXT:    [[M:%.*]] = insertelement <4 x i1> [[MASK]], i1 undef, i64 1
-; CHECK-NEXT:    [[G:%.*]] = call <4 x i64> @llvm.masked.gather.v4i64.v4p0(<4 x ptr> align 8 [[P]], <4 x i1> [[M]], <4 x i64> poison)
-; CHECK-NEXT:    [[F:%.*]] = freeze <4 x i64> [[G]]
-; CHECK-NEXT:    [[S:%.*]] = select <4 x i1> [[M]], <4 x i64> [[F]], <4 x i64> zeroinitializer
-; CHECK-NEXT:    ret <4 x i64> [[S]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i64> @llvm.masked.gather.v4i64.v4p0(<4 x ptr> align 8 [[P]], <4 x i1> [[M]], <4 x i64> zeroinitializer)
+; CHECK-NEXT:    [[F:%.*]] = freeze <4 x i64> [[TMP1]]
+; CHECK-NEXT:    ret <4 x i64> [[F]]
 ;
   %m = insertelement <4 x i1> %mask, i1 undef, i64 1
   %g = call <4 x i64> @llvm.masked.gather.v4i64.v4p0(<4 x ptr> align 8 %p, <4 x i1> %m, <4 x i64> poison)
@@ -174,10 +168,9 @@ declare <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr>, <4 x i1>, <4 x flo
 define <4 x float> @float_result_annotation(<4 x ptr> %p, <4 x i1> %mask) {
 ; CHECK-LABEL: define <4 x float> @float_result_annotation(
 ; CHECK-SAME: <4 x ptr> [[P:%.*]], <4 x i1> [[MASK:%.*]]) {
-; CHECK-NEXT:    [[G:%.*]] = call nofpclass(pzero) <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> align 4 [[P]], <4 x i1> [[MASK]], <4 x float> nofpclass(pzero) poison)
-; CHECK-NEXT:    [[F:%.*]] = freeze <4 x float> [[G]]
-; CHECK-NEXT:    [[S:%.*]] = select <4 x i1> [[MASK]], <4 x float> [[F]], <4 x float> zeroinitializer
-; CHECK-NEXT:    ret <4 x float> [[S]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> align 4 [[P]], <4 x i1> [[MASK]], <4 x float> zeroinitializer)
+; CHECK-NEXT:    [[F:%.*]] = freeze <4 x float> [[TMP1]]
+; CHECK-NEXT:    ret <4 x float> [[F]]
 ;
   %g = call nofpclass(pzero) <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> align 4 %p, <4 x i1> %mask, <4 x float> nofpclass(pzero) poison)
   %f = freeze <4 x float> %g
@@ -189,10 +182,9 @@ declare <4 x ptr> @llvm.masked.gather.v4p0.v4p0(<4 x ptr>, <4 x i1>, <4 x ptr>)
 define <4 x ptr> @pointer_result(<4 x ptr> %p, <4 x i1> %mask) {
 ; CHECK-LABEL: define <4 x ptr> @pointer_result(
 ; CHECK-SAME: <4 x ptr> [[P:%.*]], <4 x i1> [[MASK:%.*]]) {
-; CHECK-NEXT:    [[G:%.*]] = call <4 x ptr> @llvm.masked.gather.v4p0.v4p0(<4 x ptr> align 8 [[P]], <4 x i1> [[MASK]], <4 x ptr> poison)
-; CHECK-NEXT:    [[F:%.*]] = freeze <4 x ptr> [[G]]
-; CHECK-NEXT:    [[S:%.*]] = select <4 x i1> [[MASK]], <4 x ptr> [[F]], <4 x ptr> splat (ptr null)
-; CHECK-NEXT:    ret <4 x ptr> [[S]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x ptr> @llvm.masked.gather.v4p0.v4p0(<4 x ptr> align 8 [[P]], <4 x i1> [[MASK]], <4 x ptr> splat (ptr null))
+; CHECK-NEXT:    [[F:%.*]] = freeze <4 x ptr> [[TMP1]]
+; CHECK-NEXT:    ret <4 x ptr> [[F]]
 ;
   %g = call <4 x ptr> @llvm.masked.gather.v4p0.v4p0(<4 x ptr> align 8 %p, <4 x i1> %mask, <4 x ptr> poison)
   %f = freeze <4 x ptr> %g
@@ -204,16 +196,12 @@ declare <vscale x 2 x i32> @llvm.masked.gather.nxv2i32.nxv2p0(<vscale x 2 x ptr>
 define <vscale x 2 x i32> @scalable(<vscale x 2 x ptr> %p, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: define <vscale x 2 x i32> @scalable(
 ; CHECK-SAME: <vscale x 2 x ptr> [[P:%.*]], <vscale x 2 x i1> [[MASK:%.*]]) {
-; CHECK-NEXT:    [[G:%.*]] = call <vscale x 2 x i32> @llvm.masked.gather.nxv2i32.nxv2p0(<vscale x 2 x ptr> align 4 [[P]], <vscale x 2 x i1> [[MASK]], <vscale x 2 x i32> poison)
-; CHECK-NEXT:    [[F:%.*]] = freeze <vscale x 2 x i32> [[G]]
-; CHECK-NEXT:    [[S:%.*]] = select <vscale x 2 x i1> [[MASK]], <vscale x 2 x i32> [[F]], <vscale x 2 x i32> zeroinitializer
-; CHECK-NEXT:    ret <vscale x 2 x i32> [[S]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.masked.gather.nxv2i32.nxv2p0(<vscale x 2 x ptr> align 4 [[P]], <vscale x 2 x i1> [[MASK]], <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[F:%.*]] = freeze <vscale x 2 x i32> [[TMP1]]
+; CHECK-NEXT:    ret <vscale x 2 x i32> [[F]]
 ;
   %g = call <vscale x 2 x i32> @llvm.masked.gather.nxv2i32.nxv2p0(<vscale x 2 x ptr> align 4 %p, <vscale x 2 x i1> %mask, <vscale x 2 x i32> poison)
   %f = freeze <vscale x 2 x i32> %g
   %s = select <vscale x 2 x i1> %mask, <vscale x 2 x i32> %f, <vscale x 2 x i32> zeroinitializer
   ret <vscale x 2 x i32> %s
 }
-;.
-; CHECK: [[RNG0]] = !{i64 1, i64 2}
-;.
