@@ -71,5 +71,16 @@ define ptr @f8() {
   ret ptr %l
 }
 
+@c_equiv = constant i32 trunc (i64 sub (i64 ptrtoint (ptr dso_local_equivalent @fn to i64), i64 ptrtoint (ptr @c_equiv to i64)) to i32)
+
+; CHECK-LABEL: @f_equiv
+; CHECK-NOT: dso_local_equivalent
+; CHECK: ret ptr @fn
+define ptr @f_equiv() {
+  %l = call ptr @llvm.load.relative.i32(ptr @c_equiv, i32 0)
+  ret ptr %l
+}
+
+declare void @fn()
 declare ptr @llvm.load.relative.i32(ptr, i32)
 declare ptr @llvm.load.relative.i64(ptr, i64)
