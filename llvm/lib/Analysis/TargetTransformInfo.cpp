@@ -432,6 +432,11 @@ bool TargetTransformInfo::isLegalICmpImmediate(int64_t Imm) const {
   return TTIImpl->isLegalICmpImmediate(Imm);
 }
 
+bool TargetTransformInfo::preferLoopExitWithEqualityComparison(
+    const ICmpInst &Cond, const APInt &PostIncExitValue) const {
+  return TTIImpl->preferLoopExitWithEqualityComparison(Cond, PostIncExitValue);
+}
+
 bool TargetTransformInfo::isLegalAddressingMode(Type *Ty, GlobalValue *BaseGV,
                                                 int64_t BaseOffset,
                                                 bool HasBaseReg, int64_t Scale,
