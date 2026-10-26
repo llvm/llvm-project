@@ -9,7 +9,7 @@
 // <deque>
 
 // deque()
-//        noexcept(is_nothrow_default_constructible<allocator_type>::value);
+//        noexcept(is_nothrow_default_constructible<allocator_type>::value); // constexpr since C++26
 
 // This tests a conforming extension
 
