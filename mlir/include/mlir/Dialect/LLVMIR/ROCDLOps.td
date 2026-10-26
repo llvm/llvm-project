@@ -685,7 +685,7 @@ def ROCDL_AsyncmarkOp : ROCDL_ConcreteNonMemIntrOp<"asyncmark", [], 0>,
       and gfx1250's tensor loads.
 
       Details of its behavior can be found in
-      [the LLVM documentation on async tracking](/llvm/docs/AMDGPUAsyncOperations.rst).
+      [the LLVM documentation on async tracking](/llvm/docs/AMDGPUAsyncOperations.md).
 
       See `rocdl.wait.asyncmark`'s documentation for a usage example.
 
@@ -713,7 +713,7 @@ def ROCDL_WaitAsyncmarkOp: ROCDL_ConcreteNonMemIntrOp<"wait.asyncmark", [], 0, [
       other than the `count` previously-added ones will have finished executing.
 
       For more detail, including on how this mechanism composes with function calls,
-      see [the LLVM documentation on async tracking](/llvm/docs/AMDGPUAsyncOperations.rst).
+      see [the LLVM documentation on async tracking](/llvm/docs/AMDGPUAsyncOperations.md).
 
       Available on gfx9 and later.
 

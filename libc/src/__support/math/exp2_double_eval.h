@@ -34,7 +34,7 @@ namespace math {
 namespace double_eval {
 
 LIBC_ALWAYS_INLINE double exp2(double x) {
-  using FPBits = typename fputil::FPBits<double>;
+  using FPBits = fputil::FPBits<double>;
   FPBits xbits(x);
 
   uint64_t x_u = xbits.uintval();
@@ -96,14 +96,14 @@ LIBC_ALWAYS_INLINE double exp2(double x) {
   //   r_hi = m_hi + m_hi * u_hi
   //   r_lo = m * (u_lo + u^2 * P(u)) + m_lo * (1 + u_hi)
   //
-  // Since r_hi is in [0.997, 2.0), for r_hi to be exact in double precision,
+  // Since r_hi is in [1 - 2^-8, 2), for r_hi to be exact in double precision,
   // we need:
   //   lsb(m_hi * u_hi) >= 2^-52.
   // We choose:
-  //   lsb(m_hi) >= 2^-22  =>  |m_lo| <= 2^-23
+  //   lsb(m_hi) >= 2^-22  =>  |m_lo| < 2^-22
   //   lsb(u_hi) >= 2^-30
   // so that lsb(m_hi * u_hi) >= 2^-52, and the rounding errors from
-  // m_lo * (1 + u_hi) are bounded by 2^(-23 - 52) = 2^-75.
+  // m_lo * (1 + u_hi) are bounded by 2^(-22 - 52) = 2^-74.
   //
   // To get lsb(u_hi) >= 2^-30 from u = dx * log(2), since |dx| <= 2^-8 and
   // log(2) < 1, we split dx at 2^-18 and log(2) at 2^-12:

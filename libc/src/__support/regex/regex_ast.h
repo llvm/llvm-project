@@ -33,6 +33,12 @@ inline constexpr ExprId EMPTY_STR_ID = 2;
 inline constexpr size_t BYTE_SET_BITS = size_t(1) << CHAR_BIT;
 using ByteSet = cpp::bitset<BYTE_SET_BITS>;
 
+/// Bitmask flags identifying zero-width boundary assertions.
+enum AnchorKind : uint8_t {
+  ANCHOR_BOL = 1 << 0,
+  ANCHOR_EOL = 1 << 1,
+};
+
 /// Enumeration of Regular Expression AST node types.
 enum class ExprKind : uint8_t {
   /// Represents the empty set (matches nothing).
@@ -41,12 +47,16 @@ enum class ExprKind : uint8_t {
   EmptyStr,
   /// A literal character match.
   Literal,
+  /// A zero-width boundary assertion (^ or $).
+  Anchor,
   /// A 256-bit character class or wildcard match.
   ByteSet,
   /// Concatenation of two expressions (left followed by right).
   Concat,
   /// Alternation between two expressions (left or right).
   Alt,
+  /// Zero or more repetitions of a sub-expression (body*).
+  Star,
 };
 
 /// A node in the Regular Expression Abstract Syntax Tree.
@@ -57,9 +67,11 @@ enum class ExprKind : uint8_t {
 struct Expr {
   /// The type of this expression node.
   ExprKind kind = ExprKind::EmptySet;
-  /// Whether this expression can match the empty string.
-  bool nullable = false;
-  /// Character value for Literal nodes.
+  /// Whether this expression can match the empty string unconditionally.
+  bool nullable : 1;
+  /// Whether this expression or any child contains a context-sensitive Anchor.
+  bool has_anchors : 1;
+  /// The character for Literal nodes.
   char ch = '\0';
   /// Precomputed 32-bit structural hash for O(1) lookup and rehashing.
   uint32_t hash = 0;
@@ -69,25 +81,36 @@ struct Expr {
       ExprId left;
       ExprId right;
     } bin = {INVALID_EXPR_ID, INVALID_EXPR_ID};
+    /// Sub-expression for Star nodes.
+    ExprId body;
     /// Index into ExprPool::byte_sets for ByteSet nodes.
     uint32_t byte_set_id;
+    /// Bitmask of AnchorKind flags for Anchor nodes.
+    uint8_t anchor_mask;
   };
 
   /// Default constructor creates an EmptySet node.
   /// Public to allow array allocation in ExprPool::Block.
-  constexpr Expr() = default;
+  constexpr Expr() : nullable(false), has_anchors(false) {}
 
 private:
-  /// Create a node of a specific kind with nullability.
-  constexpr Expr(ExprKind k, bool is_null) : kind(k), nullable(is_null) {}
-  /// Create a Literal node.
-  constexpr Expr(char c) : kind(ExprKind::Literal), ch(c) {}
+  /// Create a leaf node with a specific nullability (and optional character).
+  constexpr Expr(ExprKind k, bool is_null, char c = '\0')
+      : kind(k), nullable(is_null), has_anchors(false), ch(c) {}
+  /// Create an Anchor node.
+  constexpr Expr(uint8_t mask)
+      : kind(ExprKind::Anchor), nullable(false), has_anchors(true),
+        anchor_mask(mask) {}
   /// Create a ByteSet node.
   constexpr Expr(uint32_t bs_id)
-      : kind(ExprKind::ByteSet), byte_set_id(bs_id) {}
+      : kind(ExprKind::ByteSet), nullable(false), has_anchors(false),
+        byte_set_id(bs_id) {}
+  /// Create a Star node.
+  constexpr Expr(ExprId b, bool anchors)
+      : kind(ExprKind::Star), nullable(true), has_anchors(anchors), body(b) {}
   /// Create a binary node (Concat or Alt).
-  constexpr Expr(ExprKind k, bool is_null, ExprId l, ExprId r)
-      : kind(k), nullable(is_null), bin{l, r} {}
+  constexpr Expr(ExprKind k, bool is_null, bool anchors, ExprId l, ExprId r)
+      : kind(k), nullable(is_null), has_anchors(anchors), bin{l, r} {}
 
 public:
   static constexpr Expr make_empty_set() {
@@ -96,13 +119,21 @@ public:
   static constexpr Expr make_empty_str() {
     return Expr(ExprKind::EmptyStr, true);
   }
-  static constexpr Expr make_literal(char c) { return Expr(c); }
-  static constexpr Expr make_byte_set(uint32_t bs_id) { return Expr(bs_id); }
-  static constexpr Expr make_concat(ExprId l, ExprId r, bool is_null = false) {
-    return Expr(ExprKind::Concat, is_null, l, r);
+  static constexpr Expr make_literal(char c) {
+    return Expr(ExprKind::Literal, false, c);
   }
-  static constexpr Expr make_alt(ExprId l, ExprId r, bool is_null = false) {
-    return Expr(ExprKind::Alt, is_null, l, r);
+  static constexpr Expr make_anchor(uint8_t mask) { return Expr(mask); }
+  static constexpr Expr make_byte_set(uint32_t bs_id) { return Expr(bs_id); }
+  static constexpr Expr make_star(ExprId b, bool anchors = false) {
+    return Expr(b, anchors);
+  }
+  static constexpr Expr make_concat(ExprId l, ExprId r, bool is_null = false,
+                                    bool anchors = false) {
+    return Expr(ExprKind::Concat, is_null, anchors, l, r);
+  }
+  static constexpr Expr make_alt(ExprId l, ExprId r, bool is_null = false,
+                                 bool anchors = false) {
+    return Expr(ExprKind::Alt, is_null, anchors, l, r);
   }
 
   /// Equivalence check for hash-consing.
@@ -115,8 +146,12 @@ public:
       return true;
     case ExprKind::Literal:
       return ch == other.ch;
+    case ExprKind::Anchor:
+      return anchor_mask == other.anchor_mask;
     case ExprKind::ByteSet:
       return byte_set_id == other.byte_set_id;
+    case ExprKind::Star:
+      return body == other.body;
     case ExprKind::Concat:
     case ExprKind::Alt:
       return bin.left == other.bin.left && bin.right == other.bin.right;

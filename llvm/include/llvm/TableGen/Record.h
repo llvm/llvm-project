@@ -2094,6 +2094,8 @@ public:
   }
 
   void addDef(std::unique_ptr<Record> R) {
+    for (const Record *SC : make_first_range(R->getDirectSuperClasses()))
+      DefsByDirectSuperClass[SC].push_back(R.get());
     bool Ins = Defs.try_emplace(R->getName(), std::move(R)).second;
     (void)Ins;
     assert(Ins && "Record already exists");
@@ -2145,6 +2147,9 @@ private:
   // Classes and Defs sorted by name, built on demand.
   mutable std::vector<const Record *> SortedClasses, SortedDefs;
   mutable std::map<std::string, std::vector<const Record *>> Cache;
+  // The defs that each class is a direct superclass of.
+  DenseMap<const Record *, SmallVector<const Record *, 0>>
+      DefsByDirectSuperClass;
   GlobalMap ExtraGlobals;
 
   /// The internal uniquer implementation of the RecordKeeper.

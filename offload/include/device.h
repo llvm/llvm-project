@@ -101,19 +101,24 @@ struct DeviceGeometryPropsTy {
   uint32_t DefaultNumBlocks = 0;
   /// Maximum amount of shared memory, in bytes, a block can use in a kernel.
   uint64_t MaxBlockSharedMemSize = 0;
+  /// Number of compute units, or zero if the device does not report it.
+  uint32_t NumComputeUnits = 0;
+  /// Backend of the platform of the device.
+  ol_platform_backend_t Backend = OL_PLATFORM_BACKEND_UNKNOWN;
 };
 
 struct PluginManager;
 
 struct DeviceTy {
   int32_t DeviceID;
-  GenericPluginTy *RTL;
-  int32_t RTLDeviceID;
+  GenericPluginTy *RTL = nullptr;
+  int32_t RTLDeviceID = -1;
+  ol_platform_handle_t Platform;
   ol_device_handle_t DeviceHandle;
   PluginManager *PM;
   ol_context_handle_t Context = nullptr;
 
-  DeviceTy(GenericPluginTy *RTL, int32_t DeviceID, int32_t RTLDeviceID,
+  DeviceTy(int32_t DeviceID, ol_platform_handle_t Platform,
            ol_device_handle_t DeviceHandle, PluginManager *PM);
   // DeviceTy is not copyable
   DeviceTy(const DeviceTy &D) = delete;
@@ -132,6 +137,9 @@ struct DeviceTy {
 
   /// Whether this device executes kernels on the host CPU.
   bool isHostDevice() const { return IsHostDevice; }
+
+  /// Get this device's backend.
+  ol_platform_backend_t getBackend() const { return Backend; }
 
   /// Load \p Img onto the device and return the resulting program.
   llvm::Expected<ProgramTy> loadBinary(__tgt_device_image *Img);
@@ -167,8 +175,9 @@ struct DeviceTy {
   /// Free memory allocated with allocCtxMem.
   llvm::Error freeCtxMem(void *Ptr);
 
-  // Data transfer. When AsyncInfo is nullptr, the transfer will be
-  // synchronous.
+  // Data transfer. The transfer is enqueued on the queue associated with
+  // \p AsyncInfo; the *Sync variants below do not need a queue and always
+  // transfer the data synchronously.
   // Copy data from host to device
   int32_t submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
                      AsyncInfoTy &AsyncInfo,
@@ -183,8 +192,19 @@ struct DeviceTy {
                        MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr = nullptr,
                        const ident_t *Loc = nullptr);
 
-  // Return true if data can be copied to DstDevice directly
-  bool isDataExchangable(const DeviceTy &DstDevice);
+  // Copy data from host to device synchronously
+  int32_t submitDataSync(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
+                         HostDataToTargetTy *Entry = nullptr,
+                         MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr = nullptr,
+                         const ident_t *Loc = nullptr,
+                         const char *Name = nullptr);
+
+  // Copy data from device back to host synchronously
+  int32_t
+  retrieveDataSync(void *HstPtrBegin, void *TgtPtrBegin, int64_t Size,
+                   HostDataToTargetTy *Entry = nullptr,
+                   MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr = nullptr,
+                   const ident_t *Loc = nullptr);
 
   // Copy data from current device to destination device directly
   int32_t dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
@@ -329,6 +349,20 @@ private:
   /// Query the properties used to compute the launch geometry of a kernel.
   llvm::Error initGeometryProps();
 
+  /// Copy data from host to device. A null \p Queue means the transfer is
+  /// performed synchronously.
+  int32_t submitDataImpl(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
+                         ol_queue_handle_t Queue, HostDataToTargetTy *Entry,
+                         MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr,
+                         const ident_t *Loc, const char *Name);
+
+  /// Copy data from device back to host. A null \p Queue means the transfer is
+  /// performed synchronously.
+  int32_t retrieveDataImpl(void *HstPtrBegin, void *TgtPtrBegin, int64_t Size,
+                           ol_queue_handle_t Queue, HostDataToTargetTy *Entry,
+                           MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr,
+                           const ident_t *Loc);
+
   /// Unique identifier of the device.
   llvm::SmallString<32> Uid;
 
@@ -346,6 +380,9 @@ private:
 
   /// Whether this is a host device.
   bool IsHostDevice = false;
+
+  /// The backend of this device.
+  ol_platform_backend_t Backend = OL_PLATFORM_BACKEND_UNKNOWN;
 
   /// Handler to collect and organize host-2-device mapping information.
   MappingInfoTy MappingInfo;
