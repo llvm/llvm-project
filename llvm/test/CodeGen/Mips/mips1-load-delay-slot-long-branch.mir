@@ -13,31 +13,31 @@ tracksRegLiveness: true
 body:             |
   ; MIPS1-LABEL: name: load_delay_slot_long_branch
   ; MIPS1: bb.0:
-  ; MIPS1: BNE $a0, $a1, %bb.{{[0-9]+}}
+  ; MIPS1: BNE $r4, $r5, %bb.{{[0-9]+}}
   bb.0:
     successors: %bb.1, %bb.3
-    liveins: $a0, $a1
-    BEQ undef $a0, undef $a1, %bb.3, implicit-def $at
+    liveins: $r4, $r5
+    BEQ undef $r4, undef $r5, %bb.3, implicit-def $r1
 
   bb.1:
     successors: %bb.2, %bb.4
-    liveins: $a0, $a1
+    liveins: $r4, $r5
     INLINEASM &".space 131040", sideeffect attdialect
-    BEQ undef $a0, undef $a1, %bb.4, implicit-def $at
+    BEQ undef $r4, undef $r5, %bb.4, implicit-def $r1
 
   ; MIPS1: bb.2:
-  ; MIPS1: $v1 = LW renamable $a0, 0
-  ; MIPS1-NEXT: $zero = SLL $zero, 0
+  ; MIPS1: $r3 = LW renamable $r4, 0
+  ; MIPS1-NEXT: $r0 = SLL $r0, 0
   bb.2:
     successors: %bb.3, %bb.4
-    liveins: $a0, $v1
-    $v1 = LW renamable $a0, 0
-    $v1 = LW renamable $v1, 0
-    BEQ undef $a0, undef $v1, %bb.4, implicit-def $at
+    liveins: $r4, $r3
+    $r3 = LW renamable $r4, 0
+    $r3 = LW renamable $r3, 0
+    BEQ undef $r4, undef $r3, %bb.4, implicit-def $r1
 
   bb.3:
-    JR undef $ra
+    JR undef $r31
 
   bb.4:
-    PseudoReturn undef $ra
+    PseudoReturn undef $r31
 ...
