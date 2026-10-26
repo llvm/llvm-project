@@ -3564,6 +3564,25 @@ bool VPlanTransforms::handleUncountableEarlyExits(
   SmallVector<EarlyExitInfo> Exits;
   for (auto [EarlyExitingVPBB, ExitBlock] :
        vputils::getEarlyExits(Plan, MiddleVPBB)) {
+    // The final value of a reduction is computed in the middle block, which is
+    // only reached when leaving the vector loop via the latch.
+    // TODO: Support reductions used on early exits.
+    for (VPRecipeBase &R : ExitBlock->phis()) {
+      VPValue *ExitV =
+          cast<VPIRPhi>(&R)->getIncomingValueForBlock(EarlyExitingVPBB);
+      for (VPReductionPHIRecipe &PhiR :
+           make_isa_range<VPReductionPHIRecipe>(HeaderVPBB->phis())) {
+        if (ExitV != PhiR.getBackedgeValue())
+          continue;
+        reportVectorizationFailure(
+            "Found reduction used on an early exit",
+            "Cannot vectorize early exit loop with reduction used on an "
+            "early exit",
+            "ReductionUsedOnEarlyExit", ORE, TheLoop);
+        return false;
+      }
+    }
+
     // Collect condition for this early exit.
     VPBlockBase *TrueSucc = EarlyExitingVPBB->getSuccessors()[0];
     VPValue *CondOfEarlyExitingVPBB;
