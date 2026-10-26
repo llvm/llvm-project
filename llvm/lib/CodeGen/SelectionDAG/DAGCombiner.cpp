@@ -18461,6 +18461,13 @@ SDValue DAGCombiner::visitBITCAST(SDNode *N) {
     return DAG.FoldConstantBuildVector(cast<BuildVectorSDNode>(N0), SDLoc(N),
                                        VT.getVectorElementType());
 
+  if (!LegalTypes && VT.isVector() && !N0.isTargetOpcode() &&
+      (isNullConstant(N0) || isNullFPConstant(N0))) {
+    return VT.isFloatingPoint()
+               ? DAG.getConstantFP(0.0, SDLoc(N), VT)
+               : DAG.getConstant(0, SDLoc(N), VT);
+  }
+
   // If the input is a constant, let getNode fold it.
   if (isIntOrFPConstant(N0)) {
     // If we can't allow illegal operations, we need to check that this is just
