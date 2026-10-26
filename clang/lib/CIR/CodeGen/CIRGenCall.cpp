@@ -574,8 +574,8 @@ void CIRGenModule::constructAttributeList(
   // TODO(cir): Add loader-replaceable attribute here.
 
   constructFunctionReturnAttributes(info, targetDecl, isThunk, retAttrs);
-  constructFunctionArgumentAttributes(info, targetDecl, isThunk, attrOnCallSite,
-                                      argAttrs);
+  constructFunctionArgumentAttributes(info, calleeInfo.getCalleeDecl(), isThunk,
+                                      attrOnCallSite, argAttrs);
 }
 
 bool CIRGenModule::hasStrictReturn(QualType retTy, const Decl *targetDecl) {
@@ -722,9 +722,10 @@ void CIRGenModule::constructFunctionReturnAttributes(
 }
 
 void CIRGenModule::constructFunctionArgumentAttributes(
-    const CIRGenFunctionInfo &info, const Decl *targetDecl, bool isThunk,
+    const CIRGenFunctionInfo &info, GlobalDecl calleeDecl, bool isThunk,
     bool attrOnCallSite, llvm::MutableArrayRef<mlir::NamedAttrList> argAttrs) {
   assert(!cir::MissingFeatures::abiArgInfo());
+  const Decl *targetDecl = calleeDecl.getDecl();
   // TODO(cir): classic codegen does a lot of work here based on the ABIArgInfo
   // to set things based on calling convention.
 
@@ -756,11 +757,23 @@ void CIRGenModule::constructFunctionArgumentAttributes(
           builder.getI64IntegerAttr(
               getNaturalPointeeTypeAlignment(thisPtrTy).getQuantity()));
 
-      // TODO(cir): the classic codegen has a recently-added bunch of logic for
-      // 'dead_on_return' as an attribute. This both doesn't exist in the LLVM
-      // dialect, and is 'too new' at the time of writing this to be considered
-      // stable enough here.  For now, we'll leave this as a TODO so that when
-      // we come back, it is hopefully a more stabilized implementation.
+      // With strict lifetimes, the object's data is dead when a destructor
+      // returns, except for a deleting destructor, whose operator delete may
+      // still use the storage, and except where a virtual base outlives the
+      // destructor of the object holding it.  An object with no data gets no
+      // attribute.
+      const auto *dd = dyn_cast_if_present<CXXDestructorDecl>(targetDecl);
+      if (dd && codeGenOpts.StrictLifetimes &&
+          calleeDecl.getDtorType() != CXXDtorType::Dtor_VectorDeleting &&
+          calleeDecl.getDtorType() != CXXDtorType::Dtor_Deleting) {
+        const CXXRecordDecl *classDecl = dd->getParent();
+        uint64_t dataSize = astContext.getASTRecordLayout(classDecl)
+                                .getDataSize()
+                                .getQuantity();
+        if (classDecl->getNumVBases() == 0 && dataSize != 0)
+          argAttrs[0].set(mlir::LLVM::LLVMDialect::getDeadOnReturnAttrName(),
+                          builder.getI64IntegerAttr(dataSize));
+      }
     }
   }
 
