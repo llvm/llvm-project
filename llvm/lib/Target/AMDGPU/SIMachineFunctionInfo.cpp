@@ -173,8 +173,9 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
   if (!S.empty())
     S.consumeInteger(0, HighBitsOf32BitAddress);
 
-  MaxMemoryClusterDWords = F.getFnAttributeAsParsedInteger(
-      "amdgpu-max-memory-cluster-dwords", DefaultMemoryClusterDWordsLimit);
+  MaxMemoryClusterDWords =
+      static_cast<unsigned>(F.getFnAttributeAsParsedInteger(
+          "amdgpu-max-memory-cluster-dwords", DefaultMemoryClusterDWordsLimit));
 
   // On GFX908, in order to guarantee copying between AGPRs, we need a scratch
   // VGPR available at all times. For now, reserve highest available VGPR. After
@@ -334,7 +335,7 @@ void SIMachineFunctionInfo::splitWWMSpillRegisters(
 }
 
 bool SIMachineFunctionInfo::isCalleeSavedReg(const MCPhysReg *CSRegs,
-                                             MCPhysReg Reg) const {
+                                             MCRegister Reg) const {
   for (unsigned I = 0; CSRegs[I]; ++I) {
     if (CSRegs[I] == Reg)
       return true;
@@ -348,7 +349,7 @@ void SIMachineFunctionInfo::shiftWwmVGPRsToLowestRange(
     BitVector &SavedVGPRs) {
   const SIRegisterInfo *TRI = MF.getSubtarget<GCNSubtarget>().getRegisterInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  for (unsigned I = 0, E = WWMVGPRs.size(); I < E; ++I) {
+  for (size_t I = 0, E = WWMVGPRs.size(); I < E; ++I) {
     Register Reg = WWMVGPRs[I];
     Register NewReg =
         TRI->findUnusedRegister(MRI, &AMDGPU::VGPR_32RegClass, MF);
@@ -367,8 +368,7 @@ void SIMachineFunctionInfo::shiftWwmVGPRsToLowestRange(
     // lanes while spilling special SGPRs like FP, BP, etc. during PEI.
     auto *RegItr = llvm::find(SpillPhysVGPRs, Reg);
     if (RegItr != SpillPhysVGPRs.end()) {
-      unsigned Idx = std::distance(SpillPhysVGPRs.begin(), RegItr);
-      SpillPhysVGPRs[Idx] = NewReg;
+      *RegItr = NewReg;
 
       // For replacing registers used in the CFI instructions.
       MF.replaceFrameInstRegister(Reg, NewReg);
@@ -453,7 +453,7 @@ bool SIMachineFunctionInfo::allocateSGPRSpillToVGPRLane(
   MachineFrameInfo &FrameInfo = MF.getFrameInfo();
   unsigned WaveSize = ST.getWavefrontSize();
 
-  unsigned Size = FrameInfo.getObjectSize(FI);
+  unsigned Size = static_cast<unsigned>(FrameInfo.getObjectSize(FI));
   unsigned NumLanes = Size / 4;
 
   if (NumLanes > WaveSize)
@@ -500,7 +500,7 @@ bool SIMachineFunctionInfo::allocateVGPRSpillToAGPR(MachineFunction &MF,
   if (!Spill.Lanes.empty())
     return Spill.FullyAllocated;
 
-  unsigned Size = FrameInfo.getObjectSize(FI);
+  unsigned Size = static_cast<unsigned>(FrameInfo.getObjectSize(FI));
   unsigned NumLanes = Size / 4;
   Spill.Lanes.resize(NumLanes, AMDGPU::NoRegister);
 
@@ -605,12 +605,12 @@ int SIMachineFunctionInfo::getScavengeFI(MachineFrameInfo &MFI,
   return *ScavengeFI;
 }
 
-MCPhysReg SIMachineFunctionInfo::getNextUserSGPR() const {
+MCRegister SIMachineFunctionInfo::getNextUserSGPR() const {
   assert(NumSystemSGPRs == 0 && "System SGPRs must be added after user SGPRs");
   return AMDGPU::SGPR0 + NumUserSGPRs;
 }
 
-MCPhysReg SIMachineFunctionInfo::getNextSystemSGPR() const {
+MCRegister SIMachineFunctionInfo::getNextSystemSGPR() const {
   return AMDGPU::SGPR0 + NumUserSGPRs + NumSystemSGPRs;
 }
 
@@ -733,8 +733,10 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
       HasSpilledSGPRs(MFI.hasSpilledSGPRs()),
       HasSpilledVGPRs(MFI.hasSpilledVGPRs()),
       HasNoWWMPoolSGPRSpillFallback(MFI.hasNoWWMPoolSGPRSpillFallback()),
-      NumWaveDispatchSGPRs(MFI.getNumWaveDispatchSGPRs()),
-      NumWaveDispatchVGPRs(MFI.getNumWaveDispatchVGPRs()),
+      NumWaveDispatchSGPRs(
+          static_cast<uint16_t>(MFI.getNumWaveDispatchSGPRs())),
+      NumWaveDispatchVGPRs(
+          static_cast<uint16_t>(MFI.getNumWaveDispatchVGPRs())),
       HighBitsOf32BitAddress(MFI.get32BitAddressHighBits()),
       Occupancy(MFI.getOccupancy()),
       ScratchRSrcReg(regToString(MFI.getScratchRSrcReg(), TRI)),

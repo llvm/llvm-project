@@ -411,8 +411,8 @@ void SILowerSGPRSpills::assignWWMRegs(MachineFunction &MF,
   unsigned DesiredPoolSize =
       std::min(static_cast<unsigned>(FuncInfo->getSGPRSpillVGPRs().size()),
                static_cast<unsigned>(MaxNumVGPRsForWwmAllocation));
-  unsigned SelectedPoolSize =
-      std::min<unsigned>(DesiredPoolSize, WWMRegCandidates.size());
+  size_t SelectedPoolSize =
+      std::min<size_t>(DesiredPoolSize, WWMRegCandidates.size());
   // WWM register candidates are ordered high-to-low, so take the highest
   // available registers when the desired pool is smaller than the candidate
   // list.
