@@ -1880,14 +1880,15 @@ std::optional<RewriteableMemOps>
 SROA::isSafeSelectToSpeculateOrPredicate(SelectInst &SI, bool PreserveCFG) {
   RewriteableMemOps Ops;
 
-  SmallVector<User *> Users(SI.users());
-  for (unsigned Idx = 0; Idx != Users.size(); ++Idx) {
-    User *U = Users[Idx];
-    if (isa<AddrSpaceCastInst>(U)) {
+  SmallVector<User *> Users;
+  for (User *U : SI.users()) {
+    if (isa<AddrSpaceCastInst>(U))
       append_range(Users, U->users());
-      continue;
-    }
+    else
+      Users.push_back(U);
+  }
 
+  for (User *U : Users) {
     if (auto *Store = dyn_cast<StoreInst>(U)) {
       // We don't care about atomicity of stores as they're always predicated.
       if (Store->isVolatile() || PreserveCFG)

@@ -730,6 +730,29 @@ define i32 @test_select_volatile_load_addrspace(i1 %cond, ptr %p) {
   ret i32 %val
 }
 
+define i32 @test_select_chained_addrspacecast(i1 %cond) {
+; CHECK-LABEL: @test_select_chained_addrspacecast(
+; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[B:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 1, ptr [[A]], align 4
+; CHECK-NEXT:    store i32 2, ptr [[B]], align 4
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[COND:%.*]], ptr [[A]], ptr [[B]]
+; CHECK-NEXT:    [[C1:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(1)
+; CHECK-NEXT:    [[C2:%.*]] = addrspacecast ptr addrspace(1) [[C1]] to ptr addrspace(2)
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr addrspace(2) [[C2]], align 4
+; CHECK-NEXT:    ret i32 [[V]]
+;
+  %a = alloca i32, align 4
+  %b = alloca i32, align 4
+  store i32 1, ptr %a
+  store i32 2, ptr %b
+  %s = select i1 %cond, ptr %a, ptr %b
+  %c1 = addrspacecast ptr %s to ptr addrspace(1)
+  %c2 = addrspacecast ptr addrspace(1) %c1 to ptr addrspace(2)
+  %v = load i32, ptr addrspace(2) %c2
+  ret i32 %v
+}
+
 !0  = !{!"branch_weights", i32 1,  i32 99}
 !1 = !{}
 
