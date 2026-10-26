@@ -595,9 +595,9 @@ define inreg <3 x bfloat> @bitcast_v3f16_to_v3bf16_scalar(<3 x half> inreg %a, i
 ; SI-NEXT:    s_lshl_b32 s5, s16, 16
 ; SI-NEXT:    s_lshl_b32 s4, s4, 16
 ; SI-NEXT:    s_lshl_b32 s6, s17, 16
-; SI-NEXT:    v_mov_b32_e32 v2, s6
-; SI-NEXT:    v_mov_b32_e32 v1, s4
 ; SI-NEXT:    v_mov_b32_e32 v0, s5
+; SI-NEXT:    v_mov_b32_e32 v1, s4
+; SI-NEXT:    v_mov_b32_e32 v2, s6
 ; SI-NEXT:    s_branch .LBB3_3
 ; SI-NEXT:  .LBB3_2: ; %cmp.true
 ; SI-NEXT:    v_cvt_f32_f16_e32 v0, s17
@@ -1420,9 +1420,9 @@ define inreg <3 x i16> @bitcast_v3f16_to_v3i16_scalar(<3 x half> inreg %a, i32 i
 ; SI-NEXT:    s_cmp_lg_u32 s18, 0
 ; SI-NEXT:    s_cbranch_scc0 .LBB9_2
 ; SI-NEXT:  ; %bb.1: ; %cmp.false
-; SI-NEXT:    v_mov_b32_e32 v1, s17
 ; SI-NEXT:    v_mov_b32_e32 v0, s16
 ; SI-NEXT:    v_mov_b32_e32 v2, s4
+; SI-NEXT:    v_mov_b32_e32 v1, s17
 ; SI-NEXT:    s_branch .LBB9_3
 ; SI-NEXT:  .LBB9_2: ; %cmp.true
 ; SI-NEXT:    v_cvt_f32_f16_e32 v0, s4

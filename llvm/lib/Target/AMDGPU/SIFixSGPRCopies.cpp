@@ -867,27 +867,33 @@ void SIFixSGPRCopies::processPHINode(MachineInstr &MI) {
     MRI->setRegClass(PHIRes, TRI->getEquivalentAGPRClass(RC0));
     for (unsigned I = 1, N = MI.getNumOperands(); I != N; I += 2) {
       MachineInstr *DefMI = MRI->getVRegDef(MI.getOperand(I).getReg());
-      if (DefMI && DefMI->isPHI())
+      if (DefMI && DefMI->isPHI() &&
+          TRI->isSGPRReg(*MRI, DefMI->getOperand(0).getReg()))
         PHIOperands.insert(DefMI);
     }
   }
 
-  // Only legalize PHIs that need it: i1 PHIs, PHIs just moved to AGPRs, and
-  // vector PHIs with SGPR or subregister inputs, which are left behind by
-  // SGPR-to-VGPR lowering (e.g. for temporal divergence).
+  // Copy SGPR inputs of vector PHIs now, not in PHI elimination: i1 PHIs need
+  // this for SILowerI1Copies, and UnreachableMachineBlockElim would otherwise
+  // copy a single-input PHI's input after a divergent loop exit.
   const TargetRegisterClass *RC = MRI->getRegClass(PHIRes);
-  bool HasSALUInput =
-      any_of(drop_begin(MI.operands()), [&](const MachineOperand &MO) {
-        return MO.isReg() &&
-               (MO.getSubReg() || TRI->isSGPRReg(*MRI, MO.getReg()));
-      });
-  if (RC0 == &AMDGPU::VReg_1RegClass ||
-      (TRI->hasVectorRegisters(RC) && (RC != RC0 || HasSALUInput))) {
-    LLVM_DEBUG(dbgs() << "Legalizing PHI: " << MI);
-    TII->legalizeOperands(MI, MDT);
+  if (TRI->hasVectorRegisters(RC)) {
+    for (unsigned I = 1, E = MI.getNumOperands(); I != E; I += 2) {
+      MachineOperand &Op = MI.getOperand(I);
+      if (!Op.isReg() || !Op.getReg().isVirtual() ||
+          !TRI->isSGPRReg(*MRI, Op.getReg()))
+        continue;
+
+      LLVM_DEBUG(dbgs() << "Copying SGPR input " << printReg(Op.getReg(), TRI)
+                        << " of PHI: " << MI);
+      MachineBasicBlock *InsertBB = MI.getOperand(I + 1).getMBB();
+      TII->legalizeGenericOperand(*InsertBB, InsertBB->getFirstTerminator(), RC,
+                                  Op, *MRI, MI.getDebugLoc());
+    }
   }
 
-  // Propagate register class back to PHI operands which are PHI themselves.
+  // Propagate the AGPR class back to PHI operands that are SGPR PHIs, which
+  // are the only inputs copied above.
   while (!PHIOperands.empty()) {
     processPHINode(*PHIOperands.pop_back_val());
   }
