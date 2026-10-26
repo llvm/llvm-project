@@ -11,6 +11,7 @@
 
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Disassembler.h"
+#include "lldb/Core/Value.h"
 #include "lldb/Core/dwarf.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Scalar.h"
@@ -18,7 +19,10 @@
 #include "lldb/lldb-private.h"
 #include "llvm/DebugInfo/DWARF/DWARFLocationExpression.h"
 #include "llvm/Support/Error.h"
+#include <cstddef>
 #include <functional>
+#include <utility>
+#include <vector>
 
 namespace lldb_private {
 
@@ -35,7 +39,24 @@ namespace lldb_private {
 /// location expression or a location list and interprets it.
 class DWARFExpression {
 public:
-  using Stack = std::vector<Value>;
+  enum class LocationDescriptionKind { Empty, Memory, Register, Implicit };
+
+  /// An eagerly materialized value on the DWARF expression stack together
+  /// with the kind of location description that produced it.
+  struct StackEntry {
+    StackEntry(const Value &value, LocationDescriptionKind loc_desc_kind =
+                                       LocationDescriptionKind::Memory)
+        : value(value), loc_desc_kind(loc_desc_kind) {}
+
+    StackEntry(const Scalar &value, LocationDescriptionKind loc_desc_kind =
+                                        LocationDescriptionKind::Memory)
+        : value(value), loc_desc_kind(loc_desc_kind) {}
+
+    Value value;
+    LocationDescriptionKind loc_desc_kind;
+  };
+
+  using Stack = std::vector<StackEntry>;
 
   class Delegate {
   public:
