@@ -13,6 +13,7 @@
 #include "TGParser.h"
 #include "TGLexer.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -151,8 +152,7 @@ const Init *TGVarScope::getVar(RecordKeeper &Records,
   if (It != Vars.end())
     return It->second;
 
-  auto FindValueInArgs = [&](Record *Rec,
-                             const StringInit *Name) -> const Init * {
+  auto FindValueInArgs = [&](Record *Rec) -> const Init * {
     if (!Rec)
       return nullptr;
     const Init *ArgName = QualifyName(*Rec, Name);
@@ -185,7 +185,7 @@ const Init *TGVarScope::getVar(RecordKeeper &Records,
 
       // The variable is a class template argument?
       if (CurRec->isClass())
-        if (auto *V = FindValueInArgs(CurRec, Name))
+        if (auto *V = FindValueInArgs(CurRec))
           return V;
     }
     break;
@@ -202,7 +202,7 @@ const Init *TGVarScope::getVar(RecordKeeper &Records,
   case SK_MultiClass: {
     // The variable is a multiclass template argument?
     if (CurMultiClass)
-      if (auto *V = FindValueInArgs(&CurMultiClass->Rec, Name))
+      if (auto *V = FindValueInArgs(&CurMultiClass->Rec))
         return V;
     break;
   }
@@ -3063,29 +3063,29 @@ const Init *TGParser::ParseSimpleValue(Record *CurRec, const RecTy *ItemType,
     // As we parse { a, b, ... }, 'a' is the highest bit, but we parse it
     // first. We'll first read everything in to a vector, then we can reverse
     // it to get the bits in the correct order for the BitsInit value.
-    for (unsigned i = 0, e = Vals.size(); i != e; ++i) {
+    for (auto [I, Val] : enumerate(Vals)) {
       // FIXME: The following two loops would not be duplicated
       //        if the API was a little more orthogonal.
 
       // bits<n> values are allowed to initialize n bits.
-      if (const auto *BI = dyn_cast<BitsInit>(Vals[i])) {
-        for (unsigned i = 0, e = BI->getNumBits(); i != e; ++i)
-          NewBits.push_back(BI->getBit((e - i) - 1));
+      if (const auto *BI = dyn_cast<BitsInit>(Val)) {
+        for (const Init *Bit : reverse(BI->getBits()))
+          NewBits.push_back(Bit);
         continue;
       }
       // bits<n> can also come from variable initializers.
-      if (const auto *VI = dyn_cast<VarInit>(Vals[i])) {
+      if (const auto *VI = dyn_cast<VarInit>(Val)) {
         if (const auto *BitsRec = dyn_cast<BitsRecTy>(VI->getType())) {
-          for (unsigned i = 0, e = BitsRec->getNumBits(); i != e; ++i)
-            NewBits.push_back(VI->getBit((e - i) - 1));
+          for (unsigned Bit : reverse(seq(BitsRec->getNumBits())))
+            NewBits.push_back(VI->getBit(Bit));
           continue;
         }
         // Fallthrough to try convert this to a bit.
       }
       // All other values must be convertible to just a single bit.
-      const Init *Bit = Vals[i]->getCastTo(BitRecTy::get(Records));
+      const Init *Bit = Val->getCastTo(BitRecTy::get(Records));
       if (!Bit) {
-        Error(BraceLoc, "Element #" + Twine(i) + " (" + Vals[i]->getAsString() +
+        Error(BraceLoc, "Element #" + Twine(I) + " (" + Val->getAsString() +
                             ") is not convertable to a bit");
         return nullptr;
       }
