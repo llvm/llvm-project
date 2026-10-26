@@ -3278,7 +3278,7 @@ static void linkDynamicDebug(Ctx &ctx, ArrayRef<WrappedSymbol> wrapped) {
   if (ctx.arg.resolveGroups)
     args.push_back("--force-group-allocation");
   if (ctx.arg.gcSections) {
-    dctx.dynDbgGCRoots = std::move(ctx.dynDbgGCRoots);
+    dctx.dynDbgInnerGCRoots = std::move(ctx.dynDbgInnerGCRoots);
     args.push_back("--gc-sections");
   }
   for (const auto &ws : wrapped)

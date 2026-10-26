@@ -2082,16 +2082,20 @@ struct LockGuard {
 };
 } // namespace
 
-// Scans the unoptimized "inner" `__dyndbg.` prefixed symbols of the object and
-// records the references to optimized "outer" symbols in the DynDbgGCInfo
-// attached to the InputSection containing the optimized "outer" equivalent
-// symbol. These DynDbgGCInfo references become additional dependencies for the
-// "outer" InputSections during the "outer" `--gc-sections` mark live.
+// Scans the unoptimized "inner" `__dyndbg.` prefixed symbols of the "inner"
+// object and records the "inner" section references to optimized "outer"
+// symbols in the DynDbgGCInfo attached to the InputSection containing the
+// optimized "outer" equivalent symbol. These DynDbgGCInfo references become
+// additional dependencies for the "outer" InputSections during the "outer"
+// `--gc-sections` mark live.
 //
-// The `__dyndbg.` prefixed symbols are also recorded as GC roots in the
-// DynDbgGCInfo for the "outer" InputSections. These GC roots are collected for
-// the live "outer" InputSections during the "outer" mark live and used as the
-// GC roots for the "inner" `--gc-sections` mark live.
+// One `__dyndbg.` prefixed symbol per "inner" section is recorded as an "inner"
+// GC root in the DynDbgGCInfo of the corresponding "outer" InputSection.
+// Usually, each "outer" InputSection will have 1 "inner" GC root. However, it
+// is possible to have multiple when linking dynamic debug objects that have
+// been combined in a relocatable link. During the "outer" `--gc-sections` mark
+// live, each live "outer" InputSection appends its "inner" GC roots to form all
+// the GC roots for the "inner" `--gc-sections` mark live.
 template <typename ELFT> void ObjFile<ELFT>::maybeCreateDynDbgGCInfo() {
   if (!dynDbgInfo || dynDbgInfo->gcInfoCreated || !dynDbgInfo->elf)
     return;
@@ -2146,6 +2150,7 @@ template <typename ELFT> void ObjFile<ELFT>::maybeCreateDynDbgGCInfo() {
     if (!name.starts_with("__dyndbg."))
       continue;
 
+    // Only one "inner" GC root is required per "inner" section.
     si.processed = true;
 
     // Try to find the matching "outer" symbol.
@@ -2167,13 +2172,14 @@ template <typename ELFT> void ObjFile<ELFT>::maybeCreateDynDbgGCInfo() {
       is->dynDbgGCInfo = gcInfo;
     }
 
-    // Add this "inner" `__dyndbg.` prefixed symbol as a GC root.
+    // Add this "inner" `__dyndbg.` prefixed symbol as a GC root for the "inner"
+    // section.
     gcInfo->roots.push_back(name);
 
     if (!si.relocIdx)
       continue;
 
-    // Find "outer" symbols referenced by the "inner" and record in the
+    // Find "outer" symbols referenced by the "inner" section and record in the
     // InputSection's DynDbgGCInfo.
     DenseSet<uint32_t> processedSyms;
     dbgObj.visitGlobalRelocSymbolIndices(
