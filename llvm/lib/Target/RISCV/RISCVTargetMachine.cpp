@@ -55,7 +55,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeMachineKCFILegacyPass(*PR);
   initializeRISCVDeadRegisterDefinitionsLegacyPass(*PR);
   initializeRISCVLateBranchOptLegacyPass(*PR);
-  initializeRISCVMakeCompressibleOptPass(*PR);
+  initializeRISCVMakeCompressibleLegacyPass(*PR);
   initializeRISCVQCRelaxMarkingPass(*PR);
   initializeRISCVGatherScatterLoweringLegacyPass(*PR);
   initializeRISCVCodeGenPrepareLegacyPass(*PR);
@@ -510,7 +510,7 @@ void RISCVPassConfig::addPreEmitPass() {
   // prevent the adjusted offset exceeding the branch range.
   addPass(createRISCVIndirectBranchTrackingLegacyPass());
   addPass(&BranchRelaxationPassID);
-  addPass(createRISCVMakeCompressibleOptPass());
+  addPass(createRISCVMakeCompressibleLegacyPass());
 }
 
 void RISCVPassConfig::addPreEmitPass2() {
