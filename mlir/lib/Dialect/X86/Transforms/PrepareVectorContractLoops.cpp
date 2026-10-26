@@ -14,7 +14,7 @@
 #include "mlir/Dialect/X86/Transforms.h"
 #include "mlir/Dialect/X86/Utils/X86Utils.h"
 #include "mlir/IR/PatternMatch.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 
 #define DEBUG_TYPE "x86-prepare-vector-contract-loops"
 
@@ -23,8 +23,7 @@ using namespace mlir;
 namespace {
 vector::ContractionOp getCandidate(scf::ForOp loop) {
   if (loop.getNumRegionIterArgs() != 1) {
-    LLVM_DEBUG(llvm::dbgs() << "reject loop at " << loop.getLoc()
-                            << ": expected one iter_arg\n");
+    LDBG() << "reject loop at " << loop.getLoc() << ": expected one iter_arg\n";
     return {};
   }
 
@@ -38,8 +37,8 @@ vector::ContractionOp getCandidate(scf::ForOp loop) {
         !contract.getAcc().hasOneUse() || !contract.getResult().hasOneUse() ||
         yield->getNumOperands() != 1 ||
         yield->getOperand(0) != contract.getResult()) {
-      LLVM_DEBUG(llvm::dbgs() << "reject contraction at " << contract.getLoc()
-                              << ": not a single loop-carried accumulation\n");
+      LDBG() << "reject contraction at " << contract.getLoc()
+             << ": not a single loop-carried accumulation\n";
       continue;
     }
 
@@ -64,8 +63,8 @@ vector::ContractionOp getCandidate(scf::ForOp loop) {
         maps[1] == AffineMap::get(4, 0, {k, n, v}, ctx) &&
         maps[2] == AffineMap::get(4, 0, {m, n}, ctx))
       return contract;
-    LLVM_DEBUG(llvm::dbgs() << "reject contraction at " << contract.getLoc()
-                            << ": noncanonical matmul layout or iterators\n");
+    LDBG() << "reject contraction at " << contract.getLoc()
+           << ": noncanonical matmul layout or iterators\n";
   }
   return {};
 }
