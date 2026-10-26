@@ -32,3 +32,4 @@ entry:
 
 ; CHECK: [[META1]] = !DILocalVariable(name: "masked", scope: [[META3:![0-9]+]] 
 ; CHECK: [[META2]] = !DILocation(line: 0, scope: [[META3]])
+; CHECK: [[META3]] = distinct !DISubprogram(name: "and_elide"
