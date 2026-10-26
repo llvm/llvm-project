@@ -145,19 +145,29 @@ public:
 
   struct RememberStack {
     PrologInfoStackEntry *entry;
-    RememberStack() : entry(nullptr) {}
+    // Entries popped by DW_CFA_restore_state, reused by the next
+    // DW_CFA_remember_state. With the stack allocator the free is a no-op, so
+    // without reuse every pair in an FDE would take a new entry of stack.
+    PrologInfoStackEntry *freeEntries;
+    RememberStack() : entry(nullptr), freeEntries(nullptr) {}
     ~RememberStack() {
 #if defined(_LIBUNWIND_REMEMBER_CLEANUP_NEEDED)
       // Clean up rememberStack. Even in the case where every
       // DW_CFA_remember_state is paired with a DW_CFA_restore_state,
       // parseInstructions can skip restore opcodes if it reaches the target PC
       // and stops interpreting, so we have to make sure we don't leak memory.
-      while (entry) {
-        PrologInfoStackEntry *next = entry->next;
-        _LIBUNWIND_REMEMBER_FREE(entry);
-        entry = next;
-      }
+      freeList(entry);
+      freeList(freeEntries);
 #endif
+    }
+
+  private:
+    static void freeList(PrologInfoStackEntry *list) {
+      while (list) {
+        PrologInfoStackEntry *next = list->next;
+        _LIBUNWIND_REMEMBER_FREE(list);
+        list = next;
+      }
     }
   };
 
@@ -601,9 +611,12 @@ bool CFI_Parser<A>::parseFDEInstructions(
       case DW_CFA_remember_state: {
         // Avoid operator new because that would be an upward dependency.
         // Avoid malloc because it needs heap allocation.
-        PrologInfoStackEntry *entry =
-            (PrologInfoStackEntry *)_LIBUNWIND_REMEMBER_ALLOC(
-                sizeof(PrologInfoStackEntry));
+        PrologInfoStackEntry *entry = rememberStack.freeEntries;
+        if (entry != NULL)
+          rememberStack.freeEntries = entry->next;
+        else
+          entry = (PrologInfoStackEntry *)_LIBUNWIND_REMEMBER_ALLOC(
+              sizeof(PrologInfoStackEntry));
         if (entry != NULL) {
           entry->next = rememberStack.entry;
           entry->info = *results;
@@ -619,7 +632,8 @@ bool CFI_Parser<A>::parseFDEInstructions(
           PrologInfoStackEntry *top = rememberStack.entry;
           *results = top->info;
           rememberStack.entry = top->next;
-          _LIBUNWIND_REMEMBER_FREE(top);
+          top->next = rememberStack.freeEntries;
+          rememberStack.freeEntries = top;
         } else {
           return false;
         }
