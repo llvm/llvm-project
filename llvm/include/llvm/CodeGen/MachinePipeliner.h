@@ -59,6 +59,7 @@ namespace llvm {
 
 class AAResults;
 class LiveIntervals;
+class MachineDominatorTree;
 class NodeSet;
 class SMSchedule;
 
@@ -327,6 +328,8 @@ class LLVM_ABI SwingSchedulerDAG : public ScheduleDAGInstrs {
   /// addLoopCarriedDependences).
   BatchAAResults BAA;
 
+  MachineDominatorTree *MDT = nullptr;
+
   /// Helper class to implement Johnson's circuit finding algorithm.
   class Circuits {
     std::vector<SUnit> &SUnits;
@@ -375,7 +378,7 @@ public:
                     MachineOptimizationRemarkEmitter *ORE, MachineLoop &L,
                     LiveIntervals &lis, const RegisterClassInfo &rci,
                     unsigned II, TargetInstrInfo::PipelinerLoopInfo *PLI,
-                    AliasAnalysis *AA);
+                    AliasAnalysis *AA, MachineDominatorTree *MDT = nullptr);
 
   void schedule() override;
   void finishBlock() override;

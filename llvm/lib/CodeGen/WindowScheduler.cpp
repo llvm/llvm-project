@@ -235,10 +235,11 @@ public:
 };
 } // end anonymous namespace
 
-WindowScheduler::WindowScheduler(MachineSchedContext *C, MachineLoop &ML)
+WindowScheduler::WindowScheduler(MachineSchedContext *C, MachineLoop &ML,
+                                 MachineDominatorTree *MDT)
     : Context(C), MF(C->MF), MBB(ML.getHeader()), Loop(ML),
       Subtarget(&MF->getSubtarget()), TII(Subtarget->getInstrInfo()),
-      TRI(Subtarget->getRegisterInfo()), MRI(&MF->getRegInfo()) {
+      TRI(Subtarget->getRegisterInfo()), MRI(&MF->getRegInfo()), MDT(MDT) {
   TripleDAG = std::unique_ptr<ScheduleDAGInstrs>(
       createMachineScheduler(/*OnlyBuildGraph=*/true));
 }
@@ -829,7 +830,7 @@ void WindowScheduler::expand() {
   ModuloSchedule MS(*MF, &Loop, std::move(OrderedInsts), std::move(Cycles),
                     std::move(Stages));
   ModuloScheduleExpander MSE(*MF, MS, *Context->LIS,
-                             ModuloScheduleExpander::InstrChangesTy());
+                             ModuloScheduleExpander::InstrChangesTy(), MDT);
   MSE.expand();
   MSE.cleanup();
 }

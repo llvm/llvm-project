@@ -60,6 +60,7 @@
 #ifndef LLVM_CODEGEN_MODULOSCHEDULE_H
 #define LLVM_CODEGEN_MODULOSCHEDULE_H
 
+#include "llvm/CodeGen/MachineDomTreeUpdater.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineLoopUtils.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -173,6 +174,7 @@ private:
   MachineRegisterInfo &MRI;
   const TargetInstrInfo *TII = nullptr;
   LiveIntervals &LIS;
+  MachineDomTreeUpdater MDTU;
 
   MachineBasicBlock *BB = nullptr;
   MachineBasicBlock *Preheader = nullptr;
@@ -273,9 +275,11 @@ public:
   /// FIXME: InstrChanges is opaque and is an implementation detail of an
   ///   optimization in MachinePipeliner that crosses abstraction boundaries.
   ModuloScheduleExpander(MachineFunction &MF, ModuloSchedule &S,
-                         LiveIntervals &LIS, InstrChangesTy InstrChanges)
+                         LiveIntervals &LIS, InstrChangesTy InstrChanges,
+                         MachineDominatorTree *MDT = nullptr)
       : Schedule(S), MF(MF), ST(MF.getSubtarget()), MRI(MF.getRegInfo()),
         TII(ST.getInstrInfo()), LIS(LIS),
+        MDTU(MDT, MachineDomTreeUpdater::UpdateStrategy::Eager),
         InstrChanges(std::move(InstrChanges)) {}
 
   /// Performs the actual expansion.
@@ -293,9 +297,11 @@ public:
 class PeelingModuloScheduleExpander {
 public:
   PeelingModuloScheduleExpander(MachineFunction &MF, ModuloSchedule &S,
-                                LiveIntervals *LIS)
+                                LiveIntervals *LIS,
+                                MachineDominatorTree *MDT = nullptr)
       : Schedule(S), MF(MF), ST(MF.getSubtarget()), MRI(MF.getRegInfo()),
-        TII(ST.getInstrInfo()), LIS(LIS) {}
+        TII(ST.getInstrInfo()), LIS(LIS),
+        MDTU(MDT, MachineDomTreeUpdater::UpdateStrategy::Eager) {}
 
   LLVM_ABI void expand();
 
@@ -310,6 +316,7 @@ protected:
   MachineRegisterInfo &MRI;
   const TargetInstrInfo *TII = nullptr;
   LiveIntervals *LIS = nullptr;
+  MachineDomTreeUpdater MDTU;
 
   /// The original loop block that gets rewritten in-place.
   MachineBasicBlock *BB = nullptr;
@@ -397,6 +404,7 @@ private:
   MachineRegisterInfo &MRI;
   const TargetInstrInfo *TII = nullptr;
   LiveIntervals &LIS;
+  MachineDomTreeUpdater MDTU;
 
   MachineBasicBlock *OrigKernel = nullptr;
   MachineBasicBlock *OrigPreheader = nullptr;
@@ -443,9 +451,11 @@ private:
 
 public:
   ModuloScheduleExpanderMVE(MachineFunction &MF, ModuloSchedule &S,
-                            LiveIntervals &LIS)
+                            LiveIntervals &LIS,
+                            MachineDominatorTree *MDT = nullptr)
       : Schedule(S), MF(MF), ST(MF.getSubtarget()), MRI(MF.getRegInfo()),
-        TII(ST.getInstrInfo()), LIS(LIS) {}
+        TII(ST.getInstrInfo()), LIS(LIS),
+        MDTU(MDT, MachineDomTreeUpdater::UpdateStrategy::Eager) {}
 
   LLVM_ABI void expand();
   LLVM_ABI static bool canApply(MachineLoop &L);

@@ -49,6 +49,7 @@
 #include "llvm/CodeGen/DFAPacketizer.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -361,6 +362,7 @@ public:
   RegisterClassInfo *RegClassInfo = nullptr;
   LiveIntervals *LIS = nullptr;
   AAResults *AA = nullptr;
+  MachineDominatorTree *MDT = nullptr;
   const TargetMachine *TM = nullptr;
   bool disabledByPragma = false;
   unsigned II_setByPragma = 0;
@@ -384,7 +386,8 @@ public:
   MachinePipelinerImpl(MachineFunction &MF, const MachineLoopInfo &MLI,
                        LiveIntervals &LIS, AAResults &AA,
                        MachineOptimizationRemarkEmitter &ORE,
-                       RegisterClassInfo &RegClassInfo);
+                       RegisterClassInfo &RegClassInfo,
+                       MachineDominatorTree *MDT);
 
   /// Run the software pipeliner over all loops in the function.
   bool run();
@@ -409,9 +412,10 @@ int MachinePipelinerImpl::NumTries = 0;
 MachinePipelinerImpl::MachinePipelinerImpl(
     MachineFunction &MF, const MachineLoopInfo &MLI, LiveIntervals &LIS,
     AAResults &AA, MachineOptimizationRemarkEmitter &ORE,
-    RegisterClassInfo &RegClassInfo)
+    RegisterClassInfo &RegClassInfo, MachineDominatorTree *MDT)
     : MF(&MF), ORE(&ORE), MLI(&MLI), TII(MF.getSubtarget().getInstrInfo()),
-      RegClassInfo(&RegClassInfo), LIS(&LIS), AA(&AA), TM(&MF.getTarget()) {}
+      RegClassInfo(&RegClassInfo), LIS(&LIS), AA(&AA), MDT(MDT),
+      TM(&MF.getTarget()) {}
 
 /// The "main" function for implementing Swing Modulo Scheduling.
 bool MachinePipelinerImpl::run() {
@@ -426,7 +430,8 @@ static bool runMachinePipeliner(
     MachineFunction &MF, function_ref<const MachineLoopInfo &()> GetMLI,
     function_ref<LiveIntervals &()> GetLIS, function_ref<AAResults &()> GetAA,
     function_ref<MachineOptimizationRemarkEmitter &()> GetORE,
-    function_ref<RegisterClassInfo &()> GetRCI) {
+    function_ref<RegisterClassInfo &()> GetRCI,
+    function_ref<MachineDominatorTree *()> GetMDT) {
   if (MF.getFunction().getAttributes().hasFnAttr(Attribute::OptimizeForSize) &&
       !EnableSWPOptSize.getPosition())
     return false;
@@ -441,7 +446,9 @@ static bool runMachinePipeliner(
        MF.getSubtarget().getInstrItineraryData()->isEmpty()))
     return false;
 
-  MachinePipelinerImpl MP(MF, GetMLI(), GetLIS(), GetAA(), GetORE(), GetRCI());
+  LiveIntervals &LIS = GetLIS();
+  MachinePipelinerImpl MP(MF, GetMLI(), LIS, GetAA(), GetORE(), GetRCI(),
+                          GetMDT());
   return MP.run();
 }
 
@@ -465,6 +472,11 @@ bool MachinePipelinerLegacy::runOnMachineFunction(MachineFunction &MF) {
       },
       [&]() -> RegisterClassInfo & {
         return getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI();
+      },
+      [&]() -> MachineDominatorTree * {
+        auto *MDTWrapper =
+            getAnalysisIfAvailable<MachineDominatorTreeWrapperPass>();
+        return MDTWrapper ? &MDTWrapper->getDomTree() : nullptr;
       });
 }
 
@@ -490,11 +502,15 @@ MachinePipelinerPass::run(MachineFunction &MF,
           },
           [&]() -> RegisterClassInfo & {
             return MFAM.getResult<MachineRegisterClassAnalysis>(MF);
+          },
+          [&]() -> MachineDominatorTree * {
+            return MFAM.getCachedResult<MachineDominatorTreeAnalysis>(MF);
           }))
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
   PA.preserve<MachineRegisterClassAnalysis>();
+  PA.preserve<MachineDominatorTreeAnalysis>();
   return PA;
 }
 
@@ -536,6 +552,11 @@ bool MachinePipelinerImpl::scheduleLoop(MachineLoop &L) {
 
   if (useWindowScheduler(Changed))
     Changed = runWindowScheduler(L);
+
+#ifdef EXPENSIVE_CHECKS
+  assert((!Changed || !MDT || MDT->verify()) &&
+         "Dominator tree not updated for the pipelined loop");
+#endif
 
   LI.LoopPipelinerInfo.reset();
   return Changed;
@@ -770,7 +791,7 @@ bool MachinePipelinerImpl::swingModuloScheduler(MachineLoop &L) {
   assert(L.getBlocks().size() == 1 && "SMS works on single blocks only.");
 
   SwingSchedulerDAG SMS(*MF, MLI, ORE, L, *LIS, *RegClassInfo, II_setByPragma,
-                        LI.LoopPipelinerInfo.get(), AA);
+                        LI.LoopPipelinerInfo.get(), AA, MDT);
 
   MachineBasicBlock *MBB = L.getHeader();
   // The kernel should not include any terminator instructions.  These
@@ -801,6 +822,7 @@ void MachinePipelinerLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<MachineOptimizationRemarkEmitterPass>();
   AU.addRequired<MachineRegisterClassInfoWrapperPass>();
   AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
+  AU.addPreserved<MachineDominatorTreeWrapperPass>();
   AU.addRequired<TargetPassConfig>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
@@ -813,7 +835,7 @@ bool MachinePipelinerImpl::runWindowScheduler(MachineLoop &L) {
   Context.AA = AA;
   Context.LIS = LIS;
   Context.RegClassInfo = RegClassInfo;
-  WindowScheduler WS(&Context, L);
+  WindowScheduler WS(&Context, L, MDT);
   return WS.run();
 }
 
@@ -861,10 +883,11 @@ SwingSchedulerDAG::SwingSchedulerDAG(MachineFunction &MF,
                                      MachineLoop &L, LiveIntervals &lis,
                                      const RegisterClassInfo &rci, unsigned II,
                                      TargetInstrInfo::PipelinerLoopInfo *PLI,
-                                     AliasAnalysis *AA)
+                                     AliasAnalysis *AA,
+                                     MachineDominatorTree *MDT)
     : ScheduleDAGInstrs(MF, MLI, false), ORE(ORE), Loop(L), LIS(lis),
       RegClassInfo(rci), II_setByPragma(II), LoopPipelinerInfo(PLI),
-      Topo(SUnits, &ExitSU), AA(AA), BAA(*AA) {
+      Topo(SUnits, &ExitSU), AA(AA), BAA(*AA), MDT(MDT) {
   initPolicy();
   MF.getSubtarget().getSMSMutations(Mutations);
   if (SwpEnableCopyToPhi)
@@ -1048,15 +1071,15 @@ void SwingSchedulerDAG::schedule() {
   }
   // The experimental code generator can't work if there are InstChanges.
   if (ExperimentalCodeGen && NewInstrChanges.empty()) {
-    PeelingModuloScheduleExpander MSE(MF, MS, &LIS);
+    PeelingModuloScheduleExpander MSE(MF, MS, &LIS, MDT);
     MSE.expand();
   } else if (MVECodeGen && NewInstrChanges.empty() &&
              LoopPipelinerInfo->isMVEExpanderSupported() &&
              ModuloScheduleExpanderMVE::canApply(Loop)) {
-    ModuloScheduleExpanderMVE MSE(MF, MS, LIS);
+    ModuloScheduleExpanderMVE MSE(MF, MS, LIS, MDT);
     MSE.expand();
   } else {
-    ModuloScheduleExpander MSE(MF, MS, LIS, std::move(NewInstrChanges));
+    ModuloScheduleExpander MSE(MF, MS, LIS, std::move(NewInstrChanges), MDT);
     MSE.expand();
     MSE.cleanup();
   }
