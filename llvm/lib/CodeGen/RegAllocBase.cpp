@@ -216,8 +216,12 @@ void RegAllocBase::cleanupFailedDefs(MachineInstr &MI, Register FailedReg,
 
       // Add the def to the PhysReg regunit ranges so it interferes with later
       // assignments. Ranges computed later will include the rewritten def.
+      MCRegister DefReg = PhysReg;
+      if (MO.getSubReg())
+        DefReg = TRI->getSubReg(PhysReg, MO.getSubReg());
+
       SlotIndex DefIdx = Idx.getRegSlot(MO.isEarlyClobber());
-      for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
+      for (MCRegUnit Unit : TRI->regunits(DefReg)) {
         LiveRange *LR = LIS->getCachedRegUnit(Unit);
         if (LR && !LR->liveAt(DefIdx))
           LR->createDeadDef(DefIdx, LIS->getVNInfoAllocator());

@@ -29,6 +29,7 @@
 #include "RISCV.h"
 #include "RISCVSubtarget.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineLoopInfo.h"
 #include <queue>
 
 using namespace llvm;
@@ -193,6 +194,7 @@ struct BlockData {
 
 class RISCVInsertWriteVXRM : public MachineFunctionPass {
   const TargetInstrInfo *TII;
+  const MachineLoopInfo *MLI;
 
   std::vector<BlockData> BlockInfo;
   std::queue<const MachineBasicBlock *> WorkList;
@@ -206,6 +208,7 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
+    AU.addUsedIfAvailable<MachineLoopInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -308,8 +311,14 @@ void RISCVInsertWriteVXRM::computeAnticipated(const MachineFunction &MF, const M
   if (MBB.succ_empty()) {
     Anticipated.setUnknown();
   } else {
+    // If VXRM writes are expensive, speculate a write into successors that
+    // don't need it, but only within a loop so that the write can be hoisted
+    // out of the loop. Elsewhere this would just add writes to paths that
+    // don't use VXRM.
+    bool Speculate =
+        ST.hasVXRMPipelineFlush() && (!MLI || MLI->getLoopFor(&MBB));
     for (const MachineBasicBlock *S : MBB.successors())
-      if (ST.hasVXRMPipelineFlush())
+      if (Speculate)
         Anticipated =
           Anticipated.intersectAnticipated(BlockInfo[S->getNumber()].AnticipatedIn);
       else
@@ -444,6 +453,10 @@ bool RISCVInsertWriteVXRM::runOnMachineFunction(MachineFunction &MF) {
     return false;
 
   TII = ST.getInstrInfo();
+  // Loop info is used to limit speculation of VXRM writes. It's available in
+  // optimized pipelines; without it, speculate everywhere.
+  auto *MLIWrapper = getAnalysisIfAvailable<MachineLoopInfoWrapperPass>();
+  MLI = MLIWrapper ? &MLIWrapper->getLI() : nullptr;
 
   assert(BlockInfo.empty() && "Expect empty block infos");
   BlockInfo.resize(MF.getNumBlockIDs());
