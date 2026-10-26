@@ -784,7 +784,8 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::IntAttr intAttr) {
       intTy && intTy.isBitInt()) {
     mlir::Type biTy = convertTypeForMemory(*converter, layout, intTy);
     return mlir::LLVM::ConstantOp::create(
-        rewriter, parentLoc, biTy, getBitIntStorageAttr(rewriter, intAttr, layout));
+        rewriter, parentLoc, biTy,
+        getBitIntStorageAttr(rewriter, intAttr, layout));
   }
 
   // Materialize the value at its literal width, then widen to the in-memory
@@ -861,8 +862,8 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::BlockAddrInfoAttr blockAddrInfo) {
   auto blkAddr = mlir::LLVM::BlockAddressAttr::get(
       rewriter.getContext(), blockAddrInfo.getFunc(), tagAttr);
   auto blockAddressOp = mlir::LLVM::BlockAddressOp::create(
-      rewriter, parentLoc, mlir::LLVM::LLVMPointerType::get(rewriter.getContext()),
-      blkAddr);
+      rewriter, parentLoc,
+      mlir::LLVM::LLVMPointerType::get(rewriter.getContext()), blkAddr);
   if (!matchLabel)
     blockInfoAddr->addUnresolvedBlockAddress(blockAddressOp, blockAddrInfo);
   return blockAddressOp;
@@ -915,7 +916,8 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::BlockAddrDiffAttr blockAddrDiff) {
   mlir::Type resultTy = converter->convertType(blockAddrDiff.getType());
   mlir::Value result = diffVal;
   if (resultTy != intptrTy)
-    result = mlir::LLVM::TruncOp::create(rewriter, parentLoc, resultTy, diffVal);
+    result =
+        mlir::LLVM::TruncOp::create(rewriter, parentLoc, resultTy, diffVal);
   return result;
 }
 
@@ -936,7 +938,8 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstArrayAttr attr) {
   if (mlir::isa<mlir::LLVM::LLVMArrayType>(llvmTy))
     if (std::optional<mlir::Attribute> constAttr =
             lowerConstArrayAttr(attr, symbolTables, converter, parentModule))
-      return mlir::LLVM::ConstantOp::create(rewriter, parentLoc, llvmTy, *constAttr);
+      return mlir::LLVM::ConstantOp::create(rewriter, parentLoc, llvmTy,
+                                            *constAttr);
 
   if (attr.hasTrailingZeros())
     result = mlir::LLVM::ZeroOp::create(rewriter, parentLoc, llvmTy);
@@ -964,15 +967,15 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstArrayAttr attr) {
       mlir::Value init = visit(prefix);
       if (!init)
         return {};
-      return mlir::LLVM::InsertValueOp::create(rewriter, parentLoc, result, init,
-                                               llvm::ArrayRef<int64_t>{0});
+      return mlir::LLVM::InsertValueOp::create(
+          rewriter, parentLoc, result, init, llvm::ArrayRef<int64_t>{0});
     }
     for (auto [idx, elt] : llvm::enumerate(arrayAttr)) {
       mlir::Value init = visit(elt);
       if (!init)
         return {};
-      result =
-          mlir::LLVM::InsertValueOp::create(rewriter, parentLoc, result, init, idx);
+      result = mlir::LLVM::InsertValueOp::create(rewriter, parentLoc, result,
+                                                 init, idx);
     }
   } else if (auto strAttr = mlir::dyn_cast<mlir::StringAttr>(attr.getElts())) {
     // TODO(cir): this diverges from traditional lowering. Normally the string
@@ -983,8 +986,8 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstArrayAttr attr) {
     for (auto [idx, elt] : llvm::enumerate(strAttr)) {
       auto init = mlir::LLVM::ConstantOp::create(
           rewriter, parentLoc, converter->convertType(eltTy), elt);
-      result =
-          mlir::LLVM::InsertValueOp::create(rewriter, parentLoc, result, init, idx);
+      result = mlir::LLVM::InsertValueOp::create(rewriter, parentLoc, result,
+                                                 init, idx);
     }
   } else {
     llvm_unreachable("unexpected ConstArrayAttr elements");
@@ -1019,8 +1022,8 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstRecordAttr constRecord) {
     mlir::Value init = visit(elt);
     if (!init)
       return {};
-    result = mlir::LLVM::InsertValueOp::create(rewriter, parentLoc, result, init,
-                                               insertIdx);
+    result = mlir::LLVM::InsertValueOp::create(rewriter, parentLoc, result,
+                                               init, insertIdx);
     ++insertIdx;
   }
 
@@ -1064,7 +1067,8 @@ CIRAttrToValue::getAddressOfSymbol(mlir::FlatSymbolRefAttr symbol) {
   mlir::Type originalType;
   unsigned addrSpace = 0;
   llvm::StringRef symName;
-  mlir::Operation *sourceSymbol = symbolTables.lookupSymbolIn(parentModule, symbol);
+  mlir::Operation *sourceSymbol =
+      symbolTables.lookupSymbolIn(parentModule, symbol);
   if (auto llvmSymbol = dyn_cast<mlir::LLVM::GlobalOp>(sourceSymbol)) {
     sourceType = llvmSymbol.getType();
     symName = llvmSymbol.getSymName();
@@ -1117,8 +1121,8 @@ mlir::Value CIRAttrToValue::castGlobalAddrToType(mlir::Value addr,
     auto llvmDstTy = converter->convertType<mlir::LLVM::LLVMPointerType>(ptrTy);
 
     if (llvmDstTy.getAddressSpace() != addrSpace)
-      addr =
-          mlir::LLVM::AddrSpaceCastOp::create(rewriter, parentLoc, llvmDstTy, addr);
+      addr = mlir::LLVM::AddrSpaceCastOp::create(rewriter, parentLoc, llvmDstTy,
+                                                 addr);
 
     mlir::DataLayout dataLayout(parentModule);
     mlir::Type llvmEltTy =
@@ -1223,8 +1227,8 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::TypeInfoAttr typeInfoAttr) {
     mlir::Value init = visit(elt);
     if (!init)
       return {};
-    result =
-        mlir::LLVM::InsertValueOp::create(rewriter, parentLoc, result, init, idx);
+    result = mlir::LLVM::InsertValueOp::create(rewriter, parentLoc, result,
+                                               init, idx);
   }
 
   return result;
@@ -1255,8 +1259,8 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::VTableAttr vtableArr) {
     mlir::Value init = visit(elt);
     if (!init)
       return {};
-    result =
-        mlir::LLVM::InsertValueOp::create(rewriter, parentLoc, result, init, idx);
+    result = mlir::LLVM::InsertValueOp::create(rewriter, parentLoc, result,
+                                               init, idx);
   }
 
   return result;
@@ -1266,7 +1270,8 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::VTableAttr vtableArr) {
 mlir::Value CIRAttrToValue::visitCirAttr(cir::ZeroAttr attr) {
   mlir::DataLayout layout(parentModule);
   return mlir::LLVM::ZeroOp::create(
-      rewriter, parentLoc, convertTypeForMemory(*converter, layout, attr.getType()));
+      rewriter, parentLoc,
+      convertTypeForMemory(*converter, layout, attr.getType()));
 }
 
 // This class handles rewriting initializer attributes for types that do not
