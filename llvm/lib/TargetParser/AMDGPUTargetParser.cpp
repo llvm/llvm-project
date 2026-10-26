@@ -458,7 +458,7 @@ unsigned AMDGPU::getAddressableNumVGPRs(GPUKind AK, bool IsWave32) {
   // The unified register file makes the AGPRs addressable as VGPRs.
   if (Features.test(FEAT_GFX90A_INSTS))
     return 512;
-  if (Features.test(FEAT_1024_ADDRESSABLE_VGPRS))
+  if (Features.test(FEAT_VGPR_MSBS))
     return IsWave32 ? 1024 : 512;
   return 256;
 }
@@ -613,7 +613,7 @@ static const AMDGPUFeatureBitset FrontendOnlyFeatures = {
     FEAT_AGPR_ALLOC,
     FEAT_1536_PHYSICAL_VGPRS,
     FEAT_HALF_ADDRESSABLE_PHYSICAL_LOCAL_MEMORY,
-    FEAT_1024_ADDRESSABLE_VGPRS,
+    FEAT_VGPR_MSBS,
     FEAT_LDS_ALLOC_GRANULARITY_256,
     FEAT_LDS_ALLOC_GRANULARITY_512,
     FEAT_LDS_ALLOC_GRANULARITY_1024,
