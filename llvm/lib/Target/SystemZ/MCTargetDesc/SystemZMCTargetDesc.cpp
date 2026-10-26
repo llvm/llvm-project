@@ -226,7 +226,9 @@ createObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI) {
 
 static MCTargetStreamer *
 createNullTargetStreamer(MCStreamer &S) {
-  return new SystemZTargetStreamer(S);
+  if (S.getContext().getTargetTriple().isOSzOS())
+    return new SystemZTargetGOFFStreamer(S);
+  return new SystemZTargetELFStreamer(S);
 }
 
 static MCInstrAnalysis *createSystemZMCInstrAnalysis(const MCInstrInfo *Info) {
