@@ -32,6 +32,25 @@ static const char *symbolLookupCallback(void *DisInfo, uint64_t ReferenceValue,
   return nullptr;
 }
 
+struct SymbolLookupRecorder {
+  unsigned NumCalls = 0;
+  uint64_t ReferenceValue = 0;
+  uint64_t ReferencePC = 0;
+};
+
+static const char *recordingSymbolLookupCallback(void *DisInfo,
+                                                 uint64_t ReferenceValue,
+                                                 uint64_t *ReferenceType,
+                                                 uint64_t ReferencePC,
+                                                 const char **ReferenceName) {
+  auto *Recorder = static_cast<SymbolLookupRecorder *>(DisInfo);
+  ++Recorder->NumCalls;
+  Recorder->ReferenceValue = ReferenceValue;
+  Recorder->ReferencePC = ReferencePC;
+  *ReferenceType = LLVMDisassembler_ReferenceType_InOut_None;
+  return nullptr;
+}
+
 static constexpr char TripleName[] = "amdgpu10.30--amdpal";
 static constexpr char CPUName[] = "";
 
@@ -60,6 +79,40 @@ TEST(AMDGPUDisassembler, Basic) {
                                    OutStringSize);
   EXPECT_EQ(InstSize, 4U);
   EXPECT_EQ(StringRef(OutString), "\ts_version UC_VERSION_GFX10");
+
+  LLVMDisasmDispose(DCR);
+}
+
+TEST(AMDGPUDisassembler, SymbolLookupCallback) {
+  LLVMInitializeAMDGPUTargetInfo();
+  LLVMInitializeAMDGPUTargetMC();
+  LLVMInitializeAMDGPUDisassembler();
+
+  SymbolLookupRecorder Recorder;
+  LLVMDisasmContextRef DCR =
+      LLVMCreateDisasmCPU(TripleName, CPUName, &Recorder, 0, nullptr,
+                          recordingSymbolLookupCallback);
+
+  // Skip test if AMDGPU not built.
+  if (!DCR)
+    GTEST_SKIP();
+
+  ASSERT_NE(LLVMSetDisasmOptions(DCR, LLVMDisassembler_Option_SetInstrComments),
+            0);
+
+  uint8_t Bytes[] = {0xf0, 0xff, 0x82, 0xbf}; // s_branch 0xfff0
+  constexpr uint64_t PC = 0x7d5210317ffc;
+  char OutString[100];
+  size_t InstSize = LLVMDisasmInstruction(DCR, Bytes, sizeof(Bytes), PC,
+                                          OutString, sizeof(OutString));
+
+  EXPECT_EQ(InstSize, 4U);
+  EXPECT_EQ(Recorder.NumCalls, 1U);
+  EXPECT_EQ(Recorder.ReferenceValue, 0x7d5210317fc0U);
+  EXPECT_EQ(Recorder.ReferencePC, PC);
+  StringRef Output(OutString);
+  EXPECT_TRUE(Output.starts_with("\ts_branch 65520"));
+  EXPECT_TRUE(Output.contains("0x7d5210317fc0"));
 
   LLVMDisasmDispose(DCR);
 }
