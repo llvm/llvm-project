@@ -987,8 +987,11 @@ bool CodeGenRegisterClass::Key::operator<(
 //
 static bool testSubClass(const CodeGenRegisterClass *A,
                          const CodeGenRegisterClass *B) {
+  // Compare the member bit vectors rather than the member lists, which would
+  // load every register.
   return A->RSI.isSubClassOf(B->RSI) &&
-         llvm::includes(A->getMembers(), B->getMembers(), deref<std::less<>>());
+         B->getMembers().size() <= A->getMembers().size() &&
+         !B->getMemberBV().test(A->getMemberBV());
 }
 
 /// Sorting predicate for register classes.  This provides a topological
