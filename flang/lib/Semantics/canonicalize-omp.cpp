@@ -322,6 +322,7 @@ static std::optional<bool> IsConsideredExecutable(
           }
         }
       }
+      return std::nullopt;
     }
     return true;
   default:
