@@ -298,6 +298,12 @@ extractStridedSliceSupportsMMAMatrixType(vector::ExtractStridedSliceOp op) {
 static bool supportsMMaMatrixType(Operation *op, bool useNvGpu) {
   if (isa<scf::ForOp, scf::YieldOp>(op))
     return true;
+  // MMA ops cannot honor a mask. An op masked by an enclosing vector.mask has
+  // no mask operand, so the checks below would miss it; rewriting it in place
+  // would leave non-maskable ops inside the vector.mask region.
+  auto maskableOp = dyn_cast<vector::MaskableOpInterface>(op);
+  if (maskableOp && maskableOp.isMasked())
+    return false;
   if (auto transferRead = dyn_cast<vector::TransferReadOp>(op))
     return useNvGpu ? nvgpu::canLowerToWarpMatrixOperation(transferRead)
                     : transferReadSupportsMMAMatrixType(transferRead);

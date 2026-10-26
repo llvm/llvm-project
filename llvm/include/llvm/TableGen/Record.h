@@ -1643,7 +1643,8 @@ public:
   /// Get the type of the field for printing purposes.
   std::string getPrintType() const;
 
-  /// Get the value of the field as an Init.
+  /// Get the value of the field as an Init. This is never null: a field that
+  /// has not been given a value has an UnsetInit.
   const Init *getValue() const { return Value; }
 
   /// Set the value of the field from an Init.
