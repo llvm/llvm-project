@@ -3664,7 +3664,10 @@ void SelectionDAGBuilder::visitCallBr(const CallBrInst &I) {
   // this changes, we might need to enhance
   // Target->setIsInlineAsmBrIndirectTarget or add something similar for
   // intrinsic indirect branches.
-  if (I.isInlineAsm()) {
+
+  // An asm that failed to lower, which reported an error, has no INLINEASM_BR
+  // to branch to the indirect targets.
+  if (I.isInlineAsm() && CallBrOutputs.contains(&I)) {
     for (BasicBlock *Dest : I.getIndirectDests()) {
       MachineBasicBlock *Target = FuncInfo.getMBB(Dest);
       Target->setIsInlineAsmBrIndirectTarget();
@@ -13308,7 +13311,13 @@ void SelectionDAGBuilder::visitCallBrLandingPad(const CallInst &I) {
   const auto *CBR =
       cast<CallBrInst>(I.getParent()->getUniquePredecessor()->getTerminator());
   auto It = CallBrOutputs.find(CBR);
-  assert(It != CallBrOutputs.end() && "callbr asm wasn't lowered");
+
+  // If the asm failed to lower, which reported an error, then nothing branches
+  // here.
+  if (It == CallBrOutputs.end()) {
+    setValue(&I, getValue(PoisonValue::get(I.getType())));
+    return;
+  }
 
   SDValue Chain = DAG.getRoot();
   SmallVector<SDValue, 8> OutputValues;
