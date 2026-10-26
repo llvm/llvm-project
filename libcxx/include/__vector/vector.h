@@ -897,7 +897,7 @@ vector<_Tp, _Allocator>::__recommend(size_type __new_size) const {
 template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::__construct_at_end(size_type __n) {
   _ConstructTransaction __tx(*this, __n);
-  __tx.__pos_ = std::__uninitialized_allocator_value_construct_n(this->__layout_.__alloc(), this->end(), __n);
+  __tx.__pos_ = std::__uninitialized_allocator_value_construct_n(this->__layout_.__alloc(), __layout_.__end_ptr(), __n);
 }
 
 //  Copy constructs __n objects starting at __layout_.__end_ptr() from __x
@@ -910,7 +910,7 @@ template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 inline void
 vector<_Tp, _Allocator>::__construct_at_end(size_type __n, const_reference __x) {
   _ConstructTransaction __tx(*this, __n);
-  __tx.__pos_ = std::__uninitialized_allocator_fill_n(this->__layout_.__alloc(), this->end(), __n, __x);
+  __tx.__pos_ = std::__uninitialized_allocator_fill_n(this->__layout_.__alloc(), __layout_.__end_ptr(), __n, __x);
 }
 
 template <class _Tp, class _Allocator>
@@ -1092,9 +1092,7 @@ vector<_Tp, _Allocator>::__move_range(pointer __from_s, pointer __from_e, pointe
   {
     pointer __i = __from_s + __n;
     _ConstructTransaction __tx(*this, __from_e - __i);
-    for (pointer __pos = __tx.__pos_; __i < __from_e; ++__i, (void)++__pos, __tx.__pos_ = __pos) {
-      __alloc_traits::construct(this->__layout_.__alloc(), std::__to_address(__pos), std::move(*__i));
-    }
+    __tx.__pos_ = std::__uninitialized_allocator_move(__layout_.__alloc(), __i, __from_e, __tx.__pos_).__out_;
   }
   std::move_backward(__from_s, __from_s + __n, __old_last);
 }
