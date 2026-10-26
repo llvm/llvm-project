@@ -294,7 +294,7 @@ void TableGenIndex::initialize(const RecordKeeper &records) {
     for (SMRange loc : def.getReferenceLocs())
       insertRef(sym, loc);
 
-    // Add definitions for any template arguments and values.
+    // Add definitions for any template arguments and fields.
     for (const RecordVal &value : llvm::concat<const RecordVal>(
              def.getTemplateArgs(), def.getValues())) {
       auto *sym = getOrInsertDef(&def, &value);
