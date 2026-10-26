@@ -237,12 +237,13 @@ bool AppleThreadPlanStepThroughObjCTrampoline::WillStop() { return true; }
 // since we can't just return control to the plan that's controlling us on the
 // first step.
 
-AppleThreadPlanStepThroughDirectDispatch ::
+AppleThreadPlanStepThroughDirectDispatch::
     AppleThreadPlanStepThroughDirectDispatch(
         Thread &thread, AppleObjCTrampolineHandler &handler)
-    : ThreadPlanStepOut(thread, nullptr, true /* first instruction */, false,
-                        eVoteNoOpinion, eVoteNoOpinion,
-                        0 /* Step out of zeroth frame */,
+    : ThreadPlanStepOut(ThreadPlan::eKindStepOut,
+                        "Step through ObjC direct dispatch", thread, nullptr,
+                        true /* first instruction */, false, eVoteNoOpinion,
+                        eVoteNoOpinion, 0 /* Step out of zeroth frame */,
                         eLazyBoolNo /* Our parent plan will decide this
                                when we are done */
                         ,
