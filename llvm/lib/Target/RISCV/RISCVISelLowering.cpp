@@ -13721,8 +13721,7 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       Rs2 = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v4i16, Rs2,
                         DAG.getUNDEF(MVT::v2i16));
       if (IntNo == Intrinsic::riscv_pwmaccsu_i32x2) {
-        SDValue Zero = DAG.getNode(ISD::SPLAT_VECTOR, DL, MVT::v4i16,
-                                   DAG.getConstant(0, DL, XLenVT));
+        SDValue Zero = DAG.getConstant(0, DL, MVT::v4i16);
         Rs1 = DAG.getNode(RISCVISD::PZIP, DL, MVT::v4i16, Rs1, Zero);
         Rs2 = DAG.getNode(RISCVISD::PZIP, DL, MVT::v4i16, Rs2, Zero);
         return DAG.getNode(RISCVISD::PMACCSU_HALVES_00, DL, VT, Acc, Rs1, Rs2);
@@ -30855,6 +30854,10 @@ bool RISCVTargetLowering::isCtpopFast(EVT VT) const {
 unsigned RISCVTargetLowering::getCustomCtpopCost(EVT VT,
                                                  ISD::CondCode Cond) const {
   return isCtpopFast(VT) ? 0 : 1;
+}
+
+bool RISCVTargetLowering::hasMultipleConditionRegisters(EVT VT) const {
+  return Subtarget.hasVInstructions() && VT.isVector();
 }
 
 bool RISCVTargetLowering::shouldInsertFencesForAtomic(
