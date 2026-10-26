@@ -24,8 +24,8 @@ cir.func @loops(%c: !cir.bool) {
     cir.yield
   } step {
     cir.yield
-  // CHECK: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress vectorize_enable vectorize_width = 4 vectorize_scalable = true vectorize_predicate = false interleave_count = 2 unroll = enable unroll_count = 8 distribute = true>
-  } loop_id distinct[4]<> loop_hints < must_progress vectorize_enable vectorize_width = 4 vectorize_scalable = true vectorize_predicate = false interleave_count = 2 unroll = enable unroll_count = 8 distribute = true>
+  // CHECK: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress vectorize_enable = true vectorize_width = 4 vectorize_scalable = true vectorize_predicate = false interleave_count = 2 unroll = enable unroll_count = 8 distribute = true>
+  } loop_id distinct[4]<> loop_hints < must_progress vectorize_enable = true vectorize_width = 4 vectorize_scalable = true vectorize_predicate = false interleave_count = 2 unroll = enable unroll_count = 8 distribute = true>
 
   // CHECK: cir.for : cond {
   cir.for : cond {

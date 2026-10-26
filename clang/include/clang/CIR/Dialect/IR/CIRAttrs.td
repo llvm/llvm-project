@@ -1002,7 +1002,7 @@ def CIR_LoopHintAttr : CIR_Attr<"LoopHint", "loop_hint"> {
     - `must_progress`: the loop must eventually terminate or have an
       observable side effect (the forward-progress guarantee of C++11 and
       later, and C11 loops with a non-constant condition).
-    - `vectorize_enable`: force vectorization on.
+    - `vectorize_enable`: force vectorization on/off.
     - `vectorize_width`: the vectorization factor. A width of 1 disables
       vectorization.
     - `vectorize_scalable`: whether the vectorization factor is
@@ -1025,14 +1025,14 @@ def CIR_LoopHintAttr : CIR_Attr<"LoopHint", "loop_hint"> {
     ```
     #cir.loop_hint<>
     #cir.loop_hint< must_progress>
-    #cir.loop_hint< must_progress vectorize_enable interleave_count = 2
+    #cir.loop_hint< must_progress vectorize_enable = true interleave_count = 2
                     unroll_count = 4>
     ```
   }];
 
   let parameters = (ins
     CIR_FlagParam<"must_progress">:$must_progress,
-    CIR_FlagParam<"vectorize_enable">:$vectorize_enable,
+    OptionalParameter<"mlir::BoolAttr">:$vectorize_enable,
     OptionalParameter<"uint32_t">:$vectorize_width,
     OptionalParameter<"mlir::BoolAttr">:$vectorize_scalable,
     OptionalParameter<"mlir::BoolAttr">:$vectorize_predicate,
@@ -1051,7 +1051,7 @@ def CIR_LoopHintAttr : CIR_Attr<"LoopHint", "loop_hint"> {
   let assemblyFormat = [{
     `<`
       (` ` $must_progress^)?
-      (` ` $vectorize_enable^)?
+      (` ` `vectorize_enable` `=` $vectorize_enable^)?
       (` ` `vectorize_width` `=` $vectorize_width^)?
       (` ` `vectorize_scalable` `=` $vectorize_scalable^)?
       (` ` `vectorize_predicate` `=` $vectorize_predicate^)?
