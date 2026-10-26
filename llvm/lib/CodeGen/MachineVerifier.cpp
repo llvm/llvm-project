@@ -341,6 +341,7 @@ struct MachineVerifier {
 
   void verifyInlineAsm(const MachineInstr *MI);
 
+  bool isPartlyDefinedInBundle(const MachineInstr &MI, MCRegister Reg) const;
   void checkLiveness(const MachineOperand *MO, unsigned MONum);
   void checkLivenessAtUse(const MachineOperand *MO, unsigned MONum,
                           SlotIndex UseIdx, const LiveRange &LR,
@@ -3060,6 +3061,38 @@ void MachineVerifier::checkLivenessAtDef(const MachineOperand *MO,
   }
 }
 
+// Return true if a non-dead def of an instruction before MI in the same bundle
+// overlaps Reg. For a BUNDLE header, all bundled instructions are checked.
+bool MachineVerifier::isPartlyDefinedInBundle(const MachineInstr &MI,
+                                              MCRegister Reg) const {
+  auto HasOverlappingDef = [&](const MachineInstr &BundledMI) {
+    if (BundledMI.isBundle())
+      return false;
+    return any_of(BundledMI.all_defs(), [&](const MachineOperand &Def) {
+      return !Def.isDead() && Def.getReg().isPhysical() &&
+             TRI->regsOverlap(Def.getReg(), Reg);
+    });
+  };
+
+  const MachineBasicBlock *MBB = MI.getParent();
+  if (MI.isBundle()) {
+    for (auto I = std::next(MI.getIterator()), E = MBB->instr_end();
+         I != E && I->isBundledWithPred(); ++I) {
+      if (HasOverlappingDef(*I))
+        return true;
+    }
+    return false;
+  }
+
+  for (auto I = MI.getIterator(), B = MBB->instr_begin();
+       I != B && I->isBundledWithPred();) {
+    --I;
+    if (HasOverlappingDef(*I))
+      return true;
+  }
+  return false;
+}
+
 void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
   const MachineInstr *MI = MO->getParent();
   const Register Reg = MO->getReg();
@@ -3151,6 +3184,8 @@ void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
             }
           }
         }
+        if (Bad && isPartlyDefinedInBundle(*MI, Reg.asMCReg()))
+          Bad = false;
         // If there is an additional implicit-use of a super register we stop
         // here. By definition we are fine if the super register is not
         // (completely) dead, if the complete super register is dead we will
