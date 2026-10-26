@@ -21,6 +21,8 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/Ownership.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/Hashing.h"
 #include <optional>
 #include <type_traits>
 #include <utility>
@@ -32,6 +34,13 @@ class ASTContext;
 class DiagnosticsEngine;
 class LangOptions;
 class Sema;
+
+/// A pair of a canonical FunctionDecl and a SourceLocation.  When used as the
+/// key in a hashtable, both the FD and location are hashed.
+struct FunctionDeclAndLoc {
+  CanonicalDeclPtr<const FunctionDecl> FD;
+  SourceLocation Loc;
+};
 
 class SemaBase {
 public:
@@ -225,5 +234,25 @@ public:
 };
 
 } // namespace clang
+
+namespace llvm {
+// Hash a FunctionDeclAndLoc by looking at both its FunctionDecl and its
+// SourceLocation.
+template <> struct DenseMapInfo<clang::FunctionDeclAndLoc> {
+  using FunctionDeclAndLoc = clang::FunctionDeclAndLoc;
+  using FDBaseInfo =
+      DenseMapInfo<clang::CanonicalDeclPtr<const clang::FunctionDecl>>;
+
+  static unsigned getHashValue(const FunctionDeclAndLoc &FDL) {
+    return hash_combine(FDBaseInfo::getHashValue(FDL.FD),
+                        FDL.Loc.getHashValue());
+  }
+
+  static bool isEqual(const FunctionDeclAndLoc &LHS,
+                      const FunctionDeclAndLoc &RHS) {
+    return LHS.FD == RHS.FD && LHS.Loc == RHS.Loc;
+  }
+};
+} // namespace llvm
 
 #endif
