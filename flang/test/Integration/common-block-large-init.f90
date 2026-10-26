@@ -13,3 +13,14 @@ end block data
 
 ! CHECK: @b_ = {{.*}}global { [55000 x i32] } { [55000 x i32] [i32 7, i32 77, i32 0
 ! CHECK-NOT: insertvalue
+
+! A trailing uninitialized scalar in the same COMMON block (zero-initialized by
+! the fir.zero_bits root) must not defeat the fold.
+block data
+  integer m(55000), k
+  common /c/ m, k
+  data (m(j), j = 1, 2) / 7, 77 /
+end block data
+
+! CHECK: @c_ = {{.*}}global { [55000 x i32], [4 x i8] } { [55000 x i32] [i32 7, i32 77, i32 0{{.*}}, [4 x i8] zeroinitializer }
+! CHECK-NOT: insertvalue

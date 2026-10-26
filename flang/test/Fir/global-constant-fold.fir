@@ -54,6 +54,33 @@ fir.global @threed : !fir.array<2x2x2xi32> {
 
 // -----
 
+// A 3D array with distinct values inserted at asymmetric coordinates, with the
+// remaining elements zero-filled by a full-range insert. The fold flattens in
+// column-major order (first Fortran dimension fastest) and builds a tensor with
+// the reversed shape, so each value must land at its exact nested position:
+// coordinate (i0, i1, i2) maps to dense[i2][i1][i0].
+fir.global @threed_distinct : !fir.array<2x3x2xi32> {
+  %c0 = arith.constant 0 : i32
+  %c11 = arith.constant 11 : i32
+  %c22 = arith.constant 22 : i32
+  %c33 = arith.constant 33 : i32
+  %c44 = arith.constant 44 : i32
+  %c55 = arith.constant 55 : i32
+  %0 = fir.undefined !fir.array<2x3x2xi32>
+  %1 = fir.insert_on_range %0, %c0 from (0,0,0) to (1,2,1) : (!fir.array<2x3x2xi32>, i32) -> !fir.array<2x3x2xi32>
+  %2 = fir.insert_value %1, %c11, [0 : index, 0 : index, 0 : index] : (!fir.array<2x3x2xi32>, i32) -> !fir.array<2x3x2xi32>
+  %3 = fir.insert_value %2, %c22, [1 : index, 0 : index, 0 : index] : (!fir.array<2x3x2xi32>, i32) -> !fir.array<2x3x2xi32>
+  %4 = fir.insert_value %3, %c33, [0 : index, 2 : index, 0 : index] : (!fir.array<2x3x2xi32>, i32) -> !fir.array<2x3x2xi32>
+  %5 = fir.insert_value %4, %c44, [1 : index, 1 : index, 1 : index] : (!fir.array<2x3x2xi32>, i32) -> !fir.array<2x3x2xi32>
+  %6 = fir.insert_value %5, %c55, [0 : index, 0 : index, 1 : index] : (!fir.array<2x3x2xi32>, i32) -> !fir.array<2x3x2xi32>
+  fir.has_value %6 : !fir.array<2x3x2xi32>
+}
+
+// CHECK: llvm.mlir.global external @threed_distinct(dense<{{\[}}{{\[}}[11, 22], [0, 0], [33, 0]], {{\[}}[55, 0], [0, 44], [0, 0]]]> : tensor<2x3x2xi32>) {{.*}} : !llvm.array<2 x array<3 x array<2 x i32>>>
+// CHECK-NOT: llvm.insertvalue
+
+// -----
+
 // A real (floating point) array folds as well.
 fir.global @reals : !fir.array<4xf32> {
   %c1 = arith.constant 1.5 : f32
@@ -150,4 +177,55 @@ fir.global @partialundef : !fir.array<8xi32> {
 
 // CHECK: llvm.mlir.global external @partialundef() {{.*}} : !llvm.array<8 x i32> {
 // CHECK:   llvm.insertvalue
+// CHECK: }
+
+// -----
+
+// A COMMON block with an uninitialized trailing scalar (e.g. `integer m(N), k`
+// with only `m` set by a DATA statement). The fir.zero_bits root
+// zero-initializes any member not set by an insert, so the whole struct still
+// folds to constants instead of falling back to the pathologically slow
+// per-operation lowering (https://github.com/llvm/llvm-project/issues/209393).
+fir.global @common_uninit_scalar : tuple<!fir.array<8xi32>, i32> {
+  %c7 = arith.constant 7 : i32
+  %c77 = arith.constant 77 : i32
+  %c0 = arith.constant 0 : i32
+  %0 = fir.zero_bits tuple<!fir.array<8xi32>, i32>
+  %1 = fir.undefined !fir.array<8xi32>
+  %2 = fir.insert_value %1, %c7, [0 : index] : (!fir.array<8xi32>, i32) -> !fir.array<8xi32>
+  %3 = fir.insert_value %2, %c77, [1 : index] : (!fir.array<8xi32>, i32) -> !fir.array<8xi32>
+  %4 = fir.insert_on_range %3, %c0 from (2) to (7) : (!fir.array<8xi32>, i32) -> !fir.array<8xi32>
+  %5 = fir.insert_value %0, %4, [0 : index] : (tuple<!fir.array<8xi32>, i32>, !fir.array<8xi32>) -> tuple<!fir.array<8xi32>, i32>
+  fir.has_value %5 : tuple<!fir.array<8xi32>, i32>
+}
+
+// CHECK: llvm.mlir.global external @common_uninit_scalar() {{.*}} : !llvm.struct<(array<8 x i32>, i32)> {
+// CHECK:   %[[UNDEF:.*]] = llvm.mlir.undef : !llvm.struct<(array<8 x i32>, i32)>
+// CHECK:   %[[CST0:.*]] = llvm.mlir.constant(dense<[7, 77, 0, 0, 0, 0, 0, 0]> : tensor<8xi32>) : !llvm.array<8 x i32>
+// CHECK:   %[[INS0:.*]] = llvm.insertvalue %[[CST0]], %[[UNDEF]][0] : !llvm.struct<(array<8 x i32>, i32)>
+// CHECK:   %[[CST1:.*]] = llvm.mlir.constant(0 : i32) : i32
+// CHECK:   %[[INS1:.*]] = llvm.insertvalue %[[CST1]], %[[INS0]][1] : !llvm.struct<(array<8 x i32>, i32)>
+// CHECK:   llvm.return %[[INS1]] : !llvm.struct<(array<8 x i32>, i32)>
+// CHECK: }
+
+// -----
+
+// A COMMON block where an entire array member is left uninitialized: the
+// fir.zero_bits root zero-initializes it to a dense zero constant.
+fir.global @common_uninit_array : tuple<!fir.array<4xi32>, !fir.array<2xi32>> {
+  %c1 = arith.constant 1 : i32
+  %0 = fir.zero_bits tuple<!fir.array<4xi32>, !fir.array<2xi32>>
+  %1 = fir.undefined !fir.array<4xi32>
+  %2 = fir.insert_on_range %1, %c1 from (0) to (3) : (!fir.array<4xi32>, i32) -> !fir.array<4xi32>
+  %3 = fir.insert_value %0, %2, [0 : index] : (tuple<!fir.array<4xi32>, !fir.array<2xi32>>, !fir.array<4xi32>) -> tuple<!fir.array<4xi32>, !fir.array<2xi32>>
+  fir.has_value %3 : tuple<!fir.array<4xi32>, !fir.array<2xi32>>
+}
+
+// CHECK: llvm.mlir.global external @common_uninit_array() {{.*}} : !llvm.struct<(array<4 x i32>, array<2 x i32>)> {
+// CHECK:   %[[UNDEF:.*]] = llvm.mlir.undef : !llvm.struct<(array<4 x i32>, array<2 x i32>)>
+// CHECK:   %[[CST0:.*]] = llvm.mlir.constant(dense<1> : tensor<4xi32>) : !llvm.array<4 x i32>
+// CHECK:   %[[INS0:.*]] = llvm.insertvalue %[[CST0]], %[[UNDEF]][0] : !llvm.struct<(array<4 x i32>, array<2 x i32>)>
+// CHECK:   %[[CST1:.*]] = llvm.mlir.constant(dense<0> : tensor<2xi32>) : !llvm.array<2 x i32>
+// CHECK:   %[[INS1:.*]] = llvm.insertvalue %[[CST1]], %[[INS0]][1] : !llvm.struct<(array<4 x i32>, array<2 x i32>)>
+// CHECK:   llvm.return %[[INS1]] : !llvm.struct<(array<4 x i32>, array<2 x i32>)>
 // CHECK: }
