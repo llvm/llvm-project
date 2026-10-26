@@ -909,5 +909,4 @@ static_assert(__is_const(int));
 // expected-error@-1 {{static assertion failed due to requirement '__is_const(int)'}} \
 // expected-note@-1 {{'int' is not const}} \
 // expected-note@-1 {{because it is not marked 'const'}}
-
 }
