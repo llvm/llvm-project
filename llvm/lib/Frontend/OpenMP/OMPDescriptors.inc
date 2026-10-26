@@ -326,8 +326,8 @@
     descriptor::Clause(
       "default-variant",
       {
-        {Version(50), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, "default-variant", {Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {}, {}}},
-        {Version(51), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, "default-variant", {Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {}, {}}},
+        {Version(50), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, "default-variant", {Directive::OMPD_begin_metadirective, Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {}, {}}},
+        {Version(51), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, "default-variant", {Directive::OMPD_begin_metadirective, Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {}, {}}},
       }
     ),
   },
@@ -1136,9 +1136,9 @@
     descriptor::Clause(
       "otherwise",
       {
-        {Version(52), {{{Property::Compatible, Property::Optional, Property::Ultimate, Property::Unique}}, "otherwise", {Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {}, {}}},
-        {Version(60), {{{Property::Compatible, Property::Optional, Property::Ultimate, Property::Unique}}, "otherwise", {Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}, {}}},
-        {Version(61), {{{Property::Compatible, Property::Optional, Property::Ultimate, Property::Unique}}, "otherwise", {Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}, {}}},
+        {Version(52), {{{Property::Compatible, Property::Optional, Property::Ultimate, Property::Unique}}, "otherwise", {Directive::OMPD_begin_metadirective, Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {}, {}}},
+        {Version(60), {{{Property::Compatible, Property::Optional, Property::Ultimate, Property::Unique}}, "otherwise", {Directive::OMPD_begin_metadirective, Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}, {}}},
+        {Version(61), {{{Property::Compatible, Property::Optional, Property::Ultimate, Property::Unique}}, "otherwise", {Directive::OMPD_begin_metadirective, Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}, {}}},
       }
     ),
   },
@@ -1654,11 +1654,11 @@
     descriptor::Clause(
       "when",
       {
-        {Version(50), {{{Property::Compatible, Property::Free, Property::Optional, Property::Repeatable}}, "when", {Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::ContextSelector}, {}}},
-        {Version(51), {{{Property::Compatible, Property::Free, Property::Optional, Property::Repeatable}}, "when", {Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::ContextSelector}, {}}},
-        {Version(52), {{{Property::Compatible, Property::Free, Property::Optional, Property::Repeatable}}, "when", {Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::ContextSelector}, {}}},
-        {Version(60), {{{Property::Compatible, Property::Free, Property::Optional, Property::Repeatable}}, "when", {Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::ContextSelector, Modifier::DirectiveNameModifier}, {}}},
-        {Version(61), {{{Property::Compatible, Property::Free, Property::Optional, Property::Repeatable}}, "when", {Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::ContextSelector, Modifier::DirectiveNameModifier}, {}}},
+        {Version(50), {{{Property::Compatible, Property::Free, Property::Optional, Property::Repeatable}}, "when", {Directive::OMPD_begin_metadirective, Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::ContextSelector}, {}}},
+        {Version(51), {{{Property::Compatible, Property::Free, Property::Optional, Property::Repeatable}}, "when", {Directive::OMPD_begin_metadirective, Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::ContextSelector}, {}}},
+        {Version(52), {{{Property::Compatible, Property::Free, Property::Optional, Property::Repeatable}}, "when", {Directive::OMPD_begin_metadirective, Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::ContextSelector}, {}}},
+        {Version(60), {{{Property::Compatible, Property::Free, Property::Optional, Property::Repeatable}}, "when", {Directive::OMPD_begin_metadirective, Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::ContextSelector, Modifier::DirectiveNameModifier}, {}}},
+        {Version(61), {{{Property::Compatible, Property::Free, Property::Optional, Property::Repeatable}}, "when", {Directive::OMPD_begin_metadirective, Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::ContextSelector, Modifier::DirectiveNameModifier}, {}}},
       }
     ),
   },
@@ -2079,6 +2079,19 @@
         {Version(52), {{{}}, "begin declare variant", Association::Delimited, Category::Declarative, {Clause::OMPC_match}, {}}},
         {Version(60), {{{}}, "begin declare_variant", Association::Delimited, Category::Declarative, {Clause::OMPC_match}, {}}},
         {Version(61), {{{}}, "begin declare_variant", Association::Delimited, Category::Declarative, {Clause::OMPC_match}, {}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_begin_metadirective,
+    descriptor::Directive(
+      "begin_metadirective",
+      {
+        {Version(50), {{{Property::Pure}}, "begin metadirective", Association::Delimited, Category::Meta, {Clause::OMPC_default_variant, Clause::OMPC_when}, {}}},
+        {Version(51), {{{Property::Pure}}, "begin metadirective", Association::Delimited, Category::Meta, {Clause::OMPC_default_variant, Clause::OMPC_when}, {}}},
+        {Version(52), {{{Property::Pure}}, "begin metadirective", Association::Delimited, Category::Meta, {Clause::OMPC_otherwise, Clause::OMPC_when}, {}}},
+        {Version(60), {{{Property::Pure}}, "begin metadirective", Association::Delimited, Category::Meta, {Clause::OMPC_otherwise, Clause::OMPC_when}, {}}},
+        {Version(61), {{{Property::Pure}}, "begin metadirective", Association::Delimited, Category::Meta, {Clause::OMPC_otherwise, Clause::OMPC_when}, {}}},
       }
     ),
   },
