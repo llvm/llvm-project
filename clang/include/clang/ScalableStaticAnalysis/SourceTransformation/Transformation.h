@@ -25,12 +25,12 @@ class SSAFOptions;
 
 class Transformation : public clang::ASTConsumer {
 public:
-  Transformation(const WPASuite &Suite, const SSAFOptions &Opts,
+  Transformation(const WPASuite &AnalysisRes, const SSAFOptions &Opts,
                  SourceEditEmitter &Edits, TransformationReportEmitter &Report)
-      : Suite(Suite), Opts(Opts), Edits(Edits), Report(Report) {}
+      : AnalysisRes(AnalysisRes), Opts(Opts), Edits(Edits), Report(Report) {}
 
 protected:
-  const WPASuite &Suite;
+  const WPASuite &AnalysisRes;
   const SSAFOptions &Opts;
   SourceEditEmitter &Edits;
   TransformationReportEmitter &Report;
