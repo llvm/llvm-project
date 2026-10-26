@@ -318,17 +318,15 @@ RuntimeLibcallsInfo::getFunctionTy(LLVMContext &Ctx, const Triple &TT,
       Attribute::NoAlias, Attribute::WriteOnly, Attribute::NonNull};
 
   switch (LibcallImpl) {
+  // FIXME: Should also include __sincospi[f]_stret
   case RTLIB::impl___sincos_stret:
-  case RTLIB::impl___sincosf_stret:
-  case RTLIB::impl___sincospi_stret:
-  case RTLIB::impl___sincospif_stret: {
+  case RTLIB::impl___sincosf_stret: {
     if (!darwinHasSinCosStret(TT)) // Non-darwin currently unexpected
       return {};
 
-    bool UseFloat = LibcallImpl == RTLIB::impl___sincosf_stret ||
-                    LibcallImpl == RTLIB::impl___sincospif_stret;
-
-    Type *ScalarTy = UseFloat ? Type::getFloatTy(Ctx) : Type::getDoubleTy(Ctx);
+    Type *ScalarTy = LibcallImpl == RTLIB::impl___sincosf_stret
+                         ? Type::getFloatTy(Ctx)
+                         : Type::getDoubleTy(Ctx);
 
     AttrBuilder FuncAttrBuilder(Ctx);
     for (Attribute::AttrKind Attr : CommonFnAttrs)
@@ -356,7 +354,7 @@ RuntimeLibcallsInfo::getFunctionTy(LLVMContext &Ctx, const Triple &TT,
     }
 
     Type *RetTy =
-        UseFloat && TT.isX86_64()
+        LibcallImpl == RTLIB::impl___sincosf_stret && TT.isX86_64()
             ? static_cast<Type *>(FixedVectorType::get(ScalarTy, 2))
             : static_cast<Type *>(StructType::get(ScalarTy, ScalarTy));
 

@@ -9,23 +9,15 @@
 
 ; X64: declare { double, double } @__sincos_stret(double) [[SINCOS_ATTRS:#[0-9]+]]
 ; X64: declare <2 x float> @__sincosf_stret(float) [[SINCOS_ATTRS]]
-; X64: declare { double, double } @__sincospi_stret(double) [[SINCOS_ATTRS]]
-; X64: declare <2 x float> @__sincospif_stret(float) [[SINCOS_ATTRS]]
 
 ; STRUCT: declare { double, double } @__sincos_stret(double) [[SINCOS_ATTRS:#[0-9]+]]
 ; STRUCT: declare { float, float } @__sincosf_stret(float) [[SINCOS_ATTRS]]
-; STRUCT: declare { double, double } @__sincospi_stret(double) [[SINCOS_ATTRS]]
-; STRUCT: declare { float, float } @__sincospif_stret(float) [[SINCOS_ATTRS]]
 
 ; SRET: declare void @__sincos_stret(ptr sret({ double, double }) align 4, double) [[SINCOS_ATTRS:#[0-9]+]]
 ; SRET: declare void @__sincosf_stret(ptr sret({ float, float }) align 4, float) [[SINCOS_ATTRS]]
-; SRET: declare void @__sincospi_stret(ptr sret({ double, double }) align 4, double) [[SINCOS_ATTRS]]
-; SRET: declare void @__sincospif_stret(ptr sret({ float, float }) align 4, float) [[SINCOS_ATTRS]]
 
 ; CHECK: attributes [[SINCOS_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; SRET: attributes [[SINCOS_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
 
 ; NONE-NOT: __sincos_stret
 ; NONE-NOT: __sincosf_stret
-; NONE-NOT: __sincospi_stret
-; NONE-NOT: __sincospif_stret

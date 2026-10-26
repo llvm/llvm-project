@@ -1946,8 +1946,8 @@ def __exp10 : RuntimeLibcallImpl<EXP10_F64>;
 def __exp10f : RuntimeLibcallImpl<EXP10_F32>;
 def __sincos_stret : RuntimeLibcallImpl<SINCOS_STRET_F64>;
 def __sincosf_stret : RuntimeLibcallImpl<SINCOS_STRET_F32>;
-def __sincospi_stret : RuntimeLibcallImpl<SINCOSPI_F64>;
-def __sincospif_stret : RuntimeLibcallImpl<SINCOSPI_F32>;
+def __sincospi : RuntimeLibcallImpl<SINCOSPI_F64>;
+def __sincospif : RuntimeLibcallImpl<SINCOSPI_F32>;
 
 def bzero : RuntimeLibcallImpl<BZERO>;
 def __bzero : RuntimeLibcallImpl<BZERO>;
@@ -2096,8 +2096,9 @@ defvar CompilerRtLibgccImpls_core =
                   CompilerRtLibgccImpls_ppcf128);
 
 
+// TODO: Guessing sincospi added at same time as sincos_stret
 defvar DarwinSinCosStret = LibcallImpls<(add __sincosf_stret, __sincos_stret,
-                                             __sincospif_stret, __sincospi_stret),
+                                             __sincospif, __sincospi),
                                         darwinHasSinCosStret>;
 defvar DarwinExp10 = LibcallImpls<(add __exp10f, __exp10), darwinHasExp10>;
 
