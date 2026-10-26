@@ -114,3 +114,84 @@ define tailcc ptr @musttail_i256(ptr %p) nounwind {
   %r = musttail call tailcc ptr @callee_i256(ptr %p, ptr %p, ptr %p, ptr %p, i256 0, i256 0, ptr %p)
   ret ptr %r
 }
+
+; The same calls from functions whose own stack is realigned. With a dynamic
+; alloca the call frame is not reserved in the prologue, so the adjustment
+; around the call shows the size the caller expects the callee to pop.
+declare void @use(ptr)
+
+define void @call_i128_realigned_dynalloca(i64 %n) nounwind {
+; CHECK-LABEL: call_i128_realigned_dynalloca:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushq %rbp
+; CHECK-NEXT:    movq %rsp, %rbp
+; CHECK-NEXT:    pushq %r14
+; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    andq $-64, %rsp
+; CHECK-NEXT:    subq $64, %rsp
+; CHECK-NEXT:    movq %rsp, %rbx
+; CHECK-NEXT:    movq %rsp, %r14
+; CHECK-NEXT:    addq $15, %rdi
+; CHECK-NEXT:    andq $-16, %rdi
+; CHECK-NEXT:    subq %rdi, %r14
+; CHECK-NEXT:    movq %r14, %rsp
+; CHECK-NEXT:    movq %rbx, %rdi
+; CHECK-NEXT:    callq use@PLT
+; CHECK-NEXT:    movq %r14, %rdi
+; CHECK-NEXT:    callq use@PLT
+; CHECK-NEXT:    subq $32, %rsp
+; CHECK-NEXT:    movq $0, 16(%rsp)
+; CHECK-NEXT:    movq $0, 8(%rsp)
+; CHECK-NEXT:    movq $6, (%rsp)
+; CHECK-NEXT:    movl $1, %esi
+; CHECK-NEXT:    movl $2, %edx
+; CHECK-NEXT:    movl $3, %ecx
+; CHECK-NEXT:    movl $4, %r8d
+; CHECK-NEXT:    movl $5, %r9d
+; CHECK-NEXT:    xorl %edi, %edi
+; CHECK-NEXT:    callq callee_i128
+; CHECK-NEXT:    leaq -16(%rbp), %rsp
+; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    popq %r14
+; CHECK-NEXT:    popq %rbp
+; CHECK-NEXT:    retq
+  %a = alloca i32, align 64
+  %d = alloca i8, i64 %n
+  call void @use(ptr %a)
+  call void @use(ptr %d)
+  call tailcc void @callee_i128(i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i128 6, ptr null)
+  ret void
+}
+
+define tailcc ptr @musttail_i128_realigned(ptr %p) nounwind {
+; CHECK-LABEL: musttail_i128_realigned:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    subq $16, %rsp
+; CHECK-NEXT:    pushq %rbp
+; CHECK-NEXT:    movq %rsp, %rbp
+; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    andq $-64, %rsp
+; CHECK-NEXT:    subq $64, %rsp
+; CHECK-NEXT:    movq %rdi, %rbx
+; CHECK-NEXT:    movq %rsp, %rdi
+; CHECK-NEXT:    callq use@PLT
+; CHECK-NEXT:    movq %rbx, 32(%rbp)
+; CHECK-NEXT:    movq 24(%rbp), %rax
+; CHECK-NEXT:    xorps %xmm0, %xmm0
+; CHECK-NEXT:    movaps %xmm0, 16(%rbp)
+; CHECK-NEXT:    movq %rax, 8(%rbp)
+; CHECK-NEXT:    movq %rbx, %rdi
+; CHECK-NEXT:    movq %rbx, %rsi
+; CHECK-NEXT:    movq %rbx, %rdx
+; CHECK-NEXT:    movq %rbx, %rcx
+; CHECK-NEXT:    movq %rbx, %r8
+; CHECK-NEXT:    movq %rbx, %r9
+; CHECK-NEXT:    leaq -8(%rbp), %rsp
+; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    popq %rbp
+; CHECK-NEXT:    jmp callee_i128_ptr@PLT # TAILCALL
+  %a = alloca i32, align 64
+  call void @use(ptr %a)
+  %r = musttail call tailcc ptr @callee_i128_ptr(ptr %p, ptr %p, ptr %p, ptr %p, ptr %p, ptr %p, i128 0, ptr %p)
+  ret ptr %r
+}
