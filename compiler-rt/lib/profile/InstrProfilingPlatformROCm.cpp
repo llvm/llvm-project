@@ -828,6 +828,20 @@ int __prof_rocm::processDeviceOffloadPrf(
   if (CountersSize == 0 || DataSize == 0)
     return 0;
 
+  // The host and device may use different instrumentation layouts.
+  uint64_t Version;
+  if (!HostSections.VersionVar || hipMemcpy(&Version, HostSections.VersionVar,
+                                            sizeof(Version), 2 /*DToH*/) != 0) {
+    PROF_ERR("%s\n", "failed to copy profile version from device");
+    return -1;
+  }
+  if (GET_VERSION(Version) != INSTR_PROF_RAW_VERSION) {
+    PROF_ERR("Device runtime and instrumentation version mismatch: "
+             "expected %d, but get %d\n",
+             INSTR_PROF_RAW_VERSION, (int)GET_VERSION(Version));
+    return -1;
+  }
+
   int ret = -1;
 
   /* Sections using linker-defined __start_/__stop_ bounds are shared across
@@ -1122,7 +1136,7 @@ int __prof_rocm::processDeviceOffloadPrf(
       (__llvm_profile_data *)(BufDataBegin + DataSize), BufCountersBegin,
       BufCountersBegin + CountersSize, UCnts.HostBegin,
       UCnts.HostBegin ? UCnts.HostBegin + UniformCountersSize : nullptr,
-      BufNamesBegin, BufNamesBegin + NamesSize, nullptr);
+      BufNamesBegin, BufNamesBegin + NamesSize, &Version);
 
   if (ret != 0) {
     PROF_ERR("%s\n", "failed to write device profile using shared API");
