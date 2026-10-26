@@ -894,7 +894,8 @@ define void @test_zero_stride(ptr %A, ptr %last) {
 ; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[A_PHI]], align 4
 ; CHECK-NEXT:    [[INCREMENTED:%.*]] = add{{.*}} i32 [[VAL]], 1
 ; CHECK-NEXT:    store i32 [[INCREMENTED]], ptr [[A_PHI]], align 4
-; CHECK-NEXT:    br i1 false, label [[EXIT_LOOPEXIT:%.*]], label [[LOOP1]]
+; CHECK-NEXT:    [[CMP_NEXT:%.*]] = icmp eq ptr [[A_PHI]], [[LAST]]
+; CHECK-NEXT:    br i1 [[CMP_NEXT]], label [[EXIT_LOOPEXIT:%.*]], label [[LOOP1]]
 ; CHECK:       exit.loopexit:
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
