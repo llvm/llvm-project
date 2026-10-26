@@ -1,5 +1,6 @@
 // RUN: mlir-opt -convert-xegpu-to-xevm -split-input-file %s | FileCheck %s --implicit-check-not='arith.{{(extui|extsi|trunci)}} {{.*}}xi4>' --implicit-check-not=arith.ori --implicit-check-not=xegpu.lane_shuffle
 
+
 // Hoist only the i4-to-i8 part of the extension before the shuffle. Extending
 // to i32 first would exceed the shuffle's 64-bit fragment limit. Starting with
 // packed bytes also checks that narrow-type legalization unpacks the nibbles
@@ -129,5 +130,54 @@ gpu.func @pack_transpose_extract_broadcast_extsi(%a: vector<2xi8>) -> vector<3x2
   %broadcast = vector.broadcast %row : vector<2xi4> to vector<3x2xi4>
   %res = arith.extsi %broadcast : vector<3x2xi4> to vector<3x2xi16>
   gpu.return %res : vector<3x2xi16>
+}
+}
+
+// -----
+
+// Distribution can split a broadcast into several slices of one shared
+// shuffle. Linearization turns the one-element slices into scalar extracts.
+// Widen the shared fragment once, before either representation of the fan-out.
+gpu.module @test {
+// CHECK-LABEL: gpu.func @unpack_shared_broadcast_extui
+// CHECK: %[[WIDE:.*]] = xevm.bitcast_shuffle {{.*}} : (i32) -> vector<4xi8>
+// CHECK: %[[SHAPE:.*]] = vector.shape_cast %[[WIDE]] : vector<4xi8> to vector<1x4xi8>
+// CHECK: %[[SLICE0:.*]] = vector.extract_strided_slice %[[SHAPE]] offsets = [0, 0], sizes = [1, 1], strides = [1, 1] : vector<1x4xi8> to vector<1x1xi8>
+// CHECK: %[[SLICE1:.*]] = vector.extract_strided_slice %[[SHAPE]] offsets = [0, 1], sizes = [1, 1], strides = [1, 1] : vector<1x4xi8> to vector<1x1xi8>
+// CHECK: vector.broadcast %[[SLICE0]] : vector<1x1xi8> to vector<1x16xi8>
+// CHECK: vector.broadcast %[[SLICE1]] : vector<1x1xi8> to vector<1x16xi8>
+// CHECK: arith.extui {{.*}} : vector<1x16xi8> to vector<1x16xi32>
+// CHECK: arith.extui {{.*}} : vector<1x16xi8> to vector<1x16xi32>
+
+gpu.func @unpack_shared_broadcast_extui(%a: vector<2xi8>) -> (vector<1x16xi32>, vector<1x16xi32>) {
+  %nibbles = vector.bitcast %a : vector<2xi8> to vector<4xi4>
+  %shuffled = xegpu.lane_shuffle %nibbles unpack : vector<4xi4>
+  %shaped = vector.shape_cast %shuffled : vector<4xi4> to vector<1x4xi4>
+  %slice0 = vector.extract_strided_slice %shaped offsets = [0, 0], sizes = [1, 1], strides = [1, 1] : vector<1x4xi4> to vector<1x1xi4>
+  %slice1 = vector.extract_strided_slice %shaped offsets = [0, 1], sizes = [1, 1], strides = [1, 1] : vector<1x4xi4> to vector<1x1xi4>
+  %b0 = vector.broadcast %slice0 : vector<1x1xi4> to vector<1x16xi4>
+  %b1 = vector.broadcast %slice1 : vector<1x1xi4> to vector<1x16xi4>
+  %r0 = arith.extui %b0 : vector<1x16xi4> to vector<1x16xi32>
+  %r1 = arith.extui %b1 : vector<1x16xi4> to vector<1x16xi32>
+  gpu.return %r0, %r1 : vector<1x16xi32>, vector<1x16xi32>
+}
+}
+
+// -----
+
+// Compatible extensions with different destination widths share one widened
+// shuffle. One extension can disappear without invalidating the other.
+gpu.module @test {
+// CHECK-LABEL: gpu.func @pack_shared_extsi
+// CHECK: %[[PACKED:.*]] = xevm.bitcast_shuffle {{.*}} : (vector<4xi8>) -> i32
+// CHECK: %[[WIDE:.*]] = llvm.bitcast %[[PACKED]] : i32 to vector<4xi8>
+// CHECK: %[[EXT:.*]] = arith.extsi %[[WIDE]] : vector<4xi8> to vector<4xi32>
+// CHECK: gpu.return %[[WIDE]], %[[EXT]] : vector<4xi8>, vector<4xi32>
+gpu.func @pack_shared_extsi(%a: vector<2xi8>) -> (vector<4xi8>, vector<4xi32>) {
+  %nibbles = vector.bitcast %a : vector<2xi8> to vector<4xi4>
+  %shuffled = xegpu.lane_shuffle %nibbles pack : vector<4xi4>
+  %r0 = arith.extsi %shuffled : vector<4xi4> to vector<4xi8>
+  %r1 = arith.extsi %shuffled : vector<4xi4> to vector<4xi32>
+  gpu.return %r0, %r1 : vector<4xi8>, vector<4xi32>
 }
 }

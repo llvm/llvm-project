@@ -31,6 +31,7 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/FormatVariadic.h"
 
 #include "mlir/IR/BuiltinTypes.h"
@@ -1563,11 +1564,11 @@ class TruncfToXeVMPattern : public OpConversionPattern<arith::TruncFOp> {
   }
 };
 
-// Hoist the i4-to-i8 part of an extension through a single-use data-movement
-// chain and lane shuffle. Widening all the way to the extension's result type
-// could exceed the bitcast-shuffle lowering's 64-bit fragment limit.
-// Signed widening preserves the eventual signed interpretation of each nibble;
-// unsigned widening preserves its unsigned interpretation.
+// Hoist the i4-to-i8 part of compatible extensions through a closed
+// data-movement graph and lane shuffle. Widening all the way to the extension's
+// result type could exceed the bitcast-shuffle lowering's 64-bit fragment
+// limit. Signed widening preserves the eventual signed interpretation of each
+// nibble; unsigned widening preserves its unsigned interpretation.
 template <typename ExtOp>
 class HoistI4ExtensionAboveLaneShuffle final : public OpRewritePattern<ExtOp> {
 public:
@@ -1581,32 +1582,53 @@ public:
         dstTy.getElementTypeBitWidth() < 8)
       return failure();
 
-    SmallVector<Operation *> movers;
+    auto isMover = [](Operation *def) {
+      return isa<vector::ShapeCastOp, vector::ExtractStridedSliceOp,
+                 vector::ExtractOp, vector::BroadcastOp, vector::TransposeOp>(
+          def);
+    };
     Value source = op.getIn();
     while (Operation *def = source.getDefiningOp()) {
-      if (!source.hasOneUse())
-        return failure();
       if (isa<xegpu::LaneShuffleOp>(def))
         break;
-      if (!isa<vector::ShapeCastOp, vector::ExtractStridedSliceOp,
-               vector::ExtractOp, vector::BroadcastOp, vector::TransposeOp>(
-              def))
+      if (!isMover(def))
         return failure();
-      // Only vector results are supported; scalar extraction needs separate
-      // narrow-type legalization.
-      if (!isa<VectorType>(def->getOperand(0).getType()) ||
-          !isa<VectorType>(def->getResult(0).getType()))
-        return failure();
-      movers.push_back(def);
       source = def->getOperand(0);
     }
     auto shuffle = source.getDefiningOp<xegpu::LaneShuffleOp>();
-    if (!shuffle || !source.hasOneUse())
+    if (!shuffle)
       return failure();
     VectorType fragmentTy = shuffle.getSourceType();
     int64_t numElements = fragmentTy.getNumElements();
     if (!fragmentTy.getElementType().isInteger(4) || numElements < 2 ||
         numElements > 8 || !llvm::isPowerOf2_64(numElements))
+      return failure();
+
+    // Validate every use before changing IR. Widening a shared fragment is
+    // safe only when all paths end in extensions with the same signedness.
+    SmallVector<Operation *> movers;
+    SmallVector<ExtOp> extensions;
+    SmallPtrSet<Operation *, 16> visited;
+    auto visit = [&](auto &&visit, Value value) -> LogicalResult {
+      for (Operation *user : value.getUsers()) {
+        if (!visited.insert(user).second)
+          continue;
+        if (auto ext = dyn_cast<ExtOp>(user)) {
+          auto type = dyn_cast<VectorType>(ext.getType());
+          if (!type || type.getElementTypeBitWidth() < 8)
+            return failure();
+          extensions.push_back(ext);
+          continue;
+        }
+        if (!isMover(user) || user->getOperand(0) != value ||
+            user->getNumResults() != 1 ||
+            failed(visit(visit, user->getResult(0))))
+          return failure();
+        movers.push_back(user);
+      }
+      return success();
+    };
+    if (failed(visit(visit, shuffle.getResult())))
       return failure();
 
     rewriter.setInsertionPoint(shuffle);
@@ -1615,20 +1637,24 @@ public:
         ExtOp::create(rewriter, op.getLoc(), wideTy, shuffle.getSource());
     Value result = xegpu::LaneShuffleOp::create(
         rewriter, shuffle.getLoc(), wideTy, wide, shuffle.getMode());
+    IRMapping mapping;
+    mapping.map(shuffle.getResult(), result);
     for (Operation *mover : llvm::reverse(movers)) {
       rewriter.setInsertionPoint(mover);
-      IRMapping mapping;
-      mapping.map(mover->getOperand(0), result);
       Operation *clone = rewriter.clone(*mover, mapping);
-      clone->getResult(0).setType(
-          cast<VectorType>(mover->getResult(0).getType())
-              .clone(rewriter.getI8Type()));
-      result = clone->getResult(0);
+      Type type = rewriter.getI8Type();
+      if (auto vectorTy = dyn_cast<VectorType>(mover->getResult(0).getType()))
+        type = vectorTy.clone(type);
+      clone->getResult(0).setType(type);
     }
-    if (result.getType() == dstTy)
-      rewriter.replaceOp(op, result);
-    else
-      rewriter.modifyOpInPlace(op, [&] { op.getInMutable().assign(result); });
+    for (ExtOp ext : extensions) {
+      Value input = mapping.lookup(ext.getIn());
+      if (input.getType() == ext.getType())
+        rewriter.replaceOp(ext, input);
+      else
+        rewriter.modifyOpInPlace(ext,
+                                 [&] { ext.getInMutable().assign(input); });
+    }
     for (Operation *mover : movers)
       rewriter.eraseOp(mover);
     rewriter.eraseOp(shuffle);

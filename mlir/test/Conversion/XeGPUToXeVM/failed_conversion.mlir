@@ -103,7 +103,7 @@ gpu.module @test_kernel {
 
 // -----
 
-// The single-use restriction also applies to intermediate data movers.
+// An escaping narrow use of an intermediate mover prevents shared widening.
 
 gpu.module @test_kernel {
   gpu.func @lane_shuffle_i4_shape_cast_multiple_uses(%a: vector<2xi8>) -> (vector<1x4xi32>, vector<1x4xi4>) {
@@ -113,6 +113,25 @@ gpu.module @test_kernel {
     %shaped = vector.shape_cast %0 : vector<4xi4> to vector<1x4xi4>
     %extended = arith.extui %shaped : vector<1x4xi4> to vector<1x4xi32>
     gpu.return %extended, %shaped : vector<1x4xi32>, vector<1x4xi4>
+  }
+}
+
+// -----
+
+// Mixed signedness is also rejected across scalar-extract/broadcast fan-out.
+
+gpu.module @test_kernel {
+  gpu.func @lane_shuffle_i4_mixed_broadcasts(%a: vector<2xi8>) -> (vector<4xi32>, vector<4xi32>) {
+    %nibbles = vector.bitcast %a : vector<2xi8> to vector<4xi4>
+    // expected-error@+1 {{failed to legalize operation 'xegpu.lane_shuffle' that was explicitly marked illegal}}
+    %shuffled = xegpu.lane_shuffle %nibbles unpack : vector<4xi4>
+    %e0 = vector.extract %shuffled[0] : i4 from vector<4xi4>
+    %e1 = vector.extract %shuffled[1] : i4 from vector<4xi4>
+    %b0 = vector.broadcast %e0 : i4 to vector<4xi4>
+    %b1 = vector.broadcast %e1 : i4 to vector<4xi4>
+    %unsigned = arith.extui %b0 : vector<4xi4> to vector<4xi32>
+    %signed = arith.extsi %b1 : vector<4xi4> to vector<4xi32>
+    gpu.return %unsigned, %signed : vector<4xi32>, vector<4xi32>
   }
 }
 
