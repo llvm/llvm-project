@@ -6,34 +6,25 @@
 
 define i32 @f() {
 ; CHECK-LABEL: define i32 @f() {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br label %[[INNER_PREHEADER:.*]]
-; CHECK:       [[OUTER_HEADER_PREHEADER:.*]]:
-; CHECK-NEXT:    br label %[[OUTER_HEADER:.*]]
-; CHECK:       [[OUTER_HEADER]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[OUTER_LATCH:.*]] ], [ 0, %[[OUTER_HEADER_PREHEADER]] ]
-; CHECK-NEXT:    br label %[[INNER_SPLIT1:.*]]
-; CHECK:       [[INNER_PREHEADER]]:
-; CHECK-NEXT:    br label %[[INNER:.*]]
-; CHECK:       [[INNER]]:
-; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[TMP0:%.*]], %[[INNER_SPLIT:.*]] ], [ 0, %[[INNER_PREHEADER]] ]
-; CHECK-NEXT:    br label %[[OUTER_HEADER_PREHEADER]]
-; CHECK:       [[INNER_SPLIT1]]:
-; CHECK-NEXT:    [[J_NEXT:%.*]] = add i64 [[J]], 1
-; CHECK-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp eq i64 [[J]], 1
+; CHECK-NEXT:  [[INNER:.*]]:
+; CHECK-NEXT:    br label %[[OUTER_HEADER_PREHEADER:.*]]
+; CHECK:       [[OUTER_HEADER_PREHEADER]]:
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[OUTER_LATCH:.*]] ], [ 0, %[[INNER]] ]
 ; CHECK-NEXT:    br label %[[INNER_EXIT:.*]]
-; CHECK:       [[INNER_SPLIT]]:
-; CHECK-NEXT:    [[TMP0]] = add i64 [[J]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[J]], 1
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[EXIT:.*]], label %[[INNER]]
 ; CHECK:       [[INNER_EXIT]]:
+; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[TMP0:%.*]], %[[INNER_EXIT]] ], [ 0, %[[OUTER_HEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[TMP0]] = add i64 [[J]], 1
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp eq i64 [[J]], 1
+; CHECK-NEXT:    br i1 [[INTERCHANGE_EXITCOND3]], label %[[INNER_EXIT1:.*]], label %[[INNER_EXIT]]
+; CHECK:       [[INNER_EXIT1]]:
+; CHECK-NEXT:    [[CST:%.*]] = phi i32 [ 42, %[[INNER_EXIT]] ]
 ; CHECK-NEXT:    br label %[[OUTER_LATCH]]
 ; CHECK:       [[OUTER_LATCH]]:
 ; CHECK-NEXT:    [[I_NEXT]] = add i64 [[I]], 1
-; CHECK-NEXT:    [[EC_I:%.*]] = icmp eq i64 [[I]], 1
-; CHECK-NEXT:    br i1 [[EC_I]], label %[[INNER_SPLIT]], label %[[OUTER_HEADER]]
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND:%.*]] = icmp eq i64 [[I]], 1
+; CHECK-NEXT:    br i1 [[INTERCHANGE_EXITCOND]], label %[[EXIT:.*]], label %[[OUTER_HEADER_PREHEADER]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[CST_LCSSA:%.*]] = phi i32 [ 42, %[[INNER_SPLIT]] ]
+; CHECK-NEXT:    [[CST_LCSSA:%.*]] = phi i32 [ [[CST]], %[[OUTER_LATCH]] ]
 ; CHECK-NEXT:    ret i32 [[CST_LCSSA]]
 ;
 entry:
@@ -69,38 +60,29 @@ exit:
 
 define i32 @g() {
 ; CHECK-LABEL: define i32 @g() {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br label %[[INNER_HEADER_PREHEADER:.*]]
-; CHECK:       [[OUTER_HEADER_PREHEADER:.*]]:
-; CHECK-NEXT:    br label %[[OUTER_HEADER:.*]]
-; CHECK:       [[OUTER_HEADER]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[OUTER_LATCH:.*]] ], [ 0, %[[OUTER_HEADER_PREHEADER]] ]
-; CHECK-NEXT:    br label %[[INNER_LATCH:.*]]
-; CHECK:       [[INNER_HEADER_PREHEADER]]:
-; CHECK-NEXT:    br label %[[INNER_HEADER:.*]]
-; CHECK:       [[INNER_HEADER]]:
-; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[TMP1:%.*]], %[[INNER_LATCH_SPLIT:.*]] ], [ 0, %[[INNER_HEADER_PREHEADER]] ]
-; CHECK-NEXT:    br label %[[OUTER_HEADER_PREHEADER]]
-; CHECK:       [[INNER_LATCH]]:
+; CHECK-NEXT:  [[INNER_HEADER:.*]]:
+; CHECK-NEXT:    br label %[[OUTER_HEADER_PREHEADER:.*]]
+; CHECK:       [[OUTER_HEADER_PREHEADER]]:
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[OUTER_LATCH:.*]] ], [ 0, %[[INNER_HEADER]] ]
 ; CHECK-NEXT:    br label %[[INNER_LATCH1:.*]]
 ; CHECK:       [[INNER_LATCH1]]:
-; CHECK-NEXT:    [[X:%.*]] = phi i32 [ 42, %[[INNER_LATCH]] ]
-; CHECK-NEXT:    [[J_NEXT:%.*]] = add i64 [[J]], 1
-; CHECK-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp eq i64 [[J]], 1
-; CHECK-NEXT:    br label %[[INNER_EXIT:.*]]
-; CHECK:       [[INNER_LATCH_SPLIT]]:
-; CHECK-NEXT:    [[X_LCSSA:%.*]] = phi i32 [ [[X]], %[[OUTER_LATCH]] ]
-; CHECK-NEXT:    [[TMP1]] = add i64 [[J]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[J]], 1
-; CHECK-NEXT:    br i1 [[TMP2]], label %[[EXIT:.*]], label %[[INNER_HEADER]]
+; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[TMP1:%.*]], %[[INNER_EXIT:.*]] ], [ 0, %[[OUTER_HEADER_PREHEADER]] ]
+; CHECK-NEXT:    br label %[[INNER_EXIT]]
 ; CHECK:       [[INNER_EXIT]]:
+; CHECK-NEXT:    [[X:%.*]] = phi i32 [ 42, %[[INNER_LATCH1]] ]
+; CHECK-NEXT:    [[TMP1]] = add i64 [[J]], 1
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp eq i64 [[J]], 1
+; CHECK-NEXT:    br i1 [[INTERCHANGE_EXITCOND3]], label %[[INNER_EXIT1:.*]], label %[[INNER_LATCH1]]
+; CHECK:       [[INNER_EXIT1]]:
+; CHECK-NEXT:    [[X_LCSSA:%.*]] = phi i32 [ [[X]], %[[INNER_EXIT]] ]
 ; CHECK-NEXT:    br label %[[OUTER_LATCH]]
 ; CHECK:       [[OUTER_LATCH]]:
+; CHECK-NEXT:    [[X_LCSSA2:%.*]] = phi i32 [ [[X_LCSSA]], %[[INNER_EXIT1]] ]
 ; CHECK-NEXT:    [[I_NEXT]] = add i64 [[I]], 1
-; CHECK-NEXT:    [[EC_I:%.*]] = icmp eq i64 [[I]], 1
-; CHECK-NEXT:    br i1 [[EC_I]], label %[[INNER_LATCH_SPLIT]], label %[[OUTER_HEADER]]
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND:%.*]] = icmp eq i64 [[I]], 1
+; CHECK-NEXT:    br i1 [[INTERCHANGE_EXITCOND]], label %[[EXIT:.*]], label %[[OUTER_HEADER_PREHEADER]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[X_FINAL:%.*]] = phi i32 [ [[X_LCSSA]], %[[INNER_LATCH_SPLIT]] ]
+; CHECK-NEXT:    [[X_FINAL:%.*]] = phi i32 [ [[X_LCSSA2]], %[[OUTER_LATCH]] ]
 ; CHECK-NEXT:    ret i32 [[X_FINAL]]
 ;
 entry:

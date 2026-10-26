@@ -9,44 +9,33 @@
 define void @f(ptr %A, i64 %n) !dbg !5 {
 ; CHECK-LABEL: define void @f(
 ; CHECK-SAME: ptr [[A:%.*]], i64 [[N:%.*]]) !dbg [[DBG4:![0-9]+]] {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br label %[[INNER_HEADER_PREHEADER:.*]]
-; CHECK:       [[OUTER_HEADER_PREHEADER:.*]]:
+; CHECK-NEXT:  [[OUTER_HEADER_PREHEADER:.*]]:
 ; CHECK-NEXT:    br label %[[OUTER_HEADER:.*]]
 ; CHECK:       [[OUTER_HEADER]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[OUTER_LATCH:.*]] ], [ 0, %[[OUTER_HEADER_PREHEADER]] ]
-; CHECK-NEXT:    [[INTERCHANGE_IV:%.*]] = phi i64 [ [[INTERCHANGE_IV_NEXT:%.*]], %[[OUTER_LATCH]] ], [ 0, %[[OUTER_HEADER_PREHEADER]] ]
-; CHECK-NEXT:      #dbg_value(i64 [[I]], [[META8:![0-9]+]], !DIExpression(), [[META13:![0-9]+]])
+; CHECK-NEXT:    [[INTERCHANGE_IV:%.*]] = phi i64 [ [[INTERCHANGE_IV_NEXT:%.*]], %[[OUTER_LATCH:.*]] ], [ 0, %[[OUTER_HEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[J_NEXT:%.*]], %[[OUTER_LATCH]] ], [ 0, %[[OUTER_HEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[N_ADD:%.*]] = add i64 [[N]], 1
+; CHECK-NEXT:      #dbg_value(i64 [[N_ADD]], [[META11:![0-9]+]], !DIExpression(), [[META13:![0-9]+]])
+; CHECK-NEXT:    br label %[[INNER_HEADER_SPLIT1:.*]]
+; CHECK:       [[INNER_HEADER_SPLIT1]]:
+; CHECK-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i64 [ [[INTERCHANGE_IV_NEXT2:%.*]], %[[INNER_HEADER_SPLIT1]] ], [ 0, %[[OUTER_HEADER]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[INNER_HEADER_SPLIT1]] ], [ 0, %[[OUTER_HEADER]] ]
+; CHECK-NEXT:      #dbg_value(i64 [[I]], [[META8:![0-9]+]], !DIExpression(), [[META13]])
 ; CHECK-NEXT:    [[I_MUL:%.*]] = mul nuw nsw i64 [[I]], 2
 ; CHECK-NEXT:      #dbg_value(i64 [[I_MUL]], [[META10:![0-9]+]], !DIExpression(), [[META13]])
-; CHECK-NEXT:    [[N_ADD:%.*]] = add i64 [[N]], 1
-; CHECK-NEXT:      #dbg_value(i64 [[N_ADD]], [[META11:![0-9]+]], !DIExpression(), [[META13]])
-; CHECK-NEXT:    br label %[[INNER_HEADER_SPLIT1:.*]]
-; CHECK:       [[INNER_HEADER_PREHEADER]]:
-; CHECK-NEXT:    br label %[[INNER_HEADER:.*]]
-; CHECK:       [[INNER_HEADER]]:
-; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[TMP0:%.*]], %[[INNER_HEADER_SPLIT:.*]] ], [ 0, %[[INNER_HEADER_PREHEADER]] ]
-; CHECK-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i64 [ [[TMP1:%.*]], %[[INNER_HEADER_SPLIT]] ], [ 0, %[[INNER_HEADER_PREHEADER]] ]
-; CHECK-NEXT:    br label %[[OUTER_HEADER_PREHEADER]]
-; CHECK:       [[INNER_HEADER_SPLIT1]]:
 ; CHECK-NEXT:      #dbg_value(i64 [[J]], [[META12:![0-9]+]], !DIExpression(), [[META14:![0-9]+]])
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [512 x i64], ptr [[A]], i64 [[J]], i64 [[I_MUL]]
 ; CHECK-NEXT:    store i64 [[N_ADD]], ptr [[GEP]], align 8
-; CHECK-NEXT:    [[J_NEXT:%.*]] = add nuw nsw i64 [[J]], 1
-; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT2:%.*]] = add i64 [[INTERCHANGE_IV1]], 1, !dbg [[DBG15:![0-9]+]]
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT2]] = add i64 [[INTERCHANGE_IV1]], 1, !dbg [[DBG15:![0-9]+]]
 ; CHECK-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp eq i64 [[INTERCHANGE_IV1]], 255, !dbg [[DBG15]]
-; CHECK-NEXT:    br label %[[OUTER_LATCH]], !dbg [[DBG15]]
-; CHECK:       [[INNER_HEADER_SPLIT]]:
-; CHECK-NEXT:    [[TMP1]] = add i64 [[INTERCHANGE_IV1]], 1, !dbg [[DBG15]]
-; CHECK-NEXT:    [[TMP0]] = add nuw nsw i64 [[J]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INTERCHANGE_IV1]], 255, !dbg [[DBG15]]
-; CHECK-NEXT:    br i1 [[TMP2]], label %[[EXIT:.*]], label %[[INNER_HEADER]], !dbg [[DBG15]]
+; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
+; CHECK-NEXT:    br i1 [[INTERCHANGE_EXITCOND3]], label %[[OUTER_LATCH]], label %[[INNER_HEADER_SPLIT1]], !dbg [[DBG15]]
 ; CHECK:       [[OUTER_LATCH]]:
 ; CHECK-NEXT:      #dbg_value(i64 [[I]], [[META8]], !DIExpression(DW_OP_plus_uconst, 1), [[META13]])
-; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
 ; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT]] = add i64 [[INTERCHANGE_IV]], 1, !dbg [[DBG16:![0-9]+]]
 ; CHECK-NEXT:    [[INTERCHANGE_EXITCOND:%.*]] = icmp eq i64 [[INTERCHANGE_IV]], 255, !dbg [[DBG16]]
-; CHECK-NEXT:    br i1 [[INTERCHANGE_EXITCOND]], label %[[INNER_HEADER_SPLIT]], label %[[OUTER_HEADER]], !dbg [[DBG16]]
+; CHECK-NEXT:    [[J_NEXT]] = add nuw nsw i64 [[J]], 1
+; CHECK-NEXT:    br i1 [[INTERCHANGE_EXITCOND]], label %[[EXIT:.*]], label %[[OUTER_HEADER]], !dbg [[DBG16]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -86,41 +75,32 @@ exit:
 define void @g(ptr %A, i1 %c) !dbg !18 {
 ; CHECK-LABEL: define void @g(
 ; CHECK-SAME: ptr [[A:%.*]], i1 [[C:%.*]]) !dbg [[DBG17:![0-9]+]] {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br label %[[INNER_PREHEADER:.*]]
-; CHECK:       [[OUTER_HEADER_PREHEADER:.*]]:
-; CHECK-NEXT:      #dbg_value(i64 [[I_MUL:%.*]], [[META20:![0-9]+]], !DIExpression(), [[META21:![0-9]+]])
+; CHECK-NEXT:  [[OUTER_HEADER_PREHEADER:.*]]:
 ; CHECK-NEXT:    br label %[[OUTER_HEADER:.*]]
 ; CHECK:       [[OUTER_HEADER]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[OUTER_LATCH:.*]] ], [ 0, %[[OUTER_HEADER_PREHEADER]] ]
-; CHECK-NEXT:    [[INTERCHANGE_IV:%.*]] = phi i64 [ [[INTERCHANGE_IV_NEXT:%.*]], %[[OUTER_LATCH]] ], [ 0, %[[OUTER_HEADER_PREHEADER]] ]
-; CHECK-NEXT:      #dbg_value(i64 [[I]], [[META19:![0-9]+]], !DIExpression(), [[META21]])
-; CHECK-NEXT:    [[I_MUL]] = mul nuw nsw i64 [[I]], 2
+; CHECK-NEXT:    [[INTERCHANGE_IV:%.*]] = phi i64 [ [[INTERCHANGE_IV_NEXT:%.*]], %[[EXIT:.*]] ], [ 0, %[[OUTER_HEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[J_NEXT:%.*]], %[[EXIT]] ], [ 0, %[[OUTER_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    br i1 [[C]], label %[[INNER_HEADER_SPLIT1:.*]], label %[[INNER_HEADER_SPLIT1]]
-; CHECK:       [[INNER_PREHEADER]]:
+; CHECK:       [[INNER_HEADER_SPLIT1]]:
 ; CHECK-NEXT:    br label %[[INNER_HEADER:.*]]
 ; CHECK:       [[INNER_HEADER]]:
-; CHECK-NEXT:    [[J:%.*]] = phi i64 [ 0, %[[INNER_PREHEADER]] ], [ [[TMP0:%.*]], %[[INNER_HEADER_SPLIT:.*]] ]
-; CHECK-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i64 [ [[TMP2:%.*]], %[[INNER_HEADER_SPLIT]] ], [ 0, %[[INNER_PREHEADER]] ]
-; CHECK-NEXT:    br label %[[OUTER_HEADER_PREHEADER]]
-; CHECK:       [[INNER_HEADER_SPLIT1]]:
+; CHECK-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i64 [ [[INTERCHANGE_IV_NEXT2:%.*]], %[[INNER_HEADER]] ], [ 0, %[[INNER_HEADER_SPLIT1]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[INNER_HEADER]] ], [ 0, %[[INNER_HEADER_SPLIT1]] ]
+; CHECK-NEXT:      #dbg_value(i64 [[I]], [[META19:![0-9]+]], !DIExpression(), [[META21:![0-9]+]])
+; CHECK-NEXT:    [[I_MUL:%.*]] = mul nuw nsw i64 [[I]], 2
+; CHECK-NEXT:      #dbg_value(i64 [[I_MUL]], [[META20:![0-9]+]], !DIExpression(), [[META21]])
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [512 x i64], ptr [[A]], i64 [[J]], i64 [[I_MUL]]
 ; CHECK-NEXT:    store i64 0, ptr [[GEP]], align 8
-; CHECK-NEXT:    [[J_NEXT:%.*]] = add nuw nsw i64 [[J]], 1
-; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT2:%.*]] = add i64 [[INTERCHANGE_IV1]], 1
-; CHECK-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp eq i64 [[INTERCHANGE_IV1]], 255
-; CHECK-NEXT:    br label %[[OUTER_LATCH]]
-; CHECK:       [[INNER_HEADER_SPLIT]]:
-; CHECK-NEXT:    [[TMP2]] = add i64 [[INTERCHANGE_IV1]], 1
-; CHECK-NEXT:    [[TMP0]] = add nuw nsw i64 [[J]], 1
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT2]] = add i64 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[INTERCHANGE_IV1]], 255
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[EXIT:.*]], label %[[INNER_HEADER]]
-; CHECK:       [[OUTER_LATCH]]:
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[EXIT]], label %[[INNER_HEADER]]
+; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT]] = add i64 [[INTERCHANGE_IV]], 1
 ; CHECK-NEXT:    [[EC_I:%.*]] = icmp eq i64 [[INTERCHANGE_IV]], 255
-; CHECK-NEXT:    br i1 [[EC_I]], label %[[INNER_HEADER_SPLIT]], label %[[OUTER_HEADER]]
-; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[J_NEXT]] = add nuw nsw i64 [[J]], 1
+; CHECK-NEXT:    br i1 [[EC_I]], label %[[INNER_HEADER_SPLIT:.*]], label %[[OUTER_HEADER]]
+; CHECK:       [[INNER_HEADER_SPLIT]]:
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -195,8 +175,8 @@ exit:
 ; CHECK: [[META12]] = !DILocalVariable(name: "j", scope: [[DBG4]], file: [[META1]], line: 5, type: [[META9]])
 ; CHECK: [[META13]] = !DILocation(line: 2, column: 3, scope: [[DBG4]])
 ; CHECK: [[META14]] = !DILocation(line: 5, column: 5, scope: [[DBG4]])
-; CHECK: [[DBG15]] = !DILocation(line: 5, column: 7, scope: [[DBG4]])
-; CHECK: [[DBG16]] = !DILocation(line: 2, column: 5, scope: [[DBG4]])
+; CHECK: [[DBG15]] = !DILocation(line: 2, column: 5, scope: [[DBG4]])
+; CHECK: [[DBG16]] = !DILocation(line: 5, column: 7, scope: [[DBG4]])
 ; CHECK: [[DBG17]] = distinct !DISubprogram(name: "g", scope: [[META1]], file: [[META1]], line: 11, type: [[META5]], scopeLine: 11, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META18:![0-9]+]])
 ; CHECK: [[META18]] = !{[[META19]], [[META20]]}
 ; CHECK: [[META19]] = !DILocalVariable(name: "i", scope: [[DBG17]], file: [[META1]], line: 12, type: [[META9]])

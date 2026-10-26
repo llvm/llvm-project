@@ -12,43 +12,33 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 define i16 @main(ptr %a) {
 ; CHECK-LABEL: define i16 @main(
 ; CHECK-SAME: ptr [[A:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br label %[[INNER_HEADER_PREHEADER:.*]]
-; CHECK:       [[OUTER_HEADER_PREHEADER:.*]]:
-; CHECK-NEXT:    br label %[[OUTER_HEADER:.*]]
-; CHECK:       [[OUTER_HEADER]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[OUTER_LATCH:.*]] ], [ 0, %[[OUTER_HEADER_PREHEADER]] ]
-; CHECK-NEXT:    br label %[[INNER_HEADER_SPLIT:.*]]
-; CHECK:       [[INNER_HEADER_PREHEADER]]:
+; CHECK-NEXT:  [[INNER_HEADER_PREHEADER:.*]]:
 ; CHECK-NEXT:    br label %[[INNER_HEADER:.*]]
 ; CHECK:       [[INNER_HEADER]]:
-; CHECK-NEXT:    [[J:%.*]] = phi i16 [ [[TMP1:%.*]], %[[INNER_LATCH_SPLIT:.*]] ], [ 0, %[[INNER_HEADER_PREHEADER]] ]
-; CHECK-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i16 [ [[TMP3:%.*]], %[[INNER_LATCH_SPLIT]] ], [ 0, %[[INNER_HEADER_PREHEADER]] ]
-; CHECK-NEXT:    br label %[[OUTER_HEADER_PREHEADER]]
-; CHECK:       [[INNER_HEADER_SPLIT]]:
+; CHECK-NEXT:    [[INTERCHANGE_IV:%.*]] = phi i16 [ [[INTERCHANGE_IV_NEXT:%.*]], %[[OUTER_LATCH:.*]] ], [ 0, %[[INNER_HEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[J:%.*]] = phi i16 [ [[J_NEXT:%.*]], %[[OUTER_LATCH]] ], [ 0, %[[INNER_HEADER_PREHEADER]] ]
+; CHECK-NEXT:    br label %[[OUTER_HEADER_PREHEADER:.*]]
+; CHECK:       [[OUTER_HEADER_PREHEADER]]:
+; CHECK-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i64 [ [[INTERCHANGE_IV_NEXT2:%.*]], %[[OUTER_BODY:.*]] ], [ 0, %[[INNER_HEADER]] ]
 ; CHECK-NEXT:    [[ARRAYIDX_US_US:%.*]] = getelementptr i16, ptr [[A]], i16 [[J]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[ARRAYIDX_US_US]], align 1
 ; CHECK-NEXT:    [[COND:%.*]] = select i1 false, i16 0, i16 0
-; CHECK-NEXT:    br label %[[INNER_LATCH:.*]]
-; CHECK:       [[INNER_LATCH]]:
-; CHECK-NEXT:    [[J_NEXT:%.*]] = add i16 [[J]], 1
-; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT2:%.*]] = add i16 [[INTERCHANGE_IV1]], 1
-; CHECK-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp ne i16 [[INTERCHANGE_IV1]], 42
-; CHECK-NEXT:    br label %[[OUTER_BODY:.*]]
-; CHECK:       [[INNER_LATCH_SPLIT]]:
-; CHECK-NEXT:    [[NEW_COND_LCSSA:%.*]] = phi i16 [ [[COND]], %[[OUTER_LATCH]] ]
-; CHECK-NEXT:    [[TMP3]] = add i16 [[INTERCHANGE_IV1]], 1
-; CHECK-NEXT:    [[TMP1]] = add i16 [[J]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i16 [[INTERCHANGE_IV1]], 42
-; CHECK-NEXT:    br i1 [[TMP2]], label %[[INNER_HEADER]], label %[[EXIT:.*]]
+; CHECK-NEXT:    br label %[[OUTER_BODY]]
 ; CHECK:       [[OUTER_BODY]]:
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT2]] = add i64 [[INTERCHANGE_IV1]], 1
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp ne i64 [[INTERCHANGE_IV1]], -1
+; CHECK-NEXT:    br i1 [[INTERCHANGE_EXITCOND3]], label %[[OUTER_HEADER_PREHEADER]], label %[[OUTER_BODY1:.*]]
+; CHECK:       [[OUTER_BODY1]]:
+; CHECK-NEXT:    [[NEW_COND_LCSSA:%.*]] = phi i16 [ [[COND]], %[[OUTER_BODY]] ]
 ; CHECK-NEXT:    br label %[[OUTER_LATCH]]
 ; CHECK:       [[OUTER_LATCH]]:
-; CHECK-NEXT:    [[I_NEXT]] = add i64 [[I]], 1
-; CHECK-NEXT:    [[CMP286_US:%.*]] = icmp ne i64 [[I]], -1
-; CHECK-NEXT:    br i1 [[CMP286_US]], label %[[OUTER_HEADER]], label %[[INNER_LATCH_SPLIT]]
+; CHECK-NEXT:    [[OLD_COND_LCSSA:%.*]] = phi i16 [ [[NEW_COND_LCSSA]], %[[OUTER_BODY1]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT]] = add i16 [[INTERCHANGE_IV]], 1
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND:%.*]] = icmp ne i16 [[INTERCHANGE_IV]], 42
+; CHECK-NEXT:    [[J_NEXT]] = add nuw nsw i16 [[J]], 1
+; CHECK-NEXT:    br i1 [[INTERCHANGE_EXITCOND]], label %[[INNER_HEADER]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[OLD_COND_LCSSA_LCSSA:%.*]] = phi i16 [ [[NEW_COND_LCSSA]], %[[INNER_LATCH_SPLIT]] ]
+; CHECK-NEXT:    [[OLD_COND_LCSSA_LCSSA:%.*]] = phi i16 [ [[OLD_COND_LCSSA]], %[[OUTER_LATCH]] ]
 ; CHECK-NEXT:    ret i16 [[OLD_COND_LCSSA_LCSSA]]
 ;
 entry:
