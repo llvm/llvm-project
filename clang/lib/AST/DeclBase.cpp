@@ -674,15 +674,12 @@ static StringRef getRealizedPlatform(const AvailabilityAttr *A,
 static AvailabilityResult CheckAvailability(ASTContext &Context,
                                             const AvailabilityAttr *A,
                                             std::string *Message,
+                                            StringRef TargetPlatform,
                                             VersionTuple EnclosingVersion) {
-  if (EnclosingVersion.empty())
-    EnclosingVersion = Context.getTargetInfo().getPlatformMinVersion();
-
   if (EnclosingVersion.empty())
     return AR_Available;
 
   StringRef ActualPlatform = A->getPlatform()->getName();
-  StringRef TargetPlatform = Context.getTargetInfo().getPlatformName();
 
   // Match the platform name.
   if (getRealizedPlatform(A, Context) != TargetPlatform)
@@ -779,9 +776,27 @@ static AvailabilityResult CheckAvailability(ASTContext &Context,
 AvailabilityResult Decl::getAvailability(std::string *Message,
                                          VersionTuple EnclosingVersion,
                                          StringRef *RealizedPlatform) const {
+  const TargetInfo &TI = getASTContext().getTargetInfo();
+  return getAvailability(TI.getPlatformName(),
+                         EnclosingVersion.empty() ? TI.getPlatformMinVersion()
+                                                  : EnclosingVersion,
+                         Message, RealizedPlatform);
+}
+
+AvailabilityResult Decl::getAvailability(StringRef Platform,
+                                         const VersionTuple &PlatformMinVersion,
+                                         std::string *Message,
+                                         StringRef *RealizedPlatform) const {
   if (auto *FTD = dyn_cast<FunctionTemplateDecl>(this))
-    return FTD->getTemplatedDecl()->getAvailability(Message, EnclosingVersion,
-                                                    RealizedPlatform);
+    return FTD->getTemplatedDecl()->getAvailability(
+        Platform, PlatformMinVersion, Message, RealizedPlatform);
+
+  const auto &Ctx = getASTContext();
+  if (!Ctx.getLangOpts().ZipperedAvailabilityChecks &&
+      Ctx.getTargetInfo().hasTargetVariantPlatform() &&
+      Ctx.getTargetInfo().getTargetVariantPlatform() == Platform) {
+    return AR_Available;
+  }
 
   AvailabilityResult Result = AR_Available;
   std::string ResultMessage;
@@ -806,8 +821,8 @@ AvailabilityResult Decl::getAvailability(std::string *Message,
 
     if (const auto *Availability = dyn_cast<AvailabilityAttr>(A)) {
       Availability = Availability->getEffectiveAttr();
-      AvailabilityResult AR = CheckAvailability(getASTContext(), Availability,
-                                                Message, EnclosingVersion);
+      AvailabilityResult AR = CheckAvailability(
+          getASTContext(), Availability, Message, Platform, PlatformMinVersion);
 
       if (AR == AR_Unavailable) {
         if (RealizedPlatform)
@@ -844,6 +859,28 @@ VersionTuple Decl::getVersionIntroduced() const {
   return {};
 }
 
+bool Decl::isDeprecatedInAnyTargetPlatform(std::string *Message) const {
+  const TargetInfo &TI = getASTContext().getTargetInfo();
+  return getAvailability(TI.getPlatformName(), TI.getPlatformMinVersion()) ==
+             AR_Deprecated ||
+         (getASTContext().getLangOpts().ZipperedAvailabilityChecks &&
+          TI.hasTargetVariantPlatform() &&
+          getAvailability(TI.getTargetVariantPlatform(),
+                          TI.getTargetVariantPlatformMinVersion()) ==
+              AR_Deprecated);
+}
+
+bool Decl::isUnavailableForAllTargetPlatforms() const {
+  const TargetInfo &TI = getASTContext().getTargetInfo();
+  return getAvailability(TI.getPlatformName(), TI.getPlatformMinVersion()) ==
+             AR_Unavailable &&
+         (!(getASTContext().getLangOpts().ZipperedAvailabilityChecks &&
+            getASTContext().getTargetInfo().hasTargetVariantPlatform()) ||
+          getAvailability(TI.getTargetVariantPlatform(),
+                          TI.getTargetVariantPlatformMinVersion()) ==
+              AR_Unavailable);
+}
+
 bool Decl::canBeWeakImported(bool &IsDefinition) const {
   IsDefinition = false;
 
@@ -878,6 +915,7 @@ bool Decl::isWeakImported() const {
   if (!canBeWeakImported(IsDefinition))
     return false;
 
+  const TargetInfo &TI = getASTContext().getTargetInfo();
   for (const auto *A : getMostRecentDecl()->attrs()) {
     if (isa<WeakImportAttr>(A))
       return true;
@@ -885,7 +923,13 @@ bool Decl::isWeakImported() const {
     if (const auto *Availability = dyn_cast<AvailabilityAttr>(A)) {
       Availability = Availability->getEffectiveAttr();
       if (CheckAvailability(getASTContext(), Availability, nullptr,
-                            VersionTuple()) == AR_NotYetIntroduced)
+                            TI.getPlatformName(), TI.getPlatformMinVersion()) ==
+              AR_NotYetIntroduced ||
+          (TI.hasTargetVariantPlatform() &&
+           CheckAvailability(getASTContext(), Availability, nullptr,
+                             TI.getTargetVariantPlatform(),
+                             TI.getTargetVariantPlatformMinVersion()) ==
+               AR_NotYetIntroduced))
         return true;
     }
   }

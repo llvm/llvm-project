@@ -19,6 +19,7 @@
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/IdentifierTable.h"
+#include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Sema.h"
 #include "llvm/ADT/StringExtras.h"
@@ -765,9 +766,16 @@ void PrintingCodeCompleteConsumer::ProcessOverloadCandidates(
 
 /// Retrieve the effective availability of the given declaration.
 static AvailabilityResult getDeclAvailability(const Decl *D) {
-  AvailabilityResult AR = D->getAvailability();
+  // FIXME: Take min of target and target-variant AR for better Xcode
+  // experience?
+  const TargetInfo &TI =
+      D->getTranslationUnitDecl()->getASTContext().getTargetInfo();
+  AvailabilityResult AR =
+      D->getAvailability(TI.getPlatformName(), TI.getPlatformMinVersion());
   if (isa<EnumConstantDecl>(D))
-    AR = std::max(AR, cast<Decl>(D->getDeclContext())->getAvailability());
+    AR = std::max(AR, cast<Decl>(D->getDeclContext())
+                          ->getAvailability(TI.getPlatformName(),
+                                            TI.getPlatformMinVersion()));
   return AR;
 }
 
