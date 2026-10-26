@@ -10,6 +10,7 @@
 #include "OffloadError.h"
 
 #include <cstdint>
+#include <cstring>
 
 using namespace llvm;
 
@@ -54,6 +55,39 @@ Expected<void *> ProgramTy::getGlobalAddress(const char *Name,
   }
 
   return Address;
+}
+
+Error ProgramTy::readGlobalFromImage(const char *Name, void *Dst,
+                                     size_t Size) const {
+  ol_symbol_handle_t Symbol;
+  if (auto Res =
+          olGetSymbol(Handle, Name, OL_SYMBOL_KIND_IMAGE_VARIABLE, &Symbol))
+    return error::createOffloadError(error::ErrorCode::INVALID_BINARY,
+                                     "failed to find global symbol %s: %s",
+                                     Name, Res->Details);
+
+  size_t SymbolSize = 0;
+  if (auto Res = olGetSymbolInfo(Symbol, OL_SYMBOL_INFO_GLOBAL_VARIABLE_SIZE,
+                                 sizeof(SymbolSize), &SymbolSize))
+    return error::createOffloadError(
+        error::ErrorCode::INVALID_BINARY,
+        "failed to get size of global symbol %s: %s", Name, Res->Details);
+  if (SymbolSize != Size)
+    return error::createOffloadError(
+        error::ErrorCode::INVALID_BINARY,
+        "global symbol %s has %zu bytes in the image but %zu were requested",
+        Name, SymbolSize, Size);
+
+  void *ImageAddress = nullptr;
+  if (auto Res = olGetSymbolInfo(Symbol, OL_SYMBOL_INFO_GLOBAL_VARIABLE_ADDRESS,
+                                 sizeof(ImageAddress), &ImageAddress))
+    return error::createOffloadError(
+        error::ErrorCode::INVALID_BINARY,
+        "failed to get image address of global symbol %s: %s", Name,
+        Res->Details);
+
+  std::memcpy(Dst, ImageAddress, Size);
+  return Error::success();
 }
 
 Expected<ol_symbol_handle_t>
