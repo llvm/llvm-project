@@ -24,6 +24,7 @@
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Interfaces/ViewLikeInterface.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Casting.h"
@@ -2214,6 +2215,14 @@ AliasAnalysis::getSourceImpl(mlir::Value v, bool getLastInstantiationPoint,
             regionBranchReturn->scopedOrigins = std::move(combined);
           }
           breakFromLoop = true;
+        })
+        .Case([&](mlir::ViewLikeOpInterface op) {
+          // Views from other dialects, e.g. the memref.reinterpret_cast ops
+          // created by fir-to-memref. Approximate because the interface
+          // doesn't expose the offset.
+          v = op.getViewSource();
+          defOp = v.getDefiningOp();
+          approximateSource = true;
         })
         .Default([&](auto op) {
           defOp = nullptr;
