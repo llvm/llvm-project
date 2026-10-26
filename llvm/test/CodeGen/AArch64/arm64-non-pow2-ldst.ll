@@ -149,8 +149,8 @@ define void @i56_and_or(ptr %a) {
 ; CHECK-NEXT:    ldrh w10, [x9, #4]!
 ; CHECK-NEXT:    orr w8, w8, #0x180
 ; CHECK-NEXT:    and w8, w8, #0xffffff80
-; CHECK-NEXT:    strh w10, [x9]
 ; CHECK-NEXT:    str w8, [x0]
+; CHECK-NEXT:    strh w10, [x9]
 ; CHECK-NEXT:    ret
   %b = load i56, ptr %a, align 1
   %c = and i56 %b, -128
@@ -167,11 +167,11 @@ define void @i56_insert_bit(ptr %a, i1 zeroext %bit) {
 ; CHECK-NEXT:    ldrh w9, [x8, #4]!
 ; CHECK-NEXT:    ldrb w10, [x8, #2]
 ; CHECK-NEXT:    orr w10, w9, w10, lsl #16
-; CHECK-NEXT:    strh w9, [x8]
 ; CHECK-NEXT:    orr x10, x11, x10, lsl #32
 ; CHECK-NEXT:    and x10, x10, #0xffffffffffffdfff
 ; CHECK-NEXT:    orr w10, w10, w1, lsl #13
 ; CHECK-NEXT:    str w10, [x0]
+; CHECK-NEXT:    strh w9, [x8]
 ; CHECK-NEXT:    ret
   %extbit = zext i1 %bit to i56
   %b = load i56, ptr %a, align 1

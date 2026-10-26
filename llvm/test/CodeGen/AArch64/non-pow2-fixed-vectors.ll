@@ -356,8 +356,8 @@ define void @v6f64_internal(ptr %c, ptr %in, ptr %out, i64 %n) {
 ; CHECK-NEXT:    mov v3.16b, v0.16b
 ; CHECK-NEXT:    ext v0.16b, v0.16b, v2.16b, #8
 ; CHECK-NEXT:    mov v3.d[1], v2.d[1]
-; CHECK-NEXT:    str q0, [x2, #32]
 ; CHECK-NEXT:    stp q1, q3, [x2]
+; CHECK-NEXT:    str q0, [x2, #32]
 ; CHECK-NEXT:    ret
 entry:
   %c.val = load <6 x double>, ptr %c

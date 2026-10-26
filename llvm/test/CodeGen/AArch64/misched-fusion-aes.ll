@@ -104,9 +104,9 @@ define void @aesea(ptr %a0, ptr %b0, ptr %c0, <16 x i8> %d, <16 x i8> %e) {
 ; CHECK-NEXT: aesmc [[VE]], [[VE]]
 ; CHECK: aese [[VF:v[0-7].16b]], {{v[0-7].16b}}
 ; CHECK-NEXT: aesmc [[VF]], [[VF]]
-; CHECK: aese [[VG:v[0-7].16b]], {{v[0-7].16b}}
+; CHECK: aese [[VG:v[0-7].16b]], {{v[1-7].16b}}
 ; CHECK-NEXT: aesmc [[VG]], [[VG]]
-; CHECK: aese [[VH:v[0-7].16b]], {{v[0-7].16b}}
+; CHECK: aese [[VH:v[0-7].16b]], {{v[1-7].16b}}
 ; CHECK-NEXT: aesmc [[VH]], [[VH]]
 ; CHECK-NOT: aesmc
 }
@@ -188,9 +188,9 @@ define void @aesda(ptr %a0, ptr %b0, ptr %c0, <16 x i8> %d, <16 x i8> %e) {
 ; CHECK-NEXT: aesimc [[VE]], [[VE]]
 ; CHECK: aesd [[VF:v[0-7].16b]], {{v[0-7].16b}}
 ; CHECK-NEXT: aesimc [[VF]], [[VF]]
-; CHECK: aesd [[VG:v[0-7].16b]], {{v[0-7].16b}}
+; CHECK: aesd [[VG:v[0-7].16b]], {{v[1-7].16b}}
 ; CHECK-NEXT: aesimc [[VG]], [[VG]]
-; CHECK: aesd [[VH:v[0-7].16b]], {{v[0-7].16b}}
+; CHECK: aesd [[VH:v[0-7].16b]], {{v[1-7].16b}}
 ; CHECK-NEXT: aesimc [[VH]], [[VH]]
 ; CHECK-NOT: aesimc
 }

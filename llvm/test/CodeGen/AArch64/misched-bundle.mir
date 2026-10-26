@@ -13,7 +13,7 @@
 # CHECK-NEXT:   Successors:
 # CHECK-NEXT:     SU(6): Out  Latency=1
 # CHECK-NEXT:     SU(6): Data Latency=3 Reg=$z0
-# CHECK-NEXT:     SU(9): Ord  Latency=0 Memory
+# CHECK-NEXT:     SU(9): Ord  Latency=0 Barrier
 # CHECK-NEXT:     SU(8): Ord  Latency=0 Memory
 # CHECK-NEXT:   Single Issue       : false;
 # CHECK-NEXT: SU(1):   renamable $z1 = LD1H renamable $p0, renamable $x2, renamable $x10 :: (load unknown-size, align 1)
@@ -31,7 +31,7 @@
 # CHECK-NEXT:     SU(7): Out  Latency=1
 # CHECK-NEXT:     SU(7): Out  Latency=1
 # CHECK-NEXT:     SU(6): Data Latency=3 Reg=$z1
-# CHECK-NEXT:     SU(9): Ord  Latency=0 Memory
+# CHECK-NEXT:     SU(9): Ord  Latency=0 Barrier
 # CHECK-NEXT:     SU(8): Ord  Latency=0 Memory
 # CHECK-NEXT:   Single Issue       : false;
 # CHECK-NEXT: SU(2):   renamable $z2 = LD1H renamable $p0, renamable $x0, renamable $x10 :: (load unknown-size, align 1)
@@ -43,7 +43,7 @@
 # CHECK-NEXT:   Height             : 7
 # CHECK-NEXT:   Successors:
 # CHECK-NEXT:     SU(6): Data Latency=3 Reg=$z2
-# CHECK-NEXT:     SU(9): Ord  Latency=0 Memory
+# CHECK-NEXT:     SU(9): Ord  Latency=0 Barrier
 # CHECK-NEXT:     SU(8): Ord  Latency=0 Memory
 # CHECK-NEXT:   Single Issue       : false;
 # CHECK-NEXT: SU(3):   renamable $z3 = LD1H renamable $p0, renamable $x11, renamable $x10 :: (load unknown-size, align 1)
@@ -55,7 +55,7 @@
 # CHECK-NEXT:   Height             : 7
 # CHECK-NEXT:   Successors:
 # CHECK-NEXT:     SU(7): Data Latency=3 Reg=$z3
-# CHECK-NEXT:     SU(9): Ord  Latency=0 Memory
+# CHECK-NEXT:     SU(9): Ord  Latency=0 Barrier
 # CHECK-NEXT:     SU(8): Ord  Latency=0 Memory
 # CHECK-NEXT:   Single Issue       : false;
 # CHECK-NEXT: SU(4):   renamable $z4 = LD1H renamable $p0, renamable $x12, renamable $x10 :: (load unknown-size, align 1)
@@ -67,7 +67,7 @@
 # CHECK-NEXT:   Height             : 7
 # CHECK-NEXT:   Successors:
 # CHECK-NEXT:     SU(7): Data Latency=3 Reg=$z4
-# CHECK-NEXT:     SU(9): Ord  Latency=0 Memory
+# CHECK-NEXT:     SU(9): Ord  Latency=0 Barrier
 # CHECK-NEXT:     SU(8): Ord  Latency=0 Memory
 # CHECK-NEXT:   Single Issue       : false;
 # CHECK-NEXT: SU(5):   renamable $z5 = LD1H renamable $p0, renamable $x13, renamable $x10 :: (load unknown-size, align 1)
@@ -79,7 +79,7 @@
 # CHECK-NEXT:   Height             : 7
 # CHECK-NEXT:   Successors:
 # CHECK-NEXT:     SU(7): Data Latency=3 Reg=$z5
-# CHECK-NEXT:     SU(9): Ord  Latency=0 Memory
+# CHECK-NEXT:     SU(9): Ord  Latency=0 Barrier
 # CHECK-NEXT:     SU(8): Ord  Latency=0 Memory
 # CHECK-NEXT:   Single Issue       : false;
 # CHECK-NEXT: SU(6):   $z0 = FMAD_ZPmZZ_H renamable $p0, killed $z0(tied-def 0), killed renamable $z1, killed renamable $z2
@@ -145,7 +145,7 @@
 # CHECK-NEXT:     SU(1): Ord  Latency=0 Memory
 # CHECK-NEXT:     SU(0): Ord  Latency=0 Memory
 # CHECK-NEXT:   Successors:
-# CHECK-NEXT:     SU(9): Ord  Latency=0 Memory
+# CHECK-NEXT:     SU(9): Ord  Latency=0 Barrier
 # CHECK-NEXT:   Single Issue       : false;
 # CHECK-NEXT: SU(9):   ST1H killed renamable $z1, renamable $p0, renamable $x13, renamable $x10 :: (store unknown-size, align 1)
 # CHECK-NEXT:   # preds left       : 8
@@ -155,14 +155,14 @@
 # CHECK-NEXT:   Depth              : 7
 # CHECK-NEXT:   Height             : 0
 # CHECK-NEXT:   Predecessors:
-# CHECK-NEXT:     SU(8): Ord  Latency=0 Memory
+# CHECK-NEXT:     SU(8): Ord  Latency=0 Barrier
 # CHECK-NEXT:     SU(7): Data Latency=4 Reg=$z1
-# CHECK-NEXT:     SU(5): Ord  Latency=0 Memory
-# CHECK-NEXT:     SU(4): Ord  Latency=0 Memory
-# CHECK-NEXT:     SU(3): Ord  Latency=0 Memory
-# CHECK-NEXT:     SU(2): Ord  Latency=0 Memory
-# CHECK-NEXT:     SU(1): Ord  Latency=0 Memory
-# CHECK-NEXT:     SU(0): Ord  Latency=0 Memory
+# CHECK-NEXT:     SU(5): Ord  Latency=0 Barrier
+# CHECK-NEXT:     SU(4): Ord  Latency=0 Barrier
+# CHECK-NEXT:     SU(3): Ord  Latency=0 Barrier
+# CHECK-NEXT:     SU(2): Ord  Latency=0 Barrier
+# CHECK-NEXT:     SU(1): Ord  Latency=0 Barrier
+# CHECK-NEXT:     SU(0): Ord  Latency=0 Barrier
 # CHECK-NEXT:   Single Issue       : false;
 # CHECK-NEXT: ExitSU:   RET_ReallyLR
 # CHECK-NEXT:   # preds left       : 0

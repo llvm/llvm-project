@@ -66,8 +66,8 @@ define dso_local void @fsd(ptr %a, double %b, double %c) nounwind {
 ; RV32IZFINXZDINX-NEXT:    fadd.d a2, a2, a4
 ; RV32IZFINXZDINX-NEXT:    sw a2, 0(a0)
 ; RV32IZFINXZDINX-NEXT:    sw a3, 4(a0)
-; RV32IZFINXZDINX-NEXT:    sw a2, 64(a0)
 ; RV32IZFINXZDINX-NEXT:    sw a3, 68(a0)
+; RV32IZFINXZDINX-NEXT:    sw a2, 64(a0)
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fsd:
@@ -80,10 +80,10 @@ define dso_local void @fsd(ptr %a, double %b, double %c) nounwind {
 ; RV32IZFINXZDINXZILSD-LABEL: fsd:
 ; RV32IZFINXZDINXZILSD:       # %bb.0:
 ; RV32IZFINXZDINXZILSD-NEXT:    mv a5, a4
+; RV32IZFINXZDINXZILSD-NEXT:    mv a7, a2
 ; RV32IZFINXZDINXZILSD-NEXT:    mv a4, a3
-; RV32IZFINXZDINXZILSD-NEXT:    mv a3, a2
-; RV32IZFINXZDINXZILSD-NEXT:    mv a2, a1
-; RV32IZFINXZDINXZILSD-NEXT:    fadd.d a2, a2, a4
+; RV32IZFINXZDINXZILSD-NEXT:    mv a6, a1
+; RV32IZFINXZDINXZILSD-NEXT:    fadd.d a2, a6, a4
 ; RV32IZFINXZDINXZILSD-NEXT:    sd a2, 0(a0)
 ; RV32IZFINXZDINXZILSD-NEXT:    sd a2, 64(a0)
 ; RV32IZFINXZDINXZILSD-NEXT:    ret
@@ -413,8 +413,8 @@ define dso_local void @store_zero(ptr %a) {
 ;
 ; RV32IZFINXZDINX-LABEL: store_zero:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    sw zero, 0(a0)
 ; RV32IZFINXZDINX-NEXT:    sw zero, 4(a0)
+; RV32IZFINXZDINX-NEXT:    sw zero, 0(a0)
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: store_zero:

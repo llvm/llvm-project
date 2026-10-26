@@ -2779,15 +2779,15 @@ define void @shuffle_v32f16_concat(ptr addrspace(1) %arg0, ptr addrspace(1) %arg
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_clause 0x1
-; GFX11-NEXT:    global_load_b128 v[6:9], v[2:3], off
-; GFX11-NEXT:    global_load_b128 v[10:13], v[2:3], off offset:16
+; GFX11-NEXT:    global_load_b128 v[6:9], v[2:3], off offset:16
+; GFX11-NEXT:    global_load_b128 v[10:13], v[2:3], off
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    global_load_b128 v[14:17], v[0:1], off
 ; GFX11-NEXT:    global_load_b128 v[0:3], v[0:1], off offset:16
 ; GFX11-NEXT:    s_waitcnt vmcnt(3)
-; GFX11-NEXT:    global_store_b128 v[4:5], v[6:9], off offset:32
+; GFX11-NEXT:    global_store_b128 v[4:5], v[6:9], off offset:48
 ; GFX11-NEXT:    s_waitcnt vmcnt(2)
-; GFX11-NEXT:    global_store_b128 v[4:5], v[10:13], off offset:48
+; GFX11-NEXT:    global_store_b128 v[4:5], v[10:13], off offset:32
 ; GFX11-NEXT:    s_waitcnt vmcnt(1)
 ; GFX11-NEXT:    global_store_b128 v[4:5], v[14:17], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
@@ -2918,15 +2918,15 @@ define void @shuffle_v32i16_concat(ptr addrspace(1) %arg0, ptr addrspace(1) %arg
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_clause 0x1
-; GFX11-NEXT:    global_load_b128 v[6:9], v[2:3], off
-; GFX11-NEXT:    global_load_b128 v[10:13], v[2:3], off offset:16
+; GFX11-NEXT:    global_load_b128 v[6:9], v[2:3], off offset:16
+; GFX11-NEXT:    global_load_b128 v[10:13], v[2:3], off
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    global_load_b128 v[14:17], v[0:1], off
 ; GFX11-NEXT:    global_load_b128 v[0:3], v[0:1], off offset:16
 ; GFX11-NEXT:    s_waitcnt vmcnt(3)
-; GFX11-NEXT:    global_store_b128 v[4:5], v[6:9], off offset:32
+; GFX11-NEXT:    global_store_b128 v[4:5], v[6:9], off offset:48
 ; GFX11-NEXT:    s_waitcnt vmcnt(2)
-; GFX11-NEXT:    global_store_b128 v[4:5], v[10:13], off offset:48
+; GFX11-NEXT:    global_store_b128 v[4:5], v[10:13], off offset:32
 ; GFX11-NEXT:    s_waitcnt vmcnt(1)
 ; GFX11-NEXT:    global_store_b128 v[4:5], v[14:17], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
@@ -3225,15 +3225,15 @@ define void @shuffle_v16i32_concat(ptr addrspace(1) %arg0, ptr addrspace(1) %arg
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_clause 0x1
-; GFX11-NEXT:    global_load_b128 v[6:9], v[2:3], off
-; GFX11-NEXT:    global_load_b128 v[10:13], v[2:3], off offset:16
+; GFX11-NEXT:    global_load_b128 v[6:9], v[2:3], off offset:16
+; GFX11-NEXT:    global_load_b128 v[10:13], v[2:3], off
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    global_load_b128 v[14:17], v[0:1], off
 ; GFX11-NEXT:    global_load_b128 v[0:3], v[0:1], off offset:16
 ; GFX11-NEXT:    s_waitcnt vmcnt(3)
-; GFX11-NEXT:    global_store_b128 v[4:5], v[6:9], off offset:32
+; GFX11-NEXT:    global_store_b128 v[4:5], v[6:9], off offset:48
 ; GFX11-NEXT:    s_waitcnt vmcnt(2)
-; GFX11-NEXT:    global_store_b128 v[4:5], v[10:13], off offset:48
+; GFX11-NEXT:    global_store_b128 v[4:5], v[10:13], off offset:32
 ; GFX11-NEXT:    s_waitcnt vmcnt(1)
 ; GFX11-NEXT:    global_store_b128 v[4:5], v[14:17], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
@@ -5989,15 +5989,15 @@ define void @shuffle_v32bf16_concat(ptr addrspace(1) %arg0, ptr addrspace(1) %ar
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_clause 0x1
-; GFX11-NEXT:    global_load_b128 v[6:9], v[2:3], off
-; GFX11-NEXT:    global_load_b128 v[10:13], v[2:3], off offset:16
+; GFX11-NEXT:    global_load_b128 v[6:9], v[2:3], off offset:16
+; GFX11-NEXT:    global_load_b128 v[10:13], v[2:3], off
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    global_load_b128 v[14:17], v[0:1], off
 ; GFX11-NEXT:    global_load_b128 v[0:3], v[0:1], off offset:16
 ; GFX11-NEXT:    s_waitcnt vmcnt(3)
-; GFX11-NEXT:    global_store_b128 v[4:5], v[6:9], off offset:32
+; GFX11-NEXT:    global_store_b128 v[4:5], v[6:9], off offset:48
 ; GFX11-NEXT:    s_waitcnt vmcnt(2)
-; GFX11-NEXT:    global_store_b128 v[4:5], v[10:13], off offset:48
+; GFX11-NEXT:    global_store_b128 v[4:5], v[10:13], off offset:32
 ; GFX11-NEXT:    s_waitcnt vmcnt(1)
 ; GFX11-NEXT:    global_store_b128 v[4:5], v[14:17], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)

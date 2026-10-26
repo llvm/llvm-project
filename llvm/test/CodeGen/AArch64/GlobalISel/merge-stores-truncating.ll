@@ -206,8 +206,8 @@ define void @merge_hole2(i32 %x, ptr %p) {
 ; CHECK-LABEL: merge_hole2:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    lsr w8, w0, #16
-; CHECK-NEXT:    strb w0, [x1]
 ; CHECK-NEXT:    strh w8, [x1, #2]
+; CHECK-NEXT:    strb w0, [x1]
 ; CHECK-NEXT:    ret
   %p2 = getelementptr inbounds i16, ptr %p, i64 1
   %sh = lshr i32 %x, 16

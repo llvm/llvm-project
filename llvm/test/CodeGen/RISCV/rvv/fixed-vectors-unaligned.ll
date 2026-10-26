@@ -327,8 +327,8 @@ define void @mscatter_v4i16_align1(<4 x i16> %val, <4 x ptr> %ptrs, <4 x i1> %m)
 ; RV64-SLOW-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
 ; RV64-SLOW-NEXT:    vmv.x.s a2, v10
 ; RV64-SLOW-NEXT:    srli a3, a1, 8
-; RV64-SLOW-NEXT:    sb a1, 0(a2)
 ; RV64-SLOW-NEXT:    sb a3, 1(a2)
+; RV64-SLOW-NEXT:    sb a1, 0(a2)
 ; RV64-SLOW-NEXT:    andi a1, a0, 2
 ; RV64-SLOW-NEXT:    beqz a1, .LBB6_2
 ; RV64-SLOW-NEXT:  .LBB6_6: # %cond.store1
@@ -339,8 +339,8 @@ define void @mscatter_v4i16_align1(<4 x i16> %val, <4 x ptr> %ptrs, <4 x i1> %m)
 ; RV64-SLOW-NEXT:    vslidedown.vi v9, v10, 1
 ; RV64-SLOW-NEXT:    vmv.x.s a2, v9
 ; RV64-SLOW-NEXT:    srli a3, a1, 8
-; RV64-SLOW-NEXT:    sb a1, 0(a2)
 ; RV64-SLOW-NEXT:    sb a3, 1(a2)
+; RV64-SLOW-NEXT:    sb a1, 0(a2)
 ; RV64-SLOW-NEXT:    andi a1, a0, 4
 ; RV64-SLOW-NEXT:    beqz a1, .LBB6_3
 ; RV64-SLOW-NEXT:  .LBB6_7: # %cond.store3
@@ -351,8 +351,8 @@ define void @mscatter_v4i16_align1(<4 x i16> %val, <4 x ptr> %ptrs, <4 x i1> %m)
 ; RV64-SLOW-NEXT:    vslidedown.vi v12, v10, 2
 ; RV64-SLOW-NEXT:    vmv.x.s a2, v12
 ; RV64-SLOW-NEXT:    srli a3, a1, 8
-; RV64-SLOW-NEXT:    sb a1, 0(a2)
 ; RV64-SLOW-NEXT:    sb a3, 1(a2)
+; RV64-SLOW-NEXT:    sb a1, 0(a2)
 ; RV64-SLOW-NEXT:    andi a0, a0, 8
 ; RV64-SLOW-NEXT:    beqz a0, .LBB6_4
 ; RV64-SLOW-NEXT:  .LBB6_8: # %cond.store5
@@ -363,8 +363,8 @@ define void @mscatter_v4i16_align1(<4 x i16> %val, <4 x ptr> %ptrs, <4 x i1> %m)
 ; RV64-SLOW-NEXT:    vslidedown.vi v8, v10, 3
 ; RV64-SLOW-NEXT:    vmv.x.s a1, v8
 ; RV64-SLOW-NEXT:    srli a2, a0, 8
-; RV64-SLOW-NEXT:    sb a0, 0(a1)
 ; RV64-SLOW-NEXT:    sb a2, 1(a1)
+; RV64-SLOW-NEXT:    sb a0, 0(a1)
 ; RV64-SLOW-NEXT:    ret
 ;
 ; RV32-FAST-LABEL: mscatter_v4i16_align1:

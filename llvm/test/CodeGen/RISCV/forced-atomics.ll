@@ -4528,14 +4528,14 @@ define i128 @load128(ptr %p) nounwind {
 ; RV32-NEXT:    addi a2, sp, 8
 ; RV32-NEXT:    li a3, 5
 ; RV32-NEXT:    call __atomic_load
-; RV32-NEXT:    lw a0, 8(sp)
-; RV32-NEXT:    lw a1, 12(sp)
-; RV32-NEXT:    lw a2, 16(sp)
+; RV32-NEXT:    lw a0, 12(sp)
+; RV32-NEXT:    lw a1, 16(sp)
+; RV32-NEXT:    lw a2, 8(sp)
 ; RV32-NEXT:    lw a3, 20(sp)
-; RV32-NEXT:    sw a0, 0(s0)
-; RV32-NEXT:    sw a1, 4(s0)
-; RV32-NEXT:    sw a2, 8(s0)
+; RV32-NEXT:    sw a0, 4(s0)
+; RV32-NEXT:    sw a1, 8(s0)
 ; RV32-NEXT:    sw a3, 12(s0)
+; RV32-NEXT:    sw a2, 0(s0)
 ; RV32-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 32
@@ -4682,14 +4682,14 @@ define i128 @cmpxchg128(ptr %p) nounwind {
 ; RV32-NEXT:    li a4, 5
 ; RV32-NEXT:    li a5, 5
 ; RV32-NEXT:    call __atomic_compare_exchange
-; RV32-NEXT:    lw a0, 24(sp)
-; RV32-NEXT:    lw a1, 28(sp)
-; RV32-NEXT:    lw a2, 32(sp)
+; RV32-NEXT:    lw a0, 28(sp)
+; RV32-NEXT:    lw a1, 32(sp)
+; RV32-NEXT:    lw a2, 24(sp)
 ; RV32-NEXT:    lw a3, 36(sp)
-; RV32-NEXT:    sw a0, 0(s0)
-; RV32-NEXT:    sw a1, 4(s0)
-; RV32-NEXT:    sw a2, 8(s0)
+; RV32-NEXT:    sw a0, 4(s0)
+; RV32-NEXT:    sw a1, 8(s0)
 ; RV32-NEXT:    sw a3, 12(s0)
+; RV32-NEXT:    sw a2, 0(s0)
 ; RV32-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 40(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 48

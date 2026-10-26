@@ -8,9 +8,9 @@ define void @add_i256(i64 %x0, i64 %x1, i64 %x2, i64 %x3, i64 %y1, i64 %y2, i64 
 ; CHECK-NEXT:    adds x8, x0, #1
 ; CHECK-NEXT:    adcs x9, x1, x4
 ; CHECK-NEXT:    stp x8, x9, [x7]
-; CHECK-NEXT:    adcs x8, x2, x5
-; CHECK-NEXT:    adc x9, x3, x6
-; CHECK-NEXT:    stp x8, x9, [x7, #16]
+; CHECK-NEXT:    adcs x9, x2, x5
+; CHECK-NEXT:    adc x8, x3, x6
+; CHECK-NEXT:    stp x9, x8, [x7, #16]
 ; CHECK-NEXT:    ret
 entry:
   ; Build x_256 = x0 | x1 << 64 | x2 << 128 | x3 << 192

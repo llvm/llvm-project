@@ -331,7 +331,6 @@ define zeroext i32 @test1(i64 %0, ptr %1) {
 ; CHECK-NEXT:    stdx 3, 12, 16
 ; CHECK-NEXT:    stdx 3, 12, 15
 ; CHECK-NEXT:    stdx 3, 12, 14
-; CHECK-NEXT:    stdx 3, 12, 31
 ; CHECK-NEXT:    stdx 3, 12, 2
 ; CHECK-NEXT:    ld 2, 544(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    stdx 3, 12, 2
@@ -371,6 +370,7 @@ define zeroext i32 @test1(i64 %0, ptr %1) {
 ; CHECK-NEXT:    stdx 3, 12, 2
 ; CHECK-NEXT:    ld 2, 400(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    stdx 3, 12, 2
+; CHECK-NEXT:    stdx 3, 12, 31
 ; CHECK-NEXT:    bdnz .LBB0_2
 ; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    ld 12, 384(1) # 8-byte Folded Reload

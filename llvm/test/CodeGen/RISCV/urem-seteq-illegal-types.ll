@@ -415,8 +415,8 @@ define void @test_urem_vec(ptr %X) nounwind {
 ; RV32-NEXT:    or a3, a3, a4
 ; RV32-NEXT:    xori a2, a2, 1
 ; RV32-NEXT:    or a1, a1, a3
-; RV32-NEXT:    sw a1, 0(a0)
 ; RV32-NEXT:    sb a2, 4(a0)
+; RV32-NEXT:    sw a1, 0(a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_urem_vec:
@@ -519,8 +519,8 @@ define void @test_urem_vec(ptr %X) nounwind {
 ; RV32M-NEXT:    or a1, a1, a4
 ; RV32M-NEXT:    xori a2, a2, 1
 ; RV32M-NEXT:    or a1, a3, a1
-; RV32M-NEXT:    sw a1, 0(a0)
 ; RV32M-NEXT:    sb a2, 4(a0)
+; RV32M-NEXT:    sw a1, 0(a0)
 ; RV32M-NEXT:    ret
 ;
 ; RV64M-LABEL: test_urem_vec:
@@ -623,8 +623,8 @@ define void @test_urem_vec(ptr %X) nounwind {
 ; RV32MV-NEXT:    slli a3, a3, 11
 ; RV32MV-NEXT:    srli a2, a2, 31
 ; RV32MV-NEXT:    or a1, a1, a3
-; RV32MV-NEXT:    sw a1, 0(a0)
 ; RV32MV-NEXT:    sb a2, 4(a0)
+; RV32MV-NEXT:    sw a1, 0(a0)
 ; RV32MV-NEXT:    ret
 ;
 ; RV64MV-LABEL: test_urem_vec:

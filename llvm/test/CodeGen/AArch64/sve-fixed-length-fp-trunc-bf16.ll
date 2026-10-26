@@ -235,53 +235,54 @@ define void @fcvt_v32f32_v32bf16(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-BASE-LABEL: fcvt_v32f32_v32bf16:
 ; CHECK-BASE:       // %bb.0:
 ; CHECK-BASE-NEXT:    ptrue p0.s, vl32
-; CHECK-BASE-NEXT:    mov z3.s, #32767 // =0x7fff
+; CHECK-BASE-NEXT:    mov z1.s, #32767 // =0x7fff
 ; CHECK-BASE-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-BASE-NEXT:    ptrue p0.s
-; CHECK-BASE-NEXT:    movprfx z1, z0
-; CHECK-BASE-NEXT:    ext z1.b, z1.b, z0.b, #64
 ; CHECK-BASE-NEXT:    movprfx z2, z0
-; CHECK-BASE-NEXT:    ext z2.b, z2.b, z0.b, #32
+; CHECK-BASE-NEXT:    ext z2.b, z2.b, z0.b, #64
+; CHECK-BASE-NEXT:    movprfx z3, z0
+; CHECK-BASE-NEXT:    ext z3.b, z3.b, z0.b, #32
 ; CHECK-BASE-NEXT:    lsr z4.s, z0.s, #16
-; CHECK-BASE-NEXT:    add z16.s, z0.s, z3.s
-; CHECK-BASE-NEXT:    fcmuo p1.s, p0/z, z0.s, z0.s
+; CHECK-BASE-NEXT:    add z7.s, z0.s, z1.s
+; CHECK-BASE-NEXT:    fcmuo p2.s, p0/z, z0.s, z0.s
 ; CHECK-BASE-NEXT:    orr z0.s, z0.s, #0x400000
-; CHECK-BASE-NEXT:    movprfx z7, z1
-; CHECK-BASE-NEXT:    ext z7.b, z7.b, z1.b, #32
-; CHECK-BASE-NEXT:    lsr z5.s, z2.s, #16
-; CHECK-BASE-NEXT:    lsr z6.s, z1.s, #16
-; CHECK-BASE-NEXT:    add z17.s, z2.s, z3.s
-; CHECK-BASE-NEXT:    add z18.s, z1.s, z3.s
+; CHECK-BASE-NEXT:    movprfx z16, z2
+; CHECK-BASE-NEXT:    ext z16.b, z16.b, z2.b, #32
+; CHECK-BASE-NEXT:    lsr z5.s, z3.s, #16
+; CHECK-BASE-NEXT:    lsr z6.s, z2.s, #16
+; CHECK-BASE-NEXT:    add z17.s, z3.s, z1.s
+; CHECK-BASE-NEXT:    add z18.s, z2.s, z1.s
 ; CHECK-BASE-NEXT:    and z4.s, z4.s, #0x1
-; CHECK-BASE-NEXT:    fcmuo p2.s, p0/z, z2.s, z2.s
+; CHECK-BASE-NEXT:    fcmuo p1.s, p0/z, z2.s, z2.s
 ; CHECK-BASE-NEXT:    orr z2.s, z2.s, #0x400000
-; CHECK-BASE-NEXT:    lsr z19.s, z7.s, #16
+; CHECK-BASE-NEXT:    lsr z19.s, z16.s, #16
 ; CHECK-BASE-NEXT:    and z5.s, z5.s, #0x1
 ; CHECK-BASE-NEXT:    and z6.s, z6.s, #0x1
-; CHECK-BASE-NEXT:    add z3.s, z7.s, z3.s
-; CHECK-BASE-NEXT:    add z4.s, z4.s, z16.s
-; CHECK-BASE-NEXT:    fcmuo p3.s, p0/z, z1.s, z1.s
-; CHECK-BASE-NEXT:    orr z1.s, z1.s, #0x400000
+; CHECK-BASE-NEXT:    add z1.s, z16.s, z1.s
+; CHECK-BASE-NEXT:    add z4.s, z4.s, z7.s
+; CHECK-BASE-NEXT:    fcmuo p3.s, p0/z, z3.s, z3.s
+; CHECK-BASE-NEXT:    orr z3.s, z3.s, #0x400000
 ; CHECK-BASE-NEXT:    and z19.s, z19.s, #0x1
 ; CHECK-BASE-NEXT:    add z5.s, z5.s, z17.s
 ; CHECK-BASE-NEXT:    add z6.s, z6.s, z18.s
-; CHECK-BASE-NEXT:    fcmuo p0.s, p0/z, z7.s, z7.s
-; CHECK-BASE-NEXT:    orr z7.s, z7.s, #0x400000
-; CHECK-BASE-NEXT:    sel z0.s, p1, z0.s, z4.s
-; CHECK-BASE-NEXT:    add z3.s, z19.s, z3.s
-; CHECK-BASE-NEXT:    sel z2.s, p2, z2.s, z5.s
-; CHECK-BASE-NEXT:    sel z1.s, p3, z1.s, z6.s
+; CHECK-BASE-NEXT:    fcmuo p0.s, p0/z, z16.s, z16.s
+; CHECK-BASE-NEXT:    orr z16.s, z16.s, #0x400000
+; CHECK-BASE-NEXT:    sel z0.s, p2, z0.s, z4.s
+; CHECK-BASE-NEXT:    add z1.s, z19.s, z1.s
+; CHECK-BASE-NEXT:    sel z2.s, p1, z2.s, z6.s
+; CHECK-BASE-NEXT:    sel z3.s, p3, z3.s, z5.s
 ; CHECK-BASE-NEXT:    lsr z0.s, z0.s, #16
-; CHECK-BASE-NEXT:    mov z3.s, p0/m, z7.s
+; CHECK-BASE-NEXT:    mov z1.s, p0/m, z16.s
 ; CHECK-BASE-NEXT:    lsr z2.s, z2.s, #16
-; CHECK-BASE-NEXT:    lsr z1.s, z1.s, #16
-; CHECK-BASE-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; CHECK-BASE-NEXT:    lsr z3.s, z3.s, #16
+; CHECK-BASE-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-BASE-NEXT:    lsr z1.s, z1.s, #16
 ; CHECK-BASE-NEXT:    uzp1 z2.h, z2.h, z2.h
-; CHECK-BASE-NEXT:    uzp1 z1.h, z1.h, z1.h
 ; CHECK-BASE-NEXT:    uzp1 z3.h, z3.h, z3.h
-; CHECK-BASE-NEXT:    stp q0, q2, [x1]
-; CHECK-BASE-NEXT:    stp q1, q3, [x1, #32]
+; CHECK-BASE-NEXT:    str q0, [x1]
+; CHECK-BASE-NEXT:    uzp1 z1.h, z1.h, z1.h
+; CHECK-BASE-NEXT:    stp q3, q2, [x1, #16]
+; CHECK-BASE-NEXT:    str q1, [x1, #48]
 ; CHECK-BASE-NEXT:    ret
 ;
 ; CHECK-BF16-LABEL: fcvt_v32f32_v32bf16:
@@ -296,15 +297,16 @@ define void @fcvt_v32f32_v32bf16(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-BF16-NEXT:    bfcvt z0.h, p0/m, z0.s
 ; CHECK-BF16-NEXT:    movprfx z3, z1
 ; CHECK-BF16-NEXT:    ext z3.b, z3.b, z1.b, #32
-; CHECK-BF16-NEXT:    bfcvt z2.h, p0/m, z2.s
 ; CHECK-BF16-NEXT:    bfcvt z1.h, p0/m, z1.s
+; CHECK-BF16-NEXT:    bfcvt z2.h, p0/m, z2.s
 ; CHECK-BF16-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; CHECK-BF16-NEXT:    bfcvt z3.h, p0/m, z3.s
-; CHECK-BF16-NEXT:    uzp1 z2.h, z2.h, z2.h
 ; CHECK-BF16-NEXT:    uzp1 z1.h, z1.h, z1.h
+; CHECK-BF16-NEXT:    uzp1 z2.h, z2.h, z2.h
+; CHECK-BF16-NEXT:    str q0, [x1]
 ; CHECK-BF16-NEXT:    uzp1 z3.h, z3.h, z3.h
-; CHECK-BF16-NEXT:    stp q0, q2, [x1]
-; CHECK-BF16-NEXT:    stp q1, q3, [x1, #32]
+; CHECK-BF16-NEXT:    stp q2, q1, [x1, #16]
+; CHECK-BF16-NEXT:    str q3, [x1, #48]
 ; CHECK-BF16-NEXT:    ret
   %op1 = load <32 x float>, ptr %a
   %res = fptrunc <32 x float> %op1 to <32 x bfloat>
@@ -316,99 +318,100 @@ define void @fcvt_v64f32_v64bf16(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-BASE-LABEL: fcvt_v64f32_v64bf16:
 ; CHECK-BASE:       // %bb.0:
 ; CHECK-BASE-NEXT:    ptrue p0.s, vl64
-; CHECK-BASE-NEXT:    mov z2.s, #32767 // =0x7fff
+; CHECK-BASE-NEXT:    mov z3.s, #32767 // =0x7fff
 ; CHECK-BASE-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-BASE-NEXT:    ptrue p0.s
 ; CHECK-BASE-NEXT:    movprfx z1, z0
 ; CHECK-BASE-NEXT:    ext z1.b, z1.b, z0.b, #128
-; CHECK-BASE-NEXT:    movprfx z3, z0
-; CHECK-BASE-NEXT:    ext z3.b, z3.b, z0.b, #32
 ; CHECK-BASE-NEXT:    movprfx z4, z0
-; CHECK-BASE-NEXT:    ext z4.b, z4.b, z0.b, #64
-; CHECK-BASE-NEXT:    lsr z16.s, z0.s, #16
+; CHECK-BASE-NEXT:    ext z4.b, z4.b, z0.b, #32
+; CHECK-BASE-NEXT:    movprfx z2, z0
+; CHECK-BASE-NEXT:    ext z2.b, z2.b, z0.b, #64
+; CHECK-BASE-NEXT:    lsr z17.s, z0.s, #16
 ; CHECK-BASE-NEXT:    fcmuo p5.s, p0/z, z0.s, z0.s
-; CHECK-BASE-NEXT:    lsr z22.s, z1.s, #16
 ; CHECK-BASE-NEXT:    movprfx z5, z1
 ; CHECK-BASE-NEXT:    ext z5.b, z5.b, z1.b, #32
-; CHECK-BASE-NEXT:    lsr z6.s, z3.s, #16
-; CHECK-BASE-NEXT:    lsr z7.s, z4.s, #16
-; CHECK-BASE-NEXT:    movprfx z17, z1
-; CHECK-BASE-NEXT:    ext z17.b, z17.b, z1.b, #64
-; CHECK-BASE-NEXT:    add z23.s, z1.s, z2.s
-; CHECK-BASE-NEXT:    movprfx z18, z4
-; CHECK-BASE-NEXT:    ext z18.b, z18.b, z4.b, #32
-; CHECK-BASE-NEXT:    add z19.s, z3.s, z2.s
-; CHECK-BASE-NEXT:    add z21.s, z4.s, z2.s
-; CHECK-BASE-NEXT:    and z22.s, z22.s, #0x1
-; CHECK-BASE-NEXT:    lsr z20.s, z5.s, #16
+; CHECK-BASE-NEXT:    lsr z23.s, z1.s, #16
+; CHECK-BASE-NEXT:    movprfx z7, z1
+; CHECK-BASE-NEXT:    ext z7.b, z7.b, z1.b, #64
+; CHECK-BASE-NEXT:    lsr z6.s, z4.s, #16
+; CHECK-BASE-NEXT:    add z24.s, z1.s, z3.s
+; CHECK-BASE-NEXT:    movprfx z18, z2
+; CHECK-BASE-NEXT:    ext z18.b, z18.b, z2.b, #32
+; CHECK-BASE-NEXT:    add z19.s, z4.s, z3.s
+; CHECK-BASE-NEXT:    and z17.s, z17.s, #0x1
+; CHECK-BASE-NEXT:    lsr z20.s, z2.s, #16
+; CHECK-BASE-NEXT:    lsr z16.s, z5.s, #16
+; CHECK-BASE-NEXT:    and z23.s, z23.s, #0x1
+; CHECK-BASE-NEXT:    add z21.s, z5.s, z3.s
+; CHECK-BASE-NEXT:    lsr z22.s, z7.s, #16
 ; CHECK-BASE-NEXT:    and z6.s, z6.s, #0x1
-; CHECK-BASE-NEXT:    and z7.s, z7.s, #0x1
-; CHECK-BASE-NEXT:    movprfx z24, z17
-; CHECK-BASE-NEXT:    ext z24.b, z24.b, z17.b, #32
+; CHECK-BASE-NEXT:    movprfx z25, z7
+; CHECK-BASE-NEXT:    ext z25.b, z25.b, z7.b, #32
+; CHECK-BASE-NEXT:    fcmuo p3.s, p0/z, z4.s, z4.s
+; CHECK-BASE-NEXT:    lsr z26.s, z18.s, #16
+; CHECK-BASE-NEXT:    orr z4.s, z4.s, #0x400000
 ; CHECK-BASE-NEXT:    and z16.s, z16.s, #0x1
-; CHECK-BASE-NEXT:    add z26.s, z5.s, z2.s
-; CHECK-BASE-NEXT:    lsr z25.s, z18.s, #16
-; CHECK-BASE-NEXT:    add z22.s, z22.s, z23.s
-; CHECK-BASE-NEXT:    add z23.s, z0.s, z2.s
-; CHECK-BASE-NEXT:    and z20.s, z20.s, #0x1
-; CHECK-BASE-NEXT:    fcmuo p2.s, p0/z, z3.s, z3.s
+; CHECK-BASE-NEXT:    add z23.s, z23.s, z24.s
+; CHECK-BASE-NEXT:    add z24.s, z0.s, z3.s
+; CHECK-BASE-NEXT:    and z22.s, z22.s, #0x1
 ; CHECK-BASE-NEXT:    add z6.s, z6.s, z19.s
-; CHECK-BASE-NEXT:    add z7.s, z7.s, z21.s
-; CHECK-BASE-NEXT:    lsr z21.s, z17.s, #16
-; CHECK-BASE-NEXT:    orr z3.s, z3.s, #0x400000
 ; CHECK-BASE-NEXT:    orr z0.s, z0.s, #0x400000
-; CHECK-BASE-NEXT:    add z16.s, z16.s, z23.s
-; CHECK-BASE-NEXT:    lsr z23.s, z24.s, #16
-; CHECK-BASE-NEXT:    add z20.s, z20.s, z26.s
 ; CHECK-BASE-NEXT:    fcmuo p1.s, p0/z, z5.s, z5.s
 ; CHECK-BASE-NEXT:    orr z5.s, z5.s, #0x400000
-; CHECK-BASE-NEXT:    add z19.s, z18.s, z2.s
-; CHECK-BASE-NEXT:    fcmuo p3.s, p0/z, z4.s, z4.s
-; CHECK-BASE-NEXT:    add z26.s, z17.s, z2.s
-; CHECK-BASE-NEXT:    and z25.s, z25.s, #0x1
-; CHECK-BASE-NEXT:    fcmuo p4.s, p0/z, z1.s, z1.s
-; CHECK-BASE-NEXT:    and z21.s, z21.s, #0x1
-; CHECK-BASE-NEXT:    orr z4.s, z4.s, #0x400000
-; CHECK-BASE-NEXT:    orr z1.s, z1.s, #0x400000
-; CHECK-BASE-NEXT:    sel z3.s, p2, z3.s, z6.s
-; CHECK-BASE-NEXT:    sel z0.s, p5, z0.s, z16.s
-; CHECK-BASE-NEXT:    and z23.s, z23.s, #0x1
-; CHECK-BASE-NEXT:    add z2.s, z24.s, z2.s
-; CHECK-BASE-NEXT:    sel z5.s, p1, z5.s, z20.s
-; CHECK-BASE-NEXT:    sel z4.s, p3, z4.s, z7.s
-; CHECK-BASE-NEXT:    add z6.s, z25.s, z19.s
-; CHECK-BASE-NEXT:    add z7.s, z21.s, z26.s
-; CHECK-BASE-NEXT:    sel z1.s, p4, z1.s, z22.s
-; CHECK-BASE-NEXT:    lsr z0.s, z0.s, #16
-; CHECK-BASE-NEXT:    lsr z3.s, z3.s, #16
-; CHECK-BASE-NEXT:    add z2.s, z23.s, z2.s
-; CHECK-BASE-NEXT:    lsr z5.s, z5.s, #16
+; CHECK-BASE-NEXT:    add z19.s, z18.s, z3.s
+; CHECK-BASE-NEXT:    add z16.s, z16.s, z21.s
+; CHECK-BASE-NEXT:    add z21.s, z7.s, z3.s
+; CHECK-BASE-NEXT:    add z17.s, z17.s, z24.s
+; CHECK-BASE-NEXT:    lsr z24.s, z25.s, #16
+; CHECK-BASE-NEXT:    and z26.s, z26.s, #0x1
+; CHECK-BASE-NEXT:    and z20.s, z20.s, #0x1
+; CHECK-BASE-NEXT:    fcmuo p2.s, p0/z, z7.s, z7.s
+; CHECK-BASE-NEXT:    orr z7.s, z7.s, #0x400000
+; CHECK-BASE-NEXT:    sel z4.s, p3, z4.s, z6.s
+; CHECK-BASE-NEXT:    add z21.s, z22.s, z21.s
+; CHECK-BASE-NEXT:    add z22.s, z2.s, z3.s
+; CHECK-BASE-NEXT:    sel z0.s, p5, z0.s, z17.s
+; CHECK-BASE-NEXT:    and z24.s, z24.s, #0x1
+; CHECK-BASE-NEXT:    add z3.s, z25.s, z3.s
+; CHECK-BASE-NEXT:    sel z5.s, p1, z5.s, z16.s
+; CHECK-BASE-NEXT:    add z6.s, z26.s, z19.s
 ; CHECK-BASE-NEXT:    lsr z4.s, z4.s, #16
-; CHECK-BASE-NEXT:    lsr z1.s, z1.s, #16
+; CHECK-BASE-NEXT:    sel z7.s, p2, z7.s, z21.s
+; CHECK-BASE-NEXT:    add z16.s, z20.s, z22.s
+; CHECK-BASE-NEXT:    lsr z0.s, z0.s, #16
+; CHECK-BASE-NEXT:    add z3.s, z24.s, z3.s
+; CHECK-BASE-NEXT:    lsr z5.s, z5.s, #16
+; CHECK-BASE-NEXT:    uzp1 z4.h, z4.h, z4.h
 ; CHECK-BASE-NEXT:    uzp1 z0.h, z0.h, z0.h
-; CHECK-BASE-NEXT:    uzp1 z3.h, z3.h, z3.h
-; CHECK-BASE-NEXT:    uzp1 z5.h, z5.h, z5.h
-; CHECK-BASE-NEXT:    fcmuo p1.s, p0/z, z18.s, z18.s
-; CHECK-BASE-NEXT:    orr z18.s, z18.s, #0x400000
-; CHECK-BASE-NEXT:    stp q0, q3, [x1]
-; CHECK-BASE-NEXT:    uzp1 z1.h, z1.h, z1.h
-; CHECK-BASE-NEXT:    fcmuo p2.s, p0/z, z17.s, z17.s
-; CHECK-BASE-NEXT:    orr z17.s, z17.s, #0x400000
-; CHECK-BASE-NEXT:    fcmuo p0.s, p0/z, z24.s, z24.s
-; CHECK-BASE-NEXT:    orr z24.s, z24.s, #0x400000
-; CHECK-BASE-NEXT:    stp q1, q5, [x1, #64]
-; CHECK-BASE-NEXT:    mov z6.s, p1/m, z18.s
-; CHECK-BASE-NEXT:    mov z7.s, p2/m, z17.s
-; CHECK-BASE-NEXT:    mov z2.s, p0/m, z24.s
-; CHECK-BASE-NEXT:    lsr z6.s, z6.s, #16
 ; CHECK-BASE-NEXT:    lsr z7.s, z7.s, #16
-; CHECK-BASE-NEXT:    lsr z0.s, z2.s, #16
-; CHECK-BASE-NEXT:    uzp1 z2.h, z4.h, z4.h
-; CHECK-BASE-NEXT:    uzp1 z3.h, z6.h, z6.h
-; CHECK-BASE-NEXT:    uzp1 z1.h, z7.h, z7.h
+; CHECK-BASE-NEXT:    fcmuo p4.s, p0/z, z1.s, z1.s
+; CHECK-BASE-NEXT:    orr z1.s, z1.s, #0x400000
+; CHECK-BASE-NEXT:    fcmuo p1.s, p0/z, z2.s, z2.s
+; CHECK-BASE-NEXT:    orr z2.s, z2.s, #0x400000
+; CHECK-BASE-NEXT:    stp q0, q4, [x1]
+; CHECK-BASE-NEXT:    uzp1 z7.h, z7.h, z7.h
+; CHECK-BASE-NEXT:    fcmuo p2.s, p0/z, z18.s, z18.s
+; CHECK-BASE-NEXT:    orr z18.s, z18.s, #0x400000
+; CHECK-BASE-NEXT:    sel z1.s, p4, z1.s, z23.s
+; CHECK-BASE-NEXT:    sel z2.s, p1, z2.s, z16.s
+; CHECK-BASE-NEXT:    fcmuo p0.s, p0/z, z25.s, z25.s
+; CHECK-BASE-NEXT:    orr z25.s, z25.s, #0x400000
+; CHECK-BASE-NEXT:    mov z6.s, p2/m, z18.s
+; CHECK-BASE-NEXT:    lsr z1.s, z1.s, #16
+; CHECK-BASE-NEXT:    lsr z2.s, z2.s, #16
+; CHECK-BASE-NEXT:    mov z3.s, p0/m, z25.s
+; CHECK-BASE-NEXT:    lsr z6.s, z6.s, #16
+; CHECK-BASE-NEXT:    uzp1 z1.h, z1.h, z1.h
+; CHECK-BASE-NEXT:    uzp1 z2.h, z2.h, z2.h
+; CHECK-BASE-NEXT:    lsr z0.s, z3.s, #16
+; CHECK-BASE-NEXT:    uzp1 z3.h, z5.h, z5.h
+; CHECK-BASE-NEXT:    uzp1 z4.h, z6.h, z6.h
+; CHECK-BASE-NEXT:    str q2, [x1, #32]
 ; CHECK-BASE-NEXT:    uzp1 z0.h, z0.h, z0.h
-; CHECK-BASE-NEXT:    stp q2, q3, [x1, #32]
-; CHECK-BASE-NEXT:    stp q1, q0, [x1, #96]
+; CHECK-BASE-NEXT:    stp q4, q1, [x1, #48]
+; CHECK-BASE-NEXT:    stp q3, q7, [x1, #80]
+; CHECK-BASE-NEXT:    str q0, [x1, #112]
 ; CHECK-BASE-NEXT:    ret
 ;
 ; CHECK-BF16-LABEL: fcvt_v64f32_v64bf16:
@@ -416,40 +419,39 @@ define void @fcvt_v64f32_v64bf16(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-BF16-NEXT:    ptrue p0.s, vl64
 ; CHECK-BF16-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-BF16-NEXT:    ptrue p0.s
-; CHECK-BF16-NEXT:    movprfx z3, z0
-; CHECK-BF16-NEXT:    ext z3.b, z3.b, z0.b, #32
+; CHECK-BF16-NEXT:    movprfx z2, z0
+; CHECK-BF16-NEXT:    ext z2.b, z2.b, z0.b, #32
 ; CHECK-BF16-NEXT:    movprfx z1, z0
 ; CHECK-BF16-NEXT:    ext z1.b, z1.b, z0.b, #128
-; CHECK-BF16-NEXT:    movprfx z2, z0
-; CHECK-BF16-NEXT:    ext z2.b, z2.b, z0.b, #64
+; CHECK-BF16-NEXT:    movprfx z3, z0
+; CHECK-BF16-NEXT:    ext z3.b, z3.b, z0.b, #64
 ; CHECK-BF16-NEXT:    bfcvt z0.h, p0/m, z0.s
-; CHECK-BF16-NEXT:    bfcvt z3.h, p0/m, z3.s
-; CHECK-BF16-NEXT:    movprfx z4, z1
-; CHECK-BF16-NEXT:    ext z4.b, z4.b, z1.b, #32
-; CHECK-BF16-NEXT:    movprfx z5, z1
-; CHECK-BF16-NEXT:    ext z5.b, z5.b, z1.b, #64
-; CHECK-BF16-NEXT:    bfcvt z1.h, p0/m, z1.s
-; CHECK-BF16-NEXT:    movprfx z6, z2
-; CHECK-BF16-NEXT:    ext z6.b, z6.b, z2.b, #32
 ; CHECK-BF16-NEXT:    bfcvt z2.h, p0/m, z2.s
+; CHECK-BF16-NEXT:    movprfx z4, z1
+; CHECK-BF16-NEXT:    ext z4.b, z4.b, z1.b, #64
+; CHECK-BF16-NEXT:    movprfx z5, z1
+; CHECK-BF16-NEXT:    ext z5.b, z5.b, z1.b, #32
+; CHECK-BF16-NEXT:    bfcvt z1.h, p0/m, z1.s
+; CHECK-BF16-NEXT:    movprfx z6, z3
+; CHECK-BF16-NEXT:    ext z6.b, z6.b, z3.b, #32
+; CHECK-BF16-NEXT:    bfcvt z3.h, p0/m, z3.s
 ; CHECK-BF16-NEXT:    uzp1 z0.h, z0.h, z0.h
-; CHECK-BF16-NEXT:    bfcvt z4.h, p0/m, z4.s
-; CHECK-BF16-NEXT:    movprfx z7, z5
-; CHECK-BF16-NEXT:    ext z7.b, z7.b, z5.b, #32
+; CHECK-BF16-NEXT:    bfcvt z7.h, p0/m, z4.s
+; CHECK-BF16-NEXT:    ext z4.b, z4.b, z4.b, #32
 ; CHECK-BF16-NEXT:    bfcvt z5.h, p0/m, z5.s
-; CHECK-BF16-NEXT:    uzp1 z3.h, z3.h, z3.h
+; CHECK-BF16-NEXT:    uzp1 z2.h, z2.h, z2.h
 ; CHECK-BF16-NEXT:    bfcvt z6.h, p0/m, z6.s
 ; CHECK-BF16-NEXT:    uzp1 z1.h, z1.h, z1.h
-; CHECK-BF16-NEXT:    uzp1 z2.h, z2.h, z2.h
-; CHECK-BF16-NEXT:    stp q0, q3, [x1]
-; CHECK-BF16-NEXT:    bfcvt z0.h, p0/m, z7.s
-; CHECK-BF16-NEXT:    uzp1 z4.h, z4.h, z4.h
-; CHECK-BF16-NEXT:    uzp1 z3.h, z5.h, z5.h
-; CHECK-BF16-NEXT:    stp q1, q4, [x1, #64]
-; CHECK-BF16-NEXT:    uzp1 z1.h, z6.h, z6.h
+; CHECK-BF16-NEXT:    stp q0, q2, [x1]
+; CHECK-BF16-NEXT:    bfcvt z0.h, p0/m, z4.s
+; CHECK-BF16-NEXT:    uzp1 z5.h, z5.h, z5.h
+; CHECK-BF16-NEXT:    uzp1 z4.h, z7.h, z7.h
+; CHECK-BF16-NEXT:    uzp1 z2.h, z6.h, z6.h
+; CHECK-BF16-NEXT:    stp q1, q5, [x1, #64]
+; CHECK-BF16-NEXT:    uzp1 z1.h, z3.h, z3.h
 ; CHECK-BF16-NEXT:    uzp1 z0.h, z0.h, z0.h
-; CHECK-BF16-NEXT:    stp q2, q1, [x1, #32]
-; CHECK-BF16-NEXT:    stp q3, q0, [x1, #96]
+; CHECK-BF16-NEXT:    stp q1, q2, [x1, #32]
+; CHECK-BF16-NEXT:    stp q4, q0, [x1, #96]
 ; CHECK-BF16-NEXT:    ret
   %op1 = load <64 x float>, ptr %a
   %res = fptrunc <64 x float> %op1 to <64 x bfloat>
@@ -758,7 +760,7 @@ define void @fcvt_v32f64_v32bf16(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-BASE-NEXT:    fcvtx z2.s, p0/m, z2.d
 ; CHECK-BASE-NEXT:    lsr z5.s, z0.s, #16
 ; CHECK-BASE-NEXT:    add z16.s, z0.s, z4.s
-; CHECK-BASE-NEXT:    fcmuo p1.s, p0/z, z0.s, z0.s
+; CHECK-BASE-NEXT:    fcmuo p2.s, p0/z, z0.s, z0.s
 ; CHECK-BASE-NEXT:    orr z0.s, z0.s, #0x400000
 ; CHECK-BASE-NEXT:    fcvtx z1.s, p0/m, z1.d
 ; CHECK-BASE-NEXT:    lsr z6.s, z2.s, #16
@@ -766,39 +768,40 @@ define void @fcvt_v32f64_v32bf16(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-BASE-NEXT:    add z17.s, z2.s, z4.s
 ; CHECK-BASE-NEXT:    add z18.s, z3.s, z4.s
 ; CHECK-BASE-NEXT:    and z5.s, z5.s, #0x1
-; CHECK-BASE-NEXT:    fcmuo p2.s, p0/z, z2.s, z2.s
-; CHECK-BASE-NEXT:    orr z2.s, z2.s, #0x400000
+; CHECK-BASE-NEXT:    fcmuo p1.s, p0/z, z3.s, z3.s
+; CHECK-BASE-NEXT:    orr z3.s, z3.s, #0x400000
 ; CHECK-BASE-NEXT:    lsr z19.s, z1.s, #16
 ; CHECK-BASE-NEXT:    and z6.s, z6.s, #0x1
 ; CHECK-BASE-NEXT:    and z7.s, z7.s, #0x1
 ; CHECK-BASE-NEXT:    add z4.s, z1.s, z4.s
 ; CHECK-BASE-NEXT:    add z5.s, z5.s, z16.s
-; CHECK-BASE-NEXT:    fcmuo p3.s, p0/z, z3.s, z3.s
-; CHECK-BASE-NEXT:    orr z3.s, z3.s, #0x400000
+; CHECK-BASE-NEXT:    fcmuo p3.s, p0/z, z2.s, z2.s
+; CHECK-BASE-NEXT:    orr z2.s, z2.s, #0x400000
 ; CHECK-BASE-NEXT:    and z19.s, z19.s, #0x1
 ; CHECK-BASE-NEXT:    add z6.s, z6.s, z17.s
 ; CHECK-BASE-NEXT:    add z7.s, z7.s, z18.s
 ; CHECK-BASE-NEXT:    fcmuo p0.s, p0/z, z1.s, z1.s
 ; CHECK-BASE-NEXT:    orr z1.s, z1.s, #0x400000
-; CHECK-BASE-NEXT:    sel z0.s, p1, z0.s, z5.s
+; CHECK-BASE-NEXT:    sel z0.s, p2, z0.s, z5.s
 ; CHECK-BASE-NEXT:    add z4.s, z19.s, z4.s
-; CHECK-BASE-NEXT:    sel z2.s, p2, z2.s, z6.s
-; CHECK-BASE-NEXT:    sel z3.s, p3, z3.s, z7.s
+; CHECK-BASE-NEXT:    sel z3.s, p1, z3.s, z7.s
+; CHECK-BASE-NEXT:    sel z2.s, p3, z2.s, z6.s
 ; CHECK-BASE-NEXT:    lsr z0.s, z0.s, #16
 ; CHECK-BASE-NEXT:    sel z1.s, p0, z1.s, z4.s
-; CHECK-BASE-NEXT:    lsr z2.s, z2.s, #16
 ; CHECK-BASE-NEXT:    lsr z3.s, z3.s, #16
+; CHECK-BASE-NEXT:    lsr z2.s, z2.s, #16
 ; CHECK-BASE-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; CHECK-BASE-NEXT:    lsr z1.s, z1.s, #16
-; CHECK-BASE-NEXT:    uzp1 z2.s, z2.s, z2.s
 ; CHECK-BASE-NEXT:    uzp1 z3.s, z3.s, z3.s
+; CHECK-BASE-NEXT:    uzp1 z2.s, z2.s, z2.s
 ; CHECK-BASE-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; CHECK-BASE-NEXT:    uzp1 z1.s, z1.s, z1.s
-; CHECK-BASE-NEXT:    uzp1 z2.h, z2.h, z2.h
 ; CHECK-BASE-NEXT:    uzp1 z3.h, z3.h, z3.h
+; CHECK-BASE-NEXT:    uzp1 z2.h, z2.h, z2.h
+; CHECK-BASE-NEXT:    str q0, [x1]
 ; CHECK-BASE-NEXT:    uzp1 z1.h, z1.h, z1.h
-; CHECK-BASE-NEXT:    stp q0, q2, [x1]
-; CHECK-BASE-NEXT:    stp q3, q1, [x1, #32]
+; CHECK-BASE-NEXT:    stp q2, q3, [x1, #16]
+; CHECK-BASE-NEXT:    str q1, [x1, #48]
 ; CHECK-BASE-NEXT:    ret
 ;
 ; CHECK-BF16-LABEL: fcvt_v32f64_v32bf16:
@@ -813,23 +816,24 @@ define void @fcvt_v32f64_v32bf16(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-BF16-NEXT:    fcvtx z0.s, p0/m, z0.d
 ; CHECK-BF16-NEXT:    movprfx z3, z1
 ; CHECK-BF16-NEXT:    ext z3.b, z3.b, z1.b, #64
-; CHECK-BF16-NEXT:    fcvtx z2.s, p0/m, z2.d
 ; CHECK-BF16-NEXT:    fcvtx z1.s, p0/m, z1.d
+; CHECK-BF16-NEXT:    fcvtx z2.s, p0/m, z2.d
 ; CHECK-BF16-NEXT:    bfcvt z0.h, p0/m, z0.s
 ; CHECK-BF16-NEXT:    fcvtx z3.s, p0/m, z3.d
-; CHECK-BF16-NEXT:    bfcvt z2.h, p0/m, z2.s
 ; CHECK-BF16-NEXT:    bfcvt z1.h, p0/m, z1.s
+; CHECK-BF16-NEXT:    bfcvt z2.h, p0/m, z2.s
 ; CHECK-BF16-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; CHECK-BF16-NEXT:    bfcvt z3.h, p0/m, z3.s
-; CHECK-BF16-NEXT:    uzp1 z2.s, z2.s, z2.s
 ; CHECK-BF16-NEXT:    uzp1 z1.s, z1.s, z1.s
+; CHECK-BF16-NEXT:    uzp1 z2.s, z2.s, z2.s
 ; CHECK-BF16-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; CHECK-BF16-NEXT:    uzp1 z3.s, z3.s, z3.s
-; CHECK-BF16-NEXT:    uzp1 z2.h, z2.h, z2.h
 ; CHECK-BF16-NEXT:    uzp1 z1.h, z1.h, z1.h
+; CHECK-BF16-NEXT:    uzp1 z2.h, z2.h, z2.h
+; CHECK-BF16-NEXT:    str q0, [x1]
 ; CHECK-BF16-NEXT:    uzp1 z3.h, z3.h, z3.h
-; CHECK-BF16-NEXT:    stp q0, q2, [x1]
-; CHECK-BF16-NEXT:    stp q1, q3, [x1, #32]
+; CHECK-BF16-NEXT:    stp q2, q1, [x1, #16]
+; CHECK-BF16-NEXT:    str q3, [x1, #48]
 ; CHECK-BF16-NEXT:    ret
   %op1 = load <32 x double>, ptr %a
   %res = fptrunc <32 x double> %op1 to <32 x bfloat>

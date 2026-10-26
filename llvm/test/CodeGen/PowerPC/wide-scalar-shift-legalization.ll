@@ -371,8 +371,8 @@ define void @ashr_16bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; BE-NEXT:    or 3, 3, 7
 ; BE-NEXT:  .LBB8_3:
 ; BE-NEXT:    srad 4, 6, 4
-; BE-NEXT:    std 3, 8(5)
 ; BE-NEXT:    std 4, 0(5)
+; BE-NEXT:    std 3, 8(5)
 ; BE-NEXT:    blr
 ;
 ; LE-32BIT-LABEL: ashr_16bytes:
@@ -438,9 +438,9 @@ define void @lshr_32bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; LE-64BIT-NEXT:    stxvd2x 2, 7, 8
 ; LE-64BIT-NEXT:    stxvd2x 2, 7, 4
 ; LE-64BIT-NEXT:    rlwinm 4, 3, 29, 27, 28
-; LE-64BIT-NEXT:    stxvd2x 1, 0, 7
 ; LE-64BIT-NEXT:    clrlwi 3, 3, 26
 ; LE-64BIT-NEXT:    stxvd2x 0, 7, 6
+; LE-64BIT-NEXT:    stxvd2x 1, 0, 7
 ; LE-64BIT-NEXT:    xori 8, 3, 63
 ; LE-64BIT-NEXT:    ldux 6, 4, 7
 ; LE-64BIT-NEXT:    ld 7, 16(4)
@@ -457,11 +457,11 @@ define void @lshr_32bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; LE-64BIT-NEXT:    sld 11, 4, 10
 ; LE-64BIT-NEXT:    sld 9, 9, 10
 ; LE-64BIT-NEXT:    std 3, 24(5)
-; LE-64BIT-NEXT:    std 8, 8(5)
 ; LE-64BIT-NEXT:    or 6, 9, 6
 ; LE-64BIT-NEXT:    or 3, 11, 7
 ; LE-64BIT-NEXT:    std 6, 0(5)
 ; LE-64BIT-NEXT:    std 3, 16(5)
+; LE-64BIT-NEXT:    std 8, 8(5)
 ; LE-64BIT-NEXT:    blr
 ;
 ; BE-LABEL: lshr_32bytes:
@@ -618,8 +618,8 @@ define void @shl_32bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; LE-64BIT-NEXT:    extsw 3, 3
 ; LE-64BIT-NEXT:    stxvd2x 0, 7, 6
 ; LE-64BIT-NEXT:    addi 6, 1, -32
-; LE-64BIT-NEXT:    stxvd2x 0, 0, 7
 ; LE-64BIT-NEXT:    stxvd2x 1, 7, 8
+; LE-64BIT-NEXT:    stxvd2x 0, 0, 7
 ; LE-64BIT-NEXT:    subfic 7, 4, 64
 ; LE-64BIT-NEXT:    ldux 3, 6, 3
 ; LE-64BIT-NEXT:    ld 8, 16(6)
@@ -636,9 +636,9 @@ define void @shl_32bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; LE-64BIT-NEXT:    or 6, 6, 7
 ; LE-64BIT-NEXT:    std 3, 0(5)
 ; LE-64BIT-NEXT:    or 3, 8, 10
-; LE-64BIT-NEXT:    std 9, 24(5)
 ; LE-64BIT-NEXT:    std 6, 8(5)
 ; LE-64BIT-NEXT:    std 3, 16(5)
+; LE-64BIT-NEXT:    std 9, 24(5)
 ; LE-64BIT-NEXT:    blr
 ;
 ; BE-LABEL: shl_32bytes:
@@ -806,11 +806,11 @@ define void @ashr_32bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; LE-64BIT-NEXT:    sld 8, 8, 10
 ; LE-64BIT-NEXT:    sld 11, 9, 10
 ; LE-64BIT-NEXT:    std 4, 24(5)
-; LE-64BIT-NEXT:    std 7, 8(5)
 ; LE-64BIT-NEXT:    or 3, 8, 3
 ; LE-64BIT-NEXT:    std 3, 0(5)
 ; LE-64BIT-NEXT:    or 3, 11, 6
 ; LE-64BIT-NEXT:    std 3, 16(5)
+; LE-64BIT-NEXT:    std 7, 8(5)
 ; LE-64BIT-NEXT:    blr
 ;
 ; BE-LABEL: ashr_32bytes:
@@ -825,13 +825,13 @@ define void @ashr_32bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; BE-NEXT:    std 7, -32(1)
 ; BE-NEXT:    sradi 3, 7, 63
 ; BE-NEXT:    rlwinm 7, 4, 29, 27, 28
+; BE-NEXT:    std 9, -16(1)
+; BE-NEXT:    std 8, -24(1)
 ; BE-NEXT:    std 3, -40(1)
 ; BE-NEXT:    std 3, -48(1)
 ; BE-NEXT:    std 3, -56(1)
 ; BE-NEXT:    std 3, -64(1)
 ; BE-NEXT:    neg 3, 7
-; BE-NEXT:    std 9, -16(1)
-; BE-NEXT:    std 8, -24(1)
 ; BE-NEXT:    extsw 3, 3
 ; BE-NEXT:    ldux 3, 6, 3
 ; BE-NEXT:    clrlwi 4, 4, 26

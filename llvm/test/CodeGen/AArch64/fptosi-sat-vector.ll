@@ -4067,12 +4067,12 @@ define <8 x i128> @test_signed_v8f16_v8i128(<8 x half> %f) {
 ; CHECK-SD-NEXT:    mov w8, #2130706431 // =0x7effffff
 ; CHECK-SD-NEXT:    ldr q0, [sp, #32] // 16-byte Reload
 ; CHECK-SD-NEXT:    fmov s10, w8
-; CHECK-SD-NEXT:    mov x22, #-9223372036854775808 // =0x8000000000000000
+; CHECK-SD-NEXT:    mov x20, #-9223372036854775808 // =0x8000000000000000
 ; CHECK-SD-NEXT:    mov x23, #9223372036854775807 // =0x7fffffffffffffff
 ; CHECK-SD-NEXT:    mov h0, v0.h[1]
 ; CHECK-SD-NEXT:    fcmp s8, s9
 ; CHECK-SD-NEXT:    csel x8, xzr, x0, lt
-; CHECK-SD-NEXT:    csel x9, x22, x1, lt
+; CHECK-SD-NEXT:    csel x9, x20, x1, lt
 ; CHECK-SD-NEXT:    fcmp s8, s10
 ; CHECK-SD-NEXT:    csel x9, x23, x9, gt
 ; CHECK-SD-NEXT:    csinv x8, x8, xzr, le
@@ -4088,7 +4088,7 @@ define <8 x i128> @test_signed_v8f16_v8i128(<8 x half> %f) {
 ; CHECK-SD-NEXT:    ldr q0, [sp, #32] // 16-byte Reload
 ; CHECK-SD-NEXT:    mov h0, v0.h[2]
 ; CHECK-SD-NEXT:    csel x8, xzr, x0, lt
-; CHECK-SD-NEXT:    csel x9, x22, x1, lt
+; CHECK-SD-NEXT:    csel x9, x20, x1, lt
 ; CHECK-SD-NEXT:    fcmp s8, s10
 ; CHECK-SD-NEXT:    csel x9, x23, x9, gt
 ; CHECK-SD-NEXT:    csinv x8, x8, xzr, le
@@ -4103,7 +4103,7 @@ define <8 x i128> @test_signed_v8f16_v8i128(<8 x half> %f) {
 ; CHECK-SD-NEXT:    ldr q0, [sp, #32] // 16-byte Reload
 ; CHECK-SD-NEXT:    mov h0, v0.h[3]
 ; CHECK-SD-NEXT:    csel x8, xzr, x0, lt
-; CHECK-SD-NEXT:    csel x9, x22, x1, lt
+; CHECK-SD-NEXT:    csel x9, x20, x1, lt
 ; CHECK-SD-NEXT:    fcmp s8, s10
 ; CHECK-SD-NEXT:    csel x9, x23, x9, gt
 ; CHECK-SD-NEXT:    csinv x8, x8, xzr, le
@@ -4118,7 +4118,7 @@ define <8 x i128> @test_signed_v8f16_v8i128(<8 x half> %f) {
 ; CHECK-SD-NEXT:    fcmp s8, s9
 ; CHECK-SD-NEXT:    ldr q0, [sp, #48] // 16-byte Reload
 ; CHECK-SD-NEXT:    csel x8, xzr, x0, lt
-; CHECK-SD-NEXT:    csel x9, x22, x1, lt
+; CHECK-SD-NEXT:    csel x9, x20, x1, lt
 ; CHECK-SD-NEXT:    fcmp s8, s10
 ; CHECK-SD-NEXT:    csel x9, x23, x9, gt
 ; CHECK-SD-NEXT:    csinv x8, x8, xzr, le
@@ -4132,21 +4132,21 @@ define <8 x i128> @test_signed_v8f16_v8i128(<8 x half> %f) {
 ; CHECK-SD-NEXT:    ldr q0, [sp, #48] // 16-byte Reload
 ; CHECK-SD-NEXT:    mov h0, v0.h[1]
 ; CHECK-SD-NEXT:    csel x8, xzr, x0, lt
-; CHECK-SD-NEXT:    csel x9, x22, x1, lt
+; CHECK-SD-NEXT:    csel x9, x20, x1, lt
 ; CHECK-SD-NEXT:    fcmp s8, s10
 ; CHECK-SD-NEXT:    csel x9, x23, x9, gt
 ; CHECK-SD-NEXT:    csinv x8, x8, xzr, le
 ; CHECK-SD-NEXT:    fcmp s8, s8
 ; CHECK-SD-NEXT:    fcvt s8, h0
-; CHECK-SD-NEXT:    csel x20, xzr, x8, vs
-; CHECK-SD-NEXT:    csel x21, xzr, x9, vs
+; CHECK-SD-NEXT:    csel x21, xzr, x8, vs
+; CHECK-SD-NEXT:    csel x22, xzr, x9, vs
 ; CHECK-SD-NEXT:    fmov s0, s8
 ; CHECK-SD-NEXT:    bl __fixsfti
 ; CHECK-SD-NEXT:    fcmp s8, s9
 ; CHECK-SD-NEXT:    ldr q0, [sp, #48] // 16-byte Reload
 ; CHECK-SD-NEXT:    mov h0, v0.h[2]
 ; CHECK-SD-NEXT:    csel x8, xzr, x0, lt
-; CHECK-SD-NEXT:    csel x9, x22, x1, lt
+; CHECK-SD-NEXT:    csel x9, x20, x1, lt
 ; CHECK-SD-NEXT:    fcmp s8, s10
 ; CHECK-SD-NEXT:    csel x9, x23, x9, gt
 ; CHECK-SD-NEXT:    csinv x8, x8, xzr, le
@@ -4160,7 +4160,7 @@ define <8 x i128> @test_signed_v8f16_v8i128(<8 x half> %f) {
 ; CHECK-SD-NEXT:    ldr q0, [sp, #48] // 16-byte Reload
 ; CHECK-SD-NEXT:    mov h0, v0.h[3]
 ; CHECK-SD-NEXT:    csel x8, xzr, x0, lt
-; CHECK-SD-NEXT:    csel x9, x22, x1, lt
+; CHECK-SD-NEXT:    csel x9, x20, x1, lt
 ; CHECK-SD-NEXT:    fcmp s8, s10
 ; CHECK-SD-NEXT:    csel x9, x23, x9, gt
 ; CHECK-SD-NEXT:    csinv x8, x8, xzr, le
@@ -4173,19 +4173,19 @@ define <8 x i128> @test_signed_v8f16_v8i128(<8 x half> %f) {
 ; CHECK-SD-NEXT:    fcmp s8, s9
 ; CHECK-SD-NEXT:    stp x26, x27, [x19, #32]
 ; CHECK-SD-NEXT:    stp x24, x25, [x19, #16]
-; CHECK-SD-NEXT:    stp x20, x21, [x19]
+; CHECK-SD-NEXT:    stp x21, x22, [x19]
 ; CHECK-SD-NEXT:    csel x8, xzr, x0, lt
-; CHECK-SD-NEXT:    csel x9, x22, x1, lt
+; CHECK-SD-NEXT:    csel x9, x20, x1, lt
 ; CHECK-SD-NEXT:    fcmp s8, s10
 ; CHECK-SD-NEXT:    stp x28, x29, [x19, #112]
+; CHECK-SD-NEXT:    ldr x10, [sp] // 8-byte Reload
 ; CHECK-SD-NEXT:    csel x9, x23, x9, gt
 ; CHECK-SD-NEXT:    csinv x8, x8, xzr, le
 ; CHECK-SD-NEXT:    fcmp s8, s8
+; CHECK-SD-NEXT:    str x10, [x19, #104]
 ; CHECK-SD-NEXT:    csel x9, xzr, x9, vs
 ; CHECK-SD-NEXT:    csel x8, xzr, x8, vs
 ; CHECK-SD-NEXT:    stp x8, x9, [x19, #48]
-; CHECK-SD-NEXT:    ldr x8, [sp] // 8-byte Reload
-; CHECK-SD-NEXT:    str x8, [x19, #104]
 ; CHECK-SD-NEXT:    ldr x8, [sp, #32] // 8-byte Reload
 ; CHECK-SD-NEXT:    str x8, [x19, #96]
 ; CHECK-SD-NEXT:    ldr x8, [sp, #8] // 8-byte Reload

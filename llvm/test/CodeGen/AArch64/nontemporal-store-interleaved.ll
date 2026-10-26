@@ -454,9 +454,9 @@ define void @test_stnp_interleaved_store3_v2i32(<2 x i32> %v0, <2 x i32> %v1, <2
 ; CHECK-LE-IADISABLED-NEXT:    uzp1 v0.4s, v0.4s, v2.4s
 ; CHECK-LE-IADISABLED-NEXT:    mov v2.s[0], v1.s[1]
 ; CHECK-LE-IADISABLED-NEXT:    mov v0.s[3], v3.s[1]
+; CHECK-LE-IADISABLED-NEXT:    mov d3, v0.d[1]
+; CHECK-LE-IADISABLED-NEXT:    stnp d0, d3, [x0]
 ; CHECK-LE-IADISABLED-NEXT:    str d2, [x0, #16]
-; CHECK-LE-IADISABLED-NEXT:    mov d1, v0.d[1]
-; CHECK-LE-IADISABLED-NEXT:    stnp d0, d1, [x0]
 ; CHECK-LE-IADISABLED-NEXT:    ret
 ;
 ; CHECK-BE-IAENABLED-LABEL: test_stnp_interleaved_store3_v2i32:
@@ -512,8 +512,8 @@ define void @test_stnp_interleaved_store3_v4i16(<4 x i16> %v0, <4 x i16> %v1, <4
 ; CHECK-LE-IADISABLED-NEXT:    tbl v0.16b, { v2.16b, v3.16b }, v0.16b
 ; CHECK-LE-IADISABLED-NEXT:    tbl v1.16b, { v2.16b, v3.16b }, v1.16b
 ; CHECK-LE-IADISABLED-NEXT:    mov d4, v0.d[1]
-; CHECK-LE-IADISABLED-NEXT:    str d1, [x0, #16]
 ; CHECK-LE-IADISABLED-NEXT:    stnp d0, d4, [x0]
+; CHECK-LE-IADISABLED-NEXT:    str d1, [x0, #16]
 ; CHECK-LE-IADISABLED-NEXT:    ret
 ;
 ; CHECK-BE-IAENABLED-LABEL: test_stnp_interleaved_store3_v4i16:
@@ -526,8 +526,8 @@ define void @test_stnp_interleaved_store3_v4i16(<4 x i16> %v0, <4 x i16> %v1, <4
 ;
 ; CHECK-BE-IADISABLED-LABEL: test_stnp_interleaved_store3_v4i16:
 ; CHECK-BE-IADISABLED:       // %bb.0: // %entry
-; CHECK-BE-IADISABLED-NEXT:    rev64 v1.4h, v1.4h
 ; CHECK-BE-IADISABLED-NEXT:    rev64 v0.4h, v0.4h
+; CHECK-BE-IADISABLED-NEXT:    rev64 v1.4h, v1.4h
 ; CHECK-BE-IADISABLED-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-BE-IADISABLED-NEXT:    adrp x8, .LCPI13_0
 ; CHECK-BE-IADISABLED-NEXT:    add x8, x8, :lo12:.LCPI13_0
@@ -574,8 +574,8 @@ define void @test_stnp_interleaved_store3_v8i8(<8 x i8> %v0, <8 x i8> %v1, <8 x 
 ; CHECK-LE-IADISABLED-NEXT:    tbl v0.16b, { v2.16b, v3.16b }, v0.16b
 ; CHECK-LE-IADISABLED-NEXT:    tbl v1.16b, { v2.16b, v3.16b }, v1.16b
 ; CHECK-LE-IADISABLED-NEXT:    mov d4, v0.d[1]
-; CHECK-LE-IADISABLED-NEXT:    str d1, [x0, #16]
 ; CHECK-LE-IADISABLED-NEXT:    stnp d0, d4, [x0]
+; CHECK-LE-IADISABLED-NEXT:    str d1, [x0, #16]
 ; CHECK-LE-IADISABLED-NEXT:    ret
 ;
 ; CHECK-BE-IAENABLED-LABEL: test_stnp_interleaved_store3_v8i8:
@@ -588,17 +588,17 @@ define void @test_stnp_interleaved_store3_v8i8(<8 x i8> %v0, <8 x i8> %v1, <8 x 
 ;
 ; CHECK-BE-IADISABLED-LABEL: test_stnp_interleaved_store3_v8i8:
 ; CHECK-BE-IADISABLED:       // %bb.0: // %entry
-; CHECK-BE-IADISABLED-NEXT:    rev64 v1.8b, v1.8b
 ; CHECK-BE-IADISABLED-NEXT:    rev64 v3.8b, v0.8b
+; CHECK-BE-IADISABLED-NEXT:    rev64 v0.8b, v1.8b
 ; CHECK-BE-IADISABLED-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-BE-IADISABLED-NEXT:    adrp x8, .LCPI14_0
 ; CHECK-BE-IADISABLED-NEXT:    add x8, x8, :lo12:.LCPI14_0
+; CHECK-BE-IADISABLED-NEXT:    mov v3.d[1], v0.d[0]
 ; CHECK-BE-IADISABLED-NEXT:    ld1 { v0.16b }, [x8]
 ; CHECK-BE-IADISABLED-NEXT:    adrp x8, .LCPI14_1
 ; CHECK-BE-IADISABLED-NEXT:    add x8, x8, :lo12:.LCPI14_1
-; CHECK-BE-IADISABLED-NEXT:    mov v3.d[1], v1.d[0]
-; CHECK-BE-IADISABLED-NEXT:    ld1 { v1.16b }, [x8]
 ; CHECK-BE-IADISABLED-NEXT:    rev64 v4.16b, v2.16b
+; CHECK-BE-IADISABLED-NEXT:    ld1 { v1.16b }, [x8]
 ; CHECK-BE-IADISABLED-NEXT:    tbl v0.16b, { v3.16b, v4.16b }, v0.16b
 ; CHECK-BE-IADISABLED-NEXT:    tbl v1.16b, { v3.16b, v4.16b }, v1.16b
 ; CHECK-BE-IADISABLED-NEXT:    rev64 v0.16b, v0.16b
@@ -632,9 +632,9 @@ define void @test_stnp_interleaved_store3_v2f32(<2 x float> %v0, <2 x float> %v1
 ; CHECK-LE-IADISABLED-NEXT:    uzp1 v0.4s, v0.4s, v2.4s
 ; CHECK-LE-IADISABLED-NEXT:    mov v2.s[0], v1.s[1]
 ; CHECK-LE-IADISABLED-NEXT:    mov v0.s[3], v3.s[1]
+; CHECK-LE-IADISABLED-NEXT:    mov d3, v0.d[1]
+; CHECK-LE-IADISABLED-NEXT:    stnp d0, d3, [x0]
 ; CHECK-LE-IADISABLED-NEXT:    str d2, [x0, #16]
-; CHECK-LE-IADISABLED-NEXT:    mov d1, v0.d[1]
-; CHECK-LE-IADISABLED-NEXT:    stnp d0, d1, [x0]
 ; CHECK-LE-IADISABLED-NEXT:    ret
 ;
 ; CHECK-BE-IAENABLED-LABEL: test_stnp_interleaved_store3_v2f32:
@@ -690,8 +690,8 @@ define void @test_stnp_interleaved_store3_v4f16(<4 x half> %v0, <4 x half> %v1, 
 ; CHECK-LE-IADISABLED-NEXT:    tbl v0.16b, { v2.16b, v3.16b }, v0.16b
 ; CHECK-LE-IADISABLED-NEXT:    tbl v1.16b, { v2.16b, v3.16b }, v1.16b
 ; CHECK-LE-IADISABLED-NEXT:    mov d4, v0.d[1]
-; CHECK-LE-IADISABLED-NEXT:    str d1, [x0, #16]
 ; CHECK-LE-IADISABLED-NEXT:    stnp d0, d4, [x0]
+; CHECK-LE-IADISABLED-NEXT:    str d1, [x0, #16]
 ; CHECK-LE-IADISABLED-NEXT:    ret
 ;
 ; CHECK-BE-IAENABLED-LABEL: test_stnp_interleaved_store3_v4f16:
@@ -704,8 +704,8 @@ define void @test_stnp_interleaved_store3_v4f16(<4 x half> %v0, <4 x half> %v1, 
 ;
 ; CHECK-BE-IADISABLED-LABEL: test_stnp_interleaved_store3_v4f16:
 ; CHECK-BE-IADISABLED:       // %bb.0: // %entry
-; CHECK-BE-IADISABLED-NEXT:    rev64 v1.4h, v1.4h
 ; CHECK-BE-IADISABLED-NEXT:    rev64 v0.4h, v0.4h
+; CHECK-BE-IADISABLED-NEXT:    rev64 v1.4h, v1.4h
 ; CHECK-BE-IADISABLED-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-BE-IADISABLED-NEXT:    adrp x8, .LCPI16_0
 ; CHECK-BE-IADISABLED-NEXT:    add x8, x8, :lo12:.LCPI16_0
@@ -891,10 +891,10 @@ define void @test_stnp_interleaved_store3_v8i16(<8 x i16> %v0, <8 x i16> %v1, <8
 ; CHECK-LE-IADISABLED-NEXT:    mov d4, v0.d[1]
 ; CHECK-LE-IADISABLED-NEXT:    tbl v1.16b, { v1.16b, v2.16b }, v3.16b
 ; CHECK-LE-IADISABLED-NEXT:    mov d2, v5.d[1]
-; CHECK-LE-IADISABLED-NEXT:    stnp d0, d4, [x0]
 ; CHECK-LE-IADISABLED-NEXT:    mov d3, v1.d[1]
 ; CHECK-LE-IADISABLED-NEXT:    stnp d5, d2, [x0, #16]
 ; CHECK-LE-IADISABLED-NEXT:    stnp d1, d3, [x0, #32]
+; CHECK-LE-IADISABLED-NEXT:    stnp d0, d4, [x0]
 ; CHECK-LE-IADISABLED-NEXT:    ret
 ;
 ; CHECK-BE-IAENABLED-LABEL: test_stnp_interleaved_store3_v8i16:
@@ -940,11 +940,11 @@ define void @test_stnp_interleaved_store3_v8i16(<8 x i16> %v0, <8 x i16> %v1, <8
 ; CHECK-BE-IADISABLED-NEXT:    tbl v5.16b, { v3.16b, v4.16b }, v1.16b
 ; CHECK-BE-IADISABLED-NEXT:    ld1 { v1.16b }, [x8]
 ; CHECK-BE-IADISABLED-NEXT:    add x8, x0, #16
-; CHECK-BE-IADISABLED-NEXT:    st1 { v0.16b }, [x0]
 ; CHECK-BE-IADISABLED-NEXT:    tbl v1.16b, { v5.16b, v6.16b }, v1.16b
 ; CHECK-BE-IADISABLED-NEXT:    st1 { v2.16b }, [x8]
 ; CHECK-BE-IADISABLED-NEXT:    add x8, x0, #32
 ; CHECK-BE-IADISABLED-NEXT:    st1 { v1.16b }, [x8]
+; CHECK-BE-IADISABLED-NEXT:    st1 { v0.16b }, [x0]
 ; CHECK-BE-IADISABLED-NEXT:    ret
 entry:
   %s0 = shufflevector <8 x i16> %v0, <8 x i16> %v1, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -988,10 +988,10 @@ define void @test_stnp_interleaved_store3_v16i8(<16 x i8> %v0, <16 x i8> %v1, <1
 ; CHECK-LE-IADISABLED-NEXT:    mov d4, v0.d[1]
 ; CHECK-LE-IADISABLED-NEXT:    tbl v1.16b, { v1.16b, v2.16b }, v3.16b
 ; CHECK-LE-IADISABLED-NEXT:    mov d2, v5.d[1]
-; CHECK-LE-IADISABLED-NEXT:    stnp d0, d4, [x0]
 ; CHECK-LE-IADISABLED-NEXT:    mov d3, v1.d[1]
 ; CHECK-LE-IADISABLED-NEXT:    stnp d5, d2, [x0, #16]
 ; CHECK-LE-IADISABLED-NEXT:    stnp d1, d3, [x0, #32]
+; CHECK-LE-IADISABLED-NEXT:    stnp d0, d4, [x0]
 ; CHECK-LE-IADISABLED-NEXT:    ret
 ;
 ; CHECK-BE-IAENABLED-LABEL: test_stnp_interleaved_store3_v16i8:
@@ -1037,11 +1037,11 @@ define void @test_stnp_interleaved_store3_v16i8(<16 x i8> %v0, <16 x i8> %v1, <1
 ; CHECK-BE-IADISABLED-NEXT:    tbl v1.16b, { v3.16b, v4.16b }, v0.16b
 ; CHECK-BE-IADISABLED-NEXT:    ld1 { v0.16b }, [x8]
 ; CHECK-BE-IADISABLED-NEXT:    add x8, x0, #16
-; CHECK-BE-IADISABLED-NEXT:    st1 { v5.16b }, [x0]
 ; CHECK-BE-IADISABLED-NEXT:    tbl v0.16b, { v1.16b, v2.16b }, v0.16b
 ; CHECK-BE-IADISABLED-NEXT:    st1 { v6.16b }, [x8]
 ; CHECK-BE-IADISABLED-NEXT:    add x8, x0, #32
 ; CHECK-BE-IADISABLED-NEXT:    st1 { v0.16b }, [x8]
+; CHECK-BE-IADISABLED-NEXT:    st1 { v5.16b }, [x0]
 ; CHECK-BE-IADISABLED-NEXT:    ret
 entry:
   %s0 = shufflevector <16 x i8> %v0, <16 x i8> %v1, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
@@ -1212,10 +1212,10 @@ define void @test_stnp_interleaved_store3_v8f16(<8 x half> %v0, <8 x half> %v1, 
 ; CHECK-LE-IADISABLED-NEXT:    mov d4, v0.d[1]
 ; CHECK-LE-IADISABLED-NEXT:    tbl v1.16b, { v1.16b, v2.16b }, v3.16b
 ; CHECK-LE-IADISABLED-NEXT:    mov d2, v5.d[1]
-; CHECK-LE-IADISABLED-NEXT:    stnp d0, d4, [x0]
 ; CHECK-LE-IADISABLED-NEXT:    mov d3, v1.d[1]
 ; CHECK-LE-IADISABLED-NEXT:    stnp d5, d2, [x0, #16]
 ; CHECK-LE-IADISABLED-NEXT:    stnp d1, d3, [x0, #32]
+; CHECK-LE-IADISABLED-NEXT:    stnp d0, d4, [x0]
 ; CHECK-LE-IADISABLED-NEXT:    ret
 ;
 ; CHECK-BE-IAENABLED-LABEL: test_stnp_interleaved_store3_v8f16:
@@ -1261,11 +1261,11 @@ define void @test_stnp_interleaved_store3_v8f16(<8 x half> %v0, <8 x half> %v1, 
 ; CHECK-BE-IADISABLED-NEXT:    tbl v5.16b, { v3.16b, v4.16b }, v1.16b
 ; CHECK-BE-IADISABLED-NEXT:    ld1 { v1.16b }, [x8]
 ; CHECK-BE-IADISABLED-NEXT:    add x8, x0, #16
-; CHECK-BE-IADISABLED-NEXT:    st1 { v0.16b }, [x0]
 ; CHECK-BE-IADISABLED-NEXT:    tbl v1.16b, { v5.16b, v6.16b }, v1.16b
 ; CHECK-BE-IADISABLED-NEXT:    st1 { v2.16b }, [x8]
 ; CHECK-BE-IADISABLED-NEXT:    add x8, x0, #32
 ; CHECK-BE-IADISABLED-NEXT:    st1 { v1.16b }, [x8]
+; CHECK-BE-IADISABLED-NEXT:    st1 { v0.16b }, [x0]
 ; CHECK-BE-IADISABLED-NEXT:    ret
 entry:
   %s0 = shufflevector <8 x half> %v0, <8 x half> %v1, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -2297,8 +2297,8 @@ define void @test_stnp_interleaved_store2_v3i32_non_pow2_elt_count(<3 x i32> %v0
 ; CHECK-LE-NEXT:    zip1 v2.4s, v0.4s, v1.4s
 ; CHECK-LE-NEXT:    zip2 v0.4s, v0.4s, v1.4s
 ; CHECK-LE-NEXT:    mov d3, v2.d[1]
-; CHECK-LE-NEXT:    str d0, [x0, #16]
 ; CHECK-LE-NEXT:    stnp d2, d3, [x0]
+; CHECK-LE-NEXT:    str d0, [x0, #16]
 ; CHECK-LE-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: test_stnp_interleaved_store2_v3i32_non_pow2_elt_count:

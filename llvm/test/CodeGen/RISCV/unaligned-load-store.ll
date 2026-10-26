@@ -347,9 +347,9 @@ define void @store_i32(ptr %p, i32 %v) {
 ; SLOW-NEXT:    srli a3, a1, 16
 ; SLOW-NEXT:    srli a4, a1, 8
 ; SLOW-NEXT:    sb a1, 0(a0)
-; SLOW-NEXT:    sb a4, 1(a0)
 ; SLOW-NEXT:    sb a3, 2(a0)
 ; SLOW-NEXT:    sb a2, 3(a0)
+; SLOW-NEXT:    sb a4, 1(a0)
 ; SLOW-NEXT:    ret
 ;
 ; FAST-LABEL: store_i32:
@@ -363,82 +363,82 @@ define void @store_i32(ptr %p, i32 %v) {
 define void @store_i64(ptr %p, i64 %v) {
 ; RV32I-LABEL: store_i64:
 ; RV32I:       # %bb.0:
+; RV32I-NEXT:    srli a3, a1, 24
+; RV32I-NEXT:    srli a4, a1, 16
+; RV32I-NEXT:    sb a1, 0(a0)
+; RV32I-NEXT:    sb a4, 2(a0)
+; RV32I-NEXT:    sb a3, 3(a0)
+; RV32I-NEXT:    sb a2, 4(a0)
 ; RV32I-NEXT:    srli a3, a2, 24
 ; RV32I-NEXT:    srli a4, a2, 16
-; RV32I-NEXT:    srli a5, a2, 8
-; RV32I-NEXT:    sb a2, 4(a0)
-; RV32I-NEXT:    sb a5, 5(a0)
+; RV32I-NEXT:    srli a2, a2, 8
+; RV32I-NEXT:    srli a1, a1, 8
+; RV32I-NEXT:    sb a2, 5(a0)
 ; RV32I-NEXT:    sb a4, 6(a0)
 ; RV32I-NEXT:    sb a3, 7(a0)
-; RV32I-NEXT:    srli a2, a1, 24
-; RV32I-NEXT:    srli a3, a1, 16
-; RV32I-NEXT:    srli a4, a1, 8
-; RV32I-NEXT:    sb a1, 0(a0)
-; RV32I-NEXT:    sb a4, 1(a0)
-; RV32I-NEXT:    sb a3, 2(a0)
-; RV32I-NEXT:    sb a2, 3(a0)
+; RV32I-NEXT:    sb a1, 1(a0)
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: store_i64:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    srli a2, a1, 56
 ; RV64I-NEXT:    srli a3, a1, 48
-; RV64I-NEXT:    srli a4, a1, 32
-; RV64I-NEXT:    srli a5, a1, 40
-; RV64I-NEXT:    sb a4, 4(a0)
-; RV64I-NEXT:    sb a5, 5(a0)
+; RV64I-NEXT:    srli a4, a1, 40
+; RV64I-NEXT:    sb a4, 5(a0)
 ; RV64I-NEXT:    sb a3, 6(a0)
 ; RV64I-NEXT:    sb a2, 7(a0)
-; RV64I-NEXT:    srli a2, a1, 24
-; RV64I-NEXT:    srli a3, a1, 16
-; RV64I-NEXT:    srli a4, a1, 8
+; RV64I-NEXT:    srli a2, a1, 32
+; RV64I-NEXT:    srli a3, a1, 24
+; RV64I-NEXT:    srli a4, a1, 16
+; RV64I-NEXT:    srli a5, a1, 8
 ; RV64I-NEXT:    sb a1, 0(a0)
-; RV64I-NEXT:    sb a4, 1(a0)
-; RV64I-NEXT:    sb a3, 2(a0)
-; RV64I-NEXT:    sb a2, 3(a0)
+; RV64I-NEXT:    sb a4, 2(a0)
+; RV64I-NEXT:    sb a3, 3(a0)
+; RV64I-NEXT:    sb a2, 4(a0)
+; RV64I-NEXT:    sb a5, 1(a0)
 ; RV64I-NEXT:    ret
 ;
 ; RV32IZBKB-LABEL: store_i64:
 ; RV32IZBKB:       # %bb.0:
+; RV32IZBKB-NEXT:    srli a3, a1, 24
+; RV32IZBKB-NEXT:    srli a4, a1, 16
+; RV32IZBKB-NEXT:    sb a1, 0(a0)
+; RV32IZBKB-NEXT:    sb a4, 2(a0)
+; RV32IZBKB-NEXT:    sb a3, 3(a0)
+; RV32IZBKB-NEXT:    sb a2, 4(a0)
 ; RV32IZBKB-NEXT:    srli a3, a2, 24
 ; RV32IZBKB-NEXT:    srli a4, a2, 16
-; RV32IZBKB-NEXT:    srli a5, a2, 8
-; RV32IZBKB-NEXT:    sb a2, 4(a0)
-; RV32IZBKB-NEXT:    sb a5, 5(a0)
+; RV32IZBKB-NEXT:    srli a2, a2, 8
+; RV32IZBKB-NEXT:    srli a1, a1, 8
+; RV32IZBKB-NEXT:    sb a2, 5(a0)
 ; RV32IZBKB-NEXT:    sb a4, 6(a0)
 ; RV32IZBKB-NEXT:    sb a3, 7(a0)
-; RV32IZBKB-NEXT:    srli a2, a1, 24
-; RV32IZBKB-NEXT:    srli a3, a1, 16
-; RV32IZBKB-NEXT:    srli a4, a1, 8
-; RV32IZBKB-NEXT:    sb a1, 0(a0)
-; RV32IZBKB-NEXT:    sb a4, 1(a0)
-; RV32IZBKB-NEXT:    sb a3, 2(a0)
-; RV32IZBKB-NEXT:    sb a2, 3(a0)
+; RV32IZBKB-NEXT:    sb a1, 1(a0)
 ; RV32IZBKB-NEXT:    ret
 ;
 ; RV64IZBKB-LABEL: store_i64:
 ; RV64IZBKB:       # %bb.0:
 ; RV64IZBKB-NEXT:    srli a2, a1, 56
 ; RV64IZBKB-NEXT:    srli a3, a1, 48
-; RV64IZBKB-NEXT:    srli a4, a1, 32
-; RV64IZBKB-NEXT:    srli a5, a1, 40
-; RV64IZBKB-NEXT:    sb a4, 4(a0)
-; RV64IZBKB-NEXT:    sb a5, 5(a0)
+; RV64IZBKB-NEXT:    srli a4, a1, 40
+; RV64IZBKB-NEXT:    sb a4, 5(a0)
 ; RV64IZBKB-NEXT:    sb a3, 6(a0)
 ; RV64IZBKB-NEXT:    sb a2, 7(a0)
-; RV64IZBKB-NEXT:    srli a2, a1, 24
-; RV64IZBKB-NEXT:    srli a3, a1, 16
-; RV64IZBKB-NEXT:    srli a4, a1, 8
+; RV64IZBKB-NEXT:    srli a2, a1, 32
+; RV64IZBKB-NEXT:    srli a3, a1, 24
+; RV64IZBKB-NEXT:    srli a4, a1, 16
+; RV64IZBKB-NEXT:    srli a5, a1, 8
 ; RV64IZBKB-NEXT:    sb a1, 0(a0)
-; RV64IZBKB-NEXT:    sb a4, 1(a0)
-; RV64IZBKB-NEXT:    sb a3, 2(a0)
-; RV64IZBKB-NEXT:    sb a2, 3(a0)
+; RV64IZBKB-NEXT:    sb a4, 2(a0)
+; RV64IZBKB-NEXT:    sb a3, 3(a0)
+; RV64IZBKB-NEXT:    sb a2, 4(a0)
+; RV64IZBKB-NEXT:    sb a5, 1(a0)
 ; RV64IZBKB-NEXT:    ret
 ;
 ; RV32I-FAST-LABEL: store_i64:
 ; RV32I-FAST:       # %bb.0:
-; RV32I-FAST-NEXT:    sw a1, 0(a0)
 ; RV32I-FAST-NEXT:    sw a2, 4(a0)
+; RV32I-FAST-NEXT:    sw a1, 0(a0)
 ; RV32I-FAST-NEXT:    ret
 ;
 ; RV64I-FAST-LABEL: store_i64:
@@ -603,21 +603,21 @@ define void @store_large_constant(ptr %x) {
 ; SLOW-LABEL: store_large_constant:
 ; SLOW:       # %bb.0:
 ; SLOW-NEXT:    li a1, -2
-; SLOW-NEXT:    li a2, 220
-; SLOW-NEXT:    li a3, 186
-; SLOW-NEXT:    li a4, 152
-; SLOW-NEXT:    sb a4, 4(a0)
-; SLOW-NEXT:    sb a3, 5(a0)
-; SLOW-NEXT:    sb a2, 6(a0)
+; SLOW-NEXT:    li a2, 186
+; SLOW-NEXT:    li a3, 220
+; SLOW-NEXT:    sb a2, 5(a0)
+; SLOW-NEXT:    sb a3, 6(a0)
 ; SLOW-NEXT:    sb a1, 7(a0)
-; SLOW-NEXT:    li a1, 118
-; SLOW-NEXT:    li a2, 84
-; SLOW-NEXT:    li a3, 50
-; SLOW-NEXT:    li a4, 16
-; SLOW-NEXT:    sb a4, 0(a0)
-; SLOW-NEXT:    sb a3, 1(a0)
-; SLOW-NEXT:    sb a2, 2(a0)
-; SLOW-NEXT:    sb a1, 3(a0)
+; SLOW-NEXT:    li a1, 152
+; SLOW-NEXT:    li a2, 118
+; SLOW-NEXT:    li a3, 84
+; SLOW-NEXT:    li a4, 50
+; SLOW-NEXT:    li a5, 16
+; SLOW-NEXT:    sb a4, 1(a0)
+; SLOW-NEXT:    sb a3, 2(a0)
+; SLOW-NEXT:    sb a2, 3(a0)
+; SLOW-NEXT:    sb a1, 4(a0)
+; SLOW-NEXT:    sb a5, 0(a0)
 ; SLOW-NEXT:    ret
 ;
 ; RV32I-FAST-LABEL: store_large_constant:
@@ -626,8 +626,8 @@ define void @store_large_constant(ptr %x) {
 ; RV32I-FAST-NEXT:    lui a2, 484675
 ; RV32I-FAST-NEXT:    addi a1, a1, -1384
 ; RV32I-FAST-NEXT:    addi a2, a2, 528
-; RV32I-FAST-NEXT:    sw a2, 0(a0)
 ; RV32I-FAST-NEXT:    sw a1, 4(a0)
+; RV32I-FAST-NEXT:    sw a2, 0(a0)
 ; RV32I-FAST-NEXT:    ret
 ;
 ; RV64I-FAST-LABEL: store_large_constant:

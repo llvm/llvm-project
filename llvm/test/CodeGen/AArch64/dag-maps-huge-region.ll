@@ -1,7 +1,7 @@
 ; REQUIRES: asserts
-; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu -debug-only=machine-scheduler -dag-maps-huge-region=2 2>&1 | FileCheck %s --check-prefix=THR2
-; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu -debug-only=machine-scheduler -dag-maps-huge-region=3 2>&1 | FileCheck %s --check-prefix=THR3
-; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu -debug-only=machine-scheduler -dag-maps-huge-region=3 -enable-store-sequencing 2>&1 | FileCheck %s --check-prefix=SS
+; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu -debug-only=machine-scheduler -dag-maps-huge-region=2 -enable-store-sequencing=false  2>&1 | FileCheck %s --check-prefix=THR2
+; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu -debug-only=machine-scheduler -dag-maps-huge-region=3 -enable-store-sequencing=false  2>&1 | FileCheck %s --check-prefix=THR3
+; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu -debug-only=machine-scheduler -dag-maps-huge-region=3 2>&1 | FileCheck %s --check-prefix=SS
 
 define void @test_barrier(ptr %p) {
 entry:

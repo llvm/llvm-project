@@ -17,8 +17,8 @@ define i128 @test_abs(ppc_fp128 %x) nounwind  {
 ;
 ; PPC64-LABEL: test_abs:
 ; PPC64:       # %bb.0: # %entry
-; PPC64-NEXT:    stfd 1, -16(1)
 ; PPC64-NEXT:    stfd 2, -8(1)
+; PPC64-NEXT:    stfd 1, -16(1)
 ; PPC64-NEXT:    ld 3, -16(1)
 ; PPC64-NEXT:    ld 4, -8(1)
 ; PPC64-NEXT:    rldicr 5, 3, 0, 0
@@ -157,15 +157,15 @@ define i128 @test_copysign(ppc_fp128 %x, ppc_fp128 %y) nounwind  {
 ; PPC32-NEXT:    stfd 1, 32(1)
 ; PPC32-NEXT:    lwz 3, 36(1)
 ; PPC32-NEXT:    stfd 2, 24(1)
+; PPC32-NEXT:    stfd 3, 56(1)
 ; PPC32-NEXT:    stw 3, 52(1)
 ; PPC32-NEXT:    lwz 3, 32(1)
-; PPC32-NEXT:    stfd 3, 56(1)
+; PPC32-NEXT:    lfd 4, 64(1)
 ; PPC32-NEXT:    stw 3, 48(1)
 ; PPC32-NEXT:    lwz 3, 28(1)
-; PPC32-NEXT:    lfd 4, 64(1)
+; PPC32-NEXT:    lfd 1, 48(1)
 ; PPC32-NEXT:    stw 3, 44(1)
 ; PPC32-NEXT:    lwz 3, 24(1)
-; PPC32-NEXT:    lfd 1, 48(1)
 ; PPC32-NEXT:    stw 3, 40(1)
 ; PPC32-NEXT:    lwz 3, 60(1)
 ; PPC32-NEXT:    lfd 2, 40(1)

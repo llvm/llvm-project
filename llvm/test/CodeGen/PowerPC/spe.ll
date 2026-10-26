@@ -681,8 +681,8 @@ define i32 @test_fasmconst(float %x) #0 {
 ; CHECK-LABEL: test_fasmconst:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    stwu 1, -32(1)
-; CHECK-NEXT:    stw 3, 20(1)
 ; CHECK-NEXT:    stw 3, 24(1)
+; CHECK-NEXT:    stw 3, 20(1)
 ; CHECK-NEXT:    lwz 3, 20(1)
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    efsctsi 3, 3

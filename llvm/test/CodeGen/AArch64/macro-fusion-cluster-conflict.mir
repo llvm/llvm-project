@@ -2,6 +2,7 @@
 # REQUIRES: asserts
 
 # RUN: llc -o /dev/null %s -mtriple=aarch64 -mattr=+fuse-address \
+# RUN:   -enable-store-sequencing=false \
 # RUN:   -run-pass machine-scheduler -debug-only=machine-scheduler 2>&1 \
 # RUN:   | FileCheck %s
 

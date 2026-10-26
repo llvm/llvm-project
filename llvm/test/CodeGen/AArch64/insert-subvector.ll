@@ -1171,8 +1171,8 @@ define void @loads_before_stores(ptr %i44) {
 ; CHECK-GI-NEXT:    ldrb w8, [x0, #25]
 ; CHECK-GI-NEXT:    strb w9, [x0, #21]
 ; CHECK-GI-NEXT:    strb w10, [x0, #30]
-; CHECK-GI-NEXT:    strb w8, [x0, #31]
 ; CHECK-GI-NEXT:    stur d1, [x0, #22]
+; CHECK-GI-NEXT:    strb w8, [x0, #31]
 ; CHECK-GI-NEXT:    ret
 bb:
   %i45 = getelementptr inbounds i8, ptr %i44, i64 20

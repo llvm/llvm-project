@@ -31,10 +31,10 @@ define void @caller_no_musttail_indirect() nounwind {
 ; RV32-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    lui a1, 262128
 ; RV32-NEXT:    mv a0, sp
-; RV32-NEXT:    sw zero, 0(sp)
 ; RV32-NEXT:    sw zero, 4(sp)
 ; RV32-NEXT:    sw zero, 8(sp)
 ; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sw zero, 0(sp)
 ; RV32-NEXT:    call callee_musttail_indirect
 ; RV32-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 32
@@ -63,10 +63,10 @@ define i32 @caller_no_musttail_forward_indirect(fp128 %a) nounwind {
 ; RV32-NEXT:    lw a3, 8(a0)
 ; RV32-NEXT:    lw a4, 12(a0)
 ; RV32-NEXT:    mv a0, sp
-; RV32-NEXT:    sw a1, 0(sp)
 ; RV32-NEXT:    sw a2, 4(sp)
 ; RV32-NEXT:    sw a3, 8(sp)
 ; RV32-NEXT:    sw a4, 12(sp)
+; RV32-NEXT:    sw a1, 0(sp)
 ; RV32-NEXT:    call callee_musttail_indirect
 ; RV32-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 32
@@ -278,24 +278,24 @@ define void @caller_musttail_nine_indirect(fp128 %a, fp128 %b, fp128 %c, fp128 %
 ; RV64-NEXT:    sd s2, 8(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    ld t0, 32(sp)
 ; RV64-NEXT:    ld t1, 40(sp)
-; RV64-NEXT:    ld t2, 96(sp)
+; RV64-NEXT:    ld t2, 72(sp)
 ; RV64-NEXT:    ld t3, 104(sp)
-; RV64-NEXT:    ld t4, 64(sp)
-; RV64-NEXT:    ld t5, 72(sp)
-; RV64-NEXT:    ld t6, 80(sp)
-; RV64-NEXT:    ld s0, 88(sp)
-; RV64-NEXT:    ld s1, 48(sp)
-; RV64-NEXT:    ld s2, 56(sp)
-; RV64-NEXT:    sd t2, 64(sp)
+; RV64-NEXT:    ld t4, 80(sp)
+; RV64-NEXT:    ld t5, 88(sp)
+; RV64-NEXT:    ld t6, 48(sp)
+; RV64-NEXT:    ld s0, 96(sp)
+; RV64-NEXT:    ld s1, 56(sp)
+; RV64-NEXT:    ld s2, 64(sp)
 ; RV64-NEXT:    sd t3, 72(sp)
-; RV64-NEXT:    sd t4, 32(sp)
-; RV64-NEXT:    sd t5, 40(sp)
-; RV64-NEXT:    sd t6, 48(sp)
-; RV64-NEXT:    sd s0, 56(sp)
-; RV64-NEXT:    sd t0, 0(sp)
+; RV64-NEXT:    sd t2, 40(sp)
+; RV64-NEXT:    sd t4, 48(sp)
+; RV64-NEXT:    sd t5, 56(sp)
+; RV64-NEXT:    sd s0, 64(sp)
 ; RV64-NEXT:    sd t1, 8(sp)
-; RV64-NEXT:    sd s1, 16(sp)
-; RV64-NEXT:    sd s2, 24(sp)
+; RV64-NEXT:    sd t6, 16(sp)
+; RV64-NEXT:    sd s1, 24(sp)
+; RV64-NEXT:    sd s2, 32(sp)
+; RV64-NEXT:    sd t0, 0(sp)
 ; RV64-NEXT:    ld s0, 24(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s1, 16(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s2, 8(sp) # 8-byte Folded Reload
@@ -324,25 +324,25 @@ define void @caller_musttail_nine_indirect_swap_first_last(fp128 %a, fp128 %b, f
 ; RV64-NEXT:    ld t0, 96(sp)
 ; RV64-NEXT:    ld t1, 104(sp)
 ; RV64-NEXT:    ld t2, 32(sp)
-; RV64-NEXT:    ld t3, 40(sp)
-; RV64-NEXT:    ld t4, 64(sp)
-; RV64-NEXT:    ld t5, 72(sp)
-; RV64-NEXT:    ld t6, 80(sp)
-; RV64-NEXT:    ld s0, 88(sp)
-; RV64-NEXT:    ld s1, 48(sp)
-; RV64-NEXT:    ld s2, 56(sp)
-; RV64-NEXT:    sd a0, 64(sp)
+; RV64-NEXT:    ld t3, 72(sp)
+; RV64-NEXT:    ld t4, 80(sp)
+; RV64-NEXT:    ld t5, 88(sp)
+; RV64-NEXT:    ld t6, 40(sp)
+; RV64-NEXT:    ld s0, 48(sp)
+; RV64-NEXT:    ld s1, 56(sp)
+; RV64-NEXT:    ld s2, 64(sp)
 ; RV64-NEXT:    sd a1, 72(sp)
-; RV64-NEXT:    sd t4, 32(sp)
-; RV64-NEXT:    sd t5, 40(sp)
-; RV64-NEXT:    sd t6, 48(sp)
-; RV64-NEXT:    sd s0, 56(sp)
-; RV64-NEXT:    sd t2, 0(sp)
-; RV64-NEXT:    sd t3, 8(sp)
+; RV64-NEXT:    sd t3, 40(sp)
+; RV64-NEXT:    sd t4, 48(sp)
+; RV64-NEXT:    sd t5, 56(sp)
+; RV64-NEXT:    sd a0, 64(sp)
+; RV64-NEXT:    sd t6, 8(sp)
+; RV64-NEXT:    sd s0, 16(sp)
+; RV64-NEXT:    sd s1, 24(sp)
 ; RV64-NEXT:    mv a0, t0
 ; RV64-NEXT:    mv a1, t1
-; RV64-NEXT:    sd s1, 16(sp)
-; RV64-NEXT:    sd s2, 24(sp)
+; RV64-NEXT:    sd s2, 32(sp)
+; RV64-NEXT:    sd t2, 0(sp)
 ; RV64-NEXT:    ld s0, 24(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s1, 16(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s2, 8(sp) # 8-byte Folded Reload
@@ -368,15 +368,15 @@ define i32 @caller_musttail_computed(fp128 %a) nounwind {
 ; RV32-NEXT:    lw a5, 12(s0)
 ; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    sw a0, 24(sp)
-; RV32-NEXT:    sw a3, 12(sp)
 ; RV32-NEXT:    sw a4, 16(sp)
 ; RV32-NEXT:    sw a5, 20(sp)
+; RV32-NEXT:    sw a3, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 40
 ; RV32-NEXT:    addi a1, sp, 24
 ; RV32-NEXT:    addi a2, sp, 8
-; RV32-NEXT:    sw a3, 28(sp)
 ; RV32-NEXT:    sw a4, 32(sp)
 ; RV32-NEXT:    sw a5, 36(sp)
+; RV32-NEXT:    sw a3, 28(sp)
 ; RV32-NEXT:    call __addtf3
 ; RV32-NEXT:    lw a0, 40(sp)
 ; RV32-NEXT:    lw a1, 44(sp)
@@ -462,16 +462,16 @@ define i32 @caller_musttail_computed_and_forwarded(fp128 %a, fp128 %b) nounwind 
 ; RV32-NEXT:    lw a2, 8(s1)
 ; RV32-NEXT:    lw a7, 12(s1)
 ; RV32-NEXT:    sw a0, 16(sp)
-; RV32-NEXT:    sw a1, 20(sp)
 ; RV32-NEXT:    sw a2, 24(sp)
 ; RV32-NEXT:    sw a7, 28(sp)
+; RV32-NEXT:    sw a1, 20(sp)
 ; RV32-NEXT:    addi a0, sp, 32
 ; RV32-NEXT:    addi a1, sp, 16
 ; RV32-NEXT:    mv a2, sp
 ; RV32-NEXT:    sw a3, 0(sp)
-; RV32-NEXT:    sw a4, 4(sp)
 ; RV32-NEXT:    sw a5, 8(sp)
 ; RV32-NEXT:    sw a6, 12(sp)
+; RV32-NEXT:    sw a4, 4(sp)
 ; RV32-NEXT:    call __addtf3
 ; RV32-NEXT:    lw a0, 32(sp)
 ; RV32-NEXT:    lw a1, 36(sp)
@@ -530,16 +530,16 @@ define i32 @caller_musttail_forwarded_and_computed(fp128 %a, fp128 %b) nounwind 
 ; RV32-NEXT:    lw a2, 8(s1)
 ; RV32-NEXT:    lw a7, 12(s1)
 ; RV32-NEXT:    sw a0, 16(sp)
-; RV32-NEXT:    sw a1, 20(sp)
 ; RV32-NEXT:    sw a2, 24(sp)
 ; RV32-NEXT:    sw a7, 28(sp)
+; RV32-NEXT:    sw a1, 20(sp)
 ; RV32-NEXT:    addi a0, sp, 32
 ; RV32-NEXT:    addi a1, sp, 16
 ; RV32-NEXT:    mv a2, sp
 ; RV32-NEXT:    sw a3, 0(sp)
-; RV32-NEXT:    sw a4, 4(sp)
 ; RV32-NEXT:    sw a5, 8(sp)
 ; RV32-NEXT:    sw a6, 12(sp)
+; RV32-NEXT:    sw a4, 4(sp)
 ; RV32-NEXT:    call __addtf3
 ; RV32-NEXT:    lw a0, 32(sp)
 ; RV32-NEXT:    lw a1, 36(sp)
@@ -600,25 +600,25 @@ define i32 @caller_musttail_both_computed(fp128 %a, fp128 %b) nounwind {
 ; RV32-NEXT:    sw s11, 108(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    mv s0, a1
 ; RV32-NEXT:    mv s1, a0
-; RV32-NEXT:    lw s5, 0(a1)
+; RV32-NEXT:    lw s3, 0(a1)
 ; RV32-NEXT:    lw s2, 4(a1)
-; RV32-NEXT:    lw s3, 8(a1)
-; RV32-NEXT:    lw s4, 12(a1)
+; RV32-NEXT:    lw s4, 8(a1)
+; RV32-NEXT:    lw s5, 12(a1)
 ; RV32-NEXT:    lw s6, 0(a0)
 ; RV32-NEXT:    lw s7, 4(a0)
 ; RV32-NEXT:    lw s8, 8(a0)
 ; RV32-NEXT:    lw s9, 12(a0)
 ; RV32-NEXT:    sw s6, 72(sp)
-; RV32-NEXT:    sw s7, 76(sp)
 ; RV32-NEXT:    sw s8, 80(sp)
 ; RV32-NEXT:    sw s9, 84(sp)
+; RV32-NEXT:    sw s7, 76(sp)
 ; RV32-NEXT:    addi a0, sp, 88
 ; RV32-NEXT:    addi a1, sp, 72
 ; RV32-NEXT:    addi a2, sp, 56
-; RV32-NEXT:    sw s5, 56(sp)
+; RV32-NEXT:    sw s3, 56(sp)
+; RV32-NEXT:    sw s4, 64(sp)
+; RV32-NEXT:    sw s5, 68(sp)
 ; RV32-NEXT:    sw s2, 60(sp)
-; RV32-NEXT:    sw s3, 64(sp)
-; RV32-NEXT:    sw s4, 68(sp)
 ; RV32-NEXT:    call __addtf3
 ; RV32-NEXT:    lw s10, 88(sp)
 ; RV32-NEXT:    lw s11, 92(sp)
@@ -627,16 +627,16 @@ define i32 @caller_musttail_both_computed(fp128 %a, fp128 %b) nounwind {
 ; RV32-NEXT:    lw a0, 100(sp)
 ; RV32-NEXT:    sw a0, 4(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw s6, 24(sp)
-; RV32-NEXT:    sw s7, 28(sp)
 ; RV32-NEXT:    sw s8, 32(sp)
 ; RV32-NEXT:    sw s9, 36(sp)
+; RV32-NEXT:    sw s7, 28(sp)
 ; RV32-NEXT:    addi a0, sp, 40
 ; RV32-NEXT:    addi a1, sp, 24
 ; RV32-NEXT:    addi a2, sp, 8
-; RV32-NEXT:    sw s5, 8(sp)
+; RV32-NEXT:    sw s3, 8(sp)
+; RV32-NEXT:    sw s4, 16(sp)
+; RV32-NEXT:    sw s5, 20(sp)
 ; RV32-NEXT:    sw s2, 12(sp)
-; RV32-NEXT:    sw s3, 16(sp)
-; RV32-NEXT:    sw s4, 20(sp)
 ; RV32-NEXT:    call __subtf3
 ; RV32-NEXT:    lw a0, 40(sp)
 ; RV32-NEXT:    lw a1, 44(sp)
@@ -765,15 +765,15 @@ define i32 @caller_musttail_cross_bb_computed(fp128 %a, i1 %cond) nounwind {
 ; RV32-NEXT:    andi s2, a1, 1
 ; RV32-NEXT:    sw a0, 0(sp)
 ; RV32-NEXT:    sw a0, 16(sp)
-; RV32-NEXT:    sw a3, 4(sp)
 ; RV32-NEXT:    sw a4, 8(sp)
 ; RV32-NEXT:    sw a5, 12(sp)
+; RV32-NEXT:    sw a3, 4(sp)
 ; RV32-NEXT:    addi a0, sp, 32
 ; RV32-NEXT:    addi a1, sp, 16
 ; RV32-NEXT:    mv a2, sp
-; RV32-NEXT:    sw a3, 20(sp)
 ; RV32-NEXT:    sw a4, 24(sp)
 ; RV32-NEXT:    sw a5, 28(sp)
+; RV32-NEXT:    sw a3, 20(sp)
 ; RV32-NEXT:    call __addtf3
 ; RV32-NEXT:    beqz s2, .LBB20_2
 ; RV32-NEXT:  # %bb.1: # %then
@@ -850,16 +850,16 @@ define void @caller_musttail_stack_spill(i32 %a0, i32 %a1, i32 %a2, i32 %a3, i32
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    lw t0, 0(sp)
 ; RV32-NEXT:    lw t1, 4(sp)
-; RV32-NEXT:    sw t0, 0(sp)
 ; RV32-NEXT:    sw t1, 4(sp)
+; RV32-NEXT:    sw t0, 0(sp)
 ; RV32-NEXT:    tail callee_musttail_stack_spill
 ;
 ; RV64-LABEL: caller_musttail_stack_spill:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    ld t0, 0(sp)
 ; RV64-NEXT:    ld t1, 8(sp)
-; RV64-NEXT:    sd t0, 0(sp)
 ; RV64-NEXT:    sd t1, 8(sp)
+; RV64-NEXT:    sd t0, 0(sp)
 ; RV64-NEXT:    tail callee_musttail_stack_spill
   musttail call void @callee_musttail_stack_spill(i32 %a0, i32 %a1, i32 %a2, i32 %a3, i32 %a4, i32 %a5, i32 %a6, i32 %a7, i32 %a8, i32 %a9)
   ret void
@@ -890,18 +890,18 @@ define void @caller_musttail_indirect_and_spill(fp128 %a, i32 %i0, i32 %i1, i32 
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    lw t0, 0(sp)
 ; RV32-NEXT:    lw t1, 4(sp)
-; RV32-NEXT:    sw t0, 0(sp)
 ; RV32-NEXT:    sw t1, 4(sp)
+; RV32-NEXT:    sw t0, 0(sp)
 ; RV32-NEXT:    tail callee_musttail_indirect_and_spill
 ;
 ; RV64-LABEL: caller_musttail_indirect_and_spill:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    ld t0, 0(sp)
-; RV64-NEXT:    ld t1, 8(sp)
+; RV64-NEXT:    ld t0, 8(sp)
+; RV64-NEXT:    ld t1, 0(sp)
 ; RV64-NEXT:    ld t2, 16(sp)
-; RV64-NEXT:    sd t0, 0(sp)
-; RV64-NEXT:    sd t1, 8(sp)
+; RV64-NEXT:    sd t0, 8(sp)
 ; RV64-NEXT:    sd t2, 16(sp)
+; RV64-NEXT:    sd t1, 0(sp)
 ; RV64-NEXT:    tail callee_musttail_indirect_and_spill
   musttail call void @callee_musttail_indirect_and_spill(fp128 %a, i32 %i0, i32 %i1, i32 %i2, i32 %i3, i32 %i4, i32 %i5, i32 %i6, i32 %i7, i32 %i8)
   ret void

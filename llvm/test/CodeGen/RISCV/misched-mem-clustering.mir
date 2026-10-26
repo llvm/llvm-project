@@ -32,11 +32,11 @@ body:             |
     ; NOPOSTMISCHED-NEXT: renamable $x29 = LW renamable $x15, 24 :: (load (s32))
     ; NOPOSTMISCHED-NEXT: renamable $x11 = ADDW renamable $x6, killed renamable $x5
     ; NOPOSTMISCHED-NEXT: renamable $x13 = ADDW killed renamable $x7, killed renamable $x28
-    ; NOPOSTMISCHED-NEXT: renamable $x11 = ADDW killed renamable $x11, killed renamable $x13
-    ; NOPOSTMISCHED-NEXT: renamable $x6 = ADDW killed renamable $x11, killed renamable $x29
     ; NOPOSTMISCHED-NEXT: SW renamable $x14, renamable $x15, 0 :: (store (s32))
     ; NOPOSTMISCHED-NEXT: SW renamable $x14, renamable $x15, 8 :: (store (s32))
     ; NOPOSTMISCHED-NEXT: SW renamable $x14, renamable $x15, 16 :: (store (s32))
+    ; NOPOSTMISCHED-NEXT: renamable $x11 = ADDW renamable $x11, renamable $x13
+    ; NOPOSTMISCHED-NEXT: renamable $x6 = ADDW renamable $x11, renamable $x29
     ; NOPOSTMISCHED-NEXT: SW renamable $x14, renamable $x15, 24 :: (store (s32))
     ; NOPOSTMISCHED-NEXT: PseudoRET
     ;

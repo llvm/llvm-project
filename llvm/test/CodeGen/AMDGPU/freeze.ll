@@ -2216,14 +2216,14 @@ define void @freeze_v14i32(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX11-SDAG:       ; %bb.0:
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    s_clause 0x3
-; GFX11-SDAG-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:32
 ; GFX11-SDAG-NEXT:    global_load_b64 v[16:17], v[0:1], off offset:48
+; GFX11-SDAG-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:32
 ; GFX11-SDAG-NEXT:    global_load_b128 v[8:11], v[0:1], off
 ; GFX11-SDAG-NEXT:    global_load_b128 v[12:15], v[0:1], off offset:16
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(3)
-; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[4:7], off offset:32
-; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(2)
 ; GFX11-SDAG-NEXT:    global_store_b64 v[2:3], v[16:17], off offset:48
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(2)
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[4:7], off offset:32
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(1)
 ; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[8:11], off
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
@@ -2493,14 +2493,14 @@ define void @freeze_v15i32(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX11-SDAG:       ; %bb.0:
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    s_clause 0x3
-; GFX11-SDAG-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:32
 ; GFX11-SDAG-NEXT:    global_load_b96 v[16:18], v[0:1], off offset:48
+; GFX11-SDAG-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:32
 ; GFX11-SDAG-NEXT:    global_load_b128 v[8:11], v[0:1], off
 ; GFX11-SDAG-NEXT:    global_load_b128 v[12:15], v[0:1], off offset:16
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(3)
-; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[4:7], off offset:32
-; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(2)
 ; GFX11-SDAG-NEXT:    global_store_b96 v[2:3], v[16:18], off offset:48
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(2)
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[4:7], off offset:32
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(1)
 ; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[8:11], off
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
@@ -2755,14 +2755,14 @@ define void @freeze_v16i32(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX11-SDAG:       ; %bb.0:
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    s_clause 0x3
-; GFX11-SDAG-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:32
-; GFX11-SDAG-NEXT:    global_load_b128 v[8:11], v[0:1], off offset:48
+; GFX11-SDAG-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:48
+; GFX11-SDAG-NEXT:    global_load_b128 v[8:11], v[0:1], off offset:32
 ; GFX11-SDAG-NEXT:    global_load_b128 v[12:15], v[0:1], off
 ; GFX11-SDAG-NEXT:    global_load_b128 v[16:19], v[0:1], off offset:16
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(3)
-; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[4:7], off offset:32
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[4:7], off offset:48
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(2)
-; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[8:11], off offset:48
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[8:11], off offset:32
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(1)
 ; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[12:15], off
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
@@ -3052,16 +3052,16 @@ define void @freeze_v17i32(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    s_clause 0x4
 ; GFX11-SDAG-NEXT:    global_load_b32 v20, v[0:1], off offset:64
-; GFX11-SDAG-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:32
-; GFX11-SDAG-NEXT:    global_load_b128 v[8:11], v[0:1], off offset:48
+; GFX11-SDAG-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:48
+; GFX11-SDAG-NEXT:    global_load_b128 v[8:11], v[0:1], off offset:32
 ; GFX11-SDAG-NEXT:    global_load_b128 v[12:15], v[0:1], off
 ; GFX11-SDAG-NEXT:    global_load_b128 v[16:19], v[0:1], off offset:16
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(4)
 ; GFX11-SDAG-NEXT:    global_store_b32 v[2:3], v20, off offset:64
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(3)
-; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[4:7], off offset:32
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[4:7], off offset:48
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(2)
-; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[8:11], off offset:48
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[8:11], off offset:32
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(1)
 ; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[12:15], off
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
@@ -3354,16 +3354,16 @@ define void @freeze_v18i32(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    s_clause 0x4
 ; GFX11-SDAG-NEXT:    global_load_b64 v[20:21], v[0:1], off offset:64
-; GFX11-SDAG-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:32
-; GFX11-SDAG-NEXT:    global_load_b128 v[8:11], v[0:1], off offset:48
+; GFX11-SDAG-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:48
+; GFX11-SDAG-NEXT:    global_load_b128 v[8:11], v[0:1], off offset:32
 ; GFX11-SDAG-NEXT:    global_load_b128 v[12:15], v[0:1], off
 ; GFX11-SDAG-NEXT:    global_load_b128 v[16:19], v[0:1], off offset:16
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(4)
 ; GFX11-SDAG-NEXT:    global_store_b64 v[2:3], v[20:21], off offset:64
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(3)
-; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[4:7], off offset:32
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[4:7], off offset:48
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(2)
-; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[8:11], off offset:48
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[8:11], off offset:32
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(1)
 ; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[12:15], off
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
@@ -3673,16 +3673,16 @@ define void @freeze_v19i32(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    s_clause 0x4
 ; GFX11-SDAG-NEXT:    global_load_b96 v[20:22], v[0:1], off offset:64
-; GFX11-SDAG-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:32
-; GFX11-SDAG-NEXT:    global_load_b128 v[8:11], v[0:1], off offset:48
+; GFX11-SDAG-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:48
+; GFX11-SDAG-NEXT:    global_load_b128 v[8:11], v[0:1], off offset:32
 ; GFX11-SDAG-NEXT:    global_load_b128 v[12:15], v[0:1], off
 ; GFX11-SDAG-NEXT:    global_load_b128 v[16:19], v[0:1], off offset:16
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(4)
 ; GFX11-SDAG-NEXT:    global_store_b96 v[2:3], v[20:22], off offset:64
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(3)
-; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[4:7], off offset:32
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[4:7], off offset:48
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(2)
-; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[8:11], off offset:48
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[8:11], off offset:32
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(1)
 ; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[12:15], off
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
@@ -3979,16 +3979,16 @@ define void @freeze_v20i32(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    s_clause 0x4
 ; GFX11-SDAG-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:64
-; GFX11-SDAG-NEXT:    global_load_b128 v[8:11], v[0:1], off offset:32
-; GFX11-SDAG-NEXT:    global_load_b128 v[12:15], v[0:1], off offset:48
+; GFX11-SDAG-NEXT:    global_load_b128 v[8:11], v[0:1], off offset:48
+; GFX11-SDAG-NEXT:    global_load_b128 v[12:15], v[0:1], off offset:32
 ; GFX11-SDAG-NEXT:    global_load_b128 v[16:19], v[0:1], off
 ; GFX11-SDAG-NEXT:    global_load_b128 v[20:23], v[0:1], off offset:16
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(4)
 ; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[4:7], off offset:64
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(3)
-; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[8:11], off offset:32
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[8:11], off offset:48
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(2)
-; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[12:15], off offset:48
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[12:15], off offset:32
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(1)
 ; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[16:19], off
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
@@ -4322,8 +4322,8 @@ define void @freeze_v21i32(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX11-SDAG-NEXT:    s_clause 0x5
 ; GFX11-SDAG-NEXT:    global_load_b32 v24, v[0:1], off offset:80
 ; GFX11-SDAG-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:64
-; GFX11-SDAG-NEXT:    global_load_b128 v[8:11], v[0:1], off offset:32
-; GFX11-SDAG-NEXT:    global_load_b128 v[12:15], v[0:1], off offset:48
+; GFX11-SDAG-NEXT:    global_load_b128 v[8:11], v[0:1], off offset:48
+; GFX11-SDAG-NEXT:    global_load_b128 v[12:15], v[0:1], off offset:32
 ; GFX11-SDAG-NEXT:    global_load_b128 v[16:19], v[0:1], off
 ; GFX11-SDAG-NEXT:    global_load_b128 v[20:23], v[0:1], off offset:16
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(5)
@@ -4331,9 +4331,9 @@ define void @freeze_v21i32(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(4)
 ; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[4:7], off offset:64
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(3)
-; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[8:11], off offset:32
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[8:11], off offset:48
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(2)
-; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[12:15], off offset:48
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[12:15], off offset:32
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(1)
 ; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[16:19], off
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
@@ -4667,20 +4667,20 @@ define void @freeze_v22i32(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX11-SDAG:       ; %bb.0:
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    s_clause 0x5
-; GFX11-SDAG-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:64
 ; GFX11-SDAG-NEXT:    global_load_b64 v[24:25], v[0:1], off offset:80
-; GFX11-SDAG-NEXT:    global_load_b128 v[8:11], v[0:1], off offset:32
-; GFX11-SDAG-NEXT:    global_load_b128 v[12:15], v[0:1], off offset:48
+; GFX11-SDAG-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:64
+; GFX11-SDAG-NEXT:    global_load_b128 v[8:11], v[0:1], off offset:48
+; GFX11-SDAG-NEXT:    global_load_b128 v[12:15], v[0:1], off offset:32
 ; GFX11-SDAG-NEXT:    global_load_b128 v[16:19], v[0:1], off
 ; GFX11-SDAG-NEXT:    global_load_b128 v[20:23], v[0:1], off offset:16
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(5)
-; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[4:7], off offset:64
-; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(4)
 ; GFX11-SDAG-NEXT:    global_store_b64 v[2:3], v[24:25], off offset:80
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(4)
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[4:7], off offset:64
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(3)
-; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[8:11], off offset:32
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[8:11], off offset:48
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(2)
-; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[12:15], off offset:48
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[12:15], off offset:32
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(1)
 ; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[16:19], off
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
@@ -5100,26 +5100,26 @@ define void @freeze_v30i32(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX11-SDAG:       ; %bb.0:
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    s_clause 0x7
-; GFX11-SDAG-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:96
 ; GFX11-SDAG-NEXT:    global_load_b64 v[32:33], v[0:1], off offset:112
-; GFX11-SDAG-NEXT:    global_load_b128 v[8:11], v[0:1], off offset:64
-; GFX11-SDAG-NEXT:    global_load_b128 v[12:15], v[0:1], off offset:80
-; GFX11-SDAG-NEXT:    global_load_b128 v[16:19], v[0:1], off offset:32
-; GFX11-SDAG-NEXT:    global_load_b128 v[20:23], v[0:1], off offset:48
+; GFX11-SDAG-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:96
+; GFX11-SDAG-NEXT:    global_load_b128 v[8:11], v[0:1], off offset:80
+; GFX11-SDAG-NEXT:    global_load_b128 v[12:15], v[0:1], off offset:64
+; GFX11-SDAG-NEXT:    global_load_b128 v[16:19], v[0:1], off offset:48
+; GFX11-SDAG-NEXT:    global_load_b128 v[20:23], v[0:1], off offset:32
 ; GFX11-SDAG-NEXT:    global_load_b128 v[24:27], v[0:1], off
 ; GFX11-SDAG-NEXT:    global_load_b128 v[28:31], v[0:1], off offset:16
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(7)
-; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[4:7], off offset:96
-; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(6)
 ; GFX11-SDAG-NEXT:    global_store_b64 v[2:3], v[32:33], off offset:112
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(6)
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[4:7], off offset:96
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(5)
-; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[8:11], off offset:64
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[8:11], off offset:80
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(4)
-; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[12:15], off offset:80
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[12:15], off offset:64
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(3)
-; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[16:19], off offset:32
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[16:19], off offset:48
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(2)
-; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[20:23], off offset:48
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[20:23], off offset:32
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(1)
 ; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[24:27], off
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
@@ -5555,26 +5555,26 @@ define void @freeze_v31i32(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX11-SDAG:       ; %bb.0:
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    s_clause 0x7
-; GFX11-SDAG-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:96
 ; GFX11-SDAG-NEXT:    global_load_b96 v[32:34], v[0:1], off offset:112
-; GFX11-SDAG-NEXT:    global_load_b128 v[8:11], v[0:1], off offset:64
-; GFX11-SDAG-NEXT:    global_load_b128 v[12:15], v[0:1], off offset:80
-; GFX11-SDAG-NEXT:    global_load_b128 v[16:19], v[0:1], off offset:32
-; GFX11-SDAG-NEXT:    global_load_b128 v[20:23], v[0:1], off offset:48
+; GFX11-SDAG-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:96
+; GFX11-SDAG-NEXT:    global_load_b128 v[8:11], v[0:1], off offset:80
+; GFX11-SDAG-NEXT:    global_load_b128 v[12:15], v[0:1], off offset:64
+; GFX11-SDAG-NEXT:    global_load_b128 v[16:19], v[0:1], off offset:48
+; GFX11-SDAG-NEXT:    global_load_b128 v[20:23], v[0:1], off offset:32
 ; GFX11-SDAG-NEXT:    global_load_b128 v[24:27], v[0:1], off
 ; GFX11-SDAG-NEXT:    global_load_b128 v[28:31], v[0:1], off offset:16
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(7)
-; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[4:7], off offset:96
-; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(6)
 ; GFX11-SDAG-NEXT:    global_store_b96 v[2:3], v[32:34], off offset:112
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(6)
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[4:7], off offset:96
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(5)
-; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[8:11], off offset:64
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[8:11], off offset:80
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(4)
-; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[12:15], off offset:80
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[12:15], off offset:64
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(3)
-; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[16:19], off offset:32
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[16:19], off offset:48
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(2)
-; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[20:23], off offset:48
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[20:23], off offset:32
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(1)
 ; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[24:27], off
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
@@ -5998,26 +5998,26 @@ define void @freeze_v32i32(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX11-SDAG:       ; %bb.0:
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    s_clause 0x7
-; GFX11-SDAG-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:96
-; GFX11-SDAG-NEXT:    global_load_b128 v[8:11], v[0:1], off offset:112
-; GFX11-SDAG-NEXT:    global_load_b128 v[12:15], v[0:1], off offset:64
-; GFX11-SDAG-NEXT:    global_load_b128 v[16:19], v[0:1], off offset:80
-; GFX11-SDAG-NEXT:    global_load_b128 v[20:23], v[0:1], off offset:32
-; GFX11-SDAG-NEXT:    global_load_b128 v[24:27], v[0:1], off offset:48
+; GFX11-SDAG-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:112
+; GFX11-SDAG-NEXT:    global_load_b128 v[8:11], v[0:1], off offset:96
+; GFX11-SDAG-NEXT:    global_load_b128 v[12:15], v[0:1], off offset:80
+; GFX11-SDAG-NEXT:    global_load_b128 v[16:19], v[0:1], off offset:64
+; GFX11-SDAG-NEXT:    global_load_b128 v[20:23], v[0:1], off offset:48
+; GFX11-SDAG-NEXT:    global_load_b128 v[24:27], v[0:1], off offset:32
 ; GFX11-SDAG-NEXT:    global_load_b128 v[28:31], v[0:1], off
 ; GFX11-SDAG-NEXT:    global_load_b128 v[32:35], v[0:1], off offset:16
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(7)
-; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[4:7], off offset:96
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[4:7], off offset:112
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(6)
-; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[8:11], off offset:112
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[8:11], off offset:96
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(5)
-; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[12:15], off offset:64
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[12:15], off offset:80
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(4)
-; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[16:19], off offset:80
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[16:19], off offset:64
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(3)
-; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[20:23], off offset:32
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[20:23], off offset:48
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(2)
-; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[24:27], off offset:48
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[24:27], off offset:32
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(1)
 ; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[28:31], off
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
@@ -9317,14 +9317,14 @@ define void @freeze_v8f64(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX11-SDAG:       ; %bb.0:
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    s_clause 0x3
-; GFX11-SDAG-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:32
-; GFX11-SDAG-NEXT:    global_load_b128 v[8:11], v[0:1], off offset:48
+; GFX11-SDAG-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:48
+; GFX11-SDAG-NEXT:    global_load_b128 v[8:11], v[0:1], off offset:32
 ; GFX11-SDAG-NEXT:    global_load_b128 v[12:15], v[0:1], off
 ; GFX11-SDAG-NEXT:    global_load_b128 v[16:19], v[0:1], off offset:16
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(3)
-; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[4:7], off offset:32
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[4:7], off offset:48
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(2)
-; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[8:11], off offset:48
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[8:11], off offset:32
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(1)
 ; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[12:15], off
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
@@ -10103,14 +10103,14 @@ define void @freeze_v8p0(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX11-SDAG:       ; %bb.0:
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    s_clause 0x3
-; GFX11-SDAG-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:32
-; GFX11-SDAG-NEXT:    global_load_b128 v[8:11], v[0:1], off offset:48
+; GFX11-SDAG-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:48
+; GFX11-SDAG-NEXT:    global_load_b128 v[8:11], v[0:1], off offset:32
 ; GFX11-SDAG-NEXT:    global_load_b128 v[12:15], v[0:1], off
 ; GFX11-SDAG-NEXT:    global_load_b128 v[16:19], v[0:1], off offset:16
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(3)
-; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[4:7], off offset:32
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[4:7], off offset:48
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(2)
-; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[8:11], off offset:48
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[8:11], off offset:32
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(1)
 ; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[12:15], off
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
@@ -10518,26 +10518,26 @@ define void @freeze_v16p0(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX11-SDAG:       ; %bb.0:
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    s_clause 0x7
-; GFX11-SDAG-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:96
-; GFX11-SDAG-NEXT:    global_load_b128 v[8:11], v[0:1], off offset:112
-; GFX11-SDAG-NEXT:    global_load_b128 v[12:15], v[0:1], off offset:64
-; GFX11-SDAG-NEXT:    global_load_b128 v[16:19], v[0:1], off offset:80
-; GFX11-SDAG-NEXT:    global_load_b128 v[20:23], v[0:1], off offset:32
-; GFX11-SDAG-NEXT:    global_load_b128 v[24:27], v[0:1], off offset:48
+; GFX11-SDAG-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:112
+; GFX11-SDAG-NEXT:    global_load_b128 v[8:11], v[0:1], off offset:96
+; GFX11-SDAG-NEXT:    global_load_b128 v[12:15], v[0:1], off offset:80
+; GFX11-SDAG-NEXT:    global_load_b128 v[16:19], v[0:1], off offset:64
+; GFX11-SDAG-NEXT:    global_load_b128 v[20:23], v[0:1], off offset:48
+; GFX11-SDAG-NEXT:    global_load_b128 v[24:27], v[0:1], off offset:32
 ; GFX11-SDAG-NEXT:    global_load_b128 v[28:31], v[0:1], off
 ; GFX11-SDAG-NEXT:    global_load_b128 v[32:35], v[0:1], off offset:16
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(7)
-; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[4:7], off offset:96
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[4:7], off offset:112
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(6)
-; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[8:11], off offset:112
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[8:11], off offset:96
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(5)
-; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[12:15], off offset:64
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[12:15], off offset:80
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(4)
-; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[16:19], off offset:80
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[16:19], off offset:64
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(3)
-; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[20:23], off offset:32
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[20:23], off offset:48
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(2)
-; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[24:27], off offset:48
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[24:27], off offset:32
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(1)
 ; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[28:31], off
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
@@ -11328,14 +11328,14 @@ define void @freeze_v8p1(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX11-SDAG:       ; %bb.0:
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    s_clause 0x3
-; GFX11-SDAG-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:32
-; GFX11-SDAG-NEXT:    global_load_b128 v[8:11], v[0:1], off offset:48
+; GFX11-SDAG-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:48
+; GFX11-SDAG-NEXT:    global_load_b128 v[8:11], v[0:1], off offset:32
 ; GFX11-SDAG-NEXT:    global_load_b128 v[12:15], v[0:1], off
 ; GFX11-SDAG-NEXT:    global_load_b128 v[16:19], v[0:1], off offset:16
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(3)
-; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[4:7], off offset:32
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[4:7], off offset:48
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(2)
-; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[8:11], off offset:48
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[8:11], off offset:32
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(1)
 ; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[12:15], off
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
@@ -11743,26 +11743,26 @@ define void @freeze_v16p1(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX11-SDAG:       ; %bb.0:
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    s_clause 0x7
-; GFX11-SDAG-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:96
-; GFX11-SDAG-NEXT:    global_load_b128 v[8:11], v[0:1], off offset:112
-; GFX11-SDAG-NEXT:    global_load_b128 v[12:15], v[0:1], off offset:64
-; GFX11-SDAG-NEXT:    global_load_b128 v[16:19], v[0:1], off offset:80
-; GFX11-SDAG-NEXT:    global_load_b128 v[20:23], v[0:1], off offset:32
-; GFX11-SDAG-NEXT:    global_load_b128 v[24:27], v[0:1], off offset:48
+; GFX11-SDAG-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:112
+; GFX11-SDAG-NEXT:    global_load_b128 v[8:11], v[0:1], off offset:96
+; GFX11-SDAG-NEXT:    global_load_b128 v[12:15], v[0:1], off offset:80
+; GFX11-SDAG-NEXT:    global_load_b128 v[16:19], v[0:1], off offset:64
+; GFX11-SDAG-NEXT:    global_load_b128 v[20:23], v[0:1], off offset:48
+; GFX11-SDAG-NEXT:    global_load_b128 v[24:27], v[0:1], off offset:32
 ; GFX11-SDAG-NEXT:    global_load_b128 v[28:31], v[0:1], off
 ; GFX11-SDAG-NEXT:    global_load_b128 v[32:35], v[0:1], off offset:16
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(7)
-; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[4:7], off offset:96
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[4:7], off offset:112
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(6)
-; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[8:11], off offset:112
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[8:11], off offset:96
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(5)
-; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[12:15], off offset:64
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[12:15], off offset:80
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(4)
-; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[16:19], off offset:80
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[16:19], off offset:64
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(3)
-; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[20:23], off offset:32
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[20:23], off offset:48
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(2)
-; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[24:27], off offset:48
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[24:27], off offset:32
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(1)
 ; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[28:31], off
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
@@ -12495,14 +12495,14 @@ define void @freeze_v16p3(ptr addrspace(3) %ptra, ptr addrspace(3) %ptrb) {
 ; GFX11-SDAG-LABEL: freeze_v16p3:
 ; GFX11-SDAG:       ; %bb.0:
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-NEXT:    ds_load_b128 v[2:5], v0 offset:32
-; GFX11-SDAG-NEXT:    ds_load_b128 v[6:9], v0 offset:48
+; GFX11-SDAG-NEXT:    ds_load_b128 v[2:5], v0 offset:48
+; GFX11-SDAG-NEXT:    ds_load_b128 v[6:9], v0 offset:32
 ; GFX11-SDAG-NEXT:    ds_load_b128 v[10:13], v0
 ; GFX11-SDAG-NEXT:    ds_load_b128 v[14:17], v0 offset:16
 ; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(3)
-; GFX11-SDAG-NEXT:    ds_store_b128 v1, v[2:5] offset:32
+; GFX11-SDAG-NEXT:    ds_store_b128 v1, v[2:5] offset:48
 ; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(3)
-; GFX11-SDAG-NEXT:    ds_store_b128 v1, v[6:9] offset:48
+; GFX11-SDAG-NEXT:    ds_store_b128 v1, v[6:9] offset:32
 ; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(3)
 ; GFX11-SDAG-NEXT:    ds_store_b128 v1, v[10:13]
 ; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(3)
@@ -13976,14 +13976,14 @@ define void @freeze_v16p5(ptr addrspace(5) %ptra, ptr addrspace(5) %ptrb) {
 ; GFX11-SDAG:       ; %bb.0:
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    s_clause 0x3
-; GFX11-SDAG-NEXT:    scratch_load_b128 v[2:5], v0, off offset:32
-; GFX11-SDAG-NEXT:    scratch_load_b128 v[6:9], v0, off offset:48
+; GFX11-SDAG-NEXT:    scratch_load_b128 v[2:5], v0, off offset:48
+; GFX11-SDAG-NEXT:    scratch_load_b128 v[6:9], v0, off offset:32
 ; GFX11-SDAG-NEXT:    scratch_load_b128 v[10:13], v0, off
 ; GFX11-SDAG-NEXT:    scratch_load_b128 v[14:17], v0, off offset:16
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(3)
-; GFX11-SDAG-NEXT:    scratch_store_b128 v1, v[2:5], off offset:32
+; GFX11-SDAG-NEXT:    scratch_store_b128 v1, v[2:5], off offset:48
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(2)
-; GFX11-SDAG-NEXT:    scratch_store_b128 v1, v[6:9], off offset:48
+; GFX11-SDAG-NEXT:    scratch_store_b128 v1, v[6:9], off offset:32
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(1)
 ; GFX11-SDAG-NEXT:    scratch_store_b128 v1, v[10:13], off
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)

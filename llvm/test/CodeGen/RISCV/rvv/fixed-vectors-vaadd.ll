@@ -266,8 +266,8 @@ define <8 x i64> @vaadd_vx_v8i64_floor(<8 x i64> %x, i64 %y) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV32-NEXT:    vlse64.v v12, (a0), zero
@@ -288,8 +288,8 @@ define <8 x i64> @vaadd_vx_v8i64_floor(<8 x i64> %x, i64 %y) {
 ; RV32NOVXRM:       # %bb.0:
 ; RV32NOVXRM-NEXT:    addi sp, sp, -16
 ; RV32NOVXRM-NEXT:    .cfi_def_cfa_offset 16
-; RV32NOVXRM-NEXT:    sw a0, 8(sp)
 ; RV32NOVXRM-NEXT:    sw a1, 12(sp)
+; RV32NOVXRM-NEXT:    sw a0, 8(sp)
 ; RV32NOVXRM-NEXT:    addi a0, sp, 8
 ; RV32NOVXRM-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV32NOVXRM-NEXT:    vlse64.v v12, (a0), zero
@@ -689,8 +689,8 @@ define <8 x i64> @vaadd_vx_v8i64_ceil(<8 x i64> %x, i64 %y) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV32-NEXT:    vlse64.v v12, (a0), zero
@@ -711,8 +711,8 @@ define <8 x i64> @vaadd_vx_v8i64_ceil(<8 x i64> %x, i64 %y) {
 ; RV32NOVXRM:       # %bb.0:
 ; RV32NOVXRM-NEXT:    addi sp, sp, -16
 ; RV32NOVXRM-NEXT:    .cfi_def_cfa_offset 16
-; RV32NOVXRM-NEXT:    sw a0, 8(sp)
 ; RV32NOVXRM-NEXT:    sw a1, 12(sp)
+; RV32NOVXRM-NEXT:    sw a0, 8(sp)
 ; RV32NOVXRM-NEXT:    addi a0, sp, 8
 ; RV32NOVXRM-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV32NOVXRM-NEXT:    vlse64.v v12, (a0), zero
@@ -762,6 +762,31 @@ define <4 x i8> @vaadd_reassociate(<4 x i8> %x, <4 x i8> %y, <4 x i8> %z, <4 x i
 ; CHECK-NEXT:    vnsrl.wi v9, v10, 0
 ; CHECK-NEXT:    vmul.vv v8, v8, v9
 ; CHECK-NEXT:    ret
+;
+; NOVXRM-LABEL: vaadd_reassociate:
+; NOVXRM:       # %bb.0:
+; NOVXRM-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; NOVXRM-NEXT:    vsext.vf2 v12, v11
+; NOVXRM-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
+; NOVXRM-NEXT:    vwsub.vv v11, v8, v10
+; NOVXRM-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; NOVXRM-NEXT:    vadd.vi v10, v11, 1
+; NOVXRM-NEXT:    vxor.vv v11, v10, v12
+; NOVXRM-NEXT:    vand.vv v10, v10, v12
+; NOVXRM-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
+; NOVXRM-NEXT:    vxor.vv v12, v8, v9
+; NOVXRM-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; NOVXRM-NEXT:    vsra.vi v11, v11, 1
+; NOVXRM-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
+; NOVXRM-NEXT:    vor.vv v8, v8, v9
+; NOVXRM-NEXT:    vsra.vi v9, v12, 1
+; NOVXRM-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; NOVXRM-NEXT:    vadd.vv v10, v10, v11
+; NOVXRM-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
+; NOVXRM-NEXT:    vsub.vv v8, v8, v9
+; NOVXRM-NEXT:    vnsrl.wi v9, v10, 0
+; NOVXRM-NEXT:    vmul.vv v8, v8, v9
+; NOVXRM-NEXT:    ret
   %a = sext <4 x i8> %x to <4 x i16>
   %b = sext <4 x i8> %y to <4 x i16>
   %c = sext <4 x i8> %z to <4 x i16>

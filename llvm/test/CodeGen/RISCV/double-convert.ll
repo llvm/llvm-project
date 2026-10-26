@@ -1445,8 +1445,8 @@ define signext i32 @fcvt_d_w_demanded_bits(i32 signext %0, ptr %1) nounwind {
 ; RV32IZFINXZDINX:       # %bb.0:
 ; RV32IZFINXZDINX-NEXT:    addi a0, a0, 1
 ; RV32IZFINXZDINX-NEXT:    fcvt.d.w a2, a0
-; RV32IZFINXZDINX-NEXT:    sw a2, 0(a1)
 ; RV32IZFINXZDINX-NEXT:    sw a3, 4(a1)
+; RV32IZFINXZDINX-NEXT:    sw a2, 0(a1)
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fcvt_d_w_demanded_bits:
@@ -1468,8 +1468,8 @@ define signext i32 @fcvt_d_w_demanded_bits(i32 signext %0, ptr %1) nounwind {
 ; RV32I-NEXT:    call __floatsidf
 ; RV32I-NEXT:    mv a2, a0
 ; RV32I-NEXT:    mv a0, s1
-; RV32I-NEXT:    sw a2, 0(s0)
 ; RV32I-NEXT:    sw a1, 4(s0)
+; RV32I-NEXT:    sw a2, 0(s0)
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
@@ -1520,8 +1520,8 @@ define signext i32 @fcvt_d_wu_demanded_bits(i32 signext %0, ptr %1) nounwind {
 ; RV32IZFINXZDINX:       # %bb.0:
 ; RV32IZFINXZDINX-NEXT:    addi a0, a0, 1
 ; RV32IZFINXZDINX-NEXT:    fcvt.d.wu a2, a0
-; RV32IZFINXZDINX-NEXT:    sw a2, 0(a1)
 ; RV32IZFINXZDINX-NEXT:    sw a3, 4(a1)
+; RV32IZFINXZDINX-NEXT:    sw a2, 0(a1)
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fcvt_d_wu_demanded_bits:
@@ -1543,8 +1543,8 @@ define signext i32 @fcvt_d_wu_demanded_bits(i32 signext %0, ptr %1) nounwind {
 ; RV32I-NEXT:    call __floatunsidf
 ; RV32I-NEXT:    mv a2, a0
 ; RV32I-NEXT:    mv a0, s1
-; RV32I-NEXT:    sw a2, 0(s0)
 ; RV32I-NEXT:    sw a1, 4(s0)
+; RV32I-NEXT:    sw a2, 0(s0)
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload

@@ -20,8 +20,8 @@ define amdgpu_kernel void @buffer_load_lds_dword_2_arrays(<4 x i32> %rsrc, i32 %
 ; GFX9-LABEL: buffer_load_lds_dword_2_arrays:
 ; GFX9:       ; %bb.0: ; %main_body
 ; GFX9-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x24
-; GFX9-NEXT:    v_mov_b32_e32 v0, 4
 ; GFX9-NEXT:    s_mov_b32 m0, 0
+; GFX9-NEXT:    v_mov_b32_e32 v0, 4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 8
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)

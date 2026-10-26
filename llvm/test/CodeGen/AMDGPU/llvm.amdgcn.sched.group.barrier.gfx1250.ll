@@ -55,9 +55,9 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_SWMMAC_cluster(ptr 
 ; COEXEC-NEXT:    s_wait_dscnt 0x0
 ; COEXEC-NEXT:    v_swmmac_f16_16x16x64_f16 v[60:63], v[16:23], v[0:15], v76
 ; COEXEC-NEXT:    ds_store_b128 v78, v[56:59]
+; COEXEC-NEXT:    ds_store_b128 v77, v[64:67] offset:1536
 ; COEXEC-NEXT:    ds_store_b128 v77, v[72:75] offset:512
 ; COEXEC-NEXT:    ds_store_b128 v77, v[68:71] offset:1024
-; COEXEC-NEXT:    ds_store_b128 v77, v[64:67] offset:1536
 ; COEXEC-NEXT:    ; sched_group_barrier mask(0x00000008) size(5) SyncID(0)
 ; COEXEC-NEXT:    ds_store_b128 v77, v[60:63] offset:2048
 ; COEXEC-NEXT:    ; sched_group_barrier mask(0x00000200) size(5) SyncID(0)

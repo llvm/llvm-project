@@ -286,30 +286,29 @@ define double @test_bitextract_double_b231_var(b231 %src, i32 %off) {
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    v_dual_mov_b32 v10, s1 :: v_dual_and_b32 v7, 0x7f, v7
 ; GFX12-NEXT:    v_mov_b32_e32 v9, s0
-; GFX12-NEXT:    s_clause 0x3
-; GFX12-NEXT:    scratch_store_b64 off, v[4:5], s32 offset:16
-; GFX12-NEXT:    scratch_store_b64 off, v[2:3], s32 offset:8
-; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s32
-; GFX12-NEXT:    scratch_store_b64 off, v[6:7], s32 offset:24
-; GFX12-NEXT:    v_and_b32_e32 v4, 63, v8
-; GFX12-NEXT:    s_clause 0x3
+; GFX12-NEXT:    v_and_b32_e32 v11, 24, v11
+; GFX12-NEXT:    s_clause 0x7
 ; GFX12-NEXT:    scratch_store_b64 off, v[9:10], s32 offset:56
 ; GFX12-NEXT:    scratch_store_b64 off, v[9:10], s32 offset:48
 ; GFX12-NEXT:    scratch_store_b64 off, v[9:10], s32 offset:40
 ; GFX12-NEXT:    scratch_store_b64 off, v[9:10], s32 offset:32
-; GFX12-NEXT:    v_and_b32_e32 v9, 24, v11
-; GFX12-NEXT:    v_xor_b32_e32 v4, 63, v4
+; GFX12-NEXT:    scratch_store_b64 off, v[4:5], s32 offset:16
+; GFX12-NEXT:    scratch_store_b64 off, v[2:3], s32 offset:8
+; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s32
+; GFX12-NEXT:    scratch_store_b64 off, v[6:7], s32 offset:24
 ; GFX12-NEXT:    s_clause 0x1
-; GFX12-NEXT:    scratch_load_b64 v[0:1], v9, s32 offset:8
-; GFX12-NEXT:    scratch_load_b64 v[2:3], v9, s32
+; GFX12-NEXT:    scratch_load_b64 v[0:1], v11, s32 offset:8
+; GFX12-NEXT:    scratch_load_b64 v[2:3], v11, s32
+; GFX12-NEXT:    v_and_b32_e32 v4, 63, v8
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(VALU_DEP_2)
+; GFX12-NEXT:    v_xor_b32_e32 v4, 63, v4
 ; GFX12-NEXT:    s_wait_loadcnt 0x1
 ; GFX12-NEXT:    v_lshlrev_b64_e32 v[0:1], 1, v[0:1]
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_lshrrev_b64 v[2:3], v8, v[2:3]
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_lshlrev_b64_e32 v[0:1], v4, v[0:1]
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_or_b32_e32 v0, v2, v0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-NEXT:    v_or_b32_e32 v1, v3, v1
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %result = bitextract double, b231 %src, i32 %off
@@ -788,7 +787,7 @@ define b231 @test_bitinsert_double_b231_var(b231 %base, double %val, i32 %off) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_mov_b32 s0, 0
-; GFX12-NEXT:    v_and_b32_e32 v25, 63, v10
+; GFX12-NEXT:    v_lshrrev_b32_e32 v15, 3, v10
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_mov_b32 s1, s0
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
@@ -798,17 +797,19 @@ define b231 @test_bitinsert_double_b231_var(b231 %base, double %val, i32 %off) {
 ; GFX12-NEXT:    s_add_co_i32 s1, s32, 0x60
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-NEXT:    v_mov_b32_e32 v12, v11
-; GFX12-NEXT:    s_clause 0x3
+; GFX12-NEXT:    s_clause 0x2
 ; GFX12-NEXT:    scratch_store_b64 off, v[13:14], s32 offset:56
 ; GFX12-NEXT:    scratch_store_b64 off, v[13:14], s32 offset:48
 ; GFX12-NEXT:    scratch_store_b64 off, v[13:14], s32 offset:40
+; GFX12-NEXT:    v_and_b32_e32 v25, 63, v10
+; GFX12-NEXT:    s_clause 0x4
 ; GFX12-NEXT:    scratch_store_b64 off, v[11:12], s32 offset:32
-; GFX12-NEXT:    v_lshrrev_b32_e32 v11, 3, v10
-; GFX12-NEXT:    s_clause 0xb
 ; GFX12-NEXT:    scratch_store_b64 off, v[13:14], s32 offset:24
 ; GFX12-NEXT:    scratch_store_b64 off, v[13:14], s32 offset:16
 ; GFX12-NEXT:    scratch_store_b64 off, v[13:14], s32 offset:8
 ; GFX12-NEXT:    scratch_store_b64 off, v[13:14], s32
+; GFX12-NEXT:    v_and_b32_e32 v11, 24, v15
+; GFX12-NEXT:    s_clause 0x7
 ; GFX12-NEXT:    scratch_store_b64 off, v[13:14], s32 offset:120
 ; GFX12-NEXT:    scratch_store_b64 off, v[13:14], s32 offset:112
 ; GFX12-NEXT:    scratch_store_b64 off, v[13:14], s32 offset:104
@@ -818,9 +819,7 @@ define b231 @test_bitinsert_double_b231_var(b231 %base, double %val, i32 %off) {
 ; GFX12-NEXT:    scratch_store_b64 off, v[13:14], s32 offset:72
 ; GFX12-NEXT:    scratch_store_b64 off, v[13:14], s32 offset:64
 ; GFX12-NEXT:    v_xor_b32_e32 v37, 63, v25
-; GFX12-NEXT:    v_and_b32_e32 v11, 24, v11
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_sub_nc_u32_e32 v19, s0, v11
 ; GFX12-NEXT:    v_sub_nc_u32_e32 v23, s1, v11
 ; GFX12-NEXT:    s_clause 0x1

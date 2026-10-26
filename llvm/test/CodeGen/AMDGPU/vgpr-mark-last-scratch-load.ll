@@ -505,6 +505,12 @@ define <8 x half> @baz() nounwind {
 ; CHECK-NEXT:    s_mov_b32 s15, s50
 ; CHECK-NEXT:    s_wait_loadcnt 0x4
 ; CHECK-NEXT:    v_dual_mov_b32 v127, v15 :: v_dual_mov_b32 v126, v14
+; CHECK-NEXT:    s_wait_loadcnt 0x3
+; CHECK-NEXT:    v_dual_mov_b32 v131, v19 :: v_dual_mov_b32 v130, v18
+; CHECK-NEXT:    v_dual_mov_b32 v129, v17 :: v_dual_mov_b32 v128, v16
+; CHECK-NEXT:    s_clause 0x1
+; CHECK-NEXT:    scratch_store_b32 off, v131, s32 offset:128
+; CHECK-NEXT:    scratch_store_b128 off, v[127:130], s32 offset:112
 ; CHECK-NEXT:    v_dual_mov_b32 v125, v13 :: v_dual_mov_b32 v124, v12
 ; CHECK-NEXT:    v_dual_mov_b32 v123, v11 :: v_dual_mov_b32 v122, v10
 ; CHECK-NEXT:    v_dual_mov_b32 v121, v9 :: v_dual_mov_b32 v120, v8
@@ -512,9 +518,6 @@ define <8 x half> @baz() nounwind {
 ; CHECK-NEXT:    v_dual_mov_b32 v117, v5 :: v_dual_mov_b32 v116, v4
 ; CHECK-NEXT:    v_dual_mov_b32 v115, v3 :: v_dual_mov_b32 v114, v2
 ; CHECK-NEXT:    v_dual_mov_b32 v113, v1 :: v_dual_mov_b32 v112, v0
-; CHECK-NEXT:    s_wait_loadcnt 0x3
-; CHECK-NEXT:    v_dual_mov_b32 v131, v19 :: v_dual_mov_b32 v130, v18
-; CHECK-NEXT:    v_dual_mov_b32 v129, v17 :: v_dual_mov_b32 v128, v16
 ; CHECK-NEXT:    s_clause 0x4 ; 80-byte Folded Reload
 ; CHECK-NEXT:    scratch_load_b128 v[0:3], off, s33 offset:176 th:TH_LOAD_LU
 ; CHECK-NEXT:    scratch_load_b128 v[4:7], off, s33 offset:192 th:TH_LOAD_LU
@@ -527,14 +530,12 @@ define <8 x half> @baz() nounwind {
 ; CHECK-NEXT:    scratch_load_b128 v[24:27], off, s33 offset:272 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; CHECK-NEXT:    s_wait_loadcnt 0x7
 ; CHECK-NEXT:    scratch_load_b128 v[28:31], off, s33 offset:288 th:TH_LOAD_LU ; 16-byte Folded Reload
-; CHECK-NEXT:    v_dual_mov_b32 v44, v112 :: v_dual_mov_b32 v45, v113
-; CHECK-NEXT:    v_mov_b32_e32 v46, v114
-; CHECK-NEXT:    s_clause 0x4
-; CHECK-NEXT:    scratch_store_b32 off, v131, s32 offset:128
-; CHECK-NEXT:    scratch_store_b128 off, v[127:130], s32 offset:112
+; CHECK-NEXT:    s_clause 0x2
 ; CHECK-NEXT:    scratch_store_b128 off, v[123:126], s32 offset:96
 ; CHECK-NEXT:    scratch_store_b128 off, v[119:122], s32 offset:80
 ; CHECK-NEXT:    scratch_store_b128 off, v[115:118], s32 offset:64
+; CHECK-NEXT:    v_dual_mov_b32 v46, v114 :: v_dual_mov_b32 v45, v113
+; CHECK-NEXT:    v_mov_b32_e32 v44, v112
 ; CHECK-NEXT:    s_wait_loadcnt 0x3
 ; CHECK-NEXT:    v_dual_mov_b32 v16, v108 :: v_dual_mov_b32 v17, v109
 ; CHECK-NEXT:    v_dual_mov_b32 v18, v110 :: v_dual_mov_b32 v19, v111

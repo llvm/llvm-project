@@ -1140,8 +1140,8 @@ define void @transpose_s16_8x8_(ptr nocapture noundef %0) {
 ; CHECK-NEXT:    stp q3, q4, [x0]
 ; CHECK-NEXT:    zip2 v3.4s, v7.4s, v19.4s
 ; CHECK-NEXT:    stp q17, q18, [x0, #32]
-; CHECK-NEXT:    stp q1, q0, [x0, #96]
 ; CHECK-NEXT:    stp q5, q3, [x0, #64]
+; CHECK-NEXT:    stp q1, q0, [x0, #96]
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: transpose_s16_8x8_:
@@ -1178,8 +1178,8 @@ define void @transpose_s16_8x8_(ptr nocapture noundef %0) {
 ; CHECK-GI-NEXT:    stp q3, q4, [x0]
 ; CHECK-GI-NEXT:    zip2 v3.4s, v7.4s, v19.4s
 ; CHECK-GI-NEXT:    stp q17, q18, [x0, #32]
-; CHECK-GI-NEXT:    stp q1, q0, [x0, #96]
 ; CHECK-GI-NEXT:    stp q5, q3, [x0, #64]
+; CHECK-GI-NEXT:    stp q1, q0, [x0, #96]
 ; CHECK-GI-NEXT:    ret
   %2 = load <8 x i16>, ptr %0, align 16
   %3 = getelementptr inbounds <8 x i16>, ptr %0, i64 1
@@ -1368,9 +1368,9 @@ define void @store_factor3(ptr %ptr, <4 x i32> %a0, <4 x i32> %a1, <4 x i32> %a2
 ; CHECK-IADISABLED-NEXT:    mov v1.s[2], v2.s[0]
 ; CHECK-IADISABLED-NEXT:    uzp2 v5.4s, v3.4s, v0.4s
 ; CHECK-IADISABLED-NEXT:    mov v4.s[3], v0.s[2]
-; CHECK-IADISABLED-NEXT:    str q1, [x0]
 ; CHECK-IADISABLED-NEXT:    ext v0.16b, v5.16b, v3.16b, #4
-; CHECK-IADISABLED-NEXT:    stp q0, q4, [x0, #16]
+; CHECK-IADISABLED-NEXT:    stp q1, q0, [x0]
+; CHECK-IADISABLED-NEXT:    str q4, [x0, #32]
 ; CHECK-IADISABLED-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: store_factor3:

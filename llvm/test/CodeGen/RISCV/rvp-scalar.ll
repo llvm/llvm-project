@@ -2492,8 +2492,8 @@ define i64 @wmacc_first_mul_multiple_uses(i32 %a, i32 %b, i32 %c, i32 %d, ptr %o
 ; RV32-NEXT:    mv a6, a2
 ; RV32-NEXT:    wmacc a2, a0, a1
 ; RV32-NEXT:    mvd a0, a2
-; RV32-NEXT:    sw a6, 0(a4)
 ; RV32-NEXT:    sw a5, 4(a4)
+; RV32-NEXT:    sw a6, 0(a4)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: wmacc_first_mul_multiple_uses:

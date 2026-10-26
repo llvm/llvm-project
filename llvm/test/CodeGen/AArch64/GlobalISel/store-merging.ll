@@ -173,9 +173,9 @@ define void @test_alias_4xs16(ptr %ptr, ptr %ptr2) {
 ; CHECK-NEXT:    mov w8, #4 ; =0x4
 ; CHECK-NEXT:    mov w9, #9 ; =0x9
 ; CHECK-NEXT:    movk w8, #5, lsl #16
-; CHECK-NEXT:    strh w9, [x0, #4]
 ; CHECK-NEXT:    str w8, [x0]
 ; CHECK-NEXT:    mov w8, #14 ; =0xe
+; CHECK-NEXT:    strh w9, [x0, #4]
 ; CHECK-NEXT:    strh wzr, [x1]
 ; CHECK-NEXT:    strh w8, [x0, #6]
 ; CHECK-NEXT:    ret
@@ -347,8 +347,8 @@ define void @mismatching_types_i16f16(ptr %ptr) {
 ; CHECK-LABEL: mismatching_types_i16f16:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    mov w8, #4 ; =0x4
-; CHECK-NEXT:    strh wzr, [x0, #2]
 ; CHECK-NEXT:    strh w8, [x0]
+; CHECK-NEXT:    strh wzr, [x0, #2]
 ; CHECK-NEXT:    ret
   store i16 4, ptr %ptr
   %addr2 = getelementptr i16, ptr %ptr, i64 1

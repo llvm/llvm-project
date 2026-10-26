@@ -195,8 +195,8 @@ define <2 x i128> @sdiv_v2i128(<2 x i128> %x, <2 x i128> %y, <2 x i1> %m) nounwi
 ; CHECK-NEXT:    call __divti3
 ; CHECK-NEXT:    sd a0, 0(s0)
 ; CHECK-NEXT:    sd a1, 8(s0)
-; CHECK-NEXT:    sd s4, 16(s0)
 ; CHECK-NEXT:    sd s5, 24(s0)
+; CHECK-NEXT:    sd s4, 16(s0)
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    add sp, sp, a0
 ; CHECK-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload

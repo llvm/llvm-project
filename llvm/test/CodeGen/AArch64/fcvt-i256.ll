@@ -597,18 +597,18 @@ define i256 @f32_to_s256(float %val) nounwind {
 ; CHECK-SD-NEXT:    sub sp, sp, #64
 ; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-SD-NEXT:    sub w10, w10, #150
-; CHECK-SD-NEXT:    str x11, [sp, #32]
-; CHECK-SD-NEXT:    lsr x11, x10, #3
-; CHECK-SD-NEXT:    mov x12, sp
+; CHECK-SD-NEXT:    mov x13, sp
+; CHECK-SD-NEXT:    lsr x12, x10, #3
+; CHECK-SD-NEXT:    add x13, x13, #32
 ; CHECK-SD-NEXT:    str xzr, [sp, #56]
-; CHECK-SD-NEXT:    add x12, x12, #32
 ; CHECK-SD-NEXT:    and x16, x10, #0x3f
 ; CHECK-SD-NEXT:    mvn w2, w10
-; CHECK-SD-NEXT:    and x11, x11, #0x18
+; CHECK-SD-NEXT:    and x12, x12, #0x18
 ; CHECK-SD-NEXT:    eor x16, x16, #0x3f
 ; CHECK-SD-NEXT:    stur q0, [sp, #40]
-; CHECK-SD-NEXT:    sub x11, x12, x11
 ; CHECK-SD-NEXT:    stp q0, q0, [sp]
+; CHECK-SD-NEXT:    str x11, [sp, #32]
+; CHECK-SD-NEXT:    sub x11, x13, x12
 ; CHECK-SD-NEXT:    ldp x12, x15, [x11]
 ; CHECK-SD-NEXT:    ldp x1, x11, [x11, #16]
 ; CHECK-SD-NEXT:    lsl x18, x15, x10
@@ -816,18 +816,18 @@ define i256 @f32_to_u256(float %val) nounwind {
 ; CHECK-SD-NEXT:    sub sp, sp, #64
 ; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-SD-NEXT:    sub w9, w9, #150
-; CHECK-SD-NEXT:    str x8, [sp, #32]
-; CHECK-SD-NEXT:    lsr x8, x9, #3
-; CHECK-SD-NEXT:    mov x10, sp
+; CHECK-SD-NEXT:    mov x11, sp
+; CHECK-SD-NEXT:    lsr x10, x9, #3
+; CHECK-SD-NEXT:    add x11, x11, #32
 ; CHECK-SD-NEXT:    str xzr, [sp, #56]
-; CHECK-SD-NEXT:    add x10, x10, #32
 ; CHECK-SD-NEXT:    and x13, x9, #0x3f
 ; CHECK-SD-NEXT:    mvn w17, w9
-; CHECK-SD-NEXT:    and x8, x8, #0x18
+; CHECK-SD-NEXT:    and x10, x10, #0x18
 ; CHECK-SD-NEXT:    eor x13, x13, #0x3f
 ; CHECK-SD-NEXT:    stur q0, [sp, #40]
-; CHECK-SD-NEXT:    sub x8, x10, x8
 ; CHECK-SD-NEXT:    stp q0, q0, [sp]
+; CHECK-SD-NEXT:    str x8, [sp, #32]
+; CHECK-SD-NEXT:    sub x8, x11, x10
 ; CHECK-SD-NEXT:    ldp x11, x10, [x8, #8]
 ; CHECK-SD-NEXT:    ldr x12, [x8]
 ; CHECK-SD-NEXT:    ldr x8, [x8, #24]
@@ -1308,18 +1308,18 @@ define i256 @f32_to_s256_sat(float %val) nounwind {
 ; CHECK-SD-NEXT:    sub sp, sp, #64
 ; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-SD-NEXT:    sub w10, w10, #150
-; CHECK-SD-NEXT:    str x11, [sp, #32]
-; CHECK-SD-NEXT:    lsr x11, x10, #3
-; CHECK-SD-NEXT:    mov x12, sp
+; CHECK-SD-NEXT:    mov x13, sp
+; CHECK-SD-NEXT:    lsr x12, x10, #3
+; CHECK-SD-NEXT:    add x13, x13, #32
 ; CHECK-SD-NEXT:    str xzr, [sp, #56]
-; CHECK-SD-NEXT:    add x12, x12, #32
 ; CHECK-SD-NEXT:    and x16, x10, #0x3f
 ; CHECK-SD-NEXT:    mvn w2, w10
-; CHECK-SD-NEXT:    and x11, x11, #0x18
+; CHECK-SD-NEXT:    and x12, x12, #0x18
 ; CHECK-SD-NEXT:    eor x16, x16, #0x3f
 ; CHECK-SD-NEXT:    stur q0, [sp, #40]
-; CHECK-SD-NEXT:    sub x11, x12, x11
 ; CHECK-SD-NEXT:    stp q0, q0, [sp]
+; CHECK-SD-NEXT:    str x11, [sp, #32]
+; CHECK-SD-NEXT:    sub x11, x13, x12
 ; CHECK-SD-NEXT:    ldp x12, x15, [x11]
 ; CHECK-SD-NEXT:    ldp x1, x11, [x11, #16]
 ; CHECK-SD-NEXT:    lsl x18, x15, x10
@@ -1529,8 +1529,8 @@ define i256 @f32_to_u256_sat(float %val) nounwind {
 ; CHECK-SD-LABEL: f32_to_u256_sat:
 ; CHECK-SD:       // %bb.0: // %fp-to-i-entry
 ; CHECK-SD-NEXT:    fmov w10, s0
-; CHECK-SD-NEXT:    ubfx w8, w10, #23, #8
-; CHECK-SD-NEXT:    cmp w8, #127
+; CHECK-SD-NEXT:    ubfx w9, w10, #23, #8
+; CHECK-SD-NEXT:    cmp w9, #127
 ; CHECK-SD-NEXT:    fccmp s0, s0, #1, hs
 ; CHECK-SD-NEXT:    ccmp w10, #0, #8, vc
 ; CHECK-SD-NEXT:    b.pl .LBB9_2
@@ -1541,51 +1541,51 @@ define i256 @f32_to_u256_sat(float %val) nounwind {
 ; CHECK-SD-NEXT:    mov x3, xzr
 ; CHECK-SD-NEXT:    ret
 ; CHECK-SD-NEXT:  .LBB9_2: // %fp-to-i-if-check.saturate
-; CHECK-SD-NEXT:    cmp w8, #254
+; CHECK-SD-NEXT:    cmp w9, #254
 ; CHECK-SD-NEXT:    b.hi .LBB9_6
 ; CHECK-SD-NEXT:  // %bb.3: // %fp-to-i-if-check.exp.size
-; CHECK-SD-NEXT:    mov w9, #8388608 // =0x800000
-; CHECK-SD-NEXT:    cmp w8, #149
-; CHECK-SD-NEXT:    bfxil w9, w10, #0, #23
+; CHECK-SD-NEXT:    mov w8, #8388608 // =0x800000
+; CHECK-SD-NEXT:    cmp w9, #149
+; CHECK-SD-NEXT:    bfxil w8, w10, #0, #23
 ; CHECK-SD-NEXT:    b.hi .LBB9_5
 ; CHECK-SD-NEXT:  // %bb.4: // %fp-to-i-if-exp.small
 ; CHECK-SD-NEXT:    mov w10, #150 // =0x96
 ; CHECK-SD-NEXT:    mov x1, xzr
 ; CHECK-SD-NEXT:    mov x2, xzr
-; CHECK-SD-NEXT:    sub w8, w10, w8
+; CHECK-SD-NEXT:    sub w9, w10, w9
 ; CHECK-SD-NEXT:    mov x3, xzr
-; CHECK-SD-NEXT:    lsr w0, w9, w8
+; CHECK-SD-NEXT:    lsr w0, w8, w9
 ; CHECK-SD-NEXT:    ret
 ; CHECK-SD-NEXT:  .LBB9_5: // %fp-to-i-if-exp.large
 ; CHECK-SD-NEXT:    sub sp, sp, #64
 ; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-SD-NEXT:    sub w8, w8, #150
-; CHECK-SD-NEXT:    str x9, [sp, #32]
-; CHECK-SD-NEXT:    lsr x9, x8, #3
-; CHECK-SD-NEXT:    mov x10, sp
+; CHECK-SD-NEXT:    sub w9, w9, #150
+; CHECK-SD-NEXT:    mov x11, sp
+; CHECK-SD-NEXT:    lsr x10, x9, #3
+; CHECK-SD-NEXT:    add x11, x11, #32
 ; CHECK-SD-NEXT:    str xzr, [sp, #56]
-; CHECK-SD-NEXT:    add x10, x10, #32
-; CHECK-SD-NEXT:    and x13, x8, #0x3f
-; CHECK-SD-NEXT:    mvn w17, w8
-; CHECK-SD-NEXT:    and x9, x9, #0x18
+; CHECK-SD-NEXT:    and x13, x9, #0x3f
+; CHECK-SD-NEXT:    mvn w17, w9
+; CHECK-SD-NEXT:    and x10, x10, #0x18
 ; CHECK-SD-NEXT:    eor x13, x13, #0x3f
 ; CHECK-SD-NEXT:    stur q0, [sp, #40]
-; CHECK-SD-NEXT:    sub x9, x10, x9
 ; CHECK-SD-NEXT:    stp q0, q0, [sp]
-; CHECK-SD-NEXT:    ldp x11, x10, [x9, #8]
-; CHECK-SD-NEXT:    ldr x12, [x9]
-; CHECK-SD-NEXT:    ldr x9, [x9, #24]
+; CHECK-SD-NEXT:    str x8, [sp, #32]
+; CHECK-SD-NEXT:    sub x8, x11, x10
+; CHECK-SD-NEXT:    ldp x11, x10, [x8, #8]
+; CHECK-SD-NEXT:    ldr x12, [x8]
+; CHECK-SD-NEXT:    ldr x8, [x8, #24]
 ; CHECK-SD-NEXT:    lsr x16, x12, #1
-; CHECK-SD-NEXT:    lsl x0, x12, x8
+; CHECK-SD-NEXT:    lsl x0, x12, x9
 ; CHECK-SD-NEXT:    lsr x14, x10, #1
 ; CHECK-SD-NEXT:    lsr x15, x11, #1
-; CHECK-SD-NEXT:    lsl x9, x9, x8
-; CHECK-SD-NEXT:    lsl x10, x10, x8
-; CHECK-SD-NEXT:    lsl x11, x11, x8
+; CHECK-SD-NEXT:    lsl x8, x8, x9
+; CHECK-SD-NEXT:    lsl x10, x10, x9
+; CHECK-SD-NEXT:    lsl x11, x11, x9
 ; CHECK-SD-NEXT:    lsr x15, x15, x17
 ; CHECK-SD-NEXT:    lsr x14, x14, x13
 ; CHECK-SD-NEXT:    lsr x13, x16, x13
-; CHECK-SD-NEXT:    orr x3, x9, x14
+; CHECK-SD-NEXT:    orr x3, x8, x14
 ; CHECK-SD-NEXT:    orr x2, x10, x15
 ; CHECK-SD-NEXT:    orr x1, x11, x13
 ; CHECK-SD-NEXT:    add sp, sp, #64

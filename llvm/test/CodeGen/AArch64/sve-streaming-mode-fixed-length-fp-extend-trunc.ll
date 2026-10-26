@@ -133,8 +133,8 @@ define void @fcvt_v16f16_to_v16f32(<16 x half> %a, ptr %b) {
 ; CHECK-NEXT:    fcvt z0.s, p0/m, z0.h
 ; CHECK-NEXT:    fcvt z2.s, p0/m, z2.h
 ; CHECK-NEXT:    fcvt z3.s, p0/m, z3.h
-; CHECK-NEXT:    stp q0, q3, [x0]
 ; CHECK-NEXT:    stp q1, q2, [x0, #32]
+; CHECK-NEXT:    stp q0, q3, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fcvt_v16f16_to_v16f32:
@@ -187,8 +187,8 @@ define void @fcvt_v16f16_to_v16f32(<16 x half> %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    fcvt s0, h0
 ; NONEON-NOSVE-NEXT:    stp s0, s1, [sp, #96]
 ; NONEON-NOSVE-NEXT:    ldp q0, q1, [sp, #96]
-; NONEON-NOSVE-NEXT:    stp q2, q3, [x0]
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [x0, #32]
+; NONEON-NOSVE-NEXT:    stp q2, q3, [x0]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #128
 ; NONEON-NOSVE-NEXT:    ret
   %res = fpext <16 x half> %a to <16 x float>
@@ -387,8 +387,8 @@ define void @fcvt_v16f16_v16f32(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    fcvt s0, h0
 ; NONEON-NOSVE-NEXT:    stp s0, s1, [sp, #96]
 ; NONEON-NOSVE-NEXT:    ldp q0, q1, [sp, #96]
-; NONEON-NOSVE-NEXT:    stp q2, q3, [x1]
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [x1, #32]
+; NONEON-NOSVE-NEXT:    stp q2, q3, [x1]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #128
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <16 x half>, ptr %a
@@ -552,8 +552,8 @@ define void @fcvt_v8f16_v8f64(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    fcvt d0, s0
 ; NONEON-NOSVE-NEXT:    stp d0, d1, [sp, #32]
 ; NONEON-NOSVE-NEXT:    ldp q0, q1, [sp, #32]
-; NONEON-NOSVE-NEXT:    stp q2, q3, [x1]
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [x1, #32]
+; NONEON-NOSVE-NEXT:    stp q2, q3, [x1]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #96
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <8 x half>, ptr %a
@@ -667,8 +667,8 @@ define void @fcvt_v16f16_v16f64(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    ldp q2, q5, [sp, #128]
 ; NONEON-NOSVE-NEXT:    stp q3, q4, [x1, #32]
 ; NONEON-NOSVE-NEXT:    stp q6, q7, [x1, #64]
-; NONEON-NOSVE-NEXT:    stp q0, q1, [x1]
 ; NONEON-NOSVE-NEXT:    stp q5, q2, [x1, #96]
+; NONEON-NOSVE-NEXT:    stp q0, q1, [x1]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #192
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <16 x half>, ptr %a
@@ -820,8 +820,8 @@ define void @fcvt_v8f32_v8f64(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    fcvt d0, s0
 ; NONEON-NOSVE-NEXT:    stp d0, d1, [sp, #96]
 ; NONEON-NOSVE-NEXT:    ldp q0, q1, [sp, #96]
-; NONEON-NOSVE-NEXT:    stp q2, q3, [x1]
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [x1, #32]
+; NONEON-NOSVE-NEXT:    stp q2, q3, [x1]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #128
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <8 x float>, ptr %a

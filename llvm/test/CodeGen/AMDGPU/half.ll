@@ -2517,29 +2517,29 @@ define amdgpu_kernel void @global_extload_v16f16_to_v16f64(ptr addrspace(1) %out
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(1)
 ; GFX11-TRUE16-NEXT:    v_cvt_f32_f16_e32 v11, v3.l
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_cvt_f32_f16_e32 v22, v5.l
-; GFX11-TRUE16-NEXT:    v_cvt_f32_f16_e32 v23, v5.h
-; GFX11-TRUE16-NEXT:    v_cvt_f32_f16_e32 v18, v4.l
-; GFX11-TRUE16-NEXT:    v_cvt_f32_f16_e32 v19, v4.h
 ; GFX11-TRUE16-NEXT:    v_cvt_f32_f16_e32 v15, v7.l
 ; GFX11-TRUE16-NEXT:    v_cvt_f32_f16_e32 v7, v7.h
+; GFX11-TRUE16-NEXT:    v_cvt_f32_f16_e32 v24, v5.l
+; GFX11-TRUE16-NEXT:    v_cvt_f32_f16_e32 v26, v5.h
 ; GFX11-TRUE16-NEXT:    v_cvt_f32_f16_e32 v14, v6.l
 ; GFX11-TRUE16-NEXT:    v_cvt_f32_f16_e32 v6, v6.h
+; GFX11-TRUE16-NEXT:    v_cvt_f32_f16_e32 v28, v4.l
+; GFX11-TRUE16-NEXT:    v_cvt_f32_f16_e32 v30, v4.h
 ; GFX11-TRUE16-NEXT:    v_cvt_f32_f16_e32 v3, v3.h
 ; GFX11-TRUE16-NEXT:    v_cvt_f32_f16_e32 v8, v0.l
 ; GFX11-TRUE16-NEXT:    v_cvt_f32_f16_e32 v9, v1.l
 ; GFX11-TRUE16-NEXT:    v_cvt_f32_f16_e32 v10, v2.l
 ; GFX11-TRUE16-NEXT:    v_cvt_f32_f16_e32 v2, v2.h
-; GFX11-TRUE16-NEXT:    v_cvt_f64_f32_e32 v[28:29], v22
-; GFX11-TRUE16-NEXT:    v_cvt_f64_f32_e32 v[30:31], v23
-; GFX11-TRUE16-NEXT:    v_cvt_f32_f16_e32 v33, v1.h
-; GFX11-TRUE16-NEXT:    v_cvt_f64_f32_e32 v[24:25], v18
-; GFX11-TRUE16-NEXT:    v_cvt_f64_f32_e32 v[26:27], v19
-; GFX11-TRUE16-NEXT:    v_cvt_f32_f16_e32 v32, v0.h
 ; GFX11-TRUE16-NEXT:    v_cvt_f64_f32_e32 v[20:21], v15
 ; GFX11-TRUE16-NEXT:    v_cvt_f64_f32_e32 v[22:23], v7
+; GFX11-TRUE16-NEXT:    v_cvt_f32_f16_e32 v33, v1.h
+; GFX11-TRUE16-NEXT:    v_cvt_f64_f32_e32 v[24:25], v24
+; GFX11-TRUE16-NEXT:    v_cvt_f64_f32_e32 v[26:27], v26
+; GFX11-TRUE16-NEXT:    v_cvt_f32_f16_e32 v32, v0.h
 ; GFX11-TRUE16-NEXT:    v_cvt_f64_f32_e32 v[16:17], v14
 ; GFX11-TRUE16-NEXT:    v_cvt_f64_f32_e32 v[18:19], v6
+; GFX11-TRUE16-NEXT:    v_cvt_f64_f32_e32 v[28:29], v28
+; GFX11-TRUE16-NEXT:    v_cvt_f64_f32_e32 v[30:31], v30
 ; GFX11-TRUE16-NEXT:    v_cvt_f64_f32_e32 v[12:13], v11
 ; GFX11-TRUE16-NEXT:    v_cvt_f64_f32_e32 v[14:15], v3
 ; GFX11-TRUE16-NEXT:    v_cvt_f64_f32_e32 v[0:1], v8
@@ -2550,10 +2550,10 @@ define amdgpu_kernel void @global_extload_v16f16_to_v16f64(ptr addrspace(1) %out
 ; GFX11-TRUE16-NEXT:    v_cvt_f64_f32_e32 v[2:3], v32
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v32, 0
 ; GFX11-TRUE16-NEXT:    s_clause 0x7
-; GFX11-TRUE16-NEXT:    global_store_b128 v32, v[28:31], s[0:1] offset:80
-; GFX11-TRUE16-NEXT:    global_store_b128 v32, v[24:27], s[0:1] offset:64
 ; GFX11-TRUE16-NEXT:    global_store_b128 v32, v[20:23], s[0:1] offset:112
+; GFX11-TRUE16-NEXT:    global_store_b128 v32, v[24:27], s[0:1] offset:80
 ; GFX11-TRUE16-NEXT:    global_store_b128 v32, v[16:19], s[0:1] offset:96
+; GFX11-TRUE16-NEXT:    global_store_b128 v32, v[28:31], s[0:1] offset:64
 ; GFX11-TRUE16-NEXT:    global_store_b128 v32, v[12:15], s[0:1] offset:48
 ; GFX11-TRUE16-NEXT:    global_store_b128 v32, v[8:11], s[0:1] offset:32
 ; GFX11-TRUE16-NEXT:    global_store_b128 v32, v[4:7], s[0:1] offset:16
@@ -2573,38 +2573,38 @@ define amdgpu_kernel void @global_extload_v16f16_to_v16f64(ptr addrspace(1) %out
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(1)
 ; GFX11-FAKE16-NEXT:    v_cvt_f32_f16_e32 v10, v1
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v23, 16, v5
-; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v11, 16, v1
-; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v19, 16, v4
 ; GFX11-FAKE16-NEXT:    v_cvt_f32_f16_e32 v15, v7
 ; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v7, 16, v7
+; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v23, 16, v5
 ; GFX11-FAKE16-NEXT:    v_cvt_f32_f16_e32 v14, v6
 ; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v6, 16, v6
+; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v11, 16, v1
+; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v19, 16, v4
 ; GFX11-FAKE16-NEXT:    v_cvt_f32_f16_e32 v13, v3
 ; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v3, 16, v3
 ; GFX11-FAKE16-NEXT:    v_cvt_f32_f16_e32 v12, v2
 ; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
-; GFX11-FAKE16-NEXT:    v_cvt_f32_f16_e32 v18, v4
 ; GFX11-FAKE16-NEXT:    v_cvt_f32_f16_e32 v22, v5
+; GFX11-FAKE16-NEXT:    v_cvt_f32_f16_e32 v7, v7
+; GFX11-FAKE16-NEXT:    v_cvt_f32_f16_e32 v18, v4
 ; GFX11-FAKE16-NEXT:    v_cvt_f64_f32_e32 v[4:5], v10
 ; GFX11-FAKE16-NEXT:    v_cvt_f32_f16_e32 v10, v23
+; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v9, 16, v0
+; GFX11-FAKE16-NEXT:    v_cvt_f32_f16_e32 v6, v6
 ; GFX11-FAKE16-NEXT:    v_cvt_f32_f16_e32 v33, v11
 ; GFX11-FAKE16-NEXT:    v_cvt_f32_f16_e32 v11, v19
-; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v9, 16, v0
-; GFX11-FAKE16-NEXT:    v_cvt_f32_f16_e32 v7, v7
-; GFX11-FAKE16-NEXT:    v_cvt_f32_f16_e32 v6, v6
 ; GFX11-FAKE16-NEXT:    v_cvt_f32_f16_e32 v8, v0
 ; GFX11-FAKE16-NEXT:    v_cvt_f32_f16_e32 v3, v3
 ; GFX11-FAKE16-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; GFX11-FAKE16-NEXT:    v_cvt_f64_f32_e32 v[28:29], v22
-; GFX11-FAKE16-NEXT:    v_cvt_f64_f32_e32 v[30:31], v10
-; GFX11-FAKE16-NEXT:    v_cvt_f64_f32_e32 v[24:25], v18
-; GFX11-FAKE16-NEXT:    v_cvt_f64_f32_e32 v[26:27], v11
-; GFX11-FAKE16-NEXT:    v_cvt_f32_f16_e32 v32, v9
 ; GFX11-FAKE16-NEXT:    v_cvt_f64_f32_e32 v[20:21], v15
+; GFX11-FAKE16-NEXT:    v_cvt_f64_f32_e32 v[28:29], v22
 ; GFX11-FAKE16-NEXT:    v_cvt_f64_f32_e32 v[22:23], v7
+; GFX11-FAKE16-NEXT:    v_cvt_f64_f32_e32 v[30:31], v10
+; GFX11-FAKE16-NEXT:    v_cvt_f32_f16_e32 v32, v9
 ; GFX11-FAKE16-NEXT:    v_cvt_f64_f32_e32 v[16:17], v14
+; GFX11-FAKE16-NEXT:    v_cvt_f64_f32_e32 v[24:25], v18
 ; GFX11-FAKE16-NEXT:    v_cvt_f64_f32_e32 v[18:19], v6
+; GFX11-FAKE16-NEXT:    v_cvt_f64_f32_e32 v[26:27], v11
 ; GFX11-FAKE16-NEXT:    v_cvt_f64_f32_e32 v[0:1], v8
 ; GFX11-FAKE16-NEXT:    v_cvt_f64_f32_e32 v[8:9], v12
 ; GFX11-FAKE16-NEXT:    v_cvt_f64_f32_e32 v[12:13], v13
@@ -2614,10 +2614,10 @@ define amdgpu_kernel void @global_extload_v16f16_to_v16f64(ptr addrspace(1) %out
 ; GFX11-FAKE16-NEXT:    v_cvt_f64_f32_e32 v[2:3], v32
 ; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v32, 0
 ; GFX11-FAKE16-NEXT:    s_clause 0x7
-; GFX11-FAKE16-NEXT:    global_store_b128 v32, v[28:31], s[0:1] offset:80
-; GFX11-FAKE16-NEXT:    global_store_b128 v32, v[24:27], s[0:1] offset:64
 ; GFX11-FAKE16-NEXT:    global_store_b128 v32, v[20:23], s[0:1] offset:112
+; GFX11-FAKE16-NEXT:    global_store_b128 v32, v[28:31], s[0:1] offset:80
 ; GFX11-FAKE16-NEXT:    global_store_b128 v32, v[16:19], s[0:1] offset:96
+; GFX11-FAKE16-NEXT:    global_store_b128 v32, v[24:27], s[0:1] offset:64
 ; GFX11-FAKE16-NEXT:    global_store_b128 v32, v[12:15], s[0:1] offset:48
 ; GFX11-FAKE16-NEXT:    global_store_b128 v32, v[8:11], s[0:1] offset:32
 ; GFX11-FAKE16-NEXT:    global_store_b128 v32, v[4:7], s[0:1] offset:16

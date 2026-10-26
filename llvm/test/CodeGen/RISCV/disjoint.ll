@@ -1,8 +1,8 @@
 ; REQUIRES: asserts
 ; RUN: llc -mtriple=riscv32 -debug-only=machine-scheduler < %s \
-; RUN:   -o /dev/null 2>&1 | FileCheck %s
+; RUN:   -enable-store-sequencing=false -o /dev/null 2>&1 | FileCheck %s
 ; RUN: llc -mtriple=riscv64 -debug-only=machine-scheduler < %s \
-; RUN:   -o /dev/null 2>&1 | FileCheck %s
+; RUN:   -enable-store-sequencing=false -o /dev/null 2>&1 | FileCheck %s
 
 ; This test exercises the areMemAccessesTriviallyDisjoint hook.
 ; Test that the two stores are disjoint memory accesses. If the corresponding

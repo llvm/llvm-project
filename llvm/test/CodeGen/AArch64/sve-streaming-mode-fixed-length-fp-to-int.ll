@@ -333,8 +333,8 @@ define void @fcvtzu_v16f16_v16i32(ptr %a, ptr %b) {
 ; CHECK-NEXT:    fcvtzu z1.s, p0/m, z1.h
 ; CHECK-NEXT:    fcvtzu z2.s, p0/m, z2.h
 ; CHECK-NEXT:    fcvtzu z3.s, p0/m, z3.h
-; CHECK-NEXT:    stp q1, q3, [x1]
 ; CHECK-NEXT:    stp q0, q2, [x1, #32]
+; CHECK-NEXT:    stp q1, q3, [x1]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fcvtzu_v16f16_v16i32:
@@ -404,8 +404,8 @@ define void @fcvtzu_v16f16_v16i32(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    fcvtzu w8, s0
 ; NONEON-NOSVE-NEXT:    stp w8, w9, [sp, #96]
 ; NONEON-NOSVE-NEXT:    ldp q0, q1, [sp, #96]
-; NONEON-NOSVE-NEXT:    stp q2, q3, [x1]
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [x1, #32]
+; NONEON-NOSVE-NEXT:    stp q2, q3, [x1]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #128
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <16 x half>, ptr %a
@@ -584,8 +584,8 @@ define void @fcvtzu_v8f16_v8i64(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    fcvtzu x8, s0
 ; NONEON-NOSVE-NEXT:    stp x8, x9, [sp, #48]
 ; NONEON-NOSVE-NEXT:    ldp q1, q0, [sp, #32]
-; NONEON-NOSVE-NEXT:    stp q2, q3, [x1]
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [x1, #32]
+; NONEON-NOSVE-NEXT:    stp q2, q3, [x1]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #96
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <8 x half>, ptr %a
@@ -599,51 +599,50 @@ define void @fcvtzu_v16f16_v16i64(ptr %a, ptr %b) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q1, q0, [x0]
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    mov z2.h, z1.h[1]
-; CHECK-NEXT:    mov z3.h, z0.h[3]
-; CHECK-NEXT:    mov z4.h, z0.h[2]
-; CHECK-NEXT:    movprfx z7, z1
-; CHECK-NEXT:    fcvtzu z7.d, p0/m, z1.h
-; CHECK-NEXT:    movprfx z5, z1
-; CHECK-NEXT:    ext z5.b, z5.b, z1.b, #8
-; CHECK-NEXT:    movprfx z6, z0
-; CHECK-NEXT:    ext z6.b, z6.b, z0.b, #8
-; CHECK-NEXT:    mov z16.h, z1.h[3]
-; CHECK-NEXT:    mov z1.h, z1.h[2]
-; CHECK-NEXT:    mov z17.h, z0.h[1]
-; CHECK-NEXT:    fcvtzu z2.d, p0/m, z2.h
+; CHECK-NEXT:    mov z3.h, z1.h[1]
+; CHECK-NEXT:    mov z4.h, z1.h[3]
+; CHECK-NEXT:    mov z5.h, z1.h[2]
+; CHECK-NEXT:    movprfx z2, z0
+; CHECK-NEXT:    ext z2.b, z2.b, z0.b, #8
+; CHECK-NEXT:    movprfx z6, z1
+; CHECK-NEXT:    ext z6.b, z6.b, z1.b, #8
+; CHECK-NEXT:    fcvtzu z1.d, p0/m, z1.h
+; CHECK-NEXT:    mov z7.h, z0.h[3]
+; CHECK-NEXT:    mov z16.h, z0.h[2]
+; CHECK-NEXT:    mov z19.h, z0.h[1]
 ; CHECK-NEXT:    fcvtzu z3.d, p0/m, z3.h
 ; CHECK-NEXT:    fcvtzu z4.d, p0/m, z4.h
-; CHECK-NEXT:    fcvtzu z0.d, p0/m, z0.h
-; CHECK-NEXT:    mov z18.h, z5.h[3]
-; CHECK-NEXT:    mov z19.h, z6.h[3]
-; CHECK-NEXT:    mov z20.h, z6.h[2]
-; CHECK-NEXT:    fcvtzu z17.d, p0/m, z17.h
-; CHECK-NEXT:    mov z21.h, z6.h[1]
+; CHECK-NEXT:    fcvtzu z5.d, p0/m, z5.h
+; CHECK-NEXT:    mov z17.h, z2.h[3]
+; CHECK-NEXT:    mov z18.h, z2.h[2]
+; CHECK-NEXT:    mov z20.h, z2.h[1]
+; CHECK-NEXT:    mov z21.h, z6.h[3]
+; CHECK-NEXT:    fcvtzu z2.d, p0/m, z2.h
+; CHECK-NEXT:    fcvtzu z7.d, p0/m, z7.h
 ; CHECK-NEXT:    fcvtzu z16.d, p0/m, z16.h
-; CHECK-NEXT:    fcvtzu z1.d, p0/m, z1.h
-; CHECK-NEXT:    fcvtzu z6.d, p0/m, z6.h
-; CHECK-NEXT:    zip1 z2.d, z7.d, z2.d
-; CHECK-NEXT:    mov z7.h, z5.h[2]
-; CHECK-NEXT:    zip1 z3.d, z4.d, z3.d
-; CHECK-NEXT:    mov z4.h, z5.h[1]
+; CHECK-NEXT:    fcvtzu z0.d, p0/m, z0.h
 ; CHECK-NEXT:    fcvtzu z19.d, p0/m, z19.h
+; CHECK-NEXT:    fcvtzu z17.d, p0/m, z17.h
+; CHECK-NEXT:    fcvtzu z18.d, p0/m, z18.h
+; CHECK-NEXT:    zip1 z1.d, z1.d, z3.d
+; CHECK-NEXT:    mov z3.h, z6.h[2]
+; CHECK-NEXT:    zip1 z4.d, z5.d, z4.d
+; CHECK-NEXT:    mov z5.h, z6.h[1]
 ; CHECK-NEXT:    fcvtzu z20.d, p0/m, z20.h
 ; CHECK-NEXT:    fcvtzu z21.d, p0/m, z21.h
-; CHECK-NEXT:    fcvtzu z18.d, p0/m, z18.h
+; CHECK-NEXT:    fcvtzu z6.d, p0/m, z6.h
+; CHECK-NEXT:    zip1 z7.d, z16.d, z7.d
+; CHECK-NEXT:    zip1 z0.d, z0.d, z19.d
+; CHECK-NEXT:    stp q1, q4, [x1]
+; CHECK-NEXT:    fcvtzu z3.d, p0/m, z3.h
 ; CHECK-NEXT:    fcvtzu z5.d, p0/m, z5.h
-; CHECK-NEXT:    fcvtzu z7.d, p0/m, z7.h
-; CHECK-NEXT:    zip1 z0.d, z0.d, z17.d
-; CHECK-NEXT:    zip1 z1.d, z1.d, z16.d
-; CHECK-NEXT:    fcvtzu z4.d, p0/m, z4.h
-; CHECK-NEXT:    stp q2, q1, [x1]
-; CHECK-NEXT:    stp q0, q3, [x1, #64]
-; CHECK-NEXT:    zip1 z0.d, z20.d, z19.d
-; CHECK-NEXT:    zip1 z3.d, z6.d, z21.d
-; CHECK-NEXT:    zip1 z1.d, z7.d, z18.d
-; CHECK-NEXT:    zip1 z2.d, z5.d, z4.d
-; CHECK-NEXT:    stp q3, q0, [x1, #96]
-; CHECK-NEXT:    stp q2, q1, [x1, #32]
+; CHECK-NEXT:    zip1 z17.d, z18.d, z17.d
+; CHECK-NEXT:    stp q0, q7, [x1, #64]
+; CHECK-NEXT:    zip1 z1.d, z2.d, z20.d
+; CHECK-NEXT:    zip1 z2.d, z3.d, z21.d
+; CHECK-NEXT:    stp q1, q17, [x1, #96]
+; CHECK-NEXT:    zip1 z1.d, z6.d, z5.d
+; CHECK-NEXT:    stp q1, q2, [x1, #32]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fcvtzu_v16f16_v16i64:
@@ -716,10 +715,10 @@ define void @fcvtzu_v16f16_v16i64(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    ldp q0, q1, [sp, #96]
 ; NONEON-NOSVE-NEXT:    stp x8, x9, [sp, #144]
 ; NONEON-NOSVE-NEXT:    ldp q5, q2, [sp, #128]
-; NONEON-NOSVE-NEXT:    stp q0, q1, [x1]
 ; NONEON-NOSVE-NEXT:    stp q3, q4, [x1, #32]
 ; NONEON-NOSVE-NEXT:    stp q6, q7, [x1, #64]
 ; NONEON-NOSVE-NEXT:    stp q5, q2, [x1, #96]
+; NONEON-NOSVE-NEXT:    stp q0, q1, [x1]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #192
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <16 x half>, ptr %a
@@ -860,8 +859,8 @@ define void @fcvtzu_v16f32_v16i16(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 96
 ; NONEON-NOSVE-NEXT:    ldp q1, q0, [x0]
 ; NONEON-NOSVE-NEXT:    ldp q2, q3, [x0, #32]
-; NONEON-NOSVE-NEXT:    str q1, [sp]
 ; NONEON-NOSVE-NEXT:    stp q3, q0, [sp, #16]
+; NONEON-NOSVE-NEXT:    str q1, [sp]
 ; NONEON-NOSVE-NEXT:    ldp s0, s1, [sp, #40]
 ; NONEON-NOSVE-NEXT:    str q2, [sp, #48]
 ; NONEON-NOSVE-NEXT:    fcvtzs w8, s1
@@ -1117,8 +1116,8 @@ define void @fcvtzu_v8f32_v8i64(ptr %a, ptr %b) {
 ; CHECK-NEXT:    fcvtzu z1.d, p0/m, z1.s
 ; CHECK-NEXT:    fcvtzu z2.d, p0/m, z2.s
 ; CHECK-NEXT:    fcvtzu z3.d, p0/m, z3.s
-; CHECK-NEXT:    stp q1, q3, [x1]
 ; CHECK-NEXT:    stp q0, q2, [x1, #32]
+; CHECK-NEXT:    stp q1, q3, [x1]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fcvtzu_v8f32_v8i64:
@@ -1148,8 +1147,8 @@ define void @fcvtzu_v8f32_v8i64(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    fcvtzu x8, s0
 ; NONEON-NOSVE-NEXT:    stp x8, x9, [sp, #96]
 ; NONEON-NOSVE-NEXT:    ldp q0, q1, [sp, #96]
-; NONEON-NOSVE-NEXT:    stp q2, q3, [x1]
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [x1, #32]
+; NONEON-NOSVE-NEXT:    stp q2, q3, [x1]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #128
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <8 x float>, ptr %a
@@ -1288,8 +1287,8 @@ define <8 x i16> @fcvtzu_v8f64_v8i16(ptr %a) {
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 144
 ; NONEON-NOSVE-NEXT:    ldp q1, q0, [x0, #32]
 ; NONEON-NOSVE-NEXT:    ldp q2, q3, [x0]
-; NONEON-NOSVE-NEXT:    str q1, [sp, #48]
 ; NONEON-NOSVE-NEXT:    stp q0, q3, [sp, #16]
+; NONEON-NOSVE-NEXT:    str q1, [sp, #48]
 ; NONEON-NOSVE-NEXT:    ldp d0, d1, [sp, #16]
 ; NONEON-NOSVE-NEXT:    str q2, [sp]
 ; NONEON-NOSVE-NEXT:    fcvtzu w9, d1
@@ -1308,15 +1307,15 @@ define <8 x i16> @fcvtzu_v8f64_v8i16(ptr %a) {
 ; NONEON-NOSVE-NEXT:    fcvtzu w8, d0
 ; NONEON-NOSVE-NEXT:    ldp d0, d2, [sp, #80]
 ; NONEON-NOSVE-NEXT:    ldr d1, [sp, #72]
-; NONEON-NOSVE-NEXT:    stp d1, d0, [sp, #104]
 ; NONEON-NOSVE-NEXT:    stp w8, w9, [sp, #64]
-; NONEON-NOSVE-NEXT:    ldp w8, w9, [sp, #104]
 ; NONEON-NOSVE-NEXT:    str d2, [sp, #120]
+; NONEON-NOSVE-NEXT:    stp d1, d0, [sp, #104]
 ; NONEON-NOSVE-NEXT:    ldr d0, [sp, #64]
+; NONEON-NOSVE-NEXT:    ldp w8, w9, [sp, #104]
+; NONEON-NOSVE-NEXT:    str d0, [sp, #96]
 ; NONEON-NOSVE-NEXT:    strh w9, [sp, #142]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #140]
 ; NONEON-NOSVE-NEXT:    ldp w8, w9, [sp, #120]
-; NONEON-NOSVE-NEXT:    str d0, [sp, #96]
 ; NONEON-NOSVE-NEXT:    strh w9, [sp, #138]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #136]
 ; NONEON-NOSVE-NEXT:    ldp w8, w9, [sp, #112]
@@ -1430,26 +1429,26 @@ define void @fcvtzu_v16f64_v16i16(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    fcvtzu w8, d0
 ; NONEON-NOSVE-NEXT:    ldp d0, d2, [sp, #176]
 ; NONEON-NOSVE-NEXT:    ldr d1, [sp, #168]
-; NONEON-NOSVE-NEXT:    stp d1, d0, [sp, #232]
-; NONEON-NOSVE-NEXT:    ldr d1, [sp, #136]
 ; NONEON-NOSVE-NEXT:    stp w8, w9, [sp, #192]
-; NONEON-NOSVE-NEXT:    ldp w8, w9, [sp, #232]
 ; NONEON-NOSVE-NEXT:    str d2, [sp, #248]
+; NONEON-NOSVE-NEXT:    stp d1, d0, [sp, #232]
 ; NONEON-NOSVE-NEXT:    ldp d0, d2, [sp, #144]
+; NONEON-NOSVE-NEXT:    ldr d1, [sp, #136]
+; NONEON-NOSVE-NEXT:    ldp w8, w9, [sp, #232]
+; NONEON-NOSVE-NEXT:    stp d1, d0, [sp, #200]
+; NONEON-NOSVE-NEXT:    ldr d0, [sp, #160]
+; NONEON-NOSVE-NEXT:    stp d2, d0, [sp, #216]
+; NONEON-NOSVE-NEXT:    ldr d0, [sp, #192]
+; NONEON-NOSVE-NEXT:    str d0, [sp, #296]
 ; NONEON-NOSVE-NEXT:    strh w9, [sp, #270]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #268]
 ; NONEON-NOSVE-NEXT:    ldp w8, w9, [sp, #248]
-; NONEON-NOSVE-NEXT:    stp d1, d0, [sp, #200]
-; NONEON-NOSVE-NEXT:    ldr d0, [sp, #160]
 ; NONEON-NOSVE-NEXT:    strh w9, [sp, #266]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #264]
 ; NONEON-NOSVE-NEXT:    ldp w8, w9, [sp, #240]
-; NONEON-NOSVE-NEXT:    stp d2, d0, [sp, #216]
-; NONEON-NOSVE-NEXT:    ldr d0, [sp, #192]
 ; NONEON-NOSVE-NEXT:    strh w9, [sp, #262]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #260]
 ; NONEON-NOSVE-NEXT:    ldp w8, w9, [sp, #200]
-; NONEON-NOSVE-NEXT:    str d0, [sp, #296]
 ; NONEON-NOSVE-NEXT:    strh w9, [sp, #258]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #256]
 ; NONEON-NOSVE-NEXT:    ldp w8, w9, [sp, #216]
@@ -1459,9 +1458,9 @@ define void @fcvtzu_v16f64_v16i16(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    strh w9, [sp, #282]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #280]
 ; NONEON-NOSVE-NEXT:    ldp w8, w9, [sp, #224]
+; NONEON-NOSVE-NEXT:    strh w9, [sp, #278]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #276]
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp, #300]
-; NONEON-NOSVE-NEXT:    strh w9, [sp, #278]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #274]
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp, #296]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #272]
@@ -1588,8 +1587,8 @@ define void @fcvtzu_v8f64_v8i32(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 96
 ; NONEON-NOSVE-NEXT:    ldp q1, q0, [x0]
 ; NONEON-NOSVE-NEXT:    ldp q2, q3, [x0, #32]
-; NONEON-NOSVE-NEXT:    str q1, [sp]
 ; NONEON-NOSVE-NEXT:    stp q3, q0, [sp, #16]
+; NONEON-NOSVE-NEXT:    str q1, [sp]
 ; NONEON-NOSVE-NEXT:    ldp d0, d1, [sp, #32]
 ; NONEON-NOSVE-NEXT:    str q2, [sp, #48]
 ; NONEON-NOSVE-NEXT:    fcvtzu w9, d1
@@ -2028,8 +2027,8 @@ define void @fcvtzs_v16f16_v16i32(ptr %a, ptr %b) {
 ; CHECK-NEXT:    fcvtzs z1.s, p0/m, z1.h
 ; CHECK-NEXT:    fcvtzs z2.s, p0/m, z2.h
 ; CHECK-NEXT:    fcvtzs z3.s, p0/m, z3.h
-; CHECK-NEXT:    stp q1, q3, [x1]
 ; CHECK-NEXT:    stp q0, q2, [x1, #32]
+; CHECK-NEXT:    stp q1, q3, [x1]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fcvtzs_v16f16_v16i32:
@@ -2099,8 +2098,8 @@ define void @fcvtzs_v16f16_v16i32(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    fcvtzs w8, s0
 ; NONEON-NOSVE-NEXT:    stp w8, w9, [sp, #96]
 ; NONEON-NOSVE-NEXT:    ldp q0, q1, [sp, #96]
-; NONEON-NOSVE-NEXT:    stp q2, q3, [x1]
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [x1, #32]
+; NONEON-NOSVE-NEXT:    stp q2, q3, [x1]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #128
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <16 x half>, ptr %a
@@ -2280,8 +2279,8 @@ define void @fcvtzs_v8f16_v8i64(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    fcvtzs x8, s0
 ; NONEON-NOSVE-NEXT:    stp x8, x9, [sp, #48]
 ; NONEON-NOSVE-NEXT:    ldp q1, q0, [sp, #32]
-; NONEON-NOSVE-NEXT:    stp q2, q3, [x1]
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [x1, #32]
+; NONEON-NOSVE-NEXT:    stp q2, q3, [x1]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #96
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <8 x half>, ptr %a
@@ -2295,51 +2294,50 @@ define void @fcvtzs_v16f16_v16i64(ptr %a, ptr %b) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q1, q0, [x0]
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    mov z2.h, z1.h[1]
-; CHECK-NEXT:    mov z3.h, z0.h[3]
-; CHECK-NEXT:    mov z4.h, z0.h[2]
-; CHECK-NEXT:    movprfx z7, z1
-; CHECK-NEXT:    fcvtzs z7.d, p0/m, z1.h
-; CHECK-NEXT:    movprfx z5, z1
-; CHECK-NEXT:    ext z5.b, z5.b, z1.b, #8
-; CHECK-NEXT:    movprfx z6, z0
-; CHECK-NEXT:    ext z6.b, z6.b, z0.b, #8
-; CHECK-NEXT:    mov z16.h, z1.h[3]
-; CHECK-NEXT:    mov z1.h, z1.h[2]
-; CHECK-NEXT:    mov z17.h, z0.h[1]
-; CHECK-NEXT:    fcvtzs z2.d, p0/m, z2.h
+; CHECK-NEXT:    mov z3.h, z1.h[1]
+; CHECK-NEXT:    mov z4.h, z1.h[3]
+; CHECK-NEXT:    mov z5.h, z1.h[2]
+; CHECK-NEXT:    movprfx z2, z0
+; CHECK-NEXT:    ext z2.b, z2.b, z0.b, #8
+; CHECK-NEXT:    movprfx z6, z1
+; CHECK-NEXT:    ext z6.b, z6.b, z1.b, #8
+; CHECK-NEXT:    fcvtzs z1.d, p0/m, z1.h
+; CHECK-NEXT:    mov z7.h, z0.h[3]
+; CHECK-NEXT:    mov z16.h, z0.h[2]
+; CHECK-NEXT:    mov z19.h, z0.h[1]
 ; CHECK-NEXT:    fcvtzs z3.d, p0/m, z3.h
 ; CHECK-NEXT:    fcvtzs z4.d, p0/m, z4.h
-; CHECK-NEXT:    fcvtzs z0.d, p0/m, z0.h
-; CHECK-NEXT:    mov z18.h, z5.h[3]
-; CHECK-NEXT:    mov z19.h, z6.h[3]
-; CHECK-NEXT:    mov z20.h, z6.h[2]
-; CHECK-NEXT:    fcvtzs z17.d, p0/m, z17.h
-; CHECK-NEXT:    mov z21.h, z6.h[1]
+; CHECK-NEXT:    fcvtzs z5.d, p0/m, z5.h
+; CHECK-NEXT:    mov z17.h, z2.h[3]
+; CHECK-NEXT:    mov z18.h, z2.h[2]
+; CHECK-NEXT:    mov z20.h, z2.h[1]
+; CHECK-NEXT:    mov z21.h, z6.h[3]
+; CHECK-NEXT:    fcvtzs z2.d, p0/m, z2.h
+; CHECK-NEXT:    fcvtzs z7.d, p0/m, z7.h
 ; CHECK-NEXT:    fcvtzs z16.d, p0/m, z16.h
-; CHECK-NEXT:    fcvtzs z1.d, p0/m, z1.h
-; CHECK-NEXT:    fcvtzs z6.d, p0/m, z6.h
-; CHECK-NEXT:    zip1 z2.d, z7.d, z2.d
-; CHECK-NEXT:    mov z7.h, z5.h[2]
-; CHECK-NEXT:    zip1 z3.d, z4.d, z3.d
-; CHECK-NEXT:    mov z4.h, z5.h[1]
+; CHECK-NEXT:    fcvtzs z0.d, p0/m, z0.h
 ; CHECK-NEXT:    fcvtzs z19.d, p0/m, z19.h
+; CHECK-NEXT:    fcvtzs z17.d, p0/m, z17.h
+; CHECK-NEXT:    fcvtzs z18.d, p0/m, z18.h
+; CHECK-NEXT:    zip1 z1.d, z1.d, z3.d
+; CHECK-NEXT:    mov z3.h, z6.h[2]
+; CHECK-NEXT:    zip1 z4.d, z5.d, z4.d
+; CHECK-NEXT:    mov z5.h, z6.h[1]
 ; CHECK-NEXT:    fcvtzs z20.d, p0/m, z20.h
 ; CHECK-NEXT:    fcvtzs z21.d, p0/m, z21.h
-; CHECK-NEXT:    fcvtzs z18.d, p0/m, z18.h
+; CHECK-NEXT:    fcvtzs z6.d, p0/m, z6.h
+; CHECK-NEXT:    zip1 z7.d, z16.d, z7.d
+; CHECK-NEXT:    zip1 z0.d, z0.d, z19.d
+; CHECK-NEXT:    stp q1, q4, [x1]
+; CHECK-NEXT:    fcvtzs z3.d, p0/m, z3.h
 ; CHECK-NEXT:    fcvtzs z5.d, p0/m, z5.h
-; CHECK-NEXT:    fcvtzs z7.d, p0/m, z7.h
-; CHECK-NEXT:    zip1 z0.d, z0.d, z17.d
-; CHECK-NEXT:    zip1 z1.d, z1.d, z16.d
-; CHECK-NEXT:    fcvtzs z4.d, p0/m, z4.h
-; CHECK-NEXT:    stp q2, q1, [x1]
-; CHECK-NEXT:    stp q0, q3, [x1, #64]
-; CHECK-NEXT:    zip1 z0.d, z20.d, z19.d
-; CHECK-NEXT:    zip1 z3.d, z6.d, z21.d
-; CHECK-NEXT:    zip1 z1.d, z7.d, z18.d
-; CHECK-NEXT:    zip1 z2.d, z5.d, z4.d
-; CHECK-NEXT:    stp q3, q0, [x1, #96]
-; CHECK-NEXT:    stp q2, q1, [x1, #32]
+; CHECK-NEXT:    zip1 z17.d, z18.d, z17.d
+; CHECK-NEXT:    stp q0, q7, [x1, #64]
+; CHECK-NEXT:    zip1 z1.d, z2.d, z20.d
+; CHECK-NEXT:    zip1 z2.d, z3.d, z21.d
+; CHECK-NEXT:    stp q1, q17, [x1, #96]
+; CHECK-NEXT:    zip1 z1.d, z6.d, z5.d
+; CHECK-NEXT:    stp q1, q2, [x1, #32]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fcvtzs_v16f16_v16i64:
@@ -2412,10 +2410,10 @@ define void @fcvtzs_v16f16_v16i64(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    ldp q0, q1, [sp, #96]
 ; NONEON-NOSVE-NEXT:    stp x8, x9, [sp, #144]
 ; NONEON-NOSVE-NEXT:    ldp q5, q2, [sp, #128]
-; NONEON-NOSVE-NEXT:    stp q0, q1, [x1]
 ; NONEON-NOSVE-NEXT:    stp q3, q4, [x1, #32]
 ; NONEON-NOSVE-NEXT:    stp q6, q7, [x1, #64]
 ; NONEON-NOSVE-NEXT:    stp q5, q2, [x1, #96]
+; NONEON-NOSVE-NEXT:    stp q0, q1, [x1]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #192
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <16 x half>, ptr %a
@@ -2556,8 +2554,8 @@ define void @fcvtzs_v16f32_v16i16(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 96
 ; NONEON-NOSVE-NEXT:    ldp q1, q0, [x0]
 ; NONEON-NOSVE-NEXT:    ldp q2, q3, [x0, #32]
-; NONEON-NOSVE-NEXT:    str q1, [sp]
 ; NONEON-NOSVE-NEXT:    stp q3, q0, [sp, #16]
+; NONEON-NOSVE-NEXT:    str q1, [sp]
 ; NONEON-NOSVE-NEXT:    ldp s0, s1, [sp, #40]
 ; NONEON-NOSVE-NEXT:    str q2, [sp, #48]
 ; NONEON-NOSVE-NEXT:    fcvtzs w8, s1
@@ -2813,8 +2811,8 @@ define void @fcvtzs_v8f32_v8i64(ptr %a, ptr %b) {
 ; CHECK-NEXT:    fcvtzs z1.d, p0/m, z1.s
 ; CHECK-NEXT:    fcvtzs z2.d, p0/m, z2.s
 ; CHECK-NEXT:    fcvtzs z3.d, p0/m, z3.s
-; CHECK-NEXT:    stp q1, q3, [x1]
 ; CHECK-NEXT:    stp q0, q2, [x1, #32]
+; CHECK-NEXT:    stp q1, q3, [x1]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fcvtzs_v8f32_v8i64:
@@ -2844,8 +2842,8 @@ define void @fcvtzs_v8f32_v8i64(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    fcvtzs x8, s0
 ; NONEON-NOSVE-NEXT:    stp x8, x9, [sp, #96]
 ; NONEON-NOSVE-NEXT:    ldp q0, q1, [sp, #96]
-; NONEON-NOSVE-NEXT:    stp q2, q3, [x1]
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [x1, #32]
+; NONEON-NOSVE-NEXT:    stp q2, q3, [x1]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #128
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <8 x float>, ptr %a
@@ -2986,8 +2984,8 @@ define <8 x i16> @fcvtzs_v8f64_v8i16(ptr %a) {
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 144
 ; NONEON-NOSVE-NEXT:    ldp q1, q0, [x0, #32]
 ; NONEON-NOSVE-NEXT:    ldp q2, q3, [x0]
-; NONEON-NOSVE-NEXT:    str q1, [sp, #48]
 ; NONEON-NOSVE-NEXT:    stp q0, q3, [sp, #16]
+; NONEON-NOSVE-NEXT:    str q1, [sp, #48]
 ; NONEON-NOSVE-NEXT:    ldp d0, d1, [sp, #16]
 ; NONEON-NOSVE-NEXT:    str q2, [sp]
 ; NONEON-NOSVE-NEXT:    fcvtzs w9, d1
@@ -3006,15 +3004,15 @@ define <8 x i16> @fcvtzs_v8f64_v8i16(ptr %a) {
 ; NONEON-NOSVE-NEXT:    fcvtzs w8, d0
 ; NONEON-NOSVE-NEXT:    ldp d0, d2, [sp, #80]
 ; NONEON-NOSVE-NEXT:    ldr d1, [sp, #72]
-; NONEON-NOSVE-NEXT:    stp d1, d0, [sp, #104]
 ; NONEON-NOSVE-NEXT:    stp w8, w9, [sp, #64]
-; NONEON-NOSVE-NEXT:    ldp w8, w9, [sp, #104]
 ; NONEON-NOSVE-NEXT:    str d2, [sp, #120]
+; NONEON-NOSVE-NEXT:    stp d1, d0, [sp, #104]
 ; NONEON-NOSVE-NEXT:    ldr d0, [sp, #64]
+; NONEON-NOSVE-NEXT:    ldp w8, w9, [sp, #104]
+; NONEON-NOSVE-NEXT:    str d0, [sp, #96]
 ; NONEON-NOSVE-NEXT:    strh w9, [sp, #142]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #140]
 ; NONEON-NOSVE-NEXT:    ldp w8, w9, [sp, #120]
-; NONEON-NOSVE-NEXT:    str d0, [sp, #96]
 ; NONEON-NOSVE-NEXT:    strh w9, [sp, #138]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #136]
 ; NONEON-NOSVE-NEXT:    ldp w8, w9, [sp, #112]
@@ -3128,26 +3126,26 @@ define void @fcvtzs_v16f64_v16i16(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    fcvtzs w8, d0
 ; NONEON-NOSVE-NEXT:    ldp d0, d2, [sp, #176]
 ; NONEON-NOSVE-NEXT:    ldr d1, [sp, #168]
-; NONEON-NOSVE-NEXT:    stp d1, d0, [sp, #232]
-; NONEON-NOSVE-NEXT:    ldr d1, [sp, #136]
 ; NONEON-NOSVE-NEXT:    stp w8, w9, [sp, #192]
-; NONEON-NOSVE-NEXT:    ldp w8, w9, [sp, #232]
 ; NONEON-NOSVE-NEXT:    str d2, [sp, #248]
+; NONEON-NOSVE-NEXT:    stp d1, d0, [sp, #232]
 ; NONEON-NOSVE-NEXT:    ldp d0, d2, [sp, #144]
+; NONEON-NOSVE-NEXT:    ldr d1, [sp, #136]
+; NONEON-NOSVE-NEXT:    ldp w8, w9, [sp, #232]
+; NONEON-NOSVE-NEXT:    stp d1, d0, [sp, #200]
+; NONEON-NOSVE-NEXT:    ldr d0, [sp, #160]
+; NONEON-NOSVE-NEXT:    stp d2, d0, [sp, #216]
+; NONEON-NOSVE-NEXT:    ldr d0, [sp, #192]
+; NONEON-NOSVE-NEXT:    str d0, [sp, #296]
 ; NONEON-NOSVE-NEXT:    strh w9, [sp, #270]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #268]
 ; NONEON-NOSVE-NEXT:    ldp w8, w9, [sp, #248]
-; NONEON-NOSVE-NEXT:    stp d1, d0, [sp, #200]
-; NONEON-NOSVE-NEXT:    ldr d0, [sp, #160]
 ; NONEON-NOSVE-NEXT:    strh w9, [sp, #266]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #264]
 ; NONEON-NOSVE-NEXT:    ldp w8, w9, [sp, #240]
-; NONEON-NOSVE-NEXT:    stp d2, d0, [sp, #216]
-; NONEON-NOSVE-NEXT:    ldr d0, [sp, #192]
 ; NONEON-NOSVE-NEXT:    strh w9, [sp, #262]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #260]
 ; NONEON-NOSVE-NEXT:    ldp w8, w9, [sp, #200]
-; NONEON-NOSVE-NEXT:    str d0, [sp, #296]
 ; NONEON-NOSVE-NEXT:    strh w9, [sp, #258]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #256]
 ; NONEON-NOSVE-NEXT:    ldp w8, w9, [sp, #216]
@@ -3157,9 +3155,9 @@ define void @fcvtzs_v16f64_v16i16(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    strh w9, [sp, #282]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #280]
 ; NONEON-NOSVE-NEXT:    ldp w8, w9, [sp, #224]
+; NONEON-NOSVE-NEXT:    strh w9, [sp, #278]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #276]
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp, #300]
-; NONEON-NOSVE-NEXT:    strh w9, [sp, #278]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #274]
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp, #296]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #272]
@@ -3286,8 +3284,8 @@ define void @fcvtzs_v8f64_v8i32(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 96
 ; NONEON-NOSVE-NEXT:    ldp q1, q0, [x0]
 ; NONEON-NOSVE-NEXT:    ldp q2, q3, [x0, #32]
-; NONEON-NOSVE-NEXT:    str q1, [sp]
 ; NONEON-NOSVE-NEXT:    stp q3, q0, [sp, #16]
+; NONEON-NOSVE-NEXT:    str q1, [sp]
 ; NONEON-NOSVE-NEXT:    ldp d0, d1, [sp, #32]
 ; NONEON-NOSVE-NEXT:    str q2, [sp, #48]
 ; NONEON-NOSVE-NEXT:    fcvtzs w9, d1
@@ -3955,16 +3953,16 @@ define void @fcvtzu_v16bf16_v16i32(ptr %a, ptr %b) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    ldr d2, [sp, #24]
 ; CHECK-NEXT:    ldr d3, [sp, #8]
-; CHECK-NEXT:    uunpklo z1.s, z1.h
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    uunpklo z1.s, z1.h
 ; CHECK-NEXT:    uunpklo z2.s, z2.h
 ; CHECK-NEXT:    uunpklo z3.s, z3.h
-; CHECK-NEXT:    lsl z1.s, z1.s, #16
 ; CHECK-NEXT:    lsl z0.s, z0.s, #16
+; CHECK-NEXT:    lsl z1.s, z1.s, #16
 ; CHECK-NEXT:    lsl z2.s, z2.s, #16
 ; CHECK-NEXT:    lsl z3.s, z3.s, #16
-; CHECK-NEXT:    fcvtzu z1.s, p0/m, z1.s
 ; CHECK-NEXT:    fcvtzu z0.s, p0/m, z0.s
+; CHECK-NEXT:    fcvtzu z1.s, p0/m, z1.s
 ; CHECK-NEXT:    fcvtzu z2.s, p0/m, z2.s
 ; CHECK-NEXT:    fcvtzu z3.s, p0/m, z3.s
 ; CHECK-NEXT:    stp q0, q3, [x1]
@@ -4071,8 +4069,8 @@ define void @fcvtzu_v16bf16_v16i32(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    fcvtzu w8, s0
 ; NONEON-NOSVE-NEXT:    stp w8, w9, [sp, #96]
 ; NONEON-NOSVE-NEXT:    ldp q0, q1, [sp, #96]
-; NONEON-NOSVE-NEXT:    stp q2, q3, [x1]
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [x1, #32]
+; NONEON-NOSVE-NEXT:    stp q2, q3, [x1]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #128
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <16 x bfloat>, ptr %a
@@ -4341,8 +4339,8 @@ define void @fcvtzu_v8bf16_v8i64(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    fcvtzu x8, s0
 ; NONEON-NOSVE-NEXT:    stp x8, x9, [sp, #48]
 ; NONEON-NOSVE-NEXT:    ldp q1, q0, [sp, #32]
-; NONEON-NOSVE-NEXT:    stp q2, q3, [x1]
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [x1, #32]
+; NONEON-NOSVE-NEXT:    stp q2, q3, [x1]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #96
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <8 x bfloat>, ptr %a
@@ -4559,10 +4557,10 @@ define void @fcvtzu_v16bf16_v16i64(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    ldp q0, q1, [sp, #96]
 ; NONEON-NOSVE-NEXT:    stp x8, x9, [sp, #144]
 ; NONEON-NOSVE-NEXT:    ldp q5, q2, [sp, #128]
-; NONEON-NOSVE-NEXT:    stp q0, q1, [x1]
 ; NONEON-NOSVE-NEXT:    stp q3, q4, [x1, #32]
 ; NONEON-NOSVE-NEXT:    stp q6, q7, [x1, #64]
 ; NONEON-NOSVE-NEXT:    stp q5, q2, [x1, #96]
+; NONEON-NOSVE-NEXT:    stp q0, q1, [x1]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #192
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <16 x bfloat>, ptr %a
