@@ -4,9 +4,8 @@
 ; to the value they would have had (or be poisoned)
 ; See issues #218630
 
-; Function Attrs: noinline nounwind uwtable
 define dso_local i32 @sdiv_elide(i32 noundef %x) #0 !dbg !9 {
-; CHECK:      #dbg_value(i32 %x, [[META16:![0-9]+]], !DIExpression(DW_OP_constu, 42, DW_OP_div, DW_OP_stack_value), [[META15:![0-9]+]])
+; CHECK:      #dbg_value(i32 %x, [[META1:![0-9]+]], !DIExpression(DW_OP_constu, 42, DW_OP_div, DW_OP_stack_value), [[META2:![0-9]+]])
 ; CHECK-NEXT: %0 = add i32 %x, 41
 ;
 entry:
@@ -17,8 +16,6 @@ entry:
   %cond = select i1 %spec.select, i32 %div, i32 24
   ret i32 %cond
 }
-
-attributes #0 = { noinline nounwind uwtable }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3}
@@ -33,3 +30,7 @@ attributes #0 = { noinline nounwind uwtable }
 !13 = !{}
 !15 = !DILocation(line: 0, scope: !9)
 !17 = !DILocalVariable(name: "quotient", scope: !9, file: !1, line: 4, type: !12)
+
+; CHECK: [[META3:![0-9]+]] = distinct !DISubprogram(name: "sdiv_elide"
+; CHECK: [[META1]] = !DILocalVariable(name: "quotient", scope: [[META3]]
+; CHECK: [[META2]] = !DILocation(line: 0, scope: [[META3]])
