@@ -77,8 +77,14 @@ public:
   RISCVISelDAGToDAGPass(RISCVTargetMachine &TM, CodeGenOptLevel OptLevel);
 };
 
-FunctionPass *createRISCVLateBranchOptPass();
-void initializeRISCVLateBranchOptPass(PassRegistry &);
+class RISCVLateBranchOptPass
+    : public OptionalPassInfoMixin<RISCVLateBranchOptPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+FunctionPass *createRISCVLateBranchOptLegacyPass();
+void initializeRISCVLateBranchOptLegacyPass(PassRegistry &);
 
 FunctionPass *createRISCVMakeCompressibleOptPass();
 void initializeRISCVMakeCompressibleOptPass(PassRegistry &);
