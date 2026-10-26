@@ -18926,7 +18926,7 @@ static SDValue combineAddOfExtsAlreadyExtended(SDNode *N, SelectionDAG &DAG) {
   const SDNode *User = Use.getUser();
   if (User->getOpcode() == ISD::ADD) {
     const SDValue OtherOp = User->getOperand(1 - Use.getOperandNo());
-    if (OtherOp->getOpcode() == ISD::MUL)
+    if (OtherOp->getOpcode() == ISD::MUL || DAG.isSplatValue(OtherOp))
       return SDValue();
   } else if (User->getOpcode() != ISD::VECREDUCE_ADD) {
     return SDValue();
