@@ -202,6 +202,21 @@ ModRefInfo AAResults::getModRefInfo(const Instruction *I,
   return getModRefInfo(I, Call2, AAQIP);
 }
 
+/// Return true if \p I is an atomic operation whose ordering is stronger
+/// than monotonic, i.e. one that has synchronization effects on memory
+/// beyond its own location.
+static bool hasOrderingStrongerThanMonotonic(const Instruction *I) {
+  if (auto *LI = dyn_cast<LoadInst>(I))
+    return isStrongerThanMonotonic(LI->getOrdering());
+  if (auto *SI = dyn_cast<StoreInst>(I))
+    return isStrongerThanMonotonic(SI->getOrdering());
+  if (auto *RMW = dyn_cast<AtomicRMWInst>(I))
+    return isStrongerThanMonotonic(RMW->getOrdering());
+  if (auto *CX = dyn_cast<AtomicCmpXchgInst>(I))
+    return isStrongerThanMonotonic(CX->getMergedOrdering());
+  return false;
+}
+
 ModRefInfo AAResults::getModRefInfo(const Instruction *I, const CallBase *Call2,
                                     AAQueryInfo &AAQI) {
   // We may have two calls.
@@ -211,6 +226,15 @@ ModRefInfo AAResults::getModRefInfo(const Instruction *I, const CallBase *Call2,
   }
   // If this is a fence, just return ModRef.
   if (I->isFenceLike())
+    return ModRefInfo::ModRef;
+  // An atomic operation stronger than monotonic also synchronizes with other
+  // threads: like the location-based overloads (see getSyncEffects),
+  // conservatively treat it as ordering any memory the call may access, even
+  // memory disjoint from the atomic's own location. Without this, a client
+  // could e.g. sink a read-only call below a release store that publishes
+  // unrelated memory, breaking the publication guarantee.
+  if (hasOrderingStrongerThanMonotonic(I) &&
+      !getMemoryEffects(Call2, AAQI).doesNotAccessMemory())
     return ModRefInfo::ModRef;
   // Otherwise, check if the call modifies or references the
   // location this memory access defines.  The best we can say
