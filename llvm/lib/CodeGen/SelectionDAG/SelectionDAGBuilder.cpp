@@ -3655,16 +3655,12 @@ void SelectionDAGBuilder::visitCallBr(const CallBrInst &I) {
 
   // Update successor info.
   addSuccessorWithProb(CallBrMBB, Return, BranchProbability::getOne());
-
   // TODO: For most of the cases where there is an intrinsic callbr, we're
   // having exactly one indirect target, which will be unreachable. As soon as
   // this changes, we might need to enhance
   // Target->setIsInlineAsmBrIndirectTarget or add something similar for
   // intrinsic indirect branches.
-
-  // An asm that failed to lower, which reported an error, has no INLINEASM_BR
-  // to branch to the indirect targets.
-  if (I.isInlineAsm() && FuncInfo.CallBrOutputRegs.contains(&I)) {
+  if (I.isInlineAsm()) {
     for (BasicBlock *Dest : I.getIndirectDests()) {
       MachineBasicBlock *Target = FuncInfo.getMBB(Dest);
       Target->setIsInlineAsmBrIndirectTarget();
@@ -13292,19 +13288,8 @@ void SelectionDAGBuilder::visitCallBrLandingPad(const CallInst &I) {
   const auto *CBR =
       cast<CallBrInst>(I.getParent()->getUniquePredecessor()->getTerminator());
 
-  // If the asm failed to lower, which reported an error, then nothing branches
-  // here.
   auto It = FuncInfo.CallBrOutputRegs.find(CBR);
-  if (It == FuncInfo.CallBrOutputRegs.end()) {
-    SmallVector<EVT, 1> ValueVTs;
-    ComputeValueVTs(DAG.getTargetLoweringInfo(), DAG.getDataLayout(),
-                    I.getType(), ValueVTs);
-    SmallVector<SDValue, 1> Ops;
-    for (EVT VT : ValueVTs)
-      Ops.push_back(DAG.getUNDEF(VT));
-    setValue(&I, DAG.getMergeValues(Ops, getCurSDLoc()));
-    return;
-  }
+  assert(It != FuncInfo.CallBrOutputRegs.end() && "callbr asm wasn't lowered");
 
   SmallVector<SDValue, 8> OutputValues;
   ArrayRef<Register> OutputRegs = It->second;
