@@ -1322,9 +1322,9 @@ foldAndOrOfICmpsWithConstEq(CmpPredicate PredL, Value *LHS0, Value *LHS1,
     NewRHS1 = simplifyWithOpReplaced(RHS1, LHS0, LHS1, SQ,
                                      /*AllowRefinement=*/true);
 
-    if (!NewRHS0)
+    if (!NewRHS0 || !isGuaranteedNotToBePoison(NewRHS0))
       NewRHS0 = RHS0;
-    if (!NewRHS1)
+    if (!NewRHS1 || !isGuaranteedNotToBePoison(NewRHS1))
       NewRHS1 = RHS1;
 
     if (NewRHS0 == RHS0 && NewRHS1 == RHS1)
