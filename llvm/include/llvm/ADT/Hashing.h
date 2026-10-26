@@ -241,7 +241,17 @@ hash_code hash_combine_range_impl(InputIteratorT first, InputIteratorT last) {
     std::memcpy(buf + len, &data, sizeof(data));
     len += sizeof(data);
   }
+  // GCC may warn about stack_buf being uninitialized for an empty range. The
+  // loop initializes all len bytes before hashing, and xxh3_64bits does not
+  // read the buffer when len is zero so this is a false positive.
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
   return combine_bytes(buf, len);
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
 }
 
 /// Implement the combining of integral values into a hash_code.
