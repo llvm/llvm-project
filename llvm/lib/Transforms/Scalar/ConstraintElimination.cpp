@@ -415,6 +415,10 @@ public:
   /// signed system implies it or because ValueTracking can prove it.
   bool isKnownNonNegative(Value *V);
 
+  /// Returns true if \p V is known to be negative, either because the signed
+  /// system implies it, or because ValueTracking can prove it.
+  bool isKnownNegative(Value *);
+
   /// Returns true if \p V is known to be positive, either because the signed
   /// system implies it or because ValueTracking can prove it.
   bool isKnownPositive(Value *V);
@@ -1151,6 +1155,13 @@ bool ConstraintInfo::isKnownNonNegative(Value *V) {
     return !CI->isNegative();
   return ::isKnownNonNegative(V, DL) ||
          doesHold(CmpInst::ICMP_SGE, V, ConstantInt::get(V->getType(), 0));
+}
+
+bool ConstraintInfo::isKnownNegative(Value *V) {
+  if (auto *CI = dyn_cast<ConstantInt>(V))
+    return CI->isNegative();
+  return ::isKnownNegative(V, DL) ||
+          doesHold(CmpInst::ICMP_SLT, V, ConstantInt::get(V->getType(), 0));
 }
 
 bool ConstraintInfo::isKnownPositive(Value *V) {
@@ -2647,7 +2658,7 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
             if (Info.isKnownNonNegative(Known))
               Info.addFact(CmpInst::ICMP_SGE, Other, Zero, CB.NumIn, CB.NumOut,
                            DFSInStack);
-            else if (::isKnownNegative(Known, F.getDataLayout()))
+            else if (Info.isKnownNegative(Known))
               Info.addFact(CmpInst::ICMP_SLT, Other, Zero, CB.NumIn, CB.NumOut,
                            DFSInStack);
           }
