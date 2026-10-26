@@ -408,37 +408,35 @@ static bool BuiltinOverflow(Sema &S, CallExpr *TheCall, unsigned BuiltinID) {
     return true;
 
   std::pair<unsigned, const char *> Builtins[] = {
-      {Builtin::BI__builtin_add_overflow, "ckd_add"},
-      {Builtin::BI__builtin_sub_overflow, "ckd_sub"},
-      {Builtin::BI__builtin_mul_overflow, "ckd_mul"},
+    { Builtin::BI__builtin_add_overflow, "ckd_add" },
+    { Builtin::BI__builtin_sub_overflow, "ckd_sub" },
+    { Builtin::BI__builtin_mul_overflow, "ckd_mul" },
   };
 
-  bool CkdOperation =
-      llvm::any_of(Builtins, [&](const std::pair<unsigned, const char *> &P) {
-        return BuiltinID == P.first && TheCall->getExprLoc().isMacroID() &&
-               Lexer::getImmediateMacroName(TheCall->getExprLoc(),
-                                            S.getSourceManager(),
-                                            S.getLangOpts()) == P.second;
-      });
+  bool CkdOperation = llvm::any_of(Builtins, [&](const std::pair<unsigned,
+    const char *> &P) {
+    return BuiltinID == P.first && TheCall->getExprLoc().isMacroID() &&
+         Lexer::getImmediateMacroName(TheCall->getExprLoc(),
+         S.getSourceManager(), S.getLangOpts()) == P.second;
+  });
 
   auto ValidCkdIntType = [](QualType QT) {
     // A valid checked integer type is an integer type other than a plain char,
     // bool, a bit-precise type, or an enumeration type.
     if (const auto *BT = QT.getCanonicalType()->getAs<BuiltinType>())
       return (BT->getKind() >= BuiltinType::Short &&
-              BT->getKind() <= BuiltinType::Int128) ||
-             (BT->getKind() >= BuiltinType::UShort &&
-              BT->getKind() <= BuiltinType::UInt128) ||
-             BT->getKind() == BuiltinType::UChar ||
-             BT->getKind() == BuiltinType::SChar;
+           BT->getKind() <= BuiltinType::Int128) || (
+           BT->getKind() >= BuiltinType::UShort &&
+           BT->getKind() <= BuiltinType::UInt128) ||
+           BT->getKind() == BuiltinType::UChar ||
+           BT->getKind() == BuiltinType::SChar;
     return false;
   };
 
   // First two arguments should be integers.
   for (unsigned I = 0; I < 2; ++I) {
     ExprResult Arg = S.DefaultFunctionArrayLvalueConversion(TheCall->getArg(I));
-    if (Arg.isInvalid())
-      return true;
+    if (Arg.isInvalid()) return true;
     TheCall->setArg(I, Arg.get());
 
     QualType Ty = Arg.get()->getType();
@@ -455,18 +453,18 @@ static bool BuiltinOverflow(Sema &S, CallExpr *TheCall, unsigned BuiltinID) {
   // the other qualifiers aren't possible.
   {
     ExprResult Arg = S.DefaultFunctionArrayLvalueConversion(TheCall->getArg(2));
-    if (Arg.isInvalid())
-      return true;
+    if (Arg.isInvalid()) return true;
     TheCall->setArg(2, Arg.get());
 
     QualType Ty = Arg.get()->getType();
     const auto *PtrTy = Ty->getAs<PointerType>();
-    if (!PtrTy || !PtrTy->getPointeeType()->isIntegerType() ||
+    if (!PtrTy ||
+        !PtrTy->getPointeeType()->isIntegerType() ||
         (!ValidCkdIntType(PtrTy->getPointeeType()) && CkdOperation) ||
         PtrTy->getPointeeType().isConstQualified()) {
       S.Diag(Arg.get()->getBeginLoc(),
              diag::err_overflow_builtin_must_be_ptr_int)
-          << CkdOperation << Ty << Arg.get()->getSourceRange();
+        << CkdOperation << Ty << Arg.get()->getSourceRange();
       return true;
     }
   }
@@ -585,8 +583,7 @@ struct BuiltinDumpStructGenerator {
     }
 
     analyze_printf::PrintfSpecifier Specifier;
-    if (Specifier.fixType(T, S.getLangOpts(), S.Context,
-                          /*IsObjCLiteral=*/false)) {
+    if (Specifier.fixType(T, S.getLangOpts(), S.Context, /*IsObjCLiteral=*/false)) {
       // We were able to guess how to format this.
       if (Specifier.getConversionSpecifier().getKind() ==
           analyze_printf::PrintfConversionSpecifier::sArg) {
@@ -847,7 +844,7 @@ static bool BuiltinCallWithStaticChain(Sema &S, CallExpr *BuiltinCall) {
   }
 
   QualType ReturnTy = CE->getCallReturnType(S.Context);
-  QualType ArgTys[2] = {ReturnTy, ChainResult.get()->getType()};
+  QualType ArgTys[2] = { ReturnTy, ChainResult.get()->getType() };
   QualType BuiltinTy = S.Context.getFunctionType(
       ReturnTy, ArgTys, FunctionProtoType::ExtProtoInfo());
   QualType BuiltinPtrTy = S.Context.getPointerType(BuiltinTy);
@@ -3162,9 +3159,9 @@ static QualType getVectorElementType(ASTContext &Context, QualType VecTy) {
   return QualType();
 }
 
-ExprResult Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl,
-                                          unsigned BuiltinID,
-                                          CallExpr *TheCall) {
+ExprResult
+Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
+                               CallExpr *TheCall) {
   ExprResult TheCallResult(TheCall);
 
   // Find out if any arguments are required to be integer constant expressions.
@@ -3172,13 +3169,12 @@ ExprResult Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl,
   ASTContext::GetBuiltinTypeError Error;
   Context.GetBuiltinType(BuiltinID, Error, &ICEArguments);
   if (Error != ASTContext::GE_None)
-    ICEArguments = 0; // Don't diagnose previously diagnosed errors.
+    ICEArguments = 0;  // Don't diagnose previously diagnosed errors.
 
   // If any arguments are required to be ICE's, check and diagnose.
   for (unsigned ArgNo = 0; ICEArguments != 0; ++ArgNo) {
     // Skip arguments not required to be ICE's.
-    if ((ICEArguments & (1 << ArgNo)) == 0)
-      continue;
+    if ((ICEArguments & (1 << ArgNo)) == 0) continue;
 
     llvm::APSInt Result;
     // If we don't have enough arguments, continue so we can issue better
