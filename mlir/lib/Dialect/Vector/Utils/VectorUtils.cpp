@@ -603,12 +603,14 @@ Operation *vector::createWriteOrMaskedWrite(OpBuilder &builder, Location loc,
           ? memref::getMixedSizes(builder, loc, dest)
           : tensor::getMixedSizes(builder, loc, dest);
 
-  // The mask has one dim for each dest dim that the vector is written to, in
-  // increasing order. For each of these "masked" dest dims, collect the mask
-  // size (`dim - index`), the write index and the dest size.
+  // The map has a dim per dest dim but a result per vector dim, and the vector
+  // can have fewer dims than the dest (e.g. rank-reducing `insert_slice`). The
+  // mask has a dim for each dest dim that the map selects, in increasing order.
+  // For each, collect the mask size (`dim - index`), write index and dest size.
   SmallVector<int64_t> maskedDestDims;
   for (AffineExpr expr : map.getResults())
     maskedDestDims.push_back(cast<AffineDimExpr>(expr).getPosition());
+  // A transposing map selects them out of order.
   llvm::sort(maskedDestDims);
   SmallVector<OpFoldResult> maskSizes;
   SmallVector<Value> maskedDestIndices;
