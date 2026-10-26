@@ -2054,7 +2054,7 @@ bool NVPTXDAGToDAGISel::tryBF16ArithToFMA(SDNode *N) {
 // negative values (not even -0). NaN signs are immaterial to these
 // instructions.
 bool NVPTXDAGToDAGISel::SelectFAbs(SDValue N, SDValue &Src) {
-  if (N.getOpcode() == ISD::FABS)
+  if (N.getOpcode() == NVPTXISD::FABS)
     Src = N.getOperand(0);
   else if (CurDAG->computeKnownFPClass(N, fcNegative).signBitIsZeroOrNaN())
     Src = N;
