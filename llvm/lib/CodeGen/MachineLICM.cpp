@@ -396,7 +396,6 @@ bool MachineLICMImpl::run(MachineFunction &MF) {
 
   HasProfileData = MF.getFunction().hasProfileData();
 
-  MBFI = nullptr;
   if (DisableHoistingToHotterBlocks == UseBFI::All ||
       (DisableHoistingToHotterBlocks == UseBFI::PGO && HasProfileData))
     MBFI = LegacyPass
