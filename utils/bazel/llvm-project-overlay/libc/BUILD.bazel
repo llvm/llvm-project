@@ -2392,7 +2392,6 @@ libc_support_library(
         ":__support_cpp_type_traits",
         ":__support_error_or",
         ":__support_file_file",
-        ":__support_libc_errno",
         ":__support_macros_attributes",
         ":__support_macros_config",
         ":__support_osutil_linux_syscall_wrappers_close",
@@ -2403,6 +2402,7 @@ libc_support_library(
         ":__support_osutil_linux_syscall_wrappers_read",
         ":__support_osutil_linux_syscall_wrappers_write",
         ":func_free",
+        ":hdr_errno_macros",
         ":hdr_fcntl_macros",
         ":hdr_stdint_proxy",
         ":hdr_stdio_macros",
@@ -3528,6 +3528,7 @@ libc_support_library(
         ":__support_macros_optimization",
         ":__support_macros_properties_architectures",
         ":__support_uint128",
+        ":hdr_errno_macros",
         ":hdr_math_macros",
         ":hdr_stdint_proxy",
     ],
@@ -3544,6 +3545,7 @@ libc_support_library(
         ":__support_fputil_rounding_mode",
         ":__support_macros_attributes",
         ":__support_macros_config",
+        ":hdr_errno_macros",
         ":hdr_math_macros",
     ],
 )
@@ -8665,6 +8667,7 @@ libc_support_library(
         ":__support_macros_properties_cpu_features",
         ":__support_range_reduction_double",
         ":__support_sincos_eval",
+        ":hdr_errno_macros",
     ],
 )
 
@@ -8861,10 +8864,10 @@ libc_support_library(
         ":__support_fputil_multiply_add",
         ":__support_fputil_polyeval",
         ":__support_fputil_rounding_mode",
-        ":__support_libc_errno",
         ":__support_macros_config",
         ":__support_macros_optimization",
         ":__support_math_exp10f_utils",
+        ":hdr_errno_macros",
     ],
 )
 
@@ -10926,12 +10929,12 @@ libc_support_library(
         ":__support_fputil_nearest_integer",
         ":__support_fputil_polyeval",
         ":__support_fputil_rounding_mode",
-        ":__support_libc_errno",
         ":__support_macros_config",
         ":__support_macros_optimization",
         ":__support_macros_properties_cpu_features",
         ":__support_math_common_constants",
         ":__support_math_exp10f_utils",
+        ":hdr_errno_macros",
     ],
 )
 
@@ -11102,6 +11105,7 @@ libc_support_library(
         ":__support_macros_optimization",
         ":__support_math_common_constants",
         ":__support_math_exp_constants",
+        ":hdr_errno_macros",
     ],
 )
 
@@ -11122,6 +11126,7 @@ libc_support_library(
         ":__support_macros_optimization",
         ":__support_macros_properties_cpu_features",
         ":__support_math_common_constants",
+        ":hdr_errno_macros",
     ],
 )
 
@@ -11365,6 +11370,7 @@ libc_support_library(
         ":__support_macros_properties_cpu_features",
         ":__support_range_reduction_double",
         ":__support_sincos_eval",
+        ":hdr_errno_macros",
     ],
 )
 
