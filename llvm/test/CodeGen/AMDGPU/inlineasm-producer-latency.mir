@@ -1,0 +1,47 @@
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -run-pass=postmisched -verify-machineinstrs -verify-misched -debug-only=machine-scheduler %s -o /dev/null 2>&1 | FileCheck %s
+# REQUIRES: asserts
+
+# Explicit inline-asm inputs retain modeled producer latency for non-DS
+# instructions, including arithmetic, global loads, and matrix instructions.
+
+---
+name: valu_result
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: valu_result:%bb.0
+  ; CHECK: SU(0): {{.*}}V_ADD_U32_e32
+  ; CHECK: SU(1): Data Latency=1 Reg=$vgpr2
+  bb.0:
+    liveins: $vgpr0, $exec
+    $vgpr2 = V_ADD_U32_e32 1, $vgpr0, implicit $exec
+    INLINEASM &"v_mov_b32 $0, $1", attdialect, regdef:VGPR_32, def $vgpr6, reguse:VGPR_32, $vgpr2
+    S_ENDPGM 0
+...
+
+---
+name: vmem_result
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: vmem_result:%bb.0
+  ; CHECK: SU(0): {{.*}}GLOBAL_LOAD_DWORD
+  ; CHECK: SU(1): Data Latency=80 Reg=$vgpr2
+  bb.0:
+    liveins: $vgpr0_vgpr1, $exec
+    $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec :: (load (s32), addrspace 1)
+    INLINEASM &"v_mov_b32 $0, $1", attdialect, regdef:VGPR_32, def $vgpr6, reguse:VGPR_32, $vgpr2
+    S_ENDPGM 0
+...
+
+---
+name: mfma_result
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: mfma_result:%bb.0
+  ; CHECK: SU(0): {{.*}}V_MFMA_F32_16X16X16F16_vgprcd_e64
+  ; CHECK: SU(1): Data Latency=4 Reg=$vgpr4_vgpr5_vgpr6_vgpr7
+  bb.0:
+    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr8_vgpr9_vgpr10_vgpr11, $mode, $exec
+    $vgpr4_vgpr5_vgpr6_vgpr7 = V_MFMA_F32_16X16X16F16_vgprcd_e64 $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr8_vgpr9_vgpr10_vgpr11, 0, 0, 0, implicit $mode, implicit $exec
+    INLINEASM &"", attdialect, regdef:VReg_128_Align2, def $vgpr4_vgpr5_vgpr6_vgpr7, reguse tiedto:$0, $vgpr4_vgpr5_vgpr6_vgpr7(tied-def 3)
+    S_ENDPGM 0
+...
