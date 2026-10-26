@@ -5,12 +5,11 @@
 ; of the new calculation
 ; See issues #218621, #218622, #218623 and 218366
 
-; Function Attrs: noinline nounwind uwtable
 define dso_local i32 @srem_to_urem(i32 noundef %x) #0 !dbg !9 {
 ; CHECK:      [[X_NONNEG:%.*]] = sub i32 0, [[X:%.*]]
 ; CHECK-NEXT: [[REM1:%.*]] = urem i32 [[X_NONNEG]], 42
 ; CHECK-NEXT: [[REM1_NEG:%.*]] = sub i32 0, [[REM1]]
-; CHECK-NEXT: #dbg_value(i32 [[X]], [[META17:![0-9]+]], !DIExpression(DW_OP_constu, 42, DW_OP_mod, DW_OP_stack_value), [[META15:![0-9]+]])
+; CHECK-NEXT: #dbg_value(i32 [[X]], [[META1:![0-9]+]], !DIExpression(DW_OP_constu, 42, DW_OP_mod, DW_OP_stack_value), [[META2:![0-9]+]])
 ;
 entry:
   %rem = srem i32 %x, 42
@@ -20,12 +19,11 @@ entry:
   ret i32 %rem.
 }
 
-; Function Attrs: noinline nounwind uwtable
 define dso_local i32 @sdiv_to_udiv(i32 noundef %x) #0 !dbg !21 {
 ; CHECK:      [[X_NONNEG:%.*]] = sub i32 0, [[X:%.*]]
 ; CHECK-NEXT: [[DIV1:%.*]] = udiv i32 [[X_NONNEG]], 42
 ; CHECK-NEXT: [[DIV1_NEG:%.*]] = sub i32 0, [[DIV1]]
-; CHECK-NEXT: #dbg_value(i32 [[X]], [[META25:![0-9]+]], !DIExpression(DW_OP_constu, 42, DW_OP_div, DW_OP_stack_value), [[META23:![0-9]+]])
+; CHECK-NEXT: #dbg_value(i32 [[X]], [[META4:![0-9]+]], !DIExpression(DW_OP_constu, 42, DW_OP_div, DW_OP_stack_value), [[META5:![0-9]+]])
 ;
 entry:
   %div = sdiv i32 %x, 42
@@ -35,10 +33,9 @@ entry:
   ret i32 %div.
 }
 
-; Function Attrs: noinline nounwind uwtable
 define dso_local i64 @sext_to_zext(i32 noundef %x) #0 !dbg !29 {
 ; CHECK:      [[CONV:%.*]] = zext nneg i32 [[X:%.*]] to i64
-; CHECK-NEXT: #dbg_value(i32 [[X]], [[META36:![0-9]+]], !DIExpression(DW_OP_LLVM_convert, 32, DW_ATE_signed, DW_OP_LLVM_convert, 64, DW_ATE_signed, DW_OP_stack_value), [[META34:![0-9]+]])
+; CHECK-NEXT: #dbg_value(i32 [[X]], [[META7:![0-9]+]], !DIExpression(DW_OP_LLVM_convert, 32, DW_ATE_signed, DW_OP_LLVM_convert, 64, DW_ATE_signed, DW_OP_stack_value), [[META8:![0-9]+]])
 ;
 entry:
   %conv = sext i32 %x to i64
@@ -48,10 +45,9 @@ entry:
   ret i64 %conv.
 }
 
-; Function Attrs: noinline nounwind uwtable
 define dso_local i32 @ashr_to_lshr(i32 noundef %x, i32 noundef %y) #0 !dbg !40 {
 ; CHECK:      [[SHR:%.*]] = lshr i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT: #dbg_value(!DIArgList(i32 [[X]], i32 [[Y]]), [[META47:![0-9]+]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_shra, DW_OP_stack_value), [[META44:![0-9]+]])
+; CHECK-NEXT: #dbg_value(!DIArgList(i32 [[X]], i32 [[Y]]), [[META10:![0-9]+]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_shra, DW_OP_stack_value), [[META11:![0-9]+]])
 ;
 entry:
   %shr = ashr i32 %x, %y
@@ -60,8 +56,6 @@ entry:
   %shr. = select i1 %cmp, i32 %shr, i32 24
   ret i32 %shr.
 }
-
-attributes #0 = { noinline nounwind uwtable }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3}
@@ -90,3 +84,16 @@ attributes #0 = { noinline nounwind uwtable }
 !42 = !{!12, !12, !12}
 !44 = !DILocation(line: 0, scope: !40)
 !47 = !DILocalVariable(name: "shifted", scope: !40, file: !1, line: 19, type: !12)
+
+; CHECK: [[META3:![0-9]+]] = distinct !DISubprogram(name: "srem_to_urem"
+; CHECK: [[META1]] = !DILocalVariable(name: "remainder", scope: [[META3]]
+; CHECK: [[META2]] = !DILocation(line: 0, scope: [[META3]])
+; CHECK: [[META6:![0-9]+]] = distinct !DISubprogram(name: "sdiv_to_udiv"
+; CHECK: [[META4]] = !DILocalVariable(name: "quotient", scope: [[META6]]
+; CHECK: [[META5]] = !DILocation(line: 0, scope: [[META6]])
+; CHECK: [[META9:![0-9]+]] = distinct !DISubprogram(name: "sext_to_zext"
+; CHECK: [[META7]] = !DILocalVariable(name: "extended", scope: [[META9]]
+; CHECK: [[META8]] = !DILocation(line: 0, scope: [[META9]])
+; CHECK: [[META12:![0-9]+]] = distinct !DISubprogram(name: "ashr_to_lshr"
+; CHECK: [[META10]] = !DILocalVariable(name: "shifted", scope: [[META12]]
+; CHECK: [[META11]] = !DILocation(line: 0, scope: [[META12]])
