@@ -20,6 +20,6 @@ float4 main(int start : SV_StartVertexLocation, float4 pos : POSITION) : SV_Posi
 }
 
 // CHECK-SPIRV-DAG: ![[#MD_0]] = !{![[#MD_1:]]}
+// The metadata below contains SPIR-V decoration 'BuiltIn' followed by
+// BuiltIn BaseVertex.
 // CHECK-SPIRV-DAG: ![[#MD_1]] = !{i32 11, i32 4424}
-//                                      |       `-> BuiltIn BaseVertex
-//                                      `-> SPIR-V decoration 'BuiltIn'
