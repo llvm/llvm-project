@@ -3,21 +3,6 @@ if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_ARCHITECTURE})
 endif()
 
 add_subdirectory(${LIBC_TARGET_ARCHITECTURE})
-
-add_header_library(
-  syscall
-  HDRS
-    syscall.h
-  DEPENDS
-    .${LIBC_TARGET_ARCHITECTURE}.linux_${LIBC_TARGET_ARCHITECTURE}_util
-    libc.src.__support.CPP.bit
-    libc.src.__support.common
-    libc.src.__support.error_or
-    libc.src.__support.macros.config
-    libc.src.__support.macros.optimization
-    libc.src.__support.macros.properties.architectures
-)
-
 add_subdirectory(syscall_wrappers)
 add_subdirectory(stat)
 
@@ -27,8 +12,9 @@ add_object_library(
     exit.cpp
   HDRS
     io.h
+    syscall.h
   DEPENDS
-    .syscall
+    .${LIBC_TARGET_ARCHITECTURE}.linux_${LIBC_TARGET_ARCHITECTURE}_util
     libc.src.__support.common
     libc.src.__support.CPP.string_view
     libc.include.sys_syscall
