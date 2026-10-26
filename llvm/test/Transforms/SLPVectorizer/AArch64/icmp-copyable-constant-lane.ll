@@ -242,17 +242,13 @@ define void @undef_lane(ptr %r, <4 x i64> %va, <4 x i64> %vb, ptr %out) {
 ; CHECK-LABEL: define void @undef_lane(
 ; CHECK-SAME: ptr [[R:%.*]], <4 x i64> [[VA:%.*]], <4 x i64> [[VB:%.*]], ptr [[OUT:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[A3:%.*]] = extractelement <4 x i64> [[VA]], i64 3
-; CHECK-NEXT:    [[B3:%.*]] = extractelement <4 x i64> [[VB]], i64 3
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i64> [[VA]], <4 x i64> poison, <2 x i32> <i32 1, i32 2>
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i64> [[VB]], <4 x i64> poison, <2 x i32> <i32 1, i32 2>
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult <2 x i64> [[TMP3]], [[TMP7]]
-; CHECK-NEXT:    [[C3:%.*]] = icmp ult i64 [[A3]], [[B3]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i64> [[VA]], <4 x i64> poison, <3 x i32> <i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i64> [[VB]], <4 x i64> poison, <3 x i32> <i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult <3 x i64> [[TMP3]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i8>, ptr [[R]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i8> [[TMP0]], zeroinitializer
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x i1> [[TMP2]], <2 x i1> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x i1> [[TMP8]], <4 x i1> <i1 undef, i1 poison, i1 poison, i1 poison>, <4 x i32> <i32 4, i32 0, i32 1, i32 poison>
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i1> [[TMP9]], i1 [[C3]], i64 3
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <3 x i1> [[TMP2]], <3 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i1> [[TMP8]], <4 x i1> <i1 undef, i1 poison, i1 poison, i1 poison>, <4 x i32> <i32 4, i32 0, i32 1, i32 2>
 ; CHECK-NEXT:    [[TMP5:%.*]] = and <4 x i1> [[TMP4]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext <4 x i1> [[TMP5]] to <4 x i8>
 ; CHECK-NEXT:    store <4 x i8> [[TMP6]], ptr [[OUT]], align 1

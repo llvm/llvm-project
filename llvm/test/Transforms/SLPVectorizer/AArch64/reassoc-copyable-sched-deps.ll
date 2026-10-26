@@ -19,8 +19,13 @@ define fastcc i1 @test(ptr %0, i64 %1, i64 %2, i64 %3, i64 %4) {
 ; CHECK-NEXT:    [[TMP65:%.*]] = add <2 x i64> [[TMP13]], [[TMP14]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <2 x i64> [[TMP65]], i64 0
 ; CHECK-NEXT:    [[TMP18:%.*]] = add i64 [[TMP17]], [[TMP1]]
-; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <2 x i64> [[TMP65]], i64 1
-; CHECK-NEXT:    [[TMP20:%.*]] = sub i64 [[TMP19]], [[TMP2]]
+; CHECK-NEXT:    [[TMP43:%.*]] = insertelement <3 x i64> poison, i64 [[TMP3]], i64 1
+; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <3 x i64> [[TMP43]], i64 [[TMP18]], i64 0
+; CHECK-NEXT:    [[TMP20:%.*]] = shufflevector <2 x i64> [[TMP65]], <2 x i64> poison, <3 x i32> <i32 poison, i32 1, i32 poison>
+; CHECK-NEXT:    [[TMP44:%.*]] = shufflevector <2 x i64> [[TMP65]], <2 x i64> poison, <3 x i32> <i32 0, i32 1, i32 poison>
+; CHECK-NEXT:    [[TMP66:%.*]] = shufflevector <3 x i64> [[TMP19]], <3 x i64> [[TMP44]], <3 x i32> <i32 0, i32 1, i32 4>
+; CHECK-NEXT:    [[TMP67:%.*]] = insertelement <3 x i64> <i64 0, i64 0, i64 poison>, i64 [[TMP2]], i64 2
+; CHECK-NEXT:    [[TMP68:%.*]] = sub <3 x i64> [[TMP66]], [[TMP67]]
 ; CHECK-NEXT:    [[TMP59:%.*]] = insertelement <2 x i64> [[TMP7]], i64 [[TMP3]], i64 0
 ; CHECK-NEXT:    [[TMP60:%.*]] = insertelement <2 x i64> <i64 0, i64 poison>, i64 [[TMP2]], i64 1
 ; CHECK-NEXT:    [[TMP61:%.*]] = add <2 x i64> [[TMP59]], [[TMP60]]
@@ -48,9 +53,7 @@ define fastcc i1 @test(ptr %0, i64 %1, i64 %2, i64 %3, i64 %4) {
 ; CHECK-NEXT:    [[TMP40:%.*]] = shufflevector <2 x i64> [[TMP32]], <2 x i64> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP41:%.*]] = shufflevector <8 x i64> [[TMP39]], <8 x i64> [[TMP40]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP42:%.*]] = icmp ult <8 x i64> [[TMP41]], <i64 7, i64 15, i64 15, i64 15, i64 15, i64 15, i64 15, i64 15>
-; CHECK-NEXT:    [[TMP43:%.*]] = insertelement <4 x i64> poison, i64 [[TMP3]], i64 1
-; CHECK-NEXT:    [[TMP44:%.*]] = insertelement <4 x i64> [[TMP43]], i64 [[TMP18]], i64 0
-; CHECK-NEXT:    [[TMP45:%.*]] = insertelement <4 x i64> [[TMP44]], i64 [[TMP20]], i64 2
+; CHECK-NEXT:    [[TMP45:%.*]] = shufflevector <3 x i64> [[TMP68]], <3 x i64> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
 ; CHECK-NEXT:    [[TMP46:%.*]] = insertelement <4 x i64> [[TMP45]], i64 [[TMP8]], i64 3
 ; CHECK-NEXT:    [[TMP47:%.*]] = add <4 x i64> [[TMP46]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP48:%.*]] = insertelement <8 x i64> <i64 poison, i64 poison, i64 poison, i64 poison, i64 poison, i64 0, i64 0, i64 1>, i64 [[TMP4]], i64 4

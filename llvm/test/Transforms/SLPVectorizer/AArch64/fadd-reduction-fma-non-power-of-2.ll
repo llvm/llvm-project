@@ -54,26 +54,13 @@ define float @color_distance(ptr %mean, ptr %pixel) {
 define float @color_distance_no_contract(ptr %mean, ptr %pixel) {
 ; CHECK-LABEL: define float @color_distance_no_contract(
 ; CHECK-SAME: ptr [[MEAN:%.*]], ptr [[PIXEL:%.*]]) {
-; CHECK-NEXT:    [[MEAN_B_P:%.*]] = getelementptr inbounds nuw i8, ptr [[MEAN]], i64 8
-; CHECK-NEXT:    [[PIXEL_G_P:%.*]] = getelementptr inbounds nuw i8, ptr [[PIXEL]], i64 2
-; CHECK-NEXT:    [[PIXEL_R_P:%.*]] = getelementptr inbounds nuw i8, ptr [[PIXEL]], i64 4
-; CHECK-NEXT:    [[PIXEL_R:%.*]] = load i16, ptr [[PIXEL_R_P]], align 4
-; CHECK-NEXT:    [[PIXEL_R_F:%.*]] = uitofp i16 [[PIXEL_R]] to float
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[MEAN]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> poison, <2 x i32> <i32 1, i32 0>
-; CHECK-NEXT:    [[PIXEL_G:%.*]] = load i16, ptr [[PIXEL_G_P]], align 2
-; CHECK-NEXT:    [[PIXEL_G_F:%.*]] = uitofp i16 [[PIXEL_G]] to float
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> poison, float [[PIXEL_G_F]], i64 0
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> [[TMP3]], float [[PIXEL_R_F]], i64 1
-; CHECK-NEXT:    [[TMP5:%.*]] = fsub reassoc nsz <2 x float> [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = fmul reassoc nsz <2 x float> [[TMP5]], [[TMP5]]
-; CHECK-NEXT:    [[TMP8:%.*]] = call reassoc nsz float @llvm.vector.reduce.fadd.v2f32(float 0.000000e+00, <2 x float> [[TMP6]])
-; CHECK-NEXT:    [[MEAN_B:%.*]] = load float, ptr [[MEAN_B_P]], align 8
-; CHECK-NEXT:    [[PIXEL_B:%.*]] = load i16, ptr [[PIXEL]], align 4
-; CHECK-NEXT:    [[PIXEL_B_F:%.*]] = uitofp i16 [[PIXEL_B]] to float
-; CHECK-NEXT:    [[D_B:%.*]] = fsub reassoc nsz float [[MEAN_B]], [[PIXEL_B_F]]
-; CHECK-NEXT:    [[SQ_B:%.*]] = fmul reassoc nsz float [[D_B]], [[D_B]]
-; CHECK-NEXT:    [[TMP7:%.*]] = fadd reassoc nsz float [[TMP8]], [[SQ_B]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load <3 x float>, ptr [[MEAN]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <3 x i16>, ptr [[PIXEL]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = uitofp <3 x i16> [[TMP2]] to <3 x float>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <3 x float> [[TMP3]], <3 x float> poison, <3 x i32> <i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[TMP5:%.*]] = fsub reassoc nsz <3 x float> [[TMP1]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = fmul reassoc nsz <3 x float> [[TMP5]], [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = call reassoc nsz float @llvm.vector.reduce.fadd.v3f32(float 0.000000e+00, <3 x float> [[TMP6]])
 ; CHECK-NEXT:    ret float [[TMP7]]
 ;
   %mean.g.p = getelementptr inbounds nuw i8, ptr %mean, i64 4

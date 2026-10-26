@@ -19,11 +19,11 @@ define i64 @all_zero_3xi64(ptr %p, i64 %x) {
 ; CHECK:       [[EMPTY]]:
 ; CHECK-NEXT:    ret i64 0
 ; CHECK:       [[COUNT]]:
-; CHECK-NEXT:    [[N0:%.*]] = call i64 @llvm.ctpop.i64(i64 [[X]])
-; CHECK-NEXT:    [[N1:%.*]] = call i64 @llvm.ctpop.i64(i64 [[W0]])
-; CHECK-NEXT:    [[OR0:%.*]] = or i64 [[N0]], [[N1]]
-; CHECK-NEXT:    [[N2:%.*]] = call i64 @llvm.ctpop.i64(i64 [[X]])
-; CHECK-NEXT:    [[TMP4:%.*]] = or i64 [[OR0]], [[N2]]
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <3 x i64> poison, i64 [[X]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <3 x i64> [[TMP0]], i64 [[W0]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <3 x i64> [[TMP1]], <3 x i64> poison, <3 x i32> <i32 0, i32 1, i32 0>
+; CHECK-NEXT:    [[TMP3:%.*]] = call <3 x i64> @llvm.ctpop.v3i64(<3 x i64> [[TMP2]])
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vector.reduce.or.v3i64(<3 x i64> [[TMP3]])
 ; CHECK-NEXT:    ret i64 [[TMP4]]
 ;
 entry:

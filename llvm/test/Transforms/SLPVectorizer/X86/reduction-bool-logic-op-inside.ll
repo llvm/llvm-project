@@ -25,10 +25,10 @@ define i1 @test1(i32 %x, i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[B]], i64 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[C]], i64 3
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp sgt <4 x i32> [[TMP4]], splat (i32 1)
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp sgt i32 [[D]], 1
+; CHECK-NEXT:    [[CMP4:%.*]] = icmp sgt i32 [[D]], 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = freeze <4 x i1> [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP6]])
-; CHECK-NEXT:    [[OP_RDX:%.*]] = select i1 [[TMP7]], i1 true, i1 [[CMP3]]
+; CHECK-NEXT:    [[OP_RDX:%.*]] = select i1 [[TMP7]], i1 true, i1 [[CMP4]]
 ; CHECK-NEXT:    ret i1 [[OP_RDX]]
 ;
   %cmp = icmp sgt i32 %x, 1

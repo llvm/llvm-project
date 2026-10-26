@@ -3,26 +3,18 @@
 ; RUN: opt -passes=slp-vectorizer -slp-vectorize-non-power-of-2=false -mtriple=arm64-apple-ios -S %s | FileCheck --check-prefixes=CHECK,POW2-ONLY %s
 
 define void @v3_load_i32_mul_by_constant_store(ptr %src, ptr %dst) {
-; NON-POW2-LABEL: @v3_load_i32_mul_by_constant_store(
-; NON-POW2-NEXT:  entry:
-; NON-POW2-NEXT:    [[GEP_SRC_0:%.*]] = getelementptr inbounds i32, ptr [[SRC:%.*]], i32 0
-; NON-POW2-NEXT:    [[TMP0:%.*]] = load <3 x i32>, ptr [[GEP_SRC_0]], align 4
-; NON-POW2-NEXT:    [[TMP1:%.*]] = mul nsw <3 x i32> [[TMP0]], splat (i32 10)
-; NON-POW2-NEXT:    store <3 x i32> [[TMP1]], ptr [[DST:%.*]], align 4
-; NON-POW2-NEXT:    ret void
-;
-; POW2-ONLY-LABEL: @v3_load_i32_mul_by_constant_store(
-; POW2-ONLY-NEXT:  entry:
-; POW2-ONLY-NEXT:    [[GEP_SRC_0:%.*]] = getelementptr inbounds i32, ptr [[SRC:%.*]], i32 0
-; POW2-ONLY-NEXT:    [[GEP_SRC_2:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i32 2
-; POW2-ONLY-NEXT:    [[L_SRC_2:%.*]] = load i32, ptr [[GEP_SRC_2]], align 4
-; POW2-ONLY-NEXT:    [[MUL_2:%.*]] = mul nsw i32 [[L_SRC_2]], 10
-; POW2-ONLY-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[GEP_SRC_0]], align 4
-; POW2-ONLY-NEXT:    [[TMP1:%.*]] = mul nsw <2 x i32> [[TMP0]], splat (i32 10)
-; POW2-ONLY-NEXT:    store <2 x i32> [[TMP1]], ptr [[DST:%.*]], align 4
-; POW2-ONLY-NEXT:    [[DST_2:%.*]] = getelementptr i32, ptr [[DST]], i32 2
-; POW2-ONLY-NEXT:    store i32 [[MUL_2]], ptr [[DST_2]], align 4
-; POW2-ONLY-NEXT:    ret void
+; CHECK-LABEL: @v3_load_i32_mul_by_constant_store(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[GEP_SRC_0:%.*]] = getelementptr inbounds i32, ptr [[SRC:%.*]], i32 0
+; CHECK-NEXT:    [[GEP_SRC_2:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i32 2
+; CHECK-NEXT:    [[L_SRC_2:%.*]] = load i32, ptr [[GEP_SRC_2]], align 4
+; CHECK-NEXT:    [[MUL_2:%.*]] = mul nsw i32 [[L_SRC_2]], 10
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[GEP_SRC_0]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nsw <2 x i32> [[TMP0]], splat (i32 10)
+; CHECK-NEXT:    store <2 x i32> [[TMP1]], ptr [[DST:%.*]], align 4
+; CHECK-NEXT:    [[DST_2:%.*]] = getelementptr i32, ptr [[DST]], i32 2
+; CHECK-NEXT:    store i32 [[MUL_2]], ptr [[DST_2]], align 4
+; CHECK-NEXT:    ret void
 ;
 entry:
   %gep.src.0 = getelementptr inbounds i32, ptr %src, i32 0
@@ -95,32 +87,22 @@ entry:
 
 
 define void @v3_load_i32_mul_store(ptr %src.1, ptr %src.2, ptr %dst) {
-; NON-POW2-LABEL: @v3_load_i32_mul_store(
-; NON-POW2-NEXT:  entry:
-; NON-POW2-NEXT:    [[GEP_SRC_1_0:%.*]] = getelementptr inbounds i32, ptr [[SRC_1:%.*]], i32 0
-; NON-POW2-NEXT:    [[GEP_SRC_2_0:%.*]] = getelementptr inbounds i32, ptr [[SRC_2:%.*]], i32 0
-; NON-POW2-NEXT:    [[TMP0:%.*]] = load <3 x i32>, ptr [[GEP_SRC_1_0]], align 4
-; NON-POW2-NEXT:    [[TMP1:%.*]] = load <3 x i32>, ptr [[GEP_SRC_2_0]], align 4
-; NON-POW2-NEXT:    [[TMP2:%.*]] = mul nsw <3 x i32> [[TMP0]], [[TMP1]]
-; NON-POW2-NEXT:    store <3 x i32> [[TMP2]], ptr [[DST:%.*]], align 4
-; NON-POW2-NEXT:    ret void
-;
-; POW2-ONLY-LABEL: @v3_load_i32_mul_store(
-; POW2-ONLY-NEXT:  entry:
-; POW2-ONLY-NEXT:    [[GEP_SRC_1_0:%.*]] = getelementptr inbounds i32, ptr [[SRC_1:%.*]], i32 0
-; POW2-ONLY-NEXT:    [[GEP_SRC_2_0:%.*]] = getelementptr inbounds i32, ptr [[SRC_2:%.*]], i32 0
-; POW2-ONLY-NEXT:    [[GEP_SRC_1_2:%.*]] = getelementptr inbounds i32, ptr [[SRC_1]], i32 2
-; POW2-ONLY-NEXT:    [[L_SRC_1_2:%.*]] = load i32, ptr [[GEP_SRC_1_2]], align 4
-; POW2-ONLY-NEXT:    [[GEP_SRC_2_2:%.*]] = getelementptr inbounds i32, ptr [[SRC_2]], i32 2
-; POW2-ONLY-NEXT:    [[L_SRC_2_2:%.*]] = load i32, ptr [[GEP_SRC_2_2]], align 4
-; POW2-ONLY-NEXT:    [[MUL_2:%.*]] = mul nsw i32 [[L_SRC_1_2]], [[L_SRC_2_2]]
-; POW2-ONLY-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[GEP_SRC_1_0]], align 4
-; POW2-ONLY-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[GEP_SRC_2_0]], align 4
-; POW2-ONLY-NEXT:    [[TMP2:%.*]] = mul nsw <2 x i32> [[TMP0]], [[TMP1]]
-; POW2-ONLY-NEXT:    store <2 x i32> [[TMP2]], ptr [[DST:%.*]], align 4
-; POW2-ONLY-NEXT:    [[DST_2:%.*]] = getelementptr i32, ptr [[DST]], i32 2
-; POW2-ONLY-NEXT:    store i32 [[MUL_2]], ptr [[DST_2]], align 4
-; POW2-ONLY-NEXT:    ret void
+; CHECK-LABEL: @v3_load_i32_mul_store(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[GEP_SRC_1_0:%.*]] = getelementptr inbounds i32, ptr [[SRC_1:%.*]], i32 0
+; CHECK-NEXT:    [[GEP_SRC_2_0:%.*]] = getelementptr inbounds i32, ptr [[SRC_2:%.*]], i32 0
+; CHECK-NEXT:    [[GEP_SRC_1_2:%.*]] = getelementptr inbounds i32, ptr [[SRC_1]], i32 2
+; CHECK-NEXT:    [[L_SRC_1_2:%.*]] = load i32, ptr [[GEP_SRC_1_2]], align 4
+; CHECK-NEXT:    [[GEP_SRC_2_2:%.*]] = getelementptr inbounds i32, ptr [[SRC_2]], i32 2
+; CHECK-NEXT:    [[L_SRC_2_2:%.*]] = load i32, ptr [[GEP_SRC_2_2]], align 4
+; CHECK-NEXT:    [[MUL_2:%.*]] = mul nsw i32 [[L_SRC_1_2]], [[L_SRC_2_2]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[GEP_SRC_1_0]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[GEP_SRC_2_0]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nsw <2 x i32> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    store <2 x i32> [[TMP2]], ptr [[DST:%.*]], align 4
+; CHECK-NEXT:    [[DST_2:%.*]] = getelementptr i32, ptr [[DST]], i32 2
+; CHECK-NEXT:    store i32 [[MUL_2]], ptr [[DST_2]], align 4
+; CHECK-NEXT:    ret void
 ;
 entry:
   %gep.src.1.0 = getelementptr inbounds i32, ptr %src.1, i32 0
@@ -153,35 +135,24 @@ entry:
 }
 
 define void @v3_load_i32_mul_add_const_store(ptr %src.1, ptr %src.2, ptr %dst) {
-; NON-POW2-LABEL: @v3_load_i32_mul_add_const_store(
-; NON-POW2-NEXT:  entry:
-; NON-POW2-NEXT:    [[GEP_SRC_1_0:%.*]] = getelementptr inbounds i32, ptr [[SRC_1:%.*]], i32 0
-; NON-POW2-NEXT:    [[GEP_SRC_2_0:%.*]] = getelementptr inbounds i32, ptr [[SRC_2:%.*]], i32 0
-; NON-POW2-NEXT:    [[TMP0:%.*]] = load <3 x i32>, ptr [[GEP_SRC_1_0]], align 4
-; NON-POW2-NEXT:    [[TMP1:%.*]] = load <3 x i32>, ptr [[GEP_SRC_2_0]], align 4
-; NON-POW2-NEXT:    [[TMP2:%.*]] = mul nsw <3 x i32> [[TMP0]], [[TMP1]]
-; NON-POW2-NEXT:    [[TMP3:%.*]] = add <3 x i32> [[TMP2]], splat (i32 9)
-; NON-POW2-NEXT:    store <3 x i32> [[TMP3]], ptr [[DST:%.*]], align 4
-; NON-POW2-NEXT:    ret void
-;
-; POW2-ONLY-LABEL: @v3_load_i32_mul_add_const_store(
-; POW2-ONLY-NEXT:  entry:
-; POW2-ONLY-NEXT:    [[GEP_SRC_1_0:%.*]] = getelementptr inbounds i32, ptr [[SRC_1:%.*]], i32 0
-; POW2-ONLY-NEXT:    [[GEP_SRC_2_0:%.*]] = getelementptr inbounds i32, ptr [[SRC_2:%.*]], i32 0
-; POW2-ONLY-NEXT:    [[GEP_SRC_1_2:%.*]] = getelementptr inbounds i32, ptr [[SRC_1]], i32 2
-; POW2-ONLY-NEXT:    [[L_SRC_1_2:%.*]] = load i32, ptr [[GEP_SRC_1_2]], align 4
-; POW2-ONLY-NEXT:    [[GEP_SRC_2_2:%.*]] = getelementptr inbounds i32, ptr [[SRC_2]], i32 2
-; POW2-ONLY-NEXT:    [[L_SRC_2_2:%.*]] = load i32, ptr [[GEP_SRC_2_2]], align 4
-; POW2-ONLY-NEXT:    [[MUL_2:%.*]] = mul nsw i32 [[L_SRC_1_2]], [[L_SRC_2_2]]
-; POW2-ONLY-NEXT:    [[ADD_2:%.*]] = add i32 [[MUL_2]], 9
-; POW2-ONLY-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[GEP_SRC_1_0]], align 4
-; POW2-ONLY-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[GEP_SRC_2_0]], align 4
-; POW2-ONLY-NEXT:    [[TMP2:%.*]] = mul nsw <2 x i32> [[TMP0]], [[TMP1]]
-; POW2-ONLY-NEXT:    [[TMP3:%.*]] = add <2 x i32> [[TMP2]], splat (i32 9)
-; POW2-ONLY-NEXT:    store <2 x i32> [[TMP3]], ptr [[DST:%.*]], align 4
-; POW2-ONLY-NEXT:    [[DST_2:%.*]] = getelementptr i32, ptr [[DST]], i32 2
-; POW2-ONLY-NEXT:    store i32 [[ADD_2]], ptr [[DST_2]], align 4
-; POW2-ONLY-NEXT:    ret void
+; CHECK-LABEL: @v3_load_i32_mul_add_const_store(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[GEP_SRC_1_0:%.*]] = getelementptr inbounds i32, ptr [[SRC_1:%.*]], i32 0
+; CHECK-NEXT:    [[GEP_SRC_2_0:%.*]] = getelementptr inbounds i32, ptr [[SRC_2:%.*]], i32 0
+; CHECK-NEXT:    [[GEP_SRC_1_2:%.*]] = getelementptr inbounds i32, ptr [[SRC_1]], i32 2
+; CHECK-NEXT:    [[L_SRC_1_2:%.*]] = load i32, ptr [[GEP_SRC_1_2]], align 4
+; CHECK-NEXT:    [[GEP_SRC_2_2:%.*]] = getelementptr inbounds i32, ptr [[SRC_2]], i32 2
+; CHECK-NEXT:    [[L_SRC_2_2:%.*]] = load i32, ptr [[GEP_SRC_2_2]], align 4
+; CHECK-NEXT:    [[MUL_2:%.*]] = mul nsw i32 [[L_SRC_1_2]], [[L_SRC_2_2]]
+; CHECK-NEXT:    [[ADD_2:%.*]] = add i32 [[MUL_2]], 9
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[GEP_SRC_1_0]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[GEP_SRC_2_0]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nsw <2 x i32> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = add <2 x i32> [[TMP2]], splat (i32 9)
+; CHECK-NEXT:    store <2 x i32> [[TMP3]], ptr [[DST:%.*]], align 4
+; CHECK-NEXT:    [[DST_2:%.*]] = getelementptr i32, ptr [[DST]], i32 2
+; CHECK-NEXT:    store i32 [[ADD_2]], ptr [[DST_2]], align 4
+; CHECK-NEXT:    ret void
 ;
 entry:
   %gep.src.1.0 = getelementptr inbounds i32, ptr %src.1, i32 0
@@ -217,26 +188,18 @@ entry:
 }
 
 define void @v3_load_f32_fadd_fadd_by_constant_store(ptr %src, ptr %dst) {
-; NON-POW2-LABEL: @v3_load_f32_fadd_fadd_by_constant_store(
-; NON-POW2-NEXT:  entry:
-; NON-POW2-NEXT:    [[GEP_SRC_0:%.*]] = getelementptr inbounds float, ptr [[SRC:%.*]], i32 0
-; NON-POW2-NEXT:    [[TMP0:%.*]] = load <3 x float>, ptr [[GEP_SRC_0]], align 4
-; NON-POW2-NEXT:    [[TMP1:%.*]] = fadd <3 x float> [[TMP0]], splat (float 1.000000e+01)
-; NON-POW2-NEXT:    store <3 x float> [[TMP1]], ptr [[DST:%.*]], align 4
-; NON-POW2-NEXT:    ret void
-;
-; POW2-ONLY-LABEL: @v3_load_f32_fadd_fadd_by_constant_store(
-; POW2-ONLY-NEXT:  entry:
-; POW2-ONLY-NEXT:    [[GEP_SRC_0:%.*]] = getelementptr inbounds float, ptr [[SRC:%.*]], i32 0
-; POW2-ONLY-NEXT:    [[GEP_SRC_2:%.*]] = getelementptr inbounds float, ptr [[SRC]], i32 2
-; POW2-ONLY-NEXT:    [[L_SRC_2:%.*]] = load float, ptr [[GEP_SRC_2]], align 4
-; POW2-ONLY-NEXT:    [[FADD_2:%.*]] = fadd float [[L_SRC_2]], 1.000000e+01
-; POW2-ONLY-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr [[GEP_SRC_0]], align 4
-; POW2-ONLY-NEXT:    [[TMP1:%.*]] = fadd <2 x float> [[TMP0]], splat (float 1.000000e+01)
-; POW2-ONLY-NEXT:    store <2 x float> [[TMP1]], ptr [[DST:%.*]], align 4
-; POW2-ONLY-NEXT:    [[DST_2:%.*]] = getelementptr float, ptr [[DST]], i32 2
-; POW2-ONLY-NEXT:    store float [[FADD_2]], ptr [[DST_2]], align 4
-; POW2-ONLY-NEXT:    ret void
+; CHECK-LABEL: @v3_load_f32_fadd_fadd_by_constant_store(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[GEP_SRC_0:%.*]] = getelementptr inbounds float, ptr [[SRC:%.*]], i32 0
+; CHECK-NEXT:    [[GEP_SRC_2:%.*]] = getelementptr inbounds float, ptr [[SRC]], i32 2
+; CHECK-NEXT:    [[L_SRC_2:%.*]] = load float, ptr [[GEP_SRC_2]], align 4
+; CHECK-NEXT:    [[FADD_2:%.*]] = fadd float [[L_SRC_2]], 1.000000e+01
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr [[GEP_SRC_0]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd <2 x float> [[TMP0]], splat (float 1.000000e+01)
+; CHECK-NEXT:    store <2 x float> [[TMP1]], ptr [[DST:%.*]], align 4
+; CHECK-NEXT:    [[DST_2:%.*]] = getelementptr float, ptr [[DST]], i32 2
+; CHECK-NEXT:    store float [[FADD_2]], ptr [[DST_2]], align 4
+; CHECK-NEXT:    ret void
 ;
 entry:
   %gep.src.0 = getelementptr inbounds float, ptr %src, i32 0
@@ -263,28 +226,18 @@ entry:
 }
 
 define void @phi_store3(ptr %dst) {
-; NON-POW2-LABEL: @phi_store3(
-; NON-POW2-NEXT:  entry:
-; NON-POW2-NEXT:    br label [[EXIT:%.*]]
-; NON-POW2:       invoke.cont8.loopexit:
-; NON-POW2-NEXT:    br label [[EXIT]]
-; NON-POW2:       exit:
-; NON-POW2-NEXT:    [[TMP0:%.*]] = phi <3 x i32> [ <i32 1, i32 2, i32 3>, [[ENTRY:%.*]] ], [ poison, [[INVOKE_CONT8_LOOPEXIT:%.*]] ]
-; NON-POW2-NEXT:    store <3 x i32> [[TMP0]], ptr [[DST:%.*]], align 4
-; NON-POW2-NEXT:    ret void
-;
-; POW2-ONLY-LABEL: @phi_store3(
-; POW2-ONLY-NEXT:  entry:
-; POW2-ONLY-NEXT:    br label [[EXIT:%.*]]
-; POW2-ONLY:       invoke.cont8.loopexit:
-; POW2-ONLY-NEXT:    br label [[EXIT]]
-; POW2-ONLY:       exit:
-; POW2-ONLY-NEXT:    [[P_2:%.*]] = phi i32 [ 3, [[ENTRY:%.*]] ], [ 0, [[INVOKE_CONT8_LOOPEXIT:%.*]] ]
-; POW2-ONLY-NEXT:    [[TMP0:%.*]] = phi <2 x i32> [ <i32 1, i32 2>, [[ENTRY]] ], [ poison, [[INVOKE_CONT8_LOOPEXIT]] ]
-; POW2-ONLY-NEXT:    [[DST_2:%.*]] = getelementptr i32, ptr [[DST:%.*]], i32 2
-; POW2-ONLY-NEXT:    store <2 x i32> [[TMP0]], ptr [[DST]], align 4
-; POW2-ONLY-NEXT:    store i32 [[P_2]], ptr [[DST_2]], align 4
-; POW2-ONLY-NEXT:    ret void
+; CHECK-LABEL: @phi_store3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       invoke.cont8.loopexit:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[P_2:%.*]] = phi i32 [ 3, [[ENTRY:%.*]] ], [ 0, [[INVOKE_CONT8_LOOPEXIT:%.*]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x i32> [ <i32 1, i32 2>, [[ENTRY]] ], [ poison, [[INVOKE_CONT8_LOOPEXIT]] ]
+; CHECK-NEXT:    [[DST_2:%.*]] = getelementptr i32, ptr [[DST:%.*]], i32 2
+; CHECK-NEXT:    store <2 x i32> [[TMP0]], ptr [[DST]], align 4
+; CHECK-NEXT:    store i32 [[P_2]], ptr [[DST_2]], align 4
+; CHECK-NEXT:    ret void
 ;
 entry:
   br label %exit

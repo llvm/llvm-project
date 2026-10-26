@@ -4049,6 +4049,19 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       return InstructionCost::getInvalid();
   }
 
+  // A non-power-of-2 i1 vector has no bitmask lowering, its lanes are extracted
+  // and combined one by one.
+  if (auto *SrcVTy = dyn_cast<FixedVectorType>(Src);
+      ISD == ISD::BITCAST && SrcVTy && Dst->isIntegerTy() &&
+      SrcVTy->getElementType()->isIntegerTy(1) &&
+      !isPowerOf2_32(SrcVTy->getNumElements())) {
+    unsigned NumElts = SrcVTy->getNumElements();
+    return getScalarizationOverhead(SrcVTy, APInt::getAllOnes(NumElts),
+                                    /*Insert=*/false, /*Extract=*/true,
+                                    CostKind) +
+           NumElts - 1;
+  }
+
   // If the cast is observable, and it is used by a widening instruction (e.g.,
   // uaddl, saddw, etc.), it may be free.
   if (I && !I->users().empty()) {
@@ -4186,6 +4199,19 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     InstructionCost ExtCost = getCastInstrCost(
         Opcode, Dst->getScalarType(), Src->getScalarType(), CCH, CostKind);
     return DstTy.getVectorNumElements() * (LaneCost + ExtCost);
+  }
+
+  // Non-power-of-2 vectors are widened by the type legalization and cast as
+  // the widened vectors.
+  if (auto *SrcVTy = dyn_cast<FixedVectorType>(Src);
+      SrcVTy && ISD != ISD::BITCAST &&
+      !isPowerOf2_32(SrcVTy->getNumElements()) &&
+      TLI->getTypeAction(Src->getContext(), SrcTy) ==
+          TargetLowering::TypeWidenVector) {
+    const unsigned NumElts = PowerOf2Ceil(SrcVTy->getNumElements());
+    return getCastInstrCost(
+        Opcode, FixedVectorType::get(Dst->getScalarType(), NumElts),
+        FixedVectorType::get(Src->getScalarType(), NumElts), CCH, CostKind);
   }
 
   if (!SrcTy.isSimple() || !DstTy.isSimple())
@@ -6060,8 +6086,8 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
     }
     EVT EltVT = VT.getVectorElementType();
     unsigned EltSize = EltVT.getScalarSizeInBits();
-    if (!isPowerOf2_32(EltSize) || EltSize < 8 || EltSize > 64 ||
-        Alignment != Align(1))
+    // The split into power-of-2 pieces does not depend on the alignment.
+    if (!isPowerOf2_32(EltSize) || EltSize < 8 || EltSize > 64)
       return LT.first;
     // FIXME: v3i8 lowering currently is very inefficient, due to automatic
     // widening to v4i8, which produces suboptimal results.
@@ -6972,6 +6998,18 @@ AArch64TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
     if (!Entry)
       break;
     auto *ValVTy = cast<FixedVectorType>(ValTy);
+    // A non-power-of-2 i1 vector is widened with the identity and reduced as
+    // the promoted integer vector, the i1 min/max lowering does not apply.
+    if (ValVTy->getElementType()->isIntegerTy(1) &&
+        !isPowerOf2_32(ValVTy->getNumElements()) && LT.first == 1) {
+      const unsigned NumElts = ValVTy->getNumElements();
+      const unsigned PaddedElts = MTy.getVectorNumElements();
+      return Entry->Cost +
+             getScalarizationOverhead(
+                 FixedVectorType::get(ValVTy->getElementType(), PaddedElts),
+                 APInt::getBitsSetFrom(PaddedElts, NumElts), /*Insert=*/true,
+                 /*Extract=*/false, CostKind);
+    }
     if (MTy.getVectorNumElements() <= ValVTy->getNumElements() &&
         isPowerOf2_32(ValVTy->getNumElements())) {
       InstructionCost ExtraCost = 0;

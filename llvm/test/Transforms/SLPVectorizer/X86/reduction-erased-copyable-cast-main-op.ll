@@ -18,11 +18,11 @@ define i64 @test(ptr %p) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = and <4 x i8> [[TMP5]], <i8 5, i8 5, i8 5, i8 -1>
 ; CHECK-NEXT:    [[TMP7:%.*]] = zext <4 x i8> [[TMP6]] to <4 x i64>
 ; CHECK-NEXT:    [[TMP8:%.*]] = mul <4 x i64> [[TMP7]], <i64 3, i64 2, i64 2, i64 3>
-; CHECK-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[TMP8]])
 ; CHECK-NEXT:    [[TMP10:%.*]] = mul i64 [[TMP4]], 2
+; CHECK-NEXT:    [[TMP12:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[TMP8]])
 ; CHECK-NEXT:    [[TMP11:%.*]] = mul i64 [[Z2]], 2
-; CHECK-NEXT:    [[OP_RDX5:%.*]] = add i64 [[TMP10]], [[TMP11]]
-; CHECK-NEXT:    [[OP_RDX6:%.*]] = add i64 [[OP_RDX5]], 1
+; CHECK-NEXT:    [[OP_RDX6:%.*]] = add i64 [[TMP11]], [[TMP12]]
+; CHECK-NEXT:    [[TMP9:%.*]] = add i64 1, [[TMP10]]
 ; CHECK-NEXT:    [[OP_RDX7:%.*]] = add i64 [[OP_RDX6]], [[TMP9]]
 ; CHECK-NEXT:    ret i64 [[OP_RDX7]]
 ;

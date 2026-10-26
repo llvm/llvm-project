@@ -65,17 +65,22 @@ define noundef i64 @or_sge_canonicalization(ptr noundef %p, i64 noundef %a, i64 
 ; CHECK-SAME: ptr nofree noundef readonly captures(none) [[P:%.*]], i64 noundef [[A:%.*]], i64 noundef [[B:%.*]], i64 noundef [[C:%.*]], i64 noundef [[D:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[C]], [[B]]
-; CHECK-NEXT:    [[CMP_3:%.*]] = icmp sle i64 [[ADD]], [[A]]
-; CHECK-NEXT:    [[CMP_5:%.*]] = icmp slt i64 [[D]], [[C]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = or i64 [[C]], [[B]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i64 [[TMP0]], [[D]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i64 [[TMP1]], -1
-; CHECK-NEXT:    [[AND_3:%.*]] = and i1 [[CMP_3]], [[TMP2]]
-; CHECK-NEXT:    [[AND_4:%.*]] = and i1 [[CMP_5]], [[AND_3]]
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <3 x i64> <i64 poison, i64 -1, i64 poison>, i64 [[D]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <3 x i64> [[TMP2]], i64 [[ADD]], i64 2
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <3 x i64> poison, i64 [[C]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <3 x i64> [[TMP4]], i64 [[TMP1]], i64 1
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <3 x i64> [[TMP5]], i64 [[A]], i64 2
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp slt <3 x i64> [[TMP3]], [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp sle <3 x i64> [[TMP3]], [[TMP6]]
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <3 x i1> [[TMP7]], <3 x i1> [[TMP8]], <3 x i32> <i32 0, i32 1, i32 5>
+; CHECK-NEXT:    [[TMP10:%.*]] = bitcast <3 x i1> [[TMP9]] to i3
+; CHECK-NEXT:    [[AND_4:%.*]] = icmp eq i3 [[TMP10]], -1
 ; CHECK-NEXT:    br i1 [[AND_4]], label %[[CONT:.*]], label %[[ELSE:.*]]
 ; CHECK:       [[CONT]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[P]], i64 [[D]]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[TMP3]], i64 [[B]]
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[P]], i64 [[D]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[TMP12]], i64 [[B]]
 ; CHECK-NEXT:    [[V:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
 ; CHECK-NEXT:    br label %[[ELSE]]
 ; CHECK:       [[ELSE]]:
