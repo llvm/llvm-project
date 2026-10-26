@@ -537,13 +537,6 @@ inline const AllocaInst *findAllocaForValue(const Value *V,
   return findAllocaForValue(const_cast<Value *>(V), OffsetZero);
 }
 
-/// Return true if the only users of this pointer are lifetime markers.
-LLVM_ABI bool onlyUsedByLifetimeMarkers(const Value *V);
-
-/// Return true if the only users of this pointer are lifetime markers or
-/// droppable instructions.
-LLVM_ABI bool onlyUsedByLifetimeMarkersOrDroppableInsts(const Value *V);
-
 /// Return true if the instruction doesn't potentially cross vector lanes. This
 /// condition is weaker than checking that the instruction is lanewise: lanewise
 /// means that the same operation is splatted across all lanes, but we also
