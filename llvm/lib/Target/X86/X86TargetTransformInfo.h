@@ -41,6 +41,10 @@ public:
       : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl(F)),
         TLI(ST->getTargetLowering()) {}
 
+  APInt getFeatureMask(const Function &F) const override;
+  APInt getPriorityMask(const Function &F) const override;
+  bool isMultiversionedFunction(const Function &F) const override;
+
   /// \name Scalar TTI Implementations
   /// @{
   TTI::PopcntSupportKind getPopcntSupport(unsigned TyWidth) const override;

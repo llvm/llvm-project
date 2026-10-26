@@ -43,7 +43,7 @@ declare i32 @callee.cpu(i32) #2
 
 define i32 @caller.avx2(i32 %x) #1 {
 ; CHECK-LABEL: define i32 @caller.avx2(
-; CHECK: call i32 @callee(
+; CHECK: call i32 @callee.avx2(
 ; CHECK: call i32 @preemptible(
 ; CHECK: call i32 @cpu_callee(
   %a = call i32 @callee(i32 %x)
@@ -54,7 +54,7 @@ define i32 @caller.avx2(i32 %x) #1 {
 
 define i32 @caller.default(i32 %x) #0 {
 ; CHECK-LABEL: define i32 @caller.default(
-; CHECK: call i32 @callee(
+; CHECK: call i32 @callee.default(
   %a = call i32 @callee(i32 %x)
   ret i32 %a
 }
@@ -100,21 +100,21 @@ declare i32 @level.v3(i32) #4
 
 define i32 @level_caller.default(i32 %x) #0 {
 ; CHECK-LABEL: define i32 @level_caller.default(
-; CHECK: call i32 @levels(
+; CHECK: call i32 @level.default(
   %a = call i32 @levels(i32 %x)
   ret i32 %a
 }
 
 define i32 @level_caller.avx2(i32 %x) #1 {
 ; CHECK-LABEL: define i32 @level_caller.avx2(
-; CHECK: call i32 @levels(
+; CHECK: call i32 @level.avx2(
   %a = call i32 @levels(i32 %x)
   ret i32 %a
 }
 
 define i32 @level_caller.v3(i32 %x) #4 {
 ; CHECK-LABEL: define i32 @level_caller.v3(
-; CHECK: call i32 @levels(
+; CHECK: call i32 @level.v3(
   %a = call i32 @levels(i32 %x)
   ret i32 %a
 }

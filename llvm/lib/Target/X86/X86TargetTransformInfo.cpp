@@ -57,6 +57,7 @@
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/TargetParser/X86TargetParser.h"
 #include <optional>
 
 using namespace llvm;
@@ -68,6 +69,30 @@ using namespace llvm;
 // X86 cost model.
 //
 //===----------------------------------------------------------------------===//
+
+static SmallVector<StringRef, 8> getFMVFeatures(const Function &F) {
+  SmallVector<StringRef, 8> Features;
+  F.getFnAttribute("fmv-features")
+      .getValueAsString()
+      .split(Features, ",", -1, false);
+  return Features;
+}
+
+APInt X86TTIImpl::getFeatureMask(const Function &F) const {
+  auto Words = X86::getCpuSupportsMask(getFMVFeatures(F));
+  APInt Mask(32 * Words.size(), 0);
+  for (auto [I, Word] : enumerate(Words))
+    Mask |= APInt(Mask.getBitWidth(), Word) << (32 * I);
+  return Mask;
+}
+
+APInt X86TTIImpl::getPriorityMask(const Function &F) const {
+  return APInt(32, X86::getFMVPriority(getFMVFeatures(F)));
+}
+
+bool X86TTIImpl::isMultiversionedFunction(const Function &F) const {
+  return F.hasFnAttribute("fmv-features");
+}
 
 // Helper struct to store/access costs for each cost kind.
 // TODO: Move this to allow other targets to use it?

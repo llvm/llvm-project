@@ -14,7 +14,7 @@ extern "C" {
 __attribute__((target_clones("default,sse4.2,avx2")))
 int callee(int x) { return x + 1; }
 
-// Before resolution, calls through matching clone families retain IFUNC dispatch.
+// Reordering versions and calling through a local pointer still allow inlining.
 __attribute__((target_clones("avx2,default,sse4.2")))
 int caller(int x) {
   int (*p)(int) = callee;
@@ -22,13 +22,16 @@ int caller(int x) {
 }
 
 // OPT-LABEL: define{{.*}} i32 @caller.avx2.
-// OPT: call{{.*}} i32 @callee(
+// OPT-NOT: call
+// OPT: add nsw i32
 // OPT: ret i32
 // OPT-LABEL: define{{.*}} i32 @caller.default.
-// OPT: call{{.*}} i32 @callee(
+// OPT-NOT: call
+// OPT: add nsw i32
 // OPT: ret i32
 // OPT-LABEL: define{{.*}} i32 @caller.sse4.2.
-// OPT: call{{.*}} i32 @callee(
+// OPT-NOT: call
+// OPT: add nsw i32
 // OPT: ret i32
 
 // The runtime resolver can still choose callee.avx2 from either caller here.
@@ -47,10 +50,12 @@ __attribute__((target_clones("default,arch=x86-64-v3")))
 double wide_caller(_Float16 x) { return widen(x); }
 
 // OPT-LABEL: define{{.*}} double @wide_caller.default.
-// OPT: call double @widen(
+// OPT-NOT: call
+// OPT: fpext half
 // OPT: ret double
 // OPT-LABEL: define{{.*}} double @wide_caller.arch_x86-64-v3.
-// OPT: call double @widen(
+// OPT-NOT: call
+// OPT: fpext half
 // OPT: ret double
 
 // CPU-model predicates are deliberately left to the runtime resolver.
@@ -73,5 +78,8 @@ int dynamic_init = callee(0);
 // CXX: call i32 @callee(
 #endif
 
-// Dispatch predicate metadata is not emitted before the implementation change.
-// ATTR-NOT: "fmv-features"
+// Dispatch predicates, rather than the expanded ISA features, describe clones.
+// ATTR-DAG: attributes #{{[0-9]+}} = { {{.*}}"fmv-features" {{.*}} }
+// ATTR-DAG: attributes #{{[0-9]+}} = { {{.*}}"fmv-features"="sse4.2" {{.*}} }
+// ATTR-DAG: attributes #{{[0-9]+}} = { {{.*}}"fmv-features"="avx2" {{.*}} }
+// ATTR-DAG: attributes #{{[0-9]+}} = { {{.*}}"fmv-features"="x86-64-v3" {{.*}} }
