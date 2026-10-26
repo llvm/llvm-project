@@ -520,16 +520,20 @@ static void computeFunctionSummary(
           for (const auto &Op : MD->operands()) {
             Function *Callee = mdconst::extract_or_null<Function>(Op);
             if (Callee)
-              CallGraphEdges[Index.getOrInsertValueInfo(Callee)];
+              CallGraphEdges[Index.getOrInsertValueInfo(Callee)]
+                  .setHasIndirectCall(true);
           }
         }
 
         CandidateProfileData =
             ICallAnalysis.getPromotionCandidatesForInstruction(
                 &I, TotalCount, NumCandidates, MaxSummaryIndirectEdges);
-        for (const auto &Candidate : CandidateProfileData)
-          CallGraphEdges[Index.getOrInsertValueInfo(Candidate.Value)]
-              .updateHotness(getHotness(Candidate.Count, PSI));
+        for (const auto &Candidate : CandidateProfileData) {
+          auto &Edge =
+              CallGraphEdges[Index.getOrInsertValueInfo(Candidate.Value)];
+          Edge.updateHotness(getHotness(Candidate.Count, PSI));
+          Edge.setHasIndirectCall(true);
+        }
       }
 
       // Summarize memprof related metadata. This is only needed for ThinLTO.

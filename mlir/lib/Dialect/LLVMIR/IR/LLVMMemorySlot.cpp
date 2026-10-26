@@ -726,20 +726,8 @@ static std::optional<uint64_t> gepToByteOffset(const DataLayout &dataLayout,
               return false;
             })
             .Case([&](LLVM::LLVMStructType structType) {
-              ArrayRef<Type> body = structType.getBody();
-              assert(index < body.size() && "expected valid struct indexing");
-              for (uint32_t i : llvm::seq(index)) {
-                if (!structType.isPacked())
-                  offset = llvm::alignTo(
-                      offset, dataLayout.getTypeABIAlignment(body[i]));
-                offset += dataLayout.getTypeSize(body[i]);
-              }
-
-              // Align for the current type as well.
-              if (!structType.isPacked())
-                offset = llvm::alignTo(
-                    offset, dataLayout.getTypeABIAlignment(body[index]));
-              currentType = body[index];
+              offset += structType.getElementOffset(dataLayout, index);
+              currentType = structType.getBody()[index];
               return false;
             })
             .Default([&](Type type) {
@@ -800,31 +788,22 @@ getSubslotAccessInfo(const DestructurableMemorySlot &slot,
       })
       .Case([&](LLVM::LLVMStructType structType)
                 -> std::optional<SubslotAccessInfo> {
-        uint64_t distanceToStart = 0;
         // Walk over the elements of the struct to find in which of
         // them the offset is.
         for (auto [index, elem] : llvm::enumerate(structType.getBody())) {
-          uint64_t elemSize = dataLayout.getTypeSize(elem);
-          if (!structType.isPacked()) {
-            distanceToStart = llvm::alignTo(
-                distanceToStart, dataLayout.getTypeABIAlignment(elem));
-            // If the offset is in padding, cancel the rewrite.
-            if (offset < distanceToStart)
-              return {};
-          }
+          uint64_t elemOffset = structType.getElementOffset(dataLayout, index);
+          // If the offset is in padding, cancel the rewrite.
+          if (*offset < elemOffset)
+            return {};
 
-          if (offset < distanceToStart + elemSize) {
+          if (*offset < elemOffset + dataLayout.getTypeSize(elem)) {
             if (isOutOfBoundsGEPIndex(index))
               return {};
             // The offset is within this element, stop iterating the
             // struct and return the index.
             return SubslotAccessInfo{static_cast<uint32_t>(index),
-                                     *offset - distanceToStart};
+                                     *offset - elemOffset};
           }
-
-          // The offset is not within this element, continue walking
-          // over the struct.
-          distanceToStart += elemSize;
         }
 
         return {};
@@ -1145,35 +1124,26 @@ memsetRewire(MemsetIntr op, const DestructurableMemorySlot &slot,
 
   IntegerAttr memsetLenAttr = createMemsetLenAttr(op);
 
-  bool packed = false;
-  if (auto structType = dyn_cast<LLVM::LLVMStructType>(slot.valueType))
-    packed = structType.isPacked();
+  auto structType = dyn_cast<LLVM::LLVMStructType>(slot.valueType);
 
   Type i32 = IntegerType::get(op.getContext(), 32);
   uint64_t memsetLen = memsetLenAttr.getValue().getZExtValue();
-  uint64_t covered = 0;
   for (size_t i = 0; i < types->size(); i++) {
     // Create indices on the fly to get elements in the right order.
     Attribute index = IntegerAttr::get(i32, i);
     Type elemType = types->at(index);
     uint64_t typeSize = dataLayout.getTypeSize(elemType);
-
-    if (!packed)
-      covered =
-          llvm::alignTo(covered, dataLayout.getTypeABIAlignment(elemType));
-
-    if (covered >= memsetLen)
+    uint64_t offset = structType ? structType.getElementOffset(dataLayout, i)
+                                 : i * dataLayout.getTypeAllocSize(elemType);
+    if (offset >= memsetLen)
       break;
 
     // If this subslot is used, apply a new memset to it.
-    // Otherwise, only compute its offset within the original memset.
     if (subslots.contains(index)) {
-      uint64_t newMemsetSize = std::min(memsetLen - covered, typeSize);
+      uint64_t newMemsetSize = std::min(memsetLen - offset, typeSize);
       createMemsetIntr(builder, op, memsetLenAttr, newMemsetSize, subslots,
                        index);
     }
-
-    covered += typeSize;
   }
 
   return DeletionKind::Delete;

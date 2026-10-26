@@ -146,8 +146,6 @@ def err_fe_action_not_available : Error<
     "action %0 not compiled in">;
 def err_fe_cir_not_built : Error<"clang IR support not available, rebuild "
                                  "clang with -DCLANG_ENABLE_CIR=ON">;
-def err_fe_cir_input_unsupported : Error<
-    "support for ClangIR input is not yet implemented">;
 def err_invalid_cir : Error<"invalid ClangIR input">;
 def err_cir_input_missing_triple : Error<
     "missing target triple in ClangIR input">;

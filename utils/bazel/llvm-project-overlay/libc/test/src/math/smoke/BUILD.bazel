@@ -499,7 +499,13 @@ math_test(name = "erfcf16")
 
 math_test(name = "erff16")
 
-math_test(name = "exp")
+math_test(
+    name = "exp",
+    deps = [
+        "//libc:__support_macros_attributes",
+        "//libc:__support_math_exp_double_eval",
+    ],
+)
 
 math_test(
     name = "expf",
@@ -520,13 +526,20 @@ math_test(
     ],
 )
 
-math_test(name = "exp2")
+math_test(
+    name = "exp2",
+    deps = [
+        "//libc:__support_macros_attributes",
+        "//libc:__support_math_exp2_double_eval",
+    ],
+)
 
 math_test(
     name = "exp2f",
     deps = [
         "//libc:__support_math_exp2f_double_eval",
         "//libc:__support_math_exp2f_float_eval",
+        "//libc:__support_math_exp2f_integer_eval",
     ],
 )
 
@@ -1262,6 +1275,9 @@ math_test(
 math_test(
     name = "getpayloadf128",
     hdrs = ["GetPayloadTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(
@@ -1637,7 +1653,13 @@ math_test(
     hdrs = ["ModfTest.h"],
 )
 
-# TODO: add nan tests.
+math_test(
+    name = "nanf128",
+    deps = [
+        "//libc:__support_fputil_float128",
+        "//libc:hdr_signal_macros",
+    ],
+)
 
 math_test(
     name = "nearbyint",
@@ -2087,6 +2109,9 @@ math_test(
 math_test(
     name = "setpayloadf128",
     hdrs = ["SetPayloadTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(
@@ -2120,6 +2145,9 @@ math_test(
 math_test(
     name = "setpayloadsigf128",
     hdrs = ["SetPayloadSigTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(
