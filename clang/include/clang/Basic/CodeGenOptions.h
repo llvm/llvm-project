@@ -627,6 +627,9 @@ public:
   /// If threshold option is not specified, it is disabled by default.
   std::optional<uint64_t> DiagnosticsHotnessThreshold = 0;
 
+  /// Specifies the csect name (qualifier & basename) on z/OS.
+  std::optional<std::string> CsectName;
+
   /// The maximum percentage profiling weights can deviate from the expected
   /// values in order to be included in misexpect diagnostics.
   std::optional<uint32_t> DiagnosticsMisExpectTolerance = 0;

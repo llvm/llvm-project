@@ -1536,6 +1536,28 @@ void CodeGenModule::Release() {
     // Multiple modes will be supported here.
     getModule().addModuleFlag(llvm::Module::Error, "zos_le_char_mode",
                               llvm::MDString::get(VMContext, "ascii"));
+
+    if (!Context.PragmaCsectCode.empty()) {
+      getModule().addModuleFlag(
+          llvm::Module::Error, "zos_csect_code",
+          llvm::MDString::get(VMContext, Context.PragmaCsectCode));
+    } else if (getCodeGenOpts().CsectName) {
+      getModule().addModuleFlag(
+          llvm::Module::Error, "zos_csect_code",
+          llvm::MDString::get(VMContext,
+                              StringRef(*(getCodeGenOpts().CsectName) + "C")));
+    }
+
+    if (!Context.PragmaCsectStatic.empty()) {
+      getModule().addModuleFlag(
+          llvm::Module::Error, "zos_csect_static",
+          llvm::MDString::get(VMContext, Context.PragmaCsectStatic));
+    } else if (getCodeGenOpts().CsectName) {
+      getModule().addModuleFlag(
+          llvm::Module::Error, "zos_csect_static",
+          llvm::MDString::get(VMContext,
+                              StringRef(*(getCodeGenOpts().CsectName) + "S")));
+    }
   }
 
   llvm::Triple T = Context.getTargetInfo().getTriple();

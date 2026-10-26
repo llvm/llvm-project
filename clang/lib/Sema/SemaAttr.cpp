@@ -1676,3 +1676,23 @@ bool Sema::checkCommonAttributeFeatures(const Stmt *S, const ParsedAttr &A,
                                         bool SkipArgCountCheck) {
   return ::checkCommonAttributeFeatures(*this, S, A, SkipArgCountCheck);
 }
+
+void Sema::ActOnPragmaCsect(StringRef SectionKind, SourceLocation SectionLoc,
+                            StringRef SectionName) {
+  if (SectionKind.equals_insensitive("static")) {
+    if (!Context.PragmaCsectStatic.empty())
+      Diag(SectionLoc, diag::warn_duplicate_pragma) << "csect";
+    else if (Context.PragmaCsectCode == SectionName)
+      Diag(SectionLoc, diag::err_conflicting_pragma) << SectionName << "csect";
+    else
+      Context.PragmaCsectStatic = SectionName.str();
+  } else if (SectionKind.equals_insensitive("code")) {
+    if (!Context.PragmaCsectCode.empty())
+      Diag(SectionLoc, diag::warn_duplicate_pragma) << "csect";
+    else if (Context.PragmaCsectStatic == SectionName)
+      Diag(SectionLoc, diag::err_conflicting_pragma) << SectionName << "csect";
+    else
+      Context.PragmaCsectCode = SectionName.str();
+  } else
+    llvm_unreachable("invalid Csect kind");
+}
