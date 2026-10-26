@@ -1,4 +1,5 @@
 // RUN: mlir-opt %s -test-vector-reduction-to-contract-patterns -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -test-vector-reduction-to-contract-patterns=allow-fast-math-flag-loss=false -split-input-file | FileCheck %s --check-prefix=KEEP-FLAGS
 
 // TODO: Separate tests for vector.multi_reduction -> vector.contract and
 //  * pre-op + vector.contract -> vector.contract,
@@ -44,6 +45,8 @@ func.func @multidimreduction_contract_int(
 
 // CHECK-LABEL: multidimreduction_contract_fastmath
 //  CHECK-NEXT:   vector.contract {fastmath = #arith.fastmath<nnan,contract>,
+// KEEP-FLAGS-LABEL: multidimreduction_contract_fastmath
+//  KEEP-FLAGS-NEXT:   vector.contract {fastmath = #arith.fastmath<nnan,contract>,
 //  CHECK-SAME:   kind = #vector.kind<add>}
 func.func @multidimreduction_contract_fastmath(
   %arg0: vector<8x32x16xf32>,%arg1: vector<8x32x16xf32>, %acc: vector<8x16xf32>) -> vector<8x16xf32> {
@@ -55,6 +58,10 @@ func.func @multidimreduction_contract_fastmath(
 // -----
 
 // CHECK-LABEL: multidimreduction_contract_fastmath_intersect
+// KEEP-FLAGS-LABEL: multidimreduction_contract_fastmath_intersect
+//   KEEP-FLAGS-NOT:   vector.contract
+//       KEEP-FLAGS:   arith.mulf
+//  KEEP-FLAGS-NEXT:   vector.multi_reduction
 //  CHECK-NEXT:   vector.contract {fastmath = #arith.fastmath<nnan>,
 //  CHECK-SAME:   kind = #vector.kind<add>}
 func.func @multidimreduction_contract_fastmath_intersect(
@@ -67,6 +74,10 @@ func.func @multidimreduction_contract_fastmath_intersect(
 // -----
 
 // CHECK-LABEL: multidimreduction_contract_fastmath_strict_mul
+// KEEP-FLAGS-LABEL: multidimreduction_contract_fastmath_strict_mul
+//   KEEP-FLAGS-NOT:   vector.contract
+//       KEEP-FLAGS:   arith.mulf
+//  KEEP-FLAGS-NEXT:   vector.multi_reduction
 //  CHECK-NEXT:   vector.contract {indexing_maps =
 //  CHECK-NOT:    fastmath
 func.func @multidimreduction_contract_fastmath_strict_mul(
@@ -79,6 +90,10 @@ func.func @multidimreduction_contract_fastmath_strict_mul(
 // -----
 
 // CHECK-LABEL: multidimreduction_contract_fastmath_strict_reduction
+// KEEP-FLAGS-LABEL: multidimreduction_contract_fastmath_strict_reduction
+//   KEEP-FLAGS-NOT:   vector.contract
+//       KEEP-FLAGS:   arith.mulf
+//  KEEP-FLAGS-NEXT:   vector.multi_reduction
 //  CHECK-NEXT:   vector.contract {indexing_maps =
 //  CHECK-NOT:    fastmath
 func.func @multidimreduction_contract_fastmath_strict_reduction(

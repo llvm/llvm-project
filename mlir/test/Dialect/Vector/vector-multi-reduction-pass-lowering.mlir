@@ -64,6 +64,9 @@ func.func @vector_multi_reduction_masked(%arg0: vector<2x4xf32>, %acc: vector<2x
 
 // -----
 
+// Covers TwoDimMultiReductionToReduction (inner-reduction), and
+// InnerOuterDimReductionConversion + TwoDimMultiReductionToElementWise
+// (inner-parallel).
 func.func @vector_multi_reduction_fastmath(%arg0: vector<2x4xf32>, %acc: vector<2xf32>) -> vector<2xf32> {
     %0 = vector.multi_reduction <maximumf>, %arg0, %acc fastmath<nnan,nsz> [1] : vector<2x4xf32> to vector<2xf32>
     return %0 : vector<2xf32>
@@ -75,6 +78,7 @@ func.func @vector_multi_reduction_fastmath(%arg0: vector<2x4xf32>, %acc: vector<
 
 // -----
 
+// Covers FlattenMultiReduction.
 func.func @vector_multi_reduction_rank3_fastmath(%arg0: vector<2x3x4xf32>, %acc: vector<2xf32>) -> vector<2xf32> {
     %0 = vector.multi_reduction <add>, %arg0, %acc fastmath<reassoc> [1, 2] : vector<2x3x4xf32> to vector<2xf32>
     return %0 : vector<2xf32>
@@ -85,6 +89,7 @@ func.func @vector_multi_reduction_rank3_fastmath(%arg0: vector<2x3x4xf32>, %acc:
 
 // -----
 
+// Covers OneDimMultiReductionToReduction.
 func.func @vector_multi_reduction_1d_fastmath(%arg0: vector<8xf32>, %acc: f32) -> f32 {
     %0 = vector.multi_reduction <maxnumf>, %arg0, %acc fastmath<nnan> [0] : vector<8xf32> to f32
     return %0 : f32

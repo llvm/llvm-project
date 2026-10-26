@@ -80,7 +80,10 @@ namespace {
 ///  ```
 struct MultiReduceToContract
     : public OpRewritePattern<vector::MultiDimReductionOp> {
-  using Base::Base;
+  MultiReduceToContract(MLIRContext *context, bool allowFastMathFlagLoss,
+                        PatternBenefit benefit = 1)
+      : OpRewritePattern(context, benefit),
+        allowFastMathFlagLoss(allowFastMathFlagLoss) {}
 
   LogicalResult matchAndRewrite(vector::MultiDimReductionOp reduceOp,
                                 PatternRewriter &rewriter) const override {
@@ -89,6 +92,20 @@ struct MultiReduceToContract
     Operation *mulOp = reduceOp.getSource().getDefiningOp();
     if (!mulOp || !isa<arith::MulIOp, arith::MulFOp>(mulOp))
       return failure();
+    // The contraction's flags apply to both its multiply and its add, so keep
+    // only the flags that both the multiply and the reduction carry. Each of
+    // the two ops then keeps a subset of its own flags, as in the `mulf` +
+    // `addf` to `math.fma` rewrite of `math-uplift-to-fma`. In particular,
+    // `contract` is kept only if both carry it. An `arith.muli` has no flags,
+    // so an integer contraction gets none.
+    arith::FastMathFlags mulFlags = arith::FastMathFlags::none;
+    if (auto mulFOp = dyn_cast<arith::MulFOp>(mulOp))
+      mulFlags = mulFOp.getFastmath();
+    arith::FastMathFlags reduceFlags = reduceOp.getFastmath();
+    if (!allowFastMathFlagLoss && mulFlags != reduceFlags)
+      return rewriter.notifyMatchFailure(
+          reduceOp, "converting would drop fast-math flags");
+    arith::FastMathFlags fastMathFlags = mulFlags & reduceFlags;
     SmallVector<bool> reductionMask = reduceOp.getReductionMask();
     auto srcMap = rewriter.getMultiDimIdentityMap(reductionMask.size());
     SmallVector<AffineExpr> exprs;
@@ -104,14 +121,6 @@ struct MultiReduceToContract
     auto dstMap =
         AffineMap::get(/*dimCount=*/reductionMask.size(),
                        /*symbolCount=*/0, exprs, reduceOp.getContext());
-    // The contraction's flags apply to both its multiply and its add, so keep
-    // only the flags that both the multiply and the reduction carry. Each of
-    // the two ops then keeps a subset of its own flags, as in the `mulf` +
-    // `addf` to `math.fma` rewrite of `math-uplift-to-fma`. An `arith.muli`
-    // has no flags, so an integer contraction gets none.
-    arith::FastMathFlags fastMathFlags = arith::FastMathFlags::none;
-    if (auto mulFOp = dyn_cast<arith::MulFOp>(mulOp))
-      fastMathFlags = mulFOp.getFastmath() & reduceOp.getFastmath();
     rewriter.replaceOpWithNewOp<mlir::vector::ContractionOp>(
         reduceOp, mulOp->getOperand(0), mulOp->getOperand(1), reduceOp.getAcc(),
         rewriter.getAffineMapArrayAttr({srcMap, srcMap, dstMap}),
@@ -123,6 +132,9 @@ struct MultiReduceToContract
         CombiningKind::ADD, fastMathFlags);
     return success();
   }
+
+private:
+  bool allowFastMathFlagLoss;
 };
 
 /// Merge LHS/RHS (A/B) TransposeOp into ContractionOp user.
@@ -2436,10 +2448,12 @@ void mlir::vector::populateVectorContractCanonicalizeMatmulToMMT(
 }
 
 void mlir::vector::populateVectorReductionToContractPatterns(
-    RewritePatternSet &patterns, PatternBenefit benefit) {
-  patterns.add<MultiReduceToContract, CombineContractBroadcastMask,
-               CombineContractABTranspose, CombineContractResultTranspose>(
-      patterns.getContext(), benefit);
+    RewritePatternSet &patterns, PatternBenefit benefit,
+    bool allowFastMathFlagLoss) {
+  patterns.add<MultiReduceToContract>(patterns.getContext(),
+                                      allowFastMathFlagLoss, benefit);
+  patterns.add<CombineContractBroadcastMask, CombineContractABTranspose,
+               CombineContractResultTranspose>(patterns.getContext(), benefit);
 }
 
 void mlir::vector::populateDropInnerMostUnitDimsXferOpPatterns(
