@@ -2027,6 +2027,10 @@ def fno_profile_use : Flag<["-"], "fno-profile-use">,
 def ftest_coverage : Flag<["-"], "ftest-coverage">, Group<f_Group>,
     HelpText<"Produce gcov notes files (*.gcno)">;
 def fno_test_coverage : Flag<["-"], "fno-test-coverage">, Group<f_Group>;
+def fprofile_abs_path : Flag<["-"], "fprofile-abs-path">,
+    Group<f_Group>, Visibility<[ClangOption, CLOption]>,
+    HelpText<"Use absolute paths in gcov notes files (*.gcno)">;
+def fno_profile_abs_path : Flag<["-"], "fno-profile-abs-path">, Group<f_Group>;
 def fprofile_arcs : Flag<["-"], "fprofile-arcs">, Group<f_Group>,
     HelpText<"Instrument code to produce gcov data files (*.gcda)">;
 def fno_profile_arcs : Flag<["-"], "fno-profile-arcs">, Group<f_Group>;
@@ -8269,6 +8273,8 @@ def : Joined<["-"], "coverage-data-file=">,
   MarshallingInfoString<CodeGenOpts<"CoverageDataFile">>;
 def : Joined<["-"], "coverage-notes-file=">,
   MarshallingInfoString<CodeGenOpts<"CoverageNotesFile">>;
+def : Joined<["-"], "coverage-notes-abs-paths">,
+  MarshallingInfoFlag<CodeGenOpts<"UseAbsolutePathsInNotesFile">>;
 def coverage_version_EQ : Joined<["-"], "coverage-version=">,
   HelpText<"Four-byte version string for gcov files.">;
 def dump_coverage_mapping : Flag<["-"], "dump-coverage-mapping">,
@@ -9290,6 +9296,13 @@ def fopenmp_host_ir_file_path : Separate<["-"], "fopenmp-host-ir-file-path">,
   MarshallingInfoString<LangOpts<"OMPHostIRFile">>;
 
 } // let Visibility = [CC1Option, FC1Option]
+
+def fopenmp_metadirective_runtime_selection
+    : Flag<["-"], "fopenmp-metadirective-runtime-selection">,
+      Visibility<[CC1Option]>,
+      HelpText<"Enable runtime selection of metadirective variants with "
+               "non-constant user conditions.">,
+      MarshallingInfoFlag<LangOpts<"OpenMPMetadirectiveRuntimeSelection">>;
 
 //===----------------------------------------------------------------------===//
 // SYCL Options

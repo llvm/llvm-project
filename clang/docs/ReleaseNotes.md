@@ -809,6 +809,7 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 #### Bug Fixes to Compiler Builtins
 
+- Dropped invalid ``constexpr`` specifier from ``__builtin_assume_separate_storage``, which is not supported in constexpr evaluation. (#GH225335)
 - Fixed a crash when classifying a call to a builtin with dependent arguments,
   such as when the call is used as an `auto` non-type template argument.
 - Fixed an assertion failure when diagnosing a constant evaluation failure
@@ -914,6 +915,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed an assertion failure when `#embed` was used in the braced initializer
   of an array new-expression, or of an array whose elements are of class type.
   (#GH128985)
+
+- Fixed list-initialization from `#embed` passing only the first embedded
+  element to a constructor, reference, scalar or `auto` deduction. (#GH222796)
 
 - Fixed a bug where top-level CV qualifiers (such as ``const``) were dropped from pointers modified by Microsoft pointer attributes (like ``__ptr32`` and ``__ptr64``) and WebAssembly's ``__funcref``.
 

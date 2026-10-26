@@ -50,8 +50,6 @@ using namespace llvm;
 
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(OperandBundleDef, LLVMOperandBundleRef)
 
-static IRBuilder<> *unwrap(LLVMBuilderRef Ref);
-
 inline BasicBlock **unwrap(LLVMBasicBlockRef *BBs) {
   return reinterpret_cast<BasicBlock **>(BBs);
 }
@@ -3505,7 +3503,7 @@ static DelayedIRBuilder *unwrapDelayed(LLVMBuilderRef Ref) {
   return reinterpret_cast<DelayedIRBuilder *>(Ref);
 }
 
-static IRBuilder<> *unwrap(LLVMBuilderRef Ref) {
+IRBuilder<> *llvm::unwrap(LLVMBuilderRef Ref) {
   DelayedIRBuilder *DB = unwrapDelayed(Ref);
   if (!DB->Builder)
     reportFatalUsageError(

@@ -63,6 +63,7 @@ class FuncArgType {
 def NoneType : FuncArgType; // dummy
 def Void : FuncArgType;
 def Bool : FuncArgType;     // 8 bits on all targets
+def Int8 : FuncArgType;
 def Int16 : FuncArgType;
 def Int32 : FuncArgType;
 def Int : FuncArgType;
@@ -70,6 +71,7 @@ def IntPlus : FuncArgType;  // Int or bigger.
 def Long : FuncArgType;     // Either 32 or 64 bits.
 def IntX : FuncArgType;     // Any integer type.
 def Int64 : FuncArgType;
+def Int128 : FuncArgType;
 def LLong : FuncArgType;    // 64 bits on all targets.
 def UInt16 : FuncArgType;
 def UInt32 : FuncArgType;
@@ -208,20 +210,21 @@ class LibcallLibrary<string name, dag impls,
   bit Isolated = false;
 }
 
-// Reference a shared LibcallLibrary from a SystemRuntimeLibrary, dropping the
-// impls in `exclude`, so a target can pull a provider (e.g. compiler-rt) but
-// keep its own versions of a few entries. A bare LibcallLibrary member is
-// equivalent to LibraryRef<Lib>.
-class LibraryRef<LibcallLibrary lib, list<RuntimeLibcallImpl> exclude = []> {
-  LibcallLibrary Library = lib;
+// Drop the impls in `exclude` from the library named `name` on triples matching
+// `pred`, so a target can use a provider (e.g. compiler-rt) but keep its own
+// versions of a few entries.
+class LibraryExclusion<string name, RuntimeLibcallAvailability pred,
+                       list<RuntimeLibcallImpl> exclude> {
+  string LibraryName = name;
+  RuntimeLibcallAvailability Pred = pred;
   list<RuntimeLibcallImpl> Exclude = exclude;
 }
 
-/// Define a complete top level set of runtime libcalls for a target. Every
-/// member of funcList must be a LibcallLibrary or LibraryRef.
-class SystemRuntimeLibrary<RuntimeLibcallAvailability Pred, dag funcList> {
+/// Define the default runtime libraries for a target, by LibraryName.
+class SystemRuntimeLibrary<RuntimeLibcallAvailability Pred,
+                           list<string> libraries> {
   /// Set the default calling convention assumed for library members.
   LibcallCallingConv DefaultLibcallCallingConv = DefaultCC;
   RuntimeLibcallAvailability TriplePred = Pred;
-  LibcallImpls MemberList = LibcallImpls<funcList>;
+  list<string> DefaultLibraries = libraries;
 }
