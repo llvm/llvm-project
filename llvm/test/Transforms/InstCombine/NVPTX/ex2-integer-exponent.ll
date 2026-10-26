@@ -7,11 +7,10 @@ declare float @llvm.nvvm.ex2.approx.ftz.f32(float)
 define float @nvfp4_exponent(i32 %code) {
 ; CHECK-LABEL: define float @nvfp4_exponent(
 ; CHECK-SAME: i32 [[CODE:%.*]]) {
-; CHECK-NEXT:    [[MAG:%.*]] = lshr i32 [[CODE]], 1
-; CHECK-NEXT:    [[E:%.*]] = and i32 [[MAG]], 3
-; CHECK-NEXT:    [[EXPONENT:%.*]] = add nsw i32 [[E]], -1
-; CHECK-NEXT:    [[F:%.*]] = sitofp i32 [[EXPONENT]] to float
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.nvvm.ex2.approx.f32(float [[F]])
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[CODE]], 22
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 25165824
+; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i32 [[TMP2]], 1056964608
+; CHECK-NEXT:    [[R:%.*]] = bitcast i32 [[TMP3]] to float
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %mag = and i32 %code, 7
@@ -25,9 +24,9 @@ define float @nvfp4_exponent(i32 %code) {
 define float @mxfp8_scale(i8 %code) {
 ; CHECK-LABEL: define float @mxfp8_scale(
 ; CHECK-SAME: i8 [[CODE:%.*]]) {
-; CHECK-NEXT:    [[F:%.*]] = uitofp i8 [[CODE]] to float
-; CHECK-NEXT:    [[E:%.*]] = fadd float [[F]], -1.270000e+02
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.nvvm.ex2.approx.ftz.f32(float [[E]])
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[CODE]] to i32
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw i32 [[TMP1]], 23
+; CHECK-NEXT:    [[R:%.*]] = bitcast i32 [[TMP2]] to float
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %f = uitofp i8 %code to float
@@ -39,9 +38,10 @@ define float @mxfp8_scale(i8 %code) {
 define float @nonnegative_integer_exponent(i32 %code) {
 ; CHECK-LABEL: define float @nonnegative_integer_exponent(
 ; CHECK-SAME: i32 [[CODE:%.*]]) {
-; CHECK-NEXT:    [[E:%.*]] = and i32 [[CODE]], 127
-; CHECK-NEXT:    [[F:%.*]] = uitofp nneg i32 [[E]] to float
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.nvvm.ex2.approx.f32(float [[F]])
+; CHECK-NEXT:    [[E:%.*]] = shl i32 [[CODE]], 23
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[E]], 1065353216
+; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i32 [[TMP1]], 1065353216
+; CHECK-NEXT:    [[R:%.*]] = bitcast i32 [[TMP2]] to float
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %e = and i32 %code, 127
@@ -107,10 +107,10 @@ define float @unsigned_exponent_out_of_range(i32 %x) {
 define float @exponent_up_to_128(i32 %code) {
 ; CHECK-LABEL: define float @exponent_up_to_128(
 ; CHECK-SAME: i32 [[CODE:%.*]]) {
-; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[CODE]], 3
-; CHECK-NEXT:    [[EXPONENT:%.*]] = add nuw nsw i32 [[MASKED]], 125
-; CHECK-NEXT:    [[F:%.*]] = uitofp nneg i32 [[EXPONENT]] to float
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.nvvm.ex2.approx.f32(float [[F]])
+; CHECK-NEXT:    [[MASKED:%.*]] = shl i32 [[CODE]], 23
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[MASKED]], 25165824
+; CHECK-NEXT:    [[TMP2:%.*]] = or disjoint i32 [[TMP1]], 2113929216
+; CHECK-NEXT:    [[R:%.*]] = bitcast i32 [[TMP2]] to float
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %masked = and i32 %code, 3
