@@ -8744,8 +8744,8 @@ struct SelectReductionBranch : OpRewritePattern<arith::SelectOp> {
         if (!branch)
           continue;
         Region *useRegion = child->getParentRegion();
-        if (!replacements.contains(useRegion)) {
-          replacements[useRegion] = Value();
+        auto [it, inserted] = replacements.try_emplace(useRegion);
+        if (inserted) {
           for (Value operand : parent->getOperands()) {
             auto reduction = operand.getDefiningOp<ReductionOp>();
             if (!reduction ||
@@ -8774,11 +8774,11 @@ struct SelectReductionBranch : OpRewritePattern<arith::SelectOp> {
               continue;
             Value replacement =
                 value ? select.getTrueValue() : select.getFalseValue();
-            replacements[useRegion] = replacement;
+            it->second = replacement;
             break;
           }
         }
-        if (Value replacement = replacements.lookup(useRegion)) {
+        if (Value replacement = it->second) {
           rewriter.modifyOpInPlace(use.getOwner(),
                                    [&] { use.set(replacement); });
           changed = true;
