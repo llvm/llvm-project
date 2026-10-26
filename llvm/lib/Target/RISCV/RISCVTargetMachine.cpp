@@ -75,7 +75,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVDAGToDAGISelLegacyPass(*PR);
   initializeRISCVMoveMergePass(*PR);
   initializeRISCVPushPopOptPass(*PR);
-  initializeRISCVIndirectBranchTrackingPass(*PR);
+  initializeRISCVIndirectBranchTrackingLegacyPass(*PR);
   initializeRISCVLoadStoreOptPass(*PR);
   initializeRISCVPreAllocZilsdOptPass(*PR);
   initializeRISCVExpandPseudoAtomicsLegacyPass(*PR);
@@ -508,7 +508,7 @@ void RISCVPassConfig::addPreEmitPass() {
   // The IndirectBranchTrackingPass inserts lpad and could have changed the
   // basic block alignment. It must be done before Branch Relaxation to
   // prevent the adjusted offset exceeding the branch range.
-  addPass(createRISCVIndirectBranchTrackingPass());
+  addPass(createRISCVIndirectBranchTrackingLegacyPass());
   addPass(&BranchRelaxationPassID);
   addPass(createRISCVMakeCompressibleOptPass());
 }
