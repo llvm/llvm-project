@@ -158,4 +158,203 @@ contains
       z%value = x
     !$omp end sections
   end subroutine
+
+  ! Eager privatisation emits the privatisation recipe inside the single
+  ! region, preventing getEffects() from providing its memory effects.
+  ! Make sure these are emitted so recursive analyis records their memory
+  ! effects.
+  ! CHECK-LABEL: func.func @_QMrecipe_memory_effectsPsingle_eager_firstprivate(
+  ! CHECK: %[[ORIGINAL:.*]] = fir.alloca i32
+  ! CHECK: %[[ORIGINAL_DECL:.*]]:2 = hlfir.declare %[[ORIGINAL]]
+  ! CHECK: omp.parallel {
+  ! CHECK-NEXT: omp.single {
+  ! CHECK-NEXT: %[[PRIVATE:.*]] = fir.alloca i32
+  ! CHECK-NEXT: %[[PRIVATE_DECL:.*]]:2 = hlfir.declare %[[PRIVATE]]
+  ! CHECK-NEXT: %[[INITIAL:.*]] = fir.load %[[ORIGINAL_DECL]]#0 : !fir.ref<i32>
+  ! CHECK-NEXT: hlfir.assign %[[INITIAL]] to %[[PRIVATE_DECL]]#0 : i32, !fir.ref<i32>
+  ! CHECK-NEXT: %[[VALUE:.*]] = fir.load %[[PRIVATE_DECL]]#0 : !fir.ref<i32>
+  ! CHECK-NEXT: %[[ONE:.*]] = arith.constant 1 : i32
+  ! CHECK-NEXT: %[[UPDATED:.*]] = arith.addi %[[VALUE]], %[[ONE]] : i32
+  ! CHECK-NEXT: hlfir.assign %[[UPDATED]] to %[[PRIVATE_DECL]]#0 : i32, !fir.ref<i32>
+  ! CHECK-NEXT: omp.terminator
+  ! CHECK-NEXT: } <copyprivate_assume_bounded_recipe_effects, private_assume_bounded_recipe_effects>
+  ! CHECK-NEXT: omp.terminator
+  ! CHECK-NEXT: }
+  ! CHECK-NEXT: %[[AFTER:.*]] = fir.load %[[ORIGINAL_DECL]]#0 : !fir.ref<i32>
+  ! CHECK-NEXT: hlfir.assign %[[AFTER]] to %{{.*}} : i32, !fir.ref<i32>
+  ! CHECK-NEXT: return
+  subroutine single_eager_firstprivate(result)
+    integer :: result, x
+    x = 10
+    !$omp parallel shared(x)
+      !$omp single firstprivate(x)
+        x = x + 1
+      !$omp end single
+    !$omp end parallel
+    result = x
+  end subroutine
+
+  ! Eager single privatization maps COMMON members rather than the block.
+  ! CHECK-LABEL: func.func @_QMrecipe_memory_effectsPsingle_intrinsic_common_private(
+  ! CHECK: omp.single {
+  ! CHECK: } <copyprivate_assume_bounded_recipe_effects, private_assume_bounded_recipe_effects>
+  ! CHECK: return
+  subroutine single_intrinsic_common_private()
+    integer :: x
+    real :: y
+    common /single_private_block/ x, y
+    !$omp single private(/single_private_block/)
+      x = 1
+      y = 1.0
+    !$omp end single
+  end subroutine
+
+  ! Firstprivate COMMON blocks must also be checked member by member.
+  ! CHECK-LABEL: func.func @_QMrecipe_memory_effectsPsingle_intrinsic_common_firstprivate(
+  ! CHECK: omp.single {
+  ! CHECK: } <copyprivate_assume_bounded_recipe_effects, private_assume_bounded_recipe_effects>
+  ! CHECK: return
+  subroutine single_intrinsic_common_firstprivate()
+    integer :: x
+    real :: y
+    common /single_firstprivate_block/ x, y
+    !$omp single firstprivate(/single_firstprivate_block/)
+      x = x + 1
+      y = y + 1.0
+    !$omp end single
+  end subroutine
+
+  ! One derived member prevents the assumption for the entire COMMON block.
+  ! CHECK-LABEL: func.func @_QMrecipe_memory_effectsPsingle_derived_common_private(
+  ! CHECK: omp.single {
+  ! CHECK-NOT: private_assume_bounded_recipe_effects
+  ! CHECK: } <copyprivate_assume_bounded_recipe_effects>
+  ! CHECK: return
+  subroutine single_derived_common_private()
+    integer :: x
+    type(record) :: z
+    common /single_derived_block/ x, z
+    !$omp single private(/single_derived_block/)
+      x = 1
+      z%value = x
+    !$omp end single
+  end subroutine
+
+  ! Direct intrinsic scalars and fixed-size arrays have bounded copy functions.
+  ! CHECK-LABEL: func.func @_QMrecipe_memory_effectsPintrinsic_copyprivate(
+  ! CHECK: omp.single copyprivate(
+  ! CHECK: copyprivate_assume_bounded_recipe_effects
+  ! CHECK: return
+  subroutine intrinsic_copyprivate()
+    integer :: i, a(4)
+    real :: r
+    complex :: c
+    logical :: l
+    character(8) :: s
+    !$omp parallel private(i, a, r, c, l, s)
+      !$omp single
+      !$omp end single copyprivate(i, a, r, c, l, s)
+    !$omp end parallel
+  end subroutine
+
+  ! CHECK-LABEL: func.func @_QMrecipe_memory_effectsPno_copyprivate(
+  ! CHECK: omp.single {
+  ! CHECK: copyprivate_assume_bounded_recipe_effects
+  ! CHECK: return
+  subroutine no_copyprivate()
+    !$omp single
+    !$omp end single
+  end subroutine
+
+  ! Copyprivate and private make independent assumptions.
+  ! CHECK-LABEL: func.func @_QMrecipe_memory_effectsPbounded_copyprivate_derived_private(
+  ! CHECK: omp.single copyprivate(
+  ! CHECK: copyprivate_assume_bounded_recipe_effects
+  ! CHECK: return
+  subroutine bounded_copyprivate_derived_private()
+    type record
+      integer :: value
+    end type
+    type(record) :: z
+    integer :: i
+    !$omp parallel private(i)
+      !$omp single private(z)
+      !$omp end single copyprivate(i)
+    !$omp end parallel
+  end subroutine
+
+  ! One derived item prevents the assumption for the entire copyprivate clause.
+  ! CHECK-LABEL: func.func @_QMrecipe_memory_effectsPderived_copyprivate_bounded_private(
+  ! CHECK: omp.single copyprivate(
+  ! CHECK-NOT: copyprivate_assume_bounded_recipe_effects
+  ! CHECK: } <private_assume_bounded_recipe_effects>
+  ! CHECK: return
+  subroutine derived_copyprivate_bounded_private()
+    type record
+      integer :: value
+    end type
+    type(record) :: z
+    integer :: i, p
+    !$omp parallel private(i, z)
+      !$omp single private(p)
+      !$omp end single copyprivate(i, z)
+    !$omp end parallel
+  end subroutine
+
+  ! Allocatable copies may allocate, free, and access pointee storage.
+  ! CHECK-LABEL: func.func @_QMrecipe_memory_effectsPallocatable_scalar_copyprivate(
+  ! CHECK: omp.single copyprivate(
+  ! CHECK-NOT: copyprivate_assume_bounded_recipe_effects
+  ! CHECK: return
+  subroutine allocatable_scalar_copyprivate()
+    integer, allocatable :: a
+    !$omp parallel private(a)
+      !$omp single
+      !$omp end single copyprivate(a)
+    !$omp end parallel
+  end subroutine
+
+  ! Allocatables may access pointees of the copyprivate variable, violating the
+  ! copyprivate_assume_bounded_recipe_effects attribute contract.
+  ! CHECK-LABEL: func.func @_QMrecipe_memory_effectsPallocatable_array_copyprivate(
+  ! CHECK: omp.single copyprivate(
+  ! CHECK-NOT: copyprivate_assume_bounded_recipe_effects
+  ! CHECK: return
+  subroutine allocatable_array_copyprivate()
+    integer, allocatable :: a(:)
+    !$omp parallel private(a)
+      !$omp single
+      !$omp end single copyprivate(a)
+    !$omp end parallel
+  end subroutine
+
+  ! Pointer variables may access pointees of the copyprivate variable, violating
+  ! the copyprivate_assume_bounded_recipe_effects attribute contract.
+  ! CHECK-LABEL: func.func @_QMrecipe_memory_effectsPpointer_copyprivate(
+  ! CHECK: omp.single copyprivate(
+  ! CHECK-NOT: copyprivate_assume_bounded_recipe_effects
+  ! CHECK: return
+  subroutine pointer_copyprivate()
+    integer, pointer :: p, a(:)
+    !$omp parallel private(p, a)
+      !$omp single
+      !$omp end single copyprivate(p, a)
+    !$omp end parallel
+  end subroutine
+
+  ! Check the members of a threadprivate COMMON block.
+  ! CHECK-LABEL: func.func @_QMrecipe_memory_effectsPintrinsic_common_copyprivate(
+  ! CHECK: omp.single copyprivate(
+  ! CHECK: copyprivate_assume_bounded_recipe_effects
+  ! CHECK: return
+  subroutine intrinsic_common_copyprivate()
+    integer :: i
+    real :: r
+    common /intrinsic_copy_block/ i, r
+    !$omp threadprivate(/intrinsic_copy_block/)
+    !$omp parallel
+      !$omp single
+      !$omp end single copyprivate(/intrinsic_copy_block/)
+    !$omp end parallel
+  end subroutine
 end module

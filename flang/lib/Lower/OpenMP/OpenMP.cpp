@@ -1858,6 +1858,30 @@ struct OpWithBodyGenInfo {
   int collapseValue = 0;
 };
 
+static bool isNonDerivedNonPointer(const semantics::Symbol &sym) {
+  const auto &ultimate = sym.GetUltimate();
+  const auto *type = ultimate.GetType();
+  return type && type->AsIntrinsic() && !semantics::IsAllocatable(ultimate) &&
+         !semantics::IsPointer(ultimate);
+}
+
+static bool isNonDerivedNonPointer(const mlir::Value &variable) {
+  return !fir::isAllocatableType(variable.getType()) &&
+         !fir::isa_derived(fir::getFortranElementType(variable.getType())) &&
+         !fir::isPointerType(variable.getType());
+}
+
+static bool isNonDerivedNonPointerItem(const semantics::Symbol &sym) {
+  const auto &ultimate = sym.GetUltimate();
+  if (const auto *common =
+          ultimate.detailsIf<semantics::CommonBlockDetails>()) {
+    return llvm::all_of(common->objects(), [](const auto &member) {
+      return isNonDerivedNonPointer(*member);
+    });
+  }
+  return isNonDerivedNonPointer(ultimate);
+}
+
 /// Create the body (block) for an OpenMP Operation.
 ///
 /// \param [in]   op  - the operation the body belongs to.
@@ -1926,6 +1950,17 @@ static void createBodyOfOp(mlir::Operation &op, const OpWithBodyGenInfo &info,
                     Fortran::lower::omp::isLastItemInQueue(item, queue),
                     /*useDelayedPrivatization=*/false, info.symTable);
     tempDsp->processStep1();
+
+    // TODO: omp.single still uses eager privatisation.
+    // Use clauseOps.privateVars inside genSingleOp once
+    // delayedPrivatization is turned on.
+    if (auto singleOp = llvm::dyn_cast<mlir::omp::SingleOp>(op)) {
+      const auto &privateSyms = tempDsp->getAllSymbolsToPrivatize();
+      if (llvm::all_of(privateSyms, [](const semantics::Symbol *sym) {
+            return isNonDerivedNonPointerItem(*sym);
+          }))
+        singleOp.setPrivateAssumeBoundedRecipeEffects(true);
+    }
   }
 
   if (info.dir == llvm::omp::Directive::OMPD_parallel) {
@@ -3564,30 +3599,6 @@ findEnclosingParallelOp(fir::FirOpBuilder &builder) {
   return {};
 }
 
-static bool isNonDerivedNonPointer(const semantics::Symbol &sym) {
-  const auto &ultimate = sym.GetUltimate();
-  const auto *type = ultimate.GetType();
-  return type && type->AsIntrinsic() && !semantics::IsAllocatable(ultimate) &&
-         !semantics::IsPointer(ultimate);
-}
-
-static bool isNonDerivedNonPointer(const mlir::Value &variable) {
-  return !fir::isAllocatableType(variable.getType()) &&
-         !fir::isa_derived(fir::getFortranElementType(variable.getType())) &&
-         !fir::isPointerType(variable.getType());
-}
-
-static bool isNonDerivedNonPointerItem(const semantics::Symbol &sym) {
-  const auto &ultimate = sym.GetUltimate();
-  if (const auto *common =
-          ultimate.detailsIf<semantics::CommonBlockDetails>()) {
-    return llvm::all_of(common->objects(), [](const auto &member) {
-      return isNonDerivedNonPointer(*member);
-    });
-  }
-  return isNonDerivedNonPointer(ultimate);
-}
-
 static mlir::omp::SectionsOp
 genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
               semantics::SemanticsContext &semaCtx,
@@ -3945,11 +3956,18 @@ genSingleOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   mlir::omp::SingleOperands clauseOps;
   genSingleClauses(converter, semaCtx, item->clauses, loc, clauseOps);
 
-  return genOpWithBody<mlir::omp::SingleOp>(
+  auto singleOp = genOpWithBody<mlir::omp::SingleOp>(
       OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
                         llvm::omp::Directive::OMPD_single)
           .setClauses(&item->clauses),
       queue, item, clauseOps);
+
+  if (llvm::all_of(clauseOps.copyprivateVars, [](mlir::Value variable) {
+        return isNonDerivedNonPointer(variable);
+      }))
+    singleOp.setCopyprivateAssumeBoundedRecipeEffects(true);
+
+  return singleOp;
 }
 
 static bool isDuplicateMappedSymbol(
