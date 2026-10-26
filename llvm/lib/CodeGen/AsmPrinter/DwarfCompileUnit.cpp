@@ -81,9 +81,6 @@ DwarfCompileUnit::DwarfCompileUnit(unsigned UID, const DICompileUnit *Node,
   insertDIE(Node, &getUnitDie());
   MacroLabelBegin = Asm->createTempSymbol("cu_macro_begin");
   assert(CUNode);
-  for (auto *GVE : CUNode->getGlobalVariables())
-    if (auto *GV = GVE->getVariable())
-      GlobalVarScopes.insert(GV->getScope());
 }
 
 /// addLabelAddress - Add a dwarf label attribute data and value using
@@ -1242,10 +1239,6 @@ DIE &DwarfCompileUnit::constructSubprogramScopeDIE(const DISubprogram *Sub,
   return ScopeDIE;
 }
 
-bool DwarfCompileUnit::hasGlobalVariableInScope(const DILocalScope *ScopeNode) {
-  return GlobalVarScopes.contains(ScopeNode);
-}
-
 DIE *DwarfCompileUnit::createAndAddScopeChildren(LexicalScope *Scope,
                                                  DIE &ScopeDIE) {
   DIE *ObjectPointer = nullptr;
@@ -1276,12 +1269,6 @@ DIE *DwarfCompileUnit::createAndAddScopeChildren(LexicalScope *Scope,
   auto skipLexicalScope = [this](LexicalScope *S) -> bool {
     const DILocalScope *DS = S->getScopeNode();
     if (isa<DISubprogram>(DS))
-      return false;
-    // Don't skip abstract lexical blocks that are scope targets for global
-    // variables (e.g., function-scope statics). Those globals are emitted
-    // later in endModule() and need to find the block via
-    // getOrCreateContextDIE().
-    if (S->isAbstractScope() && hasGlobalVariableInScope(DS))
       return false;
     // Create a concrete lexical block for a scope with an abstract lexical
     // block to ensure visibility of scope-local types and static variables
