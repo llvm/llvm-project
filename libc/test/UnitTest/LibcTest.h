@@ -27,6 +27,7 @@
 #include "src/__support/CPP/string.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/type_traits.h"
+#include "src/__support/alloc-checker.h"
 #include "src/__support/c_string.h"
 #include "src/__support/macros/properties/compiler.h"
 #include "test/UnitTest/ExecuteFunction.h"
@@ -228,7 +229,10 @@ protected:
       void operator()() override { f(); }
     };
 
-    return new Callable(f);
+    // Not checking AllocChecker: we can't do anything better than returning a
+    // null pointer anyway.
+    AllocChecker ac;
+    return new (ac) Callable(f);
   }
 
 private:

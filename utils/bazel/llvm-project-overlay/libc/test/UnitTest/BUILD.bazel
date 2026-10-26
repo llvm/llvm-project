@@ -50,6 +50,7 @@ libc_test_library(
     deps = [
         ":string_utils",
         ":test_logger",
+        "//libc:__support_alloc_checker",
         "//libc:__support_c_string",
         "//libc:__support_cpp_bit",
         "//libc:__support_cpp_bitset",

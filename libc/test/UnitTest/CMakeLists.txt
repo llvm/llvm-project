@@ -100,6 +100,7 @@ add_unittest_framework_library(
   DEPENDS
     .string_utils
     libc.hdr.stdint_proxy
+    libc.src.__support.alloc_checker
     libc.src.__support.big_int
     libc.src.__support.c_string
     libc.src.__support.CPP.string
