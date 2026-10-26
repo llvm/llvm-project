@@ -4,6 +4,7 @@ add_lldb_unittest(LLDBPlatformTests
   PlatformDarwinTest.cpp
   PlatformEmscriptenTest.cpp
   PlatformMacOSXTest.cpp
+  PlatformRemoteDarwinDeviceTest.cpp
   PlatformSiginfoTest.cpp
   PlatformTest.cpp
   PlatformWasmTest.cpp

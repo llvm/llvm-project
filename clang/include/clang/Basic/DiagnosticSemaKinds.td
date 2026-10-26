@@ -13780,8 +13780,8 @@ def err_hlsl_attribute_param_mismatch : Error<"%0 attribute parameters do not ma
 def err_hlsl_duplicate_parameter_modifier : Error<"duplicate parameter modifier %0">;
 def err_hlsl_interpolation_conflict : Error<
   "'nointerpolation' cannot be combined with other interpolation modifiers">;
-def err_hlsl_interpolation_position : Error<
-  "'nointerpolation' cannot be used on SV_Position">;
+def err_hlsl_interpolation_semantic : Error<
+  "'nointerpolation' cannot be used on %0">;
 def err_hlsl_interpolation_type : Error<
   "interpolation modifiers other than 'nointerpolation' cannot be used with type %0">;
 def warn_hlsl_duplicate_interpolation : Warning<
@@ -13807,7 +13807,7 @@ def err_hlsl_semantic_64bit_type
             "or outputs (was %1)">;
 def err_hlsl_semantic_invalid_type
     : Error<"semantic %0 must be a "
-            "%select{scalar|scalar or vector of up to %2 components}1 of "
+            "%select{scalar|scalar or vector of up to %2 components|vector of %2 components}1 of "
             "%select{16 or 32 bit integer|32 bit integer|"
             "16 or 32 bit floating-point|16 or 32 bit unsigned integer|"
             "32 bit unsigned integer}3 type (was %4)">;

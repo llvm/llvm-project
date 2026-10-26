@@ -815,10 +815,10 @@ public:
   /// \p IndexExprs The expressions for the indices.
   LLVM_ABI const SCEV *getGEPExpr(GEPOperator *GEP,
                                   ArrayRef<SCEVUse> IndexExprs);
-  LLVM_ABI const SCEV *getGEPExpr(SCEVUse BaseExpr,
-                                  ArrayRef<SCEVUse> IndexExprs,
-                                  Type *SrcElementTy,
-                                  GEPNoWrapFlags NW = GEPNoWrapFlags::none());
+  LLVM_ABI const SCEV *
+  getGEPExpr(SCEVUse BaseExpr, ArrayRef<SCEVUse> IndexExprs, Type *SrcElementTy,
+             GEPNoWrapFlags BaseNW = GEPNoWrapFlags::none(),
+             GEPNoWrapFlags OffsetNW = GEPNoWrapFlags::none());
   LLVM_ABI const SCEV *getAbsExpr(const SCEV *Op, bool IsNSW);
   LLVM_ABI const SCEV *getMinMaxExpr(SCEVTypes Kind,
                                      SmallVectorImpl<SCEVUse> &Operands);
@@ -2326,6 +2326,14 @@ private:
                                       const SCEV *RHS, CmpPredicate FoundPred,
                                       const SCEV *FoundLHS,
                                       const SCEV *FoundRHS);
+
+  /// Test whether the condition described by Pred, LHS, and RHS is true
+  /// whenever the condition described by FoundLHS, FoundRHS, and Pred with the
+  /// other signedness is true.
+  bool isImpliedCondViaSignFlippedPred(CmpPredicate Pred, const SCEV *LHS,
+                                       const SCEV *RHS, const SCEV *FoundLHS,
+                                       const SCEV *FoundRHS,
+                                       const Instruction *CtxI);
 
   /// Return true if the condition denoted by \p LHS \p Pred \p RHS is implied
   /// by a call to @llvm.experimental.guard in \p BB.

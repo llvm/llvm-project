@@ -1267,6 +1267,31 @@ add_header_library(
 )
 
 add_header_library(
+  epoll_create1
+  HDRS
+    epoll_create1.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  epoll_ctl
+  HDRS
+    epoll_ctl.h
+  DEPENDS
+    libc.hdr.types.struct_epoll_event
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
   access
   HDRS
     access.h
@@ -1581,6 +1606,19 @@ add_header_library(
   timer_delete
   HDRS
     timer_delete.h
+  DEPENDS
+    libc.hdr.types.timer_t
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  timer_getoverrun
+  HDRS
+    timer_getoverrun.h
   DEPENDS
     libc.hdr.types.timer_t
     libc.include.sys_syscall

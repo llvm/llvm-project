@@ -198,7 +198,7 @@ void NonNullParamChecker::checkPreCall(const CallEvent &Call,
     }
 
     if (stateNull) {
-      if (ExplodedNode *N = C.generateSink(stateNull, C.getPredecessor())) {
+      if (ExplodedNode *N = C.addSink(stateNull)) {
         ImplicitNullDerefEvent event = {
             V, false, N, &C.getBugReporter(),
             /*IsDirectDereference=*/HasRefTypeParam};
