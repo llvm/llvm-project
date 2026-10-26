@@ -8379,13 +8379,29 @@ MDNode *TBAAVerifier::getFieldNodeFromTBAABaseNode(const Instruction *I,
   return cast<MDNode>(BaseNode->getOperand(LastIdx));
 }
 
-static bool isNewFormatTBAATypeNode(llvm::MDNode *Type) {
+static bool isNewFormatTBAATypeNode(const MDNode *Type) {
   if (!Type || Type->getNumOperands() < 3)
     return false;
 
   // In the new format type nodes shall have a reference to the parent type as
   // its first operand.
   return isa_and_nonnull<MDNode>(Type->getOperand(0));
+}
+
+/// Returns true if the parent chain of the TBAA type node \p MD is acyclic.
+static bool hasAcyclicTBAAParentChain(const MDNode *MD) {
+  SmallPtrSet<const MDNode *, 4> Visited;
+  for (const MDNode *N = MD; N;) {
+    if (!Visited.insert(N).second)
+      return false;
+    if (isNewFormatTBAATypeNode(N)) {
+      N = cast<MDNode>(N->getOperand(0));
+    } else {
+      N = IsRootTBAANode(N) ? nullptr
+                            : dyn_cast_or_null<MDNode>(N->getOperand(1));
+    }
+  }
+  return true;
 }
 
 bool TBAAVerifier::visitTBAAMetadata(const Instruction *I, const MDNode *MD) {
@@ -8448,6 +8464,9 @@ bool TBAAVerifier::visitTBAAMetadata(const Instruction *I, const MDNode *MD) {
     CheckTBAA(isValidScalarTBAANode(AccessType),
               "Access type node must be a valid scalar type", I, MD,
               AccessType);
+  } else {
+    CheckTBAA(hasAcyclicTBAAParentChain(AccessType),
+              "Cycle detected in access type parent chain", I, MD, AccessType);
   }
 
   auto *OffsetCI = mdconst::dyn_extract_or_null<ConstantInt>(MD->getOperand(2));

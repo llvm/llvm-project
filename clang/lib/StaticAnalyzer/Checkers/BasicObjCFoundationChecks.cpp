@@ -144,7 +144,7 @@ void NilArgChecker::warnIfNilExpr(const Expr *E,
   // If it might be null, assume that it cannot after this operation.
   if (Null) {
     // One needs to make sure the pointer is non-null to be used here.
-    if (ExplodedNode *N = C.generateSink(Null, C.getPredecessor())) {
+    if (ExplodedNode *N = C.addSink(Null)) {
       dispatchEvent({*Location, /*IsLoad=*/false, N, &C.getBugReporter(),
                      /*IsDirectDereference=*/false});
     }
@@ -977,7 +977,7 @@ void ObjCLoopChecker::checkPostStmt(const ObjCForCollectionStmt *FCS,
   }
 
   if (!State)
-    C.generateSink(C.getState(), C.getPredecessor());
+    C.addSink();
   else if (State != C.getState())
     C.addTransition(State);
 }
