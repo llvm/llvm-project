@@ -54,4 +54,5 @@ MACHINE_FUNCTION_PASS("riscv-opt-w-instrs", RISCVOptWInstrsPass())
 MACHINE_FUNCTION_PASS("riscv-qc-relax-marking", RISCVQCRelaxMarkingPass())
 MACHINE_FUNCTION_PASS("riscv-vector-peephole", RISCVVectorPeepholePass())
 MACHINE_FUNCTION_PASS("riscv-vl-optimizer", RISCVVLOptimizerPass())
+MACHINE_FUNCTION_PASS("riscv-vmv0-elimination", RISCVVMV0EliminationPass())
 #undef MACHINE_FUNCTION_PASS

@@ -257,8 +257,19 @@ public:
 FunctionPass *createRISCVVLOptimizerLegacyPass();
 void initializeRISCVVLOptimizerLegacyPass(PassRegistry &);
 
-FunctionPass *createRISCVVMV0EliminationPass();
-void initializeRISCVVMV0EliminationPass(PassRegistry &);
+class RISCVVMV0EliminationPass
+    : public RequiredPassInfoMixin<RISCVVMV0EliminationPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+
+  MachineFunctionProperties getRequiredProperties() const {
+    return MachineFunctionProperties().setIsSSA();
+  }
+};
+
+FunctionPass *createRISCVVMV0EliminationLegacyPass();
+void initializeRISCVVMV0EliminationLegacyPass(PassRegistry &);
 
 class RISCVQCRelaxMarkingPass
     : public OptionalPassInfoMixin<RISCVQCRelaxMarkingPass> {
