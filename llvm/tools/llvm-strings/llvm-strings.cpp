@@ -141,8 +141,6 @@ static size_t crtomb(char *S, char_t Ch, mbstate_t *MBState) {
 
 struct CharSet {
   template <typename T> struct Base {
-    Base() = delete;
-
     using CharT = T;
 
     // Tries to read one character from the bytes Cur...End and store it in Ch.
@@ -167,24 +165,27 @@ struct CharSet {
     // valid multibyte character, or if the initial byte cannot start a valid
     // multibyte character, the initial byte. This allows consistent error
     // recovery.
-    static bool readChar(const char *&Cur, const char *End,
-                         std::mbstate_t &MBState, bool AtEOF, CharT &Ch);
+    static bool readChar(const char *&Cur, const char *End, bool AtEOF,
+                         CharT &Ch);
 
     static bool isStringChar(CharT Ch);
 
-    static void endString(raw_ostream &OS, std::mbstate_t &MBState) {
-      OS << '\n';
-    }
+    static void startString() {}
+
+    static void writeString(raw_ostream &OS, StringRef Str) { OS << Str; }
+
+    static void endString(raw_ostream &OS) { OS << '\n'; }
   };
 
-  struct MultiByte : Base<UTF32> {
-    static bool readChar(const char *&Cur, const char *End,
-                         std::mbstate_t &MBState, bool AtEOF, CharT &Ch) {
+  struct MultiByteStateless : Base<UTF32> {
+    std::mbstate_t InMBState{};
+
+    bool readChar(const char *&Cur, const char *End, bool AtEOF, CharT &Ch) {
       if (Cur == End)
         return false;
 
       const char *Next = Cur;
-      std::mbstate_t NextMBState = MBState;
+      std::mbstate_t NextMBState = InMBState;
       char_t UCh;
       for (;;) {
         // Read one byte at a time. This is usually not the best way to use
@@ -200,7 +201,7 @@ struct CharSet {
 
         case (size_t)-3:
           Cur = Next;
-          MBState = NextMBState;
+          InMBState = NextMBState;
           Ch = std::min<UTF32>(UCh, 0x10FFFF);
           return true;
 
@@ -227,7 +228,7 @@ struct CharSet {
           if (Next == Cur)
             ++Next;
           Cur = Next;
-          MBState = {};
+          InMBState = {};
           Ch = 0;
           return true;
         }
@@ -256,22 +257,49 @@ struct CharSet {
 
       return StringChars[Ch];
     }
+  };
 
-    static void endString(raw_ostream &OS, std::mbstate_t &MBState) {
+  // Note: The complexity in writing is only required for stateful encodings
+  // such as the ISO-2022 ones.
+  struct MultiByteStateful : MultiByteStateless {
+    std::mbstate_t StrMBState{}, OutMBState{};
+
+    void startString() { StrMBState = InMBState; }
+
+    void writeString(raw_ostream &OS, StringRef Str) {
+      const char *Cur = Str.begin(), *End = Str.end();
+      while (Cur != End) {
+        char_t UCh;
+        const size_t BytesRead = mbrtoc(&UCh, Cur, End - Cur, &StrMBState);
+        assert(BytesRead != 0 && BytesRead != (size_t)-1 &&
+               BytesRead != (size_t)-2 &&
+               "If a string was initially valid, it cannot to become invalid "
+               "when re-reading");
+        if (BytesRead != (size_t)-3)
+          Cur += BytesRead;
+
+        char Buf[MB_LEN_MAX];
+        const size_t BytesWritten = crtomb(Buf, UCh, &OutMBState);
+        assert(BytesWritten != (size_t)-1 &&
+               "If we successfully read a character, we must also be able to "
+               "write it");
+        OS << StringRef(Buf, BytesWritten);
+      }
+    }
+
+    void endString(raw_ostream &OS) {
       char Buf[MB_LEN_MAX];
-      // Note: This is only required for stateful encodings such as the
-      // ISO-2022 ones.
-      const size_t BytesWritten = crtomb(Buf, 0, &MBState);
-      assert(BytesWritten < (size_t)-1 &&
+      const size_t BytesWritten = crtomb(Buf, 0, &OutMBState);
+      assert(BytesWritten != (size_t)-1 &&
              "A null character must always be valid");
       Buf[BytesWritten - 1] = '\n';
       OS << StringRef(Buf, BytesWritten);
     }
   };
 
-  struct Utf8 : MultiByte {
-    static bool readChar(const char *&Cur, const char *End,
-                         std::mbstate_t &MBState, bool AtEOF, CharT &Ch) {
+  struct Utf8 : MultiByteStateless {
+    static bool readChar(const char *&Cur, const char *End, bool AtEOF,
+                         CharT &Ch) {
       if (Cur == End)
         return false;
 
@@ -296,15 +324,11 @@ struct CharSet {
       Cur = reinterpret_cast<const char *>(UTF8Next);
       return true;
     }
-
-    static void endString(raw_ostream &OS, std::mbstate_t &MBState) {
-      Base::endString(OS, MBState);
-    }
   };
 
   struct SingleByte : Base<unsigned char> {
-    static bool readChar(const char *&Cur, const char *End,
-                         std::mbstate_t &MBState, bool AtEOF, CharT &Ch) {
+    static bool readChar(const char *&Cur, const char *End, bool AtEOF,
+                         CharT &Ch) {
       if (Cur == End)
         return false;
 
@@ -317,18 +341,14 @@ struct CharSet {
       static const StringCharSet &StringChars = []() -> const StringCharSet & {
         static StringCharSet StringChars;
 
-        using llvm::sys::unicode::isCharacter;
-        using llvm::sys::unicode::isControl;
-
+        MultiByteStateless MB;
         for (int I = 0; I < 0x100; ++I) {
           const unsigned char Ch = I;
           const char *Cur = reinterpret_cast<const char *>(&Ch), *End = Cur + 1;
-          std::mbstate_t MBState = {};
-          UTF32 UCh;
-          if (MultiByte::readChar(Cur, End, MBState, /*AtEOF=*/true, UCh)) {
-            if (UCh == U'\t' || (isCharacter(UCh) && !isControl(UCh)))
-              StringChars[I] = true;
-          }
+          MultiByteStateless::CharT UCh;
+          if (MB.readChar(Cur, End, /*AtEOF=*/true, UCh) &&
+              MB.isStringChar(UCh))
+            StringChars[I] = true;
         }
 
         return StringChars;
@@ -345,9 +365,10 @@ struct CharSet {
   };
 };
 
-template <typename CharSet>
+template <typename CharSetT>
 void strings(raw_ostream &OS, StringRef FileName, sys::fs::file_t Handle) {
-  using CharT = typename CharSet::CharT;
+  using CharT = typename CharSetT::CharT;
+  CharSetT CharSet;
 
   SmallString<sys::fs::DefaultReadChunkSize> Buffer;
   auto PrintHeader = [&OS, FileName](size_t StringStart) {
@@ -381,7 +402,6 @@ void strings(raw_ostream &OS, StringRef FileName, sys::fs::file_t Handle) {
   SmallString<DefaultMinLength> Candidate;
   size_t CandidateLengthChars = 0;
   bool InString = false;
-  std::mbstate_t MBState{};
   // Offset of the start of the current chunk within the file.
   size_t ChunkOffset = 0;
 
@@ -425,16 +445,14 @@ void strings(raw_ostream &OS, StringRef FileName, sys::fs::file_t Handle) {
     // enough data to decide whether to print it.
     if (InString || !Candidate.empty()) {
       const char *StringEnd;
-      std::mbstate_t PrevMBState;
       size_t LengthChars = 0;
       bool EndOfChunk;
 
       // Find the end of the current string.
       for (;;) {
         StringEnd = Cur;
-        PrevMBState = MBState;
-        EndOfChunk = !CharSet::readChar(Cur, End, MBState, AtEOF, Ch);
-        if (EndOfChunk || !CharSet::isStringChar(Ch))
+        EndOfChunk = !CharSet.readChar(Cur, End, AtEOF, Ch);
+        if (EndOfChunk || !CharSet.isStringChar(Ch))
           break;
         ++LengthChars;
       }
@@ -445,7 +463,7 @@ void strings(raw_ostream &OS, StringRef FileName, sys::fs::file_t Handle) {
         // the header. E.g. header: aaaaa | bbbbb, where | is the chunk
         // boundary.
         // Output: Header: aaaaabbbbb, where bbbbb is printed in here.
-        OS << StringRef(Begin, SizeBytes);
+        CharSet.writeString(OS, StringRef(Begin, SizeBytes));
       } else if (CandidateLengthChars + LengthChars >= MinLengthChars) {
         // If the header hasn't been printed yet (i.e. the previous candidate
         // was smaller than Min), but we can print it now, print the header
@@ -453,7 +471,8 @@ void strings(raw_ostream &OS, StringRef FileName, sys::fs::file_t Handle) {
         // current string. E.g. aa | bbbbbb
         // Output Header: aabbbbbb, where aabbbbbb is printed in here.
         PrintHeader(ChunkOffset - Candidate.size());
-        OS << Candidate << StringRef(Begin, SizeBytes);
+        CharSet.writeString(OS, Candidate);
+        CharSet.writeString(OS, StringRef(Begin, SizeBytes));
         Candidate.clear();
         CandidateLengthChars = 0;
         InString = true;
@@ -482,7 +501,7 @@ void strings(raw_ostream &OS, StringRef FileName, sys::fs::file_t Handle) {
       if (InString) {
         // We haven't reached the end of the chunk, which means the string is
         // terminated.
-        CharSet::endString(OS, PrevMBState);
+        CharSet.endString(OS);
         InString = false;
       }
     }
@@ -493,10 +512,11 @@ void strings(raw_ostream &OS, StringRef FileName, sys::fs::file_t Handle) {
     size_t LengthChars = 0;
     for (;;) {
       const char *Prev = Cur;
-      std::mbstate_t PrevMBState = MBState;
-      if (!CharSet::readChar(Cur, End, MBState, AtEOF, Ch))
+      if (!StrHead)
+        CharSet.startString();
+      if (!CharSet.readChar(Cur, End, AtEOF, Ch))
         break;
-      if (CharSet::isStringChar(Ch)) {
+      if (CharSet.isStringChar(Ch)) {
         // Find the start of the next string.
         if (!StrHead)
           StrHead = Prev;
@@ -506,8 +526,8 @@ void strings(raw_ostream &OS, StringRef FileName, sys::fs::file_t Handle) {
         // current string. Print it if long enough.
         if (LengthChars >= MinLengthChars) {
           PrintHeader(ChunkOffset + (StrHead - Begin));
-          OS << StringRef(StrHead, Prev - StrHead);
-          CharSet::endString(OS, PrevMBState);
+          CharSet.writeString(OS, StringRef(StrHead, Prev - StrHead));
+          CharSet.endString(OS);
         }
         StrHead = nullptr;
         LengthChars = 0;
@@ -521,7 +541,7 @@ void strings(raw_ostream &OS, StringRef FileName, sys::fs::file_t Handle) {
       // Print it, or append it to Candidate if it is too short.
       if (LengthChars >= MinLengthChars) {
         PrintHeader(ChunkOffset + (StrHead - Begin));
-        OS << StringRef(StrHead, Cur - StrHead);
+        CharSet.writeString(OS, StringRef(StrHead, Cur - StrHead));
         InString = true;
       } else {
         Candidate.append(StrHead, Cur);
@@ -537,7 +557,7 @@ void strings(raw_ostream &OS, StringRef FileName, sys::fs::file_t Handle) {
   }
 
   if (InString)
-    CharSet::endString(OS, MBState);
+    CharSet.endString(OS);
 }
 } // namespace
 
@@ -621,13 +641,16 @@ int main(int argc, char **argv) {
 #endif
 #ifdef _WIN32
       // Using LLVM's built-in decoder is necessary for correctness as
-      // Strings<CharSet::MultiByte> on WIndows is implemented on top of 16-bit
-      // wchar_t which cannot represent all code points.
+      // Strings<CharSet::MultiByteStateless> on WIndows is implemented on top
+      // of 16-bit wchar_t which cannot represent all code points.
       if (GetACP() == CP_UTF8)
         return strings<CharSet::Utf8>;
 #endif
 
-      return strings<CharSet::MultiByte>;
+      if (!mblen(NULL, 0))
+        return strings<CharSet::MultiByteStateless>;
+      else
+        return strings<CharSet::MultiByteStateful>;
 
     case Encoding::Utf8:
       return strings<CharSet::Utf8>;
