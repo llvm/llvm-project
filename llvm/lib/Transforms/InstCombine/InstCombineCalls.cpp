@@ -3062,7 +3062,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     Value *Arg0 = II->getArgOperand(0);
     Value *Arg1 = II->getArgOperand(1);
     Value *X, *Y;
-    if (match(Arg0, m_FNegOrFSubNegZero(m_Value(X))) && match(Arg1, m_FNegOrFSubNegZero(m_Value(Y))) &&
+    if (match(Arg0, m_FNegOrFSubNegZero(m_Value(X))) &&
+        match(Arg1, m_FNegOrFSubNegZero(m_Value(Y))) &&
         (Arg0->hasOneUse() || Arg1->hasOneUse())) {
       // If both operands are negated, invert the call and negate the result:
       // min(-X, -Y) --> -(max(X, Y))
@@ -3165,7 +3166,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // it would be an extra instruction for min (fnabs), but
     // that is still likely better for analysis and codegen.
     auto IsMinMaxOrXNegX = [IID, &X](Value *Op0, Value *Op1) {
-      if (match(Op0, m_FNegOrFSubNegZero(m_Value(X))) && match(Op1, m_Specific(X)))
+      if (match(Op0, m_FNegOrFSubNegZero(m_Value(X))) &&
+          match(Op1, m_Specific(X)))
         return Op0->hasOneUse() ||
                (IID != Intrinsic::minimum && IID != Intrinsic::minnum &&
                 IID != Intrinsic::minimumnum);
@@ -3254,7 +3256,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     Value *Src1 = II->getArgOperand(1);
     Value *Src2 = II->getArgOperand(2);
     Value *X, *Y;
-    if (match(Src0, m_FNegOrFSubNegZero(m_Value(X))) && match(Src1, m_FNegOrFSubNegZero(m_Value(Y))))
+    if (match(Src0, m_FNegOrFSubNegZero(m_Value(X))) &&
+        match(Src1, m_FNegOrFSubNegZero(m_Value(Y))))
       return replaceInstUsesWith(
           *II, Builder.CreateIntrinsic(IID, II->getType(), {X, Y, Src2}, II));
 
@@ -3323,7 +3326,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // Peek through changes of magnitude's sign-bit. This call rewrites those:
     // copysign (fabs X), Sign --> copysign X, Sign
     // copysign (fneg X), Sign --> copysign X, Sign
-    if (match(Mag, m_FAbs(m_Value(X))) || match(Mag, m_FNegOrFSubNegZero(m_Value(X))))
+    if (match(Mag, m_FAbs(m_Value(X))) ||
+        match(Mag, m_FNegOrFSubNegZero(m_Value(X))))
       return replaceInstUsesWith(*II, Builder.CreateCopySign(X, Sign, II));
 
     // copysign(floor(fabs(X)), X) --> copysign(trunc(X), X)
@@ -3420,7 +3424,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   case Intrinsic::cosh: {
     Value *X, *Sign;
     Value *Src = II->getArgOperand(0);
-    if (match(Src, m_FNegOrFSubNegZero(m_Value(X))) || match(Src, m_FAbs(m_Value(X))) ||
+    if (match(Src, m_FNegOrFSubNegZero(m_Value(X))) ||
+        match(Src, m_FAbs(m_Value(X))) ||
         match(Src, m_CopySign(m_Value(X), m_Value(Sign)))) {
       // f(-x) --> f(x)
       // f(fabs(x)) --> f(x)
@@ -3440,7 +3445,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   case Intrinsic::tan:
   case Intrinsic::tanh: {
     Value *X;
-    if (match(II->getArgOperand(0), m_OneUse(m_FNegOrFSubNegZero(m_Value(X)))) &&
+    if (match(II->getArgOperand(0),
+              m_OneUse(m_FNegOrFSubNegZero(m_Value(X)))) &&
         !mayFlushDenormalsToPositiveZero(II)) {
       // f(-x) --> -f(x)
       // for f in {sin, sinh, tan, tanh}

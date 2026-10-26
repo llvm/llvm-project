@@ -1277,7 +1277,7 @@ template <typename OpTy> inline FNeg_match<OpTy> m_FNeg(const OpTy &X) {
 }
 
 /// Match fneg X or fsub -0.0, X
-template <typename OpTy> 
+template <typename OpTy>
 inline FNeg_match<OpTy> m_FNegOrFSubNegZero(const OpTy &X) {
   return FNeg_match<OpTy>(X, true);
 }

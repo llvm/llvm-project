@@ -654,7 +654,8 @@ Instruction *InstCombinerImpl::foldFPSignBitOps(BinaryOperator &I) {
 
   // -X * -Y --> X * Y
   // -X / -Y --> X / Y
-  if (match(Op0, m_FNegOrFSubNegZero(m_Value(X))) && match(Op1, m_FNegOrFSubNegZero(m_Value(Y))))
+  if (match(Op0, m_FNegOrFSubNegZero(m_Value(X))) &&
+      match(Op1, m_FNegOrFSubNegZero(m_Value(Y))))
     return BinaryOperator::CreateWithCopiedFlags(Opcode, X, Y, &I);
 
   // fabs(X) * fabs(X) -> X * X

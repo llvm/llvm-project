@@ -551,9 +551,9 @@ static bool LinearizeExprTree(Instruction *I,
       // further.
       Instruction *Neg;
       if (((Opcode == Instruction::Mul && match(Op, m_Neg(m_Value()))) ||
-           (Opcode == Instruction::FMul && 
-            match(Op, m_FNegOrFSubNegZero(m_Value())))) && 
-            match(Op, m_Instruction(Neg))) {
+           (Opcode == Instruction::FMul &&
+            match(Op, m_FNegOrFSubNegZero(m_Value())))) &&
+          match(Op, m_Instruction(Neg))) {
         LLVM_DEBUG(dbgs()
                    << "MORPH LEAF: " << *Op << " (" << Weight << ") TO ");
         Instruction *Mul = LowerNegateToMultiply(Neg);
@@ -860,7 +860,8 @@ static Value *NegateValue(Value *V, Instruction *BI,
   // Okay, we need to materialize a negated version of V with an instruction.
   // Scan the use lists of V to see if we have one already.
   for (User *U : V->users()) {
-    if (!match(U, m_Neg(m_Value())) && !match(U, m_FNegOrFSubNegZero(m_Value())))
+    if (!match(U, m_Neg(m_Value())) &&
+        !match(U, m_FNegOrFSubNegZero(m_Value())))
       continue;
 
     // We found one!  Now we have to make sure that the definition dominates
@@ -1076,7 +1077,8 @@ static BinaryOperator *BreakUpDistribute(Instruction *Mul,
 /// Return true if we should break up this subtract of X-Y into (X + -Y).
 static bool ShouldBreakUpSubtract(Instruction *Sub) {
   // If this is a negation, we can't split it up!
-  if (match(Sub, m_Neg(m_Value())) || match(Sub, m_FNegOrFSubNegZero(m_Value()))) 
+  if (match(Sub, m_Neg(m_Value())) ||
+      match(Sub, m_FNegOrFSubNegZero(m_Value())))
     return false;
 
   // Don't breakup X - undef.
@@ -1658,8 +1660,8 @@ Value *ReassociatePass::OptimizeAdd(Instruction *I,
       continue;
 
     // Remove X and -X from the operand list.
-    if (Ops.size() == 2 &&
-        (match(TheOp, m_Neg(m_Value())) || match(TheOp, m_FNegOrFSubNegZero(m_Value()))))
+    if (Ops.size() == 2 && (match(TheOp, m_Neg(m_Value())) ||
+                            match(TheOp, m_FNegOrFSubNegZero(m_Value()))))
       return Constant::getNullValue(X->getType());
 
     // Remove X and ~X from the operand list.

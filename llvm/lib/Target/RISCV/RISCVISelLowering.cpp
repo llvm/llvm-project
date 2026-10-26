@@ -25702,7 +25702,8 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     // InstCombine canonicalizes fneg (fmul x, y) -> fmul x, (fneg y), see
     // hoistFNegAboveFMulFDiv.
     // Undo this and sink the fneg so we match more fmsub/fnmadd patterns.
-    if (sd_match(N, m_FMul(m_Value(X), m_OneUse(m_FNegOrFSubNegZero(m_Value(Y))))))
+    if (sd_match(N,
+                 m_FMul(m_Value(X), m_OneUse(m_FNegOrFSubNegZero(m_Value(Y))))))
       return DAG.getNode(ISD::FNEG, DL, VT,
                          DAG.getNode(ISD::FMUL, DL, VT, X, Y, N->getFlags()),
                          N->getFlags());

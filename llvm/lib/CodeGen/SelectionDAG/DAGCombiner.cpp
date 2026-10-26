@@ -14546,7 +14546,8 @@ SDValue DAGCombiner::foldPartialReduceAdd(SDNode *N) {
 
   // Handle negation (sub-reduction).
   bool IsMLS = false;
-  if (sd_match(Op1, m_AnyOf(m_Neg(m_Value(Tmp)), m_FNegOrFSubNegZero(m_Value(Tmp))))) {
+  if (sd_match(Op1, m_AnyOf(m_Neg(m_Value(Tmp)),
+                            m_FNegOrFSubNegZero(m_Value(Tmp))))) {
     Op1 = Tmp;
     Op1Opcode = Op1.getOpcode();
     IsMLS = true;

@@ -358,7 +358,8 @@ Instruction *InstCombinerImpl::foldSelectOpOp(SelectInst &SI, Instruction *TI,
   if (TI->hasOneUse() || FI->hasOneUse()) {
     // Cond ? -X : -Y --> -(Cond ? X : Y)
     Value *X, *Y;
-    if (match(TI, m_FNegOrFSubNegZero(m_Value(X))) && match(FI, m_FNegOrFSubNegZero(m_Value(Y)))) {
+    if (match(TI, m_FNegOrFSubNegZero(m_Value(X))) &&
+        match(FI, m_FNegOrFSubNegZero(m_Value(Y)))) {
       // Intersect FMF from the fneg instructions and union those with the
       // select.
       FastMathFlags FMF = TI->getFastMathFlags();

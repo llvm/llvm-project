@@ -2171,16 +2171,19 @@ Instruction *InstCombinerImpl::visitFAdd(BinaryOperator &I) {
   // Similar to above, but look through fmul/fdiv for the negated term.
   // (-X * Y) + Z --> Z - (X * Y) [4 commuted variants]
   Value *Z;
-  if (match(&I, m_c_FAdd(m_OneUse(m_c_FMul(m_FNegOrFSubNegZero(m_Value(X)), m_Value(Y))),
+  if (match(&I, m_c_FAdd(m_OneUse(m_c_FMul(m_FNegOrFSubNegZero(m_Value(X)),
+                                           m_Value(Y))),
                          m_Value(Z)))) {
     Value *XY = Builder.CreateFMulFMF(X, Y, &I);
     return BinaryOperator::CreateFSubFMF(Z, XY, &I);
   }
   // (-X / Y) + Z --> Z - (X / Y) [2 commuted variants]
   // (X / -Y) + Z --> Z - (X / Y) [2 commuted variants]
-  if (match(&I, m_c_FAdd(m_OneUse(m_FDiv(m_FNegOrFSubNegZero(m_Value(X)), m_Value(Y))),
+  if (match(&I, m_c_FAdd(m_OneUse(m_FDiv(m_FNegOrFSubNegZero(m_Value(X)),
+                                         m_Value(Y))),
                          m_Value(Z))) ||
-      match(&I, m_c_FAdd(m_OneUse(m_FDiv(m_Value(X), m_FNegOrFSubNegZero(m_Value(Y)))),
+      match(&I, m_c_FAdd(m_OneUse(m_FDiv(m_Value(X),
+                                         m_FNegOrFSubNegZero(m_Value(Y)))),
                          m_Value(Z)))) {
     Value *XY = Builder.CreateFDivFMF(X, Y, &I);
     return BinaryOperator::CreateFSubFMF(Z, XY, &I);
@@ -3403,14 +3406,17 @@ Instruction *InstCombinerImpl::visitFSub(BinaryOperator &I) {
   // Similar to above, but look through fmul/fdiv of the negated value:
   // Op0 - (-X * Y) --> Op0 + (X * Y)
   // Op0 - (Y * -X) --> Op0 + (X * Y)
-  if (match(Op1, m_OneUse(m_c_FMul(m_FNegOrFSubNegZero(m_Value(X)), m_Value(Y))))) {
+  if (match(Op1,
+            m_OneUse(m_c_FMul(m_FNegOrFSubNegZero(m_Value(X)), m_Value(Y))))) {
     Value *FMul = Builder.CreateFMulFMF(X, Y, &I);
     return BinaryOperator::CreateFAddFMF(Op0, FMul, &I);
   }
   // Op0 - (-X / Y) --> Op0 + (X / Y)
   // Op0 - (X / -Y) --> Op0 + (X / Y)
-  if (match(Op1, m_OneUse(m_FDiv(m_FNegOrFSubNegZero(m_Value(X)), m_Value(Y)))) ||
-      match(Op1, m_OneUse(m_FDiv(m_Value(X), m_FNegOrFSubNegZero(m_Value(Y)))))) {
+  if (match(Op1,
+            m_OneUse(m_FDiv(m_FNegOrFSubNegZero(m_Value(X)), m_Value(Y)))) ||
+      match(Op1,
+            m_OneUse(m_FDiv(m_Value(X), m_FNegOrFSubNegZero(m_Value(Y)))))) {
     Value *FDiv = Builder.CreateFDivFMF(X, Y, &I);
     return BinaryOperator::CreateFAddFMF(Op0, FDiv, &I);
   }
