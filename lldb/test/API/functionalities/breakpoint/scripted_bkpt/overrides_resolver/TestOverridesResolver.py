@@ -28,6 +28,7 @@ class TestOverridesResolver(TestBase):
         self.build()
         self.do_test_bad_values()
 
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24528")
     def test_overrides_copied_from_dummy_target(self):
         """An override on the dummy target applies to targets created later."""
         self.build()
