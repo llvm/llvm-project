@@ -232,6 +232,13 @@ bool ObjectFileXCOFF::SetLoadAddressByType(Target &target, lldb::addr_t value,
       const size_t num_sections = section_list->GetSize();
       size_t sect_idx = 0;
 
+      // ldinfo_dataorg is the runtime address of the start of .data. .bss is
+      // laid out after .data in the same segment, so it can be loaded at
+      // dataorg + (bss_vaddr - data_vaddr)
+      lldb::addr_t data_file_addr = LLDB_INVALID_ADDRESS;
+      if (SectionSP data_sp = section_list->FindSectionByName(".data"))
+        data_file_addr = data_sp->GetFileAddress();
+
       for (sect_idx = 0; sect_idx < num_sections; ++sect_idx) {
         // Iterate through the object file sections to find all of the sections
         // that have SHF_ALLOC in their flag bits.
@@ -251,6 +258,9 @@ bool ObjectFileXCOFF::SetLoadAddressByType(Target &target, lldb::addr_t value,
               load_addr = value + section_sp->GetFileAddress();
             } else {
               load_addr = value;
+              if (is_bss && data_file_addr != LLDB_INVALID_ADDRESS &&
+                  section_sp->GetFileAddress() >= data_file_addr)
+                load_addr += section_sp->GetFileAddress() - data_file_addr;
             }
             if (target.GetSectionLoadListPublic().SetSectionLoadAddress(
                     section_sp, load_addr))
@@ -407,20 +417,25 @@ void ObjectFileXCOFF::ParseSymtab(Symtab &lldb_symtab) {
           // tables, writable data, BSS).
           //
           // Exception: vtable csects (Itanium mangled name prefix "_ZTV") are
-          // stored in XMC_RO and must retain their address so that
+          // stored in XMC_RO or XMC_RW and must retain their address so that
           // ItaniumABIRuntime can resolve the vtable pointer to a symbol for
-          // dynamic type detection 
+          // dynamic type detection
           if (smc == XCOFF::XMC_RO || smc == XCOFF::XMC_RW ||
               smc == XCOFF::XMC_BS) {
             uint64_t csect_size = csect_aux.getSectionOrLength();
             if (csect_size > 0)
               symbol.SetByteSize(csect_size);
-            if (smc == XCOFF::XMC_RO && !symbolName.starts_with("_ZTV")) {
+
+            bool is_vtable = symbolName.starts_with("_ZTV") ||
+                             name_no_dot.starts_with("_ZTV");
+
+            if (smc == XCOFF::XMC_RO && !is_vtable) {
               symbol.GetAddressRef() = Address();
             } else if (smc == XCOFF::XMC_RW) {
-              // Allowlist of XMC_RW XTY_SD symbols needed for libpthdebug.
+              // Allowlist of XMC_RW XTY_SD symbols needed for libpthdebug
+              // and C++ vtables for dynamic type resolution.
               // All other XMC_RW csects are compiler-generated tables that
-              // must not pollute the address space 
+              // must not pollute the address space
               static const llvm::StringRef kLibpthreadsSymbols[] = {
                   "__n_pthreads",
                   "__libpthreads_version",
@@ -434,11 +449,13 @@ void ObjectFileXCOFF::ParseSymtab(Symtab &lldb_symtab) {
                   "vp_hold_count",
                   "concurrency",
               };
-              bool is_needed = false;
-              for (llvm::StringRef needed : kLibpthreadsSymbols) {
-                if (symbolName == needed) {
-                  is_needed = true;
-                  break;
+              bool is_needed = is_vtable;
+              if (!is_needed) {
+                for (llvm::StringRef needed : kLibpthreadsSymbols) {
+                  if (symbolName == needed || name_no_dot == needed) {
+                    is_needed = true;
+                    break;
+                  }
                 }
               }
               if (!is_needed)
