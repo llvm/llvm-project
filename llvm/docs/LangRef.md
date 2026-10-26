@@ -2297,7 +2297,7 @@ define void @f() "no-sse" { ... }
     on function-pointer identity can break. So, any function annotated with
     `jumptable` must also be `unnamed_addr`.
 
-`"likely-module-local"`
+`likely_module_local`
 :   This attribute indicates that the function is likely not referenced from
     outside of the current module, even though its linkage does not guarantee
     that. It is only meaningful on functions with `linkonce_odr` linkage and is
