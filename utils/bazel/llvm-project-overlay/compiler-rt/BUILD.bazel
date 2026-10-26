@@ -800,7 +800,6 @@ filegroup(
             "lib/sanitizer_common/*.cpp",
         ],
         exclude = [
-            "lib/sanitizer_common/sanitizer_common_nolibc.cpp",
             "lib/sanitizer_common/sanitizer_coverage_win_runtime_thunk.cpp",
             "lib/sanitizer_common/sanitizer_offload*.cpp",
             "lib/sanitizer_common/sanitizer_win_thunk_interception.cpp",

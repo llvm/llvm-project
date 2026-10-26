@@ -53,12 +53,6 @@ set(SANITIZER_SOURCES
   sanitizer_termination.cpp
   )
 
-# Libc functions stubs. These sources should be linked instead of
-# SANITIZER_LIBCDEP_SOURCES when sanitizer_common library must not depend on
-# libc.
-set(SANITIZER_NOLIBC_SOURCES
-  sanitizer_common_nolibc.cpp
-  )
 
 set(SANITIZER_LIBCDEP_SOURCES
   sanitizer_common_libcdep.cpp
@@ -268,13 +262,6 @@ add_compiler_rt_object_libraries(RTSanitizerCommonNoTermination
   ${OS_OPTION}
   ARCHS ${SANITIZER_COMMON_SUPPORTED_ARCH}
   SOURCES ${SANITIZER_SOURCES_NOTERMINATION}
-  ADDITIONAL_HEADERS ${SANITIZER_IMPL_HEADERS}
-  CFLAGS ${SANITIZER_CFLAGS}
-  DEFS ${SANITIZER_COMMON_DEFINITIONS})
-add_compiler_rt_object_libraries(RTSanitizerCommonNoLibc
-  ${OS_OPTION}
-  ARCHS ${SANITIZER_COMMON_SUPPORTED_ARCH}
-  SOURCES ${SANITIZER_NOLIBC_SOURCES}
   ADDITIONAL_HEADERS ${SANITIZER_IMPL_HEADERS}
   CFLAGS ${SANITIZER_CFLAGS}
   DEFS ${SANITIZER_COMMON_DEFINITIONS})
