@@ -2997,10 +2997,7 @@ def Vector_PrintOp :
   ];
 
   let assemblyFormat = [{
-      ($source^ `:` type($source))?
-        oilist(
-            `str` $stringLiteral
-          | `punctuation` $punctuation)
+      custom<PrintBody>($source, type($source), $stringLiteral, $punctuation)
         attr-dict
     }];
 }
