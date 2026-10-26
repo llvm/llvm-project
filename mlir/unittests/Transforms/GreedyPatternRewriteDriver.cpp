@@ -194,6 +194,40 @@ TEST_F(GreedyDeadnessTest, MoveBlocksBetweenRegions) {
   EXPECT_EQ(&target->getRegion(0).front(), liveBlock);
 }
 
+TEST_F(GreedyDeadnessTest, MultipleBlocksAgreeWithUncachedQuery) {
+  // A write in either block must keep the parent live on repeated queries.
+  // An effect-free parent becomes dead only after both blocks are checked.
+  for (int writeBlock : {-1, 0, 1}) {
+    std::string body = "\"test.any_cond\"() ({\n";
+    for (int block = 0; block < 2; ++block) {
+      body += "^bb" + std::to_string(block) + ":\n";
+      if (block == writeBlock)
+        body += effect.str();
+      body += "\"test.return\"() : () -> ()\n";
+    }
+    body += "}) : () -> ()\n";
+    auto moduleOp = parseSourceString<ModuleOp>(body, &context);
+    ASSERT_TRUE(moduleOp);
+    Operation *root = &moduleOp->getBody()->front();
+    DeadnessCache cache;
+    EXPECT_EQ(wouldOpBeTriviallyDead(root), writeBlock == -1);
+    EXPECT_EQ(cache.isOpTriviallyDead(root), writeBlock == -1);
+    EXPECT_EQ(cache.isOpTriviallyDead(root), writeBlock == -1);
+  }
+}
+
+TEST_F(GreedyDeadnessTest, EmptyRegionAgreesWithUncachedQuery) {
+  // A recursive-effect operation with no blocks has no nested live effects.
+  auto moduleOp = parseSourceString<ModuleOp>(
+      "\"test.any_cond\"() ({}) : () -> ()", &context);
+  ASSERT_TRUE(moduleOp);
+  Operation *root = &moduleOp->getBody()->front();
+  DeadnessCache cache;
+  EXPECT_TRUE(wouldOpBeTriviallyDead(root));
+  EXPECT_TRUE(cache.isOpTriviallyDead(root));
+  EXPECT_TRUE(cache.isOpTriviallyDead(root));
+}
+
 TEST_F(GreedyDeadnessTest, UsesAreNotCached) {
   // Change uses without invalidating the effect cache. Each query must check
   // current uses, including a new use added after caching a dead result.

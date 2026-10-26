@@ -553,6 +553,8 @@ bool wouldOpBeTriviallyDead(Operation *op);
 /// also invalidate the old parent. Invalidate operations before erasing them.
 class DeadnessCache {
 public:
+  enum class State : uint8_t { Alive, Dead };
+
   /// Return true if the operation is unused and can be erased. Terminators and
   /// symbols cannot be erased. Uses are checked on every query.
   bool isOpTriviallyDead(Operation *op);
@@ -564,7 +566,6 @@ public:
   void invalidateAncestors(Operation *op);
 
 private:
-  enum class State : uint8_t { Alive, Dead };
   DenseMap<Operation *, State> cache;
 };
 

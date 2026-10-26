@@ -73,38 +73,71 @@ static bool hasOnlyDeadEffects(Operation *op, bool hasRecursiveEffects) {
 /// considers terminator operations as dead if they have no side effects. This
 /// allows for marking region operations as trivially dead without always being
 /// conservative of terminators.
-static bool wouldOpBeTriviallyDeadImpl(Operation *rootOp) {
-  // The set of operation intervals (end-exclusive) to consider when checking
-  // for side effects.
-  SmallVector<std::pair<Block::iterator, Block::iterator>, 1> effectingOps = {
-      std::make_pair(Block::iterator(rootOp), ++Block::iterator(rootOp))};
-  while (!effectingOps.empty()) {
-    Block::iterator &it = effectingOps.back().first;
-    Block::iterator end = effectingOps.back().second;
-    if (it == end) {
-      effectingOps.pop_back();
+static bool wouldOpBeTriviallyDeadImpl(
+    Operation *root,
+    DenseMap<Operation *, DeadnessCache::State> *cache = nullptr) {
+  using State = DeadnessCache::State;
+  // Repeated queries on nested operations would otherwise scan the same
+  // subtrees. Cache each subtree after checking its effects, and skip cached
+  // subtrees on later queries. An explicit worklist also bounds C++ stack use
+  // for deeply nested IR. Uncached queries do not look up or record summaries.
+  struct WorkItem {
+    // Keep the unvisited range so a block can resume after a nested operation
+    // without adding every sibling to the worklist.
+    Block::iterator current;
+    Block::iterator end;
+    Operation *complete = nullptr;
+  };
+  SmallVector<WorkItem, 1> worklist = {
+      {Block::iterator(root), ++Block::iterator(root)}};
+  while (!worklist.empty()) {
+    WorkItem &item = worklist.back();
+    if (item.current == item.end) {
+      if (cache && item.complete)
+        (*cache)[item.complete] = State::Dead;
+      worklist.pop_back();
       continue;
     }
-    mlir::Operation *op = &*(it++);
-
-    // If the operation has recursive effects, push all of the nested operations
-    // on to the stack to consider.
-    bool hasRecursiveEffects =
-        op->hasTrait<OpTrait::HasRecursiveMemoryEffects>();
-    if (hasRecursiveEffects) {
-      for (Region &region : op->getRegions()) {
-        for (auto &block : region) {
-          effectingOps.push_back(std::make_pair(block.begin(), block.end()));
-        }
+    Operation *op = &*item.current++;
+    bool cachedAlive = false;
+    if (cache) {
+      auto cached = cache->find(op);
+      if (cached != cache->end()) {
+        if (cached->second == State::Dead)
+          continue;
+        cachedAlive = true;
       }
     }
-
-    if (!hasOnlyDeadEffects(op, hasRecursiveEffects))
+    bool recursive = op->hasTrait<OpTrait::HasRecursiveMemoryEffects>();
+    if (cachedAlive || !hasOnlyDeadEffects(op, recursive)) {
+      // One live effect keeps every ancestor up to the root live. The
+      // remaining subtrees cannot change the answer.
+      if (cache) {
+        for (Operation *ancestor = op;; ancestor = ancestor->getParentOp()) {
+          (*cache)[ancestor] = State::Alive;
+          if (ancestor == root)
+            break;
+        }
+      }
       return false;
+    }
+    if (!recursive) {
+      if (cache)
+        (*cache)[op] = State::Dead;
+      continue;
+    }
+    // The first pushed block is processed last. Record the parent's summary
+    // only when that block is complete and all other blocks have been checked.
+    Operation *complete = cache ? op : nullptr;
+    for (Region &region : op->getRegions()) {
+      for (Block &block : region) {
+        worklist.push_back({block.begin(), block.end(), complete});
+        complete = nullptr;
+      }
+    }
+    if (complete)
+      (*cache)[complete] = State::Dead;
   }
-
-  // If we get here, none of the operations had effects that prevented marking
-  // 'op' as dead.
   return true;
 }
 
@@ -120,60 +153,7 @@ bool DeadnessCache::isOpTriviallyDead(Operation *root) {
   if (cachedRoot != cache.end())
     return cachedRoot->second == State::Dead;
 
-  // Repeated queries on nested operations would otherwise scan the same
-  // subtrees. Use a postorder traversal to cache each subtree's effects and
-  // skip it on later queries. Keep the traversal on an explicit worklist so
-  // deeply nested IR does not consume the C++ call stack.
-  struct WorkItem {
-    Operation *complete;
-    // The unvisited range [current, end) lets a block resume after a nested
-    // operation, without adding each sibling to the worklist. The initial
-    // range contains only the root, not the rest of its block. Completion
-    // markers do not use these iterators.
-    Block::iterator current;
-    Block::iterator end;
-  };
-  SmallVector<WorkItem, 8> worklist = {
-      {nullptr, Block::iterator(root), ++Block::iterator(root)}};
-  while (!worklist.empty()) {
-    WorkItem &item = worklist.back();
-    if (item.complete) {
-      // All nested operations have been checked without finding live effects.
-      cache[item.complete] = State::Dead;
-      worklist.pop_back();
-      continue;
-    }
-    if (item.current == item.end) {
-      worklist.pop_back();
-      continue;
-    }
-    Operation *op = &*item.current++;
-    auto cached = cache.find(op);
-    if (cached != cache.end() && cached->second == State::Dead)
-      continue;
-    bool recursive = op->hasTrait<OpTrait::HasRecursiveMemoryEffects>();
-    if (cached != cache.end() || !hasOnlyDeadEffects(op, recursive)) {
-      // One live effect keeps every ancestor up to the root live. Cache this
-      // result and stop; the remaining subtrees cannot change the answer.
-      for (Operation *ancestor = op;; ancestor = ancestor->getParentOp()) {
-        cache[ancestor] = State::Alive;
-        if (ancestor == root)
-          break;
-      }
-      return false;
-    }
-    if (!recursive) {
-      cache[op] = State::Dead;
-      continue;
-    }
-    // Process the child ranges before this completion marker. The op can be
-    // cached as dead only after all of its recursive effects are checked.
-    worklist.push_back({op, {}, {}});
-    for (Region &region : op->getRegions())
-      for (Block &block : region)
-        worklist.push_back({nullptr, block.begin(), block.end()});
-  }
-  return true;
+  return wouldOpBeTriviallyDeadImpl(root, &cache);
 }
 
 void DeadnessCache::invalidate(Operation *op) {
