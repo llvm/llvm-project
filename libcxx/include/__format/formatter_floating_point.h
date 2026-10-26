@@ -693,11 +693,22 @@ __format_floating_point(_Tp __value, _FormatContext& __ctx, __format_spec::__par
       // specified, or 1 if the precision is 0. Then, if a conversion with
       // style E would have an exponent of X:
       int __p = std::max<int>(1, (__specs.__has_precision() ? __specs.__precision_ : 6));
-      if (__result.__exponent == __result.__last)
+      if (__result.__exponent == __result.__last) {
         // if P > X >= -4, the conversion is with style f or F and precision P - 1 - X.
-        // By including the radix point it calculates P - (1 + X)
-        __p -= __result.__radix_point - __result.__integral;
-      else
+        //
+        // X is the exponent of the first significant digit. For |value| >= 1, and for zero, that is the number of
+        // integral digits minus one. For 0 < |value| < 1 the integral digit is 0 and X is negative: the first
+        // significant digit is the first nonzero digit after the radix point.
+        ptrdiff_t __x = __result.__radix_point - __result.__integral - 1;
+        if (*__result.__integral == '0') {
+          const char* __it = __result.__radix_point + 1;
+          while (__it != __result.__last && *__it == '0')
+            ++__it;
+          if (__it != __result.__last) // 0 < |value| < 1
+            __x = -(__it - __result.__radix_point);
+        }
+        __p -= 1 + __x;
+      } else
         // otherwise, the conversion is with style e or E and precision P - 1.
         --__p;
 
