@@ -383,6 +383,46 @@ TEST(ExternalIOTests, TestDirectFormatted) {
       << "EndIoStatement() for Close";
 }
 
+// A numeric output field, and its blank or asterisk padding, are emitted in
+// bulk.  Writing a field that does not fit in a fixed-size record must still
+// be diagnosed as a record overrun rather than running past the record.
+TEST(ExternalIOTests, TestFormattedFixedRecordOverrun) {
+  // OPEN(NEWUNIT=unit,ACCESS='SEQUENTIAL',ACTION='WRITE',&
+  //   FORM='FORMATTED',RECL=10,STATUS='SCRATCH')
+  auto *io{IONAME(BeginOpenNewUnit)(__FILE__, __LINE__)};
+  ASSERT_TRUE(IONAME(SetAccess)(io, "SEQUENTIAL", 10))
+      << "SetAccess(SEQUENTIAL)";
+  ASSERT_TRUE(IONAME(SetAction)(io, "WRITE", 5)) << "SetAction(WRITE)";
+  ASSERT_TRUE(IONAME(SetForm)(io, "FORMATTED", 9)) << "SetForm(FORMATTED)";
+  static constexpr std::size_t recl{10};
+  ASSERT_TRUE(IONAME(SetRecl)(io, recl)) << "SetRecl()";
+  ASSERT_TRUE(IONAME(SetStatus)(io, "SCRATCH", 7)) << "SetStatus(SCRATCH)";
+
+  int unit{-1};
+  ASSERT_TRUE(IONAME(GetNewUnit)(io, unit)) << "GetNewUnit()";
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for OpenNewUnit";
+
+  auto writeReal{[&](const char *format, double x) {
+    io = IONAME(BeginExternalFormattedOutput)(
+        format, std::strlen(format), nullptr, unit, __FILE__, __LINE__);
+    IONAME(EnableHandlers)(io, true /*IOSTAT=*/);
+    IONAME(OutputReal64)(io, x);
+    return IONAME(EndIoStatement)(io);
+  }};
+
+  EXPECT_EQ(writeReal("(F10.4)", 3.25), IostatOk) << "F10.4 into RECL=10";
+  EXPECT_EQ(writeReal("(F20.10)", 3.25), IostatRecordWriteOverrun)
+      << "F20.10 into RECL=10";
+  EXPECT_EQ(writeReal("(F12.3)", 1.0e300), IostatRecordWriteOverrun)
+      << "F12.3 overflow into RECL=10";
+
+  io = IONAME(BeginClose)(unit, __FILE__, __LINE__);
+  ASSERT_TRUE(IONAME(SetStatus)(io, "DELETE", 6)) << "SetStatus(DELETE)";
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for Close";
+}
+
 TEST(ExternalIOTests, TestSequentialVariableFormatted) {
   // OPEN(NEWUNIT=unit,ACCESS='SEQUENTIAL',ACTION='READWRITE',&
   //   FORM='FORMATTED',STATUS='SCRATCH')
