@@ -114,13 +114,12 @@ enum class StencilMergePolicy { Off, Auto, Force };
 static cl::opt<StencilMergePolicy> StencilMerge(
     "stencil-runtime-check-merge", cl::Hidden,
     cl::desc("Control stencil-pattern merging of runtime memory checks"),
-    cl::init(StencilMergePolicy::Off),
+    cl::init(StencilMergePolicy::Auto),
     cl::values(
-        clEnumValN(StencilMergePolicy::Off, "off",
-                   "Disable stencil merge (default)"),
+        clEnumValN(StencilMergePolicy::Off, "off", "Disable stencil merge"),
         clEnumValN(StencilMergePolicy::Auto, "auto",
                    "Enable stencil merge when runtime check count exceeds "
-                   "-vectorize-memory-check-threshold"),
+                   "-vectorize-memory-check-threshold (default)"),
         clEnumValN(StencilMergePolicy::Force, "force",
                    "Always attempt stencil merge regardless of check "
                    "count")));
