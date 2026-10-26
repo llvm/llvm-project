@@ -93,12 +93,13 @@ convertToBlockPointer(const Context &Ctx, const StringPointer &SP) {
   assert(CharType);
 
   // Create a descriptor for the string.
-  std::unique_ptr<Descriptor> Desc = std::make_unique<Descriptor>(
-      S, S->getType().getTypePtr(), *CharType, StringLength + 1,
-      /*IsConst=*/true,
-      /*isTemporary=*/false,
-      /*isMutable=*/false,
-      /*IsVolatile=*/false);
+  std::unique_ptr<Descriptor> Desc =
+      std::make_unique<Descriptor>(S, S->getType().getTypePtr(), *CharType,
+                                   StringLength + 1, StringLength + 1,
+                                   /*IsConst=*/true,
+                                   /*isTemporary=*/false,
+                                   /*isMutable=*/false,
+                                   /*IsVolatile=*/false);
 
   // Allocate storage for the string.
   // The byte length does not include the null terminator.

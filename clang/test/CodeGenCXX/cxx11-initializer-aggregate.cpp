@@ -1,5 +1,7 @@
-// RUN: %clang_cc1 -std=c++11 -emit-llvm -o - %s -triple x86_64-linux-gnu | FileCheck %s
-// RUN: %clang_cc1 -std=c++17 -emit-llvm -o - %s -triple x86_64-linux-gnu | FileCheck %s
+// RUN: %clang_cc1 -std=c++11 -emit-llvm -o - %s -triple x86_64-linux-gnu                                         | FileCheck %s
+// RUN: %clang_cc1 -std=c++17 -emit-llvm -o - %s -triple x86_64-linux-gnu                                         | FileCheck %s
+// RUN: %clang_cc1 -std=c++11 -emit-llvm -o - %s -triple x86_64-linux-gnu -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %clang_cc1 -std=c++17 -emit-llvm -o - %s -triple x86_64-linux-gnu -fexperimental-new-constant-interpreter | FileCheck %s
 
 struct A { int a, b; int f(); };
 

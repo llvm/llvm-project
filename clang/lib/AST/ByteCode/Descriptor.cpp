@@ -39,7 +39,7 @@ static void dtorArrayTy(std::byte *Ptr, const Descriptor *D) {
 
   if constexpr (needsDtor<T>()) {
     Ptr += sizeof(InitMapPtr);
-    for (unsigned I = 0, NE = D->getNumElems(); I != NE; ++I) {
+    for (unsigned I = 0, NE = D->getNumStoredElems(); I != NE; ++I) {
       reinterpret_cast<T *>(Ptr)[I].~T();
     }
   }
@@ -48,7 +48,7 @@ static void dtorArrayTy(std::byte *Ptr, const Descriptor *D) {
 static void ctorArrayDesc(std::byte *Ptr, bool IsConst, bool IsMutable,
                           bool IsVolatile, bool IsActive, bool InUnion,
                           const Descriptor *D) {
-  const unsigned NumElems = D->getNumElems();
+  const unsigned NumElems = D->getNumStoredElems();
   const unsigned ElemSize =
       D->ElemDesc->getAllocSize() + sizeof(InlineDescriptor);
 
@@ -78,7 +78,7 @@ static void ctorArrayDesc(std::byte *Ptr, bool IsConst, bool IsMutable,
 }
 
 static void dtorArrayDesc(std::byte *Ptr, const Descriptor *D) {
-  const unsigned NumElems = D->getNumElems();
+  const unsigned NumElems = D->getNumStoredElems();
   const unsigned ElemSize =
       D->ElemDesc->getAllocSize() + sizeof(InlineDescriptor);
 
@@ -272,7 +272,7 @@ static void ctorArrayTy(std::byte *Ptr, bool, bool, bool, bool, bool,
 
   if constexpr (needsCtor<T>()) {
     Ptr += sizeof(InitMapPtr);
-    for (unsigned I = 0, NE = D->getNumElems(); I < NE; ++I) {
+    for (unsigned I = 0, NE = D->getNumStoredElems(); I != NE; ++I) {
       new (&reinterpret_cast<T *>(Ptr)[I]) T();
     }
   }
@@ -301,17 +301,24 @@ Descriptor::Descriptor(DeclOrExpr D, const Type *SourceTy, PrimType Type,
   assert(Source && "Missing source");
 }
 
-/// Primitive arrays.
+/// Primitive arrays, possibly with a filler. A filler array is not padded, so
+/// every byte past its storage belongs to a filler element.
 Descriptor::Descriptor(DeclOrExpr D, const Type *SourceTy, PrimType Type,
-                       size_t NumElems, bool IsConst, bool IsTemporary,
-                       bool IsMutable, bool IsVolatile)
+                       size_t NumElems, size_t NumStoredElems, bool IsConst,
+                       bool IsTemporary, bool IsMutable, bool IsVolatile)
     : Source(D), SourceType(SourceTy), ElemSize(primSize(Type)),
-      Size(ElemSize * NumElems), AllocSize(align(Size) + sizeof(InitMapPtr)),
-      PrimT(Type), IsConst(IsConst), IsMutable(IsMutable),
-      IsTemporary(IsTemporary), IsVolatile(IsVolatile), IsArray(true),
-      CtorFn(nullptr), DtorFn(getDtorArrayPrim(Type)) {
+      Size(ElemSize * NumElems),
+      AllocSize((NumStoredElems == NumElems ? align(Size)
+                                            : ElemSize * NumStoredElems) +
+                sizeof(InitMapPtr)),
+      NumStoredElems(NumStoredElems), PrimT(Type), IsConst(IsConst),
+      IsMutable(IsMutable), IsTemporary(IsTemporary), IsVolatile(IsVolatile),
+      IsArray(true), HasFiller(NumStoredElems != NumElems), CtorFn(nullptr),
+      DtorFn(getDtorArrayPrim(Type)) {
   assert(Source && "Missing source");
   assert(NumElems <= (MaxArrayElemBytes / ElemSize));
+  assert(NumStoredElems <= NumElems);
+  assert(!HasFiller || NumStoredElems != 0);
 }
 
 /// Primitive unknown-size arrays.
@@ -324,18 +331,23 @@ Descriptor::Descriptor(DeclOrExpr D, PrimType Type, bool IsConst,
   assert(Source && "Missing source");
 }
 
-/// Arrays of composite elements.
+/// Arrays of composite elements, possibly with a filler. Elements are larger
+/// than alignof(void *), so a filler array is never padded.
 Descriptor::Descriptor(DeclOrExpr D, const Type *SourceTy,
-                       const Descriptor *Elem, unsigned NumElems, bool IsConst,
-                       bool IsTemporary, bool IsMutable)
+                       const Descriptor *Elem, unsigned NumElems,
+                       unsigned NumStoredElems, bool IsConst, bool IsTemporary,
+                       bool IsMutable)
     : Source(D), SourceType(SourceTy),
       ElemSize(Elem->getAllocSize() + sizeof(InlineDescriptor)),
       Size(ElemSize * NumElems),
-      AllocSize(std::max<size_t>(alignof(void *), Size)), ElemDesc(Elem),
-      IsConst(IsConst), IsMutable(IsMutable), IsTemporary(IsTemporary),
-      IsArray(true), CtorFn(ctorArrayDesc),
+      AllocSize(std::max<size_t>(alignof(void *), ElemSize * NumStoredElems)),
+      NumStoredElems(NumStoredElems), ElemDesc(Elem), IsConst(IsConst),
+      IsMutable(IsMutable), IsTemporary(IsTemporary), IsArray(true),
+      HasFiller(NumStoredElems != NumElems), CtorFn(ctorArrayDesc),
       DtorFn(Elem->DtorFn ? dtorArrayDesc : nullptr) {
   assert(Source && "Missing source");
+  assert(NumStoredElems <= NumElems);
+  assert(!HasFiller || NumStoredElems != 0);
 }
 
 /// Unknown-size arrays of composite elements.

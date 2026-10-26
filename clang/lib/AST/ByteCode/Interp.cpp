@@ -213,6 +213,17 @@ static bool CheckGlobal(InterpState &S, CodePtr OpPC, const Block *B) {
   return true;
 }
 
+/// Filler elements share storage, so modifying one would modify all of them.
+/// See Descriptor::HasFiller.
+static bool CheckFiller(InterpState &S, CodePtr OpPC, PtrView Ptr) {
+  assert(!Ptr.isZero());
+  if (!Ptr.isFillerElement())
+    return true;
+
+  S.FFDiag(S.Current->getLocation(OpPC), diag::note_constexpr_modify_global);
+  return false;
+}
+
 namespace clang {
 namespace interp {
 
@@ -1110,6 +1121,8 @@ bool CheckStore(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     return false;
   if (!CheckConst(S, OpPC, P))
     return false;
+  if (!CheckFiller(S, OpPC, P))
+    return false;
   if (!CheckVolatile(S, OpPC, P, AK))
     return false;
   if (!CheckMutable(S, OpPC, P, AK))
@@ -1749,7 +1762,7 @@ static bool getField(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   if (!Ptr.getFieldDesc()->isRecord())
     return false;
 
-  if ((Ptr.getByteOffset() + Off) >= Ptr.block()->getSize())
+  if ((Ptr.getByteOffset() + Off) >= Ptr.block()->getAddressableSize())
     return false;
 
   S.Stk.push<Pointer>(Ptr.atField(Off));
@@ -3274,7 +3287,7 @@ static void finishGlobalRecurse(InterpState &S, PtrView Ptr) {
   }
 
   if (const Descriptor *D = Ptr.getFieldDesc(); D && D->isArray()) {
-    unsigned NumElems = D->getNumElems();
+    unsigned NumElems = D->getNumStoredElems();
     if (NumElems == 0)
       return;
 
@@ -3293,13 +3306,13 @@ static void finishGlobalRecurse(InterpState &S, PtrView Ptr) {
       });
       if (AllSingleWord)
         return;
-      for (unsigned I = 1; I != D->getNumElems(); ++I) {
+      for (unsigned I = 1; I != NumElems; ++I) {
         PtrView EP = Ptr.atIndex(I);
         copyPrimitiveMemory(S, EP, PT);
       }
     } else {
       assert(D->isCompositeArray());
-      for (unsigned I = 0; I != D->getNumElems(); ++I) {
+      for (unsigned I = 0; I != NumElems; ++I) {
         PtrView EP = Ptr.atIndex(I).narrow();
         finishGlobalRecurse(S, EP);
       }
