@@ -444,6 +444,8 @@ LIBC_INLINE double tanh_small_eval(double x, uint64_t x_abs) {
   }
 
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+  using fputil::DoubleDouble;
+
   // 2^-27 < |x| < 2^-3:
   // Split x = x_hi + x_lo into 14-bit x_hi and 39-bit x_lo so that:
   //   x2_hi = x_hi * x_hi           (28 bits)
@@ -475,27 +477,25 @@ LIBC_INLINE double tanh_small_eval(double x, uint64_t x_abs) {
   double y_lo_t = x3_lo * p_full;
   double y_lo = fputil::multiply_add(x3_hi, p_rem, y_lo_t);
 
-  // Leading sum r_hi + s_err = x + y_hi (exact FastTwoSum in all rounding modes
+  // Leading sum r.hi + r.lo = x + y_hi (exact FastTwoSum in all rounding modes
   // since |y_hi| < 2^-7 * |x|):
-  double r_hi = x + y_hi;
-  double r_t = x - r_hi;
-  double s_err = r_t + y_hi;
+  DoubleDouble r = fputil::exact_add(x, y_hi);
 
   // Error bound for Ziv's rounding test:
   // The error of y_hi + y_lo is bounded by |y_hi| * 0x1.8p-54, and the rounding
-  // error of s_err + y_lo is bounded by |x| * 2^-103.
+  // error of r.lo + y_lo is bounded by |x| * 2^-103.
   double x_err = x * 0x1.0p-103;
   double err = fputil::multiply_add(y_hi, -0x1.8p-54, x_err);
 
-  // Low tail bounds lo_{u,l} ~ s_err + (y_lo +/- err):
+  // Low tail bounds lo_{u,l} ~ r.lo + (y_lo +/- err):
   double y_lo_u = y_lo + err;
   double y_lo_l = y_lo - err;
-  double lo_u = s_err + y_lo_u;
-  double lo_l = s_err + y_lo_l;
+  double lo_u = r.lo + y_lo_u;
+  double lo_l = r.lo + y_lo_l;
 
   // Ziv's rounding test in the current rounding mode:
-  double upper = r_hi + lo_u;
-  double lower = r_hi + lo_l;
+  double upper = r.hi + lo_u;
+  double lower = r.hi + lo_l;
 
   if (LIBC_LIKELY(upper == lower))
     return upper;
