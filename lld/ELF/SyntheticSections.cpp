@@ -325,6 +325,7 @@ void EhFrameSection::finalizeContents() {
   for (FdeRange &r : ranges) {
     r.off = off;
     off += r.size;
+    firstFdes.push_back(numFdes);
     numFdes += r.num;
   }
   parallelFor(0, sections.size(), [&](size_t i) {
@@ -361,45 +362,10 @@ void EhFrameSection::writeTo(uint8_t *buf) {
     // fields, and LSDA pointers.
     ctx.target->relocateEh(*sec, buf);
   });
-
-  EhFrameHeader *hdr = ctx.in.ehFrameHdr.get();
-  if (!hdr || !hdr->getParent())
-    return;
-
-  // Write the .eh_frame_hdr section using cached FDE data from updateAllocSize.
-  bool large = hdr->large;
-  int64_t ehFramePtr = getParent()->addr - hdr->getVA() - 4;
-  auto writeField = [&](uint8_t *buf, uint64_t val) {
-    large ? write64(ctx, buf, val) : write32(ctx, buf, val);
-  };
-
-  uint8_t *hdrBuf = ctx.bufferStart + hdr->getParent()->offset + hdr->outSecOff;
-  // version
-  hdrBuf[0] = 1;
-  // eh_frame_ptr_enc
-  hdrBuf[1] = DW_EH_PE_pcrel | (large ? DW_EH_PE_sdata8 : DW_EH_PE_sdata4);
-  // fde_count_enc
-  hdrBuf[2] = DW_EH_PE_udata4;
-  // table_enc
-  hdrBuf[3] = DW_EH_PE_datarel | (large ? DW_EH_PE_sdata8 : DW_EH_PE_sdata4);
-  hdrBuf += 4;
-  writeField(hdrBuf, ehFramePtr);
-  hdrBuf += large ? 8 : 4;
-  write32(ctx, hdrBuf, hdr->fdes.size());
-  hdrBuf += 4;
-  for (const FdeData &fde : hdr->fdes) {
-    writeField(hdrBuf, fde.pcRel);
-    writeField(hdrBuf + (large ? 8 : 4), fde.fdeVARel);
-    hdrBuf += large ? 16 : 8;
-  }
 }
 
 EhFrameHeader::EhFrameHeader(Ctx &ctx)
     : SyntheticSection(ctx, ".eh_frame_hdr", SHT_PROGBITS, SHF_ALLOC, 4) {}
-
-void EhFrameHeader::writeTo(uint8_t *buf) {
-  // The section content is written during EhFrameSection::writeTo.
-}
 
 bool EhFrameHeader::isNeeded() const {
   return isLive() && ctx.in.ehFrame->isNeeded();
@@ -413,27 +379,23 @@ void EhFrameHeader::finalizeContents() {
   size = 4 + (large ? 8 : 4) + 4 + numFdes * (large ? 16 : 8);
 }
 
-bool EhFrameHeader::updateAllocSize(Ctx &ctx) {
-  // This is called after `finalizeSynthetic`, so in the typical case without
-  // .relr.dyn, this function will not change the size and assignAddresses
-  // will not need another iteration.
-  EhFrameSection *ehFrame = ctx.in.ehFrame.get();
+// Call fn parallelly with the .eh_frame order index, pcRel and fdeVARel of each
+// live FDE that is not zero-range. pcRel and fdeVARel are relative to
+// .eh_frame_hdr's VA.
+template <class Fn> void EhFrameHeader::forEachFde(Fn fn) {
+  EhFrameSection &ehFrame = *ctx.in.ehFrame;
   uint64_t hdrVA = getVA();
-  int64_t ehFramePtr = ehFrame->getParent()->addr - hdrVA - 4;
-  // Determine if 64-bit encodings are needed.
-  bool newLarge = !isInt<32>(ehFramePtr);
-
-  // Collect FDE entries. For each FDE, compute pcRel and fdeVARel relative to
-  // .eh_frame_hdr's VA.
-  fdes.clear();
-  SmallVector<uint8_t, 0> encs;
-  for (EhInputSection *sec : ehFrame->sections) {
-    encs.clear();
+  uint64_t ehFrameVA = ehFrame.getParent()->addr;
+  parallelFor(0, ehFrame.sections.size(), [&](size_t i) {
+    EhInputSection *sec = ehFrame.sections[i];
+    SmallVector<uint8_t, 2> encs;
     for (uint32_t off : sec->cieOutputOffs)
-      encs.push_back(ehFrame->fdeEncodings.lookup(off));
+      encs.push_back(ehFrame.fdeEncodings.lookup(off));
+    size_t j = ehFrame.firstFdes[i];
     for (const EhSectionPiece &fde : sec->fdes) {
       if (fde.outputOff == -1)
         continue;
+      size_t idx = j++;
       // Discard zero-range FDE, otherwise it would displace the FDE of the
       // next function, which shares its address.
       if (hasZeroPcRange(*sec, fde, encs[fde.cie]))
@@ -443,25 +405,58 @@ bool EhFrameHeader::updateAllocSize(Ctx &ctx) {
       const Relocation &reloc = sec->rels[fde.firstRelocation];
       assert(isa<Defined>(reloc.sym) && "isFdeLive should have checked this");
       int64_t pcRel = reloc.sym->getVA(ctx) + reloc.addend - hdrVA;
-      int64_t fdeVARel = ehFrame->getParent()->addr + fde.outputOff - hdrVA;
-      fdes.push_back({pcRel, fdeVARel});
-      newLarge |= !isInt<32>(pcRel) || !isInt<32>(fdeVARel);
+      int64_t fdeVARel = ehFrameVA + fde.outputOff - hdrVA;
+      fn(idx, pcRel, fdeVARel);
     }
-  }
+  });
+}
 
-  // Sort the FDE list by their PC and uniquify. Usually there is only one FDE
-  // at an address, but there can be more than one FDEs pointing to the address.
-  llvm::stable_sort(
-      fdes, [](const EhFrameSection::FdeData &a,
-               const EhFrameSection::FdeData &b) { return a.pcRel < b.pcRel; });
-  fdes.erase(llvm::unique(fdes,
-                          [](const EhFrameSection::FdeData &a,
-                             const EhFrameSection::FdeData &b) {
-                            return a.pcRel == b.pcRel;
-                          }),
-             fdes.end());
-  ehFrame->numFdes = fdes.size();
+// Return the FDE entries sorted by PC. Usually there is only one FDE at an
+// address, but there can be more than one FDEs pointing to the address. Keep
+// the first in .eh_frame.
+SmallVector<EhFrameHeader::FdeData, 0> EhFrameHeader::getFdeData() {
+  // Slots of zero-range FDEs keep INT64_MAX, which sorts last.
+  SmallVector<FdeData, 0> fdes(ctx.in.ehFrame->numFdes, {INT64_MAX, 0});
+  forEachFde([&](size_t i, int64_t pcRel, int64_t fdeVARel) {
+    fdes[i] = {pcRel, fdeVARel};
+  });
+  // Stable sort by PC. The entries usually form a few ascending runs, so merge
+  // adjacent runs pairwise.
+  auto less = [](const FdeData &a, const FdeData &b) {
+    return a.pcRel < b.pcRel;
+  };
+  SmallVector<size_t, 0> runs = {0};
+  for (size_t i = 1, e = fdes.size(); i < e; ++i)
+    if (less(fdes[i], fdes[i - 1]))
+      runs.push_back(i);
+  runs.push_back(fdes.size());
+  size_t numRuns = runs.size() - 1;
+  auto at = [&](size_t r) { return fdes.begin() + runs[std::min(r, numRuns)]; };
+  for (size_t w = 1; w < numRuns; w *= 2)
+    for (size_t r = 0; r < numRuns; r += 2 * w)
+      std::inplace_merge(at(r), at(r + w), at(r + 2 * w), less);
+  fdes.erase(
+      llvm::unique(fdes, [](const FdeData &a,
+                            const FdeData &b) { return a.pcRel == b.pcRel; }),
+      fdes.end());
+  if (!fdes.empty() && fdes.back().pcRel == INT64_MAX)
+    fdes.pop_back();
+  return fdes;
+}
 
+bool EhFrameHeader::updateAllocSize(Ctx &ctx) {
+  // This is called after `finalizeSynthetic`, so in the typical case without
+  // .relr.dyn, this function will not change the size and assignAddresses
+  // will not need another iteration.
+  EhFrameSection *ehFrame = ctx.in.ehFrame.get();
+
+  // Determine if 64-bit encodings are needed.
+  std::atomic<bool> newLarge =
+      !isInt<32>(ehFrame->getParent()->addr - getVA() - 4);
+  forEachFde([&](size_t, int64_t pcRel, int64_t fdeVARel) {
+    if (!isInt<32>(pcRel) || !isInt<32>(fdeVARel))
+      newLarge = true;
+  });
   large = newLarge;
 
   // Compute size.
@@ -474,6 +469,33 @@ bool EhFrameHeader::updateAllocSize(Ctx &ctx) {
     size = oldSize;
 
   return size != oldSize;
+}
+
+void EhFrameHeader::writeTo(uint8_t *buf) {
+  SmallVector<FdeData, 0> fdes = getFdeData();
+  int64_t ehFramePtr = ctx.in.ehFrame->getParent()->addr - getVA() - 4;
+  auto writeField = [&](uint8_t *buf, uint64_t val) {
+    large ? write64(ctx, buf, val) : write32(ctx, buf, val);
+  };
+
+  // version
+  buf[0] = 1;
+  // eh_frame_ptr_enc
+  buf[1] = DW_EH_PE_pcrel | (large ? DW_EH_PE_sdata8 : DW_EH_PE_sdata4);
+  // fde_count_enc
+  buf[2] = DW_EH_PE_udata4;
+  // table_enc
+  buf[3] = DW_EH_PE_datarel | (large ? DW_EH_PE_sdata8 : DW_EH_PE_sdata4);
+  buf += 4;
+  writeField(buf, ehFramePtr);
+  buf += large ? 8 : 4;
+  write32(ctx, buf, fdes.size());
+  buf += 4;
+  size_t entSize = large ? 16 : 8;
+  parallelFor(0, fdes.size(), [&](size_t i) {
+    writeField(buf + i * entSize, fdes[i].pcRel);
+    writeField(buf + i * entSize + entSize / 2, fdes[i].fdeVARel);
+  });
 }
 
 GotSection::GotSection(Ctx &ctx)
