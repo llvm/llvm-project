@@ -300,12 +300,18 @@ public:
                               ,
                           int> = 0>
   _LIBCPP_HIDE_FROM_ABI explicit shared_ptr(_Yp* __p) : __ptr_(__p) {
-    unique_ptr<_Yp> __hold(__p);
-    typedef typename __shared_ptr_default_allocator<_Yp>::type _AllocT;
-    typedef __shared_ptr_pointer<_Yp*, __shared_ptr_default_delete<_Tp, _Yp>, _AllocT> _CntrlBlk;
-    __cntrl_ = new _CntrlBlk(__p, __shared_ptr_default_delete<_Tp, _Yp>(), _AllocT());
-    __hold.release();
+    using _Dp       = __shared_ptr_default_delete<_Tp, _Yp>;
+    using _AllocT   = typename __shared_ptr_default_allocator<_Yp>::type;
+    using _CntrlBlk = __shared_ptr_pointer<_Yp*, _Dp, _AllocT>;
+    _Dp __d{};
+    auto __guard = std::__make_exception_guard([&] { __d(__p); });
+#ifndef _LIBCPP_CXX03_LANG
+    __cntrl_ = new _CntrlBlk(__p, std::move(__d), _AllocT());
+#else
+    __cntrl_ = new _CntrlBlk(__p, __d, _AllocT());
+#endif // not _LIBCPP_CXX03_LANG
     __enable_weak_this(__p, __p);
+    __guard.__complete();
   }
 
   template <class _Yp, class _Dp, __enable_if_t<__shared_ptr_deleter_ctor_reqs_v<_Dp, _Yp, _Tp>, int> = 0>
