@@ -3015,10 +3015,8 @@ public:
 
   ~VPConditionalInductionPHIRecipe() override = default;
 
-  /// Returns the underlying PHINode if one exists, or null otherwise.
-  PHINode *getPHINode() const {
-    return cast_if_present<PHINode>(getUnderlyingValue());
-  }
+  /// Returns the underlying PHINode.
+  PHINode *getPHINode() const { return cast<PHINode>(getUnderlyingValue()); }
 
   /// Returns the conditional induction descriptor for the recipe.
   const ConditionalInductionDescriptor &
