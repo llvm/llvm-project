@@ -1,20 +1,20 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -x hip -triple x86_64-unknown-linux-gnu -aux-triple amdgcn-amd-amdhsa \
+// RUN: %clang_cc1 -x hip -triple x86_64-unknown-linux-gnu -aux-triple amdgpu-amd-amdhsa \
 // RUN:   -fclangir -emit-cir %s -o - \
 // RUN:   | FileCheck %s --check-prefix=CIR-HOST --implicit-check-not=One --implicit-check-not=Missing
-// RUN: %clang_cc1 -x hip -triple x86_64-unknown-linux-gnu -aux-triple amdgcn-amd-amdhsa \
+// RUN: %clang_cc1 -x hip -triple x86_64-unknown-linux-gnu -aux-triple amdgpu-amd-amdhsa \
 // RUN:   -fclangir -emit-llvm %s -o - \
 // RUN:   | FileCheck %s --check-prefix=LLVM-HOST --implicit-check-not=One --implicit-check-not=Missing
-// RUN: %clang_cc1 -x hip -triple x86_64-unknown-linux-gnu -aux-triple amdgcn-amd-amdhsa \
+// RUN: %clang_cc1 -x hip -triple x86_64-unknown-linux-gnu -aux-triple amdgpu-amd-amdhsa \
 // RUN:   -emit-llvm %s -o - \
 // RUN:   | FileCheck %s --check-prefix=LLVM-HOST --implicit-check-not=One --implicit-check-not=Missing
-// RUN: %clang_cc1 -x hip -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-linux-gnu \
+// RUN: %clang_cc1 -x hip -triple amdgpu-amd-amdhsa -aux-triple x86_64-unknown-linux-gnu \
 // RUN:   -fcuda-is-device -fclangir -emit-cir %s -o - \
 // RUN:   | FileCheck %s --check-prefix=CIR-DEV --implicit-check-not=Host --implicit-check-not=Missing
-// RUN: %clang_cc1 -x hip -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-linux-gnu \
+// RUN: %clang_cc1 -x hip -triple amdgpu-amd-amdhsa -aux-triple x86_64-unknown-linux-gnu \
 // RUN:   -fcuda-is-device -fclangir -emit-llvm %s -o - \
 // RUN:   | FileCheck %s --check-prefix=LLVM-DEV --implicit-check-not=Host --implicit-check-not=Missing
-// RUN: %clang_cc1 -x hip -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-linux-gnu \
+// RUN: %clang_cc1 -x hip -triple amdgpu-amd-amdhsa -aux-triple x86_64-unknown-linux-gnu \
 // RUN:   -fcuda-is-device -emit-llvm %s -o - \
 // RUN:   | FileCheck %s --check-prefix=LLVM-DEV --implicit-check-not=Host --implicit-check-not=Missing
 
