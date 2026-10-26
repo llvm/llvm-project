@@ -79,7 +79,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVLoadStoreOptPass(*PR);
   initializeRISCVPreAllocZilsdOptPass(*PR);
   initializeRISCVExpandPseudoAtomicsLegacyPass(*PR);
-  initializeRISCVRedundantCopyEliminationPass(*PR);
+  initializeRISCVRedundantCopyEliminationLegacyPass(*PR);
   initializeRISCVAsmPrinterPass(*PR);
   initializeRISCVPromoteConstantLegacyPass(*PR);
 }
@@ -587,7 +587,7 @@ void RISCVPassConfig::addFastRegAlloc() {
 
 void RISCVPassConfig::addPostRegAlloc() {
   if (TM->getOptLevel() != CodeGenOptLevel::None && CLOpts.enable_copyelim)
-    addPass(createRISCVRedundantCopyEliminationPass());
+    addPass(createRISCVRedundantCopyEliminationLegacyPass());
 }
 
 bool RISCVPassConfig::addILPOpts() {

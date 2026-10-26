@@ -57,6 +57,8 @@ MACHINE_FUNCTION_PASS("riscv-make-compressible", RISCVMakeCompressiblePass())
 MACHINE_FUNCTION_PASS("riscv-merge-base-offset", RISCVMergeBaseOffsetPass())
 MACHINE_FUNCTION_PASS("riscv-opt-w-instrs", RISCVOptWInstrsPass())
 MACHINE_FUNCTION_PASS("riscv-qc-relax-marking", RISCVQCRelaxMarkingPass())
+MACHINE_FUNCTION_PASS("riscv-redundant-copy-elimination",
+                      RISCVRedundantCopyEliminationPass())
 MACHINE_FUNCTION_PASS("riscv-vector-peephole", RISCVVectorPeepholePass())
 MACHINE_FUNCTION_PASS("riscv-vl-optimizer", RISCVVLOptimizerPass())
 MACHINE_FUNCTION_PASS("riscv-vmv0-elimination", RISCVVMV0EliminationPass())

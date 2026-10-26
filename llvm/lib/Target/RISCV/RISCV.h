@@ -224,8 +224,19 @@ public:
 FunctionPass *createRISCVInsertWriteVXRMLegacyPass();
 void initializeRISCVInsertWriteVXRMLegacyPass(PassRegistry &);
 
-FunctionPass *createRISCVRedundantCopyEliminationPass();
-void initializeRISCVRedundantCopyEliminationPass(PassRegistry &);
+class RISCVRedundantCopyEliminationPass
+    : public OptionalPassInfoMixin<RISCVRedundantCopyEliminationPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+
+  MachineFunctionProperties getRequiredProperties() const {
+    return MachineFunctionProperties().setNoVRegs();
+  }
+};
+
+FunctionPass *createRISCVRedundantCopyEliminationLegacyPass();
+void initializeRISCVRedundantCopyEliminationLegacyPass(PassRegistry &);
 
 FunctionPass *createRISCVMoveMergePass();
 void initializeRISCVMoveMergePass(PassRegistry &);
