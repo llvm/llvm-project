@@ -1818,7 +1818,7 @@ llvm::Error ScriptInterpreterPythonImpl::SetBreakpointCommandCallback(
 }
 
 // Set a Python one-liner as the callback for the watchpoint.
-Status ScriptInterpreterPythonImpl::SetWatchpointCommandCallback(
+llvm::Error ScriptInterpreterPythonImpl::SetWatchpointCommandCallback(
     WatchpointOptions *wp_options, const char *user_input, bool is_callback) {
   auto data_up = std::make_unique<WatchpointOptions::CommandData>();
 
@@ -1832,13 +1832,13 @@ Status ScriptInterpreterPythonImpl::SetWatchpointCommandCallback(
 
   if (!GenerateWatchpointCommandCallbackData(
           data_up->user_source, data_up->script_source, is_callback))
-    return Status::FromErrorString("failed to generate watchpoint callback");
+    return llvm::createStringError("failed to generate watchpoint callback");
 
   auto baton_sp =
       std::make_shared<WatchpointOptions::CommandBaton>(std::move(data_up));
   wp_options->SetCallback(
       ScriptInterpreterPythonImpl::WatchpointCallbackFunction, baton_sp);
-  return Status();
+  return llvm::Error::success();
 }
 
 Status ScriptInterpreterPythonImpl::ExportFunctionDefinitionToInterpreter(

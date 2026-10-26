@@ -125,10 +125,10 @@ llvm::Error ScriptInterpreterNone::SetBreakpointCommandCallbackFunction(
       bp_options, function_name, extra_args_sp);
 }
 
-Status ScriptInterpreterNone::SetWatchpointCommandCallback(
+llvm::Error ScriptInterpreterNone::SetWatchpointCommandCallback(
     WatchpointOptions *wp_options, const char *user_input, bool is_callback) {
   if (llvm::Error unavailable = GetUnavailableError())
-    return Status::FromError(std::move(unavailable));
+    return unavailable;
   return ScriptInterpreter::SetWatchpointCommandCallback(wp_options, user_input,
                                                          is_callback);
 }

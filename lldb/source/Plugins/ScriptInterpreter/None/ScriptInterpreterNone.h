@@ -51,9 +51,9 @@ public:
   CollectDataForWatchpointCommandCallback(WatchpointOptions *wp_options,
                                           CommandReturnObject &result) override;
 
-  Status SetWatchpointCommandCallback(WatchpointOptions *wp_options,
-                                      const char *user_input,
-                                      bool is_callback) override;
+  llvm::Error SetWatchpointCommandCallback(WatchpointOptions *wp_options,
+                                           const char *user_input,
+                                           bool is_callback) override;
 
   // Static Functions
   static void Initialize();

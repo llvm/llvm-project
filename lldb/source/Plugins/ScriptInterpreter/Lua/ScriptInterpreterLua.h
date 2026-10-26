@@ -93,9 +93,9 @@ public:
                                            const char *command_body_text,
                                            bool is_callback) override;
 
-  Status SetWatchpointCommandCallback(WatchpointOptions *wp_options,
-                                      const char *command_body_text,
-                                      bool is_callback) override;
+  llvm::Error SetWatchpointCommandCallback(WatchpointOptions *wp_options,
+                                           const char *command_body_text,
+                                           bool is_callback) override;
 
   llvm::Error SetBreakpointCommandCallbackFunction(
       BreakpointOptions &bp_options, const char *function_name,

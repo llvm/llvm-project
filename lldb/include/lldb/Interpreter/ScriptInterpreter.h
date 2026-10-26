@@ -301,10 +301,10 @@ public:
   }
 
   /// Set a one-liner as the callback for the watchpoint.
-  virtual Status SetWatchpointCommandCallback(WatchpointOptions *wp_options,
-                                              const char *user_input,
-                                              bool is_callback) {
-    return Status::FromErrorString("not implemented");
+  virtual llvm::Error
+  SetWatchpointCommandCallback(WatchpointOptions *wp_options,
+                               const char *user_input, bool is_callback) {
+    return llvm::createStringError("not implemented");
   }
 
   virtual bool GetScriptedSummary(const char *function_name,

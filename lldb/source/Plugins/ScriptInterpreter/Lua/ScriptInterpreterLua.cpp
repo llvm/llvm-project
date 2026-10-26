@@ -129,12 +129,11 @@ public:
     case eIOHandlerWatchpoint: {
       auto *wp_options =
           static_cast<WatchpointOptions *>(io_handler.GetUserData());
-      Status error = m_script_interpreter.SetWatchpointCommandCallback(
-          wp_options, data.c_str(), /*is_callback=*/false);
-      if (error.Fail()) {
+      if (llvm::Error error = m_script_interpreter.SetWatchpointCommandCallback(
+              wp_options, data.c_str(), /*is_callback=*/false)) {
         LockedStreamFile locked_stream =
             io_handler.GetErrorStreamFileSP()->Lock();
-        locked_stream << error.AsCString() << '\n';
+        locked_stream << llvm::toString(std::move(error)) << '\n';
       }
       io_handler.SetIsDone(true);
     } break;
@@ -384,10 +383,11 @@ llvm::Error ScriptInterpreterLua::RegisterBreakpointCallback(
   return llvm::Error::success();
 }
 
-Status ScriptInterpreterLua::SetWatchpointCommandCallback(
+llvm::Error ScriptInterpreterLua::SetWatchpointCommandCallback(
     WatchpointOptions *wp_options, const char *command_body_text,
     bool is_callback) {
-  return RegisterWatchpointCallback(wp_options, command_body_text, {});
+  return RegisterWatchpointCallback(wp_options, command_body_text, {})
+      .takeError();
 }
 
 Status ScriptInterpreterLua::RegisterWatchpointCallback(

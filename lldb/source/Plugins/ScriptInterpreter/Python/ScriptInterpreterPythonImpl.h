@@ -199,9 +199,9 @@ public:
                                bool uses_extra_args, bool is_callback);
 
   /// Set a one-liner as the callback for the watchpoint.
-  Status SetWatchpointCommandCallback(WatchpointOptions *wp_options,
-                                      const char *user_input,
-                                      bool is_callback) override;
+  llvm::Error SetWatchpointCommandCallback(WatchpointOptions *wp_options,
+                                           const char *user_input,
+                                           bool is_callback) override;
 
   const char *GetDictionaryName() { return m_dictionary_name.c_str(); }
 

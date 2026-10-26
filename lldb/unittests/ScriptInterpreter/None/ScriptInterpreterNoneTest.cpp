@@ -87,11 +87,9 @@ TEST_F(ScriptInterpreterNoneTest, ReportsRecordedErrorForCallbacks) {
       llvm::FailedWithMessage(expected));
 
   WatchpointOptions wp_options;
-  EXPECT_EQ(interpreter
-                .SetWatchpointCommandCallback(&wp_options, "print(1)",
-                                              /*is_callback=*/false)
-                .AsCString(),
-            expected);
+  EXPECT_THAT_ERROR(interpreter.SetWatchpointCommandCallback(
+                        &wp_options, "print(1)", /*is_callback=*/false),
+                    llvm::FailedWithMessage(expected));
 
   std::vector<std::reference_wrapper<BreakpointOptions>> bp_options_vec = {
       bp_options};
