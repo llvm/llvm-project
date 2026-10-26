@@ -1075,14 +1075,23 @@ static const SCEV *getNumBytes(const SCEV *BECount, Type *IntPtr,
 /// calling the library function, so bail if the bound exceeds a cap.
 static void addRangeAttrFromTripCount(CallInst *NewCall, uint64_t ElemsPerIter,
                                       Loop *L, ScalarEvolution *SE) {
-  Use &Len = isa<MemSetPatternInst>(NewCall)
-                 ? cast<MemSetPatternInst>(NewCall)->getLengthUse()
-                 : cast<AnyMemIntrinsic>(NewCall)->getLengthUse();
+  Use *LenUse;
+  if (auto *MSP = dyn_cast<MemSetPatternInst>(NewCall))
+    LenUse = &MSP->getLengthUse();
+  else if (auto *MI = dyn_cast<AnyMemIntrinsic>(NewCall))
+    LenUse = &MI->getLengthUse();
+  else
+    llvm_unreachable("Expected a memset.pattern or a memory intrinsic");
 
-  constexpr uint64_t MaxBoundedLen = 1 << 16;
-  if (isa<Constant>(Len) || ElemsPerIter > MaxBoundedLen)
+  // Bail if already a constant (range would be a constant too).
+  if (isa<Constant>(LenUse->get()))
     return;
 
+  // Cap all contributing parts at 64k (large upper bounds are not useful).
+  constexpr uint64_t MaxBoundedLen = 1 << 16;
+
+  if (ElemsPerIter > MaxBoundedLen)
+    return;
   const APInt *MaxBTC;
   if (!match(SE->getConstantMaxBackedgeTakenCount(L), m_scev_APInt(MaxBTC)))
     return;
@@ -1098,12 +1107,12 @@ static void addRangeAttrFromTripCount(CallInst *NewCall, uint64_t ElemsPerIter,
   // ConstantRange's upper end is exclusive, so the range ends at MaxLen + 1,
   // which must fit in the length's type.
   uint64_t RangeEnd = MaxLen + 1;
-  unsigned BW = Len->getType()->getIntegerBitWidth();
+  unsigned BW = LenUse->get()->getType()->getIntegerBitWidth();
   if (RangeEnd > maxUIntN(BW))
     return;
 
   NewCall->addParamAttr(
-      Len.getOperandNo(),
+      LenUse->getOperandNo(),
       Attribute::get(NewCall->getContext(), Attribute::Range,
                      ConstantRange(APInt::getZero(BW), APInt(BW, RangeEnd))));
 }
