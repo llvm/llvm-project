@@ -1,0 +1,41 @@
+! RUN: %flang_fc1 -fdebug-unparse %s 2>&1 | FileCheck %s
+! max(a, max(a, x)) folds to max(a, x), and likewise for min, whenever an
+! operand of the outer call is structurally identical to an operand of the
+! nested call, in any operand order; the repeated operand need not be a
+! constant.  Besides being a valid simplification, this makes an extent written
+! to a module file as max(0,ubound(a,dim)) read back as the same expression
+! tree: re-analyzing ubound() re-expands to max(0,...) and would otherwise
+! wrap one more level on every round trip.
+subroutine s(n, m)
+  integer, intent(in) :: n, m
+  ! All four orientations of a repeated constant.
+  !CHECK: PRINT *, max(0_4,n)
+  print *, max(0, max(0, n))
+  !CHECK: PRINT *, max(n,0_4)
+  print *, max(0, max(n, 0))
+  !CHECK: PRINT *, max(0_4,n)
+  print *, max(max(0, n), 0)
+  !CHECK: PRINT *, max(n,0_4)
+  print *, max(max(n, 0), 0)
+  !CHECK: PRINT *, max(0_4,n)
+  print *, max(0, max(0, max(0, n)))
+  !CHECK: PRINT *, min(7_4,n)
+  print *, min(7, min(7, n))
+  ! A repeated non-constant operand collapses too.
+  !CHECK: PRINT *, max(m,n)
+  print *, max(m, max(m, n))
+  !CHECK: PRINT *, max(n,m)
+  print *, max(max(n, m), m)
+  !CHECK: PRINT *, min(n+1_4,m)
+  print *, min(n + 1, min(n + 1, m))
+  ! Different operands do not collapse.
+  !CHECK: PRINT *, max(0_4,max(1_4,n))
+  print *, max(0, max(1, n))
+  !CHECK: PRINT *, max(m,max(n,n+1_4))
+  print *, max(m, max(n, n + 1))
+  ! Mixed min/max does not collapse.
+  !CHECK: PRINT *, max(0_4,min(0_4,n))
+  print *, max(0, min(0, n))
+  !CHECK: PRINT *, min(m,max(m,n))
+  print *, min(m, max(m, n))
+end subroutine

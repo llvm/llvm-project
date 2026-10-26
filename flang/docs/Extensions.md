@@ -559,8 +559,8 @@ print *, is_contiguous(a(::2))                   ! prints T in Flang
 * A nonallocatable nonpointer function result may be declared with a
   rank-1 integer array as its bounds (F2023 R818 `explicit-shape-bounds-spec`),
   e.g. `real :: res(shape_of_input)`.  F2023 C816 permits only an
-  `explicit-shape-spec-list` there, although R814 and C749 allow the rank-1
-  form for other entities and for components.
+  `explicit-shape-spec-list` there, although R814 allows the rank-1 form
+  for other entities.
 * `PRINT namelistname` is accepted and interpreted as
   `WRITE(*,NML=namelistname)`, a near-universal extension.
 * A character length specifier in a component or entity declaration

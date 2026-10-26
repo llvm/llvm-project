@@ -24,6 +24,9 @@
 ! RUN: %flang_fc1 -fsyntax-only -J%t %t/submod_child.f90
 ! RUN: FileCheck %s --check-prefix=SUBMOD --input-file=%t/m_submod-child.mod
 ! RUN: %flang_fc1 -fsyntax-only -J%t %t/submod_grandchild.f90
+! RUN: %flang_fc1 -fsyntax-only -J%t %t/fixedpoint_parent.f90
+! RUN: %flang_fc1 -fsyntax-only -J%t %t/fixedpoint_child.f90
+! RUN: %flang_fc1 -fsyntax-only -J%t %t/fixedpoint_consumer.f90
 ! RUN: %flang_fc1 -fsyntax-only -J%t %t/consumer.f90
 
 ! `a` has the default lower bound 1, so UBOUND(a,dim) is exact for every
@@ -153,6 +156,72 @@ contains
     call sep([2, 5], [7, 7], [.true., .true.], bb, zz)
   end procedure
 end submodule
+
+! A written bound must read back as the same expression tree, not merely the
+! same value.  The stored extent is max(0,ub) with ub a tagged element printed
+! as ubound(z,dim=2,kind=8); re-analyzing that text folds UBOUND back to
+! max(0,ub), so without the fold collapsing max(0,max(0,x)) to max(0,x) the
+! copy read from the module file would gain a wrapper on every round trip.
+! Dummy array shapes are compared leniently and would not notice; function
+! results, procedure-pointer targets, and character lengths are compared
+! structurally and would be rejected as having distinct extents.  No FileCheck:
+! the assertion is that the child and the consumer compile.
+!--- fixedpoint_parent.f90
+module m_fixedpoint
+  interface
+    module function g(n, m, c, z) result(r)
+      integer, intent(in) :: n(2), m(2)
+      logical, intent(in) :: c(2)
+      real, intent(in) :: z(merge(n, m, c))
+      real :: r(ubound(z, 2))
+    end function
+    module subroutine s(n, m, c, z, str)
+      integer, intent(in) :: n(2), m(2)
+      logical, intent(in) :: c(2)
+      real, intent(in) :: z(merge(n, m, c))
+      character(len=size(z, 2)), intent(in) :: str
+    end subroutine
+  end interface
+end module
+
+! Separate module procedures redeclare the interface's result and character
+! length; the comparison against the interface read from m_fixedpoint.mod is
+! structural.
+!--- fixedpoint_child.f90
+submodule(m_fixedpoint) child
+contains
+  module function g(n, m, c, z) result(r)
+    integer, intent(in) :: n(2), m(2)
+    logical, intent(in) :: c(2)
+    real, intent(in) :: z(merge(n, m, c))
+    real :: r(ubound(z, 2))
+    r = 3.0
+  end function
+  module subroutine s(n, m, c, z, str)
+    integer, intent(in) :: n(2), m(2)
+    logical, intent(in) :: c(2)
+    real, intent(in) :: z(merge(n, m, c))
+    character(len=size(z, 2)), intent(in) :: str
+  end subroutine
+end submodule
+
+! A procedure pointer whose interface is declared locally is associated with
+! the module function read back from m_fixedpoint.mod; the result extents are
+! compared structurally.
+!--- fixedpoint_consumer.f90
+program fixedpoint_consumer
+  use m_fixedpoint, only: g
+  interface
+    function gi(n, m, c, z) result(r)
+      integer, intent(in) :: n(2), m(2)
+      logical, intent(in) :: c(2)
+      real, intent(in) :: z(merge(n, m, c))
+      real :: r(ubound(z, 2))
+    end function
+  end interface
+  procedure(gi), pointer :: pp
+  pp => g
+end program
 
 !--- consumer.f90
 program p
