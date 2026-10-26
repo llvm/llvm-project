@@ -5731,6 +5731,16 @@ void ASTWriter::prepareLazyUpdates() {
       if (Kind == DeclUpdateKind::CXXAddedFunctionDefinition)
         DeclUpdatesTmp[D].push_back(
             ASTWriter::DeclUpdate(DeclUpdateKind::CXXAddedFunctionDefinition));
+      else if (Kind == DeclUpdateKind::CXXResolvedDtorDelete ||
+               Kind == DeclUpdateKind::CXXResolvedDtorGlobDelete ||
+               Kind == DeclUpdateKind::CXXResolvedDtorArrayDelete ||
+               Kind == DeclUpdateKind::CXXResolvedDtorGlobArrayDelete)
+        // These record the 'operator delete' that Sema resolved for a virtual
+        // destructor in this TU.  An importer cannot recompute it: the
+        // destructor may already have a body or be defined in another TU.  But
+        // codegen needs it, since in the Microsoft ABI the deleting destructor
+        // is emitted along with the vtable.  Keep them eager.
+        DeclUpdatesTmp[D].push_back(Update);
       else
         DeclUpdatesLazy[D].push_back(Update);
     }
