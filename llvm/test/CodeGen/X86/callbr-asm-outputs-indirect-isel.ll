@@ -444,3 +444,42 @@ z.split:
   %sum = fadd double %d, %f
   ret double %sum
 }
+
+; Likewise for an output in a specific physical register, which is live into
+; the indirect target.
+define float @float_in_eax(i32 %x) {
+  ; CHECK-LABEL: name: float_in_eax
+  ; CHECK: bb.0.entry:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000), %bb.2(0x00000000)
+  ; CHECK-NEXT:   liveins: $edi
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY $edi
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr32_norex2 = COPY [[COPY]]
+  ; CHECK-NEXT:   INLINEASM_BR &"", attdialect, regdef, implicit-def $eax, reguse:GR32_NOREX2, [[COPY1]], imm, %bb.2
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr32 = COPY $eax
+  ; CHECK-NEXT:   [[MOVDI2SSrr:%[0-9]+]]:fr32 = MOVDI2SSrr [[COPY2]]
+  ; CHECK-NEXT:   JMP_1 %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1.cleanup:
+  ; CHECK-NEXT:   [[FsFLD0SS:%[0-9]+]]:fr32 = FsFLD0SS
+  ; CHECK-NEXT:   $xmm0 = COPY [[FsFLD0SS]]
+  ; CHECK-NEXT:   RET 0, $xmm0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2.z.split (inlineasm-br-indirect-target):
+  ; CHECK-NEXT:   liveins: $eax
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gr32 = COPY $eax
+  ; CHECK-NEXT:   [[MOVDI2SSrr1:%[0-9]+]]:fr32 = MOVDI2SSrr [[COPY3]]
+  ; CHECK-NEXT:   $xmm0 = COPY [[MOVDI2SSrr1]]
+  ; CHECK-NEXT:   RET 0, $xmm0
+entry:
+  %direct = callbr float asm "", "={eax},r,!i"(i32 %x)
+          to label %cleanup [label %z.split]
+
+cleanup:
+  ret float 0.000000e+00
+
+z.split:
+  %indirect = call float @llvm.callbr.landingpad.f32(float %direct)
+  ret float %indirect
+}
