@@ -137,54 +137,55 @@ bool RemoveLoadsIntoFakeUses::run(MachineFunction &MF) {
       if (MI.getRestoreSize(TII)) {
         Register Reg = MI.getOperand(0).getReg();
         // Don't delete live physreg defs, or any reserved register defs.
-        if (!LivePhysRegs.available(Reg) || MRI->isReserved(Reg))
-          continue;
-        // There should typically be an exact match between the loaded register
-        // and the FAKE_USE, but sometimes regalloc will choose to load a larger
-        // value than is needed. Therefore, as long as the load isn't used by
-        // anything except at least one FAKE_USE, we will delete it. If it isn't
-        // used by any fake uses, it should still be safe to delete but we
-        // choose to ignore it so that this pass has no side effects unrelated
-        // to fake uses.
-        SmallDenseSet<MachineInstr *> FakeUsesToDelete;
-        for (MachineInstr *&FakeUse : reverse(RegFakeUses)) {
-          if (FakeUse->readsRegister(Reg, TRI)) {
-            FakeUsesToDelete.insert(FakeUse);
-            RegFakeUses.erase(&FakeUse);
+        if (LivePhysRegs.available(Reg) && !MRI->isReserved(Reg)) {
+          // There should typically be an exact match between the loaded
+          // register and the FAKE_USE, but sometimes regalloc will choose to
+          // load a larger value than is needed. Therefore, as long as the load
+          // isn't used by anything except at least one FAKE_USE, we will
+          // delete it. If it isn't used by any fake uses, it should still be
+          // safe to delete but we choose to ignore it so that this pass has no
+          // side effects unrelated to fake uses.
+          SmallDenseSet<MachineInstr *> FakeUsesToDelete;
+          for (MachineInstr *&FakeUse : reverse(RegFakeUses)) {
+            if (FakeUse->readsRegister(Reg, TRI)) {
+              FakeUsesToDelete.insert(FakeUse);
+              RegFakeUses.erase(&FakeUse);
+            }
+          }
+          if (!FakeUsesToDelete.empty()) {
+            LLVM_DEBUG(dbgs() << "RemoveLoadsIntoFakeUses: DELETING: " << MI);
+            // Since this load only exists to restore a spilled register and
+            // we haven't run LiveDebugValues yet, there shouldn't be any
+            // DBG_VALUEs for this load; otherwise, deleting this would be
+            // incorrect.
+            MI.eraseFromParent();
+            AnyChanges = true;
+            ++NumLoadsDeleted;
+            for (MachineInstr *FakeUse : FakeUsesToDelete) {
+              LLVM_DEBUG(dbgs()
+                         << "RemoveLoadsIntoFakeUses: DELETING: " << *FakeUse);
+              FakeUse->eraseFromParent();
+            }
+            NumFakeUsesDeleted += FakeUsesToDelete.size();
+            continue;
           }
         }
-        if (!FakeUsesToDelete.empty()) {
-          LLVM_DEBUG(dbgs() << "RemoveLoadsIntoFakeUses: DELETING: " << MI);
-          // Since this load only exists to restore a spilled register and we
-          // haven't, run LiveDebugValues yet, there shouldn't be any DBG_VALUEs
-          // for this load; otherwise, deleting this would be incorrect.
-          MI.eraseFromParent();
-          AnyChanges = true;
-          ++NumLoadsDeleted;
-          for (MachineInstr *FakeUse : FakeUsesToDelete) {
-            LLVM_DEBUG(dbgs()
-                       << "RemoveLoadsIntoFakeUses: DELETING: " << *FakeUse);
-            FakeUse->eraseFromParent();
-          }
-          NumFakeUsesDeleted += FakeUsesToDelete.size();
-        }
-        continue;
       }
 
       // In addition to tracking LivePhysRegs, we need to clear RegFakeUses each
-      // time a register is defined, as existing FAKE_USEs no longer apply to
-      // that register.
+      // time a register is defined or clobbered, as existing FAKE_USEs no
+      // longer apply to that register.
       if (!RegFakeUses.empty()) {
-        for (const MachineOperand &MO : MI.operands()) {
-          if (!MO.isReg())
-            continue;
-          Register Reg = MO.getReg();
-          // We clear RegFakeUses for this register and all subregisters,
-          // because any such FAKE_USE encountered prior is no longer relevant
-          // for later encountered loads.
-          for (MachineInstr *&FakeUse : reverse(RegFakeUses))
-            if (FakeUse->readsRegister(Reg, TRI))
-              RegFakeUses.erase(&FakeUse);
+        for (MachineInstr *&FakeUse : reverse(RegFakeUses)) {
+          bool Modified = false;
+          for (const MachineOperand &MO : FakeUse->operands()) {
+            if (MO.isReg() && MI.modifiesRegister(MO.getReg(), TRI)) {
+              Modified = true;
+              break;
+            }
+          }
+          if (Modified)
+            RegFakeUses.erase(&FakeUse);
         }
       }
       if (!MI.isDebugInstr())
