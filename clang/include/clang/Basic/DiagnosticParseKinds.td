@@ -1565,6 +1565,9 @@ def err_omp_expected_context_selector
     : Error<"expected valid context selector in %0">;
 def warn_omp_default_deprecated : Warning<"'default' clause for"
   " 'metadirective' is deprecated; use 'otherwise' instead">, InGroup<Deprecated>;
+def err_omp_metadirective_standalone_variant : Error<
+  "standalone directive variants are not supported in a 'metadirective' "
+  "with non-constant user conditions">;
 def err_omp_requires_out_inout_depend_type : Error<
   "reserved locator 'omp_all_memory' requires 'out' or 'inout' "
   "dependency types">;

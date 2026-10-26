@@ -449,6 +449,9 @@ void ModuleShaderFlags::initialize(Module &M, DXILResourceTypeMap &DRTM,
       // An unused signature element still contributes to the shader's type
       // requirements even when no instruction uses that component type.
       if (const EntrySignature *Sig = Signatures.get(F)) {
+        CSF.Barycentrics |= llvm::any_of(Sig->Inputs, [](const auto &E) {
+          return E.SemanticKind == dxbc::PSV::SemanticKind::Barycentrics;
+        });
         auto HasLowPrecision = [](const auto &Elements) {
           return llvm::any_of(Elements, [](const auto &E) {
             return E.CompType == ElementType::F16 ||

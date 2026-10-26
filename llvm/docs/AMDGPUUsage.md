@@ -2614,6 +2614,13 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
     The iglp_opt strategy implementations are subject to change.
 * - llvm.amdgcn.s.getpc
   - Provides access to the s_getpc_b64 instruction, but with the return value sign-extended from the width of the underlying PC hardware register even on processors where the s_getpc_b64 instruction returns a zero-extended value.
+* - llvm.amdgcn.implicit.buffer.ptr
+  - Returns the implicit buffer pointer. This is pointer is passed in
+    the first two user SGPRs of graphics and compute shaders for the
+    `mesa3d` OS on targets without architected flat scratch. The
+    backend uses it to set up the scratch buffer resource. It is an
+    error to use for other ABIs, for kernels and non-entry functions,
+    and on targets with architected flat scratch.
 * - llvm.amdgcn.ballot
   - Returns a bitfield(i32 or i64) containing the result of its i1 argument in all active lanes, and zero in all inactive lanes.
     Provides a way to convert i1 in LLVM IR to i32 or i64 lane mask - bitfield used by hardware to control active lanes when used in EXEC register.
