@@ -21905,7 +21905,8 @@ static bool checkOMPArraySectionConstantForReduction(
 
     // This is an array subscript which has implicit length 1!
     SingleElement = true;
-    ArraySizes.push_back(llvm::APSInt::get(1));
+    llvm::APSInt ConstantOne = llvm::APSInt::get(1);
+    ArraySizes.push_back(ConstantOne);
   } else {
     Expr::EvalResult Result;
     if (!Length->EvaluateAsInt(Result, Context))
