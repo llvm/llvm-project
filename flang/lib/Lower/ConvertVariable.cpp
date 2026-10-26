@@ -2560,9 +2560,9 @@ isCapturedInInternalProcedure(Fortran::lower::AbstractConverter &converter,
     return false;
   if (const auto *host =
           funit->parent.getIf<Fortran::lower::pft::FunctionLikeUnit>()) {
-    // Only canonical host globals share storage with sibling procedures.
-    // Private copies can resolve to the same ultimate symbol but have separate
-    // storage and are absent from the canonical global capture set.
+    // Treat a symbol as captured here when both conditions hold:
+    // - It is declared in the immediate host procedure.
+    // - It belongs to the host's global capture set, excluding private copies.
     if (&sym.owner() == &host->getScope() &&
         host->getHostAssoc().isAssociatedGlobal(sym))
       return true;
