@@ -1134,8 +1134,18 @@ static void addCoreInSPIRV13Capability(SPIRV::RequirementHandler &Reqs,
                                        SPIRV::Capability::Capability Cap,
                                        SPIRV::Extension::Extension Ext) {
   Reqs.addCapability(Cap);
-  if (!ST.isAtLeastSPIRVVer(VersionTuple(1, 3)))
-    Reqs.addExtension(Ext);
+  if (ST.isAtLeastSPIRVVer(VersionTuple(1, 3)))
+    return;
+  if (!ST.canUseExtension(Ext))
+    report_fatal_error(
+        Twine("capability ") +
+            getSymbolicOperandMnemonic(
+                SPIRV::OperandCategory::CapabilityOperand, Cap) +
+            " requires SPIR-V 1.3 or the following SPIR-V extension: " +
+            getSymbolicOperandMnemonic(SPIRV::OperandCategory::ExtensionOperand,
+                                       Ext),
+        false);
+  Reqs.addExtension(Ext);
 }
 
 // Add the required capabilities from a decoration instruction (including
