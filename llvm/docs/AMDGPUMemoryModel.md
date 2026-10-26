@@ -2,7 +2,6 @@
 
 # AMDGPU Memory Model
 
-
 ## Introduction
 
 The {ref}`LLVM memory model<memmodel>` provides broad guarantees that are
@@ -10,8 +9,8 @@ sufficient to implement inter-thread communication via memory. But in most
 communication patterns, not all memory accesses performed by a thread need to be
 exposed to other threads. Even when they do need to be exposed, not all threads
 may need to observe these memory accesses. This document describes the *AMDGPU
-memory model* that allows the user to control how the side-effects of memory
-accesses are propagated across threads. The programmer expresses this using
+memory model* that allows the user to control how the effect of each write
+operation is propagated across threads. The programmer expresses this using
 **new intrinsics and metadata** as described below, and the implementation can
 then choose a more efficient mechanism to complete them, such as the cache
 policy bits in an AMDGPU device.
@@ -24,15 +23,20 @@ executions that are valid in both models.
 
 ## Terminology
 
-Memory Accesses
+Operation
+: An action performed by a dynamic instance. A single dynamic instance may
+  perform one or more operations, and may be used interchangeably with the
+  operations it performs. For example, executing a `store atomic release`
+  instruction performs a store operation as well as a release operation.
 
-: Operations that read or write locations in memory are termed as *memory
-  accesses*. Typical examples are `load`, `store` and atomic instructions,
-  as well as many intrinsics.
+Memory Access
+: An operation that returns or changes the state of memory. For example:
+  - non-atomic `load` and `store` instructions
+  - load/store operations performed by `atomic` instructions
+  - *visibility* and *availability* operations
 
-Synchronizing Operations
-
-: Synchronizing operations control how the side-effects of memory accesses are
+Synchronizing Operation
+: Synchronizing operations control how the effects of write operations are
   propagated in the system. Typical examples are atomic operations (including
   fences) with at least `release` or `acquire` ordering.
 
@@ -104,7 +108,7 @@ scope corresponding to `S'` is also termed as the *common scope* of `X` and `Y`.
 #### Inclusive Scopes
 
 Two operations `X` and `Y` are said to have *inclusive scopes* if their common
-scope instance contains both of `X` and `Y`. [Informational note --- In other
+scope instance contains both `X` and `Y`. [Informational note --- In other
 words, `X` and `Y` have inclusive scopes if the scope instance of each contains
 the other.]
 
@@ -114,21 +118,21 @@ The AMDGPU memory model is built on top of the {ref}`happens-before<memmodel>`
 order defined by the LLVM memory model. But when one of the new intrinsics or
 metadata is used, **happens-before by itself is not sufficient** to describe its
 observable effects. Instead, the AMDGPU model uses *availability* and
-*visibility* to describe how the side-effects of these operations propagate to
+*visibility* to describe how the effects of these operations propagate to
 other threads.
 
-Availability determines how *far* the side-effects of a write have been
-forwarded in the system relative to that write. Visibility determines how
-*close* the side-effects of the same write have reached relative to an observer
-operation (typically a read).
+Availability determines how *far* the effect of a write has been forwarded in
+the system relative to that write. Visibility determines how *close* the effect
+of the same write has reached relative to an observer operation (typically a
+read).
 
 The AMDGPU memory model *does not change the structure of happens-before*, but
-changes the rules that determine how operations may observe the side-effects of
+changes the rules that determine how operations may observe the effects of
 other operations that *happen-before* them.
 
 Consider a write `W` that `happens-before` a read `R` to the same address:
 
-- `R` can potentially observe the side-effects of `W` **only if W is
+- `R` can potentially observe the effect of `W` **only if W is
   visible** to `R`.
 - `W` can potentially be visible to `R` **only if W is first made
   available** to `R`.
@@ -160,7 +164,7 @@ cache will fail to observe this store.
 ### store-available
 
 A *store-available* operation `X` writes data to the specified location, and
-then propagates those side-effects up to its scope instance `S` and also all
+then propagates this effect up to its scope instance `S` and also all
 the subscope instances of `S` that contain `X`.
 
 ```llvm
@@ -177,7 +181,7 @@ atomicrmw    ..., [syncscope("<target-scope>")]
 cmpxchg      ..., [syncscope("<target-scope>")]
 ```
 
-An atomic operation that results in a store operation is a *store-available*
+An atomic operation that performs a store operation is a *store-available*
 operation with scope `syncscope`.
 
 (amdgpu-load-visible)=
@@ -203,23 +207,24 @@ details.
 %value = cmpxchg     ..., [syncscope("<target-scope>")]
 ```
 
-An atomic operation that results in a read operation is a *load-visible*
+An atomic operation that performs a read operation is a *load-visible*
 operation with scope `syncscope`.
 
 ### addrspace(3) Accesses
 
-Any access to `addrspace(3)` (aka LDS or local) always results in a *store-available* or
+Any access to `addrspace(3)` (aka LDS or local) is always a *store-available* or
 *load-visible* operation with scope "workgroup".
 
-Any access to `addrspace(0)` (aka flat or generic) always results in a
-*store-available* or *load-visible* operation with scope "workgroup", if the
+Any access to `addrspace(0)` (aka flat or generic) is always a
+*store-available* or *load-visible* operation with scope "workgroup" if the
 flat address resolves to `addrspace(3)`.
 
 :::{note}
 This is independent of the `syncscope` of an atomic access. For example, even if
-a `store atomic` to `addrspace(3)` specifies a smaller `syncscope` such as "wavefront", the
-side-effects are made available at "workgroup" scope. In other words, the scope
-for atomicity is not always the same as the scope for availability/visibility.
+a `store atomic` to `addrspace(3)` specifies a smaller `syncscope` such as
+"wavefront", the effect of this write is made available at "workgroup" scope. In
+other words, the scope for atomicity is not always the same as the scope for
+availability/visibility.
 :::
 
 ### volatile Accesses
@@ -229,14 +234,14 @@ store volatile ..., ptr addrspace(N) %addr
 %value = load volatile ..., ptr addrspace(N) %addr
 ```
 
-A non-atomic `volatile` access results in a *store-available* or *load-visible*
+A non-atomic `volatile` access is a *store-available* or *load-visible*
 operation with the widest scope supported by its address space:
 
 - "system" scope for `addrspace(1)` (global) and `addrspace(0)` (generic), and
 - "workgroup" scope for `addrspace(3)` (local), since local memory is not
   observable beyond its workgroup.
 
-A `volatile` atomic access is not widened in this way. Its availability and
+An `atomic volatile` access is not widened in this way. Its availability and
 visibility remain limited to its `syncscope`, as described for atomic accesses
 above.
 
@@ -266,8 +271,8 @@ It only affects the synchronization of other memory accesses.
 
 ### make-available and make-visible
 
-*make-available* and *make-visible* operations propagate certain side-effects
-from or to the specified scope respectively. They are similar to the
+*make-available* and *make-visible* operations propagate the effects of write
+operations from or to the specified scope respectively. They are similar to the
 *store-available* and *load-visible* operations, except that their effect is not
 limited to specific locations.
 
@@ -279,26 +284,26 @@ cmpxchg      [syncscope("<target-scope>")] <ordering> [, !mmra !{!"amdgcn-av", !
 fence        [syncscope("<target-scope>")] <ordering> [, !mmra !{!"amdgcn-av", !"none"}]
 ```
 
-A synchronizing operation with at least `release` ordering is a
+An `atomic` or `fence` operation with at least `release` ordering is a
 *make-available* operation with scope `syncscope`, if it is not marked as
 `!{!"amdgcn-av", !"none"}`.
 
-A synchronizing operation with at least `acquire` ordering is a
+An `atomic` or `fence` operation with at least `acquire` ordering is a
 *make-visible* operation with scope `syncscope`, if it is not marked as
 `!{!"amdgcn-av", !"none"}`.
 
 ```llvm
-; This includes the following operations:
+; This performs the following operations:
 ; - The atomic store at "agent" scope,
-; - A store-available operation at "agent" scope on `ptr`,
+; - A store-available operation at "agent" scope on `%ptr`,
 ; - A *make-available* operation at "agent" scope that affects previous memory accesses.
-store atomic syncscope("agent") release ptr
+store atomic syncscope("agent") release %ptr
 
-; This includes the following operations:
+; This performs the following operations:
 ; - The atomic store at "agent" scope,
-; - A store-available operation at "agent" scope on `ptr`.
-; Notably, it does not include a *make-available* operation on other memory accesses.
-store atomic syncscope("agent") release ptr, !mmra !{!"amdgcn-av", !"none"}
+; - A store-available operation at "agent" scope on `%ptr`.
+; Notably, it does not perform a *make-available* operation on other memory accesses.
+store atomic syncscope("agent") release %ptr, !mmra !{!"amdgcn-av", !"none"}
 ```
 
 ## Ordering
@@ -484,7 +489,7 @@ particular, it does not list composite atomic operations like `rmw` and
 by combining suitable rules such as:
 
 - "`MakeAvailable` if the order is at least `release`, and the operation
-  results in a store",
+  performs a store",
 - "Only if it is not marked as `!{!"amdgcn-av", !"none"}`", etc.
 :::
 
