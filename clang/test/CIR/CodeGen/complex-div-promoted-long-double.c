@@ -5,13 +5,11 @@
 // RUN: %clang_cc1 -triple aarch64-unknown-linux-gnu -complex-range=promoted -fclangir -emit-llvm %s -o - | FileCheck %s --check-prefixes=FP128
 // RUN: %clang_cc1 -triple aarch64-unknown-linux-gnu -complex-range=promoted -emit-llvm %s -o - | FileCheck %s --check-prefix=FP128
 
-// FIXME: -mlong-double* is currently ignored by lowermodule, enable the cases
-// when it isn't
-// RUN_disable: %clang_cc1 -triple x86_64-unknown-linux-gnu -mlong-double-64 -complex-range=promoted -fclangir -emit-llvm %s -o - | FileCheck %s --check-prefix=DBL
-// RUN_disable: %clang_cc1 -triple x86_64-unknown-linux-gnu -mlong-double-64 -complex-range=promoted -emit-llvm %s -o - | FileCheck %s --check-prefix=DBL
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -mlong-double-64 -complex-range=promoted -fclangir -emit-llvm %s -o - | FileCheck %s --check-prefix=DBL
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -mlong-double-64 -complex-range=promoted -emit-llvm %s -o - | FileCheck %s --check-prefix=DBL
 
-// RUN_disable: %clang_cc1 -triple x86_64-unknown-linux-gnu -mlong-double-128 -complex-range=promoted -fclangir -emit-llvm %s -o - | FileCheck %s --check-prefix=FP128
-// RUN_disable: %clang_cc1 -triple x86_64-unknown-linux-gnu -mlong-double-128 -complex-range=promoted -emit-llvm %s -o - | FileCheck %s --check-prefix=FP128
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -mlong-double-128 -complex-range=promoted -fclangir -emit-llvm %s -o - | FileCheck %s --check-prefix=FP128
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -mlong-double-128 -complex-range=promoted -emit-llvm %s -o - | FileCheck %s --check-prefix=FP128
 
 _Complex double div(_Complex double a, _Complex double b) { return a / b; }
 
