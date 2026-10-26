@@ -258,33 +258,6 @@ static LogicalResult verifyOffloadContainer(mlir::Operation *op) {
   return success();
 }
 
-bool cir::CIRDialect::isPureCIRType(mlir::Type ty) const {
-  assert(ty && "isPureCIRType requires a non-null type");
-  {
-    std::lock_guard<std::mutex> lock(pureCIRTypeCacheMutex);
-    auto it = pureCIRTypeCache.find(ty);
-    if (it != pureCIRTypeCache.end())
-      return it->second;
-  }
-  // Records gain members when completed, so a "pure" answer is only stable
-  // when the walk saw no incomplete record. "Impure" answers stay stable.
-  bool sawIncompleteRecord = false;
-  bool result = !ty.walk([&](mlir::Type t) {
-                     if (!t)
-                       return mlir::WalkResult::advance();
-                     if (auto rec = mlir::dyn_cast<cir::RecordType>(t))
-                       sawIncompleteRecord |= rec.isIncomplete();
-                     return mlir::isa<cir::CIRDialect>(t.getDialect())
-                                ? mlir::WalkResult::advance()
-                                : mlir::WalkResult::interrupt();
-                   }).wasInterrupted();
-  if (!result || !sawIncompleteRecord) {
-    std::lock_guard<std::mutex> lock(pureCIRTypeCacheMutex);
-    pureCIRTypeCache[ty] = result;
-  }
-  return result;
-}
-
 LogicalResult
 cir::CIRDialect::verifyOperationAttribute(mlir::Operation *op,
                                           mlir::NamedAttribute attr) {
@@ -2702,7 +2675,7 @@ static ParseResult parseGlobalOpTypeAndInitialValue(OpAsmParser &parser,
   } else {
     // Parse constant with initializer, examples:
     //  cir.global @y = 3.400000e+00 : f32
-    //  cir.global @rgb = #cir.const_array<[...] : !cir.array<i8 x 3>>
+    //  cir.global @rgb = #cir.const_array<[...] : !cir.array<!s8i x 3>>
     if (parseConstantValue(parser, initialValueAttr).failed())
       return failure();
 

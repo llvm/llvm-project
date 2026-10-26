@@ -2765,11 +2765,7 @@ std::string RecordVal::getPrintType() const {
 }
 
 bool RecordVal::setValue(const Init *V) {
-  if (!V) {
-    Value = nullptr;
-    return false;
-  }
-
+  assert(V && "Cannot set a null value");
   const Init *NewValue = V->getCastTo(getType());
   if (!NewValue)
     return true;
@@ -2802,10 +2798,7 @@ LLVM_DUMP_METHOD void RecordVal::dump() const { errs() << *this; }
 
 void RecordVal::print(raw_ostream &OS, bool PrintSem) const {
   if (isNonconcreteOK()) OS << "field ";
-  OS << getPrintType() << " " << getNameInitAsString();
-
-  if (getValue())
-    OS << " = " << *getValue();
+  OS << getPrintType() << " " << getNameInitAsString() << " = " << *getValue();
 
   if (PrintSem) OS << ";\n";
 }
@@ -2872,21 +2865,19 @@ void Record::resolveReferences(Resolver &R, const RecordVal *SkipVal) {
   for (RecordVal &Value : Values) {
     if (SkipVal == &Value) // Skip resolve the same field as the given one
       continue;
-    if (const Init *V = Value.getValue()) {
-      const Init *VR = V->resolveReferences(R);
-      if (Value.setValue(VR)) {
-        std::string Type;
-        if (const auto *VRT = dyn_cast<TypedInit>(VR))
-          Type =
-              (Twine("of type '") + VRT->getType()->getAsString() + "' ").str();
-        PrintFatalError(
-            getLoc(),
-            Twine("Invalid value ") + Type + "found when setting field '" +
-                Value.getNameInitAsString() + "' of type '" +
-                Value.getType()->getAsString() +
-                "' after resolving references: " + VR->getAsUnquotedString() +
-                "\n");
-      }
+    const Init *VR = Value.getValue()->resolveReferences(R);
+    if (Value.setValue(VR)) {
+      std::string Type;
+      if (const auto *VRT = dyn_cast<TypedInit>(VR))
+        Type =
+            (Twine("of type '") + VRT->getType()->getAsString() + "' ").str();
+      PrintFatalError(
+          getLoc(),
+          Twine("Invalid value ") + Type + "found when setting field '" +
+              Value.getNameInitAsString() + "' of type '" +
+              Value.getType()->getAsString() +
+              "' after resolving references: " + VR->getAsUnquotedString() +
+              "\n");
     }
   }
 
@@ -2960,7 +2951,7 @@ SMLoc Record::getFieldLoc(StringRef FieldName) const {
 
 const Init *Record::getValueInit(StringRef FieldName) const {
   const RecordVal *R = getValue(FieldName);
-  if (!R || !R->getValue())
+  if (!R)
     PrintFatalError(getLoc(), "Record `" + getName() +
       "' does not have a field named `" + FieldName + "'!\n");
   return R->getValue();
@@ -2977,7 +2968,7 @@ StringRef Record::getValueAsString(StringRef FieldName) const {
 std::optional<StringRef>
 Record::getValueAsOptionalString(StringRef FieldName) const {
   const RecordVal *R = getValue(FieldName);
-  if (!R || !R->getValue())
+  if (!R)
     return std::nullopt;
   if (isa<UnsetInit>(R->getValue()))
     return std::nullopt;
