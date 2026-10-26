@@ -22,16 +22,20 @@
 #include "clang/Analysis/FlowSensitive/ASTOps.h"
 #include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowLattice.h"
+#include "clang/Analysis/FlowSensitive/Formula.h"
 #include "clang/Analysis/FlowSensitive/StorageLocation.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
+#include "clang/Basic/LLVM.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <memory>
+#include <optional>
 #include <stack>
 #include <utility>
 
@@ -39,6 +43,476 @@
 
 namespace clang {
 namespace dataflow {
+
+namespace {
+
+class SimpleBoolModel : public Environment::BoolModel {
+public:
+  SimpleBoolModel() : BoolModel(BoolModelKind::Simple) {}
+
+  static bool classof(const BoolModel *M) {
+    return M->getKind() == BoolModelKind::Simple;
+  }
+
+  std::unique_ptr<BoolModel> clone() const override {
+    return std::make_unique<SimpleBoolModel>(*this);
+  }
+
+  void onFork() override {}
+
+  void assume(const Formula &F) override {
+    if (HasContradiction)
+      return;
+    unsigned PrevSize = AtomToVal.size();
+    // Given that F is assumed true, see if we can force the assignment
+    // of any atoms and ultimately reduce F to a literal (if possible).
+    // For example, if F is `A && B`, we will force `A` and `B` to be true.
+    // If F is `A || B`, we will only force an assignment if one of A or B is
+    // already known to be false.
+    assumeFormula(/*AssumedVal=*/true, F);
+    if (HasContradiction)
+      return;
+
+    // Retain `F` in `AssumedFormulas` only if it has not yet been reduced to a
+    // known truth value in `AtomToVal` (e.g., `A || B` or `A == B` where
+    // neither side is known yet).
+    //
+    // - Why save unresolved formulas: a compound formula (like
+    //   `EqVal => (LHS == RHS)` from a comparison expression) is often assumed
+    //   while its atoms are still unknown; when we later follow a branch that
+    //   fixes one of those atoms, the propagation loop below can reduce the
+    //   saved formula to concrete `AtomToVal` entries.
+    //
+    // - Skipping formulas that already evaluate to `true` avoids bloating
+    //   `AssumedFormulas` with single-atom and conjunctive assumptions that are
+    //   already fully represented by `AtomToVal` (though it also drops
+    //   disjunctive formulas that were reduced using a branch-local atom, such
+    //   as on the RHS of a short-circuit `&&` or `||`).
+    //   TODO: We may want to retain some disjunctive formulas, but would need
+    //   to profile and see how much it helps vs how much it costs.
+    if (std::optional<bool> Val = getLiteralValue(F)) {
+      if (!*Val) {
+        HasContradiction = true;
+        return;
+      }
+    } else {
+      AssumedFormulas.insert(&F);
+    }
+
+    if (AtomToVal.size() == PrevSize)
+      return;
+
+    // Propagate newly learned atom values through any pending assumed formulas.
+    // Note: Do not remove formulas from `AssumedFormulas` when they evaluate to
+    // `true` in a branch, because the atoms that satisfied them may be
+    // branch-local and discarded at a subsequent `join`, where the formula
+    // itself still holds on both branches.
+    bool Changed = true;
+    while (Changed) {
+      Changed = false;
+      for (const Formula *Pending : AssumedFormulas) {
+        unsigned Before = AtomToVal.size();
+        assumeFormula(/*AssumedVal=*/true, *Pending);
+        if (HasContradiction)
+          return;
+        if (getLiteralValue(*Pending) == false) {
+          HasContradiction = true;
+          return;
+        }
+        if (AtomToVal.size() > Before)
+          Changed = true;
+      }
+    }
+  }
+
+  bool proves(const Formula &F) const override {
+    if (HasContradiction)
+      return true;
+    auto V = getLiteralValue(F);
+    return V.value_or(false);
+  }
+
+  bool allows(const Formula &F) const override {
+    if (HasContradiction)
+      return false;
+    auto V = getLiteralValue(F);
+    // We are conservative in the negative direction: if we can't determine the
+    // value, assume it is allowed.
+    return V.value_or(true);
+  }
+
+  BoolValue &joinBoolValues(BoolValue &Val1, const BoolModel &Model1,
+                            BoolValue &Val2, const BoolModel &Model2,
+                            Environment &JoinedEnv) override {
+    const auto &S1 = cast<SimpleBoolModel>(Model1);
+    const auto &S2 = cast<SimpleBoolModel>(Model2);
+    if (S1.HasContradiction)
+      return Val2;
+    if (S2.HasContradiction)
+      return Val1;
+    if (auto V1 = S1.getLiteralValue(Val1.formula());
+        V1.has_value() && V1 == S2.getLiteralValue(Val2.formula()))
+      return JoinedEnv.getBoolLiteralValue(*V1);
+    return JoinedEnv.makeAtomicBoolValue();
+  }
+
+  void join(const BoolModel &ModelA, const BoolModel &ModelB) override {
+    const auto &SA = cast<SimpleBoolModel>(ModelA);
+    const auto &SB = cast<SimpleBoolModel>(ModelB);
+    AtomToVal.clear();
+    AssumedFormulas.clear();
+    HasContradiction = false;
+
+    if (SA.HasContradiction && SB.HasContradiction) {
+      HasContradiction = true;
+    } else if (SA.HasContradiction) {
+      AtomToVal = SB.AtomToVal;
+      AssumedFormulas = SB.AssumedFormulas;
+    } else if (SB.HasContradiction) {
+      AtomToVal = SA.AtomToVal;
+      AssumedFormulas = SA.AssumedFormulas;
+    } else {
+      // Intersect the AtomToVal maps.
+      for (const auto &[A, V] : SA.AtomToVal) {
+        auto It = SB.AtomToVal.find(A);
+        if (It != SB.AtomToVal.end() && V == It->second)
+          AtomToVal.insert({A, V});
+      }
+
+      // Keep assumed formulas that hold on both branches (and are not already
+      // reduced to `true` by the joined `AtomToVal`): either because both
+      // environments still carry `F` as an unresolved formula, or because one
+      // branch carries `F` and the other branch's `AtomToVal` assignments
+      // already prove `F`. Any branch-local formulas not proved by the other
+      // branch are dropped here, which shrinks `AssumedFormulas` at joins.
+      for (const Formula *F : SA.AssumedFormulas) {
+        if (!proves(*F) && (SB.AssumedFormulas.contains(F) || SB.proves(*F)))
+          AssumedFormulas.insert(F);
+      }
+      for (const Formula *F : SB.AssumedFormulas) {
+        if (!proves(*F) && SA.proves(*F))
+          AssumedFormulas.insert(F);
+      }
+    }
+  }
+
+  LatticeEffect widen(const BoolModel &PrevModel) override {
+    const auto &PrevSimple = cast<SimpleBoolModel>(PrevModel);
+    SimpleBoolModel Widened;
+    Widened.join(*this, PrevSimple);
+    LatticeEffect Effect = Widened.isEquivalentTo(PrevSimple)
+                               ? LatticeEffect::Unchanged
+                               : LatticeEffect::Changed;
+    *this = std::move(Widened);
+    return Effect;
+  }
+
+  bool isEquivalentTo(const BoolModel &Other) const override {
+    const auto &OtherSimple = cast<SimpleBoolModel>(Other);
+    if (HasContradiction != OtherSimple.HasContradiction)
+      return false;
+    if (HasContradiction)
+      return true;
+    if (AtomToVal.size() != OtherSimple.AtomToVal.size() ||
+        AssumedFormulas != OtherSimple.AssumedFormulas)
+      return false;
+    return llvm::all_of(AtomToVal, [&](const auto &Entry) {
+      return OtherSimple.getAtomValue(Entry.first) == Entry.second;
+    });
+  }
+
+  Atom getFlowConditionToken() const override {
+    llvm_unreachable(
+        "getFlowConditionToken() is only supported in SatBoolModel");
+  }
+
+  void dump(raw_ostream &OS) const override {
+    OS << "SimpleBoolModel:\n";
+    OS << "  HasContradiction: " << HasContradiction << "\n";
+    OS << "  AtomToVal:\n";
+    for (auto [A, V] : AtomToVal)
+      OS << "    " << A << " = " << (V ? "true" : "false") << "\n";
+    OS << "  AssumedFormulas:\n";
+    for (const Formula *F : AssumedFormulas)
+      OS << "    " << *F << "\n";
+  }
+
+private:
+  std::optional<bool> getAtomValue(Atom A) const {
+    auto It = AtomToVal.find(A);
+    if (It == AtomToVal.end())
+      return std::nullopt;
+    return It->second;
+  }
+
+  std::optional<bool> getLiteralValue(const Formula &F) const {
+    switch (F.kind()) {
+    case Formula::AtomRef:
+      return getAtomValue(F.getAtom());
+    case Formula::Literal:
+      return F.literal();
+    case Formula::Not: {
+      ArrayRef<const Formula *> Operands = F.operands();
+      assert(Operands.size() == 1);
+      if (std::optional<bool> Maybe = getLiteralValue(*Operands[0]))
+        return !*Maybe;
+      return std::nullopt;
+    }
+    case Formula::And: {
+      ArrayRef<const Formula *> Operands = F.operands();
+      assert(Operands.size() == 2);
+      auto &LHS = *Operands[0];
+      auto &RHS = *Operands[1];
+      if (std::optional<bool> Left = getLiteralValue(LHS))
+        return !*Left ? Left : getLiteralValue(RHS);
+      if (std::optional<bool> Right = getLiteralValue(RHS); Right == false)
+        return Right;
+      return std::nullopt;
+    }
+    case Formula::Or: {
+      ArrayRef<const Formula *> Operands = F.operands();
+      assert(Operands.size() == 2);
+      auto &LHS = *Operands[0];
+      auto &RHS = *Operands[1];
+      if (std::optional<bool> Left = getLiteralValue(LHS))
+        return *Left ? Left : getLiteralValue(RHS);
+      if (std::optional<bool> Right = getLiteralValue(RHS); Right == true)
+        return Right;
+      return std::nullopt;
+    }
+    case Formula::Implies: {
+      ArrayRef<const Formula *> Operands = F.operands();
+      assert(Operands.size() == 2);
+      auto &LHS = *Operands[0];
+      auto &RHS = *Operands[1];
+      if (std::optional<bool> Left = getLiteralValue(LHS))
+        return !*Left ? true : getLiteralValue(RHS);
+      if (std::optional<bool> Right = getLiteralValue(RHS); Right == true)
+        return true;
+      return std::nullopt;
+    }
+    case Formula::Equal: {
+      ArrayRef<const Formula *> Operands = F.operands();
+      assert(Operands.size() == 2);
+      auto &LHS = *Operands[0];
+      auto &RHS = *Operands[1];
+      if (&LHS == &RHS)
+        return true;
+      if ((LHS.kind() == Formula::Not && LHS.operands()[0] == &RHS) ||
+          (RHS.kind() == Formula::Not && RHS.operands()[0] == &LHS))
+        return false;
+      auto V_L = getLiteralValue(LHS);
+      if (!V_L.has_value())
+        return std::nullopt;
+      auto V_R = getLiteralValue(RHS);
+      if (!V_R.has_value())
+        return std::nullopt;
+      return *V_L == *V_R;
+    }
+    }
+  }
+
+  // Updates atom assignments under the assumption that subformula `F`
+  // evaluates to `AssumedVal` (i.e., `F == AssumedVal`).
+  //
+  // Top-level `assume(F)` starts with `AssumedVal = true`, and recursive
+  // calls flip `AssumedVal` when traversing negations (`Formula::Not`) or
+  // comparisons (`Formula::Equal`) against known boolean values.
+  //
+  // For example:
+  // - for `assume(!A)`, then `A` must be `false`
+  // - for `assume(A && B)`, then both `A` and `B` must be `true`.
+  void assumeFormula(bool AssumedVal, const Formula &F) {
+    if (HasContradiction)
+      return;
+    switch (F.kind()) {
+    case Formula::AtomRef: {
+      // Base case: `F` is a single atom, so assuming `F == AssumedVal` directly
+      // binds this atom to `AssumedVal`, or marks the environment as having a
+      // contradiction if the atom was already bound to the opposite value.
+      auto [It, Inserted] = AtomToVal.try_emplace(F.getAtom(), AssumedVal);
+      if (!Inserted && It->second != AssumedVal)
+        HasContradiction = true;
+      break;
+    }
+    case Formula::Literal:
+      if (F.literal() != AssumedVal)
+        HasContradiction = true;
+      break;
+    case Formula::Not: {
+      // Assuming `(!Operand) == AssumedVal` is equivalent to assuming
+      // `Operand == !AssumedVal`.
+      ArrayRef<const Formula *> Operands = F.operands();
+      assert(Operands.size() == 1);
+      assumeFormula(!AssumedVal, *Operands[0]);
+      break;
+    }
+    case Formula::And: {
+      // - If `AssumedVal == true` (`LHS && RHS`), both operands must be `true`.
+      // - If `AssumedVal == false` (`!(LHS && RHS)` <=> `!LHS || !RHS`), at
+      //   least one operand is `false`; if one operand is already known `true`,
+      //   the other must be `false`.
+      ArrayRef<const Formula *> Operands = F.operands();
+      assert(Operands.size() == 2);
+      auto &LHS = *Operands[0];
+      auto &RHS = *Operands[1];
+      if (AssumedVal == true) {
+        assumeFormula(true, LHS);
+        assumeFormula(true, RHS);
+      } else {
+        if (getLiteralValue(LHS) == true)
+          assumeFormula(false, RHS);
+        else if (getLiteralValue(RHS) == true)
+          assumeFormula(false, LHS);
+      }
+      break;
+    }
+    case Formula::Or: {
+      // - If `AssumedVal == false` (`!(LHS || RHS)` <=> `!LHS && !RHS`), both
+      //   operands must be `false`.
+      // - If `AssumedVal == true` (`LHS || RHS`), at least one operand is
+      //   `true`; if one operand is already known `false`, the other must be
+      //   `true`.
+      ArrayRef<const Formula *> Operands = F.operands();
+      assert(Operands.size() == 2);
+      auto &LHS = *Operands[0];
+      auto &RHS = *Operands[1];
+      if (AssumedVal == false) {
+        assumeFormula(false, LHS);
+        assumeFormula(false, RHS);
+      } else {
+        if (getLiteralValue(LHS) == false)
+          assumeFormula(true, RHS);
+        else if (getLiteralValue(RHS) == false)
+          assumeFormula(true, LHS);
+      }
+      break;
+    }
+    case Formula::Implies: {
+      // `LHS => RHS` is equivalent to `!LHS || RHS`.
+      // - If `AssumedVal == false` (`!(LHS => RHS)`), then `LHS` must be `true`
+      //   and `RHS` must be `false`.
+      // - If `AssumedVal == true` (`LHS => RHS`):
+      //   - Modus ponens: if `LHS` is known `true`, then `RHS` must be `true`.
+      //   - Modus tollens: if `RHS` is known `false`, then `LHS` must be
+      //     `false`.
+      ArrayRef<const Formula *> Operands = F.operands();
+      assert(Operands.size() == 2);
+      auto &LHS = *Operands[0];
+      auto &RHS = *Operands[1];
+      if (AssumedVal == false) {
+        assumeFormula(true, LHS);
+        assumeFormula(false, RHS);
+      } else {
+        if (getLiteralValue(LHS) == true)
+          assumeFormula(true, RHS);
+        else if (getLiteralValue(RHS) == false)
+          assumeFormula(false, LHS);
+      }
+      break;
+    }
+    case Formula::Equal: {
+      // Assuming `(LHS == RHS) == AssumedVal`: if one side already has a known
+      // truth value `*V`, then the other side must evaluate to
+      // `(AssumedVal == *V)`.
+      ArrayRef<const Formula *> Operands = F.operands();
+      assert(Operands.size() == 2);
+      auto &LHS = *Operands[0];
+      auto &RHS = *Operands[1];
+      if (auto V = getLiteralValue(LHS)) {
+        assumeFormula(AssumedVal == *V, RHS);
+      } else if (auto V = getLiteralValue(RHS)) {
+        assumeFormula(AssumedVal == *V, LHS);
+      }
+      break;
+    }
+    }
+  }
+
+  llvm::MapVector<Atom, bool> AtomToVal;
+  llvm::SmallSetVector<const Formula *, 4> AssumedFormulas;
+  bool HasContradiction = false;
+};
+
+class SatBoolModel : public Environment::BoolModel {
+public:
+  SatBoolModel(DataflowAnalysisContext &DACtx, Atom FlowConditionToken)
+      : BoolModel(BoolModelKind::SAT), DACtx(DACtx),
+        FlowConditionToken(FlowConditionToken) {}
+
+  explicit SatBoolModel(DataflowAnalysisContext &DACtx)
+      : SatBoolModel(DACtx, DACtx.arena().makeFlowConditionToken()) {}
+
+  static bool classof(const BoolModel *M) {
+    return M->getKind() == BoolModelKind::SAT;
+  }
+
+  std::unique_ptr<BoolModel> clone() const override {
+    return std::make_unique<SatBoolModel>(*this);
+  }
+
+  void onFork() override {
+    FlowConditionToken = DACtx.forkFlowCondition(FlowConditionToken);
+  }
+
+  void assume(const Formula &F) override {
+    DACtx.addFlowConditionConstraint(FlowConditionToken, F);
+  }
+
+  bool proves(const Formula &F) const override {
+    return DACtx.flowConditionImplies(FlowConditionToken, F);
+  }
+
+  bool allows(const Formula &F) const override {
+    return DACtx.flowConditionAllows(FlowConditionToken, F);
+  }
+
+  BoolValue &joinBoolValues(BoolValue &Val1, const BoolModel &Model1,
+                            BoolValue &Val2, const BoolModel &Model2,
+                            Environment &JoinedEnv) override {
+    const auto &Sat1 = cast<SatBoolModel>(Model1);
+    const auto &Sat2 = cast<SatBoolModel>(Model2);
+    auto &A = JoinedEnv.arena();
+    auto &JoinedVal = A.makeAtomRef(A.makeAtom());
+    JoinedEnv.assume(
+        A.makeOr(A.makeAnd(A.makeAtomRef(Sat1.getFlowConditionToken()),
+                           A.makeEquals(JoinedVal, Val1.formula())),
+                 A.makeAnd(A.makeAtomRef(Sat2.getFlowConditionToken()),
+                           A.makeEquals(JoinedVal, Val2.formula()))));
+    return A.makeBoolValue(JoinedVal);
+  }
+
+  void join(const BoolModel &ModelA, const BoolModel &ModelB) override {
+    const auto &SatA = cast<SatBoolModel>(ModelA);
+    const auto &SatB = cast<SatBoolModel>(ModelB);
+    // FIXME: update join to detect backedges and simplify the flow condition
+    // accordingly.
+    FlowConditionToken = DACtx.joinFlowConditions(SatA.FlowConditionToken,
+                                                  SatB.FlowConditionToken);
+  }
+
+  LatticeEffect widen(const BoolModel &PrevModel) override {
+    (void)cast<SatBoolModel>(PrevModel);
+    return LatticeEffect::Unchanged;
+  }
+
+  bool isEquivalentTo(const BoolModel &Other) const override {
+    (void)cast<SatBoolModel>(Other);
+    return true;
+  }
+
+  Atom getFlowConditionToken() const override { return FlowConditionToken; }
+
+  void dump(raw_ostream &OS) const override {
+    DACtx.dumpFlowCondition(FlowConditionToken, OS);
+  }
+
+private:
+  DataflowAnalysisContext &DACtx;
+  Atom FlowConditionToken;
+};
+
+} // namespace
 
 // FIXME: convert these to parameters of the analysis or environment. Current
 // settings have been experimentaly validated, but only for a particular
@@ -140,16 +614,8 @@ static Value *joinDistinctValues(QualType Type, Value &Val1,
     // if (o.has_value())
     //   x = o.value();
     // ```
-    auto &Expr1 = cast<BoolValue>(Val1).formula();
-    auto &Expr2 = cast<BoolValue>(Val2).formula();
-    auto &A = JoinedEnv.arena();
-    auto &JoinedVal = A.makeAtomRef(A.makeAtom());
-    JoinedEnv.assume(
-        A.makeOr(A.makeAnd(A.makeAtomRef(Env1.getFlowConditionToken()),
-                           A.makeEquals(JoinedVal, Expr1)),
-                 A.makeAnd(A.makeAtomRef(Env2.getFlowConditionToken()),
-                           A.makeEquals(JoinedVal, Expr2))));
-    return &A.makeBoolValue(JoinedVal);
+    return &JoinedEnv.joinBoolValues(cast<BoolValue>(Val1), Env1,
+                                     cast<BoolValue>(Val2), Env2);
   }
 
   Value *JoinedVal = JoinedEnv.createValue(Type);
@@ -587,6 +1053,37 @@ public:
 
 } // namespace
 
+Environment::Environment(DataflowAnalysisContext &DACtx,
+                         Atom FlowConditionToken)
+    : DACtx(&DACtx),
+      BoolState(std::make_unique<SatBoolModel>(DACtx, FlowConditionToken)) {
+  assert(DACtx.getOptions().BoolModel == BoolModelKind::SAT &&
+         "FlowConditionToken constructor requires BoolModelKind::SAT");
+}
+
+Environment::Environment(DataflowAnalysisContext &DACtx) : DACtx(&DACtx) {
+  switch (DACtx.getOptions().BoolModel) {
+  case BoolModelKind::SAT:
+    BoolState = std::make_unique<SatBoolModel>(DACtx);
+    break;
+  case BoolModelKind::Simple:
+    BoolState = std::make_unique<SimpleBoolModel>();
+    break;
+  }
+}
+
+Environment::Environment(const Environment &Other)
+    : DACtx(Other.DACtx), CallStack(Other.CallStack),
+      InitialTargetFunc(Other.InitialTargetFunc),
+      InitialTargetStmt(Other.InitialTargetStmt),
+      ResultObjectMap(Other.ResultObjectMap), ReturnVal(Other.ReturnVal),
+      ReturnLoc(Other.ReturnLoc),
+      LocForRecordReturnVal(Other.LocForRecordReturnVal),
+      ThisPointeeLoc(Other.ThisPointeeLoc),
+      ThisExprOverrides(Other.ThisExprOverrides), DeclToLoc(Other.DeclToLoc),
+      ExprToLoc(Other.ExprToLoc), ExprToVal(Other.ExprToVal),
+      LocToVal(Other.LocToVal), BoolState(Other.BoolState->clone()) {}
+
 void Environment::initialize() {
   if (InitialTargetStmt == nullptr)
     return;
@@ -702,7 +1199,7 @@ void Environment::initFieldsGlobalsAndFuncs(const ReferencedDecls &Referenced) {
 
 Environment Environment::fork() const {
   Environment Copy(*this);
-  Copy.FlowConditionToken = DACtx->forkFlowCondition(FlowConditionToken);
+  Copy.BoolState->onFork();
   return Copy;
 }
 
@@ -784,7 +1281,7 @@ void Environment::popCall(const CallExpr *Call, const Environment &CalleeEnv) {
   //   callee's local scope, so when popping that scope, we do not propagate
   //   the maps.
   this->LocToVal = std::move(CalleeEnv.LocToVal);
-  this->FlowConditionToken = std::move(CalleeEnv.FlowConditionToken);
+  this->BoolState = CalleeEnv.BoolState->clone();
 
   if (Call->isGLValue()) {
     if (CalleeEnv.ReturnLoc != nullptr)
@@ -799,7 +1296,7 @@ void Environment::popCall(const CXXConstructExpr *Call,
                           const Environment &CalleeEnv) {
   // See also comment in `popCall(const CallExpr *, const Environment &)` above.
   this->LocToVal = std::move(CalleeEnv.LocToVal);
-  this->FlowConditionToken = std::move(CalleeEnv.FlowConditionToken);
+  this->BoolState = CalleeEnv.BoolState->clone();
 }
 
 bool Environment::equivalentTo(const Environment &Other,
@@ -828,6 +1325,8 @@ bool Environment::equivalentTo(const Environment &Other,
     return false;
 
   if (!compareKeyToValueMaps(LocToVal, Other.LocToVal, *this, Other, Model))
+    return false;
+  if (!BoolState->isEquivalentTo(*Other.BoolState))
     return false;
 
   return true;
@@ -866,7 +1365,8 @@ LatticeEffect Environment::widen(const Environment &PrevEnv,
   if (DeclToLoc.size() != PrevEnv.DeclToLoc.size() ||
       ExprToLoc.size() != PrevEnv.ExprToLoc.size() ||
       ExprToVal.size() != PrevEnv.ExprToVal.size() ||
-      LocToVal.size() != PrevEnv.LocToVal.size())
+      LocToVal.size() != PrevEnv.LocToVal.size() ||
+      BoolState->widen(*PrevEnv.BoolState) == LatticeEffect::Changed)
     Effect = LatticeEffect::Changed;
 
   return Effect;
@@ -910,10 +1410,7 @@ Environment Environment::join(const Environment &EnvA, const Environment &EnvB,
 
   JoinedEnv.DeclToLoc = intersectDeclToLoc(EnvA.DeclToLoc, EnvB.DeclToLoc);
 
-  // FIXME: update join to detect backedges and simplify the flow condition
-  // accordingly.
-  JoinedEnv.FlowConditionToken = EnvA.DACtx->joinFlowConditions(
-      EnvA.FlowConditionToken, EnvB.FlowConditionToken);
+  JoinedEnv.BoolState->join(*EnvA.BoolState, *EnvB.BoolState);
 
   JoinedEnv.LocToVal =
       joinLocToVal(EnvA.LocToVal, EnvB.LocToVal, EnvA, EnvB, JoinedEnv, Model);
@@ -1249,16 +1746,14 @@ StorageLocation &Environment::createObjectInternal(const ValueDecl *D,
   return Loc;
 }
 
-void Environment::assume(const Formula &F) {
-  DACtx->addFlowConditionConstraint(FlowConditionToken, F);
-}
+void Environment::assume(const Formula &F) { BoolState->assume(F); }
 
 bool Environment::proves(const Formula &F) const {
-  return DACtx->flowConditionImplies(FlowConditionToken, F);
+  return BoolState->proves(F);
 }
 
 bool Environment::allows(const Formula &F) const {
-  return DACtx->flowConditionAllows(FlowConditionToken, F);
+  return BoolState->allows(F);
 }
 
 void Environment::dump(raw_ostream &OS) const {
@@ -1311,7 +1806,7 @@ void Environment::dump(raw_ostream &OS) const {
   }
 
   OS << "\n";
-  DACtx->dumpFlowCondition(FlowConditionToken, OS);
+  BoolState->dump(OS);
 }
 
 void Environment::dump() const { dump(llvm::dbgs()); }
