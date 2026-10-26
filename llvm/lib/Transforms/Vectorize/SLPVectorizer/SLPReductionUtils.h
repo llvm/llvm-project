@@ -78,12 +78,13 @@ Instruction *getNonPhiOperand(Instruction *I, PHINode *Phi);
 bool isReductionCandidate(Instruction *I);
 
 /// Checks if the reduction, rooted at \p Root, reduces the loop accumulators,
-/// whose updates are the same expressions \p Shape, loading from consecutive
-/// addresses at each position. Such a reduction vectorizes along its own
-/// reduced values without gathers, while a tree across several such reductions
-/// transposes them. The different update expressions may form the nodes, which
-/// the other reductions, sharing them, cannot reuse. An empty \p Shape is set
-/// to the expressions of \p Root, \p Accs collects the accumulators.
+/// whose updates are the same expressions \p Shape in the same block, loading
+/// from consecutive addresses at each position. Such a reduction vectorizes
+/// along its own reduced values without gathers, while a tree across several
+/// such reductions transposes them. The different update expressions may form
+/// the nodes, which the other reductions, sharing them, cannot reuse. An empty
+/// \p Shape is set to the expressions of \p Root, \p Accs collects the
+/// accumulators.
 bool isReductionOfConsecutiveAccumulators(Instruction *Root, const LoopInfo &LI,
                                           const DataLayout &DL,
                                           ScalarEvolution &SE,

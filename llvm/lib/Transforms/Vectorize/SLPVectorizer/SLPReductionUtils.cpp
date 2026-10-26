@@ -240,14 +240,14 @@ bool isReductionOfConsecutiveAccumulators(Instruction *Root, const LoopInfo &LI,
     }
   }
   constexpr unsigned MinReducedVals = 4;
-  const Loop *L = LI.getLoopFor(RdxVals.front()->getParent());
-  if (RdxVals.size() < MinReducedVals || !L || L->contains(Root))
+  BasicBlock *BB = RdxVals.front()->getParent();
+  const Loop *L = LI.getLoopFor(BB);
+  if (RdxVals.size() < MinReducedVals || !L || L->contains(Root) ||
+      any_of(RdxVals, [&](Instruction *I) { return I->getParent() != BB; }))
     return false;
   // The accumulators, used by the other ones, cannot be vectorized along the
   // reduced values without the shuffles in the loop.
   auto GetAccumulator = [&](Instruction *RdxVal) -> PHINode * {
-    if (LI.getLoopFor(RdxVal->getParent()) != L)
-      return nullptr;
     PHINode *Acc = nullptr;
     for (User *U : RdxVal->users()) {
       if (!L->contains(cast<Instruction>(U)))
@@ -280,8 +280,7 @@ bool isReductionOfConsecutiveAccumulators(Instruction *Root, const LoopInfo &LI,
         RdxShape.push_back(I->getOpcode());
         continue;
       }
-      if (Depth == MaxDepth || isa<PHINode>(I) ||
-          I->getParent() != RdxVal->getParent())
+      if (Depth == MaxDepth || isa<PHINode>(I) || I->getParent() != BB)
         continue;
       RdxShape.push_back(I->getOpcode());
       if (auto *Cmp = dyn_cast<CmpInst>(I))
