@@ -570,6 +570,11 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "llvm_libc_types_gid_t",
+    hdrs = ["include/llvm-libc-types/gid_t.h"],
+)
+
+libc_support_library(
     name = "llvm_libc_types_pid_t",
     hdrs = ["include/llvm-libc-types/pid_t.h"],
 )
@@ -1387,6 +1392,15 @@ libc_support_library(
     hdrs = ["hdr/types/pid_t.h"],
     deps = select({
         ":full_build": [":llvm_libc_types_pid_t"],
+        "//conditions:default": [],
+    }),
+)
+
+libc_support_library(
+    name = "types_gid_t",
+    hdrs = ["hdr/types/gid_t.h"],
+    deps = select({
+        ":full_build": [":llvm_libc_types_gid_t"],
         "//conditions:default": [],
     }),
 )
@@ -2523,6 +2537,21 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_epoll_create1",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/epoll_create1.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+    ],
+)
+
+libc_support_library(
     name = "__support_osutil_linux_syscall_wrappers_epoll_ctl",
     hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/epoll_ctl.h"],
     target_compatible_with = select({
@@ -2535,6 +2564,25 @@ libc_support_library(
         ":__support_macros_config",
         ":__support_osutil_syscall",
         ":types_struct_epoll_event",
+    ],
+)
+
+libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_epoll_pwait2",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/epoll_pwait2.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":hdr_signal_macros",
+        ":types_sigset_t",
+        ":types_struct_epoll_event",
+        ":types_struct_timespec",
     ],
 )
 
@@ -4266,6 +4314,21 @@ libc_support_library(
         ":__support_error_or",
         ":__support_macros_config",
         ":__support_osutil_syscall",
+    ],
+)
+
+libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_getegid",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/getegid.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":types_gid_t",
     ],
 )
 
@@ -17602,6 +17665,32 @@ libc_function(
     ],
 )
 
+libc_function(
+    name = "getegid",
+    srcs = ["src/unistd/linux/getegid.cpp"],
+    hdrs = ["src/unistd/getegid.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_getegid",
+        ":types_gid_t",
+    ],
+)
+
+libc_function(
+    name = "getgid",
+    srcs = ["src/unistd/linux/getgid.cpp"],
+    hdrs = ["src/unistd/getgid.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":errno",
+        ":hdr_unistd_macros",
+        ":types_gid_t",
+    ],
+)
+
 # libc_function(
 #     name = "getopt",
 #     srcs = ["src/unistd/getopt.cpp"],
@@ -19352,7 +19441,7 @@ libc_function(
         ":__support_common",
         ":__support_libc_errno",
         ":__support_macros_config",
-        ":__support_osutil_syscall",
+        ":__support_osutil_linux_syscall_wrappers_epoll_create1",
         ":errno",
     ],
 )
@@ -19372,28 +19461,6 @@ libc_function(
         ":__support_osutil_linux_syscall_wrappers_epoll_ctl",
         ":errno",
         ":hdr_sys_epoll_macros",
-        ":types_struct_epoll_event",
-    ],
-)
-
-libc_function(
-    name = "epoll_wait",
-    srcs = ["src/sys/epoll/linux/epoll_wait.cpp"],
-    hdrs = ["src/sys/epoll/epoll_wait.h"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":__support_common",
-        ":__support_libc_errno",
-        ":__support_macros_config",
-        ":__support_macros_sanitizer",
-        ":__support_osutil_syscall",
-        ":errno",
-        ":hdr_signal_macros",
-        ":hdr_sys_epoll_macros",
-        ":types_sigset_t",
         ":types_struct_epoll_event",
     ],
 )
@@ -19433,13 +19500,33 @@ libc_function(
         ":__support_libc_errno",
         ":__support_macros_config",
         ":__support_macros_sanitizer",
+        ":__support_osutil_linux_syscall_wrappers_epoll_pwait2",
+        ":errno",
+        ":types_sigset_t",
+        ":types_struct_epoll_event",
+        ":types_struct_timespec",
+    ],
+)
+
+libc_function(
+    name = "epoll_wait",
+    srcs = ["src/sys/epoll/linux/epoll_wait.cpp"],
+    hdrs = ["src/sys/epoll/epoll_wait.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_macros_sanitizer",
         ":__support_osutil_syscall",
         ":errno",
         ":hdr_signal_macros",
         ":hdr_sys_epoll_macros",
         ":types_sigset_t",
         ":types_struct_epoll_event",
-        ":types_struct_timespec",
     ],
 )
 
