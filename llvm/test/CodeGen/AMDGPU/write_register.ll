@@ -906,8 +906,8 @@ define void @write_uniform_vgpr_into_src_flat_scratch_base(ptr addrspace(3) inre
 ; SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; SDAG-NEXT:    s_wait_kmcnt 0x0
 ; SDAG-NEXT:    v_mov_b32_e32 v0, s0
-; SDAG-NEXT:    s_mov_b64 s[2:3], src_flat_scratch_base_lo
 ; SDAG-NEXT:    ds_load_b64 v[0:1], v0
+; SDAG-NEXT:    s_mov_b64 s[2:3], src_flat_scratch_base_lo
 ; SDAG-NEXT:    ;;#ASMSTART
 ; SDAG-NEXT:    ; use s[2:3]
 ; SDAG-NEXT:    ;;#ASMEND
@@ -922,8 +922,8 @@ define void @write_uniform_vgpr_into_src_flat_scratch_base(ptr addrspace(3) inre
 ; GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; GISEL-NEXT:    s_mov_b64 s[2:3], src_flat_scratch_base_lo
 ; GISEL-NEXT:    ds_load_b64 v[0:1], v0
+; GISEL-NEXT:    s_mov_b64 s[2:3], src_flat_scratch_base_lo
 ; GISEL-NEXT:    ;;#ASMSTART
 ; GISEL-NEXT:    ; use s[2:3]
 ; GISEL-NEXT:    ;;#ASMEND
