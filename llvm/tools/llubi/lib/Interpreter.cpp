@@ -970,10 +970,11 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
   AnyValue callMaskedLoadIntrinsic(CallBase &CB, const AnyValue &Ptr,
                                    const AnyValue &Mask,
                                    const AnyValue &PassThru) {
+    StringRef IntrinsicName = Intrinsic::getBaseName(CB.getIntrinsicID());
     Type *ElemTy = CB.getType()->getScalarType();
     // TODO: Support element types that are not a whole number of bytes.
     if (!DL.typeSizeEqualsStoreSize(ElemTy)) {
-      reportError() << "llvm.masked.load with element type " << *ElemTy
+      reportError() << IntrinsicName << " with element type " << *ElemTy
                     << " is not supported.";
       return AnyValue();
     }
@@ -984,18 +985,29 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     AnyValue Res = PassThru;
     AnyValue LanePtr = Ptr;
     GEPNoWrapFlags Flags = GEPNoWrapFlags::none();
+
+    bool SeenActiveLane = false;
+    bool IsExpandLoad = CB.getIntrinsicID() == Intrinsic::masked_expandload;
+
     for (auto [I, Lane] : enumerate(Res.asAggregate())) {
       AnyValue AccumulatedOffset = AnyValue::poison();
-      LanePtr = Ctx.computeScaledPtrAdd(LanePtr, APInt(IndexBW, I == 0 ? I : 1),
-                                        APInt(IndexBW, AccessSize), Flags,
-                                        AccumulatedOffset);
-      switch (getMaskLane(Mask, I)) {
+      BooleanKind MaskLane = getMaskLane(Mask, I);
+
+      if (!IsExpandLoad || (IsExpandLoad && MaskLane == BooleanKind::True)) {
+        bool FirstIndex = I == 0 || (IsExpandLoad && !SeenActiveLane);
+        LanePtr = Ctx.computeScaledPtrAdd(
+            LanePtr, APInt(IndexBW, FirstIndex ? 0 : 1),
+            APInt(IndexBW, AccessSize), Flags, AccumulatedOffset);
+      }
+
+      switch (MaskLane) {
       case BooleanKind::False:
         continue;
       case BooleanKind::Poison:
-        reportImmediateUB() << "Poison mask lane in llvm.masked.load.";
+        reportImmediateUB() << "Poison mask lane in " << IntrinsicName << '.';
         return AnyValue();
       case BooleanKind::True:
+        SeenActiveLane = true;
         break;
       }
 
@@ -1880,6 +1892,7 @@ public:
              "oracle form must be handled earlier");
       return callSpeculativeLoadIntrinsic(CB, Args[0], Args[2]);
     case Intrinsic::masked_load:
+    case Intrinsic::masked_expandload:
       return callMaskedLoadIntrinsic(CB, Args[0], Args[1], Args[2]);
     case Intrinsic::experimental_noalias_scope_decl:
       // FIXME: Not implemented yet. Currently it acts as a noop.
