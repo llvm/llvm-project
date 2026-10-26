@@ -101,19 +101,24 @@ struct DeviceGeometryPropsTy {
   uint32_t DefaultNumBlocks = 0;
   /// Maximum amount of shared memory, in bytes, a block can use in a kernel.
   uint64_t MaxBlockSharedMemSize = 0;
+  /// Number of compute units, or zero if the device does not report it.
+  uint32_t NumComputeUnits = 0;
+  /// Backend of the platform of the device.
+  ol_platform_backend_t Backend = OL_PLATFORM_BACKEND_UNKNOWN;
 };
 
 struct PluginManager;
 
 struct DeviceTy {
   int32_t DeviceID;
-  GenericPluginTy *RTL;
-  int32_t RTLDeviceID;
+  GenericPluginTy *RTL = nullptr;
+  int32_t RTLDeviceID = -1;
+  ol_platform_handle_t Platform;
   ol_device_handle_t DeviceHandle;
   PluginManager *PM;
   ol_context_handle_t Context = nullptr;
 
-  DeviceTy(GenericPluginTy *RTL, int32_t DeviceID, int32_t RTLDeviceID,
+  DeviceTy(int32_t DeviceID, ol_platform_handle_t Platform,
            ol_device_handle_t DeviceHandle, PluginManager *PM);
   // DeviceTy is not copyable
   DeviceTy(const DeviceTy &D) = delete;
@@ -132,6 +137,9 @@ struct DeviceTy {
 
   /// Whether this device executes kernels on the host CPU.
   bool isHostDevice() const { return IsHostDevice; }
+
+  /// Get this device's backend.
+  ol_platform_backend_t getBackend() const { return Backend; }
 
   /// Load \p Img onto the device and return the resulting program.
   llvm::Expected<ProgramTy> loadBinary(__tgt_device_image *Img);
@@ -372,6 +380,9 @@ private:
 
   /// Whether this is a host device.
   bool IsHostDevice = false;
+
+  /// The backend of this device.
+  ol_platform_backend_t Backend = OL_PLATFORM_BACKEND_UNKNOWN;
 
   /// Handler to collect and organize host-2-device mapping information.
   MappingInfoTy MappingInfo;

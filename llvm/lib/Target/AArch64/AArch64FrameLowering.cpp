@@ -2576,16 +2576,19 @@ void AArch64FrameLowering::determineStackHazardSlot(
 void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
                                                 BitVector &SavedRegs,
                                                 RegScavenger *RS) const {
+  AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
   // All calls are tail calls in GHC calling conv, and functions have no
   // prologue/epilogue.
-  if (MF.getFunction().getCallingConv() == CallingConv::GHC)
+  if (MF.getFunction().getCallingConv() == CallingConv::GHC) {
+    AFI->setCalleeSavedStackSize(0);
+    AFI->setSVECalleeSavedStackSize(/*ZPR=*/0, /*PPR=*/0);
     return;
+  }
 
   const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
 
   TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
   const AArch64RegisterInfo *RegInfo = Subtarget.getRegisterInfo();
-  AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
   Register UnspilledCSGPR;
   Register UnspilledCSGPRPaired;
 
