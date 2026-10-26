@@ -79,6 +79,15 @@ public:
     EXPECT_FP_EQ_WITH_EXCEPTION_ALL_ROUNDING(
         two, LIBC_NAMESPACE::log10p1bf16(ninety_nine), 0);
     EXPECT_MATH_ERRNO(0);
+
+    const bfloat16 tiny_input =
+        FPBits(static_cast<uint16_t>(0x0114U)).get_val();
+    const bfloat16 expected_tiny_result =
+        FPBits(static_cast<uint16_t>(0x0081U)).get_val();
+
+    EXPECT_FP_EQ_WITH_EXCEPTION(expected_tiny_result,
+                                LIBC_NAMESPACE::log10p1bf16(tiny_input),
+                                FE_INEXACT);
   }
 };
 

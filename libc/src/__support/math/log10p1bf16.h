@@ -103,6 +103,12 @@ LIBC_INLINE bfloat16 log10p1bf16(bfloat16 x) {
     // This degree-4 polynomial is shared with log10p1f16 and approximates
     // log10(1 + x) / x; multiplying by x gives log10(1 + x).
     float xf = static_cast<float>(x);
+
+    // For tiny |x|, log10(1 + x) is approximately x / ln(10).
+    // Avoid subnormal intermediate products in the polynomial evaluation.
+    if (x_abs < 0x0d80U)
+      return fputil::cast<bfloat16>(xf * 0x1.bcb7b2p-2f);
+
     return fputil::cast<bfloat16>(
         xf * fputil::polyeval(xf, 0x1.bcb7b2p-2f, -0x1.bcb4cp-3f,
                               0x1.2875bcp-3f, -0x1.c2946ep-4f, 0x1.69da2p-4f));
