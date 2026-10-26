@@ -227,13 +227,12 @@ enum DataRegionType {
   DICE_KIND_ABS_JUMP_TABLE32 = 5u
 };
 
-enum RebaseType {
-  REBASE_TYPE_POINTER = 1u,
-  REBASE_TYPE_TEXT_ABSOLUTE32 = 2u,
-  REBASE_TYPE_TEXT_PCREL32 = 3u
-};
+constexpr uint8_t REBASE_TYPE_POINTER = 1u;
+constexpr uint8_t REBASE_TYPE_TEXT_ABSOLUTE32 = 2u;
+constexpr uint8_t REBASE_TYPE_TEXT_PCREL32 = 3u;
 
-enum { REBASE_OPCODE_MASK = 0xF0u, REBASE_IMMEDIATE_MASK = 0x0Fu };
+constexpr uint8_t REBASE_OPCODE_MASK = 0xF0u;
+constexpr uint8_t REBASE_IMMEDIATE_MASK = 0x0Fu;
 
 enum RebaseOpcode {
   REBASE_OPCODE_DONE = 0x00u,
@@ -247,11 +246,9 @@ enum RebaseOpcode {
   REBASE_OPCODE_DO_REBASE_ULEB_TIMES_SKIPPING_ULEB = 0x80u
 };
 
-enum BindType {
-  BIND_TYPE_POINTER = 1u,
-  BIND_TYPE_TEXT_ABSOLUTE32 = 2u,
-  BIND_TYPE_TEXT_PCREL32 = 3u
-};
+constexpr uint8_t BIND_TYPE_POINTER = 1u;
+constexpr uint8_t BIND_TYPE_TEXT_ABSOLUTE32 = 2u;
+constexpr uint8_t BIND_TYPE_TEXT_PCREL32 = 3u;
 
 enum BindSpecialDylib {
   BIND_SPECIAL_DYLIB_SELF = 0,
@@ -260,13 +257,11 @@ enum BindSpecialDylib {
   BIND_SPECIAL_DYLIB_WEAK_LOOKUP = -3
 };
 
-enum {
-  BIND_SYMBOL_FLAGS_WEAK_IMPORT = 0x1u,
-  BIND_SYMBOL_FLAGS_NON_WEAK_DEFINITION = 0x8u,
+constexpr uint8_t BIND_SYMBOL_FLAGS_WEAK_IMPORT = 0x1u;
+constexpr uint8_t BIND_SYMBOL_FLAGS_NON_WEAK_DEFINITION = 0x8u;
 
-  BIND_OPCODE_MASK = 0xF0u,
-  BIND_IMMEDIATE_MASK = 0x0Fu
-};
+constexpr uint8_t BIND_OPCODE_MASK = 0xF0u;
+constexpr uint8_t BIND_IMMEDIATE_MASK = 0x0Fu;
 
 enum BindOpcode {
   BIND_OPCODE_DONE = 0x00u,
@@ -284,12 +279,10 @@ enum BindOpcode {
   BIND_OPCODE_DO_BIND_ULEB_TIMES_SKIPPING_ULEB = 0xC0u
 };
 
-enum {
-  EXPORT_SYMBOL_FLAGS_KIND_MASK = 0x03u,
-  EXPORT_SYMBOL_FLAGS_WEAK_DEFINITION = 0x04u,
-  EXPORT_SYMBOL_FLAGS_REEXPORT = 0x08u,
-  EXPORT_SYMBOL_FLAGS_STUB_AND_RESOLVER = 0x10u
-};
+constexpr uint8_t EXPORT_SYMBOL_FLAGS_KIND_MASK = 0x03u;
+constexpr uint8_t EXPORT_SYMBOL_FLAGS_WEAK_DEFINITION = 0x04u;
+constexpr uint8_t EXPORT_SYMBOL_FLAGS_REEXPORT = 0x08u;
+constexpr uint8_t EXPORT_SYMBOL_FLAGS_STUB_AND_RESOLVER = 0x10u;
 
 enum ExportSymbolKind {
   EXPORT_SYMBOL_FLAGS_KIND_REGULAR = 0x00u,
@@ -297,14 +290,12 @@ enum ExportSymbolKind {
   EXPORT_SYMBOL_FLAGS_KIND_ABSOLUTE = 0x02u
 };
 
-enum {
-  // Constant masks for the "n_type" field in llvm::MachO::nlist and
-  // llvm::MachO::nlist_64
-  N_STAB = 0xe0,
-  N_PEXT = 0x10,
-  N_TYPE = 0x0e,
-  N_EXT = 0x01
-};
+// Constant masks for the "n_type" field in llvm::MachO::nlist and
+// llvm::MachO::nlist_64
+constexpr uint8_t N_STAB = 0xe0;
+constexpr uint8_t N_PEXT = 0x10;
+constexpr uint8_t N_TYPE = 0x0e;
+constexpr uint8_t N_EXT = 0x01;
 
 enum NListType : uint8_t {
   // Constants for the "n_type & N_TYPE" llvm::MachO::nlist and
