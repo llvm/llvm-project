@@ -2157,6 +2157,7 @@ def Tosa_ReshapeOp : Tosa_InferTensorTypeOp<"reshape", [Pure]> {
     No data conversion happens during a reshape operation.
   }];
 
+  let hasCanonicalizer = 1;
   let hasFolder = 1;
   let hasVerifier = 1;
 

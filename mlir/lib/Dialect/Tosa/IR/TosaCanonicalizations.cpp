@@ -2128,6 +2128,49 @@ REDUCE_FOLDER(ReduceProductOp)
 REDUCE_FOLDER(ReduceSumOp)
 #undef REDUCE_FOLDER
 
+namespace {
+// Cancel inverse reshapes around an elementwise cast, retaining its conversion.
+struct FoldReshapesAroundCast : public OpRewritePattern<tosa::ReshapeOp> {
+  using OpRewritePattern<tosa::ReshapeOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tosa::ReshapeOp op,
+                                PatternRewriter &rewriter) const override {
+    auto castOp = op.getInput1().getDefiningOp<tosa::CastOp>();
+    if (!castOp || !castOp->hasOneUse())
+      return failure();
+    auto innerReshape = castOp.getInput().getDefiningOp<tosa::ReshapeOp>();
+    if (!innerReshape)
+      return failure();
+
+    auto inputType =
+        dyn_cast<RankedTensorType>(innerReshape.getInput1().getType());
+    auto intermediateType = dyn_cast<RankedTensorType>(innerReshape.getType());
+    auto outputType = dyn_cast<RankedTensorType>(op.getType());
+    if (!inputType || !intermediateType || !outputType ||
+        !inputType.hasStaticShape() || !intermediateType.hasStaticShape() ||
+        !outputType.hasStaticShape() ||
+        inputType.getShape() != outputType.getShape())
+      return failure();
+
+    // Block-scaled casts depend on the last dimension's block grouping.
+    if (!isa<IntegerType, FloatType>(inputType.getElementType()) ||
+        !isa<IntegerType, FloatType>(outputType.getElementType()))
+      return failure();
+
+    auto replacement = tosa::CastOp::create(
+        rewriter, castOp.getLoc(), outputType, innerReshape.getInput1());
+    replacement->setAttrs(castOp->getAttrs());
+    rewriter.replaceOp(op, replacement.getOutput());
+    return success();
+  }
+};
+} // namespace
+
+void ReshapeOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                            MLIRContext *context) {
+  results.add<FoldReshapesAroundCast>(context);
+}
+
 OpFoldResult ReshapeOp::fold(FoldAdaptor adaptor) {
   auto inputTy = llvm::dyn_cast<RankedTensorType>(getInput1().getType());
   auto outputTy = llvm::dyn_cast<RankedTensorType>(getType());
