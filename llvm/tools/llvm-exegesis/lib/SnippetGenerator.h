@@ -69,6 +69,14 @@ public:
   std::vector<RegisterValue> computeRegisterInitialValues(
       const std::vector<InstructionTemplate> &Snippet) const;
 
+  // Assigns the register `IT`'s memory operand addresses memory through and
+  // returns it. That is `Reg` unless the instruction encoding pins the base
+  // register to a different one.
+  static MCRegister assignMemoryOperandRegister(const LLVMState &State,
+                                                InstructionTemplate &IT,
+                                                MCRegister Reg,
+                                                unsigned Offset);
+
 protected:
   const LLVMState &State;
   const Options Opts;
