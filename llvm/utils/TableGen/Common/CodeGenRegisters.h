@@ -246,8 +246,9 @@ public:
 
   // Diagnose an explicit SubRegIndex whose declared size makes a sub-register
   // extend past the register that contains it (an oversized lane mask that
-  // silently corrupts sub-register liveness and spilling). See the definition.
-  void checkSubRegIndexSizes(CodeGenRegBank &) const;
+  // silently corrupts sub-register liveness and spilling). ParentSize is the
+  // size of the register, or 0 if it is unknown. See the definition.
+  void checkSubRegIndexSizes(unsigned ParentSize) const;
 
   SubRegArrayRef getSubRegs() const {
     assert(SuperRegsComplete && "Must precompute super-registers");
