@@ -741,7 +741,7 @@ public:
     PM.add(exegesis::createRISCVPreprocessingPass());
     PM.add(createRISCVInsertVSETVLILegacyPass());
     // Setting up the correct FRM.
-    PM.add(createRISCVInsertReadWriteCSRPass());
+    PM.add(createRISCVInsertReadWriteCSRLegacyPass());
     PM.add(createRISCVInsertWriteVXRMPass());
     // This will assign physical register to the result of VSETVLI instructions
     // that produce VLMAX.

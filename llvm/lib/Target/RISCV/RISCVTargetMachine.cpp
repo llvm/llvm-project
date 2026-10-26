@@ -70,7 +70,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVVLOptimizerLegacyPass(*PR);
   initializeRISCVVMV0EliminationLegacyPass(*PR);
   initializeRISCVInsertVSETVLILegacyPass(*PR);
-  initializeRISCVInsertReadWriteCSRPass(*PR);
+  initializeRISCVInsertReadWriteCSRLegacyPass(*PR);
   initializeRISCVInsertWriteVXRMPass(*PR);
   initializeRISCVDAGToDAGISelLegacyPass(*PR);
   initializeRISCVMoveMergePass(*PR);
@@ -573,7 +573,7 @@ void RISCVPassConfig::addPreRegAlloc() {
     addPass(createRISCVPreAllocZilsdOptPass());
   }
 
-  addPass(createRISCVInsertReadWriteCSRPass());
+  addPass(createRISCVInsertReadWriteCSRLegacyPass());
   addPass(createRISCVInsertWriteVXRMPass());
   addPass(createRISCVLandingPadSetupLegacyPass());
   addPass(createRISCVVMV0EliminationLegacyPass());

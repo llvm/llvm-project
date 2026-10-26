@@ -204,8 +204,15 @@ FunctionPass *createRISCVInsertVSETVLILegacyPass();
 void initializeRISCVInsertVSETVLILegacyPass(PassRegistry &);
 extern char &RISCVInsertVSETVLILegacyID;
 
-FunctionPass *createRISCVInsertReadWriteCSRPass();
-void initializeRISCVInsertReadWriteCSRPass(PassRegistry &);
+class RISCVInsertReadWriteCSRPass
+    : public RequiredPassInfoMixin<RISCVInsertReadWriteCSRPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createRISCVInsertReadWriteCSRLegacyPass();
+void initializeRISCVInsertReadWriteCSRLegacyPass(PassRegistry &);
 
 FunctionPass *createRISCVInsertWriteVXRMPass();
 void initializeRISCVInsertWriteVXRMPass(PassRegistry &);
