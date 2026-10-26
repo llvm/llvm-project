@@ -34,7 +34,10 @@
 #include "clang/CIR/Interfaces/CIROpInterfaces.h"
 #include "clang/CIR/MissingFeatures.h"
 
+#include "llvm/TargetParser/Triple.h"
+
 #include <mutex>
+#include <optional>
 
 using BuilderCallbackRef =
     llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>;
@@ -101,6 +104,9 @@ RecordLayoutAttr getRecordLayout(mlir::ModuleOp mod, mlir::StringAttr name);
 /// Same lookup as getRecordLayout, but returns a null attribute instead of
 /// asserting when the record has no layout entry.
 RecordLayoutAttr tryGetRecordLayout(mlir::ModuleOp mod, mlir::StringAttr name);
+
+/// Attempts to construct an llvm::Triple from a module's cir.triple attribute.
+std::optional<llvm::Triple> getTripleFromModule(mlir::ModuleOp mod);
 } // namespace cir
 
 // TableGen'erated files for MLIR dialects require that a macro be defined when

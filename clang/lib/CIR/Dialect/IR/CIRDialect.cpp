@@ -358,6 +358,40 @@ cir::CIRDialect::verifyOperationAttribute(mlir::Operation *op,
                                        /*trailingZerosNum=*/0);
   }
 
+  if (attrName == getTripleAttrName()) {
+    if (!mlir::isa<mlir::ModuleOp>(op))
+      return op->emitOpError()
+             << "expects '" << getTripleAttrName() << "' attribute to be "
+             << "attached to '" << mlir::ModuleOp::getOperationName() << "'";
+
+    auto tripleStr = mlir::dyn_cast<mlir::StringAttr>(attr.getValue());
+    if (!tripleStr)
+      return op->emitOpError() << "expects '" << getTripleAttrName() << "' to "
+                               << "be a string";
+    llvm::Triple triple(tripleStr.getValue());
+    // "Validate" our triple by checking if it has a known architecture;
+    // although not all triples have a corresponding clang TargetInfo.
+    if (triple.getArch() == llvm::Triple::UnknownArch)
+      return op->emitOpError()
+             << "unknown triple '" << tripleStr.getValue() << "' in '"
+             << getTripleAttrName() << "' attribute";
+  }
+
+  if (attrName == getOptInfoAttrName()) {
+    if (!mlir::isa<mlir::ModuleOp>(op))
+      return op->emitOpError()
+             << "expects '" << getOptInfoAttrName() << "' attribute to be "
+             << "attached to '" << mlir::ModuleOp::getOperationName() << "'";
+
+    auto optInfo = mlir::dyn_cast<cir::OptInfoAttr>(attr.getValue());
+    // Checks whether or not OptInfoAttr is even parseable; opt info range
+    // sanity checks are done in OptInfoAttr::verify.
+    if (!optInfo)
+      return op->emitOpError()
+             << "malformed " << cir::CIRDialect::getOptInfoAttrName()
+             << " attribute";
+  }
+
   return success();
 }
 
@@ -471,6 +505,18 @@ static LogicalResult verifyProducedBy(Operation *op, Value operand,
            << "operand '" << operandName << "' must be produced by '"
            << ExpectedProducerOp::getOperationName() << "'";
   return success();
+}
+
+std::optional<llvm::Triple> cir::getTripleFromModule(mlir::ModuleOp mod) {
+  auto tripleAttr =
+      mod->getAttrOfType<mlir::StringAttr>(CIRDialect::getTripleAttrName());
+  if (!tripleAttr)
+    return std::nullopt;
+
+  // Verifying the validity of the triple attribute happens in
+  // cir::CIRDialect::verifyOperationAttribute; verifyOperationAttribute
+  // should error first if we have an invalid attribute.
+  return llvm::Triple{tripleAttr.getValue()};
 }
 
 //===----------------------------------------------------------------------===//

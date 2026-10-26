@@ -78,13 +78,11 @@ runCIRToCIRPasses(mlir::ModuleOp theModule, mlir::MLIRContext &mlirContext,
 
   llvm::TimeTraceScope scope("CIR To CIR Passes");
 
-  auto tripleAttr = theModule->getAttrOfType<mlir::StringAttr>(
-      cir::CIRDialect::getTripleAttrName());
-  if (!tripleAttr)
+  std::optional<llvm::Triple> triple = cir::getTripleFromModule(theModule);
+  if (!triple)
     return theModule.emitError()
            << "missing '" << cir::CIRDialect::getTripleAttrName()
            << "' attribute";
-  llvm::Triple triple(tripleAttr.getValue());
 
   auto abiAttr = theModule->getAttrOfType<mlir::StringAttr>(
       cir::CIRDialect::getTargetABIAttrName());
@@ -128,7 +126,7 @@ runCIRToCIRPasses(mlir::ModuleOp theModule, mlir::MLIRContext &mlirContext,
     // so it must run after CXXABILowering has lowered C++ ABI types to plain
     // records the classifier can handle.  Only the x86_64 System V classifier
     // is implemented; other targets are left unchanged.
-    CallConvTarget target = getCallConvTarget(triple);
+    CallConvTarget target = getCallConvTarget(*triple);
     if (target != CallConvTarget::None) {
       // Source the ABI-compatibility version from the module's serialized
       // #cir.lowering_lang_options so a reloaded .cir classifies the same way
@@ -143,8 +141,8 @@ runCIRToCIRPasses(mlir::ModuleOp theModule, mlir::MLIRContext &mlirContext,
             loweringLangOpts.getClangAbiCompat());
       pm.addPass(mlir::createCallConvLoweringPass(
           target, getX86AVXABILevel(abiAttr.getValue()),
-          allowsX86TargetAttrAvx(triple, compat),
-          getX86ABICompatInfo(triple, compat)));
+          allowsX86TargetAttrAvx(*triple, compat),
+          getX86ABICompatInfo(*triple, compat)));
     }
   }
 

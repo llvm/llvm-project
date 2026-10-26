@@ -944,11 +944,11 @@ void CXXABILoweringPass::runOnOperation() {
   mlir::MLIRContext *ctx = mod.getContext();
 
   std::unique_ptr<cir::LowerModule> lowerModule = cir::createLowerModule(mod);
-  // If lower module is not available, skip the ABI lowering pass.
-  if (!lowerModule) {
-    mod.emitWarning("Cannot create a CIR lower module, skipping the ")
-        << getName() << " pass";
-    return;
+  assert(lowerModule && "LowerModule shouldn't be null");
+  if (!lowerModule->hasTarget()) {
+    mod.emitError() << getArgument() << " requires a module with a supported '"
+                    << cir::CIRDialect::getTripleAttrName() << "' attribute";
+    return signalPassFailure();
   }
 
   if (!lowerModule->hasCXXABI()) {
