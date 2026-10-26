@@ -38,6 +38,16 @@ struct JumpTable {
 };
 } // anonymous namespace
 
+static Function *getExpandableCallee(const ScalarOptions &Opts, Value *V,
+                                     FunctionType *CallFTy) {
+  auto *Func = dyn_cast<Function>(V);
+  if (!Func || Func->isDeclaration() || Func->getFunctionType() != CallFTy ||
+      Func->getInstructionCount() >
+          Opts.jump_table_to_switch_function_size_threshold)
+    return nullptr;
+  return Func;
+}
+
 static std::optional<JumpTable> parseJumpTable(const ScalarOptions &Opts,
                                                GetElementPtrInst *GEP,
                                                PointerType *PtrTy,
@@ -86,10 +96,8 @@ static std::optional<JumpTable> parseJumpTable(const ScalarOptions &Opts,
          !NullPointerIsDefined(&F, PtrTy->getAddressSpace())) ||
         isa<UndefValue>(C))
       continue;
-    auto *Func = dyn_cast<Function>(C);
-    if (!Func || Func->isDeclaration() || Func->getFunctionType() != CallFTy ||
-        Func->getInstructionCount() >
-            Opts.jump_table_to_switch_function_size_threshold)
+    Function *Func = getExpandableCallee(Opts, C, CallFTy);
+    if (!Func)
       return std::nullopt;
     JT.Funcs.push_back({Index, Func});
   }
@@ -222,18 +230,32 @@ PreservedAnalyses JumpTableToSwitchPass::run(Function &F,
         auto *Call = dyn_cast<CallInst>(&I);
         if (!Call || Call->getCalledFunction() || Call->isMustTailCall())
           continue;
-        auto *L = dyn_cast<LoadInst>(Call->getCalledOperand());
-        // Skip atomic or volatile loads.
-        if (!L || !L->isSimple())
-          continue;
-        auto *GEP = dyn_cast<GetElementPtrInst>(L->getPointerOperand());
-        if (!GEP ||
-            (!GEP->hasNoUnsignedWrap() && !GEP->hasNoUnsignedSignedWrap()))
-          continue;
-        auto *PtrTy = dyn_cast<PointerType>(L->getType());
-        assert(PtrTy && "call operand must be a pointer");
-        std::optional<JumpTable> JT =
-            parseJumpTable(Opts, GEP, PtrTy, Call->getFunctionType());
+        std::optional<JumpTable> JT;
+        if (auto *S = dyn_cast<SelectInst>(Call->getCalledOperand())) {
+          Function *F0 = getExpandableCallee(Opts, S->getFalseValue(),
+                                             Call->getFunctionType());
+          if (!F0)
+            continue;
+          Function *F1 = getExpandableCallee(Opts, S->getTrueValue(),
+                                             Call->getFunctionType());
+          if (!F1)
+            continue;
+          JT = JumpTable();
+          JT->Index = S->getCondition();
+          JT->Funcs.push_back({0, F0});
+          JT->Funcs.push_back({1, F1});
+        } else if (auto *L = dyn_cast<LoadInst>(Call->getCalledOperand())) {
+          // Skip atomic or volatile loads.
+          if (!L || !L->isSimple())
+            continue;
+          auto *GEP = dyn_cast<GetElementPtrInst>(L->getPointerOperand());
+          if (!GEP ||
+              (!GEP->hasNoUnsignedWrap() && !GEP->hasNoUnsignedSignedWrap()))
+            continue;
+          auto *PtrTy = dyn_cast<PointerType>(L->getType());
+          assert(PtrTy && "call operand must be a pointer");
+          JT = parseJumpTable(Opts, GEP, PtrTy, Call->getFunctionType());
+        }
         if (!JT)
           continue;
         SplittedOutTail = expandToSwitch(Call, *JT, DTU, ORE, FuncToGuid);
