@@ -2614,6 +2614,13 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
     The iglp_opt strategy implementations are subject to change.
 * - llvm.amdgcn.s.getpc
   - Provides access to the s_getpc_b64 instruction, but with the return value sign-extended from the width of the underlying PC hardware register even on processors where the s_getpc_b64 instruction returns a zero-extended value.
+* - llvm.amdgcn.implicit.buffer.ptr
+  - Returns the implicit buffer pointer. This is pointer is passed in
+    the first two user SGPRs of graphics and compute shaders for the
+    `mesa3d` OS on targets without architected flat scratch. The
+    backend uses it to set up the scratch buffer resource. It is an
+    error to use for other ABIs, for kernels and non-entry functions,
+    and on targets with architected flat scratch.
 * - llvm.amdgcn.ballot
   - Returns a bitfield(i32 or i64) containing the result of its i1 argument in all active lanes, and zero in all inactive lanes.
     Provides a way to convert i1 in LLVM IR to i32 or i64 lane mask - bitfield used by hardware to control active lanes when used in EXEC register.
@@ -3215,6 +3222,24 @@ whether to skip the DPP optimization.
 ; Many expected active lanes: the DPP optimization is not skipped.
 %old1 = atomicrmw add ptr addrspace(3) @lds, i32 %val acq_rel, !amdgpu.expected.active.lanes !{i32 32}
 ```
+
+### '`amdgpu.cfs`' Metadata
+
+Set the cache fill size (CFS) field in VMEM instructions for architectures
+that support it. Can be used on memory instructions (e.g. load) and memory
+intrinsics (e.g. llvm.amdgcn.image.load.1d).
+
+The default value for the CFS field is 0 (256 bytes).
+
+Valid arguments for CFS Metadata are:
+
+- !{i32 1}  :  CFS_128B
+- !{i32 2}  :  CFS_64B
+- !{i32 3}  :  CFS_32B
+
+The field indicates how much data is fetched on a cache miss. It is only supported
+on GFX13. GFX13 only honors it for load and atomic operations. GFX13 does not
+support a 32-byte fetch size so it treats CFS_32B the same as CFS_64B.
 
 ## LLVM IR Attributes
 
