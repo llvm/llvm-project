@@ -266,8 +266,15 @@ public:
 FunctionPass *createRISCVLoadStoreOptLegacyPass();
 void initializeRISCVLoadStoreOptLegacyPass(PassRegistry &);
 
-FunctionPass *createRISCVPreAllocZilsdOptPass();
-void initializeRISCVPreAllocZilsdOptPass(PassRegistry &);
+class RISCVPreAllocZilsdOptPass
+    : public OptionalPassInfoMixin<RISCVPreAllocZilsdOptPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createRISCVPreAllocZilsdOptLegacyPass();
+void initializeRISCVPreAllocZilsdOptLegacyPass(PassRegistry &);
 
 class RISCVZacasABIFixPass
     : public RequiredPassInfoMixin<RISCVZacasABIFixPass> {
