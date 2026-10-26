@@ -65,11 +65,12 @@ struct DemandedVL {
 
 class RISCVVLOptimizerImpl {
   MachineRegisterInfo *MRI;
-  const MachineDominatorTree *MDT;
+  function_ref<const MachineDominatorTree &()> GetMDT;
   const TargetInstrInfo *TII;
 
 public:
-  RISCVVLOptimizerImpl(const MachineDominatorTree *MDT) : MDT(MDT) {}
+  RISCVVLOptimizerImpl(function_ref<const MachineDominatorTree &()> GetMDT)
+      : GetMDT(GetMDT) {}
 
   bool run(MachineFunction &MF);
 
@@ -1326,7 +1327,7 @@ bool RISCVVLOptimizerImpl::tryReduceVL(MachineInstr &MI,
   if (CommonVL.isReg()) {
     const MachineInstr *VLMI = MRI->getVRegDef(CommonVL.getReg());
     if (VLMI && RISCVInstrInfo::isFaultOnlyFirstLoad(*VLMI) &&
-        !MDT->dominates(VLMI, &MI))
+        !GetMDT().dominates(VLMI, &MI))
       CommonVL = VLMI->getOperand(RISCVII::getVLOpNum(VLMI->getDesc()));
   }
 
@@ -1352,7 +1353,7 @@ bool RISCVVLOptimizerImpl::tryReduceVL(MachineInstr &MI,
     return false;
 
   auto VLDominates = [this, &VLMI](const MachineInstr &MI) {
-    return MDT->dominates(VLMI, &MI);
+    return GetMDT().dominates(VLMI, &MI);
   };
   if (!VLDominates(MI)) {
     assert(MI.getNumExplicitDefs() == 1);
@@ -1402,14 +1403,18 @@ void RISCVVLOptimizerImpl::transfer(const MachineInstr &MI) {
 bool RISCVVLOptimizerImpl::run(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
 
-  TII = MF.getSubtarget<RISCVSubtarget>().getInstrInfo();
+  const RISCVSubtarget &ST = MF.getSubtarget<RISCVSubtarget>();
+  if (!ST.hasVInstructions())
+    return false;
+
+  TII = ST.getInstrInfo();
 
   assert(DemandedVLs.empty());
 
   // For each instruction that defines or uses a vector, propagate the VL it
   // uses to its inputs.
   for (MachineBasicBlock *MBB : post_order(&MF)) {
-    assert(MDT->isReachableFromEntry(MBB));
+    assert(GetMDT().isReachableFromEntry(MBB));
     for (MachineInstr &MI : reverse(*MBB)) {
       if (MI.isDebugInstr())
         continue;
@@ -1429,7 +1434,7 @@ bool RISCVVLOptimizerImpl::run(MachineFunction &MF) {
   // only what's demanded.
   bool MadeChange = false;
   for (auto &[MI, VL] : DemandedVLs) {
-    assert(MDT->isReachableFromEntry(MI->getParent()));
+    assert(GetMDT().isReachableFromEntry(MI->getParent()));
     if (!isCandidate(*MI))
       continue;
     if (!tryReduceVL(*const_cast<MachineInstr *>(MI), VL.VL))
@@ -1445,21 +1450,19 @@ bool RISCVVLOptimizerLegacy::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
 
-  if (!MF.getSubtarget<RISCVSubtarget>().hasVInstructions())
-    return false;
-
-  auto *MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-  return RISCVVLOptimizerImpl(MDT).run(MF);
+  auto GetMDT = [&]() -> const MachineDominatorTree & {
+    return getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  };
+  return RISCVVLOptimizerImpl(GetMDT).run(MF);
 }
 
 PreservedAnalyses
 RISCVVLOptimizerPass::run(MachineFunction &MF,
                           MachineFunctionAnalysisManager &MFAM) {
-  if (!MF.getSubtarget<RISCVSubtarget>().hasVInstructions())
-    return PreservedAnalyses::all();
-
-  auto *MDT = &MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
-  bool Changed = RISCVVLOptimizerImpl(MDT).run(MF);
+  auto GetMDT = [&]() -> const MachineDominatorTree & {
+    return MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
+  };
+  bool Changed = RISCVVLOptimizerImpl(GetMDT).run(MF);
   if (!Changed)
     return PreservedAnalyses::all();
 
