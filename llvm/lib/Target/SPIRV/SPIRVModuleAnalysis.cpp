@@ -1082,6 +1082,7 @@ void RequirementHandler::initAvailableCapabilitiesForVulkan(
                     Capability::StorageBufferArrayDynamicIndexing,
                     Capability::StorageImageArrayDynamicIndexing,
                     Capability::DerivativeControl,
+                    Capability::SampleRateShading,
                     Capability::MinLod,
                     Capability::ImageQuery,
                     Capability::ImageGatherExtended,
@@ -1135,6 +1136,14 @@ static void addOpDecorateReqs(const MachineInstr &MI, unsigned DecIndex,
   if (Dec == SPIRV::Decoration::BuiltIn) {
     int64_t BuiltInOp = MI.getOperand(DecIndex + 1).getImm();
     auto BuiltIn = static_cast<SPIRV::BuiltIn::BuiltIn>(BuiltInOp);
+    if ((BuiltIn == SPIRV::BuiltIn::BaryCoordKHR ||
+         BuiltIn == SPIRV::BuiltIn::BaryCoordNoPerspKHR) &&
+        !ST.canUseExtension(
+            SPIRV::Extension::SPV_KHR_fragment_shader_barycentric))
+      report_fatal_error(
+          "Barycentric built-ins require the following SPIR-V extension: "
+          "SPV_KHR_fragment_shader_barycentric",
+          false);
     Reqs.addRequirements(getSymbolicOperandRequirements(
         SPIRV::OperandCategory::BuiltInOperand, BuiltIn, ST, Reqs));
   } else if (Dec == SPIRV::Decoration::LinkageAttributes) {

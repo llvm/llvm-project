@@ -213,7 +213,11 @@ GlobalVariable *DXContainerGlobals::buildSignature(Module &M, Signature &Sig,
                                                    StringRef SectionName) {
   SmallString<256> Data;
   raw_svector_ostream OS(Data);
-  Sig.write(OS);
+  VersionTuple V = getAnalysis<DXILMetadataAnalysisWrapperPass>()
+                       .getModuleMetadata()
+                       .ValidatorVersion;
+  bool Legacy = !V.empty() && V != VersionTuple(0, 0) && V < VersionTuple(1, 7);
+  Sig.write(OS, /*PadToDword=*/!Legacy);
   Constant *Constant =
       ConstantDataArray::getString(M.getContext(), Data, /*AddNull*/ false);
   return buildContainerGlobal(M, Constant, Name, SectionName);

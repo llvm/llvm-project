@@ -56,6 +56,7 @@ to LLDB's core in order to improve your debugging experience in VS Code.
 ### The Debug Adapter Protocol
 
 The most relevant resources for the Debug Adapter Protocol are:
+
 * [The overview](https://microsoft.github.io/debug-adapter-protocol/overview)
   which provides a high-level introduction,
 * the [human-readable specification](https://microsoft.github.io/debug-adapter-protocol/specification), and
@@ -71,7 +72,8 @@ inspiration from it. If not, consider opening an upstream issue.
 
 To avoid naming collisions with potential future extensions of the Debug
 Adapter protocol, all non-standard extensions should use the prefix
-`$__lldb_extension` in their JSON property names.
+`$__lldb_` in their JSON property names. See
+[LLDB-DAP Extensions](./lldbdap-extensions.md) for more details.
 
 ### Debugging the Debug Adapter Protocol
 
@@ -92,8 +94,8 @@ changed.
 
 ### Pre-requisites
 
-- Install a modern version of node (e.g. `v20.0.0`).
-- On VS Code, execute the command `Install 'code' command in PATH`. You need to
+* Install a modern version of node (e.g. `v20.0.0`).
+* On VS Code, execute the command `Install 'code' command in PATH`. You need to
   do it only once. This enables the command `code` in the PATH.
 
 ### Packaging and installation
