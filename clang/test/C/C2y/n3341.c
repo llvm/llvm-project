@@ -4,15 +4,22 @@
 /* WG14 N3341: Yes
  * Slay Some Earthly Demons III
  *
- * Empty structure and union objects are now implementation-defined.
+ * Structure and union objects with a member declaration list but no named
+ * members are now implementation-defined.
  */
 
-// expected-no-diagnostics
-
-struct R {};               // gnu-warning {{empty struct is a GNU extension}}
+struct R {};               // expected-warning {{empty struct is a GNU extension}} \
+                           // gnu-warning {{empty struct is a GNU extension}}
 #if __STDC_VERSION__ >= 201112L
-struct S { struct { }; };  // gnu-warning {{empty struct is a GNU extension}}
+struct S { struct { }; };  // expected-warning {{empty struct is a GNU extension}} \
+                           // gnu-warning {{empty struct is a GNU extension}}
 #endif
 struct T { int : 0; };     // gnu-warning {{struct without named members is a GNU extension}}
-union U {};                // gnu-warning {{empty union is a GNU extension}}
+union U {};                // expected-warning {{empty union is a GNU extension}} \
+                           // gnu-warning {{empty union is a GNU extension}}
 
+void compound_literal_empty_record(void) {
+  (void)(struct {}){};     // expected-warning {{empty struct is a GNU extension}} \
+                           // gnu-warning {{empty struct is a GNU extension}} \
+                           // gnu-warning {{use of an empty initializer is a C23 extension}}
+}
