@@ -1,7 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -complex-range=promoted -fclangir -emit-llvm %s -o - | FileCheck %s --check-prefix=X87
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -complex-range=promoted -emit-llvm %s -o - | FileCheck %s --check-prefix=X87
 
-
 // RUN: %clang_cc1 -triple aarch64-unknown-linux-gnu -complex-range=promoted -fclangir -emit-llvm %s -o - | FileCheck %s --check-prefixes=FP128
 // RUN: %clang_cc1 -triple aarch64-unknown-linux-gnu -complex-range=promoted -emit-llvm %s -o - | FileCheck %s --check-prefix=FP128
 
