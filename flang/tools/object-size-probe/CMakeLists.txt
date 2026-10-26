@@ -43,6 +43,9 @@ add_custom_target(flang-generated-object-sizes DEPENDS "${_object_sizes_h}")
 add_dependencies(FortranEvaluate flang-generated-object-sizes)
 add_dependencies(FortranSemantics flang-generated-object-sizes)
 add_dependencies(FortranLower flang-generated-object-sizes)
+
+# Due to layer violations: This include flang/Semantics/runtime-type-info.h and
+# therefore indirectly include object-sizes.h
 add_dependencies(FIRTransforms flang-generated-object-sizes)
 add_dependencies(FIRCodeGen flang-generated-object-sizes)
 add_dependencies(FIROpenACCTransforms flang-generated-object-sizes)

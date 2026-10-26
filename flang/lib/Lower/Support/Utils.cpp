@@ -106,10 +106,8 @@ public:
            (static_cast<unsigned>(kind) + 5u);
   }
   static unsigned getHashValue(const Fortran::evaluate::ComplexComponent &x) {
-    const int kind{x.kind()};
     return getHashValue(x.left()) -
-           (static_cast<unsigned>(x.isImaginaryPart) + 1u) * 3u +
-           static_cast<unsigned>(kind);
+           (static_cast<unsigned>(x.isImaginaryPart) + 1u) * 3u;
   }
   template <typename T>
   static unsigned getHashValue(const Fortran::evaluate::Parentheses<T> &x) {

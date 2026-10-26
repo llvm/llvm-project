@@ -149,6 +149,9 @@ ConstantBase<RESULT, ELEMENT>::ConstantBase(
       values_(std::move(x)) {
   CHECK_KIND(kind, RESULT);
   CHECK(TotalElementCount(shape()) && size() == *TotalElementCount(shape()));
+  if constexpr (IsLengthlessIntrinsicType<Result>) {
+    CHECK(res.kind() == kind);
+  }
 }
 
 template <typename RESULT, typename ELEMENT>

@@ -118,10 +118,16 @@ public:
   ConstantBase(int kind, const A &x, Result res)
       : kind_{kind}, result_{res}, values_{Element{kind, x}} {
     CHECK_KIND(kind, RESULT);
+    if constexpr (IsLengthlessIntrinsicType<Result>) {
+      CHECK(res.kind() == kind);
+    }
   }
   ConstantBase(int kind, ELEMENT &&x)
       : kind_{kind}, result_{Result{kind}}, values_{std::move(x)} {
     CHECK_KIND(kind, RESULT);
+    if constexpr (IsLengthlessIntrinsicType<Result>) {
+      CHECK(values_.front().kind() == kind);
+    }
   }
 
   template <TypeCategory CAT>
@@ -143,6 +149,9 @@ public:
   ConstantBase(int kind, ELEMENT &&x, Result res)
       : kind_{kind}, result_{res}, values_{std::move(x)} {
     CHECK_KIND(kind, RESULT);
+    if constexpr (IsLengthlessIntrinsicType<Result>) {
+      CHECK(res.kind() == kind);
+    }
   }
 
   ConstantBase(int kind, std::vector<Element> &&x, ConstantSubscripts &&sh)

@@ -570,11 +570,11 @@ public:
   DEFAULT_CONSTRUCTORS_AND_ASSIGNMENTS(ArrayConstructor)
   explicit ArrayConstructor(int kind, Base &&values)
       : Base{std::move(values)}, kind_{kind} {
-    CHECK(kind != 0);
+    CHECK_KIND(kind, Result);
   }
   template <typename T>
   explicit ArrayConstructor(int kind, const Expr<T> &) : kind_{kind} {
-    CHECK(kind != 0);
+    CHECK_KIND(kind, Result);
   }
   ArrayConstructor &set_LEN(Expr<SubscriptInteger> &&);
   bool operator==(const ArrayConstructor &) const;

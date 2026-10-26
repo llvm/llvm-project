@@ -204,16 +204,21 @@ public:
       : Base(ops...) {}
 
   template <typename T> bool match(const evaluate::Expr<T> &input) const {
-    // All logical operations (for a given type T) have the same operation
-    // type (LogicalOperation), so type-based matching cannot tell specific
-    // operations from one another.
-    // Check the operation code first, if that matches then use the
-    // base class's match.
-    if (common::visit([&](auto &&s) { return matchOp(s); }, deparen(input).u)) {
-      return Base::match(input);
-    } else {
-      return false;
+    // The kind of a LogicalOperation is only known at runtime and always
+    // equals the kind of its enclosing Expr, so ValType can only be checked
+    // against the result type of the input expression.
+    if constexpr (std::is_same_v<T, ValType>) {
+      // All logical operations have the same operation type
+      // (LogicalOperation), so type-based matching cannot tell specific
+      // operations from one another.
+      // Check the operation code first, if that matches then use the
+      // base class's match.
+      if (common::visit(
+              [&](auto &&s) { return matchOp(s); }, deparen(input).u)) {
+        return Base::match(input);
+      }
     }
+    return false;
   }
 
   template <typename U> bool match(const U &input) const { //

@@ -307,7 +307,7 @@ std::optional<Expr<SomeComplex>> ConstructComplex(
 template <bool GET_IMAGINARY> struct ComplexPartExtractor {
   // NOTE: The code in this class was dead code; a std/common::visit
   // was forgotten such that the overload resolution was looking for a
-  // std::variant<...> overload instead for the runtime content of the
+  // std::variant<...> overload instead of for the runtime content of the
   // std::variant. There was no specialization for std::variant so this fallback
   // overload was matched unconditionally. The intended overloads were broken
   // due to never having been checked by the compiler, because they were never
