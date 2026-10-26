@@ -590,6 +590,17 @@ uint32_t L0DeviceTy::getMemAllocType(const void *Ptr) const {
   return Properties.type;
 }
 
+Expected<void *> L0DeviceTy::getNativeQueueHandle(__tgt_async_info *AsyncInfo) {
+  if (!AsyncInfo || !AsyncInfo->Queue)
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "no queue associated with the async info");
+  auto *CmdList = static_cast<L0QueueTy *>(AsyncInfo->Queue)->getZeCmdList();
+  if (!CmdList)
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "queue has no active command list");
+  return CmdList;
+}
+
 interop_spec_t L0DeviceTy::selectInteropPreference(int32_t InteropType,
                                                    int32_t NumPrefers,
                                                    interop_spec_t *Prefers) {
