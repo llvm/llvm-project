@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// MSFZ format specification:
+// https://github.com/microsoft/pdb-rs/blob/main/docs/pdb/msfz.md
+
 #ifndef LLVM_DEBUGINFO_MSF_MSFZ_H
 #define LLVM_DEBUGINFO_MSF_MSFZ_H
 
