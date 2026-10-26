@@ -878,10 +878,30 @@ Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
 
     // In most cases, there's no actual problem with an explicitly-specified
     // type, but a function type won't work here, and ActOnVariableDeclarator
-    // shouldn't be called for such a type.
-    // If the declaration is invalid, there is no need to continue with deduction
-    // or binding, as this can lead to extra error messages.
-    if (R->isFunctionType() || HasBadDeclarator)
+    // shouldn't be called for such a type. 
+    // Recover from invalid pointer declarators by removing pointer chunks
+    // so type deduction can proceed and the bindings remain usable.
+    bool DroppedPointer = false;
+    for (unsigned I = D.getNumTypeObjects(); I > 0; --I) {
+      const DeclaratorChunk &Chunk = D.getTypeObject(I - 1);
+      if (Chunk.Kind == DeclaratorChunk::Pointer ||
+          Chunk.Kind == DeclaratorChunk::MemberPointer) {
+        D.DropTypeObject(I - 1);
+        DroppedPointer = true;
+      }
+    }
+
+    if (DroppedPointer) {
+      TInfo = GetTypeForDeclarator(D);
+      R = TInfo->getType();
+    }
+
+    bool StillHasBadDeclarator =
+        D.hasGroupingParens() || D.getNumTypeObjects() > 1 ||
+        (D.getNumTypeObjects() == 1 &&
+         D.getTypeObject(0).Kind != DeclaratorChunk::Reference);
+
+    if (R->isFunctionType() || StillHasBadDeclarator)
       D.setInvalidType();
   }
 

@@ -2489,10 +2489,15 @@ public:
     return type_object_range(DeclTypeInfo.begin(), DeclTypeInfo.end());
   }
 
+  /// Removes the type object at the specified index.
+  void DropTypeObject(unsigned index) {
+    assert(index < DeclTypeInfo.size() && "Invalid type chunk");
+    DeclTypeInfo[index].destroy();
+    DeclTypeInfo.erase(DeclTypeInfo.begin() + index);
+  }
+
   void DropFirstTypeObject() {
-    assert(!DeclTypeInfo.empty() && "No type chunks to drop.");
-    DeclTypeInfo.front().destroy();
-    DeclTypeInfo.erase(DeclTypeInfo.begin());
+    DropTypeObject(0);
   }
 
   /// Return the innermost (closest to the declarator) chunk of this
