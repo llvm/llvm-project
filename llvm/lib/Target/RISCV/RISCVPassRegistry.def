@@ -18,6 +18,7 @@
 #endif
 MODULE_PASS("riscv-asm-printer-begin", RISCVAsmPrinterBeginPass())
 MODULE_PASS("riscv-asm-printer-end", RISCVAsmPrinterEndPass())
+MODULE_PASS("riscv-promote-constant", RISCVPromoteConstantPass(this))
 #undef MODULE_PASS
 
 #ifndef FUNCTION_PASS

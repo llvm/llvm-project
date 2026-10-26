@@ -244,8 +244,18 @@ void initializeRISCVO0PreLegalizerCombinerPass(PassRegistry &);
 FunctionPass *createRISCVPreLegalizerCombiner();
 void initializeRISCVPreLegalizerCombinerPass(PassRegistry &);
 
-ModulePass *createRISCVPromoteConstantPass();
-void initializeRISCVPromoteConstantPass(PassRegistry &);
+class RISCVPromoteConstantPass
+    : public OptionalPassInfoMixin<RISCVPromoteConstantPass> {
+private:
+  const RISCVTargetMachine *TM;
+
+public:
+  RISCVPromoteConstantPass(const RISCVTargetMachine *TM) : TM(TM) {}
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+};
+
+ModulePass *createRISCVPromoteConstantLegacyPass();
+void initializeRISCVPromoteConstantLegacyPass(PassRegistry &);
 
 class RISCVVLOptimizerPass
     : public OptionalPassInfoMixin<RISCVVLOptimizerPass> {
