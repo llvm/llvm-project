@@ -10,6 +10,8 @@
 
   define void @debug_use_of_base() !dbg !4 { ret void }
   define void @debug_use_of_offset() !dbg !8 { ret void }
+  define void @debug_use_of_hi() !dbg !12 { ret void }
+  define void @debug_use_of_hi_memory() !dbg !15 { ret void }
 
   !llvm.module.flags = !{!0}
   !llvm.dbg.cu = !{!1}
@@ -25,6 +27,12 @@
   !9 = !DILocalVariable(name: "off", scope: !8, file: !2)
   !10 = !DILocation(line: 2, scope: !8)
   !11 = !DILocalVariable(name: "list", scope: !4, file: !2)
+  !12 = distinct !DISubprogram(name: "debug_use_of_hi", scope: !2, file: !2, type: !3, spFlags: DISPFlagDefinition, unit: !1)
+  !13 = !DILocalVariable(name: "hi", scope: !12, file: !2)
+  !14 = !DILocation(line: 3, scope: !12)
+  !15 = distinct !DISubprogram(name: "debug_use_of_hi_memory", scope: !2, file: !2, type: !3, spFlags: DISPFlagDefinition, unit: !1)
+  !16 = !DILocalVariable(name: "hi", scope: !15, file: !2)
+  !17 = !DILocation(line: 4, scope: !15)
 ...
 
 # The register that held the base now holds the address with the offset, so
@@ -71,5 +79,49 @@ body:             |
     DBG_VALUE %off, $noreg, !9, !DIExpression(DW_OP_stack_value), debug-location !10
     %sum:gpr = ADD %lo, %off
     $x10 = COPY %sum
+    PseudoRET implicit $x10
+...
+
+# The high part of the address also changes when the offset is folded. Its
+# debug use becomes undef because the original partial address is no longer
+# available.
+# CHECK-LABEL: name: debug_use_of_hi
+# CHECK:       %hi:gpr = LUI target-flags(riscv-hi) @values + 524288
+# CHECK-NEXT:  DBG_VALUE $noreg, $noreg, !{{[0-9]+}}, !DIExpression(DW_OP_stack_value)
+# CHECK-NEXT:  %lo:gpr = ADDI %hi, target-flags(riscv-lo) @values + 524288
+# CHECK-NEXT:  $x10 = COPY %lo
+# CHECK-NEXT:  PseudoRET implicit $x10
+---
+name:            debug_use_of_hi
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %hi:gpr = LUI target-flags(riscv-hi) @values
+    DBG_VALUE %hi, $noreg, !13, !DIExpression(DW_OP_stack_value), debug-location !14
+    %lo:gpr = ADDI %hi, target-flags(riscv-lo) @values
+    %off:gpr = LUI 128
+    %sum:gpr = ADD %lo, %off
+    $x10 = COPY %sum
+    PseudoRET implicit $x10
+...
+
+# The high part also becomes unavailable when the offset is folded directly
+# into a memory operation.
+# CHECK-LABEL: name: debug_use_of_hi_memory
+# CHECK:       %hi:gpr = LUI target-flags(riscv-hi) @values + 8
+# CHECK-NEXT:  DBG_VALUE $noreg, $noreg, !{{[0-9]+}}, !DIExpression(DW_OP_stack_value)
+# CHECK-NEXT:  %load:gpr = LD %hi, target-flags(riscv-lo) @values + 8
+# CHECK-NEXT:  $x10 = COPY %load
+# CHECK-NEXT:  PseudoRET implicit $x10
+---
+name:            debug_use_of_hi_memory
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %hi:gpr = LUI target-flags(riscv-hi) @values
+    DBG_VALUE %hi, $noreg, !16, !DIExpression(DW_OP_stack_value), debug-location !17
+    %lo:gpr = ADDI %hi, target-flags(riscv-lo) @values
+    %load:gpr = LD %lo, 8 :: (load (s64) from @values)
+    $x10 = COPY %load
     PseudoRET implicit $x10
 ...
