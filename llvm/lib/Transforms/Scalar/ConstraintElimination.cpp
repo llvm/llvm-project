@@ -2651,16 +2651,20 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
                        CB.NumIn, CB.NumOut, DFSInStack);
           // The operands also have the same sign: if one of them is known to
           // be non-negative (or negative), so is the other.
-          for (auto [Known, Other] : {std::pair(A, B), std::pair(B, A)}) {
-            if (!Other->getType()->isIntegerTy())
-              continue;
-            Constant *Zero = Constant::getNullValue(Other->getType());
-            if (Info.isKnownNonNegative(Known))
-              Info.addFact(CmpInst::ICMP_SGE, Other, Zero, CB.NumIn, CB.NumOut,
-                           DFSInStack);
-            else if (Info.isKnownNegative(Known))
-              Info.addFact(CmpInst::ICMP_SLT, Other, Zero, CB.NumIn, CB.NumOut,
-                           DFSInStack);
+          if (A->getType()->isIntegerTy()) {
+            Constant *Zero = Constant::getNullValue(A->getType());
+            bool ANonNeg = Info.isKnownNonNegative(A);
+            bool BNonNeg = Info.isKnownNonNegative(B);
+            if (ANonNeg != BNonNeg) {
+              Info.addFact(CmpInst::ICMP_SGE, ANonNeg ? B : A, Zero, CB.NumIn,
+                           CB.NumOut, DFSInStack);
+            } else if (!ANonNeg) {
+              bool ANeg = Info.isKnownNegative(A);
+              bool BNeg = Info.isKnownNegative(B);
+              if (ANeg != BNeg)
+                Info.addFact(CmpInst::ICMP_SLT, ANeg ? B : A, Zero, CB.NumIn,
+                             CB.NumOut, DFSInStack);
+            }
           }
         } else {
           Info.transferToOtherSystem(Pred, A, B, CB.NumIn, CB.NumOut,
