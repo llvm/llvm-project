@@ -2554,6 +2554,25 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_epoll_pwait2",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/epoll_pwait2.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":hdr_signal_macros",
+        ":types_sigset_t",
+        ":types_struct_epoll_event",
+        ":types_struct_timespec",
+    ],
+)
+
+libc_support_library(
     name = "__support_osutil_linux_syscall_wrappers_ftruncate",
     hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/ftruncate.h"],
     target_compatible_with = select({
@@ -19392,28 +19411,6 @@ libc_function(
 )
 
 libc_function(
-    name = "epoll_wait",
-    srcs = ["src/sys/epoll/linux/epoll_wait.cpp"],
-    hdrs = ["src/sys/epoll/epoll_wait.h"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":__support_common",
-        ":__support_libc_errno",
-        ":__support_macros_config",
-        ":__support_macros_sanitizer",
-        ":__support_osutil_syscall",
-        ":errno",
-        ":hdr_signal_macros",
-        ":hdr_sys_epoll_macros",
-        ":types_sigset_t",
-        ":types_struct_epoll_event",
-    ],
-)
-
-libc_function(
     name = "epoll_pwait",
     srcs = ["src/sys/epoll/linux/epoll_pwait.cpp"],
     hdrs = ["src/sys/epoll/epoll_pwait.h"],
@@ -19448,13 +19445,33 @@ libc_function(
         ":__support_libc_errno",
         ":__support_macros_config",
         ":__support_macros_sanitizer",
+        ":__support_osutil_linux_syscall_wrappers_epoll_pwait2",
+        ":errno",
+        ":types_sigset_t",
+        ":types_struct_epoll_event",
+        ":types_struct_timespec",
+    ],
+)
+
+libc_function(
+    name = "epoll_wait",
+    srcs = ["src/sys/epoll/linux/epoll_wait.cpp"],
+    hdrs = ["src/sys/epoll/epoll_wait.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_macros_sanitizer",
         ":__support_osutil_syscall",
         ":errno",
         ":hdr_signal_macros",
         ":hdr_sys_epoll_macros",
         ":types_sigset_t",
         ":types_struct_epoll_event",
-        ":types_struct_timespec",
     ],
 )
 
