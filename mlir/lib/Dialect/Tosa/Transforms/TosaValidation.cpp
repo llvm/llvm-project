@@ -1188,16 +1188,8 @@ LogicalResult checkErrorIfResize(Operation *op) {
                "expect borderX / scaleXNumerator to be in range [-16, 1), got ")
            << borderX << "/" << scaleXN;
 
-  // The following section of code is mostly duplicated with ResizeOp::verify().
-  //
-  // In TOSA specification, we do not support broadcast behavior.
-  // However, there is a rewrite pattern to materialize broadcast ResizeOp.
-  // It makes invalid TOSA ResizeOp into valid one. To avoid breaking
-  // existing code, we keep the rewrite pattern untouched. So, we need
-  // loose the checking in ResizeOp::verify() to support broadcast ResizeOp.
-  //
-  // Here is a strict checking to conform TOSA specification.
-  // FIXME: Remove the duplicated checkings when broadcast ResizeOp is removed.
+  // In TOSA specification, we do not support broadcast behavior. Here is a
+  // strict check to conform to the specification.
   auto idivCheck = [](const int64_t lhs,
                       const int64_t rhs) -> std::optional<int64_t> {
     if (lhs % rhs != 0)
