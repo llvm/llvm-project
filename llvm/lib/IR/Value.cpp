@@ -1021,10 +1021,7 @@ Align Value::getPointerAlignment(const DataLayout &DL) const {
   } else if (const AllocaInst *AI = dyn_cast<AllocaInst>(this)) {
     return AI->getAlign();
   } else if (const auto *Call = dyn_cast<CallBase>(this)) {
-    MaybeAlign Alignment = Call->getRetAlign();
-    if (!Alignment && Call->getCalledFunction())
-      Alignment = Call->getCalledFunction()->getAttributes().getRetAlignment();
-    return Alignment.valueOrOne();
+    return Call->getRetAlign().valueOrOne();
   } else if (const LoadInst *LI = dyn_cast<LoadInst>(this)) {
     if (MDNode *MD = LI->getMetadata(LLVMContext::MD_align)) {
       ConstantInt *CI = mdconst::extract<ConstantInt>(MD->getOperand(0));
