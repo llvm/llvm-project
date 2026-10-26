@@ -191,11 +191,21 @@ expandToSwitch(CallBase *CB, const JumpTable &JT, DomTreeUpdater &DTU,
     return OptimizationRemark(DEBUG_TYPE, "ReplacedJumpTableWithSwitch", CB)
            << "expanded indirect call into switch";
   });
+  auto *Select = dyn_cast<SelectInst>(CB->getCalledOperand());
+  SmallVector<uint32_t, 2> SelectWeights;
   // Only set branch weights on the switch if we have non-zero branch weights.
   // We can have no non-zero branch weights while having VP metadata if for
   // example, all of the functions are external and not instrumented.
   if (HadProfile && llvm::any_of(BranchWeights, not_equal_to(0))) {
     setBranchWeights(*Switch, downscaleWeights(BranchWeights),
+                     /*IsExpected=*/false);
+  } else if (Select && extractBranchWeights(*Select, SelectWeights) &&
+             llvm::any_of(SelectWeights, not_equal_to(0))) {
+    // Switch branches:
+    // - default (never taken)
+    // - 0: false case (branch 1) of select
+    // - 1: true case (branch 0) of select
+    setBranchWeights(*Switch, {0, SelectWeights[1], SelectWeights[0]},
                      /*IsExpected=*/false);
   } else
     setExplicitlyUnknownBranchWeights(*Switch, DEBUG_TYPE);
