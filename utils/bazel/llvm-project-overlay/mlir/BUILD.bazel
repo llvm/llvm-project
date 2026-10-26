@@ -9297,6 +9297,7 @@ cc_library(
         "lib/Conversion/MathToEmitC",
     ],
     deps = [
+        ":ArithDialect",
         ":ConversionPassIncGen",
         ":ConvertToEmitCInterface",
         ":EmitCCommon",
