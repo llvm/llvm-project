@@ -211,6 +211,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     # stdio.h entrypoints
     libc.src.stdio.tmpfile
 
+    # sys/eventfd.h entrypoints
+    libc.src.sys.eventfd.eventfd
+
     # sys/inotify.h entrypoints
     libc.src.sys.inotify.inotify_add_watch
     libc.src.sys.inotify.inotify_init
@@ -274,6 +277,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.getpgrp
     libc.src.unistd.getpid
     libc.src.unistd.getppid
+    libc.src.unistd.getresgid
+    libc.src.unistd.getresuid
     libc.src.unistd.getsid
     libc.src.unistd.gettid
     libc.src.unistd.getgid
@@ -510,6 +515,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fsubl
     libc.src.math.getpayload
     libc.src.math.getpayloadf
+    libc.src.math.getpayloadf128
     libc.src.math.getpayloadl
     libc.src.math.hypot
     libc.src.math.hypotf
@@ -558,6 +564,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.modfl
     libc.src.math.nan
     libc.src.math.nanf
+    libc.src.math.nanf128
     libc.src.math.nanl
     libc.src.math.nearbyint
     libc.src.math.nearbyintf
@@ -600,9 +607,11 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.scalbnl
     libc.src.math.setpayload
     libc.src.math.setpayloadf
+    libc.src.math.setpayloadf128
     libc.src.math.setpayloadl
     libc.src.math.setpayloadsig
     libc.src.math.setpayloadsigf
+    libc.src.math.setpayloadsigf128
     libc.src.math.setpayloadsigl
     libc.src.math.sin
     libc.src.math.sincos
@@ -725,6 +734,18 @@ if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
       # libintl.h entrypoints
       libc.src.libintl.bind_textdomain_codeset
       libc.src.libintl.bindtextdomain
+      libc.src.libintl.dcgettext
+      libc.src.libintl.dcgettext_l
+      libc.src.libintl.dcngettext
+      libc.src.libintl.dcngettext_l
+      libc.src.libintl.dgettext
+      libc.src.libintl.dgettext_l
+      libc.src.libintl.dngettext
+      libc.src.libintl.dngettext_l
+      libc.src.libintl.gettext
+      libc.src.libintl.gettext_l
+      libc.src.libintl.ngettext
+      libc.src.libintl.ngettext_l
       libc.src.libintl.textdomain
 
       # regex.h entrypoints
@@ -737,8 +758,12 @@ if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
       libc.src.sys.ptrace.ptrace
 
       # unistd.h entrypoints
+      libc.src.unistd.setegid
+      libc.src.unistd.seteuid
       libc.src.unistd.setgid
       libc.src.unistd.setregid
+      libc.src.unistd.setresgid
+      libc.src.unistd.setresuid
       libc.src.unistd.setreuid
       libc.src.unistd.setuid
     )

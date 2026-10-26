@@ -217,6 +217,14 @@ public:
                                       Stmt *AStmt, SourceLocation StartLoc,
                                       SourceLocation EndLoc);
 
+  /// Called for metadirectives with user conditions that require runtime
+  /// selection. \p Variants holds one complete directive (or the plain
+  /// associated statement) per entry of \p TraitInfos.
+  StmtResult ActOnOpenMPMetaDirective(SourceLocation StartLoc,
+                                      SourceLocation EndLoc,
+                                      ArrayRef<OMPTraitInfo *> TraitInfos,
+                                      ArrayRef<Stmt *> Variants);
+
   // OpenMP directives and clauses.
   /// Called on correct id-expression from the '#pragma omp
   /// threadprivate'.
