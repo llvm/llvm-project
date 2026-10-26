@@ -2685,11 +2685,9 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
     // ashr and lshr have the same result.
     const APInt *ShAmtC;
     if (C->isMask() &&
-        match(Op0,
-              m_OneUse(m_c_Or(
-                  m_OneUse(m_Shr(m_OneUse(m_Sub(m_SpecificInt(*C), m_Value(X))),
-                                 m_APInt(ShAmtC))),
-                  m_Deferred(X)))) &&
+        match(Op0, m_OneUse(m_c_Or(m_Shr(m_Sub(m_SpecificInt(*C), m_Value(X)),
+                                         m_APInt(ShAmtC)),
+                                   m_Deferred(X)))) &&
         ShAmtC->ult(Width)) {
       unsigned S = C->popcount();
       unsigned ShAmt = ShAmtC->getZExtValue();

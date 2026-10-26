@@ -257,44 +257,6 @@ define i32 @neg_non_mask(i32 range(i32 0, 8388608) %x) {
   ret i32 %and
 }
 
-; Multi-use on the `sub`: fold is not profitable.
-define i32 @neg_multiuse_sub(i32 range(i32 0, 8388608) %x, ptr %sink) {
-; CHECK-LABEL: define i32 @neg_multiuse_sub(
-; CHECK-SAME: i32 range(i32 0, 8388608) [[X:%.*]], ptr [[SINK:%.*]]) {
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 255, [[X]]
-; CHECK-NEXT:    store i32 [[SUB]], ptr [[SINK]], align 4
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[SUB]], 23
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHR]], [[X]]
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[OR]], 255
-; CHECK-NEXT:    ret i32 [[AND]]
-;
-  %sub = sub i32 255, %x
-  store i32 %sub, ptr %sink
-  %shr = lshr i32 %sub, 23
-  %or = or i32 %shr, %x
-  %and = and i32 %or, 255
-  ret i32 %and
-}
-
-; Multi-use on the `shr`: fold is not profitable.
-define i32 @neg_multiuse_shr(i32 range(i32 0, 8388608) %x, ptr %sink) {
-; CHECK-LABEL: define i32 @neg_multiuse_shr(
-; CHECK-SAME: i32 range(i32 0, 8388608) [[X:%.*]], ptr [[SINK:%.*]]) {
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 255, [[X]]
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[SUB]], 23
-; CHECK-NEXT:    store i32 [[SHR]], ptr [[SINK]], align 4
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHR]], [[X]]
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[OR]], 255
-; CHECK-NEXT:    ret i32 [[AND]]
-;
-  %sub = sub i32 255, %x
-  %shr = lshr i32 %sub, 23
-  store i32 %shr, ptr %sink
-  %or = or i32 %shr, %x
-  %and = and i32 %or, 255
-  ret i32 %and
-}
-
 ; Multi-use on the `or`: fold is not profitable.
 define i32 @neg_multiuse_or(i32 range(i32 0, 8388608) %x, ptr %sink) {
 ; CHECK-LABEL: define i32 @neg_multiuse_or(
