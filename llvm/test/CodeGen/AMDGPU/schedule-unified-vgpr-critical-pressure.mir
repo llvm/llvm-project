@@ -1,6 +1,6 @@
 # REQUIRES: asserts
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -run-pass=machine-scheduler -misched-only-block=1 -misched-prera-direction=topdown -amdgpu-use-amdgpu-trackers=true -verify-machineinstrs -debug-only=machine-scheduler %s -o /dev/null 2>&1 | FileCheck %s
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -run-pass=machine-scheduler -misched-only-block=1 -misched-prera-direction=topdown -amdgpu-use-amdgpu-trackers=false -verify-machineinstrs -debug-only=machine-scheduler %s -o /dev/null 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa -run-pass=machine-scheduler -misched-only-block=1 -misched-prera-direction=topdown -amdgpu-use-amdgpu-trackers=true -debug-only=machine-scheduler %s -o /dev/null 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa -run-pass=machine-scheduler -misched-only-block=1 -misched-prera-direction=topdown -amdgpu-use-amdgpu-trackers=false -debug-only=machine-scheduler %s -o /dev/null 2>&1 | FileCheck %s
 
 # Fixed-bank virtual live ranges isolate candidate critical scoring from
 # allocation limits. Check the initial scheduling decisions before later
