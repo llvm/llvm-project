@@ -108,7 +108,8 @@ class ErrorReporter {
 public:
   ErrorReporter(ClangTidyContext &Context, FixBehaviour ApplyFixes,
                 llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
-                StringRef SarifExportPath)
+                StringRef SarifExportPath,
+                const llvm::StringMap<SarifUriBase> &SarifBaseUri)
       : Files(FileSystemOptions(), std::move(BaseFS)),
         DiagPrinter(
             SarifExportPath == "-"
@@ -119,6 +120,7 @@ public:
         SarifExportPath(SarifExportPath) {
     if (!SarifExportPath.empty()) {
       SarifWriter.emplace(SourceMgr);
+      SarifWriter->setOriginalUriBaseIds(SarifBaseUri);
       SarifWriter->createRun("clang-tidy", "clang-tidy", CLANG_VERSION_STRING,
                              "https://clang.llvm.org/extra/clang-tidy/");
     }
@@ -804,8 +806,10 @@ void handleErrors(llvm::ArrayRef<ClangTidyError> Errors,
                   ClangTidyContext &Context, FixBehaviour Fix,
                   unsigned &WarningsAsErrorsCount,
                   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
-                  StringRef SarifExportPath) {
-  ErrorReporter Reporter(Context, Fix, std::move(BaseFS), SarifExportPath);
+                  StringRef SarifExportPath,
+                  const llvm::StringMap<SarifUriBase> &SarifBaseUri) {
+  ErrorReporter Reporter(Context, Fix, std::move(BaseFS), SarifExportPath,
+                         SarifBaseUri);
   llvm::vfs::FileSystem &FileSystem =
       Reporter.getSourceManager().getFileManager().getVirtualFileSystem();
   auto InitialWorkingDir = FileSystem.getCurrentWorkingDirectory();

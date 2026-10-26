@@ -108,7 +108,11 @@ infrastructure are described first, followed by tool-specific sections.
 - Added a new {program}`clang-tidy` command line option `-sarif-export=<file>`
   in which clang-tidy diagnostics are exported in the [SARIF](https://sarifweb.azurewebsites.net/)
   format.
-  
+
+- Added a new {program}`clang-tidy` command line option
+  `-sarif-base-uri=<id>=<path|uri>` to define base URIs, so that SARIF
+  artifact locations are written relative to them.
+
 #### New checks
 
 - New {doc}`llvm-invalid-regex-pattern

@@ -405,4 +405,16 @@ TEST_F(SarifDocumentWriterTest, artifactIndexMatchesArrayPosition) {
                           R"("location":{"index":0,"uri":"file:///z.cpp"})"));
 }
 
+TEST(SarifUriBaseTest, remapsToLongestMatchingBase) {
+  llvm::StringMap<SarifUriBase> Bases;
+  Bases["ROOT"] = SarifUriBase().setURI("file:///root/");
+  Bases["SRC"] = SarifUriBase().setURI("file:///root/src/");
+
+  StringRef Id;
+  EXPECT_EQ(
+      SarifUriBase::remapUriToBaseUri("file:///root/src/a.cpp", Bases, Id),
+      "a.cpp");
+  EXPECT_EQ(Id, "SRC");
+}
+
 } // namespace

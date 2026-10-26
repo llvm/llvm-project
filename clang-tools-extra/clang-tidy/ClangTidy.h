@@ -8,9 +8,9 @@
 
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CLANGTIDY_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CLANGTIDY_H
-
 #include "ClangTidyDiagnosticConsumer.h"
 #include "ClangTidyOptions.h"
+#include "clang/Basic/Sarif.h"
 #include "llvm/ADT/StringSet.h"
 #include <memory>
 #include <vector>
@@ -119,7 +119,8 @@ void handleErrors(llvm::ArrayRef<ClangTidyError> Errors,
                   ClangTidyContext &Context, FixBehaviour Fix,
                   unsigned &WarningsAsErrorsCount,
                   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
-                  StringRef SarifExportPath = {});
+                  StringRef SarifExport = {},
+                  const llvm::StringMap<SarifUriBase> &SarifBaseUri = {});
 
 /// Serializes replacements into YAML and writes them to the specified
 /// output stream.

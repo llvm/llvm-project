@@ -74,6 +74,7 @@ private:
 
   std::optional<uint32_t> Index;
   std::string URI;
+  std::optional<std::string> UriBaseId;
 
   SarifArtifactLocation() = delete;
   explicit SarifArtifactLocation(const std::string &URI) : URI(URI) {}
@@ -85,6 +86,11 @@ public:
 
   SarifArtifactLocation setIndex(uint32_t Idx) {
     Index = Idx;
+    return *this;
+  }
+
+  SarifArtifactLocation setUriBaseId(llvm::StringRef BaseId) {
+    UriBaseId = BaseId.str();
     return *this;
   }
 };
@@ -411,6 +417,32 @@ public:
   }
 };
 
+/// A SARIF uriBaseId object that defines a base URI for relative path
+/// resolution. It enables expressing file URIs relative to known locations
+/// (e.g., "PROJROOT", "SRCROOT") to reduce redundancy and improve portability
+/// of SARIF documents.
+///
+/// Reference: <a href="https://docs.oasis-open.org/sarif/sarif/v2.1.0/os/sarif-v2.1.0-os.html#_Toc34317431">SARIF<pre>uriBaseId</pre></a>
+class SarifUriBase {
+  friend class clang::SarifDocumentWriter;
+
+  // Absolute; parent chains are derived when emitted.
+  std::string URI;
+
+public:
+  SarifUriBase setURI(llvm::StringRef BaseURI) {
+    URI = BaseURI.str();
+    return *this;
+  }
+
+  /// Finds longest matching base URI and returns the relative portion.
+  /// Sets ParentId to matched base identifier.
+  static StringRef
+  remapUriToBaseUri(StringRef FileURI,
+                    const llvm::StringMap<SarifUriBase> &OriginalUriBaseIds,
+                    StringRef &ParentId);
+};
+
 /// This class handles creating a valid SARIF document given various input
 /// attributes. However, it requires an ordering among certain method calls:
 ///
@@ -466,6 +498,9 @@ private:
   /// is invalid or does not map to a file.
   std::optional<llvm::json::Object>
   createPhysicalLocation(const CharSourceRange &R);
+
+  llvm::json::Object createOriginalUriBaseIds(
+      const llvm::StringMap<SarifUriBase> &OriginalUriBaseIds) const;
 
 public:
   SarifDocumentWriter() = delete;
@@ -523,6 +558,10 @@ public:
 
   static std::string fileNameToURI(llvm::StringRef Filename);
 
+  void setOriginalUriBaseIds(llvm::StringMap<SarifUriBase> BaseURIs) {
+    OriginalUriBaseIds = std::move(BaseURIs);
+  }
+
 private:
   /// Source Manager to use for the current SARIF document.
   const SourceManager &SourceMgr;
@@ -555,6 +594,10 @@ private:
   /// by a URI. A common example for clang's case would be files named by
   /// filesystem paths.
   llvm::StringMap<detail::SarifArtifact> CurrentArtifacts;
+
+  /// Map of uriBaseId -> SarifUriBase for relative path computation. This is
+  /// used to express artifact URIs relative to known project locations.
+  llvm::StringMap<SarifUriBase> OriginalUriBaseIds;
 };
 } // namespace clang
 

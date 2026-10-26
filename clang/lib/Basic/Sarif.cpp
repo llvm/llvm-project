@@ -21,6 +21,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Path.h"
 
@@ -210,6 +211,38 @@ createThreadFlowLocation(json::Object &&Location,
 }
 ///  @}
 
+StringRef SarifUriBase::remapUriToBaseUri(
+    StringRef FileURI,
+    const llvm::StringMap<SarifUriBase> &OriginalUriBaseIds,
+    StringRef &ParentId) {
+  // Iterate through the map of original URI bases to find the longest matching
+  // prefix for the given FileURI. If a match is found, remap the FileURI to the
+  // corresponding base URI and set the ParentId.
+  size_t BestMatchLength = 0;
+  llvm::StringRef BestMatchKey;
+  std::for_each(OriginalUriBaseIds.begin(), OriginalUriBaseIds.end(),
+                [&](const auto &Entry) {
+                  const std::string &BaseURI = Entry.second.URI;
+                  // Prevents base URI matching with itself
+                  if (BaseURI.size() < FileURI.size() &&
+                    FileURI.starts_with(BaseURI)) {
+                    const size_t MatchLength = BaseURI.size();
+                    // Equal bases: the smallest id wins, independent of map order.
+                    if (MatchLength > BestMatchLength ||
+                        (MatchLength == BestMatchLength &&
+                         Entry.getKey() < BestMatchKey)) {
+                      BestMatchLength = MatchLength;
+                      BestMatchKey = Entry.getKey();
+                    }
+                  }
+                });
+  if (BestMatchLength > 0) {
+    ParentId = BestMatchKey;
+    return FileURI.substr(BestMatchLength);
+  }
+  return FileURI;
+}
+
 std::optional<json::Object>
 SarifDocumentWriter::createPhysicalLocation(const CharSourceRange &R) {
   if (R.isInvalid())
@@ -221,13 +254,17 @@ SarifDocumentWriter::createPhysicalLocation(const CharSourceRange &R) {
   if (!FE)
     return std::nullopt;
 
-  const std::string &FileURI = fileNameToURI(getFileName(*FE));
+  std::string FileURI = fileNameToURI(getFileName(*FE));
   auto I = CurrentArtifacts.find(FileURI);
-
   if (I == CurrentArtifacts.end()) {
     uint32_t Idx = static_cast<uint32_t>(CurrentArtifacts.size());
-    const SarifArtifactLocation &Location =
-        SarifArtifactLocation::create(FileURI).setIndex(Idx);
+    StringRef ParentId;
+    StringRef RelativeURI =
+        SarifUriBase::remapUriToBaseUri(FileURI, OriginalUriBaseIds, ParentId);
+    SarifArtifactLocation Location =
+        SarifArtifactLocation::create(RelativeURI).setIndex(Idx);
+    if (!ParentId.empty())
+      Location.setUriBaseId(ParentId);
     const SarifArtifact &Artifact = SarifArtifact::create(Location)
                                         .setRoles({"resultFile"})
                                         .setLength(FE->getSize())
@@ -243,6 +280,8 @@ SarifDocumentWriter::createPhysicalLocation(const CharSourceRange &R) {
   json::Object ArtifactLocationObject{{"uri", Location.URI}};
   if (Location.Index.has_value())
     ArtifactLocationObject["index"] = *Location.Index;
+  if (Location.UriBaseId)
+    ArtifactLocationObject["uriBaseId"] = *Location.UriBaseId;
   return json::Object{{{"artifactLocation", std::move(ArtifactLocationObject)},
                        {"region", createTextRegion(SourceMgr, R)}}};
 }
@@ -313,6 +352,8 @@ void SarifDocumentWriter::endRun() {
     if (A.Location.Index.has_value()) {
       Loc["index"] = static_cast<int64_t>(*A.Location.Index);
     }
+    if (A.Location.UriBaseId)
+      Loc["uriBaseId"] = *A.Location.UriBaseId;
     json::Object Artifact;
     Artifact["location"] = std::move(Loc);
     if (A.Length.has_value())
@@ -352,6 +393,27 @@ SarifDocumentWriter::createCodeFlow(ArrayRef<ThreadFlow> ThreadFlows) {
   return json::Object{{"threadFlows", createThreadFlows(ThreadFlows)}};
 }
 
+json::Object SarifDocumentWriter::createOriginalUriBaseIds(
+    const llvm::StringMap<SarifUriBase> &OriginalUriBaseIds) const {
+  json::Object BaseIds;
+  for (const llvm::StringMapEntry<clang::SarifUriBase> &Entry :
+       OriginalUriBaseIds) {
+    StringRef Id = Entry.getKey();
+    const SarifUriBase &Base = Entry.second;
+    json::Object Loc;
+    if (!Base.URI.empty()) {
+      StringRef ParentId;
+      Loc["uri"] = SarifUriBase::remapUriToBaseUri(Base.URI, OriginalUriBaseIds,
+                                                   ParentId)
+                       .str();
+      if (!ParentId.empty())
+        Loc["uriBaseId"] = ParentId.str();
+    }
+    BaseIds[Id.str()] = std::move(Loc);
+  }
+  return BaseIds;
+}
+
 void SarifDocumentWriter::createRun(StringRef ShortToolName,
                                     StringRef LongToolName,
                                     StringRef ToolVersion,
@@ -376,6 +438,10 @@ void SarifDocumentWriter::createRun(StringRef ShortToolName,
                       {"results", {}},
                       {"artifacts", {}},
                       {"columnKind", "unicodeCodePoints"}};
+
+  if (!OriginalUriBaseIds.empty())
+    TheRun["originalUriBaseIds"] = createOriginalUriBaseIds(OriginalUriBaseIds);
+
   Runs.emplace_back(std::move(TheRun));
 }
 

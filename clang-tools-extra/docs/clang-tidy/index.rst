@@ -195,6 +195,11 @@ An overview of all the command-line options:
     --sarif-export=<filename>        - File in which to store diagnostics in SARIF format.
                                        Use '-' to write to stdout instead of the usual
                                        diagnostic output.
+    --sarif-base-uri=<id>=<path|uri> - Defines a SARIF base URI as <id>=<path|uri>.
+                                       Paths are converted to file URIs. Values with
+                                       '://' are used verbatim. Artifact locations
+                                       under a base are written relative to it, all
+                                       others keep their absolute URI. Can be repeated.    
     --extra-arg=<string>             - Additional argument to append to the compiler command line
     --extra-arg-before=<string>      - Additional argument to prepend to the compiler command line
     --fix                            - Apply suggested fixes. Without -fix-errors
