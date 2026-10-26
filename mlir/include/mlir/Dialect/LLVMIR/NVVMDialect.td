@@ -87,6 +87,7 @@ def NVVM_Dialect : Dialect {
                                            unsigned argIndex,
                                            NamedAttribute argAttr) override;
 
+  private:
     /// Register the attributes of this dialect.
     void registerAttributes();
   }];
