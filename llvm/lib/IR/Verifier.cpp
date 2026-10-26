@@ -1240,7 +1240,7 @@ void Verifier::visitMDFunctionLocalContext(const MDFunctionLocalContext &N) {
   }
   // Visit referenced MDNodes from here; most of the actual validation for the
   // contents of this class happen in vistFunction, where we have more context.
-  SmallVector<MDNode *> NodesToVisit;
+  SmallVector<const MDNode *> NodesToVisit;
   N.getUsedMDNodes(NodesToVisit);
   for (auto *Node : NodesToVisit)
     visitMDNode(*Node, AreDebugLocsAllowed::No);
