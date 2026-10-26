@@ -26,10 +26,14 @@ class PredicatedScalarEvolution;
 namespace llvm {
 
 namespace vputils {
-/// Returns true if only the first lane of \p Def is used.
+/// Returns true if checking whether \p U uses the first lane of \p Op requires
+/// recursively checking \p Op's users.
+bool propagatesFirstLaneUse(const VPUser *U, const VPValue *Op);
+
+/// Returns true if only the first lane of \p Def is used by all users.
 bool onlyFirstLaneUsed(const VPValue *Def);
 
-/// Returns true if only the first part of \p Def is used.
+/// Returns true if only the first part of \p Def is used by all users.
 bool onlyFirstPartUsed(const VPValue *Def);
 
 /// Returns true if only scalar values of \p Def are used by all users.
@@ -264,8 +268,8 @@ void pullOutPermutations(VPlan &Plan, Match_t Perm, Builder Build) {
 } // namespace vputils
 
 /// Lightweight SCEV-to-VPlan expander. Converts SCEV expressions into
-/// VPInstructions and live-ins. SCEVAddRecExprs are wrapped in a
-/// VPExpandSCEVRecipe to be expanded to IR later.
+/// VPInstructions and live-ins. Canonical IVs and non-affine SCEVAddRecExprs
+/// are wrapped in a VPExpandSCEVRecipe to be expanded to IR later.
 class VPSCEVExpander {
   VPBuilder &Builder;
   ScalarEvolution &SE;

@@ -31,8 +31,8 @@ using namespace llvm;
 #define DEBUG_TYPE "ctx-instr-lower"
 
 bool PGOCtxProfLoweringPass::isCtxIRPGOInstrEnabled(
-    const cl::LibraryOptionsContext *LibraryOptions) {
-  return !cl::LibraryOptionsContext::get<InstrumentationOptions>(LibraryOptions)
+    const cl::LibraryOptionsContext &LibraryOptions) {
+  return !LibraryOptions.get<InstrumentationOptions>()
               .profile_context_root.empty();
 }
 
@@ -155,8 +155,7 @@ CtxInstrumentationLowerer::CtxInstrumentationLowerer(Module &M,
                                                       I32Ty, /*NumCallsites*/
                                                   });
 
-  const InstrumentationOptions &Opts =
-      M.getContext().getLibraryOptions().get<InstrumentationOptions>();
+  const InstrumentationOptions &Opts = getInstrumentationOptions(M);
   // Define a global for each entrypoint. We'll reuse the entrypoint's name
   // as prefix. We assume the entrypoint names to be unique.
   for (StringRef Fname : Opts.profile_context_root) {

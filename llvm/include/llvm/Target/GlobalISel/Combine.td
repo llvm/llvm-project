@@ -2461,6 +2461,20 @@ def combine_shuffle_vector_to_build_vector : GICombineRule<
   (match (G_SHUFFLE_VECTOR $dst, $src1, $src2, $mask):$root),
   (apply [{ Helper.applyCombineShuffleToBuildVector(*${root}); }])>;
 
+// Combines shuffles of buildvector into buildvector
+def combine_shuffle_of_buildvector_to_buildvector : GICombineRule<
+  (defs root:$root),
+  (match (G_BUILD_VECTOR $src1, GIVariadic<>:$unused),
+         (G_IMPLICIT_DEF $src2),
+         (G_SHUFFLE_VECTOR $dst, $src1, $src2, $mask):$root),
+  (apply [{ Helper.applyCombineShuffleOfBuildVector(*${root}); }])>;
+def combine_shuffle_of_buildvectors_to_buildvector : GICombineRule<
+  (defs root:$root),
+  (match (G_BUILD_VECTOR $src1, GIVariadic<>:$unused1),
+         (G_BUILD_VECTOR $src2, GIVariadic<>:$unused2),
+         (G_SHUFFLE_VECTOR $dst, $src1, $src2, $mask):$root),
+  (apply [{ Helper.applyCombineShuffleOfBuildVector(*${root}); }])>;
+
 // Combines buildvector operations
 def combine_build_vector_of_bitcast : GICombineRule<
   (defs root:$root, register_vector_matchinfo:$matchinfo),
