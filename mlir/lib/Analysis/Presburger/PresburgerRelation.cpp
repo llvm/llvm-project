@@ -1042,6 +1042,120 @@ PresburgerRelation PresburgerRelation::simplify() const {
   return result;
 }
 
+PresburgerRelation
+PresburgerRelation::gist(const IntegerRelation &context) const {
+  assert(space.isCompatible(context.getSpace()) && "Spaces should match");
+  // Anything is the universe in an obviously empty context.
+  if (context.isObviouslyEmpty())
+    return getUniverse(getSpace());
+
+  PresburgerRelation result(getSpace());
+  for (const IntegerRelation &disjunct : disjuncts) {
+    IntegerRelation simplified = disjunct;
+    simplified.gist(context);
+    if (simplified.isObviouslyEmpty())
+      continue;
+    // If a disjunct becomes the universe, so does the whole union.
+    if (simplified.getNumConstraints() == 0)
+      return getUniverse(getSpace());
+    result.unionInPlace(simplified);
+  }
+  return result;
+}
+
+/// Returns a convex over-approximation of `context`, which must not be
+/// obviously empty, to be used as the context for simplifying `rel`: the
+/// universe together with those constraints of the disjuncts of `context` and
+/// of `rel` that do not involve local variables and that hold in every disjunct
+/// of `context`. Including the constraints of `rel` allows constraints of `rel`
+/// to be simplified away that are implied by every disjunct of the context but
+/// not by its simple hull. This follows ISL's
+/// isl_map_unshifted_simple_hull_from_map_list, which is used by isl_map_gist.
+static IntegerRelation
+getValidConstraintsHull(const PresburgerRelation &context,
+                        const PresburgerRelation &rel) {
+  const PresburgerSpace &space = context.getSpace();
+  assert(space.getNumLocalVars() == 0 && "space should not have locals");
+  unsigned numVars = space.getNumVars();
+
+  // A Simplex for each non-empty disjunct of the context.
+  SmallVector<Simplex, 2> simplices;
+  for (const IntegerRelation &disjunct : context.getAllDisjuncts()) {
+    simplices.emplace_back(disjunct);
+    if (simplices.back().isEmpty())
+      simplices.pop_back();
+  }
+  if (simplices.empty())
+    return IntegerRelation::getEmpty(space);
+
+  // Check whether the constraint with coefficients `coeffs` over the non-local
+  // variables holds in every disjunct of the context.
+  SmallVector<DynamicAPInt, 8> padded;
+  auto isValid = [&](ArrayRef<DynamicAPInt> coeffs, bool isEq) {
+    for (Simplex &simplex : simplices) {
+      padded.assign(coeffs.begin(), coeffs.end() - 1);
+      padded.append(simplex.getNumVariables() - numVars, DynamicAPInt(0));
+      padded.emplace_back(coeffs.back());
+      if (isEq ? !simplex.isRedundantEquality(padded)
+               : !simplex.isRedundantInequality(padded))
+        return false;
+    }
+    return true;
+  };
+
+  IntegerRelation hull = IntegerRelation::getUniverse(space);
+  SmallVector<DynamicAPInt, 8> candidate;
+  auto addCandidates = [&](const IntegerRelation &disjunct) {
+    unsigned numLocals = disjunct.getNumLocalVars();
+    // Returns false if the constraint involves local variables; otherwise,
+    // stores the constraint without the local columns in `candidate`.
+    auto extract = [&](ArrayRef<DynamicAPInt> coeffs) {
+      if (llvm::any_of(coeffs.slice(numVars, numLocals),
+                       [](const DynamicAPInt &c) { return c != 0; }))
+        return false;
+      candidate.assign(coeffs.begin(), coeffs.begin() + numVars);
+      candidate.emplace_back(coeffs.back());
+      return true;
+    };
+    for (unsigned i = 0, e = disjunct.getNumEqualities(); i < e; ++i)
+      if (extract(disjunct.getEquality(i)) && isValid(candidate, /*isEq=*/true))
+        hull.addEquality(candidate);
+    for (unsigned i = 0, e = disjunct.getNumInequalities(); i < e; ++i)
+      if (extract(disjunct.getInequality(i)) &&
+          isValid(candidate, /*isEq=*/false))
+        hull.addInequality(candidate);
+  };
+  for (const IntegerRelation &disjunct : context.getAllDisjuncts())
+    addCandidates(disjunct);
+  for (const IntegerRelation &disjunct : rel.getAllDisjuncts())
+    addCandidates(disjunct);
+
+  hull.simplify();
+  return hull;
+}
+
+PresburgerRelation
+PresburgerRelation::gist(const PresburgerRelation &context) const {
+  assert(space.isCompatible(context.getSpace()) && "Spaces should match");
+
+  // Nothing can be simplified in the universe or with a universe context.
+  if (isObviouslyUniverse() || context.isObviouslyUniverse())
+    return *this;
+  // Anything is the universe in an empty context.
+  if (context.isObviouslyEmpty() || isObviouslyEqual(context))
+    return getUniverse(getSpace());
+  // With multiple disjuncts, the per-disjunct simplification may not be able
+  // to detect that the context is a subset of `this`, in which case all
+  // constraints can be removed.
+  if ((getNumDisjuncts() != 1 || context.getNumDisjuncts() != 1) &&
+      hasOnlyDivLocals() && context.isSubsetOf(*this))
+    return getUniverse(getSpace());
+
+  if (context.getNumDisjuncts() == 1)
+    return gist(context.getDisjunct(0));
+  return gist(getValidConstraintsHull(context, *this));
+}
+
 bool PresburgerRelation::isFullDim() const {
   return llvm::any_of(getAllDisjuncts(), [](IntegerRelation disjunct) {
     return disjunct.isFullDim();
@@ -1092,4 +1206,12 @@ PresburgerSet PresburgerSet::subtract(const PresburgerRelation &set) const {
 
 PresburgerSet PresburgerSet::coalesce() const {
   return PresburgerSet(PresburgerRelation::coalesce());
+}
+
+PresburgerSet PresburgerSet::gist(const IntegerRelation &context) const {
+  return PresburgerSet(PresburgerRelation::gist(context));
+}
+
+PresburgerSet PresburgerSet::gist(const PresburgerRelation &context) const {
+  return PresburgerSet(PresburgerRelation::gist(context));
 }
