@@ -4447,6 +4447,16 @@ OpFoldResult cir::VecCmpOp::fold(FoldAdaptor adaptor) {
 }
 
 //===----------------------------------------------------------------------===//
+// VecFCmpOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::VecFCmpOp::verify() {
+  if (!cir::isFPOrVectorOfFPType(getLhs().getType()))
+    return emitOpError() << "requires floating-point vector operands";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // VecShuffleOp
 //===----------------------------------------------------------------------===//
 
