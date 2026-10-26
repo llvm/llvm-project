@@ -227,15 +227,53 @@ bool StackProtector::runOnFunction(Function &Fn) {
   return Changed;
 }
 
+/// Convert !stack-protector-padding metadat to [Begin, End) pairs of padding.
+/// Drop if the size does not match (first operand in the metadata).
+static void
+ComputePaddingRanges(const AllocaInst &AI, Module *M,
+                     SmallVectorImpl<std::pair<uint64_t, uint64_t>> &Ranges) {
+  const MDNode *MD = AI.getMetadata("stack-protector-padding");
+  if (!MD || MD->getNumOperands() % 2 != 1)
+    return;
+  std::optional<TypeSize> Size = AI.getAllocationSize(M->getDataLayout());
+  if (!Size || Size->isScalable())
+    return;
+
+  SmallVector<uint64_t, 8> Ops;
+  for (const MDOperand &Op : MD->operands()) {
+    const auto *CI = mdconst::dyn_extract<ConstantInt>(Op);
+    if (!CI)
+      return;
+    Ops.push_back(CI->getZExtValue());
+  }
+
+  if (Size->getFixedValue() != Ops[0])
+    return;
+
+  for (unsigned I = 1, E = Ops.size(); I != E; I += 2)
+    Ranges.push_back({Ops[I], Ops[I] + Ops[I + 1]});
+}
+
 /// \param [out] IsLarge is set to true if a protectable array is found and
 /// it is "large" ( >= ssp-buffer-size).  In the case of a structure with
 /// multiple arrays, this gets set if any of them is large.
-static bool ContainsProtectableArray(Type *Ty, Module *M, unsigned SSPBufferSize,
-                                     bool &IsLarge, bool Strong,
-                                     bool InStruct) {
+static bool ContainsProtectableArray(
+    Type *Ty, Module *M, unsigned SSPBufferSize, bool &IsLarge, bool Strong,
+    bool InStruct, ArrayRef<std::pair<uint64_t, uint64_t>> Padding,
+    uint64_t Offset) {
   if (!Ty)
     return false;
   if (ArrayType *AT = dyn_cast<ArrayType>(Ty)) {
+    // Padding is not a buffer (in non-strong mode)
+    if (!Strong && !Padding.empty()) {
+      uint64_t End =
+          Offset + M->getDataLayout().getTypeAllocSize(AT).getFixedValue();
+      if (llvm::any_of(Padding, [&](std::pair<uint64_t, uint64_t> R) {
+            return R.first <= Offset && End <= R.second;
+          }))
+        return false;
+    }
+
     if (!AT->getElementType()->isIntegerTy(8)) {
       // If we're on a non-Darwin platform or we're inside of a structure, don't
       // add stack protectors unless the array is a character array.
@@ -257,13 +295,16 @@ static bool ContainsProtectableArray(Type *Ty, Module *M, unsigned SSPBufferSize
       return true;
   }
 
-  const StructType *ST = dyn_cast<StructType>(Ty);
+  StructType *ST = dyn_cast<StructType>(Ty);
   if (!ST)
     return false;
 
+  const StructLayout *SL = M->getDataLayout().getStructLayout(ST);
   bool NeedsProtector = false;
-  for (Type *ET : ST->elements())
-    if (ContainsProtectableArray(ET, M, SSPBufferSize, IsLarge, Strong, true)) {
+  for (auto [I, ET] : enumerate(ST->elements())) {
+    uint64_t ElementOffset = SL->getElementOffset(I).getFixedValue();
+    if (ContainsProtectableArray(ET, M, SSPBufferSize, IsLarge, Strong, true,
+                                 Padding, Offset + ElementOffset)) {
       // If the element is a protectable array and is large (>= SSPBufferSize)
       // then we are done.  If the protectable array is not large, then
       // keep looking in case a subsequent element is a large array.
@@ -271,6 +312,7 @@ static bool ContainsProtectableArray(Type *Ty, Module *M, unsigned SSPBufferSize
         return true;
       NeedsProtector = true;
     }
+  }
 
   return NeedsProtector;
 }
@@ -501,8 +543,10 @@ bool SSPLayoutAnalysis::requiresStackProtector(Function *F,
         }
 
         bool IsLarge = false;
+        SmallVector<std::pair<uint64_t, uint64_t>, 4> Padding;
+        ComputePaddingRanges(*AI, M, Padding);
         if (ContainsProtectableArray(AI->getAllocatedType(), M, SSPBufferSize,
-                                     IsLarge, Strong, false)) {
+                                     IsLarge, Strong, false, Padding, 0)) {
           if (!Layout)
             return true;
           Layout->insert(std::make_pair(
