@@ -49,20 +49,17 @@ function(_create_unittest_framework_library fq_target_name)
     target_compile_definitions(${fq_target_name} PRIVATE TARGET_SUPPORTS_SIGNAL_CATCHING)
   endif()
 
+  _get_common_test_compile_options(compile_options "" "${TEST_LIB_FLAGS}")
   if(LLVM_LIBC_FULL_BUILD)
     target_include_directories(
       ${fq_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR}
     )
-    _get_hermetic_test_compile_options(compile_options "" "${TEST_LIB_FLAGS}")
-    target_compile_options(${fq_target_name} PRIVATE ${compile_options} -nostdinc++)
-  else()
-    _get_common_test_compile_options(compile_options "" "${TEST_LIB_FLAGS}")
-
-    if(TEST_LIB_COMPILE_OPTIONS)
-      list(APPEND compile_options ${TEST_LIB_COMPILE_OPTIONS})
-    endif()
-    target_compile_options(${fq_target_name} PRIVATE ${compile_options})
+    list(APPEND compile_options -nostdinc++)
   endif()
+  if(TEST_LIB_COMPILE_OPTIONS)
+    list(APPEND compile_options ${TEST_LIB_COMPILE_OPTIONS})
+  endif()
+  target_compile_options(${fq_target_name} PRIVATE ${compile_options})
 
   if(fq_deps_list)
     add_dependencies(${fq_target_name} ${fq_deps_list})

@@ -15,6 +15,9 @@
 // UNSUPPORTED: ubsan
 // REQUIRES: stable-runtime
 
+// FIXME: Fails after #196388 because libclang_rt.asan links static libc++abi.a.
+// XFAIL: android
+
 #include <cstdio>
 #include <new>
 
