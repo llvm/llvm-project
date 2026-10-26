@@ -325,9 +325,9 @@ define amdgpu_kernel void @sitofp_i48_constant_align2(ptr addrspace(4) %in, ptr 
 ; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1250-NEXT:    s_min_u32 s0, s0, s1
 ; GFX1250-NEXT:    v_lshlrev_b64_e32 v[0:1], s0, v[0:1]
-; GFX1250-NEXT:    s_sub_co_i32 s0, 32, s0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX1250-NEXT:    v_min_u32_e32 v0, 1, v0
+; GFX1250-NEXT:    s_sub_co_i32 s0, 32, s0
 ; GFX1250-NEXT:    v_or_b32_e32 v0, v1, v0
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-NEXT:    v_cvt_f32_i32_e32 v0, v0

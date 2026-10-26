@@ -1002,9 +1002,9 @@ define amdgpu_kernel void @v_permlane16_b32_vll_f64(ptr addrspace(1) %out, doubl
 ; GFX13-GISEL-NEXT:    s_movk_i32 s2, 0x1234
 ; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instid1(SALU_CYCLE_1)
 ; GFX13-GISEL-NEXT:    v_permlane16_b32 v0, v2, s2, 0xc1d1
-; GFX13-GISEL-NEXT:    v_mov_b32_e32 v2, 0
-; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3)
+; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX13-GISEL-NEXT:    v_permlane16_b32 v1, v3, s2, 0xc1d1
+; GFX13-GISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX13-GISEL-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX13-GISEL-NEXT:    s_endpgm
   %v = call double @llvm.amdgcn.permlane16.f64(double %src0, double %src0, i32 4660, i32 49617, i1 false, i1 false)
@@ -4490,9 +4490,9 @@ define amdgpu_kernel void @v_permlanex16_b32_vll_f64(ptr addrspace(1) %out, doub
 ; GFX13-GISEL-NEXT:    s_movk_i32 s2, 0x1234
 ; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instid1(SALU_CYCLE_1)
 ; GFX13-GISEL-NEXT:    v_permlanex16_b32 v0, v2, s2, 0xc1d1
-; GFX13-GISEL-NEXT:    v_mov_b32_e32 v2, 0
-; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3)
+; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX13-GISEL-NEXT:    v_permlanex16_b32 v1, v3, s2, 0xc1d1
+; GFX13-GISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX13-GISEL-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX13-GISEL-NEXT:    s_endpgm
   %v = call double @llvm.amdgcn.permlanex16.f64(double %src0, double %src0, i32 4660, i32 49617, i1 false, i1 false)
@@ -14198,9 +14198,9 @@ define amdgpu_kernel void @v_permlanex16_convergent(ptr addrspace(1) %out, i32 %
 ; GFX13-NEXT:    s_mov_b32 s3, 0x3ff
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    v_dual_mov_b32 v1, s0 :: v_dual_bitop2_b32 v0, s3, v0 bitop3:0x40
-; GFX13-NEXT:    s_mov_b32 s0, exec_lo
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX13-NEXT:    v_permlanex16_b32 v1, v1, s1, s2
+; GFX13-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX13-NEXT:    v_cmpx_eq_u32_e32 0, v0
 ; GFX13-NEXT:    s_cbranch_execz .LBB142_2
 ; GFX13-NEXT:  ; %bb.1: ; %t

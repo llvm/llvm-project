@@ -5374,37 +5374,36 @@ define amdgpu_kernel void @compute_mad(ptr addrspace(4) %i18, ptr addrspace(4) %
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_mul_lo_u32 v1, s2, v0
 ; GFX13-NEXT:    v_dual_add_nc_u32 v2, s2, v1 :: v_dual_add_nc_u32 v1, 1, v1
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX13-NEXT:    v_mul_lo_u32 v2, v2, v0
 ; GFX13-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0 nv
 ; GFX13-NEXT:    s_mul_i32 s4, ttmp9, s8
 ; GFX13-NEXT:    s_getreg_b32 s5, hwreg(HW_REG_IB_STS2, 6, 4)
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX13-NEXT:    v_mul_lo_u32 v2, v2, v0
 ; GFX13-NEXT:    s_add_co_i32 s7, s7, s4
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    s_and_b32 s4, s6, 0xffff
 ; GFX13-NEXT:    s_cmp_eq_u32 s5, 0
+; GFX13-NEXT:    v_mul_lo_u32 v3, v2, v1
 ; GFX13-NEXT:    s_cselect_b32 s5, ttmp9, s7
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX13-NEXT:    v_mul_lo_u32 v3, v2, v1
 ; GFX13-NEXT:    v_add_nc_u32_e32 v1, v3, v1
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_mul_lo_u32 v2, v1, v2
 ; GFX13-NEXT:    v_add_nc_u32_e32 v1, 1, v3
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_mul_lo_u32 v4, v2, v1
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX13-NEXT:    v_add_nc_u32_e32 v3, v4, v1
 ; GFX13-NEXT:    v_mad_co_u64_u32 v[0:1], null, s5, s4, v[0:1]
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX13-NEXT:    v_mul_lo_u32 v1, v3, v2
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_add_co_u32 v2, s2, s2, v0
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX13-NEXT:    v_add_co_ci_u32_e64 v3, null, s3, 0, s2
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX13-NEXT:    v_mad_co_u64_u32 v[4:5], null, v1, v4, v[1:2]
-; GFX13-NEXT:    v_lshlrev_b64_e32 v[2:3], 2, v[2:3]
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX13-NEXT:    v_lshlrev_b64_e32 v[2:3], 2, v[2:3]
 ; GFX13-NEXT:    v_mad_co_u64_u32 v[0:1], null, v4, v1, v[4:5]
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_add_co_u32 v1, vcc_lo, s0, v2
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-NEXT:    v_add_co_ci_u32_e64 v2, null, s1, v3, vcc_lo
 ; GFX13-NEXT:    global_store_b32 v[1:2], v0, off
 ; GFX13-NEXT:    s_endpgm

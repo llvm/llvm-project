@@ -245,11 +245,11 @@ define amdgpu_ps void @add_i32_constant(ptr addrspace(8) inreg %out, ptr addrspa
 ; GFX1364-NEXT:    s_cbranch_execz .LBB0_4
 ; GFX1364-NEXT:  ; %bb.1:
 ; GFX1364-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
+; GFX1364-NEXT:    ; implicit-def: $vgpr1
+; GFX1364-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
+; GFX1364-NEXT:    v_mbcnt_hi_u32_b32 v0, exec_hi, v0
 ; GFX1364-NEXT:    s_mov_b64 s[12:13], exec
 ; GFX1364-NEXT:    s_mov_b64 s[10:11], exec
-; GFX1364-NEXT:    ; implicit-def: $vgpr1
-; GFX1364-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1364-NEXT:    v_mbcnt_hi_u32_b32 v0, exec_hi, v0
 ; GFX1364-NEXT:    v_cmpx_eq_u32_e32 0, v0
 ; GFX1364-NEXT:    s_cbranch_execz .LBB0_3
 ; GFX1364-NEXT:  ; %bb.2:
@@ -285,9 +285,9 @@ define amdgpu_ps void @add_i32_constant(ptr addrspace(8) inreg %out, ptr addrspa
 ; GFX1332-NEXT:    s_cbranch_execz .LBB0_4
 ; GFX1332-NEXT:  ; %bb.1:
 ; GFX1332-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
+; GFX1332-NEXT:    ; implicit-def: $vgpr1
 ; GFX1332-NEXT:    s_mov_b32 s10, exec_lo
 ; GFX1332-NEXT:    s_mov_b32 s9, exec_lo
-; GFX1332-NEXT:    ; implicit-def: $vgpr1
 ; GFX1332-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1332-NEXT:    v_cmpx_eq_u32_e32 0, v0
 ; GFX1332-NEXT:    s_cbranch_execz .LBB0_3
