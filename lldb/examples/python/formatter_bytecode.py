@@ -23,7 +23,17 @@ import shlex
 import textwrap
 from copy import copy
 from dataclasses import dataclass
-from typing import Any, BinaryIO, Callable, Optional, Sequence, TextIO, Tuple, Union, cast
+from typing import (
+    Any,
+    BinaryIO,
+    Callable,
+    Optional,
+    Sequence,
+    TextIO,
+    Tuple,
+    Union,
+    cast,
+)
 
 BINARY_VERSION = 2
 
