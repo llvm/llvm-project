@@ -409,3 +409,34 @@ define <vscale x 4 x i32> @vmacc_of_sext_add(<vscale x 4 x i16> %x, <vscale x 4 
   %r = add <vscale x 4 x i32> %ab, %m
   ret <vscale x 4 x i32> %r
 }
+
+define <vscale x 4 x i32> @vadd_vx_of_sext_add(<vscale x 4 x i16> %x, <vscale x 4 x i16> %y, i32 %z) {
+; CHECK-LABEL: vadd_vx_of_sext_add:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
+; CHECK-NEXT:    vsra.vi v10, v8, 1
+; CHECK-NEXT:    vsra.vi v11, v9, 1
+; CHECK-NEXT:    vwadd.vv v8, v10, v11
+; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vadd.vx v8, v8, a0
+; CHECK-NEXT:    ret
+;
+; ZVABD-LABEL: vadd_vx_of_sext_add:
+; ZVABD:       # %bb.0:
+; ZVABD-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
+; ZVABD-NEXT:    vsra.vi v10, v8, 1
+; ZVABD-NEXT:    vsra.vi v11, v9, 1
+; ZVABD-NEXT:    vwadd.vv v8, v10, v11
+; ZVABD-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; ZVABD-NEXT:    vadd.vx v8, v8, a0
+; ZVABD-NEXT:    ret
+  %a = ashr <vscale x 4 x i16> %x, splat (i16 1)
+  %b = ashr <vscale x 4 x i16> %y, splat (i16 1)
+  %sa = sext <vscale x 4 x i16> %a to <vscale x 4 x i32>
+  %sb = sext <vscale x 4 x i16> %b to <vscale x 4 x i32>
+  %ab = add <vscale x 4 x i32> %sa, %sb
+  %head = insertelement <vscale x 4 x i32> poison, i32 %z, i32 0
+  %splat = shufflevector <vscale x 4 x i32> %head, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+  %r = add <vscale x 4 x i32> %ab, %splat
+  ret <vscale x 4 x i32> %r
+}
