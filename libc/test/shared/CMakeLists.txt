@@ -790,6 +790,12 @@ else()
       libc.src.__support.math.setpayloadf128
       libc.src.__support.math.setpayloadf16
       libc.src.__support.math.setpayloadl
+      libc.src.__support.math.setpayloadsig
+      libc.src.__support.math.setpayloadsigbf16
+      libc.src.__support.math.setpayloadsigf
+      libc.src.__support.math.setpayloadsigf128
+      libc.src.__support.math.setpayloadsigf16
+      libc.src.__support.math.setpayloadsigl
       libc.src.__support.math.sqrtl
       libc.src.__support.math.trunc
       libc.src.__support.math.truncbf16

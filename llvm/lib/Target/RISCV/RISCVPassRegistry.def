@@ -63,5 +63,5 @@ MACHINE_FUNCTION_PASS("riscv-redundant-copy-elimination",
                       RISCVRedundantCopyEliminationPass())
 MACHINE_FUNCTION_PASS("riscv-vector-peephole", RISCVVectorPeepholePass())
 MACHINE_FUNCTION_PASS("riscv-vl-optimizer", RISCVVLOptimizerPass())
-MACHINE_FUNCTION_PASS("risv-vmv0-elimination", RISCVVMV0EliminationPass())
+MACHINE_FUNCTION_PASS("riscv-vmv0-elimination", RISCVVMV0EliminationPass())
 #undef MACHINE_FUNCTION_PASS
