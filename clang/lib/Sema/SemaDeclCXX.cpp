@@ -3494,17 +3494,14 @@ inline static bool HasAttribute(const QualType &T) {
 }
 
 static bool IsUnusedPrivateField(const FieldDecl *FD) {
-  if (FD->getAccess() == AS_private && FD->getDeclName()) {
-    QualType FieldType = FD->getType();
-    if (HasAttribute<WarnUnusedAttr>(FieldType))
-      return true;
+  if (FD->isImplicit() || !FD->getDeclName() || FD->getAccess() != AS_private ||
+      FD->hasAttr<UnusedAttr>() || FD->getParent()->isDependentContext())
+    return false;
 
-    return !FD->isImplicit() && !FD->hasAttr<UnusedAttr>() &&
-           !FD->getParent()->isDependentContext() &&
-           !HasAttribute<UnusedAttr>(FieldType) &&
-           !InitializationHasSideEffects(*FD);
-  }
-  return false;
+  QualType FieldType = FD->getType();
+  return !HasAttribute<UnusedAttr>(FieldType) &&
+         (HasAttribute<WarnUnusedAttr>(FieldType) ||
+          !InitializationHasSideEffects(*FD));
 }
 
 NamedDecl *
