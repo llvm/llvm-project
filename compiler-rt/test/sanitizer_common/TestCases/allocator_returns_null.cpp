@@ -47,6 +47,9 @@
 
 // UNSUPPORTED: rtsan
 
+// FIXME: Fails after #196388 because libclang_rt.asan links static libc++abi.a.
+// XFAIL: android
+
 #include <assert.h>
 #include <errno.h>
 #include <stdio.h>

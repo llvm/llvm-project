@@ -48,6 +48,17 @@ static void write32AArch64Imm(uint8_t *T, uint64_t imm, uint32_t rangeLimit) {
   write32le(T, orig | ((imm & (0xFFF >> rangeLimit)) << 10));
 }
 
+/// Byte addend held in an LDR/STR (unsigned immediate) instruction. Its imm12
+/// field counts access-size units, so reading it back has to undo that scaling
+/// the way write32AArch64Ldr applies it.
+static uint64_t read32AArch64LdrAddend(uint32_t Inst) {
+  uint32_t Size = Inst >> 30;
+  // 0x04000000 indicates SIMD/FP registers, 0x00800000 indicates 128 bit.
+  if ((Inst & 0x04800000) == 0x04800000)
+    Size += 4;
+  return static_cast<uint64_t>((Inst >> 10) & 0xFFF) << Size;
+}
+
 static void write32AArch64Ldr(uint8_t *T, uint64_t imm) {
   using namespace llvm::support::endian;
 
@@ -233,7 +244,10 @@ public:
       Addend = ((orig >> 29) & 0x3) | ((orig >> 3) & 0x1FFFFC);
       break;
     }
-    case COFF::IMAGE_REL_ARM64_PAGEOFFSET_12L:
+    case COFF::IMAGE_REL_ARM64_PAGEOFFSET_12L: {
+      Addend = read32AArch64LdrAddend(read32le(Displacement));
+      break;
+    }
     case COFF::IMAGE_REL_ARM64_PAGEOFFSET_12A: {
       uint32_t orig = read32le(Displacement);
       Addend = ((orig >> 10) & 0xFFF);
