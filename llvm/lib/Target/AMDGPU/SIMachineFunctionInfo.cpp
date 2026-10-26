@@ -348,6 +348,7 @@ void SIMachineFunctionInfo::shiftWwmVGPRsToLowestRange(
     BitVector &SavedVGPRs) {
   const SIRegisterInfo *TRI = MF.getSubtarget<GCNSubtarget>().getRegisterInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
+  DenseMap<Register, Register> RenamedSpills;
   for (unsigned I = 0, E = WWMVGPRs.size(); I < E; ++I) {
     Register Reg = WWMVGPRs[I];
     Register NewReg =
@@ -361,6 +362,13 @@ void SIMachineFunctionInfo::shiftWwmVGPRsToLowestRange(
     WWMVGPRs[I] = NewReg;
     WWMReservedRegs.remove(Reg);
     WWMReservedRegs.insert(NewReg);
+
+    if (WWMSpills.contains(Reg)) {
+      assert(!WWMSpills.contains(NewReg) &&
+             "replacement WWM register already has a spill slot");
+      RenamedSpills.insert({Reg, NewReg});
+    }
+
     MRI.reserveReg(NewReg, TRI);
 
     // Replace the register in SpillPhysVGPRs. This is needed to look for free
@@ -384,6 +392,17 @@ void SIMachineFunctionInfo::shiftWwmVGPRsToLowestRange(
     }
 
     Reg = NewReg;
+  }
+
+  // Remap spill slots once after compaction, preserving spill/restore order.
+  if (!RenamedSpills.empty()) {
+    SmallVector<std::pair<Register, int>, 0> Spills = WWMSpills.takeVector();
+    for (std::pair<Register, int> Entry : Spills) {
+      auto It = RenamedSpills.find(Entry.first);
+      if (It != RenamedSpills.end())
+        Entry.first = It->second;
+      WWMSpills.insert(Entry);
+    }
   }
 }
 
