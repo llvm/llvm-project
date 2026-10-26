@@ -98,15 +98,12 @@ define void @fun2(<8 x i32> %src, ptr %p)
 ; CHECK-NEXT:    vlvgp %v0, %r0, %r0
 ; CHECK-NEXT:    vl %v1, 0(%r1), 3
 ; CHECK-NEXT:    vlgvf %r0, %v26, 2
-; CHECK-NEXT:    larl %r1, .LCPI2_1
-; CHECK-NEXT:    vl %v2, 0(%r1), 3
 ; CHECK-NEXT:    vn %v0, %v0, %v1
 ; CHECK-NEXT:    vlvgp %v1, %r0, %r0
-; CHECK-NEXT:    vn %v1, %v1, %v2
-; CHECK-NEXT:    vrepib %v3, 31
-; CHECK-NEXT:    vslb %v1, %v1, %v3
-; CHECK-NEXT:    vsl %v1, %v1, %v3
-; CHECK-NEXT:    vo %v0, %v1, %v0
+; CHECK-NEXT:    vrepib %v2, 31
+; CHECK-NEXT:    vslb %v3, %v1, %v2
+; CHECK-NEXT:    vsl %v3, %v3, %v2
+; CHECK-NEXT:    vo %v0, %v3, %v0
 ; CHECK-NEXT:    vrepib %v3, 24
 ; CHECK-NEXT:    vlgvf %r0, %v24, 3
 ; CHECK-NEXT:    vsrlb %v0, %v0, %v3
@@ -115,40 +112,45 @@ define void @fun2(<8 x i32> %src, ptr %p)
 ; CHECK-NEXT:    vrepib %v3, 124
 ; CHECK-NEXT:    vlgvf %r0, %v26, 0
 ; CHECK-NEXT:    vslb %v4, %v0, %v3
+; CHECK-NEXT:    larl %r1, .LCPI2_1
+; CHECK-NEXT:    vl %v5, 0(%r1), 3
 ; CHECK-NEXT:    vsl %v3, %v4, %v3
 ; CHECK-NEXT:    vlvgp %v4, %r0, %r0
-; CHECK-NEXT:    vn %v4, %v4, %v2
+; CHECK-NEXT:    vn %v4, %v4, %v5
+; CHECK-NEXT:    vrepib %v6, 93
 ; CHECK-NEXT:    vlgvf %r0, %v26, 1
-; CHECK-NEXT:    vrepib %v5, 93
+; CHECK-NEXT:    vslb %v4, %v4, %v6
 ; CHECK-NEXT:    larl %r1, .LCPI2_2
-; CHECK-NEXT:    vslb %v4, %v4, %v5
-; CHECK-NEXT:    vsl %v4, %v4, %v5
+; CHECK-NEXT:    vsl %v4, %v4, %v6
 ; CHECK-NEXT:    vo %v3, %v3, %v4
 ; CHECK-NEXT:    vlvgp %v4, %r0, %r0
 ; CHECK-NEXT:    vlgvf %r0, %v24, 0
-; CHECK-NEXT:    vn %v4, %v4, %v2
-; CHECK-NEXT:    vrepib %v5, 62
-; CHECK-NEXT:    vslb %v4, %v4, %v5
-; CHECK-NEXT:    vsl %v4, %v4, %v5
+; CHECK-NEXT:    vn %v4, %v4, %v5
+; CHECK-NEXT:    vrepib %v6, 62
+; CHECK-NEXT:    vn %v1, %v1, %v5
+; CHECK-NEXT:    vslb %v4, %v4, %v6
+; CHECK-NEXT:    vsl %v4, %v4, %v6
 ; CHECK-NEXT:    vo %v4, %v3, %v4
+; CHECK-NEXT:    vslb %v1, %v1, %v2
+; CHECK-NEXT:    vsl %v1, %v1, %v2
 ; CHECK-NEXT:    vo %v1, %v4, %v1
-; CHECK-NEXT:    vrepib %v4, 56
-; CHECK-NEXT:    vrepib %v5, 58
-; CHECK-NEXT:    vsrlb %v1, %v1, %v4
+; CHECK-NEXT:    vrepib %v2, 56
+; CHECK-NEXT:    vrepib %v4, 58
+; CHECK-NEXT:    vsrlb %v1, %v1, %v2
 ; CHECK-NEXT:    vsteg %v1, 16(%r2), 1
 ; CHECK-NEXT:    vlvgp %v1, %r0, %r0
 ; CHECK-NEXT:    vlgvf %r0, %v24, 1
-; CHECK-NEXT:    vrepib %v4, 89
-; CHECK-NEXT:    vslb %v1, %v1, %v4
-; CHECK-NEXT:    vsl %v1, %v1, %v4
-; CHECK-NEXT:    vlvgp %v4, %r0, %r0
+; CHECK-NEXT:    vrepib %v2, 89
+; CHECK-NEXT:    vslb %v1, %v1, %v2
+; CHECK-NEXT:    vsl %v1, %v1, %v2
+; CHECK-NEXT:    vlvgp %v2, %r0, %r0
 ; CHECK-NEXT:    vlgvf %r0, %v24, 2
-; CHECK-NEXT:    vn %v4, %v4, %v2
-; CHECK-NEXT:    vslb %v4, %v4, %v5
-; CHECK-NEXT:    vsl %v4, %v4, %v5
-; CHECK-NEXT:    vo %v1, %v1, %v4
-; CHECK-NEXT:    vlvgp %v4, %r0, %r0
-; CHECK-NEXT:    vn %v2, %v4, %v2
+; CHECK-NEXT:    vn %v2, %v2, %v5
+; CHECK-NEXT:    vslb %v2, %v2, %v4
+; CHECK-NEXT:    vsl %v2, %v2, %v4
+; CHECK-NEXT:    vo %v1, %v1, %v2
+; CHECK-NEXT:    vlvgp %v2, %r0, %r0
+; CHECK-NEXT:    vn %v2, %v2, %v5
 ; CHECK-NEXT:    vrepib %v4, 27
 ; CHECK-NEXT:    vslb %v2, %v2, %v4
 ; CHECK-NEXT:    vsl %v2, %v2, %v4
