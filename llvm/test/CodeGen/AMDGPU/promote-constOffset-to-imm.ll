@@ -366,7 +366,6 @@ define hidden amdgpu_kernel void @clmem_read(ptr addrspace(1)  %buffer) {
 ; GFX8-NEXT:    s_mov_b64 s[2:3], s[38:39]
 ; GFX8-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX8-NEXT:    s_mov_b32 s32, 0
-; GFX8-NEXT:    ; implicit-def: $sgpr15
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GFX8-NEXT:    v_lshlrev_b32_e32 v1, 17, v0
@@ -494,7 +493,6 @@ define hidden amdgpu_kernel void @clmem_read(ptr addrspace(1)  %buffer) {
 ; GFX900-NEXT:    s_mov_b64 s[2:3], s[38:39]
 ; GFX900-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX900-NEXT:    s_mov_b32 s32, 0
-; GFX900-NEXT:    ; implicit-def: $sgpr15
 ; GFX900-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX900-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GFX900-NEXT:    v_and_b32_e32 v1, 0xff, v0
@@ -605,7 +603,6 @@ define hidden amdgpu_kernel void @clmem_read(ptr addrspace(1)  %buffer) {
 ; GFX10-NEXT:    s_mov_b64 s[0:1], s[36:37]
 ; GFX10-NEXT:    s_mov_b64 s[2:3], s[38:39]
 ; GFX10-NEXT:    s_mov_b32 s32, 0
-; GFX10-NEXT:    ; implicit-def: $sgpr15
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_swappc_b64 s[30:31], s[6:7]
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v1, 17, v0
@@ -617,7 +614,7 @@ define hidden amdgpu_kernel void @clmem_read(ptr addrspace(1)  %buffer) {
 ; GFX10-NEXT:    v_lshl_or_b32 v0, v0, 3, v6
 ; GFX10-NEXT:    v_add_co_u32 v0, s0, s34, v0
 ; GFX10-NEXT:    v_add_co_ci_u32_e64 v1, s0, s35, 0, s0
-; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, 0x2800, v0
+; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 0x2800
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
 ; GFX10-NEXT:  .LBB1_1: ; %for.cond.preheader
 ; GFX10-NEXT:    ; =>This Loop Header: Depth=1
@@ -652,7 +649,7 @@ define hidden amdgpu_kernel void @clmem_read(ptr addrspace(1)  %buffer) {
 ; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    global_load_dwordx2 v[30:31], v[10:11], off
 ; GFX10-NEXT:    global_load_dwordx2 v[32:33], v[26:27], off
-; GFX10-NEXT:    v_add_co_u32 v4, vcc_lo, 0x10000, v4
+; GFX10-NEXT:    v_add_co_u32 v4, vcc_lo, v4, 0x10000
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v5, vcc_lo, 0, v5, vcc_lo
 ; GFX10-NEXT:    s_addk_i32 s1, 0x2000
 ; GFX10-NEXT:    s_cmp_lt_u32 s1, 0x400000
@@ -718,7 +715,6 @@ define hidden amdgpu_kernel void @clmem_read(ptr addrspace(1)  %buffer) {
 ; GFX90A-NEXT:    s_mov_b64 s[2:3], s[38:39]
 ; GFX90A-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX90A-NEXT:    s_mov_b32 s32, 0
-; GFX90A-NEXT:    ; implicit-def: $sgpr15
 ; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GFX90A-NEXT:    v_and_b32_e32 v1, 0xff, v0
@@ -820,7 +816,6 @@ define hidden amdgpu_kernel void @clmem_read(ptr addrspace(1)  %buffer) {
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; GFX11-NEXT:    s_load_b64 s[34:35], s[4:5], 0x24
 ; GFX11-NEXT:    s_mov_b32 s32, 0
-; GFX11-NEXT:    ; implicit-def: $sgpr15
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; GFX11-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v1, 17, v0
@@ -833,7 +828,7 @@ define hidden amdgpu_kernel void @clmem_read(ptr addrspace(1)  %buffer) {
 ; GFX11-NEXT:    v_add_co_u32 v0, s0, s34, v0
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, s35, 0, s0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, 0x2800, v0
+; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 0x2800
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX11-NEXT:  .LBB1_1: ; %for.cond.preheader
 ; GFX11-NEXT:    ; =>This Loop Header: Depth=1
@@ -870,7 +865,7 @@ define hidden amdgpu_kernel void @clmem_read(ptr addrspace(1)  %buffer) {
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    global_load_b64 v[22:23], v[22:23], off
 ; GFX11-NEXT:    global_load_b64 v[28:29], v[28:29], off offset:2048
-; GFX11-NEXT:    v_add_co_u32 v4, vcc_lo, 0x10000, v4
+; GFX11-NEXT:    v_add_co_u32 v4, vcc_lo, v4, 0x10000
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v5, null, 0, v5, vcc_lo
 ; GFX11-NEXT:    s_addk_i32 s1, 0x2000

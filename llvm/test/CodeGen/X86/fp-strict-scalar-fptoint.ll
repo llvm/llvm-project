@@ -620,14 +620,14 @@ define i64 @fptoui_f32toi64(float %x) #0 {
 ;
 ; AVX1-X64-LABEL: fptoui_f32toi64:
 ; AVX1-X64:       # %bb.0:
-; AVX1-X64-NEXT:    vmovss {{.*#+}} xmm1 = [9.22337203E+18,0.0E+0,0.0E+0,0.0E+0]
-; AVX1-X64-NEXT:    vcomiss %xmm1, %xmm0
-; AVX1-X64-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX1-X64-NEXT:    vmovss {{.*#+}} xmm2 = [9.22337203E+18,0.0E+0,0.0E+0,0.0E+0]
+; AVX1-X64-NEXT:    vcomiss %xmm2, %xmm0
+; AVX1-X64-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX1-X64-NEXT:    jb .LBB9_2
 ; AVX1-X64-NEXT:  # %bb.1:
-; AVX1-X64-NEXT:    vmovaps %xmm1, %xmm2
+; AVX1-X64-NEXT:    vmovaps %xmm2, %xmm1
 ; AVX1-X64-NEXT:  .LBB9_2:
-; AVX1-X64-NEXT:    vsubss %xmm2, %xmm0, %xmm0
+; AVX1-X64-NEXT:    vsubss %xmm1, %xmm0, %xmm0
 ; AVX1-X64-NEXT:    vcvttss2si %xmm0, %rcx
 ; AVX1-X64-NEXT:    setae %al
 ; AVX1-X64-NEXT:    movzbl %al, %eax
@@ -1260,14 +1260,14 @@ define i64 @fptoui_f64toi64(double %x) #0 {
 ;
 ; AVX1-X64-LABEL: fptoui_f64toi64:
 ; AVX1-X64:       # %bb.0:
-; AVX1-X64-NEXT:    vmovsd {{.*#+}} xmm1 = [9.2233720368547758E+18,0.0E+0]
-; AVX1-X64-NEXT:    vcomisd %xmm1, %xmm0
-; AVX1-X64-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
+; AVX1-X64-NEXT:    vmovsd {{.*#+}} xmm2 = [9.2233720368547758E+18,0.0E+0]
+; AVX1-X64-NEXT:    vcomisd %xmm2, %xmm0
+; AVX1-X64-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; AVX1-X64-NEXT:    jb .LBB18_2
 ; AVX1-X64-NEXT:  # %bb.1:
-; AVX1-X64-NEXT:    vmovapd %xmm1, %xmm2
+; AVX1-X64-NEXT:    vmovapd %xmm2, %xmm1
 ; AVX1-X64-NEXT:  .LBB18_2:
-; AVX1-X64-NEXT:    vsubsd %xmm2, %xmm0, %xmm0
+; AVX1-X64-NEXT:    vsubsd %xmm1, %xmm0, %xmm0
 ; AVX1-X64-NEXT:    vcvttsd2si %xmm0, %rcx
 ; AVX1-X64-NEXT:    setae %al
 ; AVX1-X64-NEXT:    movzbl %al, %eax

@@ -21,6 +21,7 @@
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/GlobalsModRef.h"
+#include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -30,6 +31,7 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
@@ -1044,7 +1046,7 @@ BranchProbability llvm::getBranchProbability(BasicBlock *Src, BasicBlock *Dst) {
   assert(Src != Dst && "Passed in same source as destination");
 
   Instruction *TI = Src->getTerminator();
-  if (!TI || TI->getNumSuccessors() == 0)
+  if (TI->getNumSuccessors() == 0)
     return BranchProbability::getZero();
 
   SmallVector<uint32_t, 4> Weights;
@@ -1434,7 +1436,7 @@ Value *llvm::expandReductionViaLoop(IRBuilderBase &Builder, Value *Vec,
     NewLoop->addBasicBlockToLoop(LoopBB, *LI);
   }
 
-  Builder.SetInsertPoint(ExitBB, ExitBB->begin());
+  Builder.SetInsertPoint(ExitBB->begin());
   return Res;
 }
 
@@ -2217,11 +2219,11 @@ Value *llvm::addRuntimeChecks(
   auto ExpandedChecks =
       expandBounds(PointerChecks, TheLoop, Loc, Exp, HoistRuntimeChecks);
 
-  LLVMContext &Ctx = Loc->getContext();
-  IRBuilder ChkBuilder(Ctx, InstSimplifyFolder(Loc->getDataLayout()));
-  ChkBuilder.SetInsertPoint(Loc);
+  IRBuilder ChkBuilder(Loc->getIterator(),
+                       InstSimplifyFolder(Loc->getDataLayout()));
   // Our instructions might fold to a constant.
   Value *MemoryRuntimeCheck = nullptr;
+  SmallPtrSet<Value *, 4> CheckedStrides;
 
   for (const auto &[A, B] : ExpandedChecks) {
     // Check if two pointers (A and B) conflict where conflict is computed as:
@@ -2244,13 +2246,13 @@ Value *llvm::addRuntimeChecks(
     Value *Cmp0 = ChkBuilder.CreateICmpULT(A.Start, B.End, "bound0");
     Value *Cmp1 = ChkBuilder.CreateICmpULT(B.Start, A.End, "bound1");
     Value *IsConflict = ChkBuilder.CreateAnd(Cmp0, Cmp1, "found.conflict");
-    if (A.StrideToCheck) {
+    if (A.StrideToCheck && CheckedStrides.insert(A.StrideToCheck).second) {
       Value *IsNegativeStride = ChkBuilder.CreateICmpSLT(
           A.StrideToCheck, ConstantInt::get(A.StrideToCheck->getType(), 0),
           "stride.check");
       IsConflict = ChkBuilder.CreateOr(IsConflict, IsNegativeStride);
     }
-    if (B.StrideToCheck) {
+    if (B.StrideToCheck && CheckedStrides.insert(B.StrideToCheck).second) {
       Value *IsNegativeStride = ChkBuilder.CreateICmpSLT(
           B.StrideToCheck, ConstantInt::get(B.StrideToCheck->getType(), 0),
           "stride.check");
@@ -2272,9 +2274,8 @@ Value *llvm::addDiffRuntimeChecks(Instruction *Loc,
                                   SCEVExpander &Expander, ElementCount VF,
                                   unsigned IC) {
 
-  LLVMContext &Ctx = Loc->getContext();
-  IRBuilder ChkBuilder(Ctx, InstSimplifyFolder(Loc->getDataLayout()));
-  ChkBuilder.SetInsertPoint(Loc);
+  IRBuilder ChkBuilder(Loc->getIterator(),
+                       InstSimplifyFolder(Loc->getDataLayout()));
   // Our instructions might fold to a constant.
   Value *MemoryRuntimeCheck = nullptr;
 
@@ -2491,4 +2492,91 @@ llvm::hasPartialIVCondition(const Loop &L, unsigned MSSAThreshold,
   }
 
   return {};
+}
+
+bool llvm::collectCompressedPtrs(
+    DenseMap<Value *, const SCEVAddRecExpr *> &CompressedPtrs, const Loop &L,
+    const ConditionalInductionDescriptor &CondID, ScalarEvolution &SE) {
+  assert(L.isInnermost() && "Expected innermost loop!");
+
+  const DataLayout &DL = SE.getDataLayout();
+  const SCEV *ApproximatePhiSCEV = CondID.getUnconditionalAddRec(SE, L);
+  ValueToSCEVMapTy PhiMap{{CondID.getHeaderPHI(), ApproximatePhiSCEV}};
+
+  auto GetCompressedPtrSCEV = [&](Value *Ptr,
+                                  Type *AccessTy) -> const SCEVAddRecExpr * {
+    using namespace SCEVPatternMatch;
+    // TODO: Take into account the non-wrap flags of the MD when rewriting the
+    // SCEV expressions for pointers. This should allow folding away zext/sext
+    // operations.
+    const SCEV *PtrSCEV =
+        SCEVParameterRewriter::rewrite(SE.getSCEV(Ptr), SE, PhiMap);
+
+    // Check the pointer is described by an add recurrence with a step matching
+    // the access type size.
+    unsigned AccessSize = DL.getTypeAllocSize(AccessTy).getFixedValue();
+    if (!match(PtrSCEV,
+               m_scev_AffineAddRec(m_SCEV(), m_scev_SpecificInt(AccessSize),
+                                   m_SpecificLoop(&L))))
+      return nullptr;
+
+    return cast<SCEVAddRecExpr>(PtrSCEV);
+  };
+
+  SmallPtrSet<Use *, 16> Seen;
+  SmallVector<Use *> Worklist(
+      make_pointer_range(CondID.getHeaderPHI()->uses()));
+  while (!Worklist.empty()) {
+    Use *U = Worklist.pop_back_val();
+    if (!Seen.insert(U).second)
+      continue;
+
+    auto *UserI = cast<Instruction>(U->getUser());
+    // Disallow out of loop users. TODO: This could be relaxed if the loop
+    // vectorizer could handle liveout users of the conditional induction.
+    if (!L.contains(UserI))
+      return false;
+
+    // Always allow uses by the backedge update.
+    if (UserI == CondID.getBackedgePHI())
+      continue;
+
+    Value *CurrentVal = U->get();
+    if (isa<LoadInst, StoreInst>(UserI)) {
+      // Disallow any store that uses the monotonic value as the stored value.
+      auto *SI = dyn_cast<StoreInst>(UserI);
+      if (SI && SI->getValueOperand() == CurrentVal)
+        return false;
+
+      Type *AccessTy = getLoadStoreType(UserI);
+
+      // Disallow loads/stores of irregular types (like i4).
+      if (DL.getTypeAllocSizeInBits(AccessTy) != DL.getTypeSizeInBits(AccessTy))
+        return false;
+
+      Value *Ptr = getLoadStorePointerOperand(UserI);
+      const SCEVAddRecExpr *PtrAddRec = GetCompressedPtrSCEV(Ptr, AccessTy);
+      if (!PtrAddRec)
+        return false;
+      CompressedPtrs.try_emplace(Ptr, PtrAddRec);
+      continue;
+    }
+
+    auto LoopVariantOp = [&](Value *V, bool /*AllowRepeats*/) -> Value * {
+      return L.isLoopInvariant(V) ? nullptr : V;
+    };
+
+    // Non-memory users may use any opcode (select/and/or/etc.), but they must
+    // only have CurrentVal as their only loop-varying input. That prevents
+    // mixing in a second loop-varying term. GetCompressedPtrSCEV rewrites the
+    // full leaf pointer SCEV and rejects it unless the entire address still
+    // simplifies to the required affine AddRec.
+    if (UserI->use_empty() ||
+        find_singleton<Value>(UserI->operands(), LoopVariantOp) != CurrentVal)
+      return false;
+
+    append_range(Worklist, make_pointer_range(UserI->uses()));
+  }
+
+  return true;
 }

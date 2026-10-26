@@ -10,7 +10,7 @@ end subroutine
 ! CHECK:           %[[ARG0:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"}, %[[ARG1:.*]]: !fir.ref<i32>
 ! CHECK-DAG:     %[[ARRAY:.*]]:2 = hlfir.declare %[[ARG0]]
 ! CHECK-DAG:     %[[OUT:.*]]:2 = hlfir.declare %[[ARG1]]
-! CHECK-NEXT:    %[[EXPR:.*]] = hlfir.minval %[[ARRAY]]#0 {fastmath = #arith.fastmath<contract>} : (!fir.box<!fir.array<?xi32>>) -> i32
+! CHECK-NEXT:    %[[EXPR:.*]] = hlfir.minval %[[ARRAY]]#0 fastmath(contract) : (!fir.box<!fir.array<?xi32>>) -> i32
 ! CHECK-NEXT:    hlfir.assign %[[EXPR]] to %[[OUT]]#0 : i32, !fir.ref<i32>
 ! CHECK-NEXT:    return
 ! CHECK-NEXT:  }
@@ -26,7 +26,7 @@ end subroutine
 ! CHECK-DAG:     %[[OUT:.*]]:2 = hlfir.declare %[[ARG1]]
 ! CHECK-DAG:     %[[DIM_REF:.*]]:2 = hlfir.declare %[[ARG2]]
 ! CHECK-NEXT:    %[[DIM:.*]] = fir.load %[[DIM_REF]]#0 : !fir.ref<i32>
-! CHECK-NEXT:    %[[EXPR:.*]] = hlfir.minval %[[ARRAY]]#0 dim %[[DIM]] {fastmath = #arith.fastmath<contract>} : (!fir.box<!fir.array<?x?xi32>>, i32) -> !hlfir.expr<?xi32>
+! CHECK-NEXT:    %[[EXPR:.*]] = hlfir.minval %[[ARRAY]]#0 dim %[[DIM]] fastmath(contract) : (!fir.box<!fir.array<?x?xi32>>, i32) -> !hlfir.expr<?xi32>
 ! CHECK-NEXT:    hlfir.assign %[[EXPR]] to %[[OUT]]#0 : !hlfir.expr<?xi32>, !fir.box<!fir.array<?xi32>>
 ! CHECK-NEXT:    hlfir.destroy %[[EXPR]]
 ! CHECK-NEXT:    return
@@ -43,7 +43,7 @@ end subroutine
 ! CHECK-DAG:     %[[ARRAY:.*]]:2 = hlfir.declare %[[ARG0]]
 ! CHECK-DAG:     %[[OUT:.*]]:2 = hlfir.declare %[[ARG1]]
 ! CHECK-DAG:     %[[MASK:.*]]:2 = hlfir.declare %[[ARG2]]
-! CHECK-NEXT:    %[[EXPR:.*]] = hlfir.minval %[[ARRAY]]#0 mask %[[MASK]]#0 {fastmath = #arith.fastmath<contract>} : (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.logical<4>>) -> i32
+! CHECK-NEXT:    %[[EXPR:.*]] = hlfir.minval %[[ARRAY]]#0 mask %[[MASK]]#0 fastmath(contract) : (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.logical<4>>) -> i32
 ! CHECK-NEXT:    hlfir.assign %[[EXPR]] to %[[OUT]]#0 : i32, !fir.ref<i32>
 ! CHECK-NEXT:    return
 ! CHECK-NEXT:  }
@@ -59,7 +59,7 @@ end subroutine
 ! CHECK-DAG:     %[[ARRAY:.*]]:2 = hlfir.declare %[[ARG0]]
 ! CHECK-DAG:     %[[OUT:.*]]:2 = hlfir.declare %[[ARG1]]
 ! CHECK-DAG:     %[[MASK:.*]]:2 = hlfir.declare %[[ARG2]]
-! CHECK-NEXT:    %[[EXPR:.*]] = hlfir.minval %[[ARRAY]]#0 mask %[[MASK]]#0 {fastmath = #arith.fastmath<contract>} : (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?x!fir.logical<4>>>) -> i32
+! CHECK-NEXT:    %[[EXPR:.*]] = hlfir.minval %[[ARRAY]]#0 mask %[[MASK]]#0 fastmath(contract) : (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?x!fir.logical<4>>>) -> i32
 ! CHECK-NEXT:    hlfir.assign %[[EXPR]] to %[[OUT]]#0 : i32, !fir.ref<i32>
 ! CHECK-NEXT:    return
 ! CHECK-NEXT:  }
@@ -79,7 +79,7 @@ end subroutine
 ! CHECK-DAG:     %[[OUT:.*]]:2 = hlfir.declare %[[ARG0]](%[[OUT_SHAPE]])
 ! CHECK-DAG:     %[[TRUE:.*]] = arith.constant true
 ! CHECK-DAG:     %[[C1:.*]] = arith.constant 1 : i32
-! CHECK-NEXT:    %[[EXPR:.*]] = hlfir.minval %[[ARRAY]]#0 dim %[[C1]] mask %[[TRUE]] {fastmath = #arith.fastmath<contract>} : (!fir.ref<!fir.array<2x2xi32>>, i32, i1) -> !hlfir.expr<2xi32>
+! CHECK-NEXT:    %[[EXPR:.*]] = hlfir.minval %[[ARRAY]]#0 dim %[[C1]] mask %[[TRUE]] fastmath(contract) : (!fir.ref<!fir.array<2x2xi32>>, i32, i1) -> !hlfir.expr<2xi32>
 ! CHECK-NEXT:    hlfir.assign %[[EXPR]] to %[[OUT]]#0 : !hlfir.expr<2xi32>, !fir.ref<!fir.array<2xi32>>
 ! CHECK-NEXT:    hlfir.destroy %[[EXPR]] : !hlfir.expr<2xi32>
 ! CHECK-NEXT:    return
@@ -101,7 +101,7 @@ end subroutine
 ! CHECK-NEXT:    %[[DIM_ADDR:.*]] = fir.box_addr %[[DIM_BOX]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
 ! CHECK-NEXT:    %[[DIM0:.*]] = fir.load %[[DIM_ADDR]] : !fir.ptr<i32>
 ! CHECK-NEXT:    %[[DIM1:.*]] = hlfir.no_reassoc %[[DIM0]] : i32
-! CHECK-NEXT:    %[[EXPR:.*]] = hlfir.minval %[[ARRAY]]#0 dim %[[DIM1]] {fastmath = #arith.fastmath<contract>} : (!fir.box<!fir.array<?x?xf32>>, i32) -> !hlfir.expr<?xf32>
+! CHECK-NEXT:    %[[EXPR:.*]] = hlfir.minval %[[ARRAY]]#0 dim %[[DIM1]] fastmath(contract) : (!fir.box<!fir.array<?x?xf32>>, i32) -> !hlfir.expr<?xf32>
 ! CHECK-NEXT:    hlfir.assign %[[EXPR]] to %[[OUT]]#0 : !hlfir.expr<?xf32>, !fir.box<!fir.array<?xf32>>
 ! CHECK-NEXT:    hlfir.destroy %[[EXPR]]
 ! CHECK-NEXT:    return
@@ -117,7 +117,7 @@ end subroutine
 ! CHECK-DAG:     %[[ARRAY:.*]]:2 = hlfir.declare %[[ARG0]]
 ! CHECK-DAG:     %[[UNBOXED:.*]]:2 = fir.unboxchar %[[ARG1]]
 ! CHECK-DAG:     %[[OUT:.*]]:2 = hlfir.declare %[[UNBOXED]]#0 typeparams %[[UNBOXED]]#1
-! CHECK-NEXT:    %[[EXPR:.*]] = hlfir.minval %[[ARRAY]]#0 {fastmath = #arith.fastmath<contract>} : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> !hlfir.expr<!fir.char<1,?>>
+! CHECK-NEXT:    %[[EXPR:.*]] = hlfir.minval %[[ARRAY]]#0 fastmath(contract) : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> !hlfir.expr<!fir.char<1,?>>
 ! CHECK-NEXT:    hlfir.assign %[[EXPR]] to %[[OUT]]#0 : !hlfir.expr<!fir.char<1,?>>, !fir.boxchar<1>
 ! CHECK-NEXT:    hlfir.destroy %[[EXPR]]
 ! CHECK-NEXT:    return
@@ -135,7 +135,7 @@ end subroutine
 ! CHECK-DAG:     %[[OUT:.*]]:2 = hlfir.declare %[[ARG1]]
 ! CHECK-DAG:     %[[DIM_REF:.*]]:2 = hlfir.declare %[[ARG2]]
 ! CHECK-NEXT:    %[[DIM:.*]] = fir.load %[[DIM_REF]]#0 : !fir.ref<i32>
-! CHECK-NEXT:    %[[EXPR:.*]] = hlfir.minval %[[ARRAY]]#0 dim %[[DIM]] {fastmath = #arith.fastmath<contract>} : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, i32) -> !hlfir.expr<?x!fir.char<1,?>>
+! CHECK-NEXT:    %[[EXPR:.*]] = hlfir.minval %[[ARRAY]]#0 dim %[[DIM]] fastmath(contract) : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, i32) -> !hlfir.expr<?x!fir.char<1,?>>
 ! CHECK-NEXT:    hlfir.assign %[[EXPR]] to %[[OUT]]#0 : !hlfir.expr<?x!fir.char<1,?>>, !fir.box<!fir.array<?x!fir.char<1,?>>>
 ! CHECK-NEXT:    hlfir.destroy %[[EXPR]]
 ! CHECK-NEXT:    return
@@ -153,7 +153,7 @@ end subroutine
 ! CHECK-DAG:     %[[UNBOXED:.*]]:2 = fir.unboxchar %[[ARG1]]
 ! CHECK-DAG:     %[[MASK:.*]]:2 = hlfir.declare %[[ARG2]]
 ! CHECK-DAG:     %[[OUT:.*]]:2 = hlfir.declare %[[UNBOXED]]#0 typeparams %[[UNBOXED]]#1
-! CHECK-NEXT:    %[[EXPR:.*]] = hlfir.minval %[[ARRAY]]#0 mask %[[MASK]]#0 {fastmath = #arith.fastmath<contract>} : (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.ref<!fir.logical<4>>) -> !hlfir.expr<!fir.char<1,?>>
+! CHECK-NEXT:    %[[EXPR:.*]] = hlfir.minval %[[ARRAY]]#0 mask %[[MASK]]#0 fastmath(contract) : (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.ref<!fir.logical<4>>) -> !hlfir.expr<!fir.char<1,?>>
 ! CHECK-NEXT:    hlfir.assign %[[EXPR]] to %[[OUT]]#0 : !hlfir.expr<!fir.char<1,?>>, !fir.boxchar<1>
 ! CHECK-NEXT:    hlfir.destroy %[[EXPR]]
 ! CHECK-NEXT:    return
@@ -255,7 +255,7 @@ end subroutine test_unknown_char_len_result
 ! CHECK-DAG:       %[[C3_8:.*]] = arith.constant 3 : index
 ! CHECK-DAG:       %[[C3_9:.*]] = arith.constant 3 : index
 ! CHECK-DAG:       %[[ARRAY_REF:.*]] = hlfir.designate %[[ARRAY]]#0 (%[[C1]]:%[[C3_0]]:%[[C1_3]], %[[C1]]:%[[C3_1]]:%[[C1_5]]) substr %[[C1_7]], %[[C3_8]]  shape %[[SHAPE]] typeparams %[[C3_9]] : (!fir.ref<!fir.array<3x3x!fir.char<1,3>>>, index, index, index, index, index, index, index, index, !fir.shape<2>, index) -> !fir.ref<!fir.array<3x3x!fir.char<1,3>>>
-! CHECK:           %[[EXPR:.*]] = hlfir.minval %[[ARRAY_REF]] {fastmath = #arith.fastmath<contract>} : (!fir.ref<!fir.array<3x3x!fir.char<1,3>>>) -> !hlfir.expr<!fir.char<1,3>>
+! CHECK:           %[[EXPR:.*]] = hlfir.minval %[[ARRAY_REF]] fastmath(contract) : (!fir.ref<!fir.array<3x3x!fir.char<1,3>>>) -> !hlfir.expr<!fir.char<1,3>>
 ! CHECK-NEXT:      hlfir.assign %[[EXPR]] to %[[RES]]#0 : !hlfir.expr<!fir.char<1,3>>, !fir.ref<!fir.char<1,3>>
 ! CHECK-NEXT:      hlfir.destroy %[[EXPR]]
 ! CHECK-NEXT:      return
@@ -274,7 +274,7 @@ end function
 ! CHECK:           %[[VAL_2:.*]] = arith.constant 4 : index
 ! CHECK:           %[[VAL_3:.*]] = fir.alloca !fir.array<3x4x!fir.char<1,3>> <{bindc_name = "char", uniq_name = "_QFtest_type_mismatchEchar"}>
 ! CHECK:           %[[VAL_4:.*]] = fir.shape %[[VAL_1]], %[[VAL_2]] : (index, index) -> !fir.shape<2>
-! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_3]](%[[VAL_4]]) typeparams %[[VAL_0]] {uniq_name = "_QFtest_type_mismatchEchar"} : (!fir.ref<!fir.array<3x4x!fir.char<1,3>>>, !fir.shape<2>, index) -> (!fir.ref<!fir.array<3x4x!fir.char<1,3>>>, !fir.ref<!fir.array<3x4x!fir.char<1,3>>>)
+! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_3]](%[[VAL_4]]) typeparams %[[VAL_0]] uniq_name("_QFtest_type_mismatchEchar") : (!fir.ref<!fir.array<3x4x!fir.char<1,3>>>, !fir.shape<2>, index) -> (!fir.ref<!fir.array<3x4x!fir.char<1,3>>>, !fir.ref<!fir.array<3x4x!fir.char<1,3>>>)
 ! CHECK:           %[[VAL_6:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>> <{bindc_name = "test_type_mismatch", uniq_name = "_QFtest_type_mismatchEtest_type_mismatch"}>
 ! CHECK:           %[[VAL_7:.*]] = fir.zero_bits !fir.heap<!fir.array<?x!fir.char<1,?>>>
 ! CHECK:           %[[VAL_8:.*]] = arith.constant 0 : index
@@ -282,10 +282,10 @@ end function
 ! CHECK:           %[[VAL_10:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_11:.*]] = fir.embox %[[VAL_7]](%[[VAL_9]]) typeparams %[[VAL_10]] : (!fir.heap<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, index) -> !fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>
 ! CHECK:           fir.store %[[VAL_11]] to %[[VAL_6]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>
-! CHECK:           %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_6]] {fortran_attrs = #{{.*}}, uniq_name = "_QFtest_type_mismatchEtest_type_mismatch"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>)
+! CHECK:           %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_6]] uniq_name("_QFtest_type_mismatchEtest_type_mismatch") fortran_attrs<{{.*}}> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>)
 ! CHECK:           %[[VAL_13:.*]] = fir.address_of(@_QQclX20) : !fir.ref<!fir.char<1>>
 ! CHECK:           %[[VAL_14:.*]] = arith.constant 1 : index
-! CHECK:           %[[VAL_15:.*]]:2 = hlfir.declare %[[VAL_13]] typeparams %[[VAL_14]] {fortran_attrs = {{.*}}, uniq_name = "_QQclX20"} : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
+! CHECK:           %[[VAL_15:.*]]:2 = hlfir.declare %[[VAL_13]] typeparams %[[VAL_14]] uniq_name("_QQclX20") fortran_attrs<{{.*}}> : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
 ! CHECK:           %[[VAL_16:.*]] = arith.addi %[[VAL_0]], %[[VAL_14]] : index
 ! CHECK:           %[[VAL_17:.*]] = hlfir.elemental %[[VAL_4]] typeparams %[[VAL_16]] unordered : (!fir.shape<2>, index) -> !hlfir.expr<3x4x!fir.char<1,?>> {
 ! CHECK:           ^bb0(%[[VAL_18:.*]]: index, %[[VAL_19:.*]]: index):
@@ -294,7 +294,7 @@ end function
 ! CHECK:             hlfir.yield_element %[[VAL_21]] : !hlfir.expr<!fir.char<1,4>>
 ! CHECK:           }
 ! CHECK:           %[[VAL_22:.*]] = arith.constant 1 : i32
-! CHECK:           %[[VAL_23:.*]] = hlfir.minval %[[VAL_17]] dim %[[VAL_22]] {fastmath = {{.*}}} : (!hlfir.expr<3x4x!fir.char<1,?>>, i32) -> !hlfir.expr<4x!fir.char<1,4>>
+! CHECK:           %[[VAL_23:.*]] = hlfir.minval %[[VAL_17]] dim %[[VAL_22]] fastmath({{.*}}) : (!hlfir.expr<3x4x!fir.char<1,?>>, i32) -> !hlfir.expr<4x!fir.char<1,4>>
 ! CHECK:           hlfir.assign %[[VAL_23]] to %[[VAL_12]]#0 realloc : !hlfir.expr<4x!fir.char<1,4>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>
 ! CHECK:           hlfir.destroy %[[VAL_23]] : !hlfir.expr<4x!fir.char<1,4>>
 ! CHECK:           hlfir.destroy %[[VAL_17]] : !hlfir.expr<3x4x!fir.char<1,?>>

@@ -1,3 +1,4 @@
+set(LLVM_TABLEGEN_PROJECT LLVM_HEADERS)
 set(LLVM_TARGET_DEFINITIONS MCCLOptions.td)
 tablegen(LLVM MCCLOptions.inc -gen-opt-parser-defs)
 add_public_tablegen_target(MCCLOptionsTableGen)

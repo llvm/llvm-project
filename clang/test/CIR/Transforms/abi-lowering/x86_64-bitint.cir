@@ -36,17 +36,18 @@ module attributes {
     #dlti.dl_entry<i128, dense<128>: vector<2xi64>>>
 } {
 
-  // A sub-register width is Extend: signext, and no coercion in the body.
+  // A sub-register width is Extend: signext for arguments, and no coercion in
+  // the body.
   cir.func @ret_b17(%arg0: !b17i) -> !b17i {
     cir.return %arg0 : !b17i
   }
 
   // CHECK-LABEL: cir.func{{.*}} @ret_b17(
   // CHECK-SAME:    %arg0: !cir.int<s, 17, bitint> {llvm.signext})
-  // CHECK-SAME:    -> (!cir.int<s, 17, bitint> {llvm.signext})
+  // CHECK-SAME:    -> !cir.int<s, 17, bitint>
   // CHECK-NEXT:    cir.return %arg0 : !cir.int<s, 17, bitint>
 
-  // LLVM-LABEL: define signext i17 @ret_b17(
+  // LLVM-LABEL: define i17 @ret_b17(
   // LLVM-SAME:    i17 signext %[[ARG:[0-9]+]])
   // LLVM-NEXT:    ret i17 %[[ARG]]
 
@@ -57,10 +58,10 @@ module attributes {
 
   // CHECK-LABEL: cir.func{{.*}} @ret_ub17(
   // CHECK-SAME:    %arg0: !cir.int<u, 17, bitint> {llvm.zeroext})
-  // CHECK-SAME:    -> (!cir.int<u, 17, bitint> {llvm.zeroext})
+  // CHECK-SAME:    -> !cir.int<u, 17, bitint>
   // CHECK-NEXT:    cir.return %arg0 : !cir.int<u, 17, bitint>
 
-  // LLVM-LABEL: define zeroext i17 @ret_ub17(
+  // LLVM-LABEL: define i17 @ret_ub17(
   // LLVM-SAME:    i17 zeroext %[[ARG:[0-9]+]])
   // LLVM-NEXT:    ret i17 %[[ARG]]
 
@@ -198,18 +199,12 @@ module attributes {
   // CHECK-SAME:      : !cir.ptr<!rec_anon_struct>
   // CHECK-NEXT:    %[[VALSLOT:[0-9]+]] = cir.alloca "coerce" align(8)
   // CHECK-SAME:      : !cir.ptr<!rec_anon_struct>
-  // CHECK-NEXT:    %[[FLAT:[0-9]+]] = cir.alloca "coerce" align(8)
-  // CHECK-SAME:      : !cir.ptr<!rec_anon_struct>
-  // CHECK-NEXT:    %[[E0:[0-9]+]] = cir.get_member %[[FLAT]][0]
+  // CHECK-NEXT:    %[[E0:[0-9]+]] = cir.get_member %[[VALSLOT]][0]
   // CHECK-SAME:      : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!u64i>
   // CHECK-NEXT:    cir.store %arg0, %[[E0]] : !u64i, !cir.ptr<!u64i>
-  // CHECK-NEXT:    %[[E1:[0-9]+]] = cir.get_member %[[FLAT]][1]
+  // CHECK-NEXT:    %[[E1:[0-9]+]] = cir.get_member %[[VALSLOT]][1]
   // CHECK-SAME:      : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!u64i>
   // CHECK-NEXT:    cir.store %arg1, %[[E1]] : !u64i, !cir.ptr<!u64i>
-  // CHECK-NEXT:    %[[PAIR:[0-9]+]] = cir.load %[[FLAT]]
-  // CHECK-SAME:      : !cir.ptr<!rec_anon_struct>, !rec_anon_struct
-  // CHECK-NEXT:    cir.store %[[PAIR]], %[[VALSLOT]]
-  // CHECK-SAME:      : !rec_anon_struct, !cir.ptr<!rec_anon_struct>
   // CHECK-NEXT:    %[[VALVIEW:[0-9]+]] = cir.cast bitcast %[[VALSLOT]]
   // CHECK-SAME:      : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!cir.int<s, 65, bitint>>
   // CHECK-NEXT:    %[[VAL:[0-9]+]] = cir.load %[[VALVIEW]]
@@ -226,15 +221,12 @@ module attributes {
   // LLVM-SAME:    i64 %[[A0:[0-9]+]], i64 %[[A1:[0-9]+]])
   // LLVM-NEXT:    %[[RETSLOT:[0-9]+]] = alloca { i64, i64 }
   // LLVM-NEXT:    %[[VALSLOT:[0-9]+]] = alloca { i64, i64 }
-  // LLVM-NEXT:    %[[FLAT:[0-9]+]] = alloca { i64, i64 }
   // LLVM-NEXT:    %[[E0:[0-9]+]] = getelementptr inbounds nuw { i64, i64 }
-  // LLVM-SAME:      , ptr %[[FLAT]], i32 0, i32 0
+  // LLVM-SAME:      , ptr %[[VALSLOT]], i32 0, i32 0
   // LLVM-NEXT:    store i64 %[[A0]], ptr %[[E0]]
   // LLVM-NEXT:    %[[E1:[0-9]+]] = getelementptr inbounds nuw { i64, i64 }
-  // LLVM-SAME:      , ptr %[[FLAT]], i32 0, i32 1
+  // LLVM-SAME:      , ptr %[[VALSLOT]], i32 0, i32 1
   // LLVM-NEXT:    store i64 %[[A1]], ptr %[[E1]]
-  // LLVM-NEXT:    %[[PAIR:[0-9]+]] = load { i64, i64 }, ptr %[[FLAT]]
-  // LLVM-NEXT:    store { i64, i64 } %[[PAIR]], ptr %[[VALSLOT]]
   // LLVM-NEXT:    %[[WIDE:[0-9]+]] = load i128, ptr %[[VALSLOT]]
   // LLVM-NEXT:    %[[NARROW:[0-9]+]] = trunc i128 %[[WIDE]] to i65
   // LLVM-NEXT:    %[[EXT:[0-9]+]] = sext i65 %[[NARROW]] to i128
@@ -253,18 +245,12 @@ module attributes {
   // CHECK-SAME:      : !cir.ptr<!rec_anon_struct>
   // CHECK-NEXT:    %[[VALSLOT:[0-9]+]] = cir.alloca "coerce" align(8)
   // CHECK-SAME:      : !cir.ptr<!rec_anon_struct>
-  // CHECK-NEXT:    %[[FLAT:[0-9]+]] = cir.alloca "coerce" align(8)
-  // CHECK-SAME:      : !cir.ptr<!rec_anon_struct>
-  // CHECK-NEXT:    %[[E0:[0-9]+]] = cir.get_member %[[FLAT]][0]
+  // CHECK-NEXT:    %[[E0:[0-9]+]] = cir.get_member %[[VALSLOT]][0]
   // CHECK-SAME:      : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!u64i>
   // CHECK-NEXT:    cir.store %arg0, %[[E0]] : !u64i, !cir.ptr<!u64i>
-  // CHECK-NEXT:    %[[E1:[0-9]+]] = cir.get_member %[[FLAT]][1]
+  // CHECK-NEXT:    %[[E1:[0-9]+]] = cir.get_member %[[VALSLOT]][1]
   // CHECK-SAME:      : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!u64i>
   // CHECK-NEXT:    cir.store %arg1, %[[E1]] : !u64i, !cir.ptr<!u64i>
-  // CHECK-NEXT:    %[[PAIR:[0-9]+]] = cir.load %[[FLAT]]
-  // CHECK-SAME:      : !cir.ptr<!rec_anon_struct>, !rec_anon_struct
-  // CHECK-NEXT:    cir.store %[[PAIR]], %[[VALSLOT]]
-  // CHECK-SAME:      : !rec_anon_struct, !cir.ptr<!rec_anon_struct>
   // CHECK-NEXT:    %[[VALVIEW:[0-9]+]] = cir.cast bitcast %[[VALSLOT]]
   // CHECK-SAME:      : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!cir.int<u, 65, bitint>>
   // CHECK-NEXT:    %[[VAL:[0-9]+]] = cir.load %[[VALVIEW]]
@@ -281,15 +267,12 @@ module attributes {
   // LLVM-SAME:    i64 %[[A0:[0-9]+]], i64 %[[A1:[0-9]+]])
   // LLVM-NEXT:    %[[RETSLOT:[0-9]+]] = alloca { i64, i64 }
   // LLVM-NEXT:    %[[VALSLOT:[0-9]+]] = alloca { i64, i64 }
-  // LLVM-NEXT:    %[[FLAT:[0-9]+]] = alloca { i64, i64 }
   // LLVM-NEXT:    %[[E0:[0-9]+]] = getelementptr inbounds nuw { i64, i64 }
-  // LLVM-SAME:      , ptr %[[FLAT]], i32 0, i32 0
+  // LLVM-SAME:      , ptr %[[VALSLOT]], i32 0, i32 0
   // LLVM-NEXT:    store i64 %[[A0]], ptr %[[E0]]
   // LLVM-NEXT:    %[[E1:[0-9]+]] = getelementptr inbounds nuw { i64, i64 }
-  // LLVM-SAME:      , ptr %[[FLAT]], i32 0, i32 1
+  // LLVM-SAME:      , ptr %[[VALSLOT]], i32 0, i32 1
   // LLVM-NEXT:    store i64 %[[A1]], ptr %[[E1]]
-  // LLVM-NEXT:    %[[PAIR:[0-9]+]] = load { i64, i64 }, ptr %[[FLAT]]
-  // LLVM-NEXT:    store { i64, i64 } %[[PAIR]], ptr %[[VALSLOT]]
   // LLVM-NEXT:    %[[WIDE:[0-9]+]] = load i128, ptr %[[VALSLOT]]
   // LLVM-NEXT:    %[[NARROW:[0-9]+]] = trunc i128 %[[WIDE]] to i65
   // LLVM-NEXT:    %[[EXT:[0-9]+]] = zext i65 %[[NARROW]] to i128
@@ -308,18 +291,12 @@ module attributes {
   // CHECK-SAME:      : !cir.ptr<!cir.int<s, 127, bitint>>
   // CHECK-NEXT:    %[[VALSLOT:[0-9]+]] = cir.alloca "coerce" align(8)
   // CHECK-SAME:      : !cir.ptr<!rec_anon_struct>
-  // CHECK-NEXT:    %[[FLAT:[0-9]+]] = cir.alloca "coerce" align(8)
-  // CHECK-SAME:      : !cir.ptr<!rec_anon_struct>
-  // CHECK-NEXT:    %[[E0:[0-9]+]] = cir.get_member %[[FLAT]][0]
+  // CHECK-NEXT:    %[[E0:[0-9]+]] = cir.get_member %[[VALSLOT]][0]
   // CHECK-SAME:      : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!u64i>
   // CHECK-NEXT:    cir.store %arg0, %[[E0]] : !u64i, !cir.ptr<!u64i>
-  // CHECK-NEXT:    %[[E1:[0-9]+]] = cir.get_member %[[FLAT]][1]
+  // CHECK-NEXT:    %[[E1:[0-9]+]] = cir.get_member %[[VALSLOT]][1]
   // CHECK-SAME:      : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!u64i>
   // CHECK-NEXT:    cir.store %arg1, %[[E1]] : !u64i, !cir.ptr<!u64i>
-  // CHECK-NEXT:    %[[PAIR:[0-9]+]] = cir.load %[[FLAT]]
-  // CHECK-SAME:      : !cir.ptr<!rec_anon_struct>, !rec_anon_struct
-  // CHECK-NEXT:    cir.store %[[PAIR]], %[[VALSLOT]]
-  // CHECK-SAME:      : !rec_anon_struct, !cir.ptr<!rec_anon_struct>
   // CHECK-NEXT:    %[[VALVIEW:[0-9]+]] = cir.cast bitcast %[[VALSLOT]]
   // CHECK-SAME:      : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!cir.int<s, 127, bitint>>
   // CHECK-NEXT:    %[[VAL:[0-9]+]] = cir.load %[[VALVIEW]]
@@ -336,15 +313,12 @@ module attributes {
   // LLVM-SAME:    i64 %[[A0:[0-9]+]], i64 %[[A1:[0-9]+]])
   // LLVM-NEXT:    %[[RETSLOT:[0-9]+]] = alloca i128
   // LLVM-NEXT:    %[[VALSLOT:[0-9]+]] = alloca { i64, i64 }
-  // LLVM-NEXT:    %[[FLAT:[0-9]+]] = alloca { i64, i64 }
   // LLVM-NEXT:    %[[E0:[0-9]+]] = getelementptr inbounds nuw { i64, i64 }
-  // LLVM-SAME:      , ptr %[[FLAT]], i32 0, i32 0
+  // LLVM-SAME:      , ptr %[[VALSLOT]], i32 0, i32 0
   // LLVM-NEXT:    store i64 %[[A0]], ptr %[[E0]]
   // LLVM-NEXT:    %[[E1:[0-9]+]] = getelementptr inbounds nuw { i64, i64 }
-  // LLVM-SAME:      , ptr %[[FLAT]], i32 0, i32 1
+  // LLVM-SAME:      , ptr %[[VALSLOT]], i32 0, i32 1
   // LLVM-NEXT:    store i64 %[[A1]], ptr %[[E1]]
-  // LLVM-NEXT:    %[[PAIR:[0-9]+]] = load { i64, i64 }, ptr %[[FLAT]]
-  // LLVM-NEXT:    store { i64, i64 } %[[PAIR]], ptr %[[VALSLOT]]
   // LLVM-NEXT:    %[[WIDE:[0-9]+]] = load i128, ptr %[[VALSLOT]]
   // LLVM-NEXT:    %[[NARROW:[0-9]+]] = trunc i128 %[[WIDE]] to i127
   // LLVM-NEXT:    %[[EXT:[0-9]+]] = sext i127 %[[NARROW]] to i128
@@ -429,18 +403,12 @@ module attributes {
   // CHECK-SAME:      : !cir.ptr<!rec_anon_struct>
   // CHECK-NEXT:    %[[INSLOT:[0-9]+]] = cir.alloca "coerce" align(8)
   // CHECK-SAME:      : !cir.ptr<!rec_anon_struct>
-  // CHECK-NEXT:    %[[FLAT:[0-9]+]] = cir.alloca "coerce" align(8)
-  // CHECK-SAME:      : !cir.ptr<!rec_anon_struct>
-  // CHECK-NEXT:    %[[I0:[0-9]+]] = cir.get_member %[[FLAT]][0]
+  // CHECK-NEXT:    %[[I0:[0-9]+]] = cir.get_member %[[INSLOT]][0]
   // CHECK-SAME:      : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!u64i>
   // CHECK-NEXT:    cir.store %arg0, %[[I0]] : !u64i, !cir.ptr<!u64i>
-  // CHECK-NEXT:    %[[I1:[0-9]+]] = cir.get_member %[[FLAT]][1]
+  // CHECK-NEXT:    %[[I1:[0-9]+]] = cir.get_member %[[INSLOT]][1]
   // CHECK-SAME:      : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!u64i>
   // CHECK-NEXT:    cir.store %arg1, %[[I1]] : !u64i, !cir.ptr<!u64i>
-  // CHECK-NEXT:    %[[INPAIR:[0-9]+]] = cir.load %[[FLAT]]
-  // CHECK-SAME:      : !cir.ptr<!rec_anon_struct>, !rec_anon_struct
-  // CHECK-NEXT:    cir.store %[[INPAIR]], %[[INSLOT]]
-  // CHECK-SAME:      : !rec_anon_struct, !cir.ptr<!rec_anon_struct>
   // CHECK-NEXT:    %[[INVIEW:[0-9]+]] = cir.cast bitcast %[[INSLOT]]
   // CHECK-SAME:      : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!cir.int<s, 65, bitint>>
   // CHECK-NEXT:    %[[VAL:[0-9]+]] = cir.load %[[INVIEW]]
@@ -513,18 +481,12 @@ module attributes {
   // CHECK-SAME:      : !cir.ptr<!cir.int<s, 33, bitint>>, !cir.int<s, 33, bitint>
   // CHECK-NEXT:    %[[P65SLOT:[0-9]+]] = cir.alloca "coerce" align(8)
   // CHECK-SAME:      : !cir.ptr<!rec_anon_struct>
-  // CHECK-NEXT:    %[[FLAT:[0-9]+]] = cir.alloca "coerce" align(8)
-  // CHECK-SAME:      : !cir.ptr<!rec_anon_struct>
-  // CHECK-NEXT:    %[[E0:[0-9]+]] = cir.get_member %[[FLAT]][0]
+  // CHECK-NEXT:    %[[E0:[0-9]+]] = cir.get_member %[[P65SLOT]][0]
   // CHECK-SAME:      : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!u64i>
   // CHECK-NEXT:    cir.store %arg1, %[[E0]] : !u64i, !cir.ptr<!u64i>
-  // CHECK-NEXT:    %[[E1:[0-9]+]] = cir.get_member %[[FLAT]][1]
+  // CHECK-NEXT:    %[[E1:[0-9]+]] = cir.get_member %[[P65SLOT]][1]
   // CHECK-SAME:      : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!u64i>
   // CHECK-NEXT:    cir.store %arg2, %[[E1]] : !u64i, !cir.ptr<!u64i>
-  // CHECK-NEXT:    %[[PAIR:[0-9]+]] = cir.load %[[FLAT]]
-  // CHECK-SAME:      : !cir.ptr<!rec_anon_struct>, !rec_anon_struct
-  // CHECK-NEXT:    cir.store %[[PAIR]], %[[P65SLOT]]
-  // CHECK-SAME:      : !rec_anon_struct, !cir.ptr<!rec_anon_struct>
   // CHECK-NEXT:    %[[P65VIEW:[0-9]+]] = cir.cast bitcast %[[P65SLOT]]
   // CHECK-SAME:      : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!cir.int<s, 65, bitint>>
   // CHECK-NEXT:    %{{[0-9]+}} = cir.load %[[P65VIEW]]
@@ -541,15 +503,12 @@ module attributes {
   // LLVM-NEXT:    %{{[0-9]+}} = trunc i64 %[[W33]] to i33
   // The second and third rebuild the 65-bit pair in order.
   // LLVM-NEXT:    %[[P65SLOT:[0-9]+]] = alloca { i64, i64 }, align 8
-  // LLVM-NEXT:    %[[FLAT:[0-9]+]] = alloca { i64, i64 }, align 8
   // LLVM-NEXT:    %[[E0:[0-9]+]] = getelementptr inbounds nuw { i64, i64 }
-  // LLVM-SAME:      , ptr %[[FLAT]], i32 0, i32 0
+  // LLVM-SAME:      , ptr %[[P65SLOT]], i32 0, i32 0
   // LLVM-NEXT:    store i64 %[[A1]], ptr %[[E0]], align 8
   // LLVM-NEXT:    %[[E1:[0-9]+]] = getelementptr inbounds nuw { i64, i64 }
-  // LLVM-SAME:      , ptr %[[FLAT]], i32 0, i32 1
+  // LLVM-SAME:      , ptr %[[P65SLOT]], i32 0, i32 1
   // LLVM-NEXT:    store i64 %[[A2]], ptr %[[E1]], align 8
-  // LLVM-NEXT:    %[[PAIR:[0-9]+]] = load { i64, i64 }, ptr %[[FLAT]], align 8
-  // LLVM-NEXT:    store { i64, i64 } %[[PAIR]], ptr %[[P65SLOT]], align 8
   // LLVM-NEXT:    %[[WIDE:[0-9]+]] = load i128, ptr %[[P65SLOT]], align 8
   // LLVM-NEXT:    %{{[0-9]+}} = trunc i128 %[[WIDE]] to i65
   // LLVM-NEXT:    ret void
@@ -573,18 +532,12 @@ module attributes {
   // CHECK-SAME:      : !cir.ptr<!cir.int<s, 33, bitint>>, !cir.int<s, 33, bitint>
   // CHECK-NEXT:    %[[V65SLOT:[0-9]+]] = cir.alloca "coerce" align(8)
   // CHECK-SAME:      : !cir.ptr<!rec_anon_struct>
-  // CHECK-NEXT:    %[[FLAT:[0-9]+]] = cir.alloca "coerce" align(8)
-  // CHECK-SAME:      : !cir.ptr<!rec_anon_struct>
-  // CHECK-NEXT:    %[[E0:[0-9]+]] = cir.get_member %[[FLAT]][0]
+  // CHECK-NEXT:    %[[E0:[0-9]+]] = cir.get_member %[[V65SLOT]][0]
   // CHECK-SAME:      : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!u64i>
   // CHECK-NEXT:    cir.store %arg1, %[[E0]] : !u64i, !cir.ptr<!u64i>
-  // CHECK-NEXT:    %[[E1:[0-9]+]] = cir.get_member %[[FLAT]][1]
+  // CHECK-NEXT:    %[[E1:[0-9]+]] = cir.get_member %[[V65SLOT]][1]
   // CHECK-SAME:      : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!u64i>
   // CHECK-NEXT:    cir.store %arg2, %[[E1]] : !u64i, !cir.ptr<!u64i>
-  // CHECK-NEXT:    %[[PAIR:[0-9]+]] = cir.load %[[FLAT]]
-  // CHECK-SAME:      : !cir.ptr<!rec_anon_struct>, !rec_anon_struct
-  // CHECK-NEXT:    cir.store %[[PAIR]], %[[V65SLOT]]
-  // CHECK-SAME:      : !rec_anon_struct, !cir.ptr<!rec_anon_struct>
   // CHECK-NEXT:    %[[V65VIEW:[0-9]+]] = cir.cast bitcast %[[V65SLOT]]
   // CHECK-SAME:      : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!cir.int<s, 65, bitint>>
   // CHECK-NEXT:    %[[V65:[0-9]+]] = cir.load %[[V65VIEW]]
@@ -620,15 +573,12 @@ module attributes {
   // LLVM-NEXT:    %[[W33:[0-9]+]] = load i64, ptr %[[V33SLOT]], align 8
   // LLVM-NEXT:    %[[V33:[0-9]+]] = trunc i64 %[[W33]] to i33
   // LLVM-NEXT:    %[[V65SLOT:[0-9]+]] = alloca { i64, i64 }, align 8
-  // LLVM-NEXT:    %[[FLAT:[0-9]+]] = alloca { i64, i64 }, align 8
   // LLVM-NEXT:    %[[E0:[0-9]+]] = getelementptr inbounds nuw { i64, i64 }
-  // LLVM-SAME:      , ptr %[[FLAT]], i32 0, i32 0
+  // LLVM-SAME:      , ptr %[[V65SLOT]], i32 0, i32 0
   // LLVM-NEXT:    store i64 %[[A1]], ptr %[[E0]], align 8
   // LLVM-NEXT:    %[[E1:[0-9]+]] = getelementptr inbounds nuw { i64, i64 }
-  // LLVM-SAME:      , ptr %[[FLAT]], i32 0, i32 1
+  // LLVM-SAME:      , ptr %[[V65SLOT]], i32 0, i32 1
   // LLVM-NEXT:    store i64 %[[A2]], ptr %[[E1]], align 8
-  // LLVM-NEXT:    %[[PAIR:[0-9]+]] = load { i64, i64 }, ptr %[[FLAT]], align 8
-  // LLVM-NEXT:    store { i64, i64 } %[[PAIR]], ptr %[[V65SLOT]], align 8
   // LLVM-NEXT:    %[[WIDE:[0-9]+]] = load i128, ptr %[[V65SLOT]], align 8
   // LLVM-NEXT:    %[[V65:[0-9]+]] = trunc i128 %[[WIDE]] to i65
   // Each callee register traces back to the value it carries.
@@ -677,9 +627,8 @@ module attributes {
   // CHECK-NEXT:    cir.store %arg0, %[[ARGSLOT]] : !s32i, !cir.ptr<!s32i>
   // CHECK-NEXT:    %[[ARGVIEW:[0-9]+]] = cir.cast bitcast %[[ARGSLOT]]
   // CHECK-SAME:      : !cir.ptr<!s32i> -> !cir.ptr<!rec_S>
-  // CHECK-NEXT:    %[[REC:[0-9]+]] = cir.load %[[ARGVIEW]] : !cir.ptr<!rec_S>, !rec_S
   // CHECK-NEXT:    %[[LOCAL:[0-9]+]] = cir.alloca "a" align(4) : !cir.ptr<!rec_S>
-  // CHECK-NEXT:    cir.store %[[REC]], %[[LOCAL]] : !rec_S, !cir.ptr<!rec_S>
+  // CHECK-NEXT:    cir.copy %[[ARGVIEW]] align(4) to %[[LOCAL]] align(4) : !cir.ptr<!rec_S>
   // CHECK-NEXT:    %[[RETVIEW:[0-9]+]] = cir.cast bitcast %[[LOCAL]]
   // CHECK-SAME:      : !cir.ptr<!rec_S> -> !cir.ptr<!s32i>
   // CHECK-NEXT:    %[[RES:[0-9]+]] = cir.load align(4) %[[RETVIEW]] : !cir.ptr<!s32i>, !s32i
@@ -689,9 +638,8 @@ module attributes {
   // LLVM-SAME:    i32 %[[ARG:[0-9]+]])
   // LLVM-NEXT:    %[[ARGSLOT:[0-9]+]] = alloca i32, align 4
   // LLVM-NEXT:    store i32 %[[ARG]], ptr %[[ARGSLOT]], align 4
-  // LLVM-NEXT:    %[[REC:[0-9]+]] = load %struct.S, ptr %[[ARGSLOT]], align 4
   // LLVM-NEXT:    %[[LOCAL:[0-9]+]] = alloca %struct.S, align 4
-  // LLVM-NEXT:    store %struct.S %[[REC]], ptr %[[LOCAL]], align 4
+  // LLVM-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[LOCAL]], ptr align 4 %[[ARGSLOT]], i64 4, i1 false)
   // LLVM-NEXT:    %[[RES:[0-9]+]] = load i32, ptr %[[LOCAL]], align 4
   // LLVM-NEXT:    ret i32 %[[RES]]
 
@@ -703,36 +651,25 @@ module attributes {
   // CHECK-LABEL: cir.func{{.*}} @take_p(%arg0: !u64i, %arg1: !u64i)
   // CHECK-NEXT:    %[[VALSLOT:[0-9]+]] = cir.alloca "coerce" align(8)
   // CHECK-SAME:      : !cir.ptr<!rec_anon_struct>
-  // CHECK-NEXT:    %[[FLAT:[0-9]+]] = cir.alloca "coerce" align(8)
-  // CHECK-SAME:      : !cir.ptr<!rec_anon_struct>
-  // CHECK-NEXT:    %[[E0:[0-9]+]] = cir.get_member %[[FLAT]][0]
+  // CHECK-NEXT:    %[[E0:[0-9]+]] = cir.get_member %[[VALSLOT]][0]
   // CHECK-SAME:      : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!u64i>
   // CHECK-NEXT:    cir.store %arg0, %[[E0]] : !u64i, !cir.ptr<!u64i>
-  // CHECK-NEXT:    %[[E1:[0-9]+]] = cir.get_member %[[FLAT]][1]
+  // CHECK-NEXT:    %[[E1:[0-9]+]] = cir.get_member %[[VALSLOT]][1]
   // CHECK-SAME:      : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!u64i>
   // CHECK-NEXT:    cir.store %arg1, %[[E1]] : !u64i, !cir.ptr<!u64i>
-  // CHECK-NEXT:    %[[PAIR:[0-9]+]] = cir.load %[[FLAT]]
-  // CHECK-SAME:      : !cir.ptr<!rec_anon_struct>, !rec_anon_struct
-  // CHECK-NEXT:    cir.store %[[PAIR]], %[[VALSLOT]]
-  // CHECK-SAME:      : !rec_anon_struct, !cir.ptr<!rec_anon_struct>
-  // CHECK-NEXT:    %[[VIEW:[0-9]+]] = cir.cast bitcast %[[VALSLOT]]
+  // CHECK-NEXT:    %{{[0-9]+}} = cir.cast bitcast %[[VALSLOT]]
   // CHECK-SAME:      : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!rec_P>
-  // CHECK-NEXT:    %{{[0-9]+}} = cir.load %[[VIEW]] : !cir.ptr<!rec_P>, !rec_P
   // CHECK-NEXT:    cir.return
 
   // LLVM-LABEL: define void @take_p(
   // LLVM-SAME:    i64 %[[A0:[0-9]+]], i64 %[[A1:[0-9]+]])
   // LLVM-NEXT:    %[[VALSLOT:[0-9]+]] = alloca { i64, i64 }, align 8
-  // LLVM-NEXT:    %[[FLAT:[0-9]+]] = alloca { i64, i64 }, align 8
   // LLVM-NEXT:    %[[E0:[0-9]+]] = getelementptr inbounds nuw { i64, i64 }
-  // LLVM-SAME:      , ptr %[[FLAT]], i32 0, i32 0
+  // LLVM-SAME:      , ptr %[[VALSLOT]], i32 0, i32 0
   // LLVM-NEXT:    store i64 %[[A0]], ptr %[[E0]], align 8
   // LLVM-NEXT:    %[[E1:[0-9]+]] = getelementptr inbounds nuw { i64, i64 }
-  // LLVM-SAME:      , ptr %[[FLAT]], i32 0, i32 1
+  // LLVM-SAME:      , ptr %[[VALSLOT]], i32 0, i32 1
   // LLVM-NEXT:    store i64 %[[A1]], ptr %[[E1]], align 8
-  // LLVM-NEXT:    %[[PAIR:[0-9]+]] = load { i64, i64 }, ptr %[[FLAT]], align 8
-  // LLVM-NEXT:    store { i64, i64 } %[[PAIR]], ptr %[[VALSLOT]], align 8
-  // LLVM-NEXT:    %{{[0-9]+}} = load %struct.P, ptr %[[VALSLOT]], align 16
   // LLVM-NEXT:    ret void
 
   // A struct holding a _BitInt(128) coerces to a single i128.
@@ -743,16 +680,14 @@ module attributes {
   // CHECK-LABEL: cir.func{{.*}} @take_w(%arg0: !s128i_bitint)
   // CHECK-NEXT:    %[[SLOT:[0-9]+]] = cir.alloca "coerce" align(8) : !cir.ptr<!s128i_bitint>
   // CHECK-NEXT:    cir.store %arg0, %[[SLOT]] : !s128i_bitint, !cir.ptr<!s128i_bitint>
-  // CHECK-NEXT:    %[[VIEW:[0-9]+]] = cir.cast bitcast %[[SLOT]]
+  // CHECK-NEXT:    %{{[0-9]+}} = cir.cast bitcast %[[SLOT]]
   // CHECK-SAME:      : !cir.ptr<!s128i_bitint> -> !cir.ptr<!rec_W>
-  // CHECK-NEXT:    %{{[0-9]+}} = cir.load %[[VIEW]] : !cir.ptr<!rec_W>, !rec_W
   // CHECK-NEXT:    cir.return
 
   // LLVM-LABEL: define void @take_w(
   // LLVM-SAME:    i128 %[[ARG:[0-9]+]])
   // LLVM-NEXT:    %[[SLOT:[0-9]+]] = alloca i128, align 8
   // LLVM-NEXT:    store i128 %[[ARG]], ptr %[[SLOT]], align 8
-  // LLVM-NEXT:    %{{[0-9]+}} = load %struct.W, ptr %[[SLOT]]
   // LLVM-NEXT:    ret void
 
   // A trailing byte pushes the struct past two eightbytes, so it passes byval,

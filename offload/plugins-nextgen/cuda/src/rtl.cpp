@@ -285,7 +285,8 @@ struct CUDADeviceTy : public GenericDeviceTy {
   ~CUDADeviceTy() {}
 
   /// Initialize the device, its resources and get its properties.
-  Error initImpl(GenericPluginTy &Plugin) override {
+  Error initImpl(GenericPluginTy &Plugin,
+                 GenericProfilerTy *ProfilerPtr) override {
     CUresult Res = cuDeviceGet(&Device, DeviceId);
     if (auto Err = Plugin::check(Res, "error in cuDeviceGet: %s"))
       return Err;
@@ -565,6 +566,17 @@ struct CUDADeviceTy : public GenericDeviceTy {
   /// Getters of CUDA references.
   CUcontext getCUDAContext() const { return Context; }
   CUdevice getCUDADevice() const { return Device; }
+
+  Expected<void *> getNativeHandle() override {
+    return reinterpret_cast<void *>(Device);
+  }
+
+  Expected<void *> getNativeQueueHandle(__tgt_async_info *AsyncInfo) override {
+    if (!AsyncInfo || !AsyncInfo->Queue)
+      return Plugin::error(error::ErrorCode::INVALID_ARGUMENT,
+                           "no queue associated with the async info");
+    return AsyncInfo->Queue;
+  }
 
   /// Load the binary image into the device and allocate an image object.
   Expected<DeviceImageTy *>
@@ -1680,6 +1692,16 @@ struct CUDAPluginContextTy final : public PluginContextTy {
 
     CUstream Stream;
     return CUDADevice.getStream(AsyncInfoWrapper, Stream);
+  }
+
+  Expected<void *> getNativeHandle() override {
+    // Each CUDA device carries its own CUcontext, so a single native handle
+    // only exists for a single-device context.
+    if (Devices.size() != 1)
+      return Plugin::error(error::ErrorCode::UNSUPPORTED,
+                           "CUDA context handle is only defined for a "
+                           "single-device context");
+    return static_cast<CUDADeviceTy &>(*Devices.front()).getCUDAContext();
   }
 
   Expected<PluginAllocInfoTy> getAllocInfo(const void *Ptr) override {

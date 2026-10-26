@@ -25,7 +25,6 @@
 #include "flang/Lower/Support/Utils.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
-#include "flang/Optimizer/Builder/CUFCommon.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/IntrinsicCall.h"
@@ -2098,13 +2097,26 @@ void AccDataMap::remapDataOperandSymbols(
   builder.setInsertionPointToStart(&region.front());
   llvm::SmallPtrSet<const Fortran::semantics::Symbol *, 8> seenSymbols;
   mlir::IRMapping mapper;
+
+  // A symbol may appear on several data clauses, and their results are not
+  // necessarily interchangeable. A reduction clause describes the accumulator
+  // itself through its own bounds and recipe, so prefer its result over a
+  // mapping of the enclosing variable. Otherwise keep the first result.
+  llvm::DenseMap<const Fortran::semantics::Symbol *, mlir::Value> remapTarget;
   for (auto [value, symbol] : symbols) {
-    // If a symbol appears on several data clause, just map it to the first
-    // result (all data operations results for a symbol are pointing same
-    // memory, so it does not matter which one is used).
+    auto [it, inserted] = remapTarget.try_emplace(&symbol.get(), value);
+    if (inserted)
+      continue;
+    if (mlir::acc::getDataClause(value.getDefiningOp()) ==
+        mlir::acc::DataClause::acc_reduction)
+      it->second = value;
+  }
+
+  for (auto [value, symbol] : symbols) {
     if (seenSymbols.contains(&symbol.get()))
       continue;
     seenSymbols.insert(&symbol.get());
+    value = remapTarget.lookup(&symbol.get());
     mlir::Location loc = value.getLoc();
     // When a common block appears in a directive, remap its members.
     // Note: this will instantiate all common block members even if they are not
@@ -4475,7 +4487,7 @@ genDeclareInFunction(Fortran::lower::AbstractConverter &converter,
                      const Fortran::parser::AccClauseList &accClauseList) {
   llvm::SmallVector<mlir::Value> dataClauseOperands, copyEntryOperands,
       copyinEntryOperands, createEntryOperands, copyoutEntryOperands,
-      presentEntryOperands, deviceResidentEntryOperands;
+      presentEntryOperands, deviceResidentEntryOperands, devicePtrEntryOperands;
   Fortran::lower::StatementContext stmtCtx;
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
 
@@ -4539,11 +4551,16 @@ genDeclareInFunction(Fortran::lower::AbstractConverter &converter,
     } else if (const auto *devicePtrClause =
                    std::get_if<Fortran::parser::AccClause::Deviceptr>(
                        &clause.u)) {
+      auto crtDataStart = dataClauseOperands.size();
       genDeclareDataOperandOperations<mlir::acc::DevicePtrOp,
                                       mlir::acc::DevicePtrOp>(
           devicePtrClause->v, converter, semanticsContext, stmtCtx,
           dataClauseOperands, mlir::acc::DataClause::acc_deviceptr,
           /*structured=*/true, /*implicit=*/false);
+      // No exit action, but the exit still names the object so the runtime
+      // closes the region it opened at the enter.
+      devicePtrEntryOperands.append(dataClauseOperands.begin() + crtDataStart,
+                                    dataClauseOperands.end());
     } else if (const auto *linkClause =
                    std::get_if<Fortran::parser::AccClause::Link>(&clause.u)) {
       genDeclareDataOperandOperations<mlir::acc::DeclareLinkOp,
@@ -4594,7 +4611,8 @@ genDeclareInFunction(Fortran::lower::AbstractConverter &converter,
   openAccCtx.attachCleanup([&builder, loc, createEntryOperands,
                             copyEntryOperands, copyinEntryOperands,
                             copyoutEntryOperands, presentEntryOperands,
-                            deviceResidentEntryOperands, declareToken]() {
+                            deviceResidentEntryOperands, devicePtrEntryOperands,
+                            declareToken]() {
     llvm::SmallVector<mlir::Value> operands;
     operands.append(createEntryOperands);
     operands.append(deviceResidentEntryOperands);
@@ -4602,6 +4620,7 @@ genDeclareInFunction(Fortran::lower::AbstractConverter &converter,
     operands.append(copyinEntryOperands);
     operands.append(copyoutEntryOperands);
     operands.append(presentEntryOperands);
+    operands.append(devicePtrEntryOperands);
 
     mlir::func::FuncOp funcOp = builder.getFunction();
     auto ops = funcOp.getOps<mlir::acc::DeclareExitOp>();
@@ -4808,9 +4827,6 @@ static void attachRoutineInfo(mlir::func::FuncOp func,
   func.getOperation()->setAttr(
       mlir::acc::getRoutineInfoAttrName(),
       mlir::acc::RoutineInfoAttr::get(func.getContext(), routines));
-  // The routine is compiled for the device as well, where -fstack-arrays
-  // cannot be honored: record the same policy as for a device procedure.
-  cuf::setDeviceAllocationPolicy(func.getOperation());
 }
 
 static mlir::ArrayAttr

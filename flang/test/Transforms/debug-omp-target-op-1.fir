@@ -10,14 +10,14 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
     %c1_i32 = arith.constant 1 : i32
     %c5_i32 = arith.constant 5 : i32
     %0 = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFEx"} loc(#loc1)
-    %1 = fircg.ext_declare %0 {uniq_name = "_QFEx"} : (!fir.ref<i32>) -> !fir.ref<i32> loc(#loc1)
+    %1 = fircg.ext_declare %0 uniq_name("_QFEx") : (!fir.ref<i32>) -> !fir.ref<i32> loc(#loc1)
     %2 = fir.alloca i32 {bindc_name = "y", uniq_name = "_QFEy"} loc(#loc2)
-    %3 = fircg.ext_declare %2 {uniq_name = "_QFEy"} : (!fir.ref<i32>) -> !fir.ref<i32> loc(#loc2)
+    %3 = fircg.ext_declare %2 uniq_name("_QFEy") : (!fir.ref<i32>) -> !fir.ref<i32> loc(#loc2)
     %4 = omp.map.info var_ptr(%1 : !fir.ref<i32>, i32) map_clauses(tofrom) capture(ByRef) name("x") -> !fir.ref<i32>
     %5 = omp.map.info var_ptr(%3 : !fir.ref<i32>, i32) map_clauses(tofrom) capture(ByRef) name("y") -> !fir.ref<i32>
     omp.target kernel_type(generic) map_entries(%4 -> %arg0, %5 -> %arg1 : !fir.ref<i32>, !fir.ref<i32>) {
-      %16 = fircg.ext_declare %arg0 {uniq_name = "_QFEx"} : (!fir.ref<i32>) -> !fir.ref<i32> loc(#loc3)
-      %17 = fircg.ext_declare %arg1 {uniq_name = "_QFEy"} : (!fir.ref<i32>) -> !fir.ref<i32> loc(#loc4)
+      %16 = fircg.ext_declare %arg0 uniq_name("_QFEx") : (!fir.ref<i32>) -> !fir.ref<i32> loc(#loc3)
+      %17 = fircg.ext_declare %arg1 uniq_name("_QFEy") : (!fir.ref<i32>) -> !fir.ref<i32> loc(#loc4)
       omp.terminator
     } loc(#loc5)
     return

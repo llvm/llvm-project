@@ -39,7 +39,6 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/Assign.h"
 #include "flang/Optimizer/Builder/Runtime/CUDA/Descriptor.h"
-#include "flang/Optimizer/Builder/Runtime/CUDA/Support.h"
 #include "flang/Optimizer/Builder/Runtime/Character.h"
 #include "flang/Optimizer/Builder/Runtime/Derived.h"
 #include "flang/Optimizer/Builder/Runtime/EnvironmentDefaults.h"
@@ -62,6 +61,7 @@
 #include "flang/Parser/tools.h"
 #include "flang/Runtime/iostat-consts.h"
 #include "flang/Semantics/openmp-dsa.h"
+#include "flang/Semantics/openmp-utils.h"
 #include "flang/Semantics/runtime-type-info.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
@@ -78,6 +78,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/IR/Assumptions.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -961,14 +962,24 @@ public:
     Fortran::lower::SymbolBox hsb =
         lookupSymbol(hsym, /*symMap=*/nullptr, /*forceHlfirBase=*/true);
 
+    mlir::Type allocType =
+        Fortran::semantics::IsAllocatableOrObjectPointer(&hsym.GetUltimate())
+            ? hSymType
+            : symType;
+    // The type of a procedure pointer depends on how the original was created:
+    // dummy procedure pointers use an untyped `!fir.boxproc<() -> ()>`, while
+    // other procedure pointers carry their interface signature.
+    // Give the clone the same type as the original storage so that copies
+    // between them do not mix boxproc types.
+    if (Fortran::semantics::IsProcedurePointer(hsym.GetUltimate()))
+      if (mlir::Value hostAddr = hsb.getAddr())
+        allocType = fir::unwrapRefType(hostAddr.getType());
+
     auto allocate = [&](llvm::ArrayRef<mlir::Value> shape,
                         llvm::ArrayRef<mlir::Value> typeParams) -> mlir::Value {
       mlir::Value allocVal = builder->allocateLocal(
-          loc,
-          Fortran::semantics::IsAllocatableOrObjectPointer(&hsym.GetUltimate())
-              ? hSymType
-              : symType,
-          mangleName(sym), toStringRef(sym.GetUltimate().name()),
+          loc, allocType, mangleName(sym),
+          toStringRef(sym.GetUltimate().name()),
           /*pinned=*/true, shape, typeParams,
           sym.GetUltimate().attrs().test(Fortran::semantics::Attr::TARGET));
       return allocVal;
@@ -1695,14 +1706,7 @@ private:
   mlir::Value genLoopVariableAddress(mlir::Location loc,
                                      const Fortran::semantics::Symbol &sym,
                                      bool isUnordered) {
-    if (!shallowLookupSymbol(sym) &&
-        (isUnordered ||
-         GetSymbolDSA(sym).test(Fortran::semantics::Symbol::Flag::OmpPrivate) ||
-         GetSymbolDSA(sym).test(
-             Fortran::semantics::Symbol::Flag::OmpFirstPrivate) ||
-         GetSymbolDSA(sym).test(
-             Fortran::semantics::Symbol::Flag::OmpLastPrivate) ||
-         GetSymbolDSA(sym).test(Fortran::semantics::Symbol::Flag::OmpLinear))) {
+    if (!shallowLookupSymbol(sym) && isUnordered) {
       // Do concurrent loop variables are not mapped yet since they are
       // local to the Do concurrent scope (same for OpenMP loops).
       mlir::OpBuilder::InsertPoint insPt = builder->saveInsertionPoint();
@@ -1843,7 +1847,8 @@ private:
     for (; iter != endDoIter; ++iter)
       genFIR(*iter, /*unstructuredContext=*/false);
 
-    mlir::scf::YieldOp::create(*builder, loc);
+    mlir::scf::YieldOp::create(*builder,
+                               genConstructEndLocation(doConstructEval));
     builder->setInsertionPointAfter(scfWhile);
   }
 
@@ -2072,7 +2077,7 @@ private:
         mlir::Value active = cuf::DeviceIsActiveOp::create(*builder, loc);
         builder->genIfThen(loc, active)
             .genThen([&]() {
-              fir::runtime::cuda::genCUDADeviceSynchronize(*builder, loc);
+              cuf::DeviceSynchronizeOp::create(*builder, loc);
               bridge.cudaCleanupCtx().finalizeAndKeep();
             })
             .end();
@@ -2660,6 +2665,22 @@ private:
     }
   }
 
+  /// Return the location of the statement ending construct \p eval, or of its
+  /// opening statement when the ending one has no source position (e.g. the
+  /// END IF synthesized for an IF statement).
+  mlir::Location
+  genConstructEndLocation(Fortran::lower::pft::Evaluation &eval) {
+    const Fortran::parser::CharBlock &endPosition =
+        eval.getLastNestedEvaluation().position;
+    if (!endPosition.empty())
+      return toLocation(endPosition);
+    const Fortran::parser::CharBlock &beginPosition =
+        eval.getFirstNestedEvaluation().position;
+    if (!beginPosition.empty())
+      return toLocation(beginPosition);
+    return toLocation();
+  }
+
   /// Wrap an unstructured construct's CFG in a self-contained
   /// scf.execute_region and set the builder insertion point inside it. Returns
   /// the created op (null if the construct isn't wrappable).
@@ -2670,6 +2691,9 @@ private:
             eval, bridge.getSemanticsContext()))
       return nullptr;
 
+    // A construct evaluation has no source position of its own, so the
+    // current position may still be that of a previous statement.
+    setCurrentPosition(eval.getFirstNestedEvaluation().position);
     mlir::Location loc = toLocation();
     auto wrapOp =
         mlir::scf::ExecuteRegionOp::create(*builder, loc, mlir::TypeRange{},
@@ -2680,7 +2704,7 @@ private:
     createEmptyBlocks(eval.getNestedEvaluations());
     mlir::Block *yieldBlock = builder->createBlock(&wrapOp.getRegion());
     builder->setInsertionPointToEnd(yieldBlock);
-    mlir::scf::YieldOp::create(*builder, loc);
+    mlir::scf::YieldOp::create(*builder, genConstructEndLocation(eval));
 
     if (eval.constructExit) {
       savedExitBlock = eval.constructExit->block;
@@ -2706,6 +2730,7 @@ private:
       return nullptr;
 
     Fortran::lower::pft::EvaluationList &list = eval.getNestedEvaluations();
+    setCurrentPosition(eval.getFirstNestedEvaluation().position);
     mlir::Location loc = toLocation();
     auto wrapOp =
         mlir::scf::ExecuteRegionOp::create(*builder, loc, mlir::TypeRange{},
@@ -2722,7 +2747,7 @@ private:
         llvm::make_range(std::next(list.begin()), std::prev(list.end())));
     yieldBlock = builder->createBlock(&wrapOp.getRegion());
     builder->setInsertionPointToEnd(yieldBlock);
-    mlir::scf::YieldOp::create(*builder, loc);
+    mlir::scf::YieldOp::create(*builder, genConstructEndLocation(eval));
 
     // A CYCLE targets the EndDoStmt, which is the boundary between the loop
     // body and the loop control. Inside the wrap that boundary is the region's
@@ -2997,6 +3022,9 @@ private:
     // An EndDoStmt in unstructured code may start a new block.
     Fortran::lower::pft::Evaluation &endDoEval = *iter;
     assert(endDoEval.getIf<Fortran::parser::EndDoStmt>() && "no enddo stmt");
+    // The loop end code belongs to the END DO, not to the last statement
+    // lowered in the body.
+    setCurrentPosition(endDoEval.position);
     if (unstructuredContext)
       maybeStartBlock(endDoEval.block);
 
@@ -4386,6 +4414,17 @@ private:
         activeConstructStack.back().stmtCtx;
     const Fortran::lower::SomeExpr *expr = Fortran::semantics::GetExpr(
         std::get<Fortran::parser::Scalar<Fortran::parser::Expr>>(stmt.t));
+    // Semantics already turned enumeration CASE values into ordinals.
+    std::optional<Fortran::lower::SomeExpr> enumOrdinal;
+    if (const auto *derived = std::get_if<
+            Fortran::evaluate::Expr<Fortran::evaluate::SomeDerived>>(&expr->u))
+      if (const auto *spec =
+              Fortran::evaluate::GetDerivedTypeSpec(derived->GetType());
+          spec && Fortran::semantics::IsEnumerationType(spec->typeSymbol())) {
+        enumOrdinal = Fortran::evaluate::MakeEnumerationIntCall(
+            Fortran::evaluate::Expr<Fortran::evaluate::SomeDerived>{*derived});
+        expr = &*enumOrdinal;
+      }
     bool isCharSelector = isCharacterCategory(expr->GetType()->category());
     bool isLogicalSelector = isLogicalCategory(expr->GetType()->category());
     mlir::MLIRContext *context = builder->getContext();
@@ -4871,7 +4910,7 @@ private:
     llvm::SmallVector<mlir::Attribute> attrList;
     llvm::SmallVector<mlir::Block *> blockList;
     unsigned typeGuardIdx = 0;
-    std::size_t defaultAttrPos = std::numeric_limits<size_t>::max();
+    std::size_t defaultAttrPos = Fortran::common::numeric_limits<size_t>::max();
     bool hasLocalScope = false;
     llvm::SmallVector<const Fortran::semantics::Scope *> typeCaseScopes;
 
@@ -5228,7 +5267,7 @@ private:
       } else {
         fir::MutableBoxValue box = genExprMutableBox(loc, *expr);
         fir::factory::disassociateMutableBox(*builder, loc, box);
-        cuf::genPointerSync(box.getAddr(), *builder);
+        cuf::genPointerSync(loc, box.getAddr(), *builder);
       }
     }
   }
@@ -5298,7 +5337,7 @@ private:
         loc, *this, assign.lhs, localSymbols, stmtCtx);
     mlir::Value rhs = genPointerAssignmentRhs(loc, lhs, assign, stmtCtx);
     builder->createStoreWithConvert(loc, rhs, lhs);
-    cuf::genPointerSync(lhs, *builder);
+    cuf::genPointerSync(loc, lhs, *builder);
   }
 
   void genForallPointerAssignment(mlir::Location loc,
@@ -6455,6 +6494,30 @@ private:
     }
   }
 
+  void setOpenMPAssumptionAttributes(mlir::func::FuncOp func,
+                                     const Fortran::semantics::Scope &scope) {
+    if (bridge.getSemanticsContext().langOptions().OpenMPSimd)
+      return;
+    const auto *assumptionScopeEnd =
+        &Fortran::semantics::omp::GetProgramUnit(scope).parent();
+    for (const auto *assumptionScope = &scope;
+         !assumptionScope->IsGlobal() && assumptionScope != assumptionScopeEnd;
+         assumptionScope = &assumptionScope->parent()) {
+      if (const auto *symbol = assumptionScope->symbol();
+          !symbol ||
+          !symbol->test(Fortran::semantics::Symbol::Flag::OmpAssumesNoOpenmp))
+        continue;
+      llvm::SmallVector<mlir::Attribute> llvmAttrs;
+      if (auto existing =
+              func->getAttrOfType<mlir::ArrayAttr>("llvm.passthrough"))
+        llvm::append_range(llvmAttrs, existing);
+      llvmAttrs.push_back(
+          builder->getStrArrayAttr({llvm::AssumptionAttrKey, "omp_no_openmp"}));
+      func->setAttr("llvm.passthrough", builder->getArrayAttr(llvmAttrs));
+      break;
+    }
+  }
+
   /// Start translation of a function.
   void startNewFunction(Fortran::lower::pft::FunctionLikeUnit &funit) {
     assert(!builder && "expected nullptr");
@@ -6480,6 +6543,7 @@ private:
     builder->setFPMaxminBehavior(
         bridge.getLoweringOptions().getFPMaxminBehavior());
     builder->setInsertionPointToStart(&func.front());
+    setOpenMPAssumptionAttributes(func, scope);
     if (funit.parent.isA<Fortran::lower::pft::FunctionLikeUnit>()) {
       // Give internal linkage to internal functions. There are no name clash
       // risks, but giving global linkage to internal procedure will break the
@@ -6653,6 +6717,21 @@ private:
     if (Fortran::lower::pft::Evaluation *alternateEntryEval =
             funit.getEntryEval())
       genBranch(alternateEntryEval->lexicalSuccessor->block);
+
+    setNonExecutionPartLocations(func.getBody());
+  }
+
+  /// Give line 0 to everything in \p body that is not execution part so that it
+  /// does not take part in line table calculation unless it has
+  /// FortranVariableOpInterface.
+  static void setNonExecutionPartLocations(mlir::Region &body) {
+    body.walk([](mlir::Operation *op) {
+      if (mlir::isa<fir::FortranVariableOpInterface>(op))
+        return;
+      if (auto fileLoc = op->getLoc()->findInstanceOf<mlir::FileLineColLoc>())
+        op->setLoc(mlir::FileLineColLoc::get(fileLoc.getFilename(),
+                                             /*line=*/0, /*column=*/0));
+    });
   }
 
   /// Recursively null every Evaluation::block in \p evaluationList.  Called
