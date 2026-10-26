@@ -1,0 +1,48 @@
+{
+  "data": [
+    {
+      "summary_data": [
+        {
+          "entity_id": 0,
+          "entity_summary": {
+            "ref": {
+              "@": 99
+            }
+          }
+        }
+      ],
+      "summary_name": "Analysis1"
+    }
+  ],
+  "id_table": [
+    {
+      "id": 0,
+      "name": {
+        "namespace": [
+          {
+            "kind": "LinkUnit",
+            "name": "libinvalid"
+          }
+        ],
+        "suffix": "",
+        "usr": "c:@F@foo#"
+      }
+    }
+  ],
+  "linkage_table": [
+    {
+      "id": 0,
+      "linkage": {
+        "type": "External"
+      }
+    }
+  ],
+  "lu_namespace": [
+    {
+      "kind": "LinkUnit",
+      "name": "libinvalid"
+    }
+  ],
+  "target_triple": "arm64-apple-macosx",
+  "type": "LUSummary"
+}

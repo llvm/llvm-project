@@ -17,6 +17,7 @@
 // CHECK-NEXT: note:       - [2/2] Reading '{{.*}}tu-2.json'.
 // CHECK-NEXT: note:       - [2/2] Linking '{{.*}}tu-2.json'.
 // CHECK-NEXT: note:     - Linked 2 translation unit(s).
+// CHECK-NEXT: note:     - Linked 0 shared library(ies).
 // CHECK-NEXT: note:     - Target namespace: 'NestedBuildNamespace([BuildNamespace(LinkUnit, lu-1+2)])'.
 // CHECK-NEXT: note:   - Writing link unit summary to '{{.*}}lu-1+2.json'.
 // CHECK-NEXT: note: - Linking finished.
@@ -43,6 +44,27 @@
 // MEMBER-NEXT: note:       - [1/1] Linking '{{.*}}libtwo-1arch.json' (multi-arch static library, 1 member(s)).
 // MEMBER-NEXT: note:     - Linked 2 translation unit(s).
 
+// A shared library input is reported as such, and the closing counts keep
+// translation units and shared libraries apart.
+
+// RUN: clang-ssaf-linker --verbose %S/Inputs/tu-1.json %S/Inputs/lu-arm64.json -o %t/lu-shared.json 2>&1 \
+// RUN:           | FileCheck %s --match-full-lines --check-prefix=SHARED
+// SHARED:      note:       - [2/2] Reading '{{.*}}lu-arm64.json'.
+// SHARED-NEXT: note:       - [2/2] Linking '{{.*}}lu-arm64.json' (shared library).
+// SHARED-NEXT: note:     - Linked 1 translation unit(s).
+// SHARED-NEXT: note:     - Linked 1 shared library(ies).
+
+// A multi-arch shared input reports how many members it carries.
+
+// RUN: clang-ssaf-linker multi-arch create %S/Inputs/lu-arm64.json -o %t/libshared-1arch.json
+// RUN: clang-ssaf-linker --verbose %t/libshared-1arch.json -o %t/lu-shared-member.json 2>&1 \
+// RUN:           | FileCheck %s --match-full-lines --check-prefix=SHARED-MEMBER
+// SHARED-MEMBER:      note:       - [1/1] Reading '{{.*}}libshared-1arch.json'.
+// SHARED-MEMBER-NEXT: note:       - Target triple: 'arm64-apple-macosx' (inferred from '{{.*}}libshared-1arch.json').
+// SHARED-MEMBER-NEXT: note:       - [1/1] Linking '{{.*}}libshared-1arch.json' (multi-arch shared library, 1 member(s)).
+// SHARED-MEMBER-NEXT: note:     - Linked 0 translation unit(s).
+// SHARED-MEMBER-NEXT: note:     - Linked 1 shared library(ies).
+
 // An explicit --target-triple is reported as such rather than as inferred.
 // Which member it selects is asserted by content in linking.test, not here; the
 // selected member of Inputs/libtwo-2arch.json is empty, hence no linked units.
@@ -53,9 +75,27 @@
 // EXPLICIT-NEXT: note:       - [1/1] Linking '{{.*}}libtwo-2arch.json' (multi-arch static library, 2 member(s)).
 // EXPLICIT-NEXT: note:     - Linked 0 translation unit(s).
 
+// The same for a multi-arch shared library. The selected member of
+// Inputs/libfoo-2arch.json is an empty shared library, hence one linked shared
+// library but no translation units.
+
+// RUN: clang-ssaf-linker --verbose --target-triple arm64-apple-macosx %S/Inputs/libfoo-2arch.json -o %t/lu-shared-explicit.json 2>&1 \
+// RUN:           | FileCheck %s --check-prefix=SHARED-EXPLICIT
+// SHARED-EXPLICIT:      note:       - Target triple: 'arm64-apple-macosx' (from --target-triple).
+// SHARED-EXPLICIT-NEXT: note:       - [1/1] Linking '{{.*}}libfoo-2arch.json' (multi-arch shared library, 2 member(s)).
+// SHARED-EXPLICIT-NEXT: note:     - Linked 0 translation unit(s).
+// SHARED-EXPLICIT-NEXT: note:     - Linked 1 shared library(ies).
+
 // A run that cannot fix a target triple reports no triple and links nothing.
 
 // RUN: not clang-ssaf-linker --verbose %S/Inputs/libtwo-2arch.json -o %t/lu-none.json 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=NO-TRIPLE --implicit-check-not="Target triple"
 // NO-TRIPLE:      note:       - [1/1] Reading '{{.*}}libtwo-2arch.json'.
 // NO-TRIPLE-NEXT: error: cannot infer target triple from '{{.*}}libtwo-2arch.json': multi-arch static library has 2 members; pass --target-triple to select one
+
+// The same for a multi-arch shared library.
+
+// RUN: not clang-ssaf-linker --verbose %S/Inputs/libfoo-2arch.json -o %t/lu-shared-none.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=SHARED-NO-TRIPLE --implicit-check-not="Target triple"
+// SHARED-NO-TRIPLE:      note:       - [1/1] Reading '{{.*}}libfoo-2arch.json'.
+// SHARED-NO-TRIPLE-NEXT: error: cannot infer target triple from '{{.*}}libfoo-2arch.json': multi-arch shared library has 2 members; pass --target-triple to select one

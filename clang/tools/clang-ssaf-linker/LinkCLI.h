@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 //
 //  Declares the CLI action class for the link action of `clang-ssaf-linker`.
-//  Links TU summaries, static libraries, and members of multi-arch static
-//  libraries into one LU summary.
+//  Links TU summaries, static libraries, shared libraries, and members of
+//  multi-arch static and shared libraries into one LU summary.
 //
 //  The class is intentionally independent of the tool's cl::opt globals.
 //  Every input it needs is passed to run(), so the class can be reused or
@@ -65,13 +65,29 @@ private:
   /// Determines the link unit's target triple.
   ///
   /// An explicit --target-triple wins. Otherwise the triple is inferred from
-  /// \p First: its own for a TU summary or a static library, and its sole
-  /// member's for a single-member multi-arch static library. Any other shape
-  /// cannot be inferred from and requires --target-triple.
+  /// \p First: its own for a TU summary, a static library, or a shared library,
+  /// and its sole member's for a single-member multi-arch static or shared
+  /// library. Any other shape cannot be inferred from and requires
+  /// --target-triple.
   ///
   /// \param SourceFile The path \p First was read from, named in diagnostics.
   llvm::Triple resolveTargetTriple(const ArtifactEncoding &First,
                                    llvm::StringRef SourceFile, unsigned Level);
+
+  /// Infers the target triple from the sole member of a multi-arch library.
+  ///
+  /// A single member names the target unambiguously; anything else needs the
+  /// architecture to be chosen on the command line, so an empty or multi-member
+  /// \p Library calls fail().
+  ///
+  /// \param Library A MultiArchStaticLibrary or MultiArchSharedLibrary.
+  /// \param KindName The library kind named in diagnostics, e.g. "static
+  ///        library".
+  /// \param SourceFile The path \p Library was read from, named in diagnostics.
+  template <typename MultiArchLibraryT>
+  static llvm::Triple inferFromSoleMember(const MultiArchLibraryT &Library,
+                                          llvm::StringRef KindName,
+                                          llvm::StringRef SourceFile);
 
   /// Folds one input into \p EL, reporting whatever EntityLinker rejects --
   /// including an input that does not belong to the resolved target -- with the

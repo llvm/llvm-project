@@ -24,6 +24,7 @@
 
 namespace clang::ssaf {
 
+class LinkCLI;
 class MultiArchCreateCLI;
 
 /// Represents a multi-architecture shared library.
@@ -36,6 +37,8 @@ class MultiArchCreateCLI;
 /// namespace identifying that shared library, and every member's
 /// \c LUNamespace must equal it exactly.
 class MultiArchSharedLibrary {
+  friend class EntityLinker;
+  friend class LinkCLI;
   friend class MultiArchCreateCLI;
   friend class SerializationFormat;
   friend class TestFixture;

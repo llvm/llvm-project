@@ -128,6 +128,115 @@
 // RUN: rm %t/lu-1+2.json
 
 // ============================================================================
+// Shared libraries are folded in as already linked LU summaries
+//
+// The shared library below is tu-1 linked on its own, so linking it with tu-2
+// resolves the same entities as linking tu-1 and tu-2 directly. External
+// entities merge across the boundary exactly as they do across TUs; entities
+// without external linkage keep the shared library's namespace beneath the new
+// link unit's, so Outputs/lu-libone+2.json differs from Outputs/lu-1+2.json
+// only in that extra namespace level on tu-1's entities.
+// ============================================================================
+
+// The shared libraries are derived from tu-1 rather than stored as fixtures:
+// the runs above and multi-arch-create.test already pin what these two commands
+// produce, so a checked-in copy would duplicate them.
+// RUN: clang-ssaf-linker %S/Inputs/tu-1.json -o %t/libone.json
+// RUN: clang-ssaf-linker multi-arch create %t/libone.json -o %t/libone-1arch.json
+
+// RUN: clang-ssaf-linker %t/libone.json %S/Inputs/tu-2.json -o %t/lu-libone+2.json
+// RUN: diff %S/Outputs/lu-libone+2.json %t/lu-libone+2.json
+// RUN: rm %t/lu-libone+2.json
+
+// A shared library with no entities contributes nothing, exactly as an empty TU
+// summary does.
+// RUN: clang-ssaf-linker %S/Inputs/lu-arm64.json -o %t/lu-empty.json
+// RUN: diff %S/Outputs/lu-empty.json %t/lu-empty.json
+// RUN: rm %t/lu-empty.json
+
+// Shared libraries and bare TU summaries mix freely in one invocation, in any
+// position.
+// RUN: clang-ssaf-linker %S/Inputs/tu-1.json %S/Inputs/lu-arm64.json -o %t/lu-1.json
+// RUN: diff %S/Outputs/lu-1.json %t/lu-1.json
+// RUN: rm %t/lu-1.json
+
+// A TU summary linked before a shared library keeps its own summary for an
+// external entity both define: the first definition linked wins, as it does
+// across TUs. Outputs/lu-2+libone.json matches linking tu-2 and tu-1 directly,
+// apart from the shared library's namespace level on tu-1's entities.
+// RUN: clang-ssaf-linker %S/Inputs/tu-2.json %t/libone.json -o %t/lu-2+libone.json
+// RUN: diff %S/Outputs/lu-2+libone.json %t/lu-2+libone.json
+// RUN: rm %t/lu-2+libone.json
+
+// Two shared libraries merge their external entities with each other, while
+// each keeps its own namespace level on the rest. Outputs/lu-libone+libtwo-shared.json
+// matches linking tu-1 and tu-2 directly, apart from those namespace levels.
+// RUN: clang-ssaf-linker %S/Inputs/tu-2.json -o %t/libtwo-shared.json
+// RUN: clang-ssaf-linker %t/libone.json %t/libtwo-shared.json -o %t/lu-libone+libtwo-shared.json
+// RUN: diff %S/Outputs/lu-libone+libtwo-shared.json %t/lu-libone+libtwo-shared.json
+// RUN: rm %t/lu-libone+libtwo-shared.json
+
+// A shared library that itself linked a shared library adds one namespace level
+// per link: tu-1's internal entity passes through libone and libouter before
+// reaching the final link unit.
+// RUN: clang-ssaf-linker %t/libone.json %S/Inputs/tu-2.json -o %t/libouter.json
+// RUN: clang-ssaf-linker %t/libouter.json -o %t/lu-nested.json
+// RUN: FileCheck %s --check-prefix=NESTED --input-file=%t/lu-nested.json
+// NESTED:      "name": "tu1.cpp"
+// NESTED-NEXT: },
+// NESTED-NEXT: {
+// NESTED-NEXT:   "kind": "LinkUnit",
+// NESTED-NEXT:   "name": "libone"
+// NESTED-NEXT: },
+// NESTED-NEXT: {
+// NESTED-NEXT:   "kind": "LinkUnit",
+// NESTED-NEXT:   "name": "libouter"
+// NESTED-NEXT: },
+// NESTED-NEXT: {
+// NESTED-NEXT:   "kind": "LinkUnit",
+// NESTED-NEXT:   "name": "lu-nested"
+// NESTED-NEXT: }
+// NESTED-NEXT: ],
+// NESTED-NEXT: "suffix": "",
+// NESTED-NEXT: "usr": "c:@F@shared_int#"
+// RUN: rm %t/lu-nested.json
+
+// ============================================================================
+// Multi-arch shared libraries contribute the member matching the link unit
+// ============================================================================
+
+// A single-member bundle names its target unambiguously, so no --target-triple
+// is needed and the result matches linking the member directly.
+// RUN: clang-ssaf-linker %t/libone-1arch.json %S/Inputs/tu-2.json -o %t/lu-libone+2.json
+// RUN: diff %S/Outputs/lu-libone+2.json %t/lu-libone+2.json
+// RUN: rm %t/lu-libone+2.json
+
+// A bundle in a later position is resolved against the triple the first input
+// already fixed, rather than contributing one of its own.
+// RUN: clang-ssaf-linker %S/Inputs/tu-empty.json %S/Inputs/libfoo-2arch.json -o %t/lu-empty.json
+// RUN: diff %S/Outputs/lu-empty.json %t/lu-empty.json
+// RUN: rm %t/lu-empty.json
+
+// Only the selected member is folded in: folding the x86_64 member, or both,
+// into an arm64 link unit would be rejected as a target triple mismatch.
+// RUN: clang-ssaf-linker --target-triple arm64-apple-macosx %S/Inputs/libfoo-2arch.json -o %t/lu-empty.json
+// RUN: diff %S/Outputs/lu-empty.json %t/lu-empty.json
+// RUN: rm %t/lu-empty.json
+
+// Members are matched on the triple's canonical components, not its spelling.
+// RUN: clang-ssaf-linker --target-triple aarch64-apple-macosx %S/Inputs/libfoo-2arch.json -o %t/lu-aarch64.json
+// RUN: FileCheck %s --check-prefix=SHARED-ALIAS-MEMBER --input-file=%t/lu-aarch64.json
+// SHARED-ALIAS-MEMBER: "target_triple": "aarch64-apple-macosx",
+// RUN: rm %t/lu-aarch64.json
+
+// An OS version does not distinguish a member either, and the link unit again
+// records the requested spelling.
+// RUN: clang-ssaf-linker --target-triple arm64-apple-macosx15.0 %t/libone-1arch.json -o %t/lu-versioned.json
+// RUN: FileCheck %s --check-prefix=SHARED-VERSIONED-MEMBER --input-file=%t/lu-versioned.json
+// SHARED-VERSIONED-MEMBER: "target_triple": "arm64-apple-macosx15.0",
+// RUN: rm %t/lu-versioned.json
+
+// ============================================================================
 // Target triples are not restricted to Apple platforms
 //
 // "unknown" and "none" are the conventional spellings for an unspecified
