@@ -4,6 +4,9 @@
 // Test intercept_strpbrk asan option
 // RUN: %env_asan_opts=intercept_strpbrk=false %run %t 2>&1
 
+// Bionic's strpbrk calls strcspn via PLT, which is still intercepted.
+// XFAIL: android-37
+
 #include <assert.h>
 #include <string.h>
 #include <sanitizer/asan_interface.h>
