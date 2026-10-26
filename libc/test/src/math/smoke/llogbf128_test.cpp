@@ -11,7 +11,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "ILogbTest.h"
+#include "test/src/math/smoke/ILogbTest.h"
 
 #include "src/__support/FPUtil/float128.h"
 #include "src/math/llogbf128.h"

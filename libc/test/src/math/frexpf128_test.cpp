@@ -11,7 +11,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "FrexpTest.h"
+#include "test/src/math/FrexpTest.h"
 
 #include "src/__support/FPUtil/float128.h"
 #include "src/math/frexpf128.h"

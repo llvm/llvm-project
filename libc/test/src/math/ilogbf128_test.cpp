@@ -11,7 +11,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "ILogbTest.h"
+#include "test/src/math/ILogbTest.h"
 
 #include "hdr/math_macros.h"
 #include "src/__support/FPUtil/FPBits.h"
