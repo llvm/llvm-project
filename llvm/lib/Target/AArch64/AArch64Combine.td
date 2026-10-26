@@ -84,6 +84,14 @@ def deinterleave_load : GICombineRule<
   (apply [{ applyDeinterleavingLoad(*${root}, MRI, B, ${matchinfo}); }])
 >;
 
+// Convert store + shuffle to st2/st3/st4
+def interleave_store : GICombineRule<
+  (defs root:$root, register_vector_matchinfo:$matchinfo),
+  (match (G_STORE $value, $addr):$root,
+         [{ return matchInterleavingStore(*${root}, MRI, ${matchinfo}); }]),
+  (apply [{ applyInterleavingStore(*${root}, MRI, B, ${matchinfo}); }])
+>;
+
 def AArch64PreLegalizerCombiner: GICombiner<
   "AArch64PreLegalizerCombinerImpl", [all_combines,
                                       select_zero_true,
@@ -100,7 +108,8 @@ def AArch64PreLegalizerCombiner: GICombiner<
                                       push_mul_through_sext,
                                       simplify_uaddo,
                                       memcpy_family_combines,
-                                      emit_bzero, deinterleave_load]> {
+                                      emit_bzero,
+                                      deinterleave_load, interleave_store]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }
 
@@ -457,7 +466,7 @@ def AArch64PostLegalizerCombiner
                         select_combines, select_zero_true, select_zero_false, select_not,
                         fold_merge_to_zext, merge_combines,
                         constant_fold_binops, constant_fold_cast_op, identity_combines,
-                        ptr_add_immed_chain, overlapping_and,
+                        ptr_add_immed_chain, shift_immed_chain, overlapping_and,
                         split_store_zero_128, undef_combines,
                         select_to_minmax, or_to_bsp, trunc_or_to_addhn,
                         combine_concat_vector,
