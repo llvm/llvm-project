@@ -1,4 +1,4 @@
-add_custom_target(libc-shared-tests)
+add_libc_testsuite(libc-shared-tests)
 
 # Shared math tests include the entire math library headers into a single file
 # so it might take some time to compile the tests.  We do have dedicated
@@ -17,6 +17,7 @@ else()
     SRCS
       shared_math_test.cpp
     DEPENDS
+      libc.hdr.fenv_macros
       libc.src.__support.FPUtil.float128
       libc.src.__support.FPUtil.fp_bits
       libc.src.__support.math.acos
@@ -789,6 +790,12 @@ else()
       libc.src.__support.math.setpayloadf128
       libc.src.__support.math.setpayloadf16
       libc.src.__support.math.setpayloadl
+      libc.src.__support.math.setpayloadsig
+      libc.src.__support.math.setpayloadsigbf16
+      libc.src.__support.math.setpayloadsigf
+      libc.src.__support.math.setpayloadsigf128
+      libc.src.__support.math.setpayloadsigf16
+      libc.src.__support.math.setpayloadsigl
       libc.src.__support.math.sqrtl
       libc.src.__support.math.trunc
       libc.src.__support.math.truncbf16
@@ -837,6 +844,9 @@ add_fp_unittest(
     libc.src.__support.builtins.divsf3
     libc.src.__support.builtins.divtf3
     libc.src.__support.builtins.extenddftf2
+    libc.src.__support.builtins.extendhfdf2
+    libc.src.__support.builtins.extendhfsf2
+    libc.src.__support.builtins.extendhftf2
     libc.src.__support.builtins.extendsfdf2
     libc.src.__support.builtins.extendsftf2
     libc.src.__support.builtins.extendxftf2
@@ -872,8 +882,11 @@ add_fp_unittest(
     libc.src.__support.builtins.subdf3
     libc.src.__support.builtins.subsf3
     libc.src.__support.builtins.subtf3
+    libc.src.__support.builtins.truncdfhf2
     libc.src.__support.builtins.truncdfsf2
+    libc.src.__support.builtins.truncsfhf2
     libc.src.__support.builtins.trunctfdf2
+    libc.src.__support.builtins.trunctfhf2
     libc.src.__support.builtins.trunctfsf2
     libc.src.__support.builtins.trunctfxf2
     libc.src.__support.uint128
