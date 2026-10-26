@@ -34,7 +34,7 @@ namespace detail {
 class DeviceImageManager;
 class ContextImpl;
 
-// TODO: Pointers to instances of this class are supported to be stored in
+// TODO: Pointers to instances of this class are supposed to be stored in
 // header function templates as a static variable to avoid repeated runtime
 // lookup overhead.
 class DeviceKernelInfo {
@@ -52,12 +52,19 @@ public:
   /// \return the device image containing the device code of this kernel.
   DeviceImageManager &getDeviceImage() const { return MDeviceImage; }
 
-  /// Returns a cache entry for pair key \p Context & \p Device if successful,
-  /// null otherwise
+  /// Looks up the kernel cached for a context and a device.
+  ///
+  /// \param Context is the context of the cache key.
+  /// \param Device is the device of the cache key.
+  /// \return the cached kernel, or null if there is none.
   ol_symbol_handle_t tryGetCachedKernel(ContextImpl *Context,
                                         ol_device_handle_t Device);
 
-  /// Adds \p Kernel to the cache by using the pair key \p Context & \p Device
+  /// Adds a kernel to the cache for a context and a device.
+  ///
+  /// \param Context is the context of the cache key.
+  /// \param Device is the device of the cache key.
+  /// \param Kernel is the kernel to cache.
   void addCachedKernel(ContextImpl *Context, ol_device_handle_t Device,
                        ol_symbol_handle_t Kernel);
 

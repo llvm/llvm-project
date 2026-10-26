@@ -25,9 +25,10 @@ _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
 template <int> class nd_item;
 
-// SYCL 2020 4.9.1.8. sub_group class.
 /// The sub_group class encapsulates all functionality required to represent a
 /// particular sub-group within a parallel execution.
+///
+/// \sa SYCL 2020 4.9.1.8. sub_group class.
 class sub_group {
 public:
   using id_type = id<1>;

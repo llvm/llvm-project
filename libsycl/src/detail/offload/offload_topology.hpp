@@ -46,26 +46,19 @@ struct OffloadTopology {
   explicit OffloadTopology(ol_platform_backend_t OLBackend)
       : MBackend(OLBackend) {}
 
-  /// Updates backend for this topology.
-  ///
-  /// \param Backend new backend value.
+  /// Sets the backend of this topology to \p Backend.
   void setBackend(ol_platform_backend_t Backend) { MBackend = Backend; }
 
-  /// Queries backend of this topology.
-  ///
-  /// \return backend of this topology.
+  /// \return the backend of this topology.
   ol_platform_backend_t getBackend() const { return MBackend; }
 
-  /// Returns all platform driver groups associated with this topology.
-  ///
-  /// \return platform driver groups associated with this topology.
+  /// \return the platform driver groups associated with this topology.
   const std::vector<OffloadPlatformGroup> &getPlatformGroups() const {
     return MPlatformGroups;
   }
 
-  /// Registers platform driver groups and devices into this topology.
-  ///
-  /// \param PlatformsAndDev collection of platforms & devices.
+  /// Adds each device in \p PlatformsAndDev to the platform driver group of its
+  /// platform and driver, creating the group if it doesn't exist yet.
   void
   registerNewPlatformsAndDevices(const Platform2DevContainer &PlatformsAndDev);
 

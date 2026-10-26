@@ -30,10 +30,11 @@ namespace detail {
 class Builder;
 } // namespace detail
 
-// SYCL2020 4.9.1.5. nd_item class.
 /// nd_item<int Dimensions> identifies an instance of the function object
 /// executing at each point in an nd_range<int Dimensions> passed to a
 /// parallel_for call.
+///
+/// \sa SYCL 2020 4.9.1.5. nd_item class.
 template <int Dimensions = 1> class nd_item {
 public:
   static constexpr int dimensions = Dimensions;

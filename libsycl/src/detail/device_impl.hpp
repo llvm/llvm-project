@@ -43,55 +43,41 @@ public:
   /// Constructs a SYCL device instance using the provided
   /// offload device instance.
   ///
-  /// \param Device is a raw offload library handle representing device.
-  /// \param Platform is a platform this device belongs to.
-  /// All device impls must be created in corresponding platform ctor.
+  /// \param Device is a raw offload library handle representing the device.
+  /// \param Platform is the platform this device belongs to. All device impls
+  /// must be created in the corresponding platform constructor.
   explicit DeviceImpl(ol_device_handle_t Device, PlatformImpl &Platform,
                       PrivateTag)
       : MOffloadDevice(Device), MPlatform(Platform) {}
 
   ~DeviceImpl() = default;
 
-  /// Queries device type from offloading runtime
-  ///
-  /// \return device type of the device
+  /// \return the device type of the device, as reported by the offloading
+  /// runtime.
   info::device_type getDeviceType() const;
 
-  /// Check if device is a CPU device
-  ///
-  /// \return true if SYCL device is a CPU device
+  /// \return true if the device is a CPU device.
   bool isCPU() const;
 
-  /// Check if device is a GPU device
-  ///
-  /// \return true if SYCL device is a GPU device
+  /// \return true if the device is a GPU device.
   bool isGPU() const;
 
-  /// Check if device is an accelerator device
-  ///
-  /// \return true if SYCL device is an accelerator device
+  /// \return true if the device is an accelerator device.
   bool isAccelerator() const;
 
-  /// Returns the backend associated with this device.
-  ///
   /// \return the sycl::backend associated with this device.
   backend getBackend() const noexcept;
 
-  /// Returns the implementation class object of platform associated with this
-  /// device.
-  ///
-  /// \return platform implementation object this device belongs to.
+  /// \return the implementation object of the platform this device belongs to.
   PlatformImpl &getPlatformImpl() const { return MPlatform; }
 
-  /// Checks if this device supports aspect.
+  /// Checks if this device supports an aspect.
   ///
-  /// \param Aspect to perform a check of.
-  /// \return true if this device has the given aspect.
+  /// \param Aspect the aspect to check for.
+  /// \return true if this device has \p Aspect.
   bool has(aspect Aspect) const;
 
-  /// Queries this device for information requested by the template parameter
-  /// param.
-  /// The return type depends on information being queried.
+  /// Implements sycl::device::get_info.
   template <typename Param> typename Param::return_type getInfo() const {
     using namespace info::device;
     using Map = InfoOLMapping<ol_device_info_t>;

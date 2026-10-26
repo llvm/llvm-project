@@ -56,7 +56,7 @@ class PlatformImpl {
 public:
   /// Constructs PlatformImpl from a platform handle.
   ///
-  /// \param Platform is a raw offload library handle representing platform.
+  /// \param Platform is a raw offload library handle representing the platform.
   /// \param Devices are the devices in one platform context group.
   /// All platform impls are created during first getPlatforms() call.
   PlatformImpl(ol_platform_handle_t Platform,
@@ -67,10 +67,8 @@ public:
   /// \return sycl::backend associated with this platform.
   backend getBackend() const noexcept { return MBackend; }
 
-  /// Returns all SYCL platforms from all backends that are
-  /// available in the system.
-  ///
-  /// \return std::vector of all platforms that are available in the system.
+  /// \return all SYCL platforms from all backends that are available in the
+  /// system.
   static const std::vector<PlatformImplUPtr> &getPlatforms();
 
   /// Returns the raw underlying offload platform handle.
@@ -84,18 +82,14 @@ public:
     return MOffloadPlatform;
   }
 
-  /// Indicates if all of the SYCL devices on this platform have the
-  /// given aspect.
+  /// Indicates if all of the SYCL devices on this platform have the given
+  /// aspect.
   ///
-  /// \param Aspect is one of the values defined in SYCL 2020 Section 4.6.4.5.
-  ///
-  /// \return true all of the SYCL devices on this platform have the
-  /// given aspect.
+  /// \param Aspect the aspect to check for.
+  /// \return true if all of the SYCL devices on this platform have \p Aspect.
   bool has(aspect Aspect) const;
 
-  /// Queries this SYCL platform for info.
-  ///
-  /// The return type depends on information being queried.
+  /// Implements sycl::platform::get_info.
   template <typename Param> typename Param::return_type getInfo() const {
     // For now we have only std::string properties
     static_assert(std::is_same_v<typename Param::return_type, std::string>,
@@ -133,7 +127,7 @@ public:
   ContextImpl &getDefaultContext();
 
 private:
-  /// \return reference to collection of root devices for platform
+  /// \return a reference to the collection of root devices of this platform.
   const std::vector<DeviceImplUPtr> &getRootDevices() const;
 
   const ol_platform_handle_t MOffloadPlatform{};

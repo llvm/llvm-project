@@ -45,7 +45,7 @@ public:
   ~NestedCallsTracker() { NestedCallsDetectorRef = false; }
 
 private:
-  // Cache the TLS location to decrease amount of TLS accesses.
+  // Cache the TLS location to reduce the number of TLS accesses.
   bool &NestedCallsDetectorRef = NestedCallsDetector;
 };
 

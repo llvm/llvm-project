@@ -37,6 +37,11 @@ struct HandlerImpl;
 class QueueImpl;
 } // namespace detail
 
+/// Records the dependencies and the single command (a kernel or a memory
+/// operation) of a command group; the runtime passes an instance of it to the
+/// command group function object.
+///
+/// \sa SYCL 2020 4.9.4. Command group handler class.
 class _LIBSYCL_EXPORT handler : private detail::KernelSubmissionBase<handler> {
 public:
   handler(const handler &) = delete;
@@ -46,7 +51,7 @@ public:
 
   ~handler() = default;
 
-  /// \copybrief handler::depends_on(std::vector<event>const&)
+  /// Adds event dependencies to this command group.
   ///
   /// \param depEvent is the event that must complete before this command
   /// group is executed.
@@ -54,7 +59,7 @@ public:
     return depends_on(std::vector<event>{depEvent});
   }
 
-  /// \brief Adds event dependencies to this command group.
+  /// \overload
   ///
   /// \param depEvents are the events that must complete before this command
   /// group is executed.
@@ -62,16 +67,15 @@ public:
     MDepEvents.insert(MDepEvents.end(), depEvents.begin(), depEvents.end());
   }
 
-  /// Defines a single-task kernel for this command group.
-  ///
-  /// \param kernelFunc is the kernel functor or lambda to execute.
+  /// Defines a single-task kernel for this command group that executes the
+  /// kernel functor or lambda \p kernelFunc.
   template <typename KernelName = detail::AutoName, typename KernelType>
   void single_task(const KernelType &kernelFunc) {
     setKernelRange();
     submitSingleTask<KernelName, KernelType>(kernelFunc);
   }
 
-  /// Defines a one-dimensional range kernel for this command group.
+  /// Defines a range kernel for this command group.
   ///
   /// \param numWorkItems is the number of work-items in the kernel range.
   /// \param rest contains the kernel functor or lambda and its optional
@@ -82,22 +86,14 @@ public:
                                        std::forward<Rest>(rest)...);
   }
 
-  /// Defines a two-dimensional range kernel for this command group.
-  ///
-  /// \param numWorkItems is the number of work-items in the kernel range.
-  /// \param rest contains the kernel functor or lambda and its optional
-  /// submission arguments.
+  /// \copydoc parallel_for
   template <typename KernelName = detail::AutoName, typename... Rest>
   void parallel_for(range<2> numWorkItems, Rest &&...rest) {
     return parallelForImpl<KernelName>(numWorkItems,
                                        std::forward<Rest>(rest)...);
   }
 
-  /// Defines a three-dimensional range kernel for this command group.
-  ///
-  /// \param numWorkItems is the number of work-items in the kernel range.
-  /// \param rest contains the kernel functor or lambda and its optional
-  /// submission arguments.
+  /// \copydoc parallel_for
   template <typename KernelName = detail::AutoName, typename... Rest>
   void parallel_for(range<3> numWorkItems, Rest &&...rest) {
     return parallelForImpl<KernelName>(numWorkItems,

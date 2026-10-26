@@ -103,7 +103,12 @@ private:
 
 } // namespace detail
 
-// SYCL 2020 4.6.5. Queue class.
+/// Schedules kernels and memory operations submitted to it on a single device.
+///
+/// A queue constructed without a context uses the default context of the
+/// platform that contains its device.
+///
+/// \sa SYCL 2020 4.6.5. Queue class.
 class _LIBSYCL_EXPORT queue : private detail::KernelSubmissionBase<queue> {
 public:
   queue(const queue &rhs) = default;
@@ -120,29 +125,32 @@ public:
     return !(lhs == rhs);
   }
 
-  /// Constructs a SYCL queue instance using the device returned by an instance
-  /// of default_selector.
+  /// Constructs a SYCL queue using the device selected by default_selector_v.
   ///
   /// \param propList is a list of properties for queue construction.
+  /// \throw sycl::exception with sycl::errc::runtime if no device is available.
   explicit queue(const property_list &propList = {})
       : queue(detail::SelectDevice(default_selector_v), async_handler{},
               propList) {}
 
-  /// Constructs a SYCL queue instance with an async_handler using the device
-  /// returned by an instance of default_selector.
+  /// \overload
   ///
-  /// \param asyncHandler is a SYCL asynchronous exception handler.
+  /// \param asyncHandler receives the asynchronous errors of this queue.
   /// \param propList is a list of properties for queue construction.
+  /// \throw sycl::exception with sycl::errc::runtime if no device is available.
   explicit queue(const async_handler &asyncHandler,
                  const property_list &propList = {})
       : queue(detail::SelectDevice(default_selector_v), asyncHandler,
               propList) {}
 
-  /// Constructs a SYCL queue instance using the device identified by the
-  /// device selector provided.
-  /// \param deviceSelector is a SYCL 2020 Device Selector, a simple callable
-  /// that takes a device and returns an int
+  /// \overload
+  ///
+  /// \param deviceSelector a callable that takes a device and returns an int
+  /// score; the device with the highest score is chosen, and a negative score
+  /// rejects a device.
   /// \param propList is a list of properties for queue construction.
+  /// \throw sycl::exception with sycl::errc::runtime if \p deviceSelector
+  /// rejects all devices.
   template <
       typename DeviceSelector,
       typename = detail::EnableIfDeviceSelectorIsInvocable<DeviceSelector>>
@@ -151,12 +159,15 @@ public:
       : queue(detail::SelectDevice(deviceSelector), async_handler{}, propList) {
   }
 
-  /// Constructs a SYCL queue instance using the device identified by the
-  /// device selector provided.
-  /// \param deviceSelector is a SYCL 2020 Device Selector, a simple callable
-  /// that takes a device and returns an int
-  /// \param asyncHandler is a SYCL asynchronous exception handler.
+  /// \overload
+  ///
+  /// \param deviceSelector a callable that takes a device and returns an int
+  /// score; the device with the highest score is chosen, and a negative score
+  /// rejects a device.
+  /// \param asyncHandler receives the asynchronous errors of this queue.
   /// \param propList is a list of properties for queue construction.
+  /// \throw sycl::exception with sycl::errc::runtime if \p deviceSelector
+  /// rejects all devices.
   template <
       typename DeviceSelector,
       typename = detail::EnableIfDeviceSelectorIsInvocable<DeviceSelector>>
@@ -165,33 +176,34 @@ public:
                  const property_list &propList = {})
       : queue(detail::SelectDevice(deviceSelector), asyncHandler, propList) {}
 
-  /// Constructs a SYCL queue instance using the device provided.
+  /// \overload
   ///
-  /// \param syclDevice is an instance of SYCL device.
+  /// \param syclDevice is the device the queue submits commands to.
   /// \param propList is a list of properties for queue construction.
   explicit queue(const device &syclDevice, const property_list &propList = {})
       : queue(syclDevice, async_handler{}, propList) {}
 
-  /// Constructs a SYCL queue instance with an async_handler using the device
-  /// provided.
+  /// \overload
   ///
-  /// \param syclDevice is an instance of SYCL device.
-  /// \param asyncHandler is a SYCL asynchronous exception handler.
+  /// \param syclDevice is the device the queue submits commands to.
+  /// \param asyncHandler receives the asynchronous errors of this queue.
   /// \param propList is a list of properties for queue construction.
   explicit queue(const device &syclDevice, const async_handler &asyncHandler,
                  const property_list &propList = {})
       : queue(syclDevice.get_platform().khr_get_default_context(), syclDevice,
               asyncHandler, propList) {}
 
-  /// Constructs a SYCL queue instance that is associated with syclContext,
-  /// using the device identified by the device selector provided.
+  /// \overload
   ///
   /// \param syclContext is the context to associate the queue with.
-  /// \param deviceSelector is a SYCL 2020 Device Selector, a simple callable
-  /// that takes a device and returns an int
+  /// \param deviceSelector a callable that takes a device and returns an int
+  /// score; the device with the highest score is chosen, and a negative score
+  /// rejects a device.
   /// \param propList is a list of properties for queue construction.
-  /// \throw sycl::exception with sycl::errc::invalid if syclContext does not
-  /// contain the selected device.
+  /// \throw sycl::exception with sycl::errc::runtime if \p deviceSelector
+  /// rejects all devices.
+  /// \throw sycl::exception with sycl::errc::invalid if \p syclContext does
+  /// not contain the selected device.
   template <
       typename DeviceSelector,
       typename = detail::EnableIfDeviceSelectorIsInvocable<DeviceSelector>>
@@ -200,17 +212,18 @@ public:
                  const property_list &propList = {})
       : queue(syclContext, detail::SelectDevice(deviceSelector), propList) {}
 
-  /// Constructs a SYCL queue instance with an async_handler that is associated
-  /// with syclContext, using the device identified by the device selector
-  /// provided.
+  /// \overload
   ///
   /// \param syclContext is the context to associate the queue with.
-  /// \param deviceSelector is a SYCL 2020 Device Selector, a simple callable
-  /// that takes a device and returns an int
-  /// \param asyncHandler is a SYCL asynchronous exception handler.
+  /// \param deviceSelector a callable that takes a device and returns an int
+  /// score; the device with the highest score is chosen, and a negative score
+  /// rejects a device.
+  /// \param asyncHandler receives the asynchronous errors of this queue.
   /// \param propList is a list of properties for queue construction.
-  /// \throw sycl::exception with sycl::errc::invalid if syclContext does not
-  /// contain the selected device.
+  /// \throw sycl::exception with sycl::errc::runtime if \p deviceSelector
+  /// rejects all devices.
+  /// \throw sycl::exception with sycl::errc::invalid if \p syclContext does
+  /// not contain the selected device.
   template <
       typename DeviceSelector,
       typename = detail::EnableIfDeviceSelectorIsInvocable<DeviceSelector>>
@@ -221,26 +234,24 @@ public:
       : queue(syclContext, detail::SelectDevice(deviceSelector), asyncHandler,
               propList) {}
 
-  /// Constructs a SYCL queue instance that is associated with syclContext,
-  /// using the device provided.
+  /// \overload
   ///
   /// \param syclContext is the context to associate the queue with.
-  /// \param syclDevice is an instance of SYCL device.
+  /// \param syclDevice is the device the queue submits commands to.
   /// \param propList is a list of properties for queue construction.
-  /// \throw sycl::exception with sycl::errc::invalid if syclContext does not
-  /// contain syclDevice.
+  /// \throw sycl::exception with sycl::errc::invalid if \p syclContext does
+  /// not contain \p syclDevice.
   explicit queue(const context &syclContext, const device &syclDevice,
                  const property_list &propList = {});
 
-  /// Constructs a SYCL queue instance with an async_handler that is associated
-  /// with syclContext, using the device provided.
+  /// \overload
   ///
   /// \param syclContext is the context to associate the queue with.
-  /// \param syclDevice is an instance of SYCL device.
-  /// \param asyncHandler is a SYCL asynchronous exception handler.
+  /// \param syclDevice is the device the queue submits commands to.
+  /// \param asyncHandler receives the asynchronous errors of this queue.
   /// \param propList is a list of properties for queue construction.
-  /// \throw sycl::exception with sycl::errc::invalid if syclContext does not
-  /// contain syclDevice.
+  /// \throw sycl::exception with sycl::errc::invalid if \p syclContext does
+  /// not contain \p syclDevice.
   explicit queue(const context &syclContext, const device &syclDevice,
                  const async_handler &asyncHandler,
                  const property_list &propList = {});
@@ -259,14 +270,11 @@ public:
   /// \return true if and only if the queue is in order.
   bool is_in_order() const;
 
-  /// Queries the queue for information.
-  ///
-  /// The return type depends on information being queried.
+  /// \return the value of the queue information descriptor Param.
   template <typename Param> typename Param::return_type get_info() const;
 
-  /// Queries the queue for SYCL backend-specific information.
-  ///
-  /// The return type depends on the information being queried.
+  /// \return the value of the SYCL backend-specific information descriptor
+  /// Param of this queue.
   template <typename Param>
   typename Param::return_type get_backend_info() const;
 
@@ -297,25 +305,20 @@ public:
                                                kernelFunc);
   }
 
-  /// Defines and invokes a SYCL kernel function as a lambda expression or a
-  /// named function object type.
+  /// \overload
   ///
-  /// \param depEvent is an event that specifies the kernel dependency.
+  /// \param depEvent is an event that the kernel depends on.
   /// \param kernelFunc is the kernel functor or lambda.
-  /// \return an event that represents the status of the submitted kernel.
   template <typename KernelName = detail::AutoName, typename KernelType>
   event single_task(event depEvent, const KernelType &kernelFunc) {
     return single_task<KernelName, KernelType>(std::vector<event>{depEvent},
                                                kernelFunc);
   }
 
-  /// Defines and invokes a SYCL kernel function as a lambda expression or a
-  /// named function object type.
+  /// \overload
   ///
-  /// \param depEvents is a collection of events that specify the kernel
-  /// dependencies.
+  /// \param depEvents is a collection of events that the kernel depends on.
   /// \param kernelFunc is the kernel functor or lambda.
-  /// \return an event that represents the status of the submitted kernel.
   template <typename KernelName = detail::AutoName, typename KernelType>
   event single_task(const std::vector<event> &depEvents,
                     const KernelType &kernelFunc) {
@@ -331,50 +334,45 @@ public:
     return getLastEvent();
   }
 
+  // TODO: Rest will represent reduction types once it is supported.
+
   /// Defines and invokes a SYCL kernel function as a lambda expression or a
   /// named function object type, for the specified range.
   ///
   /// \param numWorkItems specifies the global work space of the kernel.
   /// \param rest acts as if it was "const KernelType &KernelFunc".
-  // TODO: Rest will represent reduction types once it is supported.
+  /// \return an event that represents the status of the submitted kernel.
   template <typename KernelName = detail::AutoName, typename... Rest>
   event parallel_for(range<1> numWorkItems, Rest &&...rest) {
     return parallel_for<KernelName, Rest...>(numWorkItems, std::vector<event>{},
                                              std::forward<Rest>(rest)...);
   }
 
-  /// Defines and invokes a SYCL kernel function as a lambda expression or a
-  /// named function object type, for the specified range.
+  /// \overload
   ///
   /// \param numWorkItems specifies the global work space of the kernel.
   /// \param rest acts as if it was "const KernelType &KernelFunc".
-  // TODO: Rest will represent reduction types once it is supported.
   template <typename KernelName = detail::AutoName, typename... Rest>
   event parallel_for(range<2> numWorkItems, Rest &&...rest) {
     return parallel_for<KernelName, Rest...>(numWorkItems, std::vector<event>{},
                                              std::forward<Rest>(rest)...);
   }
 
-  /// Defines and invokes a SYCL kernel function as a lambda expression or a
-  /// named function object type, for the specified range.
+  /// \overload
   ///
   /// \param numWorkItems specifies the global work space of the kernel.
   /// \param rest acts as if it was "const KernelType &KernelFunc".
-  // TODO: Rest will represent reduction types once it is supported.
   template <typename KernelName = detail::AutoName, typename... Rest>
   event parallel_for(range<3> numWorkItems, Rest &&...rest) {
     return parallel_for<KernelName, Rest...>(numWorkItems, std::vector<event>{},
                                              std::forward<Rest>(rest)...);
   }
 
-  /// Defines and invokes a SYCL kernel function as a lambda expression or a
-  /// named function object type, for the specified range.
+  /// \overload
   ///
   /// \param numWorkItems specifies the global work space of the kernel.
-  /// \param depEvent adds a requirement that the action represented by depEvent
-  /// must complete before executing this kernel.
+  /// \param depEvent is an event that the kernel depends on.
   /// \param rest acts as if it was "const KernelType &KernelFunc".
-  // TODO: Rest will represent reduction types once it is supported.
   template <typename KernelName = detail::AutoName, typename... Rest>
   event parallel_for(range<1> numWorkItems, event depEvent, Rest &&...rest) {
     return parallel_for<KernelName, Rest...>(numWorkItems,
@@ -382,14 +380,11 @@ public:
                                              std::forward<Rest>(rest)...);
   }
 
-  /// Defines and invokes a SYCL kernel function as a lambda expression or a
-  /// named function object type, for the specified range.
+  /// \overload
   ///
   /// \param numWorkItems specifies the global work space of the kernel.
-  /// \param depEvent adds a requirement that the action represented by depEvent
-  /// must complete before executing this kernel.
+  /// \param depEvent is an event that the kernel depends on.
   /// \param rest acts as if it was "const KernelType &KernelFunc".
-  // TODO: Rest will represent reduction types once it is supported.
   template <typename KernelName = detail::AutoName, typename... Rest>
   event parallel_for(range<2> numWorkItems, event depEvent, Rest &&...rest) {
     return parallel_for<KernelName, Rest...>(numWorkItems,
@@ -397,14 +392,11 @@ public:
                                              std::forward<Rest>(rest)...);
   }
 
-  /// Defines and invokes a SYCL kernel function as a lambda expression or a
-  /// named function object type, for the specified range.
+  /// \overload
   ///
   /// \param numWorkItems specifies the global work space of the kernel.
-  /// \param depEvent adds a requirement that the action represented by depEvent
-  /// must complete before executing this kernel.
+  /// \param depEvent is an event that the kernel depends on.
   /// \param rest acts as if it was "const KernelType &KernelFunc".
-  // TODO: Rest will represent reduction types once it is supported.
   template <typename KernelName = detail::AutoName, typename... Rest>
   event parallel_for(range<3> numWorkItems, event depEvent, Rest &&...rest) {
     return parallel_for<KernelName, Rest...>(numWorkItems,
@@ -412,14 +404,11 @@ public:
                                              std::forward<Rest>(rest)...);
   }
 
-  /// Defines and invokes a SYCL kernel function as a lambda expression or a
-  /// named function object type, for the specified range.
+  /// \overload
   ///
-  /// \param numWorkItems specifies the global work space of the kernel
-  /// \param depEvents is a vector of events that specifies the kernel
-  /// dependencies.
+  /// \param numWorkItems specifies the global work space of the kernel.
+  /// \param depEvents is a collection of events that the kernel depends on.
   /// \param rest acts as if it was "const KernelType &KernelFunc".
-  // TODO: Rest will represent reduction types once it is supported.
   template <typename KernelName = detail::AutoName, typename... Rest>
   event parallel_for(range<1> numWorkItems, const std::vector<event> &depEvents,
                      Rest &&...rest) {
@@ -427,14 +416,11 @@ public:
                                        std::forward<Rest>(rest)...);
   }
 
-  /// Defines and invokes a SYCL kernel function as a lambda expression or a
-  /// named function object type, for the specified range.
+  /// \overload
   ///
-  /// \param numWorkItems specifies the global work space of the kernel
-  /// \param depEvents is a vector of events that specifies the kernel
-  /// dependencies.
+  /// \param numWorkItems specifies the global work space of the kernel.
+  /// \param depEvents is a collection of events that the kernel depends on.
   /// \param rest acts as if it was "const KernelType &KernelFunc".
-  // TODO: Rest will represent reduction types once it is supported.
   template <typename KernelName = detail::AutoName, typename... Rest>
   event parallel_for(range<2> numWorkItems, const std::vector<event> &depEvents,
                      Rest &&...rest) {
@@ -442,14 +428,11 @@ public:
                                        std::forward<Rest>(rest)...);
   }
 
-  /// Defines and invokes a SYCL kernel function as a lambda expression or a
-  /// named function object type, for the specified range.
+  /// \overload
   ///
-  /// \param numWorkItems specifies the global work space of the kernel
-  /// \param depEvents is a vector of events that specifies the kernel
-  /// dependencies.
+  /// \param numWorkItems specifies the global work space of the kernel.
+  /// \param depEvents is a collection of events that the kernel depends on.
   /// \param rest acts as if it was "const KernelType &KernelFunc".
-  // TODO: Rest will represent reduction types once it is supported.
   template <typename KernelName = detail::AutoName, typename... Rest>
   event parallel_for(range<3> numWorkItems, const std::vector<event> &depEvents,
                      Rest &&...rest) {
@@ -457,12 +440,25 @@ public:
                                        std::forward<Rest>(rest)...);
   }
 
+  /// Defines and invokes a SYCL kernel function as a lambda expression or a
+  /// named function object type, for the specified range.
+  ///
+  /// \param executionRange specifies the global and local work spaces of the
+  /// kernel.
+  /// \param rest acts as if it was "const KernelType &KernelFunc".
+  /// \return an event that represents the status of the submitted kernel.
   template <typename KernelName = detail::AutoName, int Dims, typename... Rest>
   event parallel_for(nd_range<Dims> executionRange, Rest &&...rest) {
     return parallel_for<KernelName, Dims, Rest...>(
         executionRange, std::vector<event>{}, std::forward<Rest>(rest)...);
   }
 
+  /// \overload
+  ///
+  /// \param executionRange specifies the global and local work spaces of the
+  /// kernel.
+  /// \param depEvent is an event that the kernel depends on.
+  /// \param rest acts as if it was "const KernelType &KernelFunc".
   template <typename KernelName = detail::AutoName, int Dims, typename... Rest>
   event parallel_for(nd_range<Dims> executionRange, event depEvent,
                      Rest &&...rest) {
@@ -471,6 +467,12 @@ public:
                                                    std::forward<Rest>(rest)...);
   }
 
+  /// \overload
+  ///
+  /// \param executionRange specifies the global and local work spaces of the
+  /// kernel.
+  /// \param depEvents is a collection of events that the kernel depends on.
+  /// \param rest acts as if it was "const KernelType &KernelFunc".
   template <typename KernelName = detail::AutoName, int Dims, typename... Rest>
   event parallel_for(nd_range<Dims> executionRange,
                      const std::vector<event> &depEvents, Rest &&...rest) {
@@ -479,7 +481,7 @@ public:
                                        std::forward<Rest>(rest)...);
   }
 
-  /// Submits a memory copy operation from one USM or host pointer to another.
+  /// Submits a memory copy operation from one USM or host pointer to another;
   /// USM pointers must be accessible on the device associated with the queue.
   ///
   /// \param dest is the pointer to copy to.
@@ -490,34 +492,30 @@ public:
     return memcpy(dest, src, numBytes, std::vector<event>{});
   }
 
-  /// Submits a memory copy operation from one USM or host pointer to another.
-  /// USM pointers must be accessible on the device associated with the queue.
+  /// \overload
   ///
   /// \param dest is the pointer to copy to.
   /// \param src is the pointer to copy from.
   /// \param numBytes is the number of bytes to copy.
   /// \param depEvent is an event that represents a dependency for the
   /// operation.
-  /// \return an event that represents the status of the operation.
   event memcpy(void *dest, const void *src, std::size_t numBytes,
                event depEvent) {
     return memcpy(dest, src, numBytes, std::vector<event>{depEvent});
   }
 
-  /// Submits a memory copy operation from one USM or host pointer to another.
-  /// USM pointers must be accessible on the device associated with the queue.
+  /// \overload
   ///
   /// \param dest is the pointer to copy to.
   /// \param src is the pointer to copy from.
   /// \param numBytes is the number of bytes to copy.
   /// \param depEvents is a vector of events that represent dependencies for the
   /// operation.
-  /// \return an event that represents the status of the operation.
   event memcpy(void *dest, const void *src, std::size_t numBytes,
                const std::vector<event> &depEvents);
 
   /// Submits a memset operation on a USM allocation that must be accessible
-  /// on the device associated with the queue. Equivalent to a fill operation
+  /// on the device associated with the queue, equivalent to a fill operation
   /// with an unsigned char pattern.
   ///
   /// \param ptr is the pointer to memory to be set.
@@ -529,9 +527,7 @@ public:
     return memset(ptr, value, numBytes, std::vector<event>{});
   }
 
-  /// Submits a memset operation on a USM allocation that must be accessible
-  /// on the device associated with the queue. Equivalent to a fill operation
-  /// with an unsigned char pattern.
+  /// \overload
   ///
   /// \param ptr is the pointer to memory to be set.
   /// \param value is the value the memory should be filled with, interpreted
@@ -539,14 +535,11 @@ public:
   /// \param numBytes is the number of bytes to set.
   /// \param depEvent is an event that represents a dependency for the
   /// operation.
-  /// \return an event that represents the status of the operation.
   event memset(void *ptr, int value, std::size_t numBytes, event depEvent) {
     return memset(ptr, value, numBytes, std::vector<event>{depEvent});
   }
 
-  /// Submits a memset operation on a USM allocation that must be accessible
-  /// on the device associated with the queue. Equivalent to a fill operation
-  /// with an unsigned char pattern.
+  /// \overload
   ///
   /// \param ptr is the pointer to memory to be set.
   /// \param value is the value the memory should be filled with, interpreted
@@ -554,7 +547,6 @@ public:
   /// \param numBytes is the number of bytes to set.
   /// \param depEvents is a vector of events that represent dependencies for the
   /// operation.
-  /// \return an event that represents the status of the operation.
   event memset(void *ptr, int value, std::size_t numBytes,
                const std::vector<event> &depEvents) {
     return fill(ptr, static_cast<unsigned char>(value), numBytes, depEvents);
@@ -572,41 +564,36 @@ public:
     return fill(ptr, pattern, count, std::vector<event>{});
   }
 
-  /// Submits a fill operation that replicates a pattern into a USM allocation
-  /// that must be accessible on the device associated with the queue.
+  /// \overload
   ///
   /// \param ptr is the pointer to memory to be filled.
   /// \param pattern is the pattern to be replicated.
   /// \param count is the number of times the pattern is replicated.
   /// \param depEvent is an event that represents a dependency for the
   /// operation.
-  /// \return an event that represents the status of the operation.
   template <typename T>
   event fill(void *ptr, const T &pattern, std::size_t count, event depEvent) {
     return fill(ptr, pattern, count, std::vector<event>{depEvent});
   }
 
-  /// Submits a fill operation that replicates a pattern into a USM allocation
-  /// that must be accessible on the device associated with the queue.
+  /// \overload
   ///
   /// \param ptr is the pointer to memory to be filled.
   /// \param pattern is the pattern to be replicated.
   /// \param count is the number of times the pattern is replicated.
   /// \param depEvents is a vector of events that represent dependencies for the
   /// operation.
-  /// \return an event that represents the status of the operation.
   template <typename T>
   event fill(void *ptr, const T &pattern, std::size_t count,
              const std::vector<event> &depEvents) {
     return fillImpl(ptr, &pattern, sizeof(T), count, depEvents);
   }
 
-  /// Immediately calls the command group function object.
+  /// Immediately calls the command group function object, which may submit no
+  /// more than one command to this queue for execution on the associated
+  /// device.
   ///
-  /// The command group may submit no more than one command to this queue for
-  /// execution on the associated device.
-  ///
-  /// \param cgf command group function object.
+  /// \param cgf is the command group function object.
   /// \return an event that represents the status of the submitted command.
   template <typename T>
   std::enable_if_t<std::is_invocable_r_v<void, T, handler &>, event>
@@ -614,16 +601,12 @@ public:
     return submitWithHandler(cgf);
   }
 
-  /// Immediately calls the command group function object.
+  /// \overload
   ///
-  /// The command group may submit no more than one command to this queue for
-  /// execution on the associated device. On a kernel error, this command group
-  /// may be scheduled for execution on \p secondaryQueue.
-  ///
-  /// \param cgf command group function object.
-  /// \param secondaryQueue queue used as a fallback for kernel errors. Unused
-  /// (See SYCL 2020 3.9.10. Fallback mechanism).
-  /// \return an event that represents the status of the submitted command.
+  /// \param cgf is the command group function object.
+  /// \param secondaryQueue a queue on which this command group may be scheduled
+  /// for execution on a kernel error. Unused (See SYCL 2020 3.9.10. Fallback
+  /// mechanism).
   template <typename T>
   std::enable_if_t<std::is_invocable_r_v<void, T, handler &>, event>
   submit(T cgf, [[maybe_unused]] queue &secondaryQueue) {
@@ -641,27 +624,22 @@ public:
     return prefetch(ptr, numBytes, std::vector<event>{});
   }
 
-  /// Provides hints to the runtime library that data can be made available
-  /// on a device earlier than Unified Shared Memory would normally require it
-  /// to be available.
+  /// \overload
   ///
   /// \param ptr is a USM pointer to the memory to be prefetched to the device.
   /// \param numBytes is a number of bytes to be prefetched.
-  /// \param depEvent is an event that specifies the kernel dependencies.
-  /// \return an event representing prefetch operation.
+  /// \param depEvent is an event that represents a dependency for the
+  /// operation.
   event prefetch(const void *ptr, std::size_t numBytes, event depEvent) {
     return prefetch(ptr, numBytes, std::vector<event>{depEvent});
   }
 
-  /// Provides hints to the runtime library that data can be made available
-  /// on a device earlier than Unified Shared Memory would normally require it
-  /// to be available.
+  /// \overload
   ///
   /// \param ptr is a USM pointer to the memory to be prefetched to the device.
   /// \param numBytes is a number of bytes to be prefetched.
-  /// \param depEvents is a vector of events that specify the kernel
-  /// dependencies.
-  /// \return an event representing prefetch operation.
+  /// \param depEvents is a vector of events that represent dependencies for the
+  /// operation.
   event prefetch(const void *ptr, std::size_t numBytes,
                  const std::vector<event> &depEvents);
 
@@ -691,19 +669,10 @@ private:
   void submitKernelImpl(detail::DeviceKernelInfo &KernelInfo, void *ArgData,
                         std::size_t ArgSize);
 
-  /// \return an event representing last kernel invocation.
+  /// \return an event representing the last kernel invocation.
   event getLastEvent();
 
-  /// Submits a fill operation that replicates a pattern into a USM allocation
-  /// that must be accessible on the device associated with the queue.
-  ///
-  /// \param Ptr is the pointer to memory to be filled.
-  /// \param Pattern is the pattern to be replicated.
-  /// \param PatternSize is the size of the pattern in bytes.
-  /// \param Count is the number of times the pattern is replicated.
-  /// \param DepEvents is a vector of events that represent dependencies for the
-  /// operation.
-  /// \return an event that represents the status of the operation.
+  /// Implements fill() for a type-erased pattern.
   event fillImpl(void *Ptr, const void *Pattern, std::size_t PatternSize,
                  std::size_t Count, const std::vector<event> &DepEvents);
 

@@ -28,8 +28,10 @@ void __spirv_ControlBarrier(std::uint32_t Execution, std::uint32_t Memory,
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
-// 4.17.2.1. Group type trait.
-
+/// The is_group type trait is used to determine which types of groups are
+/// supported by group functions.
+///
+/// \sa SYCL 2020 4.17.2.1. Group type trait.
 template <class T> struct is_group : std::false_type {};
 
 template <int Dimensions>

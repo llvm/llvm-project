@@ -21,14 +21,14 @@ _LIBSYCL_BEGIN_NAMESPACE_SYCL
 namespace detail {
 
 namespace {
-// libsycl follows SYCL 2020 specification that doesn't declare any
+// libsycl follows the SYCL 2020 specification that doesn't declare any
 // init/shutdown methods that can help to avoid usage of static variables.
 // liboffload uses static variables too. In the first call of get_platforms
-// we call liboffload's iterateDevices that leads to liboffload static
+// we call liboffload's olIterateDevices that leads to liboffload static
 // storage initialization. Then we initialize our own local static var of
 // StaticVarShutdownHandler type to be able to call our shutdown methods
 // earlier and before the liboffload objects are destructed at the end of
-// program. See documentation of std::exit for local objects with static
+// the program. See documentation of std::exit for local objects with static
 // storage duration.
 struct StaticVarShutdownHandler {
   StaticVarShutdownHandler(const StaticVarShutdownHandler &) = delete;

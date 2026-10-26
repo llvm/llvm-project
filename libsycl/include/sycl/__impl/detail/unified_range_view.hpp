@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains helper function class to unify ABI for different kernel
+/// This file contains a helper class that unifies the ABI for different kernel
 /// ranges.
 ///
 //===----------------------------------------------------------------------===//

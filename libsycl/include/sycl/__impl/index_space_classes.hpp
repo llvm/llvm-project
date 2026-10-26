@@ -30,6 +30,7 @@ class Builder;
 template <typename N, typename T>
 using IntegralType = std::enable_if_t<std::is_integral_v<N>, T>;
 
+/// \internal
 /// Helper class for dimensions data management.
 template <typename Derived, int Dimensions> class IndexSpaceBase {
   static_assert(Dimensions >= 1 && Dimensions <= 3,
@@ -62,25 +63,21 @@ public:
   template <int N = Dimensions, std::enable_if_t<N == 3, bool> = true>
   IndexSpaceBase() : IndexSpaceBase(0, 0, 0) {}
 
-  /// Returns the value for the specified dimension.
-  /// Results in undefined behavior if dimension is not in the range [0,
-  /// Dimensions).
-  /// \param dimension the dimension to return the value for.
-  /// \return the value matching the requested dimension.
+  /// Returns the value for the specified dimension; results in undefined
+  /// behavior if dimension is not in the range [0, Dimensions).
+  ///
+  /// \param dimension is the dimension to return the value for.
+  /// \return the value for \p dimension.
   std::size_t get(int dimension) const noexcept { return MArray[dimension]; }
 
-  /// Returns the value for the specified dimension.
-  /// Results in undefined behavior if dimension is not in the range [0,
-  /// Dimensions).
-  /// \param dimension the dimension to return the value for.
-  /// \return the value matching the requested dimension.
+  /// Returns a reference to the value for the specified dimension; results in
+  /// undefined behavior if dimension is not in the range [0, Dimensions).
+  ///
+  /// \param dimension is the dimension to return the value for.
+  /// \return a reference to the value for \p dimension.
   std::size_t &operator[](int dimension) noexcept { return MArray[dimension]; }
 
-  /// Returns the value for the specified dimension.
-  /// Results in undefined behavior if dimension is not in the range [0,
-  /// Dimensions).
-  /// \param dimension the dimension to return the value for.
-  /// \return the value matching the requested dimension.
+  /// \copydoc get(int) const
   std::size_t operator[](int dimension) const noexcept {
     return MArray[dimension];
   }
@@ -216,10 +213,11 @@ protected:
 
 } // namespace detail
 
-/// SYCL 2020 4.9.1.1. range class.
 /// range<int Dimensions> is a 1D, 2D or 3D vector that defines the iteration
 /// domain of either a single work-group in a parallel dispatch, or the overall
 /// Dimensions of the dispatch.
+///
+/// \sa SYCL 2020 4.9.1.1. range class.
 template <int Dimensions = 1>
 class range : public detail::IndexSpaceBase<range<Dimensions>, Dimensions> {
   static_assert(Dimensions >= 1 && Dimensions <= 3,
@@ -235,7 +233,7 @@ public:
   range<Dimensions> &operator=(range<Dimensions> &&rhs) = default;
 
   /// Constructs a 1D range with value dim0.
-  ///  Only valid when the template parameter Dimensions is equal to 1.
+  /// Only valid when the template parameter Dimensions is equal to 1.
   template <int N = Dimensions, std::enable_if_t<N == 1, bool> = true>
   range(std::size_t dim0) noexcept : Base(dim0) {}
 
@@ -266,7 +264,7 @@ public:
   }
 };
 
-/// c++ deduction guides.
+// C++ deduction guides.
 #ifdef __cpp_deduction_guides
 range(std::size_t) -> range<1>;
 range(std::size_t, std::size_t) -> range<2>;
@@ -275,10 +273,11 @@ range(std::size_t, std::size_t, std::size_t) -> range<3>;
 
 template <int Dimensions = 1, bool WithOffset = true> class item;
 
-/// SYCL 2020 4.9.1.3. id class.
 /// id<int Dimensions> is a vector of Dimensions that is used to represent an id
 /// into a global or local range. It can be used as an index in an accessor of
 /// the same rank.
+///
+/// \sa SYCL 2020 4.9.1.3. id class.
 template <int Dimensions = 1>
 class id : public detail::IndexSpaceBase<id<Dimensions>, Dimensions> {
   static_assert(Dimensions >= 1 && Dimensions <= 3,
@@ -318,39 +317,33 @@ public:
   id(std::size_t dim0, std::size_t dim1, std::size_t dim2) noexcept
       : Base(dim0, dim1, dim2) {}
 
-  /// Constructs an id from the dimensions of range.
-  /// Only valid when the template parameter Dimensions is equal to 1.
+  /// Constructs an id from the dimensions of \p range.
   template <int N = Dimensions, std::enable_if_t<N == 1, bool> = true>
   id(const range<Dimensions> &range) noexcept : Base(range.get(0)) {}
 
-  /// Constructs an id from the dimensions of range.
-  /// Only valid when the template parameter Dimensions is equal to 2.
+  /// Constructs an id from the dimensions of \p range.
   template <int N = Dimensions, std::enable_if_t<N == 2, bool> = true>
   id(const range<Dimensions> &range) noexcept
       : Base(range.get(0), range.get(1)) {}
 
-  /// Constructs an id from the dimensions of range.
-  /// Only valid when the template parameter Dimensions is equal to 3.
+  /// Constructs an id from the dimensions of \p range.
   template <int N = Dimensions, std::enable_if_t<N == 3, bool> = true>
   id(const range<Dimensions> &range) noexcept
       : Base(range.get(0), range.get(1), range.get(2)) {}
 
-  /// Constructs an id from item.get_id().
-  /// Only valid when the template parameter Dimensions is equal to 1.
+  /// Constructs an id from \p item.get_id().
   template <int N = Dimensions, bool WithOffset = true,
             std::enable_if_t<N == 1, bool> = true>
   id(const item<Dimensions, WithOffset> &item) noexcept
       : Base(item.get_id(0)) {}
 
-  /// Constructs an id from item.get_id().
-  /// Only valid when the template parameter Dimensions is equal to 2.
+  /// Constructs an id from \p item.get_id().
   template <int N = Dimensions, bool WithOffset = true,
             std::enable_if_t<N == 2, bool> = true>
   id(const item<Dimensions, WithOffset> &item) noexcept
       : Base(item.get_id(0), item.get_id(1)) {}
 
-  /// Constructs an id from item.get_id().
-  /// Only valid when the template parameter Dimensions is equal to 3.
+  /// Constructs an id from \p item.get_id().
   template <int N = Dimensions, bool WithOffset = true,
             std::enable_if_t<N == 3, bool> = true>
   id(const item<Dimensions, WithOffset> &item) noexcept
@@ -366,8 +359,9 @@ public:
   // Template operator is not allowed because it disables further type
   // conversion. For example, the next code will not work in case of template
   // conversion: int a = id<1>(value);
-  /// Returns the same value as get(0).
-  ///  Available only when: Dimensions == 1.
+  /// Converts this id to its only value; available only when Dimensions == 1.
+  ///
+  /// \return the same value as get(0).
   operator EnableIfT<(Dimensions == 1), std::size_t>() const noexcept {
     return Base::get(0);
   }
@@ -400,16 +394,17 @@ public:
 #undef _LIBSYCL_GEN_OPT
 };
 
-/// c++ deduction guides.
+// C++ deduction guides.
 #ifdef __cpp_deduction_guides
 id(std::size_t) -> id<1>;
 id(std::size_t, std::size_t) -> id<2>;
 id(std::size_t, std::size_t, std::size_t) -> id<3>;
 #endif
 
-/// SYCL 2020 4.9.1.4. item class.
 /// item identifies an instance of the function object executing at each point
 /// in a range.
+///
+/// \sa SYCL 2020 4.9.1.4. item class.
 template <int Dimensions /* = 1*/, bool WithOffset /* = true*/> class item {
   /* Helper class for conversion operator. Void type is not suitable. User
    * cannot even try to get address of the operator PrivateTag(). User
@@ -501,7 +496,7 @@ public:
     return get_id(0);
   }
 
-  /// \return Return the id as a linear index value.
+  /// \return the id as a linear index value.
   std::size_t get_linear_id() const noexcept {
     if constexpr (WithOffset) {
       if constexpr (1 == Dimensions)

@@ -30,6 +30,7 @@ namespace detail {
 
 /// \name  Helpers for unnamed lambdas.
 /// @{
+
 /// This class is the default kernel name template parameter type for kernel
 /// invocation APIs such as single_task.
 class AutoName {};

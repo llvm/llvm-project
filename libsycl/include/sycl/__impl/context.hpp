@@ -44,53 +44,78 @@ template <typename T>
 using is_context_info_desc_t = typename is_info_desc<T, context>::return_type;
 } // namespace detail
 
-// SYCL 2020 4.6.3. Context class
+/// Holds the runtime data structures and state required by a SYCL backend API
+/// to interact with a group of devices associated with a platform.
+///
+/// \sa SYCL 2020 4.6.3. Context class.
 class _LIBSYCL_EXPORT context {
 public:
-  /// Constructs a SYCL context using the device selected by
-  /// default_selector_v.
+  /// Constructs a SYCL context using the device selected by default_selector_v.
+  ///
+  /// \param propList is a list of properties for context construction.
+  /// \throw sycl::exception with sycl::errc::runtime if no device is available.
   explicit context(const property_list &propList = {})
       : context(device{}, propList) {}
 
-  /// Constructs a SYCL context using the device selected by
-  /// default_selector_v.
+  /// \overload
+  ///
+  /// \param asyncHandler receives the asynchronous errors of this context.
+  /// \param propList is a list of properties for context construction.
+  /// \throw sycl::exception with sycl::errc::runtime if no device is available.
   explicit context(async_handler asyncHandler,
                    const property_list &propList = {})
       : context(device{}, asyncHandler, propList) {}
 
-  /// Constructs a SYCL context associated with the platform of \p dev.
+  /// \overload
+  ///
+  /// \param dev is the device the context contains.
+  /// \param propList is a list of properties for context construction.
   explicit context(const device &dev, const property_list &propList = {})
       : context(std::vector<device>{dev}, propList) {}
 
-  /// Constructs a SYCL context associated with the platform of \p dev.
+  /// \overload
+  ///
+  /// \param dev is the device the context contains.
+  /// \param asyncHandler receives the asynchronous errors of this context.
+  /// \param propList is a list of properties for context construction.
   explicit context(const device &dev, async_handler asyncHandler,
                    const property_list &propList = {})
       : context(std::vector<device>{dev}, asyncHandler, propList) {}
 
-  /// Constructs a SYCL context containing all devices in \p plt.
+  /// \overload
   ///
+  /// \param plt is the platform whose devices the context contains.
+  /// \param propList is a list of properties for context construction.
   /// \throw sycl::exception with sycl::errc::invalid if \p plt has no devices.
   explicit context(const platform &plt, const property_list &propList = {})
       : context(plt.get_devices(), propList) {}
 
-  /// Constructs a SYCL context containing all devices in \p plt.
+  /// \overload
   ///
+  /// \param plt is the platform whose devices the context contains.
+  /// \param asyncHandler receives the asynchronous errors of this context.
+  /// \param propList is a list of properties for context construction.
   /// \throw sycl::exception with sycl::errc::invalid if \p plt has no devices.
   explicit context(const platform &plt, async_handler asyncHandler,
                    const property_list &propList = {})
       : context(plt.get_devices(), asyncHandler, propList) {}
 
-  /// Constructs a SYCL context associated with each device in \p deviceList.
-  /// All devices in \p deviceList must belong to the same platform.
+  /// \overload
   ///
+  /// \param deviceList are the devices the context contains; they must all be
+  /// associated with the same platform.
+  /// \param propList is a list of properties for context construction.
   /// \throw sycl::exception with sycl::errc::invalid if \p deviceList is empty.
   explicit context(const std::vector<device> &deviceList,
                    const property_list &propList = {})
       : context(deviceList, detail::defaultAsyncHandler, propList) {}
 
-  /// Constructs a SYCL context associated with each device in \p deviceList.
-  /// All devices in \p deviceList must belong to the same platform.
+  /// \overload
   ///
+  /// \param deviceList are the devices the context contains; they must all be
+  /// associated with the same platform.
+  /// \param asyncHandler receives the asynchronous errors of this context.
+  /// \param propList is a list of properties for context construction.
   /// \throw sycl::exception with sycl::errc::invalid if \p deviceList is empty.
   explicit context(const std::vector<device> &deviceList,
                    async_handler asyncHandler,
@@ -123,15 +148,12 @@ public:
   /// \return a vector of valid SYCL devices associated with this SYCL context.
   std::vector<device> get_devices() const;
 
-  /// Queries this SYCL context for information.
-  ///
-  /// The return type depends on information being queried.
+  /// \return the value of the context information descriptor Param.
   template <typename Param>
   detail::is_context_info_desc_t<Param> get_info() const;
 
-  /// Queries this SYCL context for SYCL backend-specific information.
-  ///
-  /// The return type depends on information being queried.
+  /// \return the value of the SYCL backend-specific information descriptor
+  /// Param of this context.
   template <typename Param>
   typename Param::return_type get_backend_info() const;
 
