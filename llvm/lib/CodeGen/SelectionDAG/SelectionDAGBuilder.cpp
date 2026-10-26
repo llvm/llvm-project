@@ -3655,21 +3655,26 @@ void SelectionDAGBuilder::visitCallBr(const CallBrInst &I) {
 
   // Update successor info.
   addSuccessorWithProb(CallBrMBB, Return, BranchProbability::getOne());
+
   // TODO: For most of the cases where there is an intrinsic callbr, we're
   // having exactly one indirect target, which will be unreachable. As soon as
   // this changes, we might need to enhance
   // Target->setIsInlineAsmBrIndirectTarget or add something similar for
   // intrinsic indirect branches.
-  if (I.isInlineAsm()) {
+
+  // An asm that failed to lower, which reported an error, has no INLINEASM_BR
+  // to branch to the indirect targets.
+  if (I.isInlineAsm() && FuncInfo.CallBrOutputRegs.contains(&I)) {
     for (BasicBlock *Dest : I.getIndirectDests()) {
       MachineBasicBlock *Target = FuncInfo.getMBB(Dest);
       Target->setIsInlineAsmBrIndirectTarget();
-      // If we introduce a type of asm goto statement that is permitted to use
-      // an indirect call instruction to jump to its labels, then we should add
-      // a call to Target->setMachineBlockAddressTaken() here, to mark the
-      // target block as requiring a BTI.
-
       Target->setLabelMustBeEmitted();
+
+      // TODO: If we introduce a type of asm goto statement that is permitted
+      // to use an indirect call instruction to jump to its labels, then we
+      // should add a call to Target->setMachineBlockAddressTaken() here, to
+      // mark the target block as requiring a BTI.
+
       // Don't add duplicate machine successors.
       if (Dests.insert(Dest).second)
         addSuccessorWithProb(CallBrMBB, Target, BranchProbability::getZero());
@@ -10900,6 +10905,71 @@ determineConstraints(ConstraintDecisionInfo &Info,
   return prepareDAGLevelOperands(Info, Call, Builder, TLI, DAG);
 }
 
+/// Return the result of inline asm call \p Call from \p Outputs, the values of
+/// its direct outputs in order, each converted to the type of its result.
+static SDValue getInlineAsmResult(const CallBase &Call,
+                                  ArrayRef<SDValue> Outputs, const SDLoc &DL,
+                                  SelectionDAG &DAG) {
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  llvm::Type *CallResultType = Call.getType();
+  ArrayRef<Type *> ResultTypes;
+  if (StructType *StructResult = dyn_cast<StructType>(CallResultType))
+    ResultTypes = StructResult->elements();
+  else if (!CallResultType->isVoidTy())
+    ResultTypes = ArrayRef(CallResultType);
+
+  SmallVector<EVT, 1> ResultVTs;
+  SmallVector<SDValue, 1> ResultValues;
+  auto CurResultType = ResultTypes.begin();
+  auto handleRegAssign = [&](SDValue V) {
+    assert(CurResultType != ResultTypes.end() && "Unexpected value");
+    assert((*CurResultType)->isSized() && "Unexpected unsized type");
+    EVT ResultVT = TLI.getValueType(DAG.getDataLayout(), *CurResultType);
+    ++CurResultType;
+
+    // If the type of the inline asm call site return value is different, but
+    // has the same size as the type of the asm output, bitcast it.  One
+    // example of this is for vectors with different width / number of
+    // elements.  This can happen for register classes that can contain
+    // multiple different value types.  The PReg or VReg allocated may not have
+    // the same VT as was  expected.
+    //
+    // This can also happen for a return value that disagrees with the register
+    // class it is put in, e.g. a double in a general-purpose register on a
+    // 32-bit machine.
+    if (ResultVT != V.getValueType() &&
+        ResultVT.getSizeInBits() == V.getValueSizeInBits()) {
+      V = DAG.getNode(ISD::BITCAST, DL, ResultVT, V);
+    } else if (ResultVT != V.getValueType() && ResultVT.isInteger() &&
+               V.getValueType().isInteger()) {
+      // If a result value was tied to an input value, the computed result
+      // may have a wider width than the expected result.  Extract the
+      // relevant portion.
+      V = DAG.getNode(ISD::TRUNCATE, DL, ResultVT, V);
+    }
+
+    assert(ResultVT == V.getValueType() && "Asm result value mismatch!");
+    ResultVTs.push_back(ResultVT);
+    ResultValues.push_back(V);
+  };
+
+  for (SDValue Val : Outputs) {
+    if (Val.getOpcode() == ISD::MERGE_VALUES) {
+      for (const SDValue &V : Val->op_values())
+        handleRegAssign(V);
+    } else {
+      handleRegAssign(Val);
+    }
+  }
+
+  assert(CurResultType == ResultTypes.end() &&
+         "Mismatch in number of ResultTypes");
+  assert(ResultValues.size() == ResultTypes.size() &&
+         "Mismatch in number of output operands in asm result");
+  return DAG.getNode(ISD::MERGE_VALUES, DL, DAG.getVTList(ResultVTs),
+                     ResultValues);
+}
+
 /// visitInlineAsm - Handle a call to an InlineAsm object.
 void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
                                          const BasicBlock *EHPadBB) {
@@ -10932,47 +11002,13 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
 
   // Do additional work to generate outputs.
 
-  SmallVector<EVT, 1> ResultVTs;
-  SmallVector<SDValue, 1> ResultValues;
+  SmallVector<SDValue, 1> OutputValues;
   SmallVector<SDValue, 8> OutChains;
 
-  llvm::Type *CallResultType = Call.getType();
-  ArrayRef<Type *> ResultTypes;
-  if (StructType *StructResult = dyn_cast<StructType>(CallResultType))
-    ResultTypes = StructResult->elements();
-  else if (!CallResultType->isVoidTy())
-    ResultTypes = ArrayRef(CallResultType);
-
-  auto CurResultType = ResultTypes.begin();
-  auto handleRegAssign = [&](SDValue V) {
-    assert(CurResultType != ResultTypes.end() && "Unexpected value");
-    assert((*CurResultType)->isSized() && "Unexpected unsized type");
-    EVT ResultVT = TLI.getValueType(DAG.getDataLayout(), *CurResultType);
-    ++CurResultType;
-    // If the type of the inline asm call site return value is different but has
-    // same size as the type of the asm output bitcast it.  One example of this
-    // is for vectors with different width / number of elements.  This can
-    // happen for register classes that can contain multiple different value
-    // types.  The preg or vreg allocated may not have the same VT as was
-    // expected.
-    //
-    // This can also happen for a return value that disagrees with the register
-    // class it is put in, eg. a double in a general-purpose register on a
-    // 32-bit machine.
-    if (ResultVT != V.getValueType() &&
-        ResultVT.getSizeInBits() == V.getValueSizeInBits())
-      V = DAG.getNode(ISD::BITCAST, getCurSDLoc(), ResultVT, V);
-    else if (ResultVT != V.getValueType() && ResultVT.isInteger() &&
-             V.getValueType().isInteger()) {
-      // If a result value was tied to an input value, the computed result
-      // may have a wider width than the expected result.  Extract the
-      // relevant portion.
-      V = DAG.getNode(ISD::TRUNCATE, getCurSDLoc(), ResultVT, V);
-    }
-    assert(ResultVT == V.getValueType() && "Asm result value mismatch!");
-    ResultVTs.push_back(ResultVT);
-    ResultValues.push_back(V);
-  };
+  // The indirect targets of a callbr read its outputs from the registers that
+  // the INLINEASM_BR defines.
+  SmallVector<Register, 4> *CallBrOutputRegs =
+      IsCallBr ? &FuncInfo.CallBrOutputRegs[&Call] : nullptr;
 
   // Deal with output operands.
   for (SDISelAsmOperandInfo &OpInfo : Info.ConstraintOperands) {
@@ -11011,26 +11047,18 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
       } else {
         // generate CopyFromRegs to associated registers.
         assert(!Call.getType()->isVoidTy() && "Bad inline asm!");
-        if (Val.getOpcode() == ISD::MERGE_VALUES) {
-          for (const SDValue &V : Val->op_values())
-            handleRegAssign(V);
-        } else
-          handleRegAssign(Val);
+        OutputValues.push_back(Val);
+        if (CallBrOutputRegs &&
+            (OpInfo.ConstraintType == TargetLowering::C_Register ||
+             OpInfo.ConstraintType == TargetLowering::C_RegisterClass))
+          llvm::append_range(*CallBrOutputRegs, OpInfo.AssignedRegs.Regs);
       }
     }
   }
 
   // Set results.
-  if (!ResultValues.empty()) {
-    assert(CurResultType == ResultTypes.end() &&
-           "Mismatch in number of ResultTypes");
-    assert(ResultValues.size() == ResultTypes.size() &&
-           "Mismatch in number of output operands in asm result");
-
-    SDValue V = DAG.getNode(ISD::MERGE_VALUES, getCurSDLoc(),
-                            DAG.getVTList(ResultVTs), ResultValues);
-    setValue(&Call, V);
-  }
+  if (!OutputValues.empty())
+    setValue(&Call, getInlineAsmResult(Call, OutputValues, getCurSDLoc(), DAG));
 
   // Collect store chains.
   if (!OutChains.empty())
@@ -11040,7 +11068,7 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
     Chain = lowerEndEH(Chain, II, EHPadBB, Info.BeginLabel);
 
   // Only Update Root if inline assembly has a memory effect.
-  if (ResultValues.empty() || Info.HasSideEffect || !OutChains.empty() ||
+  if (OutputValues.empty() || Info.HasSideEffect || !OutChains.empty() ||
       IsCallBr || isa<InvokeInst>(Call))
     DAG.setRoot(Chain);
 }
@@ -13277,46 +13305,35 @@ void SelectionDAGBuilder::visitVectorSplice(const CallInst &I) {
 // increase in virtreg number from there. If a callbr has no outputs, then it
 // should not have a corresponding callbr landingpad; in fact, the callbr
 // landingpad would not even be able to refer to such a callbr.
-static Register FollowCopyChain(MachineRegisterInfo &MRI, Register Reg) {
-  MachineInstr *MI = MRI.def_begin(Reg)->getParent();
-  // There is definitely at least one copy.
-  assert(MI->getOpcode() == TargetOpcode::COPY &&
-         "start of copy chain MUST be COPY");
-  Reg = MI->getOperand(1).getReg();
-
-  // If the copied register in the first copy must be virtual.
-  assert(Reg.isVirtual() && "expected COPY of virtual register");
-  MI = MRI.def_begin(Reg)->getParent();
-
-  // There may be an optional second copy.
-  if (MI->getOpcode() == TargetOpcode::COPY) {
-    assert(Reg.isVirtual() && "expected COPY of virtual register");
-    Reg = MI->getOperand(1).getReg();
-    assert(Reg.isPhysical() && "expected COPY of physical register");
-  } else {
-    // The start of the chain must be an INLINEASM_BR.
-    assert(MI->getOpcode() == TargetOpcode::INLINEASM_BR &&
-           "end of copy chain MUST be INLINEASM_BR");
-  }
-
-  return Reg;
-}
-
-// We must do this walk rather than the simpler
+//
+// Read the outputs from the registers that the INLINEASM_BR defines them in,
+// rather than the simpler
 //   setValue(&I, getCopyFromRegs(CBR, CBR->getType()));
 // otherwise we will end up with copies of virtregs only valid along direct
 // edges.
 void SelectionDAGBuilder::visitCallBrLandingPad(const CallInst &I) {
-  SmallVector<EVT, 8> ResultVTs;
-  SmallVector<SDValue, 8> ResultValues;
   const auto *CBR =
       cast<CallBrInst>(I.getParent()->getUniquePredecessor()->getTerminator());
 
+  // If the asm failed to lower, which reported an error, then nothing branches
+  // here.
+  auto It = FuncInfo.CallBrOutputRegs.find(CBR);
+  if (It == FuncInfo.CallBrOutputRegs.end()) {
+    SmallVector<EVT, 1> ValueVTs;
+    ComputeValueVTs(DAG.getTargetLoweringInfo(), DAG.getDataLayout(),
+                    I.getType(), ValueVTs);
+    SmallVector<SDValue, 1> Ops;
+    for (EVT VT : ValueVTs)
+      Ops.push_back(DAG.getUNDEF(VT));
+    setValue(&I, DAG.getMergeValues(Ops, getCurSDLoc()));
+    return;
+  }
+
+  SmallVector<SDValue, 8> OutputValues;
+  ArrayRef<Register> OutputRegs = It->second;
+
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   const TargetRegisterInfo *TRI = DAG.getSubtarget().getRegisterInfo();
-  MachineRegisterInfo &MRI = DAG.getMachineFunction().getRegInfo();
-
-  Register InitialDef = FuncInfo.ValueMap[CBR];
   SDValue Chain = DAG.getRoot();
 
   // Re-parse the asm constraints string.
@@ -13324,7 +13341,7 @@ void SelectionDAGBuilder::visitCallBrLandingPad(const CallInst &I) {
       TLI.ParseConstraints(DAG.getDataLayout(), TRI, *CBR);
   for (auto &T : TargetConstraints) {
     SDISelAsmOperandInfo OpInfo(T);
-    if (OpInfo.Type != InlineAsm::isOutput)
+    if (OpInfo.Type != InlineAsm::isOutput || OpInfo.isIndirect)
       continue;
 
     // Pencil in OpInfo.ConstraintType and OpInfo.ConstraintVT based on the
@@ -13340,33 +13357,28 @@ void SelectionDAGBuilder::visitCallBrLandingPad(const CallInst &I) {
       // getRegistersForValue may produce 1 to many registers based on whether
       // the OpInfo.ConstraintVT is legal on the target or not.
       for (Register &Reg : OpInfo.AssignedRegs.Regs) {
-        Register OriginalDef = FollowCopyChain(MRI, InitialDef++);
-        if (OriginalDef.isPhysical())
-          FuncInfo.MBB->addLiveIn(OriginalDef);
-        // Update the assigned registers to use the original defs.
-        Reg = OriginalDef;
+        assert(!OutputRegs.empty() && "Missing callbr output register");
+        Reg = OutputRegs.consume_front();
+        if (Reg.isPhysical())
+          FuncInfo.MBB->addLiveIn(Reg);
       }
 
-      SDValue V = OpInfo.AssignedRegs.getCopyFromRegs(
-          DAG, FuncInfo, getCurSDLoc(), Chain, nullptr, CBR);
-      ResultValues.push_back(V);
-      ResultVTs.push_back(OpInfo.ConstraintVT);
+      OutputValues.push_back(OpInfo.AssignedRegs.getCopyFromRegs(
+          DAG, FuncInfo, getCurSDLoc(), Chain, nullptr, CBR));
       break;
     }
+    case TargetLowering::C_Immediate:
     case TargetLowering::C_Other: {
       SDValue Flag;
-      SDValue V = TLI.LowerAsmOutputForConstraint(Chain, Flag, getCurSDLoc(),
-                                                  OpInfo, DAG);
-      ++InitialDef;
-      ResultValues.push_back(V);
-      ResultVTs.push_back(OpInfo.ConstraintVT);
+      OutputValues.push_back(TLI.LowerAsmOutputForConstraint(
+          Chain, Flag, getCurSDLoc(), OpInfo, DAG));
       break;
     }
     default:
       break;
     }
   }
-  SDValue V = DAG.getNode(ISD::MERGE_VALUES, getCurSDLoc(),
-                          DAG.getVTList(ResultVTs), ResultValues);
-  setValue(&I, V);
+
+  assert(OutputRegs.empty() && "Unused callbr output register");
+  setValue(&I, getInlineAsmResult(*CBR, OutputValues, getCurSDLoc(), DAG));
 }
