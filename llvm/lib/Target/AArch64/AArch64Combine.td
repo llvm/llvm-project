@@ -446,11 +446,16 @@ def ubfx_sign_bit_to_lshr : GICombineRule<
   (match (G_CONSTANT $lsb, $lsbimm),
          (G_UBFX $dst, $src, $lsb, 1):$root,
          [{ LLT Ty = MRI.getType(${dst}.getReg());
-            uint64_t Lsb = ${lsbimm}.getCImm()->getZExtValue();
-            return Ty.isScalar() && Lsb < Ty.getSizeInBits() &&
+            unsigned BitWidth = Ty.getSizeInBits();
+            const APInt &Lsb = ${lsbimm}.getCImm()->getValue();
+            return Ty.isScalar() && Lsb.ult(BitWidth) &&
                    VT->computeNumSignBits(${src}.getReg()) >=
-                       Ty.getSizeInBits() - Lsb; }]),
-  (apply [{ applyUBFXSignBitToLShr(*${root}, MRI, B); }])>;
+                       BitWidth - Lsb.getZExtValue(); }]),
+  (apply [{ B.setInstrAndDebugLoc(*${root});
+            unsigned BitWidth = MRI.getType(${dst}.getReg()).getSizeInBits();
+            auto Amt = B.buildConstant(LLT::integer(64), BitWidth - 1);
+            B.buildLShr(${dst}.getReg(), ${src}.getReg(), Amt);
+            ${root}->eraseFromParent(); }])>;
 
 // Post-legalization combines which are primarily optimizations.
 def AArch64PostLegalizerCombiner
