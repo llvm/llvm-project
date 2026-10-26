@@ -3,6 +3,11 @@
 // RUN: %clangxx %t/main.cpp -o %t/main
 // RUN: env LD_PRELOAD=%t/shared.so %run %t/main
 
+// On Android, %t/main is the host android_run.py wrapper script, so
+// `env LD_PRELOAD=%t/shared.so` preloads the target DSO into the host process
+// (and android_run.py does not forward LD_PRELOAD to the device).
+// UNSUPPORTED: android
+
 //--- shared.c
 #include <dirent.h>
 
