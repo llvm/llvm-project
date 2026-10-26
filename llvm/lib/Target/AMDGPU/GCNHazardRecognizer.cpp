@@ -1772,7 +1772,7 @@ static bool isFastForwardProducerForSGPR_VCC(const MachineInstr &MI,
 // Exempt only known condition/carry inputs from the two-state scalar-data
 // wait. Unlisted opcodes retain the wait even if they have Boolean inputs.
 static bool isFastForwardConsumerForSGPR_VCC(const MachineInstr &MI,
-                                    const MachineOperand &Use) {
+                                             const MachineOperand &Use) {
   switch (MI.getOpcode()) {
   case AMDGPU::V_CNDMASK_B32_e32:
   case AMDGPU::V_CNDMASK_B32_dpp:
