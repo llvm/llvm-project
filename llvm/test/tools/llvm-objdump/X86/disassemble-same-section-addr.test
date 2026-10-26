@@ -112,3 +112,46 @@ Symbols:
   - Name:    second
     Section: .second
     Value:   [[SYMVAL2]]
+
+## Two sections at the same address, the larger one (e.g. a NOBITS section
+## placed over code) with a symbol at its start. The closest preceding symbol
+## is used, whichever candidate section it is in; on a tie, the non-BSS section
+## wins.
+# RUN: yaml2obj %s --docnum=3 -o %t12
+# RUN: llvm-objdump -d %t12 | FileCheck %s --check-prefix=CLOSEST
+
+# CLOSEST: callq 0x11 <start+0x1>
+# CLOSEST: callq 0x12 <callee>
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:    .caller
+    Type:    SHT_PROGBITS
+    Flags:   [SHF_ALLOC, SHF_EXECINSTR]
+    Address: 0x0
+    Content: e80c000000e808000000 ## Call instructions to 0x11 and 0x12.
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [SHF_ALLOC, SHF_EXECINSTR]
+    Address: 0x10
+    Content: 90909090
+  - Name:    .dummy
+    Type:    SHT_NOBITS
+    Flags:   [SHF_ALLOC, SHF_WRITE]
+    Address: 0x10
+    Size:    0x100
+Symbols:
+  - Name:    start
+    Section: .text
+    Value:   0x10
+  - Name:    callee
+    Section: .text
+    Value:   0x12
+  - Name:    dummy_start
+    Section: .dummy
+    Value:   0x10

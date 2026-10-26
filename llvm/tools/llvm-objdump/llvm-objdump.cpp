@@ -2589,6 +2589,7 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
               // relocatable case yet.
               std::vector<const SectionSymbolsTy *> TargetSectionSymbols;
               if (!Obj.isRelocatableObject()) {
+                std::vector<const SectionSymbolsTy *> BSSSectionSymbols;
                 auto It = llvm::partition_point(
                     SectionAddresses,
                     [=](const std::pair<uint64_t, SectionRef> &O) {
@@ -2601,36 +2602,46 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
                     TargetSecAddr = It->first;
                   if (It->first != TargetSecAddr)
                     break;
-                  TargetSectionSymbols.push_back(&AllSymbols[It->second]);
+                  (It->second.isBSS() ? BSSSectionSymbols
+                                      : TargetSectionSymbols)
+                      .push_back(&AllSymbols[It->second]);
                 }
+                llvm::append_range(TargetSectionSymbols, BSSSectionSymbols);
               } else {
                 TargetSectionSymbols.push_back(&Symbols);
               }
-              TargetSectionSymbols.push_back(&AbsoluteSymbols);
 
-              // Find the last symbol in the first candidate section whose
-              // offset is less than or equal to the target. If there are no
-              // such symbols, try in the next section and so on, before finally
-              // using the nearest preceding absolute symbol (if any), if there
-              // are no other valid symbols.
-              const SymbolInfoTy *TargetSym = nullptr;
-              for (const SectionSymbolsTy *TargetSymbols :
-                   TargetSectionSymbols) {
-                auto It = llvm::partition_point(
-                    *TargetSymbols,
-                    [=](const SymbolInfoTy &O) { return O.Addr <= Target; });
-                while (It != TargetSymbols->begin()) {
+              // Find the last symbol whose offset is less than or equal to the
+              // target, skipping mapping symbols to avoid possible ambiguity as
+              // they do not allow uniquely identifying the target address.
+              auto FindPrecedingSymbol =
+                  [=](const SectionSymbolsTy &Syms) -> const SymbolInfoTy * {
+                auto It =
+                    llvm::partition_point(Syms, [=](const SymbolInfoTy &O) {
+                      return O.Addr <= Target;
+                    });
+                while (It != Syms.begin()) {
                   --It;
-                  // Skip mapping symbols to avoid possible ambiguity as they
-                  // do not allow uniquely identifying the target address.
-                  if (!It->IsMappingSymbol) {
-                    TargetSym = &*It;
-                    break;
-                  }
+                  if (!It->IsMappingSymbol)
+                    return &*It;
                 }
-                if (TargetSym)
-                  break;
-              }
+                return nullptr;
+              };
+
+              // Several candidate sections may share a start address (e.g. a
+              // NOBITS section placed over a code section), so use the closest
+              // preceding symbol from any of them; on a tie, the earlier
+              // candidate wins, and BSS sections come last so that code is
+              // labelled with code symbols. Use the nearest preceding absolute
+              // symbol (if any) only if there are no other valid symbols.
+              const SymbolInfoTy *TargetSym = nullptr;
+              for (const SectionSymbolsTy *TargetSymbols : TargetSectionSymbols)
+                if (const SymbolInfoTy *Sym =
+                        FindPrecedingSymbol(*TargetSymbols))
+                  if (!TargetSym || Sym->Addr > TargetSym->Addr)
+                    TargetSym = Sym;
+              if (!TargetSym)
+                TargetSym = FindPrecedingSymbol(AbsoluteSymbols);
 
               // Branch targets are printed just after the instructions.
               // Print the labels corresponding to the target if there's any.
