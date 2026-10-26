@@ -27,7 +27,8 @@ def OryonModel : SchedMachineModel {
                                                     SMEUnsupported.F,
                                                     MTEUnsupported.F,
                                                     PAUnsupported.F,
-                                                    [HasPAuth, HasCSSC, HasMOPS, HasMOPS_GO]);
+                                                    [HasPAuth, HasCSSC, HasMOPS, HasMOPS_GO,
+                                                     HasFPv2]);
 }
 
 let SchedModel = OryonModel in {

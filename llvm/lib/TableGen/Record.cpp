@@ -2422,6 +2422,13 @@ const DefInit *VarDefInit::instantiate() {
 }
 
 const Init *VarDefInit::resolveReferences(Resolver &R) const {
+  bool CachedUnresolved = false;
+  if (const Init *Cached = R.getCachedResult(this, CachedUnresolved)) {
+    if (CachedUnresolved)
+      R.noteUnresolved();
+    return Cached;
+  }
+
   TrackUnresolvedResolver UR(&R);
   bool Changed = false;
   SmallVector<const ArgumentInit *, 8> NewArgs;
@@ -2433,13 +2440,16 @@ const Init *VarDefInit::resolveReferences(Resolver &R) const {
     Changed |= NewArg != Arg;
   }
 
+  const Init *Result = this;
   if (Changed) {
     auto *New = VarDefInit::get(Loc, Class, NewArgs);
-    if (!UR.foundUnresolved())
-      return const_cast<VarDefInit *>(New)->instantiate();
-    return New;
+    if (UR.foundUnresolved())
+      Result = New;
+    else
+      Result = const_cast<VarDefInit *>(New)->instantiate();
   }
-  return this;
+  R.cacheResult(this, Result, UR.foundUnresolved());
+  return Result;
 }
 
 const Init *VarDefInit::Fold() const {
@@ -2755,11 +2765,7 @@ std::string RecordVal::getPrintType() const {
 }
 
 bool RecordVal::setValue(const Init *V) {
-  if (!V) {
-    Value = nullptr;
-    return false;
-  }
-
+  assert(V && "Cannot set a null value");
   const Init *NewValue = V->getCastTo(getType());
   if (!NewValue)
     return true;
@@ -2792,10 +2798,7 @@ LLVM_DUMP_METHOD void RecordVal::dump() const { errs() << *this; }
 
 void RecordVal::print(raw_ostream &OS, bool PrintSem) const {
   if (isNonconcreteOK()) OS << "field ";
-  OS << getPrintType() << " " << getNameInitAsString();
-
-  if (getValue())
-    OS << " = " << *getValue();
+  OS << getPrintType() << " " << getNameInitAsString() << " = " << *getValue();
 
   if (PrintSem) OS << ";\n";
 }
@@ -2862,21 +2865,19 @@ void Record::resolveReferences(Resolver &R, const RecordVal *SkipVal) {
   for (RecordVal &Value : Values) {
     if (SkipVal == &Value) // Skip resolve the same field as the given one
       continue;
-    if (const Init *V = Value.getValue()) {
-      const Init *VR = V->resolveReferences(R);
-      if (Value.setValue(VR)) {
-        std::string Type;
-        if (const auto *VRT = dyn_cast<TypedInit>(VR))
-          Type =
-              (Twine("of type '") + VRT->getType()->getAsString() + "' ").str();
-        PrintFatalError(
-            getLoc(),
-            Twine("Invalid value ") + Type + "found when setting field '" +
-                Value.getNameInitAsString() + "' of type '" +
-                Value.getType()->getAsString() +
-                "' after resolving references: " + VR->getAsUnquotedString() +
-                "\n");
-      }
+    const Init *VR = Value.getValue()->resolveReferences(R);
+    if (Value.setValue(VR)) {
+      std::string Type;
+      if (const auto *VRT = dyn_cast<TypedInit>(VR))
+        Type =
+            (Twine("of type '") + VRT->getType()->getAsString() + "' ").str();
+      PrintFatalError(
+          getLoc(),
+          Twine("Invalid value ") + Type + "found when setting field '" +
+              Value.getNameInitAsString() + "' of type '" +
+              Value.getType()->getAsString() +
+              "' after resolving references: " + VR->getAsUnquotedString() +
+              "\n");
     }
   }
 
@@ -2950,7 +2951,7 @@ SMLoc Record::getFieldLoc(StringRef FieldName) const {
 
 const Init *Record::getValueInit(StringRef FieldName) const {
   const RecordVal *R = getValue(FieldName);
-  if (!R || !R->getValue())
+  if (!R)
     PrintFatalError(getLoc(), "Record `" + getName() +
       "' does not have a field named `" + FieldName + "'!\n");
   return R->getValue();
@@ -2967,7 +2968,7 @@ StringRef Record::getValueAsString(StringRef FieldName) const {
 std::optional<StringRef>
 Record::getValueAsOptionalString(StringRef FieldName) const {
   const RecordVal *R = getValue(FieldName);
-  if (!R || !R->getValue())
+  if (!R)
     return std::nullopt;
   if (isa<UnsetInit>(R->getValue()))
     return std::nullopt;
@@ -3155,11 +3156,11 @@ LLVM_DUMP_METHOD void RecordKeeper::dump() const { errs() << *this; }
 
 raw_ostream &llvm::operator<<(raw_ostream &OS, const RecordKeeper &RK) {
   OS << "------------- Classes -----------------\n";
-  for (const auto &[_, C] : RK.getClasses())
+  for (const Record *C : RK.getClasses())
     OS << "class " << *C;
 
   OS << "------------- Defs -----------------\n";
-  for (const auto &[_, D] : RK.getDefs())
+  for (const Record *D : RK.getDefs())
     OS << "def " << *D;
   return OS;
 }
@@ -3180,27 +3181,100 @@ RecordKeeper::getAllDerivedDefinitions(StringRef ClassName) const {
   return Iter->second;
 }
 
+// Return the records in Map sorted by name. Records are never removed, so
+// Sorted is out of date if its size differs.
+static ArrayRef<const Record *>
+getSortedRecords(const StringMap<std::unique_ptr<Record>> &Map,
+                 std::vector<const Record *> &Sorted) {
+  if (Sorted.size() != Map.size()) {
+    Sorted.clear();
+    Sorted.reserve(Map.size());
+    for (const auto &Entry : Map)
+      Sorted.push_back(Entry.second.get());
+    llvm::sort(Sorted, [](const Record *LHS, const Record *RHS) {
+      return LHS->getName() < RHS->getName();
+    });
+  }
+  return Sorted;
+}
+
+ArrayRef<const Record *> RecordKeeper::getClasses() const {
+  return getSortedRecords(Classes, SortedClasses);
+}
+
+ArrayRef<const Record *> RecordKeeper::getDefs() const {
+  return getSortedRecords(Defs, SortedDefs);
+}
+
+// Return true if R is a subclass of Class, like R->isSubClassOf(Class), and
+// remember the result for each class visited in Memo.
+namespace {
+// Answers R->isSubClassOf(Class) for many records. Many records share
+// superclasses, so remember the answer for each superclass instead of
+// searching its superclasses again.
+class SubClassOfCache {
+  const Record *Class;
+  DenseMap<const Record *, bool> SuperClassResults;
+
+public:
+  explicit SubClassOfCache(const Record *Class) : Class(Class) {}
+
+  // Return true if SC is Class or a subclass of it.
+  bool isSuperClassSubClassOf(const Record *SC) {
+    if (SC == Class)
+      return true;
+    if (auto It = SuperClassResults.find(SC); It != SuperClassResults.end())
+      return It->second;
+
+    // isSubClassOf may add to SuperClassResults, so insert afterwards.
+    bool Result = isSubClassOf(SC);
+    SuperClassResults.try_emplace(SC, Result);
+    return Result;
+  }
+
+  bool isSubClassOf(const Record *R) {
+    for (const Record *SC : make_first_range(R->getDirectSuperClasses())) {
+      if (isSuperClassSubClassOf(SC))
+        return true;
+    }
+
+    return false;
+  }
+};
+} // namespace
+
 std::vector<const Record *>
 RecordKeeper::getAllDerivedDefinitions(ArrayRef<StringRef> ClassNames) const {
-  SmallVector<const Record *, 2> ClassRecs;
-  std::vector<const Record *> Defs;
+  SmallVector<SubClassOfCache, 2> Classes;
+  std::vector<const Record *> Derived;
 
   assert(ClassNames.size() > 0 && "At least one class must be passed.");
   for (StringRef ClassName : ClassNames) {
     const Record *Class = getClass(ClassName);
     if (!Class)
       PrintFatalError("The class '" + ClassName + "' is not defined\n");
-    ClassRecs.push_back(Class);
+    Classes.emplace_back(Class);
   }
 
-  for (const auto &OneDef : getDefs()) {
-    if (all_of(ClassRecs, [&OneDef](const Record *Class) {
-          return OneDef.second->isSubClassOf(Class);
-        }))
-      Defs.push_back(OneDef.second.get());
+  // Find the defs derived from the first class through their direct
+  // superclasses, which there are far fewer of than defs. The iteration order
+  // doesn't matter since the result is sorted.
+  for (const auto &[SC, SCDefs] : DefsByDirectSuperClass) {
+    if (!Classes.front().isSuperClassSubClassOf(SC))
+      continue;
+
+    for (const Record *Def : SCDefs) {
+      if (all_of(drop_begin(Classes),
+                 [Def](SubClassOfCache &C) { return C.isSubClassOf(Def); }))
+        Derived.push_back(Def);
+    }
   }
-  llvm::sort(Defs, LessRecord());
-  return Defs;
+
+  // A def is found once for each of its direct superclasses derived from the
+  // first class.
+  llvm::sort(Derived, LessRecord());
+  Derived.erase(llvm::unique(Derived), Derived.end());
+  return Derived;
 }
 
 ArrayRef<const Record *>
@@ -3225,7 +3299,9 @@ const Init *MapResolver::resolve(const Init *VarName) {
     // Resolve mutual references among the mapped variables, but prevent
     // infinite recursion.
     Map.erase(It);
+    ++NumInProgress;
     I = I->resolveReferences(*this);
+    --NumInProgress;
     Map[VarName] = {I, true};
   }
 
