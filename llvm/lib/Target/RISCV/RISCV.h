@@ -247,8 +247,15 @@ public:
 FunctionPass *createRISCVMoveMergeLegacyPass();
 void initializeRISCVMoveMergeLegacyPass(PassRegistry &);
 
-FunctionPass *createRISCVPushPopOptimizationPass();
-void initializeRISCVPushPopOptPass(PassRegistry &);
+class RISCVPushPopOptPass : public OptionalPassInfoMixin<RISCVPushPopOptPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createRISCVPushPopOptLegacyPass();
+void initializeRISCVPushPopOptLegacyPass(PassRegistry &);
+
 FunctionPass *createRISCVLoadStoreOptPass();
 void initializeRISCVLoadStoreOptPass(PassRegistry &);
 
