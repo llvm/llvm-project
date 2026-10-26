@@ -241,14 +241,18 @@ void CSPreInliner::processFunction(const FunctionId Name) {
   ProfiledCandidateQueue CQueue;
   getInlineCandidates(CQueue, FSamples);
 
+  // Candidates left out because the size budget is spent.
+  SmallVector<ProfiledInlineCandidate> OverBudget;
   while (!CQueue.empty()) {
-    // Inlines always_inline callees regardless of the budget.
-    if (FuncFinalSize >= SizeLimit &&
-        !CQueue.top().CalleeSamples->getContext().hasAttribute(
-            ContextAlwaysInline))
-      break;
     ProfiledInlineCandidate Candidate = CQueue.top();
     CQueue.pop();
+    // Inlines always_inline callees regardless of the budget.
+    if (FuncFinalSize >= SizeLimit &&
+        !Candidate.CalleeSamples->getContext().hasAttribute(
+            ContextAlwaysInline)) {
+      OverBudget.push_back(Candidate);
+      continue;
+    }
     bool ShouldInline = false;
     if ((ShouldInline = shouldInline(Candidate))) {
       // We mark context as inlined as the corresponding context profile
@@ -273,7 +277,7 @@ void CSPreInliner::processFunction(const FunctionId Name) {
                << ", call count:" << Candidate.CallsiteCount << ")\n");
   }
 
-  if (!CQueue.empty()) {
+  if (!OverBudget.empty()) {
     if (SizeLimit == (unsigned)ProfileInlineLimitMax)
       ++PreInlNumCSInlinedHitMaxLimit;
     else if (SizeLimit == (unsigned)ProfileInlineLimitMin)
@@ -283,15 +287,13 @@ void CSPreInliner::processFunction(const FunctionId Name) {
   }
 
   LLVM_DEBUG({
-    if (!CQueue.empty())
+    if (!OverBudget.empty())
       dbgs() << "  Inline candidates ignored due to size limit (inliner "
                 "original size: "
              << FuncSize << ", inliner final size: " << FuncFinalSize
              << ", size limit: " << SizeLimit << ")\n";
 
-    while (!CQueue.empty()) {
-      ProfiledInlineCandidate Candidate = CQueue.top();
-      CQueue.pop();
+    for (const ProfiledInlineCandidate &Candidate : OverBudget) {
       bool WasInlined =
           Candidate.CalleeSamples->getContext().hasAttribute(ContextWasInlined);
       dbgs() << "    "

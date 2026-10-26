@@ -55,6 +55,21 @@
 ; NOBUDGET-NOATTR:       10: 6 _ZL3ordi.__uniq.{{[0-9]+}}:6
 ; NOBUDGET-NOATTR-NOT:  !Attributes: {{[23]}}{{$}}
 
+; When ai is the coldest candidate, the loop goes on past the candidates queued
+; before it once the budget is spent: ni and ord are left out, ai is still
+; inlined. Inputs/cs-preinline-inline-attributes-cold-ai.raw.prof is the profile
+; of the perfscript with the pre-inliner off (--csspgo-preinliner=0
+; --gen-cs-nested-profile=0 --trim-cold-profile=0 --csprof-merge-cold-context=0
+; --profile-summary-cold-count=0), with ai's calls lowered from 34 to 4.
+; RUN: llvm-profgen --format=text --llvm-sample-profile=%S/Inputs/cs-preinline-inline-attributes-cold-ai.raw.prof --binary=%S/Inputs/cs-preinline-inline-attributes.perfbin --output=%t --profile-summary-cold-count=0 --sample-profile-inline-limit-min=0 --sample-profile-inline-limit-max=0
+; RUN: FileCheck %s --input-file %t --check-prefix=NOBUDGET-COLD
+
+; NOBUDGET-COLD:      main:4192:0
+; NOBUDGET-COLD:       5: _ZL2aii.__uniq.{{[0-9]+}}:3966
+; NOBUDGET-COLD:        !Attributes: 11
+; NOBUDGET-COLD:      ni:22:22
+; NOBUDGET-COLD:      _ZL3ordi.__uniq.{{[0-9]+}}:6:6
+
 ; A 250-byte budget against main's 178 bytes: ai is free by default, so ord
 ; still fits. -preinliner-charge-always-inline-size charges ai's 78 bytes, which
 ; uses the budget up, so ord is no longer inlined.
