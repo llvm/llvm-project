@@ -1711,7 +1711,7 @@ bool LSRUse::InsertFormula(const Formula &F, const Loop &L) {
   SmallVector<const SCEV *, 4> Key = F.BaseRegs;
   if (F.ScaledReg) Key.push_back(F.ScaledReg);
   // Unstable sort by host order ok, because this is only used for uniquifying.
-  llvm::sort(Key);
+  llvm::sort(Key, std::less<>());
 
   if (!Uniquifier.insert(Key).second)
     return false;
