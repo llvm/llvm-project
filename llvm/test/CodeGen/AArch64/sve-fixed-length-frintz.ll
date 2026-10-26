@@ -10,10 +10,10 @@ target triple = "aarch64-unknown-linux-gnu"
 define <8 x float> @frintz_f32_i32_f32(<8 x float> %in) {
 ; CHECK-LABEL: frintz_f32_i32_f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
-; CHECK-NEXT:    splice z0.d, p0, z0.d, z1.d
+; CHECK-NEXT:    splice z0.s, p0, z0.s, z1.s
 ; CHECK-NEXT:    ptrue p0.s, vl8
 ; CHECK-NEXT:    frintz z0.s, p0/m, z0.s
 ; CHECK-NEXT:    movprfx z1, z0
@@ -67,10 +67,10 @@ define <4 x double> @frintz_f64_i64_f64(<4 x double> %in) {
 define <8 x float> @frintz_f32_i64_f32(<8 x float> %in) {
 ; CHECK-LABEL: frintz_f32_i64_f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
-; CHECK-NEXT:    splice z0.d, p0, z0.d, z1.d
+; CHECK-NEXT:    splice z0.s, p0, z0.s, z1.s
 ; CHECK-NEXT:    ptrue p0.s, vl8
 ; CHECK-NEXT:    frintz z0.s, p0/m, z0.s
 ; CHECK-NEXT:    movprfx z1, z0

@@ -19,10 +19,10 @@ define void @vector_interleave2_v8f32(<4 x float> %a, <4 x float> %b) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $q0, $q1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x i64>) = COPY $q0
-  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(<4 x f32>) = G_BITCAST [[COPY]](<2 x i64>)
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<2 x i64>) = COPY $q1
-  ; CHECK-NEXT:   [[BITCAST1:%[0-9]+]]:_(<4 x f32>) = G_BITCAST [[COPY1]](<2 x i64>)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x i32>) = COPY $q0
+  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(<4 x f32>) = G_BITCAST [[COPY]](<4 x i32>)
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<4 x i32>) = COPY $q1
+  ; CHECK-NEXT:   [[BITCAST1:%[0-9]+]]:_(<4 x f32>) = G_BITCAST [[COPY1]](<4 x i32>)
   ; CHECK-NEXT:   [[SHUF:%[0-9]+]]:_(<8 x f32>) = G_SHUFFLE_VECTOR [[BITCAST]](<4 x f32>), [[BITCAST1]], shufflemask(0, 4, 1, 5, 2, 6, 3, 7)
   ; CHECK-NEXT:   RET_ReallyLR
     %res = call <8 x float> @llvm.vector.interleave2.v8f32(<4 x float> %a, <4 x float> %b)

@@ -131,10 +131,9 @@ define <4 x float> @test_pow_one_third_v4f32(<4 x float> %x) nounwind {
 ; LIBMVEC-LABEL: test_pow_one_third_v4f32:
 ; LIBMVEC:       // %bb.0:
 ; LIBMVEC-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; LIBMVEC-NEXT:    mov x8, #43691 // =0xaaab
-; LIBMVEC-NEXT:    movk x8, #16042, lsl #16
-; LIBMVEC-NEXT:    orr x8, x8, x8, lsl #32
-; LIBMVEC-NEXT:    dup v1.2d, x8
+; LIBMVEC-NEXT:    mov w8, #43691 // =0xaaab
+; LIBMVEC-NEXT:    movk w8, #16042, lsl #16
+; LIBMVEC-NEXT:    dup v1.4s, w8
 ; LIBMVEC-NEXT:    bl _ZGVnN4vv_powf
 ; LIBMVEC-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; LIBMVEC-NEXT:    ret
@@ -179,10 +178,9 @@ define <4 x float> @test_pow_one_third_v4f32_bad_fmf(<4 x float> %x) nounwind {
 ; LIBMVEC-LABEL: test_pow_one_third_v4f32_bad_fmf:
 ; LIBMVEC:       // %bb.0:
 ; LIBMVEC-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; LIBMVEC-NEXT:    mov x8, #43691 // =0xaaab
-; LIBMVEC-NEXT:    movk x8, #16042, lsl #16
-; LIBMVEC-NEXT:    orr x8, x8, x8, lsl #32
-; LIBMVEC-NEXT:    dup v1.2d, x8
+; LIBMVEC-NEXT:    mov w8, #43691 // =0xaaab
+; LIBMVEC-NEXT:    movk w8, #16042, lsl #16
+; LIBMVEC-NEXT:    dup v1.4s, w8
 ; LIBMVEC-NEXT:    bl _ZGVnN4vv_powf
 ; LIBMVEC-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; LIBMVEC-NEXT:    ret
