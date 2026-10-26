@@ -1,5 +1,12 @@
-// RUN: mlir-opt %s -test-transform-dialect-erase-schedule -convert-vector-to-llvm='vector-contract-lowering=outerproduct' -test-lower-to-llvm | mlir-runner -e main -entry-point-result=void -shared-libs=%mlir_c_runner_utils | FileCheck %s
-// RUN: mlir-opt %s -transform-interpreter -test-transform-dialect-erase-schedule -convert-vector-to-llvm='vector-contract-lowering=outerproduct' -test-lower-to-llvm | mlir-runner -e main -entry-point-result=void -shared-libs=%mlir_c_runner_utils | FileCheck %s
+// RUN: mlir-opt %s -test-transform-dialect-erase-schedule \
+// RUN:   -convert-vector-to-llvm='vector-contract-lowering=outerproduct' \
+// RUN:   -test-lower-to-llvm | mlir-runner -e main -entry-point-result=void \
+// RUN:   -shared-libs=%mlir_c_runner_utils | FileCheck %s
+// RUN: mlir-opt %s -transform-interpreter \
+// RUN:   -test-transform-dialect-erase-schedule \
+// RUN:   -convert-vector-to-llvm='vector-contract-lowering=outerproduct' \
+// RUN:   -test-lower-to-llvm | mlir-runner -e main -entry-point-result=void \
+// RUN:   -shared-libs=%mlir_c_runner_utils | FileCheck %s
 
 #lhs = affine_map<(m, n, k) -> (m, k)>
 #rhs = affine_map<(m, n, k) -> (k, n)>
