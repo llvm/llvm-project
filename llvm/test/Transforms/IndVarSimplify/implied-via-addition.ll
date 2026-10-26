@@ -77,7 +77,6 @@ exit:
   ret void
 }
 
-
 define void @three_ops_add_with_negative_operand(ptr %base, i64 range(i64 -2, 0) %a, i64 range(i64 1, 4) %b, i64 range(i64 0, 4) %c, i64 %p, i64 %q) {
 ; CHECK-LABEL: define void @three_ops_add_with_negative_operand(
 ; CHECK-SAME: ptr [[BASE:%.*]], i64 range(i64 -2, 0) [[A:%.*]], i64 range(i64 1, 4) [[B:%.*]], i64 range(i64 0, 4) [[C:%.*]], i64 [[P:%.*]], i64 [[Q:%.*]]) {
@@ -89,7 +88,7 @@ define void @three_ops_add_with_negative_operand(ptr %base, i64 range(i64 -2, 0)
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp samesign ult i64 [[IV_NEXT]], 4
 ; CHECK-NEXT:    br i1 [[EC]], label %[[LOOP]], label %[[EXIT:.*]]
