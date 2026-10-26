@@ -880,7 +880,7 @@ bool BuiltinPattern::checkSemantics(ArrayRef<SMLoc> Loc) {
          I.Kind == BI_ReplaceRegWithFConstant) &&
         Idx == 1) {
       if (!Op.hasImmValue() || Op.isNamedOperand()) {
-        PrintError(Loc, "expected operand " + std::to_string(Idx) + " of '" +
+        PrintError(Loc, "expected operand " + Twine(Idx) + " of '" +
                             getInstName() + "' to be an immediate value");
         return false;
       }
