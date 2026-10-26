@@ -361,32 +361,32 @@ private:
   // check-omp-syntax.cpp
   bool VerifyClauseVersion(
       parser::OmpDirectiveName dirName, const AppliedClauseInfo &info);
-  bool VerifyClauseRequired(
-      parser::OmpDirectiveName dirName, const AppliedClauseInfo &info);
-  bool VerifyClauseUnique(
-      parser::OmpDirectiveName dirName, const AppliedClauseInfo &info);
-  bool VerifyClauseExclusive(
-      parser::OmpDirectiveName dirName, const AppliedClauseInfo &info);
-  bool VerifyClauseUltimate(
-      parser::OmpDirectiveName dirName, const AppliedClauseInfo &info);
-  bool VerifyClauseSyntax(
-      parser::OmpDirectiveName dirName, const AppliedClauseInfo &info);
+  bool VerifyClauseRequired(parser::OmpDirectiveName dirName,
+      const AppliedClauseInfo &info, llvm::omp::Version version);
+  bool VerifyClauseUnique(parser::OmpDirectiveName dirName,
+      const AppliedClauseInfo &info, llvm::omp::Version version);
+  bool VerifyClauseExclusive(parser::OmpDirectiveName dirName,
+      const AppliedClauseInfo &info, llvm::omp::Version version);
+  bool VerifyClauseUltimate(parser::OmpDirectiveName dirName,
+      const AppliedClauseInfo &info, llvm::omp::Version version);
+  bool VerifyClauseSyntax(parser::OmpDirectiveName dirName,
+      const AppliedClauseInfo &info, llvm::omp::Version version);
   void VerifyClauseSyntax(const parser::OmpDirectiveSpecification *beginSpec,
       const parser::OmpDirectiveSpecification *endDir);
 
   bool VerifyModifierVersion(parser::omp::WithSource<llvm::omp::Clause> clause,
       const AppliedModifierInfo &info);
   bool VerifyModifierRequired(parser::omp::WithSource<llvm::omp::Clause> clause,
-      const AppliedModifierInfo &info);
+      const AppliedModifierInfo &info, llvm::omp::Version version);
   bool VerifyModifierUnique(parser::omp::WithSource<llvm::omp::Clause> clause,
-      const AppliedModifierInfo &info);
+      const AppliedModifierInfo &info, llvm::omp::Version version);
   bool VerifyModifierExclusive(
       parser::omp::WithSource<llvm::omp::Clause> clause,
-      const AppliedModifierInfo &info);
+      const AppliedModifierInfo &info, llvm::omp::Version version);
   bool VerifyModifierUltimate(parser::omp::WithSource<llvm::omp::Clause> clause,
-      const AppliedModifierInfo &info);
+      const AppliedModifierInfo &info, llvm::omp::Version version);
   bool VerifyModifierSyntax(parser::omp::WithSource<llvm::omp::Clause> clause,
-      const AppliedModifierInfo &info);
+      const AppliedModifierInfo &info, llvm::omp::Version version);
   void VerifyModifierSyntax(const parser::OmpClause &x);
 
   void SetAllowedClauseOverride(llvm::omp::Clause clauseId,

@@ -407,9 +407,8 @@ static bool missingCombiner(llvm::omp::Directive d, llvm::omp::Clause c) {
       c == llvm::omp::Clause::OMPC_combiner;
 }
 
-bool OmpStructureChecker::VerifyClauseRequired(
-    parser::OmpDirectiveName dirName, const AppliedClauseInfo &info) {
-  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
+bool OmpStructureChecker::VerifyClauseRequired(parser::OmpDirectiveName dirName,
+    const AppliedClauseInfo &info, llvm::omp::Version version) {
 
   auto result = VerifyRequired(info, dirName.v, version);
 
@@ -455,9 +454,8 @@ bool OmpStructureChecker::VerifyClauseRequired(
   return result.first.empty() && result.second.empty();
 }
 
-bool OmpStructureChecker::VerifyClauseUnique(
-    parser::OmpDirectiveName dirName, const AppliedClauseInfo &info) {
-  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
+bool OmpStructureChecker::VerifyClauseUnique(parser::OmpDirectiveName dirName,
+    const AppliedClauseInfo &info, llvm::omp::Version version) {
 
   auto result = VerifyUnique(info, dirName.v, version);
 
@@ -472,8 +470,8 @@ bool OmpStructureChecker::VerifyClauseUnique(
 }
 
 bool OmpStructureChecker::VerifyClauseExclusive(
-    parser::OmpDirectiveName dirName, const AppliedClauseInfo &info) {
-  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
+    parser::OmpDirectiveName dirName, const AppliedClauseInfo &info,
+    llvm::omp::Version version) {
 
   auto resultExcl = VerifyExclusive(info, dirName.v, version);
 
@@ -507,9 +505,8 @@ bool OmpStructureChecker::VerifyClauseExclusive(
   return resultExcl.empty() && resultMut.empty();
 }
 
-bool OmpStructureChecker::VerifyClauseUltimate(
-    parser::OmpDirectiveName dirName, const AppliedClauseInfo &info) {
-  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
+bool OmpStructureChecker::VerifyClauseUltimate(parser::OmpDirectiveName dirName,
+    const AppliedClauseInfo &info, llvm::omp::Version version) {
 
   auto result = VerifyUltimate(info, dirName.v, version, /*last=*/true);
 
@@ -564,14 +561,14 @@ AppliedClauseInfo GetAppliedClauses(
   return info;
 }
 
-bool OmpStructureChecker::VerifyClauseSyntax(
-    parser::OmpDirectiveName dirName, const AppliedClauseInfo &info) {
+bool OmpStructureChecker::VerifyClauseSyntax(parser::OmpDirectiveName dirName,
+    const AppliedClauseInfo &info, llvm::omp::Version version) {
   bool valid[]{
       VerifyClauseVersion(dirName, info),
-      VerifyClauseRequired(dirName, info),
-      VerifyClauseUnique(dirName, info),
-      VerifyClauseExclusive(dirName, info),
-      VerifyClauseUltimate(dirName, info),
+      VerifyClauseRequired(dirName, info, version),
+      VerifyClauseUnique(dirName, info, version),
+      VerifyClauseExclusive(dirName, info, version),
+      VerifyClauseUltimate(dirName, info, version),
   };
 
   return llvm::all_of(valid, [](bool x) { return x; });
@@ -581,6 +578,13 @@ void OmpStructureChecker::VerifyClauseSyntax(
     const parser::OmpDirectiveSpecification *beginSpec,
     const parser::OmpDirectiveSpecification *endSpec) {
   llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
+
+  // KLUDGE:
+  // This is a temporary fix for enforcing syntax rules on directives
+  // that don't exist in this version. Without it some checks would
+  // just be skipped.
+  version = GetClosestVersion(
+      descriptor::GetVersionRangeForDirective(beginSpec->DirId()), version);
 
   if (endSpec) {
     for (const parser::OmpClause &clause : endSpec->Clauses().v) {
@@ -593,8 +597,8 @@ void OmpStructureChecker::VerifyClauseSyntax(
       }
     }
   }
-  VerifyClauseSyntax(
-      beginSpec->DirName(), GetAppliedClauses(beginSpec, endSpec, version));
+  VerifyClauseSyntax(beginSpec->DirName(),
+      GetAppliedClauses(beginSpec, endSpec, version), version);
 }
 
 bool OmpStructureChecker::VerifyModifierVersion(
@@ -634,8 +638,8 @@ bool OmpStructureChecker::VerifyModifierVersion(
 }
 
 bool OmpStructureChecker::VerifyModifierRequired(
-    WithSource<llvm::omp::Clause> clause, const AppliedModifierInfo &info) {
-  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
+    WithSource<llvm::omp::Clause> clause, const AppliedModifierInfo &info,
+    llvm::omp::Version version) {
 
   auto result = VerifyRequired(info, clause.value, version);
 
@@ -653,8 +657,8 @@ bool OmpStructureChecker::VerifyModifierRequired(
 }
 
 bool OmpStructureChecker::VerifyModifierUnique(
-    WithSource<llvm::omp::Clause> clause, const AppliedModifierInfo &info) {
-  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
+    WithSource<llvm::omp::Clause> clause, const AppliedModifierInfo &info,
+    llvm::omp::Version version) {
 
   auto result = VerifyUnique(info, clause.value, version);
 
@@ -671,8 +675,8 @@ bool OmpStructureChecker::VerifyModifierUnique(
 }
 
 bool OmpStructureChecker::VerifyModifierExclusive(
-    WithSource<llvm::omp::Clause> clause, const AppliedModifierInfo &info) {
-  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
+    WithSource<llvm::omp::Clause> clause, const AppliedModifierInfo &info,
+    llvm::omp::Version version) {
 
   auto resultExcl = VerifyExclusive(info, clause.value, version);
 
@@ -707,8 +711,8 @@ bool OmpStructureChecker::VerifyModifierExclusive(
 }
 
 bool OmpStructureChecker::VerifyModifierUltimate(
-    WithSource<llvm::omp::Clause> clause, const AppliedModifierInfo &info) {
-  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
+    WithSource<llvm::omp::Clause> clause, const AppliedModifierInfo &info,
+    llvm::omp::Version version) {
   auto &cdesc{llvm::omp::getDescriptor(clause.value)};
   bool last{
       !cdesc.getProperties(version).test(llvm::omp::Property::PostModified)};
@@ -815,14 +819,15 @@ AppliedModifierInfo GetAppliedModifiers(
 }
 
 bool OmpStructureChecker::VerifyModifierSyntax(
-    WithSource<llvm::omp::Clause> clause, const AppliedModifierInfo &info) {
+    WithSource<llvm::omp::Clause> clause, const AppliedModifierInfo &info,
+    llvm::omp::Version version) {
   // Run all checks without short-circuiting, return 'true' if all succeed.
   bool valid[]{
       VerifyModifierVersion(clause, info),
-      VerifyModifierRequired(clause, info),
-      VerifyModifierUnique(clause, info),
-      VerifyModifierExclusive(clause, info),
-      VerifyModifierUltimate(clause, info),
+      VerifyModifierRequired(clause, info, version),
+      VerifyModifierUnique(clause, info, version),
+      VerifyModifierExclusive(clause, info, version),
+      VerifyModifierUltimate(clause, info, version),
   };
 
   return llvm::all_of(valid, [](bool x) { return x; });
@@ -844,14 +849,14 @@ void OmpStructureChecker::VerifyModifierSyntax(const parser::OmpClause &x) {
     for (auto &&as : uac.v) {
       bool legacy{std::get<bool>(as.t)};
       if (!legacy) {
-        VerifyModifierSyntax(
-            clauseId, GetAppliedModifiers(id, version, OmpGetModifiers(as)));
+        VerifyModifierSyntax(clauseId,
+            GetAppliedModifiers(id, version, OmpGetModifiers(as)), version);
       }
     }
     break;
   }
   default:
-    VerifyModifierSyntax(clauseId, GetAppliedModifiers(x, version));
+    VerifyModifierSyntax(clauseId, GetAppliedModifiers(x, version), version);
     break;
   }
 }

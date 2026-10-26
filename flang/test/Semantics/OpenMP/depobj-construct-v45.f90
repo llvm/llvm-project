@@ -4,6 +4,7 @@
 
 subroutine f00
   integer :: x
+  !ERROR: One of DEPEND, DESTROY or UPDATE (depend-objects) clauses is required on DEPOBJ directive
   !ERROR: The DEPOBJ directive requires a single clause
   !$omp depobj(x)
 end
