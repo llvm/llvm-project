@@ -56,9 +56,10 @@ bool fir::shouldUseStackForCopyin(mlir::Location loc, mlir::Type sequenceType,
       loc, sequenceType, *sizeContext.dataLayout, *sizeContext.kindMap);
   if (!sizeAndAlignment)
     return false;
-  PendingAllocationInfo info{
-      /*isTemporary=*/true, /*isDynamic=*/false,
-      static_cast<std::int64_t>(sizeAndAlignment->first)};
+  PendingAllocationInfo info;
+  info.isTemporary = true;
+  info.isDynamic = false;
+  info.byteSize = static_cast<std::int64_t>(sizeAndAlignment->first);
   AllocationPolicy copyInPolicy = allocationPolicy;
   copyInPolicy.stackArrays = false;
   return shouldAllocateOnStack(info, copyInPolicy, /*stackBytesUsed=*/0);
