@@ -293,6 +293,8 @@ defm : ValueField<"slp-schedule-budget", "int", "100000",
   "Limit the size of the SLP scheduling region per block">;
 defm : BoolField<"slp-split-alternate-instructions", "true",
   "Improve the code quality by splitting alternate instructions">;
+defm : BoolField<"slp-store-load-forward-check", "true",
+  "Add a cost penalty to SLP trees whose load or store widening would break store-to-load forwarding">;
 defm : OptionalValueField<"slp-threshold", "int",
   "Only vectorize if you gain more than this number">;
 // The scalar loop left by the loop vectorizer runs only a few iterations or the

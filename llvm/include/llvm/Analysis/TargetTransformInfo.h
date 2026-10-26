@@ -1486,6 +1486,11 @@ public:
   /// \return The size of a cache line in bytes.
   LLVM_ABI unsigned getCacheLineSize() const;
 
+  /// \return The per-occurrence penalty for a store-to-load forwarding (STLF)
+  /// hazard in a loop, from the subtarget scheduling model. 0 disables the
+  /// hazard check.
+  LLVM_ABI InstructionCost getStoreLoadForwardingConflictCost() const;
+
   /// The possible cache levels
   enum class CacheLevel {
     L1D, // The L1 data cache
