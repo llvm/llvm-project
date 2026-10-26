@@ -61,5 +61,5 @@ declare void @llvm.memcpy.p0.p0.i64(ptr nocapture writeonly, ptr nocapture reado
 
 !1 = distinct !{!1, !2, !3, !{!"llvm.loop.parallel_accesses", !4}}
 !2 = distinct !{!2, !3}
-!3 = !{!"llvm.loop.vectorize.enable", i1 true}
+!3 = !{!"llvm.loop.vectorize.enable"}
 !4 = distinct !{} ; access group

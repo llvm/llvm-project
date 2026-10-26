@@ -8,7 +8,12 @@
 
 #include "flang/Optimizer/Transforms/MemoryUtils.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
+#include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.h"
+#include "flang/Optimizer/Dialect/FIRAttr.h"
+#include "flang/Optimizer/Dialect/Support/FIRContext.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Dominance.h"
 #include "llvm/ADT/STLExtras.h"
@@ -308,4 +313,90 @@ bool fir::replaceAllocas(mlir::RewriterBase &rewriter,
   });
   rewriter.restoreInsertionPoint(insertPoint);
   return replacedAllRequestedAlloca;
+}
+
+fir::AllocMemOp fir::createAllocMemFromAlloca(mlir::OpBuilder &builder,
+                                              fir::AllocaOp alloca) {
+  auto unpackName = [](std::optional<llvm::StringRef> opt) -> llvm::StringRef {
+    if (opt)
+      return *opt;
+    return {};
+  };
+  return fir::AllocMemOp::create(builder, alloca.getLoc(), alloca.getInType(),
+                                 unpackName(alloca.getUniqName()),
+                                 unpackName(alloca.getBindcName()),
+                                 alloca.getTypeparams(), alloca.getShape());
+}
+
+/// Device code keeps its stack allocations: the unified/managed entry points
+/// are host-only, and a kernel-side heap allocation would be a large
+/// regression over a device stack array.
+static bool isDeviceCode(mlir::Operation *func, mlir::ModuleOp mod) {
+  if (func->getParentOfType<mlir::gpu::GPUModuleOp>())
+    return true;
+  if (auto procAttr =
+          func->getAttrOfType<cuf::ProcAttributeAttr>(cuf::getProcAttrName()))
+    // As in the inDeviceContext helpers of the CUF passes, attributes(host,
+    // device) is not device code here: this is the host copy of the routine,
+    // and its device copy is in the gpu.module handled above.
+    return procAttr.getValue() != cuf::ProcAttribute::Host &&
+           procAttr.getValue() != cuf::ProcAttribute::HostDevice;
+  if (mlir::acc::isAccRoutine(func))
+    return true;
+  if (auto offloadMod =
+          llvm::dyn_cast<mlir::omp::OffloadModuleInterface>(mod.getOperation()))
+    return offloadMod.getIsTargetDevice();
+  return false;
+}
+
+bool fir::promoteDynamicVariableAllocasToCudaHeap(mlir::RewriterBase &rewriter,
+                                                  mlir::Operation *func,
+                                                  bool stackArrays) {
+  auto mod = func->getParentOfType<mlir::ModuleOp>();
+  if (!mod)
+    return false;
+  fir::CudaHeapAllocMode mode = fir::getCudaHeapAllocMode(mod);
+  if (mode == fir::CudaHeapAllocMode::None || isDeviceCode(func, mod))
+    return false;
+  // The stack is device accessible under unified memory, so -fstack-arrays can
+  // be honored there. Under managed memory only the allocator can be.
+  if (stackArrays && mode == fir::CudaHeapAllocMode::Unified)
+    return false;
+
+  bool changed = false;
+  // User variables only: automatic arrays and automatic character, which are
+  // the ones carrying a uniqued name. Compiler temporaries do not need unified
+  // memory and would turn a stack save/restore into a malloc/free pair,
+  // possibly per loop iteration.
+  auto mustReplace = [](fir::AllocaOp alloca) {
+    if (!alloca.isDynamic())
+      return false;
+    // An alloca pinned to the stack (e.g. an array function result, whose
+    // storage the abstract-result pass replaces by the caller buffer) would
+    // only be left with a dead malloc/free pair.
+    if (auto attr = alloca->getAttrOfType<fir::MustBeStackAttr>(
+            fir::MustBeStackAttr::getAttrName()))
+      if (attr.getValue())
+        return false;
+    std::optional<llvm::StringRef> uniqName = alloca.getUniqName();
+    return uniqName && !uniqName->empty();
+  };
+  auto genAllocmem = [&](mlir::OpBuilder &builder, fir::AllocaOp alloca,
+                         bool) -> mlir::Value {
+    fir::AllocMemOp heap = fir::createAllocMemFromAlloca(builder, alloca);
+    fir::setCudaHeapAllocMode(heap.getOperation(), mode);
+    // Keep the placement passes from sinking it back to the stack: the
+    // allocator is chosen here and the matching free is emitted below.
+    heap->setAttr(fir::MustBeHeapAttr::getAttrName(),
+                  fir::MustBeHeapAttr::get(builder.getContext(), true));
+    changed = true;
+    return heap;
+  };
+  auto genFreemem = [&](mlir::Location loc, mlir::OpBuilder &builder,
+                        mlir::Value allocmem) {
+    auto free = fir::FreeMemOp::create(builder, loc, allocmem);
+    fir::setCudaHeapAllocMode(free.getOperation(), mode);
+  };
+  fir::replaceAllocas(rewriter, func, mustReplace, genAllocmem, genFreemem);
+  return changed;
 }

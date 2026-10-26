@@ -16,7 +16,6 @@
 #include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -56,8 +55,11 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
+  }
+
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().setIsSSA();
   }
 };
 } // namespace
@@ -65,6 +67,8 @@ public:
 PreservedAnalyses
 DeadMachineInstructionElimPass::run(MachineFunction &MF,
                                     MachineFunctionAnalysisManager &) {
+  MFPropsModifier _(*this, MF);
+
   if (!DeadMachineInstructionElimImpl().runImpl(MF))
     return PreservedAnalyses::all();
   PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
@@ -124,6 +128,14 @@ bool DeadMachineInstructionElimImpl::eliminateDeadMI(
         ++NumDeletes;
         continue;
       }
+
+      for (MachineOperand &MO : MI.all_defs()) {
+        Register Reg = MO.getReg();
+        if (Reg.isPhysical() && !MO.isDead() && !MRI->isReserved(Reg) &&
+            LivePhysRegs.available(Reg))
+          MO.setIsDead();
+      }
+
       LivePhysRegs.stepBackward(MI);
     }
   }

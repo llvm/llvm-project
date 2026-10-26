@@ -414,9 +414,10 @@ static bool fixIrreducible(CycleRef C, CycleInfo &CI, DominatorTree &DT,
   }
   CI.setSingleEntry(C, GuardBlocks[0]);
 
-  CI.verifyCycle(C);
+  SmallPtrSet<BasicBlock *, 32> Reachable;
+  CI.verifyCycle(C, Reachable);
   if (CycleRef Parent = CI.getParentCycle(C))
-    CI.verifyCycle(Parent);
+    CI.verifyCycle(Parent, Reachable);
 
   LLVM_DEBUG(dbgs() << "Finished one cycle:\n"; CI.print(dbgs()););
   return true;
@@ -436,9 +437,8 @@ static bool FixIrreducibleImpl(Function &F, CycleInfo &CI, DominatorTree &DT,
 
 #if defined(EXPENSIVE_CHECKS)
   CI.verify();
-  if (LI) {
-    LI->verify(DT);
-  }
+  if (LI)
+    LI->verify();
 #endif // EXPENSIVE_CHECKS
 
   return true;

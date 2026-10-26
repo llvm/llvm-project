@@ -8,6 +8,7 @@
 
 #include "clang/Edit/EditedSource.h"
 #include "clang/Basic/CharInfo.h"
+#include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
@@ -476,3 +477,56 @@ EditedSource::getActionForOffset(FileOffset Offs) {
 
   return FileEdits.end();
 }
+
+namespace clang::edit {
+
+namespace {
+
+class FixitReceiver : public edit::EditsReceiver {
+  SmallVectorImpl<FixItHint> &MergedFixits;
+
+public:
+  FixitReceiver(SmallVectorImpl<FixItHint> &MergedFixits)
+      : MergedFixits(MergedFixits) {}
+
+  void insert(SourceLocation loc, StringRef text) override {
+    MergedFixits.push_back(FixItHint::CreateInsertion(loc, text));
+  }
+
+  void replace(CharSourceRange range, StringRef text) override {
+    MergedFixits.push_back(FixItHint::CreateReplacement(range, text));
+  }
+};
+
+} // namespace
+
+void mergeFixits(ArrayRef<FixItHint> FixItHints, const SourceManager &SM,
+                 const LangOptions &LangOpts,
+                 SmallVectorImpl<FixItHint> &MergedFixits) {
+  MergedFixits.clear();
+  edit::Commit commit(SM, LangOpts);
+  for (const auto &Hint : FixItHints)
+    if (Hint.CodeToInsert.empty()) {
+      if (Hint.InsertFromRange.isValid())
+        commit.insertFromRange(Hint.RemoveRange.getBegin(),
+                               Hint.InsertFromRange, /*afterToken=*/false,
+                               Hint.BeforePreviousInsertions);
+      else
+        commit.remove(Hint.RemoveRange);
+    } else {
+      if (Hint.RemoveRange.isTokenRange() ||
+          Hint.RemoveRange.getBegin() != Hint.RemoveRange.getEnd())
+        commit.replace(Hint.RemoveRange, Hint.CodeToInsert);
+      else
+        commit.insert(Hint.RemoveRange.getBegin(), Hint.CodeToInsert,
+                      /*afterToken=*/false, Hint.BeforePreviousInsertions);
+    }
+
+  edit::EditedSource Editor(SM, LangOpts);
+  if (Editor.commit(commit)) {
+    FixitReceiver Rec(MergedFixits);
+    Editor.applyRewrites(Rec);
+  }
+}
+
+} // namespace clang::edit

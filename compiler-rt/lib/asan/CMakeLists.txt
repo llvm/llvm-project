@@ -173,13 +173,14 @@ if(COMPILER_RT_ASAN_ENABLE_EXCEPTIONS AND
     "COMPILER_RT_CXX_LIBRARY.")
 endif()
 
-# Two paths for resolving <new>:
-#   * in-tree libc++ available (e.g. runtimes build, cross toolchain): keep
-#     -nostdinc++ so host headers stay out, route <new> through the prepared
-#     libc++ via COMPILER_RT_CXX_CFLAGS, and add cxx-headers to DEPS so the
-#     header tree is staged first.
-#   * Otherwise (standalone build using the host toolchain): drop
-#     -nostdinc++ for this TU only so the host C++ headers can supply <new>.
+# Take <new> from the C++ library compiler-rt is configured to use:
+#   * COMPILER_RT_CXX_LIBRARY=libcxx (in-tree libc++): keep -nostdinc++ so
+#     host headers stay out, route <new> through the prepared libc++ via
+#     COMPILER_RT_CXX_CFLAGS, and add cxx-headers to DEPS so the header tree
+#     is staged first. COMPILER_RT_CXX_CFLAGS is only set in this mode.
+#   * COMPILER_RT_CXX_LIBRARY=default (the toolchain's C++ library, even when
+#     libc++ is also part of the build): drop -nostdinc++ for this TU only
+#     so the toolchain's C++ headers can supply <new>.
 set(ASAN_CXX_CFLAGS ${ASAN_CFLAGS})
 set(ASAN_DYNAMIC_CXX_CFLAGS ${ASAN_DYNAMIC_CFLAGS})
 set(ASAN_CXX_DEPS "")
@@ -188,7 +189,20 @@ if(COMPILER_RT_ASAN_ENABLE_EXCEPTIONS AND COMPILER_RT_HAS_FEXCEPTIONS_FLAG)
   list(APPEND ASAN_CXX_CFLAGS -fexceptions)
   list(REMOVE_ITEM ASAN_DYNAMIC_CXX_CFLAGS -fno-exceptions)
   list(APPEND ASAN_DYNAMIC_CXX_CFLAGS -fexceptions)
-  if(TARGET cxx-headers OR HAVE_LIBCXX)
+  # The throwing version of operator new throws standard exceptions such as
+  # std::bad_alloc. Under -fno-rtti, clang emits a private type_info for
+  # these exceptions that a `catch` statement in a user's program, referencing
+  # type_info provided by the C++ standard library linked into the program,
+  # can't match on Mach-O.
+  # See this example of the behavior:
+  #      https://stackoverflow.com/questions/21737201/problems-throwing-and-catching-exceptions-on-os-x-with-fno-rtti
+  # To avoid this, when available, enable RTTI for all potentially throwing TUs
+  # (ASAN_CXX_SOURCES).
+  remove_rtti_flags(ASAN_CXX_CFLAGS)
+  append_rtti_flag(ON ASAN_CXX_CFLAGS)
+  remove_rtti_flags(ASAN_DYNAMIC_CXX_CFLAGS)
+  append_rtti_flag(ON ASAN_DYNAMIC_CXX_CFLAGS)
+  if(COMPILER_RT_CXX_LIBRARY STREQUAL "libcxx")
     list(APPEND ASAN_CXX_CFLAGS ${COMPILER_RT_CXX_CFLAGS})
     list(APPEND ASAN_DYNAMIC_CXX_CFLAGS ${COMPILER_RT_CXX_CFLAGS})
     set(ASAN_CXX_DEPS cxx-headers)
@@ -404,12 +418,12 @@ else()
 
     if (SANITIZER_USE_SYMBOLS AND NOT ${arch} STREQUAL "i386")
       add_sanitizer_rt_symbols(clang_rt.asan_cxx
-        ARCHS ${arch})
-      add_dependencies(asan clang_rt.asan_cxx-${arch}-symbols)
+        ARCHS ${arch}
+        PARENT_TARGET asan)
       add_sanitizer_rt_symbols(clang_rt.asan
         ARCHS ${arch}
+        PARENT_TARGET asan
         EXTRA asan.syms.extra)
-      add_dependencies(asan clang_rt.asan-${arch}-symbols)
     endif()
 
     if (WIN32)

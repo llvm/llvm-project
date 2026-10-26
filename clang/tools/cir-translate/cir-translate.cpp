@@ -14,16 +14,18 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
-#include "mlir/Dialect/OpenMP/OpenMPUtils.h"
+#include "mlir/Dialect/OpenMP/Utils/Utils.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
-#include "mlir/InitAllTranslations.h"
 #include "mlir/Support/LogicalResult.h"
-#include "mlir/Target/LLVMIR/Dialect/All.h"
-#include "mlir/Target/LLVMIR/Import.h"
+#include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
+#include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
+#include "mlir/Target/LLVMIR/Dialect/OpenMP/OpenMPToLLVMIRTranslation.h"
+#include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Tools/mlir-translate/MlirTranslateMain.h"
 #include "mlir/Tools/mlir-translate/Translation.h"
 
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Module.h"
 #include "llvm/TargetParser/Host.h"
 
@@ -31,6 +33,7 @@
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/CIR/CIRDataLayoutSpec.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/Passes.h"
 #include "clang/CIR/InitAllDialects.h"
@@ -111,9 +114,7 @@ llvm::LogicalResult prepareCIRModuleDataLayout(mlir::ModuleOp mod,
   context->loadDialect<mlir::DLTIDialect, mlir::LLVM::LLVMDialect,
                        mlir::omp::OpenMPDialect>();
 
-  mlir::DataLayoutSpecInterface dlSpec =
-      mlir::translateDataLayout(llvm::DataLayout(layoutString), context);
-  mod->setAttr(mlir::DLTIDialect::kDataLayoutAttrName, dlSpec);
+  cir::setMLIRDataLayout(mod, llvm::DataLayout(layoutString));
 
   return llvm::success();
 }
@@ -145,6 +146,12 @@ llvm::LogicalResult prepareCIRModuleForTranslation(mlir::ModuleOp mod) {
 } // namespace
 } // namespace cir
 
+static void registerLLVMIRTranslations(mlir::DialectRegistry &registry) {
+  mlir::registerBuiltinDialectTranslation(registry);
+  mlir::registerLLVMDialectTranslation(registry);
+  mlir::registerOpenMPDialectTranslation(registry);
+}
+
 void registerToLLVMTranslation() {
   static llvm::cl::opt<bool> disableCCLowering(
       "disable-cc-lowering",
@@ -166,18 +173,42 @@ void registerToLLVMTranslation() {
                                                       enableOpenMP);
         if (!llvmModule)
           return mlir::failure();
+        llvmModule->renumberMetadataForAssembly();
         llvmModule->print(output, nullptr);
         return mlir::success();
       },
       [](mlir::DialectRegistry &registry) {
         cir::registerAllDialects(registry);
         registry.insert<mlir::func::FuncDialect>();
-        mlir::registerAllToLLVMIRTranslations(registry);
+        registerLLVMIRTranslations(registry);
         cir::direct::registerCIRDialectTranslation(registry);
+      });
+}
+
+// Mirrors mlir::registerToLLVMIRTranslation, restricted to the dialects CIR
+// lowers to so that the ClangIR tests need not depend on mlir-translate, which
+// links every MLIR dialect.
+static void registerMLIRToLLVMIRTranslation() {
+  mlir::TranslateFromMLIRRegistration registration(
+      "mlir-to-llvmir", "Translate MLIR to LLVMIR",
+      [](mlir::Operation *op, mlir::raw_ostream &output) {
+        llvm::LLVMContext llvmContext;
+        std::unique_ptr<llvm::Module> llvmModule =
+            mlir::translateModuleToLLVMIR(op, llvmContext);
+        if (!llvmModule)
+          return mlir::failure();
+        llvmModule->renumberMetadataForAssembly();
+        llvmModule->print(output, nullptr);
+        return mlir::success();
+      },
+      [](mlir::DialectRegistry &registry) {
+        registry.insert<mlir::DLTIDialect, mlir::func::FuncDialect>();
+        registerLLVMIRTranslations(registry);
       });
 }
 
 int main(int argc, char **argv) {
   registerToLLVMTranslation();
+  registerMLIRToLLVMIRTranslation();
   return failed(mlir::mlirTranslateMain(argc, argv, "CIR Translation Tool"));
 }

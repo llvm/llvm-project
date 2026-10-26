@@ -169,19 +169,16 @@ define <8 x double> @mul_subadd_pd512_partial(<8 x double> %C, <8 x double> %D, 
 ; FMA3_256-LABEL: mul_subadd_pd512_partial:
 ; FMA3_256:       # %bb.0:
 ; FMA3_256-NEXT:    vmulpd %ymm3, %ymm1, %ymm1
-; FMA3_256-NEXT:    vmovapd %ymm2, %ymm3
-; FMA3_256-NEXT:    vfmadd213pd {{.*#+}} ymm3 = (ymm0 * ymm3) + ymm4
-; FMA3_256-NEXT:    vaddpd %ymm5, %ymm1, %ymm6
-; FMA3_256-NEXT:    vfmsub213pd {{.*#+}} ymm2 = (ymm0 * ymm2) - ymm4
-; FMA3_256-NEXT:    vblendpd {{.*#+}} ymm0 = ymm3[0],ymm2[1],ymm3[2],ymm2[3]
+; FMA3_256-NEXT:    vaddpd %ymm5, %ymm1, %ymm3
 ; FMA3_256-NEXT:    vextractf128 $1, %ymm1, %xmm1
 ; FMA3_256-NEXT:    vshufpd {{.*#+}} xmm1 = xmm1[1,0]
-; FMA3_256-NEXT:    vextractf128 $1, %ymm5, %xmm2
-; FMA3_256-NEXT:    vshufpd {{.*#+}} xmm2 = xmm2[1,0]
-; FMA3_256-NEXT:    vsubsd %xmm2, %xmm1, %xmm1
-; FMA3_256-NEXT:    vextractf128 $1, %ymm6, %xmm2
+; FMA3_256-NEXT:    vextractf128 $1, %ymm5, %xmm5
+; FMA3_256-NEXT:    vshufpd {{.*#+}} xmm5 = xmm5[1,0]
+; FMA3_256-NEXT:    vsubsd %xmm5, %xmm1, %xmm1
+; FMA3_256-NEXT:    vfmsubadd213pd {{.*#+}} ymm0 = (ymm2 * ymm0) -/+ ymm4
+; FMA3_256-NEXT:    vextractf128 $1, %ymm3, %xmm2
 ; FMA3_256-NEXT:    vunpcklpd {{.*#+}} xmm1 = xmm2[0],xmm1[0]
-; FMA3_256-NEXT:    vinsertf128 $1, %xmm1, %ymm6, %ymm1
+; FMA3_256-NEXT:    vinsertf128 $1, %xmm1, %ymm3, %ymm1
 ; FMA3_256-NEXT:    retq
 ;
 ; FMA3_512-LABEL: mul_subadd_pd512_partial:
@@ -203,18 +200,16 @@ define <8 x double> @mul_subadd_pd512_partial(<8 x double> %C, <8 x double> %D, 
 ; FMA4-LABEL: mul_subadd_pd512_partial:
 ; FMA4:       # %bb.0:
 ; FMA4-NEXT:    vmulpd %ymm3, %ymm1, %ymm1
-; FMA4-NEXT:    vfmaddpd {{.*#+}} ymm3 = (ymm0 * ymm2) + ymm4
-; FMA4-NEXT:    vaddpd %ymm5, %ymm1, %ymm6
-; FMA4-NEXT:    vfmsubpd {{.*#+}} ymm0 = (ymm0 * ymm2) - ymm4
-; FMA4-NEXT:    vblendpd {{.*#+}} ymm0 = ymm3[0],ymm0[1],ymm3[2],ymm0[3]
+; FMA4-NEXT:    vaddpd %ymm5, %ymm1, %ymm3
 ; FMA4-NEXT:    vextractf128 $1, %ymm1, %xmm1
 ; FMA4-NEXT:    vshufpd {{.*#+}} xmm1 = xmm1[1,0]
-; FMA4-NEXT:    vextractf128 $1, %ymm5, %xmm2
-; FMA4-NEXT:    vshufpd {{.*#+}} xmm2 = xmm2[1,0]
-; FMA4-NEXT:    vsubsd %xmm2, %xmm1, %xmm1
-; FMA4-NEXT:    vextractf128 $1, %ymm6, %xmm2
+; FMA4-NEXT:    vextractf128 $1, %ymm5, %xmm5
+; FMA4-NEXT:    vshufpd {{.*#+}} xmm5 = xmm5[1,0]
+; FMA4-NEXT:    vsubsd %xmm5, %xmm1, %xmm1
+; FMA4-NEXT:    vfmsubaddpd {{.*#+}} ymm0 = (ymm0 * ymm2) -/+ ymm4
+; FMA4-NEXT:    vextractf128 $1, %ymm3, %xmm2
 ; FMA4-NEXT:    vunpcklpd {{.*#+}} xmm1 = xmm2[0],xmm1[0]
-; FMA4-NEXT:    vinsertf128 $1, %xmm1, %ymm6, %ymm1
+; FMA4-NEXT:    vinsertf128 $1, %xmm1, %ymm3, %ymm1
 ; FMA4-NEXT:    retq
   %A = fmul contract <8 x double> %C, %D
   %i = fadd contract <8 x double> %A, %B

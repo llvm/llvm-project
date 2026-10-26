@@ -10,7 +10,10 @@
 // RUN: mlir-capi-rewrite-test 2>&1 | FileCheck %s
 
 #include "mlir-c/Rewrite.h"
+#include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/BuiltinTypes.h"
+#include "mlir-c/Dialect/Arith.h"
+#include "mlir-c/Dialect/Func.h"
 #include "mlir-c/IR.h"
 
 #include <assert.h>
@@ -621,6 +624,82 @@ void testCloneWithMapping(MlirContext ctx) {
 
   // CHECK: testCloneWithMapping: PASSED
   fprintf(stderr, "testCloneWithMapping: PASSED\n");
+}
+
+void testInsertionPointSaveRestore(MlirContext ctx) {
+  // CHECK-LABEL: @testInsertionPointSaveRestore
+  fprintf(stderr, "@testInsertionPointSaveRestore\n");
+
+  const char *moduleString = "\"dialect.op1\"() : () -> ()\n"
+                             "\"dialect.op2\"() : () -> ()\n";
+  MlirModule module =
+      mlirModuleCreateParse(ctx, mlirStringRefCreateFromCString(moduleString));
+  MlirOperation op = mlirModuleGetOperation(module);
+  MlirBlock body = mlirModuleGetBody(module);
+  MlirOperation op1 = mlirBlockGetFirstOperation(body);
+  MlirOperation op2 = mlirOperationGetNextInBlock(op1);
+
+  MlirRewriterBase rewriter = mlirIRRewriterCreate(ctx);
+
+  // Save an insertion point that points right before op2.
+  mlirRewriterBaseSetInsertionPointBefore(rewriter, op2);
+  MlirRewriterBaseInsertPoint saved =
+      mlirRewriterBaseSaveInsertionPoint(rewriter);
+  assert(!mlirBlockIsNull(saved.block));
+  assert(mlirOperationEqual(saved.operationAfter, op2));
+
+  // Move the insertion point to the end of the block. An end-of-block insertion
+  // point round-trips with a null `operationAfter`.
+  mlirRewriterBaseSetInsertionPointToEnd(rewriter, body);
+  MlirRewriterBaseInsertPoint endIp =
+      mlirRewriterBaseSaveInsertionPoint(rewriter);
+  assert(!mlirBlockIsNull(endIp.block));
+  assert(mlirOperationIsNull(endIp.operationAfter));
+
+  // Restoring the first saved insertion point makes subsequent insertions land
+  // before op2 again, not at the end where we just were.
+  mlirRewriterBaseRestoreInsertionPoint(rewriter, saved);
+  MlirOperation opRestored =
+      createOperationWithName(ctx, "dialect.op_restored");
+  mlirRewriterBaseInsert(rewriter, opRestored);
+
+  // Restoring the null-`operationAfter` point re-establishes end-of-block, even
+  // though the insertion point currently sits in the middle of the block.
+  mlirRewriterBaseRestoreInsertionPoint(rewriter, endIp);
+  assert(!mlirBlockIsNull(mlirRewriterBaseGetInsertionBlock(rewriter)));
+  assert(mlirOperationIsNull(
+      mlirRewriterBaseGetOperationAfterInsertion(rewriter)));
+  MlirOperation opEnd = createOperationWithName(ctx, "dialect.op_end");
+  mlirRewriterBaseInsert(rewriter, opEnd);
+
+  // A cleared insertion point round-trips as a null block.
+  mlirRewriterBaseClearInsertionPoint(rewriter);
+  MlirRewriterBaseInsertPoint clearedIp =
+      mlirRewriterBaseSaveInsertionPoint(rewriter);
+  assert(mlirBlockIsNull(clearedIp.block));
+  assert(mlirOperationIsNull(clearedIp.operationAfter));
+
+  // Restoring a cleared insertion point clears the current one.
+  mlirRewriterBaseSetInsertionPointToStart(rewriter, body);
+  assert(!mlirBlockIsNull(mlirRewriterBaseGetInsertionBlock(rewriter)));
+  mlirRewriterBaseRestoreInsertionPoint(rewriter, clearedIp);
+  assert(mlirBlockIsNull(mlirRewriterBaseGetInsertionBlock(rewriter)));
+
+  mlirOperationDump(op);
+  // clang-format off
+  // CHECK:      module {
+  // CHECK-NEXT:   "dialect.op1"() : () -> ()
+  // CHECK-NEXT:   %{{.*}} = "dialect.op_restored"() : () -> index
+  // CHECK-NEXT:   "dialect.op2"() : () -> ()
+  // CHECK-NEXT:   %{{.*}} = "dialect.op_end"() : () -> index
+  // CHECK-NEXT: }
+  // clang-format on
+
+  mlirIRRewriterDestroy(rewriter);
+  mlirModuleDestroy(module);
+
+  // CHECK: testInsertionPointSaveRestore: PASSED
+  fprintf(stderr, "testInsertionPointSaveRestore: PASSED\n");
 }
 
 static MlirConversionTargetLegality dynamicLegalityAlwaysLegal(MlirOperation op,
@@ -1884,6 +1963,56 @@ void testTypeConverter1ToNConversionErasure(MlirContext ctx) {
   fprintf(stderr, "testTypeConverter1ToNConversionErasure: PASSED\n");
 }
 
+void testDialectMaterializeConstant(MlirContext ctx) {
+  // CHECK-LABEL: @testDialectMaterializeConstant
+  fprintf(stderr, "@testDialectMaterializeConstant\n");
+
+  MlirDialect arith =
+      mlirDialectHandleLoadDialect(mlirGetDialectHandle__arith__(), ctx);
+  MlirDialect func =
+      mlirDialectHandleLoadDialect(mlirGetDialectHandle__func__(), ctx);
+
+  const char *moduleString = "func.func @f() {\n"
+                             "  return\n"
+                             "}\n";
+  MlirModule module =
+      mlirModuleCreateParse(ctx, mlirStringRefCreateFromCString(moduleString));
+  MlirBlock body = mlirModuleGetBody(module);
+  MlirOperation funcOp = mlirBlockGetFirstOperation(body);
+  MlirRegion funcRegion = mlirOperationGetRegion(funcOp, 0);
+  MlirBlock funcBody = mlirRegionGetFirstBlock(funcRegion);
+
+  MlirRewriterBase rewriter = mlirIRRewriterCreate(ctx);
+  mlirRewriterBaseSetInsertionPointToStart(rewriter, funcBody);
+
+  // Materialize an i32 constant of value 42 using the arith dialect's hook.
+  MlirType i32 = mlirIntegerTypeGet(ctx, 32);
+  MlirAttribute value = mlirIntegerAttrGet(i32, 42);
+  MlirLocation loc = mlirLocationUnknownGet(ctx);
+  MlirOperation constOp =
+      mlirDialectMaterializeConstant(arith, rewriter, value, i32, loc);
+  assert(!mlirOperationIsNull(constOp));
+  // The op is created at the current insertion point without changing it: it
+  // lands in funcBody, and the rewriter still points there afterwards.
+  assert(mlirBlockEqual(mlirOperationGetBlock(constOp), funcBody));
+  assert(mlirBlockEqual(mlirRewriterBaseGetInsertionBlock(rewriter), funcBody));
+  mlirOperationDump(constOp);
+  // CHECK: arith.constant 42 : i32
+
+  // A dialect whose materializer declines the given attribute/type returns
+  // null. The func dialect has a constant materializer, but it only builds
+  // func.constant from a symbol ref, so an i32 IntegerAttr yields null.
+  MlirOperation none =
+      mlirDialectMaterializeConstant(func, rewriter, value, i32, loc);
+  assert(mlirOperationIsNull(none));
+
+  mlirIRRewriterDestroy(rewriter);
+  mlirModuleDestroy(module);
+
+  // CHECK: testDialectMaterializeConstant: PASSED
+  fprintf(stderr, "testDialectMaterializeConstant: PASSED\n");
+}
+
 int main(void) {
   MlirContext ctx = mlirContextCreate();
   mlirContextSetAllowUnregisteredDialects(ctx, true);
@@ -1899,6 +2028,7 @@ int main(void) {
   testReplaceUses(ctx);
   testGreedyRewriteDriverConfig(ctx);
   testCloneWithMapping(ctx);
+  testInsertionPointSaveRestore(ctx);
   testConversionTargetDynamicLegality(ctx);
   testTypeConverterSourceMaterialization(ctx);
   testTypeConverterTargetMaterialization(ctx);
@@ -1911,6 +2041,7 @@ int main(void) {
   testConversionReplaceOpWithMultipleRanges(ctx);
   testTypeConverter1ToNOperandRequires1ToNCallback(ctx);
   testTypeConverter1ToNConversionErasure(ctx);
+  testDialectMaterializeConstant(ctx);
 
   mlirContextDestroy(ctx);
   return 0;

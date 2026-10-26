@@ -169,7 +169,7 @@ func.func @call_and_store_before(%arg0: memref<f32>) -> memref<f32> {
   %1 = arith.constant 1.0 : f32
   memref.store %0, %arg0[] {tag_name = "pre"} : memref<f32>
   memref.load %arg0[] {tag = "before_call"} : memref<f32>
-  test.call_and_store @callee(%arg0), %arg0 {tag_name = "call", store_before_call = true} : (memref<f32>, memref<f32>) -> ()
+  test.call_and_store @callee(%arg0), %arg0 <store_before_call = true> {tag_name = "call"} : (memref<f32>, memref<f32>) -> ()
   memref.load %arg0[] {tag = "after_call"} : memref<f32>
   memref.store %1, %arg0[] {tag_name = "post"} : memref<f32>
   return {tag = "return"} %arg0 : memref<f32>
@@ -221,7 +221,7 @@ func.func @call_and_store_after(%arg0: memref<f32>) -> memref<f32> {
   %1 = arith.constant 1.0 : f32
   memref.store %0, %arg0[] {tag_name = "pre"} : memref<f32>
   memref.load %arg0[] {tag = "before_call"} : memref<f32>
-  test.call_and_store @callee(%arg0), %arg0 {tag_name = "call", store_before_call = false} : (memref<f32>, memref<f32>) -> ()
+  test.call_and_store @callee(%arg0), %arg0 <store_before_call = false> {tag_name = "call"} : (memref<f32>, memref<f32>) -> ()
   memref.load %arg0[] {tag = "after_call"} : memref<f32>
   memref.store %1, %arg0[] {tag_name = "post"} : memref<f32>
   return {tag = "return"} %arg0 : memref<f32>

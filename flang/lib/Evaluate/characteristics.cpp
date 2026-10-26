@@ -669,6 +669,7 @@ static std::optional<Procedure> CharacterizeProcedure(
             }
             result.cudaSubprogramAttrs = subp.cudaSubprogramAttrs();
             result.hasOpenACCRoutine = !subp.openACCRoutineInfos().empty();
+            result.isStmtFunction = subp.stmtFunction().has_value();
             return std::move(result);
           },
           [&](const semantics::ProcEntityDetails &proc)

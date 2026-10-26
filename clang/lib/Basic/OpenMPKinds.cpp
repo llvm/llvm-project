@@ -162,7 +162,7 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind, StringRef Str,
   .Case(#Name, static_cast<unsigned>(OMPC_ORDER_MODIFIER_##Name))
 #include "clang/Basic/OpenMPKinds.def"
         .Default(OMPC_ORDER_unknown);
-  case OMPC_update:
+  case OMPC_update_depend_objects:
     return llvm::StringSwitch<OpenMPDependClauseKind>(Str)
 #define OPENMP_DEPEND_KIND(Name) .Case(#Name, OMPC_DEPEND_##Name)
 #include "clang/Basic/OpenMPKinds.def"
@@ -517,7 +517,7 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
 #include "clang/Basic/OpenMPKinds.def"
     }
     llvm_unreachable("Invalid OpenMP 'order' clause type");
-  case OMPC_update:
+  case OMPC_update_depend_objects:
     switch (Type) {
     case OMPC_DEPEND_unknown:
       return "unknown";
@@ -854,7 +854,7 @@ bool clang::isOpenMPCanonicalLoopNestTransformationDirective(
     OpenMPDirectiveKind DKind) {
   return DKind == OMPD_tile || DKind == OMPD_unroll || DKind == OMPD_reverse ||
          DKind == OMPD_split || DKind == OMPD_interchange ||
-         DKind == OMPD_stripe;
+         DKind == OMPD_stripe || DKind == OMPD_flatten;
 }
 
 bool clang::isOpenMPCanonicalLoopSequenceTransformationDirective(
@@ -946,6 +946,24 @@ bool clang::isOpenMPOrderConcurrentNestableDirective(
   return false;
 }
 
+bool clang::isOpenMPSimdizableDirective(OpenMPDirectiveKind DKind,
+                                        OpenMPBindClauseKind BindKind,
+                                        const LangOptions &LangOpts) {
+  if (DKind == OMPD_loop) // binding region undefined: bind(thread)
+    return BindKind == OMPC_BIND_thread;
+  // Directives that may be encountered during execution of a simd region are:
+  // OpenMP 5.x: ordered simd, simd, scan and atomic
+  // OpenMP 6.0: above plus all loop-transformation directives
+  if (DKind == OMPD_ordered_blockassoc || DKind == OMPD_simd ||
+      DKind == OMPD_scan || DKind == OMPD_atomic)
+    return true;
+
+  if (LangOpts.OpenMP >= 60)
+    return isOpenMPLoopTransformationDirective(DKind);
+
+  return false;
+}
+
 void clang::getOpenMPCaptureRegions(
     SmallVectorImpl<OpenMPDirectiveKind> &CaptureRegions,
     OpenMPDirectiveKind DKind) {
@@ -995,7 +1013,7 @@ void clang::getOpenMPCaptureRegions(
     case OMPD_dispatch:
     case OMPD_distribute:
     case OMPD_for:
-    case OMPD_ordered:
+    case OMPD_ordered_blockassoc:
     case OMPD_scope:
     case OMPD_sections:
     case OMPD_simd:

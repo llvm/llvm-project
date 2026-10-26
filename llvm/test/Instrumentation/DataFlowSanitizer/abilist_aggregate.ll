@@ -241,8 +241,8 @@ define void @custom_varg({i32, i1} %a, ...) {
   ret void
 }
 
-; CHECK: declare { i1, i7 } @__dfsw_custom_with_ret({ i32, i1 }, [2 x i7], i8, i8, ptr)
-; CHECK: declare void @__dfsw_custom_without_ret({ i32, i1 }, [2 x i7], i8, i8)
-; CHECK: declare void @__dfsw_custom_varg({ i32, i1 }, i8, ptr, ...)
+; CHECK: declare { i1, i7 } @__dfsw_custom_with_ret({ i32, i1 }, [2 x i7], i8 zeroext, i8 zeroext, ptr)
+; CHECK: declare void @__dfsw_custom_without_ret({ i32, i1 }, [2 x i7], i8 zeroext, i8 zeroext)
+; CHECK: declare void @__dfsw_custom_varg({ i32, i1 }, i8 zeroext, ptr, ...)
 
-; CHECK: declare { i1, i7 } @__dfsw_custom_cb(ptr, { i32, i1 }, [2 x i7], i8, i8, i8, ptr)
+; CHECK: declare { i1, i7 } @__dfsw_custom_cb(ptr, { i32, i1 }, [2 x i7], i8 zeroext, i8 zeroext, i8 zeroext, ptr)

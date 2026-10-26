@@ -183,6 +183,10 @@ DebuggerCreateTool::Call(const lldb_protocol::mcp::ToolArguments &) {
   debugger_sp->SetOutputFile(out);
   debugger_sp->SetErrorFile(out);
 
+  // A debugger driven over MCP has no event loop to service asynchronous
+  // stops, so a resume must not return before the process has stopped.
+  debugger_sp->SetAsyncExecution(false);
+
   return createTextResult(to_uri(debugger_sp));
 }
 

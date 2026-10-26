@@ -37,6 +37,7 @@ enum {
   DIAG_SIZE_COMMON = 300,
   DIAG_SIZE_DRIVER = 400,
   DIAG_SIZE_FRONTEND = 300,
+  DIAG_SIZE_CODEGEN = 100,
   DIAG_SIZE_SERIALIZATION = 120,
   DIAG_SIZE_LEX = 500,
   DIAG_SIZE_PARSE = 800,
@@ -55,7 +56,8 @@ enum {
   DIAG_START_COMMON        =                          0,
   DIAG_START_DRIVER        = DIAG_START_COMMON        + static_cast<int>(DIAG_SIZE_COMMON),
   DIAG_START_FRONTEND      = DIAG_START_DRIVER        + static_cast<int>(DIAG_SIZE_DRIVER),
-  DIAG_START_SERIALIZATION = DIAG_START_FRONTEND      + static_cast<int>(DIAG_SIZE_FRONTEND),
+  DIAG_START_CODEGEN       = DIAG_START_FRONTEND      + static_cast<int>(DIAG_SIZE_FRONTEND),
+  DIAG_START_SERIALIZATION = DIAG_START_CODEGEN       + static_cast<int>(DIAG_SIZE_CODEGEN),
   DIAG_START_LEX           = DIAG_START_SERIALIZATION + static_cast<int>(DIAG_SIZE_SERIALIZATION),
   DIAG_START_PARSE         = DIAG_START_LEX           + static_cast<int>(DIAG_SIZE_LEX),
   DIAG_START_AST           = DIAG_START_PARSE         + static_cast<int>(DIAG_SIZE_PARSE),
@@ -513,6 +515,12 @@ private:
   diag::Severity
   getDiagnosticSeverity(unsigned DiagID, SourceLocation Loc,
                         const DiagnosticsEngine &Diag) const LLVM_READONLY;
+
+  /// Given a collection of diagnostic IDs, get the 'highest' severity of them
+  /// at the provided location for this DiagnosticsEngine.
+  diag::Severity getDiagnosticListHighestSeverity(
+      llvm::ArrayRef<diag::kind> DiagIDs, SourceLocation Loc,
+      const DiagnosticsEngine &Diag) const LLVM_READONLY;
 
   Class getDiagClass(unsigned DiagID) const;
 

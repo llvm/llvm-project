@@ -243,12 +243,12 @@ define void @bounded_rmw_vf_capped(ptr noalias %A, ptr noalias %B, i32 %n) {
 ; VF2-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[TMP0]], 3
 ; VF2-NEXT:    br i1 [[TMP1]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; VF2:       [[VECTOR_PH]]:
-; VF2-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], 2
+; VF2-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N]], 1
 ; VF2-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
 ; VF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF2:       [[VECTOR_BODY]]:
 ; VF2-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VF2-NEXT:    [[TMP2:%.*]] = urem i32 [[INDEX]], 4
+; VF2-NEXT:    [[TMP2:%.*]] = and i32 [[INDEX]], 3
 ; VF2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[TMP2]]
 ; VF2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP3]], align 4
 ; VF2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[B]], i32 [[INDEX]]
@@ -289,12 +289,12 @@ define void @bounded_rmw_vf_capped(ptr noalias %A, ptr noalias %B, i32 %n) {
 ; VF4-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[TMP0]], 3
 ; VF4-NEXT:    br i1 [[TMP1]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; VF4:       [[VECTOR_PH]]:
-; VF4-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], 4
+; VF4-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N]], 3
 ; VF4-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
 ; VF4-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF4:       [[VECTOR_BODY]]:
 ; VF4-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VF4-NEXT:    [[TMP2:%.*]] = urem i32 [[INDEX]], 4
+; VF4-NEXT:    [[TMP2:%.*]] = and i32 [[INDEX]], 3
 ; VF4-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[TMP2]]
 ; VF4-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP3]], align 4
 ; VF4-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[B]], i32 [[INDEX]]
@@ -335,12 +335,12 @@ define void @bounded_rmw_vf_capped(ptr noalias %A, ptr noalias %B, i32 %n) {
 ; VF8-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[TMP0]], 3
 ; VF8-NEXT:    br i1 [[TMP1]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; VF8:       [[VECTOR_PH]]:
-; VF8-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], 8
+; VF8-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N]], 7
 ; VF8-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
 ; VF8-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF8:       [[VECTOR_BODY]]:
 ; VF8-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VF8-NEXT:    [[TMP2:%.*]] = urem i32 [[INDEX]], 4
+; VF8-NEXT:    [[TMP2:%.*]] = and i32 [[INDEX]], 3
 ; VF8-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[TMP2]]
 ; VF8-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i32>, ptr [[TMP3]], align 4
 ; VF8-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[B]], i32 [[INDEX]]

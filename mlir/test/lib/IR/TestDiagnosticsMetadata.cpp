@@ -43,7 +43,8 @@ struct TestDiagnosticMetadataPass
 
     // Emit a diagnostic for every operation with a valid loc.
     getOperation()->walk([&](Operation *op) {
-      if (StringAttr strAttr = op->getAttrOfType<StringAttr>("attr")) {
+      if (StringAttr strAttr =
+              op->getDiscardableAttrOfType<StringAttr>("attr")) {
         if (strAttr.getValue() == "emit_error")
           emitError(op->getLoc(), "test diagnostic metadata")
               .getUnderlyingDiagnostic()

@@ -75,6 +75,10 @@ define void @f(ptr %x) {
   load atomic elementwise <2 x float>, ptr %x syncscope("agent") monotonic, align 4
   ; CHECK: load atomic volatile elementwise <2 x i32>, ptr %x monotonic, align 4
   load atomic volatile elementwise <2 x i32>, ptr %x monotonic, align 4
+  ; CHECK: store atomic elementwise <2 x float> <float 3.000000e+00, float 4.000000e+00>, ptr %x syncscope("agent") monotonic, align 4
+  store atomic elementwise <2 x float> <float 3.0, float 4.0>, ptr %x syncscope("agent") monotonic, align 4
+  ; CHECK: store atomic volatile elementwise <2 x i32> <i32 3, i32 4>, ptr %x monotonic, align 4
+  store atomic volatile elementwise <2 x i32> <i32 3, i32 4>, ptr %x monotonic, align 4
 
   ; CHECK: fence syncscope("singlethread") release
   fence syncscope("singlethread") release
@@ -159,8 +163,8 @@ define void @fp_vector_atomicrmw(ptr %x, <2 x half> %val) {
   ; CHECK: %atomic.elem.fadd = atomicrmw elementwise fadd ptr %x, <2 x half> %val monotonic
   %atomic.elem.fadd = atomicrmw elementwise fadd ptr %x, <2 x half> %val monotonic
 
-  ; CHECK: %atomic.elem.fadd.vol = atomicrmw volatile elementwise fadd ptr %x, <2 x half> %val seq_cst
-  %atomic.elem.fadd.vol = atomicrmw volatile elementwise fadd ptr %x, <2 x half> %val seq_cst
+  ; CHECK: %atomic.elem.fadd.vol = atomicrmw volatile elementwise fadd ptr %x, <2 x half> %val acq_rel
+  %atomic.elem.fadd.vol = atomicrmw volatile elementwise fadd ptr %x, <2 x half> %val acq_rel
 
   ret void
 }

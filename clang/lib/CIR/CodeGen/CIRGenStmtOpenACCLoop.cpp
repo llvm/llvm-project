@@ -58,7 +58,9 @@ CIRGenFunction::emitOpenACCLoopConstruct(const OpenACCLoopConstruct &s) {
   mlir::Location end = getLoc(s.getSourceRange().getEnd());
   llvm::SmallVector<mlir::Type> retTy;
   llvm::SmallVector<mlir::Value> operands;
-  auto op = LoopOp::create(builder, start, retTy, operands);
+  auto op =
+      LoopOp::create(builder, start, retTy, operands,
+                     cir::getDefaultProperties<LoopOp>(builder.getContext()));
 
   // TODO(OpenACC): In the future we are going to need to come up with a
   // transformation here that can teach the acc.loop how to figure out the
@@ -131,7 +133,8 @@ CIRGenFunction::emitOpenACCLoopConstruct(const OpenACCLoopConstruct &s) {
     LexicalScope ls{*this, start, builder.getInsertionBlock()};
     ActiveOpenACCLoopRAII activeLoop{*this, &op};
 
-    stmtRes = emitStmt(s.getLoop(), /*useCurrentScope=*/true);
+    if (s.getLoop())
+      stmtRes = emitStmt(s.getLoop(), /*useCurrentScope=*/true);
     mlir::acc::YieldOp::create(builder, end);
   }
 

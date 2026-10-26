@@ -26,7 +26,9 @@ public:
 
   virtual llvm::Expected<bool> IsStale() { return true; };
 
-  virtual lldb::StateType GetRunState() { return lldb::eStateStepping; }
+  virtual llvm::Expected<lldb::StateType> GetRunState() {
+    return lldb::eStateStepping;
+  }
 
   virtual llvm::Error GetStopDescription(lldb::StreamSP &stream) {
     return llvm::Error::success();

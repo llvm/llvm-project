@@ -1,4 +1,6 @@
 ! RUN: %flang -S -emit-llvm -o - %s | FileCheck %s
+! REQUIRES: flang-authentic-cmdline
+
 ! Test communication of COMPILER_OPTIONS from flang to flang -fc1.
 ! CHECK: [[OPTSVAR:@_QQclX[0-9A-Fa-f]+]] = {{[a-z]+}} constant [[[OPTSLEN:[0-9]+]] x i8] c"-S -emit-llvm -o -"
 program main

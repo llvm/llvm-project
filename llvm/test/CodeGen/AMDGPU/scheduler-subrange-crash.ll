@@ -25,9 +25,9 @@ define amdgpu_gs void @main(i32 inreg %arg) #0 {
 ; CHECK-NEXT:    tbuffer_store_format_x v0, off, s[0:3], s0 format:[BUF_DATA_FORMAT_32,BUF_NUM_FORMAT_UINT] offset:92 glc slc
 ; CHECK-NEXT:    s_endpgm
 main_body:
-  %tmp = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> poison, i32 20, i32 0)
-  %tmp1 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> poison, i32 24, i32 0)
-  %tmp2 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> poison, i32 48, i32 0)
+  %tmp = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) poison, i32 20, i32 0), !invariant.load !{}
+  %tmp1 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) poison, i32 24, i32 0), !invariant.load !{}
+  %tmp2 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) poison, i32 48, i32 0), !invariant.load !{}
   %array_vector3 = insertelement <4 x float> zeroinitializer, float %tmp2, i32 3
   %array_vector5 = insertelement <4 x float> <float 0.000000e+00, float poison, float poison, float poison>, float %tmp, i32 1
   %array_vector6 = insertelement <4 x float> %array_vector5, float poison, i32 2
@@ -55,7 +55,7 @@ main_body:
   ret void
 }
 
-declare float @llvm.amdgcn.s.buffer.load.f32(<4 x i32>, i32, i32 immarg) #1
+declare float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8), i32, i32 immarg) #1
 declare i32 @llvm.amdgcn.raw.buffer.load.i32(<4 x i32>, i32, i32, i32 immarg) #2
 declare void @llvm.amdgcn.raw.tbuffer.store.i32(i32, <4 x i32>, i32, i32, i32 immarg, i32 immarg) #3
 

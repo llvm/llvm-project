@@ -172,6 +172,11 @@ public:
   // On PPC ELF V2 abi, the first entry in the .got is the .TOC.
   unsigned gotHeaderEntriesNum = 0;
 
+  // True if the dynamic linker resolves a PLT entry by writing the target
+  // address to a GotPltSection slot (named .plt on PPC). SPARC instead has it
+  // rewrite the PLT entry's instructions, so pltRel applies to .plt.
+  bool usesGotPlt = true;
+
   // On PPC ELF V2 abi, the dynamic section needs DT_PPC64_OPT (DT_LOPROC + 3)
   // to be set to 0x2 if there can be multiple TOC's. Although we do not emit
   // multiple TOC's, there can be a mix of TOC and NOTOC addressing which

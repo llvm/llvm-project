@@ -6,8 +6,8 @@
 ; NOP instructions are used.
 ;
 ; Independently, -aarch64-cfi-llvm-set-ra-sign-state picks which CFI directive
-; describes that signing: the legacy .cfi_negate_ra_state[_with_pc] ("never",
-; the default), or the new .cfi_set_ra_state ("pauth-lr"/"always").
+; describes that signing: the legacy .cfi_negate_ra_state[_with_pc] ("never"),
+; or the new .cfi_set_ra_state ("pauth-lr"/"always").
 
 ; There are 6 cases to cover:
 
@@ -28,7 +28,9 @@
 ; RUN: llc -mtriple=aarch64 -mattr=v8.3a < %s | FileCheck --check-prefixes=CHECK,V83A %s
 ; RUN: llc -mtriple=aarch64 -mattr=v9a -mattr=pauth-lr < %s | FileCheck --check-prefixes=PAUTHLR %s
 ;
-; RUN: llc -mtriple=aarch64                     -aarch64-cfi-llvm-set-ra-sign-state=pauth-lr < %s | FileCheck --check-prefixes=CFISET-CHECK,CFISET-COMPAT %s
+; RUN: llc -mtriple=aarch64                                                                  < %s | FileCheck --check-prefixes=CFISET-CHECK,CFISET-COMPAT %s
+; RUN: llc -mtriple=aarch64                                                                  < %s | FileCheck --check-prefixes=CFISET-CHECK,CFISET-COMPAT %s
+; RUN: llc -mtriple=aarch64 -mattr=v8.3a        -aarch64-cfi-llvm-set-ra-sign-state=pauth-lr < %s | FileCheck --check-prefixes=CFISET-CHECK,CFISET-V83A %s
 ; RUN: llc -mtriple=aarch64 -mattr=v8.3a        -aarch64-cfi-llvm-set-ra-sign-state=pauth-lr < %s | FileCheck --check-prefixes=CFISET-CHECK,CFISET-V83A %s
 ;
 ; RUN: llc -mtriple=aarch64                     -aarch64-cfi-llvm-set-ra-sign-state=never    < %s | FileCheck --check-prefixes=NEGATE-CHECK,NEGATE-COMPAT %s

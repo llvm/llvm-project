@@ -99,15 +99,16 @@ static FloatAttr convertFloatAttr(FloatAttr srcAttr, FloatType dstType,
   return builder.getF32FloatAttr(dstVal.convertToFloat());
 }
 
-// Get in IntegerAttr from FloatAttr while preserving the bits.
-// Useful for converting float constants to integer constants while preserving
-// the bits.
-static IntegerAttr
-getIntegerAttrFromFloatAttr(FloatAttr floatAttr, Type dstType,
-                            ConversionPatternRewriter &rewriter) {
-  APFloat floatVal = floatAttr.getValue();
-  APInt intVal = floatVal.bitcastToAPInt();
-  return rewriter.getIntegerAttr(dstType, intVal);
+// Gets an IntegerAttr from a FloatAttr while preserving the bits. If `dstType`
+// is wider than the float (e.g. i8 emulated as i32), the bits are widened
+// like an integer constant of the float's width.
+static IntegerAttr getIntegerAttrFromFloatAttr(FloatAttr floatAttr,
+                                               IntegerType dstType,
+                                               Builder builder) {
+  APInt intVal = floatAttr.getValue().bitcastToAPInt();
+  auto srcType = IntegerType::get(dstType.getContext(), intVal.getBitWidth());
+  return convertIntegerAttr(builder.getIntegerAttr(srcType, intVal), dstType,
+                            builder);
 }
 
 /// Returns true if the given `type` is a boolean scalar or vector type.
@@ -214,12 +215,14 @@ struct ElementwiseArithOpPattern final : OpConversionPattern<Op> {
         op, dstType, adaptor.getOperands());
 
     if (bitEnumContainsAny(overflowFlags, arith::IntegerOverflowFlags::nsw))
-      newOp->setAttr(getDecorationString(spirv::Decoration::NoSignedWrap),
-                     rewriter.getUnitAttr());
+      newOp->setDiscardableAttr(
+          getDecorationString(spirv::Decoration::NoSignedWrap),
+          rewriter.getUnitAttr());
 
     if (bitEnumContainsAny(overflowFlags, arith::IntegerOverflowFlags::nuw))
-      newOp->setAttr(getDecorationString(spirv::Decoration::NoUnsignedWrap),
-                     rewriter.getUnitAttr());
+      newOp->setDiscardableAttr(
+          getDecorationString(spirv::Decoration::NoUnsignedWrap),
+          rewriter.getUnitAttr());
 
     return success();
   }
@@ -312,8 +315,8 @@ struct ConstantCompositeOpPattern final
           if (typeConverter->getOptions().emulateUnsupportedFloatTypes &&
               srcElemType.getIntOrFloatBitWidth() == 8 &&
               isa<IntegerType>(dstElemType)) {
-            dstAttr =
-                getIntegerAttrFromFloatAttr(srcAttr, dstElemType, rewriter);
+            dstAttr = getIntegerAttrFromFloatAttr(
+                srcAttr, cast<IntegerType>(dstElemType), rewriter);
           } else {
             dstAttr = convertFloatAttr(srcAttr, cast<FloatType>(dstElemType),
                                        rewriter);
@@ -387,10 +390,10 @@ struct ConstantScalarOpPattern final
       // converted to float type.
       auto *typeConverter = getTypeConverter<SPIRVTypeConverter>();
       if (typeConverter->getOptions().emulateUnsupportedFloatTypes &&
-          srcType.getIntOrFloatBitWidth() == 8 && isa<IntegerType>(dstType) &&
-          dstType.getIntOrFloatBitWidth() == 8) {
+          srcType.getIntOrFloatBitWidth() == 8 && isa<IntegerType>(dstType)) {
         // If the source is an 8-bit float, convert it to a 8-bit integer.
-        dstAttr = getIntegerAttrFromFloatAttr(srcAttr, dstType, rewriter);
+        dstAttr = getIntegerAttrFromFloatAttr(
+            srcAttr, cast<IntegerType>(dstType), rewriter);
         if (!dstAttr)
           return failure();
       } else if (srcType != dstType) {
@@ -729,8 +732,14 @@ struct IntToFPPattern final : public OpConversionPattern<ArithOp> {
     // Check if the source integer type was widened during type conversion.
     unsigned originalBitwidth =
         getElementTypeOrSelf(op.getIn().getType()).getIntOrFloatBitWidth();
-    unsigned convertedBitwidth =
-        getElementTypeOrSelf(srcType).getIntOrFloatBitWidth();
+
+    Type srcElemType = getElementTypeOrSelf(srcType);
+    if (!srcElemType.isIntOrFloat()) {
+      return rewriter.notifyMatchFailure(op,
+                                         "unsupported type for uitofp/sitofp");
+    }
+
+    unsigned convertedBitwidth = srcElemType.getIntOrFloatBitWidth();
 
     if (originalBitwidth >= convertedBitwidth) {
       rewriter.replaceOpWithNewOp<SPIRVOp>(op, dstType, adaptor.getOperands());
@@ -1059,7 +1068,7 @@ struct TypeCastingOpPattern final : public OpConversionPattern<Op> {
       auto newOp = rewriter.template replaceOpWithNewOp<SPIRVOp>(
           op, dstType, adaptor.getOperands());
       if (rm) {
-        newOp->setAttr(
+        newOp->setDiscardableAttr(
             getDecorationString(spirv::Decoration::FPRoundingMode),
             spirv::FPRoundingModeAttr::get(rewriter.getContext(), *rm));
       }
@@ -1500,6 +1509,7 @@ void mlir::arith::populateArithToSPIRVPatterns(
     TypeCastingOpPattern<arith::ExtFOp, spirv::FConvertOp>,
     TruncIPattern, TruncII1Pattern,
     TypeCastingOpPattern<arith::TruncFOp, spirv::FConvertOp>,
+    TypeCastingOpPattern<arith::ConvertFOp, spirv::FConvertOp>,
     IntToFPPattern<arith::UIToFPOp, spirv::ConvertUToFOp, false>,
     BoolToValuePattern<arith::UIToFPOp>,
     IntToFPPattern<arith::SIToFPOp, spirv::ConvertSToFOp, true>,

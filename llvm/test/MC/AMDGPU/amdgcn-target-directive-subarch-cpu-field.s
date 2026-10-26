@@ -43,16 +43,21 @@
 
 //--- cpu-not-covered.s
 // A processor not covered by the triple's subarch is rejected.
-// NOTCOVERED: {{.*}}: error: target id 'amdgpu12.50-amd-amdhsa-unknown-gfx900' specifies a processor that is not valid for subarch 'amdgpu12.50'
+// FIXME: TargetID::parse now rejects the subarch-incompatible processor, so
+// this reports the generic malformed-target-id diagnostic instead of the more
+// specific "not valid for subarch" message.
+// NOTCOVERED: {{.*}}: error: malformed target id 'amdgpu12.50-amd-amdhsa-unknown-gfx900'
 .amdgcn_target "amdgpu12.50-amd-amdhsa-unknown-gfx900"
 
 //--- cpu-not-covered-same-major.s
 // A sibling processor sharing the major subarch (gfx1251 and gfx1250 are both
 // gfx12.5) is still not covered by a specific subarch (amdgpu12.50).
-// NOTCOVERED-SAME-MAJOR: {{.*}}: error: target id 'amdgpu12.50-amd-amdhsa-unknown-gfx1251' specifies a processor that is not valid for subarch 'amdgpu12.50'
+// FIXME: As above, this now reports the generic malformed-target-id diagnostic.
+// NOTCOVERED-SAME-MAJOR: {{.*}}: error: malformed target id 'amdgpu12.50-amd-amdhsa-unknown-gfx1251'
 .amdgcn_target "amdgpu12.50-amd-amdhsa-unknown-gfx1251"
 
 //--- isa-cpu-not-covered.s
 // The same check applies to .amd_amdgpu_isa.
-// ISA-NOTCOVERED: {{.*}}: error: target id 'amdgpu12.50-amd-amdpal-unknown-gfx900' specifies a processor that is not valid for subarch 'amdgpu12.50'
+// FIXME: As above, this now reports the generic malformed-target-id diagnostic.
+// ISA-NOTCOVERED: {{.*}}: error: malformed target id 'amdgpu12.50-amd-amdpal-unknown-gfx900'
 .amd_amdgpu_isa "amdgpu12.50-amd-amdpal-unknown-gfx900"

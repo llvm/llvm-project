@@ -102,7 +102,7 @@ InputSection *elf::createInterpSection(Ctx &ctx) {
 
 Defined *elf::addSyntheticLocal(Ctx &ctx, StringRef name, uint8_t type,
                                 uint64_t value, uint64_t size,
-                                InputSectionBase &section) {
+                                SectionBase &section) {
   Defined *s = makeDefined(ctx, section.file, name, STB_LOCAL, STV_DEFAULT,
                            type, value, size, &section);
   if (ctx.in.symTab)
@@ -228,28 +228,6 @@ BssSection::BssSection(Ctx &ctx, StringRef name, uint64_t size,
 EhFrameSection::EhFrameSection(Ctx &ctx)
     : SyntheticSection(ctx, ".eh_frame", SHT_PROGBITS, SHF_ALLOC, 1) {}
 
-// Search for an existing CIE record or create a new one.
-// CIE records from input object files are uniquified by their contents
-// and where their relocations point to.
-CieRecord *EhFrameSection::addCie(EhSectionPiece &cie,
-                                  ArrayRef<Relocation> rels) {
-  Symbol *personality = nullptr;
-  unsigned firstRelI = cie.firstRelocation;
-  if (firstRelI != (unsigned)-1)
-    personality = rels[firstRelI].sym;
-
-  // Search for an existing CIE by CIE contents/relocation target pair.
-  CieRecord *&rec = cieMap[{cie.data(), personality}];
-
-  // If not found, create a new one.
-  if (!rec) {
-    rec = make<CieRecord>();
-    rec->cie = &cie;
-    cieRecords.push_back(rec);
-  }
-  return rec;
-}
-
 // There is one FDE per function. Returns a non-null pointer to the function
 // symbol if the given FDE points to a live function.
 Defined *EhFrameSection::isFdeLive(EhSectionPiece &fde,
@@ -270,56 +248,23 @@ Defined *EhFrameSection::isFdeLive(EhSectionPiece &fde,
   return nullptr;
 }
 
-// .eh_frame is a sequence of CIE or FDE records. In general, there
-// is one CIE record per input object file which is followed by
-// a list of FDEs. This function searches an existing CIE or create a new
-// one and associates FDEs to the CIE.
-template <endianness e> void EhFrameSection::addRecords(EhInputSection *sec) {
-  auto rels = sec->rels;
-  offsetToCie.clear();
-  for (EhSectionPiece &cie : sec->cies)
-    offsetToCie[cie.inputOff] = addCie(cie, rels);
-  for (EhSectionPiece &fde : sec->fdes) {
-    uint32_t id = endian::read32<e>(fde.data().data() + 4);
-    CieRecord *rec = offsetToCie[fde.inputOff + 4 - id];
-    if (!rec)
-      Fatal(ctx) << sec << ": invalid CIE reference";
-
-    if (!isFdeLive(fde, rels))
-      continue;
-    rec->fdes.push_back(&fde);
-    numFdes++;
-  }
-}
-
-// Used by ICF<ELFT>::handleLSDA(). This function is very similar to
-// EhFrameSection::addRecords().
-template <class ELFT>
-void EhFrameSection::iterateFDEWithLSDAAux(
-    EhInputSection &sec, DenseSet<size_t> &ciesWithLSDA,
-    llvm::function_ref<void(InputSection &)> fn) {
-  for (EhSectionPiece &cie : sec.cies)
-    if (hasLSDA(cie))
-      ciesWithLSDA.insert(cie.inputOff);
-  for (EhSectionPiece &fde : sec.fdes) {
-    uint32_t id = endian::read32<ELFT::Endianness>(fde.data().data() + 4);
-    if (!ciesWithLSDA.contains(fde.inputOff + 4 - id))
-      continue;
-
-    // The CIE has a LSDA argument. Call fn with d's section.
-    if (Defined *d = isFdeLive(fde, sec.rels))
-      if (auto *s = dyn_cast_or_null<InputSection>(d->section))
-        fn(*s);
-  }
-}
-
-template <class ELFT>
+// Used by ICF.
 void EhFrameSection::iterateFDEWithLSDA(
     llvm::function_ref<void(InputSection &)> fn) {
-  DenseSet<size_t> ciesWithLSDA;
+  SmallVector<bool, 0> ciesWithLSDA;
   for (EhInputSection *sec : sections) {
     ciesWithLSDA.clear();
-    iterateFDEWithLSDAAux<ELFT>(*sec, ciesWithLSDA, fn);
+    for (EhSectionPiece &cie : sec->cies)
+      ciesWithLSDA.push_back(hasLSDA(*sec, cie));
+    for (EhSectionPiece &fde : sec->fdes) {
+      if (!ciesWithLSDA[fde.cie])
+        continue;
+
+      // The CIE has a LSDA argument. Call fn with d's section.
+      if (Defined *d = isFdeLive(fde, sec->rels))
+        if (auto *s = dyn_cast_or_null<InputSection>(d->section))
+          fn(*s);
+    }
   }
 }
 
@@ -332,33 +277,59 @@ static void writeCieFde(Ctx &ctx, uint8_t *buf, ArrayRef<uint8_t> d) {
 void EhFrameSection::finalizeContents() {
   assert(!this->size); // Not finalized.
 
-  switch (ctx.arg.ekind) {
-  case ELFNoneKind:
-    llvm_unreachable("invalid ekind");
-  case ELF32LEKind:
-  case ELF64LEKind:
-    for (EhInputSection *sec : sections)
-      if (sec->isLive())
-        addRecords<endianness::little>(sec);
-    break;
-  case ELF32BEKind:
-  case ELF64BEKind:
-    for (EhInputSection *sec : sections)
-      if (sec->isLive())
-        addRecords<endianness::big>(sec);
-    break;
-  }
-
+  // Uniquify CIEs by their contents and where their relocations point to.
+  DenseMap<std::pair<ArrayRef<uint8_t>, Symbol *>, uint32_t> cieMap;
   size_t off = 0;
-  for (CieRecord *rec : cieRecords) {
-    rec->cie->outputOff = off;
-    off += rec->cie->size;
-
-    for (EhSectionPiece *fde : rec->fdes) {
-      fde->outputOff = off;
-      off += fde->size;
+  for (EhInputSection *sec : sections) {
+    if (!sec->isLive())
+      continue;
+    for (EhSectionPiece &cie : sec->cies) {
+      Symbol *personality = nullptr;
+      if (cie.firstRelocation != unsigned(-1))
+        personality = sec->rels[cie.firstRelocation].sym;
+      auto [it, inserted] =
+          cieMap.try_emplace({cie.data(*sec), personality}, off);
+      if (inserted) {
+        cie.outputOff = off;
+        off += cie.size;
+        uint8_t enc = getFdeEncoding(*sec, cie) & 0x70;
+        if (enc != DW_EH_PE_absptr && enc != DW_EH_PE_pcrel)
+          Err(ctx) << "unknown FDE size encoding";
+      }
+      sec->cieOutputOffs.push_back(it->second);
     }
   }
+
+  // Place live FDEs after the CIEs in input order. Compute section-relative
+  // offsets in parallel, then add each section's base offset.
+  struct FdeRange {
+    uint64_t off = 0, size = 0;
+    size_t num = 0;
+  };
+  SmallVector<FdeRange, 0> ranges(sections.size());
+  parallelFor(0, sections.size(), [&](size_t i) {
+    EhInputSection &sec = *sections[i];
+    if (!sec.isLive())
+      return;
+    FdeRange &r = ranges[i];
+    for (EhSectionPiece &fde : sec.fdes) {
+      if (!isFdeLive(fde, sec.rels))
+        continue;
+      fde.outputOff = r.size;
+      r.size += fde.size;
+      ++r.num;
+    }
+  });
+  for (FdeRange &r : ranges) {
+    r.off = off;
+    off += r.size;
+    numFdes += r.num;
+  }
+  parallelFor(0, sections.size(), [&](size_t i) {
+    for (EhSectionPiece &fde : sections[i]->fdes)
+      if (fde.outputOff != -1)
+        fde.outputOff += ranges[i].off;
+  });
 
   // The LSB standard does not allow a .eh_frame section with zero
   // Call Frame Information records. glibc unwind-dw2-fde.c
@@ -370,25 +341,24 @@ void EhFrameSection::finalizeContents() {
 }
 
 void EhFrameSection::writeTo(uint8_t *buf) {
-  // Write CIE and FDE records.
-  for (CieRecord *rec : cieRecords) {
-    size_t cieOffset = rec->cie->outputOff;
-    writeCieFde(ctx, buf + cieOffset, rec->cie->data());
-
-    for (EhSectionPiece *fde : rec->fdes) {
-      size_t off = fde->outputOff;
-      writeCieFde(ctx, buf + off, fde->data());
+  parallelForEach(sections, [&](EhInputSection *sec) {
+    for (EhSectionPiece &cie : sec->cies)
+      if (cie.outputOff != -1)
+        writeCieFde(ctx, buf + cie.outputOff, cie.data(*sec));
+    for (EhSectionPiece &fde : sec->fdes) {
+      if (fde.outputOff == -1)
+        continue;
+      size_t off = fde.outputOff;
+      writeCieFde(ctx, buf + off, fde.data(*sec));
 
       // FDE's second word should have the offset to an associated CIE.
       // Write it.
-      write32(ctx, buf + off + 4, off + 4 - cieOffset);
+      write32(ctx, buf + off + 4, off + 4 - sec->cieOutputOffs[fde.cie]);
     }
-  }
-
-  // Apply relocations to .eh_frame entries. This includes CIE personality
-  // pointers, FDE initial_location fields, and LSDA pointers.
-  for (EhInputSection *s : sections)
-    ctx.target->relocateEh(*s, buf);
+    // Apply relocations to CIE personality pointers, FDE initial_location
+    // fields, and LSDA pointers.
+    ctx.target->relocateEh(*sec, buf);
+  });
 
   EhFrameHeader *hdr = ctx.in.ehFrameHdr.get();
   if (!hdr || !hdr->getParent())
@@ -454,20 +424,16 @@ bool EhFrameHeader::updateAllocSize(Ctx &ctx) {
   // Collect FDE entries. For each FDE, compute pcRel and fdeVARel relative to
   // .eh_frame_hdr's VA.
   fdes.clear();
-  for (CieRecord *rec : ehFrame->getCieRecords()) {
-    uint8_t enc = getFdeEncoding(rec->cie);
-    if ((enc & 0x70) != DW_EH_PE_absptr && (enc & 0x70) != DW_EH_PE_pcrel) {
-      Err(ctx) << "unknown FDE size encoding";
-      continue;
-    }
-    for (EhSectionPiece *fde : rec->fdes) {
+  for (EhInputSection *sec : ehFrame->sections) {
+    for (const EhSectionPiece &fde : sec->fdes) {
+      if (fde.outputOff == -1)
+        continue;
       // The FDE has passed `isFdeLive`, so the first relocation's symbol is a
       // live Defined.
-      auto *isec = cast<EhInputSection>(fde->sec);
-      auto &reloc = isec->rels[fde->firstRelocation];
+      const Relocation &reloc = sec->rels[fde.firstRelocation];
       assert(isa<Defined>(reloc.sym) && "isFdeLive should have checked this");
       int64_t pcRel = reloc.sym->getVA(ctx) + reloc.addend - hdrVA;
-      int64_t fdeVARel = ehFrame->getParent()->addr + fde->outputOff - hdrVA;
+      int64_t fdeVARel = ehFrame->getParent()->addr + fde.outputOff - hdrVA;
       fdes.push_back({pcRel, fdeVARel});
       newLarge |= !isInt<32>(pcRel) || !isInt<32>(fdeVARel);
     }
@@ -491,6 +457,12 @@ bool EhFrameHeader::updateAllocSize(Ctx &ctx) {
   // Compute size.
   size_t oldSize = size;
   finalizeContents();
+
+  // Don't allow the section to shrink; otherwise the size of the section can
+  // oscillate infinitely.
+  if (size < oldSize)
+    size = oldSize;
+
   return size != oldSize;
 }
 
@@ -507,7 +479,9 @@ void GotSection::addEntry(const Symbol &sym) {
 
 void GotSection::addAuthEntry(const Symbol &sym) {
   authEntries.push_back(
-      {(numEntries - 1) * ctx.target->gotEntrySize, sym.isFunc()});
+      {/*offset=*/(numEntries - 1) * ctx.target->gotEntrySize,
+       /*isSymbolFunc=*/sym.isFunc(),
+       /*isUndefinedNonPreemptible=*/sym.isUndefined() && !sym.isPreemptible});
 }
 
 bool GotSection::addTlsDescEntry(const Symbol &sym) {
@@ -517,9 +491,12 @@ bool GotSection::addTlsDescEntry(const Symbol &sym) {
   return true;
 }
 
-void GotSection::addTlsDescAuthEntry() {
-  authEntries.push_back({(numEntries - 2) * ctx.target->gotEntrySize, true});
-  authEntries.push_back({(numEntries - 1) * ctx.target->gotEntrySize, false});
+void GotSection::addTlsDescAuthEntry(const Symbol &sym) {
+  authEntries.push_back({/*offset=*/(numEntries - 2) * ctx.target->gotEntrySize,
+                         /*isSymbolFunc=*/true,
+                         /*isUndefinedNonPreemptible=*/false});
+  assert(!sym.isFunc());
+  addAuthEntry(sym);
 }
 
 bool GotSection::addDynTlsEntry(const Symbol &sym) {
@@ -568,7 +545,8 @@ void GotSection::finalizeContents() {
 bool GotSection::isNeeded() const {
   // Needed if the GOT symbol is used or the number of entries is more than just
   // the header. A GOT with just the header may not be needed.
-  return hasGotOffRel || numEntries > ctx.target->gotHeaderEntriesNum;
+  return hasGotOffRel || hasDeferredEntries ||
+         numEntries > ctx.target->gotHeaderEntriesNum;
 }
 
 void GotSection::writeTo(uint8_t *buf) {
@@ -578,6 +556,12 @@ void GotSection::writeTo(uint8_t *buf) {
   ctx.target->writeGotHeader(buf);
   ctx.target->relocateAlloc(*this, buf);
   for (const AuthEntryInfo &authEntry : authEntries) {
+    uint8_t *dest = buf + authEntry.offset;
+
+    if (authEntry.isUndefinedNonPreemptible) {
+      write64(ctx, dest, 0);
+      continue;
+    }
     // https://github.com/ARM-software/abi-aa/blob/2024Q3/pauthabielf64/pauthabielf64.rst#default-signing-schema
     //   Signed GOT entries use the IA key for symbols of type STT_FUNC and the
     //   DA key for all other symbol types, with the address of the GOT entry as
@@ -587,7 +571,6 @@ void GotSection::writeTo(uint8_t *buf) {
     // https://github.com/ARM-software/abi-aa/blob/2024Q3/pauthabielf64/pauthabielf64.rst#encoding-the-signing-schema
     //   If address diversity is set and the discriminator
     //   is 0 then modifier = Place
-    uint8_t *dest = buf + authEntry.offset;
     uint64_t key = authEntry.isSymbolFunc ? /*IA=*/0b00 : /*DA=*/0b10;
     uint64_t addrDiversity = 1;
     write64(ctx, dest, (addrDiversity << 63) | (key << 60));
@@ -1316,6 +1299,12 @@ DynamicSection<ELFT>::computeContents() {
     addInt(DT_PLTREL, ctx.arg.isRela ? DT_RELA : DT_REL);
   }
 
+  if (ctx.arg.zMarkPlt && ctx.in.plt->isNeeded()) {
+    addInSec(DT_X86_64_PLT, *ctx.in.plt);
+    addInt(DT_X86_64_PLTSZ, ctx.in.plt->getSize());
+    addInt(DT_X86_64_PLTENT, ctx.target->pltEntrySize);
+  }
+
   if (ctx.arg.emachine == EM_AARCH64) {
     if (ctx.arg.andFeatures & GNU_PROPERTY_AARCH64_FEATURE_1_BTI)
       addInt(DT_AARCH64_BTI_PLT, 0);
@@ -1440,7 +1429,7 @@ template <class ELFT> void DynamicSection<ELFT>::writeTo(uint8_t *buf) {
 }
 
 uint64_t DynamicReloc::getOffset() const {
-  return inputSec->getVA(offsetInSec);
+  return inputSec->getRelocVA(offsetInSec);
 }
 
 int64_t DynamicReloc::computeAddend(Ctx &ctx) const {
@@ -1521,9 +1510,14 @@ void RelocationBaseSection::finalizeContents() {
   else
     getParent()->link = 0;
 
-  if (ctx.in.relaPlt.get() == this && ctx.in.gotPlt->getParent()) {
-    getParent()->flags |= ELF::SHF_INFO_LINK;
-    getParent()->info = ctx.in.gotPlt->getParent()->sectionIndex;
+  if (ctx.in.relaPlt.get() == this) {
+    InputSection *sec = ctx.target->usesGotPlt
+                            ? static_cast<InputSection *>(ctx.in.gotPlt.get())
+                            : static_cast<InputSection *>(ctx.in.plt.get());
+    if (sec->getParent()) {
+      getParent()->flags |= ELF::SHF_INFO_LINK;
+      getParent()->info = sec->getParent()->sectionIndex;
+    }
   }
 }
 
@@ -2864,14 +2858,14 @@ void DebugNamesBaseSection::computeHdrAndAbbrevTable(
         FoldingSetNodeID id;
         abbrev.Profile(id);
         uint32_t newCode;
-        void *insertPos;
-        if (Abbrev *existing = abbrevSet.FindNodeOrInsertPos(id, insertPos)) {
+        FoldingSetInsertToken token;
+        if (Abbrev *existing = abbrevSet.lookup(id, token)) {
           // Found it; we've already seen an identical abbreviation.
           newCode = existing->code;
         } else {
           Abbrev *abbrev2 =
               new (abbrevAlloc.Allocate()) Abbrev(std::move(abbrev));
-          abbrevSet.InsertNode(abbrev2, insertPos);
+          abbrevSet.insert(abbrev2, token);
           abbrevTable.push_back(abbrev2);
           newCode = abbrevTable.size();
           abbrev2->code = newCode;
@@ -4107,6 +4101,32 @@ InputSection *ThunkSection::getTargetInputSection() const {
   return t->getTargetInputSection();
 }
 
+// Move forward thunks to the right half and sort them by destination VA:
+//
+// dstA, dstB, [backward A, B], [forward D, C], dstC, dstD
+//
+// A forward thunk's distance grows when a thunk after it grows. Ordering
+// forward thunks by descending destination keeps the most promotable ones
+// lowest, where their growth stays below the rest. A backward thunk's distance
+// grows only with a promotion before it, already applied by
+// ThunkSection::assignOffsets when we reach it, so backward thunks need no
+// ordering and stay ahead of forward thunks in creation order.
+void ThunkSection::sortByDestination() {
+  uint64_t base = getVA();
+  SmallVector<std::pair<uint64_t, Thunk *>, 0> keys;
+  keys.resize_for_overwrite(thunks.size());
+  for (auto [i, t] : enumerate(thunks))
+    keys[i] = {t->getDestVA(), t};
+  auto *forward =
+      std::stable_partition(keys.begin(), keys.end(),
+                            [base](const auto &k) { return k.first <= base; });
+  std::stable_sort(forward, keys.end(), [](const auto &a, const auto &b) {
+    return a.first > b.first;
+  });
+  for (auto [i, p] : llvm::enumerate(keys))
+    thunks[i] = p.second;
+}
+
 bool ThunkSection::assignOffsets() {
   uint64_t off = 0;
   bool changed = false;
@@ -4380,6 +4400,38 @@ size_t MemtagGlobalDescriptors::getSize() const {
   return createMemtagGlobalDescriptors(ctx, symbols);
 }
 
+DynamicDebugSection::DynamicDebugSection(Ctx &ctx)
+    : SyntheticSection(ctx, dynDbgSecName, SHT_LLVM_DYNDBG_ELF, 0, 8) {
+  assert(ctx.dynDbgOutput);
+}
+
+size_t DynamicDebugSection::getSize() const {
+  return ctx.dynDbgOutput->getBufferSize();
+}
+
+void DynamicDebugSection::writeTo(uint8_t *buf) {
+  memcpy(buf, ctx.dynDbgOutput->getBufferStart(),
+         ctx.dynDbgOutput->getBufferSize());
+}
+
+constexpr char dynDbgNoteName[] = "LLVM";
+
+DynamicDebugNote::DynamicDebugNote(Ctx &ctx)
+    : SyntheticSection(ctx, ".note.llvm.dyndbg", SHT_NOTE, 0, 4) {}
+
+size_t DynamicDebugNote::getSize() const {
+  return sizeof(llvm::ELF::Elf64_Nhdr) + alignTo(sizeof(dynDbgNoteName), 4) +
+         /*descsz=*/sizeof(uint32_t);
+}
+
+void DynamicDebugNote::writeTo(uint8_t *buf) {
+  write32(ctx, buf, sizeof(dynDbgNoteName));        // Name size
+  write32(ctx, buf + 4, sizeof(uint32_t));          // Content size
+  write32(ctx, buf + 8, NT_LLVM_DYNAMIC_DEBUGGING); // Type
+  memcpy(buf + 12, dynDbgNoteName, sizeof(dynDbgNoteName));
+  write32(ctx, buf + 12 + alignTo(sizeof(dynDbgNoteName), 4), 0); // Version
+}
+
 static OutputSection *findSection(Ctx &ctx, StringRef name) {
   for (SectionCommand *cmd : ctx.script->sectionCommands)
     if (auto *osd = dyn_cast<OutputDesc>(cmd))
@@ -4541,7 +4593,7 @@ template <class ELFT> void elf::createSyntheticSections(Ctx &ctx) {
   // Add .relro_padding if DATA_SEGMENT_RELRO_END is used; otherwise, add the
   // section in the absence of PHDRS/SECTIONS commands.
   if (ctx.arg.zRelro &&
-      ((ctx.script->phdrsCommands.empty() && !ctx.script->hasSectionsCommand) ||
+      ((!ctx.script->hasPhdrsCommands() && !ctx.script->hasSectionsCommand) ||
        ctx.script->seenRelroEnd)) {
     ctx.in.relroPadding = std::make_unique<RelroPaddingSection>(ctx);
     add(*ctx.in.relroPadding);
@@ -4604,21 +4656,21 @@ template <class ELFT> void elf::createSyntheticSections(Ctx &ctx) {
     add(*ctx.in.shStrTab);
   if (ctx.in.strTab)
     add(*ctx.in.strTab);
+
+  if (ctx.dynDbgOutput) {
+    ctx.in.dynDbg = std::make_unique<DynamicDebugSection>(ctx);
+    add(*ctx.in.dynDbg);
+    if (!ctx.arg.relocatable) {
+      ctx.in.dynDbgNote = std::make_unique<DynamicDebugNote>(ctx);
+      add(*ctx.in.dynDbgNote);
+    }
+  }
 }
 
 template void elf::splitSections<ELF32LE>(Ctx &);
 template void elf::splitSections<ELF32BE>(Ctx &);
 template void elf::splitSections<ELF64LE>(Ctx &);
 template void elf::splitSections<ELF64BE>(Ctx &);
-
-template void EhFrameSection::iterateFDEWithLSDA<ELF32LE>(
-    function_ref<void(InputSection &)>);
-template void EhFrameSection::iterateFDEWithLSDA<ELF32BE>(
-    function_ref<void(InputSection &)>);
-template void EhFrameSection::iterateFDEWithLSDA<ELF64LE>(
-    function_ref<void(InputSection &)>);
-template void EhFrameSection::iterateFDEWithLSDA<ELF64BE>(
-    function_ref<void(InputSection &)>);
 
 template class elf::SymbolTableSection<ELF32LE>;
 template class elf::SymbolTableSection<ELF32BE>;

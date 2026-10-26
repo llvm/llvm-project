@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/JumpTableToSwitch.h"
-#include "llvm/ADT/DenseSet.h"
+#include "ScalarOptions.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -19,31 +19,10 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/ProfileData/InstrProf.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Error.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include <limits>
 
 using namespace llvm;
-
-static cl::opt<unsigned>
-    JumpTableSizeThreshold("jump-table-to-switch-size-threshold", cl::Hidden,
-                           cl::desc("Only split jump tables with size less or "
-                                    "equal than JumpTableSizeThreshold."),
-                           cl::init(10));
-
-// TODO: Consider adding a cost model for profitability analysis of this
-// transformation. Currently we replace a jump table with a switch if all the
-// functions in the jump table are smaller than the provided threshold.
-static cl::opt<unsigned> FunctionSizeThreshold(
-    "jump-table-to-switch-function-size-threshold", cl::Hidden,
-    cl::desc("Only split jump tables containing functions whose sizes are less "
-             "or equal than this threshold."),
-    cl::init(50));
-
-namespace llvm {
-extern cl::opt<bool> ProfcheckDisableMetadataFixes;
-} // end namespace llvm
 
 #define DEBUG_TYPE "jump-table-to-switch"
 
@@ -55,11 +34,12 @@ STATISTIC(NumJumpTablesConverted,
 namespace {
 struct JumpTableTy {
   Value *Index;
-  SmallVector<Function *, 10> Funcs;
+  SmallVector<std::pair<uint64_t, Function *>, 10> Funcs;
 };
 } // anonymous namespace
 
-static std::optional<JumpTableTy> parseJumpTable(GetElementPtrInst *GEP,
+static std::optional<JumpTableTy> parseJumpTable(const ScalarOptions &Opts,
+                                                 GetElementPtrInst *GEP,
                                                  PointerType *PtrTy,
                                                  FunctionType *CallFTy) {
   Constant *Ptr = dyn_cast<Constant>(GEP->getPointerOperand());
@@ -89,7 +69,7 @@ static std::optional<JumpTableTy> parseJumpTable(GetElementPtrInst *GEP,
     return std::nullopt;
   ++NumEligibleJumpTables;
   const uint64_t N = JumpTableSizeBytes / StrideBytes.getZExtValue();
-  if (N > JumpTableSizeThreshold)
+  if (N > Opts.jump_table_to_switch_size_threshold)
     return std::nullopt;
 
   JumpTableTy JumpTable;
@@ -100,12 +80,22 @@ static std::optional<JumpTableTy> parseJumpTable(GetElementPtrInst *GEP,
     APInt Offset = Index * StrideBytes;
     Constant *C =
         ConstantFoldLoadFromConst(GV->getInitializer(), PtrTy, Offset, DL);
-    auto *Func = dyn_cast_or_null<Function>(C);
-    if (!Func || Func->isDeclaration() || Func->getFunctionType() != CallFTy ||
-        Func->getInstructionCount() > FunctionSizeThreshold)
+    if (!C)
       return std::nullopt;
-    JumpTable.Funcs.push_back(Func);
+    if ((isa<ConstantPointerNull>(C) &&
+         !NullPointerIsDefined(&F, PtrTy->getAddressSpace())) ||
+        isa<UndefValue>(C))
+      continue;
+    auto *Func = dyn_cast<Function>(C);
+    if (!Func || Func->isDeclaration() || Func->getFunctionType() != CallFTy ||
+        Func->getInstructionCount() >
+            Opts.jump_table_to_switch_function_size_threshold)
+      return std::nullopt;
+    JumpTable.Funcs.push_back({Index, Func});
   }
+  // Empty table, or only values that are UB when called
+  if (JumpTable.Funcs.empty())
+    return std::nullopt;
   return JumpTable;
 }
 
@@ -145,8 +135,9 @@ expandToSwitch(CallBase *CB, const JumpTableTy &JT, DomTreeUpdater &DTU,
   if (HadProfile) {
     // The assumptions, coming in, are that the functions in JT.Funcs are
     // defined in this module (from parseJumpTable).
-    assert(llvm::all_of(
-        JT.Funcs, [](const Function *F) { return F && !F->isDeclaration(); }));
+    assert(llvm::all_of(JT.Funcs, [](auto &F) {
+      return F.second && !F.second->isDeclaration();
+    }));
     BranchWeights.reserve(JT.Funcs.size() + 1);
     // The first is the default target, which is the unreachable block created
     // above.
@@ -163,7 +154,7 @@ expandToSwitch(CallBase *CB, const JumpTableTy &JT, DomTreeUpdater &DTU,
       assert(It.second);
     }
   }
-  for (auto [Index, Func] : llvm::enumerate(JT.Funcs)) {
+  for (auto [Index, Func] : JT.Funcs) {
     BasicBlock *B = BasicBlock::Create(Func->getContext(),
                                        "call." + Twine(Index), &F, Tail);
     DTUpdates.push_back({DominatorTree::Insert, BB, B});
@@ -195,8 +186,7 @@ expandToSwitch(CallBase *CB, const JumpTableTy &JT, DomTreeUpdater &DTU,
   // Only set branch weights on the switch if we have non-zero branch weights.
   // We can have no non-zero branch weights while having VP metadata if for
   // example, all of the functions are external and not instrumented.
-  if (HadProfile && !ProfcheckDisableMetadataFixes &&
-      llvm::any_of(BranchWeights, not_equal_to(0))) {
+  if (HadProfile && llvm::any_of(BranchWeights, not_equal_to(0))) {
     setBranchWeights(*Switch, downscaleWeights(BranchWeights),
                      /*IsExpected=*/false);
   } else
@@ -214,13 +204,14 @@ PreservedAnalyses JumpTableToSwitchPass::run(Function &F,
   DominatorTree *DT = AM.getCachedResult<DominatorTreeAnalysis>(F);
   PostDominatorTree *PDT = AM.getCachedResult<PostDominatorTreeAnalysis>(F);
   DomTreeUpdater DTU(DT, PDT, DomTreeUpdater::UpdateStrategy::Lazy);
+  const ScalarOptions &Opts = getScalarOptions(F);
   bool Changed = false;
   auto FuncToGuid = [&](const Function &Fct) {
     if (const auto MaybeGUID = Fct.getGUIDIfAssigned(); MaybeGUID)
       return *MaybeGUID;
 
     return Function::getGUIDAssumingExternalLinkage(
-        getIRPGOFuncName(Fct, InLTO));
+        getIRPGOObjectName(Fct, InLTO));
   };
 
   for (BasicBlock &BB : make_early_inc_range(F)) {
@@ -236,12 +227,13 @@ PreservedAnalyses JumpTableToSwitchPass::run(Function &F,
         if (!L || !L->isSimple())
           continue;
         auto *GEP = dyn_cast<GetElementPtrInst>(L->getPointerOperand());
-        if (!GEP)
+        if (!GEP ||
+            (!GEP->hasNoUnsignedWrap() && !GEP->hasNoUnsignedSignedWrap()))
           continue;
         auto *PtrTy = dyn_cast<PointerType>(L->getType());
         assert(PtrTy && "call operand must be a pointer");
         std::optional<JumpTableTy> JumpTable =
-            parseJumpTable(GEP, PtrTy, Call->getFunctionType());
+            parseJumpTable(Opts, GEP, PtrTy, Call->getFunctionType());
         if (!JumpTable)
           continue;
         SplittedOutTail =
