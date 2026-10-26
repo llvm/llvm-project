@@ -16,6 +16,7 @@
 
 #include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/CodeGen/BreakFalseDeps.h"
+#include "llvm/CodeGen/CFGuardLongjmp.h"
 #include "llvm/CodeGen/CFIInstrInserter.h"
 #include "llvm/CodeGen/EHContGuardTargets.h"
 #include "llvm/CodeGen/EarlyIfConversion.h"
@@ -28,11 +29,15 @@
 #include "llvm/CodeGen/JMCInstrumenter.h"
 #include "llvm/CodeGen/KCFI.h"
 #include "llvm/CodeGen/MachineCombiner.h"
+#include "llvm/CodeGen/PseudoProbeInserter.h"
+#include "llvm/CodeGen/RegAllocGreedyPass.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/Pass.h"
 #include "llvm/Passes/CodeGenPassBuilder.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Target/CGPassBuilderOption.h"
 #include "llvm/Transforms/CFGuard.h"
 
 using namespace llvm;
@@ -66,14 +71,13 @@ public:
   void addILPOpts(PassManagerWrapper &PMW) override;
   void addMachineSSAOptimization(PassManagerWrapper &PMW) override;
   void addPreRegAlloc(PassManagerWrapper &PMW) override;
-  // TODO(boomanaiden154): We need to add addPostFastRegAllocRewrite here once
-  // it is available to support AMX.
   void addPostRegAlloc(PassManagerWrapper &PMW) override;
   void addPreSched2(PassManagerWrapper &PMW) override;
   void addPreEmitPass(PassManagerWrapper &PMW) override;
   void addPreEmitPass2(PassManagerWrapper &PMW) override;
-  // TODO(boomanaiden154): We need to add addRegAssignAndRewriteOptimized here
-  // once it is available to support AMX.
+  Error addRegAssignAndRewriteFast(PassManagerWrapper &PMW) override;
+  Expected<bool>
+  addRegAssignAndRewriteOptimized(PassManagerWrapper &PMW) override;
   void addAsmPrinterBegin(PassManagerWrapper &PMW) override;
   void addAsmPrinter(PassManagerWrapper &PMW) override;
   void addAsmPrinterEnd(PassManagerWrapper &PMW) override;
@@ -108,6 +112,8 @@ void X86CodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
     flushFPMsToMPM(PMW);
     addModulePass(JMCInstrumenterPass(), PMW);
   }
+
+  addFunctionPass(X86FenceNonTemporalStoresPass(&getTM()), PMW);
 }
 
 void X86CodeGenPassBuilder::addPreISel(PassManagerWrapper &PMW) {
@@ -228,8 +234,7 @@ void X86CodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
 
   if (getOptLevel() != CodeGenOptLevel::None) {
     addMachineFunctionPass(X86FixupBWInstsPass(), PMW);
-    // TODO(boomanaiden154): Add X86PadShortFunctionsPass here once it has been
-    // ported.
+    addMachineFunctionPass(X86PadShortFunctionsPass(), PMW);
     addMachineFunctionPass(X86FixupLEAsPass(), PMW);
     addMachineFunctionPass(X86FixupInstTuningPass(), PMW);
     addMachineFunctionPass(X86FixupVectorConstantsPass(), PMW);
@@ -243,7 +248,6 @@ void X86CodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
 
 void X86CodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) {
   const Triple &TT = TM.getTargetTriple();
-  const MCAsmInfo &MAI = TM.getMCAsmInfo();
 
   // The X86 Speculative Execution Pass must run after all control
   // flow graph modifying passes. As a result it was listed to run right before
@@ -267,16 +271,14 @@ void X86CodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) {
 
   // Verify basic block incoming and outgoing cfa offset and register values and
   // correct CFA calculation rule where needed by inserting appropriate CFI
-  // instructions.
-  if (!TT.isOSDarwin() &&
-      (!TT.isOSWindows() ||
-       MAI.getExceptionHandlingType() == ExceptionHandling::DwarfCFI))
+  // instructions. CFIInstrInserter self-skips targets that do not use DWARF
+  // CFI.
+  if (!TT.isOSDarwin())
     addMachineFunctionPass(CFIInstrInserterPass(), PMW);
 
   if (TT.isOSWindows()) {
     // Identify valid longjmp targets for Windows Control Flow Guard.
-    // TODO(boomanaiden154): Add CFGuardLongjmpPass here when it has been
-    // ported.
+    addMachineFunctionPass(CFGuardLongjmpPass(), PMW);
     // Identify valid eh continuation targets for Windows EHCont Guard.
     addMachineFunctionPass(EHContGuardTargetsPass(), PMW);
   }
@@ -284,8 +286,7 @@ void X86CodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) {
   addMachineFunctionPass(X86LoadValueInjectionRetHardeningPass(), PMW);
 
   // Insert pseudo probe annotation for callsite profiling
-  // TODO(boomanaiden154): Add PseudoProberInserterPass here once it has been
-  // ported.
+  addMachineFunctionPass(PseudoProbeInserterPass(), PMW);
 
   // KCFI indirect call checks are lowered to a bundle, and on Darwin platforms,
   // also CALL_RVMARKER.
@@ -307,6 +308,32 @@ void X86CodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) {
   if (TT.isOSWindows() && TT.isX86_64()) {
     addMachineFunctionPass(X86WinEHUnwindV2Pass(), PMW);
   }
+}
+
+static bool onlyAllocateTileRegisters(const TargetRegisterInfo &TRI,
+                                      const MachineRegisterInfo &MRI,
+                                      const Register Reg) {
+  const TargetRegisterClass *RC = MRI.getRegClass(Reg);
+  return static_cast<const X86RegisterInfo &>(TRI).isTileRegisterClass(RC);
+}
+
+Error X86CodeGenPassBuilder::addRegAssignAndRewriteFast(
+    PassManagerWrapper &PMW) {
+  Error PossibleError = Base::addRegAssignAndRewriteFast(PMW);
+  addMachineFunctionPass(X86FastTileConfigPass(), PMW);
+  return PossibleError;
+}
+
+Expected<bool> X86CodeGenPassBuilder::addRegAssignAndRewriteOptimized(
+    PassManagerWrapper &PMW) {
+  // Don't support tile RA when RA is specified by command line "-regalloc".
+  if (Opt.RegAlloc == RegAllocType::Default && getTM().getCLOpts().tile_ra) {
+    // Allocate tile register first.
+    addMachineFunctionPass(
+        RAGreedyPass({RAGreedyPass::Options(onlyAllocateTileRegisters)}), PMW);
+    addMachineFunctionPass(X86TileConfigPass(), PMW);
+  }
+  return Base::addRegAssignAndRewriteOptimized(PMW);
 }
 
 void X86CodeGenPassBuilder::addAsmPrinterBegin(PassManagerWrapper &PMW) {
