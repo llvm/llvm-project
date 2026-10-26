@@ -4069,7 +4069,7 @@ DiagnosedSilenceableFailure transform::tileToForallOpImpl(
     TransformOpInterface transformOp, Operation *target,
     ArrayRef<OpFoldResult> mixedNumThreads,
     ArrayRef<OpFoldResult> mixedTileSizes, std::optional<ArrayAttr> mapping,
-    scf::SCFTilingResult &tilingResult) {
+    scf::SCFTilingResult &tilingResult, ArrayRef<bool> scalableSizes) {
   // Transform all targets one by one.
   auto tileableOp = dyn_cast<TilingInterface>(target);
   if (!tileableOp) {
@@ -4094,7 +4094,26 @@ DiagnosedSilenceableFailure transform::tileToForallOpImpl(
   if (!mixedNumThreads.empty()) {
     options.setNumThreads(mixedNumThreads);
   } else {
-    options.setTileSizes(mixedTileSizes);
+    // Materialize scalable sizes only after checking the target's
+    // preconditions. The tiler invokes this callback in each target's scope.
+    options.setTileSizeComputationFunction(
+        [mixedTileSizes, scalableSizes](OpBuilder &builder, Operation *op) {
+          SmallVector<OpFoldResult> tileSizes(mixedTileSizes);
+          Value vscale;
+          for (auto [i, scalable] : llvm::enumerate(scalableSizes)) {
+            if (!scalable || isZeroInteger(tileSizes[i]))
+              continue;
+            Location loc = op->getLoc();
+            if (!vscale)
+              vscale = vector::VectorScaleOp::create(builder, loc,
+                                                     builder.getIndexType());
+            Value factor =
+                getValueOrCreateConstantIndexOp(builder, loc, tileSizes[i]);
+            tileSizes[i] =
+                arith::MulIOp::create(builder, loc, factor, vscale).getResult();
+          }
+          return tileSizes;
+        });
   }
   if (mapping) {
     options.setMapping(mapping.value().getValue());
@@ -4153,28 +4172,10 @@ DiagnosedSilenceableFailure transform::TileUsingForallOp::apply(
     return status;
 
   for (Operation *target : state.getPayloadOps(getTarget())) {
-    // Materialize scalable sizes separately for each target so that the values
-    // dominate the tiled operation, even when targets are in different regions.
-    OpBuilder::InsertionGuard guard(rewriter);
-    rewriter.setInsertionPoint(target);
-    SmallVector<OpFoldResult> tileSizes(mixedTileSizes);
-    Value vscale;
-    for (auto [i, scalable] : llvm::enumerate(getScalableSizes())) {
-      if (!scalable || isZeroInteger(tileSizes[i]))
-        continue;
-      Location loc = target->getLoc();
-      if (!vscale)
-        vscale = vector::VectorScaleOp::create(rewriter, loc,
-                                               rewriter.getIndexType());
-      Value factor =
-          getValueOrCreateConstantIndexOp(rewriter, loc, tileSizes[i]);
-      tileSizes[i] =
-          arith::MulIOp::create(rewriter, loc, factor, vscale).getResult();
-    }
     scf::SCFTilingResult tilingResult;
     DiagnosedSilenceableFailure diag = tileToForallOpImpl(
-        rewriter, state, transformOp, target, mixedNumThreads, tileSizes,
-        getMapping(), tilingResult);
+        rewriter, state, transformOp, target, mixedNumThreads, mixedTileSizes,
+        getMapping(), tilingResult, getScalableSizes());
     if (!diag.succeeded())
       return diag;
     if (!tilingResult.loops.empty())

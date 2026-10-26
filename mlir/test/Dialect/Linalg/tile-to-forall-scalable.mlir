@@ -129,9 +129,9 @@ module attributes {transform.with_named_sequence} {
 
 // Dynamic extents, buffer semantics and device mapping remain supported.
 // CHECK-LABEL: func.func @scalable_memref
+// CHECK: memref.dim
 // CHECK: vector.vscale
 // CHECK: arith.muli
-// CHECK: memref.dim
 // CHECK: scf.forall (%{{.*}})
 // CHECK: memref.subview
 // CHECK: linalg.copy
