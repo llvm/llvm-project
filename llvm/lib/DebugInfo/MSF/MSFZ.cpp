@@ -209,13 +209,7 @@ private:
               "MSFZ compressed chunk exceeds the supported size");
         break;
       case MSFZCompression::Deflate:
-        if (!compression::raw_deflate::isAvailable())
-          return streamError(
-              "MSFZ raw DEFLATE compression requires LLVM_ENABLE_ZLIB");
-        if (Entry.UncompressedSize > MaxCompressedChunkSize)
-          return streamError(
-              "MSFZ compressed chunk exceeds the supported size");
-        break;
+        return streamError("MSFZ DEFLATE chunk compression is unsupported");
       default:
         return streamError("MSFZ file uses an unknown chunk compression");
       }
@@ -258,15 +252,7 @@ private:
       Directory = DirectoryStorage;
       break;
     case MSFZCompression::Deflate:
-      if (!compression::raw_deflate::isAvailable())
-        return streamError("MSFZ raw DEFLATE directory compression requires "
-                           "LLVM_ENABLE_ZLIB");
-      if (Error E = compression::raw_deflate::decompress(
-              CompressedDirectory, DirectoryStorage,
-              Header.StreamDirectorySizeUncompressed))
-        return E;
-      Directory = DirectoryStorage;
-      break;
+      return streamError("MSFZ DEFLATE directory compression is unsupported");
     default:
       return streamError("MSFZ file uses an unknown directory compression");
     }
@@ -391,12 +377,8 @@ private:
     }
 
     SmallVector<uint8_t, 0> Decompressed;
-    Error E = Compression == MSFZCompression::Deflate
-                  ? compression::raw_deflate::decompress(
-                        Compressed, Decompressed, Entry.UncompressedSize)
-                  : compression::zstd::decompress(Compressed, Decompressed,
-                                                  Entry.UncompressedSize);
-    if (E)
+    if (Error E = compression::zstd::decompress(Compressed, Decompressed,
+                                                Entry.UncompressedSize))
       return std::move(E);
     if (Decompressed.size() != Entry.UncompressedSize)
       return streamError("MSFZ file has an invalid decompressed chunk");

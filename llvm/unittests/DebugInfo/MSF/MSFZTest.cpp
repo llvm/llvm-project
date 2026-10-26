@@ -43,79 +43,44 @@ static void writeU64(MutableArrayRef<uint8_t> Data, uint64_t Offset,
   std::memcpy(Data.data() + Offset, &LE, sizeof(LE));
 }
 
-static SmallVector<uint8_t, 0> makeRawDeflateFile() {
-  // These streams were produced independently with Python's
-  // zlib.compressobj(wbits=-15).
-  const uint8_t Directory[] = {0x63, 0x60, 0x60, 0x60, 0x60, 0x63,
-                               0x80, 0x83, 0x06, 0x10, 0x01, 0x00};
-  const uint8_t FirstChunk[] = {0x4b, 0x4c, 0x4a, 0x06, 0x00};
-  const uint8_t SecondChunk[] = {0x4b, 0x49, 0x4d, 0x03, 0x00};
-
-  uint64_t DirectoryOffset = sizeof(MSFZHeader);
-  uint64_t FirstChunkOffset = DirectoryOffset + sizeof(Directory);
-  uint64_t SecondChunkOffset = FirstChunkOffset + sizeof(FirstChunk);
-  uint64_t ChunkTableOffset = SecondChunkOffset + sizeof(SecondChunk);
-  SmallVector<uint8_t, 0> File(ChunkTableOffset + 2 * sizeof(MSFZChunkEntry));
-
+TEST(MSFZTest, RejectsDeflateCompression) {
+  SmallVector<uint8_t, 0> File(sizeof(MSFZHeader) + 4 + 1 +
+                               sizeof(MSFZChunkEntry));
   MSFZHeader Header = {};
   std::memcpy(Header.Magic, MSFZMagic, sizeof(MSFZMagic));
-  Header.StreamDirectoryOffset = DirectoryOffset;
+  Header.StreamDirectoryOffset = sizeof(MSFZHeader);
   Header.StreamDirectoryCompression =
-      static_cast<uint32_t>(MSFZCompression::Deflate);
-  Header.StreamDirectorySizeCompressed = sizeof(Directory);
-  Header.StreamDirectorySizeUncompressed = 20;
-  Header.NumStreams = 2;
-  Header.ChunkTableOffset = ChunkTableOffset;
-  Header.NumChunks = 2;
-  Header.ChunkTableSize = 2 * sizeof(MSFZChunkEntry);
+      static_cast<uint32_t>(MSFZCompression::None);
+  Header.StreamDirectorySizeCompressed = 4;
+  Header.StreamDirectorySizeUncompressed = 4;
+  Header.NumStreams = 1;
+  Header.ChunkTableOffset = sizeof(MSFZHeader) + 4 + 1;
+  Header.NumChunks = 1;
+  Header.ChunkTableSize = sizeof(MSFZChunkEntry);
   std::memcpy(File.data(), &Header, sizeof(Header));
-  std::memcpy(File.data() + DirectoryOffset, Directory, sizeof(Directory));
-  std::memcpy(File.data() + FirstChunkOffset, FirstChunk, sizeof(FirstChunk));
-  std::memcpy(File.data() + SecondChunkOffset, SecondChunk,
-              sizeof(SecondChunk));
 
-  MSFZChunkEntry Chunks[2] = {};
-  Chunks[0].FileOffset = FirstChunkOffset;
-  Chunks[0].Compression = static_cast<uint32_t>(MSFZCompression::Deflate);
-  Chunks[0].CompressedSize = sizeof(FirstChunk);
-  Chunks[0].UncompressedSize = 3;
-  Chunks[1].FileOffset = SecondChunkOffset;
-  Chunks[1].Compression = static_cast<uint32_t>(MSFZCompression::Deflate);
-  Chunks[1].CompressedSize = sizeof(SecondChunk);
-  Chunks[1].UncompressedSize = 3;
-  std::memcpy(File.data() + ChunkTableOffset, Chunks, sizeof(Chunks));
-  return File;
-}
+  MSFZChunkEntry Chunk = {};
+  Chunk.FileOffset = sizeof(MSFZHeader) + 4;
+  Chunk.Compression = static_cast<uint32_t>(MSFZCompression::Deflate);
+  Chunk.CompressedSize = 1;
+  Chunk.UncompressedSize = 1;
+  std::memcpy(File.data() + Header.ChunkTableOffset, &Chunk, sizeof(Chunk));
 
-TEST(MSFZTest, ReadsRawDeflateDirectoryAndChunks) {
-  SmallVector<uint8_t, 0> File = makeRawDeflateFile();
   BumpPtrAllocator Allocator;
   BinaryByteStream Input(File, llvm::endianness::little);
-  auto ReaderOrErr = MSFZFile::create(Input, Allocator);
-#if LLVM_ENABLE_ZLIB
-  ASSERT_THAT_EXPECTED(ReaderOrErr, Succeeded());
-  auto StreamOrErr = (*ReaderOrErr)->createStream(1);
-  ASSERT_THAT_EXPECTED(StreamOrErr, Succeeded());
-  ArrayRef<uint8_t> Data;
-  ASSERT_THAT_ERROR((*StreamOrErr)->readBytes(2, 3, Data), Succeeded());
-  EXPECT_EQ(toStringRef(Data), "cde");
-#else
   EXPECT_THAT_EXPECTED(
-      ReaderOrErr,
-      FailedWithMessage(
-          "MSFZ raw DEFLATE compression requires LLVM_ENABLE_ZLIB"));
+      MSFZFile::create(Input, Allocator),
+      FailedWithMessage("MSFZ DEFLATE chunk compression is unsupported"));
 
-  MSFZHeader Header;
-  std::memcpy(&Header, File.data(), sizeof(Header));
   Header.NumChunks = 0;
   Header.ChunkTableSize = 0;
+  Header.StreamDirectoryCompression =
+      static_cast<uint32_t>(MSFZCompression::Deflate);
   std::memcpy(File.data(), &Header, sizeof(Header));
   BinaryByteStream DirectoryInput(File, llvm::endianness::little);
   EXPECT_THAT_EXPECTED(
       MSFZFile::create(DirectoryInput, Allocator),
-      FailedWithMessage(
-          "MSFZ raw DEFLATE directory compression requires LLVM_ENABLE_ZLIB"));
-#endif
+      FailedWithMessage("MSFZ DEFLATE directory compression is unsupported"));
 }
 
 TEST(MSFZTest, CompatibilityWrapperWritesCompressedStreams) {
