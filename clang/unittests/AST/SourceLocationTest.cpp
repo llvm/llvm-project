@@ -234,6 +234,10 @@ TEST(TypeLoc, VectorSourceInfo) {
   llvm::Annotations Code(R"cpp(
     typedef int (__attribute__(($Vector^vector_size($VectorSize[[8 * 2]]))) Vector);
     typedef int (__attribute__(($Extended^ext_vector_type($ExtendedSize[[4]]))) Extended);
+    template <int N> struct V {
+      typedef int __attribute__((vector_size(N))) DependentVector;
+      typedef int __attribute__((ext_vector_type(N))) DependentExtended;
+    };
   )cpp");
   auto AST = tooling::buildASTFromCodeWithArgs(Code.code(), /*Args=*/{});
   ASSERT_TRUE(AST);
@@ -256,6 +260,20 @@ TEST(TypeLoc, VectorSourceInfo) {
     auto Expected = Code.range(Name + "Size");
     EXPECT_EQ(SM.getFileOffset(Range.getBegin()), Expected.Begin) << Name;
     EXPECT_EQ(SM.getFileOffset(Range.getEnd()), Expected.End) << Name;
+  }
+
+  auto DependentMatches =
+      match(typedefNameDecl(hasAnyName("DependentVector", "DependentExtended"))
+                .bind("decl"),
+            Ctx);
+  ASSERT_EQ(DependentMatches.size(), 2u);
+  for (const auto &Match : DependentMatches) {
+    const auto *Decl = Match.getNodeAs<TypedefNameDecl>("decl");
+    TypeLoc TL = Decl->getTypeSourceInfo()->getTypeLoc();
+    if (auto VTL = TL.getAs<DependentVectorTypeLoc>())
+      EXPECT_TRUE(VTL.getSizeExpr());
+    else
+      EXPECT_TRUE(TL.castAs<DependentSizedExtVectorTypeLoc>().getSizeExpr());
   }
 }
 

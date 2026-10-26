@@ -1381,10 +1381,7 @@ DEF_TRAVERSE_TYPELOC(DependentAddressSpaceType, {
 // FIXME: order? why not size expr first?
 // FIXME: base VectorTypeLoc is unfinished
 DEF_TRAVERSE_TYPELOC(DependentSizedExtVectorType, {
-  Expr *Size = TL.getSizeExpr();
-  if (!Size)
-    Size = TL.getTypePtr()->getSizeExpr();
-  TRY_TO(TraverseStmt(Size));
+  TRY_TO(TraverseStmt(TL.getSizeExpr()));
   TRY_TO(TraverseType(TL.getTypePtr()->getElementType()));
 })
 
@@ -1395,10 +1392,7 @@ DEF_TRAVERSE_TYPELOC(VectorType, {
 })
 
 DEF_TRAVERSE_TYPELOC(DependentVectorType, {
-  Expr *Size = TL.getSizeExpr();
-  if (!Size)
-    Size = TL.getTypePtr()->getSizeExpr();
-  TRY_TO(TraverseStmt(Size));
+  TRY_TO(TraverseStmt(TL.getSizeExpr()));
   TRY_TO(TraverseType(TL.getTypePtr()->getElementType()));
 })
 

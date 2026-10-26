@@ -2118,7 +2118,7 @@ public:
   void initializeLocal(ASTContext &Context, SourceLocation Loc) {
     setNameLoc(Loc);
     setAttrNameLoc(Loc);
-    setSizeExpr(nullptr);
+    setSizeExpr(getTypePtr()->getSizeExpr());
   }
 
   TypeLoc getElementLoc() const { return getInnerTypeLoc(); }
@@ -2152,7 +2152,7 @@ public:
   void initializeLocal(ASTContext &Context, SourceLocation Loc) {
     setNameLoc(Loc);
     setAttrNameLoc(Loc);
-    setSizeExpr(nullptr);
+    setSizeExpr(getTypePtr()->getSizeExpr());
   }
 
   TypeLoc getElementLoc() const { return getInnerTypeLoc(); }

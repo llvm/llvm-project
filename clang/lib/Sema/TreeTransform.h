@@ -6214,8 +6214,6 @@ QualType TreeTransform<Derived>::TransformDependentVectorType(
       SemaRef, Sema::ExpressionEvaluationContext::ConstantEvaluated);
 
   Expr *OrigSize = TL.getSizeExpr();
-  if (!OrigSize)
-    OrigSize = T->getSizeExpr();
   ExprResult Size = getDerived().TransformExpr(OrigSize);
   Size = SemaRef.ActOnConstantExpression(Size);
   if (Size.isInvalid())
@@ -6262,8 +6260,6 @@ QualType TreeTransform<Derived>::TransformDependentSizedExtVectorType(
       SemaRef, Sema::ExpressionEvaluationContext::ConstantEvaluated);
 
   Expr *OrigSize = TL.getSizeExpr();
-  if (!OrigSize)
-    OrigSize = T->getSizeExpr();
   ExprResult Size = getDerived().TransformExpr(OrigSize);
   Size = SemaRef.ActOnConstantExpression(Size);
   if (Size.isInvalid())
