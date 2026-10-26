@@ -273,6 +273,23 @@ define i32 @neg_non_mask(i32 range(i32 0, 8388608) %x) {
   ret i32 %and
 }
 
+; Second operand of the `or` is not X.
+define i32 @neg_or_not_x(i32 range(i32 0, 8388608) %x, i32 range(i32 0, 8388608) %y) {
+; CHECK-LABEL: define i32 @neg_or_not_x(
+; CHECK-SAME: i32 range(i32 0, 8388608) [[X:%.*]], i32 range(i32 0, 8388608) [[Y:%.*]]) {
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 255, [[X]]
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[SUB]], 23
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHR]], [[Y]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[OR]], 255
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %sub = sub i32 255, %x
+  %shr = lshr i32 %sub, 23
+  %or = or i32 %shr, %y
+  %and = and i32 %or, 255
+  ret i32 %and
+}
+
 ; Multi-use on the `or`: fold is not profitable.
 define i32 @neg_multiuse_or(i32 range(i32 0, 8388608) %x, ptr %sink) {
 ; CHECK-LABEL: define i32 @neg_multiuse_or(
