@@ -2894,45 +2894,43 @@ define bfloat @vreduce_fminimum_v64bf16(ptr %x) {
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    li a0, 32
-; CHECK-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
-; CHECK-NEXT:    vslidedown.vx v24, v8, a0
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
-; CHECK-NEXT:    vfwcvtbf16.f.f.v v16, v24
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v16, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
-; CHECK-NEXT:    vmfne.vv v12, v16, v16
-; CHECK-NEXT:    vcpop.m a0, v12
-; CHECK-NEXT:    lui a1, 523264
-; CHECK-NEXT:    fmv.w.x fa5, a1
-; CHECK-NEXT:    beqz a0, .LBB13_2
+; CHECK-NEXT:    vmfne.vv v24, v16, v16
+; CHECK-NEXT:    vcpop.m a1, v24
+; CHECK-NEXT:    lui a2, 523264
+; CHECK-NEXT:    fmv.w.x fa5, a2
+; CHECK-NEXT:    beqz a1, .LBB13_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    fmv.s fa4, fa5
 ; CHECK-NEXT:    j .LBB13_3
 ; CHECK-NEXT:  .LBB13_2:
-; CHECK-NEXT:    vfredmin.vs v12, v16, v16
-; CHECK-NEXT:    vfmv.f.s fa4, v12
+; CHECK-NEXT:    vfredmin.vs v16, v16, v16
+; CHECK-NEXT:    vfmv.f.s fa4, v16
 ; CHECK-NEXT:  .LBB13_3:
-; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
-; CHECK-NEXT:    vfwcvtbf16.f.f.v v16, v8
+; CHECK-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
+; CHECK-NEXT:    vslidedown.vx v16, v8, a0
+; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v8, v16
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
-; CHECK-NEXT:    vmfne.vv v8, v16, v16
-; CHECK-NEXT:    vcpop.m a0, v8
-; CHECK-NEXT:    bnez a0, .LBB13_5
+; CHECK-NEXT:    vmfne.vv v16, v8, v8
+; CHECK-NEXT:    vcpop.m a0, v16
+; CHECK-NEXT:    beqz a0, .LBB13_5
 ; CHECK-NEXT:  # %bb.4:
-; CHECK-NEXT:    vfredmin.vs v8, v16, v16
-; CHECK-NEXT:    vfmv.f.s fa5, v8
-; CHECK-NEXT:  .LBB13_5:
-; CHECK-NEXT:    feq.s a0, fa5, fa5
-; CHECK-NEXT:    fmv.s fa3, fa4
-; CHECK-NEXT:    bnez a0, .LBB13_7
-; CHECK-NEXT:  # %bb.6:
 ; CHECK-NEXT:    fmv.s fa3, fa5
-; CHECK-NEXT:  .LBB13_7:
+; CHECK-NEXT:    j .LBB13_6
+; CHECK-NEXT:  .LBB13_5:
+; CHECK-NEXT:    vfredmin.vs v8, v8, v8
+; CHECK-NEXT:    vfmv.f.s fa3, v8
+; CHECK-NEXT:  .LBB13_6:
 ; CHECK-NEXT:    feq.s a0, fa4, fa4
-; CHECK-NEXT:    bnez a0, .LBB13_9
-; CHECK-NEXT:  # %bb.8:
-; CHECK-NEXT:    fmv.s fa5, fa4
-; CHECK-NEXT:  .LBB13_9:
-; CHECK-NEXT:    fmin.s fa5, fa5, fa3
+; CHECK-NEXT:    feq.s a1, fa3, fa3
+; CHECK-NEXT:    and a0, a0, a1
+; CHECK-NEXT:    beqz a0, .LBB13_8
+; CHECK-NEXT:  # %bb.7:
+; CHECK-NEXT:    fmin.s fa5, fa4, fa3
+; CHECK-NEXT:  .LBB13_8:
 ; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
 ; CHECK-NEXT:    ret
   %v = load <64 x bfloat>, ptr %x
@@ -2949,31 +2947,25 @@ define bfloat @vreduce_fminimum_v128bf16(ptr %x) {
 ; CHECK-NEXT:    slli a1, a1, 4
 ; CHECK-NEXT:    sub sp, sp, a1
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 16 * vlenb
-; CHECK-NEXT:    li a1, 64
-; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
+; CHECK-NEXT:    li a2, 64
+; CHECK-NEXT:    vsetvli zero, a2, e16, m8, ta, ma
 ; CHECK-NEXT:    vle16.v v16, (a0)
-; CHECK-NEXT:    li a2, 32
-; CHECK-NEXT:    vmv4r.v v8, v16
+; CHECK-NEXT:    li a1, 32
 ; CHECK-NEXT:    csrr a3, vlenb
 ; CHECK-NEXT:    slli a3, a3, 3
 ; CHECK-NEXT:    add a3, sp, a3
 ; CHECK-NEXT:    addi a3, a3, 16
-; CHECK-NEXT:    vs8r.v v8, (a3) # vscale x 64-byte Folded Spill
-; CHECK-NEXT:    vsetvli zero, a2, e16, m8, ta, ma
-; CHECK-NEXT:    vslidedown.vx v16, v16, a2
-; CHECK-NEXT:    addi a0, a0, 128
-; CHECK-NEXT:    vsetvli zero, a2, e16, m4, ta, ma
+; CHECK-NEXT:    vs8r.v v16, (a3) # vscale x 64-byte Folded Spill
+; CHECK-NEXT:    vsetvli zero, a1, e16, m4, ta, ma
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v8, v16
-; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
-; CHECK-NEXT:    vle16.v v24, (a0)
-; CHECK-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
+; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vmfeq.vv v0, v8, v8
-; CHECK-NEXT:    vmv4r.v v16, v24
-; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vs8r.v v16, (a0) # vscale x 64-byte Folded Spill
+; CHECK-NEXT:    addi a0, a0, 128
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m8, ta, ma
-; CHECK-NEXT:    vslidedown.vx v24, v24, a2
-; CHECK-NEXT:    vsetvli zero, a2, e16, m4, ta, ma
+; CHECK-NEXT:    vle16.v v24, (a0)
+; CHECK-NEXT:    addi a0, sp, 16
+; CHECK-NEXT:    vs8r.v v24, (a0) # vscale x 64-byte Folded Spill
+; CHECK-NEXT:    vsetvli zero, a1, e16, m4, ta, ma
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v16, v24
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vmfeq.vv v7, v16, v16
@@ -2987,8 +2979,8 @@ define bfloat @vreduce_fminimum_v128bf16(ptr %x) {
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vmfne.vv v16, v8, v8
 ; CHECK-NEXT:    vcpop.m a0, v16
-; CHECK-NEXT:    lui a1, 523264
-; CHECK-NEXT:    fmv.w.x fa5, a1
+; CHECK-NEXT:    lui a2, 523264
+; CHECK-NEXT:    fmv.w.x fa5, a2
 ; CHECK-NEXT:    beqz a0, .LBB14_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    fmv.s fa4, fa5
@@ -3001,44 +2993,46 @@ define bfloat @vreduce_fminimum_v128bf16(ptr %x) {
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vl8r.v v16, (a0) # vscale x 64-byte Folded Reload
-; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
-; CHECK-NEXT:    vfwcvtbf16.f.f.v v8, v16
+; CHECK-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
+; CHECK-NEXT:    vslidedown.vx v8, v8, a1
+; CHECK-NEXT:    vsetvli zero, a1, e16, m4, ta, ma
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v16, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
-; CHECK-NEXT:    vmfeq.vv v0, v8, v8
+; CHECK-NEXT:    vmfeq.vv v0, v16, v16
 ; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vl8r.v v24, (a0) # vscale x 64-byte Folded Reload
-; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
-; CHECK-NEXT:    vfwcvtbf16.f.f.v v16, v24
+; CHECK-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
+; CHECK-NEXT:    vslidedown.vx v8, v8, a1
+; CHECK-NEXT:    vsetvli zero, a1, e16, m4, ta, ma
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v24, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
-; CHECK-NEXT:    vmfeq.vv v7, v16, v16
-; CHECK-NEXT:    vmerge.vvm v24, v8, v16, v0
+; CHECK-NEXT:    vmfeq.vv v7, v24, v24
+; CHECK-NEXT:    vmerge.vvm v8, v16, v24, v0
 ; CHECK-NEXT:    vmv1r.v v0, v7
-; CHECK-NEXT:    vmerge.vvm v8, v16, v8, v0
-; CHECK-NEXT:    vfmin.vv v8, v8, v24
+; CHECK-NEXT:    vmerge.vvm v16, v24, v16, v0
+; CHECK-NEXT:    vfmin.vv v8, v16, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
 ; CHECK-NEXT:    vfncvtbf16.f.f.w v16, v8
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v8, v16
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vmfne.vv v16, v8, v8
 ; CHECK-NEXT:    vcpop.m a0, v16
-; CHECK-NEXT:    bnez a0, .LBB14_5
+; CHECK-NEXT:    beqz a0, .LBB14_5
 ; CHECK-NEXT:  # %bb.4:
-; CHECK-NEXT:    vfredmin.vs v8, v8, v8
-; CHECK-NEXT:    vfmv.f.s fa5, v8
-; CHECK-NEXT:  .LBB14_5:
-; CHECK-NEXT:    feq.s a0, fa5, fa5
-; CHECK-NEXT:    fmv.s fa3, fa4
-; CHECK-NEXT:    bnez a0, .LBB14_7
-; CHECK-NEXT:  # %bb.6:
 ; CHECK-NEXT:    fmv.s fa3, fa5
-; CHECK-NEXT:  .LBB14_7:
+; CHECK-NEXT:    j .LBB14_6
+; CHECK-NEXT:  .LBB14_5:
+; CHECK-NEXT:    vfredmin.vs v8, v8, v8
+; CHECK-NEXT:    vfmv.f.s fa3, v8
+; CHECK-NEXT:  .LBB14_6:
 ; CHECK-NEXT:    feq.s a0, fa4, fa4
-; CHECK-NEXT:    bnez a0, .LBB14_9
-; CHECK-NEXT:  # %bb.8:
-; CHECK-NEXT:    fmv.s fa5, fa4
-; CHECK-NEXT:  .LBB14_9:
-; CHECK-NEXT:    fmin.s fa5, fa5, fa3
+; CHECK-NEXT:    feq.s a1, fa3, fa3
+; CHECK-NEXT:    and a0, a0, a1
+; CHECK-NEXT:    beqz a0, .LBB14_8
+; CHECK-NEXT:  # %bb.7:
+; CHECK-NEXT:    fmin.s fa5, fa4, fa3
+; CHECK-NEXT:  .LBB14_8:
 ; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
@@ -3084,45 +3078,43 @@ define bfloat @vreduce_fmaximum_v64bf16(ptr %x) {
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    li a0, 32
-; CHECK-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
-; CHECK-NEXT:    vslidedown.vx v24, v8, a0
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
-; CHECK-NEXT:    vfwcvtbf16.f.f.v v16, v24
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v16, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
-; CHECK-NEXT:    vmfne.vv v12, v16, v16
-; CHECK-NEXT:    vcpop.m a0, v12
-; CHECK-NEXT:    lui a1, 523264
-; CHECK-NEXT:    fmv.w.x fa5, a1
-; CHECK-NEXT:    beqz a0, .LBB16_2
+; CHECK-NEXT:    vmfne.vv v24, v16, v16
+; CHECK-NEXT:    vcpop.m a1, v24
+; CHECK-NEXT:    lui a2, 523264
+; CHECK-NEXT:    fmv.w.x fa5, a2
+; CHECK-NEXT:    beqz a1, .LBB16_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    fmv.s fa4, fa5
 ; CHECK-NEXT:    j .LBB16_3
 ; CHECK-NEXT:  .LBB16_2:
-; CHECK-NEXT:    vfredmax.vs v12, v16, v16
-; CHECK-NEXT:    vfmv.f.s fa4, v12
+; CHECK-NEXT:    vfredmax.vs v16, v16, v16
+; CHECK-NEXT:    vfmv.f.s fa4, v16
 ; CHECK-NEXT:  .LBB16_3:
-; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
-; CHECK-NEXT:    vfwcvtbf16.f.f.v v16, v8
+; CHECK-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
+; CHECK-NEXT:    vslidedown.vx v16, v8, a0
+; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v8, v16
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
-; CHECK-NEXT:    vmfne.vv v8, v16, v16
-; CHECK-NEXT:    vcpop.m a0, v8
-; CHECK-NEXT:    bnez a0, .LBB16_5
+; CHECK-NEXT:    vmfne.vv v16, v8, v8
+; CHECK-NEXT:    vcpop.m a0, v16
+; CHECK-NEXT:    beqz a0, .LBB16_5
 ; CHECK-NEXT:  # %bb.4:
-; CHECK-NEXT:    vfredmax.vs v8, v16, v16
-; CHECK-NEXT:    vfmv.f.s fa5, v8
-; CHECK-NEXT:  .LBB16_5:
-; CHECK-NEXT:    feq.s a0, fa5, fa5
-; CHECK-NEXT:    fmv.s fa3, fa4
-; CHECK-NEXT:    bnez a0, .LBB16_7
-; CHECK-NEXT:  # %bb.6:
 ; CHECK-NEXT:    fmv.s fa3, fa5
-; CHECK-NEXT:  .LBB16_7:
+; CHECK-NEXT:    j .LBB16_6
+; CHECK-NEXT:  .LBB16_5:
+; CHECK-NEXT:    vfredmax.vs v8, v8, v8
+; CHECK-NEXT:    vfmv.f.s fa3, v8
+; CHECK-NEXT:  .LBB16_6:
 ; CHECK-NEXT:    feq.s a0, fa4, fa4
-; CHECK-NEXT:    bnez a0, .LBB16_9
-; CHECK-NEXT:  # %bb.8:
-; CHECK-NEXT:    fmv.s fa5, fa4
-; CHECK-NEXT:  .LBB16_9:
-; CHECK-NEXT:    fmax.s fa5, fa5, fa3
+; CHECK-NEXT:    feq.s a1, fa3, fa3
+; CHECK-NEXT:    and a0, a0, a1
+; CHECK-NEXT:    beqz a0, .LBB16_8
+; CHECK-NEXT:  # %bb.7:
+; CHECK-NEXT:    fmax.s fa5, fa4, fa3
+; CHECK-NEXT:  .LBB16_8:
 ; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
 ; CHECK-NEXT:    ret
   %v = load <64 x bfloat>, ptr %x
@@ -3139,31 +3131,25 @@ define bfloat @vreduce_fmaximum_v128bf16(ptr %x) {
 ; CHECK-NEXT:    slli a1, a1, 4
 ; CHECK-NEXT:    sub sp, sp, a1
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 16 * vlenb
-; CHECK-NEXT:    li a1, 64
-; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
+; CHECK-NEXT:    li a2, 64
+; CHECK-NEXT:    vsetvli zero, a2, e16, m8, ta, ma
 ; CHECK-NEXT:    vle16.v v16, (a0)
-; CHECK-NEXT:    li a2, 32
-; CHECK-NEXT:    vmv4r.v v8, v16
+; CHECK-NEXT:    li a1, 32
 ; CHECK-NEXT:    csrr a3, vlenb
 ; CHECK-NEXT:    slli a3, a3, 3
 ; CHECK-NEXT:    add a3, sp, a3
 ; CHECK-NEXT:    addi a3, a3, 16
-; CHECK-NEXT:    vs8r.v v8, (a3) # vscale x 64-byte Folded Spill
-; CHECK-NEXT:    vsetvli zero, a2, e16, m8, ta, ma
-; CHECK-NEXT:    vslidedown.vx v16, v16, a2
-; CHECK-NEXT:    addi a0, a0, 128
-; CHECK-NEXT:    vsetvli zero, a2, e16, m4, ta, ma
+; CHECK-NEXT:    vs8r.v v16, (a3) # vscale x 64-byte Folded Spill
+; CHECK-NEXT:    vsetvli zero, a1, e16, m4, ta, ma
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v8, v16
-; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
-; CHECK-NEXT:    vle16.v v24, (a0)
-; CHECK-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
+; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vmfeq.vv v0, v8, v8
-; CHECK-NEXT:    vmv4r.v v16, v24
-; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vs8r.v v16, (a0) # vscale x 64-byte Folded Spill
+; CHECK-NEXT:    addi a0, a0, 128
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m8, ta, ma
-; CHECK-NEXT:    vslidedown.vx v24, v24, a2
-; CHECK-NEXT:    vsetvli zero, a2, e16, m4, ta, ma
+; CHECK-NEXT:    vle16.v v24, (a0)
+; CHECK-NEXT:    addi a0, sp, 16
+; CHECK-NEXT:    vs8r.v v24, (a0) # vscale x 64-byte Folded Spill
+; CHECK-NEXT:    vsetvli zero, a1, e16, m4, ta, ma
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v16, v24
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vmfeq.vv v7, v16, v16
@@ -3177,8 +3163,8 @@ define bfloat @vreduce_fmaximum_v128bf16(ptr %x) {
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vmfne.vv v16, v8, v8
 ; CHECK-NEXT:    vcpop.m a0, v16
-; CHECK-NEXT:    lui a1, 523264
-; CHECK-NEXT:    fmv.w.x fa5, a1
+; CHECK-NEXT:    lui a2, 523264
+; CHECK-NEXT:    fmv.w.x fa5, a2
 ; CHECK-NEXT:    beqz a0, .LBB17_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    fmv.s fa4, fa5
@@ -3191,44 +3177,46 @@ define bfloat @vreduce_fmaximum_v128bf16(ptr %x) {
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vl8r.v v16, (a0) # vscale x 64-byte Folded Reload
-; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
-; CHECK-NEXT:    vfwcvtbf16.f.f.v v8, v16
+; CHECK-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
+; CHECK-NEXT:    vslidedown.vx v8, v8, a1
+; CHECK-NEXT:    vsetvli zero, a1, e16, m4, ta, ma
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v16, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
-; CHECK-NEXT:    vmfeq.vv v0, v8, v8
+; CHECK-NEXT:    vmfeq.vv v0, v16, v16
 ; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vl8r.v v24, (a0) # vscale x 64-byte Folded Reload
-; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
-; CHECK-NEXT:    vfwcvtbf16.f.f.v v16, v24
+; CHECK-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
+; CHECK-NEXT:    vslidedown.vx v8, v8, a1
+; CHECK-NEXT:    vsetvli zero, a1, e16, m4, ta, ma
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v24, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
-; CHECK-NEXT:    vmfeq.vv v7, v16, v16
-; CHECK-NEXT:    vmerge.vvm v24, v8, v16, v0
+; CHECK-NEXT:    vmfeq.vv v7, v24, v24
+; CHECK-NEXT:    vmerge.vvm v8, v16, v24, v0
 ; CHECK-NEXT:    vmv1r.v v0, v7
-; CHECK-NEXT:    vmerge.vvm v8, v16, v8, v0
-; CHECK-NEXT:    vfmax.vv v8, v8, v24
+; CHECK-NEXT:    vmerge.vvm v16, v24, v16, v0
+; CHECK-NEXT:    vfmax.vv v8, v16, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
 ; CHECK-NEXT:    vfncvtbf16.f.f.w v16, v8
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v8, v16
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vmfne.vv v16, v8, v8
 ; CHECK-NEXT:    vcpop.m a0, v16
-; CHECK-NEXT:    bnez a0, .LBB17_5
+; CHECK-NEXT:    beqz a0, .LBB17_5
 ; CHECK-NEXT:  # %bb.4:
-; CHECK-NEXT:    vfredmax.vs v8, v8, v8
-; CHECK-NEXT:    vfmv.f.s fa5, v8
-; CHECK-NEXT:  .LBB17_5:
-; CHECK-NEXT:    feq.s a0, fa5, fa5
-; CHECK-NEXT:    fmv.s fa3, fa4
-; CHECK-NEXT:    bnez a0, .LBB17_7
-; CHECK-NEXT:  # %bb.6:
 ; CHECK-NEXT:    fmv.s fa3, fa5
-; CHECK-NEXT:  .LBB17_7:
+; CHECK-NEXT:    j .LBB17_6
+; CHECK-NEXT:  .LBB17_5:
+; CHECK-NEXT:    vfredmax.vs v8, v8, v8
+; CHECK-NEXT:    vfmv.f.s fa3, v8
+; CHECK-NEXT:  .LBB17_6:
 ; CHECK-NEXT:    feq.s a0, fa4, fa4
-; CHECK-NEXT:    bnez a0, .LBB17_9
-; CHECK-NEXT:  # %bb.8:
-; CHECK-NEXT:    fmv.s fa5, fa4
-; CHECK-NEXT:  .LBB17_9:
-; CHECK-NEXT:    fmax.s fa5, fa5, fa3
+; CHECK-NEXT:    feq.s a1, fa3, fa3
+; CHECK-NEXT:    and a0, a0, a1
+; CHECK-NEXT:    beqz a0, .LBB17_8
+; CHECK-NEXT:  # %bb.7:
+; CHECK-NEXT:    fmax.s fa5, fa4, fa3
+; CHECK-NEXT:  .LBB17_8:
 ; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4

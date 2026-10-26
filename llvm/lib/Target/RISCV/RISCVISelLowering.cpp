@@ -690,10 +690,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(FPRndMode, MVT::f16,
                          Subtarget.hasStdExtZfa() ? Legal : Custom);
       setOperationAction(ISD::IS_FPCLASS, MVT::f16, Custom);
-      setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, MVT::f16,
-                         Subtarget.hasStdExtZfa() ? Legal : Custom);
-      if (Subtarget.hasStdExtZfa())
+      if (Subtarget.hasStdExtZfa()) {
         setOperationAction(ISD::ConstantFP, MVT::f16, Custom);
+        setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, MVT::f16, Legal);
+      }
     } else {
       setOperationAction(ZfhminZfbfminPromoteOps, MVT::f16, Promote);
       setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, MVT::f16, Promote);
@@ -777,8 +777,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::ConstantFP, MVT::f32, Custom);
       setOperationAction(ISD::FNEARBYINT, MVT::f32, Legal);
       setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, MVT::f32, Legal);
-    } else {
-      setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, MVT::f32, Custom);
     }
   }
 
@@ -804,11 +802,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(FPRndMode, MVT::f64, Legal);
       setOperationAction(ISD::FNEARBYINT, MVT::f64, Legal);
       setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, MVT::f64, Legal);
-    } else {
-      if (Subtarget.is64Bit())
-        setOperationAction(FPRndMode, MVT::f64, Custom);
-
-      setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, MVT::f64, Custom);
+    } else if (Subtarget.is64Bit()) {
+      setOperationAction(FPRndMode, MVT::f64, Custom);
     }
 
     setOperationAction(ISD::STRICT_FP_ROUND, MVT::f32, Legal);
@@ -7909,30 +7904,7 @@ static SDValue lowerFMAXIMUM_FMINIMUM(SDValue Op, SelectionDAG &DAG,
   SDValue X = Op.getOperand(0);
   SDValue Y = Op.getOperand(1);
 
-  if (!VT.isVector()) {
-    MVT XLenVT = Subtarget.getXLenVT();
-
-    // If X is a nan, replace Y with X. If Y is a nan, replace X with Y. This
-    // ensures that when one input is a nan, the other will also be a nan
-    // allowing the nan to propagate. If both inputs are nan, this will swap the
-    // inputs which is harmless.
-
-    SDValue NewY = Y;
-    if (!Op->getFlags().hasNoNaNs() && !DAG.isKnownNeverNaN(X)) {
-      SDValue XIsNonNan = DAG.getSetCC(DL, XLenVT, X, X, ISD::SETOEQ);
-      NewY = DAG.getSelect(DL, VT, XIsNonNan, Y, X);
-    }
-
-    SDValue NewX = X;
-    if (!Op->getFlags().hasNoNaNs() && !DAG.isKnownNeverNaN(Y)) {
-      SDValue YIsNonNan = DAG.getSetCC(DL, XLenVT, Y, Y, ISD::SETOEQ);
-      NewX = DAG.getSelect(DL, VT, YIsNonNan, X, Y);
-    }
-
-    unsigned Opc =
-        Op.getOpcode() == ISD::FMAXIMUM ? RISCVISD::FMAX : RISCVISD::FMIN;
-    return DAG.getNode(Opc, DL, VT, NewX, NewY);
-  }
+  assert(VT.isVector() && "Unexpected scalar type");
 
   // Check no NaNs before converting to fixed vector scalable.
   bool XIsNeverNan = Op->getFlags().hasNoNaNs() || DAG.isKnownNeverNaN(X);

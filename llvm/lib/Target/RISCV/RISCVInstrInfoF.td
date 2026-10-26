@@ -79,10 +79,6 @@ def riscv_fcvt_x
 def riscv_fcvt_xu
     : RVSDNode<"FCVT_XU", SDT_RISCVFCVT_X>;
 
-// Floating point fmax and fmin matching the RISC-V instruction semantics.
-def riscv_fmin : RVSDNode<"FMIN", SDTFPBinOp>;
-def riscv_fmax : RVSDNode<"FMAX", SDTFPBinOp>;
-
 let IsStrictFP = true in {
   // FP to 32 bit int conversions for RV64. These are used to keep track of the
   // result being sign extended to 64 bit. These saturate out of range inputs.
@@ -659,8 +655,6 @@ foreach Ext = FExts in {
   defm : PatFprFpr_m<fmaxnum, FMAX_S, Ext>;
   defm : PatFprFpr_m<fminimumnum, FMIN_S, Ext>;
   defm : PatFprFpr_m<fmaximumnum, FMAX_S, Ext>;
-  defm : PatFprFpr_m<riscv_fmin, FMIN_S, Ext>;
-  defm : PatFprFpr_m<riscv_fmax, FMAX_S, Ext>;
   let Predicates = Ext.Predicates in {
     def : Pat<(f32 (fcanonicalize Ext.PrimaryTy:$rs1)),
               (!cast<Instruction>("FMIN_S"#Ext.Suffix) $rs1, $rs1)>;
