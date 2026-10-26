@@ -65,12 +65,7 @@ void testBasic(MemoryOrder... memory_order) {
 
     assert(!r);
     assert(a.load() == T(1.2));
-
-    // bug
-    // TODO https://llvm.org/PR48634
-    if constexpr (!std::same_as<T, long double>) {
-      assert(expected == T(1.2));
-    }
+    assert(expected == T(1.2));
   }
 }
 
@@ -235,8 +230,7 @@ int main(int, char**) {
   test<float>();
   test<double>();
 
-  // TODO https://llvm.org/PR48634
-  // test<long double>();
+  test<long double>();
 
   return 0;
 }
