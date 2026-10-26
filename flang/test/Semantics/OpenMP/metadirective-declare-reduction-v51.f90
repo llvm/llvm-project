@@ -18,6 +18,7 @@ subroutine f03
   type :: t
     integer :: m
   end type
+  !$omp metadirective default(nothing)
   !$omp begin metadirective default(parallel)
   block
 ! Ok

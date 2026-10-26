@@ -18,6 +18,7 @@ subroutine f03
   type :: t
     integer :: m
   end type
+  !$omp metadirective otherwise(nothing)
   !$omp begin metadirective otherwise(parallel)
   block
 ! Ok
