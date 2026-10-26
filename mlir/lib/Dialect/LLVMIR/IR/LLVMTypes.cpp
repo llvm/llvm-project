@@ -22,6 +22,7 @@
 
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/TypeSize.h"
+#include "llvm/TargetParser/RISCVTargetParser.h"
 #include <optional>
 
 using namespace mlir;
@@ -752,6 +753,74 @@ bool LLVM::LLVMTargetExtType::supportsMemOps() const {
     return true;
 
   return false;
+}
+
+Type LLVM::LLVMTargetExtType::getLayoutType() const {
+  // Keep this mapping consistent with getTargetTypeInfo in
+  // llvm/lib/IR/Type.cpp.
+  MLIRContext *context = getContext();
+  StringRef name = getExtTypeName();
+  if (name == "spirv.Type") {
+    assert(getIntParams().size() == 3 &&
+           "wrong number of parameters for spirv.Type");
+    unsigned size = getIntParams()[1];
+    unsigned alignment = getIntParams()[2];
+    if (size && alignment)
+      return LLVMArrayType::get(IntegerType::get(context, alignment),
+                                size * 8 / alignment);
+    return IntegerType::get(context, 32);
+  }
+  if (name == "spirv.IntegralConstant" || name == "spirv.Literal" ||
+      name == "amdgpu.stridemark")
+    return LLVMVoidType::get(context);
+  if (name == "spirv.Padding" || name == "dx.Padding") {
+    assert(getIntParams().size() == 1 && "expected padding size");
+    return LLVMArrayType::get(IntegerType::get(context, 8), getIntParams()[0]);
+  }
+  if (name.starts_with(kSpirvPrefix) || name.starts_with("dx.") ||
+      name == "wasm.funcref" || name == "wasm.externref")
+    return LLVMPointerType::get(context);
+  if (name == kArmSVCount)
+    return VectorType::get({16}, IntegerType::get(context, 1), {true});
+  if (name == "riscv.vector.tuple") {
+    assert(getTypeParams().size() == 1 && getIntParams().size() == 1 &&
+           "expected tuple vector type and field count");
+    unsigned numElements =
+        std::max(getVectorNumElements(getTypeParams()[0]).getKnownMinValue(),
+                 llvm::RISCV::RVVBytesPerBlock) *
+        getIntParams()[0];
+    return VectorType::get({numElements}, IntegerType::get(context, 8), {true});
+  }
+  if (name == kAMDGCNNamedBarrier)
+    return IntegerType::get(context, 8);
+  if (name == "llvm.test.vectorelement")
+    return IntegerType::get(context, 32);
+  return LLVMVoidType::get(context);
+}
+
+llvm::TypeSize LLVM::LLVMTargetExtType::getTypeSizeInBits(
+    const DataLayout &dataLayout, DataLayoutEntryListRef params) const {
+  Type layoutType = getLayoutType();
+  // LLVM vector bit sizes do not round the element count up to a power of two,
+  // unlike the default data layout for builtin MLIR vectors.
+  if (auto vectorType = dyn_cast<VectorType>(layoutType))
+    return llvm::TypeSize::get(
+        vectorType.getNumElements() *
+            dataLayout.getTypeSizeInBits(vectorType.getElementType())
+                .getFixedValue(),
+        vectorType.isScalable());
+  return dataLayout.getTypeSizeInBits(layoutType);
+}
+
+uint64_t
+LLVM::LLVMTargetExtType::getABIAlignment(const DataLayout &dataLayout,
+                                         DataLayoutEntryListRef params) const {
+  return dataLayout.getTypeABIAlignment(getLayoutType());
+}
+
+uint64_t LLVM::LLVMTargetExtType::getPreferredAlignment(
+    const DataLayout &dataLayout, DataLayoutEntryListRef params) const {
+  return dataLayout.getTypePreferredAlignment(getLayoutType());
 }
 
 //===----------------------------------------------------------------------===//
