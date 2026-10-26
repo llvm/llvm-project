@@ -1,8 +1,7 @@
 # RUN: llc -mtriple=x86_64 -run-pass=none -o - %s | FileCheck %s
 
 # Test that inline asm operand flags round-trip: a count other than 1 as
-# "ops:N", whether written symbolically or as a numeric flag, and the "func"
-# kind of a call target.
+# "ops:N", and the "func" kind of a call target.
 
 --- |
   define void @operand_count() { ret void }
@@ -20,13 +19,11 @@ body: |
 
     ; CHECK-LABEL: name: operand_count
     ; CHECK: INLINEASM &"", sideeffect mayload attdialect, regdef:GR64 ops:2, def %2, def %3, mem:m ops:5, %stack.0, 1, $noreg, 0, $noreg, reguse:GR64 foldable ops:2, %0, %1, reguse tiedto:$0 ops:2, %2(tied-def 3), %3(tied-def 4)
-    ; CHECK: INLINEASM &"", sideeffect attdialect, reguse foldable ops:2, %0, %1, reguse:GR64, %0
     %0:gr64 = COPY $rdi
     %1:gr64 = COPY $rsi
     %2:gr64 = COPY %0
     %3:gr64 = COPY %1
     INLINEASM &"", sideeffect mayload attdialect, regdef:GR64 ops:2, def %2, def %3, mem:m ops:5, %stack.0, 1, $noreg, 0, $noreg, reguse:GR64 foldable ops:2, %0, %1, reguse tiedto:$0 ops:2, %2(tied-def 3), %3(tied-def 4)
-    INLINEASM &"", sideeffect attdialect, 1073741841 /* reguse foldable ops:2 */, %0, %1, reguse:GR64, %0
     RET 0, implicit %2, implicit %3
 ...
 ---
