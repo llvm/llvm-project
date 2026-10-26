@@ -1215,7 +1215,7 @@ ClassInfo *AsmMatcherInfo::getOperandClass(const Record *Rec, int SubOpIdx) {
     // RegisterOperand may have an associated ParserMatchClass. If it does,
     // use it, else just fall back to the underlying register class.
     const RecordVal *R = Rec->getValue("ParserMatchClass");
-    if (!R || !R->getValue())
+    if (!R)
       PrintFatalError(Rec->getLoc(),
                       "Record `" + Rec->getName() +
                           "' does not have a ParserMatchClass!\n");

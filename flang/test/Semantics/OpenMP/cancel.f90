@@ -2,28 +2,28 @@
 
 subroutine f00
 !$omp parallel
-!ERROR: Missing cancel-directive-name clause on the CANCEL construct
+!ERROR: cancel-directive-name clause is required on CANCEL directive
 !$omp cancel
 !$omp end parallel
 end
 
 subroutine f01
 !$omp parallel
-!ERROR: Multiple cancel-directive-name clauses are not allowed on CANCEL construct
+!ERROR: At most one cancel-directive-name clause can appear on CANCEL directive
 !$omp cancel parallel parallel
 !$omp end parallel
 end
 
 subroutine f02
 !$omp parallel
-!ERROR: Missing cancel-directive-name clause on the CANCELLATION POINT construct
+!ERROR: cancel-directive-name clause is required on CANCELLATION POINT directive
 !$omp cancellation point
 !$omp end parallel
 end
 
 subroutine f03
 !$omp parallel
-!ERROR: Multiple cancel-directive-name clauses are not allowed on CANCELLATION POINT construct
+!ERROR: At most one cancel-directive-name clause can appear on CANCELLATION POINT directive
 !$omp cancellation point parallel parallel
 !$omp end parallel
 end
