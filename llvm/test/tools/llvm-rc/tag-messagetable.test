@@ -1,0 +1,32 @@
+; Inputs/messagetable.bin was generated with the following command, using
+; binutils windmc:
+;   $ x86_64-w64-mingw32-windmc -A t.mc && mv MSG00001.bin messagetable.bin
+; The contents of t.mc follow, with CRLF line endings:
+;   MessageId=1
+;   Language=English
+;   %1
+;   .
+
+; RUN: rm -rf %t
+; RUN: mkdir %t
+; RUN: cd %t
+; RUN: cp %p/Inputs/messagetable.bin .
+; RUN: llvm-rc -no-preprocess /FO %t/tag-messagetable.res -- %p/Inputs/tag-messagetable.rc
+; RUN: llvm-readobj %t/tag-messagetable.res | FileCheck %s
+
+; CHECK:      Resource type (int): MESSAGETABLE (ID 11)
+; CHECK-NEXT: Resource name (int): 1
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x30
+; CHECK-NEXT: Language ID: 1033
+; CHECK-NEXT: Version (major): 0
+; CHECK-NEXT: Version (minor): 0
+; CHECK-NEXT: Characteristics: 0
+; CHECK-NEXT: Data size: 28
+; CHECK-NEXT: Data: (
+; CHECK-NEXT:   0000: 01000000 01000000 01000000 10000000  |................|
+; CHECK-NEXT:   0010: 0C000000 25310D0A 00000000           |....%1......|
+; CHECK-NEXT: )
+
+; CHECK:      Resource type (int): MESSAGETABLE (ID 11)
+; CHECK-NEXT: Resource name (string): NAME

@@ -81,6 +81,8 @@ RCParser::ParseType RCParser::parseSingleResource() {
     Result = parseMenuResource();
   else if (TypeToken->equalsLower("MENUEX"))
     Result = parseMenuExResource();
+  else if (TypeToken->equalsLower("MESSAGETABLE"))
+    Result = parseUserDefinedResource(RkMessageTable);
   else if (TypeToken->equalsLower("RCDATA"))
     Result = parseUserDefinedResource(RkRcData);
   else if (TypeToken->equalsLower("VERSIONINFO"))
