@@ -1,3 +1,4 @@
+# REQUIRES: asserts
 # RUN: llc -mtriple=amdgpu12.51 -run-pass=instruction-select -verify-machineinstrs -global-isel-abort=2 -pass-remarks-missed='gisel*' %s -o /dev/null 2>&1 | FileCheck -check-prefix=ERR %s
 
 # ERR: remark: <unknown>:0:0: cannot select: %2:vcc(s1) = G_FCMP floatpred(oeq), %1:vgpr(s32), %0:vgpr (in function: g_fcmp_op2_fconstant_s32)
@@ -315,7 +316,7 @@ body: |
     $vgpr0 = COPY %2
 ...
 
-# ERR: remark: <unknown>:0:0: cannot select: %2:vgpr_32(s32) = G_FMAXNUM_IEEE %0:vgpr, %1:vgpr (in function: g_fmaxnum_ieee_op0_f32)
+# ERR: remark: <unknown>:0:0: instruction is not legal: %2:vgpr(s32) = G_FMAXNUM_IEEE %0:vgpr, %1:vgpr (in function: g_fmaxnum_ieee_op0_f32)
 
 ---
 name: g_fmaxnum_ieee_op0_f32
@@ -331,7 +332,7 @@ body: |
     $vgpr0 = COPY %2
 ...
 
-# ERR: remark: <unknown>:0:0: cannot select: %2:vgpr_32(s32) = G_FMINNUM_IEEE %0:vgpr, %1:vgpr (in function: g_fminnum_ieee_op0_f32)
+# ERR: remark: <unknown>:0:0: instruction is not legal: %2:vgpr(s32) = G_FMINNUM_IEEE %0:vgpr, %1:vgpr (in function: g_fminnum_ieee_op0_f32)
 
 ---
 name: g_fminnum_ieee_op0_f32

@@ -207,6 +207,22 @@ libc_test(
     ],
 )
 
+libc_test(
+    name = "getgid_test",
+    srcs = ["getgid_test.cpp"],
+    deps = [
+        "//libc:getgid",
+    ],
+)
+
+libc_test(
+    name = "getegid_test",
+    srcs = ["getegid_test.cpp"],
+    deps = [
+        "//libc:getegid",
+    ],
+)
+
 # TODO: add rules for functions modifying directories.
 
 #TODO: Enable once fullbuild is added to bazel, since this depends on a macro
