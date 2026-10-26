@@ -133,8 +133,9 @@ struct AMDGPUIncomingArgHandler : public CallLowering::IncomingValueHandler {
       if (ValTy.isInteger()) {
         MIRBuilder.buildTrunc(ValVReg, Extended);
       } else {
-        auto Trunc = MIRBuilder.buildTrunc(LLT::integer(ValTy.getSizeInBits()),
-                                           Extended);
+        auto Trunc = MIRBuilder.buildTrunc(
+            LLT::integer(static_cast<unsigned>(ValTy.getSizeInBits())),
+            Extended);
         MIRBuilder.buildBitcast(ValVReg, Trunc);
       }
       return;
@@ -168,8 +169,9 @@ struct AMDGPUIncomingArgHandler : public CallLowering::IncomingValueHandler {
       if (ValTy.isInteger()) {
         MIRBuilder.buildTrunc(ValVReg, Extended);
       } else {
-        auto Trunc = MIRBuilder.buildTrunc(LLT::integer(ValTy.getSizeInBits()),
-                                           Extended);
+        auto Trunc = MIRBuilder.buildTrunc(
+            LLT::integer(static_cast<unsigned>(ValTy.getSizeInBits())),
+            Extended);
         MIRBuilder.buildBitcast(ValVReg, Trunc);
       }
       return;
@@ -236,7 +238,7 @@ struct CallReturnHandler : public AMDGPUIncomingArgHandler {
 struct AMDGPUOutgoingArgHandler : public AMDGPUOutgoingValueHandler {
   /// For tail calls, the byte offset of the call's argument area from the
   /// callee's. Unused elsewhere.
-  int FPDiff;
+  int64_t FPDiff;
 
   // Cache the SP register vreg if we need it more than once in this call site.
   Register SPReg;
@@ -245,7 +247,7 @@ struct AMDGPUOutgoingArgHandler : public AMDGPUOutgoingValueHandler {
 
   AMDGPUOutgoingArgHandler(MachineIRBuilder &MIRBuilder,
                            MachineRegisterInfo &MRI, MachineInstrBuilder MIB,
-                           bool IsTailCall = false, int FPDiff = 0)
+                           bool IsTailCall = false, int64_t FPDiff = 0)
       : AMDGPUOutgoingValueHandler(MIRBuilder, MRI, MIB), FPDiff(FPDiff),
         IsTailCall(IsTailCall) {}
 
@@ -519,19 +521,19 @@ static void allocateHSAUserSGPRs(CCState &CCInfo,
   if (UserSGPRInfo.hasPrivateSegmentBuffer()) {
     Register PrivateSegmentBufferReg = Info.addPrivateSegmentBuffer(TRI);
     MF.addLiveIn(PrivateSegmentBufferReg, &AMDGPU::SGPR_128RegClass);
-    CCInfo.AllocateReg(PrivateSegmentBufferReg);
+    CCInfo.AllocateReg(static_cast<MCPhysReg>(PrivateSegmentBufferReg));
   }
 
   if (UserSGPRInfo.hasDispatchPtr()) {
     Register DispatchPtrReg = Info.addDispatchPtr(TRI);
     MF.addLiveIn(DispatchPtrReg, &AMDGPU::SGPR_64RegClass);
-    CCInfo.AllocateReg(DispatchPtrReg);
+    CCInfo.AllocateReg(static_cast<MCPhysReg>(DispatchPtrReg));
   }
 
   if (UserSGPRInfo.hasQueuePtr()) {
     Register QueuePtrReg = Info.addQueuePtr(TRI);
     MF.addLiveIn(QueuePtrReg, &AMDGPU::SGPR_64RegClass);
-    CCInfo.AllocateReg(QueuePtrReg);
+    CCInfo.AllocateReg(static_cast<MCPhysReg>(QueuePtrReg));
   }
 
   if (UserSGPRInfo.hasKernargSegmentPtr()) {
@@ -542,25 +544,25 @@ static void allocateHSAUserSGPRs(CCState &CCInfo,
     MRI.addLiveIn(InputPtrReg, VReg);
     B.getMBB().addLiveIn(InputPtrReg);
     B.buildCopy(VReg, InputPtrReg);
-    CCInfo.AllocateReg(InputPtrReg);
+    CCInfo.AllocateReg(static_cast<MCPhysReg>(InputPtrReg));
   }
 
   if (UserSGPRInfo.hasDispatchID()) {
     Register DispatchIDReg = Info.addDispatchID(TRI);
     MF.addLiveIn(DispatchIDReg, &AMDGPU::SGPR_64RegClass);
-    CCInfo.AllocateReg(DispatchIDReg);
+    CCInfo.AllocateReg(static_cast<MCPhysReg>(DispatchIDReg));
   }
 
   if (UserSGPRInfo.hasFlatScratchInit()) {
     Register FlatScratchInitReg = Info.addFlatScratchInit(TRI);
     MF.addLiveIn(FlatScratchInitReg, &AMDGPU::SGPR_64RegClass);
-    CCInfo.AllocateReg(FlatScratchInitReg);
+    CCInfo.AllocateReg(static_cast<MCPhysReg>(FlatScratchInitReg));
   }
 
   if (UserSGPRInfo.hasPrivateSegmentSize()) {
     Register PrivateSegmentSizeReg = Info.addPrivateSegmentSize(TRI);
     MF.addLiveIn(PrivateSegmentSizeReg, &AMDGPU::SGPR_32RegClass);
-    CCInfo.AllocateReg(PrivateSegmentSizeReg);
+    CCInfo.AllocateReg(static_cast<MCPhysReg>(PrivateSegmentSizeReg));
   }
 
   // TODO: Add GridWorkGroupCount user SGPRs when used. For now with HSA we read
@@ -598,7 +600,7 @@ bool AMDGPUCallLowering::lowerFormalArgumentsKernel(
 
     const bool IsByRef = Arg.hasByRefAttr();
     Type *ArgTy = IsByRef ? Arg.getParamByRefType() : Arg.getType();
-    unsigned AllocSize = DL.getTypeAllocSize(ArgTy);
+    TypeSize AllocSize = DL.getTypeAllocSize(ArgTy);
     if (AllocSize == 0)
       continue;
 
@@ -676,14 +678,14 @@ bool AMDGPUCallLowering::lowerFormalArguments(
   if (UserSGPRInfo.hasImplicitBufferPtr()) {
     Register ImplicitBufferPtrReg = Info->addImplicitBufferPtr(*TRI);
     MF.addLiveIn(ImplicitBufferPtrReg, &AMDGPU::SGPR_64RegClass);
-    CCInfo.AllocateReg(ImplicitBufferPtrReg);
+    CCInfo.AllocateReg(static_cast<MCPhysReg>(ImplicitBufferPtrReg));
   }
 
   // FIXME: This probably isn't defined for mesa
   if (UserSGPRInfo.hasFlatScratchInit() && !Subtarget.isAmdPalOS()) {
     Register FlatScratchInitReg = Info->addFlatScratchInit(*TRI);
     MF.addLiveIn(FlatScratchInitReg, &AMDGPU::SGPR_64RegClass);
-    CCInfo.AllocateReg(FlatScratchInitReg);
+    CCInfo.AllocateReg(static_cast<MCPhysReg>(FlatScratchInitReg));
   }
 
   SmallVector<ArgInfo, 32> SplitArgs;
@@ -797,7 +799,7 @@ bool AMDGPUCallLowering::lowerFormalArguments(
     TLI.allocateSpecialInputVGPRsFixed(CCInfo, MF, *TRI, *Info);
 
     if (!Subtarget.hasFlatScratchEnabled())
-      CCInfo.AllocateReg(Info->getScratchRSrcReg());
+      CCInfo.AllocateReg(static_cast<MCPhysReg>(Info->getScratchRSrcReg()));
     TLI.allocateSpecialInputSGPRs(CCInfo, MF, *TRI, *Info);
   }
 
@@ -828,7 +830,7 @@ bool AMDGPUCallLowering::lowerFormalArguments(
   // the caller's stack. So, whenever we lower formal arguments, we should keep
   // track of this information, since we might lower a tail call in this
   // function later.
-  Info->setBytesInStackArgArea(StackSize);
+  Info->setBytesInStackArgArea(static_cast<unsigned>(StackSize));
 
   // Move back to the end of the basic block.
   B.setMBB(MBB);
@@ -930,7 +932,8 @@ bool AMDGPUCallLowering::passSpecialInputs(MachineIRBuilder &MIRBuilder,
 
     if (OutgoingArg->isRegister()) {
       ArgRegs.emplace_back(OutgoingArg->getRegister(), InputReg);
-      if (!CCInfo.AllocateReg(OutgoingArg->getRegister()))
+      if (!CCInfo.AllocateReg(
+              static_cast<MCPhysReg>(OutgoingArg->getRegister())))
         report_fatal_error("failed to allocate implicit input argument");
     } else {
       LLVM_DEBUG(dbgs() << "Unhandled stack passed implicit input argument\n");
@@ -1032,7 +1035,7 @@ bool AMDGPUCallLowering::passSpecialInputs(MachineIRBuilder &MIRBuilder,
     if (InputReg)
       ArgRegs.emplace_back(OutgoingArg->getRegister(), InputReg);
 
-    if (!CCInfo.AllocateReg(OutgoingArg->getRegister()))
+    if (!CCInfo.AllocateReg(static_cast<MCPhysReg>(OutgoingArg->getRegister())))
       report_fatal_error("failed to allocate implicit input argument");
   } else {
     LLVM_DEBUG(dbgs() << "Unhandled stack passed implicit input argument\n");
@@ -1409,12 +1412,12 @@ bool AMDGPUCallLowering::lowerTailCall(
   // by this amount for a tail call. In a sibling call it must be 0 because the
   // caller will deallocate the entire stack and the callee still expects its
   // arguments to begin at SP+0.
-  int FPDiff = 0;
+  int64_t FPDiff = 0;
 
   // This will be 0 for sibcalls, potentially nonzero for tail calls produced
   // by -tailcallopt. For sibcalls, the memory operands for the call are
   // already available in the caller's incoming argument space.
-  unsigned NumBytes = 0;
+  uint64_t NumBytes = 0;
   if (!IsSibCall) {
     // We aren't sibcalling, so we need to compute FPDiff. We need to do this
     // before handling assignments, because FPDiff must be known for memory
@@ -1465,7 +1468,7 @@ bool AMDGPUCallLowering::lowerTailCall(
   // Mark the scratch resource descriptor as allocated so the CC analysis
   // does not assign user arguments to these registers, matching the callee.
   if (!ST.hasFlatScratchEnabled())
-    CCInfo.AllocateReg(FuncInfo->getScratchRSrcReg());
+    CCInfo.AllocateReg(static_cast<MCPhysReg>(FuncInfo->getScratchRSrcReg()));
 
   OutgoingValueAssigner Assigner(AssignFnFixed, AssignFnVarArg);
 
@@ -1695,7 +1698,7 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   // does not assign user arguments to these registers, matching the callee.
   if (!ST.hasFlatScratchEnabled()) {
     const SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
-    CCInfo.AllocateReg(FuncInfo->getScratchRSrcReg());
+    CCInfo.AllocateReg(static_cast<MCPhysReg>(FuncInfo->getScratchRSrcReg()));
   }
 
   // Do the actual argument marshalling.
@@ -1716,7 +1719,7 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                               ImplicitArgRegs);
 
   // Get a count of how many bytes are to be pushed on the stack.
-  unsigned NumBytes = CCInfo.getStackSize();
+  uint64_t NumBytes = CCInfo.getStackSize();
 
   // If Callee is a reg, since it is used by a target specific
   // instruction, it must have a register class matching the
