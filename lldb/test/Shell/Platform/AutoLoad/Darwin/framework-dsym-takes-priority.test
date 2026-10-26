@@ -1,0 +1,31 @@
+# REQUIRES: python, system-darwin
+#
+# Test that when both a dSYM script and a framework script exist,
+# the dSYM script takes priority.
+
+# RUN: split-file %s %t
+# RUN: mkdir -p %t/TestFramework.framework/Resources/Python
+# RUN: %clang_host -g %t/main.c -o %t/TestFramework.framework/TestFramework
+# RUN: mkdir -p %t/TestFramework.framework/TestFramework.dSYM/Contents/Resources/Python
+
+# RUN: cp %t/dsym_script.py %t/TestFramework.framework/TestFramework.dSYM/Contents/Resources/Python/TestFramework.py
+# RUN: cp %t/framework_script.py %t/TestFramework.framework/Resources/Python/TestFramework.py
+# RUN: %lldb -b \
+# RUN:   -o 'settings set target.load-script-from-symbol-file true' \
+# RUN:   -o 'target create %t/TestFramework.framework/TestFramework' 2>&1 \
+# RUN:   | FileCheck %s --implicit-check-not=FRAMEWORK_SCRIPT
+
+# CHECK: DSYM_SCRIPT
+
+#--- main.c
+int main() { return 0; }
+
+#--- dsym_script.py
+import sys
+def __lldb_init_module(debugger, internal_dict):
+    print("DSYM_SCRIPT", file=sys.stderr)
+
+#--- framework_script.py
+import sys
+def __lldb_init_module(debugger, internal_dict):
+    print("FRAMEWORK_SCRIPT", file=sys.stderr)
