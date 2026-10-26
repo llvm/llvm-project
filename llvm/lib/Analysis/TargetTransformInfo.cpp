@@ -29,10 +29,6 @@ using namespace PatternMatch;
 
 #define DEBUG_TYPE "tti"
 
-static cl::opt<bool> EnableReduxCost("costmodel-reduxcost", cl::init(false),
-                                     cl::Hidden,
-                                     cl::desc("Recognize reduction patterns."));
-
 static cl::opt<unsigned> CacheLineSize(
     "cache-line-size", cl::init(0), cl::Hidden,
     cl::desc("Use this to override the target cache line size when "
@@ -434,6 +430,11 @@ bool TargetTransformInfo::isLegalAddScalableImmediate(int64_t Imm) const {
 
 bool TargetTransformInfo::isLegalICmpImmediate(int64_t Imm) const {
   return TTIImpl->isLegalICmpImmediate(Imm);
+}
+
+bool TargetTransformInfo::preferLoopExitWithEqualityComparison(
+    const ICmpInst &Cond, const APInt &PostIncExitValue) const {
+  return TTIImpl->preferLoopExitWithEqualityComparison(Cond, PostIncExitValue);
 }
 
 bool TargetTransformInfo::isLegalAddressingMode(Type *Ty, GlobalValue *BaseGV,
