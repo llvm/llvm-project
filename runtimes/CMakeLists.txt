@@ -219,6 +219,10 @@ if("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^nvptx")
   set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -flto -c")
 endif()
 
+if(NOT DEFINED RUNTIMES_LTO_FLAG)
+  set(RUNTIMES_LTO_FLAG -flto)
+endif()
+
 # Avoid checking whether the compiler is working.
 set(LLVM_COMPILER_CHECKED ON)
 

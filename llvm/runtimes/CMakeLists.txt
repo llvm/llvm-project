@@ -91,6 +91,19 @@ macro(set_enable_per_target_runtime_dir)
   endif()
 endmacro()
 
+set(RUNTIMES_LTO "full" CACHE STRING
+    "Kind of LTO used by runtimes that always use LTO: full or thin")
+string(TOUPPER "${RUNTIMES_LTO}" uppercase_RUNTIMES_LTO)
+if(uppercase_RUNTIMES_LTO STREQUAL "THIN")
+  set(RUNTIMES_LTO_FLAG "-flto=thin")
+elseif(uppercase_RUNTIMES_LTO STREQUAL "FULL")
+  set(RUNTIMES_LTO_FLAG "-flto")
+else()
+  message(FATAL_ERROR "RUNTIMES_LTO must be full or thin, got '${RUNTIMES_LTO}'")
+endif()
+
+list(APPEND COMMON_CMAKE_ARGS "-DRUNTIMES_LTO_FLAG=${RUNTIMES_LTO_FLAG}")
+
 macro(append_passthrough_options out type names)
   get_cmake_property(variable_names VARIABLES)
 

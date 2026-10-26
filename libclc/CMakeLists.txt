@@ -165,8 +165,11 @@ if(LIBCLC_TARGET_ARCH IN_LIST LIBCLC_ARCHS_AMDGPU OR LIBCLC_TARGET_ARCH IN_LIST 
 endif()
 
 # Common compile options shared by CLC and OpenCL libraries.
+if(NOT DEFINED RUNTIMES_LTO_FLAG)
+  set(RUNTIMES_LTO_FLAG -flto)
+endif()
 set(compile_flags
-  -flto
+  ${RUNTIMES_LTO_FLAG}
   --target=${clang_triple}
   -nostdlib
   -nostdlibinc

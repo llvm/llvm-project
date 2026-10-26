@@ -1111,7 +1111,10 @@ else ()
   if(COMPILER_RT_GPU_BUILD)
     append_list_if(COMPILER_RT_HAS_FFREESTANDING_FLAG -ffreestanding BUILTIN_CFLAGS)
     append_list_if(COMPILER_RT_HAS_NOGPULIB_FLAG -nogpulib BUILTIN_CFLAGS)
-    append_list_if(COMPILER_RT_HAS_FLTO_FLAG -flto BUILTIN_CFLAGS)
+    if(NOT DEFINED RUNTIMES_LTO_FLAG)
+      set(RUNTIMES_LTO_FLAG -flto)
+    endif()
+    append_list_if(COMPILER_RT_HAS_FLTO_FLAG ${RUNTIMES_LTO_FLAG} BUILTIN_CFLAGS)
 
     # AMDGPU targets want to use a generic ABI.
     if(COMPILER_RT_TARGET_AMDGPU)
