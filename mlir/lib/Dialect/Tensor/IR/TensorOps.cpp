@@ -1409,6 +1409,9 @@ OpFoldResult ExtractOp::fold(FoldAdaptor adaptor) {
       return {};
   }
 
+  if (Value result = foldExtractAfterInsert(*this))
+    return result;
+
   // Collect the constant indices into the tensor.
   SmallVector<uint64_t, 8> indices;
   for (Attribute indice : adaptor.getIndices()) {
@@ -1443,9 +1446,6 @@ OpFoldResult ExtractOp::fold(FoldAdaptor adaptor) {
     if (elementsAttr && elementsAttr.isValidIndex(indices))
       return elementsAttr.getValues<Attribute>()[indices];
   }
-
-  if (Value result = foldExtractAfterInsert(*this))
-    return result;
 
   return {};
 }
