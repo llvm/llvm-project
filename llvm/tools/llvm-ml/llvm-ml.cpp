@@ -66,6 +66,27 @@ class MLOptTable : public opt::OptTable {
 public:
   MLOptTable() : opt::OptTable(optionTables(), /*IgnoreCase=*/false) {}
 };
+
+/// Reports each file read through the SourceMgr (e.g. via INCLUDE) in
+/// cl.exe's /showIncludes format. The main input is read directly rather
+/// than through the SourceMgr, so it is not reported, matching cl.exe
+class ShowIncludesFileSystem : public vfs::ProxyFileSystem {
+public:
+  using ProxyFileSystem::ProxyFileSystem;
+
+  ErrorOr<std::unique_ptr<vfs::File>>
+  openFileForRead(const Twine &Path) override {
+    auto FileOrErr = ProxyFileSystem::openFileForRead(Path);
+    if (!FileOrErr)
+      return FileOrErr;
+    // On POSIX, opening a directory succeeds and only reading it fails, so
+    // only report files that SourceMgr will actually read.
+    auto Status = (*FileOrErr)->status();
+    if (Status && Status->isRegularFile())
+      errs() << "Note: including file: " << Path << '\n';
+    return FileOrErr;
+  }
+};
 } // namespace
 
 static Triple GetTriple(StringRef ProgName, opt::InputArgList &Args) {
@@ -308,7 +329,10 @@ int llvm_ml_main(int Argc, char **Argv, const llvm::ToolContext &) {
     }
   }
   SrcMgr.setIncludeDirs(IncludeDirs);
-  SrcMgr.setVirtualFileSystem(vfs::getRealFileSystem());
+  IntrusiveRefCntPtr<vfs::FileSystem> FS = vfs::getRealFileSystem();
+  if (InputArgs.hasArg(OPT_show_includes))
+    FS = makeIntrusiveRefCnt<ShowIncludesFileSystem>(std::move(FS));
+  SrcMgr.setVirtualFileSystem(std::move(FS));
 
   std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TheTriple));
   assert(MRI && "Unable to create target register info!");
