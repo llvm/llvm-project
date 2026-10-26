@@ -570,3 +570,28 @@ class C : B<A> {};
 // CHECK: [[@LINE-1]]:13 | class/C++ | A | c:@N@clangd_issue_504@S@A | <no-cgname> | Ref,RelCont | rel: 1
 // CHECK-NEXT: RelCont | C | c:@N@clangd_issue_504@S@C
 } // namespace clangd_issue_504
+
+namespace using_type {
+namespace ns1 {
+struct A {};
+typedef A T;
+}
+namespace ns2 {
+using ns1::A;
+using ns1::T;
+}
+void foo() {
+  ns2::A a;
+// CHECK: [[@LINE-1]]:8 | struct/C | A | c:@N@using_type@N@ns1@S@A | <no-cgname> | Ref,RelCont | rel: 1
+// CHECK-NEXT: RelCont | foo | c:@N@using_type@F@foo#
+  ns2::T t;
+// CHECK: [[@LINE-1]]:8 | type-alias/using-struct/C | T | c:index-source.cpp@N@using_type@N@ns1@T@T | <no-cgname> | Ref,RelCont | rel: 1
+}
+struct B : ns2::A {};
+// CHECK: [[@LINE-1]]:17 | struct/C | A | c:@N@using_type@N@ns1@S@A | <no-cgname> | Ref,RelBase,RelCont | rel: 1
+// CHECK-NEXT: RelBase,RelCont | B | c:@N@using_type@S@B
+struct C : ns2::T {};
+// CHECK: [[@LINE-1]]:17 | type-alias/using-struct/C | T | c:index-source.cpp@N@using_type@N@ns1@T@T | <no-cgname> | Ref,RelCont | rel: 1
+// CHECK: [[@LINE-2]]:17 | struct/C | A | c:@N@using_type@N@ns1@S@A | <no-cgname> | Ref,Impl,RelBase,RelCont | rel: 1
+// CHECK-NEXT: RelBase,RelCont | C | c:@N@using_type@S@C
+} // namespace using_type
