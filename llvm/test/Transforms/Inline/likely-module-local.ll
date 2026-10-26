@@ -1,6 +1,6 @@
 ; RUN: opt -passes=inline -inline-threshold=0 -S < %s | FileCheck %s
 
-; A linkonce_odr function marked "likely-module-local" gets the last-call-to-
+; A linkonce_odr function marked likely_module_local gets the last-call-to-
 ; static bonus for its sole call, like a local function would.
 
 ; CHECK-LABEL: define i32 @caller(
@@ -18,7 +18,7 @@ define i32 @caller(i32 %x) {
   ret i32 %d
 }
 
-define linkonce_odr i32 @hint_once(i32 %x) "likely-module-local" {
+define linkonce_odr i32 @hint_once(i32 %x) likely_module_local {
   %v1 = mul i32 %x, 3
   %v2 = mul i32 %v1, 5
   %v3 = mul i32 %v2, 7
@@ -37,7 +37,7 @@ define linkonce_odr i32 @hint_once(i32 %x) "likely-module-local" {
   ret i32 %v15
 }
 
-define linkonce_odr i32 @hint_twice(i32 %x) "likely-module-local" {
+define linkonce_odr i32 @hint_twice(i32 %x) likely_module_local {
   %v1 = mul i32 %x, 3
   %v2 = mul i32 %v1, 5
   %v3 = mul i32 %v2, 7
@@ -75,7 +75,7 @@ define linkonce_odr i32 @nohint_once(i32 %x) {
   ret i32 %v15
 }
 
-define i32 @hint_external_once(i32 %x) "likely-module-local" {
+define i32 @hint_external_once(i32 %x) likely_module_local {
   %v1 = mul i32 %x, 3
   %v2 = mul i32 %v1, 5
   %v3 = mul i32 %v2, 7
