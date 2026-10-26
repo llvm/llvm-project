@@ -38,14 +38,17 @@ private:
   MCRegister CondReg;
   MCRegister ExecReg;
 
+  const char *DbgType;
+
   bool optimizeVcndVcmpPair(MachineBasicBlock &MBB);
   bool optimizeElseBranch(MachineBasicBlock &MBB);
 
 public:
-  SIOptimizeExecMaskingPreRA(MachineFunction &MF, LiveIntervals *LIS)
+  SIOptimizeExecMaskingPreRA(MachineFunction &MF, LiveIntervals *LIS,
+                             const char *DebugType = DEBUG_TYPE)
       : ST(MF.getSubtarget<GCNSubtarget>()), TRI(ST.getRegisterInfo()),
         TII(ST.getInstrInfo()), MRI(&MF.getRegInfo()), LIS(LIS),
-        LMC(AMDGPU::LaneMaskConstants::get(ST)) {}
+        LMC(AMDGPU::LaneMaskConstants::get(ST)), DbgType(DebugType) {}
   bool run(MachineFunction &MF);
 };
 
@@ -68,6 +71,30 @@ public:
   }
 };
 
+class AMDGPUOptimizeExecMaskingSSALegacy : public MachineFunctionPass {
+public:
+  static char ID;
+
+  AMDGPUOptimizeExecMaskingSSALegacy() : MachineFunctionPass(ID) {}
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
+
+  StringRef getPassName() const override {
+    return "AMDGPU optimize exec mask operations SSA";
+  }
+
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().set(
+        MachineFunctionProperties::Property::IsSSA);
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<LiveIntervalsWrapperPass>();
+    AU.setPreservesAll();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+};
+
 } // End anonymous namespace.
 
 INITIALIZE_PASS_BEGIN(SIOptimizeExecMaskingPreRALegacy, DEBUG_TYPE,
@@ -79,6 +106,19 @@ INITIALIZE_PASS_END(SIOptimizeExecMaskingPreRALegacy, DEBUG_TYPE,
 char SIOptimizeExecMaskingPreRALegacy::ID = 0;
 
 char &llvm::SIOptimizeExecMaskingPreRAID = SIOptimizeExecMaskingPreRALegacy::ID;
+
+#define SSA_DEBUG_TYPE "amdgpu-optimize-exec-masking-ssa"
+INITIALIZE_PASS_BEGIN(AMDGPUOptimizeExecMaskingSSALegacy, SSA_DEBUG_TYPE,
+                      "AMDGPU optimize exec mask operations in SSA", false,
+                      false)
+INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
+INITIALIZE_PASS_END(AMDGPUOptimizeExecMaskingSSALegacy, SSA_DEBUG_TYPE,
+                    "AMDGPU optimize exec mask operations in SSA", false, false)
+
+char AMDGPUOptimizeExecMaskingSSALegacy::ID = 0;
+
+char &llvm::AMDGPUOptimizeExecMaskingSSAID =
+    AMDGPUOptimizeExecMaskingSSALegacy::ID;
 
 // See if there is a def between \p AndIdx and \p SelIdx that needs to live
 // beyond \p AndIdx.
@@ -197,8 +237,8 @@ bool SIOptimizeExecMaskingPreRA::optimizeVcndVcmpPair(MachineBasicBlock &MBB) {
     return false;
 
   // TODO: Guard against implicit def operands?
-  LLVM_DEBUG(dbgs() << "Folding sequence:\n\t" << *Sel << '\t' << *Cmp << '\t'
-                    << *And);
+  DEBUG_WITH_TYPE(DbgType, dbgs() << "Folding sequence:\n\t" << *Sel << '\t'
+                                  << *Cmp << '\t' << *And);
 
   MachineInstr *Andn2 =
       BuildMI(MBB, *And, And->getDebugLoc(), TII->get(LMC.AndN2Opc),
@@ -214,7 +254,7 @@ bool SIOptimizeExecMaskingPreRA::optimizeVcndVcmpPair(MachineBasicBlock &MBB) {
   SlotIndex AndIdx = LIS->ReplaceMachineInstrInMaps(*And, *Andn2);
   And->eraseFromParent();
 
-  LLVM_DEBUG(dbgs() << "=>\n\t" << *Andn2 << '\n');
+  DEBUG_WITH_TYPE(DbgType, dbgs() << "=>\n\t" << *Andn2 << '\n');
 
   // Update live intervals for CCReg before potentially removing CmpReg/SelReg,
   // and their associated liveness information.
@@ -238,7 +278,7 @@ bool SIOptimizeExecMaskingPreRA::optimizeVcndVcmpPair(MachineBasicBlock &MBB) {
                     [&](const MachineInstr &MI) {
                       return MI.readsRegister(CondReg, TRI);
                     }))) {
-    LLVM_DEBUG(dbgs() << "Erasing: " << *Cmp << '\n');
+    DEBUG_WITH_TYPE(DbgType, dbgs() << "Erasing: " << *Cmp << '\n');
     if (CmpLI)
       LIS->removeVRegDefAt(*CmpLI, CmpIdx.getRegSlot());
     LIS->RemoveMachineInstrFromMaps(*Cmp);
@@ -250,7 +290,7 @@ bool SIOptimizeExecMaskingPreRA::optimizeVcndVcmpPair(MachineBasicBlock &MBB) {
     LIS->shrinkToUses(SelLI);
     bool IsDead = SelLI->Query(SelIdx.getRegSlot()).isDeadDef();
     if (MRI->use_nodbg_empty(SelReg) && (IsKill || IsDead)) {
-      LLVM_DEBUG(dbgs() << "Erasing: " << *Sel << '\n');
+      DEBUG_WITH_TYPE(DbgType, dbgs() << "Erasing: " << *Sel << '\n');
 
       LIS->removeVRegDefAt(*SelLI, SelIdx.getRegSlot());
       LIS->RemoveMachineInstrFromMaps(*Sel);
@@ -359,6 +399,15 @@ bool SIOptimizeExecMaskingPreRALegacy::runOnMachineFunction(
   return SIOptimizeExecMaskingPreRA(MF, LIS).run(MF);
 }
 
+bool AMDGPUOptimizeExecMaskingSSALegacy::runOnMachineFunction(
+    MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+
+  auto *LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
+  return SIOptimizeExecMaskingPreRA(MF, LIS, SSA_DEBUG_TYPE).run(MF);
+}
+
 bool SIOptimizeExecMaskingPreRA::run(MachineFunction &MF) {
   CondReg = MCRegister::from(LMC.VccReg);
   ExecReg = MCRegister::from(LMC.ExecReg);
@@ -415,8 +464,8 @@ bool SIOptimizeExecMaskingPreRA::run(MachineFunction &MF) {
               I->hasUnmodeledSideEffects() || I->hasOrderedMemoryRef())
             break;
 
-          LLVM_DEBUG(dbgs()
-                     << "Removing no effect instruction: " << *I << '\n');
+          DEBUG_WITH_TYPE(DbgType, dbgs() << "Removing no effect instruction: "
+                                          << *I << '\n');
 
           for (auto &Op : I->operands()) {
             if (Op.isReg())
@@ -468,7 +517,8 @@ bool SIOptimizeExecMaskingPreRA::run(MachineFunction &MF) {
             static_cast<unsigned>(Idx) <
                 SingleExecUser->getDesc().getNumOperands() &&
             TII->isOperandLegal(*SingleExecUser, Idx, &I->getOperand(1))) {
-          LLVM_DEBUG(dbgs() << "Redundant EXEC COPY: " << *I << '\n');
+          DEBUG_WITH_TYPE(DbgType,
+                          dbgs() << "Redundant EXEC COPY: " << *I << '\n');
           LIS->RemoveMachineInstrFromMaps(*I);
           I->eraseFromParent();
           MRI->replaceRegWith(SavedExec, ExecReg);
