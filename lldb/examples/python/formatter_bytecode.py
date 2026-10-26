@@ -1774,11 +1774,13 @@ if __name__ == "__main__":
 
         def test_boolean(self):
             def run(expr, *args, valobj=None):
-                methods = self.compile_methods(f"""
+                methods = self.compile_methods(
+                    f"""
                     class Synthetic:
                         def get_child_index(self, a, b, c):
                             return {expr}
-                    """)
+                    """
+                )
                 data = [{"valobj": valobj}, *args]
                 return interpret(methods["get_child_index"], [], data)
 
