@@ -154,6 +154,8 @@ void SPIRVModuleAnalysisImpl::setBaseInfo(const Module &M) {
   MAI.GlobalVarList.clear();
   MAI.ExtInstSetMap.clear();
   MAI.InstrAuxDataRecords.clear();
+  MAI.FPFastMathDefaultInfoMap.clear();
+  MAI.ImplicitContractionOff.clear();
   MAI.Reqs.clear();
   MAI.Reqs.initAvailableCapabilities(*ST);
 
@@ -2741,7 +2743,6 @@ static void collectReqs(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,
   auto Node = M.getNamedMetadata("spirv.ExecutionMode");
   if (Node) {
     bool RequireFloatControls = false, RequireIntelFloatControls2 = false,
-         RequireKHRFloatControls2 = false,
          VerLower14 = !ST.isAtLeastSPIRVVer(VersionTuple(1, 4));
     bool HasIntelFloatControls2 =
         ST.canUseExtension(SPIRV::Extension::SPV_INTEL_float_controls2);
@@ -2775,25 +2776,14 @@ static void collectReqs(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,
                   SPIRV::OperandCategory::ExecutionModeOperand, EM, ST);
             }
             break;
-          case SPIRV::ExecutionMode::FPFastMathDefault: {
-            if (HasKHRFloatControls2) {
-              RequireKHRFloatControls2 = true;
-              MAI.Reqs.getAndAddRequirements(
-                  SPIRV::OperandCategory::ExecutionModeOperand, EM, ST);
-            }
+          // SPV_KHR_float_controls2 reqs: see addFPFastMathDefaultReqs.
+          case SPIRV::ExecutionMode::FPFastMathDefault:
             break;
-          }
           case SPIRV::ExecutionMode::ContractionOff:
           case SPIRV::ExecutionMode::SignedZeroInfNanPreserve:
-            if (HasKHRFloatControls2) {
-              RequireKHRFloatControls2 = true;
-              MAI.Reqs.getAndAddRequirements(
-                  SPIRV::OperandCategory::ExecutionModeOperand,
-                  SPIRV::ExecutionMode::FPFastMathDefault, ST);
-            } else {
+            if (!HasKHRFloatControls2)
               MAI.Reqs.getAndAddRequirements(
                   SPIRV::OperandCategory::ExecutionModeOperand, EM, ST);
-            }
             break;
           default:
             MAI.Reqs.getAndAddRequirements(
@@ -2807,8 +2797,6 @@ static void collectReqs(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,
       MAI.Reqs.addExtension(SPIRV::Extension::SPV_KHR_float_controls);
     if (RequireIntelFloatControls2)
       MAI.Reqs.addExtension(SPIRV::Extension::SPV_INTEL_float_controls2);
-    if (RequireKHRFloatControls2)
-      MAI.Reqs.addExtension(SPIRV::Extension::SPV_KHR_float_controls2);
   }
   for (const Function &F : M) {
     if (F.isDeclaration())
@@ -3115,6 +3103,138 @@ static void collectFPFastMathDefaults(
   }
 }
 
+static const Function *getCallee(const MachineInstr &MI) {
+  return cast<Function>(MI.getOperand(2).getGlobal());
+}
+
+// SPIRV-LLVM-Translator rule. Uncontracted fadd/fsub: possible unfused mul-add.
+static bool disablesContraction(const MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  case SPIRV::OpFAddS:
+  case SPIRV::OpFAddV:
+  case SPIRV::OpFSubS:
+  case SPIRV::OpFSubV:
+    return !MI.getFlag(MachineInstr::MIFlag::FmContract);
+  case SPIRV::OpFunctionCall: {
+    // Intrinsics never disable.
+    const Function *Callee = getCallee(MI);
+    return Callee->isDeclaration() &&
+           !Callee->getName().starts_with("spirv.llvm_");
+  }
+  case SPIRV::OpFunctionPointerCallINTEL:
+  case SPIRV::OpAsmCallINTEL:
+    return true;
+  default:
+    return false;
+  }
+}
+
+// Functions forbidding contraction, directly or through callees.
+static SmallPtrSet<const Function *, 16>
+collectContractionOffFunctions(const Module &M, MachineFunctionGetter GetMF) {
+  SmallPtrSet<const Function *, 16> Disabled;
+  SmallVector<const Function *> Worklist;
+  DenseMap<const Function *, SmallVector<const Function *, 4>> Callers;
+  for (const Function &F : M) {
+    MachineFunction *MF = GetMF(F);
+    if (!MF)
+      continue;
+    for (const MachineBasicBlock &MBB : *MF) {
+      for (const MachineInstr &MI : MBB) {
+        if (MI.getOpcode() == SPIRV::OpFunctionCall)
+          Callers[getCallee(MI)].push_back(&F);
+        if (disablesContraction(MI) && Disabled.insert(&F).second)
+          Worklist.push_back(&F);
+      }
+    }
+  }
+  while (!Worklist.empty()) {
+    auto It = Callers.find(Worklist.pop_back_val());
+    if (It == Callers.end())
+      continue;
+    for (const Function *Caller : It->second)
+      if (Disabled.insert(Caller).second)
+        Worklist.push_back(Caller);
+  }
+  return Disabled;
+}
+
+// Kernel entry points getting ContractionOff without explicit metadata.
+static void collectImplicitContractionOff(const Module &M,
+                                          SPIRV::ModuleAnalysisInfo &MAI,
+                                          MachineFunctionGetter GetMF,
+                                          const SPIRVSubtarget &ST) {
+  if (!ST.allowsImplicitContractionOff(M))
+    return;
+  const bool Forced = ST.forcesContractionOff();
+  SmallPtrSet<const Function *, 16> Disabled;
+  if (!Forced)
+    Disabled = collectContractionOffFunctions(M, GetMF);
+  // With SPV_KHR_float_controls2, emitted as FPFastMathDefault from the map.
+  const bool UseFC2 =
+      ST.canUseExtension(SPIRV::Extension::SPV_KHR_float_controls2);
+  for (const Function &F : M) {
+    if (F.isDeclaration() || !isEntryPoint(F) ||
+        !(Forced || Disabled.contains(&F)))
+      continue;
+    if (UseFC2) {
+      for (SPIRV::FPFastMathDefaultInfo &Info :
+           getOrCreateFPFastMathDefaultInfoVec(M, MAI.FPFastMathDefaultInfoMap,
+                                               &F))
+        Info.ContractionOff = true;
+    } else {
+      MAI.ImplicitContractionOff.insert(&F);
+    }
+  }
+}
+
+void SPIRV::ModuleAnalysisInfo::forEachFPFastMathDefault(
+    const Module &M,
+    function_ref<void(const Function &, const MachineInstr &FloatTy,
+                      const FPFastMathDefaultInfo &)>
+        Fn) const {
+  if (FPFastMathDefaultInfoMap.empty())
+    return;
+  SmallVector<const MachineInstr *, 3> FloatTypes;
+  for (const MachineInstr *MI : MS[MB_TypeConstVars])
+    if (MI->getOpcode() == OpTypeFloat &&
+        FPFastMathDefaultInfoVector::isSupportedWidth(
+            MI->getOperand(1).getImm()))
+      FloatTypes.push_back(MI);
+
+  // Module order, not map order: deterministic output.
+  for (const Function &F : M) {
+    auto It = FPFastMathDefaultInfoMap.find(&F);
+    if (It == FPFastMathDefaultInfoMap.end() || It->second.empty())
+      continue;
+    for (const MachineInstr *MI : FloatTypes) {
+      unsigned Width = MI->getOperand(1).getImm();
+      size_t Index =
+          FPFastMathDefaultInfoVector::computeFPFastMathDefaultInfoVecIndex(
+              Width);
+      assert(Index < It->second.size() &&
+             "Index out of bounds for FPFastMathDefaultInfoVec");
+      const FPFastMathDefaultInfo &Info = It->second[Index];
+      assert(Info.Ty && "Expected target type for FPFastMathDefaultInfo");
+      assert(Info.Ty->getScalarSizeInBits() == Width &&
+             "Mismatched float type size");
+      if (Info.needsExecutionMode())
+        Fn(F, *MI, Info);
+    }
+  }
+}
+
+static void addFPFastMathDefaultReqs(const Module &M,
+                                     SPIRV::ModuleAnalysisInfo &MAI,
+                                     const SPIRVSubtarget &ST) {
+  MAI.forEachFPFastMathDefault(M, [&](const Function &, const MachineInstr &,
+                                      const SPIRV::FPFastMathDefaultInfo &) {
+    MAI.Reqs.getAndAddRequirements(SPIRV::OperandCategory::ExecutionModeOperand,
+                                   SPIRV::ExecutionMode::FPFastMathDefault, ST);
+    MAI.Reqs.addExtension(SPIRV::Extension::SPV_KHR_float_controls2);
+  });
+}
+
 SPIRVModuleAnalysisImpl::SPIRVModuleAnalysisImpl(const SPIRVSubtarget &ST,
                                                  SPIRV::ModuleAnalysisInfo &MAI,
                                                  MachineFunctionGetter GetMF)
@@ -3126,12 +3246,15 @@ void SPIRVModuleAnalysisImpl::run(const Module &M) {
 
   addMBBNames(M, GetMF, MAI);
   collectFPFastMathDefaults(M, MAI.FPFastMathDefaultInfoMap, *ST);
+  collectImplicitContractionOff(M, MAI, GetMF, *ST);
 
   collectReqs(M, MAI, GetMF, *ST);
 
   // Process type/const/global var/func decl instructions, number their
   // destination registers from 0 to N, collect Extensions and Capabilities.
   collectDeclarations(M);
+
+  addFPFastMathDefaultReqs(M, MAI, *ST);
 
   // Number rest of registers from N+1 onwards.
   numberRegistersGlobally(M);

@@ -103,6 +103,8 @@ public:
     return AvailableExtensions;
   }
   bool canUseExtension(SPIRV::Extension::Extension E) const;
+  bool allowsImplicitContractionOff(const Module &M) const;
+  bool forcesContractionOff() const;
   bool canUseExtInstSet(SPIRV::InstructionSet::InstructionSet E) const;
   SPIRV::InstructionSet::InstructionSet getPreferredInstructionSet() const;
 
