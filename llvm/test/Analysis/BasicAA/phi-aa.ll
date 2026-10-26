@@ -80,11 +80,11 @@ declare void @inc(ptr)
 
 ; When we have a chain of phis in nested loops we should recognise if there's
 ; actually only one underlying value.
-; FIXME: All of these could be NoAlias.
+; All three PHIs have @X as their only underlying object.
 ; CHECK-LABEL: loop_phi_chain
-; CHECK: MayAlias: i32* %val1, i32* @Y
-; CHECK: MayAlias: i32* %val2, i32* @Y
-; CHECK: MayAlias: i32* %val3, i32* @Y
+; CHECK: NoAlias: i32* %val1, i32* @Y
+; CHECK: NoAlias: i32* %val2, i32* @Y
+; CHECK: NoAlias: i32* %val3, i32* @Y
 define void @loop_phi_chain(i32 %a, i32 %b, i32 %c) {
 entry:
   br label %loop1
