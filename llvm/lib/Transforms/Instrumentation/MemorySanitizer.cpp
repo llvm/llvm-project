@@ -592,13 +592,17 @@ void insertModuleCtor(const InstrumentationOptions &Opts, Module &M) {
 
 } // end anonymous namespace
 
-MemorySanitizerOptions::MemorySanitizerOptions(int TO, bool R, bool K,
-                                               bool EC) {
-  const InstrumentationOptions &Opts = InstrumentationOptions::Global;
-  Kernel = valueOr(Opts.msan_kernel, K);
-  TrackOrigins = Opts.msan_track_origins.value_or(Kernel ? 2 : TO);
-  Recover = valueOr(Opts.msan_keep_going, Kernel || R);
-  EagerChecks = valueOr(Opts.msan_eager_checks, EC);
+MemorySanitizerOptions::MemorySanitizerOptions(int TO, bool R, bool K, bool EC)
+    : Kernel(K), TrackOrigins(TO), Recover(R), EagerChecks(EC) {}
+
+static MemorySanitizerOptions resolveOptions(const InstrumentationOptions &Opts,
+                                             MemorySanitizerOptions O) {
+  O.Kernel = valueOr(Opts.msan_kernel, O.Kernel);
+  O.TrackOrigins =
+      Opts.msan_track_origins.value_or(O.Kernel ? 2 : O.TrackOrigins);
+  O.Recover = valueOr(Opts.msan_keep_going, O.Kernel || O.Recover);
+  O.EagerChecks = valueOr(Opts.msan_eager_checks, O.EagerChecks);
+  return O;
 }
 
 PreservedAnalyses MemorySanitizerPass::run(Module &M,
@@ -606,9 +610,10 @@ PreservedAnalyses MemorySanitizerPass::run(Module &M,
   // Return early if nosanitize_memory module flag is present for the module.
   if (checkIfAlreadyInstrumented(M, "nosanitize_memory"))
     return PreservedAnalyses::all();
-  const InstrumentationOptions &Opts = InstrumentationOptions::Global;
+  const InstrumentationOptions &Opts = getInstrumentationOptions(M);
+  MemorySanitizerOptions MSanOpts = resolveOptions(Opts, Options);
   bool Modified = false;
-  if (!Options.Kernel) {
+  if (!MSanOpts.Kernel) {
     insertModuleCtor(Opts, M);
     Modified = true;
   }
@@ -617,7 +622,7 @@ PreservedAnalyses MemorySanitizerPass::run(Module &M,
   for (Function &F : M) {
     if (F.empty())
       continue;
-    MemorySanitizer Msan(Opts, *F.getParent(), Options);
+    MemorySanitizer Msan(Opts, *F.getParent(), MSanOpts);
     Modified |=
         Msan.sanitizeFunction(F, FAM.getResult<TargetLibraryAnalysis>(F));
   }
@@ -1825,6 +1830,15 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   /// Set SV to be the shadow value for V.
   void setShadow(Value *V, Value *SV) {
     assert(!ShadowMap.count(V) && "Values may only have one shadow");
+
+    // getShadowTy(VoidType) == nullptr
+    if (SV && !V->getType()->isVoidTy() && getShadowTy(V) != SV->getType()) {
+      LLVM_DEBUG(dbgs() << "V:  " << *V << "\n");
+      LLVM_DEBUG(dbgs() << "SV: " << *SV << "\n");
+      assert(getShadowTy(V) == SV->getType() &&
+             "setShadow called with mismatching types");
+    }
+
     ShadowMap[V] = PropagateShadow ? SV : getCleanShadow(V);
   }
 
@@ -4190,6 +4204,72 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
+  // e.g., <4 x i32>  @llvm.vector.partial.reduce.add (<4 x i32>,  <8 x i32>)
+  //                                                   acc         addends
+  //       <4 x fp16> @llvm.vector.partial.reduce.fadd(<4 x fp16>, <8 x fp16>)
+  //                                                   acc         addends
+  //
+  // output[i] = acc[i] + addend[i] + addend[i+4]
+  //
+  // We approximate this as "all-or-nothing" for each element of the vector
+  // i.e., even a single uninitialized bit in acc[i], addend[i], or
+  // addend[i+4] will make output[i] fully uninitialized.
+  //
+  // By converting each vector element to a single value (0 or 1) representing
+  // whether it is uninitialized, we can apply vector.partial.reduce.add to
+  // compute the output shadow.
+  //
+  // N.B. this function is ready for scalable vectors, but its dependencies
+  // are not.
+  void handleVectorPartialReduceAddIntrinsic(IntrinsicInst &I) {
+    IRBuilder<> IRB(&I);
+
+    assert(I.arg_size() == 2);
+    [[maybe_unused]] Value *Accumulator = I.getArgOperand(0);
+    [[maybe_unused]] Value *Addends = I.getArgOperand(1);
+    assert(isa<VectorType>(Accumulator->getType()));
+    assert(isa<VectorType>(Addends->getType()));
+
+    assert(I.getType() == Accumulator->getType());
+
+    assert(cast<VectorType>(Addends->getType())->getElementType() ==
+           cast<VectorType>(I.getType())->getElementType());
+    assert(cast<VectorType>(Addends->getType())
+               ->getElementCount()
+               .isKnownMultipleOf(
+                   cast<VectorType>(I.getType())->getElementCount()));
+
+    // e.g., <4 x i32>, <8 x i32>
+    Value *SAcc = getShadow(&I, 0);
+    Value *SAdd = getShadow(&I, 1);
+
+    // All-or-nothing shadows
+    // e.g., <4 x i1>, <8 x i1>
+    SAcc = IRB.CreateICmpNE(SAcc, getCleanShadow(SAcc));
+    SAdd = IRB.CreateICmpNE(SAdd, getCleanShadow(SAdd));
+
+    // If we applied vector.partial.reduce.add to (<M x i1>, <N x i1>) shadows,
+    // the sums might wrap around. Zero-extend to avoid this.
+    // 16-bit for each sum (up to 65535) ought to be enough for anybody.
+    SAcc = IRB.CreateZExt(
+        SAcc,
+        VectorType::get(IRB.getInt16Ty(),
+                        cast<VectorType>(SAcc->getType())->getElementCount()));
+    SAdd = IRB.CreateZExt(
+        SAdd,
+        VectorType::get(IRB.getInt16Ty(),
+                        cast<VectorType>(SAdd->getType())->getElementCount()));
+
+    Value *SOutput = IRB.CreateIntrinsic(
+        SAcc->getType(), Intrinsic::vector_partial_reduce_add, {SAcc, SAdd});
+
+    SOutput = IRB.CreateSExt(IRB.CreateICmpNE(SOutput, getCleanShadow(SOutput)),
+                             getShadowTy(&I));
+
+    setShadow(&I, SOutput);
+    setOriginForNaryOp(I);
+  }
+
   // Instrument vector.reduce.or intrinsic.
   // Valid (non-poisoned) set bits in the operand pull low the
   // corresponding shadow bits.
@@ -5922,6 +6002,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::vector_reduce_fadd:
     case Intrinsic::vector_reduce_fmul:
       handleVectorReduceWithStarterIntrinsic(I);
+      break;
+
+    // e.g., <4 x i32> @llvm.vector.partial.reduce.add(<4 x i32>, <8 x i32>)
+    case Intrinsic::vector_partial_reduce_add:
+    case Intrinsic::vector_partial_reduce_fadd:
+      handleVectorPartialReduceAddIntrinsic(I);
       break;
 
     case Intrinsic::scmp:

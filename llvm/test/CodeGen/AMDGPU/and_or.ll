@@ -44,10 +44,15 @@ define amdgpu_ps float @and_or_vgpr_b(i32 inreg %a, i32 %b, i32 inreg %c) {
 ; GFX9-NEXT:    v_or_b32_e32 v0, s3, v0
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
-; GFX10PLUS-LABEL: and_or_vgpr_b:
-; GFX10PLUS:       ; %bb.0:
-; GFX10PLUS-NEXT:    v_and_or_b32 v0, s2, v0, s3
-; GFX10PLUS-NEXT:    ; return to shader part epilog
+; GFX10-LABEL: and_or_vgpr_b:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    v_and_or_b32 v0, s2, v0, s3
+; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX11-LABEL: and_or_vgpr_b:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    v_and_or_b32 v0, s0, v0, s1
+; GFX11-NEXT:    ; return to shader part epilog
   %x = and i32 %a, %b
   %result = or i32 %x, %c
   %bc = bitcast i32 %result to float
@@ -66,10 +71,15 @@ define amdgpu_ps float @and_or_vgpr_ab(i32 %a, i32 %b, i32 inreg %c) {
 ; GFX9-NEXT:    v_and_or_b32 v0, v0, v1, s2
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
-; GFX10PLUS-LABEL: and_or_vgpr_ab:
-; GFX10PLUS:       ; %bb.0:
-; GFX10PLUS-NEXT:    v_and_or_b32 v0, v0, v1, s2
-; GFX10PLUS-NEXT:    ; return to shader part epilog
+; GFX10-LABEL: and_or_vgpr_ab:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    v_and_or_b32 v0, v0, v1, s2
+; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX11-LABEL: and_or_vgpr_ab:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    v_and_or_b32 v0, v0, v1, s0
+; GFX11-NEXT:    ; return to shader part epilog
   %x = and i32 %a, %b
   %result = or i32 %x, %c
   %bc = bitcast i32 %result to float
@@ -464,11 +474,17 @@ define amdgpu_ps <2 x i32> @s_and_or_v2i32(<2 x i32> inreg %a, <2 x i32> inreg %
 ; GFX9-NEXT:    s_or_b64 s[0:1], s[0:1], s[6:7]
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
-; GFX10PLUS-LABEL: s_and_or_v2i32:
-; GFX10PLUS:       ; %bb.0:
-; GFX10PLUS-NEXT:    s_and_b64 s[0:1], s[2:3], s[4:5]
-; GFX10PLUS-NEXT:    s_or_b64 s[0:1], s[0:1], s[6:7]
-; GFX10PLUS-NEXT:    ; return to shader part epilog
+; GFX10-LABEL: s_and_or_v2i32:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_and_b64 s[0:1], s[2:3], s[4:5]
+; GFX10-NEXT:    s_or_b64 s[0:1], s[0:1], s[6:7]
+; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX11-LABEL: s_and_or_v2i32:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_and_b64 s[0:1], s[0:1], s[2:3]
+; GFX11-NEXT:    s_or_b64 s[0:1], s[0:1], s[4:5]
+; GFX11-NEXT:    ; return to shader part epilog
   %x = and <2 x i32> %a, %b
   %result = or <2 x i32> %x, %c
   ret <2 x i32> %result

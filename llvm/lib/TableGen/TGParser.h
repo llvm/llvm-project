@@ -237,14 +237,14 @@ public:
   }
 
 private: // Semantic analysis methods.
-  bool AddValue(Record *TheRec, SMLoc Loc, const RecordVal &RV);
+  bool AddValue(Record *TheRec, SMLoc Loc, const RecordVal &RV,
+                const Record *FromRec = nullptr);
   /// Set the value of a RecordVal within the given record. If `OverrideDefLoc`
   /// is set, the provided location overrides any existing location of the
   /// RecordVal. An optional `Mode` specifies append/prepend concatenation.
   bool SetValue(Record *TheRec, SMLoc Loc, const Init *ValName,
                 ArrayRef<unsigned> BitList, const Init *V,
-                bool AllowSelfAssignment = false, bool OverrideDefLoc = true,
-                LetMode Mode = LetMode::Replace);
+                bool OverrideDefLoc = true, LetMode Mode = LetMode::Replace);
   bool AddSubClass(Record *Rec, SubClassReference &SubClass);
   bool AddSubClass(RecordsEntry &Entry, SubClassReference &SubClass);
   bool AddSubMultiClass(MultiClass *CurMC,

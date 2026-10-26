@@ -11,6 +11,7 @@
 #include "PtrTypesSemantics.h"
 #include "RawPtrRefSafetyModel.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"

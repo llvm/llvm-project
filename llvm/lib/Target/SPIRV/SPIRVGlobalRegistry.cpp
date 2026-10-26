@@ -1346,6 +1346,7 @@ SPIRVTypeInst SPIRVGlobalRegistry::restOfCreateSPIRVType(
   SPIRVToLLVMType[SpirvType] = unifyPtrType(Ty);
 
   if (SpirvType->getOpcode() == SPIRV::OpTypeForwardPointer ||
+      SpirvType->getOpcode() == SPIRV::OpTypeUntypedPointerKHR ||
       findMI(Ty, false, &MIRBuilder.getMF()) || isSpecialOpaqueType(Ty))
     return SpirvType;
 

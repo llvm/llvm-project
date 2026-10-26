@@ -374,15 +374,13 @@ static void fixupVFUsersForEVL(VPlan &Plan, VPValue &EVL) {
           .createScalarZExtOrTrunc(&EVL, Plan.getVF().getScalarType(),
                                    DebugLoc::getUnknown());
 
-  Plan.getVF().replaceUsesWithIf(EVLAsIdx, [](VPUser &U) {
-    return isa<VPWidenIntOrFpInductionRecipe, VPScalarIVStepsRecipe>(U);
-  });
+  Plan.getVF().replaceUsesWithIf(
+      EVLAsIdx, IsaPred<VPWidenIntOrFpInductionRecipe, VPScalarIVStepsRecipe>);
 
-  Plan.getVFxUF().replaceUsesWithIf(EVLAsIdx, [](VPUser &U) {
-    // Only replace uses in VPWidenPointerInductionRecipe; The increment of the
-    // canonical induction must not be updated.
-    return isa<VPWidenPointerInductionRecipe>(U);
-  });
+  // Only replace uses in VPWidenPointerInductionRecipe; The increment of the
+  // canonical induction must not be updated.
+  Plan.getVFxUF().replaceUsesWithIf(EVLAsIdx,
+                                    IsaPred<VPWidenPointerInductionRecipe>);
 
   // Create a scalar phi to track the previous EVL if fixed-order recurrence is
   // contained.
@@ -553,9 +551,8 @@ void VPlanTransforms::addExplicitVectorLength(
 
   // Replace all uses of the canonical IV with VPCurrentIterationPHIRecipe
   // except for the canonical IV increment.
-  CanonicalIV->replaceUsesWithIf(
-      CurrentIteration,
-      [CanonicalIVIncrement](VPUser &U) { return &U != CanonicalIVIncrement; });
+  CanonicalIV->replaceUsesWithIf(CurrentIteration,
+                                 not_equal_to(CanonicalIVIncrement));
   // TODO: support unroll factor > 1.
   Plan.setUF(1);
 }
