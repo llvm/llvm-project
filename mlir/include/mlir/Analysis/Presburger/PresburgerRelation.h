@@ -217,6 +217,27 @@ public:
   /// redundencies.
   PresburgerRelation simplify() const;
 
+  /// Return a relation that has the same intersection with `context` as `this`
+  /// but is as simple as possible (ISL's "gist", see `isl_map_gist_basic_map`);
+  /// see `IntegerRelation::gist` for the simplification of a single disjunct.
+  /// Each disjunct is simplified separately in the context; disjuncts that
+  /// become empty are dropped, and if any disjunct becomes the universe, the
+  /// universe is returned (a deliberate deviation from
+  /// `isl_map_gist_basic_map`, which keeps the other disjuncts). An obviously
+  /// empty context yields the universe. The result is only meaningful together
+  /// with `context`.
+  PresburgerRelation gist(const IntegerRelation &context) const;
+
+  /// Same as above, but for a context that is a union of disjuncts (ISL's
+  /// `isl_map_gist`). A context with a single disjunct is used directly.
+  /// Otherwise, `this` is simplified in the context of a convex
+  /// over-approximation of `context` that consists of all the constraints of
+  /// the disjuncts of `context` and of `this` that are valid for every
+  /// disjunct of `context`. This replaces ISL's
+  /// `isl_map_unshifted_simple_hull_from_map_list`: the constraints are not
+  /// shifted, but checked for validity with a Simplex per disjunct.
+  PresburgerRelation gist(const PresburgerRelation &context) const;
+
   /// Return whether the given PresburgerRelation is full-dimensional. By full-
   /// dimensional we mean that it is not flat along any dimension.
   bool isFullDim() const;
@@ -263,6 +284,8 @@ public:
   PresburgerSet complement() const;
   PresburgerSet subtract(const PresburgerRelation &set) const;
   PresburgerSet coalesce() const;
+  PresburgerSet gist(const IntegerRelation &context) const;
+  PresburgerSet gist(const PresburgerRelation &context) const;
 
 protected:
   /// Construct an empty PresburgerRelation with the specified number of

@@ -882,3 +882,145 @@ TEST(SetTest, subtractOutputSizeRegression) {
   // sets, which is correct, but bad for output size.
   EXPECT_EQ(subtractSelf.getNumDisjuncts(), 0u);
 }
+
+/// Computes the gist of `set` in the context of `context`, checks that the
+/// gist has the same intersection with the context as `set`, that gist is
+/// idempotent (the gist of the result is equal to the result and has the same
+/// number of disjuncts), and, if given, that the result is equal to
+/// `expected`. Returns the gist.
+static PresburgerSet
+expectGist(const PresburgerSet &set, const PresburgerSet &context,
+           std::optional<PresburgerSet> expected = std::nullopt) {
+  PresburgerSet gist = set.gist(context);
+  EXPECT_TRUE(gist.intersect(context).isEqual(set.intersect(context)));
+  PresburgerSet gistAgain = gist.gist(context);
+  EXPECT_TRUE(gistAgain.isEqual(gist));
+  EXPECT_EQ(gistAgain.getNumDisjuncts(), gist.getNumDisjuncts());
+  if (expected)
+    EXPECT_TRUE(gist.isEqual(*expected));
+  return gist;
+}
+
+static PresburgerSet
+expectGist(ArrayRef<StringRef> set, ArrayRef<StringRef> context,
+           std::optional<PresburgerSet> expected = std::nullopt) {
+  return expectGist(parsePresburgerSet(set), parsePresburgerSet(context),
+                    expected);
+}
+
+static PresburgerSet universeSet(unsigned numDims) {
+  return PresburgerSet::getUniverse(PresburgerSpace::getSetSpace(numDims));
+}
+
+static PresburgerSet emptySet(unsigned numDims) {
+  return PresburgerSet::getEmpty(PresburgerSpace::getSetSpace(numDims));
+}
+
+TEST(SetTest, gistUnionSubsetContextYieldsUniverse) {
+  // From the ISL test suite. The context is a subset of the set.
+  expectGist(
+      {"(x) : (x >= 0, -x + 4 >= 0)", "(x) : (x - 6 >= 0, -x + 9 >= 0)"},
+      {"(x) : (x - 1 >= 0, -x + 3 >= 0)", "(x) : (x - 7 >= 0, -x + 8 >= 0)"},
+      universeSet(1));
+}
+
+TEST(SetTest, gistUnionConvexSubsetContextYieldsUniverse) {
+  // From the ISL test suite. The convex context is a subset of the union.
+  expectGist({"(x, y) : (-x - 1 >= 0, y >= 0, -y + 4 >= 0)",
+              "(x, y) : (x + 2 >= 0, x + y >= 0, x - y + 10 >= 0)"},
+             {"(x, y) : (y - 1 >= 0, -y + 3 >= 0)"}, universeSet(2));
+}
+
+TEST(SetTest, gistUnionConstraintValidInEveryContextDisjunct) {
+  // From the ISL test suite. The constraint of the set is valid in each
+  // disjunct of the context, but not in the simple hull of the context.
+  expectGist({"(m, n, a, b) : (-a + n + 2147 >= 0)"},
+             {"(m, n, a, b) : (m - 1 >= 0, n - 1 >= 0, -a - m + 2148 >= 0, "
+              "-b - n + 2148 >= 0, b >= 0, b + n + a - 2149 >= 0)",
+              "(m, n, a, b) : (n - 1 >= 0, a >= 0, -b - n - a + 2148 >= 0, "
+              "b >= 0)"},
+             universeSet(4));
+}
+
+TEST(SetTest, gistUnionPerDisjunct) {
+  // Each disjunct of the set is simplified separately.
+  PresburgerSet gist = expectGist(
+      {"(x) : (x >= 0, -x + 10 >= 0)", "(x) : (x - 20 >= 0, -x + 30 >= 0)"},
+      {"(x) : (x >= 0)"},
+      parsePresburgerSet(
+          {"(x) : (-x + 10 >= 0)", "(x) : (x - 20 >= 0, -x + 30 >= 0)"}));
+  ASSERT_EQ(gist.getNumDisjuncts(), 2u);
+  EXPECT_EQ(gist.getDisjunct(0).getNumConstraints(), 1u);
+  EXPECT_EQ(gist.getDisjunct(1).getNumConstraints(), 2u);
+}
+
+TEST(SetTest, gistUnionDropsEmptyDisjunct) {
+  // Disjuncts that do not intersect the context are dropped.
+  PresburgerSet gist = expectGist(
+      {"(x) : (x >= 0, -x + 10 >= 0)", "(x) : (x - 20 >= 0, -x + 30 >= 0)"},
+      {"(x) : (-x + 5 >= 0)"}, parsePresburgerSet({"(x) : (x >= 0)"}));
+  EXPECT_EQ(gist.getNumDisjuncts(), 1u);
+}
+
+TEST(SetTest, gistUnionHullFromMultiDisjunctContext) {
+  // Context with multiple disjuncts: the hull of the context implies
+  // 1 <= x <= 8.
+  PresburgerSet gist =
+      expectGist({"(x, y) : (x >= 0, -x + 10 >= 0, -y + 5 >= 0)"},
+                 {"(x, y) : (x - 1 >= 0, -x + 3 >= 0, y >= 0)",
+                  "(x, y) : (x - 6 >= 0, -x + 8 >= 0, y - 1 >= 0)"},
+                 parsePresburgerSet({"(x, y) : (-y + 5 >= 0)"}));
+  ASSERT_EQ(gist.getNumDisjuncts(), 1u);
+  EXPECT_EQ(gist.getDisjunct(0).getNumConstraints(), 1u);
+}
+
+TEST(SetTest, gistUnionSimplifiesOnlyAffectedDisjunct) {
+  expectGist({"(i, j) : (i - 1 >= 0, j - 1 >= 0)",
+              "(i, j) : (i - 2 >= 0, -j + 10 >= 0)"},
+             {"(i, j) : (i - 1 >= 0)"},
+             parsePresburgerSet({"(i, j) : (j - 1 >= 0)",
+                                 "(i, j) : (i - 2 >= 0, -j + 10 >= 0)"}));
+}
+
+TEST(SetTest, gistEmptySetStaysEmpty) {
+  PresburgerSet gist = expectGist(
+      emptySet(1), parsePresburgerSet({"(x) : (x >= 0, -x + 10 >= 0)"}));
+  EXPECT_TRUE(gist.isObviouslyEmpty());
+}
+
+TEST(SetTest, gistEmptyContextYieldsUniverse) {
+  expectGist(parsePresburgerSet({"(x) : (x >= 0, -x + 10 >= 0)"}), emptySet(1),
+             universeSet(1));
+}
+
+TEST(SetTest, gistUniverseStaysUniverse) {
+  expectGist(universeSet(1),
+             parsePresburgerSet({"(x) : (x >= 0, -x + 10 >= 0)"}),
+             universeSet(1));
+}
+
+TEST(SetTest, gistUniverseContextKeepsSet) {
+  PresburgerSet set = parsePresburgerSet({"(x) : (x >= 0, -x + 10 >= 0)"});
+  expectGist(set, universeSet(1), set);
+}
+
+TEST(SetTest, gistSelfYieldsUniverse) {
+  PresburgerSet set = parsePresburgerSet({"(x) : (x >= 0, -x + 10 >= 0)"});
+  expectGist(set, set, universeSet(1));
+}
+
+TEST(SetTest, gistUnionAllEmptyContextDisjunctsYieldsUniverse) {
+  // A context whose disjuncts are all (obviously) empty is empty.
+  PresburgerSet emptyDisjuncts = parsePresburgerSet(
+      {"(x) : (x - 1 >= 0, -x >= 0)", "(x) : (x - 1 == 0, x - 2 == 0)"});
+  expectGist(parsePresburgerSet({"(x) : (x >= 0, -x + 10 >= 0)"}),
+             emptyDisjuncts, universeSet(1));
+}
+
+TEST(SetTest, gistEmptySetInEmptyConvexContextYieldsUniverse) {
+  // The empty set in an empty convex context is the universe.
+  EXPECT_TRUE(
+      emptySet(1)
+          .gist(IntegerRelation::getEmpty(PresburgerSpace::getSetSpace(1)))
+          .isEqual(universeSet(1)));
+}
