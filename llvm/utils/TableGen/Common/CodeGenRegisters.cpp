@@ -201,7 +201,7 @@ void CodeGenRegister::buildObjectGraph(CodeGenRegBank &RegBank) {
 // Return true if the RegUnits changed.
 bool CodeGenRegister::inheritRegUnits(CodeGenRegBank &RegBank) {
   bool changed = false;
-  for (const auto &[_, SR] : SubRegs) {
+  for (const auto &[_, SR] : getSubRegs()) {
     // Merge the subregister's units into this register's RegUnits.
     changed |= (RegUnits |= SR->RegUnits);
   }
@@ -551,6 +551,22 @@ void CodeGenRegister::computeSecondarySubRegs(CodeGenRegBank &RegBank) {
   }
 }
 
+CodeGenRegister *CodeGenRegister::getSubReg(const CodeGenSubRegIndex *Idx,
+                                            unsigned &Hint) const {
+  assert(SuperRegsComplete && "Must precompute super-registers");
+  if (Hint < FinalSubRegs.size() && FinalSubRegs[Hint].first == Idx)
+    return FinalSubRegs[Hint].second;
+
+  auto It = llvm::lower_bound(FinalSubRegs, Idx->EnumValue,
+                              [](const auto &Entry, unsigned EnumValue) {
+                                return Entry.first->EnumValue < EnumValue;
+                              });
+  if (It == FinalSubRegs.end() || It->first != Idx)
+    return nullptr;
+  Hint = It - FinalSubRegs.begin();
+  return It->second;
+}
+
 void CodeGenRegister::computeSuperRegs(CodeGenRegBank &RegBank) {
   // Only visit each register once.
   if (SuperRegsComplete)
@@ -565,7 +581,10 @@ void CodeGenRegister::computeSuperRegs(CodeGenRegBank &RegBank) {
   // Now add this as a super-register on all sub-registers.
   // Also compute the TopoSigId in post-order.
   TopoSigId Id;
+  FinalSubRegs.reserve(SubRegs.size());
   for (auto SubReg : SubRegs) {
+    FinalSubRegs.push_back(SubReg);
+
     // Topological signature computed from SubIdx, TopoId(SubReg).
     // Loops and idempotent indices have TopoSig = ~0u.
     Id.push_back(SubReg.first->EnumValue);
@@ -577,18 +596,20 @@ void CodeGenRegister::computeSuperRegs(CodeGenRegBank &RegBank) {
       continue;
     SubReg.second->SuperRegs.push_back(this);
   }
+
   TopoSig = RegBank.getTopoSig(Id);
+  SubRegs = SubRegMap();
 }
 
 void CodeGenRegister::addSubRegsPreOrder(
     SetVector<const CodeGenRegister *> &OSet, CodeGenRegBank &RegBank) const {
-  assert(SubRegsComplete && "Must precompute sub-registers");
+  assert(SuperRegsComplete && "Must precompute super-registers");
   for (CodeGenRegister *SR : ExplicitSubRegs) {
     if (OSet.insert(SR))
       SR->addSubRegsPreOrder(OSet, RegBank);
   }
   // Add any secondary sub-registers that weren't part of the explicit tree.
-  OSet.insert_range(llvm::make_second_range(SubRegs));
+  OSet.insert_range(llvm::make_second_range(FinalSubRegs));
 }
 
 // Get the sum of this register's unit weights.
@@ -1157,6 +1178,12 @@ bool CodeGenRegisterClass::hasSuperRegClass(
   return FindI != SuperRegClasses.end() && FindI->second.contains(RC);
 }
 
+bool CodeGenRegisterClass::hasSuperRegClass(
+    const CodeGenRegisterClass *RC) const {
+  return any_of(SuperRegClasses,
+                [RC](const auto &Entry) { return Entry.second.contains(RC); });
+}
+
 void CodeGenRegisterClass::getSuperRegClasses(const CodeGenSubRegIndex *SubIdx,
                                               BitVector &Out) const {
   auto FindI = SuperRegClasses.find(SubIdx);
@@ -1198,8 +1225,7 @@ void CodeGenRegisterClass::extendSuperRegClasses(CodeGenSubRegIndex *SubIdx) {
       if (!ComposedSubIdx)
         continue;
 
-      for (CodeGenRegisterClass *SuperRC : Pair.second)
-        addSuperRegClass(ComposedSubIdx, SuperRC);
+      SuperRegClasses[ComposedSubIdx].insert_range(Pair.second);
     }
   }
 }
@@ -1516,7 +1542,7 @@ void CodeGenRegBank::computeComposites() {
   // side subregister.
   std::map<const CodeGenSubRegIndex *, RegMap> SubRegAction;
   for (const CodeGenRegister &R : Registers) {
-    const CodeGenRegister::SubRegMap &SM = R.getSubRegs();
+    CodeGenRegister::SubRegArrayRef SM = R.getSubRegs();
     for (auto [SRI, SubReg] : SM)
       SubRegAction[SRI].try_emplace(&R, SubReg);
   }
@@ -1568,12 +1594,12 @@ void CodeGenRegBank::computeComposites() {
       continue;
     TopoSigs.set(Reg1.getTopoSig());
 
-    const CodeGenRegister::SubRegMap &SRM1 = Reg1.getSubRegs();
+    CodeGenRegister::SubRegArrayRef SRM1 = Reg1.getSubRegs();
     for (auto [Idx1, Reg2] : SRM1) {
       // Ignore identity compositions.
       if (&Reg1 == Reg2)
         continue;
-      const CodeGenRegister::SubRegMap &SRM2 = Reg2->getSubRegs();
+      CodeGenRegister::SubRegArrayRef SRM2 = Reg2->getSubRegs();
       // Try composing Idx1 with another SubRegIndex.
       for (auto I2 : SRM2) {
         CodeGenSubRegIndex *Idx2 = I2.first;
@@ -1968,7 +1994,7 @@ static bool normalizeWeight(CodeGenRegister *Reg,
   NormalRegs.set(Reg->EnumValue);
 
   bool Changed = false;
-  const CodeGenRegister::SubRegMap &SRM = Reg->getSubRegs();
+  CodeGenRegister::SubRegArrayRef SRM = Reg->getSubRegs();
   for (auto SRI : SRM) {
     if (SRI.second == Reg)
       continue; // self-cycles happen
@@ -2376,8 +2402,8 @@ void CodeGenRegBank::computeRegUnitLaneMasks() {
     CodeGenRegister::RegUnitLaneMaskList RegUnitLaneMasks(
         RegUnits.count(), LaneBitmask::getAll());
     // Iterate through SubRegisters.
-    using SubRegMap = CodeGenRegister::SubRegMap;
-    const SubRegMap &SubRegs = Register.getSubRegs();
+    using SubRegArrayRef = CodeGenRegister::SubRegArrayRef;
+    SubRegArrayRef SubRegs = Register.getSubRegs();
 
     auto UnitMaskIdx = [&](unsigned SUI) {
       unsigned U = 0;
@@ -2531,7 +2557,7 @@ void CodeGenRegBank::inferSubClassWithSubReg(CodeGenRegisterClass *RC) {
   for (const CodeGenRegister *R : RC->getMembers()) {
     if (R->Artificial)
       continue;
-    const CodeGenRegister::SubRegMap &SRM = R->getSubRegs();
+    CodeGenRegister::SubRegArrayRef SRM = R->getSubRegs();
     for (auto [I, _] : SRM)
       SRSets[I].push_back(R);
   }
@@ -2594,10 +2620,11 @@ void CodeGenRegBank::inferMatchingSuperRegClass(
     // that the list may contain entries with the same Sub but different Supers.
     SubRegs.clear();
     TopoSigs.reset();
+    unsigned Hint = 0;
     for (const CodeGenRegister *Super : RC->getMembers()) {
       if (Super->Artificial)
         continue;
-      const CodeGenRegister *Sub = Super->getSubRegs().find(SubIdx)->second;
+      const CodeGenRegister *Sub = Super->getSubReg(SubIdx, Hint);
       assert(Sub && "Missing sub-register");
       SubRegs.push_back(Sub);
       TopoSigs.set(Sub->getTopoSig());
@@ -2916,7 +2943,7 @@ CodeGenRegBank::computeCoveredRegisters(ArrayRef<const Record *> Regs) {
         continue;
       // This new super-register is covered by its sub-registers.
       bool AllSubsInSet = true;
-      const CodeGenRegister::SubRegMap &SRM = Super->getSubRegs();
+      CodeGenRegister::SubRegArrayRef SRM = Super->getSubRegs();
       for (auto [_, SR] : SRM)
         if (!Set.contains(SR)) {
           AllSubsInSet = false;

@@ -33,7 +33,7 @@ using namespace lld::elf;
 namespace {
 class EhReader {
 public:
-  EhReader(InputSectionBase *s, ArrayRef<uint8_t> d) : isec(s), d(d) {}
+  EhReader(const InputSectionBase *s, ArrayRef<uint8_t> d) : isec(s), d(d) {}
   uint8_t getFdeEncoding();
   bool hasLSDA();
 
@@ -51,7 +51,7 @@ private:
   void skipAugP();
   StringRef getAugmentation();
 
-  InputSectionBase *isec;
+  const InputSectionBase *isec;
   ArrayRef<uint8_t> d;
 };
 }
@@ -131,12 +131,13 @@ void EhReader::skipAugP() {
   d = d.slice(size);
 }
 
-uint8_t elf::getFdeEncoding(EhSectionPiece *p) {
-  return EhReader(p->sec, p->data()).getFdeEncoding();
+uint8_t elf::getFdeEncoding(const EhInputSection &sec,
+                            const EhSectionPiece &p) {
+  return EhReader(&sec, p.data(sec)).getFdeEncoding();
 }
 
-bool elf::hasLSDA(const EhSectionPiece &p) {
-  return EhReader(p.sec, p.data()).hasLSDA();
+bool elf::hasLSDA(const EhInputSection &sec, const EhSectionPiece &p) {
+  return EhReader(&sec, p.data(sec)).hasLSDA();
 }
 
 StringRef EhReader::getAugmentation() {
