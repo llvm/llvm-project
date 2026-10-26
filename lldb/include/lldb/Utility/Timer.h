@@ -11,6 +11,7 @@
 
 #include "lldb/lldb-defines.h"
 #include "llvm/Support/Chrono.h"
+#include "llvm/Support/FormatVariadic.h"
 #include <atomic>
 #include <cstdint>
 
@@ -66,7 +67,7 @@ protected:
   using TimePoint = std::chrono::steady_clock::time_point;
   void ChildDuration(TimePoint::duration dur) { m_child_duration += dur; }
 
-  void Start(std::string start_message);
+  void Start(llvm::function_ref<std::string()> start_message_func);
 
   Category &m_category;
   TimePoint m_total_start;

@@ -58,7 +58,7 @@ Timer::Category::Category(const char *cat) : m_name(cat) {
 
 void Timer::SetQuiet(bool value) { g_quiet = value; }
 
-void Timer::Start(std::string start_message) {
+void Timer::Start(llvm::function_ref<std::string()> start_message_func) {
   Signposts->startInterval(this, m_category.GetName());
   TimerStack &stack = GetTimerStackForCurrentThread();
 
@@ -69,6 +69,7 @@ void Timer::Start(std::string start_message) {
     // Indent
     ::fprintf(stdout, "%*s", int(stack.size() - 1) * TIMER_INDENT_AMOUNT, "");
     // Print formatted string
+    const std::string start_message = start_message_func();
     ::fprintf(stdout, "%s", start_message.c_str());
     // Newline
     ::fprintf(stdout, "\n");
@@ -79,16 +80,18 @@ Timer::Timer(Timer::Category &category, const char *format, ...)
     : m_category(category), m_total_start(std::chrono::steady_clock::now()) {
   va_list args;
   va_start(args, format);
-  StreamString sstr;
-  sstr.PrintfVarArg(format, args);
-  va_end(args);
+  Start([&]() -> std::string {
+    StreamString sstr;
+    sstr.PrintfVarArg(format, args);
 
-  Start(sstr.GetString().str());
+    return sstr.GetString().str();
+  });
+  va_end(args);
 }
 
 Timer::Timer(Timer::Category &category, const llvm::formatv_object_base &obj)
     : m_category(category), m_total_start(std::chrono::steady_clock::now()) {
-  Start(obj.str());
+  Start([&]() -> std::string { return obj.str(); });
 }
 
 Timer::~Timer() {
