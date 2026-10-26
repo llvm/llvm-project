@@ -18,6 +18,8 @@
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Bitcode/BitcodeReader.h"
+#include "llvm/Support/Endian.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/TimeProfiler.h"
 
 using namespace llvm;
@@ -321,6 +323,135 @@ void objc::checkCategories() {
         checker.parseCategory(catIsec);
       }
   }
+}
+
+SmallVector<InputSection *> objc::getLoadMethodSections() {
+  CategoryLayout catLayout(target->wordSize);
+  ClassLayout classLayout(target->wordSize);
+  ROClassLayout roClassLayout(target->wordSize);
+  ListHeaderLayout listHeaderLayout(target->wordSize);
+  MethodLayout methodLayout(target->wordSize);
+  SetVector<InputSection *> loadMethods;
+
+  struct SectionLocation {
+    InputSection *isec = nullptr;
+    uint64_t offset = 0;
+  };
+
+  auto getRelocationTarget = [](const Relocation *reloc,
+                                int64_t extraAddend = 0) -> SectionLocation {
+    if (!reloc)
+      return {};
+    InputSection *isec = reloc->getReferentInputSection();
+    if (!isec)
+      return {};
+    auto [offset, overflow] =
+        llvm::AddOverflow<int64_t>(reloc->addend, extraAddend);
+    if (overflow)
+      return {};
+    if (auto *sym = reloc->referent.dyn_cast<Symbol *>()) {
+      auto *defined = dyn_cast<Defined>(sym);
+      if (!defined || defined->value > INT64_MAX)
+        return {};
+      auto added = llvm::AddOverflow<int64_t>(
+          offset, static_cast<int64_t>(defined->value));
+      if (added.second)
+        return {};
+      offset = added.first;
+    }
+    if (offset < 0 || static_cast<uint64_t>(offset) > isec->data.size())
+      return {};
+    return {isec, static_cast<uint64_t>(offset)};
+  };
+
+  auto getRelocationTargetAt = [&](InputSection *isec,
+                                   uint32_t offset) -> SectionLocation {
+    const Relocation *reloc = isec->getRelocAt(offset);
+    if (!reloc || !target->hasAttr(reloc->type, RelocAttrBits::SUBTRAHEND))
+      return getRelocationTarget(reloc);
+
+    SectionLocation subtrahend = getRelocationTarget(reloc);
+    // parseRelocations stores the paired UNSIGNED minuend immediately after
+    // the SUBTRACTOR; the suffix does not carry the relocation field offset.
+    const Relocation *minuend = reloc + 1;
+    if (!subtrahend.isec || subtrahend.isec != isec ||
+        subtrahend.offset > INT64_MAX)
+      return {};
+    int64_t extraAddend =
+        static_cast<int64_t>(offset) - static_cast<int64_t>(subtrahend.offset);
+    return getRelocationTarget(minuend, extraAddend);
+  };
+
+  auto getReferent = [&](SectionLocation location,
+                         uint32_t fieldOffset) -> SectionLocation {
+    if (!location.isec || location.offset + fieldOffset > UINT32_MAX ||
+        location.offset + fieldOffset >= location.isec->data.size())
+      return {};
+    return getRelocationTargetAt(
+        location.isec, static_cast<uint32_t>(location.offset + fieldOffset));
+  };
+
+  auto getString = [](SectionLocation location) -> StringRef {
+    if (!location.isec || location.offset >= location.isec->data.size())
+      return {};
+    if (auto *strings = dyn_cast<CStringInputSection>(location.isec))
+      return strings->getStringRefAtOffset(location.offset);
+    ArrayRef<uint8_t> data = location.isec->data.slice(location.offset);
+    const char *string = reinterpret_cast<const char *>(data.data());
+    return StringRef(string, strnlen(string, data.size()));
+  };
+
+  auto collectLoadMethod = [&](SectionLocation methods) {
+    if (!methods.isec ||
+        methods.offset + listHeaderLayout.totalSize > methods.isec->data.size())
+      return;
+    const uint8_t *header = methods.isec->data.data() + methods.offset;
+    uint32_t sizeAndFlags = support::endian::read32le(header);
+    uint32_t entrySize = sizeAndFlags & 0xffff;
+    uint32_t entryCount = support::endian::read32le(header + sizeof(uint32_t));
+    bool relative = sizeAndFlags & 0x80000000;
+    uint32_t nameOffset = relative ? 0 : methodLayout.nameOffset;
+    uint32_t implOffset =
+        relative ? 2 * sizeof(uint32_t) : methodLayout.implOffset;
+    uint64_t entriesOffset = methods.offset + listHeaderLayout.totalSize;
+    uint64_t entriesSize = static_cast<uint64_t>(entrySize) * entryCount;
+    if (entrySize <= std::max(nameOffset, implOffset) ||
+        entriesOffset + entriesSize > methods.isec->data.size())
+      return;
+
+    for (uint32_t index = 0; index < entryCount; ++index) {
+      uint64_t entryOffset =
+          entriesOffset + static_cast<uint64_t>(index) * entrySize;
+      SectionLocation name = getRelocationTargetAt(
+          methods.isec, static_cast<uint32_t>(entryOffset + nameOffset));
+      if (getString(name) != "load")
+        continue;
+      InputSection *impl =
+          getRelocationTargetAt(methods.isec,
+                                static_cast<uint32_t>(entryOffset + implOffset))
+              .isec;
+      if (impl && isCodeSection(impl))
+        loadMethods.insert(impl->canonical());
+    }
+  };
+
+  auto getClassMethods = [&](SectionLocation klass) {
+    SectionLocation metaClass = getReferent(klass, classLayout.metaClassOffset);
+    SectionLocation roClass = getReferent(metaClass, classLayout.roDataOffset);
+    return getReferent(roClass, roClassLayout.baseMethodsOffset);
+  };
+
+  for (InputSection *listIsec : inputSections) {
+    if (listIsec->getName() == section_names::objcNonLazyClassList) {
+      for (const Relocation &reloc : listIsec->relocs)
+        collectLoadMethod(getClassMethods(getRelocationTarget(&reloc)));
+    } else if (listIsec->getName() == section_names::objcNonLazyCatList) {
+      for (const Relocation &reloc : listIsec->relocs)
+        collectLoadMethod(getReferent(getRelocationTarget(&reloc),
+                                      catLayout.classMethodsOffset));
+    }
+  }
+  return SmallVector<InputSection *>(loadMethods.begin(), loadMethods.end());
 }
 
 namespace {
