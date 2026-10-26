@@ -1369,9 +1369,9 @@ def OMP_Task : Directive<[Spelling<"task">]> {
 }
 def OMP_TaskIteration : Directive<[Spelling<"task_iteration">]> {
   let allowedClauses = [
-    VersionedClause<OMPC_Affinity, 61>,
-    VersionedClause<OMPC_Depend, 61>,
-    VersionedClause<OMPC_If, 61>,
+    VersionedClause<OMPC_Affinity, 60>,
+    VersionedClause<OMPC_Depend, 60>,
+    VersionedClause<OMPC_If, 60>,
   ];
   let association = AS_None;
   let category = CA_Subsidiary;
