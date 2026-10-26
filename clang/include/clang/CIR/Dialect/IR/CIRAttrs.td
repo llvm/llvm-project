@@ -2690,13 +2690,14 @@ def CIR_LoweringLangOptionsAttr
     "bool":$gpu_rdc,
     "bool":$openmp,
     "bool":$openmp_is_target_device,
-    "int32_t":$clang_abi_compat
+    "int32_t":$clang_abi_compat,
+    "int32_t":$long_double_size
   );
 
   let assemblyFormat = [{
     `<` struct($exceptions, $threadsafe_statics, $cuda, $cuda_is_device, $hip,
                $hlsl, $gpu_rdc, $openmp, $openmp_is_target_device,
-               $clang_abi_compat) `>`
+               $clang_abi_compat, $long_double_size) `>`
   }];
 
   let canHaveIllegalCXXABIType = 0;
