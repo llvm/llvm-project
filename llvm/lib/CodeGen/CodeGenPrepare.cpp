@@ -2902,16 +2902,6 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB,
   if (PN && PN->getParent() != BB)
     return false;
 
-  auto isLifetimeEndOrBitCastFor = [](const Instruction *Inst) {
-    const BitCastInst *BC = dyn_cast<BitCastInst>(Inst);
-    if (BC && BC->hasOneUse())
-      Inst = BC->user_back();
-
-    if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(Inst))
-      return II->getIntrinsicID() == Intrinsic::lifetime_end;
-    return false;
-  };
-
   SmallVector<const IntrinsicInst *, 4> FakeUses;
 
   auto isFakeUse = [&FakeUses](const Instruction *Inst) {
@@ -2938,7 +2928,7 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB,
   BasicBlock::const_iterator BI = BB->getFirstNonPHIIt();
   // Skip over pseudo-probes and the bitcast.
   while (&*BI == BCI || &*BI == EVI || isa<PseudoProbeInst>(BI) ||
-         isLifetimeEndOrBitCastFor(&*BI) || isFakeUse(&*BI))
+         match(&*BI, m_Intrinsic<Intrinsic::lifetime_end>()) || isFakeUse(&*BI))
     BI = std::next(BI);
   if (&*BI != RetI)
     return false;

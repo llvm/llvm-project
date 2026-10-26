@@ -7702,33 +7702,6 @@ AllocaInst *llvm::findAllocaForValue(Value *V, bool OffsetZero) {
   return Result;
 }
 
-static bool onlyUsedByLifetimeMarkersOrDroppableInstsHelper(
-    const Value *V, bool AllowLifetime, bool AllowDroppable) {
-  for (const User *U : V->users()) {
-    const IntrinsicInst *II = dyn_cast<IntrinsicInst>(U);
-    if (!II)
-      return false;
-
-    if (AllowLifetime && II->isLifetimeStartOrEnd())
-      continue;
-
-    if (AllowDroppable && II->isDroppable())
-      continue;
-
-    return false;
-  }
-  return true;
-}
-
-bool llvm::onlyUsedByLifetimeMarkers(const Value *V) {
-  return onlyUsedByLifetimeMarkersOrDroppableInstsHelper(
-      V, /* AllowLifetime */ true, /* AllowDroppable */ false);
-}
-bool llvm::onlyUsedByLifetimeMarkersOrDroppableInsts(const Value *V) {
-  return onlyUsedByLifetimeMarkersOrDroppableInstsHelper(
-      V, /* AllowLifetime */ true, /* AllowDroppable */ true);
-}
-
 bool llvm::isNotCrossLaneOperation(const Instruction *I) {
   if (auto *II = dyn_cast<IntrinsicInst>(I))
     return isTriviallyVectorizable(II->getIntrinsicID());

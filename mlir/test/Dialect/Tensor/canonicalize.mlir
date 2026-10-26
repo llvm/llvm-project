@@ -2973,3 +2973,105 @@ func.func @sink_expand_of_cast_preserves_sparse_encoding(
       : tensor<?xf32, #sparse_v> into tensor<?x?xf32, #sparse_m>
   return %e : tensor<?x?xf32, #sparse_m>
 }
+
+// -----
+
+// A negative constant in `output_shape` proves the op has no valid execution
+// (a dimension cannot be negative). `ConvertToStaticExpandShape` must decline
+// instead of building a RankedTensorType with a negative dimension.
+// CHECK-LABEL:  func.func @expand_shape_negative_output_shape
+//  CHECK-DAG:      %[[CNEG:.*]] = arith.constant -5 : index
+//  CHECK-DAG:      %[[C2:.*]] = arith.constant 2 : index
+//       CHECK:      %[[EXPAND:.*]] = tensor.expand_shape %{{.*}} {{\[}}[0, 1]] output_shape [%[[CNEG]], %[[C2]]]
+//       CHECK:      return %[[EXPAND]]
+func.func @expand_shape_negative_output_shape(%arg0: tensor<10xf32>)
+    -> tensor<?x?xf32> {
+  %cneg = arith.constant -5 : index
+  %c2 = arith.constant 2 : index
+  %cast = tensor.cast %arg0 : tensor<10xf32> to tensor<?xf32>
+  %e = tensor.expand_shape %cast [[0, 1]] output_shape [%cneg, %c2]
+      : tensor<?xf32> into tensor<?x?xf32>
+  return %e : tensor<?x?xf32>
+}
+
+// -----
+
+// `-1` used to be ShapedType::kDynamic; it is now an ordinary invalid
+// dimension (kDynamic == INT64_MIN), so it must take the same path.
+// CHECK-LABEL:  func.func @expand_shape_minus_one_output_shape
+//  CHECK-DAG:      %[[CNEG1:.*]] = arith.constant -1 : index
+//  CHECK-DAG:      %[[C2:.*]] = arith.constant 2 : index
+//       CHECK:      %[[EXPAND:.*]] = tensor.expand_shape %{{.*}} {{\[}}[0, 1]] output_shape [%[[CNEG1]], %[[C2]]]
+//       CHECK:      return %[[EXPAND]]
+func.func @expand_shape_minus_one_output_shape(%arg0: tensor<10xf32>)
+    -> tensor<?x?xf32> {
+  %cneg1 = arith.constant -1 : index
+  %c2 = arith.constant 2 : index
+  %cast = tensor.cast %arg0 : tensor<10xf32> to tensor<?xf32>
+  %e = tensor.expand_shape %cast [[0, 1]] output_shape [%cneg1, %c2]
+      : tensor<?xf32> into tensor<?x?xf32>
+  return %e : tensor<?x?xf32>
+}
+
+// -----
+
+// INT64_MIN is the dynamic sentinel value itself; it must not be mistaken
+// for a valid static dimension either.
+// CHECK-LABEL:  func.func @expand_shape_int64_min_output_shape
+//  CHECK-DAG:      %[[CMIN:.*]] = arith.constant -9223372036854775808 : index
+//  CHECK-DAG:      %[[C2:.*]] = arith.constant 2 : index
+//       CHECK:      %[[EXPAND:.*]] = tensor.expand_shape %{{.*}} {{\[}}[0, 1]] output_shape [%[[CMIN]], %[[C2]]]
+//       CHECK:      return %[[EXPAND]]
+func.func @expand_shape_int64_min_output_shape(%arg0: tensor<10xf32>)
+    -> tensor<?x?xf32> {
+  %cmin = arith.constant -9223372036854775808 : index
+  %c2 = arith.constant 2 : index
+  %cast = tensor.cast %arg0 : tensor<10xf32> to tensor<?xf32>
+  %e = tensor.expand_shape %cast [[0, 1]] output_shape [%cmin, %c2]
+      : tensor<?xf32> into tensor<?x?xf32>
+  return %e : tensor<?x?xf32>
+}
+
+// -----
+
+// The negative value is produced by canonicalization itself (arith folding),
+// which is why the verifier cannot catch it: the value only becomes a
+// constant inside the very pass that runs this pattern.
+// CHECK-LABEL:  func.func @expand_shape_folded_negative_output_shape
+//  CHECK-DAG:      %[[C1:.*]] = arith.constant 1 : index
+//  CHECK-DAG:      %[[CNEG:.*]] = arith.constant -6 : index
+//       CHECK:      %[[EXPAND:.*]] = tensor.expand_shape %{{.*}} {{\[}}[0, 1]] output_shape [%[[CNEG]], %[[C1]]]
+//       CHECK:      return %[[EXPAND]]
+func.func @expand_shape_folded_negative_output_shape(%arg0: tensor<10xf32>)
+    -> tensor<?x?xf32> {
+  %c1 = arith.constant 1 : index
+  %c7 = arith.constant 7 : index
+  %cneg = arith.subi %c1, %c7 : index
+  %cast = tensor.cast %arg0 : tensor<10xf32> to tensor<?xf32>
+  %e = tensor.expand_shape %cast [[0, 1]] output_shape [%cneg, %c1]
+      : tensor<?xf32> into tensor<?x?xf32>
+  return %e : tensor<?x?xf32>
+}
+
+// -----
+
+// Issue-shaped case: the non-negative entries (10, 7) are staticizable on
+// their own, but bail-out must happen before any mutation, so nothing is
+// staticized at all. This distinguishes "decline the rewrite" from "staticize
+// what we can and keep the negative entry dynamic".
+// CHECK-LABEL:  func.func @expand_shape_no_partial_staticization
+//  CHECK-DAG:      %[[C7:.*]] = arith.constant 7 : index
+//  CHECK-DAG:      %[[C10:.*]] = arith.constant 10 : index
+//  CHECK-DAG:      %[[CNEG:.*]] = arith.constant -5 : index
+//       CHECK:      %[[EXPAND:.*]] = tensor.expand_shape %{{.*}} {{\[}}[0, 1], [2]] output_shape [%[[C10]], %[[C7]], %[[CNEG]]]
+//       CHECK:      return %[[EXPAND]]
+func.func @expand_shape_no_partial_staticization(%arg0: tensor<10x10xf32>)
+    -> tensor<?x?x?xf32> {
+  %c7 = arith.constant 7 : index
+  %c10 = arith.constant 10 : index
+  %cneg = arith.constant -5 : index
+  %cast = tensor.cast %arg0 : tensor<10x10xf32> to tensor<?x?xf32>
+  %e = tensor.expand_shape %cast [[0, 1], [2]] output_shape [%c10, %c7, %cneg]
+      : tensor<?x?xf32> into tensor<?x?x?xf32>
+  return %e : tensor<?x?x?xf32>
+}
