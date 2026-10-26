@@ -91,7 +91,14 @@ define i8 @constant.divisor.v7(i8 %x) {
 ; CHECK-LABEL: @constant.divisor.v7(
 ; CHECK-NEXT:    [[CMP_X_UPPER:%.*]] = icmp ult i8 [[X:%.*]], 7
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_X_UPPER]])
-; CHECK-NEXT:    [[REM:%.*]] = urem i8 [[X]], 3
+; CHECK-NEXT:    [[X_FROZEN:%.*]] = freeze i8 [[X]]
+; CHECK-NEXT:    [[REM_HALFX:%.*]] = lshr i8 [[X_FROZEN]], 1
+; CHECK-NEXT:    [[REM_CMP1:%.*]] = icmp uge i8 [[X_FROZEN]], 3
+; CHECK-NEXT:    [[REM_CMP2:%.*]] = icmp uge i8 [[REM_HALFX]], 3
+; CHECK-NEXT:    [[REM_SUB1:%.*]] = sub i8 [[X_FROZEN]], 3
+; CHECK-NEXT:    [[REM_SUB2:%.*]] = sub i8 [[REM_SUB1]], 3
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[REM_CMP1]], i8 [[REM_SUB1]], i8 [[X_FROZEN]]
+; CHECK-NEXT:    [[REM:%.*]] = select i1 [[REM_CMP2]], i8 [[REM_SUB2]], i8 [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[REM]]
 ;
   %cmp.x.upper = icmp ult i8 %x, 7
@@ -106,7 +113,14 @@ define i8 @constant.divisor.v6to8(i8 %x) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_X_LOWER]])
 ; CHECK-NEXT:    [[CMP_X_UPPER:%.*]] = icmp ult i8 [[X]], 9
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_X_UPPER]])
-; CHECK-NEXT:    [[REM:%.*]] = urem i8 [[X]], 3
+; CHECK-NEXT:    [[X_FROZEN:%.*]] = freeze i8 [[X]]
+; CHECK-NEXT:    [[REM_HALFX:%.*]] = lshr i8 [[X_FROZEN]], 1
+; CHECK-NEXT:    [[REM_CMP1:%.*]] = icmp uge i8 [[X_FROZEN]], 3
+; CHECK-NEXT:    [[REM_CMP2:%.*]] = icmp uge i8 [[REM_HALFX]], 3
+; CHECK-NEXT:    [[REM_SUB1:%.*]] = sub i8 [[X_FROZEN]], 3
+; CHECK-NEXT:    [[REM_SUB2:%.*]] = sub i8 [[REM_SUB1]], 3
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[REM_CMP1]], i8 [[REM_SUB1]], i8 [[X_FROZEN]]
+; CHECK-NEXT:    [[REM:%.*]] = select i1 [[REM_CMP2]], i8 [[REM_SUB2]], i8 [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[REM]]
 ;
   %cmp.x.lower = icmp uge i8 %x, 6
@@ -285,7 +299,15 @@ define i8 @variable.v7(i8 %x, i8 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_Y_LOWER]])
 ; CHECK-NEXT:    [[CMP_Y_UPPER:%.*]] = icmp ule i8 [[Y]], 4
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_Y_UPPER]])
-; CHECK-NEXT:    [[REM:%.*]] = urem i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[X_FROZEN:%.*]] = freeze i8 [[X]]
+; CHECK-NEXT:    [[Y_FROZEN:%.*]] = freeze i8 [[Y]]
+; CHECK-NEXT:    [[REM_HALFX:%.*]] = lshr i8 [[X_FROZEN]], 1
+; CHECK-NEXT:    [[REM_CMP1:%.*]] = icmp uge i8 [[X_FROZEN]], [[Y_FROZEN]]
+; CHECK-NEXT:    [[REM_CMP2:%.*]] = icmp uge i8 [[REM_HALFX]], [[Y_FROZEN]]
+; CHECK-NEXT:    [[REM_SUB1:%.*]] = sub i8 [[X_FROZEN]], [[Y_FROZEN]]
+; CHECK-NEXT:    [[REM_SUB2:%.*]] = sub i8 [[REM_SUB1]], [[Y_FROZEN]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[REM_CMP1]], i8 [[REM_SUB1]], i8 [[X_FROZEN]]
+; CHECK-NEXT:    [[REM:%.*]] = select i1 [[REM_CMP2]], i8 [[REM_SUB2]], i8 [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[REM]]
 ;
   %cmp.x = icmp ult i8 %x, 7
@@ -308,7 +330,15 @@ define i8 @variable.v6to8.v3to4(i8 %x, i8 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_Y_LOWER]])
 ; CHECK-NEXT:    [[CMP_Y_UPPER:%.*]] = icmp ule i8 [[Y]], 4
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_Y_UPPER]])
-; CHECK-NEXT:    [[REM:%.*]] = urem i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[X_FROZEN:%.*]] = freeze i8 [[X]]
+; CHECK-NEXT:    [[Y_FROZEN:%.*]] = freeze i8 [[Y]]
+; CHECK-NEXT:    [[REM_HALFX:%.*]] = lshr i8 [[X_FROZEN]], 1
+; CHECK-NEXT:    [[REM_CMP1:%.*]] = icmp uge i8 [[X_FROZEN]], [[Y_FROZEN]]
+; CHECK-NEXT:    [[REM_CMP2:%.*]] = icmp uge i8 [[REM_HALFX]], [[Y_FROZEN]]
+; CHECK-NEXT:    [[REM_SUB1:%.*]] = sub i8 [[X_FROZEN]], [[Y_FROZEN]]
+; CHECK-NEXT:    [[REM_SUB2:%.*]] = sub i8 [[REM_SUB1]], [[Y_FROZEN]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[REM_CMP1]], i8 [[REM_SUB1]], i8 [[X_FROZEN]]
+; CHECK-NEXT:    [[REM:%.*]] = select i1 [[REM_CMP2]], i8 [[REM_SUB2]], i8 [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[REM]]
 ;
   %cmp.x.lower = icmp uge i8 %x, 6
@@ -366,7 +396,14 @@ define i8 @large.divisor.v1.range(ptr %x.ptr) {
 }
 define i8 @large.divisor.v2.unbound.x(i8 %x) {
 ; CHECK-LABEL: @large.divisor.v2.unbound.x(
-; CHECK-NEXT:    [[REM:%.*]] = urem i8 [[X:%.*]], 127
+; CHECK-NEXT:    [[X_FROZEN:%.*]] = freeze i8 [[X:%.*]]
+; CHECK-NEXT:    [[REM_HALFX:%.*]] = lshr i8 [[X_FROZEN]], 1
+; CHECK-NEXT:    [[REM_CMP1:%.*]] = icmp uge i8 [[X_FROZEN]], 127
+; CHECK-NEXT:    [[REM_CMP2:%.*]] = icmp uge i8 [[REM_HALFX]], 127
+; CHECK-NEXT:    [[REM_SUB1:%.*]] = sub i8 [[X_FROZEN]], 127
+; CHECK-NEXT:    [[REM_SUB2:%.*]] = sub i8 [[REM_SUB1]], 127
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[REM_CMP1]], i8 [[REM_SUB1]], i8 [[X_FROZEN]]
+; CHECK-NEXT:    [[REM:%.*]] = select i1 [[REM_CMP2]], i8 [[REM_SUB2]], i8 [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[REM]]
 ;
   %rem = urem i8 %x, 127
@@ -455,4 +492,123 @@ define i8 @known_uge(i8 noundef %x) {
   call void @llvm.assume(i1 %cmp.x.lower)
   %rem = urem i8 %x, 3
   ret i8 %rem
+}
+
+; MaxQ == 2: boundary tests
+
+define i8 @constant.divisor.v8(i8 %x) {
+; CHECK-LABEL: @constant.divisor.v8(
+; CHECK-NEXT:    [[CMP_X_UPPER:%.*]] = icmp ult i8 [[X:%.*]], 8
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_X_UPPER]])
+; CHECK-NEXT:    [[X_FROZEN:%.*]] = freeze i8 [[X]]
+; CHECK-NEXT:    [[REM_HALFX:%.*]] = lshr i8 [[X_FROZEN]], 1
+; CHECK-NEXT:    [[REM_CMP1:%.*]] = icmp uge i8 [[X_FROZEN]], 3
+; CHECK-NEXT:    [[REM_CMP2:%.*]] = icmp uge i8 [[REM_HALFX]], 3
+; CHECK-NEXT:    [[REM_SUB1:%.*]] = sub i8 [[X_FROZEN]], 3
+; CHECK-NEXT:    [[REM_SUB2:%.*]] = sub i8 [[REM_SUB1]], 3
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[REM_CMP1]], i8 [[REM_SUB1]], i8 [[X_FROZEN]]
+; CHECK-NEXT:    [[REM:%.*]] = select i1 [[REM_CMP2]], i8 [[REM_SUB2]], i8 [[TMP1]]
+; CHECK-NEXT:    ret i8 [[REM]]
+;
+  %cmp.x.upper = icmp ult i8 %x, 8
+  call void @llvm.assume(i1 %cmp.x.upper)
+  %rem = urem i8 %x, 3
+  ret i8 %rem
+}
+
+define i8 @constant.divisor.v9(i8 %x) {
+; CHECK-LABEL: @constant.divisor.v9(
+; CHECK-NEXT:    [[CMP_X_UPPER:%.*]] = icmp ult i8 [[X:%.*]], 9
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_X_UPPER]])
+; CHECK-NEXT:    [[X_FROZEN:%.*]] = freeze i8 [[X]]
+; CHECK-NEXT:    [[REM_HALFX:%.*]] = lshr i8 [[X_FROZEN]], 1
+; CHECK-NEXT:    [[REM_CMP1:%.*]] = icmp uge i8 [[X_FROZEN]], 3
+; CHECK-NEXT:    [[REM_CMP2:%.*]] = icmp uge i8 [[REM_HALFX]], 3
+; CHECK-NEXT:    [[REM_SUB1:%.*]] = sub i8 [[X_FROZEN]], 3
+; CHECK-NEXT:    [[REM_SUB2:%.*]] = sub i8 [[REM_SUB1]], 3
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[REM_CMP1]], i8 [[REM_SUB1]], i8 [[X_FROZEN]]
+; CHECK-NEXT:    [[REM:%.*]] = select i1 [[REM_CMP2]], i8 [[REM_SUB2]], i8 [[TMP1]]
+; CHECK-NEXT:    ret i8 [[REM]]
+;
+  %cmp.x.upper = icmp ult i8 %x, 9
+  call void @llvm.assume(i1 %cmp.x.upper)
+  %rem = urem i8 %x, 3
+  ret i8 %rem
+}
+
+; MaxQ == 3: should NOT expand
+define i8 @constant.divisor.v10(i8 %x) {
+; CHECK-LABEL: @constant.divisor.v10(
+; CHECK-NEXT:    [[CMP_X_UPPER:%.*]] = icmp ult i8 [[X:%.*]], 10
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_X_UPPER]])
+; CHECK-NEXT:    [[REM:%.*]] = urem i8 [[X]], 3
+; CHECK-NEXT:    ret i8 [[REM]]
+;
+  %cmp.x.upper = icmp ult i8 %x, 10
+  call void @llvm.assume(i1 %cmp.x.upper)
+  %rem = urem i8 %x, 3
+  ret i8 %rem
+}
+
+; MaxQ == 2: variable divisor, wider range
+define i8 @variable.v8(i8 %x, i8 %y) {
+; CHECK-LABEL: @variable.v8(
+; CHECK-NEXT:    [[CMP_X:%.*]] = icmp ult i8 [[X:%.*]], 8
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_X]])
+; CHECK-NEXT:    [[CMP_Y_LOWER:%.*]] = icmp samesign uge i8 [[Y:%.*]], 3
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_Y_LOWER]])
+; CHECK-NEXT:    [[CMP_Y_UPPER:%.*]] = icmp ule i8 [[Y]], 4
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_Y_UPPER]])
+; CHECK-NEXT:    [[X_FROZEN:%.*]] = freeze i8 [[X]]
+; CHECK-NEXT:    [[Y_FROZEN:%.*]] = freeze i8 [[Y]]
+; CHECK-NEXT:    [[REM_HALFX:%.*]] = lshr i8 [[X_FROZEN]], 1
+; CHECK-NEXT:    [[REM_CMP1:%.*]] = icmp uge i8 [[X_FROZEN]], [[Y_FROZEN]]
+; CHECK-NEXT:    [[REM_CMP2:%.*]] = icmp uge i8 [[REM_HALFX]], [[Y_FROZEN]]
+; CHECK-NEXT:    [[REM_SUB1:%.*]] = sub i8 [[X_FROZEN]], [[Y_FROZEN]]
+; CHECK-NEXT:    [[REM_SUB2:%.*]] = sub i8 [[REM_SUB1]], [[Y_FROZEN]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[REM_CMP1]], i8 [[REM_SUB1]], i8 [[X_FROZEN]]
+; CHECK-NEXT:    [[REM:%.*]] = select i1 [[REM_CMP2]], i8 [[REM_SUB2]], i8 [[TMP1]]
+; CHECK-NEXT:    ret i8 [[REM]]
+;
+  %cmp.x = icmp ult i8 %x, 8
+  call void @llvm.assume(i1 %cmp.x)
+  %cmp.y.lower = icmp uge i8 %y, 3
+  call void @llvm.assume(i1 %cmp.y.lower)
+  %cmp.y.upper = icmp ule i8 %y, 4
+  call void @llvm.assume(i1 %cmp.y.upper)
+  %rem = urem i8 %x, %y
+  ret i8 %rem
+}
+
+; MaxQ == 2: INT_MAX divisor (full i32 range, MaxQ == 2)
+define i32 @large.constant.divisor.intmax(i32 %x) {
+; CHECK-LABEL: @large.constant.divisor.intmax(
+; CHECK-NEXT:    [[X_FROZEN:%.*]] = freeze i32 [[X:%.*]]
+; CHECK-NEXT:    [[REM_HALFX:%.*]] = lshr i32 [[X_FROZEN]], 1
+; CHECK-NEXT:    [[REM_CMP1:%.*]] = icmp uge i32 [[X_FROZEN]], 2147483647
+; CHECK-NEXT:    [[REM_CMP2:%.*]] = icmp uge i32 [[REM_HALFX]], 2147483647
+; CHECK-NEXT:    [[REM_SUB1:%.*]] = sub i32 [[X_FROZEN]], 2147483647
+; CHECK-NEXT:    [[REM_SUB2:%.*]] = sub i32 [[REM_SUB1]], 2147483647
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[REM_CMP1]], i32 [[REM_SUB1]], i32 [[X_FROZEN]]
+; CHECK-NEXT:    [[REM:%.*]] = select i1 [[REM_CMP2]], i32 [[REM_SUB2]], i32 [[TMP1]]
+; CHECK-NEXT:    ret i32 [[REM]]
+;
+  %rem = urem i32 %x, 2147483647
+  ret i32 %rem
+}
+
+define i8 @test_maxq_0(i8 %x, i8 %y) {
+; CHECK-LABEL: @test_maxq_0(
+; CHECK-NEXT:    [[C1:%.*]] = icmp ult i8 [[X:%.*]], 10
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C1]])
+; CHECK-NEXT:    [[C2:%.*]] = icmp uge i8 [[Y:%.*]], 20
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C2]])
+; CHECK-NEXT:    ret i8 [[X]]
+;
+  %c1 = icmp ult i8 %x, 10
+  call void @llvm.assume(i1 %c1)
+  %c2 = icmp uge i8 %y, 20
+  call void @llvm.assume(i1 %c2)
+  %r = urem i8 %x, %y
+  ret i8 %r
 }
