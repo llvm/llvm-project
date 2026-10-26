@@ -148,16 +148,16 @@ define <4 x i64> @intervening_store(<4 x ptr> %p, <4 x i1> %mask, ptr %q) {
   ret <4 x i64> %s
 }
 
-; A mask with undef/poison lanes must not cause additional memory accesses.
-define <4 x i64> @partial_undef_mask(<4 x ptr> %p, <4 x i1> %mask) {
-; CHECK-LABEL: define <4 x i64> @partial_undef_mask(
-; CHECK-SAME: <4 x ptr> [[P:%.*]], <4 x i1> [[MASK:%.*]]) {
-; CHECK-NEXT:    [[M:%.*]] = insertelement <4 x i1> [[MASK]], i1 undef, i64 1
+; A computed mask must be reused without introducing extra memory accesses.
+define <4 x i64> @inserted_mask_lane(<4 x ptr> %p, <4 x i1> %mask, i1 %lane) {
+; CHECK-LABEL: define <4 x i64> @inserted_mask_lane(
+; CHECK-SAME: <4 x ptr> [[P:%.*]], <4 x i1> [[MASK:%.*]], i1 [[LANE:%.*]]) {
+; CHECK-NEXT:    [[M:%.*]] = insertelement <4 x i1> [[MASK]], i1 [[LANE]], i64 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i64> @llvm.masked.gather.v4i64.v4p0(<4 x ptr> align 8 [[P]], <4 x i1> [[M]], <4 x i64> zeroinitializer)
 ; CHECK-NEXT:    [[F:%.*]] = freeze <4 x i64> [[TMP1]]
 ; CHECK-NEXT:    ret <4 x i64> [[F]]
 ;
-  %m = insertelement <4 x i1> %mask, i1 undef, i64 1
+  %m = insertelement <4 x i1> %mask, i1 %lane, i64 1
   %g = call <4 x i64> @llvm.masked.gather.v4i64.v4p0(<4 x ptr> align 8 %p, <4 x i1> %m, <4 x i64> poison)
   %f = freeze <4 x i64> %g
   %s = select <4 x i1> %m, <4 x i64> %f, <4 x i64> zeroinitializer

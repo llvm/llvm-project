@@ -5318,8 +5318,9 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   // Fold the inactive lanes through freeze without changing active-lane poison.
   Value *GatherPtr;
   if (match(FalseVal, m_Zero()) &&
-      match(TrueVal, m_OneUse(m_Freeze(m_OneUse(m_MaskedGather(
-                         m_Value(GatherPtr), m_Specific(CondVal), m_Poison())))))) {
+      match(TrueVal,
+            m_OneUse(m_Freeze(m_OneUse(m_MaskedGather(
+                m_Value(GatherPtr), m_Specific(CondVal), m_Poison())))))) {
     auto *Frozen = cast<FreezeInst>(TrueVal);
     auto *Gather = cast<IntrinsicInst>(Frozen->getOperand(0));
     // Keep the memory access in place. Rebuild without result or passthrough
