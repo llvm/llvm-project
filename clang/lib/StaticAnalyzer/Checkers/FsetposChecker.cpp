@@ -36,18 +36,10 @@ private:
 
   CallDescription FgetposCall{CDM::CLibrary, {"fgetpos"}, 2};
   CallDescription FsetposCall{CDM::CLibrary, {"fsetpos"}, 2};
-  CallDescriptionSet OpenSet{
-      {CDM::CLibrary, {"fopen"}, 2},
-      {CDM::CLibrary, {"fdopen"}, 2},
-      {CDM::CLibrary, {"freopen"}, 3},
-      {CDM::CLibrary, {"tmpfile"}, 0},
-  };
 
 public:
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const;
-  void checkBind(SVal Loc, SVal Val, const Stmt *S, bool AtDeclInit,
-                 CheckerContext &C) const;
   void checkLocation(SVal L, bool IsLoad, const Stmt *S,
                      CheckerContext &C) const;
   ProgramStateRef checkPointerEscape(ProgramStateRef State,
@@ -59,10 +51,37 @@ public:
 
 } // namespace
 
-/// Map a 'FILE *' value to a 'fpos_t *' value and also to the SVal at this
-/// location. The 'fpos_t *' is used because the 'fpos_t' type can be a struct,
-/// in this case it may not have a permanent SVal.
+/// Used to get the 'FILE *' value from a 'fpos_t *' value or the SVal at this
+/// location.
+/// For example at 'fsetpos(F, &P)' the 'F' value can be get by using '&P'
+/// (pointer) or the 'P' (a value of 'fpos_t' type) as key. The 'fpos_t *' is
+/// used as key because the 'fpos_t' type can be a struct, in this case it may
+/// not have a permanent SVal. (But if it is an integral type tracking the
+/// value works even at assignments of 'fpos_t' type.)
 REGISTER_MAP_WITH_PROGRAMSTATE(FPosFile, SVal, SVal)
+
+namespace {
+
+SVal getFileVal(ProgramStateRef State, SVal LocVal, bool *IsInteger) {
+  if (LocVal.isUndef())
+    return UndefinedVal{};
+  auto FPosLoc = LocVal.getAs<Loc>();
+  if (!FPosLoc)
+    return UnknownVal{};
+  SVal FPosVal = State->getSVal(*FPosLoc);
+  if (FPosVal.getAsInteger())
+    *IsInteger = true;
+  if (FPosVal.getAsInteger() || FPosVal.isUndef())
+    return UndefinedVal{};
+  if (const SVal *V = State->get<FPosFile>(*FPosLoc))
+    return *V;
+  if (!FPosVal.isUnknownOrUndef())
+    if (const SVal *V = State->get<FPosFile>(FPosVal))
+      return *V;
+  return UnknownVal{};
+}
+
+} // namespace
 
 void FsetposChecker::checkPreCall(const CallEvent &Call,
                                   CheckerContext &C) const {
@@ -73,27 +92,19 @@ void FsetposChecker::checkPreCall(const CallEvent &Call,
     if (FileVal.isUnknownOrUndef())
       return;
     SVal FPosLocVal = Call.getArgSVal(1);
-    auto FPosLoc = FPosLocVal.getAs<Loc>();
-    SVal FPosVal = FPosLoc ? State->getSVal(*FPosLoc) : UnknownVal{};
-    SVal FPosFileVal = [&]() -> SVal {
-      if (FPosLoc)
-        if (const SVal *V = State->get<FPosFile>(*FPosLoc))
-          return *V;
-      if (!FPosVal.isUnknownOrUndef())
-        if (const SVal *V = State->get<FPosFile>(FPosVal))
-          return *V;
-      return UnknownVal{};
-    }();
-    if ((!FPosFileVal.isUnknown() && FPosFileVal != FileVal) ||
-        FPosLocVal.isUndef() || FPosVal.isUndef() || FPosVal.getAsInteger()) {
+    bool IsInteger = false;
+    SVal FPosFileVal = getFileVal(State, FPosLocVal, &IsInteger);
+    if (FPosFileVal.isUnknown())
+      return;
+    if (FPosFileVal.isUndef() || FPosFileVal != FileVal) {
       if (ExplodedNode *N = C.generateErrorNode()) {
         SmallString<100> Str;
         llvm::raw_svector_ostream Os(Str);
         Os << "Position argument to 'fsetpos' ";
-        if (FPosLocVal.isUndef() || FPosVal.isUndef())
-          Os << "(which is an undefined value) ";
-        else if (FPosVal.getAsInteger())
+        if (IsInteger)
           Os << "(which is a constant value) ";
+        else if (FPosFileVal.isUndef())
+          Os << "(which is an undefined value) ";
         Os << "was not obained from previous call to 'fgetpos' on the same "
               "file";
         auto R = std::make_unique<PathSensitiveBugReport>(BT_InvalidFsetposArg,
@@ -101,7 +112,6 @@ void FsetposChecker::checkPreCall(const CallEvent &Call,
         R->addRange(Call.getArgSourceRange(1));
         C.emitReport(std::move(R));
       }
-      return;
     }
   }
 }
