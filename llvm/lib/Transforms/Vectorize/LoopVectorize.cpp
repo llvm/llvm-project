@@ -5187,6 +5187,13 @@ bool LoopVectorizationPlanner::planForEpilogueTF() {
     return false;
   }
 
+  if (EpilogueTfCM.getTailFoldingStyle() != TailFoldingStyle::DataAndControlFlow) {
+    reportVectorizationInfo("Right now tail-folded epilogue is supported only "
+                            "for DataAndControlFlow tail-folding style.",
+                            "InvalidTailFoldedEpilogue", ORE, OrigLoop);
+    return false;
+  }
+
   auto VPlan1 = tryToBuildVPlan1(EpilogueTfCM);
 
   // If we're here, the main loop's initial VPlan was built successfully.
@@ -7222,8 +7229,7 @@ static void preparePlanForEpilogueVectorLoop(
   VPValue *VPV = GetResumeValue(Markers.VectorTC, "vec.epilog.resume.val");
   assert(all_of(IV->users(),
                 [](const VPUser *U) {
-                  if (isa<VPScalarIVStepsRecipe, VPDerivedIVRecipe,
-                          VPWidenCanonicalIVRecipe>(U))
+                  if (isa<VPScalarIVStepsRecipe, VPDerivedIVRecipe>(U))
                     return true;
                   auto *VPI = dyn_cast<VPInstruction>(U);
                   if (!VPI)

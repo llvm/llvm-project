@@ -295,8 +295,8 @@ outer.header:
 
 inner:
   %iv.inner = phi i64 [ 0, %outer.header ], [ %iv.inner.next, %inner ]
-  %gep = getelementptr inbounds i32, ptr %A, i64 %iv.inner
-  store i32 0, ptr %gep, align 4
+  %gep = getelementptr inbounds i8, ptr %A, i64 %iv.inner
+  store i8 0, ptr %gep, align 1
   %iv.inner.next = add nuw nsw i64 %iv.inner, 1
   %inner.ec = icmp eq i64 %iv.inner.next, 8
   br i1 %inner.ec, label %outer.latch, label %inner
