@@ -15,6 +15,7 @@
 #define LLVM_TRANSFORMS_UTILS_PROMOTEMEMTOREG_H
 
 #include "llvm/Support/Compiler.h"
+#include <cassert>
 
 namespace llvm {
 
@@ -23,13 +24,41 @@ class AllocaInst;
 class DominatorTree;
 class AssumptionCache;
 
-/// Return true if this alloca is legal for promotion.
+/// Either "this alloca is promotable" or the reason it is not, modelled on
+/// InlineResult. Converts to bool for convenience.
+class AllocaPromotionResult {
+  const char *Reason = nullptr;
+
+  AllocaPromotionResult(const char *Reason) : Reason(Reason) {}
+
+public:
+  AllocaPromotionResult() = default;
+
+  static AllocaPromotionResult success() { return {}; }
+
+  /// \p Reason is a sentence naming the blocking use, e.g. "Has a volatile
+  /// load.", and must outlive the result, so in practice a string literal.
+  static AllocaPromotionResult failure(const char *Reason) {
+    assert(Reason && "A failure must carry a reason.");
+    return AllocaPromotionResult(Reason);
+  }
+
+  bool isSuccess() const { return Reason == nullptr; }
+  explicit operator bool() const { return isSuccess(); }
+
+  const char *getFailureReason() const {
+    assert(!isSuccess() && "Not a failure.");
+    return Reason;
+  }
+};
+
+/// Return whether this alloca is legal for promotion, and if not, why.
 ///
-/// This is true if there are only loads, stores, and lifetime markers
+/// Promotion is legal if there are only loads, stores, and lifetime markers
 /// (transitively) using this alloca. This also enforces that there is only
 /// ever one layer of bitcasts or GEPs between the alloca and the lifetime
 /// markers.
-LLVM_ABI bool isAllocaPromotable(const AllocaInst *AI);
+LLVM_ABI AllocaPromotionResult isAllocaPromotable(const AllocaInst *AI);
 
 /// Promote the specified list of alloca instructions into scalar
 /// registers, inserting PHI nodes as appropriate.

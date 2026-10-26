@@ -63,7 +63,9 @@ STATISTIC(NumSingleStore,   "Number of alloca's promoted with a single store");
 STATISTIC(NumDeadAlloca,    "Number of dead alloca's removed");
 STATISTIC(NumPHIInsert,     "Number of PHI nodes inserted");
 
-bool llvm::isAllocaPromotable(const AllocaInst *AI) {
+AllocaPromotionResult llvm::isAllocaPromotable(const AllocaInst *AI) {
+  using Result = AllocaPromotionResult;
+
   // Only allow direct and non-volatile loads and stores...
   // All loads and stores must use the same type (determined by the first one
   // seen). We don't require the type to match the alloca's declared type.
@@ -73,44 +75,50 @@ bool llvm::isAllocaPromotable(const AllocaInst *AI) {
       // Note that atomic loads can be transformed; atomic semantics do
       // not have any meaning for a local alloca.
       if (LI->isVolatile())
-        return false;
+        return Result::failure("Has a volatile load.");
       if (!ExpectedType)
         ExpectedType = LI->getType();
       else if (LI->getType() != ExpectedType)
-        return false;
+        return Result::failure("Has loads and stores of different types.");
     } else if (const StoreInst *SI = dyn_cast<StoreInst>(U)) {
       if (SI->getValueOperand() == AI)
-        return false; // Don't allow a store OF the AI, only INTO the AI.
+        // Don't allow a store OF the AI, only INTO the AI.
+        return Result::failure("Address is stored to memory.");
       // Note that atomic stores can be transformed; atomic semantics do
       // not have any meaning for a local alloca.
       if (SI->isVolatile())
-        return false;
+        return Result::failure("Has a volatile store.");
       Type *StoreType = SI->getValueOperand()->getType();
       if (!ExpectedType)
         ExpectedType = StoreType;
       else if (StoreType != ExpectedType)
-        return false;
+        return Result::failure("Has loads and stores of different types.");
     } else if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(U)) {
       if (!II->isLifetimeStartOrEnd() && !II->isDroppable() &&
           II->getIntrinsicID() != Intrinsic::fake_use)
-        return false;
+        return Result::failure("Address is passed to an intrinsic.");
     } else if (const BitCastInst *BCI = dyn_cast<BitCastInst>(U)) {
       if (!onlyUsedByLifetimeMarkersOrDroppableInsts(BCI))
-        return false;
+        return Result::failure("Address is used through a bitcast.");
     } else if (const GetElementPtrInst *GEPI = dyn_cast<GetElementPtrInst>(U)) {
       if (!GEPI->hasAllZeroIndices())
-        return false;
+        return Result::failure("Is accessed at a non-zero offset.");
       if (!onlyUsedByLifetimeMarkersOrDroppableInsts(GEPI))
-        return false;
+        return Result::failure("Address is used through a zero-index GEP with "
+                               "non-lifetime uses.");
     } else if (const AddrSpaceCastInst *ASCI = dyn_cast<AddrSpaceCastInst>(U)) {
       if (!onlyUsedByLifetimeMarkers(ASCI))
-        return false;
+        return Result::failure("Address is used through an addrspacecast.");
+    } else if (isa<CallBase>(U)) {
+      // Rejected by the catch-all below too, split out only so that the most
+      // common blocker gets a more specific reason.
+      return Result::failure("Address is passed to a call.");
     } else {
-      return false;
+      return Result::failure("Has a use that is not a load or store.");
     }
   }
 
-  return true;
+  return Result::success();
 }
 
 namespace {
