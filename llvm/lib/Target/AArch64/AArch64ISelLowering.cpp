@@ -13996,8 +13996,9 @@ bool AArch64TargetLowering::isFPImmLegalAsFMov(const APFloat &Imm,
   return false;
 }
 
-bool AArch64TargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
-                                         bool OptForSize) const {
+TargetLowering::FPImmAction
+AArch64TargetLowering::getFPImmAction(const APFloat &Imm, EVT VT,
+                                      bool OptForSize) const {
   bool IsLegal = isFPImmLegalAsFMov(Imm, VT);
 
   // If we can not materialize in immediate field for fmov, check if the
@@ -14041,7 +14042,7 @@ bool AArch64TargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
   LLVM_DEBUG(dbgs() << (IsLegal ? "Legal " : "Illegal ") << VT
                     << " imm value: ";
              Imm.dump(););
-  return IsLegal;
+  return IsLegal ? FPImmAction::Legal : FPImmAction::ConstantPool;
 }
 
 //===----------------------------------------------------------------------===//
@@ -25841,8 +25842,8 @@ static SDValue performIntrinsicCombine(SDNode *N,
   case Intrinsic::aarch64_sve_subr:
     return convertMergedOpToPredOp(N, ISD::SUB, DAG, true, true);
   case Intrinsic::aarch64_sve_and_u:
-    return DAG.getNode(ISD::AND, SDLoc(N), N->getValueType(0), N->getOperand(2),
-                       N->getOperand(3));
+    return DAG.getNode(AArch64ISD::AND_U, SDLoc(N), N->getValueType(0),
+                       N->getOperand(1), N->getOperand(2), N->getOperand(3));
   case Intrinsic::aarch64_sve_bic_u:
     return DAG.getNode(AArch64ISD::BIC, SDLoc(N), N->getValueType(0),
                        N->getOperand(2), N->getOperand(3));
@@ -36586,7 +36587,8 @@ bool AArch64TargetLowering::isComplexDeinterleavingOperationSupported(
 
   // If the vector is scalable, SVE is enabled, implying support for complex
   // numbers. Otherwise, we need to ensure complex number support is available
-  if (!VTy->isScalableTy() && !Subtarget->hasComplxNum())
+  if (!VTy->isScalableTy() &&
+      (!Subtarget->hasComplxNum() || !Subtarget->isNeonAvailable()))
     return false;
 
   auto *ScalarTy = VTy->getScalarType();

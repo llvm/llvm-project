@@ -215,6 +215,14 @@ struct __generate_n;
 // operator()(_Policy&&, _ForwardIterator __first, _Size __n, _Generator __gen) const noexcept;
 
 template <class _Backend, class _ExecutionPolicy>
+struct __includes;
+// template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _Compare>
+// optional<bool>
+// operator()(_Policy&& __policy, _ForwardIterator1 __first1, _ForwardIterator1 __last1,
+//                                _ForwardIterator2 __first2, _ForwardIterator2 __last2,
+//                                _Compare __comp) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
 struct __is_heap;
 // template <class _Policy, class _RandomAccessIterator, class _Comp>
 // optional<bool>
@@ -379,6 +387,42 @@ struct __search_n;
 // optional<_ForwardIterator>
 // operator()(_Policy&&, _ForwardIterator __first, _ForwardIterator __last,
 //                       _Size __count, const _T& __value, _Predicate __pred) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
+struct __set_difference;
+// template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _ForwardOutIterator, class _Compare>
+// optional<_ForwardOutIterator>
+// operator()(_Policy&& __policy, _ForwardIterator1 __first1, _ForwardIterator1 __last1,
+//                                _ForwardIterator2 __first2, _ForwardIterator2 __last2,
+//                                _ForwardOutIterator __result,
+//                                _Compare __comp) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
+struct __set_intersection;
+// template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _ForwardOutIterator, class _Compare>
+// optional<_ForwardOutIterator>
+// operator()(_Policy&& __policy, _ForwardIterator1 __first1, _ForwardIterator1 __last1,
+//                                _ForwardIterator2 __first2, _ForwardIterator2 __last2,
+//                                _ForwardOutIterator __result,
+//                                _Compare __comp) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
+struct __set_symmetric_difference;
+// template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _ForwardOutIterator, class _Compare>
+// optional<_ForwardOutIterator>
+// operator()(_Policy&& __policy, _ForwardIterator1 __first1, _ForwardIterator1 __last1,
+//                                _ForwardIterator2 __first2, _ForwardIterator2 __last2,
+//                                _ForwardOutIterator __result,
+//                                _Compare __comp) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
+struct __set_union;
+// template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _ForwardOutIterator, class _Compare>
+// optional<_ForwardOutIterator>
+// operator()(_Policy&& __policy, _ForwardIterator1 __first1, _ForwardIterator1 __last1,
+//                                _ForwardIterator2 __first2, _ForwardIterator2 __last2,
+//                                _ForwardOutIterator __result,
+//                                _Compare __comp) const noexcept;
 
 template <class _Backend, class _ExecutionPolicy>
 struct __sort;
