@@ -149,7 +149,7 @@ void VirtualCallChecker::checkPreCall(const CallEvent &Call,
     OS << "bypasses virtual dispatch";
 
   ExplodedNode *N =
-      IsPure ? C.generateErrorNode() : C.generateNonFatalErrorNode();
+      IsPure ? C.addSink() : C.generateNonFatalErrorNode();
   if (!N)
     return;
 
