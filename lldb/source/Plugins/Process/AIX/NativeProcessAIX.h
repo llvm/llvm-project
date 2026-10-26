@@ -223,6 +223,11 @@ public:
 
   NativeThreadAIX* FindStoppedThread();
 
+  /// Retrieve the saved user stack pointer (ti_ustk) and mode for a kernel thread
+  /// using getthrds64(). Used to reconstruct registers when a thread is suspended in kernel mode.
+  bool GetKernelThreadUserStack(lldb::tid_t tid, lldb::addr_t &user_sp,
+                                bool &in_kernel_mode);
+
 protected:
   llvm::Expected<llvm::ArrayRef<uint8_t>>
   GetSoftwareBreakpointTrapOpcode(size_t size_hint) override;

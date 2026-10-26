@@ -176,10 +176,31 @@ static int cb_read_regs(pthdb_user_t user, pthdb_tid_t tid,
       GPR_PPC gpr{};
       Status s = NativeProcessAIX::PtraceWrapper(PTT_READ_GPRS, ktid, nullptr,
                                                  &gpr, sizeof(gpr));
-      if (s.Fail())
-        return 1;
+      if (s.Fail()) {
+        if (s.GetError() == EPERM) {
+          lldb::addr_t user_sp = 0;
+          bool in_kernel_mode = false;
+          if (process && process->GetKernelThreadUserStack(ktid, user_sp, in_kernel_mode) && user_sp != 0) {
+            gpr.r1 = static_cast<uint32_t>(user_sp & 0xFFFFFFFFULL);
+            uint32_t caller_sp = 0;
+            size_t bytes_read = 0;
+            Status mem_err = process->ReadMemory(user_sp & 0xFFFFFFFFULL, &caller_sp, sizeof(caller_sp), bytes_read);
+            if (mem_err.Success() && caller_sp != 0) {
+              caller_sp &= 0xFFFFFFFFULL;
+              uint32_t caller_lr = 0;
+              mem_err = process->ReadMemory(caller_sp + 8, &caller_lr, sizeof(caller_lr), bytes_read);
+              if (mem_err.Success() && caller_lr != 0) {
+                caller_lr &= 0xFFFFFFFFULL;
+                gpr.lr = caller_lr;
+                gpr.pc = caller_lr;
+              }
+            }
+          }
+        } else {
+          return 1;
+        }
+      }
 
-      // TODO: Create a common function for this to avoid redundant code
       for (int i = 0; i < 32; ++i)
         context->gpr[i] = (&gpr.r0)[i];
       context->iar = gpr.pc;
@@ -192,8 +213,28 @@ static int cb_read_regs(pthdb_user_t user, pthdb_tid_t tid,
       GPR_PPC64 gpr{};
       Status s = NativeProcessAIX::PtraceWrapper(PTT_READ_GPRS, ktid, nullptr,
                                                  &gpr, sizeof(gpr));
-      if (s.Fail())
-        return 1;
+      if (s.Fail()) {
+        if (s.GetError() == EPERM) {
+          lldb::addr_t user_sp = 0;
+          bool in_kernel_mode = false;
+          if (process && process->GetKernelThreadUserStack(ktid, user_sp, in_kernel_mode) && user_sp != 0) {
+            gpr.r1 = user_sp;
+            uint64_t caller_sp = 0;
+            size_t bytes_read = 0;
+            Status mem_err = process->ReadMemory(user_sp, &caller_sp, sizeof(caller_sp), bytes_read);
+            if (mem_err.Success() && caller_sp != 0) {
+              uint64_t caller_lr = 0;
+              mem_err = process->ReadMemory(caller_sp + 16, &caller_lr, sizeof(caller_lr), bytes_read);
+              if (mem_err.Success() && caller_lr != 0) {
+                gpr.lr = caller_lr;
+                gpr.pc = caller_lr;
+              }
+            }
+          }
+        } else {
+          return 1;
+        }
+      }
       for (int i = 0; i < 32; ++i)
         context->gpr[i] = (&gpr.r0)[i];
       context->iar = gpr.pc;
@@ -209,7 +250,7 @@ static int cb_read_regs(pthdb_user_t user, pthdb_tid_t tid,
     FPR_PPC64 fpr{};
     Status s = NativeProcessAIX::PtraceWrapper(PTT_READ_FPRS, ktid, nullptr,
                                                &fpr, sizeof(fpr));
-    if (s.Fail())
+    if (s.Fail() && s.GetError() != EPERM)
       return 1;
     static_assert(sizeof(context->fpr[0]) == sizeof(uint64_t),
                   "FPR element size mismatch");
@@ -223,7 +264,7 @@ static int cb_read_regs(pthdb_user_t user, pthdb_tid_t tid,
     VMX_PPC64 vmx{};
     Status s = NativeProcessAIX::PtraceWrapper(PTT_READ_VEC, ktid, nullptr,
                                                &vmx, sizeof(vmx));
-    if (s.Fail())
+    if (s.Fail() && s.GetError() != EPERM)
       return 1;
     // VMX copy intentionally left as no-op (layout differences); expand later.
   }
@@ -232,7 +273,7 @@ static int cb_read_regs(pthdb_user_t user, pthdb_tid_t tid,
     VSX_PPC64 vsx{};
     Status s = NativeProcessAIX::PtraceWrapper(PTT_READ_VSX, ktid, nullptr,
                                                &vsx, sizeof(vsx));
-    if (s.Fail())
+    if (s.Fail() && s.GetError() != EPERM)
       return 1;
     // VSX copy intentionally left as no-op; expand later.
   }

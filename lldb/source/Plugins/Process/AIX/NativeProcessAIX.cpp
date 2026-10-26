@@ -56,6 +56,7 @@
 #include <sys/reg.h>
 #include <sys/ptrace.h>
 #include <sys/ldr.h>
+#include <sys/thread.h>
 #include <sys/socket.h>
 //#include <sys/syscall.h>
 #include <sys/types.h>
@@ -567,12 +568,11 @@ NativeThreadAIX* NativeProcessAIX::FindStoppedThread() {
     TakeThreadSnapshot(GetID(), entries);
 
     for (const auto &entry : entries) {
-        if (entry.ti_cursig) {
+        if (entry.ti_flag & TTRCSIG) {
             lldb::tid_t stopped_tid = static_cast<lldb::tid_t>(entry.ti_tid);
             LLDB_LOG(log,
-                     "FindStoppedThread: tid={0} cursig={1} TTRCSIG={2} state={3}",
-                     stopped_tid, (int)entry.ti_cursig,
-                     bool(entry.ti_flag & TTRCSIG), (int)entry.ti_state);
+                     "FindStoppedThread: tid={0} cursig={1} TTRCSIG=true state={2}",
+                     stopped_tid, (int)entry.ti_cursig, (int)entry.ti_state);
             for (const auto &thread_sp : m_threads) {
                 if (thread_sp->GetID() == stopped_tid)
                     return static_cast<NativeThreadAIX *>(thread_sp.get());
@@ -585,10 +585,28 @@ NativeThreadAIX* NativeProcessAIX::FindStoppedThread() {
         }
     }
 
+    // Fall back to threads with non-zero cursig.
+    for (const auto &entry : entries) {
+        if (entry.ti_cursig) {
+            lldb::tid_t stopped_tid = static_cast<lldb::tid_t>(entry.ti_tid);
+            LLDB_LOG(log,
+                     "FindStoppedThread (cursig): tid={0} cursig={1} TTRCSIG=false state={2}",
+                     stopped_tid, (int)entry.ti_cursig, (int)entry.ti_state);
+            for (const auto &thread_sp : m_threads) {
+                if (thread_sp->GetID() == stopped_tid)
+                    return static_cast<NativeThreadAIX *>(thread_sp.get());
+            }
+            m_triggering_tid = stopped_tid;
+            LLDB_LOG(log, "FindStoppedThread (cursig): tid {0} not yet in thread list",
+                     stopped_tid);
+            return nullptr;
+        }
+    }
+
     // No thread has a pending signal.  Fall back to the first tracked thread
     if (!m_threads.empty()) {
         LLDB_LOG(log,
-                 "FindStoppedThread: no cursig thread, falling back to first "
+                 "FindStoppedThread: no TTRCSIG/cursig thread, falling back to first "
                  "thread {0}",
                  m_threads.front()->GetID());
         return static_cast<NativeThreadAIX *>(m_threads.front().get());
@@ -725,11 +743,20 @@ bool NativeProcessAIX::TryHandleWaitStatus(lldb::pid_t pid,
              (int)e.ti_state, bool(e.ti_flag & TTRCSIG));
 
   // Identify the stopping thread from the snapshot.
+  // We prioritize checking TTRCSIG, falling back to ti_cursig.
   lldb::tid_t stopping_tid = LLDB_INVALID_THREAD_ID;
   for (const auto &entry : snapshot) {
-    if (entry.ti_cursig) {
+    if (entry.ti_flag & TTRCSIG) {
       stopping_tid = static_cast<lldb::tid_t>(entry.ti_tid);
       break;
+    }
+  }
+  if (stopping_tid == LLDB_INVALID_THREAD_ID) {
+    for (const auto &entry : snapshot) {
+      if (entry.ti_cursig) {
+        stopping_tid = static_cast<lldb::tid_t>(entry.ti_tid);
+        break;
+      }
     }
   }
   // Commit to m_triggering_tid now so pthdb_session_stop_tid sees it.
@@ -1051,10 +1078,37 @@ Status NativeProcessAIX::IssuePTTContinue(
     size_t idx = 0;
     constexpr size_t kMaxOther = (sizeof(buf.th) / sizeof(buf.th[0])) - 1;
 
+    std::vector<struct thrdentry64> snap;
+    TakeThreadSnapshot(static_cast<lldb::pid_t>(process_pid), snap);
+
+    lldb::tid_t actual_ttrcsig_tid = LLDB_INVALID_THREAD_ID;
+    for (const auto &entry : snap) {
+        if (entry.ti_flag & TTRCSIG) {
+            actual_ttrcsig_tid = static_cast<lldb::tid_t>(entry.ti_tid);
+            break;
+        }
+    }
+
+    // Fail safe
+    if (actual_ttrcsig_tid != LLDB_INVALID_THREAD_ID && actual_ttrcsig_tid != triggering_tid) {
+        LLDB_LOG(log, "IssuePTTContinue: correcting triggering_tid from {0} to kernel TTRCSIG tid {1}",
+                 triggering_tid, actual_ttrcsig_tid);
+        triggering_tid = actual_ttrcsig_tid;
+    }
+
     if (IsPthdbInitialized()) {
         // Enumerate ALL pthreads
         llvm::SmallDenseSet<lldb::tid_t, 8> pthdb_tids;
         pthdb_session_t sess = GetPthdbSession();
+
+        // Build a live kernel-state map for all threads from getthrds64.
+        // pt_setrun() only wakes a thread if tv_state == TSSTOP. A thread not
+        // yet in the pvthread ring (TSIDL / just created) causes TID_VALIDATE
+        // to return NULL -> ESRCH. Therefore, we only add threads in TSSTOP state.
+        std::unordered_map<lldb::tid_t, uint32_t> kernel_state_map;
+        for (const auto &entry : snap)
+            kernel_state_map[static_cast<lldb::tid_t>(entry.ti_tid)] = entry.ti_state;
+
         pthdb_pthread_t handle = PTHDB_INVALID_PTHREAD;
         int rc = pthdb_pthread(sess, &handle, PTHDB_LIST_FIRST);
         while (rc == PTHDB_SUCCESS && handle != PTHDB_INVALID_PTHREAD) {
@@ -1064,11 +1118,20 @@ Status NativeProcessAIX::IssuePTTContinue(
                 static_cast<lldb::tid_t>(ktid) != triggering_tid) {
                 lldb::tid_t tid = static_cast<lldb::tid_t>(ktid);
                 pthdb_tids.insert(tid);
-                if (idx < kMaxOther)
-                    buf.th[idx++] = static_cast<tid64_t>(ktid);
-                else
-                    LLDB_LOG(log, "IssuePTTContinue: tid list full, "
-                                  "truncating at {0}", kMaxOther);
+
+                auto it = kernel_state_map.find(tid);
+                bool is_tsstop = (it != kernel_state_map.end() && it->second == TSSTOP);
+                if (is_tsstop) {
+                    if (idx < kMaxOther)
+                        buf.th[idx++] = static_cast<tid64_t>(ktid);
+                    else
+                        LLDB_LOG(log, "IssuePTTContinue: tid list full, "
+                                      "truncating at {0}", kMaxOther);
+                } else {
+                    uint32_t kstate = (it != kernel_state_map.end()) ? it->second : 0;
+                    LLDB_LOG(log, "IssuePTTContinue: skipping tid {0}: kernel state {1} is not TSSTOP",
+                             tid, kstate);
+                }
             }
             rc = pthdb_pthread(sess, &handle, PTHDB_LIST_NEXT);
         }
@@ -1080,15 +1143,24 @@ Status NativeProcessAIX::IssuePTTContinue(
                 continue;
             if (pthdb_tids.count(tid))
                 continue; // already added via pthdb
-            if (idx < kMaxOther) {
-                LLDB_LOG(log,
-                         "IssuePTTContinue: tid {0} not in pthdb, adding from "
-                         "m_threads",
-                         tid);
-                buf.th[idx++] = static_cast<tid64_t>(tid);
+
+            auto it = kernel_state_map.find(tid);
+            bool is_tsstop = (it != kernel_state_map.end() && it->second == TSSTOP);
+            if (is_tsstop) {
+                if (idx < kMaxOther) {
+                    LLDB_LOG(log,
+                             "IssuePTTContinue: tid {0} not in pthdb, adding from "
+                             "m_threads",
+                             tid);
+                    buf.th[idx++] = static_cast<tid64_t>(tid);
+                } else {
+                    LLDB_LOG(log, "IssuePTTContinue: tid list full, "
+                                  "truncating at {0}", kMaxOther);
+                }
             } else {
-                LLDB_LOG(log, "IssuePTTContinue: tid list full, "
-                              "truncating at {0}", kMaxOther);
+                uint32_t kstate = (it != kernel_state_map.end()) ? it->second : 0;
+                LLDB_LOG(log, "IssuePTTContinue: skipping untracked tid {0}: kernel state {1} is not TSSTOP",
+                         tid, kstate);
             }
         }
     } else {
@@ -1208,16 +1280,28 @@ Status NativeProcessAIX::Resume(const ResumeActionList &resume_actions) {
     return Status();
   }
 
-  // m_triggering_tid MUST be the stopped thread (it is the id arg of
-  // PTT_CONTINUE).  If it is not in tids_to_run, re-derive it.
-  if (llvm::find(tids_to_run, m_triggering_tid) == tids_to_run.end()) {
-    if (NativeThreadAIX *st = FindStoppedThread()) {
-      m_triggering_tid = st->GetID();
-      LLDB_LOG(log, "Resume: updated m_triggering_tid to {0}", m_triggering_tid);
-    } else if (!tids_to_run.empty()) {
-      m_triggering_tid = tids_to_run.front();
-      LLDB_LOG(log, "Resume: no stopped thread, using first tid_to_run {0}",
-               m_triggering_tid);
+  // m_triggering_tid MUST be the exact kernel-stopped thread possessing the
+  // TTRCSIG flag (it is the id arg of PTT_CONTINUE). We unconditionally verify
+  // and re-derive it here to ensure we pass the correct thread to the kernel.
+  lldb::tid_t actual_stopped_tid = LLDB_INVALID_THREAD_ID;
+  if (NativeThreadAIX *st = FindStoppedThread()) {
+    actual_stopped_tid = st->GetID();
+  }
+
+  if (actual_stopped_tid != LLDB_INVALID_THREAD_ID) {
+    if (m_triggering_tid != actual_stopped_tid) {
+      LLDB_LOG(log, "Resume: changing m_triggering_tid from {0} to actual stopped tid {1}",
+               m_triggering_tid, actual_stopped_tid);
+      m_triggering_tid = actual_stopped_tid;
+    }
+  } else {
+    // Fallback: if no TTRCSIG/stopped thread is found, check if our current triggering tid is in tids_to_run.
+    if (llvm::find(tids_to_run, m_triggering_tid) == tids_to_run.end()) {
+      if (!tids_to_run.empty()) {
+        m_triggering_tid = tids_to_run.front();
+        LLDB_LOG(log, "Resume: no stopped thread found, using first tid_to_run {0}",
+                 m_triggering_tid);
+      }
     }
   }
 
@@ -1867,6 +1951,8 @@ Status NativeProcessAIX::ReadMemory(const ProcessAddress &process_addr,
                                     void *buf, size_t size,
                                       size_t &bytes_read) {
   lldb::addr_t addr = process_addr.GetValue();
+  if (GetArchitecture().GetAddressByteSize() == 4)
+    addr &= 0xFFFFFFFFULL;
   unsigned char *dst = static_cast<unsigned char *>(buf);
   constexpr size_t kMaxPtraceBlockSize = IPCDATA;
   bytes_read = 0;
@@ -1899,6 +1985,8 @@ Status NativeProcessAIX::ReadMemory(const ProcessAddress &process_addr,
 
 Status NativeProcessAIX::DoWriteMemory(lldb::addr_t addr, const void *buf,
                                        size_t size, size_t &bytes_written) {
+  if (GetArchitecture().GetAddressByteSize() == 4)
+    addr &= 0xFFFFFFFFULL;
   const unsigned char *src = static_cast<const unsigned char *>(buf);
   size_t remainder;
   Status error;
@@ -2159,16 +2247,18 @@ void NativeProcessAIX::ThreadWasCreated(NativeThreadAIX &thread) {
 
 template<typename GPR_T, typename PTSPRS_T>
 static void GetSPRs(int req, lldb::tid_t tid, GPR_T *gpr) {
-    PTSPRS_T sprs;
+    PTSPRS_T sprs{};
 
-    ptrace64(req, tid, (long long)&sprs, 0, 0);
-
-    gpr->cr = sprs.pt_cr;
-    gpr->msr = sprs.pt_msr;
-    gpr->xer = sprs.pt_xer;
-    gpr->lr = sprs.pt_lr;
-    gpr->ctr = sprs.pt_ctr;
-    gpr->pc = sprs.pt_iar;
+    errno = 0;
+    int rc = ptrace64(req, tid, (long long)&sprs, 0, 0);
+    if (rc == 0) {
+        gpr->cr = sprs.pt_cr;
+        gpr->msr = sprs.pt_msr;
+        gpr->xer = sprs.pt_xer;
+        gpr->lr = sprs.pt_lr;
+        gpr->ctr = sprs.pt_ctr;
+        gpr->pc = sprs.pt_iar;
+    }
 }
 
 template<typename GPR_T, typename PTSPRS_T>
@@ -2199,21 +2289,33 @@ Status NativeProcessAIX::PtraceWrapper(int req, lldb::pid_t id, void *addr,
   errno = 0;
   /* NOTE: id could be pid or tid, based on the caller */
   switch (req) {
-    case PTT_READ_GPRS:
+    case PTT_READ_GPRS: {
       ptrace64(req, id, (long long)data, 0, 0);
+      // Save errno: if PTT_READ_GPRS failed (e.g. EPERM for a kernel-mode thread),
+      // GetSPRs resets errno=0 before its own ptrace call.  For 32-bit debuggees
+      // PTT_READ_SPRS can succeed even when PTT_READ_GPRS failed, which would
+      // silently clear the error.  Preserve the original errno across the SPR read.
+      int saved_errno = errno;
       if(data_size == sizeof(GPR_PPC))
         GetSPRs<GPR_PPC,ptsprs>(PTT_READ_SPRS, id, static_cast<GPR_PPC *>(data));
       else if(data_size == sizeof(GPR_PPC64))
         GetSPRs<GPR_PPC64,ptxsprs>(PTT_READ_SPRS, id, static_cast<GPR_PPC64 *>(data));
+      if (saved_errno && !errno)
+        errno = saved_errno;
       break;
+    }
 
-    case PTT_WRITE_GPRS:
+    case PTT_WRITE_GPRS: {
       ptrace64(req, id , (long long)data, 0, 0);
+      int saved_errno = errno;
       if(data_size == sizeof(GPR_PPC))
         SetSPRs<GPR_PPC,ptsprs>(PTT_WRITE_SPRS, id, static_cast<GPR_PPC *>(data));
       else if(data_size == sizeof(GPR_PPC64))
         SetSPRs<GPR_PPC64,ptxsprs>(PTT_WRITE_SPRS, id, static_cast<GPR_PPC64 *>(data));
+      if (saved_errno && !errno)
+        errno = saved_errno;
       break;
+    }
 
     case PTT_READ_FPRS:
       /* Since this case needs both pid and tid, we will have to make use of 
@@ -2337,4 +2439,30 @@ Expected<json::Value> NativeProcessAIX::TraceGetState(StringRef type) {
 Expected<std::vector<uint8_t>> NativeProcessAIX::TraceGetBinaryData(
     const TraceGetBinaryDataRequest &request) {
   return NativeProcessProtocol::TraceGetBinaryData(request);
+}
+
+bool NativeProcessAIX::GetKernelThreadUserStack(lldb::tid_t tid,
+                                                lldb::addr_t &user_sp,
+                                                bool &in_kernel_mode) {
+  struct thrdentry64 thrd;
+  tid64_t index = static_cast<tid64_t>(tid);
+  int count = getthrds64(GetID(), &thrd, sizeof(thrd), &index, 1);
+  if (count > 0 && thrd.ti_tid == static_cast<tid64_t>(tid)) {
+    in_kernel_mode = true;
+    user_sp = static_cast<lldb::addr_t>(thrd.ti_ustk);
+    if (GetArchitecture().GetAddressByteSize() == 4)
+      user_sp &= 0xFFFFFFFFULL;
+    return true;
+  }
+  index = 0;
+  while ((count = getthrds64(GetID(), &thrd, sizeof(thrd), &index, 1)) > 0) {
+    if (thrd.ti_tid == static_cast<tid64_t>(tid)) {
+      in_kernel_mode = true;
+      user_sp = static_cast<lldb::addr_t>(thrd.ti_ustk);
+      if (GetArchitecture().GetAddressByteSize() == 4)
+        user_sp &= 0xFFFFFFFFULL;
+      return true;
+    }
+  }
+  return false;
 }

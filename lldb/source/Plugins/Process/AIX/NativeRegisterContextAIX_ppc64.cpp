@@ -475,10 +475,127 @@ uint32_t NativeRegisterContextAIX_ppc64::CalculateVsxOffset(
          GetRegisterInfoAtIndex(k_first_vsx_ppc64)->byte_offset;
 }
 
+Status NativeRegisterContextAIX_ppc64::ReadGPR() {
+  Status error = NativeProcessAIX::PtraceWrapper(
+      PTT_READ_GPRS, m_thread.GetID(), nullptr, GetGPRBuffer(), GetGPRSize());
+
+  if (error.Success())
+    return error;
+
+  // On AIX, ptrace(PTT_READ_GPRS) fails with EPERM when the thread is suspended
+  // in kernel mode (e.g. sleep/waiting in a syscall) and is not the stopping thread.
+  // We reconstruct the user-space state using the saved user stack pointer (ti_ustk)
+  // from getthrds64().
+  if (error.GetError() == EPERM) {
+    NativeProcessAIX &process =
+        static_cast<NativeProcessAIX &>(m_thread.GetProcess());
+    lldb::addr_t user_sp = 0;
+    bool in_kernel_mode = false;
+
+    if (process.GetKernelThreadUserStack(m_thread.GetID(), user_sp,
+                                         in_kernel_mode) &&
+        user_sp != 0) {
+      if (GetGPRSize() == sizeof(GPR_PPC64)) {
+        ::memset(&m_gpr_storage.gpr64, 0, sizeof(m_gpr_storage.gpr64));
+        m_gpr_storage.gpr64.r1 = user_sp;
+
+        // PowerPC AIX 64-bit ABI stack frame:
+        // *(user_sp)        = Caller SP (back chain)
+        // *(caller_sp + 16) = Saved Link Register (LR) in caller's frame
+        uint64_t caller_sp = 0;
+        size_t bytes_read = 0;
+        Status mem_err = process.ReadMemory(
+            user_sp, &caller_sp, sizeof(caller_sp), bytes_read);
+        if (mem_err.Success() && caller_sp != 0) {
+          uint64_t caller_lr = 0;
+          mem_err = process.ReadMemory(
+              caller_sp + 16, &caller_lr, sizeof(caller_lr), bytes_read);
+          if (mem_err.Success() && caller_lr != 0) {
+            m_gpr_storage.gpr64.lr = caller_lr;
+
+            // Check if instruction before caller_lr is a branch-and-link (bl)
+            uint32_t branch_insn = 0;
+            mem_err = process.ReadMemory(caller_lr - 4, &branch_insn,
+                                         sizeof(branch_insn), bytes_read);
+            if (mem_err.Success() &&
+                (branch_insn & 0xFC000001) == 0x48000001) {
+              int64_t li = (branch_insn & 0x03FFFFFC);
+              if (li & 0x02000000)
+                li |= 0xFFFFFFFFFC000000ULL;
+              if (branch_insn & 2)
+                m_gpr_storage.gpr64.pc = static_cast<uint64_t>(li);
+              else
+                m_gpr_storage.gpr64.pc = (caller_lr - 4) + li;
+            } else {
+              m_gpr_storage.gpr64.pc = caller_lr;
+            }
+          }
+        }
+      } else if (GetGPRSize() == sizeof(GPR_PPC)) {
+        ::memset(&m_gpr_storage.gpr32, 0, sizeof(m_gpr_storage.gpr32));
+        user_sp &= 0xFFFFFFFFULL;
+        m_gpr_storage.gpr32.r1 = static_cast<uint32_t>(user_sp);
+
+        // PowerPC AIX 32-bit ABI stack frame:
+        // *(user_sp)       = Caller SP (back chain, 4 bytes)
+        // *(caller_sp + 8) = Saved Link Register (LR) in caller's frame
+        uint32_t caller_sp = 0;
+        size_t bytes_read = 0;
+        Status mem_err = process.ReadMemory(
+            user_sp, &caller_sp, sizeof(caller_sp), bytes_read);
+        if (mem_err.Success() && caller_sp != 0) {
+          caller_sp &= 0xFFFFFFFFULL;
+          uint32_t caller_lr = 0;
+          mem_err = process.ReadMemory(
+              caller_sp + 8, &caller_lr, sizeof(caller_lr), bytes_read);
+          if (mem_err.Success() && caller_lr != 0) {
+            caller_lr &= 0xFFFFFFFFULL;
+            m_gpr_storage.gpr32.lr = caller_lr;
+
+            uint32_t branch_insn = 0;
+            mem_err = process.ReadMemory(caller_lr - 4, &branch_insn,
+                                         sizeof(branch_insn), bytes_read);
+            if (mem_err.Success() &&
+                (branch_insn & 0xFC000001) == 0x48000001) {
+              int32_t li = (branch_insn & 0x03FFFFFC);
+              if (li & 0x02000000)
+                li |= 0xFC000000;
+              if (branch_insn & 2)
+                m_gpr_storage.gpr32.pc = static_cast<uint32_t>(li);
+              else
+                m_gpr_storage.gpr32.pc = static_cast<uint32_t>((caller_lr - 4) + li);
+            } else {
+              m_gpr_storage.gpr32.pc = caller_lr;
+            }
+          }
+        }
+      }
+      return Status();
+    }
+  }
+
+  return error;
+}
+
+Status NativeRegisterContextAIX_ppc64::ReadFPR() {
+  Status error = NativeProcessAIX::PtraceWrapper(
+      PTT_READ_FPRS, m_thread.GetID(), nullptr, GetFPRBuffer(), GetFPRSize());
+  if (error.GetError() == EPERM) {
+    ::memset(GetFPRBuffer(), 0, GetFPRSize());
+    return Status();
+  }
+  return error;
+}
+
 Status NativeRegisterContextAIX_ppc64::ReadVMX() {
-  return NativeProcessAIX::PtraceWrapper(PTT_READ_VEC, m_thread.GetID(),
+  Status error = NativeProcessAIX::PtraceWrapper(PTT_READ_VEC, m_thread.GetID(),
                                            nullptr, &m_vmx_ppc64,
                                            sizeof(m_vmx_ppc64));
+  if (error.GetError() == EPERM) {
+    ::memset(&m_vmx_ppc64, 0, sizeof(m_vmx_ppc64));
+    return Status();
+  }
+  return error;
 }
 
 Status NativeRegisterContextAIX_ppc64::WriteVMX() {
@@ -490,9 +607,14 @@ Status NativeRegisterContextAIX_ppc64::WriteVMX() {
 }
 
 Status NativeRegisterContextAIX_ppc64::ReadVSX() {
-  return NativeProcessAIX::PtraceWrapper(PTT_READ_VSX, m_thread.GetID(),
+  Status error = NativeProcessAIX::PtraceWrapper(PTT_READ_VSX, m_thread.GetID(),
                                            nullptr, &m_vsx_ppc64,
                                            sizeof(m_vsx_ppc64));
+  if (error.GetError() == EPERM) {
+    ::memset(&m_vsx_ppc64, 0, sizeof(m_vsx_ppc64));
+    return Status();
+  }
+  return error;
 }
 
 Status NativeRegisterContextAIX_ppc64::WriteVSX() {
