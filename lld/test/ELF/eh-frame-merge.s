@@ -42,8 +42,8 @@
 # EH-EMPTY:
 # EH-NEXT:   00000054 ZERO terminator
 
-## Each merged CIE is followed by its FDEs from all .eh_frame sections, in input
-## order, even when an FDE refers to an earlier duplicate CIE in the same section.
+## Merged CIEs precede all FDEs, which keep input order regardless of the merged
+## CIE they refer to.
 # RUN: llvm-mc -filetype=obj -triple=x86_64 b.s -o b.o
 # RUN: ld.lld b.o -Ttext=0x201000 -o order
 # RUN: llvm-nm order | FileCheck %s --check-prefix=SYM
@@ -53,17 +53,17 @@
 # SYM:      [[#%x,BASE:]] r cieA
 # SYM-NEXT: {{0*}}[[#%x,BASE]] r cieA2
 # SYM-NEXT: {{0*}}[[#%x,BASE]] r cieA3
-# SYM-NEXT: {{0*}}[[#%x,BASE+0x70]] r cieB
+# SYM-NEXT: {{0*}}[[#%x,BASE+0x10]] r cieB
 # SYM-NEXT: {{0*}}[[#%x,BASE]] r cieB2
 
 # ORDER:      00000000 0000000c 00000000 CIE
+# ORDER:      00000010 0000000c 00000000 CIE
 # ORDER:      FDE cie=00000000 pc=00201000...
+# ORDER:      FDE cie=00000010 pc=00201001...
 # ORDER:      FDE cie=00000000 pc=00201002...
 # ORDER:      FDE cie=00000000 pc=00201003...
+# ORDER:      FDE cie=00000010 pc=00201005...
 # ORDER:      FDE cie=00000000 pc=00201004...
-# ORDER:      00000070 0000000c 00000000 CIE
-# ORDER:      FDE cie=00000070 pc=00201001...
-# ORDER:      FDE cie=00000070 pc=00201005...
 # ORDER-NOT:  {{CIE|FDE}}
 
 ## CIEs with different personalities are not merged.
@@ -73,15 +73,15 @@
 
 # PERS:      00000000 00000014 00000000 CIE
 # PERS:        Augmentation: "zR"
-# PERS:      00000018 00000010 0000001c FDE cie=00000000
-# PERS:      0000002c 00000018 00000000 CIE
+# PERS:      00000018 00000018 00000000 CIE
 # PERS:        Augmentation: "zPR"
 # PERS:        Personality Address: [[#%.16x,P0:]]
-# PERS:      00000048 00000010 00000020 FDE cie=0000002c
-# PERS:      0000005c 00000018 00000000 CIE
+# PERS:      00000034 00000018 00000000 CIE
 # PERS:        Augmentation: "zPR"
 # PERS:        Personality Address: [[#%.16x,P0+1]]
-# PERS:      00000078 00000014 00000020 FDE cie=0000005c
+# PERS:      00000050 00000010 00000054 FDE cie=00000000
+# PERS:      00000064 00000010 00000050 FDE cie=00000018
+# PERS:      00000078 00000014 00000048 FDE cie=00000034
 
 #--- a.s
         .section	foo,"ax",@progbits
