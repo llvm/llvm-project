@@ -3901,24 +3901,22 @@ void transform::TileUsingForOp::getEffects(
 // TileUsingForallOp
 //===----------------------------------------------------------------------===//
 
-void transform::TileUsingForallOp::build(OpBuilder &builder,
-                                         OperationState &result, Value target,
-                                         ArrayRef<int64_t> staticTileSizes,
-                                         transform::TileSizesSpec,
-                                         ArrayAttr mapping) {
+void transform::TileUsingForallOp::build(
+    OpBuilder &builder, OperationState &result, Value target,
+    ArrayRef<int64_t> staticTileSizes, transform::TileSizesSpec,
+    ArrayAttr mapping, std::optional<ArrayRef<bool>> scalableSizes) {
   return build(builder, result,
                /*target=*/target,
                /*mixedTileSizes=*/
                getAsOpFoldResult(builder.getI64ArrayAttr(staticTileSizes)),
                /*_=*/TileSizesSpec(),
-               /*mapping=*/mapping);
+               /*mapping=*/mapping, scalableSizes);
 }
 
-void transform::TileUsingForallOp::build(OpBuilder &builder,
-                                         OperationState &result, Value target,
-                                         ArrayRef<OpFoldResult> mixedTileSizes,
-                                         transform::TileSizesSpec,
-                                         ArrayAttr mapping) {
+void transform::TileUsingForallOp::build(
+    OpBuilder &builder, OperationState &result, Value target,
+    ArrayRef<OpFoldResult> mixedTileSizes, transform::TileSizesSpec,
+    ArrayAttr mapping, std::optional<ArrayRef<bool>> scalableSizes) {
   SmallVector<int64_t> staticTileSizes;
   SmallVector<Value> dynamicTileSizes;
   dispatchIndexOpFoldResults(mixedTileSizes, dynamicTileSizes, staticTileSizes);
@@ -3937,6 +3935,8 @@ void transform::TileUsingForallOp::build(OpBuilder &builder,
         /*packed_tile_sizes=*/Value(),
         /*static_num_threads=*/builder.getDenseI64ArrayAttr({}),
         /*static_tile_sizes=*/staticTileSizesAttr,
+        /*scalable_sizes=*/
+        builder.getDenseBoolArrayAttr(scalableSizes.value_or(ArrayRef<bool>{})),
         /*mapping=*/mapping);
 }
 
@@ -3974,6 +3974,7 @@ void transform::TileUsingForallOp::build(OpBuilder &builder,
         /*packed_tile_sizes=*/Value(),
         /*static_num_threads=*/staticNumThreadsAttr,
         /*static_tile_sizes=*/builder.getDenseI64ArrayAttr({}),
+        /*scalable_sizes=*/builder.getDenseBoolArrayAttr({}),
         /*mapping=*/mapping);
 }
 
@@ -4152,9 +4153,27 @@ DiagnosedSilenceableFailure transform::TileUsingForallOp::apply(
     return status;
 
   for (Operation *target : state.getPayloadOps(getTarget())) {
+    // Materialize scalable sizes separately for each target so that the values
+    // dominate the tiled operation, even when targets are in different regions.
+    OpBuilder::InsertionGuard guard(rewriter);
+    rewriter.setInsertionPoint(target);
+    SmallVector<OpFoldResult> tileSizes(mixedTileSizes);
+    Value vscale;
+    for (auto [i, scalable] : llvm::enumerate(getScalableSizes())) {
+      if (!scalable || isZeroInteger(tileSizes[i]))
+        continue;
+      Location loc = target->getLoc();
+      if (!vscale)
+        vscale = vector::VectorScaleOp::create(rewriter, loc,
+                                               rewriter.getIndexType());
+      Value factor =
+          getValueOrCreateConstantIndexOp(rewriter, loc, tileSizes[i]);
+      tileSizes[i] =
+          arith::MulIOp::create(rewriter, loc, factor, vscale).getResult();
+    }
     scf::SCFTilingResult tilingResult;
     DiagnosedSilenceableFailure diag = tileToForallOpImpl(
-        rewriter, state, transformOp, target, mixedNumThreads, mixedTileSizes,
+        rewriter, state, transformOp, target, mixedNumThreads, tileSizes,
         getMapping(), tilingResult);
     if (!diag.succeeded())
       return diag;
@@ -4191,6 +4210,16 @@ SmallVector<OpFoldResult> TileUsingForallOp::getMixedTileSizes() {
 }
 
 LogicalResult TileUsingForallOp::verify() {
+  ArrayRef<bool> scalableSizes = getScalableSizes();
+  if (!scalableSizes.empty() &&
+      scalableSizes.size() != getStaticTileSizes().size())
+    return emitOpError(
+        "expected as many scalable size flags as static tile sizes");
+  for (auto [size, scalable] : llvm::zip(getStaticTileSizes(), scalableSizes)) {
+    if (scalable && (ShapedType::isDynamic(size) || size < 0))
+      return emitOpError(
+          "scalable tile sizes must be non-negative static integers");
+  }
   int numThreadsSpec = static_cast<int>(!getMixedNumThreads().empty()) +
                        static_cast<int>(getPackedNumThreads() != Value());
   if (numThreadsSpec > 1)
@@ -4204,6 +4233,8 @@ LogicalResult TileUsingForallOp::verify() {
   if (numThreadsSpec == 0 && tileSizesSpec == 0)
     return emitOpError("either (packed_)num_threads or (packed_)tile_sizes "
                        "must be specified");
+  if (numThreadsSpec != 0 && llvm::is_contained(scalableSizes, true))
+    return emitOpError("scalable tile sizes cannot be used with num_threads");
   return success();
 }
 
