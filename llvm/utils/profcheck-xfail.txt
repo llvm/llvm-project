@@ -37,4 +37,3 @@ Transforms/OpenMP/spmdization_indirect.ll
 Transforms/OpenMP/spmdization_no_guarding_two_reaching_kernels.ll
 Transforms/OpenMP/spmdization_remarks.ll
 Transforms/Util/control-flow-hub-finalize-same-succ-crash.ll
-Transforms/Util/lowerswitch.ll
