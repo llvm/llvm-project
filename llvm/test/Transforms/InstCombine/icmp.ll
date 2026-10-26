@@ -1279,8 +1279,8 @@ define i1 @test57(i32 %a) {
 }
 
 ; rdar://problem/10482509
-define zeroext i1 @cmpabs_ne1(i64 %val) {
-; CHECK-LABEL: define zeroext i1 @cmpabs_ne1(
+define zeroext i1 @cmpabs1(i64 %val) {
+; CHECK-LABEL: define zeroext i1 @cmpabs1(
 ; CHECK-SAME: i64 [[VAL:%.*]]) {
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i64 [[VAL]], 0
 ; CHECK-NEXT:    ret i1 [[TOBOOL]]
@@ -1292,8 +1292,8 @@ define zeroext i1 @cmpabs_ne1(i64 %val) {
   ret i1 %tobool
 }
 
-define zeroext i1 @cmpabs_ne2(i64 %val) {
-; CHECK-LABEL: define zeroext i1 @cmpabs_ne2(
+define zeroext i1 @cmpabs2(i64 %val) {
+; CHECK-LABEL: define zeroext i1 @cmpabs2(
 ; CHECK-SAME: i64 [[VAL:%.*]]) {
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i64 [[VAL]], 0
 ; CHECK-NEXT:    ret i1 [[TOBOOL]]
@@ -1305,29 +1305,27 @@ define zeroext i1 @cmpabs_ne2(i64 %val) {
   ret i1 %tobool
 }
 
-define zeroext i1 @cmpabs_eq1(i64 %val) {
-; CHECK-LABEL: define zeroext i1 @cmpabs_eq1(
-; CHECK-SAME: i64 [[VAL:%.*]]) {
+define zeroext i1 @cmp_posorneg_eq1(i64 %val, i1 %cond) {
+; CHECK-LABEL: define zeroext i1 @cmp_posorneg_eq1(
+; CHECK-SAME: i64 [[VAL:%.*]], i1 [[COND:%.*]]) {
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[VAL]], 0
 ; CHECK-NEXT:    ret i1 [[TOBOOL]]
 ;
   %sub = sub nsw i64 0, %val
-  %cmp = icmp slt i64 %val, 0
-  %sub.val = select i1 %cmp, i64 %sub, i64 %val
-  %tobool = icmp eq i64 %sub.val, 0
+  %val.or.sub = select i1 %cond, i64 %sub, i64 %val
+  %tobool = icmp eq i64 %val.or.sub, 0
   ret i1 %tobool
 }
 
-define zeroext i1 @cmpabs_eq2(i64 %val) {
-; CHECK-LABEL: define zeroext i1 @cmpabs_eq2(
-; CHECK-SAME: i64 [[VAL:%.*]]) {
+define zeroext i1 @cmp_posorneg_eq2(i64 %val, i1 %cond) {
+; CHECK-LABEL: define zeroext i1 @cmp_posorneg_eq2(
+; CHECK-SAME: i64 [[VAL:%.*]], i1 [[COND:%.*]]) {
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[VAL]], 0
 ; CHECK-NEXT:    ret i1 [[TOBOOL]]
 ;
   %sub = sub nsw i64 0, %val
-  %cmp = icmp slt i64 %val, 0
-  %sub.val = select i1 %cmp, i64 %val, i64 %sub
-  %tobool = icmp eq i64 %sub.val, 0
+  %val.or.sub = select i1 %cond, i64 %val, i64 %sub
+  %tobool = icmp eq i64 %val.or.sub, 0
   ret i1 %tobool
 }
 
