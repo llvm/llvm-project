@@ -8,7 +8,6 @@
 
 #include "llvm/ExecutionEngine/Orc/MachO.h"
 
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
@@ -96,50 +95,6 @@ checkMachORelocatableObject(std::unique_ptr<MemoryBuffer> Obj, const Triple &TT,
           checkMachORelocatableObject(Obj->getMemBufferRef(), TT, ObjIsSlice))
     return std::move(Err);
   return std::move(Obj);
-}
-
-Expected<std::pair<std::unique_ptr<MemoryBuffer>, LinkableFileKind>>
-loadMachORelocatableObject(StringRef Path, const Triple &TT, LoadArchives LA,
-                           std::optional<StringRef> IdentifierOverride) {
-  assert((TT.getObjectFormat() == Triple::UnknownObjectFormat ||
-          TT.getObjectFormat() == Triple::MachO) &&
-         "TT must specify MachO or Unknown object format");
-
-  if (!IdentifierOverride)
-    IdentifierOverride = Path;
-
-  Expected<sys::fs::file_t> FDOrErr =
-      sys::fs::openNativeFileForRead(Path, sys::fs::OF_None);
-  if (!FDOrErr)
-    return createFileError(Path, FDOrErr.takeError());
-  sys::fs::file_t FD = *FDOrErr;
-  llvm::scope_exit CloseFile([&]() { sys::fs::closeFile(FD); });
-
-  auto Buf =
-      MemoryBuffer::getOpenFile(FD, *IdentifierOverride, /*FileSize=*/-1);
-  if (!Buf)
-    return make_error<StringError>(
-        StringRef("Could not load MachO object at path ") + Path,
-        Buf.getError());
-
-  switch (identify_magic((*Buf)->getBuffer())) {
-  case file_magic::macho_object: {
-    auto CheckedObj = checkMachORelocatableObject(std::move(*Buf), TT, false);
-    if (!CheckedObj)
-      return CheckedObj.takeError();
-    return std::make_pair(std::move(*CheckedObj),
-                          LinkableFileKind::RelocatableObject);
-  }
-  case file_magic::macho_universal_binary:
-    return loadLinkableSliceFromMachOUniversalBinary(FD, std::move(*Buf), TT,
-                                                     LoadArchives::Never, Path,
-                                                     *IdentifierOverride);
-  default:
-    return make_error<StringError>(
-        Path + " does not contain a relocatable object file compatible with " +
-            TT.str(),
-        inconvertibleErrorCode());
-  }
 }
 
 Expected<std::pair<std::unique_ptr<MemoryBuffer>, LinkableFileKind>>
