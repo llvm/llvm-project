@@ -2321,6 +2321,194 @@ define <2 x i1> @icmp_sub57_sge_sub20_vec_nonsplat(<2 x i32> %x, <2 x i32> %y) {
   ret <2 x i1> %cmp
 }
 
+; Unsigned versions of the above: with nuw on both adds, the smaller
+; constant can be subtracted from both sides.
+
+define i1 @icmp_add20_uge_add57(i8 %x, i8 %y) {
+; CHECK-LABEL: define i1 @icmp_add20_uge_add57(
+; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw i8 [[Y]], 37
+; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i8 [[X]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %1 = add nuw i8 %x, 20
+  %2 = add nuw i8 %y, 57
+  %cmp = icmp uge i8 %1, %2
+  ret i1 %cmp
+}
+
+define i1 @icmp_add57_ult_add20(i8 %x, i8 %y) {
+; CHECK-LABEL: define i1 @icmp_add57_ult_add20(
+; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw i8 [[X]], 37
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[TMP1]], [[Y]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %1 = add nuw i8 %x, 57
+  %2 = add nuw i8 %y, 20
+  %cmp = icmp ult i8 %1, %2
+  ret i1 %cmp
+}
+
+define i1 @icmp_add20_ule_add20(i8 %x, i8 %y) {
+; CHECK-LABEL: define i1 @icmp_add20_ule_add20(
+; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i8 [[X]], [[Y]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %1 = add nuw i8 %x, 20
+  %2 = add nuw i8 %y, 20
+  %cmp = icmp ule i8 %1, %2
+  ret i1 %cmp
+}
+
+; The constants have different sign bits, which the signed fold rejects.
+define i1 @icmp_add200_ugt_add100(i8 %x, i8 %y) {
+; CHECK-LABEL: define i1 @icmp_add200_ugt_add100(
+; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw i8 [[X]], 100
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[TMP1]], [[Y]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %1 = add nuw i8 %x, 200
+  %2 = add nuw i8 %y, 100
+  %cmp = icmp ugt i8 %1, %2
+  ret i1 %cmp
+}
+
+define <2 x i1> @icmp_add20_uge_add57_splat(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: define <2 x i1> @icmp_add20_uge_add57_splat(
+; CHECK-SAME: <2 x i8> [[X:%.*]], <2 x i8> [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw <2 x i8> [[Y]], splat (i8 37)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp uge <2 x i8> [[X]], [[TMP1]]
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %1 = add nuw <2 x i8> %x, <i8 20, i8 20>
+  %2 = add nuw <2 x i8> %y, <i8 57, i8 57>
+  %cmp = icmp uge <2 x i8> %1, %2
+  ret <2 x i1> %cmp
+}
+
+define <2 x i1> @icmp_add20_uge_add57_poison(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: define <2 x i1> @icmp_add20_uge_add57_poison(
+; CHECK-SAME: <2 x i8> [[X:%.*]], <2 x i8> [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw <2 x i8> [[Y]], splat (i8 37)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp uge <2 x i8> [[X]], [[TMP1]]
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %1 = add nuw <2 x i8> %x, <i8 20, i8 20>
+  %2 = add nuw <2 x i8> %y, <i8 57, i8 poison>
+  %cmp = icmp uge <2 x i8> %1, %2
+  ret <2 x i1> %cmp
+}
+
+define <2 x i1> @icmp_add20_uge_add57_vec_nonsplat(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: define <2 x i1> @icmp_add20_uge_add57_vec_nonsplat(
+; CHECK-SAME: <2 x i8> [[X:%.*]], <2 x i8> [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw <2 x i8> [[X]], <i8 20, i8 19>
+; CHECK-NEXT:    [[TMP2:%.*]] = add nuw <2 x i8> [[Y]], <i8 57, i8 58>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp uge <2 x i8> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %1 = add nuw <2 x i8> %x, <i8 20, i8 19>
+  %2 = add nuw <2 x i8> %y, <i8 57, i8 58>
+  %cmp = icmp uge <2 x i8> %1, %2
+  ret <2 x i1> %cmp
+}
+
+define i1 @icmp_add20_uge_add57_extra_use(i8 %x, i8 %y) {
+; CHECK-LABEL: define i1 @icmp_add20_uge_add57_extra_use(
+; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw i8 [[X]], 20
+; CHECK-NEXT:    call void @use_i8(i8 [[TMP1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = add nuw i8 [[Y]], 37
+; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i8 [[X]], [[TMP2]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %1 = add nuw i8 %x, 20
+  call void @use_i8(i8 %1)
+  %2 = add nuw i8 %y, 57
+  %cmp = icmp uge i8 %1, %2
+  ret i1 %cmp
+}
+
+define i1 @icmp_add20_uge_add57_extra_uses(i8 %x, i8 %y) {
+; CHECK-LABEL: define i1 @icmp_add20_uge_add57_extra_uses(
+; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw i8 [[X]], 20
+; CHECK-NEXT:    call void @use_i8(i8 [[TMP1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = add nuw i8 [[Y]], 57
+; CHECK-NEXT:    call void @use_i8(i8 [[TMP2]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i8 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %1 = add nuw i8 %x, 20
+  call void @use_i8(i8 %1)
+  %2 = add nuw i8 %y, 57
+  call void @use_i8(i8 %2)
+  %cmp = icmp uge i8 %1, %2
+  ret i1 %cmp
+}
+
+define i1 @icmp_add20_uge_add57_no_nuw_lhs(i8 %x, i8 %y) {
+; CHECK-LABEL: define i1 @icmp_add20_uge_add57_no_nuw_lhs(
+; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[X]], 20
+; CHECK-NEXT:    [[TMP2:%.*]] = add nuw i8 [[Y]], 57
+; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i8 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %1 = add i8 %x, 20
+  %2 = add nuw i8 %y, 57
+  %cmp = icmp uge i8 %1, %2
+  ret i1 %cmp
+}
+
+define i1 @icmp_add20_uge_add57_no_nuw_rhs(i8 %x, i8 %y) {
+; CHECK-LABEL: define i1 @icmp_add20_uge_add57_no_nuw_rhs(
+; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw i8 [[X]], 20
+; CHECK-NEXT:    [[TMP2:%.*]] = add i8 [[Y]], 57
+; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i8 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %1 = add nuw i8 %x, 20
+  %2 = add i8 %y, 57
+  %cmp = icmp uge i8 %1, %2
+  ret i1 %cmp
+}
+
+define i1 @icmp_add20_uge_add57_nsw(i8 %x, i8 %y) {
+; CHECK-LABEL: define i1 @icmp_add20_uge_add57_nsw(
+; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i8 [[X]], 20
+; CHECK-NEXT:    [[TMP2:%.*]] = add nsw i8 [[Y]], 57
+; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i8 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %1 = add nsw i8 %x, 20
+  %2 = add nsw i8 %y, 57
+  %cmp = icmp uge i8 %1, %2
+  ret i1 %cmp
+}
+
+; After moving the constants, the common %base cancels out.
+define i1 @icmp_add_nuw_common_base_ule(i8 %base, i8 %off) {
+; CHECK-LABEL: define i1 @icmp_add_nuw_common_base_ule(
+; CHECK-SAME: i8 [[BASE:%.*]], i8 [[OFF:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = add nuw i8 [[BASE]], [[OFF]]
+; CHECK-NEXT:    call void @use_i8(i8 [[A]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[OFF]], 59
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %a = add nuw i8 %base, %off
+  call void @use_i8(i8 %a)
+  %b = add nuw i8 %a, 4
+  %c = add nuw i8 %base, 62
+  %cmp = icmp ule i8 %b, %c
+  ret i1 %cmp
+}
+
 define i1 @icmp_and_shl_neg_ne_0(i32 %A, i32 %B) {
 ; CHECK-LABEL: define i1 @icmp_and_shl_neg_ne_0(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
@@ -5805,9 +5993,7 @@ define i1 @disjoint_or_ugt_2(i8 %a, i8 %b) {
 define i1 @disjoint_or_ugt_3(i8 %a, i8 %b) {
 ; CHECK-LABEL: define i1 @disjoint_or_ugt_3(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]]) {
-; CHECK-NEXT:    [[A1:%.*]] = or disjoint i8 [[A]], 2
-; CHECK-NEXT:    [[B1:%.*]] = add nuw i8 [[B]], 1
-; CHECK-NEXT:    [[ICMP_:%.*]] = icmp ugt i8 [[A1]], [[B1]]
+; CHECK-NEXT:    [[ICMP_:%.*]] = icmp uge i8 [[A]], [[B]]
 ; CHECK-NEXT:    ret i1 [[ICMP_]]
 ;
   %a1 = or disjoint i8 %a, 2
