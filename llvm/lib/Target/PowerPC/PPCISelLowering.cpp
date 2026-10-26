@@ -3741,6 +3741,8 @@ SDValue PPCTargetLowering::LowerVAARG(SDValue Op, SelectionDAG &DAG) const {
 
   assert(!Subtarget.isPPC64() && "LowerVAARG is PPC32 only");
 
+  const bool IsDoubleWord = VT == MVT::i64 || VT.isFloatingPoint();
+
   // gpr_index
   SDValue GprIndex = DAG.getExtLoad(ISD::ZEXTLOAD, dl, MVT::i32, InChain,
                                     VAListPtr, MachinePointerInfo(SV), MVT::i8);
@@ -3813,12 +3815,21 @@ SDValue PPCTargetLowering::LowerVAARG(SDValue Op, SelectionDAG &DAG) const {
                               MachinePointerInfo(SV), MVT::i8);
 
   // determine if we should load from reg_save_area or overflow_area
-  SDValue Result = DAG.getNode(ISD::SELECT, dl, PtrVT, CC, OurReg, OverflowArea);
+  SDValue AlignedOverflowArea = OverflowArea;
+  if (IsDoubleWord)
+    AlignedOverflowArea =
+        DAG.getNode(ISD::AND, dl, PtrVT,
+                    DAG.getNode(ISD::ADD, dl, PtrVT, OverflowArea,
+                                DAG.getConstant(7, dl, MVT::i32)),
+                    DAG.getSignedConstant(-8, dl, MVT::i32));
+
+  SDValue Result =
+      DAG.getNode(ISD::SELECT, dl, PtrVT, CC, OurReg, AlignedOverflowArea);
 
   // increase overflow_area by 4/8 if gpr/fpr > 8
-  SDValue OverflowAreaPlusN = DAG.getNode(ISD::ADD, dl, PtrVT, OverflowArea,
-                                          DAG.getConstant(VT.isInteger() ? 4 : 8,
-                                          dl, MVT::i32));
+  SDValue OverflowAreaPlusN =
+      DAG.getNode(ISD::ADD, dl, PtrVT, AlignedOverflowArea,
+                  DAG.getConstant(IsDoubleWord ? 8 : 4, dl, MVT::i32));
 
   OverflowArea = DAG.getNode(ISD::SELECT, dl, MVT::i32, CC, OverflowArea,
                              OverflowAreaPlusN);
