@@ -3126,17 +3126,6 @@ add_header_library(
 )
 
 add_header_library(
-  check.exp_exceptions
-  HDRS
-    check/exp_exceptions.h
-  DEPENDS
-    libc.hdr.fenv_macros
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.common
-    libc.src.__support.macros.config
-)
-
-add_header_library(
   expf_double_eval
   HDRS
     expf_double_eval.h
