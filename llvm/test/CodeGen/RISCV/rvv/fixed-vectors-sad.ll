@@ -413,22 +413,28 @@ define <vscale x 4 x i32> @vmacc_of_sext_add(<vscale x 4 x i16> %x, <vscale x 4 
 define <vscale x 4 x i32> @vadd_vx_of_sext_add(<vscale x 4 x i16> %x, <vscale x 4 x i16> %y, i32 %z) {
 ; CHECK-LABEL: vadd_vx_of_sext_add:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vsra.vi v10, v8, 1
-; CHECK-NEXT:    vsra.vi v11, v9, 1
-; CHECK-NEXT:    vwadd.vv v8, v10, v11
-; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vadd.vx v8, v8, a0
+; CHECK-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vmv1r.v v10, v9
+; CHECK-NEXT:    vmv1r.v v11, v8
+; CHECK-NEXT:    vmv.v.x v8, a0
+; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
+; CHECK-NEXT:    vsra.vi v11, v11, 1
+; CHECK-NEXT:    vsra.vi v10, v10, 1
+; CHECK-NEXT:    vadd.vv v10, v11, v10
+; CHECK-NEXT:    vwadd.wv v8, v8, v10
 ; CHECK-NEXT:    ret
 ;
 ; ZVABD-LABEL: vadd_vx_of_sext_add:
 ; ZVABD:       # %bb.0:
-; ZVABD-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
-; ZVABD-NEXT:    vsra.vi v10, v8, 1
-; ZVABD-NEXT:    vsra.vi v11, v9, 1
-; ZVABD-NEXT:    vwadd.vv v8, v10, v11
-; ZVABD-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; ZVABD-NEXT:    vadd.vx v8, v8, a0
+; ZVABD-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
+; ZVABD-NEXT:    vmv1r.v v10, v9
+; ZVABD-NEXT:    vmv1r.v v11, v8
+; ZVABD-NEXT:    vmv.v.x v8, a0
+; ZVABD-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
+; ZVABD-NEXT:    vsra.vi v11, v11, 1
+; ZVABD-NEXT:    vsra.vi v10, v10, 1
+; ZVABD-NEXT:    vadd.vv v10, v11, v10
+; ZVABD-NEXT:    vwadd.wv v8, v8, v10
 ; ZVABD-NEXT:    ret
   %a = ashr <vscale x 4 x i16> %x, splat (i16 1)
   %b = ashr <vscale x 4 x i16> %y, splat (i16 1)
