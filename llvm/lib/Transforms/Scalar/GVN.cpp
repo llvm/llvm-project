@@ -71,6 +71,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/NVPTXAddrSpace.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar/GVNValueTable.h"
 #include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
@@ -1997,6 +1998,18 @@ void GVNPassImpl::eliminatePartiallyRedundantLoad(
   salvageAndRemoveInstruction(Load);
 }
 
+static bool avoidLoadForPRE(LoadInst *Load) {
+  const DataLayout &DL = Load->getDataLayout();
+  int64_t Offset = 0;
+  const Value *Base =
+      GetPointerBaseWithConstantOffset(Load->getPointerOperand(), Offset, DL);
+  const auto *Arg = dyn_cast<Argument>(Base);
+  bool HasConstParamOffset =
+      Arg && Arg->hasByValAttr() &&
+      (Load->getPointerAddressSpace() == NVPTXAS::ADDRESS_SPACE_ENTRY_PARAM);
+  return HasConstParamOffset;
+}
+
 bool GVNPassImpl::performLoadPRE(LoadInst *Load,
                                  AvailValInBlkVect &ValuesPerBlock,
                                  UnavailBlkVect &UnavailableBlocks) {
@@ -2151,6 +2164,11 @@ bool GVNPassImpl::performLoadPRE(LoadInst *Load,
                                         DT))
         return false;
   }
+
+  // Avoid introducing new control flow by splitting edges for eliminating
+  // redundancy for a cheap load
+  if (!CriticalEdgePredSplit.empty() && avoidLoadForPRE(Load))
+    return false;
 
   // Split critical edges, and update the unavailable predecessors accordingly.
   for (BasicBlock *OrigPred : CriticalEdgePredSplit) {
