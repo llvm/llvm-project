@@ -432,10 +432,9 @@ mulifx(IntType n, FXType m) {
   WideType unscaled_result = n * static_cast<WideType>(m_comp);
 
   if constexpr (FXRep::SIGN_LEN > 0) {
-    constexpr WideType MASK = (WideType(1) << F) - 1;
-    constexpr int SIGN_OFFSET = cpp::numeric_limits<WideType>::digits;
+    constexpr WideType BIAS = (WideType(1) << F) - 1;
     WideType result =
-        (unscaled_result + ((unscaled_result >> SIGN_OFFSET) & MASK)) >> F;
+        (unscaled_result + (unscaled_result < 0 ? BIAS : WideType(0))) >> F;
     return static_cast<IntType>(result);
   }
   WideType result = unscaled_result >> F;
