@@ -733,7 +733,7 @@ arguments.
 ```{eval-rst}
 .. productionlist::
    Body: ";" | "{" `BodyItem`* "}"
-   BodyItem: `Type` `TokIdentifier` ["=" `Value`] ";"
+   BodyItem: ["field"] `Type` `TokIdentifier` ["=" `Value`] ";"
            :| "let" [`LetMode`] `TokIdentifier` [`RangeList`] "=" `Value` ";"
            :| "defvar" `TokIdentifier` "=" `Value` ";"
            :| `Assert`

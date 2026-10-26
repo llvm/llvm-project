@@ -27,6 +27,7 @@
 #include "VPlanValue.h"
 #include "llvm/ADT/Bitfields.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
@@ -35,6 +36,7 @@
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/VectorUtils.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/FMF.h"
 #include "llvm/IR/Operator.h"
@@ -1272,6 +1274,37 @@ public:
 #endif
 };
 
+/// Manage IR per-argument and return attributes for call recipes. Only
+/// attributes that are valid to propagate to the widened call are stored.
+class VPIRAttributes {
+  AttributeList CallAttrs;
+
+public:
+  VPIRAttributes() = default;
+
+  /// Stores the return and per-arg attributes of \p CI that are valid for a
+  /// widened call with type \p WideTy. If \p IsMaskedCall is true, the scalar
+  /// call only executes for some lanes, so argument attributes are only kept
+  /// for widened arguments passed to a masked variant.
+  VPIRAttributes(const CallInst &CI, FunctionType *WideTy, bool IsMaskedCall);
+
+  /// Keep only the attributes valid for both this and \p Other.
+  void intersectAttrs(const VPIRAttributes &Other, LLVMContext &Ctx);
+
+  /// Apply the stored attributes to the widened call \p WideCall.
+  void applyAttrs(CallInst &WideCall) const {
+    WideCall.setAttributes(CallAttrs);
+  }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print return-value attributes carried with this object.
+  void printRetAttrs(raw_ostream &O) const;
+
+  /// Print per-arg attributes for argument \p ArgIdx.
+  void printParamAttrs(raw_ostream &O, unsigned ArgIdx) const;
+#endif
+};
+
 /// This is a concrete Recipe that models a single VPlan-level instruction.
 /// While as any Recipe it may generate a sequence of IR instructions when
 /// executed, these instructions would always form a single-def expression as
@@ -1386,7 +1419,8 @@ public:
     /// operands (all operands after the first one).
     ExtractLane,
     /// Explicit user for values in the main VPlan, used by the epilogue vector
-    /// loop.
+    /// loop. Operands are the resume value from the main vector loop and bypass
+    /// value.
     ResumeForEpilogue,
     /// Extracts the last active lane from a set of vectors. The first operand
     /// is the default value if no lanes in the masks are active. Conceptually,
@@ -2102,7 +2136,8 @@ public:
 
 /// A recipe for widening Call instructions using library calls.
 class LLVM_ABI_FOR_TEST VPWidenCallRecipe : public VPRecipeWithIRFlags,
-                                            public VPIRMetadata {
+                                            public VPIRMetadata,
+                                            public VPIRAttributes {
   /// Variant stores a pointer to the chosen function. There is a 1:1 mapping
   /// between a given VF and the chosen vectorized variant, so there will be a
   /// different VPlan for each VF with a valid variant.
@@ -2112,11 +2147,12 @@ public:
   VPWidenCallRecipe(Value *UV, Function *Variant,
                     ArrayRef<VPValue *> CallArguments,
                     const VPIRFlags &Flags = {},
-                    const VPIRMetadata &Metadata = {}, DebugLoc DL = {})
+                    const VPIRMetadata &Metadata = {},
+                    const VPIRAttributes &Attrs = {}, DebugLoc DL = {})
       : VPRecipeWithIRFlags(VPRecipeBase::VPWidenCallSC, CallArguments,
                             toScalarizedTy(Variant->getReturnType()), Flags,
                             DL),
-        VPIRMetadata(Metadata), Variant(Variant) {
+        VPIRMetadata(Metadata), VPIRAttributes(Attrs), Variant(Variant) {
     setUnderlyingValue(UV);
     assert(isa<Function>(getLastOperand()->getLiveInIRValue()) &&
            "last operand must be the called function");
@@ -2129,7 +2165,7 @@ public:
 
   VPWidenCallRecipe *clone() override {
     return new VPWidenCallRecipe(getUnderlyingValue(), Variant, operands(),
-                                 *this, *this, getDebugLoc());
+                                 *this, *this, *this, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPWidenCallSC)
@@ -4106,7 +4142,7 @@ protected:
 /// index. It starts at the start value of the canonical induction and gets
 /// incremented by the number of scalar iterations processed by the vector loop
 /// iteration. The increment does not have to be loop invariant.
-class VPCurrentIterationPHIRecipe : public VPHeaderPHIRecipe {
+class LLVM_ABI_FOR_TEST VPCurrentIterationPHIRecipe : public VPHeaderPHIRecipe {
 public:
   VPCurrentIterationPHIRecipe(VPValue *StartIV, DebugLoc DL)
       : VPHeaderPHIRecipe(VPRecipeBase::VPCurrentIterationPHISC, nullptr,
@@ -4142,8 +4178,8 @@ public:
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
-  LLVM_ABI_FOR_TEST void printRecipe(raw_ostream &O, const Twine &Indent,
-                                     VPSlotTracker &SlotTracker) const override;
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override;
 #endif
 };
 
@@ -4843,10 +4879,10 @@ class VPlan {
   friend class VPSlotTracker;
 
   /// VPBasicBlock corresponding to the original preheader. Used to place
-  /// VPExpandSCEV recipes for expressions used during skeleton creation and the
-  /// rest of VPlan execution.
-  /// When this VPlan is used for the epilogue vector loop, the entry will be
-  /// replaced by a new entry block created during skeleton creation.
+  /// VPExpandSCEV recipes for expressions used during VPlan execution.
+  /// When this VPlan is used for the epilogue vector loop, the entry models the
+  /// main plan's entry and its edges move to the epilogue iteration check (see
+  /// VPlanTransforms::modelGeneratedMainLoopBlocks).
   VPBasicBlock *Entry;
 
   /// VPIRBasicBlock wrapping the header of the original scalar loop.

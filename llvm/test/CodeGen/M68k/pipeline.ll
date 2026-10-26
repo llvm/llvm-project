@@ -41,6 +41,7 @@
 ; CHECK-NEXT:      Branch Probability Analysis
 ; CHECK-NEXT:      Block Frequency Analysis
 ; CHECK-NEXT:      CodeGen Prepare
+; CHECK-NEXT:      SJLJ Exception Handling preparation
 ; CHECK-NEXT:      Dominator Tree Construction
 ; CHECK-NEXT:      Exception handling preparation
 ; CHECK-NEXT:      Prepare inline asm insts
@@ -83,11 +84,10 @@
 ; CHECK-NEXT:      Init Undef Pass
 ; CHECK-NEXT:      Process Implicit Definitions
 ; CHECK-NEXT:      Remove unreachable machine basic blocks
-; CHECK-NEXT:      Live Variable Analysis
-; CHECK-NEXT:      Eliminate PHI nodes for register allocation
 ; CHECK-NEXT:      MachineDominator Tree Construction
 ; CHECK-NEXT:      Slot index numbering
 ; CHECK-NEXT:      Live Interval Analysis
+; CHECK-NEXT:      Eliminate PHI nodes for register allocation
 ; CHECK-NEXT:      Two-Address instruction pass
 ; CHECK-NEXT:      Register Coalescer
 ; CHECK-NEXT:      Rename Disconnected Subregister Components

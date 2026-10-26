@@ -585,8 +585,6 @@ defm : BoolField<"enable-poison-reuse-guard", "true",
   "Enable poison-reuse guard">;
 
 // StructurizeCFG.cpp
-defm : BoolField<"structurizecfg-relaxed-uniform-regions", "true",
-  "Allow relaxed uniform region checks">;
 defm : OptionalBoolField<"structurizecfg-skip-uniform-regions",
   "Force whether the StructurizeCFG pass skips uniform regions">;
 
