@@ -248,7 +248,11 @@ void Target::PrimeFromDummyTarget(Target &target) {
   for (auto const &elem : target.m_breakpoint_overrides) {
     BreakpointResolverOverrideUP new_override_up =
         elem.second->CopyIntoNewTarget(*this);
-    if (new_override_up->Validate())
+    if (llvm::Error error = new_override_up->Validate())
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Breakpoints), std::move(error),
+                     "Can't copy breakpoint override from the dummy target: "
+                     "{0}");
+    else
       AddBreakpointResolverOverride(std::move(new_override_up));
   }
 

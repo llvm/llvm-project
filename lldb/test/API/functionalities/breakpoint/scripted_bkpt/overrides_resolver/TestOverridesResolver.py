@@ -28,6 +28,33 @@ class TestOverridesResolver(TestBase):
         self.build()
         self.do_test_bad_values()
 
+    def test_overrides_copied_from_dummy_target(self):
+        """An override on the dummy target applies to targets created later."""
+        self.build()
+        self.import_resolver_script()
+        extra_args = lldb.SBStructuredData()
+        extra_args.SetFromJSON('{"symbol": "stop_here_instead"}')
+        error = lldb.SBError()
+        self.dbg.GetDummyTarget().AddBreakpointOverride(
+            "bkpt_resolver.OverrideExample",
+            "dummy target override",
+            lldb.eResolverFileAndLine,
+            extra_args,
+            error,
+        )
+        self.assertSuccess(error)
+
+        target = self.createTestTarget()
+        self.expect("breakpoint override list", substrs=["dummy target override"])
+        bkpt = target.BreakpointCreateByLocation(
+            "main.c", line_number("main.c", "I am in the stop symbol")
+        )
+        self.assertEqual(bkpt.GetNumLocations(), 1)
+        self.assertEqual(
+            bkpt.GetLocationAtIndex(0).GetAddress().GetFunction().GetName(),
+            "stop_here_instead",
+        )
+
     def make_target_and_import(self):
         self.target = lldbutil.run_to_breakpoint_make_target(self)
         self.import_resolver_script()
