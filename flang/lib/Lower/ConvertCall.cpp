@@ -363,6 +363,31 @@ static bool mustDestroyOrFinalizeFunctionResult(
          hlfir::mayHaveAllocatableComponent(callSiteType.getResult(0));
 }
 
+/// Return the CUDA data attribute of each descriptor in \p args as call
+/// argument attributes, or null if none has one. Codegen reads them to place
+/// descriptors passed to BIND(C) device dummies in device-accessible memory,
+/// since foreign code may launch a kernel on them.
+static mlir::ArrayAttr
+genCUDADataArgAttrs(fir::FirOpBuilder &builder,
+                    const Fortran::lower::CallerInterface &caller,
+                    mlir::ValueRange args) {
+  llvm::SmallVector<mlir::Attribute> argAttrs(args.size(),
+                                              builder.getDictionaryAttr({}));
+  bool hasDataAttr = false;
+  for (unsigned i = 0, e = std::min<std::size_t>(args.size(),
+                                                 caller.getNumFIRArguments());
+       i < e; ++i) {
+    if (!mlir::isa<fir::BaseBoxType>(args[i].getType()))
+      continue;
+    for (const mlir::NamedAttribute &attr : caller.getFIRArgumentAttributes(i))
+      if (attr.getName() == cuf::getDataAttrName()) {
+        argAttrs[i] = builder.getDictionaryAttr(attr);
+        hasDataAttr = true;
+      }
+  }
+  return hasDataAttr ? builder.getArrayAttr(argAttrs) : mlir::ArrayAttr{};
+}
+
 std::tuple<Fortran::lower::LoweredResult, bool, mlir::Operation *>
 Fortran::lower::genCallOpAndResult(
     mlir::Location loc, Fortran::lower::AbstractConverter &converter,
@@ -802,9 +827,16 @@ Fortran::lower::genCallOpAndResult(
     else if (caller.getCallDescription().hasAlwaysInline())
       inlineAttr = fir::FortranInlineEnumAttr::get(
           builder.getContext(), fir::FortranInlineEnum::always_inline);
+    mlir::ArrayAttr argAttrs;
+    if (procAttrs &&
+        fir::bitEnumContainsAny(procAttrs.getValue(),
+                                fir::FortranProcedureFlagsEnum::bind_c))
+      argAttrs = genCUDADataArgAttrs(
+          builder, caller,
+          mlir::ValueRange(operands).drop_front(funcPointer ? 1 : 0));
     auto call = fir::CallOp::create(
-        builder, loc, funcType.getResults(), funcSymbolAttr, operands,
-        /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr, procAttrs, inlineAttr,
+        builder, loc, funcType.getResults(), funcSymbolAttr, operands, argAttrs,
+        /*res_attrs=*/nullptr, procAttrs, inlineAttr,
         /*accessGroups=*/mlir::ArrayAttr{});
     callOp = call;
 
@@ -812,6 +844,16 @@ Fortran::lower::genCallOpAndResult(
     if (callNumResults != 0)
       callResult = call.getResult(0);
   }
+
+  // A POINTER or ALLOCATABLE dummy that is not INTENT(IN) may associate,
+  // allocate, or deallocate the actual argument. When the actual argument
+  // names a CUDA global whose descriptor has a device copy, that copy must be
+  // synchronized with the host descriptor the callee may have updated.
+  if (!mlir::isa<cuf::KernelLaunchOp>(callOp) &&
+      !cuf::isCUDADeviceContext(builder.getRegion()))
+    for (const auto &arg : caller.getPassedArguments())
+      if (arg.passBy == PassBy::MutableBox && arg.mayBeModifiedByCall())
+        cuf::genPointerSync(loc, caller.getInput(arg), builder);
 
   std::optional<Fortran::evaluate::DynamicType> retTy =
       caller.getCallDescription().proc().GetType();
