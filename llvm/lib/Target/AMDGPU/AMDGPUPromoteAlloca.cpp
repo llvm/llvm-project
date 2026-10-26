@@ -1268,6 +1268,16 @@ void AMDGPUPromoteAllocaImpl::splitLaneOnlyVectors(Function &F) {
       auto *CI = dyn_cast<ConstantInt>(Idx);
       return CI && CI->getValue().ult(NumElts);
     };
+    // Constant expressions have no elements to split into.
+    auto HasLanes = [NumElts](Value *V) {
+      auto *C = dyn_cast<Constant>(V);
+      if (!C)
+        return false;
+      for (unsigned K = 0; K != NumElts; ++K)
+        if (!C->getAggregateElement(K))
+          return false;
+      return true;
+    };
 
     SetVector<Instruction *> Web;
     SmallSetVector<FreezeInst *, 2> Frozen;
@@ -1276,10 +1286,12 @@ void AMDGPUPromoteAllocaImpl::splitLaneOnlyVectors(Function &F) {
     bool Splittable = true;
     while (Splittable && !Worklist.empty()) {
       Value *V = Worklist.pop_back_val();
-      if (isa<Constant>(V))
+      if (isa<Constant>(V)) {
+        Splittable = HasLanes(V);
         continue;
+      }
       if (auto *FI = dyn_cast<FreezeInst>(V);
-          FI && FI->getType() == VecTy && isa<Constant>(FI->getOperand(0))) {
+          FI && FI->getType() == VecTy && HasLanes(FI->getOperand(0))) {
         Frozen.insert(FI);
         continue;
       }
@@ -1376,17 +1388,17 @@ void AMDGPUPromoteAllocaImpl::splitLaneOnlyVectors(Function &F) {
       }
     }
 
-    // A lane can be another extract from the web, so replace all extracts
-    // before erasing any of them.
-    SmallVector<Value *> Replacements;
+    // A lane can be another extract from the web, which may get replaced
+    // first.
+    SmallVector<WeakTrackingVH> Replacements;
     for (ExtractElementInst *EE : Extracts) {
       unsigned K = cast<ConstantInt>(EE->getIndexOperand())->getZExtValue();
-      Replacements.push_back(GetLanes(EE->getVectorOperand())[K]);
+      Replacements.emplace_back(GetLanes(EE->getVectorOperand())[K]);
     }
-    for (auto [EE, Repl] : zip_equal(Extracts, Replacements))
+    for (auto [EE, Repl] : zip_equal(Extracts, Replacements)) {
       EE->replaceAllUsesWith(Repl);
-    for (ExtractElementInst *EE : Extracts)
       EE->eraseFromParent();
+    }
     for (Instruction *I : Web)
       I->dropAllReferences();
     for (Instruction *I : Web)
