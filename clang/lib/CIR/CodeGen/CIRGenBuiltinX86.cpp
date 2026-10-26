@@ -1258,6 +1258,7 @@ mlir::Value CIRGenFunction::emitX86MSVCIntrin(MSVCIntrin builtinID,
     cgm.errorNYI(E->getExprLoc(), "MSVC intrinsic");
     return {};
   }
+  llvm_unreachable("Incorrect MSVC intrinsic!");
 }
 
 std::optional<mlir::Value>
