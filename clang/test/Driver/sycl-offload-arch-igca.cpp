@@ -13,7 +13,7 @@
 // CHK-INVALID-NOT: llvm-offload-binary
 
 /// IGCA targets should not accept feature suffixes, so a valid target followed
-/// by a feature suffix should be rejected: 
+/// by a feature suffix should be rejected:
 // RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
 // RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=igca_20ca:foo \
 // RUN:   -c %s 2>&1 | FileCheck -check-prefix=CHK-FEATURE %s
@@ -31,11 +31,15 @@
 // RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
 // RUN:   --offload-targets=amdgcn-amd-amdhsa --offload-arch=igca_20ca \
 // RUN:   -c %s 2>&1 | FileCheck -check-prefix=CHK-AMDGPU %s
-// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
-// RUN:   --offload-targets=spirv64-amd-amdhsa --offload-arch=igca_20ca \
-// RUN:   -c %s 2>&1 | FileCheck -check-prefix=CHK-AMDGPU %s
-// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
-// RUN:   --offload-targets=spirv64-unknown-amdhsa --offload-arch=igca_20ca \
-// RUN:   -c %s 2>&1 | FileCheck -check-prefix=CHK-AMDGPU %s
 // CHK-AMDGPU: error: unsupported HIP gpu architecture: igca_20ca
 // CHK-AMDGPU-NOT: llvm-offload-binary
+
+/// IGCA targets are rejected on AMD SPIR-V triples:
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-targets=spirv64-amd-amdhsa --offload-arch=igca_20ca \
+// RUN:   -c %s 2>&1 | FileCheck -check-prefix=CHK-AMD-SPIRV -DTRIPLE=spirv64-amd-amdhsa %s
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-targets=spirv64-unknown-amdhsa --offload-arch=igca_20ca \
+// RUN:   -c %s 2>&1 | FileCheck -check-prefix=CHK-AMD-SPIRV -DTRIPLE=spirv64-unknown-amdhsa %s
+// CHK-AMD-SPIRV: error: the target architecture 'igca_20ca' is not supported by the target '[[TRIPLE]]'
+// CHK-AMD-SPIRV-NOT: llvm-offload-binary

@@ -3951,8 +3951,8 @@ static StringRef getCanonicalArchString(Compilation &C,
     }
   } else if (Triple.isSPIRV() && ArchStr.starts_with("igca")) {
     if (Triple.getOS() == llvm::Triple::AMDHSA) {
-      C.getDriver().Diag(clang::diag::err_drv_offload_bad_gpu_arch)
-          << "HIP" << ArchStr;
+      C.getDriver().Diag(clang::diag::err_target_unsupported_arch)
+          << ArchStr << Triple.str();
       return StringRef();
     }
     // FIXME(IGCA): This only checks ArchStr's starting with "igca". Typos such

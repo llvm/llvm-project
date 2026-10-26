@@ -58,8 +58,9 @@ enum class IGCAFeatureSet : uint8_t {
 ///          16 bits              13 bits              3 bits
 ///
 /// Note that bit 0 is a flag that represents if the feature set is "exact".
-/// Only targets listed in INTEL_IGCA_TARGET are valid; any other value is
-/// stored as invalid(), whose packed representation is 0.
+/// Only targets in INTEL_IGCA_TARGET, which IntelGPUTargetParser.def derives
+/// from the device rows, are valid; any other value is stored as invalid(),
+/// whose packed representation is 0.
 class IGCATarget {
   uint32_t V = 0;
 
@@ -157,7 +158,7 @@ LLVM_ABI std::string getNumericArchName(uint32_t GPUIPVersion);
 /// IntelGPUTargetParser.def.
 LLVM_ABI IGCATarget parseIGCATarget(StringRef MaybeTarget);
 
-/// \return the \p Target as a string, i.e. "igca_20ca", or an empty string if
+/// \return the \p Target as a string, e.g. "igca_20ca", or an empty string if
 /// \p Target is invalid or not a known target in IntelGPUTargetParser.def.
 LLVM_ABI StringRef getIGCATargetName(IGCATarget Target);
 
