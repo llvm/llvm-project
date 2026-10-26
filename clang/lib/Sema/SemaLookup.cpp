@@ -2906,6 +2906,10 @@ namespace {
       return ClassesTransitive.insert(RD);
     }
 
+    bool visitTemplateArguments(CXXRecordDecl *RD) {
+      return ClassesWithVisitedTemplateArguments.insert(RD);
+    }
+
     Sema &S;
     Sema::AssociatedNamespaceSet &Namespaces;
     Sema::AssociatedClassSet &Classes;
@@ -2913,6 +2917,7 @@ namespace {
 
   private:
     Sema::AssociatedClassSet ClassesTransitive;
+    Sema::AssociatedClassSet ClassesWithVisitedTemplateArguments;
   };
 } // end anonymous namespace
 
@@ -3089,9 +3094,11 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result,
     // Add the associated namespace for this class.
     CollectEnclosingNamespace(Result.Namespaces, Ctx);
 
-    const TemplateArgumentList &TemplateArgs = Spec->getTemplateArgs();
-    for (unsigned I = 0, N = TemplateArgs.size(); I != N; ++I)
-      addAssociatedClassesAndNamespaces(Result, TemplateArgs[I]);
+    if (Result.visitTemplateArguments(Class)) {
+      const TemplateArgumentList &TemplateArgs = Spec->getTemplateArgs();
+      for (unsigned I = 0, N = TemplateArgs.size(); I != N; ++I)
+        addAssociatedClassesAndNamespaces(Result, TemplateArgs[I]);
+    }
   }
 
   // Add the class itself. If we've already transitively visited this class,
