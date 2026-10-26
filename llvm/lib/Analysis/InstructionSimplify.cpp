@@ -7241,8 +7241,8 @@ static Value *simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
 
     // copysign -X, X --> X
     // copysign X, -X --> -X
-    if (match(Op0, m_FNeg(m_Specific(Op1))) ||
-        match(Op1, m_FNeg(m_Specific(Op0))))
+    if (match(Op0, m_FNegOrFSubNegZero(m_Specific(Op1))) ||
+        match(Op1, m_FNegOrFSubNegZero(m_Specific(Op0))))
       return Op1;
     break;
   }
