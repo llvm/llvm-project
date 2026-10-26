@@ -6092,12 +6092,6 @@ void VPlanTransforms::makeScalarizationDecisions(VPlan &Plan, VFRange &Range) {
       if (VPI.isMasked() && !VPI.isSafeToSpeculativelyExecute())
         continue;
 
-      // Avoid rewriting IV increment as that interferes with
-      // `removeRedundantCanonicalIVs`.
-      if (VPI.getOpcode() == Instruction::Add &&
-          any_of(VPI.operands(), IsaPred<VPWidenIntOrFpInductionRecipe>))
-        continue;
-
       // Other lanes are needed - can't drop them.
       if (!vputils::onlyFirstLaneUsed(&VPI))
         continue;
