@@ -30,6 +30,6 @@ entry:
 !15 = !DILocation(line: 0, scope: !9)
 !17 = !DILocalVariable(name: "masked", scope: !9, file: !1, line: 4, type: !12)
 
-; CHECK: [[META1]] = !DILocalVariable(name: "masked", scope: [[META3:![0-9]+]] 
+; CHECK: [[META3:![0-9]+]] = distinct !DISubprogram(name: "and_elide"
+; CHECK: [[META1]] = !DILocalVariable(name: "masked", scope: [[META3]] 
 ; CHECK: [[META2]] = !DILocation(line: 0, scope: [[META3]])
-; CHECK: [[META3]] = distinct !DISubprogram(name: "and_elide"
