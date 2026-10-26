@@ -54,12 +54,14 @@ exit:
   ret void, !dbg !17
 }
 
+; Every location is available, so the record is copied whole.
 ; CHECK-LABEL: define internal void @all_inputs.cold.1(i32 %x, i32 %y)
-; CHECK-NOT: DW_OP_LLVM_arg
+; CHECK: #dbg_value(!DIArgList(i32 %x, i32 %y), ![[#]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value)
 ; CHECK: ret void
 
+; %y is not passed in, so the record cannot be described and is dropped.
 ; CHECK-LABEL: define internal void @some_inputs.cold.1(i32 %x)
-; CHECK-NOT: DW_OP_LLVM_arg
+; CHECK-NOT: #dbg_value
 ; CHECK: ret void
 
 ; CHECK-LABEL: define internal void @single_location.cold.1(i32 %x)
