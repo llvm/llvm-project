@@ -1741,7 +1741,7 @@ llvm::Error ScriptInterpreterPythonImpl::SetBreakpointCommandCallbackFunction(
       GetMaxPositionalArgumentsForCallable(function_name);
   if (!maybe_args)
     return llvm::createStringErrorV("could not get num args: {0}",
-                                    llvm::toString(maybe_args.takeError()));
+                                    llvm::fmt_consume(maybe_args.takeError()));
   size_t max_args = *maybe_args;
 
   bool uses_extra_args = false;
