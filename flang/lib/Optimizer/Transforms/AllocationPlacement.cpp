@@ -207,6 +207,7 @@ void AllocationPlacementPass::runOnOperation() {
         alloca ? alloca.isDynamic()
                : (allocmem.hasLenParams() || allocmem.hasShapeOperands());
     info.byteSize = getConstantByteSize(op, dl, kindMap);
+    info.alignment = alloca ? alloca.getAlignment() : allocmem.getAlignment();
 
     // A hook, if provided, fully overrides the default policy; it may delegate
     // back to decideAllocationPlacement after adjusting the policy.
@@ -215,15 +216,11 @@ void AllocationPlacementPass::runOnOperation() {
             ? placementHook(info, basePolicy, stackBytesUsed)
             : fir::decideAllocationPlacement(info, basePolicy, stackBytesUsed);
 
-    // Account for the decision in the running stack budget, including the
-    // worst-case padding a requested alignment may need.
-    if (endsUpOnStack(placement, info.isCurrentlyOnStack) && info.byteSize) {
-      stackBytesUsed += static_cast<std::size_t>(*info.byteSize);
-      std::optional<std::int64_t> alignment =
-          alloca ? alloca.getAlignment() : allocmem.getAlignment();
-      if (alignment && *alignment > 1)
-        stackBytesUsed += static_cast<std::size_t>(*alignment - 1);
-    }
+    // Account for the decision in the running stack budget, with the same
+    // figure the decision used (size plus worst-case alignment padding).
+    if (endsUpOnStack(placement, info.isCurrentlyOnStack))
+      if (std::optional<std::size_t> bytes = fir::stackBytesNeeded(info))
+        stackBytesUsed += *bytes;
 
     LLVM_DEBUG({
       llvm::dbgs() << "allocation-placement: "

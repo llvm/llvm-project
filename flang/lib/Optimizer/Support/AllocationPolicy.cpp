@@ -64,6 +64,16 @@ bool fir::shouldUseStackForCopyin(mlir::Location loc, mlir::Type sequenceType,
   return shouldAllocateOnStack(info, copyInPolicy, /*stackBytesUsed=*/0);
 }
 
+std::optional<std::size_t>
+fir::stackBytesNeeded(const PendingAllocationInfo &info) {
+  if (!info.byteSize)
+    return std::nullopt;
+  auto bytes = static_cast<std::size_t>(*info.byteSize);
+  if (info.alignment && *info.alignment > 1)
+    bytes += static_cast<std::size_t>(*info.alignment - 1);
+  return bytes;
+}
+
 /// The policy in effect for \p info. Inside an offload region -fstack-arrays is
 /// not honored, since the device stack is far smaller than the host one.
 static fir::AllocationPolicy policyFor(const fir::PendingAllocationInfo &info,
@@ -100,9 +110,12 @@ static bool shouldAllocateOnStackImpl(const fir::PendingAllocationInfo &info,
 
   auto size = static_cast<std::size_t>(*info.byteSize);
   // Small array temporaries go on the stack while the per-function budget
-  // allows it; bigger ones go on the heap.
+  // allows it; bigger ones go on the heap. The size threshold looks at the
+  // object itself; the budget also charges the worst-case padding a requested
+  // alignment may need.
   return size <= policy.smallArrayThresholdBytes &&
-         stackBytesUsed + size <= policy.totalStackLimitBytes;
+         stackBytesUsed + *stackBytesNeeded(info) <=
+             policy.totalStackLimitBytes;
 }
 
 bool fir::shouldAllocateOnStack(const PendingAllocationInfo &info,
