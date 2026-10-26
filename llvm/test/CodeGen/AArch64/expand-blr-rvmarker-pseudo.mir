@@ -53,7 +53,7 @@
 #
 name: test_1_callsite_info
 callSites:
-  - {bb: 0, offset: 0, fwdArgRegs:
+  - {bb: '%bb.0', offset: 0, fwdArgRegs:
     - { arg: 0, reg: '$x0' } }
 body:             |
     bb.0:
@@ -179,7 +179,7 @@ body:             |
 #
 name: test_no_nop
 callSites:
-  - {bb: 0, offset: 0, fwdArgRegs:
+  - {bb: '%bb.0', offset: 0, fwdArgRegs:
     - { arg: 0, reg: '$x0' } }
 body:             |
     bb.0:

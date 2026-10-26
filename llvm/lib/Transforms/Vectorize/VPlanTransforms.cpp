@@ -49,24 +49,21 @@ using namespace VPlanPatternMatch;
 using namespace SCEVPatternMatch;
 
 void VPlanTransforms::verifyIfRequested(VPlan &Plan) {
-  const VectorizeOptions &Opts =
-      Plan.getContext().getLibraryOptions().get<VectorizeOptions>();
+  const VectorizeOptions &Opts = getVectorizeOptions(Plan.getContext());
   if (Opts.vplan_verify_each && !verifyVPlanIsValid(Plan))
     report_fatal_error("Broken VPlan found, compilation aborted!");
 }
 
 #ifndef NDEBUG
 bool VPlanTransforms::isPrintingRequested(const VPlan &Plan) {
-  const VectorizeOptions &Opts =
-      Plan.getContext().getLibraryOptions().get<VectorizeOptions>();
+  const VectorizeOptions &Opts = getVectorizeOptions(Plan.getContext());
   return Opts.vplan_print_before_all || Opts.vplan_print_after_all ||
          !Opts.vplan_print_before.empty() || !Opts.vplan_print_after.empty();
 }
 
 void VPlanTransforms::printIfRequested(VPlan &Plan, Function *Fn,
                                        StringRef NumberedPassName, bool After) {
-  const VectorizeOptions &Opts =
-      Plan.getContext().getLibraryOptions().get<VectorizeOptions>();
+  const VectorizeOptions &Opts = getVectorizeOptions(Plan.getContext());
   bool All = After ? Opts.vplan_print_after_all : Opts.vplan_print_before_all;
   ArrayRef<StringRef> Passes =
       After ? Opts.vplan_print_after : Opts.vplan_print_before;
@@ -176,6 +173,8 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
                                               /*Mask=*/nullptr, *VPI, *VPI,
                                               Ingredient.getDebugLoc());
           } else {
+            assert(!CI->hasOperandBundles() &&
+                   "calls with operand bundles must not be widened");
             NewRecipe = new VPWidenIntrinsicRecipe(
                 *CI, VectorID, drop_end(Ingredient.operands()), CI->getType(),
                 VPIRFlags(*CI), *VPI, CI->getDebugLoc());
@@ -189,7 +188,7 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
                                         *VPI, Ingredient.getDebugLoc());
         }
       } else {
-        assert(isa<VPWidenIntOrFpInductionRecipe>(&Ingredient) &&
+        assert(isa<VPWidenInductionRecipe>(&Ingredient) &&
                "inductions must be created earlier");
         continue;
       }
@@ -2454,6 +2453,9 @@ void VPlanTransforms::cse(VPlan &Plan, const VPDominatorTree &VPDT) {
       // Only keep flags present on both V and Def.
       if (auto *RFlags = dyn_cast<VPRecipeWithIRFlags>(V))
         RFlags->intersectFlags(*cast<VPRecipeWithIRFlags>(Def));
+      // Only keep call attributes valid for both V and Def.
+      if (auto *Call = dyn_cast<VPWidenCallRecipe>(V))
+        Call->intersectAttrs(*cast<VPWidenCallRecipe>(Def), Plan.getContext());
       Def->replaceAllUsesWith(V);
     }
     LoadCSEMap.clear();
@@ -3562,6 +3564,25 @@ bool VPlanTransforms::handleUncountableEarlyExits(
   SmallVector<EarlyExitInfo> Exits;
   for (auto [EarlyExitingVPBB, ExitBlock] :
        vputils::getEarlyExits(Plan, MiddleVPBB)) {
+    // The final value of a reduction is computed in the middle block, which is
+    // only reached when leaving the vector loop via the latch.
+    // TODO: Support reductions used on early exits.
+    for (VPRecipeBase &R : ExitBlock->phis()) {
+      VPValue *ExitV =
+          cast<VPIRPhi>(&R)->getIncomingValueForBlock(EarlyExitingVPBB);
+      for (VPReductionPHIRecipe &PhiR :
+           make_isa_range<VPReductionPHIRecipe>(HeaderVPBB->phis())) {
+        if (ExitV != PhiR.getBackedgeValue())
+          continue;
+        reportVectorizationFailure(
+            "Found reduction used on an early exit",
+            "Cannot vectorize early exit loop with reduction used on an "
+            "early exit",
+            "ReductionUsedOnEarlyExit", ORE, TheLoop);
+        return false;
+      }
+    }
+
     // Collect condition for this early exit.
     VPBlockBase *TrueSucc = EarlyExitingVPBB->getSuccessors()[0];
     VPValue *CondOfEarlyExitingVPBB;
@@ -4007,13 +4028,14 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
     // -> reduce.add(mul(wider_ext(A), wider_ext(B)))
     // The inner extends must either have the same opcode as the outer extend or
     // be the same sext, in which case the multiply cannot result in a negative
-    // value and the outer extend can be folded away by doing wider
-    // extends for the operands of the mul.
+    // value without wrapping. If the narrow mul cannot wrap, the outer extend
+    // can be folded away by doing wider extends for the operands of the mul.
     if (Ext0 && Ext1 &&
         (Ext->getOpcode() == Ext0->getOpcode() ||
          (Ext0 == Ext1 && Ext0->getOpcode() == Instruction::SExt)) &&
-        Ext0->getOpcode() == Ext1->getOpcode() &&
-        IsMulAccValidAndClampRange(Mul, Ext0, Ext1, Ext) && Mul->hasOneUse()) {
+        Ext0->getOpcode() == Ext1->getOpcode() && Mul->hasOneUse() &&
+        canFoldOuterExtendIntoMul(Mul) &&
+        IsMulAccValidAndClampRange(Mul, Ext0, Ext1, Ext)) {
       auto *NewExt0 = new VPWidenCastRecipe(
           Ext0->getOpcode(), Ext0->getOperand(0), Ext->getScalarType(), nullptr,
           *Ext0, *Ext0, Ext0->getDebugLoc());
@@ -6214,6 +6236,9 @@ bool VPlanTransforms::makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
           },
           Range);
 
+      assert((Decision.Kind == CallWideningDecision::KindTy::Scalarize ||
+              !CI->hasOperandBundles()) &&
+             "calls with operand bundles must not be widened");
       VPSingleDefRecipe *Replacement = nullptr;
       switch (Decision.Kind) {
       case CallWideningDecision::KindTy::Intrinsic: {
@@ -6232,8 +6257,10 @@ bool VPlanTransforms::makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
           Ops.push_back(Mask);
         }
         Ops.push_back(VPI.getOperand(VPI.getNumOperandsWithoutMask() - 1));
+        VPIRAttributes Attrs(*CI, Decision.Variant->getFunctionType(),
+                             VPI.isMasked());
         Replacement = new VPWidenCallRecipe(CI, Decision.Variant, Ops, VPI, VPI,
-                                            VPI.getDebugLoc());
+                                            Attrs, VPI.getDebugLoc());
         Widened = true;
         break;
       }
@@ -6264,11 +6291,6 @@ void VPlanTransforms::narrowInductionTruncates(VPlan &Plan, VFRange &Range,
       if (VPI.getOpcode() != Instruction::Trunc)
         continue;
 
-      // A truncate that is not widened is left to the scalarization decisions
-      // made earlier.
-      if (vputils::onlyFirstLaneUsed(&VPI))
-        continue;
-
       VPValue *Op = VPI.getOperand(0);
       auto *WideIV = getOptimizableIVOf(Op, PSE);
       if (!WideIV)
@@ -6278,6 +6300,11 @@ void VPlanTransforms::narrowInductionTruncates(VPlan &Plan, VFRange &Range,
       // is not handled here.
       // TODO: Also narrow truncates of the incremented IV.
       if (Op != WideIV)
+        continue;
+
+      // A truncate that is not widened is left to the scalarization decisions
+      // made earlier.
+      if (vputils::onlyFirstLaneUsed(&VPI))
         continue;
 
       // Replacing a free truncate would add an induction update instruction to

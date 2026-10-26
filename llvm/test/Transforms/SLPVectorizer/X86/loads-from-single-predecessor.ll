@@ -79,6 +79,81 @@ exit:
   ret void
 }
 
+; Several loads, including the first one, are in the predecessor.
+define void @multiple_copyable_loads(ptr noalias %dst, ptr noalias %src, i1 %c) {
+; CHECK-LABEL: define void @multiple_copyable_loads(
+; CHECK-SAME: ptr noalias [[DST:%.*]], ptr noalias [[SRC:%.*]], i1 [[C:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br i1 [[C]], label %[[BB:.*]], label %[[EXIT:.*]]
+; CHECK:       [[BB]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[SRC]], align 4
+; CHECK-NEXT:    store <4 x i32> [[TMP0]], ptr [[DST]], align 4
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %l0 = load i32, ptr %src, align 4
+  %src2 = getelementptr inbounds i32, ptr %src, i64 2
+  %l2 = load i32, ptr %src2, align 4
+  br i1 %c, label %bb, label %exit
+
+bb:
+  %src1 = getelementptr inbounds i32, ptr %src, i64 1
+  %l1 = load i32, ptr %src1, align 4
+  %src3 = getelementptr inbounds i32, ptr %src, i64 3
+  %l3 = load i32, ptr %src3, align 4
+  %dst1 = getelementptr inbounds i32, ptr %dst, i64 1
+  %dst2 = getelementptr inbounds i32, ptr %dst, i64 2
+  %dst3 = getelementptr inbounds i32, ptr %dst, i64 3
+  store i32 %l0, ptr %dst, align 4
+  store i32 %l1, ptr %dst1, align 4
+  store i32 %l2, ptr %dst2, align 4
+  store i32 %l3, ptr %dst3, align 4
+  br label %exit
+
+exit:
+  ret void
+}
+
+; Same, but the loads are jumbled.
+define void @multiple_copyable_loads_jumbled(ptr noalias %dst, ptr noalias %src, i1 %c) {
+; CHECK-LABEL: define void @multiple_copyable_loads_jumbled(
+; CHECK-SAME: ptr noalias [[DST:%.*]], ptr noalias [[SRC:%.*]], i1 [[C:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br i1 [[C]], label %[[BB:.*]], label %[[EXIT:.*]]
+; CHECK:       [[BB]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[SRC]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <4 x i32> <i32 2, i32 0, i32 3, i32 1>
+; CHECK-NEXT:    store <4 x i32> [[TMP1]], ptr [[DST]], align 4
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %l0 = load i32, ptr %src, align 4
+  %src2 = getelementptr inbounds i32, ptr %src, i64 2
+  %l2 = load i32, ptr %src2, align 4
+  br i1 %c, label %bb, label %exit
+
+bb:
+  %src1 = getelementptr inbounds i32, ptr %src, i64 1
+  %l1 = load i32, ptr %src1, align 4
+  %src3 = getelementptr inbounds i32, ptr %src, i64 3
+  %l3 = load i32, ptr %src3, align 4
+  %dst1 = getelementptr inbounds i32, ptr %dst, i64 1
+  %dst2 = getelementptr inbounds i32, ptr %dst, i64 2
+  %dst3 = getelementptr inbounds i32, ptr %dst, i64 3
+  store i32 %l2, ptr %dst, align 4
+  store i32 %l0, ptr %dst1, align 4
+  store i32 %l3, ptr %dst2, align 4
+  store i32 %l1, ptr %dst3, align 4
+  br label %exit
+
+exit:
+  ret void
+}
+
 ; The successor block may write to the memory of the predecessor load.
 define void @clobber_in_successor(ptr noalias %dst, ptr %src, ptr %p, i1 %c) {
 ; CHECK-LABEL: define void @clobber_in_successor(

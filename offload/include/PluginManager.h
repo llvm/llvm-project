@@ -138,8 +138,16 @@ struct PluginManager {
   /// Returns the number of plugins that are active.
   int getNumActivePlugins() const;
 
+  /// Get the UID for the host device.
+  static constexpr const char *getHostDeviceUid() { return "HOST"; }
+
+  /// Return true if liboffload was initialized by init().
+  bool isLibOffloadInitialized() const { return LibOffloadInitialized; }
+
 private:
   bool RTLsLoaded = false;
+  // Whether init() called olInit, so deinit() must call olShutDown.
+  bool LibOffloadInitialized = false;
   llvm::SmallVector<__tgt_bin_desc *> DelayedBinDesc;
 
   // List of all plugins, in use or not.

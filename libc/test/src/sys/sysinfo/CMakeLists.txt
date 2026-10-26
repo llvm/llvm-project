@@ -1,9 +1,9 @@
-add_custom_target(libc_sys_sysinfo_unittests)
+add_libc_testsuite(libc-sys-sysinfo-tests)
 
 add_libc_test(
   sysinfo_test
   SUITE
-    libc_sys_sysinfo_unittests
+    libc-sys-sysinfo-tests
   SRCS
     sysinfo_test.cpp
   DEPENDS

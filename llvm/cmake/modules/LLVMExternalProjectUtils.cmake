@@ -435,6 +435,7 @@ function(llvm_ExternalProject_Add name source_dir)
     INSTALL_COMMAND ""
     STEP_TARGETS configure build
     BUILD_ALWAYS 1
+    CONFIGURE_HANDLED_BY_BUILD 1
     USES_TERMINAL_CONFIGURE 1
     USES_TERMINAL_BUILD 1
     USES_TERMINAL_INSTALL 1
