@@ -23,6 +23,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CoreEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -856,61 +857,38 @@ void CheckerManager::runCheckersForPrintStateJson(raw_ostream &Out,
   Indent(NLOut, InnerSpace, IsDot) << "\"";  // then begin the next message.
 
   ++Space;
-  bool HasMessage = false;
 
-  std::vector<CheckerBackend *> CheckerBackends;
+  std::vector<std::pair<std::string, std::string>> CheckerMsgs;
   for (const auto &CT : CheckerTags) {
-    CheckerBackend *CB = CT.second.get();
-    CheckerBackends.push_back(CB);
-  }
-  llvm::sort(CheckerBackends,
-             [](const CheckerBackend *First, const CheckerBackend *Last) {
-               return First->getDebugTag() < Last->getDebugTag();
-             });
-
-  // Store the last CheckerBackend.
-  const void *LastCB = nullptr;
-  for (const auto &CB : CheckerBackends) {
-    // See whether the current checker has a message.
-    CB->printState(TempOut, State, /*NL=*/NewLine.c_str(), /*Sep=*/"");
-
-    if (TempBuf.empty())
-      continue;
-
-    if (!HasMessage) {
-      Out << '[' << NL;
-      HasMessage = true;
-    }
-
-    LastCB = &CB;
+    CT.second->printState(TempOut, State, /*NL=*/NewLine.c_str(), /*Sep=*/"");
+    const std::string Msg = TempBuf.str().trim().str();
     TempBuf.clear();
+
+    if (!Msg.empty())
+      CheckerMsgs.push_back({CT.second->getDebugTag().str(), Msg});
   }
+  llvm::sort(CheckerMsgs);
 
-  for (const auto &CB : CheckerBackends) {
-    // See whether the current checker has a message.
-    CB->printState(TempOut, State, /*NL=*/NewLine.c_str(), /*Sep=*/"");
+  if (!CheckerMsgs.empty())
+    Out << '[' << NL;
 
-    if (TempBuf.empty())
-      continue;
-
-    Indent(Out, Space, IsDot) << "{ \"checker\": \"" << CB->getDebugTag()
-                              << "\", \"messages\": [" << NL;
-    Indent(Out, InnerSpace, IsDot)
-        << '\"' << TempBuf.str().trim() << '\"' << NL;
-    Indent(Out, Space, IsDot) << "]}";
-
-    if (&CB != LastCB)
-      Out << ',';
-    Out << NL;
-
-    TempBuf.clear();
-  }
+  llvm::interleave(
+      CheckerMsgs,
+      [&](const std::pair<std::string, std::string> &Msg) {
+        Indent(Out, Space, IsDot)
+            << "{ \"checker\": \"" << Msg.first << "\", \"messages\": [" << NL;
+        Indent(Out, InnerSpace, IsDot) << '\"' << Msg.second << '\"' << NL;
+        Indent(Out, Space, IsDot) << "]}";
+      },
+      [&] { Out << ',' << NL; });
 
   // It is the last element of the 'program_state' so do not add a comma.
-  if (HasMessage)
+  if (!CheckerMsgs.empty()) {
+    Out << NL;
     Indent(Out, --Space, IsDot) << "]";
-  else
+  } else {
     Out << "null";
+  }
 
   Out << NL;
 }
