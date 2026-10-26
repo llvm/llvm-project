@@ -1888,8 +1888,7 @@ int GCNHazardRecognizer::checkVALUHazards(MachineInstr *VALU) const {
         continue;
       }
 
-      const bool ConsumerSide = isFastForwardConsumerForSGPR_VCC(
-        *VALU, Use);
+      const bool ConsumerSide = isFastForwardConsumerForSGPR_VCC(*VALU, Use);
       // The lambda is used as producers are scanned in getWaitStatesSince
       auto IsHazardDef = [&](const MachineInstr &MI) {
         return IsVALUDefSGPRFn(MI) &&
