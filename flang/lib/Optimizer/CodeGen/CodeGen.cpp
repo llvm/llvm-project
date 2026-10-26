@@ -72,6 +72,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Support/CommandLine.h"
 
 namespace fir {
@@ -370,8 +371,23 @@ public:
       if (auto varAttr =
               mlir::dyn_cast_or_null<mlir::LLVM::DILocalVariableAttr>(
                   fusedLoc.getMetadata())) {
-        mlir::LLVM::DbgDeclareOp::create(rewriter, fusedLoc, memRef, varAttr,
-                                         nullptr);
+        mlir::Value addr = memRef;
+        mlir::LLVM::DIExpressionAttr expr;
+        // A variable whose storage address is returned by a call has no stack
+        // slot to point at, and a declare on an SSA value only describes it
+        // where that value is live. Spill the address to a slot and deref it.
+        if (addr.getDefiningOp<mlir::LLVM::CallOp>()) {
+          mlir::Value slot = this->genAllocaAndAddrCastWithType(
+              fusedLoc, addr.getType(), defaultAlign, rewriter);
+          mlir::LLVM::StoreOp::create(rewriter, fusedLoc, addr, slot);
+          addr = slot;
+          expr = mlir::LLVM::DIExpressionAttr::get(
+              rewriter.getContext(),
+              {mlir::LLVM::DIExpressionElemAttr::get(
+                  rewriter.getContext(), llvm::dwarf::DW_OP_deref, {})});
+        }
+        mlir::LLVM::DbgDeclareOp::create(rewriter, fusedLoc, addr, varAttr,
+                                         expr);
       }
     }
     rewriter.replaceOp(declareOp, memRef);
