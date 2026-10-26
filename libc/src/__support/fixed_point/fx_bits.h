@@ -417,10 +417,6 @@ mulifx(IntType n, FXType m) {
   static_assert(cpp::is_signed_v<IntType> == (FXRep::SIGN_LEN > 0),
                 "IntType and FXType must have matching signedness");
 
-  if (LIBC_UNLIKELY(n == 0)) {
-    return static_cast<IntType>(0);
-  }
-
   CompType m_comp = static_cast<CompType>(FXBits(m).get_bits());
 
   constexpr int F = FXRep::FRACTION_LEN;
