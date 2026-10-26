@@ -158,13 +158,15 @@ bool Filler::runOnMachineBasicBlock(MachineBasicBlock &MBB) {
   return Changed;
 }
 
-/// A tail call emitted as `call` writes %o7, so the instruction that puts the
-/// return address back must run in its delay slot: the restore of a non-leaf
-/// function, or the copy from %g1 that SparcFrameLowering emits for a leaf.
+/// The restore before a tail call must run in its delay slot: `jmp %reg`
+/// reads a register of the current window, and `call` writes %o7. For the
+/// same reason a leaf `call` needs the copy of %o7 back from %g1 that
+/// SparcFrameLowering emits.
 MachineBasicBlock::iterator
 Filler::findRequiredDelayInstr(MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator slot) {
-  if (slot->getOpcode() != SP::TAIL_CALL || slot == MBB.begin())
+  unsigned Opc = slot->getOpcode();
+  if ((Opc != SP::TAIL_CALL && Opc != SP::TAIL_CALLri) || slot == MBB.begin())
     return MBB.end();
 
   MachineBasicBlock::iterator J = slot;
@@ -174,7 +176,8 @@ Filler::findRequiredDelayInstr(MachineBasicBlock &MBB,
 
   if (J->getOpcode() == SP::RESTORErr || J->getOpcode() == SP::RESTOREri)
     return J;
-  if (J->getOpcode() == SP::ORrr && J->getOperand(0).getReg() == SP::O7)
+  if (Opc == SP::TAIL_CALL && J->getOpcode() == SP::ORrr &&
+      J->getOperand(0).getReg() == SP::O7)
     return J;
   return MBB.end();
 }

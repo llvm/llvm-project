@@ -194,9 +194,8 @@ define i32 @func_ptr_test2(ptr nocapture %func_ptr,
 ; V9-O0-NEXT:    mov %i0, %i3
 ; V9-O0-NEXT:    ldx [%fp+2039], %i0 ! 8-byte Folded Reload
 ; V9-O0-NEXT:    mov 10, %i1
-; V9-O0-NEXT:    restore
 ; V9-O0-NEXT:    jmp %i3
-; V9-O0-NEXT:    nop
+; V9-O0-NEXT:    restore
                            i32 %r, i32 %q) #1 {
 entry:
   %call = tail call i32 %func_ptr(i32 %r, i32 10, i32 %q) #1
