@@ -113,14 +113,11 @@ void populateVectorContractToAMXDotProductPatterns(RewritePatternSet &patterns);
 void populateMoveAccumulatorForContractLoopPatterns(
     RewritePatternSet &patterns);
 
-// Clients must register the affine, arith and scf value-bounds models before
-// applying these patterns to loops with computed read indices.
+// Adds patterns that fold RHS unpacking into vector contractions inside
+// scf.for loops, so the contractions use VNNI-packed operands directly.
+// The patterns require constant innermost read indices; other indices may
+// be computed.
 void populatePrepareVectorContractLoopsPatterns(RewritePatternSet &patterns);
-
-// Feature flags to control the multi-level unroll patttern.
-struct MultiLevelUnrollOptions {
-  bool enableAMX = false; // Prepare for AMX tile dot-product
-};
 
 // A set of patterns that tile and unroll contractions in order to prepare them
 // for the AMX nanokernel lowerings.
