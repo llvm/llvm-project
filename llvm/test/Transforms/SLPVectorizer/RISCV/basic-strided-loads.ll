@@ -630,8 +630,8 @@ define void @constant_stride_masked_no_reordering(ptr %pl, i64 %stride, ptr %ps)
 ; CHECK-SAME: ptr [[PL:%.*]], i64 [[STRIDE:%.*]], ptr [[PS:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[GEP_L0:%.*]] = getelementptr inbounds i8, ptr [[PL]], i64 0
 ; CHECK-NEXT:    [[GEP_S0:%.*]] = getelementptr inbounds i8, ptr [[PS]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = call <28 x i8> @llvm.masked.load.v28i8.p0(ptr align 1 [[GEP_L0]], <28 x i1> <i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true>, <28 x i8> poison)
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <28 x i8> [[TMP1]], <28 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11, i32 16, i32 17, i32 18, i32 19, i32 24, i32 25, i32 26, i32 27>
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.experimental.vp.strided.load.v4i32.p0.i64(ptr align 1 [[GEP_L0]], i64 8, <4 x i1> splat (i1 true), i32 4)
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i32> [[TMP1]] to <16 x i8>
 ; CHECK-NEXT:    store <16 x i8> [[TMP2]], ptr [[GEP_S0]], align 1
 ; CHECK-NEXT:    ret void
 ;
