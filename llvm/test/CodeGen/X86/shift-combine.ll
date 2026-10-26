@@ -847,7 +847,6 @@ define i32 @lshr_exact_narrow_shl(i32 %x, ptr %p) {
 ; X64-NEXT:    movl %edi, %ecx
 ; X64-NEXT:    shrl $2, %ecx
 ; X64-NEXT:    movl %ecx, (%rsi)
-; X64-NEXT:    andl $-4, %eax
 ; X64-NEXT:    retq
   %z = zext i32 %x to i64
   %s = lshr exact i64 %z, 2
