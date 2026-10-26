@@ -11350,10 +11350,8 @@ computeConstantFPRangeImpl(const Value *V, const SimplifyQuery &SQ,
   // Poison may be refined to any value, so it does not widen the range.
   if (isa<PoisonValue>(V))
     return ConstantFPRange::getEmpty(Sem);
-  if (isa<UndefValue>(V))
-    return ConstantFPRange::getFull(Sem);
-  if (auto *CFP = dyn_cast<ConstantFP>(V))
-    return ConstantFPRange(CFP->getValueAPF());
+  if (auto *C = dyn_cast<Constant>(V))
+    return C->toConstantFPRange();
   if (Depth >= MaxAnalysisRecursionDepth)
     return ConstantFPRange::getFull(Sem);
 
