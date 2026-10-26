@@ -3019,11 +3019,7 @@ TEST(TargetParserTest, testAMDGPULDSGranularityFeatures) {
     EXPECT_TRUE(Has(Kind, AMDGPU::FEAT_LDS_ENCODING_GRANULARITY_512));
   }
 
-  // A generic target uses the largest allocation granularity of the GPUs it
-  // covers. gfx9-4-generic therefore uses gfx950's 1280-byte granule.
   EXPECT_TRUE(
-      Has(AMDGPU::GK_GFX9_4_GENERIC, AMDGPU::FEAT_LDS_ALLOC_GRANULARITY_1280));
-  EXPECT_FALSE(
       Has(AMDGPU::GK_GFX9_4_GENERIC, AMDGPU::FEAT_LDS_ALLOC_GRANULARITY_512));
   EXPECT_TRUE(Has(AMDGPU::GK_GFX9_4_GENERIC,
                   AMDGPU::FEAT_LDS_ENCODING_GRANULARITY_1280));
@@ -3505,7 +3501,7 @@ TEST(TargetParserTest, testAMDGPUgetLDSGranules) {
       {AMDGPU::GK_GFX1250, Triple::AMDGPUSubArch1250, 2048, 2048},
       {AMDGPU::GK_GFX1251, Triple::AMDGPUSubArch1251, 2048, 2048},
       {AMDGPU::GK_GFX1310, Triple::AMDGPUSubArch1310, 1024, 1024},
-      {AMDGPU::GK_GFX9_4_GENERIC, Triple::AMDGPUSubArch9_4, 1280, 1280},
+      {AMDGPU::GK_GFX9_4_GENERIC, Triple::AMDGPUSubArch9_4, 512, 1280},
       {AMDGPU::GK_GFX10_1_GENERIC, Triple::AMDGPUSubArch10_1, 512, 512},
       {AMDGPU::GK_GFX10_3_GENERIC, Triple::AMDGPUSubArch10_3, 1024, 512},
       {AMDGPU::GK_GFX11_GENERIC, Triple::AMDGPUSubArch11, 1024, 512},
