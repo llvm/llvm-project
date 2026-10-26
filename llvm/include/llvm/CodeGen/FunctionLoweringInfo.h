@@ -100,13 +100,6 @@ public:
   /// Track virtual registers created for exception pointers.
   DenseMap<const Value *, Register> CatchPadExceptionPointers;
 
-  /// The registers that each callbr's INLINEASM_BR defines its direct
-  /// register outputs in, in order. An indirect target reads its outputs from
-  /// them, since the copies of the outputs after the INLINEASM_BR are only on
-  /// the path to the default target. A callbr whose asm failed to lower has
-  /// no entry.
-  DenseMap<const Value *, SmallVector<Register, 4>> CallBrOutputRegs;
-
   /// A directly-lowered statepoint value (see willLowerDirectly): a leaf that
   /// can be rebuilt at a gc.relocate in another block.
   struct StatepointDirectLeaf {

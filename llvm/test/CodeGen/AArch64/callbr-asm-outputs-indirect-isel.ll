@@ -31,14 +31,14 @@ define i32 @test0() {
   ; CHECK-NEXT: bb.2.direct:
   ; CHECK-NEXT:   successors: %bb.4(0x80000000), %bb.3(0x00000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   INLINEASM_BR &"# $0", attdialect, regdef:GPR32common, def %7, imm, %bb.3
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr32all = COPY %7
+  ; CHECK-NEXT:   INLINEASM_BR &"# $0", attdialect, regdef:GPR32common, def %6, imm, %bb.3
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr32all = COPY %6
   ; CHECK-NEXT:   B %bb.4
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.direct.indirect_crit_edge (inlineasm-br-indirect-target):
   ; CHECK-NEXT:   successors: %bb.5(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gpr32all = COPY %7
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gpr32all = COPY %6
   ; CHECK-NEXT:   B %bb.5
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4.direct2:
