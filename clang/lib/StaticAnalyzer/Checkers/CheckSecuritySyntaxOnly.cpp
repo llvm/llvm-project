@@ -588,7 +588,7 @@ void WalkAST::checkCall_mktemp(const CallExpr *CE, const FunctionDecl *FD) {
                      "Potential insecure temporary file in call 'mktemp'",
                      "Security",
                      "Call to function 'mktemp' is insecure as it always "
-                     "creates or uses insecure temporary file. Use 'mkstemp' "
+                     "creates or uses insecure temporary file; use 'mkstemp' "
                      "instead",
                      CELoc, CE->getCallee()->getSourceRange());
 }
@@ -892,8 +892,8 @@ void WalkAST::checkCall_rand(const CallExpr *CE, const FunctionDecl *FD) {
   SmallString<256> buf2;
   llvm::raw_svector_ostream os2(buf2);
   os2 << "Function '" << *FD
-      << "' is obsolete because it implements a poor random number generator."
-      << " Use 'arc4random' instead";
+      << "' is obsolete because it implements a poor random number generator;"
+      << " use 'arc4random' instead";
 
   PathDiagnosticLocation CELoc =
     PathDiagnosticLocation::createBegin(CE, BR.getSourceManager(), AC);
@@ -922,7 +922,7 @@ void WalkAST::checkCall_random(const CallExpr *CE, const FunctionDecl *FD) {
                      "'random' is not a secure random number generator",
                      "Security",
                      "The 'random' function produces a sequence of values that "
-                     "an adversary may be able to predict. Use 'arc4random' "
+                     "an adversary may be able to predict; use 'arc4random' "
                      "instead",
                      CELoc, CE->getCallee()->getSourceRange());
 }
