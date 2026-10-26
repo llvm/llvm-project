@@ -166,8 +166,10 @@ define dso_local i32 @double_bf16(bfloat %a, bfloat %b) #0 {
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     [[R0]] = convert_sf2w([[R0]]):chop
-; CHECK-NEXT:     jumpr r31
 ; CHECK-NEXT:     [[SP]] = add([[SP]],#16)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     jumpr r31
 ; CHECK-NEXT:    }
 
 entry:

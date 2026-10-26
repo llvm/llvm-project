@@ -49,6 +49,8 @@ define i16 @fptoui.sat.i16.f32(float %x) {
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r0 = convert_sf2uw(r0):chop
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
 ; CHECK-NEXT:     jumpr r31
 ; CHECK-NEXT:    }
   %res = call i16 @llvm.fptoui.sat(float %x)
@@ -107,6 +109,8 @@ define i32 @fptoui.sat.i32.f64(double %x) {
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r0 = convert_df2uw(r1:0):chop
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
 ; CHECK-NEXT:     jumpr r31
 ; CHECK-NEXT:    }
   %res = call i32 @llvm.fptoui.sat(double %x)

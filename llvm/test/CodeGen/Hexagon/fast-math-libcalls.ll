@@ -37,6 +37,8 @@ define float @fast_add_f32(float %x, float %y) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r0 = sfadd(r0,r1)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
 ; CHECK-NEXT:     jumpr r31
 ; CHECK-NEXT:    }
   %result = fadd nnan ninf nsz afn float %x, %y
@@ -64,6 +66,8 @@ define float @fast_sub_f32(float %x, float %y) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r0 = sfsub(r0,r1)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
 ; CHECK-NEXT:     jumpr r31
 ; CHECK-NEXT:    }
   %result = fsub nnan ninf nsz afn float %x, %y
@@ -91,6 +95,8 @@ define float @fast_mul_f32(float %x, float %y) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r0 = sfmpy(r0,r1)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
 ; CHECK-NEXT:     jumpr r31
 ; CHECK-NEXT:    }
   %result = fmul nnan ninf nsz afn float %x, %y
@@ -149,6 +155,8 @@ define float @fast_div_f32(float %x, float %y) {
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r0 += sfmpy(r2,r4,p0):scale
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
 ; CHECK-NEXT:     jumpr r31
 ; CHECK-NEXT:    }
   %result = fdiv nnan ninf nsz afn float %x, %y
@@ -237,6 +245,8 @@ define float @fadd_f32_afn(float %x, float %y) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r0 = sfadd(r0,r1)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
 ; CHECK-NEXT:     jumpr r31
 ; CHECK-NEXT:    }
   %result = fadd afn float %x, %y
@@ -249,6 +259,8 @@ define float @fadd_f32__afn_ninf(float %x, float %y) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r0 = sfadd(r0,r1)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
 ; CHECK-NEXT:     jumpr r31
 ; CHECK-NEXT:    }
   %result = fadd afn ninf float %x, %y
@@ -261,6 +273,8 @@ define float @fadd_f32__afn_nnan(float %x, float %y) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r0 = sfadd(r0,r1)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
 ; CHECK-NEXT:     jumpr r31
 ; CHECK-NEXT:    }
   %result = fadd afn nnan float %x, %y
@@ -273,6 +287,8 @@ define float @fadd_f32__nnan(float %x, float %y) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r0 = sfadd(r0,r1)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
 ; CHECK-NEXT:     jumpr r31
 ; CHECK-NEXT:    }
   %result = fadd nnan float %x, %y
@@ -285,6 +301,8 @@ define float @fadd_f32__nnan_ninf_afn(float %x, float %y) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r0 = sfadd(r0,r1)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
 ; CHECK-NEXT:     jumpr r31
 ; CHECK-NEXT:    }
   %result = fadd nnan ninf afn float %x, %y
