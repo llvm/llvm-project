@@ -63,7 +63,7 @@ class RelLookupTableConverterPass
 public:
   RelLookupTableConverterPass() = default;
 
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 } // end namespace llvm

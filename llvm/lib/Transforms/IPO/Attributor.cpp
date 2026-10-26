@@ -68,6 +68,14 @@ using namespace llvm;
 DEBUG_COUNTER(ManifestDBGCounter, "attributor-manifest",
               "Determine what attributes are manifested in the IR");
 
+/// A debug counter to limit the number of AAs created.
+DEBUG_COUNTER(NumAbstractAttributes, "num-abstract-attributes",
+              "How many AAs should be initialized");
+
+bool llvm::shouldCreateAbstractAttribute() {
+  return DebugCounter::shouldExecute(NumAbstractAttributes);
+}
+
 STATISTIC(NumFnDeleted, "Number of function deleted");
 STATISTIC(NumFnWithExactDefinition,
           "Number of functions with exact definitions");
@@ -220,26 +228,6 @@ enum class SPIRVAddressSpace : unsigned {
 bool AA::isGPU(const Module &M) {
   Triple T(M.getTargetTriple());
   return T.isGPU();
-}
-
-bool AA::isGPUGenericAddressSpace(const Module &M, unsigned AS) {
-  assert(AA::isGPU(M) && "Only callable on GPU targets");
-  Triple T(M.getTargetTriple());
-
-  if (T.isSPIRV())
-    return AS == static_cast<unsigned>(SPIRVAddressSpace::Generic);
-
-  return AS == static_cast<unsigned>(NVPTXAMDGPUAddressSpace::Generic);
-}
-
-bool AA::isGPUGlobalAddressSpace(const Module &M, unsigned AS) {
-  assert(AA::isGPU(M) && "Only callable on GPU targets");
-  Triple T(M.getTargetTriple());
-
-  if (T.isSPIRV())
-    return AS == static_cast<unsigned>(SPIRVAddressSpace::Global);
-
-  return AS == static_cast<unsigned>(NVPTXAMDGPUAddressSpace::Global);
 }
 
 bool AA::isGPUSharedAddressSpace(const Module &M, unsigned AS) {
@@ -1022,52 +1010,35 @@ static bool isEqualOrWorse(const Attribute &New, const Attribute &Old) {
   return Old.getValueAsInt() >= New.getValueAsInt();
 }
 
-/// Return true if the information provided by \p Attr was added to the
-/// attribute set \p AttrSet. This is only the case if it was not already
-/// present in \p AttrSet.
-static bool addIfNotExistent(LLVMContext &Ctx, const Attribute &Attr,
-                             AttributeSet AttrSet, bool ForceReplace,
-                             AttrBuilder &AB) {
-
-  if (Attr.isEnumAttribute()) {
-    Attribute::AttrKind Kind = Attr.getKindAsEnum();
-    if (AttrSet.hasAttribute(Kind))
-      return false;
-    AB.addAttribute(Kind);
-    return true;
-  }
+/// Return the attribute to add to a position to provide the information of
+/// \p Attr, given the attribute \p Existing of the same kind at the position
+/// (or none), or an invalid attribute if \p Existing already provides it.
+static Attribute getAttrToAdd(LLVMContext &Ctx, Attribute Attr,
+                              Attribute Existing, bool ForceReplace) {
+  if (Attr.isEnumAttribute())
+    return Existing.isValid() ? Attribute() : Attr;
   if (Attr.isStringAttribute()) {
-    StringRef Kind = Attr.getKindAsString();
-    if (AttrSet.hasAttribute(Kind)) {
-      if (!ForceReplace)
-        return false;
-    }
-    AB.addAttribute(Kind, Attr.getValueAsString());
-    return true;
+    if (Existing.isValid() && (!ForceReplace || Existing == Attr))
+      return Attribute();
+    return Attr;
   }
+
   if (Attr.isIntAttribute()) {
-    Attribute::AttrKind Kind = Attr.getKindAsEnum();
-    if (!ForceReplace && Kind == Attribute::Memory) {
-      MemoryEffects ME = Attr.getMemoryEffects() & AttrSet.getMemoryEffects();
-      if (ME == AttrSet.getMemoryEffects())
-        return false;
-      AB.addMemoryAttr(ME);
-      return true;
+    if (!ForceReplace && Attr.getKindAsEnum() == Attribute::Memory) {
+      MemoryEffects OldME = Existing.isValid() ? Existing.getMemoryEffects()
+                                               : MemoryEffects::unknown();
+      MemoryEffects ME = Attr.getMemoryEffects() & OldME;
+      if (ME == OldME)
+        return Attribute();
+      return Attribute::getWithMemoryEffects(Ctx, ME);
     }
-    if (AttrSet.hasAttribute(Kind)) {
-      if (!ForceReplace && isEqualOrWorse(Attr, AttrSet.getAttribute(Kind)))
-        return false;
-    }
-    AB.addAttribute(Attr);
-    return true;
+    if (Existing.isValid() && !ForceReplace && isEqualOrWorse(Attr, Existing))
+      return Attribute();
+    return Attr;
   }
-  if (Attr.isConstantRangeAttribute()) {
-    Attribute::AttrKind Kind = Attr.getKindAsEnum();
-    if (!ForceReplace && AttrSet.hasAttribute(Kind))
-      return false;
-    AB.addAttribute(Attr);
-    return true;
-  }
+
+  if (Attr.isConstantRangeAttribute())
+    return !ForceReplace && Existing.isValid() ? Attribute() : Attr;
 
   llvm_unreachable("Expected enum or string attribute!");
 }
@@ -1224,7 +1195,8 @@ Attributor::updateAttrMap(const IRPosition &IRP, ArrayRef<DescTy> AttrDescs,
   if (HasChanged == ChangeStatus::UNCHANGED)
     return ChangeStatus::UNCHANGED;
 
-  AL = AL.removeAttributesAtIndex(Ctx, AttrIdx, AM);
+  if (!AM.empty())
+    AL = AL.removeAttributesAtIndex(Ctx, AttrIdx, AM);
   AL = AL.addAttributesAtIndex(Ctx, AttrIdx, AB);
 
   Iter->second = AL;
@@ -1324,17 +1296,43 @@ ChangeStatus Attributor::removeAttrs(const IRPosition &IRP,
 ChangeStatus Attributor::manifestAttrs(const IRPosition &IRP,
                                        ArrayRef<Attribute> Attrs,
                                        bool ForceReplace) {
-  LLVMContext &Ctx = IRP.getAnchorValue().getContext();
-  auto AddAttrCB = [&](const Attribute &Attr, AttributeSet AttrSet,
-                       AttributeMask &, AttrBuilder &AB) {
-    return addIfNotExistent(Ctx, Attr, AttrSet, ForceReplace, AB);
-  };
-  return updateAttrMap<Attribute>(IRP, Attrs, AddAttrCB);
-}
+  if (Attrs.empty())
+    return ChangeStatus::UNCHANGED;
 
-const IRPosition IRPosition::EmptyKey(DenseMapInfo<void *>::getEmptyKey());
-const IRPosition
-    IRPosition::TombstoneKey(DenseMapInfo<void *>::getTombstoneKey());
+  switch (IRP.getPositionKind()) {
+  case IRPosition::IRP_FLOAT:
+  case IRPosition::IRP_INVALID:
+    return ChangeStatus::UNCHANGED;
+  default:
+    break;
+  }
+
+  AttributeList AL = IRP.getAttrList();
+  auto [Iter, Inserted] = AttrsMap.insert({IRP.getAttrListAnchor(), AL});
+  if (!Inserted)
+    AL = Iter->second;
+
+  LLVMContext &Ctx = IRP.getAnchorValue().getContext();
+  auto AttrIdx = IRP.getAttrIdx();
+  AttributeSet AS = AL.getAttributes(AttrIdx);
+  SmallVector<Attribute, 8> Added;
+  for (Attribute Attr : Attrs) {
+    Attribute Existing = Attr.isStringAttribute()
+                             ? AS.getAttribute(Attr.getKindAsString())
+                             : AS.getAttribute(Attr.getKindAsEnum());
+    if (Attribute New = getAttrToAdd(Ctx, Attr, Existing, ForceReplace);
+        New.isValid())
+      Added.push_back(New);
+  }
+
+  if (Added.empty())
+    return ChangeStatus::UNCHANGED;
+
+  // Added keeps the order of Attrs, so it is sorted with distinct kinds too.
+  AL = AL.addSortedAttributesAtIndex(Ctx, AttrIdx, Added);
+  Iter->second = AL;
+  return ChangeStatus::CHANGED;
+}
 
 SubsumingPositionIterator::SubsumingPositionIterator(const IRPosition &IRP) {
   IRPositions.emplace_back(IRP);
@@ -2431,7 +2429,6 @@ void Attributor::identifyDeadInternalFunctions() {
       isModulePass()
           ? nullptr
           : getInfoCache().getTargetLibraryInfoForFunction(*Functions.back());
-  LibFunc LF;
 
   // Identify dead internal functions and delete them. This happens outside
   // the other fixpoint analysis as we might treat potentially dead functions
@@ -2440,7 +2437,8 @@ void Attributor::identifyDeadInternalFunctions() {
 
   SmallVector<Function *, 8> InternalFns;
   for (Function *F : Functions)
-    if (F->hasLocalLinkage() && (isModulePass() || !TLI->getLibFunc(*F, LF)))
+    if (F->hasLocalLinkage() &&
+        (isModulePass() || TLI->getLibFunc(*F) == NotLibFunc))
       InternalFns.push_back(F);
 
   SmallPtrSet<Function *, 8> LiveInternalFns;
@@ -2533,10 +2531,13 @@ ChangeStatus Attributor::cleanupIR() {
       auto *CB = cast<CallBase>(U->getUser());
       if (CB->isArgOperand(U)) {
         unsigned Idx = CB->getArgOperandNo(U);
-        CB->removeParamAttr(Idx, Attribute::NoUndef);
+        // Drop all attributes that make passing undef UB, e.g., dereferenceable
+        // implies noundef.
+        AttributeMask UBImplying = AttributeFuncs::getUBImplyingAttributes();
+        CB->removeParamAttrs(Idx, UBImplying);
         auto *Callee = dyn_cast_if_present<Function>(CB->getCalledOperand());
         if (Callee && Callee->arg_size() > Idx)
-          Callee->removeParamAttr(Idx, Attribute::NoUndef);
+          Callee->removeParamAttrs(Idx, UBImplying);
       }
     }
     if (isa<Constant>(NewV) && isa<CondBrInst>(U->getUser())) {
@@ -3044,14 +3045,14 @@ ChangeStatus Attributor::rewriteFunctionSignatures(
   ChangeStatus Changed = ChangeStatus::UNCHANGED;
 
   for (auto &It : ArgumentReplacementMap) {
-    Function *OldFn = It.getFirst();
+    Function *OldFn = It.first;
 
     // Deleted functions do not require rewrites.
     if (!Functions.count(OldFn) || ToBeDeletedFunctions.count(OldFn))
       continue;
 
     const SmallVectorImpl<std::unique_ptr<ArgumentReplacementInfo>> &ARIs =
-        It.getSecond();
+        It.second;
     assert(ARIs.size() == OldFn->arg_size() && "Inconsistent state!");
 
     SmallVector<Type *, 16> NewArgumentTypes;
@@ -3183,7 +3184,7 @@ ChangeStatus Attributor::rewriteFunctionSignatures(
       }
 
       // Copy over various properties and the new attributes.
-      NewCB->copyMetadata(*OldCB, {LLVMContext::MD_prof, LLVMContext::MD_dbg});
+      NewCB->copyProfileAndDebugMetadata(*OldCB);
       NewCB->setCallingConv(OldCB->getCallingConv());
       NewCB->takeName(OldCB);
       NewCB->setAttributes(AttributeList::get(
@@ -3872,8 +3873,8 @@ raw_ostream &llvm::operator<<(raw_ostream &OS,
 
 static bool runAttributorOnFunctions(InformationCache &InfoCache,
                                      SetVector<Function *> &Functions,
-                                     AnalysisGetter &AG,
                                      CallGraphUpdater &CGUpdater,
+                                     FunctionAnalysisManager &FAM,
                                      bool DeleteFns, bool IsModulePass) {
   if (Functions.empty())
     return false;
@@ -3890,6 +3891,11 @@ static bool runAttributorOnFunctions(InformationCache &InfoCache,
   AttributorConfig AC(CGUpdater);
   AC.IsModulePass = IsModulePass;
   AC.DeleteFns = DeleteFns;
+  auto OREGetter = [&FAM](Function *F) -> OptimizationRemarkEmitter & {
+    return FAM.getResult<OptimizationRemarkEmitterAnalysis>(*F);
+  };
+  AC.OREGetter = OREGetter;
+  AC.PassName = DEBUG_TYPE;
 
   /// Tracking callback for specialization of indirect calls.
   DenseMap<CallBase *, std::unique_ptr<SmallPtrSet<Function *, 8>>>
@@ -3978,7 +3984,6 @@ static bool runAttributorOnFunctions(InformationCache &InfoCache,
 
 static bool runAttributorLightOnFunctions(InformationCache &InfoCache,
                                           SetVector<Function *> &Functions,
-                                          AnalysisGetter &AG,
                                           CallGraphUpdater &CGUpdater,
                                           FunctionAnalysisManager &FAM,
                                           bool IsModulePass) {
@@ -4097,13 +4102,14 @@ PreservedAnalyses AttributorPass::run(Module &M, ModuleAnalysisManager &AM) {
   AnalysisGetter AG(FAM);
 
   SetVector<Function *> Functions;
+  Functions.reserve(M.size());
   for (Function &F : M)
     Functions.insert(&F);
 
   CallGraphUpdater CGUpdater;
   BumpPtrAllocator Allocator;
   InformationCache InfoCache(M, AG, Allocator, /* CGSCC */ nullptr);
-  if (runAttributorOnFunctions(InfoCache, Functions, AG, CGUpdater,
+  if (runAttributorOnFunctions(InfoCache, Functions, CGUpdater, FAM,
                                /* DeleteFns */ true, /* IsModulePass */ true)) {
     // FIXME: Think about passes we will preserve and add them here.
     return PreservedAnalyses::none();
@@ -4120,6 +4126,7 @@ PreservedAnalyses AttributorCGSCCPass::run(LazyCallGraph::SCC &C,
   AnalysisGetter AG(FAM);
 
   SetVector<Function *> Functions;
+  Functions.reserve(C.size());
   for (LazyCallGraph::Node &N : C)
     Functions.insert(&N.getFunction());
 
@@ -4131,7 +4138,7 @@ PreservedAnalyses AttributorCGSCCPass::run(LazyCallGraph::SCC &C,
   CGUpdater.initialize(CG, C, AM, UR);
   BumpPtrAllocator Allocator;
   InformationCache InfoCache(M, AG, Allocator, /* CGSCC */ &Functions);
-  if (runAttributorOnFunctions(InfoCache, Functions, AG, CGUpdater,
+  if (runAttributorOnFunctions(InfoCache, Functions, CGUpdater, FAM,
                                /* DeleteFns */ false,
                                /* IsModulePass */ false)) {
     // FIXME: Think about passes we will preserve and add them here.
@@ -4149,13 +4156,14 @@ PreservedAnalyses AttributorLightPass::run(Module &M,
   AnalysisGetter AG(FAM, /* CachedOnly */ true);
 
   SetVector<Function *> Functions;
+  Functions.reserve(M.size());
   for (Function &F : M)
     Functions.insert(&F);
 
   CallGraphUpdater CGUpdater;
   BumpPtrAllocator Allocator;
   InformationCache InfoCache(M, AG, Allocator, /* CGSCC */ nullptr);
-  if (runAttributorLightOnFunctions(InfoCache, Functions, AG, CGUpdater, FAM,
+  if (runAttributorLightOnFunctions(InfoCache, Functions, CGUpdater, FAM,
                                     /* IsModulePass */ true)) {
     PreservedAnalyses PA;
     // We have not added or removed functions.
@@ -4187,7 +4195,7 @@ PreservedAnalyses AttributorLightCGSCCPass::run(LazyCallGraph::SCC &C,
   CGUpdater.initialize(CG, C, AM, UR);
   BumpPtrAllocator Allocator;
   InformationCache InfoCache(M, AG, Allocator, /* CGSCC */ &Functions);
-  if (runAttributorLightOnFunctions(InfoCache, Functions, AG, CGUpdater, FAM,
+  if (runAttributorLightOnFunctions(InfoCache, Functions, CGUpdater, FAM,
                                     /* IsModulePass */ false)) {
     PreservedAnalyses PA;
     // We have not added or removed functions.

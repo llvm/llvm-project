@@ -409,8 +409,8 @@ define i32 @f8(i64 %i) local_unnamed_addr #0 {
 ; RV64I-NEXT:    addi s0, sp, 832
 ; RV64I-NEXT:    .cfi_def_cfa s0, 0
 ; RV64I-NEXT:    andi sp, sp, -64
-; RV64I-NEXT:    slli a0, a0, 2
 ; RV64I-NEXT:    mv a1, sp
+; RV64I-NEXT:    slli a0, a0, 2
 ; RV64I-NEXT:    add a0, a1, a0
 ; RV64I-NEXT:    li a1, 1
 ; RV64I-NEXT:    sw a1, 0(a0)
@@ -436,8 +436,8 @@ define i32 @f8(i64 %i) local_unnamed_addr #0 {
 ; RV32I-NEXT:    addi s0, sp, 832
 ; RV32I-NEXT:    .cfi_def_cfa s0, 0
 ; RV32I-NEXT:    andi sp, sp, -64
-; RV32I-NEXT:    slli a0, a0, 2
 ; RV32I-NEXT:    mv a1, sp
+; RV32I-NEXT:    slli a0, a0, 2
 ; RV32I-NEXT:    add a0, a1, a0
 ; RV32I-NEXT:    li a1, 1
 ; RV32I-NEXT:    sw a1, 0(a0)
@@ -477,9 +477,9 @@ define i32 @f9(i64 %i) local_unnamed_addr #0 {
 ; RV64I-NEXT:    sd zero, 0(sp)
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    andi sp, sp, -2048
-; RV64I-NEXT:    slli a0, a0, 2
 ; RV64I-NEXT:    addi a1, sp, 2047
 ; RV64I-NEXT:    addi a1, a1, 1
+; RV64I-NEXT:    slli a0, a0, 2
 ; RV64I-NEXT:    add a0, a1, a0
 ; RV64I-NEXT:    li a1, 1
 ; RV64I-NEXT:    sw a1, 0(a0)
@@ -513,9 +513,9 @@ define i32 @f9(i64 %i) local_unnamed_addr #0 {
 ; RV32I-NEXT:    sw zero, 0(sp)
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    andi sp, sp, -2048
-; RV32I-NEXT:    slli a0, a0, 2
 ; RV32I-NEXT:    addi a1, sp, 2047
 ; RV32I-NEXT:    addi a1, a1, 1
+; RV32I-NEXT:    slli a0, a0, 2
 ; RV32I-NEXT:    add a0, a1, a0
 ; RV32I-NEXT:    li a1, 1
 ; RV32I-NEXT:    sw a1, 0(a0)
@@ -554,8 +554,8 @@ define i32 @f10(i64 %i) local_unnamed_addr #0 {
 ; RV64I-NEXT:    addi sp, sp, -1040
 ; RV64I-NEXT:    andi sp, sp, -1024
 ; RV64I-NEXT:    sd zero, 0(sp)
-; RV64I-NEXT:    slli a0, a0, 2
 ; RV64I-NEXT:    addi a1, sp, 1024
+; RV64I-NEXT:    slli a0, a0, 2
 ; RV64I-NEXT:    add a0, a1, a0
 ; RV64I-NEXT:    li a1, 1
 ; RV64I-NEXT:    sw a1, 0(a0)
@@ -584,8 +584,8 @@ define i32 @f10(i64 %i) local_unnamed_addr #0 {
 ; RV32I-NEXT:    addi sp, sp, -1040
 ; RV32I-NEXT:    andi sp, sp, -1024
 ; RV32I-NEXT:    sw zero, 0(sp)
-; RV32I-NEXT:    slli a0, a0, 2
 ; RV32I-NEXT:    addi a1, sp, 1024
+; RV32I-NEXT:    slli a0, a0, 2
 ; RV32I-NEXT:    add a0, a1, a0
 ; RV32I-NEXT:    li a1, 1
 ; RV32I-NEXT:    sw a1, 0(a0)
@@ -635,15 +635,15 @@ define void @f11(i32 %vla_size, i64 %i) #0 {
 ; RV64I-NEXT:    slli sp, a2, 15
 ; RV64I-NEXT:    mv s1, sp
 ; RV64I-NEXT:    slli a1, a1, 2
+; RV64I-NEXT:    slli a0, a0, 32
 ; RV64I-NEXT:    lui a2, 8
 ; RV64I-NEXT:    add a2, s1, a2
-; RV64I-NEXT:    add a1, a2, a1
-; RV64I-NEXT:    li a2, 1
-; RV64I-NEXT:    slli a0, a0, 32
 ; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    sw a2, 0(a1)
+; RV64I-NEXT:    add a1, a2, a1
 ; RV64I-NEXT:    addi a0, a0, 15
+; RV64I-NEXT:    li a2, 1
 ; RV64I-NEXT:    andi a0, a0, -16
+; RV64I-NEXT:    sw a2, 0(a1)
 ; RV64I-NEXT:    sub a0, sp, a0
 ; RV64I-NEXT:    andi a0, a0, -2048
 ; RV64I-NEXT:    lui a1, 1
@@ -693,12 +693,12 @@ define void @f11(i32 %vla_size, i64 %i) #0 {
 ; RV32I-NEXT:    srli a2, sp, 15
 ; RV32I-NEXT:    slli sp, a2, 15
 ; RV32I-NEXT:    mv s1, sp
-; RV32I-NEXT:    slli a1, a1, 2
 ; RV32I-NEXT:    lui a2, 8
 ; RV32I-NEXT:    add a2, s1, a2
+; RV32I-NEXT:    slli a1, a1, 2
+; RV32I-NEXT:    addi a0, a0, 15
 ; RV32I-NEXT:    add a1, a2, a1
 ; RV32I-NEXT:    li a2, 1
-; RV32I-NEXT:    addi a0, a0, 15
 ; RV32I-NEXT:    andi a0, a0, -16
 ; RV32I-NEXT:    sw a2, 0(a1)
 ; RV32I-NEXT:    sub a0, sp, a0
@@ -728,6 +728,75 @@ define void @f11(i32 %vla_size, i64 %i) #0 {
   %1 = zext i32 %vla_size to i64
   %vla = alloca i8, i64 %1, align 2048
   %2 = load volatile i8, ptr %vla, align 2048
+  ret void
+}
+
+; Probe loop with a split SP adjustment. The CFA offsets must include the
+; first SP adjustment.
+declare void @g(ptr)
+
+define void @f12() #0 {
+; RV64I-LABEL: f12:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -2032
+; RV64I-NEXT:    .cfi_def_cfa_offset 2032
+; RV64I-NEXT:    sd ra, 2024(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    .cfi_offset ra, -8
+; RV64I-NEXT:    lui a0, 9
+; RV64I-NEXT:    sub t1, sp, a0
+; RV64I-NEXT:    .cfi_def_cfa t1, 38896
+; RV64I-NEXT:    lui t2, 1
+; RV64I-NEXT:  .LBB12_1: # =>This Inner Loop Header: Depth=1
+; RV64I-NEXT:    sub sp, sp, t2
+; RV64I-NEXT:    sd zero, 0(sp)
+; RV64I-NEXT:    bne sp, t1, .LBB12_1
+; RV64I-NEXT:  # %bb.2:
+; RV64I-NEXT:    .cfi_def_cfa_register sp
+; RV64I-NEXT:    addi sp, sp, -1120
+; RV64I-NEXT:    .cfi_def_cfa_offset 40016
+; RV64I-NEXT:    addi a0, sp, 8
+; RV64I-NEXT:    call g
+; RV64I-NEXT:    lui a0, 9
+; RV64I-NEXT:    addi a0, a0, 1120
+; RV64I-NEXT:    add sp, sp, a0
+; RV64I-NEXT:    .cfi_def_cfa_offset 2032
+; RV64I-NEXT:    ld ra, 2024(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    .cfi_restore ra
+; RV64I-NEXT:    addi sp, sp, 2032
+; RV64I-NEXT:    .cfi_def_cfa_offset 0
+; RV64I-NEXT:    ret
+;
+; RV32I-LABEL: f12:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -2032
+; RV32I-NEXT:    .cfi_def_cfa_offset 2032
+; RV32I-NEXT:    sw ra, 2028(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    .cfi_offset ra, -4
+; RV32I-NEXT:    lui a0, 9
+; RV32I-NEXT:    sub t1, sp, a0
+; RV32I-NEXT:    .cfi_def_cfa t1, 38896
+; RV32I-NEXT:    lui t2, 1
+; RV32I-NEXT:  .LBB12_1: # =>This Inner Loop Header: Depth=1
+; RV32I-NEXT:    sub sp, sp, t2
+; RV32I-NEXT:    sw zero, 0(sp)
+; RV32I-NEXT:    bne sp, t1, .LBB12_1
+; RV32I-NEXT:  # %bb.2:
+; RV32I-NEXT:    .cfi_def_cfa_register sp
+; RV32I-NEXT:    addi sp, sp, -1120
+; RV32I-NEXT:    .cfi_def_cfa_offset 40016
+; RV32I-NEXT:    addi a0, sp, 12
+; RV32I-NEXT:    call g
+; RV32I-NEXT:    lui a0, 9
+; RV32I-NEXT:    addi a0, a0, 1120
+; RV32I-NEXT:    add sp, sp, a0
+; RV32I-NEXT:    .cfi_def_cfa_offset 2032
+; RV32I-NEXT:    lw ra, 2028(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    .cfi_restore ra
+; RV32I-NEXT:    addi sp, sp, 2032
+; RV32I-NEXT:    .cfi_def_cfa_offset 0
+; RV32I-NEXT:    ret
+  %buf = alloca [40000 x i8], align 1
+  call void @g(ptr %buf)
   ret void
 }
 

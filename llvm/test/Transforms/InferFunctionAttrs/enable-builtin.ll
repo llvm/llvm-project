@@ -1,5 +1,5 @@
-; RUN: opt -S -mtriple=amdgcn-- -passes=inferattrs %s | FileCheck -check-prefix=NOBUILTIN %s
-; RUN: opt -S -enable-builtin=malloc -mtriple=amdgcn-- -passes=inferattrs %s | FileCheck -check-prefix=WITHBUILTIN %s
+; RUN: opt -S -mtriple=amdgpu-- -passes=inferattrs %s | FileCheck -check-prefix=NOBUILTIN %s
+; RUN: opt -S -enable-builtin=malloc -mtriple=amdgpu-- -passes=inferattrs %s | FileCheck -check-prefix=WITHBUILTIN %s
 
 ; Test that the -enable-builtin flag works and forces recognition of
 ; malloc despite the target's default TargetLibraryInfo.

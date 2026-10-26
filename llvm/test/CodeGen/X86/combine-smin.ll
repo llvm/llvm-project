@@ -198,5 +198,37 @@ define <16 x i8> @test_v16i8_demandedbits(<16 x i8> %x, <16 x i8> %y, <16 x i8> 
   ret <16 x i8> %res
 }
 
-declare i8 @llvm.smin.i8(i8, i8)
-declare <16 x i8> @llvm.smin.v16i8(<16 x i8>, <16 x i8>)
+; smin(X, 0) -> and(X, ashr(X, BW-1)): saves a byte vs compare+cmov on x86-64.
+define i32 @smin_zero_i32(i32 %x) {
+; CHECK-LABEL: smin_zero_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    sarl $31, %eax
+; CHECK-NEXT:    andl %edi, %eax
+; CHECK-NEXT:    retq
+  %r = call i32 @llvm.smin.i32(i32 %x, i32 0)
+  ret i32 %r
+}
+
+define i64 @smin_zero_i64(i64 %x) {
+; CHECK-LABEL: smin_zero_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    sarq $63, %rax
+; CHECK-NEXT:    andq %rdi, %rax
+; CHECK-NEXT:    retq
+  %r = call i64 @llvm.smin.i64(i64 %x, i64 0)
+  ret i64 %r
+}
+
+; smin(X, -1) should NOT transform -- no 2-instruction bitwise form exists.
+define i32 @smin_allones_i32(i32 %x) {
+; CHECK-LABEL: smin_allones_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cmpl $-1, %edi
+; CHECK-NEXT:    movl $-1, %eax
+; CHECK-NEXT:    cmovll %edi, %eax
+; CHECK-NEXT:    retq
+  %r = call i32 @llvm.smin.i32(i32 %x, i32 -1)
+  ret i32 %r
+}

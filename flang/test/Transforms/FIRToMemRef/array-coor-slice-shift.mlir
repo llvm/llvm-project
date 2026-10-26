@@ -15,7 +15,7 @@ func.func @array_coor_slice_shift_1d() {
   %c1_i32 = arith.constant 1 : i32
   %0 = fir.alloca !fir.array<10xi32> {bindc_name = "a", uniq_name = "_QFEa"}
   %1 = fir.shape_shift %c0, %c10 : (index, index) -> !fir.shapeshift<1>
-  %2 = fir.declare %0(%1) {uniq_name = "_QFEa"} : (!fir.ref<!fir.array<10xi32>>, !fir.shapeshift<1>) -> !fir.ref<!fir.array<10xi32>>
+  %2 = fir.declare %0(%1) uniq_name("_QFEa") : (!fir.ref<!fir.array<10xi32>>, !fir.shapeshift<1>) -> !fir.ref<!fir.array<10xi32>>
   %3 = fir.slice %c0, %c10, %c1 : (index, index, index) -> !fir.slice<1>
   // Index %c0 is Fortran index 0 (= lower bound). Must produce memref index 0.
   %4 = fir.array_coor %2(%1) [%3] %c0 : (!fir.ref<!fir.array<10xi32>>, !fir.shapeshift<1>, !fir.slice<1>, index) -> !fir.ref<i32>
@@ -37,7 +37,7 @@ func.func @array_coor_slice_shift_2d() {
   %c1_i32 = arith.constant 1 : i32
   %0 = fir.alloca !fir.array<10x10xi32> {bindc_name = "a", uniq_name = "_QFEa"}
   %1 = fir.shape_shift %c0, %c10, %c_neg1, %c10 : (index, index, index, index) -> !fir.shapeshift<2>
-  %2 = fir.declare %0(%1) {uniq_name = "_QFEa"} : (!fir.ref<!fir.array<10x10xi32>>, !fir.shapeshift<2>) -> !fir.ref<!fir.array<10x10xi32>>
+  %2 = fir.declare %0(%1) uniq_name("_QFEa") : (!fir.ref<!fir.array<10x10xi32>>, !fir.shapeshift<2>) -> !fir.ref<!fir.array<10x10xi32>>
   %3 = fir.slice %c0, %c10, %c1, %c_neg1, %c8, %c1 : (index, index, index, index, index, index) -> !fir.slice<2>
   // Fortran indices (0, -1) = lower bounds => memref indices must be (0, 0).
   %4 = fir.array_coor %2(%1) [%3] %c0, %c_neg1 : (!fir.ref<!fir.array<10x10xi32>>, !fir.shapeshift<2>, !fir.slice<2>, index, index) -> !fir.ref<i32>
@@ -65,7 +65,7 @@ func.func @array_coor_slice_shift_section() {
   %c1_i32 = arith.constant 1 : i32
   %0 = fir.alloca !fir.array<6x9xi32> {bindc_name = "a", uniq_name = "_QFEa"}
   %1 = fir.shape_shift %c1, %c6, %c1, %c9 : (index, index, index, index) -> !fir.shapeshift<2>
-  %2 = fir.declare %0(%1) {uniq_name = "_QFEa"} : (!fir.ref<!fir.array<6x9xi32>>, !fir.shapeshift<2>) -> !fir.ref<!fir.array<6x9xi32>>
+  %2 = fir.declare %0(%1) uniq_name("_QFEa") : (!fir.ref<!fir.array<6x9xi32>>, !fir.shapeshift<2>) -> !fir.ref<!fir.array<6x9xi32>>
   // Slice: full range in dim 1, section 2:4 in dim 2.
   %3 = fir.slice %c1, %c6, %c1, %c2, %c4, %c1 : (index, index, index, index, index, index) -> !fir.slice<2>
   // Index (1, 1) in shape_shift space. Dim 2 slice starts at 2,
@@ -75,17 +75,20 @@ func.func @array_coor_slice_shift_section() {
   return
 }
 
-// Descriptor-backed array_coor with shape_shift + slice.
-// TODO: the strides must still be taken from the descriptor.
+// Descriptor-backed array_coor with shape_shift + slice. The descriptor owns
+// the layout: extents and strides must come from fir.box_dims, not from the
+// shape_shift extents. This matches the CodeGen XArrayCoorOp lowering, which
+// reads stride from the box (getStrideFromBox) regardless of any explicit
+// shape; the shape_shift only contributes lower bounds for index translation.
 // CHECK-LABEL: func.func @array_coor_box_shape_shift_slice
-// CHECK:       %[[C1:.*]] = arith.constant 1 : index
-// CHECK:       %[[C5:.*]] = arith.constant 5 : index
-// CHECK:       %[[C10:.*]] = arith.constant 10 : index
 // CHECK:       fir.box_addr %arg0
-// CHECK:       memref.reinterpret_cast %{{.+}} to offset: [%{{.+}}], sizes: [%[[C5]], %[[C10]]], strides: [%[[C10]], %{{.+}}]
+// CHECK:       fir.box_elesize %arg0
+// CHECK:       fir.box_dims %arg0
+// CHECK:       arith.divsi
+// CHECK:       fir.box_dims %arg0
+// CHECK:       arith.divsi
+// CHECK:       memref.reinterpret_cast %{{.+}} to offset: [%{{.+}}], sizes: [{{%.+}}, {{%.+}}], strides: [{{%.+}}, {{%.+}}]
 // CHECK:       memref.load
-// CHECK-NOT:   fir.box_dims
-// CHECK-NOT:   fir.box_elesize
 // CHECK-NOT:   fir.array_coor
 func.func @array_coor_box_shape_shift_slice(%arg0: !fir.box<!fir.array<?x?xi32>>) {
   %c1 = arith.constant 1 : index
@@ -120,7 +123,7 @@ func.func @array_coor_slice_scalar_full_rank_dim1_shifted() {
   %c1_i32 = arith.constant 1 : i32
   %0 = fir.alloca !fir.array<10x10xi32> {bindc_name = "a", uniq_name = "_QFEa"}
   %1 = fir.shape_shift %c3, %c10, %c_neg4, %c10 : (index, index, index, index) -> !fir.shapeshift<2>
-  %2 = fir.declare %0(%1) {uniq_name = "_QFEa"} : (!fir.ref<!fir.array<10x10xi32>>, !fir.shapeshift<2>) -> !fir.ref<!fir.array<10x10xi32>>
+  %2 = fir.declare %0(%1) uniq_name("_QFEa") : (!fir.ref<!fir.array<10x10xi32>>, !fir.shapeshift<2>) -> !fir.ref<!fir.array<10x10xi32>>
   %u = fir.undefined index
   %3 = fir.slice %c5, %u, %u, %c_neg4, %c10, %c1 : (index, index, index, index, index, index) -> !fir.slice<2>
   %4 = fir.array_coor %2(%1) [%3] %c5, %c_neg4 : (!fir.ref<!fir.array<10x10xi32>>, !fir.shapeshift<2>, !fir.slice<2>, index, index) -> !fir.ref<i32>

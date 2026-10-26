@@ -43,9 +43,6 @@ public:
   bool operator==(const SPIRVTypeInst &Other) const { return MI == Other.MI; }
   bool operator!=(const SPIRVTypeInst &Other) const { return MI != Other.MI; }
 
-  bool operator==(const MachineInstr *Other) const { return MI == Other; }
-  bool operator!=(const MachineInstr *Other) const { return MI != Other; }
-
   operator bool() const { return MI; }
 
   // Returns true if this is an OpTypeInt instruction.
@@ -55,18 +52,19 @@ public:
   bool isAnyTypeFloat() const;
   // Returns true if this is an OpTypeInt or OpTypeFloat instruction.
   bool isTypeIntOrFloat() const { return isTypeIntN() || isAnyTypeFloat(); }
+  // Returns true if this is an OpTypePointer or OpTypeUntypedPointerKHR
+  // instruction.
+  bool isPointer() const;
+  // Returns true if this is an OpTypePointer instruction.
+  bool isTypePtr() const;
+  // Returns true if this is an OpTypeUntypedPointerKHR instruction.
+  bool isTypeUntypedPtr() const;
 
   friend struct DenseMapInfo<SPIRVTypeInst>;
 };
 
 template <> struct DenseMapInfo<SPIRVTypeInst> {
   using MIInfo = DenseMapInfo<MachineInstr *>;
-  static SPIRVTypeInst getEmptyKey() {
-    return {MIInfo::getEmptyKey(), SPIRVTypeInst::UncheckedConstructor()};
-  }
-  static SPIRVTypeInst getTombstoneKey() {
-    return {MIInfo::getTombstoneKey(), SPIRVTypeInst::UncheckedConstructor()};
-  }
   static unsigned getHashValue(SPIRVTypeInst Ty) {
     return MIInfo::getHashValue(Ty.MI);
   }

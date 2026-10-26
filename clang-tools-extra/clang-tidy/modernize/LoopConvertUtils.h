@@ -268,7 +268,8 @@ using UsageResult = SmallVector<Usage, 8>;
 
 // General functions used by ForLoopIndexUseVisitor and LoopConvertCheck.
 const Expr *digThroughConstructorsConversions(const Expr *E);
-bool areSameExpr(ASTContext *Context, const Expr *First, const Expr *Second);
+bool areSameExpr(const ASTContext *Context, const Expr *First,
+                 const Expr *Second);
 const DeclRefExpr *getDeclRef(const Expr *E);
 bool areSameVariable(const ValueDecl *First, const ValueDecl *Second);
 

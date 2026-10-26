@@ -16,8 +16,12 @@ namespace llvm {
 class DeadMachineInstructionElimPass
     : public OptionalPassInfoMixin<DeadMachineInstructionElimPass> {
 public:
-  PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM);
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM);
+
+  MachineFunctionProperties getRequiredProperties() const {
+    return MachineFunctionProperties().setIsSSA();
+  }
 };
 
 } // namespace llvm

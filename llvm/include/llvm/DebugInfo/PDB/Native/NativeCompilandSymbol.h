@@ -15,7 +15,7 @@
 namespace llvm {
 namespace pdb {
 
-class NativeCompilandSymbol : public NativeRawSymbol {
+class LLVM_ABI NativeCompilandSymbol : public NativeRawSymbol {
 public:
   NativeCompilandSymbol(NativeSession &Session, SymIndexId SymbolId,
                         DbiModuleDescriptor MI);

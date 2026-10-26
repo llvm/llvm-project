@@ -88,10 +88,12 @@ private:
   friend class ConstantExpr;
 
   void setHasNoUnsignedWrap(bool B) {
+    assert(isa<Instruction>(this) && "cannot modify ConstantExpr");
     SubclassOptionalData =
       (SubclassOptionalData & ~NoUnsignedWrap) | (B * NoUnsignedWrap);
   }
   void setHasNoSignedWrap(bool B) {
+    assert(isa<Instruction>(this) && "cannot modify ConstantExpr");
     SubclassOptionalData =
       (SubclassOptionalData & ~NoSignedWrap) | (B * NoSignedWrap);
   }
@@ -318,6 +320,8 @@ public:
     case Instruction::FRem:
     case Instruction::FPTrunc:
     case Instruction::FPExt:
+    case Instruction::UIToFP:
+    case Instruction::SIToFP:
     // FIXME: To clean up and correct the semantics of fast-math-flags, FCmp
     //        should not be treated as a math op, but the other opcodes should.
     //        This would make things consistent with Select/PHI (FP value type
@@ -465,12 +469,6 @@ public:
     return true;
   }
 
-  unsigned countNonConstantIndices() const {
-    return count_if(indices(), [](const Use& use) {
-        return !isa<ConstantInt>(*use);
-      });
-  }
-
   /// Compute the maximum alignment that this GEP is garranteed to preserve.
   LLVM_ABI Align getMaxPreservedAlignment(const DataLayout &DL) const;
 
@@ -553,7 +551,6 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(PtrToIntOperator, Value)
 
 class PtrToAddrOperator
     : public ConcreteOperator<Operator, Instruction::PtrToAddr> {
-  friend class PtrToAddr;
   friend class ConstantExpr;
 
 public:

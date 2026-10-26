@@ -22,10 +22,10 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
     %4 = llvm.addrspacecast %3 : !llvm.ptr<5> to !llvm.ptr
     %5 = llvm.alloca %c0 x i32 {bindc_name = "z"} : (i64) -> !llvm.ptr<5>
     %6 = llvm.addrspacecast %5 : !llvm.ptr<5> to !llvm.ptr
-    %7 = omp.map.info var_ptr(%2 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = "x"}
-    %8 = omp.map.info var_ptr(%4 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = "y"}
-    %9 = omp.map.info var_ptr(%6 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = "z"}
-    omp.target map_entries(%7 -> %arg0, %8 -> %arg1, %9 -> %arg2 : !llvm.ptr, !llvm.ptr, !llvm.ptr) {
+    %7 = omp.map.info var_ptr(%2 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) name("x") -> !llvm.ptr
+    %8 = omp.map.info var_ptr(%4 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) name("y") -> !llvm.ptr
+    %9 = omp.map.info var_ptr(%6 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) name("z") -> !llvm.ptr
+    omp.target kernel_type(generic) map_entries(%7 -> %arg0, %8 -> %arg1, %9 -> %arg2 : !llvm.ptr, !llvm.ptr, !llvm.ptr) {
       %11 = llvm.mlir.constant(10000 : i32) : i32
       %12 = llvm.mlir.constant(1 : i32) : i32
       omp.teams reduction(@reduction %arg0 -> %arg3 : !llvm.ptr) {

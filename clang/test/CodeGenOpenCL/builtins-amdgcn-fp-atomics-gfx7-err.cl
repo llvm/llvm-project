@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgcn-amd-amdhsa -target-cpu gfx700 \
+// RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgpu7.00-amd-amdhsa \
 // RUN:   %s -verify -S -o -
 
 kernel void test_fadd_local(__local float *ptr, float val){

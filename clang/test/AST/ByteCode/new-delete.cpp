@@ -29,6 +29,9 @@ struct S {
 static_assert(((delete[] (new int[true])), true));
 static_assert(((delete[] (new S[true])), true));
 
+static_assert((new int[]{})[0] == 0); // both-error {{not an integral constant expression}} \
+                                      // both-note {{read of dereferenced one-past-the-end pointer}}
+
 constexpr int a() {
   new int(12); // both-note {{allocation performed here was not deallocated}}
   return 1;
@@ -108,6 +111,22 @@ consteval int doubleDelete() { // both-error {{never produces a constant express
 }
 static_assert(doubleDelete() == 1); // both-error {{not an integral constant expression}} \
                                     // both-note {{in call to 'doubleDelete()'}}
+
+template <int N>
+constexpr bool doubleDelete2(const char (&x)[N]) {
+  int *p[N];
+  for (int i = 0; i < N; i++)
+    p[i] = new int(x[i]);
+
+  delete p[0];
+  delete p[0]; // both-note {{delete of pointer that has already been deleted}}
+
+  return true;
+}
+static_assert(doubleDelete2("foo")); // both-error {{not an integral constant expression}} \
+                                     // both-note {{in call to}}
+
+
 
 constexpr int AutoArray() {
   auto array = new int[]{0, 1, 2, 3};
@@ -324,6 +343,18 @@ namespace placement_new_delete {
     void operator delete(DestroyingDelete*, std::destroying_delete_t);
   };
   struct alignas(64) Overaligned {};
+  struct NothrowByValue {
+    void *operator new(std::size_t, std::nothrow_t) noexcept;
+    void *operator new[](std::size_t, std::nothrow_t) noexcept;
+  };
+
+  // Constant-folding the new-expression used to assume the (std::nothrow)
+  // placement argument was an lvalue and assert on the prvalue produced when a
+  // user-declared allocation function takes std::nothrow_t by value.
+  void nothrow_by_value_fold(NothrowByValue *p) {
+    p = (1 ? new (std::nothrow) NothrowByValue[1] : nullptr);
+    p = (1 ? new (std::nothrow) NothrowByValue : nullptr);
+  }
 
   constexpr bool ok() {
     delete new Overaligned;
@@ -357,6 +388,10 @@ namespace placement_new_delete {
       // unreasonable to expect implementations to support this.
       delete new (std::align_val_t{64}) Overaligned; // both-note {{this placement new expression is not supported in constant expressions}}
       break;
+
+    case 5:
+      delete new (std::nothrow) NothrowByValue; // both-note {{call to class-specific 'operator new'}}
+      break;
     }
 
     return true;
@@ -368,6 +403,7 @@ namespace placement_new_delete {
   static_assert(bad(3)); // both-error {{constant expression}} both-note {{in call}}
   static_assert(bad(4)); // both-error {{constant expression}} \
                          // both-note {{in call}}
+  static_assert(bad(5)); // both-error {{constant expression}} both-note {{in call}}
 }
 
 
@@ -1098,12 +1134,18 @@ namespace BaseCompare {
 }
 
 
-namespace NegativeArraySize { 
+namespace NegativeArraySize {
   constexpr void f() { // both-error {{constexpr function never produces a constant expression}}
     int x = -1;
-    int *p = new int[x]; //both-note {{cannot allocate array; evaluated array bound -1 is negative}} 
+    int *p = new int[x]; //both-note {{cannot allocate array; evaluated array bound -1 is negative}}
   }
-} // namespace NegativeArraySize
+
+  struct S {};
+  constexpr void f1() { // both-error {{constexpr function never produces a constant expression}}
+    int x = -1;
+    int *p = new int[x]; //both-note {{cannot allocate array; evaluated array bound -1 is negative}}
+  }
+}
 
 namespace NewNegSizeNothrow {
   constexpr int get_neg_size() {
@@ -1112,7 +1154,7 @@ namespace NewNegSizeNothrow {
 
   constexpr bool test_nothrow_neg_size() {
     int x = get_neg_size();
-    int* p = new (std::nothrow) int[x]; 
+    int* p = new (std::nothrow) int[x];
     return p == nullptr;
   }
 
@@ -1215,6 +1257,69 @@ namespace ArrayDestSize {
   static_assert(dynarray<char>(5, 5) == 0); // both-error {{constant expression}} both-note {{in call}}
   static_assert(dynarray<char>(4, 4) == 0); // both-error {{constant expression}} both-note {{in call}}
   static_assert(dynarray<char>(3, 2) == 'x'); // both-error {{constant expression}} both-note {{in call}}
+}
+
+namespace OperatorArrayDelete {
+  struct S {};
+  using State = S[2];
+  constexpr unsigned run(const State *s) {
+    void *p;
+    p = operator new[](128); // both-note {{cannot allocate untyped memory}}
+    operator delete[](p);
+    return 42;
+  }
+
+  constexpr State s[] = {};
+  static_assert(run(s) == 42, ""); // both-error {{not an integral constant expression}} \
+                                   // both-note {{in call to}}
+}
+
+namespace AllocInBase {
+  struct A {
+    int *p;
+    constexpr A() : p(new int) {} // both-note {{heap allocation performed here}}
+  };
+  struct B : A {
+    int *m;
+    constexpr B() : m(new int) {}
+  };
+  constexpr B b{}; // both-error {{must be initialized by a constant expression}} \
+                   // both-note {{pointer to heap-allocated object is not a constant expression}}
+}
+
+namespace FreeNonBlockPointer {
+  extern int f();
+
+#define fold(x) (__builtin_constant_p(x) ? (x) : (x))
+  constexpr int foo() { // expected-error {{constexpr function never produces a constant expression}}
+    int *p;
+    p = fold((int*)(void*)f);
+    delete p; // expected-note 2 {{delete of pointer '&f' that does not point to a heap-allocated object}}
+    return 10;
+  }
+  static_assert(foo() == 10); // both-error {{not an integral constant expression}} expected-note {{in call to 'foo()'}}
+}
+
+namespace NonPrimitiveImplicitValueInitExpr {
+  constexpr int m() {
+    int r;
+    auto foo = new int[2][4][1]{};
+    r = foo[0][2][0];
+    delete[] foo;
+    return r;
+  }
+  static_assert(m() == 0);
+}
+
+namespace ZeroSizeElems {
+  typedef int U[0];
+
+  constexpr bool foo() {
+    auto p = new U[3.14]; // both-warning {{implicit conversion}}
+    delete[] p;
+    return true;
+  }
+  static_assert(foo());
 }
 
 #else

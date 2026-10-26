@@ -14,13 +14,14 @@
 #include <vector>
 
 #include "benchmark/benchmark.h"
+#include "test_macros.h"
 #include "../../GenerateInput.h"
 
 int main(int argc, char** argv) {
   auto bm = []<class Container>(std::type_identity<Container>, std::string name) {
     benchmark::RegisterBenchmark(
         name,
-        [](benchmark::State& state) {
+        [](benchmark::State& state) TEST_ALIGN_BENCHMARK {
           std::size_t size = state.range(0);
 
           Container c;

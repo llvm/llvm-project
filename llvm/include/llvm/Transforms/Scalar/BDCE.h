@@ -24,7 +24,7 @@ class Function;
 
 // The Bit-Tracking Dead Code Elimination pass.
 struct BDCEPass : OptionalPassInfoMixin<BDCEPass> {
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 }
 

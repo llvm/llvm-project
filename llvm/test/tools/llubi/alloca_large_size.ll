@@ -7,6 +7,6 @@ define void @main() {
 }
 ; CHECK: Entering function: main
 ; CHECK-NEXT: Stacktrace:
-; CHECK-NEXT: #0   %alloc_dyn = alloca i32, i32 100, align 4 at @main
+; CHECK-NEXT: #0   %alloc_dyn = alloca i32, i32 100, align 4 at @main <stdin>:5
 ; CHECK-NEXT: Error: Insufficient stack space.
 ; CHECK-NEXT: error: Execution of function 'main' failed.

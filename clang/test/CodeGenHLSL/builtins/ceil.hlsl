@@ -10,7 +10,7 @@ using hlsl::ceil;
 // NATIVE_HALF-LABEL: define hidden noundef nofpclass(nan inf) half @_Z14test_ceil_half
 // NATIVE_HALF: call reassoc nnan ninf nsz arcp afn half @llvm.ceil.f16(
 // NO_HALF-LABEL: define hidden noundef nofpclass(nan inf) float @_Z14test_ceil_half
-// NO_HALF: call reassoc nnan ninf nsz arcp afn float @llvm.ceil.f32(float %0)
+// NO_HALF: call reassoc nnan ninf nsz arcp afn float @llvm.ceil.f32(float %[[#]])
 half test_ceil_half(half p0) { return ceil(p0); }
 // NATIVE_HALF-LABEL: define hidden noundef nofpclass(nan inf) <2 x half> @_Z15test_ceil_half2
 // NATIVE_HALF: call reassoc nnan ninf nsz arcp afn <2 x half> @llvm.ceil.v2f16(
@@ -40,3 +40,7 @@ float3 test_ceil_float3(float3 p0) { return ceil(p0); }
 // CHECK-LABEL: define hidden noundef nofpclass(nan inf) <4 x float> @_Z16test_ceil_float4
 // CHECK: call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.ceil.v4f32(
 float4 test_ceil_float4(float4 p0) { return ceil(p0); }
+
+// CHECK-LABEL: test_ceil_float5
+// CHECK: call reassoc nnan ninf nsz arcp afn <5 x float> @llvm.ceil.v5f32
+vector<float, 5> test_ceil_float5(vector<float, 5> p0) { return ceil(p0); }

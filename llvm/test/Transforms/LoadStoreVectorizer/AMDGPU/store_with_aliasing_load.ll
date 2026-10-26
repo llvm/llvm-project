@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=amdgcn-amd-amdhsa -passes=load-store-vectorizer -S -o - %s | FileCheck %s
+; RUN: opt -mtriple=amdgpu-amd-amdhsa -passes=load-store-vectorizer -S -o - %s | FileCheck %s
 
 ; Check that, in the presence of an aliasing load, the stores preceding the
 ; aliasing load are safe to vectorize.

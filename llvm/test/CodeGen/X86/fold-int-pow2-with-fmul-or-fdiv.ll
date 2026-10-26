@@ -116,6 +116,7 @@ define <4 x float> @fmul_pow2_ldexp_4xfloat(<4 x i32> %i) {
 ; CHECK-ONLY-AVX512F:       # %bb.0:
 ; CHECK-ONLY-AVX512F-NEXT:    vbroadcastss {{.*#+}} xmm1 = [9.0E+0,9.0E+0,9.0E+0,9.0E+0]
 ; CHECK-ONLY-AVX512F-NEXT:    vmovaps %xmm0, %xmm0
+; CHECK-ONLY-AVX512F-NEXT:    vcvtdq2ps %zmm0, %zmm0
 ; CHECK-ONLY-AVX512F-NEXT:    vscalefps %zmm0, %zmm1, %zmm0
 ; CHECK-ONLY-AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; CHECK-ONLY-AVX512F-NEXT:    vzeroupper
@@ -578,6 +579,7 @@ define <8 x half> @fmul_pow2_ldexp_8xhalf(<8 x i16> %i) {
 ; CHECK-AVX512F:       # %bb.0:
 ; CHECK-AVX512F-NEXT:    vbroadcastss {{.*#+}} ymm1 = [8.192E+3,8.192E+3,8.192E+3,8.192E+3,8.192E+3,8.192E+3,8.192E+3,8.192E+3]
 ; CHECK-AVX512F-NEXT:    vpmovsxwd %xmm0, %ymm0
+; CHECK-AVX512F-NEXT:    vcvtdq2ps %zmm0, %zmm0
 ; CHECK-AVX512F-NEXT:    vscalefps %zmm0, %zmm1, %zmm0
 ; CHECK-AVX512F-NEXT:    vcvtps2ph $4, %ymm0, %xmm0
 ; CHECK-AVX512F-NEXT:    vzeroupper
@@ -1802,8 +1804,8 @@ define double @fmul_pow_shl_cnt_fail_knownbits_bad_exp(i64 %cnt) nounwind {
 ; CHECK-SKX:       # %bb.0:
 ; CHECK-SKX-NEXT:    andb $15, %dil
 ; CHECK-SKX-NEXT:    movl $1, %eax
-; CHECK-SKX-NEXT:    shlxq %rdi, %rax, %rax
-; CHECK-SKX-NEXT:    vcvtsi2sd %rax, %xmm15, %xmm0
+; CHECK-SKX-NEXT:    shlxl %edi, %eax, %eax
+; CHECK-SKX-NEXT:    vcvtsi2sd %eax, %xmm15, %xmm0
 ; CHECK-SKX-NEXT:    vmulsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; CHECK-SKX-NEXT:    retq
   %cnt_masked = and i64 %cnt, 15
@@ -1855,8 +1857,8 @@ define double @fdiv_pow_shl_cnt_fail_knownbits_bad_exp(i64 %cnt) nounwind {
 ; CHECK-SKX:       # %bb.0:
 ; CHECK-SKX-NEXT:    andb $15, %dil
 ; CHECK-SKX-NEXT:    movl $1, %eax
-; CHECK-SKX-NEXT:    shlxq %rdi, %rax, %rax
-; CHECK-SKX-NEXT:    vcvtsi2sd %rax, %xmm15, %xmm0
+; CHECK-SKX-NEXT:    shlxl %edi, %eax, %eax
+; CHECK-SKX-NEXT:    vcvtsi2sd %eax, %xmm15, %xmm0
 ; CHECK-SKX-NEXT:    vmovsd {{.*#+}} xmm1 = [5.4683415146672981E-304,0.0E+0]
 ; CHECK-SKX-NEXT:    vdivsd %xmm0, %xmm1, %xmm0
 ; CHECK-SKX-NEXT:    retq

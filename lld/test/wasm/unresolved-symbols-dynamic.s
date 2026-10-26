@@ -75,8 +75,6 @@ data_ptr:
 # CHECK-NEXT:        Name:            undef
 # CHECK-NEXT:      - Index:           2
 # CHECK-NEXT:        Name:            data_external
-# CHECK-NEXT:      - Index:           3
-# CHECK-NEXT:        Name:            __stack_pointer
 # CHECK-NEXT:    DataSegmentNames:
 # CHECK-NEXT:      - Index:           0
 # CHECK-NEXT:        Name:            .data

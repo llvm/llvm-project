@@ -23,7 +23,7 @@ using __sanitizer::uptr;
 #include "tysan_platform.h"
 
 extern "C" {
-void tysan_set_type_unknown(const void *addr, uptr size);
+void __tysan_set_type_unknown(const void *addr, uptr size);
 void tysan_copy_types(const void *daddr, const void *saddr, uptr size);
 }
 

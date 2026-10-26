@@ -21,10 +21,12 @@
 #include "clang/AST/APValue.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
+#include "clang/AST/MatrixUtils.h"
 #include "clang/AST/NSAPI.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/Builtins.h"
+#include "clang/CodeGenUtils/RecordLayoutUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/Analysis/ConstantFolding.h"
@@ -599,7 +601,8 @@ private:
 
   bool Build(const InitListExpr *ILE, bool AllowOverwrite);
   bool Build(const APValue &Val, const RecordDecl *RD, bool IsPrimaryBase,
-             const CXXRecordDecl *VTableClass, CharUnits BaseOffset);
+             const CXXRecordDecl *VTableClass, CharUnits BaseOffset,
+             bool IsCompleteClass = true);
   bool DoZeroInitPadding(const ASTRecordLayout &Layout, unsigned FieldNo,
                          const FieldDecl &Field, bool AllowOverwrite,
                          CharUnits &SizeSoFar, bool &ZeroFieldSize);
@@ -760,7 +763,7 @@ bool ConstStructBuilder::Build(const InitListExpr *ILE, bool AllowOverwrite) {
 
     // Zero-sized fields are not emitted, but their initializers may still
     // prevent emission of this struct as a constant.
-    if (isEmptyFieldForLayout(CGM.getContext(), Field)) {
+    if (CodeGenUtils::isEmptyFieldForLayout(CGM.getContext(), Field)) {
       if (Init && Init->HasSideEffects(CGM.getContext()))
         return false;
       continue;
@@ -840,44 +843,71 @@ struct BaseInfo {
 bool ConstStructBuilder::Build(const APValue &Val, const RecordDecl *RD,
                                bool IsPrimaryBase,
                                const CXXRecordDecl *VTableClass,
-                               CharUnits Offset) {
+                               CharUnits Offset, bool IsCompleteClass) {
+  assert(Val.isStruct() || Val.isUnion());
+
   const ASTRecordLayout &Layout = CGM.getContext().getASTRecordLayout(RD);
 
-  if (const CXXRecordDecl *CD = dyn_cast<CXXRecordDecl>(RD)) {
-    // Add a vtable pointer, if we need one and it hasn't already been added.
-    if (Layout.hasOwnVFPtr()) {
-      llvm::Constant *VTableAddressPoint =
-          CGM.getCXXABI().getVTableAddressPoint(BaseSubobject(CD, Offset),
-                                                VTableClass);
-      if (auto Authentication = CGM.getVTablePointerAuthentication(CD)) {
-        VTableAddressPoint = Emitter.tryEmitConstantSignedPointer(
-            VTableAddressPoint, *Authentication);
-        if (!VTableAddressPoint)
+  if (Val.isStruct()) {
+    if (const CXXRecordDecl *CD = dyn_cast<CXXRecordDecl>(RD)) {
+      // Add a vtable pointer, if we need one and it hasn't already been added.
+      if (Layout.hasOwnVFPtr()) {
+        llvm::Constant *VTableAddressPoint =
+            CGM.getCXXABI().getVTableAddressPoint(BaseSubobject(CD, Offset),
+                                                  VTableClass);
+        if (auto Authentication =
+                CGM.getVTablePointerAuthentication(CD,
+                                                   /*IsVTTEntry=*/false)) {
+          VTableAddressPoint = Emitter.tryEmitConstantSignedPointer(
+              VTableAddressPoint, *Authentication);
+          if (!VTableAddressPoint)
+            return false;
+        }
+        if (!AppendBytes(Offset, VTableAddressPoint))
           return false;
       }
-      if (!AppendBytes(Offset, VTableAddressPoint))
-        return false;
-    }
 
-    // Accumulate and sort bases, in order to visit them in address order, which
-    // may not be the same as declaration order.
-    SmallVector<BaseInfo, 8> Bases;
-    Bases.reserve(CD->getNumBases());
-    unsigned BaseNo = 0;
-    for (CXXRecordDecl::base_class_const_iterator Base = CD->bases_begin(),
-         BaseEnd = CD->bases_end(); Base != BaseEnd; ++Base, ++BaseNo) {
-      assert(!Base->isVirtual() && "should not have virtual bases here");
-      const CXXRecordDecl *BD = Base->getType()->getAsCXXRecordDecl();
-      CharUnits BaseOffset = Layout.getBaseClassOffset(BD);
-      Bases.push_back(BaseInfo(BD, BaseOffset, BaseNo));
-    }
-    llvm::stable_sort(Bases);
+      // Accumulate and sort bases, in order to visit them in address order,
+      // which may not be the same as declaration order.
+      SmallVector<BaseInfo, 8> Bases;
+      Bases.reserve(Val.getStructNumBases());
+      unsigned BaseNo = 0;
+      for (const CXXBaseSpecifier &Base : CD->bases()) {
+        if (Base.isVirtual())
+          continue;
+        const CXXRecordDecl *BD = Base.getType()->getAsCXXRecordDecl();
+        CharUnits BaseOffset = Layout.getBaseClassOffset(BD);
+        Bases.push_back(BaseInfo(BD, BaseOffset, BaseNo));
+        ++BaseNo;
+      }
+      llvm::stable_sort(Bases);
 
-    for (const BaseInfo &Base : Bases) {
-      bool IsPrimaryBase = Layout.getPrimaryBase() == Base.Decl;
-      if (!Build(Val.getStructBase(Base.Index), Base.Decl, IsPrimaryBase,
-                 VTableClass, Offset + Base.Offset))
-        return false;
+      for (const BaseInfo &Base : Bases) {
+        bool IsPrimaryBase = Layout.getPrimaryBase() == Base.Decl;
+        if (!Build(Val.getStructBase(Base.Index), Base.Decl, IsPrimaryBase,
+                   VTableClass, Offset + Base.Offset, false))
+          return false;
+      }
+
+      if (IsCompleteClass) {
+        Bases.clear();
+        BaseNo = 0;
+        Bases.reserve(Val.getStructNumVirtualBases());
+        for (const CXXBaseSpecifier &Base : CD->vbases()) {
+          const CXXRecordDecl *BD = Base.getType()->getAsCXXRecordDecl();
+          CharUnits BaseOffset = Layout.getVBaseClassOffset(BD);
+          Bases.push_back(BaseInfo(BD, BaseOffset, BaseNo));
+          ++BaseNo;
+        }
+        llvm::stable_sort(Bases);
+
+        for (const BaseInfo &Base : Bases) {
+          bool IsPrimaryBase = Layout.getPrimaryBase() == Base.Decl;
+          if (!Build(Val.getStructVirtualBase(Base.Index), Base.Decl,
+                     IsPrimaryBase, VTableClass, Offset + Base.Offset, false))
+            return false;
+        }
+      }
     }
   }
 
@@ -896,7 +926,7 @@ bool ConstStructBuilder::Build(const APValue &Val, const RecordDecl *RD,
 
     // Don't emit anonymous bitfields or zero-sized fields.
     if (Field->isUnnamedBitField() ||
-        isEmptyFieldForLayout(CGM.getContext(), *Field))
+        CodeGenUtils::isEmptyFieldForLayout(CGM.getContext(), *Field))
       continue;
 
     // Emit the value of the initializer.
@@ -1856,8 +1886,9 @@ namespace {
         IndexValues[i] = llvm::ConstantInt::get(CGM.Int32Ty, Indices[i]);
       }
 
-      llvm::Constant *location = llvm::ConstantExpr::getInBoundsGetElementPtr(
-          BaseValueTy, Base, IndexValues);
+      llvm::Constant *location = llvm::ConstantExpr::getGetElementPtr(
+          CGM.getDataLayout(), BaseValueTy, Base, IndexValues,
+          llvm::GEPNoWrapFlags::inBounds());
 
       Locations.insert({placeholder, location});
     }
@@ -1922,7 +1953,7 @@ llvm::Constant *ConstantEmitter::tryEmitPrivateForVarInit(const VarDecl &D) {
 
   // Try to emit the initializer.  Note that this can allow some things that
   // are not allowed by tryEmitPrivateForMemory alone.
-  if (APValue *value = D.evaluateValue()) {
+  if (const APValue *value = D.evaluateValue()) {
     assert(!value->allowConstexprUnknown() &&
            "Constexpr unknown values are not allowed in CodeGen");
     return tryEmitPrivateForMemory(*value, destType);
@@ -2055,6 +2086,26 @@ llvm::Constant *ConstantEmitter::emitForMemory(CodeGenModule &CGM,
       }
       return Res;
     }
+  }
+
+  if (destType->isConstantMatrixType() &&
+      isMatrixRowMajor(CGM.getLangOpts(), destType)) {
+    const auto *MT = destType->castAs<ConstantMatrixType>();
+    SmallVector<llvm::Constant *, 16> Inits(MT->getNumElementsFlattened());
+    for (unsigned Row = 0; Row != MT->getNumRows(); ++Row)
+      for (unsigned Col = 0; Col != MT->getNumColumns(); ++Col)
+        Inits[MT->getRowMajorFlattenedIndex(Row, Col)] =
+            C->getAggregateElement(MT->getColumnMajorFlattenedIndex(Row, Col));
+    llvm::Constant *MemoryValue = llvm::ConstantVector::get(Inits);
+    if (destType->isConstantMatrixBoolType()) {
+      llvm::Constant *Res = llvm::ConstantFoldCastOperand(
+          llvm::Instruction::ZExt, MemoryValue,
+          CGM.getTypes().convertTypeForLoadStore(destType),
+          CGM.getDataLayout());
+      assert(Res && "Constant folding must succeed");
+      return Res;
+    }
+    return MemoryValue;
   }
 
   return C;
@@ -2597,16 +2648,8 @@ ConstantEmitter::tryEmitPrivate(const APValue &Value, QualType DestType,
         llvm::StructType::get(Complex[0]->getType(), Complex[1]->getType());
     return llvm::ConstantStruct::get(STy, Complex);
   }
-  case APValue::Float: {
-    const llvm::APFloat &Init = Value.getFloat();
-    if (&Init.getSemantics() == &llvm::APFloat::IEEEhalf() &&
-        !CGM.getContext().getLangOpts().NativeHalfType &&
-        CGM.getContext().getTargetInfo().useFP16ConversionIntrinsics())
-      return llvm::ConstantInt::get(CGM.getLLVMContext(),
-                                    Init.bitcastToAPInt());
-    else
-      return llvm::ConstantFP::get(CGM.getLLVMContext(), Init);
-  }
+  case APValue::Float:
+    return llvm::ConstantFP::get(CGM.getLLVMContext(), Value.getFloat());
   case APValue::ComplexFloat: {
     llvm::Constant *Complex[2];
 
@@ -2645,13 +2688,10 @@ ConstantEmitter::tryEmitPrivate(const APValue &Value, QualType DestType,
     unsigned NumElts = NumRows * NumCols;
     SmallVector<llvm::Constant *, 16> Inits(NumElts);
 
-    bool IsRowMajor = CGM.getLangOpts().getDefaultMatrixMemoryLayout() ==
-                      LangOptions::MatrixMemoryLayout::MatrixRowMajor;
-
     for (unsigned Row = 0; Row != NumRows; ++Row) {
       for (unsigned Col = 0; Col != NumCols; ++Col) {
         const APValue &Elt = Value.getMatrixElt(Row, Col);
-        unsigned Idx = MT->getFlattenedIndex(Row, Col, IsRowMajor);
+        unsigned Idx = MT->getColumnMajorFlattenedIndex(Row, Col);
         if (Elt.isInt())
           Inits[Idx] =
               llvm::ConstantInt::get(CGM.getLLVMContext(), Elt.getInt());
@@ -2734,6 +2774,8 @@ ConstantEmitter::tryEmitPrivate(const APValue &Value, QualType DestType,
   }
   case APValue::MemberPointer:
     return CGM.getCXXABI().EmitMemberPointer(Value, DestType);
+  case APValue::Reflection:
+    llvm_unreachable("std::meta::info is consteval-only type");
   }
   llvm_unreachable("Unknown APValue kind");
 }
@@ -2801,7 +2843,7 @@ static llvm::Constant *EmitNullConstant(CodeGenModule &CGM,
 
       const auto *base = I.getType()->castAsCXXRecordDecl();
       // Ignore empty bases.
-      if (isEmptyRecordForLayout(CGM.getContext(), I.getType()) ||
+      if (CodeGenUtils::isEmptyRecordForLayout(CGM.getContext(), I.getType()) ||
           CGM.getContext()
               .getASTRecordLayout(base)
               .getNonVirtualSize()
@@ -2819,7 +2861,7 @@ static llvm::Constant *EmitNullConstant(CodeGenModule &CGM,
     // Fill in non-bitfields. (Bitfields always use a zero pattern, which we
     // will fill in later.)
     if (!Field->isBitField() &&
-        !isEmptyFieldForLayout(CGM.getContext(), Field)) {
+        !CodeGenUtils::isEmptyFieldForLayout(CGM.getContext(), Field)) {
       unsigned fieldIndex = layout.getLLVMFieldNo(Field);
       elements[fieldIndex] = CGM.EmitNullConstant(Field->getType());
     }
@@ -2839,7 +2881,7 @@ static llvm::Constant *EmitNullConstant(CodeGenModule &CGM,
     for (const auto &I : CXXR->vbases()) {
       const auto *base = I.getType()->castAsCXXRecordDecl();
       // Ignore empty bases.
-      if (isEmptyRecordForLayout(CGM.getContext(), I.getType()))
+      if (CodeGenUtils::isEmptyRecordForLayout(CGM.getContext(), I.getType()))
         continue;
 
       unsigned fieldIndex = layout.getVirtualBaseIndex(base);
@@ -2881,9 +2923,14 @@ llvm::Constant *ConstantEmitter::emitNullForMemory(CodeGenModule &CGM,
 }
 
 llvm::Constant *CodeGenModule::EmitNullConstant(QualType T) {
-  if (T->getAs<PointerType>())
-    return getNullPointer(
-        cast<llvm::PointerType>(getTypes().ConvertTypeForMem(T)), T);
+  if (T->getAs<PointerType>()) {
+    llvm::Type *LT = getTypes().ConvertTypeForMem(T);
+    if (auto *PT = dyn_cast<llvm::PointerType>(LT))
+      return getNullPointer(PT, T);
+    // Some pointer types do not lower to an LLVM pointer (e.g. a WebAssembly
+    // funcref, which is an opaque reference type). Use the type's zero value.
+    return llvm::Constant::getNullValue(LT);
+  }
 
   if (getTypes().isZeroInitializable(T))
     return llvm::Constant::getNullValue(getTypes().ConvertTypeForMem(T));

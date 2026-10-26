@@ -43,7 +43,7 @@ class TestStopHooks(TestBase):
         self.interp.HandleCommand(command, result)
         self.assertFalse(result.Succeeded(), "Set the target stop hook")
         self.assertIn(
-            "Abstract method no_handle_stop.handle_stop not implemented",
+            "abstract method no_handle_stop.handle_stop not implemented",
             result.GetError(),
             "Got the right error",
         )

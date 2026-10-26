@@ -1,10 +1,10 @@
 // REQUIRES: aarch64
-// RUN: rm -rf %t && split-file %s %t
-// RUN: llvm-mc -triple aarch64-none-elf -filetype=obj -o %t/a.o %t/a.s
-// RUN: ld.lld --shared %t/a.o -T %t/a.t -o %t/a
-// RUN: llvm-objdump --no-show-raw-insn -d --start-address=0x7001004 --stop-address=0x7001010 %t/a | FileCheck %s
-// RUN: llvm-objdump --no-show-raw-insn -d --start-address=0x11001008 --stop-address=0x11001014 %t/a | FileCheck --check-prefix=CHECK2 %s
-// RUN: rm -f %t/a
+// RUN: rm -rf %t && split-file %s %t && cd %t
+// RUN: llvm-mc -triple aarch64-none-elf -filetype=obj -o a.o a.s
+// RUN: ld.lld --shared a.o -T a.lds -o a
+// RUN: llvm-objdump --no-show-raw-insn -d --start-address=0x7001004 --stop-address=0x7001010 a | FileCheck %s
+// RUN: llvm-objdump --no-show-raw-insn -d --start-address=0x11001008 --stop-address=0x11001014 a | FileCheck --check-prefix=CHECK2 %s
+// RUN: rm -f a a.o
 /// This test shows that once a long-range thunk has been generated it
 /// cannot be written as a short-range thunk. This prevents oscillations
 /// in size that can prevent convergence.
@@ -24,7 +24,7 @@
 // CHECK2-NEXT:           br      x16
 
 
-//--- a.t
+//--- a.lds
 SECTIONS {
   .foo 0x1000 : { *(.foo.*) }
   .bar 0x11001000 : { *(.bar.*) }

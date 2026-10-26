@@ -17,9 +17,8 @@
 using namespace llvm;
 
 void clang::EmitClangDataCollectors(const RecordKeeper &RK, raw_ostream &OS) {
-  const auto &Defs = RK.getClasses();
-  for (const auto &Entry : Defs) {
-    Record &R = *Entry.second;
+  for (const Record *Class : RK.getClasses()) {
+    const Record &R = *Class;
     OS << "DEF_ADD_DATA(" << R.getName() << ", {\n";
     auto Code = R.getValue("Code")->getValue();
     OS << Code->getAsUnquotedString() << "}\n)";

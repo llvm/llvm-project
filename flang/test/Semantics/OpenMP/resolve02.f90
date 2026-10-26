@@ -7,7 +7,7 @@
   !$omp parallel private(a) shared(b)
   a = 3.
   b = 4
-  !ERROR: LASTPRIVATE clause is not allowed on the PARALLEL directive
+  !ERROR: LASTPRIVATE clause is not allowed on PARALLEL directive
   !ERROR: 'a' appears in more than one data-sharing clause on the same OpenMP directive
   !$omp parallel private(a) shared(b) lastprivate(a)
   a = 5.

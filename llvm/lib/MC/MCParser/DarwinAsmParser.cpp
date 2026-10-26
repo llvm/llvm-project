@@ -192,6 +192,8 @@ public:
     addDirectiveHandler<&DarwinAsmParser::parseMacOSXVersionMin>(
       ".macosx_version_min");
     addDirectiveHandler<&DarwinAsmParser::parseBuildVersion>(".build_version");
+    addDirectiveHandler<&DarwinAsmParser::parseTargetTripleDirective>(
+        ".target_triple");
     addDirectiveHandler<&DarwinAsmParser::parseDirectiveCGProfile>(
         ".cg_profile");
 
@@ -457,6 +459,7 @@ public:
   }
 
   bool parseBuildVersion(StringRef Directive, SMLoc Loc);
+  bool parseTargetTripleDirective(StringRef Directive, SMLoc Loc);
   bool parseVersionMin(StringRef Directive, SMLoc Loc, MCVersionMinType Type);
   bool parseMajorMinorVersionComponent(unsigned *Major, unsigned *Minor,
                                        const char *VersionName);
@@ -847,10 +850,9 @@ bool DarwinAsmParser::parseDirectiveTBSS(StringRef, SMLoc) {
     return Error(SizeLoc, "invalid '.tbss' directive size, can't be less than"
                  "zero");
 
-  // FIXME: Diagnose overflow.
-  if (Pow2Alignment < 0)
-    return Error(Pow2AlignmentLoc, "invalid '.tbss' alignment, can't be less"
-                 "than zero");
+  if (Pow2Alignment < 0 || Pow2Alignment > 63)
+    return Error(Pow2AlignmentLoc, "invalid '.tbss' alignment, must be in the "
+                                   "range [0, 63]");
 
   if (!Sym->isUndefined())
     return Error(IDLoc, "invalid symbol redefinition");
@@ -859,7 +861,7 @@ bool DarwinAsmParser::parseDirectiveTBSS(StringRef, SMLoc) {
       getContext().getMachOSection("__DATA", "__thread_bss",
                                    MachO::S_THREAD_LOCAL_ZEROFILL, 0,
                                    SectionKind::getThreadBSS()),
-      Sym, Size, Align(1ULL << Pow2Alignment));
+      Sym, Size, Align::fromLog2(Pow2Alignment));
 
   return false;
 }
@@ -931,10 +933,9 @@ bool DarwinAsmParser::parseDirectiveZerofill(StringRef, SMLoc) {
 
   // NOTE: The alignment in the directive is a power of 2 value, the assembler
   // may internally end up wanting an alignment in bytes.
-  // FIXME: Diagnose overflow.
-  if (Pow2Alignment < 0)
+  if (Pow2Alignment < 0 || Pow2Alignment > 63)
     return Error(Pow2AlignmentLoc, "invalid '.zerofill' directive alignment, "
-                 "can't be less than zero");
+                                   "must be in the range [0, 63]");
 
   if (!Sym->isUndefined())
     return Error(IDLoc, "invalid symbol redefinition");
@@ -945,7 +946,7 @@ bool DarwinAsmParser::parseDirectiveZerofill(StringRef, SMLoc) {
   getStreamer().emitZerofill(
       getContext().getMachOSection(Segment, Section, MachO::S_ZEROFILL, 0,
                                    SectionKind::getBSS()),
-      Sym, Size, Align(1ULL << Pow2Alignment), SectionLoc);
+      Sym, Size, Align::fromLog2(Pow2Alignment), SectionLoc);
 
   return false;
 }
@@ -1183,6 +1184,25 @@ bool DarwinAsmParser::parseBuildVersion(StringRef Directive, SMLoc Loc) {
     = getOSTypeFromPlatform((MachO::PlatformType)Platform);
   checkVersion(Directive, PlatformName, Loc, ExpectedOS);
   getStreamer().emitBuildVersion(Platform, Major, Minor, Update, SDKVersion);
+  return false;
+}
+
+/// parseTargetTripleDirective
+///   ::= .target_triple parseTargetTriple
+bool DarwinAsmParser::parseTargetTripleDirective(StringRef Directive,
+                                                 SMLoc Loc) {
+  StringRef TargetTriple;
+  SMLoc TargetTripleLoc = getTok().getLoc();
+  if (getParser().parseIdentifier(TargetTriple))
+    return TokError("target triple expected");
+  std::string NormalizedTriple = Triple::normalize(TargetTriple);
+  if (!Triple(NormalizedTriple).isOSDarwin())
+    return Error(TargetTripleLoc, "non-Darwin target triple");
+
+  if (parseEOL())
+    return addErrorSuffix(" in '.target_triple' directive");
+
+  getStreamer().emitTargetTriple(NormalizedTriple);
   return false;
 }
 

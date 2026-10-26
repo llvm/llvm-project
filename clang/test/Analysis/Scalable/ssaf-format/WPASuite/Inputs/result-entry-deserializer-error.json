@@ -22,5 +22,6 @@
         "tags": "not-an-array"
       }
     }
-  ]
+  ],
+  "type": "WPASuite"
 }

@@ -20,6 +20,7 @@ add_llvm_target(DirectXCodeGen
   DirectXTargetMachine.cpp
   DirectXTargetTransformInfo.cpp
   DXContainerGlobals.cpp
+  DXContainerPDB.cpp
   DXILCBufferAccess.cpp
   DXILDataScalarization.cpp
   DXILFinalizeLinkage.cpp
@@ -32,9 +33,11 @@ add_llvm_target(DirectXCodeGen
   DXILPostOptimizationValidation.cpp
   DXILPrepare.cpp
   DXILPrettyPrinter.cpp
+  DXILRemoveUnusedResources.cpp
   DXILResourceAccess.cpp
   DXILResourceImplicitBinding.cpp
   DXILShaderFlags.cpp
+  DXILSignatureAnalysis.cpp
   DXILTranslateMetadata.cpp
   DXILRootSignature.cpp
   DXILLegalizePass.cpp
@@ -46,6 +49,8 @@ add_llvm_target(DirectXCodeGen
   CodeGen
   CodeGenTypes
   Core
+  DebugInfoMSF
+  DebugInfoPDB
   DXILBitWriter
   DirectXDesc
   DirectXInfo

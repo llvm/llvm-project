@@ -1,10 +1,18 @@
 // RUN: %libomptarget-compilexx-run-and-check-generic
 // RUN: %libomptarget-compileoptxx-run-and-check-generic
+// RUN: %libomptarget-compilexx-generic -fopenmp-target-atomic-reduction && \
+// RUN:   %libomptarget-run-generic | %fcheck-generic
+// RUN: %libomptarget-compileoptxx-generic -fopenmp-target-atomic-reduction && \
+// RUN:   %libomptarget-run-generic | %fcheck-generic
 // UNSUPPORTED: intelgpu
+
+// See array_reductions.cpp for a clone of this file for array reductions.
 
 #include <cassert>
 #include <cstdio>
 #include <cstdlib>
+#include <iomanip>
+#include <ios>
 #include <iostream>
 
 #include "omp.h"
@@ -33,7 +41,6 @@ template <typename T> void run_type(void) {
 #pragma omp target teams distribute parallel for reduction(+ : s1)
   for (int i = 0; i < N; ++i)
     s1 += in1[i];
-  // CHECK: 49995000
   std::cout << s1 << '\n';
 
   s1 = T(0);
@@ -42,7 +49,6 @@ template <typename T> void run_type(void) {
 #pragma omp target teams distribute parallel for reduction(+ : s1)
   for (int i = 0; i < N; i++)
     s1 = accumulate(s1, in1[i]);
-  // CHECK: 49995000
   std::cout << s1 << '\n';
 
   // Dot reduction
@@ -50,7 +56,6 @@ template <typename T> void run_type(void) {
 #pragma omp target teams distribute parallel for reduction(+ : s1)
   for (int i = 0; i < N; ++i)
     s1 += in1[i] * in2[i];
-  // CHECK: 2570853208
   std::cout << s1 << '\n';
 
   // Combined reduction (sum and max) - in the same loop ...
@@ -61,7 +66,6 @@ template <typename T> void run_type(void) {
     s1 += in1[i];
     s2 = in1[i] > s2 ? in1[i] : s2;
   }
-  // CHECK: 49995000 : 9999
   std::cout << s1 << " : " << s2 << '\n';
 
   // ... and in separate loops
@@ -77,7 +81,6 @@ template <typename T> void run_type(void) {
     for (int i = 0; i < N; i++)
       s2 = in1[i] > s2 ? in1[i] : s2;
   }
-  // CHECK: 49995000 : 9999
   std::cout << s1 << " : " << s2 << '\n';
 
   // Reduction in a kernel that is also doing something completely
@@ -100,7 +103,6 @@ template <typename T> void run_type(void) {
         s1 += x;
     }
   }
-  // CHECK: 49995000
   std::cout << s1 << '\n';
 
 #pragma omp target exit data map(delete : in1[0 : N], in2[0 : N])
@@ -110,8 +112,30 @@ template <typename T> void run_type(void) {
 }
 
 int main(int argc, char **argv) {
+  std::cout << std::fixed << std::setprecision(0);
+
+  // CHECK: 49995000
+  // CHECK: 49995000
+  // CHECK: 333283335000
+  // CHECK: 49995000 : 9999
+  // CHECK: 49995000 : 9999
+  // CHECK: 49995000
   run_type<double>();
+
+  // CHECK: 49995000
+  // CHECK: 49995000
+  // CHECK: 2570853208
+  // CHECK: 49995000 : 9999
+  // CHECK: 49995000 : 9999
+  // CHECK: 49995000
   run_type<unsigned>();
+
+  // CHECK: 49995000
+  // CHECK: 49995000
+  // CHECK: 333283335000
+  // CHECK: 49995000 : 9999
+  // CHECK: 49995000 : 9999
+  // CHECK: 49995000
   run_type<unsigned long>();
 
   // Reduction calculating pi

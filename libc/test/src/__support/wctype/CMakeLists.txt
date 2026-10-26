@@ -1,4 +1,4 @@
-add_custom_target(libc-support-wctype-tests)
+add_libc_testsuite(libc-support-wctype-tests PARENT libc-support-tests)
 
 set(CONSTEXPR_FLAGS "")
 
@@ -23,6 +23,7 @@ add_libc_test(
   SRCS
     wctype_perfect_hash_test.cpp
   COMPILE_OPTIONS
+    -DLIBC_ENABLE_CONSTEXPR=1
     ${CONSTEXPR_FLAGS}
   DEPENDS
     libc.src.__support.wctype.lower_to_upper

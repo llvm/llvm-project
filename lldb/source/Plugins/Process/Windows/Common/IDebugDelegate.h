@@ -32,10 +32,13 @@ public:
                                            const ExceptionRecord &record) = 0;
   virtual void OnCreateThread(const HostThread &thread) = 0;
   virtual void OnExitThread(lldb::tid_t thread_id, uint32_t exit_code) = 0;
-  virtual void OnLoadDll(const ModuleSpec &module_spec,
-                         lldb::addr_t module_addr) = 0;
-  virtual void OnUnloadDll(lldb::addr_t module_addr) = 0;
-  virtual void OnDebugString(const std::string &string) = 0;
+  virtual DllEventAction OnLoadDll(const ModuleSpec &module_spec,
+                                   lldb::addr_t module_addr,
+                                   lldb::tid_t thread_id) = 0;
+  virtual DllEventAction OnUnloadDll(lldb::addr_t module_addr,
+                                     lldb::tid_t thread_id) = 0;
+  virtual void OnDebugString(lldb::addr_t debug_string_addr, bool is_unicode,
+                             uint16_t length_lower_word) = 0;
   virtual void OnDebuggerError(const Status &error, uint32_t type) = 0;
 };
 }

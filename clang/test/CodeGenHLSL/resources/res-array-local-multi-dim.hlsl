@@ -16,6 +16,7 @@ RWStructuredBuffer<float> Out;
 
 // CHECK: define {{.*}} float @_Z3fooA2_A2_N4hlsl8RWBufferIfEE(ptr noundef byval([2 x [2 x %"class.hlsl::RWBuffer"]]) align 4 %Arr)
 // CHECK-NEXT: entry:
+// CHECK-NEXT: %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 float foo(RWBuffer<float> Arr[2][2]) {
 // CHECK-NEXT: %[[Arr_1_Ptr:.*]] = getelementptr inbounds [2 x [2 x %"class.hlsl::RWBuffer"]], ptr %Arr, i32 0, i32 1
 // CHECK-NEXT: %[[Arr_1_1_Ptr:.*]] = getelementptr inbounds [2 x %"class.hlsl::RWBuffer"], ptr %[[Arr_1_Ptr]], i32 0, i32 1
@@ -27,6 +28,7 @@ float foo(RWBuffer<float> Arr[2][2]) {
 
 // CHECK: define internal void @_Z4mainv()
 // CHECK-NEXT: entry:
+// CHECK-NEXT: %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 [numthreads(4,1,1)]
 void main() {
 // CHECK: %L = alloca [2 x [2 x %"class.hlsl::RWBuffer"]], align 4

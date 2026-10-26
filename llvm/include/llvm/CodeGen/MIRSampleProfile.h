@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/Support/Discriminator.h"
+#include "llvm/Support/VirtualFileSystemFwd.h"
 #include <memory>
 #include <string>
 
@@ -27,14 +28,10 @@ class MachineBlockFrequencyInfo;
 class MachineFunction;
 class Module;
 
-namespace vfs {
-class FileSystem;
-} // namespace vfs
-
 using namespace sampleprof;
 
 class MIRProfileLoader;
-class MIRProfileLoaderPass : public MachineFunctionPass {
+class LLVM_ABI MIRProfileLoaderPass : public MachineFunctionPass {
   MachineFunction *MF;
   std::string ProfileFileName;
   FSDiscriminatorPass P;
@@ -55,7 +52,6 @@ public:
   StringRef getPassName() const override { return "SampleFDO loader in MIR"; }
 
 private:
-  void init(MachineFunction &MF);
   bool runOnMachineFunction(MachineFunction &) override;
   bool doInitialization(Module &M) override;
   void getAnalysisUsage(AnalysisUsage &AU) const override;

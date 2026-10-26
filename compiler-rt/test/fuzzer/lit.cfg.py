@@ -3,27 +3,15 @@ import sys
 import os
 
 config.name = "libFuzzer" + config.name_suffix
-config.test_format = lit.formats.ShTest(True)
 config.suffixes = [".test"]
 config.test_source_root = os.path.dirname(__file__)
 config.available_features.add(config.target_arch)
-
-# Choose between lit's internal shell pipeline runner and a real shell.  If
-# LIT_USE_INTERNAL_SHELL is in the environment, we use that as an override.
-use_lit_shell = os.environ.get("LIT_USE_INTERNAL_SHELL")
-if use_lit_shell:
-    # 0 is external, "" is default, and everything else is internal.
-    execute_external = use_lit_shell == "0"
-else:
-    # Otherwise we default to internal on Windows and external elsewhere, as
-    # bash on Windows is usually very slow.
-    execute_external = not sys.platform in ["win32"]
 
 # testFormat: The test format to use to interpret tests.
 #
 # For now we require '&&' between commands, until they get globally killed and
 # the test runner updated.
-config.test_format = lit.formats.ShTest(execute_external)
+config.test_format = lit.formats.ShTest()
 
 # LeakSanitizer is not supported on OSX or Windows right now.
 if (

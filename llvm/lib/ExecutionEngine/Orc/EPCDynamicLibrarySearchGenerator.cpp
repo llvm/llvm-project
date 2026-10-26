@@ -81,8 +81,8 @@ Error EPCDynamicLibrarySearchGenerator::tryToGenerate(
         SymbolMap NewSymbols;
         for (auto &[Name, Flags] : LookupSymbols) {
           const auto &Sym = *SymsIt++;
-          if (Sym && Sym->getAddress())
-            NewSymbols[Name] = *Sym;
+          if (Sym && *Sym)
+            NewSymbols[Name] = {*Sym, JITSymbolFlags::Exported};
           else if (LLVM_UNLIKELY(!Sym &&
                                  Flags == SymbolLookupFlags::RequiredSymbol))
             MissingSymbols.insert(Name);

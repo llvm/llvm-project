@@ -140,10 +140,10 @@ define i64 @early_exit_with_live_in_condition(i1 %cond) {
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[IV]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[ARRAYIDX]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i8> [[WIDE_LOAD]], zeroinitializer
-; CHECK-NEXT:    [[INC]] = add nuw i64 [[IV]], 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[BROADCAST_SPLAT]], <4 x i1> splat (i1 true), <4 x i1> [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = freeze <4 x i1> [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP3]])
+; CHECK-NEXT:    [[INC]] = add nuw i64 [[IV]], 4
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INC]], 1024
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[VECTOR_EARLY_EXIT_CHECK:%.*]], label [[VECTOR_BODY_INTERIM]]
 ; CHECK:       vector.body.interim:

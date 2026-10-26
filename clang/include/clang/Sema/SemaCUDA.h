@@ -107,6 +107,15 @@ public:
   /// Same as DiagIfDeviceCode, with "host" and "device" switched.
   SemaDiagnosticBuilder DiagIfHostCode(SourceLocation Loc, unsigned DiagID);
 
+  /// Diagnoses a use of RTTI at \p Loc if it is in device function or the
+  /// initializer of a device variable, where RTTI is not available.
+  void checkRTTIUse(SourceLocation Loc, StringRef Op);
+
+  /// Diagnoses a use of RTTI in \p Init, the default argument or default
+  /// member initializer of \p D if it is used at \p UseLoc in device code.
+  void checkRTTIInDefaultInit(const ValueDecl *D, const Expr *Init,
+                              SourceLocation UseLoc);
+
   /// Determines whether the given function is a CUDA device/host/kernel/etc.
   /// function.
   ///
@@ -284,8 +293,19 @@ public:
   void recordPotentialODRUsedVariable(MultiExprArg Args,
                                       OverloadCandidateSet &CandidateSet);
 
+  /// Null-tolerant wrapper for FunctionDecl::isImplicitHDExplicitInstantiation.
+  static bool isImplicitHDExplicitInstantiation(const FunctionDecl *FD);
+
 private:
   unsigned ForceHostDeviceDepth = 0;
+
+  /// Whether the current context is the initializer of a device variable.
+  bool isDeviceVarInit() const;
+
+  /// The default arguments and default member initializers, paired with the
+  /// function using them.
+  llvm::DenseSet<std::pair<const ValueDecl *, const FunctionDecl *>>
+      RTTICheckedDefaultInits;
 
   friend class ASTReader;
   friend class ASTWriter;
@@ -300,14 +320,6 @@ template <> struct DenseMapInfo<clang::SemaCUDA::FunctionDeclAndLoc> {
   using FunctionDeclAndLoc = clang::SemaCUDA::FunctionDeclAndLoc;
   using FDBaseInfo =
       DenseMapInfo<clang::CanonicalDeclPtr<const clang::FunctionDecl>>;
-
-  static FunctionDeclAndLoc getEmptyKey() {
-    return {FDBaseInfo::getEmptyKey(), clang::SourceLocation()};
-  }
-
-  static FunctionDeclAndLoc getTombstoneKey() {
-    return {FDBaseInfo::getTombstoneKey(), clang::SourceLocation()};
-  }
 
   static unsigned getHashValue(const FunctionDeclAndLoc &FDL) {
     return hash_combine(FDBaseInfo::getHashValue(FDL.FD),

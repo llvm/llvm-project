@@ -28,8 +28,9 @@ class IndVarSimplifyPass : public OptionalPassInfoMixin<IndVarSimplifyPass> {
 
 public:
   IndVarSimplifyPass(bool WidenIndVars = true) : WidenIndVars(WidenIndVars) {}
-  PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
-                        LoopStandardAnalysisResults &AR, LPMUpdater &U);
+  LLVM_ABI PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
+                                 LoopStandardAnalysisResults &AR,
+                                 LPMUpdater &U);
 };
 
 } // end namespace llvm

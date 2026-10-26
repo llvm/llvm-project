@@ -18,7 +18,7 @@ struct PGOForceFunctionAttrsPass
     : public OptionalPassInfoMixin<PGOForceFunctionAttrsPass> {
   PGOForceFunctionAttrsPass(PGOOptions::ColdFuncOpt ColdType)
       : ColdType(ColdType) {}
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 
 private:
   PGOOptions::ColdFuncOpt ColdType;

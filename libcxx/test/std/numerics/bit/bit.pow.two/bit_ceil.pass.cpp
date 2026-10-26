@@ -142,7 +142,7 @@ int main(int, char**)
 
     // _BitInt tests. Width tiers follow C23 7.18.2.5.
     // bit_ceil uses numeric_limits::digits, so only byte-aligned widths.
-#if TEST_HAS_EXTENSION(bit_int)
+#if TEST_HAS_BITINT
     {
       using T32 = unsigned _BitInt(32);
       using T64 = unsigned _BitInt(64);
@@ -200,7 +200,7 @@ int main(int, char**)
       assert(std::bit_ceil((T256(1) << 200) + 1) == T256(1) << 201);
     }
 #  endif
-#endif // TEST_HAS_EXTENSION(bit_int)
+#endif // TEST_HAS_BITINT
 
     return 0;
 }

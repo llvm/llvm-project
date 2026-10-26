@@ -807,7 +807,7 @@ define <8 x bfloat> @abs_fmul_v8bf16(<8 x bfloat> %a, <8 x bfloat> %b) {
 ; B16B16-NEXT:    fabs v0.8h, v0.8h
 ; B16B16-NEXT:    ret
   %mul = fmul <8 x bfloat> %a, %b
-  %res = call <8 x bfloat> @llvm.fabs.v8f16(<8 x bfloat> %mul)
+  %res = call <8 x bfloat> @llvm.fabs.v8bf16(<8 x bfloat> %mul)
   ret <8 x bfloat> %res
 }
 

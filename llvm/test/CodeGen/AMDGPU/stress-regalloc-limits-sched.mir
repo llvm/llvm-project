@@ -1,0 +1,64 @@
+# RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -run-pass=machine-scheduler %s -o - | FileCheck -check-prefix=DEFAULT %s
+# RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -run-pass=machine-scheduler -amdgpu-stress-vgpr=3 %s -o - | FileCheck -check-prefix=STRESS %s
+
+# Test that -amdgpu-stress-vgpr affects scheduler pressure tracking.
+# Without stress, the scheduler keeps all producers before consumers.
+# With stress, the scheduler interleaves producers and consumers to
+# reduce register pressure.
+
+--- |
+  define amdgpu_kernel void @sched_pressure() #0 { ret void }
+  attributes #0 = { "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="64,64" }
+...
+
+---
+# DEFAULT-LABEL: name: sched_pressure
+# DEFAULT:      %v0:vgpr_32 = V_ADD_U32_e32
+# DEFAULT-NEXT: %v1:vgpr_32 = V_MUL_LO_U32_e64
+# DEFAULT-NEXT: %v2:vgpr_32 = V_SUB_U32_e32
+# DEFAULT-NEXT: %v3:vgpr_32 = V_XOR_B32_e32
+# DEFAULT-NEXT: %v4:vgpr_32 = V_OR_B32_e32
+# DEFAULT-NEXT: %v5:vgpr_32 = V_AND_B32_e32
+# DEFAULT-NEXT: %r0:vgpr_32 = V_ADD_U32_e32 %v0, %v1
+# DEFAULT-NEXT: %r1:vgpr_32 = V_ADD_U32_e32 %v2, %v3
+# DEFAULT-NEXT: %r2:vgpr_32 = V_ADD_U32_e32 %v4, %v5
+
+# STRESS-LABEL: name: sched_pressure
+# STRESS:      %v0:vgpr_32 = V_ADD_U32_e32
+# STRESS-NEXT: %v1:vgpr_32 = V_MUL_LO_U32_e64
+# STRESS-NEXT: %r0:vgpr_32 = V_ADD_U32_e32 %v0, %v1
+# STRESS-NEXT: %v2:vgpr_32 = V_SUB_U32_e32
+# STRESS-NEXT: %v3:vgpr_32 = V_XOR_B32_e32
+# STRESS-NEXT: %r1:vgpr_32 = V_ADD_U32_e32 %v2, %v3
+# STRESS-NEXT: %v4:vgpr_32 = V_OR_B32_e32
+# STRESS-NEXT: %v5:vgpr_32 = V_AND_B32_e32
+# STRESS-NEXT: %r2:vgpr_32 = V_ADD_U32_e32 %v4, %v5
+
+name: sched_pressure
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+
+    %a:vgpr_32 = COPY $vgpr0
+    %b:vgpr_32 = COPY $vgpr1
+
+    %v0:vgpr_32 = V_ADD_U32_e32 %a, %b, implicit $exec
+    %v1:vgpr_32 = V_MUL_LO_U32_e64 %a, %b, implicit $exec
+    %v2:vgpr_32 = V_SUB_U32_e32 %a, %b, implicit $exec
+    %v3:vgpr_32 = V_XOR_B32_e32 %a, %b, implicit $exec
+    %v4:vgpr_32 = V_OR_B32_e32 %a, %b, implicit $exec
+    %v5:vgpr_32 = V_AND_B32_e32 %a, %b, implicit $exec
+
+    %r0:vgpr_32 = V_ADD_U32_e32 %v0, %v1, implicit $exec
+    %r1:vgpr_32 = V_ADD_U32_e32 %v2, %v3, implicit $exec
+    %r2:vgpr_32 = V_ADD_U32_e32 %v4, %v5, implicit $exec
+    %r3:vgpr_32 = V_ADD_U32_e32 %r0, %r1, implicit $exec
+    %r4:vgpr_32 = V_ADD_U32_e32 %r3, %r2, implicit $exec
+
+    DS_WRITE_B32_gfx9 %a, %r4, 0, 0, implicit $exec :: (store (s32), addrspace 3)
+
+    S_ENDPGM 0
+...

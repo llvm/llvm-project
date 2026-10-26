@@ -4,7 +4,7 @@
 
 # RUN: rm -rf %t
 # RUN: mkdir -p %t/clangd
-# RUN: cp -r %S/Inputs/include-cleaner %t/include
+# RUN: cp -R %S/Inputs/include-cleaner %t/include
 # RUN: echo '-I%t/include' > %t/compile_flags.txt
 # Create a config file enabling include-cleaner features.
 # RUN: echo 'Diagnostics:' > %t/clangd/config.yaml

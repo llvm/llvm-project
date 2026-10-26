@@ -24,6 +24,7 @@
 #include "SourcePrinter.h"
 #include "WasmDump.h"
 #include "XCOFFDump.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/StringExtras.h"
@@ -63,10 +64,10 @@
 #include "llvm/Option/Option.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Driver.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/StringSaver.h"
@@ -83,8 +84,6 @@
 #include <optional>
 #include <set>
 #include <system_error>
-#include <unordered_map>
-#include <utility>
 
 using namespace llvm;
 using namespace llvm::object;
@@ -93,21 +92,17 @@ using namespace llvm::opt;
 
 namespace {
 
-class CommonOptTable : public opt::GenericOptTable {
+class CommonOptTable : public opt::OptTable {
 public:
-  CommonOptTable(const StringTable &StrTable,
-                 ArrayRef<StringTable::Offset> PrefixesTable,
-                 ArrayRef<Info> OptionInfos, const char *Usage,
-                 const char *Description)
-      : opt::GenericOptTable(StrTable, PrefixesTable, OptionInfos),
-        Usage(Usage), Description(Description) {
+  CommonOptTable(const Tables &T, const char *Usage, const char *Description)
+      : opt::OptTable(T), Usage(Usage), Description(Description) {
     setGroupedShortOptions(true);
   }
 
   void printHelp(StringRef Argv0, bool ShowHidden = false) const {
     Argv0 = sys::path::filename(Argv0);
-    opt::GenericOptTable::printHelp(outs(), (Argv0 + Usage).str().c_str(),
-                                    Description, ShowHidden, ShowHidden);
+    opt::OptTable::printHelp(outs(), (Argv0 + Usage).str().c_str(), Description,
+                             ShowHidden, ShowHidden);
     // TODO Replace this with OptTable API once it adds extrahelp support.
     outs() << "\nPass @FILE as argument to read options from FILE.\n";
   }
@@ -119,29 +114,16 @@ private:
 
 // ObjdumpOptID is in ObjdumpOptID.h
 namespace objdump_opt {
-#define OPTTABLE_STR_TABLE_CODE
+#define OPTTABLE_CODE
 #include "ObjdumpOpts.inc"
-#undef OPTTABLE_STR_TABLE_CODE
-
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "ObjdumpOpts.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-static constexpr opt::OptTable::Info ObjdumpInfoTable[] = {
-#define OPTION(...)                                                            \
-  LLVM_CONSTRUCT_OPT_INFO_WITH_ID_PREFIX(OBJDUMP_, __VA_ARGS__),
-#include "ObjdumpOpts.inc"
-#undef OPTION
-};
 } // namespace objdump_opt
 
 class ObjdumpOptTable : public CommonOptTable {
 public:
   ObjdumpOptTable()
-      : CommonOptTable(
-            objdump_opt::OptionStrTable, objdump_opt::OptionPrefixesTable,
-            objdump_opt::ObjdumpInfoTable, " [options] <input object files>",
-            "llvm object file dumper") {}
+      : CommonOptTable(objdump_opt::optionTables(),
+                       " [options] <input object files>",
+                       "llvm object file dumper") {}
 };
 
 enum OtoolOptID {
@@ -152,26 +134,14 @@ enum OtoolOptID {
 };
 
 namespace otool {
-#define OPTTABLE_STR_TABLE_CODE
+#define OPTTABLE_CODE
 #include "OtoolOpts.inc"
-#undef OPTTABLE_STR_TABLE_CODE
-
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "OtoolOpts.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-static constexpr opt::OptTable::Info OtoolInfoTable[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO_WITH_ID_PREFIX(OTOOL_, __VA_ARGS__),
-#include "OtoolOpts.inc"
-#undef OPTION
-};
 } // namespace otool
 
 class OtoolOptTable : public CommonOptTable {
 public:
   OtoolOptTable()
-      : CommonOptTable(otool::OptionStrTable, otool::OptionPrefixesTable,
-                       otool::OtoolInfoTable, " [option...] [file...]",
+      : CommonOptTable(otool::optionTables(), " [option...] [file...]",
                        "Mach-O object file displaying tool") {}
 };
 
@@ -262,8 +232,8 @@ public:
   void AddFunctionEntry(BBAddrMap AddrMap, PGOAnalysisMap PGOMap) {
     uint64_t FunctionAddr = AddrMap.getFunctionAddress();
     for (size_t I = 1; I < AddrMap.BBRanges.size(); ++I)
-      RangeBaseAddrToFunctionAddr.emplace(AddrMap.BBRanges[I].BaseAddress,
-                                          FunctionAddr);
+      RangeBaseAddrToFunctionAddr.try_emplace(AddrMap.BBRanges[I].BaseAddress,
+                                              FunctionAddr);
     [[maybe_unused]] auto R = FunctionAddrToMap.try_emplace(
         FunctionAddr, std::move(AddrMap), std::move(PGOMap));
     assert(R.second && "duplicate function address");
@@ -285,8 +255,8 @@ public:
   }
 
 private:
-  std::unordered_map<uint64_t, BBAddrMapFunctionEntry> FunctionAddrToMap;
-  std::unordered_map<uint64_t, uint64_t> RangeBaseAddrToFunctionAddr;
+  DenseMap<uint64_t, BBAddrMapFunctionEntry> FunctionAddrToMap;
+  DenseMap<uint64_t, uint64_t> RangeBaseAddrToFunctionAddr;
 };
 
 } // namespace
@@ -341,8 +311,11 @@ static bool PrettyPGOAnalysisMap;
 static bool DynamicSymbolTable;
 std::string objdump::TripleName;
 bool objdump::UnwindInfo;
+bool objdump::UnwindShowWODPool;
 std::string objdump::Prefix;
 uint32_t objdump::PrefixStrip;
+std::vector<std::pair<std::string, std::string>> objdump::SubstitutePaths;
+std::vector<std::string> objdump::SourceDirs;
 
 DebugFormat objdump::DbgVariables = DFDisabled;
 DebugFormat objdump::DbgInlinedFunctions = DFDisabled;
@@ -1120,7 +1093,7 @@ PrettyPrinter &selectPrettyPrinter(Triple const &Triple) {
     return PrettyPrinterInst;
   case Triple::hexagon:
     return HexagonPrettyPrinterInst;
-  case Triple::amdgcn:
+  case Triple::amdgpu:
     return AMDGCNPrettyPrinterInst;
   case Triple::bpfel:
   case Triple::bpfeb:
@@ -1199,8 +1172,10 @@ DisassemblerTarget::DisassemblerTarget(const Target *TheTarget, ObjectFile &Obj,
   if (!DisAsm)
     reportError(Obj.getFileName(), "no disassembler for target " + TripleName);
 
-  if (auto *ELFObj = dyn_cast<ELFObjectFileBase>(&Obj))
+  if (auto *ELFObj = dyn_cast<ELFObjectFileBase>(&Obj)) {
     DisAsm->setABIVersion(ELFObj->getEIdentABIVersion());
+    DisAsm->emitTargetIDIfSupported(outs(), ELFObj->getPlatformFlags());
+  }
 
   InstrAnalysis.reset(TheTarget->createMCInstrAnalysis(InstrInfo.get()));
 
@@ -1376,7 +1351,7 @@ static void addPltEntries(const MCSubtargetInfo &STI, const ObjectFile &Obj,
       if (Expected<StringRef> NameOrErr = Symbol.getName()) {
         if (!NameOrErr->empty())
           AllSymbols[SectionNames[Plt.Section]].emplace_back(
-              Plt.Address, Saver.save((*NameOrErr + "@plt").str()), SymbolType);
+              Plt.Address, Saver.save(*NameOrErr + "@plt"), SymbolType);
         continue;
       } else {
         // The warning has been reported in disassembleObject().
@@ -1473,16 +1448,13 @@ class RISCVISATargetCache {
 public:
   explicit RISCVISATargetCache(StringRef FileName) : FileName(FileName) {}
 
-  // Returns a DisassemblerTarget configured for ISAStr.  Feature priority in
-  // the returned target is (low -> high): Tag_RISCV_arch, the mapping-symbol
-  // ISA, then --mattr, so an explicit --mattr on the command line overrides
-  // both the attribute-recorded arch and the mapping symbol.  If appending
-  // --mattr on top of the mapping symbol would create a conflicting feature
-  // set (e.g. mapping symbol rv64if combined with --mattr=+zfinx), the
-  // --mattr layer is dropped for this region and only the mapping symbol
-  // (layered on Tag_RISCV_arch) is used.  Falls back to &Base when ISAStr is
-  // empty or cannot be parsed; a parse failure is cached so the same bad
-  // string is consumed only once.
+  // Returns a DisassemblerTarget configured for ISAStr.  A "$x<ISA>" mapping
+  // symbol specifies the full ISA for its region rather than a delta on top of
+  // Base.  An explicit --mattr on the command line is layered on top unless it
+  // conflicts with the mapping symbol (e.g. mapping symbol rv64if combined with
+  // --mattr=+zfinx), in which case --mattr is dropped for this region.  Falls
+  // back to &Base when ISAStr is empty or cannot be parsed; a parse failure is
+  // cached so the same bad string is consumed only once.
   DisassemblerTarget *get(DisassemblerTarget &Base, StringRef ISAStr) {
     if (ISAStr.empty())
       return &Base;
@@ -1493,11 +1465,11 @@ public:
       auto ParseResult = RISCVISAInfo::parseNormalizedArchString(ISAStr);
       if (ParseResult) {
         std::vector<std::string> ISAFeatures = (*ParseResult)->toFeatures();
-        // Base's feature string already contains Tag_RISCV_arch followed by
-        // --mattr.  Appending the mapping-symbol features here puts the
-        // mapping symbol above both; the --mattr re-layering below then puts
-        // --mattr back on top as the highest-priority source.
-        SubtargetFeatures Features(Base.SubtargetInfo->getFeatureString());
+        // Start from an empty feature set rather than Base: "$x<ISA>" encodes
+        // the full ISA for this region, and toFeatures() only emits "+ext" for
+        // enabled extensions, so starting from Base would keep extensions from
+        // Tag_RISCV_arch or conflicting --mattr flags enabled.
+        SubtargetFeatures Features;
         // toFeatures() only emits the extensions from Exts (i, m, f, ...),
         // not the base-ISA XLEN.  Derive 64bit from getXLen() so mapping
         // symbols that switch XLEN (e.g. rv64 inside an rv32 triple) reach
@@ -1658,8 +1630,7 @@ static SymbolInfoTy createDummySymbolInfo(const ObjectFile &Obj,
 
 static void collectBBAddrMapLabels(
     const BBAddrMapInfo &FullAddrMap, uint64_t SectionAddr, uint64_t Start,
-    uint64_t End,
-    std::unordered_map<uint64_t, std::vector<BBAddrMapLabel>> &Labels) {
+    uint64_t End, DenseMap<uint64_t, std::vector<BBAddrMapLabel>> &Labels) {
   if (FullAddrMap.empty())
     return;
   Labels.clear();
@@ -1691,12 +1662,10 @@ static void collectBBAddrMapLabels(
   }
 }
 
-static void
-collectLocalBranchTargets(ArrayRef<uint8_t> Bytes, MCInstrAnalysis *MIA,
-                          MCDisassembler *DisAsm, MCInstPrinter *IP,
-                          const MCSubtargetInfo *STI, uint64_t SectionAddr,
-                          uint64_t Start, uint64_t End,
-                          std::unordered_map<uint64_t, std::string> &Labels) {
+static void collectLocalBranchTargets(
+    ArrayRef<uint8_t> Bytes, MCInstrAnalysis *MIA, MCDisassembler *DisAsm,
+    MCInstPrinter *IP, const MCSubtargetInfo *STI, uint64_t SectionAddr,
+    uint64_t Start, uint64_t End, DenseMap<uint64_t, std::string> &Labels) {
   // Supported by certain targets.
   const bool isPPC = STI->getTargetTriple().isPPC();
   const bool isX86 = STI->getTargetTriple().isX86();
@@ -1837,9 +1806,13 @@ fetchBinaryByBuildID(const ObjectFile &Obj) {
   object::BuildIDRef BuildID = getBuildID(&Obj);
   if (BuildID.empty())
     return std::nullopt;
-  std::optional<std::string> Path = BIDFetcher->fetch(BuildID);
-  if (!Path)
+  Expected<std::string> Path = BIDFetcher->fetch(BuildID);
+  if (!Path) {
+    // Failure to fetch debuginfod is rarely an error and most users will not
+    // care why this failed.
+    consumeError(Path.takeError());
     return std::nullopt;
+  }
   Expected<OwningBinary<Binary>> DebugBinary = createBinary(*Path);
   if (!DebugBinary) {
     reportWarning(toString(DebugBinary.takeError()), *Path);
@@ -2136,7 +2109,7 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
         unwrapOrError(Section.getContents(), Obj.getFileName()));
 
     std::vector<std::unique_ptr<std::string>> SynthesizedLabelNames;
-    if (Obj.isELF() && Obj.getArch() == Triple::amdgcn) {
+    if (Obj.isELF() && Obj.getArch() == Triple::amdgpu) {
       // AMDGPU disassembler uses symbolizer for printing labels
       addSymbolizer(*DT->Context, DT->TheTarget, DT->TheTriple,
                     DT->DisAsm.get(), SectionAddr, Bytes, Symbols,
@@ -2421,8 +2394,8 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
           Symbols[SI - 1].XCOFFSymInfo.StorageMappingClass &&
           (*Symbols[SI - 1].XCOFFSymInfo.StorageMappingClass == XCOFF::XMC_PR);
 
-      std::unordered_map<uint64_t, std::string> AllLabels;
-      std::unordered_map<uint64_t, std::vector<BBAddrMapLabel>> BBAddrMapLabels;
+      DenseMap<uint64_t, std::string> AllLabels;
+      DenseMap<uint64_t, std::vector<BBAddrMapLabel>> BBAddrMapLabels;
       if (SymbolizeOperands) {
         collectLocalBranchTargets(Bytes, DT->InstrAnalysis.get(),
                                   DT->DisAsm.get(), DT->InstPrinter.get(),
@@ -3679,16 +3652,19 @@ static void dumpInput(StringRef file) {
   OwningBinary<Binary> OBinary = unwrapOrError(createBinary(file), file);
   Binary &Binary = *OBinary.getBinary();
 
-  if (Archive *A = dyn_cast<Archive>(&Binary))
+  if (Archive *A = dyn_cast<Archive>(&Binary)) {
     dumpArchive(A);
-  else if (ObjectFile *O = dyn_cast<ObjectFile>(&Binary))
+  } else if (ObjectFile *O = dyn_cast<ObjectFile>(&Binary)) {
     dumpObject(O);
-  else if (MachOUniversalBinary *UB = dyn_cast<MachOUniversalBinary>(&Binary))
+  } else if (MachOUniversalBinary *UB =
+                 dyn_cast<MachOUniversalBinary>(&Binary)) {
     parseInputMachO(UB);
-  else if (OffloadBinary *OB = dyn_cast<OffloadBinary>(&Binary))
+  } else if (isa<OffloadBinary>(&Binary)) {
+    std::unique_ptr<MemoryBuffer> OB = OBinary.takeBinary().second;
     dumpOffloadSections(*OB);
-  else
+  } else {
     reportError(errorCodeToError(object_error::invalid_file_type), file);
+  }
 }
 
 template <typename T>
@@ -3852,6 +3828,8 @@ static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
   TracebackTable = InputArgs.hasArg(OBJDUMP_traceback_table);
   DisassembleSymbols =
       commaSeparatedValues(InputArgs, OBJDUMP_disassemble_symbols_EQ);
+  for (auto Sym : InputArgs.getAllArgValues(OBJDUMP_disassemble_EQ))
+    DisassembleSymbols.push_back(Sym);
   DisassembleZeroes = InputArgs.hasArg(OBJDUMP_disassemble_zeroes);
   if (const opt::Arg *A = InputArgs.getLastArg(OBJDUMP_dwarf_EQ)) {
     DwarfDumpType = StringSwitch<DIDumpType>(A->getValue())
@@ -3898,8 +3876,21 @@ static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
   DynamicSymbolTable = InputArgs.hasArg(OBJDUMP_dynamic_syms);
   TripleName = InputArgs.getLastArgValue(OBJDUMP_triple_EQ).str();
   UnwindInfo = InputArgs.hasArg(OBJDUMP_unwind_info);
+  UnwindShowWODPool = InputArgs.hasArg(OBJDUMP_unwind_show_wod_pool);
   Prefix = InputArgs.getLastArgValue(OBJDUMP_prefix).str();
   parseIntArg(InputArgs, OBJDUMP_prefix_strip, PrefixStrip);
+  for (const opt::Arg *A : InputArgs.filtered(OBJDUMP_substitute_path)) {
+    StringRef From = A->getValue(0);
+    if (From.empty())
+      reportCmdLineError(A->getSpelling() + ": <from> must not be empty");
+    SubstitutePaths.emplace_back(From.str(), A->getValue(1));
+  }
+  for (StringRef Dir : InputArgs.getAllArgValues(OBJDUMP_source_dir)) {
+    if (Dir.empty())
+      reportCmdLineError("--source-dir argument must not be empty");
+    SourceDirs.insert(SourceDirs.end(), Dir.str());
+  }
+
   if (const opt::Arg *A = InputArgs.getLastArg(OBJDUMP_debug_vars_EQ)) {
     DbgVariables = StringSwitch<DebugFormat>(A->getValue())
                        .Case("ascii", DFASCII)
@@ -3975,8 +3966,10 @@ static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
   // Look up any provided build IDs, then append them to the input filenames.
   for (const opt::Arg *A : InputArgs.filtered(OBJDUMP_build_id)) {
     object::BuildID BuildID = parseBuildIDArg(A);
-    std::optional<std::string> Path = BIDFetcher->fetch(BuildID);
+    Expected<std::string> Path = BIDFetcher->fetch(BuildID);
     if (!Path) {
+      // Most users will not care why this failed.
+      consumeError(Path.takeError());
       reportCmdLineError(A->getSpelling() + ": could not find build ID '" +
                          A->getValue() + "'");
     }

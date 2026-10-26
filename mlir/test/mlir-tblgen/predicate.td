@@ -27,9 +27,9 @@ def OpA : NS_Op<"op_for_CPred_containing_multiple_same_placeholder", []> {
 // CHECK-NOT.        << " must be 32-bit integer or floating-point type, but got " << type;
 
 // CHECK: static ::llvm::LogicalResult [[$TENSOR_CONSTRAINT:__mlir_ods_local_type_constraint.*]](
-// CHECK:       if (!(((::llvm::isa<::mlir::TensorType>(type))) && ([](::mlir::Type elementType) { return (true); }(::llvm::cast<::mlir::ShapedType>(type).getElementType())))) {
+// CHECK:       if (!(((::llvm::isa<::mlir::TensorType>(type))) && ([](::mlir::Type elementType) { return !((::llvm::isa<::mlir::TokenType>(elementType))); }(::llvm::cast<::mlir::ShapedType>(type).getElementType())))) {
 // CHECK-NEXT:    return op->emitOpError(valueKind) << " #" << valueIndex
-// CHECK-NEXT:        << " must be tensor of any type values, but got " << type;
+// CHECK-NEXT:        << " must be tensor of any non-token type values, but got " << type;
 
 // CHECK: static ::llvm::LogicalResult [[$TENSOR_INTEGER_FLOAT_CONSTRAINT:__mlir_ods_local_type_constraint.*]](
 // CHECK:       if (!(((::llvm::isa<::mlir::TensorType>(type))) && ([](::mlir::Type elementType) { return ((elementType.isF32())) || ((elementType.isSignlessInteger(32))); }(::llvm::cast<::mlir::ShapedType>(type).getElementType())))) {

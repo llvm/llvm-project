@@ -153,7 +153,7 @@ attributes #6 = { noreturn nounwind }
 ;
 ; CHECK: Function Attrs: naked nocf_check noinline nounwind
 ; CHECK-LABEL: define internal void @_Z9nothrow_ei.cfi_jt
-; CHECK-SAME: () #[[ATTR5:[0-9]+]] align 8 {
+; CHECK-SAME: () #[[ATTR5:[0-9]+]] prefalign(8) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    tail call void asm sideeffect "jmp ${0:c}@plt\0Aint3\0Aint3\0Aint3\0A", "s"(ptr nonnull @_Z9nothrow_ei) #[[ATTR7:[0-9]+]]
 ; CHECK-NEXT:    unreachable

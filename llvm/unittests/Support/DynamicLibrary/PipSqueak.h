@@ -24,6 +24,8 @@
 #define PIPSQUEAK_EXPORT __declspec(dllexport)
 #elif defined(__MVS__)
 #define PIPSQUEAK_EXPORT __attribute__((__visibility__("default")))
+#elif defined(__GNUC__) || defined(__clang__)
+#define PIPSQUEAK_EXPORT __attribute__((visibility("default")))
 #else
 #define PIPSQUEAK_EXPORT
 #endif

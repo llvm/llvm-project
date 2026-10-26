@@ -22,7 +22,7 @@ namespace llvm {
 
 class AsmPrinterAnalysis : public AnalysisInfoMixin<AsmPrinterAnalysis> {
 public:
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
   std::unique_ptr<AsmPrinter> HeldPrinter;
 
   class Result {

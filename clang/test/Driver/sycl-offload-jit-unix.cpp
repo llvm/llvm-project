@@ -10,7 +10,8 @@
 // RUN: rm -rf %t && mkdir -p %t/bin %t/lib/x86_64-unknown-linux-gnu
 // RUN: touch %t/lib/x86_64-unknown-linux-gnu/libLLVMSYCL.so
 // RUN: ln -s %clang %t/bin/clang
-// RUN: %t/bin/clang -### -no-canonical-prefixes --target=x86_64-unknown-linux-gnu -fsycl %s 2>&1 \
+// RUN: %t/bin/clang -### -no-canonical-prefixes --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   -resource-dir=%S/Inputs/spirv64-sycl %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=CHECK-LSYCL,CHECK-SYCL-HEADERS-HOST,CHECK-SYCL-HEADERS-DEVICE %s
 // CHECK-SYCL-HEADERS-DEVICE: "-fsycl-is-device"{{.*}} "-internal-isystem" "{{.*}}bin{{[/\\]+}}..{{[/\\]+}}include"
 // CHECK-SYCL-HEADERS-HOST: "-fsycl-is-host"{{.*}} "-internal-isystem" "{{.*}}bin{{[/\\]+}}..{{[/\\]+}}include"
@@ -20,6 +21,16 @@
 // RUN: rm -rf %t && mkdir -p %t/bin %t/lib
 // RUN: touch %t/lib/libLLVMSYCL.so
 // RUN: ln -s %clang %t/bin/clang
-// RUN: %t/bin/clang -### -no-canonical-prefixes --target=x86_64-unknown-linux-gnu -fsycl %s 2>&1 \
+// RUN: %t/bin/clang -### -no-canonical-prefixes --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   -resource-dir=%S/Inputs/spirv64-sycl %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-LSYCL-FLAT %s
 // CHECK-LSYCL-FLAT: clang-linker-wrapper{{.*}} "{{.*}}bin{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}libLLVMSYCL.so"
+
+// Check that -nolibsycl suppresses libLLVMSYCL.so from the linker invocation.
+// RUN: rm -rf %t && mkdir -p %t/bin %t/lib/x86_64-unknown-linux-gnu
+// RUN: touch %t/lib/x86_64-unknown-linux-gnu/libLLVMSYCL.so
+// RUN: ln -s %clang %t/bin/clang
+// RUN: %t/bin/clang -### -no-canonical-prefixes --target=x86_64-unknown-linux-gnu -fsycl -nolibsycl \
+// RUN:   -resource-dir=%S/Inputs/spirv64-sycl %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-NOLIBSYCL %s
+// CHECK-NOLIBSYCL-NOT: libLLVMSYCL.so

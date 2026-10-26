@@ -14,13 +14,13 @@
 #ifndef LLVM_XRAY_INSTRUMENTATIONMAP_H
 #define LLVM_XRAY_INSTRUMENTATIONMAP_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/YAMLTraits.h"
 #include <cstdint>
 #include <optional>
-#include <unordered_map>
 #include <vector>
 
 namespace llvm::xray {
@@ -74,8 +74,8 @@ struct YAMLXRaySledEntry {
 ///
 class InstrumentationMap {
 public:
-  using FunctionAddressMap = std::unordered_map<int32_t, uint64_t>;
-  using FunctionAddressReverseMap = std::unordered_map<uint64_t, int32_t>;
+  using FunctionAddressMap = DenseMap<int32_t, uint64_t>;
+  using FunctionAddressReverseMap = DenseMap<uint64_t, int32_t>;
   using SledContainer = std::vector<SledEntry>;
 
 private:

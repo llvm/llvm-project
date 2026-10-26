@@ -2,10 +2,6 @@
 ; RUN: llc < %s -verify-machineinstrs -mtriple=arm64-none-linux-gnu | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc < %s -verify-machineinstrs -mtriple=arm64-none-linux-gnu -global-isel -global-isel-abort=2 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK-GI:       warning: Instruction selection used fallback path for poly_mulv8i8
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for poly_mulv16i8
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for commutable_poly_mul
-
 define <8 x i8> @mul8xi8(<8 x i8> %A, <8 x i8> %B) {
 ; CHECK-LABEL: mul8xi8:
 ; CHECK:       // %bb.0:

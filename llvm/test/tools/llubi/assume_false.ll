@@ -7,6 +7,6 @@ define void @main() {
 }
 ; CHECK: Entering function: main
 ; CHECK-NEXT: Stacktrace:
-; CHECK-NEXT: #0   call void @llvm.assume(i1 false) at @main
+; CHECK-NEXT: #0   call void @llvm.assume(i1 false) at @main <stdin>:5
 ; CHECK-NEXT: Immediate UB detected: Assume on false or poison condition.
 ; CHECK-NEXT: error: Execution of function 'main' failed.

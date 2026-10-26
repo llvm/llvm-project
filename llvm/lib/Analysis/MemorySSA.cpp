@@ -25,6 +25,7 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CFGPrinter.h"
 #include "llvm/Analysis/IteratedDominanceFrontier.h"
+#include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Config/llvm-config.h"
@@ -217,14 +218,6 @@ private:
 namespace llvm {
 
 template <> struct DenseMapInfo<MemoryLocOrCall> {
-  static inline MemoryLocOrCall getEmptyKey() {
-    return MemoryLocOrCall(DenseMapInfo<MemoryLocation>::getEmptyKey());
-  }
-
-  static inline MemoryLocOrCall getTombstoneKey() {
-    return MemoryLocOrCall(DenseMapInfo<MemoryLocation>::getTombstoneKey());
-  }
-
   static unsigned getHashValue(const MemoryLocOrCall &MLOC) {
     if (!MLOC.IsCall)
       return hash_combine(
@@ -301,10 +294,6 @@ instructionClobbersQuery(const MemoryDef *MD, const MemoryLocation &UseLoc,
     case Intrinsic::experimental_noalias_scope_decl:
     case Intrinsic::pseudoprobe:
       return false;
-    case Intrinsic::dbg_declare:
-    case Intrinsic::dbg_label:
-    case Intrinsic::dbg_value:
-      llvm_unreachable("debuginfo shouldn't have associated defs!");
     default:
       break;
     }
@@ -372,10 +361,10 @@ static bool isUseTriviallyOptimizableToLiveOnEntry(AliasAnalysisType &AA,
                                                    const Instruction *I) {
   // If the memory can't be changed, then loads of the memory can't be
   // clobbered.
-  if (auto *LI = dyn_cast<LoadInst>(I)) {
-    return I->hasMetadata(LLVMContext::MD_invariant_load) ||
-           !isModSet(AA.getModRefInfoMask(MemoryLocation::get(LI)));
-  }
+  if (I->hasMetadata(LLVMContext::MD_invariant_load))
+    return true;
+  if (auto *LI = dyn_cast<LoadInst>(I))
+    return !isModSet(AA.getModRefInfoMask(MemoryLocation::get(LI)));
   return false;
 }
 
@@ -727,16 +716,9 @@ class ClobberWalker {
   };
 
   using def_path_iterator = generic_def_path_iterator<DefPath, ClobberWalker>;
-  using const_def_path_iterator =
-      generic_def_path_iterator<const DefPath, const ClobberWalker>;
 
   iterator_range<def_path_iterator> def_path(ListIndex From) {
     return make_range(def_path_iterator(this, From), def_path_iterator());
-  }
-
-  iterator_range<const_def_path_iterator> const_def_path(ListIndex From) const {
-    return make_range(const_def_path_iterator(this, From),
-                      const_def_path_iterator());
   }
 
   struct OptznResult {

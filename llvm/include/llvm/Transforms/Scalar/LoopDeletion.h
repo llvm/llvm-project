@@ -25,8 +25,9 @@ class LoopDeletionPass : public OptionalPassInfoMixin<LoopDeletionPass> {
 public:
   LoopDeletionPass() = default;
 
-  PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
-                        LoopStandardAnalysisResults &AR, LPMUpdater &U);
+  LLVM_ABI PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
+                                 LoopStandardAnalysisResults &AR,
+                                 LPMUpdater &U);
 };
 
 } // end namespace llvm

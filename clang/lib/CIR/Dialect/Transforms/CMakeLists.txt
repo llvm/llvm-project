@@ -13,16 +13,25 @@ add_clang_library(MLIRCIRTransforms
   LoweringPrepare.cpp
   GotoSolver.cpp
   IdiomRecognizer.cpp
+  LibOpt.cpp
+  RecordTypeConverter.cpp
+  CIRABIClassifier.cpp
+  CIRABIClassifierAMDGPU.cpp
+  CIRABIClassifierX86_64.cpp
 
   DEPENDS
   MLIRCIRPassIncGen
+  MLIRBuiltinLocationAttributesIncGen
+  MLIRBytecodeOpInterfaceIncGen
+
+  LINK_COMPONENTS
+  ABI
 
   LINK_LIBS PUBLIC
-  clangAST
   clangBasic
 
   MLIRABI
-  MLIRAnalysis
+  MLIRAnalysisBase
   MLIRDLTIDialect
   MLIRIR
   MLIRPass

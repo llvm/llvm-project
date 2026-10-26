@@ -7,8 +7,8 @@ define void @above_threshold(i32 signext %in, ptr %out) nounwind {
 ; CHECK-LABEL: above_threshold:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lpad 0
-; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    li a2, 5
+; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    bltu a2, a0, .LBB0_9
 ; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    slli a0, a0, 2
@@ -38,6 +38,40 @@ define void @above_threshold(i32 signext %in, ptr %out) nounwind {
 ; CHECK-NEXT:    sw a0, 0(a1)
 ; CHECK-NEXT:  .LBB0_9: # %exit
 ; CHECK-NEXT:    ret
+;
+; NO-ZICFILP-LABEL: above_threshold:
+; NO-ZICFILP:       # %bb.0: # %entry
+; NO-ZICFILP-NEXT:    li a2, 5
+; NO-ZICFILP-NEXT:    addi a0, a0, -1
+; NO-ZICFILP-NEXT:    bltu a2, a0, .LBB0_9
+; NO-ZICFILP-NEXT:  # %bb.1: # %entry
+; NO-ZICFILP-NEXT:    slli a0, a0, 2
+; NO-ZICFILP-NEXT:    lui a2, %hi(.LJTI0_0)
+; NO-ZICFILP-NEXT:    addi a2, a2, %lo(.LJTI0_0)
+; NO-ZICFILP-NEXT:    add a0, a2, a0
+; NO-ZICFILP-NEXT:    lw a0, 0(a0)
+; NO-ZICFILP-NEXT:    jr a0
+; NO-ZICFILP-NEXT:  .LBB0_2: # %bb1
+; NO-ZICFILP-NEXT:    li a0, 4
+; NO-ZICFILP-NEXT:    j .LBB0_8
+; NO-ZICFILP-NEXT:  .LBB0_3: # %bb5
+; NO-ZICFILP-NEXT:    li a0, 100
+; NO-ZICFILP-NEXT:    j .LBB0_8
+; NO-ZICFILP-NEXT:  .LBB0_4: # %bb3
+; NO-ZICFILP-NEXT:    li a0, 2
+; NO-ZICFILP-NEXT:    j .LBB0_8
+; NO-ZICFILP-NEXT:  .LBB0_5: # %bb4
+; NO-ZICFILP-NEXT:    li a0, 1
+; NO-ZICFILP-NEXT:    j .LBB0_8
+; NO-ZICFILP-NEXT:  .LBB0_6: # %bb2
+; NO-ZICFILP-NEXT:    li a0, 3
+; NO-ZICFILP-NEXT:    j .LBB0_8
+; NO-ZICFILP-NEXT:  .LBB0_7: # %bb6
+; NO-ZICFILP-NEXT:    li a0, 200
+; NO-ZICFILP-NEXT:  .LBB0_8: # %exit
+; NO-ZICFILP-NEXT:    sw a0, 0(a1)
+; NO-ZICFILP-NEXT:  .LBB0_9: # %exit
+; NO-ZICFILP-NEXT:    ret
 entry:
   switch i32 %in, label %exit [
     i32 1, label %bb1
@@ -69,5 +103,6 @@ exit:
   ret void
 }
 
-!llvm.module.flags = !{!0}
+!llvm.module.flags = !{!0, !1}
 !0 = !{i32 8, !"cf-protection-branch", i32 1}
+!1 = !{i32 1, !"cf-branch-label-scheme", !"unlabeled"}

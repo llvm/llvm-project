@@ -1,4 +1,4 @@
-; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn--amdhsa -mcpu=gfx900 -o - %s | FileCheck %s
+; RUN: llc -global-isel -mtriple=amdgpu9.00--amdhsa -o - %s | FileCheck %s
 
 @lds0 = addrspace(3) global [512 x float] poison
 @lds1 = addrspace(3) global [256 x float] poison
@@ -28,7 +28,7 @@ define amdgpu_kernel void @dynamic_shared_array_1(ptr addrspace(1) %out, i32 %co
 entry:
   %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x()
   %idx.0 = add nsw i32 %tid.x, 64
-  %tmp = icmp eq i32 %cond, 0
+  %tmp = icmp eq i32 %cond, %tid.x
   br i1 %tmp, label %if, label %else
 
 if:                                               ; preds = %entry
