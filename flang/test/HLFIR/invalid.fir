@@ -1722,3 +1722,12 @@ func.func @fir_declare_bad_storage_offset(%arg0: !fir.ref<!fir.array<8xi8>>) {
   %4:2 = "hlfir.declare"(%3) <{uniq_name = "a", operandSegmentSizes = array<i32: 1, 0, 0, 0, 0>, storage_offset = 1 : ui64}> : (!fir.ref<i8>) -> (!fir.ref<i8>, !fir.ref<i8>)
   "func.return"() : () -> ()
 }) : () -> ()
+
+// -----
+
+func.func @copy_in_bad_alignment(%box: !fir.box<!fir.array<?xf64>>, %temp: !fir.ref<!fir.box<!fir.array<?xf64>>>) {
+  // expected-error@+1 {{'hlfir.copy_in' op alignment must be a positive power of two}}
+  %0:3 = hlfir.copy_in %box to %temp alignment(24) : (!fir.box<!fir.array<?xf64>>, !fir.ref<!fir.box<!fir.array<?xf64>>>) -> (!fir.box<!fir.array<?xf64>>, i1, i1)
+  return
+}
+
