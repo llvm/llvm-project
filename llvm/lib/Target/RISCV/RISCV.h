@@ -260,8 +260,15 @@ void initializeRISCVVLOptimizerLegacyPass(PassRegistry &);
 FunctionPass *createRISCVVMV0EliminationPass();
 void initializeRISCVVMV0EliminationPass(PassRegistry &);
 
-FunctionPass *createRISCVQCRelaxMarkingPass();
-void initializeRISCVQCRelaxMarkingPass(PassRegistry &);
+class RISCVQCRelaxMarkingPass
+    : public OptionalPassInfoMixin<RISCVQCRelaxMarkingPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createRISCVQCRelaxMarkingLegacyPass();
+void initializeRISCVQCRelaxMarkingLegacyPass(PassRegistry &);
 
 void initializeRISCVAsmPrinterPass(PassRegistry &);
 } // namespace llvm
