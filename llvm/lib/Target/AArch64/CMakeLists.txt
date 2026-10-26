@@ -2,37 +2,37 @@ add_llvm_component_group(AArch64 HAS_JIT)
 
 set(LLVM_TARGET_DEFINITIONS AArch64.td)
 
-tablegen(LLVM AArch64GenAsmMatcher.inc -gen-asm-matcher)
-tablegen(LLVM AArch64GenAsmWriter.inc -gen-asm-writer)
-tablegen(LLVM AArch64GenAsmWriter1.inc -gen-asm-writer -asmwriternum=1)
-tablegen(LLVM AArch64GenCallingConv.inc -gen-callingconv)
-tablegen(LLVM AArch64GenDAGISel.inc -gen-dag-isel)
-tablegen(LLVM AArch64GenDisassemblerTables.inc -gen-disassembler)
-tablegen(LLVM AArch64GenFastISel.inc -gen-fast-isel)
-tablegen(LLVM AArch64GenGlobalISel.inc -gen-global-isel -gisel-extended-llt)
-tablegen(LLVM AArch64GenO0PreLegalizeGICombiner.inc -gen-global-isel-combiner
+llvm_tablegen(AArch64GenAsmMatcher.inc -gen-asm-matcher)
+llvm_tablegen(AArch64GenAsmWriter.inc -gen-asm-writer)
+llvm_tablegen(AArch64GenAsmWriter1.inc -gen-asm-writer -asmwriternum=1)
+llvm_tablegen(AArch64GenCallingConv.inc -gen-callingconv)
+llvm_tablegen(AArch64GenDAGISel.inc -gen-dag-isel)
+llvm_tablegen(AArch64GenDisassemblerTables.inc -gen-disassembler)
+llvm_tablegen(AArch64GenFastISel.inc -gen-fast-isel)
+llvm_tablegen(AArch64GenGlobalISel.inc -gen-global-isel -gisel-extended-llt)
+llvm_tablegen(AArch64GenO0PreLegalizeGICombiner.inc -gen-global-isel-combiner
               -combiners="AArch64O0PreLegalizerCombiner")
-tablegen(LLVM AArch64GenPreLegalizeGICombiner.inc -gen-global-isel-combiner
+llvm_tablegen(AArch64GenPreLegalizeGICombiner.inc -gen-global-isel-combiner
               -combiners="AArch64PreLegalizerCombiner")
-tablegen(LLVM AArch64GenPostLegalizeGICombiner.inc -gen-global-isel-combiner
+llvm_tablegen(AArch64GenPostLegalizeGICombiner.inc -gen-global-isel-combiner
               -combiners="AArch64PostLegalizerCombiner")
-tablegen(LLVM AArch64GenPostLegalizeGILowering.inc -gen-global-isel-combiner
+llvm_tablegen(AArch64GenPostLegalizeGILowering.inc -gen-global-isel-combiner
               -combiners="AArch64PostLegalizerLowering")
-tablegen(LLVM AArch64GenInstrInfo.inc -gen-instr-info)
-tablegen(LLVM AArch64GenMCCodeEmitter.inc -gen-emitter)
-tablegen(LLVM AArch64GenMCPseudoLowering.inc -gen-pseudo-lowering)
-tablegen(LLVM AArch64GenRegisterBank.inc -gen-register-bank)
-tablegen(LLVM AArch64GenRegisterInfo.inc -gen-register-info)
-tablegen(LLVM AArch64GenSDNodeInfo.inc -gen-sd-node-info)
-tablegen(LLVM AArch64GenSubtargetInfo.inc -gen-subtarget)
-tablegen(LLVM AArch64GenSystemOperands.inc -gen-searchable-tables)
-tablegen(LLVM AArch64GenExegesis.inc -gen-exegesis)
+llvm_tablegen(AArch64GenInstrInfo.inc -gen-instr-info)
+llvm_tablegen(AArch64GenMCCodeEmitter.inc -gen-emitter)
+llvm_tablegen(AArch64GenMCPseudoLowering.inc -gen-pseudo-lowering)
+llvm_tablegen(AArch64GenRegisterBank.inc -gen-register-bank)
+llvm_tablegen(AArch64GenRegisterInfo.inc -gen-register-info)
+llvm_tablegen(AArch64GenSDNodeInfo.inc -gen-sd-node-info)
+llvm_tablegen(AArch64GenSubtargetInfo.inc -gen-subtarget)
+llvm_tablegen(AArch64GenSystemOperands.inc -gen-searchable-tables)
+llvm_tablegen(AArch64GenExegesis.inc -gen-exegesis)
 
 set(LLVM_TARGET_DEFINITIONS AArch64Options.td)
-tablegen(LLVM AArch64Options.inc -gen-opt-parser-defs)
+llvm_tablegen(AArch64Options.inc -gen-opt-parser-defs)
 
 set(LLVM_TARGET_DEFINITIONS MCTargetDesc/AArch64MCOptions.td)
-tablegen(LLVM AArch64MCOptions.inc -gen-opt-parser-defs)
+llvm_tablegen(AArch64MCOptions.inc -gen-opt-parser-defs)
 
 add_public_tablegen_target(AArch64CommonTableGen)
 

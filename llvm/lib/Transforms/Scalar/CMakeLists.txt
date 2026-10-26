@@ -1,6 +1,6 @@
 set(LLVM_TABLEGEN_PROJECT LLVM_HEADERS)
 set(LLVM_TARGET_DEFINITIONS ScalarOptions.td)
-tablegen(LLVM ScalarOptions.inc -gen-opt-parser-defs)
+llvm_tablegen(ScalarOptions.inc -gen-opt-parser-defs)
 add_public_tablegen_target(ScalarOptionsTableGen)
 
 add_llvm_component_library(LLVMScalarOpts

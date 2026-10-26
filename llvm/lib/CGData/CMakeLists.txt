@@ -1,6 +1,6 @@
 set(LLVM_TABLEGEN_PROJECT LLVM_HEADERS)
 set(LLVM_TARGET_DEFINITIONS CGDataOptions.td)
-tablegen(LLVM CGDataOptions.inc -gen-opt-parser-defs)
+llvm_tablegen(CGDataOptions.inc -gen-opt-parser-defs)
 add_public_tablegen_target(CGDataOptionsTableGen)
 
 add_llvm_component_library(LLVMCGData

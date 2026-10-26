@@ -1,7 +1,7 @@
 # Set the .td file to be processed for this target.
 set(LLVM_TARGET_DEFINITIONS Opts.td)
 
-tablegen(LLVM Opts.inc -gen-opt-parser-defs)
+llvm_tablegen(Opts.inc -gen-opt-parser-defs)
 add_public_tablegen_target(HelloSubTableGen)
 
 set(LLVM_LINK_COMPONENTS  
