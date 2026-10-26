@@ -2091,6 +2091,16 @@ semantics and lowers coroutine intrinsics that not needed to be preserved to
 help later coroutine passes. This pass lowers {ref}`coro.promise`, {ref}`coro.frame` and
 {ref}`coro.done` intrinsics.
 
+For returned-continuation coroutines, CoroEarly also separates the callable
+entry from the pre-split body. The entry forwards through
+`llvm.coro.prepare.retcon` to an internal body marked `"coro-retcon-body"`.
+The prepared pointer stays opaque until that body has been split: its exits
+alone do not describe the values returned to the caller at suspension points.
+CoroSplit then exposes the concrete ramp, allowing ordinary interprocedural
+optimization to resume without special handling in the optimizers. An imported
+body declaration names an external ramp whose definition is split in its owning
+module. This does not change the switched-resume or async lowering.
+
 (CoroSplit)=
 
 ### CoroSplit

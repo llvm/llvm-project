@@ -30,6 +30,6 @@ declare void @free(ptr)
 
 ; CHECK-LABEL: define { ptr, ptr } @f(
 ; CHECK: ret { ptr, ptr }
-; CHECK-LABEL: define internal void @f.resume.0(
+; CHECK-LABEL: define internal void @f.coro.body.resume.0(
 ; CHECK: ret void
 ; INVALID: return slot of coro.id.retcon.* has insufficient size or alignment

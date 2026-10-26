@@ -4,9 +4,9 @@
 
 define {ptr, i32} @f(ptr %buffer, i32 %n) {
 ; CHECK-LABEL: @f(
-; CHECK-NEXT:  coro.return:
+; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    store i32 [[N:%.*]], ptr [[BUFFER:%.*]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { ptr, i32 } { ptr @f.resume.0, i32 poison }, i32 [[N]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { ptr, i32 } { ptr @f.coro.body.resume.0, i32 poison }, i32 [[N]], 1
 ; CHECK-NEXT:    ret { ptr, i32 } [[TMP0]]
 ;
 entry:
@@ -36,9 +36,9 @@ cleanup:
 define i32 @main() {
 ; CHECK-LABEL: @main(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @print(i32 4)
-; CHECK-NEXT:    call void @print(i32 5)
-; CHECK-NEXT:    call void @print(i32 6)
+; CHECK-NEXT:    tail call void @print(i32 4)
+; CHECK-NEXT:    tail call void @print(i32 5)
+; CHECK-NEXT:    tail call void @print(i32 6)
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:

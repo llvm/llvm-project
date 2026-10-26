@@ -1,12 +1,15 @@
 ; RUN: opt -verify-each -passes='coro-early,cgscc(coro-split),ipsccp,coro-cleanup,instcombine' -S %s | FileCheck %s
-; RUN: opt -verify-each -passes='coro-early,ipsccp,cgscc(coro-split),coro-cleanup,instcombine' -S %s | FileCheck %s
-; RUN: opt -verify-each -passes='default<O2>' -S %s | FileCheck %s
-; RUN: opt -verify-each -passes='thinlto<O2>' -S %s | FileCheck %s
+; RUN: opt -verify-each -passes='coro-early,ipsccp,cgscc(coro-split),coro-cleanup,ipsccp,instcombine' -S %s | FileCheck %s
+; RUN: opt -verify-each -passes='default<O2>,ipsccp,instcombine' -S %s | FileCheck %s
+; RUN: opt -verify-each -passes='thinlto-pre-link<O2>,thinlto<O2>,ipsccp,instcombine' -S %s | FileCheck %s
 
 ; The body never returns, but the ramp returns the yielded value at the first
 ; suspension. An explicit return after the unreachable coro.end does not model
 ; that caller-visible return. Splitting before IPSCCP preserves the value;
 ; running IPO before splitting must preserve it too.
+; A final IPSCCP pass folds the now-visible ramp return, but cannot repair an
+; earlier incorrect replacement of the caller's result with undef.
+; The ThinLTO backend expects the pre-link pipeline to have run CoroEarly.
 
 declare token @llvm.coro.id.retcon.once(i32, i32, ptr, ptr, ptr, ptr, ptr)
 declare ptr @llvm.coro.begin(token, ptr)

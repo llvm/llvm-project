@@ -51,8 +51,6 @@ entry:
 ; PRE: ret ptr
 
 ; SPLIT-LABEL: define ptr @normal(
-; SPLIT: phi ptr [ @normal.resume.0
-; SPLIT: ret ptr
+; SPLIT: ret ptr @normal.coro.body.resume.0
 ; SPLIT-LABEL: define ptr @once(
-; SPLIT: phi ptr [ @once.resume.0
-; SPLIT: ret ptr
+; SPLIT: ret ptr @once.coro.body.resume.0

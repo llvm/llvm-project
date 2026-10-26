@@ -5,17 +5,19 @@
 
 define ptr @f(ptr %buffer, i32 %n) {
 ; CHECK-LABEL: @f(
-; CHECK-NEXT:  coro.return:
+; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    store i32 [[N:%.*]], ptr [[BUFFER:%.*]], align 4
 ; CHECK-NEXT:    tail call void @print(i32 [[N]])
-; CHECK-NEXT:    ret ptr @f.resume.0
+; CHECK-NEXT:    ret ptr @f.coro.body.resume.0
 ;
 ; CORO-LABEL: @f(
 ; CORO-NEXT:  entry:
 ; CORO-NEXT:    [[CORO_RET:%.*]] = alloca ptr, align 8
+; CORO-NEXT:    call void @llvm.lifetime.start.p0(ptr [[CORO_RET]])
 ; CORO-NEXT:    store i32 [[N:%.*]], ptr [[N_VAL_SPILL_ADDR:%.*]], align 4
 ; CORO-NEXT:    call void @print(i32 [[N]])
-; CORO-NEXT:    ret ptr @f.resume.0
+; CORO-NEXT:    call void @llvm.lifetime.end.p0(ptr [[CORO_RET]])
+; CORO-NEXT:    ret ptr @f.coro.body.resume.0
 ;
 entry:
   %coro.ret = alloca ptr
@@ -75,23 +77,23 @@ entry:
 
 define hidden { ptr, ptr } @g(ptr %buffer, ptr %ptr) {
 ; CHECK-LABEL: @g(
-; CHECK-NEXT:  coro.return:
+; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = tail call ptr @allocate(i32 8)
 ; CHECK-NEXT:    store ptr [[TMP0]], ptr [[BUFFER:%.*]], align 8
 ; CHECK-NEXT:    store ptr [[PTR:%.*]], ptr [[TMP0]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { ptr, ptr } { ptr @g.resume.0, ptr poison }, ptr [[PTR]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { ptr, ptr } { ptr @g.coro.body.resume.0, ptr poison }, ptr [[PTR]], 1
 ; CHECK-NEXT:    ret { ptr, ptr } [[TMP1]]
 ;
 ; CORO-LABEL: @g(
 ; CORO-NEXT:  entry:
 ; CORO-NEXT:    [[CORO_RET:%.*]] = alloca { ptr, ptr }, align 8
+; CORO-NEXT:    call void @llvm.lifetime.start.p0(ptr [[CORO_RET]])
 ; CORO-NEXT:    [[TMP0:%.*]] = call ptr @allocate(i32 8)
 ; CORO-NEXT:    store ptr [[TMP0]], ptr [[BUFFER:%.*]], align 8
 ; CORO-NEXT:    store ptr [[PTR:%.*]], ptr [[TMP0]], align 8
-; CORO-NEXT:    [[PTR_RELOAD_ADDR:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 0
-; CORO-NEXT:    [[PTR_RELOAD:%.*]] = load ptr, ptr [[PTR_RELOAD_ADDR]], align 8
-; CORO-NEXT:    [[TMP1:%.*]] = insertvalue { ptr, ptr } poison, ptr @g.resume.0, 0
-; CORO-NEXT:    [[TMP2:%.*]] = insertvalue { ptr, ptr } [[TMP1]], ptr [[PTR_RELOAD]], 1
+; CORO-NEXT:    [[PTR_RELOAD_I:%.*]] = load ptr, ptr [[TMP0]], align 8
+; CORO-NEXT:    [[TMP2:%.*]] = insertvalue { ptr, ptr } { ptr @g.coro.body.resume.0, ptr poison }, ptr [[PTR_RELOAD_I]], 1
+; CORO-NEXT:    call void @llvm.lifetime.end.p0(ptr [[CORO_RET]])
 ; CORO-NEXT:    ret { ptr, ptr } [[TMP2]]
 ;
 entry:
@@ -117,20 +119,28 @@ define ptr @nosuspend(ptr %buffer, i32 %n) {
 ; CHECK-LABEL: @nosuspend(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[A]])
 ; CHECK-NEXT:    store i32 [[N:%.*]], ptr [[A]], align 4
 ; CHECK-NEXT:    call void @use_var_ptr(ptr nonnull [[A]])
 ; CHECK-NEXT:    [[AL:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    call void @use_var(i32 [[AL]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[A]])
 ; CHECK-NEXT:    ret ptr null
 ;
 ; CORO-LABEL: @nosuspend(
 ; CORO-NEXT:  entry:
 ; CORO-NEXT:    [[CORO_RET:%.*]] = alloca ptr, align 8
 ; CORO-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CORO-NEXT:    [[SAVEDSTACK:%.*]] = call ptr @llvm.stacksave.p0()
+; CORO-NEXT:    call void @llvm.lifetime.start.p0(ptr [[CORO_RET]])
+; CORO-NEXT:    call void @llvm.lifetime.start.p0(ptr [[A]])
 ; CORO-NEXT:    store i32 [[N:%.*]], ptr [[A]], align 4
 ; CORO-NEXT:    call void @use_var_ptr(ptr [[A]])
 ; CORO-NEXT:    [[AL:%.*]] = load i32, ptr [[A]], align 4
 ; CORO-NEXT:    call void @use_var(i32 [[AL]])
+; CORO-NEXT:    call void @llvm.lifetime.end.p0(ptr [[CORO_RET]])
+; CORO-NEXT:    call void @llvm.lifetime.end.p0(ptr [[A]])
+; CORO-NEXT:    call void @llvm.stackrestore.p0(ptr [[SAVEDSTACK]])
 ; CORO-NEXT:    ret ptr null
 ;
 entry:

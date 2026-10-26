@@ -4,7 +4,7 @@ target datalayout = "E-p:32:32"
 
 define ptr @f(ptr %buffer, i32 %n, ptr swifterror %errorslot) {
 ; CHECK-LABEL: @f(
-; CHECK-NEXT:  coro.return:
+; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    store i32 [[N:%.*]], ptr [[BUFFER:%.*]], align 4
 ; CHECK-NEXT:    tail call void @print(i32 [[N]])
 ; CHECK-NEXT:    store ptr null, ptr [[ERRORSLOT:%.*]], align 4
@@ -12,7 +12,7 @@ define ptr @f(ptr %buffer, i32 %n, ptr swifterror %errorslot) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ERRORSLOT]], align 4
 ; CHECK-NEXT:    tail call void @logError(ptr [[TMP0]])
 ; CHECK-NEXT:    store ptr [[TMP0]], ptr [[ERRORSLOT]], align 4
-; CHECK-NEXT:    ret ptr @f.resume.0
+; CHECK-NEXT:    ret ptr @f.coro.body.resume.0
 ;
 entry:
   %coro.ret = alloca ptr
@@ -45,7 +45,7 @@ cleanup:
 
 define ptr @g(ptr %buffer, i32 %n) {
 ; CHECK-LABEL: @g(
-; CHECK-NEXT:  coro.return:
+; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = alloca swifterror ptr, align 4
 ; CHECK-NEXT:    store i32 [[N:%.*]], ptr [[BUFFER:%.*]], align 4
 ; CHECK-NEXT:    tail call void @print(i32 [[N]])
@@ -55,7 +55,7 @@ define ptr @g(ptr %buffer, i32 %n) {
 ; CHECK-NEXT:    [[DOTSPILL_ADDR:%.*]] = getelementptr inbounds nuw i8, ptr [[BUFFER]], i32 4
 ; CHECK-NEXT:    store ptr [[TMP1]], ptr [[DOTSPILL_ADDR]], align 4
 ; CHECK-NEXT:    call void @logError(ptr [[TMP1]])
-; CHECK-NEXT:    ret ptr @g.resume.0
+; CHECK-NEXT:    ret ptr @g.coro.body.resume.0
 ;
 entry:
   %errorslot = alloca swifterror ptr, align 4

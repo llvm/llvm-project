@@ -5,10 +5,10 @@
 
 define ptr @f(ptr %buffer, i32 %n) {
 ; CHECK-LABEL: @f(
-; CHECK-NEXT:  coro.return:
+; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    store i32 [[N:%.*]], ptr [[BUFFER:%.*]], align 4
 ; CHECK-NEXT:    tail call void @print(i32 [[N]])
-; CHECK-NEXT:    ret ptr @f.resume.0
+; CHECK-NEXT:    ret ptr @f.coro.body.resume.0
 ;
 entry:
   %coro.ret = alloca ptr
@@ -37,9 +37,9 @@ define i32 @main() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    tail call void @print(i32 4)
 ; CHECK-NEXT:    tail call void @llvm.experimental.noalias.scope.decl(metadata [[META0:![0-9]+]])
-; CHECK-NEXT:    tail call void @print(i32 5), !noalias [[META0]]
-; CHECK-NEXT:    tail call void @llvm.experimental.noalias.scope.decl(metadata [[META3:![0-9]+]])
-; CHECK-NEXT:    tail call void @print(i32 6), !noalias [[META3]]
+; CHECK-NEXT:    tail call void @print(i32 5), !noalias [[META0]], !inline_history [[META3:![0-9]+]]
+; CHECK-NEXT:    tail call void @llvm.experimental.noalias.scope.decl(metadata [[META4:![0-9]+]])
+; CHECK-NEXT:    tail call void @print(i32 6), !noalias [[META4]], !inline_history [[META3]]
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:
@@ -54,11 +54,11 @@ entry:
 
 define hidden { ptr, ptr } @g(ptr %buffer, ptr %ptr) {
 ; CHECK-LABEL: @g(
-; CHECK-NEXT:  coro.return:
+; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = tail call ptr @allocate(i32 8)
 ; CHECK-NEXT:    store ptr [[TMP0]], ptr [[BUFFER:%.*]], align 8
 ; CHECK-NEXT:    store ptr [[PTR:%.*]], ptr [[TMP0]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { ptr, ptr } { ptr @g.resume.0, ptr poison }, ptr [[PTR]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { ptr, ptr } { ptr @g.coro.body.resume.0, ptr poison }, ptr [[PTR]], 1
 ; CHECK-NEXT:    ret { ptr, ptr } [[TMP1]]
 ;
 entry:
