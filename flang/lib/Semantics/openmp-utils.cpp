@@ -44,6 +44,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Frontend/OpenMP/OMPContext.h"
+#include "llvm/Frontend/OpenMP/OMPDescriptors.h"
 
 #include <array>
 #include <cinttypes>
@@ -77,7 +78,9 @@ bool IsClauseAllowedOnDirective(llvm::omp::Clause clauseId,
       return true;
     }
   }
-  return llvm::omp::isAllowedClauseForDirective(dirId, clauseId, version);
+
+  const auto &desc{llvm::omp::getDescriptor(dirId)};
+  return descriptor::GetAllowedElements(desc, version).test(clauseId);
 }
 
 bool IsClauseAllowedOnDirective(llvm::omp::Clause clauseId,
@@ -1338,7 +1341,19 @@ std::pair<WithReason<int64_t>, bool> GetAffectedNestDepthWithReason(
   bool allowsOrdered{IsClauseAllowedOnDirective(
       llvm::omp::Clause::OMPC_ordered, dir, version, overrides)};
 
-  if (allowsCollapse || allowsOrdered) {
+  // KLUDGE:
+  // LOOP is the only non-loop-transforming loop-associated directive
+  // that is not present in 4.5. With version=45 both allowsCollapse and
+  // allowsOrdered will be false, and the function will return nullopt.
+  // This will be handled properly once version checks for directives
+  // are present: LOOP will be added to the semantic overrides if it
+  // ends up being allowed.
+  // Until then treat it as a special case.
+  bool hasLoopConstruct{
+      llvm::is_contained(llvm::omp::getLeafConstructsOrSelf(dir),
+          llvm::omp::Directive::OMPD_loop)};
+
+  if (allowsCollapse || allowsOrdered || hasLoopConstruct) {
     auto [ccount, creason]{GetArgumentValueWithReason(
         spec, llvm::omp::Clause::OMPC_collapse, version, semaCtx)};
     auto [ocount, oreason]{GetArgumentValueWithReason(
