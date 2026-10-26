@@ -440,6 +440,7 @@ define i32 @argmin_trunc_iv(ptr %src) {
 ; DATA_AND_CONTROL-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; DATA_AND_CONTROL-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 1
 ; DATA_AND_CONTROL-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 0, i64 101)
+; DATA_AND_CONTROL-NEXT:    [[TRIP_COUNT_MINUS_VF:%.*]] = call i64 @llvm.usub.sat.i64(i64 101, i64 [[TMP1]])
 ; DATA_AND_CONTROL-NEXT:    [[TMP2:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
 ; DATA_AND_CONTROL-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP1]], i64 0
 ; DATA_AND_CONTROL-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
@@ -458,11 +459,11 @@ define i32 @argmin_trunc_iv(ptr %src) {
 ; DATA_AND_CONTROL-NEXT:    [[TMP8]] = select <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i32> [[TMP7]], <vscale x 2 x i32> [[VEC_PHI]]
 ; DATA_AND_CONTROL-NEXT:    [[TMP19:%.*]] = select <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i1> [[TMP5]], <vscale x 2 x i1> zeroinitializer
 ; DATA_AND_CONTROL-NEXT:    [[TMP6]] = select <vscale x 2 x i1> [[TMP19]], <vscale x 2 x i64> [[VEC_IND]], <vscale x 2 x i64> [[VEC_PHI1]]
-; DATA_AND_CONTROL-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP1]]
-; DATA_AND_CONTROL-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX_NEXT]], i64 101)
+; DATA_AND_CONTROL-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX]], i64 [[TRIP_COUNT_MINUS_VF]])
 ; DATA_AND_CONTROL-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 2 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; DATA_AND_CONTROL-NEXT:    [[TMP10:%.*]] = xor i1 [[TMP9]], true
 ; DATA_AND_CONTROL-NEXT:    [[VEC_IND_NEXT]] = add nuw <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; DATA_AND_CONTROL-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP1]]
 ; DATA_AND_CONTROL-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; DATA_AND_CONTROL:       [[MIDDLE_BLOCK]]:
 ; DATA_AND_CONTROL-NEXT:    [[TMP11:%.*]] = call i32 @llvm.vector.reduce.smin.nxv2i32(<vscale x 2 x i32> [[TMP8]])
