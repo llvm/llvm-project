@@ -851,6 +851,190 @@ define <vscale x 2 x double> @ext_f64(<vscale x 2 x double> %a, <vscale x 2 x do
   ret <vscale x 2 x double> %out
 }
 
+define <vscale x 16 x i8> @ext_same_i8(<vscale x 16 x i8> %a) {
+; CHECK-LABEL: ext_same_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #1
+; CHECK-NEXT:    ret
+  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.ext(<vscale x 16 x i8> %a,
+                                                       <vscale x 16 x i8> %a,
+                                                       i32 1)
+  ret <vscale x 16 x i8> %out
+}
+
+define <vscale x 8 x i16> @ext_same_i16(<vscale x 8 x i16> %a) {
+; CHECK-LABEL: ext_same_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #2
+; CHECK-NEXT:    ret
+  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.ext(<vscale x 8 x i16> %a,
+                                                       <vscale x 8 x i16> %a,
+                                                       i32 1)
+  ret <vscale x 8 x i16> %out
+}
+
+define <vscale x 4 x i32> @ext_same_i32(<vscale x 4 x i32> %a) {
+; CHECK-LABEL: ext_same_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #4
+; CHECK-NEXT:    ret
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.ext(<vscale x 4 x i32> %a,
+                                                       <vscale x 4 x i32> %a,
+                                                       i32 1)
+  ret <vscale x 4 x i32> %out
+}
+
+define <vscale x 2 x i64> @ext_same_i64(<vscale x 2 x i64> %a) {
+; CHECK-LABEL: ext_same_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
+; CHECK-NEXT:    ret
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.ext(<vscale x 2 x i64> %a,
+                                                       <vscale x 2 x i64> %a,
+                                                       i32 1)
+  ret <vscale x 2 x i64> %out
+}
+
+define <vscale x 8 x half> @ext_same_f16(<vscale x 8 x half> %a) {
+; CHECK-LABEL: ext_same_f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #2
+; CHECK-NEXT:    ret
+  %out = call <vscale x 8 x half> @llvm.aarch64.sve.ext(<vscale x 8 x half> %a,
+                                                        <vscale x 8 x half> %a,
+                                                        i32 1)
+  ret <vscale x 8 x half> %out
+}
+
+define <vscale x 4 x float> @ext_same_f32(<vscale x 4 x float> %a) {
+; CHECK-LABEL: ext_same_f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #4
+; CHECK-NEXT:    ret
+  %out = call <vscale x 4 x float> @llvm.aarch64.sve.ext(<vscale x 4 x float> %a,
+                                                         <vscale x 4 x float> %a,
+                                                         i32 1)
+  ret <vscale x 4 x float> %out
+}
+
+define <vscale x 2 x double> @ext_same_f64(<vscale x 2 x double> %a) {
+; CHECK-LABEL: ext_same_f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
+; CHECK-NEXT:    ret
+  %out = call <vscale x 2 x double> @llvm.aarch64.sve.ext(<vscale x 2 x double> %a,
+                                                          <vscale x 2 x double> %a,
+                                                          i32 1)
+  ret <vscale x 2 x double> %out
+}
+
+define <vscale x 8 x bfloat> @ext_same_bf16(<vscale x 8 x bfloat> %a) #0 {
+; CHECK-LABEL: ext_same_bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #2
+; CHECK-NEXT:    ret
+  %out = call <vscale x 8 x bfloat> @llvm.aarch64.sve.ext(<vscale x 8 x bfloat> %a,
+                                                          <vscale x 8 x bfloat> %a,
+                                                          i32 1)
+  ret <vscale x 8 x bfloat> %out
+}
+
+define <vscale x 16 x i8> @ext_same_i8_movprfx(<vscale x 16 x i8> %unused, <vscale x 16 x i8> %a) {
+; CHECK-LABEL: ext_same_i8_movprfx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #1
+; CHECK-NEXT:    ret
+  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.ext(<vscale x 16 x i8> %a,
+                                                       <vscale x 16 x i8> %a,
+                                                       i32 1)
+  ret <vscale x 16 x i8> %out
+}
+
+define <vscale x 8 x i16> @ext_same_i16_movprfx(<vscale x 8 x i16> %unused, <vscale x 8 x i16> %a) {
+; CHECK-LABEL: ext_same_i16_movprfx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #2
+; CHECK-NEXT:    ret
+  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.ext(<vscale x 8 x i16> %a,
+                                                       <vscale x 8 x i16> %a,
+                                                       i32 1)
+  ret <vscale x 8 x i16> %out
+}
+
+define <vscale x 4 x i32> @ext_same_i32_movprfx(<vscale x 4 x i32> %unused, <vscale x 4 x i32> %a) {
+; CHECK-LABEL: ext_same_i32_movprfx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #4
+; CHECK-NEXT:    ret
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.ext(<vscale x 4 x i32> %a,
+                                                       <vscale x 4 x i32> %a,
+                                                       i32 1)
+  ret <vscale x 4 x i32> %out
+}
+
+define <vscale x 2 x i64> @ext_same_i64_movprfx(<vscale x 2 x i64> %unused, <vscale x 2 x i64> %a) {
+; CHECK-LABEL: ext_same_i64_movprfx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #8
+; CHECK-NEXT:    ret
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.ext(<vscale x 2 x i64> %a,
+                                                       <vscale x 2 x i64> %a,
+                                                       i32 1)
+  ret <vscale x 2 x i64> %out
+}
+
+define <vscale x 8 x half> @ext_same_f16_movprfx(<vscale x 8 x half> %unused, <vscale x 8 x half> %a) {
+; CHECK-LABEL: ext_same_f16_movprfx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #2
+; CHECK-NEXT:    ret
+  %out = call <vscale x 8 x half> @llvm.aarch64.sve.ext(<vscale x 8 x half> %a,
+                                                        <vscale x 8 x half> %a,
+                                                        i32 1)
+  ret <vscale x 8 x half> %out
+}
+
+define <vscale x 4 x float> @ext_same_f32_movprfx(<vscale x 4 x float> %unused, <vscale x 4 x float> %a) {
+; CHECK-LABEL: ext_same_f32_movprfx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #4
+; CHECK-NEXT:    ret
+  %out = call <vscale x 4 x float> @llvm.aarch64.sve.ext(<vscale x 4 x float> %a,
+                                                         <vscale x 4 x float> %a,
+                                                         i32 1)
+  ret <vscale x 4 x float> %out
+}
+
+define <vscale x 2 x double> @ext_same_f64_movprfx(<vscale x 2 x double> %unused, <vscale x 2 x double> %a) {
+; CHECK-LABEL: ext_same_f64_movprfx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #8
+; CHECK-NEXT:    ret
+  %out = call <vscale x 2 x double> @llvm.aarch64.sve.ext(<vscale x 2 x double> %a,
+                                                          <vscale x 2 x double> %a,
+                                                          i32 1)
+  ret <vscale x 2 x double> %out
+}
+
+define <vscale x 8 x bfloat> @ext_same_bf16_movprfx(<vscale x 8 x bfloat> %unused, <vscale x 8 x bfloat> %a) #0 {
+; CHECK-LABEL: ext_same_bf16_movprfx:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #2
+; CHECK-NEXT:    ret
+  %out = call <vscale x 8 x bfloat> @llvm.aarch64.sve.ext(<vscale x 8 x bfloat> %a,
+                                                          <vscale x 8 x bfloat> %a,
+                                                          i32 1)
+  ret <vscale x 8 x bfloat> %out
+}
+
 ;
 ; LASTA
 ;
@@ -2943,3 +3127,6 @@ declare <vscale x 8 x bfloat> @llvm.vector.insert.nxv8bf16.v8bf16(<vscale x 8 x 
 
 ; +bf16 is required for the bfloat version.
 attributes #0 = { "target-features"="+sve,+bf16" }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; SVE: {{.*}}
+; SVE2: {{.*}}
