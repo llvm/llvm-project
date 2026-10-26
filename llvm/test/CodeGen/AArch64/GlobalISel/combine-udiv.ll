@@ -303,6 +303,7 @@ define <4 x i32> @udiv_div_by_104_exact(<4 x i32> %x)
   %udiv = udiv exact <4 x i32> %x, <i32 104, i32 72, i32 104, i32 72>
   ret <4 x i32> %udiv
 }
+
 define <8 x i32> @combine_vec_udiv_nonuniform_v8i32(<8 x i32> %x) {
 ; SDAG-LABEL: combine_vec_udiv_nonuniform_v8i32:
 ; SDAG:       // %bb.0:
