@@ -177,6 +177,9 @@ Makes programs 10x faster by doing Special New Thing.
 * Removed `TargetOptions::FloatABIType`. The soft float ABI should be
   controlled by setting the `"float-abi"` module flag.
 
+* Removed `TargetOptions::ExceptionModel`. The exception model should
+  be controlled by setting the `"exception-model"` module flag.
+
 * Removed `TargetOptions::EABIVersion` and the `llc`/`opt` `-meabi` flag. The
   GNU-vs-EABI distinction is now derived entirely from the target triple's
   environment (e.g. `arm-none-gnueabi` vs `arm-none-eabi`).
@@ -465,6 +468,12 @@ Makes programs 10x faster by doing Special New Thing.
 
 * llvm-rc now supports `/showIncludes` to report header and resource-file
   dependencies in a format compatible with Ninja's `deps = msvc` mode.
+
+* llvm-dwarfutil now supports `--compress-debug-sections[=<format>]` to compress
+  the output debug sections. Previously, the debug sections were always written
+  uncompressed after garbage collection and deduplication, even if the input
+  debug sections were compressed. They are now compressed using the input
+  format by default.
 
 ### Changes to LLDB
 

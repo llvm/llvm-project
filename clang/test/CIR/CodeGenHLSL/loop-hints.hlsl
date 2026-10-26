@@ -11,6 +11,6 @@ void use(int);
 }
 
 // CHECK-LABEL: cir.func {{.*}} @_Z4mainv
-// CHECK: } loop_hints < must_progress unroll = enable>
-// CHECK: } loop_hints < must_progress unroll_count = 4>
-// CHECK: } loop_hints < must_progress unroll = disable>
+// CHECK: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress unroll = enable>
+// CHECK: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress unroll_count = 4>
+// CHECK: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress unroll = disable>

@@ -509,8 +509,8 @@ and use the returned node for bug reporting.
 <p>If analysis can not continue, then the current state should be transitioned
 into a so-called <i>sink node</i>, a node from which no further analysis will be
 performed. This is done by calling the <a
-href="https://clang.llvm.org/doxygen/classclang_1_1ento_1_1CheckerContext.html#a249245cdf2384738921f134c8d7d909a">
-CheckerContext::generateSink</a> function; this function is the same as the
+href="https://clang.llvm.org/doxygen/classclang_1_1ento_1_1CheckerContext.html#ab85fa7cc6b81e482f2565ff4cdb0a728">
+CheckerContext::addSink</a> function; this function is the same as the
 <tt>addTransition</tt> function, but marks the state as a sink node. Like
 <tt>addTransition</tt>, this returns an <tt>ExplodedNode</tt> with the updated
 state, which can then be passed to the <tt>BugReport</tt> constructor.
@@ -714,7 +714,7 @@ to:</p>
     call was modeled, eg. <tt>SymbolConjured::getStmt</tt> is nullable.</li>
   <li><tt>CallEvent::getDecl</tt> is nullable - for example, it returns null for a
       call of symbolic function pointer.</li>
-  <li><tt>addTransition</tt>, <tt>generateSink</tt>, <tt>generateNonFatalErrorNode</tt>,
+  <li><tt>addTransition</tt>, <tt>addSink</tt>, <tt>generateNonFatalErrorNode</tt>,
     <tt>generateErrorNode</tt> are nullable because you can transition to a node that you have already visited.</li>
   <li>Methods of <tt>CallExpr</tt>/<tt>FunctionDecl</tt>/<tt>CallEvent</tt> that
     return arguments crash when the argument is out-of-bounds. If you checked the function name,

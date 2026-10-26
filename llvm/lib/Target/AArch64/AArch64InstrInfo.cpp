@@ -1664,8 +1664,10 @@ bool AArch64InstrInfo::isSchedulingBoundary(const MachineInstr &MI,
   }
   if (isSEHInstruction(MI))
     return true;
-  auto Next = std::next(MI.getIterator());
-  return Next != MBB->end() && Next->isCFIInstruction();
+  // Skip debug instructions and pseudo probes so they do not change
+  // scheduling regions.
+  auto Next = next_nodbg(MI.getIterator(), MBB->instr_end());
+  return Next != MBB->instr_end() && Next->isCFIInstruction();
 }
 
 /// analyzeCompare - For a comparison instruction, return the source registers
@@ -8615,15 +8617,14 @@ generateGatherLanePattern(MachineInstr &Root,
   // Helper lambda to create a LD1 instruction.
   auto CreateLD1Instruction = [&](MachineInstr *OriginalInstr,
                                   Register SrcRegister, unsigned Lane,
-                                  Register OffsetRegister,
-                                  bool OffsetRegisterKillState) {
+                                  Register OffsetRegister) {
     auto NewRegister = MRI.createVirtualRegister(FPR128RegClass);
     MachineInstrBuilder LoadIndexIntoRegister =
         BuildMI(MF, MIMetadata(*OriginalInstr), TII->get(Root.getOpcode()),
                 NewRegister)
             .addReg(SrcRegister)
             .addImm(Lane)
-            .addReg(OffsetRegister, getKillRegState(OffsetRegisterKillState))
+            .addReg(OffsetRegister)
             .setMemRefs(OriginalInstr->memoperands());
     InstrIdxForVirtReg.insert(std::make_pair(NewRegister, InsInstrs.size()));
     InsInstrs.push_back(LoadIndexIntoRegister);
@@ -8665,8 +8666,7 @@ generateGatherLanePattern(MachineInstr &Root,
   for (auto [Index, LoadInstr] : llvm::enumerate(LanesToLoadToReg0)) {
     const MachineOperand &OffsetRegOperand = LoadInstr->getOperand(3);
     PrevReg = CreateLD1Instruction(LoadInstr, PrevReg, Index + 1,
-                                   OffsetRegOperand.getReg(),
-                                   OffsetRegOperand.isKill());
+                                   OffsetRegOperand.getReg());
     DelInstrs.push_back(LoadInstr);
   }
   Register LastLoadReg0 = PrevReg;
@@ -8712,7 +8712,7 @@ generateGatherLanePattern(MachineInstr &Root,
   auto SubRegToRegInstr =
       BuildMI(MF, MIMetadata(Root), TII->get(SubregToReg->getOpcode()),
               DestRegForSubregToReg)
-          .addReg(DestRegForMiddleIndex, getKillRegState(true))
+          .addReg(DestRegForMiddleIndex)
           .addImm(SubregType);
   InstrIdxForVirtReg.insert(
       std::make_pair(DestRegForSubregToReg, InsInstrs.size()));
@@ -8726,8 +8726,7 @@ generateGatherLanePattern(MachineInstr &Root,
   for (auto [Index, LoadInstr] : llvm::enumerate(LanesToLoadToReg1)) {
     const MachineOperand &OffsetRegOperand = LoadInstr->getOperand(3);
     PrevReg = CreateLD1Instruction(LoadInstr, PrevReg, Index + 1,
-                                   OffsetRegOperand.getReg(),
-                                   OffsetRegOperand.isKill());
+                                   OffsetRegOperand.getReg());
 
     // Do not add the last reg to DelInstrs - it will be removed later.
     if (Index == NumLanes / 2 - 2) {
