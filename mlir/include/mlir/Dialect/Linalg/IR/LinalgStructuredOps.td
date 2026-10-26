@@ -236,7 +236,11 @@ def MapOp : LinalgStructuredBase_Op<"map", [
   let summary = "Elementwise operations";
   let description = [{
     Models elementwise operations on tensors in terms of arithmetic operations
-    on the corresponding elements.
+    on the corresponding elements. The mapper region receives one block
+    argument per `ins` operand plus a trailing argument for the `outs`
+    destination; that destination argument must remain unused (destination
+    passing style only). Use `linalg.generic` when the payload needs to read
+    the destination value.
 
     Example:
     ```mlir
