@@ -2530,6 +2530,10 @@ void CodeGenRegBank::inferCommonSubClass(CodeGenRegisterClass *RC) {
     if (RC1 == RC2)
       continue;
 
+    // Skip disjoint class pairs, without loading the members.
+    if (!RC1->getMemberBV().anyCommon(RC2->getMemberBV()))
+      continue;
+
     // Compute the set intersection of RC1 and RC2.
     const CodeGenRegister::Vec &Memb1 = RC1->getMembers();
     const CodeGenRegister::Vec &Memb2 = RC2->getMembers();
@@ -2538,10 +2542,6 @@ void CodeGenRegBank::inferCommonSubClass(CodeGenRegisterClass *RC) {
                           Memb2.end(),
                           std::inserter(Intersection, Intersection.begin()),
                           deref<std::less<>>());
-
-    // Skip disjoint class pairs.
-    if (Intersection.empty())
-      continue;
 
     // Skip casses where the intersection is composed of artificial
     // registers.
