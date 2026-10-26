@@ -91,8 +91,8 @@ declare void @use(i32)
 ; Verify that lifetime.start and lifetime.end on an addrspace(5) alloca
 ; alongside droppable users insert store undef in the pre-pass,
 ; breaking loop-carried back-edge dependencies.
-define void @lifetime_addrspace5_and_gep_in_loop(i32 %val, i1 %c1, i1 %c2) {
-; CHECK-LABEL: @lifetime_addrspace5_and_gep_in_loop(
+define void @lifetime_addrspace5(i32 %val, i1 %c1, i1 %c2) {
+; CHECK-LABEL: @lifetime_addrspace5(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:

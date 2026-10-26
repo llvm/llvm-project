@@ -539,9 +539,8 @@ static void removeIntrinsicUsers(AllocaInst *AI) {
       continue;
     }
 
-    // Same as above for lifetime intrinsics directly on the alloca. If the
-    // alloca has no load/store users, PromotedType is null and the alloca will
-    // be deleted as dead, so no store is needed.
+    // If the alloca has no load/store users, PromotedType is null and the
+    // alloca will be deleted as dead, so no store is needed.
     if (PromotedType)
       if (auto *II = dyn_cast<IntrinsicInst>(I))
         if (II->isLifetimeStartOrEnd()) {
