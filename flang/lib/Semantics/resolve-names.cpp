@@ -4169,9 +4169,8 @@ bool ScopeHandler::ConvertToUseError(
         location,
         "'%s' is use-associated into a subprogram of the same name"_port_en_US,
         used.name());
-    SourceName created{context().GetTempName(currScope())};
-    Symbol &tmpUse{MakeSymbol(created, Attrs(), UseDetails{location, used})};
-    UseErrorDetails useError{tmpUse.get<UseDetails>()};
+    UseDetails useDetails{location, used};
+    UseErrorDetails useError{useDetails};
     useError.add_occurrence(location, hostAssocDetails->symbol());
     symbol.set_details(std::move(useError));
     return true;
