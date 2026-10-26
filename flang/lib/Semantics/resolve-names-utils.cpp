@@ -1024,6 +1024,18 @@ public:
     }
     return false;
   }
+  // The originating array recorded as a RankOneBoundElement's provenance is
+  // not part of the expression tree that Traverse visits, so it must be
+  // remapped here explicitly; otherwise a copied dummy's bound would still
+  // name the interface's array and the module writer would order the body's
+  // declarations against the wrong symbol.
+  bool operator()(const evaluate::RankOneBoundElement &x) {
+    (*this)(x.base());
+    if (const auto &array{x.originatingArray()}) {
+      (*this)(*array);
+    }
+    return false;
+  }
   void MapSymbolExprs(Symbol &);
   Symbol *CopySymbol(const Symbol *);
 

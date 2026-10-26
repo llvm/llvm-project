@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1 -Wautomatic-in-main-program -Wsaved-local-in-spec-expr
+! RUN: %python %S/test_errors.py %s %flang_fc1 -Wautomatic-in-main-program -Wsaved-local-in-spec-expr -Wrank-one-bounds-on-function-result
 ! ---- Module with rank-1 array-bounded declarations, USE'd elsewhere ----
 subroutine array_flatten(int)
   integer, intent(IN) :: int
@@ -146,13 +146,15 @@ module data
   !ERROR: Rank-1 integer array used as upper bounds in DECLARATION must have constant size
   integer :: gg3(nonconstsize : nonconstsize)
 end module 
-! A raw rank-1 bound element in a(0:n)'s extents (the lower bound 0 makes
-! neither UBOUND nor LBOUND exact) must keep SIZE from folding, but must not
-! keep it from validating DIM=: an out-of-range or non-positive DIM is still
-! diagnosed.
-subroutine size_dim_checked(n)
-  integer, intent(in) :: n(2)
-  real :: a(0:n)
+! A raw rank-1 bound element that survives folding in a's extents (merge() with
+! a LOGICAL mask is not reduced to a per-element scalar, and the lower bound 0
+! makes neither UBOUND nor LBOUND exact) must keep SIZE from folding, but must
+! not keep it from validating DIM=: an out-of-range or non-positive DIM is
+! still diagnosed.
+subroutine size_dim_checked(n, m, c)
+  integer, intent(in) :: n(2), m(2)
+  logical, intent(in) :: c(2)
+  real :: a(0:merge(n, m, c))
   !ERROR: DIM=9 dimension is out of range for rank-2 array
   print *, size(a, 9)
   !ERROR: DIM=2147483648 dimension is out of range for rank-2 array
@@ -168,6 +170,42 @@ subroutine size_constant_base()
   integer(kind=merge(4, -1, count == 12)) :: ok
   ok = 0
 end subroutine
+! F2023 C816 permits only an explicit-shape-spec-list for a nonallocatable
+! nonpointer function result, so a rank-1 integer array as the result's bounds
+! is an extension and gets a portability warning.  The same bounds on a dummy
+! (R814) or on an ALLOCATABLE result (not covered by C816) are standard.
+module c816
+contains
+  function res_rank1(n, a) result(r)
+    integer, intent(in) :: n(2)
+    real, intent(in) :: a(n)
+    !PORTABILITY: Function result 'r' should not be declared with a rank-1 integer array as its bounds (F2023 C816) [-Wrank-one-bounds-on-function-result]
+    real :: r(n)
+    r = a
+  end function
+  function res_rank1_lb(lo, hi) result(r)
+    integer, intent(in) :: lo(2), hi(2)
+    !PORTABILITY: Function result 'r' should not be declared with a rank-1 integer array as its bounds (F2023 C816) [-Wrank-one-bounds-on-function-result]
+    real :: r(lo:hi)
+    r = 0.0
+  end function
+  function res_zero_size() result(r)
+    !PORTABILITY: Function result 'r' should not be declared with a rank-1 integer array as its bounds (F2023 C816) [-Wrank-one-bounds-on-function-result]
+    real :: r([integer::])
+    r = 0.0
+  end function
+  function res_alloc(n) result(r)
+    integer, intent(in) :: n(2)
+    real, allocatable :: r(:,:)
+    allocate(r(n(1), n(2)))
+    r = 0.0
+  end function
+  function res_explicit_list(n) result(r)
+    integer, intent(in) :: n(2)
+    real :: r(n(1), n(2))
+    r = 0.0
+  end function
+end module
 program declaration_array_bounds
   use getter
   implicit none

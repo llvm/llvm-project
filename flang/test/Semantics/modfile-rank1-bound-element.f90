@@ -20,6 +20,10 @@
 ! RUN: FileCheck %s --check-prefix=UNFOLDED --input-file=%t/m_unfolded.mod
 ! RUN: %flang_fc1 -fsyntax-only -J%t %t/dependency.f90
 ! RUN: FileCheck %s --check-prefix=DEP --input-file=%t/m_dependency.mod
+! RUN: %flang_fc1 -fsyntax-only -J%t %t/submod_parent.f90
+! RUN: %flang_fc1 -fsyntax-only -J%t %t/submod_child.f90
+! RUN: FileCheck %s --check-prefix=SUBMOD --input-file=%t/m_submod-child.mod
+! RUN: %flang_fc1 -fsyntax-only -J%t %t/submod_grandchild.f90
 ! RUN: %flang_fc1 -fsyntax-only -J%t %t/consumer.f90
 
 ! `a` has the default lower bound 1, so UBOUND(a,dim) is exact for every
@@ -103,6 +107,52 @@ end module
 ! DEP: real(4)::z(1_8:__builtin_int(merge(n,m,c),kind=8))
 ! DEP: real(4)::b(1_8:{{.*}}ubound(z,dim=2,kind=8){{.*}})
 ! DEP-NOT: {{[%][Rr][Oo][Bb][Ee]}}
+
+! A `module procedure` body in a submodule inherits its dummies by copying the
+! interface's symbols and remapping every symbol reference in their expressions
+! to the body's own copies.  The provenance array is outside the traversed
+! expression tree, so it must be remapped explicitly; otherwise the body's `b`
+! would still name the interface's `z`, the child's mod file would declare `b`
+! before its own `z`, and a descendant submodule could not use the interface.
+!--- submod_parent.f90
+module m_submod
+  interface
+    module subroutine sep(n, m, c, b, z)
+      integer, intent(in) :: n(2), m(2)
+      logical, intent(in) :: c(2)
+      real :: z(merge(n, m, c))
+      real :: b(size(z, 2))
+    end subroutine
+    module subroutine report()
+    end subroutine
+  end interface
+end module
+
+!--- submod_child.f90
+submodule(m_submod) child
+contains
+  module procedure sep
+    b = 1.0
+    z = 2.0
+  end procedure
+end submodule
+! SUBMOD-LABEL: module subroutine sep(n,m,c,b,z)
+! SUBMOD: real(4)::z(1_8:__builtin_int(merge(n,m,c),kind=8))
+! SUBMOD: real(4)::b(1_8:{{.*}}ubound(z,dim=2,kind=8){{.*}})
+! SUBMOD-NOT: {{[%][Rr][Oo][Bb][Ee]}}
+
+! No FileCheck: the assertion is that this compiles.  A descendant submodule
+! reads m_submod-child.mod from disk and calls sep through it, so this fails
+! unless the child's interface body declared z before b.  report() exists only
+! to host the call.
+!--- submod_grandchild.f90
+submodule(m_submod:child) grandchild
+contains
+  module procedure report
+    real :: bb(5), zz(2, 5)
+    call sep([2, 5], [7, 7], [.true., .true.], bb, zz)
+  end procedure
+end submodule
 
 !--- consumer.f90
 program p
