@@ -5,26 +5,32 @@
 # RUN: rm -rf %t && split-file %s %t && cd %t
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64 --defsym=BSS=1 a.s -o a.o
-# RUN: ld.lld --section-start=.note=0x200300 a.o -o a
+# RUN: ld.lld --section-start=.note=0x200300 a.o -z nolrodata-after-bss -o a
 # RUN: llvm-readelf -S -l -sX a | FileCheck %s
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64 a.s -o a1.o
-# RUN: ld.lld --section-start=.note=0x200300 a1.o -o a1
+# RUN: ld.lld --section-start=.note=0x200300 a1.o -z nolrodata-after-bss -o a1
 # RUN: llvm-readelf -S -sX a1 | FileCheck %s --check-prefix=CHECK1
 
 # RUN: ld.lld -T b.lds -z norelro a.o -z lrodata-after-bss -z nolrodata-after-bss -o b --fatal-warnings
 # RUN: llvm-readelf -S -l b | FileCheck %s --check-prefix=CHECK2
 
-# RUN: ld.lld --section-start=.note=0x200300 a.o -z lrodata-after-bss -o a3
+# RUN: ld.lld --section-start=.note=0x200300 a.o -o a3
 # RUN: llvm-readelf -S -l -sX a3 | FileCheck %s --check-prefix=CHECK3
+# RUN: ld.lld --section-start=.note=0x200300 a.o -z nolrodata-after-bss -z lrodata-after-bss -o a3.explicit
+# RUN: cmp a3 a3.explicit
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64 c.s -o c.o
 # RUN: ld.lld c.o -o c
 # RUN: llvm-readelf -S -l c | FileCheck %s --check-prefix=CHECK4
+# RUN: ld.lld c.o -z nolrodata-after-bss -o c.nolrodata
+# RUN: llvm-readelf -S -l c.nolrodata | FileCheck %s --check-prefix=CHECK6
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64 d.s -o d.o
 # RUN: ld.lld d.o -z keep-text-section-prefix -o d
 # RUN: llvm-readelf -S d | FileCheck %s --check-prefix=CHECK5
+# RUN: ld.lld d.o -z keep-text-section-prefix -z nolrodata-after-bss -o d.nolrodata
+# RUN: llvm-readelf -S d.nolrodata | FileCheck %s --check-prefix=CHECK5
 
 # CHECK:       Name              Type            Address          Off    Size   ES Flg Lk Inf Al
 # CHECK-NEXT:                    NULL            0000000000000000 000000 000000 00      0   0  0
@@ -125,23 +131,36 @@
 # CHECK3-NEXT:  0000000000207d0d     0 NOTYPE  GLOBAL DEFAULT [[#]] (.ldata2) _end
 
 # CHECK4:      .note      NOTE
-# CHECK4-NEXT: .ltext     PROGBITS
-# CHECK4-NEXT: .lrodata   PROGBITS
 # CHECK4-NEXT: .rodata    PROGBITS
 # CHECK4-NEXT: .text      PROGBITS
 # CHECK4-NEXT: .data      PROGBITS
 # CHECK4-NEXT: .bss       NOBITS
-# CHECK4-NEXT: .ldata     PROGBITS
 # CHECK4-NEXT: .lbss      NOBITS
+# CHECK4-NEXT: .ltext     PROGBITS
+# CHECK4-NEXT: .lrodata   PROGBITS
+# CHECK4-NEXT: .ldata     PROGBITS
 # CHECK4-NEXT: .ltext_w   PROGBITS
 # CHECK4-NEXT: .comment   PROGBITS
 
 ## .ltext.hot and .ltext.unlikely are kept separate with -z keep-text-section-prefix.
-# CHECK5:      .ltext.hot      PROGBITS
+# CHECK5:      .text           PROGBITS
+# CHECK5-NEXT: .text.hot       PROGBITS
+# CHECK5-NEXT: .text.unlikely  PROGBITS
+# CHECK5-NEXT: .ltext.hot      PROGBITS
 # CHECK5-NEXT: .ltext.unlikely PROGBITS
 # CHECK5-NEXT: .ltext          PROGBITS
-# CHECK5:      .text.hot       PROGBITS
-# CHECK5-NEXT: .text.unlikely  PROGBITS
+
+# CHECK6:      .note      NOTE
+# CHECK6-NEXT: .lrodata   PROGBITS
+# CHECK6-NEXT: .rodata    PROGBITS
+# CHECK6-NEXT: .text      PROGBITS
+# CHECK6-NEXT: .data      PROGBITS
+# CHECK6-NEXT: .bss       NOBITS
+# CHECK6-NEXT: .ldata     PROGBITS
+# CHECK6-NEXT: .lbss      NOBITS
+# CHECK6-NEXT: .ltext     PROGBITS
+# CHECK6-NEXT: .ltext_w   PROGBITS
+# CHECK6-NEXT: .comment   PROGBITS
 
 #--- a.s
 .globl _start, _etext, _edata, _end

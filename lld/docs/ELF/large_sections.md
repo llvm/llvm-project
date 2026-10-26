@@ -28,28 +28,31 @@ to them.
 
 Large globals are placed in separate sections from small globals, and those
 sections have a "large" section flag, e.g. `SHF_X86_64_LARGE` for x86-64. The
-linker places large sections on the outer edges of the binary, making sure they
+linker places large sections after the small sections, making sure they
 do not affect the distance of small globals to text. The large versions
 of `.rodata`, `.bss`, and `.data` are `.lrodata`, `.lbss`, and
 `.ldata`, and they are laid out as follows:
 
-```{image} large_section_layout_pic.png
+```{image} large_section_layout_nopic.png
 ```
 
-We try to keep the number of `PT_LOAD` segments to a minimum, so we place
-large sections next to the small sections with the same RWX permissions when
-possible.
+Large code is placed in `.ltext`, which is laid out after `.lbss` and before
+`.lrodata`.
 
 `.lbss` is right after `.bss` so that they are merged together and we
 minimize the number of segments with `p_memsz > p_filesz`.
 
-Note that the above applies to PIC code. For less common non-PIC code with
-absolute relocations instead of relative relocations, 32-bit relocations
+For non-PIC code with absolute relocations, 32-bit signed relocations
 typically assume that symbols are in the lower 2GB of the address space. So for
 non-PIC code, large sections should be placed after all small sections to avoid
 `.lrodata` pushing small symbols out of the lower 2GB of the address space.
-`-z lrodata-after-bss` changes the layout to be:
+This layout also keeps `.text` close to the ELF headers, allowing small-model
+PIC code to reference `__ehdr_start` with a 32-bit PC-relative relocation.
 
-```{image} large_section_layout_nopic.png
+`-z lrodata-after-bss` is the default. `-z nolrodata-after-bss` places
+`.lrodata` before `.text`:
+
+```{image} large_section_layout_pic.png
 ```
 
+`.ltext` remains after `.bss` regardless of this option.

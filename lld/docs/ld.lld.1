@@ -871,7 +871,10 @@ During symbol resolution interposers are searched after the application
 but before other dependencies.
 .Pp
 .It Cm lrodata-after-bss
-Place .lrodata after .bss.
+Place .lrodata after .bss (default).
+Use
+.Cm nolrodata-after-bss
+to place .lrodata before .text.
 .Pp
 .It Cm muldefs
 Do not error if a symbol is defined multiple times.

@@ -713,10 +713,9 @@ unsigned elf::getSectionRank(Ctx &ctx, OutputSection &osec) {
     else
       rank |= RF_RODATA;
   } else if (isExec) {
-    // Place readonly .ltext before .lrodata and writable .ltext after .lbss to
-    // keep writable and readonly segments separate.
+    // Keep .ltext from separating small sections from the ELF headers.
     if (isLarge) {
-      rank |= isWrite ? RF_LARGE_EXEC_WRITE : RF_LARGE_EXEC;
+      rank |= RF_LARGE_ALT | (isWrite ? RF_LARGE_EXEC_WRITE : RF_LARGE_EXEC);
     } else {
       rank |= isWrite ? RF_EXEC_WRITE : RF_EXEC;
     }
