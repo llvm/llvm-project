@@ -10,6 +10,19 @@ add_libc_test(
     libc.include.llvm-libc-macros.alloca_macros
 )
 
+if(LIBC_TARGET_OS_IS_LINUX)
+  add_libc_test(
+    dirent_dttoif_test
+    SUITE
+      libc-include-tests
+    SRCS
+      dirent_dttoif_test.cpp
+    DEPENDS
+      libc.include.dirent
+      libc.include.sys_stat
+  )
+endif()
+
 add_libc_test(
   assert_test
   SUITE
