@@ -22,6 +22,7 @@ add_llvm_library(LLVMTableGenCommon STATIC OBJECT EXCLUDE_FROM_ALL DISABLE_LLVM_
   GlobalISel/Patterns.cpp
 
   AsmWriterInst.cpp
+  BytecodeProgram.cpp
   CodeGenDAGPatterns.cpp
   CodeGenHwModes.cpp
   CodeGenInstAlias.cpp
