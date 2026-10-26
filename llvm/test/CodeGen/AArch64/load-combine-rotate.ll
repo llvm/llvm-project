@@ -3,16 +3,16 @@
 ; RUN: llc < %s -mtriple=aarch64_be | FileCheck %s --check-prefix=BE
 
 define i64 @load_swap_32_to_64(ptr %p) {
-    ; LE-LABEL: load_swap_32_to_64:
-    ; LE:       // %bb.0:
-    ; LE-NEXT:    ldr x8, [x0]
-    ; LE-NEXT:    ror x0, x8, #32
-    ; LE-NEXT:    ret
-    ;
-    ; BE-LABEL: load_swap_32_to_64:
-    ; BE:       // %bb.0:
-    ; BE-NEXT:    ldr x0, [x0]
-    ; BE-NEXT:    ret
+  ; LE-LABEL: load_swap_32_to_64:
+  ; LE:       // %bb.0:
+  ; LE-NEXT:    ldr x8, [x0]
+  ; LE-NEXT:    ror x0, x8, #32
+  ; LE-NEXT:    ret
+  ;
+  ; BE-LABEL: load_swap_32_to_64:
+  ; BE:       // %bb.0:
+  ; BE-NEXT:    ldr x0, [x0]
+  ; BE-NEXT:    ret
     %p.hi = getelementptr inbounds nuw i8, ptr %p, i64 4
     %lo = load i32, ptr %p
     %hi = load i32, ptr %p.hi
@@ -24,16 +24,16 @@ define i64 @load_swap_32_to_64(ptr %p) {
 }
 
 define i64 @load_swap_32_to_64_be(ptr %p) {
-    ; LE-LABEL: load_swap_32_to_64_be:
-    ; LE:       // %bb.0:
-    ; LE-NEXT:    ldr x0, [x0]
-    ; LE-NEXT:    ret
-    ;
-    ; BE-LABEL: load_swap_32_to_64_be:
-    ; BE:       // %bb.0:
-    ; BE-NEXT:    ldp w8, w9, [x0]
-    ; BE-NEXT:    orr x0, x8, x9, lsl #32
-    ; BE-NEXT:    ret
+  ; LE-LABEL: load_swap_32_to_64_be:
+  ; LE:       // %bb.0:
+  ; LE-NEXT:    ldr x0, [x0]
+  ; LE-NEXT:    ret
+  ;
+  ; BE-LABEL: load_swap_32_to_64_be:
+  ; BE:       // %bb.0:
+  ; BE-NEXT:    ldp w8, w9, [x0]
+  ; BE-NEXT:    orr x0, x8, x9, lsl #32
+  ; BE-NEXT:    ret
     %p.hi = getelementptr inbounds nuw i8, ptr %p, i64 4
     %lo = load i32, ptr %p
     %hi = load i32, ptr %p.hi
@@ -45,16 +45,16 @@ define i64 @load_swap_32_to_64_be(ptr %p) {
 }
 
 define i32 @load_swap_16_to_32(ptr %p) {
-    ; LE-LABEL: load_swap_16_to_32:
-    ; LE:       // %bb.0:
-    ; LE-NEXT:    ldr w8, [x0]
-    ; LE-NEXT:    ror w0, w8, #16
-    ; LE-NEXT:    ret
-    ;
-    ; BE-LABEL: load_swap_16_to_32:
-    ; BE:       // %bb.0:
-    ; BE-NEXT:    ldr w0, [x0]
-    ; BE-NEXT:    ret
+  ; LE-LABEL: load_swap_16_to_32:
+  ; LE:       // %bb.0:
+  ; LE-NEXT:    ldr w8, [x0]
+  ; LE-NEXT:    ror w0, w8, #16
+  ; LE-NEXT:    ret
+  ;
+  ; BE-LABEL: load_swap_16_to_32:
+  ; BE:       // %bb.0:
+  ; BE-NEXT:    ldr w0, [x0]
+  ; BE-NEXT:    ret
     %p.hi = getelementptr inbounds nuw i8, ptr %p, i64 2
     %lo = load i16, ptr %p
     %hi = load i16, ptr %p.hi
@@ -66,20 +66,20 @@ define i32 @load_swap_16_to_32(ptr %p) {
 }
 
 define i64 @load_rot_16_to_64(ptr %p) {
-    ; LE-LABEL: load_rot_16_to_64:
-    ; LE:       // %bb.0:
-    ; LE-NEXT:    ldr x8, [x0]
-    ; LE-NEXT:    ror x0, x8, #16
-    ; LE-NEXT:    ret
-    ;
-    ; BE-LABEL: load_rot_16_to_64:
-    ; BE:       // %bb.0:
-    ; BE-NEXT:    ldrh w8, [x0, #2]
-    ; BE-NEXT:    ldrh w9, [x0]
-    ; BE-NEXT:    ldr w10, [x0, #4]
-    ; BE-NEXT:    orr x8, x8, x9, lsl #48
-    ; BE-NEXT:    orr x0, x8, x10, lsl #16
-    ; BE-NEXT:    ret
+  ; LE-LABEL: load_rot_16_to_64:
+  ; LE:       // %bb.0:
+  ; LE-NEXT:    ldr x8, [x0]
+  ; LE-NEXT:    ror x0, x8, #16
+  ; LE-NEXT:    ret
+  ;
+  ; BE-LABEL: load_rot_16_to_64:
+  ; BE:       // %bb.0:
+  ; BE-NEXT:    ldrh w8, [x0, #2]
+  ; BE-NEXT:    ldrh w9, [x0]
+  ; BE-NEXT:    ldr w10, [x0, #4]
+  ; BE-NEXT:    orr x8, x8, x9, lsl #48
+  ; BE-NEXT:    orr x0, x8, x10, lsl #16
+  ; BE-NEXT:    ret
     %p2 = getelementptr inbounds nuw i8, ptr %p, i64 2
     %p4 = getelementptr inbounds nuw i8, ptr %p, i64 4
     %lo = load i16, ptr %p
@@ -96,20 +96,20 @@ define i64 @load_rot_16_to_64(ptr %p) {
 }
 
 define i32 @load_rot_8_to_32(ptr %p) {
-    ; LE-LABEL: load_rot_8_to_32:
-    ; LE:       // %bb.0:
-    ; LE-NEXT:    ldr w8, [x0]
-    ; LE-NEXT:    ror w0, w8, #8
-    ; LE-NEXT:    ret
-    ;
-    ; BE-LABEL: load_rot_8_to_32:
-    ; BE:       // %bb.0:
-    ; BE-NEXT:    ldrb w8, [x0, #1]
-    ; BE-NEXT:    ldrb w9, [x0]
-    ; BE-NEXT:    ldrh w10, [x0, #2]
-    ; BE-NEXT:    orr w8, w8, w9, lsl #24
-    ; BE-NEXT:    orr w0, w8, w10, lsl #8
-    ; BE-NEXT:    ret
+  ; LE-LABEL: load_rot_8_to_32:
+  ; LE:       // %bb.0:
+  ; LE-NEXT:    ldr w8, [x0]
+  ; LE-NEXT:    ror w0, w8, #8
+  ; LE-NEXT:    ret
+  ;
+  ; BE-LABEL: load_rot_8_to_32:
+  ; BE:       // %bb.0:
+  ; BE-NEXT:    ldrb w8, [x0, #1]
+  ; BE-NEXT:    ldrb w9, [x0]
+  ; BE-NEXT:    ldrh w10, [x0, #2]
+  ; BE-NEXT:    orr w8, w8, w9, lsl #24
+  ; BE-NEXT:    orr w0, w8, w10, lsl #8
+  ; BE-NEXT:    ret
     %p1 = getelementptr inbounds nuw i8, ptr %p, i64 1
     %p2 = getelementptr inbounds nuw i8, ptr %p, i64 2
     %b0 = load i8, ptr %p
@@ -126,19 +126,19 @@ define i32 @load_rot_8_to_32(ptr %p) {
 }
 
 define i64 @negative_gap(ptr %p) {
-    ; LE-LABEL: negative_gap:
-    ; LE:       // %bb.0:
-    ; LE-NEXT:    ldur w8, [x0, #5]
-    ; LE-NEXT:    ldr w9, [x0]
-    ; LE-NEXT:    orr x0, x8, x9, lsl #32
-    ; LE-NEXT:    ret
-    ;
-    ; BE-LABEL: negative_gap:
-    ; BE:       // %bb.0:
-    ; BE-NEXT:    ldur w8, [x0, #5]
-    ; BE-NEXT:    ldr w9, [x0]
-    ; BE-NEXT:    orr x0, x8, x9, lsl #32
-    ; BE-NEXT:    ret
+  ; LE-LABEL: negative_gap:
+  ; LE:       // %bb.0:
+  ; LE-NEXT:    ldur w8, [x0, #5]
+  ; LE-NEXT:    ldr w9, [x0]
+  ; LE-NEXT:    orr x0, x8, x9, lsl #32
+  ; LE-NEXT:    ret
+  ;
+  ; BE-LABEL: negative_gap:
+  ; BE:       // %bb.0:
+  ; BE-NEXT:    ldur w8, [x0, #5]
+  ; BE-NEXT:    ldr w9, [x0]
+  ; BE-NEXT:    orr x0, x8, x9, lsl #32
+  ; BE-NEXT:    ret
     %p.hi = getelementptr inbounds nuw i8, ptr %p, i64 5
     %lo = load i32, ptr %p
     %hi = load i32, ptr %p.hi
