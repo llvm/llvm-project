@@ -1,0 +1,86 @@
+## This test checks the --[no-]compress-debug-sections options.
+
+# REQUIRES: zlib
+
+# RUN: yaml2obj %p/Inputs/common.yaml -o %t.o
+# RUN: llvm-objcopy --compress-debug-sections=zlib %t.o %t.zlib.o
+
+## Check that the linked debug sections are not compressed by default if the
+## input debug sections are not compressed.
+# RUN: llvm-dwarfutil %t.o %t1
+# RUN: llvm-readelf -t %t1 | FileCheck %s --check-prefix=UNCOMPRESSED --implicit-check-not=COMPRESSED
+# RUN: llvm-dwarfdump --debug-info %t1 | FileCheck %s --check-prefix=DEBUG
+
+## Check that the linked debug sections are compressed by default if the input
+## debug sections are compressed.
+# RUN: llvm-dwarfutil --verify %t.zlib.o %t2
+# RUN: llvm-readelf -t %t2 | FileCheck %s --check-prefix=ZLIB
+# RUN: llvm-dwarfdump --debug-info %t2 | FileCheck %s --check-prefix=DEBUG
+
+## Check that nothing but the debug sections compression differs.
+# RUN: llvm-objcopy --decompress-debug-sections %t2 %t2.decompressed
+# RUN: cmp %t1 %t2.decompressed
+
+## Check --compress-debug-sections and --compress-debug-sections=zlib.
+# RUN: llvm-dwarfutil --compress-debug-sections %t.o %t3
+# RUN: cmp %t2 %t3
+# RUN: llvm-dwarfutil --compress-debug-sections=zlib %t.o %t3
+# RUN: cmp %t2 %t3
+
+## Check --no-compress-debug-sections and --compress-debug-sections=none.
+# RUN: llvm-dwarfutil --no-compress-debug-sections %t.zlib.o %t4
+# RUN: cmp %t1 %t4
+# RUN: llvm-dwarfutil --compress-debug-sections=none %t.zlib.o %t4
+# RUN: cmp %t1 %t4
+
+## Check that the last option wins.
+# RUN: llvm-dwarfutil --compress-debug-sections --no-compress-debug-sections %t.o %t5
+# RUN: cmp %t1 %t5
+# RUN: llvm-dwarfutil --no-compress-debug-sections --compress-debug-sections %t.o %t5
+# RUN: cmp %t2 %t5
+
+## Check --separate-debug-file.
+# RUN: llvm-dwarfutil --verify --separate-debug-file %t.zlib.o %t6
+# RUN: llvm-readelf -t %t6.debug | FileCheck %s --check-prefix=ZLIB
+# RUN: llvm-dwarfdump --debug-info %t6.debug | FileCheck %s --check-prefix=DEBUG
+
+## Check that .gnu_debuglink contains the CRC of the compressed debug file.
+# RUN: llvm-objcopy --remove-section=.gnu_debuglink \
+# RUN:   --add-gnu-debuglink=%t6.debug %t6 %t6.expected
+# RUN: cmp %t6.expected %t6
+
+## Check that the debug sections are copied as is if they are not linked.
+# RUN: llvm-dwarfutil --no-garbage-collection %t.zlib.o %t7
+# RUN: cmp %t.zlib.o %t7
+# RUN: llvm-dwarfutil --no-garbage-collection %t.o %t7
+# RUN: llvm-readelf -t %t7 | FileCheck %s --check-prefix=UNCOMPRESSED --implicit-check-not=COMPRESSED
+
+## Check that the debug sections are compressed if requested, even if they are
+## not linked.
+# RUN: llvm-dwarfutil --no-garbage-collection --compress-debug-sections %t.o %t8
+# RUN: cmp %t.zlib.o %t8
+# RUN: llvm-dwarfutil --no-garbage-collection --separate-debug-file \
+# RUN:   --compress-debug-sections %t.o %t9
+# RUN: llvm-readelf -t %t9.debug | FileCheck %s --check-prefix=ZLIB
+
+## Check that the debug sections are decompressed if requested, even if they
+## are not linked.
+# RUN: llvm-dwarfutil --no-garbage-collection --no-compress-debug-sections \
+# RUN:   %t.zlib.o %t10
+# RUN: llvm-readelf -t %t10 | FileCheck %s --check-prefix=UNCOMPRESSED --implicit-check-not=COMPRESSED
+# RUN: llvm-dwarfdump --debug-info %t10 | FileCheck %s --check-prefix=DEBUG
+
+# UNCOMPRESSED:      .debug_info
+# UNCOMPRESSED-NEXT:   PROGBITS
+# UNCOMPRESSED-NEXT:   [0000000000000000]:
+
+# ZLIB:      .debug_info
+# ZLIB-NEXT:   PROGBITS
+# ZLIB-NEXT:   [0000000000000800]: COMPRESSED
+# ZLIB-NEXT:   ZLIB,
+
+# DEBUG: .debug_info contents:
+# DEBUG: DW_TAG_compile_unit
+# DEBUG:   DW_AT_name{{.*}}"CU1"
+# DEBUG:   DW_TAG_class_type
+# DEBUG:     DW_AT_name{{.*}}"class1"
