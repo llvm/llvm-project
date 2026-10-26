@@ -342,6 +342,9 @@ void Host::SystemLog(Severity severity, llvm::StringRef message) {
   case lldb::eSeverityInfo:
     stream << "[Info] ";
     break;
+  case lldb::eSeverityHint:
+    stream << "[Hint] ";
+    break;
   }
 
   stream << message;

@@ -253,7 +253,8 @@ void REPL::IOHandlerInputComplete(IOHandler &io_handler, std::string &code) {
           ci.SetPromptOnQuit(false);
 
         // Execute the command
-        CommandReturnObject result(debugger.GetUseColor());
+        CommandReturnObject result(debugger.GetUseColor(),
+                                   debugger.GetShowHints());
         result.SetImmediateOutputStream(std::make_shared<StreamFile>(
             output_stream_sp->GetUnlockedFileSP()));
         result.SetImmediateErrorStream(

@@ -2855,7 +2855,8 @@ void CommandInterpreter::HandleCommands(
           "{0} {1}", m_debugger.GetPrompt().str().c_str(), cmd);
     }
 
-    CommandReturnObject tmp_result(m_debugger.GetUseColor());
+    CommandReturnObject tmp_result(m_debugger.GetUseColor(),
+                                   m_debugger.GetShowHints());
     tmp_result.SetInteractive(result.GetInteractive());
     tmp_result.SetSuppressImmediateOutput(true);
 
@@ -3451,7 +3452,8 @@ void CommandInterpreter::IOHandlerInputComplete(IOHandler &io_handler,
       RestoreExecutionContext();
   });
 
-  lldb_private::CommandReturnObject result(m_debugger.GetUseColor());
+  lldb_private::CommandReturnObject result(m_debugger.GetUseColor(),
+                                           m_debugger.GetShowHints());
   HandleCommand(line.c_str(), eLazyBoolCalculate, result);
 
   // Now emit the command output text from the command we just executed

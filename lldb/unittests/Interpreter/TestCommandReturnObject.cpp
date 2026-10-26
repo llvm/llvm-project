@@ -36,3 +36,16 @@ TEST(CommandReturnObjectTest, ClearResetsToInvalid) {
   result.Clear();
   EXPECT_EQ(result.GetStatus(), eReturnStatusInvalid);
 }
+
+TEST(CommandReturnObjectTest, AppendHint) {
+  CommandReturnObject result(false);
+  result.AppendHint("try this");
+  EXPECT_EQ(result.GetErrorString(), "hint: try this\n");
+  EXPECT_NE(result.GetStatus(), eReturnStatusFailed);
+}
+
+TEST(CommandReturnObjectTest, AppendHintDisabled) {
+  CommandReturnObject result(/*colors=*/false, /*show_hints=*/false);
+  result.AppendHint("try this");
+  EXPECT_EQ(result.GetErrorString(), "");
+}

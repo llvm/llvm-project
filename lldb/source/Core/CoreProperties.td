@@ -329,6 +329,10 @@ let Definition = "debugger", Path = "" in {
     DefaultEnumValue<"eDWIMPrintVerbosityNone">,
     EnumValues<"OptionEnumValues(g_dwim_print_verbosities)">,
     Desc<"The verbosity level used by dwim-print.">;
+  def ShowHints: Property<"show-hints", "Boolean">,
+    Global,
+    DefaultTrue,
+    Desc<"Whether to show hints.">;
   def ShowInlineDiagnostics: Property<"show-inline-diagnostics", "Boolean">,
     Global,
     DefaultFalse,
