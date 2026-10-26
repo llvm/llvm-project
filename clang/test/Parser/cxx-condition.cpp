@@ -20,12 +20,10 @@ void f() {
 
 void extension_in_condition(int x, int y) {
   if (__extension__({ 0; })) {}
-  // clang-format off
   if (__extension__(x ?: y) ==
       (x ?: y)) {} // expected-warning {{use of GNU ?: conditional expression extension, omitting middle operand}}
   if (__extension__ int z = (x ?: y);
       z == (x ?: y)) {} // expected-warning {{use of GNU ?: conditional expression extension, omitting middle operand}}
-  // clang-format on
   for (; __extension__(x ?: y);) {}
 }
 

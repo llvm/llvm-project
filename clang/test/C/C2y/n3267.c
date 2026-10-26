@@ -261,16 +261,12 @@ void negative_test_while_init_clause() {
 void extension_in_if(void *p, void *q) {
   (void)__extension__(p + 1);
   if (__extension__(p + 1)) {}
-  // clang-format off
   if (__extension__(p + 1) ==
       (q + 1)) {} // expected-warning {{arithmetic on a pointer to void is a GNU extension}}
-  // clang-format on
   if (__extension__({ 0; })) {}
   if (__extension__ void *r = p + 1) {}
-  // clang-format off
   if (__extension__ void *r = p + 1;
       r == (q + 1)) {} // expected-warning {{arithmetic on a pointer to void is a GNU extension}}
-  // clang-format on
   switch (__extension__({ 0; })) {
   default:
     break;
