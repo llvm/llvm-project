@@ -72,9 +72,9 @@ STATISTIC(NumFoldedLoads,     "Number of folded loads");
 STATISTIC(NumRemats,          "Number of rematerialized defs for spilling");
 
 static cl::opt<bool>
-RestrictStatepointRemat("restrict-statepoint-remat",
-                       cl::init(false), cl::Hidden,
-                       cl::desc("Restrict remat for statepoint operands"));
+    RestrictStatepointRemat("restrict-statepoint-remat", cl::init(true),
+                            cl::Hidden,
+                            cl::desc("Restrict remat for statepoint operands"));
 
 namespace {
 class HoistSpillHelper : private LiveRangeEdit::Delegate {
