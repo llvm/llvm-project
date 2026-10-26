@@ -13,6 +13,7 @@
 #include "TGParser.h"
 #include "TGLexer.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -104,15 +105,13 @@ static void checkConcrete(Record &R) {
     if (RV.isNonconcreteOK())
       continue;
 
-    if (const Init *V = RV.getValue()) {
-      bool Ok = isa<BitsInit>(V) ? checkBitsConcrete(R, RV) : V->isConcrete();
-      if (!Ok) {
-        PrintError(R.getLoc(), Twine("Initializer of '") +
-                                   RV.getNameInitAsString() + "' in '" +
-                                   R.getNameInitAsString() +
-                                   "' could not be fully resolved: " +
-                                   RV.getValue()->getAsString());
-      }
+    const Init *V = RV.getValue();
+    bool Ok = isa<BitsInit>(V) ? checkBitsConcrete(R, RV) : V->isConcrete();
+    if (!Ok) {
+      PrintError(R.getLoc(),
+                 Twine("Initializer of '") + RV.getNameInitAsString() +
+                     "' in '" + R.getNameInitAsString() +
+                     "' could not be fully resolved: " + V->getAsString());
     }
   }
 }
@@ -153,8 +152,7 @@ const Init *TGVarScope::getVar(RecordKeeper &Records,
   if (It != Vars.end())
     return It->second;
 
-  auto FindValueInArgs = [&](Record *Rec,
-                             const StringInit *Name) -> const Init * {
+  auto FindValueInArgs = [&](Record *Rec) -> const Init * {
     if (!Rec)
       return nullptr;
     const Init *ArgName = QualifyName(*Rec, Name);
@@ -187,7 +185,7 @@ const Init *TGVarScope::getVar(RecordKeeper &Records,
 
       // The variable is a class template argument?
       if (CurRec->isClass())
-        if (auto *V = FindValueInArgs(CurRec, Name))
+        if (auto *V = FindValueInArgs(CurRec))
           return V;
     }
     break;
@@ -204,7 +202,7 @@ const Init *TGVarScope::getVar(RecordKeeper &Records,
   case SK_MultiClass: {
     // The variable is a multiclass template argument?
     if (CurMultiClass)
-      if (auto *V = FindValueInArgs(&CurMultiClass->Rec, Name))
+      if (auto *V = FindValueInArgs(&CurMultiClass->Rec))
         return V;
     break;
   }
@@ -243,10 +241,8 @@ bool TGParser::AddValue(Record *CurRec, SMLoc Loc, const RecordVal &RV,
 /// Return true on error, false on success.
 bool TGParser::SetValue(Record *CurRec, SMLoc Loc, const Init *ValName,
                         ArrayRef<unsigned> BitList, const Init *V,
-                        bool AllowSelfAssignment, bool OverrideDefLoc,
-                        LetMode Mode) {
-  if (!V)
-    return false;
+                        bool OverrideDefLoc, LetMode Mode) {
+  assert(V && "Cannot set a null value");
 
   if (!CurRec)
     CurRec = &CurMultiClass->Rec;
@@ -295,7 +291,7 @@ bool TGParser::SetValue(Record *CurRec, SMLoc Loc, const Init *ValName,
   // in the resolution machinery.
   if (BitList.empty())
     if (const auto *VI = dyn_cast<VarInit>(V))
-      if (VI->getNameInit() == ValName && !AllowSelfAssignment)
+      if (VI->getNameInit() == ValName)
         return Error(Loc, "Recursion / self-assignment forbidden");
 
   // If we are assigning to a subset of the bits in the value we must be
@@ -408,20 +404,19 @@ bool TGParser::AddSubClass(RecordsEntry &Entry, SubClassReference &SubClass) {
 /// AddSubMultiClass - Add SubMultiClass as a subclass to
 /// CurMC, resolving its template args as SubMultiClass's
 /// template arguments.
-bool TGParser::AddSubMultiClass(MultiClass *CurMC,
-                                SubMultiClassReference &SubMultiClass) {
+bool TGParser::AddSubMultiClass(SubMultiClassReference &SubMultiClass) {
   MultiClass *SMC = SubMultiClass.MC;
 
   SubstStack Substs;
   if (resolveArgumentsOfMultiClass(
           Substs, SMC, SubMultiClass.TemplateArgs,
-          VarInit::get(QualifiedNameOfImplicitName(CurMC),
+          VarInit::get(QualifiedNameOfImplicitName(CurMultiClass),
                        StringRecTy::get(Records)),
           SubMultiClass.RefRange.Start))
     return true;
 
   // Add all of the defs in the subclass into the current multiclass.
-  return resolve(SMC->Entries, Substs, false, &CurMC->Entries);
+  return resolve(SMC->Entries, Substs, false, &CurMultiClass->Entries);
 }
 
 /// Add a record, foreach loop, or assertion to the current context.
@@ -716,7 +711,7 @@ bool TGParser::consume(tgtok::TokKind K) {
 ///   ObjectName ::= Value [ '#' Value ]*
 ///   ObjectName ::= /*empty*/
 ///
-const Init *TGParser::ParseObjectName(MultiClass *CurMultiClass) {
+const Init *TGParser::ParseObjectName() {
   switch (Lex.getCode()) {
   case tgtok::colon:
   case tgtok::semi:
@@ -845,8 +840,7 @@ SubClassReference TGParser::ParseSubClassReference(Record *CurRec,
 ///  SubMultiClassRef ::= MultiClassID
 ///  SubMultiClassRef ::= MultiClassID '<' ArgValueList '>'
 ///
-SubMultiClassReference
-TGParser::ParseSubMultiClassReference(MultiClass *CurMC) {
+SubMultiClassReference TGParser::ParseSubMultiClassReference() {
   SubMultiClassReference Result;
   Result.RefRange.Start = Lex.getLoc();
 
@@ -861,8 +855,8 @@ TGParser::ParseSubMultiClassReference(MultiClass *CurMC) {
   }
 
   SmallVector<SMLoc> ArgLocs;
-  if (ParseTemplateArgValueList(Result.TemplateArgs, ArgLocs, &CurMC->Rec,
-                                &Result.MC->Rec)) {
+  if (ParseTemplateArgValueList(Result.TemplateArgs, ArgLocs,
+                                &CurMultiClass->Rec, &Result.MC->Rec)) {
     Result.MC = nullptr; // Error parsing value list.
     return Result;
   }
@@ -3069,29 +3063,29 @@ const Init *TGParser::ParseSimpleValue(Record *CurRec, const RecTy *ItemType,
     // As we parse { a, b, ... }, 'a' is the highest bit, but we parse it
     // first. We'll first read everything in to a vector, then we can reverse
     // it to get the bits in the correct order for the BitsInit value.
-    for (unsigned i = 0, e = Vals.size(); i != e; ++i) {
+    for (auto [I, Val] : enumerate(Vals)) {
       // FIXME: The following two loops would not be duplicated
       //        if the API was a little more orthogonal.
 
       // bits<n> values are allowed to initialize n bits.
-      if (const auto *BI = dyn_cast<BitsInit>(Vals[i])) {
-        for (unsigned i = 0, e = BI->getNumBits(); i != e; ++i)
-          NewBits.push_back(BI->getBit((e - i) - 1));
+      if (const auto *BI = dyn_cast<BitsInit>(Val)) {
+        for (const Init *Bit : reverse(BI->getBits()))
+          NewBits.push_back(Bit);
         continue;
       }
       // bits<n> can also come from variable initializers.
-      if (const auto *VI = dyn_cast<VarInit>(Vals[i])) {
+      if (const auto *VI = dyn_cast<VarInit>(Val)) {
         if (const auto *BitsRec = dyn_cast<BitsRecTy>(VI->getType())) {
-          for (unsigned i = 0, e = BitsRec->getNumBits(); i != e; ++i)
-            NewBits.push_back(VI->getBit((e - i) - 1));
+          for (unsigned Bit : reverse(seq(BitsRec->getNumBits())))
+            NewBits.push_back(VI->getBit(Bit));
           continue;
         }
         // Fallthrough to try convert this to a bit.
       }
       // All other values must be convertible to just a single bit.
-      const Init *Bit = Vals[i]->getCastTo(BitRecTy::get(Records));
+      const Init *Bit = Val->getCastTo(BitRecTy::get(Records));
       if (!Bit) {
-        Error(BraceLoc, "Element #" + Twine(i) + " (" + Vals[i]->getAsString() +
+        Error(BraceLoc, "Element #" + Twine(I) + " (" + Val->getAsString() +
                             ") is not convertable to a bit");
         return nullptr;
       }
@@ -3600,7 +3594,7 @@ bool TGParser::ParseTemplateArgValueList(
 const Init *TGParser::ParseDeclaration(Record *CurRec,
                                        bool ParsingTemplateArgs) {
   // Read the field prefix if present.
-  bool HasField = consume(tgtok::Field);
+  bool HasField = !ParsingTemplateArgs && consume(tgtok::Field);
 
   const RecTy *Type = ParseType();
   if (!Type)
@@ -3651,9 +3645,8 @@ const Init *TGParser::ParseDeclaration(Record *CurRec,
   if (consume(tgtok::equal)) {
     SMLoc ValLoc = Lex.getLoc();
     const Init *Val = ParseValue(CurRec, Type);
-    if (!Val ||
-        SetValue(CurRec, ValLoc, DeclName, {}, Val,
-                 /*AllowSelfAssignment=*/false, /*OverrideDefLoc=*/false)) {
+    if (!Val || SetValue(CurRec, ValLoc, DeclName, {}, Val,
+                         /*OverrideDefLoc=*/false)) {
       // Return the name, even if an error is thrown. This is so that we can
       // continue to make some progress, even without the value having been
       // initialized.
@@ -3831,13 +3824,13 @@ LetModeAndName TGParser::ParseLetModeAndName() {
 ///
 bool TGParser::ParseBodyItem(Record *CurRec) {
   if (Lex.getCode() == tgtok::Assert)
-    return ParseAssert(nullptr, CurRec);
+    return ParseAssert(CurRec);
 
   if (Lex.getCode() == tgtok::Defvar)
     return ParseDefvar(CurRec);
 
   if (Lex.getCode() == tgtok::Dump)
-    return ParseDump(nullptr, CurRec);
+    return ParseDump(CurRec);
 
   if (Lex.getCode() != tgtok::Let) {
     if (!ParseDeclaration(CurRec, false))
@@ -3884,7 +3877,7 @@ bool TGParser::ParseBodyItem(Record *CurRec) {
     return TokError("expected ';' after let expression");
 
   return SetValue(CurRec, IdLoc, FieldName, BitList, Val,
-                  /*AllowSelfAssignment=*/false, /*OverrideDefLoc=*/true, Mode);
+                  /*OverrideDefLoc=*/true, Mode);
 }
 
 /// ParseBody - Read the body of a class or def. Return true on error, false on
@@ -3925,8 +3918,7 @@ bool TGParser::ApplyLetStack(Record *CurRec) {
   for (SmallVectorImpl<LetRecord> &LetInfo : LetStack)
     for (LetRecord &LR : LetInfo)
       if (SetValue(CurRec, LR.Loc, LR.Name, LR.Bits, LR.Value,
-                   /*AllowSelfAssignment=*/false, /*OverrideDefLoc=*/true,
-                   LR.Mode))
+                   /*OverrideDefLoc=*/true, LR.Mode))
         return true;
   return false;
 }
@@ -3997,7 +3989,7 @@ bool TGParser::ParseObjectBody(Record *CurRec) {
 ///
 ///   DefInst ::= DEF ObjectName ObjectBody
 ///
-bool TGParser::ParseDef(MultiClass *CurMultiClass) {
+bool TGParser::ParseDef() {
   SMLoc DefLoc = Lex.getLoc();
   assert(Lex.getCode() == tgtok::Def && "Unknown tok");
   Lex.Lex(); // Eat the 'def' token.
@@ -4009,7 +4001,7 @@ bool TGParser::ParseDef(MultiClass *CurMultiClass) {
 
   // Parse ObjectName and make a record for it.
   std::unique_ptr<Record> CurRec;
-  const Init *Name = ParseObjectName(CurMultiClass);
+  const Init *Name = ParseObjectName();
   if (!Name)
     return true;
 
@@ -4057,7 +4049,7 @@ bool TGParser::ParseDefset() {
   Lex.Lex(); // Eat the '{'
 
   Defsets.push_back(&Defset);
-  bool Err = ParseObjectList(nullptr);
+  bool Err = ParseObjectList();
   Defsets.pop_back();
   if (Err)
     return true;
@@ -4159,7 +4151,7 @@ bool TGParser::ParseDefvar(Record *CurRec) {
 ///   Foreach ::= FOREACH Declaration IN '{ ObjectList '}'
 ///   Foreach ::= FOREACH Declaration IN Object
 ///
-bool TGParser::ParseForeach(MultiClass *CurMultiClass) {
+bool TGParser::ParseForeach() {
   SMLoc Loc = Lex.getLoc();
   assert(Lex.getCode() == tgtok::Foreach && "Unknown tok");
   Lex.Lex(); // Eat the 'for' token.
@@ -4182,7 +4174,7 @@ bool TGParser::ParseForeach(MultiClass *CurMultiClass) {
 
   if (Lex.getCode() != tgtok::l_brace) {
     // FOREACH Declaration IN Object
-    if (ParseObject(CurMultiClass))
+    if (ParseObject())
       return true;
   } else {
     SMLoc BraceLoc = Lex.getLoc();
@@ -4190,7 +4182,7 @@ bool TGParser::ParseForeach(MultiClass *CurMultiClass) {
     Lex.Lex(); // eat the '{'.
 
     // Parse the object list.
-    if (ParseObjectList(CurMultiClass))
+    if (ParseObjectList())
       return true;
 
     if (!consume(tgtok::r_brace)) {
@@ -4213,7 +4205,7 @@ bool TGParser::ParseForeach(MultiClass *CurMultiClass) {
 ///   If ::= IF Value THEN IfBody
 ///   If ::= IF Value THEN IfBody ELSE IfBody
 ///
-bool TGParser::ParseIf(MultiClass *CurMultiClass) {
+bool TGParser::ParseIf() {
   SMLoc Loc = Lex.getLoc();
   assert(Lex.getCode() == tgtok::If && "Unknown tok");
   Lex.Lex(); // Eat the 'if' token.
@@ -4246,7 +4238,7 @@ bool TGParser::ParseIf(MultiClass *CurMultiClass) {
           ->Fold(nullptr);
   Loops.push_back(std::make_unique<ForeachLoop>(Loc, nullptr, ThenClauseList));
 
-  if (ParseIfBody(CurMultiClass, "then"))
+  if (ParseIfBody("then"))
     return true;
 
   std::unique_ptr<ForeachLoop> Loop = std::move(Loops.back());
@@ -4269,7 +4261,7 @@ bool TGParser::ParseIf(MultiClass *CurMultiClass) {
     Loops.push_back(
         std::make_unique<ForeachLoop>(Loc, nullptr, ElseClauseList));
 
-    if (ParseIfBody(CurMultiClass, "else"))
+    if (ParseIfBody("else"))
       return true;
 
     Loop = std::move(Loops.back());
@@ -4287,13 +4279,13 @@ bool TGParser::ParseIf(MultiClass *CurMultiClass) {
 ///   IfBody ::= Object
 ///   IfBody ::= '{' ObjectList '}'
 ///
-bool TGParser::ParseIfBody(MultiClass *CurMultiClass, StringRef Kind) {
+bool TGParser::ParseIfBody(StringRef Kind) {
   // An if-statement introduces a new scope for local variables.
   TGVarScope *BodyScope = PushScope();
 
   if (Lex.getCode() != tgtok::l_brace) {
     // A single object.
-    if (ParseObject(CurMultiClass))
+    if (ParseObject())
       return true;
   } else {
     SMLoc BraceLoc = Lex.getLoc();
@@ -4301,7 +4293,7 @@ bool TGParser::ParseIfBody(MultiClass *CurMultiClass, StringRef Kind) {
     Lex.Lex(); // eat the '{'.
 
     // Parse the object list.
-    if (ParseObjectList(CurMultiClass))
+    if (ParseObjectList())
       return true;
 
     if (!consume(tgtok::r_brace)) {
@@ -4317,7 +4309,7 @@ bool TGParser::ParseIfBody(MultiClass *CurMultiClass, StringRef Kind) {
 /// ParseAssert - Parse an assert statement.
 ///
 ///   Assert ::= ASSERT condition , message ;
-bool TGParser::ParseAssert(MultiClass *CurMultiClass, Record *CurRec) {
+bool TGParser::ParseAssert(Record *CurRec) {
   assert(Lex.getCode() == tgtok::Assert && "Unknown tok");
   Lex.Lex(); // Eat the 'assert' token.
 
@@ -4446,7 +4438,7 @@ void TGParser::ParseLetList(SmallVectorImpl<LetRecord> &Result) {
 ///   Object ::= LET LetList IN '{' ObjectList '}'
 ///   Object ::= LET LetList IN Object
 ///
-bool TGParser::ParseTopLevelLet(MultiClass *CurMultiClass) {
+bool TGParser::ParseTopLevelLet() {
   assert(Lex.getCode() == tgtok::Let && "Unexpected token");
   Lex.Lex();
 
@@ -4463,7 +4455,7 @@ bool TGParser::ParseTopLevelLet(MultiClass *CurMultiClass) {
   // If this is a scalar let, just handle it now
   if (Lex.getCode() != tgtok::l_brace) {
     // LET LetList IN Object
-    if (ParseObject(CurMultiClass))
+    if (ParseObject())
       return true;
   } else { // Object ::= LETCommand '{' ObjectList '}'
     SMLoc BraceLoc = Lex.getLoc();
@@ -4474,7 +4466,7 @@ bool TGParser::ParseTopLevelLet(MultiClass *CurMultiClass) {
     TGVarScope *LetScope = PushScope();
 
     // Parse the object list.
-    if (ParseObjectList(CurMultiClass))
+    if (ParseObjectList())
       return true;
 
     if (!consume(tgtok::r_brace)) {
@@ -4535,20 +4527,19 @@ bool TGParser::ParseMultiClass() {
     inherits = true;
 
     // Read all of the submulticlasses.
-    SubMultiClassReference SubMultiClass =
-        ParseSubMultiClassReference(CurMultiClass);
+    SubMultiClassReference SubMultiClass = ParseSubMultiClassReference();
     while (true) {
       // Check for error.
       if (!SubMultiClass.MC)
         return true;
 
       // Add it.
-      if (AddSubMultiClass(CurMultiClass, SubMultiClass))
+      if (AddSubMultiClass(SubMultiClass))
         return true;
 
       if (!consume(tgtok::comma))
         break;
-      SubMultiClass = ParseSubMultiClassReference(CurMultiClass);
+      SubMultiClass = ParseSubMultiClassReference();
     }
   }
 
@@ -4575,7 +4566,7 @@ bool TGParser::ParseMultiClass() {
       case tgtok::Foreach:
       case tgtok::If:
       case tgtok::Let:
-        if (ParseObject(CurMultiClass))
+        if (ParseObject())
           return true;
         break;
       }
@@ -4602,11 +4593,11 @@ bool TGParser::ParseMultiClass() {
 ///
 ///   DefMInst ::= DEFM ID ':' DefmSubClassRef ';'
 ///
-bool TGParser::ParseDefm(MultiClass *CurMultiClass) {
+bool TGParser::ParseDefm() {
   assert(Lex.getCode() == tgtok::Defm && "Unexpected token!");
   Lex.Lex(); // eat the defm
 
-  const Init *DefmName = ParseObjectName(CurMultiClass);
+  const Init *DefmName = ParseObjectName();
   if (!DefmName)
     return true;
   if (isa<UnsetInit>(DefmName)) {
@@ -4719,35 +4710,35 @@ bool TGParser::ParseDefm(MultiClass *CurMultiClass) {
 ///   Object ::= Defvar
 ///   Object ::= Assert
 ///   Object ::= Dump
-bool TGParser::ParseObject(MultiClass *MC) {
+bool TGParser::ParseObject() {
   switch (Lex.getCode()) {
   default:
     return TokError(
         "Expected assert, class, def, defm, defset, dump, foreach, if, or let");
   case tgtok::Assert:
-    return ParseAssert(MC);
+    return ParseAssert();
   case tgtok::Def:
-    return ParseDef(MC);
+    return ParseDef();
   case tgtok::Defm:
-    return ParseDefm(MC);
+    return ParseDefm();
   case tgtok::Deftype:
     return ParseDeftype();
   case tgtok::Defvar:
     return ParseDefvar();
   case tgtok::Dump:
-    return ParseDump(MC);
+    return ParseDump();
   case tgtok::Foreach:
-    return ParseForeach(MC);
+    return ParseForeach();
   case tgtok::If:
-    return ParseIf(MC);
+    return ParseIf();
   case tgtok::Let:
-    return ParseTopLevelLet(MC);
+    return ParseTopLevelLet();
   case tgtok::Defset:
-    if (MC)
+    if (CurMultiClass)
       return TokError("defset is not allowed inside multiclass");
     return ParseDefset();
   case tgtok::Class:
-    if (MC)
+    if (CurMultiClass)
       return TokError("class is not allowed inside multiclass");
     if (!Loops.empty())
       return TokError("class is not allowed inside foreach loop");
@@ -4761,9 +4752,9 @@ bool TGParser::ParseObject(MultiClass *MC) {
 
 /// ParseObjectList
 ///   ObjectList :== Object*
-bool TGParser::ParseObjectList(MultiClass *MC) {
+bool TGParser::ParseObjectList() {
   while (tgtok::isObjectStart(Lex.getCode())) {
-    if (ParseObject(MC))
+    if (ParseObject())
       return true;
   }
   return false;
@@ -4857,7 +4848,7 @@ LLVM_DUMP_METHOD void MultiClass::dump() const {
 }
 #endif
 
-bool TGParser::ParseDump(MultiClass *CurMultiClass, Record *CurRec) {
+bool TGParser::ParseDump(Record *CurRec) {
   // Location of the `dump` statement.
   SMLoc Loc = Lex.getLoc();
   assert(Lex.getCode() == tgtok::Dump && "Unknown tok");

@@ -48,6 +48,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/Verifier.h"
+#include "IROptions.h"
 #include "VerifierInternal.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
@@ -120,11 +121,11 @@
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CodeGen.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/ModRef.h"
+#include "llvm/Support/NVVMAttributes.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
@@ -141,11 +142,6 @@
 #include <utility>
 
 using namespace llvm;
-
-static cl::opt<bool> VerifyNoAliasScopeDomination(
-    "verify-noalias-scope-decl-dom", cl::Hidden, cl::init(false),
-    cl::desc("Ensure that llvm.experimental.noalias.scope.decl for identical "
-             "scopes are not dominating"));
 
 namespace {
 
@@ -430,7 +426,7 @@ private:
   void visitShuffleVectorInst(ShuffleVectorInst &EI);
   void visitBitInsertInst(BitInsertInst &BII);
   void visitBitExtractInst(BitExtractInst &BEI);
-  void visitVAArgInst(VAArgInst &VAA) { visitInstruction(VAA); }
+  void visitVAArgInst(VAArgInst &VAA);
   void visitCallInst(CallInst &CI);
   void visitInvokeInst(InvokeInst &II);
   void checkGEPOperator(const GEPOperator &GEP);
@@ -2730,6 +2726,8 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
                .empty(),
           "\"patchable-function-entry-section\" must not be empty");
   checkUnsignedBaseTenFuncAttr(Attrs, "warn-stack-size", V);
+  for (StringLiteral Attr : NVVMAttr::AbiPreserveAttrs)
+    checkUnsignedBaseTenFuncAttr(Attrs, Attr, V);
 
   if (auto A = Attrs.getFnAttr("sign-return-address"); A.isValid()) {
     StringRef S = A.getValueAsString();
@@ -2831,7 +2829,23 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
       }
     }
   }
+
+  Check(!(Attrs.hasFnAttr(Attribute::Hot) && Attrs.hasFnAttr(Attribute::Cold)),
+        "Attributes 'hot' and 'cold' are incompatible");
+
+  if (Attrs.hasFnAttr("mnop-mcount")) {
+    auto A = Attrs.getFnAttr("fentry-call");
+    Check(A.isValid() && A.getValueAsString() == "true",
+          "mnop-mcount only supported with fentry-call");
+  }
+
+  if (Attrs.hasFnAttr("mrecord-mcount")) {
+    auto A = Attrs.getFnAttr("fentry-call");
+    Check(A.isValid() && A.getValueAsString() == "true",
+          "mrecord-mcount only supported with fentry-call");
+  }
 }
+
 void Verifier::verifyUnknownProfileMetadata(MDNode *MD) {
   Check(MD->getNumOperands() == 2,
         "'unknown' !prof should have a single additional operand", MD);
@@ -2865,11 +2879,8 @@ void Verifier::verifyFunctionMetadata(
             "expected string with name of the !prof annotation", MD);
       MDString *MDS = cast<MDString>(MD->getOperand(0));
       StringRef ProfName = MDS->getString();
-      Check(ProfName == MDProfLabels::FunctionEntryCount ||
-                ProfName == MDProfLabels::SyntheticFunctionEntryCount,
-            "first operand should be 'function_entry_count'"
-            " or 'synthetic_function_entry_count'",
-            MD);
+      Check(ProfName == MDProfLabels::FunctionEntryCount,
+            "first operand should be 'function_entry_count'", MD);
 
       // Check second operand.
       Check(MD->getOperand(1) != nullptr, "second operand should not be null",
@@ -3340,8 +3351,18 @@ void Verifier::visitFunction(const Function &F) {
   case CallingConv::Fast:
   case CallingConv::Cold:
   case CallingConv::Intel_OCL_BI:
-  case CallingConv::PTX_Kernel:
   case CallingConv::PTX_Device:
+    Check(!F.isVarArg(),
+          "Calling convention does not support varargs or "
+          "perfect forwarding!",
+          &F);
+    break;
+  case CallingConv::PTX_Kernel:
+    // PTX permits the abi_preserve directives only between a .func directive
+    // and its body, so a kernel cannot express them.
+    for (StringLiteral Attr : NVVMAttr::AbiPreserveAttrs)
+      Check(!F.hasFnAttribute(Attr),
+            "'" + Attr + "' is not allowed on kernel functions", &F);
     Check(!F.isVarArg(),
           "Calling convention does not support varargs or "
           "perfect forwarding!",
@@ -4646,6 +4667,13 @@ void Verifier::visitBitInsertInst(BitInsertInst &BII) {
             DL.getTypeSizeInBits(BII.getOperand(1)->getType()),
         "bitinsert val type cannot be wider than base type!", &BII);
   visitInstruction(BII);
+}
+
+void Verifier::visitVAArgInst(VAArgInst &VAA) {
+  // No target can lower va_arg of an aggregate, so frontends expand it.
+  Check(!VAA.getType()->isAggregateType(),
+        "va_arg with an aggregate type is not supported", &VAA);
+  visitInstruction(VAA);
 }
 
 void Verifier::visitBitExtractInst(BitExtractInst &BEI) {
@@ -6209,6 +6237,17 @@ void Verifier::visitInstruction(Instruction &I) {
           MD);
   }
 
+  if (MDNode *MD = I.getMetadata("amdgpu.cfs")) {
+    Check(MD->getNumOperands() == 1,
+          "!amdgpu.cfs must have exactly one operand", &I, MD);
+    ConstantInt *CI =
+        mdconst::dyn_extract_or_null<ConstantInt>(MD->getOperand(0));
+    Check(CI && CI->getType()->isIntegerTy(32),
+          "!amdgpu.cfs operand must be an i32 constant", &I, MD);
+    Check(CI->getZExtValue() <= 3,
+          "!amdgpu.cfs operand must be in the range [0, 3]", &I, MD);
+  }
+
   if (MDNode *N = I.getDebugLoc().getAsMDNode()) {
     CheckDI(isa<DILocation>(N), "invalid !dbg metadata attachment", &I, N);
     visitMDNode(*N, AreDebugLocsAllowed::Yes);
@@ -7314,6 +7353,22 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "llvm.riscv.vsetvli/vsetvlimax VLMUL is reserved", &Call);
     break;
   }
+  case Intrinsic::riscv_sati: {
+    unsigned BitWidth = Call.getType()->getScalarSizeInBits();
+    uint64_t Imm = cast<ConstantInt>(Call.getArgOperand(1))->getZExtValue();
+    Check(Imm >= 1 && Imm <= BitWidth,
+          "llvm.riscv.sati immediate must be in the range [1, bitwidth]",
+          &Call);
+    break;
+  }
+  case Intrinsic::riscv_usati: {
+    unsigned BitWidth = Call.getType()->getScalarSizeInBits();
+    uint64_t Imm = cast<ConstantInt>(Call.getArgOperand(1))->getZExtValue();
+    Check(Imm < BitWidth,
+          "llvm.riscv.usati immediate must be in the range [0, bitwidth-1]",
+          &Call);
+    break;
+  }
   case Intrinsic::callbr_landingpad: {
     const auto *CBR = dyn_cast<CallBrInst>(Call.getOperand(0));
     Check(CBR, "intrinstic requires callbr operand", &Call);
@@ -7974,7 +8029,7 @@ void Verifier::verifyNoAliasScopeDecl() {
 
   // Only check the domination rule when requested. Once all passes have been
   // adapted this option can go away.
-  if (!VerifyNoAliasScopeDomination)
+  if (!getIROptions(M.getContext()).verify_noalias_scope_decl_dom)
     return;
 
   // Now sort the intrinsics based on the scope MDNode so that declarations of
@@ -8324,13 +8379,29 @@ MDNode *TBAAVerifier::getFieldNodeFromTBAABaseNode(const Instruction *I,
   return cast<MDNode>(BaseNode->getOperand(LastIdx));
 }
 
-static bool isNewFormatTBAATypeNode(llvm::MDNode *Type) {
+static bool isNewFormatTBAATypeNode(const MDNode *Type) {
   if (!Type || Type->getNumOperands() < 3)
     return false;
 
   // In the new format type nodes shall have a reference to the parent type as
   // its first operand.
   return isa_and_nonnull<MDNode>(Type->getOperand(0));
+}
+
+/// Returns true if the parent chain of the TBAA type node \p MD is acyclic.
+static bool hasAcyclicTBAAParentChain(const MDNode *MD) {
+  SmallPtrSet<const MDNode *, 4> Visited;
+  for (const MDNode *N = MD; N;) {
+    if (!Visited.insert(N).second)
+      return false;
+    if (isNewFormatTBAATypeNode(N)) {
+      N = cast<MDNode>(N->getOperand(0));
+    } else {
+      N = IsRootTBAANode(N) ? nullptr
+                            : dyn_cast_or_null<MDNode>(N->getOperand(1));
+    }
+  }
+  return true;
 }
 
 bool TBAAVerifier::visitTBAAMetadata(const Instruction *I, const MDNode *MD) {
@@ -8393,6 +8464,9 @@ bool TBAAVerifier::visitTBAAMetadata(const Instruction *I, const MDNode *MD) {
     CheckTBAA(isValidScalarTBAANode(AccessType),
               "Access type node must be a valid scalar type", I, MD,
               AccessType);
+  } else {
+    CheckTBAA(hasAcyclicTBAAParentChain(AccessType),
+              "Cycle detected in access type parent chain", I, MD, AccessType);
   }
 
   auto *OffsetCI = mdconst::dyn_extract_or_null<ConstantInt>(MD->getOperand(2));
