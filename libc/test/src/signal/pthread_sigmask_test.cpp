@@ -30,9 +30,8 @@ public:
     LIBC_NAMESPACE::pthread_sigmask(0, nullptr, &old_set);
   }
 
-  void TearDown() override {
+  void OnTearDown() override {
     LIBC_NAMESPACE::pthread_sigmask(SIG_SETMASK, &old_set, nullptr);
-    ErrnoCheckingTest::TearDown();
   }
 };
 

@@ -208,11 +208,10 @@ template <typename T> struct FPTest : public ErrnoCheckingTest {
   };
 #endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
 
-  void TearDown() override {
+  void OnTearDown() override {
     // TODO (PR 135320): Remove this override once all FPTest instances are
     // updated to validate or ignore errno.
     libc_errno = 0;
-    ErrnoCheckingTest::TearDown();
   }
 };
 

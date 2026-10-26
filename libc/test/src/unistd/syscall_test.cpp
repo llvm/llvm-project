@@ -29,7 +29,6 @@ using LlvmLibcSyscallTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 // (__llvm_libc_syscall) which is inside the namespace.
 TEST_F(LlvmLibcSyscallTest, TrivialCall) {
   ASSERT_GE(LIBC_NAMESPACE::syscall(SYS_gettid), 0l);
-  ASSERT_ERRNO_SUCCESS();
 }
 
 TEST_F(LlvmLibcSyscallTest, SymlinkCreateDestroy) {
