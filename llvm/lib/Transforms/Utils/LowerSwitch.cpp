@@ -80,7 +80,7 @@ bool IsInRanges(const IntRange &R, const std::vector<IntRange> &Ranges) {
 //   ], !prof !{!"branch_weights", i32 0, i32 20, i32 15}
 struct DefaultCase {
   APInt Value;
-  uint64_t Weight;
+  uint64_t Weight = 0;
 };
 
 // The one leaf that gets the whole default count.
@@ -102,8 +102,8 @@ struct DefaultCase {
 // Only %check can reach %def, so it keeps the whole default count:
 // {Low: 1, Weight: 100}.
 struct UniqueMissLeaf {
-  ConstantInt *Low;
-  uint64_t Weight;
+  ConstantInt *Low = nullptr;
+  uint64_t Weight = 0;
 };
 
 // Numeric weights for the compare tree.
