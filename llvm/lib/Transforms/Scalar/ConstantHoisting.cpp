@@ -952,7 +952,6 @@ bool ConstantHoistingPass::runImpl(Function &Fn, TargetTransformInfo &TTI,
       MadeChange |= emitBaseConstants(MapEntry.first);
     }
 
-
   // Cleanup dead instructions.
   deleteDeadCastInst();
 
