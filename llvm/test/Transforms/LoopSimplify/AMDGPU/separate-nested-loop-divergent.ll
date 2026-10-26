@@ -11,33 +11,29 @@ define amdgpu_kernel void @continue_loop(i32 %n, ptr addrspace(1) %p, ptr addrsp
 ; AMDGPU-SAME: i32 [[N:%.*]], ptr addrspace(1) [[P:%.*]], ptr addrspace(1) [[OUT:%.*]]) {
 ; AMDGPU-NEXT:  [[ENTRY:.*]]:
 ; AMDGPU-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
-; AMDGPU-NEXT:    br label %[[HEADER_OUTER:.*]]
-; AMDGPU:       [[HEADER_OUTER]]:
-; AMDGPU-NEXT:    [[I_PH:%.*]] = phi i32 [ [[I_NEXT:%.*]], %[[UPDATE:.*]] ], [ 0, %[[ENTRY]] ]
-; AMDGPU-NEXT:    [[ACC_PH:%.*]] = phi i32 [ [[ACC_NEXT:%.*]], %[[UPDATE]] ], [ 0, %[[ENTRY]] ]
 ; AMDGPU-NEXT:    br label %[[HEADER:.*]]
 ; AMDGPU:       [[HEADER]]:
-; AMDGPU-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT]], %[[CONTINUE:.*]] ], [ [[I_PH]], %[[HEADER_OUTER]] ]
+; AMDGPU-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[HEADER_BACKEDGE:.*]] ]
+; AMDGPU-NEXT:    [[ACC:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[ACC_BE:%.*]], %[[HEADER_BACKEDGE]] ]
 ; AMDGPU-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
 ; AMDGPU-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr addrspace(1) [[P]], i32 [[I]]
 ; AMDGPU-NEXT:    [[V:%.*]] = load i32, ptr addrspace(1) [[GEP]], align 4
 ; AMDGPU-NEXT:    [[BITS:%.*]] = lshr i32 [[V]], [[TID]]
 ; AMDGPU-NEXT:    [[BIT:%.*]] = and i32 [[BITS]], 1
 ; AMDGPU-NEXT:    [[IS_ZERO:%.*]] = icmp eq i32 [[BIT]], 0
-; AMDGPU-NEXT:    br i1 [[IS_ZERO]], label %[[CONTINUE]], label %[[UPDATE]]
+; AMDGPU-NEXT:    br i1 [[IS_ZERO]], label %[[CONTINUE:.*]], label %[[UPDATE:.*]]
 ; AMDGPU:       [[CONTINUE]]:
 ; AMDGPU-NEXT:    [[C1:%.*]] = icmp slt i32 [[I_NEXT]], [[N]]
-; AMDGPU-NEXT:    br i1 [[C1]], label %[[HEADER]], label %[[EXIT_LOOPEXIT:.*]]
+; AMDGPU-NEXT:    br i1 [[C1]], label %[[HEADER_BACKEDGE]], label %[[EXIT:.*]]
+; AMDGPU:       [[HEADER_BACKEDGE]]:
+; AMDGPU-NEXT:    [[ACC_BE]] = phi i32 [ [[ACC]], %[[CONTINUE]] ], [ [[ACC_NEXT:%.*]], %[[UPDATE]] ]
+; AMDGPU-NEXT:    br label %[[HEADER]]
 ; AMDGPU:       [[UPDATE]]:
-; AMDGPU-NEXT:    [[ACC_NEXT]] = add i32 [[ACC_PH]], [[V]]
+; AMDGPU-NEXT:    [[ACC_NEXT]] = add i32 [[ACC]], [[V]]
 ; AMDGPU-NEXT:    [[C2:%.*]] = icmp slt i32 [[I_NEXT]], [[N]]
-; AMDGPU-NEXT:    br i1 [[C2]], label %[[HEADER_OUTER]], label %[[EXIT_LOOPEXIT1:.*]]
-; AMDGPU:       [[EXIT_LOOPEXIT]]:
-; AMDGPU-NEXT:    br label %[[EXIT:.*]]
-; AMDGPU:       [[EXIT_LOOPEXIT1]]:
-; AMDGPU-NEXT:    br label %[[EXIT]]
+; AMDGPU-NEXT:    br i1 [[C2]], label %[[HEADER_BACKEDGE]], label %[[EXIT]]
 ; AMDGPU:       [[EXIT]]:
-; AMDGPU-NEXT:    [[R:%.*]] = phi i32 [ [[ACC_PH]], %[[EXIT_LOOPEXIT]] ], [ [[ACC_NEXT]], %[[EXIT_LOOPEXIT1]] ]
+; AMDGPU-NEXT:    [[R:%.*]] = phi i32 [ [[ACC]], %[[CONTINUE]] ], [ [[ACC_NEXT]], %[[UPDATE]] ]
 ; AMDGPU-NEXT:    [[OUT_GEP:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT]], i32 [[TID]]
 ; AMDGPU-NEXT:    store i32 [[R]], ptr addrspace(1) [[OUT_GEP]], align 4
 ; AMDGPU-NEXT:    ret void
@@ -221,6 +217,7 @@ define i32 @degenerate_header_phi(i32 %n) {
 ; AMDGPU-NEXT:    br label %[[HEADER:.*]]
 ; AMDGPU:       [[HEADER]]:
 ; AMDGPU-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[HEADER_BACKEDGE:.*]] ]
+; AMDGPU-NEXT:    [[P:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[P_BE:%.*]], %[[HEADER_BACKEDGE]] ]
 ; AMDGPU-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
 ; AMDGPU-NEXT:    [[COND:%.*]] = icmp eq i32 [[I]], [[TID]]
 ; AMDGPU-NEXT:    br i1 [[COND]], label %[[L1:.*]], label %[[L2:.*]]
@@ -228,12 +225,13 @@ define i32 @degenerate_header_phi(i32 %n) {
 ; AMDGPU-NEXT:    [[C1:%.*]] = icmp slt i32 [[I_NEXT]], [[N]]
 ; AMDGPU-NEXT:    br i1 [[C1]], label %[[HEADER_BACKEDGE]], label %[[EXIT:.*]]
 ; AMDGPU:       [[HEADER_BACKEDGE]]:
+; AMDGPU-NEXT:    [[P_BE]] = phi i32 [ [[P]], %[[L1]] ], [ 0, %[[L2]] ]
 ; AMDGPU-NEXT:    br label %[[HEADER]]
 ; AMDGPU:       [[L2]]:
 ; AMDGPU-NEXT:    [[C2:%.*]] = icmp slt i32 [[I_NEXT]], [[N]]
 ; AMDGPU-NEXT:    br i1 [[C2]], label %[[HEADER_BACKEDGE]], label %[[EXIT]]
 ; AMDGPU:       [[EXIT]]:
-; AMDGPU-NEXT:    [[R:%.*]] = add i32 [[I]], 0
+; AMDGPU-NEXT:    [[R:%.*]] = add i32 [[I]], [[P]]
 ; AMDGPU-NEXT:    ret i32 [[R]]
 ;
 ; GENERIC-LABEL: define i32 @degenerate_header_phi(

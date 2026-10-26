@@ -54,6 +54,7 @@
 #include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
@@ -472,7 +473,8 @@ static BasicBlock *insertUniqueBackedgeBlock(Loop *L, BasicBlock *Preheader,
 static bool simplifyOneLoop(Loop *L, SmallVectorImpl<Loop *> &Worklist,
                             DominatorTree *DT, LoopInfo *LI,
                             ScalarEvolution *SE, AssumptionCache *AC,
-                            MemorySSAUpdater *MSSAU, bool PreserveLCSSA) {
+                            MemorySSAUpdater *MSSAU, bool PreserveLCSSA,
+                            const TargetTransformInfo *TTI) {
   bool Changed = false;
   if (MSSAU && VerifyMemorySSA)
     MSSAU->getMemorySSA()->verifyMemorySSA();
@@ -554,7 +556,12 @@ ReprocessLoop:
     // If this is really a nested loop, rip it out into a child loop.  Don't do
     // this for loops with a giant number of backedges, just factor them into a
     // common backedge instead.
-    if (L->getNumBackEdges() < 8) {
+    // On targets with branch divergence, a backedge taken by only some threads
+    // (e.g. a divergent "continue") would become a divergent inner loop, which
+    // can turn otherwise uniform loop state into per-thread state.
+    bool AllowSeparate =
+        !TTI || !TTI->hasBranchDivergence(L->getHeader()->getParent());
+    if (AllowSeparate && L->getNumBackEdges() < 8) {
       if (Loop *OuterL = separateNestedLoop(L, Preheader, DT, LI, SE,
                                             PreserveLCSSA, AC, MSSAU)) {
         ++NumNested;
@@ -691,7 +698,8 @@ ReprocessLoop:
 
 bool llvm::simplifyLoop(Loop *L, DominatorTree *DT, LoopInfo *LI,
                         ScalarEvolution *SE, AssumptionCache *AC,
-                        MemorySSAUpdater *MSSAU, bool PreserveLCSSA) {
+                        MemorySSAUpdater *MSSAU, bool PreserveLCSSA,
+                        const TargetTransformInfo *TTI) {
   bool Changed = false;
 
 #ifndef NDEBUG
@@ -719,7 +727,7 @@ bool llvm::simplifyLoop(Loop *L, DominatorTree *DT, LoopInfo *LI,
 
   while (!Worklist.empty())
     Changed |= simplifyOneLoop(Worklist.pop_back_val(), Worklist, DT, LI, SE,
-                               AC, MSSAU, PreserveLCSSA);
+                               AC, MSSAU, PreserveLCSSA, TTI);
 
   // Changing exit conditions for blocks may affect exit counts of this loop and
   // any of its parents, so we must invalidate the entire subtree if we've made
@@ -798,11 +806,14 @@ bool LoopSimplify::runOnFunction(Function &F) {
     MSSAU = std::make_unique<MemorySSAUpdater>(MSSA);
   }
 
+  auto *TTIWP = getAnalysisIfAvailable<TargetTransformInfoWrapperPass>();
+  const TargetTransformInfo *TTI = TTIWP ? &TTIWP->getTTI(F) : nullptr;
+
   bool PreserveLCSSA = mustPreserveAnalysisID(LCSSAID);
 
   // Simplify each loop nest in the function.
   for (auto *L : *LI)
-    Changed |= simplifyLoop(L, DT, LI, SE, AC, MSSAU.get(), PreserveLCSSA);
+    Changed |= simplifyLoop(L, DT, LI, SE, AC, MSSAU.get(), PreserveLCSSA, TTI);
 
 #ifndef NDEBUG
   if (PreserveLCSSA) {
@@ -821,6 +832,7 @@ PreservedAnalyses LoopSimplifyPass::run(Function &F,
   DominatorTree *DT = &AM.getResult<DominatorTreeAnalysis>(F);
   ScalarEvolution *SE = AM.getCachedResult<ScalarEvolutionAnalysis>(F);
   AssumptionCache *AC = &AM.getResult<AssumptionAnalysis>(F);
+  const TargetTransformInfo *TTI = &AM.getResult<TargetIRAnalysis>(F);
   auto *MSSAAnalysis = AM.getCachedResult<MemorySSAAnalysis>(F);
   std::unique_ptr<MemorySSAUpdater> MSSAU;
   if (MSSAAnalysis) {
@@ -832,8 +844,8 @@ PreservedAnalyses LoopSimplifyPass::run(Function &F,
   // Note that we don't preserve LCSSA in the new PM, if you need it run LCSSA
   // after simplifying the loops. MemorySSA is preserved if it exists.
   for (auto *L : *LI)
-    Changed |=
-        simplifyLoop(L, DT, LI, SE, AC, MSSAU.get(), /*PreserveLCSSA*/ false);
+    Changed |= simplifyLoop(L, DT, LI, SE, AC, MSSAU.get(),
+                            /*PreserveLCSSA*/ false, TTI);
 
   if (!Changed)
     return PreservedAnalyses::all();
