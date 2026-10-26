@@ -312,12 +312,11 @@ std::unique_ptr<BreakpointOptions> BreakpointOptions::CreateFromStructuredData(
                 .c_str());
         return nullptr;
       }
-      Status script_error;
-      script_error =
-          interp->SetBreakpointCommandCallback(*bp_options, cmd_data_up);
-      if (script_error.Fail()) {
+      if (llvm::Error script_error =
+              interp->SetBreakpointCommandCallback(*bp_options, cmd_data_up)) {
         error = Status::FromErrorStringWithFormat(
-            "Error generating script callback: %s.", error.AsCString());
+            "Error generating script callback: %s.",
+            llvm::toString(std::move(script_error)).c_str());
         return nullptr;
       }
     }
