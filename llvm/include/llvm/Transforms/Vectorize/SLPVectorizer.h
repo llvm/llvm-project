@@ -45,6 +45,7 @@ class StoreInst;
 class TargetLibraryInfo;
 class TargetTransformInfo;
 class Value;
+struct VectorizeOptions;
 class WeakTrackingVH;
 
 /// A private "module" namespace for types and utilities used by this pass.
@@ -62,6 +63,7 @@ struct SLPVectorizerPass : public OptionalPassInfoMixin<SLPVectorizerPass> {
   using GEPListMap = MapVector<Value *, GEPList>;
   using InstSetVector = SmallSetVector<Instruction *, 8>;
 
+  const VectorizeOptions *Opts = nullptr;
   ScalarEvolution *SE = nullptr;
   TargetTransformInfo *TTI = nullptr;
   TargetLibraryInfo *TLI = nullptr;
@@ -114,16 +116,25 @@ private:
   /// Vectorize the store instructions collected in Stores.
   bool vectorizeStoreChains(slpvectorizer::BoUpSLP &R);
 
+  /// Vectorize the poor-throughput instruction groups of \p BB that the store
+  /// chains cannot cover completely.
+  bool vectorizeSplitStorePoorThroughputSeeds(BasicBlock *BB,
+                                              slpvectorizer::BoUpSLP &R);
+
   /// Try to vectorize the poor-throughput instructions \p Candidates as the
-  /// standalone seeds.
-  bool vectorizePoorThroughputSeeds(ArrayRef<Instruction *> Candidates,
-                                    slpvectorizer::BoUpSLP &R);
+  /// standalone seeds. If \p Filter is provided, only the groups accepted by
+  /// it are tried.
+  bool vectorizePoorThroughputSeeds(
+      ArrayRef<Instruction *> Candidates, slpvectorizer::BoUpSLP &R,
+      function_ref<bool(ArrayRef<Value *>)> Filter = nullptr);
 
   /// Try to vectorize the standalone seeds \p Seeds in the groups of the
-  /// compatible instructions, \p IsLessGroup orders the groups.
+  /// compatible instructions, \p IsLessGroup orders the groups. If \p Filter
+  /// is provided, only the groups accepted by it are tried.
   bool vectorizeSeeds(SmallVectorImpl<Value *> &Seeds,
                       function_ref<bool(Value *, Value *)> IsLessGroup,
-                      slpvectorizer::BoUpSLP &R);
+                      slpvectorizer::BoUpSLP &R,
+                      function_ref<bool(ArrayRef<Value *>)> Filter = nullptr);
 
   /// Try to vectorize the instructions with the single user in \p BB as the
   /// standalone seeds.

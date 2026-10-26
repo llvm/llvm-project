@@ -13,8 +13,6 @@ from lldbsuite.test import lldbutil
 
 @requireExpressionEvaluation
 class TestClassTemplateSpecializationParametersHandling(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
-
     def test_class_template_specialization(self):
         self.build()
 

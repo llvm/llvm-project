@@ -116,13 +116,11 @@ public:
   }
 
   Value *FoldBitInsert(Value *Base, Value *Val, Value *Offset) const override {
-    // TODO
-    return nullptr;
+    return simplifyBitInsertInst(Base, Val, Offset, SQ);
   }
 
   Value *FoldBitExtract(Type *Ty, Value *Src, Value *Offset) const override {
-    // TODO
-    return nullptr;
+    return simplifyBitExtractInst(Ty, Src, Offset, SQ);
   }
 
   Value *FoldCast(Instruction::CastOps Op, Value *V,

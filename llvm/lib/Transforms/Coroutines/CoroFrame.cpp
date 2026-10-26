@@ -1637,7 +1637,8 @@ static Value *emitSetAndGetSwiftErrorValueAround(Instruction *Call,
     Builder.SetInsertPoint(Call->getNextNode());
   } else {
     auto Invoke = cast<InvokeInst>(Call);
-    Builder.SetInsertPoint(Invoke->getNormalDest()->getFirstNonPHIOrDbg());
+    Builder.SetInsertPoint(
+        Invoke->getNormalDest()->getFirstNonPHIOrPseudoProbe());
   }
 
   // Get the current swifterror value and store it to the alloca.
@@ -1678,7 +1679,7 @@ static void eliminateSwiftErrorAlloca(Function &F, AllocaInst *Alloca,
 static void eliminateSwiftErrorArgument(Function &F, Argument &Arg,
                                         coro::Shape &Shape,
                              SmallVectorImpl<AllocaInst*> &AllocasToPromote) {
-  IRBuilder<> Builder(F.getEntryBlock().getFirstNonPHIOrDbg());
+  IRBuilder<> Builder(F.getEntryBlock().getFirstNonPHIOrPseudoProbe());
 
   auto ArgTy = cast<PointerType>(Arg.getType());
   auto ValueTy = PointerType::getUnqual(F.getContext());

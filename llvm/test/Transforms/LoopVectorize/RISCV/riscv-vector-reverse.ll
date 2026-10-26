@@ -276,8 +276,7 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; RV64-UF2-NEXT:    [[TMP10:%.*]] = or i1 [[TMP7]], [[TMP9]]
 ; RV64-UF2-NEXT:    br i1 [[TMP10]], label %[[SCALAR_PH]], label %[[VECTOR_MEMCHECK:.*]]
 ; RV64-UF2:       [[VECTOR_MEMCHECK]]:
-; RV64-UF2-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vscale.i64()
-; RV64-UF2-NEXT:    [[TMP12:%.*]] = shl nuw nsw i64 [[TMP11]], 5
+; RV64-UF2-NEXT:    [[TMP12:%.*]] = shl nuw nsw i64 [[TMP1]], 5
 ; RV64-UF2-NEXT:    [[TMP15:%.*]] = add nsw i64 [[TMP12]], -1
 ; RV64-UF2-NEXT:    [[TMP14:%.*]] = sub i64 [[B1]], [[A2]]
 ; RV64-UF2-NEXT:    [[TMP16:%.*]] = sub i64 [[TMP14]], 1
@@ -491,8 +490,7 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; RV64-UF2-NEXT:    [[TMP10:%.*]] = or i1 [[TMP7]], [[TMP9]]
 ; RV64-UF2-NEXT:    br i1 [[TMP10]], label %[[SCALAR_PH]], label %[[VECTOR_MEMCHECK:.*]]
 ; RV64-UF2:       [[VECTOR_MEMCHECK]]:
-; RV64-UF2-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vscale.i64()
-; RV64-UF2-NEXT:    [[TMP12:%.*]] = shl nuw nsw i64 [[TMP11]], 5
+; RV64-UF2-NEXT:    [[TMP12:%.*]] = shl nuw nsw i64 [[TMP1]], 5
 ; RV64-UF2-NEXT:    [[TMP15:%.*]] = add nsw i64 [[TMP12]], -1
 ; RV64-UF2-NEXT:    [[TMP14:%.*]] = sub i64 [[B1]], [[A2]]
 ; RV64-UF2-NEXT:    [[TMP16:%.*]] = sub i64 [[TMP14]], 1

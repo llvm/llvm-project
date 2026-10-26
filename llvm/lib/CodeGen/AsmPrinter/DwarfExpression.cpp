@@ -629,7 +629,7 @@ bool DwarfExpression::addExpression(
           emitOp(dwarf::DW_OP_deref);
         } else {
           emitOp(dwarf::DW_OP_deref_size);
-          emitUnsigned(DerefSize);
+          emitData1(DerefSize);
         }
       }
 
