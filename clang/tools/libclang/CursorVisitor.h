@@ -240,6 +240,7 @@ public:
   // FIXME: ObjCCompatibleAliasDecl requires aliased-class locations.
   bool VisitObjCPropertyImplDecl(ObjCPropertyImplDecl *PD);
   bool VisitLinkageSpecDecl(LinkageSpecDecl *D);
+  bool VisitExportDecl(ExportDecl *D);
   bool VisitNamespaceDecl(NamespaceDecl *D);
   bool VisitNamespaceAliasDecl(NamespaceAliasDecl *D);
   bool VisitUsingDirectiveDecl(UsingDirectiveDecl *D);
