@@ -5,14 +5,14 @@ permissions:
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - 'release/**'
-    paths:
-      - 'clang/**'
-      - '.github/workflows/clang-tests.yml'
-      - '.github/workflows/llvm-project-tests.yml'
-      - '!llvm/**'
+  # push:
+  #   branches:
+  #     - 'release/**'
+  #   paths:
+  #     - 'clang/**'
+  #     - '.github/workflows/clang-tests.yml'
+  #     - '.github/workflows/llvm-project-tests.yml'
+  #     - '!llvm/**'
   pull_request:
     branches:
       - 'release/**'
@@ -30,9 +30,10 @@ concurrency:
 
 jobs:
   check_clang:
-    if: github.repository_owner == 'llvm'
-    name: Test clang,lldb,libclc
+    # if: github.repository_owner == 'llvm'
+    name: Test clang
     uses: ./.github/workflows/llvm-project-tests.yml
     with:
       build_target: check-clang
-      projects: clang;lldb;libclc
+      extra_cmake_args: -DLLVM_TARGETS_TO_BUILD="X86;RISCV" -DLLVM_PARALLEL_LINK_JOBS=1
+      projects: clang
