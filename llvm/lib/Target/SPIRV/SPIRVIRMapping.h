@@ -297,11 +297,6 @@ public:
       return findMI(SPIRV::irhandle_explict_layout_type(T), MF);
     return findMI(SPIRV::handle(T), MF);
   }
-
-  const MachineInstr *findMI(const MachineInstr *Obj,
-                             const MachineFunction *MF) {
-    return findMI(SPIRV::handle(Obj), MF);
-  }
 };
 } // namespace llvm
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRVIRMAPPING_H
