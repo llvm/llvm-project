@@ -613,6 +613,35 @@ struct CallOpInterfaceLowering : public ConvertOpToLLVMPattern<CallOpType> {
     if constexpr (std::is_same_v<CallOpType, func::CallOp>)
       newOp.setCalleeAttr(callOp.getCalleeAttr());
 
+    // Forward the `llvm.` argument and result attributes where the conversion
+    // is one-to-one; expanded operands or packed results have no positional
+    // mapping for them.
+    auto filterLLVMAttrs = [&](ArrayAttr attrs) -> ArrayAttr {
+      if (!attrs)
+        return {};
+      bool anyKept = false;
+      SmallVector<Attribute> filtered;
+      for (Attribute dict : attrs) {
+        SmallVector<NamedAttribute> kept;
+        for (NamedAttribute attr : cast<DictionaryAttr>(dict))
+          if (attr.getName().getValue().starts_with("llvm."))
+            kept.push_back(attr);
+        anyKept |= !kept.empty();
+        filtered.push_back(rewriter.getDictionaryAttr(kept));
+      }
+      return anyKept ? rewriter.getArrayAttr(filtered) : ArrayAttr();
+    };
+    if (promoted.size() == callOp->getNumOperands())
+      if (ArrayAttr argAttrs = filterLLVMAttrs(callOp.getArgAttrsAttr());
+          argAttrs && argAttrs.size() == newOp.getArgOperands().size())
+        newOp.setArgAttrsAttr(argAttrs);
+    if (numResults <= 1 && numConvertedTypes <= 1)
+      if (ArrayAttr resAttrs = filterLLVMAttrs(callOp.getResAttrsAttr()))
+        newOp.setResAttrsAttr(resAttrs);
+    if constexpr (std::is_same_v<CallOpType, func::CallOp>)
+      if (callOp.getNoInline())
+        newOp.setNoInline(true);
+
     // Helper function that extracts an individual result from the return value
     // of the new call op. llvm.call ops support only 0 or 1 result. In case of
     // 2 or more results, the results are packed into a structure.
