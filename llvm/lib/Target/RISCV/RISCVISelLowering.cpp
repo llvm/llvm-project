@@ -18916,6 +18916,10 @@ static SDValue transformAddImmMulImm(SDNode *N, SelectionDAG &DAG,
 // add (ext X), (ext Y) -> ext (add X, Y)
 // if the add can't overflow in the narrow type.
 static SDValue combineAddOfExtsAlreadyExtended(SDNode *N, SelectionDAG &DAG) {
+  EVT VT = User->getValueType(0);
+  if (!VT.isVector())
+    return SDValue();
+
   // Ensure the user has a widening variant so the extend can be moved after
   // the add and still be combined. Do not interfere with existing fusion
   // opportunities, such as mul-add.
