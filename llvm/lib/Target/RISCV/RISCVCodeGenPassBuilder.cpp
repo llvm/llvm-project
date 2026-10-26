@@ -113,10 +113,11 @@ void RISCVCodeGenPassBuilder::addPreISel(PassManagerWrapper &PMW) {
     // currently support enabling the pass in an "OnlyOptimizeForSize" mode.
     // Investigating and addressing both items are TODO.
     flushFPMsToMPM(PMW);
-    addModulePass(GlobalMergePass(&getTM(), {.MaxOffset = 2047,
-                                             .MergeExternal = true,
-                                             .SizeOnly = false}),
-                  PMW);
+    GlobalMergeOptions GMOptions;
+    GMOptions.MaxOffset = 2047;
+    GMOptions.MergeExternal = true;
+    GMOptions.SizeOnly = false;
+    addModulePass(GlobalMergePass(&getTM(), GMOptions), PMW);
   }
 }
 
@@ -186,20 +187,24 @@ static bool onlyAllocateRVVReg(const TargetRegisterInfo &TRI,
   return RISCVRegisterInfo::isRVVRegClass(RC);
 }
 
-Error RISCVCodeGenPassBuilder::addRegAssignAndRewriteFast(PassManagerWrapper &PMW) {
+Error RISCVCodeGenPassBuilder::addRegAssignAndRewriteFast(
+    PassManagerWrapper &PMW) {
   addMachineFunctionPass(
       RegAllocFastPass({onlyAllocateRVVReg, "rvv", /*ClearVRegs=*/false}), PMW);
   addMachineFunctionPass(RISCVInsertVSETVLIPass(), PMW);
-  if (getOptLevel() != CodeGenOptLevel::None && getTM().getCLOpts().enable_dead_defs)
+  if (getOptLevel() != CodeGenOptLevel::None &&
+      getTM().getCLOpts().enable_dead_defs)
     addMachineFunctionPass(RISCVDeadRegisterDefinitionsPass(), PMW);
   return Base::addRegAssignAndRewriteFast(PMW);
 }
 
-Expected<bool> RISCVCodeGenPassBuilder::addRegAssignAndRewriteOptimized(PassManagerWrapper &PMW) {
+Expected<bool> RISCVCodeGenPassBuilder::addRegAssignAndRewriteOptimized(
+    PassManagerWrapper &PMW) {
   addMachineFunctionPass(RAGreedyPass({onlyAllocateRVVReg, "rvv"}), PMW);
   addMachineFunctionPass(VirtRegRewriterPass(false), PMW);
   addMachineFunctionPass(RISCVInsertVSETVLIPass(), PMW);
-  if (getOptLevel() != CodeGenOptLevel::None && getTM().getCLOpts().enable_dead_defs)
+  if (getOptLevel() != CodeGenOptLevel::None &&
+      getTM().getCLOpts().enable_dead_defs)
     addMachineFunctionPass(RISCVDeadRegisterDefinitionsPass(), PMW);
   return Base::addRegAssignAndRewriteOptimized(PMW);
 }
@@ -223,7 +228,8 @@ void RISCVCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
   // propagation after the machine outliner (which runs after addPreEmitPass)
   // currently leads to incorrect code-gen, where copies to registers within
   // outlined functions are removed erroneously.
-  if (getOptLevel() >= CodeGenOptLevel::Default && getTM().getCLOpts().enable_copy_propagation)
+  if (getOptLevel() >= CodeGenOptLevel::Default &&
+      getTM().getCLOpts().enable_copy_propagation)
     addMachineFunctionPass(MachineCopyPropagationPass(true), PMW);
   if (getOptLevel() >= CodeGenOptLevel::Default)
     addMachineFunctionPass(RISCVLateBranchOptPass(), PMW);
