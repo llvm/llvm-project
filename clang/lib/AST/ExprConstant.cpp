@@ -11932,8 +11932,19 @@ bool RecordExprEvaluator::VisitCXXConstructExpr(const CXXConstructExpr *E,
   const FunctionDecl *Definition = nullptr;
   auto Body = FD->getBody(Definition);
 
-  if (!CheckConstexprFunction(Info, E->getExprLoc(), FD, Definition, Body))
+  if (!CheckConstexprFunction(Info, E->getExprLoc(), FD, Definition, Body)) {
+    // The constructor was declared but not yet defined while we are checking
+    // for a potential constant expression. The arguments are still evaluated
+    // before the call, so evaluate them to diagnose problems in them (such as
+    // non-literal types) that don't depend on the constructor's definition.
+    if (Info.checkingPotentialConstantExpression() && !Definition) {
+      CallScopeRAII CallScope(Info);
+      CallRef Call = Info.CurrentCall->createCall(FD);
+      (void)EvaluateArgs(ArrayRef(E->getArgs(), E->getNumArgs()), Call, Info,
+                         FD);
+    }
     return false;
+  }
 
   // Avoid materializing a temporary for an elidable copy/move constructor.
   if (E->isElidable() && !ZeroInit) {
