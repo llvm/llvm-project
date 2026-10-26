@@ -53,59 +53,6 @@ static std::optional<MCRegister> lookupOptReg(const MapT &Map,
   return It->second;
 }
 
-/// Partition \p Ty into \p BasicTypes, \p PointerTypes, \p SubroutineTypes,
-/// \p VectorTypes, \p ArrayTypes, \p CompositeTypes, and \p TypedefTypes for
-/// NSDI emission. Used when iterating DebugInfoFinder.types(); each DI node is
-/// seen once, so no recursion into pointer bases. Other composites and the
-/// remaining derived kinds are ignored because they are not yet supported.
-/// Only types that are supported (later used) are partitioned.
-static void
-partitionTypes(const DIType *Ty, SmallVector<const DIBasicType *> &BasicTypes,
-               SmallVector<const DIDerivedType *> &PointerTypes,
-               SmallVector<const DISubroutineType *> &SubroutineTypes,
-               SmallVector<const DICompositeType *> &VectorTypes,
-               SmallVector<const DICompositeType *> &ArrayTypes,
-               SmallVector<const DICompositeType *> &CompositeTypes,
-               SmallVector<const DIDerivedType *> &TypedefTypes) {
-  if (const auto *BT = dyn_cast<DIBasicType>(Ty)) {
-    BasicTypes.push_back(BT);
-    return;
-  }
-  if (const auto *ST = dyn_cast<DISubroutineType>(Ty)) {
-    SubroutineTypes.push_back(ST);
-    return;
-  }
-  if (const auto *CT = dyn_cast<DICompositeType>(Ty)) {
-    if (CT->getTag() == dwarf::DW_TAG_array_type) {
-      // A vector is an array with DINode::FlagVector. A plain array is the
-      // same tag without it. A matrix is also lowered to a DW_TAG_array_type
-      // (two subranges), so it is indistinguishable from a 2D array here and
-      // is emitted as a DebugTypeArray.
-      //
-      // FIXME: Emitting a matrix as a DebugTypeArray is valid but loses the
-      // matrix shape. DWARF has no matrix tag, so distinguishing a matrix needs
-      // a new DINode flag analogous to FlagVector, set on the array, plus a way
-      // to carry column-major vs row-major traits. Array-of-vectors alone would
-      // not disambiguate a matrix from a genuine array of vectors. Once the
-      // frontend marks matrices, route them to a DebugTypeMatrix path here.
-      if (CT->isVector())
-        VectorTypes.push_back(CT);
-      else
-        ArrayTypes.push_back(CT);
-    } else if (CT->getTag() == dwarf::DW_TAG_structure_type ||
-               CT->getTag() == dwarf::DW_TAG_class_type ||
-               CT->getTag() == dwarf::DW_TAG_union_type) {
-      CompositeTypes.push_back(CT);
-    }
-    return;
-  }
-  const auto *DT = dyn_cast<DIDerivedType>(Ty);
-  if (DT && DT->getTag() == dwarf::DW_TAG_pointer_type)
-    PointerTypes.push_back(DT);
-  else if (DT && DT->getTag() == dwarf::DW_TAG_typedef)
-    TypedefTypes.push_back(DT);
-}
-
 enum : uint32_t {
   NSDIFlagIsProtected = 1u << 0,
   NSDIFlagIsPrivate = 1u << 1,
@@ -382,15 +329,8 @@ void SPIRVNonSemanticDebugHandler::beginModule(Module *M) {
     return;
 
   CompileUnits.clear();
-  BasicTypes.clear();
-  PointerTypes.clear();
-  SubroutineTypes.clear();
-  VectorTypes.clear();
-  ArrayTypes.clear();
-  CompositeTypes.clear();
-  TypedefTypes.clear();
-  SubprogramDeclarations.clear();
-  SubprogramDefinitions.clear();
+  DebugTypes.clear();
+  Subprograms.clear();
   UniqueDebugLocations.clear();
   GlobalVariableDebugInfoMap.clear();
   LocalVariables.clear();
@@ -407,7 +347,6 @@ void SPIRVNonSemanticDebugHandler::beginModule(Module *M) {
   ScalarTypeCache.clear();
   ScalarConstantCache.clear();
   ConstantValueRegs.clear();
-  DebugTypeFunctionCache.clear();
   DebugOperationCache.clear();
   DebugExpressionCache.clear();
   ModuleScopeIds.clear();
@@ -453,19 +392,14 @@ void SPIRVNonSemanticDebugHandler::beginModule(Module *M) {
   }
 
   // Find all debug info types that may be referenced by NSDI instructions.
+  // Member types are not roots: each one is emitted only from its composite.
   DebugInfoFinder Finder;
   Finder.processModule(*M);
-  llvm::for_each(Finder.types(), [&](DIType *Ty) {
-    partitionTypes(Ty, BasicTypes, PointerTypes, SubroutineTypes, VectorTypes,
-                   ArrayTypes, CompositeTypes, TypedefTypes);
+  copy_if(Finder.types(), std::back_inserter(DebugTypes), [](const DIType *Ty) {
+    return Ty->getTag() != dwarf::DW_TAG_member;
   });
 
-  for (const DISubprogram *SP : Finder.subprograms()) {
-    if (SP->isDefinition())
-      SubprogramDefinitions.push_back(SP);
-    else
-      SubprogramDeclarations.push_back(SP);
-  }
+  Subprograms.assign(Finder.subprograms().begin(), Finder.subprograms().end());
 
   // Walk LLVM globals to map each DIGlobalVariable to its llvm::GlobalVariable.
   DenseMap<const DIGlobalVariable *, const GlobalVariable *> DIGVToLLVMGV;
@@ -605,6 +539,7 @@ MCRegister SPIRVNonSemanticDebugHandler::emitExtInst(
     MCRegister VoidTypeReg, MCRegister ExtInstSetReg,
     ArrayRef<MCRegister> Operands, SPIRV::ModuleAnalysisInfo &MAI) {
   MCRegister Reg = MAI.getNextIDRegister();
+
   MCInst Inst;
   Inst.setOpcode(SPIRV::OpExtInst);
   Inst.addOperand(MCOperand::createReg(Reg));
@@ -614,20 +549,6 @@ MCRegister SPIRVNonSemanticDebugHandler::emitExtInst(
   for (MCRegister R : Operands)
     Inst.addOperand(MCOperand::createReg(R));
   emitMCInst(Inst);
-  return Reg;
-}
-
-MCRegister SPIRVNonSemanticDebugHandler::getOrEmitDebugTypeFunction(
-    ArrayRef<MCRegister> Ops, MCRegister VoidTypeReg, MCRegister ExtInstSetReg,
-    SPIRV::ModuleAnalysisInfo &MAI) {
-  auto [It, Inserted] =
-      DebugTypeFunctionCache.try_emplace(SmallVector<MCRegister, 8>(Ops));
-  if (!Inserted)
-    return It->second;
-
-  MCRegister Reg = emitExtInst(SPIRV::NonSemanticExtInst::DebugTypeFunction,
-                               VoidTypeReg, ExtInstSetReg, Ops, MAI);
-  It->second = Reg;
   return Reg;
 }
 
@@ -838,34 +759,44 @@ MCRegister SPIRVNonSemanticDebugHandler::findOrEmitOpTypeInt32(
 // Each node emits its dependencies first. E.g. for `void f() { struct L; }`,
 // node L emits f, then L. For `struct S { S *p; }`, S* is a back edge, so S
 // is emitted without member p.
-SPIRVNonSemanticDebugHandler::EmitResult
-SPIRVNonSemanticDebugHandler::getOrCreateDebugScope(const DIScope *S) {
+auto SPIRVNonSemanticDebugHandler::getOrCreateDebugScope(const DIScope *S)
+    -> EmitResult<MCRegister> {
   if (!S || FailedScopes.contains(S))
-    return EmitResult::unsupported();
+    return EmitResult<MCRegister>::unsupported();
   if (auto Reg = lookupOptReg(DebugScopeRegs, S))
-    return EmitResult::emitted(*Reg);
+    return EmitResult<MCRegister>::emitted(*Reg);
 
   // Mark the node as in progress while its dependencies are resolved/emitted.
   // This also prevents cycles from happening.
   if (!ScopesInProgress.insert(S).second)
-    return EmitResult::inProgress();
-  EmitResult R = emitDebugScope(S);
+    return EmitResult<MCRegister>::inProgress();
+
+  EmitResult<PreparedScope> P = emitDebugScope(S);
   ScopesInProgress.erase(S);
-  assert((!R || !GlobalNSDIEnabled) &&
+  assert((!P || !GlobalNSDIEnabled) &&
          "debug type or scope created after module-scope NSDI emission");
-  if (R)
-    DebugScopeRegs[S] = R.Reg;
-  else if (R.Status == EmitStatus::Unsupported)
-    FailedScopes.insert(S);
-  return R;
+  if (!P) {
+    if (P.Status == EmitStatus::Unsupported)
+      FailedScopes.insert(S);
+    return P.Status == EmitStatus::InProgress
+               ? EmitResult<MCRegister>::inProgress()
+               : EmitResult<MCRegister>::unsupported();
+  }
+
+  // The scope was successfully emitted.
+  SPIRV::ModuleAnalysisInfo &MAI = *CurrentMAI;
+  MCRegister Reg =
+      emitExtInst(P.Value->Opcode, getOrEmitOpTypeVoidReg(MAI),
+                  MAI.getExtInstSetReg(NSSet), P.Value->Operands, MAI);
+  DebugScopeRegs[S] = Reg;
+  return EmitResult<MCRegister>::emitted(Reg);
 }
 
-SPIRVNonSemanticDebugHandler::EmitResult
-SPIRVNonSemanticDebugHandler::emitDebugTypeBasic(
-    const DIBasicType *BT, MCRegister VoidTypeReg, MCRegister I32TypeReg,
-    MCRegister ExtInstSetReg, SPIRV::ModuleAnalysisInfo &MAI) {
+auto SPIRVNonSemanticDebugHandler::emitDebugTypeBasic(
+    const DIBasicType *BT, MCRegister I32TypeReg,
+    SPIRV::ModuleAnalysisInfo &MAI) -> EmitResult<PreparedScope> {
   if (!isUInt<32>(BT->getSizeInBits()))
-    return EmitResult::unsupported();
+    return EmitResult<PreparedScope>::unsupported();
 
   MCRegister NameReg = getCachedOpStringReg(BT->getName());
   MCRegister SizeReg = emitOpConstantI32(
@@ -899,13 +830,13 @@ SPIRVNonSemanticDebugHandler::emitDebugTypeBasic(
   }
   MCRegister EncodingReg = emitOpConstantI32(Encoding, I32TypeReg, MAI);
   MCRegister FlagsReg = emitOpConstantI32(0, I32TypeReg, MAI);
-  return EmitResult::emitted(emitExtInst(
-      SPIRV::NonSemanticExtInst::DebugTypeBasic, VoidTypeReg, ExtInstSetReg,
-      {NameReg, SizeReg, EncodingReg, FlagsReg}, MAI));
+  return EmitResult<PreparedScope>::emitted(
+      PreparedScope{SPIRV::NonSemanticExtInst::DebugTypeBasic,
+                    {NameReg, SizeReg, EncodingReg, FlagsReg}});
 }
 
-SPIRVNonSemanticDebugHandler::EmitResult
-SPIRVNonSemanticDebugHandler::emitDebugScope(const DIScope *S) {
+auto SPIRVNonSemanticDebugHandler::emitDebugScope(const DIScope *S)
+    -> EmitResult<PreparedScope> {
   assert(CurrentMAI && "emitDebugScope requires CurrentMAI");
   SPIRV::ModuleAnalysisInfo &MAI = *CurrentMAI;
   MCRegister ExtInstSetReg = MAI.getExtInstSetReg(NSSet);
@@ -913,9 +844,9 @@ SPIRVNonSemanticDebugHandler::emitDebugScope(const DIScope *S) {
   MCRegister I32TypeReg = getOrEmitOpTypeInt32Reg(MAI);
 
   if (const auto *BT = dyn_cast<DIBasicType>(S))
-    return emitDebugTypeBasic(BT, VoidTypeReg, I32TypeReg, ExtInstSetReg, MAI);
+    return emitDebugTypeBasic(BT, I32TypeReg, MAI);
   if (const auto *ST = dyn_cast<DISubroutineType>(S))
-    return emitDebugTypeFunctionForSubroutineType(ST, ExtInstSetReg, MAI);
+    return emitDebugTypeFunctionForSubroutineType(ST, MAI);
   if (const auto *CT = dyn_cast<DICompositeType>(S))
     return emitDebugTypeForCompositeType(CT, VoidTypeReg, I32TypeReg,
                                          ExtInstSetReg, MAI);
@@ -931,57 +862,69 @@ SPIRVNonSemanticDebugHandler::emitDebugScope(const DIScope *S) {
     return emitDebugFunctionDeclaration(SP, VoidTypeReg, I32TypeReg,
                                         ExtInstSetReg, MAI);
   }
-  return EmitResult::unsupported();
+  return EmitResult<PreparedScope>::unsupported();
 }
 
-SPIRVNonSemanticDebugHandler::EmitResult
-SPIRVNonSemanticDebugHandler::emitDebugTypeForCompositeType(
+auto SPIRVNonSemanticDebugHandler::emitDebugTypeForCompositeType(
     const DICompositeType *CT, MCRegister VoidTypeReg, MCRegister I32TypeReg,
-    MCRegister ExtInstSetReg, SPIRV::ModuleAnalysisInfo &MAI) {
+    MCRegister ExtInstSetReg, SPIRV::ModuleAnalysisInfo &MAI)
+    -> EmitResult<PreparedScope> {
   switch (CT->getTag()) {
   case dwarf::DW_TAG_array_type:
+    // A vector is an array with DINode::FlagVector. A plain array is the
+    // same tag without it. A matrix is also lowered to a DW_TAG_array_type
+    // (two subranges), so it is indistinguishable from a 2D array here and
+    // is emitted as a DebugTypeArray.
+    //
+    // FIXME: Emitting a matrix as a DebugTypeArray is valid but loses the
+    // matrix shape. DWARF has no matrix tag, so distinguishing a matrix needs
+    // a new DINode flag analogous to FlagVector, set on the array, plus a way
+    // to carry column-major vs row-major traits. Array-of-vectors alone would
+    // not disambiguate a matrix from a genuine array of vectors. Once the
+    // frontend marks matrices, route them to a DebugTypeMatrix path here.
     if (CT->isVector())
-      return emitDebugTypeVector(CT, ExtInstSetReg, MAI);
-    return emitDebugTypeArray(CT, ExtInstSetReg, MAI);
+      return emitDebugTypeVector(CT, MAI);
+    return emitDebugTypeArray(CT, MAI);
   case dwarf::DW_TAG_structure_type:
   case dwarf::DW_TAG_class_type:
   case dwarf::DW_TAG_union_type:
     return emitDebugTypeComposite(CT, VoidTypeReg, I32TypeReg, ExtInstSetReg,
                                   MAI);
   default:
-    return EmitResult::unsupported();
+    return EmitResult<PreparedScope>::unsupported();
   }
 }
 
-SPIRVNonSemanticDebugHandler::EmitResult
-SPIRVNonSemanticDebugHandler::emitDebugTypeForDerivedType(
+auto SPIRVNonSemanticDebugHandler::emitDebugTypeForDerivedType(
     const DIDerivedType *DT, MCRegister VoidTypeReg, MCRegister I32TypeReg,
-    MCRegister ExtInstSetReg, SPIRV::ModuleAnalysisInfo &MAI) {
+    MCRegister ExtInstSetReg, SPIRV::ModuleAnalysisInfo &MAI)
+    -> EmitResult<PreparedScope> {
   switch (DT->getTag()) {
   case dwarf::DW_TAG_pointer_type:
-    return emitDebugTypePointer(DT, ExtInstSetReg, MAI);
+    return emitDebugTypePointer(DT, MAI);
   case dwarf::DW_TAG_typedef:
     return emitDebugTypedef(DT, VoidTypeReg, I32TypeReg, ExtInstSetReg, MAI);
+  case dwarf::DW_TAG_member:
+    return emitDebugTypeMember(DT, VoidTypeReg, I32TypeReg, ExtInstSetReg, MAI);
   default:
-    return EmitResult::unsupported();
+    return EmitResult<PreparedScope>::unsupported();
   }
 }
 
-SPIRVNonSemanticDebugHandler::EmitResult
-SPIRVNonSemanticDebugHandler::emitDebugTypePointer(
-    const DIDerivedType *PT, MCRegister ExtInstSetReg,
-    SPIRV::ModuleAnalysisInfo &MAI) {
+auto SPIRVNonSemanticDebugHandler::emitDebugTypePointer(
+    const DIDerivedType *PT, SPIRV::ModuleAnalysisInfo &MAI)
+    -> EmitResult<PreparedScope> {
   // A DWARF address space is required to determine the SPIR-V storage class.
   // Skip pointer types that do not carry one.
   if (!PT->getDWARFAddressSpace().has_value())
-    return EmitResult::unsupported();
+    return EmitResult<PreparedScope>::unsupported();
 
   MCRegister BaseReg;
   if (const DIType *BaseTy = PT->getBaseType()) {
-    EmitResult Base = getOrCreateDebugScope(BaseTy);
+    EmitResult<MCRegister> Base = getOrCreateDebugScope(BaseTy);
     if (!Base)
-      return Base;
-    BaseReg = Base.Reg;
+      return EmitResult<PreparedScope>::failure(Base);
+    BaseReg = *Base.Value;
   } else {
     // No getBaseType() (typical for void*): use DebugInfoNone as Base Type,
     // same as SPIRV-LLVM-Translator (see issue #109287 and the DISABLED
@@ -990,7 +933,6 @@ SPIRVNonSemanticDebugHandler::emitDebugTypePointer(
     BaseReg = CachedDebugInfoNoneReg;
   }
 
-  MCRegister VoidTypeReg = getOrEmitOpTypeVoidReg(MAI);
   MCRegister I32TypeReg = getOrEmitOpTypeInt32Reg(MAI);
   MCRegister DebugTypePointerFlagsReg =
       emitOpConstantI32(transDebugFlags(PT), I32TypeReg, MAI);
@@ -1002,15 +944,14 @@ SPIRVNonSemanticDebugHandler::emitDebugTypePointer(
       addressSpaceToStorageClass(PT->getDWARFAddressSpace().value(), ST),
       I32TypeReg, MAI);
 
-  return EmitResult::emitted(emitExtInst(
-      SPIRV::NonSemanticExtInst::DebugTypePointer, VoidTypeReg, ExtInstSetReg,
-      {BaseReg, StorageClassReg, DebugTypePointerFlagsReg}, MAI));
+  return EmitResult<PreparedScope>::emitted(
+      PreparedScope{SPIRV::NonSemanticExtInst::DebugTypePointer,
+                    {BaseReg, StorageClassReg, DebugTypePointerFlagsReg}});
 }
 
-SPIRVNonSemanticDebugHandler::EmitResult
-SPIRVNonSemanticDebugHandler::emitDebugTypeFunctionForSubroutineType(
-    const DISubroutineType *ST, MCRegister ExtInstSetReg,
-    SPIRV::ModuleAnalysisInfo &MAI) {
+auto SPIRVNonSemanticDebugHandler::emitDebugTypeFunctionForSubroutineType(
+    const DISubroutineType *ST, SPIRV::ModuleAnalysisInfo &MAI)
+    -> EmitResult<PreparedScope> {
   MCRegister VoidTypeReg = getOrEmitOpTypeVoidReg(MAI);
   MCRegister I32TypeReg = getOrEmitOpTypeInt32Reg(MAI);
   MCRegister DebugTypeFunctionFlagsReg =
@@ -1026,21 +967,21 @@ SPIRVNonSemanticDebugHandler::emitDebugTypeFunctionForSubroutineType(
   } else {
     for (unsigned I = 0, E = TA.size(); I != E; ++I) {
       bool IsReturnType = (I == 0);
-      EmitResult Slot =
+      EmitResult<MCRegister> Slot =
           mapDISignatureTypeToReg(TA[I], VoidTypeReg, IsReturnType);
       // No emitted DebugType* id for this slot (e.g., pointer that
       // was skipped due missing address space, etc.).
       if (!Slot)
-        return Slot;
-      Ops.push_back(Slot.Reg);
+        return EmitResult<PreparedScope>::failure(Slot);
+      Ops.push_back(*Slot.Value);
     }
   }
-  return EmitResult::emitted(
-      getOrEmitDebugTypeFunction(Ops, VoidTypeReg, ExtInstSetReg, MAI));
+  return EmitResult<PreparedScope>::emitted(
+      PreparedScope{SPIRV::NonSemanticExtInst::DebugTypeFunction, Ops});
 }
 
 // Match SPIRV-LLVM-Translator's selection logic for the Parent operand.
-SPIRVNonSemanticDebugHandler::EmitResult
+SPIRVNonSemanticDebugHandler::EmitResult<MCRegister>
 SPIRVNonSemanticDebugHandler::resolveScope(const DIScope *Scope,
                                            const DICompileUnit *FallbackCU) {
   // DebugLexicalBlockDiscriminator cannot be used as a scope, so unwrap it.
@@ -1052,26 +993,27 @@ SPIRVNonSemanticDebugHandler::resolveScope(const DIScope *Scope,
 
   // For a file, compile-unit, or absent scope, fall back to a compile unit.
   auto CUResult = [](std::optional<MCRegister> Reg) {
-    return Reg ? EmitResult::emitted(*Reg) : EmitResult::unsupported();
+    return Reg ? EmitResult<MCRegister>::emitted(*Reg)
+               : EmitResult<MCRegister>::unsupported();
   };
   if (FallbackCU)
     return CUResult(lookupOptReg(DebugScopeRegs, FallbackCU));
 
   if (CompileUnits.empty())
-    return EmitResult::unsupported();
+    return EmitResult<MCRegister>::unsupported();
 
   return CUResult(lookupOptReg(DebugScopeRegs, CompileUnits[0].TheCU));
 }
 
-SPIRVNonSemanticDebugHandler::EmitResult
-SPIRVNonSemanticDebugHandler::emitDebugLexicalBlock(
+auto SPIRVNonSemanticDebugHandler::emitDebugLexicalBlock(
     const DIScope *S, MCRegister VoidTypeReg, MCRegister I32TypeReg,
-    MCRegister ExtInstSetReg, SPIRV::ModuleAnalysisInfo &MAI) {
+    MCRegister ExtInstSetReg, SPIRV::ModuleAnalysisInfo &MAI)
+    -> EmitResult<PreparedScope> {
   assert((isa<DILexicalBlock, DINamespace>(S)) &&
          "S must be a DILexicalBlock or DINamespace in emitDebugLexicalBlock");
-  EmitResult Parent = resolveScope(S->getScope());
+  EmitResult<MCRegister> Parent = resolveScope(S->getScope());
   if (!Parent)
-    return Parent;
+    return EmitResult<PreparedScope>::failure(Parent);
 
   MCRegister FileStrReg = getCachedScopePathOpStringReg(
       S->getFile(), /*UseEmptyPathIfNullScope=*/true);
@@ -1084,19 +1026,18 @@ SPIRVNonSemanticDebugHandler::emitDebugLexicalBlock(
                                            I32TypeReg, MAI);
     MCRegister ColReg = emitOpConstantI32(
         static_cast<uint32_t>(LB->getColumn()), I32TypeReg, MAI);
-    Ops = {SrcReg, LineReg, ColReg, Parent.Reg};
+    Ops = {SrcReg, LineReg, ColReg, *Parent.Value};
   } else {
     const auto *NS = cast<DINamespace>(S);
     // DINamespace carries no line/column info.
     MCRegister LineReg = emitOpConstantI32(0, I32TypeReg, MAI);
     MCRegister ColReg = emitOpConstantI32(0, I32TypeReg, MAI);
     MCRegister NameReg = getCachedOpStringReg(NS->getName());
-    Ops = {SrcReg, LineReg, ColReg, Parent.Reg, NameReg};
+    Ops = {SrcReg, LineReg, ColReg, *Parent.Value, NameReg};
   }
 
-  return EmitResult::emitted(
-      emitExtInst(SPIRV::NonSemanticExtInst::DebugLexicalBlock, VoidTypeReg,
-                  ExtInstSetReg, Ops, MAI));
+  return EmitResult<PreparedScope>::emitted(
+      PreparedScope{SPIRV::NonSemanticExtInst::DebugLexicalBlock, Ops});
 }
 
 MCRegister SPIRVNonSemanticDebugHandler::getOrEmitDebugInlinedAt(
@@ -1107,14 +1048,14 @@ MCRegister SPIRVNonSemanticDebugHandler::getOrEmitDebugInlinedAt(
   if (MCRegister Cached = DebugInlinedAtRegs.lookup(IA))
     return Cached;
 
-  EmitResult Scope = resolveScope(IA->getScope());
+  EmitResult<MCRegister> Scope = resolveScope(IA->getScope());
   if (!Scope)
     return MCRegister();
 
   MCRegister LineReg =
       emitOpConstantI32(static_cast<uint32_t>(IA->getLine()), I32TypeReg, MAI);
 
-  SmallVector<MCRegister, 3> Ops{LineReg, Scope.Reg};
+  SmallVector<MCRegister, 3> Ops{LineReg, *Scope.Value};
   // Recurse before building this instruction's operands so an outer
   // inlined-at link is always available.
   if (const DILocation *Outer = IA->getInlinedAt()) {
@@ -1131,22 +1072,22 @@ MCRegister SPIRVNonSemanticDebugHandler::getOrEmitDebugInlinedAt(
   return Reg;
 }
 
-SPIRVNonSemanticDebugHandler::EmitResult
-SPIRVNonSemanticDebugHandler::emitDebugFunctionDeclaration(
+auto SPIRVNonSemanticDebugHandler::emitDebugFunctionDeclaration(
     const DISubprogram *SP, MCRegister VoidTypeReg, MCRegister I32TypeReg,
-    MCRegister ExtInstSetReg, SPIRV::ModuleAnalysisInfo &MAI) {
+    MCRegister ExtInstSetReg, SPIRV::ModuleAnalysisInfo &MAI)
+    -> EmitResult<PreparedScope> {
   assert(SP && "SP must not be null in emitDebugFunctionDeclaration");
   assert(!SP->isDefinition() &&
          "SP must not be a definition in emitDebugFunctionDeclaration");
 
   // The IR verifier already enforces that this cannot be null.
-  EmitResult FnTy = getOrCreateDebugScope(SP->getType());
+  EmitResult<MCRegister> FnTy = getOrCreateDebugScope(SP->getType());
   if (!FnTy)
-    return FnTy;
+    return EmitResult<PreparedScope>::failure(FnTy);
 
-  EmitResult Parent = resolveScope(SP->getScope(), SP->getUnit());
+  EmitResult<MCRegister> Parent = resolveScope(SP->getScope(), SP->getUnit());
   if (!Parent)
-    return Parent;
+    return EmitResult<PreparedScope>::failure(Parent);
 
   MCRegister FileStrReg = getCachedScopePathOpStringReg(SP);
 
@@ -1165,28 +1106,26 @@ SPIRVNonSemanticDebugHandler::emitDebugFunctionDeclaration(
   FlagsVal &= ~NSDIFlagIsDefinition;
   MCRegister FlagsReg = emitOpConstantI32(FlagsVal, I32TypeReg, MAI);
 
-  return EmitResult::emitted(
-      emitExtInst(SPIRV::NonSemanticExtInst::DebugFunctionDeclaration,
-                  VoidTypeReg, ExtInstSetReg,
-                  {NameReg, FnTy.Reg, SrcReg, LineReg, ColReg, Parent.Reg,
-                   LinkageReg, FlagsReg},
-                  MAI));
+  return EmitResult<PreparedScope>::emitted(
+      PreparedScope{SPIRV::NonSemanticExtInst::DebugFunctionDeclaration,
+                    {NameReg, *FnTy.Value, SrcReg, LineReg, ColReg,
+                     *Parent.Value, LinkageReg, FlagsReg}});
 }
 
-SPIRVNonSemanticDebugHandler::EmitResult
-SPIRVNonSemanticDebugHandler::emitDebugFunction(
+auto SPIRVNonSemanticDebugHandler::emitDebugFunction(
     const DISubprogram *SP, MCRegister VoidTypeReg, MCRegister I32TypeReg,
-    MCRegister ExtInstSetReg, SPIRV::ModuleAnalysisInfo &MAI) {
+    MCRegister ExtInstSetReg, SPIRV::ModuleAnalysisInfo &MAI)
+    -> EmitResult<PreparedScope> {
   assert(SP && "SP must not be null in emitDebugFunction");
   assert(SP->isDefinition() && "SP must be a definition in emitDebugFunction");
 
-  EmitResult FnTy = getOrCreateDebugScope(SP->getType());
+  EmitResult<MCRegister> FnTy = getOrCreateDebugScope(SP->getType());
   if (!FnTy)
-    return FnTy;
+    return EmitResult<PreparedScope>::failure(FnTy);
 
-  EmitResult Parent = resolveScope(SP->getScope(), SP->getUnit());
+  EmitResult<MCRegister> Parent = resolveScope(SP->getScope(), SP->getUnit());
   if (!Parent)
-    return Parent;
+    return EmitResult<PreparedScope>::failure(Parent);
 
   MCRegister NameReg = getCachedOpStringReg(SP->getName());
   MCRegister LinkageReg = getCachedOpStringReg(SP->getLinkageName());
@@ -1203,31 +1142,29 @@ SPIRVNonSemanticDebugHandler::emitDebugFunction(
   MCRegister ScopeLineReg = emitOpConstantI32(
       static_cast<uint32_t>(SP->getScopeLine()), I32TypeReg, MAI);
 
-  SmallVector<MCRegister, 10> Ops = {NameReg,    FnTy.Reg, SrcReg,
-                                     LineReg,    ColReg,   Parent.Reg,
-                                     LinkageReg, FlagsReg, ScopeLineReg};
+  SmallVector<MCRegister, 10> Ops = {NameReg,    *FnTy.Value, SrcReg,
+                                     LineReg,    ColReg,      *Parent.Value,
+                                     LinkageReg, FlagsReg,    ScopeLineReg};
 
   if (const DISubprogram *Decl = SP->getDeclaration()) {
-    EmitResult DeclRes = getOrCreateDebugScope(Decl);
+    EmitResult<MCRegister> DeclRes = getOrCreateDebugScope(Decl);
     if (DeclRes)
-      Ops.push_back(DeclRes.Reg);
+      Ops.push_back(*DeclRes.Value);
   }
 
-  return EmitResult::emitted(
-      emitExtInst(SPIRV::NonSemanticExtInst::DebugFunction, VoidTypeReg,
-                  ExtInstSetReg, Ops, MAI));
+  return EmitResult<PreparedScope>::emitted(
+      PreparedScope{SPIRV::NonSemanticExtInst::DebugFunction, Ops});
 }
 
-SPIRVNonSemanticDebugHandler::EmitResult
-SPIRVNonSemanticDebugHandler::mapDISignatureTypeToReg(const DIType *Ty,
-                                                      MCRegister VoidTypeReg,
-                                                      bool ReturnType) {
+auto SPIRVNonSemanticDebugHandler::mapDISignatureTypeToReg(
+    const DIType *Ty, MCRegister VoidTypeReg, bool ReturnType)
+    -> EmitResult<MCRegister> {
   if (!Ty) {
     if (ReturnType)
-      return EmitResult::emitted(VoidTypeReg);
+      return EmitResult<MCRegister>::emitted(VoidTypeReg);
     assert(CachedDebugInfoNoneReg.isValid() &&
            "DebugInfoNone must be emitted before DISubroutineType operands");
-    return EmitResult::emitted(CachedDebugInfoNoneReg);
+    return EmitResult<MCRegister>::emitted(CachedDebugInfoNoneReg);
   }
   return getOrCreateDebugScope(Ty);
 }
@@ -1346,11 +1283,11 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugGlobalVariable(
     SPIRV::ModuleAnalysisInfo &MAI) {
   assert(GV && "GV must not be null in emitDebugGlobalVariable");
 
-  EmitResult Parent = resolveScope(GV->getScope());
+  EmitResult<MCRegister> Parent = resolveScope(GV->getScope());
   if (!Parent)
     return std::nullopt;
 
-  MCRegister ParentReg = Parent.Reg;
+  MCRegister ParentReg = *Parent.Value;
 
   // TyReg: DebugInfoNone when GV has no DI type (as done in
   // SPIRV-LLVM-Translator). Declarations (isDefinition: false) can have null
@@ -1366,6 +1303,7 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugGlobalVariable(
 
   std::optional<MCRegister> StaticMemberRegOpt;
   if (const DIDerivedType *SM = GV->getStaticDataMemberDeclaration()) {
+    // Do not create the member here, just look it up to avoid orphaning it.
     StaticMemberRegOpt = lookupOptReg(DebugScopeRegs, SM);
     if (!StaticMemberRegOpt)
       return std::nullopt;
@@ -1419,7 +1357,7 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugLocalVariable(
     MCRegister ExtInstSetReg, SPIRV::ModuleAnalysisInfo &MAI) {
   assert(LV && "LV must not be null in emitDebugLocalVariable");
 
-  EmitResult Parent = resolveScope(LV->getScope());
+  EmitResult<MCRegister> Parent = resolveScope(LV->getScope());
   if (!Parent)
     return std::nullopt;
 
@@ -1442,8 +1380,8 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugLocalVariable(
   MCRegister ColReg = emitOpConstantI32(0, I32TypeReg, MAI);
   MCRegister FlagsReg = emitOpConstantI32(transDebugFlags(LV), I32TypeReg, MAI);
 
-  SmallVector<MCRegister, 8> Ops = {NameReg, TyReg,      SrcReg,  LineReg,
-                                    ColReg,  Parent.Reg, FlagsReg};
+  SmallVector<MCRegister, 8> Ops = {NameReg, TyReg,         SrcReg,  LineReg,
+                                    ColReg,  *Parent.Value, FlagsReg};
   if (unsigned Arg = LV->getArg())
     Ops.push_back(emitOpConstantI32(Arg, I32TypeReg, MAI));
 
@@ -1451,52 +1389,47 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugLocalVariable(
                      ExtInstSetReg, Ops, MAI);
 }
 
-SPIRVNonSemanticDebugHandler::EmitResult
-SPIRVNonSemanticDebugHandler::emitDebugTypeVector(
-    const DICompositeType *VT, MCRegister ExtInstSetReg,
-    SPIRV::ModuleAnalysisInfo &MAI) {
+auto SPIRVNonSemanticDebugHandler::emitDebugTypeVector(
+    const DICompositeType *VT, SPIRV::ModuleAnalysisInfo &MAI)
+    -> EmitResult<PreparedScope> {
   const auto *BaseTy = dyn_cast_or_null<DIBasicType>(VT->getBaseType());
   if (!BaseTy)
-    return EmitResult::unsupported();
+    return EmitResult<PreparedScope>::unsupported();
 
   // DebugTypeVector models only 1D vectors (multi-subrange types cannot be
   // encoded).
   DINodeArray Elements = VT->getElements();
   if (Elements.size() != 1)
-    return EmitResult::unsupported();
+    return EmitResult<PreparedScope>::unsupported();
   const auto *SR = cast<DISubrange>(Elements[0]);
   const auto *CI = dyn_cast_if_present<ConstantInt *>(SR->getCount());
   if (!CI)
-    return EmitResult::unsupported();
+    return EmitResult<PreparedScope>::unsupported();
 
-  EmitResult Base = getOrCreateDebugScope(BaseTy);
+  EmitResult<MCRegister> Base = getOrCreateDebugScope(BaseTy);
   if (!Base)
-    return Base;
+    return EmitResult<PreparedScope>::failure(Base);
 
-  MCRegister VoidTypeReg = getOrEmitOpTypeVoidReg(MAI);
   MCRegister I32TypeReg = getOrEmitOpTypeInt32Reg(MAI);
   MCRegister CountReg = emitOpConstantI32(
       static_cast<uint32_t>(CI->getZExtValue()), I32TypeReg, MAI);
-  return EmitResult::emitted(
-      emitExtInst(SPIRV::NonSemanticExtInst::DebugTypeVector, VoidTypeReg,
-                  ExtInstSetReg, {Base.Reg, CountReg}, MAI));
+  return EmitResult<PreparedScope>::emitted(PreparedScope{
+      SPIRV::NonSemanticExtInst::DebugTypeVector, {*Base.Value, CountReg}});
 }
 
-SPIRVNonSemanticDebugHandler::EmitResult
-SPIRVNonSemanticDebugHandler::emitDebugTypeArray(
-    const DICompositeType *AT, MCRegister ExtInstSetReg,
-    SPIRV::ModuleAnalysisInfo &MAI) {
+auto SPIRVNonSemanticDebugHandler::emitDebugTypeArray(
+    const DICompositeType *AT, SPIRV::ModuleAnalysisInfo &MAI)
+    -> EmitResult<PreparedScope> {
   // Unlike DebugTypeVector, the element may be any debug type, not only a
   // basic type. Create it first so this array names an id that already exists.
-  EmitResult Base = getOrCreateDebugScope(AT->getBaseType());
+  EmitResult<MCRegister> Base = getOrCreateDebugScope(AT->getBaseType());
   if (!Base)
-    return Base;
+    return EmitResult<PreparedScope>::failure(Base);
 
-  MCRegister VoidTypeReg = getOrEmitOpTypeVoidReg(MAI);
   MCRegister I32TypeReg = getOrEmitOpTypeInt32Reg(MAI);
 
   SmallVector<MCRegister> Ops;
-  Ops.push_back(Base.Reg);
+  Ops.push_back(*Base.Value);
 
   // One component count per DISubrange, in DWARF subrange order. Emit 0 for
   // counts that are not a compile-time constant (dynamic arrays). This matches
@@ -1519,20 +1452,20 @@ SPIRVNonSemanticDebugHandler::emitDebugTypeArray(
     Ops.push_back(emitOpConstantI32(Count, I32TypeReg, MAI));
   }
 
-  return EmitResult::emitted(
-      emitExtInst(SPIRV::NonSemanticExtInst::DebugTypeArray, VoidTypeReg,
-                  ExtInstSetReg, Ops, MAI));
+  return EmitResult<PreparedScope>::emitted(
+      PreparedScope{SPIRV::NonSemanticExtInst::DebugTypeArray, Ops});
 }
 
-std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugTypeMember(
+auto SPIRVNonSemanticDebugHandler::emitDebugTypeMember(
     const DIDerivedType *M, MCRegister VoidTypeReg, MCRegister I32TypeReg,
-    MCRegister ExtInstSetReg, SPIRV::ModuleAnalysisInfo &MAI) {
-  EmitResult Ty = getOrCreateDebugScope(M->getBaseType());
+    MCRegister ExtInstSetReg, SPIRV::ModuleAnalysisInfo &MAI)
+    -> EmitResult<PreparedScope> {
+  EmitResult<MCRegister> Ty = getOrCreateDebugScope(M->getBaseType());
   if (!Ty)
-    return std::nullopt;
+    return EmitResult<PreparedScope>::failure(Ty);
 
   if (!isUInt<32>(M->getOffsetInBits()) || !isUInt<32>(M->getSizeInBits()))
-    return std::nullopt;
+    return EmitResult<PreparedScope>::unsupported();
 
   MCRegister NameReg = getCachedOpStringReg(M->getName());
   MCRegister FileStrReg = getCachedScopePathOpStringReg(
@@ -1559,33 +1492,33 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugTypeMember(
   // available but is not emitted as the optional Value operand, and under DWARF
   // 5 a static member is tagged DW_TAG_variable, which the caller's member loop
   // skips.
-  return emitExtInst(
-      SPIRV::NonSemanticExtInst::DebugTypeMember, VoidTypeReg, ExtInstSetReg,
-      {NameReg, Ty.Reg, SrcReg, LineReg, ColReg, OffsetReg, SizeReg, FlagsReg},
-      MAI);
+  return EmitResult<PreparedScope>::emitted(
+      PreparedScope{SPIRV::NonSemanticExtInst::DebugTypeMember,
+                    {NameReg, *Ty.Value, SrcReg, LineReg, ColReg, OffsetReg,
+                     SizeReg, FlagsReg}});
 }
 
-SPIRVNonSemanticDebugHandler::EmitResult
-SPIRVNonSemanticDebugHandler::emitDebugTypeComposite(
+auto SPIRVNonSemanticDebugHandler::emitDebugTypeComposite(
     const DICompositeType *CT, MCRegister VoidTypeReg, MCRegister I32TypeReg,
-    MCRegister ExtInstSetReg, SPIRV::ModuleAnalysisInfo &MAI) {
+    MCRegister ExtInstSetReg, SPIRV::ModuleAnalysisInfo &MAI)
+    -> EmitResult<PreparedScope> {
   // Parent and size before any member: a failure must stream nothing, or a
   // retry would emit the members again.
-  EmitResult Parent = resolveScope(CT->getScope());
+  EmitResult<MCRegister> Parent = resolveScope(CT->getScope());
   if (!Parent)
-    return Parent;
+    return EmitResult<PreparedScope>::failure(Parent);
 
   if (!isUInt<32>(CT->getSizeInBits()))
-    return EmitResult::unsupported();
+    return EmitResult<PreparedScope>::unsupported();
 
   SmallVector<MCRegister, 8> MemberRegs;
   for (const DINode *Element : CT->getElements()) {
     const auto *M = dyn_cast<DIDerivedType>(Element);
     if (!M || M->getTag() != dwarf::DW_TAG_member)
       continue;
-    if (auto MemberReg =
-            emitDebugTypeMember(M, VoidTypeReg, I32TypeReg, ExtInstSetReg, MAI))
-      MemberRegs.push_back(*MemberReg);
+    EmitResult<MCRegister> Member = getOrCreateDebugScope(M);
+    if (Member)
+      MemberRegs.push_back(*Member.Value);
   }
 
   MCRegister NameReg = getCachedOpStringReg(CT->getName());
@@ -1610,23 +1543,20 @@ SPIRVNonSemanticDebugHandler::emitDebugTypeComposite(
   MCRegister FlagsReg = emitOpConstantI32(transDebugFlags(CT), I32TypeReg, MAI);
 
   SmallVector<MCRegister> Ops = {NameReg,    TagReg,  SrcReg,
-                                 LineReg,    ColReg,  Parent.Reg,
+                                 LineReg,    ColReg,  *Parent.Value,
                                  LinkageReg, SizeReg, FlagsReg};
   Ops.append(MemberRegs.begin(), MemberRegs.end());
-  return EmitResult::emitted(
-      emitExtInst(SPIRV::NonSemanticExtInst::DebugTypeComposite, VoidTypeReg,
-                  ExtInstSetReg, Ops, MAI));
+  return EmitResult<PreparedScope>::emitted(
+      PreparedScope{SPIRV::NonSemanticExtInst::DebugTypeComposite, Ops});
 }
 
-SPIRVNonSemanticDebugHandler::EmitResult
-SPIRVNonSemanticDebugHandler::emitDebugTypedef(const DIDerivedType *TD,
-                                               MCRegister VoidTypeReg,
-                                               MCRegister I32TypeReg,
-                                               MCRegister ExtInstSetReg,
-                                               SPIRV::ModuleAnalysisInfo &MAI) {
-  EmitResult Base = getOrCreateDebugScope(TD->getBaseType());
+auto SPIRVNonSemanticDebugHandler::emitDebugTypedef(
+    const DIDerivedType *TD, MCRegister VoidTypeReg, MCRegister I32TypeReg,
+    MCRegister ExtInstSetReg, SPIRV::ModuleAnalysisInfo &MAI)
+    -> EmitResult<PreparedScope> {
+  EmitResult<MCRegister> Base = getOrCreateDebugScope(TD->getBaseType());
   if (!Base)
-    return Base;
+    return EmitResult<PreparedScope>::failure(Base);
 
   MCRegister NameReg = getCachedOpStringReg(TD->getName());
   MCRegister FileStrReg = getCachedScopePathOpStringReg(
@@ -1641,13 +1571,13 @@ SPIRVNonSemanticDebugHandler::emitDebugTypedef(const DIDerivedType *TD,
   // Parent must be a lexical scope. Valid NSDI lexical scopes are
   // DebugCompilationUnit, DebugFunction, DebugLexicalBlock, or
   // DebugTypeComposite.
-  EmitResult Parent = resolveScope(TD->getScope());
+  EmitResult<MCRegister> Parent = resolveScope(TD->getScope());
   if (!Parent)
-    return Parent;
+    return EmitResult<PreparedScope>::failure(Parent);
 
-  return EmitResult::emitted(emitExtInst(
-      SPIRV::NonSemanticExtInst::DebugTypedef, VoidTypeReg, ExtInstSetReg,
-      {NameReg, Base.Reg, SrcReg, LineReg, ColReg, Parent.Reg}, MAI));
+  return EmitResult<PreparedScope>::emitted(PreparedScope{
+      SPIRV::NonSemanticExtInst::DebugTypedef,
+      {NameReg, *Base.Value, SrcReg, LineReg, ColReg, *Parent.Value}});
 }
 
 void SPIRVNonSemanticDebugHandler::emitNonSemanticDebugStrings(
@@ -1669,36 +1599,43 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticDebugStrings(
     }
   }
 
-  for (const DIBasicType *BT : BasicTypes)
-    emitOpStringIfNew(BT->getName(), MAI);
-
-  for (const DISubprogram *SP : concat<const DISubprogram *>(
-           SubprogramDeclarations, SubprogramDefinitions)) {
+  for (const DISubprogram *SP : Subprograms) {
     emitOpStringIfNew(SP->getName(), MAI);
     emitOpStringIfNew(SP->getLinkageName(), MAI);
     emitAndCacheScopePathOpStringReg(SP, MAI);
   }
 
-  // Cache the OpStrings each DebugTypeComposite and its DebugTypeMembers use:
-  // the composite name, identifier (linkage name), and path, plus each member
-  // name and path.
-  for (const DICompositeType *CT : CompositeTypes) {
-    emitOpStringIfNew(CT->getName(), MAI);
-    emitOpStringIfNew(CT->getIdentifier(), MAI);
-    emitAndCacheScopePathOpStringReg(CT->getFile(), MAI);
-    for (const DINode *Element : CT->getElements()) {
-      const auto *M = dyn_cast<DIDerivedType>(Element);
-      if (!M || M->getTag() != dwarf::DW_TAG_member)
-        continue;
-      emitOpStringIfNew(M->getName(), MAI);
-      emitAndCacheScopePathOpStringReg(M->getFile(), MAI);
+  for (const DIType *Ty : DebugTypes) {
+    if (const auto *BT = dyn_cast<DIBasicType>(Ty)) {
+      emitOpStringIfNew(BT->getName(), MAI);
+      continue;
     }
-  }
-
-  // Cache the name and path OpStrings each DebugTypedef uses.
-  for (const DIDerivedType *TD : TypedefTypes) {
-    emitOpStringIfNew(TD->getName(), MAI);
-    emitAndCacheScopePathOpStringReg(TD->getFile(), MAI);
+    if (const auto *CT = dyn_cast<DICompositeType>(Ty)) {
+      // Cache the OpStrings each DebugTypeComposite and its DebugTypeMembers
+      // use: the composite name, identifier (linkage name), and path, plus
+      // each member name and path. Arrays and vectors have no such strings.
+      if (CT->getTag() != dwarf::DW_TAG_structure_type &&
+          CT->getTag() != dwarf::DW_TAG_class_type &&
+          CT->getTag() != dwarf::DW_TAG_union_type)
+        continue;
+      emitOpStringIfNew(CT->getName(), MAI);
+      emitOpStringIfNew(CT->getIdentifier(), MAI);
+      emitAndCacheScopePathOpStringReg(CT->getFile(), MAI);
+      for (const DINode *Element : CT->getElements()) {
+        const auto *M = dyn_cast<DIDerivedType>(Element);
+        if (!M || M->getTag() != dwarf::DW_TAG_member)
+          continue;
+        emitOpStringIfNew(M->getName(), MAI);
+        emitAndCacheScopePathOpStringReg(M->getFile(), MAI);
+      }
+      continue;
+    }
+    // Cache the name and path OpStrings each DebugTypedef uses.
+    const auto *TD = dyn_cast<DIDerivedType>(Ty);
+    if (TD && TD->getTag() == dwarf::DW_TAG_typedef) {
+      emitOpStringIfNew(TD->getName(), MAI);
+      emitAndCacheScopePathOpStringReg(TD->getFile(), MAI);
+    }
   }
 
   for (const auto &[GV, _] : GlobalVariableDebugInfoMap) {
@@ -2145,11 +2082,11 @@ bool SPIRVNonSemanticDebugHandler::emitDebugScopeForInstruction(
       return true;
   }
 
-  EmitResult CurScopeRes = resolveScope(CurScope);
+  EmitResult<MCRegister> CurScopeRes = resolveScope(CurScope);
   if (!CurScopeRes)
     return false;
 
-  SmallVector<MCRegister, 2> Ops{CurScopeRes.Reg};
+  SmallVector<MCRegister, 2> Ops{*CurScopeRes.Value};
   if (CurInlinedAt) {
     // If the global emission did not include this inlined-at case, we skip it.
     MCRegister InlinedReg = DebugInlinedAtRegs.lookup(CurInlinedAt);
@@ -2358,17 +2295,7 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticGlobalDebugInfo(
   }
 
   for (const DIScope *S :
-       make_filter_range(LexicalBlocks, IsaPred<DINamespace>))
-    getOrCreateDebugScope(S);
-  for (const DIType *Ty :
-       concat<const DIType *>(BasicTypes, VectorTypes, PointerTypes, ArrayTypes,
-                              SubroutineTypes, TypedefTypes, CompositeTypes))
-    getOrCreateDebugScope(Ty);
-  for (const DISubprogram *SP : concat<const DISubprogram *>(
-           SubprogramDeclarations, SubprogramDefinitions))
-    getOrCreateDebugScope(SP);
-  for (const DIScope *S :
-       make_filter_range(LexicalBlocks, IsaPred<DILexicalBlock>))
+       concat<const DIScope *const>(LexicalBlocks, DebugTypes, Subprograms))
     getOrCreateDebugScope(S);
 
   // Emit DebugLocalVariable after DebugFunction and their lexical blocks so the

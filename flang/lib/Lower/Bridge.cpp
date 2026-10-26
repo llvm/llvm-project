@@ -61,6 +61,7 @@
 #include "flang/Parser/tools.h"
 #include "flang/Runtime/iostat-consts.h"
 #include "flang/Semantics/openmp-dsa.h"
+#include "flang/Semantics/openmp-utils.h"
 #include "flang/Semantics/runtime-type-info.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
@@ -77,6 +78,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/IR/Assumptions.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -5265,7 +5267,7 @@ private:
       } else {
         fir::MutableBoxValue box = genExprMutableBox(loc, *expr);
         fir::factory::disassociateMutableBox(*builder, loc, box);
-        cuf::genPointerSync(box.getAddr(), *builder);
+        cuf::genPointerSync(loc, box.getAddr(), *builder);
       }
     }
   }
@@ -5335,7 +5337,7 @@ private:
         loc, *this, assign.lhs, localSymbols, stmtCtx);
     mlir::Value rhs = genPointerAssignmentRhs(loc, lhs, assign, stmtCtx);
     builder->createStoreWithConvert(loc, rhs, lhs);
-    cuf::genPointerSync(lhs, *builder);
+    cuf::genPointerSync(loc, lhs, *builder);
   }
 
   void genForallPointerAssignment(mlir::Location loc,
@@ -6492,6 +6494,30 @@ private:
     }
   }
 
+  void setOpenMPAssumptionAttributes(mlir::func::FuncOp func,
+                                     const Fortran::semantics::Scope &scope) {
+    if (bridge.getSemanticsContext().langOptions().OpenMPSimd)
+      return;
+    const auto *assumptionScopeEnd =
+        &Fortran::semantics::omp::GetProgramUnit(scope).parent();
+    for (const auto *assumptionScope = &scope;
+         !assumptionScope->IsGlobal() && assumptionScope != assumptionScopeEnd;
+         assumptionScope = &assumptionScope->parent()) {
+      if (const auto *symbol = assumptionScope->symbol();
+          !symbol ||
+          !symbol->test(Fortran::semantics::Symbol::Flag::OmpAssumesNoOpenmp))
+        continue;
+      llvm::SmallVector<mlir::Attribute> llvmAttrs;
+      if (auto existing =
+              func->getAttrOfType<mlir::ArrayAttr>("llvm.passthrough"))
+        llvm::append_range(llvmAttrs, existing);
+      llvmAttrs.push_back(
+          builder->getStrArrayAttr({llvm::AssumptionAttrKey, "omp_no_openmp"}));
+      func->setAttr("llvm.passthrough", builder->getArrayAttr(llvmAttrs));
+      break;
+    }
+  }
+
   /// Start translation of a function.
   void startNewFunction(Fortran::lower::pft::FunctionLikeUnit &funit) {
     assert(!builder && "expected nullptr");
@@ -6517,6 +6543,7 @@ private:
     builder->setFPMaxminBehavior(
         bridge.getLoweringOptions().getFPMaxminBehavior());
     builder->setInsertionPointToStart(&func.front());
+    setOpenMPAssumptionAttributes(func, scope);
     if (funit.parent.isA<Fortran::lower::pft::FunctionLikeUnit>()) {
       // Give internal linkage to internal functions. There are no name clash
       // risks, but giving global linkage to internal procedure will break the
@@ -6859,7 +6886,12 @@ private:
     createGlobals();
     if (mlir::Region *region = func.getCallableRegion())
       region->dropAllReferences();
-    func.erase();
+    // createFunction registered the sham function in the symbol table: erase
+    // it through the table so that no dangling entry is left behind.
+    if (symbolTable)
+      symbolTable->erase(func);
+    else
+      func.erase();
     delete builder;
     builder = nullptr;
     localSymbols.clear();
@@ -7279,10 +7311,10 @@ private:
   /// utilities to deal with procedure pointer components whose arguments have
   /// the type of the containing derived type.
   Fortran::lower::TypeConstructionStack typeConstructionStack;
-  /// MLIR symbol table of the fir.global/func.func operations. Note that it is
-  /// not guaranteed to contain all operations of the ModuleOp with Symbol
-  /// attribute since mlirSymbolTable must pro-actively be maintained when
-  /// new Symbol operations are created.
+  /// MLIR symbol table of the fir.global/func.func/fir.type_info operations.
+  /// The FirOpBuilder lookups trust it, so it must pro-actively be maintained:
+  /// every one of these operations created during lowering must go through the
+  /// FirOpBuilder creation helpers or be registered with fir::registerSymbol.
   mlir::SymbolTable mlirSymbolTable;
 
   /// Used to store context while recursing into regions during lowering.
