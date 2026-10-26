@@ -28401,11 +28401,24 @@ performInterleavedStoreCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   SmallVector<SDValue, 4> ValueInterleaveOps;
   if (isSequentialConcatOfVectorInterleave(WideValue.getNode(),
                                            ValueInterleaveOps)) {
-    // Bail out if the stored value has an unexpected number of uses, since
-    // we'll have to perform manual interleaving and may as well just use normal
-    // masked stores.
-    if (!WideValue.hasOneUse())
-      return SDValue();
+    // Multiple ordinary stores can each fold the interleave if no other user
+    // needs the wide value.
+    if (!WideValue.hasOneUse()) {
+      if (!llvm::all_of(WideValue->users(), [&](SDNode *User) {
+            auto *Store = dyn_cast<StoreSDNode>(User);
+            return Store && ISD::isNormalStore(Store) && Store->isSimple() &&
+                   Store->getValue() == WideValue;
+          }))
+        return SDValue();
+
+      // Reusing the wide vector is cheaper than duplicating structured stores
+      // when every fixed-length input is already a splat.
+      if (WideValue.getValueType().isFixedLengthVector() &&
+          llvm::all_of(ValueInterleaveOps, [&](SDValue Op) {
+            return DAG.isSplatValue(Op, /*AllowUndefs=*/true);
+          }))
+        return SDValue();
+    }
   } else if (!isSplatVectorInterleaveOps(DAG, DL, WideValue,
                                          ValueInterleaveOps)) {
     return SDValue();
