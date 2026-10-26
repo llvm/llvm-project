@@ -29,29 +29,29 @@ define dso_local signext i32 @test_FI_elim(ptr noalias nocapture dereferenceable
 ; CHECK-NEXT:    lxv v2, 0(r3)
 ; CHECK-NEXT:    mr r9, r6
 ; CHECK-NEXT:    mr r6, r5
+; CHECK-NEXT:    li r11, 3
 ; CHECK-NEXT:    li r12, -127
+; CHECK-NEXT:    stb r11, 0(0)
 ; CHECK-NEXT:    li r0, 4
-; CHECK-NEXT:    stb r12, 0(r3)
 ; CHECK-NEXT:    li r2, 1
+; CHECK-NEXT:    stb r12, 0(r3)
 ; CHECK-NEXT:    std r0, 0(r3)
 ; CHECK-NEXT:    stw r2, 0(r3)
-; CHECK-NEXT:    li r11, 3
-; CHECK-NEXT:    stb r11, 0(0)
 ; CHECK-NEXT:    mfvsrd r5, v2
-; CHECK-NEXT:    vaddudm v3, v2, v2
 ; CHECK-NEXT:    pstxv v2, 64(r1), 0
+; CHECK-NEXT:    vaddudm v3, v2, v2
 ; CHECK-NEXT:    neg r5, r5
 ; CHECK-NEXT:    mfvsrd r10, v3
 ; CHECK-NEXT:    std r5, 0(r3)
 ; CHECK-NEXT:    lbz r5, 2(r7)
 ; CHECK-NEXT:    stb r11, 0(r3)
-; CHECK-NEXT:    stb r12, 0(r3)
-; CHECK-NEXT:    std r2, 0(r3)
 ; CHECK-NEXT:    mr r7, r9
 ; CHECK-NEXT:    neg r10, r10
 ; CHECK-NEXT:    rlwinm r5, r5, 0, 27, 27
 ; CHECK-NEXT:    stb r5, 0(0)
 ; CHECK-NEXT:    lbz r5, 2(r8)
+; CHECK-NEXT:    stb r12, 0(r3)
+; CHECK-NEXT:    std r2, 0(r3)
 ; CHECK-NEXT:    rlwinm r5, r5, 0, 27, 27
 ; CHECK-NEXT:    stb r5, 0(r3)
 ; CHECK-NEXT:    li r5, 2
@@ -78,29 +78,29 @@ define dso_local signext i32 @test_FI_elim(ptr noalias nocapture dereferenceable
 ; CHECK-BE-NEXT:    mr r9, r6
 ; CHECK-BE-NEXT:    mr r6, r5
 ; CHECK-BE-NEXT:    std r30, 160(r1) # 8-byte Folded Spill
+; CHECK-BE-NEXT:    li r11, 3
 ; CHECK-BE-NEXT:    li r12, -127
+; CHECK-BE-NEXT:    stb r11, 0(0)
 ; CHECK-BE-NEXT:    li r0, 4
-; CHECK-BE-NEXT:    stb r12, 0(r3)
 ; CHECK-BE-NEXT:    li r30, 1
+; CHECK-BE-NEXT:    stb r12, 0(r3)
 ; CHECK-BE-NEXT:    std r0, 0(r3)
 ; CHECK-BE-NEXT:    stw r30, 0(r3)
-; CHECK-BE-NEXT:    li r11, 3
-; CHECK-BE-NEXT:    stb r11, 0(0)
 ; CHECK-BE-NEXT:    mfvsrld r5, v2
-; CHECK-BE-NEXT:    vaddudm v3, v2, v2
 ; CHECK-BE-NEXT:    pstxv v2, 144(r1), 0
+; CHECK-BE-NEXT:    vaddudm v3, v2, v2
 ; CHECK-BE-NEXT:    mfvsrld r10, v3
 ; CHECK-BE-NEXT:    neg r5, r5
 ; CHECK-BE-NEXT:    std r5, 0(r3)
 ; CHECK-BE-NEXT:    lbz r5, 2(r7)
 ; CHECK-BE-NEXT:    stb r11, 0(r3)
-; CHECK-BE-NEXT:    stb r12, 0(r3)
-; CHECK-BE-NEXT:    std r30, 0(r3)
 ; CHECK-BE-NEXT:    mr r7, r9
 ; CHECK-BE-NEXT:    neg r10, r10
 ; CHECK-BE-NEXT:    rlwinm r5, r5, 0, 27, 27
 ; CHECK-BE-NEXT:    stb r5, 0(0)
 ; CHECK-BE-NEXT:    lbz r5, 2(r8)
+; CHECK-BE-NEXT:    stb r12, 0(r3)
+; CHECK-BE-NEXT:    std r30, 0(r3)
 ; CHECK-BE-NEXT:    rlwinm r5, r5, 0, 27, 27
 ; CHECK-BE-NEXT:    stb r5, 0(r3)
 ; CHECK-BE-NEXT:    li r5, 2

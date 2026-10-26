@@ -1,5 +1,5 @@
-; RUN: llc -mcpu=cyclone -debug-only=machine-scheduler < %s 2>&1 | FileCheck %s --check-prefixes=COMMON,SDAG
-; RUN: llc -mcpu=cyclone -global-isel -debug-only=machine-scheduler < %s 2>&1 | FileCheck %s --check-prefixes=COMMON,GISEL
+; RUN: llc -mcpu=cyclone -enable-store-sequencing=false -debug-only=machine-scheduler < %s 2>&1 | FileCheck %s --check-prefixes=COMMON,SDAG
+; RUN: llc -mcpu=cyclone -global-isel -enable-store-sequencing=false -debug-only=machine-scheduler < %s 2>&1 | FileCheck %s --check-prefixes=COMMON,GISEL
 
 ; REQUIRES: asserts
 

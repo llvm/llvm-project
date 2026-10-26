@@ -156,14 +156,11 @@ define void @foo3(ptr %a, ptr readonly %b, ptr readonly %c) #0 {
 ; CHECK-NEXT:  .LBB2_1: # %for.body
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    lwz 8, 0(4)
-; CHECK-NEXT:    lwz 12, 12(5)
 ; CHECK-NEXT:    lwz 9, 4(4)
 ; CHECK-NEXT:    lwz 10, 8(4)
 ; CHECK-NEXT:    lwz 11, 12(4)
-; CHECK-NEXT:    stw 8, 32(1)
-; CHECK-NEXT:    rlwinm 8, 12, 29, 28, 29
+; CHECK-NEXT:    lwz 12, 12(5)
 ; CHECK-NEXT:    stw 6, 28(1)
-; CHECK-NEXT:    sub 8, 7, 8
 ; CHECK-NEXT:    stw 6, 24(1)
 ; CHECK-NEXT:    stw 6, 20(1)
 ; CHECK-NEXT:    stw 6, 16(1)
@@ -172,6 +169,9 @@ define void @foo3(ptr %a, ptr readonly %b, ptr readonly %c) #0 {
 ; CHECK-NEXT:    stw 10, 40(1)
 ; CHECK-NEXT:    subfic 0, 11, 32
 ; CHECK-NEXT:    stw 9, 36(1)
+; CHECK-NEXT:    stw 8, 32(1)
+; CHECK-NEXT:    rlwinm 8, 12, 29, 28, 29
+; CHECK-NEXT:    sub 8, 7, 8
 ; CHECK-NEXT:    lwz 9, 4(8)
 ; CHECK-NEXT:    lwz 10, 0(8)
 ; CHECK-NEXT:    lwz 12, 12(8)

@@ -1047,6 +1047,8 @@ define void @fir(ptr nocapture readonly %S, ptr nocapture readonly %pSrc, ptr no
 ; CHECK-NEXT:    vldrw.u32 q0, [r3], #8
 ; CHECK-NEXT:    ldrh.w r0, [r10, #12]
 ; CHECK-NEXT:    ldrh.w r7, [r10, #10]
+; CHECK-NEXT:    str r3, [sp, #16] @ 4-byte Spill
+; CHECK-NEXT:    adds r3, r5, #2
 ; CHECK-NEXT:    ldrh.w r4, [r10, #8]
 ; CHECK-NEXT:    ldrh.w r6, [r10, #6]
 ; CHECK-NEXT:    ldrh.w r9, [r10, #4]
@@ -1054,11 +1056,9 @@ define void @fir(ptr nocapture readonly %S, ptr nocapture readonly %pSrc, ptr no
 ; CHECK-NEXT:    ldrh.w r8, [r10]
 ; CHECK-NEXT:    vstrb.8 q0, [r1], #8
 ; CHECK-NEXT:    vldrw.u32 q0, [r5]
-; CHECK-NEXT:    str r3, [sp, #16] @ 4-byte Spill
-; CHECK-NEXT:    adds r3, r5, #2
 ; CHECK-NEXT:    vldrw.u32 q1, [r3]
-; CHECK-NEXT:    vmul.f16 q0, q0, r8
 ; CHECK-NEXT:    adds r3, r5, #6
+; CHECK-NEXT:    vmul.f16 q0, q0, r8
 ; CHECK-NEXT:    vfma.f16 q0, q1, r11
 ; CHECK-NEXT:    vldrw.u32 q1, [r5, #4]
 ; CHECK-NEXT:    vfma.f16 q0, q1, r9

@@ -156,8 +156,8 @@ define void @fcvtzu_v16f16_v16i32(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-NEXT:    uunpklo z1.s, z1.h
 ; VBITS_GE_256-NEXT:    fcvtzu z0.s, p0/m, z0.h
 ; VBITS_GE_256-NEXT:    fcvtzu z1.s, p0/m, z1.h
-; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x1]
 ; VBITS_GE_256-NEXT:    st1w { z1.s }, p0, [x1, x8, lsl #2]
+; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x1]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: fcvtzu_v16f16_v16i32:
@@ -260,8 +260,8 @@ define void @fcvtzu_v8f16_v8i64(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-NEXT:    uunpklo z1.d, z1.s
 ; VBITS_GE_256-NEXT:    fcvtzu z0.d, p0/m, z0.h
 ; VBITS_GE_256-NEXT:    fcvtzu z1.d, p0/m, z1.h
-; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x1]
 ; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x1, x8, lsl #3]
+; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x1]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: fcvtzu_v8f16_v8i64:
@@ -551,8 +551,8 @@ define void @fcvtzu_v8f32_v8i64(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-NEXT:    uunpklo z1.d, z1.s
 ; VBITS_GE_256-NEXT:    fcvtzu z0.d, p0/m, z0.s
 ; VBITS_GE_256-NEXT:    fcvtzu z1.d, p0/m, z1.s
-; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x1]
 ; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x1, x8, lsl #3]
+; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x1]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: fcvtzu_v8f32_v8i64:
@@ -1043,8 +1043,8 @@ define void @fcvtzs_v16f16_v16i32(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-NEXT:    uunpklo z1.s, z1.h
 ; VBITS_GE_256-NEXT:    fcvtzs z0.s, p0/m, z0.h
 ; VBITS_GE_256-NEXT:    fcvtzs z1.s, p0/m, z1.h
-; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x1]
 ; VBITS_GE_256-NEXT:    st1w { z1.s }, p0, [x1, x8, lsl #2]
+; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x1]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: fcvtzs_v16f16_v16i32:
@@ -1147,8 +1147,8 @@ define void @fcvtzs_v8f16_v8i64(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-NEXT:    uunpklo z1.d, z1.s
 ; VBITS_GE_256-NEXT:    fcvtzs z0.d, p0/m, z0.h
 ; VBITS_GE_256-NEXT:    fcvtzs z1.d, p0/m, z1.h
-; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x1]
 ; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x1, x8, lsl #3]
+; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x1]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: fcvtzs_v8f16_v8i64:
@@ -1438,8 +1438,8 @@ define void @fcvtzs_v8f32_v8i64(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-NEXT:    uunpklo z1.d, z1.s
 ; VBITS_GE_256-NEXT:    fcvtzs z0.d, p0/m, z0.s
 ; VBITS_GE_256-NEXT:    fcvtzs z1.d, p0/m, z1.s
-; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x1]
 ; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x1, x8, lsl #3]
+; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x1]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: fcvtzs_v8f32_v8i64:

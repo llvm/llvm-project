@@ -286,8 +286,8 @@ define <12 x float> @abp90c12(<12 x float> %a, <12 x float> %b, <12 x float> %c)
 ; CHECK-NEXT:    zip1 v0.4s, v0.4s, v3.4s
 ; CHECK-NEXT:    ext v1.16b, v2.16b, v1.16b, #8
 ; CHECK-NEXT:    mov v4.d[1], v2.d[0]
-; CHECK-NEXT:    str q0, [x8]
-; CHECK-NEXT:    stp q4, q1, [x8, #16]
+; CHECK-NEXT:    stp q0, q4, [x8]
+; CHECK-NEXT:    str q1, [x8, #32]
 ; CHECK-NEXT:    ret
 entry:
   %ar = shufflevector <12 x float> %a, <12 x float> poison, <6 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10>

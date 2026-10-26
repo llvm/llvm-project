@@ -16,20 +16,21 @@ define void @interleave3_v3f32(ptr %dst, ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:    bfxil x11, x8, #32, #32
 ; CHECK-NEXT:    str x9, [sp, #-48]!
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-NEXT:    lsr x9, x8, #32
-; CHECK-NEXT:    str x11, [sp, #16]
-; CHECK-NEXT:    lsr x11, x12, #32
 ; CHECK-NEXT:    str x12, [sp, #32]
+; CHECK-NEXT:    lsr x9, x8, #32
 ; CHECK-NEXT:    and x12, x13, #0xffffffff00000000
+; CHECK-NEXT:    str x11, [sp, #16]
+; CHECK-NEXT:    lsr x11, x11, #32
 ; CHECK-NEXT:    bfi x13, x9, #32, #32
-; CHECK-NEXT:    ldr w9, [sp, #4]
-; CHECK-NEXT:    bfi x8, x11, #32, #32
-; CHECK-NEXT:    ldr w11, [sp, #20]
+; CHECK-NEXT:    ldr w9, [sp, #36]
+; CHECK-NEXT:    orr x11, x11, x12
+; CHECK-NEXT:    ldr w12, [sp, #4]
 ; CHECK-NEXT:    str s0, [x0, #32]
-; CHECK-NEXT:    orr x9, x10, x9, lsl #32
-; CHECK-NEXT:    stp x8, x13, [x0]
-; CHECK-NEXT:    orr x10, x11, x12
-; CHECK-NEXT:    stp x10, x9, [x0, #16]
+; CHECK-NEXT:    bfi x8, x9, #32, #32
+; CHECK-NEXT:    stp x13, x11, [x0, #8]
+; CHECK-NEXT:    orr x9, x10, x12, lsl #32
+; CHECK-NEXT:    str x8, [x0]
+; CHECK-NEXT:    str x9, [x0, #24]
 ; CHECK-NEXT:    add sp, sp, #48
 ; CHECK-NEXT:    ret
   %vec0 = load <3 x float>, ptr %a, align 4
@@ -117,21 +118,21 @@ define void @interleave4_v3f32(ptr %dst, ptr %a, ptr %b, ptr %c, ptr %d) {
 ; CHECK-NEXT:    bfxil x8, x12, #0, #32
 ; CHECK-NEXT:    str x16, [sp, #16]
 ; CHECK-NEXT:    and x11, x11, #0xffffffff00000000
-; CHECK-NEXT:    extr x14, x14, x13, #32
-; CHECK-NEXT:    bfi x13, x12, #32, #32
+; CHECK-NEXT:    orr x10, x15, x10, lsl #32
 ; CHECK-NEXT:    ldr w16, [sp, #4]
+; CHECK-NEXT:    extr x14, x14, x13, #32
 ; CHECK-NEXT:    str x8, [sp, #32]
 ; CHECK-NEXT:    lsr x8, x8, #32
-; CHECK-NEXT:    ldr w12, [x4, #8]
+; CHECK-NEXT:    bfi x13, x12, #32, #32
+; CHECK-NEXT:    ldr w15, [x4, #8]
 ; CHECK-NEXT:    orr x8, x8, x11
 ; CHECK-NEXT:    ldr w11, [sp, #52]
+; CHECK-NEXT:    stp x14, x10, [x0, #24]
 ; CHECK-NEXT:    stp x13, x8, [x0, #8]
-; CHECK-NEXT:    orr x8, x15, x10, lsl #32
-; CHECK-NEXT:    orr x10, x16, x12, lsl #32
+; CHECK-NEXT:    orr x8, x16, x15, lsl #32
 ; CHECK-NEXT:    bfi x9, x11, #32, #32
-; CHECK-NEXT:    stp x14, x8, [x0, #24]
 ; CHECK-NEXT:    str x9, [x0]
-; CHECK-NEXT:    str x10, [x0, #40]
+; CHECK-NEXT:    str x8, [x0, #40]
 ; CHECK-NEXT:    add sp, sp, #64
 ; CHECK-NEXT:    ret
   %vec0 = load <3 x float>, ptr %a, align 4
@@ -151,56 +152,56 @@ define void @interleave4_v5f32(ptr %dst, ptr %a, ptr %b, ptr %c, ptr %d) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 128
 ; CHECK-NEXT:    ldr w9, [x3, #16]
 ; CHECK-NEXT:    ldr w8, [x2, #16]
-; CHECK-NEXT:    ldp x17, x12, [x2]
-; CHECK-NEXT:    orr x16, x8, x9, lsl #32
-; CHECK-NEXT:    ldp x13, x9, [x3]
 ; CHECK-NEXT:    ldp x11, x10, [x1]
+; CHECK-NEXT:    orr x16, x8, x9, lsl #32
+; CHECK-NEXT:    ldp x17, x12, [x2]
+; CHECK-NEXT:    ldp x13, x9, [x3]
 ; CHECK-NEXT:    ldp x14, x15, [x4]
+; CHECK-NEXT:    mov x18, x11
 ; CHECK-NEXT:    str x16, [sp, #8]
+; CHECK-NEXT:    bfi x18, x17, #32, #32
 ; CHECK-NEXT:    ldr w16, [x1, #16]
 ; CHECK-NEXT:    mov x1, x12
 ; CHECK-NEXT:    mov x2, x9
 ; CHECK-NEXT:    bfxil x1, x10, #32, #32
-; CHECK-NEXT:    mov x18, x11
 ; CHECK-NEXT:    bfi x2, x15, #32, #32
-; CHECK-NEXT:    bfi x18, x17, #32, #32
 ; CHECK-NEXT:    extr x16, x16, x15, #32
 ; CHECK-NEXT:    lsr x15, x15, #32
-; CHECK-NEXT:    stp x2, x1, [sp, #32]
-; CHECK-NEXT:    mov x1, x13
-; CHECK-NEXT:    bfi x1, x14, #32, #32
-; CHECK-NEXT:    str x18, [sp, #96]
-; CHECK-NEXT:    mov x18, x13
 ; CHECK-NEXT:    str x16, [sp]
 ; CHECK-NEXT:    extr x16, x10, x14, #32
+; CHECK-NEXT:    extr x15, x15, x9, #32
+; CHECK-NEXT:    str x18, [sp, #96]
+; CHECK-NEXT:    mov x18, x13
+; CHECK-NEXT:    stp x2, x1, [sp, #32]
+; CHECK-NEXT:    mov x1, x13
 ; CHECK-NEXT:    bfxil x18, x17, #32, #32
-; CHECK-NEXT:    str x1, [sp, #104]
+; CHECK-NEXT:    bfi x1, x14, #32, #32
 ; CHECK-NEXT:    lsr x17, x17, #32
 ; CHECK-NEXT:    and x14, x14, #0xffffffff00000000
-; CHECK-NEXT:    ldr w5, [sp, #108]
 ; CHECK-NEXT:    stp x18, x16, [sp, #64]
 ; CHECK-NEXT:    ldr w18, [sp, #12]
+; CHECK-NEXT:    str x1, [sp, #104]
 ; CHECK-NEXT:    ldr w3, [sp, #68]
 ; CHECK-NEXT:    extr x16, x17, x11, #32
+; CHECK-NEXT:    ldr w5, [sp, #108]
 ; CHECK-NEXT:    ldr w17, [x4, #16]
-; CHECK-NEXT:    bfi x13, x5, #32, #32
-; CHECK-NEXT:    ldr w5, [sp, #36]
 ; CHECK-NEXT:    ldr w1, [sp, #4]
 ; CHECK-NEXT:    ldr w2, [sp, #76]
 ; CHECK-NEXT:    ldr w4, [sp, #100]
 ; CHECK-NEXT:    orr x14, x3, x14
+; CHECK-NEXT:    bfi x13, x5, #32, #32
+; CHECK-NEXT:    ldr w5, [sp, #36]
 ; CHECK-NEXT:    ldr w3, [sp, #44]
-; CHECK-NEXT:    extr x15, x15, x9, #32
-; CHECK-NEXT:    bfi x9, x5, #32, #32
 ; CHECK-NEXT:    bfi x11, x4, #32, #32
 ; CHECK-NEXT:    orr x12, x2, x12, lsl #32
 ; CHECK-NEXT:    orr x8, x1, x8, lsl #32
+; CHECK-NEXT:    bfi x9, x5, #32, #32
 ; CHECK-NEXT:    extr x10, x3, x10, #32
+; CHECK-NEXT:    stp x13, x16, [x0, #8]
+; CHECK-NEXT:    stp x14, x12, [x0, #24]
 ; CHECK-NEXT:    str x9, [x0, #40]
 ; CHECK-NEXT:    orr x9, x18, x17, lsl #32
-; CHECK-NEXT:    stp x13, x16, [x0, #8]
 ; CHECK-NEXT:    stp x10, x15, [x0, #48]
-; CHECK-NEXT:    stp x14, x12, [x0, #24]
 ; CHECK-NEXT:    str x11, [x0]
 ; CHECK-NEXT:    stp x8, x9, [x0, #64]
 ; CHECK-NEXT:    add sp, sp, #128

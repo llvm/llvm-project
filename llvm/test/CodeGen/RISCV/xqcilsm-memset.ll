@@ -117,10 +117,10 @@ define void @test2d(ptr nocapture %p) nounwind {
 ; RV32I-NEXT:    lui a3, 678490
 ; RV32I-NEXT:    addi a2, a2, 1445
 ; RV32I-NEXT:    addi a3, a3, 1445
-; RV32I-NEXT:    sw a3, 0(a0)
 ; RV32I-NEXT:    sw a3, 4(a0)
 ; RV32I-NEXT:    sh a2, 8(a0)
 ; RV32I-NEXT:    sb a1, 10(a0)
+; RV32I-NEXT:    sw a3, 0(a0)
 ; RV32I-NEXT:    ret
 ;
 ; RV32IXQCILSM-LABEL: test2d:

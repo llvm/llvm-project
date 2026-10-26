@@ -223,21 +223,21 @@ define <4 x i256> @load_sext_v4i32i256(ptr %ap) {
 ; CHECK-NEXT:    fmov x9, d1
 ; CHECK-NEXT:    mov z1.d, z1.d[1]
 ; CHECK-NEXT:    fmov x11, d0
+; CHECK-NEXT:    asr x10, x9, #63
 ; CHECK-NEXT:    mov z0.d, z0.d[1]
-; CHECK-NEXT:    asr x10, x9, #63
-; CHECK-NEXT:    stp x9, x10, [x8]
-; CHECK-NEXT:    fmov x9, d1
-; CHECK-NEXT:    asr x12, x11, #63
 ; CHECK-NEXT:    stp x10, x10, [x8, #16]
-; CHECK-NEXT:    stp x11, x12, [x8, #64]
-; CHECK-NEXT:    fmov x11, d0
+; CHECK-NEXT:    stp x9, x10, [x8]
+; CHECK-NEXT:    asr x9, x11, #63
+; CHECK-NEXT:    fmov x10, d1
+; CHECK-NEXT:    stp x11, x9, [x8, #64]
+; CHECK-NEXT:    stp x9, x9, [x8, #80]
+; CHECK-NEXT:    fmov x9, d0
+; CHECK-NEXT:    asr x11, x10, #63
+; CHECK-NEXT:    stp x10, x11, [x8, #32]
 ; CHECK-NEXT:    asr x10, x9, #63
-; CHECK-NEXT:    stp x12, x12, [x8, #80]
-; CHECK-NEXT:    stp x10, x10, [x8, #48]
-; CHECK-NEXT:    asr x12, x11, #63
-; CHECK-NEXT:    stp x9, x10, [x8, #32]
-; CHECK-NEXT:    stp x12, x12, [x8, #112]
-; CHECK-NEXT:    stp x11, x12, [x8, #96]
+; CHECK-NEXT:    stp x11, x11, [x8, #48]
+; CHECK-NEXT:    stp x9, x10, [x8, #96]
+; CHECK-NEXT:    stp x10, x10, [x8, #112]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: load_sext_v4i32i256:
@@ -247,20 +247,22 @@ define <4 x i256> @load_sext_v4i32i256(ptr %ap) {
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 32
 ; NONEON-NOSVE-NEXT:    ldp d1, d0, [sp]
 ; NONEON-NOSVE-NEXT:    stp d0, d1, [sp, #16]
-; NONEON-NOSVE-NEXT:    ldpsw x11, x9, [sp, #16]
-; NONEON-NOSVE-NEXT:    ldpsw x12, x13, [sp, #24]
-; NONEON-NOSVE-NEXT:    asr x10, x9, #63
-; NONEON-NOSVE-NEXT:    asr x14, x11, #63
-; NONEON-NOSVE-NEXT:    stp x10, x10, [x8, #112]
-; NONEON-NOSVE-NEXT:    stp x9, x10, [x8, #96]
+; NONEON-NOSVE-NEXT:    ldpsw x9, x10, [sp, #20]
+; NONEON-NOSVE-NEXT:    ldrsw x12, [sp, #16]
+; NONEON-NOSVE-NEXT:    ldrsw x13, [sp, #28]
+; NONEON-NOSVE-NEXT:    asr x11, x9, #63
+; NONEON-NOSVE-NEXT:    str x10, [x8]
+; NONEON-NOSVE-NEXT:    asr x14, x12, #63
+; NONEON-NOSVE-NEXT:    asr x10, x10, #63
+; NONEON-NOSVE-NEXT:    stp x9, x11, [x8, #96]
 ; NONEON-NOSVE-NEXT:    asr x9, x13, #63
-; NONEON-NOSVE-NEXT:    asr x10, x12, #63
+; NONEON-NOSVE-NEXT:    stp x11, x11, [x8, #112]
 ; NONEON-NOSVE-NEXT:    stp x14, x14, [x8, #80]
-; NONEON-NOSVE-NEXT:    stp x11, x14, [x8, #64]
+; NONEON-NOSVE-NEXT:    stp x12, x14, [x8, #64]
 ; NONEON-NOSVE-NEXT:    stp x9, x9, [x8, #48]
 ; NONEON-NOSVE-NEXT:    stp x13, x9, [x8, #32]
 ; NONEON-NOSVE-NEXT:    stp x10, x10, [x8, #16]
-; NONEON-NOSVE-NEXT:    stp x12, x10, [x8]
+; NONEON-NOSVE-NEXT:    str x10, [x8, #8]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #32
 ; NONEON-NOSVE-NEXT:    ret
   %a = load <4 x i32>, ptr %ap
@@ -330,9 +332,9 @@ define <16 x i64> @load_zext_v16i16i64(ptr %ap)  {
 ; NONEON-NOSVE-NEXT:    stp d0, d1, [sp, #32]
 ; NONEON-NOSVE-NEXT:    ldp d1, d0, [sp, #16]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #42]
+; NONEON-NOSVE-NEXT:    stp d0, d1, [sp, #48]
 ; NONEON-NOSVE-NEXT:    stp w8, wzr, [sp, #120]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #40]
-; NONEON-NOSVE-NEXT:    stp d0, d1, [sp, #48]
 ; NONEON-NOSVE-NEXT:    stp w8, wzr, [sp, #112]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #46]
 ; NONEON-NOSVE-NEXT:    stp w8, wzr, [sp, #104]

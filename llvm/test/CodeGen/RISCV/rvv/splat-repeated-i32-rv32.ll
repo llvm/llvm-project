@@ -23,8 +23,8 @@ define <vscale x 1 x i64> @splat_different_i32(i32 %low, i32 %high) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    sw a0, 8(sp)
 ; CHECK-NEXT:    sw a1, 12(sp)
+; CHECK-NEXT:    sw a0, 8(sp)
 ; CHECK-NEXT:    addi a0, sp, 8
 ; CHECK-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vlse64.v v8, (a0), zero
@@ -59,8 +59,8 @@ define <vscale x 1 x i64> @splat_repeated_i32_tu(<vscale x 1 x i64> %passthru, i
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    sw a0, 8(sp)
 ; CHECK-NEXT:    sw a0, 12(sp)
+; CHECK-NEXT:    sw a0, 8(sp)
 ; CHECK-NEXT:    addi a0, sp, 8
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m1, tu, ma
 ; CHECK-NEXT:    vlse64.v v8, (a0), zero
@@ -166,8 +166,8 @@ define void @splat_equal_constant_defined_passthru(ptr %in, ptr %out, i32 %vl) {
 ; CHECK-NEXT:    vle64.v v8, (a0)
 ; CHECK-NEXT:    lui a0, 74565
 ; CHECK-NEXT:    addi a0, a0, 1656
-; CHECK-NEXT:    sw a0, 8(sp)
 ; CHECK-NEXT:    sw a0, 12(sp)
+; CHECK-NEXT:    sw a0, 8(sp)
 ; CHECK-NEXT:    addi a0, sp, 8
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m2, tu, ma
 ; CHECK-NEXT:    vlse64.v v8, (a0), zero

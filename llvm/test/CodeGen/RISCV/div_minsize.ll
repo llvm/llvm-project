@@ -98,8 +98,8 @@ define i128 @i128_sdiv(i128 %arg0) minsize nounwind {
 ; RV32IM-NEXT:    or a2, a6, a2
 ; RV32IM-NEXT:    sw a5, 0(a0)
 ; RV32IM-NEXT:    sw a3, 4(a0)
-; RV32IM-NEXT:    sw a2, 8(a0)
 ; RV32IM-NEXT:    sw a1, 12(a0)
+; RV32IM-NEXT:    sw a2, 8(a0)
 ; RV32IM-NEXT:    ret
 ;
 ; RV64IM-LABEL: i128_sdiv:
@@ -178,8 +178,8 @@ define i256 @i256_sdiv(i256 %arg0) minsize nounwind {
 ; RV32IM-NEXT:    sw t1, 12(a0)
 ; RV32IM-NEXT:    sw t2, 16(a0)
 ; RV32IM-NEXT:    sw a7, 20(a0)
-; RV32IM-NEXT:    sw a6, 24(a0)
 ; RV32IM-NEXT:    sw a4, 28(a0)
+; RV32IM-NEXT:    sw a6, 24(a0)
 ; RV32IM-NEXT:    ret
 ;
 ; RV64IM-LABEL: i256_sdiv:
@@ -210,8 +210,8 @@ define i256 @i256_sdiv(i256 %arg0) minsize nounwind {
 ; RV64IM-NEXT:    or a2, a6, a2
 ; RV64IM-NEXT:    sd a5, 0(a0)
 ; RV64IM-NEXT:    sd a3, 8(a0)
-; RV64IM-NEXT:    sd a2, 16(a0)
 ; RV64IM-NEXT:    sd a1, 24(a0)
+; RV64IM-NEXT:    sd a2, 16(a0)
 ; RV64IM-NEXT:    ret
   %div = sdiv i256 %arg0, 4
   ret i256 %div

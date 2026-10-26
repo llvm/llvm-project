@@ -171,9 +171,17 @@ define dso_local { ppc_fp128, ppc_fp128 } @fp128CmplxRetCallee()  {
 ; 32BIT-NEXT:    lis 6, 16382
 ; 32BIT-NEXT:    li 3, -1
 ; 32BIT-NEXT:    li 4, -2
-; 32BIT-NEXT:    stw 3, -44(1)
+; 32BIT-NEXT:    stw 3, -28(1)
 ; 32BIT-NEXT:    ori 5, 5, 65535
 ; 32BIT-NEXT:    ori 6, 6, 65535
+; 32BIT-NEXT:    stw 3, -20(1)
+; 32BIT-NEXT:    stw 3, -24(1)
+; 32BIT-NEXT:    stw 3, -12(1)
+; 32BIT-NEXT:    stw 4, -4(1)
+; 32BIT-NEXT:    stw 3, -8(1)
+; 32BIT-NEXT:    stw 5, -32(1)
+; 32BIT-NEXT:    stw 6, -16(1)
+; 32BIT-NEXT:    stw 3, -44(1)
 ; 32BIT-NEXT:    stw 3, -48(1)
 ; 32BIT-NEXT:    stw 4, -52(1)
 ; 32BIT-NEXT:    stw 3, -56(1)
@@ -185,14 +193,6 @@ define dso_local { ppc_fp128, ppc_fp128 } @fp128CmplxRetCallee()  {
 ; 32BIT-NEXT:    lfd 4, -56(1)
 ; 32BIT-NEXT:    lfd 1, -40(1)
 ; 32BIT-NEXT:    lfd 3, -64(1)
-; 32BIT-NEXT:    stw 3, -28(1)
-; 32BIT-NEXT:    stw 3, -20(1)
-; 32BIT-NEXT:    stw 3, -24(1)
-; 32BIT-NEXT:    stw 3, -12(1)
-; 32BIT-NEXT:    stw 4, -4(1)
-; 32BIT-NEXT:    stw 3, -8(1)
-; 32BIT-NEXT:    stw 5, -32(1)
-; 32BIT-NEXT:    stw 6, -16(1)
 ; 32BIT-NEXT:    blr
 ;
 ; 64BIT-LABEL: fp128CmplxRetCallee:

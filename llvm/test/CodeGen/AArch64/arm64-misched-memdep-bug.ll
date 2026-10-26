@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: llc < %s -mtriple=arm64-linux-gnu -mcpu=cortex-a57 -enable-misched -verify-misched -debug-only=machine-scheduler -o - 2>&1 > /dev/null | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-linux-gnu -mcpu=cortex-a57 -enable-misched -enable-store-sequencing=false -verify-misched -debug-only=machine-scheduler -o - 2>&1 > /dev/null | FileCheck %s
 ;
 ; Test for bug in misched memory dependency calculation.
 ;

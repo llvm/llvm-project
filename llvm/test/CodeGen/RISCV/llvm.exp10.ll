@@ -155,8 +155,8 @@ define <3 x half> @exp10_v3f16(<3 x half> %x) {
 ; RV32IFD-NEXT:    call exp10f
 ; RV32IFD-NEXT:    call __truncsfhf2
 ; RV32IFD-NEXT:    fmv.x.w a0, fa0
-; RV32IFD-NEXT:    sw s1, 0(s0)
 ; RV32IFD-NEXT:    sh a0, 4(s0)
+; RV32IFD-NEXT:    sw s1, 0(s0)
 ; RV32IFD-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
 ; RV32IFD-NEXT:    lw s0, 40(sp) # 4-byte Folded Reload
 ; RV32IFD-NEXT:    lw s1, 36(sp) # 4-byte Folded Reload
@@ -211,8 +211,8 @@ define <3 x half> @exp10_v3f16(<3 x half> %x) {
 ; RV64IFD-NEXT:    call exp10f
 ; RV64IFD-NEXT:    call __truncsfhf2
 ; RV64IFD-NEXT:    fmv.x.w a0, fa0
-; RV64IFD-NEXT:    sw s1, 0(s0)
 ; RV64IFD-NEXT:    sh a0, 4(s0)
+; RV64IFD-NEXT:    sw s1, 0(s0)
 ; RV64IFD-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
@@ -283,11 +283,11 @@ define <4 x half> @exp10_v4f16(<4 x half> %x) {
 ; RV32IFD-NEXT:    fmv.x.w s2, fs2
 ; RV32IFD-NEXT:    fmv.x.w s3, fs3
 ; RV32IFD-NEXT:    call __truncsfhf2
-; RV32IFD-NEXT:    fmv.x.w a0, fa0
-; RV32IFD-NEXT:    sh s1, 0(s0)
 ; RV32IFD-NEXT:    sh s2, 2(s0)
+; RV32IFD-NEXT:    fmv.x.w a0, fa0
 ; RV32IFD-NEXT:    sh s3, 4(s0)
 ; RV32IFD-NEXT:    sh a0, 6(s0)
+; RV32IFD-NEXT:    sh s1, 0(s0)
 ; RV32IFD-NEXT:    lw ra, 60(sp) # 4-byte Folded Reload
 ; RV32IFD-NEXT:    lw s0, 56(sp) # 4-byte Folded Reload
 ; RV32IFD-NEXT:    lw s1, 52(sp) # 4-byte Folded Reload
@@ -357,11 +357,11 @@ define <4 x half> @exp10_v4f16(<4 x half> %x) {
 ; RV64IFD-NEXT:    fmv.x.w s2, fs1
 ; RV64IFD-NEXT:    fmv.x.w s3, fs0
 ; RV64IFD-NEXT:    call __truncsfhf2
-; RV64IFD-NEXT:    fmv.x.w a0, fa0
-; RV64IFD-NEXT:    sh s1, 0(s0)
 ; RV64IFD-NEXT:    sh s2, 2(s0)
+; RV64IFD-NEXT:    fmv.x.w a0, fa0
 ; RV64IFD-NEXT:    sh s3, 4(s0)
 ; RV64IFD-NEXT:    sh a0, 6(s0)
+; RV64IFD-NEXT:    sh s1, 0(s0)
 ; RV64IFD-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    ld s1, 40(sp) # 8-byte Folded Reload
@@ -498,9 +498,9 @@ define <3 x float> @exp10_v3f32(<3 x float> %x) {
 ; RV32IFD-NEXT:    fmv.s fs1, fa0
 ; RV32IFD-NEXT:    fmv.s fa0, fs0
 ; RV32IFD-NEXT:    call exp10f
-; RV32IFD-NEXT:    fsw fs2, 0(s0)
 ; RV32IFD-NEXT:    fsw fs1, 4(s0)
 ; RV32IFD-NEXT:    fsw fa0, 8(s0)
+; RV32IFD-NEXT:    fsw fs2, 0(s0)
 ; RV32IFD-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32IFD-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32IFD-NEXT:    fld fs0, 16(sp) # 8-byte Folded Reload
@@ -544,8 +544,8 @@ define <3 x float> @exp10_v3f32(<3 x float> %x) {
 ; RV64IFD-NEXT:    or s1, a0, s1
 ; RV64IFD-NEXT:    fmv.s fa0, fs0
 ; RV64IFD-NEXT:    call exp10f
-; RV64IFD-NEXT:    sd s1, 0(s0)
 ; RV64IFD-NEXT:    fsw fa0, 8(s0)
+; RV64IFD-NEXT:    sd s1, 0(s0)
 ; RV64IFD-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
@@ -594,10 +594,10 @@ define <4 x float> @exp10_v4f32(<4 x float> %x) {
 ; RV32IFD-NEXT:    fmv.s fs1, fa0
 ; RV32IFD-NEXT:    fmv.s fa0, fs0
 ; RV32IFD-NEXT:    call exp10f
-; RV32IFD-NEXT:    fsw fs3, 0(s0)
 ; RV32IFD-NEXT:    fsw fs2, 4(s0)
 ; RV32IFD-NEXT:    fsw fs1, 8(s0)
 ; RV32IFD-NEXT:    fsw fa0, 12(s0)
+; RV32IFD-NEXT:    fsw fs3, 0(s0)
 ; RV32IFD-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
 ; RV32IFD-NEXT:    lw s0, 40(sp) # 4-byte Folded Reload
 ; RV32IFD-NEXT:    fld fs0, 32(sp) # 8-byte Folded Reload
@@ -644,10 +644,10 @@ define <4 x float> @exp10_v4f32(<4 x float> %x) {
 ; RV64IFD-NEXT:    fmv.s fs1, fa0
 ; RV64IFD-NEXT:    fmv.s fa0, fs0
 ; RV64IFD-NEXT:    call exp10f
-; RV64IFD-NEXT:    fsw fs3, 0(s0)
 ; RV64IFD-NEXT:    fsw fs2, 4(s0)
 ; RV64IFD-NEXT:    fsw fs1, 8(s0)
 ; RV64IFD-NEXT:    fsw fa0, 12(s0)
+; RV64IFD-NEXT:    fsw fs3, 0(s0)
 ; RV64IFD-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    fld fs0, 24(sp) # 8-byte Folded Reload
@@ -756,9 +756,9 @@ define <3 x double> @exp10_v3f64(<3 x double> %x) {
 ; RV32IFD-NEXT:    fmv.d fs1, fa0
 ; RV32IFD-NEXT:    fmv.d fa0, fs0
 ; RV32IFD-NEXT:    call exp10
-; RV32IFD-NEXT:    fsd fs2, 0(s0)
 ; RV32IFD-NEXT:    fsd fs1, 8(s0)
 ; RV32IFD-NEXT:    fsd fa0, 16(s0)
+; RV32IFD-NEXT:    fsd fs2, 0(s0)
 ; RV32IFD-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32IFD-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32IFD-NEXT:    fld fs0, 16(sp) # 8-byte Folded Reload
@@ -797,9 +797,9 @@ define <3 x double> @exp10_v3f64(<3 x double> %x) {
 ; RV64IFD-NEXT:    fmv.d fs1, fa0
 ; RV64IFD-NEXT:    fmv.d fa0, fs0
 ; RV64IFD-NEXT:    call exp10
-; RV64IFD-NEXT:    fsd fs2, 0(s0)
 ; RV64IFD-NEXT:    fsd fs1, 8(s0)
 ; RV64IFD-NEXT:    fsd fa0, 16(s0)
+; RV64IFD-NEXT:    fsd fs2, 0(s0)
 ; RV64IFD-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    fld fs0, 24(sp) # 8-byte Folded Reload
@@ -848,10 +848,10 @@ define <4 x double> @exp10_v4f64(<4 x double> %x) {
 ; RV32IFD-NEXT:    fmv.d fs1, fa0
 ; RV32IFD-NEXT:    fmv.d fa0, fs0
 ; RV32IFD-NEXT:    call exp10
-; RV32IFD-NEXT:    fsd fs3, 0(s0)
 ; RV32IFD-NEXT:    fsd fs2, 8(s0)
 ; RV32IFD-NEXT:    fsd fs1, 16(s0)
 ; RV32IFD-NEXT:    fsd fa0, 24(s0)
+; RV32IFD-NEXT:    fsd fs3, 0(s0)
 ; RV32IFD-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
 ; RV32IFD-NEXT:    lw s0, 40(sp) # 4-byte Folded Reload
 ; RV32IFD-NEXT:    fld fs0, 32(sp) # 8-byte Folded Reload
@@ -898,10 +898,10 @@ define <4 x double> @exp10_v4f64(<4 x double> %x) {
 ; RV64IFD-NEXT:    fmv.d fs1, fa0
 ; RV64IFD-NEXT:    fmv.d fa0, fs0
 ; RV64IFD-NEXT:    call exp10
-; RV64IFD-NEXT:    fsd fs3, 0(s0)
 ; RV64IFD-NEXT:    fsd fs2, 8(s0)
 ; RV64IFD-NEXT:    fsd fs1, 16(s0)
 ; RV64IFD-NEXT:    fsd fa0, 24(s0)
+; RV64IFD-NEXT:    fsd fs3, 0(s0)
 ; RV64IFD-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    fld fs0, 24(sp) # 8-byte Folded Reload

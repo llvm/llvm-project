@@ -23,8 +23,8 @@ define i32 @splat_vector_split_i64() {
 ; CHECK-NEXT:    vor.vv v10, v12, v10
 ; CHECK-NEXT:    vsrl.vi v12, v8, 24
 ; CHECK-NEXT:    lui a3, 1044480
-; CHECK-NEXT:    sw a3, 8(sp)
 ; CHECK-NEXT:    sw zero, 12(sp)
+; CHECK-NEXT:    sw a3, 8(sp)
 ; CHECK-NEXT:    lui a3, 4080
 ; CHECK-NEXT:    addi a4, sp, 8
 ; CHECK-NEXT:    vand.vx v12, v12, a3

@@ -25,8 +25,8 @@ define void @test_load_v4i8_align1(ptr %ret_ptr, ptr %a_ptr) {
 ; CHECK-RV32-NEXT:    ppaire.b a3, a6, a7
 ; CHECK-RV32-NEXT:    pack a2, a2, a4
 ; CHECK-RV32-NEXT:    pack a1, a3, a1
-; CHECK-RV32-NEXT:    sw a2, 0(a0)
 ; CHECK-RV32-NEXT:    sw a1, 4(a0)
+; CHECK-RV32-NEXT:    sw a2, 0(a0)
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64-LABEL: test_load_v4i8_align1:
@@ -53,8 +53,8 @@ define void @test_load_v4i8_align1(ptr %ret_ptr, ptr %a_ptr) {
 ; UNALIGNED-RV32:       # %bb.0:
 ; UNALIGNED-RV32-NEXT:    lw a2, 0(a1)
 ; UNALIGNED-RV32-NEXT:    lw a1, 4(a1)
-; UNALIGNED-RV32-NEXT:    sw a2, 0(a0)
 ; UNALIGNED-RV32-NEXT:    sw a1, 4(a0)
+; UNALIGNED-RV32-NEXT:    sw a2, 0(a0)
 ; UNALIGNED-RV32-NEXT:    ret
 ;
 ; UNALIGNED-RV64-LABEL: test_load_v4i8_align1:
@@ -74,18 +74,18 @@ define void @test_store_v4i8_align1(ptr %a_ptr, ptr %b_ptr) {
 ; CHECK-RV32-NEXT:    lw a0, 0(a0)
 ; CHECK-RV32-NEXT:    srli a3, a2, 24
 ; CHECK-RV32-NEXT:    srli a4, a2, 16
-; CHECK-RV32-NEXT:    srli a5, a2, 8
-; CHECK-RV32-NEXT:    srli a6, a0, 24
-; CHECK-RV32-NEXT:    srli a7, a0, 16
+; CHECK-RV32-NEXT:    srli a5, a0, 24
+; CHECK-RV32-NEXT:    srli a6, a0, 16
+; CHECK-RV32-NEXT:    sb a0, 0(a1)
+; CHECK-RV32-NEXT:    sb a6, 2(a1)
+; CHECK-RV32-NEXT:    sb a5, 3(a1)
 ; CHECK-RV32-NEXT:    sb a2, 4(a1)
-; CHECK-RV32-NEXT:    sb a5, 5(a1)
+; CHECK-RV32-NEXT:    srli a2, a2, 8
+; CHECK-RV32-NEXT:    srli a0, a0, 8
+; CHECK-RV32-NEXT:    sb a2, 5(a1)
 ; CHECK-RV32-NEXT:    sb a4, 6(a1)
 ; CHECK-RV32-NEXT:    sb a3, 7(a1)
-; CHECK-RV32-NEXT:    srli a2, a0, 8
-; CHECK-RV32-NEXT:    sb a0, 0(a1)
-; CHECK-RV32-NEXT:    sb a2, 1(a1)
-; CHECK-RV32-NEXT:    sb a7, 2(a1)
-; CHECK-RV32-NEXT:    sb a6, 3(a1)
+; CHECK-RV32-NEXT:    sb a0, 1(a1)
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64-LABEL: test_store_v4i8_align1:
@@ -97,23 +97,23 @@ define void @test_store_v4i8_align1(ptr %a_ptr, ptr %b_ptr) {
 ; CHECK-RV64-NEXT:    srli a5, a0, 32
 ; CHECK-RV64-NEXT:    srli a6, a0, 24
 ; CHECK-RV64-NEXT:    srli a7, a0, 16
-; CHECK-RV64-NEXT:    sb a5, 4(a1)
 ; CHECK-RV64-NEXT:    sb a4, 5(a1)
 ; CHECK-RV64-NEXT:    sb a3, 6(a1)
 ; CHECK-RV64-NEXT:    sb a2, 7(a1)
 ; CHECK-RV64-NEXT:    srli a2, a0, 8
 ; CHECK-RV64-NEXT:    sb a0, 0(a1)
-; CHECK-RV64-NEXT:    sb a2, 1(a1)
 ; CHECK-RV64-NEXT:    sb a7, 2(a1)
 ; CHECK-RV64-NEXT:    sb a6, 3(a1)
+; CHECK-RV64-NEXT:    sb a5, 4(a1)
+; CHECK-RV64-NEXT:    sb a2, 1(a1)
 ; CHECK-RV64-NEXT:    ret
 ;
 ; UNALIGNED-RV32-LABEL: test_store_v4i8_align1:
 ; UNALIGNED-RV32:       # %bb.0:
 ; UNALIGNED-RV32-NEXT:    lw a2, 0(a0)
 ; UNALIGNED-RV32-NEXT:    lw a0, 4(a0)
-; UNALIGNED-RV32-NEXT:    sw a2, 0(a1)
 ; UNALIGNED-RV32-NEXT:    sw a0, 4(a1)
+; UNALIGNED-RV32-NEXT:    sw a2, 0(a1)
 ; UNALIGNED-RV32-NEXT:    ret
 ;
 ; UNALIGNED-RV64-LABEL: test_store_v4i8_align1:
@@ -135,8 +135,8 @@ define void @test_load_v4i8_align2(ptr %ret_ptr, ptr %a_ptr) {
 ; CHECK-RV32-NEXT:    lhu a1, 6(a1)
 ; CHECK-RV32-NEXT:    pack a2, a2, a3
 ; CHECK-RV32-NEXT:    pack a1, a4, a1
-; CHECK-RV32-NEXT:    sw a2, 0(a0)
 ; CHECK-RV32-NEXT:    sw a1, 4(a0)
+; CHECK-RV32-NEXT:    sw a2, 0(a0)
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64-LABEL: test_load_v4i8_align2:
@@ -158,8 +158,8 @@ define void @test_load_v4i8_align2(ptr %ret_ptr, ptr %a_ptr) {
 ; UNALIGNED-RV32:       # %bb.0:
 ; UNALIGNED-RV32-NEXT:    lw a2, 0(a1)
 ; UNALIGNED-RV32-NEXT:    lw a1, 4(a1)
-; UNALIGNED-RV32-NEXT:    sw a2, 0(a0)
 ; UNALIGNED-RV32-NEXT:    sw a1, 4(a0)
+; UNALIGNED-RV32-NEXT:    sw a2, 0(a0)
 ; UNALIGNED-RV32-NEXT:    ret
 ;
 ; UNALIGNED-RV64-LABEL: test_load_v4i8_align2:
@@ -180,9 +180,9 @@ define void @test_store_v4i8_align2(ptr %a_ptr, ptr %b_ptr) {
 ; CHECK-RV32-NEXT:    srli a3, a0, 16
 ; CHECK-RV32-NEXT:    srli a4, a2, 16
 ; CHECK-RV32-NEXT:    sh a2, 0(a1)
-; CHECK-RV32-NEXT:    sh a4, 2(a1)
 ; CHECK-RV32-NEXT:    sh a0, 4(a1)
 ; CHECK-RV32-NEXT:    sh a3, 6(a1)
+; CHECK-RV32-NEXT:    sh a4, 2(a1)
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64-LABEL: test_store_v4i8_align2:
@@ -192,17 +192,17 @@ define void @test_store_v4i8_align2(ptr %a_ptr, ptr %b_ptr) {
 ; CHECK-RV64-NEXT:    srli a3, a0, 32
 ; CHECK-RV64-NEXT:    srli a4, a0, 16
 ; CHECK-RV64-NEXT:    sh a0, 0(a1)
-; CHECK-RV64-NEXT:    sh a4, 2(a1)
 ; CHECK-RV64-NEXT:    sh a3, 4(a1)
 ; CHECK-RV64-NEXT:    sh a2, 6(a1)
+; CHECK-RV64-NEXT:    sh a4, 2(a1)
 ; CHECK-RV64-NEXT:    ret
 ;
 ; UNALIGNED-RV32-LABEL: test_store_v4i8_align2:
 ; UNALIGNED-RV32:       # %bb.0:
 ; UNALIGNED-RV32-NEXT:    lw a2, 0(a0)
 ; UNALIGNED-RV32-NEXT:    lw a0, 4(a0)
-; UNALIGNED-RV32-NEXT:    sw a2, 0(a1)
 ; UNALIGNED-RV32-NEXT:    sw a0, 4(a1)
+; UNALIGNED-RV32-NEXT:    sw a2, 0(a1)
 ; UNALIGNED-RV32-NEXT:    ret
 ;
 ; UNALIGNED-RV64-LABEL: test_store_v4i8_align2:
@@ -220,8 +220,8 @@ define void @test_load_v4i8_align4(ptr %ret_ptr, ptr %a_ptr) {
 ; CHECK-RV32:       # %bb.0:
 ; CHECK-RV32-NEXT:    lw a2, 0(a1)
 ; CHECK-RV32-NEXT:    lw a1, 4(a1)
-; CHECK-RV32-NEXT:    sw a2, 0(a0)
 ; CHECK-RV32-NEXT:    sw a1, 4(a0)
+; CHECK-RV32-NEXT:    sw a2, 0(a0)
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64-LABEL: test_load_v4i8_align4:
@@ -236,8 +236,8 @@ define void @test_load_v4i8_align4(ptr %ret_ptr, ptr %a_ptr) {
 ; UNALIGNED-RV32:       # %bb.0:
 ; UNALIGNED-RV32-NEXT:    lw a2, 0(a1)
 ; UNALIGNED-RV32-NEXT:    lw a1, 4(a1)
-; UNALIGNED-RV32-NEXT:    sw a2, 0(a0)
 ; UNALIGNED-RV32-NEXT:    sw a1, 4(a0)
+; UNALIGNED-RV32-NEXT:    sw a2, 0(a0)
 ; UNALIGNED-RV32-NEXT:    ret
 ;
 ; UNALIGNED-RV64-LABEL: test_load_v4i8_align4:
@@ -255,8 +255,8 @@ define void @test_store_v4i8_align4(ptr %a_ptr, ptr %b_ptr) {
 ; CHECK-RV32:       # %bb.0:
 ; CHECK-RV32-NEXT:    lw a2, 0(a0)
 ; CHECK-RV32-NEXT:    lw a0, 4(a0)
-; CHECK-RV32-NEXT:    sw a2, 0(a1)
 ; CHECK-RV32-NEXT:    sw a0, 4(a1)
+; CHECK-RV32-NEXT:    sw a2, 0(a1)
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64-LABEL: test_store_v4i8_align4:
@@ -271,8 +271,8 @@ define void @test_store_v4i8_align4(ptr %a_ptr, ptr %b_ptr) {
 ; UNALIGNED-RV32:       # %bb.0:
 ; UNALIGNED-RV32-NEXT:    lw a2, 0(a0)
 ; UNALIGNED-RV32-NEXT:    lw a0, 4(a0)
-; UNALIGNED-RV32-NEXT:    sw a2, 0(a1)
 ; UNALIGNED-RV32-NEXT:    sw a0, 4(a1)
+; UNALIGNED-RV32-NEXT:    sw a2, 0(a1)
 ; UNALIGNED-RV32-NEXT:    ret
 ;
 ; UNALIGNED-RV64-LABEL: test_store_v4i8_align4:
@@ -328,9 +328,9 @@ define void @test_store_v2i16_align1(ptr %a_ptr, ptr %b_ptr) {
 ; CHECK-NEXT:    srli a3, a0, 16
 ; CHECK-NEXT:    srli a4, a0, 8
 ; CHECK-NEXT:    sb a0, 0(a1)
-; CHECK-NEXT:    sb a4, 1(a1)
 ; CHECK-NEXT:    sb a3, 2(a1)
 ; CHECK-NEXT:    sb a2, 3(a1)
+; CHECK-NEXT:    sb a4, 1(a1)
 ; CHECK-NEXT:    ret
 ;
 ; UNALIGNED-LABEL: test_store_v2i16_align1:
@@ -407,8 +407,8 @@ define void @test_load_v8i8_align1(ptr %ret_ptr, ptr %a_ptr) {
 ; CHECK-RV32-NEXT:    ppaire.b a3, a6, a7
 ; CHECK-RV32-NEXT:    pack a2, a2, a4
 ; CHECK-RV32-NEXT:    pack a1, a3, a1
-; CHECK-RV32-NEXT:    sw a2, 0(a0)
 ; CHECK-RV32-NEXT:    sw a1, 4(a0)
+; CHECK-RV32-NEXT:    sw a2, 0(a0)
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64-LABEL: test_load_v8i8_align1:
@@ -435,8 +435,8 @@ define void @test_load_v8i8_align1(ptr %ret_ptr, ptr %a_ptr) {
 ; UNALIGNED-RV32:       # %bb.0:
 ; UNALIGNED-RV32-NEXT:    lw a2, 0(a1)
 ; UNALIGNED-RV32-NEXT:    lw a1, 4(a1)
-; UNALIGNED-RV32-NEXT:    sw a2, 0(a0)
 ; UNALIGNED-RV32-NEXT:    sw a1, 4(a0)
+; UNALIGNED-RV32-NEXT:    sw a2, 0(a0)
 ; UNALIGNED-RV32-NEXT:    ret
 ;
 ; UNALIGNED-RV64-LABEL: test_load_v8i8_align1:
@@ -456,18 +456,18 @@ define void @test_store_v8i8_align1(ptr %a_ptr, ptr %b_ptr) {
 ; CHECK-RV32-NEXT:    lw a0, 0(a0)
 ; CHECK-RV32-NEXT:    srli a3, a2, 24
 ; CHECK-RV32-NEXT:    srli a4, a2, 16
-; CHECK-RV32-NEXT:    srli a5, a2, 8
-; CHECK-RV32-NEXT:    srli a6, a0, 24
-; CHECK-RV32-NEXT:    srli a7, a0, 16
+; CHECK-RV32-NEXT:    srli a5, a0, 24
+; CHECK-RV32-NEXT:    srli a6, a0, 16
+; CHECK-RV32-NEXT:    sb a0, 0(a1)
+; CHECK-RV32-NEXT:    sb a6, 2(a1)
+; CHECK-RV32-NEXT:    sb a5, 3(a1)
 ; CHECK-RV32-NEXT:    sb a2, 4(a1)
-; CHECK-RV32-NEXT:    sb a5, 5(a1)
+; CHECK-RV32-NEXT:    srli a2, a2, 8
+; CHECK-RV32-NEXT:    srli a0, a0, 8
+; CHECK-RV32-NEXT:    sb a2, 5(a1)
 ; CHECK-RV32-NEXT:    sb a4, 6(a1)
 ; CHECK-RV32-NEXT:    sb a3, 7(a1)
-; CHECK-RV32-NEXT:    srli a2, a0, 8
-; CHECK-RV32-NEXT:    sb a0, 0(a1)
-; CHECK-RV32-NEXT:    sb a2, 1(a1)
-; CHECK-RV32-NEXT:    sb a7, 2(a1)
-; CHECK-RV32-NEXT:    sb a6, 3(a1)
+; CHECK-RV32-NEXT:    sb a0, 1(a1)
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64-LABEL: test_store_v8i8_align1:
@@ -479,23 +479,23 @@ define void @test_store_v8i8_align1(ptr %a_ptr, ptr %b_ptr) {
 ; CHECK-RV64-NEXT:    srli a5, a0, 32
 ; CHECK-RV64-NEXT:    srli a6, a0, 24
 ; CHECK-RV64-NEXT:    srli a7, a0, 16
-; CHECK-RV64-NEXT:    sb a5, 4(a1)
 ; CHECK-RV64-NEXT:    sb a4, 5(a1)
 ; CHECK-RV64-NEXT:    sb a3, 6(a1)
 ; CHECK-RV64-NEXT:    sb a2, 7(a1)
 ; CHECK-RV64-NEXT:    srli a2, a0, 8
 ; CHECK-RV64-NEXT:    sb a0, 0(a1)
-; CHECK-RV64-NEXT:    sb a2, 1(a1)
 ; CHECK-RV64-NEXT:    sb a7, 2(a1)
 ; CHECK-RV64-NEXT:    sb a6, 3(a1)
+; CHECK-RV64-NEXT:    sb a5, 4(a1)
+; CHECK-RV64-NEXT:    sb a2, 1(a1)
 ; CHECK-RV64-NEXT:    ret
 ;
 ; UNALIGNED-RV32-LABEL: test_store_v8i8_align1:
 ; UNALIGNED-RV32:       # %bb.0:
 ; UNALIGNED-RV32-NEXT:    lw a2, 0(a0)
 ; UNALIGNED-RV32-NEXT:    lw a0, 4(a0)
-; UNALIGNED-RV32-NEXT:    sw a2, 0(a1)
 ; UNALIGNED-RV32-NEXT:    sw a0, 4(a1)
+; UNALIGNED-RV32-NEXT:    sw a2, 0(a1)
 ; UNALIGNED-RV32-NEXT:    ret
 ;
 ; UNALIGNED-RV64-LABEL: test_store_v8i8_align1:
@@ -517,8 +517,8 @@ define void @test_load_v8i8_align2(ptr %ret_ptr, ptr %a_ptr) {
 ; CHECK-RV32-NEXT:    lhu a1, 6(a1)
 ; CHECK-RV32-NEXT:    pack a2, a2, a3
 ; CHECK-RV32-NEXT:    pack a1, a4, a1
-; CHECK-RV32-NEXT:    sw a2, 0(a0)
 ; CHECK-RV32-NEXT:    sw a1, 4(a0)
+; CHECK-RV32-NEXT:    sw a2, 0(a0)
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64-LABEL: test_load_v8i8_align2:
@@ -540,8 +540,8 @@ define void @test_load_v8i8_align2(ptr %ret_ptr, ptr %a_ptr) {
 ; UNALIGNED-RV32:       # %bb.0:
 ; UNALIGNED-RV32-NEXT:    lw a2, 0(a1)
 ; UNALIGNED-RV32-NEXT:    lw a1, 4(a1)
-; UNALIGNED-RV32-NEXT:    sw a2, 0(a0)
 ; UNALIGNED-RV32-NEXT:    sw a1, 4(a0)
+; UNALIGNED-RV32-NEXT:    sw a2, 0(a0)
 ; UNALIGNED-RV32-NEXT:    ret
 ;
 ; UNALIGNED-RV64-LABEL: test_load_v8i8_align2:
@@ -562,9 +562,9 @@ define void @test_store_v8i8_align2(ptr %a_ptr, ptr %b_ptr) {
 ; CHECK-RV32-NEXT:    srli a3, a0, 16
 ; CHECK-RV32-NEXT:    srli a4, a2, 16
 ; CHECK-RV32-NEXT:    sh a2, 0(a1)
-; CHECK-RV32-NEXT:    sh a4, 2(a1)
 ; CHECK-RV32-NEXT:    sh a0, 4(a1)
 ; CHECK-RV32-NEXT:    sh a3, 6(a1)
+; CHECK-RV32-NEXT:    sh a4, 2(a1)
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64-LABEL: test_store_v8i8_align2:
@@ -574,17 +574,17 @@ define void @test_store_v8i8_align2(ptr %a_ptr, ptr %b_ptr) {
 ; CHECK-RV64-NEXT:    srli a3, a0, 32
 ; CHECK-RV64-NEXT:    srli a4, a0, 16
 ; CHECK-RV64-NEXT:    sh a0, 0(a1)
-; CHECK-RV64-NEXT:    sh a4, 2(a1)
 ; CHECK-RV64-NEXT:    sh a3, 4(a1)
 ; CHECK-RV64-NEXT:    sh a2, 6(a1)
+; CHECK-RV64-NEXT:    sh a4, 2(a1)
 ; CHECK-RV64-NEXT:    ret
 ;
 ; UNALIGNED-RV32-LABEL: test_store_v8i8_align2:
 ; UNALIGNED-RV32:       # %bb.0:
 ; UNALIGNED-RV32-NEXT:    lw a2, 0(a0)
 ; UNALIGNED-RV32-NEXT:    lw a0, 4(a0)
-; UNALIGNED-RV32-NEXT:    sw a2, 0(a1)
 ; UNALIGNED-RV32-NEXT:    sw a0, 4(a1)
+; UNALIGNED-RV32-NEXT:    sw a2, 0(a1)
 ; UNALIGNED-RV32-NEXT:    ret
 ;
 ; UNALIGNED-RV64-LABEL: test_store_v8i8_align2:
@@ -614,8 +614,8 @@ define void @test_load_v4i16_align1(ptr %ret_ptr, ptr %a_ptr) {
 ; CHECK-RV32-NEXT:    ppaire.b a3, a6, a7
 ; CHECK-RV32-NEXT:    pack a2, a2, a4
 ; CHECK-RV32-NEXT:    pack a1, a3, a1
-; CHECK-RV32-NEXT:    sw a2, 0(a0)
 ; CHECK-RV32-NEXT:    sw a1, 4(a0)
+; CHECK-RV32-NEXT:    sw a2, 0(a0)
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64-LABEL: test_load_v4i16_align1:
@@ -642,8 +642,8 @@ define void @test_load_v4i16_align1(ptr %ret_ptr, ptr %a_ptr) {
 ; UNALIGNED-RV32:       # %bb.0:
 ; UNALIGNED-RV32-NEXT:    lw a2, 0(a1)
 ; UNALIGNED-RV32-NEXT:    lw a1, 4(a1)
-; UNALIGNED-RV32-NEXT:    sw a2, 0(a0)
 ; UNALIGNED-RV32-NEXT:    sw a1, 4(a0)
+; UNALIGNED-RV32-NEXT:    sw a2, 0(a0)
 ; UNALIGNED-RV32-NEXT:    ret
 ;
 ; UNALIGNED-RV64-LABEL: test_load_v4i16_align1:
@@ -663,18 +663,18 @@ define void @test_store_v4i16_align1(ptr %a_ptr, ptr %b_ptr) {
 ; CHECK-RV32-NEXT:    lw a0, 0(a0)
 ; CHECK-RV32-NEXT:    srli a3, a2, 24
 ; CHECK-RV32-NEXT:    srli a4, a2, 16
-; CHECK-RV32-NEXT:    srli a5, a2, 8
-; CHECK-RV32-NEXT:    srli a6, a0, 24
-; CHECK-RV32-NEXT:    srli a7, a0, 16
+; CHECK-RV32-NEXT:    srli a5, a0, 24
+; CHECK-RV32-NEXT:    srli a6, a0, 16
+; CHECK-RV32-NEXT:    sb a0, 0(a1)
+; CHECK-RV32-NEXT:    sb a6, 2(a1)
+; CHECK-RV32-NEXT:    sb a5, 3(a1)
 ; CHECK-RV32-NEXT:    sb a2, 4(a1)
-; CHECK-RV32-NEXT:    sb a5, 5(a1)
+; CHECK-RV32-NEXT:    srli a2, a2, 8
+; CHECK-RV32-NEXT:    srli a0, a0, 8
+; CHECK-RV32-NEXT:    sb a2, 5(a1)
 ; CHECK-RV32-NEXT:    sb a4, 6(a1)
 ; CHECK-RV32-NEXT:    sb a3, 7(a1)
-; CHECK-RV32-NEXT:    srli a2, a0, 8
-; CHECK-RV32-NEXT:    sb a0, 0(a1)
-; CHECK-RV32-NEXT:    sb a2, 1(a1)
-; CHECK-RV32-NEXT:    sb a7, 2(a1)
-; CHECK-RV32-NEXT:    sb a6, 3(a1)
+; CHECK-RV32-NEXT:    sb a0, 1(a1)
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64-LABEL: test_store_v4i16_align1:
@@ -686,23 +686,23 @@ define void @test_store_v4i16_align1(ptr %a_ptr, ptr %b_ptr) {
 ; CHECK-RV64-NEXT:    srli a5, a0, 32
 ; CHECK-RV64-NEXT:    srli a6, a0, 24
 ; CHECK-RV64-NEXT:    srli a7, a0, 16
-; CHECK-RV64-NEXT:    sb a5, 4(a1)
 ; CHECK-RV64-NEXT:    sb a4, 5(a1)
 ; CHECK-RV64-NEXT:    sb a3, 6(a1)
 ; CHECK-RV64-NEXT:    sb a2, 7(a1)
 ; CHECK-RV64-NEXT:    srli a2, a0, 8
 ; CHECK-RV64-NEXT:    sb a0, 0(a1)
-; CHECK-RV64-NEXT:    sb a2, 1(a1)
 ; CHECK-RV64-NEXT:    sb a7, 2(a1)
 ; CHECK-RV64-NEXT:    sb a6, 3(a1)
+; CHECK-RV64-NEXT:    sb a5, 4(a1)
+; CHECK-RV64-NEXT:    sb a2, 1(a1)
 ; CHECK-RV64-NEXT:    ret
 ;
 ; UNALIGNED-RV32-LABEL: test_store_v4i16_align1:
 ; UNALIGNED-RV32:       # %bb.0:
 ; UNALIGNED-RV32-NEXT:    lw a2, 0(a0)
 ; UNALIGNED-RV32-NEXT:    lw a0, 4(a0)
-; UNALIGNED-RV32-NEXT:    sw a2, 0(a1)
 ; UNALIGNED-RV32-NEXT:    sw a0, 4(a1)
+; UNALIGNED-RV32-NEXT:    sw a2, 0(a1)
 ; UNALIGNED-RV32-NEXT:    ret
 ;
 ; UNALIGNED-RV64-LABEL: test_store_v4i16_align1:
@@ -724,8 +724,8 @@ define void @test_load_v4i16_align2(ptr %ret_ptr, ptr %a_ptr) {
 ; CHECK-RV32-NEXT:    lhu a1, 6(a1)
 ; CHECK-RV32-NEXT:    pack a2, a2, a3
 ; CHECK-RV32-NEXT:    pack a1, a4, a1
-; CHECK-RV32-NEXT:    sw a2, 0(a0)
 ; CHECK-RV32-NEXT:    sw a1, 4(a0)
+; CHECK-RV32-NEXT:    sw a2, 0(a0)
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64-LABEL: test_load_v4i16_align2:
@@ -747,8 +747,8 @@ define void @test_load_v4i16_align2(ptr %ret_ptr, ptr %a_ptr) {
 ; UNALIGNED-RV32:       # %bb.0:
 ; UNALIGNED-RV32-NEXT:    lw a2, 0(a1)
 ; UNALIGNED-RV32-NEXT:    lw a1, 4(a1)
-; UNALIGNED-RV32-NEXT:    sw a2, 0(a0)
 ; UNALIGNED-RV32-NEXT:    sw a1, 4(a0)
+; UNALIGNED-RV32-NEXT:    sw a2, 0(a0)
 ; UNALIGNED-RV32-NEXT:    ret
 ;
 ; UNALIGNED-RV64-LABEL: test_load_v4i16_align2:
@@ -769,9 +769,9 @@ define void @test_store_v4i16_align2(ptr %a_ptr, ptr %b_ptr) {
 ; CHECK-RV32-NEXT:    srli a3, a0, 16
 ; CHECK-RV32-NEXT:    srli a4, a2, 16
 ; CHECK-RV32-NEXT:    sh a2, 0(a1)
-; CHECK-RV32-NEXT:    sh a4, 2(a1)
 ; CHECK-RV32-NEXT:    sh a0, 4(a1)
 ; CHECK-RV32-NEXT:    sh a3, 6(a1)
+; CHECK-RV32-NEXT:    sh a4, 2(a1)
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64-LABEL: test_store_v4i16_align2:
@@ -781,17 +781,17 @@ define void @test_store_v4i16_align2(ptr %a_ptr, ptr %b_ptr) {
 ; CHECK-RV64-NEXT:    srli a3, a0, 32
 ; CHECK-RV64-NEXT:    srli a4, a0, 16
 ; CHECK-RV64-NEXT:    sh a0, 0(a1)
-; CHECK-RV64-NEXT:    sh a4, 2(a1)
 ; CHECK-RV64-NEXT:    sh a3, 4(a1)
 ; CHECK-RV64-NEXT:    sh a2, 6(a1)
+; CHECK-RV64-NEXT:    sh a4, 2(a1)
 ; CHECK-RV64-NEXT:    ret
 ;
 ; UNALIGNED-RV32-LABEL: test_store_v4i16_align2:
 ; UNALIGNED-RV32:       # %bb.0:
 ; UNALIGNED-RV32-NEXT:    lw a2, 0(a0)
 ; UNALIGNED-RV32-NEXT:    lw a0, 4(a0)
-; UNALIGNED-RV32-NEXT:    sw a2, 0(a1)
 ; UNALIGNED-RV32-NEXT:    sw a0, 4(a1)
+; UNALIGNED-RV32-NEXT:    sw a2, 0(a1)
 ; UNALIGNED-RV32-NEXT:    ret
 ;
 ; UNALIGNED-RV64-LABEL: test_store_v4i16_align2:
@@ -809,8 +809,8 @@ define void @test_load_v4i16_align4(ptr %ret_ptr, ptr %a_ptr) {
 ; CHECK-RV32:       # %bb.0:
 ; CHECK-RV32-NEXT:    lw a2, 0(a1)
 ; CHECK-RV32-NEXT:    lw a1, 4(a1)
-; CHECK-RV32-NEXT:    sw a2, 0(a0)
 ; CHECK-RV32-NEXT:    sw a1, 4(a0)
+; CHECK-RV32-NEXT:    sw a2, 0(a0)
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64-LABEL: test_load_v4i16_align4:
@@ -825,8 +825,8 @@ define void @test_load_v4i16_align4(ptr %ret_ptr, ptr %a_ptr) {
 ; UNALIGNED-RV32:       # %bb.0:
 ; UNALIGNED-RV32-NEXT:    lw a2, 0(a1)
 ; UNALIGNED-RV32-NEXT:    lw a1, 4(a1)
-; UNALIGNED-RV32-NEXT:    sw a2, 0(a0)
 ; UNALIGNED-RV32-NEXT:    sw a1, 4(a0)
+; UNALIGNED-RV32-NEXT:    sw a2, 0(a0)
 ; UNALIGNED-RV32-NEXT:    ret
 ;
 ; UNALIGNED-RV64-LABEL: test_load_v4i16_align4:
@@ -844,8 +844,8 @@ define void @test_store_v4i16_align4(ptr %a_ptr, ptr %b_ptr) {
 ; CHECK-RV32:       # %bb.0:
 ; CHECK-RV32-NEXT:    lw a2, 0(a0)
 ; CHECK-RV32-NEXT:    lw a0, 4(a0)
-; CHECK-RV32-NEXT:    sw a2, 0(a1)
 ; CHECK-RV32-NEXT:    sw a0, 4(a1)
+; CHECK-RV32-NEXT:    sw a2, 0(a1)
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64-LABEL: test_store_v4i16_align4:
@@ -860,8 +860,8 @@ define void @test_store_v4i16_align4(ptr %a_ptr, ptr %b_ptr) {
 ; UNALIGNED-RV32:       # %bb.0:
 ; UNALIGNED-RV32-NEXT:    lw a2, 0(a0)
 ; UNALIGNED-RV32-NEXT:    lw a0, 4(a0)
-; UNALIGNED-RV32-NEXT:    sw a2, 0(a1)
 ; UNALIGNED-RV32-NEXT:    sw a0, 4(a1)
+; UNALIGNED-RV32-NEXT:    sw a2, 0(a1)
 ; UNALIGNED-RV32-NEXT:    ret
 ;
 ; UNALIGNED-RV64-LABEL: test_store_v4i16_align4:
@@ -891,8 +891,8 @@ define void @test_load_v2i32_align1(ptr %ret_ptr, ptr %a_ptr) {
 ; CHECK-RV32-NEXT:    ppaire.b a3, a6, a7
 ; CHECK-RV32-NEXT:    pack a2, a2, a4
 ; CHECK-RV32-NEXT:    pack a1, a3, a1
-; CHECK-RV32-NEXT:    sw a1, 0(a0)
 ; CHECK-RV32-NEXT:    sw a2, 4(a0)
+; CHECK-RV32-NEXT:    sw a1, 0(a0)
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64-LABEL: test_load_v2i32_align1:
@@ -919,8 +919,8 @@ define void @test_load_v2i32_align1(ptr %ret_ptr, ptr %a_ptr) {
 ; UNALIGNED-RV32:       # %bb.0:
 ; UNALIGNED-RV32-NEXT:    lw a2, 0(a1)
 ; UNALIGNED-RV32-NEXT:    lw a1, 4(a1)
-; UNALIGNED-RV32-NEXT:    sw a2, 0(a0)
 ; UNALIGNED-RV32-NEXT:    sw a1, 4(a0)
+; UNALIGNED-RV32-NEXT:    sw a2, 0(a0)
 ; UNALIGNED-RV32-NEXT:    ret
 ;
 ; UNALIGNED-RV64-LABEL: test_load_v2i32_align1:
@@ -940,18 +940,18 @@ define void @test_store_v2i32_align1(ptr %a_ptr, ptr %b_ptr) {
 ; CHECK-RV32-NEXT:    lw a0, 0(a0)
 ; CHECK-RV32-NEXT:    srli a3, a2, 24
 ; CHECK-RV32-NEXT:    srli a4, a2, 16
-; CHECK-RV32-NEXT:    srli a5, a2, 8
-; CHECK-RV32-NEXT:    srli a6, a0, 24
-; CHECK-RV32-NEXT:    srli a7, a0, 16
+; CHECK-RV32-NEXT:    srli a5, a0, 24
+; CHECK-RV32-NEXT:    srli a6, a0, 16
+; CHECK-RV32-NEXT:    sb a0, 0(a1)
+; CHECK-RV32-NEXT:    sb a6, 2(a1)
+; CHECK-RV32-NEXT:    sb a5, 3(a1)
 ; CHECK-RV32-NEXT:    sb a2, 4(a1)
-; CHECK-RV32-NEXT:    sb a5, 5(a1)
+; CHECK-RV32-NEXT:    srli a2, a2, 8
+; CHECK-RV32-NEXT:    srli a0, a0, 8
+; CHECK-RV32-NEXT:    sb a2, 5(a1)
 ; CHECK-RV32-NEXT:    sb a4, 6(a1)
 ; CHECK-RV32-NEXT:    sb a3, 7(a1)
-; CHECK-RV32-NEXT:    srli a2, a0, 8
-; CHECK-RV32-NEXT:    sb a0, 0(a1)
-; CHECK-RV32-NEXT:    sb a2, 1(a1)
-; CHECK-RV32-NEXT:    sb a7, 2(a1)
-; CHECK-RV32-NEXT:    sb a6, 3(a1)
+; CHECK-RV32-NEXT:    sb a0, 1(a1)
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64-LABEL: test_store_v2i32_align1:
@@ -963,23 +963,23 @@ define void @test_store_v2i32_align1(ptr %a_ptr, ptr %b_ptr) {
 ; CHECK-RV64-NEXT:    srli a5, a0, 32
 ; CHECK-RV64-NEXT:    srli a6, a0, 24
 ; CHECK-RV64-NEXT:    srli a7, a0, 16
-; CHECK-RV64-NEXT:    sb a5, 4(a1)
 ; CHECK-RV64-NEXT:    sb a4, 5(a1)
 ; CHECK-RV64-NEXT:    sb a3, 6(a1)
 ; CHECK-RV64-NEXT:    sb a2, 7(a1)
 ; CHECK-RV64-NEXT:    srli a2, a0, 8
 ; CHECK-RV64-NEXT:    sb a0, 0(a1)
-; CHECK-RV64-NEXT:    sb a2, 1(a1)
 ; CHECK-RV64-NEXT:    sb a7, 2(a1)
 ; CHECK-RV64-NEXT:    sb a6, 3(a1)
+; CHECK-RV64-NEXT:    sb a5, 4(a1)
+; CHECK-RV64-NEXT:    sb a2, 1(a1)
 ; CHECK-RV64-NEXT:    ret
 ;
 ; UNALIGNED-RV32-LABEL: test_store_v2i32_align1:
 ; UNALIGNED-RV32:       # %bb.0:
 ; UNALIGNED-RV32-NEXT:    lw a2, 0(a0)
 ; UNALIGNED-RV32-NEXT:    lw a0, 4(a0)
-; UNALIGNED-RV32-NEXT:    sw a2, 0(a1)
 ; UNALIGNED-RV32-NEXT:    sw a0, 4(a1)
+; UNALIGNED-RV32-NEXT:    sw a2, 0(a1)
 ; UNALIGNED-RV32-NEXT:    ret
 ;
 ; UNALIGNED-RV64-LABEL: test_store_v2i32_align1:
@@ -1001,8 +1001,8 @@ define void @test_load_v2i32_align2(ptr %ret_ptr, ptr %a_ptr) {
 ; CHECK-RV32-NEXT:    lhu a1, 6(a1)
 ; CHECK-RV32-NEXT:    pack a1, a4, a1
 ; CHECK-RV32-NEXT:    pack a2, a2, a3
-; CHECK-RV32-NEXT:    sw a2, 0(a0)
 ; CHECK-RV32-NEXT:    sw a1, 4(a0)
+; CHECK-RV32-NEXT:    sw a2, 0(a0)
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64-LABEL: test_load_v2i32_align2:
@@ -1024,8 +1024,8 @@ define void @test_load_v2i32_align2(ptr %ret_ptr, ptr %a_ptr) {
 ; UNALIGNED-RV32:       # %bb.0:
 ; UNALIGNED-RV32-NEXT:    lw a2, 0(a1)
 ; UNALIGNED-RV32-NEXT:    lw a1, 4(a1)
-; UNALIGNED-RV32-NEXT:    sw a2, 0(a0)
 ; UNALIGNED-RV32-NEXT:    sw a1, 4(a0)
+; UNALIGNED-RV32-NEXT:    sw a2, 0(a0)
 ; UNALIGNED-RV32-NEXT:    ret
 ;
 ; UNALIGNED-RV64-LABEL: test_load_v2i32_align2:
@@ -1046,9 +1046,9 @@ define void @test_store_v2i32_align2(ptr %a_ptr, ptr %b_ptr) {
 ; CHECK-RV32-NEXT:    srli a3, a0, 16
 ; CHECK-RV32-NEXT:    srli a4, a2, 16
 ; CHECK-RV32-NEXT:    sh a2, 0(a1)
-; CHECK-RV32-NEXT:    sh a4, 2(a1)
 ; CHECK-RV32-NEXT:    sh a0, 4(a1)
 ; CHECK-RV32-NEXT:    sh a3, 6(a1)
+; CHECK-RV32-NEXT:    sh a4, 2(a1)
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64-LABEL: test_store_v2i32_align2:
@@ -1058,17 +1058,17 @@ define void @test_store_v2i32_align2(ptr %a_ptr, ptr %b_ptr) {
 ; CHECK-RV64-NEXT:    srli a3, a0, 32
 ; CHECK-RV64-NEXT:    srli a4, a0, 16
 ; CHECK-RV64-NEXT:    sh a0, 0(a1)
-; CHECK-RV64-NEXT:    sh a4, 2(a1)
 ; CHECK-RV64-NEXT:    sh a3, 4(a1)
 ; CHECK-RV64-NEXT:    sh a2, 6(a1)
+; CHECK-RV64-NEXT:    sh a4, 2(a1)
 ; CHECK-RV64-NEXT:    ret
 ;
 ; UNALIGNED-RV32-LABEL: test_store_v2i32_align2:
 ; UNALIGNED-RV32:       # %bb.0:
 ; UNALIGNED-RV32-NEXT:    lw a2, 0(a0)
 ; UNALIGNED-RV32-NEXT:    lw a0, 4(a0)
-; UNALIGNED-RV32-NEXT:    sw a2, 0(a1)
 ; UNALIGNED-RV32-NEXT:    sw a0, 4(a1)
+; UNALIGNED-RV32-NEXT:    sw a2, 0(a1)
 ; UNALIGNED-RV32-NEXT:    ret
 ;
 ; UNALIGNED-RV64-LABEL: test_store_v2i32_align2:
@@ -1086,8 +1086,8 @@ define void @test_load_v2i32_align4(ptr %ret_ptr, ptr %a_ptr) {
 ; CHECK-RV32:       # %bb.0:
 ; CHECK-RV32-NEXT:    lw a2, 0(a1)
 ; CHECK-RV32-NEXT:    lw a1, 4(a1)
-; CHECK-RV32-NEXT:    sw a2, 0(a0)
 ; CHECK-RV32-NEXT:    sw a1, 4(a0)
+; CHECK-RV32-NEXT:    sw a2, 0(a0)
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64-LABEL: test_load_v2i32_align4:
@@ -1102,8 +1102,8 @@ define void @test_load_v2i32_align4(ptr %ret_ptr, ptr %a_ptr) {
 ; UNALIGNED-RV32:       # %bb.0:
 ; UNALIGNED-RV32-NEXT:    lw a2, 0(a1)
 ; UNALIGNED-RV32-NEXT:    lw a1, 4(a1)
-; UNALIGNED-RV32-NEXT:    sw a2, 0(a0)
 ; UNALIGNED-RV32-NEXT:    sw a1, 4(a0)
+; UNALIGNED-RV32-NEXT:    sw a2, 0(a0)
 ; UNALIGNED-RV32-NEXT:    ret
 ;
 ; UNALIGNED-RV64-LABEL: test_load_v2i32_align4:
@@ -1121,8 +1121,8 @@ define void @test_store_v2i32_align4(ptr %a_ptr, ptr %b_ptr) {
 ; CHECK-RV32:       # %bb.0:
 ; CHECK-RV32-NEXT:    lw a2, 0(a0)
 ; CHECK-RV32-NEXT:    lw a0, 4(a0)
-; CHECK-RV32-NEXT:    sw a2, 0(a1)
 ; CHECK-RV32-NEXT:    sw a0, 4(a1)
+; CHECK-RV32-NEXT:    sw a2, 0(a1)
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64-LABEL: test_store_v2i32_align4:
@@ -1137,8 +1137,8 @@ define void @test_store_v2i32_align4(ptr %a_ptr, ptr %b_ptr) {
 ; UNALIGNED-RV32:       # %bb.0:
 ; UNALIGNED-RV32-NEXT:    lw a2, 0(a0)
 ; UNALIGNED-RV32-NEXT:    lw a0, 4(a0)
-; UNALIGNED-RV32-NEXT:    sw a2, 0(a1)
 ; UNALIGNED-RV32-NEXT:    sw a0, 4(a1)
+; UNALIGNED-RV32-NEXT:    sw a2, 0(a1)
 ; UNALIGNED-RV32-NEXT:    ret
 ;
 ; UNALIGNED-RV64-LABEL: test_store_v2i32_align4:

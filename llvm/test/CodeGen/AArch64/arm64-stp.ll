@@ -181,8 +181,8 @@ entry:
 define i32 @stp_int_rar_hazard(i32 %a, i32 %b, ptr nocapture %p) nounwind {
 ; CHECK-LABEL: stp_int_rar_hazard:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr w8, [x2, #8]
 ; CHECK-NEXT:    stp w0, w1, [x2]
+; CHECK-NEXT:    ldr w8, [x2, #8]
 ; CHECK-NEXT:    add w0, w8, w1
 ; CHECK-NEXT:    ret
   store i32 %a, ptr %p, align 4

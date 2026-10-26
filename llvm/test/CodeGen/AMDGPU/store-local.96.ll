@@ -250,14 +250,14 @@ define amdgpu_kernel void @store_lds_v3i32_align1(ptr addrspace(3) %out, <3 x i3
 ; GFX11-NEXT:    s_lshr_b32 s0, s0, 24
 ; GFX11-NEXT:    v_dual_mov_b32 v6, s4 :: v_dual_mov_b32 v7, s1
 ; GFX11-NEXT:    v_dual_mov_b32 v8, s5 :: v_dual_mov_b32 v9, s0
-; GFX11-NEXT:    ds_store_b8 v0, v1 offset:8
 ; GFX11-NEXT:    ds_store_b8_d16_hi v0, v1 offset:10
 ; GFX11-NEXT:    ds_store_b8 v0, v4 offset:9
 ; GFX11-NEXT:    ds_store_b8 v0, v5 offset:11
 ; GFX11-NEXT:    ds_store_b8 v0, v3
-; GFX11-NEXT:    ds_store_b8_d16_hi v0, v3 offset:2
 ; GFX11-NEXT:    ds_store_b8 v0, v2 offset:4
 ; GFX11-NEXT:    ds_store_b8_d16_hi v0, v2 offset:6
+; GFX11-NEXT:    ds_store_b8 v0, v1 offset:8
+; GFX11-NEXT:    ds_store_b8_d16_hi v0, v3 offset:2
 ; GFX11-NEXT:    ds_store_b8 v0, v6 offset:5
 ; GFX11-NEXT:    ds_store_b8 v0, v7 offset:7
 ; GFX11-NEXT:    ds_store_b8 v0, v8 offset:1
@@ -357,14 +357,14 @@ define amdgpu_kernel void @store_lds_v3i32_align2(ptr addrspace(3) %out, <3 x i3
 ; GFX11-NEXT:    s_load_b32 s6, s[4:5], 0x0
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x10
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_dual_mov_b32 v0, s6 :: v_dual_mov_b32 v1, s0
-; GFX11-NEXT:    v_dual_mov_b32 v2, s1 :: v_dual_mov_b32 v3, s2
-; GFX11-NEXT:    ds_store_b16 v0, v1
-; GFX11-NEXT:    ds_store_b16 v0, v2 offset:4
-; GFX11-NEXT:    ds_store_b16 v0, v3 offset:8
-; GFX11-NEXT:    ds_store_b16_d16_hi v0, v3 offset:10
-; GFX11-NEXT:    ds_store_b16_d16_hi v0, v2 offset:6
-; GFX11-NEXT:    ds_store_b16_d16_hi v0, v1 offset:2
+; GFX11-NEXT:    v_dual_mov_b32 v0, s6 :: v_dual_mov_b32 v1, s1
+; GFX11-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s0
+; GFX11-NEXT:    ds_store_b16 v0, v1 offset:4
+; GFX11-NEXT:    ds_store_b16 v0, v2 offset:8
+; GFX11-NEXT:    ds_store_b16_d16_hi v0, v2 offset:10
+; GFX11-NEXT:    ds_store_b16_d16_hi v0, v1 offset:6
+; GFX11-NEXT:    ds_store_b16 v0, v3
+; GFX11-NEXT:    ds_store_b16_d16_hi v0, v3 offset:2
 ; GFX11-NEXT:    s_endpgm
   store <3 x i32> %x, ptr addrspace(3) %out, align 2
   ret void

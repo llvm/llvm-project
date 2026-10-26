@@ -90,10 +90,10 @@ define i128 @test_v128i1(<128 x i1> %x) {
 ; RV32-NEXT:    li a1, 128
 ; RV32-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
 ; RV32-NEXT:    vcpop.m a1, v0
-; RV32-NEXT:    sw a1, 0(a0)
 ; RV32-NEXT:    sw zero, 4(a0)
 ; RV32-NEXT:    sw zero, 8(a0)
 ; RV32-NEXT:    sw zero, 12(a0)
+; RV32-NEXT:    sw a1, 0(a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_v128i1:
@@ -166,14 +166,14 @@ define i256 @test_v256i1(<256 x i1> %x) {
 ; RV32-NEXT:  # %bb.1: # %entry
 ; RV32-NEXT:    sltu a2, a3, a4
 ; RV32-NEXT:  .LBB8_2: # %entry
-; RV32-NEXT:    sw zero, 16(a0)
 ; RV32-NEXT:    sw zero, 20(a0)
 ; RV32-NEXT:    sw zero, 24(a0)
 ; RV32-NEXT:    sw zero, 28(a0)
 ; RV32-NEXT:    sw a1, 0(a0)
 ; RV32-NEXT:    sw a3, 4(a0)
-; RV32-NEXT:    sw a2, 8(a0)
 ; RV32-NEXT:    sw zero, 12(a0)
+; RV32-NEXT:    sw zero, 16(a0)
+; RV32-NEXT:    sw a2, 8(a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_v256i1:
@@ -195,8 +195,8 @@ define i256 @test_v256i1(<256 x i1> %x) {
 ; RV64-NEXT:    add a2, a1, a2
 ; RV64-NEXT:    sltu a1, a2, a1
 ; RV64-NEXT:    sd a2, 0(a0)
-; RV64-NEXT:    sd a1, 8(a0)
 ; RV64-NEXT:    sd zero, 24(a0)
+; RV64-NEXT:    sd a1, 8(a0)
 ; RV64-NEXT:    ret
 entry:
   %a = bitcast <256 x i1> %x to i256

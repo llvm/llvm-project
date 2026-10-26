@@ -204,8 +204,8 @@ define <10 x i32> @load_factor3_x25(ptr %ptr) {
 ; NEON-NEXT:    add v1.4s, v1.4s, v2.4s
 ; NEON-NEXT:    add v0.4s, v3.4s, v0.4s
 ; NEON-NEXT:    add v3.4s, v4.4s, v5.4s
-; NEON-NEXT:    str d1, [x8, #32]
 ; NEON-NEXT:    stp q3, q0, [x8]
+; NEON-NEXT:    str d1, [x8, #32]
 ; NEON-NEXT:    ret
 ;
 ; NO_NEON-LABEL: load_factor3_x25:
@@ -558,23 +558,23 @@ define void @store_factor3(ptr %ptr, <4 x i32> %v0, <4 x i32> %v1, <4 x i32> %v2
 ; NO_NEON-NEXT:    ldr w8, [sp]
 ; NO_NEON-NEXT:    ldr w9, [sp, #32]
 ; NO_NEON-NEXT:    // kill: def $w4 killed $w4 def $x4
-; NO_NEON-NEXT:    mov w12, w3
+; NO_NEON-NEXT:    mov w11, w3
 ; NO_NEON-NEXT:    ldr w10, [sp, #24]
-; NO_NEON-NEXT:    ldr w11, [sp, #16]
-; NO_NEON-NEXT:    mov w13, w6
-; NO_NEON-NEXT:    orr x8, x8, x9, lsl #32
-; NO_NEON-NEXT:    ldr w9, [sp, #8]
+; NO_NEON-NEXT:    ldr w12, [sp, #16]
 ; NO_NEON-NEXT:    // kill: def $w7 killed $w7 def $x7
 ; NO_NEON-NEXT:    // kill: def $w5 killed $w5 def $x5
 ; NO_NEON-NEXT:    // kill: def $w2 killed $w2 def $x2
-; NO_NEON-NEXT:    orr x12, x12, x7, lsl #32
+; NO_NEON-NEXT:    orr x11, x11, x7, lsl #32
+; NO_NEON-NEXT:    orr x8, x8, x9, lsl #32
+; NO_NEON-NEXT:    ldr w9, [sp, #8]
 ; NO_NEON-NEXT:    orr x10, x10, x4, lsl #32
 ; NO_NEON-NEXT:    orr x9, x9, x2, lsl #32
 ; NO_NEON-NEXT:    stp x10, x8, [x0, #32]
+; NO_NEON-NEXT:    mov w8, w6
 ; NO_NEON-NEXT:    mov w10, w1
-; NO_NEON-NEXT:    orr x8, x13, x11, lsl #32
+; NO_NEON-NEXT:    orr x8, x8, x12, lsl #32
 ; NO_NEON-NEXT:    orr x10, x10, x5, lsl #32
-; NO_NEON-NEXT:    stp x8, x12, [x0, #16]
+; NO_NEON-NEXT:    stp x8, x11, [x0, #16]
 ; NO_NEON-NEXT:    stp x10, x9, [x0]
 ; NO_NEON-NEXT:    ret
 ;
@@ -608,8 +608,8 @@ define void @store_factor4(ptr %ptr, <4 x i32> %v0, <4 x i32> %v1, <4 x i32> %v2
 ; NEON-IADISABLED-NEXT:    zip1 v5.4s, v2.4s, v3.4s
 ; NEON-IADISABLED-NEXT:    trn1 v6.4s, v2.4s, v3.4s
 ; NEON-IADISABLED-NEXT:    zip2 v7.4s, v0.4s, v1.4s
-; NEON-IADISABLED-NEXT:    zip2 v3.4s, v2.4s, v3.4s
 ; NEON-IADISABLED-NEXT:    trn2 v16.4s, v0.4s, v1.4s
+; NEON-IADISABLED-NEXT:    zip2 v3.4s, v2.4s, v3.4s
 ; NEON-IADISABLED-NEXT:    uzp2 v4.4s, v4.4s, v0.4s
 ; NEON-IADISABLED-NEXT:    zip1 v0.4s, v0.4s, v1.4s
 ; NEON-IADISABLED-NEXT:    ext v1.16b, v2.16b, v5.16b, #8
@@ -617,8 +617,9 @@ define void @store_factor4(ptr %ptr, <4 x i32> %v0, <4 x i32> %v1, <4 x i32> %v2
 ; NEON-IADISABLED-NEXT:    mov v16.d[1], v5.d[1]
 ; NEON-IADISABLED-NEXT:    mov v4.d[1], v3.d[1]
 ; NEON-IADISABLED-NEXT:    mov v0.d[1], v1.d[1]
-; NEON-IADISABLED-NEXT:    stp q0, q16, [x0]
-; NEON-IADISABLED-NEXT:    stp q7, q4, [x0, #32]
+; NEON-IADISABLED-NEXT:    stp q16, q7, [x0, #16]
+; NEON-IADISABLED-NEXT:    str q4, [x0, #48]
+; NEON-IADISABLED-NEXT:    str q0, [x0]
 ; NEON-IADISABLED-NEXT:    ret
 ;
 ; NO_NEON-LABEL: store_factor4:
@@ -907,10 +908,10 @@ define void @store_ptrvec_factor4(ptr %ptr, <2 x ptr> %v0, <2 x ptr> %v1, <2 x p
 ; NO_NEON:       // %bb.0:
 ; NO_NEON-NEXT:    ldr x8, [sp, #8]
 ; NO_NEON-NEXT:    stp x3, x5, [x0, #32]
-; NO_NEON-NEXT:    stp x2, x4, [x0]
 ; NO_NEON-NEXT:    stp x7, x8, [x0, #48]
 ; NO_NEON-NEXT:    ldr x8, [sp]
 ; NO_NEON-NEXT:    stp x6, x8, [x0, #16]
+; NO_NEON-NEXT:    stp x2, x4, [x0]
 ; NO_NEON-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: store_ptrvec_factor4:
@@ -1122,8 +1123,9 @@ define void @store_undef_mask_factor2(ptr %ptr, <4 x i32> %v0, <4 x i32> %v1) {
 ; NO_NEON-LABEL: store_undef_mask_factor2:
 ; NO_NEON:       // %bb.0:
 ; NO_NEON-NEXT:    ldr w8, [sp]
-; NO_NEON-NEXT:    stp w3, w7, [x0, #16]
-; NO_NEON-NEXT:    stp w4, w8, [x0, #24]
+; NO_NEON-NEXT:    stp w7, w4, [x0, #20]
+; NO_NEON-NEXT:    str w8, [x0, #28]
+; NO_NEON-NEXT:    str w3, [x0, #16]
 ; NO_NEON-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: store_undef_mask_factor2:
@@ -1164,23 +1166,24 @@ define void @store_undef_mask_factor3(ptr %ptr, <4 x i32> %v0, <4 x i32> %v1, <4
 ; NO_NEON:       // %bb.0:
 ; NO_NEON-NEXT:    ldr w8, [sp]
 ; NO_NEON-NEXT:    ldr w9, [sp, #32]
-; NO_NEON-NEXT:    // kill: def $w4 killed $w4 def $x4
+; NO_NEON-NEXT:    // kill: def $w2 killed $w2 def $x2
 ; NO_NEON-NEXT:    mov w11, w3
-; NO_NEON-NEXT:    ldr w10, [sp, #24]
+; NO_NEON-NEXT:    ldr w10, [sp, #16]
 ; NO_NEON-NEXT:    // kill: def $w7 killed $w7 def $x7
 ; NO_NEON-NEXT:    // kill: def $w5 killed $w5 def $x5
-; NO_NEON-NEXT:    // kill: def $w2 killed $w2 def $x2
+; NO_NEON-NEXT:    // kill: def $w4 killed $w4 def $x4
+; NO_NEON-NEXT:    orr x11, x11, x7, lsl #32
 ; NO_NEON-NEXT:    orr x8, x8, x9, lsl #32
-; NO_NEON-NEXT:    ldr w9, [sp, #16]
-; NO_NEON-NEXT:    orr x10, x10, x4, lsl #32
-; NO_NEON-NEXT:    lsl x9, x9, #32
-; NO_NEON-NEXT:    stp x10, x8, [x0, #32]
-; NO_NEON-NEXT:    orr x8, x11, x7, lsl #32
+; NO_NEON-NEXT:    ldr w9, [sp, #24]
+; NO_NEON-NEXT:    lsl x10, x10, #32
+; NO_NEON-NEXT:    str x8, [x0, #40]
+; NO_NEON-NEXT:    lsl x8, x2, #32
+; NO_NEON-NEXT:    orr x9, x9, x4, lsl #32
+; NO_NEON-NEXT:    stp x8, x10, [x0, #8]
 ; NO_NEON-NEXT:    mov w10, w1
-; NO_NEON-NEXT:    lsl x11, x2, #32
-; NO_NEON-NEXT:    stp x9, x8, [x0, #16]
-; NO_NEON-NEXT:    orr x9, x10, x5, lsl #32
-; NO_NEON-NEXT:    stp x9, x11, [x0]
+; NO_NEON-NEXT:    orr x8, x10, x5, lsl #32
+; NO_NEON-NEXT:    stp x11, x9, [x0, #24]
+; NO_NEON-NEXT:    str x8, [x0]
 ; NO_NEON-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: store_undef_mask_factor3:
@@ -1209,19 +1212,20 @@ define void @store_undef_mask_factor4(ptr %ptr, <4 x i32> %v0, <4 x i32> %v1, <4
 ;
 ; NEON-IADISABLED-LABEL: store_undef_mask_factor4:
 ; NEON-IADISABLED:       // %bb.0:
-; NEON-IADISABLED-NEXT:    uzp2 v4.4s, v0.4s, v1.4s
-; NEON-IADISABLED-NEXT:    zip2 v5.4s, v0.4s, v1.4s
-; NEON-IADISABLED-NEXT:    zip1 v6.4s, v0.4s, v1.4s
+; NEON-IADISABLED-NEXT:    uzp2 v5.4s, v0.4s, v1.4s
+; NEON-IADISABLED-NEXT:    trn1 v4.4s, v2.4s, v3.4s
+; NEON-IADISABLED-NEXT:    zip2 v6.4s, v0.4s, v1.4s
+; NEON-IADISABLED-NEXT:    zip1 v7.4s, v0.4s, v1.4s
 ; NEON-IADISABLED-NEXT:    mov v1.s[2], v2.s[1]
-; NEON-IADISABLED-NEXT:    trn1 v7.4s, v2.4s, v3.4s
-; NEON-IADISABLED-NEXT:    uzp2 v0.4s, v4.4s, v0.4s
-; NEON-IADISABLED-NEXT:    zip2 v4.4s, v2.4s, v3.4s
-; NEON-IADISABLED-NEXT:    mov v6.s[2], v2.s[0]
+; NEON-IADISABLED-NEXT:    uzp2 v0.4s, v5.4s, v0.4s
+; NEON-IADISABLED-NEXT:    zip2 v5.4s, v2.4s, v3.4s
+; NEON-IADISABLED-NEXT:    mov v6.d[1], v4.d[1]
 ; NEON-IADISABLED-NEXT:    mov v1.s[3], v3.s[1]
-; NEON-IADISABLED-NEXT:    mov v5.d[1], v7.d[1]
-; NEON-IADISABLED-NEXT:    mov v0.d[1], v4.d[1]
-; NEON-IADISABLED-NEXT:    stp q6, q1, [x0]
-; NEON-IADISABLED-NEXT:    stp q5, q0, [x0, #32]
+; NEON-IADISABLED-NEXT:    mov v7.s[2], v2.s[0]
+; NEON-IADISABLED-NEXT:    mov v0.d[1], v5.d[1]
+; NEON-IADISABLED-NEXT:    stp q1, q6, [x0, #16]
+; NEON-IADISABLED-NEXT:    str q7, [x0]
+; NEON-IADISABLED-NEXT:    str q0, [x0, #48]
 ; NEON-IADISABLED-NEXT:    ret
 ;
 ; NO_NEON-LABEL: store_undef_mask_factor4:
@@ -1460,15 +1464,14 @@ define void @store_general_mask_factor4_undefend(ptr %ptr, <32 x i32> %v0, <32 x
 ; NO_NEON-NEXT:    .cfi_def_cfa_offset 16
 ; NO_NEON-NEXT:    .cfi_offset w29, -16
 ; NO_NEON-NEXT:    ldr w8, [sp, #96]
-; NO_NEON-NEXT:    ldr w9, [sp, #224]
-; NO_NEON-NEXT:    ldr w10, [sp, #216]
-; NO_NEON-NEXT:    str w6, [x0, #16]
-; NO_NEON-NEXT:    str w8, [x0, #20]
-; NO_NEON-NEXT:    ldr w8, [sp, #24]
-; NO_NEON-NEXT:    str w9, [x0, #24]
-; NO_NEON-NEXT:    ldr w9, [sp, #88]
-; NO_NEON-NEXT:    stp w10, w8, [x0, #8]
-; NO_NEON-NEXT:    stp w5, w9, [x0]
+; NO_NEON-NEXT:    ldr w10, [sp, #224]
+; NO_NEON-NEXT:    ldr w9, [sp, #24]
+; NO_NEON-NEXT:    stp w6, w8, [x0, #16]
+; NO_NEON-NEXT:    ldr w8, [sp, #216]
+; NO_NEON-NEXT:    str w10, [x0, #24]
+; NO_NEON-NEXT:    ldr w10, [sp, #88]
+; NO_NEON-NEXT:    stp w8, w9, [x0, #8]
+; NO_NEON-NEXT:    stp w5, w10, [x0]
 ; NO_NEON-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; NO_NEON-NEXT:    ret
 ;
@@ -1616,27 +1619,27 @@ define void @store_general_mask_factor3(ptr %ptr, <32 x i32> %v0, <32 x i32> %v1
 ; NO_NEON-NEXT:    .cfi_def_cfa_offset 16
 ; NO_NEON-NEXT:    .cfi_offset w29, -16
 ; NO_NEON-NEXT:    ldr w8, [sp, #240]
-; NO_NEON-NEXT:    ldr w10, [sp, #112]
+; NO_NEON-NEXT:    ldr w9, [sp, #112]
 ; NO_NEON-NEXT:    // kill: def $w6 killed $w6 def $x6
-; NO_NEON-NEXT:    ldr w11, [sp, #224]
+; NO_NEON-NEXT:    mov w14, w7
+; NO_NEON-NEXT:    ldr w10, [sp, #224]
+; NO_NEON-NEXT:    ldr w11, [sp, #88]
 ; NO_NEON-NEXT:    ldr w12, [sp, #96]
+; NO_NEON-NEXT:    orr x8, x8, x9, lsl #32
 ; NO_NEON-NEXT:    ldr w9, [sp, #104]
-; NO_NEON-NEXT:    ldr w13, [sp, #16]
-; NO_NEON-NEXT:    orr x8, x8, x10, lsl #32
-; NO_NEON-NEXT:    orr x10, x11, x12, lsl #32
-; NO_NEON-NEXT:    ldr w11, [sp, #232]
-; NO_NEON-NEXT:    orr x9, x9, x13, lsl #32
-; NO_NEON-NEXT:    mov w13, w7
-; NO_NEON-NEXT:    ldr w12, [sp, #88]
+; NO_NEON-NEXT:    ldr w13, [sp, #216]
+; NO_NEON-NEXT:    orr x11, x11, x6, lsl #32
+; NO_NEON-NEXT:    orr x10, x10, x12, lsl #32
+; NO_NEON-NEXT:    ldr w12, [sp, #16]
 ; NO_NEON-NEXT:    str x8, [x0, #40]
-; NO_NEON-NEXT:    orr x11, x13, x11, lsl #32
-; NO_NEON-NEXT:    ldr w8, [sp, #216]
-; NO_NEON-NEXT:    orr x12, x12, x6, lsl #32
-; NO_NEON-NEXT:    stp x11, x9, [x0, #24]
-; NO_NEON-NEXT:    mov w9, w5
-; NO_NEON-NEXT:    orr x8, x9, x8, lsl #32
-; NO_NEON-NEXT:    stp x12, x10, [x0, #8]
-; NO_NEON-NEXT:    str x8, [x0]
+; NO_NEON-NEXT:    ldr w8, [sp, #232]
+; NO_NEON-NEXT:    stp x11, x10, [x0, #8]
+; NO_NEON-NEXT:    mov w10, w5
+; NO_NEON-NEXT:    orr x9, x9, x12, lsl #32
+; NO_NEON-NEXT:    orr x8, x14, x8, lsl #32
+; NO_NEON-NEXT:    orr x10, x10, x13, lsl #32
+; NO_NEON-NEXT:    stp x8, x9, [x0, #24]
+; NO_NEON-NEXT:    str x10, [x0]
 ; NO_NEON-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; NO_NEON-NEXT:    ret
 ;
@@ -1655,8 +1658,8 @@ define void @store_general_mask_factor3(ptr %ptr, <32 x i32> %v0, <32 x i32> %v1
 ; CHECK-GI-NEXT:    mov v2.s[3], v1.s[1]
 ; CHECK-GI-NEXT:    mov v5.s[3], v4.s[3]
 ; CHECK-GI-NEXT:    mov v3.s[3], v0.s[2]
-; CHECK-GI-NEXT:    str q5, [x0, #32]
 ; CHECK-GI-NEXT:    stp q2, q3, [x0]
+; CHECK-GI-NEXT:    str q5, [x0, #32]
 ; CHECK-GI-NEXT:    ret
   %interleaved.vec = shufflevector <32 x i32> %v0, <32 x i32> %v1, <12 x i32> <i32 4, i32 32, i32 16, i32 5, i32 33, i32 17, i32 6, i32 34, i32 18, i32 7, i32 35, i32 19>
   store <12 x i32> %interleaved.vec, ptr %ptr, align 4
@@ -1692,25 +1695,25 @@ define void @store_general_mask_factor3_undefmultimid(ptr %ptr, <32 x i32> %v0, 
 ; NO_NEON-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; NO_NEON-NEXT:    .cfi_def_cfa_offset 16
 ; NO_NEON-NEXT:    .cfi_offset w29, -16
-; NO_NEON-NEXT:    ldr w8, [sp, #240]
-; NO_NEON-NEXT:    ldr w9, [sp, #112]
 ; NO_NEON-NEXT:    ldr w10, [sp, #104]
 ; NO_NEON-NEXT:    ldr w11, [sp, #16]
+; NO_NEON-NEXT:    mov w13, w5
+; NO_NEON-NEXT:    ldr w8, [sp, #240]
+; NO_NEON-NEXT:    ldr w9, [sp, #112]
 ; NO_NEON-NEXT:    ldr w12, [sp, #232]
-; NO_NEON-NEXT:    orr x8, x8, x9, lsl #32
-; NO_NEON-NEXT:    ldr w9, [sp, #224]
 ; NO_NEON-NEXT:    orr x10, x10, x11, lsl #32
 ; NO_NEON-NEXT:    ldr w11, [sp, #96]
+; NO_NEON-NEXT:    orr x8, x8, x9, lsl #32
+; NO_NEON-NEXT:    ldr w9, [sp, #224]
 ; NO_NEON-NEXT:    lsl x12, x12, #32
-; NO_NEON-NEXT:    str x8, [x0, #40]
-; NO_NEON-NEXT:    ldr w8, [sp, #216]
-; NO_NEON-NEXT:    orr x9, x9, x11, lsl #32
-; NO_NEON-NEXT:    mov w11, w5
 ; NO_NEON-NEXT:    str x10, [x0, #32]
-; NO_NEON-NEXT:    ldr w10, [sp, #88]
-; NO_NEON-NEXT:    orr x8, x11, x8, lsl #32
+; NO_NEON-NEXT:    ldr w10, [sp, #216]
+; NO_NEON-NEXT:    str x8, [x0, #40]
+; NO_NEON-NEXT:    ldr w8, [sp, #88]
+; NO_NEON-NEXT:    orr x9, x9, x11, lsl #32
+; NO_NEON-NEXT:    orr x10, x13, x10, lsl #32
 ; NO_NEON-NEXT:    stp x9, x12, [x0, #16]
-; NO_NEON-NEXT:    stp x8, x10, [x0]
+; NO_NEON-NEXT:    stp x10, x8, [x0]
 ; NO_NEON-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; NO_NEON-NEXT:    ret
 ;
@@ -1755,25 +1758,25 @@ define void @store_general_mask_factor3_undef_fail(ptr %ptr, <32 x i32> %v0, <32
 ; NO_NEON-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; NO_NEON-NEXT:    .cfi_def_cfa_offset 16
 ; NO_NEON-NEXT:    .cfi_offset w29, -16
-; NO_NEON-NEXT:    ldr w8, [sp, #240]
-; NO_NEON-NEXT:    ldr w9, [sp, #112]
 ; NO_NEON-NEXT:    ldr w10, [sp, #104]
 ; NO_NEON-NEXT:    ldr w11, [sp, #24]
+; NO_NEON-NEXT:    mov w13, w5
+; NO_NEON-NEXT:    ldr w8, [sp, #240]
+; NO_NEON-NEXT:    ldr w9, [sp, #112]
 ; NO_NEON-NEXT:    ldr w12, [sp, #232]
-; NO_NEON-NEXT:    orr x8, x8, x9, lsl #32
-; NO_NEON-NEXT:    ldr w9, [sp, #224]
 ; NO_NEON-NEXT:    orr x10, x10, x11, lsl #32
 ; NO_NEON-NEXT:    ldr w11, [sp, #96]
+; NO_NEON-NEXT:    orr x8, x8, x9, lsl #32
+; NO_NEON-NEXT:    ldr w9, [sp, #224]
 ; NO_NEON-NEXT:    lsl x12, x12, #32
-; NO_NEON-NEXT:    str x8, [x0, #40]
-; NO_NEON-NEXT:    ldr w8, [sp, #216]
-; NO_NEON-NEXT:    orr x9, x9, x11, lsl #32
-; NO_NEON-NEXT:    mov w11, w5
 ; NO_NEON-NEXT:    str x10, [x0, #32]
-; NO_NEON-NEXT:    ldr w10, [sp, #88]
-; NO_NEON-NEXT:    orr x8, x11, x8, lsl #32
+; NO_NEON-NEXT:    ldr w10, [sp, #216]
+; NO_NEON-NEXT:    str x8, [x0, #40]
+; NO_NEON-NEXT:    ldr w8, [sp, #88]
+; NO_NEON-NEXT:    orr x9, x9, x11, lsl #32
+; NO_NEON-NEXT:    orr x10, x13, x10, lsl #32
 ; NO_NEON-NEXT:    stp x9, x12, [x0, #16]
-; NO_NEON-NEXT:    stp x8, x10, [x0]
+; NO_NEON-NEXT:    stp x10, x8, [x0]
 ; NO_NEON-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; NO_NEON-NEXT:    ret
 ;
@@ -1830,17 +1833,17 @@ define void @store_general_mask_factor3_undeflane(ptr %ptr, <32 x i32> %v0, <32 
 ; NO_NEON-NEXT:    ldr w10, [sp, #104]
 ; NO_NEON-NEXT:    ldr w11, [sp, #232]
 ; NO_NEON-NEXT:    ldr w12, [sp, #224]
-; NO_NEON-NEXT:    ldr w13, [sp, #96]
+; NO_NEON-NEXT:    ldr w13, [sp, #216]
 ; NO_NEON-NEXT:    orr x8, x8, x9, lsl #32
+; NO_NEON-NEXT:    ldr w9, [sp, #96]
 ; NO_NEON-NEXT:    str x10, [x0, #32]
-; NO_NEON-NEXT:    ldr w10, [sp, #216]
-; NO_NEON-NEXT:    lsl x9, x11, #32
-; NO_NEON-NEXT:    orr x11, x12, x13, lsl #32
+; NO_NEON-NEXT:    lsl x11, x11, #32
+; NO_NEON-NEXT:    ldr w10, [sp, #88]
 ; NO_NEON-NEXT:    str x8, [x0, #40]
-; NO_NEON-NEXT:    ldr w8, [sp, #88]
-; NO_NEON-NEXT:    stp x11, x9, [x0, #16]
-; NO_NEON-NEXT:    lsl x9, x10, #32
-; NO_NEON-NEXT:    stp x9, x8, [x0]
+; NO_NEON-NEXT:    orr x8, x12, x9, lsl #32
+; NO_NEON-NEXT:    lsl x9, x13, #32
+; NO_NEON-NEXT:    stp x8, x11, [x0, #16]
+; NO_NEON-NEXT:    stp x9, x10, [x0]
 ; NO_NEON-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; NO_NEON-NEXT:    ret
 ;
@@ -1887,18 +1890,18 @@ define void @store_general_mask_factor3_negativestart(ptr %ptr, <32 x i32> %v0, 
 ; NO_NEON-NEXT:    ldr w10, [sp, #104]
 ; NO_NEON-NEXT:    ldr w11, [sp, #232]
 ; NO_NEON-NEXT:    ldr w12, [sp, #96]
+; NO_NEON-NEXT:    ldr w13, [sp, #216]
 ; NO_NEON-NEXT:    orr x8, x8, x9, lsl #32
-; NO_NEON-NEXT:    ldr w9, [sp, #224]
 ; NO_NEON-NEXT:    orr x10, x10, x3, lsl #32
+; NO_NEON-NEXT:    ldr w9, [sp, #224]
 ; NO_NEON-NEXT:    lsl x11, x11, #32
 ; NO_NEON-NEXT:    str x8, [x0, #40]
-; NO_NEON-NEXT:    ldr w8, [sp, #216]
+; NO_NEON-NEXT:    ldr w8, [sp, #88]
 ; NO_NEON-NEXT:    orr x9, x9, x12, lsl #32
-; NO_NEON-NEXT:    str x10, [x0, #32]
-; NO_NEON-NEXT:    ldr w10, [sp, #88]
-; NO_NEON-NEXT:    lsl x8, x8, #32
-; NO_NEON-NEXT:    stp x9, x11, [x0, #16]
-; NO_NEON-NEXT:    stp x8, x10, [x0]
+; NO_NEON-NEXT:    stp x11, x10, [x0, #24]
+; NO_NEON-NEXT:    lsl x10, x13, #32
+; NO_NEON-NEXT:    stp x8, x9, [x0, #8]
+; NO_NEON-NEXT:    str x10, [x0]
 ; NO_NEON-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; NO_NEON-NEXT:    ret
 ;
@@ -2534,13 +2537,13 @@ define void @store_factor2_wide2(ptr %ptr, <8 x i32> %v0, <8 x i32> %v1) {
 ;
 ; CHECK-GI-LABEL: store_factor2_wide2:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    mov v4.16b, v1.16b
+; CHECK-GI-NEXT:    mov v4.16b, v0.16b
 ; CHECK-GI-NEXT:    add x8, x0, #32
-; CHECK-GI-NEXT:    mov v1.16b, v2.16b
-; CHECK-GI-NEXT:    mov v5.16b, v3.16b
-; CHECK-GI-NEXT:    st2 { v0.4s, v1.4s }, [x0]
-; CHECK-GI-NEXT:    st2 { v4.4s, v5.4s }, [x8]
+; CHECK-GI-NEXT:    mov v5.16b, v2.16b
+; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 def $q1_q2
+; CHECK-GI-NEXT:    mov v2.16b, v3.16b
+; CHECK-GI-NEXT:    st2 { v4.4s, v5.4s }, [x0]
+; CHECK-GI-NEXT:    st2 { v1.4s, v2.4s }, [x8]
 ; CHECK-GI-NEXT:    ret
   %interleaved.vec = shufflevector <8 x i32> %v0, <8 x i32> %v1, <16 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11, i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
   store <16 x i32> %interleaved.vec, ptr %ptr, align 4
@@ -2560,31 +2563,32 @@ define void @store_factor2_wide15(ptr %ptr, ptr %p0, ptr %p1) {
 ; NEON-NEXT:    zip1 v1.4s, v1.4s, v4.4s
 ; NEON-NEXT:    ext v5.16b, v4.16b, v5.16b, #8
 ; NEON-NEXT:    rev64 v2.4s, v2.4s
-; NEON-NEXT:    str q1, [x0]
 ; NEON-NEXT:    trn2 v2.4s, v2.4s, v5.4s
 ; NEON-NEXT:    ext v0.16b, v2.16b, v0.16b, #8
 ; NEON-NEXT:    mov v3.d[1], v2.d[0]
-; NEON-NEXT:    stp q3, q0, [x0, #16]
+; NEON-NEXT:    stp q1, q3, [x0]
+; NEON-NEXT:    str q0, [x0, #32]
 ; NEON-NEXT:    ret
 ;
 ; NO_NEON-LABEL: store_factor2_wide15:
 ; NO_NEON:       // %bb.0:
-; NO_NEON-NEXT:    ldp x8, x11, [x2, #8]
-; NO_NEON-NEXT:    ldr x14, [x1]
-; NO_NEON-NEXT:    ldp x9, x10, [x1, #8]
-; NO_NEON-NEXT:    ldr x12, [x2]
+; NO_NEON-NEXT:    ldp x8, x11, [x1]
+; NO_NEON-NEXT:    ldr x12, [x2, #16]
+; NO_NEON-NEXT:    ldp x10, x9, [x2]
 ; NO_NEON-NEXT:    mov x13, x8
-; NO_NEON-NEXT:    bfxil x13, x9, #32, #32
-; NO_NEON-NEXT:    bfi x9, x8, #32, #32
-; NO_NEON-NEXT:    mov x8, x11
-; NO_NEON-NEXT:    bfxil x8, x10, #32, #32
-; NO_NEON-NEXT:    bfi x10, x11, #32, #32
-; NO_NEON-NEXT:    stp x9, x13, [x0, #16]
-; NO_NEON-NEXT:    mov x9, x14
-; NO_NEON-NEXT:    bfi x9, x12, #32, #32
-; NO_NEON-NEXT:    bfxil x12, x14, #32, #32
-; NO_NEON-NEXT:    stp x10, x8, [x0, #32]
-; NO_NEON-NEXT:    stp x9, x12, [x0]
+; NO_NEON-NEXT:    mov x14, x9
+; NO_NEON-NEXT:    bfi x13, x10, #32, #32
+; NO_NEON-NEXT:    bfxil x10, x8, #32, #32
+; NO_NEON-NEXT:    ldr x8, [x1, #16]
+; NO_NEON-NEXT:    bfxil x14, x11, #32, #32
+; NO_NEON-NEXT:    bfi x11, x9, #32, #32
+; NO_NEON-NEXT:    mov x9, x12
+; NO_NEON-NEXT:    bfxil x9, x8, #32, #32
+; NO_NEON-NEXT:    bfi x8, x12, #32, #32
+; NO_NEON-NEXT:    stp x10, x11, [x0, #8]
+; NO_NEON-NEXT:    stp x14, x8, [x0, #24]
+; NO_NEON-NEXT:    str x9, [x0, #40]
+; NO_NEON-NEXT:    str x13, [x0]
 ; NO_NEON-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: store_factor2_wide15:
@@ -2609,53 +2613,55 @@ define void @store_factor2_wide15(ptr %ptr, ptr %p0, ptr %p1) {
 define void @store_factor2_wide3(ptr %ptr, ptr %p0, ptr %p1) {
 ; NEON-LABEL: store_factor2_wide3:
 ; NEON:       // %bb.0:
-; NEON-NEXT:    ldp q0, q2, [x1, #16]
-; NEON-NEXT:    ldr q3, [x1]
-; NEON-NEXT:    ldp q1, q4, [x2, #16]
-; NEON-NEXT:    ldr q5, [x2]
-; NEON-NEXT:    zip1 v6.4s, v0.4s, v1.4s
-; NEON-NEXT:    zip2 v0.4s, v0.4s, v1.4s
-; NEON-NEXT:    zip1 v1.4s, v2.4s, v4.4s
-; NEON-NEXT:    zip2 v2.4s, v2.4s, v4.4s
-; NEON-NEXT:    zip2 v4.4s, v3.4s, v5.4s
-; NEON-NEXT:    zip1 v3.4s, v3.4s, v5.4s
-; NEON-NEXT:    stp q6, q0, [x0, #32]
-; NEON-NEXT:    stp q3, q4, [x0]
-; NEON-NEXT:    stp q1, q2, [x0, #64]
+; NEON-NEXT:    ldp q0, q3, [x2]
+; NEON-NEXT:    ldr q5, [x1, #32]
+; NEON-NEXT:    ldp q1, q2, [x1]
+; NEON-NEXT:    ldr q6, [x2, #32]
+; NEON-NEXT:    zip2 v4.4s, v1.4s, v0.4s
+; NEON-NEXT:    zip1 v7.4s, v2.4s, v3.4s
+; NEON-NEXT:    zip2 v2.4s, v2.4s, v3.4s
+; NEON-NEXT:    zip1 v3.4s, v5.4s, v6.4s
+; NEON-NEXT:    zip2 v5.4s, v5.4s, v6.4s
+; NEON-NEXT:    zip1 v0.4s, v1.4s, v0.4s
+; NEON-NEXT:    stp q4, q7, [x0, #16]
+; NEON-NEXT:    stp q2, q3, [x0, #48]
+; NEON-NEXT:    str q5, [x0, #80]
+; NEON-NEXT:    str q0, [x0]
 ; NEON-NEXT:    ret
 ;
 ; NO_NEON-LABEL: store_factor2_wide3:
 ; NO_NEON:       // %bb.0:
-; NO_NEON-NEXT:    ldp x15, x10, [x2]
-; NO_NEON-NEXT:    ldp x14, x13, [x1]
-; NO_NEON-NEXT:    ldp x17, x18, [x2, #16]
+; NO_NEON-NEXT:    ldp x11, x10, [x1]
+; NO_NEON-NEXT:    ldp x15, x14, [x2]
 ; NO_NEON-NEXT:    ldp x8, x9, [x1, #16]
-; NO_NEON-NEXT:    mov x16, x10
-; NO_NEON-NEXT:    bfxil x16, x13, #32, #32
-; NO_NEON-NEXT:    bfi x13, x10, #32, #32
-; NO_NEON-NEXT:    ldp x11, x12, [x1, #32]
-; NO_NEON-NEXT:    ldp x10, x1, [x2, #32]
+; NO_NEON-NEXT:    ldp x12, x13, [x1, #32]
+; NO_NEON-NEXT:    mov x16, x11
+; NO_NEON-NEXT:    ldp x17, x18, [x2, #16]
+; NO_NEON-NEXT:    mov x1, x14
+; NO_NEON-NEXT:    bfi x16, x15, #32, #32
+; NO_NEON-NEXT:    bfxil x15, x11, #32, #32
+; NO_NEON-NEXT:    bfxil x1, x10, #32, #32
+; NO_NEON-NEXT:    bfi x10, x14, #32, #32
+; NO_NEON-NEXT:    ldp x11, x14, [x2, #32]
 ; NO_NEON-NEXT:    mov x2, x17
+; NO_NEON-NEXT:    stp x15, x10, [x0, #8]
+; NO_NEON-NEXT:    mov x10, x18
 ; NO_NEON-NEXT:    bfxil x2, x8, #32, #32
 ; NO_NEON-NEXT:    bfi x8, x17, #32, #32
-; NO_NEON-NEXT:    stp x13, x16, [x0, #16]
-; NO_NEON-NEXT:    mov x13, x18
-; NO_NEON-NEXT:    bfxil x13, x9, #32, #32
+; NO_NEON-NEXT:    bfxil x10, x9, #32, #32
 ; NO_NEON-NEXT:    bfi x9, x18, #32, #32
-; NO_NEON-NEXT:    stp x8, x2, [x0, #32]
-; NO_NEON-NEXT:    mov x8, x10
-; NO_NEON-NEXT:    bfxil x8, x11, #32, #32
-; NO_NEON-NEXT:    bfi x11, x10, #32, #32
-; NO_NEON-NEXT:    stp x9, x13, [x0, #48]
-; NO_NEON-NEXT:    mov x9, x1
-; NO_NEON-NEXT:    mov x10, x14
-; NO_NEON-NEXT:    bfxil x9, x12, #32, #32
-; NO_NEON-NEXT:    bfi x12, x1, #32, #32
-; NO_NEON-NEXT:    bfi x10, x15, #32, #32
-; NO_NEON-NEXT:    bfxil x15, x14, #32, #32
-; NO_NEON-NEXT:    stp x11, x8, [x0, #64]
-; NO_NEON-NEXT:    stp x12, x9, [x0, #80]
-; NO_NEON-NEXT:    stp x10, x15, [x0]
+; NO_NEON-NEXT:    stp x1, x8, [x0, #24]
+; NO_NEON-NEXT:    mov x8, x11
+; NO_NEON-NEXT:    stp x2, x9, [x0, #40]
+; NO_NEON-NEXT:    mov x9, x14
+; NO_NEON-NEXT:    bfxil x8, x12, #32, #32
+; NO_NEON-NEXT:    bfi x12, x11, #32, #32
+; NO_NEON-NEXT:    bfxil x9, x13, #32, #32
+; NO_NEON-NEXT:    bfi x13, x14, #32, #32
+; NO_NEON-NEXT:    stp x10, x12, [x0, #56]
+; NO_NEON-NEXT:    stp x8, x13, [x0, #72]
+; NO_NEON-NEXT:    str x9, [x0, #88]
+; NO_NEON-NEXT:    str x16, [x0]
 ; NO_NEON-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: store_factor2_wide3:
@@ -2697,77 +2703,79 @@ define void @store_factor3_wide(ptr %ptr, <8 x i32> %v0, <8 x i32> %v1, <8 x i32
 ; NEON-IADISABLED-LABEL: store_factor3_wide:
 ; NEON-IADISABLED:       // %bb.0:
 ; NEON-IADISABLED-NEXT:    trn2 v6.4s, v1.4s, v3.4s
-; NEON-IADISABLED-NEXT:    uzp1 v7.4s, v0.4s, v2.4s
 ; NEON-IADISABLED-NEXT:    trn2 v16.4s, v0.4s, v2.4s
-; NEON-IADISABLED-NEXT:    trn1 v17.4s, v0.4s, v2.4s
-; NEON-IADISABLED-NEXT:    uzp1 v18.4s, v1.4s, v3.4s
+; NEON-IADISABLED-NEXT:    trn1 v17.4s, v1.4s, v3.4s
+; NEON-IADISABLED-NEXT:    uzp1 v7.4s, v1.4s, v3.4s
+; NEON-IADISABLED-NEXT:    uzp1 v18.4s, v0.4s, v2.4s
+; NEON-IADISABLED-NEXT:    trn1 v19.4s, v0.4s, v2.4s
 ; NEON-IADISABLED-NEXT:    ext v6.16b, v6.16b, v1.16b, #4
-; NEON-IADISABLED-NEXT:    uzp2 v2.4s, v2.4s, v7.4s
-; NEON-IADISABLED-NEXT:    trn1 v7.4s, v1.4s, v3.4s
-; NEON-IADISABLED-NEXT:    ext v16.16b, v16.16b, v0.16b, #4
-; NEON-IADISABLED-NEXT:    mov v17.d[1], v0.d[0]
-; NEON-IADISABLED-NEXT:    uzp2 v0.4s, v3.4s, v18.4s
+; NEON-IADISABLED-NEXT:    mov v17.d[1], v1.d[0]
+; NEON-IADISABLED-NEXT:    ext v1.16b, v16.16b, v0.16b, #4
+; NEON-IADISABLED-NEXT:    uzp2 v3.4s, v3.4s, v7.4s
+; NEON-IADISABLED-NEXT:    uzp2 v2.4s, v2.4s, v18.4s
+; NEON-IADISABLED-NEXT:    mov v19.d[1], v0.d[0]
 ; NEON-IADISABLED-NEXT:    mov v6.s[0], v5.s[2]
-; NEON-IADISABLED-NEXT:    mov v7.d[1], v1.d[0]
+; NEON-IADISABLED-NEXT:    mov v1.s[0], v4.s[2]
+; NEON-IADISABLED-NEXT:    mov v17.s[2], v5.s[0]
+; NEON-IADISABLED-NEXT:    mov v3.s[1], v5.s[1]
 ; NEON-IADISABLED-NEXT:    mov v2.s[1], v4.s[1]
-; NEON-IADISABLED-NEXT:    mov v16.s[0], v4.s[2]
-; NEON-IADISABLED-NEXT:    mov v17.s[2], v4.s[0]
-; NEON-IADISABLED-NEXT:    mov v0.s[1], v5.s[1]
+; NEON-IADISABLED-NEXT:    mov v19.s[2], v4.s[0]
 ; NEON-IADISABLED-NEXT:    mov v6.s[3], v5.s[3]
-; NEON-IADISABLED-NEXT:    mov v7.s[2], v5.s[0]
-; NEON-IADISABLED-NEXT:    mov v16.s[3], v4.s[3]
-; NEON-IADISABLED-NEXT:    stp q17, q2, [x0]
-; NEON-IADISABLED-NEXT:    stp q0, q6, [x0, #64]
-; NEON-IADISABLED-NEXT:    stp q16, q7, [x0, #32]
+; NEON-IADISABLED-NEXT:    mov v1.s[3], v4.s[3]
+; NEON-IADISABLED-NEXT:    stp q19, q2, [x0]
+; NEON-IADISABLED-NEXT:    stp q17, q3, [x0, #48]
+; NEON-IADISABLED-NEXT:    str q6, [x0, #80]
+; NEON-IADISABLED-NEXT:    str q1, [x0, #32]
 ; NEON-IADISABLED-NEXT:    ret
 ;
 ; NO_NEON-LABEL: store_factor3_wide:
 ; NO_NEON:       // %bb.0:
-; NO_NEON-NEXT:    ldr w10, [sp, #48]
-; NO_NEON-NEXT:    ldr w11, [sp, #112]
+; NO_NEON-NEXT:    ldr w10, [sp, #64]
+; NO_NEON-NEXT:    ldr w13, [sp, #128]
 ; NO_NEON-NEXT:    // kill: def $w6 killed $w6 def $x6
-; NO_NEON-NEXT:    // kill: def $w4 killed $w4 def $x4
-; NO_NEON-NEXT:    mov w18, w7
-; NO_NEON-NEXT:    ldr w9, [sp, #64]
-; NO_NEON-NEXT:    ldr w8, [sp, #120]
-; NO_NEON-NEXT:    mov w17, w5
-; NO_NEON-NEXT:    ldr w14, [sp, #128]
-; NO_NEON-NEXT:    orr x10, x10, x11, lsl #32
-; NO_NEON-NEXT:    ldr w11, [sp]
-; NO_NEON-NEXT:    ldr w12, [sp, #104]
-; NO_NEON-NEXT:    ldr w13, [sp, #32]
+; NO_NEON-NEXT:    mov w17, w7
+; NO_NEON-NEXT:    ldr w11, [sp, #120]
+; NO_NEON-NEXT:    ldr w16, [sp]
 ; NO_NEON-NEXT:    // kill: def $w2 killed $w2 def $x2
-; NO_NEON-NEXT:    ldr w15, [sp, #88]
-; NO_NEON-NEXT:    orr x9, x9, x14, lsl #32
-; NO_NEON-NEXT:    orr x8, x8, x11, lsl #32
-; NO_NEON-NEXT:    ldr w16, [sp, #16]
-; NO_NEON-NEXT:    ldr w11, [sp, #56]
-; NO_NEON-NEXT:    orr x12, x12, x6, lsl #32
-; NO_NEON-NEXT:    ldr w14, [sp, #40]
-; NO_NEON-NEXT:    str x9, [x0, #88]
-; NO_NEON-NEXT:    ldr w9, [sp, #96]
-; NO_NEON-NEXT:    str x8, [x0, #80]
-; NO_NEON-NEXT:    ldr w8, [sp, #80]
-; NO_NEON-NEXT:    orr x11, x18, x11, lsl #32
-; NO_NEON-NEXT:    orr x9, x13, x9, lsl #32
-; NO_NEON-NEXT:    orr x13, x15, x4, lsl #32
-; NO_NEON-NEXT:    stp x12, x10, [x0, #56]
-; NO_NEON-NEXT:    orr x8, x16, x8, lsl #32
+; NO_NEON-NEXT:    // kill: def $w4 killed $w4 def $x4
+; NO_NEON-NEXT:    ldr w12, [sp, #48]
+; NO_NEON-NEXT:    ldr w9, [sp, #104]
+; NO_NEON-NEXT:    orr x10, x10, x13, lsl #32
+; NO_NEON-NEXT:    ldr w13, [sp, #112]
+; NO_NEON-NEXT:    ldr w15, [sp, #56]
+; NO_NEON-NEXT:    orr x11, x11, x16, lsl #32
+; NO_NEON-NEXT:    ldr w8, [sp, #32]
+; NO_NEON-NEXT:    ldr w14, [sp, #16]
+; NO_NEON-NEXT:    orr x12, x12, x13, lsl #32
+; NO_NEON-NEXT:    orr x9, x9, x6, lsl #32
+; NO_NEON-NEXT:    ldr w16, [sp, #96]
+; NO_NEON-NEXT:    str x10, [x0, #88]
+; NO_NEON-NEXT:    orr x15, x17, x15, lsl #32
+; NO_NEON-NEXT:    ldr w10, [sp, #80]
+; NO_NEON-NEXT:    ldr w17, [sp, #72]
+; NO_NEON-NEXT:    mov w13, w1
+; NO_NEON-NEXT:    str x11, [x0, #80]
+; NO_NEON-NEXT:    ldr w11, [sp, #40]
+; NO_NEON-NEXT:    orr x8, x8, x16, lsl #32
+; NO_NEON-NEXT:    stp x9, x12, [x0, #56]
+; NO_NEON-NEXT:    mov w12, w5
+; NO_NEON-NEXT:    orr x10, x14, x10, lsl #32
+; NO_NEON-NEXT:    orr x9, x12, x11, lsl #32
+; NO_NEON-NEXT:    orr x11, x17, x2, lsl #32
+; NO_NEON-NEXT:    str x8, [x0, #40]
+; NO_NEON-NEXT:    ldr w8, [sp, #88]
+; NO_NEON-NEXT:    str x10, [x0, #16]
+; NO_NEON-NEXT:    ldr w10, [sp, #8]
 ; NO_NEON-NEXT:    ldr w12, [sp, #24]
-; NO_NEON-NEXT:    str x11, [x0, #72]
-; NO_NEON-NEXT:    stp x13, x9, [x0, #32]
-; NO_NEON-NEXT:    ldr w13, [sp, #72]
-; NO_NEON-NEXT:    mov w9, w3
-; NO_NEON-NEXT:    str x8, [x0, #16]
-; NO_NEON-NEXT:    ldr w8, [sp, #8]
-; NO_NEON-NEXT:    mov w11, w1
-; NO_NEON-NEXT:    orr x10, x17, x14, lsl #32
-; NO_NEON-NEXT:    orr x9, x9, x12, lsl #32
-; NO_NEON-NEXT:    orr x12, x13, x2, lsl #32
-; NO_NEON-NEXT:    orr x8, x11, x8, lsl #32
-; NO_NEON-NEXT:    str x10, [x0, #48]
-; NO_NEON-NEXT:    str x9, [x0, #24]
-; NO_NEON-NEXT:    stp x8, x12, [x0]
+; NO_NEON-NEXT:    str x11, [x0, #8]
+; NO_NEON-NEXT:    mov w11, w3
+; NO_NEON-NEXT:    orr x8, x8, x4, lsl #32
+; NO_NEON-NEXT:    str x9, [x0, #48]
+; NO_NEON-NEXT:    orr x9, x13, x10, lsl #32
+; NO_NEON-NEXT:    orr x11, x11, x12, lsl #32
+; NO_NEON-NEXT:    str x15, [x0, #72]
+; NO_NEON-NEXT:    stp x11, x8, [x0, #24]
+; NO_NEON-NEXT:    str x9, [x0]
 ; NO_NEON-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: store_factor3_wide:
@@ -2825,35 +2833,35 @@ define void @store_factor4_wide(ptr %ptr, <8 x i32> %v0, <8 x i32> %v1, <8 x i32
 ; NEON-IADISABLED-LABEL: store_factor4_wide:
 ; NEON-IADISABLED:       // %bb.0:
 ; NEON-IADISABLED-NEXT:    uzp2 v16.4s, v1.4s, v3.4s
-; NEON-IADISABLED-NEXT:    zip1 v17.4s, v5.4s, v7.4s
-; NEON-IADISABLED-NEXT:    trn1 v18.4s, v5.4s, v7.4s
-; NEON-IADISABLED-NEXT:    zip2 v19.4s, v1.4s, v3.4s
-; NEON-IADISABLED-NEXT:    uzp2 v20.4s, v0.4s, v2.4s
-; NEON-IADISABLED-NEXT:    trn2 v21.4s, v1.4s, v3.4s
-; NEON-IADISABLED-NEXT:    zip1 v22.4s, v4.4s, v6.4s
+; NEON-IADISABLED-NEXT:    zip1 v19.4s, v5.4s, v7.4s
+; NEON-IADISABLED-NEXT:    uzp2 v21.4s, v0.4s, v2.4s
+; NEON-IADISABLED-NEXT:    zip1 v24.4s, v4.4s, v6.4s
+; NEON-IADISABLED-NEXT:    trn1 v17.4s, v5.4s, v7.4s
+; NEON-IADISABLED-NEXT:    zip2 v18.4s, v1.4s, v3.4s
+; NEON-IADISABLED-NEXT:    trn2 v20.4s, v1.4s, v3.4s
+; NEON-IADISABLED-NEXT:    trn1 v22.4s, v4.4s, v6.4s
+; NEON-IADISABLED-NEXT:    zip2 v23.4s, v0.4s, v2.4s
+; NEON-IADISABLED-NEXT:    trn2 v25.4s, v0.4s, v2.4s
 ; NEON-IADISABLED-NEXT:    zip2 v7.4s, v5.4s, v7.4s
 ; NEON-IADISABLED-NEXT:    uzp2 v16.4s, v16.4s, v1.4s
 ; NEON-IADISABLED-NEXT:    zip1 v1.4s, v1.4s, v3.4s
-; NEON-IADISABLED-NEXT:    ext v3.16b, v5.16b, v17.16b, #8
-; NEON-IADISABLED-NEXT:    trn1 v5.4s, v4.4s, v6.4s
-; NEON-IADISABLED-NEXT:    mov v19.d[1], v18.d[1]
-; NEON-IADISABLED-NEXT:    zip2 v18.4s, v0.4s, v2.4s
-; NEON-IADISABLED-NEXT:    zip2 v6.4s, v4.4s, v6.4s
-; NEON-IADISABLED-NEXT:    uzp2 v20.4s, v20.4s, v0.4s
-; NEON-IADISABLED-NEXT:    mov v21.d[1], v17.d[1]
-; NEON-IADISABLED-NEXT:    trn2 v17.4s, v0.4s, v2.4s
+; NEON-IADISABLED-NEXT:    ext v3.16b, v5.16b, v19.16b, #8
+; NEON-IADISABLED-NEXT:    zip2 v5.4s, v4.4s, v6.4s
+; NEON-IADISABLED-NEXT:    uzp2 v6.4s, v21.4s, v0.4s
 ; NEON-IADISABLED-NEXT:    zip1 v0.4s, v0.4s, v2.4s
-; NEON-IADISABLED-NEXT:    ext v2.16b, v4.16b, v22.16b, #8
+; NEON-IADISABLED-NEXT:    ext v2.16b, v4.16b, v24.16b, #8
+; NEON-IADISABLED-NEXT:    mov v18.d[1], v17.d[1]
+; NEON-IADISABLED-NEXT:    mov v20.d[1], v19.d[1]
+; NEON-IADISABLED-NEXT:    mov v23.d[1], v22.d[1]
+; NEON-IADISABLED-NEXT:    mov v25.d[1], v24.d[1]
 ; NEON-IADISABLED-NEXT:    mov v16.d[1], v7.d[1]
 ; NEON-IADISABLED-NEXT:    mov v1.d[1], v3.d[1]
-; NEON-IADISABLED-NEXT:    mov v18.d[1], v5.d[1]
-; NEON-IADISABLED-NEXT:    stp q21, q19, [x0, #80]
-; NEON-IADISABLED-NEXT:    mov v20.d[1], v6.d[1]
-; NEON-IADISABLED-NEXT:    mov v17.d[1], v22.d[1]
+; NEON-IADISABLED-NEXT:    mov v6.d[1], v5.d[1]
+; NEON-IADISABLED-NEXT:    stp q20, q18, [x0, #80]
 ; NEON-IADISABLED-NEXT:    mov v0.d[1], v2.d[1]
+; NEON-IADISABLED-NEXT:    stp q25, q23, [x0, #16]
 ; NEON-IADISABLED-NEXT:    str q16, [x0, #112]
-; NEON-IADISABLED-NEXT:    stp q20, q1, [x0, #48]
-; NEON-IADISABLED-NEXT:    stp q17, q18, [x0, #16]
+; NEON-IADISABLED-NEXT:    stp q6, q1, [x0, #48]
 ; NEON-IADISABLED-NEXT:    str q0, [x0]
 ; NEON-IADISABLED-NEXT:    ret
 ;
@@ -2887,7 +2895,6 @@ define void @store_factor4_wide(ptr %ptr, <8 x i32> %v0, <8 x i32> %v1, <8 x i32
 ; NO_NEON-NEXT:    str w2, [x0, #16]
 ; NO_NEON-NEXT:    str w8, [x0, #76]
 ; NO_NEON-NEXT:    ldr w8, [sp, #40]
-; NO_NEON-NEXT:    str w1, [x0]
 ; NO_NEON-NEXT:    stp w8, w9, [x0, #68]
 ; NO_NEON-NEXT:    ldr w8, [sp, #160]
 ; NO_NEON-NEXT:    ldr w9, [sp, #96]
@@ -2909,6 +2916,7 @@ define void @store_factor4_wide(ptr %ptr, <8 x i32> %v0, <8 x i32> %v1, <8 x i32
 ; NO_NEON-NEXT:    str w8, [x0, #12]
 ; NO_NEON-NEXT:    ldr w8, [sp, #8]
 ; NO_NEON-NEXT:    stp w8, w9, [x0, #4]
+; NO_NEON-NEXT:    str w1, [x0]
 ; NO_NEON-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: store_factor4_wide:
@@ -3204,13 +3212,13 @@ define void @store_factor2_wide_intrinsic(ptr %ptr, <8 x i32> %v0, <8 x i32> %v1
 ;
 ; CHECK-GI-LABEL: store_factor2_wide_intrinsic:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    mov v4.16b, v1.16b
+; CHECK-GI-NEXT:    mov v4.16b, v0.16b
 ; CHECK-GI-NEXT:    add x8, x0, #32
-; CHECK-GI-NEXT:    mov v1.16b, v2.16b
-; CHECK-GI-NEXT:    mov v5.16b, v3.16b
-; CHECK-GI-NEXT:    st2 { v0.4s, v1.4s }, [x0]
-; CHECK-GI-NEXT:    st2 { v4.4s, v5.4s }, [x8]
+; CHECK-GI-NEXT:    mov v5.16b, v2.16b
+; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 def $q1_q2
+; CHECK-GI-NEXT:    mov v2.16b, v3.16b
+; CHECK-GI-NEXT:    st2 { v4.4s, v5.4s }, [x0]
+; CHECK-GI-NEXT:    st2 { v1.4s, v2.4s }, [x8]
 ; CHECK-GI-NEXT:    ret
   %interleaved.intrinsic = call <16 x i32> @llvm.vector.interleave2.v16i32(<8 x i32> %v0, <8 x i32> %v1)
   store <16 x i32> %interleaved.intrinsic, ptr %ptr, align 4
@@ -3231,23 +3239,23 @@ define void @store_factor3_intrinsic(ptr %ptr, <4 x i32> %v0, <4 x i32> %v1, <4 
 ; NO_NEON-NEXT:    ldr w8, [sp]
 ; NO_NEON-NEXT:    ldr w9, [sp, #32]
 ; NO_NEON-NEXT:    // kill: def $w4 killed $w4 def $x4
-; NO_NEON-NEXT:    mov w12, w3
+; NO_NEON-NEXT:    mov w11, w3
 ; NO_NEON-NEXT:    ldr w10, [sp, #24]
-; NO_NEON-NEXT:    ldr w11, [sp, #16]
-; NO_NEON-NEXT:    mov w13, w6
-; NO_NEON-NEXT:    orr x8, x8, x9, lsl #32
-; NO_NEON-NEXT:    ldr w9, [sp, #8]
+; NO_NEON-NEXT:    ldr w12, [sp, #16]
 ; NO_NEON-NEXT:    // kill: def $w7 killed $w7 def $x7
 ; NO_NEON-NEXT:    // kill: def $w5 killed $w5 def $x5
 ; NO_NEON-NEXT:    // kill: def $w2 killed $w2 def $x2
-; NO_NEON-NEXT:    orr x12, x12, x7, lsl #32
+; NO_NEON-NEXT:    orr x11, x11, x7, lsl #32
+; NO_NEON-NEXT:    orr x8, x8, x9, lsl #32
+; NO_NEON-NEXT:    ldr w9, [sp, #8]
 ; NO_NEON-NEXT:    orr x10, x10, x4, lsl #32
 ; NO_NEON-NEXT:    orr x9, x9, x2, lsl #32
 ; NO_NEON-NEXT:    stp x10, x8, [x0, #32]
+; NO_NEON-NEXT:    mov w8, w6
 ; NO_NEON-NEXT:    mov w10, w1
-; NO_NEON-NEXT:    orr x8, x13, x11, lsl #32
+; NO_NEON-NEXT:    orr x8, x8, x12, lsl #32
 ; NO_NEON-NEXT:    orr x10, x10, x5, lsl #32
-; NO_NEON-NEXT:    stp x8, x12, [x0, #16]
+; NO_NEON-NEXT:    stp x8, x11, [x0, #16]
 ; NO_NEON-NEXT:    stp x10, x9, [x0]
 ; NO_NEON-NEXT:    ret
 ;
@@ -3278,51 +3286,52 @@ define void @store_factor3_wide_intrinsic(ptr %ptr, <8 x i32> %v0, <8 x i32> %v1
 ;
 ; NO_NEON-LABEL: store_factor3_wide_intrinsic:
 ; NO_NEON:       // %bb.0:
-; NO_NEON-NEXT:    ldr w10, [sp, #48]
-; NO_NEON-NEXT:    ldr w11, [sp, #112]
+; NO_NEON-NEXT:    ldr w10, [sp, #64]
+; NO_NEON-NEXT:    ldr w13, [sp, #128]
 ; NO_NEON-NEXT:    // kill: def $w6 killed $w6 def $x6
-; NO_NEON-NEXT:    // kill: def $w4 killed $w4 def $x4
-; NO_NEON-NEXT:    mov w18, w7
-; NO_NEON-NEXT:    ldr w9, [sp, #64]
-; NO_NEON-NEXT:    ldr w8, [sp, #120]
-; NO_NEON-NEXT:    mov w17, w5
-; NO_NEON-NEXT:    ldr w14, [sp, #128]
-; NO_NEON-NEXT:    orr x10, x10, x11, lsl #32
-; NO_NEON-NEXT:    ldr w11, [sp]
-; NO_NEON-NEXT:    ldr w12, [sp, #104]
-; NO_NEON-NEXT:    ldr w13, [sp, #32]
+; NO_NEON-NEXT:    mov w17, w7
+; NO_NEON-NEXT:    ldr w11, [sp, #120]
+; NO_NEON-NEXT:    ldr w16, [sp]
 ; NO_NEON-NEXT:    // kill: def $w2 killed $w2 def $x2
-; NO_NEON-NEXT:    ldr w15, [sp, #88]
-; NO_NEON-NEXT:    orr x9, x9, x14, lsl #32
-; NO_NEON-NEXT:    orr x8, x8, x11, lsl #32
-; NO_NEON-NEXT:    ldr w16, [sp, #16]
-; NO_NEON-NEXT:    ldr w11, [sp, #56]
-; NO_NEON-NEXT:    orr x12, x12, x6, lsl #32
-; NO_NEON-NEXT:    ldr w14, [sp, #40]
-; NO_NEON-NEXT:    str x9, [x0, #88]
-; NO_NEON-NEXT:    ldr w9, [sp, #96]
-; NO_NEON-NEXT:    str x8, [x0, #80]
-; NO_NEON-NEXT:    ldr w8, [sp, #80]
-; NO_NEON-NEXT:    orr x11, x18, x11, lsl #32
-; NO_NEON-NEXT:    orr x9, x13, x9, lsl #32
-; NO_NEON-NEXT:    orr x13, x15, x4, lsl #32
-; NO_NEON-NEXT:    stp x12, x10, [x0, #56]
-; NO_NEON-NEXT:    orr x8, x16, x8, lsl #32
+; NO_NEON-NEXT:    // kill: def $w4 killed $w4 def $x4
+; NO_NEON-NEXT:    ldr w12, [sp, #48]
+; NO_NEON-NEXT:    ldr w9, [sp, #104]
+; NO_NEON-NEXT:    orr x10, x10, x13, lsl #32
+; NO_NEON-NEXT:    ldr w13, [sp, #112]
+; NO_NEON-NEXT:    ldr w15, [sp, #56]
+; NO_NEON-NEXT:    orr x11, x11, x16, lsl #32
+; NO_NEON-NEXT:    ldr w8, [sp, #32]
+; NO_NEON-NEXT:    ldr w14, [sp, #16]
+; NO_NEON-NEXT:    orr x12, x12, x13, lsl #32
+; NO_NEON-NEXT:    orr x9, x9, x6, lsl #32
+; NO_NEON-NEXT:    ldr w16, [sp, #96]
+; NO_NEON-NEXT:    str x10, [x0, #88]
+; NO_NEON-NEXT:    orr x15, x17, x15, lsl #32
+; NO_NEON-NEXT:    ldr w10, [sp, #80]
+; NO_NEON-NEXT:    ldr w17, [sp, #72]
+; NO_NEON-NEXT:    mov w13, w1
+; NO_NEON-NEXT:    str x11, [x0, #80]
+; NO_NEON-NEXT:    ldr w11, [sp, #40]
+; NO_NEON-NEXT:    orr x8, x8, x16, lsl #32
+; NO_NEON-NEXT:    stp x9, x12, [x0, #56]
+; NO_NEON-NEXT:    mov w12, w5
+; NO_NEON-NEXT:    orr x10, x14, x10, lsl #32
+; NO_NEON-NEXT:    orr x9, x12, x11, lsl #32
+; NO_NEON-NEXT:    orr x11, x17, x2, lsl #32
+; NO_NEON-NEXT:    str x8, [x0, #40]
+; NO_NEON-NEXT:    ldr w8, [sp, #88]
+; NO_NEON-NEXT:    str x10, [x0, #16]
+; NO_NEON-NEXT:    ldr w10, [sp, #8]
 ; NO_NEON-NEXT:    ldr w12, [sp, #24]
-; NO_NEON-NEXT:    str x11, [x0, #72]
-; NO_NEON-NEXT:    stp x13, x9, [x0, #32]
-; NO_NEON-NEXT:    ldr w13, [sp, #72]
-; NO_NEON-NEXT:    mov w9, w3
-; NO_NEON-NEXT:    str x8, [x0, #16]
-; NO_NEON-NEXT:    ldr w8, [sp, #8]
-; NO_NEON-NEXT:    mov w11, w1
-; NO_NEON-NEXT:    orr x10, x17, x14, lsl #32
-; NO_NEON-NEXT:    orr x9, x9, x12, lsl #32
-; NO_NEON-NEXT:    orr x12, x13, x2, lsl #32
-; NO_NEON-NEXT:    orr x8, x11, x8, lsl #32
-; NO_NEON-NEXT:    str x10, [x0, #48]
-; NO_NEON-NEXT:    str x9, [x0, #24]
-; NO_NEON-NEXT:    stp x8, x12, [x0]
+; NO_NEON-NEXT:    str x11, [x0, #8]
+; NO_NEON-NEXT:    mov w11, w3
+; NO_NEON-NEXT:    orr x8, x8, x4, lsl #32
+; NO_NEON-NEXT:    str x9, [x0, #48]
+; NO_NEON-NEXT:    orr x9, x13, x10, lsl #32
+; NO_NEON-NEXT:    orr x11, x11, x12, lsl #32
+; NO_NEON-NEXT:    str x15, [x0, #72]
+; NO_NEON-NEXT:    stp x11, x8, [x0, #24]
+; NO_NEON-NEXT:    str x9, [x0]
 ; NO_NEON-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: store_factor3_wide_intrinsic:
@@ -3433,7 +3442,6 @@ define void @store_factor4_wide_intrinsic(ptr %ptr, <8 x i32> %v0, <8 x i32> %v1
 ; NO_NEON-NEXT:    str w2, [x0, #16]
 ; NO_NEON-NEXT:    str w8, [x0, #76]
 ; NO_NEON-NEXT:    ldr w8, [sp, #40]
-; NO_NEON-NEXT:    str w1, [x0]
 ; NO_NEON-NEXT:    stp w8, w9, [x0, #68]
 ; NO_NEON-NEXT:    ldr w8, [sp, #160]
 ; NO_NEON-NEXT:    ldr w9, [sp, #96]
@@ -3455,6 +3463,7 @@ define void @store_factor4_wide_intrinsic(ptr %ptr, <8 x i32> %v0, <8 x i32> %v1
 ; NO_NEON-NEXT:    str w8, [x0, #12]
 ; NO_NEON-NEXT:    ldr w8, [sp, #8]
 ; NO_NEON-NEXT:    stp w8, w9, [x0, #4]
+; NO_NEON-NEXT:    str w1, [x0]
 ; NO_NEON-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: store_factor4_wide_intrinsic:
@@ -3490,27 +3499,27 @@ define void @store_general_mask_factor3_intrinsic(ptr %ptr, <32 x i32> %v0, <32 
 ; NO_NEON-NEXT:    .cfi_def_cfa_offset 16
 ; NO_NEON-NEXT:    .cfi_offset w29, -16
 ; NO_NEON-NEXT:    ldr w8, [sp, #240]
-; NO_NEON-NEXT:    ldr w10, [sp, #112]
+; NO_NEON-NEXT:    ldr w9, [sp, #112]
 ; NO_NEON-NEXT:    // kill: def $w6 killed $w6 def $x6
-; NO_NEON-NEXT:    ldr w11, [sp, #224]
+; NO_NEON-NEXT:    mov w14, w7
+; NO_NEON-NEXT:    ldr w10, [sp, #224]
+; NO_NEON-NEXT:    ldr w11, [sp, #88]
 ; NO_NEON-NEXT:    ldr w12, [sp, #96]
+; NO_NEON-NEXT:    orr x8, x8, x9, lsl #32
 ; NO_NEON-NEXT:    ldr w9, [sp, #104]
-; NO_NEON-NEXT:    ldr w13, [sp, #16]
-; NO_NEON-NEXT:    orr x8, x8, x10, lsl #32
-; NO_NEON-NEXT:    orr x10, x11, x12, lsl #32
-; NO_NEON-NEXT:    ldr w11, [sp, #232]
-; NO_NEON-NEXT:    orr x9, x9, x13, lsl #32
-; NO_NEON-NEXT:    mov w13, w7
-; NO_NEON-NEXT:    ldr w12, [sp, #88]
+; NO_NEON-NEXT:    ldr w13, [sp, #216]
+; NO_NEON-NEXT:    orr x11, x11, x6, lsl #32
+; NO_NEON-NEXT:    orr x10, x10, x12, lsl #32
+; NO_NEON-NEXT:    ldr w12, [sp, #16]
 ; NO_NEON-NEXT:    str x8, [x0, #40]
-; NO_NEON-NEXT:    orr x11, x13, x11, lsl #32
-; NO_NEON-NEXT:    ldr w8, [sp, #216]
-; NO_NEON-NEXT:    orr x12, x12, x6, lsl #32
-; NO_NEON-NEXT:    stp x11, x9, [x0, #24]
-; NO_NEON-NEXT:    mov w9, w5
-; NO_NEON-NEXT:    orr x8, x9, x8, lsl #32
-; NO_NEON-NEXT:    stp x12, x10, [x0, #8]
-; NO_NEON-NEXT:    str x8, [x0]
+; NO_NEON-NEXT:    ldr w8, [sp, #232]
+; NO_NEON-NEXT:    stp x11, x10, [x0, #8]
+; NO_NEON-NEXT:    mov w10, w5
+; NO_NEON-NEXT:    orr x9, x9, x12, lsl #32
+; NO_NEON-NEXT:    orr x8, x14, x8, lsl #32
+; NO_NEON-NEXT:    orr x10, x10, x13, lsl #32
+; NO_NEON-NEXT:    stp x8, x9, [x0, #24]
+; NO_NEON-NEXT:    str x10, [x0]
 ; NO_NEON-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; NO_NEON-NEXT:    ret
 ;
@@ -3545,26 +3554,26 @@ define void @store_general_mask_factor3_undeflane_intrinsic(ptr %ptr, <32 x i32>
 ; NO_NEON-NEXT:    .cfi_offset w29, -16
 ; NO_NEON-NEXT:    ldr w8, [sp, #240]
 ; NO_NEON-NEXT:    ldr w9, [sp, #112]
-; NO_NEON-NEXT:    mov w14, w3
-; NO_NEON-NEXT:    ldr w10, [sp, #104]
-; NO_NEON-NEXT:    ldr w11, [sp, #224]
-; NO_NEON-NEXT:    // kill: def $w4 killed $w4 def $x4
 ; NO_NEON-NEXT:    // kill: def $w2 killed $w2 def $x2
-; NO_NEON-NEXT:    ldr w12, [sp, #96]
+; NO_NEON-NEXT:    // kill: def $w4 killed $w4 def $x4
+; NO_NEON-NEXT:    ldr w10, [sp, #224]
+; NO_NEON-NEXT:    ldr w11, [sp, #96]
+; NO_NEON-NEXT:    ldr w12, [sp, #88]
 ; NO_NEON-NEXT:    ldr w13, [sp, #232]
 ; NO_NEON-NEXT:    orr x8, x8, x9, lsl #32
-; NO_NEON-NEXT:    ldr w9, [sp, #88]
-; NO_NEON-NEXT:    orr x10, x10, x4, lsl #32
-; NO_NEON-NEXT:    orr x11, x11, x12, lsl #32
-; NO_NEON-NEXT:    orr x12, x14, x13, lsl #32
+; NO_NEON-NEXT:    ldr w9, [sp, #104]
+; NO_NEON-NEXT:    orr x10, x10, x11, lsl #32
+; NO_NEON-NEXT:    orr x12, x12, x2, lsl #32
+; NO_NEON-NEXT:    ldr w11, [sp, #216]
 ; NO_NEON-NEXT:    str x8, [x0, #40]
-; NO_NEON-NEXT:    ldr w8, [sp, #216]
-; NO_NEON-NEXT:    orr x9, x9, x2, lsl #32
-; NO_NEON-NEXT:    stp x12, x10, [x0, #24]
+; NO_NEON-NEXT:    mov w8, w3
+; NO_NEON-NEXT:    orr x9, x9, x4, lsl #32
+; NO_NEON-NEXT:    stp x12, x10, [x0, #8]
 ; NO_NEON-NEXT:    mov w10, w1
-; NO_NEON-NEXT:    orr x8, x10, x8, lsl #32
-; NO_NEON-NEXT:    stp x9, x11, [x0, #8]
-; NO_NEON-NEXT:    str x8, [x0]
+; NO_NEON-NEXT:    orr x8, x8, x13, lsl #32
+; NO_NEON-NEXT:    orr x10, x10, x11, lsl #32
+; NO_NEON-NEXT:    stp x8, x9, [x0, #24]
+; NO_NEON-NEXT:    str x10, [x0]
 ; NO_NEON-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; NO_NEON-NEXT:    ret
 ;
@@ -3598,27 +3607,27 @@ define void @store_general_mask_factor3_undefmultimid_intrinsic(ptr %ptr, <32 x 
 ; NO_NEON-NEXT:    .cfi_def_cfa_offset 16
 ; NO_NEON-NEXT:    .cfi_offset w29, -16
 ; NO_NEON-NEXT:    ldr w8, [sp, #240]
-; NO_NEON-NEXT:    ldr w10, [sp, #112]
+; NO_NEON-NEXT:    ldr w9, [sp, #112]
 ; NO_NEON-NEXT:    // kill: def $w6 killed $w6 def $x6
-; NO_NEON-NEXT:    ldr w11, [sp, #224]
+; NO_NEON-NEXT:    mov w14, w7
+; NO_NEON-NEXT:    ldr w10, [sp, #224]
+; NO_NEON-NEXT:    ldr w11, [sp, #88]
 ; NO_NEON-NEXT:    ldr w12, [sp, #96]
+; NO_NEON-NEXT:    orr x8, x8, x9, lsl #32
 ; NO_NEON-NEXT:    ldr w9, [sp, #104]
-; NO_NEON-NEXT:    ldr w13, [sp, #16]
-; NO_NEON-NEXT:    orr x8, x8, x10, lsl #32
-; NO_NEON-NEXT:    orr x10, x11, x12, lsl #32
-; NO_NEON-NEXT:    ldr w11, [sp, #232]
-; NO_NEON-NEXT:    orr x9, x9, x13, lsl #32
-; NO_NEON-NEXT:    mov w13, w7
-; NO_NEON-NEXT:    ldr w12, [sp, #88]
+; NO_NEON-NEXT:    ldr w13, [sp, #216]
+; NO_NEON-NEXT:    orr x11, x11, x6, lsl #32
+; NO_NEON-NEXT:    orr x10, x10, x12, lsl #32
+; NO_NEON-NEXT:    ldr w12, [sp, #16]
 ; NO_NEON-NEXT:    str x8, [x0, #40]
-; NO_NEON-NEXT:    orr x11, x13, x11, lsl #32
-; NO_NEON-NEXT:    ldr w8, [sp, #216]
-; NO_NEON-NEXT:    orr x12, x12, x6, lsl #32
-; NO_NEON-NEXT:    stp x11, x9, [x0, #24]
-; NO_NEON-NEXT:    mov w9, w5
-; NO_NEON-NEXT:    orr x8, x9, x8, lsl #32
-; NO_NEON-NEXT:    stp x12, x10, [x0, #8]
-; NO_NEON-NEXT:    str x8, [x0]
+; NO_NEON-NEXT:    ldr w8, [sp, #232]
+; NO_NEON-NEXT:    stp x11, x10, [x0, #8]
+; NO_NEON-NEXT:    mov w10, w5
+; NO_NEON-NEXT:    orr x9, x9, x12, lsl #32
+; NO_NEON-NEXT:    orr x8, x14, x8, lsl #32
+; NO_NEON-NEXT:    orr x10, x10, x13, lsl #32
+; NO_NEON-NEXT:    stp x8, x9, [x0, #24]
+; NO_NEON-NEXT:    str x10, [x0]
 ; NO_NEON-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; NO_NEON-NEXT:    ret
 ;
@@ -3838,10 +3847,10 @@ define void @store_general_mask_factor4_undefmulti_intrinsic(ptr %ptr, <32 x i32
 ; NO_NEON-NEXT:    .cfi_offset w29, -16
 ; NO_NEON-NEXT:    ldr w8, [sp, #32]
 ; NO_NEON-NEXT:    stp w6, w2, [x0, #16]
-; NO_NEON-NEXT:    stp w5, w1, [x0]
 ; NO_NEON-NEXT:    stp w2, w8, [x0, #24]
 ; NO_NEON-NEXT:    ldr w8, [sp, #24]
 ; NO_NEON-NEXT:    stp w1, w8, [x0, #8]
+; NO_NEON-NEXT:    stp w5, w1, [x0]
 ; NO_NEON-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; NO_NEON-NEXT:    ret
 ;
@@ -3929,10 +3938,10 @@ define void @store_ptrvec_factor4_intrinsic(ptr %ptr, <2 x ptr> %v0, <2 x ptr> %
 ; NO_NEON:       // %bb.0:
 ; NO_NEON-NEXT:    ldr x8, [sp, #8]
 ; NO_NEON-NEXT:    stp x3, x5, [x0, #32]
-; NO_NEON-NEXT:    stp x2, x4, [x0]
 ; NO_NEON-NEXT:    stp x7, x8, [x0, #48]
 ; NO_NEON-NEXT:    ldr x8, [sp]
 ; NO_NEON-NEXT:    stp x6, x8, [x0, #16]
+; NO_NEON-NEXT:    stp x2, x4, [x0]
 ; NO_NEON-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: store_ptrvec_factor4_intrinsic:
@@ -3990,23 +3999,23 @@ define void @store_undef_mask_factor3_intrinsic(ptr %ptr, <4 x i32> %v0, <4 x i3
 ; NO_NEON-NEXT:    ldr w8, [sp]
 ; NO_NEON-NEXT:    ldr w9, [sp, #32]
 ; NO_NEON-NEXT:    // kill: def $w4 killed $w4 def $x4
-; NO_NEON-NEXT:    mov w12, w3
+; NO_NEON-NEXT:    mov w11, w3
 ; NO_NEON-NEXT:    ldr w10, [sp, #24]
-; NO_NEON-NEXT:    ldr w11, [sp, #16]
-; NO_NEON-NEXT:    mov w13, w6
-; NO_NEON-NEXT:    orr x8, x8, x9, lsl #32
-; NO_NEON-NEXT:    ldr w9, [sp, #8]
+; NO_NEON-NEXT:    ldr w12, [sp, #16]
 ; NO_NEON-NEXT:    // kill: def $w7 killed $w7 def $x7
 ; NO_NEON-NEXT:    // kill: def $w5 killed $w5 def $x5
 ; NO_NEON-NEXT:    // kill: def $w2 killed $w2 def $x2
-; NO_NEON-NEXT:    orr x12, x12, x7, lsl #32
+; NO_NEON-NEXT:    orr x11, x11, x7, lsl #32
+; NO_NEON-NEXT:    orr x8, x8, x9, lsl #32
+; NO_NEON-NEXT:    ldr w9, [sp, #8]
 ; NO_NEON-NEXT:    orr x10, x10, x4, lsl #32
 ; NO_NEON-NEXT:    orr x9, x9, x2, lsl #32
 ; NO_NEON-NEXT:    stp x10, x8, [x0, #32]
+; NO_NEON-NEXT:    mov w8, w6
 ; NO_NEON-NEXT:    mov w10, w1
-; NO_NEON-NEXT:    orr x8, x13, x11, lsl #32
+; NO_NEON-NEXT:    orr x8, x8, x12, lsl #32
 ; NO_NEON-NEXT:    orr x10, x10, x5, lsl #32
-; NO_NEON-NEXT:    stp x8, x12, [x0, #16]
+; NO_NEON-NEXT:    stp x8, x11, [x0, #16]
 ; NO_NEON-NEXT:    stp x10, x9, [x0]
 ; NO_NEON-NEXT:    ret
 ;

@@ -9119,48 +9119,48 @@ define <32 x double> @global_extload_v32bf16_to_v32f64(ptr addrspace(1) %ptr) #0
 ; GFX1250-NEXT:    s_wait_loadcnt 0x4
 ; GFX1250-NEXT:    v_dual_lshlrev_b32 v49, 16, v29 :: v_dual_lshlrev_b32 v52, 16, v30
 ; GFX1250-NEXT:    s_wait_loadcnt 0x3
-; GFX1250-NEXT:    v_dual_lshlrev_b32 v54, 16, v31 :: v_dual_lshlrev_b32 v48, 16, v28
+; GFX1250-NEXT:    v_dual_lshlrev_b32 v65, 16, v31 :: v_dual_lshlrev_b32 v48, 16, v28
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    v_dual_lshlrev_b32 v66, 16, v32 :: v_dual_lshlrev_b32 v34, 16, v34
-; GFX1250-NEXT:    v_lshlrev_b32_e32 v65, 16, v33
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX1250-NEXT:    v_cvt_f64_f32_e32 v[54:55], v54
-; GFX1250-NEXT:    v_dual_lshlrev_b32 v11, 16, v14 :: v_dual_lshlrev_b32 v14, 16, v15
+; GFX1250-NEXT:    v_dual_lshlrev_b32 v67, 16, v32 :: v_dual_lshlrev_b32 v34, 16, v34
+; GFX1250-NEXT:    v_dual_lshlrev_b32 v66, 16, v33 :: v_dual_lshlrev_b32 v14, 16, v14
+; GFX1250-NEXT:    v_lshlrev_b32_e32 v11, 16, v15
 ; GFX1250-NEXT:    v_lshlrev_b32_e32 v15, 16, v19
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX1250-NEXT:    v_cvt_f64_f32_e32 v[54:55], v34
 ; GFX1250-NEXT:    v_cvt_f64_f32_e32 v[50:51], v48
 ; GFX1250-NEXT:    v_cvt_f64_f32_e32 v[16:17], v35
 ; GFX1250-NEXT:    v_cvt_f64_f32_e32 v[28:29], v36
 ; GFX1250-NEXT:    v_cvt_f64_f32_e32 v[30:31], v37
 ; GFX1250-NEXT:    v_cvt_f64_f32_e32 v[36:37], v23
+; GFX1250-NEXT:    v_cvt_f64_f32_e32 v[34:35], v27
 ; GFX1250-NEXT:    v_cvt_f64_f32_e32 v[32:33], v22
 ; GFX1250-NEXT:    v_cvt_f64_f32_e32 v[70:71], v68
 ; GFX1250-NEXT:    v_cvt_f64_f32_e32 v[68:69], v69
-; GFX1250-NEXT:    v_cvt_f64_f32_e32 v[24:25], v14
+; GFX1250-NEXT:    v_cvt_f64_f32_e32 v[24:25], v11
 ; GFX1250-NEXT:    v_cvt_f64_f32_e32 v[22:23], v15
-; GFX1250-NEXT:    v_cvt_f64_f32_e32 v[20:21], v11
-; GFX1250-NEXT:    v_cvt_f64_f32_e32 v[18:19], v10
+; GFX1250-NEXT:    v_cvt_f64_f32_e32 v[20:21], v14
 ; GFX1250-NEXT:    scratch_store_b128 v0, v[2:5], off offset:240
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    v_cvt_f64_f32_e32 v[4:5], v52
+; GFX1250-NEXT:    v_cvt_f64_f32_e32 v[2:3], v53
+; GFX1250-NEXT:    v_cvt_f64_f32_e32 v[52:53], v67
 ; GFX1250-NEXT:    scratch_store_b128 v0, v[6:9], off offset:224
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
-; GFX1250-NEXT:    v_cvt_f64_f32_e32 v[8:9], v34
+; GFX1250-NEXT:    v_cvt_f64_f32_e32 v[8:9], v65
 ; GFX1250-NEXT:    v_cvt_f64_f32_e32 v[6:7], v66
-; GFX1250-NEXT:    v_cvt_f64_f32_e32 v[2:3], v53
-; GFX1250-NEXT:    v_cvt_f64_f32_e32 v[52:53], v65
 ; GFX1250-NEXT:    v_cvt_f64_f32_e32 v[66:67], v49
 ; GFX1250-NEXT:    v_cvt_f64_f32_e32 v[64:65], v64
 ; GFX1250-NEXT:    v_cvt_f64_f32_e32 v[48:49], v26
-; GFX1250-NEXT:    v_cvt_f64_f32_e32 v[34:35], v27
 ; GFX1250-NEXT:    v_cvt_f64_f32_e32 v[26:27], v82
+; GFX1250-NEXT:    v_cvt_f64_f32_e32 v[18:19], v10
 ; GFX1250-NEXT:    v_cvt_f64_f32_e32 v[82:83], v80
 ; GFX1250-NEXT:    v_cvt_f64_f32_e32 v[80:81], v81
 ; GFX1250-NEXT:    v_cvt_f64_f32_e32 v[14:15], v39
 ; GFX1250-NEXT:    v_cvt_f64_f32_e32 v[12:13], v1
 ; GFX1250-NEXT:    v_cvt_f64_f32_e32 v[10:11], v38
 ; GFX1250-NEXT:    s_clause 0xd
-; GFX1250-NEXT:    scratch_store_b128 v0, v[6:9], off offset:208
-; GFX1250-NEXT:    scratch_store_b128 v0, v[52:55], off offset:192
+; GFX1250-NEXT:    scratch_store_b128 v0, v[52:55], off offset:208
+; GFX1250-NEXT:    scratch_store_b128 v0, v[6:9], off offset:192
 ; GFX1250-NEXT:    scratch_store_b128 v0, v[2:5], off offset:176
 ; GFX1250-NEXT:    scratch_store_b128 v0, v[64:67], off offset:160
 ; GFX1250-NEXT:    scratch_store_b128 v0, v[48:51], off offset:144

@@ -55,8 +55,8 @@ entry:
 ; Vector store, then store to vector elements
 define void @test4(ptr %p, i64 %x, i64 %y) {
 ; CHECK-LABEL: test4:
-; CHECK-DAG: stp x2, x1, [x0, #8]
-; CHECK-DAG: str xzr, [x0]
+; CHECK-DAG: stp xzr, x2, [x0]
+; CHECK-DAG: str x1, [x0, #16]
 entry:
   store <3 x i64> zeroinitializer, ptr %p, align 8
   %0 = getelementptr inbounds i64, ptr %p, i64 2
