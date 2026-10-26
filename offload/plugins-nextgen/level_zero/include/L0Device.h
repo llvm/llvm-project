@@ -597,6 +597,10 @@ public:
 
   Error setDeviceStackSize(uint64_t V) override { return Plugin::success(); }
 
+  Expected<void *> getNativeHandle() override { return getZeDevice(); }
+
+  Expected<void *> getNativeQueueHandle(__tgt_async_info *AsyncInfo) override;
+
   Expected<omp_interop_val_t *>
   createInterop(int32_t InteropType, interop_spec_t &InteropSpec) override;
   Error releaseInterop(omp_interop_val_t *Interop) override;
