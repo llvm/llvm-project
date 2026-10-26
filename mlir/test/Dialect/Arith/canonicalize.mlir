@@ -1817,6 +1817,47 @@ func.func @truncFPConstantE8M0Zero() -> f8E8M0FNU {
   return %0 : f8E8M0FNU
 }
 
+// A format without a sign (f8E8M0FNU, f8E5M3FNU) has no negative values: a
+// negative NaN or a negative overflow is NOT folded into one.
+// CHECK-LABEL: @truncFPNegToUnsignedNoFold
+// CHECK-COUNT-4:   arith.truncf
+func.func @truncFPNegToUnsignedNoFold()
+    -> (f8E8M0FNU, f8E8M0FNU, f8E8M0FNU, f8E5M3FNU) {
+  %nan = arith.constant 0xFFC00000 : f32
+  %ovf = arith.constant -3.000000e+38 : f32
+  %0 = arith.truncf %nan : f32 to f8E8M0FNU
+  %1 = arith.truncf %ovf : f32 to f8E8M0FNU
+  %2 = arith.truncf %ovf downward : f32 to f8E8M0FNU
+  %3 = arith.truncf %nan : f32 to f8E5M3FNU
+  return %0, %1, %2, %3 : f8E8M0FNU, f8E8M0FNU, f8E8M0FNU, f8E5M3FNU
+}
+
+// Non-negative values still fold.
+// CHECK-LABEL: @truncFPPosToUnsignedFolds
+//   CHECK-NOT:   arith.truncf
+//   CHECK-DAG:   arith.constant 2.000000e+00 : f8E8M0FNU
+//   CHECK-DAG:   arith.constant 0.000000e+00 : f8E5M3FNU
+//   CHECK-NOT:   arith.truncf
+//       CHECK:   return
+func.func @truncFPPosToUnsignedFolds() -> (f8E8M0FNU, f8E5M3FNU) {
+  %two = arith.constant 2.000000e+00 : f32
+  %zero = arith.constant 0.000000e+00 : f32
+  %0 = arith.truncf %two : f32 to f8E8M0FNU
+  %1 = arith.truncf %zero : f32 to f8E5M3FNU
+  return %0, %1 : f8E8M0FNU, f8E5M3FNU
+}
+
+// arith.convertf goes through the same fold: a negative NaN is NOT folded into
+// a format without a sign either.
+// CHECK-LABEL: @convertFPNegNaNToUnsignedNoFold
+// CHECK-COUNT-2:   arith.convertf
+func.func @convertFPNegNaNToUnsignedNoFold() -> (f8E5M3FNU, f8E8M0FNU) {
+  %nan = arith.constant 0xFF : f8E4M3FN
+  %0 = arith.convertf %nan : f8E4M3FN to f8E5M3FNU
+  %1 = arith.convertf %nan : f8E4M3FN to f8E8M0FNU
+  return %0, %1 : f8E5M3FNU, f8E8M0FNU
+}
+
 // The negation of an f8E8M0FNU value is not representable, so it is NOT
 // folded. Folding used to create a negative f8E8M0FNU attribute, and printing
 // it asserted in APFloat.

@@ -1,7 +1,12 @@
 add_mlir_unittest(MLIRArithTests
   ArithUtilsTest.cpp
+  NarrowFloatExpansionTest.cpp
 )
 mlir_target_link_libraries(MLIRArithTests
   PRIVATE
+  MLIRArithTransforms
   MLIRArithUtils
+  MLIRAsmParser
+  MLIRFuncDialect
+  MLIRTransformUtils
 )
