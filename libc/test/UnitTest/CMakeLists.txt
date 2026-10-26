@@ -291,8 +291,8 @@ add_header_library(
   DEPENDS
     libc.src.__support.common
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.libc_errno
     libc.src.__support.StringUtil.error_to_string
-    libc.src.errno.errno
 )
 
 add_header_library(
@@ -301,8 +301,8 @@ add_header_library(
     ErrnoCheckingTest.h
   DEPENDS
     libc.src.__support.common
+    libc.src.__support.libc_errno
     libc.src.__support.macros.properties.architectures
-    libc.src.errno.errno
 )
 
 add_header_library(

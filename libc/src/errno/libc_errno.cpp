@@ -19,7 +19,9 @@ namespace {
 LIBC_THREAD_LOCAL int thread_errno;
 }
 
-extern "C" int *__llvm_libc_errno() noexcept { return &thread_errno; }
+extern "C" LLVM_LIBC_FUNCTION_ATTR int *__llvm_libc_errno() noexcept {
+  return &thread_errno;
+}
 
 #elif LIBC_ERRNO_MODE == LIBC_ERRNO_MODE_SHARED
 
@@ -27,7 +29,9 @@ namespace {
 int shared_errno;
 }
 
-extern "C" int *__llvm_libc_errno() noexcept { return &shared_errno; }
+extern "C" LLVM_LIBC_FUNCTION_ATTR int *__llvm_libc_errno() noexcept {
+  return &shared_errno;
+}
 
 #endif
 

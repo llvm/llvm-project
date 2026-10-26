@@ -17,17 +17,18 @@
 // - #include "src/__support/libc_errno.h"
 // - NOT #include <errno.h>
 // - Only use `libc_errno` in the code
-// - Depend on libc.src.errno.errno
+// - `libc.src.errno.errno` is linked automatically by test rules
 
 // Integration tests should:
 // - NOT #include "src/__support/libc_errno.h"
 // - #include <errno.h>
 // - Use regular `errno` in the code
-// - Still depend on libc.src.errno.errno
+// - `libc.src.errno.errno` is linked automatically by test rules
 
 // libc uses a fallback default value, either system or thread local.
 #define LIBC_ERRNO_MODE_DEFAULT 0
-// libc never stores a value; `errno` macro uses get link-time failure.
+// libc never stores a value; `libc_errno` is a no-op returning 0, while public
+// `<errno.h>` macro uses get a link-time failure.
 #define LIBC_ERRNO_MODE_UNDEFINED 1
 // libc maintains per-thread state (requires C++ `thread_local` support).
 #define LIBC_ERRNO_MODE_THREAD_LOCAL 2

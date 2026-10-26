@@ -89,89 +89,44 @@ rules:
 
 ## Setting `errno` from runtime code
 
-Many libc functions set `errno` to indicate an error condition. If LLVM's libc
-is being used as the only libc, then the `errno` from LLVM's libc is affected.
-If LLVM's libc is being used in {ref}`overlay_mode`, then the `errno` from
-the system libc is affected. When a libc function that can potentially affect
-`errno` is called from a unit test, we do not want the global `errno`
-(as in, the `errno` of the process thread running the unit test) to be
-affected. If the global `errno` is affected, then the operation of the unit
-test infrastructure itself can be affected.
+Many libc functions set `errno` to indicate an error condition. In full build
+mode, LLVM-libc uses its own internal `errno`. In {ref}`overlay_mode`, the
+public `libllvmlibc.a` archive uses the system libc's `errno`, whereas unit
+tests use LLVM-libc's internal thread-local `errno` so that tested functions do
+not clobber the system `errno` used by the test harness.
 
-For a complete architectural overview of `errno` modes (`LIBC_ERRNO_MODE`),
-targets, and build rules, see {doc}`errno`. To handle `errno` correctly across
-all build modes and avoid silent thread-local storage mismatches, the following
-rules must be followed:
+To ensure `errno` works across all build modes, follow these rules (see
+{doc}`errno` for full details on targets, `LIBC_ERRNO_MODE` options, and build
+dependencies):
 
-1. **Header Inclusion:**
-   Runtime code and unit tests that read or write `errno` must **ONLY**
-   `#include "src/__support/libc_errno.h"` and refer to `libc_errno`.
-   - Never `#include <errno.h>`.
-   - Never `#include "src/errno/libc_errno.h"` (this is a legacy path; the header
-     lives in `src/__support/`).
-   - If a file only needs standard error constants (such as `EINVAL`, `ENOMEM`)
-     and does not read or write `libc_errno`, include `"hdr/errno_macros.h"`
-     instead.
+1. **Header inclusion:**
+   - Code and unit tests that read or write `errno` must
+     `#include "src/__support/libc_errno.h"` and use `libc_errno`:
 
-   Setting `errno` should be done directly via `libc_errno`:
+     ```c++
+     libc_errno = EINVAL;
+     ```
 
-   ```c++
-   libc_errno = EINVAL;
-   ```
+   - Code that only needs error constants (`EINVAL`, `ERANGE`, etc.) without
+     accessing `libc_errno` should `#include "hdr/errno_macros.h"` instead.
+   - Never `#include <errno.h>` in implementation or unit test files.
 
 2. **Where to set `errno`:**
-   `errno` should only be set just before returning from the implementation of
-   the public function. It should not be set from within helper functions. Helper
-   functions should use idiomatic C++ constructs like
-   [cpp::optional](https://github.com/llvm/llvm-project/blob/main/libc/src/__support/CPP/optional.h)
-   and
-   [ErrorOr](https://github.com/llvm/llvm-project/blob/main/libc/src/__support/error_or.h)
-   to return error values.
+   Set `libc_errno` only at the public entrypoint boundary just before returning
+   (or via `fputil::set_errno_if_required` in math code). Internal helpers
+   should not modify `libc_errno` directly; instead, return error values using
+   [`cpp::optional`](https://github.com/llvm/llvm-project/blob/main/libc/src/__support/CPP/optional.h)
+   or
+   [`ErrorOr`](https://github.com/llvm/llvm-project/blob/main/libc/src/__support/error_or.h).
 
-3. **CMake Dependencies for Public Entrypoints:**
-   - Entrypoints that only use error macros (for example, `pthread_*` functions
-     returning `EINVAL` directly) should depend on **`libc.hdr.errno_macros`**.
-   - Entrypoints that read or set `libc_errno` should declare
-     **`libc.src.__support.libc_errno`** (for the `src/__support/libc_errno.h`
-     header and inline `Errno` wrapper) and **`libc.src.errno.errno`** (for the
-     compiled runtime storage in `libc_errno.cpp` defining `thread_errno` /
-     `shared_errno` and `__llvm_libc_errno()`).
-
-   While LLVM-libc generally disallows dependencies between public entrypoints,
-   `libc.src.errno.errno` is an **explicitly allowed exception** in the build system
-   (see `ALLOWED_DEPS` in `libc/cmake/modules/LLVMLibCObjectRules.cmake`).
-
-4. **CMake Dependencies for Internal Support Libraries:**
-   Targets under `libc/src/__support/` must **never** depend on
-   `libc.src.errno.errno` (both because `libc/src/__support` is configured
-   before `libc/src/errno` and because header-only `libc/shared/*` and math
-   consumers must not pull in `libc_errno.cpp`). Instead:
-   - Support libraries that only need error constants (`EINVAL`, etc.) must
-     depend on **`libc.hdr.errno_macros`**.
-   - Support libraries that reference `libc_errno` must depend on
-     **`libc.src.__support.libc_errno`**.
-
-5. **Unit and Hermetic Testing:**
-   Unit tests verifying functions that set `errno` should use the
-   `ErrnoCheckingTest` fixture (`test/UnitTest/ErrnoCheckingTest.h`) and
-   `ErrnoSetterMatcher` (`test/UnitTest/ErrnoSetterMatcher.h`).
-   - Test targets created with `add_libc_test`, `add_fp_unittest`,
-     `add_integration_test`, and `add_libc_fuzzer` (as well as
-     `ErrnoCheckingTest` and `ErrnoSetterMatcher`) automatically link
+3. **Build dependencies:**
+   - Targets in `libc/src/__support/` must depend on `libc.hdr.errno_macros` or
+     `libc.src.__support.libc_errno`, and **never** on `libc.src.errno.errno`.
+   - Public entrypoints that access `libc_errno` should depend on
+     `libc.src.__support.libc_errno` (and `libc.src.errno.errno` for non-math
+     `libc.a` entrypoints).
+   - Test targets (`add_libc_test`, `add_fp_unittest`, etc.) automatically link
      `libc.src.errno.errno`.
-   - Tests must never `#include <errno.h>` (except `libc/test/shared/*`, which
-     tests the public header-only `libc/shared/*` interface).
-
-6. **The "Dual-TLS" Pitfall in Overlay Mode:**
-   Why is strictly adhering to `libc_errno` and `"src/__support/libc_errno.h"` critical?
-   In overlay mode, the host system libc (e.g., glibc) maintains its own thread-local
-   `errno` location (accessed via `*__errno_location()`). In unit tests, LLVM-libc
-   runs in internal thread-local mode (`LIBC_ERRNO_MODE_THREAD_LOCAL`), writing to
-   LLVM-libc's own `thread_errno`.
-   If implementation code or tests mistakenly `#include <errno.h>` and use raw `errno`,
-   the code will compile cleanly without warnings, but reads and writes will target
-   different thread-local storage locations in the same thread. This results in silent
-   test failures or error values that appear to vanish or go to the wrong thread.
 
 (expected_and_optional)=
 
