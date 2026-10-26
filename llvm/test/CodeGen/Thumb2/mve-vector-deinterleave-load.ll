@@ -162,10 +162,17 @@ define void @factor2_v4i32(ptr %src) {
 define void @factor2_v4i32_align2(ptr %src) {
 ; CHECK-LABEL: factor2_v4i32_align2:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vld20.32 {q0, q1}, [r0]
-; CHECK-NEXT:    vld21.32 {q0, q1}, [r0]
+; CHECK-NEXT:    vldrh.u16 q1, [r0, #16]
+; CHECK-NEXT:    vldrh.u16 q0, [r0]
+; CHECK-NEXT:    vmov.f32 s8, s1
+; CHECK-NEXT:    vmov.f32 s9, s3
+; CHECK-NEXT:    vmov.f32 s1, s2
+; CHECK-NEXT:    vmov.f32 s10, s5
+; CHECK-NEXT:    vmov.f32 s11, s7
+; CHECK-NEXT:    @ fake_use: $q2
+; CHECK-NEXT:    vmov.f32 s2, s4
+; CHECK-NEXT:    vmov.f32 s3, s6
 ; CHECK-NEXT:    @ fake_use: $q0
-; CHECK-NEXT:    @ fake_use: $q1
 ; CHECK-NEXT:    bx lr
   %load = load <8 x i32>, ptr %src, align 2
   %deinterleave = call { <4 x i32>, <4 x i32> } @llvm.vector.deinterleave2.v8i32(<8 x i32> %load)
@@ -256,16 +263,56 @@ define void @factor4_v8f16(ptr %src) {
 define void @factor4_v8f16_align1(ptr %src) {
 ; CHECK-LABEL: factor4_v8f16_align1:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vld40.16 {q0, q1, q2, q3}, [r0]
-; CHECK-NEXT:    vld41.16 {q0, q1, q2, q3}, [r0]
-; CHECK-NEXT:    vld42.16 {q0, q1, q2, q3}, [r0]
-; CHECK-NEXT:    vld43.16 {q0, q1, q2, q3}, [r0]
-; CHECK-NEXT:    @ fake_use: $q0
+; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13}
+; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13}
+; CHECK-NEXT:    vldrb.u8 q0, [r0]
+; CHECK-NEXT:    vldrb.u8 q2, [r0, #16]
+; CHECK-NEXT:    vldrb.u8 q3, [r0, #32]
+; CHECK-NEXT:    vldrb.u8 q4, [r0, #48]
+; CHECK-NEXT:    vmovx.f16 s4, s1
+; CHECK-NEXT:    vmovx.f16 s6, s3
+; CHECK-NEXT:    vins.f16 s4, s6
+; CHECK-NEXT:    vmovx.f16 s5, s9
+; CHECK-NEXT:    vmovx.f16 s6, s11
+; CHECK-NEXT:    vmovx.f16 s7, s15
+; CHECK-NEXT:    vins.f16 s5, s6
+; CHECK-NEXT:    vmovx.f16 s6, s13
+; CHECK-NEXT:    vins.f16 s6, s7
+; CHECK-NEXT:    vmovx.f16 s7, s17
+; CHECK-NEXT:    vmovx.f16 s20, s19
+; CHECK-NEXT:    vins.f16 s1, s3
+; CHECK-NEXT:    vins.f16 s7, s20
+; CHECK-NEXT:    vmovx.f16 s20, s0
+; CHECK-NEXT:    vmovx.f16 s3, s2
+; CHECK-NEXT:    vmovx.f16 s21, s8
+; CHECK-NEXT:    vins.f16 s20, s3
+; CHECK-NEXT:    vmovx.f16 s3, s10
+; CHECK-NEXT:    vins.f16 s21, s3
+; CHECK-NEXT:    vmovx.f16 s22, s12
+; CHECK-NEXT:    vmovx.f16 s3, s14
+; CHECK-NEXT:    vins.f16 s9, s11
+; CHECK-NEXT:    vins.f16 s13, s15
+; CHECK-NEXT:    vins.f16 s17, s19
+; CHECK-NEXT:    vins.f16 s22, s3
+; CHECK-NEXT:    vmovx.f16 s23, s16
+; CHECK-NEXT:    vmovx.f16 s3, s18
+; CHECK-NEXT:    vins.f16 s8, s10
+; CHECK-NEXT:    vins.f16 s12, s14
+; CHECK-NEXT:    vins.f16 s16, s18
+; CHECK-NEXT:    vins.f16 s23, s3
+; CHECK-NEXT:    vins.f16 s0, s2
+; CHECK-NEXT:    vmov.f32 s24, s1
+; CHECK-NEXT:    @ fake_use: $q5
+; CHECK-NEXT:    vmov.f32 s25, s9
 ; CHECK-NEXT:    @ fake_use: $q1
-; CHECK-NEXT:    vmov q0, q2
+; CHECK-NEXT:    vmov.f32 s26, s13
+; CHECK-NEXT:    vmov.f32 s27, s17
+; CHECK-NEXT:    @ fake_use: $q6
+; CHECK-NEXT:    vmov.f32 s1, s8
+; CHECK-NEXT:    vmov.f32 s2, s12
+; CHECK-NEXT:    vmov.f32 s3, s16
 ; CHECK-NEXT:    @ fake_use: $q0
-; CHECK-NEXT:    vmov q0, q3
-; CHECK-NEXT:    @ fake_use: $q0
+; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13}
 ; CHECK-NEXT:    bx lr
   %load = load <32 x half>, ptr %src, align 1
   %deinterleave = call { <8 x half>, <8 x half>, <8 x half>, <8 x half> } @llvm.vector.deinterleave4.v32f16(<32 x half> %load)
