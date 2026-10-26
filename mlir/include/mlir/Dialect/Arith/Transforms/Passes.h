@@ -56,6 +56,18 @@ void populateEmulateUnsupportedFloatsLegality(ConversionTarget &target,
 /// Add patterns to expand Arith bf16 patterns to lower level bitcasts/shifts.
 void populateExpandBFloat16Patterns(RewritePatternSet &patterns);
 
+/// Add patterns to expand `arith.truncf` and `arith.extf` on the narrow float
+/// types in `narrowTypes` (at most 8 bits, with a zero and subnormals or, as a
+/// truncf destination with a rounding mode, an unsigned precision-1 format with
+/// neither; others are ignored) into integer arith ops plus, for some pairs,
+/// arith.extf or arith.truncf bridges. Results are APFloat::convert's in the
+/// op's rounding mode, rounded once (from f80 or f128 via f64 rounded to odd);
+/// a format without Inf and NaN saturates (NaN gives +max-finite), and an
+/// unsigned destination gets the input rounded with its sign, the sign then
+/// dropped. Dynamic shapes are left alone.
+void populateExpandNarrowFloatPatterns(RewritePatternSet &patterns,
+                                       ArrayRef<TypeID> narrowTypes);
+
 /// Add patterns to expand Arith f4e2m1 patterns to lower level bitcasts/shifts.
 void populateExpandF4E2M1Patterns(RewritePatternSet &patterns);
 
@@ -67,6 +79,8 @@ void populateExpandF8E5M2Patterns(RewritePatternSet &patterns);
 void populateExpandF8E4M3FNPatterns(RewritePatternSet &patterns);
 
 /// Add patterns to expand Arith f8e8m0 patterns to lower level bitcasts/shifts.
+/// Without a rounding mode a truncf into f8E8M0FNU takes the exponent (toward
+/// zero); with one it is expanded as by populateExpandNarrowFloatPatterns.
 void populateExpandF8E8M0Patterns(RewritePatternSet &patterns);
 
 /// Add patterns to expand scaling ExtF/TruncF ops to equivalent arith ops
