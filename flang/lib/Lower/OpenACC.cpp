@@ -4487,7 +4487,7 @@ genDeclareInFunction(Fortran::lower::AbstractConverter &converter,
                      const Fortran::parser::AccClauseList &accClauseList) {
   llvm::SmallVector<mlir::Value> dataClauseOperands, copyEntryOperands,
       copyinEntryOperands, createEntryOperands, copyoutEntryOperands,
-      presentEntryOperands, deviceResidentEntryOperands;
+      presentEntryOperands, deviceResidentEntryOperands, devicePtrEntryOperands;
   Fortran::lower::StatementContext stmtCtx;
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
 
@@ -4551,11 +4551,16 @@ genDeclareInFunction(Fortran::lower::AbstractConverter &converter,
     } else if (const auto *devicePtrClause =
                    std::get_if<Fortran::parser::AccClause::Deviceptr>(
                        &clause.u)) {
+      auto crtDataStart = dataClauseOperands.size();
       genDeclareDataOperandOperations<mlir::acc::DevicePtrOp,
                                       mlir::acc::DevicePtrOp>(
           devicePtrClause->v, converter, semanticsContext, stmtCtx,
           dataClauseOperands, mlir::acc::DataClause::acc_deviceptr,
           /*structured=*/true, /*implicit=*/false);
+      // No exit action, but the exit still names the object so the runtime
+      // closes the region it opened at the enter.
+      devicePtrEntryOperands.append(dataClauseOperands.begin() + crtDataStart,
+                                    dataClauseOperands.end());
     } else if (const auto *linkClause =
                    std::get_if<Fortran::parser::AccClause::Link>(&clause.u)) {
       genDeclareDataOperandOperations<mlir::acc::DeclareLinkOp,
@@ -4606,7 +4611,8 @@ genDeclareInFunction(Fortran::lower::AbstractConverter &converter,
   openAccCtx.attachCleanup([&builder, loc, createEntryOperands,
                             copyEntryOperands, copyinEntryOperands,
                             copyoutEntryOperands, presentEntryOperands,
-                            deviceResidentEntryOperands, declareToken]() {
+                            deviceResidentEntryOperands, devicePtrEntryOperands,
+                            declareToken]() {
     llvm::SmallVector<mlir::Value> operands;
     operands.append(createEntryOperands);
     operands.append(deviceResidentEntryOperands);
@@ -4614,6 +4620,7 @@ genDeclareInFunction(Fortran::lower::AbstractConverter &converter,
     operands.append(copyinEntryOperands);
     operands.append(copyoutEntryOperands);
     operands.append(presentEntryOperands);
+    operands.append(devicePtrEntryOperands);
 
     mlir::func::FuncOp funcOp = builder.getFunction();
     auto ops = funcOp.getOps<mlir::acc::DeclareExitOp>();

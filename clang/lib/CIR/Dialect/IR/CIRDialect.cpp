@@ -1295,13 +1295,7 @@ OpFoldResult cir::CastOp::fold(FoldAdaptor adaptor) {
 
   if (getSrc().getType() == getType()) {
     switch (getKind()) {
-    case cir::CastKind::integral: {
-      llvm::SmallVector<mlir::OpFoldResult, 1> foldResults;
-      auto foldOrder = getSrc().getDefiningOp()->fold(foldResults);
-      if (foldOrder.succeeded() && mlir::isa<mlir::Attribute>(foldResults[0]))
-        return mlir::cast<mlir::Attribute>(foldResults[0]);
-      return {};
-    }
+    case cir::CastKind::integral:
     case cir::CastKind::bitcast:
     case cir::CastKind::address_space:
     case cir::CastKind::float_complex:
