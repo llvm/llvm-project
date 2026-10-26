@@ -1919,6 +1919,10 @@ public:
     case Intrinsic::masked_gather:
       return callMaskedLoadStoreIntrinsic(CB, Args[0], Args[1], Args[2],
                                           MaskedAddrMode::PerLane);
+    case Intrinsic::masked_scatter:
+      return callMaskedLoadStoreIntrinsic(CB, Args[1], Args[2], Args[0],
+                                          /*IsStore=*/true,
+                                          MaskedAddrMode::PerLane);
     case Intrinsic::experimental_noalias_scope_decl:
       // FIXME: Not implemented yet. Currently it acts as a noop.
       return AnyValue();
