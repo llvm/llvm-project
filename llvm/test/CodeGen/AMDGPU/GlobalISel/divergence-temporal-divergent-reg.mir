@@ -2,6 +2,29 @@
 # RUN: llc -mtriple=amdgpu10.10-mesa-amdpal -run-pass=amdgpu-global-isel-divergence-lowering -verify-machineinstrs %s -o - | FileCheck -check-prefix=GFX10 %s
 # RUN: llc -mtriple=amdgpu10.10-mesa-amdpal -passes=amdgpu-global-isel-divergence-lowering -verify-each %s -o - | FileCheck -check-prefix=GFX10 %s
 
+--- |
+  define void @temporal_divergent_i32() !dbg !3 {
+    ret void
+  }
+
+  define void @temporal_divergent_i32_multiple_use() {
+    ret void
+  }
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!2}
+  !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "llc", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug)
+  !1 = !DIFile(filename: "temporal-divergence-reg.c", directory: "/")
+  !2 = !{i32 2, !"Debug Info Version", i32 3}
+  !3 = distinct !DISubprogram(name: "temporal_divergent_i32", scope: !1, file: !1, line: 1, type: !4, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !5)
+  !4 = !DISubroutineType(types: !10)
+  !5 = !{!6, !7}
+  !6 = !DILocalVariable(name: "value", scope: !3, file: !1, line: 1, type: !8)
+  !7 = !DILocalVariable(name: "counter", scope: !3, file: !1, line: 1, type: !8)
+  !8 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !9 = !DILocation(line: 1, column: 1, scope: !3)
+  !10 = !{}
+...
 ---
 name: temporal_divergent_i32
 legalized: true
@@ -35,7 +58,9 @@ body: |
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT: bb.2:
   ; GFX10-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[INT]](s32)
+  ; GFX10-NEXT:   DBG_VALUE [[COPY3]](s32), $noreg, !7, !DIExpression(), debug-location !DILocation(line: 1, column: 1, scope: !3)
   ; GFX10-NEXT:   G_STORE [[COPY3]](s32), [[MV]](p0) :: (store (s32))
+  ; GFX10-NEXT:   DBG_VALUE $noreg, $noreg, !9, !DIExpression(), debug-location !DILocation(line: 1, column: 1, scope: !3)
   ; GFX10-NEXT:   SI_RETURN
   bb.0:
     successors: %bb.1(0x80000000)
@@ -63,7 +88,9 @@ body: |
 
   bb.2:
     G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %7(s32)
+    DBG_VALUE %9, $noreg, !6, !DIExpression(), debug-location !9
     G_STORE %9(s32), %3(p0) :: (store (s32))
+    DBG_VALUE %8, $noreg, !7, !DIExpression(), debug-location !9
     SI_RETURN
 ...
 

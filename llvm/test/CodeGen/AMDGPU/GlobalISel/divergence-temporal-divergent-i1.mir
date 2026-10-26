@@ -2,6 +2,53 @@
 # RUN: llc -mtriple=amdgpu10.10-mesa-amdpal -run-pass=amdgpu-global-isel-divergence-lowering -verify-machineinstrs %s -o - | FileCheck -check-prefix=GFX10 %s
 # RUN: llc -mtriple=amdgpu10.10-mesa-amdpal -passes=amdgpu-global-isel-divergence-lowering -verify-each %s -o - | FileCheck -check-prefix=GFX10 %s
 
+--- |
+  define void @temporal_divergent_i1_phi() !dbg !3 {
+    ret void
+  }
+
+  define void @temporal_divergent_i1_non_phi() {
+    ret void
+  }
+
+  define void @loop_with_1break() {
+    ret void
+  }
+
+  define void @nested_loops_temporal_divergence_inner() !dbg !11 {
+    ret void
+  }
+
+  define void @nested_loops_temporal_divergence_outer() {
+    ret void
+  }
+
+  define void @nested_loops_temporal_divergence_both() !dbg !12 {
+    ret void
+  }
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!2}
+  !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "llc", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug)
+  !1 = !DIFile(filename: "temporal-divergence-i1.c", directory: "/")
+  !2 = !{i32 2, !"Debug Info Version", i32 3}
+  !3 = distinct !DISubprogram(name: "temporal_divergent_i1_phi", scope: !1, file: !1, line: 1, type: !4, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !5)
+  !4 = !DISubroutineType(types: !10)
+  !5 = !{!6, !7}
+  !6 = !DILocalVariable(name: "value", scope: !3, file: !1, line: 1, type: !8)
+  !7 = !DILocalVariable(name: "next", scope: !3, file: !1, line: 1, type: !8)
+  !8 = !DIBasicType(name: "_Bool", size: 1, encoding: DW_ATE_boolean)
+  !9 = !DILocation(line: 1, column: 1, scope: !3)
+  !10 = !{}
+  !11 = distinct !DISubprogram(name: "nested_loops_temporal_divergence_inner", scope: !1, file: !1, line: 2, type: !4, scopeLine: 2, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !13)
+  !12 = distinct !DISubprogram(name: "nested_loops_temporal_divergence_both", scope: !1, file: !1, line: 3, type: !4, scopeLine: 3, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !16)
+  !13 = !{!14}
+  !14 = !DILocalVariable(name: "inner", scope: !11, file: !1, line: 2, type: !8)
+  !15 = !DILocation(line: 2, column: 1, scope: !11)
+  !16 = !{!17}
+  !17 = !DILocalVariable(name: "both", scope: !12, file: !1, line: 3, type: !8)
+  !18 = !DILocation(line: 3, column: 1, scope: !12)
+...
 ---
 name: temporal_divergent_i1_phi
 legalized: true
@@ -31,6 +78,7 @@ body: |
   ; GFX10-NEXT:   [[COPY4:%[0-9]+]]:sreg_32(s1) = COPY [[PHI]](s1)
   ; GFX10-NEXT:   [[C2:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
   ; GFX10-NEXT:   [[XOR:%[0-9]+]]:_(s1) = G_XOR [[PHI3]], [[C2]]
+  ; GFX10-NEXT:   DBG_VALUE [[PHI3]](s1), $noreg, !7, !DIExpression(), debug-location !DILocation(line: 1, column: 1, scope: !3)
   ; GFX10-NEXT:   [[UITOFP:%[0-9]+]]:_(s32) = G_UITOFP [[PHI2]](s32)
   ; GFX10-NEXT:   [[FCMP:%[0-9]+]]:_(s1) = G_FCMP floatpred(ogt), [[UITOFP]](s32), [[COPY]]
   ; GFX10-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
@@ -47,6 +95,9 @@ body: |
   ; GFX10-NEXT:   [[C4:%[0-9]+]]:_(s32) = G_FCONSTANT float 0.000000e+00
   ; GFX10-NEXT:   [[C5:%[0-9]+]]:_(s32) = G_FCONSTANT float 1.000000e+00
   ; GFX10-NEXT:   [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[S_OR_B32_]](s1), [[C5]], [[C4]]
+  ; GFX10-NEXT:   DBG_VALUE [[S_OR_B32_]](s1), $noreg, !7, !DIExpression(), debug-location !DILocation(line: 1, column: 1, scope: !3)
+  ; GFX10-NEXT:   DBG_VALUE $noreg, $noreg, !9, !DIExpression(), debug-location !DILocation(line: 1, column: 1, scope: !3)
+  ; GFX10-NEXT:   DBG_VALUE_LIST !7, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value), $noreg, $noreg, debug-location !DILocation(line: 1, column: 1, scope: !3)
   ; GFX10-NEXT:   G_STORE [[SELECT]](s32), [[MV]](p0) :: (store (s32))
   ; GFX10-NEXT:   SI_RETURN
   bb.0:
@@ -68,6 +119,7 @@ body: |
     %10:_(s1) = G_PHI %5(s1), %bb.0, %11(s1), %bb.1
     %12:_(s1) = G_CONSTANT i1 true
     %11:_(s1) = G_XOR %10, %12
+    DBG_VALUE %10, $noreg, !6, !DIExpression(), debug-location !9
     %13:_(s32) = G_UITOFP %8(s32)
     %14:_(s1) = G_FCMP floatpred(ogt), %13(s32), %0
     %15:_(s32) = G_CONSTANT i32 1
@@ -81,6 +133,9 @@ body: |
     %16:_(s32) = G_FCONSTANT float 0.000000e+00
     %17:_(s32) = G_FCONSTANT float 1.000000e+00
     %18:_(s32) = G_SELECT %10(s1), %17, %16
+    DBG_VALUE %10, $noreg, !6, !DIExpression(), debug-location !9
+    DBG_VALUE %11, $noreg, !7, !DIExpression(), debug-location !9
+    DBG_VALUE_LIST !6, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value), %10, %11, debug-location !9
     G_STORE %18(s32), %3(p0) :: (store (s32))
     SI_RETURN
 ...
@@ -422,6 +477,7 @@ body: |
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT: bb.4:
   ; GFX10-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[INT1]](s32)
+  ; GFX10-NEXT:   DBG_VALUE $noreg, $noreg, !12, !DIExpression(), debug-location !DILocation(line: 2, column: 1, scope: !10)
   ; GFX10-NEXT:   SI_RETURN
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7
@@ -480,6 +536,7 @@ body: |
 
   bb.4:
     G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %12(s32)
+    DBG_VALUE %26, $noreg, !14, !DIExpression(), debug-location !15
     SI_RETURN
 ...
 
@@ -690,6 +747,7 @@ body: |
   ; GFX10-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[INT]](s32)
   ; GFX10-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[MV1]], [[SEXT]](s64)
   ; GFX10-NEXT:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[S_OR_B32_]](s1)
+  ; GFX10-NEXT:   DBG_VALUE [[S_OR_B32_]](s1), $noreg, !15, !DIExpression(), debug-location !DILocation(line: 3, column: 1, scope: !13)
   ; GFX10-NEXT:   [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
   ; GFX10-NEXT:   G_STORE [[ZEXT]](s32), [[PTR_ADD1]](p0) :: (store (s8))
   ; GFX10-NEXT:   [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[PHI2]], [[C6]]
@@ -753,6 +811,7 @@ body: |
     G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %25(s32)
     %34:_(p0) = G_PTR_ADD %7, %18(s64)
     %35:_(s32) = G_ZEXT %29(s1)
+    DBG_VALUE %29, $noreg, !17, !DIExpression(), debug-location !18
     %36:_(s32) = G_CONSTANT i32 1
     G_STORE %35(s32), %34(p0) :: (store (s8))
     %17:_(s32) = G_ADD %16, %36
