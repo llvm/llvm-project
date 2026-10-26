@@ -1038,7 +1038,8 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
 
   unsigned BitWidth = DL.getTypeSizeInBits(IntIdxTy);
   APInt Offset(BitWidth, 0);
-  SmallVector<const Value *, 4> Indices(llvm::drop_begin(Ops));
+  ArrayRef<const Value *> Indices(
+      reinterpret_cast<const Value *const *>(Ops.data()) + 1, Ops.size() - 1);
   if (!GEPOperator::accumulateConstantOffset(SrcElemTy, Indices, DL, Offset))
     return nullptr;
 
@@ -1052,12 +1053,9 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
   while (auto *GEP = dyn_cast<GEPOperator>(Ptr)) {
     NW &= GEP->getNoWrapFlags();
 
-    SmallVector<Value *, 4> NestedOps(llvm::drop_begin(GEP->operands()));
-
     // Do not try to incorporate the sub-GEP if some index is not a number.
     APInt NestedOffset(BitWidth, 0);
-    if (!GEPOperator::accumulateConstantOffset(GEP->getSourceElementType(),
-                                               NestedOps, DL, NestedOffset))
+    if (!GEP->accumulateConstantOffset(DL, NestedOffset))
       break;
 
     // Adjust inrange offset and intersect inrange attributes
