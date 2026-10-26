@@ -1730,6 +1730,9 @@ MachineBasicBlock::computeRegisterLiveness(const TargetRegisterInfo *TRI,
       return LQR_Dead;
   }
 
+  // Debug instructions and pseudo probes must not hide the end of the block.
+  I = skipDebugInstructionsForward(I, end());
+
   // If we reached the end, it is safe to clobber Reg at the end of a block of
   // no successor has it live in.
   if (I == end()) {
