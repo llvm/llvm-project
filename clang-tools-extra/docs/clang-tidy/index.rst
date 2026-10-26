@@ -193,6 +193,11 @@ An overview of all the command-line options:
     --export-fixes=<filename>        - YAML file to store suggested fixes in. The
                                        stored fixes can be applied to the input source
                                        code with clang-apply-replacements.
+    --sarif-base-uri=<id>=<path|uri> - Defines a SARIF base URI as <id>=<path|uri>.
+                                       Paths are converted to file URIs. Values with
+                                       '://' are used verbatim. Artifact locations
+                                       under a base are written relative to it, all
+                                       others keep their absolute URI. Can be repeated.    
     --extra-arg=<string>             - Additional argument to append to the compiler command line
     --extra-arg-before=<string>      - Additional argument to prepend to the compiler command line
     --fix                            - Apply suggested fixes. Without -fix-errors
