@@ -3668,13 +3668,12 @@ void SelectionDAGBuilder::visitCallBr(const CallBrInst &I) {
     for (BasicBlock *Dest : I.getIndirectDests()) {
       MachineBasicBlock *Target = FuncInfo.getMBB(Dest);
       Target->setIsInlineAsmBrIndirectTarget();
+      // If we introduce a type of asm goto statement that is permitted to use
+      // an indirect call instruction to jump to its labels, then we should add
+      // a call to Target->setMachineBlockAddressTaken() here, to mark the
+      // target block as requiring a BTI.
+
       Target->setLabelMustBeEmitted();
-
-      // TODO: If we introduce a type of asm goto statement that is permitted
-      // to use an indirect call instruction to jump to its labels, then we
-      // should add a call to Target->setMachineBlockAddressTaken() here, to
-      // mark the target block as requiring a BTI.
-
       // Don't add duplicate machine successors.
       if (Dests.insert(Dest).second)
         addSuccessorWithProb(CallBrMBB, Target, BranchProbability::getZero());
@@ -10932,7 +10931,7 @@ static SDValue getInlineAsmResult(const CallBase &Call,
     // example of this is for vectors with different width / number of
     // elements.  This can happen for register classes that can contain
     // multiple different value types.  The PReg or VReg allocated may not have
-    // the same VT as was  expected.
+    // the same VT as was expected.
     //
     // This can also happen for a return value that disagrees with the register
     // class it is put in, e.g. a double in a general-purpose register on a
@@ -13284,28 +13283,6 @@ void SelectionDAGBuilder::visitVectorSplice(const CallInst &I) {
   setValue(&I, DAG.getVectorShuffle(VT, DL, V1, V2, Mask));
 }
 
-// Consider the following MIR after SelectionDAG, which produces output in
-// phyregs in the first case or virtregs in the second case.
-//
-// INLINEASM_BR ..., implicit-def $ebx, ..., implicit-def $edx
-// %5:gr32 = COPY $ebx
-// %6:gr32 = COPY $edx
-// %1:gr32 = COPY %6:gr32
-// %0:gr32 = COPY %5:gr32
-//
-// INLINEASM_BR ..., def %5:gr32, ..., def %6:gr32
-// %1:gr32 = COPY %6:gr32
-// %0:gr32 = COPY %5:gr32
-//
-// Given %0, we'd like to return $ebx in the first case and %5 in the second.
-// Given %1, we'd like to return $edx in the first case and %6 in the second.
-//
-// If a callbr has outputs, it will have a single mapping in FuncInfo.ValueMap
-// to a single virtreg (such as %0). The remaining outputs monotonically
-// increase in virtreg number from there. If a callbr has no outputs, then it
-// should not have a corresponding callbr landingpad; in fact, the callbr
-// landingpad would not even be able to refer to such a callbr.
-//
 // Read the outputs from the registers that the INLINEASM_BR defines them in,
 // rather than the simpler
 //   setValue(&I, getCopyFromRegs(CBR, CBR->getType()));
