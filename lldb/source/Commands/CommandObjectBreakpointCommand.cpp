@@ -381,7 +381,8 @@ protected:
           script_interp->CollectDataForBreakpointCommandCallback(
               m_bp_options_vec, result);
           // Still gathering input; the IOHandler will set the final status.
-          result.SetStatus(eReturnStatusStarted);
+          if (result.GetStatus() != eReturnStatusFailed)
+            result.SetStatus(eReturnStatusStarted);
           return;
         }
         llvm::Error error =

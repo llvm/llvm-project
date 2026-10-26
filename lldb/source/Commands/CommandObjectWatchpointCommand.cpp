@@ -401,9 +401,10 @@ protected:
         if (m_options.m_use_script_language) {
           ScriptInterpreter *script_interp = GetDebugger().GetScriptInterpreter(
               /*can_create=*/true, m_options.m_script_language);
+          Status error;
           // Special handling for one-liner specified inline.
           if (m_options.m_use_one_liner) {
-            script_interp->SetWatchpointCommandCallback(
+            error = script_interp->SetWatchpointCommandCallback(
                 wp_options, m_options.m_one_liner.c_str(),
                 /*is_callback=*/false);
           }
@@ -414,11 +415,15 @@ protected:
           else if (!m_options.m_function_name.empty()) {
             std::string function_signature = m_options.m_function_name;
             function_signature += "(frame, wp, internal_dict)";
-            script_interp->SetWatchpointCommandCallback(
+            error = script_interp->SetWatchpointCommandCallback(
                 wp_options, function_signature.c_str(), /*is_callback=*/true);
           } else {
             script_interp->CollectDataForWatchpointCommandCallback(wp_options,
                                                                    result);
+          }
+          if (error.Fail()) {
+            result.SetError(std::move(error));
+            return;
           }
         } else {
           // Special handling for one-liner specified inline.
