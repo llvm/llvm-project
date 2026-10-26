@@ -1204,6 +1204,16 @@ define i1 @mul_evenC_ne(i8 %v) {
   ret i1 %cmp
 }
 
+define i1 @mul_evenC_ne_nuw(i8 %v) {
+; CHECK-LABEL: @mul_evenC_ne_nuw(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[TMP1:%.*]], 6
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = mul nuw i8 %v, 6
+  %cmp = icmp ne i8 %mul, 36
+  ret i1 %cmp
+}
+
 define <2 x i1> @mul_oddC_ne_vec(<2 x i8> %v) {
 ; CHECK-LABEL: @mul_oddC_ne_vec(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i8> [[V:%.*]], splat (i8 4)
