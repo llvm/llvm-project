@@ -565,17 +565,25 @@ int xegpu::getLargestDivisor(T dim, ArrayRef<T> candidates,
   return largest;
 }
 
+/// Returns the flags held by `fastmath`, or none if it is null.
+static arith::FastMathFlags getFlags(arith::FastMathFlagsAttr fastmath) {
+  return fastmath ? fastmath.getValue() : arith::FastMathFlags::none;
+}
+
 Value xegpu::subgroupReduction(Location loc, OpBuilder &builder, Value input,
-                               vector::CombiningKind kind, uint32_t size) {
+                               vector::CombiningKind kind, uint32_t size,
+                               arith::FastMathFlagsAttr fastmath) {
   // First reduce on a single thread to get per lane reduction value.
-  Value laneVal = vector::ReductionOp::create(builder, loc, kind, input);
+  Value laneVal = vector::ReductionOp::create(builder, loc, kind, input,
+                                              getFlags(fastmath));
   // Parallel reduction using butterfly shuffles.
   for (uint64_t i = 1; i < size; i <<= 1) {
     Value shuffled =
         gpu::ShuffleOp::create(builder, loc, laneVal, i, /**  width = **/ size,
                                /**  mode = **/ gpu::ShuffleMode::XOR)
             .getShuffleResult();
-    laneVal = makeArithReduction(builder, loc, kind, laneVal, shuffled);
+    laneVal =
+        makeArithReduction(builder, loc, kind, laneVal, shuffled, fastmath);
   }
   return laneVal;
 }
@@ -584,7 +592,8 @@ Value xegpu::lowerToVectorReductions(TypedValue<VectorType> src,
                                      TypedValue<VectorType> acc,
                                      vector::CombiningKind kind,
                                      int64_t reductionDim, Location loc,
-                                     PatternRewriter &rewriter) {
+                                     PatternRewriter &rewriter,
+                                     arith::FastMathFlagsAttr fastmath) {
   VectorType sourceType = src.getType();
   int64_t sourceRank = sourceType.getRank();
   // Expecting at least a 2D source vector. Leading dimensions (all except the
@@ -648,7 +657,7 @@ Value xegpu::lowerToVectorReductions(TypedValue<VectorType> src,
     accIdx[accRank - 1] = i;
     Value accExtract = vector::ExtractOp::create(rewriter, loc, acc, accIdx);
     Value reduction = vector::ReductionOp::create(
-        rewriter, loc, kind, slice.getResult(), accExtract);
+        rewriter, loc, kind, slice.getResult(), accExtract, getFlags(fastmath));
     reductionResult = vector::InsertOp::create(rewriter, loc, reduction,
                                                reductionResult, accIdx);
     // Insert op should have the same layout as the accumulator.
@@ -660,7 +669,8 @@ Value xegpu::lowerToVectorReductions(TypedValue<VectorType> src,
 Value xegpu::lowerCrossLaneReductionToShuffles(
     TypedValue<VectorType> src, TypedValue<VectorType> acc,
     vector::CombiningKind kind, int64_t reductionDim, int64_t reductionSize,
-    Location loc, PatternRewriter &rewriter) {
+    Location loc, PatternRewriter &rewriter,
+    arith::FastMathFlagsAttr fastmath) {
   VectorType sourceType = src.getType();
   int64_t sourceRank = sourceType.getRank();
   // Expecting at least a 2D source vector. Leading dimensions (all except the
@@ -715,19 +725,49 @@ Value xegpu::lowerCrossLaneReductionToShuffles(
     SmallVector<int64_t> accIdx(accRank, 0);
     accIdx[accRank - 1] = i;
     Value accExtract = vector::ExtractOp::create(rewriter, loc, acc, accIdx);
-    Value fullReduce =
-        xegpu::subgroupReduction(loc, rewriter, slice, kind, reductionSize);
-    fullReduce =
-        vector::makeArithReduction(rewriter, loc, kind, fullReduce, accExtract);
+    Value fullReduce = xegpu::subgroupReduction(loc, rewriter, slice, kind,
+                                                reductionSize, fastmath);
+    fullReduce = vector::makeArithReduction(rewriter, loc, kind, fullReduce,
+                                            accExtract, fastmath);
     reductionResult = vector::InsertOp::create(rewriter, loc, fullReduce,
                                                reductionResult, accIdx);
   }
   return reductionResult;
 }
 
+/// Returns the neutral value of a float min or max reduction over elements of
+/// `semantics`. The reduction combines this value under its fast-math
+/// `flags`, so build only a value that the format can represent and the flags
+/// allow:
+/// - A kind that ignores NaN operands uses a quiet NaN, if the format has one
+///   and `nnan` is not set.
+/// - Otherwise it uses the infinity that never wins, if the format has one and
+///   `ninf` is not set.
+/// - Otherwise it uses the lowest (for max) or highest (for min) finite value.
+///   That value never wins either: under `ninf` the inputs are finite, and a
+///   format without infinity has no larger value.
+static APFloat getMinMaxNeutral(const llvm::fltSemantics &semantics, bool isMax,
+                                bool ignoresNaN, arith::FastMathFlags flags) {
+  if (ignoresNaN && APFloat::semanticsHasNaN(semantics) &&
+      !arith::bitEnumContainsAny(flags, arith::FastMathFlags::nnan))
+    return APFloat::getQNaN(semantics);
+  bool useInf = APFloat::semanticsHasInf(semantics) &&
+                !arith::bitEnumContainsAny(flags, arith::FastMathFlags::ninf);
+  if (!isMax)
+    return useInf ? APFloat::getInf(semantics) : APFloat::getLargest(semantics);
+  // An unsigned format has no negative values. Its lowest value is zero, or
+  // its smallest positive value if it has no zero.
+  if (!APFloat::semanticsHasSignedRepr(semantics))
+    return APFloat::semanticsHasZero(semantics)
+               ? APFloat::getZero(semantics)
+               : APFloat::getSmallest(semantics);
+  return useInf ? APFloat::getInf(semantics, /*Negative=*/true)
+                : APFloat::getLargest(semantics, /*Negative=*/true);
+}
+
 Value xegpu::createReductionNeutralValue(OpBuilder &builder, Location loc,
-                                         Type type,
-                                         vector::CombiningKind kind) {
+                                         Type type, vector::CombiningKind kind,
+                                         arith::FastMathFlagsAttr fastmath) {
   auto vecTy = dyn_cast<VectorType>(type);
   Type elemTy = vecTy ? vecTy.getElementType() : type;
 
@@ -769,26 +809,23 @@ Value xegpu::createReductionNeutralValue(OpBuilder &builder, Location loc,
     return nullptr;
 
   case vector::CombiningKind::MINIMUMF:
-    if (auto floatTy = dyn_cast<FloatType>(elemTy))
-      return makeConst(builder.getFloatAttr(
-          elemTy, APFloat::getInf(floatTy.getFloatSemantics())));
-    return nullptr;
-
   case vector::CombiningKind::MAXIMUMF:
-    if (auto floatTy = dyn_cast<FloatType>(elemTy))
-      return makeConst(builder.getFloatAttr(
-          elemTy,
-          APFloat::getInf(floatTy.getFloatSemantics(), /*Negative=*/true)));
-    return nullptr;
-
   case vector::CombiningKind::MINNUMF:
   case vector::CombiningKind::MINIMUMNUMF:
   case vector::CombiningKind::MAXNUMF:
-  case vector::CombiningKind::MAXIMUMNUMF:
-    if (auto floatTy = dyn_cast<FloatType>(elemTy))
-      return makeConst(builder.getFloatAttr(
-          elemTy, APFloat::getQNaN(floatTy.getFloatSemantics())));
-    return nullptr;
+  case vector::CombiningKind::MAXIMUMNUMF: {
+    auto floatTy = dyn_cast<FloatType>(elemTy);
+    if (!floatTy)
+      return nullptr;
+    bool isMax = kind == vector::CombiningKind::MAXIMUMF ||
+                 kind == vector::CombiningKind::MAXNUMF ||
+                 kind == vector::CombiningKind::MAXIMUMNUMF;
+    bool ignoresNaN = kind != vector::CombiningKind::MINIMUMF &&
+                      kind != vector::CombiningKind::MAXIMUMF;
+    return makeConst(builder.getFloatAttr(
+        elemTy, getMinMaxNeutral(floatTy.getFloatSemantics(), isMax, ignoresNaN,
+                                 getFlags(fastmath))));
+  }
   }
   return nullptr;
 }

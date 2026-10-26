@@ -1847,4 +1847,49 @@ gpu.func @extract_strided_slice_packed_distributed_dim() {
     }> : vector<1x64xbf16>
   gpu.return
 }
+
+// CHECK-LABEL: gpu.func @vector_reduction_fastmath
+// CHECK:       vector.reduction <maximumf>, %{{.*}} fastmath<nnan,nsz> : vector<2xf32> into f32
+// CHECK-COUNT-5: arith.maximumf %{{.*}}, %{{.*}} fastmath<nnan,nsz> : f32
+gpu.func @vector_reduction_fastmath() {
+  %acc = arith.constant 1.0 : f32
+  %0 = "test.some_op"() : () -> vector<32xf32>
+  %2 = vector.reduction <maximumf>, %0, %acc fastmath<nnan,nsz> : vector<32xf32> into f32
+  %anchor = xegpu.convert_layout %2
+    <{
+      target_layout = #xegpu.slice<#xegpu.layout<lane_layout = [16], lane_data = [1]>, dims = [0]>
+    }> : f32
+  gpu.return
+}
+
+// CHECK-LABEL: gpu.func @vector_multi_reduction_cross_lane_fastmath
+// CHECK:       vector.reduction <maximumf>, %{{.*}} fastmath<nnan,nsz> : vector<1xf32> into f32
+// CHECK-COUNT-5: arith.maximumf %{{.*}}, %{{.*}} fastmath<nnan,nsz> : f32
+// CHECK:       vector.reduction <maximumf>, %{{.*}} fastmath<nnan,nsz> : vector<1xf32> into f32
+// CHECK-COUNT-5: arith.maximumf %{{.*}}, %{{.*}} fastmath<nnan,nsz> : f32
+gpu.func @vector_multi_reduction_cross_lane_fastmath(%laneid: index) {
+  %src = "test.some_op"() : () -> vector<2x16xf32>
+  %acc = arith.constant dense<1.0>  : vector<2xf32>
+  %1 = vector.multi_reduction <maximumf>, %src, %acc fastmath<nnan,nsz>
+      [1] : vector<2x16xf32> to vector<2xf32>
+  %cl1 = xegpu.convert_layout %1
+    <{
+      target_layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [1]>
+    }> : vector<2xf32>
+  gpu.return
+}
+
+// CHECK-LABEL: gpu.func @vector_multi_reduction_lane_local_fastmath
+// CHECK:       vector.reduction <maximumf>, %{{.*}}, %{{.*}} fastmath<nnan,nsz> : vector<12xf32> into f32
+gpu.func @vector_multi_reduction_lane_local_fastmath(%laneid: index) {
+  %src = "test.some_op"() : () -> vector<16x12xf32>
+  %acc = arith.constant dense<1.0>  : vector<16xf32>
+  %1 = vector.multi_reduction <maximumf>, %src, %acc fastmath<nnan,nsz>
+      [1] : vector<16x12xf32> to vector<16xf32>
+  %cl1 = xegpu.convert_layout %1
+    <{
+      target_layout = #xegpu.slice<#xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>, dims = [1]>
+    }> : vector<16xf32>
+  gpu.return
+}
 }

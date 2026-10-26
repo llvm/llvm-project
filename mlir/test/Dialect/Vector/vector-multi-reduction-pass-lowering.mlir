@@ -61,3 +61,45 @@ func.func @vector_multi_reduction_masked(%arg0: vector<2x4xf32>, %acc: vector<2x
 //  INNER-PARALLEL: %[[INNERMASK:.+]] = vector.extract %[[TPMASK]][0] : vector<2xi1> from vector<4x2xi1>
 //  INNER-PARALLEL: %[[REDUCED:.+]] = arith.mulf %[[INNERVEC]], %[[ACC]] : vector<2xf32>
 //  INNER-PARALLEL: arith.select %[[INNERMASK]], %[[REDUCED]], %[[ACC]] : vector<2xi1>, vector<2xf32>
+
+// -----
+
+func.func @vector_multi_reduction_masked_fastmath(%arg0: vector<2x4xf32>, %acc: vector<2xf32>, %mask: vector<2x4xi1>) -> vector<2xf32> {
+    %0 = vector.mask %mask { vector.multi_reduction <maxnumf>, %arg0, %acc fastmath<nnan> [1] : vector<2x4xf32> to vector<2xf32> } : vector<2x4xi1> -> vector<2xf32>
+    return %0 : vector<2xf32>
+}
+
+//                     ALL-LABEL: func @vector_multi_reduction_masked_fastmath
+//       INNER-REDUCTION-COUNT-2: vector.mask %{{.+}} { vector.reduction <maxnumf>, %{{.+}}, %{{.+}} fastmath<nnan> : vector<4xf32> into f32 } : vector<4xi1> -> f32
+//                INNER-PARALLEL: %[[REDUCED:.+]] = arith.maxnumf %{{.+}}, %{{.+}} fastmath<nnan> : vector<2xf32>
+//                INNER-PARALLEL: arith.select %{{.+}}, %[[REDUCED]], %{{.+}} : vector<2xi1>, vector<2xf32>
+
+// -----
+
+func.func @vector_multi_reduction_fastmath(%arg0: vector<2x4xf32>, %acc: vector<2xf32>) -> vector<2xf32> {
+    %0 = vector.multi_reduction <maximumf>, %arg0, %acc fastmath<nnan,nsz> [1] : vector<2x4xf32> to vector<2xf32>
+    return %0 : vector<2xf32>
+}
+//              ALL-LABEL: func @vector_multi_reduction_fastmath
+// INNER-REDUCTION-COUNT-2: vector.reduction <maximumf>, %{{.+}}, %{{.+}} fastmath<nnan,nsz> : vector<4xf32> into f32
+//         INNER-PARALLEL: vector.transpose
+//  INNER-PARALLEL-COUNT-4: arith.maximumf %{{.+}}, %{{.+}} fastmath<nnan,nsz> : vector<2xf32>
+
+// -----
+
+func.func @vector_multi_reduction_rank3_fastmath(%arg0: vector<2x3x4xf32>, %acc: vector<2xf32>) -> vector<2xf32> {
+    %0 = vector.multi_reduction <add>, %arg0, %acc fastmath<reassoc> [1, 2] : vector<2x3x4xf32> to vector<2xf32>
+    return %0 : vector<2xf32>
+}
+//               ALL-LABEL: func @vector_multi_reduction_rank3_fastmath
+// INNER-REDUCTION-COUNT-2: vector.reduction <add>, %{{.+}}, %{{.+}} fastmath<reassoc> : vector<12xf32> into f32
+// INNER-PARALLEL-COUNT-12: arith.addf %{{.+}}, %{{.+}} fastmath<reassoc> : vector<2xf32>
+
+// -----
+
+func.func @vector_multi_reduction_1d_fastmath(%arg0: vector<8xf32>, %acc: f32) -> f32 {
+    %0 = vector.multi_reduction <maxnumf>, %arg0, %acc fastmath<nnan> [0] : vector<8xf32> to f32
+    return %0 : f32
+}
+// ALL-LABEL: func @vector_multi_reduction_1d_fastmath
+//       ALL: vector.reduction <maxnumf>, %{{.+}}, %{{.+}} fastmath<nnan> : vector<8xf32> into f32
