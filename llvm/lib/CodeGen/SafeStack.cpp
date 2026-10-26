@@ -647,12 +647,7 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
   // FIXME: no need to update BasePointer in leaf functions.
   unsigned FrameSize = alignTo(SSL.getFrameSize(), StackAlignment);
 
-  MDBuilder MDB(F.getContext());
-  SmallVector<Metadata *, 2> Data;
-  Data.push_back(MDB.createString("unsafe-stack-size"));
-  Data.push_back(MDB.createConstant(ConstantInt::get(Int32Ty, FrameSize)));
-  MDNode *MD = MDTuple::get(F.getContext(), Data);
-  F.setMetadata(LLVMContext::MD_annotation, MD);
+  F.addFnAttr("unsafe-stack-size", utostr(FrameSize));
 
   // Update shadow stack pointer in the function epilogue.
   IRB.SetInsertPoint(BasePointer->getNextNode());
