@@ -570,6 +570,11 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "llvm_libc_types_gid_t",
+    hdrs = ["include/llvm-libc-types/gid_t.h"],
+)
+
+libc_support_library(
     name = "llvm_libc_types_pid_t",
     hdrs = ["include/llvm-libc-types/pid_t.h"],
 )
@@ -1387,6 +1392,15 @@ libc_support_library(
     hdrs = ["hdr/types/pid_t.h"],
     deps = select({
         ":full_build": [":llvm_libc_types_pid_t"],
+        "//conditions:default": [],
+    }),
+)
+
+libc_support_library(
+    name = "types_gid_t",
+    hdrs = ["hdr/types/gid_t.h"],
+    deps = select({
+        ":full_build": [":llvm_libc_types_gid_t"],
         "//conditions:default": [],
     }),
 )
@@ -4300,6 +4314,21 @@ libc_support_library(
         ":__support_error_or",
         ":__support_macros_config",
         ":__support_osutil_syscall",
+    ],
+)
+
+libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_getegid",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/getegid.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":types_gid_t",
     ],
 )
 
@@ -17633,6 +17662,32 @@ libc_function(
         ":errno",
         ":hdr_unistd_macros",
         ":types_uid_t",
+    ],
+)
+
+libc_function(
+    name = "getegid",
+    srcs = ["src/unistd/linux/getegid.cpp"],
+    hdrs = ["src/unistd/getegid.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_getegid",
+        ":types_gid_t",
+    ],
+)
+
+libc_function(
+    name = "getgid",
+    srcs = ["src/unistd/linux/getgid.cpp"],
+    hdrs = ["src/unistd/getgid.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":errno",
+        ":hdr_unistd_macros",
+        ":types_gid_t",
     ],
 )
 

@@ -1788,7 +1788,7 @@ bool ClauseProcessor::processLinear(
                   clause.t)) {
         mlir::Value operand =
             fir::getBase(converter.genExprValue(toEvExpr(*mod), stmtCtx));
-        result.linearStepVars.append(objects.size(), operand);
+        result.linearStepVars.push_back(operand);
       } else {
         // If nothing is present, add the default step of 1.
         fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
@@ -1796,7 +1796,7 @@ bool ClauseProcessor::processLinear(
         mlir::Type integerTy = ty.isInteger() ? ty : firOpBuilder.getI32Type();
         mlir::Value operand =
             firOpBuilder.createIntegerConstant(currentLocation, integerTy, 1);
-        result.linearStepVars.append(objects.size(), operand);
+        result.linearStepVars.push_back(operand);
       }
 
       // Determine the linear modifier:
