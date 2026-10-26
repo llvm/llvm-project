@@ -716,16 +716,9 @@ class ClobberWalker {
   };
 
   using def_path_iterator = generic_def_path_iterator<DefPath, ClobberWalker>;
-  using const_def_path_iterator =
-      generic_def_path_iterator<const DefPath, const ClobberWalker>;
 
   iterator_range<def_path_iterator> def_path(ListIndex From) {
     return make_range(def_path_iterator(this, From), def_path_iterator());
-  }
-
-  iterator_range<const_def_path_iterator> const_def_path(ListIndex From) const {
-    return make_range(const_def_path_iterator(this, From),
-                      const_def_path_iterator());
   }
 
   struct OptznResult {

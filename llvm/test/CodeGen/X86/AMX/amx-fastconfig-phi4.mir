@@ -59,7 +59,7 @@ body:             |
   ; CHECK-NEXT:   [[LEA64r1:%[0-9]+]]:gr64_nosp = LEA64r %stack.0, 1, $noreg, 0, $noreg
   ; CHECK-NEXT:   %t0:tile = PTILEZEROV %r0, %c0
   ; CHECK-NEXT:   [[MOV64ri:%[0-9]+]]:gr64_nosp = MOV64ri 64
-  ; CHECK-NEXT:   TILESTORED %stack.0, 1, killed [[MOV64ri]], 0, $noreg, %t0 :: (store (s8192) into %stack.0)
+  ; CHECK-NEXT:   TILESTORED %stack.0, 1, [[MOV64ri]], 0, $noreg, %t0 :: (store (s8192) into %stack.0)
   ; CHECK-NEXT:   CMP32ri8 [[COPY1]], 0, implicit-def $eflags
   ; CHECK-NEXT:   [[SETCCr:%[0-9]+]]:gr8 = SETCCr 4, implicit $eflags
   ; CHECK-NEXT:   TEST8ri [[SETCCr]], 1, implicit-def $eflags
@@ -85,9 +85,9 @@ body:             |
   ; CHECK-NEXT:   [[PHI5:%[0-9]+]]:gr64_nosp = PHI [[LEA64r]], %bb.0, %24, %bb.3, %25, %bb.2
   ; CHECK-NEXT:   PLDTILECFGV %stack.1, 1, $noreg, 0, $noreg, implicit-def dead $tmm0, implicit-def dead $tmm1, implicit-def dead $tmm2, implicit-def dead $tmm3, implicit-def dead $tmm4, implicit-def dead $tmm5, implicit-def dead $tmm6, implicit-def dead $tmm7 :: (load (s512) from %stack.1, align 4)
   ; CHECK-NEXT:   [[MOV64ri1:%[0-9]+]]:gr64_nosp = MOV64ri 64
-  ; CHECK-NEXT:   [[PTILELOADDV:%[0-9]+]]:tile = PTILELOADDV [[PHI1]], [[PHI]], [[PHI2]], 1, killed [[MOV64ri1]], 0, $noreg
+  ; CHECK-NEXT:   [[PTILELOADDV:%[0-9]+]]:tile = PTILELOADDV [[PHI1]], [[PHI]], [[PHI2]], 1, [[MOV64ri1]], 0, $noreg
   ; CHECK-NEXT:   [[MOV64ri2:%[0-9]+]]:gr64_nosp = MOV64ri 64
-  ; CHECK-NEXT:   [[PTILELOADDV1:%[0-9]+]]:tile = PTILELOADDV [[PHI4]], [[PHI3]], [[PHI5]], 1, killed [[MOV64ri2]], 0, $noreg
+  ; CHECK-NEXT:   [[PTILELOADDV1:%[0-9]+]]:tile = PTILELOADDV [[PHI4]], [[PHI3]], [[PHI5]], 1, [[MOV64ri2]], 0, $noreg
   ; CHECK-NEXT:   [[MOV16ri2:%[0-9]+]]:gr16 = MOV16ri 64
   ; CHECK-NEXT:   [[MOV16ri3:%[0-9]+]]:gr16 = MOV16ri 16
   ; CHECK-NEXT:   PLDTILECFGV %stack.1, 1, $noreg, 0, $noreg, implicit-def dead $tmm0, implicit-def dead $tmm1, implicit-def dead $tmm2, implicit-def dead $tmm3, implicit-def dead $tmm4, implicit-def dead $tmm5, implicit-def dead $tmm6, implicit-def dead $tmm7 :: (load (s512) from %stack.1, align 4)
@@ -95,7 +95,7 @@ body:             |
   ; CHECK-NEXT:   [[LEA64r3:%[0-9]+]]:gr64_nosp = LEA64r %stack.3, 1, $noreg, 0, $noreg
   ; CHECK-NEXT:   [[PTILEZEROV1:%[0-9]+]]:tile = PTILEZEROV [[MOV16ri3]], [[MOV16ri2]]
   ; CHECK-NEXT:   [[MOV64ri3:%[0-9]+]]:gr64_nosp = MOV64ri 64
-  ; CHECK-NEXT:   TILESTORED %stack.3, 1, killed [[MOV64ri3]], 0, $noreg, [[PTILEZEROV1]] :: (store (s8192) into %stack.3)
+  ; CHECK-NEXT:   TILESTORED %stack.3, 1, [[MOV64ri3]], 0, $noreg, [[PTILEZEROV1]] :: (store (s8192) into %stack.3)
   ; CHECK-NEXT:   TEST8ri [[SETCCr]], 1, implicit-def $eflags
   ; CHECK-NEXT:   JCC_1 %bb.2, 5, implicit $eflags
   ; CHECK-NEXT: {{  $}}
@@ -109,7 +109,7 @@ body:             |
   ; CHECK-NEXT:   [[LEA64r5:%[0-9]+]]:gr64_nosp = LEA64r %stack.2, 1, $noreg, 0, $noreg
   ; CHECK-NEXT:   [[PTILEZEROV2:%[0-9]+]]:tile = PTILEZEROV [[MOV16ri5]], [[MOV16ri4]]
   ; CHECK-NEXT:   [[MOV64ri4:%[0-9]+]]:gr64_nosp = MOV64ri 64
-  ; CHECK-NEXT:   TILESTORED %stack.2, 1, killed [[MOV64ri4]], 0, $noreg, [[PTILEZEROV2]] :: (store (s8192) into %stack.2)
+  ; CHECK-NEXT:   TILESTORED %stack.2, 1, [[MOV64ri4]], 0, $noreg, [[PTILEZEROV2]] :: (store (s8192) into %stack.2)
   ; CHECK-NEXT:   JMP_1 %bb.2
   bb.0.entry:
     liveins: $edi

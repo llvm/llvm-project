@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/AutoUpgrade.h"
+#include "IROptions.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -48,7 +49,6 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/CodeGen.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
@@ -63,10 +63,6 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "auto-upgrade"
-
-static cl::opt<bool>
-    DisableAutoUpgradeDebugInfo("disable-auto-upgrade-debug-info",
-                                cl::desc("Disable autoupgrade of debug info"));
 
 static void rename(GlobalValue *GV) { GV->setName(GV->getName() + ".old"); }
 
@@ -6777,7 +6773,7 @@ static std::optional<StringRef> getModuleFlagNameSafely(const MDNode &Flag) {
 /// Check the debug info version number, if it is out-dated, drop the debug
 /// info. Return true if module is modified.
 bool llvm::UpgradeDebugInfo(Module &M) {
-  if (DisableAutoUpgradeDebugInfo)
+  if (!getIROptions(M.getContext()).auto_upgrade_debug_info)
     return false;
 
   llvm::TimeTraceScope timeScope("Upgrade debug info");

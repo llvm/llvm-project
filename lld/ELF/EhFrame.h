@@ -12,10 +12,11 @@
 #include "lld/Common/LLVM.h"
 
 namespace lld::elf {
+class EhInputSection;
 struct EhSectionPiece;
 
-uint8_t getFdeEncoding(EhSectionPiece *p);
-bool hasLSDA(const EhSectionPiece &p);
+uint8_t getFdeEncoding(const EhInputSection &sec, const EhSectionPiece &p);
+bool hasLSDA(const EhInputSection &sec, const EhSectionPiece &p);
 }
 
 #endif

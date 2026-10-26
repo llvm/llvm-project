@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -fsyntax-only -fenumeration-type -pedantic %s
+! RUN: %flang_fc1 -fsyntax-only -pedantic %s
 ! NEXT/PREVIOUS calls that must compile cleanly (F2023 16.9.151, 16.9.164).
 
 module enum_intrinsics_valid_mod

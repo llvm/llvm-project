@@ -14,6 +14,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 #include "lldb/Breakpoint/BreakpointList.h"
@@ -48,6 +49,7 @@
 #include "lldb/lldb-public.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Casting.h"
 
 namespace lldb_private {
 
@@ -2076,6 +2078,18 @@ public:
 
   /// Return the target groups this target belongs to.
   std::vector<lldb::TargetGroupSP> GetTargetGroups() const;
+
+  /// Return the first target group that can be cast to GroupT.
+  template <typename GroupT>
+  std::shared_ptr<GroupT> GetFirstTargetGroupOfType() const {
+    static_assert(std::is_base_of_v<TargetGroup, GroupT>,
+                  "GroupT must derive from TargetGroup");
+    for (const lldb::TargetGroupSP &group_sp : GetTargetGroups()) {
+      if (GroupT *group = llvm::dyn_cast<GroupT>(group_sp.get()))
+        return std::shared_ptr<GroupT>(group_sp, group);
+    }
+    return {};
+  }
 
 protected:
   friend class TargetGroup;
