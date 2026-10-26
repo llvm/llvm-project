@@ -4895,6 +4895,37 @@ Instruction *InstCombinerImpl::visitExtractValueInst(ExtractValueInst &EV) {
   return nullptr;
 }
 
+Instruction *InstCombinerImpl::visitBitInsertInst(BitInsertInst &BI) {
+  Value *Base = BI.getOperand(0);
+  Value *Val = BI.getOperand(1);
+  Value *Offset = BI.getOperand(2);
+  if (Value *V =
+          simplifyBitInsertInst(Base, Val, Offset, SQ.getWithInstruction(&BI)))
+    return replaceInstUsesWith(BI, V);
+
+  // bitinsert (bN x), (ty y), 0 -> bitcast y to bN, if ty is N bits wide
+  if (match(Offset, m_Zero()) && DL.getTypeSizeInBits(Val->getType()) ==
+                                     DL.getTypeSizeInBits(Base->getType()))
+    return new BitCastInst(Val, Base->getType());
+
+  return nullptr;
+}
+
+Instruction *InstCombinerImpl::visitBitExtractInst(BitExtractInst &BE) {
+  Value *Src = BE.getOperand(0);
+  Value *Offset = BE.getOperand(1);
+  if (Value *V = simplifyBitExtractInst(BE.getType(), Src, Offset,
+                                        SQ.getWithInstruction(&BE)))
+    return replaceInstUsesWith(BE, V);
+
+  // bitextract ty, (bN x), 0 -> bitcast x to ty, if ty is N bits wide
+  if (match(Offset, m_Zero()) && DL.getTypeSizeInBits(BE.getType()) ==
+                                     DL.getTypeSizeInBits(Src->getType()))
+    return new BitCastInst(Src, BE.getType());
+
+  return nullptr;
+}
+
 /// Return 'true' if the given typeinfo will match anything.
 static bool isCatchAll(EHPersonality Personality, Constant *TypeInfo) {
   switch (Personality) {
@@ -6277,8 +6308,7 @@ static bool combineInstructionsOverFunction(
 
   // Lower dbg.declare intrinsics otherwise their value may be clobbered
   // by instcombiner.
-  const auto &CLOpts =
-      F.getContext().getLibraryOptions().get<InstCombineCLOptions>();
+  const auto &CLOpts = getInstCombineCLOptions(F);
   bool MadeIRChange = false;
   if (CLOpts.lower_dbg_declare)
     MadeIRChange = LowerDbgDeclare(F);
