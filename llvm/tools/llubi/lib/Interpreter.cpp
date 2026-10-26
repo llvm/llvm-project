@@ -967,6 +967,46 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     return Ctx.fromBytes(Bytes, RetTy);
   }
 
+  AnyValue callMaskedLoadIntrinsic(CallBase &CB, const AnyValue &Ptr,
+                                   const AnyValue &Mask,
+                                   const AnyValue &PassThru) {
+    Type *ElemTy = CB.getType()->getScalarType();
+    // TODO: Support element types that are not a whole number of bytes.
+    if (!DL.typeSizeEqualsStoreSize(ElemTy)) {
+      reportError() << "llvm.masked.load with element type " << *ElemTy
+                    << " is not supported.";
+      return AnyValue();
+    }
+
+    const uint64_t AccessSize = Ctx.getEffectiveTypeStoreSize(ElemTy);
+    const unsigned IndexBW =
+        DL.getIndexTypeSizeInBits(CB.getArgOperand(0)->getType());
+    AnyValue Res = PassThru;
+    AnyValue LanePtr = Ptr;
+    GEPNoWrapFlags Flags = GEPNoWrapFlags::none();
+    for (auto [I, Lane] : enumerate(Res.asAggregate())) {
+      AnyValue AccumulatedOffset = AnyValue::poison();
+      LanePtr = Ctx.computeScaledPtrAdd(LanePtr, APInt(IndexBW, I == 0 ? I : 1),
+                                        APInt(IndexBW, AccessSize), Flags,
+                                        AccumulatedOffset);
+      switch (getMaskLane(Mask, I)) {
+      case BooleanKind::False:
+        continue;
+      case BooleanKind::Poison:
+        reportImmediateUB() << "Poison mask lane in llvm.masked.load.";
+        return AnyValue();
+      case BooleanKind::True:
+        break;
+      }
+
+      Lane = load(LanePtr, Align(1), ElemTy, /*NoUndef=*/false);
+      // The first enabled base pointer may not be inbounds, but pointers after
+      // that must be inbounds.
+      Flags = GEPNoWrapFlags::inBounds();
+    }
+    return Res;
+  }
+
 public:
   InstExecutor(Context &C, EventHandler &H, Function &F,
                ArrayRef<AnyValue> Args, AnyValue &RetVal)
@@ -1591,6 +1631,23 @@ public:
       }
       return std::move(Res);
     }
+    case Intrinsic::get_active_lane_mask: {
+      if (Args[0].isPoison() || Args[1].isPoison())
+        return AnyValue::getPoisonValue(Ctx, RetTy);
+      // Lane I is active iff Base + I < N without wrapping, i.e. iff Base < N
+      // and I < N - Base, where N - Base cannot wrap.
+      const APInt &Base = Args[0].asInteger();
+      const APInt &N = Args[1].asInteger();
+      const uint32_t Len =
+          Ctx.getEVL(cast<VectorType>(RetTy)->getElementCount());
+      const uint32_t NumActive =
+          Base.uge(N) ? 0 : (N - Base).getLimitedValue(Len);
+      std::vector<AnyValue> Res;
+      Res.reserve(Len);
+      Res.insert(Res.end(), NumActive, AnyValue::boolean(true));
+      Res.insert(Res.end(), Len - NumActive, AnyValue::boolean(false));
+      return std::move(Res);
+    }
     case Intrinsic::vector_reduce_fadd:
     case Intrinsic::vector_reduce_fmul:
     case Intrinsic::vector_reduce_fmaximum:
@@ -1822,6 +1879,8 @@ public:
       assert(!getSpeculativeLoadOracle(CB) &&
              "oracle form must be handled earlier");
       return callSpeculativeLoadIntrinsic(CB, Args[0], Args[2]);
+    case Intrinsic::masked_load:
+      return callMaskedLoadIntrinsic(CB, Args[0], Args[1], Args[2]);
     case Intrinsic::experimental_noalias_scope_decl:
       // FIXME: Not implemented yet. Currently it acts as a noop.
       return AnyValue();
@@ -2900,6 +2959,35 @@ public:
     Ctx.toBytes(getValue(BCI.getOperand(0)), BCI.getOperand(0)->getType(),
                 Bytes);
     setResult(BCI, Ctx.fromBytes(Bytes, BCI.getType()));
+  }
+
+  void visitBitInsertInst(BitInsertInst &BII) {
+    ByteValue Res = getValue(BII.getOperand(0)).asByte();
+    auto &Val = getValue(BII.getOperand(1));
+    auto &Offset = getValue(BII.getOperand(2));
+    Type *ValTy = BII.getOperand(1)->getType();
+    uint64_t NumBits = DL.getTypeSizeInBits(ValTy).getFixedValue();
+    uint64_t OffsetInBits =
+        Offset.isPoison() ? 0 : Offset.asInteger().getZExtValue();
+    if (Offset.isPoison() || OffsetInBits + NumBits > Res.getBitWidth()) {
+      setResult(BII, AnyValue::getPoisonValue(Ctx, BII.getType()));
+      return;
+    }
+    Ctx.insertBits(Res, OffsetInBits, Val, ValTy);
+    setResult(BII, std::move(Res));
+  }
+
+  void visitBitExtractInst(BitExtractInst &BEI) {
+    auto &Src = getValue(BEI.getOperand(0)).asByte();
+    auto &Offset = getValue(BEI.getOperand(1));
+    uint64_t NumBits = DL.getTypeSizeInBits(BEI.getType()).getFixedValue();
+    uint64_t OffsetInBits =
+        Offset.isPoison() ? 0 : Offset.asInteger().getZExtValue();
+    if (Offset.isPoison() || OffsetInBits + NumBits > Src.getBitWidth()) {
+      setResult(BEI, AnyValue::getPoisonValue(Ctx, BEI.getType()));
+      return;
+    }
+    setResult(BEI, Ctx.extractBits(Src, OffsetInBits, BEI.getType()));
   }
 
   void visitFreezeInst(FreezeInst &FI) {

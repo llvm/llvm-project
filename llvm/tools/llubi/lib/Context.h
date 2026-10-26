@@ -300,9 +300,6 @@ class Context {
                          GEPNoWrapFlags Flags, AnyValue &AccumulatedOffset);
   AnyValue computePtrAdd(const AnyValue &Ptr, const APInt &Offset,
                          GEPNoWrapFlags Flags, AnyValue &AccumulatedOffset);
-  AnyValue computeScaledPtrAdd(const AnyValue &Ptr, const AnyValue &Index,
-                               const APInt &Scale, GEPNoWrapFlags Flags,
-                               AnyValue &AccumulatedOffset);
 
   // Constants
   // Use std::map to avoid iterator/reference invalidation.
@@ -420,6 +417,13 @@ public:
                      bool *ContainsUndefinedBits = nullptr);
   /// Convert a value to byte sequence. Padding bits are set to zero.
   void toBytes(const AnyValue &Val, Type *Ty, MutableArrayRef<Byte> Bytes);
+  /// Read the bits [OffsetInBits, OffsetInBits + bitwidth(Ty)) of \p Src as a
+  /// value of type \p Ty. The bit range must be within \p Src.
+  AnyValue extractBits(const ByteValue &Src, uint32_t OffsetInBits, Type *Ty);
+  /// Overwrite the bits [OffsetInBits, OffsetInBits + bitwidth(Ty)) of \p Base
+  /// with \p Val. The bit range must be within \p Base.
+  void insertBits(ByteValue &Base, uint32_t OffsetInBits, const AnyValue &Val,
+                  Type *Ty);
   /// Direct memory load without checks.
   AnyValue load(MemoryObject &MO, uint64_t Offset, Type *ValTy,
                 bool *ContainsUndefinedBits = nullptr);
@@ -434,6 +438,9 @@ public:
 
   AnyValue computeGEP(GEPOperator &GEP,
                       function_ref<const AnyValue &(Value *V)> GetValue);
+  AnyValue computeScaledPtrAdd(const AnyValue &Ptr, const AnyValue &Index,
+                               const APInt &Scale, GEPNoWrapFlags Flags,
+                               AnyValue &AccumulatedOffset);
 
   Function *getTargetFunction(const Pointer &Ptr);
   BasicBlock *getTargetBlock(const Pointer &Ptr);

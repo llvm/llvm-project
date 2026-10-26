@@ -1,9 +1,9 @@
-add_custom_target(libc_sys_sysmacros_unittests)
+add_libc_testsuite(libc-sys-sysmacros-tests)
 
 add_libc_test(
   sysmacros_test
   SUITE
-    libc_sys_sysmacros_unittests
+    libc-sys-sysmacros-tests
   SRCS
     sysmacros_test.cpp
   DEPENDS

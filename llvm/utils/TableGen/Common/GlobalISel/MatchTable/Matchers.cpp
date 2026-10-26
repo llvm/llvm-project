@@ -1565,6 +1565,12 @@ bool InstructionMatcher::isHigherPriorityThan(InstructionMatcher &B) {
   if (Operands.size() < B.Operands.size())
     return false;
 
+  // Instruction matchers involving more predicates have higher priority.
+  if (predicates_size() > B.predicates_size())
+    return true;
+  if (predicates_size() < B.predicates_size())
+    return false;
+
   for (auto &&P : zip(predicates(), B.predicates())) {
     auto L = static_cast<InstructionPredicateMatcher *>(std::get<0>(P).get());
     auto R = static_cast<InstructionPredicateMatcher *>(std::get<1>(P).get());
@@ -1580,11 +1586,6 @@ bool InstructionMatcher::isHigherPriorityThan(InstructionMatcher &B) {
     if (std::get<1>(Operand)->isHigherPriorityThan(*std::get<0>(Operand)))
       return false;
   }
-  // Instruction matchers involving more predicates have higher priority.
-  if (predicates_size() > B.predicates_size())
-    return true;
-  if (predicates_size() < B.predicates_size())
-    return false;
 
   return false;
 }

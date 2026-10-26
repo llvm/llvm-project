@@ -83,31 +83,31 @@ Parser/Semantics, MLIR, Lowering, or the OpenMPIRBuilder.
 | Feature                                                    | Status                            | Claimed By | Comments                                                |
 |:-----------------------------------------------------------|:----------------------------------|:-----------|:--------------------------------------------------------|
 | proc_bind clause                                           | <span class="good">done</span> | | |
-| simd construct                                             | <span class="part">partial</span> | | Implicit linearization is skipped if iv is a pointer or allocatable|
+| simd construct                                             | <span class="part">partial</span> | | Implicit linearization is skipped if iv is a pointer|
 | declare simd directive                                     | <span class="part">partial</span> | chichunchen | Semantics coverage exists (for example `flang/test/Semantics/OpenMP/declarative-directive01.f90`) and lowering exists for key forms (for example `flang/test/Lower/OpenMP/declare-simd-interface-body.f90`), but coverage is not yet complete for all variants. |
-| do simd construct                                          | <span class="part">partial</span> | | Implicit linearization is skipped if iv is a pointer or allocatable |
+| do simd construct                                          | <span class="part">partial</span> | | Implicit linearization is skipped if iv is a pointer |
 | target data construct                                      | <span class="good">done</span> | | |
 | target construct                                           | <span class="good">done</span> | | |
 | target update construct                                    | <span class="good">done</span> | | |
 | declare target directive                                   | <span class="good">done</span> | | |
 | teams construct                                            | <span class="good">done</span> | | |
 | distribute construct                                       | <span class="good">done</span> | | |
-| distribute simd construct                                  | <span class="part">partial</span> | | Implicit linearization is skipped if iv is a pointer or allocatable |
+| distribute simd construct                                  | <span class="part">partial</span> | | Implicit linearization is skipped if iv is a pointer |
 | distribute parallel loop construct                         | <span class="good">done</span> | | |
-| distribute parallel loop simd construct                    | <span class="part">partial</span> | | Implicit linearization is skipped if iv is a pointer or allocatable |
+| distribute parallel loop simd construct                    | <span class="part">partial</span> | | Implicit linearization is skipped if iv is a pointer |
 | depend clause                                              | <span class="good">done</span> | | |
 | declare reduction directive                                | <span class="part">partial</span> | sshrestha-aa | Partial support, including user-defined reductions with derived types. |
 | atomic construct extensions                                | <span class="good">done</span> | | |
 | cancel construct                                           | <span class="good">done</span> | | |
 | cancellation point construct                               | <span class="good">done</span> | | |
-| parallel do simd construct                                 | <span class="part">partial</span> | | Implicit linearization is skipped if iv is a pointer or allocatable |
+| parallel do simd construct                                 | <span class="part">partial</span> | | Implicit linearization is skipped if iv is a pointer |
 | target teams construct                                     | <span class="good">done</span> | | |
 | teams distribute construct                                 | <span class="good">done</span> | | |
-| teams distribute simd construct                            | <span class="part">partial</span> | | Implicit linearization is skipped if iv is a pointer or allocatable |
+| teams distribute simd construct                            | <span class="part">partial</span> | | Implicit linearization is skipped if iv is a pointer |
 | target teams distribute construct                          | <span class="good">done</span> | | |
 | teams distribute parallel loop construct                   | <span class="good">done</span> | | |
 | target teams distribute parallel loop construct            | <span class="good">done</span> | | |
-| teams distribute parallel loop simd construct              | <span class="part">partial</span> | | Implicit linearization is skipped if iv is a pointer or allocatable |
+| teams distribute parallel loop simd construct              | <span class="part">partial</span> | | Implicit linearization is skipped if iv is a pointer |
 | target teams distribute parallel loop simd construct       | <span class="part">partial</span> | | Implicit linearization is completely skipped |
 | taskgroup construct                                        | <span class="good">done</span> | | Semantics and lowering coverage exists (`flang/test/Semantics/OpenMP/taskgroup01.f90`, `flang/test/Lower/OpenMP/taskgroup.f90`). |
 
@@ -197,7 +197,7 @@ Parser/Semantics, MLIR, Lowering, or the OpenMPIRBuilder.
 | nothing directive | <span class="good">done</span> | | Parser and lowering coverage exists for standalone and metadirective-selected forms (`flang/test/Parser/OpenMP/nothing.f90`, `flang/test/Lower/OpenMP/nothing.f90`, `flang/test/Lower/OpenMP/metadirective-nothing.f90`). | [llvm/llvm-project#193664](https://github.com/llvm/llvm-project/pull/193664), [llvm/llvm-project#202679](https://github.com/llvm/llvm-project/pull/202679) |
 | tile and unroll constructs | <span class="part">partial</span> | | Semantics coverage exists across tile/unroll and loop-transformation tests (`flang/test/Semantics/OpenMP/tile01.f90`, `flang/test/Semantics/OpenMP/tile09.f90`, `flang/test/Semantics/OpenMP/loop-transformation-construct01.f90`), with additional lowering/transform completeness work ongoing. The `full` and `partial` clauses on `unroll` are lowered (`flang/test/Lower/OpenMP/unroll-full01.f90`, `flang/test/Lower/OpenMP/unroll-partial01.f90`). | [llvm/llvm-project#160298](https://github.com/llvm/llvm-project/pull/160298), [llvm/llvm-project#185296](https://github.com/llvm/llvm-project/pull/185296), [llvm/llvm-project#188025](https://github.com/llvm/llvm-project/pull/188025) |
 | scope construct | <span class="part">partial</span> | | Scope construct support is available, with follow-on completeness work still in progress for some combinations (see also OpenMP 5.2 scope-related rows). | [llvm/llvm-project#113700](https://github.com/llvm/llvm-project/pull/113700), [llvm/llvm-project#193098](https://github.com/llvm/llvm-project/pull/193098) |
-| assumes directives | <span class="none">unclaimed</span> | | Lowering still has explicit TODO (`flang/lib/Lower/OpenMP/OpenMP.cpp` TODO: `OpenMP ASSUMES declaration`; `flang/test/Lower/OpenMP/Todo/assumes.f90`). | [llvm/llvm-project#102008](https://github.com/llvm/llvm-project/pull/102008) |
+| assumes directives | <span class="part">partial</span> | | `no_openmp` is supported. For OpenMP 5.2 and earlier, module-level assumptions are preserved in module files for separately compiled submodules. Other clauses remain TODO-tracked (`flang/test/Lower/OpenMP/assumption.f90`, `flang/test/Lower/OpenMP/Todo/assumes.f90`). | [llvm/llvm-project#102008](https://github.com/llvm/llvm-project/pull/102008) |
 | assume directive | <span class="none">unclaimed</span> | | Lowering still has explicit TODO (`flang/lib/Lower/OpenMP/OpenMP.cpp` TODO: `OpenMP ASSUME construct`; `flang/test/Lower/OpenMP/Todo/assume.f90`). | [llvm/llvm-project#102008](https://github.com/llvm/llvm-project/pull/102008) |
 | default(firstprivate) | <span class="good">done</span> | | Supported for `default(firstprivate)` clause forms, with semantics and lowering coverage (`flang/test/Semantics/OpenMP/default-clause.f90`, `flang/test/Lower/OpenMP/default-clause.f90`, `flang/test/Lower/OpenMP/default-clause-byref.f90`). | [D123930](https://reviews.llvm.org/D123930) |
 | default(private) | <span class="part">partial</span> | | Semantics/default-clause coverage exists (`flang/test/Semantics/OpenMP/default.f90`, `flang/test/Semantics/OpenMP/default02.f90`) with ongoing lowering completeness checks. | [llvm/llvm-project#107586](https://github.com/llvm/llvm-project/pull/107586) |

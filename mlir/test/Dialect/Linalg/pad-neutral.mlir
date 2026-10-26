@@ -166,12 +166,15 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// Negative: `nnan` declares that NaN operands do not occur, so the NaN neutral
-// element of maxnumf is not a usable pad value and inference fails instead.
-
-func.func @negative_pad_reduce_maxnumf_nnan(%input: tensor<8x30xf32>,
+// CHECK-LABEL: @pad_reduce_maxnumf_nnan
+func.func @pad_reduce_maxnumf_nnan(%input: tensor<8x30xf32>,
     %init: tensor<8xf32>) -> tensor<8xf32> {
-  // expected-note @below {{target op}}
+  // CHECK-DAG:   %[[NEUTRAL:.*]] = arith.constant 0xFF800000 : f32
+  // CHECK:       %[[PAD:.*]] = tensor.pad %{{.*}} low[0, 0] high[0, 2]
+  // CHECK:         tensor.yield %[[NEUTRAL]] : f32
+  // CHECK:       } : tensor<8x30xf32> to tensor<8x32xf32>
+  // CHECK:       linalg.reduce ins(%[[PAD]] : tensor<8x32xf32>)
+  // CHECK:       arith.maxnumf {{.*}} fastmath<nnan> : f32
   %0 = linalg.reduce ins(%input : tensor<8x30xf32>) outs(%init : tensor<8xf32>)
       dimensions = [1]
     (%in: f32, %out: f32) {
@@ -185,7 +188,6 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %red = transform.structured.match ops{["linalg.reduce"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
-    // expected-error @below {{failed to pad op}}
     %padded, %pad = transform.structured.pad_tiling_interface %red to padding_sizes [8, 32]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
     transform.yield
