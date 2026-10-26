@@ -29,7 +29,27 @@ find_package_handle_standard_args(
 )
 
 if(zstd_FOUND)
-  if(zstd_LIBRARY MATCHES "${zstd_STATIC_LIBRARY_SUFFIX}$" AND NOT zstd_LIBRARY MATCHES "\\.dll\\.a$")
+  set(zstd_library_is_static FALSE)
+  if(zstd_LIBRARY MATCHES "${zstd_STATIC_LIBRARY_SUFFIX}$"
+      AND NOT zstd_LIBRARY MATCHES "\\.dll\\.a$")
+    if(NOT "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
+      set(zstd_library_is_static TRUE)
+    else()
+      # On AIX, .a archives may contain shared objects rather than relocatable
+      # objects. Probe with dump -T to check for a loader section, which is
+      # present only in shared-object members. Treat the library as shared if
+      # a loader section is found, regardless of the file suffix.
+      execute_process(
+        COMMAND dump -X32_64 -T "${zstd_LIBRARY}"
+        OUTPUT_VARIABLE zstd_dump_output
+        ERROR_QUIET)
+      if(NOT zstd_dump_output MATCHES "Loader Section")
+        set(zstd_library_is_static TRUE)
+      endif()
+      unset(zstd_dump_output)
+    endif()
+  endif()
+  if(zstd_library_is_static)
     set(zstd_STATIC_LIBRARY "${zstd_LIBRARY}")
   elseif (NOT TARGET zstd::libzstd_shared)
     add_library(zstd::libzstd_shared SHARED IMPORTED)
@@ -54,6 +74,7 @@ if(zstd_FOUND)
           IMPORTED_LOCATION "${zstd_LIBRARY}")
     endif()
   endif()
+  unset(zstd_library_is_static)
   if(zstd_STATIC_LIBRARY MATCHES "${zstd_STATIC_LIBRARY_SUFFIX}$" AND
      NOT TARGET zstd::libzstd_static)
     add_library(zstd::libzstd_static STATIC IMPORTED)
