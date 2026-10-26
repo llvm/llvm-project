@@ -539,6 +539,7 @@ void CodeGenRegister::computeSecondarySubRegs(CodeGenRegBank &RegBank) {
   }
 
   // Create sub-register index composition maps for the synthesized indices.
+  unsigned NumModes = RegBank.getHwModes().getNumModeIds();
   for (auto [NewIdx, NewSubReg] : NewSubRegs) {
     for (auto [SRI, SubReg] : NewSubReg->SubRegs) {
       CodeGenSubRegIndex *SubIdx = getSubRegIndex(SubReg);
@@ -546,6 +547,11 @@ void CodeGenRegister::computeSecondarySubRegs(CodeGenRegBank &RegBank) {
         PrintFatalError(TheDef->getLoc(), "No SubRegIndex for " +
                                               SubReg->getName() + " in " +
                                               getName());
+      // Most compositions were already added for registers with the same
+      // structure, and then addComposite has no effect.
+      if (CodeGenSubRegIndex *Known = NewIdx->compose(SRI);
+          Known && Known->hasOffsetInAllModes(NumModes))
+        continue;
       NewIdx->addComposite(SRI, SubIdx, RegBank.getHwModes());
     }
   }
