@@ -4516,9 +4516,9 @@ def fno_direct_access_external_data : Flag<["-"], "fno-direct-access-external-da
   HelpText<"Use GOT indirection to reference external data symbols">;
 defm plt : BoolFOption<"plt",
   CodeGenOpts<"NoPLT">, DefaultFalse,
-  NegFlag<SetTrue, [], [ClangOption, CC1Option],
-          "Use GOT indirection instead of PLT to make external function calls (x86 only)">,
-  PosFlag<SetFalse>>;
+  NegFlag<SetTrue, [], [ClangOption, CC1Option, FlangOption, FC1Option],
+          "Use GOT indirection instead of PLT to make external function calls (x86 and AArch64 only)">,
+  PosFlag<SetFalse, [], [FlangOption, FC1Option]>>;
 defm ropi : BoolFOption<"ropi",
   LangOpts<"ROPI">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, FlangOption, CC1Option],

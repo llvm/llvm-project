@@ -398,6 +398,10 @@ void Flang::addCodegenOptions(const ArgList &Args,
                      options::OPT_fno_optimize_sibling_calls);
 
   const llvm::Triple &Triple = getToolChain().getEffectiveTriple();
+  // Only ELF x86 and AArch64 use -fno-plt. The default is PLT,
+  // so only an explicit -fno-plt (last flag wins) is forwarded.
+  if (Triple.isOSBinFormatELF() && (Triple.isAArch64() || Triple.isX86()))
+    Args.addOptOutFlag(CmdArgs, options::OPT_fplt, options::OPT_fno_plt);
   addSeparateSectionFlags(Triple, Args, CmdArgs);
 
   if (Args.hasArg(options::OPT_fcoarray))
