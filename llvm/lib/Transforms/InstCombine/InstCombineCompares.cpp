@@ -2344,7 +2344,17 @@ Instruction *InstCombinerImpl::foldICmpMulConstant(ICmpInst &Cmp,
       APInt NewC = (C.lshr(K) * MulC->lshr(K).multiplicativeInverse()) & Mask;
 
       // (mul X, OddC) eq/ne C --> X eq/ne C * OddC^{-1}
-      if (K == 0)
+      //
+      // It's also true for EvenC when multiplication has nuw.
+      //
+      //   X * MulC < 2^N <=>
+      //   X * 2^K * Q < 2^N <=>
+      //   X * Q < 2^{N-K} =>
+      //   X < 2^{N-K} and Q < 2^{N-K}
+      //
+      // Because of this fact, applying Mask to X is a no-op and we
+      // can skip it.
+      if (K == 0 || Mul->hasNoUnsignedWrap())
         return new ICmpInst(Pred, X, ConstantInt::get(MulTy, NewC));
 
       // (mul X, EvenC) eq/ne C --> (and X, Mask) eq/ne NewC
