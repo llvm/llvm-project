@@ -615,8 +615,8 @@ static bool isCBranchReadEXECZ(const MachineInstr &MI) {
 
 unsigned
 GCNHazardRecognizer::checkVASSrcVASDstHazards(const MachineInstr &MI) const {
-  // These are only relevant to MI450 when not using SCHED_MODE 0.
-  if (!ST.hasGFX1250Insts() || ST.getGeneration() != AMDGPUSubtarget::GFX12)
+  // These are only relevant when not using SCHED_MODE 0.
+  if (!ST.hasGFX1250Insts())
     return 0;
 
   bool IsSALU = SIInstrInfo::isSALU(MI);
