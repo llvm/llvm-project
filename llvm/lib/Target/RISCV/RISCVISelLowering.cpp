@@ -19371,7 +19371,7 @@ static SDValue combineAddOfExtsAlreadyExtended(SDNode *N, SelectionDAG &DAG) {
 
   // Ensure the user has a widening variant so the extend can be moved after
   // the add and still be combined. Do not interfere with existing fusion
-  // opportunities, such as mul-add.
+  // opportunities, such as mul-add or .vx patterns.
   if (!N->hasOneUse())
     return SDValue();
 
