@@ -670,8 +670,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   // the RISC-V conversions already saturate. There is no legalFor() because
   // they do not produce 0 for NaN, which legalizeCustom fixes up with a
   // compare and a select. The remaining cases fall back to the generic
-  // lowering, which clamps before converting. Scalars only: the generic
-  // lowering is not vector-safe and RISC-V GISel has no vector support.
+  // lowering, which clamps before converting and only handles scalars.
   getActionDefinitionsBuilder({G_FPTOSI_SAT, G_FPTOUI_SAT})
       .customFor(ST.hasStdExtF(), {{sXLen, s32}})
       .customFor(ST.hasStdExtD(), {{sXLen, s64}})
