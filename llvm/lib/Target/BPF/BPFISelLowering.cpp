@@ -113,6 +113,8 @@ BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
   for (auto VT : {MVT::i32, MVT::i64}) {
     setOperationAction(ISD::ATOMIC_LOAD, VT, Custom);
     setOperationAction(ISD::ATOMIC_STORE, VT, Custom);
+    // No atomic sub insn. Expand it into atomic add of the negated value.
+    setOperationAction(ISD::ATOMIC_LOAD_SUB, VT, Expand);
   }
 
   setOperationAction(ISD::ATOMIC_FENCE, MVT::Other, Custom);
