@@ -214,8 +214,15 @@ public:
 FunctionPass *createRISCVInsertReadWriteCSRLegacyPass();
 void initializeRISCVInsertReadWriteCSRLegacyPass(PassRegistry &);
 
-FunctionPass *createRISCVInsertWriteVXRMPass();
-void initializeRISCVInsertWriteVXRMPass(PassRegistry &);
+class RISCVInsertWriteVXRMPass
+    : public RequiredPassInfoMixin<RISCVInsertWriteVXRMPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createRISCVInsertWriteVXRMLegacyPass();
+void initializeRISCVInsertWriteVXRMLegacyPass(PassRegistry &);
 
 FunctionPass *createRISCVRedundantCopyEliminationPass();
 void initializeRISCVRedundantCopyEliminationPass(PassRegistry &);

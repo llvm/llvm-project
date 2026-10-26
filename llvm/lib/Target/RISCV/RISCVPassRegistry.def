@@ -49,6 +49,7 @@ MACHINE_FUNCTION_PASS("riscv-indirect-branch-tracking",
 MACHINE_FUNCTION_PASS("riscv-insert-read-write-csr",
                       RISCVInsertReadWriteCSRPass())
 MACHINE_FUNCTION_PASS("riscv-insert-vsetvli", RISCVInsertVSETVLIPass())
+MACHINE_FUNCTION_PASS("riscv-insert-write-vxrm", RISCVInsertWriteVXRMPass())
 MACHINE_FUNCTION_PASS("riscv-isel", RISCVISelDAGToDAGPass(*this, getOptLevel()))
 MACHINE_FUNCTION_PASS("riscv-late-branch-opt", RISCVLateBranchOptPass())
 MACHINE_FUNCTION_PASS("riscv-lpad-setup", RISCVLandingPadSetupPass())
