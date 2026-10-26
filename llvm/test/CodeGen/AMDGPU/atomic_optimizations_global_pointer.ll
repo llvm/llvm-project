@@ -10554,7 +10554,7 @@ define amdgpu_kernel void @uniform_add_i8(ptr addrspace(1) %result, ptr addrspac
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX9-NEXT:    s_mov_b32 s2, -1
-; GFX9-NEXT:    v_mad_legacy_u16 v0, s12, v4, v0
+; GFX9-NEXT:    v_mad_u16 v0, s12, v4, v0
 ; GFX9-NEXT:    buffer_store_byte v0, off, s[0:3], 0
 ; GFX9-NEXT:    s_endpgm
 ;
@@ -12998,7 +12998,7 @@ define amdgpu_kernel void @uniform_add_i16(ptr addrspace(1) %result, ptr addrspa
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX9-NEXT:    s_mov_b32 s2, -1
-; GFX9-NEXT:    v_mad_legacy_u16 v0, s12, v4, v0
+; GFX9-NEXT:    v_mad_u16 v0, s12, v4, v0
 ; GFX9-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; GFX9-NEXT:    s_endpgm
 ;

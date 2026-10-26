@@ -545,7 +545,9 @@ def V_INTERP_MOV_F32_e64 : VOP3Interp <"v_interp_mov_f32", VOP3_INTERP_MOV>;
 } // End SubtargetPredicate = isGFX8Plus, Uses = [MODE, M0, EXEC], OtherPredicates = [isNotGFX90APlus]
 
 // Note: 16-bit instructions produce a 0 result in the high 16-bits
-// on GFX8 and GFX9 and preserve high 16 bits on GFX10+
+// on GFX8 and GFX9 and preserve high 16 bits on GFX10+. On GFX9 the legacy
+// v_mad_u16 (renamed v_mad_legacy_u16) is still the best choice for a
+// zero-extended result, although the op_sel version is used otherwise.
 multiclass Arithmetic_i16_0Hi_TernaryPats <SDPatternOperator op, Instruction inst> {
   def : GCNPat<
     (i32 (zext (op i16:$src0, i16:$src1, i16:$src2))),
@@ -557,7 +559,7 @@ let Predicates = [Has16BitInsts, isGFX8GFX9] in {
 defm : Arithmetic_i16_0Hi_TernaryPats<imad, V_MAD_U16_e64>;
 }
 
-let Predicates = [Has16BitInsts, isGFX6GFX7GFX8GFX9] in {
+let Predicates = [Has16BitInsts, isGFX8Only] in {
 
 // FIXME: Should be able to just pass imad to the instruction
 // definition pattern, but the implied clamp input interferes.
@@ -570,7 +572,7 @@ multiclass Ternary_i16_Pats <SDPatternOperator op, Instruction inst> {
 
 defm: Ternary_i16_Pats<imad, V_MAD_U16_e64>;
 
-} // End Predicates = [Has16BitInsts, isGFX6GFX7GFX8GFX9]
+} // End Predicates = [Has16BitInsts, isGFX8Only]
 
 multiclass Ternary_i16_Pats_gfx9<SDPatternOperator op1, SDPatternOperator op2,
                                  Instruction inst> {
@@ -589,9 +591,9 @@ let True16Predicate = UseRealTrue16Insts in {
 let True16Predicate = UseFakeTrue16Insts in {
   defm: Ternary_i16_Pats_gfx9<mul, add, V_MAD_U16_gfx9_fake16_e64>;
 } // End True16Predicates = UseFakeTrue16Insts
-let OtherPredicates = [isGFX10Plus, Has16BitInsts], True16Predicate = NotHasTrue16BitInsts in {
+let OtherPredicates = [isGFX9Plus, Has16BitInsts], True16Predicate = NotHasTrue16BitInsts in {
   defm: Ternary_i16_Pats_gfx9<mul, add, V_MAD_U16_gfx9_e64>;
-} // End OtherPredicates = [isGFX10Plus, Has16BitInsts], True16Predicate = NotHasTrue16BitInsts
+} // End OtherPredicates = [isGFX9Plus, Has16BitInsts], True16Predicate = NotHasTrue16BitInsts
 
 class ThreeOpFragSDAG<SDPatternOperator op1, SDPatternOperator op2> : PatFrag<
   (ops node:$x, node:$y, node:$z),
