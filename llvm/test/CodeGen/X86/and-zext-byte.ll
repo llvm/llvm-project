@@ -16,8 +16,7 @@ define i32 @parse(ptr %p) {
 ; X64-NEXT:    .p2align 4
 ; X64-NEXT:  .LBB0_1: # %loop
 ; X64-NEXT:    # =>This Inner Loop Header: Depth=1
-; X64-NEXT:    andb $15, %cl
-; X64-NEXT:    movzbl %cl, %ecx
+; X64-NEXT:    andl $15, %ecx
 ; X64-NEXT:    leal (%rax,%rax,4), %eax
 ; X64-NEXT:    leal (%rcx,%rax,2), %eax
 ; X64-NEXT:    movzbl (%rdi), %ecx
@@ -59,8 +58,7 @@ define i32 @parse(ptr %p) {
 ; APX-NEXT:    .p2align 4
 ; APX-NEXT:  .LBB0_1: # %loop
 ; APX-NEXT:    # =>This Inner Loop Header: Depth=1
-; APX-NEXT:    andb $15, %cl
-; APX-NEXT:    movzbl %cl, %ecx
+; APX-NEXT:    andl $15, %ecx
 ; APX-NEXT:    leal (%rax,%rax,4), %eax
 ; APX-NEXT:    leal (%rcx,%rax,2), %eax
 ; APX-NEXT:    movzbl (%rdi), %ecx
@@ -100,8 +98,7 @@ define i32 @parse_mask128(ptr %p) {
 ; X64-NEXT:    .p2align 4
 ; X64-NEXT:  .LBB1_1: # %loop
 ; X64-NEXT:    # =>This Inner Loop Header: Depth=1
-; X64-NEXT:    andb $-128, %cl
-; X64-NEXT:    movzbl %cl, %ecx
+; X64-NEXT:    andl $128, %ecx
 ; X64-NEXT:    leal (%rax,%rax,4), %eax
 ; X64-NEXT:    leal (%rcx,%rax,2), %eax
 ; X64-NEXT:    movzbl (%rdi), %ecx
@@ -143,8 +140,7 @@ define i32 @parse_mask128(ptr %p) {
 ; APX-NEXT:    .p2align 4
 ; APX-NEXT:  .LBB1_1: # %loop
 ; APX-NEXT:    # =>This Inner Loop Header: Depth=1
-; APX-NEXT:    andb $-128, %cl
-; APX-NEXT:    movzbl %cl, %ecx
+; APX-NEXT:    andl $128, %ecx
 ; APX-NEXT:    leal (%rax,%rax,4), %eax
 ; APX-NEXT:    leal (%rcx,%rax,2), %eax
 ; APX-NEXT:    movzbl (%rdi), %ecx
@@ -284,8 +280,8 @@ define i32 @parse_source_live(ptr %p) {
 ; X64-NEXT:  .LBB3_1: # %loop
 ; X64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X64-NEXT:    movzbl %cl, %edx
-; X64-NEXT:    andb $15, %cl
-; X64-NEXT:    movzbl %cl, %ecx
+; X64-NEXT:    # kill: def $ecx killed $ecx killed $rcx
+; X64-NEXT:    andl $15, %ecx
 ; X64-NEXT:    leal (%rax,%rax,4), %eax
 ; X64-NEXT:    leal (%rdx,%rax,2), %eax
 ; X64-NEXT:    addl %ecx, %eax
@@ -335,8 +331,7 @@ define i32 @parse_source_live(ptr %p) {
 ; APX-NEXT:    .p2align 4
 ; APX-NEXT:  .LBB3_1: # %loop
 ; APX-NEXT:    # =>This Inner Loop Header: Depth=1
-; APX-NEXT:    andb $15, %cl, %dl
-; APX-NEXT:    movzbl %dl, %edx
+; APX-NEXT:    andl $15, %ecx, %edx
 ; APX-NEXT:    leal (%rax,%rax,4), %eax
 ; APX-NEXT:    movzbl %cl, %ecx
 ; APX-NEXT:    leal (%rcx,%rax,2), %eax
