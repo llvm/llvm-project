@@ -47,6 +47,7 @@ bool diagnoseDummy(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 
 bool arrayElemPtrOpaque(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                         APSInt &&Index, bool AllowReplace = true);
+void noteValueLocation(InterpState &S, const Pointer &Ptr);
 
 /// Checks if a pointer is in range.
 inline bool CheckRange(InterpState &S, CodePtr OpPC, PtrView Ptr,

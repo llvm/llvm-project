@@ -62,6 +62,14 @@ public:
     target.addIllegalOp<tosa::AvgPool2dOp>();
     target.addIllegalOp<tosa::AvgPool2dAdaptiveOp>();
     target.addIllegalOp<tosa::MatMulOp>();
+    // Linalg has a quantized batch matmul, but no quantized transpose-B
+    // variant. Defer nonzero zero points to the generic pass's adjusted
+    // contraction.
+    target.addDynamicallyLegalOp<tosa::MatMulTOp>([](tosa::MatMulTOp op) {
+      FailureOr<int64_t> aZp = op.getAZeroPoint();
+      FailureOr<int64_t> bZp = op.getBZeroPoint();
+      return succeeded(aZp) && succeeded(bZp) && (*aZp != 0 || *bZp != 0);
+    });
     target.addIllegalOp<tosa::TransposeOp>();
 
     target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });

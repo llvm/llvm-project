@@ -1939,7 +1939,7 @@ HexagonTargetLowering::validateConstPtrAlignment(SDValue Ptr, Align NeedAlign,
     return true;
   unsigned Addr = CA->getZExtValue();
   Align HaveAlign =
-      Addr != 0 ? Align(1ull << llvm::countr_zero(Addr)) : NeedAlign;
+      Addr != 0 ? Align::fromLog2(llvm::countr_zero(Addr)) : NeedAlign;
   if (HaveAlign >= NeedAlign)
     return true;
 
@@ -3709,12 +3709,11 @@ HexagonTargetLowering::getRegForInlineAsmConstraint(
   return TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
 }
 
-/// isFPImmLegal - Returns true if the target can instruction select the
-/// specified FP immediate natively. If false, the legalizer will
-/// materialize the FP immediate as a load from a constant pool.
-bool HexagonTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
-                                         bool ForCodeSize) const {
-  return true;
+/// Returns how to materialize the specified FP immediate.
+TargetLowering::FPImmAction
+HexagonTargetLowering::getFPImmAction(const APFloat &Imm, EVT VT,
+                                      bool ForCodeSize) const {
+  return FPImmAction::Legal;
 }
 
 /// Returns true if it is beneficial to convert a load of a constant

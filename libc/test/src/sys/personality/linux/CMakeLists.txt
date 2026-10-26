@@ -1,9 +1,9 @@
-add_custom_target(libc_sys_personality_unittests)
+add_libc_testsuite(libc-sys-personality-tests)
 
 add_libc_test(
   personality_test
   SUITE
-    libc_sys_personality_unittests
+    libc-sys-personality-tests
   SRCS
     personality_test.cpp
   DEPENDS

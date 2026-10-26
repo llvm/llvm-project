@@ -253,8 +253,7 @@ struct KnownFPClass {
   minMaxLike(const KnownFPClass &LHS, const KnownFPClass &RHS, MinMaxKind Kind,
              DenormalMode DenormMode = DenormalMode::getDynamic());
 
-  /// Apply the canonicalize intrinsic to this value. This is essentially a
-  /// stronger form of propagateCanonicalizingSrc.
+  /// Apply the canonicalize intrinsic to this value.
   LLVM_ABI static KnownFPClass
   canonicalize(const KnownFPClass &Src,
                DenormalMode DenormMode = DenormalMode::getDynamic());
@@ -327,18 +326,31 @@ struct KnownFPClass {
       const KnownFPClass &Addend,
       DenormalMode Mode = DenormalMode::getDynamic());
 
+  /// Report known values for fmuladd
+  LLVM_ABI static KnownFPClass
+  fmuladd(const KnownFPClass &LHS, const KnownFPClass &RHS,
+          const KnownFPClass &Addend,
+          DenormalMode Mode = DenormalMode::getDynamic());
+
   /// Report known values for fma squared, squared, addend
   LLVM_ABI static KnownFPClass
   fma_square(const KnownFPClass &Squared, const KnownFPClass &Addend,
              DenormalMode Mode = DenormalMode::getDynamic());
+
+  /// Report known values for fmuladd squared, squared, addend
+  LLVM_ABI static KnownFPClass
+  fmuladd_square(const KnownFPClass &Squared, const KnownFPClass &Addend,
+                 DenormalMode Mode = DenormalMode::getDynamic());
 
   /// Propagate known class for sqrt
   LLVM_ABI static KnownFPClass
   sqrt(const KnownFPClass &Src, DenormalMode Mode = DenormalMode::getDynamic());
 
   /// Propagate known class for log/log2/log10
-  LLVM_ABI static KnownFPClass
-  log(const KnownFPClass &Src, DenormalMode Mode = DenormalMode::getDynamic());
+  ///
+  /// \p IsMultiUnitFPType if this is for a multi-unit floating-point type.
+  LLVM_ABI static KnownFPClass log(const KnownFPClass &Src, DenormalMode Mode,
+                                   bool IsMultiUnitFPType);
 
   /// Report known values for exp, exp2 and exp10.
   /// This function assumes that exp10(-1.0) = +0.1 and exp10(+1.0) = +10.0 are
@@ -451,58 +463,43 @@ struct KnownFPClass {
       knownNot(fcNan);
   }
 
-  // Propagate knowledge for operations whose result sign is the xor of the
-  // operand signs, such as multiply and divide. This only rules out possible
-  // non-NaN sign classes. NaNs do not have a constrained sign class here.
-  void propagateXorSign(const KnownFPClass &LHS, const KnownFPClass &RHS,
-                        DenormalMode Mode) {
-    const bool LHSCannotHavePositiveInput =
-        LHS.isKnownNever(fcPositive) && LHS.isKnownNeverLogicalPosZero(Mode);
-    const bool RHSCannotHavePositiveInput =
-        RHS.isKnownNever(fcPositive) && RHS.isKnownNeverLogicalPosZero(Mode);
-    if ((LHS.isKnownNever(fcNegative) && RHS.isKnownNever(fcNegative)) ||
-        (LHSCannotHavePositiveInput && RHSCannotHavePositiveInput))
-      knownNot(fcNegative);
-
-    if ((LHSCannotHavePositiveInput && RHS.isKnownNever(fcNegative)) ||
-        (LHS.isKnownNever(fcNegative) && RHSCannotHavePositiveInput)) {
-      knownNot(fcPosInf | fcPosNormal | fcPosSubnormal);
-      if (!Mode.outputsMayBePositiveZero())
-        knownNot(fcPosZero);
-    }
-  }
-
-  /// Propagate knowledge from a source value that could be a denormal or
-  /// zero. We have to be conservative since output flushing is not guaranteed,
-  /// so known-never-zero may not hold.
-  ///
-  /// This assumes a copy-like operation and will replace any currently known
-  /// information.
-  LLVM_ABI void propagateDenormal(const KnownFPClass &Src, DenormalMode Mode);
-
-  /// Report known classes if \p Src is evaluated through a potentially
-  /// canonicalizing operation. We can assume signaling nans will not be
-  /// introduced, but cannot assume a denormal will be flushed under FTZ/DAZ.
-  ///
-  /// This assumes a copy-like operation and will replace any currently known
-  /// information.
-  LLVM_ABI void propagateCanonicalizingSrc(const KnownFPClass &Src,
-                                           DenormalMode Mode);
-
-  /// Propagate known class for fpext.
-  LLVM_ABI static KnownFPClass fpext(const KnownFPClass &KnownSrc,
-                                     const fltSemantics &DstTy,
-                                     const fltSemantics &SrcTy);
-
-  /// Propagate known class for fptrunc.
-  LLVM_ABI static KnownFPClass fptrunc(const KnownFPClass &KnownSrc);
-
-  /// Propagate known class for rounding intrinsics (trunc, floor, ceil, rint,
-  /// nearbyint, round, roundeven). This is trunc if \p IsTrunc. \p
-  /// IsMultiUnitFPType if this is for a multi-unit floating-point type.
+  /// Propagate known class for fpext. \p DstMode and \p SrcMode are the
+  /// denormal modes of the destination and source types.
   LLVM_ABI static KnownFPClass
-  roundToIntegral(const KnownFPClass &Src, bool IsTrunc, bool IsMultiUnitFPType,
+  fpext(const KnownFPClass &KnownSrc, const fltSemantics &DstTy,
+        const fltSemantics &SrcTy, DenormalMode DstMode, DenormalMode SrcMode);
+
+  /// Propagate known class for fptrunc and fptrunc_round. \p DstMode and
+  /// \p SrcMode are the denormal modes of the destination and source types.
+  LLVM_ABI static KnownFPClass fptrunc(const KnownFPClass &KnownSrc,
+                                       const fltSemantics &DstTy,
+                                       const fltSemantics &SrcTy,
+                                       DenormalMode DstMode,
+                                       DenormalMode SrcMode);
+
+  /// Propagate known class for rounding intrinsics (rint, nearbyint, round,
+  /// roundeven). \p IsMultiUnitFPType if this is for a multi-unit
+  /// floating-point type.
+  LLVM_ABI static KnownFPClass
+  roundToIntegral(const KnownFPClass &Src, bool IsMultiUnitFPType,
                   DenormalMode Mode = DenormalMode::getDynamic());
+
+  /// Propagate known class for trunc.
+  LLVM_ABI static KnownFPClass
+  trunc(const KnownFPClass &Src,
+        DenormalMode Mode = DenormalMode::getDynamic());
+
+  /// Propagate known class for floor. \p IsMultiUnitFPType if this is for a
+  /// multi-unit floating-point type.
+  LLVM_ABI static KnownFPClass
+  floor(const KnownFPClass &Src, bool IsMultiUnitFPType,
+        DenormalMode Mode = DenormalMode::getDynamic());
+
+  /// Propagate known class for ceil. \p IsMultiUnitFPType if this is for a
+  /// multi-unit floating-point type.
+  LLVM_ABI static KnownFPClass
+  ceil(const KnownFPClass &Src, bool IsMultiUnitFPType,
+       DenormalMode Mode = DenormalMode::getDynamic());
 
   /// Propagate known class for mantissa component of frexp
   LLVM_ABI static KnownFPClass

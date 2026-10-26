@@ -572,7 +572,11 @@ public:
                                           void *EndEventPtr) override;
 
   Expected<InfoTreeNode> obtainInfoImpl() override;
-  uint64_t getClockFrequency() const override { return getClockRate(); }
+  /// This is the frequency of the counter read by `__builtin_readsteadycounter`
+  /// in device code, which has no SPIR-V lowering yet. Report zero for now.
+  /// TODO: Return the counter frequency once `readsteadycounter` is
+  /// implemented for SPIR-V.
+  uint64_t getClockFrequency() const override { return 0; }
   uint64_t getHardwareParallelism() const override { return getTotalThreads(); }
   Error getDeviceMemorySize(uint64_t &DSize) override {
     DSize = getGlobalMemorySize();
@@ -592,6 +596,10 @@ public:
                               DeviceImageTy &Image) override;
 
   Error setDeviceStackSize(uint64_t V) override { return Plugin::success(); }
+
+  Expected<void *> getNativeHandle() override { return getZeDevice(); }
+
+  Expected<void *> getNativeQueueHandle(__tgt_async_info *AsyncInfo) override;
 
   Expected<omp_interop_val_t *>
   createInterop(int32_t InteropType, interop_spec_t &InteropSpec) override;

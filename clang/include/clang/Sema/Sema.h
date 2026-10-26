@@ -2521,6 +2521,50 @@ public:
   /// Implementations are in SemaBoundsSafety.cpp
   ///@{
 public:
+  struct BoundsAttrFlags {
+    bool CountInBytes = false;
+    bool OrNull = false;
+    bool IsEndedBy = false;
+
+    /// Return the flags for a bounds attribute of kind \p K.
+    static BoundsAttrFlags get(AttributeCommonInfo::Kind K);
+  };
+  static BoundsAttributedType::BoundsAttrKind
+  getBoundsAttrKind(const BoundsAttrFlags &);
+
+  /// Check the type shape for counted_by, sized_by and their _or_null variants.
+  /// The caller checks declaration context, count expressions, flexible array
+  /// member eligibility and nesting.
+  ///
+  /// \p Flags selects the attribute variant. For void pointers, counted_by is
+  /// treated as a byte count outside the -fbounds-safety attribute model. Set
+  /// \c Flags.CountInBytes in this case if \p UpdateFlags is true.
+  /// \p AttrSpelling, \p AllowRedecl and \p AttrArg are reserved for that model
+  /// (see LangOptions::hasBoundsSafetyAttributes).
+  ///
+  /// \returns false after diagnosing an attribute that must be dropped. Returns
+  /// true if the shape is valid, after the warning for an array of structs with
+  /// flexible array members, and, under the -fbounds-safety attribute model,
+  /// after an error on a pointer, with \c Flags.CountInBytes set so that type
+  /// construction can recover.
+  bool ValidateBoundsAttrTypeShape(QualType Ty, SourceLocation AttrLoc,
+                                   SourceRange AttrRange,
+                                   BoundsAttrFlags &Flags,
+                                   StringRef AttrSpelling = {},
+                                   bool AllowRedecl = false,
+                                   Expr *AttrArg = nullptr,
+                                   bool UpdateFlags = true);
+
+  /// Check a counted_by-family attribute in type position and initialize
+  /// \p Flags from \p AttrKind. \p PointerNestLevel counts the pointer, array
+  /// and function declarator chunks enclosing the attribute.
+  ///
+  /// \returns false after diagnosing an attribute that must be dropped (see
+  /// ValidateBoundsAttrTypeShape).
+  bool ValidateBoundsAttrTypeForTypePosition(
+      QualType Ty, AttributeCommonInfo::Kind AttrKind, SourceLocation AttrLoc,
+      SourceRange AttrRange, unsigned PointerNestLevel, BoundsAttrFlags &Flags);
+
   /// Check if applying the specified attribute variant from the "counted by"
   /// family of attributes to FieldDecl \p FD is semantically valid. If
   /// semantically invalid diagnostics will be emitted explaining the problems.
@@ -2557,10 +2601,15 @@ public:
     return RejectedLateParsedBoundsTypes.contains(BATy);
   }
 
+  /// Validate the late-parsed type attribute \p LA and wrap \p QT in a
+  /// CountAttributedType with no count yet, recorded on \p LA for later
+  /// completion. Returns false if \p LA is invalid.
+  bool ProcessLateParsedTypeAttr(LateParsedTypeAttrInfo &LA, QualType &QT);
+
   /// Supply the parsed argument of a late-parsed bounds attribute to the type
-  /// built for it by ActOnLateParsedTypeAttr, and run the checks that need the
-  /// owning declaration. \p FD is the field the type belongs to. Returns false
-  /// if the attribute was rejected.
+  /// built for it by ProcessLateParsedTypeAttr, and run the checks that need
+  /// the owning declaration. \p FD is the field the type belongs to. Returns
+  /// false if the attribute was rejected.
   bool ActOnLateParsedTypeAttrArgument(BoundsAttributedType *BATy,
                                        FieldDecl *FD, Expr *Arg);
 
@@ -3505,10 +3554,9 @@ public:
   bool ActOnCXXNestedNameSpecifierDecltype(CXXScopeSpec &SS, const DeclSpec &DS,
                                            SourceLocation ColonColonLoc);
 
-  bool ActOnCXXNestedNameSpecifierIndexedPack(CXXScopeSpec &SS,
-                                              const DeclSpec &DS,
-                                              SourceLocation ColonColonLoc,
-                                              QualType Type);
+  ParsedType ActOnCXXNestedNameSpecifierIndexedPack(
+      CXXScopeSpec &SS, const DeclSpec &DS, TypeSourceInfo *PatternLoc,
+      SourceLocation ColonColonLoc, QualType Type);
 
   /// IsInvalidUnlessNestedName - This method is used for error recovery
   /// purposes to determine whether the specified identifier is only valid as
@@ -4560,6 +4608,14 @@ public:
 
   /// Push the parameters of D, which must be a function, into scope.
   void ActOnReenterFunctionContext(Scope *S, Decl *D);
+
+  /// Add \p Params to scope, so a late-parsed attribute can name them.
+  void ActOnReenterFunctionPrototypeParams(Scope *S,
+                                           ArrayRef<ParmVarDecl *> Params);
+  /// Undo the above, for when \p S outlives the attribute so no scope pop
+  /// removes them.
+  void ActOnExitFunctionPrototypeParams(Scope *S,
+                                        ArrayRef<ParmVarDecl *> Params);
   void ActOnExitFunctionContext();
 
   /// Add this decl to the scope shadowed decl chains.
@@ -5303,10 +5359,9 @@ public:
     // In C++ the implicit 'this' function parameter also counts.
     // Parameters are counted from one.
     bool HP = hasFunctionProto(D);
-    bool HasImplicitThisParam = hasImplicitObjectParameter(D);
     bool IV = HP && isFunctionOrMethodVariadic(D);
     unsigned NumParams =
-        (HP ? getFunctionOrMethodNumParams(D) : 0) + HasImplicitThisParam;
+        HP ? getFunctionOrMethodNumParams(D, /*IncludeThis=*/true) : 0;
 
     std::optional<llvm::APSInt> IdxInt;
     if (IdxExpr->isTypeDependent() ||
@@ -5325,7 +5380,7 @@ public:
           << &AI << AttrArgNum << IdxExpr->getSourceRange();
       return false;
     }
-    if (HasImplicitThisParam && !CanIndexImplicitThis) {
+    if (hasImplicitObjectParameter(D) && !CanIndexImplicitThis) {
       if (IdxSource == 1) {
         Diag(getAttrLoc(AI), diag::err_attribute_invalid_implicit_this_argument)
             << &AI << IdxExpr->getSourceRange();
@@ -9132,6 +9187,11 @@ public:
       AggregateDeductionCandidates;
 
   bool IsStringInit(Expr *Init, const ArrayType *AT);
+
+  /// The initializers of \p ILE with each multi-element EmbedExpr split into
+  /// one EmbedExpr per embedded element; \p Storage is used only if needed.
+  MultiExprArg getInitsWithEmbedExpanded(InitListExpr *ILE,
+                                         SmallVectorImpl<Expr *> &Storage);
 
   /// Determine whether we can perform aggregate initialization for the purposes
   /// of overload resolution.
@@ -13029,6 +13089,11 @@ public:
       const DefaultArguments &DefaultArgs, SourceLocation ArgLoc,
       bool PartialOrdering, bool *StrictPackMatch);
 
+  /// Determine the declared type of the constant template parameter that \p Arg
+  /// names, if any.
+  static QualType
+  getTypeOfConstantTemplateParameter(const TemplateArgument &Arg);
+
   /// Mark which template parameters are used in a given expression.
   ///
   /// \param E the expression from which template parameters will be deduced.
@@ -15615,10 +15680,9 @@ public:
   QualType BuildDecltypeType(Expr *E, bool AsUnevaluated = true);
 
   QualType ActOnPackIndexingType(QualType Pattern, Expr *IndexExpr,
-                                 SourceLocation Loc,
-                                 SourceLocation EllipsisLoc);
+                                 SourceLocation Loc);
   QualType BuildPackIndexingType(QualType Pattern, Expr *IndexExpr,
-                                 SourceLocation Loc, SourceLocation EllipsisLoc,
+                                 SourceLocation Loc,
                                  bool FullySubstituted = false,
                                  ArrayRef<QualType> Expansions = {});
 

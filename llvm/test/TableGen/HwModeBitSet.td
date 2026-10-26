@@ -128,6 +128,10 @@ def foo : Instruction {
   let AsmString = "foo  $factor";
 }
 
+// CHECK-SUBTARGET-LABEL: struct TestTargetGenMCSubtargetInfo : public MCSubtargetInfo {
+// CHECK-SUBTARGET:         unsigned getHwModeSet() const final;
+// CHECK-SUBTARGET-NEXT:    unsigned getHwMode(enum HwModeType type = HwMode_Default) const final;
+// CHECK-SUBTARGET-NEXT:  };
 // CHECK-SUBTARGET-LABEL:  unsigned TestTargetGenMCSubtargetInfo::getHwModeSet() const {
 // CHECK-SUBTARGET{LITERAL}:[[maybe_unused]] const FeatureBitset &FB = getFeatureBits();
 // CHECK-SUBTARGET-NEXT:    // Collect HwModes and store them as a bit set.
@@ -138,6 +142,9 @@ def foo : Instruction {
 // CHECK-SUBTARGET-NEXT:    return Modes;
 // CHECK-SUBTARGET-NEXT:  }
 
+// CHECK-SUBTARGET-LABEL: struct TestTargetGenSubtargetInfo : public TargetSubtargetInfo {
+// CHECK-SUBTARGET:         unsigned getHwModeSet() const final;
+// CHECK-SUBTARGET-NEXT:    unsigned getHwMode(enum HwModeType type = HwMode_Default) const final;
 // CHECK-SUBTARGET-LABEL: unsigned TestTargetGenSubtargetInfo::getHwModeSet() const {
 // CHECK-SUBTARGET{LITERAL}:[[maybe_unused]] const auto *Subtarget =
 // CHECK-SUBTARGET-NEXT:        static_cast<const TestTargetSubtarget *>(this);

@@ -168,7 +168,7 @@ static bool runImpl(Function &F, const X86Subtarget *ST) {
   // Finally, walk each block and insert sfence before any sync point reached in
   // a dirty state.
   bool Changed = false;
-  IRBuilder<> Builder(F.getContext());
+  IRBuilder<> Builder(*F.getParent());
 
   for (BasicBlock &BB : F) {
     bool CurrentDirty = Flags[&BB] & DirtyIn;
