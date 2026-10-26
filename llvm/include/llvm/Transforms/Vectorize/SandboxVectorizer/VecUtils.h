@@ -541,6 +541,31 @@ public:
     return make_range(Begin, End);
   }
 
+  /// Given the alignments of the instructions before vectorization, this
+  /// returns the alignment of the vectorized instruction.
+  template <typename AlignRangeT, typename TypeRangeT>
+  static Align getVecAlignment(AlignRangeT AlignRange, TypeRangeT TypeRange) {
+    assert(AlignRange.begin() != AlignRange.end() && "Expected non empty!");
+    assert(TypeRange.begin() != TypeRange.end() && "Expected non empty!");
+    assert(AlignRange.end() - AlignRange.begin() ==
+               TypeRange.end() - TypeRange.begin() &&
+           "Expected same size!");
+    // TODO: Implement smarter aligment deduction based on types.
+    // For now we return the alignment of the first element.
+    return *AlignRange.begin();
+  }
+
+  /// Helper for getVecAlignment(AlignRange, TypeRange).
+  template <typename InstrRangeT>
+  static Align getVecAlignment(InstrRangeT InstrRange) {
+    auto AlignRange = map_range(
+        InstrRange, [](auto *I) -> Align { return getLoadStoreAlignment(I); });
+    auto TypeRange = map_range(InstrRange, [](auto *I) -> Type * {
+      return Utils::getExpectedType(I);
+    });
+    return getVecAlignment(AlignRange, TypeRange);
+  }
+
 #ifndef NDEBUG
   /// Helper dump function for debugging.
   LLVM_DUMP_METHOD static void dump(ArrayRef<Value *> Bndl);

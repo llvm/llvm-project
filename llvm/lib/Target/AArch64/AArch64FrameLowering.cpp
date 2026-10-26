@@ -1663,6 +1663,7 @@ struct RegGroupInfo {
   }
 
   Register getAsMultiVectorRegister() const {
+    assert(Type == ZPR && isGrouped() && "Expected ZPR register group");
     return (isQuad() ? AArch64::Z0_Z1_Z2_Z3 : AArch64::Z0_Z1) +
            (Reg2 - AArch64::Z0);
   }
@@ -1917,7 +1918,6 @@ void computeCalleeSaveRegisterGroups(const AArch64FrameLowering &AFL,
     [[maybe_unused]] bool RegsOrdered =
         all_of(seq(RGI.getNumRegs() - 1), [&](int RegOffset) {
           return CSI[i + RegInc * RegOffset].getFrameIdx() + RegInc ==
-
                  CSI[i + RegInc * RegOffset + RegInc].getFrameIdx();
         });
     assert(RegsOrdered && "Out of order callee saved regs!");
@@ -2576,16 +2576,19 @@ void AArch64FrameLowering::determineStackHazardSlot(
 void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
                                                 BitVector &SavedRegs,
                                                 RegScavenger *RS) const {
+  AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
   // All calls are tail calls in GHC calling conv, and functions have no
   // prologue/epilogue.
-  if (MF.getFunction().getCallingConv() == CallingConv::GHC)
+  if (MF.getFunction().getCallingConv() == CallingConv::GHC) {
+    AFI->setCalleeSavedStackSize(0);
+    AFI->setSVECalleeSavedStackSize(/*ZPR=*/0, /*PPR=*/0);
     return;
+  }
 
   const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
 
   TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
   const AArch64RegisterInfo *RegInfo = Subtarget.getRegisterInfo();
-  AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
   Register UnspilledCSGPR;
   Register UnspilledCSGPRPaired;
 

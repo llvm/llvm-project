@@ -9,6 +9,7 @@ set(LIBS
   MLIRBuiltinToLLVMIRTranslation
   MLIRFuncDialect
   MLIRGPUDialect
+  MLIRGPUROCDLTransforms
   MLIRGPUToGPURuntimeTransforms
   MLIRGPUTransforms
   MLIRIR
