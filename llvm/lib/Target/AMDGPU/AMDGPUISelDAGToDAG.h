@@ -34,12 +34,13 @@ static inline bool getConstantValue(SDValue N, uint32_t &Out) {
   }
 
   if (const ConstantSDNode *C = dyn_cast<ConstantSDNode>(N)) {
-    Out = C->getAPIntValue().getSExtValue();
+    Out = static_cast<uint32_t>(C->getAPIntValue().getSExtValue());
     return true;
   }
 
   if (const ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(N)) {
-    Out = C->getValueAPF().bitcastToAPInt().getSExtValue();
+    Out =
+        static_cast<uint32_t>(C->getValueAPF().bitcastToAPInt().getSExtValue());
     return true;
   }
 
