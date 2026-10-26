@@ -7337,9 +7337,10 @@ static void preparePlanForEpilogueVectorLoop(
       }
     } else {
       // Retrieve the induction resume value via ResumeForEpilogue.
-      assert(isa<VPWidenInductionRecipe>(&R) ||
-             isa<VPConditionalInductionPHIRecipe>(&R));
-      PHINode *IndPhi = cast<VPHeaderPHIRecipe>(&R)->getPHINode();
+      PHINode *IndPhi =
+          isa<VPWidenInductionRecipe>(&R)
+              ? cast<VPWidenInductionRecipe>(&R)->getPHINode()
+              : cast<VPConditionalInductionPHIRecipe>(&R)->getPHINode();
       ResumeVPV =
           GetResumeValue(IRPhiToResumeForEpi.at(IndPhi), "bc.resume.val");
     }

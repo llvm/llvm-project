@@ -6529,8 +6529,9 @@ bool VPlanTransforms::handleCompressingPatterns(
         VPInstruction::NumActiveLanes, {Mask}, nullptr, {}, {},
         DebugLoc::getUnknown(), "handled.lanes", UpdateType);
 
-    VPValue *Step = vputils::getOrCreateVPValueForSCEVExpr(
-        Plan, ConditionalInductionPhi->getStepSCEV());
+    auto &CondID = ConditionalInductionPhi->getConditionalInductionDescriptor();
+    VPValue *Step =
+        vputils::getOrCreateVPValueForSCEVExpr(Plan, CondID.getStepSCEV());
     VPValue *Offset =
         Builder.createOverflowingOp(Instruction::Mul, {Step, HandledLanes});
     VPValue *Update;

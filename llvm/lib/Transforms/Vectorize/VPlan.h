@@ -2545,11 +2545,6 @@ public:
     VPUser::addOperand(V);
   }
 
-  /// Returns the underlying PHINode if one exists, or null otherwise.
-  PHINode *getPHINode() const {
-    return cast_if_present<PHINode>(getUnderlyingValue());
-  }
-
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -2613,6 +2608,11 @@ public:
   /// Note that at the moment, VPWidenPointerInductionRecipe only has a single
   /// incoming value, its start value.
   unsigned getNumIncoming() const override { return 1; }
+
+  /// Returns the underlying PHINode if one exists, or null otherwise.
+  PHINode *getPHINode() const {
+    return cast_if_present<PHINode>(getUnderlyingValue());
+  }
 
   /// Returns the induction descriptor for the recipe.
   const InductionDescriptor &getInductionDescriptor() const { return IndDesc; }
@@ -2999,26 +2999,37 @@ protected:
 /// first operand of the recipe, the incoming value from the backedge is the
 /// second operand, and the third operand is the step.
 class VPConditionalInductionPHIRecipe : public VPHeaderPHIRecipe {
-  const SCEV *StepSCEV = nullptr;
+  ConditionalInductionDescriptor CondID;
 
 public:
   VPConditionalInductionPHIRecipe(PHINode &Phi, VPValue &Start,
-                                  VPValue &BackedgeValue, const SCEV *StepSCEV)
+                                  VPValue &BackedgeValue,
+                                  const ConditionalInductionDescriptor &CondID)
       : VPHeaderPHIRecipe(VPRecipeBase::VPConditionalInductionPHISC, &Phi,
                           &Start, Start.getScalarType()),
-        StepSCEV(StepSCEV) {
+        CondID(CondID) {
     addOperand(&BackedgeValue);
   }
-
-  const SCEV *getStepSCEV() const { return StepSCEV; }
 
   unsigned getNumIncoming() const override { return 2; }
 
   ~VPConditionalInductionPHIRecipe() override = default;
 
+  /// Returns the underlying PHINode if one exists, or null otherwise.
+  PHINode *getPHINode() const {
+    return cast_if_present<PHINode>(getUnderlyingValue());
+  }
+
+  /// Returns the conditional induction descriptor for the recipe.
+  const ConditionalInductionDescriptor &
+  getConditionalInductionDescriptor() const {
+    return CondID;
+  }
+
   VPConditionalInductionPHIRecipe *clone() override {
-    return new VPConditionalInductionPHIRecipe(*getPHINode(), *getStartValue(),
-                                               *getBackedgeValue(), StepSCEV);
+    return new VPConditionalInductionPHIRecipe(
+        *getPHINode(), *getStartValue(), *getBackedgeValue(),
+        getConditionalInductionDescriptor());
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPConditionalInductionPHISC)
