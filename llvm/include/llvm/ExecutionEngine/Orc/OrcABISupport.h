@@ -434,10 +434,10 @@ public:
   /// Write the requested number of trampolines into the given memory,
   /// which must be big enough to hold 1 pointer, plus NumTrampolines
   /// trampolines.
-  LLVM_ABI static void writeTrampolines(char *TrampolineBlockWorkingMem,
-                                        ExecutorAddr TrampolineBlockTargetAddress,
-                                        ExecutorAddr ResolverAddr,
-                                        unsigned NumTrampolines);
+  LLVM_ABI static void
+  writeTrampolines(char *TrampolineBlockWorkingMem,
+                   ExecutorAddr TrampolineBlockTargetAddress,
+                   ExecutorAddr ResolverAddr, unsigned NumTrampolines);
 
   /// Write NumStubs indirect stubs to working memory at StubsBlockWorkingMem.
   /// Stubs will be written as if linked at StubsBlockTargetAddress, with the

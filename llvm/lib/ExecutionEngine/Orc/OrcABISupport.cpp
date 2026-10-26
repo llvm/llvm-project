@@ -1252,8 +1252,8 @@ void OrcSystemZ::writeResolverCode(char *ResolverWorkingMem,
   //   280(%r15): landing address from reentry
   //   288(%r15)..311(%r15): std %f0/%f2/%f4/%f6
   //
-  // Reentry is called as reenter(%r2 = ReentryCtxAddr, %r3 = trampoline address),
-  // where the trampoline address is %r14 - 12.
+  // Reentry is called as reenter(%r2 = ReentryCtxAddr, %r3 = trampoline
+  // address), where the trampoline address is %r14 - 12.
   //
   // On return, the trampoline's saved caller %r14 is restored from %r0 and
   // control branches to the landing address.
@@ -1265,38 +1265,40 @@ void OrcSystemZ::writeResolverCode(char *ResolverWorkingMem,
   // larl %r1, Lfn  at 0x2e: field = (0x70 - 0x2e) / 2 = 0x21
 
   const uint8_t ResolverCode[] = {
-    0xa7, 0xfb, 0xfe, 0xc0,              // 0x00: aghi  %r15, -320
-    0xeb, 0x0e, 0xf0, 0xa0, 0x00, 0x24, // 0x04: stmg  %r0, %r14, 160(%r15)
-    0x60, 0x00, 0xf1, 0x20,              // 0x0a: std   %f0, 288(%r15)
-    0x60, 0x20, 0xf1, 0x28,              // 0x0e: std   %f2, 296(%r15)
-    0x60, 0x40, 0xf1, 0x30,              // 0x12: std   %f4, 304(%r15)
-    0x60, 0x60, 0xf1, 0x38,              // 0x16: std   %f6, 312(%r15)
-    0xb9, 0x04, 0x00, 0x3e,              // 0x1a: lgr   %r3, %r14
-    0xa7, 0x3b, 0xff, 0xf4,              // 0x1e: aghi  %r3, -12
-    0xc0, 0x10, 0x00, 0x00, 0x00, 0x23, // 0x22: larl  %r1, Lctx
-    0xe3, 0x20, 0x10, 0x00, 0x00, 0x04, // 0x28: lg    %r2, 0(%r1)
-    0xc0, 0x10, 0x00, 0x00, 0x00, 0x21, // 0x2e: larl  %r1, Lfn
-    0xe3, 0x10, 0x10, 0x00, 0x00, 0x04, // 0x34: lg    %r1, 0(%r1)
-    0x0d, 0xe1,                          // 0x3a: basr  %r14, %r1
-    0xe3, 0x20, 0xf1, 0x18, 0x00, 0x24, // 0x3c: stg   %r2, 280(%r15)
-    0x68, 0x00, 0xf1, 0x20,              // 0x42: ld    %f0, 288(%r15)
-    0x68, 0x20, 0xf1, 0x28,              // 0x46: ld    %f2, 296(%r15)
-    0x68, 0x40, 0xf1, 0x30,              // 0x4a: ld    %f4, 304(%r15)
-    0x68, 0x60, 0xf1, 0x38,              // 0x4e: ld    %f6, 312(%r15)
-    0xeb, 0x0e, 0xf0, 0xa0, 0x00, 0x04, // 0x52: lmg   %r0, %r14, 160(%r15)
-    0xb9, 0x04, 0x00, 0xe0,              // 0x58: lgr   %r14, %r0
-    0xe3, 0x10, 0xf1, 0x18, 0x00, 0x04, // 0x5c: lg    %r1, 280(%r15)
-    0xa7, 0xfb, 0x01, 0x40,              // 0x62: aghi  %r15, 320
-    0x07, 0xf1,                          // 0x66: br    %r1
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 0x68: Lctx (ReentryCtxAddr)
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 0x70: Lfn  (ReentryFnAddr)
+      0xa7, 0xfb, 0xfe, 0xc0,             // 0x00: aghi  %r15, -320
+      0xeb, 0x0e, 0xf0, 0xa0, 0x00, 0x24, // 0x04: stmg  %r0, %r14, 160(%r15)
+      0x60, 0x00, 0xf1, 0x20,             // 0x0a: std   %f0, 288(%r15)
+      0x60, 0x20, 0xf1, 0x28,             // 0x0e: std   %f2, 296(%r15)
+      0x60, 0x40, 0xf1, 0x30,             // 0x12: std   %f4, 304(%r15)
+      0x60, 0x60, 0xf1, 0x38,             // 0x16: std   %f6, 312(%r15)
+      0xb9, 0x04, 0x00, 0x3e,             // 0x1a: lgr   %r3, %r14
+      0xa7, 0x3b, 0xff, 0xf4,             // 0x1e: aghi  %r3, -12
+      0xc0, 0x10, 0x00, 0x00, 0x00, 0x23, // 0x22: larl  %r1, Lctx
+      0xe3, 0x20, 0x10, 0x00, 0x00, 0x04, // 0x28: lg    %r2, 0(%r1)
+      0xc0, 0x10, 0x00, 0x00, 0x00, 0x21, // 0x2e: larl  %r1, Lfn
+      0xe3, 0x10, 0x10, 0x00, 0x00, 0x04, // 0x34: lg    %r1, 0(%r1)
+      0x0d, 0xe1,                         // 0x3a: basr  %r14, %r1
+      0xe3, 0x20, 0xf1, 0x18, 0x00, 0x24, // 0x3c: stg   %r2, 280(%r15)
+      0x68, 0x00, 0xf1, 0x20,             // 0x42: ld    %f0, 288(%r15)
+      0x68, 0x20, 0xf1, 0x28,             // 0x46: ld    %f2, 296(%r15)
+      0x68, 0x40, 0xf1, 0x30,             // 0x4a: ld    %f4, 304(%r15)
+      0x68, 0x60, 0xf1, 0x38,             // 0x4e: ld    %f6, 312(%r15)
+      0xeb, 0x0e, 0xf0, 0xa0, 0x00, 0x04, // 0x52: lmg   %r0, %r14, 160(%r15)
+      0xb9, 0x04, 0x00, 0xe0,             // 0x58: lgr   %r14, %r0
+      0xe3, 0x10, 0xf1, 0x18, 0x00, 0x04, // 0x5c: lg    %r1, 280(%r15)
+      0xa7, 0xfb, 0x01, 0x40,             // 0x62: aghi  %r15, 320
+      0x07, 0xf1,                         // 0x66: br    %r1
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, // 0x68: Lctx (ReentryCtxAddr)
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, // 0x70: Lfn  (ReentryFnAddr)
   };
 
   static_assert(sizeof(ResolverCode) == ResolverCodeSize,
                 "ResolverCodeSize does not match resolver code size");
 
   const unsigned ReentryCtxAddrOffset = 0x68;
-  const unsigned ReentryFnAddrOffset  = 0x70;
+  const unsigned ReentryFnAddrOffset = 0x70;
 
   memcpy(ResolverWorkingMem, ResolverCode, sizeof(ResolverCode));
   memcpy(ResolverWorkingMem + ReentryCtxAddrOffset, &ReentryCtxAddr,
@@ -1328,22 +1330,29 @@ void OrcSystemZ::writeTrampolines(char *TrampolineBlockWorkingMem,
   memcpy(TrampolineBlockWorkingMem + PtrOffset, &ResolverAddr,
          sizeof(uint64_t));
 
-  uint8_t *Trampolines =
-      reinterpret_cast<uint8_t *>(TrampolineBlockWorkingMem);
+  uint8_t *Trampolines = reinterpret_cast<uint8_t *>(TrampolineBlockWorkingMem);
 
   for (unsigned I = 0; I < NumTrampolines; ++I) {
     uint8_t *T = Trampolines + I * TrampolineSize;
     int32_t HWOffset =
         ((int32_t)PtrOffset - (int32_t)(I * TrampolineSize + 4)) / 2;
 
-    T[0]  = 0xb9; T[1]  = 0x04; T[2]  = 0x00; T[3]  = 0x0e; // lgr  %r0, %r14
-    T[4]  = 0xc4; T[5]  = 0x18;                               // lgrl %r1, Lptr
-    T[6]  = (HWOffset >> 24) & 0xff;
-    T[7]  = (HWOffset >> 16) & 0xff;
-    T[8]  = (HWOffset >>  8) & 0xff;
-    T[9]  = (HWOffset      ) & 0xff;
-    T[10] = 0x0d; T[11] = 0xe1;                               // basr %r14, %r1
-    T[12] = 0x00; T[13] = 0x00; T[14] = 0x00; T[15] = 0x00;  // padding
+    T[0] = 0xb9;
+    T[1] = 0x04;
+    T[2] = 0x00;
+    T[3] = 0x0e; // lgr  %r0, %r14
+    T[4] = 0xc4;
+    T[5] = 0x18; // lgrl %r1, Lptr
+    T[6] = (HWOffset >> 24) & 0xff;
+    T[7] = (HWOffset >> 16) & 0xff;
+    T[8] = (HWOffset >> 8) & 0xff;
+    T[9] = (HWOffset) & 0xff;
+    T[10] = 0x0d;
+    T[11] = 0xe1; // basr %r14, %r1
+    T[12] = 0x00;
+    T[13] = 0x00;
+    T[14] = 0x00;
+    T[15] = 0x00; // padding
   }
 }
 
@@ -1367,18 +1376,20 @@ void OrcSystemZ::writeIndirectStubsBlock(
   for (unsigned I = 0; I < NumStubs; ++I) {
     uint8_t *S = Stub + I * StubSize;
     ExecutorAddr LgrlAddr = StubsBlockTargetAddress + I * StubSize;
-    ExecutorAddr PtrAddr  = PointersBlockTargetAddress + I * PointerSize;
-    int32_t HWOffset = (int32_t)(((int64_t)PtrAddr.getValue() -
-                                  (int64_t)LgrlAddr.getValue()) / 2);
+    ExecutorAddr PtrAddr = PointersBlockTargetAddress + I * PointerSize;
+    int32_t HWOffset =
+        (int32_t)(((int64_t)PtrAddr.getValue() - (int64_t)LgrlAddr.getValue()) /
+                  2);
 
-    S[0] = 0xc4; S[1] = 0x18;            // lgrl %r1, ptr_I
+    S[0] = 0xc4;
+    S[1] = 0x18; // lgrl %r1, ptr_I
     S[2] = (HWOffset >> 24) & 0xff;
     S[3] = (HWOffset >> 16) & 0xff;
-    S[4] = (HWOffset >>  8) & 0xff;
-    S[5] = (HWOffset      ) & 0xff;
-    S[6] = 0x07; S[7] = 0xf1;            // br %r1
-    S[8] = S[9] = S[10] = S[11] =
-    S[12] = S[13] = S[14] = S[15] = 0x00;
+    S[4] = (HWOffset >> 8) & 0xff;
+    S[5] = (HWOffset) & 0xff;
+    S[6] = 0x07;
+    S[7] = 0xf1; // br %r1
+    S[8] = S[9] = S[10] = S[11] = S[12] = S[13] = S[14] = S[15] = 0x00;
   }
 }
 
