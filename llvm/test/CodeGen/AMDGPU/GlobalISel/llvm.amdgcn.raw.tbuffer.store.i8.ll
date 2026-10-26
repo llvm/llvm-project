@@ -36,16 +36,16 @@ define amdgpu_ps void @raw_tbuffer_store_i8__sgpr_rsrc__vgpr_voffset__sgpr_soffs
   ;
   ; GFX12-LABEL: name: raw_tbuffer_store_i8__sgpr_rsrc__vgpr_voffset__sgpr_soffset
   ; GFX12: bb.1 (%ir-block.0):
-  ; GFX12-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $vgpr1, $vgpr0_lo16
+  ; GFX12-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $vgpr1, $vgpr0_lo16
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT:   [[COPY:%[0-9]+]]:vgpr_16 = COPY $vgpr0_lo16
-  ; GFX12-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr2
-  ; GFX12-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr3
-  ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr4
-  ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; GFX12-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr0
+  ; GFX12-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr1
+  ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr2
+  ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; GFX12-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY4]], %subreg.sub3
   ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-  ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
+  ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr4
   ; GFX12-NEXT:   [[DEF:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
   ; GFX12-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[COPY]], %subreg.lo16, [[DEF]], %subreg.hi16
   ; GFX12-NEXT:   TBUFFER_STORE_FORMAT_X_VBUFFER_OFFEN_exact [[REG_SEQUENCE1]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 0, 94, 0, 0, implicit $exec :: (dereferenceable store (i8), addrspace 8)
@@ -153,7 +153,7 @@ define amdgpu_ps void @raw_tbuffer_store_i8__vgpr_rsrc__vgpr_voffset__sgpr_soffs
   ; GFX12-LABEL: name: raw_tbuffer_store_i8__vgpr_rsrc__vgpr_voffset__sgpr_soffset
   ; GFX12: bb.1 (%ir-block.0):
   ; GFX12-NEXT:   successors: %bb.2(0x80000000)
-  ; GFX12-NEXT:   liveins: $sgpr2, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr0_lo16
+  ; GFX12-NEXT:   liveins: $sgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr0_lo16
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT:   [[COPY:%[0-9]+]]:vgpr_16 = COPY $vgpr0_lo16
   ; GFX12-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
@@ -162,7 +162,7 @@ define amdgpu_ps void @raw_tbuffer_store_i8__vgpr_rsrc__vgpr_voffset__sgpr_soffs
   ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr4
   ; GFX12-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY4]], %subreg.sub3
   ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr5
-  ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr2
+  ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr0
   ; GFX12-NEXT:   [[DEF:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
   ; GFX12-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[COPY]], %subreg.lo16, [[DEF]], %subreg.hi16
   ; GFX12-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
@@ -466,7 +466,7 @@ define amdgpu_ps void @raw_tbuffer_store_i8__vgpr_rsrc__sgpr_voffset__vgpr_soffs
   ; GFX12-LABEL: name: raw_tbuffer_store_i8__vgpr_rsrc__sgpr_voffset__vgpr_soffset
   ; GFX12: bb.1 (%ir-block.0):
   ; GFX12-NEXT:   successors: %bb.2(0x80000000)
-  ; GFX12-NEXT:   liveins: $sgpr2, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr0_lo16
+  ; GFX12-NEXT:   liveins: $sgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr0_lo16
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT:   [[COPY:%[0-9]+]]:vgpr_16 = COPY $vgpr0_lo16
   ; GFX12-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
@@ -474,7 +474,7 @@ define amdgpu_ps void @raw_tbuffer_store_i8__vgpr_rsrc__sgpr_voffset__vgpr_soffs
   ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr3
   ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr4
   ; GFX12-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY4]], %subreg.sub3
-  ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr2
+  ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr0
   ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY $vgpr5
   ; GFX12-NEXT:   [[DEF:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
   ; GFX12-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[COPY]], %subreg.lo16, [[DEF]], %subreg.hi16
