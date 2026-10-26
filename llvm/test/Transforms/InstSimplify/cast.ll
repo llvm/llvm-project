@@ -56,3 +56,69 @@ define i32 @test5() {
   %add_to_int = ptrtoint ptr %add to i32                            ; 4
   ret i32 %add_to_int                                               ; 4
 }
+
+; A value-preserving zext of a no-unsigned-wrap trunc folds back to the source.
+define i64 @zext_of_trunc_nuw(i64 %x) {
+; CHECK-LABEL: @zext_of_trunc_nuw(
+; CHECK-NEXT:    ret i64 [[X:%.*]]
+;
+  %t = trunc nuw i64 %x to i32
+  %z = zext i32 %t to i64
+  ret i64 %z
+}
+
+; A value-preserving sext of a no-signed-wrap trunc folds back to the source.
+define i64 @sext_of_trunc_nsw(i64 %x) {
+; CHECK-LABEL: @sext_of_trunc_nsw(
+; CHECK-NEXT:    ret i64 [[X:%.*]]
+;
+  %t = trunc nsw i64 %x to i32
+  %s = sext i32 %t to i64
+  ret i64 %s
+}
+
+; Same folds work on vectors.
+define <2 x i64> @zext_of_trunc_nuw_vec(<2 x i64> %x) {
+; CHECK-LABEL: @zext_of_trunc_nuw_vec(
+; CHECK-NEXT:    ret <2 x i64> [[X:%.*]]
+;
+  %t = trunc nuw <2 x i64> %x to <2 x i32>
+  %z = zext <2 x i32> %t to <2 x i64>
+  ret <2 x i64> %z
+}
+
+; Negative: without nuw, zext(trunc) is not value-preserving for InstSimplify.
+define i64 @zext_of_trunc_no_flag(i64 %x) {
+; CHECK-LABEL: @zext_of_trunc_no_flag(
+; CHECK-NEXT:    [[T:%.*]] = trunc i64 [[X:%.*]] to i32
+; CHECK-NEXT:    [[Z:%.*]] = zext i32 [[T]] to i64
+; CHECK-NEXT:    ret i64 [[Z]]
+;
+  %t = trunc i64 %x to i32
+  %z = zext i32 %t to i64
+  ret i64 %z
+}
+
+; Negative: zext of an nsw-only trunc does not guarantee the unsigned round-trip.
+define i64 @zext_of_trunc_nsw_only(i64 %x) {
+; CHECK-LABEL: @zext_of_trunc_nsw_only(
+; CHECK-NEXT:    [[T:%.*]] = trunc nsw i64 [[X:%.*]] to i32
+; CHECK-NEXT:    [[Z:%.*]] = zext i32 [[T]] to i64
+; CHECK-NEXT:    ret i64 [[Z]]
+;
+  %t = trunc nsw i64 %x to i32
+  %z = zext i32 %t to i64
+  ret i64 %z
+}
+
+; Negative: sext of an nuw-only trunc does not guarantee the signed round-trip.
+define i64 @sext_of_trunc_nuw_only(i64 %x) {
+; CHECK-LABEL: @sext_of_trunc_nuw_only(
+; CHECK-NEXT:    [[T:%.*]] = trunc nuw i64 [[X:%.*]] to i32
+; CHECK-NEXT:    [[S:%.*]] = sext i32 [[T]] to i64
+; CHECK-NEXT:    ret i64 [[S]]
+;
+  %t = trunc nuw i64 %x to i32
+  %s = sext i32 %t to i64
+  ret i64 %s
+}

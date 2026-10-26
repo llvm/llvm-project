@@ -85,6 +85,12 @@ tablegen("X86GenPostLegalizeGICombiner") {
   td_file = "X86.td"
 }
 
+tablegen("X86Options") {
+  visibility = [ ":LLVMX86CodeGen" ]
+  args = [ "-gen-opt-parser-defs" ]
+  td_file = "X86Options.td"
+}
+
 static_library("LLVMX86CodeGen") {
   deps = [
     ":X86GenAsmMatcher",
@@ -98,6 +104,7 @@ static_library("LLVMX86CodeGen") {
     ":X86GenPreLegalizeGICombiner",
     ":X86GenRegisterBank",
     ":X86GenSDNodeInfo",
+    ":X86Options",
     "MCTargetDesc",
     "TargetInfo",
     "//llvm/include/llvm/Config:llvm-config",
@@ -109,6 +116,8 @@ static_library("LLVMX86CodeGen") {
     "//llvm/lib/IR",
     "//llvm/lib/IRPrinter",
     "//llvm/lib/MC",
+    "//llvm/lib/Option",
+    "//llvm/lib/Passes",
     "//llvm/lib/Support",
     "//llvm/lib/Target",
     "//llvm/lib/TargetParser",
@@ -161,6 +170,7 @@ static_library("LLVMX86CodeGen") {
     "X86InstrFoldTables.cpp",
     "X86InstrInfo.cpp",
     "X86InterleavedAccess.cpp",
+    "X86LFIRewritePass.cpp",
     "X86LoadValueInjectionLoadHardening.cpp",
     "X86LoadValueInjectionRetHardening.cpp",
     "X86LowerAMXIntrinsics.cpp",

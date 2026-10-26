@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CAS/BuiltinObjectHasher.h"
-#include "llvm/Support/BLAKE3.h"
+#include "llvm/ADT/ScopeExit.h"
 
 using namespace llvm;
 using namespace llvm::cas;
@@ -21,6 +21,8 @@ BuiltinObjectHasher<HasherT>::hashFile(StringRef FilePath) {
   sys::fs::file_t FD;
   if (Error E = sys::fs::openNativeFileForRead(FilePath).moveInto(FD))
     return E;
+
+  llvm::scope_exit CloseFile([&]() { sys::fs::closeFile(FD); });
 
   sys::fs::file_status Status;
   std::error_code EC = sys::fs::status(FD, Status);
@@ -46,6 +48,6 @@ BuiltinObjectHasher<HasherT>::hashFile(StringRef FilePath) {
   return H.finish();
 }
 
-// Provide the definition for when using the BLAKE3 hasher.
-template Expected<BuiltinObjectHasher<BLAKE3>::HashT>
-BuiltinObjectHasher<BLAKE3>::hashFile(StringRef FilePath);
+namespace llvm::cas {
+template class LLVM_EXPORT_TEMPLATE BuiltinObjectHasher<BLAKE3>;
+}

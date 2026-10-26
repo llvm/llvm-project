@@ -88,3 +88,32 @@ def testInsertionPointEnterExit():
 
 
 run(testInsertionPointEnterExit)
+
+
+# CHECK-LABEL: TEST: testTransientScope
+def testTransientScope():
+    ctx = Context()
+    with ctx, Location.unknown(ctx):
+        i32 = IntegerType.get_signless(32)
+        assert not ctx.is_in_transient_scope
+        with ctx.transient_scope():
+            assert ctx.is_in_transient_scope
+            v = VectorType.get([4], i32)
+            assert v is not None
+
+            # Test exception on entering nested transient scope
+            try:
+                with ctx.transient_scope():
+                    pass
+            except ValueError as e:
+                # CHECK: Context is already in a transient scope
+                print(e)
+            else:
+                assert False, "Expected ValueError on nested transient scope"
+
+        assert not ctx.is_in_transient_scope
+        # Base type remains intact after scope exit
+        assert IntegerType.get_signless(32) == i32
+
+
+run(testTransientScope)

@@ -60,6 +60,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/LoopVersioningLICM.h"
+#include "ScalarOptions.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -81,7 +82,6 @@
 #include "llvm/IR/Value.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
@@ -95,21 +95,6 @@ using namespace llvm;
 
 static const char *LICMVersioningMetaData = "llvm.loop.licm_versioning.disable";
 
-/// Threshold minimum allowed percentage for possible
-/// invariant instructions in a loop.
-static cl::opt<float>
-    LVInvarThreshold("licm-versioning-invariant-threshold",
-                     cl::desc("LoopVersioningLICM's minimum allowed percentage "
-                              "of possible invariant instructions per loop"),
-                     cl::init(25), cl::Hidden);
-
-/// Threshold for maximum allowed loop nest/depth
-static cl::opt<unsigned> LVLoopDepthThreshold(
-    "licm-versioning-max-depth-threshold",
-    cl::desc(
-        "LoopVersioningLICM's threshold for maximum allowed loop nest/depth"),
-    cl::init(2), cl::Hidden);
-
 namespace {
 
 struct LoopVersioningLICM {
@@ -117,13 +102,13 @@ struct LoopVersioningLICM {
   // loop versioning might return early due to instructions that are not safe
   // for versioning. By passing the proxy instead the construction of
   // LoopAccessInfo will take place only when it's necessary.
-  LoopVersioningLICM(AliasAnalysis *AA, ScalarEvolution *SE,
-                     OptimizationRemarkEmitter *ORE,
+  LoopVersioningLICM(const ScalarOptions &Opts, AliasAnalysis *AA,
+                     ScalarEvolution *SE, OptimizationRemarkEmitter *ORE,
                      LoopAccessInfoManager &LAIs, LoopInfo &LI,
                      AssumptionCache *AC, Loop *CurLoop)
       : AA(AA), SE(SE), LAIs(LAIs), LI(LI), AC(AC), CurLoop(CurLoop),
-        LoopDepthThreshold(LVLoopDepthThreshold),
-        InvariantThreshold(LVInvarThreshold), ORE(ORE) {}
+        LoopDepthThreshold(Opts.licm_versioning_max_depth_threshold),
+        InvariantThreshold(Opts.licm_versioning_invariant_threshold), ORE(ORE) {}
 
   bool run(DominatorTree *DT);
 
@@ -436,11 +421,21 @@ bool LoopVersioningLICM::instructionSafeForVersioning(Instruction *I) {
       LLVM_DEBUG(dbgs() << "    Convergent call site found.\n");
       return false;
     }
+    if (!Call->willReturn()) {
+      LLVM_DEBUG(dbgs() << "    Call site that may not return found.\n");
+      return false;
+    }
 
-    if (!AA->doesNotAccessMemory(Call)) {
+    // Calls that only access inaccessible memory cannot alias loop memory and
+    // are safe to duplicate during loop versioning. This covers
+    // llvm.pseudoprobe (used for sample-based profiling under
+    // -fpseudo-probe-for-profiling).
+    if (Call->mayThrow() ||
+        !AA->getMemoryEffects(Call).onlyAccessesInaccessibleMem()) {
       LLVM_DEBUG(dbgs() << "    Unsafe call site found.\n");
       return false;
     }
+    return true;
   }
 
   // Avoid loops with possiblity of throw
@@ -670,8 +665,9 @@ void LoopVersioningLICM::generateAndAddRuntimeChecks(DominatorTree *DT) {
   const SCEVPredicate &Preds(LAI->getPSE().getPredicate());
   Value *SCEVRuntimeChecks = Exp2.expandCodeForPredicate(&Preds, PlaceholderForRuntimeChecks);
 
-  IRBuilder<InstSimplifyFolder> Builder(RuntimeCheckBB->getContext(), 
-                InstSimplifyFolder(RuntimeCheckBB->getModule()->getDataLayout()));
+  IRBuilder<InstSimplifyFolder> Builder(
+      *RuntimeCheckBB->getModule(),
+      InstSimplifyFolder(RuntimeCheckBB->getDataLayout()));
   
   Value *RuntimeCheck = nullptr;
   if (MemRuntimeChecks && SCEVRuntimeChecks) {
@@ -777,7 +773,10 @@ PreservedAnalyses LoopVersioningLICMPass::run(Loop &L, LoopAnalysisManager &AM,
   OptimizationRemarkEmitter ORE(F);
 
   LoopAccessInfoManager LAIs(*SE, *AA, *DT, LAR.LI, nullptr, nullptr, &LAR.AC);
-  if (!LoopVersioningLICM(AA, SE, &ORE, LAIs, LAR.LI, &LAR.AC, &L).run(DT))
+  const ScalarOptions &Opts =
+      F->getContext().getLibraryOptions().get<ScalarOptions>();
+  if (!LoopVersioningLICM(Opts, AA, SE, &ORE, LAIs, LAR.LI, &LAR.AC, &L)
+           .run(DT))
     return PreservedAnalyses::all();
   return getLoopPassPreservedAnalyses();
 }

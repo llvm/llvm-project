@@ -10,7 +10,7 @@
 // RUN:     --dry-run \
 // RUN: 2>&1 | FileCheck %s
 
-// clang-linker-wrapper was previously calling clang-offload-bundler with -targets=...,hip-amdgcn-amd-amdhsa--amdgcnspirv
+// clang-linker-wrapper was previously calling clang-offload-bundler with -targets=...,hip-amdgpu-amd-amdhsa--amdgcnspirv
 // This caused the runtime not to recognise the triple for the AMD SPIR-V code.
 
 // CHECK: {{".*clang-offload-bundler.*"}} {{.*}} -targets={{.*}},hip-spirv64-amd-amdhsa--amdgcnspirv

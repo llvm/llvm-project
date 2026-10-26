@@ -212,6 +212,10 @@ LLVM_ABI Boolean isLegalUTF8String(const UTF8 **source, const UTF8 *sourceEnd);
 LLVM_ABI unsigned getUTF8SequenceSize(const UTF8 *source,
                                       const UTF8 *sourceEnd);
 
+LLVM_ABI unsigned
+findMaximalSubpartOfIllFormedUTF8Sequence(const UTF8 *source,
+                                          const UTF8 *sourceEnd);
+
 LLVM_ABI unsigned getNumBytesForUTF8(UTF8 firstByte);
 
 /*************************************************************************/

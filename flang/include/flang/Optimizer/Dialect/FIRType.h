@@ -73,6 +73,9 @@ public:
   /// Is this a box describing an array or assumed-rank?
   bool isArray() const;
 
+  /// Is this a box describing a coarray?
+  bool isCoarray() const;
+
   /// Return the same type, except for the shape, that is taken the shape
   /// of shapeMold.
   BaseBoxType getBoxTypeWithNewShape(mlir::Type shapeMold) const;
@@ -428,6 +431,9 @@ inline bool boxHasAddendum(fir::BaseBoxType boxTy) {
 /// Get the rank from a !fir.box type.
 unsigned getBoxRank(mlir::Type boxTy);
 
+/// Get the corank from a !fir.box type.
+unsigned getBoxCorank(mlir::Type boxTy);
+
 /// Return true iff `ty` is a RecordType with members that are allocatable.
 bool isRecordWithAllocatableMember(mlir::Type ty);
 
@@ -475,10 +481,11 @@ inline bool isNoneOrSeqNone(mlir::Type type) {
 /// is polymorphic and assumed shape return fir.box<T>.
 inline mlir::Type wrapInClassOrBoxType(mlir::Type eleTy,
                                        bool isPolymorphic = false,
-                                       bool isAssumedType = false) {
+                                       bool isAssumedType = false,
+                                       unsigned corank = 0) {
   if (isPolymorphic && !isAssumedType)
-    return fir::ClassType::get(eleTy);
-  return fir::BoxType::get(eleTy);
+    return fir::ClassType::get(eleTy, /*isVolatile*/ false, corank);
+  return fir::BoxType::get(eleTy, /*isVolatile*/ false, corank);
 }
 
 /// Re-create the given type with the given volatility, if this is a type
@@ -548,7 +555,34 @@ inline bool isRefOfConstantSizeAggregateType(mlir::Type t) {
 std::string getTypeAsString(mlir::Type ty, const KindMapping &kindMap,
                             llvm::StringRef prefix = "");
 
-/// Return the size and alignment of FIR types.
+/// Return the allocation extent and ABI alignment of a FIR type.
+///
+/// The returned size includes padding required for allocation and array
+/// element strides.
+///
+/// - **Trivial scalars** (integer, real, complex, logical, character):
+///   size = dl.getTypeSize(), which is the *store* size (data bytes only,
+///   no tail padding).  For example, x86 f80 has store size 10 and ABI
+///   alignment 16; the returned size is 10, not 16.  Callers that need
+///   the allocation size (e.g. FoldBoxEleSize, array element strides)
+///   must round up: llvm::alignTo(size, alignment).
+///
+/// - **Sequences (fir::SequenceType)**:
+///   Each element size is rounded to its alignment boundary before
+///   multiplying by the element count (allocation-size stride). This
+///   rounding is part of the allocation extent and includes per-element
+///   allocation padding.
+///
+/// - **Packed records (fir::RecordType with isPacked)**:
+///   Fields are laid out back-to-back using each field's allocation size
+///   (llvm::alignTo(fieldStoreSize, fieldAlign)), matching LLVM's packed
+///   StructLayout. No inter-field or tail padding is added.
+///
+/// - **Unpacked records (fir::RecordType, not packed)**:
+///   Fields are laid out with inter-field alignment padding; each field
+///   occupies llvm::alignTo(fieldSize, fieldAlign) bytes. The allocation
+///   extent is rounded up to the record's own alignment (tail-padded).
+///
 /// TODO: consider moving this to a DataLayoutTypeInterface implementation
 /// for FIR types. It should first be ensured that it is OK to open the gate of
 /// target dependent type size inquiries in lowering. It would also not be

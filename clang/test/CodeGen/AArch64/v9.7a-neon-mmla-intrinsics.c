@@ -6,7 +6,7 @@
 
 #include <arm_neon.h>
 
-// CHECK-LABEL: define dso_local <8 x half> @test_vmmlaq_f16_f16(
+// CHECK-LABEL: define dso_local <8 x half> @test_vmmlaq_f16(
 // CHECK-SAME: <8 x half> noundef [[ACC:%.*]], <8 x half> noundef [[A:%.*]], <8 x half> noundef [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <8 x half> [[ACC]] to <8 x i16>
@@ -21,8 +21,8 @@
 // CHECK-NEXT:    [[FMMLA3_I:%.*]] = call <8 x half> @llvm.aarch64.neon.fmmla.v8f16.v8f16(<8 x half> [[FMMLA_I]], <8 x half> [[FMMLA1_I]], <8 x half> [[FMMLA2_I]])
 // CHECK-NEXT:    ret <8 x half> [[FMMLA3_I]]
 //
-float16x8_t test_vmmlaq_f16_f16(float16x8_t acc, float16x8_t a, float16x8_t b) {
-  return vmmlaq_f16_f16(acc, a, b);
+float16x8_t test_vmmlaq_f16(float16x8_t acc, float16x8_t a, float16x8_t b) {
+  return vmmlaq_f16(acc, a, b);
 }
 
 // CHECK-LABEL: define dso_local <4 x float> @test_vmmlaq_f32_f16(

@@ -87,7 +87,7 @@ MCContext::MCContext(const Triple &TheTriple, const MCAsmInfo &mai,
     Env = IsMachO;
     break;
   case Triple::COFF:
-    if (!TheTriple.isOSWindows() && !TheTriple.isUEFI()) {
+    if (!TheTriple.isOSWindowsOrUEFI()) {
       reportFatalUsageError(
           "cannot initialize MC for non-Windows COFF object files");
     }
@@ -1081,6 +1081,8 @@ CodeViewContext &MCContext::getCVContext() {
 
 void MCContext::diagnose(const SMDiagnostic &SMD) {
   assert(DiagHandler && "MCContext::DiagHandler is not set");
+  if (SMD.getKind() == SourceMgr::DK_Error)
+    HadError = true;
   bool UseInlineSrcMgr = false;
   const SourceMgr *SMP = nullptr;
   if (SrcMgr) {

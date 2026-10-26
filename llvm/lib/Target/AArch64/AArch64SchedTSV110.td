@@ -25,6 +25,7 @@ def TSV110Model : SchedMachineModel {
   let CompleteModel         =   1;
 
   list<Predicate> UnsupportedFeatures = !listconcat(SVEUnsupported.F,
+                                                    SVE2p1Unsupported.F,
                                                     PAUnsupported.F,
                                                     SMEUnsupported.F,
                                                     [HasMTE, HasCSSC, HasMOPS, HasMOPS_GO]);

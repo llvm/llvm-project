@@ -17,7 +17,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/SMLoc.h"
 #include <cstdint>
-#include <map>
 
 namespace llvm {
 
@@ -46,7 +45,7 @@ class ConstantPool {
 
   // Caches of entries that already exist, indexed by their contents
   // and also the size of the constant.
-  std::map<std::pair<int64_t, unsigned>, const MCSymbolRefExpr *>
+  DenseMap<std::pair<int64_t, unsigned>, const MCSymbolRefExpr *>
       CachedConstantEntries;
   DenseMap<std::pair<const MCSymbol *, unsigned>, const MCSymbolRefExpr *>
       CachedSymbolEntries;

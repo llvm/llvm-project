@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn -mcpu=verde < %s | FileCheck %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu6.01 < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu8.02 < %s | FileCheck %s
 
 ; This is used to crash in LiveIntervalAnalysis via SILoadStoreOptimizer
 ; while fixing up the merge of two ds_write instructions.

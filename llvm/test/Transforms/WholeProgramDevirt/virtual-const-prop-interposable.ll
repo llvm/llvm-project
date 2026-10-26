@@ -15,7 +15,7 @@
 
 define weak i32 @vf1_weak(ptr %this, i32 %arg) {
 ; CHECK-LABEL: define weak i32 @vf1_weak(
-; CHECK-SAME: ptr [[THIS:%.*]], i32 [[ARG:%.*]]) {
+; CHECK-SAME: ptr [[THIS:%.*]], i32 [[ARG:%.*]]) !guid [[META6:![0-9]+]] {
 ; CHECK-NEXT:    ret i32 [[ARG]]
 ;
   ret i32 %arg
@@ -23,7 +23,7 @@ define weak i32 @vf1_weak(ptr %this, i32 %arg) {
 
 define weak i32 @vf2_weak(ptr %this, i32 %arg) {
 ; CHECK-LABEL: define weak i32 @vf2_weak(
-; CHECK-SAME: ptr [[THIS:%.*]], i32 [[ARG:%.*]]) {
+; CHECK-SAME: ptr [[THIS:%.*]], i32 [[ARG:%.*]]) !guid [[META7:![0-9]+]] {
 ; CHECK-NEXT:    ret i32 [[ARG]]
 ;
   ret i32 %arg
@@ -31,7 +31,7 @@ define weak i32 @vf2_weak(ptr %this, i32 %arg) {
 
 define linkonce_odr i32 @vf1_linkonce_odr(ptr %this, i32 %arg) {
 ; CHECK-LABEL: define linkonce_odr i32 @vf1_linkonce_odr(
-; CHECK-SAME: ptr [[THIS:%.*]], i32 [[ARG:%.*]]) {
+; CHECK-SAME: ptr [[THIS:%.*]], i32 [[ARG:%.*]]) !guid [[META8:![0-9]+]] {
 ; CHECK-NEXT:    ret i32 [[ARG]]
 ;
   ret i32 %arg
@@ -39,7 +39,7 @@ define linkonce_odr i32 @vf1_linkonce_odr(ptr %this, i32 %arg) {
 
 define linkonce_odr i32 @vf2_linkonce_odr(ptr %this, i32 %arg) {
 ; CHECK-LABEL: define linkonce_odr i32 @vf2_linkonce_odr(
-; CHECK-SAME: ptr [[THIS:%.*]], i32 [[ARG:%.*]]) {
+; CHECK-SAME: ptr [[THIS:%.*]], i32 [[ARG:%.*]]) !guid [[META9:![0-9]+]] {
 ; CHECK-NEXT:    ret i32 [[ARG]]
 ;
   ret i32 %arg
@@ -47,7 +47,7 @@ define linkonce_odr i32 @vf2_linkonce_odr(ptr %this, i32 %arg) {
 
 define i32 @test_weak(ptr %obj) {
 ; CHECK-LABEL: define i32 @test_weak(
-; CHECK-SAME: ptr [[OBJ:%.*]]) {
+; CHECK-SAME: ptr [[OBJ:%.*]]) !guid [[META10:![0-9]+]] {
 ; CHECK-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[OBJ]], align 8
 ; CHECK-NEXT:    [[P:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"typeid_weak")
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[P]])
@@ -65,7 +65,7 @@ define i32 @test_weak(ptr %obj) {
 
 define i32 @test_linkonce_odr(ptr %obj) {
 ; CHECK-LABEL: define i32 @test_linkonce_odr(
-; CHECK-SAME: ptr [[OBJ:%.*]]) {
+; CHECK-SAME: ptr [[OBJ:%.*]]) !guid [[META11:![0-9]+]] {
 ; CHECK-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[OBJ]], align 8
 ; CHECK-NEXT:    [[P:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"typeid_linkonce_odr")
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[P]])
@@ -82,3 +82,11 @@ define i32 @test_linkonce_odr(ptr %obj) {
 
 !0 = !{i32 0, !"typeid_weak"}
 !1 = !{i32 0, !"typeid_linkonce_odr"}
+;.
+; CHECK: [[META6]] = !{i64 -7067669819462802158}
+; CHECK: [[META7]] = !{i64 7788932116295580834}
+; CHECK: [[META8]] = !{i64 -7271860403678991523}
+; CHECK: [[META9]] = !{i64 3179538762998407930}
+; CHECK: [[META10]] = !{i64 1773407144618971966}
+; CHECK: [[META11]] = !{i64 2326665858058907152}
+;.

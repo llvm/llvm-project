@@ -5,7 +5,7 @@ This is a framework for writing cross-translation unit analyses in a scalable an
 ```{toctree}
 :glob: true
 :maxdepth: 2
-:numbered: true
+:numbered:
 
 user-docs/*
 ```

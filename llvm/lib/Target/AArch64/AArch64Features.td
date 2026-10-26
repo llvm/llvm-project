@@ -303,9 +303,6 @@ def FeatureXS : Extension<"xs", "XS", "FEAT_XS",
 def FeatureWFxT : ExtensionWithMArch<"wfxt", "WFxT", "FEAT_WFxT",
   "Enable Armv8.7-A WFET and WFIT instruction">;
 
-def FeatureHCX : Extension<"hcx", "HCX", "FEAT_HCX",
-  "Enable Armv8.7-A HCRX_EL2 system register">;
-
 def FeatureLS64 : ExtensionWithMArch<"ls64", "LS64",
   "FEAT_LS64, FEAT_LS64_V, FEAT_LS64_ACCDATA",
   "Enable Armv8.7-A LD64B/ST64B Accelerator Extension">;
@@ -410,6 +407,9 @@ def FeatureRME : Extension<"rme", "RME", "FEAT_RME",
 
 def FeatureSME : ExtensionWithMArch<"sme", "SME", "FEAT_SME",
   "Enable Scalable Matrix Extension (SME)", [FeatureBF16, FeatureFullFP16]>;
+def FeatureMCAStreamingSched : SubtargetFeature<
+  "mca-streaming-sched", "MCAStreamingSched", "true",
+  "Enable streaming-SVE schedule predicates for MC analysis tools">;
 
 def FeatureSMEF64F64 : ExtensionWithMArch<"sme-f64f64", "SMEF64F64", "FEAT_SME_F64F64",
   "Enable Scalable Matrix Extension (SME) F64F64 instructions", [FeatureSME]>;
@@ -579,6 +579,9 @@ def FeatureSME_TMOP: ExtensionWithMArch<"sme-tmop", "SME_TMOP", "FEAT_SME_TMOP",
 def FeatureSSVE_FEXPA : ExtensionWithMArch<"ssve-fexpa", "SSVE_FEXPA", "FEAT_SSVE_FEXPA",
   "Enable SVE FEXPA instruction in Streaming SVE mode", [FeatureSME2]>;
 
+def FeatureHINTE: ExtensionWithMArch<"hinte", "HINTE", "FEAT_HINTE",
+  "Enable extended A64 hint instruction space">;
+
 //===----------------------------------------------------------------------===//
 //  Armv9.7 Architecture Extensions
 //===----------------------------------------------------------------------===//
@@ -613,6 +616,20 @@ def FeatureF16F32DOT : ExtensionWithMArch<"f16f32dot", "F16F32DOT", "FEAT_F16F32
 
 def FeatureF16F32MM : ExtensionWithMArch<"f16f32mm", "F16F32MM", "FEAT_F16F32MM",
   "Enable Armv9.7-A Advanced SIMD half-precision matrix multiply-accumulate to single-precision", [FeatureNEON, FeatureFullFP16]>;
+
+//===----------------------------------------------------------------------===//
+//  Armv9.8 Architecture Extensions
+//===----------------------------------------------------------------------===//
+
+def FeatureCFLT : ExtensionWithMArch<"cflt", "CFLT", "FEAT_CFLT",
+  "Enable Armv9.8-A Conditional Fault instructions">;
+
+def FeatureLSC64B : ExtensionWithMArch<"lsc64b", "LSC64B", "FEAT_LSC64B",
+  "Enable Armv9.8-A Single-copy atomic 64-byte load/store consistency extension", [FeatureLSCP]>;
+
+def FeatureSVE_LRCPC: ExtensionWithMArch<"sve-lrcpc", "SVE_LRCPC", "FEAT_SVE_LRCPC",
+  "Enable Armv9.8-A SVE weaker Release Consistency processor consistent (RCpc) model",
+   [FeatureSVE2, FeatureRCPC3]>;
 
 //===----------------------------------------------------------------------===//
 //  Future Architecture Technologies
@@ -661,6 +678,10 @@ def FeatureExperimentalZeroingPseudos
 def FeatureNoSVEFPLD1R : SubtargetFeature<"no-sve-fp-ld1r",
   "NoSVEFPLD1R", "true", "Avoid using LD1RX instructions for FP",
   [], InlineIgnore>;
+
+def FeatureDontPreferPredicatedLD1R : SubtargetFeature <
+    "dont-prefer-predicated-ld1r", "NoPredicatedLD1R", "true",
+    "Don't prefer predicated SVE LD1R over sign-extended-load + NEON dup", [], InlineIgnore>;
 
 def FeatureZCRegMoveGPR64 : SubtargetFeature<"zcm-gpr64", "HasZeroCycleRegMoveGPR64", "true",
                                         "Has zero-cycle register moves for GPR64 registers",
@@ -825,6 +846,11 @@ def FeatureFuseFCmpFCSel : SubtargetFeature<
     "CPU can fuse FCMP and FCSEL operations",
     [], InlineIgnore>;
 
+def FeatureFuseFMinFMax : SubtargetFeature<
+    "fuse-fmin-fmax", "HasFuseFMinFMax", "true",
+    "CPU can fuse FMIN and FMAX operations",
+    [], InlineIgnore>;
+
 def FeatureAlignCmpCSelPairs : SubtargetFeature<
     "align-cmp-csel-pairs", "HasAlignCmpCSelPairs", "true",
     "Align certain CMP/FCMP and CSEL/FCSEL instruction pairs",
@@ -848,6 +874,11 @@ def FeatureFuseLiterals : SubtargetFeature<
 def FeatureFuseAddSub2RegAndConstOne : SubtargetFeature<
    "fuse-addsub-2reg-const1", "HasFuseAddSub2RegAndConstOne", "true",
    "CPU fuses (a + b + 1) and (a - b - 1)",
+   [], InlineIgnore>;
+
+def FeatureFuseAppleSMECompute : SubtargetFeature<
+   "fuse-apple-sme-compute", "HasFuseAppleSMECompute", "true",
+   "CPU fuses SME compute operations",
    [], InlineIgnore>;
 
 def FeatureDisableLatencySchedHeuristic : SubtargetFeature<
@@ -1000,6 +1031,20 @@ def FeatureMaxInterleaveFactor4 : SubtargetFeature<
     "Set the MaxInterleaveFactor to 4 (from the default 2)",
     [], InlineIgnore>;
 
+def FeatureFixedLoadLatency4 : SubtargetFeature<
+    "fixed-load-latency-4", "FixedLoadLatency", "4",
+    "Use a fixed latency of 4 for loads instead of querying the scheduling model">;
+
+def FeatureLimited64bitVectorMulBandwidth : SubtargetFeature<
+    "has-limited-64bit-vector-mul-bandwidth", "HasLimited64bitVectorMulBandwidth", "true",
+    "Has limited 64bit vector multiply bandwidth compared to scalar multiply",
+    [], InlineIgnore>;
+
+def FeatureUseReciprocalFDivCombineThreshold2 : SubtargetFeature<
+    "use-reciprocal-fdiv-combine-threshold-2", "UseReciprocalFDivCombineThreshold2", "true",
+    "Set the reciprocal FDiv combine threshold to 2 (from the default 3)",
+    [], InlineIgnore>;
+
 //===----------------------------------------------------------------------===//
 // Architectures.
 //
@@ -1050,7 +1095,7 @@ def HasV8_6aOps : Architecture64<8, 6, "a", "v8.6a",
     FeatureEnhancedCounterVirtualization, FeatureMatMulInt8],
   !listconcat(HasV8_5aOps.DefaultExts, [FeatureBF16, FeatureMatMulInt8])>;
 def HasV8_7aOps : Architecture64<8, 7, "a", "v8.7a",
-  [HasV8_6aOps, FeatureXS, FeatureWFxT, FeatureHCX],
+  [HasV8_6aOps, FeatureXS, FeatureWFxT],
   !listconcat(HasV8_6aOps.DefaultExts, [FeatureWFxT, FeatureSPE_EEF])>;
 def HasV8_8aOps : Architecture64<8, 8, "a", "v8.8a",
   [HasV8_7aOps, FeatureHBC, FeatureMOPS, FeatureNMI],
@@ -1083,13 +1128,16 @@ def HasV9_5aOps : Architecture64<9, 5, "a", "v9.5a",
   [HasV9_4aOps, FeatureCPA],
   !listconcat(HasV9_4aOps.DefaultExts, [FeatureCPA,  FeatureLUT, FeatureFAMINMAX])>;
 def HasV9_6aOps : Architecture64<9, 6, "a", "v9.6a",
-  [HasV9_5aOps, FeatureCMPBR, FeatureLSUI, FeatureOCCMO],
+  [HasV9_5aOps, FeatureCMPBR, FeatureLSUI, FeatureOCCMO, FeatureHINTE],
   !listconcat(HasV9_5aOps.DefaultExts, [FeatureCMPBR,
-    FeatureLSUI, FeatureOCCMO])>;
+    FeatureLSUI, FeatureOCCMO, FeatureHINTE])>;
 def HasV9_7aOps : Architecture64<9, 7, "a", "v9.7a",
   [HasV9_6aOps, FeatureSVE2p3, FeatureFPRCVT, FeatureF16F32DOT],
   !listconcat(HasV9_6aOps.DefaultExts, [FeatureSVE2p3, FeatureFPRCVT,
     FeatureF16F32DOT])>;
+def HasV9_8aOps : Architecture64<9, 8, "a", "v9.8a",
+  [HasV9_7aOps],
+  HasV9_7aOps.DefaultExts>;
 def HasV8_0rOps : Architecture64<8, 0, "r", "v8r",
   [ //v8.1
     FeatureCRC, FeaturePAN, FeatureLSE, FeatureCONTEXTIDREL2,

@@ -157,17 +157,17 @@ struct MemberSetters {
     p = local.data(); // expected-warning {{stack memory associated with local variable 'local' escapes to the field 'p' which will dangle}}
   }
 
-  void use_after_scope() {
+  void escape_to_field() {
     {
       std::string local;
       view = local;     // expected-warning {{stack memory associated with local variable 'local' escapes to the field 'view' which will dangle}}
       p = local.data(); // expected-warning {{stack memory associated with local variable 'local' escapes to the field 'p' which will dangle}}
     }
-    (void)view;
+    (void)view;         // Discarding the value is not a use.
     (void)p;
   }
 
-  void use_after_scope_saved_after_reassignment() {
+  void escape_to_field_saved_after_reassignment() {
     {
       std::string local;
       view = local;
@@ -175,6 +175,21 @@ struct MemberSetters {
     }
     (void)view;
     (void)p;
+
+    view = kGlobal;
+    p = kGlobal.data();
+  }
+
+  // Reading the dangling field is reported as a use of it.
+  void use_after_scope() {
+    {
+      std::string local;
+      view = local;     // expected-warning {{local variable 'local' does not live long enough}}
+      p = local.data(); // expected-warning {{local variable 'local' does not live long enough}} \
+                        // expected-note {{result of call to 'data' aliases the storage of local variable 'local' because the implicit object parameter is inferred as lifetimebound}}
+    }                   // expected-note 2 {{local variable 'local' is destroyed here}}
+    use(view);          // expected-note {{later used here}}
+    use(p);             // expected-note {{later used here}}
 
     view = kGlobal;
     p = kGlobal.data();
@@ -245,3 +260,44 @@ struct HasUniquePtrField {
   }
 };
 } // namespace MakeUnique
+
+namespace DtorNoWarn {
+struct DtorSet {
+  std::string_view view;
+  ~DtorSet() {
+    std::string s;
+    view = s;
+  }
+};
+} // namespace DtorNoWarn
+
+namespace LambdaCaptureReset {
+struct MyObj {};
+struct HasField {
+  MyObj* ptr; // expected-note 3 {{this field dangles}}
+
+  void this_capture() {
+    MyObj local;
+    ptr = &local; // expected-warning-re {{stack memory associated with local variable 'local' may escape to the field 'ptr' which will dangle. {{.*}} captured by a lambda}}
+    auto cleanup = [this]() {
+      ptr = nullptr;
+    };
+  }
+
+  void capture_by_ref() {
+    MyObj local;
+    ptr = &local; // expected-warning-re {{stack memory associated with local variable 'local' may escape to the field 'ptr' which will dangle. {{.*}} captured by a lambda}}
+    auto cleanup = [&]() {
+      ptr = nullptr;
+    };
+  }
+
+  void foo_init_capture() {
+    MyObj local;
+    ptr = &local; // expected-warning-re {{stack memory associated with local variable 'local' may escape to the field 'ptr' which will dangle. {{.*}} captured by a lambda}}
+    auto cleanup = [&p = ptr]() {
+      p = nullptr;
+    };
+  }
+};
+} // namespace LambdaCaptureReset

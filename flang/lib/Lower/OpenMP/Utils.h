@@ -29,7 +29,11 @@ class RecordType;
 namespace Fortran {
 
 namespace semantics {
+class SemanticsContext;
 class Symbol;
+namespace omp {
+class OmpVariantMatchContext;
+} // namespace omp
 } // namespace semantics
 
 namespace parser {
@@ -167,6 +171,8 @@ void genObjectList(const ObjectList &objects,
 void lastprivateModifierNotSupported(const omp::clause::Lastprivate &lastp,
                                      mlir::Location loc);
 
+pft::Evaluation *tryGetNestedDoConstruct(pft::Evaluation &eval);
+
 pft::Evaluation *getNestedDoConstruct(pft::Evaluation &eval);
 
 int64_t collectLoopRelatedInfo(
@@ -210,9 +216,12 @@ struct IteratorRange {
   Fortran::semantics::Symbol *ivSym = nullptr;
 };
 
-bool hasIteratorIVReference(
-    const omp::Object &object,
-    const llvm::SmallPtrSetImpl<const Fortran::semantics::Symbol *> &ivSyms);
+/// Select ranges referenced in the locator source, even if folding removes
+/// their occurrences from the analyzed expression. Preserve declaration order.
+/// An empty result means the locator is not iterator-dependent.
+llvm::SmallVector<IteratorRange>
+getIteratorRangesForObject(const omp::Object &object,
+                           llvm::ArrayRef<IteratorRange> ranges);
 
 /// Default name mangler for implicit default mappers.
 ///
@@ -222,17 +231,11 @@ bool hasIteratorIVReference(
 void defaultMangler(Fortran::lower::AbstractConverter &converter,
                     std::string &mapperIdName, llvm::StringRef memberName);
 
-mlir::Value genIteratorCoordinate(Fortran::lower::AbstractConverter &converter,
-                                  hlfir::Entity entity,
-                                  llvm::ArrayRef<mlir::Value> ivs,
-                                  mlir::Location loc);
-
 /// Resolve the declare mapper symbol to attach to a mapped object.
 ///
 /// The default mapper path first looks for a user-defined mapper. If none
-/// exists, it may synthesize a compiler-generated mapper, except for mapped
-/// members whose parent object is also mapped and for target enter data,
-/// target exit data, and target update directives.
+/// exists, it may synthesize a compiler-generated mapper, except for target
+/// enter data, target exit data, and target update directives.
 ///
 /// \param converter The converter used to query and generate mapper symbols.
 /// \param loc The location to use when generating an implicit mapper.
@@ -242,19 +245,12 @@ mlir::Value genIteratorCoordinate(Fortran::lower::AbstractConverter &converter,
 /// \param mapTypeBits The map flags used when deciding whether an implicit
 ///        mapper should be generated.
 /// \param directive The enclosing OpenMP directive.
-/// \param hasParentObj True if a mapped parent object already owns this object.
 /// \return A symbol reference to the resolved mapper, or a null attribute when
 ///         no mapper applies.
-mlir::FlatSymbolRefAttr
-resolveMapperId(Fortran::lower::AbstractConverter &converter,
-                mlir::Location loc, const omp::Object &object,
-                llvm::StringRef mapperIdName,
-                mlir::omp::ClauseMapFlags mapTypeBits,
-                llvm::omp::Directive directive, bool hasParentObj);
-
-std::optional<llvm::SmallVector<mlir::Value>> getIteratorElementIndices(
-    Fortran::lower::AbstractConverter &converter, const omp::Object &object,
-    Fortran::lower::StatementContext &stmtCtx, mlir::Location loc);
+mlir::FlatSymbolRefAttr resolveMapperId(
+    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+    const omp::Object &object, llvm::StringRef mapperIdName,
+    mlir::omp::ClauseMapFlags mapTypeBits, llvm::omp::Directive directive);
 
 /// Walk the already-emitted MLIR parent operations starting from \p op and
 /// collect the implied OpenMP construct traits in outermost-to-innermost
@@ -264,18 +260,21 @@ void collectEnclosingConstructTraits(
     mlir::Operation *op,
     llvm::SmallVectorImpl<llvm::omp::TraitProperty> &constructTraits);
 
-/// `OMPContext` flavour used by Flang's OpenMP variant matching. Adds an
-/// ISA-trait override based on the module's target-features attribute.
-class FlangOMPContext final : public llvm::omp::OMPContext {
-public:
-  FlangOMPContext(mlir::ModuleOp module,
-                  llvm::ArrayRef<llvm::omp::TraitProperty> constructTraits);
-  bool matchesISATrait(llvm::StringRef rawString) const override;
+/// Return true when \p module is being compiled for an AMDGPU device or all of
+/// its offload targets are AMDGPU devices.
+bool hasOnlyAMDGCNTargets(mlir::ModuleOp module);
 
-private:
-  static bool isDeviceCompilation(mlir::ModuleOp module);
-  mlir::LLVM::TargetFeaturesAttr targetFeatures;
-};
+/// Return true when unified shared memory is required by either the OpenMP
+/// module attributes or a source-level `requires` directive.
+bool requiresUnifiedSharedMemory(mlir::ModuleOp module,
+                                 semantics::SemanticsContext &semaCtx);
+
+/// Build the OpenMP variant-matching context for \p module. The device flag,
+/// host triple, offload triple, and target features are read from the module;
+/// \p constructTraits seeds the enclosing-construct traits.
+semantics::omp::OmpVariantMatchContext makeVariantMatchContext(
+    mlir::ModuleOp module,
+    llvm::ArrayRef<llvm::omp::TraitProperty> constructTraits);
 
 } // namespace omp
 } // namespace lower

@@ -19,6 +19,9 @@
 #include "flang/Runtime/CUDA/common.h"
 #include "flang/Support/Fortran.h"
 
+#include "cuda.h"
+#include "cuda_runtime.h"
+
 namespace Fortran::runtime::cuda {
 
 struct DeviceAllocation {
@@ -41,17 +44,17 @@ int compareDeviceAlloc(const void *a, const void *b) {
 }
 
 // Dynamic array for tracking asynchronous allocations.
-static DeviceAllocation *deviceAllocations = nullptr;
-Lock lock;
+static DeviceAllocation *asyncDeviceAllocations = nullptr;
+Lock asyncDeviceAllocationTableLock;
 static int maxDeviceAllocations{512}; // Initial size
 static int numDeviceAllocations{0};
 static constexpr int allocNotFound{-1};
 
-static void initAllocations() {
-  if (!deviceAllocations) {
-    deviceAllocations = static_cast<DeviceAllocation *>(
+static void initAsyncDeviceAllocations() {
+  if (!asyncDeviceAllocations) {
+    asyncDeviceAllocations = static_cast<DeviceAllocation *>(
         malloc(maxDeviceAllocations * sizeof(DeviceAllocation)));
-    if (!deviceAllocations) {
+    if (!asyncDeviceAllocations) {
       Terminator terminator{__FILE__, __LINE__};
       terminator.Crash("Failed to allocate tracking array");
     }
@@ -61,16 +64,16 @@ static void initAllocations() {
 static void doubleAllocationArray() {
   unsigned newSize = maxDeviceAllocations * 2;
   DeviceAllocation *newArray = static_cast<DeviceAllocation *>(
-      realloc(deviceAllocations, newSize * sizeof(DeviceAllocation)));
+      realloc(asyncDeviceAllocations, newSize * sizeof(DeviceAllocation)));
   if (!newArray) {
     Terminator terminator{__FILE__, __LINE__};
     terminator.Crash("Failed to reallocate tracking array");
   }
-  deviceAllocations = newArray;
+  asyncDeviceAllocations = newArray;
   maxDeviceAllocations = newSize;
 }
 
-static unsigned findAllocation(void *ptr) {
+int findAsyncDeviceAllocation(void *ptr) {
   if (numDeviceAllocations == 0) {
     return allocNotFound;
   }
@@ -84,10 +87,10 @@ static unsigned findAllocation(void *ptr) {
 
   while (left <= right) {
     int mid = left + (right - left) / 2;
-    if (deviceAllocations[mid].ptr == ptr) {
+    if (asyncDeviceAllocations[mid].ptr == ptr) {
       return mid;
     }
-    if (deviceAllocations[mid].ptr < ptr) {
+    if (asyncDeviceAllocations[mid].ptr < ptr) {
       left = mid + 1;
     } else {
       right = mid - 1;
@@ -96,34 +99,44 @@ static unsigned findAllocation(void *ptr) {
   return allocNotFound;
 }
 
-static void insertAllocation(void *ptr, std::size_t size, cudaStream_t stream) {
-  CriticalSection critical{lock};
-  initAllocations();
+void insertAsyncDeviceAllocation(
+    void *ptr, std::size_t size, cudaStream_t stream) {
+  initAsyncDeviceAllocations();
   if (numDeviceAllocations >= maxDeviceAllocations) {
     doubleAllocationArray();
   }
-  deviceAllocations[numDeviceAllocations].ptr = ptr;
-  deviceAllocations[numDeviceAllocations].size = size;
-  deviceAllocations[numDeviceAllocations].stream = stream;
+  asyncDeviceAllocations[numDeviceAllocations].ptr = ptr;
+  asyncDeviceAllocations[numDeviceAllocations].size = size;
+  asyncDeviceAllocations[numDeviceAllocations].stream = stream;
   ++numDeviceAllocations;
-  qsort(deviceAllocations, numDeviceAllocations, sizeof(DeviceAllocation),
+  qsort(asyncDeviceAllocations, numDeviceAllocations, sizeof(DeviceAllocation),
       compareDeviceAlloc);
 }
 
-static void eraseAllocation(int pos) {
-  deviceAllocations[pos].ptr = nullptr;
-  deviceAllocations[pos].size = 0;
-  deviceAllocations[pos].stream = (cudaStream_t)0;
-  qsort(deviceAllocations, numDeviceAllocations, sizeof(DeviceAllocation),
+cudaStream_t getAsyncDeviceAllocationStream(int pos) {
+  if (pos < 0 || pos >= numDeviceAllocations) {
+    return nullptr;
+  }
+  return asyncDeviceAllocations[pos].stream;
+}
+
+void eraseAsyncDeviceAllocation(int pos) {
+  if (pos < 0 || pos >= numDeviceAllocations) {
+    return;
+  }
+  asyncDeviceAllocations[pos].ptr = nullptr;
+  asyncDeviceAllocations[pos].size = 0;
+  asyncDeviceAllocations[pos].stream = (cudaStream_t)0;
+  qsort(asyncDeviceAllocations, numDeviceAllocations, sizeof(DeviceAllocation),
       compareDeviceAlloc);
   --numDeviceAllocations;
 }
 
 void CUFResetStream(cudaStream_t stream) {
-  CriticalSection critical{lock};
+  CriticalSection critical{asyncDeviceAllocationTableLock};
   for (int i = 0; i < numDeviceAllocations; ++i) {
-    if (deviceAllocations[i].stream == stream) {
-      deviceAllocations[i].stream = nullptr;
+    if (asyncDeviceAllocations[i].stream == stream) {
+      asyncDeviceAllocations[i].stream = nullptr;
     }
   }
 }
@@ -142,9 +155,9 @@ void RTDEF(CUFRegisterAllocator)() {
 }
 
 cudaStream_t RTDECL(CUFGetAssociatedStream)(void *p) {
-  int pos = findAllocation(p);
+  int pos = findAsyncDeviceAllocation(p);
   if (pos >= 0) {
-    cudaStream_t stream = deviceAllocations[pos].stream;
+    cudaStream_t stream = asyncDeviceAllocations[pos].stream;
     return stream;
   }
   return nullptr;
@@ -154,18 +167,20 @@ int RTDECL(CUFSetAssociatedStream)(void *p, cudaStream_t stream) {
   if (p == nullptr) {
     return StatBaseNull;
   }
-  int pos = findAllocation(p);
+  int pos = findAsyncDeviceAllocation(p);
   if (pos >= 0) {
-    deviceAllocations[pos].stream = stream;
+    asyncDeviceAllocations[pos].stream = stream;
   } else {
-    insertAllocation(p, 0, stream);
+    CriticalSection critical{asyncDeviceAllocationTableLock};
+    insertAsyncDeviceAllocation(p, 0, stream);
   }
   return StatOk;
 }
 }
 
-void *CUFAllocPinned(
-    std::size_t sizeInBytes, [[maybe_unused]] std::int64_t *asyncObject) {
+void *CUFAllocPinned(std::size_t sizeInBytes,
+    [[maybe_unused]] std::size_t alignment,
+    [[maybe_unused]] std::int64_t *asyncObject) {
   void *p;
   CUDA_REPORT_IF_ERROR(cudaMallocHost((void **)&p, sizeInBytes));
   return p;
@@ -173,7 +188,8 @@ void *CUFAllocPinned(
 
 void CUFFreePinned(void *p) { cudaFreeHost(p); }
 
-void *CUFAllocDevice(std::size_t sizeInBytes, std::int64_t *asyncObject) {
+void *CUFAllocDevice(std::size_t sizeInBytes,
+    [[maybe_unused]] std::size_t alignment, std::int64_t *asyncObject) {
   void *p;
   if (Fortran::runtime::executionEnvironment.cudaDeviceIsManaged) {
     CUDA_REPORT_IF_ERROR(
@@ -184,26 +200,30 @@ void *CUFAllocDevice(std::size_t sizeInBytes, std::int64_t *asyncObject) {
     } else {
       CUDA_REPORT_IF_ERROR(
           cudaMallocAsync(&p, sizeInBytes, (cudaStream_t)*asyncObject));
-      insertAllocation(p, sizeInBytes, (cudaStream_t)*asyncObject);
+      CriticalSection critical{asyncDeviceAllocationTableLock};
+      insertAsyncDeviceAllocation(p, sizeInBytes, (cudaStream_t)*asyncObject);
     }
   }
   return p;
 }
 
+// Scope-exit cleanup is guarded in lowering; explicit deallocation after a
+// reset is unsupported, keeping cudaFreeAsync free of context-query overhead.
 void CUFFreeDevice(void *p) {
-  CriticalSection critical{lock};
-  int pos = findAllocation(p);
+  CriticalSection critical{asyncDeviceAllocationTableLock};
+  int pos = findAsyncDeviceAllocation(p);
   if (pos >= 0) {
-    cudaStream_t stream = deviceAllocations[pos].stream;
-    eraseAllocation(pos);
+    cudaStream_t stream = asyncDeviceAllocations[pos].stream;
+    eraseAsyncDeviceAllocation(pos);
     CUDA_REPORT_IF_ERROR(cudaFreeAsync(p, stream));
   } else {
     CUDA_REPORT_IF_ERROR(cudaFree(p));
   }
 }
 
-void *CUFAllocManaged(
-    std::size_t sizeInBytes, [[maybe_unused]] std::int64_t *asyncObject) {
+void *CUFAllocManaged(std::size_t sizeInBytes,
+    [[maybe_unused]] std::size_t alignment,
+    [[maybe_unused]] std::int64_t *asyncObject) {
   void *p;
   CUDA_REPORT_IF_ERROR(
       cudaMallocManaged((void **)&p, sizeInBytes, cudaMemAttachGlobal));
@@ -212,10 +232,11 @@ void *CUFAllocManaged(
 
 void CUFFreeManaged(void *p) { CUDA_REPORT_IF_ERROR(cudaFree(p)); }
 
-void *CUFAllocUnified(
-    std::size_t sizeInBytes, [[maybe_unused]] std::int64_t *asyncObject) {
+void *CUFAllocUnified(std::size_t sizeInBytes,
+    [[maybe_unused]] std::size_t alignment,
+    [[maybe_unused]] std::int64_t *asyncObject) {
   // Call alloc managed for the time being.
-  return CUFAllocManaged(sizeInBytes, asyncObject);
+  return CUFAllocManaged(sizeInBytes, alignment, asyncObject);
 }
 
 void CUFFreeUnified(void *p) {

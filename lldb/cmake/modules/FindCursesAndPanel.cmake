@@ -25,7 +25,7 @@ if(CURSES_INCLUDE_DIRS AND CURSES_LIBRARIES AND PANEL_LIBRARIES)
     endif()
     mark_as_advanced(CURSES_HAS_TINFO)
   endif()
-  set(CURSESANDPANEL_FOUND TRUE)
+  set(CursesAndPanel_FOUND TRUE)
 else()
   find_package(Curses QUIET)
   find_library(PANEL_LIBRARIES NAMES panel DOC "The curses panel library" QUIET)
@@ -48,7 +48,7 @@ else()
 
   find_package_handle_standard_args(CursesAndPanel
                                     FOUND_VAR
-                                      CURSESANDPANEL_FOUND
+                                      CursesAndPanel_FOUND
                                     REQUIRED_VARS
                                       CURSES_INCLUDE_DIRS
                                       CURSES_LIBRARIES

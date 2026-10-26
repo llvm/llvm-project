@@ -37,7 +37,7 @@ bool Declaration::DumpStopContext(Stream *s, bool show_fullpaths) const {
     if (show_fullpaths)
       *s << m_file;
     else
-      m_file.GetFilename().Dump(s);
+      s->PutCString(m_file.GetFilename());
 
     if (m_line > 0)
       s->Printf(":%u", m_line);

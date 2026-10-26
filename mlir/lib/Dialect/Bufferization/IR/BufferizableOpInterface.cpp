@@ -358,6 +358,34 @@ BaseMemRefType getMemRefTypeWithFullyDynamicLayout(ArrayRef<int64_t> shape,
   return MemRefType::get(shape, elementType, stridedLayout, memorySpace);
 }
 
+/// Create a memref allocation with the given type and dynamic extents.
+FailureOr<Value> defaultCreateAlloc(OpBuilder &b, Location loc, MemRefType type,
+                                    ValueRange dynShape,
+                                    unsigned int bufferAlignment) {
+  // Default buffer allocation via AllocOp.
+  if (bufferAlignment != 0)
+    return memref::AllocOp::create(b, loc, type, dynShape,
+                                   b.getI64IntegerAttr(bufferAlignment))
+        .getResult();
+  return memref::AllocOp::create(b, loc, type, dynShape).getResult();
+}
+
+/// Create a memory copy between two memref buffers.
+LogicalResult defaultCreateMemCpy(OpBuilder &b, Location loc, Value from,
+                                  Value to) {
+  memref::CopyOp::create(b, loc, from, to);
+  return success();
+}
+
+FailureOr<Value> defaultCreateCast(OpBuilder &b, Location loc, Type dest,
+                                   Value value) {
+  assert(isa<BaseMemRefType>(dest) && "expected BaseMemRefType");
+  assert(isa<BaseMemRefType>(value.getType()) && "expected BaseMemRefType");
+  assert(memref::CastOp::areCastCompatible(value.getType(), dest) &&
+         "cast incompatible");
+  return memref::CastOp::create(b, loc, dest, value).getResult();
+}
+
 /// Default function arg type converter: Use a fully dynamic layout map.
 BufferLikeType
 defaultFunctionArgTypeConverter(TensorLikeType type, Attribute memorySpace,
@@ -405,7 +433,9 @@ defaultReconcileBufferTypeMismatch(BufferLikeType x, BufferLikeType y,
 
 // Default constructor for BufferizationOptions.
 BufferizationOptions::BufferizationOptions()
-    : functionArgTypeConverterFn(defaultFunctionArgTypeConverter),
+    : allocationFn(defaultCreateAlloc), memCpyFn(defaultCreateMemCpy),
+      castFn(defaultCreateCast),
+      functionArgTypeConverterFn(defaultFunctionArgTypeConverter),
       unknownTypeConverterFn(defaultUnknownTypeConverter),
       reconcileBufferTypeMismatchFn(defaultReconcileBufferTypeMismatch) {}
 
@@ -809,35 +839,6 @@ void bufferization::replaceOpWithBufferizedValues(RewriterBase &rewriter,
   }
 
   rewriter.replaceOp(op, replacements);
-}
-
-//===----------------------------------------------------------------------===//
-// Bufferization-specific scoped alloc insertion support.
-//===----------------------------------------------------------------------===//
-
-/// Create a memref allocation with the given type and dynamic extents.
-FailureOr<Value> BufferizationOptions::createAlloc(OpBuilder &b, Location loc,
-                                                   MemRefType type,
-                                                   ValueRange dynShape) const {
-  if (allocationFn)
-    return (*allocationFn)(b, loc, type, dynShape, bufferAlignment);
-
-  // Default bufferallocation via AllocOp.
-  if (bufferAlignment != 0)
-    return memref::AllocOp::create(b, loc, type, dynShape,
-                                   b.getI64IntegerAttr(bufferAlignment))
-        .getResult();
-  return memref::AllocOp::create(b, loc, type, dynShape).getResult();
-}
-
-/// Create a memory copy between two memref buffers.
-LogicalResult BufferizationOptions::createMemCpy(OpBuilder &b, Location loc,
-                                                 Value from, Value to) const {
-  if (memCpyFn)
-    return (*memCpyFn)(b, loc, from, to);
-
-  memref::CopyOp::create(b, loc, from, to);
-  return success();
 }
 
 //===----------------------------------------------------------------------===//

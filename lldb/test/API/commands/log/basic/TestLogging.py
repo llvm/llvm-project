@@ -83,7 +83,6 @@ class LogTestCase(TestBase):
         self.assertEqual(contents.find("bacon"), 0)
 
     # Enable all log options and check that nothing crashes.
-    @skipIfWindows
     def test_all_log_options(self):
         if os.path.exists(self.log_file):
             os.remove(self.log_file)
@@ -124,3 +123,28 @@ class LogTestCase(TestBase):
             self.assertIn("tid", obj)
             self.assertIn("file", obj)
             self.assertIn("function", obj)
+
+    def test_log_invalid(self):
+        self.expect(
+            "log enable not_a_channel not_a_category",
+            error=True,
+            substrs=["Invalid log channel 'not_a_channel'"],
+        )
+
+        self.expect(
+            "log enable lldb not_a_category",
+            error=True,
+            substrs=[
+                "unrecognized log category 'not_a_category'",
+                "Logging categories for 'lldb':",
+            ],
+        )
+
+        self.expect(
+            "log enable lldb not_a_category api not_a_category_either",
+            error=True,
+            substrs=[
+                "unrecognized log categories 'not_a_category', 'not_a_category_either'",
+                "Logging categories for 'lldb':",
+            ],
+        )

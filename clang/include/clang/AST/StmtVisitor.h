@@ -115,16 +115,21 @@ public:
 
   // If the implementation chooses not to implement a certain visit method, fall
   // back on VisitExpr or whatever else is the superclass.
-#define STMT(CLASS, PARENT)                                   \
-  RetTy Visit ## CLASS(PTR(CLASS) S, ParamTys... P) { DISPATCH(PARENT, PARENT); }
+  // Note: In debug builds, avoid ALWAYS_INLINE to prevent stack overflow with
+  // deeply nested expressions (e.g., 2000+ logical operators).
+#define STMT(CLASS, PARENT)                                                    \
+  LLVM_ATTRIBUTE_ALWAYS_INLINE_UNLESS_DEBUG                                    \
+  RetTy Visit##CLASS(PTR(CLASS) S, ParamTys... P) { DISPATCH(PARENT, PARENT); }
 #include "clang/AST/StmtNodes.inc"
 
   // If the implementation doesn't implement binary operator methods, fall back
   // on VisitBinaryOperator.
-#define BINOP_FALLBACK(NAME) \
-  RetTy VisitBin ## NAME(PTR(BinaryOperator) S, ParamTys... P) { \
-    DISPATCH(BinaryOperator, BinaryOperator); \
+#define BINOP_FALLBACK(NAME)                                                   \
+  LLVM_ATTRIBUTE_ALWAYS_INLINE                                                 \
+  RetTy VisitBin##NAME(PTR(BinaryOperator) S, ParamTys... P) {                 \
+    DISPATCH(BinaryOperator, BinaryOperator);                                  \
   }
+  // clang-format off
   BINOP_FALLBACK(PtrMemD)                    BINOP_FALLBACK(PtrMemI)
   BINOP_FALLBACK(Mul)   BINOP_FALLBACK(Div)  BINOP_FALLBACK(Rem)
   BINOP_FALLBACK(Add)   BINOP_FALLBACK(Sub)  BINOP_FALLBACK(Shl)
@@ -143,9 +148,10 @@ public:
 
   // If the implementation doesn't implement compound assignment operator
   // methods, fall back on VisitCompoundAssignOperator.
-#define CAO_FALLBACK(NAME) \
-  RetTy VisitBin ## NAME(PTR(CompoundAssignOperator) S, ParamTys... P) { \
-    DISPATCH(CompoundAssignOperator, CompoundAssignOperator); \
+#define CAO_FALLBACK(NAME)                                                     \
+  LLVM_ATTRIBUTE_ALWAYS_INLINE                                                 \
+  RetTy VisitBin##NAME(PTR(CompoundAssignOperator) S, ParamTys... P) {         \
+    DISPATCH(CompoundAssignOperator, CompoundAssignOperator);                  \
   }
   CAO_FALLBACK(MulAssign) CAO_FALLBACK(DivAssign) CAO_FALLBACK(RemAssign)
   CAO_FALLBACK(AddAssign) CAO_FALLBACK(SubAssign) CAO_FALLBACK(ShlAssign)
@@ -155,9 +161,10 @@ public:
 
   // If the implementation doesn't implement unary operator methods, fall back
   // on VisitUnaryOperator.
-#define UNARYOP_FALLBACK(NAME) \
-  RetTy VisitUnary ## NAME(PTR(UnaryOperator) S, ParamTys... P) { \
-    DISPATCH(UnaryOperator, UnaryOperator);    \
+#define UNARYOP_FALLBACK(NAME)                                                 \
+  LLVM_ATTRIBUTE_ALWAYS_INLINE                                                 \
+  RetTy VisitUnary##NAME(PTR(UnaryOperator) S, ParamTys... P) {                \
+    DISPATCH(UnaryOperator, UnaryOperator);                                    \
   }
   UNARYOP_FALLBACK(PostInc)   UNARYOP_FALLBACK(PostDec)
   UNARYOP_FALLBACK(PreInc)    UNARYOP_FALLBACK(PreDec)
@@ -170,7 +177,10 @@ public:
 #undef UNARYOP_FALLBACK
 
   // Base case, ignore it. :)
-  RetTy VisitStmt(PTR(Stmt) Node, ParamTys... P) { return RetTy(); }
+  LLVM_ATTRIBUTE_ALWAYS_INLINE RetTy VisitStmt(PTR(Stmt) Node, ParamTys... P) {
+    return RetTy();
+  }
+  // clang-format on
 
 #undef PTR
 #undef DISPATCH

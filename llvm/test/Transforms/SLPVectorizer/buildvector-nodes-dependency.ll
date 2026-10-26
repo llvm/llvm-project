@@ -8,7 +8,7 @@ define double @test() {
 ; X86-NEXT:    [[TMP0:%.*]] = load double, ptr null, align 8
 ; X86-NEXT:    br label [[COND_TRUE:%.*]]
 ; X86:       cond.true:
-; X86-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> <double 0.000000e+00, double poison>, double [[TMP0]], i32 1
+; X86-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> <double 0.000000e+00, double poison>, double [[TMP0]], i64 1
 ; X86-NEXT:    [[TMP2:%.*]] = fmul <2 x double> zeroinitializer, [[TMP1]]
 ; X86-NEXT:    [[TMP3:%.*]] = fmul <2 x double> zeroinitializer, [[TMP1]]
 ; X86-NEXT:    [[TMP15:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <2 x i32> <i32 1, i32 1>
@@ -30,8 +30,8 @@ define double @test() {
 ; X86-NEXT:    [[TMP22:%.*]] = fmul <2 x double> [[TMP17]], zeroinitializer
 ; X86-NEXT:    [[TMP23:%.*]] = fmul <2 x double> zeroinitializer, [[TMP22]]
 ; X86-NEXT:    [[TMP24:%.*]] = fadd <2 x double> [[TMP23]], [[TMP21]]
-; X86-NEXT:    [[ADD12:%.*]] = extractelement <2 x double> [[TMP24]], i32 0
-; X86-NEXT:    [[ADD27:%.*]] = extractelement <2 x double> [[TMP24]], i32 1
+; X86-NEXT:    [[ADD12:%.*]] = extractelement <2 x double> [[TMP24]], i64 0
+; X86-NEXT:    [[ADD27:%.*]] = extractelement <2 x double> [[TMP24]], i64 1
 ; X86-NEXT:    [[ADD29:%.*]] = fadd double [[ADD12]], [[ADD27]]
 ; X86-NEXT:    ret double [[ADD29]]
 ;
@@ -40,7 +40,7 @@ define double @test() {
 ; AARCH64-NEXT:    [[TMP0:%.*]] = load double, ptr null, align 8
 ; AARCH64-NEXT:    br label [[COND_TRUE:%.*]]
 ; AARCH64:       cond.true:
-; AARCH64-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> <double 0.000000e+00, double poison>, double [[TMP0]], i32 1
+; AARCH64-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> <double 0.000000e+00, double poison>, double [[TMP0]], i64 1
 ; AARCH64-NEXT:    [[TMP2:%.*]] = fmul <2 x double> zeroinitializer, [[TMP1]]
 ; AARCH64-NEXT:    [[TMP6:%.*]] = fmul <2 x double> zeroinitializer, [[TMP1]]
 ; AARCH64-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <2 x i32> <i32 1, i32 1>
@@ -62,8 +62,8 @@ define double @test() {
 ; AARCH64-NEXT:    [[TMP22:%.*]] = fmul <2 x double> [[TMP5]], zeroinitializer
 ; AARCH64-NEXT:    [[TMP23:%.*]] = fmul <2 x double> zeroinitializer, [[TMP22]]
 ; AARCH64-NEXT:    [[TMP24:%.*]] = fadd <2 x double> [[TMP23]], [[TMP21]]
-; AARCH64-NEXT:    [[TMP25:%.*]] = extractelement <2 x double> [[TMP24]], i32 0
-; AARCH64-NEXT:    [[TMP26:%.*]] = extractelement <2 x double> [[TMP24]], i32 1
+; AARCH64-NEXT:    [[TMP25:%.*]] = extractelement <2 x double> [[TMP24]], i64 0
+; AARCH64-NEXT:    [[TMP26:%.*]] = extractelement <2 x double> [[TMP24]], i64 1
 ; AARCH64-NEXT:    [[ADD29:%.*]] = fadd double [[TMP25]], [[TMP26]]
 ; AARCH64-NEXT:    ret double [[ADD29]]
 ;

@@ -56,9 +56,9 @@ void arith::ArithDialect::initialize() {
   declarePromisedInterfaces<bufferization::BufferizableOpInterface, ConstantOp,
                             IndexCastOp, SelectOp>();
   declarePromisedInterfaces<ValueBoundsOpInterface, ConstantOp, ExtSIOp, AddIOp,
-                            ConstantOp, SubIOp, MulIOp, SelectOp, FloorDivSIOp,
-                            CeilDivSIOp, MinSIOp, MaxSIOp, MinUIOp, MaxUIOp,
-                            RemSIOp, RemUIOp>();
+                            SubIOp, MulIOp, SelectOp, FloorDivSIOp, CeilDivSIOp,
+                            MinSIOp, MaxSIOp, MinUIOp, MaxUIOp, RemSIOp,
+                            RemUIOp, DivUIOp, DivSIOp>();
 }
 
 /// Materialize an integer or floating point constant.

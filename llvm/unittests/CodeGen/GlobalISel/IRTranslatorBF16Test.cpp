@@ -89,7 +89,7 @@ TEST_F(AArch64IRTranslatorTest, IRTranslateBfloat16) {
   auto TM = createTargetMachine();
   if (!TM)
     GTEST_SKIP();
-  M->setDataLayout(TM->createDataLayout());
+  M->setDataLayout(TM->getTargetTriple().computeDataLayout());
 
   TM->setGlobalISel(true);
   TM->setGlobalISelAbort(GlobalISelAbortMode::DisableWithDiag);
@@ -102,7 +102,7 @@ TEST_F(AArch64IRTranslatorTest, IRTranslateBfloat16) {
       new MachineModuleInfoWrapperPass(TM.get());
   PM.add(TPC);
   PM.add(MMIWP);
-  PM.add(new IRTranslator());
+  PM.add(new IRTranslatorLegacy());
   PM.run(*M);
 
   auto *MMI = &MMIWP->getMMI();

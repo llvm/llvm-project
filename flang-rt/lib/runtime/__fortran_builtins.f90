@@ -108,6 +108,10 @@ module __fortran_builtins
     type(__builtin_dummy_team_descriptor_type), pointer, private :: info => null()
   end type
 
+  type, public, bind(C) :: __builtin_prif_coarray_handle_type
+    type(__builtin_c_ptr), private :: info
+  end type
+
   integer, parameter, public :: __builtin_atomic_int_kind = selected_int_kind(18)
   integer, parameter, public :: &
     __builtin_atomic_logical_kind = __builtin_atomic_int_kind

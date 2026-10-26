@@ -23,12 +23,17 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # Limitations
 #===============================================================================
 
-if (CMAKE_SYSTEM_NAME STREQUAL Windows AND NOT MSVC)
+if (CMAKE_SYSTEM_NAME STREQUAL Windows)
 # Build with other compilers is not configured, not guaranteed and not tested.
+  if (NOT MSVC)
     message(FATAL_ERROR
       "When compiling for Windows, libsycl requires a"
       " version of Microsoft Visual C++ or another compiler"
       " that uses the Visual C++ cl command-line syntax.")
+  endif()
+  if (CMAKE_MSVC_RUNTIME_LIBRARY AND (NOT CMAKE_MSVC_RUNTIME_LIBRARY MATCHES "DLL$"))
+      message(FATAL_ERROR "libsycl requires a DLL version of the MSVC CRT.")
+  endif()
 endif()
 
 #===============================================================================
@@ -127,9 +132,6 @@ install(DIRECTORY "${LIBSYCL_SOURCE_INCLUDE_DIR}/CL" DESTINATION ${LIBSYCL_INCLU
 set(LIBSYCL_LIB_NAME "LLVMSYCL")
 set(LIBSYCL_SHARED_OUTPUT_NAME "${LIBSYCL_LIB_NAME}")
 if (CMAKE_SYSTEM_NAME STREQUAL Windows)
-  if (CMAKE_MSVC_RUNTIME_LIBRARY AND (NOT CMAKE_MSVC_RUNTIME_LIBRARY MATCHES "DLL$"))
-      message(FATAL_ERROR "libsycl requires a DLL version of the MSVC CRT.")
-  endif()
   if ((NOT CMAKE_MSVC_RUNTIME_LIBRARY AND uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG")
       OR (CMAKE_MSVC_RUNTIME_LIBRARY STREQUAL "MultiThreadedDebugDLL"))
     set(LIBSYCL_SHARED_OUTPUT_NAME "${LIBSYCL_SHARED_OUTPUT_NAME}d")

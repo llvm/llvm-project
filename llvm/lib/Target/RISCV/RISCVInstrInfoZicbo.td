@@ -70,6 +70,9 @@ def PREFETCH_W : Prefetch_ri<0b00011, "prefetch.w">, Sched<[]>;
 //===----------------------------------------------------------------------===//
 
 def AddrRegImmLsb00000 : ComplexPattern<iPTR, 2, "SelectAddrRegImmLsb00000">;
+def gi_addr_regimm_lsb00000
+    : GIComplexOperandMatcher<s64, "selectAddrRegImmLsb00000">,
+      GIComplexPatternEquiv<AddrRegImmLsb00000>;
 
 let Predicates = [NoVendorXMIPSCBOP] in {
   def : Pat<(prefetch (AddrRegImmLsb00000 (XLenVT GPR:$rs1), simm12_lsb00000:$imm12),

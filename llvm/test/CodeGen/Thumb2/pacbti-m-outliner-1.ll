@@ -1,5 +1,5 @@
-; RUN: llc --force-dwarf-frame-section --exception-model=arm %s -o - --target-abi=aapcs16 | FileCheck %s
-; RUN: llc --filetype=obj %s --exception-model=arm -o - --target-abi=aapcs16 | llvm-readelf -s --unwind - | FileCheck %s --check-prefix=UNWIND
+; RUN: llc --force-dwarf-frame-section --exception-model=arm %s -o - --target-abi=aapcs16 -mcpu=cortex-m4 | FileCheck %s
+; RUN: llc --filetype=obj %s --exception-model=arm -o - --target-abi=aapcs16 -mcpu=cortex-m4 | llvm-readelf -s --unwind - | FileCheck %s --check-prefix=UNWIND
 target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 
 ; Triple tweaked so we get 16-byte stack alignment and better test coverage.

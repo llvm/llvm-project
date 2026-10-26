@@ -193,7 +193,7 @@ void EHStreamer::computePadMap(
     const LandingPadInfo *LandingPad = LandingPads[i];
     for (unsigned j = 0, E = LandingPad->BeginLabels.size(); j != E; ++j) {
       MCSymbol *BeginLabel = LandingPad->BeginLabels[j];
-      MCSymbol *EndLabel = LandingPad->BeginLabels[j];
+      MCSymbol *EndLabel = LandingPad->EndLabels[j];
       // If we have deleted the code for a given invoke after registering it in
       // the LandingPad label list, the associated symbols will not have been
       // emitted. In that case, ignore this callsite entry.
@@ -267,6 +267,12 @@ void EHStreamer::computeCallSiteTable(
       if (!MI.isEHLabel()) {
         if (MI.isCall())
           SawPotentiallyThrowing |= !callToNoUnwindFunction(&MI);
+        else if (MI.isInlineAsm()) {
+          // An inline asm call may unwind iff it contains the `unwind` keyword.
+          unsigned ExtraInfo =
+              MI.getOperand(InlineAsm::MIOp_ExtraInfo).getImm();
+          SawPotentiallyThrowing |= ExtraInfo & InlineAsm::Extra_MayUnwind;
+        }
         continue;
       }
 

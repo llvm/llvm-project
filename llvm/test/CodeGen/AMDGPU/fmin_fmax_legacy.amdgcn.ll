@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx600 < %s | FileCheck -enable-var-scope -check-prefixes=SI,GCN %s
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -enable-var-scope -check-prefixes=SI,GCN %s
 
-; RUN: llc -mtriple=amdgcn -mcpu=fiji < %s | FileCheck -enable-var-scope -check-prefixes=VI,GCN %s
+; RUN: llc -mtriple=amdgpu8.03 < %s | FileCheck -enable-var-scope -check-prefixes=VI,GCN %s
 
 ; GCN-LABEL: {{^}}min_fneg_select_regression_0:
 ; GCN-NOT: v_mul
@@ -179,7 +179,7 @@ define amdgpu_ps float @select_fneg_a_or_q_cmp_olt_a_neg1(float %a, float %b) #0
 
 ; GCN-LABEL: {{^}}select_fneg_a_or_q_cmp_olt_a_neg1_fast:
 
-; VI-NANN: v_max_f32_e64 v0, -v0, 1.0
+; VI: v_max_f32_e64 v0, -v0, 1.0
 define amdgpu_ps float @select_fneg_a_or_q_cmp_olt_a_neg1_fast(float %a, float %b) #0 {
   %fneg.a = fneg float %a
   %cmp.a = fcmp olt float %a, -1.0

@@ -43,7 +43,7 @@ void ProcessInfo::Clear() {
 }
 
 llvm::StringRef ProcessInfo::GetName() const {
-  return m_executable.GetFilename().GetStringRef();
+  return m_executable.GetFilename();
 }
 
 void ProcessInfo::Dump(Stream &s, Platform *platform) const {
@@ -121,7 +121,7 @@ void ProcessInstanceInfo::Dump(Stream &s, UserIDResolver &resolver) const {
     s.Printf(" parent = %" PRIu64 "\n", GetParentProcessID());
 
   if (m_executable) {
-    s.Printf("   name = %s\n", m_executable.GetFilename().GetCString());
+    s.Format("   name = {0}\n", m_executable.GetFilename());
     s.PutCString("   file = ");
     m_executable.Dump(s.AsRawOstream());
     s.EOL();
@@ -140,7 +140,7 @@ void ProcessInstanceInfo::Dump(Stream &s, UserIDResolver &resolver) const {
   s.Format("{0}", m_environment);
 
   if (m_arch.IsValid()) {
-    s.Printf("   arch = ");
+    s.PutCString("   arch = ");
     m_arch.DumpTriple(s.AsRawOstream());
     s.EOL();
   }

@@ -17,7 +17,7 @@ void test1(int a) {
     test2(a + 1); // third breakpoint
 }
 
-int main(int argc) {
+int main() {
   test2(42);
   test1(23);
   return 0;

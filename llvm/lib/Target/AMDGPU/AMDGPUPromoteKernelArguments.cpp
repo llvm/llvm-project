@@ -110,6 +110,12 @@ bool AMDGPUPromoteKernelArguments::promotePointer(Value *Ptr) {
   if (PT->getAddressSpace() != AMDGPUAS::FLAT_ADDRESS)
     return Changed;
 
+  // The promotion is valid because in the HSA offload model the host populates
+  // kernarg slots at dispatch time and can only supply global-aperture
+  // addresses. Any flat pointer reachable from a kernel argument can therefore
+  // be assumed to be in the global aperture. This also mirrors the assumption
+  // in getAssumedAddrSpace (AMDGPUTargetMachine.cpp) which independently
+  // promotes flat kernel arguments to global via InferAddressSpaces.
   IRBuilder<> B(LI ? &*std::next(cast<Instruction>(Ptr)->getIterator())
                    : ArgCastInsertPt);
 
@@ -199,10 +205,6 @@ INITIALIZE_PASS_END(AMDGPUPromoteKernelArguments, DEBUG_TYPE,
                     "AMDGPU Promote Kernel Arguments", false, false)
 
 char AMDGPUPromoteKernelArguments::ID = 0;
-
-FunctionPass *llvm::createAMDGPUPromoteKernelArgumentsPass() {
-  return new AMDGPUPromoteKernelArguments();
-}
 
 PreservedAnalyses
 AMDGPUPromoteKernelArgumentsPass::run(Function &F,

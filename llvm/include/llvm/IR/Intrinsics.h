@@ -25,15 +25,16 @@
 
 namespace llvm {
 
-class Type;
-class FunctionType;
-class Function;
-class LLVMContext;
-class Module;
+class APInt;
 class AttributeList;
 class AttributeSet;
-class raw_ostream;
 class Constant;
+class Function;
+class FunctionType;
+class LLVMContext;
+class Module;
+class raw_ostream;
+class Type;
 
 /// This namespace contains an enum with a value for every intrinsic/builtin
 /// function known by LLVM. The enum values are returned by
@@ -94,6 +95,15 @@ LLVM_ABI bool isTriviallyScalarizable(ID id);
 
 /// Returns true if the intrinsic has pretty printed immediate arguments.
 LLVM_ABI bool hasPrettyPrintedArgs(ID id);
+
+/// Returns the first default argument index and an ArrayRef of all
+/// default values for the trailing parameters of intrinsic IID.
+/// Returns {0, empty} if the intrinsic has no default arguments.
+///
+/// The defaults are stored contiguously starting at FirstDefault and
+/// extending to the last parameter (mirrors C++ default-argument
+/// rules).
+LLVM_ABI std::pair<unsigned, ArrayRef<uint64_t>> getAllDefaultArgValues(ID IID);
 
 /// isTargetIntrinsic - Returns true if IID is an intrinsic specific to a
 /// certain target. If it is a generic intrinsic false is returned.
@@ -299,6 +309,14 @@ LLVM_ABI bool isSignatureValid(Function *F,
                                SmallVectorImpl<Type *> &OverloadTys,
                                raw_ostream &OS = nulls());
 
+/// Same as previous, but \p FT may omit exactly \p NumMissingTrailingParams
+/// trailing parameters. The omitted parameters must have concrete integer type
+/// so that all overload types can be resolved from the provided signature.
+LLVM_ABI bool isSignatureValid(Intrinsic::ID ID, FunctionType *FT,
+                               SmallVectorImpl<Type *> &OverloadTys,
+                               unsigned NumMissingTrailingParams,
+                               raw_ostream &OS = nulls());
+
 // Checks if the intrinsic name matches with its signature and if not
 // returns the declaration with the same signature and remangled name.
 // An existing GlobalValue with the wanted name but with a wrong prototype
@@ -315,6 +333,13 @@ LLVM_ABI Intrinsic::ID getDeinterleaveIntrinsicID(unsigned Factor);
 /// Print the argument info for the arguments with ArgInfo.
 LLVM_ABI void printImmArg(ID IID, unsigned ArgIdx, raw_ostream &OS,
                           const Constant *ImmArgVal);
+
+LLVM_ABI void printFPClassMask(raw_ostream &OS, const Constant *ImmArgVal);
+
+/// Returns true if \p Value satisfies the range constraints specified for
+/// argument \p ArgIdx of intrinsic \p IID.
+LLVM_ABI bool isImmArgValueInRangeSet(ID IID, unsigned ArgIdx,
+                                      const APInt &Value);
 
 } // namespace Intrinsic
 

@@ -164,6 +164,17 @@ JSONFormat::readLUSummaryEncodingFromObject(const Object &RootObject) {
 llvm::Error
 JSONFormat::writeLUSummaryEncoding(const LUSummaryEncoding &SummaryEncoding,
                                    llvm::StringRef Path) {
+  if (auto Error = writeJSON(luSummaryEncodingToJSON(SummaryEncoding), Path)) {
+    return ErrorBuilder::wrap(std::move(Error))
+        .context(ErrorMessages::WritingToFile, "LUSummary", Path)
+        .build();
+  }
+
+  return llvm::Error::success();
+}
+
+Object JSONFormat::luSummaryEncodingToJSON(
+    const LUSummaryEncoding &SummaryEncoding) const {
   Object RootObject;
 
   RootObject[JSONTypeKey] = JSONTypeValueLUSummary;
@@ -181,13 +192,7 @@ JSONFormat::writeLUSummaryEncoding(const LUSummaryEncoding &SummaryEncoding,
 
   RootObject["data"] = encodingSummaryDataMapToJSON(getData(SummaryEncoding));
 
-  if (auto Error = writeJSON(std::move(RootObject), Path)) {
-    return ErrorBuilder::wrap(std::move(Error))
-        .context(ErrorMessages::WritingToFile, "LUSummary", Path)
-        .build();
-  }
-
-  return llvm::Error::success();
+  return RootObject;
 }
 
 } // namespace clang::ssaf

@@ -12,12 +12,24 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::readability {
 
+TrivialSwitchCheck::TrivialSwitchCheck(StringRef Name,
+                                       ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      IgnoreMacros(Options.get("IgnoreMacros", true)) {}
+
+void TrivialSwitchCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "IgnoreMacros", IgnoreMacros);
+}
+
 void TrivialSwitchCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(switchStmt().bind("switch"), this);
 }
 
 void TrivialSwitchCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Switch = Result.Nodes.getNodeAs<SwitchStmt>("switch");
+  if (IgnoreMacros && Switch->getBeginLoc().isMacroID())
+    return;
+
   std::size_t CaseCount = 0;
   bool HasDefault = false;
 

@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=s390x-linux-gnu -start-before=prologepilog %s -o - -mcpu=z14 \
+# RUN: llc -mtriple=s390x-linux-gnu -start-before=prolog-epilog %s -o - -mcpu=z14 \
 # RUN:   -verify-machineinstrs 2>&1 | FileCheck %s
 #
 # Test that redundant frame addressing anchor points are removed by

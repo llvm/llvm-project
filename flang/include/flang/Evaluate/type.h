@@ -32,7 +32,6 @@
 #include <optional>
 #include <string>
 #include <type_traits>
-#include <variant>
 
 namespace Fortran::semantics {
 class DeclTypeSpec;
@@ -249,6 +248,11 @@ private:
 // Return the DerivedTypeSpec of a DynamicType if it has one.
 const semantics::DerivedTypeSpec *GetDerivedTypeSpec(const DynamicType &);
 const semantics::DerivedTypeSpec *GetDerivedTypeSpec(
+    const std::optional<DynamicType> &);
+// Return the DerivedTypeSpec of a DynamicType if it is an enumeration type,
+// otherwise null.
+const semantics::DerivedTypeSpec *GetEnumerationTypeSpec(const DynamicType &);
+const semantics::DerivedTypeSpec *GetEnumerationTypeSpec(
     const std::optional<DynamicType> &);
 const semantics::DerivedTypeSpec *GetParentTypeSpec(
     const semantics::DerivedTypeSpec &);
@@ -507,6 +511,10 @@ bool IsCUDAIntrinsicType(const DynamicType &);
 bool AreSameDerivedType(
     const semantics::DerivedTypeSpec &, const semantics::DerivedTypeSpec &);
 bool AreSameDerivedTypeIgnoringTypeParameters(
+    const semantics::DerivedTypeSpec &, const semantics::DerivedTypeSpec &);
+// Like AreSameDerivedType, but length type parameters may differ; kind type
+// parameters must still match.
+bool AreSameDerivedTypeIgnoringLengthParameters(
     const semantics::DerivedTypeSpec &, const semantics::DerivedTypeSpec &);
 bool AreSameDerivedTypeIgnoringSequence(
     const semantics::DerivedTypeSpec &, const semantics::DerivedTypeSpec &);

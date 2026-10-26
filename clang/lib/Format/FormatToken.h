@@ -80,6 +80,7 @@ namespace format {
   TYPE(EnumLBrace)                                                             \
   TYPE(EnumRBrace)                                                             \
   TYPE(EnumUnderlyingTypeColon)                                                \
+  TYPE(ExportLBrace)                                                           \
   TYPE(FatArrow)                                                               \
   TYPE(ForEachMacro)                                                           \
   TYPE(FunctionAnnotationRParen)                                               \
@@ -831,7 +832,7 @@ public:
                    tok::kw_decltype, tok::kw_noexcept, tok::kw_static_assert,
                    tok::kw__Atomic,
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) tok::kw___##Trait,
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/BuiltinTraits.inc"
                    tok::kw_requires);
   }
 

@@ -18,7 +18,7 @@ namespace clang::ssaf {
 volatile int AnalysisRegistryAnchorSource = 0;
 } // namespace clang::ssaf
 
-LLVM_DEFINE_REGISTRY(llvm::Registry<AnalysisBase>)
+LLVM_DEFINE_REGISTRY_EX(CLANG_ABI_EXPORT, llvm::Registry<AnalysisBase>)
 
 std::vector<AnalysisName> &AnalysisRegistry::getAnalysisNames() {
   static std::vector<AnalysisName> Names;

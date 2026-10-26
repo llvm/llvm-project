@@ -14,7 +14,6 @@
 #include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
-#include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
@@ -77,11 +76,11 @@ static constexpr char kMaskedloadNeedsMask[] =
 namespace {
 
 struct MaskedLoadLowering final : OpRewritePattern<vector::MaskedLoadOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::MaskedLoadOp maskedOp,
                                 PatternRewriter &rewriter) const override {
-    if (maskedOp->hasAttr(kMaskedloadNeedsMask))
+    if (maskedOp->hasDiscardableAttr(kMaskedloadNeedsMask))
       return rewriter.notifyMatchFailure(maskedOp, "already rewritten");
 
     if (failed(hasBufferAddressSpace(maskedOp.getBase().getType()))) {
@@ -150,7 +149,7 @@ struct MaskedLoadLowering final : OpRewritePattern<vector::MaskedLoadOp> {
 
     auto thenBuilder = [&](OpBuilder &builder, Location loc) {
       Operation *read = builder.clone(*maskedOp.getOperation());
-      read->setAttr(kMaskedloadNeedsMask, builder.getUnitAttr());
+      read->setDiscardableAttr(kMaskedloadNeedsMask, builder.getUnitAttr());
       Value readResult = read->getResult(0);
       scf::YieldOp::create(builder, loc, readResult);
     };
@@ -172,7 +171,7 @@ struct MaskedLoadLowering final : OpRewritePattern<vector::MaskedLoadOp> {
 
 struct FullMaskedLoadToConditionalLoad
     : OpRewritePattern<vector::MaskedLoadOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::MaskedLoadOp loadOp,
                                 PatternRewriter &rewriter) const override {
@@ -204,7 +203,7 @@ struct FullMaskedLoadToConditionalLoad
 
 struct FullMaskedStoreToConditionalStore
     : OpRewritePattern<vector::MaskedStoreOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::MaskedStoreOp storeOp,
                                 PatternRewriter &rewriter) const override {

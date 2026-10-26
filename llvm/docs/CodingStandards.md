@@ -1,8 +1,5 @@
 # LLVM Coding Standards
 
-```{contents}
-:local:
-```
 
 ## Introduction
 
@@ -57,7 +54,7 @@ code and avoid unnecessary vendor-specific extensions.
 
 Nevertheless, we restrict ourselves to features which are available in the
 major toolchains supported as host compilers (see {doc}`GettingStarted` page,
-section [Software](project:GettingStarted.md#software)).
+section [Software](GettingStarted.md#software)).
 
 Each toolchain provides a good reference for what it accepts:
 
@@ -109,7 +106,7 @@ subjects is available in the {doc}`ProgrammersManual`.
 For more information about LLVM's data structures and the tradeoffs they make,
 please consult [that section of the programmer's manual].
 
-[that section of the programmer's manual]: https://llvm.org/docs/ProgrammersManual.html#picking-the-right-data-structure-for-a-task
+[that section of the programmer's manual]: ProgrammersManual.md#picking-the-right-data-structure-for-a-task
 
 ### Python version and Source Code Formatting
 
@@ -582,7 +579,7 @@ or RTTI ([runtime type information], for example,
 [runtime type information]: https://en.wikipedia.org/wiki/Run-time_type_information
 
 That said, LLVM does make extensive use of a hand-rolled form of RTTI that use
-templates like [isa<>, cast<>, and dyn_cast<>](project:ProgrammersManual.md#the-isa-cast-and-dyn-cast-templates).
+templates like [isa<>, cast<>, and dyn_cast<>](ProgrammersManual.md#the-isa-cast-and-dyn-cast-templates).
 This form of RTTI is opt-in and can be
 {doc}`added to any class <HowToSetUpLLVMStyleRTTI>`.
 
@@ -606,7 +603,31 @@ rather than C-style casts. There are two exceptions to this:
 
 Static constructors and destructors (e.g., global variables whose types have a
 constructor or destructor) should not be added to the code base, and should be
-removed wherever possible.
+removed wherever possible. Global constants (including static variables defined
+in functions) should be `constexpr` where possible to avoid inadvertant startup
+overhead.
+
+```c++
+// Avoid: this will cause the string to be constructed in a global constructor
+// and be destructed in a global destructor. The same applies for global/static
+// maps, sets, etc.
+static std::string VeryBad = "abc123";
+
+struct BadWrapInt {
+  int x;
+  BadWrapInt(int x) : x(x) {}
+};
+// Avoid: the BadWrapInt constructor is not constexpr and this will cause the
+// initialization of Bad in a global constructor.
+static const BadWrapInt Bad(1);
+
+struct GoodWrapInt {
+  int x;
+  constexpr GoodWrapInt(int x) : x(x) {}
+};
+// Ok.
+static constexpr GoodWrapInt Good(1);
+```
 
 Globals in different source files are initialized in an [arbitrary order],
 making the code more
@@ -618,6 +639,44 @@ Static constructors have a negative impact on the launch time of programs that u
 LLVM as a library. We would really like for there to be zero cost for linking
 in an additional LLVM target or other library into an application, but static
 constructors undermine this goal.
+
+#### Avoid Pointers in Global/Static Constants
+
+Static constants that contain non-null pointers should be avoided, especially
+for large or frequently used data structures.
+
+All static constants that contain pointers need to be relocated on every startup
+when LLVM is built as position-independent code, increasing startup times and
+memory usage.
+
+```c++
+// Avoid: StringRef stores pointers to string; this array needs to be touched
+// on every startup (typically 32 bytes).
+static constexpr StringRef Bad1[] = {"abc", "def"};
+
+// Avoid: likewise (typically 16 bytes).
+static const char *const Bad2[] = {"abc", "def"};
+
+// Avoid: this is a mutable array!
+static const char *ReallyBad[] = {"abc", "def"};
+
+// Ok.
+static constexpr char OkStorage[] = "\0abc\0def";
+StringRef getOk(StringTable::Offset Off) { return StringTable(OkStorage)[Off]; }
+// Avoid: StringTable itself is just a wrapper around StringRef.
+extern constexpr StringTable Bad3(OkStorage);
+
+// Avoid.
+struct KeyValue {
+  const char *Key;
+  unsigned Value;
+};
+static constexpr KeyValue KVs[] = {{"abc", 1}, {"def", 2}};
+
+// Ok.
+constexpr EnumStringDef<unsigned> KVDefs[] = {{{"abc"}, 1}, {{"def"}, 2}};
+static constexpr auto KVs = BUILD_ENUM_STRINGS(KVDefs);
+```
 
 #### Use of `class` and `struct` Keywords
 
@@ -695,6 +754,8 @@ If you use a braced initializer list when initializing a variable, use an equals
 ```c++
 int data[] = {0, 1, 2, 3};
 ```
+
+(use-auto-type-deduction)=
 
 #### Use `auto` Type Deduction to Make Code More Readable
 
@@ -840,10 +901,10 @@ If you really need to do something like this, put a private header file in the
 same directory as the source files, and include it locally.  This ensures that
 your private interface remains private and undisturbed by outsiders.
 
-```{note}
+:::{note}
 It's okay to put extra implementation methods in a public class itself. Just
 make them private (or protected) and all is well.
-```
+:::
 
 #### Use Namespace Qualifiers to Define Previously Declared Symbols
 
@@ -1438,10 +1499,10 @@ problematic in this regard --- just `<iostream>`. However, `raw_ostream`
 provides various APIs that are better performing for almost every use than
 `std::ostream` style APIs.
 
-```{note}
+:::{note}
 New code should always use {ref}`raw_ostream <raw_ostream>` for writing, or the
 `llvm::MemoryBuffer` API for reading files.
-```
+:::
 
 (raw_ostream)=
 
@@ -1652,6 +1713,8 @@ static void runHelper() {
   ...
 }
 ```
+
+(don-t-use-braces-on-simple-single-statement-bodies-of-if-else-loop-statements)=
 
 #### Don't Use Braces on Simple Single-Statement Bodies of if/else/loop Statements
 

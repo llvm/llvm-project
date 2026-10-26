@@ -17,6 +17,7 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/IndexedMap.h"
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSet.h"
@@ -42,6 +43,7 @@
 namespace llvm {
 
 class PSetIterator;
+class VirtRegMap;
 
 /// Convenient type to represent either a register class or a register bank.
 using RegClassOrRegBank =
@@ -118,6 +120,12 @@ private:
   /// Hold the register properties that are used to populate the VirtRegMap
   /// pass when deserializing from .mir files.
   SmallVector<PendingVirtRegMapEntry, 0> PendingVirtRegMapEntries;
+
+  /// AntiHintRegs - This vector records register anti-hints for
+  /// virtual registers. For each virtual register, it keeps a vector of virtual
+  /// registers that should NOT be allocated to the same or overlapping physical
+  /// registers.
+  IndexedMap<SmallVector<Register, 4>, VirtReg2IndexFunctor> AntiHintRegs;
 
   /// PhysRegUseDefLists - This is an array of the head of the use/def list for
   /// physical registers.
@@ -636,12 +644,19 @@ public:
   /// getVRegDef - Return the machine instr that defines the specified virtual
   /// register or null if none is found.  This assumes that the code is in SSA
   /// form, so there should only be one definition.
-  LLVM_ABI MachineInstr *getVRegDef(Register Reg) const;
+  LLVM_ABI LLVM_READONLY MachineInstr *getVRegDef(Register Reg) const;
 
   /// getUniqueVRegDef - Return the unique machine instr that defines the
   /// specified virtual register or null if none is found.  If there are
   /// multiple definitions or no definition, return null.
-  LLVM_ABI MachineInstr *getUniqueVRegDef(Register Reg) const;
+  LLVM_ABI LLVM_READONLY MachineInstr *getUniqueVRegDef(Register Reg) const;
+
+  /// Return the machine basic block in which the specified virtual register is
+  /// defined, or null if it has no definition. This assumes SSA form.
+  MachineBasicBlock *getDefBlock(Register Reg) const {
+    MachineInstr *DefMI = getVRegDef(Reg);
+    return DefMI ? DefMI->getParent() : nullptr;
+  }
 
   /// clearKillFlags - Iterate over all the uses of the given register and
   /// clear the kill flag from the MachineOperand. This function is used by
@@ -816,6 +831,12 @@ public:
   /// getNumVirtRegs - Return the number of virtual registers created.
   unsigned getNumVirtRegs() const { return VRegInfo.size(); }
 
+  /// Reserve space for at least \p NumVirtRegs virtual registers.
+  void reserveVirtRegs(unsigned NumVirtRegs) {
+    VRegInfo.reserve(NumVirtRegs);
+    VRegToType.reserve(NumVirtRegs);
+  }
+
   /// clearVirtRegs - Remove all virtual registers (after physreg assignment).
   LLVM_ABI void clearVirtRegs();
 
@@ -899,6 +920,51 @@ public:
     return RegAllocHints.inBounds(VReg) ? &RegAllocHints[VReg] : nullptr;
   }
 
+  /// Add a register allocation anti-hint for the specified virtual register.
+  /// This tells the allocator to avoid allocating VReg to the same physical
+  /// register as AntiHintVReg (or overlapping ones).
+  void addRegAllocationAntiHint(Register VReg, Register AntiHintVReg) {
+    assert(VReg.isVirtual() && AntiHintVReg.isVirtual() &&
+           "Anti-hints and anti-hint targets are only for virtual registers");
+    AntiHintRegs.grow(VReg);
+    SmallVector<Register, 4> &AntiHints = AntiHintRegs[VReg];
+    // Avoid duplicates.
+    if (!is_contained(AntiHints, AntiHintVReg))
+      AntiHints.push_back(AntiHintVReg);
+  }
+
+  /// Add multiple anti-hints at once.
+  void addRegAllocationAntiHints(Register VReg,
+                                 ArrayRef<Register> AntiHintVRegs) {
+    for (Register AntiHint : AntiHintVRegs)
+      addRegAllocationAntiHint(VReg, AntiHint);
+  }
+
+  /// Clear all anti-hints for a register.
+  void clearRegAllocationAntiHints(Register VReg) {
+    assert(VReg.isVirtual() && "Anti-hints are only for virtual registers");
+    if (AntiHintRegs.inBounds(VReg))
+      AntiHintRegs[VReg].clear();
+  }
+
+  /// Return the vector of anti-hints for VReg.
+  ArrayRef<Register> getRegAllocationAntiHints(Register VReg) const {
+    assert(VReg.isVirtual() && "Anti-hints are only for virtual registers");
+    if (!AntiHintRegs.inBounds(VReg))
+      return ArrayRef<Register>();
+    return AntiHintRegs[VReg];
+  }
+
+  /// Check if VReg has AntiHintVReg as an anti-hint.
+  bool hasRegAllocationAntiHint(Register VReg, Register AntiHintVReg) const {
+    assert(VReg.isVirtual() && AntiHintVReg.isVirtual() &&
+           "Anti-hints and anti-hint targets are only for virtual registers");
+    if (!AntiHintRegs.inBounds(VReg))
+      return false;
+    const SmallVector<Register, 4> &AntiHints = AntiHintRegs[VReg];
+    return is_contained(AntiHints, AntiHintVReg);
+  }
+
   /// markUsesInDebugValueAsUndef - Mark every DBG_VALUE referencing the
   /// specified register as undefined which causes the DBG_VALUE to be
   /// deleted during LiveDebugVariables analysis.
@@ -906,31 +972,8 @@ public:
 
   /// updateDbgUsersToReg - Update a collection of debug instructions
   /// to refer to the designated register.
-  void updateDbgUsersToReg(MCRegister OldReg, MCRegister NewReg,
-                           ArrayRef<MachineInstr *> Users) const {
-    // If this operand is a register, check whether it overlaps with OldReg.
-    // If it does, replace with NewReg.
-    auto UpdateOp = [this, &NewReg, &OldReg](MachineOperand &Op) {
-      if (Op.isReg() &&
-          getTargetRegisterInfo()->regsOverlap(Op.getReg(), OldReg))
-        Op.setReg(NewReg);
-    };
-
-    // Iterate through (possibly several) operands to DBG_VALUEs and update
-    // each. For DBG_PHIs, only one operand will be present.
-    for (MachineInstr *MI : Users) {
-      if (MI->isDebugValue()) {
-        for (auto &Op : MI->debug_operands())
-          UpdateOp(Op);
-        assert(MI->hasDebugOperandForReg(NewReg) &&
-               "Expected debug value to have some overlap with OldReg");
-      } else if (MI->isDebugPHI()) {
-        UpdateOp(MI->getOperand(0));
-      } else {
-        llvm_unreachable("Non-DBG_VALUE, Non-DBG_PHI debug instr updated");
-      }
-    }
-  }
+  LLVM_ABI void updateDbgUsersToReg(MCRegister OldReg, MCRegister NewReg,
+                                    ArrayRef<MachineInstr *> Users) const;
 
   /// Return true if the specified register is modified in this function.
   /// This checks that no defining machine operands exist for the register or

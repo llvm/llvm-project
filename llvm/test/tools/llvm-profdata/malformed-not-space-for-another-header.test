@@ -57,7 +57,6 @@ RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\1\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
-RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 
 RUN: printf '\023\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\3\0foo\0\0\0' >> %t.profraw
