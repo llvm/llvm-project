@@ -36,6 +36,47 @@ TEST(GetParents, ReturnsParentForStmt) {
                              ifStmt(hasParent(compoundStmt()))));
 }
 
+TEST(GetParents, PreservesSharedInitializerEdges) {
+  auto AST = tooling::buildASTFromCodeWithArgs(R"c(
+    struct V { const struct V *child; };
+    void f(void) {
+      struct V value = {.child = (struct V[]){{.child = 0}}};
+    }
+  )c",
+                                               {"-std=c99"}, "input.c");
+  ASSERT_TRUE(AST);
+  auto &Ctx = AST->getASTContext();
+  auto Variables = match(varDecl(hasName("value")).bind("value"), Ctx);
+  ASSERT_EQ(Variables.size(), 1u);
+  const auto *Variable = Variables.front().getNodeAs<VarDecl>("value");
+  const auto *Init =
+      dyn_cast<InitListExpr>(Variable->getInit()->IgnoreImplicit());
+  ASSERT_TRUE(Init);
+  ASSERT_TRUE(Init->getSyntacticForm());
+  const auto *Designator =
+      dyn_cast<DesignatedInitExpr>(Init->getSyntacticForm()->getInit(0));
+  ASSERT_TRUE(Designator);
+  const auto *Shared = Init->getInit(0);
+  ASSERT_EQ(Shared, Designator->getInit());
+
+  // The syntactic and semantic forms both reference this expression.
+  EXPECT_THAT(Ctx.getParents(*Shared),
+              testing::UnorderedElementsAre(DynTypedNode::create(*Init),
+                                            DynTypedNode::create(*Designator)));
+  // Skipping the repeated traversal must not lose its descendants' parents.
+  const Expr *Descendant = Shared;
+  while (const auto *Cast = dyn_cast<ImplicitCastExpr>(Descendant)) {
+    const Expr *Child = Cast->getSubExpr();
+    EXPECT_THAT(Ctx.getParents(*Child),
+                ElementsAre(DynTypedNode::create(*Descendant)));
+    Descendant = Child;
+  }
+  const auto *Literal = dyn_cast<CompoundLiteralExpr>(Descendant);
+  ASSERT_TRUE(Literal);
+  EXPECT_THAT(Ctx.getParents(*Literal->getInitializer()),
+              ElementsAre(DynTypedNode::create(*Literal)));
+}
+
 TEST(GetParents, ReturnsParentForTypeLoc) {
   MatchVerifier<TypeLoc> Verifier;
   EXPECT_TRUE(

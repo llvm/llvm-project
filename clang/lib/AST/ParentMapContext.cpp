@@ -460,6 +460,11 @@ private:
   // Using generic TraverseNode for Stmt would prevent data-recursion.
   bool dataTraverseStmtPre(Stmt *StmtNode) {
     addParent(StmtNode, &Map.PointerParents);
+    // Shared statements can have several parents, but their outgoing edges
+    // do not depend on the path used to reach them. Record every incoming
+    // edge before skipping descendants already included in the parent map.
+    if (!TraversedStmts.insert(StmtNode).second)
+      return false;
     ParentStack.push_back(DynTypedNode::create(*StmtNode));
     return true;
   }
@@ -469,6 +474,7 @@ private:
   }
 
   ParentMap &Map;
+  llvm::SmallPtrSet<Stmt *, 32> TraversedStmts;
   llvm::SmallVector<DynTypedNode, 16> ParentStack;
 };
 
