@@ -16,6 +16,10 @@
 
 namespace llvm {
 
+// DWARFUnit is intentionally not forward-declared here: the printers in this
+// header must not depend on DWARFUnit, so that users of them do not link
+// DWARFUnit and DWARFContext. Printers that resolve base type references
+// through a DWARFUnit live in DWARFExpressionUnit.h.
 struct DIDumpOptions;
 class raw_ostream;
 
