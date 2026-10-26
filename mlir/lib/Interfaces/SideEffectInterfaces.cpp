@@ -46,7 +46,7 @@ bool mlir::isOpTriviallyDead(Operation *op) {
 /// The caller must also check nested effects when `hasRecursiveEffects` is
 /// true. This function does not check uses or restrictions on erasing
 /// terminators and symbols.
-static bool hasOnlyDeadEffects(Operation *op, bool hasRecursiveEffects) {
+static bool hasOnlyRemovableEffects(Operation *op, bool hasRecursiveEffects) {
   if (auto effectInterface = dyn_cast<MemoryEffectOpInterface>(op)) {
     SmallVector<MemoryEffects::EffectInstance, 1> effects;
     effectInterface.getEffects(effects);
@@ -109,7 +109,7 @@ static bool wouldOpBeTriviallyDeadImpl(
       }
     }
     bool recursive = op->hasTrait<OpTrait::HasRecursiveMemoryEffects>();
-    if (cachedAlive || !hasOnlyDeadEffects(op, recursive)) {
+    if (cachedAlive || !hasOnlyRemovableEffects(op, recursive)) {
       // One live effect keeps every ancestor up to the root live. The
       // remaining subtrees cannot change the answer.
       if (cache) {
