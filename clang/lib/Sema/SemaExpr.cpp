@@ -21258,16 +21258,14 @@ static void FixDependencyOfIdExpressionsInLambdaWithDependentObjectParameter(
       bool IsDependentObjectParam = [&]() {
         const ParmVarDecl *ObjectParamDecl = MD->getParamDecl(0);
         assert(ObjectParamDecl && "Shall explicit object parameter exist here.");
-        QualType ObjectParamType = ObjectParamDecl->getType();
+
         // If we are in the middle of instantiation, try to use
         // the real type of the deduced explicit object parameter.
-        if (auto *CIS = SemaRef.CurrentInstantiationScope) {
-          if (auto *Inst = CIS->getInstantiationOfIfExists(ObjectParamDecl)) {
-            auto *Deduced = dyn_cast<ParmVarDecl>(Inst->dyn_cast<Decl *>());
-            assert(Deduced);
-            ObjectParamType = Deduced->getType();
-          }
-        }
+        QualType ObjectParamType = ObjectParamDecl->getType();
+        if (auto *CIS = SemaRef.CurrentInstantiationScope)
+          if (auto *Inst = CIS->getInstantiationOfIfExists(ObjectParamDecl))
+            ObjectParamType = cast<ParmVarDecl>(cast<Decl *>(*Inst))->getType();
+        
         return ObjectParamType->isDependentType();
       }();
 
