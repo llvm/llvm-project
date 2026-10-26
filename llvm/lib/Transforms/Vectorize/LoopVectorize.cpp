@@ -5187,7 +5187,8 @@ bool LoopVectorizationPlanner::planForEpilogueTF() {
     return false;
   }
 
-  if (EpilogueTfCM.getTailFoldingStyle() != TailFoldingStyle::DataAndControlFlow) {
+  if (EpilogueTfCM.getTailFoldingStyle() !=
+      TailFoldingStyle::DataAndControlFlow) {
     reportVectorizationInfo("Right now tail-folded epilogue is supported only "
                             "for DataAndControlFlow tail-folding style.",
                             "InvalidTailFoldedEpilogue", ORE, OrigLoop);

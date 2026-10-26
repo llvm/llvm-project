@@ -3,13 +3,11 @@
 
 ; RUN: opt -S -p loop-vectorize -mattr=+sve -force-vector-width=16 \
 ; RUN: -epilogue-tail-folding-policy=prefer-fold-tail \
-; RUN: -epilogue-vectorization-force-VF=8 \
-; RUN: -force-tail-folding-style=data-and-control %s | FileCheck %s
+; RUN: -epilogue-vectorization-force-VF=8 %s | FileCheck %s
 
 ; RUN: opt -S -p loop-vectorize -mattr=+sve -force-vector-width="vscale x 16" \
 ; RUN: -epilogue-tail-folding-policy=prefer-fold-tail \
-; RUN: -epilogue-vectorization-force-VF="vscale x 8" \
-; RUN: -force-tail-folding-style=data-and-control %s | FileCheck %s \
+; RUN: -epilogue-vectorization-force-VF="vscale x 8" %s | FileCheck %s \
 ; RUN: --check-prefix=CHECK-VS
 
 ; RUN: opt -S -p loop-vectorize -debug-only=loop-vectorize \
