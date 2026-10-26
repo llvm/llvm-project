@@ -1184,8 +1184,6 @@ bool AVRExpandPseudo::expand<AVR::STWPtrRr>(Block &MBB, BlockIt MBBI) {
   bool SrcIsKill = MI.getOperand(1).isKill();
   const AVRSubtarget &STI = MBB.getParent()->getSubtarget<AVRSubtarget>();
 
-  // TODO: Need to reverse this order like inw and stsw?
-
   if (STI.hasTinyEncoding()) {
     // Handle this case in the expansion of STDWPtrQRr because it is very
     // similar.
@@ -1379,10 +1377,34 @@ bool AVRExpandPseudo::expand<AVR::STDSPQRr>(Block &MBB, BlockIt MBBI) {
 
   assert(STI.getFrameLowering()->hasReservedCallFrame(MF) &&
          "unexpected STDSPQRr pseudo instruction");
-  (void)STI;
 
-  MI.setDesc(TII->get(AVR::STDPtrQRr));
-  MI.getOperand(0).setReg(AVR::R29R28);
+  if (STI.hasTinyEncoding()) {
+    // Reduced tiny cores don't support std, so emulate it with a plain store
+    // and pointer adjustments.
+    unsigned Imm = MI.getOperand(1).getImm();
+    Register SrcReg = MI.getOperand(2).getReg();
+    bool SrcIsKill = MI.getOperand(2).isKill();
+
+    if (Imm != 0)
+      buildMI(MBB, MBBI, AVR::SUBIWRdK, AVR::R29R28)
+          .addReg(AVR::R29R28, RegState::Kill)
+          .addImm(0x10000 - Imm);
+
+    buildMI(MBB, MBBI, AVR::STPtrRr)
+        .addReg(AVR::R29R28, RegState::Kill)
+        .addReg(SrcReg, getKillRegState(SrcIsKill))
+        .setMemRefs(MI.memoperands());
+
+    if (Imm != 0)
+      buildMI(MBB, std::next(MBBI), AVR::SUBIWRdK, AVR::R29R28)
+          .addReg(AVR::R29R28, RegState::Kill)
+          .addImm(Imm);
+
+    MI.eraseFromParent();
+  } else {
+    MI.setDesc(TII->get(AVR::STDPtrQRr));
+    MI.getOperand(0).setReg(AVR::R29R28);
+  }
 
   return true;
 }
@@ -2554,8 +2576,9 @@ bool AVRExpandPseudo::expand<AVR::SPREAD>(Block &MBB, BlockIt MBBI) {
     auto MI0 =
         buildMI(MBB, MBBI, AVR::EORRdRr)
             .addReg(DstHiReg, RegState::Define | getDeadRegState(DstIsDead))
-            .addReg(DstHiReg, RegState::Kill)
-            .addReg(DstHiReg);
+            .addReg(DstHiReg, RegState::Kill | RegState::Undef)
+            .addReg(DstHiReg, RegState::Kill | RegState::Undef);
+
     // SREG is implicitly dead.
     MI0->getOperand(3).setIsDead();
   }
@@ -2627,10 +2650,15 @@ template <> bool AVRExpandPseudo::expand<AVR::FRMSP>(Block &MBB, BlockIt MBBI) {
   Register ASOPointer = MI.getOperand(0).getReg();
   int64_t ASOAlignment = MI.getOperand(1).getImm();
 
+  // Note: `FrameReg` is an out-param here - passing `ASOPointer` instead would
+  // overwrite the register we are supposed to write the aligned stack address
+  // into.
+  Register FrameReg;
+
   StackOffset ASOOffset =
       MF.getSubtarget<AVRSubtarget>()
           .getFrameLowering()
-          ->getFrameIndexReference(MF, AFI->AlignedStackObjectIdx, ASOPointer);
+          ->getFrameIndexReference(MF, AFI->AlignedStackObjectIdx, FrameReg);
 
   TII->copyPhysReg(MBB, MI, DL, ASOPointer, AVR::R29R28, false, false, false);
 
