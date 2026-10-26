@@ -86,6 +86,9 @@ def NVVM_Dialect : Dialect {
                                            unsigned regionIndex,
                                            unsigned argIndex,
                                            NamedAttribute argAttr) override;
+
+    /// Register the attributes of this dialect.
+    void registerAttributes();
   }];
 
   let useDefaultAttributePrinterParser = 1;
