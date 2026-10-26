@@ -94,3 +94,36 @@ entry:
   %obit = extractvalue {i32, i1} %t, 1
   ret i1 %obit
 }
+
+define {i64, i1} @usubo_i64(i64 %v1, i64 %v2) nounwind {
+; CHECK-LABEL: usubo_i64:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    suba.l #12, %sp
+; CHECK-NEXT:    movem.l %d2-%d4, (0,%sp) ; 16-byte Folded Spill
+; CHECK-NEXT:    move.l (16,%sp), %a0
+; CHECK-NEXT:    move.l (28,%sp), %d0
+; CHECK-NEXT:    move.l (20,%sp), %d1
+; CHECK-NEXT:    move.l (24,%sp), %d2
+; CHECK-NEXT:    move.l %d2, %d3
+; CHECK-NEXT:    sub.l (32,%sp), %d3
+; CHECK-NEXT:    move.w %sr, -(%sp)
+; CHECK-NEXT:    move.l %d1, %d4
+; CHECK-NEXT:    move.w (%sp)+, %ccr
+; CHECK-NEXT:    subx.l %d0, %d4
+; CHECK-NEXT:    move.l %d4, (%a0)
+; CHECK-NEXT:    move.l %d3, (4,%a0)
+; CHECK-NEXT:    sub.l %d3, %d2
+; CHECK-NEXT:    subx.l %d4, %d1
+; CHECK-NEXT:    scs %d0
+; CHECK-NEXT:    and.b #1, %d0
+; CHECK-NEXT:    move.b %d0, (8,%a0)
+; CHECK-NEXT:    move.l %a0, %d0
+; CHECK-NEXT:    movem.l (0,%sp), %d2-%d4 ; 16-byte Folded Reload
+; CHECK-NEXT:    adda.l #12, %sp
+; CHECK-NEXT:    move.l (%sp), %a1
+; CHECK-NEXT:    adda.l #4, %sp
+; CHECK-NEXT:    move.l %a1, (%sp)
+; CHECK-NEXT:    rts
+  %t = call {i64, i1} @llvm.usub.with.overflow.i64(i64 %v1, i64 %v2)
+  ret {i64, i1} %t
+}
