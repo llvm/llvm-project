@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 %s -fsyntax-only --embed-dir=%S/Inputs -verify -Wno-c23-extensions
 // RUN: %clang_cc1 %s -fsyntax-only --embed-dir=%S/Inputs -verify -fexperimental-new-constant-interpreter -Wno-c23-extensions
+// RUN: %clang_cc1 %s -ast-dump -ast-dump-filter=ctor_list --embed-dir=%S/Inputs -Wno-c23-extensions | FileCheck %s
 // expected-no-diagnostics
 
 constexpr int value(int a, int b) {
@@ -104,3 +105,29 @@ constexpr struct Wrapper W = {
 };
 
 static_assert(W.d.h[2] == '3');
+
+struct X {
+  template <typename... T>
+  constexpr X(T... t) : sum((0 + ... + int(t))), size(sizeof...(T)) {}
+  int sum;
+  int size;
+};
+
+// CHECK: CXXConstructExpr {{.*}} 'const X' 'void (int, int)' list
+// CHECK-NEXT: EmbedExpr {{.*}} 'int'
+// CHECK-NEXT: begin: 0
+// CHECK-NEXT: number of elements: 1
+// CHECK-NEXT: EmbedExpr {{.*}} 'int'
+// CHECK-NEXT: begin: 1
+// CHECK-NEXT: number of elements: 1
+constexpr X ctor_list = {
+#embed <jk.txt>
+};
+static_assert(ctor_list.size == 2);
+static_assert(ctor_list.sum == ExpectedValue);
+
+constexpr X ctor_paren(
+#embed <jk.txt>
+);
+static_assert(ctor_paren.size == 2);
+static_assert(ctor_paren.sum == ExpectedValue);

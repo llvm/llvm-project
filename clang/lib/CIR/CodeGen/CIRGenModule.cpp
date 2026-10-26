@@ -1033,8 +1033,8 @@ LangAS CIRGenModule::getGlobalVarAddressSpace(const VarDecl *d) {
     return LangAS::cuda_device;
   }
 
-  if (langOpts.OpenMP)
-    errorNYI("OpenMP global address space");
+  if (langOpts.OpenMP && d && d->hasAttr<OMPAllocateDeclAttr>())
+    errorNYI(d->getSourceRange(), "OpenMP global address space");
 
   return getTargetCIRGenInfo().getGlobalVarAddressSpace(*this, d);
 }
