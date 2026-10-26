@@ -39,6 +39,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
+#include <array>
 #include <numeric>
 #include <optional>
 #include <queue>
@@ -157,6 +158,13 @@ private:
   bool foldBitcastOfVPLoad(Instruction &I);
   bool foldBitOrderReverseAndSwap(Instruction &I);
   bool shrinkType(Instruction &I);
+  using LoadPair = std::pair<LoadInst *, LoadInst *>;
+  bool collectShuffleLoadConcats(ShuffleVectorInst *Root,
+                                 std::array<LoadPair, 2> &Pairs,
+                                 SmallVectorImpl<int> &ResultMask) const;
+  bool canFoldLoadConcat(LoadPair In, FixedVectorType *InputTy) const;
+  bool foldShuffleOfLoadConcatsFromLoad(Instruction &I);
+  bool foldShuffleOfLoadConcats(Instruction &I);
   bool shrinkLoadForShuffles(Instruction &I);
   bool shrinkPhiOfShuffles(Instruction &I);
   bool foldInterleaveOfDeinterleaveChains(Instruction &I);
@@ -3665,6 +3673,194 @@ static InstLane lookThroughShuffles(Value *V, int Lane) {
   return InstLane{V, Lane};
 }
 
+/// Find the two adjacent load pairs that form the inputs of one shuffle.
+bool VectorCombine::collectShuffleLoadConcats(
+    ShuffleVectorInst *Root, std::array<LoadPair, 2> &Pairs,
+    SmallVectorImpl<int> &ResultMask) const {
+  SmallVector<InstLane> Lanes;
+  SmallVector<LoadInst *, 4> Sources;
+  for (unsigned Lane = 0, E = Root->getShuffleMask().size(); Lane != E;
+       ++Lane) {
+    auto IL = lookThroughShuffles(Root, Lane);
+    if (isa_and_nonnull<PoisonValue>(IL.first))
+      IL = {nullptr, PoisonMaskElem};
+    if (IL.first) {
+      auto *LI = dyn_cast<LoadInst>(IL.first);
+      if (!LI || !LI->isSimple() || LI->getParent() != Root->getParent())
+        return false;
+      if (!is_contained(Sources, LI))
+        Sources.push_back(LI);
+    }
+    Lanes.push_back(IL);
+  }
+  // Each of the two shuffle inputs concatenates two source loads.
+  if (Sources.size() != 2 * Pairs.size())
+    return false;
+  auto *Ty = dyn_cast<FixedVectorType>(Sources.front()->getType());
+  if (!Ty || any_of(Sources, [&](LoadInst *L) { return L->getType() != Ty; }))
+    return false;
+  auto *ConcatTy = FixedVectorType::getDoubleElementsVectorType(Ty);
+  if (Root->getType() != ConcatTy || !TTI.isTypeLegal(ConcatTy))
+    return false;
+
+  struct LoadInfo {
+    LoadInst *Load;
+    Value *Base;
+    int64_t Offset;
+  };
+  SmallVector<LoadInfo, 4> Loads;
+  for (LoadInst *L : Sources) {
+    int64_t Offset;
+    Value *Base =
+        GetPointerBaseWithConstantOffset(L->getPointerOperand(), Offset, *DL);
+    Loads.push_back({L, Base, Offset});
+  }
+  // Keep the first address stream first, then order loads by offset.
+  Value *FirstBase = Loads.front().Base;
+  stable_sort(Loads, [FirstBase](const LoadInfo &A, const LoadInfo &B) {
+    if ((A.Base == FirstBase) != (B.Base == FirstBase))
+      return A.Base == FirstBase;
+    return A.Offset < B.Offset;
+  });
+  for (LoadPair &Pair : Pairs) {
+    LoadInfo Low = Loads.front();
+    Loads.erase(Loads.begin());
+    auto Next = find_if(Loads, [&](const LoadInfo &L) {
+      return L.Base == Low.Base && uint64_t(L.Offset) - uint64_t(Low.Offset) ==
+                                       DL->getTypeStoreSize(Ty);
+    });
+    if (Next == Loads.end())
+      return false;
+    Pair = {Low.Load, Next->Load};
+    Loads.erase(Next);
+  }
+
+  for (auto [V, Lane] : Lanes) {
+    int M = PoisonMaskElem;
+    if (V) {
+      for (auto [Index, Pair] : enumerate(Pairs)) {
+        if (V == Pair.first)
+          M = Index * ConcatTy->getNumElements() + Lane;
+        else if (V == Pair.second)
+          M = Index * ConcatTy->getNumElements() + Ty->getNumElements() + Lane;
+      }
+      assert(M != PoisonMaskElem && "Unmapped source lane");
+    }
+    ResultMask.push_back(M);
+  }
+  return true;
+}
+
+/// Conservatively check load-folding opportunities for code size.
+/// These checks do not guarantee that codegen combines the loads.
+bool VectorCombine::canFoldLoadConcat(LoadPair In,
+                                     FixedVectorType *InputTy) const {
+  auto *Low = In.first;
+  auto *High = In.second;
+  uint64_t WideSize = DL->getTypeStoreSize(InputTy);
+  if (WideSize != DL->getTypeStoreSize(Low->getType()) +
+                      DL->getTypeStoreSize(High->getType()) ||
+      Low->getPointerAddressSpace() != High->getPointerAddressSpace())
+    return false;
+  unsigned Fast = 0;
+  if (Low->getAlign().value() < WideSize &&
+      (!TTI.allowsMisalignedMemoryAccesses(
+           In.first->getContext(), DL->getTypeSizeInBits(InputTy),
+           Low->getPointerAddressSpace(), Low->getAlign(), &Fast) ||
+       !Fast))
+    return false;
+  auto *First = Low, *Last = High;
+  if (Last->comesBefore(First))
+    std::swap(First, Last);
+  MemoryLocation Loc(Low->getPointerOperand(), LocationSize::precise(WideSize));
+  auto Begin = std::next(First->getIterator());
+  auto End = Last->getIterator();
+  if (isMemModifiedBetween(Opts, Begin, End, Loc, AA))
+    return false;
+  // Even a readonly call can prevent load folding across the call's
+  // register clobbers. Only free intrinsics are transparent here.
+  if (any_of(make_range(Begin, End), [&](Instruction &Inst) {
+        return isa<CallBase>(Inst) &&
+               (!isa<IntrinsicInst>(Inst) ||
+                TTI.getInstructionCost(&Inst, CostKind) != 0);
+      }))
+    return false;
+  return true;
+}
+
+/// Reconstruct a shuffle from concatenations of adjacent load pairs.
+/// The result has the concat width; its mask follows from the source lanes.
+bool VectorCombine::foldShuffleOfLoadConcats(Instruction &I) {
+  auto *Root = cast<ShuffleVectorInst>(&I);
+  if (Root->use_empty() || none_of(Root->operands(), [](Value *V) {
+        return isa<ShuffleVectorInst>(V);
+      }))
+    return false;
+
+  std::array<LoadPair, 2> Pairs;
+  SmallVector<int, 16> ResultMask;
+  if (!collectShuffleLoadConcats(Root, Pairs, ResultMask))
+    return false;
+  auto *Ty = cast<FixedVectorType>(Root->getType());
+
+  SmallPtrSet<User *, 16> Dead{Root};
+  SmallVector<ShuffleVectorInst *, 16> Removed{Root};
+  InstructionCost OldCost = 0, NewCost = 0;
+  // Credit only shuffles whose users will all be removed, counting each once.
+  for (unsigned Index = 0; Index != Removed.size(); ++Index) {
+    auto *S = Removed[Index];
+    OldCost += TTI.getInstructionCost(S, CostKind);
+    for (Value *V : S->operands())
+      if (auto *Op = dyn_cast<ShuffleVectorInst>(V);
+          Op && !Dead.contains(Op) &&
+          all_of(Op->users(), [&](User *U) { return Dead.contains(U); })) {
+        Dead.insert(Op);
+        Removed.push_back(Op);
+      }
+  }
+
+  // Retained loads are outside this load-concat cost estimate.
+  if (any_of(Pairs, [&](LoadPair Pair) {
+        return any_of(Pair.first->users(),
+                      [&](User *U) { return !Dead.contains(U); }) ||
+               any_of(Pair.second->users(),
+                      [&](User *U) { return !Dead.contains(U); });
+      }))
+    return false;
+
+  auto ConcatMask = createSequentialMask(0, Ty->getNumElements(), 0);
+  InstructionCost ConcatCost = TTI.getShuffleCost(
+      TTI::SK_PermuteTwoSrc, Ty,
+      cast<VectorType>(Pairs[0].first->getType()), CostKind, ConcatMask);
+  if (!ConcatCost.isValid())
+    return false;
+  // A paid concat may retain separate loads and insertions, which the shuffle
+  // costs do not account for. Require load-folding opportunities for code size.
+  if (CostKind == TTI::TCK_CodeSize && ConcatCost != 0 &&
+      any_of(Pairs,
+             [&](LoadPair Pair) { return !canFoldLoadConcat(Pair, Ty); }))
+    return false;
+  NewCost = ConcatCost * Pairs.size();
+  NewCost +=
+      TTI.getShuffleCost(TTI::SK_PermuteTwoSrc, Ty, Ty, CostKind, ResultMask);
+  if (!OldCost.isValid() || !NewCost.isValid() || NewCost >= OldCost)
+    return false;
+
+  LLVM_DEBUG(dbgs() << "Reconstructing shuffle from load concats: " << I
+                    << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
+                    << "\n");
+  Builder.SetInsertPoint(Root);
+  Builder.SetCurrentDebugLocation(Root->getDebugLoc());
+  Value *Concat0 =
+      Builder.CreateShuffleVector(Pairs[0].first, Pairs[0].second, ConcatMask);
+  Value *Concat1 =
+      Builder.CreateShuffleVector(Pairs[1].first, Pairs[1].second, ConcatMask);
+  Value *New = Builder.CreateShuffleVector(Concat0, Concat1, ResultMask);
+  // The root may be ahead of the load entry point in the forward scan.
+  replaceValue(*Root, *New, /*Erase=*/false);
+  return true;
+}
+
 static SmallVector<InstLane>
 generateInstLaneVectorFromOperand(ArrayRef<InstLane> Item, int Op) {
   SmallVector<InstLane> NItem;
@@ -6739,6 +6935,24 @@ bool VectorCombine::foldBitOrderReverseAndSwap(Instruction &I) {
   return true;
 }
 
+/// Expose load concats before shrinking their source loads.
+bool VectorCombine::foldShuffleOfLoadConcatsFromLoad(Instruction &I) {
+  auto *Load = cast<LoadInst>(&I);
+  if (!Load->isSimple())
+    return false;
+  Instruction *Root = Load;
+  unsigned NumVisited = 0;
+  while (Root->hasOneUse()) {
+    auto *Shuf = dyn_cast<ShuffleVectorInst>(*Root->user_begin());
+    if (!Shuf || Shuf->getParent() != Load->getParent())
+      break;
+    if (++NumVisited > Opts.vector_combine_max_scan_instrs)
+      return false;
+    Root = Shuf;
+  }
+  return Root != Load && foldShuffleOfLoadConcats(*Root);
+}
+
 /// Given the maximum shuffle index and load vector type, compute the number of
 /// elements for the shrunk load, rounding up to the next full vector register
 /// boundary to avoid scalar remainders that legalize poorly.
@@ -7095,6 +7309,8 @@ bool VectorCombine::run() {
           return true;
         if (foldShuffleOfShuffles(I))
           return true;
+        if (foldShuffleOfLoadConcats(I))
+          return true;
         if (foldPermuteOfIntrinsic(I))
           return true;
         if (foldShufflesOfLengthChangingShuffles(I))
@@ -7107,6 +7323,8 @@ bool VectorCombine::run() {
           return true;
         break;
       case Instruction::Load:
+        if (foldShuffleOfLoadConcatsFromLoad(I))
+          return true;
         if (shrinkLoadForShuffles(I))
           return true;
         break;

@@ -7,21 +7,17 @@ define <4 x double> @throughput(ptr %px, ptr %py) {
 ; SNB-LABEL: throughput:
 ; SNB:       # %bb.0:
 ; SNB-NEXT:    vmovaps (%rdi), %xmm0
-; SNB-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],mem[0]
-; SNB-NEXT:    vmovddup {{.*#+}} xmm1 = mem[0,0]
-; SNB-NEXT:    vmovlps {{.*#+}} xmm1 = mem[0,1],xmm1[2,3]
-; SNB-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; SNB-NEXT:    vmovaps (%rsi), %xmm1
+; SNB-NEXT:    vinsertf128 $1, 16(%rdi), %ymm0, %ymm0
+; SNB-NEXT:    vinsertf128 $1, 16(%rsi), %ymm1, %ymm1
+; SNB-NEXT:    vmovddup {{.*#+}} ymm1 = ymm1[0,0,2,2]
+; SNB-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],ymm1[1,2],ymm0[3]
 ; SNB-NEXT:    retq
 ;
 ; HSW-LABEL: throughput:
 ; HSW:       # %bb.0:
-; HSW-NEXT:    vmovapd (%rsi), %xmm0
-; HSW-NEXT:    vmovupd (%rdi), %ymm1
-; HSW-NEXT:    vshufpd {{.*#+}} ymm0 = ymm1[0],ymm0[0],ymm1[3],ymm0[3]
-; HSW-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; HSW-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm1
-; HSW-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[0,1,2,2]
-; HSW-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0,1],ymm1[2],ymm0[3]
+; HSW-NEXT:    vmovddup {{.*#+}} ymm0 = mem[0,0,2,2]
+; HSW-NEXT:    vblendpd {{.*#+}} ymm0 = mem[0],ymm0[1,2],mem[3]
 ; HSW-NEXT:    retq
   %pxhi = getelementptr inbounds i8, ptr %px, i64 16
   %pyhi = getelementptr inbounds i8, ptr %py, i64 16
@@ -50,13 +46,8 @@ define <4 x double> @optsize(ptr %px, ptr %py) optsize {
 ;
 ; HSW-LABEL: optsize:
 ; HSW:       # %bb.0:
-; HSW-NEXT:    vmovapd (%rsi), %xmm0
-; HSW-NEXT:    vmovupd (%rdi), %ymm1
-; HSW-NEXT:    vshufpd {{.*#+}} ymm0 = ymm1[0],ymm0[0],ymm1[3],ymm0[3]
-; HSW-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; HSW-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm1
-; HSW-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[0,1,2,2]
-; HSW-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0,1],ymm1[2],ymm0[3]
+; HSW-NEXT:    vmovddup {{.*#+}} ymm0 = mem[0,0,2,2]
+; HSW-NEXT:    vblendpd {{.*#+}} ymm0 = mem[0],ymm0[1,2],mem[3]
 ; HSW-NEXT:    retq
   %pxhi = getelementptr inbounds i8, ptr %px, i64 16
   %pyhi = getelementptr inbounds i8, ptr %py, i64 16
@@ -85,13 +76,8 @@ define <4 x double> @minsize(ptr %px, ptr %py) optsize minsize {
 ;
 ; HSW-LABEL: minsize:
 ; HSW:       # %bb.0:
-; HSW-NEXT:    vmovapd (%rsi), %xmm0
-; HSW-NEXT:    vmovupd (%rdi), %ymm1
-; HSW-NEXT:    vshufpd {{.*#+}} ymm0 = ymm1[0],ymm0[0],ymm1[3],ymm0[3]
-; HSW-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; HSW-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm1
-; HSW-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[0,1,2,2]
-; HSW-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0,1],ymm1[2],ymm0[3]
+; HSW-NEXT:    vmovddup {{.*#+}} ymm0 = mem[0,0,2,2]
+; HSW-NEXT:    vblendpd {{.*#+}} ymm0 = mem[0],ymm0[1,2],mem[3]
 ; HSW-NEXT:    retq
   %pxhi = getelementptr inbounds i8, ptr %px, i64 16
   %pyhi = getelementptr inbounds i8, ptr %py, i64 16
@@ -111,24 +97,14 @@ define <4 x double> @minsize(ptr %px, ptr %py) optsize minsize {
 define <4 x double> @aligned(ptr %px, ptr %py) optsize minsize {
 ; SNB-LABEL: aligned:
 ; SNB:       # %bb.0:
-; SNB-NEXT:    vmovapd (%rsi), %xmm0
-; SNB-NEXT:    vmovapd (%rdi), %ymm1
-; SNB-NEXT:    vshufpd {{.*#+}} ymm0 = ymm1[0],ymm0[0],ymm1[3],ymm0[3]
-; SNB-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; SNB-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm1
-; SNB-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[0,1,2,2]
-; SNB-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0,1],ymm1[2],ymm0[3]
+; SNB-NEXT:    vmovddup {{.*#+}} ymm0 = mem[0,0,2,2]
+; SNB-NEXT:    vblendpd {{.*#+}} ymm0 = mem[0],ymm0[1,2],mem[3]
 ; SNB-NEXT:    retq
 ;
 ; HSW-LABEL: aligned:
 ; HSW:       # %bb.0:
-; HSW-NEXT:    vmovapd (%rsi), %xmm0
-; HSW-NEXT:    vmovapd (%rdi), %ymm1
-; HSW-NEXT:    vshufpd {{.*#+}} ymm0 = ymm1[0],ymm0[0],ymm1[3],ymm0[3]
-; HSW-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; HSW-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm1
-; HSW-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[0,1,2,2]
-; HSW-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0,1],ymm1[2],ymm0[3]
+; HSW-NEXT:    vmovddup {{.*#+}} ymm0 = mem[0,0,2,2]
+; HSW-NEXT:    vblendpd {{.*#+}} ymm0 = mem[0],ymm0[1,2],mem[3]
 ; HSW-NEXT:    retq
   %pxhi = getelementptr inbounds i8, ptr %px, i64 16
   %pyhi = getelementptr inbounds i8, ptr %py, i64 16

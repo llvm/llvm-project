@@ -7,11 +7,8 @@
 define <4 x double> @interleave_loads(ptr %px, ptr %py) {
 ; CHECK-LABEL: interleave_loads:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovapd (%rsi), %xmm0
-; CHECK-NEXT:    vmovupd (%rdi), %ymm1
-; CHECK-NEXT:    vshufpd {{.*#+}} ymm0 = ymm1[1],ymm0[0],ymm1[3],ymm0[3]
-; CHECK-NEXT:    vbroadcastsd 16(%rsi), %ymm1
-; CHECK-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0,1,2],ymm1[3]
+; CHECK-NEXT:    vmovupd (%rdi), %ymm0
+; CHECK-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[1],mem[0],ymm0[3],mem[2]
 ; CHECK-NEXT:    retq
   %pxhi = getelementptr inbounds nuw i8, ptr %px, i64 16
   %pyhi = getelementptr inbounds nuw i8, ptr %py, i64 16
