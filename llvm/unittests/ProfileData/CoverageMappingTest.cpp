@@ -16,6 +16,7 @@
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include "gtest/gtest.h"
 
+#include <limits>
 #include <map>
 #include <ostream>
 #include <utility>
@@ -201,6 +202,14 @@ struct CoverageMappingTest : ::testing::TestWithParam<std::tuple<bool, bool>> {
     unsigned FileID = getFileIndexForFunction(File);
     Regions.push_back(CounterMappingRegion::makeDecisionRegion(
         mcdc::DecisionParameters{Mask, NC}, FileID, LS, CS, LE, CE));
+  }
+
+  void addBranchCMR(Counter C1, Counter C2, StringRef File, unsigned LS,
+                    unsigned CS, unsigned LE, unsigned CE) {
+    auto &Regions = InputFunctions.back().Regions;
+    unsigned FileID = getFileIndexForFunction(File);
+    Regions.push_back(
+        CounterMappingRegion::makeBranchRegion(C1, C2, FileID, LS, CS, LE, CE));
   }
 
   void addMCDCBranchCMR(Counter C1, Counter C2, mcdc::ConditionID ID,
@@ -901,6 +910,104 @@ TEST_P(CoverageMappingTest, non_code_region_counters) {
     ASSERT_EQ(2U, Func.CountedRegions.size());
   }
   ASSERT_EQ(1U, Names.size());
+}
+
+// Test that a counter expression that evaluates to a negative value, which can
+// happen when the counter values are inconsistent with each other, is reported
+// as zero instead of wrapping around.
+TEST_P(CoverageMappingTest, negative_counter_value_is_clamped_to_zero) {
+  ProfileWriter.addRecord({"func", 0x1234, {1, 5}}, Err);
+
+  startFunction("func", 0x1234);
+  addCMR(Counter::getCounter(0), "file", 1, 1, 9, 9);
+  // #0 - #1 = 1 - 5 = -4
+  addExpression(CounterExpression(CounterExpression::Subtract,
+                                  Counter::getCounter(0),
+                                  Counter::getCounter(1)));
+  addBranchCMR(Counter::getCounter(1), Counter::getExpression(0), "file", 2, 1,
+               2, 5);
+  addCMR(Counter::getExpression(0), "file", 3, 1, 4, 1);
+
+  EXPECT_THAT_ERROR(loadCoverageMapping(), Succeeded());
+
+  const auto FunctionRecords = LoadedCoverage->getCoveredFunctions();
+  const auto &FunctionRecord = *FunctionRecords.begin();
+  ASSERT_EQ(2U, FunctionRecord.CountedRegions.size());
+  EXPECT_EQ(1U, FunctionRecord.CountedRegions[0].ExecutionCount);
+  EXPECT_EQ(0U, FunctionRecord.CountedRegions[1].ExecutionCount);
+  ASSERT_EQ(1U, FunctionRecord.CountedBranchRegions.size());
+  EXPECT_EQ(5U, FunctionRecord.CountedBranchRegions[0].ExecutionCount);
+  EXPECT_EQ(0U, FunctionRecord.CountedBranchRegions[0].FalseExecutionCount);
+
+  CoverageData Data = LoadedCoverage->getCoverageForFunction(FunctionRecord);
+  std::vector<CoverageSegment> Segments(Data.begin(), Data.end());
+  ASSERT_EQ(4U, Segments.size());
+  EXPECT_EQ(CoverageSegment(1, 1, 1, true), Segments[0]);
+  EXPECT_EQ(CoverageSegment(3, 1, 0, true), Segments[1]);
+  EXPECT_EQ(CoverageSegment(4, 1, 1, false), Segments[2]);
+  EXPECT_EQ(CoverageSegment(9, 9, false), Segments[3]);
+}
+
+// Test that only the final value of a counter expression is clamped, and not
+// the value of a subexpression.
+TEST_P(CoverageMappingTest, negative_subexpression_value_is_not_clamped) {
+  ProfileWriter.addRecord({"func", 0x1234, {1, 5, 10}}, Err);
+
+  startFunction("func", 0x1234);
+  addCMR(Counter::getCounter(0), "file", 1, 1, 9, 9);
+  // (#0 - #1) + #2 = (1 - 5) + 10 = 6
+  addExpression(CounterExpression(CounterExpression::Subtract,
+                                  Counter::getCounter(0),
+                                  Counter::getCounter(1)));
+  addExpression(CounterExpression(CounterExpression::Add,
+                                  Counter::getExpression(0),
+                                  Counter::getCounter(2)));
+  addCMR(Counter::getExpression(1), "file", 3, 1, 4, 1);
+
+  EXPECT_THAT_ERROR(loadCoverageMapping(), Succeeded());
+
+  const auto FunctionRecords = LoadedCoverage->getCoveredFunctions();
+  const auto &FunctionRecord = *FunctionRecords.begin();
+  ASSERT_EQ(2U, FunctionRecord.CountedRegions.size());
+  EXPECT_EQ(6U, FunctionRecord.CountedRegions[1].ExecutionCount);
+}
+
+// Test that counter values that do not fit into int64_t, like the saturated
+// counters written by llvm-profdata merge, and overflowing counter
+// expressions saturate instead of being treated as negative values.
+TEST_P(CoverageMappingTest, large_counter_values_saturate) {
+  const uint64_t Int64Max = std::numeric_limits<int64_t>::max();
+  ProfileWriter.addRecord({"func", 0x1234, {getInstrMaxCountValue(), 1}}, Err);
+
+  startFunction("func", 0x1234);
+  addCMR(Counter::getCounter(0), "file", 1, 1, 9, 9);
+  // #0 - #1
+  addExpression(CounterExpression(CounterExpression::Subtract,
+                                  Counter::getCounter(0),
+                                  Counter::getCounter(1)));
+  // #0 + #1
+  addExpression(CounterExpression(
+      CounterExpression::Add, Counter::getCounter(0), Counter::getCounter(1)));
+  // (#1 - #0) - #0
+  addExpression(CounterExpression(CounterExpression::Subtract,
+                                  Counter::getCounter(1),
+                                  Counter::getCounter(0)));
+  addExpression(CounterExpression(CounterExpression::Subtract,
+                                  Counter::getExpression(2),
+                                  Counter::getCounter(0)));
+  addCMR(Counter::getExpression(0), "file", 2, 1, 2, 5);
+  addCMR(Counter::getExpression(1), "file", 3, 1, 3, 5);
+  addCMR(Counter::getExpression(3), "file", 4, 1, 4, 5);
+
+  EXPECT_THAT_ERROR(loadCoverageMapping(), Succeeded());
+
+  const auto FunctionRecords = LoadedCoverage->getCoveredFunctions();
+  const auto &FunctionRecord = *FunctionRecords.begin();
+  ASSERT_EQ(4U, FunctionRecord.CountedRegions.size());
+  EXPECT_EQ(Int64Max, FunctionRecord.CountedRegions[0].ExecutionCount);
+  EXPECT_EQ(Int64Max - 1, FunctionRecord.CountedRegions[1].ExecutionCount);
+  EXPECT_EQ(Int64Max, FunctionRecord.CountedRegions[2].ExecutionCount);
+  EXPECT_EQ(0U, FunctionRecord.CountedRegions[3].ExecutionCount);
 }
 
 // Test that MCDC bitmasks not associated with any code regions are allowed.
