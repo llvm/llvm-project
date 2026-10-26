@@ -1094,6 +1094,21 @@ func.func @map_input_output_shape_mismatch(
 
 // -----
 
+func.func @map_init_block_arg_used(
+    %arg0: tensor<64xf32>, %arg1: tensor<64xf32>) -> tensor<64xf32> {
+  // expected-error@+1{{'linalg.map' op expects the mapper region to not use the init/destination block argument}}
+  %mapped = linalg.map
+      ins(%arg0 : tensor<64xf32>)
+      outs(%arg1 : tensor<64xf32>)
+      (%in: f32, %init: f32) {
+        %0 = arith.addf %in, %init : f32
+        linalg.yield %0 : f32
+      }
+  func.return %mapped : tensor<64xf32>
+}
+
+// -----
+
 func.func @map_no_operands1() {
   // expected-error @+1 {{'linalg.map' op expected 1 or more operands, but found 0}}
   linalg.map { arith.addf }
