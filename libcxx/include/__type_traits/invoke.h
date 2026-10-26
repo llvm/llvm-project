@@ -12,6 +12,7 @@
 
 #include <__config>
 #include <__type_traits/conditional.h>
+#include <__type_traits/conjunction.h>
 #include <__type_traits/decay.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/integral_constant.h>
@@ -22,6 +23,8 @@
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_void.h>
 #include <__type_traits/nat.h>
+#include <__type_traits/negation.h>
+#include <__type_traits/reference_converts_from_temporary.h>
 #include <__type_traits/void_t.h>
 #include <__utility/declval.h>
 #include <__utility/forward.h>
@@ -68,6 +71,15 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+#if _LIBCPP_STD_VER >= 23
+template <class _Src, class _Dst>
+using __is_core_convertible_rejecting_temporary _LIBCPP_NODEBUG =
+    _And<__is_core_convertible<_Src, _Dst>, _Not<reference_converts_from_temporary<_Dst, _Src>>>;
+#else
+template <class _Src, class _Dst>
+using __is_core_convertible_rejecting_temporary _LIBCPP_NODEBUG = __is_core_convertible<_Src, _Dst>;
+#endif
+
 #if __has_builtin(__builtin_invoke)
 
 template <class, class... _Args>
@@ -107,7 +119,7 @@ inline const bool __is_invocable_r_impl = false;
 
 template <class _Ret, class... _Args>
 inline const bool __is_invocable_r_impl<_Ret, true, _Args...> =
-    __is_core_convertible<__invoke_result_t<_Args...>, _Ret>::value || is_void<_Ret>::value;
+    __is_core_convertible_rejecting_temporary<__invoke_result_t<_Args...>, _Ret>::value || is_void<_Ret>::value;
 
 template <class _Ret, class... _Args>
 inline const bool __is_invocable_r_v = __is_invocable_r_impl<_Ret, __is_invocable_v<_Args...>, _Args...>;
@@ -266,9 +278,10 @@ struct __invokable_r {
   // or incomplete array types as required by the standard.
   using _Result _LIBCPP_NODEBUG = decltype(__try_call<_Fp, _Args...>(0));
 
-  using type              = __conditional_t<_IsNotSame<_Result, __nat>::value,
-                                            __conditional_t<is_void<_Ret>::value, true_type, __is_core_convertible<_Result, _Ret> >,
-                                            false_type>;
+  using type = __conditional_t<
+      _IsNotSame<_Result, __nat>::value,
+      __conditional_t<is_void<_Ret>::value, true_type, __is_core_convertible_rejecting_temporary<_Result, _Ret> >,
+      false_type>;
   static const bool value = type::value;
 };
 template <class _Fp, class... _Args>
@@ -393,6 +406,17 @@ struct _LIBCPP_NO_SPECIALIZATIONS invoke_result : __invoke_result<_Fn, _Args...>
 
 template <class _Fn, class... _Args>
 using invoke_result_t = __invoke_result_t<_Fn, _Args...>;
+
+#  if _LIBCPP_STD_VER >= 23 && _LIBCPP_STD_VER < 26
+// __is_invocable_r_from_temporary is only used to reject binding reference to temporary in return statements.
+// Core language change in C++26 (per P2748R5) makes it unnecessary.
+template <class _Ret, class _Fn, class... _Args>
+inline constexpr bool __is_invocable_r_from_temporary = false;
+template <class _Ret, class _Fn, class... _Args>
+  requires __is_invocable_v<_Fn, _Args...>
+inline constexpr bool __is_invocable_r_from_temporary<_Ret, _Fn, _Args...> =
+    reference_converts_from_temporary_v<_Ret, __invoke_result_t<_Fn, _Args...>>;
+#  endif
 
 #endif
 
