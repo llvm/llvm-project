@@ -7162,9 +7162,9 @@ void OpenMPIRBuilder::createVirtualRowExecutor(CanonicalLoopInfo *Result,
   // Keep the original branch as their anchor and give it a PHI-free successor.
   auto *InnerBr = cast<UncondBrInst>(Plan.Preheaders.back()->getTerminator());
   BasicBlock *InnerHeader = Plan.IndVars.back()->getParent();
-  BasicBlock *InnerEntry = BasicBlock::Create(
-      M.getContext(), "omp_collapsed.row.preheader", InnerHeader->getParent(),
-      InnerHeader);
+  BasicBlock *InnerEntry =
+      BasicBlock::Create(M.getContext(), "omp_collapsed.row.preheader",
+                         InnerHeader->getParent(), InnerHeader);
   Builder.SetInsertPoint(InnerEntry);
   Builder.SetCurrentDebugLocation(DL);
   Builder.CreateBr(InnerHeader);
@@ -7226,9 +7226,9 @@ CanonicalLoopInfo *OpenMPIRBuilder::createVirtualCollapsedLoop(
   // the instructions directly so the initial constants are not folded away.
   auto *Begin = Builder.Insert(BinaryOperator::CreateAdd(Zero, Zero),
                                "omp_collapsed.range.begin");
-  auto *Count = Builder.Insert(
-      BinaryOperator::CreateAdd(CollapsedTripCount, Zero),
-      "omp_collapsed.range.count");
+  auto *Count =
+      Builder.Insert(BinaryOperator::CreateAdd(CollapsedTripCount, Zero),
+                     "omp_collapsed.range.count");
   Builder.CreateCondBr(Builder.CreateICmpNE(Count, Zero), Entry,
                        Result->getExit());
   Result->VirtualCollapse =

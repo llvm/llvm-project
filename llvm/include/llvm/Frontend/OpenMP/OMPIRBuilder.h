@@ -4559,7 +4559,8 @@ class CanonicalLoopInfo {
 private:
   /// State retained after Virtual collapse of a loop nest.
   struct VirtualCollapseInfo {
-    /// Copy of the first normalized iteration; scheduling replaces operand zero.
+    /// Copy of the first normalized iteration; scheduling replaces operand
+    /// zero.
     BinaryOperator *Begin = nullptr;
     /// Copy of the full count; scheduling replaces operand zero with its count.
     /// May wrap for idle scheduler assignments.

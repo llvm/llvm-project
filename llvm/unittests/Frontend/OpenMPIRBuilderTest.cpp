@@ -8883,8 +8883,8 @@ createEmptyNest(OpenMPIRBuilder &OMP, OpenMPIRBuilder::LocationDescription Loc,
     Loops[1] = *Inner;
     return Error::success();
   };
-  auto Outer = OMP.createCanonicalLoop(Loc, Body, ConstantInt::get(Ty, 3),
-                                       "outer");
+  auto Outer =
+      OMP.createCanonicalLoop(Loc, Body, ConstantInt::get(Ty, 3), "outer");
   if (!Outer)
     return Outer.takeError();
   Loops[0] = *Outer;
@@ -8919,18 +8919,17 @@ TEST_F(OpenMPIRBuilderTest, VirtualCollapseRepeatedEdges) {
   Value *BoundValue = cast<CondBrInst>(Cond->getTerminator())->getCondition();
   B.restoreIP(Inner->getBodyIP());
   B.SetCurrentDebugLocation(DL);
-  auto Observe = M->getOrInsertFunction("observe_condition", B.getVoidTy(),
-                                       B.getInt1Ty());
+  auto Observe =
+      M->getOrInsertFunction("observe_condition", B.getVoidTy(), B.getInt1Ty());
   CallInst *Use = B.CreateCall(Observe, {BoundValue});
   auto *Collapsed = OMP.collapseLoops(DL, {Outer, Inner}, {});
   EXPECT_EQ(Collapsed->getHeader(), Header);
   EXPECT_EQ(Body->getTerminator(), Switch);
   Collapsed->assertOK();
   BasicBlock *Init = Collapsed->getPreheader()->getSingleSuccessor();
-  BasicBlock *Decode =
-      cast<CondBrInst>(Init->getTerminator())->getSuccessor(0);
+  BasicBlock *Decode = cast<CondBrInst>(Init->getTerminator())->getSuccessor(0);
   ASSERT_THAT_EXPECTED(OMP.applyWorkshareLoop({}, Collapsed, BB->begin(), false,
-                                            omp::OMP_SCHEDULE_Static),
+                                              omp::OMP_SCHEDULE_Static),
                        Succeeded());
   auto *Branch = dyn_cast<CondBrInst>(Cond->getTerminator());
   ASSERT_NE(Branch, nullptr);
@@ -9287,10 +9286,10 @@ TEST_F(OpenMPIRBuilderTest, VirtualCollapseSavedPreheader) {
       JoinPhi->setIncomingBlock(2, JoinBranch->getParent());
       return Error::success();
     };
-    ASSERT_THAT_EXPECTED(InsertBuilder->createCanonicalLoop(
-                            {JoinBranch->getIterator(), DL}, RepairJoin,
-                            B.getInt32(2)),
-                        Succeeded());
+    ASSERT_THAT_EXPECTED(
+        InsertBuilder->createCanonicalLoop({JoinBranch->getIterator(), DL},
+                                           RepairJoin, B.getInt32(2)),
+        Succeeded());
     // User PHIs stay caller-managed even in a small join inside Virtual.
     BasicBlock *OldSmallPred = SmallBranch->getParent();
     auto RepairSmall = [&](OpenMPIRBuilder::InsertPointTy, Value *) {
@@ -9300,24 +9299,25 @@ TEST_F(OpenMPIRBuilderTest, VirtualCollapseSavedPreheader) {
         SmallPhi->setIncomingBlock(Index, SmallBranch->getParent());
       return Error::success();
     };
-    ASSERT_THAT_EXPECTED(InsertBuilder->createCanonicalLoop(
-                            {SmallBranch->getIterator(), DL}, RepairSmall,
-                            B.getInt32(2)),
-                        Succeeded());
+    ASSERT_THAT_EXPECTED(
+        InsertBuilder->createCanonicalLoop({SmallBranch->getIterator(), DL},
+                                           RepairSmall, B.getInt32(2)),
+        Succeeded());
     // A legacy caller may also perform its predecessor lookup after return.
     OldSmallPred = SmallBranch->getParent();
-    ASSERT_THAT_EXPECTED(InsertBuilder->createCanonicalLoop(
-                            {SmallBranch->getIterator(), DL}, Empty, B.getInt32(2)),
-                        Succeeded());
+    ASSERT_THAT_EXPECTED(
+        InsertBuilder->createCanonicalLoop({SmallBranch->getIterator(), DL},
+                                           Empty, B.getInt32(2)),
+        Succeeded());
     int Index = SmallPhi->getBasicBlockIndex(OldSmallPred);
     ASSERT_GE(Index, 0);
     SmallPhi->setIncomingBlock(Index, SmallBranch->getParent());
     ASSERT_THAT_EXPECTED(InsertBuilder->createCanonicalLoop(
-                            {Saved, DL}, CheckControls, B.getInt32(2)),
-                        Succeeded());
+                             {Saved, DL}, CheckControls, B.getInt32(2)),
+                         Succeeded());
     ASSERT_THAT_EXPECTED(InsertBuilder->createCanonicalLoop(
-                            {SavedInner, DL}, CheckControls, B.getInt32(2)),
-                        Succeeded());
+                             {SavedInner, DL}, CheckControls, B.getInt32(2)),
+                         Succeeded());
     ASSERT_FALSE(verifyModule(*M, &errs()));
     Collapsed->assertOK();
   }
