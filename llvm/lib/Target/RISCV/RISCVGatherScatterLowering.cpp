@@ -38,6 +38,7 @@ class RISCVGatherScatterLoweringImpl {
   const RISCVSubtarget *ST;
   const RISCVTargetLowering *TLI;
   function_ref<LoopInfo &()> GetLI;
+  LoopInfo *LI = nullptr;
   const DataLayout *DL;
 
   SmallVector<WeakTrackingVH> MaybeDeadPHIs;
@@ -468,8 +469,11 @@ RISCVGatherScatterLoweringImpl::determineBaseAndStride(Instruction *Ptr,
     return P;
   }
 
+  if (!LI)
+    LI = &GetLI();
+
   // Make sure we're in a loop and that has a pre-header and a single latch.
-  Loop *L = GetLI().getLoopFor(GEP->getParent());
+  Loop *L = LI->getLoopFor(GEP->getParent());
   if (!L || !L->getLoopPreheader() || !L->getLoopLatch())
     return std::make_pair(nullptr, nullptr);
 

@@ -66,6 +66,7 @@ struct DemandedVL {
 class RISCVVLOptimizerImpl {
   MachineRegisterInfo *MRI;
   function_ref<const MachineDominatorTree &()> GetMDT;
+  const MachineDominatorTree *MDT = nullptr;
   const TargetInstrInfo *TII;
 
 public:
@@ -79,7 +80,7 @@ private:
                                  unsigned OpIdx) const;
   /// Returns true if the users of \p MI have compatible EEWs and SEWs.
   bool checkUsers(const MachineInstr &MI) const;
-  bool tryReduceVL(MachineInstr &MI, MachineOperand VL) const;
+  bool tryReduceVL(MachineInstr &MI, MachineOperand VL);
   bool isSupportedInstr(const MachineInstr &MI) const;
   bool isCandidate(const MachineInstr &MI) const;
   void transfer(const MachineInstr &MI);
@@ -1313,7 +1314,7 @@ bool RISCVVLOptimizerImpl::checkUsers(const MachineInstr &MI) const {
 }
 
 bool RISCVVLOptimizerImpl::tryReduceVL(MachineInstr &MI,
-                                       MachineOperand CommonVL) const {
+                                       MachineOperand CommonVL) {
   LLVM_DEBUG(dbgs() << "Trying to reduce VL for " << MI);
 
   unsigned VLOpNum = RISCVII::getVLOpNum(MI.getDesc());
@@ -1326,9 +1327,12 @@ bool RISCVVLOptimizerImpl::tryReduceVL(MachineInstr &MI,
   // vleff's AVL. It will be greater than or equal to the output VL.
   if (CommonVL.isReg()) {
     const MachineInstr *VLMI = MRI->getVRegDef(CommonVL.getReg());
-    if (VLMI && RISCVInstrInfo::isFaultOnlyFirstLoad(*VLMI) &&
-        !GetMDT().dominates(VLMI, &MI))
-      CommonVL = VLMI->getOperand(RISCVII::getVLOpNum(VLMI->getDesc()));
+    if (VLMI && RISCVInstrInfo::isFaultOnlyFirstLoad(*VLMI)) {
+      if (!MDT)
+        MDT = &GetMDT();
+      if (!MDT->dominates(VLMI, &MI))
+        CommonVL = VLMI->getOperand(RISCVII::getVLOpNum(VLMI->getDesc()));
+    }
   }
 
   if (!RISCV::isVLKnownLE(*MRI, CommonVL, VLOp)) {
@@ -1352,8 +1356,10 @@ bool RISCVVLOptimizerImpl::tryReduceVL(MachineInstr &MI,
   if (!VLMI)
     return false;
 
+  if (!MDT)
+    MDT = &GetMDT();
   auto VLDominates = [this, &VLMI](const MachineInstr &MI) {
-    return GetMDT().dominates(VLMI, &MI);
+    return MDT->dominates(VLMI, &MI);
   };
   if (!VLDominates(MI)) {
     assert(MI.getNumExplicitDefs() == 1);
@@ -1414,7 +1420,6 @@ bool RISCVVLOptimizerImpl::run(MachineFunction &MF) {
   // For each instruction that defines or uses a vector, propagate the VL it
   // uses to its inputs.
   for (MachineBasicBlock *MBB : post_order(&MF)) {
-    assert(GetMDT().isReachableFromEntry(MBB));
     for (MachineInstr &MI : reverse(*MBB)) {
       if (MI.isDebugInstr())
         continue;
@@ -1434,7 +1439,6 @@ bool RISCVVLOptimizerImpl::run(MachineFunction &MF) {
   // only what's demanded.
   bool MadeChange = false;
   for (auto &[MI, VL] : DemandedVLs) {
-    assert(GetMDT().isReachableFromEntry(MI->getParent()));
     if (!isCandidate(*MI))
       continue;
     if (!tryReduceVL(*const_cast<MachineInstr *>(MI), VL.VL))
