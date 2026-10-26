@@ -11,33 +11,29 @@ define i32 @continue_loop(i32 %n, ptr %p) {
 ; DIVERGENT-SAME: i32 [[N:%.*]], ptr [[P:%.*]]) {
 ; DIVERGENT-NEXT:  [[ENTRY:.*]]:
 ; DIVERGENT-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
-; DIVERGENT-NEXT:    br label %[[HEADER_OUTER:.*]]
-; DIVERGENT:       [[HEADER_OUTER]]:
-; DIVERGENT-NEXT:    [[I_PH:%.*]] = phi i32 [ [[I_NEXT:%.*]], %[[UPDATE:.*]] ], [ 0, %[[ENTRY]] ]
-; DIVERGENT-NEXT:    [[ACC_PH:%.*]] = phi i32 [ [[ACC_NEXT:%.*]], %[[UPDATE]] ], [ 0, %[[ENTRY]] ]
 ; DIVERGENT-NEXT:    br label %[[HEADER:.*]]
 ; DIVERGENT:       [[HEADER]]:
-; DIVERGENT-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT]], %[[CONTINUE:.*]] ], [ [[I_PH]], %[[HEADER_OUTER]] ]
+; DIVERGENT-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[HEADER_BACKEDGE:.*]] ]
+; DIVERGENT-NEXT:    [[ACC:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[ACC_BE:%.*]], %[[HEADER_BACKEDGE]] ]
 ; DIVERGENT-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
 ; DIVERGENT-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[P]], i32 [[I]]
 ; DIVERGENT-NEXT:    [[V:%.*]] = load i32, ptr [[GEP]], align 4
 ; DIVERGENT-NEXT:    [[BITS:%.*]] = lshr i32 [[V]], [[TID]]
 ; DIVERGENT-NEXT:    [[BIT:%.*]] = and i32 [[BITS]], 1
 ; DIVERGENT-NEXT:    [[IS_ZERO:%.*]] = icmp eq i32 [[BIT]], 0
-; DIVERGENT-NEXT:    br i1 [[IS_ZERO]], label %[[CONTINUE]], label %[[UPDATE]]
+; DIVERGENT-NEXT:    br i1 [[IS_ZERO]], label %[[CONTINUE:.*]], label %[[UPDATE:.*]]
 ; DIVERGENT:       [[CONTINUE]]:
 ; DIVERGENT-NEXT:    [[C1:%.*]] = icmp slt i32 [[I_NEXT]], [[N]]
-; DIVERGENT-NEXT:    br i1 [[C1]], label %[[HEADER]], label %[[EXIT_LOOPEXIT:.*]]
+; DIVERGENT-NEXT:    br i1 [[C1]], label %[[HEADER_BACKEDGE]], label %[[EXIT:.*]]
+; DIVERGENT:       [[HEADER_BACKEDGE]]:
+; DIVERGENT-NEXT:    [[ACC_BE]] = phi i32 [ [[ACC]], %[[CONTINUE]] ], [ [[ACC_NEXT:%.*]], %[[UPDATE]] ]
+; DIVERGENT-NEXT:    br label %[[HEADER]]
 ; DIVERGENT:       [[UPDATE]]:
-; DIVERGENT-NEXT:    [[ACC_NEXT]] = add i32 [[ACC_PH]], [[V]]
+; DIVERGENT-NEXT:    [[ACC_NEXT]] = add i32 [[ACC]], [[V]]
 ; DIVERGENT-NEXT:    [[C2:%.*]] = icmp slt i32 [[I_NEXT]], [[N]]
-; DIVERGENT-NEXT:    br i1 [[C2]], label %[[HEADER_OUTER]], label %[[EXIT_LOOPEXIT1:.*]]
-; DIVERGENT:       [[EXIT_LOOPEXIT]]:
-; DIVERGENT-NEXT:    br label %[[EXIT:.*]]
-; DIVERGENT:       [[EXIT_LOOPEXIT1]]:
-; DIVERGENT-NEXT:    br label %[[EXIT]]
+; DIVERGENT-NEXT:    br i1 [[C2]], label %[[HEADER_BACKEDGE]], label %[[EXIT]]
 ; DIVERGENT:       [[EXIT]]:
-; DIVERGENT-NEXT:    [[R:%.*]] = phi i32 [ [[ACC_PH]], %[[EXIT_LOOPEXIT]] ], [ [[ACC_NEXT]], %[[EXIT_LOOPEXIT1]] ]
+; DIVERGENT-NEXT:    [[R:%.*]] = phi i32 [ [[ACC]], %[[CONTINUE]] ], [ [[ACC_NEXT]], %[[UPDATE]] ]
 ; DIVERGENT-NEXT:    ret i32 [[R]]
 ;
 ; UNIFORM-LABEL: define i32 @continue_loop(
