@@ -570,6 +570,11 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "llvm_libc_types_gid_t",
+    hdrs = ["include/llvm-libc-types/gid_t.h"],
+)
+
+libc_support_library(
     name = "llvm_libc_types_pid_t",
     hdrs = ["include/llvm-libc-types/pid_t.h"],
 )
@@ -1392,6 +1397,15 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "types_gid_t",
+    hdrs = ["hdr/types/gid_t.h"],
+    deps = select({
+        ":full_build": [":llvm_libc_types_gid_t"],
+        "//conditions:default": [],
+    }),
+)
+
+libc_support_library(
     name = "types_uid_t",
     hdrs = ["hdr/types/uid_t.h"],
     deps = select({
@@ -1767,6 +1781,7 @@ libc_support_library(
     deps = [
         ":__support_macros_attributes",
         ":__support_macros_config",
+        ":__support_macros_optimization",
     ],
 )
 
@@ -1835,6 +1850,7 @@ libc_support_library(
         ":__support_cpp_utility",
         ":__support_macros_attributes",
         ":__support_macros_config",
+        ":__support_macros_optimization",
         ":hdr_stdint_proxy",
     ],
 )
@@ -2521,6 +2537,21 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_epoll_create1",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/epoll_create1.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+    ],
+)
+
+libc_support_library(
     name = "__support_osutil_linux_syscall_wrappers_epoll_ctl",
     hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/epoll_ctl.h"],
     target_compatible_with = select({
@@ -2533,6 +2564,25 @@ libc_support_library(
         ":__support_macros_config",
         ":__support_osutil_syscall",
         ":types_struct_epoll_event",
+    ],
+)
+
+libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_epoll_pwait2",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/epoll_pwait2.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":hdr_signal_macros",
+        ":types_sigset_t",
+        ":types_struct_epoll_event",
+        ":types_struct_timespec",
     ],
 )
 
@@ -3492,6 +3542,17 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_fputil_is_integer",
+    hdrs = ["src/__support/FPUtil/is_integer.h"],
+    deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_fp_bits",
+        ":__support_macros_attributes",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_fputil_manipulation_functions",
     hdrs = ["src/__support/FPUtil/ManipulationFunctions.h"],
     textual_hdrs = [
@@ -4253,6 +4314,21 @@ libc_support_library(
         ":__support_error_or",
         ":__support_macros_config",
         ":__support_osutil_syscall",
+    ],
+)
+
+libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_getegid",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/getegid.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":types_gid_t",
     ],
 )
 
@@ -5102,6 +5178,7 @@ cc_library(
         ":__support_fputil_fp_bitwise",
         ":__support_fputil_generic_fmod",
         ":__support_fputil_hypot",
+        ":__support_fputil_is_integer",
         ":__support_fputil_manipulation_functions",
         ":__support_fputil_multiply_add",
         ":__support_fputil_nearest_integer",
@@ -5920,8 +5997,8 @@ libc_support_library(
     hdrs = ["src/__support/math/setpayloadf128.h"],
     deps = [
         ":__support_fputil_basic_operations",
+        ":__support_fputil_float128",
         ":__support_macros_config",
-        ":llvm_libc_types_float128",
     ],
 )
 
@@ -5977,8 +6054,8 @@ libc_support_library(
     hdrs = ["src/__support/math/setpayloadsigf128.h"],
     deps = [
         ":__support_fputil_basic_operations",
+        ":__support_fputil_float128",
         ":__support_macros_config",
-        ":llvm_libc_types_float128",
     ],
 )
 
@@ -8069,10 +8146,10 @@ libc_support_library(
     name = "__support_math_nanf128",
     hdrs = ["src/__support/math/nanf128.h"],
     deps = [
+        ":__support_fputil_float128",
         ":__support_libc_errno",
         ":__support_macros_config",
         ":__support_str_to_float",
-        ":llvm_libc_types_float128",
     ],
 )
 
@@ -9821,8 +9898,8 @@ libc_support_library(
     hdrs = ["src/__support/math/getpayloadf128.h"],
     deps = [
         ":__support_fputil_basic_operations",
+        ":__support_fputil_float128",
         ":__support_macros_config",
-        ":llvm_libc_types_float128",
     ],
 )
 
@@ -10210,6 +10287,7 @@ libc_support_library(
         ":__support_fputil_except_value_utils",
         ":__support_fputil_fenv_impl",
         ":__support_fputil_fp_bits",
+        ":__support_fputil_is_integer",
         ":__support_fputil_multiply_add",
         ":__support_fputil_nearest_integer_operations",
         ":__support_fputil_polyeval",
@@ -10229,6 +10307,7 @@ libc_support_library(
         ":__support_fputil_cast",
         ":__support_fputil_fenv_impl",
         ":__support_fputil_fp_bits",
+        ":__support_fputil_is_integer",
         ":__support_fputil_multiply_add",
         ":__support_fputil_nearest_integer_operations",
         ":__support_fputil_polyeval",
@@ -10572,6 +10651,7 @@ libc_support_library(
         ":__support_fputil_dyadic_float",
         ":__support_fputil_fenv_impl",
         ":__support_fputil_fp_bits",
+        ":__support_fputil_is_integer",
         ":__support_fputil_multiply_add",
         ":__support_fputil_nearest_integer",
         ":__support_fputil_polyeval",
@@ -10652,6 +10732,7 @@ libc_support_library(
         ":__support_fputil_double_double",
         ":__support_fputil_fenv_impl",
         ":__support_fputil_fp_bits",
+        ":__support_fputil_is_integer",
         ":__support_fputil_nearest_integer",
         ":__support_fputil_rounding_mode",
         ":__support_fputil_sqrt",
@@ -11658,6 +11739,7 @@ libc_support_library(
         ":__support_fputil_except_value_utils",
         ":__support_fputil_fenv_impl",
         ":__support_fputil_fp_bits",
+        ":__support_fputil_is_integer",
         ":__support_fputil_multiply_add",
         ":__support_macros_optimization",
         ":__support_math_sincosf16_utils",
@@ -12001,6 +12083,7 @@ libc_support_library(
         ":__support_fputil_except_value_utils",
         ":__support_fputil_fenv_impl",
         ":__support_fputil_fp_bits",
+        ":__support_fputil_is_integer",
         ":__support_fputil_multiply_add",
         ":__support_macros_config",
         ":__support_macros_optimization",
@@ -14190,6 +14273,8 @@ libc_math_function(
 libc_math_function(
     name = "getpayloadf128",
     additional_deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_float128",
         ":__support_math_getpayloadf128",
     ],
 )
@@ -14732,6 +14817,8 @@ libc_math_function(
 libc_math_function(
     name = "nanf128",
     additional_deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_float128",
         ":__support_math_nanf128",
     ],
 )
@@ -15307,6 +15394,8 @@ libc_math_function(
 libc_math_function(
     name = "setpayloadf128",
     additional_deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_float128",
         ":__support_math_setpayloadf128",
     ],
 )
@@ -15349,6 +15438,8 @@ libc_math_function(
 libc_math_function(
     name = "setpayloadsigf128",
     additional_deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_float128",
         ":__support_math_setpayloadsigf128",
     ],
 )
@@ -17581,6 +17672,32 @@ libc_function(
     ],
 )
 
+libc_function(
+    name = "getegid",
+    srcs = ["src/unistd/linux/getegid.cpp"],
+    hdrs = ["src/unistd/getegid.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_getegid",
+        ":types_gid_t",
+    ],
+)
+
+libc_function(
+    name = "getgid",
+    srcs = ["src/unistd/linux/getgid.cpp"],
+    hdrs = ["src/unistd/getgid.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":errno",
+        ":hdr_unistd_macros",
+        ":types_gid_t",
+    ],
+)
+
 # libc_function(
 #     name = "getopt",
 #     srcs = ["src/unistd/getopt.cpp"],
@@ -19331,7 +19448,7 @@ libc_function(
         ":__support_common",
         ":__support_libc_errno",
         ":__support_macros_config",
-        ":__support_osutil_syscall",
+        ":__support_osutil_linux_syscall_wrappers_epoll_create1",
         ":errno",
     ],
 )
@@ -19351,28 +19468,6 @@ libc_function(
         ":__support_osutil_linux_syscall_wrappers_epoll_ctl",
         ":errno",
         ":hdr_sys_epoll_macros",
-        ":types_struct_epoll_event",
-    ],
-)
-
-libc_function(
-    name = "epoll_wait",
-    srcs = ["src/sys/epoll/linux/epoll_wait.cpp"],
-    hdrs = ["src/sys/epoll/epoll_wait.h"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":__support_common",
-        ":__support_libc_errno",
-        ":__support_macros_config",
-        ":__support_macros_sanitizer",
-        ":__support_osutil_syscall",
-        ":errno",
-        ":hdr_signal_macros",
-        ":hdr_sys_epoll_macros",
-        ":types_sigset_t",
         ":types_struct_epoll_event",
     ],
 )
@@ -19412,13 +19507,33 @@ libc_function(
         ":__support_libc_errno",
         ":__support_macros_config",
         ":__support_macros_sanitizer",
+        ":__support_osutil_linux_syscall_wrappers_epoll_pwait2",
+        ":errno",
+        ":types_sigset_t",
+        ":types_struct_epoll_event",
+        ":types_struct_timespec",
+    ],
+)
+
+libc_function(
+    name = "epoll_wait",
+    srcs = ["src/sys/epoll/linux/epoll_wait.cpp"],
+    hdrs = ["src/sys/epoll/epoll_wait.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_macros_sanitizer",
         ":__support_osutil_syscall",
         ":errno",
         ":hdr_signal_macros",
         ":hdr_sys_epoll_macros",
         ":types_sigset_t",
         ":types_struct_epoll_event",
-        ":types_struct_timespec",
     ],
 )
 

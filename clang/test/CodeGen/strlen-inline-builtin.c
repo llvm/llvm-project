@@ -22,4 +22,4 @@ size_t call_strlen(const char *s) {
 //
 // CHECK: Function Attrs: alwaysinline nounwind
 // CHECK-LABEL: define internal i64 @strlen.inline(
-// CHECK-SAME: ptr [[S:%.*]]) #[[ATTR2:[0-9]+]] {
+// CHECK-SAME: ptr noundef [[S:%.*]]) #[[ATTR2:[0-9]+]] {

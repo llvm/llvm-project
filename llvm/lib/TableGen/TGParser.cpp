@@ -104,15 +104,13 @@ static void checkConcrete(Record &R) {
     if (RV.isNonconcreteOK())
       continue;
 
-    if (const Init *V = RV.getValue()) {
-      bool Ok = isa<BitsInit>(V) ? checkBitsConcrete(R, RV) : V->isConcrete();
-      if (!Ok) {
-        PrintError(R.getLoc(), Twine("Initializer of '") +
-                                   RV.getNameInitAsString() + "' in '" +
-                                   R.getNameInitAsString() +
-                                   "' could not be fully resolved: " +
-                                   RV.getValue()->getAsString());
-      }
+    const Init *V = RV.getValue();
+    bool Ok = isa<BitsInit>(V) ? checkBitsConcrete(R, RV) : V->isConcrete();
+    if (!Ok) {
+      PrintError(R.getLoc(),
+                 Twine("Initializer of '") + RV.getNameInitAsString() +
+                     "' in '" + R.getNameInitAsString() +
+                     "' could not be fully resolved: " + V->getAsString());
     }
   }
 }
@@ -243,10 +241,8 @@ bool TGParser::AddValue(Record *CurRec, SMLoc Loc, const RecordVal &RV,
 /// Return true on error, false on success.
 bool TGParser::SetValue(Record *CurRec, SMLoc Loc, const Init *ValName,
                         ArrayRef<unsigned> BitList, const Init *V,
-                        bool AllowSelfAssignment, bool OverrideDefLoc,
-                        LetMode Mode) {
-  if (!V)
-    return false;
+                        bool OverrideDefLoc, LetMode Mode) {
+  assert(V && "Cannot set a null value");
 
   if (!CurRec)
     CurRec = &CurMultiClass->Rec;
@@ -295,7 +291,7 @@ bool TGParser::SetValue(Record *CurRec, SMLoc Loc, const Init *ValName,
   // in the resolution machinery.
   if (BitList.empty())
     if (const auto *VI = dyn_cast<VarInit>(V))
-      if (VI->getNameInit() == ValName && !AllowSelfAssignment)
+      if (VI->getNameInit() == ValName)
         return Error(Loc, "Recursion / self-assignment forbidden");
 
   // If we are assigning to a subset of the bits in the value we must be
@@ -3651,9 +3647,8 @@ const Init *TGParser::ParseDeclaration(Record *CurRec,
   if (consume(tgtok::equal)) {
     SMLoc ValLoc = Lex.getLoc();
     const Init *Val = ParseValue(CurRec, Type);
-    if (!Val ||
-        SetValue(CurRec, ValLoc, DeclName, {}, Val,
-                 /*AllowSelfAssignment=*/false, /*OverrideDefLoc=*/false)) {
+    if (!Val || SetValue(CurRec, ValLoc, DeclName, {}, Val,
+                         /*OverrideDefLoc=*/false)) {
       // Return the name, even if an error is thrown. This is so that we can
       // continue to make some progress, even without the value having been
       // initialized.
@@ -3884,7 +3879,7 @@ bool TGParser::ParseBodyItem(Record *CurRec) {
     return TokError("expected ';' after let expression");
 
   return SetValue(CurRec, IdLoc, FieldName, BitList, Val,
-                  /*AllowSelfAssignment=*/false, /*OverrideDefLoc=*/true, Mode);
+                  /*OverrideDefLoc=*/true, Mode);
 }
 
 /// ParseBody - Read the body of a class or def. Return true on error, false on
@@ -3925,8 +3920,7 @@ bool TGParser::ApplyLetStack(Record *CurRec) {
   for (SmallVectorImpl<LetRecord> &LetInfo : LetStack)
     for (LetRecord &LR : LetInfo)
       if (SetValue(CurRec, LR.Loc, LR.Name, LR.Bits, LR.Value,
-                   /*AllowSelfAssignment=*/false, /*OverrideDefLoc=*/true,
-                   LR.Mode))
+                   /*OverrideDefLoc=*/true, LR.Mode))
         return true;
   return false;
 }

@@ -1639,7 +1639,7 @@ add_fp_unittest(
   frexpf128_test
   NEED_MPFR_F128
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     frexpf128_test.cpp
   HDRS
@@ -1698,7 +1698,7 @@ add_fp_unittest(
 add_fp_unittest(
   ilogbf128_test
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     ilogbf128_test.cpp
   HDRS
@@ -1794,7 +1794,7 @@ add_fp_unittest(
 add_fp_unittest(
   logbf128_test
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     logbf128_test.cpp
   HDRS
