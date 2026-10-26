@@ -158,6 +158,62 @@ func.func @dynamic_inner_k(%a: memref<?x32x?xbf16>,
   return %result : vector<32x32xf32>
 }
 
+// fold a leading unit-dimension broadcast of an already packed RHS
+// CHECK-LABEL: func.func @broadcast_vnni_bf16(
+// CHECK: memref.expand_shape
+// CHECK: %[[LHS:.+]] = vector.transfer_read {{.*}} vector<32x16x2xbf16>
+// CHECK: %[[RHS:.+]] = vector.transfer_read {{.*}} vector<16x32x2xbf16>
+// CHECK-NOT: vector.broadcast
+// CHECK-NOT: vector.transpose
+// CHECK-NOT: vector.shape_cast
+// CHECK: vector.contract {{.*}} %[[LHS]], %[[RHS]], %{{.+}} : vector<32x16x2xbf16>, vector<16x32x2xbf16> into vector<32x32xf32>
+// NANO-LABEL: func.func @broadcast_vnni_bf16(
+// NANO-NOT: vector.contract
+// NANO: return
+func.func @broadcast_vnni_bf16(%a: memref<?x32x32xbf16>,
+                              %b: memref<?x16x32x2xbf16>,
+                              %init: vector<32x32xf32>, %ub: index) -> vector<32x32xf32> {
+  %zero = arith.constant 0 : index
+  %step = arith.constant 16 : index
+  %pad = arith.constant 0.0 : bf16
+  %result = scf.for %k = %zero to %ub step %step iter_args(%accum = %init) -> (vector<32x32xf32>) {
+    %lhs = vector.transfer_read %a[%k, %zero, %zero], %pad {in_bounds = [true, true]} : memref<?x32x32xbf16>, vector<32x32xbf16>
+    %rhs = vector.transfer_read %b[%k, %zero, %zero, %zero], %pad {in_bounds = [true, true, true]} : memref<?x16x32x2xbf16>, vector<16x32x2xbf16>
+    %broadcast = vector.broadcast %rhs : vector<16x32x2xbf16> to vector<1x16x32x2xbf16>
+    %transpose = vector.transpose %broadcast, [0, 1, 3, 2] : vector<1x16x32x2xbf16> to vector<1x16x2x32xbf16>
+    %flat = vector.shape_cast %transpose : vector<1x16x2x32xbf16> to vector<32x32xbf16>
+    %dot = vector.contract {indexing_maps = [#lhs, #rhs, #acc], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %lhs, %flat, %accum : vector<32x32xbf16>, vector<32x32xbf16> into vector<32x32xf32>
+    scf.yield %dot : vector<32x32xf32>
+  }
+  return %result : vector<32x32xf32>
+}
+
+// negative test: broadcasting creates K, so the source is not VNNI packed -> skip
+// CHECK-LABEL: func.func @negative_broadcast_unpacked_rhs(
+// CHECK-NOT: memref.expand_shape
+// CHECK: %[[RHS:.+]] = vector.transfer_read {{.*}} vector<32x2xbf16>
+// CHECK: %[[BCAST:.+]] = vector.broadcast %[[RHS]] : vector<32x2xbf16> to vector<16x32x2xbf16>
+// CHECK: %[[T:.+]] = vector.transpose %[[BCAST]], [0, 2, 1]
+// CHECK: %[[FLAT:.+]] = vector.shape_cast %[[T]] : vector<16x2x32xbf16> to vector<32x32xbf16>
+// CHECK: vector.contract {{.*}} %{{.+}}, %[[FLAT]], %{{.+}} : vector<32x32xbf16>, vector<32x32xbf16> into vector<32x32xf32>
+func.func @negative_broadcast_unpacked_rhs(%a: memref<?x32x32xbf16>,
+                                          %b: memref<?x32x2xbf16>,
+                                          %init: vector<32x32xf32>, %ub: index) -> vector<32x32xf32> {
+  %zero = arith.constant 0 : index
+  %step = arith.constant 16 : index
+  %pad = arith.constant 0.0 : bf16
+  %result = scf.for %k = %zero to %ub step %step iter_args(%accum = %init) -> (vector<32x32xf32>) {
+    %lhs = vector.transfer_read %a[%k, %zero, %zero], %pad {in_bounds = [true, true]} : memref<?x32x32xbf16>, vector<32x32xbf16>
+    %rhs = vector.transfer_read %b[%k, %zero, %zero], %pad {in_bounds = [true, true]} : memref<?x32x2xbf16>, vector<32x2xbf16>
+    %broadcast = vector.broadcast %rhs : vector<32x2xbf16> to vector<16x32x2xbf16>
+    %transpose = vector.transpose %broadcast, [0, 2, 1] : vector<16x32x2xbf16> to vector<16x2x32xbf16>
+    %flat = vector.shape_cast %transpose : vector<16x2x32xbf16> to vector<32x32xbf16>
+    %dot = vector.contract {indexing_maps = [#lhs, #rhs, #acc], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %lhs, %flat, %accum : vector<32x32xbf16>, vector<32x32xbf16> into vector<32x32xf32>
+    scf.yield %dot : vector<32x32xf32>
+  }
+  return %result : vector<32x32xf32>
+}
+
 // negative test: lhs innermost read offset 1 is not a multiple of VNNI factor 2 -> skip
 // CHECK-LABEL: func.func @negative_misaligned_inner_k(
 // CHECK-SAME: %[[A:[^,]+]]: memref<?x32x64xbf16>

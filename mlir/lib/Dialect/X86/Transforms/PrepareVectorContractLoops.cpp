@@ -106,7 +106,9 @@ std::optional<ExpandedRead> getExpandableRead(vector::TransferReadOp read,
     if (read.getVectorType().isScalable() ||
         failed(type.getStridesAndOffset(strides, offset)))
       return std::nullopt;
-    // The in-bounds read covers this prefix of the last dimension.
+    // The full dimension has a dynamic size, but this in-bounds read ends at
+    // a known index. Create a view whose last dimension ends there and give
+    // the divisibility check below a static size to work with.
     SmallVector<int64_t> shape(type.getShape());
     shape.back() = *lastIndex + read.getVectorType().getShape().back();
     view = type = MemRefType::get(
@@ -139,7 +141,8 @@ Value buildExpandedRead(PatternRewriter &rewriter, Location loc,
   rewriter.setInsertionPoint(info.read->getParentOp());
   Value base = info.read.getBase();
   if (info.view) {
-    // Unlike subview, this view stays valid when the loop runs zero times.
+    // Unlike memref.subview, memref.reinterpret_cast is valid even when
+    // the loop runs zero times (which makes the view out of bounds).
     auto metadata =
         memref::ExtractStridedMetadataOp::create(rewriter, loc, base);
     SmallVector<OpFoldResult> sizes = metadata.getConstifiedMixedSizes();
