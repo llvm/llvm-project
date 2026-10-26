@@ -31,6 +31,7 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
 // CHECK-SAME: ptr %[[DESC:.*]], i64 %[[S0:.*]], i64 %[[S1:.*]], i64 %[[S2:.*]], i64 %[[S3:.*]])
 // CHECK: %[[FROM_DIMS:.*]] = alloca [5 x %struct.descriptor_dim.0]
 // CHECK: %[[TO_DIMS:.*]] = alloca [5 x %struct.descriptor_dim]
+// CHECK: getelementptr inbounds {{i8|i32}}, ptr %{{.*}}, i64
 // CHECK: %[[BAND_OFFSET:.*]] = mul i64 2, %[[S1]]
 // CHECK: %[[BASE:.*]] = load ptr, ptr %[[DESC]]
 // CHECK: %[[IS_NULL:.*]] = icmp eq ptr %[[BASE]], null
@@ -56,6 +57,7 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
 // CHECK: store i64 1,
 // CHECK: store ptr %[[TO_DIMS]],
 // CHECK: call void @__tgt_target_data_update_mapper({{.*}}ptr @.offload_sizes, ptr @.offload_maptypes,
+// CHECK: getelementptr inbounds {{i8|i32}}, ptr %{{.*}}, i64
 // CHECK: %[[FROM_BAND_OFFSET:.*]] = mul i64 2, %[[S1]]
 // CHECK: %[[FROM_BASE:.*]] = load ptr, ptr %[[DESC]]
 // CHECK: store ptr %[[FROM_BASE]],
