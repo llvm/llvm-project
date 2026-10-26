@@ -144,7 +144,7 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
 
   std::optional<cir::SourceLanguage> sourceLanguage = getCIRSourceLanguage();
   if (sourceLanguage)
-    theModule->setAttr(
+    getModule()->setAttr(
         cir::CIRDialect::getSourceLanguageAttrName(),
         cir::SourceLanguageAttr::get(&mlirContext, *sourceLanguage));
   if (langOpts.OpenCL || (langOpts.CUDAIsDevice && getTriple().isSPIRV())) {
@@ -158,38 +158,41 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
     // SPIR v2.0 s2.12 requires opencl.spir.version.
     if (getTriple().isSPIR()) {
       unsigned spirMajor = version / 100;
-      theModule->setAttr(cir::CIRDialect::getOpenCLSPIRVersionAttrName(),
-                         cir::OpenCLVersionAttr::get(&getMLIRContext(),
-                                                     spirMajor,
-                                                     spirMajor > 1 ? 0 : 2));
+      getModule()->setAttr(cir::CIRDialect::getOpenCLSPIRVersionAttrName(),
+                           cir::OpenCLVersionAttr::get(&getMLIRContext(),
+                                                       spirMajor,
+                                                       spirMajor > 1 ? 0 : 2));
     }
   }
-  theModule->setAttr(cir::CIRDialect::getTripleAttrName(),
-                     builder.getStringAttr(getTriple().str()));
-  theModule->setAttr(cir::CIRDialect::getTargetABIAttrName(),
-                     builder.getStringAttr(getTarget().getABI()));
+  getModule()->setAttr(cir::CIRDialect::getTripleAttrName(),
+                       builder.getStringAttr(getTriple().str()));
+  getModule()->setAttr(cir::CIRDialect::getTargetABIAttrName(),
+                       builder.getStringAttr(getTarget().getABI()));
 
   // If cxxabi was overridden via -fc++-abi, record it.
   if (langOpts.CXXABI)
-    theModule->setAttr(
+    getModule()->setAttr(
         cir::CIRDialect::getCXXABIAttrName(),
         builder.getStringAttr(TargetCXXABI::getSpelling(*langOpts.CXXABI)));
 
   if (llvm::VersionTuple sdkVersion = getTarget().getSDKVersion();
       !sdkVersion.empty())
-    theModule->setAttr(cir::CIRDialect::getSDKVersionAttrName(),
-                       builder.getStringAttr(sdkVersion.getAsString()));
+    getModule()->setAttr(cir::CIRDialect::getSDKVersionAttrName(),
+                         builder.getStringAttr(sdkVersion.getAsString()));
+  if (langOpts.CUDA && !langOpts.CUID.empty())
+    getModule()->setAttr(cir::CIRDialect::getCUIDHashAttrName(),
+                         builder.getStringAttr(astContext.getCUIDHash()));
   // TODO(CIR): These attributes should eventually be replaced by
   // TypeSizeInfoAttr once it is upstreamed.
-  theModule->setAttr(cir::CIRDialect::getSizeTypeWidthAttrName(),
-                     builder.getI32IntegerAttr(sizeTypeSize));
-  theModule->setAttr(cir::CIRDialect::getIntTypeWidthAttrName(),
-                     builder.getI32IntegerAttr(target.getIntWidth()));
+  getModule()->setAttr(cir::CIRDialect::getSizeTypeWidthAttrName(),
+                       builder.getI32IntegerAttr(sizeTypeSize));
+  getModule()->setAttr(cir::CIRDialect::getIntTypeWidthAttrName(),
+                       builder.getI32IntegerAttr(target.getIntWidth()));
 
   // Serialize the lowering-relevant LangOptions onto the ModuleOp so a reloaded
   // .cir is self-describing and lowers the same way it was compiled, without a
   // live clang::LangOptions.
-  theModule->setAttr(
+  getModule()->setAttr(
       cir::CIRDialect::getLoweringLangOptionsAttrName(),
       cir::LoweringLangOptionsAttr::get(
           &mlirContext,
@@ -203,15 +206,16 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
           /*openmp=*/langOpts.OpenMP != 0,
           /*openmp_is_target_device=*/langOpts.OpenMPIsTargetDevice,
           /*clang_abi_compat=*/
-          static_cast<int32_t>(langOpts.getClangABICompat())));
+          static_cast<int32_t>(langOpts.getClangABICompat()),
+          static_cast<int32_t>(langOpts.LongDoubleSize)));
 
   if (cgo.OptimizationLevel > 0 || cgo.OptimizeSize > 0)
-    theModule->setAttr(cir::CIRDialect::getOptInfoAttrName(),
-                       cir::OptInfoAttr::get(&mlirContext,
-                                             cgo.OptimizationLevel,
-                                             cgo.OptimizeSize));
+    getModule()->setAttr(cir::CIRDialect::getOptInfoAttrName(),
+                         cir::OptInfoAttr::get(&mlirContext,
+                                               cgo.OptimizationLevel,
+                                               cgo.OptimizeSize));
 
-  theModule->setAttr(
+  getModule()->setAttr(
       cir::CIRDialect::getDefaultTlsModelAttrName(),
       cir::TLSModelAttr::get(&mlirContext, getDefaultCIRTLSModel()));
 
@@ -222,8 +226,8 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
         langOpts.OpenMPNoNestedParallelism, langOpts.OpenMPIsTargetDevice,
         getTriple().isGPU(), langOpts.OpenMPForceUSM, langOpts.OpenMP,
         langOpts.OMPHostIRFile, langOpts.OMPTargetTriples, langOpts.NoGPULib);
-    mlir::omp::setOffloadModuleInterfaceAttributes(theModule, ompOpts);
-    mlir::omp::setOpenMPVersionAttribute(theModule, langOpts.OpenMP);
+    mlir::omp::setOffloadModuleInterfaceAttributes(getModule(), ompOpts);
+    mlir::omp::setOpenMPVersionAttribute(getModule(), langOpts.OpenMP);
   }
 
   if (langOpts.CUDA)
@@ -239,17 +243,17 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
       *astContext.getSourceManager().getFileEntryForID(mainFileId);
   StringRef path = mainFile.tryGetRealPathName();
   if (!path.empty()) {
-    theModule.setSymName(path);
-    theModule->setLoc(mlir::FileLineColLoc::get(&mlirContext, path,
-                                                /*line=*/0,
-                                                /*column=*/0));
+    getModule().setSymName(path);
+    getModule()->setLoc(mlir::FileLineColLoc::get(&mlirContext, path,
+                                                  /*line=*/0,
+                                                  /*column=*/0));
   }
 }
 
 CIRGenModule::~CIRGenModule() = default;
 
 void CIRGenModule::setOpenCLVersionAttr(StringRef attrName, unsigned version) {
-  theModule->setAttr(
+  getModule()->setAttr(
       attrName, cir::OpenCLVersionAttr::get(&getMLIRContext(), version / 100,
                                             (version % 100) / 10));
 }
@@ -559,6 +563,38 @@ void CIRGenModule::printPostfixForExternalizedDecl(llvm::raw_ostream &os,
   }
 }
 
+static bool shouldSkipAliasEmission(const CIRGenModule &cgm,
+                                    const ValueDecl *global) {
+  const LangOptions &langOpts = cgm.getLangOpts();
+  if (!langOpts.OpenMPIsTargetDevice && !langOpts.CUDA)
+    return false;
+
+  const auto *aa = global->getAttr<AliasAttr>();
+  GlobalDecl aliaseeGD;
+
+  // Check if the aliasee exists, if the aliasee is not found, skip the alias
+  // emission. This is executed for both the host and device.
+  if (!cgm.lookupRepresentativeDecl(aa->getAliasee(), aliaseeGD))
+    return true;
+
+  const auto *aliaseeDecl = dyn_cast<ValueDecl>(aliaseeGD.getDecl());
+  if (langOpts.OpenMPIsTargetDevice)
+    return !aliaseeDecl ||
+           !OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(aliaseeDecl);
+
+  // CUDA / HIP
+  const bool hasDeviceAttr = global->hasAttr<CUDADeviceAttr>();
+  const bool aliaseeHasDeviceAttr =
+      aliaseeDecl && aliaseeDecl->hasAttr<CUDADeviceAttr>();
+
+  if (langOpts.CUDAIsDevice)
+    return !hasDeviceAttr || !aliaseeHasDeviceAttr;
+
+  // CUDA / HIP Host
+  // we know that the aliasee exists from above, so we know to emit
+  return false;
+}
+
 void CIRGenModule::emitGlobal(clang::GlobalDecl gd) {
   if (const auto *cd = dyn_cast<clang::OpenACCConstructDecl>(gd.getDecl())) {
     emitGlobalOpenACCDecl(cd);
@@ -574,9 +610,8 @@ void CIRGenModule::emitGlobal(clang::GlobalDecl gd) {
   // If this is an alias definition (which otherwise looks like a declaration)
   // emit it now.
   if (global->hasAttr<AliasAttr>()) {
-    // Classic codegen calls shouldSkipAliasEmission here to skip alias
-    // emission for OpenMP target device and CUDA configurations.
-    assert(!cir::MissingFeatures::shouldSkipAliasEmission());
+    if (shouldSkipAliasEmission(*this, global))
+      return;
     emitAliasDefinition(gd);
     return;
   }
@@ -629,7 +664,7 @@ void CIRGenModule::emitGlobal(clang::GlobalDecl gd) {
       // change linkage, make sure that it's emitted.
       if (astContext.getInlineVariableDefinitionKind(vd) ==
           ASTContext::InlineVariableDefinitionKind::Strong)
-        getAddrOfGlobalVar(vd);
+        getOrCreateCIRGlobal(vd, /*ty=*/{}, NotForDefinition);
       // Otherwise, we can ignore this declaration. The variable will be emitted
       // on its first use.
       return;
@@ -757,7 +792,7 @@ void CIRGenModule::handleCXXStaticMemberVarInstantiation(VarDecl *vd) {
   // If we have a definition, this might be a deferred decl. If the
   // instantiation is explicit, make sure we emit it at the end.
   if (vd->getDefinition() && tsk == TSK_ExplicitInstantiationDefinition)
-    getAddrOfGlobalVar(vd);
+    getOrCreateCIRGlobal(vd, /*ty=*/{}, NotForDefinition);
 
   emitTopLevelDecl(vd);
 }
@@ -1030,8 +1065,8 @@ LangAS CIRGenModule::getGlobalVarAddressSpace(const VarDecl *d) {
     return LangAS::cuda_device;
   }
 
-  if (langOpts.OpenMP)
-    errorNYI("OpenMP global address space");
+  if (langOpts.OpenMP && d && d->hasAttr<OMPAllocateDeclAttr>())
+    errorNYI(d->getSourceRange(), "OpenMP global address space");
 
   return getTargetCIRGenInfo().getGlobalVarAddressSpace(*this, d);
 }
@@ -1183,7 +1218,7 @@ void CIRGenModule::replaceGlobal(cir::GlobalOp oldGV, cir::GlobalOp newGV) {
 
   // Visit all uses and add handling to fix up the types.
   std::optional<mlir::SymbolTable::UseRange> oldSymUses =
-      oldGV.getSymbolUses(theModule);
+      oldGV.getSymbolUses(getModule());
   for (mlir::SymbolTable::SymbolUse use : *oldSymUses) {
     mlir::Operation *userOp = use.getUser();
     assert(
@@ -1901,7 +1936,7 @@ void CIRGenModule::applyReplacements() {
   // Previously, each replaceAllSymbolUses call walked the entire module,
   // giving O(R × M) quadratic behavior for R replacements.
   mlir::SymbolTableCollection symbolTableCollection;
-  mlir::SymbolUserMap userMap(symbolTableCollection, theModule);
+  mlir::SymbolUserMap userMap(symbolTableCollection, getModule());
 
   for (auto &i : replacements) {
     StringRef mangledName = i.first;
@@ -3808,7 +3843,7 @@ CIRGenModule::createCIRFunction(mlir::Location loc, StringRef name,
     // Functions always belong at module scope, but the ambient insertion
     // point may be inside another op's region, e.g. a thunk body or a
     // global's ctor region, so it cannot be used here.
-    builder.setInsertionPointToEnd(theModule.getBody());
+    builder.setInsertionPointToEnd(getModule().getBody());
 
     func = cir::FuncOp::create(builder, loc, name, funcType);
 
@@ -4016,19 +4051,19 @@ void CIRGenModule::release() {
   emitVTablesOpportunistically();
   applyReplacements();
 
-  theModule->setAttr(cir::CIRDialect::getModuleLevelAsmAttrName(),
-                     builder.getArrayAttr(globalScopeAsm));
+  getModule()->setAttr(cir::CIRDialect::getModuleLevelAsmAttrName(),
+                       builder.getArrayAttr(globalScopeAsm));
 
   emitGlobalAnnotations();
 
   if (std::optional<cir::FramePointerKind> kind =
           getFramePointerKind(codeGenOpts.getFramePointer()))
-    theModule->setAttr(
+    getModule()->setAttr(
         cir::CIRDialect::getModuleFramePointerAttrName(),
         cir::FramePointerKindAttr::get(&getMLIRContext(), *kind));
 
   if (!recordLayoutEntries.empty())
-    theModule->setAttr(
+    getModule()->setAttr(
         cir::CIRDialect::getRecordLayoutsAttrName(),
         mlir::DictionaryAttr::get(&getMLIRContext(), recordLayoutEntries));
 
@@ -4076,7 +4111,7 @@ void CIRGenModule::release() {
     clang::Module *primary = astContext.getCurrentNamedModule();
     bool isInterfaceUnit = primary && !primary->isModuleImplementation();
     if (isInterfaceUnit)
-      theModule->setAttr(
+      getModule()->setAttr(
           cir::CIRDialect::getCXXModuleInitFnNameAttrName(),
           builder.getStringAttr(getModuleInitializerName(primary)));
 
@@ -4096,8 +4131,8 @@ void CIRGenModule::release() {
           builder.getStringAttr(getModuleInitializerName(mod)), loc));
     }
     if (!importedInits.empty())
-      theModule->setAttr(cir::CIRDialect::getCXXModuleImportedInitsAttrName(),
-                         builder.getArrayAttr(importedInits));
+      getModule()->setAttr(cir::CIRDialect::getCXXModuleImportedInitsAttrName(),
+                           builder.getArrayAttr(importedInits));
   }
 
   // Autolink metadata for the imported modules is not emitted yet.
@@ -4248,7 +4283,7 @@ bool CIRGenModule::verifyModule() const {
   // Verify the module after we have finished constructing it, this will
   // check the structural properties of the IR and invoke any specific
   // verifiers we have on the CIR operations.
-  return mlir::verify(theModule).succeeded();
+  return mlir::verify(getModule()).succeeded();
 }
 
 mlir::Attribute CIRGenModule::getAddrOfRTTIDescriptor(mlir::Location loc,

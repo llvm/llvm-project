@@ -1329,13 +1329,22 @@ DataAggregator::getFallthroughsInTrace(BinaryFunction &BF, const Trace &Trace,
 
 ErrorOr<DataAggregator::LBREntry> DataAggregator::parseLBREntry() {
   /// perf script -F brstack entry format:
-  /// FROM/TO/EVENT/INTX/ABORT/CYCLES/TYPE/SPEC
+  /// FROM/TO/EVENT/INTX/ABORT/CYCLES[/TYPE/SPEC]
+  ErrorOr<StringRef> EntryStr = parseString(FieldSeparator, true);
+  if (std::error_code EC = EntryStr.getError())
+    return EC;
+  SmallVector<StringRef, 8> Fields;
+  EntryStr->split(Fields, '/');
+  if (Fields.size() < 6 ||
+      (Fields.size() > 6 && (Fields.size() < 8 || Fields[7].empty()))) {
+    reportError("expected rest of brstack entry");
+    Diag << "Found: " << *EntryStr << "\n";
+    return make_error_code(llvm::errc::io_error);
+  }
+
   LBREntry Res;
   // From
-  ErrorOr<StringRef> FromStrRes = parseString('/');
-  if (std::error_code EC = FromStrRes.getError())
-    return EC;
-  StringRef OffsetStr = FromStrRes.get();
+  StringRef OffsetStr = Fields[0];
   if (OffsetStr.getAsInteger(0, Res.From)) {
     reportError("expected hexadecimal number with From address");
     Diag << "Found: " << OffsetStr << "\n";
@@ -1343,10 +1352,7 @@ ErrorOr<DataAggregator::LBREntry> DataAggregator::parseLBREntry() {
   }
 
   // To
-  ErrorOr<StringRef> ToStrRes = parseString('/');
-  if (std::error_code EC = ToStrRes.getError())
-    return EC;
-  OffsetStr = ToStrRes.get();
+  OffsetStr = Fields[1];
   if (OffsetStr.getAsInteger(0, Res.To)) {
     reportError("expected hexadecimal number with To address");
     Diag << "Found: " << OffsetStr << "\n";
@@ -1354,10 +1360,7 @@ ErrorOr<DataAggregator::LBREntry> DataAggregator::parseLBREntry() {
   }
 
   // Event: M: mispredicted, P: predicted, N: not taken
-  ErrorOr<StringRef> EventStrRes = parseString('/');
-  if (std::error_code EC = EventStrRes.getError())
-    return EC;
-  StringRef MispredStr = EventStrRes.get();
+  StringRef MispredStr = Fields[2];
   // SPE brstack mispredicted flags might be up to two characters long:
   // 'PN' or 'MN'. Where 'N' optionally appears.
   bool ValidStrSize = opts::ArmSPE
@@ -1385,28 +1388,12 @@ ErrorOr<DataAggregator::LBREntry> DataAggregator::parseLBREntry() {
     MispredWarning = false;
   }
 
-  // Transaction, abort, cycles
-  for (unsigned I = 0; I < 3; ++I) {
-    ErrorOr<StringRef> IgnoredStr = parseString('/');
-    if (std::error_code EC = IgnoredStr.getError())
-      return EC;
-  }
+  // Transaction, abort, cycles are ignored.
 
   // Type: COND/UNCOND/IND/CALL/IND_CALL/RET
-  ErrorOr<StringRef> TypeStr = parseString('/');
-  if (std::error_code EC = TypeStr.getError())
-    return EC;
-  Res.IsReturn = TypeStr.get() == "RET";
+  Res.IsReturn = Fields.size() > 6 && Fields[6] == "RET";
 
-  // Branch speculation
-  ErrorOr<StringRef> Rest = parseString(FieldSeparator, true);
-  if (std::error_code EC = Rest.getError())
-    return EC;
-  if (Rest.get().size() < 1) {
-    reportError("expected rest of brstack entry");
-    Diag << "Found: " << Rest.get() << "\n";
-    return make_error_code(llvm::errc::io_error);
-  }
+  // Branch speculation is ignored.
   return Res;
 }
 
