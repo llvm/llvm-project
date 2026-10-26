@@ -91,7 +91,6 @@ public:
 // On AArch64 and COFF hosts the JIT carves each object's code and data from
 // one reserved mapping, because their relocations limit the distance between
 // sections. Code mapped on its own could land anywhere relative to the data.
-// Unlike the tests below, this one also runs on Windows.
 TEST(MLIRExecutionEngine, SKIP_WITHOUT_JIT(CodeAndDataShareOneMapping)) {
   llvm::Triple host(llvm::sys::getProcessTriple());
   if (!host.isAArch64() && !host.isOSBinFormatCOFF())
@@ -127,8 +126,8 @@ TEST(MLIRExecutionEngine, SKIP_WITHOUT_JIT(CodeAndDataShareOneMapping)) {
       mapper.purposes, llvm::SectionMemoryManager::AllocationPurpose::Code));
 }
 
-// The JIT isn't supported on Windows at that time
-#if !defined(_WIN32) && !defined(_AIX)
+// The JIT tests are not enabled on AIX yet.
+#if !defined(_AIX)
 
 TEST(MLIRExecutionEngine, SKIP_WITHOUT_JIT(AddInteger)) {
 #ifdef __s390__
@@ -461,4 +460,4 @@ TEST(MLIRExecutionEngine, SKIP_WITHOUT_JIT(CallbackInGlobalCtor)) {
   ASSERT_EQ(initCnt, 1);
 }
 
-#endif // _WIN32
+#endif // !defined(_AIX)
