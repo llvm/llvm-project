@@ -429,7 +429,8 @@ mulifx(IntType n, FXType m) {
       cpp::conditional_t<INTERMEDIATE_BITS <= 64, int64_t, Int128>,
       cpp::conditional_t<INTERMEDIATE_BITS <= 64, uint64_t, UInt128>>;
 
-  WideType unscaled_result = n * static_cast<WideType>(m_comp);
+  WideType unscaled_result =
+      static_cast<WideType>(n) * static_cast<WideType>(m_comp);
 
   if constexpr (FXRep::SIGN_LEN > 0) {
     constexpr WideType BIAS = (WideType(1) << F) - 1;
