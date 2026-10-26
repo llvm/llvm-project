@@ -59,16 +59,23 @@ constexpr Triple::EnvironmentType AllStages[] = {
     Triple::Amplification, Triple::Mesh,  Triple::Library};
 
 // The semantic kinds getAvailableStages knows about.
-constexpr SemanticKind SupportedKinds[] = {
-    SemanticKind::Arbitrary,        SemanticKind::Position,
-    SemanticKind::VertexID,         SemanticKind::Target,
-    SemanticKind::IsFrontFace,      SemanticKind::ClipDistance,
-    SemanticKind::CullDistance,     SemanticKind::TessFactor,
-    SemanticKind::InsideTessFactor, SemanticKind::DispatchThreadID,
-    SemanticKind::GroupID,          SemanticKind::GroupIndex,
-    SemanticKind::GroupThreadID,    SemanticKind::InstanceID,
-    SemanticKind::ShadingRate,      SemanticKind::Barycentrics,
-    SemanticKind::StartVertexLocation};
+constexpr SemanticKind SupportedKinds[] = {SemanticKind::Arbitrary,
+                                           SemanticKind::Position,
+                                           SemanticKind::VertexID,
+                                           SemanticKind::Target,
+                                           SemanticKind::IsFrontFace,
+                                           SemanticKind::ClipDistance,
+                                           SemanticKind::CullDistance,
+                                           SemanticKind::TessFactor,
+                                           SemanticKind::InsideTessFactor,
+                                           SemanticKind::DispatchThreadID,
+                                           SemanticKind::GroupID,
+                                           SemanticKind::GroupIndex,
+                                           SemanticKind::GroupThreadID,
+                                           SemanticKind::InstanceID,
+                                           SemanticKind::ShadingRate,
+                                           SemanticKind::Barycentrics,
+                                           SemanticKind::StartVertexLocation};
 
 // Ensure all stages return a valid SemanticInterpretation
 TEST(HLSLSemanticStagesTest, StagesAreValid) {
