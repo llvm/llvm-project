@@ -97,6 +97,15 @@
 // CHK-PHASES-NORDC-ARCHS-NEXT: 13: llvm-offload-binary, {7, 12}, image, (device-sycl)
 // CHK-PHASES-NORDC-ARCHS-NEXT: 14: clang-linker-wrapper, {13}, sycl-fatbin, (device-sycl)
 
+/// SYCL cannot target NVIDIA GPUs.
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-arch=sm_80 -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-NVPTX %s
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-targets=nvptx64-nvidia-cuda -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-NVPTX %s
+// CHK-NVPTX: error: invalid or unsupported offload target: 'nvptx64-nvidia-cuda'
+
 /// Multiple device triples are not supported today in non-RDC mode.
 // RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
 // RUN:   --no-offloadlib -fno-gpu-rdc \
