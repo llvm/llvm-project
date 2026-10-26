@@ -53,6 +53,20 @@ llvm::omp::Modifiers GetElements(const llvm::omp::descriptor::ModifierSet &desc,
     llvm::omp::Version version) {
   return desc.getModifiers(version);
 }
+
+llvm::directive::VersionRange GetVersionRangeForDirective(
+    llvm::omp::Directive dirId) {
+  llvm::omp::Version minVer{std::numeric_limits<int>::max()};
+  llvm::omp::Version maxVer{0u};
+  auto &desc = llvm::omp::getDescriptor(dirId);
+  for (llvm::omp::Version v : desc.getVersions()) {
+    minVer = std::min(minVer, v);
+    maxVer = std::max(maxVer, v);
+  }
+  return llvm::directive::VersionRange{
+      static_cast<int>(static_cast<unsigned>(minVer)),
+      static_cast<int>(static_cast<unsigned>(maxVer))};
+}
 } // namespace descriptor
 
 const parser::Designator *GetDesignatorFromObj(
