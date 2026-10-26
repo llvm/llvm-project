@@ -999,11 +999,6 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
         break;
       }
 
-      if (Ptr.isPoison()) {
-        reportImmediateUB() << "llvm.masked.load with poison pointer.";
-        return AnyValue();
-      }
-
       Lane = load(LanePtr, Align(1), ElemTy, /*NoUndef=*/false);
       // The first enabled base pointer may not be inbounds, but pointers after
       // that must be inbounds.

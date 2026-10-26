@@ -43,7 +43,7 @@ define void @poison_pointer() {
 ; POISON-PTR: Entering function: poison_pointer
 ; POISON-PTR-NEXT: Stacktrace:
 ; POISON-PTR-NEXT: #0   %r = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 poison, <4 x i1> <i1 false, i1 true, i1 false, i1 false>, <4 x i32> poison) at @poison_pointer <stdin>:{{[0-9]+}}
-; POISON-PTR-NEXT: Immediate UB detected: llvm.masked.load with poison pointer.
+; POISON-PTR-NEXT: Immediate UB detected: Invalid memory access with a poison pointer.
 ; POISON-PTR-NEXT: error: Execution of function 'poison_pointer' failed.
   %r = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 poison, <4 x i1> <i1 false, i1 true, i1 false, i1 false>, <4 x i32> poison)
   ret void
@@ -55,7 +55,7 @@ define void @misaligned() {
 ; MISALIGNED-NEXT:   %p = getelementptr i32, ptr @a, i64 1 => ptr 0xC [@a + 4]
 ; MISALIGNED-NEXT: Stacktrace:
 ; MISALIGNED-NEXT: #0   %r = call <2 x i32> @llvm.masked.load.v2i32.p0(ptr align 8 %p, <2 x i1> <i1 true, i1 false>, <2 x i32> poison) at @misaligned <stdin>:{{[0-9]+}}
-; MISALIGNED-NEXT: Immediate UB detected: llvm.masked.load with poison pointer.
+; MISALIGNED-NEXT: Immediate UB detected: Invalid memory access with a poison pointer.
 ; MISALIGNED-NEXT: error: Execution of function 'misaligned' failed.
   %p = getelementptr i32, ptr @a, i64 1
   %r = call <2 x i32> @llvm.masked.load.v2i32.p0(ptr align 8 %p, <2 x i1> <i1 true, i1 false>, <2 x i32> poison)
