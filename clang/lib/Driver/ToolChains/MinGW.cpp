@@ -298,13 +298,6 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       if (Args.hasArg(options::OPT_static))
         CmdArgs.push_back("--start-group");
 
-      if (Args.hasArg(options::OPT_fstack_protector) ||
-          Args.hasArg(options::OPT_fstack_protector_strong) ||
-          Args.hasArg(options::OPT_fstack_protector_all)) {
-        CmdArgs.push_back("-lssp_nonshared");
-        CmdArgs.push_back("-lssp");
-      }
-
       if (Args.hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
                        options::OPT_fno_openmp, false)) {
         switch (TC.getDriver().getOpenMPRuntime(Args)) {
