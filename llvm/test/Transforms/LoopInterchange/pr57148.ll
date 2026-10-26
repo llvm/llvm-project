@@ -17,12 +17,13 @@ define void @test1() {
 ; CHECK:       [[FOR_COND33_PREHEADER_PREHEADER:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_BODY42:.*]]
 ; CHECK:       [[FOR_BODY42]]:
-; CHECK-NEXT:    [[I_011:%.*]] = phi i16 [ [[INC69:%.*]], %[[FOR_END68:.*]] ], [ 0, %[[FOR_COND33_PREHEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV:%.*]] = phi i16 [ [[INTERCHANGE_IV_NEXT:%.*]], %[[FOR_END68:.*]] ], [ 0, %[[FOR_COND33_PREHEADER_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[FOR_COND37_PREHEADER:.*]]
 ; CHECK:       [[FOR_BODY42_SPLIT1]]:
 ; CHECK-NEXT:    br label %[[FOR_BODY42_PREHEADER:.*]]
 ; CHECK:       [[FOR_BODY42_PREHEADER]]:
 ; CHECK-NEXT:    [[J_010:%.*]] = phi i16 [ [[TMP3:%.*]], %[[FOR_END67:.*]] ], [ 0, %[[FOR_BODY42_SPLIT1]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i16 [ [[TMP5:%.*]], %[[FOR_END67]] ], [ 0, %[[FOR_BODY42_SPLIT1]] ]
 ; CHECK-NEXT:    br label %[[FOR_COND33_PREHEADER_PREHEADER]]
 ; CHECK:       [[FOR_COND37_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[FOR_BODY43:.*]]
@@ -39,15 +40,17 @@ define void @test1() {
 ; CHECK-NEXT:    [[ADD61_LCSSA_LCSSA:%.*]] = phi i32 [ [[ADD61]], %[[FOR_BODY43]] ]
 ; CHECK-NEXT:    store i32 [[ADD61_LCSSA_LCSSA]], ptr undef, align 1
 ; CHECK-NEXT:    [[INC66:%.*]] = add nuw nsw i16 [[J_010]], 1
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i16 [[J_010]], 43
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT2:%.*]] = add i16 [[INTERCHANGE_IV1]], 1
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp ne i16 [[INTERCHANGE_IV1]], 43
 ; CHECK-NEXT:    br label %[[FOR_END68]]
 ; CHECK:       [[FOR_END67]]:
+; CHECK-NEXT:    [[TMP5]] = add i16 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    [[TMP3]] = add nuw nsw i16 [[J_010]], 1
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp slt i16 [[J_010]], 43
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i16 [[INTERCHANGE_IV1]], 43
 ; CHECK-NEXT:    br i1 [[TMP4]], label %[[FOR_BODY42_PREHEADER]], label %[[FOR_COND75_PREHEADER:.*]]
 ; CHECK:       [[FOR_END68]]:
-; CHECK-NEXT:    [[INC69]] = add nuw nsw i16 [[I_011]], 1
-; CHECK-NEXT:    [[EXITCOND13_NOT:%.*]] = icmp eq i16 [[INC69]], 2
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT]] = add i16 [[INTERCHANGE_IV]], 1
+; CHECK-NEXT:    [[EXITCOND13_NOT:%.*]] = icmp eq i16 [[INTERCHANGE_IV]], 1
 ; CHECK-NEXT:    br i1 [[EXITCOND13_NOT]], label %[[FOR_END67]], label %[[FOR_BODY42]]
 ; CHECK:       [[FOR_COND75_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[FOR_COND75:.*]]
@@ -104,40 +107,48 @@ define void @test2() {
 ; CHECK-NEXT:    br label %[[FOR_COND33_PREHEADER1:.*]]
 ; CHECK:       [[FOR_COND33_PREHEADER1]]:
 ; CHECK-NEXT:    [[I_166:%.*]] = phi i16 [ [[INC69:%.*]], %[[FOR_INC69:.*]] ], [ 0, %[[FOR_COND33_PREHEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV4:%.*]] = phi i16 [ 0, %[[FOR_COND33_PREHEADER_PREHEADER]] ], [ [[INTERCHANGE_IV_NEXT5:%.*]], %[[FOR_INC69]] ]
 ; CHECK-NEXT:    [[ARRAYIDX60:%.*]] = getelementptr inbounds [2 x [4 x i32]], ptr @c, i16 0, i16 [[I_166]], i16 [[J_165:%.*]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY85_SPLIT1:.*]]
 ; CHECK:       [[FOR_COND33_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[FOR_COND37_PREHEADER:.*]]
 ; CHECK:       [[FOR_COND37_PREHEADER]]:
 ; CHECK-NEXT:    [[J_165]] = phi i16 [ [[TMP7:%.*]], %[[MIDDLE_BLOCK80:.*]] ], [ 0, %[[FOR_COND33_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i16 [ [[TMP8:%.*]], %[[MIDDLE_BLOCK80]] ], [ 0, %[[FOR_COND33_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY85:.*]]
 ; CHECK:       [[VECTOR_BODY85]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY86:.*]]
 ; CHECK:       [[VECTOR_BODY86]]:
 ; CHECK-NEXT:    [[INDEX86:%.*]] = phi i16 [ 0, %[[VECTOR_BODY85]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY85_SPLIT:.*]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV7:%.*]] = phi i16 [ [[TMP9:%.*]], %[[VECTOR_BODY85_SPLIT]] ], [ 0, %[[VECTOR_BODY85]] ]
 ; CHECK-NEXT:    br label %[[FOR_COND33_PREHEADER_PREHEADER]]
 ; CHECK:       [[VECTOR_BODY85_SPLIT1]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = or disjoint i16 [[INDEX86]], 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [512 x [4 x i32]], ptr @b, i16 0, i16 [[TMP0]], i16 [[J_165]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP1]], align 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nuw i16 [[INDEX86]], 4
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i16 [[INDEX86]], 42
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT8:%.*]] = add i16 [[INTERCHANGE_IV7]], 1
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND9:%.*]] = icmp ne i16 [[INTERCHANGE_IV7]], 11
 ; CHECK-NEXT:    br label %[[FOR_INC68:.*]]
 ; CHECK:       [[VECTOR_BODY85_SPLIT]]:
+; CHECK-NEXT:    [[TMP9]] = add i16 [[INTERCHANGE_IV7]], 1
 ; CHECK-NEXT:    [[TMP5]] = add nuw i16 [[INDEX86]], 4
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp slt i16 [[INDEX86]], 42
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i16 [[INTERCHANGE_IV7]], 11
 ; CHECK-NEXT:    br i1 [[TMP4]], label %[[VECTOR_BODY86]], label %[[MIDDLE_BLOCK80]]
 ; CHECK:       [[FOR_INC68]]:
 ; CHECK-NEXT:    [[INC66:%.*]] = add nuw nsw i16 [[J_165]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i16 [[INC66]], 42
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT2:%.*]] = add i16 [[INTERCHANGE_IV1]], 1
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp ne i16 [[INTERCHANGE_IV1]], 41
 ; CHECK-NEXT:    br label %[[FOR_INC69]]
 ; CHECK:       [[MIDDLE_BLOCK80]]:
+; CHECK-NEXT:    [[TMP8]] = add i16 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    [[TMP7]] = add nuw nsw i16 [[J_165]], 1
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp slt i16 [[TMP7]], 42
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne i16 [[INTERCHANGE_IV1]], 41
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[FOR_COND37_PREHEADER]], label %[[FOR_COND75_PREHEADER:.*]]
 ; CHECK:       [[FOR_INC69]]:
 ; CHECK-NEXT:    [[INC69]] = add nuw nsw i16 [[I_166]], 1
-; CHECK-NEXT:    [[EXITCOND77_NOT:%.*]] = icmp slt i16 [[INC69]], 24
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT5]] = add i16 [[INTERCHANGE_IV4]], 1
+; CHECK-NEXT:    [[EXITCOND77_NOT:%.*]] = icmp ne i16 [[INTERCHANGE_IV4]], 23
 ; CHECK-NEXT:    br i1 [[EXITCOND77_NOT]], label %[[FOR_COND33_PREHEADER1]], label %[[VECTOR_BODY85_SPLIT]]
 ; CHECK:       [[FOR_COND75_PREHEADER]]:
 ; CHECK-NEXT:    unreachable
@@ -185,17 +196,19 @@ define void @test3() {
 ; CHECK:       [[FOR_COND33_PREHEADER_PREHEADER:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_BODY42:.*]]
 ; CHECK:       [[FOR_BODY42]]:
-; CHECK-NEXT:    [[I_011:%.*]] = phi i16 [ [[INC69:%.*]], %[[FOR_END68:.*]] ], [ 0, %[[FOR_COND33_PREHEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV4:%.*]] = phi i16 [ 0, %[[FOR_COND33_PREHEADER_PREHEADER]] ], [ [[INTERCHANGE_IV_NEXT5:%.*]], %[[FOR_END68:.*]] ]
 ; CHECK-NEXT:    br label %[[FOR_COND38_PREHEADER:.*]]
 ; CHECK:       [[FOR_BODY42_SPLIT1]]:
 ; CHECK-NEXT:    br label %[[FOR_COND37_PREHEADER:.*]]
 ; CHECK:       [[FOR_COND37_PREHEADER]]:
 ; CHECK-NEXT:    [[J_010:%.*]] = phi i16 [ [[TMP5:%.*]], %[[FOR_END67:.*]] ], [ 0, %[[FOR_BODY42_SPLIT1]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i16 [ [[TMP7:%.*]], %[[FOR_END67]] ], [ 0, %[[FOR_BODY42_SPLIT1]] ]
 ; CHECK-NEXT:    br label %[[FOR_COND38_PREHEADER_PREHEADER:.*]]
 ; CHECK:       [[FOR_COND38_PREHEADER_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[FOR_BODY42_PREHEADER:.*]]
 ; CHECK:       [[FOR_BODY42_PREHEADER]]:
 ; CHECK-NEXT:    [[K_010:%.*]] = phi i16 [ 0, %[[FOR_COND38_PREHEADER_PREHEADER]] ], [ [[TMP1:%.*]], %[[FOR_END64:.*]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV7:%.*]] = phi i16 [ [[TMP8:%.*]], %[[FOR_END64]] ], [ 0, %[[FOR_COND38_PREHEADER_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[FOR_COND33_PREHEADER_PREHEADER]]
 ; CHECK:       [[FOR_COND38_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[FOR_BODY43:.*]]
@@ -212,23 +225,27 @@ define void @test3() {
 ; CHECK-NEXT:    [[ADD61_LCSSA_LCSSA:%.*]] = phi i32 [ [[ADD61]], %[[FOR_BODY43]] ]
 ; CHECK-NEXT:    store i32 [[ADD61_LCSSA_LCSSA]], ptr undef, align 1
 ; CHECK-NEXT:    [[INC67:%.*]] = add nuw nsw i16 [[K_010]], 1
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp slt i16 [[K_010]], 44
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT8:%.*]] = add i16 [[INTERCHANGE_IV7]], 1
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND9:%.*]] = icmp ne i16 [[INTERCHANGE_IV7]], 44
 ; CHECK-NEXT:    br label %[[FOR_END66:.*]]
 ; CHECK:       [[FOR_END64]]:
+; CHECK-NEXT:    [[TMP8]] = add i16 [[INTERCHANGE_IV7]], 1
 ; CHECK-NEXT:    [[TMP1]] = add nuw nsw i16 [[K_010]], 1
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp slt i16 [[K_010]], 44
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne i16 [[INTERCHANGE_IV7]], 44
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[FOR_BODY42_PREHEADER]], label %[[FOR_END67]]
 ; CHECK:       [[FOR_END66]]:
 ; CHECK-NEXT:    [[INC66:%.*]] = add nuw nsw i16 [[J_010]], 1
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i16 [[J_010]], 43
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT2:%.*]] = add i16 [[INTERCHANGE_IV1]], 1
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp ne i16 [[INTERCHANGE_IV1]], 43
 ; CHECK-NEXT:    br label %[[FOR_END68]]
 ; CHECK:       [[FOR_END67]]:
+; CHECK-NEXT:    [[TMP7]] = add i16 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    [[TMP5]] = add nuw nsw i16 [[J_010]], 1
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp slt i16 [[J_010]], 43
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i16 [[INTERCHANGE_IV1]], 43
 ; CHECK-NEXT:    br i1 [[TMP4]], label %[[FOR_COND37_PREHEADER]], label %[[FOR_COND75_PREHEADER:.*]]
 ; CHECK:       [[FOR_END68]]:
-; CHECK-NEXT:    [[INC69]] = add nuw nsw i16 [[I_011]], 1
-; CHECK-NEXT:    [[EXITCOND13_NOT:%.*]] = icmp eq i16 [[INC69]], 2
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT5]] = add i16 [[INTERCHANGE_IV4]], 1
+; CHECK-NEXT:    [[EXITCOND13_NOT:%.*]] = icmp eq i16 [[INTERCHANGE_IV4]], 1
 ; CHECK-NEXT:    br i1 [[EXITCOND13_NOT]], label %[[FOR_END64]], label %[[FOR_BODY42]]
 ; CHECK:       [[FOR_COND75_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[FOR_COND75:.*]]

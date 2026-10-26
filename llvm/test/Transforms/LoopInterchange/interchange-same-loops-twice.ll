@@ -18,39 +18,51 @@ define void @f(ptr %A) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[L1_HEADER:.*]]
 ; CHECK:       [[L1_HEADER]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[L1_LATCH:.*]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[L3_HEADER_SPLIT:.*]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = mul nsw i64 [[I]], -2
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i2
+; CHECK-NEXT:    [[TMP5:%.*]] = zext i2 [[TMP1]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP5]], 1
 ; CHECK-NEXT:    br label %[[L3_HEADER_PREHEADER:.*]]
-; CHECK:       [[L2_HEADER_PREHEADER:.*]]:
+; CHECK:       [[L3_HEADER_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[L2_HEADER:.*]]
 ; CHECK:       [[L2_HEADER]]:
-; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[J_NEXT:%.*]], %[[L2_LATCH:.*]] ], [ 0, %[[L2_HEADER_PREHEADER]] ]
-; CHECK-NEXT:    [[I_MUL:%.*]] = mul nsw i64 [[I]], 2
+; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[TMP7:%.*]], %[[L2_LATCH_SPLIT:.*]] ], [ 0, %[[L3_HEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV8:%.*]] = phi i64 [ 0, %[[L3_HEADER_PREHEADER]] ], [ [[TMP6:%.*]], %[[L2_LATCH_SPLIT]] ]
 ; CHECK-NEXT:    br label %[[L3_HEADER_SPLIT1:.*]]
-; CHECK:       [[L3_HEADER_PREHEADER]]:
+; CHECK:       [[L2_HEADER_SPLIT:.*]]:
 ; CHECK-NEXT:    br label %[[L3_HEADER:.*]]
-; CHECK:       [[L3_HEADER]]:
-; CHECK-NEXT:    [[K:%.*]] = phi i64 [ [[TMP2:%.*]], %[[L3_HEADER_SPLIT:.*]] ], [ 0, %[[L3_HEADER_PREHEADER]] ]
-; CHECK-NEXT:    br label %[[L2_HEADER_PREHEADER]]
 ; CHECK:       [[L3_HEADER_SPLIT1]]:
+; CHECK-NEXT:    br label %[[L2_HEADER_PREHEADER:.*]]
+; CHECK:       [[L2_HEADER_PREHEADER]]:
+; CHECK-NEXT:    [[K:%.*]] = phi i64 [ [[TMP2:%.*]], %[[L3_HEADER_SPLIT2:.*]] ], [ 0, %[[L3_HEADER_SPLIT1]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i64 [ [[TMP4:%.*]], %[[L3_HEADER_SPLIT2]] ], [ 0, %[[L3_HEADER_SPLIT1]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV5:%.*]] = phi i64 [ 0, %[[L3_HEADER_SPLIT1]] ], [ [[INTERCHANGE_IV_NEXT6:%.*]], %[[L3_HEADER_SPLIT2]] ]
+; CHECK-NEXT:    br label %[[L2_HEADER_SPLIT]]
+; CHECK:       [[L3_HEADER]]:
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [6 x [6 x [6 x i32]]], ptr [[A]], i64 0, i64 [[I]], i64 [[J]], i64 [[K]]
 ; CHECK-NEXT:    store i32 0, ptr [[GEP]], align 4
-; CHECK-NEXT:    [[I_REM:%.*]] = urem i64 [[I_MUL]], 4
-; CHECK-NEXT:    [[K_BOUND:%.*]] = add nuw nsw i64 [[I_REM]], 2
 ; CHECK-NEXT:    [[K_NEXT:%.*]] = add nuw nsw i64 [[K]], 1
-; CHECK-NEXT:    [[EC_K:%.*]] = icmp eq i64 [[K_NEXT]], [[K_BOUND]]
-; CHECK-NEXT:    br label %[[L2_LATCH]]
-; CHECK:       [[L3_HEADER_SPLIT]]:
-; CHECK-NEXT:    [[I_MUL_LCSSA:%.*]] = phi i64 [ [[I_MUL]], %[[L2_LATCH]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = urem i64 [[I_MUL_LCSSA]], 4
-; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i64 [[TMP0]], 2
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT2:%.*]] = add i64 [[INTERCHANGE_IV1]], 1
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp eq i64 [[INTERCHANGE_IV1]], [[TMP3]]
+; CHECK-NEXT:    br label %[[L2_LATCH:.*]]
+; CHECK:       [[L3_HEADER_SPLIT2]]:
+; CHECK-NEXT:    [[TMP4]] = add i64 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    [[TMP2]] = add nuw nsw i64 [[K]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[TMP2]], [[TMP1]]
-; CHECK-NEXT:    br i1 [[TMP3]], label %[[L1_LATCH]], label %[[L3_HEADER]]
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT6]] = add i64 [[INTERCHANGE_IV5]], 1
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND7:%.*]] = icmp eq i64 [[INTERCHANGE_IV5]], [[TMP3]]
+; CHECK-NEXT:    br i1 [[INTERCHANGE_EXITCOND7]], label %[[L2_LATCH_SPLIT]], label %[[L2_HEADER_PREHEADER]]
 ; CHECK:       [[L2_LATCH]]:
-; CHECK-NEXT:    [[J_NEXT]] = add nuw nsw i64 [[J]], 1
-; CHECK-NEXT:    [[EC_J:%.*]] = icmp eq i64 [[J_NEXT]], 2
+; CHECK-NEXT:    [[J_NEXT:%.*]] = add nuw nsw i64 [[J]], 1
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT9:%.*]] = add i64 [[INTERCHANGE_IV8]], 1
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND10:%.*]] = icmp eq i64 [[INTERCHANGE_IV8]], 1
+; CHECK-NEXT:    br label %[[L3_HEADER_SPLIT2]]
+; CHECK:       [[L2_LATCH_SPLIT]]:
+; CHECK-NEXT:    [[TMP6]] = add i64 [[INTERCHANGE_IV8]], 1
+; CHECK-NEXT:    [[TMP7]] = add nuw nsw i64 [[J]], 1
+; CHECK-NEXT:    [[EC_J:%.*]] = icmp eq i64 [[INTERCHANGE_IV8]], 1
 ; CHECK-NEXT:    br i1 [[EC_J]], label %[[L3_HEADER_SPLIT]], label %[[L2_HEADER]]
-; CHECK:       [[L1_LATCH]]:
+; CHECK:       [[L3_HEADER_SPLIT]]:
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
 ; CHECK-NEXT:    [[EC_I:%.*]] = icmp eq i64 [[I_NEXT]], 3
 ; CHECK-NEXT:    br i1 [[EC_I]], label %[[EXIT:.*]], label %[[L1_HEADER]]

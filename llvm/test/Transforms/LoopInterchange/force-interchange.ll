@@ -17,25 +17,30 @@ define dso_local void @f() local_unnamed_addr #0 {
 ; CHECK-NEXT:    br label %[[OUTER_HEADER:.*]]
 ; CHECK:       [[OUTER_HEADER]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[INNER_HEADER:.*]] ], [ 0, %[[OUTER_HEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV:%.*]] = phi i64 [ [[INTERCHANGE_IV_NEXT:%.*]], %[[INNER_HEADER]] ], [ 0, %[[OUTER_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[INNER_BODY_SPLIT1:.*]]
 ; CHECK:       [[INNER_BODY_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[INNER_BODY:.*]]
 ; CHECK:       [[INNER_HEADER]]:
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
-; CHECK-NEXT:    [[EXITCOND20_NOT:%.*]] = icmp eq i64 [[I_NEXT]], 1024
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT]] = add i64 [[INTERCHANGE_IV]], 1
+; CHECK-NEXT:    [[EXITCOND20_NOT:%.*]] = icmp eq i64 [[INTERCHANGE_IV]], 1023
 ; CHECK-NEXT:    br i1 [[EXITCOND20_NOT]], label %[[INNER_BODY_SPLIT:.*]], label %[[OUTER_HEADER]]
 ; CHECK:       [[INNER_BODY]]:
 ; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[TMP0:%.*]], %[[INNER_BODY_SPLIT]] ], [ 0, %[[INNER_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i64 [ [[TMP2:%.*]], %[[INNER_BODY_SPLIT]] ], [ 0, %[[INNER_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[OUTER_HEADER_PREHEADER]]
 ; CHECK:       [[INNER_BODY_SPLIT1]]:
 ; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds nuw [1024 x [1024 x i32]], ptr @A, i64 0, i64 [[I]], i64 [[J]]
 ; CHECK-NEXT:    store i32 42, ptr [[ARRAYIDX6]], align 4
 ; CHECK-NEXT:    [[J_NEXT:%.*]] = add nuw nsw i64 [[J]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[J_NEXT]], 1024
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT2:%.*]] = add i64 [[INTERCHANGE_IV1]], 1
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp eq i64 [[INTERCHANGE_IV1]], 1023
 ; CHECK-NEXT:    br label %[[INNER_HEADER]]
 ; CHECK:       [[INNER_BODY_SPLIT]]:
+; CHECK-NEXT:    [[TMP2]] = add i64 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    [[TMP0]] = add nuw nsw i64 [[J]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[TMP0]], 1024
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[INTERCHANGE_IV1]], 1023
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[EXIT:.*]], label %[[INNER_BODY]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void

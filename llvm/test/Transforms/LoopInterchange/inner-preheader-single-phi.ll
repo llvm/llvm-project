@@ -17,21 +17,21 @@ define void @f(ptr %A) {
 ; CHECK:       [[INNER_PH]]:
 ; CHECK-NEXT:    br label %[[INNER:.*]]
 ; CHECK:       [[INNER]]:
-; CHECK-NEXT:    [[J:%.*]] = phi i64 [ 0, %[[INNER_PH]] ], [ [[TMP0:%.*]], %[[INNER_SPLIT:.*]] ]
+; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[TMP0:%.*]], %[[INNER_SPLIT:.*]] ], [ 0, %[[INNER_PH]] ]
 ; CHECK-NEXT:    br label %[[OUTER_HEADER_PREHEADER]]
 ; CHECK:       [[INNER_SPLIT1]]:
 ; CHECK-NEXT:    [[J_INC:%.*]] = add i64 [[J]], 1
-; CHECK-NEXT:    [[EC_J:%.*]] = icmp eq i64 [[J_INC]], 10
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp eq i64 [[J]], 9
 ; CHECK-NEXT:    br label %[[OUTER_BODY:.*]]
 ; CHECK:       [[INNER_SPLIT]]:
 ; CHECK-NEXT:    [[TMP0]] = add i64 [[J]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[TMP0]], 10
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[J]], 9
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[EXIT:.*]], label %[[INNER]]
 ; CHECK:       [[OUTER_BODY]]:
 ; CHECK-NEXT:    br label %[[OUTER_LATCH]]
 ; CHECK:       [[OUTER_LATCH]]:
 ; CHECK-NEXT:    [[I_INC]] = add i64 [[I]], 1
-; CHECK-NEXT:    [[EC_I:%.*]] = icmp eq i64 [[I_INC]], 10
+; CHECK-NEXT:    [[EC_I:%.*]] = icmp eq i64 [[I]], 9
 ; CHECK-NEXT:    br i1 [[EC_I]], label %[[INNER_SPLIT]], label %[[OUTER_HEADER]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void

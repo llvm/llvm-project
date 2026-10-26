@@ -450,6 +450,10 @@ public:
     return InnerLoopInductions;
   }
 
+  const ArrayRef<PHINode *> getOuterLoopInductions() const {
+    return OuterLoopInductions;
+  }
+
   ArrayRef<Instruction *> getHasNoWrapReductions() const {
     return HasNoWrapReductions;
   }
@@ -623,7 +627,8 @@ public:
   LoopInterchangeTransform(Loop *Outer, Loop *Inner, ScalarEvolution *SE,
                            LoopInfo *LI, DominatorTree *DT,
                            const LoopInterchangeLegality &LIL)
-      : OuterLoop(Outer), InnerLoop(Inner), SE(SE), LI(LI), DT(DT), LIL(LIL) {}
+      : OuterLoop(Outer), InnerLoop(Inner), SE(SE), LI(LI), DT(DT),
+        Expander(*SE, "loop-interchange"), LIL(LIL) {}
 
   /// Interchange OuterLoop and InnerLoop.
   void transform(ArrayRef<Instruction *> DropNoWrapInsts,
@@ -637,6 +642,7 @@ public:
 private:
   void adjustLoopBranches();
   void updateLatchMetadata();
+  PHINode *replaceExitCondition(Loop *L, Value *BackedgeTakenCount);
 
   Loop *OuterLoop;
   Loop *InnerLoop;
@@ -646,6 +652,13 @@ private:
 
   LoopInfo *LI;
   DominatorTree *DT;
+
+  /// Expands the values in the preheader of the outer loop.
+  SCEVExpander Expander;
+
+  /// Instructions that may become dead during the transform. They are deleted
+  /// together after the new instructions that may reuse them are created.
+  SmallVector<WeakTrackingVH, 8> DeadInsts;
 
   const LoopInterchangeLegality &LIL;
 };
@@ -2220,6 +2233,42 @@ void LoopInterchangeTransform::updateLatchMetadata() {
   }
 }
 
+/// Replace the exit condition of \p L with a new counter that starts from zero,
+/// so that \p L runs \p BackedgeTakenCount + 1 iterations. Return the counter.
+PHINode *
+LoopInterchangeTransform::replaceExitCondition(Loop *L,
+                                               Value *BackedgeTakenCount) {
+  BasicBlock *Header = L->getHeader();
+  BasicBlock *Latch = L->getLoopLatch();
+  auto *LatchBI = cast<CondBrInst>(Latch->getTerminator());
+  Type *Ty = BackedgeTakenCount->getType();
+
+  IRBuilder<> Builder(Header->getFirstNonPHIIt());
+  PHINode *Counter = Builder.CreatePHI(Ty, 2, "interchange.iv");
+  Builder.SetInsertPoint(LatchBI);
+  // The increment in the last iteration may wrap if BackedgeTakenCount is the
+  // maximum value of the type, so don't add any no-wrap flags.
+  // TODO: Propagate the no-wrap flags from the original induction variables.
+  // nuw can be propagated from an induction variable of the same width that is
+  // updated by an add with nuw. nsw additionally requires the start value to be
+  // non-negative and the step to be positive, since the counter starts from
+  // zero.
+  Value *Next = Builder.CreateAdd(Counter, ConstantInt::get(Ty, 1),
+                                  "interchange.iv.next");
+  for (BasicBlock *Pred : predecessors(Header))
+    Counter->addIncoming(Pred == Latch ? Next : ConstantInt::get(Ty, 0), Pred);
+
+  // Exit the loop after the iteration in which the counter is equal to
+  // BackedgeTakenCount.
+  bool ExitOnTrue = LatchBI->getSuccessor(0) != Header;
+  Value *Cond =
+      Builder.CreateICmp(ExitOnTrue ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE,
+                         Counter, BackedgeTakenCount, "interchange.exitcond");
+  DeadInsts.push_back(LatchBI->getCondition());
+  LatchBI->setCondition(Cond);
+  return Counter;
+}
+
 ///  User can write, or optimizers can generate the reduction for inner loop.
 ///  To make the interchange valid, apply Reduction2Mem by moving the
 ///  initializer and store instructions into the inner loop. So far we only
@@ -2287,13 +2336,63 @@ void LoopInterchangeTransform::transform(
 
   updateLatchMetadata();
 
+  // Replace the exit condition of each loop with a counter, so that the
+  // computation of the original exit condition of the inner loop doesn't need
+  // to be cloned into the new latch. Materialize the backedge-taken counts
+  // before modifying the loops.
+  Instruction *ExpandPt = OuterLoop->getLoopPreheader()->getTerminator();
+  const SCEV *OuterBTC = SE->getBackedgeTakenCount(OuterLoop);
+  const SCEV *InnerBTC = SE->getBackedgeTakenCount(InnerLoop);
+  Value *OuterBTCV =
+      Expander.expandCodeFor(OuterBTC, OuterBTC->getType(), ExpandPt);
+  Value *InnerBTCV =
+      Expander.expandCodeFor(InnerBTC, InnerBTC->getType(), ExpandPt);
+  replaceExitCondition(OuterLoop, OuterBTCV);
+  PHINode *InnerLoopCounter = replaceExitCondition(InnerLoop, InnerBTCV);
+  // The expanded backedge-taken counts may reuse the values that computed the
+  // original exit conditions, so delete the original exit conditions only after
+  // both of them are replaced.
+  RecursivelyDeleteTriviallyDeadInstructionsPermissive(DeadInsts);
+
+  // The induction variables that were used only to control the loops are no
+  // longer used.
+  auto DeleteDeadInductions = [](ArrayRef<PHINode *> Inductions) {
+    // RecursivelyDeleteDeadPHINode deletes not only the given PHI but also the
+    // instructions that become dead as a result, which may include another PHI
+    // in Inductions. For example, all of %x, %y, and %z below are induction
+    // variables, and %y is used only by the update of %x:
+    //
+    //   %x = phi i64 [ 0, %preheader ], [ %x.next, %latch ]
+    //   %y = phi i64 [ 0, %preheader ], [ %z.next, %latch ]
+    //   %z = phi i64 [ 0, %preheader ], [ %z.next, %latch ]
+    //   ...
+    //   %x.next = add i64 %y, 1
+    //   %z.next = add i64 %z, 1
+    //
+    // Deleting %x also deletes %x.next and then %y, so a raw pointer to %y
+    // would dangle. Hold the PHIs with WeakVH, which becomes null when the
+    // value is deleted. Note that WeakTrackingVH doesn't work here, since
+    // RecursivelyDeleteDeadPHINode may replace a PHI with poison before
+    // deleting it.
+    SmallVector<WeakVH, 8> Handles(Inductions.begin(), Inductions.end());
+    SmallVector<PHINode *, 8> Live;
+    for (WeakVH &H : Handles)
+      if (auto *PHI = cast_or_null<PHINode>(H))
+        if (!RecursivelyDeleteDeadPHINode(PHI))
+          Live.push_back(PHI);
+    return Live;
+  };
+  DeleteDeadInductions(LIL.getOuterLoopInductions());
+  SmallVector<PHINode *, 8> InductionPHIs =
+      DeleteDeadInductions(LIL.getInnerLoopInductions());
+  InductionPHIs.push_back(InnerLoopCounter);
+
   ArrayRef<LoopInterchangeLegality::InnerReduction> InnerReductions =
       LIL.getInnerReductions();
   if (InnerReductions.size() == 1)
     reduction2Memory();
 
   LLVM_DEBUG(dbgs() << "Splitting the inner loop latch\n");
-  auto &InductionPHIs = LIL.getInnerLoopInductions();
   assert(!InductionPHIs.empty() &&
          "Expected at least one induction variable in the inner loop");
 
