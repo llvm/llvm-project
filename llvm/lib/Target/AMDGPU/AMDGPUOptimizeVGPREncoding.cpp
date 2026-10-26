@@ -186,7 +186,7 @@ public:
   /// Abstract coordinates for an occurrence of this register.
   struct Coordinates {
     /// The index of the MBB.
-    unsigned MBBIndex;
+    unsigned MBBIdx;
     /// The index of the MODE-using instruction.
     unsigned InstrIdx;
     /// The operand type.
@@ -1514,7 +1514,11 @@ void VirtRegReMap::getAntiHintRegUnits(Register VirtReg,
   SmallVector<MCPhysReg> AntiHints;
   for (Register VirtReg : MRI.getRegAllocationAntiHints(VirtReg)) {
     assert(VirtReg.isVirtual() && "expected virtreg");
-    for (MCRegUnit Unit : TRI.regunits(VRM.getPhys(VirtReg)))
+    MCRegister PhysReg = VRM.getPhys(VirtReg);
+    // It is possible the virtual register is no longer part of the MIR.
+    if (!PhysReg.isValid())
+      continue;
+    for (MCRegUnit Unit : TRI.regunits(PhysReg))
       AntiHintUnits.set(static_cast<unsigned>(Unit));
   }
 }
@@ -1746,9 +1750,9 @@ Printable ModeSetOptimizer::print(const VirtRegMap &VRM) const {
   return Printable([&](raw_ostream &OS) {
     OS << "* Optimization status:\n  Optimizable registers:\n";
     for (const OptReg &Reg : OptRegs) {
-      OS << "  " << Reg.print(VRM) << '\n';
+      OS << "    " << Reg.print(VRM) << '\n';
       for (const auto &[NeighborReg, NumOcc] : Reg.getNeighbors())
-        OS << "    [" << NumOcc << "] " << NeighborReg->print(VRM) << '\n';
+        OS << "      [" << NumOcc << "] " << NeighborReg->print(VRM) << '\n';
     }
 
     OS << "  MODE-set placement:\n";
@@ -1785,9 +1789,7 @@ Printable OptRegCandidate::print(const VirtRegMap &VRM) const {
       OS << " / ";
     }
     PrintMoveScore(Targets.find_last());
-    OS << " with benefit " << Benefit;
-
-    OS << " (";
+    OS << " with benefit " << Benefit << " (";
     switch (NeighboringPins) {
     case PinState::PinInBadGroup:
       OS << "bad pin";
@@ -1841,13 +1843,13 @@ Printable MaxHeap::print(const VirtRegMap &VRM,
       CandsPerMBB[MBB].push_back(&Cand);
     }
 
-    OS << "* Starting re-assignment phase with registers:\n";
-    OS << "  | Global (" << CandsPerMBB[nullptr].size() << " registers):\n";
+    OS << "* Starting re-assignment phase:\n  Candidates:\n";
+    OS << "    Global (" << CandsPerMBB[nullptr].size() << " registers):\n";
     PrintRegs(CandsPerMBB[nullptr]);
     for (const auto &[MBB, Cands] : CandsPerMBB) {
       if (!MBB)
         continue;
-      OS << "  | MBB #" << MBB->getNumber() << " (" << Cands.size()
+      OS << "    MBB #" << MBB->getNumber() << " (" << Cands.size()
          << " registers)\n";
       PrintRegs(Cands);
     }
