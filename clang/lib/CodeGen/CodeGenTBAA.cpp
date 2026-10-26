@@ -368,7 +368,7 @@ llvm::MDNode *CodeGenTBAA::getTypeInfoHelper(const Type *Ty) {
 
   // For now, handle any other kind of type conservatively.
   if (Features.Sanitize.has(SanitizerKind::Type)) {
-    return createScalarTypeNode("TysanConservativeTBAA", getChar(), 1);
+    return createScalarTypeNode("Tysan Conservative TBAA", getChar(), 1);
   }
   return getChar();
 }

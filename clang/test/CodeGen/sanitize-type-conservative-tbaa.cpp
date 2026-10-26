@@ -6,7 +6,7 @@
 // instead it should emit TysanConservativeTBAA. This gets recorded
 // by TySan, and it emits a specially tagged type descriptor.
 
-// CHECK: @__tysan_v1_TysanConservativeTBAA = linkonce_odr constant { i64, i64, ptr, i64, [22 x i8] } { i64 3, i64 1, ptr @__tysan_v1_omnipotent_20char, i64 0, [22 x i8] c"TysanConservativeTBAA\00" }, comdat
+// CHECK: @__tysan_v1_Tysan_20Conservative_20TBAA = linkonce_odr constant { i64, i64, ptr, i64, [24 x i8] } { i64 3, i64 1, ptr @__tysan_v1_omnipotent_20char, i64 0, [24 x i8] c"Tysan Conservative TBAA\00" }, comdat
 
 struct S{
     float forceConservativeTBAAPath[1];
@@ -14,4 +14,6 @@ struct S{
 
 S s;
 
-// CHECK: !{!"TysanConservativeTBAA",
+// CHECK: !{!"Tysan Conservative TBAA", [[META1:![0-9]+]], i64 0}
+// CHECK: [[META1]] = !{!"omnipotent char", [[META2:![0-9]+]], i64 0}
+// CHECK: [[META2]] = !{!"Simple C++ TBAA"}

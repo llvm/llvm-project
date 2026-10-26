@@ -378,7 +378,7 @@ bool TypeSanitizer::generateBaseTypeDescriptor(
   };
 
   int TDTag = 2; // 2 is for structs
-  if (Name == "TysanConservativeTBAA")
+  if (Name == "Tysan Conservative TBAA")
     TDTag = 3; // 3 is for TDs that conservatively alias with everything
   PushTDSub(ConstantInt::get(IntptrTy, TDTag));
   PushTDSub(ConstantInt::get(IntptrTy, Members.size()));
