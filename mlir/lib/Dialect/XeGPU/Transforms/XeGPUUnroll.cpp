@@ -413,10 +413,10 @@ struct UnrollDpasOp : public UnrollPattern<xegpu::DpasOp> {
     for (int64_t d = 0; d < batchRank; ++d)
       batchIters *= aShape[d] / batchDims[d];
 
-    SmallVector<Value> newOps;
+    SmallVector<Value> newOps(batchIters * mIters * nIters);
     for (int64_t batch = 0; batch < batchIters; ++batch) {
-      for (int64_t i = 0; i < mIters; ++i) {
-        for (int64_t j = 0; j < nIters; ++j) {
+      for (int64_t j = 0; j < nIters; ++j) {
+        for (int64_t i = 0; i < mIters; ++i) {
           Value tmpC;
           if (c)
             tmpC = cVals[batch * (mIters * nIters) + i * nIters + j];
@@ -435,7 +435,7 @@ struct UnrollDpasOp : public UnrollPattern<xegpu::DpasOp> {
             xegpu::dropInstDataOnInherentAttrs(newDpasOp);
             tmpC = newDpasOp.getResult();
           }
-          newOps.push_back(tmpC);
+          newOps[batch * (mIters * nIters) + i * nIters + j] = tmpC;
         }
       }
     }
