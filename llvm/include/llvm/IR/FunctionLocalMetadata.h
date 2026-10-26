@@ -243,7 +243,7 @@ public:
   }
 
   // Populates \p Nodes with the complete set of MDNodes used by this.
-  LLVM_ABI void getUsedMDNodes(SmallVectorImpl<MDNode *> &Nodes) const;
+  LLVM_ABI void getUsedMDNodes(SmallVectorImpl<const MDNode *> &Nodes) const;
 
   LLVM_ABI static MDFunctionLocalContext *getDistinct(LLVMContext &Context,
                                                       bool NonDebug = false);
