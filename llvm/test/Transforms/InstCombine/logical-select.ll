@@ -1709,7 +1709,7 @@ define i1 @not_logical_or_or(i1 %a, i1 %b) {
 ; CHECK-LABEL: @not_logical_or_or(
 ; CHECK-NEXT:    [[OR:%.*]] = select i1 [[A:%.*]], i1 true, i1 [[B:%.*]]
 ; CHECK-NEXT:    call void @use(i1 [[OR]])
-; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[OR]], true
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[A]], true
 ; CHECK-NEXT:    [[RES:%.*]] = select i1 [[NOT]], i1 true, i1 [[B]]
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
@@ -1724,7 +1724,7 @@ define i1 @not_logical_and_and(i1 %a, i1 %b) {
 ; CHECK-LABEL: @not_logical_and_and(
 ; CHECK-NEXT:    [[AND:%.*]] = select i1 [[A:%.*]], i1 [[B:%.*]], i1 false
 ; CHECK-NEXT:    call void @use(i1 [[AND]])
-; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[AND]], true
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[A]], true
 ; CHECK-NEXT:    [[RES:%.*]] = select i1 [[NOT]], i1 [[B]], i1 false
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
@@ -1739,7 +1739,7 @@ define <2 x i1> @not_logical_or_or_vec(<2 x i1> %a, <2 x i1> %b) {
 ; CHECK-LABEL: @not_logical_or_or_vec(
 ; CHECK-NEXT:    [[OR:%.*]] = select <2 x i1> [[A:%.*]], <2 x i1> splat (i1 true), <2 x i1> [[B:%.*]]
 ; CHECK-NEXT:    call void @use2(<2 x i1> [[OR]])
-; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i1> [[OR]], splat (i1 true)
+; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i1> [[A]], splat (i1 true)
 ; CHECK-NEXT:    [[RES:%.*]] = select <2 x i1> [[NOT]], <2 x i1> splat (i1 true), <2 x i1> [[B]]
 ; CHECK-NEXT:    ret <2 x i1> [[RES]]
 ;
