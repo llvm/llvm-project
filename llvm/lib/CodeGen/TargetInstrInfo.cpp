@@ -929,6 +929,7 @@ TargetInstrInfo::foldMemoryOperand(MachineInstr &MI, ArrayRef<unsigned> Ops,
   // Ask the target to do the actual folding.
   MachineInstr *NewMI = nullptr;
   int FrameIndex = 0;
+  TypeSize MemBytes = TypeSize::getZero();
 
   if ((MI.getOpcode() == TargetOpcode::STACKMAP ||
        MI.getOpcode() == TargetOpcode::PATCHPOINT ||
@@ -938,7 +939,18 @@ TargetInstrInfo::foldMemoryOperand(MachineInstr &MI, ArrayRef<unsigned> Ops,
     NewMI = foldPatchpoint(MF, MI, Ops, FrameIndex, *this);
     if (NewMI)
       NewMI = &*MBB.insert(MI, NewMI);
-  } else if (MI.isInlineAsm() && isLoadFromStackSlot(LoadMI, FrameIndex)) {
+  } else if (MI.isInlineAsm() &&
+             isLoadFromStackSlot(LoadMI, FrameIndex, MemBytes)) {
+    // The asm reads the stack slot in place of the loaded register, so the
+    // load must fill the register, and the slot must still hold the value when
+    // the asm reads it. An asm that stores might write the slot first (e.g.
+    // through an early-clobber "=&m" output), unless it's invariant.
+    if (Ops.empty() ||
+        MemBytes * 8 != TRI.getRegSizeInBits(MI.getOperand(Ops[0]).getReg(),
+                                             MF.getRegInfo()) ||
+        (MI.mayStore() && !LoadMI.isDereferenceableInvariantLoad()))
+      return nullptr;
+
     return foldInlineAsmMemOperand(MI, Ops, FrameIndex, *this);
   } else {
     // Ask the target to do the actual folding.
