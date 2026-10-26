@@ -1182,12 +1182,13 @@ void AntiDepState::exitRegion(MachineBasicBlock::iterator Begin,
     return;
 
   BoundaryScanPos = Begin;
-  if (RegionProcessed)
+  if (RegionProcessed) {
     BoundaryScanIndex -= std::distance(Begin, End);
-  else
+  } else {
     // schedule() skips empty and single-instruction regions. Scan a skipped
     // region here so its instructions still contribute to liveness.
     scanRangeBackwards(End, Begin);
+  }
 }
 
 bool AntiDepState::breakAntiDependencies(
