@@ -1,6 +1,6 @@
-; RUN: opt < %s -passes=indvars -indvars-eliminate-pointer-ivs=true -S | FileCheck %s
+; RUN: opt < %s -passes=indvars -indvars-simplify-pointer-ivs=true -S | FileCheck %s
 
-; Comprehensive test coverage for pointer IV elimination in IndVarSimplify.
+; Comprehensive test coverage for pointer IV simplification in IndVarSimplify.
 
 @global_array = global [1024 x i8] zeroinitializer
 %struct.Point = type { i32, i32 }
@@ -1310,7 +1310,7 @@ exit:
 
 ; Other Coverage
 
-; TEST: Basic pointer PHI elimination with int pointers
+; TEST: Basic pointer PHI simplification with int pointers
 define void @test_basic_int_ptr(ptr %A, ptr %last, ptr %B, ptr %C) {
 ; CHECK-LABEL: @test_basic_int_ptr(
 ; CHECK-NEXT:  entry:

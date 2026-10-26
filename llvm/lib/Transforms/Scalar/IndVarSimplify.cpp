@@ -486,7 +486,7 @@ bool IndVarSimplify::handleFloatingPointIV(Loop *L, PHINode *PN) {
 ///   bar(*(base + (i * 2)));
 bool IndVarSimplify::handlePointerIV(Loop *L, PHINode *PN) {
   // Respect the user-controlled opt-out first.
-  if (!AllowPointerIVElimination)
+  if (!Opts.indvars_simplify_pointer_ivs)
     return false;
 
   // Only handle pointer PHI nodes with one preheader incoming value and one
@@ -517,8 +517,8 @@ bool IndVarSimplify::handlePointerIV(Loop *L, PHINode *PN) {
 
   int64_t StrideInt = ConstStride->getSExtValue();
   // Limit transformation to loops with small strides
-  if (StrideInt == 0 || StrideInt > MaxPointerIVStride ||
-      StrideInt < -MaxPointerIVStride)
+  if (StrideInt == 0 || StrideInt > Opts.indvars_max_pointer_iv_stride ||
+      StrideInt < -Opts.indvars_max_pointer_iv_stride)
     return false;
 
   Value *BasePtr = PN->getIncomingValue(IncomingEdge);
