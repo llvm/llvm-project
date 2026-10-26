@@ -232,13 +232,12 @@ template <typename A, typename B> A *UnwrapExpr(B *x) {
 
 /// A variant of UnwrapExpr that also requires a specific kind of the
 /// expression.
-template <typename A, typename B>
-auto UnwrapExpr(int kind, B &x) -> decltype(UnwrapExpr<A>(x)) {
+template <typename A, typename B> auto UnwrapExpr(int kind, B &x) {
   auto *result{UnwrapExpr<A>(x)};
-  if (result && result->kind() == kind) {
-    return result;
+  if (result && result->kind() != kind) {
+    result = nullptr;
   }
-  return nullptr;
+  return result;
 }
 
 // A variant of UnwrapExpr above that also skips through (parentheses)
