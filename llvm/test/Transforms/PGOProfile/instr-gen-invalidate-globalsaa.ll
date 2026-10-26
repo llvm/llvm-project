@@ -1,6 +1,4 @@
-; GlobalsAA is only invalidated when a pass explicitly abandons it. A result
-; cached before instrumentation would let function-attrs infer memory(none) on
-; functions that now update profile counters.
+; Regression test for pgo-instr-gen not invalidating GlobalsAA.
 ; RUN: opt < %s -passes='require<globals-aa>,pgo-instr-gen,function-attrs' -S | FileCheck %s
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
