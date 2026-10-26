@@ -576,7 +576,6 @@ void RISCVPassConfig::addPreRegAlloc() {
   addPass(createRISCVInsertReadWriteCSRPass());
   addPass(createRISCVInsertWriteVXRMPass());
   addPass(createRISCVLandingPadSetupLegacyPass());
-
   addPass(createRISCVVMV0EliminationPass());
 }
 
