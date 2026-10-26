@@ -85,29 +85,29 @@ TEST(LlvmLibcCheckedPtrTest, BasicMakeUniqueAndAccess) {
 
     // Once checked, access via const reference is valid and safe.
     const auto &cref = ptr;
-    ASSERT_EQ(*cref->destruct_count, 0);
-    ASSERT_EQ(*(*cref).destruct_count, 0);
+    EXPECT_EQ(*cref->destruct_count, 0);
+    EXPECT_EQ(*(*cref).destruct_count, 0);
   }
-  ASSERT_EQ(destruct_count, 1);
+  EXPECT_EQ(destruct_count, 1);
 }
 
 TEST(LlvmLibcCheckedPtrTest, NullptrCheck) {
   CheckedPtr<int> ptr(nullptr);
-  ASSERT_FALSE(static_cast<bool>(ptr));
+  EXPECT_FALSE(static_cast<bool>(ptr));
 }
 
 TEST(LlvmLibcCheckedPtrTest, MoveRequiresRecheck) {
   int destruct_count = 0;
   {
     auto ptr1 = make_unique<DestructTracker>(&destruct_count);
-    ASSERT_TRUE(static_cast<bool>(ptr1));
+    EXPECT_TRUE(static_cast<bool>(ptr1));
 
     // Even though ptr1 was checked, moving into ptr2 requires checking ptr2.
     CheckedPtr<DestructTracker> ptr2(move(ptr1));
     ASSERT_TRUE(static_cast<bool>(ptr2));
-    ASSERT_EQ(*ptr2->destruct_count, 0);
+    EXPECT_EQ(*ptr2->destruct_count, 0);
   }
-  ASSERT_EQ(destruct_count, 1);
+  EXPECT_EQ(destruct_count, 1);
 }
 
 TEST(LlvmLibcCheckedPtrTest, MoveUncheckedThenCheck) {
@@ -117,9 +117,9 @@ TEST(LlvmLibcCheckedPtrTest, MoveUncheckedThenCheck) {
     // Move before checking: ptr1 is disarmed; ptr2 must be checked.
     CheckedPtr<DestructTracker> ptr2(move(ptr1));
     ASSERT_TRUE(static_cast<bool>(ptr2));
-    ASSERT_EQ(*ptr2->destruct_count, 0);
+    EXPECT_EQ(*ptr2->destruct_count, 0);
   }
-  ASSERT_EQ(destruct_count, 1);
+  EXPECT_EQ(destruct_count, 1);
 }
 
 TEST(LlvmLibcCheckedPtrTest, MoveAssignment) {
@@ -127,28 +127,28 @@ TEST(LlvmLibcCheckedPtrTest, MoveAssignment) {
   int destruct_count2 = 0;
   {
     auto ptr1 = make_unique<DestructTracker>(&destruct_count1);
+    EXPECT_TRUE(static_cast<bool>(ptr1));
     auto ptr2 = make_unique<DestructTracker>(&destruct_count2);
-    ASSERT_TRUE(static_cast<bool>(ptr1));
-    ASSERT_TRUE(static_cast<bool>(ptr2));
+    EXPECT_TRUE(static_cast<bool>(ptr2));
 
     ptr2 = move(ptr1);
-    ASSERT_EQ(destruct_count1, 0);
-    ASSERT_EQ(destruct_count2, 1);
-    ASSERT_TRUE(static_cast<bool>(ptr2));
+    EXPECT_EQ(destruct_count1, 0);
+    EXPECT_EQ(destruct_count2, 1);
+    EXPECT_TRUE(static_cast<bool>(ptr2));
   }
-  ASSERT_EQ(destruct_count1, 1);
+  EXPECT_EQ(destruct_count1, 1);
 }
 
 TEST(LlvmLibcCheckedPtrTest, Conversions) {
   auto derived = make_unique<Derived>(100);
   CheckedPtr<Base> base(move(derived));
   ASSERT_TRUE(static_cast<bool>(base));
-  ASSERT_EQ(base->val, 100);
+  EXPECT_EQ(base->val, 100);
 
   auto mut_int = make_unique<int>(42);
   CheckedPtr<const int> const_int(move(mut_int));
   ASSERT_TRUE(static_cast<bool>(const_int));
-  ASSERT_EQ(*const_int, 42);
+  EXPECT_EQ(*const_int, 42);
 }
 
 TEST(LlvmLibcCheckedPtrTest, Array) {
@@ -159,9 +159,9 @@ TEST(LlvmLibcCheckedPtrTest, Array) {
     ptr[0].destruct_count = &destruct_count;
     ptr[1].destruct_count = &destruct_count;
     ptr[2].destruct_count = &destruct_count;
-    ASSERT_EQ(destruct_count, 0);
+    EXPECT_EQ(destruct_count, 0);
   }
-  ASSERT_EQ(destruct_count, 3);
+  EXPECT_EQ(destruct_count, 3);
 }
 
 TEST(LlvmLibcCheckedPtrTest, CustomDeleters) {
@@ -171,10 +171,10 @@ TEST(LlvmLibcCheckedPtrTest, CustomDeleters) {
     CheckedPtr<int, CustomDeleter> ptr(new (ac) int(7),
                                        CustomDeleter{&obj_deletes});
     ASSERT_TRUE(static_cast<bool>(ptr));
-    ASSERT_EQ(*ptr, 7);
-    ASSERT_EQ(obj_deletes, 0);
+    EXPECT_EQ(*ptr, 7);
+    EXPECT_EQ(obj_deletes, 0);
   }
-  ASSERT_EQ(obj_deletes, 1);
+  EXPECT_EQ(obj_deletes, 1);
 
   int arr_deletes = 0;
   {
@@ -184,20 +184,20 @@ TEST(LlvmLibcCheckedPtrTest, CustomDeleters) {
     ASSERT_TRUE(static_cast<bool>(arr));
     arr[0] = 10;
     arr[1] = 20;
-    ASSERT_EQ(arr[0] + arr[1], 30);
-    ASSERT_EQ(arr_deletes, 0);
+    EXPECT_EQ(arr[0] + arr[1], 30);
+    EXPECT_EQ(arr_deletes, 0);
   }
-  ASSERT_EQ(arr_deletes, 1);
+  EXPECT_EQ(arr_deletes, 1);
 }
 
 TEST(LlvmLibcCheckedPtrTest, SelfSwap) {
   auto ptr = make_unique<int>(1);
-  ASSERT_TRUE(static_cast<bool>(ptr));
+  EXPECT_TRUE(static_cast<bool>(ptr));
   // Self-move-assignment (which happens as a part of self-swap) must be a
   // no-op.
   LIBC_NAMESPACE::cpp::swap(ptr, ptr);
   ASSERT_TRUE(static_cast<bool>(ptr));
-  ASSERT_EQ(*ptr, 1);
+  EXPECT_EQ(*ptr, 1);
 }
 
 struct VoidDeleter {
@@ -206,7 +206,7 @@ struct VoidDeleter {
 
 TEST(LlvmLibcCheckedPtrTest, Void) {
   CheckedPtr<void, VoidDeleter> ptr(nullptr);
-  ASSERT_FALSE(static_cast<bool>(ptr));
+  EXPECT_FALSE(static_cast<bool>(ptr));
 }
 
 TEST(LlvmLibcCheckedPtrTest, TakeUnique) {
@@ -214,15 +214,15 @@ TEST(LlvmLibcCheckedPtrTest, TakeUnique) {
   unique_ptr<DestructTracker> owner;
   {
     auto ptr = make_unique<DestructTracker>(&destruct_count);
-    ASSERT_TRUE(static_cast<bool>(ptr));
+    EXPECT_TRUE(static_cast<bool>(ptr));
     owner = ptr.take_unique();
     // `ptr` is now null and still checked, so destroying it must neither delete
     // the object nor assert.
   }
-  ASSERT_EQ(destruct_count, 0);
-  ASSERT_TRUE(static_cast<bool>(owner));
+  EXPECT_EQ(destruct_count, 0);
+  EXPECT_TRUE(static_cast<bool>(owner));
   owner.reset();
-  ASSERT_EQ(destruct_count, 1);
+  EXPECT_EQ(destruct_count, 1);
 }
 
 #if !defined(NDEBUG) && LIBC_TEST_SUBPROCESS_TESTS

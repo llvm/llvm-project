@@ -108,6 +108,9 @@ public:
   LIBC_INLINE constexpr CheckedPtr(CheckedPtr &&other) = default;
   LIBC_INLINE constexpr CheckedPtr &operator=(CheckedPtr &&other) = default;
 
+  CheckedPtr(const CheckedPtr &) = delete;
+  CheckedPtr &operator=(const CheckedPtr &) = delete;
+
   // Conversion move constructor (available iff the underlying cpp::unique_ptr
   // conversion is)
   template <typename U, typename E,
@@ -194,6 +197,13 @@ LIBC_INLINE CheckedPtr<T> make_unique(size_t n) {
   AllocChecker ac;
   return CheckedPtr<T>(new (ac) Elem[n]());
 }
+
+/// Arrays of known bound (e.g. `make_unique<int[4]>()`) are not supported.
+template <typename T, typename... Args,
+          cpp::enable_if_t<cpp::is_array_v<T> &&
+                               !cpp::is_same_v<T, cpp::remove_extent_t<T>[]>,
+                           int> = 0>
+void make_unique(Args &&...) = delete;
 
 } // namespace LIBC_NAMESPACE_DECL
 
