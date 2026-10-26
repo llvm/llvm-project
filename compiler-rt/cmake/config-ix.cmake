@@ -828,7 +828,7 @@ else()
   set(COMPILER_RT_HAS_DFSAN FALSE)
 endif()
 
-# FIXME: LSan is broken on Android (https://github.com/llvm/llvm-project/pull/113003).
+# FIXME: LSan is broken on Android and there is no evidence it is used.
 if (COMPILER_RT_HAS_SANITIZER_COMMON AND LSAN_SUPPORTED_ARCH AND
     OS_NAME MATCHES "Darwin|Linux|NetBSD|Fuchsia")
   set(COMPILER_RT_HAS_LSAN TRUE)
