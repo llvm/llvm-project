@@ -3,7 +3,8 @@
 // '#pragma clang repl optimize(<opt>)' sets the optimization level and size for
 // input parsed after it; <opt> is an -O flag spelled without the leading dash.
 //
-// RUN: cat %s | clang-repl -Xcc -Xclang -Xcc -emit-llvm | FileCheck %s
+// RUN: cat %s | clang-repl -Xcc -fno-discard-value-names -Xcc -Xclang -Xcc -emit-llvm \
+// RUN:   | FileCheck %s
 
 extern "C" int f_o0(int x) { return x; }
 // CHECK:      ; Function Attrs: {{.*}}noinline {{.*}}optnone
