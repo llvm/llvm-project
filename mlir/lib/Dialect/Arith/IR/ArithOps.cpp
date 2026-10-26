@@ -497,7 +497,7 @@ void arith::AddIOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 //===----------------------------------------------------------------------===//
 
 std::optional<SmallVector<int64_t, 4>>
-arith::AddUIExtendedOp::getShapeForUnroll() {
+arith::AddUIExtendedOp::getIterationShapeToUnroll() {
   if (auto vt = dyn_cast<VectorType>(getType(0)))
     return llvm::to_vector<4>(vt.getShape());
   return std::nullopt;
@@ -561,7 +561,7 @@ void arith::AddUIExtendedOp::getCanonicalizationPatterns(
 //===----------------------------------------------------------------------===//
 
 std::optional<SmallVector<int64_t, 4>>
-arith::SubUIExtendedOp::getShapeForUnroll() {
+arith::SubUIExtendedOp::getIterationShapeToUnroll() {
   if (auto vt = dyn_cast<VectorType>(getType(0)))
     return llvm::to_vector<4>(vt.getShape());
   return std::nullopt;
@@ -733,7 +733,7 @@ void arith::MulIOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 //===----------------------------------------------------------------------===//
 
 std::optional<SmallVector<int64_t, 4>>
-arith::MulSIExtendedOp::getShapeForUnroll() {
+arith::MulSIExtendedOp::getIterationShapeToUnroll() {
   if (auto vt = dyn_cast<VectorType>(getType(0)))
     return llvm::to_vector<4>(vt.getShape());
   return std::nullopt;
@@ -777,7 +777,7 @@ void arith::MulSIExtendedOp::getCanonicalizationPatterns(
 //===----------------------------------------------------------------------===//
 
 std::optional<SmallVector<int64_t, 4>>
-arith::MulUIExtendedOp::getShapeForUnroll() {
+arith::MulUIExtendedOp::getIterationShapeToUnroll() {
   if (auto vt = dyn_cast<VectorType>(getType(0)))
     return llvm::to_vector<4>(vt.getShape());
   return std::nullopt;
@@ -3385,7 +3385,9 @@ TypedAttr mlir::arith::getIdentityValueAttr(AtomicRMWKind kind, Type resultType,
   case AtomicRMWKind::maxnumf: {
     const llvm::fltSemantics &semantic =
         llvm::cast<FloatType>(resultType).getFloatSemantics();
-    APFloat identity = APFloat::getNaN(semantic, /*Negative=*/true);
+    APFloat identity = useOnlyFiniteValue
+                           ? APFloat::getLargest(semantic, /*Negative=*/true)
+                           : APFloat::getNaN(semantic, /*Negative=*/true);
     return builder.getFloatAttr(resultType, identity);
   }
   case AtomicRMWKind::addf:
@@ -3414,7 +3416,9 @@ TypedAttr mlir::arith::getIdentityValueAttr(AtomicRMWKind kind, Type resultType,
   case AtomicRMWKind::minnumf: {
     const llvm::fltSemantics &semantic =
         llvm::cast<FloatType>(resultType).getFloatSemantics();
-    APFloat identity = APFloat::getNaN(semantic, /*Negative=*/false);
+    APFloat identity = useOnlyFiniteValue
+                           ? APFloat::getLargest(semantic, /*Negative=*/false)
+                           : APFloat::getNaN(semantic, /*Negative=*/false);
     return builder.getFloatAttr(resultType, identity);
   }
   case AtomicRMWKind::mins:
@@ -3469,6 +3473,16 @@ std::optional<TypedAttr> mlir::arith::getNeutralElement(Operation *op) {
     arith::FastMathFlagsAttr fmfAttr = fmfOpInterface.getFastMathFlagsAttr();
     useOnlyFiniteValue =
         bitEnumContainsAny(fmfAttr.getValue(), arith::FastMathFlags::ninf);
+    if (*maybeKind == AtomicRMWKind::maxnumf ||
+        *maybeKind == AtomicRMWKind::minnumf) {
+      if (bitEnumContainsAny(fmfAttr.getValue(), arith::FastMathFlags::nnan)) {
+        *maybeKind = *maybeKind == AtomicRMWKind::maxnumf
+                         ? AtomicRMWKind::maximumf
+                         : AtomicRMWKind::minimumf;
+      } else {
+        useOnlyFiniteValue = false;
+      }
+    }
   }
 
   // Builder only used as helper for attribute creation.

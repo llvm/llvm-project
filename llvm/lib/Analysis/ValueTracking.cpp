@@ -5249,7 +5249,19 @@ static void computeKnownFPClassForFPTrunc(const Operator *Op,
   KnownFPClass KnownSrc;
   computeKnownFPClass(Op->getOperand(0), DemandedElts, InterestedClasses,
                       KnownSrc, Q, Depth + 1);
-  Known = KnownFPClass::fptrunc(KnownSrc);
+
+  const fltSemantics &DstTy = Op->getType()->getScalarType()->getFltSemantics();
+  const fltSemantics &SrcTy =
+      Op->getOperand(0)->getType()->getScalarType()->getFltSemantics();
+
+  const auto *I = dyn_cast<Instruction>(Op);
+  const Function *F = I ? I->getFunction() : nullptr;
+  DenormalMode DstMode =
+      F ? F->getDenormalMode(DstTy) : DenormalMode::getDynamic();
+  DenormalMode SrcMode =
+      F ? F->getDenormalMode(SrcTy) : DenormalMode::getDynamic();
+
+  Known = KnownFPClass::fptrunc(KnownSrc, DstTy, SrcTy, DstMode, SrcMode);
 }
 
 static constexpr KnownFPClass::MinMaxKind getMinMaxKind(Intrinsic::ID IID) {
@@ -5479,8 +5491,10 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     }
     case Intrinsic::fma:
     case Intrinsic::fmuladd: {
-      if ((InterestedClasses & fcNegative) == fcNone)
+      if ((InterestedClasses & (fcNegative | fcNan)) == fcNone)
         break;
+
+      const bool IsFMA = IID == Intrinsic::fma;
 
       // FIXME: This should check isGuaranteedNotToBeUndef
       if (II->getArgOperand(0) == II->getArgOperand(1)) {
@@ -5506,7 +5520,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
           KnownAddend.knownNot(fcInf);
         }
 
-        Known = KnownFPClass::fma_square(KnownSrc, KnownAddend, Mode);
+        Known = IsFMA
+                    ? KnownFPClass::fma_square(KnownSrc, KnownAddend, Mode)
+                    : KnownFPClass::fmuladd_square(KnownSrc, KnownAddend, Mode);
         break;
       }
 
@@ -5528,7 +5544,10 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
           II->getType()->getScalarType()->getFltSemantics();
       DenormalMode Mode =
           F ? F->getDenormalMode(FltSem) : DenormalMode::getDynamic();
-      Known = KnownFPClass::fma(KnownSrc[0], KnownSrc[1], KnownSrc[2], Mode);
+      Known =
+          IsFMA ? KnownFPClass::fma(KnownSrc[0], KnownSrc[1], KnownSrc[2], Mode)
+                : KnownFPClass::fmuladd(KnownSrc[0], KnownSrc[1], KnownSrc[2],
+                                        Mode);
       break;
     }
     case Intrinsic::sqrt:
@@ -6282,7 +6301,14 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     const fltSemantics &SrcTy =
         Op->getOperand(0)->getType()->getScalarType()->getFltSemantics();
 
-    Known = KnownFPClass::fpext(KnownSrc, DstTy, SrcTy);
+    const auto *I = dyn_cast<Instruction>(Op);
+    const Function *F = I ? I->getFunction() : nullptr;
+    DenormalMode DstMode =
+        F ? F->getDenormalMode(DstTy) : DenormalMode::getDynamic();
+    DenormalMode SrcMode =
+        F ? F->getDenormalMode(SrcTy) : DenormalMode::getDynamic();
+
+    Known = KnownFPClass::fpext(KnownSrc, DstTy, SrcTy, DstMode, SrcMode);
     break;
   }
   case Instruction::FPTrunc: {
@@ -6715,6 +6741,9 @@ bool llvm::canIgnoreSignBitOfZero(const Use &U) {
   case Instruction::FPToSI:
   case Instruction::FPToUI:
     return true;
+  case Instruction::FRem:
+    // frem(x, +-0.0) == NaN, and more generally frem(x, y) == frem(x, -y).
+    return U.getOperandNo() == 1;
   case Instruction::FCmp:
     // fcmp treats both positive and negative zero as equal.
     return true;
@@ -6722,9 +6751,27 @@ bool llvm::canIgnoreSignBitOfZero(const Use &U) {
     if (auto *II = dyn_cast<IntrinsicInst>(User)) {
       switch (II->getIntrinsicID()) {
       case Intrinsic::fabs:
+      case Intrinsic::exp:
+      case Intrinsic::exp2:
+      case Intrinsic::exp10:
+      case Intrinsic::log:
+      case Intrinsic::log2:
+      case Intrinsic::log10:
+      case Intrinsic::cos:
+      case Intrinsic::acos:
+      case Intrinsic::cosh:
+      case Intrinsic::fptosi_sat:
+      case Intrinsic::fptoui_sat:
+      case Intrinsic::lround:
+      case Intrinsic::llround:
+      case Intrinsic::lrint:
+      case Intrinsic::llrint:
         return true;
       case Intrinsic::copysign:
         return U.getOperandNo() == 0;
+      case Intrinsic::pow:
+        // pow(x, +-0.0) == +1.0 or NaN
+        return U.getOperandNo() == 1;
       case Intrinsic::is_fpclass: {
         auto Test =
             static_cast<FPClassTest>(
@@ -8647,6 +8694,7 @@ bool llvm::intrinsicPropagatesPoison(Intrinsic::ID IID) {
   case Intrinsic::fshr:
   case Intrinsic::frexp:
   case Intrinsic::get_active_lane_mask:
+  case Intrinsic::mask_beforefirst:
     return true;
   default:
     return false;

@@ -5434,7 +5434,6 @@ void ASTWriter::AddToken(const Token &Tok, RecordDataImpl &Record) {
     case tok::annot_pragma_unused:
     case tok::annot_pragma_openacc:
     case tok::annot_pragma_openacc_end:
-    case tok::annot_repl_input_end:
       break;
     default:
       llvm_unreachable("missing serialization code for annotation token");
@@ -6695,7 +6694,7 @@ void ASTWriter::WriteDeclUpdatesBlocks(ASTContext &Context,
           // specialization. If so, record which one.
           auto From = Spec->getInstantiatedFrom();
           if (auto PartialSpec =
-                From.dyn_cast<ClassTemplatePartialSpecializationDecl*>()) {
+                  dyn_cast<ClassTemplatePartialSpecializationDecl *>(From)) {
             Record.push_back(true);
             Record.AddDeclRef(PartialSpec);
             Record.AddTemplateArgumentList(

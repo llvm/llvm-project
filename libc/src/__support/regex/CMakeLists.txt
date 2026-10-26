@@ -41,8 +41,12 @@ add_object_library(
     regex_matcher.h
   DEPENDS
     .regex_expr_pool
+    .regex_internal
+    libc.hdr.regex_macros
+    libc.src.__support.common
     libc.src.__support.CPP.string_view
     libc.src.__support.error_or
+    libc.src.__support.libc_assert
 )
 
 add_object_library(
@@ -54,6 +58,11 @@ add_object_library(
   DEPENDS
     .regex_expr_pool
     libc.hdr.regex_macros
+    libc.src.__support.alloc_checker
+    libc.src.__support.CPP.array
+    libc.src.__support.CPP.new
+    libc.src.__support.CPP.scope
+    libc.src.__support.CPP.span
     libc.src.__support.CPP.string_view
     libc.src.__support.error_or
     libc.src.__support.macros.config

@@ -726,7 +726,7 @@ GCNTTIImpl::hoistLaneIntrinsicThroughOperand(InstCombiner &IC,
 
 /// Evaluate V as a function of the lane ID and return its value on Lane, or
 /// std::nullopt if V is not a closed-form expression of the lane ID.
-static std::optional<unsigned> evalLaneExpr(Value *V, unsigned Lane,
+static std::optional<uint64_t> evalLaneExpr(Value *V, unsigned Lane,
                                             const GCNSubtarget &ST,
                                             const DataLayout &DL,
                                             unsigned Depth = 0) {
@@ -748,11 +748,11 @@ static std::optional<unsigned> evalLaneExpr(Value *V, unsigned Lane,
   if (!BO)
     return std::nullopt;
 
-  std::optional<unsigned> LHS =
+  std::optional<uint64_t> LHS =
       evalLaneExpr(BO->getOperand(0), Lane, ST, DL, Depth + 1);
   if (!LHS)
     return std::nullopt;
-  std::optional<unsigned> RHS =
+  std::optional<uint64_t> RHS =
       evalLaneExpr(BO->getOperand(1), Lane, ST, DL, Depth + 1);
   if (!RHS)
     return std::nullopt;
@@ -761,7 +761,7 @@ static std::optional<unsigned> evalLaneExpr(Value *V, unsigned Lane,
   Constant *Ops[] = {ConstantInt::get(Ty, *LHS), ConstantInt::get(Ty, *RHS)};
   auto *CI =
       dyn_cast_or_null<ConstantInt>(ConstantFoldInstOperands(BO, Ops, DL));
-  return CI ? std::optional<unsigned>(CI->getZExtValue()) : std::nullopt;
+  return CI ? std::optional<uint64_t>(CI->getZExtValue()) : std::nullopt;
 }
 
 /// Build the per-lane shuffle map by evaluating Index for every lane in the
@@ -772,10 +772,10 @@ static bool tryBuildShuffleMap(Value *Index, const GCNSubtarget &ST,
   unsigned WaveSize = ST.getWavefrontSize();
   Ids.resize(WaveSize);
   for (unsigned Lane : seq(WaveSize)) {
-    std::optional<unsigned> Val = evalLaneExpr(Index, Lane, ST, DL);
+    std::optional<uint64_t> Val = evalLaneExpr(Index, Lane, ST, DL);
     if (!Val || *Val >= WaveSize)
       return false;
-    Ids[Lane] = *Val;
+    Ids[Lane] = static_cast<uint8_t>(*Val);
   }
   return true;
 }
@@ -785,7 +785,7 @@ static bool tryBuildShuffleMap(Value *Index, const GCNSubtarget &ST,
 template <unsigned Period>
 static bool hasPeriodicLayout(ArrayRef<uint8_t> Ids) {
   static_assert(isPowerOf2_32(Period), "Period must be a power of two");
-  for (unsigned I = Period, E = Ids.size(); I < E; ++I)
+  for (size_t I = Period, E = Ids.size(); I < E; ++I)
     if (Ids[I] != Ids[I % Period] + (I & ~(Period - 1)))
       return false;
   return true;
@@ -1129,10 +1129,10 @@ tryOptimizeShufflePattern(InstCombiner &IC, IntrinsicInst &II,
   if (IsBpermute) {
     Ids.resize(WaveSize);
     for (unsigned Lane : seq(WaveSize)) {
-      std::optional<unsigned> Val = evalLaneExpr(Index, Lane, ST, DL);
+      std::optional<uint64_t> Val = evalLaneExpr(Index, Lane, ST, DL);
       if (!Val || (*Val & 3) || (*Val >> 2) >= WaveSize)
         return std::nullopt;
-      Ids[Lane] = *Val >> 2;
+      Ids[Lane] = static_cast<uint8_t>(*Val >> 2);
     }
   } else {
     if (!tryBuildShuffleMap(Index, ST, Ids, DL))
@@ -1490,7 +1490,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       return IC.replaceInstUsesWith(II, Src);
     }
 
-    unsigned Width;
+    uint64_t Width;
     Type *Ty = II.getType();
     unsigned IntSize = Ty->getIntegerBitWidth();
 
@@ -1508,7 +1508,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       }
     }
 
-    unsigned Offset;
+    uint64_t Offset;
     ConstantInt *COffset = dyn_cast<ConstantInt>(II.getArgOperand(1));
     if (COffset) {
       Offset = COffset->getZExtValue();
@@ -1549,7 +1549,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   case Intrinsic::amdgcn_exp_row:
   case Intrinsic::amdgcn_exp_compr: {
     ConstantInt *En = cast<ConstantInt>(II.getArgOperand(1));
-    unsigned EnBits = En->getZExtValue();
+    uint64_t EnBits = En->getZExtValue();
     if (EnBits == 0xf)
       break; // All inputs enabled.
 
@@ -1839,7 +1839,8 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
     auto *MsgImm = cast<ConstantInt>(II.getArgOperand(0));
     uint16_t MsgId, OpId, StreamId;
-    decodeMsg(MsgImm->getZExtValue(), MsgId, OpId, StreamId, *ST);
+    decodeMsg(static_cast<unsigned>(MsgImm->getZExtValue()), MsgId, OpId,
+              StreamId, *ST);
 
     if (!msgDoesNotUseM0(MsgId, *ST))
       break;
@@ -1986,8 +1987,10 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       break;
     }
 
-    unsigned Exponent = FSrcInt.extractBitsAsZExtValue(11, 52);
-    unsigned SegmentVal = Cseg->getValue().trunc(5).getZExtValue();
+    unsigned Exponent =
+        static_cast<unsigned>(FSrcInt.extractBitsAsZExtValue(11, 52));
+    unsigned SegmentVal =
+        static_cast<unsigned>(Cseg->getValue().trunc(5).getZExtValue());
     unsigned Shift = SegmentVal * 53;
     if (Exponent > 1077)
       Shift += Exponent - 1077;
@@ -2225,7 +2228,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     auto *Src0Ty = cast<FixedVectorType>(Src0->getType());
     auto *Src1Ty = cast<FixedVectorType>(Src1->getType());
 
-    auto getFormatNumRegs = [](unsigned FormatVal) {
+    auto getFormatNumRegs = [](uint64_t FormatVal) {
       switch (FormatVal) {
       case AMDGPU::MFMAScaleFormats::FP6_E2M3:
       case AMDGPU::MFMAScaleFormats::FP6_E3M2:
@@ -2392,9 +2395,9 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
         // Clear demanded bits and update the offset.
         DemandedElts &= ~((1 << UnusedComponentsAtFront) - 1);
         auto *Offset = Args[OffsetIdx];
-        unsigned SingleComponentSizeInBits =
-            IC.getDataLayout().getTypeSizeInBits(EltTy);
-        unsigned OffsetAdd =
+        uint64_t SingleComponentSizeInBits =
+            IC.getDataLayout().getTypeSizeInBits(EltTy).getFixedValue();
+        uint64_t OffsetAdd =
             UnusedComponentsAtFront * SingleComponentSizeInBits / 8;
         auto *OffsetAddVal = ConstantInt::get(Offset->getType(), OffsetAdd);
         Args[OffsetIdx] = IC.Builder.CreateAdd(Offset, OffsetAddVal);
