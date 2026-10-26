@@ -41,15 +41,15 @@ define amdgpu_ps half @struct_tbuffer_load_f16__sgpr_rsrc__vgpr_vindex__vgpr_vof
   ;
   ; PACKED-GFX11-LABEL: name: struct_tbuffer_load_f16__sgpr_rsrc__vgpr_vindex__vgpr_voffset__sgpr_soffset
   ; PACKED-GFX11: bb.1 (%ir-block.0):
-  ; PACKED-GFX11-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $vgpr0, $vgpr1
+  ; PACKED-GFX11-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $vgpr0, $vgpr1
   ; PACKED-GFX11-NEXT: {{  $}}
-  ; PACKED-GFX11-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr2
-  ; PACKED-GFX11-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
-  ; PACKED-GFX11-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
-  ; PACKED-GFX11-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; PACKED-GFX11-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+  ; PACKED-GFX11-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
+  ; PACKED-GFX11-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr2
+  ; PACKED-GFX11-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; PACKED-GFX11-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; PACKED-GFX11-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-  ; PACKED-GFX11-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
+  ; PACKED-GFX11-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr4
   ; PACKED-GFX11-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; PACKED-GFX11-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY5]], %subreg.sub1
   ; PACKED-GFX11-NEXT:   [[TBUFFER_LOAD_FORMAT_D16_X_BOTHEN:%[0-9]+]]:vgpr_32 = TBUFFER_LOAD_FORMAT_D16_X_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 0, 78, 0, 0, implicit $exec :: (dereferenceable load (f16) from %ir.rsrc, align 1, addrspace 8)
@@ -114,15 +114,15 @@ define amdgpu_ps <2 x half> @struct_tbuffer_load_v2f16__sgpr_rsrc__vgpr_vindex__
   ;
   ; PACKED-GFX11-LABEL: name: struct_tbuffer_load_v2f16__sgpr_rsrc__vgpr_vindex__vgpr_voffset__sgpr_soffset
   ; PACKED-GFX11: bb.1 (%ir-block.0):
-  ; PACKED-GFX11-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $vgpr0, $vgpr1
+  ; PACKED-GFX11-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $vgpr0, $vgpr1
   ; PACKED-GFX11-NEXT: {{  $}}
-  ; PACKED-GFX11-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr2
-  ; PACKED-GFX11-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
-  ; PACKED-GFX11-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
-  ; PACKED-GFX11-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; PACKED-GFX11-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+  ; PACKED-GFX11-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
+  ; PACKED-GFX11-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr2
+  ; PACKED-GFX11-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; PACKED-GFX11-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; PACKED-GFX11-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-  ; PACKED-GFX11-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
+  ; PACKED-GFX11-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr4
   ; PACKED-GFX11-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; PACKED-GFX11-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY5]], %subreg.sub1
   ; PACKED-GFX11-NEXT:   [[TBUFFER_LOAD_FORMAT_D16_XY_BOTHEN:%[0-9]+]]:vgpr_32 = TBUFFER_LOAD_FORMAT_D16_XY_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 0, 78, 0, 0, implicit $exec :: (dereferenceable load (<2 x f16>) from %ir.rsrc, align 1, addrspace 8)
@@ -209,15 +209,15 @@ define amdgpu_ps <4 x half> @struct_tbuffer_load_v4f16__sgpr_rsrc__vgpr_vindex__
   ;
   ; PACKED-GFX11-LABEL: name: struct_tbuffer_load_v4f16__sgpr_rsrc__vgpr_vindex__vgpr_voffset__sgpr_soffset
   ; PACKED-GFX11: bb.1 (%ir-block.0):
-  ; PACKED-GFX11-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $vgpr0, $vgpr1
+  ; PACKED-GFX11-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $vgpr0, $vgpr1
   ; PACKED-GFX11-NEXT: {{  $}}
-  ; PACKED-GFX11-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr2
-  ; PACKED-GFX11-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
-  ; PACKED-GFX11-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
-  ; PACKED-GFX11-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; PACKED-GFX11-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+  ; PACKED-GFX11-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
+  ; PACKED-GFX11-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr2
+  ; PACKED-GFX11-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; PACKED-GFX11-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; PACKED-GFX11-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-  ; PACKED-GFX11-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
+  ; PACKED-GFX11-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr4
   ; PACKED-GFX11-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; PACKED-GFX11-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY5]], %subreg.sub1
   ; PACKED-GFX11-NEXT:   [[TBUFFER_LOAD_FORMAT_D16_XYZW_BOTHEN:%[0-9]+]]:vreg_64 = TBUFFER_LOAD_FORMAT_D16_XYZW_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 0, 78, 0, 0, implicit $exec :: (dereferenceable load (<4 x f16>) from %ir.rsrc, align 1, addrspace 8)
@@ -307,14 +307,14 @@ define amdgpu_ps half @struct_tbuffer_load_f16__sgpr_rsrc__vgpr_vindex__vgpr_vof
   ;
   ; PACKED-GFX11-LABEL: name: struct_tbuffer_load_f16__sgpr_rsrc__vgpr_vindex__vgpr_voffset__sgpr_soffset_vindex0
   ; PACKED-GFX11: bb.1 (%ir-block.0):
-  ; PACKED-GFX11-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $vgpr0
+  ; PACKED-GFX11-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $vgpr0
   ; PACKED-GFX11-NEXT: {{  $}}
-  ; PACKED-GFX11-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr2
-  ; PACKED-GFX11-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
-  ; PACKED-GFX11-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
-  ; PACKED-GFX11-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; PACKED-GFX11-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+  ; PACKED-GFX11-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
+  ; PACKED-GFX11-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr2
+  ; PACKED-GFX11-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; PACKED-GFX11-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-  ; PACKED-GFX11-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr6
+  ; PACKED-GFX11-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr4
   ; PACKED-GFX11-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
   ; PACKED-GFX11-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; PACKED-GFX11-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
@@ -463,14 +463,14 @@ define amdgpu_ps <4 x half> @struct_tbuffer_load_v4f16__vgpr_rsrc__sgpr_vindex__
   ; PACKED-GFX11-LABEL: name: struct_tbuffer_load_v4f16__vgpr_rsrc__sgpr_vindex__sgpr_voffset__vgpr_soffset
   ; PACKED-GFX11: bb.1 (%ir-block.0):
   ; PACKED-GFX11-NEXT:   successors: %bb.2(0x80000000)
-  ; PACKED-GFX11-NEXT:   liveins: $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
+  ; PACKED-GFX11-NEXT:   liveins: $sgpr0, $sgpr1, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
   ; PACKED-GFX11-NEXT: {{  $}}
   ; PACKED-GFX11-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; PACKED-GFX11-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; PACKED-GFX11-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; PACKED-GFX11-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr3
-  ; PACKED-GFX11-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY $sgpr2
-  ; PACKED-GFX11-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr3
+  ; PACKED-GFX11-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY $sgpr0
+  ; PACKED-GFX11-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr1
   ; PACKED-GFX11-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY $vgpr4
   ; PACKED-GFX11-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; PACKED-GFX11-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[COPY4]]
@@ -632,15 +632,15 @@ define amdgpu_ps half @struct_tbuffer_load_f16__sgpr_rsrc__vgpr_vindex__vgpr_vof
   ;
   ; PACKED-GFX11-LABEL: name: struct_tbuffer_load_f16__sgpr_rsrc__vgpr_vindex__vgpr_voffset__sgpr_soffset_voffset_add4095
   ; PACKED-GFX11: bb.1 (%ir-block.0):
-  ; PACKED-GFX11-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $vgpr0, $vgpr1
+  ; PACKED-GFX11-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $vgpr0, $vgpr1
   ; PACKED-GFX11-NEXT: {{  $}}
-  ; PACKED-GFX11-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr2
-  ; PACKED-GFX11-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
-  ; PACKED-GFX11-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
-  ; PACKED-GFX11-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; PACKED-GFX11-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+  ; PACKED-GFX11-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
+  ; PACKED-GFX11-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr2
+  ; PACKED-GFX11-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; PACKED-GFX11-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; PACKED-GFX11-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-  ; PACKED-GFX11-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
+  ; PACKED-GFX11-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr4
   ; PACKED-GFX11-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; PACKED-GFX11-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY5]], %subreg.sub1
   ; PACKED-GFX11-NEXT:   [[TBUFFER_LOAD_FORMAT_D16_X_BOTHEN:%[0-9]+]]:vgpr_32 = TBUFFER_LOAD_FORMAT_D16_X_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 4095, 78, 0, 0, implicit $exec :: (dereferenceable load (f16) from %ir.rsrc, align 1, addrspace 8)

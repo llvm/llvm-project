@@ -53,16 +53,16 @@ define amdgpu_ps float @atomic_swap_1d(<8 x i32> inreg %rsrc, i32 %data, i16 %s)
   ;
   ; GFX11NSA-LABEL: name: atomic_swap_1d
   ; GFX11NSA: bb.1.main_body:
-  ; GFX11NSA-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1_lo16
+  ; GFX11NSA-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1_lo16
   ; GFX11NSA-NEXT: {{  $}}
-  ; GFX11NSA-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr2
-  ; GFX11NSA-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr3
-  ; GFX11NSA-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr4
-  ; GFX11NSA-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr5
-  ; GFX11NSA-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr6
-  ; GFX11NSA-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr7
-  ; GFX11NSA-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr8
-  ; GFX11NSA-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr9
+  ; GFX11NSA-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+  ; GFX11NSA-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr1
+  ; GFX11NSA-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr2
+  ; GFX11NSA-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr3
+  ; GFX11NSA-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr4
+  ; GFX11NSA-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr5
+  ; GFX11NSA-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr6
+  ; GFX11NSA-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr7
   ; GFX11NSA-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x i32>) = G_BUILD_VECTOR [[COPY]](i32), [[COPY1]](i32), [[COPY2]](i32), [[COPY3]](i32), [[COPY4]](i32), [[COPY5]](i32), [[COPY6]](i32), [[COPY7]](i32)
   ; GFX11NSA-NEXT:   [[COPY8:%[0-9]+]]:_(i32) = COPY $vgpr0
   ; GFX11NSA-NEXT:   [[COPY9:%[0-9]+]]:_(i16) = COPY $vgpr1_lo16
@@ -75,16 +75,16 @@ define amdgpu_ps float @atomic_swap_1d(<8 x i32> inreg %rsrc, i32 %data, i16 %s)
   ;
   ; GFX12-LABEL: name: atomic_swap_1d
   ; GFX12: bb.1.main_body:
-  ; GFX12-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1_lo16
+  ; GFX12-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1_lo16
   ; GFX12-NEXT: {{  $}}
-  ; GFX12-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr2
-  ; GFX12-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr3
-  ; GFX12-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr4
-  ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr5
-  ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr6
-  ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr7
-  ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr8
-  ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr9
+  ; GFX12-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+  ; GFX12-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr1
+  ; GFX12-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr2
+  ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr3
+  ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr4
+  ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr5
+  ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr6
+  ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr7
   ; GFX12-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x i32>) = G_BUILD_VECTOR [[COPY]](i32), [[COPY1]](i32), [[COPY2]](i32), [[COPY3]](i32), [[COPY4]](i32), [[COPY5]](i32), [[COPY6]](i32), [[COPY7]](i32)
   ; GFX12-NEXT:   [[COPY8:%[0-9]+]]:_(i32) = COPY $vgpr0
   ; GFX12-NEXT:   [[COPY9:%[0-9]+]]:_(i16) = COPY $vgpr1_lo16
@@ -149,16 +149,16 @@ define amdgpu_ps float @atomic_add_1d(<8 x i32> inreg %rsrc, i32 %data, i16 %s) 
   ;
   ; GFX11NSA-LABEL: name: atomic_add_1d
   ; GFX11NSA: bb.1.main_body:
-  ; GFX11NSA-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1_lo16
+  ; GFX11NSA-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1_lo16
   ; GFX11NSA-NEXT: {{  $}}
-  ; GFX11NSA-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr2
-  ; GFX11NSA-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr3
-  ; GFX11NSA-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr4
-  ; GFX11NSA-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr5
-  ; GFX11NSA-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr6
-  ; GFX11NSA-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr7
-  ; GFX11NSA-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr8
-  ; GFX11NSA-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr9
+  ; GFX11NSA-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+  ; GFX11NSA-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr1
+  ; GFX11NSA-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr2
+  ; GFX11NSA-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr3
+  ; GFX11NSA-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr4
+  ; GFX11NSA-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr5
+  ; GFX11NSA-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr6
+  ; GFX11NSA-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr7
   ; GFX11NSA-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x i32>) = G_BUILD_VECTOR [[COPY]](i32), [[COPY1]](i32), [[COPY2]](i32), [[COPY3]](i32), [[COPY4]](i32), [[COPY5]](i32), [[COPY6]](i32), [[COPY7]](i32)
   ; GFX11NSA-NEXT:   [[COPY8:%[0-9]+]]:_(i32) = COPY $vgpr0
   ; GFX11NSA-NEXT:   [[COPY9:%[0-9]+]]:_(i16) = COPY $vgpr1_lo16
@@ -171,16 +171,16 @@ define amdgpu_ps float @atomic_add_1d(<8 x i32> inreg %rsrc, i32 %data, i16 %s) 
   ;
   ; GFX12-LABEL: name: atomic_add_1d
   ; GFX12: bb.1.main_body:
-  ; GFX12-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1_lo16
+  ; GFX12-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1_lo16
   ; GFX12-NEXT: {{  $}}
-  ; GFX12-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr2
-  ; GFX12-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr3
-  ; GFX12-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr4
-  ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr5
-  ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr6
-  ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr7
-  ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr8
-  ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr9
+  ; GFX12-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+  ; GFX12-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr1
+  ; GFX12-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr2
+  ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr3
+  ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr4
+  ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr5
+  ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr6
+  ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr7
   ; GFX12-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x i32>) = G_BUILD_VECTOR [[COPY]](i32), [[COPY1]](i32), [[COPY2]](i32), [[COPY3]](i32), [[COPY4]](i32), [[COPY5]](i32), [[COPY6]](i32), [[COPY7]](i32)
   ; GFX12-NEXT:   [[COPY8:%[0-9]+]]:_(i32) = COPY $vgpr0
   ; GFX12-NEXT:   [[COPY9:%[0-9]+]]:_(i16) = COPY $vgpr1_lo16
@@ -245,16 +245,16 @@ define amdgpu_ps float @atomic_sub_1d(<8 x i32> inreg %rsrc, i32 %data, i16 %s) 
   ;
   ; GFX11NSA-LABEL: name: atomic_sub_1d
   ; GFX11NSA: bb.1.main_body:
-  ; GFX11NSA-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1_lo16
+  ; GFX11NSA-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1_lo16
   ; GFX11NSA-NEXT: {{  $}}
-  ; GFX11NSA-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr2
-  ; GFX11NSA-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr3
-  ; GFX11NSA-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr4
-  ; GFX11NSA-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr5
-  ; GFX11NSA-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr6
-  ; GFX11NSA-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr7
-  ; GFX11NSA-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr8
-  ; GFX11NSA-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr9
+  ; GFX11NSA-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+  ; GFX11NSA-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr1
+  ; GFX11NSA-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr2
+  ; GFX11NSA-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr3
+  ; GFX11NSA-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr4
+  ; GFX11NSA-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr5
+  ; GFX11NSA-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr6
+  ; GFX11NSA-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr7
   ; GFX11NSA-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x i32>) = G_BUILD_VECTOR [[COPY]](i32), [[COPY1]](i32), [[COPY2]](i32), [[COPY3]](i32), [[COPY4]](i32), [[COPY5]](i32), [[COPY6]](i32), [[COPY7]](i32)
   ; GFX11NSA-NEXT:   [[COPY8:%[0-9]+]]:_(i32) = COPY $vgpr0
   ; GFX11NSA-NEXT:   [[COPY9:%[0-9]+]]:_(i16) = COPY $vgpr1_lo16
@@ -267,16 +267,16 @@ define amdgpu_ps float @atomic_sub_1d(<8 x i32> inreg %rsrc, i32 %data, i16 %s) 
   ;
   ; GFX12-LABEL: name: atomic_sub_1d
   ; GFX12: bb.1.main_body:
-  ; GFX12-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1_lo16
+  ; GFX12-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1_lo16
   ; GFX12-NEXT: {{  $}}
-  ; GFX12-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr2
-  ; GFX12-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr3
-  ; GFX12-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr4
-  ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr5
-  ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr6
-  ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr7
-  ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr8
-  ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr9
+  ; GFX12-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+  ; GFX12-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr1
+  ; GFX12-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr2
+  ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr3
+  ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr4
+  ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr5
+  ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr6
+  ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr7
   ; GFX12-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x i32>) = G_BUILD_VECTOR [[COPY]](i32), [[COPY1]](i32), [[COPY2]](i32), [[COPY3]](i32), [[COPY4]](i32), [[COPY5]](i32), [[COPY6]](i32), [[COPY7]](i32)
   ; GFX12-NEXT:   [[COPY8:%[0-9]+]]:_(i32) = COPY $vgpr0
   ; GFX12-NEXT:   [[COPY9:%[0-9]+]]:_(i16) = COPY $vgpr1_lo16
@@ -341,16 +341,16 @@ define amdgpu_ps float @atomic_smin_1d(<8 x i32> inreg %rsrc, i32 %data, i16 %s)
   ;
   ; GFX11NSA-LABEL: name: atomic_smin_1d
   ; GFX11NSA: bb.1.main_body:
-  ; GFX11NSA-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1_lo16
+  ; GFX11NSA-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1_lo16
   ; GFX11NSA-NEXT: {{  $}}
-  ; GFX11NSA-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr2
-  ; GFX11NSA-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr3
-  ; GFX11NSA-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr4
-  ; GFX11NSA-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr5
-  ; GFX11NSA-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr6
-  ; GFX11NSA-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr7
-  ; GFX11NSA-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr8
-  ; GFX11NSA-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr9
+  ; GFX11NSA-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+  ; GFX11NSA-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr1
+  ; GFX11NSA-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr2
+  ; GFX11NSA-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr3
+  ; GFX11NSA-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr4
+  ; GFX11NSA-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr5
+  ; GFX11NSA-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr6
+  ; GFX11NSA-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr7
   ; GFX11NSA-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x i32>) = G_BUILD_VECTOR [[COPY]](i32), [[COPY1]](i32), [[COPY2]](i32), [[COPY3]](i32), [[COPY4]](i32), [[COPY5]](i32), [[COPY6]](i32), [[COPY7]](i32)
   ; GFX11NSA-NEXT:   [[COPY8:%[0-9]+]]:_(i32) = COPY $vgpr0
   ; GFX11NSA-NEXT:   [[COPY9:%[0-9]+]]:_(i16) = COPY $vgpr1_lo16
@@ -363,16 +363,16 @@ define amdgpu_ps float @atomic_smin_1d(<8 x i32> inreg %rsrc, i32 %data, i16 %s)
   ;
   ; GFX12-LABEL: name: atomic_smin_1d
   ; GFX12: bb.1.main_body:
-  ; GFX12-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1_lo16
+  ; GFX12-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1_lo16
   ; GFX12-NEXT: {{  $}}
-  ; GFX12-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr2
-  ; GFX12-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr3
-  ; GFX12-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr4
-  ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr5
-  ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr6
-  ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr7
-  ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr8
-  ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr9
+  ; GFX12-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+  ; GFX12-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr1
+  ; GFX12-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr2
+  ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr3
+  ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr4
+  ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr5
+  ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr6
+  ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr7
   ; GFX12-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x i32>) = G_BUILD_VECTOR [[COPY]](i32), [[COPY1]](i32), [[COPY2]](i32), [[COPY3]](i32), [[COPY4]](i32), [[COPY5]](i32), [[COPY6]](i32), [[COPY7]](i32)
   ; GFX12-NEXT:   [[COPY8:%[0-9]+]]:_(i32) = COPY $vgpr0
   ; GFX12-NEXT:   [[COPY9:%[0-9]+]]:_(i16) = COPY $vgpr1_lo16
@@ -438,16 +438,16 @@ define amdgpu_ps float @atomic_umin_1d(<8 x i32> inreg %rsrc, i32 %data, i16 %s)
   ;
   ; GFX11NSA-LABEL: name: atomic_umin_1d
   ; GFX11NSA: bb.1.main_body:
-  ; GFX11NSA-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1_lo16
+  ; GFX11NSA-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1_lo16
   ; GFX11NSA-NEXT: {{  $}}
-  ; GFX11NSA-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr2
-  ; GFX11NSA-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr3
-  ; GFX11NSA-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr4
-  ; GFX11NSA-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr5
-  ; GFX11NSA-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr6
-  ; GFX11NSA-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr7
-  ; GFX11NSA-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr8
-  ; GFX11NSA-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr9
+  ; GFX11NSA-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+  ; GFX11NSA-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr1
+  ; GFX11NSA-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr2
+  ; GFX11NSA-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr3
+  ; GFX11NSA-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr4
+  ; GFX11NSA-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr5
+  ; GFX11NSA-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr6
+  ; GFX11NSA-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr7
   ; GFX11NSA-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x i32>) = G_BUILD_VECTOR [[COPY]](i32), [[COPY1]](i32), [[COPY2]](i32), [[COPY3]](i32), [[COPY4]](i32), [[COPY5]](i32), [[COPY6]](i32), [[COPY7]](i32)
   ; GFX11NSA-NEXT:   [[COPY8:%[0-9]+]]:_(i32) = COPY $vgpr0
   ; GFX11NSA-NEXT:   [[COPY9:%[0-9]+]]:_(i16) = COPY $vgpr1_lo16
@@ -460,16 +460,16 @@ define amdgpu_ps float @atomic_umin_1d(<8 x i32> inreg %rsrc, i32 %data, i16 %s)
   ;
   ; GFX12-LABEL: name: atomic_umin_1d
   ; GFX12: bb.1.main_body:
-  ; GFX12-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1_lo16
+  ; GFX12-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1_lo16
   ; GFX12-NEXT: {{  $}}
-  ; GFX12-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr2
-  ; GFX12-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr3
-  ; GFX12-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr4
-  ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr5
-  ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr6
-  ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr7
-  ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr8
-  ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr9
+  ; GFX12-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+  ; GFX12-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr1
+  ; GFX12-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr2
+  ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr3
+  ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr4
+  ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr5
+  ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr6
+  ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr7
   ; GFX12-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x i32>) = G_BUILD_VECTOR [[COPY]](i32), [[COPY1]](i32), [[COPY2]](i32), [[COPY3]](i32), [[COPY4]](i32), [[COPY5]](i32), [[COPY6]](i32), [[COPY7]](i32)
   ; GFX12-NEXT:   [[COPY8:%[0-9]+]]:_(i32) = COPY $vgpr0
   ; GFX12-NEXT:   [[COPY9:%[0-9]+]]:_(i16) = COPY $vgpr1_lo16
@@ -534,16 +534,16 @@ define amdgpu_ps float @atomic_smax_1d(<8 x i32> inreg %rsrc, i32 %data, i16 %s)
   ;
   ; GFX11NSA-LABEL: name: atomic_smax_1d
   ; GFX11NSA: bb.1.main_body:
-  ; GFX11NSA-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1_lo16
+  ; GFX11NSA-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1_lo16
   ; GFX11NSA-NEXT: {{  $}}
-  ; GFX11NSA-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr2
-  ; GFX11NSA-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr3
-  ; GFX11NSA-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr4
-  ; GFX11NSA-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr5
-  ; GFX11NSA-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr6
-  ; GFX11NSA-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr7
-  ; GFX11NSA-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr8
-  ; GFX11NSA-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr9
+  ; GFX11NSA-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+  ; GFX11NSA-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr1
+  ; GFX11NSA-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr2
+  ; GFX11NSA-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr3
+  ; GFX11NSA-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr4
+  ; GFX11NSA-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr5
+  ; GFX11NSA-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr6
+  ; GFX11NSA-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr7
   ; GFX11NSA-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x i32>) = G_BUILD_VECTOR [[COPY]](i32), [[COPY1]](i32), [[COPY2]](i32), [[COPY3]](i32), [[COPY4]](i32), [[COPY5]](i32), [[COPY6]](i32), [[COPY7]](i32)
   ; GFX11NSA-NEXT:   [[COPY8:%[0-9]+]]:_(i32) = COPY $vgpr0
   ; GFX11NSA-NEXT:   [[COPY9:%[0-9]+]]:_(i16) = COPY $vgpr1_lo16
@@ -556,16 +556,16 @@ define amdgpu_ps float @atomic_smax_1d(<8 x i32> inreg %rsrc, i32 %data, i16 %s)
   ;
   ; GFX12-LABEL: name: atomic_smax_1d
   ; GFX12: bb.1.main_body:
-  ; GFX12-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1_lo16
+  ; GFX12-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1_lo16
   ; GFX12-NEXT: {{  $}}
-  ; GFX12-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr2
-  ; GFX12-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr3
-  ; GFX12-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr4
-  ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr5
-  ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr6
-  ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr7
-  ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr8
-  ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr9
+  ; GFX12-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+  ; GFX12-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr1
+  ; GFX12-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr2
+  ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr3
+  ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr4
+  ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr5
+  ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr6
+  ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr7
   ; GFX12-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x i32>) = G_BUILD_VECTOR [[COPY]](i32), [[COPY1]](i32), [[COPY2]](i32), [[COPY3]](i32), [[COPY4]](i32), [[COPY5]](i32), [[COPY6]](i32), [[COPY7]](i32)
   ; GFX12-NEXT:   [[COPY8:%[0-9]+]]:_(i32) = COPY $vgpr0
   ; GFX12-NEXT:   [[COPY9:%[0-9]+]]:_(i16) = COPY $vgpr1_lo16
@@ -630,16 +630,16 @@ define amdgpu_ps float @atomic_umax_1d(<8 x i32> inreg %rsrc, i32 %data, i16 %s)
   ;
   ; GFX11NSA-LABEL: name: atomic_umax_1d
   ; GFX11NSA: bb.1.main_body:
-  ; GFX11NSA-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1_lo16
+  ; GFX11NSA-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1_lo16
   ; GFX11NSA-NEXT: {{  $}}
-  ; GFX11NSA-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr2
-  ; GFX11NSA-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr3
-  ; GFX11NSA-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr4
-  ; GFX11NSA-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr5
-  ; GFX11NSA-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr6
-  ; GFX11NSA-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr7
-  ; GFX11NSA-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr8
-  ; GFX11NSA-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr9
+  ; GFX11NSA-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+  ; GFX11NSA-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr1
+  ; GFX11NSA-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr2
+  ; GFX11NSA-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr3
+  ; GFX11NSA-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr4
+  ; GFX11NSA-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr5
+  ; GFX11NSA-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr6
+  ; GFX11NSA-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr7
   ; GFX11NSA-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x i32>) = G_BUILD_VECTOR [[COPY]](i32), [[COPY1]](i32), [[COPY2]](i32), [[COPY3]](i32), [[COPY4]](i32), [[COPY5]](i32), [[COPY6]](i32), [[COPY7]](i32)
   ; GFX11NSA-NEXT:   [[COPY8:%[0-9]+]]:_(i32) = COPY $vgpr0
   ; GFX11NSA-NEXT:   [[COPY9:%[0-9]+]]:_(i16) = COPY $vgpr1_lo16
@@ -652,16 +652,16 @@ define amdgpu_ps float @atomic_umax_1d(<8 x i32> inreg %rsrc, i32 %data, i16 %s)
   ;
   ; GFX12-LABEL: name: atomic_umax_1d
   ; GFX12: bb.1.main_body:
-  ; GFX12-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1_lo16
+  ; GFX12-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1_lo16
   ; GFX12-NEXT: {{  $}}
-  ; GFX12-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr2
-  ; GFX12-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr3
-  ; GFX12-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr4
-  ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr5
-  ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr6
-  ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr7
-  ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr8
-  ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr9
+  ; GFX12-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+  ; GFX12-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr1
+  ; GFX12-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr2
+  ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr3
+  ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr4
+  ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr5
+  ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr6
+  ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr7
   ; GFX12-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x i32>) = G_BUILD_VECTOR [[COPY]](i32), [[COPY1]](i32), [[COPY2]](i32), [[COPY3]](i32), [[COPY4]](i32), [[COPY5]](i32), [[COPY6]](i32), [[COPY7]](i32)
   ; GFX12-NEXT:   [[COPY8:%[0-9]+]]:_(i32) = COPY $vgpr0
   ; GFX12-NEXT:   [[COPY9:%[0-9]+]]:_(i16) = COPY $vgpr1_lo16
@@ -726,16 +726,16 @@ define amdgpu_ps float @atomic_and_1d(<8 x i32> inreg %rsrc, i32 %data, i16 %s) 
   ;
   ; GFX11NSA-LABEL: name: atomic_and_1d
   ; GFX11NSA: bb.1.main_body:
-  ; GFX11NSA-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1_lo16
+  ; GFX11NSA-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1_lo16
   ; GFX11NSA-NEXT: {{  $}}
-  ; GFX11NSA-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr2
-  ; GFX11NSA-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr3
-  ; GFX11NSA-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr4
-  ; GFX11NSA-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr5
-  ; GFX11NSA-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr6
-  ; GFX11NSA-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr7
-  ; GFX11NSA-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr8
-  ; GFX11NSA-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr9
+  ; GFX11NSA-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+  ; GFX11NSA-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr1
+  ; GFX11NSA-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr2
+  ; GFX11NSA-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr3
+  ; GFX11NSA-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr4
+  ; GFX11NSA-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr5
+  ; GFX11NSA-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr6
+  ; GFX11NSA-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr7
   ; GFX11NSA-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x i32>) = G_BUILD_VECTOR [[COPY]](i32), [[COPY1]](i32), [[COPY2]](i32), [[COPY3]](i32), [[COPY4]](i32), [[COPY5]](i32), [[COPY6]](i32), [[COPY7]](i32)
   ; GFX11NSA-NEXT:   [[COPY8:%[0-9]+]]:_(i32) = COPY $vgpr0
   ; GFX11NSA-NEXT:   [[COPY9:%[0-9]+]]:_(i16) = COPY $vgpr1_lo16
@@ -748,16 +748,16 @@ define amdgpu_ps float @atomic_and_1d(<8 x i32> inreg %rsrc, i32 %data, i16 %s) 
   ;
   ; GFX12-LABEL: name: atomic_and_1d
   ; GFX12: bb.1.main_body:
-  ; GFX12-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1_lo16
+  ; GFX12-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1_lo16
   ; GFX12-NEXT: {{  $}}
-  ; GFX12-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr2
-  ; GFX12-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr3
-  ; GFX12-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr4
-  ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr5
-  ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr6
-  ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr7
-  ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr8
-  ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr9
+  ; GFX12-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+  ; GFX12-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr1
+  ; GFX12-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr2
+  ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr3
+  ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr4
+  ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr5
+  ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr6
+  ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr7
   ; GFX12-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x i32>) = G_BUILD_VECTOR [[COPY]](i32), [[COPY1]](i32), [[COPY2]](i32), [[COPY3]](i32), [[COPY4]](i32), [[COPY5]](i32), [[COPY6]](i32), [[COPY7]](i32)
   ; GFX12-NEXT:   [[COPY8:%[0-9]+]]:_(i32) = COPY $vgpr0
   ; GFX12-NEXT:   [[COPY9:%[0-9]+]]:_(i16) = COPY $vgpr1_lo16
@@ -822,16 +822,16 @@ define amdgpu_ps float @atomic_or_1d(<8 x i32> inreg %rsrc, i32 %data, i16 %s) {
   ;
   ; GFX11NSA-LABEL: name: atomic_or_1d
   ; GFX11NSA: bb.1.main_body:
-  ; GFX11NSA-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1_lo16
+  ; GFX11NSA-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1_lo16
   ; GFX11NSA-NEXT: {{  $}}
-  ; GFX11NSA-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr2
-  ; GFX11NSA-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr3
-  ; GFX11NSA-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr4
-  ; GFX11NSA-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr5
-  ; GFX11NSA-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr6
-  ; GFX11NSA-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr7
-  ; GFX11NSA-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr8
-  ; GFX11NSA-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr9
+  ; GFX11NSA-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+  ; GFX11NSA-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr1
+  ; GFX11NSA-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr2
+  ; GFX11NSA-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr3
+  ; GFX11NSA-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr4
+  ; GFX11NSA-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr5
+  ; GFX11NSA-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr6
+  ; GFX11NSA-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr7
   ; GFX11NSA-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x i32>) = G_BUILD_VECTOR [[COPY]](i32), [[COPY1]](i32), [[COPY2]](i32), [[COPY3]](i32), [[COPY4]](i32), [[COPY5]](i32), [[COPY6]](i32), [[COPY7]](i32)
   ; GFX11NSA-NEXT:   [[COPY8:%[0-9]+]]:_(i32) = COPY $vgpr0
   ; GFX11NSA-NEXT:   [[COPY9:%[0-9]+]]:_(i16) = COPY $vgpr1_lo16
@@ -844,16 +844,16 @@ define amdgpu_ps float @atomic_or_1d(<8 x i32> inreg %rsrc, i32 %data, i16 %s) {
   ;
   ; GFX12-LABEL: name: atomic_or_1d
   ; GFX12: bb.1.main_body:
-  ; GFX12-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1_lo16
+  ; GFX12-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1_lo16
   ; GFX12-NEXT: {{  $}}
-  ; GFX12-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr2
-  ; GFX12-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr3
-  ; GFX12-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr4
-  ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr5
-  ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr6
-  ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr7
-  ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr8
-  ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr9
+  ; GFX12-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+  ; GFX12-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr1
+  ; GFX12-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr2
+  ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr3
+  ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr4
+  ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr5
+  ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr6
+  ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr7
   ; GFX12-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x i32>) = G_BUILD_VECTOR [[COPY]](i32), [[COPY1]](i32), [[COPY2]](i32), [[COPY3]](i32), [[COPY4]](i32), [[COPY5]](i32), [[COPY6]](i32), [[COPY7]](i32)
   ; GFX12-NEXT:   [[COPY8:%[0-9]+]]:_(i32) = COPY $vgpr0
   ; GFX12-NEXT:   [[COPY9:%[0-9]+]]:_(i16) = COPY $vgpr1_lo16
@@ -918,16 +918,16 @@ define amdgpu_ps float @atomic_xor_1d(<8 x i32> inreg %rsrc, i32 %data, i16 %s) 
   ;
   ; GFX11NSA-LABEL: name: atomic_xor_1d
   ; GFX11NSA: bb.1.main_body:
-  ; GFX11NSA-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1_lo16
+  ; GFX11NSA-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1_lo16
   ; GFX11NSA-NEXT: {{  $}}
-  ; GFX11NSA-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr2
-  ; GFX11NSA-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr3
-  ; GFX11NSA-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr4
-  ; GFX11NSA-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr5
-  ; GFX11NSA-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr6
-  ; GFX11NSA-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr7
-  ; GFX11NSA-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr8
-  ; GFX11NSA-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr9
+  ; GFX11NSA-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+  ; GFX11NSA-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr1
+  ; GFX11NSA-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr2
+  ; GFX11NSA-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr3
+  ; GFX11NSA-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr4
+  ; GFX11NSA-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr5
+  ; GFX11NSA-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr6
+  ; GFX11NSA-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr7
   ; GFX11NSA-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x i32>) = G_BUILD_VECTOR [[COPY]](i32), [[COPY1]](i32), [[COPY2]](i32), [[COPY3]](i32), [[COPY4]](i32), [[COPY5]](i32), [[COPY6]](i32), [[COPY7]](i32)
   ; GFX11NSA-NEXT:   [[COPY8:%[0-9]+]]:_(i32) = COPY $vgpr0
   ; GFX11NSA-NEXT:   [[COPY9:%[0-9]+]]:_(i16) = COPY $vgpr1_lo16
@@ -940,16 +940,16 @@ define amdgpu_ps float @atomic_xor_1d(<8 x i32> inreg %rsrc, i32 %data, i16 %s) 
   ;
   ; GFX12-LABEL: name: atomic_xor_1d
   ; GFX12: bb.1.main_body:
-  ; GFX12-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1_lo16
+  ; GFX12-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1_lo16
   ; GFX12-NEXT: {{  $}}
-  ; GFX12-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr2
-  ; GFX12-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr3
-  ; GFX12-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr4
-  ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr5
-  ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr6
-  ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr7
-  ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr8
-  ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr9
+  ; GFX12-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+  ; GFX12-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr1
+  ; GFX12-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr2
+  ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr3
+  ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr4
+  ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr5
+  ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr6
+  ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr7
   ; GFX12-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x i32>) = G_BUILD_VECTOR [[COPY]](i32), [[COPY1]](i32), [[COPY2]](i32), [[COPY3]](i32), [[COPY4]](i32), [[COPY5]](i32), [[COPY6]](i32), [[COPY7]](i32)
   ; GFX12-NEXT:   [[COPY8:%[0-9]+]]:_(i32) = COPY $vgpr0
   ; GFX12-NEXT:   [[COPY9:%[0-9]+]]:_(i16) = COPY $vgpr1_lo16
@@ -1014,16 +1014,16 @@ define amdgpu_ps float @atomic_inc_1d(<8 x i32> inreg %rsrc, i32 %data, i16 %s) 
   ;
   ; GFX11NSA-LABEL: name: atomic_inc_1d
   ; GFX11NSA: bb.1.main_body:
-  ; GFX11NSA-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1_lo16
+  ; GFX11NSA-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1_lo16
   ; GFX11NSA-NEXT: {{  $}}
-  ; GFX11NSA-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr2
-  ; GFX11NSA-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr3
-  ; GFX11NSA-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr4
-  ; GFX11NSA-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr5
-  ; GFX11NSA-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr6
-  ; GFX11NSA-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr7
-  ; GFX11NSA-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr8
-  ; GFX11NSA-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr9
+  ; GFX11NSA-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+  ; GFX11NSA-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr1
+  ; GFX11NSA-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr2
+  ; GFX11NSA-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr3
+  ; GFX11NSA-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr4
+  ; GFX11NSA-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr5
+  ; GFX11NSA-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr6
+  ; GFX11NSA-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr7
   ; GFX11NSA-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x i32>) = G_BUILD_VECTOR [[COPY]](i32), [[COPY1]](i32), [[COPY2]](i32), [[COPY3]](i32), [[COPY4]](i32), [[COPY5]](i32), [[COPY6]](i32), [[COPY7]](i32)
   ; GFX11NSA-NEXT:   [[COPY8:%[0-9]+]]:_(i32) = COPY $vgpr0
   ; GFX11NSA-NEXT:   [[COPY9:%[0-9]+]]:_(i16) = COPY $vgpr1_lo16
@@ -1036,16 +1036,16 @@ define amdgpu_ps float @atomic_inc_1d(<8 x i32> inreg %rsrc, i32 %data, i16 %s) 
   ;
   ; GFX12-LABEL: name: atomic_inc_1d
   ; GFX12: bb.1.main_body:
-  ; GFX12-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1_lo16
+  ; GFX12-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1_lo16
   ; GFX12-NEXT: {{  $}}
-  ; GFX12-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr2
-  ; GFX12-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr3
-  ; GFX12-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr4
-  ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr5
-  ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr6
-  ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr7
-  ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr8
-  ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr9
+  ; GFX12-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+  ; GFX12-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr1
+  ; GFX12-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr2
+  ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr3
+  ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr4
+  ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr5
+  ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr6
+  ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr7
   ; GFX12-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x i32>) = G_BUILD_VECTOR [[COPY]](i32), [[COPY1]](i32), [[COPY2]](i32), [[COPY3]](i32), [[COPY4]](i32), [[COPY5]](i32), [[COPY6]](i32), [[COPY7]](i32)
   ; GFX12-NEXT:   [[COPY8:%[0-9]+]]:_(i32) = COPY $vgpr0
   ; GFX12-NEXT:   [[COPY9:%[0-9]+]]:_(i16) = COPY $vgpr1_lo16
@@ -1110,16 +1110,16 @@ define amdgpu_ps float @atomic_dec_1d(<8 x i32> inreg %rsrc, i32 %data, i16 %s) 
   ;
   ; GFX11NSA-LABEL: name: atomic_dec_1d
   ; GFX11NSA: bb.1.main_body:
-  ; GFX11NSA-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1_lo16
+  ; GFX11NSA-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1_lo16
   ; GFX11NSA-NEXT: {{  $}}
-  ; GFX11NSA-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr2
-  ; GFX11NSA-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr3
-  ; GFX11NSA-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr4
-  ; GFX11NSA-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr5
-  ; GFX11NSA-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr6
-  ; GFX11NSA-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr7
-  ; GFX11NSA-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr8
-  ; GFX11NSA-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr9
+  ; GFX11NSA-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+  ; GFX11NSA-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr1
+  ; GFX11NSA-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr2
+  ; GFX11NSA-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr3
+  ; GFX11NSA-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr4
+  ; GFX11NSA-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr5
+  ; GFX11NSA-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr6
+  ; GFX11NSA-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr7
   ; GFX11NSA-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x i32>) = G_BUILD_VECTOR [[COPY]](i32), [[COPY1]](i32), [[COPY2]](i32), [[COPY3]](i32), [[COPY4]](i32), [[COPY5]](i32), [[COPY6]](i32), [[COPY7]](i32)
   ; GFX11NSA-NEXT:   [[COPY8:%[0-9]+]]:_(i32) = COPY $vgpr0
   ; GFX11NSA-NEXT:   [[COPY9:%[0-9]+]]:_(i16) = COPY $vgpr1_lo16
@@ -1132,16 +1132,16 @@ define amdgpu_ps float @atomic_dec_1d(<8 x i32> inreg %rsrc, i32 %data, i16 %s) 
   ;
   ; GFX12-LABEL: name: atomic_dec_1d
   ; GFX12: bb.1.main_body:
-  ; GFX12-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1_lo16
+  ; GFX12-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1_lo16
   ; GFX12-NEXT: {{  $}}
-  ; GFX12-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr2
-  ; GFX12-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr3
-  ; GFX12-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr4
-  ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr5
-  ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr6
-  ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr7
-  ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr8
-  ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr9
+  ; GFX12-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+  ; GFX12-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr1
+  ; GFX12-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr2
+  ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr3
+  ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr4
+  ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr5
+  ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr6
+  ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr7
   ; GFX12-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x i32>) = G_BUILD_VECTOR [[COPY]](i32), [[COPY1]](i32), [[COPY2]](i32), [[COPY3]](i32), [[COPY4]](i32), [[COPY5]](i32), [[COPY6]](i32), [[COPY7]](i32)
   ; GFX12-NEXT:   [[COPY8:%[0-9]+]]:_(i32) = COPY $vgpr0
   ; GFX12-NEXT:   [[COPY9:%[0-9]+]]:_(i16) = COPY $vgpr1_lo16
@@ -1210,16 +1210,16 @@ define amdgpu_ps float @atomic_cmpswap_1d(<8 x i32> inreg %rsrc, i32 %cmp, i32 %
   ;
   ; GFX11NSA-LABEL: name: atomic_cmpswap_1d
   ; GFX11NSA: bb.1.main_body:
-  ; GFX11NSA-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1, $vgpr2_lo16
+  ; GFX11NSA-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1, $vgpr2_lo16
   ; GFX11NSA-NEXT: {{  $}}
-  ; GFX11NSA-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr2
-  ; GFX11NSA-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr3
-  ; GFX11NSA-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr4
-  ; GFX11NSA-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr5
-  ; GFX11NSA-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr6
-  ; GFX11NSA-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr7
-  ; GFX11NSA-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr8
-  ; GFX11NSA-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr9
+  ; GFX11NSA-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+  ; GFX11NSA-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr1
+  ; GFX11NSA-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr2
+  ; GFX11NSA-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr3
+  ; GFX11NSA-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr4
+  ; GFX11NSA-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr5
+  ; GFX11NSA-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr6
+  ; GFX11NSA-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr7
   ; GFX11NSA-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x i32>) = G_BUILD_VECTOR [[COPY]](i32), [[COPY1]](i32), [[COPY2]](i32), [[COPY3]](i32), [[COPY4]](i32), [[COPY5]](i32), [[COPY6]](i32), [[COPY7]](i32)
   ; GFX11NSA-NEXT:   [[COPY8:%[0-9]+]]:_(i32) = COPY $vgpr0
   ; GFX11NSA-NEXT:   [[COPY9:%[0-9]+]]:_(i32) = COPY $vgpr1
@@ -1234,16 +1234,16 @@ define amdgpu_ps float @atomic_cmpswap_1d(<8 x i32> inreg %rsrc, i32 %cmp, i32 %
   ;
   ; GFX12-LABEL: name: atomic_cmpswap_1d
   ; GFX12: bb.1.main_body:
-  ; GFX12-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1, $vgpr2_lo16
+  ; GFX12-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1, $vgpr2_lo16
   ; GFX12-NEXT: {{  $}}
-  ; GFX12-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr2
-  ; GFX12-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr3
-  ; GFX12-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr4
-  ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr5
-  ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr6
-  ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr7
-  ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr8
-  ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr9
+  ; GFX12-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+  ; GFX12-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr1
+  ; GFX12-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr2
+  ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr3
+  ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr4
+  ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr5
+  ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr6
+  ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr7
   ; GFX12-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x i32>) = G_BUILD_VECTOR [[COPY]](i32), [[COPY1]](i32), [[COPY2]](i32), [[COPY3]](i32), [[COPY4]](i32), [[COPY5]](i32), [[COPY6]](i32), [[COPY7]](i32)
   ; GFX12-NEXT:   [[COPY8:%[0-9]+]]:_(i32) = COPY $vgpr0
   ; GFX12-NEXT:   [[COPY9:%[0-9]+]]:_(i32) = COPY $vgpr1
@@ -1312,16 +1312,16 @@ define amdgpu_ps float @atomic_add_2d(<8 x i32> inreg %rsrc, i32 %data, i16 %s, 
   ;
   ; GFX11NSA-LABEL: name: atomic_add_2d
   ; GFX11NSA: bb.1.main_body:
-  ; GFX11NSA-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1_lo16, $vgpr2_lo16
+  ; GFX11NSA-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1_lo16, $vgpr2_lo16
   ; GFX11NSA-NEXT: {{  $}}
-  ; GFX11NSA-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr2
-  ; GFX11NSA-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr3
-  ; GFX11NSA-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr4
-  ; GFX11NSA-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr5
-  ; GFX11NSA-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr6
-  ; GFX11NSA-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr7
-  ; GFX11NSA-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr8
-  ; GFX11NSA-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr9
+  ; GFX11NSA-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+  ; GFX11NSA-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr1
+  ; GFX11NSA-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr2
+  ; GFX11NSA-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr3
+  ; GFX11NSA-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr4
+  ; GFX11NSA-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr5
+  ; GFX11NSA-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr6
+  ; GFX11NSA-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr7
   ; GFX11NSA-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x i32>) = G_BUILD_VECTOR [[COPY]](i32), [[COPY1]](i32), [[COPY2]](i32), [[COPY3]](i32), [[COPY4]](i32), [[COPY5]](i32), [[COPY6]](i32), [[COPY7]](i32)
   ; GFX11NSA-NEXT:   [[COPY8:%[0-9]+]]:_(i32) = COPY $vgpr0
   ; GFX11NSA-NEXT:   [[COPY9:%[0-9]+]]:_(i16) = COPY $vgpr1_lo16
@@ -1334,16 +1334,16 @@ define amdgpu_ps float @atomic_add_2d(<8 x i32> inreg %rsrc, i32 %data, i16 %s, 
   ;
   ; GFX12-LABEL: name: atomic_add_2d
   ; GFX12: bb.1.main_body:
-  ; GFX12-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1_lo16, $vgpr2_lo16
+  ; GFX12-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1_lo16, $vgpr2_lo16
   ; GFX12-NEXT: {{  $}}
-  ; GFX12-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr2
-  ; GFX12-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr3
-  ; GFX12-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr4
-  ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr5
-  ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr6
-  ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr7
-  ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr8
-  ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr9
+  ; GFX12-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+  ; GFX12-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr1
+  ; GFX12-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr2
+  ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr3
+  ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr4
+  ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr5
+  ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr6
+  ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr7
   ; GFX12-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x i32>) = G_BUILD_VECTOR [[COPY]](i32), [[COPY1]](i32), [[COPY2]](i32), [[COPY3]](i32), [[COPY4]](i32), [[COPY5]](i32), [[COPY6]](i32), [[COPY7]](i32)
   ; GFX12-NEXT:   [[COPY8:%[0-9]+]]:_(i32) = COPY $vgpr0
   ; GFX12-NEXT:   [[COPY9:%[0-9]+]]:_(i16) = COPY $vgpr1_lo16
@@ -1419,16 +1419,16 @@ define amdgpu_ps float @atomic_add_3d(<8 x i32> inreg %rsrc, i32 %data, i16 %s, 
   ;
   ; GFX11NSA-LABEL: name: atomic_add_3d
   ; GFX11NSA: bb.1.main_body:
-  ; GFX11NSA-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1_lo16, $vgpr2_lo16, $vgpr3_lo16
+  ; GFX11NSA-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1_lo16, $vgpr2_lo16, $vgpr3_lo16
   ; GFX11NSA-NEXT: {{  $}}
-  ; GFX11NSA-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr2
-  ; GFX11NSA-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr3
-  ; GFX11NSA-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr4
-  ; GFX11NSA-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr5
-  ; GFX11NSA-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr6
-  ; GFX11NSA-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr7
-  ; GFX11NSA-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr8
-  ; GFX11NSA-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr9
+  ; GFX11NSA-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+  ; GFX11NSA-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr1
+  ; GFX11NSA-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr2
+  ; GFX11NSA-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr3
+  ; GFX11NSA-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr4
+  ; GFX11NSA-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr5
+  ; GFX11NSA-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr6
+  ; GFX11NSA-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr7
   ; GFX11NSA-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x i32>) = G_BUILD_VECTOR [[COPY]](i32), [[COPY1]](i32), [[COPY2]](i32), [[COPY3]](i32), [[COPY4]](i32), [[COPY5]](i32), [[COPY6]](i32), [[COPY7]](i32)
   ; GFX11NSA-NEXT:   [[COPY8:%[0-9]+]]:_(i32) = COPY $vgpr0
   ; GFX11NSA-NEXT:   [[COPY9:%[0-9]+]]:_(i16) = COPY $vgpr1_lo16
@@ -1444,16 +1444,16 @@ define amdgpu_ps float @atomic_add_3d(<8 x i32> inreg %rsrc, i32 %data, i16 %s, 
   ;
   ; GFX12-LABEL: name: atomic_add_3d
   ; GFX12: bb.1.main_body:
-  ; GFX12-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1_lo16, $vgpr2_lo16, $vgpr3_lo16
+  ; GFX12-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1_lo16, $vgpr2_lo16, $vgpr3_lo16
   ; GFX12-NEXT: {{  $}}
-  ; GFX12-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr2
-  ; GFX12-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr3
-  ; GFX12-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr4
-  ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr5
-  ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr6
-  ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr7
-  ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr8
-  ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr9
+  ; GFX12-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+  ; GFX12-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr1
+  ; GFX12-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr2
+  ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr3
+  ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr4
+  ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr5
+  ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr6
+  ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr7
   ; GFX12-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x i32>) = G_BUILD_VECTOR [[COPY]](i32), [[COPY1]](i32), [[COPY2]](i32), [[COPY3]](i32), [[COPY4]](i32), [[COPY5]](i32), [[COPY6]](i32), [[COPY7]](i32)
   ; GFX12-NEXT:   [[COPY8:%[0-9]+]]:_(i32) = COPY $vgpr0
   ; GFX12-NEXT:   [[COPY9:%[0-9]+]]:_(i16) = COPY $vgpr1_lo16
@@ -1532,16 +1532,16 @@ define amdgpu_ps float @atomic_add_cube(<8 x i32> inreg %rsrc, i32 %data, i16 %s
   ;
   ; GFX11NSA-LABEL: name: atomic_add_cube
   ; GFX11NSA: bb.1.main_body:
-  ; GFX11NSA-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1_lo16, $vgpr2_lo16, $vgpr3_lo16
+  ; GFX11NSA-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1_lo16, $vgpr2_lo16, $vgpr3_lo16
   ; GFX11NSA-NEXT: {{  $}}
-  ; GFX11NSA-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr2
-  ; GFX11NSA-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr3
-  ; GFX11NSA-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr4
-  ; GFX11NSA-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr5
-  ; GFX11NSA-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr6
-  ; GFX11NSA-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr7
-  ; GFX11NSA-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr8
-  ; GFX11NSA-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr9
+  ; GFX11NSA-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+  ; GFX11NSA-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr1
+  ; GFX11NSA-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr2
+  ; GFX11NSA-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr3
+  ; GFX11NSA-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr4
+  ; GFX11NSA-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr5
+  ; GFX11NSA-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr6
+  ; GFX11NSA-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr7
   ; GFX11NSA-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x i32>) = G_BUILD_VECTOR [[COPY]](i32), [[COPY1]](i32), [[COPY2]](i32), [[COPY3]](i32), [[COPY4]](i32), [[COPY5]](i32), [[COPY6]](i32), [[COPY7]](i32)
   ; GFX11NSA-NEXT:   [[COPY8:%[0-9]+]]:_(i32) = COPY $vgpr0
   ; GFX11NSA-NEXT:   [[COPY9:%[0-9]+]]:_(i16) = COPY $vgpr1_lo16
@@ -1557,16 +1557,16 @@ define amdgpu_ps float @atomic_add_cube(<8 x i32> inreg %rsrc, i32 %data, i16 %s
   ;
   ; GFX12-LABEL: name: atomic_add_cube
   ; GFX12: bb.1.main_body:
-  ; GFX12-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1_lo16, $vgpr2_lo16, $vgpr3_lo16
+  ; GFX12-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1_lo16, $vgpr2_lo16, $vgpr3_lo16
   ; GFX12-NEXT: {{  $}}
-  ; GFX12-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr2
-  ; GFX12-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr3
-  ; GFX12-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr4
-  ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr5
-  ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr6
-  ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr7
-  ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr8
-  ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr9
+  ; GFX12-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+  ; GFX12-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr1
+  ; GFX12-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr2
+  ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr3
+  ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr4
+  ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr5
+  ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr6
+  ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr7
   ; GFX12-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x i32>) = G_BUILD_VECTOR [[COPY]](i32), [[COPY1]](i32), [[COPY2]](i32), [[COPY3]](i32), [[COPY4]](i32), [[COPY5]](i32), [[COPY6]](i32), [[COPY7]](i32)
   ; GFX12-NEXT:   [[COPY8:%[0-9]+]]:_(i32) = COPY $vgpr0
   ; GFX12-NEXT:   [[COPY9:%[0-9]+]]:_(i16) = COPY $vgpr1_lo16
@@ -1636,16 +1636,16 @@ define amdgpu_ps float @atomic_add_1darray(<8 x i32> inreg %rsrc, i32 %data, i16
   ;
   ; GFX11NSA-LABEL: name: atomic_add_1darray
   ; GFX11NSA: bb.1.main_body:
-  ; GFX11NSA-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1_lo16, $vgpr2_lo16
+  ; GFX11NSA-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1_lo16, $vgpr2_lo16
   ; GFX11NSA-NEXT: {{  $}}
-  ; GFX11NSA-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr2
-  ; GFX11NSA-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr3
-  ; GFX11NSA-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr4
-  ; GFX11NSA-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr5
-  ; GFX11NSA-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr6
-  ; GFX11NSA-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr7
-  ; GFX11NSA-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr8
-  ; GFX11NSA-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr9
+  ; GFX11NSA-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+  ; GFX11NSA-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr1
+  ; GFX11NSA-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr2
+  ; GFX11NSA-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr3
+  ; GFX11NSA-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr4
+  ; GFX11NSA-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr5
+  ; GFX11NSA-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr6
+  ; GFX11NSA-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr7
   ; GFX11NSA-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x i32>) = G_BUILD_VECTOR [[COPY]](i32), [[COPY1]](i32), [[COPY2]](i32), [[COPY3]](i32), [[COPY4]](i32), [[COPY5]](i32), [[COPY6]](i32), [[COPY7]](i32)
   ; GFX11NSA-NEXT:   [[COPY8:%[0-9]+]]:_(i32) = COPY $vgpr0
   ; GFX11NSA-NEXT:   [[COPY9:%[0-9]+]]:_(i16) = COPY $vgpr1_lo16
@@ -1658,16 +1658,16 @@ define amdgpu_ps float @atomic_add_1darray(<8 x i32> inreg %rsrc, i32 %data, i16
   ;
   ; GFX12-LABEL: name: atomic_add_1darray
   ; GFX12: bb.1.main_body:
-  ; GFX12-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1_lo16, $vgpr2_lo16
+  ; GFX12-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1_lo16, $vgpr2_lo16
   ; GFX12-NEXT: {{  $}}
-  ; GFX12-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr2
-  ; GFX12-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr3
-  ; GFX12-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr4
-  ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr5
-  ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr6
-  ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr7
-  ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr8
-  ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr9
+  ; GFX12-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+  ; GFX12-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr1
+  ; GFX12-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr2
+  ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr3
+  ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr4
+  ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr5
+  ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr6
+  ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr7
   ; GFX12-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x i32>) = G_BUILD_VECTOR [[COPY]](i32), [[COPY1]](i32), [[COPY2]](i32), [[COPY3]](i32), [[COPY4]](i32), [[COPY5]](i32), [[COPY6]](i32), [[COPY7]](i32)
   ; GFX12-NEXT:   [[COPY8:%[0-9]+]]:_(i32) = COPY $vgpr0
   ; GFX12-NEXT:   [[COPY9:%[0-9]+]]:_(i16) = COPY $vgpr1_lo16
@@ -1743,16 +1743,16 @@ define amdgpu_ps float @atomic_add_2darray(<8 x i32> inreg %rsrc, i32 %data, i16
   ;
   ; GFX11NSA-LABEL: name: atomic_add_2darray
   ; GFX11NSA: bb.1.main_body:
-  ; GFX11NSA-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1_lo16, $vgpr2_lo16, $vgpr3_lo16
+  ; GFX11NSA-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1_lo16, $vgpr2_lo16, $vgpr3_lo16
   ; GFX11NSA-NEXT: {{  $}}
-  ; GFX11NSA-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr2
-  ; GFX11NSA-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr3
-  ; GFX11NSA-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr4
-  ; GFX11NSA-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr5
-  ; GFX11NSA-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr6
-  ; GFX11NSA-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr7
-  ; GFX11NSA-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr8
-  ; GFX11NSA-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr9
+  ; GFX11NSA-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+  ; GFX11NSA-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr1
+  ; GFX11NSA-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr2
+  ; GFX11NSA-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr3
+  ; GFX11NSA-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr4
+  ; GFX11NSA-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr5
+  ; GFX11NSA-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr6
+  ; GFX11NSA-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr7
   ; GFX11NSA-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x i32>) = G_BUILD_VECTOR [[COPY]](i32), [[COPY1]](i32), [[COPY2]](i32), [[COPY3]](i32), [[COPY4]](i32), [[COPY5]](i32), [[COPY6]](i32), [[COPY7]](i32)
   ; GFX11NSA-NEXT:   [[COPY8:%[0-9]+]]:_(i32) = COPY $vgpr0
   ; GFX11NSA-NEXT:   [[COPY9:%[0-9]+]]:_(i16) = COPY $vgpr1_lo16
@@ -1768,16 +1768,16 @@ define amdgpu_ps float @atomic_add_2darray(<8 x i32> inreg %rsrc, i32 %data, i16
   ;
   ; GFX12-LABEL: name: atomic_add_2darray
   ; GFX12: bb.1.main_body:
-  ; GFX12-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1_lo16, $vgpr2_lo16, $vgpr3_lo16
+  ; GFX12-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1_lo16, $vgpr2_lo16, $vgpr3_lo16
   ; GFX12-NEXT: {{  $}}
-  ; GFX12-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr2
-  ; GFX12-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr3
-  ; GFX12-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr4
-  ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr5
-  ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr6
-  ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr7
-  ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr8
-  ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr9
+  ; GFX12-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+  ; GFX12-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr1
+  ; GFX12-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr2
+  ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr3
+  ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr4
+  ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr5
+  ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr6
+  ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr7
   ; GFX12-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x i32>) = G_BUILD_VECTOR [[COPY]](i32), [[COPY1]](i32), [[COPY2]](i32), [[COPY3]](i32), [[COPY4]](i32), [[COPY5]](i32), [[COPY6]](i32), [[COPY7]](i32)
   ; GFX12-NEXT:   [[COPY8:%[0-9]+]]:_(i32) = COPY $vgpr0
   ; GFX12-NEXT:   [[COPY9:%[0-9]+]]:_(i16) = COPY $vgpr1_lo16
@@ -1856,16 +1856,16 @@ define amdgpu_ps float @atomic_add_2dmsaa(<8 x i32> inreg %rsrc, i32 %data, i16 
   ;
   ; GFX11NSA-LABEL: name: atomic_add_2dmsaa
   ; GFX11NSA: bb.1.main_body:
-  ; GFX11NSA-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1_lo16, $vgpr2_lo16, $vgpr3_lo16
+  ; GFX11NSA-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1_lo16, $vgpr2_lo16, $vgpr3_lo16
   ; GFX11NSA-NEXT: {{  $}}
-  ; GFX11NSA-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr2
-  ; GFX11NSA-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr3
-  ; GFX11NSA-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr4
-  ; GFX11NSA-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr5
-  ; GFX11NSA-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr6
-  ; GFX11NSA-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr7
-  ; GFX11NSA-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr8
-  ; GFX11NSA-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr9
+  ; GFX11NSA-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+  ; GFX11NSA-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr1
+  ; GFX11NSA-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr2
+  ; GFX11NSA-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr3
+  ; GFX11NSA-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr4
+  ; GFX11NSA-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr5
+  ; GFX11NSA-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr6
+  ; GFX11NSA-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr7
   ; GFX11NSA-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x i32>) = G_BUILD_VECTOR [[COPY]](i32), [[COPY1]](i32), [[COPY2]](i32), [[COPY3]](i32), [[COPY4]](i32), [[COPY5]](i32), [[COPY6]](i32), [[COPY7]](i32)
   ; GFX11NSA-NEXT:   [[COPY8:%[0-9]+]]:_(i32) = COPY $vgpr0
   ; GFX11NSA-NEXT:   [[COPY9:%[0-9]+]]:_(i16) = COPY $vgpr1_lo16
@@ -1881,16 +1881,16 @@ define amdgpu_ps float @atomic_add_2dmsaa(<8 x i32> inreg %rsrc, i32 %data, i16 
   ;
   ; GFX12-LABEL: name: atomic_add_2dmsaa
   ; GFX12: bb.1.main_body:
-  ; GFX12-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1_lo16, $vgpr2_lo16, $vgpr3_lo16
+  ; GFX12-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1_lo16, $vgpr2_lo16, $vgpr3_lo16
   ; GFX12-NEXT: {{  $}}
-  ; GFX12-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr2
-  ; GFX12-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr3
-  ; GFX12-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr4
-  ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr5
-  ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr6
-  ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr7
-  ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr8
-  ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr9
+  ; GFX12-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+  ; GFX12-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr1
+  ; GFX12-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr2
+  ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr3
+  ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr4
+  ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr5
+  ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr6
+  ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr7
   ; GFX12-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x i32>) = G_BUILD_VECTOR [[COPY]](i32), [[COPY1]](i32), [[COPY2]](i32), [[COPY3]](i32), [[COPY4]](i32), [[COPY5]](i32), [[COPY6]](i32), [[COPY7]](i32)
   ; GFX12-NEXT:   [[COPY8:%[0-9]+]]:_(i32) = COPY $vgpr0
   ; GFX12-NEXT:   [[COPY9:%[0-9]+]]:_(i16) = COPY $vgpr1_lo16
@@ -1971,16 +1971,16 @@ define amdgpu_ps float @atomic_add_2darraymsaa(<8 x i32> inreg %rsrc, i32 %data,
   ;
   ; GFX11NSA-LABEL: name: atomic_add_2darraymsaa
   ; GFX11NSA: bb.1.main_body:
-  ; GFX11NSA-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1_lo16, $vgpr2_lo16, $vgpr3_lo16, $vgpr4_lo16
+  ; GFX11NSA-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1_lo16, $vgpr2_lo16, $vgpr3_lo16, $vgpr4_lo16
   ; GFX11NSA-NEXT: {{  $}}
-  ; GFX11NSA-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr2
-  ; GFX11NSA-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr3
-  ; GFX11NSA-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr4
-  ; GFX11NSA-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr5
-  ; GFX11NSA-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr6
-  ; GFX11NSA-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr7
-  ; GFX11NSA-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr8
-  ; GFX11NSA-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr9
+  ; GFX11NSA-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+  ; GFX11NSA-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr1
+  ; GFX11NSA-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr2
+  ; GFX11NSA-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr3
+  ; GFX11NSA-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr4
+  ; GFX11NSA-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr5
+  ; GFX11NSA-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr6
+  ; GFX11NSA-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr7
   ; GFX11NSA-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x i32>) = G_BUILD_VECTOR [[COPY]](i32), [[COPY1]](i32), [[COPY2]](i32), [[COPY3]](i32), [[COPY4]](i32), [[COPY5]](i32), [[COPY6]](i32), [[COPY7]](i32)
   ; GFX11NSA-NEXT:   [[COPY8:%[0-9]+]]:_(i32) = COPY $vgpr0
   ; GFX11NSA-NEXT:   [[COPY9:%[0-9]+]]:_(i16) = COPY $vgpr1_lo16
@@ -1996,16 +1996,16 @@ define amdgpu_ps float @atomic_add_2darraymsaa(<8 x i32> inreg %rsrc, i32 %data,
   ;
   ; GFX12-LABEL: name: atomic_add_2darraymsaa
   ; GFX12: bb.1.main_body:
-  ; GFX12-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1_lo16, $vgpr2_lo16, $vgpr3_lo16, $vgpr4_lo16
+  ; GFX12-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1_lo16, $vgpr2_lo16, $vgpr3_lo16, $vgpr4_lo16
   ; GFX12-NEXT: {{  $}}
-  ; GFX12-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr2
-  ; GFX12-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr3
-  ; GFX12-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr4
-  ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr5
-  ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr6
-  ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr7
-  ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr8
-  ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr9
+  ; GFX12-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+  ; GFX12-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr1
+  ; GFX12-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr2
+  ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr3
+  ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr4
+  ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr5
+  ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr6
+  ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr7
   ; GFX12-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x i32>) = G_BUILD_VECTOR [[COPY]](i32), [[COPY1]](i32), [[COPY2]](i32), [[COPY3]](i32), [[COPY4]](i32), [[COPY5]](i32), [[COPY6]](i32), [[COPY7]](i32)
   ; GFX12-NEXT:   [[COPY8:%[0-9]+]]:_(i32) = COPY $vgpr0
   ; GFX12-NEXT:   [[COPY9:%[0-9]+]]:_(i16) = COPY $vgpr1_lo16
@@ -2073,16 +2073,16 @@ define amdgpu_ps float @atomic_add_1d_slc(<8 x i32> inreg %rsrc, i32 %data, i16 
   ;
   ; GFX11NSA-LABEL: name: atomic_add_1d_slc
   ; GFX11NSA: bb.1.main_body:
-  ; GFX11NSA-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1_lo16
+  ; GFX11NSA-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1_lo16
   ; GFX11NSA-NEXT: {{  $}}
-  ; GFX11NSA-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr2
-  ; GFX11NSA-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr3
-  ; GFX11NSA-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr4
-  ; GFX11NSA-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr5
-  ; GFX11NSA-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr6
-  ; GFX11NSA-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr7
-  ; GFX11NSA-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr8
-  ; GFX11NSA-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr9
+  ; GFX11NSA-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+  ; GFX11NSA-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr1
+  ; GFX11NSA-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr2
+  ; GFX11NSA-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr3
+  ; GFX11NSA-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr4
+  ; GFX11NSA-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr5
+  ; GFX11NSA-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr6
+  ; GFX11NSA-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr7
   ; GFX11NSA-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x i32>) = G_BUILD_VECTOR [[COPY]](i32), [[COPY1]](i32), [[COPY2]](i32), [[COPY3]](i32), [[COPY4]](i32), [[COPY5]](i32), [[COPY6]](i32), [[COPY7]](i32)
   ; GFX11NSA-NEXT:   [[COPY8:%[0-9]+]]:_(i32) = COPY $vgpr0
   ; GFX11NSA-NEXT:   [[COPY9:%[0-9]+]]:_(i16) = COPY $vgpr1_lo16
@@ -2095,16 +2095,16 @@ define amdgpu_ps float @atomic_add_1d_slc(<8 x i32> inreg %rsrc, i32 %data, i16 
   ;
   ; GFX12-LABEL: name: atomic_add_1d_slc
   ; GFX12: bb.1.main_body:
-  ; GFX12-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1_lo16
+  ; GFX12-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1_lo16
   ; GFX12-NEXT: {{  $}}
-  ; GFX12-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr2
-  ; GFX12-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr3
-  ; GFX12-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr4
-  ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr5
-  ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr6
-  ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr7
-  ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr8
-  ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr9
+  ; GFX12-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+  ; GFX12-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr1
+  ; GFX12-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr2
+  ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr3
+  ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr4
+  ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr5
+  ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr6
+  ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr7
   ; GFX12-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x i32>) = G_BUILD_VECTOR [[COPY]](i32), [[COPY1]](i32), [[COPY2]](i32), [[COPY3]](i32), [[COPY4]](i32), [[COPY5]](i32), [[COPY6]](i32), [[COPY7]](i32)
   ; GFX12-NEXT:   [[COPY8:%[0-9]+]]:_(i32) = COPY $vgpr0
   ; GFX12-NEXT:   [[COPY9:%[0-9]+]]:_(i16) = COPY $vgpr1_lo16
@@ -2175,16 +2175,16 @@ define amdgpu_ps float @atomic_cmpswap_2d(<8 x i32> inreg %rsrc, i32 %cmp, i32 %
   ;
   ; GFX11NSA-LABEL: name: atomic_cmpswap_2d
   ; GFX11NSA: bb.1.main_body:
-  ; GFX11NSA-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1, $vgpr2_lo16, $vgpr3_lo16
+  ; GFX11NSA-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1, $vgpr2_lo16, $vgpr3_lo16
   ; GFX11NSA-NEXT: {{  $}}
-  ; GFX11NSA-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr2
-  ; GFX11NSA-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr3
-  ; GFX11NSA-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr4
-  ; GFX11NSA-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr5
-  ; GFX11NSA-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr6
-  ; GFX11NSA-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr7
-  ; GFX11NSA-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr8
-  ; GFX11NSA-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr9
+  ; GFX11NSA-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+  ; GFX11NSA-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr1
+  ; GFX11NSA-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr2
+  ; GFX11NSA-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr3
+  ; GFX11NSA-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr4
+  ; GFX11NSA-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr5
+  ; GFX11NSA-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr6
+  ; GFX11NSA-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr7
   ; GFX11NSA-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x i32>) = G_BUILD_VECTOR [[COPY]](i32), [[COPY1]](i32), [[COPY2]](i32), [[COPY3]](i32), [[COPY4]](i32), [[COPY5]](i32), [[COPY6]](i32), [[COPY7]](i32)
   ; GFX11NSA-NEXT:   [[COPY8:%[0-9]+]]:_(i32) = COPY $vgpr0
   ; GFX11NSA-NEXT:   [[COPY9:%[0-9]+]]:_(i32) = COPY $vgpr1
@@ -2199,16 +2199,16 @@ define amdgpu_ps float @atomic_cmpswap_2d(<8 x i32> inreg %rsrc, i32 %cmp, i32 %
   ;
   ; GFX12-LABEL: name: atomic_cmpswap_2d
   ; GFX12: bb.1.main_body:
-  ; GFX12-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1, $vgpr2_lo16, $vgpr3_lo16
+  ; GFX12-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1, $vgpr2_lo16, $vgpr3_lo16
   ; GFX12-NEXT: {{  $}}
-  ; GFX12-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr2
-  ; GFX12-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr3
-  ; GFX12-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr4
-  ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr5
-  ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr6
-  ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr7
-  ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr8
-  ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr9
+  ; GFX12-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+  ; GFX12-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr1
+  ; GFX12-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr2
+  ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr3
+  ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr4
+  ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr5
+  ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr6
+  ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr7
   ; GFX12-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x i32>) = G_BUILD_VECTOR [[COPY]](i32), [[COPY1]](i32), [[COPY2]](i32), [[COPY3]](i32), [[COPY4]](i32), [[COPY5]](i32), [[COPY6]](i32), [[COPY7]](i32)
   ; GFX12-NEXT:   [[COPY8:%[0-9]+]]:_(i32) = COPY $vgpr0
   ; GFX12-NEXT:   [[COPY9:%[0-9]+]]:_(i32) = COPY $vgpr1
@@ -2290,16 +2290,16 @@ define amdgpu_ps float @atomic_cmpswap_3d(<8 x i32> inreg %rsrc, i32 %cmp, i32 %
   ;
   ; GFX11NSA-LABEL: name: atomic_cmpswap_3d
   ; GFX11NSA: bb.1.main_body:
-  ; GFX11NSA-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1, $vgpr2_lo16, $vgpr3_lo16, $vgpr4_lo16
+  ; GFX11NSA-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1, $vgpr2_lo16, $vgpr3_lo16, $vgpr4_lo16
   ; GFX11NSA-NEXT: {{  $}}
-  ; GFX11NSA-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr2
-  ; GFX11NSA-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr3
-  ; GFX11NSA-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr4
-  ; GFX11NSA-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr5
-  ; GFX11NSA-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr6
-  ; GFX11NSA-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr7
-  ; GFX11NSA-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr8
-  ; GFX11NSA-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr9
+  ; GFX11NSA-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+  ; GFX11NSA-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr1
+  ; GFX11NSA-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr2
+  ; GFX11NSA-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr3
+  ; GFX11NSA-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr4
+  ; GFX11NSA-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr5
+  ; GFX11NSA-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr6
+  ; GFX11NSA-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr7
   ; GFX11NSA-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x i32>) = G_BUILD_VECTOR [[COPY]](i32), [[COPY1]](i32), [[COPY2]](i32), [[COPY3]](i32), [[COPY4]](i32), [[COPY5]](i32), [[COPY6]](i32), [[COPY7]](i32)
   ; GFX11NSA-NEXT:   [[COPY8:%[0-9]+]]:_(i32) = COPY $vgpr0
   ; GFX11NSA-NEXT:   [[COPY9:%[0-9]+]]:_(i32) = COPY $vgpr1
@@ -2317,16 +2317,16 @@ define amdgpu_ps float @atomic_cmpswap_3d(<8 x i32> inreg %rsrc, i32 %cmp, i32 %
   ;
   ; GFX12-LABEL: name: atomic_cmpswap_3d
   ; GFX12: bb.1.main_body:
-  ; GFX12-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1, $vgpr2_lo16, $vgpr3_lo16, $vgpr4_lo16
+  ; GFX12-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1, $vgpr2_lo16, $vgpr3_lo16, $vgpr4_lo16
   ; GFX12-NEXT: {{  $}}
-  ; GFX12-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr2
-  ; GFX12-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr3
-  ; GFX12-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr4
-  ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr5
-  ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr6
-  ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr7
-  ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr8
-  ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr9
+  ; GFX12-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+  ; GFX12-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr1
+  ; GFX12-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr2
+  ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr3
+  ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr4
+  ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr5
+  ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr6
+  ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr7
   ; GFX12-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x i32>) = G_BUILD_VECTOR [[COPY]](i32), [[COPY1]](i32), [[COPY2]](i32), [[COPY3]](i32), [[COPY4]](i32), [[COPY5]](i32), [[COPY6]](i32), [[COPY7]](i32)
   ; GFX12-NEXT:   [[COPY8:%[0-9]+]]:_(i32) = COPY $vgpr0
   ; GFX12-NEXT:   [[COPY9:%[0-9]+]]:_(i32) = COPY $vgpr1
@@ -2413,16 +2413,16 @@ define amdgpu_ps float @atomic_cmpswap_2darraymsaa(<8 x i32> inreg %rsrc, i32 %c
   ;
   ; GFX11NSA-LABEL: name: atomic_cmpswap_2darraymsaa
   ; GFX11NSA: bb.1.main_body:
-  ; GFX11NSA-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1, $vgpr2_lo16, $vgpr3_lo16, $vgpr4_lo16, $vgpr5_lo16
+  ; GFX11NSA-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1, $vgpr2_lo16, $vgpr3_lo16, $vgpr4_lo16, $vgpr5_lo16
   ; GFX11NSA-NEXT: {{  $}}
-  ; GFX11NSA-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr2
-  ; GFX11NSA-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr3
-  ; GFX11NSA-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr4
-  ; GFX11NSA-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr5
-  ; GFX11NSA-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr6
-  ; GFX11NSA-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr7
-  ; GFX11NSA-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr8
-  ; GFX11NSA-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr9
+  ; GFX11NSA-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+  ; GFX11NSA-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr1
+  ; GFX11NSA-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr2
+  ; GFX11NSA-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr3
+  ; GFX11NSA-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr4
+  ; GFX11NSA-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr5
+  ; GFX11NSA-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr6
+  ; GFX11NSA-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr7
   ; GFX11NSA-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x i32>) = G_BUILD_VECTOR [[COPY]](i32), [[COPY1]](i32), [[COPY2]](i32), [[COPY3]](i32), [[COPY4]](i32), [[COPY5]](i32), [[COPY6]](i32), [[COPY7]](i32)
   ; GFX11NSA-NEXT:   [[COPY8:%[0-9]+]]:_(i32) = COPY $vgpr0
   ; GFX11NSA-NEXT:   [[COPY9:%[0-9]+]]:_(i32) = COPY $vgpr1
@@ -2440,16 +2440,16 @@ define amdgpu_ps float @atomic_cmpswap_2darraymsaa(<8 x i32> inreg %rsrc, i32 %c
   ;
   ; GFX12-LABEL: name: atomic_cmpswap_2darraymsaa
   ; GFX12: bb.1.main_body:
-  ; GFX12-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $vgpr0, $vgpr1, $vgpr2_lo16, $vgpr3_lo16, $vgpr4_lo16, $vgpr5_lo16
+  ; GFX12-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1, $vgpr2_lo16, $vgpr3_lo16, $vgpr4_lo16, $vgpr5_lo16
   ; GFX12-NEXT: {{  $}}
-  ; GFX12-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr2
-  ; GFX12-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr3
-  ; GFX12-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr4
-  ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr5
-  ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr6
-  ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr7
-  ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr8
-  ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr9
+  ; GFX12-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+  ; GFX12-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr1
+  ; GFX12-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr2
+  ; GFX12-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr3
+  ; GFX12-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $sgpr4
+  ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $sgpr5
+  ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:_(i32) = COPY $sgpr6
+  ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:_(i32) = COPY $sgpr7
   ; GFX12-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x i32>) = G_BUILD_VECTOR [[COPY]](i32), [[COPY1]](i32), [[COPY2]](i32), [[COPY3]](i32), [[COPY4]](i32), [[COPY5]](i32), [[COPY6]](i32), [[COPY7]](i32)
   ; GFX12-NEXT:   [[COPY8:%[0-9]+]]:_(i32) = COPY $vgpr0
   ; GFX12-NEXT:   [[COPY9:%[0-9]+]]:_(i32) = COPY $vgpr1
