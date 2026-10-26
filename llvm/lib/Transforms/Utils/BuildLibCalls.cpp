@@ -2100,18 +2100,18 @@ Value *llvm::emitCalloc(Value *Num, Value *Size, IRBuilderBase &B,
 Value *llvm::emitHotColdSizeReturningNew(Value *Num, IRBuilderBase &B,
                                          const TargetLibraryInfo *TLI,
                                          LibFunc SizeFeedbackNewFunc,
-                                         Value *HotCold) {
+                                         Value *HotCold, Type *RetTy) {
   Module *M = B.getModule();
   if (!isLibFuncEmittable(M, TLI, SizeFeedbackNewFunc))
     return nullptr;
 
   StringRef Name = TLI->getName(SizeFeedbackNewFunc);
+  if (const Function *F = M->getFunction(Name);
+      F && F->getReturnType() != RetTy)
+    return nullptr;
 
-  // __sized_ptr_t struct return type { void*, size_t }
-  StructType *SizedPtrT =
-      StructType::get(M->getContext(), {B.getPtrTy(), Num->getType()});
-  FunctionCallee Func = getOrInsertLibFunc(
-      M, *TLI, SizeFeedbackNewFunc, SizedPtrT, Num->getType(), B.getInt8Ty());
+  FunctionCallee Func = getOrInsertLibFunc(M, *TLI, SizeFeedbackNewFunc, RetTy,
+                                           Num->getType(), B.getInt8Ty());
   inferNonMandatoryLibFuncAttrs(M, Name, *TLI);
   CallInst *CI = B.CreateCall(Func, {Num, HotCold}, "sized_ptr");
 
@@ -2125,19 +2125,19 @@ Value *llvm::emitHotColdSizeReturningNewAligned(Value *Num, Value *Align,
                                                 IRBuilderBase &B,
                                                 const TargetLibraryInfo *TLI,
                                                 LibFunc SizeFeedbackNewFunc,
-                                                Value *HotCold) {
+                                                Value *HotCold, Type *RetTy) {
   Module *M = B.getModule();
   if (!isLibFuncEmittable(M, TLI, SizeFeedbackNewFunc))
     return nullptr;
 
   StringRef Name = TLI->getName(SizeFeedbackNewFunc);
+  if (const Function *F = M->getFunction(Name);
+      F && F->getReturnType() != RetTy)
+    return nullptr;
 
-  // __sized_ptr_t struct return type { void*, size_t }
-  StructType *SizedPtrT =
-      StructType::get(M->getContext(), {B.getPtrTy(), Num->getType()});
   FunctionCallee Func =
-      getOrInsertLibFunc(M, *TLI, SizeFeedbackNewFunc, SizedPtrT,
-                         Num->getType(), Align->getType(), B.getInt8Ty());
+      getOrInsertLibFunc(M, *TLI, SizeFeedbackNewFunc, RetTy, Num->getType(),
+                         Align->getType(), B.getInt8Ty());
   inferNonMandatoryLibFuncAttrs(M, Name, *TLI);
   CallInst *CI = B.CreateCall(Func, {Num, Align, HotCold}, "sized_ptr");
 

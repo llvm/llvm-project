@@ -48,6 +48,10 @@ function(add_lldb_unittest test_name)
 
   target_link_libraries(${test_name} PRIVATE ${ARG_LINK_LIBS})
 
+  if (ARG_SBAPITEST)
+    lldb_prevent_liblldb_symbol_interposition(${test_name})
+  endif()
+
   if (MSVC)
     if (LLDB_UNITTEST_STRIP_DEBUG_INFO)
       target_link_options(${test_name} PRIVATE

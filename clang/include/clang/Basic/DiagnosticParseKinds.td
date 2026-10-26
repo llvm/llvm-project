@@ -24,7 +24,8 @@ defm label_followed_by_declaration : C23Compat<
   "label followed by a declaration is">;
 
 // C2y compatibility with C23 and earlier.
-defm decl_statement : C2yCompat<"'%select{if|switch}0' declaration statements are">;
+defm decl_statement : C2yCompat<"'%select{if|switch}0' declaration statements are",
+                                /*ext_warn=*/true>;
 defm generic_with_type_arg : C2yCompat<
   "passing a type argument as the first operand to '_Generic' is">;
 
@@ -284,6 +285,8 @@ def err_c2y_labeled_break_continue : Error<
 def err_c2y_first_condition_clause_is_not_declaration : Error<
   "first clause in condition must be a declaration">;
 def err_c2y_multiple_declarations : Error<"multiple declarations are not allowed">;
+def err_c_decl_in_while_statement : Error<
+  "ISO C does not allow a declaration in a 'while' statement">;
 
 // Generic errors.
 def err_expected_expression : Error<"expected expression">;

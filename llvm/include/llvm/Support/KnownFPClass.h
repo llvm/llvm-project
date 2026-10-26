@@ -326,10 +326,21 @@ struct KnownFPClass {
       const KnownFPClass &Addend,
       DenormalMode Mode = DenormalMode::getDynamic());
 
+  /// Report known values for fmuladd
+  LLVM_ABI static KnownFPClass
+  fmuladd(const KnownFPClass &LHS, const KnownFPClass &RHS,
+          const KnownFPClass &Addend,
+          DenormalMode Mode = DenormalMode::getDynamic());
+
   /// Report known values for fma squared, squared, addend
   LLVM_ABI static KnownFPClass
   fma_square(const KnownFPClass &Squared, const KnownFPClass &Addend,
              DenormalMode Mode = DenormalMode::getDynamic());
+
+  /// Report known values for fmuladd squared, squared, addend
+  LLVM_ABI static KnownFPClass
+  fmuladd_square(const KnownFPClass &Squared, const KnownFPClass &Addend,
+                 DenormalMode Mode = DenormalMode::getDynamic());
 
   /// Propagate known class for sqrt
   LLVM_ABI static KnownFPClass
@@ -452,13 +463,19 @@ struct KnownFPClass {
       knownNot(fcNan);
   }
 
-  /// Propagate known class for fpext.
-  LLVM_ABI static KnownFPClass fpext(const KnownFPClass &KnownSrc,
-                                     const fltSemantics &DstTy,
-                                     const fltSemantics &SrcTy);
+  /// Propagate known class for fpext. \p DstMode and \p SrcMode are the
+  /// denormal modes of the destination and source types.
+  LLVM_ABI static KnownFPClass
+  fpext(const KnownFPClass &KnownSrc, const fltSemantics &DstTy,
+        const fltSemantics &SrcTy, DenormalMode DstMode, DenormalMode SrcMode);
 
-  /// Propagate known class for fptrunc.
-  LLVM_ABI static KnownFPClass fptrunc(const KnownFPClass &KnownSrc);
+  /// Propagate known class for fptrunc and fptrunc_round. \p DstMode and
+  /// \p SrcMode are the denormal modes of the destination and source types.
+  LLVM_ABI static KnownFPClass fptrunc(const KnownFPClass &KnownSrc,
+                                       const fltSemantics &DstTy,
+                                       const fltSemantics &SrcTy,
+                                       DenormalMode DstMode,
+                                       DenormalMode SrcMode);
 
   /// Propagate known class for rounding intrinsics (rint, nearbyint, round,
   /// roundeven). \p IsMultiUnitFPType if this is for a multi-unit
