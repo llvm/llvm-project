@@ -426,8 +426,12 @@ mulifx(IntType n, FXType m) {
 
   using WideType = cpp::conditional_t<
       cpp::is_signed_v<IntType>,
-      cpp::conditional_t<INTERMEDIATE_BITS <= 64, int64_t, Int128>,
-      cpp::conditional_t<INTERMEDIATE_BITS <= 64, uint64_t, UInt128>>;
+      cpp::conditional_t<INTERMEDIATE_BITS <=
+                             cpp::numeric_limits<int64_t>::digits,
+                         int64_t, Int128>,
+      cpp::conditional_t<INTERMEDIATE_BITS <=
+                             cpp::numeric_limits<uint64_t>::digits,
+                         uint64_t, UInt128>>;
 
   WideType unscaled_result =
       static_cast<WideType>(n) * static_cast<WideType>(m_comp);
