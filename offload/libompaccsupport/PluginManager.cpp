@@ -498,15 +498,11 @@ int PluginManager::loadImagesOntoDevice(DeviceTy &Device) {
             // for use at launch time.
             SmallString<128> EnvName(Entry.SymbolName);
             EnvName += "_kernel_environment";
-            llvm::omp::target::plugin::GenericDeviceTy &GenericDevice =
-                Device.RTL->getDevice(Device.RTLDeviceID);
             KernelEnvironmentTy KernelEnv{};
-            llvm::omp::target::plugin::GlobalTy KernelEnvGlobal(
-                EnvName, sizeof(KernelEnv), &KernelEnv);
-            auto &Image = Kernel->getImage();
-            if (auto Err =
-                    GenericDevice.Plugin.getGlobalHandler().readGlobalFromImage(
-                        GenericDevice, Image, KernelEnvGlobal)) {
+            // Read the kernel environment from the image on the host; it is
+            // constant, so no device access is needed.
+            if (auto Err = Program.readGlobalFromImage(
+                    EnvName.c_str(), &KernelEnv, sizeof(KernelEnv))) {
               std::string ErrStr = toString(std::move(Err));
               KernelEnv = KernelEnvironmentTy{};
               KernelEnv.Configuration.ExecMode =
