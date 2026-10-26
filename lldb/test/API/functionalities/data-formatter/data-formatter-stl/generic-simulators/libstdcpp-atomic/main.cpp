@@ -138,8 +138,7 @@ int main() {
   std::atomic<bool> atomic_bool{{true}};
   std::atomic<float> atomic_float{3.14f};
   std::atomic<double> atomic_double{6.28};
-  std::atomic<_Complex float> atomic_complex_float{
-      make_complex(1.5f, 2.5f)};
+  std::atomic<_Complex float> atomic_complex_float{make_complex(1.5f, 2.5f)};
   std::atomic<vector4float> atomic_vector_float{vector4float{1, 2, 3, 4}};
 
   int pointee = 42;
