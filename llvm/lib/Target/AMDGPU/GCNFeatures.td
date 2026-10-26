@@ -1386,7 +1386,7 @@ defm 64BitLiterals : AMDGPUSubtargetFeature<"64-bit-literals",
 >;
 
 defm VGPRMSBs : AMDGPUSubtargetFeature<"vgpr-msbs",
-  "Has VGPR MSBs to address VGPRs above 255"
+  "Has MSB registers to address VGPRs that don't fit in the instruction encodings"
 >;
 
 defm SetregVGPRMSBFixup : AMDGPUGenericAnySubtargetFeature<"setreg-vgpr-msb-fixup",
