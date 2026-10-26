@@ -778,10 +778,6 @@ static bool isNoopIntrinsic(Instruction *I) {
     case Intrinsic::launder_invariant_group:
     case Intrinsic::assume:
       return true;
-    case Intrinsic::dbg_declare:
-    case Intrinsic::dbg_label:
-    case Intrinsic::dbg_value:
-      llvm_unreachable("Intrinsic should not be modeled in MemorySSA");
     default:
       return false;
     }
@@ -1247,51 +1243,62 @@ OverwriteResult DSEState::isOverwrite(const Instruction *KillingI,
 
   if (AnyScalable)
     return OW_Unknown;
-  // Query the alias information
-  AliasResult AAR = BatchAA.alias(KillingLoc, DeadLoc);
+  // Only query AA if the constant offsets cannot be compared.
+  auto CheckAA = [&]() {
+    // Query the alias information
+    AliasResult AAR = BatchAA.alias(KillingLoc, DeadLoc);
 
-  // If the start pointers are the same, we just have to compare sizes to see if
-  // the killing store was larger than the dead store.
-  if (AAR == AliasResult::MustAlias) {
-    // Make sure that the KillingSize size is >= the DeadSize size.
-    if (KillingSize >= DeadSize)
-      return OW_Complete;
-  }
+    // If the start pointers are the same, we just have to compare sizes to see
+    // if the killing store was larger than the dead store.
+    if (AAR == AliasResult::MustAlias) {
+      // Make sure that the KillingSize size is >= the DeadSize size.
+      if (KillingSize >= DeadSize)
+        return OW_Complete;
+    }
 
-  // If we hit a partial alias we may have a full overwrite
-  if (AAR == AliasResult::PartialAlias && AAR.hasOffset()) {
-    int32_t Off = AAR.getOffset();
-    if (Off >= 0 && (uint64_t)Off + DeadSize <= KillingSize)
-      return OW_Complete;
-  }
+    // If we hit a partial alias we may have a full overwrite
+    if (AAR == AliasResult::PartialAlias && AAR.hasOffset()) {
+      int32_t Off = AAR.getOffset();
+      if (Off >= 0 && (uint64_t)Off + DeadSize <= KillingSize)
+        return OW_Complete;
+    }
 
-  // If we can't resolve the same pointers to the same object, then we can't
-  // analyze them at all.
-  if (DeadUndObj != KillingUndObj) {
     // Non aliasing stores to different objects don't overlap. Note that
     // if the killing store is known to overwrite whole object (out of
     // bounds access overwrites whole object as well) then it is assumed to
     // completely overwrite any store to the same object even if they don't
     // actually alias (see next check).
-    if (AAR == AliasResult::NoAlias)
+    if (DeadUndObj != KillingUndObj && AAR == AliasResult::NoAlias)
       return OW_None;
     return OW_Unknown;
-  }
+  };
+
+  // If we can't resolve the same pointers to the same object, then we can't
+  // analyze them at all.
+  if (DeadUndObj != KillingUndObj)
+    return CheckAA();
+
+  // Offsets in different address spaces may wrap at different widths.
+  unsigned IdxWidth = DL.getIndexTypeSizeInBits(DeadPtr->getType());
+  if (IdxWidth != DL.getIndexTypeSizeInBits(KillingPtr->getType()))
+    return CheckAA();
 
   // Okay, we have stores to two completely different pointers.  Try to
   // decompose the pointer into a "base + constant_offset" form.  If the base
   // pointers are equal, then we can reason about the two stores.
   DeadOff = 0;
   KillingOff = 0;
-  const Value *DeadBasePtr =
-      GetPointerBaseWithConstantOffset(DeadPtr, DeadOff, DL);
-  const Value *KillingBasePtr =
-      GetPointerBaseWithConstantOffset(KillingPtr, KillingOff, DL);
+  APInt DeadBaseOff(IdxWidth, 0);
+  APInt KillingBaseOff(IdxWidth, 0);
+  const Value *DeadBasePtr = DeadPtr->stripAndAccumulateConstantOffsets(
+      DL, DeadBaseOff, /*AllowNonInbounds=*/true);
+  const Value *KillingBasePtr = KillingPtr->stripAndAccumulateConstantOffsets(
+      DL, KillingBaseOff, /*AllowNonInbounds=*/true);
 
   // If the base pointers still differ, we have two completely different
   // stores.
   if (DeadBasePtr != KillingBasePtr)
-    return OW_Unknown;
+    return CheckAA();
 
   // The killing access completely overlaps the dead store if and only if
   // both start and end of the dead one is "inside" the killing one:
@@ -1304,23 +1311,26 @@ OverwriteResult DSEState::isOverwrite(const Instruction *KillingI,
   //           OR
   //    |-------dead-------|
   //    |<->|---killing---|<----->|
-  //
-  // We have to be careful here as *Off is signed while *.Size is unsigned.
 
-  // Check if the dead access starts "not before" the killing one.
-  if (DeadOff >= KillingOff) {
+  // A zero-sized killing access does not overwrite anything.
+  if (KillingSize == 0)
+    return OW_None;
+
+  // Check if the dead access starts "inside" the killing one.
+  APInt Delta = DeadBaseOff - KillingBaseOff;
+  if (Delta.ult(KillingSize)) {
     // If the dead access ends "not after" the killing access then the
     // dead one is completely overwritten by the killing one.
-    if (uint64_t(DeadOff - KillingOff) + DeadSize <= KillingSize)
+    if (Delta.getZExtValue() + DeadSize <= KillingSize)
       return OW_Complete;
-    // If start of the dead access is "before" end of the killing access
-    // then accesses overlap.
-    else if ((uint64_t)(DeadOff - KillingOff) < KillingSize)
-      return OW_MaybePartial;
+    // Otherwise the accesses overlap.
+    KillingOff = -int64_t(Delta.getZExtValue());
+    return OW_MaybePartial;
   }
   // If start of the killing access is "before" end of the dead access then
   // accesses overlap.
-  else if ((uint64_t)(KillingOff - DeadOff) < DeadSize) {
+  if ((-Delta).ult(DeadSize)) {
+    KillingOff = (-Delta).getZExtValue();
     return OW_MaybePartial;
   }
 
@@ -2389,10 +2399,9 @@ bool DSEState::removePartiallyOverlappedStores(InstOverlapIntervalsTy &IOL) {
     MemoryLocation Loc = *getLocForWrite(DeadI);
     assert(isRemovable(DeadI) && "Expect only removable instruction");
 
-    const Value *Ptr = Loc.Ptr->stripPointerCasts();
+    // Overlap intervals are relative to the start of the dead access.
     int64_t DeadStart = 0;
     uint64_t DeadSize = Loc.Size.getValue();
-    GetPointerBaseWithConstantOffset(Ptr, DeadStart, DL);
     OverlapIntervalsTy &IntervalMap = OI.second;
     Changed |= tryToShortenEnd(DeadI, IntervalMap, DeadStart, DeadSize);
     if (IntervalMap.empty())
@@ -2723,7 +2732,7 @@ static bool eliminateDeadStores(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
                                 DominatorTree &DT, PostDominatorTree &PDT,
                                 const TargetLibraryInfo &TLI,
                                 const CycleInfo &CI) {
-  const ScalarOptions &Opts = ScalarOptions::Global;
+  const ScalarOptions &Opts = getScalarOptions(F);
   bool MadeChange = false;
   DSEState State(Opts, F, AA, MSSA, DT, PDT, TLI, CI);
   // For each store:

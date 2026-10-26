@@ -248,8 +248,7 @@ static const SCEV *mulSCEVNoOverflow(const SCEV *A, const SCEV *B,
 static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
     const SCEVAddRecExpr *AR, const SCEV *MaxBTC, const SCEV *EltSize,
     ScalarEvolution &SE, const DataLayout &DL, DominatorTree *DT,
-    AssumptionCache *AC,
-    std::optional<ScalarEvolution::LoopGuards> &LoopGuards) {
+    AssumptionCache *AC, ScalarEvolution::LoopGuards &LoopGuards) {
   auto *PointerBase = SE.getPointerBase(AR->getStart());
   auto *StartPtr = dyn_cast<SCEVUnknown>(PointerBase);
   if (!StartPtr)
@@ -313,9 +312,7 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
   const SCEV *StartOffset = SE.getNoopOrZeroExtend(
       SE.getMinusSCEV(AR->getStart(), StartPtr), WiderTy);
 
-  if (!LoopGuards)
-    LoopGuards.emplace(ScalarEvolution::LoopGuards::collect(AR->getLoop(), SE));
-  MaxBTC = SE.applyLoopGuards(MaxBTC, *LoopGuards);
+  MaxBTC = SE.applyLoopGuards(MaxBTC, LoopGuards);
 
   const SCEV *AbsStep = SE.getAbsExpr(Step, /*IsNSW=*/false);
   // Total distance (in bytes) between the first and the last
@@ -347,7 +344,7 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
     MaxOffset = addSCEVNoOverflow(StartOffset, AccessedBytes, SE);
     if (!MaxOffset)
       return false;
-    DerefBytesSCEV = SE.applyLoopGuards(DerefBytesSCEV, *LoopGuards);
+    DerefBytesSCEV = SE.applyLoopGuards(DerefBytesSCEV, LoopGuards);
   } else {
     // FIXME: two independent off-by-EltSize bugs on this branch:
     //  1. StartOffset here is actually the HIGHEST offset, because it is
@@ -444,7 +441,7 @@ std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
     DenseMap<std::pair<const SCEV *, const SCEV *>,
              std::pair<const SCEV *, const SCEV *>> *PointerBounds,
     DominatorTree *DT, AssumptionCache *AC,
-    std::optional<ScalarEvolution::LoopGuards> &LoopGuards) {
+    ScalarEvolution::LoopGuards &LoopGuards) {
   auto &DL = Lp->getHeader()->getDataLayout();
   Type *IdxTy = DL.getIndexType(PtrExpr->getType());
   const SCEV *EltSizeSCEV = SE->getStoreSizeOfExpr(IdxTy, AccessTy);
@@ -460,7 +457,7 @@ std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
     DenseMap<std::pair<const SCEV *, const SCEV *>,
              std::pair<const SCEV *, const SCEV *>> *PointerBounds,
     DominatorTree *DT, AssumptionCache *AC,
-    std::optional<ScalarEvolution::LoopGuards> &LoopGuards) {
+    ScalarEvolution::LoopGuards &LoopGuards) {
   std::pair<const SCEV *, const SCEV *> *PtrBoundsPair;
   if (PointerBounds) {
     auto [Iter, Ins] = PointerBounds->insert(
@@ -481,6 +478,7 @@ std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
     ScStart = PtrExpr;
     ScEnd = SE->getAddExpr(PtrExpr, EltSizeSCEV);
   } else if (auto *AR = dyn_cast<SCEVAddRecExpr>(PtrExpr)) {
+    assert(AR->getLoop() == Lp && "LoopGuards must be the guards of Lp");
     const SCEV *Step = AR->getStepRecurrence(*SE);
     // The address of the last accessed element, if it can be computed
     // precisely.
@@ -1697,8 +1695,8 @@ public:
                  DominatorTree &DT, MemoryDepChecker::DepCandidates &DA,
                  PredicatedScalarEvolution &PSE,
                  SmallPtrSetImpl<MDNode *> &LoopAliasScopes)
-      : TheLoop(TheLoop), BAA(*AA), AST(BAA), LI(LI), DT(DT), DepCands(DA),
-        PSE(PSE), LoopAliasScopes(LoopAliasScopes) {
+      : TheLoop(TheLoop), EEA(DT, LI), BAA(*AA, &EEA), AST(BAA), LI(LI), DT(DT),
+        DepCands(DA), PSE(PSE), LoopAliasScopes(LoopAliasScopes) {
     // We're analyzing dependences across loop iterations.
     BAA.enableCrossIterationMode();
   }
@@ -1758,10 +1756,12 @@ public:
   /// dependency checking (i.e. ShouldRetryWithRuntimeChecks).
   bool isDependencyCheckNeeded() const { return !CheckDeps.empty(); }
 
-  /// We decided that no dependence analysis would be used.  Reset the state.
+  /// Reset dependence checks after a successful runtime-check retry.
+  /// Remove unknown dependences covered by runtime checks, but retain known
+  /// dependences to constrain reordering.
   void resetDepChecks(MemoryDepChecker &DepChecker) {
     CheckDeps.clear();
-    DepChecker.clearDependences();
+    DepChecker.removeUnknownDependences();
   }
 
   ArrayRef<MemAccessInfo> getDependenciesToCheck() const { return CheckDeps; }
@@ -1807,6 +1807,9 @@ private:
 
   /// Set of pointers that are read only.
   SmallPtrSet<Value*, 16> ReadOnlyPtr;
+
+  /// Capture analysis for BAA.
+  EarliestEscapeAnalysis EEA;
 
   /// Batched alias analysis results.
   BatchAAResults BAA;
@@ -1887,6 +1890,9 @@ llvm::getStrideFromAddRec(const SCEVAddRecExpr *AR, const Loop *Lp,
   const auto &DL = Lp->getHeader()->getDataLayout();
   TypeSize AllocSize = DL.getTypeAllocSize(AccessTy);
   int64_t Size = AllocSize.getFixedValue();
+
+  if (Size == 0)
+    return std::nullopt;
 
   // Huge step value - give up.
   std::optional<int64_t> StepVal = APStepVal->trySExtValue();
@@ -2332,11 +2338,35 @@ bool AccessAnalysis::canCheckPtrAtRT(RuntimePointerChecking &RtCheck,
       continue;
     }
 
+    const DataLayout &DL = TheLoop->getHeader()->getDataLayout();
+    auto StoreSize = [&DL](Type *Ty) { return DL.getTypeStoreSize(Ty); };
+
     for (auto &Access : AccessInfos) {
-      for (const auto &AccessTy : Accesses[Access]) {
+      // A written pointer is only checked via its write access, so its bounds
+      // must also cover the types it is loaded with.
+      SmallSetVector<Type *, 1> AccessTys = Accesses.lookup(Access);
+      if (Access.getInt()) {
+        auto ReadIt = Accesses.find(MemAccessInfo(Access.getPointer(), false));
+        if (ReadIt != Accesses.end())
+          AccessTys.insert_range(ReadIt->second);
+      }
+
+      // The widest fixed and scalable types cover all accesses of their kind.
+      for (bool Scalable : {false, true}) {
+        auto HasMatchingSizeKind = [&](Type *Ty) {
+          return StoreSize(Ty).isScalable() == Scalable;
+        };
+        auto Tys = make_filter_range(AccessTys, std::ref(HasMatchingSizeKind));
+        if (Tys.empty())
+          continue;
+
+        Type *AccessTy = *max_element(Tys, [&](Type *A, Type *B) {
+          return TypeSize::isKnownLT(StoreSize(A), StoreSize(B));
+        });
+
         if (!createCheckForAccess(RtCheck, Access, AccessTy, StridesMap,
                                   DepSetId, TheLoop, RunningDepId, ASId,
-                                  false)) {
+                                  /*Assume=*/false)) {
           LLVM_DEBUG(dbgs() << "LAA: Can't find bounds for ptr:"
                             << *Access.getPointer() << '\n');
           Retries.emplace_back(Access, AccessTy);
@@ -2870,9 +2900,8 @@ void MemoryDepChecker::mergeInStatus(VectorizationSafetyStatus S) {
 ///                = out[i];
 ///       out[i+D] =
 ///     }
-static bool isSafeDependenceDistance(const DataLayout &DL, ScalarEvolution &SE,
-                                     const SCEV &MaxBTC, const SCEV &Dist,
-                                     uint64_t MaxStride) {
+static bool isSafeDependenceDistance(ScalarEvolution &SE, const SCEV &MaxBTC,
+                                     const SCEV &Dist, uint64_t MaxStride) {
 
   // If we can prove that
   //      (**) |Dist| > MaxBTC * Step
@@ -2891,21 +2920,16 @@ static bool isSafeDependenceDistance(const DataLayout &DL, ScalarEvolution &SE,
   // will be executed only if LoopCount >= VF, proving distance >= LoopCount
   // also guarantees that distance >= VF.
   //
-  const SCEV *Step = SE.getConstant(MaxBTC.getType(), MaxStride);
-  const SCEV *Product = SE.getMulExpr(&MaxBTC, Step);
-
-  const SCEV *CastedDist = &Dist;
-  const SCEV *CastedProduct = Product;
-  uint64_t DistTypeSizeBits = DL.getTypeSizeInBits(Dist.getType());
-  uint64_t ProductTypeSizeBits = DL.getTypeSizeInBits(Product->getType());
-
-  // The dependence distance can be positive/negative, so we sign extend Dist;
-  // The multiplication of the absolute stride in bytes and the
-  // backedgeTakenCount is non-negative, so we zero extend Product.
-  if (DistTypeSizeBits > ProductTypeSizeBits)
-    CastedProduct = SE.getZeroExtendExpr(Product, Dist.getType());
-  else
-    CastedDist = SE.getNoopOrSignExtend(&Dist, Product->getType());
+  // The dependence distance can be positive/negative, so we sign-extend Dist.
+  // MaxBTC is non-negative, so we zero-extended to the wider type before
+  // computing MaxBTC * Step.
+  // FIXME: The checks below can still wrap if MaxBTC * MaxStride does not fit
+  // in WideTy with two bits to spare, e.g. for an unbounded i64 MaxBTC.
+  Type *WideTy = SE.getWiderType(Dist.getType(), MaxBTC.getType());
+  const SCEV *Step = SE.getConstant(WideTy, MaxStride);
+  const SCEV *CastedDist = SE.getNoopOrSignExtend(&Dist, WideTy);
+  const SCEV *CastedProduct =
+      SE.getMulExpr(SE.getNoopOrZeroExtend(&MaxBTC, WideTy), Step);
 
   // Is  Dist - (MaxBTC * Step) > 0 ?
   // (If so, then we have proven (**) because |Dist| >= Dist)
@@ -2974,16 +2998,13 @@ bool MemoryDepChecker::areAccessesCompletelyBeforeOrAfter(const SCEV *Src,
       isa<SCEVCouldNotCompute>(SinkEnd_))
     return false;
 
-  if (!LoopGuards)
-    LoopGuards.emplace(ScalarEvolution::LoopGuards::collect(InnermostLoop, SE));
-
-  auto SrcEnd = SE.applyLoopGuards(SrcEnd_, *LoopGuards);
-  auto SinkStart = SE.applyLoopGuards(SinkStart_, *LoopGuards);
+  auto SrcEnd = SE.applyLoopGuards(SrcEnd_, LoopGuards);
+  auto SinkStart = SE.applyLoopGuards(SinkStart_, LoopGuards);
   if (SE.isKnownPredicate(CmpInst::ICMP_ULE, SrcEnd, SinkStart))
     return true;
 
-  auto SinkEnd = SE.applyLoopGuards(SinkEnd_, *LoopGuards);
-  auto SrcStart = SE.applyLoopGuards(SrcStart_, *LoopGuards);
+  auto SinkEnd = SE.applyLoopGuards(SinkEnd_, LoopGuards);
+  auto SrcStart = SE.applyLoopGuards(SrcStart_, LoopGuards);
   return SE.isKnownPredicate(CmpInst::ICMP_ULE, SinkEnd, SrcStart);
 }
 
@@ -3148,8 +3169,8 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   // they are far enough appart that accesses won't access the same location
   // across all loop ierations.
   if (HasSameSize &&
-      isSafeDependenceDistance(
-          DL, SE, *(PSE.getSymbolicMaxBackedgeTakenCount()), *Dist, MaxStride))
+      isSafeDependenceDistance(SE, *(PSE.getSymbolicMaxBackedgeTakenCount()),
+                               *Dist, MaxStride))
     return Dependence::NoDep;
 
   const APInt *APDist = nullptr;
@@ -3173,10 +3194,7 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
       return Dependence::NoDep;
     }
   } else {
-    if (!LoopGuards)
-      LoopGuards.emplace(
-          ScalarEvolution::LoopGuards::collect(InnermostLoop, SE));
-    Dist = SE.applyLoopGuards(Dist, *LoopGuards);
+    Dist = SE.applyLoopGuards(Dist, LoopGuards);
   }
 
   // Negative distances are not plausible dependencies.
@@ -3543,6 +3561,15 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
         for (Metadata *Op : Decl->getScopeList()->operands())
           LoopAliasScopes.insert(cast<MDNode>(Op));
 
+      // Operand bundles may access memory, even if the callee does not.
+      auto *CB = dyn_cast<CallBase>(&I);
+      if (CB && CB->hasReadingOperandBundles()) {
+        recordAnalysis("CantVectorizeInstruction", &I)
+            << "call instruction with operand bundles cannot be vectorized";
+        HasComplexMemInst = true;
+        continue;
+      }
+
       // Many math library functions read the rounding mode. We will only
       // vectorize a loop if it contains known function calls that don't set
       // the flag. Therefore, it is safe to ignore this read from memory.
@@ -3779,7 +3806,8 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
         return false;
       }
 
-      // Clear the dependency checks. They are no longer needed.
+      // The runtime checks cover the unknown dependences, so drop those. Keep
+      // the known ones, as they still constrain reordering.
       Accesses.resetDepChecks(*DepChecker);
 
       DepsAreSafe = true;
@@ -4078,7 +4106,9 @@ LoopAccessInfo::LoopAccessInfo(Loop *L, ScalarEvolution *SE,
                                DominatorTree *DT, LoopInfo *LI,
                                AssumptionCache *AC, bool AllowPartial)
     : PSE(std::make_unique<PredicatedScalarEvolution>(*SE, *L)),
-      PtrRtChecking(nullptr), TheLoop(L), AllowPartial(AllowPartial) {
+      PtrRtChecking(nullptr), TheLoop(L),
+      LoopGuards(ScalarEvolution::LoopGuards::collectOnDemand(L, *SE)),
+      AllowPartial(AllowPartial) {
   unsigned MaxTargetVectorWidthInBits = std::numeric_limits<unsigned>::max();
   if (TTI && !TTI->enableScalableVectorization())
     // Scale the vector width by 2 as rough estimate to also consider

@@ -1267,6 +1267,15 @@ filegroup(
     ],
 )
 
+gentbl_cc_library(
+    name = "IROptionsTableGen",
+    strip_include_prefix = "lib/IR",
+    tbl_outs = {"lib/IR/IROptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/IR/IROptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
 cc_library(
     name = "Core",
     srcs = glob([
@@ -1298,6 +1307,8 @@ cc_library(
     deps = [
         ":BinaryFormat",
         ":Demangle",
+        ":IROptionsTableGen",
+        ":Option",
         ":Remarks",
         ":Support",
         ":TargetParser",
@@ -1698,24 +1709,6 @@ td_library(
 )
 
 td_library(
-    name = "ArmTargetTdFiles",
-    srcs = glob([
-        "lib/Target/ARM/**/*.td",
-    ]),
-)
-
-gentbl_cc_library(
-    name = "ARMTargetParserDefGen",
-    tbl_outs = {"include/llvm/TargetParser/ARMTargetParserDef.inc": ["-gen-arm-target-def"]},
-    tblgen = ":llvm-min-tblgen",
-    td_file = "lib/Target/ARM/ARM.td",
-    deps = [
-        ":ArmTargetTdFiles",
-        ":CommonTargetTdFiles",
-    ],
-)
-
-td_library(
     name = "AArch64TargetTdFiles",
     srcs = glob([
         "lib/Target/AArch64/**/*.td",
@@ -1726,7 +1719,7 @@ gentbl_cc_library(
     name = "AArch64TargetParserDefGen",
     tbl_outs = {"include/llvm/TargetParser/AArch64TargetParserDef.inc": ["-gen-arm-target-def"]},
     tblgen = ":llvm-min-tblgen",
-    td_file = "lib/Target/AArch64/AArch64.td",
+    td_file = "lib/Target/AArch64/AArch64TargetParserDef.td",
     deps = [
         ":AArch64TargetTdFiles",
         ":CommonTargetTdFiles",
@@ -1769,7 +1762,7 @@ gentbl_cc_library(
     name = "AMDGPUTargetParserDefGen",
     tbl_outs = {"include/llvm/TargetParser/AMDGPUTargetParserDef.inc": ["-gen-amdgpu-target-def"]},
     tblgen = ":llvm-min-tblgen",
-    td_file = "lib/Target/AMDGPU/AMDGPU.td",
+    td_file = "lib/Target/AMDGPU/AMDGPUTargetParserDef.td",
     deps = [
         ":AMDGPUTargetTdFiles",
         ":CommonTargetTdFiles",
@@ -1780,7 +1773,7 @@ gentbl_cc_library(
     name = "R600TargetParserDefGen",
     tbl_outs = {"include/llvm/TargetParser/R600TargetParserDef.inc": ["-gen-amdgpu-target-def"]},
     tblgen = ":llvm-min-tblgen",
-    td_file = "lib/Target/AMDGPU/R600.td",
+    td_file = "lib/Target/AMDGPU/R600TargetParserDef.td",
     deps = [
         ":AMDGPUTargetTdFiles",
         ":CommonTargetTdFiles",
@@ -1791,7 +1784,7 @@ gentbl_cc_library(
     name = "PPCGenTargetFeaturesGen",
     tbl_outs = {"include/llvm/TargetParser/PPCGenTargetFeatures.inc": ["-gen-target-features"]},
     tblgen = ":llvm-tblgen",
-    td_file = "lib/Target/PowerPC/PPC.td",
+    td_file = "lib/Target/PowerPC/PPCTargetParserDef.td",
     deps = [
         ":CommonTargetTdFiles",
         ":PPCTargetTdFiles",
@@ -1832,7 +1825,6 @@ cc_library(
         "include/llvm/TargetParser/AArch64FeatPriorities.inc",
         "include/llvm/TargetParser/AArch64TargetParserDef.inc",
         "include/llvm/TargetParser/AMDGPUTargetParserDef.inc",
-        "include/llvm/TargetParser/ARMTargetParserDef.inc",
         "include/llvm/TargetParser/RISCVTargetParserDef.inc",
         "include/llvm/TargetParser/R600TargetParserDef.inc",
     ] + glob([
@@ -1942,6 +1934,17 @@ cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "InstrumentationOptionsTableGen",
+    strip_include_prefix = "lib/Transforms/Instrumentation",
+    tbl_outs = {
+        "lib/Transforms/Instrumentation/InstrumentationOptions.inc": ["-gen-opt-parser-defs"],
+    },
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/Transforms/Instrumentation/InstrumentationOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
 cc_library(
     name = "Instrumentation",
     srcs = glob([
@@ -1959,7 +1962,9 @@ cc_library(
         ":Core",
         ":Demangle",
         ":FrontendOffloading",
+        ":InstrumentationOptionsTableGen",
         ":MC",
+        ":Option",
         ":ProfileData",
         ":Scalar",
         ":Support",
@@ -2045,6 +2050,17 @@ cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "VectorizeOptionsTableGen",
+    strip_include_prefix = "lib/Transforms/Vectorize",
+    tbl_outs = {
+        "lib/Transforms/Vectorize/VectorizeOptions.inc": ["-gen-opt-parser-defs"],
+    },
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/Transforms/Vectorize/VectorizeOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
 cc_library(
     name = "Vectorize",
     srcs = glob([
@@ -2061,11 +2077,13 @@ cc_library(
     deps = [
         ":Analysis",
         ":Core",
+        ":Option",
         ":SandboxIR",
         ":Scalar",
         ":Support",
         ":Target",
         ":TransformUtils",
+        ":VectorizeOptionsTableGen",
         ":config",
     ],
 )
@@ -2093,6 +2111,7 @@ cc_library(
     deps = [
         ":Analysis",
         ":Core",
+        ":Instrumentation",
         ":ProfileData",
         ":Support",
         ":TargetParser",
@@ -2780,6 +2799,10 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/ARM/ARMGenSystemRegister.inc",
             ),
             (
+                ["-gen-arm-target-def"],
+                "lib/Target/ARM/ARMGenTargetDef.inc",
+            ),
+            (
                 ["-gen-instr-info"],
                 "lib/Target/ARM/ARMGenInstrInfo.inc",
             ),
@@ -3121,6 +3144,9 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/Lanai/LanaiGenSubtargetInfo.inc",
             ),
         ],
+        "tbl_deps": [
+            ":LanaiOptionsTableGen",
+        ],
     },
     {
         "name": "LoongArch",
@@ -3257,6 +3283,10 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/Mips/MipsGenSubtargetInfo.inc",
             ),
         ],
+        "tbl_deps": [
+            ":MipsMCOptionsTableGen",
+            ":MipsOptionsTableGen",
+        ],
     },
     {
         "name": "MSP430",
@@ -3308,6 +3338,9 @@ llvm_target_lib_list = [lib for lib in [
                 ["-gen-subtarget"],
                 "lib/Target/MSP430/MSP430GenSubtargetInfo.inc",
             ),
+        ],
+        "tbl_deps": [
+            ":MSP430OptionsTableGen",
         ],
     },
     {
@@ -3489,6 +3522,8 @@ llvm_target_lib_list = [lib for lib in [
             ),
         ],
         "tbl_deps": [
+            ":RISCVMCOptionsTableGen",
+            ":RISCVOptionsTableGen",
             ":riscv_isel_target_gen",
         ],
     },
@@ -3929,6 +3964,9 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/XCore/XCoreGenSubtargetInfo.inc",
             ),
         ],
+        "tbl_deps": [
+            ":XCoreOptionsTableGen",
+        ],
     },
     {
         "name": "Xtensa",
@@ -4117,6 +4155,60 @@ gentbl_cc_library(
 )
 
 gentbl_cc_library(
+    name = "LanaiOptionsTableGen",
+    strip_include_prefix = "lib/Target/Lanai",
+    tbl_outs = {"lib/Target/Lanai/LanaiOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/Lanai/LanaiOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "MipsMCOptionsTableGen",
+    strip_include_prefix = "lib/Target/Mips",
+    tbl_outs = {"lib/Target/Mips/MipsMCOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/Mips/MCTargetDesc/MipsMCOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "MipsOptionsTableGen",
+    strip_include_prefix = "lib/Target/Mips",
+    tbl_outs = {"lib/Target/Mips/MipsOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/Mips/MipsOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "MSP430OptionsTableGen",
+    strip_include_prefix = "lib/Target/MSP430",
+    tbl_outs = {"lib/Target/MSP430/MSP430Options.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/MSP430/MSP430Options.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "RISCVMCOptionsTableGen",
+    strip_include_prefix = "lib/Target/RISCV",
+    tbl_outs = {"lib/Target/RISCV/RISCVMCOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/RISCV/MCTargetDesc/RISCVMCOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "RISCVOptionsTableGen",
+    strip_include_prefix = "lib/Target/RISCV",
+    tbl_outs = {"lib/Target/RISCV/RISCVOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/RISCV/RISCVOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
     name = "SparcOptionsTableGen",
     strip_include_prefix = "lib/Target/Sparc",
     tbl_outs = {"lib/Target/Sparc/SparcOptions.inc": ["-gen-opt-parser-defs"]},
@@ -4140,6 +4232,15 @@ gentbl_cc_library(
     tbl_outs = {"lib/Target/X86/X86Options.inc": ["-gen-opt-parser-defs"]},
     tblgen = ":llvm-tblgen",
     td_file = "lib/Target/X86/X86Options.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "XCoreOptionsTableGen",
+    strip_include_prefix = "lib/Target/XCore",
+    tbl_outs = {"lib/Target/XCore/XCoreOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/XCore/XCoreOptions.td",
     deps = [":OptParserTdFiles"],
 )
 

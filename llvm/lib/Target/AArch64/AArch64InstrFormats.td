@@ -737,6 +737,16 @@ def uimm6s16 : Operand<i64>, ImmLeaf<i64,
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
+// uimm8sN predicate - True if the immediate is a multiple of N in the range
+// [0 * N, 255 * N].
+def UImm8s32Operand : UImmScaledMemoryIndexed<8, 32>;
+def uimm8s32 : Operand<i64>, ImmLeaf<i64,
+[{ return Imm >= 0 && Imm < (256*32) && ((Imm % 32) == 0); }]> {
+  let PrintMethod = "printImmScale<32>";
+  let ParserMatchClass = UImm8s32Operand;
+  let OperandType = "OPERAND_IMMEDIATE";
+}
+
 def SImmS2XForm : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(N->getSExtValue() / 2, SDLoc(N), MVT::i64);
 }]>;
@@ -2785,6 +2795,17 @@ def shiftMask64 : ComplexPattern<i64, 1, "SelectShiftMask<64>", [], [], 0>;
 def gi_shift_mask64 : GIComplexOperandMatcher<s64, "selectShiftMask<64>">,
                       GIComplexPatternEquiv<shiftMask64>;
 
+// A 32-bit shift reads only the low 5 bits of its amount, so the same masking
+// applies when that amount is held in an i64 register (e.g. a narrow shift
+// amount widened by sext/zext). Reuse the 32-bit matcher on an i64 node; the
+// widen pattern narrows the result with EXTRACT_SUBREG.
+def shiftMask32In64 : ComplexPattern<i64, 1, "SelectShiftMask<32>", [], [], 0>;
+
+// A 64-bit shift reads the low 6 bits of its amount; when that amount is an
+// i32 value widened to i64 (e.g. a (64 - x) computed in i32 then zero/any/
+// sign-extended), run the 64-bit matcher on the i32 node and widen the result.
+def shiftMask64In32 : ComplexPattern<i32, 1, "SelectShiftMask<64>", [], [], 0>;
+
 multiclass Shift<bits<2> shift_type, string asm, SDNode OpNode> {
   def Wr : BaseShift<0b0, shift_type, GPR32, asm>;
 
@@ -2811,10 +2832,38 @@ multiclass Shift<bits<2> shift_type, string asm, SDNode OpNode> {
             (!cast<Instruction>(NAME # "Xr") GPR64:$Rn,
                 (SUBREG_TO_REG GPR32:$Rm, sub_32))>;
 
+  // Peek through the widening when the i64 shift amount is an extended i32
+  // value that still carries a maskable AND or a (C - x) subtract.
+  def : Pat<(i64 (OpNode GPR64:$Rn, (i64 (zext (i32 shiftMask64In32:$Rm))))),
+            (!cast<Instruction>(NAME # "Xr") GPR64:$Rn,
+                (SUBREG_TO_REG shiftMask64In32:$Rm, sub_32))>;
+  def : Pat<(i64 (OpNode GPR64:$Rn, (i64 (anyext (i32 shiftMask64In32:$Rm))))),
+            (!cast<Instruction>(NAME # "Xr") GPR64:$Rn,
+                (SUBREG_TO_REG shiftMask64In32:$Rm, sub_32))>;
+  def : Pat<(i64 (OpNode GPR64:$Rn, (i64 (sext (i32 shiftMask64In32:$Rm))))),
+            (!cast<Instruction>(NAME # "Xr") GPR64:$Rn,
+                (SUBREG_TO_REG shiftMask64In32:$Rm, sub_32))>;
+
   def : Pat<(i32 (OpNode GPR32:$Rn, shiftMask32:$Rm)),
             (!cast<Instruction>(NAME # "Wr") GPR32:$Rn, shiftMask32:$Rm)>;
   def : Pat<(i64 (OpNode GPR64:$Rn, shiftMask64:$Rm)),
             (!cast<Instruction>(NAME # "Xr") GPR64:$Rn, shiftMask64:$Rm)>;
+
+  // For 32-bit rotates the shift amount is legalized with a zext to i64;
+  // peek through it and apply the 32-bit shift-amount masking.
+  def : Pat<(i32 (OpNode GPR32:$Rn, (i64 (zext (i32 shiftMask32:$Rm))))),
+            (!cast<Instruction>(NAME # "Wr") GPR32:$Rn, shiftMask32:$Rm)>;
+  def : Pat<(i32 (OpNode GPR32:$Rn, (i64 (anyext (i32 shiftMask32:$Rm))))),
+            (!cast<Instruction>(NAME # "Wr") GPR32:$Rn, shiftMask32:$Rm)>;
+  def : Pat<(i32 (OpNode GPR32:$Rn, (i64 (sext (i32 shiftMask32:$Rm))))),
+            (!cast<Instruction>(NAME # "Wr") GPR32:$Rn, shiftMask32:$Rm)>;
+
+  // A 32-bit shift may take an i64 shift amount that carries a redundant
+  // AND mask, e.g. an i8/i16 shift amount widened to i64. Strip the mask
+  // with the 32-bit matcher (shiftMask32In64) and narrow the result to i32.
+  def : Pat<(i32 (OpNode GPR32:$Rn, (i64 shiftMask32In64:$Rm))),
+            (!cast<Instruction>(NAME # "Wr") GPR32:$Rn,
+                (EXTRACT_SUBREG shiftMask32In64:$Rm, sub_32))>;
 }
 
 class ShiftAlias<string asm, Instruction inst, RegisterClass regtype>
@@ -6110,11 +6159,12 @@ class BaseOneOperandFPComparison<bit signalAllNans,
 
   // Rm should be 0b00000 canonically, but we need to accept any value.
   let PostEncoderMethod = "fixOneOperandFPComparison";
+  let Defs = [NZCV];
 }
 
-let mayLoad = 0, mayStore = 0, hasSideEffects = 0, mayRaiseFPException = 1, Uses = [FPCR] in
-class BaseTwoOperandFPComparison<bit signalAllNans, RegisterClass regtype,
-                                string asm, list<dag> pat>
+let mayLoad = 0, mayStore = 0, hasSideEffects = 0, Uses = [FPCR] in
+class BaseTwoOperandFPComparison<bit totalOrder, bits<2> opc,
+                                 RegisterClass regtype, string asm, list<dag> pat>
     : I<(outs), (ins regtype:$Rn, regtype:$Rm), asm, "\t$Rn, $Rm", "", pat>,
       Sched<[WriteFCmp]> {
   bits<5> Rm;
@@ -6122,16 +6172,19 @@ class BaseTwoOperandFPComparison<bit signalAllNans, RegisterClass regtype,
   let Inst{31-24} = 0b00011110;
   let Inst{21}    = 1;
   let Inst{20-16} = Rm;
-  let Inst{15-10} = 0b001000;
+  let Inst{15}    = totalOrder;
+  let Inst{14-10} = 0b01000;
   let Inst{9-5}   = Rn;
-  let Inst{4}     = signalAllNans;
-  let Inst{3-0}   = 0b0000;
+  let Inst{4-3}   = opc;
+  let Inst{2-0}   = 0b000;
+
+  let mayRaiseFPException = !not(totalOrder);
+  let Defs = [NZCV];
 }
 
 multiclass FPComparison<bit signalAllNans, string asm,
                         SDPatternOperator OpNode = null_frag> {
-  let Defs = [NZCV] in {
-  def Hrr : BaseTwoOperandFPComparison<signalAllNans, FPR16, asm,
+  def Hrr : BaseTwoOperandFPComparison<0b0, {signalAllNans, 0}, FPR16, asm,
       [(set NZCV, (OpNode (f16 FPR16:$Rn), (f16 FPR16:$Rm)))]> {
     let Inst{23-22} = 0b11;
     let Predicates = [HasFullFP16];
@@ -6143,7 +6196,7 @@ multiclass FPComparison<bit signalAllNans, string asm,
     let Predicates = [HasFullFP16];
   }
 
-  def Srr : BaseTwoOperandFPComparison<signalAllNans, FPR32, asm,
+  def Srr : BaseTwoOperandFPComparison<0b0, {signalAllNans, 0}, FPR32, asm,
       [(set NZCV, (OpNode FPR32:$Rn, (f32 FPR32:$Rm)))]> {
     let Inst{23-22} = 0b00;
   }
@@ -6153,7 +6206,7 @@ multiclass FPComparison<bit signalAllNans, string asm,
     let Inst{23-22} = 0b00;
   }
 
-  def Drr : BaseTwoOperandFPComparison<signalAllNans, FPR64, asm,
+  def Drr : BaseTwoOperandFPComparison<0b0, {signalAllNans, 0}, FPR64, asm,
       [(set NZCV, (OpNode FPR64:$Rn, (f64 FPR64:$Rm)))]> {
     let Inst{23-22} = 0b01;
   }
@@ -6162,7 +6215,20 @@ multiclass FPComparison<bit signalAllNans, string asm,
       [(set NZCV, (OpNode (f64 FPR64:$Rn), fpimm0))]> {
     let Inst{23-22} = 0b01;
   }
-  } // Defs = [NZCV]
+}
+
+multiclass FPTotalOrderComparison<bit magnitude, string asm> {
+  def Hrr : BaseTwoOperandFPComparison<0b1, {0, magnitude}, FPR16, asm, []> {
+    let Inst{23-22} = 0b11;
+  }
+
+  def Srr : BaseTwoOperandFPComparison<0b1, {0, magnitude}, FPR32, asm, []> {
+    let Inst{23-22} = 0b00;
+  }
+
+  def Drr : BaseTwoOperandFPComparison<0b1, {0, magnitude}, FPR64, asm, []> {
+    let Inst{23-22} = 0b01;
+  }
 }
 
 //---

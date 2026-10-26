@@ -64,6 +64,13 @@ struct V2PhysSCopyInfo {
 static const MachineMemOperand::Flags MOThreadPrivate =
     MachineMemOperand::MOTargetFlag4;
 
+/// Use two MMO flags to encode the 2-bit cache fill size field for GFX13+
+static const MachineMemOperand::Flags MOCFSB0 =
+    MachineMemOperand::MOTargetFlag5;
+
+static const MachineMemOperand::Flags MOCFSB1 =
+    MachineMemOperand::MOTargetFlag6;
+
 /// Utility to store machine instructions worklist.
 struct SIInstrWorklist {
   SIInstrWorklist() = default;
@@ -231,14 +238,14 @@ protected:
   bool swapSourceModifiers(MachineInstr &MI, MachineOperand &Src0,
                            AMDGPU::OpName Src0OpName, MachineOperand &Src1,
                            AMDGPU::OpName Src1OpName) const;
-  bool isLegalToSwap(const MachineInstr &MI, unsigned fromIdx,
-                     unsigned toIdx) const;
   bool isNonCommutableDPP(const MachineInstr &MI) const;
   MachineInstr *commuteInstructionImpl(MachineInstr &MI, bool NewMI,
                                        unsigned OpIdx0,
                                        unsigned OpIdx1) const override;
 
 public:
+  bool isLegalToSwap(const MachineInstr &MI, unsigned fromIdx,
+                     unsigned toIdx) const;
   enum TargetOperandFlags {
     MO_MASK = 0xf,
 
@@ -306,6 +313,15 @@ public:
                            int64_t Offset2, bool OffsetIsScalable2,
                            unsigned ClusterSize,
                            unsigned NumBytes) const override;
+
+  /// Return true if the memory operations described by \p BaseOps1 and
+  /// \p BaseOps2 (as returned by getMemOperandsWithOffsetWidth) address the
+  /// same base. Unlike shouldClusterMemOps, this does not apply the
+  /// MaxMemoryClusterDWords budget, which only bounds pre-RA register pressure.
+  /// Only the first base operand is compared, unlike
+  /// memOpsHaveSameBaseOperands which requires all of them to match.
+  bool memOpsHaveSameBase(ArrayRef<const MachineOperand *> BaseOps1,
+                          ArrayRef<const MachineOperand *> BaseOps2) const;
 
   bool shouldScheduleLoadsNear(SDNode *Load0, SDNode *Load1, int64_t Offset0,
                                int64_t Offset1, unsigned NumLoads) const override;
@@ -442,8 +458,8 @@ public:
 
   bool canInsertSelect(const MachineBasicBlock &MBB,
                        ArrayRef<MachineOperand> Cond, Register DstReg,
-                       Register TrueReg, Register FalseReg, int &CondCycles,
-                       int &TrueCycles, int &FalseCycles) const override;
+                       Register TrueReg, Register FalseReg,
+                       SelectExpansion &Exp) const override;
 
   void insertSelect(MachineBasicBlock &MBB,
                     MachineBasicBlock::iterator I, const DebugLoc &DL,
@@ -1559,6 +1575,13 @@ public:
   isLegalSingleSGPRReadInstOperand(const MachineRegisterInfo &MRI,
                                    const MachineInstr &MI, unsigned SrcN,
                                    const MachineOperand *MO = nullptr) const;
+
+  /// Check if \p MI has legal GFX950 v_pk_fma op_sel.
+  bool isLegalPkFMAF32OpSel(const MachineInstr &MI) const;
+
+  /// Decompose a GFX950 v_pk_fma_f32 with invalid op_sel into two independent
+  /// scalar V_FMA_F32_e64 instructions, replacing \p MI.
+  void decomposePkFMAF32(MachineInstr &MI, MachineRegisterInfo &MRI) const;
 
   /// Legalize operands in \p MI by either commuting it or inserting a
   /// copy of src1.

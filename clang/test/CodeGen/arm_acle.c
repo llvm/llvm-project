@@ -1989,9 +1989,120 @@ void test_atomic_store_hint_array_arg() {
   __builtin_arm_atomic_store_with_hint(storage, 0, __ATOMIC_RELAXED, HINT_STSHH_STRM);
 }
 
+// AArch64-LABEL: @test_atomic_fetch_hint_char(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    [[OLD:%.*]] = atomicrmw add ptr [[PTR:%.*]], i8 [[DATA:%.*]] monotonic, align 1, !mem.cache_hint [[FETCH0:![0-9]+]]
+// AArch64-NEXT:    ret i8 [[OLD]]
+//
+char test_atomic_fetch_hint_char(char *ptr, char data) {
+  return __arm_atomic_fetch_add_with_hint(ptr, data, __ATOMIC_RELAXED, 3);
+}
+
+// AArch64-LABEL: @test_atomic_fetch_hint_uchar(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    [[OLD:%.*]] = atomicrmw sub ptr [[PTR:%.*]], i8 [[DATA:%.*]] release, align 1, !mem.cache_hint [[FETCH1:![0-9]+]]
+// AArch64-NEXT:    ret i8 [[OLD]]
+//
+unsigned char test_atomic_fetch_hint_uchar(unsigned char *ptr, unsigned char data) {
+  return __arm_atomic_fetch_sub_with_hint(ptr, data, __ATOMIC_RELEASE, 4);
+}
+
+// AArch64-LABEL: @test_atomic_fetch_hint_short(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    [[OLD:%.*]] = atomicrmw and ptr [[PTR:%.*]], i16 [[DATA:%.*]] acquire, align 2, !mem.cache_hint [[FETCH0]]
+// AArch64-NEXT:    ret i16 [[OLD]]
+//
+short test_atomic_fetch_hint_short(short *ptr, short data) {
+  return __arm_atomic_fetch_and_with_hint(ptr, data, __ATOMIC_ACQUIRE, 3);
+}
+
+// AArch64-LABEL: @test_atomic_fetch_hint_ushort(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    [[OLD:%.*]] = atomicrmw xor ptr [[PTR:%.*]], i16 [[DATA:%.*]] acq_rel, align 2, !mem.cache_hint [[FETCH1]]
+// AArch64-NEXT:    ret i16 [[OLD]]
+//
+unsigned short test_atomic_fetch_hint_ushort(unsigned short *ptr, unsigned short data) {
+  return __arm_atomic_fetch_xor_with_hint(ptr, data, __ATOMIC_ACQ_REL, 4);
+}
+
+// AArch64-LABEL: @test_atomic_fetch_hint_int(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    [[OLD:%.*]] = atomicrmw or ptr [[PTR:%.*]], i32 [[DATA:%.*]] seq_cst, align 4, !mem.cache_hint [[FETCH0]]
+// AArch64-NEXT:    ret i32 [[OLD]]
+//
+int test_atomic_fetch_hint_int(int *ptr, int data) {
+  return __arm_atomic_fetch_or_with_hint(ptr, data, __ATOMIC_SEQ_CST, 3);
+}
+
+// AArch64-LABEL: @test_atomic_fetch_hint_unsigned(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    [[OLD:%.*]] = atomicrmw add ptr [[PTR:%.*]], i32 [[DATA:%.*]] acquire, align 4, !mem.cache_hint [[FETCH1]]
+// AArch64-NEXT:    ret i32 [[OLD]]
+//
+unsigned test_atomic_fetch_hint_unsigned(unsigned *ptr, unsigned data) {
+  return __arm_atomic_fetch_add_with_hint(ptr, data, __ATOMIC_CONSUME, 4);
+}
+
+// AArch64-LABEL: @test_atomic_fetch_hint_long(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    [[OLD:%.*]] = atomicrmw sub ptr [[PTR:%.*]], i64 [[DATA:%.*]] monotonic, align 8, !mem.cache_hint [[FETCH0]]
+// AArch64-NEXT:    ret i64 [[OLD]]
+//
+long test_atomic_fetch_hint_long(long *ptr, long data) {
+  return __arm_atomic_fetch_sub_with_hint(ptr, data, __ATOMIC_RELAXED, 3);
+}
+
+// AArch64-LABEL: @test_atomic_fetch_hint_bool(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    [[STOREDV:%.*]] = zext i1 [[DATA:%.*]] to i8
+// AArch64-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[STOREDV]], 0
+// AArch64-NEXT:    [[STOREDV1:%.*]] = zext i1 [[LOADEDV]] to i8
+// AArch64-NEXT:    [[OLD:%.*]] = atomicrmw xor ptr [[PTR:%.*]], i8 [[STOREDV1]] monotonic, align 1, !mem.cache_hint [[FETCH0]]
+// AArch64-NEXT:    [[LOADEDV1:%.*]] = icmp ne i8 [[OLD]], 0
+// AArch64-NEXT:    ret i1 [[LOADEDV1]]
+//
+bool test_atomic_fetch_hint_bool(bool *ptr, bool data) {
+  return __arm_atomic_fetch_xor_with_hint(ptr, data, __ATOMIC_RELAXED, 3);
+}
+
+// AArch64-LABEL: @test_atomic_fetch_hint_volatile(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    [[OLD:%.*]] = atomicrmw volatile or ptr [[PTR:%.*]], i32 [[DATA:%.*]] acq_rel, align 4, !mem.cache_hint [[FETCH0]]
+// AArch64-NEXT:    ret i32 [[OLD]]
+//
+int test_atomic_fetch_hint_volatile(volatile int *ptr, int data) {
+  return __arm_atomic_fetch_or_with_hint(ptr, data, __ATOMIC_ACQ_REL, 3);
+}
+
+// AArch64-LABEL: @test_atomic_fetch_hint_typedef(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    [[OLD:%.*]] = atomicrmw add ptr [[PTR:%.*]], i32 [[DATA:%.*]] release, align 4, !mem.cache_hint [[FETCH1]]
+// AArch64-NEXT:    ret i32 [[OLD]]
+//
+aliased_int test_atomic_fetch_hint_typedef(aliased_int *ptr, const int data) {
+  return __arm_atomic_fetch_add_with_hint(ptr, data, __ATOMIC_RELEASE, 4);
+}
+
+// AArch64-LABEL: @test_atomic_fetch_hint_array_arg(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    [[STORAGE:%.*]] = alloca [1 x i32], align 4
+// AArch64-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[STORAGE]], i8 0, i64 4, i1 false)
+// AArch64-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [1 x i32], ptr [[STORAGE]], i64 0, i64 0
+// AArch64-NEXT:    [[OLD:%.*]] = atomicrmw sub ptr [[ARRAYDECAY]], i32 1 monotonic, align 4, !mem.cache_hint [[FETCH1]]
+// AArch64-NEXT:    ret i32 [[OLD]]
+//
+int test_atomic_fetch_hint_array_arg(void) {
+  int storage[1] = {0};
+  return __arm_atomic_fetch_sub_with_hint(storage, 1, __ATOMIC_RELAXED, 4);
+}
+
 // AArch64: [[HINT1]] = !{i32 1, [[HINT2:![0-9]+]]}
 // AArch64-NEXT: [[HINT2]] = !{!"aarch64.mem_hint", i32 0}
 
 // AArch64-NEXT: [[HINT3]] = !{i32 1, [[HINT4:![0-9]+]]}
 // AArch64-NEXT: [[HINT4]] = !{!"aarch64.mem_hint", i32 1}
+// AArch64: [[FETCH0]] = !{i32 0, [[FETCH_HINT0:![0-9]+]]}
+// AArch64-NEXT: [[FETCH_HINT0]] = !{!"aarch64.mem_hint", i32 3}
+// AArch64-NEXT: [[FETCH1]] = !{i32 0, [[FETCH_HINT1:![0-9]+]]}
+// AArch64-NEXT: [[FETCH_HINT1]] = !{!"aarch64.mem_hint", i32 4}
 #endif

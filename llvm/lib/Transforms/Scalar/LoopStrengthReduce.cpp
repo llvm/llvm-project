@@ -104,7 +104,6 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -144,14 +143,13 @@ static const unsigned MaxIVUsers = 200;
 /// the salvaging is not too expensive for the compiler.
 static const unsigned MaxSCEVSalvageExpressionSize = 64;
 
+static bool stressIVChain(const ScalarOptions &Opts) {
 #ifndef NDEBUG
-// Stress test IV chain generation.
-static cl::opt<bool> StressIVChain(
-  "stress-ivchain", cl::Hidden, cl::init(false),
-  cl::desc("Stress test LSR IV chains"));
+  return Opts.stress_ivchain;
 #else
-static bool StressIVChain = false;
+  return false;
 #endif
+}
 
 namespace {
 
@@ -771,6 +769,10 @@ static bool isMulSExtable(const SCEVMulExpr *M, ScalarEvolution &SE) {
 static const SCEV *getExactSDiv(const SCEV *LHS, const SCEV *RHS,
                                 ScalarEvolution &SE,
                                 bool IgnoreSignificantBits = false) {
+  // A stride can fold to zero once the callers sign-extend it.
+  if (RHS->isZero())
+    return nullptr;
+
   // Handle the trivial case, which works for any SCEV type.
   if (LHS == RHS)
     return SE.getConstant(LHS->getType(), 1);
@@ -1713,7 +1715,7 @@ bool LSRUse::InsertFormula(const Formula &F, const Loop &L) {
   SmallVector<const SCEV *, 4> Key = F.BaseRegs;
   if (F.ScaledReg) Key.push_back(F.ScaledReg);
   // Unstable sort by host order ok, because this is only used for uniquifying.
-  llvm::sort(Key);
+  llvm::sort(Key, std::less<>());
 
   if (!Uniquifier.insert(Key).second)
     return false;
@@ -2197,6 +2199,9 @@ class LSRInstance {
   void OptimizeShadowIV();
   bool FindIVUserForCond(Instruction *Cond, IVStrideUse *&CondUse);
   Instruction *OptimizeMax(ICmpInst *Cond, IVStrideUse *&CondUse);
+  ICmpInst *OptimizeLoopTermCondToEquality(ICmpInst *Cond,
+                                           IVStrideUse *&CondUse,
+                                           BasicBlock *ExitingBlock);
   void OptimizeLoopTermCond();
 
   void ChainInstruction(Instruction *UserInst, Instruction *IVOper,
@@ -2450,6 +2455,70 @@ bool LSRInstance::FindIVUserForCond(Instruction *Cond, IVStrideUse *&CondUse) {
   return false;
 }
 
+/// Replace a relational loop exit with an equality comparison when the target
+/// prefers the exact exit value as an equality immediate.
+ICmpInst *LSRInstance::OptimizeLoopTermCondToEquality(
+    ICmpInst *Cond, IVStrideUse *&CondUse, BasicBlock *ExitingBlock) {
+  if (Cond->isEquality() || ExitingBlock != L->getLoopLatch())
+    return Cond;
+
+  auto *IV = dyn_cast<PHINode>(CondUse->getOperandValToReplace());
+  if (!IV || !IV->getType()->isIntegerTy() || IV->getParent() != L->getHeader())
+    return Cond;
+
+  const auto *AR = dyn_cast<SCEVAddRecExpr>(SE.getSCEV(IV));
+  if (!AR || AR->getLoop() != L || !AR->isAffine())
+    return Cond;
+
+  const auto *Step = dyn_cast<SCEVConstant>(AR->getStepRecurrence(SE));
+  if (!Step || Step->isZero())
+    return Cond;
+
+  const SCEV *ExitCount = SE.getExitCount(L, ExitingBlock);
+  if (isa<SCEVCouldNotCompute>(ExitCount))
+    return Cond;
+
+  // A W-bit add recurrence with step S has period
+  // 2^W / gcd(2^W, S) = 2^(W - countr_zero(S)). Require the exit count to be
+  // smaller without relying on poison-derived no-wrap flags, so equality
+  // cannot match on an earlier iteration.
+  const APInt &StepValue = Step->getAPInt();
+  unsigned RecurrencePeriodLog2 =
+      StepValue.getBitWidth() - StepValue.countr_zero();
+  if (!SE.getUnsignedRangeMax(ExitCount).isIntN(RecurrencePeriodLog2))
+    return Cond;
+
+  const auto *ExitValue =
+      dyn_cast<SCEVConstant>(AR->evaluateAtIteration(ExitCount, SE));
+  if (!ExitValue || !TTI.preferLoopExitWithEqualityComparison(
+                        *Cond, ExitValue->getAPInt() + StepValue))
+    return Cond;
+
+  LLVM_DEBUG(dbgs() << "  Rewriting loop exit to compare " << *IV << " against "
+                    << *ExitValue << '\n');
+
+  auto *TermBr = cast<CondBrInst>(ExitingBlock->getTerminator());
+  bool TrueContinues = L->contains(TermBr->getSuccessor(0));
+  assert(TrueContinues != L->contains(TermBr->getSuccessor(1)) &&
+         "Expected exactly one in-loop successor");
+
+  auto Pred = TrueContinues ? ICmpInst::ICMP_NE : ICmpInst::ICMP_EQ;
+  auto *NewCond = new ICmpInst(TermBr->getIterator(), Pred, IV,
+                               ExitValue->getValue(), "lsr.exitcond");
+  NewCond->setDebugLoc(Cond->getDebugLoc());
+  TermBr->setCondition(NewCond);
+
+  if (Cond->use_empty()) {
+    CondUse->setUser(NewCond);
+    Cond->eraseFromParent();
+  } else {
+    CondUse = &IU.AddUser(NewCond, IV);
+  }
+
+  Changed = true;
+  return NewCond;
+}
+
 /// Rewrite the loop's terminating condition if it uses a max computation.
 ///
 /// This is a narrow solution to a specific, but acute, problem. For loops
@@ -2675,6 +2744,9 @@ LSRInstance::OptimizeLoopTermCond() {
     // Check for dominance.
     if (!DT.dominates(ExitingBlock, LatchBlock))
       continue;
+
+    if (auto *Cmp = dyn_cast<ICmpInst>(Cond))
+      Cond = OptimizeLoopTermCondToEquality(Cmp, CondUse, ExitingBlock);
 
     // Conservatively avoid trying to use the post-inc value in non-latch
     // exits if there may be pre-inc users in intervening blocks.
@@ -3055,10 +3127,6 @@ static const SCEV *getExprBase(const SCEV *S) {
 bool IVChain::isProfitableIncrement(const SCEV *OperExpr,
                                     const SCEV *IncExpr,
                                     ScalarEvolution &SE) {
-  // Aggressively form chains when -stress-ivchain.
-  if (StressIVChain)
-    return true;
-
   // Do not replace a constant offset from IV head with a nonconstant IV
   // increment.
   if (!isa<SCEVConstant>(IncExpr)) {
@@ -3085,9 +3153,6 @@ static bool isProfitableChain(IVChain &Chain,
                               SmallPtrSetImpl<Instruction *> &Users,
                               ScalarEvolution &SE,
                               const TargetTransformInfo &TTI) {
-  if (StressIVChain)
-    return true;
-
   if (!Chain.hasIncs())
     return false;
 
@@ -3179,7 +3244,7 @@ void LSRInstance::ChainInstruction(Instruction *UserInst, Instruction *IVOper,
     // are expressions that operate on the same unscaled SCEVUnknown. This
     // "base" will be canceled by the subsequent getMinusSCEV call. Checking
     // first avoids creating extra SCEV expressions.
-    if (!StressIVChain && Chain.ExprBase != OperExprBase)
+    if (!stressIVChain(Opts) && Chain.ExprBase != OperExprBase)
       continue;
 
     Value *PrevIV = getWideOperand(Chain.Incs.back().IVOperand);
@@ -3196,7 +3261,9 @@ void LSRInstance::ChainInstruction(Instruction *UserInst, Instruction *IVOper,
     if (isa<SCEVCouldNotCompute>(IncExpr) || !SE.isLoopInvariant(IncExpr, L))
       continue;
 
-    if (Chain.isProfitableIncrement(OperExpr, IncExpr, SE)) {
+    // Aggressively form chains when -stress-ivchain.
+    if (stressIVChain(Opts) ||
+        Chain.isProfitableIncrement(OperExpr, IncExpr, SE)) {
       LastIncExpr = IncExpr;
       break;
     }
@@ -3206,7 +3273,7 @@ void LSRInstance::ChainInstruction(Instruction *UserInst, Instruction *IVOper,
   if (ChainIdx == NChains) {
     if (isa<PHINode>(UserInst))
       return;
-    if (NChains >= MaxChains && !StressIVChain) {
+    if (NChains >= MaxChains && !stressIVChain(Opts)) {
       LLVM_DEBUG(dbgs() << "IV Chain Limit\n");
       return;
     }
@@ -3352,7 +3419,8 @@ void LSRInstance::CollectChains() {
   unsigned ChainIdx = 0;
   for (unsigned UsersIdx = 0, NChains = IVChainVec.size();
        UsersIdx < NChains; ++UsersIdx) {
-    if (!isProfitableChain(IVChainVec[UsersIdx],
+    if (!stressIVChain(Opts) &&
+        !isProfitableChain(IVChainVec[UsersIdx],
                            ChainUsersVec[UsersIdx].FarUsers, SE, TTI))
       continue;
     // Preserve the chain at UsesIdx.
@@ -6005,7 +6073,8 @@ void LSRInstance::RewriteForPHI(PHINode *PN, const LSRUse &LU,
           } else {
             SmallVector<BasicBlock *, 2> NewBBs;
             DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
-            SplitLandingPadPredecessors(Parent, BB, "", "", NewBBs, &DTU, &LI);
+            SplitLandingPadPredecessors(Parent, BB, "", "", NewBBs, &DTU, &LI,
+                                        MSSAU, ShouldPreserveLCSSA);
             NewBB = NewBBs[0];
           }
           // If NewBB==NULL, then SplitCriticalEdge refused to split because all
@@ -6330,7 +6399,7 @@ LSRInstance::LSRInstance(const ScalarOptions &Opts, Loop *L, IVUsers &IU,
   // registers.
   // FIXME: add profitable chain optimization for other kinds major cost, for
   // example number of instructions.
-  if (TTI.isNumRegsMajorCostOfLSR() || StressIVChain)
+  if (TTI.isNumRegsMajorCostOfLSR() || stressIVChain(Opts))
     CollectChains();
   CollectInterestingTypesAndFactors();
   CollectFixupsAndInitialFormulae();
@@ -7137,7 +7206,7 @@ static bool ReduceLoopStrength(Loop *L, IVUsers &IU, ScalarEvolution &SE,
                                const TargetTransformInfo &TTI,
                                AssumptionCache &AC, TargetLibraryInfo &TLI,
                                MemorySSA *MSSA, bool PreserveLCSSA) {
-  const ScalarOptions &Opts = ScalarOptions::Global;
+  const ScalarOptions &Opts = getScalarOptions(*L);
 
   // Debug preservation - before we start removing anything identify which DVI
   // meet the salvageable criteria and store their DIExpression and SCEVs.

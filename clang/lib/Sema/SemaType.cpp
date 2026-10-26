@@ -1298,11 +1298,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     break;
   }
   case DeclSpec::TST_typename_pack_indexing: {
-    Expr *E = DS.getPackIndexingExpr();
-    assert(E && "Didn't get an expression for pack indexing");
-    QualType Pattern = S.GetTypeFromParser(DS.getRepAsType());
-    Result = S.BuildPackIndexingType(Pattern, E, DS.getBeginLoc(),
-                                     DS.getEllipsisLoc());
+    Result = S.GetTypeFromParser(DS.getRepAsType());
     if (Result.isNull()) {
       declarator.setInvalidType(true);
       Result = Context.IntTy;
@@ -6141,7 +6137,9 @@ namespace {
     }
     void VisitPackIndexingTypeLoc(PackIndexingTypeLoc TL) {
       assert(DS.getTypeSpecType() == DeclSpec::TST_typename_pack_indexing);
-      TL.setEllipsisLoc(DS.getEllipsisLoc());
+      TypeSourceInfo *TInfo = nullptr;
+      Sema::GetTypeFromParser(DS.getRepAsType(), &TInfo);
+      TL.copy(TInfo->getTypeLoc());
     }
     void VisitUnaryTransformTypeLoc(UnaryTransformTypeLoc TL) {
       assert(DS.isTransformTypeTrait(DS.getTypeSpecType()));
@@ -6657,23 +6655,6 @@ QualType Sema::BuildAddressSpaceAttr(QualType &T, Expr *AddrSpace,
 static void HandleBTFTypeTagAttribute(QualType &Type, const ParsedAttr &Attr,
                                       TypeProcessingState &State) {
   Sema &S = State.getSema();
-
-  // This attribute is only supported in C.
-  // FIXME: we should implement checkCommonAttributeFeatures() in SemaAttr.cpp
-  // such that it handles type attributes, and then call that from
-  // processTypeAttrs() instead of one-off checks like this.
-  if (!Attr.diagnoseLangOpts(S)) {
-    Attr.setInvalid();
-    return;
-  }
-
-  // Check the number of attribute arguments.
-  if (Attr.getNumArgs() != 1) {
-    S.Diag(Attr.getLoc(), diag::err_attribute_wrong_number_arguments)
-        << Attr << 1;
-    Attr.setInvalid();
-    return;
-  }
 
   // Ensure the argument is a string.
   auto *StrLiteral = dyn_cast<StringLiteral>(Attr.getArgAsExpr(0));
@@ -8582,13 +8563,6 @@ static void HandleVectorSizeAttr(QualType &CurType, const ParsedAttr &Attr,
 /// a type.
 static void HandleExtVectorTypeAttr(QualType &CurType, const ParsedAttr &Attr,
                                     Sema &S) {
-  // check the attribute arguments.
-  if (Attr.getNumArgs() != 1) {
-    S.Diag(Attr.getLoc(), diag::err_attribute_wrong_number_arguments) << Attr
-                                                                      << 1;
-    return;
-  }
-
   Expr *SizeExpr = Attr.getArgAsExpr(0);
   QualType T = S.BuildExtVectorType(CurType, SizeExpr, Attr.getLoc());
   if (!T.isNull())
@@ -8690,13 +8664,6 @@ static void HandleNeonVectorTypeAttr(QualType &CurType, const ParsedAttr &Attr,
     return;
   }
 
-  // Check the attribute arguments.
-  if (Attr.getNumArgs() != 1) {
-    S.Diag(Attr.getLoc(), diag::err_attribute_wrong_number_arguments)
-        << Attr << 1;
-    Attr.setInvalid();
-    return;
-  }
   // The number of elements must be an ICE.
   llvm::APSInt numEltsInt(32);
   if (!verifyValidIntegerConstantExpr(S, Attr, numEltsInt))
@@ -8803,14 +8770,6 @@ static void HandleArmSveVectorBitsTypeAttr(QualType &CurType, ParsedAttr &Attr,
     return;
   }
 
-  // Check the attribute arguments.
-  if (Attr.getNumArgs() != 1) {
-    S.Diag(Attr.getLoc(), diag::err_attribute_wrong_number_arguments)
-        << Attr << 1;
-    Attr.setInvalid();
-    return;
-  }
-
   // The vector size must be an integer constant expression.
   llvm::APSInt SveVectorSizeInBits(32);
   if (!verifyValidIntegerConstantExpr(S, Attr, SveVectorSizeInBits))
@@ -8883,14 +8842,6 @@ static void HandleRISCVRVVVectorBitsTypeAttr(QualType &CurType,
   if (!VScale || !VScale->first || VScale->first != VScale->second) {
     S.Diag(Attr.getLoc(), diag::err_attribute_riscv_rvv_bits_unsupported)
         << Attr;
-    Attr.setInvalid();
-    return;
-  }
-
-  // Check the attribute arguments.
-  if (Attr.getNumArgs() != 1) {
-    S.Diag(Attr.getLoc(), diag::err_attribute_wrong_number_arguments)
-        << Attr << 1;
     Attr.setInvalid();
     return;
   }
@@ -9016,12 +8967,6 @@ static void HandleMatrixTypeAttr(QualType &CurType, const ParsedAttr &Attr,
     return;
   }
 
-  if (Attr.getNumArgs() != 2) {
-    S.Diag(Attr.getLoc(), diag::err_attribute_wrong_number_arguments)
-        << Attr << 2;
-    return;
-  }
-
   Expr *RowsExpr = Attr.getArgAsExpr(0);
   Expr *ColsExpr = Attr.getArgAsExpr(1);
   QualType T = S.BuildMatrixType(CurType, RowsExpr, ColsExpr, Attr.getLoc());
@@ -9094,6 +9039,30 @@ static void HandleHLSLParamModifierAttr(TypeProcessingState &State,
   }
 }
 
+bool Sema::ProcessLateParsedTypeAttr(LateParsedTypeAttrInfo &LA, QualType &QT) {
+  // A DeclSpec attribute runs this once per declarator, as in
+  // `IP __counted_by(n) a, b;`. Reuse one node, as the eager path does, so no
+  // node is left without a count.
+  if (LA.TypeToComplete) {
+    QT = QualType(LA.TypeToComplete, 0);
+    return true;
+  }
+
+  // Nesting is checked once the enclosing declarator chunks wrap the node.
+  BoundsAttrFlags Flags;
+  if (!ValidateBoundsAttrTypeForTypePosition(QT, LA.Kind, LA.NameLoc,
+                                             SourceRange(LA.NameLoc),
+                                             /*PointerNestLevel=*/0, Flags))
+    return false;
+
+  // The argument isn't parsed yet, so build the type without a count.
+  CountAttributedType *CATy = getASTContext().getIncompleteCountAttributedType(
+      QT, Flags.CountInBytes, Flags.OrNull);
+  QT = QualType(CATy, 0);
+  LA.TypeToComplete = CATy;
+  return true;
+}
+
 static void processTypeAttrs(TypeProcessingState &state, QualType &type,
                              TypeAttrLocation TAL,
                              const ParsedAttributesView &attrs,
@@ -9145,6 +9114,12 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
         //   that can be applied to the declaration name).
         continue;
       }
+    }
+
+    if (attr.isTypeAttr() &&
+        state.getSema().checkCommonAttributeFeatures(type, attr)) {
+      attr.setInvalid();
+      continue;
     }
 
     // If this is an attribute we can handle, do so now,
@@ -10205,8 +10180,7 @@ QualType Sema::BuildDecltypeType(Expr *E, bool AsUnevaluated) {
 }
 
 QualType Sema::ActOnPackIndexingType(QualType Pattern, Expr *IndexExpr,
-                                     SourceLocation Loc,
-                                     SourceLocation EllipsisLoc) {
+                                     SourceLocation Loc) {
   if (!IndexExpr)
     return QualType();
 
@@ -10214,7 +10188,7 @@ QualType Sema::ActOnPackIndexingType(QualType Pattern, Expr *IndexExpr,
   if (!Pattern->containsUnexpandedParameterPack())
     Diag(Loc, diag::err_expected_name_of_pack) << Pattern;
 
-  QualType Type = BuildPackIndexingType(Pattern, IndexExpr, Loc, EllipsisLoc);
+  QualType Type = BuildPackIndexingType(Pattern, IndexExpr, Loc);
 
   if (!Type.isNull())
     DiagCompat(Loc, diag_compat::pack_indexing);
@@ -10222,9 +10196,7 @@ QualType Sema::ActOnPackIndexingType(QualType Pattern, Expr *IndexExpr,
 }
 
 QualType Sema::BuildPackIndexingType(QualType Pattern, Expr *IndexExpr,
-                                     SourceLocation Loc,
-                                     SourceLocation EllipsisLoc,
-                                     bool FullySubstituted,
+                                     SourceLocation Loc, bool FullySubstituted,
                                      ArrayRef<QualType> Expansions) {
 
   UnsignedOrNone Index = std::nullopt;

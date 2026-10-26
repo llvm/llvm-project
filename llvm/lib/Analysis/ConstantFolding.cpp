@@ -1211,6 +1211,11 @@ Constant *ConstantFoldInstOperandsImpl(const Value *InstOrCE, unsigned Opcode,
   case Instruction::ShuffleVector:
     return ConstantExpr::getShuffleVector(
         Ops[0], Ops[1], cast<ShuffleVectorInst>(InstOrCE)->getShuffleMask());
+  case Instruction::BitInsert:
+    return ConstantFoldBitInsertOperands(Ops[0], Ops[1], Ops[2], DL);
+  case Instruction::BitExtract:
+    return ConstantFoldBitExtractOperands(InstOrCE->getType(), Ops[0], Ops[1],
+                                          DL);
   case Instruction::Load: {
     const auto *LI = dyn_cast<LoadInst>(InstOrCE);
     if (LI->isVolatile())
@@ -1730,6 +1735,87 @@ Constant *llvm::ConstantFoldIntegerCast(Constant *C, Type *DestTy,
   return ConstantFoldCastOperand(Instruction::ZExt, C, DestTy, DL);
 }
 
+Constant *llvm::ConstantFoldBitInsertOperands(Constant *Base, Constant *Val,
+                                              Constant *Offset,
+                                              const DataLayout &DL) {
+  // bitinsert C, C, undef -> poison
+  if (isa<UndefValue>(Offset))
+    return PoisonValue::get(Base->getType());
+
+  // bitinsert poison, poison, C -> poison
+  if (isa<PoisonValue>(Base) && isa<PoisonValue>(Val))
+    return Base;
+
+  auto *COffset = dyn_cast<ConstantInt>(Offset);
+  if (!COffset)
+    return nullptr;
+
+  // bitinsert C, C, out_of_range -> poison
+  unsigned BaseBits = DL.getTypeSizeInBits(Base->getType());
+  unsigned Bits = DL.getTypeSizeInBits(Val->getType());
+  uint64_t Off = COffset->getZExtValue();
+  if (Off + Bits > BaseBits)
+    return PoisonValue::get(Base->getType());
+
+  // Overwriting every bit of the base is a bitcast of the value.
+  if (Bits == BaseBits)
+    return ConstantFoldCastOperand(Instruction::BitCast, Val, Base->getType(),
+                                   DL);
+
+  // bitinsert undef, undef, C -> undef
+  // Any poison bits are refined to undef.
+  if (isa<UndefValue>(Base) && isa<UndefValue>(Val))
+    return UndefValue::get(Base->getType());
+
+  // A byte constant can't mix poison or undef bits with other bits.
+  auto *CB = dyn_cast<ConstantByte>(Base);
+  // The value bits are unknown.
+  if (!CB || isa<ConstantExpr>(Val) || Val->getType()->isPointerTy())
+    return nullptr;
+
+  auto *CI = dyn_cast_or_null<ConstantInt>(
+      ConstantFoldCastOperand(Instruction::BitCast, Val,
+                              IntegerType::get(Base->getContext(), Bits), DL));
+  if (!CI)
+    return nullptr;
+
+  APInt Res = CB->getValue();
+  Res.insertBits(CI->getValue(), Off);
+  return ConstantByte::get(Base->getType(), Res);
+}
+
+Constant *llvm::ConstantFoldBitExtractOperands(Type *Ty, Constant *Src,
+                                               Constant *Offset,
+                                               const DataLayout &DL) {
+  // bitextract poison, C -> poison
+  // bitextract C, undef -> poison
+  if (isa<PoisonValue>(Src) || isa<UndefValue>(Offset))
+    return PoisonValue::get(Ty);
+
+  auto *COffset = dyn_cast<ConstantInt>(Offset);
+  if (!COffset)
+    return nullptr;
+
+  // bitextract C, out_of_range -> poison
+  unsigned Bits = DL.getTypeSizeInBits(Ty);
+  uint64_t Off = COffset->getZExtValue();
+  if (Off + Bits > DL.getTypeSizeInBits(Src->getType()))
+    return PoisonValue::get(Ty);
+
+  // bitextract undef, C -> undef
+  if (isa<UndefValue>(Src))
+    return UndefValue::get(Ty);
+
+  auto *CB = dyn_cast<ConstantByte>(Src);
+  // An integer can't be bitcast to a pointer.
+  if (!CB || Ty->isPointerTy())
+    return nullptr;
+
+  APInt Res = CB->getValue().extractBits(Bits, Off);
+  return ConstantFoldCastOperand(
+      Instruction::BitCast, ConstantInt::get(Src->getContext(), Res), Ty, DL);
+}
+
 //===----------------------------------------------------------------------===//
 //  Constant Folding for Calls
 //
@@ -1751,6 +1837,7 @@ static bool canConstantFoldIntrinsic(Intrinsic::ID ID, bool IsStrictFP) {
   case Intrinsic::launder_invariant_group:
   case Intrinsic::masked_load:
   case Intrinsic::get_active_lane_mask:
+  case Intrinsic::mask_beforefirst:
   case Intrinsic::abs:
   case Intrinsic::smax:
   case Intrinsic::smin:
@@ -1814,6 +1901,12 @@ static bool canConstantFoldIntrinsic(Intrinsic::ID ID, bool IsStrictFP) {
   case Intrinsic::amdgcn_s_wqm:
   case Intrinsic::amdgcn_s_quadmask:
   case Intrinsic::amdgcn_s_bitreplicate:
+  case Intrinsic::arm_crc32b:
+  case Intrinsic::arm_crc32h:
+  case Intrinsic::arm_crc32w:
+  case Intrinsic::arm_crc32cb:
+  case Intrinsic::arm_crc32ch:
+  case Intrinsic::arm_crc32cw:
   case Intrinsic::arm_mve_vctp8:
   case Intrinsic::arm_mve_vctp16:
   case Intrinsic::arm_mve_vctp32:
@@ -3951,20 +4044,26 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
     case Intrinsic::amdgcn_wave_reduce_or:
       return Operands[0];
     case Intrinsic::aarch64_crc32b:
+    case Intrinsic::arm_crc32b:
       return ConstantFoldCRC32(Ty, C0, C1, 1, 0xEDB88320);
     case Intrinsic::aarch64_crc32h:
+    case Intrinsic::arm_crc32h:
       return ConstantFoldCRC32(Ty, C0, C1, 2, 0xEDB88320);
     case Intrinsic::aarch64_crc32w:
+    case Intrinsic::arm_crc32w:
       return ConstantFoldCRC32(Ty, C0, C1, 4, 0xEDB88320);
     case Intrinsic::aarch64_crc32x:
       return ConstantFoldCRC32(Ty, C0, C1, 8, 0xEDB88320);
     case Intrinsic::aarch64_crc32cb:
+    case Intrinsic::arm_crc32cb:
     case Intrinsic::x86_sse42_crc32_32_8:
       return ConstantFoldCRC32(Ty, C0, C1, 1, 0x82F63B78);
     case Intrinsic::aarch64_crc32ch:
+    case Intrinsic::arm_crc32ch:
     case Intrinsic::x86_sse42_crc32_32_16:
       return ConstantFoldCRC32(Ty, C0, C1, 2, 0x82F63B78);
     case Intrinsic::aarch64_crc32cw:
+    case Intrinsic::arm_crc32cw:
     case Intrinsic::x86_sse42_crc32_32_32:
       return ConstantFoldCRC32(Ty, C0, C1, 4, 0x82F63B78);
     case Intrinsic::aarch64_crc32cx:
@@ -4453,6 +4552,23 @@ static Constant *ConstantFoldFixedVectorCall(
     }
     return nullptr;
   }
+  case Intrinsic::mask_beforefirst: {
+    Constant *True = ConstantInt::getTrue(Ty);
+    Constant *False = ConstantInt::getFalse(Ty);
+    Constant *Current = True;
+    for (unsigned I = 0, E = FVTy->getNumElements(); I != E; ++I) {
+      Constant *Elt = Operands[0]->getAggregateElement(I);
+      if (isa_and_nonnull<PoisonValue>(Elt))
+        return PoisonValue::get(FVTy);
+      auto *CI = dyn_cast_or_null<ConstantInt>(Elt);
+      if (!CI)
+        return nullptr;
+      if (CI->isOne())
+        Current = False;
+      Result[I] = Current;
+    }
+    return ConstantVector::get(Result);
+  }
   case Intrinsic::vector_extract: {
     auto *Idx = dyn_cast<ConstantInt>(Operands[1]);
     Constant *Vec = Operands[0];
@@ -4611,6 +4727,14 @@ static Constant *ConstantFoldScalableVectorCall(
     auto *Op1 = dyn_cast<ConstantInt>(Operands[1]);
     if (Op0 && Op1 && Op0->getValue().uge(Op1->getValue()))
       return ConstantVector::getNullValue(SVTy);
+    break;
+  }
+  case Intrinsic::mask_beforefirst: {
+    Constant *SplatVal = Operands[0]->getSplatValue();
+    if (isa_and_nonnull<PoisonValue>(SplatVal))
+      return PoisonValue::get(SVTy);
+    if (auto *CI = dyn_cast_if_present<ConstantInt>(SplatVal))
+      return ConstantInt::getBool(SVTy, CI->isZero());
     break;
   }
   case Intrinsic::vector_interleave2:

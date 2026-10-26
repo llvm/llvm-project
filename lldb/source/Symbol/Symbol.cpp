@@ -501,6 +501,8 @@ Symbol *Symbol::ResolveReExportedSymbolInModuleSpec(
     for (const SymbolContext &sc : sc_list) {
       if (!sc.symbol->IsExternal() && !sc.symbol->IsWeak())
         continue;
+      if (sc.symbol->GetType() == eSymbolTypeUndefined)
+        continue;
       // Don't return a symbol that itself only re-exports the definition
       // (e.g. an ELF filter library's placeholder): the real definition is
       // found by following the module-level re-exports below, which also
