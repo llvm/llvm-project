@@ -196,4 +196,26 @@ template <typename T> void braced_init_templ() {
     ;
 }
 void braced_init_inst() { braced_init_templ<int>(); }
+
+struct It {
+  int *p;
+  It &operator++() { ++p; return *this; }
+  It &operator+=(int n) { p += n; return *this; }
+  friend bool operator<(It a, It b) { return a.p < b.p; }
+  friend int operator-(It a, It b) { return a.p - b.p; }
+  friend It operator+(It a, int n) { return {a.p + n}; }
+};
+void aggregate_counter(int *q) {
+#pragma omp for
+  for (It it = {q}; it < It{q + 4}; ++it)
+    ;
+
+#pragma omp unroll partial
+  for (It it = {q}; it < It{q + 4}; ++it)
+    ;
+
+#pragma omp unroll partial
+  for (It it = {}; it < It{q + 4}; ++it)
+    ;
+}
 }

@@ -6020,6 +6020,26 @@ static QualType getIntTypeForBitwidthOrBitInt(ASTContext &C, unsigned Bits,
   return Ty;
 }
 
+static Expr *buildInitListValue(Sema &SemaRef, Expr *E) {
+  auto *ILE = dyn_cast<InitListExpr>(E);
+  if (!ILE)
+    return E;
+  if (ILE->isTransparent())
+    return buildInitListValue(SemaRef, ILE->getInit(0));
+  ASTContext &Context = SemaRef.Context;
+  QualType Ty = ILE->getType();
+  bool IsEmptyScalar = ILE->getNumInits() == 0 && Ty->isScalarType();
+  if (!SemaRef.getLangOpts().CPlusPlus)
+    return IsEmptyScalar ? new (Context) ImplicitValueInitExpr(Ty) : E;
+  if (!IsEmptyScalar && !Ty->isRecordType())
+    return E;
+  return CXXFunctionalCastExpr::Create(
+      Context, Ty, VK_PRValue,
+      Context.getTrivialTypeSourceInfo(Ty, ILE->getLBraceLoc()), CK_NoOp, ILE,
+      /*Path=*/nullptr, SemaRef.CurFPFeatureOverrides(), SourceLocation(),
+      SourceLocation());
+}
+
 static VarDecl *precomputeExpr(Sema &Actions,
                                SmallVectorImpl<Stmt *> &BodyStmts, Expr *E,
                                StringRef Name) {
@@ -6364,11 +6384,11 @@ StmtResult SemaOpenMP::ActOnOpenMPCanonicalLoop(Stmt *AStmt) {
         llvm::APInt(Ctx.getIntWidth(LogicalTy), Direction, /*isSigned=*/true),
         LogicalTy, {});
   } else if (auto *IncBin = dyn_cast<BinaryOperator>(Inc)) {
+    Expr *IncRHS = buildInitListValue(SemaRef, IncBin->getRHS());
     if (IncBin->getOpcode() == BO_AddAssign) {
-      Step = IncBin->getRHS();
+      Step = IncRHS;
     } else if (IncBin->getOpcode() == BO_SubAssign) {
-      Step = AssertSuccess(
-          SemaRef.BuildUnaryOp(nullptr, {}, UO_Minus, IncBin->getRHS()));
+      Step = AssertSuccess(SemaRef.BuildUnaryOp(nullptr, {}, UO_Minus, IncRHS));
     } else
       llvm_unreachable("unhandled binary increment operator");
   } else if (auto *CondCXXOp = dyn_cast<CXXOperatorCallExpr>(Inc)) {
@@ -6382,11 +6402,12 @@ StmtResult SemaOpenMP::ActOnOpenMPCanonicalLoop(Stmt *AStmt) {
           Ctx, llvm::APInt(Ctx.getIntWidth(LogicalTy), -1), LogicalTy, {});
       break;
     case OO_PlusEqual:
-      Step = CondCXXOp->getArg(1);
+      Step = buildInitListValue(SemaRef, CondCXXOp->getArg(1));
       break;
     case OO_MinusEqual:
-      Step = AssertSuccess(
-          SemaRef.BuildUnaryOp(nullptr, {}, UO_Minus, CondCXXOp->getArg(1)));
+      Step = AssertSuccess(SemaRef.BuildUnaryOp(
+          nullptr, {}, UO_Minus,
+          buildInitListValue(SemaRef, CondCXXOp->getArg(1))));
       break;
     default:
       llvm_unreachable("unhandled overloaded increment operator");
@@ -8701,19 +8722,6 @@ static const StmtExpr *findStmtExpr(const Expr *E) {
   return nullptr;
 }
 
-static ExprResult buildInitListValue(Sema &SemaRef, Expr *E) {
-  auto *ILE = dyn_cast<InitListExpr>(E);
-  if (!ILE)
-    return E;
-  if (ILE->isTransparent())
-    return buildInitListValue(SemaRef, ILE->getInit(0));
-  if (ILE->getNumInits() != 0 || !ILE->getType()->isScalarType())
-    return E;
-  return SemaRef.PerformImplicitConversion(
-      SemaRef.ActOnIntegerConstant(ILE->getLBraceLoc(), 0).get(),
-      ILE->getType(), AssignmentAction::Converting);
-}
-
 bool OpenMPIterationSpaceChecker::checkNonRectangularBound(
     const Expr *E, bool IsInitializer) const {
   // Such a bound is emitted at every use, its declarations cannot be.
@@ -8734,12 +8742,7 @@ bool OpenMPIterationSpaceChecker::setLCDeclAndLB(ValueDecl *NewLCDecl,
          UB == nullptr && Step == nullptr && !TestIsLessOp && !TestIsStrictOp);
   if (!NewLCDecl || !NewLB || NewLB->containsErrors())
     return true;
-  if (!SemaRef.CurContext->isDependentContext()) {
-    ExprResult LBVal = buildInitListValue(SemaRef, NewLB);
-    if (LBVal.isInvalid())
-      return true;
-    NewLB = LBVal.get();
-  }
+  NewLB = buildInitListValue(SemaRef, NewLB);
   LCDecl = getCanonicalDecl(NewLCDecl);
   LCRef = NewLCRefExpr;
   if (auto *CE = dyn_cast_or_null<CXXConstructExpr>(NewLB))
@@ -8784,12 +8787,7 @@ bool OpenMPIterationSpaceChecker::setStep(Expr *NewStep, bool Subtract) {
   assert(LCDecl != nullptr && LB != nullptr && Step == nullptr);
   if (!NewStep || NewStep->containsErrors())
     return true;
-  if (!SemaRef.CurContext->isDependentContext()) {
-    ExprResult StepVal = buildInitListValue(SemaRef, NewStep);
-    if (StepVal.isInvalid())
-      return true;
-    NewStep = StepVal.get();
-  }
+  NewStep = buildInitListValue(SemaRef, NewStep);
   if (!NewStep->isValueDependent()) {
     // Check that the step is integer expression.
     SourceLocation StepLoc = NewStep->getBeginLoc();
