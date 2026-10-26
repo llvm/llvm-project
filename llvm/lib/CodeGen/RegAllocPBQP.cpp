@@ -29,6 +29,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/RegAllocPBQP.h"
+#include "RegAllocBase.h"
 #include "RegisterCoalescer.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
@@ -160,6 +161,12 @@ private:
   void spillVReg(Register VReg, SmallVectorImpl<Register> &NewIntervals,
                  MachineFunction &MF, LiveIntervals &LIS, VirtRegMap &VRM,
                  Spiller &VRegSpiller);
+
+  /// Report that VReg, which can't be spilled, has no register, e.g. because
+  /// an inline asm needs more registers than are available, and assign it one
+  /// anyway, as the other allocators do.
+  void failVReg(Register VReg, MachineFunction &MF, LiveIntervals &LIS,
+                VirtRegMap &VRM);
 
   /// Given a solved PBQP problem maps this solution back to a register
   /// assignment.
@@ -652,6 +659,11 @@ void RegAllocPBQP::initializeGraph(PBQPRAGraph &G, VirtRegMap &VRM,
     // Check for vregs that have no allowed registers. These should be
     // pre-spilled and the new vregs added to the worklist.
     if (VRegAllowed.empty()) {
+      if (!VRegLI.isSpillable()) {
+        failVReg(VReg, MF, LIS, VRM);
+        continue;
+      }
+
       SmallVector<Register, 8> NewVRegs;
       spillVReg(VReg, NewVRegs, MF, LIS, VRM, VRegSpiller);
       llvm::append_range(Worklist, NewVRegs);
@@ -715,6 +727,20 @@ void RegAllocPBQP::spillVReg(Register VReg,
   LLVM_DEBUG(dbgs() << ")\n");
 }
 
+void RegAllocPBQP::failVReg(Register VReg, MachineFunction &MF,
+                            LiveIntervals &LIS, VirtRegMap &VRM) {
+  VRegsToAlloc.erase(VReg);
+
+  // Only an error needs the allocation orders.
+  RegisterClassInfo RCI;
+  RCI.runOnMachineFunction(MF);
+  MCRegister PReg = assignFailedVirtReg(VReg, RCI, LIS, VRM);
+  (void)PReg;
+  LLVM_DEBUG(dbgs() << "VREG " << printReg(VReg) << " -> FAILED, rewritten to "
+                    << printReg(PReg, MF.getSubtarget().getRegisterInfo())
+                    << "\n");
+}
+
 bool RegAllocPBQP::mapPBQPToRegAlloc(const PBQPRAGraph &G,
                                      const PBQP::Solution &Solution,
                                      VirtRegMap &VRM,
@@ -742,6 +768,10 @@ bool RegAllocPBQP::mapPBQPToRegAlloc(const PBQPRAGraph &G,
                         << TRI.getName(PReg) << "\n");
       assert(PReg != 0 && "Invalid preg selected.");
       VRM.assignVirt2Phys(VReg, PReg);
+    } else if (!LIS.getInterval(VReg).isSpillable()) {
+      // Only a problem with no solution of finite cost spills a register that
+      // can't be spilled.
+      failVReg(VReg, MF, LIS, VRM);
     } else {
       // Spill VReg. If this introduces new intervals we'll need another round
       // of allocation.
