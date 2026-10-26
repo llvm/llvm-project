@@ -21,8 +21,9 @@
 ; INSTR-NEXT:   call void @llvm.instrprof.increment(ptr @bar, i64 [[#]], i32 2, i32 0)
 ; INSTR-NEXT:   %inc =
 ; INSTR:        %test = icmp eq i32 %t, 0
-; INSTR-NEXT:   %1  = zext i1 %test to i64
-; INSTR-NEXT:   call void @llvm.instrprof.increment.step(ptr @bar, i64 [[#]], i32 2, i32 1, i64 %1)
+; INSTR-NEXT:   [[FREEZE:%.*]] = freeze i1 %test
+; INSTR-NEXT:   [[ZEXT:%.*]] = zext i1 [[FREEZE]] to i64
+; INSTR-NEXT:   call void @llvm.instrprof.increment.step(ptr @bar, i64 [[#]], i32 2, i32 1, i64 [[ZEXT]])
 ; INSTR-NEXT:   %res = select
 
 ; POST-INL-LABEL: yes:

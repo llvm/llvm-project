@@ -338,6 +338,16 @@ public:
                     ok = false;
                   }
                 }
+              } else if (IsImpliedShape(symbol) && object->init()) {
+                // Implied-shape named constant: there is no explicit upper
+                // bound, but the extent is known from the initializer.
+                if (auto extent{
+                        ToInt64(GetExtent(base, dimension_, invariantOnly_))}) {
+                  if (*extent <= 0) {
+                    return Result{1};
+                  }
+                  ok = true;
+                }
               }
               // ok: LBOUND is exact here (lb==1, dimension provably nonempty,
               // or assumed-size last dimension), so lbound() provenance is

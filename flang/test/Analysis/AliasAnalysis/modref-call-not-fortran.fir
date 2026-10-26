@@ -7,7 +7,7 @@
 // Function "unknown" is not known to be a Fortran procedure.
 func.func @_QPtest_unknown_call(%arg0: !fir.ref<f32> {fir.bindc_name = "x"}) {
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg0 dummy_scope %0 {test.ptr = "x", uniq_name = "_QFtest_unknown_callEx"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 uniq_name("_QFtest_unknown_callEx") {test.ptr = "x"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
   fir.call @unknown() {test.ptr = "unknown"} : () -> ()
   return
 }

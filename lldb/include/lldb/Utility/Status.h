@@ -175,13 +175,13 @@ public:
 
   /// Get the error string associated with the current error.
   //
-  /// Gets the error value as a NULL terminated C string. The error string
+  /// Gets the error value as a null-terminated C string. The error string
   /// will be fetched and cached on demand. The error string will be retrieved
   /// from a callback that is appropriate for the type of the error and will
   /// be cached until the error value is changed or cleared.
   ///
   /// \return
-  ///     The error as a NULL terminated C string value if the error
+  ///     The error as a null-terminated C string value if the error
   ///     is valid and is able to be converted to a string value,
   ///     NULL otherwise.
   const char *AsCString(const char *default_error_str = "unknown error") const;

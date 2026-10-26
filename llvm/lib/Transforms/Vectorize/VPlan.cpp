@@ -24,6 +24,7 @@
 #include "VPlanPatternMatch.h"
 #include "VPlanTransforms.h"
 #include "VPlanUtils.h"
+#include "VectorizeOptions.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -55,8 +56,6 @@ using namespace llvm::VPlanPatternMatch;
 
 namespace llvm {
 extern cl::opt<bool> ProfcheckDisableMetadataFixes;
-extern cl::opt<unsigned> ForceTargetInstructionCost;
-extern cl::opt<unsigned> NumberOfStoresToPredicate;
 } // namespace llvm
 
 /// @{
@@ -67,10 +66,6 @@ const char LLVMLoopVectorizeFollowupVectorized[] =
 const char LLVMLoopVectorizeFollowupEpilogue[] =
     "llvm.loop.vectorize.followup_epilogue";
 /// @}
-
-static cl::opt<bool> PrintVPlansInDotFormat(
-    "vplan-print-in-dot-format", cl::Hidden,
-    cl::desc("Use dot format instead of plain text when dumping VPlans"));
 
 #define DEBUG_TYPE "loop-vectorize"
 
@@ -259,13 +254,6 @@ Value *VPTransformState::get(const VPValue *Def, const VPLane &Lane) {
     return Data.VPV2Scalars[Def][0];
   }
 
-  // Look through BuildVector to avoid redundant extracts.
-  // TODO: Remove once replicate regions are unrolled explicitly.
-  if (Lane.getKind() == VPLane::Kind::First && match(Def, m_BuildVector())) {
-    auto *BuildVector = cast<VPInstruction>(Def);
-    return get(BuildVector->getOperand(Lane.getKnownLane()), true);
-  }
-
   assert(hasVectorValue(Def));
   auto *VecPart = Data.VPV2Vector[Def];
   if (!VecPart->getType()->isVectorTy()) {
@@ -279,10 +267,10 @@ Value *VPTransformState::get(const VPValue *Def, const VPLane &Lane) {
   return Extract;
 }
 
-Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
+Value *VPTransformState::get(const VPValue *Def, bool NeedsSingleScalar) {
   assert(!isa<VPRegionValue>(Def) &&
          "VPRegionValue must be materialized before VPTransformState::get");
-  if (NeedsScalar) {
+  if (NeedsSingleScalar) {
     assert((VF.isScalar() || isa<VPIRValue, VPSymbolicValue>(Def) ||
             hasVectorValue(Def) || !vputils::onlyFirstLaneUsed(Def) ||
             (hasScalarValue(Def, VPLane(0)) &&
@@ -350,12 +338,12 @@ void VPTransformState::fixupHeaderPhis() {
 
     for (VPRecipeBase &R : Header->phis()) {
       auto *PhiR = cast<VPSingleDefRecipe>(&R);
-      bool NeedsScalar =
+      bool NeedsSingleScalar =
           isa<VPPhi>(PhiR) || (isa<VPReductionPHIRecipe>(PhiR) &&
                                cast<VPReductionPHIRecipe>(PhiR)->isInLoop());
 
-      Value *Phi = get(PhiR, NeedsScalar);
-      Value *Val = get(PhiR->getOperand(1), NeedsScalar);
+      Value *Phi = get(PhiR, NeedsSingleScalar);
+      Value *Val = get(PhiR->getOperand(1), NeedsSingleScalar);
       cast<PHINode>(Phi)->addIncoming(Val, VectorLatchBB);
     }
   }
@@ -423,19 +411,28 @@ void VPBasicBlock::connectToPredecessors(VPTransformState &State) {
     } else {
       // Set each forward successor here when it is created, excluding
       // backedges. A backward successor is set when the branch is created.
-      // Branches to VPIRBasicBlocks must have the same successors in VPlan as
-      // in the original IR, except when the predecessor is the entry block.
-      // This enables including SCEV and memory runtime check blocks in VPlan.
-      // TODO: Remove exception by modeling the terminator of entry block using
+      // Generated successors are redirected, as for the entry block and for
+      // blocks bypassing a vector loop during epilogue vectorization. Edges
+      // already present in the generated IR need no update; this happens during
+      // epilogue vectorization, where the plan models blocks generated for the
+      // main vector loop.
+      // TODO: Remove the exception by modeling those terminators using
       // BranchOnCond.
-      unsigned idx = PredVPSuccessors.front() == this ? 0 : 1;
       auto *TermBr = cast<CondBrInst>(PredBBTerminator);
-      assert((!TermBr->getSuccessor(idx) ||
-              (isa<VPIRBasicBlock>(this) &&
-               (TermBr->getSuccessor(idx) == NewBB ||
-                PredVPBlock == getPlan()->getEntry()))) &&
-             "Trying to reset an existing successor block.");
-      TermBr->setSuccessor(idx, NewBB);
+      if (TermBr->getSuccessor(0) != NewBB &&
+          TermBr->getSuccessor(1) != NewBB) {
+        unsigned Idx = PredVPSuccessors.front() == this ? 0 : 1;
+        BasicBlock *ReplacedSucc = TermBr->getSuccessor(Idx);
+        assert(
+            (!ReplacedSucc || isa<VPIRBasicBlock>(PredVPBB)) &&
+            "only VPIRBasicBlock predecessors may have an existing successor "
+            "redirected");
+        if (ReplacedSucc)
+          ReplacedSucc->removePredecessor(PredBB, /*KeepOneInputPHIs=*/true);
+        TermBr->setSuccessor(Idx, NewBB);
+        if (ReplacedSucc)
+          CFG.DTU.applyUpdates({{DominatorTree::Delete, PredBB, ReplacedSucc}});
+      }
     }
     CFG.DTU.applyUpdates({{DominatorTree::Insert, PredBB, NewBB}});
   }
@@ -770,8 +767,8 @@ InstructionCost VPRegionBlock::cost(ElementCount VF, VPCostContext &Ctx) {
       Cost += Block->cost(VF, Ctx);
     // Add the costs of the loop's backedge and canonical IV increment
     auto AddCost = [&](InstructionCost C, const char *Name) {
-      if (ForceTargetInstructionCost.getNumOccurrences())
-        C = InstructionCost(ForceTargetInstructionCost);
+      if (Ctx.Opts.force_target_instruction_cost)
+        C = InstructionCost(*Ctx.Opts.force_target_instruction_cost);
       LLVM_DEBUG(dbgs() << "Cost of " << C << " for VF " << VF << ": " << Name
                         << "\n");
       Cost += C;
@@ -1032,16 +1029,22 @@ InstructionCost VPlan::cost(ElementCount VF, VPCostContext &Ctx) {
 
 VPRegionBlock *VPlan::getVectorLoopRegion() {
   // Find the vector loop region by following the last successor of each block,
-  // starting from the plan's entry. The vector code path is always the last
-  // successor of the entry (and of the min-iters bypass block, if present), and
-  // every block on the path to the region has a single predecessor. Stop at the
-  // first block with multiple predecessors: in a plain CFG that is the loop
-  // header (no region exists yet), and in a rolled CFG it is the middle block
-  // following the region.
-  for (VPBlockBase *B = Entry; B && B->getNumPredecessors() <= 1;
-       B = B->hasSuccessors() ? B->getSuccessors().back() : nullptr)
+  // starting from the plan's entry; the vector code path is always the last
+  // successor. When vectorizing the epilogue, the path leads through the blocks
+  // generated for the main vector loop. Each block on the path is entered from
+  // its first predecessor. Stop at a block entered from another predecessor,
+  // e.g. a loop header entered via its back-edge in a plain CFG, before regions
+  // are created or after they have been dissolved.
+  for (VPBlockBase *B = Entry; B;) {
     if (auto *R = dyn_cast<VPRegionBlock>(B))
-      return R->isReplicator() ? nullptr : R;
+      return R->isReplicator() || R->getNumPredecessors() != 1 ? nullptr : R;
+    if (!B->hasSuccessors())
+      return nullptr;
+    VPBlockBase *Succ = B->getSuccessors().back();
+    if (Succ->getPredecessors().front() != B)
+      return nullptr;
+    B = Succ;
+  }
   return nullptr;
 }
 
@@ -1448,14 +1451,13 @@ bool VPValue::isDefinedOutsideLoopRegions() const {
   return !isDefinedInsideLoopRegions(this);
 }
 void VPValue::replaceAllUsesWith(VPValue *New) {
-  replaceUsesWithIf(New, [](VPUser &, unsigned) { return true; });
+  replaceUsesWithIf(New, [](VPUser *) { return true; });
   if (auto *SV = dyn_cast<VPSymbolicValue>(this))
     SV->markMaterialized();
 }
 
 void VPValue::replaceUsesWithIf(
-    VPValue *New,
-    llvm::function_ref<bool(VPUser &U, unsigned Idx)> ShouldReplace) {
+    VPValue *New, llvm::function_ref<bool(VPUser *U)> ShouldReplace) {
   assertNotMaterialized();
   // Note that this early exit is required for correctness; the implementation
   // below relies on the number of users for this VPValue to decrease, which
@@ -1467,7 +1469,7 @@ void VPValue::replaceUsesWithIf(
     VPUser *User = Users[J];
     bool RemovedUser = false;
     for (unsigned I = 0, E = User->getNumOperands(); I < E; ++I) {
-      if (User->getOperand(I) != this || !ShouldReplace(*User, I))
+      if (User->getOperand(I) != this || !ShouldReplace(User))
         continue;
 
       RemovedUser = true;
@@ -1593,6 +1595,10 @@ std::string VPSlotTracker::getName(const Value *V) {
   return Name;
 }
 
+void VPSlotTracker::printMetadataAsOperand(raw_ostream &O, const MDNode *N) {
+  N->printAsOperand(O, getOrCreateMST(), getModule());
+}
+
 std::string VPSlotTracker::getOrCreateName(const VPValue *V) const {
   std::string Name = VPValue2Name.lookup(V);
   if (!Name.empty())
@@ -1617,19 +1623,6 @@ std::string VPSlotTracker::getOrCreateName(const VPValue *V) const {
   return "<badref>";
 }
 
-VPInstruction *VPBuilder::createAnyOfReduction(VPValue *ChainOp,
-                                               VPValue *TrueVal,
-                                               VPValue *FalseVal, DebugLoc DL) {
-  assert(ChainOp->getScalarType()->isIntegerTy(1) &&
-         "ChainOp must be i1 for AnyOf reduction");
-  VPIRFlags Flags(RecurKind::Or, /*IsOrdered=*/false, /*IsInLoop=*/false,
-                  FastMathFlags());
-  auto *OrReduce =
-      createNaryOp(VPInstruction::ComputeReductionResult, {ChainOp}, Flags, DL);
-  auto *Freeze = createNaryOp(Instruction::Freeze, {OrReduce}, DL);
-  return createSelect(Freeze, TrueVal, FalseVal, DL, "rdx.select");
-}
-
 bool LoopVectorizationPlanner::getDecisionAndClampRange(
     const std::function<bool(ElementCount)> &Predicate, VFRange &Range) {
   assert(!Range.isEmpty() && "Trying to test an empty VF range.");
@@ -1642,27 +1635,6 @@ bool LoopVectorizationPlanner::getDecisionAndClampRange(
     }
 
   return PredicateAtRangeStart;
-}
-
-VPSingleDefRecipe *
-VPBuilder::createConsecutiveVectorPointer(VPValue *Ptr, Type *SourceElementTy,
-                                          bool Reverse, DebugLoc DL) {
-  VPlan &Plan = getPlan();
-  GEPNoWrapFlags Flags = vputils::getGEPFlagsForPtr(Ptr);
-  if (Reverse) {
-    // When folding the tail, we may compute an address that we don't in the
-    // original scalar loop: drop the GEP no-wrap flags in this case. Otherwise
-    // preserve existing flags without no-unsigned-wrap, as we will emit
-    // negative indices.
-    GEPNoWrapFlags ReverseFlags = Plan.hasTailFolded()
-                                      ? GEPNoWrapFlags::none()
-                                      : Flags.withoutNoUnsignedWrap();
-    return tryInsertInstruction(new VPVectorEndPointerRecipe(
-        Ptr, &Plan.getVF(), SourceElementTy, /*Stride=*/-1, ReverseFlags, DL));
-  }
-  Type *StrideTy = Plan.getDataLayout().getIndexType(Ptr->getScalarType());
-  VPValue *StrideOne = Plan.getConstantInt(StrideTy, 1);
-  return createVectorPointer(Ptr, SourceElementTy, StrideOne, Flags, DL);
 }
 
 VPlan &LoopVectorizationPlanner::getPlanFor(ElementCount VF) const {
@@ -1736,8 +1708,8 @@ void LoopVectorizationPlanner::updateLoopMetadataAndProfileInfo(
       if (DisableRuntimeUnroll)
         addRuntimeUnrollDisableMetaData(OrigLoop);
 
-      LoopVectorizeHints Hints(OrigLoop, /*InterleaveOnlyWhenForced*/ false,
-                               *ORE);
+      LoopVectorizeHints Hints(Opts, OrigLoop,
+                               /*InterleaveOnlyWhenForced*/ false, *ORE);
       Hints.setAlreadyVectorized();
     }
   }
@@ -1761,8 +1733,8 @@ void LoopVectorizationPlanner::updateLoopMetadataAndProfileInfo(
       VectorLoop->setLoopID(OrigLoopID);
 
     if (!VectorizingEpilogue) {
-      LoopVectorizeHints Hints(VectorLoop, /*InterleaveOnlyWhenForced*/ false,
-                               *ORE);
+      LoopVectorizeHints Hints(Opts, VectorLoop,
+                               /*InterleaveOnlyWhenForced*/ false, *ORE);
       Hints.setAlreadyVectorized();
     }
   }
@@ -1826,7 +1798,7 @@ void LoopVectorizationPlanner::printPlans(raw_ostream &O) {
     return;
   }
   for (const auto &Plan : VPlans)
-    if (PrintVPlansInDotFormat)
+    if (Opts.vplan_print_in_dot_format)
       Plan->printDOT(O);
     else
       Plan->print(O);
@@ -1934,7 +1906,7 @@ bool VPCostContext::useEmulatedMaskMemRefHack(const VPReplicateRecipe *R,
       }
     }
   }
-  return *NumPredStores > NumberOfStoresToPredicate;
+  return *NumPredStores > Opts.vectorize_num_stores_pred;
 }
 
 bool VPCostContext::isFreeScalarIntrinsic(Intrinsic::ID ID) {
@@ -1945,13 +1917,9 @@ bool VPCostContext::isFreeScalarIntrinsic(Intrinsic::ID ID) {
                       ID);
 }
 
-uint64_t VPCostContext::getReplicateRegionCostDivisor(
-    const VPRegionBlock *Region) const {
-  if (CostKind == TTI::TCK_CodeSize)
-    return 1;
-  std::optional<VPExecutionFrequency> Freq =
-      Region->getEntryBranchOnMask()->getExecutionFrequency();
-  if (!Freq)
+uint64_t
+VPCostContext::getCostDivisor(std::optional<VPExecutionFrequency> Freq) const {
+  if (CostKind == TTI::TCK_CodeSize || !Freq)
     return 1;
   // A recorded frequency is neither zero nor always-executing, so the
   // probability is non-zero and the division below is safe.

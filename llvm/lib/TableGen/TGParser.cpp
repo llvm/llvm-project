@@ -104,15 +104,13 @@ static void checkConcrete(Record &R) {
     if (RV.isNonconcreteOK())
       continue;
 
-    if (const Init *V = RV.getValue()) {
-      bool Ok = isa<BitsInit>(V) ? checkBitsConcrete(R, RV) : V->isConcrete();
-      if (!Ok) {
-        PrintError(R.getLoc(), Twine("Initializer of '") +
-                                   RV.getNameInitAsString() + "' in '" +
-                                   R.getNameInitAsString() +
-                                   "' could not be fully resolved: " +
-                                   RV.getValue()->getAsString());
-      }
+    const Init *V = RV.getValue();
+    bool Ok = isa<BitsInit>(V) ? checkBitsConcrete(R, RV) : V->isConcrete();
+    if (!Ok) {
+      PrintError(R.getLoc(),
+                 Twine("Initializer of '") + RV.getNameInitAsString() +
+                     "' in '" + R.getNameInitAsString() +
+                     "' could not be fully resolved: " + V->getAsString());
     }
   }
 }
@@ -163,7 +161,7 @@ const Init *TGVarScope::getVar(RecordKeeper &Records,
       assert(RV && "Template arg doesn't exist??");
       RV->setUsed(true);
       if (TrackReferenceLocs)
-        RV->addReferenceLoc(NameLoc);
+        Rec->appendValueReferenceLoc(ArgName, NameLoc);
       return VarInit::get(ArgName, RV->getType());
     }
     return Name->getValue() == "NAME"
@@ -181,7 +179,7 @@ const Init *TGVarScope::getVar(RecordKeeper &Records,
       // The variable is a record field?
       if (RecordVal *RV = CurRec->getValue(Name)) {
         if (TrackReferenceLocs)
-          RV->addReferenceLoc(NameLoc);
+          CurRec->appendValueReferenceLoc(Name, NameLoc);
         return VarInit::get(Name, RV->getType());
       }
 
@@ -218,7 +216,8 @@ const Init *TGVarScope::getVar(RecordKeeper &Records,
   return nullptr;
 }
 
-bool TGParser::AddValue(Record *CurRec, SMLoc Loc, const RecordVal &RV) {
+bool TGParser::AddValue(Record *CurRec, SMLoc Loc, const RecordVal &RV,
+                        const Record *FromRec) {
   if (!CurRec)
     CurRec = &CurMultiClass->Rec;
 
@@ -232,6 +231,8 @@ bool TGParser::AddValue(Record *CurRec, SMLoc Loc, const RecordVal &RV) {
                             ERV->getType()->getAsString() + "'");
   } else {
     CurRec->addValue(RV);
+    if (FromRec)
+      CurRec->appendValueReferenceLocs(*FromRec, RV.getNameInit());
   }
   return false;
 }
@@ -240,10 +241,8 @@ bool TGParser::AddValue(Record *CurRec, SMLoc Loc, const RecordVal &RV) {
 /// Return true on error, false on success.
 bool TGParser::SetValue(Record *CurRec, SMLoc Loc, const Init *ValName,
                         ArrayRef<unsigned> BitList, const Init *V,
-                        bool AllowSelfAssignment, bool OverrideDefLoc,
-                        LetMode Mode) {
-  if (!V)
-    return false;
+                        bool OverrideDefLoc, LetMode Mode) {
+  assert(V && "Cannot set a null value");
 
   if (!CurRec)
     CurRec = &CurMultiClass->Rec;
@@ -292,7 +291,7 @@ bool TGParser::SetValue(Record *CurRec, SMLoc Loc, const Init *ValName,
   // in the resolution machinery.
   if (BitList.empty())
     if (const auto *VI = dyn_cast<VarInit>(V))
-      if (VI->getNameInit() == ValName && !AllowSelfAssignment)
+      if (VI->getNameInit() == ValName)
         return Error(Loc, "Recursion / self-assignment forbidden");
 
   // If we are assigning to a subset of the bits in the value we must be
@@ -355,7 +354,7 @@ bool TGParser::AddSubClass(Record *CurRec, SubClassReference &SubClass) {
   // record.
   for (const RecordVal &Field : SC->getValues())
     if (!Field.isTemplateArg())
-      if (AddValue(CurRec, SubClass.RefRange.Start, Field))
+      if (AddValue(CurRec, SubClass.RefRange.Start, Field, SC))
         return true;
 
   if (resolveArgumentsOfClass(R, SC, SubClass.TemplateArgs,
@@ -3333,13 +3332,12 @@ const Init *TGParser::ParseValue(Record *CurRec, const RecTy *ItemType,
       // Add a reference to this field if we know the record class.
       if (TrackReferenceLocs) {
         if (const auto *DI = dyn_cast<DefInit>(Result)) {
-          const RecordVal *V = DI->getDef()->getValue(FieldName);
-          const_cast<RecordVal *>(V)->addReferenceLoc(FieldNameLoc);
+          DI->getDef()->appendValueReferenceLoc(FieldName, FieldNameLoc);
         } else if (const auto *TI = dyn_cast<TypedInit>(Result)) {
           if (const auto *RecTy = dyn_cast<RecordRecTy>(TI->getType())) {
             for (const Record *R : RecTy->getClasses())
-              if (const auto *RV = R->getValue(FieldName))
-                const_cast<RecordVal *>(RV)->addReferenceLoc(FieldNameLoc);
+              if (R->getValue(FieldName))
+                R->appendValueReferenceLoc(FieldName, FieldNameLoc);
           }
         }
       }
@@ -3598,7 +3596,7 @@ bool TGParser::ParseTemplateArgValueList(
 const Init *TGParser::ParseDeclaration(Record *CurRec,
                                        bool ParsingTemplateArgs) {
   // Read the field prefix if present.
-  bool HasField = consume(tgtok::Field);
+  bool HasField = !ParsingTemplateArgs && consume(tgtok::Field);
 
   const RecTy *Type = ParseType();
   if (!Type)
@@ -3649,9 +3647,8 @@ const Init *TGParser::ParseDeclaration(Record *CurRec,
   if (consume(tgtok::equal)) {
     SMLoc ValLoc = Lex.getLoc();
     const Init *Val = ParseValue(CurRec, Type);
-    if (!Val ||
-        SetValue(CurRec, ValLoc, DeclName, {}, Val,
-                 /*AllowSelfAssignment=*/false, /*OverrideDefLoc=*/false)) {
+    if (!Val || SetValue(CurRec, ValLoc, DeclName, {}, Val,
+                         /*OverrideDefLoc=*/false)) {
       // Return the name, even if an error is thrown. This is so that we can
       // continue to make some progress, even without the value having been
       // initialized.
@@ -3882,7 +3879,7 @@ bool TGParser::ParseBodyItem(Record *CurRec) {
     return TokError("expected ';' after let expression");
 
   return SetValue(CurRec, IdLoc, FieldName, BitList, Val,
-                  /*AllowSelfAssignment=*/false, /*OverrideDefLoc=*/true, Mode);
+                  /*OverrideDefLoc=*/true, Mode);
 }
 
 /// ParseBody - Read the body of a class or def. Return true on error, false on
@@ -3923,8 +3920,7 @@ bool TGParser::ApplyLetStack(Record *CurRec) {
   for (SmallVectorImpl<LetRecord> &LetInfo : LetStack)
     for (LetRecord &LR : LetInfo)
       if (SetValue(CurRec, LR.Loc, LR.Name, LR.Bits, LR.Value,
-                   /*AllowSelfAssignment=*/false, /*OverrideDefLoc=*/true,
-                   LR.Mode))
+                   /*OverrideDefLoc=*/true, LR.Mode))
         return true;
   return false;
 }

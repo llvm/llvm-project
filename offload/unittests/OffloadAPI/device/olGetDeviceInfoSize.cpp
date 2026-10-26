@@ -16,8 +16,8 @@ using olGetDeviceInfoSizeEqualTest = olGetHostDeviceInfoPropertyTest;
 using olGetDeviceInfoSizeNonZeroTest = olGetHostDeviceInfoPropertyTest;
 
 DeviceInfoProperties answerSizeEqualToTypeSizeProperties = mergeProperties(
-    {Uint32Properties, Uint64Properties, CapabilitesFlagsProperties,
-     PlatformProperties, DeviceTypeProperties});
+    {Uint32Properties, Uint64Properties, Uint64MayBeZeroProperties,
+     CapabilitesFlagsProperties, PlatformProperties, DeviceTypeProperties});
 
 OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE_WITH_PARAM(
     olGetDeviceInfoSizeEqualTest, answerSizeEqualToTypeSizeProperties,
@@ -79,4 +79,11 @@ TEST_P(olGetDeviceInfoSizeTest, InvalidDeviceInfoEnumeration) {
 TEST_P(olGetDeviceInfoSizeTest, InvalidNullPointer) {
   ASSERT_ERROR(OL_ERRC_INVALID_NULL_POINTER,
                olGetDeviceInfoSize(Device, OL_DEVICE_INFO_TYPE, nullptr));
+}
+
+TEST_P(olGetDeviceInfoSizeTest, SuccessNativeHandle) {
+  size_t Size = 0;
+  ASSERT_SUCCESS_OR_UNSUPPORTED(
+      olGetDeviceInfoSize(Device, OL_DEVICE_INFO_NATIVE_HANDLE, &Size));
+  ASSERT_EQ(Size, sizeof(void *));
 }

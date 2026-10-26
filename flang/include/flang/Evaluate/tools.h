@@ -1080,6 +1080,10 @@ template <typename A> SymbolVector GetSymbolVector(const A &x) {
   return GetSymbolVectorHelper{}(x);
 }
 
+// The selector of an associate name when it is a variable that is not a
+// pointer returned by a function, else nullptr.
+const Expr<SomeType> *GetVariableSelector(const Symbol &);
+
 // GetLastTarget() returns the rightmost symbol in an object designator's
 // SymbolVector that has the POINTER or TARGET attribute, or a null pointer
 // when none is found.
@@ -1343,24 +1347,13 @@ std::vector<SymbolVector> GetSymbolVectors(const Expr<SomeType> &expr);
 bool IsCUDADeviceSymbol(const Symbol &sym);
 bool IsCUDADeviceOnlySymbol(const Symbol &sym);
 
-inline bool IsCUDAManagedOrUnifiedSymbol(const Symbol &sym) {
-  if (const auto *details =
-          sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()) {
-    if (details->cudaDataAttr() &&
-        (*details->cudaDataAttr() == common::CUDADataAttr::Managed ||
-            *details->cudaDataAttr() == common::CUDADataAttr::Unified)) {
-      return true;
-    }
-  }
-  return false;
-}
+// True if the data designated by the symbol has the CUDA data attribute. An
+// associate name takes the attribute of the variable its selector designates.
+bool IsCUDADataAttrSymbol(const Symbol &sym, common::CUDADataAttr attr);
 
-inline bool IsCUDADataAttrSymbol(const Symbol &sym, common::CUDADataAttr attr) {
-  if (const auto *details =
-          sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()) {
-    return details->cudaDataAttr() && *details->cudaDataAttr() == attr;
-  }
-  return false;
+inline bool IsCUDAManagedOrUnifiedSymbol(const Symbol &sym) {
+  return IsCUDADataAttrSymbol(sym, common::CUDADataAttr::Managed) ||
+      IsCUDADataAttrSymbol(sym, common::CUDADataAttr::Unified);
 }
 
 inline bool IsCUDAManagedSymbol(const Symbol &sym) {
@@ -1377,6 +1370,11 @@ inline bool HasCUDADataAttr(const Symbol &sym) {
   return details && details->cudaDataAttr().has_value();
 }
 
+// Replace each associate name whose selector is a variable by the CUDA symbols
+// of its selector, the same way GetSymbolVector expands it.
+semantics::UnorderedSymbolSet ExpandCudaAssociations(
+    semantics::UnorderedSymbolSet &&symbols);
+
 // The data attribute of a component describes the data that the component
 // designates, so it hides the attribute of the object that the component is
 // taken from: in a%b, where a is managed and b is device, a%b designates
@@ -1384,7 +1382,10 @@ inline bool HasCUDADataAttr(const Symbol &sym) {
 // that a component with an attribute hides.
 template <typename A>
 semantics::UnorderedSymbolSet CollectEffectiveCudaSymbols(const A &expr) {
-  semantics::UnorderedSymbolSet result{CollectCudaSymbols(expr)};
+  // Associate names are expanded so that the set holds the symbols that
+  // GetSymbolVector lists, which the hiding below relies on.
+  semantics::UnorderedSymbolSet result{
+      ExpandCudaAssociations(CollectCudaSymbols(expr))};
   SymbolVector symbols{GetSymbolVector(expr)};
   // GetSymbolVector lists the base of a component chain before its components.
   // Reverse it to visit the innermost component of a chain first.
@@ -1465,6 +1466,11 @@ template <typename A> inline int GetNbOfCUDADeviceSymbols(const A &expr) {
 
 // Get the number of unique symbols with CUDA device attribute.
 int GetNbOfUniqueCUDADeviceSymbols(const Expr<SomeType> &expr);
+
+// Get the number of unique symbols with CUDA device attribute that are managed
+// or unified. Symbols are counted the same way as in
+// GetNbOfUniqueCUDADeviceSymbols so the two counts can be compared.
+int GetNbOfUniqueCUDAManagedOrUnifiedSymbols(const Expr<SomeType> &expr);
 
 // Get the number of distinct symbols with CUDA managed or unified
 // attribute in the expression.
@@ -1567,8 +1573,8 @@ inline bool IsCUDADataTransfer(const A &lhs, const B &rhs) {
   return !lhsIsHost || rhsNbSymbols > 0;
 }
 
-/// Check if the expression is a mix of host and device variables that require
-/// implicit data transfer.
+/// Check if the expression uses device data in an operation evaluated on the
+/// host, which requires an implicit data transfer.
 bool HasCUDAImplicitTransfer(const Expr<SomeType> &expr);
 
 /// Check if the expression is a mix of host and constant variables.
@@ -1739,6 +1745,10 @@ std::optional<int> CountDerivedTypeAncestors(const semantics::Scope &);
 // __ordinal component.  Returns std::nullopt if the expression is not a
 // constant or structure constructor of an enumeration-type value.
 std::optional<Expr<SomeType>> GetEnumerationOrdinal(Expr<SomeDerived> &);
+
+// Build INT(x), a default INTEGER reference to x's ordinal. The caller must
+// ensure x is of enumeration type.
+Expr<SomeType> MakeEnumerationIntCall(Expr<SomeDerived> &&);
 
 } // namespace Fortran::evaluate
 

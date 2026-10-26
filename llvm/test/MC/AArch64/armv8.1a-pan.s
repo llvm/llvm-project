@@ -24,7 +24,7 @@
 // CHECK-ERROR: error: immediate must be an integer in range [0, 15].
 // CHECK-ERROR:   msr pan, #16
 // CHECK-ERROR:            ^
-// CHECK-ERROR: error: immediate must be an integer in range [0, 15].
+// CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:   msr pan, w0
 // CHECK-ERROR:            ^
 // CHECK-ERROR: error: invalid operand for instruction

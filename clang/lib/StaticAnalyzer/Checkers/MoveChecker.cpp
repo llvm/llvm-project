@@ -386,7 +386,7 @@ void MoveChecker::modelUse(ProgramStateRef State, const MemRegion *Region,
   // And still finalize changes made by the caller.
   if (isAnyBaseRegionReported(State, Region)) {
     if (misuseCausesCrash(MK)) {
-      C.generateSink(State, C.getPredecessor());
+      C.addSink(State);
     } else {
       C.addTransition(State);
     }

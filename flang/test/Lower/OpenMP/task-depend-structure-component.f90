@@ -11,7 +11,7 @@ subroutine depend
    !$omp end task
 end subroutine depend
 
-! CHECK: %[[VAR_ALLOC:.*]] = fir.alloca !fir.type<{{.*}}my_struct{{.*}}> {bindc_name = "my_var", {{.*}}}
+! CHECK: %[[VAR_ALLOC:.*]] = fir.alloca !fir.type<{{.*}}my_struct{{.*}}> <{bindc_name = "my_var", {{.*}}}>
 ! CHECK: %[[VAR_DECL:.*]]:2 = hlfir.declare %[[VAR_ALLOC]]
 
 ! CHECK: %[[COMP_SELECTOR:.*]] = hlfir.designate %[[VAR_DECL]]#0{"my_component"}
