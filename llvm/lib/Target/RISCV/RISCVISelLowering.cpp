@@ -19364,9 +19364,11 @@ static SDValue transformAddImmMulImm(SDNode *N, SelectionDAG &DAG,
 
 // add (ext X), (ext Y) -> ext (add X, Y)
 // if the add can't overflow in the narrow type.
-static SDValue combineAddOfExtsAlreadyExtended(SDNode *N, SelectionDAG &DAG) {
+static SDValue
+combineAddOfExtsAlreadyExtended(SDNode *N, SelectionDAG &DAG,
+                                const RISCVSubtarget &Subtarget) {
   EVT VT = User->getValueType(0);
-  if (!VT.isVector())
+  if (!VT.isVector() || !Subtarget.hasVInstructions())
     return SDValue();
 
   // Ensure the user has a widening variant so the extend can be moved after
@@ -19880,7 +19882,7 @@ static SDValue performADDCombine(SDNode *N,
     return V;
   if (SDValue V = combineAddOfExts(N, DAG, Subtarget))
     return V;
-  if (SDValue V = combineAddOfExtsAlreadyExtended(N, DAG))
+  if (SDValue V = combineAddOfExtsAlreadyExtended(N, DAG, Subtarget))
     return V;
   if (SDValue V = combineAddPackedByteDot(N, DAG, Subtarget))
     return V;
