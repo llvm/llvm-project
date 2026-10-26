@@ -2681,17 +2681,22 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
     // - ShAmt + S u<= BW  -- the borrow's all-ones run reaches up to bit S-1
     // - X u< 1<<ShAmt     -- bounds X - C u< 1<<ShAmt in the X u> C case
     // Then shr(sub(C, X), ShAmt) is 0 when X u<= C and has all of C's bits set
-    // when X u> C, so (shr | X) & C clamps X to C. The bound on X also means
-    // ashr and lshr have the same result.
+    // when X u> C, so (shr | X) & C clamps X to C. For ashr, the bound on X
+    // also means sub(C, X) is negative when X u> C, so shr is all-ones and
+    // ShAmt + S u<= BW is not needed.
     const APInt *ShAmtC;
+    Instruction *Shr;
     if (C->isMask() &&
-        match(Op0, m_OneUse(m_c_Or(m_Shr(m_Sub(m_SpecificInt(*C), m_Value(X)),
-                                         m_APInt(ShAmtC)),
-                                   m_Deferred(X)))) &&
+        match(Op0, m_OneUse(m_c_Or(
+                       m_CombineAnd(m_Instruction(Shr),
+                                    m_Shr(m_Sub(m_SpecificInt(*C), m_Value(X)),
+                                          m_APInt(ShAmtC))),
+                       m_Deferred(X)))) &&
         ShAmtC->ult(Width)) {
       unsigned S = C->popcount();
       unsigned ShAmt = ShAmtC->getZExtValue();
-      if (S <= ShAmt && ShAmt + S <= Width &&
+      bool IsAShr = Shr->getOpcode() == Instruction::AShr;
+      if (S <= ShAmt && (IsAShr || ShAmt + S <= Width) &&
           MaskedValueIsZero(X, APInt::getBitsSetFrom(Width, ShAmt), &I))
         return replaceInstUsesWith(
             I, Builder.CreateBinaryIntrinsic(Intrinsic::umin, X, Op1));

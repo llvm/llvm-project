@@ -3,7 +3,8 @@
 
 ; Fold:
 ;   (or (shr (sub C, X), ShAmt), X) & C  -->  umin(X, C)
-; where C = (1<<S)-1, S u<= ShAmt, ShAmt + S u<= BW, and X u< 1<<ShAmt.
+; where C = (1<<S)-1, S u<= ShAmt, ShAmt + S u<= BW (lshr only), and
+; X u< 1<<ShAmt.
 
 ; Positive cases
 
@@ -218,6 +219,21 @@ define i32 @neg_shamt_plus_s_exceeds_bw(i32 range(i32 0, 33554432) %x) {
 ;
   %sub = sub i32 255, %x
   %shr = lshr i32 %sub, 25
+  %or = or i32 %shr, %x
+  %and = and i32 %or, 255
+  ret i32 %and
+}
+
+; Same as above with ashr: sub(C, X) is negative when X u> C, so the ashr is
+; all-ones and the fold is valid without ShAmt + S u<= BW.
+define i32 @umin_i32_ashr_shamt_plus_s_exceeds_bw(i32 range(i32 0, 33554432) %x) {
+; CHECK-LABEL: define i32 @umin_i32_ashr_shamt_plus_s_exceeds_bw(
+; CHECK-SAME: i32 range(i32 0, 33554432) [[X:%.*]]) {
+; CHECK-NEXT:    [[AND:%.*]] = call i32 @llvm.umin.i32(i32 [[X]], i32 255)
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %sub = sub i32 255, %x
+  %shr = ashr i32 %sub, 25
   %or = or i32 %shr, %x
   %and = and i32 %or, 255
   ret i32 %and
