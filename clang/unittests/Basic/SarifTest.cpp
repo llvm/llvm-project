@@ -388,4 +388,21 @@ TEST_F(SarifDocumentWriterTest, checkSerializingCodeflows) {
   ASSERT_THAT(Output, ::testing::StrEq(ExpectedOutput));
 }
 
+TEST_F(SarifDocumentWriterTest, artifactIndexMatchesArrayPosition) {
+  SarifDocumentWriter Writer{SourceMgr};
+  Writer.createRun("sarif test", "sarif test runner");
+  unsigned RuleIdx = Writer.createRule(SarifRule::create());
+
+  // "/z.cpp" is seen first (index 0) but sorts after "/a.h" by name.
+  FileID ZFile = registerSource("/z.cpp", "int z;\n");
+  FileID AFile = registerSource("/a.h", "int a;\n");
+  Writer.appendResult(SarifResult::create(RuleIdx).addLocations(
+      {getFakeCharSourceRange(ZFile, {1, 1}, {1, 2}),
+       getFakeCharSourceRange(AFile, {1, 1}, {1, 2})}));
+
+  std::string Output = serializeSarifDocument(Writer.createDocument());
+  EXPECT_THAT(Output, ::testing::HasSubstr(
+                          R"("location":{"index":0,"uri":"file:///z.cpp"})"));
+}
+
 } // namespace
