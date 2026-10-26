@@ -4,9 +4,8 @@
 ; to the value they would have had (or be poisoned)
 ; See issues #218631 and #218633
 
-; Function Attrs: noinline nounwind uwtable
 define dso_local i32 @srem_elide(i32 noundef %x) #0 !dbg !9 {
-; CHECK:      #dbg_value(i32 %x, [[META16:![0-9]+]], !DIExpression(DW_OP_constu, 42, DW_OP_mod, DW_OP_stack_value), [[META15:![0-9]+]])
+; CHECK:      #dbg_value(i32 %x, [[META2:![0-9]+]], !DIExpression(DW_OP_constu, 42, DW_OP_mod, DW_OP_stack_value), [[META1:![0-9]+]])
 ; CHECK-NEXT: %0 = add i32 %x, 41
 ;
 entry:
@@ -18,9 +17,8 @@ entry:
   ret i32 %cond
 }
 
-; Function Attrs: noinline nounwind uwtable
 define dso_local i32 @urem_elide(i32 noundef %x) #0 !dbg !23 {
-; CHECK:      #dbg_value(i32 poison, [[META28:![0-9]+]], !DIExpression(), [[META27:![0-9]+]])
+; CHECK:      #dbg_value(i32 poison, [[META4:![0-9]+]], !DIExpression(), [[META3:![0-9]+]])
 ; CHECK-NEXT: %cmp = icmp ult i32 %x, 42
 ;
 entry:
@@ -30,8 +28,6 @@ entry:
   %rem. = select i1 %cmp, i32 %rem, i32 24
   ret i32 %rem.
 }
-
-attributes #0 = { noinline nounwind uwtable }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!2}
@@ -52,3 +48,10 @@ attributes #0 = { noinline nounwind uwtable }
 !26 = !DIBasicType(name: "unsigned int", size: 32, encoding: DW_ATE_unsigned)
 !28 = !DILocation(line: 0, scope: !23)
 !30 = !DILocalVariable(name: "remainder", scope: !23, file: !1, line: 9, type: !26)
+
+; CHECK: [[META5:![0-9]+]] = distinct !DISubprogram(name: "srem_elide"
+; CHECK: [[META2]] = !DILocalVariable(name: "rem", scope: [[META5]]
+; CHECK: [[META1]] = !DILocation(line: 0, scope: [[META5]])
+; CHECK: [[META6:![0-9]+]] = distinct !DISubprogram(name: "urem_elide"
+; CHECK: [[META4]] = !DILocalVariable(name: "remainder", scope: [[META6]]
+; CHECK: [[META3]] = !DILocation(line: 0, scope: [[META6]])
