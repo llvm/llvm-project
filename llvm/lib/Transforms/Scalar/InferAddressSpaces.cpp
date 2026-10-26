@@ -469,11 +469,13 @@ InferAddressSpacesImpl::getIntToPtrPointerOperand(const Operator *I2P) const {
   // Either side can hold the pointer; the other is then the mask. Both sides
   // being a pointer needs no special case: such a "mask" has no known bits, so
   // its worst-case bit change is unbounded and the check below rejects it.
-  Value *OldPtr = nullptr, *Mask = nullptr;
-  for (unsigned Idx = 0; Idx != 2 && !Mask; ++Idx)
-    if (match(LogicalOp->getOperand(Idx), m_PtrToInt(m_Value(OldPtr))))
-      Mask = LogicalOp->getOperand(1 - Idx);
-  if (!Mask)
+  Value *LHS = LogicalOp->getOperand(0), *RHS = LogicalOp->getOperand(1);
+  Value *OldPtr, *Mask;
+  if (match(LHS, m_PtrToInt(m_Value(OldPtr))))
+    Mask = RHS;
+  else if (match(RHS, m_PtrToInt(m_Value(OldPtr))))
+    Mask = LHS;
+  else
     return nullptr;
 
   Operator *AsCast = dyn_cast<AddrSpaceCastOperator>(OldPtr);
@@ -507,11 +509,13 @@ void InferAddressSpacesImpl::collectIntToPtrPointerOperand() {
   };
 
   // A compile-time address folds the whole round trip into a constant
-  // expression, which never appears as an instruction and reaches the function
-  // only as an operand, possibly nested under further constant expressions as
-  // when a gep indexes it. Without walking those, every access to a fixed
-  // address stays flat. The rewrite side already handles them; see
-  // cloneConstantExprWithNewAddressSpace.
+  // expression, which is not an instruction. Within a function it is reached
+  // as an operand of an instruction, possibly nested under further constant
+  // expressions as when a gep indexes it. Without walking those, every access
+  // to a fixed address stays flat. The rewrite side already handles them; see
+  // cloneConstantExprWithNewAddressSpace. Only constant expressions reachable
+  // from instruction operands are visited; the initializers of global values
+  // are not, and the originals are never modified, so those are unaffected.
   DenseSet<ConstantExpr *> VisitedCE;
   SmallVector<ConstantExpr *, 8> Worklist;
   auto PushConstantExpr = [&](Value *V) {
