@@ -13354,10 +13354,13 @@ SDValue DAGCombiner::foldSelectToABD(SDValue LHS, SDValue RHS, SDValue True,
   }
 
   // (setcc (add nsw A, Const), 0, sets??) --> (setcc A, -Const, sets??)
+  // Ensure -Const doesn't overflow.
   SDValue A, B;
   if (ISD::isSignedIntSetCC(CC) && LHS->getFlags().hasNoSignedWrap() &&
       isZeroOrZeroSplat(RHS) && sd_match(LHS, m_Add(m_Value(A), m_Value(B))) &&
-      DAG.isConstantIntBuildVectorOrConstantInt(B)) {
+      ISD::matchUnaryPredicate(B, [](ConstantSDNode *C) {
+        return !C->getAPIntValue().isMinSignedValue();
+      })) {
     RHS = DAG.getNegative(B, LHS, B.getValueType());
     LHS = A;
   }
