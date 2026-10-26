@@ -403,6 +403,18 @@ public:
     return CompilerType();
   }
 
+  /// Returns the name of the member that backs the named property on
+  /// \a type, if this type system knows of one (e.g. an ivar reached via
+  /// DW_AT_property_forward on a DWARF DW_TAG_property).
+  ///
+  /// \return An empty string if \a type has no property named
+  /// \a property_name, or if that property has no known backing storage.
+  virtual llvm::StringRef
+  GetPropertyBackingStorageName(lldb::opaque_compiler_type_t type,
+                                llvm::StringRef property_name) {
+    return llvm::StringRef();
+  }
+
   virtual bool IsTemplateType(lldb::opaque_compiler_type_t type);
 
   virtual size_t GetNumTemplateArguments(lldb::opaque_compiler_type_t type,
