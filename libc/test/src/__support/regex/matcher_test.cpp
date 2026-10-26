@@ -409,6 +409,12 @@ TEST(LlvmLibcRegexMatcherTest, BracketMatchingAndRanges) {
   ASSERT_TRUE(sh_neg_nl.has_value());
   EXPECT_EQ(match(pool, *sh_neg_nl, "x\ny", REG_NEWLINE, 0),
             MatchResult::NoMatch);
+
+  ErrorOr<ExprId> multi_class =
+      parse_ere("^[[:alpha:][:blank:]]*$", REG_EXTENDED, pool);
+  ASSERT_TRUE(multi_class.has_value());
+  EXPECT_EQ(match(pool, *multi_class, "Hello World"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *multi_class, "Hello1World"), MatchResult::NoMatch);
 }
 
 TEST(LlvmLibcRegexMatcherTest, PoolExhaustionPropagation) {

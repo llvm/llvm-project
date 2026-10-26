@@ -69,5 +69,6 @@ add_object_library(
     libc.src.__support.CPP.string_view
     libc.src.__support.ctype_utils
     libc.src.__support.error_or
+    libc.src.__support.macros.attributes
     libc.src.__support.macros.config
 )

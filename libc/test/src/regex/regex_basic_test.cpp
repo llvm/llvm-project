@@ -404,6 +404,27 @@ TEST(LlvmLibcRegexTest, PosixCharacterClassesAndShorthands) {
   check(R"(^\d*$)", "");
   check(R"(^\d*$)", "12345");
   check(R"(^\d*$)", "12a45", REG_NOMATCH);
+
+  // Back-to-back adjacent character classes in a single bracket expression.
+  check("^[[:alpha:][:blank:]]$", "a");
+  check("^[[:alpha:][:blank:]]$", " ");
+  check("^[[:alpha:][:blank:]]$", "\t");
+  check("^[[:alpha:][:blank:]]$", "1", REG_NOMATCH);
+  check("^[[:alpha:][:blank:]]$", "_", REG_NOMATCH);
+
+  check("^[[:alpha:][:blank:]]*$", "Hello World");
+  check("^[[:alpha:][:blank:]]*$", "Hello\tWorld");
+  check("^[[:alpha:][:blank:]]*$", "Hello1World", REG_NOMATCH);
+  check("^[[:alpha:][:blank:]]*$", "Hello_World", REG_NOMATCH);
+
+  // Multiple classes combined with literals.
+  check("^[[:digit:][:lower:]_]*$", "3abc_7");
+  check("^[[:digit:][:lower:]_]*$", "3ABC_7", REG_NOMATCH);
+
+  // Negated multi-class bracket expressions.
+  check("^[^[:digit:][:space:]]*$", "abcABC_!");
+  check("^[^[:digit:][:space:]]*$", "abc 123", REG_NOMATCH);
+  check("^[^[:digit:][:space:]]*$", "abc1", REG_NOMATCH);
 }
 
 #if defined(LIBC_ADD_NULL_CHECKS)

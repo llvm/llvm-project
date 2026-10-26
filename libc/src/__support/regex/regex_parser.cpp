@@ -82,8 +82,6 @@ ErrorOr<uint8_t> parse_coll_elem(cpp::string_view &rem) {
 
 // Parses a single bracket expression item (collating element or single byte).
 ErrorOr<uint8_t> parse_bracket_elem(cpp::string_view &rem) {
-  if (rem.starts_with("[:"))
-    return Error(REG_BADPAT);
   if (rem.starts_with("[.") || rem.starts_with("[="))
     return parse_coll_elem(rem);
   uint8_t c = static_cast<uint8_t>(rem.front());
