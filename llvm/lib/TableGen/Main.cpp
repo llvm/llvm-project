@@ -25,7 +25,6 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/Process.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/ToolOutputFile.h"
@@ -134,17 +133,9 @@ static int WriteOutput(const char *argv0, StringRef Filename,
                                   EC.message() + "\n");
 #ifdef __MVS__
   // On z/OS, text files default to IBM-1047, but generated files are UTF-8.
-  // Tag the file as UTF-8 before any content is written. ToolOutputFile does
-  // not expose its file descriptor, so reopen the (still empty) file.
+  // Tag the file as UTF-8 before any content is written.
   if (Filename != "-") {
-    int FD;
-    EC = sys::fs::openFileForWrite(Filename, FD, sys::fs::CD_OpenExisting,
-                                   sys::fs::OF_None);
-    if (EC)
-      return reportError(argv0, "error reopening " + Filename + ": " +
-                                    EC.message() + "\n");
-    EC = setzOSFileTag(FD, CCSID_UTF_8, /*IsText=*/true);
-    sys::Process::SafelyCloseFileDescriptor(FD);
+    EC = setzOSFileTag(OutFile.os().get_fd(), CCSID_UTF_8, /*IsText=*/true);
     if (EC)
       return reportError(argv0, "error tagging " + Filename + ": " +
                                     EC.message() + "\n");
