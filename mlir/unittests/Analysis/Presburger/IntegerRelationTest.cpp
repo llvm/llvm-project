@@ -8,6 +8,7 @@
 
 #include "mlir/Analysis/Presburger/IntegerRelation.h"
 #include "Parser.h"
+#include "Utils.h"
 #include "mlir/Analysis/Presburger/PresburgerSpace.h"
 #include "mlir/Analysis/Presburger/Simplex.h"
 
@@ -776,4 +777,44 @@ TEST(IntegerRelationTest, isFullDim) {
 
   rel = parseRelationFromSet("(x): (-1 >= 0)", 1);
   EXPECT_FALSE(rel.isFullDim());
+}
+
+TEST(IntegerRelationTest, gistPreservesDomainAndRange) {
+  IntegerRelation rel = parseRelationFromSet(
+      "(x, y) : (y - x - 1 >= 0, x >= 0, -x + 10 >= 0)", 1);
+  IntegerRelation context = parseRelationFromSet("(x, y) : (x >= 0)", 1);
+  IntegerRelation gist = rel;
+  gist.gist(context);
+
+  expectGistInvariants(rel, context, gist);
+  IntegerRelation gistAgain = gist;
+  gistAgain.gist(context);
+  EXPECT_TRUE(gistAgain.isObviouslyEqual(gist));
+  EXPECT_TRUE(gist.isEqual(
+      parseRelationFromSet("(x, y) : (y - x - 1 >= 0, -x + 10 >= 0)", 1)));
+  EXPECT_EQ(gist.getNumConstraints(), 2u);
+  EXPECT_EQ(gist.getNumDomainVars(), 1u);
+  EXPECT_EQ(gist.getNumRangeVars(), 1u);
+}
+
+TEST(IntegerRelationTest, gistWithSymbolsAndSharedLocal) {
+  // Domain, range and symbol variables, with the same division (local) on
+  // both sides.
+  IntegerRelation rel = parseRelationFromSet(
+      "(x, y)[N] : (y - 2*(y floordiv 2) == 0, x - N >= 0, y - x >= 0)", 1);
+  IntegerRelation context = parseRelationFromSet(
+      "(x, y)[N] : (y - 2*(y floordiv 2) == 0, x - N >= 0, N >= 0)", 1);
+  IntegerRelation gist = rel;
+  gist.gist(context);
+  expectGistInvariants(rel, context, gist);
+  IntegerRelation gistAgain = gist;
+  gistAgain.gist(context);
+  EXPECT_TRUE(gistAgain.isObviouslyEqual(gist));
+  EXPECT_TRUE(
+      gist.isEqual(parseRelationFromSet("(x, y)[N] : (y - x >= 0)", 1)));
+  EXPECT_EQ(gist.getNumConstraints(), 1u);
+  EXPECT_EQ(gist.getNumLocalVars(), 0u);
+  EXPECT_EQ(gist.getNumDomainVars(), 1u);
+  EXPECT_EQ(gist.getNumRangeVars(), 1u);
+  EXPECT_EQ(gist.getNumSymbolVars(), 1u);
 }

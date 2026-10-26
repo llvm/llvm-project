@@ -1544,6 +1544,287 @@ void IntegerRelation::simplify() {
   // Current set is not empty.
 }
 
+/// Removes the inequalities of `rel` that are obviously implied by a single
+/// inequality of `context`, i.e., that have the same linear part as an
+/// inequality of `context` with a constant term that is at least as large, as
+/// well as trivially true inequalities. Both relations must have the same
+/// columns. This is a port of ISL's mark_shifted_constraints.
+static void removeShiftedConstraints(IntegerRelation &rel,
+                                     const IntegerRelation &context) {
+  assert(rel.getNumCols() == context.getNumCols() && "columns must match");
+
+  // Map from the linear part of a context inequality to its smallest constant
+  // term, i.e., the tightest context bound with that linear part.
+  SmallDenseMap<ArrayRef<DynamicAPInt>, DynamicAPInt> contextBounds;
+  for (unsigned i = 0, e = context.getNumInequalities(); i < e; ++i) {
+    ArrayRef<DynamicAPInt> ineq = context.getInequality(i);
+    DynamicAPInt constTerm = ineq.back();
+    auto [it, inserted] =
+        contextBounds.try_emplace(ineq.drop_back(), constTerm);
+    if (!inserted && constTerm < it->second)
+      it->second = constTerm;
+  }
+
+  for (unsigned i = rel.getNumInequalities(); i-- > 0;) {
+    ArrayRef<DynamicAPInt> ineq = rel.getInequality(i);
+    ArrayRef<DynamicAPInt> linearPart = ineq.drop_back();
+    DynamicAPInt constTerm = ineq.back();
+    if (constTerm >= 0 && rangeIsZero(linearPart)) {
+      rel.removeInequality(i);
+      continue;
+    }
+    auto it = contextBounds.find(linearPart);
+    if (it != contextBounds.end() && constTerm >= it->second)
+      rel.removeInequality(i);
+  }
+}
+
+void IntegerRelation::gist(const IntegerRelation &context) {
+  assert(space.isCompatible(context.getSpace()) &&
+         "Spaces must be compatible.");
+
+  // Trivial cases.
+  if (getNumConstraints() == 0)
+    return;
+  if (context.isObviouslyEmpty()) {
+    // The universe, without any local variables.
+    clearConstraints();
+    removeVarRange(VarKind::Local, 0, getNumLocalVars());
+    return;
+  }
+  if (isObviouslyEmpty())
+    return;
+  // In the universe context, only the constraints that are redundant on their
+  // own can be removed.
+  if (context.getNumConstraints() == 0) {
+    removeRedundantConstraints();
+    return;
+  }
+
+  // Establish the preconditions of gistAligned: both relations use the same
+  // columns, with locals that have the same division representation merged
+  // and one-sided locals appended as zero columns (the caller's `context` is
+  // left untouched), and both are GCD-tightened and normalized so that
+  // shifted-constraint matching compares canonical rows.
+  IntegerRelation ctx = context;
+  mergeLocalVars(ctx);
+  gcdTightenInequalities();
+  normalizeConstraintsByGCD();
+  ctx.gcdTightenInequalities();
+  ctx.normalizeConstraintsByGCD();
+  gistAligned(ctx);
+
+  // Drop the local variables that are no longer used, in particular those
+  // that were only added to align the locals with the context.
+  unsigned localOffset = getVarKindOffset(VarKind::Local);
+  for (unsigned i = getNumLocalVars(); i-- > 0;)
+    if (isColZero(localOffset + i))
+      removeVar(VarKind::Local, i);
+}
+
+void IntegerRelation::gistAligned(const IntegerRelation &ctx) {
+  assert(space.isEqual(ctx.getSpace()) && "spaces must be aligned");
+  assert(!ctx.isObviouslyEmpty() && !isObviouslyEmpty() &&
+         getNumConstraints() != 0 && "trivial cases should have been handled");
+  unsigned localOffset = getVarKindOffset(VarKind::Local);
+  unsigned numLocals = getNumLocalVars();
+
+  // Remember the constraints that define the division representations of the
+  // locals. Unlike ISL, we do not store the definition of a division
+  // separately from the constraints, so if the defining constraints of a local
+  // that is still used in the result are removed, they are added back below,
+  // such that the local keeps its meaning.
+  struct DivDef {
+    /// The defining equality, or the lower bound if `isEq` is false.
+    SmallVector<DynamicAPInt, 8> first;
+    /// The upper bound if `isEq` is false.
+    SmallVector<DynamicAPInt, 8> second;
+    bool isEq = false;
+    bool exists = false;
+  };
+  SmallVector<DivDef, 4> divDefs(numLocals);
+  {
+    std::vector<MaybeLocalRepr> reprs(numLocals);
+    getLocalReprs(&reprs);
+    for (unsigned i = 0; i < numLocals; ++i) {
+      DivDef &def = divDefs[i];
+      if (reprs[i].kind == ReprKind::Equality) {
+        ArrayRef<DynamicAPInt> eq = getEquality(reprs[i].repr.equalityIdx);
+        def.first.assign(eq.begin(), eq.end());
+        def.isEq = def.exists = true;
+      } else if (reprs[i].kind == ReprKind::Inequality) {
+        ArrayRef<DynamicAPInt> lb =
+            getInequality(reprs[i].repr.inequalityPair.lowerBoundIdx);
+        ArrayRef<DynamicAPInt> ub =
+            getInequality(reprs[i].repr.inequalityPair.upperBoundIdx);
+        def.first.assign(lb.begin(), lb.end());
+        def.second.assign(ub.begin(), ub.end());
+        def.exists = true;
+      }
+    }
+  }
+
+  // Check whether the intersection of the affine hulls of `this` and `ctx`
+  // (i.e., the combined equalities) is obviously empty, which may only become
+  // apparent after Gaussian elimination.
+  {
+    IntegerRelation combined = *this;
+    for (unsigned i = 0, e = ctx.getNumEqualities(); i < e; ++i)
+      combined.addEquality(ctx.getEquality(i));
+    combined.gaussianEliminate();
+    if (combined.isObviouslyEmpty()) {
+      *this = getEmpty(getSpace());
+      return;
+    }
+  }
+
+  // Rewrite the constraints using the equalities of the context. Equalities
+  // of `this` that are implied by those of the context become trivial and are
+  // dropped.
+  reduceUsingEqualities(ctx);
+  if (isObviouslyEmpty()) {
+    *this = getEmpty(getSpace());
+    return;
+  }
+
+  // Build a Simplex of the context. Checking the context for emptiness has to
+  // come before any constraint of `this` is removed, since a context that is
+  // found to be empty only now makes the result empty.
+  // TODO: port ISL's drop_irrelevant_constraints to drop the constraints of
+  // the context that cannot affect the redundancy of the constraints of `this`.
+  Simplex simplex(ctx);
+  if (simplex.isEmpty()) {
+    *this = getEmpty(getSpace());
+    return;
+  }
+
+  // Drop inequalities that are obviously implied by a single inequality of
+  // the context.
+  removeShiftedConstraints(*this, ctx);
+  if (getNumConstraints() == 0)
+    return;
+
+  // Among mutually redundant constraints, `Simplex::detectRedundant` marks the
+  // ones that come first as redundant. Move the inequalities that involve
+  // locals to the front so that they are removed in favor of those that do
+  // not, as ISL does.
+  auto moveLocalInequalitiesFirst = [&]() {
+    unsigned front = 0;
+    for (unsigned i = 0, e = getNumInequalities(); i < e; ++i) {
+      if (!rangeIsZero(getInequality(i).slice(localOffset, numLocals)))
+        inequalities.swapRows(i, front++);
+    }
+  };
+
+  // Add the constraints of `this` to the Simplex of the context. Only the
+  // constraints of `this`, starting at `offset`, are checked for redundancy;
+  // the context constraints are always respected.
+  unsigned offset = simplex.getNumConstraints();
+  moveLocalInequalitiesFirst();
+  simplex.intersectIntegerRelation(*this);
+  if (simplex.isEmpty()) {
+    *this = getEmpty(getSpace());
+    return;
+  }
+
+  // Detect implicit equalities: an inequality whose maximum over the
+  // intersection with the context is zero holds as an equality there.
+  bool foundEquality = false;
+  for (unsigned i = getNumInequalities(); i-- > 0;) {
+    MaybeOptimum<Fraction> max =
+        simplex.computeOptimum(Simplex::Direction::Up, getInequality(i));
+    if (max.isBounded() && *max == Fraction(0, 1)) {
+      addEquality(getInequality(i));
+      removeInequality(i);
+      foundEquality = true;
+    }
+  }
+  if (foundEquality) {
+    // Use the equalities to eliminate variables from the other constraints,
+    // pivoting on the last variable of each equality (as in
+    // reduceUsingEqualities), so that locals are eliminated in favor of
+    // dimensions and later dimensions in favor of earlier ones.
+    SmallVector<unsigned, 8> cols(
+        llvm::reverse(llvm::seq<unsigned>(0, getNumVars())));
+    llvm::SmallBitVector rowUsed(getNumEqualities());
+    SmallVector<unsigned, 8> pivotRows, pivotCols;
+    reduceEqualityRows(equalities, cols, rowUsed, pivotRows, pivotCols);
+    for (auto [pivotRow, pivotCol] : llvm::zip_equal(pivotRows, pivotCols)) {
+      ArrayRef<DynamicAPInt> pivot = getEquality(pivotRow);
+      for (unsigned i = 0, e = getNumInequalities(); i < e; ++i)
+        eliminateColumnUsingEquality(inequalities.getRow(i), pivot, pivotCol);
+    }
+    // The unused rows are now constant; a non-zero constant means that the
+    // set is empty.
+    removeTrivialRedundancy();
+    removeTrivialEqualities();
+    if (isObviouslyEmpty()) {
+      *this = getEmpty(getSpace());
+      return;
+    }
+    // Rebuild the Simplex with the new constraint layout; the offset does not
+    // change since the context is unchanged.
+    simplex = Simplex(ctx);
+    moveLocalInequalitiesFirst();
+    simplex.intersectIntegerRelation(*this);
+  }
+
+  // Remove the constraints of `this` that are redundant in the context.
+  simplex.detectRedundant(offset);
+  removeRedundantConstraintsFromSimplex(simplex, offset);
+
+  // Integer-exact pass: an inequality is redundant if its negation together
+  // with the context and the remaining constraints has no integer solution.
+  // The negation of `c >= 0` is `-c - 1 >= 0`. This costs one integer
+  // emptiness check per remaining inequality.
+  if (getNumInequalities() != 0) {
+    IntegerRelation combined = ctx;
+    combined.append(*this);
+    unsigned ctxIneqs = ctx.getNumInequalities();
+    unsigned numCols = getNumCols();
+    for (unsigned i = getNumInequalities(); i-- > 0;) {
+      unsigned r = ctxIneqs + i;
+      combined.inequalities.negateRow(r);
+      --combined.atIneq(r, numCols - 1);
+      if (combined.isIntegerEmpty()) {
+        removeInequality(i);
+        combined.removeInequality(r);
+        continue;
+      }
+      // Restore the inequality.
+      ++combined.atIneq(r, numCols - 1);
+      combined.inequalities.negateRow(r);
+    }
+  }
+
+  // Add back the defining constraints of the locals that are still used but
+  // have lost their division representation. Since the definition of a local
+  // may use other locals (nested divisions), this is iterated to a fixpoint,
+  // recomputing the representations and used columns after each addition.
+  llvm::SmallBitVector readded(numLocals);
+  bool changed = true;
+  while (changed) {
+    changed = false;
+    DivisionRepr divs = getLocalReprs();
+    for (unsigned i = 0; i < numLocals; ++i) {
+      const DivDef &def = divDefs[i];
+      if (!def.exists || readded[i] || divs.hasRepr(i) ||
+          isColZero(localOffset + i))
+        continue;
+      if (def.isEq) {
+        addEquality(def.first);
+      } else {
+        addInequality(def.first);
+        addInequality(def.second);
+      }
+      readded[i] = true;
+      changed = true;
+    }
+    if (changed)
+      removeTrivialRedundancy();
+  }
+}
+
 /// Removes local variables using equalities. Each equality is checked if it
 /// can be reduced to the form: `e = affine-expr`, where `e` is a local
 /// variable and `affine-expr` is an affine expression not containing `e`.
