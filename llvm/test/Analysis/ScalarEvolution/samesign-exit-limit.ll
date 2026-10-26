@@ -81,9 +81,9 @@ exit:
 define void @zero_max(i8 %n) {
 ; CHECK-LABEL: 'zero_max'
 ; CHECK-NEXT:  Determining loop execution counts for: @zero_max
-; CHECK-NEXT:  Loop %loop: backedge-taken count is i1 false
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i1 false
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i1 false
+; CHECK-NEXT:  Loop %loop: backedge-taken count is i8 0
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i8 0
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i8 0
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -107,13 +107,13 @@ define void @predicated_masked_count(i64 %n) {
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + (1 smax %n))<nsw>
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %n)
 ; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:      {1,+,1}<%loop> Added Flags: <nusw>
 ; CHECK-NEXT:  Loop %loop: Predicated constant max backedge-taken count is i64 9223372036854775806
 ; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:      {1,+,1}<%loop> Added Flags: <nusw>
-; CHECK-NEXT:  Loop %loop: Predicated symbolic max backedge-taken count is (-1 + (1 smax %n))<nsw>
+; CHECK-NEXT:  Loop %loop: Predicated symbolic max backedge-taken count is (-1 + %n)
 ; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:      {1,+,1}<%loop> Added Flags: <nusw>
 ;
