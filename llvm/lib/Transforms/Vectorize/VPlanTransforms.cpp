@@ -49,24 +49,21 @@ using namespace VPlanPatternMatch;
 using namespace SCEVPatternMatch;
 
 void VPlanTransforms::verifyIfRequested(VPlan &Plan) {
-  const VectorizeOptions &Opts =
-      Plan.getContext().getLibraryOptions().get<VectorizeOptions>();
+  const VectorizeOptions &Opts = getVectorizeOptions(Plan.getContext());
   if (Opts.vplan_verify_each && !verifyVPlanIsValid(Plan))
     report_fatal_error("Broken VPlan found, compilation aborted!");
 }
 
 #ifndef NDEBUG
 bool VPlanTransforms::isPrintingRequested(const VPlan &Plan) {
-  const VectorizeOptions &Opts =
-      Plan.getContext().getLibraryOptions().get<VectorizeOptions>();
+  const VectorizeOptions &Opts = getVectorizeOptions(Plan.getContext());
   return Opts.vplan_print_before_all || Opts.vplan_print_after_all ||
          !Opts.vplan_print_before.empty() || !Opts.vplan_print_after.empty();
 }
 
 void VPlanTransforms::printIfRequested(VPlan &Plan, Function *Fn,
                                        StringRef NumberedPassName, bool After) {
-  const VectorizeOptions &Opts =
-      Plan.getContext().getLibraryOptions().get<VectorizeOptions>();
+  const VectorizeOptions &Opts = getVectorizeOptions(Plan.getContext());
   bool All = After ? Opts.vplan_print_after_all : Opts.vplan_print_before_all;
   ArrayRef<StringRef> Passes =
       After ? Opts.vplan_print_after : Opts.vplan_print_before;
@@ -3567,6 +3564,25 @@ bool VPlanTransforms::handleUncountableEarlyExits(
   SmallVector<EarlyExitInfo> Exits;
   for (auto [EarlyExitingVPBB, ExitBlock] :
        vputils::getEarlyExits(Plan, MiddleVPBB)) {
+    // The final value of a reduction is computed in the middle block, which is
+    // only reached when leaving the vector loop via the latch.
+    // TODO: Support reductions used on early exits.
+    for (VPRecipeBase &R : ExitBlock->phis()) {
+      VPValue *ExitV =
+          cast<VPIRPhi>(&R)->getIncomingValueForBlock(EarlyExitingVPBB);
+      for (VPReductionPHIRecipe &PhiR :
+           make_isa_range<VPReductionPHIRecipe>(HeaderVPBB->phis())) {
+        if (ExitV != PhiR.getBackedgeValue())
+          continue;
+        reportVectorizationFailure(
+            "Found reduction used on an early exit",
+            "Cannot vectorize early exit loop with reduction used on an "
+            "early exit",
+            "ReductionUsedOnEarlyExit", ORE, TheLoop);
+        return false;
+      }
+    }
+
     // Collect condition for this early exit.
     VPBlockBase *TrueSucc = EarlyExitingVPBB->getSuccessors()[0];
     VPValue *CondOfEarlyExitingVPBB;

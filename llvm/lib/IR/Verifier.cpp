@@ -6237,6 +6237,17 @@ void Verifier::visitInstruction(Instruction &I) {
           MD);
   }
 
+  if (MDNode *MD = I.getMetadata("amdgpu.cfs")) {
+    Check(MD->getNumOperands() == 1,
+          "!amdgpu.cfs must have exactly one operand", &I, MD);
+    ConstantInt *CI =
+        mdconst::dyn_extract_or_null<ConstantInt>(MD->getOperand(0));
+    Check(CI && CI->getType()->isIntegerTy(32),
+          "!amdgpu.cfs operand must be an i32 constant", &I, MD);
+    Check(CI->getZExtValue() <= 3,
+          "!amdgpu.cfs operand must be in the range [0, 3]", &I, MD);
+  }
+
   if (MDNode *N = I.getDebugLoc().getAsMDNode()) {
     CheckDI(isa<DILocation>(N), "invalid !dbg metadata attachment", &I, N);
     visitMDNode(*N, AreDebugLocsAllowed::Yes);
@@ -7342,6 +7353,22 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "llvm.riscv.vsetvli/vsetvlimax VLMUL is reserved", &Call);
     break;
   }
+  case Intrinsic::riscv_sati: {
+    unsigned BitWidth = Call.getType()->getScalarSizeInBits();
+    uint64_t Imm = cast<ConstantInt>(Call.getArgOperand(1))->getZExtValue();
+    Check(Imm >= 1 && Imm <= BitWidth,
+          "llvm.riscv.sati immediate must be in the range [1, bitwidth]",
+          &Call);
+    break;
+  }
+  case Intrinsic::riscv_usati: {
+    unsigned BitWidth = Call.getType()->getScalarSizeInBits();
+    uint64_t Imm = cast<ConstantInt>(Call.getArgOperand(1))->getZExtValue();
+    Check(Imm < BitWidth,
+          "llvm.riscv.usati immediate must be in the range [0, bitwidth-1]",
+          &Call);
+    break;
+  }
   case Intrinsic::callbr_landingpad: {
     const auto *CBR = dyn_cast<CallBrInst>(Call.getOperand(0));
     Check(CBR, "intrinstic requires callbr operand", &Call);
@@ -8352,13 +8379,29 @@ MDNode *TBAAVerifier::getFieldNodeFromTBAABaseNode(const Instruction *I,
   return cast<MDNode>(BaseNode->getOperand(LastIdx));
 }
 
-static bool isNewFormatTBAATypeNode(llvm::MDNode *Type) {
+static bool isNewFormatTBAATypeNode(const MDNode *Type) {
   if (!Type || Type->getNumOperands() < 3)
     return false;
 
   // In the new format type nodes shall have a reference to the parent type as
   // its first operand.
   return isa_and_nonnull<MDNode>(Type->getOperand(0));
+}
+
+/// Returns true if the parent chain of the TBAA type node \p MD is acyclic.
+static bool hasAcyclicTBAAParentChain(const MDNode *MD) {
+  SmallPtrSet<const MDNode *, 4> Visited;
+  for (const MDNode *N = MD; N;) {
+    if (!Visited.insert(N).second)
+      return false;
+    if (isNewFormatTBAATypeNode(N)) {
+      N = cast<MDNode>(N->getOperand(0));
+    } else {
+      N = IsRootTBAANode(N) ? nullptr
+                            : dyn_cast_or_null<MDNode>(N->getOperand(1));
+    }
+  }
+  return true;
 }
 
 bool TBAAVerifier::visitTBAAMetadata(const Instruction *I, const MDNode *MD) {
@@ -8421,6 +8464,9 @@ bool TBAAVerifier::visitTBAAMetadata(const Instruction *I, const MDNode *MD) {
     CheckTBAA(isValidScalarTBAANode(AccessType),
               "Access type node must be a valid scalar type", I, MD,
               AccessType);
+  } else {
+    CheckTBAA(hasAcyclicTBAAParentChain(AccessType),
+              "Cycle detected in access type parent chain", I, MD, AccessType);
   }
 
   auto *OffsetCI = mdconst::dyn_extract_or_null<ConstantInt>(MD->getOperand(2));

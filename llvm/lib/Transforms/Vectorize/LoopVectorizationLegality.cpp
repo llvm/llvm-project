@@ -81,18 +81,17 @@ LoopVectorizeHints::LoopVectorizeHints(const VectorizeOptions &Opts,
       [TTI](ScalableForceKind ForceScalableHint,
             ScalableForceKind ForceScalableOpt, unsigned ForceWidth,
             ElementCount ForceWidthOpt) -> ScalableForceKind {
-    // -scalable-vectorization=(always|off|on) has the highest precedence.
-    if (ForceScalableOpt != SK_Unspecified)
-      return ForceScalableOpt;
-
-    // Then, consider loop hints.
+    // Loop hints have the highest precedence.
     assert(ForceScalableHint != SK_AlwaysScalable && "Unexpected loop hint.");
     if (ForceScalableHint == SK_PreferScalable ||
         ForceScalableHint == SK_FixedWidthOnly)
       return ForceScalableHint;
 
+    // Then, consider -scalable-vectorization=(always|off|on).
+    if (ForceScalableOpt != SK_Unspecified)
+      return ForceScalableOpt;
+
     // Then, infer scalability from a preferred VF.
-    assert(ForceScalableOpt == SK_Unspecified);
     if (ForceWidthOpt.isScalable())
       return SK_AlwaysScalable;
     if (ForceWidth)
@@ -1716,10 +1715,10 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
     return false;
   }
 
-  if (Reductions.size() || FixedOrderRecurrences.size()) {
+  if (!FixedOrderRecurrences.empty()) {
     reportVectorizationFailure(
-        "Found reductions or recurrences in early-exit loop",
-        "Cannot vectorize early exit loop with reductions or recurrences",
+        "Found fixed-order recurrences in early-exit loop",
+        "Cannot vectorize early exit loop with fixed-order recurrences",
         "RecurrencesInEarlyExitLoop", ORE, TheLoop);
     return false;
   }
