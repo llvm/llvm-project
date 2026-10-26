@@ -379,6 +379,19 @@ Makes programs 10x faster by doing Special New Thing.
   a read-only table of functions, and an indirect call is `callx` through
   the table. It is for programs that keep pointers to functions in arena.
 
+* Added register `r12`, the pointer to the frame of a function in a stack in
+  arena. It is reserved.
+
+* Added `-mattr=+arena`: the memory of a program is in arena, and the source
+  doesn't mark the pointers to it with `address_space(1)`. It is for C, Rust and
+  other languages. Locals are in a stack in arena and are accessed through
+  `r12`. Global variables are in `.addr_space.1` and `.bss.addr_space.1`,
+  the sections that a loader puts into arena. `ptr` is a flat pointer: a pointer
+  that is dereferenced and can be an address in arena is cast with
+  `addr_space_cast`. What helpers and kfuncs get, what holds pointers of
+  the kernel, and constants that a loader can set stay where they are.
+  The feature enables `func-table`.
+
 ### Changes to the DirectX Backend
 
 * The DirectX backend has been promoted from experimental to an official,

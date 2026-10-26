@@ -1,4 +1,5 @@
 ; RUN: opt -S -mtriple=bpfel -passes=bpf-func-table %s | FileCheck %s
+; RUN: opt -S -mtriple=bpfel -passes=bpf-func-table,bpf-func-table %s | FileCheck %s
 ; RUN: llc -mtriple=bpfel -mcpu=v4 -mattr=+func-table %s -o - | FileCheck --check-prefix=ASM %s
 ; RUN: llc -mtriple=bpfel -mcpu=v4 %s -o - | FileCheck --check-prefix=OFF %s
 

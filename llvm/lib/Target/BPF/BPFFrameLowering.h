@@ -38,6 +38,9 @@ public:
   StackOffset getFrameIndexReference(const MachineFunction &MF, int FI,
                                      Register &FrameReg) const override;
 
+  void processFunctionBeforeFrameFinalized(MachineFunction &MF,
+                                           RegScavenger *RS) const override;
+
 protected:
   bool hasFPImpl(const MachineFunction &MF) const override;
 };
