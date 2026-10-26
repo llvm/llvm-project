@@ -238,8 +238,14 @@ public:
 FunctionPass *createRISCVRedundantCopyEliminationLegacyPass();
 void initializeRISCVRedundantCopyEliminationLegacyPass(PassRegistry &);
 
-FunctionPass *createRISCVMoveMergePass();
-void initializeRISCVMoveMergePass(PassRegistry &);
+class RISCVMoveMergePass : public OptionalPassInfoMixin<RISCVMoveMergePass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createRISCVMoveMergeLegacyPass();
+void initializeRISCVMoveMergeLegacyPass(PassRegistry &);
 
 FunctionPass *createRISCVPushPopOptimizationPass();
 void initializeRISCVPushPopOptPass(PassRegistry &);
