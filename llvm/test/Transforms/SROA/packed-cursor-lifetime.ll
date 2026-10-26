@@ -15,22 +15,19 @@ define i32 @packed_cursor(i64 %init, i64 %initial.count) {
 ; LE-LABEL: define i32 @packed_cursor(
 ; LE-SAME: i64 [[INIT:%.*]], i64 [[INITIAL_COUNT:%.*]]) {
 ; LE-NEXT:  [[ENTRY:.*]]:
+; LE-NEXT:    [[STATE_SROA_0_0_EXTRACT_TRUNC:%.*]] = trunc i64 [[INIT]] to i32
+; LE-NEXT:    [[STATE_SROA_5_0_EXTRACT_SHIFT:%.*]] = lshr i64 [[INIT]], 32
 ; LE-NEXT:    br label %[[LOOP:.*]]
 ; LE:       [[LOOP]]:
 ; LE-NEXT:    [[STATE_SROA_61_0:%.*]] = phi i64 [ [[INITIAL_COUNT]], %[[ENTRY]] ], [ [[NEXTN:%.*]], %[[BODY:.*]] ]
-; LE-NEXT:    [[STATE_SROA_0_0:%.*]] = phi i64 [ [[INIT]], %[[ENTRY]] ], [ [[STATE_SROA_0_0_INSERT_INSERT:%.*]], %[[BODY]] ]
+; LE-NEXT:    [[STATE_SROA_0_0:%.*]] = phi i32 [ [[STATE_SROA_0_0_EXTRACT_TRUNC]], %[[ENTRY]] ], [ [[NEXT:%.*]], %[[BODY]] ]
 ; LE-NEXT:    [[S:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[NEXTS:%.*]], %[[BODY]] ]
 ; LE-NEXT:    [[DONE:%.*]] = icmp eq i64 [[STATE_SROA_61_0]], 0
 ; LE-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[BODY]]
 ; LE:       [[BODY]]:
-; LE-NEXT:    [[STATE_SROA_0_0_EXTRACT_TRUNC:%.*]] = trunc i64 [[STATE_SROA_0_0]] to i32
-; LE-NEXT:    [[STATE_SROA_5_0_EXTRACT_SHIFT:%.*]] = lshr i64 [[STATE_SROA_0_0]], 32
 ; LE-NEXT:    [[TMP0:%.*]] = trunc nuw i64 [[STATE_SROA_5_0_EXTRACT_SHIFT]] to i32
-; LE-NEXT:    [[ADDED:%.*]] = add i32 [[TMP0]], [[STATE_SROA_0_0_EXTRACT_TRUNC]]
-; LE-NEXT:    [[NEXT:%.*]] = and i32 [[ADDED]], 63
-; LE-NEXT:    [[STATE_SROA_0_0_INSERT_EXT:%.*]] = zext nneg i32 [[NEXT]] to i64
-; LE-NEXT:    [[STATE_SROA_0_0_INSERT_MASK:%.*]] = and i64 [[STATE_SROA_0_0]], -4294967296
-; LE-NEXT:    [[STATE_SROA_0_0_INSERT_INSERT]] = or disjoint i64 [[STATE_SROA_0_0_INSERT_MASK]], [[STATE_SROA_0_0_INSERT_EXT]]
+; LE-NEXT:    [[ADDED:%.*]] = add i32 [[STATE_SROA_0_0]], [[TMP0]]
+; LE-NEXT:    [[NEXT]] = and i32 [[ADDED]], 63
 ; LE-NEXT:    [[NEXTS]] = add i32 [[S]], [[NEXT]]
 ; LE-NEXT:    [[NEXTN]] = add i64 [[STATE_SROA_61_0]], -1
 ; LE-NEXT:    br label %[[LOOP]]
@@ -40,24 +37,20 @@ define i32 @packed_cursor(i64 %init, i64 %initial.count) {
 ; BE-LABEL: define i32 @packed_cursor(
 ; BE-SAME: i64 [[INIT:%.*]], i64 [[INITIAL_COUNT:%.*]]) {
 ; BE-NEXT:  [[ENTRY:.*]]:
+; BE-NEXT:    [[STATE_SROA_0_0_EXTRACT_SHIFT:%.*]] = lshr i64 [[INIT]], 32
+; BE-NEXT:    [[STATE_SROA_0_0_EXTRACT_TRUNC:%.*]] = trunc nuw i64 [[STATE_SROA_0_0_EXTRACT_SHIFT]] to i32
 ; BE-NEXT:    br label %[[LOOP:.*]]
 ; BE:       [[LOOP]]:
 ; BE-NEXT:    [[STATE_SROA_61_0:%.*]] = phi i64 [ [[INITIAL_COUNT]], %[[ENTRY]] ], [ [[NEXTN:%.*]], %[[BODY:.*]] ]
-; BE-NEXT:    [[STATE_SROA_0_0:%.*]] = phi i64 [ [[INIT]], %[[ENTRY]] ], [ [[STATE_SROA_0_0_INSERT_INSERT:%.*]], %[[BODY]] ]
+; BE-NEXT:    [[STATE_SROA_0_0:%.*]] = phi i32 [ [[STATE_SROA_0_0_EXTRACT_TRUNC]], %[[ENTRY]] ], [ [[NEXT:%.*]], %[[BODY]] ]
 ; BE-NEXT:    [[S:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[NEXTS:%.*]], %[[BODY]] ]
 ; BE-NEXT:    [[DONE:%.*]] = icmp eq i64 [[STATE_SROA_61_0]], 0
 ; BE-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[BODY]]
 ; BE:       [[BODY]]:
-; BE-NEXT:    [[STATE_SROA_0_0_EXTRACT_SHIFT:%.*]] = lshr i64 [[STATE_SROA_0_0]], 32
-; BE-NEXT:    [[STATE_SROA_0_0_EXTRACT_TRUNC:%.*]] = trunc nuw i64 [[STATE_SROA_0_0_EXTRACT_SHIFT]] to i32
-; BE-NEXT:    [[TMP0:%.*]] = trunc i64 [[STATE_SROA_0_0]] to i32
+; BE-NEXT:    [[TMP0:%.*]] = trunc i64 [[INIT]] to i32
 ; BE-NEXT:    [[TMP1:%.*]] = lshr i32 [[TMP0]], 24
-; BE-NEXT:    [[ADDED:%.*]] = add i32 [[TMP1]], [[STATE_SROA_0_0_EXTRACT_TRUNC]]
-; BE-NEXT:    [[NEXT:%.*]] = and i32 [[ADDED]], 63
-; BE-NEXT:    [[STATE_SROA_0_0_INSERT_EXT:%.*]] = zext nneg i32 [[NEXT]] to i64
-; BE-NEXT:    [[STATE_SROA_0_0_INSERT_SHIFT:%.*]] = shl nuw nsw i64 [[STATE_SROA_0_0_INSERT_EXT]], 32
-; BE-NEXT:    [[STATE_SROA_0_0_INSERT_MASK:%.*]] = and i64 [[STATE_SROA_0_0]], 4294967295
-; BE-NEXT:    [[STATE_SROA_0_0_INSERT_INSERT]] = or disjoint i64 [[STATE_SROA_0_0_INSERT_MASK]], [[STATE_SROA_0_0_INSERT_SHIFT]]
+; BE-NEXT:    [[ADDED:%.*]] = add i32 [[STATE_SROA_0_0]], [[TMP1]]
+; BE-NEXT:    [[NEXT]] = and i32 [[ADDED]], 63
 ; BE-NEXT:    [[NEXTS]] = add i32 [[S]], [[NEXT]]
 ; BE-NEXT:    [[NEXTN]] = add i64 [[STATE_SROA_61_0]], -1
 ; BE-NEXT:    br label %[[LOOP]]
