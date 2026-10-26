@@ -1106,8 +1106,10 @@ Value *InstCombinerImpl::simplifyNonNullOperand(Value *V, bool UseProvenance,
 static Instruction *foldLoadOfSelectOfConstPtrs(LoadInst &LI,
                                                 const DataLayout &DL) {
   Value *Op = LI.getOperand(0);
-  // Avoid computing offsets unless the base is a select of constants.
-  Value *Base = getUnderlyingObject(Op);
+  // In canonical IR the pattern is load (select) or load (gep (select)).
+  Value *Base = Op;
+  if (auto *GEP = dyn_cast<GEPOperator>(Base))
+    Base = GEP->getPointerOperand();
   Value *Cond;
   Constant *TrueC, *FalseC;
   if (!match(Base,
