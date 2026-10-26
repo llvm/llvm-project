@@ -3,6 +3,10 @@
 # RUN: yaml2obj %s -o %t
 # RUN: llvm-objcopy %t %t.out
 # RUN: cmp %t %t.out
+# RUN: not llvm-objcopy --update-resource=24/1=%s %t %t.resource 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=RESOURCE
+
+# RESOURCE: error: option is not supported for DXContainer
 
 ## The DXContainer described below was generated with:
 

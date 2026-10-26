@@ -302,6 +302,16 @@ Error COFFWriter::finalize(bool IsBigObj) {
     // If the PE header had a checksum, clear it, since it isn't valid
     // any longer. (We don't calculate a new one.)
     Obj.PeHeader.CheckSum = 0;
+
+    // The attribute certificate table (which holds Authenticode signatures)
+    // isn't part of any section and is located by a file offset rather than
+    // an RVA, so it isn't copied. Clear its entry, which would otherwise point
+    // at unrelated data. (Any signature would be invalidated by modifying
+    // the image anyway.)
+    if (Obj.DataDirectories.size() > CERTIFICATE_TABLE) {
+      Obj.DataDirectories[CERTIFICATE_TABLE].RelativeVirtualAddress = 0;
+      Obj.DataDirectories[CERTIFICATE_TABLE].Size = 0;
+    }
   }
 
   Expected<size_t> StrTabSizeOrErr = finalizeStringTable();

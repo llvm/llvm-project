@@ -1,0 +1,25 @@
+REQUIRES: libxml2
+UNSUPPORTED: system-windows
+
+Update the manifest embedded in a PE image by merging other manifests into it.
+RUN: yaml2obj %p/Inputs/pe.yaml -o %t.exe
+RUN: llvm-mt /manifest %p/Inputs/test_manifest.manifest /outputresource:%t.exe
+RUN: llvm-mt /manifest %p/Inputs/additional.manifest /updateresource:%t.exe
+RUN: llvm-mt /inputresource:%t.exe /out:%t.manifest
+RUN: llvm-mt /manifest %p/Inputs/test_manifest.manifest /manifest %p/Inputs/additional.manifest /out:%t.expected.manifest
+RUN: diff %t.expected.manifest %t.manifest
+
+With /notify_update, the exit code indicates whether the resource changed.
+Without other manifests, the embedded manifest is only canonicalized, which does
+not change it if it is already canonical.
+RUN: llvm-mt /updateresource:%t.exe /notify_update
+RUN: not llvm-mt /manifest %p/Inputs/windows_settings.manifest /updateresource:%t.exe /notify_update
+RUN: llvm-mt /inputresource:%t.exe /out:%t.2.manifest
+RUN: FileCheck %s --input-file=%t.2.manifest --check-prefix=SETTINGS
+
+SETTINGS: <dpiAware>true/pm</dpiAware>
+
+Errors.
+RUN: yaml2obj %p/Inputs/pe.yaml -o %t.noresources.exe
+RUN: not llvm-mt /updateresource:%t.noresources.exe 2>&1 | FileCheck %s --check-prefix=NOT-FOUND
+NOT-FOUND: llvm-mt: error: {{.*}}.noresources.exe: manifest resource with ID 1 not found

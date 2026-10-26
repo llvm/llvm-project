@@ -1,0 +1,95 @@
+REQUIRES: libxml2
+UNSUPPORTED: system-windows
+
+Read the manifest from the RT_MANIFEST resource of a PE image.
+RUN: yaml2obj %p/Inputs/pe.yaml -o %t.exe
+RUN: llvm-objcopy --update-resource=24/1=%p/Inputs/test_manifest.manifest %t.exe
+RUN: llvm-mt /inputresource:%t.exe /out:%t.manifest
+RUN: FileCheck %s --input-file=%t.manifest
+
+The resource ID defaults to 1 and can be given with or without a '#'.
+RUN: llvm-mt "/inputresource:%t.exe;#1" /out:%t.1.manifest
+RUN: diff %t.manifest %t.1.manifest
+RUN: llvm-mt "/inputresource:%t.exe;1" /out:%t.2.manifest
+RUN: diff %t.manifest %t.2.manifest
+
+Other resource IDs work as well.
+RUN: llvm-objcopy --update-resource=24/2=%p/Inputs/additional.manifest %t.exe
+RUN: llvm-mt "/inputresource:%t.exe;#2" /out:%t.3.manifest
+RUN: FileCheck %s --input-file=%t.3.manifest --check-prefix=ADDITIONAL
+
+The manifest read from the resource is merged with the other input manifests.
+RUN: llvm-mt /inputresource:%t.exe /manifest %p/Inputs/additional.manifest /out:%t.4.manifest
+RUN: llvm-mt /manifest %p/Inputs/test_manifest.manifest /manifest %p/Inputs/additional.manifest /out:%t.5.manifest
+RUN: diff %t.4.manifest %t.5.manifest
+
+CHECK:      <?xml version="1.0" encoding="UTF-8"?>
+CHECK-NEXT: <assembly xmlns="urn:schemas-microsoft-com:asm.v1">
+CHECK-NEXT:   <trustInfo>
+CHECK-NEXT:     <security>
+CHECK-NEXT:       <requestedPrivileges>
+CHECK-NEXT:         <requestedExecutionLevel level="3" uiAccess="1"/>
+CHECK-NEXT:       </requestedPrivileges>
+CHECK-NEXT:     </security>
+CHECK-NEXT:   </trustInfo>
+CHECK-NEXT:   <dependency>
+CHECK-NEXT:     <dependentAssembly>
+CHECK-NEXT:       <assemblyIdentity program="displayDriver"/>
+CHECK-NEXT:     </dependentAssembly>
+CHECK-NEXT:   </dependency>
+CHECK-NEXT:   <compatibility>
+CHECK-NEXT:     <dependency>
+CHECK-NEXT:       <assemblyIdentity program="compatibilityCheck1"/>
+CHECK-NEXT:     </dependency>
+CHECK-NEXT:     <application>
+CHECK-NEXT:       <supportedOS Id="FooOS"/>
+CHECK-NEXT:     </application>
+CHECK-NEXT:   </compatibility>
+CHECK-NEXT: </assembly>
+
+ADDITIONAL:      <?xml version="1.0" encoding="UTF-8"?>
+ADDITIONAL-NEXT: <assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
+ADDITIONAL-NEXT:   <trustInfo>
+ADDITIONAL-NEXT:     <security>
+ADDITIONAL-NEXT:       <requestedPrivileges>
+ADDITIONAL-NEXT:         <requestedExecutionLevel level="3" admin="false"/>
+ADDITIONAL-NEXT:       </requestedPrivileges>
+ADDITIONAL-NEXT:     </security>
+ADDITIONAL-NEXT:   </trustInfo>
+ADDITIONAL-NEXT:   <dependency>
+ADDITIONAL-NEXT:     <dependentAssembly>
+ADDITIONAL-NEXT:       <assemblyIdentity program="logDisplay"/>
+ADDITIONAL-NEXT:     </dependentAssembly>
+ADDITIONAL-NEXT:   </dependency>
+ADDITIONAL-NEXT:   <compatibility>
+ADDITIONAL-NEXT:     <dependency>
+ADDITIONAL-NEXT:       <assemblyIdentity program="compatibilityCheck2"/>
+ADDITIONAL-NEXT:     </dependency>
+ADDITIONAL-NEXT:     <application>
+ADDITIONAL-NEXT:       <supportedOS Id="BarOS"/>
+ADDITIONAL-NEXT:     </application>
+ADDITIONAL-NEXT:   </compatibility>
+ADDITIONAL-NEXT: </assembly>
+
+Errors.
+RUN: not llvm-mt "/inputresource:%t.exe;#3" /out:%t.out 2>&1 | FileCheck %s --check-prefix=NOT-FOUND
+NOT-FOUND: llvm-mt: error: {{.*}}.exe: manifest resource with ID 3 not found
+
+RUN: yaml2obj %p/Inputs/pe.yaml -o %t.noresources.exe
+RUN: not llvm-mt /inputresource:%t.noresources.exe /out:%t.out 2>&1 | FileCheck %s --check-prefix=NO-RESOURCES
+NO-RESOURCES: llvm-mt: error: {{.*}}.noresources.exe: manifest resource with ID 1 not found
+
+RUN: not llvm-mt /inputresource:%p/Inputs/test_manifest.manifest /out:%t.out 2>&1 | FileCheck %s --check-prefix=NOT-OBJECT
+NOT-OBJECT: llvm-mt: error: '{{.*}}test_manifest.manifest': The file was not recognized as a valid object file
+
+RUN: not llvm-mt "/inputresource:%t.exe;#x" /out:%t.out 2>&1 | FileCheck %s --check-prefix=INVALID-ID
+INVALID-ID: llvm-mt: error: invalid resource ID in '{{.*}}.exe;#x'
+
+RUN: not llvm-mt "/inputresource:%t.exe;" /out:%t.out 2>&1 | FileCheck %s --check-prefix=EMPTY-ID
+EMPTY-ID: llvm-mt: error: invalid resource ID in '{{.*}}.exe;'
+
+RUN: not llvm-mt "/inputresource:;#1" /out:%t.out 2>&1 | FileCheck %s --check-prefix=NO-FILE
+NO-FILE: llvm-mt: error: missing file name in ';#1'
+
+RUN: not llvm-mt /inputresource:%t.exe 2>&1 | FileCheck %s --check-prefix=NO-OUTPUT
+NO-OUTPUT: llvm-mt: error: no output file specified
