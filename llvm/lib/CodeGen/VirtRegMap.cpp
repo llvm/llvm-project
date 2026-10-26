@@ -370,6 +370,10 @@ bool VirtRegRewriter::run(MachineFunction &fn) {
     // replaced. Remove the virtual registers and release all the transient data.
     VRM->clearAllVirt();
     MRI->clearVirtRegs();
+  } else {
+    // Later runs of the pass will not see the assignments in this VirtRegMap,
+    // so record them in the debug value locations now.
+    DebugVars->rewriteAssignedLocations(*VRM);
   }
 
   return true;
