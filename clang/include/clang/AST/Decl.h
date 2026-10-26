@@ -2376,7 +2376,7 @@ public:
   /// there is one).
   bool hasBody(const FunctionDecl *&Definition) const;
 
-  bool hasBody() const override {
+  bool hasBody() const {
     const FunctionDecl* Definition;
     return hasBody(Definition);
   }
