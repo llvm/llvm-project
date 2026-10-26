@@ -428,14 +428,40 @@ static const ValueDecl *getValueDeclFromSExpr(const til::SExpr *E) {
   return nullptr;
 }
 
+// The type of the object, pointer or array that E denotes, where the TIL
+// records one; null otherwise.
+static QualType getSExprType(const til::SExpr *E) {
+  if (auto *VD = getValueDeclFromSExpr(E))
+    return VD->getType();
+  // A decayed array, or a smart pointer, is its operand.
+  if (const auto *C = dyn_cast<til::Cast>(E))
+    return getSExprType(C->expr());
+  if (const auto *AI = dyn_cast<til::ArrayIndex>(E)) {
+    QualType T = getSExprType(AI->array());
+    if (T.isNull())
+      return T;
+    if (const auto *AT = T->getAsArrayTypeUnsafe())
+      return AT->getElementType();
+    return T->getPointeeType();
+  }
+  if (const auto *C = dyn_cast<til::Call>(E))
+    if (const CallExpr *CE = C->clangCallExpr())
+      return CE->getType();
+  return QualType();
+}
+
+// Whether E denotes a pointer to an object rather than the object itself, so
+// that its member is spelled `p->mu`, not `p.mu`. Since `&` and `*` are no-ops
+// in the TIL, this is decided by the translated base, not by the source.
 static bool hasAnyPointerType(const til::SExpr *E) {
-  auto *VD = getValueDeclFromSExpr(E);
-  if (VD && VD->getType()->isAnyPointerType())
-    return true;
   if (const auto *C = dyn_cast<til::Cast>(E))
     return C->castOpcode() == til::CAST_objToPtr;
-
-  return false;
+  // A member reached through arithmetic is reached through a pointer; an
+  // overloaded operator is a Call.
+  if (isa<til::BinaryOp>(E))
+    return true;
+  QualType T = getSExprType(E);
+  return !T.isNull() && T->isAnyPointerType();
 }
 
 til::SExpr *SExprBuilder::translateDeclRefExpr(const DeclRefExpr *DRE,
@@ -489,26 +515,24 @@ til::SExpr *SExprBuilder::translateDeclRefExpr(const DeclRefExpr *DRE,
   // a MemberExpr with an artificial self in the AST (e.g. ImplicitThisExpr as a
   // C equivalent of CXXThisExpr). Until such AST support is available, project
   // the field on the current SelfArg, so implicit member references in C and in
-  // parameter attributes are not lost. (A chain rooted in a VarDecl, from a
-  // namespace-scope anonymous union, is a named object instead.)
-  if (const auto *FD = dyn_cast<FieldDecl>(VD);
-      FD && Ctx && Ctx->SelfArg && !(IFD && IFD->getVarDecl())) {
-    // Project each anonymous member of the chain in turn.
-    SmallVector<const FieldDecl *> Chain;
-    if (IFD)
-      for (const NamedDecl *ND : IFD->chain())
-        Chain.push_back(cast<FieldDecl>(ND));
-    else
-      Chain.push_back(FD);
+  // parameter attributes are not lost.
+  if (const auto *FD = dyn_cast<FieldDecl>(VD); FD && Ctx && Ctx->SelfArg) {
+    // Sema lowers a non-member IndirectFieldDecl, from a namespace- or
+    // block-scope anonymous union, to a MemberExpr chain rooted at its VarDecl.
+    assert((!IFD || !IFD->getVarDecl()) &&
+           "non-member IndirectFieldDecl should be a MemberExpr");
     bool Found;
-    til::SExpr *E = translateFieldOwner(Chain.front()->getParent(), Ctx, Found);
-    til::Project *P = nullptr;
-    for (const FieldDecl *Member : Chain)
-      E = P = translateProject(E, Member);
-    assert(P && "a field or a non-empty chain");
+    const auto *Owner =
+        cast<FieldDecl>(IFD ? IFD->chain().front() : FD)->getParent();
+    til::SExpr *E = translateFieldOwner(Owner, Ctx, Found);
+    // Project each anonymous member of the chain in turn.
+    if (IFD)
+      for (const NamedDecl *ND : IFD->chain().drop_back())
+        E = translateProject(E, cast<FieldDecl>(ND));
+    til::Project *P = translateProject(E, FD);
     // Say whose field this is when self does not have it.
     P->setQualified(!Found);
-    return E;
+    return P;
   }
 
   // For non-local variables, treat it as a reference to a named object.
@@ -533,12 +557,15 @@ til::SExpr *SExprBuilder::translateFieldOwner(const RecordDecl *Owner,
     return translateCXXThisExpr(nullptr, Ctx);
   Found = false;
   for (const Expr *E = SelfArg;;) {
-    // Up to casts, E is either the object or a pointer to it.
+    // Up to casts, E is either the object or a pointer to it. An array of
+    // objects, left by stripping its decay to a pointer, is its element.
     const Expr *Inner = E->IgnoreParenImpCasts();
     QualType T = Inner->getType();
     bool Pointer = T->isAnyPointerType();
     if (Pointer)
       T = T->getPointeeType();
+    else if (const auto *AT = T->getAsArrayTypeUnsafe())
+      T = AT->getElementType();
     if (const auto *RD = T->getAsRecordDecl()) {
       if (declaresSameEntity(RD, Owner)) {
         SelfArg = E;
@@ -601,7 +628,7 @@ static const CXXMethodDecl *getFirstVirtualDecl(const CXXMethodDecl *D) {
     D = D->getCanonicalDecl();
     auto OverriddenMethods = D->overridden_methods();
     if (OverriddenMethods.begin() == OverriddenMethods.end())
-      return D;  // Method does not override anything
+      return D; // Method does not override anything
     // FIXME: this does not work with multiple inheritance.
     D = *OverriddenMethods.begin();
   }
@@ -622,14 +649,8 @@ til::SExpr *SExprBuilder::translateMemberExpr(const MemberExpr *ME,
 til::SExpr *SExprBuilder::translateObjCIVarRefExpr(const ObjCIvarRefExpr *IVRE,
                                                    CallingContext *Ctx) {
   til::SExpr *BE = translate(IVRE->getBase(), Ctx);
-  til::SExpr *E = new (Arena) til::SApply(BE);
-
   const auto *D = cast<ObjCIvarDecl>(IVRE->getDecl()->getCanonicalDecl());
-
-  til::Project *P = new (Arena) til::Project(E, D);
-  if (hasAnyPointerType(BE))
-    P->setArrow(true);
-  return P;
+  return translateProject(BE, D);
 }
 
 til::SExpr *SExprBuilder::translateCallExpr(const CallExpr *CE,
@@ -850,10 +871,14 @@ til::SExpr *SExprBuilder::translateCastExpr(const CastExpr *CE,
     // FIXME!! -- get Load working properly
     // return new (Arena) til::Load(E0);
   }
+  case CK_ArrayToPointerDecay:
+    // Keep the decay, so that a member of an element is spelled as reached
+    // through the pointer, `arr->mu`, unlike one of the array, `arr[0].mu`.
+    return new (Arena)
+        til::Cast(til::CAST_objToPtr, translate(CE->getSubExpr(), Ctx));
   case CK_NoOp:
   case CK_DerivedToBase:
   case CK_UncheckedDerivedToBase:
-  case CK_ArrayToPointerDecay:
   case CK_FunctionToPointerDecay: {
     til::SExpr *E0 = translate(CE->getSubExpr(), Ctx);
     return E0;

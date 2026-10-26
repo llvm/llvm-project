@@ -648,7 +648,7 @@ protected:
   // An anonymous struct/union member has no name to print. This includes the
   // implicit member -fms-extensions adds for a tagged anonymous struct.
   static bool isAnonymousProjection(const Project *E) {
-    return E->slotName().empty();
+    return E->clangDecl()->getDeclName().isEmpty();
   }
 
   // Qualify with the nearest named record, skipping anonymous ones.

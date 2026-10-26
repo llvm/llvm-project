@@ -405,9 +405,13 @@ struct NamedNesting {
   union { struct Mutex amu; };
   struct Named {
     struct Mutex nmu;
+    int nx GUARDED_BY(nmu);
     int ny GUARDED_BY(mu);
     int nv GUARDED_BY(amu);
-  } n, narr[2], *np;
+    struct NamedIn {
+      int nix GUARDED_BY(nmu);
+    } nin;
+  } n, narr[2], *np, *pa[2];
   struct {
     struct Inner {
       struct Mutex imu;
@@ -444,6 +448,36 @@ void test_named_nesting(struct NamedNesting *m, struct NamedNesting *o) {
             // expected-note {{found near match 'm->in.imu'}}
   mutex_unlock(&m->in.imu);
   mutex_unlock(&m->n.nmu);
+}
+
+// An array of records accessed through its decayed pointer is still an object
+// of its element type, whose own field may be named.
+void test_named_nesting_array(struct NamedNesting *m, struct Named narr[2]) {
+  mutex_exclusive_lock(&m->narr->nmu);
+  m->narr->nx = 1;
+  m->narr->nin.nix = 2;
+  m->narr[1].nx = 3; // expected-warning {{writing variable 'nx' requires holding mutex 'm->narr[1].nmu' exclusively}} \
+                     // expected-note {{found near match 'm->narr->nmu'}}
+  mutex_unlock(&m->narr->nmu);
+  m->narr->nx = 1; // expected-warning {{writing variable 'nx' requires holding mutex 'm->narr->nmu' exclusively}}
+  m->narr->nin.nix = 2; // expected-warning {{writing variable 'nix' requires holding mutex 'm->narr->nmu' exclusively}}
+  mutex_exclusive_lock(&narr->nmu);
+  narr->nx = 1;
+  narr->nin.nix = 2;
+  mutex_unlock(&narr->nmu);
+  // Pointer arithmetic is spelled as written, and is not a subscript.
+  mutex_exclusive_lock(&(m->narr + 1)->nmu);
+  (m->narr + 1)->nx = 1;
+  m->narr[1].nx = 3; // expected-warning {{writing variable 'nx' requires holding mutex 'm->narr[1].nmu' exclusively}} \
+                     // expected-note {{found near match '(m->narr + 1)->nmu'}}
+  mutex_unlock(&(m->narr + 1)->nmu);
+  (m->np + 1)->nx = 1; // expected-warning {{writing variable 'nx' requires holding mutex '(m->np + 1)->nmu' exclusively}}
+  // An element of an array of pointers is a pointer.
+  mutex_exclusive_lock(&m->pa[1]->nmu);
+  m->pa[1]->nx = 1;
+  m->pa[0]->nx = 1; // expected-warning {{writing variable 'nx' requires holding mutex 'm->pa[0]->nmu' exclusively}} \
+                    // expected-note {{found near match 'm->pa[1]->nmu'}}
+  mutex_unlock(&m->pa[1]->nmu);
 }
 
 // With only the nested object at hand, its enclosing record's field cannot be

@@ -7867,7 +7867,7 @@ void testPointerAliasTryLockDubious(int x) {
   }
   ptr->data = 42;            // expected-warning{{writing variable 'data' requires holding mutex 'ptr->mu' exclusively}} \
                              // expected-warning{{mutex 'ptr->mu' is not held on every path through here}} \
-                             // expected-warning{{mutex 'returnsFoo().mu' is not held on every path through here}}
+                             // expected-warning{{mutex 'returnsFoo()->mu' is not held on every path through here}}
   ptr->mu.Unlock();          // expected-warning{{releasing mutex 'ptr->mu' that was not held}}
 }
 
@@ -8614,8 +8614,12 @@ struct NamedNesting {
   Mutex mu;
   struct Named {
     Mutex nmu;
+    int nx GUARDED_BY(nmu);
     int ny GUARDED_BY(mu);
-  } n, narr[2], *np;
+    struct NamedIn {
+      int nix GUARDED_BY(nmu);
+    } nin;
+  } n, narr[2], *np, *pa[2];
   struct Inner {
     Mutex imu;
     int w GUARDED_BY(mu);
@@ -8653,6 +8657,36 @@ void testNamedNesting(NamedNesting *m, NamedNesting *o) {
             // expected-note {{found near match 'm->in.imu'}}
   m->in.imu.Unlock();
   m->n.nmu.Unlock();
+}
+
+// An array of records accessed through its decayed pointer is still an object
+// of its element type, whose own field may be named.
+void testNamedNestingArray(NamedNesting *m, NamedNesting::Named narr[2]) {
+  m->narr->nmu.Lock();
+  m->narr->nx = 1;
+  m->narr->nin.nix = 2;
+  m->narr[1].nx = 3; // expected-warning {{writing variable 'nx' requires holding mutex 'm->narr[1].nmu' exclusively}} \
+                     // expected-note {{found near match 'm->narr->nmu'}}
+  m->narr->nmu.Unlock();
+  m->narr->nx = 1; // expected-warning {{writing variable 'nx' requires holding mutex 'm->narr->nmu' exclusively}}
+  m->narr->nin.nix = 2; // expected-warning {{writing variable 'nix' requires holding mutex 'm->narr->nmu' exclusively}}
+  narr->nmu.Lock();
+  narr->nx = 1;
+  narr->nin.nix = 2;
+  narr->nmu.Unlock();
+  // Pointer arithmetic is spelled as written, and is not a subscript.
+  (m->narr + 1)->nmu.Lock();
+  (m->narr + 1)->nx = 1;
+  m->narr[1].nx = 3; // expected-warning {{writing variable 'nx' requires holding mutex 'm->narr[1].nmu' exclusively}} \
+                     // expected-note {{found near match '(m->narr + 1)->nmu'}}
+  (m->narr + 1)->nmu.Unlock();
+  (m->np + 1)->nx = 1; // expected-warning {{writing variable 'nx' requires holding mutex '(m->np + 1)->nmu' exclusively}}
+  // An element of an array of pointers is a pointer.
+  m->pa[1]->nmu.Lock();
+  m->pa[1]->nx = 1;
+  m->pa[0]->nx = 1; // expected-warning {{writing variable 'nx' requires holding mutex 'm->pa[0]->nmu' exclusively}} \
+                    // expected-note {{found near match 'm->pa[1]->nmu'}}
+  m->pa[1]->nmu.Unlock();
 }
 
 // With only the nested object at hand, its enclosing record's field cannot be
