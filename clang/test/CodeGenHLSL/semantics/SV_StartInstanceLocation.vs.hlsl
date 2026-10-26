@@ -20,6 +20,6 @@ float4 main(uint start : SV_StartInstanceLocation, float4 pos : POSITION) : SV_P
 }
 
 // CHECK-SPIRV-DAG: ![[#MD_0]] = !{![[#MD_1:]]}
+// The metadata below contains SPIR-V decoration 'BuiltIn' followed by
+// BuiltIn BaseInstance.
 // CHECK-SPIRV-DAG: ![[#MD_1]] = !{i32 11, i32 4425}
-//                                      |       `-> BuiltIn BaseInstance
-//                                      `-> SPIR-V decoration 'BuiltIn'
