@@ -2502,15 +2502,21 @@ SDValue SparcTargetLowering::LowerF128Compare(SDValue LHS, SDValue RHS,
     SPCC = SPCC::ICC_NE;
     return DAG.getNode(SPISD::CMPICC, DL, MVT::Glue, Result, RHS);
   }
+  // _Q_cmp returns 0 for equal, 1 for less, 2 for greater and 3 for
+  // unordered. Bit 1 of (Result + 1) is set for exactly 1 and 2.
   case SPCC::FCC_LG :  {
-    SDValue Mask   = DAG.getConstant(3, DL, Result.getValueType());
+    SDValue One = DAG.getConstant(1, DL, Result.getValueType());
+    Result = DAG.getNode(ISD::ADD, DL, Result.getValueType(), Result, One);
+    SDValue Mask = DAG.getConstant(2, DL, Result.getValueType());
     Result = DAG.getNode(ISD::AND, DL, Result.getValueType(), Result, Mask);
     SDValue RHS    = DAG.getConstant(0, DL, Result.getValueType());
     SPCC = SPCC::ICC_NE;
     return DAG.getNode(SPISD::CMPICC, DL, MVT::Glue, Result, RHS);
   }
   case SPCC::FCC_UE : {
-    SDValue Mask   = DAG.getConstant(3, DL, Result.getValueType());
+    SDValue One = DAG.getConstant(1, DL, Result.getValueType());
+    Result = DAG.getNode(ISD::ADD, DL, Result.getValueType(), Result, One);
+    SDValue Mask = DAG.getConstant(2, DL, Result.getValueType());
     Result = DAG.getNode(ISD::AND, DL, Result.getValueType(), Result, Mask);
     SDValue RHS    = DAG.getConstant(0, DL, Result.getValueType());
     SPCC = SPCC::ICC_E;
