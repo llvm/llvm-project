@@ -19,6 +19,7 @@
 
 namespace llvm {
 class FunctionPass;
+class Pass;
 class PassRegistry;
 class SystemZTargetMachine;
 
@@ -198,6 +199,7 @@ FunctionPass *createSystemZLDCleanupPass(SystemZTargetMachine &TM);
 FunctionPass *createSystemZCopyPhysRegsPass(SystemZTargetMachine &TM);
 FunctionPass *createSystemZPostRewritePass(SystemZTargetMachine &TM);
 FunctionPass *createSystemZTDCPass();
+Pass *createSystemZTranslateIdiomPass();
 
 void initializeSystemZAsmPrinterPass(PassRegistry &);
 void initializeSystemZCopyPhysRegsPass(PassRegistry &);
@@ -208,6 +210,7 @@ void initializeSystemZLongBranchPass(PassRegistry &);
 void initializeSystemZPostRewritePass(PassRegistry &);
 void initializeSystemZShortenInstPass(PassRegistry &);
 void initializeSystemZTDCPassPass(PassRegistry &);
+void initializeSystemZTranslateIdiomLegacyPassPass(PassRegistry &);
 
 namespace SYSTEMZAS {
 enum : unsigned { PTR32 = 1 };

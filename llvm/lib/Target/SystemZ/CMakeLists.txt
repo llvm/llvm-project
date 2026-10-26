@@ -41,6 +41,7 @@ add_llvm_target(SystemZCodeGen
   SystemZTargetObjectFile.cpp
   SystemZTargetTransformInfo.cpp
   SystemZTDC.cpp
+  SystemZTranslateIdiom.cpp
 
   LINK_COMPONENTS
   Analysis

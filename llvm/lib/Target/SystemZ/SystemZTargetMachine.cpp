@@ -55,6 +55,7 @@ LLVMInitializeSystemZTarget() {
   initializeSystemZShortenInstPass(PR);
   initializeSystemZPostRewritePass(PR);
   initializeSystemZTDCPassPass(PR);
+  initializeSystemZTranslateIdiomLegacyPassPass(PR);
   initializeSystemZDAGToDAGISelLegacyPass(PR);
   initializeSystemZCopyPhysRegsPass(PR);
 }
@@ -211,6 +212,7 @@ public:
 
 void SystemZPassConfig::addIRPasses() {
   if (getOptLevel() != CodeGenOptLevel::None) {
+    addPass(createSystemZTranslateIdiomPass());
     addPass(createSystemZTDCPass());
     addPass(createLoopDataPrefetchPass());
   }
