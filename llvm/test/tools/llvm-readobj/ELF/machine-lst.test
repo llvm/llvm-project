@@ -1,0 +1,27 @@
+## Check the symbolic and numeric encodings of the Lisuan Technology GPU machine.
+
+# RUN: yaml2obj %s -D MACHINE=EM_LST -o %t.o
+# RUN: llvm-readobj --file-headers %t.o | FileCheck %s --check-prefix=LLVM
+# RUN: llvm-readelf --file-headers %t.o | FileCheck %s --check-prefix=GNU
+
+# LLVM: Machine: EM_LST (0x10F)
+# GNU:  Machine: Lisuan Technology GPU
+
+## The numeric value must produce the same ELF header as the symbolic name.
+# RUN: yaml2obj %s -D MACHINE=271 -o %t.numeric.o
+# RUN: cmp %t.o %t.numeric.o
+
+## Preserve the symbolic machine name and object contents through a YAML round trip.
+# RUN: obj2yaml %t.o > %t.yaml
+# RUN: FileCheck %s --check-prefix=YAML < %t.yaml
+# RUN: yaml2obj %t.yaml -o %t.roundtrip.o
+# RUN: cmp %t.o %t.roundtrip.o
+
+# YAML: Machine: EM_LST
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: [[MACHINE]]
