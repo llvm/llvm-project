@@ -1138,14 +1138,14 @@ LogicalResult checkErrorIfResize(Operation *op) {
   if (!tosa::getConstShapeValues(resize.getScale().getDefiningOp(), scale))
     return failure();
 
+  // ERROR_IF(scale <= 0)
+  if (llvm::any_of(scale, [](int64_t s) { return s <= 0; }))
+    return op->emitOpError("expect all scale values to be > 0, got ") << scale;
+
   const int64_t scaleYN = scale[0];
   const int64_t scaleYD = scale[1];
   const int64_t scaleXN = scale[2];
   const int64_t scaleXD = scale[3];
-
-  // ERROR_IF(scale <= 0)
-  if (llvm::any_of(scale, [](int64_t s) { return s <= 0; }))
-    return op->emitOpError("expect all scale values to be > 0, got ") << scale;
 
   // Ensure scale values don't overflow int32 accumulator
   if (scaleYN > (1 << 11) || scaleXN > (1 << 11))
