@@ -22,6 +22,7 @@
 #include "../bugprone/SignalHandlerCheck.h"
 #include "../bugprone/SignedCharMisuseCheck.h"
 #include "../bugprone/SizeofExpressionCheck.h"
+#include "../bugprone/SmartPtrInitializationCheck.h"
 #include "../bugprone/SpuriouslyWakeUpFunctionsCheck.h"
 #include "../bugprone/StdNamespaceModificationCheck.h"
 #include "../bugprone/SuspiciousMemoryComparisonCheck.h"
@@ -265,6 +266,8 @@ public:
     CheckFactories.registerCheck<misc::ThrowByValueCatchByReferenceCheck>(
         "cert-err61-cpp");
     // MEM
+    CheckFactories.registerCheck<bugprone::SmartPtrInitializationCheck>(
+        "cert-mem56-cpp");
     CheckFactories
         .registerCheck<bugprone::DefaultOperatorNewOnOveralignedTypeCheck>(
             "cert-mem57-cpp");
