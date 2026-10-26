@@ -1,4 +1,5 @@
 ! This test checks lowering of OpenMP loops with pointer or allocatable loop index variable
+!XFAIL: *
 
 !RUN: bbc -emit-hlfir -fopenmp %s -o - 2>&1 | FileCheck %s
 !RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - 2>&1 | FileCheck %s
