@@ -521,8 +521,7 @@ bool RISCVMoveMergeImpl::runOnMachineFunction(MachineFunction &MF) {
   return Modified;
 }
 
-/// createRISCVMoveMergePass - returns an instance of the
-/// move merge pass.
+/// Returns an instance of the move merge pass.
 FunctionPass *llvm::createRISCVMoveMergeLegacyPass() {
   return new RISCVMoveMergeLegacy();
 }
