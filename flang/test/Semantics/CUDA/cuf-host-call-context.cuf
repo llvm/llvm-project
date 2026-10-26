@@ -63,9 +63,9 @@ contains
     call device_sub()
     !ERROR: 'device_value', a procedure with the DEVICE attribute, may not be called from host code
     n = device_value(1)
-    !ERROR: 'device_generic' (specific procedure 'device_value'), a procedure with the DEVICE attribute, may not be called from host code
+    !ERROR: No specific function of generic 'device_generic' matches the actual arguments
     n = device_generic(1)
-    !ERROR: 'device_generic_sub' (specific procedure 'device_sub'), a procedure with the DEVICE attribute, may not be called from host code
+    !ERROR: No specific subroutine of generic 'device_generic_sub' matches the actual arguments
     call device_generic_sub()
     !ERROR: 'device_value', a procedure with the DEVICE attribute, may not be called from host code
     n = host_value(device_value(1))
@@ -113,7 +113,7 @@ contains
     p => device_value
     !ERROR: 'p', a procedure with the DEVICE attribute, may not be called from host code
     n = p(1)
-    !ERROR: '.adddevice.' (specific procedure 'device_add'), a procedure with the DEVICE attribute, may not be called from host code
+    !ERROR: No intrinsic or user-defined .ADDDEVICE. matches operand types INTEGER(4) and INTEGER(4)
     n = 1 .adddevice. 2
   end subroutine
 

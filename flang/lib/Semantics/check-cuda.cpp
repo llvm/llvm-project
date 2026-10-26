@@ -106,6 +106,18 @@ static bool ChecksOnDevice(
   return expr && FindOnDevice{}(*expr);
 }
 
+static bool IsIntrinsicModuleProcedure(
+    const evaluate::ProcedureDesignator &proc) {
+  if (const Symbol *symbol{proc.GetSymbol()}) {
+    const Symbol &ultimate{symbol->GetUltimate()};
+    const Scope &scope{ultimate.owner()};
+    const Symbol *module{scope.IsModule() ? scope.symbol() : nullptr};
+    return ultimate.has<SubprogramDetails>() && module &&
+        module->attrs().test(Attr::INTRINSIC);
+  }
+  return false;
+}
+
 // Traverses an evaluate::Expr<> in search of calls that are not supported
 // in the current execution context.
 
@@ -146,8 +158,12 @@ private:
           return (*this)(*stmtFunction);
         }
         if (callContext_ == CallContext::Host) {
+          // Processor intrinsics may have host implementations despite DEVICE
+          // interfaces, as generic resolution also allows. Test the called
+          // procedure, not an intrinsic interface of a user dummy or pointer.
           if (subp->cudaSubprogramAttrs() ==
-              common::CUDASubprogramAttrs::Device) {
+                  common::CUDASubprogramAttrs::Device &&
+              !IsIntrinsicModuleProcedure(x)) {
             return CallError(x, common::CUDASubprogramAttrs::Device);
           }
           return {};
