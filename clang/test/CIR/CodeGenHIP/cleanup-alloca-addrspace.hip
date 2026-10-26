@@ -15,6 +15,11 @@
 // CIR-FLAT-LABEL: cir.func {{.*}} @_ZN1SD1Ev
 // CIR-FLAT:         cir.alloca "this" {{.*}} : !cir.ptr<!cir.ptr<!rec_S>, target_address_space(5)>
 
+// CIR-FLAT-LABEL: cir.func {{.*}} @_Z13array_cleanupv
+// CIR-FLAT:         [[ELEMENTS:%.+]] = cir.alloca "elements" {{.+}} : !cir.ptr<!cir.array<!rec_ArrayElement x 2>, target_address_space(5)>
+// CIR-FLAT:         cir.cast address_space [[ELEMENTS]] : {{.+}}target_address_space(5){{.+}} -> !cir.ptr<!cir.array<!rec_ArrayElement x 2>>
+// CIR-FLAT-COUNT-2: %{{.+}} = cir.alloca "__array_idx" {{.+}} : !cir.ptr<!cir.ptr<!rec_ArrayElement>, target_address_space(5)>
+
 // CIR-FLAT-LABEL: cir.func {{.*}} @_ZN1SD2Ev
 // CIR-FLAT:         cir.alloca "this" {{.*}} : !cir.ptr<!cir.ptr<!rec_S>, target_address_space(5)>
 
@@ -25,6 +30,13 @@
 
 // LLVM-LABEL: define {{.*}} @_ZN1SD1Ev
 // LLVM:         alloca ptr, align 8, addrspace(5)
+
+// LLVM-LABEL: define {{.*}} @_Z13array_cleanupv
+// LLVM:         [[ELEMENTS:%.+]] = alloca [2 x %struct.ArrayElement], align 1, addrspace(5)
+// LLVM:         %{{.+}} = alloca ptr, align 1, addrspace(5)
+// LLVM:         %{{.+}} = addrspacecast ptr addrspace(5) [[ELEMENTS]] to ptr
+// LLVM:         %{{.+}} = alloca ptr, align 1, addrspace(5)
+// LLVM:         ret void
 
 // LLVM-LABEL: define {{.*}} @_ZN1SD2Ev
 // LLVM:         alloca ptr, align 8, addrspace(5)
@@ -37,3 +49,10 @@ __attribute__((device)) S f() {
   S s;
   return s;
 }
+
+struct ArrayElement {
+  __attribute__((device)) ArrayElement() {}
+  __attribute__((device)) ~ArrayElement() {}
+};
+
+__attribute__((device)) void array_cleanup() { ArrayElement elements[2]; }
