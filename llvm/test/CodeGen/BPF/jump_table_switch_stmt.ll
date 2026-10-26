@@ -68,8 +68,9 @@ llc -march=bpf -mcpu=v4 -bpf-min-jump-table-entries=3 < test.ll \
 ; CHECK: 	w1 += -1
 ; CHECK: 	if w1 > 29 goto .LBB0_6
 ; CHECK: # %bb.1:                                # %entry
+; CHECK: 	r1 &= 31
 ; CHECK: 	r1 <<= 3
-; CHECK: 	r2 = BPF.JT.0.0 ll
+; CHECK: 	r2 = BPF.JT.0.1 ll
 ; CHECK: 	r2 += r1
 ; CHECK: 	r1 = *(u64 *)(r2 + 0)
 ; CHECK: 	gotox r1
@@ -92,7 +93,7 @@ llc -march=bpf -mcpu=v4 -bpf-min-jump-table-entries=3 < test.ll \
 ; CHECK: 	.size	.Lfoo$local, .Lfunc_end0-foo
 ; CHECK: 	.cfi_endproc
 ; CHECK: 	.section	.jumptables,"",@progbits
-; CHECK: BPF.JT.0.0:
+; CHECK: BPF.JT.0.1:
 ; CHECK: 	.quad	.LBB0_2-.text
 ; CHECK: 	.quad	.LBB0_6-.text
 ; CHECK: 	.quad	.LBB0_6-.text
@@ -123,4 +124,6 @@ llc -march=bpf -mcpu=v4 -bpf-min-jump-table-entries=3 < test.ll \
 ; CHECK: 	.quad	.LBB0_6-.text
 ; CHECK: 	.quad	.LBB0_6-.text
 ; CHECK: 	.quad	.LBB0_4-.text
-; CHECK: 	.size	BPF.JT.0.0, 240
+; CHECK: 	.quad	.LBB0_4-.text
+; CHECK: 	.quad	.LBB0_4-.text
+; CHECK: 	.size	BPF.JT.0.1, 256

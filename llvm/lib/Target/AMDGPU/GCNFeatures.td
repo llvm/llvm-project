@@ -2197,7 +2197,7 @@ def FeatureISAVersion9_4_2 : FeatureSet<
 def FeatureISAVersion9_4_Generic : FeatureSet<
   !listconcat(FeatureISAVersion9_4_Common.Features,
     [FeatureAddressableLocalMemorySize65536,
-     FeatureLDSAllocGranularity1280,
+     FeatureLDSAllocGranularity512,
      FeatureLDSEncodingGranularity1280,
      FeatureLDSBankCount32,
      FeatureRequiresCOV6])>;
@@ -2705,8 +2705,6 @@ def FeatureISAVersion12_5_Generic: FeatureSet<
    FeatureDataCacheLineSize128,
    FeatureRequiresInitialUnclausedVmem,
    FeatureNeedsTDMDrain,
-   FeatureXNACKOnOffModes,
-   FeatureSupportsXNACK,
    ])>;
 
 def FeatureISAVersion13 : FeatureSet<

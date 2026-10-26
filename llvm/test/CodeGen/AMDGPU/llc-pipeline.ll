@@ -220,13 +220,10 @@
 ; GCN-O1-NEXT:        Loop Strength Reduction
 ; GCN-O1-NEXT:      Remove unreachable blocks from the CFG
 ; GCN-O1-NEXT:      Cycle Info Analysis
-; GCN-O1-NEXT:      Post-Dominator Tree Construction
-; GCN-O1-NEXT:      Branch Probability Analysis
-; GCN-O1-NEXT:      Block Frequency Analysis
-; GCN-O1-NEXT:      Constant Hoisting
-; GCN-O1-NEXT:      Replace intrinsics with calls to vector library
 ; GCN-O1-NEXT:      Lazy Branch Probability Analysis
 ; GCN-O1-NEXT:      Lazy Block Frequency Analysis
+; GCN-O1-NEXT:      Constant Hoisting
+; GCN-O1-NEXT:      Replace intrinsics with calls to vector library
 ; GCN-O1-NEXT:      Optimization Remark Emitter
 ; GCN-O1-NEXT:      Partially inline calls to library functions
 ; GCN-O1-NEXT:      Instrument function entry/exit with calls to e.g. mcount() (post inlining)
@@ -532,13 +529,10 @@
 ; GCN-O1-OPTS-NEXT:        Loop Strength Reduction
 ; GCN-O1-OPTS-NEXT:      Remove unreachable blocks from the CFG
 ; GCN-O1-OPTS-NEXT:      Cycle Info Analysis
-; GCN-O1-OPTS-NEXT:      Post-Dominator Tree Construction
-; GCN-O1-OPTS-NEXT:      Branch Probability Analysis
-; GCN-O1-OPTS-NEXT:      Block Frequency Analysis
-; GCN-O1-OPTS-NEXT:      Constant Hoisting
-; GCN-O1-OPTS-NEXT:      Replace intrinsics with calls to vector library
 ; GCN-O1-OPTS-NEXT:      Lazy Branch Probability Analysis
 ; GCN-O1-OPTS-NEXT:      Lazy Block Frequency Analysis
+; GCN-O1-OPTS-NEXT:      Constant Hoisting
+; GCN-O1-OPTS-NEXT:      Replace intrinsics with calls to vector library
 ; GCN-O1-OPTS-NEXT:      Optimization Remark Emitter
 ; GCN-O1-OPTS-NEXT:      Partially inline calls to library functions
 ; GCN-O1-OPTS-NEXT:      Instrument function entry/exit with calls to e.g. mcount() (post inlining)
@@ -862,13 +856,10 @@
 ; GCN-O2-NEXT:        Loop Strength Reduction
 ; GCN-O2-NEXT:      Remove unreachable blocks from the CFG
 ; GCN-O2-NEXT:      Cycle Info Analysis
-; GCN-O2-NEXT:      Post-Dominator Tree Construction
-; GCN-O2-NEXT:      Branch Probability Analysis
-; GCN-O2-NEXT:      Block Frequency Analysis
-; GCN-O2-NEXT:      Constant Hoisting
-; GCN-O2-NEXT:      Replace intrinsics with calls to vector library
 ; GCN-O2-NEXT:      Lazy Branch Probability Analysis
 ; GCN-O2-NEXT:      Lazy Block Frequency Analysis
+; GCN-O2-NEXT:      Constant Hoisting
+; GCN-O2-NEXT:      Replace intrinsics with calls to vector library
 ; GCN-O2-NEXT:      Optimization Remark Emitter
 ; GCN-O2-NEXT:      Partially inline calls to library functions
 ; GCN-O2-NEXT:      Instrument function entry/exit with calls to e.g. mcount() (post inlining)
@@ -1201,13 +1192,10 @@
 ; GCN-O3-NEXT:        Loop Strength Reduction
 ; GCN-O3-NEXT:      Remove unreachable blocks from the CFG
 ; GCN-O3-NEXT:      Cycle Info Analysis
-; GCN-O3-NEXT:      Post-Dominator Tree Construction
-; GCN-O3-NEXT:      Branch Probability Analysis
-; GCN-O3-NEXT:      Block Frequency Analysis
-; GCN-O3-NEXT:      Constant Hoisting
-; GCN-O3-NEXT:      Replace intrinsics with calls to vector library
 ; GCN-O3-NEXT:      Lazy Branch Probability Analysis
 ; GCN-O3-NEXT:      Lazy Block Frequency Analysis
+; GCN-O3-NEXT:      Constant Hoisting
+; GCN-O3-NEXT:      Replace intrinsics with calls to vector library
 ; GCN-O3-NEXT:      Optimization Remark Emitter
 ; GCN-O3-NEXT:      Partially inline calls to library functions
 ; GCN-O3-NEXT:      Instrument function entry/exit with calls to e.g. mcount() (post inlining)
