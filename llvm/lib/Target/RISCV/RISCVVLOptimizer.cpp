@@ -1402,11 +1402,7 @@ void RISCVVLOptimizerImpl::transfer(const MachineInstr &MI) {
 bool RISCVVLOptimizerImpl::run(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
 
-  const RISCVSubtarget &ST = MF.getSubtarget<RISCVSubtarget>();
-  if (!ST.hasVInstructions())
-    return false;
-
-  TII = ST.getInstrInfo();
+  TII = MF.getSubtarget<RISCVSubtarget>().getInstrInfo();
 
   assert(DemandedVLs.empty());
 
@@ -1449,6 +1445,9 @@ bool RISCVVLOptimizerLegacy::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
 
+  if (!MF.getSubtarget<RISCVSubtarget>().hasVInstructions())
+    return false;
+
   auto *MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   return RISCVVLOptimizerImpl(MDT).run(MF);
 }
@@ -1456,6 +1455,9 @@ bool RISCVVLOptimizerLegacy::runOnMachineFunction(MachineFunction &MF) {
 PreservedAnalyses
 RISCVVLOptimizerPass::run(MachineFunction &MF,
                           MachineFunctionAnalysisManager &MFAM) {
+  if (!MF.getSubtarget<RISCVSubtarget>().hasVInstructions())
+    return PreservedAnalyses::all();
+
   auto *MDT = &MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
   bool Changed = RISCVVLOptimizerImpl(MDT).run(MF);
   if (!Changed)

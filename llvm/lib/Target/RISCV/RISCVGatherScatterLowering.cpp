@@ -605,9 +605,6 @@ bool RISCVGatherScatterLoweringImpl::tryCreateStridedLoadStore(
 }
 
 bool RISCVGatherScatterLoweringImpl::run(Function &F) {
-  if (!ST->hasVInstructions() || !ST->useRVVForFixedLengthVectors())
-    return false;
-
   SmallVector<IntrinsicInst *, 4> Worklist;
 
   bool Changed = false;
@@ -650,6 +647,9 @@ bool RISCVGatherScatterLoweringLegacy::runOnFunction(Function &F) {
   auto &TPC = getAnalysis<TargetPassConfig>();
   auto &TM = TPC.getTM<RISCVTargetMachine>();
   auto *ST = &TM.getSubtarget<RISCVSubtarget>(F);
+  if (!ST->hasVInstructions() || !ST->useRVVForFixedLengthVectors())
+    return false;
+
   auto *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   return RISCVGatherScatterLoweringImpl(ST, LI, &F.getDataLayout()).run(F);
 }
@@ -657,6 +657,9 @@ bool RISCVGatherScatterLoweringLegacy::runOnFunction(Function &F) {
 PreservedAnalyses
 RISCVGatherScatterLoweringPass::run(Function &F, FunctionAnalysisManager &FAM) {
   auto *ST = &TM->getSubtarget<RISCVSubtarget>(F);
+  if (!ST->hasVInstructions() || !ST->useRVVForFixedLengthVectors())
+    return PreservedAnalyses::all();
+
   auto *LI = &FAM.getResult<LoopAnalysis>(F);
   bool Changed =
       RISCVGatherScatterLoweringImpl(ST, LI, &F.getDataLayout()).run(F);
