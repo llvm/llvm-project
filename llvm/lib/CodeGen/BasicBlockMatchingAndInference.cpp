@@ -19,6 +19,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/BasicBlockMatchingAndInference.h"
+#include "CodeGenOptions.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/CodeGen/BasicBlockSectionsProfileReader.h"
@@ -26,22 +27,10 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
-#include <llvm/Support/CommandLine.h>
 
 using namespace llvm;
 
 #define DEBUG_TYPE "machine-block-match-infer"
-
-static cl::opt<float>
-    PropellerInferThreshold("propeller-infer-threshold",
-                            cl::desc("Threshold for infer stale profile"),
-                            cl::init(0.6));
-
-static cl::opt<bool>
-    PropellerMatchBBID("propeller-match-bbid",
-                       cl::desc("Match basic blocks using BBIDs instead of "
-                                "hashes for Propeller inference"),
-                       cl::init(false), cl::Optional);
 
 /// The object is used to identify and match basic blocks given their hashes.
 class StaleMatcher {
@@ -167,14 +156,17 @@ BasicBlockMatchingAndInference::initWeightInfoByMatching(MachineFunction &MF) {
 BasicBlockMatchingAndInference::WeightInfo
 BasicBlockMatchingAndInference::initWeightInfoByBBID(MachineFunction &MF,
                                                      const CFGProfile &CFG) {
-  // Path cloning does not run before matching and inference, so blocks are
-  // identified by their base IDs. The counts of clones in the profile are
+  // Match blocks by their full UniqueBBID (including CloneID). If a cloned
+  // block in the profile does not exist in MF (e.g., because its cloning path
+  // was rejected), fall back to the original block so its counts are
   // attributed to the original block.
-  DenseMap<unsigned, MachineBasicBlock *> BaseIDToMBB;
+  DenseMap<UniqueBBID, MachineBasicBlock *> BBIDToMBB;
   for (auto &MBB : MF)
-    BaseIDToMBB[MBB.getBBID()->BaseID] = &MBB;
+    BBIDToMBB[*MBB.getBBID()] = &MBB;
   auto FindMBB = [&](const UniqueBBID &BBID) {
-    return BaseIDToMBB.lookup(BBID.BaseID);
+    if (MachineBasicBlock *MBB = BBIDToMBB.lookup(BBID))
+      return MBB;
+    return BBIDToMBB.lookup(UniqueBBID{BBID.BaseID, 0});
   };
 
   // A basic block is matched only if it exists in CFG.NodeCounts and all of its
@@ -255,8 +247,9 @@ bool BasicBlockMatchingAndInference::runOnMachineFunction(MachineFunction &MF) {
   if (CFG == nullptr || (CFG->NodeCounts.empty() && CFG->EdgeCounts.empty()))
     return false;
 
+  const CodeGenOptions &Opts = getCodeGenOptions(MF);
   BasicBlockMatchingAndInference::WeightInfo MatchWeight;
-  if (PropellerMatchBBID) {
+  if (Opts.propeller_match_bbid) {
     MatchWeight = initWeightInfoByBBID(MF, *CFG);
   } else {
     MatchWeight = initWeightInfoByMatching(MF);
@@ -264,7 +257,7 @@ bool BasicBlockMatchingAndInference::runOnMachineFunction(MachineFunction &MF) {
     // MBBs in the function is less than the threshold value, the processing
     // should be abandoned.
     if (static_cast<float>(MatchWeight.BlockWeights.size()) / MF.size() <
-        PropellerInferThreshold) {
+        Opts.propeller_infer_threshold) {
       return false;
     }
   }

@@ -303,7 +303,7 @@ void DereferenceChecker::checkLocation(SVal l, bool isLoad, const Stmt* S,
     // Otherwise, we have the case where the location could either be
     // null or not-null.  Record the error node as an "implicit" null
     // dereference.
-    if (ExplodedNode *N = C.generateSink(nullState, C.getPredecessor())) {
+    if (ExplodedNode *N = C.addSink(nullState)) {
       ImplicitNullDerefEvent event = {l, isLoad, N, &C.getBugReporter(),
                                       /*IsDirectDereference=*/true};
       dispatchEvent(event);
@@ -358,7 +358,7 @@ void DereferenceChecker::checkBind(SVal L, SVal V, const Stmt *S,
 
     // At this point the value could be either null or non-null.
     // Record this as an "implicit" null dereference.
-    if (ExplodedNode *N = C.generateSink(StNull, C.getPredecessor())) {
+    if (ExplodedNode *N = C.addSink(StNull)) {
       ImplicitNullDerefEvent event = {V, /*isLoad=*/true, N,
                                       &C.getBugReporter(),
                                       /*IsDirectDereference=*/true};
