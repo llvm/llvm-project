@@ -10672,9 +10672,8 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
   bool KeepNotOfSetCC = false;
   if (N0Opcode == ISD::SETCC && !N0.hasOneUse()) {
     EVT OpVT = N0.getOperand(0).getValueType();
-    if (TLI.getTypeAction(*DAG.getContext(), OpVT) ==
-        TargetLowering::TypePromoteInteger)
-      OpVT = TLI.getTypeToTransformTo(*DAG.getContext(), OpVT);
+    if (OpVT.isScalarInteger())
+      OpVT = TLI.getLegalTypeToTransformTo(*DAG.getContext(), OpVT);
     EVT XorVT = VT.isScalarInteger()
                     ? TLI.getLegalTypeToTransformTo(*DAG.getContext(), VT)
                     : VT;
