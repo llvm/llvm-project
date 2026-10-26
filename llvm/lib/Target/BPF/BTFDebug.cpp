@@ -630,7 +630,7 @@ void BTFTypeFuncProto::completeType(BTFDebug &BDebug) {
   IsCompleted = true;
 
   DITypeArray Elements = STy->getTypeArray();
-  if (VoidReturn) {
+  if (VoidReturn || Elements.size() == 0) {
     BTFType.Type = 0;
   } else {
     auto RetType = tryRemoveAtomicType(Elements[0]);
@@ -862,9 +862,11 @@ void BTFDebug::visitSubroutineType(
     const SmallDenseMap<uint32_t, StringRef> &FuncArgNames, uint32_t &TypeId,
     bool VoidReturn) {
   DITypeArray Elements = STy->getTypeArray();
-  uint32_t VLen = Elements.size() - 1;
-  if (VLen > BTF::MAX_VLEN)
+  uint32_t VLen = Elements.size() ? Elements.size() - 1 : 0;
+  if (VLen > BTF::MAX_VLEN) {
+    TypeId = 0;
     return;
+  }
 
   // Subprogram has a valid non-zero-length name, and the pointee of
   // a function pointer has an empty name. The subprogram type will
@@ -1595,7 +1597,7 @@ void BTFDebug::beginFunctionImpl(const MachineFunction *MF) {
   }
 
   // Construct subprogram func proto type.
-  uint32_t ProtoTypeId, FuncTypeId;
+  uint32_t ProtoTypeId = 0, FuncTypeId = 0;
   uint8_t Scope = SP->isLocalToUnit() ? BTF::FUNC_STATIC : BTF::FUNC_GLOBAL;
   bool IsNocall = SP->getType()->getCC() == dwarf::DW_CC_nocall;
   bool UseFilteredParams = false;
@@ -1622,7 +1624,7 @@ void BTFDebug::beginFunctionImpl(const MachineFunction *MF) {
         ArgIndexMap[ArgReg.first] = I;
       }
 
-      if (!VoidReturn)
+      if (!VoidReturn && Elements.size() > 0)
         visitTypeEntry(Elements[0]);
       for (uint32_t ArgNo : AliveParamIndices)
         visitTypeEntry(Elements[ArgNo]);
@@ -1994,7 +1996,7 @@ void BTFDebug::processFuncPrototypes(const Function *F) {
   if (!ProtoFunctions.insert(F).second)
     return;
 
-  uint32_t ProtoTypeId;
+  uint32_t ProtoTypeId = 0;
   const SmallDenseMap<uint32_t, StringRef> FuncArgNames;
   visitSubroutineType(SP->getType(), false, FuncArgNames, ProtoTypeId);
   uint32_t FuncId = processDISubprogram(SP, ProtoTypeId, BTF::FUNC_EXTERN);
