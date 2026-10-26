@@ -21,6 +21,13 @@
 
 namespace llvm {
 
+/// Enable verification of cycle info.
+///
+/// The flag enables checks which are expensive and are disabled by default
+/// unless the `EXPENSIVE_CHECKS` macro is defined.  The `-verify-cycle-info`
+/// flag allows the checks to be enabled selectively without re-compilation.
+LLVM_ABI extern bool VerifyCycleInfo;
+
 /// Legacy analysis pass which computes a \ref CycleInfo.
 class LLVM_ABI CycleInfoWrapperPass : public FunctionPass {
   Function *F = nullptr;
@@ -38,8 +45,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   void releaseMemory() override;
   void print(raw_ostream &OS, const Module *M = nullptr) const override;
-
-  // TODO: verify analysis?
+  void verifyAnalysis() const override;
 };
 
 /// Analysis pass which computes a \ref CycleInfo.
@@ -55,9 +61,6 @@ public:
 
   /// Run the analysis pass over a function and produce a dominator tree.
   LLVM_ABI CycleInfo run(Function &F, FunctionAnalysisManager &);
-
-  LLVM_ABI bool invalidate(Function &F, const PreservedAnalyses &PA,
-                           FunctionAnalysisManager::Invalidator &);
 
   // TODO: verify analysis?
 };

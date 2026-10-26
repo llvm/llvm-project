@@ -326,8 +326,8 @@
     descriptor::Clause(
       "default-variant",
       {
-        {Version(50), {{{Property::Compatible, Property::Optional, Property::Ultimate, Property::Unique}}, "default-variant", {Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {}, {}}},
-        {Version(51), {{{Property::Compatible, Property::Optional, Property::Ultimate, Property::Unique}}, "default-variant", {Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {}, {}}},
+        {Version(50), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, "default-variant", {Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {}, {}}},
+        {Version(51), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, "default-variant", {Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {}, {}}},
       }
     ),
   },
@@ -765,6 +765,7 @@
     descriptor::Clause(
       "initializer",
       {
+        {Version(45), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, "initializer", {Directive::OMPD_declare_reduction}, SourceLanguage::C | SourceLanguage::Fortran, {}, {}}},
         {Version(50), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, "initializer", {Directive::OMPD_declare_reduction}, SourceLanguage::C | SourceLanguage::Fortran, {}, {}}},
         {Version(51), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, "initializer", {Directive::OMPD_declare_reduction}, SourceLanguage::C | SourceLanguage::Fortran, {}, {}}},
         {Version(52), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, "initializer", {Directive::OMPD_declare_reduction}, SourceLanguage::C | SourceLanguage::Fortran, {}, {}}},
@@ -1812,6 +1813,19 @@
     ),
   },
   {
+    ClauseSet::DeclareMapperClauseSet1,
+    descriptor::ClauseSet(
+      "declare_mapper_clause_set_1",
+      {
+        {Version(50), {{{Property::Required}}, {Clause::OMPC_map}, {Directive::OMPD_declare_mapper}}},
+        {Version(51), {{{Property::Required}}, {Clause::OMPC_map}, {Directive::OMPD_declare_mapper}}},
+        {Version(52), {{{Property::Required}}, {Clause::OMPC_map}, {Directive::OMPD_declare_mapper}}},
+        {Version(60), {{{Property::Required}}, {Clause::OMPC_map}, {Directive::OMPD_declare_mapper}}},
+        {Version(61), {{{Property::Required}}, {Clause::OMPC_map}, {Directive::OMPD_declare_mapper}}},
+      }
+    ),
+  },
+  {
     ClauseSet::DepobjClauseSet1,
     descriptor::ClauseSet(
       "depobj_clause_set_1",
@@ -2125,11 +2139,11 @@
     descriptor::Directive(
       "declare_mapper",
       {
-        {Version(50), {{{Property::Pure}}, "declare mapper", Association::Unassociated, Category::Declarative, {Clause::OMPC_map}, {}}},
-        {Version(51), {{{Property::Pure}}, "declare mapper", Association::Unassociated, Category::Declarative, {Clause::OMPC_map}, {}}},
-        {Version(52), {{{Property::Pure}}, "declare mapper", Association::Unassociated, Category::Declarative, {Clause::OMPC_map}, {}}},
-        {Version(60), {{{Property::Pure}}, "declare_mapper", Association::Unassociated, Category::Declarative, {Clause::OMPC_map}, {}}},
-        {Version(61), {{{Property::Pure}}, "declare_mapper", Association::Unassociated, Category::Declarative, {Clause::OMPC_map}, {}}},
+        {Version(50), {{{Property::Pure}}, "declare mapper", Association::Unassociated, Category::Declarative, {Clause::OMPC_map}, {ClauseSet::DeclareMapperClauseSet1}}},
+        {Version(51), {{{Property::Pure}}, "declare mapper", Association::Unassociated, Category::Declarative, {Clause::OMPC_map}, {ClauseSet::DeclareMapperClauseSet1}}},
+        {Version(52), {{{Property::Pure}}, "declare mapper", Association::Unassociated, Category::Declarative, {Clause::OMPC_map}, {ClauseSet::DeclareMapperClauseSet1}}},
+        {Version(60), {{{Property::Pure}}, "declare_mapper", Association::Unassociated, Category::Declarative, {Clause::OMPC_map}, {ClauseSet::DeclareMapperClauseSet1}}},
+        {Version(61), {{{Property::Pure}}, "declare_mapper", Association::Unassociated, Category::Declarative, {Clause::OMPC_map}, {ClauseSet::DeclareMapperClauseSet1}}},
       }
     ),
   },
@@ -2138,7 +2152,7 @@
     descriptor::Directive(
       "declare_reduction",
       {
-        {Version(45), {{{Property::Pure}}, "declare reduction", Association::Unassociated, Category::Declarative, {}, {}}},
+        {Version(45), {{{Property::Pure}}, "declare reduction", Association::Unassociated, Category::Declarative, {Clause::OMPC_initializer}, {}}},
         {Version(50), {{{Property::Pure}}, "declare reduction", Association::Unassociated, Category::Declarative, {Clause::OMPC_initializer}, {}}},
         {Version(51), {{{Property::Pure}}, "declare reduction", Association::Unassociated, Category::Declarative, {Clause::OMPC_initializer}, {}}},
         {Version(52), {{{Property::Pure}}, "declare reduction", Association::Unassociated, Category::Declarative, {Clause::OMPC_initializer}, {}}},

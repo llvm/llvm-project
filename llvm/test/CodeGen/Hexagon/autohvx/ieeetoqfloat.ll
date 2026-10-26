@@ -1,5 +1,7 @@
 ; RUN: llc -march=hexagon -mattr=+hvx-ieee-fp,+hvx-length128b,+hvxv79 < %s \
 ; RUN: | FileCheck %s --enable-var-scope
+; RUN: llc -march=hexagon -mattr=+hvx-ieee-fp,+hvx-length128b,+hvxv79 \
+; RUN: -hexagon-qf-fast-convert < %s | FileCheck %s --check-prefix=FAST --enable-var-scope
 ; RUN: llc -march=hexagon -mattr=+hvx-ieee-fp,+hvx-length128b,+hvxv81 < %s \
 ; RUN: | FileCheck %s --enable-var-scope
 ; RUN: llc -march=hexagon -mattr=+hvx-ieee-fp,+hvx-length128b,+hvxv75 < %s \
@@ -576,6 +578,94 @@ entry:
   ret <32 x i32> %0
 }
 
+;On v79 and above,
+;v0.h = vcvt(v0.hf) is translated to call.
+;FIXME: v81 might have a direct mapping.
+
+; CHECK-LABEL: convhhf:
+; CHECK-NOT: v{{.*}}.h = vcvt(v0.hf)
+; CHECK: call __qf_convert_hf_to_h_rne
+
+; FAST-LABEL: convhhf:
+; FAST-NOT: v{{.*}}.h = vcvt(v0.hf)
+; FAST-NOT: call __qf_convert_hf_to_h_rne
+; FAST: call __qf_fast_convert_hf_to_h_rne
+
+; V75-LABEL: convhhf:
+; V75: v{{.*}}.h = vcvt(v0.hf)
+
+define dso_local inreg <32 x i32> @convhhf(<32 x i32> noundef %Vu) local_unnamed_addr {
+entry:
+  %0 = tail call <32 x i32> @llvm.hexagon.V6.vcvt.h.hf.128B(<32 x i32> %Vu)
+  ret <32 x i32> %0
+}
+
+;On v79 and above,
+;v0.b = vcvt(v0.hf,v1.hf) is translated to a call.
+;FIXME: v81 might have a direct mapping.
+
+; CHECK-LABEL: convbhfhf:
+; CHECK-NOT: v{{.*}}.b = vcvt(v0.hf,v1.hf)
+; CHECK: call __qf_convert_hf_to_b_rne
+
+; FAST-LABEL: convbhfhf:
+; FAST-NOT: v{{.*}}.b = vcvt(v0.hf,v1.hf)
+; FAST-NOT: call __qf_convert_hf_to_b_rne
+; FAST: call __qf_fast_convert_hf_to_b_rne
+
+; V75-LABEL: convbhfhf:
+; V75: v{{.*}}.b = vcvt(v0.hf,v1.hf)
+
+define dso_local inreg <32 x i32> @convbhfhf(<32 x i32> noundef %Vu, <32 x i32> noundef %Vv) local_unnamed_addr {
+entry:
+  %0 = tail call <32 x i32> @llvm.hexagon.V6.vcvt.b.hf.128B(<32 x i32> %Vu, <32 x i32> %Vv)
+  ret <32 x i32> %0
+}
+
+;On v79 and above,
+;v0.ub = vcvt(v0.hf,v1.hf) is translated to a call.
+;FIXME: v81 might have a direct mapping.
+
+; CHECK-LABEL: convubhfhf:
+; CHECK-NOT: v{{.*}}.ub = vcvt(v0.hf,v1.hf)
+; CHECK: call __qf_convert_hf_to_ub_rne
+
+; FAST-LABEL: convubhfhf:
+; FAST-NOT: v{{.*}}.ub = vcvt(v0.hf,v1.hf)
+; FAST-NOT: call __qf_convert_hf_to_ub_rne
+; FAST: call __qf_fast_convert_hf_to_ub_rne
+
+; V75-LABEL: convubhfhf:
+; V75: v{{.*}}.ub = vcvt(v0.hf,v1.hf)
+
+define dso_local inreg <32 x i32> @convubhfhf(<32 x i32> noundef %Vu, <32 x i32> noundef %Vv) local_unnamed_addr {
+entry:
+  %0 = tail call <32 x i32> @llvm.hexagon.V6.vcvt.ub.hf.128B(<32 x i32> %Vu, <32 x i32> %Vv)
+  ret <32 x i32> %0
+}
+
+;On v79 and above,
+;v0.uh = vcvt(v0.hf) is translated to a call.
+;FIXME: v81 might have a direct mapping.
+
+; CHECK-LABEL: convuhhf:
+; CHECK-NOT: v0.uh = vcvt(v0.hf)
+; CHECK: call __qf_convert_hf_to_uh_rne
+
+; FAST-LABEL: convuhhf:
+; FAST-NOT: v{{.*}}.uh = vcvt(v0.hf)
+; FAST-NOT: call __qf_convert_hf_to_uh_rne
+; FAST: call __qf_fast_convert_hf_to_uh_rne
+
+; V75-LABEL: convuhhf:
+; V75: v0.uh = vcvt(v0.hf)
+
+define dso_local inreg <32 x i32> @convuhhf(<32 x i32> noundef %Vu) local_unnamed_addr {
+entry:
+  %0 = tail call <32 x i32> @llvm.hexagon.V6.vcvt.uh.hf.128B(<32 x i32> %Vu)
+  ret <32 x i32> %0
+}
+
 declare <32 x i32> @llvm.hexagon.V6.vabs.hf.128B(<32 x i32>)
 declare <32 x i32> @llvm.hexagon.V6.vabs.sf.128B(<32 x i32>)
 declare <32 x i32> @llvm.hexagon.V6.vassign.fp.128B(<32 x i32>)
@@ -602,6 +692,10 @@ declare <32 x i32> @llvm.hexagon.V6.vfneg.hf.128B(<32 x i32>)
 declare <32 x i32> @llvm.hexagon.V6.vfneg.sf.128B(<32 x i32>)
 declare <32 x i32> @llvm.hexagon.V6.vcvt.hf.h.128B(<32 x i32>)
 declare <64 x i32> @llvm.hexagon.V6.vcvt.sf.hf.128B(<32 x i32>)
+declare <32 x i32> @llvm.hexagon.V6.vcvt.h.hf.128B(<32 x i32>)
+declare <32 x i32> @llvm.hexagon.V6.vcvt.b.hf.128B(<32 x i32>, <32 x i32>)
+declare <32 x i32> @llvm.hexagon.V6.vcvt.ub.hf.128B(<32 x i32>, <32 x i32>)
+declare <32 x i32> @llvm.hexagon.V6.vcvt.uh.hf.128B(<32 x i32>)
 declare <32 x i32> @llvm.hexagon.V6.vcvt.hf.sf.128B(<32 x i32>, <32 x i32>)
 declare <32 x i32> @llvm.hexagon.V6.vcvt.hf.uh.128B(<32 x i32>)
 declare <64 x i32> @llvm.hexagon.V6.vcvt.hf.b.128B(<32 x i32>)
