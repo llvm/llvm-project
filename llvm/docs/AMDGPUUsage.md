@@ -14200,9 +14200,10 @@ For GFX125x:
 
 - There may be multiple L2 caches per agent. Ranges of virtual addresses can be set up as follows:
 
-  - Be non-hardware-coherent; copies of the data are not coherent between multiple L2s.
-  - Be read-write hardware-coherent with other L2 caches on the same or other agents.
-  - Bypass L2 entirely to ensure system coherence.
+  - Be read-write hardware-coherent with other L2 caches on the same or other agents (MTYPE RW).
+  - Bypass L2 entirely to ensure system coherence (MTYPE UC).
+  - Be non-hardware-coherent; copies of the data are not coherent between multiple L2s (MTYPE NC,
+    not used on gfx1250 and gfx1251).
 
 - L2 caches have multiple memory channels to service disjoint ranges of virtual
   addresses.
@@ -14629,7 +14630,8 @@ the instruction in the code sequence that references the table.
 
     3. `global_inv`
 
-    > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
+    > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`;
+    >   use `SCOPE_SE` if MTYPE NC is not used.
     > - Must happen before any following global/generic load/load atomic/atomicrmw.
     > - Ensures that following loads will not see stale global data.
 
@@ -14672,7 +14674,8 @@ the instruction in the code sequence that references the table.
 
     3. `global_inv`
 
-    > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
+    > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`;
+    >   use `SCOPE_SE` if MTYPE NC is not used.
     > - Must happen before any following global/generic load/load atomic/atomicrmw.
     > - Ensures that following loads will not see stale global data.
 
@@ -14793,7 +14796,8 @@ the instruction in the code sequence that references the table.
 
     4. `global_inv`
 
-    > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
+    > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`;
+    >   use `SCOPE_SE` if MTYPE NC is not used.
     > - Must happen before any following global/generic load/load atomic/atomicrmw.
     > - Ensures that following loads will not see stale global data.
 
@@ -14854,7 +14858,8 @@ the instruction in the code sequence that references the table.
 
     4. `global_inv`
 
-    > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
+    > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`;
+    >   use `SCOPE_SE` if MTYPE NC is not used.
     > - Must happen before any following global/generic load/load atomic/atomicrmw.
     > - Ensures that following loads will not see stale global data.
 
@@ -14927,7 +14932,8 @@ the instruction in the code sequence that references the table.
 
     2. `global_inv`
 
-    > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
+    > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`;
+    >   use `SCOPE_SE` if MTYPE NC is not used.
     > - Ensures that following loads will not see stale data.
 
     3. `s_wait_loadcnt 0x0` must happen after `global_inv` and before subsequent memory operations.
@@ -15006,10 +15012,12 @@ the instruction in the code sequence that references the table.
     >   - `s_wait_storecnt 0x0` must happen after any preceding global/generic store/store atomic/ atomicrmw-no-return-value.
     > - Must happen before the following `global_wb`.
     > - Ensures that all global memory store/rmw operations have completed before their data is written back.
+    > - Omit if `global_wb` is omitted.
 
     2. `global_wb`
 
        > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
+       > - Omit if MTYPE NC is not used.
     3. `s_wait_storecnt 0x0`\
        `s_wait_loadcnt 0x0`\
        `s_wait_dscnt 0x0`
@@ -15100,10 +15108,12 @@ the instruction in the code sequence that references the table.
     >   - `s_wait_storecnt 0x0` must happen after any preceding global/generic store/store atomic/ atomicrmw-no-return-value.
     > - Must happen before the following `global_wb`.
     > - Ensures that all global memory store/rmw operations have completed before their data is written back.
+    > - Omit if `global_wb` is omitted.
 
     2. `global_wb`
 
     > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
+    > - Omit if MTYPE NC is not used.
 
     3. `s_wait_storecnt 0x0`\
        `s_wait_loadcnt 0x0`\
@@ -15163,10 +15173,12 @@ the instruction in the code sequence that references the table.
     >   - `s_wait_storecnt 0x0` must happen after any preceding global/generic store/store atomic/ atomicrmw-no-return-value.
     > - Must happen before the following `global_wb`.
     > - Ensures that all global memory store/rmw operations have completed before their data is written back.
+    > - Omit if `global_wb` is omitted.
 
     2. `global_wb`
 
     > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
+    > - Omit if MTYPE NC is not used.
 
     3. `s_wait_storecnt 0x0`\
        `s_wait_loadcnt 0x0`\
@@ -15305,10 +15317,12 @@ the instruction in the code sequence that references the table.
     >   - `s_wait_storecnt 0x0` must happen after any preceding global/generic store/store atomic/ atomicrmw-no-return-value.
     > - Must happen before the following `global_wb`.
     > - Ensures that all global memory store/rmw operations have completed before their data is written back.
+    > - Omit if `global_wb` is omitted.
 
     2. `global_wb`
 
     > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
+    > - Omit if MTYPE NC is not used.
 
     3. `s_wait_storecnt 0x0`\
        `s_wait_loadcnt 0x0`\
@@ -15342,7 +15356,8 @@ the instruction in the code sequence that references the table.
 
     7. `global_inv`
 
-    > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
+    > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`;
+    >   use `SCOPE_SE` if MTYPE NC is not used.
     > - Must happen before any following global/generic load/load atomic/atomicrmw.
     > - Ensures that following loads will not see stale global data.
 
@@ -15361,9 +15376,11 @@ the instruction in the code sequence that references the table.
     >   - `s_wait_storecnt 0x0` must happen after any preceding global/generic store/store atomic/ atomicrmw-no-return-value.
     > - Must happen before the following `global_wb`.
     > - Ensures that all global memory store/rmw operations have completed before their data is written back.
+    > - Omit if `global_wb` is omitted.
 
     2. `global_wb`
-       : - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
+       > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
+       > - Omit if MTYPE NC is not used.
     3. `s_wait_storecnt 0x0`\
        `s_wait_loadcnt 0x0`\
        `s_wait_dscnt 0x0`
@@ -15398,7 +15415,8 @@ the instruction in the code sequence that references the table.
 
     7. `global_inv`
 
-    > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
+    > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`;
+    >   use `SCOPE_SE` if MTYPE NC is not used.
     > - Must happen before any following global/generic load/load atomic/atomicrmw.
     > - Ensures that following loads will not see stale global data.
 
@@ -15447,9 +15465,11 @@ the instruction in the code sequence that references the table.
     >   - `s_wait_storecnt 0x0` must happen after any preceding global/generic store/store atomic/ atomicrmw-no-return-value.
     > - Must happen before the following `global_wb`.
     > - Ensures that all global memory store/rmw operations have completed before their data is written back.
+    > - Omit if `global_wb` is omitted.
 
     2. `global_wb`
-       : - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
+       > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
+       > - Omit if MTYPE NC is not used.
     3. `s_wait_storecnt 0x0`\
        `s_wait_loadcnt 0x0`\
        `s_wait_dscnt 0x0`
@@ -15469,7 +15489,8 @@ the instruction in the code sequence that references the table.
 
     4. `global_inv`
 
-    > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
+    > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`;
+    >   use `SCOPE_SE` if MTYPE NC is not used.
     > - Must happen before any following global/generic load/load atomic/store/store atomic/atomicrmw.
     > - Ensures that following loads will not see stale global data.
     >   This satisfies the requirements of acquire.
