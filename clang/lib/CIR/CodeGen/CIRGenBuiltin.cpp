@@ -1905,6 +1905,44 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return RValue::get(emitBuiltinObjectSize(e->getArg(0), type, resType,
                                              /*EmittedE=*/nullptr, isDynamic));
   }
+  case Builtin::BI__builtin_counted_by_ref: {
+    // Sema has already checked that the argument is a (side-effect free)
+    // member access of a flexible array member or a pointer, and set the
+    // result type to a pointer to the count field if the member has a
+    // counted_by attribute, and to 'void *' otherwise.
+    mlir::Location loc = getLoc(e->getSourceRange());
+
+    // Default to returning '(void *) 0'.
+    mlir::Value result = builder.getNullPtr(convertType(e->getType()), loc);
+
+    const Expr *arg = e->getArg(0)->IgnoreParenImpCasts();
+    if (const auto *me = dyn_cast<MemberExpr>(arg)) {
+      if (const auto *caTy =
+              me->getMemberDecl()->getType()->getAs<CountAttributedType>();
+          caTy && caTy->getKind() == CountAttributedType::CountedBy) {
+        const auto *memberDecl = cast<FieldDecl>(me->getMemberDecl());
+        const FieldDecl *countFD = memberDecl->findCountedByField();
+        if (!countFD)
+          llvm::report_fatal_error("Cannot find the counted_by 'count' field");
+
+        if (countFD->isBitField()) {
+          cgm.errorNYI(e->getSourceRange(),
+                       "__builtin_counted_by_ref: bit-field count");
+          return getUndefRValue(e->getType());
+        }
+
+        Address countAddr = emitAddrOfCountedByField(arg, countFD);
+        if (!countAddr.isValid()) {
+          cgm.errorNYI(e->getSourceRange(),
+                       "__builtin_counted_by_ref: unsupported base expression");
+          return getUndefRValue(e->getType());
+        }
+        result = countAddr.getPointer();
+      }
+    }
+
+    return RValue::get(result);
+  }
 
   case Builtin::BI__builtin_prefetch: {
     auto evaluateOperandAsInt = [&](const Expr *arg) {

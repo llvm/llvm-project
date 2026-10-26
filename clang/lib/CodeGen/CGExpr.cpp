@@ -1062,136 +1062,6 @@ static llvm::Value *getArrayIndexingBound(CodeGenFunction &CGF,
   return nullptr;
 }
 
-/// Returns true if \p Field is reachable from \p RD either as a direct field or
-/// through a chain of nested record fields (including anonymous
-/// structs/unions). This mirrors the GEP path that getGEPIndicesToField builds,
-/// and is used to identify the right anchor expression in Base.
-static bool RecordContainsField(const RecordDecl *RD, const FieldDecl *Field) {
-  for (const FieldDecl *FD : RD->fields()) {
-    if (FD == Field)
-      return true;
-    QualType Ty = FD->getType();
-    if (Ty->isRecordType())
-      if (RecordContainsField(Ty->getAsRecordDecl(), Field))
-        return true;
-  }
-  return false;
-}
-
-namespace {
-
-/// \p StructAccessBase returns the base \p Expr of a field access. It returns
-/// either a \p DeclRefExpr, representing the base pointer to the struct, i.e.:
-///
-///     p in p-> a.b.c
-///
-/// or a \p MemberExpr, if the \p MemberExpr has the \p RecordDecl we're
-/// looking for:
-///
-///     struct s {
-///       struct s *ptr;
-///       int count;
-///       char array[] __attribute__((counted_by(count)));
-///     };
-///
-/// If we have an expression like \p p->ptr->array[index], we want the
-/// \p MemberExpr for \p p->ptr instead of \p p.
-class StructAccessBase
-    : public ConstStmtVisitor<StructAccessBase, const Expr *> {
-  /// The count field we're navigating to. We stop at the innermost expression
-  /// whose struct type transitively contains this field, so that
-  /// getGEPIndicesToField can navigate from that struct down to it.
-  const FieldDecl *CountDecl;
-
-  /// Returns true if E's record type (or pointee record type) transitively
-  /// contains CountDecl. Handles both direct containment and nested structs,
-  /// so we don't need a pre-computed RD from the caller.
-  bool IsExpectedRecordDecl(const Expr *E) const {
-    QualType Ty = E->getType();
-    if (Ty->isPointerType())
-      Ty = Ty->getPointeeType();
-    const RecordDecl *RD = Ty->getAsRecordDecl();
-    return RD && RecordContainsField(RD, CountDecl);
-  }
-
-public:
-  StructAccessBase(const FieldDecl *CountDecl) : CountDecl(CountDecl) {}
-
-  //===--------------------------------------------------------------------===//
-  //                            Visitor Methods
-  //===--------------------------------------------------------------------===//
-
-  // NOTE: If we build C++ support for counted_by, then we'll have to handle
-  // horrors like this:
-  //
-  //     struct S {
-  //       int x, y;
-  //       int blah[] __attribute__((counted_by(x)));
-  //     } s;
-  //
-  //     int foo(int index, int val) {
-  //       int (S::*IHatePMDs)[] = &S::blah;
-  //       (s.*IHatePMDs)[index] = val;
-  //     }
-
-  const Expr *Visit(const Expr *E) {
-    return ConstStmtVisitor<StructAccessBase, const Expr *>::Visit(E);
-  }
-
-  const Expr *VisitStmt(const Stmt *S) { return nullptr; }
-
-  // These are the types we expect to return (in order of most to least
-  // likely):
-  //
-  //   1. DeclRefExpr - This is the expression for the base of the structure.
-  //      It's exactly what we want to build an access to the \p counted_by
-  //      field.
-  //   2. MemberExpr - This is the expression that has the same \p RecordDecl
-  //      as the flexble array member's lexical enclosing \p RecordDecl. This
-  //      allows us to catch things like: "p->p->array"
-  //   3. CompoundLiteralExpr - This is for people who create something
-  //      heretical like (struct foo has a flexible array member):
-  //
-  //        (struct foo){ 1, 2 }.blah[idx];
-  const Expr *VisitDeclRefExpr(const DeclRefExpr *E) {
-    return IsExpectedRecordDecl(E) ? E : nullptr;
-  }
-  const Expr *VisitMemberExpr(const MemberExpr *E) {
-    if (IsExpectedRecordDecl(E) && E->isArrow())
-      return E;
-    const Expr *Res = Visit(E->getBase());
-    return !Res && IsExpectedRecordDecl(E) ? E : Res;
-  }
-  const Expr *VisitCompoundLiteralExpr(const CompoundLiteralExpr *E) {
-    return IsExpectedRecordDecl(E) ? E : nullptr;
-  }
-  const Expr *VisitCallExpr(const CallExpr *E) {
-    return IsExpectedRecordDecl(E) ? E : nullptr;
-  }
-
-  const Expr *VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
-    if (IsExpectedRecordDecl(E))
-      return E;
-    return Visit(E->getBase());
-  }
-  const Expr *VisitCastExpr(const CastExpr *E) {
-    if (E->getCastKind() == CK_LValueToRValue)
-      return IsExpectedRecordDecl(E) ? E : nullptr;
-    return Visit(E->getSubExpr());
-  }
-  const Expr *VisitParenExpr(const ParenExpr *E) {
-    return Visit(E->getSubExpr());
-  }
-  const Expr *VisitUnaryAddrOf(const UnaryOperator *E) {
-    return Visit(E->getSubExpr());
-  }
-  const Expr *VisitUnaryDeref(const UnaryOperator *E) {
-    return Visit(E->getSubExpr());
-  }
-};
-
-} // end anonymous namespace
-
 using RecIndicesTy = SmallVector<llvm::Value *, 8>;
 
 static bool getGEPIndicesToField(CodeGenFunction &CGF, const RecordDecl *RD,
@@ -1232,7 +1102,8 @@ llvm::Value *CodeGenFunction::GetCountedByFieldExprGEP(
   // builds the field indices from that struct down to CountDecl, handling any
   // intermediate nesting without requiring us to pre-compute a RecordDecl from
   // Base's type or from CountDecl's parent chain.
-  const Expr *StructBase = StructAccessBase(CountDecl).Visit(Base);
+  const Expr *StructBase =
+      CodeGenUtils::findCountedByFieldBase(Base, CountDecl);
   if (!StructBase || StructBase->HasSideEffects(getContext()))
     return nullptr;
 

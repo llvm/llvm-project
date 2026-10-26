@@ -1804,6 +1804,13 @@ public:
                                  llvm::StringRef fieldName,
                                  unsigned fieldIndex);
 
+  /// Emit the address of the \p counted_by count field \p countDecl for the
+  /// field access expression \p base (e.g. \p p->array). Returns an invalid
+  /// address if the count field can't be reached from \p base without side
+  /// effects.
+  Address emitAddrOfCountedByField(const Expr *base,
+                                   const FieldDecl *countDecl);
+
   mlir::Value emitAlloca(llvm::StringRef name, mlir::Type ty,
                          mlir::Location loc, clang::CharUnits alignment,
                          bool insertIntoFnEntryBlock,

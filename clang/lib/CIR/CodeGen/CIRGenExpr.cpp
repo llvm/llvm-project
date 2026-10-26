@@ -702,6 +702,72 @@ LValue CIRGenFunction::emitLValueForFieldInitialization(
   return makeAddrLValue(v, fieldType, fieldBaseInfo);
 }
 
+/// Collect the chain of fields leading from \p rd down to \p field, walking
+/// through nested (possibly anonymous) records. The outermost field comes first
+/// in \p path. Returns false if \p field isn't reachable from \p rd.
+static bool getFieldPathToField(const RecordDecl *rd, const FieldDecl *field,
+                                SmallVectorImpl<const FieldDecl *> &path) {
+  for (const FieldDecl *fd : rd->fields()) {
+    if (fd == field) {
+      path.push_back(fd);
+      return true;
+    }
+
+    if (const RecordDecl *nestedRD = fd->getType()->getAsRecordDecl()) {
+      path.push_back(fd);
+      if (getFieldPathToField(nestedRD, field, path))
+        return true;
+      path.pop_back();
+    }
+  }
+
+  return false;
+}
+
+Address CIRGenFunction::emitAddrOfCountedByField(const Expr *base,
+                                                 const FieldDecl *countDecl) {
+  assert(!countDecl->isBitField() && "cannot take the address of a bit-field");
+
+  // Walk base to find the deepest sub-expression whose record type
+  // transitively contains countDecl. This is the anchor we address the count
+  // field from.
+  const Expr *structBase =
+      CodeGenUtils::findCountedByFieldBase(base, countDecl);
+  if (!structBase || structBase->HasSideEffects(getContext()))
+    return Address::invalid();
+
+  // Derive the record type from the anchor expression itself.
+  QualType structTy = structBase->getType();
+  if (structTy->isPointerType())
+    structTy = structTy->getPointeeType();
+  const RecordDecl *rd = structTy->getAsRecordDecl();
+  if (!rd)
+    return Address::invalid();
+
+  LValue lv;
+  if (structBase->getType()->isPointerType()) {
+    LValueBaseInfo baseInfo;
+    assert(!cir::MissingFeatures::opTBAA());
+    Address addr = emitPointerWithAlignment(structBase, &baseInfo);
+    lv = makeAddrLValue(addr, structTy, baseInfo);
+  } else if (structBase->isLValue()) {
+    lv = emitLValue(structBase);
+  } else {
+    return Address::invalid();
+  }
+
+  // Unlike classic codegen, which builds a single GEP with all the indices, we
+  // emit one member access per level of nesting.
+  SmallVector<const FieldDecl *, 8> fieldPath;
+  if (!getFieldPathToField(rd, countDecl, fieldPath))
+    return Address::invalid();
+
+  for (const FieldDecl *field : fieldPath)
+    lv = emitLValueForField(lv, field);
+
+  return lv.getAddress();
+}
+
 /// Converts a scalar value from its primary IR type (as returned
 /// by ConvertType) to its load/store type.
 mlir::Value CIRGenFunction::emitToMemory(mlir::Value value, QualType ty) {

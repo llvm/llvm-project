@@ -43,6 +43,14 @@ bool isTrivialFiller(const Expr *E);
 /// one everywhere.  That's GCC behavior too.
 bool onlyHasInlineBuiltinDeclaration(const FunctionDecl *FD);
 
+/// Find the sub-expression of the field access \p Base from which the
+/// \p counted_by count field \p CountDecl can be reached: the innermost
+/// expression whose record type (or pointee record type) transitively contains
+/// \p CountDecl. For example, \p p in \p p->a.b.array, or \p p->ptr in
+/// \p p->ptr->array. Returns nullptr if there is no such sub-expression.
+const Expr *findCountedByFieldBase(const Expr *Base,
+                                   const FieldDecl *CountDecl);
+
 } // namespace clang::CodeGenUtils
 
 #endif // LLVM_CLANG_CODEGENUTILS_EXPRUTILS_H
