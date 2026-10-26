@@ -1571,8 +1571,9 @@ public:
 
 private:
   bool FoldArray(const Expr<T> &expr) {
+    const int kind{expr.kind()};
     Expr<T> folded{Fold(context_, common::Clone(expr))};
-    if (const auto *c{UnwrapConstantValue<T>(folded)}) {
+    if (const auto *c{UnwrapConstantValue<T>(kind, folded)}) {
       // Copy elements in Fortran array element order
       if (!c->empty()) {
         ConstantSubscripts index{c->lbounds()};
@@ -1671,7 +1672,7 @@ bool ArrayConstructorIsFlat(const ArrayConstructorValues<T> &values) {
 template <typename T>
 std::optional<Expr<T>> AsFlatArrayConstructor(const Expr<T> &expr) {
   const int kind{expr.kind()};
-  if (const auto *c{UnwrapConstantValue<T>(expr)}) {
+  if (const auto *c{UnwrapConstantValue<T>(kind, expr)}) {
     ArrayConstructor<T> result{kind, expr};
     if (!c->empty()) {
       ConstantSubscripts at{c->lbounds()};
