@@ -422,7 +422,7 @@ mulifx(IntType n, FXType m) {
   constexpr int F = FXRep::FRACTION_LEN;
 
   constexpr int INTERMEDIATE_BITS =
-      sizeof(IntType) * 8 - cpp::is_signed_v<IntType> + FXRep::VALUE_LEN;
+      cpp::numeric_limits<IntType>::digits + FXRep::VALUE_LEN;
 
   using WideType = cpp::conditional_t<
       cpp::is_signed_v<IntType>,
