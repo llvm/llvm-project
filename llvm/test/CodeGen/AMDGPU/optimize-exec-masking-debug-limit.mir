@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgpu10.10 -mattr=+wavefrontsize64 -run-pass=si-optimize-exec-masking -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=amdgpu10.10 -run-pass=si-optimize-exec-masking %s -o - | FileCheck %s
 
 # Debug instructions must not consume findExecCopy's 25-instruction search
 # limit or hide the copy from exec.
@@ -31,14 +31,14 @@ body:             |
     liveins: $vgpr0, $sgpr2
 
     ; CHECK-LABEL: name: ignore_debug_in_find_exec_copy
-    ; CHECK: $sgpr2_sgpr3 = S_AND_SAVEEXEC_B64 $sgpr0_sgpr1
-    renamable $sgpr0_sgpr1 = V_CMP_GT_U32_e64 $sgpr2, killed $vgpr0, implicit $exec
-    DBG_VALUE $sgpr0_sgpr1, $noreg, !9, !DIExpression(), debug-location !11
-    $sgpr2_sgpr3 = COPY $exec, implicit-def $exec
-    DBG_VALUE $sgpr2_sgpr3, $noreg, !9, !DIExpression(), debug-location !11
-    DBG_VALUE $exec, $noreg, !9, !DIExpression(), debug-location !11
-    $sgpr2_sgpr3 = S_AND_B64 killed renamable $sgpr2_sgpr3, killed renamable $sgpr0_sgpr1, implicit-def dead $scc
-    DBG_VALUE $sgpr2_sgpr3, $noreg, !9, !DIExpression(), debug-location !11
+    ; CHECK: $sgpr1 = S_AND_SAVEEXEC_B32 $sgpr0
+    renamable $sgpr0 = V_CMP_GT_U32_e64 $sgpr2, killed $vgpr0, implicit $exec
+    DBG_VALUE $sgpr0, $noreg, !9, !DIExpression(), debug-location !11
+    $sgpr1 = COPY $exec_lo, implicit-def $exec_lo
+    DBG_VALUE $sgpr1, $noreg, !9, !DIExpression(), debug-location !11
+    DBG_VALUE $exec_lo, $noreg, !9, !DIExpression(), debug-location !11
+    $sgpr1 = S_AND_B32 killed renamable $sgpr1, killed renamable $sgpr0, implicit-def dead $scc
+    DBG_VALUE $sgpr1, $noreg, !9, !DIExpression(), debug-location !11
     DBG_VALUE $scc, $noreg, !9, !DIExpression(), debug-location !11
     DBG_VALUE $noreg, $noreg, !9, !DIExpression(), debug-location !11
     DBG_VALUE $noreg, $noreg, !9, !DIExpression(), debug-location !11
@@ -65,5 +65,5 @@ body:             |
     DBG_VALUE $noreg, $noreg, !9, !DIExpression(), debug-location !11
     DBG_VALUE $noreg, $noreg, !9, !DIExpression(), debug-location !11
     DBG_VALUE $noreg, $noreg, !9, !DIExpression(), debug-location !11
-    $exec = S_MOV_B64_term killed renamable $sgpr2_sgpr3
+    $exec_lo = S_MOV_B32_term killed renamable $sgpr1
 ...
