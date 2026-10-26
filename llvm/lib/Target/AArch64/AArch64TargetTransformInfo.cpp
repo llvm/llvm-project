@@ -6423,7 +6423,7 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
        SE.getSmallConstantMaxTripCount(L) <= 32))
     return;
 
-  if (findStringMetadataForLoop(L, "llvm.loop.isvectorized"))
+  if (getBooleanLoopAttribute(L, "llvm.loop.unroll.runtime.disable"))
     return;
 
   if (SE.getSymbolicMaxBackedgeTakenCount(L) != SE.getBackedgeTakenCount(L))
