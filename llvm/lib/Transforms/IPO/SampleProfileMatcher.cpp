@@ -836,7 +836,14 @@ void SampleProfileMatcher::findFunctionsWithoutProfile() {
 // templates, and parameter types). Returns an empty string on failure.
 static std::string getDemangledBaseName(ItaniumPartialDemangler &Demangler,
                                         StringRef FName) {
-  auto FunctionName = FName.str();
+  // The demangler parses a clone suffix such as ".llvm.N" as a DotSuffix root
+  // node, for which getFunctionBaseName() returns null. Strip the known ones,
+  // including ".__uniq.N" which getCanonicalFnName keeps when the profile has
+  // it. Other suffixes (e.g. coroutine ".resume") are kept so such clones do
+  // not collide with the original function's basename.
+  StringRef Canon = FunctionSamples::getCanonicalFnName(FName);
+  auto FunctionName =
+      Canon.take_front(Canon.find(FunctionSamples::UniqSuffix)).str();
   if (Demangler.partialDemangle(FunctionName.c_str()))
     return std::string();
   size_t BaseNameSize = 0;
@@ -1080,7 +1087,10 @@ void SampleProfileMatcher::UpdateWithSalvagedProfiles() {
     assert(I.first && "New function is null");
     FunctionId FuncName(I.first->getName());
     ProfileSalvagedFuncs.insert(I.second.stringRef());
-    FuncNameToProfNameMap->emplace(FuncName, I.second);
+    // SampleProfileReader::getSamplesFor(const Function &) looks this map up by
+    // the canonical name.
+    FuncNameToProfNameMap->emplace(
+        FunctionId(FunctionSamples::getCanonicalFnName(*I.first)), I.second);
 
     // We need to remove the old entry to avoid duplicating the function
     // processing.
