@@ -23,4 +23,9 @@
 #define DT_LNK 10
 #define DT_SOCK 12
 
+// Converting between the type a directory entry reports and the one a
+// mode holds, which are the same values twelve bits apart.
+#define IFTODT(mode) (((mode) & 0170000) >> 12)
+#define DTTOIF(dirtype) ((dirtype) << 12)
+
 #endif // LLVM_LIBC_MACROS_LINUX_DIRENT_MACROS_H
