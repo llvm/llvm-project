@@ -1358,6 +1358,7 @@ let rd = 0 in {
 }
 
 // Section B.33 - Floating-point Operate (FPop) Instructions
+let Uses = [FSR], mayRaiseFPException = 1 in {
 
 // Convert Integer to Floating-point Instructions, p. 141
 def FITOS : F3_3u<2, 0b110100, 0b011000100,
@@ -1424,6 +1425,7 @@ def FQTOD : F3_3u<2, 0b110100, 0b011001011,
                  "fqtod $rs2, $rd",
                  [(set f64:$rd, (fpround f128:$rs2))]>,
                  Requires<[HasHardQuad]>;
+} // Uses = [FSR], mayRaiseFPException = 1
 
 // Floating-point Move Instructions, p. 144
 def FMOVS : F3_3u<2, 0b110100, 0b000000001,
@@ -1442,6 +1444,7 @@ def FABSS : F3_3u<2, 0b110100, 0b000001001,
 
 
 // Floating-point Square Root Instructions, p.145
+let Uses = [FSR], mayRaiseFPException = 1 in {
 // FSQRTS generates an erratum on LEON processors, so by disabling this instruction
 // this will be promoted to use FSQRTD with doubles instead.
 let Predicates = [HasNoFdivSqrtFix] in
@@ -1546,6 +1549,7 @@ def FDIVQ  : F3_3<2, 0b110100, 0b001001111,
                  "fdivq $rs1, $rs2, $rd",
                  [(set f128:$rd, (fdiv f128:$rs1, f128:$rs2))]>,
                  Requires<[HasHardQuad]>;
+} // Uses = [FSR], mayRaiseFPException = 1
 
 // Floating-point Compare Instructions, p. 148
 // Note: the 2nd template arg is different for these guys.
@@ -1554,7 +1558,7 @@ def FDIVQ  : F3_3<2, 0b110100, 0b001001111,
 // This behavior is modeled with a forced noop after the instruction in
 // DelaySlotFiller.
 
-let Defs = [FCC0], rd = 0, isCodeGenOnly = 1 in {
+let Defs = [FCC0], rd = 0, isCodeGenOnly = 1, mayRaiseFPException = 1 in {
   def FCMPS  : F3_3c<2, 0b110101, 0b001010001,
                    (outs), (ins FPRegs:$rs1, FPRegs:$rs2),
                    "fcmps $rs1, $rs2",
@@ -1579,7 +1583,8 @@ let Defs = [FCC0], rd = 0, isCodeGenOnly = 1 in {
 // the contents of an FCC, since SPARC v9 doesn't have facilities to spill
 // an individual FCC.
 
-let Predicates = [HasV9], Defs = [FCC0], rd = 0, isCodeGenOnly = 1 in {
+let Predicates = [HasV9], Defs = [FCC0], rd = 0, isCodeGenOnly = 1,
+    mayRaiseFPException = 1 in {
   def FCMPS_V9  : F3_3c<2, 0b110101, 0b001010001,
                    (outs), (ins FPRegs:$rs1, FPRegs:$rs2),
                    "fcmps %fcc0, $rs1, $rs2",

@@ -18,7 +18,7 @@ body:             |
     NOP
 
   bb.2:
-    $f0 = FADDS $f0, $f0
+    $f0 = FADDS $f0, $f0, implicit $fsr
 
 ---
 # CHECK:      bb.2:
