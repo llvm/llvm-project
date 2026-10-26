@@ -986,36 +986,32 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     AnyValue LanePtr = Ptr;
     GEPNoWrapFlags Flags = GEPNoWrapFlags::none();
 
-    bool SeenActiveLane = false;
     bool IsExpandLoad = CB.getIntrinsicID() == Intrinsic::masked_expandload;
 
     for (auto [I, Lane] : enumerate(Res.asAggregate())) {
       AnyValue AccumulatedOffset = AnyValue::poison();
       BooleanKind MaskLane = getMaskLane(Mask, I);
 
-      if (!IsExpandLoad || (IsExpandLoad && MaskLane == BooleanKind::True)) {
-        bool FirstIndex = I == 0 || (IsExpandLoad && !SeenActiveLane);
-        LanePtr = Ctx.computeScaledPtrAdd(
-            LanePtr, APInt(IndexBW, FirstIndex ? 0 : 1),
-            APInt(IndexBW, AccessSize), Flags, AccumulatedOffset);
-      }
-
-      switch (MaskLane) {
-      case BooleanKind::False:
-        continue;
-      case BooleanKind::Poison:
+      if (MaskLane == BooleanKind::Poison) {
         reportImmediateUB() << "Poison mask lane in " << IntrinsicName << '.';
         return AnyValue();
-      case BooleanKind::True:
-        SeenActiveLane = true;
-        break;
       }
 
-      Lane = load(LanePtr, Align(1), ElemTy, /*NoUndef=*/false);
-      // The first enabled base pointer may not be inbounds, but pointers after
-      // that must be inbounds.
-      Flags = GEPNoWrapFlags::inBounds();
+      assert(MaskLane == BooleanKind::True || MaskLane == BooleanKind::False);
+
+      if (MaskLane == BooleanKind::True) {
+        Lane = load(LanePtr, Align(1), ElemTy, /*NoUndef=*/false);
+        // The first enabled base pointer may not be inbounds, but pointers
+        // after that must be inbounds.
+        Flags = GEPNoWrapFlags::inBounds();
+      }
+
+      if (!IsExpandLoad || MaskLane == BooleanKind::True)
+        LanePtr = Ctx.computeScaledPtrAdd(LanePtr, APInt(IndexBW, 1),
+                                          APInt(IndexBW, AccessSize), Flags,
+                                          AccumulatedOffset);
     }
+
     return Res;
   }
 
