@@ -157,8 +157,6 @@ void RegAllocBase::postOptimization() {
   DeadRemats.clear();
 }
 
-// TODO: This forward declaration is to limit the size of the "diff" to make it
-// easier to review.
 static void cleanupFailedDefs(MachineInstr &MI, Register FailedReg,
                               MCRegister PhysReg, LiveIntervals *LIS,
                               const VirtRegMap &VRM);
@@ -274,7 +272,6 @@ static MCPhysReg getErrorAssignment(MachineFunction &MF,
                                     const RegisterClassInfo &RCI,
                                     const TargetRegisterClass &RC,
                                     const MachineInstr *CtxMI) {
-
   // Avoid printing the error for every single instance of the register. It
   // would be better if this were per register class.
   bool EmitError = !MF.getProperties().hasFailedRegAlloc();
