@@ -2556,33 +2556,29 @@ void CodeGenRegBank::inferCommonSubClass(CodeGenRegisterClass *RC) {
 // form a register class.  Update RC->SubClassWithSubReg.
 //
 void CodeGenRegBank::inferSubClassWithSubReg(CodeGenRegisterClass *RC) {
-  // Map SubRegIndex to set of registers in RC supporting that SubRegIndex.
-  using SubReg2SetMap = std::map<const CodeGenSubRegIndex *,
-                                 CodeGenRegister::Vec, deref<std::less<>>>;
+  // The set of registers in RC supporting each SubRegIndex, indexed by
+  // EnumValue.
+  std::vector<CodeGenRegister::Vec> SRSets(SubRegIndices.size() + 1);
 
   // Compute the set of registers supporting each SubRegIndex.
-  SubReg2SetMap SRSets;
+  size_t NumNonArtificial = 0;
   for (const CodeGenRegister *R : RC->getMembers()) {
     if (R->Artificial)
       continue;
-    CodeGenRegister::SubRegArrayRef SRM = R->getSubRegs();
-    for (auto [I, _] : SRM)
-      SRSets[I].push_back(R);
+    ++NumNonArtificial;
+    for (auto [I, _] : R->getSubRegs())
+      SRSets[I->EnumValue].push_back(R);
   }
 
   // Find matching classes for all SRSets entries.  Iterate in SubRegIndex
   // numerical order to visit synthetic indices last.
   for (const CodeGenSubRegIndex &SubIdx : SubRegIndices) {
-    SubReg2SetMap::const_iterator I = SRSets.find(&SubIdx);
+    const CodeGenRegister::Vec &Set = SRSets[SubIdx.EnumValue];
     // Unsupported SubRegIndex. Skip it.
-    if (I == SRSets.end())
+    if (Set.empty())
       continue;
     // In most cases, all RC registers support the SubRegIndex.
-    auto IsNotArtificial = [](const CodeGenRegister *R) {
-      return !R->Artificial;
-    };
-    if (I->second.size() ==
-        (size_t)count_if(RC->getMembers(), IsNotArtificial)) {
+    if (Set.size() == NumNonArtificial) {
       RC->setSubClassWithSubReg(&SubIdx, RC);
       continue;
     }
@@ -2590,8 +2586,8 @@ void CodeGenRegBank::inferSubClassWithSubReg(CodeGenRegisterClass *RC) {
       continue;
     // This is a real subset.  See if we have a matching class.
     CodeGenRegisterClass *SubRC =
-        getOrCreateSubClass(RC, &I->second,
-                            RC->getName() + "_with_" + I->first->getName())
+        getOrCreateSubClass(RC, &Set,
+                            RC->getName() + "_with_" + SubIdx.getName())
             .first;
     RC->setSubClassWithSubReg(&SubIdx, SubRC);
   }
