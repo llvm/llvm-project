@@ -493,16 +493,12 @@ void GCNSchedStrategy::pickNodeFromQueue(SchedBoundary &Zone,
   unsigned SGPRPressure = 0;
   unsigned VGPRPressure = 0;
   unsigned AGPRPressure = 0;
-  unsigned VGPRPeak = 0, AGPRPeak = 0;
   IsPending = false;
   if (DAG->isTrackingPressure()) {
     if (!useGCNTrackers()) {
       SGPRPressure = Pressure[AMDGPU::RegisterPressureSets::SReg_32];
       VGPRPressure = Pressure[AMDGPU::RegisterPressureSets::VGPR_32];
       AGPRPressure = Pressure[AMDGPU::RegisterPressureSets::AGPR_32];
-      const auto &Peak = RPTracker.getPressure().MaxSetPressure;
-      VGPRPeak = Peak[AMDGPU::RegisterPressureSets::VGPR_32];
-      AGPRPeak = Peak[AMDGPU::RegisterPressureSets::AGPR_32];
     } else {
       GCNRPTracker *T = IsBottomUp
                             ? static_cast<GCNRPTracker *>(&UpwardTracker)
@@ -510,53 +506,8 @@ void GCNSchedStrategy::pickNodeFromQueue(SchedBoundary &Zone,
       SGPRPressure = T->getPressure().getSGPRNum();
       VGPRPressure = T->getPressure().getArchVGPRNum();
       AGPRPressure = T->getPressure().getAGPRNum();
-      VGPRPeak = T->getMaxPressure().getArchVGPRNum();
-      AGPRPeak = T->getMaxPressure().getAGPRNum();
     }
   }
-  // Use this boundary's peaks so picks from the other boundary do not affect
-  // cached candidates. The legacy iterative scheduler has no CurrentStage.
-  bool UseUnifiedVGPRPeak =
-      CurrentStage && DAG->isTrackingPressure() &&
-      MF->getSubtarget<GCNSubtarget>().hasGFX90AInsts() &&
-      *CurrentStage != GCNSchedStageID::ILPInitialSchedule &&
-      *CurrentStage != GCNSchedStageID::MemoryClauseInitialSchedule;
-  auto getUnifiedVGPRPeak = [&]() {
-    if (!UseUnifiedVGPRPeak)
-      return 0u;
-    unsigned V = std::max(this->Pressure[AMDGPU::RegisterPressureSets::VGPR_32],
-                          VGPRPeak);
-    unsigned A = std::max(this->Pressure[AMDGPU::RegisterPressureSets::AGPR_32],
-                          AGPRPeak);
-    return A ? GCNRegPressure::getUnifiedVGPRNum(V, A, 0) : V;
-  };
-  unsigned BestUnifiedVGPRPeak = 0;
-  auto tryUnifiedVGPRPeak = [&](SchedCandidate &TryCand, SchedBoundary *ZoneArg,
-                                unsigned TryPeak, bool Pending) {
-    const PressureChange &Critical = TryCand.RPDelta.CriticalMax;
-    if (!UseUnifiedVGPRPeak || !Cand.isValid() || !ZoneArg ||
-        !Critical.isValid() ||
-        Critical.getPSet() != AMDGPU::RegisterPressureSets::VGPR_32 ||
-        !(Critical == Cand.RPDelta.CriticalMax))
-      return false;
-
-    // Preserve the heuristics preceding critical pressure in tryCandidate()
-    // and tryPendingCandidate(). The combined critical scores already tie.
-    if (Pending ? tryGreater(biasPhysReg(TryCand.SU, TryCand.AtTop),
-                             biasPhysReg(Cand.SU, Cand.AtTop), TryCand, Cand,
-                             PhysReg)
-                : tryBiasPhysRegs(TryCand, Cand, ZoneArg,
-                                  RegionPolicy.BiasPRegsExtra))
-      return true;
-    if (tryPressure(TryCand.RPDelta.Excess, Cand.RPDelta.Excess, TryCand, Cand,
-                    RegExcess, TRI, DAG->MF))
-      return true;
-
-    // Equal instantaneous pressure can still grow one bank beyond its earlier
-    // peak. Prefer the smaller allocation implied by the two per-bank peaks.
-    return tryLess(TryPeak, BestUnifiedVGPRPeak, TryCand, Cand, RegCritical);
-  };
-
   LLVM_DEBUG(dbgs() << "Available Q:\n");
   ReadyQueue &AQ = Zone.Available;
   for (SUnit *SU : AQ) {
@@ -566,16 +517,13 @@ void GCNSchedStrategy::pickNodeFromQueue(SchedBoundary &Zone,
                   VGPRPressure, AGPRPressure, IsBottomUp);
     // Pass SchedBoundary only when comparing nodes from the same boundary.
     SchedBoundary *ZoneArg = Cand.AtTop == TryCand.AtTop ? &Zone : nullptr;
-    unsigned TryPeak = getUnifiedVGPRPeak();
-    if (!tryUnifiedVGPRPeak(TryCand, ZoneArg, TryPeak, /*Pending=*/false))
-      tryCandidate(Cand, TryCand, ZoneArg);
+    tryCandidate(Cand, TryCand, ZoneArg);
     if (TryCand.Reason != NoCand) {
       // Initialize resource delta if needed in case future heuristics query it.
       if (TryCand.ResDelta == SchedResourceDelta())
         TryCand.initResourceDelta(Zone.DAG, SchedModel);
       LLVM_DEBUG(printCandidateDecision(Cand, TryCand));
       Cand.setBest(TryCand);
-      BestUnifiedVGPRPeak = TryPeak;
     } else {
       printCandidateDecision(TryCand, Cand);
     }
@@ -593,9 +541,7 @@ void GCNSchedStrategy::pickNodeFromQueue(SchedBoundary &Zone,
                   VGPRPressure, AGPRPressure, IsBottomUp);
     // Pass SchedBoundary only when comparing nodes from the same boundary.
     SchedBoundary *ZoneArg = Cand.AtTop == TryCand.AtTop ? &Zone : nullptr;
-    unsigned TryPeak = getUnifiedVGPRPeak();
-    if (!tryUnifiedVGPRPeak(TryCand, ZoneArg, TryPeak, /*Pending=*/true))
-      tryPendingCandidate(Cand, TryCand, ZoneArg);
+    tryPendingCandidate(Cand, TryCand, ZoneArg);
     if (TryCand.Reason != NoCand) {
       // Initialize resource delta if needed in case future heuristics query it.
       if (TryCand.ResDelta == SchedResourceDelta())
@@ -603,7 +549,6 @@ void GCNSchedStrategy::pickNodeFromQueue(SchedBoundary &Zone,
       LLVM_DEBUG(printCandidateDecision(Cand, TryCand));
       IsPending = true;
       Cand.setBest(TryCand);
-      BestUnifiedVGPRPeak = TryPeak;
     } else {
       printCandidateDecision(TryCand, Cand);
     }
