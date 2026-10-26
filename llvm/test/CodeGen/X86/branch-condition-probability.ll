@@ -13,11 +13,12 @@ declare void @no()
 define void @and_cold(i32 %a, i32 %b, i32 %c, i32 %d) !prof !2 {
 ; ASM-LABEL: and_cold:
 ; ASM:       # %bb.0: # %entry
-; ASM-NEXT:    xorl %esi, %edi
-; ASM-NEXT:    xorl %ecx, %edx
-; ASM-NEXT:    orl %edi, %edx
+; ASM-NEXT:    cmpl %esi, %edi
 ; ASM-NEXT:    jne no@PLT # TAILCALL
-; ASM-NEXT:  # %bb.1: # %true
+; ASM-NEXT:  # %bb.1: # %entry
+; ASM-NEXT:    cmpl %ecx, %edx
+; ASM-NEXT:    jne no@PLT # TAILCALL
+; ASM-NEXT:  # %bb.2: # %true
 ; ASM-NEXT:    jmp yes@PLT # TAILCALL
 ;
 ; OLD-ASM-LABEL: and_cold:
@@ -30,16 +31,21 @@ define void @and_cold(i32 %a, i32 %b, i32 %c, i32 %d) !prof !2 {
 ; OLD-ASM-NEXT:    jmp yes@PLT # TAILCALL
 ; MIR-LABEL: name: and_cold
 ; MIR: bb.0.entry:
-; MIR-NEXT:   successors: %bb.1(0x00106035), %bb.2(0x7fef9fcb)
+; MIR-NEXT:   successors: %bb.3(0x4008301b), %bb.2(0x3ff7cfe5)
 ; MIR-NEXT:   liveins: $edi, $esi, $edx, $ecx
 ; MIR-NEXT: {{  $}}
 ; MIR-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY $ecx
 ; MIR-NEXT:   [[COPY1:%[0-9]+]]:gr32 = COPY $edx
 ; MIR-NEXT:   [[COPY2:%[0-9]+]]:gr32 = COPY $esi
 ; MIR-NEXT:   [[COPY3:%[0-9]+]]:gr32 = COPY $edi
-; MIR-NEXT:   [[XOR32rr:%[0-9]+]]:gr32 = XOR32rr [[COPY3]], [[COPY2]], implicit-def dead $eflags
-; MIR-NEXT:   [[XOR32rr1:%[0-9]+]]:gr32 = XOR32rr [[COPY1]], [[COPY]], implicit-def dead $eflags
-; MIR-NEXT:   [[OR32rr:%[0-9]+]]:gr32 = OR32rr [[XOR32rr]], [[XOR32rr1]], implicit-def $eflags
+; MIR-NEXT:   [[SUB32rr:%[0-9]+]]:gr32 = SUB32rr [[COPY3]], [[COPY2]], implicit-def $eflags
+; MIR-NEXT:   JCC_1 %bb.2, 5, implicit $eflags
+; MIR-NEXT:   JMP_1 %bb.3
+; MIR-NEXT: {{  $}}
+; MIR-NEXT: bb.3.entry:
+; MIR-NEXT:   successors: %bb.1(0x0020bc3a), %bb.2(0x7fdf43c6)
+; MIR-NEXT: {{  $}}
+; MIR-NEXT:   [[SUB32rr1:%[0-9]+]]:gr32 = SUB32rr [[COPY1]], [[COPY]], implicit-def $eflags
 ; MIR-NEXT:   JCC_1 %bb.2, 5, implicit $eflags
 ; MIR-NEXT:   JMP_1 %bb.1
 ; MIR-NEXT: {{  $}}
@@ -85,12 +91,11 @@ false:
 define void @and_hot(i32 %a, i32 %b, i32 %c, i32 %d) !prof !2 {
 ; ASM-LABEL: and_hot:
 ; ASM:       # %bb.0: # %entry
-; ASM-NEXT:    cmpl %esi, %edi
+; ASM-NEXT:    xorl %esi, %edi
+; ASM-NEXT:    xorl %ecx, %edx
+; ASM-NEXT:    orl %edi, %edx
 ; ASM-NEXT:    jne no@PLT # TAILCALL
-; ASM-NEXT:  # %bb.1: # %entry
-; ASM-NEXT:    cmpl %ecx, %edx
-; ASM-NEXT:    jne no@PLT # TAILCALL
-; ASM-NEXT:  # %bb.2: # %true
+; ASM-NEXT:  # %bb.1: # %true
 ; ASM-NEXT:    jmp yes@PLT # TAILCALL
 ;
 ; OLD-ASM-LABEL: and_hot:
@@ -104,21 +109,16 @@ define void @and_hot(i32 %a, i32 %b, i32 %c, i32 %d) !prof !2 {
 ; OLD-ASM-NEXT:    jmp yes@PLT # TAILCALL
 ; MIR-LABEL: name: and_hot
 ; MIR: bb.0.entry:
-; MIR-NEXT:   successors: %bb.3(0x7ff7cfe6), %bb.2(0x0008301a)
+; MIR-NEXT:   successors: %bb.1(0x7fef9fcb), %bb.2(0x00106035)
 ; MIR-NEXT:   liveins: $edi, $esi, $edx, $ecx
 ; MIR-NEXT: {{  $}}
 ; MIR-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY $ecx
 ; MIR-NEXT:   [[COPY1:%[0-9]+]]:gr32 = COPY $edx
 ; MIR-NEXT:   [[COPY2:%[0-9]+]]:gr32 = COPY $esi
 ; MIR-NEXT:   [[COPY3:%[0-9]+]]:gr32 = COPY $edi
-; MIR-NEXT:   [[SUB32rr:%[0-9]+]]:gr32 = SUB32rr [[COPY3]], [[COPY2]], implicit-def $eflags
-; MIR-NEXT:   JCC_1 %bb.2, 5, implicit $eflags
-; MIR-NEXT:   JMP_1 %bb.3
-; MIR-NEXT: {{  $}}
-; MIR-NEXT: bb.3.entry:
-; MIR-NEXT:   successors: %bb.1(0x7ff7cf60), %bb.2(0x000830a0)
-; MIR-NEXT: {{  $}}
-; MIR-NEXT:   [[SUB32rr1:%[0-9]+]]:gr32 = SUB32rr [[COPY1]], [[COPY]], implicit-def $eflags
+; MIR-NEXT:   [[XOR32rr:%[0-9]+]]:gr32 = XOR32rr [[COPY3]], [[COPY2]], implicit-def dead $eflags
+; MIR-NEXT:   [[XOR32rr1:%[0-9]+]]:gr32 = XOR32rr [[COPY1]], [[COPY]], implicit-def dead $eflags
+; MIR-NEXT:   [[OR32rr:%[0-9]+]]:gr32 = OR32rr [[XOR32rr]], [[XOR32rr1]], implicit-def $eflags
 ; MIR-NEXT:   JCC_1 %bb.2, 5, implicit $eflags
 ; MIR-NEXT:   JMP_1 %bb.1
 ; MIR-NEXT: {{  $}}
@@ -169,11 +169,12 @@ false:
 define void @or_hot(i32 %a, i32 %b, i32 %c, i32 %d) !prof !2 {
 ; ASM-LABEL: or_hot:
 ; ASM:       # %bb.0: # %entry
-; ASM-NEXT:    xorl %esi, %edi
-; ASM-NEXT:    xorl %ecx, %edx
-; ASM-NEXT:    orl %edi, %edx
+; ASM-NEXT:    cmpl %esi, %edi
+; ASM-NEXT:    jne yes@PLT # TAILCALL
+; ASM-NEXT:  # %bb.1: # %entry
+; ASM-NEXT:    cmpl %ecx, %edx
 ; ASM-NEXT:    je no@PLT # TAILCALL
-; ASM-NEXT:  # %bb.1: # %true
+; ASM-NEXT:  # %bb.2: # %true
 ; ASM-NEXT:    jmp yes@PLT # TAILCALL
 ;
 ; OLD-ASM-LABEL: or_hot:
@@ -186,16 +187,21 @@ define void @or_hot(i32 %a, i32 %b, i32 %c, i32 %d) !prof !2 {
 ; OLD-ASM-NEXT:    jmp yes@PLT # TAILCALL
 ; MIR-LABEL: name: or_hot
 ; MIR: bb.0.entry:
-; MIR-NEXT:   successors: %bb.1(0x7fef9fcb), %bb.2(0x00106035)
+; MIR-NEXT:   successors: %bb.1(0x3ff7cfe5), %bb.3(0x4008301b)
 ; MIR-NEXT:   liveins: $edi, $esi, $edx, $ecx
 ; MIR-NEXT: {{  $}}
 ; MIR-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY $ecx
 ; MIR-NEXT:   [[COPY1:%[0-9]+]]:gr32 = COPY $edx
 ; MIR-NEXT:   [[COPY2:%[0-9]+]]:gr32 = COPY $esi
 ; MIR-NEXT:   [[COPY3:%[0-9]+]]:gr32 = COPY $edi
-; MIR-NEXT:   [[XOR32rr:%[0-9]+]]:gr32 = XOR32rr [[COPY3]], [[COPY2]], implicit-def dead $eflags
-; MIR-NEXT:   [[XOR32rr1:%[0-9]+]]:gr32 = XOR32rr [[COPY1]], [[COPY]], implicit-def dead $eflags
-; MIR-NEXT:   [[OR32rr:%[0-9]+]]:gr32 = OR32rr [[XOR32rr]], [[XOR32rr1]], implicit-def $eflags
+; MIR-NEXT:   [[SUB32rr:%[0-9]+]]:gr32 = SUB32rr [[COPY3]], [[COPY2]], implicit-def $eflags
+; MIR-NEXT:   JCC_1 %bb.1, 5, implicit $eflags
+; MIR-NEXT:   JMP_1 %bb.3
+; MIR-NEXT: {{  $}}
+; MIR-NEXT: bb.3.entry:
+; MIR-NEXT:   successors: %bb.1(0x7fdf43c6), %bb.2(0x0020bc3a)
+; MIR-NEXT: {{  $}}
+; MIR-NEXT:   [[SUB32rr1:%[0-9]+]]:gr32 = SUB32rr [[COPY1]], [[COPY]], implicit-def $eflags
 ; MIR-NEXT:   JCC_1 %bb.2, 4, implicit $eflags
 ; MIR-NEXT:   JMP_1 %bb.1
 ; MIR-NEXT: {{  $}}
@@ -241,12 +247,11 @@ false:
 define void @or_cold(i32 %a, i32 %b, i32 %c, i32 %d) !prof !2 {
 ; ASM-LABEL: or_cold:
 ; ASM:       # %bb.0: # %entry
-; ASM-NEXT:    cmpl %esi, %edi
-; ASM-NEXT:    jne yes@PLT # TAILCALL
-; ASM-NEXT:  # %bb.1: # %entry
-; ASM-NEXT:    cmpl %ecx, %edx
+; ASM-NEXT:    xorl %esi, %edi
+; ASM-NEXT:    xorl %ecx, %edx
+; ASM-NEXT:    orl %edi, %edx
 ; ASM-NEXT:    je no@PLT # TAILCALL
-; ASM-NEXT:  # %bb.2: # %true
+; ASM-NEXT:  # %bb.1: # %true
 ; ASM-NEXT:    jmp yes@PLT # TAILCALL
 ;
 ; OLD-ASM-LABEL: or_cold:
@@ -260,21 +265,16 @@ define void @or_cold(i32 %a, i32 %b, i32 %c, i32 %d) !prof !2 {
 ; OLD-ASM-NEXT:    jmp yes@PLT # TAILCALL
 ; MIR-LABEL: name: or_cold
 ; MIR: bb.0.entry:
-; MIR-NEXT:   successors: %bb.1(0x0008301a), %bb.3(0x7ff7cfe6)
+; MIR-NEXT:   successors: %bb.1(0x00106035), %bb.2(0x7fef9fcb)
 ; MIR-NEXT:   liveins: $edi, $esi, $edx, $ecx
 ; MIR-NEXT: {{  $}}
 ; MIR-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY $ecx
 ; MIR-NEXT:   [[COPY1:%[0-9]+]]:gr32 = COPY $edx
 ; MIR-NEXT:   [[COPY2:%[0-9]+]]:gr32 = COPY $esi
 ; MIR-NEXT:   [[COPY3:%[0-9]+]]:gr32 = COPY $edi
-; MIR-NEXT:   [[SUB32rr:%[0-9]+]]:gr32 = SUB32rr [[COPY3]], [[COPY2]], implicit-def $eflags
-; MIR-NEXT:   JCC_1 %bb.1, 5, implicit $eflags
-; MIR-NEXT:   JMP_1 %bb.3
-; MIR-NEXT: {{  $}}
-; MIR-NEXT: bb.3.entry:
-; MIR-NEXT:   successors: %bb.1(0x000830a0), %bb.2(0x7ff7cf60)
-; MIR-NEXT: {{  $}}
-; MIR-NEXT:   [[SUB32rr1:%[0-9]+]]:gr32 = SUB32rr [[COPY1]], [[COPY]], implicit-def $eflags
+; MIR-NEXT:   [[XOR32rr:%[0-9]+]]:gr32 = XOR32rr [[COPY3]], [[COPY2]], implicit-def dead $eflags
+; MIR-NEXT:   [[XOR32rr1:%[0-9]+]]:gr32 = XOR32rr [[COPY1]], [[COPY]], implicit-def dead $eflags
+; MIR-NEXT:   [[OR32rr:%[0-9]+]]:gr32 = OR32rr [[XOR32rr]], [[XOR32rr1]], implicit-def $eflags
 ; MIR-NEXT:   JCC_1 %bb.2, 4, implicit $eflags
 ; MIR-NEXT:   JMP_1 %bb.1
 ; MIR-NEXT: {{  $}}
