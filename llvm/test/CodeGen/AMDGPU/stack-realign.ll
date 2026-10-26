@@ -341,7 +341,7 @@ define i32 @needs_align1024_stack_args_used_inside_loop(ptr addrspace(5) nocaptu
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    s_mov_b32 s11, s33
 ; GCN-NEXT:    s_add_i32 s33, s32, 0xffc0
-; GCN-NEXT:    s_mov_b32 s14, s34
+; GCN-NEXT:    s_mov_b32 s12, s34
 ; GCN-NEXT:    s_mov_b32 s34, s32
 ; GCN-NEXT:    s_and_b32 s33, s33, 0xffff0000
 ; GCN-NEXT:    v_lshrrev_b32_e64 v1, 6, s34
@@ -351,19 +351,18 @@ define i32 @needs_align1024_stack_args_used_inside_loop(ptr addrspace(5) nocaptu
 ; GCN-NEXT:    s_add_i32 s32, s32, 0x30000
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], s33 offset:1024
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    ; implicit-def: $sgpr6_sgpr7
 ; GCN-NEXT:    s_branch .LBB10_2
 ; GCN-NEXT:  .LBB10_1: ; %Flow
 ; GCN-NEXT:    ; in Loop: Header=BB10_2 Depth=1
 ; GCN-NEXT:    s_or_b64 exec, exec, s[8:9]
-; GCN-NEXT:    s_and_b64 s[8:9], exec, s[6:7]
-; GCN-NEXT:    s_or_b64 s[4:5], s[8:9], s[4:5]
+; GCN-NEXT:    s_and_b64 s[6:7], exec, s[6:7]
+; GCN-NEXT:    s_or_b64 s[4:5], s[6:7], s[4:5]
 ; GCN-NEXT:    s_andn2_b64 exec, exec, s[4:5]
 ; GCN-NEXT:    s_cbranch_execz .LBB10_4
 ; GCN-NEXT:  .LBB10_2: ; %loop_body
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    buffer_load_dword v0, v1, s[0:3], 0 offen
-; GCN-NEXT:    s_or_b64 s[6:7], s[6:7], exec
+; GCN-NEXT:    s_mov_b64 s[6:7], -1
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, s10, v0
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
@@ -373,17 +372,15 @@ define i32 @needs_align1024_stack_args_used_inside_loop(ptr addrspace(5) nocaptu
 ; GCN-NEXT:    ; in Loop: Header=BB10_2 Depth=1
 ; GCN-NEXT:    s_add_i32 s10, s10, 1
 ; GCN-NEXT:    s_cmp_eq_u32 s10, 9
-; GCN-NEXT:    s_cselect_b64 s[12:13], -1, 0
-; GCN-NEXT:    s_andn2_b64 s[6:7], s[6:7], exec
-; GCN-NEXT:    s_and_b64 s[12:13], s[12:13], exec
+; GCN-NEXT:    s_cselect_b64 s[6:7], -1, 0
 ; GCN-NEXT:    v_add_u32_e32 v1, vcc, 4, v1
 ; GCN-NEXT:    v_mov_b32_e32 v0, 1
-; GCN-NEXT:    s_or_b64 s[6:7], s[6:7], s[12:13]
+; GCN-NEXT:    s_orn2_b64 s[6:7], s[6:7], exec
 ; GCN-NEXT:    s_branch .LBB10_1
 ; GCN-NEXT:  .LBB10_4: ; %exit
 ; GCN-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GCN-NEXT:    s_mov_b32 s32, s34
-; GCN-NEXT:    s_mov_b32 s34, s14
+; GCN-NEXT:    s_mov_b32 s34, s12
 ; GCN-NEXT:    s_mov_b32 s33, s11
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 begin:
