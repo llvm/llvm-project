@@ -76,7 +76,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVMoveMergeLegacyPass(*PR);
   initializeRISCVPushPopOptLegacyPass(*PR);
   initializeRISCVIndirectBranchTrackingLegacyPass(*PR);
-  initializeRISCVLoadStoreOptPass(*PR);
+  initializeRISCVLoadStoreOptLegacyPass(*PR);
   initializeRISCVPreAllocZilsdOptPass(*PR);
   initializeRISCVExpandPseudoAtomicsLegacyPass(*PR);
   initializeRISCVRedundantCopyEliminationLegacyPass(*PR);
@@ -491,7 +491,7 @@ void RISCVPassConfig::addPreSched2() {
   // Emit KCFI checks for indirect calls.
   addPass(createKCFIPass());
   if (TM->getOptLevel() != CodeGenOptLevel::None)
-    addPass(createRISCVLoadStoreOptPass());
+    addPass(createRISCVLoadStoreOptLegacyPass());
 }
 
 void RISCVPassConfig::addPreEmitPass() {
