@@ -44,7 +44,7 @@ def OTHERW   : UA2005RegWin<"otherw", 0b00011>;
 } // Predicates = [HasUA2005]
 
 // UltraSPARC Architecture 2007 Instructions
-let Predicates = [HasUA2007] in {
+let Predicates = [HasUA2007], Uses = [FSR], mayRaiseFPException = 1 in {
 def FMADDS : FourOp<"fmadds", 0b110111, 0b0001, FPRegs>;
 def FMADDD : FourOp<"fmaddd", 0b110111, 0b0010, DFPRegs>;
 def FMSUBS : FourOp<"fmsubs", 0b110111, 0b0101, FPRegs>;
@@ -54,7 +54,7 @@ def FNMADDS : FourOp<"fnmadds", 0b110111, 0b1101, FPRegs>;
 def FNMADDD : FourOp<"fnmaddd", 0b110111, 0b1110, DFPRegs>;
 def FNMSUBS : FourOp<"fnmsubs", 0b110111, 0b1001, FPRegs>;
 def FNMSUBD : FourOp<"fnmsubd", 0b110111, 0b1010, DFPRegs>;
-} // Predicates = [HasUA2007]
+} // Predicates = [HasUA2007], Uses = [FSR], mayRaiseFPException = 1
 
 // Oracle SPARC Architecture 2011 Instructions
 let Predicates = [HasOSA2011] in {
