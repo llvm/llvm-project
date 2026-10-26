@@ -193,9 +193,16 @@ public:
 FunctionPass *createRISCVExpandPseudoAtomicsLegacyPass();
 void initializeRISCVExpandPseudoAtomicsLegacyPass(PassRegistry &);
 
-FunctionPass *createRISCVInsertVSETVLIPass();
-void initializeRISCVInsertVSETVLIPass(PassRegistry &);
-extern char &RISCVInsertVSETVLIID;
+class RISCVInsertVSETVLIPass
+    : public RequiredPassInfoMixin<RISCVInsertVSETVLIPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createRISCVInsertVSETVLILegacyPass();
+void initializeRISCVInsertVSETVLILegacyPass(PassRegistry &);
+extern char &RISCVInsertVSETVLILegacyID;
 
 FunctionPass *createRISCVInsertReadWriteCSRPass();
 void initializeRISCVInsertReadWriteCSRPass(PassRegistry &);

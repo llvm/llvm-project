@@ -69,7 +69,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVVectorPeepholeLegacyPass(*PR);
   initializeRISCVVLOptimizerLegacyPass(*PR);
   initializeRISCVVMV0EliminationLegacyPass(*PR);
-  initializeRISCVInsertVSETVLIPass(*PR);
+  initializeRISCVInsertVSETVLILegacyPass(*PR);
   initializeRISCVInsertReadWriteCSRPass(*PR);
   initializeRISCVInsertWriteVXRMPass(*PR);
   initializeRISCVDAGToDAGISelLegacyPass(*PR);
@@ -382,7 +382,7 @@ FunctionPass *RISCVPassConfig::createRVVRegAllocPass(bool Optimized) {
 
 bool RISCVPassConfig::addRegAssignAndRewriteFast() {
   addPass(createRVVRegAllocPass(false));
-  addPass(createRISCVInsertVSETVLIPass());
+  addPass(createRISCVInsertVSETVLILegacyPass());
   if (TM->getOptLevel() != CodeGenOptLevel::None && CLOpts.enable_dead_defs)
     addPass(createRISCVDeadRegisterDefinitionsLegacyPass());
   return TargetPassConfig::addRegAssignAndRewriteFast();
@@ -391,7 +391,7 @@ bool RISCVPassConfig::addRegAssignAndRewriteFast() {
 bool RISCVPassConfig::addRegAssignAndRewriteOptimized() {
   addPass(createRVVRegAllocPass(true));
   addPass(createVirtRegRewriter(false));
-  addPass(createRISCVInsertVSETVLIPass());
+  addPass(createRISCVInsertVSETVLILegacyPass());
   if (TM->getOptLevel() != CodeGenOptLevel::None && CLOpts.enable_dead_defs)
     addPass(createRISCVDeadRegisterDefinitionsLegacyPass());
   return TargetPassConfig::addRegAssignAndRewriteOptimized();

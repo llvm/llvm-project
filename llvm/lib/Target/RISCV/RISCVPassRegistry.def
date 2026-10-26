@@ -46,6 +46,7 @@ MACHINE_FUNCTION_PASS("riscv-expand-pseudo-pre-ra",
 MACHINE_FUNCTION_PASS("riscv-fold-mem-offset", RISCVFoldMemOffsetPass())
 MACHINE_FUNCTION_PASS("riscv-indirect-branch-tracking",
                       RISCVIndirectBranchTrackingPass())
+MACHINE_FUNCTION_PASS("riscv-insert-vsetvli", RISCVInsertVSETVLIPass())
 MACHINE_FUNCTION_PASS("riscv-isel", RISCVISelDAGToDAGPass(*this, getOptLevel()))
 MACHINE_FUNCTION_PASS("riscv-late-branch-opt", RISCVLateBranchOptPass())
 MACHINE_FUNCTION_PASS("riscv-lpad-setup", RISCVLandingPadSetupPass())
