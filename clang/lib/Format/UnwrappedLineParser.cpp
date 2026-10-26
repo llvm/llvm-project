@@ -2999,7 +2999,7 @@ FormatToken *UnwrappedLineParser::findRBraceToken(size_t BodyStart,
     // A nested conditional changed the depth, but the branch summary omits it.
     bool UnbalancedNested = false;
     const PPBranchSummary *BodyBranch = nullptr;
-    SmallVector<const PPBranchSummary *, 2> Branches;
+    SmallVector<const PPBranchSummary *, 2> Branches = {};
   };
   SmallVector<Conditional, 4> Open;
   const auto BodyEndLoc = BodyEnd->Tok.getLocation();
