@@ -41,11 +41,6 @@ class Defined;
 struct PhdrEntry;
 class SymbolTableBaseSection;
 
-struct CieRecord {
-  EhSectionPiece *cie = nullptr;
-  SmallVector<EhSectionPiece *, 0> fdes;
-};
-
 // Section for .eh_frame.
 class EhFrameSection final : public SyntheticSection {
 public:
@@ -67,28 +62,10 @@ public:
     int64_t fdeVARel;
   };
 
-  ArrayRef<CieRecord *> getCieRecords() const { return cieRecords; }
-  template <class ELFT>
   void iterateFDEWithLSDA(llvm::function_ref<void(InputSection &)> fn);
 
 private:
-  // This is used only when parsing EhInputSection. We keep it here to avoid
-  // allocating one for each EhInputSection.
-  llvm::DenseMap<size_t, CieRecord *> offsetToCie;
-
-  template <llvm::endianness E> void addRecords(EhInputSection *s);
-  template <class ELFT>
-  void iterateFDEWithLSDAAux(EhInputSection &sec,
-                             llvm::DenseSet<size_t> &ciesWithLSDA,
-                             llvm::function_ref<void(InputSection &)> fn);
-
-  CieRecord *addCie(EhSectionPiece &piece, ArrayRef<Relocation> rels);
   Defined *isFdeLive(EhSectionPiece &piece, ArrayRef<Relocation> rels);
-
-  SmallVector<CieRecord *, 0> cieRecords;
-
-  // CIE records are uniquified by their contents and personality functions.
-  llvm::DenseMap<std::pair<ArrayRef<uint8_t>, Symbol *>, CieRecord *> cieMap;
 };
 
 // .eh_frame_hdr contains a binary search table for .eh_frame FDEs. The section

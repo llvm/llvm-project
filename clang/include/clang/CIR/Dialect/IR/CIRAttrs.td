@@ -1852,6 +1852,36 @@ def CIR_FuncInfoAttr : AnyAttrOf<[
   CIR_FuncIdentityAttr
 ], "function information attribute">;
 
+
+//===----------------------------------------------------------------------===//
+// CoroutineKindAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_CoroutineKind : CIR_I32Enum<"CoroutineKind", "coroutine kind", [
+  I32EnumCase<"Coroutine", 0, "coroutine">,
+  I32EnumCase<"FlattenedCoroutine", 1, "flattened_coroutine">
+]>;
+
+def CIR_CoroutineKindAttr : CIR_EnumAttr<CIR_CoroutineKind, "coroutine_kind"> {
+  let description = [{
+    Marks a `cir.func` as a coroutine and records which form its body
+    is in. A function without this attribute is not a coroutine.
+
+    - `coroutine`: the body still holds the structured `cir.coroutine` op
+      (and its `cir.await` / `cir.co_return` children), as emitted by CIRGen.
+    - `flattened_coroutine`: FlattenCFG has inlined those regions into plain
+      blocks. The function no longer contains a `cir.coroutine` op, but is
+      still a coroutine for the purposes of LLVM lowering.
+
+    On `cir.func` it is printed as a bare keyword:
+
+    ```mlir
+    cir.func coroutine @f() { ... }
+    cir.func flattened_coroutine @f() { ... }
+    ```
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // BitFieldDeclAttr
 //===----------------------------------------------------------------------===//
@@ -2660,13 +2690,14 @@ def CIR_LoweringLangOptionsAttr
     "bool":$gpu_rdc,
     "bool":$openmp,
     "bool":$openmp_is_target_device,
-    "int32_t":$clang_abi_compat
+    "int32_t":$clang_abi_compat,
+    "int32_t":$long_double_size
   );
 
   let assemblyFormat = [{
     `<` struct($exceptions, $threadsafe_statics, $cuda, $cuda_is_device, $hip,
                $hlsl, $gpu_rdc, $openmp, $openmp_is_target_device,
-               $clang_abi_compat) `>`
+               $clang_abi_compat, $long_double_size) `>`
   }];
 
   let canHaveIllegalCXXABIType = 0;

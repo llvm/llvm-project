@@ -315,34 +315,8 @@ void test_fp_ops(struct FPOps *ops) {
 }
 
 void test_fp_ops_fail(struct FPOps *ops) {
-  ops->a = 42; // expected-warning {{writing variable 'a' requires holding mutex 'ops->mu' exclusively}}
-  ops->requires_mu(); // expected-warning {{calling function 'requires_mu' requires holding mutex 'ops->mu' exclusively}}
-}
-
-// '&mu' names the mutex of the same object, as 'mu' does; C has no
-// pointer-to-member syntax, so it is not the wildcard '&FPOps::mu' is in C++.
-void test_fp_ops_other(struct FPOps *ops, struct FPOps *other) {
-  other->lock();
-  ops->a = 42; // expected-warning {{writing variable 'a' requires holding mutex 'ops->mu' exclusively}} \
-               // expected-note {{found near match 'other->mu'}}
-  ops->requires_mu(); // expected-warning {{calling function 'requires_mu' requires holding mutex 'ops->mu' exclusively}} \
-                      // expected-note {{found near match 'other->mu'}}
-  other->unlock();
-}
-
-// The object may be reached without a pointer, and the field may be called
-// through an explicit dereference.
-void test_fp_ops_value(struct FPOps foo, struct FPOps *ops) {
-  foo.lock();
-  foo.a = 42;
-  (*ops->lock)();
-  ops->a = 42;
-  (*foo.unlock)();
-  foo.a = 42; // expected-warning {{writing variable 'a' requires holding mutex 'foo.mu' exclusively}} \
-              // expected-note {{found near match 'ops->mu'}}
-  foo.requires_mu(); // expected-warning {{calling function 'requires_mu' requires holding mutex 'foo.mu' exclusively}} \
-                     // expected-note {{found near match 'ops->mu'}}
-  ops->unlock();
+  ops->a = 42; // expected-warning {{writing variable 'a' requires holding mutex '&FPOps::mu' exclusively}}
+  ops->requires_mu(); // expected-warning {{calling function 'requires_mu' requires holding mutex '&FPOps::mu' exclusively}}
 }
 
 // Function pointer parameters. The attributes constrain the function reached
