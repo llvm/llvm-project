@@ -30,6 +30,7 @@
 #include "RISCVSubtarget.h"
 #include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/IR/Analysis.h"
 #include <queue>
@@ -196,6 +197,7 @@ struct BlockData {
 
 class RISCVInsertWriteVXRMImpl {
   const TargetInstrInfo *TII;
+  const MachineLoopInfo *MLI;
 
   std::vector<BlockData> BlockInfo;
   std::queue<const MachineBasicBlock *> WorkList;
@@ -207,7 +209,8 @@ class RISCVInsertWriteVXRMImpl {
   void emitWriteVXRM(MachineBasicBlock &MBB);
 
 public:
-  bool runOnMachineFunction(MachineFunction &MF);
+  bool runOnMachineFunction(MachineFunction &MF,
+                            function_ref<MachineLoopInfo *()> GetMLI);
 };
 
 class RISCVInsertWriteVXRMLegacy : public MachineFunctionPass {
@@ -220,6 +223,7 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
+    AU.addUsedIfAvailable<MachineLoopInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -318,8 +322,14 @@ void RISCVInsertWriteVXRMImpl::computeAnticipated(
   if (MBB.succ_empty()) {
     Anticipated.setUnknown();
   } else {
+    // If VXRM writes are expensive, speculate a write into successors that
+    // don't need it, but only within a loop so that the write can be hoisted
+    // out of the loop. Elsewhere this would just add writes to paths that
+    // don't use VXRM.
+    bool Speculate =
+        ST.hasVXRMPipelineFlush() && (!MLI || MLI->getLoopFor(&MBB));
     for (const MachineBasicBlock *S : MBB.successors())
-      if (ST.hasVXRMPipelineFlush())
+      if (Speculate)
         Anticipated =
           Anticipated.intersectAnticipated(BlockInfo[S->getNumber()].AnticipatedIn);
       else
@@ -447,13 +457,17 @@ void RISCVInsertWriteVXRMImpl::emitWriteVXRM(MachineBasicBlock &MBB) {
   }
 }
 
-bool RISCVInsertWriteVXRMImpl::runOnMachineFunction(MachineFunction &MF) {
+bool RISCVInsertWriteVXRMImpl::runOnMachineFunction(
+    MachineFunction &MF, function_ref<MachineLoopInfo *()> GetMLI) {
   // Skip if the vector extension is not enabled.
   const RISCVSubtarget &ST = MF.getSubtarget<RISCVSubtarget>();
   if (!ST.hasVInstructions())
     return false;
 
   TII = ST.getInstrInfo();
+  // Loop info is used to limit speculation of VXRM writes. It's available in
+  // optimized pipelines; without it, speculate everywhere.
+  MLI = GetMLI();
 
   assert(BlockInfo.empty() && "Expect empty block infos");
   BlockInfo.resize(MF.getNumBlockIDs());
@@ -505,15 +519,19 @@ FunctionPass *llvm::createRISCVInsertWriteVXRMLegacyPass() {
 
 bool RISCVInsertWriteVXRMLegacy::runOnMachineFunction(MachineFunction &MF) {
   RISCVInsertWriteVXRMImpl Impl;
-  return Impl.runOnMachineFunction(MF);
+  return Impl.runOnMachineFunction(MF, [&]() {
+    auto *MLIWrapper = getAnalysisIfAvailable<MachineLoopInfoWrapperPass>();
+    return MLIWrapper ? &MLIWrapper->getLI() : nullptr;
+  });
 }
 
 PreservedAnalyses
 RISCVInsertWriteVXRMPass::run(MachineFunction &MF,
                               MachineFunctionAnalysisManager &MFAM) {
   RISCVInsertWriteVXRMImpl Impl;
-  return Impl.runOnMachineFunction(MF)
-             ? getMachineFunctionPassPreservedAnalyses()
-                   .preserveSet<CFGAnalyses>()
-             : PreservedAnalyses::all();
+  bool Changed = Impl.runOnMachineFunction(
+      MF, [&]() { return &MFAM.getResult<MachineLoopAnalysis>(MF); });
+  return Changed ? getMachineFunctionPassPreservedAnalyses()
+                       .preserveSet<CFGAnalyses>()
+                 : PreservedAnalyses::all();
 }
