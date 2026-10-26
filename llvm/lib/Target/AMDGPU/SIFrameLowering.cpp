@@ -1024,10 +1024,10 @@ void SIFrameLowering::emitEntryFunctionScratchRsrcRegSetup(
           .addImm(0) // cpol
           .addMemOperand(MMO)
           .addReg(ScratchRsrcReg, RegState::ImplicitDefine);
-
-        MF.getRegInfo().addLiveIn(MFI->getImplicitBufferPtrUserSGPR());
-        MBB.addLiveIn(MFI->getImplicitBufferPtrUserSGPR());
       }
+
+      MF.getRegInfo().addLiveIn(MFI->getImplicitBufferPtrUserSGPR());
+      MBB.addLiveIn(MFI->getImplicitBufferPtrUserSGPR());
     } else {
       Register Rsrc0 = TRI->getSubReg(ScratchRsrcReg, AMDGPU::sub0);
       Register Rsrc1 = TRI->getSubReg(ScratchRsrcReg, AMDGPU::sub1);

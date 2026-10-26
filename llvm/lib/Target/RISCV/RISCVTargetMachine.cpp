@@ -576,10 +576,6 @@ void RISCVPassConfig::addPreRegAlloc() {
   addPass(createRISCVInsertReadWriteCSRPass());
   addPass(createRISCVInsertWriteVXRMPass());
   addPass(createRISCVLandingPadSetupLegacyPass());
-
-  if (TM->getOptLevel() != CodeGenOptLevel::None && CLOpts.enable_pipeliner)
-    addPass(&MachinePipelinerID);
-
   addPass(createRISCVVMV0EliminationPass());
 }
 
