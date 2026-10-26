@@ -282,11 +282,11 @@ private: // Parser methods.
   bool ParseDefset();
   bool ParseDeftype();
   bool ParseDefvar(Record *CurRec = nullptr);
-  bool ParseDump(MultiClass *CurMultiClass, Record *CurRec = nullptr);
+  bool ParseDump(Record *CurRec = nullptr);
   bool ParseForeach(MultiClass *CurMultiClass);
   bool ParseIf(MultiClass *CurMultiClass);
   bool ParseIfBody(MultiClass *CurMultiClass, StringRef Kind);
-  bool ParseAssert(MultiClass *CurMultiClass, Record *CurRec = nullptr);
+  bool ParseAssert(Record *CurRec = nullptr);
   bool ParseTopLevelLet(MultiClass *CurMultiClass);
   LetModeAndName ParseLetModeAndName();
   void ParseLetList(SmallVectorImpl<LetRecord> &Result);

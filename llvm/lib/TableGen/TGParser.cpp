@@ -3829,13 +3829,13 @@ LetModeAndName TGParser::ParseLetModeAndName() {
 ///
 bool TGParser::ParseBodyItem(Record *CurRec) {
   if (Lex.getCode() == tgtok::Assert)
-    return ParseAssert(nullptr, CurRec);
+    return ParseAssert(CurRec);
 
   if (Lex.getCode() == tgtok::Defvar)
     return ParseDefvar(CurRec);
 
   if (Lex.getCode() == tgtok::Dump)
-    return ParseDump(nullptr, CurRec);
+    return ParseDump(CurRec);
 
   if (Lex.getCode() != tgtok::Let) {
     if (!ParseDeclaration(CurRec, false))
@@ -4314,7 +4314,7 @@ bool TGParser::ParseIfBody(MultiClass *CurMultiClass, StringRef Kind) {
 /// ParseAssert - Parse an assert statement.
 ///
 ///   Assert ::= ASSERT condition , message ;
-bool TGParser::ParseAssert(MultiClass *CurMultiClass, Record *CurRec) {
+bool TGParser::ParseAssert(Record *CurRec) {
   assert(Lex.getCode() == tgtok::Assert && "Unknown tok");
   Lex.Lex(); // Eat the 'assert' token.
 
@@ -4722,7 +4722,7 @@ bool TGParser::ParseObject(MultiClass *MC) {
     return TokError(
         "Expected assert, class, def, defm, defset, dump, foreach, if, or let");
   case tgtok::Assert:
-    return ParseAssert(MC);
+    return ParseAssert();
   case tgtok::Def:
     return ParseDef(MC);
   case tgtok::Defm:
@@ -4732,7 +4732,7 @@ bool TGParser::ParseObject(MultiClass *MC) {
   case tgtok::Defvar:
     return ParseDefvar();
   case tgtok::Dump:
-    return ParseDump(MC);
+    return ParseDump();
   case tgtok::Foreach:
     return ParseForeach(MC);
   case tgtok::If:
@@ -4854,7 +4854,7 @@ LLVM_DUMP_METHOD void MultiClass::dump() const {
 }
 #endif
 
-bool TGParser::ParseDump(MultiClass *CurMultiClass, Record *CurRec) {
+bool TGParser::ParseDump(Record *CurRec) {
   // Location of the `dump` statement.
   SMLoc Loc = Lex.getLoc();
   assert(Lex.getCode() == tgtok::Dump && "Unknown tok");
