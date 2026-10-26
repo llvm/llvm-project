@@ -1207,7 +1207,7 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
     SmallVector<unsigned, 8> &MaskIndices = SuperRegMaskIndices[RC.EnumValue];
     for (auto &Idx : SubRegIndices) {
       MaskBV.reset();
-      RC.getSuperRegClasses(&Idx, MaskBV);
+      RC.getSuperRegClasses(&Idx, RegBank, MaskBV);
       if (MaskBV.none())
         continue;
       SRIList.push_back(&Idx);
