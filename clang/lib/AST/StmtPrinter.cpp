@@ -2011,6 +2011,15 @@ void StmtPrinter::VisitConvertVectorExpr(ConvertVectorExpr *Node) {
   OS << ")";
 }
 
+void StmtPrinter::VisitElementwiseSaturatingCastExpr(
+    ElementwiseSaturatingCastExpr *Node) {
+  OS << "__builtin_elementwise_saturating_cast(";
+  PrintExpr(Node->getSrcExpr());
+  OS << ", ";
+  Node->getTypeSourceInfo()->getType().print(OS, Policy);
+  OS << ")";
+}
+
 void StmtPrinter::VisitInitListExpr(InitListExpr* Node) {
   if (Node->getSyntacticForm()) {
     Visit(Node->getSyntacticForm());

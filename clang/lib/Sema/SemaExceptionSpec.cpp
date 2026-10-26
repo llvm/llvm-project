@@ -1301,6 +1301,7 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Expr::ShuffleVectorExprClass:
   case Expr::StmtExprClass:
   case Expr::ConvertVectorExprClass:
+  case Expr::ElementwiseSaturatingCastExprClass:
   case Expr::VAArgExprClass:
   case Expr::CXXParenListInitExprClass:
   case Expr::CXXExpansionSelectExprClass:
