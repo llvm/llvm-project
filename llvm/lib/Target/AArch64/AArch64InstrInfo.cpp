@@ -7802,6 +7802,10 @@ static bool getMaddPatterns(MachineInstr &Root,
   const AArch64Subtarget &STI =
       MBB.getParent()->getSubtarget<AArch64Subtarget>();
   auto setShfFound = [&](int Opcode, unsigned ZeroReg, unsigned Pattern) {
+    // TODO: Currently its not possible to reject the combine for Apple targets
+    // based on the scheduling model, because we have gaps in modeling and
+    // analysis. Once we fill the gaps, remove the subtarget feature and the
+    // associated check here.
     if (STI.hasShiftMaddSlow())
       return;
 
