@@ -6,6 +6,7 @@
 ; element gets its own phi instead.
 
 %complex = type { float, float }
+@g = addrspace(1) global i32 0
 
 define amdgpu_kernel void @split_constant_indices(ptr addrspace(1) %out, i1 %c, float %a, float %b) {
 ; CHECK-LABEL: define amdgpu_kernel void @split_constant_indices(
@@ -43,6 +44,37 @@ join:
   %y = load float, ptr addrspace(5) %p1y, align 4
   %sum = fadd float %x, %y
   store float %sum, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+; An element can be copied from another element of the same vector.
+define amdgpu_kernel void @split_copied_element(ptr addrspace(1) %out, i1 %c, i32 %a, i32 %b) {
+; CHECK-LABEL: define amdgpu_kernel void @split_copied_element(
+; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], i1 [[C:%.*]], i32 [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br i1 [[C]], label %[[THEN:.*]], label %[[JOIN:.*]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    br label %[[JOIN]]
+; CHECK:       [[JOIN]]:
+; CHECK-NEXT:    [[PROMOTEALLOCA_0:%.*]] = phi i32 [ [[B]], %[[THEN]] ], [ [[A]], %[[ENTRY]] ]
+; CHECK-NEXT:    store i32 [[PROMOTEALLOCA_0]], ptr addrspace(1) [[OUT]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %alloca = alloca [2 x i32], align 8, addrspace(5)
+  store i32 %a, ptr addrspace(5) %alloca, align 8
+  br i1 %c, label %then, label %join
+
+then:
+  store i32 %b, ptr addrspace(5) %alloca, align 8
+  br label %join
+
+join:
+  %v = load <2 x i32>, ptr addrspace(5) %alloca, align 8
+  %e0 = extractelement <2 x i32> %v, i32 0
+  %v2 = insertelement <2 x i32> %v, i32 %e0, i32 1
+  %e1 = extractelement <2 x i32> %v2, i32 1
+  store i32 %e1, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -128,5 +160,41 @@ then:
 join:
   %v = load <4 x float>, ptr addrspace(5) %alloca, align 16
   store <4 x float> %v, ptr addrspace(1) %out, align 16
+  ret void
+}
+
+; A constant expression has no elements to split into, so the vector is kept.
+define amdgpu_kernel void @keep_constant_expression(ptr addrspace(1) %out, i1 %c, i32 %a) {
+; CHECK-LABEL: define amdgpu_kernel void @keep_constant_expression(
+; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], i1 [[C:%.*]], i32 [[A:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[ALLOCA:%.*]] = freeze <2 x i32> poison
+; CHECK-NEXT:    br i1 [[C]], label %[[THEN:.*]], label %[[JOIN:.*]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> bitcast (i64 ptrtoint (ptr addrspace(1) @g to i64) to <2 x i32>), i32 [[A]], i32 1
+; CHECK-NEXT:    br label %[[JOIN]]
+; CHECK:       [[JOIN]]:
+; CHECK-NEXT:    [[PROMOTEALLOCA:%.*]] = phi <2 x i32> [ [[TMP0]], %[[THEN]] ], [ bitcast (i64 ptrtoint (ptr addrspace(1) @g to i64) to <2 x i32>), %[[ENTRY]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i32> [[PROMOTEALLOCA]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[PROMOTEALLOCA]], i32 1
+; CHECK-NEXT:    [[S:%.*]] = add i32 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    store i32 [[S]], ptr addrspace(1) [[OUT]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %alloca = alloca [2 x i32], align 8, addrspace(5)
+  %p1 = getelementptr inbounds [2 x i32], ptr addrspace(5) %alloca, i32 0, i32 1
+  store i64 ptrtoint (ptr addrspace(1) @g to i64), ptr addrspace(5) %alloca, align 8
+  br i1 %c, label %then, label %join
+
+then:
+  store i32 %a, ptr addrspace(5) %p1, align 4
+  br label %join
+
+join:
+  %x = load i32, ptr addrspace(5) %alloca, align 8
+  %y = load i32, ptr addrspace(5) %p1, align 4
+  %s = add i32 %x, %y
+  store i32 %s, ptr addrspace(1) %out, align 4
   ret void
 }
