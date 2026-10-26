@@ -571,4 +571,73 @@ InstructionCost getNarrowedLeafOpsCost(
         {TTI::OK_NonUniformConstantValue, TTI::OP_None}, {}, CtxI);
   return Cost;
 }
+
+SmallBitVector selectBSwapGathers(
+    ArrayRef<SmallVector<Value *>> GatheredScalars, const DataLayout &DL,
+    const TargetTransformInfo &TTI, bool ReVec,
+    TargetTransformInfo::TargetCostKind CostKind,
+    function_ref<std::optional<
+        std::tuple<const void *, FixedVectorType *, unsigned>>(Value *)>
+        GetVectorizedSource) {
+  struct SourceVector {
+    FixedVectorType *VecTy = nullptr;
+    APInt DemandedElts;
+    InstructionCost Cost = 0;
+    SmallVector<unsigned> Gathers;
+  };
+  SmallDenseMap<const void *, SourceVector> SourceVectors;
+  SmallBitVector BSwapGathers(GatheredScalars.size());
+  for (auto [Idx, VL] : enumerate(GatheredScalars)) {
+    std::optional<std::tuple<Value *, unsigned, SmallVector<int>>> Fields =
+        matchGatheredExtractedFields(VL, DL);
+    if (!Fields)
+      continue;
+    auto &[Src, FieldWidth, Mask] = *Fields;
+    Type *SrcTy = Src->getType();
+    unsigned NumFields = SrcTy->getIntegerBitWidth() / FieldWidth;
+    if (FieldWidth != 8 || NumFields % 2 != 0 ||
+        !ShuffleVectorInst::isReverseMask(Mask, NumFields))
+      continue;
+    IntrinsicCostAttributes CostAttrs(Intrinsic::bswap, SrcTy, {SrcTy});
+    InstructionCost Cost =
+        TTI.getIntrinsicInstrCost(CostAttrs, CostKind) -
+        getShuffleCost(TTI, TTI::SK_PermuteSingleSrc,
+                       cast<VectorType>(getWidenedType(
+                           Type::getInt8Ty(SrcTy->getContext()), NumFields)),
+                       CostKind, Mask);
+    std::optional<std::tuple<const void *, FixedVectorType *, unsigned>>
+        Source = GetVectorizedSource(Src);
+    if (!Source)
+      if (std::optional<unsigned> Lane = getElementIndex(Src)) {
+        auto *EE = cast<ExtractElementInst>(Src);
+        Source = std::make_tuple(
+            EE->getVectorOperand(),
+            cast<FixedVectorType>(EE->getVectorOperandType()), *Lane);
+      }
+    if (!Source) {
+      if (Cost <= 0)
+        BSwapGathers.set(Idx);
+      continue;
+    }
+    auto &[Vec, VecTy, Lane] = *Source;
+    auto [It, Inserted] = SourceVectors.try_emplace(Vec);
+    SourceVector &Info = It->second;
+    if (Inserted) {
+      Info.VecTy = VecTy;
+      Info.DemandedElts = APInt::getZero(VecTy->getNumElements());
+    }
+    Info.DemandedElts.setBit(Lane);
+    Info.Cost += Cost;
+    Info.Gathers.push_back(Idx);
+  }
+  for (const SourceVector &Info : make_second_range(SourceVectors)) {
+    InstructionCost ExtractCost = getScalarizationOverhead(
+        TTI, ReVec, Info.VecTy->getElementType(), Info.VecTy, Info.DemandedElts,
+        /*Insert=*/false, /*Extract=*/true, CostKind);
+    if (Info.Cost + ExtractCost <= 0)
+      for (unsigned Idx : Info.Gathers)
+        BSwapGathers.set(Idx);
+  }
+  return BSwapGathers;
+}
 } // namespace llvm::slpvectorizer
