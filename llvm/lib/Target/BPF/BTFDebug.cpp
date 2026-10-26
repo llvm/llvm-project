@@ -630,7 +630,7 @@ void BTFTypeFuncProto::completeType(BTFDebug &BDebug) {
   IsCompleted = true;
 
   DITypeArray Elements = STy->getTypeArray();
-  if (VoidReturn || Elements.size() == 0) {
+  if (VoidReturn) {
     BTFType.Type = 0;
   } else {
     auto RetType = tryRemoveAtomicType(Elements[0]);
@@ -850,6 +850,7 @@ void BTFDebug::visitBasicType(const DIBasicType *BTy, uint32_t &TypeId) {
         std::make_unique<BTFTypeFloat>(BTy->getSizeInBits(), BTy->getName());
     break;
   default:
+    TypeId = 0;
     return;
   }
 
@@ -862,7 +863,7 @@ void BTFDebug::visitSubroutineType(
     const SmallDenseMap<uint32_t, StringRef> &FuncArgNames, uint32_t &TypeId,
     bool VoidReturn) {
   DITypeArray Elements = STy->getTypeArray();
-  uint32_t VLen = Elements.size() ? Elements.size() - 1 : 0;
+  uint32_t VLen = Elements.size() - 1;
   if (VLen > BTF::MAX_VLEN) {
     TypeId = 0;
     return;
@@ -997,8 +998,10 @@ void BTFDebug::visitStructType(const DICompositeType *CTy, bool IsStruct,
       VLen++;
     }
   }
-  if (VLen > BTF::MAX_VLEN)
+  if (VLen > BTF::MAX_VLEN) {
+    TypeId = 0;
     return;
+  }
 
   // Check whether we have any bitfield members or not
   bool HasBitField = false;
@@ -1091,8 +1094,10 @@ void BTFDebug::visitArrayType(const DICompositeType *CTy, uint32_t &TypeId) {
 void BTFDebug::visitEnumType(const DICompositeType *CTy, uint32_t &TypeId) {
   DINodeArray Elements = CTy->getElements();
   uint32_t VLen = Elements.size();
-  if (VLen > BTF::MAX_VLEN)
+  if (VLen > BTF::MAX_VLEN) {
+    TypeId = 0;
     return;
+  }
 
   bool IsSigned = false;
   unsigned NumBits = 32;
@@ -1207,8 +1212,10 @@ void BTFDebug::visitDerivedType(const DIDerivedType *DTy, uint32_t &TypeId,
              Tag == dwarf::DW_TAG_restrict_type) {
     auto TypeEntry = std::make_unique<BTFTypeDerived>(DTy, Tag, false);
     TypeId = addType(std::move(TypeEntry), DTy);
-  } else if (Tag != dwarf::DW_TAG_member) {
-    return;
+  } else {
+    TypeId = 0;
+    if (Tag != dwarf::DW_TAG_member)
+      return;
   }
 
   // Visit base type of pointer, typedef, const, volatile, restrict or
@@ -1597,7 +1604,7 @@ void BTFDebug::beginFunctionImpl(const MachineFunction *MF) {
   }
 
   // Construct subprogram func proto type.
-  uint32_t ProtoTypeId = 0, FuncTypeId = 0;
+  uint32_t ProtoTypeId, FuncTypeId;
   uint8_t Scope = SP->isLocalToUnit() ? BTF::FUNC_STATIC : BTF::FUNC_GLOBAL;
   bool IsNocall = SP->getType()->getCC() == dwarf::DW_CC_nocall;
   bool UseFilteredParams = false;
@@ -1624,7 +1631,7 @@ void BTFDebug::beginFunctionImpl(const MachineFunction *MF) {
         ArgIndexMap[ArgReg.first] = I;
       }
 
-      if (!VoidReturn && Elements.size() > 0)
+      if (!VoidReturn)
         visitTypeEntry(Elements[0]);
       for (uint32_t ArgNo : AliveParamIndices)
         visitTypeEntry(Elements[ArgNo]);
@@ -1996,7 +2003,7 @@ void BTFDebug::processFuncPrototypes(const Function *F) {
   if (!ProtoFunctions.insert(F).second)
     return;
 
-  uint32_t ProtoTypeId = 0;
+  uint32_t ProtoTypeId;
   const SmallDenseMap<uint32_t, StringRef> FuncArgNames;
   visitSubroutineType(SP->getType(), false, FuncArgNames, ProtoTypeId);
   uint32_t FuncId = processDISubprogram(SP, ProtoTypeId, BTF::FUNC_EXTERN);
