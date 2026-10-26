@@ -5528,6 +5528,9 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
       return BinaryOperator::CreateOr(Op0, Op1);
   }
 
+  if (haveNoCommonBitsSet(Op0, Op1, SQ.getWithInstruction(&I)))
+    return BinaryOperator::CreateDisjointOr(Op0, Op1);
+
   if (Instruction *Xor = visitMaskedMerge(I, Builder))
     return Xor;
 
