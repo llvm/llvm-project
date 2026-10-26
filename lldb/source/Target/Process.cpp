@@ -7269,50 +7269,74 @@ Process::GetAddressSpaceInfo(lldb::addr_space_t address_space_id) {
                                  address_space_id, ids.c_str());
 }
 
-// Address space 0 (default / flat) has no aperture; 0 is the NULL pointer.
-static const FlatAperture *
-FindFlatAperture(const std::vector<AddressSpaceInfo> &address_spaces,
-                 lldb::addr_space_t address_space) {
-  if (address_space == LLDB_DEFAULT_ADDRESS_SPACE_ID)
-    return nullptr;
-  for (const AddressSpaceInfo &info : address_spaces) {
-    if (info.space_id == address_space && info.flat_aperture &&
-        info.flat_aperture->pointer_unit != 0)
-      return &*info.flat_aperture;
-  }
-  return nullptr;
-}
-
-ProcessAddress Process::PointerToLoadAddress(lldb::addr_t pointer,
-                                             lldb::addr_space_t address_space) {
+llvm::Expected<ProcessAddress>
+Process::PointerToLoadAddress(lldb::addr_t pointer,
+                              lldb::addr_space_t address_space) {
   if (pointer == LLDB_INVALID_ADDRESS)
-    return ProcessAddress(LLDB_INVALID_ADDRESS, address_space);
-  const FlatAperture *aperture =
-      FindFlatAperture(m_address_spaces, address_space);
-  if (!aperture)
+    return llvm::createStringError(std::errc::invalid_argument,
+                                   "invalid pointer address");
+  if (address_space == LLDB_DEFAULT_ADDRESS_SPACE_ID)
+    return ProcessAddress(pointer, LLDB_DEFAULT_ADDRESS_SPACE_ID);
+  llvm::Expected<AddressSpaceInfo> info = GetAddressSpaceInfo(address_space);
+  if (!info)
+    return info.takeError();
+  if (!info->flat_aperture)
     return ProcessAddress(pointer, address_space);
+  const FlatAperture &aperture = *info->flat_aperture;
+  if (aperture.pointer_unit == 0)
+    return llvm::createStringError(std::errc::invalid_argument,
+                                   "address space %" PRIu64
+                                   " flat aperture has pointer_unit 0",
+                                   address_space);
   // Bounds check against aperture size and overflow check.
-  if (aperture->size != 0 &&
-      pointer > (aperture->size - 1) / aperture->pointer_unit)
-    return ProcessAddress(LLDB_INVALID_ADDRESS, LLDB_DEFAULT_ADDRESS_SPACE_ID);
+  if (aperture.size != 0 &&
+      pointer > (aperture.size - 1) / aperture.pointer_unit)
+    return llvm::createStringError(std::errc::result_out_of_range,
+                                   "pointer 0x%" PRIx64
+                                   " exceeds address space %" PRIu64
+                                   " flat aperture size 0x%" PRIx64,
+                                   pointer, address_space, aperture.size);
   if (pointer >
-      std::numeric_limits<lldb::addr_t>::max() / aperture->pointer_unit)
-    return ProcessAddress(LLDB_INVALID_ADDRESS, LLDB_DEFAULT_ADDRESS_SPACE_ID);
-  lldb::addr_t offset = pointer * aperture->pointer_unit;
-  if (std::numeric_limits<lldb::addr_t>::max() - aperture->base < offset)
-    return ProcessAddress(LLDB_INVALID_ADDRESS, LLDB_DEFAULT_ADDRESS_SPACE_ID);
-  return ProcessAddress(aperture->base + offset, LLDB_DEFAULT_ADDRESS_SPACE_ID);
+      std::numeric_limits<lldb::addr_t>::max() / aperture.pointer_unit)
+    return llvm::createStringError(std::errc::value_too_large,
+                                   "pointer 0x%" PRIx64
+                                   " overflows pointer_unit %" PRIu64,
+                                   pointer, aperture.pointer_unit);
+  lldb::addr_t offset = pointer * aperture.pointer_unit;
+  if (std::numeric_limits<lldb::addr_t>::max() - aperture.base < offset)
+    return llvm::createStringError(std::errc::value_too_large,
+                                   "pointer 0x%" PRIx64
+                                   " overflows flat aperture base 0x%" PRIx64,
+                                   pointer, aperture.base);
+  return ProcessAddress(aperture.base + offset, LLDB_DEFAULT_ADDRESS_SPACE_ID);
 }
 
-ProcessAddress Process::LoadAddressToPointer(lldb::addr_t address,
-                                             lldb::addr_space_t address_space) {
+llvm::Expected<ProcessAddress>
+Process::LoadAddressToPointer(lldb::addr_t address,
+                              lldb::addr_space_t address_space) {
   if (address == LLDB_INVALID_ADDRESS)
-    return ProcessAddress(LLDB_INVALID_ADDRESS, address_space);
-  const FlatAperture *aperture =
-      FindFlatAperture(m_address_spaces, address_space);
-  if (!aperture || address < aperture->base ||
-      (aperture->size != 0 && address - aperture->base >= aperture->size))
+    return llvm::createStringError(std::errc::invalid_argument,
+                                   "invalid load address");
+  if (address_space == LLDB_DEFAULT_ADDRESS_SPACE_ID)
+    return ProcessAddress(address, LLDB_DEFAULT_ADDRESS_SPACE_ID);
+  llvm::Expected<AddressSpaceInfo> info = GetAddressSpaceInfo(address_space);
+  if (!info)
+    return info.takeError();
+  if (!info->flat_aperture)
     return ProcessAddress(address, address_space);
-  return ProcessAddress((address - aperture->base) / aperture->pointer_unit,
+  const FlatAperture &aperture = *info->flat_aperture;
+  if (aperture.pointer_unit == 0)
+    return llvm::createStringError(std::errc::invalid_argument,
+                                   "address space %" PRIu64
+                                   " flat aperture has pointer_unit 0",
+                                   address_space);
+  if (address < aperture.base ||
+      (aperture.size != 0 && address - aperture.base >= aperture.size))
+    return llvm::createStringError(std::errc::result_out_of_range,
+                                   "load address 0x%" PRIx64
+                                   " is outside address space %" PRIu64
+                                   " flat aperture",
+                                   address, address_space);
+  return ProcessAddress((address - aperture.base) / aperture.pointer_unit,
                         address_space);
 }

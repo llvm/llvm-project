@@ -2041,14 +2041,15 @@ public:
   /// (see AddressSpaceInfo), this maps \p pointer into the default address
   /// space at aperture.base + pointer * aperture.pointer_unit; otherwise it
   /// returns ProcessAddress(pointer, address_space).
-  ProcessAddress PointerToLoadAddress(
+  llvm::Expected<ProcessAddress> PointerToLoadAddress(
       lldb::addr_t pointer,
       lldb::addr_space_t address_space = LLDB_DEFAULT_ADDRESS_SPACE_ID);
 
   /// Inverse of PointerToLoadAddress: returns ProcessAddress(target_pointer,
   /// address_space) if \p address lies in the flat aperture of
-  /// \p address_space, and ProcessAddress(address, address_space) otherwise.
-  ProcessAddress LoadAddressToPointer(
+  /// \p address_space, and ProcessAddress(address, address_space) if
+  /// \p address_space has no flat aperture.
+  llvm::Expected<ProcessAddress> LoadAddressToPointer(
       lldb::addr_t address,
       lldb::addr_space_t address_space = LLDB_DEFAULT_ADDRESS_SPACE_ID);
 

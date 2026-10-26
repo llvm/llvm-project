@@ -1900,52 +1900,91 @@ TEST_F(MemoryTest, TestPointerToLoadAddressApertures) {
       {"imem", 7, /*is_thread_specific=*/false, std::nullopt},
   });
 
-  // Invalid address is preserved.
-  EXPECT_EQ(
-      process_sp->PointerToLoadAddress(LLDB_INVALID_ADDRESS, 3).GetValue(),
-      LLDB_INVALID_ADDRESS);
-  EXPECT_EQ(
-      process_sp->LoadAddressToPointer(LLDB_INVALID_ADDRESS, 3).GetValue(),
-      LLDB_INVALID_ADDRESS);
+  // Invalid address returns an error.
+  EXPECT_THAT_EXPECTED(
+      process_sp->PointerToLoadAddress(LLDB_INVALID_ADDRESS, 3),
+      llvm::Failed());
+  EXPECT_THAT_EXPECTED(
+      process_sp->LoadAddressToPointer(LLDB_INVALID_ADDRESS, 3),
+      llvm::Failed());
+
+  // Unconfigured non-default address space returns an error.
+  EXPECT_THAT_EXPECTED(process_sp->PointerToLoadAddress(0x1234, 99),
+                       llvm::Failed());
+  EXPECT_THAT_EXPECTED(process_sp->LoadAddressToPointer(0x1234, 99),
+                       llvm::Failed());
 
   // Default address space (0) or non-aperture space preserves value and
   // address space ID.
-  ProcessAddress default_pa = process_sp->PointerToLoadAddress(0x1234, 0);
-  EXPECT_EQ(default_pa.GetValue(), 0x1234ULL);
-  EXPECT_TRUE(default_pa.IsInDefaultAddressSpace());
+  llvm::Expected<ProcessAddress> default_pa =
+      process_sp->PointerToLoadAddress(0x1234, 0);
+  ASSERT_THAT_EXPECTED(default_pa, llvm::Succeeded());
+  EXPECT_EQ(default_pa->GetValue(), 0x1234ULL);
+  EXPECT_TRUE(default_pa->IsInDefaultAddressSpace());
 
-  ProcessAddress imem_pa = process_sp->PointerToLoadAddress(0x1234, 7);
-  EXPECT_EQ(imem_pa.GetValue(), 0x1234ULL);
-  EXPECT_EQ(imem_pa.GetAddressSpace(), 7U);
+  llvm::Expected<ProcessAddress> imem_pa =
+      process_sp->PointerToLoadAddress(0x1234, 7);
+  ASSERT_THAT_EXPECTED(imem_pa, llvm::Succeeded());
+  EXPECT_EQ(imem_pa->GetValue(), 0x1234ULL);
+  EXPECT_EQ(imem_pa->GetAddressSpace(), 7U);
 
-  EXPECT_EQ(process_sp->LoadAddressToPointer(0x100020, 0).GetValue(),
-            0x100020ULL);
+  llvm::Expected<ProcessAddress> default_ptr =
+      process_sp->LoadAddressToPointer(0x100020, 0);
+  ASSERT_THAT_EXPECTED(default_ptr, llvm::Succeeded());
+  EXPECT_EQ(default_ptr->GetValue(), 0x100020ULL);
 
   // Byte-addressed aperture (space 3: base 0x100000, size 0x1000, unit 1):
   // Pointer value 0 maps to aperture.base in the default address space.
-  ProcessAddress local_pa = process_sp->PointerToLoadAddress(0, 3);
-  EXPECT_EQ(local_pa.GetValue(), 0x100000ULL);
-  EXPECT_TRUE(local_pa.IsInDefaultAddressSpace());
-  EXPECT_EQ(process_sp->PointerToLoadAddress(0xfff, 3).GetValue(), 0x100fffULL);
-  // Out-of-bounds pointer returns LLDB_INVALID_ADDRESS.
-  EXPECT_EQ(process_sp->PointerToLoadAddress(0x1000, 3).GetValue(),
-            LLDB_INVALID_ADDRESS);
+  llvm::Expected<ProcessAddress> local_pa =
+      process_sp->PointerToLoadAddress(0, 3);
+  ASSERT_THAT_EXPECTED(local_pa, llvm::Succeeded());
+  EXPECT_EQ(local_pa->GetValue(), 0x100000ULL);
+  EXPECT_TRUE(local_pa->IsInDefaultAddressSpace());
+
+  llvm::Expected<ProcessAddress> local_end_pa =
+      process_sp->PointerToLoadAddress(0xfff, 3);
+  ASSERT_THAT_EXPECTED(local_end_pa, llvm::Succeeded());
+  EXPECT_EQ(local_end_pa->GetValue(), 0x100fffULL);
+
+  // Out-of-bounds pointer returns an error.
+  EXPECT_THAT_EXPECTED(process_sp->PointerToLoadAddress(0x1000, 3),
+                       llvm::Failed());
+
   // Inverse mapping inside and outside the aperture.
-  ProcessAddress local_ptr = process_sp->LoadAddressToPointer(0x100000, 3);
-  EXPECT_EQ(local_ptr.GetValue(), 0ULL);
-  EXPECT_EQ(local_ptr.GetAddressSpace(), 3U);
-  EXPECT_EQ(process_sp->LoadAddressToPointer(0x100040, 3).GetValue(), 0x40ULL);
-  EXPECT_EQ(process_sp->LoadAddressToPointer(0x0fffff, 3).GetValue(),
-            0x0fffffULL);
-  EXPECT_EQ(process_sp->LoadAddressToPointer(0x101000, 3).GetValue(),
-            0x101000ULL);
+  llvm::Expected<ProcessAddress> local_ptr =
+      process_sp->LoadAddressToPointer(0x100000, 3);
+  ASSERT_THAT_EXPECTED(local_ptr, llvm::Succeeded());
+  EXPECT_EQ(local_ptr->GetValue(), 0ULL);
+  EXPECT_EQ(local_ptr->GetAddressSpace(), 3U);
+
+  llvm::Expected<ProcessAddress> local_off_ptr =
+      process_sp->LoadAddressToPointer(0x100040, 3);
+  ASSERT_THAT_EXPECTED(local_off_ptr, llvm::Succeeded());
+  EXPECT_EQ(local_off_ptr->GetValue(), 0x40ULL);
+
+  EXPECT_THAT_EXPECTED(process_sp->LoadAddressToPointer(0x0fffff, 3),
+                       llvm::Failed());
+  EXPECT_THAT_EXPECTED(process_sp->LoadAddressToPointer(0x101000, 3),
+                       llvm::Failed());
 
   // Word-addressed aperture (space 5: base 0x200000, size 0x400, unit 4):
-  EXPECT_EQ(process_sp->PointerToLoadAddress(10, 5).GetValue(), 0x200028ULL);
-  EXPECT_EQ(process_sp->PointerToLoadAddress(0xff, 5).GetValue(), 0x2003fcULL);
-  EXPECT_EQ(process_sp->PointerToLoadAddress(0x100, 5).GetValue(),
-            LLDB_INVALID_ADDRESS);
-  EXPECT_EQ(process_sp->PointerToLoadAddress(UINT64_MAX, 5).GetValue(),
-            LLDB_INVALID_ADDRESS);
-  EXPECT_EQ(process_sp->LoadAddressToPointer(0x200028, 5).GetValue(), 10ULL);
+  llvm::Expected<ProcessAddress> vmem_pa =
+      process_sp->PointerToLoadAddress(10, 5);
+  ASSERT_THAT_EXPECTED(vmem_pa, llvm::Succeeded());
+  EXPECT_EQ(vmem_pa->GetValue(), 0x200028ULL);
+
+  llvm::Expected<ProcessAddress> vmem_end_pa =
+      process_sp->PointerToLoadAddress(0xff, 5);
+  ASSERT_THAT_EXPECTED(vmem_end_pa, llvm::Succeeded());
+  EXPECT_EQ(vmem_end_pa->GetValue(), 0x2003fcULL);
+
+  EXPECT_THAT_EXPECTED(process_sp->PointerToLoadAddress(0x100, 5),
+                       llvm::Failed());
+  EXPECT_THAT_EXPECTED(process_sp->PointerToLoadAddress(UINT64_MAX, 5),
+                       llvm::Failed());
+
+  llvm::Expected<ProcessAddress> vmem_ptr =
+      process_sp->LoadAddressToPointer(0x200028, 5);
+  ASSERT_THAT_EXPECTED(vmem_ptr, llvm::Succeeded());
+  EXPECT_EQ(vmem_ptr->GetValue(), 10ULL);
 }

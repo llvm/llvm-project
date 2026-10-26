@@ -702,12 +702,12 @@ CompilerType CompilerType::AddPtrAuthModifier(uint32_t payload) const {
   return CompilerType();
 }
 
-CompilerType
+llvm::Expected<CompilerType>
 CompilerType::AddAddressSpaceModifier(lldb::addr_space_t address_space) const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
       return type_system_sp->AddAddressSpaceModifier(m_type, address_space);
-  return CompilerType();
+  return llvm::createStringError(std::errc::invalid_argument, "invalid type");
 }
 
 CompilerType CompilerType::GetLValueReferenceType() const {

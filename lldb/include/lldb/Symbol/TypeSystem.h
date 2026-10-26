@@ -208,8 +208,8 @@ public:
   }
 
   /// Returns the target address space ID of \p type (matching
-  /// AddressSpaceInfo::space_id from jAddressSpacesInfo), or std::nullopt
-  /// if it lives in the default address space.
+  /// AddressSpaceInfo::space_id), or std::nullopt if it lives in the default
+  /// address space.
   virtual std::optional<lldb::addr_space_t>
   GetTargetAddressSpace(lldb::opaque_compiler_type_t type) {
     return std::nullopt;
@@ -316,7 +316,7 @@ public:
   virtual CompilerType AddPtrAuthModifier(lldb::opaque_compiler_type_t type,
                                           uint32_t payload);
 
-  virtual CompilerType
+  virtual llvm::Expected<CompilerType>
   AddAddressSpaceModifier(lldb::opaque_compiler_type_t type,
                           lldb::addr_space_t address_space);
 

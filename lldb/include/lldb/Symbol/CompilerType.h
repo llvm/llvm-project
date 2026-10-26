@@ -407,9 +407,10 @@ public:
   /// Return a new CompilerType that qualifies this type with the given target
   /// address space ID (matching AddressSpaceInfo::space_id) if this type is
   /// valid and the type system supports target address spaces. Passing
-  /// LLDB_DEFAULT_ADDRESS_SPACE_ID (0 / DW_ADDR_none) returns this type
-  /// unchanged.
-  CompilerType AddAddressSpaceModifier(lldb::addr_space_t address_space) const;
+  /// LLDB_DEFAULT_ADDRESS_SPACE_ID removes any existing target address space
+  /// qualifier.
+  llvm::Expected<CompilerType>
+  AddAddressSpaceModifier(lldb::addr_space_t address_space) const;
   /// \}
 
   /// Exploring the type.

@@ -1723,11 +1723,16 @@ ValueObject::MapPointerToLoadAddress(AddrAndType pointer) {
   if (!type.IsPointerOrReferenceType())
     return pointer;
   ExecutionContext exe_ctx(GetExecutionContextRef());
-  if (Process *process = exe_ctx.GetProcessPtr())
-    pointer.address = process
-                          ->PointerToLoadAddress(pointer.address,
-                                                 GetPointeeAddressSpace(type))
-                          .GetValue();
+  if (Process *process = exe_ctx.GetProcessPtr()) {
+    llvm::Expected<ProcessAddress> load_addr = process->PointerToLoadAddress(
+        pointer.address, GetPointeeAddressSpace(type));
+    if (load_addr)
+      pointer.address = load_addr->GetValue();
+    else {
+      llvm::consumeError(load_addr.takeError());
+      pointer.address = LLDB_INVALID_ADDRESS;
+    }
+  }
   return pointer;
 }
 
@@ -3033,13 +3038,18 @@ ValueObjectSP ValueObject::AddressOf(Status &error) {
 
         // The resulting pointer holds the target's pointer encoding of addr.
         if (address_type == eAddressTypeLoad) {
-          if (Process *process = exe_ctx.GetProcessPtr())
-            addr = process
-                       ->LoadAddressToPointer(
-                           addr,
-                           GetCompilerType().GetTargetAddressSpace().value_or(
-                               LLDB_DEFAULT_ADDRESS_SPACE_ID))
-                       .GetValue();
+          if (Process *process = exe_ctx.GetProcessPtr()) {
+            llvm::Expected<ProcessAddress> ptr_addr =
+                process->LoadAddressToPointer(
+                    addr, GetCompilerType().GetTargetAddressSpace().value_or(
+                              LLDB_DEFAULT_ADDRESS_SPACE_ID));
+            if (ptr_addr)
+              addr = ptr_addr->GetValue();
+            else {
+              error = Status::FromError(ptr_addr.takeError());
+              return ValueObjectSP();
+            }
+          }
         }
 
         lldb::DataBufferSP buffer(

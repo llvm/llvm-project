@@ -809,7 +809,7 @@ public:
   CompilerType AddPtrAuthModifier(lldb::opaque_compiler_type_t type,
                                   uint32_t payload) override;
 
-  CompilerType
+  llvm::Expected<CompilerType>
   AddAddressSpaceModifier(lldb::opaque_compiler_type_t type,
                           lldb::addr_space_t address_space) override;
 
