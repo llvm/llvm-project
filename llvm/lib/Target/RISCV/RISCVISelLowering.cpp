@@ -18922,10 +18922,10 @@ static SDValue combineAddOfExtsAlreadyExtended(SDNode *N, SelectionDAG &DAG) {
   if (!N->hasOneUse())
     return SDValue();
 
-  SDNode *User = *N->user_begin();
+  const SDUse &Use = *N->use_begin();
+  const SDNode *User = Use.getUser();
   if (User->getOpcode() == ISD::ADD) {
-    SDValue OtherOp =
-        User->getOperand(User->getOperand(0).getNode() == N ? 1 : 0);
+    const SDValue OtherOp = User->getOperand(1 - Use.getOperandNo());
     if (OtherOp->getOpcode() == ISD::MUL)
       return SDValue();
   } else if (User->getOpcode() != ISD::VECREDUCE_ADD) {
