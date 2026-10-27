@@ -20,13 +20,23 @@
 
 ## Verify that safe_thunks ICF still creates separate branch-extension thunks
 ## when needed.
-# RUN: %lld -arch arm64 -lSystem -o %t/icf-safe %t/input.o --icf=safe_thunks
+# RUN: %lld -arch arm64 -lSystem -o %t/icf-safe %t/input.o --icf=safe_thunks \
+# RUN:   -arm64-islands-max-hops 0
 # RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t/icf-safe | FileCheck %s --check-prefix=SAFE
+# RUN: %lld -arch arm64 -lSystem -o %t/icf-safe-island-hops-2 %t/input.o \
+# RUN:   --icf=safe_thunks -arm64-islands-max-hops 2
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn \
+# RUN:   %t/icf-safe-island-hops-2 | FileCheck %s --check-prefixes=SAFE,ISLAND-HOPS-2
 
 ## Each call gets its own branch-extension thunk.
 # SAFE-LABEL: <_main>:
 # SAFE:       bl 0x[[#%x, THUNK_A:]] <_target_a.thunk.0>
 # SAFE-NEXT:  bl 0x[[#%x, THUNK_B:]] <_target_b.thunk.0>
+
+## With -arm64-islands-max-hops 2, the synthetic ICF thunk's
+## branch is also routed through a branch-extension thunk.
+# ISLAND-HOPS-2-LABEL: <_target_b>:
+# ISLAND-HOPS-2:       b 0x{{[0-9a-f]+}} <_target_a.thunk.1>
 
 .subsections_via_symbols
 

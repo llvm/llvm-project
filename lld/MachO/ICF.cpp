@@ -595,14 +595,13 @@ Defined *macho::getBodyForThunkFoldedSym(Defined *foldedSym) {
   // The symbol of the merged body of the function that the thunk jumps to. This
   // will end up in the final binary.
   Defined *bodySym = cast<Defined>(target->getThunkBranchTarget(thunkBody));
-  if (bodySym->branchExtensionThunk) {
-    // For branch extension thunks, follow relocations to get the original body
+  while (bodySym->branchExtensionThunk) {
+    // Follow branch extenders, including island chains, to the original body.
     InputSection *thunk = bodySym->isec();
     assert(thunk && !thunk->relocs.empty());
     const Relocation &r = thunk->relocs.front();
     assert(r.addend == 0);
     bodySym = cast<Defined>(cast<Symbol *>(r.referent));
-    assert(!bodySym->branchExtensionThunk);
   }
 
   return bodySym;

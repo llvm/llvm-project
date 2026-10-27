@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Arch/ARM64Common.h"
+#include "Driver.h"
 #include "InputFiles.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
@@ -14,7 +15,9 @@
 
 #include "lld/Common/ErrorHandler.h"
 #include "mach-o/compact_unwind_encoding.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/Option/ArgList.h"
 
 using namespace llvm;
 using namespace llvm::MachO;
@@ -25,6 +28,7 @@ namespace {
 
 struct ARM64 : ARM64Common {
   ARM64();
+  void configureBranchExtenders(const llvm::opt::ArgList &args) override;
   void writeStub(uint8_t *buf, const Symbol &, uint64_t) const override;
   void writeStubHelperHeader(uint8_t *buf) const override;
   void writeStubHelperEntry(uint8_t *buf, const Symbol &,
@@ -33,8 +37,6 @@ struct ARM64 : ARM64Common {
   void writeObjCMsgSendStub(uint8_t *buf, Symbol *sym, uint64_t stubsAddr,
                             uint64_t &stubOffset, uint64_t selrefVA,
                             Symbol *objcMsgSend) const override;
-  void populateThunk(InputSection *thunk, Symbol *funcSym,
-                     int64_t addend) override;
 
   void initICFSafeThunkBody(InputSection *thunk,
                             Symbol *targetSym) const override;
@@ -161,20 +163,62 @@ static constexpr uint32_t thunkCode[] = {
     0xd61f0200, // 08: br    x16
 };
 
-void ARM64::populateThunk(InputSection *thunk, Symbol *funcSym,
-                          int64_t addend) {
-  thunk->align = 4;
-  thunk->data = {reinterpret_cast<const uint8_t *>(thunkCode),
-                 sizeof(thunkCode)};
-  thunk->relocs.emplace_back(/*type=*/ARM64_RELOC_PAGEOFF12,
-                             /*pcrel=*/false, /*length=*/2,
-                             /*offset=*/4, /*addend=*/addend,
-                             /*referent=*/funcSym);
-  thunk->relocs.emplace_back(/*type=*/ARM64_RELOC_PAGE21,
-                             /*pcrel=*/true, /*length=*/2,
-                             /*offset=*/0, /*addend=*/addend,
-                             /*referent=*/funcSym);
-}
+// A branch island preserves all registers and may be chained to other islands.
+static constexpr uint32_t islandCode[] = {
+    0x14000000, // b <target>
+};
+
+namespace {
+class Island final : public BranchExtender {
+public:
+  Island() : BranchExtender(/*maxReach=*/uint64_t{1} << 27) {}
+  std::pair<uint64_t, uint64_t> getSourceRange(uint64_t to) const override {
+    assert(to % 4 == 0 && "unaligned branch destination");
+    constexpr uint64_t range = uint64_t{1} << 27;
+    return {to - std::min(to, range - 4), SaturatingAdd(to, range)};
+  }
+  size_t getSize() const override { return sizeof(islandCode); }
+  uint32_t getAlign() const override { return 4; }
+  StringRef getSuffix() const override { return ".island."; }
+  void populate(InputSection *isec, Symbol *sym,
+                int64_t addend) const override {
+    isec->align = getAlign();
+    isec->data = {reinterpret_cast<const uint8_t *>(islandCode), getSize()};
+    isec->relocs.emplace_back(/*type=*/ARM64_RELOC_BRANCH26,
+                              /*pcrel=*/true, /*length=*/2,
+                              /*offset=*/0, /*addend=*/addend,
+                              /*referent=*/sym);
+  }
+};
+
+class Thunk final : public BranchExtender {
+public:
+  Thunk() : BranchExtender(/*maxReach=*/(uint64_t{1} << 32) + 4095) {}
+  std::pair<uint64_t, uint64_t> getSourceRange(uint64_t to) const override {
+    // ADRP encodes a signed 21-bit displacement between 4 KiB pages.
+    constexpr uint64_t range = uint64_t{1} << 32;
+    to &= ~uint64_t{4095};
+    return {to - std::min(to, range - 4096), SaturatingAdd(to, range + 4095)};
+  }
+  size_t getSize() const override { return sizeof(thunkCode); }
+  uint32_t getAlign() const override { return 4; }
+  StringRef getSuffix() const override { return ".thunk."; }
+  void populate(InputSection *isec, Symbol *sym,
+                int64_t addend) const override {
+    isec->align = getAlign();
+    isec->data = {reinterpret_cast<const uint8_t *>(thunkCode), getSize()};
+    isec->relocs.emplace_back(/*type=*/ARM64_RELOC_PAGEOFF12,
+                              /*pcrel=*/false, /*length=*/2,
+                              /*offset=*/4, /*addend=*/addend,
+                              /*referent=*/sym);
+    isec->relocs.emplace_back(/*type=*/ARM64_RELOC_PAGE21,
+                              /*pcrel=*/true, /*length=*/2,
+                              /*offset=*/0, /*addend=*/addend,
+                              /*referent=*/sym);
+  }
+};
+} // namespace
+
 // Just a single direct branch to the target function.
 static constexpr uint32_t icfSafeThunkCode[] = {
     0x14000000, // 08: b    target
@@ -204,12 +248,37 @@ Symbol *ARM64::getThunkBranchTarget(InputSection *thunk) const {
 
 uint32_t ARM64::getICFSafeThunkSize() const { return sizeof(icfSafeThunkCode); }
 
+void ARM64::configureBranchExtenders(const llvm::opt::ArgList &args) {
+  auto getInteger = [&](unsigned option, uint32_t defaultValue) {
+    const llvm::opt::Arg *arg = args.getLastArg(option);
+    if (!arg)
+      return defaultValue;
+    uint32_t value;
+    if (llvm::to_integer(arg->getValue(), value))
+      return value;
+    error(arg->getSpelling() +
+          ": expected an integer in the range [0, 4294967295], but got '" +
+          arg->getValue() + "'");
+    return defaultValue;
+  };
+  static Island island;
+  static Thunk thunk;
+  static const BranchExtender *const extenders[] = {&island, &thunk};
+  island.maxHops = getInteger(OPT_arm64_islands_max_hops, 2);
+  thunk.maxHops = getInteger(OPT_arm64_thunks_max_hops, 1);
+  coarseBoundarySpacing = getInteger(
+      OPT_arm64_branch_extension_coarse_boundary_spacing, 1024 * 1024);
+  branchExtenders = extenders;
+  for ([[maybe_unused]] const BranchExtender *extender : branchExtenders)
+    assert(extender->maxReach > 0 && extender->maxReach >= forwardBranchRange &&
+           extender->maxReach >= backwardBranchRange);
+}
+
 ARM64::ARM64() : ARM64Common(LP64()) {
   cpuType = CPU_TYPE_ARM64;
   cpuSubtype = CPU_SUBTYPE_ARM64_ALL;
 
   stubSize = sizeof(stubCode);
-  thunkSize = sizeof(thunkCode);
 
   objcStubsFastSize = sizeof(objcStubsFastCode);
   objcStubsFastAlignment = 32;

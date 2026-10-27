@@ -1,7 +1,8 @@
 # REQUIRES: aarch64
 
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-darwin %s -o %t.o
-# RUN: %lld -arch arm64 -U _extern_sym -o %t %t.o
+# RUN: %lld -arch arm64 -U _extern_sym -o %t %t.o \
+# RUN:   -arm64-islands-max-hops 0
 # RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t | FileCheck %s --implicit-check-not=.thunk.
 
 # CHECK-LABEL: Disassembly of section __TEXT,__text:
@@ -13,15 +14,15 @@
 # CHECK-NEXT:    bl 0x[[#%x,THUNK_BAR:]] <_objc_msgSend$bar.thunk.0>
 # CHECK-NEXT:    ret
 
+# CHECK-DAG: [[#THUNK]] <_extern_sym.thunk.0>:
+# CHECK-DAG: [[#THUNK_FOO]] <_objc_msgSend$foo.thunk.0>:
+# CHECK-DAG: [[#THUNK_BAR]] <_objc_msgSend$bar.thunk.0>:
+
 # CHECK-LABEL: <_foo>:
 # CHECK-NEXT:    bl 0x[[#%x,THUNK:]] <_extern_sym.thunk.0>
 # CHECK-NEXT:    bl 0x[[#%x,THUNK_FOO:]] <_objc_msgSend$foo.thunk.0>
 # CHECK-NEXT:    bl 0x[[#%x,THUNK_BAR:]] <_objc_msgSend$bar.thunk.0>
 # CHECK-NEXT:    ret
-
-# CHECK: [[#THUNK]] <_extern_sym.thunk.0>:
-# CHECK: [[#THUNK_FOO]] <_objc_msgSend$foo.thunk.0>:
-# CHECK: [[#THUNK_BAR]] <_objc_msgSend$bar.thunk.0>:
 
 # CHECK-LABEL: Disassembly of section __TEXT,__stubs:
 # CHECK-LABEL: Disassembly of section __TEXT,__objc_stubs:

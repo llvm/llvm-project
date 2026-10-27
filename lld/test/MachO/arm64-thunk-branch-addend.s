@@ -5,7 +5,8 @@
 
 ## When two call sites branch to the same target symbol with different addends
 ## and each needs a branch-extension thunk, the thunks must be distinct.
-# RUN: %lld -arch arm64 -lSystem -o %t/base %t/input.o
+# RUN: %lld -arch arm64 -lSystem -o %t/base %t/input.o \
+# RUN:   -arm64-islands-max-hops 0
 # RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t/base \
 # RUN:   | FileCheck %s --check-prefixes=CHECK,BASE
 
@@ -13,7 +14,8 @@
 ## branch relocation is a Defined symbol that *also* has a __stubs entry
 ## (here forced via -interposable, which creates a stub for every extern
 ## Defined so callers can be interposed at runtime).
-# RUN: %lld -arch arm64 -lSystem -interposable -o %t/interp %t/input.o
+# RUN: %lld -arch arm64 -lSystem -interposable -o %t/interp %t/input.o \
+# RUN:   -arm64-islands-max-hops 0
 # RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t/interp \
 # RUN:   | FileCheck %s --check-prefixes=CHECK,INTERP
 
@@ -50,19 +52,6 @@ _main:
 # CHECK-LABEL: <_target>:
 # CHECK-NEXT:   [[#%x, TARGET_VA:]]: mov w0, #1
 
-# BASE-LABEL: <_main>:
-# BASE-NEXT:    bl 0x{{[0-9a-f]+}} <_target.thunk.0>
-# BASE-NEXT:    bl 0x{{[0-9a-f]+}} <_target+8.thunk.0>
-# BASE-NEXT:    ret
-
-## For -interposable: The addend=0 call takes the __stubs fast-path, so its bl
-## target is an address inside the __stubs section. The addend=8 call must
-## resolve against the local body.
-# INTERP-LABEL: <_main>:
-# INTERP-NEXT:  bl 0x[[#%x, STUB_CALL:]]
-# INTERP-NEXT:  bl 0x{{[0-9a-f]+}} <_target+8.thunk.0>
-# INTERP-NEXT:  ret
-
 ## The +0 thunk should be only present in BASE test.
 # BASE-LABEL: <_target.thunk.0>:
 # BASE-NEXT:    adrp  x16, 0x[[#TARGET_VA]]
@@ -75,6 +64,19 @@ _main:
 # CHECK-NEXT:   adrp  x16, 0x[[#TARGET_VA]]
 # CHECK-NEXT:   add   x16, x16, #8
 # CHECK-NEXT:   br    x16
+
+# BASE-LABEL: <_main>:
+# BASE-NEXT:    bl 0x{{[0-9a-f]+}} <_target.thunk.0>
+# BASE-NEXT:    bl 0x{{[0-9a-f]+}} <_target+8.thunk.0>
+# BASE-NEXT:    ret
+
+## For -interposable: The addend=0 call takes the __stubs fast-path, so its bl
+## target is an address inside the __stubs section. The addend=8 call must
+## resolve against the local body.
+# INTERP-LABEL: <_main>:
+# INTERP-NEXT:  bl 0x[[#%x, STUB_CALL:]]
+# INTERP-NEXT:  bl 0x{{[0-9a-f]+}} <_target+8.thunk.0>
+# INTERP-NEXT:  ret
 
 # INTERP-LABEL: <__stubs>:
 # INTERP:       [[#STUB_CALL]]: adrp x16,

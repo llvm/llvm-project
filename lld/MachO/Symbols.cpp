@@ -91,12 +91,12 @@ uint64_t Defined::getVA() const {
     return value;
 
   if (!isec()->isFinal) {
-    // A target arch that does not use thunks ought never ask for
-    // the address of a function that has not yet been finalized.
-    assert(target->usesThunks());
+    // A target arch that does not use branch range extenders ought never ask
+    // for the address of a function that has not yet been finalized.
+    assert(target->needsBranchExtension());
 
     // ConcatOutputSection::finalize() can seek the address of a
-    // function before its address is assigned. The thunking algorithm
+    // function before its address is assigned. The extender algorithm
     // knows that unfinalized functions will be out of range, so it is
     // expedient to return a contrived out-of-range address.
     return TargetInfo::outOfRangeVA;

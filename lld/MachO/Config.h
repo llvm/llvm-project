@@ -26,6 +26,7 @@
 #include "llvm/TextAPI/Platform.h"
 #include "llvm/TextAPI/Target.h"
 
+#include <cstdint>
 #include <vector>
 
 namespace llvm {
@@ -229,7 +230,6 @@ struct Configuration {
   bool disableVerify;
   bool separateCstringLiteralSections;
   bool tailMergeStrings;
-  unsigned slopScale = 256;
 
   bool callGraphProfileSort = false;
   llvm::StringRef printSymbolOrder;

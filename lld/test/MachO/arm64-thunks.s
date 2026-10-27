@@ -16,7 +16,7 @@
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-darwin %s -o %t/input.o
 ## Use --icf=safe_thunks to test that branch extension algo is compatible
 ## with safe_thunks ICF.
-# RUN: %lld -arch arm64 -dead_strip -lSystem -U _extern_sym -map %t/thunk.map -o %t/thunk %t/input.o --icf=safe_thunks
+# RUN: %lld -arch arm64 -dead_strip -lSystem -U _extern_sym -map %t/thunk.map -o %t/thunk %t/input.o --icf=safe_thunks -arm64-islands-max-hops 0
 # RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t/thunk | FileCheck %s
 # RUN: llvm-objdump --macho --section-headers %t/thunk > %t/headers.txt
 # RUN: llvm-otool -vs __DATA __objc_selrefs %t/thunk >> %t/headers.txt
@@ -42,27 +42,26 @@
 # MAP:      0x{{[[:xdigit:]]+}} {{.*}} _fold_func_low_addr
 # MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _a
 # MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _b
-# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _c
-# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _d.thunk.0
 # MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _e.thunk.0
 # MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _f.thunk.0
 # MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _g.thunk.0
 # MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _h.thunk.0
 # MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} ___nan.thunk.0
+# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _c
 # MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _d
 # MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _e
 # MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _f
-# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _g
-# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _a.thunk.0
 # MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _b.thunk.0
+# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _c.thunk.0
+# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _d.thunk.0
+# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _e.thunk.1
+# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _f.thunk.1
+# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _a.thunk.0
+# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _fold_func_low_addr.thunk.0
+# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _g
 # MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _h
 # MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _main
 # MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _fold_func_high_addr
-# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _c.thunk.0
-# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _d.thunk.1
-# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _e.thunk.1
-# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _f.thunk.1
-# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _fold_func_low_addr.thunk.0
 
 
 # CHECK: Disassembly of section __TEXT,__text:
@@ -73,7 +72,7 @@
 # CHECK:  bl 0x[[#%x, A:]] <_a>
 # CHECK:  bl 0x[[#%x, B:]] <_b>
 # CHECK:  bl 0x[[#%x, C:]] <_c>
-# CHECK:  bl 0x[[#%x, D_THUNK_0:]] <_d.thunk.0>
+# CHECK:  bl 0x[[#%x, D:]] <_d>
 # CHECK:  bl 0x[[#%x, E_THUNK_0:]] <_e.thunk.0>
 # CHECK:  bl 0x[[#%x, F_THUNK_0:]] <_f.thunk.0>
 # CHECK:  bl 0x[[#%x, G_THUNK_0:]] <_g.thunk.0>
@@ -84,27 +83,12 @@
 # CHECK:  bl 0x[[#%x, A]] <_a>
 # CHECK:  bl 0x[[#%x, B]] <_b>
 # CHECK:  bl 0x[[#%x, C]] <_c>
-# CHECK:  bl 0x[[#%x, D:]] <_d>
+# CHECK:  bl 0x[[#%x, D]] <_d>
 # CHECK:  bl 0x[[#%x, E_THUNK_0]] <_e.thunk.0>
 # CHECK:  bl 0x[[#%x, F_THUNK_0]] <_f.thunk.0>
 # CHECK:  bl 0x[[#%x, G_THUNK_0]] <_g.thunk.0>
 # CHECK:  bl 0x[[#%x, H_THUNK_0]] <_h.thunk.0>
 # CHECK:  bl 0x[[#%x, NAN_THUNK_0]] <___nan.thunk.0>
-
-# CHECK: [[#%.13x, C_PAGE:]][[#%.3x, C_OFFSET:]] <_c>:
-# CHECK:  bl 0x[[#%x, A]] <_a>
-# CHECK:  bl 0x[[#%x, B]] <_b>
-# CHECK:  bl 0x[[#%x, C]] <_c>
-# CHECK:  bl 0x[[#%x, D]] <_d>
-# CHECK:  bl 0x[[#%x, E:]] <_e>
-# CHECK:  bl 0x[[#%x, F:]] <_f>
-# CHECK:  bl 0x[[#%x, G_THUNK_0]] <_g.thunk.0>
-# CHECK:  bl 0x[[#%x, H_THUNK_0]] <_h.thunk.0>
-# CHECK:  bl 0x[[#%x, NAN_THUNK_0]] <___nan.thunk.0>
-
-# CHECK: [[#%x, D_THUNK_0]] <_d.thunk.0>:
-# CHECK:  adrp x16, 0x[[#%x, D_PAGE:]]
-# CHECK:  add  x16, x16, #[[#D_OFFSET:]]
 
 # CHECK: [[#%x, E_THUNK_0]] <_e.thunk.0>:
 # CHECK:  adrp x16, 0x[[#%x, E_PAGE:]]
@@ -126,14 +110,25 @@
 # CHECK:  adrp x16, 0x[[#%x, NAN_PAGE:]]
 # CHECK:  add  x16, x16, #[[#NAN_OFFSET:]]
 
-# CHECK: [[#%x, D_PAGE + D_OFFSET]] <_d>:
+# CHECK: [[#%.13x, C_PAGE:]][[#%.3x, C_OFFSET:]] <_c>:
+# CHECK:  bl 0x[[#%x, A]] <_a>
+# CHECK:  bl 0x[[#%x, B]] <_b>
+# CHECK:  bl 0x[[#%x, C]] <_c>
+# CHECK:  bl 0x[[#%x, D]] <_d>
+# CHECK:  bl 0x[[#%x, E:]] <_e>
+# CHECK:  bl 0x[[#%x, F:]] <_f>
+# CHECK:  bl 0x[[#%x, G_THUNK_0]] <_g.thunk.0>
+# CHECK:  bl 0x[[#%x, H_THUNK_0]] <_h.thunk.0>
+# CHECK:  bl 0x[[#%x, NAN_THUNK_0]] <___nan.thunk.0>
+
+# CHECK: [[#%.13x, D_PAGE:]][[#%.3x, D_OFFSET:]] <_d>:
 # CHECK:  bl 0x[[#%x, A]] <_a>
 # CHECK:  bl 0x[[#%x, B]] <_b>
 # CHECK:  bl 0x[[#%x, C]] <_c>
 # CHECK:  bl 0x[[#%x, D]] <_d>
 # CHECK:  bl 0x[[#%x, E]] <_e>
 # CHECK:  bl 0x[[#%x, F]] <_f>
-# CHECK:  bl 0x[[#%x, G:]] <_g>
+# CHECK:  bl 0x[[#%x, G_THUNK_0]] <_g.thunk.0>
 # CHECK:  bl 0x[[#%x, H_THUNK_0]] <_h.thunk.0>
 # CHECK:  bl 0x[[#%x, NAN_THUNK_0]] <___nan.thunk.0>
 
@@ -144,7 +139,7 @@
 # CHECK:  bl 0x[[#%x, D]] <_d>
 # CHECK:  bl 0x[[#%x, E]] <_e>
 # CHECK:  bl 0x[[#%x, F]] <_f>
-# CHECK:  bl 0x[[#%x, G]] <_g>
+# CHECK:  bl 0x[[#%x, G:]] <_g>
 # CHECK:  bl 0x[[#%x, H:]] <_h>
 # CHECK:  bl 0x[[#%x, NAN_THUNK_0]] <___nan.thunk.0>
 
@@ -159,30 +154,50 @@
 # CHECK:  bl 0x[[#%x, H]] <_h>
 # CHECK:  bl 0x[[#%x, NAN_THUNK_0]] <___nan.thunk.0>
 
+# CHECK: [[#%x, B_THUNK_0]] <_b.thunk.0>:
+# CHECK:  adrp x16, 0x[[#%x, B_PAGE]]000
+# CHECK:  add  x16, x16, #[[#%d, B_OFFSET]]
+
+# CHECK: [[#%x, C_THUNK_0:]] <_c.thunk.0>:
+# CHECK:  adrp x16, 0x[[#%x, C_PAGE]]000
+# CHECK:  add  x16, x16, #[[#%d, C_OFFSET]]
+
+# CHECK: [[#%x, D_THUNK_0:]] <_d.thunk.0>:
+# CHECK:  adrp x16, 0x[[#%x, D_PAGE]]000
+# CHECK:  add  x16, x16, #[[#%d, D_OFFSET]]
+
+# CHECK: [[#%x, E_THUNK_1:]] <_e.thunk.1>:
+# CHECK:  adrp x16, 0x[[#%x, E_PAGE]]
+# CHECK:  add  x16, x16, #[[#E_OFFSET]]
+
+# CHECK: [[#%x, F_THUNK_1:]] <_f.thunk.1>:
+# CHECK:  adrp x16, 0x[[#%x, F_PAGE]]
+# CHECK:  add  x16, x16, #[[#F_OFFSET]]
+
+# CHECK: [[#%x, A_THUNK_0]] <_a.thunk.0>:
+# CHECK:  adrp x16, 0x[[#%x, A_PAGE]]000
+# CHECK:  add  x16, x16, #[[#%d, A_OFFSET]]
+
+# CHECK: [[#%x, FOLD_LOW_THUNK_0:]] <_fold_func_low_addr.thunk.0>:
+# CHECK:  adrp x16, 0x[[#%x, FOLD_LOW_PAGE]]000
+# CHECK:  add  x16, x16, #[[#%d, FOLD_LOW_OFFSET]]
+
 # CHECK: [[#%x, G_PAGE + G_OFFSET]] <_g>:
 # CHECK:  bl 0x[[#%x, A_THUNK_0]] <_a.thunk.0>
 # CHECK:  bl 0x[[#%x, B_THUNK_0]] <_b.thunk.0>
-# CHECK:  bl 0x[[#%x, C_THUNK_0:]] <_c.thunk.0>
-# CHECK:  bl 0x[[#%x, D_THUNK_1:]] <_d.thunk.1>
+# CHECK:  bl 0x[[#%x, C_THUNK_0]] <_c.thunk.0>
+# CHECK:  bl 0x[[#%x, D_THUNK_0]] <_d.thunk.0>
 # CHECK:  bl 0x[[#%x, E]] <_e>
 # CHECK:  bl 0x[[#%x, F]] <_f>
 # CHECK:  bl 0x[[#%x, G]] <_g>
 # CHECK:  bl 0x[[#%x, H]] <_h>
 # CHECK:  bl 0x[[#%x, NAN:]]
 
-# CHECK: [[#%x, A_THUNK_0]] <_a.thunk.0>:
-# CHECK:  adrp x16, 0x[[#%x, A_PAGE]]000
-# CHECK:  add  x16, x16, #[[#%d, A_OFFSET]]
-
-# CHECK: [[#%x, B_THUNK_0]] <_b.thunk.0>:
-# CHECK:  adrp x16, 0x[[#%x, B_PAGE]]000
-# CHECK:  add  x16, x16, #[[#%d, B_OFFSET]]
-
 # CHECK: [[#%x, H_PAGE + H_OFFSET]] <_h>:
 # CHECK:  bl 0x[[#%x, A_THUNK_0]] <_a.thunk.0>
 # CHECK:  bl 0x[[#%x, B_THUNK_0]] <_b.thunk.0>
 # CHECK:  bl 0x[[#%x, C_THUNK_0]] <_c.thunk.0>
-# CHECK:  bl 0x[[#%x, D_THUNK_1]] <_d.thunk.1>
+# CHECK:  bl 0x[[#%x, D_THUNK_0]] <_d.thunk.0>
 # CHECK:  bl 0x[[#%x, E]] <_e>
 # CHECK:  bl 0x[[#%x, F]] <_f>
 # CHECK:  bl 0x[[#%x, G]] <_g>
@@ -193,12 +208,12 @@
 # CHECK:  bl 0x[[#%x, A_THUNK_0]] <_a.thunk.0>
 # CHECK:  bl 0x[[#%x, B_THUNK_0]] <_b.thunk.0>
 # CHECK:  bl 0x[[#%x, C_THUNK_0]] <_c.thunk.0>
-# CHECK:  bl 0x[[#%x, D_THUNK_1]] <_d.thunk.1>
-# CHECK:  bl 0x[[#%x, E_THUNK_1:]] <_e.thunk.1>
-# CHECK:  bl 0x[[#%x, F_THUNK_1:]] <_f.thunk.1>
+# CHECK:  bl 0x[[#%x, D_THUNK_0]] <_d.thunk.0>
+# CHECK:  bl 0x[[#%x, E_THUNK_1]] <_e.thunk.1>
+# CHECK:  bl 0x[[#%x, F_THUNK_1]] <_f.thunk.1>
 # CHECK:  bl 0x[[#%x, G]] <_g>
 # CHECK:  bl 0x[[#%x, H]] <_h>
-# CHECK:  bl 0x[[#%x, FOLD_LOW_THUNK_0:]] <_fold_func_low_addr.thunk.0>
+# CHECK:  bl 0x[[#%x, FOLD_LOW_THUNK_0]] <_fold_func_low_addr.thunk.0>
 # CHECK:  bl 0x[[#%x, FOLD_HIGH:]] <_fold_func_high_addr>
 # CHECK:  bl 0x[[#%x, NAN]]
 # CHECK:  bl 0x[[#%x, FOO:]] <_objc_msgSend$foo>
@@ -206,26 +221,6 @@
 
 # CHECK: [[#%x, FOLD_HIGH]] <_fold_func_high_addr>:
 # CHECK:  b 0x[[#%x, FOLD_LOW_THUNK_0]] <_fold_func_low_addr.thunk.0>
-
-# CHECK: [[#%x, C_THUNK_0]] <_c.thunk.0>:
-# CHECK:  adrp x16, 0x[[#%x, C_PAGE]]000
-# CHECK:  add  x16, x16, #[[#%d, C_OFFSET]]
-
-# CHECK: [[#%x, D_THUNK_1]] <_d.thunk.1>:
-# CHECK:  adrp x16, 0x[[#%x, D_PAGE]]
-# CHECK:  add  x16, x16, #[[#D_OFFSET]]
-
-# CHECK: [[#%x, E_THUNK_1]] <_e.thunk.1>:
-# CHECK:  adrp x16, 0x[[#%x, E_PAGE]]
-# CHECK:  add  x16, x16, #[[#E_OFFSET]]
-
-# CHECK: [[#%x, F_THUNK_1]] <_f.thunk.1>:
-# CHECK:  adrp x16, 0x[[#%x, F_PAGE]]
-# CHECK:  add  x16, x16, #[[#F_OFFSET]]
-
-# CHECK: [[#%x, FOLD_LOW_THUNK_0]] <_fold_func_low_addr.thunk.0>:
-# CHECK:  adrp x16, 0x[[#%x, FOLD_LOW_PAGE]]000
-# CHECK:  add  x16, x16, #[[#%d, FOLD_LOW_OFFSET]]
 
 # CHECK: Disassembly of section __TEXT,__stubs:
 

@@ -41,6 +41,19 @@
 ; VERIFY-FAR-MAP-NEXT: sym: _func_B, {{.*}} binAddr: 0x[[#FAR_A]], size: 0x0
 ; VERIFY-FAR-MAP-NEXT: sym: _func_C, {{.*}} binAddr: 0x[[#FAR_A]], size: 0x0
 
+;;; Check that STABS follows every hop in an island chain to the retained body.
+; RUN: llvm-mc -filetype=obj -triple=arm64-apple-darwin %t/chain-spacer.s -o %t/chain-spacer.o
+; RUN: %lld -arch arm64 --icf=safe_thunks --keep-icf-stabs -arm64-islands-max-hops 2 -arm64-thunks-max-hops 0 -dylib -order_file %t/chain-orderfile.txt -o %t/chain.dylib %t/a.o %t/chain-spacer.o -map - | FileCheck %s --check-prefix=VERIFY-CHAIN
+; RUN: dsymutil --dump-debug-map %t/chain.dylib | FileCheck %s --check-prefix=VERIFY-CHAIN-MAP
+; RUN: dsymutil --verify-dwarf=all --flat %t/chain.dylib -o %t/chain.dwarf
+; RUN: llvm-dwarfdump --verify %t/chain.dwarf | FileCheck %s --check-prefix=VERIFY-DSYM
+
+; VERIFY-CHAIN: ltmp{{.*}}.island.0
+; VERIFY-CHAIN: ltmp{{.*}}.island.1
+; VERIFY-CHAIN-MAP:      sym: _func_A, {{.*}} binAddr: 0x[[#%X, CHAIN_A:]], size: 0x8
+; VERIFY-CHAIN-MAP-NEXT: sym: _func_B, {{.*}} binAddr: 0x[[#CHAIN_A]], size: 0x0
+; VERIFY-CHAIN-MAP-NEXT: sym: _func_C, {{.*}} binAddr: 0x[[#CHAIN_A]], size: 0x0
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;; Test multiple object files with identical functions ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ; RUN: llc -filetype=obj %t/b.ll -O3 -o %t/b.o -enable-machine-outliner=never -mtriple arm64-apple-macos -addrsig
@@ -172,6 +185,29 @@ _spacer:
 _func_A
 _func_B
 _spacer
+_func_C
+
+;--- chain-spacer.s
+.subsections_via_symbols
+.text
+.globl _spacer1, _spacer2, _spacer3
+_spacer1:
+  mov x0, #1
+  .space 0x63ffffc
+_spacer2:
+  mov x0, #2
+  .space 0x63ffffc
+_spacer3:
+  mov x0, #3
+  .space 0x63ffffc
+  ret
+
+;--- chain-orderfile.txt
+_func_A
+_func_B
+_spacer1
+_spacer2
+_spacer3
 _func_C
 
 ;--- gen

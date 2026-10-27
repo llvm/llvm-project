@@ -12,15 +12,22 @@
 #include "MachOStructs.h"
 #include "Relocations.h"
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 
 #include <cstddef>
 #include <cstdint>
+#include <utility>
 
 #include "mach-o/compact_unwind_encoding.h"
+
+namespace llvm::opt {
+class ArgList;
+}
 
 namespace lld::macho {
 LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
@@ -30,6 +37,28 @@ class Defined;
 class DylibSymbol;
 class InputSection;
 class ObjFile;
+
+class BranchExtender {
+public:
+  explicit BranchExtender(uint64_t maxReach) : maxReach(maxReach) {}
+  virtual ~BranchExtender() = default;
+  // Upper bound on the displacement of any one hop, for optimistic estimates.
+  // Must be nonzero and at least the target's original branch reach in both
+  // directions, so distance / maxReach underestimates the extensions needed.
+  const uint64_t maxReach;
+  uint32_t maxHops = 1;
+  // Inclusive source-address bounds; the planner also applies getAlign().
+  virtual std::pair<uint64_t, uint64_t> getSourceRange(uint64_t to) const = 0;
+  bool canReach(uint64_t from, uint64_t to) const {
+    assert(from % getAlign() == 0 && "unaligned branch extender");
+    auto [low, high] = getSourceRange(to);
+    return low <= from && from <= high;
+  }
+  virtual size_t getSize() const = 0;
+  virtual uint32_t getAlign() const = 0;
+  virtual llvm::StringRef getSuffix() const = 0;
+  virtual void populate(InputSection *, Symbol *, int64_t addend) const = 0;
+};
 
 static_assert(static_cast<uint32_t>(UNWIND_X86_64_MODE_MASK) ==
                   static_cast<uint32_t>(UNWIND_X86_MODE_MASK) &&
@@ -99,10 +128,15 @@ public:
 
   virtual uint64_t getPageSize() const = 0;
 
-  virtual void populateThunk(InputSection *thunk, Symbol *funcSym,
-                             int64_t addend) {
-    llvm_unreachable("target does not use thunks");
-  }
+  bool needsBranchExtension() const { return !branchExtenders.empty(); }
+
+  virtual void configureBranchExtenders(const llvm::opt::ArgList &) {}
+
+  // Implementations and backing storage have static lifetime. Backends must
+  // register extenders in ascending outreach order.
+  llvm::ArrayRef<const BranchExtender *> branchExtenders;
+  // Minimum byte spacing for coarse placement candidates; zero includes all.
+  uint32_t coarseBoundarySpacing = 0;
 
   const RelocAttrs &getRelocAttrs(uint8_t type) const {
     assert(type < relocAttrs.size() && "invalid relocation type");
@@ -114,8 +148,6 @@ public:
   bool hasAttr(uint8_t type, RelocAttrBits bit) const {
     return getRelocAttrs(type).hasAttr(bit);
   }
-
-  bool usesThunks() const { return thunkSize > 0; }
 
   // For now, handleDtraceReloc only implements -no_dtrace_dof, and ensures
   // that the linking would not fail even when there are user-provided dtrace
@@ -141,7 +173,6 @@ public:
   uint8_t p2WordSize;
   size_t wordSize;
 
-  size_t thunkSize = 0;
   uint64_t forwardBranchRange = 0;
   uint64_t backwardBranchRange = 0;
 

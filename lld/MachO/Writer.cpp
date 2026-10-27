@@ -16,6 +16,7 @@
 #include "OutputSection.h"
 #include "OutputSegment.h"
 #include "SectionPriorities.h"
+#include "Sections.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
@@ -54,7 +55,7 @@ public:
   template <class LP> void createLoadCommands();
   void finalizeAddresses();
   void finalizeLinkEditSegment();
-  void assignAddresses(OutputSegment *);
+  void assignAddresses(OutputSegment *, const OutputSectionAttributesMap *);
 
   void openFile();
   void writeSections();
@@ -1153,17 +1154,33 @@ void Writer::finalizeAddresses() {
   TimeTraceScope timeScope("Finalize addresses");
   uint64_t pageSize = target->getPageSize();
 
-  // We could parallelize this loop, but local benchmarking indicates it is
-  // faster to do it all in the main thread.
+  OutputSectionAttributesMap osecAttrs;
+  // Compute attributes across all segments in parallel before using them to
+  // select concat sections for early finalization.
+  if (target->needsBranchExtension()) {
+    std::vector<std::pair<OutputSegment *, OutputSectionAttributesMap>>
+        segmentAttrs;
+    segmentAttrs.reserve(outputSegments.size());
+    for (OutputSegment *seg : outputSegments)
+      segmentAttrs.emplace_back(seg, OutputSectionAttributesMap{});
+    parallelForEach(segmentAttrs, [](auto &entry) {
+      entry.first->computeOsecAttrs(entry.second);
+    });
+    for (const auto &[seg, attrs] : segmentAttrs)
+      for (OutputSection *osec : seg->getSections())
+        osecAttrs[osec] = attrs.lookup(osec);
+  }
+
+  // Finalize concat sections without branch sources before assigning addresses:
+  // output-section finalizers may query symbols in later segments and require
+  // their input offsets and isFinal state. Defer branch-source sections until
+  // after planning, since inserting extenders can change their input offsets.
   for (OutputSegment *seg : outputSegments) {
-    if (seg == linkEditSegment)
-      continue;
     for (OutputSection *osec : seg->getSections()) {
-      if (!osec->isNeeded())
+      if (!osec->isNeeded() || osecAttrs[osec].containsBranchSource)
         continue;
-      // Other kinds of OutputSections have already been finalized.
-      if (auto *concatOsec = dyn_cast<ConcatOutputSection>(osec))
-        concatOsec->finalizeContents();
+      if (auto *section = dyn_cast<ConcatOutputSection>(osec))
+        section->finalizeContents();
     }
   }
 
@@ -1177,7 +1194,7 @@ void Writer::finalizeAddresses() {
     if (seg == linkEditSegment)
       continue;
     seg->addr = addr;
-    assignAddresses(seg);
+    assignAddresses(seg, &osecAttrs);
     // codesign / libstuff checks for segment ordering by verifying that
     // `fileOff + fileSize == next segment fileOff`. So we call
     // alignToPowerOf2() before (instead of after) computing fileSize to ensure
@@ -1211,28 +1228,18 @@ void Writer::finalizeLinkEditSegment() {
   // Now that __LINKEDIT is filled out, do a proper calculation of its
   // addresses and offsets.
   linkEditSegment->addr = addr;
-  assignAddresses(linkEditSegment);
+  assignAddresses(linkEditSegment, /*osecAttrs=*/nullptr);
   // No need to page-align fileOff / addr here since this is the last segment.
   linkEditSegment->vmSize = addr - linkEditSegment->addr;
   linkEditSegment->fileSize = fileOff - linkEditSegment->fileOff;
 }
 
-void Writer::assignAddresses(OutputSegment *seg) {
+void Writer::assignAddresses(OutputSegment *seg,
+                             const OutputSectionAttributesMap *osecAttrs) {
   seg->fileOff = fileOff;
-
-  for (OutputSection *osec : seg->getSections()) {
-    if (!osec->isNeeded())
-      continue;
-    addr = alignToPowerOf2(addr, osec->align);
-    fileOff = alignToPowerOf2(fileOff, osec->align);
-    osec->addr = addr;
-    osec->fileOff = isZeroFill(osec->flags) ? 0 : fileOff;
-    osec->finalize();
-    osec->assignAddressesToStartEndSymbols();
-
-    addr += osec->getSize();
-    fileOff += osec->getFileSize();
-  }
+  seg->finalize(osecAttrs);
+  addr = seg->addr + seg->vmSize;
+  fileOff = seg->fileOff + seg->fileSize;
 }
 
 void Writer::openFile() {
