@@ -469,7 +469,7 @@ static bool isSupportedMemset(MemSetInst *I, AllocaInst *AI,
 }
 
 static Value *calculateVectorIndex(Value *Ptr, AllocaAnalysis &AA) {
-  IRBuilder<> B(Ptr->getContext());
+  IRBuilder<> B(*AA.Alloca->getModule());
 
   Ptr = Ptr->stripPointerCasts();
   if (Ptr == AA.Alloca)
@@ -634,9 +634,8 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
                                         function_ref<Value *()> GetCurVal) {
   // Note: we use InstSimplifyFolder because it can leverage the DataLayout
   // to do more folding, especially in the case of vector splats.
-  IRBuilder<InstSimplifyFolder> Builder(Inst->getContext(),
+  IRBuilder<InstSimplifyFolder> Builder(Inst->getIterator(),
                                         InstSimplifyFolder(DL));
-  Builder.SetInsertPoint(Inst);
 
   Type *VecEltTy = AA.Vector.Ty->getElementType();
 

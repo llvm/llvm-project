@@ -111,6 +111,8 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::SRA_PARTS, GRLenVT, Custom);
   setOperationAction(ISD::SRL_PARTS, GRLenVT, Custom);
   setOperationAction(ISD::FP_TO_SINT, GRLenVT, Custom);
+  if (Subtarget.hasBasicF())
+    setOperationAction(ISD::FP_TO_SINT_SAT, GRLenVT, Custom);
   setOperationAction(ISD::ROTL, GRLenVT, Expand);
   setOperationAction(ISD::CTPOP, GRLenVT, Expand);
 
@@ -364,6 +366,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     for (MVT VT : {MVT::v4i32, MVT::v2i64}) {
       setOperationAction({ISD::SINT_TO_FP, ISD::UINT_TO_FP}, VT, Legal);
       setOperationAction({ISD::FP_TO_SINT, ISD::FP_TO_UINT}, VT, Legal);
+      setOperationAction(ISD::FP_TO_SINT_SAT, VT, Custom);
     }
     setOperationAction(ISD::UINT_TO_FP, GRLenVT, Custom);
     for (MVT VT : {MVT::v4f32, MVT::v2f64}) {
@@ -464,6 +467,8 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::BITREVERSE, VT, Custom);
     for (MVT VT : {MVT::v16i16, MVT::v8i32, MVT::v4i64})
       setOperationAction(ISD::BSWAP, VT, Legal);
+    for (MVT VT : {MVT::v8i32, MVT::v4i64})
+      setOperationAction(ISD::FP_TO_SINT_SAT, VT, Custom);
     for (MVT VT : {MVT::v8i32, MVT::v4i32, MVT::v4i64}) {
       setOperationAction({ISD::FP_TO_SINT, ISD::FP_TO_UINT}, VT, Legal);
       setOperationAction(ISD::SINT_TO_FP, VT, Legal);
@@ -619,6 +624,8 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
     return lowerFP_TO_SINT(Op, DAG);
   case ISD::FP_TO_UINT:
     return lowerFP_TO_UINT(Op, DAG);
+  case ISD::FP_TO_SINT_SAT:
+    return lowerFP_TO_SINT_SAT(Op, DAG);
   case ISD::BITCAST:
     return lowerBITCAST(Op, DAG);
   case ISD::UINT_TO_FP:
@@ -2030,6 +2037,7 @@ static SDValue lowerVECTOR_SHUFFLEAsZeroOrAnyExtend(const SDLoc &DL,
       SDValue Ext =
           AnyExt ? DAG.getFreeze(InputV) : DAG.getConstant(0, DL, InputVT);
       InputV = DAG.getBitcast(InputVT, InputV);
+      Ext = DAG.getBitcast(InputVT, Ext);
       InputV = DAG.getNode(VilVLoHi, DL, InputVT, Ext, InputV);
       Scale /= 2;
       EltBits *= 2;
@@ -2788,6 +2796,23 @@ lowerVECTOR_SHUFFLE_XVSHUF4I(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
   return lowerVECTOR_SHUFFLE_VSHUF4I(DL, Mask, VT, V1, V2, DAG, Subtarget);
 }
 
+/// Lower VECTOR_SHUFFLE into XVREPLVE0 (if possible).
+///
+/// It is a XVREPLVE0 when the VECTOR_SHUFFLE is a broadcast of element 0,
+/// i.e. the mask is:
+///   <0, 0, 0, ...>
+///
+/// When undef's appear in the mask they are treated as if they were whatever
+/// value is necessary in order to fit the above form.
+static SDValue lowerVECTOR_SHUFFLE_XVREPLVE0(const SDLoc &DL,
+                                             ArrayRef<int> Mask, MVT VT,
+                                             SDValue V1, SelectionDAG &DAG) {
+  if (!ShuffleVectorInst::isZeroEltSplatMask(Mask, Mask.size()))
+    return SDValue();
+
+  return DAG.getNode(LoongArchISD::XVREPLVE0, DL, VT, V1);
+}
+
 /// Lower VECTOR_SHUFFLE into XVPERMI (if possible).
 static SDValue
 lowerVECTOR_SHUFFLE_XVPERMI(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
@@ -3404,6 +3429,8 @@ static SDValue lower256BitShuffle(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
       return Result;
     if ((Result = lowerVECTOR_SHUFFLE_XVSHUF4I(DL, Mask, VT, V1, V2, DAG,
                                                Subtarget)))
+      return Result;
+    if ((Result = lowerVECTOR_SHUFFLE_XVREPLVE0(DL, Mask, VT, V1, DAG)))
       return Result;
     // Try to widen vectors to gain more optimization opportunities.
     if (SDValue NewShuffle = widenShuffleMask(DL, Mask, VT, V1, V2, DAG))
@@ -4359,6 +4386,43 @@ SDValue LoongArchTargetLowering::lowerFP_TO_SINT(SDValue Op,
   EVT FPTy = EVT::getFloatingPointVT(Op.getValueSizeInBits());
   SDValue Trunc = DAG.getNode(LoongArchISD::FTINT, DL, FPTy, Op0);
   return DAG.getNode(ISD::BITCAST, DL, Op.getValueType(), Trunc);
+}
+
+// [X]VFTINTRZ and FTINTRZ saturate out-of-range values and convert NaN to 0,
+// which is exactly the semantics of FP_TO_SINT_SAT with a native saturation
+// width.
+SDValue LoongArchTargetLowering::lowerFP_TO_SINT_SAT(SDValue Op,
+                                                     SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SDValue Src = Op.getOperand(0);
+  EVT VT = Op.getValueType();
+  EVT SrcVT = Src.getValueType();
+  unsigned SatWidth = cast<VTSDNode>(Op.getOperand(1))->getVT().getSizeInBits();
+
+  // Vectors are selected by patterns.
+  if (VT.isVector()) {
+    if (SatWidth == VT.getScalarSizeInBits() &&
+        SatWidth == SrcVT.getScalarSizeInBits())
+      return Op;
+    return SDValue();
+  }
+
+  if (SrcVT != MVT::f32 && SrcVT != MVT::f64)
+    return SDValue();
+
+  if (SatWidth == 32) {
+    SDValue Ftint = DAG.getNode(LoongArchISD::FTINT, DL, MVT::f32, Src);
+    if (Subtarget.is64Bit())
+      return DAG.getNode(LoongArchISD::MOVFR2GR_S_LA64, DL, VT, Ftint);
+    return DAG.getBitcast(VT, Ftint);
+  }
+
+  if (SatWidth == 64 && Subtarget.is64Bit() && Subtarget.hasBasicD()) {
+    SDValue Ftint = DAG.getNode(LoongArchISD::FTINT, DL, MVT::f64, Src);
+    return DAG.getBitcast(VT, Ftint);
+  }
+
+  return SDValue();
 }
 
 SDValue LoongArchTargetLowering::lowerFP_TO_UINT(SDValue Op,
@@ -7096,6 +7160,42 @@ static bool checkValueWidth(SDValue V, ISD::LoadExtType &ExtType) {
   return false;
 }
 
+// Fold a lane-mask extraction that is only compared against zero into one of
+// all-lane check instructions, which write the results into fcc register, so
+// BCEQZ could use it directly.
+//
+//   (VMSKLTZ X) != 0  ->  VSETNEZ.V X
+//   (VMSKLTZ X) == 0  ->  VSETEQZ.V X
+//
+// This is valid when X is the result of a vector compare instruction,
+// so each lane of X has to be all-ones or all-zeros.
+static SDValue foldVMskZeroTest(SDValue LHS, SDValue RHS, ISD::CondCode CC,
+                                const SDLoc &DL, SelectionDAG &DAG,
+                                const LoongArchSubtarget &Subtarget) {
+  if (CC != ISD::SETEQ && CC != ISD::SETNE)
+    return SDValue();
+  if (!isNullConstant(RHS))
+    return SDValue();
+
+  unsigned MskOpc = LHS.getOpcode();
+  if (MskOpc != LoongArchISD::VMSKLTZ && MskOpc != LoongArchISD::XVMSKLTZ)
+    return SDValue();
+  // Keeping the mask alive for another user would defeat the purpose.
+  if (!LHS.hasOneUse())
+    return SDValue();
+
+  SDValue Src = LHS.getOperand(0);
+  EVT SrcVT = Src.getValueType();
+  // Make sure every lane is all-ones or all-zeros.
+  if (!SrcVT.isVector() ||
+      DAG.ComputeNumSignBits(Src) != SrcVT.getScalarSizeInBits())
+    return SDValue();
+
+  return DAG.getNode(CC == ISD::SETNE ? LoongArchISD::VANYNONZERO
+                                      : LoongArchISD::VALLZERO,
+                     DL, Subtarget.getGRLenVT(), Src);
+}
+
 // Eliminate redundant truncation and zero-extension nodes.
 // * Case 1:
 //  +------------+ +------------+ +------------+
@@ -7159,6 +7259,11 @@ static SDValue performSETCCCombine(SDNode *N, SelectionDAG &DAG,
                                    TargetLowering::DAGCombinerInfo &DCI,
                                    const LoongArchSubtarget &Subtarget) {
   ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+
+  if (N->getValueType(0) == Subtarget.getGRLenVT())
+    if (SDValue V = foldVMskZeroTest(N->getOperand(0), N->getOperand(1), CC,
+                                     SDLoc(N), DAG, Subtarget))
+      return V;
 
   SDNode *AndNode = N->getOperand(0).getNode();
   if (AndNode->getOpcode() != ISD::AND)
@@ -7473,6 +7578,14 @@ static SDValue performBR_CCCombine(SDNode *N, SelectionDAG &DAG,
   SDValue RHS = N->getOperand(2);
   SDValue CC = N->getOperand(3);
   SDLoc DL(N);
+
+  // CC was folded into V, so always return ISD::SETNE is fine.
+  if (SDValue V = foldVMskZeroTest(LHS, RHS, cast<CondCodeSDNode>(CC)->get(),
+                                   DL, DAG, Subtarget))
+    return DAG.getNode(LoongArchISD::BR_CC, DL, N->getValueType(0),
+                       N->getOperand(0), V,
+                       DAG.getConstant(0, DL, Subtarget.getGRLenVT()),
+                       DAG.getCondCode(ISD::SETNE), N->getOperand(4));
 
   if (combine_CC(LHS, RHS, CC, DL, DAG, Subtarget))
     return DAG.getNode(LoongArchISD::BR_CC, DL, N->getValueType(0),
@@ -8366,7 +8479,7 @@ static SDValue ExtendSrcToDst(SDNode *N, SelectionDAG &DAG, unsigned ExtendOp) {
     return SDValue();
 
   MVT WidenEltVT = MVT::getIntegerVT(DstEltBits);
-  MVT WidenSrcVT = MVT::getVectorVT(WidenEltVT, DstElts);
+  EVT WidenSrcVT = EVT::getVectorVT(*DAG.getContext(), WidenEltVT, DstElts);
 
   SDValue Extend = DAG.getNode(ExtendOp, DL, WidenSrcVT, Src);
   return DAG.getNode(N->getOpcode(), DL, VT, Extend);
@@ -8452,6 +8565,10 @@ static SDValue performSINT_TO_FPCombine(SDNode *N, SelectionDAG &DAG,
       return SDValue();
 
     if (!SrcVT.isSimple() || !VT.isSimple())
+      return SDValue();
+
+    // [x]vffint.s.l needs LSX and at least one full 128-bit source register.
+    if (!Subtarget.hasExtLSX() || SrcVT.getSizeInBits() < 128)
       return SDValue();
 
     // Combine [x]vffint.s.l for vector si64 to float conversion.
@@ -9275,8 +9392,8 @@ emitPseudoVMSKCOND(MachineInstr &MI, MachineBasicBlock *BB,
     Register Tmp = MRI.createVirtualRegister(RC);
     BuildMI(*BB, MI, DL, TII->get(MskOpc), Tmp).addReg(Src);
     BuildMI(*BB, MI, DL, TII->get(NotOpc), Msk)
-        .addReg(Tmp, RegState::Kill)
-        .addReg(Tmp, RegState::Kill);
+        .addReg(Tmp)
+        .addReg(Tmp);
   } else {
     BuildMI(*BB, MI, DL, TII->get(MskOpc), Msk).addReg(Src);
   }
@@ -9288,19 +9405,19 @@ emitPseudoVMSKCOND(MachineInstr &MI, MachineBasicBlock *BB,
         .addReg(Msk)
         .addImm(0);
     BuildMI(*BB, MI, DL, TII->get(LoongArch::XVPICKVE2GR_WU), Hi)
-        .addReg(Msk, RegState::Kill)
+        .addReg(Msk)
         .addImm(4);
     BuildMI(*BB, MI, DL,
             TII->get(Subtarget.is64Bit() ? LoongArch::BSTRINS_D
                                          : LoongArch::BSTRINS_W),
             Dst)
-        .addReg(Lo, RegState::Kill)
-        .addReg(Hi, RegState::Kill)
+        .addReg(Lo)
+        .addReg(Hi)
         .addImm(256 / EleBits - 1)
         .addImm(128 / EleBits);
   } else {
     BuildMI(*BB, MI, DL, TII->get(LoongArch::VPICKVE2GR_HU), Dst)
-        .addReg(Msk, RegState::Kill)
+        .addReg(Msk)
         .addImm(0);
   }
 
@@ -9346,7 +9463,7 @@ emitBuildPairF64Pseudo(MachineInstr &MI, MachineBasicBlock *BB,
   BuildMI(*BB, MI, DL, TII.get(LoongArch::MOVGR2FR_W_64), TmpReg)
       .addReg(LoReg, getKillRegState(MI.getOperand(1).isKill()));
   BuildMI(*BB, MI, DL, TII.get(LoongArch::MOVGR2FRH_W), DstReg)
-      .addReg(TmpReg, RegState::Kill)
+      .addReg(TmpReg)
       .addReg(HiReg, getKillRegState(MI.getOperand(2).isKill()));
   MI.eraseFromParent(); // The pseudo instruction is gone now.
   return BB;
@@ -10949,14 +11066,31 @@ bool LoongArchTargetLowering::isFPImmVLDILegal(const APFloat &Imm,
   return false;
 }
 
-bool LoongArchTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
-                                           bool ForCodeSize) const {
+// Only form FP_TO_SINT_SAT from clamp/NaN-guard idioms when it will be lowered
+// to a single [X]VFTINTRZ/FTINTRZ, otherwise the generic expansion is worse
+// than the original sequence.
+bool LoongArchTargetLowering::shouldConvertFpToSat(unsigned Op, EVT FPVT,
+                                                   EVT VT) const {
+  if (!isOperationLegalOrCustom(Op, VT))
+    return false;
+  if (VT.isVector())
+    return FPVT.getScalarSizeInBits() == VT.getScalarSizeInBits();
+  if (FPVT == MVT::f32)
+    return VT.getSizeInBits() == 32 || Subtarget.hasBasicD();
+  return FPVT == MVT::f64 && Subtarget.hasBasicD();
+}
+
+TargetLowering::FPImmAction
+LoongArchTargetLowering::getFPImmAction(const APFloat &Imm, EVT VT,
+                                        bool ForCodeSize) const {
   // TODO: Maybe need more checks here after vector extension is supported.
   if (VT == MVT::f32 && !Subtarget.hasBasicF())
-    return false;
+    return FPImmAction::ConstantPool;
   if (VT == MVT::f64 && !Subtarget.hasBasicD())
-    return false;
-  return (Imm.isZero() || Imm.isOne() || isFPImmVLDILegal(Imm, VT));
+    return FPImmAction::ConstantPool;
+  return (Imm.isZero() || Imm.isOne() || isFPImmVLDILegal(Imm, VT))
+             ? FPImmAction::Legal
+             : FPImmAction::ConstantPool;
 }
 
 bool LoongArchTargetLowering::isCheapToSpeculateCttz(Type *) const {
@@ -11320,7 +11454,7 @@ Register LoongArchTargetLowering::getExceptionSelectorRegister(
 
 static int getEstimateRefinementSteps(EVT VT,
                                       const LoongArchSubtarget &Subtarget) {
-  // Feature FRECIPE instrucions relative accuracy is 2^-14.
+  // Feature FRECIPE instructions relative accuracy is 2^-14.
   // IEEE float has 23 digits and double has 52 digits.
   int RefinementSteps = VT.getScalarType() == MVT::f64 ? 2 : 1;
   return RefinementSteps;
@@ -11857,6 +11991,21 @@ void LoongArchTargetLowering::computeKnownBitsForTargetNode(
   switch (Opc) {
   default:
     break;
+  case LoongArchISD::VANYNONZERO:
+  case LoongArchISD::VALLZERO: {
+    // MOVCF2GR zero-extend the i1 cond to GPR.
+    Known.Zero.setBitsFrom(1);
+    break;
+  }
+  case LoongArchISD::VALL_ZERO:
+  case LoongArchISD::VANY_ZERO:
+  case LoongArchISD::VALL_NONZERO:
+  case LoongArchISD::VANY_NONZERO: {
+    // Materialized as literal 0/1 by the Pseudo{,X}VB{Z,NZ}_[BHWD]'s custom
+    // inserter, emitVecCondBranchPseudo().
+    Known.Zero.setBitsFrom(1);
+    break;
+  }
   case LoongArchISD::VPICK_ZEXT_ELT: {
     assert(isa<VTSDNode>(Op->getOperand(2)) && "Unexpected operand!");
     EVT VT = cast<VTSDNode>(Op->getOperand(2))->getVT();
