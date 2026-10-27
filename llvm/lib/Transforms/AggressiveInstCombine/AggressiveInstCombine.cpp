@@ -2524,8 +2524,8 @@ static bool foldMulHigh(Instruction &I) {
   Instruction *A, *B, *C;
   auto HiHi = m_OneUse(m_Mul(m_LShr(m_Value(X), m_SpecificInt(BitWidth / 2)),
                              m_LShr(m_Value(Y), m_SpecificInt(BitWidth / 2))));
-  if ((match(&I, m_c_Add(HiHi, m_OneUse(m_Add(m_Instruction(A),
-                                              m_Instruction(B))))) ||
+  if ((match(&I, m_c_Add(HiHi, m_OneUse(m_AddLike(m_Instruction(A),
+                                                  m_Instruction(B))))) ||
        match(&I, m_c_Add(m_Instruction(A),
                          m_OneUse(m_c_Add(HiHi, m_Instruction(B)))))) &&
       A->hasOneUse() && B->hasOneUse())
@@ -2534,19 +2534,19 @@ static bool foldMulHigh(Instruction &I) {
 
   if ((match(&I, m_c_Add(HiHi, m_OneUse(m_c_Add(
                                    m_Instruction(A),
-                                   m_OneUse(m_Add(m_Instruction(B),
-                                                  m_Instruction(C))))))) ||
+                                   m_OneUse(m_AddLike(m_Instruction(B),
+                                                      m_Instruction(C))))))) ||
        match(&I, m_c_Add(m_Instruction(A),
                          m_OneUse(m_c_Add(
-                             HiHi, m_OneUse(m_Add(m_Instruction(B),
-                                                  m_Instruction(C))))))) ||
+                             HiHi, m_OneUse(m_AddLike(m_Instruction(B),
+                                                      m_Instruction(C))))))) ||
        match(&I, m_c_Add(m_Instruction(A),
                          m_OneUse(m_c_Add(
                              m_Instruction(B),
                              m_OneUse(m_c_Add(HiHi, m_Instruction(C))))))) ||
-       match(&I,
-             m_c_Add(m_OneUse(m_c_Add(HiHi, m_Instruction(A))),
-                     m_OneUse(m_Add(m_Instruction(B), m_Instruction(C)))))) &&
+       match(&I, m_c_Add(m_OneUse(m_c_Add(HiHi, m_Instruction(A))),
+                         m_OneUse(m_AddLike(m_Instruction(B),
+                                            m_Instruction(C)))))) &&
       A->hasOneUse() && B->hasOneUse() && C->hasOneUse())
     return FoldMulHighCarry4(X, Y, A, B, C) ||
            FoldMulHighLadder4(X, Y, A, B, C);

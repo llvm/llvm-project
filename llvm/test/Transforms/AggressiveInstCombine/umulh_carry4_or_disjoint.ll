@@ -6,25 +6,11 @@ define i64 @umulh1_add_carry_to_low_accum_hi(i64 %x, i64 %y) {
   ; Extract low and high 32 bits
 ; CHECK-LABEL: define i64 @umulh1_add_carry_to_low_accum_hi(
 ; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]]) {
-; CHECK-NEXT:    [[X_LO:%.*]] = and i64 [[X]], 4294967295
-; CHECK-NEXT:    [[Y_LO:%.*]] = and i64 [[Y]], 4294967295
-; CHECK-NEXT:    [[X_HI:%.*]] = lshr i64 [[X]], 32
-; CHECK-NEXT:    [[Y_HI:%.*]] = lshr i64 [[Y]], 32
-; CHECK-NEXT:    [[Y_LO_X_HI:%.*]] = mul nuw i64 [[Y_LO]], [[X_HI]]
-; CHECK-NEXT:    [[Y_HI_X_HI:%.*]] = mul nuw i64 [[Y_HI]], [[X_HI]]
-; CHECK-NEXT:    [[Y_HI_X_LO:%.*]] = mul nuw i64 [[Y_HI]], [[X_LO]]
-; CHECK-NEXT:    [[Y_LO_X_LO:%.*]] = mul nuw i64 [[Y_LO]], [[X_LO]]
-; CHECK-NEXT:    [[CROSS_SUM:%.*]] = add i64 [[Y_HI_X_LO]], [[Y_LO_X_HI]]
-; CHECK-NEXT:    [[CARRY_OUT:%.*]] = icmp ult i64 [[CROSS_SUM]], [[Y_LO_X_HI]]
-; CHECK-NEXT:    [[CARRY:%.*]] = select i1 [[CARRY_OUT]], i64 4294967296, i64 0
-; CHECK-NEXT:    [[Y_LO_X_LO_HI:%.*]] = lshr i64 [[Y_LO_X_LO]], 32
-; CHECK-NEXT:    [[CROSS_SUM_LO:%.*]] = and i64 [[CROSS_SUM]], 4294967295
-; CHECK-NEXT:    [[CROSS_SUM_HI:%.*]] = lshr i64 [[CROSS_SUM]], 32
-; CHECK-NEXT:    [[LOW_ACCUM:%.*]] = add nuw nsw i64 [[CROSS_SUM_LO]], [[Y_LO_X_LO_HI]]
-; CHECK-NEXT:    [[LOW_ACCUM_HI:%.*]] = lshr i64 [[LOW_ACCUM]], 32
-; CHECK-NEXT:    [[CARRIES:%.*]] = or disjoint i64 [[CARRY]], [[LOW_ACCUM_HI]]
-; CHECK-NEXT:    [[INTERMEDIATE:%.*]] = add i64 [[CROSS_SUM_HI]], [[CARRIES]]
-; CHECK-NEXT:    [[HW64:%.*]] = add i64 [[Y_HI_X_HI]], [[INTERMEDIATE]]
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i64 [[X]] to i128
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i64 [[Y]] to i128
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i128 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = lshr i128 [[TMP3]], 64
+; CHECK-NEXT:    [[HW64:%.*]] = trunc nuw i128 [[TMP4]] to i64
 ; CHECK-NEXT:    ret i64 [[HW64]]
 ;
   %x_lo = and i64 %x, 4294967295              ; x & 0xffffffff
@@ -68,25 +54,11 @@ define i64 @umulh2_add_carry_to_low_accum_hi(i64 %x, i64 %y) {
   ; Extract low and high 32 bits
 ; CHECK-LABEL: define i64 @umulh2_add_carry_to_low_accum_hi(
 ; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]]) {
-; CHECK-NEXT:    [[X_LO:%.*]] = and i64 [[X]], 4294967295
-; CHECK-NEXT:    [[Y_LO:%.*]] = and i64 [[Y]], 4294967295
-; CHECK-NEXT:    [[X_HI:%.*]] = lshr i64 [[X]], 32
-; CHECK-NEXT:    [[Y_HI:%.*]] = lshr i64 [[Y]], 32
-; CHECK-NEXT:    [[Y_LO_X_HI:%.*]] = mul nuw i64 [[Y_LO]], [[X_HI]]
-; CHECK-NEXT:    [[Y_HI_X_HI:%.*]] = mul nuw i64 [[Y_HI]], [[X_HI]]
-; CHECK-NEXT:    [[Y_HI_X_LO:%.*]] = mul nuw i64 [[Y_HI]], [[X_LO]]
-; CHECK-NEXT:    [[Y_LO_X_LO:%.*]] = mul nuw i64 [[Y_LO]], [[X_LO]]
-; CHECK-NEXT:    [[CROSS_SUM:%.*]] = add i64 [[Y_HI_X_LO]], [[Y_LO_X_HI]]
-; CHECK-NEXT:    [[CARRY_OUT:%.*]] = icmp ult i64 [[CROSS_SUM]], [[Y_LO_X_HI]]
-; CHECK-NEXT:    [[CARRY:%.*]] = select i1 [[CARRY_OUT]], i64 4294967296, i64 0
-; CHECK-NEXT:    [[Y_LO_X_LO_HI:%.*]] = lshr i64 [[Y_LO_X_LO]], 32
-; CHECK-NEXT:    [[CROSS_SUM_LO:%.*]] = and i64 [[CROSS_SUM]], 4294967295
-; CHECK-NEXT:    [[CROSS_SUM_HI:%.*]] = lshr i64 [[CROSS_SUM]], 32
-; CHECK-NEXT:    [[LOW_ACCUM:%.*]] = add nuw nsw i64 [[CROSS_SUM_LO]], [[Y_LO_X_LO_HI]]
-; CHECK-NEXT:    [[LOW_ACCUM_HI:%.*]] = lshr i64 [[LOW_ACCUM]], 32
-; CHECK-NEXT:    [[CARRIES:%.*]] = or disjoint i64 [[CARRY]], [[LOW_ACCUM_HI]]
-; CHECK-NEXT:    [[INTERMEDIATE:%.*]] = add i64 [[Y_HI_X_HI]], [[CARRIES]]
-; CHECK-NEXT:    [[HW64:%.*]] = add i64 [[CROSS_SUM_HI]], [[INTERMEDIATE]]
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i64 [[X]] to i128
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i64 [[Y]] to i128
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i128 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = lshr i128 [[TMP3]], 64
+; CHECK-NEXT:    [[HW64:%.*]] = trunc nuw i128 [[TMP4]] to i64
 ; CHECK-NEXT:    ret i64 [[HW64]]
 ;
   %x_lo = and i64 %x, 4294967295              ; x & 0xffffffff
@@ -132,25 +104,11 @@ define i64 @umulh4_add_carry_to_low_accum_hi(i64 %x, i64 %y) {
   ; Extract low and high 32 bits
 ; CHECK-LABEL: define i64 @umulh4_add_carry_to_low_accum_hi(
 ; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]]) {
-; CHECK-NEXT:    [[X_LO:%.*]] = and i64 [[X]], 4294967295
-; CHECK-NEXT:    [[Y_LO:%.*]] = and i64 [[Y]], 4294967295
-; CHECK-NEXT:    [[X_HI:%.*]] = lshr i64 [[X]], 32
-; CHECK-NEXT:    [[Y_HI:%.*]] = lshr i64 [[Y]], 32
-; CHECK-NEXT:    [[Y_LO_X_HI:%.*]] = mul nuw i64 [[Y_LO]], [[X_HI]]
-; CHECK-NEXT:    [[Y_HI_X_HI:%.*]] = mul nuw i64 [[Y_HI]], [[X_HI]]
-; CHECK-NEXT:    [[Y_HI_X_LO:%.*]] = mul nuw i64 [[Y_HI]], [[X_LO]]
-; CHECK-NEXT:    [[Y_LO_X_LO:%.*]] = mul nuw i64 [[Y_LO]], [[X_LO]]
-; CHECK-NEXT:    [[CROSS_SUM:%.*]] = add i64 [[Y_HI_X_LO]], [[Y_LO_X_HI]]
-; CHECK-NEXT:    [[CARRY_OUT:%.*]] = icmp ult i64 [[CROSS_SUM]], [[Y_LO_X_HI]]
-; CHECK-NEXT:    [[CARRY:%.*]] = select i1 [[CARRY_OUT]], i64 4294967296, i64 0
-; CHECK-NEXT:    [[Y_LO_X_LO_HI:%.*]] = lshr i64 [[Y_LO_X_LO]], 32
-; CHECK-NEXT:    [[CROSS_SUM_LO:%.*]] = and i64 [[CROSS_SUM]], 4294967295
-; CHECK-NEXT:    [[CROSS_SUM_HI:%.*]] = lshr i64 [[CROSS_SUM]], 32
-; CHECK-NEXT:    [[LOW_ACCUM:%.*]] = add nuw nsw i64 [[CROSS_SUM_LO]], [[Y_LO_X_LO_HI]]
-; CHECK-NEXT:    [[LOW_ACCUM_HI:%.*]] = lshr i64 [[LOW_ACCUM]], 32
-; CHECK-NEXT:    [[INTERMEDIATE:%.*]] = add i64 [[Y_HI_X_HI]], [[CROSS_SUM_HI]]
-; CHECK-NEXT:    [[CARRIES:%.*]] = or disjoint i64 [[CARRY]], [[LOW_ACCUM_HI]]
-; CHECK-NEXT:    [[HW64:%.*]] = add i64 [[INTERMEDIATE]], [[CARRIES]]
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i64 [[X]] to i128
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i64 [[Y]] to i128
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i128 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = lshr i128 [[TMP3]], 64
+; CHECK-NEXT:    [[HW64:%.*]] = trunc nuw i128 [[TMP4]] to i64
 ; CHECK-NEXT:    ret i64 [[HW64]]
 ;
   %x_lo = and i64 %x, 4294967295              ; x & 0xffffffff

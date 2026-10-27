@@ -5,22 +5,11 @@ define i32 @mul_carry_add_carry_to_crosssum(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i32 @mul_carry_add_carry_to_crosssum(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[X]], 16
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X]], 65535
-; CHECK-NEXT:    [[SHR1:%.*]] = lshr i32 [[Y]], 16
-; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[Y]], 65535
-; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i32 [[AND2]], [[SHR]]
-; CHECK-NEXT:    [[MUL3:%.*]] = mul nuw i32 [[SHR1]], [[AND]]
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[MUL3]], [[MUL]]
-; CHECK-NEXT:    [[MUL4:%.*]] = mul nuw i32 [[AND]], [[AND2]]
-; CHECK-NEXT:    [[SHR5:%.*]] = lshr i32 [[MUL4]], 16
-; CHECK-NEXT:    [[ADD6:%.*]] = add i32 [[SHR5]], [[ADD]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ADD6]], [[MUL]]
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 65536, i32 0
-; CHECK-NEXT:    [[MUL8:%.*]] = mul nuw i32 [[SHR]], [[SHR1]]
-; CHECK-NEXT:    [[SHR10:%.*]] = lshr i32 [[ADD6]], 16
-; CHECK-NEXT:    [[ADD9:%.*]] = or disjoint i32 [[COND]], [[SHR10]]
-; CHECK-NEXT:    [[ADD11:%.*]] = add i32 [[ADD9]], [[MUL8]]
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[X]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[Y]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 32
+; CHECK-NEXT:    [[ADD11:%.*]] = trunc nuw i64 [[TMP3]] to i32
 ; CHECK-NEXT:    ret i32 [[ADD11]]
 ;
 entry:
