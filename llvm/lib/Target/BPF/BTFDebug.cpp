@@ -358,10 +358,11 @@ void BTFTypeInt::emitType(MCStreamer &OS) {
   OS.emitInt32(IntVal);
 }
 
-BTFTypeEnum::BTFTypeEnum(const DICompositeType *ETy, uint32_t VLen,
+BTFTypeEnum::BTFTypeEnum(const DICompositeType *ETy, uint32_t Size,
                          bool IsSigned)
-    : BTFTypeBase(BTF::BTF_KIND_ENUM, VLen, IsSigned), ETy(ETy) {
-  BTFType.Size = roundupToBytes(ETy->getSizeInBits());
+    : BTFTypeBase(BTF::BTF_KIND_ENUM, ETy->getElements().size(), IsSigned),
+      ETy(ETy) {
+  BTFType.Size = Size;
 }
 
 void BTFTypeEnum::completeType(BTFDebug &BDebug) {
@@ -396,10 +397,10 @@ void BTFTypeEnum::emitType(MCStreamer &OS) {
   }
 }
 
-BTFTypeEnum64::BTFTypeEnum64(const DICompositeType *ETy, uint32_t VLen,
-                             bool IsSigned)
-    : BTFTypeBase(BTF::BTF_KIND_ENUM64, VLen, IsSigned), ETy(ETy) {
-  BTFType.Size = roundupToBytes(ETy->getSizeInBits());
+BTFTypeEnum64::BTFTypeEnum64(const DICompositeType *ETy, bool IsSigned)
+    : BTFTypeBase(BTF::BTF_KIND_ENUM64, ETy->getElements().size(), IsSigned),
+      ETy(ETy) {
+  BTFType.Size = sizeof(uint64_t);
 }
 
 void BTFTypeEnum64::completeType(BTFDebug &BDebug) {
@@ -1001,27 +1002,39 @@ std::optional<uint32_t> BTFDebug::visitArrayType(const DICompositeType *CTy) {
 }
 
 std::optional<uint32_t> BTFDebug::visitEnumType(const DICompositeType *CTy) {
-  DINodeArray Elements = CTy->getElements();
-  uint32_t VLen = Elements.size();
-  if (VLen > BTF::MAX_VLEN)
+  const DINodeArray Elements = CTy->getElements();
+  if (Elements.size() > BTF::MAX_VLEN)
     return std::nullopt;
 
-  bool IsSigned = false;
-  unsigned NumBits = 32;
-  // No BaseType implies forward declaration in which case a
-  // BTFTypeEnum with Vlen = 0 is emitted.
-  if (CTy->getBaseType() != nullptr) {
-    const auto *BTy = cast<DIBasicType>(CTy->getBaseType());
-    IsSigned = BTy->getEncoding() == dwarf::DW_ATE_signed ||
-               BTy->getEncoding() == dwarf::DW_ATE_signed_char;
-    NumBits = BTy->getSizeInBits();
-  }
+  // BTF records signedness but has no reference to the underlying integer.
+  const DIType *Base = CTy->getBaseType();
+  const auto *BTy = dyn_cast_or_null<DIBasicType>(stripDITypeAttributes(Base));
+  if (Base && !BTy)
+    return std::nullopt;
+  const bool IsSigned =
+      BTy && BTy->getSignedness() == DIBasicType::Signedness::Signed;
 
-  // No need to visit base type as BTF does not encode it.
-  if (NumBits <= 32)
-    return addType(std::make_unique<BTFTypeEnum>(CTy, VLen, IsSigned), CTy);
-  assert(NumBits == 64);
-  return addType(std::make_unique<BTFTypeEnum64>(CTy, VLen, IsSigned), CTy);
+  const bool IsForwardDecl = CTy->isForwardDecl() && Elements.empty();
+  uint64_t SizeInBits = CTy->getSizeInBits();
+  // libbpf uses a four-byte enum for a forward declaration without a known
+  // size or an underlying type.
+  if (!SizeInBits && IsForwardDecl)
+    SizeInBits = BTy ? BTy->getSizeInBits() : 32;
+
+  switch (SizeInBits) {
+  case 64:
+    // A forward declaration has no enumerator values to encode.
+    if (!IsForwardDecl)
+      return addType(std::make_unique<BTFTypeEnum64>(CTy, IsSigned), CTy);
+    [[fallthrough]];
+  case 8:
+  case 16:
+  case 32:
+    return addType(std::make_unique<BTFTypeEnum>(CTy, SizeInBits / 8, IsSigned),
+                   CTy);
+  default:
+    return std::nullopt;
+  }
 }
 
 /// Handle structure/union forward declarations.
