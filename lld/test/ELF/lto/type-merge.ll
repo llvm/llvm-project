@@ -13,14 +13,14 @@ define void @foo()  {
 }
 declare void @bar(ptr)
 
-; CHECK:      define void @foo() {
+; CHECK:      define void @foo() !guid !{{[0-9]+}} {
 ; CHECK-NEXT:   call void @bar(ptr null)
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: }
 
 ; CHECK: declare void @bar(ptr)
 
-; CHECK:      define void @zed() {
+; CHECK:      define void @zed() !guid !{{[0-9]+}} {
 ; CHECK-NEXT:   call void @bar()
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: }
