@@ -650,11 +650,12 @@ void LoopVersioningPass::runOnOperation() {
   // A loop that is versioned anyway can also check the stride of a local
   // POINTER array that it accesses, without another copy of the loop. Do this
   // when the pointer assignment is not visible, e.g. because a call associated
-  // the POINTER, and the loop does not modify the POINTER. A visible pointer
-  // assignment was either forwarded above or has a target that is not known
-  // to be contiguous. A descriptor loaded inside the loop is loaded before the
-  // loop instead, so that the check can use it. Visit outer loops first, so
-  // that a descriptor checked for a loop is not checked again for its inner
+  // the POINTER, and the loop does not modify the POINTER. If the pointer
+  // assignment is visible, the POINTER was either forwarded above, or it is
+  // associated with something else, such as a row of a dummy or a local array,
+  // and is left alone. A descriptor loaded inside the loop is loaded before
+  // the loop instead, so that the check can use it. Visit outer loops first,
+  // so that a descriptor checked for a loop is not checked again for its inner
   // loops.
   {
     fir::AliasAnalysis aliasAnalysis;
