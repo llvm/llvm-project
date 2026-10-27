@@ -12,4 +12,4 @@
 
 static bfloat16 sub_func(bfloat16 x, bfloat16 y) { return x - y; }
 
-LIST_SUB_TESTS(bfloat16, bfloat16, sub_func)
+LIST_SUB_TESTS(Bfloat16Sub, bfloat16, bfloat16, sub_func)

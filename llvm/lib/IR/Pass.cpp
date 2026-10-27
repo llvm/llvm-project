@@ -68,7 +68,8 @@ bool ModulePass::skipModule(const Module &M) const {
   if (PassName.empty())
     PassName = this->getPassName();
 
-  return Gate.isEnabled() && !Gate.shouldRunPass(PassName, getDescription(M));
+  return Gate.isEnabled() &&
+         !Gate.shouldRunPass(PassName, getDescription(M), "");
 }
 
 bool Pass::mustPreserveAnalysisID(char &AID) const {
@@ -200,7 +201,8 @@ bool FunctionPass::skipFunction(const Function &F) const {
   if (PassName.empty())
     PassName = this->getPassName();
 
-  if (Gate.isEnabled() && !Gate.shouldRunPass(PassName, getDescription(F)))
+  if (Gate.isEnabled() &&
+      !Gate.shouldRunPass(PassName, getDescription(F), F.getName()))
     return true;
 
   if (F.hasOptNone()) {

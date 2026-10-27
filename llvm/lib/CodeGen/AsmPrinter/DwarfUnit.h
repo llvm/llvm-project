@@ -113,9 +113,6 @@ public:
   const DICompileUnit *getCUNode() const { return CUNode; }
   DwarfDebug &getDwarfDebug() const { return *DD; }
 
-  /// Return true if this compile unit has something to write out.
-  bool hasContent() const { return getUnitDie().hasChildren(); }
-
   /// Get string containing language specific context for a global name.
   ///
   /// Walks the metadata parent chain in a language specific manner (using the
@@ -172,7 +169,7 @@ public:
 
   /// Add an integer attribute data and value; value may be any width.
   void addInt(DIE &Die, dwarf::Attribute Attribute, const APInt &Integer,
-	      bool Unsigned);
+              bool Unsigned, std::optional<dwarf::Form> Form = std::nullopt);
 
   /// Add a string attribute data and value.
   ///
@@ -373,7 +370,8 @@ private:
 
   /// A helper to add a wide integer constant to a DIE using a block
   /// form.
-  void addIntAsBlock(DIE &Die, dwarf::Attribute Attribute, const APInt &Val);
+  void addIntAsBlock(DIE &Die, dwarf::Attribute Attribute, const APInt &Val,
+                     bool Unsigned);
 
   // Add discriminant constants to a DW_TAG_variant DIE.
   void addDiscriminant(DIE &Variant, Constant *Discriminant, bool IsUnsigned);
@@ -403,9 +401,6 @@ private:
 
   /// Get an anonymous type for index type.
   DIE *getIndexTyDie();
-
-  /// Set D as anonymous type for index which can be reused later.
-  void setIndexTyDie(DIE *D) { IndexTyDie = D; }
 
   virtual void finishNonUnitTypeDIE(DIE& D, const DICompositeType *CTy) = 0;
 

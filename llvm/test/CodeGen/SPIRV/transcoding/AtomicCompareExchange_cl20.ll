@@ -6,7 +6,7 @@
 ; CHECK-DAG: %[[#int:]] = OpTypeInt 32 0
 ; CHECK-DAG: %[[#int8:]] = OpTypeInt 8 0
 ; CHECK-DAG: %[[#DeviceScope:]] =  OpConstant %[[#int]] 1
-; CHECK-DAG: %[[#SequentiallyConsistent_MS:]] = OpConstant %[[#int]] 16
+; CHECK-DAG: %[[#SequentiallyConsistent_MS:]] = OpConstant %[[#int]] 784
 ; CHECK-DAG: %[[#int_ptr:]] = OpTypePointer Generic %[[#int]]
 ; CHECK-DAG: %[[#int_ptr8:]] = OpTypePointer Generic %[[#int8]]
 ; CHECK-DAG: %[[#bool:]] = OpTypeBool

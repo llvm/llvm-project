@@ -9,7 +9,7 @@ define void @zero32() nounwind ssp {
   ; CHECK-LABEL: name: zero32
   ; CHECK: bb.0 (%ir-block.0):
   ; CHECK-NEXT:   [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm $rip, 1, $noreg, target-flags(x86-gotpcrel) @x, $noreg :: (load (s64) from got)
-  ; CHECK-NEXT:   MOV32mi killed [[MOV64rm]], 1, $noreg, 0, $noreg, 0 :: (store (s32) into @x)
+  ; CHECK-NEXT:   MOV32mi [[MOV64rm]], 1, $noreg, 0, $noreg, 0 :: (store (s32) into @x)
   ; CHECK-NEXT:   RET 0
   store float zeroinitializer, ptr @x, align 4
   ret void
@@ -20,14 +20,14 @@ define void @zero128() nounwind ssp {
   ; NOAVX: bb.0 (%ir-block.0):
   ; NOAVX-NEXT:   [[V_SET0_:%[0-9]+]]:vr128 = V_SET0
   ; NOAVX-NEXT:   [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm $rip, 1, $noreg, target-flags(x86-gotpcrel) @z, $noreg :: (load (s64) from got, align 16)
-  ; NOAVX-NEXT:   MOVAPSmr killed [[MOV64rm]], 1, $noreg, 0, $noreg, killed [[V_SET0_]] :: (store (s128) into @z)
+  ; NOAVX-NEXT:   MOVAPSmr [[MOV64rm]], 1, $noreg, 0, $noreg, [[V_SET0_]] :: (store (s128) into @z)
   ; NOAVX-NEXT:   RET 0
   ;
   ; AVX-LABEL: name: zero128
   ; AVX: bb.0 (%ir-block.0):
   ; AVX-NEXT:   [[V_SET0_:%[0-9]+]]:vr128 = V_SET0
   ; AVX-NEXT:   [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm $rip, 1, $noreg, target-flags(x86-gotpcrel) @z, $noreg :: (load (s64) from got, align 16)
-  ; AVX-NEXT:   VMOVAPSmr killed [[MOV64rm]], 1, $noreg, 0, $noreg, killed [[V_SET0_]] :: (store (s128) into @z)
+  ; AVX-NEXT:   VMOVAPSmr [[MOV64rm]], 1, $noreg, 0, $noreg, [[V_SET0_]] :: (store (s128) into @z)
   ; AVX-NEXT:   RET 0
   store <4 x float> zeroinitializer, ptr @z, align 16
   ret void

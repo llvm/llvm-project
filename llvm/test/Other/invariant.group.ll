@@ -79,11 +79,6 @@ define void @dontProveEquality(ptr %a) {
 ; CHECK: call void @useBool(i1 %r)
   call void @useBool(i1 %r)
 
-  %b2 = call ptr @llvm.strip.invariant.group.p0(ptr %a)
-  %r2 = icmp eq ptr %b2, %a
-; CHECK: call void @useBool(i1 %r2)
-  call void @useBool(i1 %r2)
-
   ret void
 }
 
@@ -94,10 +89,6 @@ declare void @clobber(ptr)
 ; CHECK: Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(inaccessiblemem: readwrite){{$}}
 ; CHECK-NEXT: declare ptr @llvm.launder.invariant.group.p0(ptr)
 declare ptr @llvm.launder.invariant.group.p0(ptr)
-
-; CHECK: Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none){{$}}
-; CHECK-NEXT: declare ptr @llvm.strip.invariant.group.p0(ptr)
-declare ptr @llvm.strip.invariant.group.p0(ptr)
 
 
 !0 = !{}

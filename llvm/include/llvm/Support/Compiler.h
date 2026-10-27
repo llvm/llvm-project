@@ -198,14 +198,10 @@
 #define LLVM_ABI_EXPORT __declspec(dllexport)
 #elif __has_attribute(visibility)
 #if defined(__ELF__) || defined(__MINGW32__) || defined(_AIX) ||               \
-    defined(__MVS__) || defined(__CYGWIN__)
+    defined(__MVS__) || defined(__CYGWIN__) || defined(__MACH__) ||            \
+    defined(__wasm__) || defined(__EMSCRIPTEN__)
 #define LLVM_ABI __attribute__((visibility("default")))
 #define LLVM_TEMPLATE_ABI LLVM_ABI
-#define LLVM_EXPORT_TEMPLATE
-#define LLVM_ABI_EXPORT LLVM_ABI
-#elif defined(__MACH__) || defined(__wasm__) || defined(__EMSCRIPTEN__)
-#define LLVM_ABI __attribute__((visibility("default")))
-#define LLVM_TEMPLATE_ABI
 #define LLVM_EXPORT_TEMPLATE
 #define LLVM_ABI_EXPORT LLVM_ABI
 #endif
@@ -254,10 +250,13 @@
 #define LLVM_ATTRIBUTE_RETAIN
 #endif
 
+// For deprecations that are not a simple rename, use [[deprecated(MSG)]]
+// instead.
 #if defined(__clang__)
-#define LLVM_DEPRECATED(MSG, FIX) __attribute__((deprecated(MSG, FIX)))
+#define LLVM_DEPRECATED_WITH_FIXIT(MSG, FIX)                                   \
+  __attribute__((deprecated(MSG, FIX)))
 #else
-#define LLVM_DEPRECATED(MSG, FIX) [[deprecated(MSG)]]
+#define LLVM_DEPRECATED_WITH_FIXIT(MSG, FIX) [[deprecated(MSG)]]
 #endif
 
 // clang-format off
@@ -269,10 +268,10 @@
   _Pragma("GCC diagnostic pop")
 #elif defined(_MSC_VER)
 #define LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH                             \
-  _Pragma("warning(push)")                                                     \
-  _Pragma("warning(disable : 4996)")
+  __pragma(warning(push))                                                     \
+  __pragma(warning(disable : 4996))
 #define LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP                              \
-  _Pragma("warning(pop)")
+  __pragma(warning(pop))
 #else
 #define LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
 #define LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
@@ -309,6 +308,11 @@
 // FIXME: Provide this for PE/COFF targets.
 #if __has_attribute(weak) && !defined(__MINGW32__) && !defined(__CYGWIN__) &&  \
     !defined(_WIN32)
+#define LLVM_HAS_ATTRIBUTE_WEAK 1
+#else
+#define LLVM_HAS_ATTRIBUTE_WEAK 0
+#endif
+#if LLVM_HAS_ATTRIBUTE_WEAK
 #define LLVM_ATTRIBUTE_WEAK __attribute__((__weak__))
 #else
 #define LLVM_ATTRIBUTE_WEAK
@@ -342,6 +346,14 @@
 #else
 #define LLVM_LIKELY(EXPR) (EXPR)
 #define LLVM_UNLIKELY(EXPR) (EXPR)
+#endif
+
+// Indicate that a branch condition is hard to predict, so that the compiler
+// prefers a conditional move or select over a branch.
+#if __has_builtin(__builtin_unpredictable)
+#define LLVM_UNPREDICTABLE(EXPR) __builtin_unpredictable(EXPR)
+#else
+#define LLVM_UNPREDICTABLE(EXPR) (EXPR)
 #endif
 
 /// LLVM_ATTRIBUTE_NOINLINE - On compilers where we have a directive to do so,
@@ -467,8 +479,8 @@
 #define LLVM_SUPPRESS_MSVC_ATTR_IS_VENDOR_EXT_POP
 #else // MSVC < 19.43
 #define LLVM_SUPPRESS_MSVC_ATTR_IS_VENDOR_EXT_PUSH                             \
-  _Pragma("warning(push)") _Pragma("warning(disable : 4848)")
-#define LLVM_SUPPRESS_MSVC_ATTR_IS_VENDOR_EXT_POP _Pragma("warning(pop)")
+  __pragma(warning(push)) __pragma(warning(disable : 4848))
+#define LLVM_SUPPRESS_MSVC_ATTR_IS_VENDOR_EXT_POP __pragma(warning(pop))
 #endif
 
 #if LLVM_HAS_CPP_ATTRIBUTE(no_unique_address)

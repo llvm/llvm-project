@@ -63,8 +63,9 @@ declare i64 @llvm.hexagon.A4.combineir(i32, i32) nounwind readnone
 
 declare i32 @llvm.hexagon.A2.combine.ll(i32, i32) nounwind readnone
 
-!0 = !{!"long", !1}
+!0 = !{!5, !5, i64 0}
 !1 = !{!"omnipotent char", !2}
 !2 = !{!"Simple C/C++ TBAA"}
 !3 = !{i32 18362}
 !4 = !{i32 18893}
+!5 = !{!"long", !1}

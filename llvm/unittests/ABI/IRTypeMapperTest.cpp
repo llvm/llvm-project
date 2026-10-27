@@ -71,7 +71,9 @@ TEST_F(IRTypeMapperTest, SVEPredicateVectorMapsToScalableI1Vector) {
 }
 
 TEST_F(IRTypeMapperTest, SVECountMapsToAArch64SVCount) {
-  const llvm::abi::VectorType *SVCount = TB.getSVECountType(llvm::Align(2));
+  const llvm::abi::VectorType *SVCount =
+      TB.getScalablePredicateOrCountVectorType(llvm::Align(2),
+                                               llvm::abi::VectorKind::SVECount);
 
   auto *TET = llvm::dyn_cast<llvm::TargetExtType>(Mapper.convertType(SVCount));
   ASSERT_NE(TET, nullptr);
@@ -97,6 +99,26 @@ TEST_F(IRTypeMapperTest, SVEDataTupleMapsToStructOfVectors) {
     EXPECT_EQ(Struct->getElementType(I), ExpectedVec);
 }
 
+TEST_F(IRTypeMapperTest, PackedRecordMapsToPackedStruct) {
+  const llvm::abi::Type *I32 =
+      TB.getIntegerType(32, llvm::Align(4), /*Signed=*/true);
+  const llvm::abi::VectorType *SVInt32 =
+      TB.getVectorType(I32, llvm::ElementCount::getScalable(4), llvm::Align(16),
+                       llvm::abi::VectorKind::SVEData);
+  const llvm::abi::RecordType *Packed = TB.getRecordType(
+      {llvm::abi::FieldInfo(SVInt32, 0), llvm::abi::FieldInfo(SVInt32, 0)},
+      llvm::TypeSize::getFixed(0), llvm::Align(1),
+      /*UnadjustedAlign=*/llvm::Align(1), llvm::abi::StructPacking::Packed);
+
+  auto *Struct = llvm::dyn_cast<llvm::StructType>(Mapper.convertType(Packed));
+  ASSERT_NE(Struct, nullptr);
+  EXPECT_TRUE(Struct->isPacked());
+  ASSERT_EQ(Struct->getNumElements(), 2u);
+  llvm::Type *Vec = Mapper.convertType(SVInt32);
+  EXPECT_EQ(Struct->getElementType(0), Vec);
+  EXPECT_EQ(Struct->getElementType(1), Vec);
+}
+
 TEST_F(IRTypeMapperTest, SameSizeAtomicMapsToValueType) {
   const llvm::abi::Type *F32 =
       TB.getFloatType(llvm::APFloat::IEEEsingle(), llvm::Align(4));
@@ -112,7 +134,8 @@ TEST_F(IRTypeMapperTest, PaddedAtomicMapsToValueAndTailPadding) {
   const llvm::abi::RecordType *ThreeBytes = TB.getRecordType(
       {llvm::abi::FieldInfo(I8, 0), llvm::abi::FieldInfo(I8, 8),
        llvm::abi::FieldInfo(I8, 16)},
-      llvm::TypeSize::getFixed(24), llvm::Align(1));
+      llvm::TypeSize::getFixed(24), llvm::Align(1),
+      /*UnadjustedAlign=*/llvm::Align(1));
   const llvm::abi::AtomicType *Atomic =
       TB.getAtomicType(ThreeBytes, 32, llvm::Align(4));
 

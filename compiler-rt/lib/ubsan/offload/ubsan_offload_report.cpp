@@ -15,11 +15,12 @@
 
 #include "ubsan_diag.h"
 #include "ubsan_handlers_internal.h"
-#include "ubsan_offload_hsa.h"
 #include "ubsan_value.h"
 
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_libc.h"
+#include "sanitizer_common/sanitizer_offload.h"
+#include "shared/rpc.h"
 
 using namespace __sanitizer;
 
@@ -65,7 +66,7 @@ static_assert(sizeof(CFICheckFailLocPrefix) <= sizeof(CFICheckFailData),
 
 // The HSA loader knows the host-side address of any device pointer contained in
 // a loaded segment. We can read them directly without copying or VRAM access.
-const void *Host(uptr Dev) { return GetHsa().HostAddr(Dev); }
+const void *Host(uptr Dev) { return Offload::Get().HostPointer(Dev); }
 
 // The associated SourceLocation is a C-string located in the device executable.
 bool PatchLoc(void *S, uptr Off) {
@@ -320,13 +321,10 @@ void PrintOffloadReport(const __ubsan_offload_report &R) {
 
   void *Data = nullptr;
   ValueHandle V0 = 0, V1 = 0, V2 = 0;
-  {
-    Lock L(&UbsanOffloadMutex);
-    if (!GetHsa().Ready() || !Materialize(R, &Data, &V0, &V1, &V2)) {
-      VReport(1, "%s: could not translate device UBSan data 0x%zx (kind %u)\n",
-              SanitizerToolName, (uptr)R.data, (unsigned)R.kind);
-      return;
-    }
+  if (!Offload::Get().Ready() || !Materialize(R, &Data, &V0, &V1, &V2)) {
+    VReport(1, "%s: could not translate device UBSan data 0x%zx (kind %u)\n",
+            SanitizerToolName, (uptr)R.data, (unsigned)R.kind);
+    return;
   }
 
   ReportOptions Opts = {};
@@ -338,6 +336,19 @@ void PrintOffloadReport(const __ubsan_offload_report &R) {
   Replay(R.kind, Data, V0, V1, V2, Opts);
   if (R.fatal)
     Die();
+}
+
+u32 HandleOffloadReport(void *PortPtr, u32) {
+  auto &Port = *reinterpret_cast<rpc::Server::Port *>(PortPtr);
+  if (Port.get_opcode() != SANITIZER_OFFLOAD_UBSAN)
+    return rpc::RPC_UNHANDLED_OPCODE;
+
+  Port.recv([&](rpc::Buffer *Buffer, uint32_t) {
+    __ubsan_offload_report R;
+    internal_memcpy(&R, Buffer->data, sizeof(R));
+    PrintOffloadReport(R);
+  });
+  return rpc::RPC_SUCCESS;
 }
 
 } // namespace __ubsan

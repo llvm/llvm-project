@@ -10,6 +10,7 @@
 #define MLIR_CONVERSION_OPENACCTOLLVM_ACCTOLLVMUTILS_H
 
 #include "mlir/Dialect/OpenACC/Analysis/OpenACCSupport.h"
+#include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/OpenACCRuntimeUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -79,6 +80,13 @@ Value createIdent(Location loc, StringRef functionName, OpBuilder &builder,
 /// for values like queue numbers.
 Value castToI64(Location loc, Value value, OpBuilder &builder);
 
+/// Creates an i64 constant.
+Value constantI64(Location loc, int64_t value, OpBuilder &builder);
+
+/// Returns the value \p value was converted to, or \p value itself when the
+/// conversion left it as it was. Returns a null value for a null \p value.
+Value remapOrSelf(Value value, ConversionPatternRewriter &rewriter);
+
 /// Returns the queue an `async` clause selects: the value of the clause when it
 /// has one, the queue standing for an `async` clause without a value when
 /// \p asyncOnly is set, and the synchronous queue when there is no clause at
@@ -90,10 +98,29 @@ Value getAsyncQueue(Location loc, Value asyncOperand, bool asyncOnly,
 /// which is what a `wait` clause or an `acc.wait` directive asks for. An empty
 /// \p waitOperands waits for every queue, as a `wait` clause without values
 /// does. The values must already be converted to the LLVM dialect.
+/// If provided, \p deviceNum must be an i32 value; otherwise the device number
+/// defaults to zero.
 LogicalResult emitWaitCall(Location loc, ValueRange waitOperands,
                            Value asyncQueue, OpBuilder &builder,
                            Region &globalSymbolRegion, SymbolTable &symbolTable,
-                           const ACCRuntimeCallConfig &config);
+                           const ACCRuntimeCallConfig &config,
+                           Value deviceNum = {});
+
+/// Emits the runtime call that asks for the device address the object of the
+/// data clause \p clauseOp is mapped to, which is what a `use_device` clause
+/// exposes in the body of its construct. \p hostPtr is the address of that
+/// object, already converted to the LLVM dialect. With \p ifPresent, an object
+/// that is not mapped keeps its host address instead of being reported.
+///
+/// Bounds on the clause say which part of the object it names, which the
+/// address asked about does not have to state: the result stands for the
+/// object, so whatever reads it addresses the part it wants as it would on the
+/// host.
+FailureOr<Value> emitGetDevicePtrCall(Operation *clauseOp, Value hostPtr,
+                                      bool ifPresent, OpBuilder &builder,
+                                      Region &globalSymbolRegion,
+                                      SymbolTable &symbolTable,
+                                      const ACCRuntimeCallConfig &config);
 
 /// Runs \p emitFn guarded by a branch on \p ifCond, or unguarded when there is
 /// no condition. Leaves the insertion point after the guarded code, so that a
@@ -102,11 +129,23 @@ LogicalResult emitGuardedByIfCond(Location loc, Value ifCond,
                                   RewriterBase &rewriter,
                                   function_ref<LogicalResult()> emitFn);
 
-/// The clauses of a construct can be given once per device type. Of the values
-/// that reach a given device type, the ones naming it are the most specific,
-/// then the ones naming every device type, then the ones given before any
-/// device_type clause.
-SmallVector<DeviceType, 3> getDeviceTypesByPrecedence(DeviceType deviceType);
+/// Emits \p thenFn on the path a branch on \p ifCond takes and \p elseFn on
+/// the other one, and returns the value that reaches the code following the
+/// branch. Both have to produce a value, and of the same type. With no
+/// condition only \p thenFn is emitted and its value returned. As with
+/// emitGuardedByIfCond, the insertion point is left after the branch.
+FailureOr<Value>
+emitValueSelectedByIfCond(Location loc, Value ifCond, RewriterBase &rewriter,
+                          function_ref<FailureOr<Value>()> thenFn,
+                          function_ref<FailureOr<Value>()> elseFn);
+
+/// Splices \p region, the body of a structured construct, into the block
+/// holding \p op, so that the construct itself can be erased. The code that
+/// follows \p op is branched to where the region ends, whether it ends in an
+/// `acc.terminator` or, as a region holding no terminator does, at the end of
+/// its blocks.
+void spliceConstructRegion(Operation *op, Region &region,
+                           RewriterBase &rewriter);
 
 namespace detail {
 /// The constructs carrying a `device_type` clause hold their async and wait
