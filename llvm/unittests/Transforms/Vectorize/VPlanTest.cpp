@@ -163,7 +163,7 @@ TEST_F(VPInstructionTest, moveBefore) {
   VPBB1.appendRecipe(I2);
   VPBB1.appendRecipe(I3);
 
-  I1->moveBefore(VPBB1, I3->getIterator());
+  I1->moveBefore(I3->getIterator());
 
   CHECK_ITERATOR(VPBB1, I2, I1, I3);
 
@@ -175,7 +175,7 @@ TEST_F(VPInstructionTest, moveBefore) {
   VPBB2.appendRecipe(I4);
   VPBB2.appendRecipe(I5);
 
-  I3->moveBefore(VPBB2, I4->getIterator());
+  I3->moveBefore(I4->getIterator());
 
   CHECK_ITERATOR(VPBB1, I2, I1);
   CHECK_ITERATOR(VPBB2, I3, I4, I5);
@@ -183,7 +183,7 @@ TEST_F(VPInstructionTest, moveBefore) {
 
   VPBasicBlock &VPBB3 = *getPlan().createVPBasicBlock("");
 
-  I4->moveBefore(VPBB3, VPBB3.end());
+  I4->moveBefore(VPBB3.end());
 
   CHECK_ITERATOR(VPBB1, I2, I1);
   CHECK_ITERATOR(VPBB2, I3, I5);

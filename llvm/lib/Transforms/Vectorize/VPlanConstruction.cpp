@@ -523,7 +523,7 @@ static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB, DebugLoc DL) {
 /// Creates extracts for values in \p Plan defined in a loop region and used
 /// outside a loop region.
 static void createExtractsForLiveOuts(VPlan &Plan, VPBasicBlock *MiddleVPBB) {
-  VPBuilder B(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
+  VPBuilder B(MiddleVPBB->getFirstNonPhi());
   for (VPBasicBlock *EB : Plan.getExitBlocks()) {
     if (!is_contained(EB->predecessors(), MiddleVPBB))
       continue;
@@ -603,7 +603,7 @@ static void addInitialSkeleton(VPlan &Plan, Type *InductionTy,
   // Create resume phis in the scalar preheader for each phi in the scalar loop.
   // Their incoming value from the vector loop will be the last lane of the
   // corresponding vector loop header phi.
-  VPBuilder MiddleBuilder(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
+  VPBuilder MiddleBuilder(MiddleVPBB->getFirstNonPhi());
   VPBuilder ScalarPHBuilder(ScalarPH);
   assert(equal(ScalarPH->getPredecessors(),
                ArrayRef<VPBlockBase *>({MiddleVPBB, Plan.getEntry()})) &&
@@ -887,8 +887,7 @@ static bool hoistPreviousBeforeFORUsers(VPFirstOrderRecurrencePHIRecipe *FOR,
   });
 
   for (VPRecipeBase *HoistCandidate : HoistCandidates) {
-    HoistCandidate->moveBefore(*HoistPoint->getParent(),
-                               HoistPoint->getIterator());
+    HoistCandidate->moveBefore(HoistPoint->getIterator());
   }
 
   return true;
@@ -921,21 +920,19 @@ static bool tryToSinkOrHoistRecurrenceUsers(VPBasicBlock *HeaderVPBB,
       Previous = PrevPhi->getBackedgeValue()->getDefiningRecipe();
     }
 
-    VPBasicBlock *InsertBlock = FOR->getParent();
-    VPBasicBlock::iterator InsertPt = InsertBlock->getFirstNonPhi();
+    VPBasicBlock::iterator InsertPt = FOR->getParent()->getFirstNonPhi();
     if (Previous) {
       // Sink FOR users after Previous or hoist Previous before FOR users.
       if (!sinkRecurrenceUsersAfterPrevious(FOR, Previous, VPDT) &&
           !hoistPreviousBeforeFORUsers(FOR, Previous, VPDT))
         return false;
-      InsertBlock = Previous->getParent();
       InsertPt = isa<VPHeaderPHIRecipe>(Previous)
-                     ? InsertBlock->getFirstNonPhi()
+                     ? Previous->getParent()->getFirstNonPhi()
                      : std::next(Previous->getIterator());
     }
 
     // Create FirstOrderRecurrenceSplice and replace FOR uses.
-    VPBuilder LoopBuilder(InsertBlock, InsertPt);
+    VPBuilder LoopBuilder(InsertPt);
     auto *RecurSplice =
         LoopBuilder.createNaryOp(VPInstruction::FirstOrderRecurrenceSplice,
                                  {FOR, FOR->getBackedgeValue()});
@@ -1170,13 +1167,13 @@ void VPlanTransforms::createInLoopReductionRecipes(VPlan &Plan,
             Instruction::FMul,
             {CurrentLink->getOperand(0), CurrentLink->getOperand(1)},
             CurrentLinkI->getFastMathFlags());
-        LinkVPBB->insert(FMulRecipe, CurrentLink->getIterator());
+        FMulRecipe->insertBefore(CurrentLink);
         VecOp = FMulRecipe;
       } else if (Kind == RecurKind::AddChainWithSubs &&
                  match(CurrentLink, m_Sub(m_VPValue(), m_VPValue()))) {
         Type *PhiTy = PhiR->getScalarType();
         auto *Zero = Plan.getConstantInt(PhiTy, 0);
-        VPBuilder Builder(LinkVPBB, CurrentLink->getIterator());
+        VPBuilder Builder(CurrentLink);
         auto *Sub = Builder.createSub(Zero, CurrentLink->getOperand(1),
                                       CurrentLinkI->getDebugLoc());
         Sub->setUnderlyingValue(CurrentLinkI);
@@ -1375,7 +1372,7 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
 
   // Abstract header mask, materialized into concrete recipes later.
   VPValue *HeaderMask = LoopRegion->createHeaderMask();
-  VPBuilder Builder(Header, Header->getFirstNonPhi());
+  VPBuilder Builder(Header->getFirstNonPhi());
   Builder.createNaryOp(VPInstruction::BranchOnCond, HeaderMask);
 
   VPBasicBlock *OrigLatch = LoopRegion->getExitingBasicBlock();
@@ -1415,7 +1412,7 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
     CollectBypassedOperands(R);
 
   // Insert phis for values coming past the end of the tail.
-  Builder.setInsertPoint(Latch, Latch->begin());
+  Builder.setInsertPoint(Latch->begin());
   for (const auto &[V, Users] : NeedsPhi) {
     VPValue *TailVal = Plan.getPoison(V->getScalarType());
     std::optional<VPIRFlags> Flags;
@@ -1910,7 +1907,7 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
   VPValue *AnyNaNLane =
       LatchBuilder.createNaryOp(VPInstruction::AnyOf, {AllNaNLanes});
   VPBasicBlock *MiddleVPBB = Plan.getMiddleBlock();
-  VPBuilder MiddleBuilder(MiddleVPBB, MiddleVPBB->begin());
+  VPBuilder MiddleBuilder(MiddleVPBB->begin());
   for (const auto &[RedPhiR, _] : MinOrMaxNumReductionsToHandle) {
     assert(RecurrenceDescriptor::isFPMinMaxNumRecurrenceKind(
                RedPhiR->getRecurrenceKind()) &&
@@ -2470,8 +2467,7 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
     // Reducing to a scalar min or max value is placed right before reducing to
     // its scalar iteration, in order to generate instructions that use both
     // their operands.
-    MinOrMaxResult->moveBefore(*FindIVRdxResult->getParent(),
-                               FindIVRdxResult->getIterator());
+    MinOrMaxResult->moveBefore(FindIVRdxResult->getIterator());
 
     bool IsStrictPredicate = CmpInst::isStrictPredicate(Pred);
     if (IsStrictPredicate) {
@@ -2532,7 +2528,7 @@ void VPlanTransforms::attachAliasMaskToHeaderMask(VPlan &Plan) {
       DebugLoc::getUnknown(), "incoming.alias.mask", I1Ty);
 
   VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
-  Builder = VPBuilder(Header, Header->getFirstNonPhi());
+  Builder = VPBuilder(Header->getFirstNonPhi());
 
   // Update all existing users of the header mask to "HeaderMask & AliasMask".
   auto *ClampedHeaderMask = Builder.createAnd(HeaderMask, AliasMask);

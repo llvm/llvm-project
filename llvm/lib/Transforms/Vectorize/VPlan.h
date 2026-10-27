@@ -400,14 +400,12 @@ protected:
 /// recipes must inherit from VPSingleDef instead of inheriting from both
 /// VPRecipeBase and VPValue separately.
 class LLVM_ABI_FOR_TEST VPRecipeBase
-    : public ilist_node_with_parent<VPRecipeBase, VPBasicBlock>,
+    : public ilist_node_with_parent<VPRecipeBase, VPBasicBlock,
+                                    ilist_parent<VPBasicBlock>>,
       public VPDef,
       public VPUser {
   friend VPBasicBlock;
   friend class VPBlockUtils;
-
-  /// Each VPRecipe belongs to a single VPBasicBlock.
-  VPBasicBlock *Parent = nullptr;
 
   /// The debug location for the recipe.
   DebugLoc DL;
@@ -473,9 +471,9 @@ public:
   /// Clone the current recipe.
   virtual VPRecipeBase *clone() = 0;
 
-  /// \return the VPBasicBlock which this VPRecipe belongs to.
-  VPBasicBlock *getParent() { return Parent; }
-  const VPBasicBlock *getParent() const { return Parent; }
+  /// The list type holding the recipes of a VPBasicBlock. Each node, including
+  /// the sentinel, stores its parent VPBasicBlock.
+  using RecipeListTy = iplist<VPRecipeBase, ilist_parent<VPBasicBlock>>;
 
   /// \return the VPRegionBlock which the recipe belongs to.
   VPRegionBlock *getRegion();
@@ -493,9 +491,8 @@ public:
   /// Insert an unlinked recipe into a basic block immediately before
   /// the specified recipe.
   void insertBefore(VPRecipeBase *InsertPos);
-  /// Insert an unlinked recipe into \p BB immediately before the insertion
-  /// point \p IP;
-  void insertBefore(VPBasicBlock &BB, iplist<VPRecipeBase>::iterator IP);
+  /// Insert an unlinked recipe immediately before the insertion point \p IP.
+  void insertBefore(RecipeListTy::iterator IP);
 
   /// Insert an unlinked Recipe into a basic block immediately after
   /// the specified Recipe.
@@ -505,10 +502,8 @@ public:
   /// the VPBasicBlock that MovePos lives in, right after MovePos.
   void moveAfter(VPRecipeBase *MovePos);
 
-  /// Unlink this recipe and insert into BB before I.
-  ///
-  /// \pre I is a valid iterator into BB.
-  void moveBefore(VPBasicBlock &BB, iplist<VPRecipeBase>::iterator I);
+  /// Unlink this recipe and insert it before \p I.
+  void moveBefore(RecipeListTy::iterator I);
 
   /// This method unlinks 'this' from the containing basic block, but does not
   /// delete it.
@@ -517,7 +512,7 @@ public:
   /// This method unlinks 'this' from the containing basic block and deletes it.
   ///
   /// \returns an iterator pointing to the element after the erased one
-  iplist<VPRecipeBase>::iterator eraseFromParent();
+  RecipeListTy::iterator eraseFromParent();
 
   /// \return an ID for the concrete type of this object.
   VPRecipeTy getVPRecipeID() const { return SubclassID; }
@@ -4477,20 +4472,24 @@ class LLVM_ABI_FOR_TEST VPBasicBlock : public VPBlockBase {
 
   /// Use VPlan::createVPBasicBlock to create VPBasicBlocks.
   VPBasicBlock(const Twine &Name = "", VPRecipeBase *Recipe = nullptr)
-      : VPBlockBase(VPBasicBlockSC, Name.str()) {
+      : VPBasicBlock(VPBasicBlockSC, Name) {
     if (Recipe)
       appendRecipe(Recipe);
   }
 
 public:
-  using RecipeListTy = iplist<VPRecipeBase>;
+  using RecipeListTy = VPRecipeBase::RecipeListTy;
 
 protected:
   /// The VPRecipes held in the order of output instructions to generate.
   RecipeListTy Recipes;
 
   VPBasicBlock(VPBlockTy BlockSC, const Twine &Name = "")
-      : VPBlockBase(BlockSC, Name.str()) {}
+      : VPBlockBase(BlockSC, Name.str()) {
+    // Set the parent of the list's sentinel, so end() iterators know their
+    // block.
+    Recipes.end().getNodePtr()->setParent(this);
+  }
 
 public:
   ~VPBasicBlock() override {
@@ -4540,8 +4539,10 @@ public:
 
   void insert(VPRecipeBase *Recipe, iterator InsertPt) {
     assert(Recipe && "No recipe to append.");
-    assert(!Recipe->Parent && "Recipe already in VPlan");
-    Recipe->Parent = this;
+    assert(!Recipe->getParent() && "Recipe already in VPlan");
+    assert(InsertPt.getNodeParent() == this &&
+           "Insertion position not in this VPBasicBlock");
+    Recipe->setParent(this);
     Recipes.insert(InsertPt, Recipe);
   }
 

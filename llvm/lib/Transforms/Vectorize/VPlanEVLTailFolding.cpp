@@ -394,7 +394,7 @@ static void fixupVFUsersForEVL(VPlan &Plan, VPValue &EVL) {
     MaxEVL = Builder.createScalarZExtOrTrunc(
         MaxEVL, Type::getInt32Ty(Plan.getContext()), DebugLoc::getUnknown());
 
-    Builder.setInsertPoint(Header, Header->getFirstNonPhi());
+    Builder.setInsertPoint(Header->getFirstNonPhi());
     VPValue *PrevEVL = Builder.createScalarPhi(
         {MaxEVL, &EVL}, DebugLoc::getUnknown(), "prev.evl");
 
@@ -435,8 +435,7 @@ static void fixupVFUsersForEVL(VPlan &Plan, VPValue &EVL) {
 
   // Replace the abstract header mask with a mask equivalent to predicating by
   // EVL: icmp ult step-vector, EVL
-  VPRecipeBase *EVLR = EVL.getDefiningRecipe();
-  VPBuilder Builder(EVLR->getParent(), std::next(EVLR->getIterator()));
+  auto Builder = VPBuilder::getToInsertAfter(EVL.getDefiningRecipe());
   Type *EVLType = EVL.getScalarType();
   VPValue *EVLMask = Builder.createICmp(
       CmpInst::ICMP_ULT,
@@ -512,8 +511,8 @@ void VPlanTransforms::addExplicitVectorLength(
   // Create the CurrentIteration recipe in the vector loop.
   auto *CurrentIteration =
       new VPCurrentIterationPHIRecipe(StartV, DebugLoc::getUnknown());
-  CurrentIteration->insertBefore(*Header, Header->begin());
-  VPBuilder Builder(Header, Header->getFirstNonPhi());
+  CurrentIteration->insertBefore(Header->begin());
+  VPBuilder Builder(Header->getFirstNonPhi());
   // Create the AVL (application vector length), starting from TC -> 0 in steps
   // of EVL.
   VPPhi *AVLPhi = Builder.createScalarPhi(

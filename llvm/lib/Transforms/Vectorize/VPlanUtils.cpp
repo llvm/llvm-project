@@ -95,7 +95,7 @@ VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr) {
   auto Iter = EntryVPBB->getFirstNonPhi();
   while (Iter != EntryVPBB->end() && isa<VPIRInstruction>(*Iter))
     ++Iter;
-  EntryVPBB->insert(Expanded, Iter);
+  Expanded->insertBefore(Iter);
   return Expanded;
 }
 
@@ -1538,7 +1538,7 @@ VPValue *vputils::reconstructSSA(VPBasicBlock *VPBB,
 
   // Multiple predecessors, create a join.
   Type *Ty = Defs.begin()->second->getScalarType();
-  VPPhi *Phi = VPBuilder(VPBB, VPBB->getFirstNonPhi())
+  VPPhi *Phi = VPBuilder(VPBB->getFirstNonPhi())
                    .createScalarPhi({}, DebugLoc::getUnknown(), "", {}, Ty);
   Defs[VPBB] = Phi;
   for (auto *Pred : VPBB->predecessors())
