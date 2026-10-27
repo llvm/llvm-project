@@ -218,7 +218,7 @@ void llvm::addAIRPortablePasses(legacy::PassManagerBase &PM) {
   PM.add(createAIRNaNMinMaxLegacyPass());
   PM.add(createLLVMToAIRIntrinsicsLegacyPass());
   PM.add(createAIRBarrierRenameLegacyPass());
-  PM.add(createAIRLowerAtomicRMWLegacyPass());
+  PM.add(createAIRLowerAtomicRMWLegacyPass(/*OrderingHints=*/true));
   PM.add(createAIRScalarArgsToConstantBuffersLegacyPass());
   PM.add(createAIRSystemValuesLegacyPass());
 }

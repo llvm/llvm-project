@@ -25,9 +25,14 @@ public:
 };
 
 class AIRLowerAtomicRMWLegacy : public ModulePass {
+  bool OrderingHints;
+
 public:
   bool runOnModule(Module &M) override;
-  AIRLowerAtomicRMWLegacy() : ModulePass(ID) {}
+  /// With \p OrderingHints, ordered atomics keep their ordering as
+  /// air::AtomicOrderingMD (for consumers other than Metal).
+  AIRLowerAtomicRMWLegacy(bool OrderingHints = false)
+      : ModulePass(ID), OrderingHints(OrderingHints) {}
   static char ID;
 };
 

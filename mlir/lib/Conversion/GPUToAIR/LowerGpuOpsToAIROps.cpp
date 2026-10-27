@@ -175,10 +175,37 @@ struct GPUBarrierOpLowering : ConvertOpToLLVMPattern<gpu::BarrierOp> {
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op->getLoc();
     Type i32 = rewriter.getI32Type();
-    // mem_flags: device (1) | threadgroup (2); thread_scope_threadgroup (1).
-    Value flags = LLVM::ConstantOp::create(rewriter, loc, i32, 3);
+    if (adaptor.getNamedBarrier())
+      return rewriter.notifyMatchFailure(op, "named barrier");
+    // mem_flags: device (1) | threadgroup (2), or the memory of `memfence`
+    // (none for `memfence []`, which only synchronizes).
+    int64_t memFlags = 3;
+    if (std::optional<ArrayAttr> spaces = op.getAddressSpaces()) {
+      memFlags = 0;
+      for (Attribute a : *spaces)
+        switch (cast<gpu::AddressSpaceAttr>(a).getValue()) {
+        case gpu::AddressSpace::Global:
+          memFlags |= 1;
+          break;
+        case gpu::AddressSpace::Workgroup:
+          memFlags |= 2;
+          break;
+        case gpu::AddressSpace::Private:
+          break;
+        }
+    }
+    Value flags = LLVM::ConstantOp::create(rewriter, loc, i32, memFlags);
+    gpu::BarrierScope barrierScope = op.getScope();
+    if (barrierScope != gpu::BarrierScope::Workgroup &&
+        barrierScope != gpu::BarrierScope::Subgroup)
+      return rewriter.notifyMatchFailure(op, "barrier scope beyond workgroup");
+    // thread_scope_threadgroup (1).
     Value scope = LLVM::ConstantOp::create(rewriter, loc, i32, 1);
-    callAIR(rewriter, op, "air.wg.barrier", nullptr, {flags, scope});
+    callAIR(rewriter, op,
+            barrierScope == gpu::BarrierScope::Subgroup
+                ? "air.simdgroup.barrier"
+                : "air.wg.barrier",
+            nullptr, {flags, scope});
     rewriter.eraseOp(op);
     return success();
   }
@@ -404,9 +431,10 @@ struct MatrixMultiplyAccumulateOpLowering
   LogicalResult
   matchAndRewrite(air::MatrixMultiplyAccumulateOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    std::string m = "v64" + typeSuffix(op.getType().getElementType());
-    std::string name = "air.simdgroup_matrix_8x8_multiply_accumulate." + m +
-                       "." + m + "." + m + "." + m;
+    std::string ab = "v64" + typeSuffix(op.getA().getType().getElementType());
+    std::string cd = "v64" + typeSuffix(op.getType().getElementType());
+    std::string name = "air.simdgroup_matrix_8x8_multiply_accumulate." + cd +
+                       "." + ab + "." + ab + "." + cd;
     rewriter.replaceOp(op, callAIR(rewriter, op, name, op.getType(),
                                    {adaptor.getA(), adaptor.getB(),
                                     adaptor.getC()}));

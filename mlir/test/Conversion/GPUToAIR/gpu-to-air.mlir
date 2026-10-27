@@ -38,8 +38,10 @@ gpu.module @ids {
 
 // -----
 
-// The barrier orders device and threadgroup memory; shuffles, ballots and
-// reductions are AIR's SIMD-group functions.
+// The barrier orders device and threadgroup memory, or the memory its
+// memfence names (none for `memfence []`); a subgroup-scope barrier is AIR's
+// SIMD-group barrier. Shuffles, ballots and reductions are AIR's SIMD-group
+// functions.
 gpu.module @simd {
   // CHECK-LABEL: llvm.func @simd(
   gpu.func @simd(%out: memref<8xf32, 1>, %v: f32, %p: i1) kernel {
@@ -47,6 +49,15 @@ gpu.module @simd {
     // CHECK: %[[S:.*]] = llvm.mlir.constant(1 : i32)
     // CHECK: llvm.call @air.wg.barrier(%[[F]], %[[S]]) : (i32, i32) -> ()
     gpu.barrier
+    // CHECK: %[[N:.*]] = llvm.mlir.constant(0 : i32)
+    // CHECK: llvm.call @air.wg.barrier(%[[N]], %{{.*}}) : (i32, i32) -> ()
+    gpu.barrier memfence []
+    // CHECK: %[[W:.*]] = llvm.mlir.constant(2 : i32)
+    // CHECK: llvm.call @air.wg.barrier(%[[W]], %{{.*}}) : (i32, i32) -> ()
+    gpu.barrier memfence [#gpu.address_space<workgroup>]
+    // CHECK: %[[G:.*]] = llvm.mlir.constant(1 : i32)
+    // CHECK: llvm.call @air.simdgroup.barrier(%[[G]], %{{.*}}) : (i32, i32) -> ()
+    gpu.barrier scope <subgroup> memfence [#gpu.address_space<global>]
     %c1 = arith.constant 1 : i32
     %c32 = arith.constant 32 : i32
     // CHECK: llvm.call @air.simd_shuffle.u.i32(%{{.*}}, %{{.*}}) : (i32, i16) -> i32
@@ -82,6 +93,10 @@ gpu.module @matrix {
     %d = air.simdgroup_matrix_multiply_accumulate %m, %m, %f : vector<64xf32>
     // CHECK: llvm.call @air.simdgroup_matrix_8x8_store.v64f32.p1f32(
     air.simdgroup_matrix_store %d, %C[%i0, %i0] : vector<64xf32> -> memref<8x8xf32, strided<[8, 1]>, 1>
+    %h = arith.truncf %m : vector<64xf32> to vector<64xf16>
+    // CHECK: llvm.call @air.simdgroup_matrix_8x8_multiply_accumulate.v64f32.v64f16.v64f16.v64f32(%{{.*}}, %{{.*}}, %{{.*}}) : (vector<64xf16>, vector<64xf16>, vector<64xf32>) -> vector<64xf32>
+    %e = air.simdgroup_matrix_multiply_accumulate %h, %h, %d : vector<64xf16>, vector<64xf32>
+    air.simdgroup_matrix_store %e, %C[%i0, %i0] : vector<64xf32> -> memref<8x8xf32, strided<[8, 1]>, 1>
     gpu.return
   }
 }

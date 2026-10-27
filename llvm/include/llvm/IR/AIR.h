@@ -65,6 +65,14 @@ constexpr StringLiteral ThreadsPerSimdgroup = "air.threads_per_simdgroup";
 constexpr StringLiteral SimdgroupsPerThreadgroup =
     "air.simdgroups_per_threadgroup";
 
+/// A hint on a relaxed AIR atomic that AIR's portable lowering placed between
+/// two seq_cst `air.atomic.fence` calls (AIR 2.8 atomics are relaxed): the
+/// MSL memory_order(s) of the LLVM atomic it came from, `!{i32 order}`, or
+/// `!{i32 success, i32 failure}` for a compare-exchange. A consumer with
+/// ordered atomics (AGX) may replace the fence, atomic, fence with one atomic
+/// of that order. Metal-bound output does not carry it.
+constexpr StringLiteral AtomicOrderingMD = "agx.atomic.ordering";
+
 } // namespace air
 } // namespace llvm
 

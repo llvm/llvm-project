@@ -1025,7 +1025,10 @@ Calls to AIR functions become LLVM intrinsics and instructions:
   for threadgroup memory and ``thread_scope_threadgroup``, volatile when AIR
   says so; the compare-exchange leaves the value it found in its expected
   operand;
-* ``air.atomic.fence`` is a ``fence``;
+* ``air.atomic.fence`` is a ``fence``; an atomic between two ``seq_cst``
+  fences (AIR's ordered atomic, which is relaxed) that carries
+  ``!agx.atomic.ordering`` (the order AIR's portable passes lowered it from)
+  is that ordered atomic, without the fences;
 * ``air.wg.barrier`` is ``llvm.agx.threadgroup_barrier``, between
   workgroup-scope release and acquire fences when it orders memory, and
   ``air.simdgroup.barrier`` a workgroup-scope fence (SIMD-groups run in
@@ -1047,8 +1050,11 @@ Calls to AIR functions become LLVM intrinsics and instructions:
   are fragments in the layout of ``llvm.agx.simdgroup.matrix.fma`` (see
   `SIMD-group matrices`_): a ``<64 x T>`` becomes the thread's ``<2 x T>``,
   loads and stores move its two elements at
-  (c + j + origin.x) * stride.x + (r + origin.y) * stride.y, and element-wise
-  operations, selects and phis apply to the fragment. Other uses of a
+  (c + j + origin.x) * stride.x + (r + origin.y) * stride.y, a
+  multiply-accumulate of ``half`` or ``bfloat`` matrices into ``float`` ones
+  extends the operands first, and element-wise operations, AIR's and LLVM's
+  element-wise functions (``air.fma``, ``llvm.maxnum``), ``fpext`` /
+  ``fptrunc``, selects and phis apply to the fragment. Other uses of a
   ``<64 x T>``, which would depend on how AIR orders its elements, are
   errors.
 

@@ -107,6 +107,32 @@ static unsigned getScope(LLVMContext &Ctx, unsigned AS, SyncScope::ID SSID) {
   return ScopeDevice;
 }
 
+/// The MSL memory_order of an LLVM ordering.
+static unsigned mslOrder(AtomicOrdering O) {
+  switch (O) {
+  case AtomicOrdering::Acquire:
+    return 2;
+  case AtomicOrdering::Release:
+    return 3;
+  case AtomicOrdering::AcquireRelease:
+    return 4;
+  case AtomicOrdering::SequentiallyConsistent:
+    return OrderSeqCst;
+  default:
+    return OrderRelaxed;
+  }
+}
+
+/// air::AtomicOrderingMD on the AIR atomic \p Call.
+static void addOrderingHint(CallInst *Call, ArrayRef<AtomicOrdering> Orders) {
+  LLVMContext &Ctx = Call->getContext();
+  SmallVector<Metadata *, 2> Ops;
+  for (AtomicOrdering O : Orders)
+    Ops.push_back(ConstantAsMetadata::get(
+        ConstantInt::get(Type::getInt32Ty(Ctx), mslOrder(O))));
+  Call->setMetadata(air::AtomicOrderingMD, MDNode::get(Ctx, Ops));
+}
+
 static bool isOrdered(AtomicOrdering O) {
   return O != AtomicOrdering::NotAtomic && O != AtomicOrdering::Unordered &&
          O != AtomicOrdering::Monotonic;
@@ -124,7 +150,7 @@ static void emitFence(IRBuilder<> &B, Module &M, unsigned Scope) {
                    B.getInt32(Scope)});
 }
 
-static bool lowerAtomicRMW(Module &M) {
+static bool lowerAtomicRMW(Module &M, bool OrderingHints) {
   LLVMContext &Ctx = M.getContext();
   Type *I32 = Type::getInt32Ty(Ctx);
   Type *I1 = Type::getInt1Ty(Ctx);
@@ -172,11 +198,15 @@ static bool lowerAtomicRMW(Module &M) {
                                   {Ptr->getType(), Expected->getType(), I32,
                                    I32, I32, I32, I1},
                                   false));
-      Value *Old = B.CreateCall(
+      CallInst *Old = B.CreateCall(
           F, {Ptr, Expected, CX->getNewValOperand(), B.getInt32(OrderRelaxed),
               B.getInt32(OrderRelaxed), B.getInt32(Scope), B.getTrue()});
-      if (Ordered)
+      if (Ordered) {
         emitFence(B, M, Scope);
+        if (OrderingHints)
+          addOrderingHint(Old, {CX->getSuccessOrdering(),
+                                CX->getFailureOrdering()});
+      }
       Value *Success = B.CreateICmpEQ(Old, CX->getCompareOperand());
       Value *Result = B.CreateInsertValue(PoisonValue::get(CX->getType()), Old, 0);
       Result = B.CreateInsertValue(Result, Success, 1);
@@ -208,12 +238,15 @@ static bool lowerAtomicRMW(Module &M) {
 
     if (Ordered)
       emitFence(B, M, Scope);
-    Value *Result = B.CreateCall(
+    CallInst *Result = B.CreateCall(
         FC, {RMW->getPointerOperand(), RMW->getValOperand(),
              B.getInt32(OrderRelaxed), B.getInt32(Scope), B.getTrue()},
         RMW->getName());
-    if (Ordered)
+    if (Ordered) {
       emitFence(B, M, Scope);
+      if (OrderingHints)
+        addOrderingHint(Result, RMW->getOrdering());
+    }
     RMW->replaceAllUsesWith(Result);
     RMW->eraseFromParent();
     Changed = true;
@@ -224,12 +257,12 @@ static bool lowerAtomicRMW(Module &M) {
 
 PreservedAnalyses AIRLowerAtomicRMWPass::run(Module &M,
                                                ModuleAnalysisManager &AM) {
-  return lowerAtomicRMW(M) ? PreservedAnalyses::none()
+  return lowerAtomicRMW(M, /*OrderingHints=*/false) ? PreservedAnalyses::none()
                            : PreservedAnalyses::all();
 }
 
 bool AIRLowerAtomicRMWLegacy::runOnModule(Module &M) {
-  return lowerAtomicRMW(M);
+  return lowerAtomicRMW(M, OrderingHints);
 }
 
 char AIRLowerAtomicRMWLegacy::ID = 0;
@@ -237,6 +270,6 @@ char AIRLowerAtomicRMWLegacy::ID = 0;
 INITIALIZE_PASS(AIRLowerAtomicRMWLegacy, DEBUG_TYPE, "AIR Lower AtomicRMW",
                 false, false)
 
-ModulePass *llvm::createAIRLowerAtomicRMWLegacyPass() {
-  return new AIRLowerAtomicRMWLegacy();
+ModulePass *llvm::createAIRLowerAtomicRMWLegacyPass(bool OrderingHints) {
+  return new AIRLowerAtomicRMWLegacy(OrderingHints);
 }

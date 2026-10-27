@@ -102,7 +102,11 @@ The others adapt the module to Apple's Metal driver (for example
 to the Triton host's argument convention (``air-scalar-buffer-packing``), or to
 the bitcode writer. ``addAIRPortablePasses`` (``AIR.h``) adds the six, in the
 same order, for consumers other than the Metal driver; ``llc -air-portable``
-runs them alone and prints the module.
+runs them alone and prints the module. There, ``air-lower-atomic-rmw`` also
+marks each ordered atomic it makes relaxed between two ``seq_cst`` fences with
+the order it had (``!agx.atomic.ordering``, ``llvm/IR/AIR.h``), so that a
+consumer with ordered atomics (the AGX backend) can restore it; the module
+for Metal does not carry it.
 
 Kernel Arguments
 ================

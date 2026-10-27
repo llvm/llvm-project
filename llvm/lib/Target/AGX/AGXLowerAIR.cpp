@@ -41,6 +41,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringTable.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/AIR.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -172,6 +173,7 @@ private:
   Value *systemValue(IRBuilder<> &B, StringRef Role, Type *Ty, Function *F);
   void passConstantBuffersByReference(AIRKernel &K, Function *NewF);
   void lowerMatrices(Function &F);
+  void foldOrderedAtomics(Function &F);
   void lowerCalls();
   bool lowerCall(CallInst &CI, StringRef Name, Value *&Result);
   bool lowerAtomic(IRBuilder<> &B, CallInst &CI, StringRef Name,
@@ -1132,8 +1134,36 @@ void LowerAIR::lowerMatrices(Function &F) {
                                    Get(S->getFalseValue()), I.getName());
         continue;
       }
+      // fpext and fptrunc between matrix element types.
+      if (auto *C = dyn_cast<CastInst>(&I);
+          C && isMatrix(C->getType()) && isMatrix(C->getSrcTy())) {
+        Value *V = IB.CreateCast(C->getOpcode(), Get(C->getOperand(0)),
+                                 FragTy(C->getType()), I.getName());
+        if (auto *VI = dyn_cast<Instruction>(V))
+          VI->copyIRFlags(&I);
+        Frag[&I] = V;
+        continue;
+      }
       if (isa<FreezeInst>(I)) {
         Frag[&I] = IB.CreateFreeze(Get(I.getOperand(0)), I.getName());
+        continue;
+      }
+      // An element-wise intrinsic of matrices (llvm.fma.v64f32).
+      if (auto *II = dyn_cast<IntrinsicInst>(&I);
+          II && isMatrix(II->getType()) &&
+          isTriviallyVectorizable(II->getIntrinsicID()) &&
+          all_of(II->args(), [&](Value *A) {
+            return !A->getType()->isVectorTy() || A->getType() == II->getType();
+          })) {
+        SmallVector<Value *, 4> Args;
+        for (Value *A : II->args())
+          Args.push_back(isMatrix(A->getType()) ? Get(A) : A);
+        Value *New = IB.CreateIntrinsic(II->getIntrinsicID(),
+                                        {FragTy(II->getType())}, Args, nullptr,
+                                        I.getName());
+        if (auto *NI = dyn_cast<Instruction>(New))
+          NI->copyIRFlags(&I);
+        Frag[&I] = New;
         continue;
       }
       auto *CI = dyn_cast<CallInst>(&I);
@@ -1195,10 +1225,18 @@ void LowerAIR::lowerMatrices(Function &F) {
         for (unsigned J = 0; J < 2; ++J)
           IB.CreateStore(IB.CreateExtractElement(V, J),
                          Element(IB, EltTy, Arg(1), Arg(3), Arg(4), J));
-      } else if (Name.starts_with("multiply_accumulate.") && N == 3) {
-        Frag[&I] = IB.CreateIntrinsic(Intrinsic::agx_simdgroup_matrix_fma,
-                                      {FragTy(CI->getType())},
-                                      {Get(Arg(0)), Get(Arg(1)), Get(Arg(2))});
+      } else if (Name.starts_with("multiply_accumulate.") && N == 3 &&
+                 Arg(0)->getType() == Arg(1)->getType() &&
+                 Arg(2)->getType() == CI->getType()) {
+        // f16 or bf16 A and B with f32 C: the products are exact in f32.
+        Type *FT = FragTy(CI->getType());
+        Value *A = Get(Arg(0)), *B = Get(Arg(1));
+        if (A->getType() != FT) {
+          A = IB.CreateFPExt(A, FT);
+          B = IB.CreateFPExt(B, FT);
+        }
+        Frag[&I] = IB.CreateIntrinsic(Intrinsic::agx_simdgroup_matrix_fma, {FT},
+                                      {A, B, Get(Arg(2))});
       } else if (Name.starts_with("multiply.") && N == 2) {
         Type *FT = FragTy(CI->getType());
         Frag[&I] = IB.CreateIntrinsic(Intrinsic::agx_simdgroup_matrix_fma, {FT},
@@ -1242,6 +1280,65 @@ void LowerAIR::lowerMatrices(Function &F) {
     I->replaceAllUsesWith(PoisonValue::get(I->getType()));
   for (Instruction *I : Old)
     I->eraseFromParent();
+}
+
+// AIR 2.8's atomics are relaxed, so AIR's lowering of an ordered LLVM atomic
+// is the relaxed atomic between two seq_cst fences, where the AGX backend
+// fences far more than for the ordered atomic. Where the atomic carries the
+// order it came from (air::AtomicOrderingMD) and the fences are still around
+// it, the atomic takes that order and the fences go: the original atomic.
+void LowerAIR::foldOrderedAtomics(Function &F) {
+  auto IsFence = [](Instruction *I, Value *Scope) {
+    auto *CI = dyn_cast_or_null<CallInst>(I);
+    Function *Callee = CI ? CI->getCalledFunction() : nullptr;
+    if (!Callee || Callee->getName() != "air.atomic.fence" ||
+        CI->arg_size() != 3)
+      return false;
+    auto *Order = dyn_cast<ConstantInt>(CI->getArgOperand(1));
+    return Order && Order->getZExtValue() == 5 &&
+           CI->getArgOperand(2) == Scope;
+  };
+  SmallVector<CallInst *, 8> Atomics;
+  for (Instruction &I : instructions(F))
+    if (auto *CI = dyn_cast<CallInst>(&I);
+        CI && CI->getMetadata(air::AtomicOrderingMD))
+      Atomics.push_back(CI);
+  for (CallInst *CI : Atomics) {
+    MDNode *Hint = CI->getMetadata(air::AtomicOrderingMD);
+    CI->setMetadata(air::AtomicOrderingMD, nullptr);
+    StringRef Name = CI->getCalledFunction()
+                         ? CI->getCalledFunction()->getName()
+                         : StringRef();
+    bool CmpXchg = Name.ends_with(".cmpxchg.weak.i32");
+    // (ptr, value, order, scope, volatile) or (ptr, expected, desired,
+    // success, failure, scope, [flags,] volatile).
+    unsigned OrderArg = CmpXchg ? 3 : 2;
+    unsigned ScopeArg = CmpXchg ? 5 : 3;
+    if (!Name.starts_with("air.atomic.") ||
+        Hint->getNumOperands() != (CmpXchg ? 2u : 1u) ||
+        CI->arg_size() <= ScopeArg)
+      continue;
+    Value *Scope = CI->getArgOperand(ScopeArg);
+    // A compare-exchange stores the expected value just before it.
+    Instruction *Before = CI->getPrevNode();
+    if (CmpXchg) {
+      auto *SI = dyn_cast_or_null<StoreInst>(Before);
+      if (!SI || SI->getPointerOperand() != CI->getArgOperand(1))
+        continue;
+      Before = SI->getPrevNode();
+    }
+    Instruction *After = CI->getNextNode();
+    if (!IsFence(Before, Scope) || !IsFence(After, Scope) ||
+        !all_of(Hint->operands(), [](const MDOperand &Op) {
+          return mdconst::hasa<ConstantInt>(Op);
+        }))
+      continue;
+    for (unsigned K = 0; K < Hint->getNumOperands(); ++K)
+      CI->setArgOperand(OrderArg + K,
+                        mdconst::extract<ConstantInt>(Hint->getOperand(K)));
+    Before->eraseFromParent();
+    After->eraseFromParent();
+  }
 }
 
 void LowerAIR::lowerCalls() {
@@ -1398,8 +1495,10 @@ bool LowerAIR::run() {
     if (F.isIntrinsic() && F.use_empty())
       F.eraseFromParent();
 
-  for (Function &F : M)
+  for (Function &F : M) {
     lowerMatrices(F);
+    foldOrderedAtomics(F);
+  }
   lowerCalls();
   dropAIRMetadata();
   M.setTargetTriple(TM.getTargetTriple());

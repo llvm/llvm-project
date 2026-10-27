@@ -139,11 +139,26 @@ def AIR_MatrixStoreOp : AIR_Op<"simdgroup_matrix_store"> {
 
 def AIR_MatrixMultiplyAccumulateOp
     : AIR_Op<"simdgroup_matrix_multiply_accumulate",
-             [Pure, AllTypesMatch<["a", "b", "c", "result"]>]> {
+             [Pure, AllTypesMatch<["a", "b"]>,
+              AllTypesMatch<["c", "result"]>]> {
   let summary = "D = A * B + C on 8x8 SIMD-group matrices";
+  let description = [{
+    A and B have one element type and C and D another: the same, or f16 or
+    bf16 A and B with f32 C and D (products and sums in f32).
+    ```mlir
+    %d = air.simdgroup_matrix_multiply_accumulate %a, %b, %c : vector<64xf32>
+    %e = air.simdgroup_matrix_multiply_accumulate %h, %h, %d : vector<64xf16>, vector<64xf32>
+    ```
+  }];
   let arguments = (ins AIR_Matrix:$a, AIR_Matrix:$b, AIR_Matrix:$c);
   let results = (outs AIR_Matrix:$result);
-  let assemblyFormat = "$a `,` $b `,` $c attr-dict `:` type($result)";
+  let assemblyFormat = [{
+    $a `,` $b `,` $c attr-dict `:` custom<MatrixMMATypes>(type($a), type($c))
+  }];
+  let builders = [OpBuilder<(ins "Value":$a, "Value":$b, "Value":$c), [{
+    build($_builder, $_state, c.getType(), a, b, c);
+  }]>];
+  let hasVerifier = 1;
 }
 
 def AIR_MatrixFillOp

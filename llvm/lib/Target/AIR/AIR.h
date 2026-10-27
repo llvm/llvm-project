@@ -76,8 +76,9 @@ ModulePass *createAIRBarrierRenameLegacyPass();
 /// Initializer for the AIR lower-atomicrmw pass.
 void initializeAIRLowerAtomicRMWLegacyPass(PassRegistry &);
 
-/// Pass to lower `atomicrmw` instructions to `air.atomic.*` intrinsic calls.
-ModulePass *createAIRLowerAtomicRMWLegacyPass();
+/// Pass to lower `atomicrmw` instructions to `air.atomic.*` intrinsic calls;
+/// with \p OrderingHints, ordered ones carry `agx.atomic.ordering`.
+ModulePass *createAIRLowerAtomicRMWLegacyPass(bool OrderingHints = false);
 
 /// Initializer for the AIR i64 simd shuffle split pass.
 void initializeAIRSplitI64ShuffleLegacyPass(PassRegistry &);

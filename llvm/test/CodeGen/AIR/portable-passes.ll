@@ -4,7 +4,8 @@
 ; to the Metal driver do not run: fneg stays, the device load in the loop is
 ; not made volatile, the store without a thread index is not guarded, the
 ; helper is not inlined and the constant buffer is not packed into
-; _scalar_buf. The full pipeline does all of these.
+; _scalar_buf. The full pipeline does all of these. An ordered atomic, relaxed
+; between fences in AIR, keeps its order as agx.atomic.ordering here only.
 ; RUN: llc -mtriple=air -air-portable %s -o - | FileCheck %s
 ; RUN: llc -mtriple=air %s -o - | FileCheck %s --check-prefix=METAL
 ; RUN: not --crash llc -mtriple=air -air-portable -filetype=obj %s -o /dev/null 2>&1 \
@@ -17,15 +18,20 @@
 ; CHECK: call float @air.sqrt.f32(
 ; CHECK: call float @helper(
 ; CHECK: call i32 @air.atomic.global.add.s.i32(
+; CHECK: call void @air.atomic.fence(i32 3, i32 5, i32 2)
+; CHECK-NEXT: call i32 @air.atomic.global.add.s.i32({{.*}}), !agx.atomic.ordering ![[ACQREL:[0-9]+]]
+; CHECK-NEXT: call void @air.atomic.fence(i32 3, i32 5, i32 2)
 ; CHECK-NOT: load volatile
 ; CHECK: ret void
 ; CHECK: !air.kernel = !{![[K:[0-9]+]]}
-; CHECK: ![[K]] = !{ptr @kernel,
+; CHECK-DAG: ![[K]] = !{ptr @kernel,
+; CHECK-DAG: ![[ACQREL]] = !{i32 4}
 
 ; METAL-LABEL: define void @kernel(
 ; METAL-SAME: %_scalar_buf
 ; METAL-NOT: fneg
 ; METAL-NOT: call float @helper(
+; METAL-NOT: agx.atomic.ordering
 ; METAL: load volatile
 
 ; OBJ: -air-portable prints the module; use -filetype=asm
@@ -46,6 +52,7 @@ entry:
   %r = call float @llvm.sqrt.f32(float %s)
   %h = call float @helper(float %r)
   %old = atomicrmw add ptr addrspace(1) %out, i32 %tx monotonic
+  %ord = atomicrmw add ptr addrspace(1) %out, i32 %old acq_rel
   %slot = getelementptr float, ptr addrspace(1) %out, i32 1
   br label %loop
 

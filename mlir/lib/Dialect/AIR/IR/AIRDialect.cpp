@@ -53,5 +53,32 @@ LogicalResult MatrixStoreOp::verify() {
                             getValue().getType());
 }
 
+LogicalResult MatrixMultiplyAccumulateOp::verify() {
+  Type ab = getA().getType().getElementType();
+  Type cd = getC().getType().getElementType();
+  if (ab != cd && !((ab.isF16() || ab.isBF16()) && cd.isF32()))
+    return emitOpError("multiplies ")
+           << ab << " matrices into " << cd
+           << " (only the same type, or f16 or bf16 into f32)";
+  return success();
+}
+
+/// `: T` when A, B, C and D all have type T, else `: TA, TC`.
+static ParseResult parseMatrixMMATypes(OpAsmParser &parser, Type &a, Type &c) {
+  if (parser.parseType(a))
+    return failure();
+  c = a;
+  if (succeeded(parser.parseOptionalComma()))
+    return parser.parseType(c);
+  return success();
+}
+
+static void printMatrixMMATypes(OpAsmPrinter &printer, Operation *, Type a,
+                                Type c) {
+  printer << a;
+  if (a != c)
+    printer << ", " << c;
+}
+
 #define GET_OP_CLASSES
 #include "mlir/Dialect/AIR/IR/AIROps.cpp.inc"
