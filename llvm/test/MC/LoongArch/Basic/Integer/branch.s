@@ -4,9 +4,9 @@
 # RUN:     | FileCheck --check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc %s --triple=loongarch64 --show-encoding \
 # RUN:     | FileCheck --check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
-# RUN: llvm-mc %s --triple=loongarch32 --filetype=obj | llvm-objdump -d - \
+# RUN: llvm-mc %s --triple=loongarch32 --filetype=obj | llvm-objdump --no-print-imm-hex -d - \
 # RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
-# RUN: llvm-mc %s --triple=loongarch64 --filetype=obj | llvm-objdump -d - \
+# RUN: llvm-mc %s --triple=loongarch64 --filetype=obj | llvm-objdump --no-print-imm-hex -d - \
 # RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
 
 # CHECK-ASM-AND-OBJ: beq $a6, $a3, 176

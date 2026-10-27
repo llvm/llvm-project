@@ -6,8 +6,8 @@
 
 # RUN: ld.lld 32.o --defsym foo16=b16+4 --defsym bar16=b16 --defsym foo21=b21+4 --defsym bar21=b21 --defsym foo26=b26+4 --defsym bar26=b26 -o 32
 # RUN: ld.lld 64.o --defsym foo16=b16+4 --defsym bar16=b16 --defsym foo21=b21+4 --defsym bar21=b21 --defsym foo26=b26+4 --defsym bar26=b26 -o 64
-# RUN: llvm-objdump --no-show-raw-insn -d 32 | FileCheck %s
-# RUN: llvm-objdump --no-show-raw-insn -d 64 | FileCheck %s
+# RUN: llvm-objdump --no-print-imm-hex --no-show-raw-insn -d 32 | FileCheck %s
+# RUN: llvm-objdump --no-print-imm-hex --no-show-raw-insn -d 64 | FileCheck %s
 # CHECK: beq $zero, $zero, 4
 # CHECK: bne $zero, $zero, -4
 # CHECK: beqz $s8, 4
@@ -17,8 +17,8 @@
 
 # RUN: ld.lld 32.o --defsym foo16=b16+0x1fffc --defsym bar16=b16+4-0x20000 --defsym foo21=b21+0x3ffffc --defsym bar21=b21+4-0x400000 --defsym foo26=b26+0x7fffffc --defsym bar26=b26+4-0x8000000 -o 32.limits
 # RUN: ld.lld 64.o --defsym foo16=b16+0x1fffc --defsym bar16=b16+4-0x20000 --defsym foo21=b21+0x3ffffc --defsym bar21=b21+4-0x400000 --defsym foo26=b26+0x7fffffc --defsym bar26=b26+4-0x8000000 -o 64.limits
-# RUN: llvm-objdump --no-show-raw-insn -d 32.limits | FileCheck --check-prefix=LIMITS %s
-# RUN: llvm-objdump --no-show-raw-insn -d 64.limits | FileCheck --check-prefix=LIMITS %s
+# RUN: llvm-objdump --no-print-imm-hex --no-show-raw-insn -d 32.limits | FileCheck --check-prefix=LIMITS %s
+# RUN: llvm-objdump --no-print-imm-hex --no-show-raw-insn -d 64.limits | FileCheck --check-prefix=LIMITS %s
 # LIMITS:      beq $zero, $zero, 131068
 # LIMITS-NEXT: bne $zero, $zero, -131072
 # LIMITS:      beqz $s8, 4194300
