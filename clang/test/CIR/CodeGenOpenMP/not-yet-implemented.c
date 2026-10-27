@@ -1,4 +1,13 @@
-// RUN: %clang_cc1 -fopenmp -triple x86_64-linux-gnu -fclangir %s -verify -emit-cir -o -
+// RUN: %clang_cc1 -fopenmp -triple x86_64-linux-gnu -fopenmp-targets=amdgcn-amd-amdhsa -fclangir %s -verify -emit-cir -o -
+
+static int global_var;
+
+void map_global_var() {
+  // expected-error@+2{{ClangIR code gen Not Yet Implemented: OpenMP map clause with global or static variable}}
+  // expected-error@+1{{ClangIR code gen Not Yet Implemented: OpenMP target implicit by-ref capture}}
+#pragma omp target map(tofrom : global_var)
+  { global_var = 1; }
+}
 
 void do_things() {
   // expected-error@+1{{ClangIR code gen Not Yet Implemented: OpenMP OMPCriticalDirective}}

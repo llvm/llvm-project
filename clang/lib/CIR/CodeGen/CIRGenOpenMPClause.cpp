@@ -182,6 +182,14 @@ bool OpenMPClauseEmitter::emitMap(
         continue;
       }
 
+      // Globals and statics aren't captured locals, so there's no local
+      // address to remap.
+      if (!vd->hasLocalStorage()) {
+        cgm.errorNYI(varExpr->getExprLoc(),
+                     "OpenMP map clause with global or static variable");
+        continue;
+      }
+
       result.mapVars.push_back(
           emitMapInfoForVar(cgf, builder, loc, vd, mapFlags));
       if (mapSyms)
