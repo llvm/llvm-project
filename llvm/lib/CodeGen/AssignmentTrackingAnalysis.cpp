@@ -1320,7 +1320,7 @@ private:
   /// Update \p LiveSet after encountering an instruction with a DIAssignID
   /// attachment, \p I.
   void processTaggedInstruction(Instruction &I, BlockInfo *LiveSet);
-  /// Update \p LiveSet after encountering an instruciton without a DIAssignID
+  /// Update \p LiveSet after encountering an instruction without a DIAssignID
   /// attachment, \p I.
   void processUntaggedInstruction(Instruction &I, BlockInfo *LiveSet);
   void processUnknownStoreToVariable(Instruction &I, VariableID &Var,

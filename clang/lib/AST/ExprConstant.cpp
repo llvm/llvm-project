@@ -6486,7 +6486,20 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
   case Stmt::ContinueStmtClass:
   case Stmt::BreakStmtClass: {
     auto *B = cast<LoopControlStmt>(S);
-    Info.BreakContinueStack.push_back(B->getNamedLoopOrSwitch());
+    const Stmt *LoopOrSwitch = nullptr;
+    if (B->isNamed()) {
+      LoopOrSwitch = B->getNamedLoopOrSwitch();
+      // May be null if the named loop is outside of the
+      // current evaluation context, i.e. not a valid target.
+      if (!LoopOrSwitch) {
+        Info.FFDiag(S->getBeginLoc(),
+                    diag::note_break_continue_label_outside_context)
+            << isa<ContinueStmt>(B);
+        return ESR_Failed;
+      }
+    }
+
+    Info.BreakContinueStack.push_back(LoopOrSwitch);
     return isa<ContinueStmt>(S) ? ESR_Continue : ESR_Break;
   }
 
@@ -22802,6 +22815,13 @@ APSInt Expr::EvaluateKnownConstInt(const ASTContext &Ctx) const {
   ExprTimeTraceScope TimeScope(this, Ctx, "EvaluateKnownConstInt");
   EvalResult EVResult;
 
+  bool IsConst;
+  if (FastEvaluateAsRValue(this, EVResult.Val, Ctx, IsConst)) {
+    assert(IsConst);
+    assert(EVResult.Val.isInt() && "Expression did not evaluate to integer");
+    return EVResult.Val.getInt();
+  }
+
   if (Ctx.getLangOpts().EnableNewConstInterp) {
     interp::EvalSettings Settings(EvaluationMode::IgnoreSideEffects, EVResult,
                                   /*SProxy=*/nullptr);
@@ -22834,6 +22854,13 @@ APSInt Expr::EvaluateKnownConstIntCheckOverflow(
   ExprTimeTraceScope TimeScope(this, Ctx, "EvaluateKnownConstIntCheckOverflow");
   EvalResult EVResult;
   EVResult.Diag = Diag;
+
+  bool IsConst;
+  if (FastEvaluateAsRValue(this, EVResult.Val, Ctx, IsConst)) {
+    assert(IsConst);
+    assert(EVResult.Val.isInt() && "Expression did not evaluate to integer");
+    return EVResult.Val.getInt();
+  }
 
   if (Ctx.getLangOpts().EnableNewConstInterp) {
     interp::EvalSettings Settings(EvaluationMode::IgnoreSideEffects, EVResult,

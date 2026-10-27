@@ -11454,7 +11454,7 @@ Register LoongArchTargetLowering::getExceptionSelectorRegister(
 
 static int getEstimateRefinementSteps(EVT VT,
                                       const LoongArchSubtarget &Subtarget) {
-  // Feature FRECIPE instrucions relative accuracy is 2^-14.
+  // Feature FRECIPE instructions relative accuracy is 2^-14.
   // IEEE float has 23 digits and double has 52 digits.
   int RefinementSteps = VT.getScalarType() == MVT::f64 ? 2 : 1;
   return RefinementSteps;
