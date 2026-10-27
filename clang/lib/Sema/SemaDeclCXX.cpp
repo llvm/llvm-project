@@ -878,7 +878,7 @@ Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
 
     // In most cases, there's no actual problem with an explicitly-specified
     // type, but a function type won't work here, and ActOnVariableDeclarator
-    // shouldn't be called for such a type. 
+    // shouldn't be called for such a type.
     // Recover from invalid pointer declarators by removing pointer chunks
     // so type deduction can proceed and the bindings remain usable.
     bool DroppedPointer = false;

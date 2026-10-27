@@ -2496,9 +2496,7 @@ public:
     DeclTypeInfo.erase(DeclTypeInfo.begin() + index);
   }
 
-  void DropFirstTypeObject() {
-    DropTypeObject(0);
-  }
+  void DropFirstTypeObject() { DropTypeObject(0); }
 
   /// Return the innermost (closest to the declarator) chunk of this
   /// declarator that is not a parens chunk, or null if there are no
