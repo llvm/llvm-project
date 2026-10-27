@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Level Zero Context abstraction.
+// Level Zero Driver abstraction.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0CONTEXT_H
-#define OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0CONTEXT_H
+#ifndef OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0DRIVER_H
+#define OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0DRIVER_H
 
 #include "APIHelpers.h"
 #include "L0Compat.h"
@@ -95,8 +95,8 @@ private:
 
 /// Driver and context-specific resources. We assume a single context per
 /// driver.
-class L0ContextTy {
-  /// The plugin that created this context.
+class L0DriverTy {
+  /// The plugin that created this driver.
   LevelZeroPluginTy &Plugin;
 
   /// Level Zero Driver handle.
@@ -135,16 +135,16 @@ public:
   static constexpr int32_t ImportExist = 1;
 
   /// Create context, initialize event pool and extension functions.
-  L0ContextTy(LevelZeroPluginTy &Plugin, ze_driver_handle_t zeDriver,
-              int32_t DriverId);
+  L0DriverTy(LevelZeroPluginTy &Plugin, ze_driver_handle_t zeDriver,
+             int32_t DriverId);
 
-  L0ContextTy(const L0ContextTy &) = delete;
-  L0ContextTy(L0ContextTy &&) = delete;
-  L0ContextTy &operator=(const L0ContextTy &) = delete;
-  L0ContextTy &operator=(const L0ContextTy &&) = delete;
+  L0DriverTy(const L0DriverTy &) = delete;
+  L0DriverTy(L0DriverTy &&) = delete;
+  L0DriverTy &operator=(const L0DriverTy &) = delete;
+  L0DriverTy &operator=(const L0DriverTy &&) = delete;
 
   /// Release resources.
-  ~L0ContextTy();
+  ~L0DriverTy();
 
   Error init();
   Error deinit();
@@ -218,4 +218,4 @@ public:
 
 } // namespace llvm::omp::target::plugin
 
-#endif // OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0CONTEXT_H
+#endif // OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0DRIVER_H
