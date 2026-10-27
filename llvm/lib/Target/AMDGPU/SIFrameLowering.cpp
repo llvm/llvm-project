@@ -940,23 +940,25 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
 
 void SIFrameLowering::emitEntryFunctionEpilogue(MachineFunction &MF,
                                                 MachineBasicBlock &MBB) const {
-  // Entry functions don't usually need an epilogue. The only exception is
-  // if we have a chain call (which is the only possible tail call in an
-  // entry function), in which case the current frame is becoming dead and  we
-  // need to reset SP to point to the base of the stack.
-  const MachineFrameInfo &FrameInfo = MF.getFrameInfo();
-  if (!FrameInfo.hasTailCall())
+  // Entry functions don't usually need an epilogue. The only exception is a
+  // block ending in a chain call (which is the only possible tail call in an
+  // entry function), in which case the current frame is becoming dead and we
+  // need to reset SP to point to the base of the stack. Other exits of the
+  // function, e.g. blocks ending in S_ENDPGM, don't need any of this.
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  const SIInstrInfo *TII = ST.getInstrInfo();
+  MachineBasicBlock::iterator MBBI = MBB.getFirstTerminator();
+  assert(MBBI != MBB.end() && "return block should end in a terminator");
+  if (!TII->isTailCall(*MBBI))
     return;
 
   // If the prologue has set SP and there aren't any local variables, then we
   // don't need to restore anything.
+  const MachineFrameInfo &FrameInfo = MF.getFrameInfo();
   if (requiresStackPointerReference(MF) && FrameInfo.getStackSize() == 0)
     return;
 
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
-  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  const SIInstrInfo *TII = ST.getInstrInfo();
-  MachineBasicBlock::iterator MBBI = MBB.getFirstTerminator();
   const DebugLoc &DL = MBBI->getDebugLoc();
 
   Register SPReg = MFI->getStackPtrOffsetReg();
