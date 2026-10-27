@@ -111,6 +111,11 @@ ValueEnumerator::ValueEnumerator(Module &M, const PointeeTypeMap &PTM)
         if (auto *SV = dyn_cast<ShuffleVectorInst>(&I))
           addType(SV->getShuffleMaskForBitcode()->getType());
 
+        // A call records its own function type, which with opaque pointers
+        // need not be the callee's.
+        if (auto *CB = dyn_cast<CallBase>(&I))
+          addType(CB->getFunctionType());
+
         if (auto *AI = dyn_cast<AllocaInst>(&I)) {
           addType(AI->getAllocatedType());
           ptrTypeIdx(PointerType::get(M.getContext(), 0),
@@ -237,6 +242,15 @@ unsigned ValueEnumerator::typeIdx(Type *T) {
   auto It = typeMap.find(E);
   if (It != typeMap.end())
     return It->second;
+  if (frozen) {
+    // A type added now would be missing from the type table already emitted.
+    std::string Msg;
+    raw_string_ostream OS(Msg);
+    OS << "AIRWriter: type '" << *T
+       << "' is used at emit time but was not registered; add it to "
+          "ValueEnumerator's registration loop";
+    report_fatal_error(StringRef(OS.str()));
+  }
   return addType(T);
 }
 
