@@ -33,7 +33,7 @@ extern bool tysan_init_is_running;
 
 void InitializeInterceptors();
 
-enum class TysanTDKind : char{
+enum class TysanTDKind : char {
   // TD that represents an access of a member in a struct
   MEMBER = 1,
   // TD that represents a struct containing values

@@ -118,17 +118,10 @@ private:
 };
 } // namespace
 
-<<<<<<< HEAD
 TypeSanitizer::TypeSanitizer(const InstrumentationOptions &Opts, Module &M)
     : Opts(Opts), OutlineInstrumentation(Opts.tysan_outline_instrumentation),
       TargetTriple(M.getTargetTriple()),
-      AnonNameRegex("^_ZTS.*N[1-9][0-9]*_GLOBAL__N"),
-      ConservativeTBAADescriptor(nullptr) {
-=======
-TypeSanitizer::TypeSanitizer(Module &M)
-    : TargetTriple(M.getTargetTriple()),
       AnonNameRegex("^_ZTS.*N[1-9][0-9]*_GLOBAL__N") {
->>>>>>> 8678792148af (Replace global sentinal with new TD tag)
   const DataLayout &DL = M.getDataLayout();
   IntptrTy = DL.getIntPtrType(M.getContext());
   PtrShift = countr_zero(IntptrTy->getPrimitiveSizeInBits() / 8);
