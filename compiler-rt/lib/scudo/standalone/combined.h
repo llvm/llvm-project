@@ -134,6 +134,23 @@ public:
                                    Chunk::getHeaderSize()));
     }
 
+    // Make sure that Ptr is a live batch returned by allocate() before the
+    // quarantine uses it. Batches share a size class with user chunks and
+    // their links aren't covered by the header checksum, so a corrupted link
+    // must not lead the quarantine to anything else.
+    void checkBatch(void *Ptr) {
+      const uptr QuarantineClassId = SizeClassMap::getClassIdBySize(
+          sizeof(QuarantineBatch) + Chunk::getHeaderSize());
+      Chunk::UnpackedHeader Header;
+      Chunk::loadHeader(Allocator.Cookie, Ptr, &Header);
+
+      if (UNLIKELY(Header.State != Chunk::State::Quarantined))
+        reportInvalidChunkState(AllocatorAction::Recycling, Ptr);
+      CHECK_EQ(Header.ClassId, QuarantineClassId);
+      CHECK_EQ(Header.Offset, 0);
+      CHECK_EQ(Header.SizeOrUnusedBytes, sizeof(QuarantineBatch));
+    }
+
   private:
     ThisT &Allocator;
     SizeClassAllocatorT &SizeClassAllocator;
