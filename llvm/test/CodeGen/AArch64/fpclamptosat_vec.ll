@@ -667,10 +667,10 @@ define <2 x i64> @utest_f64i64(<2 x double> %x) {
 ; CHECK-CVT-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl __fixunsdfti
 ; CHECK-CVT-SD-NEXT:    cmp x1, #0
-; CHECK-CVT-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-CVT-SD-NEXT:    csel x8, x0, xzr, eq
-; CHECK-CVT-SD-NEXT:    cmp x20, #0
+; CHECK-CVT-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-CVT-SD-NEXT:    fmov d0, x8
+; CHECK-CVT-SD-NEXT:    cmp x20, #0
 ; CHECK-CVT-SD-NEXT:    csel x8, x19, xzr, eq
 ; CHECK-CVT-SD-NEXT:    fmov d1, x8
 ; CHECK-CVT-SD-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
@@ -696,10 +696,10 @@ define <2 x i64> @utest_f64i64(<2 x double> %x) {
 ; CHECK-FP16-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-FP16-SD-NEXT:    bl __fixunsdfti
 ; CHECK-FP16-SD-NEXT:    cmp x1, #0
-; CHECK-FP16-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-FP16-SD-NEXT:    csel x8, x0, xzr, eq
-; CHECK-FP16-SD-NEXT:    cmp x20, #0
+; CHECK-FP16-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-FP16-SD-NEXT:    fmov d0, x8
+; CHECK-FP16-SD-NEXT:    cmp x20, #0
 ; CHECK-FP16-SD-NEXT:    csel x8, x19, xzr, eq
 ; CHECK-FP16-SD-NEXT:    fmov d1, x8
 ; CHECK-FP16-SD-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
@@ -801,15 +801,15 @@ define <2 x i64> @ustest_f64i64(<2 x double> %x) {
 ; CHECK-CVT-SD-NEXT:    mov d0, v0.d[1]
 ; CHECK-CVT-SD-NEXT:    bl __fixdfti
 ; CHECK-CVT-SD-NEXT:    cmp x1, #1
-; CHECK-CVT-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-CVT-SD-NEXT:    csel x8, x0, xzr, lt
+; CHECK-CVT-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-CVT-SD-NEXT:    csinc x9, x1, xzr, lt
 ; CHECK-CVT-SD-NEXT:    cmp x20, #1
 ; CHECK-CVT-SD-NEXT:    csel x10, x19, xzr, lt
 ; CHECK-CVT-SD-NEXT:    csinc x11, x20, xzr, lt
 ; CHECK-CVT-SD-NEXT:    cmp xzr, x10
-; CHECK-CVT-SD-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
 ; CHECK-CVT-SD-NEXT:    ngcs xzr, x11
+; CHECK-CVT-SD-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
 ; CHECK-CVT-SD-NEXT:    csel x10, x10, xzr, lt
 ; CHECK-CVT-SD-NEXT:    cmp xzr, x8
 ; CHECK-CVT-SD-NEXT:    ngcs xzr, x9
@@ -838,15 +838,15 @@ define <2 x i64> @ustest_f64i64(<2 x double> %x) {
 ; CHECK-FP16-SD-NEXT:    mov d0, v0.d[1]
 ; CHECK-FP16-SD-NEXT:    bl __fixdfti
 ; CHECK-FP16-SD-NEXT:    cmp x1, #1
-; CHECK-FP16-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-FP16-SD-NEXT:    csel x8, x0, xzr, lt
+; CHECK-FP16-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-FP16-SD-NEXT:    csinc x9, x1, xzr, lt
 ; CHECK-FP16-SD-NEXT:    cmp x20, #1
 ; CHECK-FP16-SD-NEXT:    csel x10, x19, xzr, lt
 ; CHECK-FP16-SD-NEXT:    csinc x11, x20, xzr, lt
 ; CHECK-FP16-SD-NEXT:    cmp xzr, x10
-; CHECK-FP16-SD-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
 ; CHECK-FP16-SD-NEXT:    ngcs xzr, x11
+; CHECK-FP16-SD-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
 ; CHECK-FP16-SD-NEXT:    csel x10, x10, xzr, lt
 ; CHECK-FP16-SD-NEXT:    cmp xzr, x8
 ; CHECK-FP16-SD-NEXT:    ngcs xzr, x9
@@ -1130,10 +1130,10 @@ define <2 x i64> @utest_f32i64(<2 x float> %x) {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl __fixunssfti
 ; CHECK-CVT-SD-NEXT:    cmp x1, #0
-; CHECK-CVT-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-CVT-SD-NEXT:    csel x8, x0, xzr, eq
-; CHECK-CVT-SD-NEXT:    cmp x20, #0
+; CHECK-CVT-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-CVT-SD-NEXT:    fmov d0, x8
+; CHECK-CVT-SD-NEXT:    cmp x20, #0
 ; CHECK-CVT-SD-NEXT:    csel x8, x19, xzr, eq
 ; CHECK-CVT-SD-NEXT:    fmov d1, x8
 ; CHECK-CVT-SD-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
@@ -1160,10 +1160,10 @@ define <2 x i64> @utest_f32i64(<2 x float> %x) {
 ; CHECK-FP16-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-FP16-SD-NEXT:    bl __fixunssfti
 ; CHECK-FP16-SD-NEXT:    cmp x1, #0
-; CHECK-FP16-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-FP16-SD-NEXT:    csel x8, x0, xzr, eq
-; CHECK-FP16-SD-NEXT:    cmp x20, #0
+; CHECK-FP16-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-FP16-SD-NEXT:    fmov d0, x8
+; CHECK-FP16-SD-NEXT:    cmp x20, #0
 ; CHECK-FP16-SD-NEXT:    csel x8, x19, xzr, eq
 ; CHECK-FP16-SD-NEXT:    fmov d1, x8
 ; CHECK-FP16-SD-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
@@ -1268,20 +1268,20 @@ define <2 x i64> @ustest_f32i64(<2 x float> %x) {
 ; CHECK-CVT-SD-NEXT:    mov s0, v0.s[1]
 ; CHECK-CVT-SD-NEXT:    bl __fixsfti
 ; CHECK-CVT-SD-NEXT:    cmp x1, #1
+; CHECK-CVT-SD-NEXT:    csel x8, x0, xzr, lt
 ; CHECK-CVT-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
-; CHECK-CVT-SD-NEXT:    csinc x8, x1, xzr, lt
-; CHECK-CVT-SD-NEXT:    csel x9, x0, xzr, lt
+; CHECK-CVT-SD-NEXT:    csinc x9, x1, xzr, lt
 ; CHECK-CVT-SD-NEXT:    cmp x20, #1
 ; CHECK-CVT-SD-NEXT:    csel x10, x19, xzr, lt
 ; CHECK-CVT-SD-NEXT:    csinc x11, x20, xzr, lt
 ; CHECK-CVT-SD-NEXT:    cmp xzr, x10
-; CHECK-CVT-SD-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
 ; CHECK-CVT-SD-NEXT:    ngcs xzr, x11
+; CHECK-CVT-SD-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
 ; CHECK-CVT-SD-NEXT:    csel x10, x10, xzr, lt
-; CHECK-CVT-SD-NEXT:    cmp xzr, x9
-; CHECK-CVT-SD-NEXT:    ngcs xzr, x8
+; CHECK-CVT-SD-NEXT:    cmp xzr, x8
+; CHECK-CVT-SD-NEXT:    ngcs xzr, x9
 ; CHECK-CVT-SD-NEXT:    fmov d0, x10
-; CHECK-CVT-SD-NEXT:    csel x8, x9, xzr, lt
+; CHECK-CVT-SD-NEXT:    csel x8, x8, xzr, lt
 ; CHECK-CVT-SD-NEXT:    fmov d1, x8
 ; CHECK-CVT-SD-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-CVT-SD-NEXT:    add sp, sp, #48
@@ -1306,20 +1306,20 @@ define <2 x i64> @ustest_f32i64(<2 x float> %x) {
 ; CHECK-FP16-SD-NEXT:    mov s0, v0.s[1]
 ; CHECK-FP16-SD-NEXT:    bl __fixsfti
 ; CHECK-FP16-SD-NEXT:    cmp x1, #1
+; CHECK-FP16-SD-NEXT:    csel x8, x0, xzr, lt
 ; CHECK-FP16-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
-; CHECK-FP16-SD-NEXT:    csinc x8, x1, xzr, lt
-; CHECK-FP16-SD-NEXT:    csel x9, x0, xzr, lt
+; CHECK-FP16-SD-NEXT:    csinc x9, x1, xzr, lt
 ; CHECK-FP16-SD-NEXT:    cmp x20, #1
 ; CHECK-FP16-SD-NEXT:    csel x10, x19, xzr, lt
 ; CHECK-FP16-SD-NEXT:    csinc x11, x20, xzr, lt
 ; CHECK-FP16-SD-NEXT:    cmp xzr, x10
-; CHECK-FP16-SD-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
 ; CHECK-FP16-SD-NEXT:    ngcs xzr, x11
+; CHECK-FP16-SD-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
 ; CHECK-FP16-SD-NEXT:    csel x10, x10, xzr, lt
-; CHECK-FP16-SD-NEXT:    cmp xzr, x9
-; CHECK-FP16-SD-NEXT:    ngcs xzr, x8
+; CHECK-FP16-SD-NEXT:    cmp xzr, x8
+; CHECK-FP16-SD-NEXT:    ngcs xzr, x9
 ; CHECK-FP16-SD-NEXT:    fmov d0, x10
-; CHECK-FP16-SD-NEXT:    csel x8, x9, xzr, lt
+; CHECK-FP16-SD-NEXT:    csel x8, x8, xzr, lt
 ; CHECK-FP16-SD-NEXT:    fmov d1, x8
 ; CHECK-FP16-SD-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-FP16-SD-NEXT:    add sp, sp, #48
@@ -1624,8 +1624,8 @@ define <2 x i64> @ustest_f16i64(<2 x half> %x) {
 ; CHECK-CVT-SD-NEXT:    asr x11, x9, #63
 ; CHECK-CVT-SD-NEXT:    asr x10, x8, #63
 ; CHECK-CVT-SD-NEXT:    cmp x10, #1
-; CHECK-CVT-SD-NEXT:    csinc x10, x10, xzr, lt
 ; CHECK-CVT-SD-NEXT:    csel x8, x8, xzr, lt
+; CHECK-CVT-SD-NEXT:    csinc x10, x10, xzr, lt
 ; CHECK-CVT-SD-NEXT:    cmp x11, #1
 ; CHECK-CVT-SD-NEXT:    csel x9, x9, xzr, lt
 ; CHECK-CVT-SD-NEXT:    csinc x11, x11, xzr, lt
@@ -1649,8 +1649,8 @@ define <2 x i64> @ustest_f16i64(<2 x half> %x) {
 ; CHECK-FP16-SD-NEXT:    asr x11, x9, #63
 ; CHECK-FP16-SD-NEXT:    asr x10, x8, #63
 ; CHECK-FP16-SD-NEXT:    cmp x10, #1
-; CHECK-FP16-SD-NEXT:    csinc x10, x10, xzr, lt
 ; CHECK-FP16-SD-NEXT:    csel x8, x8, xzr, lt
+; CHECK-FP16-SD-NEXT:    csinc x10, x10, xzr, lt
 ; CHECK-FP16-SD-NEXT:    cmp x11, #1
 ; CHECK-FP16-SD-NEXT:    csel x9, x9, xzr, lt
 ; CHECK-FP16-SD-NEXT:    csinc x11, x11, xzr, lt
@@ -2385,10 +2385,10 @@ define <2 x i64> @utest_f64i64_mm(<2 x double> %x) {
 ; CHECK-CVT-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl __fixunsdfti
 ; CHECK-CVT-SD-NEXT:    cmp x1, #0
-; CHECK-CVT-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-CVT-SD-NEXT:    csel x8, x0, xzr, eq
-; CHECK-CVT-SD-NEXT:    cmp x20, #0
+; CHECK-CVT-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-CVT-SD-NEXT:    fmov d0, x8
+; CHECK-CVT-SD-NEXT:    cmp x20, #0
 ; CHECK-CVT-SD-NEXT:    csel x8, x19, xzr, eq
 ; CHECK-CVT-SD-NEXT:    fmov d1, x8
 ; CHECK-CVT-SD-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
@@ -2414,10 +2414,10 @@ define <2 x i64> @utest_f64i64_mm(<2 x double> %x) {
 ; CHECK-FP16-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-FP16-SD-NEXT:    bl __fixunsdfti
 ; CHECK-FP16-SD-NEXT:    cmp x1, #0
-; CHECK-FP16-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-FP16-SD-NEXT:    csel x8, x0, xzr, eq
-; CHECK-FP16-SD-NEXT:    cmp x20, #0
+; CHECK-FP16-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-FP16-SD-NEXT:    fmov d0, x8
+; CHECK-FP16-SD-NEXT:    cmp x20, #0
 ; CHECK-FP16-SD-NEXT:    csel x8, x19, xzr, eq
 ; CHECK-FP16-SD-NEXT:    fmov d1, x8
 ; CHECK-FP16-SD-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
@@ -2518,15 +2518,15 @@ define <2 x i64> @ustest_f64i64_mm(<2 x double> %x) {
 ; CHECK-CVT-SD-NEXT:    mov d0, v0.d[1]
 ; CHECK-CVT-SD-NEXT:    bl __fixdfti
 ; CHECK-CVT-SD-NEXT:    cmp x1, #1
-; CHECK-CVT-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-CVT-SD-NEXT:    csel x8, x0, xzr, lt
+; CHECK-CVT-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-CVT-SD-NEXT:    csinc x9, x1, xzr, lt
 ; CHECK-CVT-SD-NEXT:    cmp x20, #1
-; CHECK-CVT-SD-NEXT:    csinc x10, x20, xzr, lt
-; CHECK-CVT-SD-NEXT:    csel x11, x19, xzr, lt
-; CHECK-CVT-SD-NEXT:    cmp x10, #0
+; CHECK-CVT-SD-NEXT:    csel x10, x19, xzr, lt
+; CHECK-CVT-SD-NEXT:    csinc x11, x20, xzr, lt
 ; CHECK-CVT-SD-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
-; CHECK-CVT-SD-NEXT:    csel x10, xzr, x11, mi
+; CHECK-CVT-SD-NEXT:    cmp x11, #0
+; CHECK-CVT-SD-NEXT:    csel x10, xzr, x10, mi
 ; CHECK-CVT-SD-NEXT:    cmp x9, #0
 ; CHECK-CVT-SD-NEXT:    csel x8, xzr, x8, mi
 ; CHECK-CVT-SD-NEXT:    fmov d0, x10
@@ -2553,15 +2553,15 @@ define <2 x i64> @ustest_f64i64_mm(<2 x double> %x) {
 ; CHECK-FP16-SD-NEXT:    mov d0, v0.d[1]
 ; CHECK-FP16-SD-NEXT:    bl __fixdfti
 ; CHECK-FP16-SD-NEXT:    cmp x1, #1
-; CHECK-FP16-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-FP16-SD-NEXT:    csel x8, x0, xzr, lt
+; CHECK-FP16-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-FP16-SD-NEXT:    csinc x9, x1, xzr, lt
 ; CHECK-FP16-SD-NEXT:    cmp x20, #1
-; CHECK-FP16-SD-NEXT:    csinc x10, x20, xzr, lt
-; CHECK-FP16-SD-NEXT:    csel x11, x19, xzr, lt
-; CHECK-FP16-SD-NEXT:    cmp x10, #0
+; CHECK-FP16-SD-NEXT:    csel x10, x19, xzr, lt
+; CHECK-FP16-SD-NEXT:    csinc x11, x20, xzr, lt
 ; CHECK-FP16-SD-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
-; CHECK-FP16-SD-NEXT:    csel x10, xzr, x11, mi
+; CHECK-FP16-SD-NEXT:    cmp x11, #0
+; CHECK-FP16-SD-NEXT:    csel x10, xzr, x10, mi
 ; CHECK-FP16-SD-NEXT:    cmp x9, #0
 ; CHECK-FP16-SD-NEXT:    csel x8, xzr, x8, mi
 ; CHECK-FP16-SD-NEXT:    fmov d0, x10
@@ -2839,10 +2839,10 @@ define <2 x i64> @utest_f32i64_mm(<2 x float> %x) {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl __fixunssfti
 ; CHECK-CVT-SD-NEXT:    cmp x1, #0
-; CHECK-CVT-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-CVT-SD-NEXT:    csel x8, x0, xzr, eq
-; CHECK-CVT-SD-NEXT:    cmp x20, #0
+; CHECK-CVT-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-CVT-SD-NEXT:    fmov d0, x8
+; CHECK-CVT-SD-NEXT:    cmp x20, #0
 ; CHECK-CVT-SD-NEXT:    csel x8, x19, xzr, eq
 ; CHECK-CVT-SD-NEXT:    fmov d1, x8
 ; CHECK-CVT-SD-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
@@ -2869,10 +2869,10 @@ define <2 x i64> @utest_f32i64_mm(<2 x float> %x) {
 ; CHECK-FP16-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-FP16-SD-NEXT:    bl __fixunssfti
 ; CHECK-FP16-SD-NEXT:    cmp x1, #0
-; CHECK-FP16-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-FP16-SD-NEXT:    csel x8, x0, xzr, eq
-; CHECK-FP16-SD-NEXT:    cmp x20, #0
+; CHECK-FP16-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-FP16-SD-NEXT:    fmov d0, x8
+; CHECK-FP16-SD-NEXT:    cmp x20, #0
 ; CHECK-FP16-SD-NEXT:    csel x8, x19, xzr, eq
 ; CHECK-FP16-SD-NEXT:    fmov d1, x8
 ; CHECK-FP16-SD-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
@@ -2976,15 +2976,15 @@ define <2 x i64> @ustest_f32i64_mm(<2 x float> %x) {
 ; CHECK-CVT-SD-NEXT:    mov s0, v0.s[1]
 ; CHECK-CVT-SD-NEXT:    bl __fixsfti
 ; CHECK-CVT-SD-NEXT:    cmp x1, #1
-; CHECK-CVT-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-CVT-SD-NEXT:    csel x8, x0, xzr, lt
+; CHECK-CVT-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-CVT-SD-NEXT:    csinc x9, x1, xzr, lt
 ; CHECK-CVT-SD-NEXT:    cmp x20, #1
-; CHECK-CVT-SD-NEXT:    csinc x10, x20, xzr, lt
-; CHECK-CVT-SD-NEXT:    csel x11, x19, xzr, lt
-; CHECK-CVT-SD-NEXT:    cmp x10, #0
+; CHECK-CVT-SD-NEXT:    csel x10, x19, xzr, lt
+; CHECK-CVT-SD-NEXT:    csinc x11, x20, xzr, lt
 ; CHECK-CVT-SD-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
-; CHECK-CVT-SD-NEXT:    csel x10, xzr, x11, mi
+; CHECK-CVT-SD-NEXT:    cmp x11, #0
+; CHECK-CVT-SD-NEXT:    csel x10, xzr, x10, mi
 ; CHECK-CVT-SD-NEXT:    cmp x9, #0
 ; CHECK-CVT-SD-NEXT:    csel x8, xzr, x8, mi
 ; CHECK-CVT-SD-NEXT:    fmov d0, x10
@@ -3012,15 +3012,15 @@ define <2 x i64> @ustest_f32i64_mm(<2 x float> %x) {
 ; CHECK-FP16-SD-NEXT:    mov s0, v0.s[1]
 ; CHECK-FP16-SD-NEXT:    bl __fixsfti
 ; CHECK-FP16-SD-NEXT:    cmp x1, #1
-; CHECK-FP16-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-FP16-SD-NEXT:    csel x8, x0, xzr, lt
+; CHECK-FP16-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-FP16-SD-NEXT:    csinc x9, x1, xzr, lt
 ; CHECK-FP16-SD-NEXT:    cmp x20, #1
-; CHECK-FP16-SD-NEXT:    csinc x10, x20, xzr, lt
-; CHECK-FP16-SD-NEXT:    csel x11, x19, xzr, lt
-; CHECK-FP16-SD-NEXT:    cmp x10, #0
+; CHECK-FP16-SD-NEXT:    csel x10, x19, xzr, lt
+; CHECK-FP16-SD-NEXT:    csinc x11, x20, xzr, lt
 ; CHECK-FP16-SD-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
-; CHECK-FP16-SD-NEXT:    csel x10, xzr, x11, mi
+; CHECK-FP16-SD-NEXT:    cmp x11, #0
+; CHECK-FP16-SD-NEXT:    csel x10, xzr, x10, mi
 ; CHECK-FP16-SD-NEXT:    cmp x9, #0
 ; CHECK-FP16-SD-NEXT:    csel x8, xzr, x8, mi
 ; CHECK-FP16-SD-NEXT:    fmov d0, x10
@@ -3326,8 +3326,8 @@ define <2 x i64> @ustest_f16i64_mm(<2 x half> %x) {
 ; CHECK-CVT-SD-NEXT:    csel x8, x8, xzr, lt
 ; CHECK-CVT-SD-NEXT:    csinc x10, x10, xzr, lt
 ; CHECK-CVT-SD-NEXT:    cmp x11, #1
-; CHECK-CVT-SD-NEXT:    csinc x11, x11, xzr, lt
 ; CHECK-CVT-SD-NEXT:    csel x9, x9, xzr, lt
+; CHECK-CVT-SD-NEXT:    csinc x11, x11, xzr, lt
 ; CHECK-CVT-SD-NEXT:    cmp x11, #0
 ; CHECK-CVT-SD-NEXT:    csel x9, xzr, x9, mi
 ; CHECK-CVT-SD-NEXT:    cmp x10, #0
@@ -3349,8 +3349,8 @@ define <2 x i64> @ustest_f16i64_mm(<2 x half> %x) {
 ; CHECK-FP16-SD-NEXT:    csel x8, x8, xzr, lt
 ; CHECK-FP16-SD-NEXT:    csinc x10, x10, xzr, lt
 ; CHECK-FP16-SD-NEXT:    cmp x11, #1
-; CHECK-FP16-SD-NEXT:    csinc x11, x11, xzr, lt
 ; CHECK-FP16-SD-NEXT:    csel x9, x9, xzr, lt
+; CHECK-FP16-SD-NEXT:    csinc x11, x11, xzr, lt
 ; CHECK-FP16-SD-NEXT:    cmp x11, #0
 ; CHECK-FP16-SD-NEXT:    csel x9, xzr, x9, mi
 ; CHECK-FP16-SD-NEXT:    cmp x10, #0

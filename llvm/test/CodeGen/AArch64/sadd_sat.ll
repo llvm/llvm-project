@@ -63,11 +63,11 @@ define i16 @func16(i16 %x, i16 %y) nounwind {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    sxth w8, w1
 ; CHECK-GI-NEXT:    add w8, w8, w0, sxth
-; CHECK-GI-NEXT:    sxth w9, w8
-; CHECK-GI-NEXT:    sbfx w10, w8, #15, #1
-; CHECK-GI-NEXT:    sub w10, w10, #8, lsl #12 // =32768
-; CHECK-GI-NEXT:    cmp w8, w9
-; CHECK-GI-NEXT:    csel w0, w10, w8, ne
+; CHECK-GI-NEXT:    sbfx w9, w8, #15, #1
+; CHECK-GI-NEXT:    sxth w10, w8
+; CHECK-GI-NEXT:    sub w9, w9, #8, lsl #12 // =32768
+; CHECK-GI-NEXT:    cmp w8, w10
+; CHECK-GI-NEXT:    csel w0, w9, w8, ne
 ; CHECK-GI-NEXT:    ret
   %tmp = call i16 @llvm.sadd.sat.i16(i16 %x, i16 %y);
   ret i16 %tmp;
@@ -76,11 +76,11 @@ define i16 @func16(i16 %x, i16 %y) nounwind {
 define i8 @func8(i8 %x, i8 %y) nounwind {
 ; CHECK-SD-LABEL: func8:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    sxtb w9, w0
-; CHECK-SD-NEXT:    mov w8, #127 // =0x7f
-; CHECK-SD-NEXT:    add w9, w9, w1, sxtb
-; CHECK-SD-NEXT:    cmp w9, #127
-; CHECK-SD-NEXT:    csel w8, w9, w8, lt
+; CHECK-SD-NEXT:    sxtb w8, w0
+; CHECK-SD-NEXT:    mov w9, #127 // =0x7f
+; CHECK-SD-NEXT:    add w8, w8, w1, sxtb
+; CHECK-SD-NEXT:    cmp w8, #127
+; CHECK-SD-NEXT:    csel w8, w8, w9, lt
 ; CHECK-SD-NEXT:    mov w9, #-128 // =0xffffff80
 ; CHECK-SD-NEXT:    cmn w8, #128
 ; CHECK-SD-NEXT:    csel w0, w8, w9, gt
@@ -90,11 +90,11 @@ define i8 @func8(i8 %x, i8 %y) nounwind {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    sxtb w8, w1
 ; CHECK-GI-NEXT:    add w8, w8, w0, sxtb
-; CHECK-GI-NEXT:    sxtb w9, w8
-; CHECK-GI-NEXT:    sbfx w10, w8, #7, #1
-; CHECK-GI-NEXT:    sub w10, w10, #128
-; CHECK-GI-NEXT:    cmp w8, w9
-; CHECK-GI-NEXT:    csel w0, w10, w8, ne
+; CHECK-GI-NEXT:    sbfx w9, w8, #7, #1
+; CHECK-GI-NEXT:    sxtb w10, w8
+; CHECK-GI-NEXT:    sub w9, w9, #128
+; CHECK-GI-NEXT:    cmp w8, w10
+; CHECK-GI-NEXT:    csel w0, w9, w8, ne
 ; CHECK-GI-NEXT:    ret
   %tmp = call i8 @llvm.sadd.sat.i8(i8 %x, i8 %y);
   ret i8 %tmp;
@@ -103,12 +103,12 @@ define i8 @func8(i8 %x, i8 %y) nounwind {
 define i4 @func3(i4 %x, i4 %y) nounwind {
 ; CHECK-SD-LABEL: func3:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    lsl w9, w1, #28
-; CHECK-SD-NEXT:    sbfx w10, w0, #0, #4
-; CHECK-SD-NEXT:    mov w8, #7 // =0x7
-; CHECK-SD-NEXT:    add w9, w10, w9, asr #28
-; CHECK-SD-NEXT:    cmp w9, #7
-; CHECK-SD-NEXT:    csel w8, w9, w8, lt
+; CHECK-SD-NEXT:    lsl w8, w1, #28
+; CHECK-SD-NEXT:    sbfx w9, w0, #0, #4
+; CHECK-SD-NEXT:    add w8, w9, w8, asr #28
+; CHECK-SD-NEXT:    mov w9, #7 // =0x7
+; CHECK-SD-NEXT:    cmp w8, #7
+; CHECK-SD-NEXT:    csel w8, w8, w9, lt
 ; CHECK-SD-NEXT:    mov w9, #-8 // =0xfffffff8
 ; CHECK-SD-NEXT:    cmn w8, #8
 ; CHECK-SD-NEXT:    csel w0, w8, w9, gt
@@ -121,8 +121,8 @@ define i4 @func3(i4 %x, i4 %y) nounwind {
 ; CHECK-GI-NEXT:    add w8, w8, w9
 ; CHECK-GI-NEXT:    sbfx w9, w8, #0, #4
 ; CHECK-GI-NEXT:    asr w10, w9, #3
-; CHECK-GI-NEXT:    cmp w8, w9
 ; CHECK-GI-NEXT:    add w10, w10, #8
+; CHECK-GI-NEXT:    cmp w8, w9
 ; CHECK-GI-NEXT:    csel w0, w10, w8, ne
 ; CHECK-GI-NEXT:    ret
   %tmp = call i4 @llvm.sadd.sat.i4(i4 %x, i4 %y);

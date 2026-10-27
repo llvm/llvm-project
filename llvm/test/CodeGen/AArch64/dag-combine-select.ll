@@ -35,8 +35,8 @@ define void @test1(i32 %bitset, i32 %val0, i32 %val1) {
 ; CHECK-SD-LABEL: test1:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    cmp w0, #7
-; CHECK-SD-NEXT:    adrp x9, out
 ; CHECK-SD-NEXT:    csel w8, w1, w2, eq
+; CHECK-SD-NEXT:    adrp x9, out
 ; CHECK-SD-NEXT:    cmp w8, #13
 ; CHECK-SD-NEXT:    csel w8, w1, w2, lo
 ; CHECK-SD-NEXT:    cmp w0, #42
