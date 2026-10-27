@@ -2154,13 +2154,22 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   }
 
   // Compare the definitions of these two enums. If either or both are
-  // incomplete (i.e. forward declared), we assume that they are equivalent.
+  // incomplete (i.e. forward declared), we assume that they are equivalent,
+  // except in C23 mode, where only complete enumerations are compatible. An
+  // enumeration without a definition is complete only if its underlying type
+  // is fixed, and then only that type needs to be compared.
   // In C23, the order of the enumerations does not matter, only the names and
   // values do.
-  D1 = D1->getDefinition();
-  D2 = D2->getDefinition();
-  if (!D1 || !D2)
-    return true;
+  EnumDecl *Def1 = D1->getDefinition(), *Def2 = D2->getDefinition();
+  if (!Def1 || !Def2) {
+    if (!Context.LangOpts.C23)
+      return true;
+    return !Def1 && !Def2 && D1->isComplete() && D2->isComplete() &&
+           IsStructurallyEquivalent(Context, D1->getIntegerType(),
+                                    D2->getIntegerType());
+  }
+  D1 = Def1;
+  D2 = Def2;
 
   if (Context.LangOpts.C23 &&
       !CheckStructurallyEquivalentAttributes(Context, D1, D2))
