@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=amdgcn-amd-amdhsa -S -passes=amdgpu-lower-kernel-attributes,instcombine,infer-alignment %s | FileCheck -enable-var-scope %s
+; RUN: opt -mtriple=amdgpu-amd-amdhsa -S -passes=amdgpu-lower-kernel-attributes,instcombine,infer-alignment %s | FileCheck -enable-var-scope %s
 
 ; CHECK-LABEL: @no_reqd_work_group_size(
 ; CHECK: load i16,

@@ -1,0 +1,89 @@
+# RUN: llc -mtriple=arm64-apple-darwin -run-pass=prolog-epilog -run-pass=machine-outliner \
+# RUN:     -verify-machineinstrs %s -o - | FileCheck %s
+
+# Do not use the MachO compact-unwind frame-record form when the outlined
+# sequence itself reads or writes FP. Restoring FP in the outlined epilogue
+# would clobber the sequence's result.
+
+--- |
+  define void @baz() #0 { ret void }
+  define void @bar(i32 %a) #0 { ret void }
+  attributes #0 = { noredzone uwtable }
+...
+---
+name:            bar
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $w0, $lr, $fp
+    $sp = frame-setup SUBXri $sp, 32, 0
+    $fp = frame-setup ADDXri $sp, 16, 0
+
+  bb.1:
+    BL @baz, implicit-def dead $lr, implicit $sp
+    $x9 = ORRXrs $xzr, $fp, 0
+    $fp = ORRXrs $xzr, $x9, 0
+    BL @baz, implicit-def dead $lr, implicit $sp
+    $w17 = ORRWri $wzr, 1
+    $w0 = ORRWri $wzr, 6
+
+    BL @baz, implicit-def dead $lr, implicit $sp
+    $x9 = ORRXrs $xzr, $fp, 0
+    $fp = ORRXrs $xzr, $x9, 0
+    BL @baz, implicit-def dead $lr, implicit $sp
+    $w17 = ORRWri $wzr, 1
+    $w0 = ORRWri $wzr, 5
+
+    BL @baz, implicit-def dead $lr, implicit $sp
+    $x9 = ORRXrs $xzr, $fp, 0
+    $fp = ORRXrs $xzr, $x9, 0
+    BL @baz, implicit-def dead $lr, implicit $sp
+    $w17 = ORRWri $wzr, 1
+    $w0 = ORRWri $wzr, 4
+
+    BL @baz, implicit-def dead $lr, implicit $sp
+    $x9 = ORRXrs $xzr, $fp, 0
+    $fp = ORRXrs $xzr, $x9, 0
+    BL @baz, implicit-def dead $lr, implicit $sp
+    $w17 = ORRWri $wzr, 1
+    $w0 = ORRWri $wzr, 3
+
+    BL @baz, implicit-def dead $lr, implicit $sp
+    $x9 = ORRXrs $xzr, $fp, 0
+    $fp = ORRXrs $xzr, $x9, 0
+    BL @baz, implicit-def dead $lr, implicit $sp
+    $w17 = ORRWri $wzr, 1
+    $w0 = ORRWri $wzr, 2
+
+    BL @baz, implicit-def dead $lr, implicit $sp
+    $x9 = ORRXrs $xzr, $fp, 0
+    $fp = ORRXrs $xzr, $x9, 0
+    BL @baz, implicit-def dead $lr, implicit $sp
+    $w17 = ORRWri $wzr, 1
+    $w0 = ORRWri $wzr, 1
+
+  bb.2:
+    $fp, $lr = LDPXi $sp, 2
+    RET undef $lr
+...
+---
+name:            baz
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $w0, $lr
+    RET undef $lr
+
+# CHECK: name:            OUTLINED_FUNCTION_0
+# CHECK-NOT: STPXpre
+# CHECK-NOT: $fp = ADDXri $sp, 0, 0
+# CHECK: frame-setup CFI_INSTRUCTION def_cfa_offset 16
+# CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $w30, -16
+# CHECK-NEXT: early-clobber $sp = STRXpre $lr, $sp, -16
+# CHECK-NEXT: BL @baz, implicit-def dead $lr, implicit $sp
+# CHECK-NEXT: $x9 = ORRXrs $xzr, $fp, 0
+# CHECK-NEXT: $fp = ORRXrs $xzr, $x9, 0
+# CHECK-NEXT: BL @baz, implicit-def dead $lr, implicit $sp
+# CHECK-NEXT: $w17 = ORRWri $wzr, 1
+# CHECK: early-clobber $sp, $lr = LDRXpost $sp, 16
+# CHECK-NEXT: RET $lr

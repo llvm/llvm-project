@@ -232,7 +232,7 @@ void ClangOpcodesEmitter::EmitDisasm(raw_ostream &OS, StringRef N,
     OS << "  Text.Op = PrintName(\"" << ID << "\");\n";
     for (const auto *Arg : R->getValueAsListOfDefs("Args"))
       OS << "  Text.Args.push_back(printArg<" << Arg->getValueAsString("Name")
-         << ">(P, PC));\n";
+         << ">(PC));\n";
 
     OS << "  break;\n";
   });
@@ -444,7 +444,7 @@ void ClangOpcodesEmitter::EmitEval(raw_ostream &OS, StringRef N,
                 PrintTypes(OS, TS);
                 OS << "(S";
                 if (PassOpPC)
-                  OS << ", OpPC";
+                  OS << ", CodePtr()";
                 for (size_t I = 0, N = Args.size(); I < N; ++I)
                   OS << ", A" << I;
                 OS << ");\n";

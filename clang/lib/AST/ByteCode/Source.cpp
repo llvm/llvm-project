@@ -31,23 +31,3 @@ SourceRange SourceInfo::getRange() const {
     return D->getSourceRange();
   return SourceRange();
 }
-
-const Expr *SourceInfo::asExpr() const {
-  if (const auto *S = dyn_cast_if_present<const Stmt *>(Source))
-    return dyn_cast<Expr>(S);
-  return nullptr;
-}
-
-const Expr *SourceMapper::getExpr(const Function *F, CodePtr PC) const {
-  if (const Expr *E = getSource(F, PC).asExpr())
-    return E;
-  return nullptr;
-}
-
-SourceLocation SourceMapper::getLocation(const Function *F, CodePtr PC) const {
-  return getSource(F, PC).getLoc();
-}
-
-SourceRange SourceMapper::getRange(const Function *F, CodePtr PC) const {
-  return getSource(F, PC).getRange();
-}

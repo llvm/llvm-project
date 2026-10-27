@@ -1,5 +1,6 @@
-! Test that GPU delayed privatization allocates dynamic private arrays for
-! target teams distribute parallel do on the heap and emits cleanup.
+! Test GPU delayed privatization for target teams distribute parallel do:
+! a dynamic-extent private array is heap-allocated (with cleanup), while a
+! constant-size private array is privatized unboxed as a plain fir.array.
 
 ! RUN: %if amdgpu-registered-target %{ \
 ! RUN:   %flang_fc1 -triple amdgcn-amd-amdhsa -emit-hlfir \
@@ -41,10 +42,10 @@ end subroutine
 
 ! CHECK: warning: {{.*}}OpenMP private dynamic array 'tmp' on a GPU target may exceed stack memory; using device heap allocation instead, which can severely degrade performance
 
-! CHECK-LABEL: omp.private {type = private} @{{.*}}Etmp_private_box_64xf32 : !fir.box<!fir.array<64xf32>> init {
-! CHECK-NOT:     fir.allocmem
-! CHECK:         fir.alloca !fir.array<64xf32>
-! CHECK:         omp.yield
+! A static (constant-size, trivial-element) private array is privatized unboxed
+! as a plain fir.array -- no descriptor and no init region, even on a GPU target.
+! The trailing end-of-line anchor confirms there is no `init {` region:
+! CHECK: omp.private {type = private} @{{.*}}Etmp_private_64xf32 : !fir.array<64xf32>{{$}}
 
 ! CHECK-LABEL: omp.private {type = private} @{{.*}}Etmp_private_heap_box_Uxf32 : !fir.box<!fir.array<?xf32>> init {
 ! CHECK:         %[[DIMS:.*]]:3 = fir.box_dims

@@ -1,0 +1,18 @@
+## LC_TARGET_TRIPLE whose triple.offset points inside the
+## target_triple_command struct (before the end of the 12-byte struct).
+--- !mach-o
+IsLittleEndian:  true
+FileHeader:
+  magic:           0xFEEDFACE
+  cputype:         0x00000007
+  cpusubtype:      0x00000003
+  filetype:        0x00000001
+  ncmds:           1
+  sizeofcmds:      12
+  flags:           0x00000000
+LoadCommands:
+  - cmd:             LC_TARGET_TRIPLE
+    cmdsize:         16
+    triple:          8
+    Content:         'arm64-apple-macos27.0.0'
+...

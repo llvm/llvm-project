@@ -642,6 +642,196 @@ define void @test_nontemporal_ALL_store_nxv16i8(ptr %p, <vscale x 16 x i8> %v) {
   ret void
 }
 
+define <vscale x 2 x i64> @test_nontemporal_masked_load_nxv2i64(ptr %p, <vscale x 2 x i1> %m) {
+; CHECK-RV64V-LABEL: test_nontemporal_masked_load_nxv2i64:
+; CHECK-RV64V:       # %bb.0:
+; CHECK-RV64V-NEXT:    vsetvli a1, zero, e64, m2, ta, mu
+; CHECK-RV64V-NEXT:    vmv.v.i v8, 0
+; CHECK-RV64V-NEXT:    ntl.all
+; CHECK-RV64V-NEXT:    vle64.v v8, (a0), v0.t
+; CHECK-RV64V-NEXT:    ret
+;
+; CHECK-RV32V-LABEL: test_nontemporal_masked_load_nxv2i64:
+; CHECK-RV32V:       # %bb.0:
+; CHECK-RV32V-NEXT:    vsetvli a1, zero, e64, m2, ta, mu
+; CHECK-RV32V-NEXT:    vmv.v.i v8, 0
+; CHECK-RV32V-NEXT:    ntl.all
+; CHECK-RV32V-NEXT:    vle64.v v8, (a0), v0.t
+; CHECK-RV32V-NEXT:    ret
+  %1 = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr %p, i32 8, <vscale x 2 x i1> %m, <vscale x 2 x i64> zeroinitializer), !nontemporal !0
+  ret <vscale x 2 x i64> %1
+}
+
+define <vscale x 2 x i64> @test_nontemporal_P1_masked_load_nxv2i64(ptr %p, <vscale x 2 x i1> %m) {
+; CHECK-RV64V-LABEL: test_nontemporal_P1_masked_load_nxv2i64:
+; CHECK-RV64V:       # %bb.0:
+; CHECK-RV64V-NEXT:    vsetvli a1, zero, e64, m2, ta, mu
+; CHECK-RV64V-NEXT:    vmv.v.i v8, 0
+; CHECK-RV64V-NEXT:    ntl.p1
+; CHECK-RV64V-NEXT:    vle64.v v8, (a0), v0.t
+; CHECK-RV64V-NEXT:    ret
+;
+; CHECK-RV32V-LABEL: test_nontemporal_P1_masked_load_nxv2i64:
+; CHECK-RV32V:       # %bb.0:
+; CHECK-RV32V-NEXT:    vsetvli a1, zero, e64, m2, ta, mu
+; CHECK-RV32V-NEXT:    vmv.v.i v8, 0
+; CHECK-RV32V-NEXT:    ntl.p1
+; CHECK-RV32V-NEXT:    vle64.v v8, (a0), v0.t
+; CHECK-RV32V-NEXT:    ret
+  %1 = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr %p, i32 8, <vscale x 2 x i1> %m, <vscale x 2 x i64> zeroinitializer), !nontemporal !0, !riscv-nontemporal-domain !1
+  ret <vscale x 2 x i64> %1
+}
+
+define <vscale x 2 x i64> @test_nontemporal_PALL_masked_load_nxv2i64(ptr %p, <vscale x 2 x i1> %m) {
+; CHECK-RV64V-LABEL: test_nontemporal_PALL_masked_load_nxv2i64:
+; CHECK-RV64V:       # %bb.0:
+; CHECK-RV64V-NEXT:    vsetvli a1, zero, e64, m2, ta, mu
+; CHECK-RV64V-NEXT:    vmv.v.i v8, 0
+; CHECK-RV64V-NEXT:    ntl.pall
+; CHECK-RV64V-NEXT:    vle64.v v8, (a0), v0.t
+; CHECK-RV64V-NEXT:    ret
+;
+; CHECK-RV32V-LABEL: test_nontemporal_PALL_masked_load_nxv2i64:
+; CHECK-RV32V:       # %bb.0:
+; CHECK-RV32V-NEXT:    vsetvli a1, zero, e64, m2, ta, mu
+; CHECK-RV32V-NEXT:    vmv.v.i v8, 0
+; CHECK-RV32V-NEXT:    ntl.pall
+; CHECK-RV32V-NEXT:    vle64.v v8, (a0), v0.t
+; CHECK-RV32V-NEXT:    ret
+  %1 = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr %p, i32 8, <vscale x 2 x i1> %m, <vscale x 2 x i64> zeroinitializer), !nontemporal !0, !riscv-nontemporal-domain !2
+  ret <vscale x 2 x i64> %1
+}
+
+define <vscale x 2 x i64> @test_nontemporal_S1_masked_load_nxv2i64(ptr %p, <vscale x 2 x i1> %m) {
+; CHECK-RV64V-LABEL: test_nontemporal_S1_masked_load_nxv2i64:
+; CHECK-RV64V:       # %bb.0:
+; CHECK-RV64V-NEXT:    vsetvli a1, zero, e64, m2, ta, mu
+; CHECK-RV64V-NEXT:    vmv.v.i v8, 0
+; CHECK-RV64V-NEXT:    ntl.s1
+; CHECK-RV64V-NEXT:    vle64.v v8, (a0), v0.t
+; CHECK-RV64V-NEXT:    ret
+;
+; CHECK-RV32V-LABEL: test_nontemporal_S1_masked_load_nxv2i64:
+; CHECK-RV32V:       # %bb.0:
+; CHECK-RV32V-NEXT:    vsetvli a1, zero, e64, m2, ta, mu
+; CHECK-RV32V-NEXT:    vmv.v.i v8, 0
+; CHECK-RV32V-NEXT:    ntl.s1
+; CHECK-RV32V-NEXT:    vle64.v v8, (a0), v0.t
+; CHECK-RV32V-NEXT:    ret
+  %1 = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr %p, i32 8, <vscale x 2 x i1> %m, <vscale x 2 x i64> zeroinitializer), !nontemporal !0, !riscv-nontemporal-domain !3
+  ret <vscale x 2 x i64> %1
+}
+
+define <vscale x 2 x i64> @test_nontemporal_ALL_masked_load_nxv2i64(ptr %p, <vscale x 2 x i1> %m) {
+; CHECK-RV64V-LABEL: test_nontemporal_ALL_masked_load_nxv2i64:
+; CHECK-RV64V:       # %bb.0:
+; CHECK-RV64V-NEXT:    vsetvli a1, zero, e64, m2, ta, mu
+; CHECK-RV64V-NEXT:    vmv.v.i v8, 0
+; CHECK-RV64V-NEXT:    ntl.all
+; CHECK-RV64V-NEXT:    vle64.v v8, (a0), v0.t
+; CHECK-RV64V-NEXT:    ret
+;
+; CHECK-RV32V-LABEL: test_nontemporal_ALL_masked_load_nxv2i64:
+; CHECK-RV32V:       # %bb.0:
+; CHECK-RV32V-NEXT:    vsetvli a1, zero, e64, m2, ta, mu
+; CHECK-RV32V-NEXT:    vmv.v.i v8, 0
+; CHECK-RV32V-NEXT:    ntl.all
+; CHECK-RV32V-NEXT:    vle64.v v8, (a0), v0.t
+; CHECK-RV32V-NEXT:    ret
+  %1 = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr %p, i32 8, <vscale x 2 x i1> %m, <vscale x 2 x i64> zeroinitializer), !nontemporal !0, !riscv-nontemporal-domain !4
+  ret <vscale x 2 x i64> %1
+}
+
+define void @test_nontemporal_masked_store_nxv2i64(ptr %p, <vscale x 2 x i64> %v, <vscale x 2 x i1> %m) {
+; CHECK-RV64V-LABEL: test_nontemporal_masked_store_nxv2i64:
+; CHECK-RV64V:       # %bb.0:
+; CHECK-RV64V-NEXT:    vsetvli a1, zero, e64, m2, ta, ma
+; CHECK-RV64V-NEXT:    ntl.all
+; CHECK-RV64V-NEXT:    vse64.v v8, (a0), v0.t
+; CHECK-RV64V-NEXT:    ret
+;
+; CHECK-RV32V-LABEL: test_nontemporal_masked_store_nxv2i64:
+; CHECK-RV32V:       # %bb.0:
+; CHECK-RV32V-NEXT:    vsetvli a1, zero, e64, m2, ta, ma
+; CHECK-RV32V-NEXT:    ntl.all
+; CHECK-RV32V-NEXT:    vse64.v v8, (a0), v0.t
+; CHECK-RV32V-NEXT:    ret
+  call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> %v, ptr %p, i32 8, <vscale x 2 x i1> %m), !nontemporal !0
+  ret void
+}
+
+define void @test_nontemporal_P1_masked_store_nxv2i64(ptr %p, <vscale x 2 x i64> %v, <vscale x 2 x i1> %m) {
+; CHECK-RV64V-LABEL: test_nontemporal_P1_masked_store_nxv2i64:
+; CHECK-RV64V:       # %bb.0:
+; CHECK-RV64V-NEXT:    vsetvli a1, zero, e64, m2, ta, ma
+; CHECK-RV64V-NEXT:    ntl.p1
+; CHECK-RV64V-NEXT:    vse64.v v8, (a0), v0.t
+; CHECK-RV64V-NEXT:    ret
+;
+; CHECK-RV32V-LABEL: test_nontemporal_P1_masked_store_nxv2i64:
+; CHECK-RV32V:       # %bb.0:
+; CHECK-RV32V-NEXT:    vsetvli a1, zero, e64, m2, ta, ma
+; CHECK-RV32V-NEXT:    ntl.p1
+; CHECK-RV32V-NEXT:    vse64.v v8, (a0), v0.t
+; CHECK-RV32V-NEXT:    ret
+  call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> %v, ptr %p, i32 8, <vscale x 2 x i1> %m), !nontemporal !0, !riscv-nontemporal-domain !1
+  ret void
+}
+
+define void @test_nontemporal_PALL_masked_store_nxv2i64(ptr %p, <vscale x 2 x i64> %v, <vscale x 2 x i1> %m) {
+; CHECK-RV64V-LABEL: test_nontemporal_PALL_masked_store_nxv2i64:
+; CHECK-RV64V:       # %bb.0:
+; CHECK-RV64V-NEXT:    vsetvli a1, zero, e64, m2, ta, ma
+; CHECK-RV64V-NEXT:    ntl.pall
+; CHECK-RV64V-NEXT:    vse64.v v8, (a0), v0.t
+; CHECK-RV64V-NEXT:    ret
+;
+; CHECK-RV32V-LABEL: test_nontemporal_PALL_masked_store_nxv2i64:
+; CHECK-RV32V:       # %bb.0:
+; CHECK-RV32V-NEXT:    vsetvli a1, zero, e64, m2, ta, ma
+; CHECK-RV32V-NEXT:    ntl.pall
+; CHECK-RV32V-NEXT:    vse64.v v8, (a0), v0.t
+; CHECK-RV32V-NEXT:    ret
+  call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> %v, ptr %p, i32 8, <vscale x 2 x i1> %m), !nontemporal !0, !riscv-nontemporal-domain !2
+  ret void
+}
+
+define void @test_nontemporal_S1_masked_store_nxv2i64(ptr %p, <vscale x 2 x i64> %v, <vscale x 2 x i1> %m) {
+; CHECK-RV64V-LABEL: test_nontemporal_S1_masked_store_nxv2i64:
+; CHECK-RV64V:       # %bb.0:
+; CHECK-RV64V-NEXT:    vsetvli a1, zero, e64, m2, ta, ma
+; CHECK-RV64V-NEXT:    ntl.s1
+; CHECK-RV64V-NEXT:    vse64.v v8, (a0), v0.t
+; CHECK-RV64V-NEXT:    ret
+;
+; CHECK-RV32V-LABEL: test_nontemporal_S1_masked_store_nxv2i64:
+; CHECK-RV32V:       # %bb.0:
+; CHECK-RV32V-NEXT:    vsetvli a1, zero, e64, m2, ta, ma
+; CHECK-RV32V-NEXT:    ntl.s1
+; CHECK-RV32V-NEXT:    vse64.v v8, (a0), v0.t
+; CHECK-RV32V-NEXT:    ret
+  call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> %v, ptr %p, i32 8, <vscale x 2 x i1> %m), !nontemporal !0, !riscv-nontemporal-domain !3
+  ret void
+}
+
+define void @test_nontemporal_ALL_masked_store_nxv2i64(ptr %p, <vscale x 2 x i64> %v, <vscale x 2 x i1> %m) {
+; CHECK-RV64V-LABEL: test_nontemporal_ALL_masked_store_nxv2i64:
+; CHECK-RV64V:       # %bb.0:
+; CHECK-RV64V-NEXT:    vsetvli a1, zero, e64, m2, ta, ma
+; CHECK-RV64V-NEXT:    ntl.all
+; CHECK-RV64V-NEXT:    vse64.v v8, (a0), v0.t
+; CHECK-RV64V-NEXT:    ret
+;
+; CHECK-RV32V-LABEL: test_nontemporal_ALL_masked_store_nxv2i64:
+; CHECK-RV32V:       # %bb.0:
+; CHECK-RV32V-NEXT:    vsetvli a1, zero, e64, m2, ta, ma
+; CHECK-RV32V-NEXT:    ntl.all
+; CHECK-RV32V-NEXT:    vse64.v v8, (a0), v0.t
+; CHECK-RV32V-NEXT:    ret
+  call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> %v, ptr %p, i32 8, <vscale x 2 x i1> %m), !nontemporal !0, !riscv-nontemporal-domain !4
+  ret void
+}
+
 !0 = !{i32 1}
 !1 = !{i32 2}
 !2 = !{i32 3}

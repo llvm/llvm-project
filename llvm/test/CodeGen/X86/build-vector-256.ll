@@ -191,14 +191,13 @@ define <16 x i16> @test_buildvector_v16i16(i16 %a0, i16 %a1, i16 %a2, i16 %a3, i
 ; AVX2-64-NEXT:    vpinsrw $5, %r9d, %xmm0, %xmm0
 ; AVX2-64-NEXT:    vpinsrw $6, {{[0-9]+}}(%rsp), %xmm0, %xmm0
 ; AVX2-64-NEXT:    vpinsrw $7, {{[0-9]+}}(%rsp), %xmm0, %xmm0
-; AVX2-64-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; AVX2-64-NEXT:    vpinsrw $1, {{[0-9]+}}(%rsp), %xmm1, %xmm1
-; AVX2-64-NEXT:    vpinsrw $2, {{[0-9]+}}(%rsp), %xmm1, %xmm1
-; AVX2-64-NEXT:    vpinsrw $3, {{[0-9]+}}(%rsp), %xmm1, %xmm1
-; AVX2-64-NEXT:    vpinsrw $4, {{[0-9]+}}(%rsp), %xmm1, %xmm1
-; AVX2-64-NEXT:    vpinsrw $5, {{[0-9]+}}(%rsp), %xmm1, %xmm1
-; AVX2-64-NEXT:    vpinsrw $6, {{[0-9]+}}(%rsp), %xmm1, %xmm1
-; AVX2-64-NEXT:    vpinsrw $7, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; AVX2-64-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm1
+; AVX2-64-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm2
+; AVX2-64-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[0,2],mem[0,2]
+; AVX2-64-NEXT:    vshufps {{.*#+}} xmm2 = xmm2[0,2],mem[0,2]
+; AVX2-64-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
+; AVX2-64-NEXT:    vpshufb {{.*#+}} ymm1 = ymm1[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
+; AVX2-64-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[0,2,2,3]
 ; AVX2-64-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; AVX2-64-NEXT:    retq
   %ins0  = insertelement <16 x i16> undef,  i16 %a0,  i32 0
@@ -297,39 +296,26 @@ define <32 x i8> @test_buildvector_v32i8(i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4,
 ;
 ; AVX2-32-LABEL: test_buildvector_v32i8:
 ; AVX2-32:       # %bb.0:
-; AVX2-32-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX2-32-NEXT:    vpinsrb $1, {{[0-9]+}}(%esp), %xmm0, %xmm0
-; AVX2-32-NEXT:    vpinsrb $2, {{[0-9]+}}(%esp), %xmm0, %xmm0
-; AVX2-32-NEXT:    vpinsrb $3, {{[0-9]+}}(%esp), %xmm0, %xmm0
-; AVX2-32-NEXT:    vpinsrb $4, {{[0-9]+}}(%esp), %xmm0, %xmm0
-; AVX2-32-NEXT:    vpinsrb $5, {{[0-9]+}}(%esp), %xmm0, %xmm0
-; AVX2-32-NEXT:    vpinsrb $6, {{[0-9]+}}(%esp), %xmm0, %xmm0
-; AVX2-32-NEXT:    vpinsrb $7, {{[0-9]+}}(%esp), %xmm0, %xmm0
-; AVX2-32-NEXT:    vpinsrb $8, {{[0-9]+}}(%esp), %xmm0, %xmm0
-; AVX2-32-NEXT:    vpinsrb $9, {{[0-9]+}}(%esp), %xmm0, %xmm0
-; AVX2-32-NEXT:    vpinsrb $10, {{[0-9]+}}(%esp), %xmm0, %xmm0
-; AVX2-32-NEXT:    vpinsrb $11, {{[0-9]+}}(%esp), %xmm0, %xmm0
-; AVX2-32-NEXT:    vpinsrb $12, {{[0-9]+}}(%esp), %xmm0, %xmm0
-; AVX2-32-NEXT:    vpinsrb $13, {{[0-9]+}}(%esp), %xmm0, %xmm0
-; AVX2-32-NEXT:    vpinsrb $14, {{[0-9]+}}(%esp), %xmm0, %xmm0
-; AVX2-32-NEXT:    vpinsrb $15, {{[0-9]+}}(%esp), %xmm0, %xmm0
-; AVX2-32-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; AVX2-32-NEXT:    vpinsrb $1, {{[0-9]+}}(%esp), %xmm1, %xmm1
-; AVX2-32-NEXT:    vpinsrb $2, {{[0-9]+}}(%esp), %xmm1, %xmm1
-; AVX2-32-NEXT:    vpinsrb $3, {{[0-9]+}}(%esp), %xmm1, %xmm1
-; AVX2-32-NEXT:    vpinsrb $4, {{[0-9]+}}(%esp), %xmm1, %xmm1
-; AVX2-32-NEXT:    vpinsrb $5, {{[0-9]+}}(%esp), %xmm1, %xmm1
-; AVX2-32-NEXT:    vpinsrb $6, {{[0-9]+}}(%esp), %xmm1, %xmm1
-; AVX2-32-NEXT:    vpinsrb $7, {{[0-9]+}}(%esp), %xmm1, %xmm1
-; AVX2-32-NEXT:    vpinsrb $8, {{[0-9]+}}(%esp), %xmm1, %xmm1
-; AVX2-32-NEXT:    vpinsrb $9, {{[0-9]+}}(%esp), %xmm1, %xmm1
-; AVX2-32-NEXT:    vpinsrb $10, {{[0-9]+}}(%esp), %xmm1, %xmm1
-; AVX2-32-NEXT:    vpinsrb $11, {{[0-9]+}}(%esp), %xmm1, %xmm1
-; AVX2-32-NEXT:    vpinsrb $12, {{[0-9]+}}(%esp), %xmm1, %xmm1
-; AVX2-32-NEXT:    vpinsrb $13, {{[0-9]+}}(%esp), %xmm1, %xmm1
-; AVX2-32-NEXT:    vpinsrb $14, {{[0-9]+}}(%esp), %xmm1, %xmm1
-; AVX2-32-NEXT:    vpinsrb $15, {{[0-9]+}}(%esp), %xmm1, %xmm1
-; AVX2-32-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX2-32-NEXT:    vmovdqa {{.*#+}} ymm0 = [0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
+; AVX2-32-NEXT:    vmovdqu {{[0-9]+}}(%esp), %ymm1
+; AVX2-32-NEXT:    vmovdqu {{[0-9]+}}(%esp), %ymm2
+; AVX2-32-NEXT:    vpshufb %ymm0, %ymm2, %ymm2
+; AVX2-32-NEXT:    vpermq {{.*#+}} ymm2 = ymm2[0,2,2,3]
+; AVX2-32-NEXT:    vpshufb %ymm0, %ymm1, %ymm1
+; AVX2-32-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[0,2,2,3]
+; AVX2-32-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; AVX2-32-NEXT:    vpbroadcastw {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
+; AVX2-32-NEXT:    vpand %ymm2, %ymm1, %ymm1
+; AVX2-32-NEXT:    vmovdqu {{[0-9]+}}(%esp), %ymm3
+; AVX2-32-NEXT:    vmovdqu {{[0-9]+}}(%esp), %ymm4
+; AVX2-32-NEXT:    vpshufb %ymm0, %ymm4, %ymm4
+; AVX2-32-NEXT:    vpermq {{.*#+}} ymm4 = ymm4[0,2,2,3]
+; AVX2-32-NEXT:    vpshufb %ymm0, %ymm3, %ymm0
+; AVX2-32-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
+; AVX2-32-NEXT:    vinserti128 $1, %xmm4, %ymm0, %ymm0
+; AVX2-32-NEXT:    vpand %ymm2, %ymm0, %ymm0
+; AVX2-32-NEXT:    vpackuswb %ymm1, %ymm0, %ymm0
+; AVX2-32-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
 ; AVX2-32-NEXT:    retl
 ;
 ; AVX2-64-LABEL: test_buildvector_v32i8:

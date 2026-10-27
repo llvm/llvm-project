@@ -48,7 +48,7 @@
 name:            main
 tracksRegLiveness: true
 callSites:
-  - { bb: 1, offset: 0 }
+  - { bb: '%bb.1', offset: 0 }
 body:             |
   bb.0:
     successors: %bb.2(0x80000000)

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=fiji -mattr=-flat-for-global -relocation-model=static < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu8.03--amdhsa -mattr=-flat-for-global -relocation-model=static < %s | FileCheck %s
 
 @lds = external addrspace(3) global [4 x i32]
 

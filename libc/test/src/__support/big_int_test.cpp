@@ -249,7 +249,7 @@ TEST(LlvmLibcUIntClassTest, BitCastToFromNativeUint128) {
 }
 #endif // LIBC_TYPES_HAS_INT128
 
-#ifdef LIBC_TYPES_HAS_FLOAT128
+#ifdef LIBC_TYPES_HAS_NATIVE_FLOAT128
 TEST(LlvmLibcUIntClassTest, BitCastToFromNativeFloat128) {
   static_assert(cpp::is_trivially_copyable<LL_UInt128>::value);
   static_assert(sizeof(LL_UInt128) == sizeof(float128));
@@ -260,7 +260,7 @@ TEST(LlvmLibcUIntClassTest, BitCastToFromNativeFloat128) {
     EXPECT_TRUE(value == forth);
   }
 }
-#endif // LIBC_TYPES_HAS_FLOAT128
+#endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
 
 #ifdef LIBC_TYPES_HAS_FLOAT16
 TEST(LlvmLibcUIntClassTest, BitCastToFromNativeFloat16) {
@@ -770,6 +770,7 @@ TEST(LlvmLibcUIntClassTest, FullMulTests) {
   } while (0)
 
 TEST(LlvmLibcUIntClassTest, QuickMulHiTests) {
+  TEST_QUICK_MUL_HI(64, 1);
   TEST_QUICK_MUL_HI(128, 1);
   TEST_QUICK_MUL_HI(192, 2);
   TEST_QUICK_MUL_HI(256, 3);

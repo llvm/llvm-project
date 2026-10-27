@@ -110,7 +110,7 @@ spirv.func @load_none() "None" {
 // CHECK-LABEL: @load_with_alignment
 spirv.func @load_with_alignment() "None" {
   %0 = spirv.Variable : !spirv.ptr<f32, Function>
-  // CHECK: llvm.load %{{.*}} {alignment = 4 : i64} : !llvm.ptr -> f32
+  // CHECK: llvm.load %{{.*}} <alignment = 4> : !llvm.ptr -> f32
   %1 = spirv.Load "Function" %0 ["Aligned", 4] : f32
   spirv.Return
 }
@@ -126,7 +126,7 @@ spirv.func @load_volatile() "None" {
 // CHECK-LABEL: @load_nontemporal
 spirv.func @load_nontemporal() "None" {
   %0 = spirv.Variable : !spirv.ptr<f32, Function>
-  // CHECK: llvm.load %{{.*}} {nontemporal} : !llvm.ptr -> f32
+  // CHECK: llvm.load %{{.*}} <nontemporal> : !llvm.ptr -> f32
   %1 = spirv.Load "Function" %0 ["Nontemporal"] : f32
   spirv.Return
 }
@@ -154,7 +154,7 @@ spirv.func @store_composite(%arg0 : !spirv.struct<(f64)>) "None" {
 // CHECK-LABEL: @store_with_alignment
 spirv.func @store_with_alignment(%arg0 : f32) "None" {
   %0 = spirv.Variable : !spirv.ptr<f32, Function>
-  // CHECK: llvm.store %{{.*}}, %{{.*}} {alignment = 4 : i64} : f32, !llvm.ptr
+  // CHECK: llvm.store %{{.*}}, %{{.*}} <alignment = 4> : f32, !llvm.ptr
   spirv.Store "Function" %0, %arg0 ["Aligned", 4] : f32
   spirv.Return
 }
@@ -170,7 +170,7 @@ spirv.func @store_volatile(%arg0 : f32) "None" {
 // CHECK-LABEL: @store_nontemporal
 spirv.func @store_nontemporal(%arg0 : f32) "None" {
   %0 = spirv.Variable : !spirv.ptr<f32, Function>
-  // CHECK: llvm.store %{{.*}}, %{{.*}} {nontemporal} : f32, !llvm.ptr
+  // CHECK: llvm.store %{{.*}}, %{{.*}} <nontemporal> : f32, !llvm.ptr
   spirv.Store "Function" %0, %arg0 ["Nontemporal"] : f32
   spirv.Return
 }

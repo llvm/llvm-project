@@ -3883,6 +3883,9 @@ TEST(TransferTest, StaticCastBaseToDerivedWithSyntheticFieldsNoModeledFields) {
               return {{"synth", RD->getASTContext().IntTy}};
             return {};
           }),
+      // This is a crash repro. We used to crash when there were synthetic
+      // fields but no derived fields.  So checking for success (without a
+      // crash) is enough.
       llvm::Succeeded());
 }
 

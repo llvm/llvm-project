@@ -388,14 +388,14 @@ FormatManager::GetSyntheticForType(lldb::TypeNameSpecifierImplSP type_sp) {
     category_sp = GetCategoryAtIndex(category_id);
     if (!category_sp->IsEnabled())
       continue;
-    lldb::ScriptedSyntheticChildrenSP synth_current_sp(
-        (ScriptedSyntheticChildren *)category_sp->GetSyntheticForType(type_sp)
-            .get());
-    if (synth_current_sp &&
+    auto synth_current_sp = category_sp->GetSyntheticForType(type_sp);
+
+    if (synth_current_sp && synth_current_sp->IsScripted() &&
         (synth_chosen_sp.get() == nullptr ||
          (prio_category > category_sp->GetEnabledPosition()))) {
       prio_category = category_sp->GetEnabledPosition();
-      synth_chosen_sp = synth_current_sp;
+      synth_chosen_sp =
+          std::static_pointer_cast<ScriptedSyntheticChildren>(synth_current_sp);
     }
   }
   return synth_chosen_sp;
@@ -412,8 +412,8 @@ void FormatManager::ForEachCategory(TypeCategoryMap::ForEachCallback callback) {
   }
 }
 
-lldb::TypeCategoryImplSP
-FormatManager::GetCategory(ConstString category_name, bool can_create) {
+lldb::TypeCategoryImplSP FormatManager::GetCategory(ConstString category_name,
+                                                    bool can_create) {
   if (!category_name)
     return GetCategory(m_default_category_name);
   lldb::TypeCategoryImplSP category;
@@ -424,7 +424,8 @@ FormatManager::GetCategory(ConstString category_name, bool can_create) {
     return lldb::TypeCategoryImplSP();
 
   m_categories_map.Add(category_name,
-                       std::make_shared<TypeCategoryImpl>(this, category_name));
+                       std::make_shared<TypeCategoryImpl>(
+                           this, category_name.GetStringRef().str()));
   return GetCategory(category_name);
 }
 

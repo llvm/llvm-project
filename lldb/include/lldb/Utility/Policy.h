@@ -50,6 +50,7 @@ struct Policy {
     bool can_run_breakpoint_actions = true;
     bool can_load_frame_providers = true;
     bool can_run_frame_recognizers = true;
+    bool can_bypass_target_api_mutex = false;
   };
 
   /// Why a private-state policy is being pushed. Distinguishes a PST's
@@ -75,6 +76,7 @@ struct Policy {
   static Policy CreatePrivateState(
       PrivateStatePurpose purpose = PrivateStatePurpose::Default);
   static Policy CreatePublicStateRunningExpression();
+  static Policy CreateScriptedExtensionCall();
   /// @}
 
   void Dump(Stream &s) const;
@@ -95,10 +97,7 @@ struct Policy {
 /// thread's stack when the task starts.
 class PolicyStack {
 public:
-  static PolicyStack &Get() {
-    static thread_local PolicyStack s_stack;
-    return s_stack;
-  }
+  static PolicyStack &Get();
 
   Policy Current() const;
 
@@ -140,6 +139,11 @@ public:
 
   [[nodiscard]] Guard PushPublicStateRunningExpression() {
     Push(Policy::CreatePublicStateRunningExpression());
+    return Guard();
+  }
+
+  [[nodiscard]] Guard PushScriptedExtensionCall() {
+    Push(Policy::CreateScriptedExtensionCall());
     return Guard();
   }
 

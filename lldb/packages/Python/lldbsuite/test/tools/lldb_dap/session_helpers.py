@@ -2,9 +2,12 @@
 from __future__ import annotations
 
 import base64
+import contextlib
 import dataclasses
 import logging
 import os
+import re
+import time
 import unittest
 from dataclasses import dataclass
 from pathlib import Path
@@ -19,7 +22,7 @@ from typing import (
     cast,
 )
 
-from .dap_types import (
+from .types import (
     AttachArgs,
     Breakpoint,
     BreakpointEvent,
@@ -27,6 +30,7 @@ from .dap_types import (
     CompletionsArgs,
     ConfigurationDoneArgs,
     ContinueArgs,
+    ContinuedEvent,
     DataBreakpoint,
     DataBreakpointInfoArgs,
     DisassembleArgs,
@@ -513,9 +517,31 @@ class _ConfigureContext:
         session.test_case.assertFalse(
             session._state.is_initialized, "session already started."
         )
-        self.init_response = session.initialize_sequence(session.initialize_args)
-        self._pending_request = session.send_request(self._config)
-        session.wait_for_event(InitializedEvent, after=self.init_response)
+        init_resp = session.initialize_sequence(session.initialize_args)
+        pending = session.send_request(self._config)
+
+        # A failed launch or attach is answered right away, without an
+        # InitializedEvent. Wait for either an InitializedEvent or the config response.
+        command = self._config.command_
+        timeout = session._message_timeout
+        deadline = time.monotonic() + timeout
+        while True:
+            with contextlib.suppress(TimeoutError):
+                session.wait_for_event(InitializedEvent, after=init_resp, timeout=0.05)
+                break
+
+            if pending.done():
+                fail_msg = f"'{command}' failed: {pending.result_or_error()}"
+                session.test_case.fail(fail_msg)
+
+            if time.monotonic() > deadline:
+                raise TimeoutError(
+                    f"Timed out after {timeout}s waiting for 'InitializedEvent' or "
+                    f"the '{command}' response. Last seen event: {session.last_event()}"
+                )
+
+        self.init_response = init_resp
+        self._pending_request = pending
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -554,7 +580,7 @@ class _ExpectCommon:
 
     # Checks on the Expression's result or Variable's value.
     startswith: Optional[str] = None
-    matches: Optional[str] = None  # regex applied to .value/.result
+    matches: Optional[str | re.Pattern[str]] = None  # regex applied to .value/.result
     # When set, fetch children via `variablesReference` and verify recursively.
     children: Optional[dict[str, "ExpectVar"]] = None
 
@@ -669,28 +695,15 @@ class DAPTestSession(Session):
         return self.send_request(args)
 
     def configuration_done(self) -> PendingResponse[EmptyBodyResponse]:
-        # Wait for initialized event.
-        self.ensure_initialized()
-        # And then send configuration done.
         return self.send_request(ConfigurationDoneArgs())
 
     def verify_configuration_done(self, expected_success: bool = True):
-        response = self.configuration_done().result_or_error()
         if expected_success:
-            self.test_case.assertEqual(
-                response.success, True, f"got error response: {response}."
-            )
-            self.test_case.assertIsInstance(response, EmptyBodyResponse)
-
-            # In VSCode, immediately following 'configurationDone', a
-            # 'threads' request is made to get the initial set of threads,
-            # specifically the main threads id and name.
-            # We issue the threads request to mimic this pattern and prevent
-            # tests that use threads to have the wrong result.
-            self.send_request(ThreadsArgs()).result()
+            # Wait for initialized event.
+            self.ensure_initialized()
+            response = self.configuration_done().result()
         else:
-            self.test_case.assertEqual(response.success, False)
-            self.test_case.assertIsInstance(response, ErrorResponse)
+            response = self.configuration_done().error()
         return response
 
     def set_source_breakpoints(
@@ -1103,8 +1116,17 @@ class DAPTestSession(Session):
         return self.wait_for_event(MemoryEvent, after=after)
 
     def do_continue(self):
+        """Send a 'continueRequest' and wait for a 'ContinuedEvent',
+
+        Receiving the continue response does not mean the process continued,
+        It means we successfully sent the continue packet.
+        LLDB can continue asynchronously, so wait for the 'Continued' event.
+        """
         self.ensure_initialized()
-        return self.send_request(ContinueArgs()).result()
+        prior_event = self.last_event()
+        response = self.send_request(ContinueArgs()).result()
+        self.wait_for_event(ContinuedEvent, after=prior_event)
+        return response
 
     def continue_to_exit(self, exitCode: int = 0) -> ExitedEvent:
         continue_response = self.do_continue()
@@ -1578,20 +1600,27 @@ class DAPTestSession(Session):
             count=count,
             format=format,
         )
-        response = self.send_request(args).result()
+        response = self.send_request(args).result(
+            f"failed to get variables for reference: {variablesReference}"
+        )
         return response.body.variables
 
-    def thread_context_from(self, thread_ref: int | StoppedEvent) -> ThreadContext:
-        if isinstance(thread_ref, StoppedEvent):
+    def thread_context_from(
+        self, thread_ref: int | StoppedEvent | InvalidatedEvent
+    ) -> ThreadContext:
+        if isinstance(thread_ref, (StoppedEvent, InvalidatedEvent)):
             self.test_case.assertIsNotNone(thread_ref.body.threadId)
             thread_id = cast(int, thread_ref.body.threadId)
         elif isinstance(thread_ref, int):
             thread_id = thread_ref
         else:
-            self.test_case.fail(f"cannot get thread context from '{type(thread_ref)}'.")
+            ref_type_name = type(thread_ref).__name__
+            self.test_case.fail(f"cannot get thread context from '{ref_type_name}'.")
         return ThreadContext(thread_id, self)
 
-    def top_frame_from(self, thread_ref: int | StoppedEvent) -> FrameContext:
+    def top_frame_from(
+        self, thread_ref: int | StoppedEvent | InvalidatedEvent
+    ) -> FrameContext:
         """Top FrameContext of the currently stopped thread."""
         return self.thread_context_from(thread_ref).top_frame()
 
@@ -1612,7 +1641,7 @@ class DAPTestSession(Session):
         response = self.send_request(info_args).result()
         return response.body
 
-    def do_restart(self, arguments: LaunchArgs | AttachArgs | None = None):
+    def restart(self, arguments: LaunchArgs | AttachArgs | None = None):
         restart_args = RestartArgs(arguments)
         return self.send_request(restart_args).result()
 

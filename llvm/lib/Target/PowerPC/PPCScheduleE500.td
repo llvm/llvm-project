@@ -111,10 +111,6 @@ def PPCE500Itineraries : ProcessorItineraries<
                                   InstrStage<1, [E500_SU0, E500_SU1]>],
                                  [4, 1, 1], // Latency = 1
                                  [E500_CR_Bypass, E500_GPR_Bypass]>,
-  InstrItinData<IIC_LdStDCBA,    [InstrStage<1, [E500_DIS0, E500_DIS1], 0>,
-                                  InstrStage<1, [E500_LSU_0]>],
-                                 [6, 1], // Latency = 3, Repeat rate = 1
-                                 [E500_GPR_Bypass, E500_GPR_Bypass]>,
   InstrItinData<IIC_LdStDCBF,    [InstrStage<1, [E500_DIS0, E500_DIS1], 0>,
                                   InstrStage<1, [E500_LSU_0]>],
                                  [6, 1], // Latency = 3

@@ -5,7 +5,7 @@
 // RUN:            -I%S/../CodeGenCUDA/Inputs/ -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR-HOST --input-file=%t.cir %s
 
-// RUN: %clang_cc1 -triple=amdgcn-amd-amdhsa -x hip -fclangir \
+// RUN: %clang_cc1 -triple=amdgpu-amd-amdhsa -x hip -fclangir \
 // RUN:            -fcuda-is-device -fhip-new-launch-api \
 // RUN:            -I%S/../CodeGenCUDA/Inputs/ -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR-DEVICE --input-file=%t.cir %s
@@ -15,7 +15,7 @@
 // RUN:            -I%S/../CodeGenCUDA/Inputs/ %s -o %t.ll
 // RUN: FileCheck --check-prefix=OGCG-HOST --input-file=%t.ll %s
 
-// RUN: %clang_cc1 -triple=amdgcn-amd-amdhsa -x hip \
+// RUN: %clang_cc1 -triple=amdgpu-amd-amdhsa -x hip \
 // RUN:            -fcuda-is-device -fhip-new-launch-api \
 // RUN:            -fvisibility=hidden                      \
 // RUN:            -I%S/../CodeGenCUDA/Inputs/ -emit-llvm %s -o %t.ll

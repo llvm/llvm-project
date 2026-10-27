@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=amdgcn -mcpu=gfx942 -O2 -S %s -o - -stop-after=sroa | FileCheck %s
+; RUN: opt -mtriple=amdgpu9.42 -O2 -S %s -o - -stop-after=sroa | FileCheck %s
 
 ; This testcase is dervied from warp's reduce.cu.
 ;
@@ -11,7 +11,7 @@
 ; through blocks that define values that are live outside of the block.
 ; There is no large increase in phi count with:
 ;
-;   opt -mtriple=amdgcn -O2 -S %s -o - -stop-after=sroa -max-jump-threading-live-blocks=0
+;   opt -mtriple=amdgpu -O2 -S %s -o - -stop-after=sroa -max-jump-threading-live-blocks=0
 
 
 ; CHECK-LABEL: @_func7(

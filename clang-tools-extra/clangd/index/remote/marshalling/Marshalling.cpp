@@ -397,7 +397,7 @@ llvm::Expected<std::string> Marshaller::uriToRelativePath(llvm::StringRef URI) {
   llvm::StringRef Path(Result);
   // Check for Windows paths (URI=file:///X:/path => Body=/X:/path)
   if (is_absolute(Path.substr(1), Style::windows))
-    Result = Path.drop_front();
+    Result = Path.drop_front().str();
   if (!replace_path_prefix(Result, RemoteIndexRoot, ""))
     return error("File path '{0}' doesn't start with '{1}'.", Result.str(),
                  RemoteIndexRoot);

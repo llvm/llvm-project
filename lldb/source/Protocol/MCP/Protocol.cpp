@@ -7,12 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Protocol/MCP/Protocol.h"
+#include "lldb/Version/Version.inc"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/JSON.h"
 
 using namespace llvm;
 
 namespace lldb_protocol::mcp {
+
+llvm::StringLiteral GetServerVersion() { return LLDB_VERSION_STRING; }
 
 static bool mapRaw(const json::Value &Params, StringLiteral Prop,
                    std::optional<json::Value> &V, json::Path P) {

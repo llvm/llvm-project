@@ -8,6 +8,7 @@
 
 #include "fp_test.h"
 
+#if defined(__hexagon__)
 // Fused multiply-add: computes a*b + c with a single rounding, in the
 // current rounding mode.
 COMPILER_RT_ABI double __hexagon_fmadf5(double a, double b, double c);
@@ -66,8 +67,10 @@ static int test_all_modes(double a, double b, double c, uint64_t expected) {
   ret |= test_rm(a, b, c, FE_TOWARDZERO, expected);
   return ret;
 }
+#endif
 
 int main(void) {
+#if defined(__hexagon__)
   double qnan = fromRep64(QNAN_REP);
   double inf = fromRep64(POS_INF_REP);
   double ninf = fromRep64(NEG_INF_REP);
@@ -227,5 +230,8 @@ int main(void) {
   if (test(-0.0, 5.0, 0.0, POS_ZERO_REP))
     return 1; // -0 in nearest -> +0
 
+#else
+  printf("skipped\n");
+#endif
   return 0;
 }

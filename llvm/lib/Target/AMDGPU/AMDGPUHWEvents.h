@@ -53,7 +53,7 @@ public:
 
   enum : value_type {
     NONE = 0,
-#define AMDGPU_HW_EVENT(X, V) X = (1 << V),
+#define AMDGPU_HW_EVENT(X, V) X = (1u << V),
 #define AMDGPU_LAST_HW_EVENT(X) HWEVENT_LAST_EVENT = X,
 #include "AMDGPUHWEvents.def"
 

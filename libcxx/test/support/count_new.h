@@ -450,7 +450,7 @@ void operator delete[](void* p, std::nothrow_t const&) TEST_NOEXCEPT {
 }
 
 #  ifndef TEST_HAS_NO_ALIGNED_ALLOCATION
-#    if defined(_LIBCPP_MSVCRT_LIKE) || (!defined(_LIBCPP_VERSION) && defined(_WIN32))
+#    ifdef _WIN32
 #      define USE_ALIGNED_ALLOC
 #    endif
 

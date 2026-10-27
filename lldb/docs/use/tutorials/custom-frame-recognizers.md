@@ -5,6 +5,32 @@ on ABI, arguments or other special properties of that frame, even without
 source code or debug info. Currently, one use case is to extract function
 arguments that would otherwise be inaccessible, or augment existing arguments.
 
+Frame recognizers also allow you to implement "trampoline handlers".  lldb
+has built-in trampoline handlers, for instance, to go from a shared library
+stub to its target, from the dispatch of an objc message send to its target,
+etc, or from std::function to its target.  They work by recognizing the
+start point of the stub, and providing a "step through" Thread Plan that drives
+the thread to the trampoline target.
+
+Frame recognizers already do the "identify the target" part.  To provide the
+step through, have your frame recogizer implement the `get_step_through_plan`
+method:
+
+```
+def get_step_through_plan(self, thread : lldb.SBThread):
+```
+
+It should return a Python dictionary with two keys:
+
+```
+class_name : the name of the class implementing the step through thread plan
+extra_args : a dictionary with the keys that will be passed to the __init__
+             of your scripted thread plan.
+```
+
+and lldb will push a ScriptedThreadPlan using the class and extra_args
+provided.
+
 Adding a custom frame recognizer is done by implementing a Python class and
 using the `frame recognizer add` command. The Python class should implement the
 `get_recognized_arguments` method and it will receive an argument of type

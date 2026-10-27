@@ -1,14 +1,15 @@
 # Xqcibi - Qualcomm uC Branch Immediate Extension
 # RUN: not llvm-mc -triple riscv32 -mattr=+xqcibi < %s 2>&1 \
-# RUN:     | FileCheck -check-prefixes=CHECK,CHECK-PLUS %s
+# RUN:     | FileCheck -check-prefixes=CHECK-PLUS %s
 # RUN: not llvm-mc -triple riscv32 -mattr=-xqcibi < %s 2>&1 \
-# RUN:     | FileCheck -check-prefixes=CHECK,CHECK-MINUS %s
+# RUN:     | FileCheck -check-prefixes=CHECK-MINUS %s
 
 # CHECK-PLUS: :[[@LINE+2]]:9: error: register must be a GPR excluding zero (x0)
 # CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.beqi x0, 12, 346
 
-# CHECK: :[[@LINE+1]]:{{15: error: too few operands for instruction|1: error: invalid instruction}}
+# CHECK-PLUS: :[[@LINE+2]]:15: error: too few operands for instruction
+# CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.beqi x8, 12
 
 # CHECK-PLUS: :[[@LINE+1]]:13: error: immediate must be non-zero in the range [-16, 15]
@@ -25,7 +26,8 @@ qc.beqi x8, 12, 346
 # CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.bnei x0, 15, 4094
 
-# CHECK: :[[@LINE+1]]:{{15: error: too few operands for instruction|1: error: invalid instruction}}
+# CHECK-PLUS: :[[@LINE+2]]:15: error: too few operands for instruction
+# CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.bnei x4, 15
 
 # CHECK-PLUS: :[[@LINE+1]]:13: error: immediate must be non-zero in the range [-16, 15]
@@ -42,7 +44,8 @@ qc.bnei x4, 15, 4094
 # CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.bgei x0, 1, -4096
 
-# CHECK: :[[@LINE+1]]:{{15: error: too few operands for instruction|1: error: invalid instruction}}
+# CHECK-PLUS: :[[@LINE+2]]:15: error: too few operands for instruction
+# CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.bgei x10, 1
 
 # CHECK-PLUS: :[[@LINE+1]]:14: error: immediate must be non-zero in the range [-16, 15]
@@ -59,7 +62,8 @@ qc.bgei x10, 1, -4096
 # CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.blti x0, 6, 2000
 
-# CHECK: :[[@LINE+1]]:{{14: error: too few operands for instruction|1: error: invalid instruction}}
+# CHECK-PLUS: :[[@LINE+2]]:14: error: too few operands for instruction
+# CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.blti x1, 6
 
 # CHECK-PLUS: :[[@LINE+1]]:13: error: immediate must be non-zero in the range [-16, 15]
@@ -76,7 +80,8 @@ qc.blti x1, 6, 2000
 # CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.bgeui x0, 11, 128
 
-# CHECK: :[[@LINE+1]]:{{17: error: too few operands for instruction|1: error: invalid instruction}}
+# CHECK-PLUS: :[[@LINE+2]]:17: error: too few operands for instruction
+# CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.bgeui x12, 11
 
 # CHECK-PLUS: :[[@LINE+1]]:15: error: immediate must be an integer in the range [1, 31]
@@ -93,7 +98,8 @@ qc.bgeui x12, 11, 128
 # CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.bltui x0, 7, 666
 
-# CHECK: :[[@LINE+1]]:{{15: error: too few operands for instruction|1: error: invalid instruction}}
+# CHECK-PLUS: :[[@LINE+2]]:15: error: too few operands for instruction
+# CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.bltui x2, 7
 
 # CHECK-PLUS: :[[@LINE+1]]:14: error: immediate must be an integer in the range [1, 31]
@@ -110,7 +116,8 @@ qc.bltui x2, 7, 666
 # CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.e.beqi x0, 1, 2
 
-# CHECK: :[[@LINE+1]]:{{16: error: too few operands for instruction|1: error: invalid instruction}}
+# CHECK-PLUS: :[[@LINE+2]]:16: error: too few operands for instruction
+# CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.e.beqi x1, 1
 
 # CHECK-PLUS: :[[@LINE+1]]:15: error: immediate must be non-zero in the range [-32768, 32767]
@@ -127,7 +134,8 @@ qc.e.beqi x1, 1, 2
 # CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.e.bnei x0, 115, 4094
 
-# CHECK: :[[@LINE+1]]:{{18: error: too few operands for instruction|1: error: invalid instruction}}
+# CHECK-PLUS: :[[@LINE+2]]:18: error: too few operands for instruction
+# CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.e.bnei x4, 115
 
 # CHECK-PLUS: :[[@LINE+1]]:15: error: immediate must be non-zero in the range [-32768, 32767]
@@ -144,7 +152,8 @@ qc.e.bnei x4, 115, 4094
 # CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.e.bgei x0, -32768, -4096
 
-# CHECK: :[[@LINE+1]]:{{22: error: too few operands for instruction|1: error: invalid instruction}}
+# CHECK-PLUS: :[[@LINE+2]]:22: error: too few operands for instruction
+# CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.e.bgei x10, -32768
 
 # CHECK-PLUS: :[[@LINE+1]]:16: error: immediate must be non-zero in the range [-32768, 32767]
@@ -161,7 +170,8 @@ qc.e.bgei x10, -32768, -4096
 # CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.e.blti x0, 32767, 2000
 
-# CHECK: :[[@LINE+1]]:{{20: error: too few operands for instruction|1: error: invalid instruction}}
+# CHECK-PLUS: :[[@LINE+2]]:20: error: too few operands for instruction
+# CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.e.blti x1, 32767
 
 # CHECK-PLUS: :[[@LINE+1]]:15: error: immediate must be non-zero in the range [-32768, 32767]
@@ -178,7 +188,8 @@ qc.e.blti x1, 32767, 2000
 # CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.e.bgeui x0, 711, 128
 
-# CHECK: :[[@LINE+1]]:{{20: error: too few operands for instruction|1: error: invalid instruction}}
+# CHECK-PLUS: :[[@LINE+2]]:20: error: too few operands for instruction
+# CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.e.bgeui x12, 711
 
 # CHECK-PLUS: :[[@LINE+1]]:17: error: immediate must be an integer in the range [1, 65535]
@@ -195,7 +206,8 @@ qc.e.bgeui x12, 711, 128
 # CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.e.bltui x0, 7, 666
 
-# CHECK: :[[@LINE+1]]:{{17: error: too few operands for instruction|1: error: invalid instruction}}
+# CHECK-PLUS: :[[@LINE+2]]:17: error: too few operands for instruction
+# CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.e.bltui x2, 7
 
 # CHECK-PLUS: :[[@LINE+1]]:16: error: immediate must be an integer in the range [1, 65535]

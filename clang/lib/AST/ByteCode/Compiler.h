@@ -14,6 +14,7 @@
 #define LLVM_CLANG_AST_INTERP_BYTECODEEXPRGEN_H
 
 #include "ByteCodeEmitter.h"
+#include "DeclOrExpr.h"
 #include "EvalEmitter.h"
 #include "Pointer.h"
 #include "PrimType.h"
@@ -28,7 +29,6 @@ class QualType;
 namespace interp {
 
 template <class Emitter> class LocalScope;
-template <class Emitter> class DestructorScope;
 template <class Emitter> class VariableScope;
 template <class Emitter> class DeclScope;
 template <class Emitter> class InitLinkScope;
@@ -37,9 +37,7 @@ template <class Emitter> class OptionScope;
 template <class Emitter> class ArrayIndexScope;
 template <class Emitter> class SourceLocScope;
 template <class Emitter> class LoopScope;
-template <class Emitter> class LabelScope;
 template <class Emitter> class SwitchScope;
-template <class Emitter> class StmtExprScope;
 template <class Emitter> class LocOverrideScope;
 
 template <class Emitter> class Compiler;
@@ -48,12 +46,13 @@ public:
   enum {
     K_This = 0,
     K_Field = 1,
-    K_Temp = 2,
-    K_Decl = 3,
-    K_Elem = 5,
-    K_RVO = 6,
-    K_InitList = 7,
-    K_DIE = 8,
+    K_Base = 2,
+    K_Temp = 3,
+    K_Decl = 4,
+    K_Elem = 6,
+    K_RVO = 7,
+    K_InitList = 8,
+    K_DIE = 9,
   };
 
   static InitLink This() { return InitLink{K_This}; }
@@ -62,6 +61,11 @@ public:
   static InitLink DIE() { return InitLink{K_DIE}; }
   static InitLink Field(unsigned Offset) {
     InitLink IL{K_Field};
+    IL.Offset = Offset;
+    return IL;
+  }
+  static InitLink Base(unsigned Offset) {
+    InitLink IL{K_Base};
     IL.Offset = Offset;
     return IL;
   }
@@ -108,8 +112,8 @@ enum class ScopeKind { Block, FullExpression, Call };
 
 /// Compilation context for expressions.
 template <class Emitter>
-class Compiler : public ConstStmtVisitor<Compiler<Emitter>, bool>,
-                 public Emitter {
+class Compiler final : public ConstStmtVisitor<Compiler<Emitter>, bool>,
+                       public Emitter {
 protected:
   // Aliases for types defined in the emitter.
   using LabelTy = typename Emitter::LabelTy;
@@ -232,6 +236,7 @@ public:
   bool VisitCXXTypeidExpr(const CXXTypeidExpr *E);
   bool VisitObjCDictionaryLiteral(const ObjCDictionaryLiteral *E);
   bool VisitObjCArrayLiteral(const ObjCArrayLiteral *E);
+  bool VisitCXXReflectExpr(const CXXReflectExpr *E);
   bool VisitDesignatedInitUpdateExpr(const DesignatedInitUpdateExpr *E);
 
   // Statements.
@@ -250,6 +255,10 @@ public:
   bool visitDefaultStmt(const DefaultStmt *S);
   bool visitAttributedStmt(const AttributedStmt *S);
   bool visitCXXTryStmt(const CXXTryStmt *S);
+  bool
+  visitCXXExpansionStmtInstantiation(const CXXExpansionStmtInstantiation *S);
+
+  bool registerRedecl(const VarDecl *VD, const APValue &V);
 
 protected:
   bool visitStmt(const Stmt *S);
@@ -321,7 +330,8 @@ protected:
   VarCreationState visitDecl(const VarDecl *VD);
   /// Visit an APValue.
   bool visitAPValue(const APValue &Val, PrimType ValType, SourceInfo Info);
-  bool visitAPValueInitializer(const APValue &Val, SourceInfo Info, QualType T);
+  bool visitAPValueInitializer(const APValue &Val, SourceInfo Info, QualType T,
+                               bool IsCompleteClass = true);
   /// Visit the given decl as if we have a reference to it.
   bool visitDeclRef(const ValueDecl *D, const Expr *E);
 
@@ -336,19 +346,18 @@ protected:
                      bool Activate, bool IsOperatorCall);
 
   /// Creates a local primitive value.
-  unsigned allocateLocalPrimitive(DeclTy &&Decl, PrimType Ty, bool IsConst,
+  unsigned allocateLocalPrimitive(DeclOrExpr Decl, PrimType Ty, bool IsConst,
                                   bool IsVolatile = false,
                                   ScopeKind SC = ScopeKind::Block);
 
   /// Allocates a space storing a local given its type.
-  UnsignedOrNone allocateLocal(DeclTy &&Decl, QualType Ty = QualType(),
+  UnsignedOrNone allocateLocal(DeclOrExpr Decl, QualType Ty = QualType(),
                                ScopeKind = ScopeKind::Block);
   UnsignedOrNone allocateTemporary(const Expr *E);
 
 private:
   friend class VariableScope<Emitter>;
   friend class LocalScope<Emitter>;
-  friend class DestructorScope<Emitter>;
   friend class DeclScope<Emitter>;
   friend class InitLinkScope<Emitter>;
   friend class InitStackScope<Emitter>;
@@ -357,14 +366,13 @@ private:
   friend class SourceLocScope<Emitter>;
   friend struct InitLink;
   friend class LoopScope<Emitter>;
-  friend class LabelScope<Emitter>;
   friend class SwitchScope<Emitter>;
-  friend class StmtExprScope<Emitter>;
   friend class LocOverrideScope<Emitter>;
 
   /// Emits a zero initializer.
   bool visitZeroInitializer(PrimType T, QualType QT, const Expr *E);
-  bool visitZeroRecordInitializer(const Record *R, const Expr *E);
+  bool visitZeroRecordInitializer(const Record *R, const Expr *E,
+                                  bool IsCompleteClass = true);
   bool visitZeroArrayInitializer(QualType T, const Expr *E);
   bool visitAssignment(const Expr *LHS, const Expr *RHS, const Expr *E);
 
@@ -423,7 +431,7 @@ private:
                              const BinaryOperator *E);
   bool emitRecordDestructionPop(const Record *R, SourceInfo Loc);
   bool emitDestructionPop(const Descriptor *Desc, SourceInfo Loc);
-  bool emitDummyPtr(const DeclTy &D, const Expr *E, bool CU = false);
+  bool emitDummyPtr(DeclOrExpr D, const Expr *E, bool CU = false);
   bool emitFloat(const APFloat &F, SourceInfo Info);
   unsigned collectBaseOffset(const QualType BaseType,
                              const QualType DerivedType);
@@ -490,7 +498,7 @@ protected:
   /// Flag inidicating if we're initializing an already created
   /// variable. This is set in visitInitializer().
   bool Initializing = false;
-  const ValueDecl *InitializingDecl = nullptr;
+  const VarDecl *InitializingDecl = nullptr;
 
   llvm::SmallVector<InitLink> InitStack;
   bool InitStackActive = false;

@@ -18,6 +18,7 @@
 
 #include <benchmark/benchmark.h>
 #include "../../GenerateInput.h"
+#include "test_macros.h"
 
 int main(int argc, char** argv) {
   auto std_find    = [](auto first, auto last, auto const& value) { return std::find(first, last, value); };
@@ -78,7 +79,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto find) {
       benchmark::RegisterBenchmark(
           name,
-          [find](auto& st) {
+          [find](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size = st.range(0);
             using ValueType        = typename Container::value_type;
             ValueType x            = Generate<ValueType>::random();
@@ -108,7 +109,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto find) {
       benchmark::RegisterBenchmark(
           name,
-          [find](auto& st) {
+          [find](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size = st.range(0);
             using ValueType        = typename Container::value_type;
             ValueType x            = Generate<ValueType>::random();
@@ -136,7 +137,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto find) {
       benchmark::RegisterBenchmark(
           name,
-          [find](auto& st) {
+          [find](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size     = st.range(0);
             std::size_t const seg_size = 256;
             std::size_t const segments = (size + seg_size - 1) / seg_size;
@@ -174,7 +175,7 @@ int main(int argc, char** argv) {
     auto bm = [](std::string name, auto find) {
       benchmark::RegisterBenchmark(
           name,
-          [find](auto& st) {
+          [find](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size = st.range(0);
             std::vector<bool> c(size, true);
             bool y = false;

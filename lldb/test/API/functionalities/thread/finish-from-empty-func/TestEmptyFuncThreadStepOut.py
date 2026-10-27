@@ -41,7 +41,6 @@ class FinishFromEmptyFunctionTestCase(TestBase):
         if self.TraceOn():
             self.runCmd("bt")
 
-        correct_stepped_out_line = line_number("main.c", "leaving main")
         return_statement_line = line_number("main.c", "return 0")
         safety_bp = target.BreakpointCreateByLocation(
             lldb.SBFileSpec("main.c"), return_statement_line
@@ -54,9 +53,19 @@ class FinishFromEmptyFunctionTestCase(TestBase):
         if self.TraceOn():
             self.runCmd("bt")
 
-        frame = thread.GetSelectedFrame()
-        self.assertEqual(
-            frame.line_entry.GetLine(),
-            correct_stepped_out_line,
+        # Compilers may generate source locations differently, so we expect to
+        # either be:
+        # * On the line of the second done() call, or -
+        # * On the puts() line below.
+        #
+        # If we reach the return statement, we did not step out correctly.
+        stepped_out_lines = [
+            line_number("main.c", "leaving main"),
+            line_number("main.c", "Second call to done"),
+        ]
+
+        self.assertIn(
+            thread.GetSelectedFrame().line_entry.GetLine(),
+            stepped_out_lines,
             "Step-out lost control of execution, ran too far",
         )

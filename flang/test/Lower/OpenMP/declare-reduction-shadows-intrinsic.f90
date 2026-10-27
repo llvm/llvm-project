@@ -20,7 +20,7 @@ end subroutine
 ! @max_reduction / @max_i32 op should be generated.
 
 ! CHECK-NOT: omp.declare_reduction @max
-! CHECK: omp.declare_reduction @[[RED:_QQFtest_maxop.max]] : i32 init {
+! CHECK: omp.declare_reduction @[[RED:_QQFtest_maxop\.max_i32]] : i32 init {
 ! CHECK: combiner {
 ! CHECK: arith.addi
 ! CHECK: omp.yield

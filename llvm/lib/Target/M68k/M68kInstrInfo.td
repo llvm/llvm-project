@@ -490,6 +490,9 @@ def IsPIC        : Predicate<"TM.isPositionIndependent()">;
 def IsNotPIC     : Predicate<"!TM.isPositionIndependent()">;
 
 // ISA versions
+def IsM68000 : Predicate<"Subtarget->isM68000()">,
+                            AssemblerPredicate<(all_of FeatureISA00)>;
+
 foreach i = [0,1,2,4,6] in
 def AtLeastM680 # i # "0" : Predicate<"Subtarget->atLeastM680"#i#"0()">,
                             AssemblerPredicate<(all_of
@@ -527,7 +530,7 @@ def MxCONDle  : PatLeaf<(i8 15)>; // Less or Equal
 // Complex Patterns
 //===----------------------------------------------------------------------===//
 
-// NOTE Though this CP is not strictly necessarily it will simplify instruciton
+// NOTE Though this CP is not strictly necessarily it will simplify instruction
 // definitions
 let WantsParent = true in {
   def MxCP_ARI   : ComplexPattern<iPTR, 1, "SelectARI">;

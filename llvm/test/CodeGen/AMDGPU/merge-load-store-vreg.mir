@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=amdgcn -mcpu=gfx803 -verify-machineinstrs -run-pass si-load-store-opt -o - %s | FileCheck -check-prefixes=GCN,VI %s
-# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs -run-pass si-load-store-opt -o - %s | FileCheck -check-prefixes=GCN,GFX9 %s
+# RUN: llc -mtriple=amdgpu8.03 -verify-machineinstrs -run-pass si-load-store-opt -o - %s | FileCheck -check-prefixes=GCN,VI %s
+# RUN: llc -mtriple=amdgpu9.00 -verify-machineinstrs -run-pass si-load-store-opt -o - %s | FileCheck -check-prefixes=GCN,GFX9 %s
 
 # If there's a base offset, check that SILoadStoreOptimizer creates
 # V_ADD_{I|U}32_e64 for that offset; _e64 uses a vreg for the carry (rather than
@@ -9,14 +9,14 @@
 # GCN-LABEL: name: ds_combine_base_offset{{$}}
 
 # VI: V_ADD_CO_U32_e64 %6, %0,
-# VI-NEXT: DS_WRITE2_B32 killed %7, %0, %3, 0, 8,
+# VI-NEXT: DS_WRITE2_B32 %7, %0, %3, 0, 8,
 # VI: V_ADD_CO_U32_e64 %10, %3,
-# VI-NEXT: DS_READ2_B32 killed %11, 16, 24,
+# VI-NEXT: DS_READ2_B32 %11, 16, 24,
 
 # GFX9: V_ADD_U32_e64 %6, %0,
-# GFX9-NEXT: DS_WRITE2_B32_gfx9 killed %7, %0, %3, 0, 8,
+# GFX9-NEXT: DS_WRITE2_B32_gfx9 %7, %0, %3, 0, 8,
 # GFX9: V_ADD_U32_e64 %9, %3,
-# GFX9-NEXT: DS_READ2_B32_gfx9 killed %10, 16, 24,
+# GFX9-NEXT: DS_READ2_B32_gfx9 %10, 16, 24,
 
 --- |
   @0 = internal unnamed_addr addrspace(3) global [256 x float] poison, align 4
@@ -92,14 +92,14 @@ body:             |
 # GCN-LABEL: name: ds_combine_base_offset_subreg{{$}}
 
 # VI: V_ADD_CO_U32_e64 %6, %0.sub0,
-# VI-NEXT: DS_WRITE2_B32 killed %7, %0.sub0, %3.sub0, 0, 8,
+# VI-NEXT: DS_WRITE2_B32 %7, %0.sub0, %3.sub0, 0, 8,
 # VI: V_ADD_CO_U32_e64 %10, %3.sub0,
-# VI-NEXT: DS_READ2_B32 killed %11, 16, 24,
+# VI-NEXT: DS_READ2_B32 %11, 16, 24,
 
 # GFX9: V_ADD_U32_e64 %6, %0.sub0,
-# GFX9-NEXT: DS_WRITE2_B32_gfx9 killed %7, %0.sub0, %3.sub0, 0, 8,
+# GFX9-NEXT: DS_WRITE2_B32_gfx9 %7, %0.sub0, %3.sub0, 0, 8,
 # GFX9: V_ADD_U32_e64 %9, %3.sub0,
-# GFX9-NEXT: DS_READ2_B32_gfx9 killed %10, 16, 24,
+# GFX9-NEXT: DS_READ2_B32_gfx9 %10, 16, 24,
 ---
 name:            ds_combine_base_offset_subreg
 body:             |

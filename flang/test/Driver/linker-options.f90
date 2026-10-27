@@ -24,11 +24,11 @@
 ! RUN: %flang -target x86_64-pc-linux-gnu -no-pie -### %s 2>&1 \
 ! RUN:     | FileCheck %s --check-prefix=NO-PIE
 !
-! Ensure that "-pie" is passed to the linker.
-! RUN: %flang -target i386-unknown-freebsd -pie -### %s 2>&1 \
-! RUN:     | FileCheck %s --check-prefix=PIE
-! RUN: %flang -target aarch64-pc-linux-gnu -pie -### %s 2>&1 \
-! RUN:     | FileCheck %s --check-prefix=PIE
+! Ensure that "-no-pie" suppresses "-pie".
+! RUN: %flang -target i386-unknown-freebsd -no-pie -### %s 2>&1 \
+! RUN:     | FileCheck %s --check-prefix=NO-PIE
+! RUN: %flang -target aarch64-pc-linux-gnu -no-pie -### %s 2>&1 \
+! RUN:     | FileCheck %s --check-prefix=NO-PIE
 !
 ! On Musl Linux, PIE is enabled by default, but can be disabled.
 ! RUN: %flang -target x86_64-linux-musl -### %s 2>&1 \
@@ -58,21 +58,13 @@
 ! RUN: %flang -target i386-pc-openbsd -pie -### %s 2>&1 \
 ! RUN:   | FileCheck %s --check-prefix=PIE
 !
-! On FreeBSD, -pie is not passed to the linker, but can be forced.
+! On FreeBSD, -pie is passed to the linker by default, but can be disabled.
 ! RUN: %flang -target amd64-pc-freebsd -### %s 2>&1 \
-! RUN:   | FileCheck %s --check-prefix=NO-PIE
-! RUN: %flang -target i386-pc-freebsd -### %s 2>&1 \
-! RUN:   | FileCheck %s --check-prefix=NO-PIE
-! RUN: %flang -target aarch64-unknown-freebsd -### %s 2>&1 \
-! RUN:   | FileCheck %s --check-prefix=NO-PIE
-! RUN: %flang -target arm-unknown-freebsd -### %s 2>&1 \
-! RUN:   | FileCheck %s --check-prefix=NO-PIE
-! RUN: %flang -target powerpc-unknown-freebsd -### %s 2>&1 \
-! RUN:   | FileCheck %s --check-prefix=NO-PIE
-! RUN: %flang -target sparc64-unknown-freebsd -### %s 2>&1 \
-! RUN:   | FileCheck %s --check-prefix=NO-PIE
-! RUN: %flang -target i386-pc-freebsd -pie -### %s 2>&1 \
 ! RUN:   | FileCheck %s --check-prefix=PIE
+! RUN: %flang -target aarch64-unknown-freebsd -### %s 2>&1 \
+! RUN:   | FileCheck %s --check-prefix=PIE
+! RUN: %flang -target amd64-pc-freebsd -no-pie -### %s 2>&1 \
+! RUN:   | FileCheck %s --check-prefix=NO-PIE
 !
 ! On AIX, -pie is never passed to the linker.
 ! RUN: %flang -target powerpc64-unknown-aix -### %s 2>&1 \

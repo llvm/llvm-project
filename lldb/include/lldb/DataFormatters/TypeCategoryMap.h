@@ -21,6 +21,8 @@
 #include "lldb/DataFormatters/FormattersContainer.h"
 #include "lldb/DataFormatters/TypeCategory.h"
 
+#include "llvm/ADT/StringMap.h"
+
 namespace lldb_private {
 class TypeCategoryMap {
 private:
@@ -28,8 +30,7 @@ private:
   typedef ActiveCategoriesList::iterator ActiveCategoriesIterator;
 
 public:
-  typedef ConstString KeyType;
-  typedef std::map<KeyType, lldb::TypeCategoryImplSP> MapType;
+  typedef llvm::StringMap<lldb::TypeCategoryImplSP> MapType;
   typedef MapType::iterator MapIterator;
   typedef std::function<bool(const lldb::TypeCategoryImplSP &)> ForEachCallback;
 
@@ -41,13 +42,13 @@ public:
 
   TypeCategoryMap(IFormatChangeListener *lst);
 
-  void Add(KeyType name, const lldb::TypeCategoryImplSP &entry);
+  void Add(llvm::StringRef name, const lldb::TypeCategoryImplSP &entry);
 
-  bool Delete(KeyType name);
+  bool Delete(llvm::StringRef name);
 
-  bool Enable(KeyType category_name, Position pos = Default);
+  bool Enable(llvm::StringRef category_name, Position pos = Default);
 
-  bool Disable(KeyType category_name);
+  bool Disable(llvm::StringRef category_name);
 
   bool Enable(lldb::TypeCategoryImplSP category, Position pos = Default);
 
@@ -59,7 +60,7 @@ public:
 
   void Clear();
 
-  bool Get(KeyType name, lldb::TypeCategoryImplSP &entry);
+  bool Get(llvm::StringRef name, lldb::TypeCategoryImplSP &entry);
 
   void ForEach(ForEachCallback callback);
 

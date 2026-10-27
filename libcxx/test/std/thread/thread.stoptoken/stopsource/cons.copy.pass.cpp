@@ -15,6 +15,7 @@
 #include <optional>
 #include <stop_token>
 #include <type_traits>
+#include <utility>
 
 #include "test_macros.h"
 

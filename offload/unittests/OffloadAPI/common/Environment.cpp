@@ -13,6 +13,7 @@
 #include <OffloadAPI.h>
 #include <cstdlib>
 #include <fstream>
+#include <optional>
 
 using namespace llvm;
 
@@ -181,14 +182,17 @@ const std::string DeviceBinsDirectory = DEVICE_CODE_PATH;
 
 bool TestEnvironment::loadDeviceBinary(
     const std::string &BinaryName, ol_device_handle_t Device,
-    std::unique_ptr<MemoryBuffer> &BinaryOut) {
+    std::unique_ptr<MemoryBuffer> &BinaryOut,
+    std::optional<ol_platform_backend_t> OverrideBackend) {
+  ol_platform_backend_t DeviceBackend = OL_PLATFORM_BACKEND_UNKNOWN;
 
-  // Get the platform type
   ol_platform_handle_t Platform;
   olGetDeviceInfo(Device, OL_DEVICE_INFO_PLATFORM, sizeof(Platform), &Platform);
-  ol_platform_backend_t Backend = OL_PLATFORM_BACKEND_UNKNOWN;
-  olGetPlatformInfo(Platform, OL_PLATFORM_INFO_BACKEND, sizeof(Backend),
-                    &Backend);
+  olGetPlatformInfo(Platform, OL_PLATFORM_INFO_BACKEND, sizeof(DeviceBackend),
+                    &DeviceBackend);
+
+  ol_platform_backend_t Backend = OverrideBackend.value_or(DeviceBackend);
+
   std::string FileExtension;
   if (Backend == OL_PLATFORM_BACKEND_AMDGPU) {
     FileExtension = ".amdgpu.bin";

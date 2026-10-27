@@ -1,8 +1,5 @@
 # LLVM Coding Standards
 
-```{contents}
-:local:
-```
 
 ## Introduction
 
@@ -57,7 +54,7 @@ code and avoid unnecessary vendor-specific extensions.
 
 Nevertheless, we restrict ourselves to features which are available in the
 major toolchains supported as host compilers (see {doc}`GettingStarted` page,
-section [Software](project:GettingStarted.md#software)).
+section [Software](GettingStarted.md#software)).
 
 Each toolchain provides a good reference for what it accepts:
 
@@ -109,7 +106,7 @@ subjects is available in the {doc}`ProgrammersManual`.
 For more information about LLVM's data structures and the tradeoffs they make,
 please consult [that section of the programmer's manual].
 
-[that section of the programmer's manual]: https://llvm.org/docs/ProgrammersManual.html#picking-the-right-data-structure-for-a-task
+[that section of the programmer's manual]: ProgrammersManual.md#picking-the-right-data-structure-for-a-task
 
 ### Python version and Source Code Formatting
 
@@ -582,7 +579,7 @@ or RTTI ([runtime type information], for example,
 [runtime type information]: https://en.wikipedia.org/wiki/Run-time_type_information
 
 That said, LLVM does make extensive use of a hand-rolled form of RTTI that use
-templates like [isa<>, cast<>, and dyn_cast<>](project:ProgrammersManual.md#the-isa-cast-and-dyn-cast-templates).
+templates like [isa<>, cast<>, and dyn_cast<>](ProgrammersManual.md#the-isa-cast-and-dyn-cast-templates).
 This form of RTTI is opt-in and can be
 {doc}`added to any class <HowToSetUpLLVMStyleRTTI>`.
 
@@ -758,6 +755,8 @@ If you use a braced initializer list when initializing a variable, use an equals
 int data[] = {0, 1, 2, 3};
 ```
 
+(use-auto-type-deduction)=
+
 #### Use `auto` Type Deduction to Make Code More Readable
 
 Some are advocating a policy of "almost always `auto`" in C++11; however, LLVM
@@ -902,10 +901,10 @@ If you really need to do something like this, put a private header file in the
 same directory as the source files, and include it locally.  This ensures that
 your private interface remains private and undisturbed by outsiders.
 
-```{note}
+:::{note}
 It's okay to put extra implementation methods in a public class itself. Just
 make them private (or protected) and all is well.
-```
+:::
 
 #### Use Namespace Qualifiers to Define Previously Declared Symbols
 
@@ -1500,10 +1499,10 @@ problematic in this regard --- just `<iostream>`. However, `raw_ostream`
 provides various APIs that are better performing for almost every use than
 `std::ostream` style APIs.
 
-```{note}
+:::{note}
 New code should always use {ref}`raw_ostream <raw_ostream>` for writing, or the
 `llvm::MemoryBuffer` API for reading files.
-```
+:::
 
 (raw_ostream)=
 
@@ -1714,6 +1713,8 @@ static void runHelper() {
   ...
 }
 ```
+
+(don-t-use-braces-on-simple-single-statement-bodies-of-if-else-loop-statements)=
 
 #### Don't Use Braces on Simple Single-Statement Bodies of if/else/loop Statements
 

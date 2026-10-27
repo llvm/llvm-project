@@ -5,7 +5,7 @@
 ;; array and whose second is a GEP into the matching uniform-counter array.
 ;; Sampling is disabled so the increment lowers to a direct call.
 
-; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -offload-pgo-sampling=0 -passes=instrprof < %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgpu-amd-amdhsa -offload-pgo-sampling=0 -passes=instrprof < %s | FileCheck %s
 
 @__profn_kernel1 = private constant [7 x i8] c"kernel1"
 @__profn_kernel2 = private constant [7 x i8] c"kernel2"
@@ -29,4 +29,4 @@ declare void @llvm.instrprof.increment(ptr, i64, i32, i32)
 
 ;; Second counter slot uses a GEP into the per-kernel counter array and the
 ;; matching uniform-counter array.
-; CHECK: call void @__llvm_profile_instrument_gpu(ptr addrspacecast (ptr addrspace(1) getelementptr inbounds ([2 x i64], ptr addrspace(1) @__profc_kernel1, i32 0, i32 1) to ptr), ptr addrspacecast (ptr addrspace(1) getelementptr inbounds ([2 x i64], ptr addrspace(1) @__llvm_prf_unifcnt_kernel1, i32 0, i32 1) to ptr), i64 1)
+; CHECK: call void @__llvm_profile_instrument_gpu(ptr addrspacecast (ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @__profc_kernel1, i64 8) to ptr), ptr addrspacecast (ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @__llvm_prf_unifcnt_kernel1, i64 8) to ptr), i64 1)

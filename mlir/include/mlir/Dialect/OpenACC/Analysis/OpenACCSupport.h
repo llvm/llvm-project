@@ -67,6 +67,17 @@
 namespace mlir {
 namespace acc {
 
+/// How the name of a variable is to be rendered.
+struct VariableNameConfig {
+  /// Render the name the source language spells, which is the name a message
+  /// to the user states. When false, the name the variable is emitted under is
+  /// rendered instead - for a global the symbol it is addressed through -
+  /// which is the name it is resolved against the symbols of a binary by. Only
+  /// a language that uniques or mangles the names of its variables spells the
+  /// two differently.
+  bool preferDemangledName = true;
+};
+
 namespace detail {
 /// This class contains internal trait classes used by OpenACCSupport.
 /// It follows the Concept-Model pattern used throughout MLIR (e.g., in
@@ -77,7 +88,7 @@ struct OpenACCSupportTraits {
     virtual ~Concept() = default;
 
     /// Get the variable name for a given MLIR value.
-    virtual std::string getVariableName(Value v) = 0;
+    virtual std::string getVariableName(Value v, VariableNameConfig config) = 0;
 
     /// Get the recipe name for a given kind, type and value.
     virtual std::string getRecipeName(RecipeKind kind, Type type,
@@ -170,8 +181,8 @@ struct OpenACCSupportTraits {
     explicit Model(ImplT &&impl) : impl(std::forward<ImplT>(impl)) {}
     ~Model() override = default;
 
-    std::string getVariableName(Value v) final {
-      return impl.getVariableName(v);
+    std::string getVariableName(Value v, VariableNameConfig config) final {
+      return impl.getVariableName(v, config);
     }
 
     std::string getRecipeName(RecipeKind kind, Type type, Value var) final {
@@ -252,11 +263,15 @@ public:
         std::make_unique<Model<AnalysisT>>(std::forward<AnalysisT>(analysis));
   }
 
-  /// Get the variable name for a given value.
+  /// Get the variable name for a given value. Which of the names a variable
+  /// goes by is a question only an implementation that knows the source
+  /// language can answer, so the default implementation returns the one name
+  /// the IR states regardless of \p config.
   ///
   /// \param v The MLIR value to get the variable name for.
+  /// \param config Which of the names of the variable to return.
   /// \return The variable name, or an empty string if unavailable.
-  std::string getVariableName(Value v);
+  std::string getVariableName(Value v, VariableNameConfig config = {});
 
   /// Get the recipe name for a given type and value.
   ///
@@ -274,7 +289,11 @@ public:
   /// \param message The message to report.
   /// \return An in-flight diagnostic object that can be used to report the
   ///         unsupported case.
-  InFlightDiagnostic emitNYI(Location loc, const Twine &message);
+  InFlightDiagnostic emitNYI(Location loc, const Twine &message) {
+    if (impl)
+      return impl->emitNYI(loc, message);
+    return mlir::emitError(loc, "not yet implemented: " + message);
+  }
 
   /// Emit an OpenACC remark with lazy message generation.
   ///
