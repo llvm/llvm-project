@@ -2694,9 +2694,18 @@ __arm_set_fpm_overflow_cvt(fpm_t __fpm, enum __ARM_FPM_OVERFLOW __behaviour) {
   return (__fpm & ~0x8000ull) | ((fpm_t)__behaviour << 15u);
 }
 
-__inline__ fpm_t __attribute__((__always_inline__, __nodebug__)) __arm_set_fpm_lscale(fpm_t __fpm, uint64_t __scale);
-__inline__ fpm_t __attribute__((__always_inline__, __nodebug__)) __arm_set_fpm_nscale(fpm_t __fpm, int64_t __scale);
-__inline__ fpm_t __attribute__((__always_inline__, __nodebug__))  __arm_set_fpm_lscale2(fpm_t __fpm, uint64_t __scale);
+/*
+ * The types below must match the builtin prototypes in BuiltinsAArch64.td
+ * exactly. Do not use fpm_t, uint64_t or int64_t here since these depend on
+ * __UINT64_TYPE__ and __INT64_TYPE__, which some users (e.g. the Linux kernel)
+ * redefine.
+ */
+__inline__ unsigned long long __attribute__((__always_inline__, __nodebug__))
+__arm_set_fpm_lscale(unsigned long long __fpm, unsigned long long __scale);
+__inline__ unsigned long long __attribute__((__always_inline__, __nodebug__))
+__arm_set_fpm_nscale(unsigned long long __fpm, long long __scale);
+__inline__ unsigned long long __attribute__((__always_inline__, __nodebug__))
+__arm_set_fpm_lscale2(unsigned long long __fpm, unsigned long long __scale);
 
 )";
 

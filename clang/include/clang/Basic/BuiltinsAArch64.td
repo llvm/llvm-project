@@ -48,10 +48,13 @@ def sev     : AArch64Builtin<"void ()">;
 def sevl    : AArch64Builtin<"void ()">;
 def chkfeat : AArch64Builtin<"uint64_t (uint64_t)">;
 
+// The FPM scale helpers are declared in arm_vector_types.h. Use types that do
+// not depend on __UINT64_TYPE__ / __INT64_TYPE__ such that the declarations in
+// that header match these prototypes even if these macros have been redefined.
 let Attributes = [NoThrow, RequireDeclaration], Header = "arm_vector_types.h" in {
-        def __arm_set_fpm_lscale  : AArch64NoPrefixTargetLibBuiltin<"uint64_t (uint64_t, uint64_t)">;
-        def __arm_set_fpm_nscale  : AArch64NoPrefixTargetLibBuiltin<"uint64_t (uint64_t, int64_t)">;
-        def __arm_set_fpm_lscale2 : AArch64NoPrefixTargetLibBuiltin<"uint64_t (uint64_t, uint64_t)">;
+        def __arm_set_fpm_lscale  : AArch64NoPrefixTargetLibBuiltin<"unsigned long long int (unsigned long long int, unsigned long long int)">;
+        def __arm_set_fpm_nscale  : AArch64NoPrefixTargetLibBuiltin<"unsigned long long int (unsigned long long int, long long int)">;
+        def __arm_set_fpm_lscale2 : AArch64NoPrefixTargetLibBuiltin<"unsigned long long int (unsigned long long int, unsigned long long int)">;
 }
 
 let Attributes = [RequireDeclaration], Languages = "ALL_LANGUAGES", Header = "arm_acle.h" in {
