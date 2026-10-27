@@ -1839,6 +1839,11 @@ convertFloatValue(APFloat sourceValue,
   if (sourceValue.isNaN() &&
       targetSemantics.nonFiniteBehavior == fltNonfiniteBehavior::FiniteOnly)
     return failure();
+  // A format without a sign (e.g. f8E8M0FNU) has no negative values, and
+  // APFloat::convert reaches llvm_unreachable on a negative NaN or overflow.
+  if (sourceValue.isNegative() &&
+      !APFloat::semanticsHasSignedRepr(targetSemantics))
+    return failure();
 
   bool losesInfo = false;
   auto status = sourceValue.convert(targetSemantics, roundingMode, &losesInfo);

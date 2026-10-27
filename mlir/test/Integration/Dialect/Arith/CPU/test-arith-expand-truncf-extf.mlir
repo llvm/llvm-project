@@ -1,5 +1,6 @@
 // Check various edge cases for truncf/extf ops involving f32 and the f4E2M1FN,
-// f8E4M3FN and f8E5M2 types.
+// f8E4M3FN and f8E5M2 types. test-arith-expand-narrow-float.mlir covers the
+// other formats, the rounding modes and the other source and result types.
 
 // RUN: mlir-opt %s --convert-func-to-llvm \
 // RUN:             --arith-expand="include-f4e2m1=true include-f8e4m3fn=true include-f8e5m2=true" \
@@ -79,6 +80,7 @@ func.func @entry() {
   %higherThanMax = arith.constant 1000000.0 : f32
   %mustRound = arith.constant -3.14 : f32
   %nan = arith.constant 0x7f80000 : f32
+  %five = arith.constant 5.0 : f32
 
   // CHECK: 0
   func.call @check_truncf(%zero) : (f32) -> ()
@@ -118,6 +120,13 @@ func.func @entry() {
   func.call @check_truncf(%mustRound) : (f32) -> ()
   // CHECK: 0
   func.call @check_truncf(%nan) : (f32) -> ()
+  // 5.0 is halfway between 4.0 (0b0110) and 6.0 (0b0111) and rounds to the
+  // even code; rounding ties away from zero would give 7.
+  // CHECK: 6
+  func.call @check_truncf(%five) : (f32) -> ()
+  // -0.0 keeps its sign (0b1000).
+  // CHECK: 8
+  func.call @check_truncf(%minZero) : (f32) -> ()
 
   // CHECK: 0
   %zeroF4 = arith.truncf %zero : f32 to f4E2M1FN
@@ -170,6 +179,9 @@ func.func @entry() {
   // CHECK: -3
   %mustRoundF4 = arith.truncf %mustRound : f32 to f4E2M1FN
   func.call @check_extf(%mustRoundF4) : (f4E2M1FN) -> ()
+  // CHECK: 4
+  %fiveF4 = arith.truncf %five : f32 to f4E2M1FN
+  func.call @check_extf(%fiveF4) : (f4E2M1FN) -> ()
 
   // F8E4M3FN checks. See the OCP FP8 (E4M3) spec for the representation.
   %e4m3Round = arith.constant 1.1 : f32
@@ -178,6 +190,9 @@ func.func @entry() {
   %e4m3Ovf = arith.constant 465.0 : f32
   %e4m3Min = arith.constant -448.0 : f32
   %qnan = arith.constant 0x7fc00000 : f32
+  // 1.0625 + 2^-20 (f8E4M3FN) and 1.125 + 2^-14 (f8E5M2) lie just above a
+  // tie, but rounding them to f16 first lands exactly on it.
+  %e4m3RoundOnce = arith.constant 0x3f880008 : f32
 
   // CHECK: 0
   func.call @check_truncf_f8E4M3FN(%zero) : (f32) -> ()
@@ -195,6 +210,9 @@ func.func @entry() {
   func.call @check_truncf_f8E4M3FN(%four) : (f32) -> ()
   // CHECK: 57
   func.call @check_truncf_f8E4M3FN(%e4m3Round) : (f32) -> ()
+  // A single rounding gives 1.125 (rounding through f16 gives 1.0, 56).
+  // CHECK: 57
+  func.call @check_truncf_f8E4M3FN(%e4m3RoundOnce) : (f32) -> ()
   // CHECK: 126
   func.call @check_truncf_f8E4M3FN(%e4m3Max) : (f32) -> ()
   // A magnitude exactly halfway between the max (448) and the NaN slot rounds
@@ -214,7 +232,8 @@ func.func @entry() {
   func.call @check_truncf_f8E4M3FN(%minFour) : (f32) -> ()
   // CHECK: 254
   func.call @check_truncf_f8E4M3FN(%e4m3Min) : (f32) -> ()
-  // CHECK: 127
+  // A negative overflow gives -NaN (0xff), as APFloat::convert does.
+  // CHECK: 255
   func.call @check_truncf_f8E4M3FN(%lowerThanMin) : (f32) -> ()
   // CHECK: 127
   func.call @check_truncf_f8E4M3FN(%qnan) : (f32) -> ()
@@ -231,6 +250,9 @@ func.func @entry() {
   // CHECK: 1.125
   %roundE4m3 = arith.truncf %e4m3Round : f32 to f8E4M3FN
   func.call @check_extf_f8E4M3FN(%roundE4m3) : (f8E4M3FN) -> ()
+  // CHECK: 1.125
+  %roundOnceE4m3 = arith.truncf %e4m3RoundOnce : f32 to f8E4M3FN
+  func.call @check_extf_f8E4M3FN(%roundOnceE4m3) : (f8E4M3FN) -> ()
   // CHECK: 448
   %maxE4m3 = arith.truncf %e4m3Max : f32 to f8E4M3FN
   func.call @check_extf_f8E4M3FN(%maxE4m3) : (f8E4M3FN) -> ()
@@ -246,7 +268,8 @@ func.func @entry() {
   // CHECK: -4
   %minFourE4m3 = arith.truncf %minFour : f32 to f8E4M3FN
   func.call @check_extf_f8E4M3FN(%minFourE4m3) : (f8E4M3FN) -> ()
-  // CHECK: nan
+  // The NaN keeps its sign through extf.
+  // CHECK: -nan
   %lowerE4m3 = arith.truncf %lowerThanMin : f32 to f8E4M3FN
   func.call @check_extf_f8E4M3FN(%lowerE4m3) : (f8E4M3FN) -> ()
 
@@ -255,6 +278,7 @@ func.func @entry() {
   %e5m2Max = arith.constant 57344.0 : f32
   %e5m2Min = arith.constant -57344.0 : f32
   %inf = arith.constant 0x7f800000 : f32
+  %e5m2RoundOnce = arith.constant 0x3f900200 : f32
 
   // CHECK: 0
   func.call @check_truncf_f8E5M2(%zero) : (f32) -> ()
@@ -264,6 +288,9 @@ func.func @entry() {
   func.call @check_truncf_f8E5M2(%one) : (f32) -> ()
   // CHECK: 61
   func.call @check_truncf_f8E5M2(%e5m2Round) : (f32) -> ()
+  // A single rounding gives 1.25 (rounding through f16 gives 1.0, 60).
+  // CHECK: 61
+  func.call @check_truncf_f8E5M2(%e5m2RoundOnce) : (f32) -> ()
   // CHECK: 62
   func.call @check_truncf_f8E5M2(%oneAndAHalf) : (f32) -> ()
   // CHECK: 64
@@ -300,6 +327,9 @@ func.func @entry() {
   // CHECK: 1.25
   %roundE5m2 = arith.truncf %e5m2Round : f32 to f8E5M2
   func.call @check_extf_f8E5M2(%roundE5m2) : (f8E5M2) -> ()
+  // CHECK: 1.25
+  %roundOnceE5m2 = arith.truncf %e5m2RoundOnce : f32 to f8E5M2
+  func.call @check_extf_f8E5M2(%roundOnceE5m2) : (f8E5M2) -> ()
   // CHECK: 1.5
   %oneAndAHalfE5m2 = arith.truncf %oneAndAHalf : f32 to f8E5M2
   func.call @check_extf_f8E5M2(%oneAndAHalfE5m2) : (f8E5M2) -> ()
