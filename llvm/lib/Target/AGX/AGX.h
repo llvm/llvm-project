@@ -101,7 +101,10 @@ public:
 /// Writes a module of AGX kernels as the input of the AIR target's portable
 /// passes: upstream AIR, with hints for what AIR does not have.
 class AGXRaiseToAIRPass : public RequiredPassInfoMixin<AGXRaiseToAIRPass> {
+  const TargetMachine *TM;
+
 public:
+  explicit AGXRaiseToAIRPass(const TargetMachine *TM = nullptr) : TM(TM) {}
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 

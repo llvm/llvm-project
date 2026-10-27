@@ -29,6 +29,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "AGX.h"
+#include "AGXSubtarget.h"
+#include "AGXTargetMachine.h"
 #include "Utils/AGXBaseInfo.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
@@ -138,13 +140,25 @@ public:
 class RaiseToAIR {
   Module &M;
   LLVMContext &Ctx;
+  /// Double precision NaN results are the canonical NaN (the AGX subtarget's
+  /// canonical-nan, as AGXSoftF64 does).
+  bool CanonicalNaN = false;
   bool Failed = false;
   bool NeedSoftF64 = false;
   /// Hint functions by key and AGX type, before the types change.
   std::map<std::pair<std::string, FunctionType *>, Function *> Hints;
 
 public:
-  explicit RaiseToAIR(Module &M) : M(M), Ctx(M.getContext()) {}
+  RaiseToAIR(Module &M, const TargetMachine *TM)
+      : M(M), Ctx(M.getContext()) {
+    for (Function &F : M)
+      if (TM && !F.isDeclaration()) {
+        CanonicalNaN =
+            static_cast<const AGXTargetMachine *>(TM)->getSubtarget<AGXSubtarget>(F)
+                .hasCanonicalNaN();
+        break;
+      }
+  }
   bool run();
 
 private:
@@ -799,6 +813,22 @@ void RaiseToAIR::emulate(Function &F, StringRef Key) {
     }
     if (!R)
       return NoEmulation();
+    // NaN results canonical; f64 results only (not comparisons or integer
+    // conversions).
+    // A NaN made from operands that are not NaN is the canonical NaN; NaN
+    // operands propagate.
+    if (CanonicalNaN && DblOut && R->getType()->isIntegerTy(64)) {
+      auto NaN = [&](Value *X) {
+        return B.CreateICmpUGT(
+            B.CreateAnd(X, B.getInt64(0x7fffffffffffffffull)),
+            B.getInt64(0x7ff0000000000000ull));
+      };
+      Value *Made = NaN(R);
+      for (auto [I, X] : enumerate(A))
+        if (I + 1 < Mask.size() && Mask[I + 1] == 'd')
+          Made = B.CreateAnd(Made, B.CreateNot(NaN(X)));
+      R = B.CreateSelect(Made, B.getInt64(0x7fffffffffffffffull), R);
+    }
     return Fin(R);
   }
 
@@ -1173,6 +1203,6 @@ bool RaiseToAIR::run() {
 } // namespace
 
 PreservedAnalyses AGXRaiseToAIRPass::run(Module &M, ModuleAnalysisManager &) {
-  return RaiseToAIR(M).run() ? PreservedAnalyses::none()
+  return RaiseToAIR(M, TM).run() ? PreservedAnalyses::none()
                              : PreservedAnalyses::all();
 }

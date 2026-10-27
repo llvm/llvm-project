@@ -185,7 +185,7 @@ void AGXTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
       [this](StringRef Name, ModulePassManager &MPM,
              ArrayRef<PassBuilder::PipelineElement>) {
         if (Name == "agx-raise-to-air") {
-          MPM.addPass(AGXRaiseToAIRPass());
+          MPM.addPass(AGXRaiseToAIRPass(this));
           return true;
         }
         if (Name != "agx-lower-air")
