@@ -1136,6 +1136,126 @@ def group_misc():
     return cases
 
 
+def group_extra():
+    """The rest of the compute functions the reference front ends call."""
+    cases = []
+    # OpenCL-style builtin ids (dxmt): x component; threadgroups of 32.
+    for name, ref in (('get_global_id', lambda i: i), ('get_local_id', lambda i: i % 32),
+                      ('get_group_id', lambda i: i // 32)):
+        c = Case('air_' + name, ['u32'], 'u32', '%%r = call i32 @air.%s.i32(i32 0)' % name,
+                 {'declare i32 @air.%s.i32(i32)' % name}, lambda i, v, ref=ref: ref(i),
+                 tgsize=32, source='dxmt CreateGetBuiltinID')
+        cases.append(c)
+    # air.convert, signed int to float.
+    cases.append(Case('air_convert_f32_s32', ['i32'], 'f32',
+                      '%r = call float @air.convert.f.f32.s.i32(i32 %a0)',
+                      {'declare float @air.convert.f.f32.s.i32(i32)'},
+                      lambda i, v: float(v[0][i]), ulps=0, source='dxmt CreateConvertToFloat'))
+    # air.dot of two float4 (thread i < 16 handles 4 floats; others copy).
+    cases.append(full_case(
+        'air_dot_v4f32', ['f32', 'f32'], 'f32',
+        lambda i, v: sum(v[0][j] * v[1][j] for j in range(i // 4 * 4, i // 4 * 4 + 4)) if i % 4 == 0 else 0.0,
+        '%q = and i32 %tid, 15\n%is = icmp eq i32 %tid, %q\n'
+        '%idx = shl i32 %tid, 2\n'
+        'br i1 %is, label %go, label %done\n'
+        'go:\n'
+        '%pa = getelementptr <4 x float>, ptr addrspace(1) %in0, i32 %tid\n'
+        '%a = load <4 x float>, ptr addrspace(1) %pa\n'
+        '%pb = getelementptr <4 x float>, ptr addrspace(1) %in1, i32 %tid\n'
+        '%b = load <4 x float>, ptr addrspace(1) %pb\n'
+        '%d = call float @air.dot.v4f32(<4 x float> %a, <4 x float> %b)\n'
+        '%po = getelementptr float, ptr addrspace(1) %out, i32 %idx\n'
+        'store float %d, ptr addrspace(1) %po\n'
+        'br label %done\n'
+        'done:\nret void',
+        {'declare float @air.dot.v4f32(<4 x float>, <4 x float>)'},
+        gen=[lambda i, r: float(r.randrange(-8, 9)), lambda i, r: float(r.randrange(-8, 9))],
+        ulps=0, source='dxmt CreateDot'))
+    cases[-1].out_init = [0.0] * N
+    # pack/unpack unorm4x8: thread i < 16 packs in0[4i..4i+3]; out[i] holds the word.
+    def pack_ref(i, v):
+        if i >= 16:
+            return 0
+        b = [max(0, min(255, int(math.floor(max(0.0, min(1.0, x)) * 255 + 0.5))))
+             for x in v[0][4 * i:4 * i + 4]]
+        return b[0] | b[1] << 8 | b[2] << 16 | b[3] << 24
+    c = full_case(
+        'air_pack_unorm4x8', ['f32'], 'u32', pack_ref,
+        '%small = icmp ult i32 %tid, 16\n'
+        'br i1 %small, label %go, label %done\n'
+        'go:\n'
+        '%pa = getelementptr <4 x float>, ptr addrspace(1) %in0, i32 %tid\n'
+        '%a = load <4 x float>, ptr addrspace(1) %pa\n'
+        '%w = call i32 @air.pack.unorm4x8.v4f32(<4 x float> %a)\n'
+        '%po = getelementptr i32, ptr addrspace(1) %out, i32 %tid\n'
+        'store i32 %w, ptr addrspace(1) %po\n'
+        'br label %done\n'
+        'done:\nret void',
+        {'declare i32 @air.pack.unorm4x8.v4f32(<4 x float>)'},
+        gen=[lambda i, r: r.uniform(-0.2, 1.2)], source='floor metal.hpp')
+    c.out_init = [0] * N
+    cases.append(c)
+    # sincos: the cosine comes back through a private pointer.
+    cases.append(full_case(
+        'air_sincos', ['f32'], 'f32', lambda i, v: math.sin(v[0][i]) + 2 * math.cos(v[0][i]),
+        '%cp = alloca float\n'
+        '%pa = getelementptr float, ptr addrspace(1) %in0, i32 %tid\n'
+        '%a = load float, ptr addrspace(1) %pa\n'
+        '%sn = call float @air.sincos.f32(float %a, ptr %cp)\n'
+        '%cs = load float, ptr %cp\n%c2 = fmul float %cs, 2.0\n%r = fadd float %sn, %c2\n'
+        '%po = getelementptr float, ptr addrspace(1) %out, i32 %tid\n'
+        'store float %r, ptr addrspace(1) %po\nret void',
+        {'declare float @air.sincos.f32(float, ptr)'}, ulps=8, abstol=1e-6,
+        source='Metal.jl sincos (pointer out-parameter)'))
+    # shuffle_and_fill_down: lanes past the end take the fill value's lanes.
+    cases.append(full_case(
+        'simd_shuffle_and_fill_down', ['u32', 'u32'], 'u32',
+        lambda i, v: lanes(i, v[0])[i % 32 + 3] if i % 32 + 3 < 32 else lanes(i, v[1])[(i % 32 + 3) - 32],
+        '%pa = getelementptr i32, ptr addrspace(1) %in0, i32 %tid\n%a = load i32, ptr addrspace(1) %pa\n'
+        '%pb = getelementptr i32, ptr addrspace(1) %in1, i32 %tid\n%b = load i32, ptr addrspace(1) %pb\n'
+        '%r = call i32 @air.simd_shuffle_and_fill_down.u.i32(i32 %a, i32 %b, i16 3, i16 32)\n'
+        '%po = getelementptr i32, ptr addrspace(1) %out, i32 %tid\n'
+        'store i32 %r, ptr addrspace(1) %po\nret void',
+        {'declare i32 @air.simd_shuffle_and_fill_down.u.i32(i32, i32, i16, i16)'},
+        source='Metal.jl simd.jl'))
+    # quad ballot (i16) and SIMD vote all.
+    cases.append(full_case(
+        'quad_ballot', ['u32'], 'u32',
+        lambda i, v: sum((v[0][i // 4 * 4 + k] & 1) << k for k in range(4)),
+        '%pa = getelementptr i32, ptr addrspace(1) %in0, i32 %tid\n%a = load i32, ptr addrspace(1) %pa\n'
+        '%odd = trunc i32 %a to i1\n'
+        '%m = call i16 @air.quad_ballot(i1 %odd)\n%m4 = and i16 %m, 15\n%r = zext i16 %m4 to i32\n'
+        '%po = getelementptr i32, ptr addrspace(1) %out, i32 %tid\n'
+        'store i32 %r, ptr addrspace(1) %po\nret void',
+        {'declare i16 @air.quad_ballot(i1)'}, source='Metal.jl quad_ballot'))
+    cases.append(full_case(
+        'simd_vote_all', ['u32'], 'u32',
+        lambda i, v: int(all(x < 4000000000 for x in lanes(i, v[0]))),
+        '%pa = getelementptr i32, ptr addrspace(1) %in0, i32 %tid\n%a = load i32, ptr addrspace(1) %pa\n'
+        '%small = icmp ult i32 %a, 4000000000\n'
+        '%m = call i64 @air.simd_ballot.i64(i1 %small)\n'
+        '%b = call i1 @air.simd_vote_all.i64(i64 %m)\n%r = zext i1 %b to i32\n'
+        '%po = getelementptr i32, ptr addrspace(1) %out, i32 %tid\n'
+        'store i32 %r, ptr addrspace(1) %po\nret void',
+        {'declare i64 @air.simd_ballot.i64(i1)', 'declare i1 @air.simd_vote_all.i64(i64)'},
+        source='Metal.jl simd_vote_all'))
+    # simdgroup barrier on threadgroup memory within one SIMD-group.
+    c = Case('simdgroup_barrier', ['i32'], 'i32', None,
+             {'declare { i32, i32, i32 } @air.thread_position_in_threadgroup.v3i32()',
+              'declare void @air.simdgroup.barrier(i32, i32)'},
+             lambda i, v: v[0][i // 32 * 32 + 31 - i % 32], tgsize=32, source='dxmt CreateBarrier(SimdGroup)')
+    c.full = tg_kernel('simdgroup_barrier', (
+        '%sp = getelementptr [64 x i32], ptr addrspace(3) @tg, i32 0, i32 %lid\n'
+        'store i32 %a0, ptr addrspace(3) %sp\n'
+        'call void @air.simdgroup.barrier(i32 2, i32 4)\n'
+        '%rl = sub i32 31, %lid\n'
+        '%rp = getelementptr [64 x i32], ptr addrspace(3) @tg, i32 0, i32 %rl\n'
+        '%r = load i32, ptr addrspace(3) %rp\n'
+        'store i32 %r, ptr addrspace(1) %po'))
+    cases.append(c)
+    return cases
+
+
 GROUPS = {
     'llvm-math-f32': group_llvm_math_f32,
     'air-math-f32': group_air_math_f32,
@@ -1149,6 +1269,7 @@ GROUPS = {
     'memory': group_memory,
     'matrix': group_matrix,
     'misc': group_misc,
+    'extra': group_extra,
 }
 
 

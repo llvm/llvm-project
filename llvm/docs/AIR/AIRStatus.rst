@@ -42,9 +42,11 @@ Verification so far
   ``matrix``        8x8 SIMD-group matrices: f32, f16, accumulate, transposed,
                     from threadgroup memory (results exact)
   ``misc``          device-coherent loads and stores, ``air.mul_hi``
+  ``extra``         builtin ids, ``convert``, ``dot``, ``pack``, ``sincos``,
+                    fill shuffles, quad ballot, vote all, SIMD-group barrier
   ================= =========================================================
 
-  In all, 219 cases pass. One probe records a function AIR does not have
+  In all, 230 cases pass. One probe records a function AIR does not have
   (``air.copysign``), and one case needs a newer OS than the device runs
   (below).
 
