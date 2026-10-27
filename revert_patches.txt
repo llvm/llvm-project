@@ -16,11 +16,6 @@ ASAN-DEBUG lib breaks
 ---
 [DebugInfo] Accept DW_OP_xderef_size and DW_OP_lit1..DW_OP_lit31. (#227839)
 ---
-Need CK to fix their flags
-[LifetimeSafety] Add warning for member functions returning field origins (#229784)
-[LifetimeSafety] Add default member initializers to `LifetimeSafetyOpts` (#231914)
-[LifetimeSafety] Add a group for experimental warnings (#233377)
----
 need to work comgr build issues
 adfd756d1b830 Enable ClangIR Build By Default (#221291)
 ---
