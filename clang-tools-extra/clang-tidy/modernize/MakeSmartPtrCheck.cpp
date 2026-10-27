@@ -14,19 +14,19 @@
 
 using namespace clang::ast_matchers;
 
+namespace clang::tidy::modernize {
+
 namespace {
-AST_MATCHER(clang::Decl, hasInaccessibleDtor) {
-  if (const auto *RD = llvm::dyn_cast<clang::CXXRecordDecl>(&Node)) {
-    if (const auto *Destructor = RD->getDestructor()) {
-      return Destructor->isDeleted() ||
-             Destructor->getAccess() != clang::AS_public;
-    }
+
+AST_MATCHER(Decl, hasInaccessibleDtor) {
+  if (const auto *RD = llvm::dyn_cast<CXXRecordDecl>(&Node)) {
+    if (const auto *Destructor = RD->getDestructor())
+      return Destructor->isDeleted() || Destructor->getAccess() != AS_public;
   }
   return false;
 }
-} // namespace
 
-namespace clang::tidy::modernize {
+} // namespace
 
 static constexpr char ConstructorCall[] = "constructorCall";
 static constexpr char DirectVar[] = "directVar";
