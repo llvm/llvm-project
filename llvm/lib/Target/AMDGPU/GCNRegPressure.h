@@ -186,10 +186,23 @@ private:
                          unsigned DynamicVGPRBlockSize);
 };
 
+/// \returns the maximum of \p P1 and \p P2 for each register file. The VGPR and
+/// AVGPR components are queried as one sum, so both come from the operand with
+/// the larger sum. The AGPR maximum stays separate also for a unified VGPR
+/// file: ArchVGPRs and AGPRs use separate ranges of it, so the unified pressure
+/// is the sum of both peaks even when they are at different points.
 inline GCNRegPressure max(const GCNRegPressure &P1, const GCNRegPressure &P2) {
   GCNRegPressure Res;
   for (unsigned I = 0; I < GCNRegPressure::ValueArraySize; ++I)
     Res.Value[I] = std::max(P1.Value[I], P2.Value[I]);
+  for (unsigned Base : {0u, unsigned(GCNRegPressure::TOTAL_KINDS)}) {
+    unsigned V = Base + GCNRegPressure::VGPR;
+    unsigned AV = Base + GCNRegPressure::AVGPR;
+    const GCNRegPressure &From =
+        P1.Value[V] + P1.Value[AV] >= P2.Value[V] + P2.Value[AV] ? P1 : P2;
+    Res.Value[V] = From.Value[V];
+    Res.Value[AV] = From.Value[AV];
+  }
   return Res;
 }
 
