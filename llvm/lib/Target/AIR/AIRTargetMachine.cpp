@@ -200,6 +200,24 @@ AIRTargetMachine::AIRTargetMachine(const Target &T, const Triple &TT,
 
 AIRTargetMachine::~AIRTargetMachine() {}
 
+static cl::opt<bool> AIRPortable(
+    "air-portable",
+    cl::desc("Run only the passes shared by every AIR consumer "
+             "(addAIRPortablePasses) and print the module; with "
+             "-filetype=asm only"),
+    cl::init(false));
+
+// The passes of the full pipeline (AIRPassConfig::addCodeGenPrepare) that
+// define AIR rather than work around the Metal driver, in the same order.
+void llvm::addAIRPortablePasses(legacy::PassManagerBase &PM) {
+  PM.add(createAIRFromGenericGPULegacyPass());
+  PM.add(createAIRNaNMinMaxLegacyPass());
+  PM.add(createLLVMToAIRIntrinsicsLegacyPass());
+  PM.add(createAIRBarrierRenameLegacyPass());
+  PM.add(createAIRLowerAtomicRMWLegacyPass());
+  PM.add(createAIRSystemValuesLegacyPass());
+}
+
 void AIRTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB){
 #define GET_PASS_REGISTRY "AIRPassRegistry.def"
 #include "llvm/Passes/TargetPassRegistry.inc"
@@ -209,6 +227,14 @@ bool AIRTargetMachine::addPassesToEmitFile(
     PassManagerBase &PM, raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
     CodeGenFileType FileType, bool DisableVerify,
     MachineModuleInfoWrapperPass *MMIWP) {
+  if (AIRPortable) {
+    if (FileType != CodeGenFileType::AssemblyFile)
+      report_fatal_error("-air-portable prints the module; use -filetype=asm");
+    addAIRPortablePasses(PM);
+    PM.add(createPrintModulePass(Out, "", true));
+    return false;
+  }
+
   TargetPassConfig *PassConfig = createPassConfig(PM);
   // Standard llc IR prologue (verifier, LSR + codegen-prep IR passes) at
   // -O1+, same as every upstream backend; -O0 / -disable-lsr opt out.

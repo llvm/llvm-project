@@ -94,6 +94,16 @@ Pass name                                    Responsibility
 ``air-prepare``                            Final AIR-conformance fixups
 ============================================ ====================================
 
+Only six of these passes give the module AIR's meaning:
+``air-from-generic-gpu``, ``air-nan-min-max``, ``air-llvm-to-air-intrinsics``,
+``air-barrier-rename``, ``air-lower-atomic-rmw`` and ``air-air-system-values``.
+The others adapt the module to Apple's Metal driver (for example
+``air-lower-fneg``, ``air-device-loads-volatile``, ``air-inline-non-kernel``),
+to the Triton host's argument convention (``air-scalar-buffer-packing``), or to
+the bitcode writer. ``addAIRPortablePasses`` (``AIR.h``) adds the six, in the
+same order, for consumers other than the Metal driver; ``llc -air-portable``
+runs them alone and prints the module.
+
 Kernel Arguments
 ================
 

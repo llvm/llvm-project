@@ -18,6 +18,9 @@ namespace llvm {
 class ModulePass;
 class FunctionPass;
 class PassRegistry;
+namespace legacy {
+class PassManagerBase;
+} // namespace legacy
 
 /// Initializer for the generic-GPU (OpenCL/SPIR-V builtin) -> AIR lowering.
 void initializeAIRFromGenericGPUPass(PassRegistry &);
@@ -166,6 +169,14 @@ void initializeAIRCrossBufferStoreSeparateLegacyPass(PassRegistry &);
 /// cross-buffer device stores, working around the AGX-1 JIT store-coalescing
 /// miscompile. No-op on single-output kernels. See AGX_BUGS.md (AGX-1).
 ModulePass *createAIRCrossBufferStoreSeparateLegacyPass();
+
+/// Add the passes that give a module AIR's meaning: generic GPU builtins,
+/// LLVM intrinsics, barriers and atomics become AIR functions, and system
+/// values become kernel parameters described by `!air.kernel`. Their result is
+/// the AIR that every consumer shares (the AGX target reads it). The other
+/// AIR passes adapt it to Apple's Metal driver or to the bitcode writer and
+/// run only on the way to a .metallib or .air.
+void addAIRPortablePasses(legacy::PassManagerBase &PM);
 
 } // namespace llvm
 
