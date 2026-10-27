@@ -3542,8 +3542,8 @@ void SemaHLSL::ActOnEndOfTranslationUnit(TranslationUnitDecl *TU) {
   diagnoseAvailabilityViolations(TU);
 
   if (!TU->hasAttr<HLSLPreciseAttr>())
-    for (const auto &D : DeferredFPNaNInfDiagnostics)
-      Diag(D.first, D.second);
+    for (const auto &[Loc, PD] : DeferredFPNaNInfDiagnostics)
+      Diag(Loc, PD);
   DeferredFPNaNInfDiagnostics.clear();
 }
 

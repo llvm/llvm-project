@@ -178,9 +178,7 @@ bool BackendConsumer::LinkInModules(llvm::Module *M) {
 
 void BackendConsumer::HandleTranslationUnit(ASTContext &C) {
   // If HLSL `precise` appears anywhere in the TU, compile the whole TU as if
-  // -ffp-model=strict (-Gis) had been specified. This is only sound because
-  // CodeGeneratorImpl defers all HLSL emission until HandleTranslationUnit;
-  // see DeferEmission in ModuleBuilder.cpp.
+  // -ffp-model=strict (-Gis) had been specified.
   if (C.getTranslationUnitDecl()->hasAttr<HLSLPreciseAttr>() &&
       !Diags.hasErrorOccurred()) {
     auto &Opts = CI.getLangOpts();
