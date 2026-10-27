@@ -453,6 +453,10 @@ def err_invalid_is_within_lifetime : Note<
   "a pointer to an object whose lifetime has not yet begun}1"
 >;
 
+def note_break_continue_label_outside_context : Note<
+  "cannot %select{break|continue}0 to a label outside "
+  "the current evaluation context">;
+
 // inline asm related.
 let CategoryName = "Inline Assembly Issue" in {
   def err_asm_invalid_escape : Error<
