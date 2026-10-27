@@ -19,8 +19,12 @@ def WriteALU : SchedWrite;
 def WriteALU64 : SchedWrite;
 // imadd, bit field, shift, bit count, convert.
 def WriteIMul : SchedWrite;
-// fadd, fmul, fmadd (32 and 16 bit), cmpsel.
+// fadd, fmul, fmadd16, 16-bit cmpsel.
 def WriteFP : SchedWrite;
+// fmadd32 and 32-bit cmpsel: three or more 32-bit register sources, which
+// issue every 2 cycles (fmadd32 2.1, icmpsel / fcmpsel 2.2 in the G14C
+// instruction bench, against 1.1 for fadd32 and fmul32).
+def WriteFP3 : SchedWrite;
 // floor, ceil, trunc, rint, sin_pt_1.
 def WriteFRound : SchedWrite;
 // rcp, log2, exp2, sin_pt_2.
@@ -37,6 +41,9 @@ def WriteShuffle : SchedWrite;
 def WriteQuadShuffle : SchedWrite;
 // simd reductions and scans.
 def WriteSIMDReduce : SchedWrite;
+// simd_matrix_fmadd32 / 16 (8x8 SIMD-group matrices): latency 17, a new one
+// every 16 cycles on G14C.
+def WriteSIMDMatrix : SchedWrite;
 // quad reductions and scans.
 def WriteQuadReduce : SchedWrite;
 // device memory and stack loads.
@@ -85,6 +92,7 @@ multiclass AGXWrites<ProcResource ALU, ProcResource SFU, ProcResource Mem> {
   def : WriteRes<WriteALU64, [SFU]> { let Latency = 5; let ReleaseAtCycles = [4]; }
   def : WriteRes<WriteIMul, [SFU]> { let Latency = 3; let ReleaseAtCycles = [2]; }
   def : WriteRes<WriteFP, [ALU]> { let Latency = 2; }
+  def : WriteRes<WriteFP3, [ALU]> { let Latency = 2; let ReleaseAtCycles = [2]; }
   def : WriteRes<WriteFRound, [SFU]> { let Latency = 3; let ReleaseAtCycles = [2]; }
   def : WriteRes<WriteSFU, [SFU]> { let Latency = 5; let ReleaseAtCycles = [2]; }
   def : WriteRes<WriteSFUSlow, [SFU]> { let Latency = 6; let ReleaseAtCycles = [4]; }
@@ -93,6 +101,7 @@ multiclass AGXWrites<ProcResource ALU, ProcResource SFU, ProcResource Mem> {
   def : WriteRes<WriteShuffle, [SFU]> { let Latency = 5; let ReleaseAtCycles = [2]; }
   def : WriteRes<WriteQuadShuffle, [ALU]> { let Latency = 4; }
   def : WriteRes<WriteSIMDReduce, [SFU]> { let Latency = 24; let ReleaseAtCycles = [24]; }
+  def : WriteRes<WriteSIMDMatrix, [SFU]> { let Latency = 17; let ReleaseAtCycles = [16]; }
   def : WriteRes<WriteQuadReduce, [SFU]> { let Latency = 12; let ReleaseAtCycles = [9]; }
   def : WriteRes<WriteDeviceLoad, [Mem]> { let Latency = 46; }
   def : WriteRes<WriteDeviceStore, [Mem]> { let Latency = 3; let ReleaseAtCycles = [3]; }

@@ -79,15 +79,15 @@ define agx_kernel void @transcendental(ptr addrspace(1) %out, float %a, float %b
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov_imm r3, 1059256707
 ; CHECK-NEXT:    fmul32 r1, u2, r3
-; CHECK-NEXT:    mov_imm r4, 1070141403
 ; CHECK-NEXT:    rint r2, r1
+; CHECK-NEXT:    mov_imm r4, 1070141403
+; CHECK-NEXT:    fmadd32 r1, r2.neg, r4, u2
 ; CHECK-NEXT:    mov_imm r5, -1287930578
+; CHECK-NEXT:    fmadd32 r1, r2.neg, r5, r1
 ; CHECK-NEXT:    mov_imm r6, -1493750547
-; CHECK-NEXT:    fmadd32 r7, r2.neg, r4, u2
+; CHECK-NEXT:    fmadd32 r7, r2.neg, r6, r1
 ; CHECK-NEXT:    mov_imm r1, 0
-; CHECK-NEXT:    fmadd32 r7, r2.neg, r5, r7
 ; CHECK-NEXT:    mov_imm r8, 1249902592
-; CHECK-NEXT:    fmadd32 r7, r2.neg, r6, r7
 ; CHECK-NEXT:    fcmpsel lt, r2, u2.abs, r8, r2, r1
 ; CHECK-NEXT:    fmul32 r9, r7, r7
 ; CHECK-NEXT:    mov_imm r10, 1007190942

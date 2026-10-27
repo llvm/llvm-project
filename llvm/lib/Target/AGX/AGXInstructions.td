@@ -470,29 +470,29 @@ defvar FC_LTE = 6;
 defvar FC_GTN = 7;
 
 multiclass ICmpselPseudo<RegisterClass rc, RegisterOperand cmp,
-                         RegisterOperand sel> {
+                         RegisterOperand sel, SchedWrite sched = WriteFP> {
   def NAME : AGXALUPseudo<ICMPSEL_g13, (outs rc:$dst),
                           (ins i32imm:$cc, SrcMods:$src0_mods, cmp:$src0,
                                SrcMods:$src1_mods, cmp:$src1,
                                SrcMods:$src2_mods, sel:$src2,
-                               SrcMods:$src3_mods, sel:$src3), [], [WriteFP]>;
+                               SrcMods:$src3_mods, sel:$src3), [], [sched]>;
 }
 
 multiclass FCmpselPseudo<RegisterClass rc, RegisterOperand cmp,
-                         RegisterOperand sel> {
+                         RegisterOperand sel, SchedWrite sched = WriteFP> {
   def NAME : AGXALUPseudo<FCMPSEL_g13, (outs rc:$dst),
                           (ins i32imm:$cc, SrcMods:$src0_mods, cmp:$src0,
                                SrcMods:$src1_mods, cmp:$src1,
                                SrcMods:$src2_mods, sel:$src2,
-                               SrcMods:$src3_mods, sel:$src3), [], [WriteFP]>;
+                               SrcMods:$src3_mods, sel:$src3), [], [sched]>;
 }
 
 // Naming: <compare type>_<result type>.
-defm ICMPSEL_I32 : ICmpselPseudo<GPR32, Src32Op, Src32Op>;
+defm ICMPSEL_I32 : ICmpselPseudo<GPR32, Src32Op, Src32Op, WriteFP3>;
 defm ICMPSEL_I16 : ICmpselPseudo<GPR16, Src16Op, Src16Op>;
 defm ICMPSEL_I16_I32 : ICmpselPseudo<GPR32, Src16Op, Src32Op>;
 defm ICMPSEL_I32_I16 : ICmpselPseudo<GPR16, Src32Op, Src16Op>;
-defm FCMPSEL_F32 : FCmpselPseudo<GPR32, Src32Op, Src32Op>;
+defm FCMPSEL_F32 : FCmpselPseudo<GPR32, Src32Op, Src32Op, WriteFP3>;
 defm FCMPSEL_F16 : FCmpselPseudo<GPR16, Src16Op, Src16Op>;
 defm FCMPSEL_F16_I32 : FCmpselPseudo<GPR32, Src16Op, Src32Op>;
 defm FCMPSEL_F32_I16 : FCmpselPseudo<GPR16, Src32Op, Src16Op>;
@@ -694,14 +694,15 @@ def : Pat<(f32 (fpextend (AGXFPSrc16 f16:$a, i32:$am))),
 def : Pat<(f16 (fpround (AGXFPSrc32 f32:$a, i32:$am))),
           (FADD32_F16_F32 $am, $a, 0, (i32 FPIMM_NEG_ZERO))>;
 
-multiclass FMAPseudo<Instruction real, RegisterClass rc, RegisterOperand src> {
+multiclass FMAPseudo<Instruction real, RegisterClass rc, RegisterOperand src,
+                     SchedWrite sched = WriteFP> {
   def NAME : AGXALUPseudo<real, (outs rc:$dst),
                           (ins SrcMods:$src0_mods, src:$src0,
                                SrcMods:$src1_mods, src:$src1,
-                               SrcMods:$src2_mods, src:$src2), [], [WriteFP]>;
+                               SrcMods:$src2_mods, src:$src2), [], [sched]>;
 }
 
-defm FMADD32_F32 : FMAPseudo<FMADD32_g13, GPR32, Src32Op>;
+defm FMADD32_F32 : FMAPseudo<FMADD32_g13, GPR32, Src32Op, WriteFP3>;
 defm FMADD16_F16 : FMAPseudo<FMADD16_g13, GPR16, Src16Op>;
 
 def : Pat<(f32 (fma (AGXFPSrc32 f32:$a, i32:$am), (AGXFPSrc32 f32:$b, i32:$bm),
@@ -1496,13 +1497,13 @@ def SIMD_MATRIX_FMADD32 : AGXALUPseudo<SIMD_MATRIX_FMADD32_g13,
                                        (ins SrcMods:$src0_mods, Src64Op:$src0,
                                             SrcMods:$src1_mods, Src64Op:$src1,
                                             SrcMods:$src2_mods, Src64Op:$src2),
-                                       [], [WriteSIMDReduce]>;
+                                       [], [WriteSIMDMatrix]>;
 def SIMD_MATRIX_FMADD16 : AGXALUPseudo<SIMD_MATRIX_FMADD16_g13,
                                        (outs GPR32:$dst),
                                        (ins SrcMods:$src0_mods, GPR32SrcOp:$src0,
                                             SrcMods:$src1_mods, GPR32SrcOp:$src1,
                                             SrcMods:$src2_mods, GPR32SrcOp:$src2),
-                                       [], [WriteSIMDReduce]>;
+                                       [], [WriteSIMDMatrix]>;
 }
 
 let Predicates = [HasSIMDMatrix] in {
