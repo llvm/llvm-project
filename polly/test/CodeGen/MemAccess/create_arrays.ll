@@ -37,7 +37,7 @@
 ; CODEGEN: !3 = distinct !{!3, !1}
 ; CODEGEN: !4 = !{!5}
 ; CODEGEN: !5 = distinct !{!5, !6, !"polly.alias.scope.E"}
-; CODEGEN: !6 = distinct !{!6, !"polly.alias.scope.domain"}
+; CODEGEN: !6 = distinct !{!6, i1 false, !"polly.alias.scope.domain"}
 ; CODEGEN: !7 = !{!8, !9, !10, !11}
 ; CODEGEN: !8 = distinct !{!8, !6, !"polly.alias.scope.MemRef_B"}
 ; CODEGEN: !9 = distinct !{!9, !6, !"polly.alias.scope.MemRef_A"}

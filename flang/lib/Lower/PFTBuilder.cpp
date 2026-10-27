@@ -1117,8 +1117,8 @@ private:
           },
           [&](const parser::AssignStmt &s) { // legacy label assignment
             auto &label = std::get<parser::Label>(s.t);
-            const auto *sym = std::get<parser::Name>(s.t).symbol;
-            assert(sym && "missing AssignStmt symbol");
+            assert(std::get<parser::Name>(s.t).symbol &&
+                   "missing AssignStmt symbol");
             auto labelIter{labelEvaluationMap->find(label)};
             assert(labelIter != labelEvaluationMap->end() &&
                    "assigned label has no evaluation");
@@ -2650,7 +2650,7 @@ constantValueOrMax(const parser::ScalarIntConstantExpr &intExpr) {
     if (auto v = evaluate::ToInt64(*expr))
       if (*v > 0)
         return *v;
-  return std::numeric_limits<int64_t>::max();
+  return common::numeric_limits<int64_t>::max();
 }
 
 /// Fill \p chain with the DoConstruct at each depth above (and including)

@@ -21,11 +21,11 @@ using namespace sycl;
 
 int main() {
   for (const sycl::platform &P : sycl::platform::get_platforms()) {
-    auto ctx_devs = P.khr_get_default_context().get_devices();
-    auto root_devs = P.get_devices();
+    auto CtxDevs = P.khr_get_default_context().get_devices();
+    auto RootDevs = P.get_devices();
 
-    for (const auto &dev : root_devs)
-      if (std::find(ctx_devs.begin(), ctx_devs.end(), dev) == ctx_devs.end())
+    for (const auto &Dev : RootDevs)
+      if (std::find(CtxDevs.begin(), CtxDevs.end(), Dev) == CtxDevs.end())
         return 1;
   }
 

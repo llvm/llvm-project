@@ -341,13 +341,8 @@ Parser::ParseRHSOfBinaryExpression(ExprResult LHS, prec::Level MinPrec) {
       assert(getLangOpts().Reflection);
       if (getLangOpts().Blocks) {
         OpToken.setKind(tok::caret);
-        Token Caret;
-        {
-          Caret.startToken();
-          Caret.setKind(tok::caret);
-          Caret.setLocation(OpToken.getLocation().getLocWithOffset(1));
-          Caret.setLength(1);
-        }
+        Token Caret = Token::create(
+            tok::caret, OpToken.getLocation().getLocWithOffset(1), 1);
         UnconsumeToken(OpToken);
         PP.EnterToken(Caret, /*IsReinject=*/true);
         return ParseRHSOfBinaryExpression(LHS, MinPrec);
@@ -2667,6 +2662,10 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool StopIfCastExpr,
                              ParsedType &CastTy, SourceLocation &RParenLoc) {
   assert(Tok.is(tok::l_paren) && "Not a paren expr!");
   ColonProtectionRAIIObject ColonProtection(*this, false);
+  GenericAssociationTypeRAIIObject NotParsingGenericAssociationType(
+      *this,
+      /*Value=*/false);
+
   BalancedDelimiterTracker T(*this, tok::l_paren);
   if (T.consumeOpen())
     return ExprError();
@@ -3107,7 +3106,8 @@ ExprResult Parser::ParseGenericSelectionExpression() {
       DefaultLoc = ConsumeToken();
       Ty = nullptr;
     } else {
-      ColonProtectionRAIIObject X(*this);
+      GenericAssociationTypeRAIIObject X(*this);
+
       TypeResult TR = ParseTypeName(nullptr, DeclaratorContext::Association);
       if (TR.isInvalid()) {
         SkipUntil(tok::r_paren, StopAtSemi);
@@ -3197,15 +3197,10 @@ void Parser::injectEmbedTokens() {
                               Data->BinaryData.size() * 2 - 1);
   unsigned I = 0;
   for (auto &Byte : Data->BinaryData) {
-    Toks[I].startToken();
-    Toks[I].setKind(tok::binary_data);
-    Toks[I].setLocation(Tok.getLocation());
-    Toks[I].setLength(1);
+    Toks[I] = Token::create(tok::binary_data, Tok.getLocation(), 1);
     Toks[I].setLiteralData(&Byte);
     if (I != ((Data->BinaryData.size() - 1) * 2)) {
-      Toks[I + 1].startToken();
-      Toks[I + 1].setKind(tok::comma);
-      Toks[I + 1].setLocation(Tok.getLocation());
+      Toks[I + 1] = Token::create(tok::comma, Tok.getLocation());
     }
     I += 2;
   }

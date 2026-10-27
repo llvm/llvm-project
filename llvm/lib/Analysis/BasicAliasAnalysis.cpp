@@ -254,6 +254,10 @@ CaptureComponents EarliestEscapeAnalysis::getCapturesBefore(
     if (!I)
       return false;
 
+    // Handle longjmp during re-entry.
+    if (callsReturnsTwiceFn())
+      return false;
+
     if (I == CaptureInst) {
       if (OrAt)
         return false;
@@ -265,6 +269,13 @@ CaptureComponents EarliestEscapeAnalysis::getCapturesBefore(
   if (IsNotCapturedBefore())
     return CaptureComponents::None;
   return Iter.first->second.second.WithoutRet;
+}
+
+bool EarliestEscapeAnalysis::callsReturnsTwiceFn() {
+  if (!CallsReturnsTwiceFn)
+    CallsReturnsTwiceFn =
+        DT.getRoot()->getParent()->callsFunctionThatReturnsTwice();
+  return *CallsReturnsTwiceFn;
 }
 
 void EarliestEscapeAnalysis::removeInstruction(Instruction *I) {
@@ -885,15 +896,6 @@ MemoryEffects BasicAAResult::getMemoryEffects(const CallBase *Call,
 /// Returns the behavior when calling the given function. For use when the call
 /// site is not known.
 MemoryEffects BasicAAResult::getMemoryEffects(const Function *F) {
-  switch (F->getIntrinsicID()) {
-  case Intrinsic::experimental_guard:
-  case Intrinsic::experimental_deoptimize:
-    // These intrinsics can read arbitrary memory, and additionally modref
-    // inaccessible memory to model control dependence.
-    return MemoryEffects::readOnly() |
-           MemoryEffects::inaccessibleMemOnly(ModRefInfo::ModRef);
-  }
-
   return F->getMemoryEffects();
 }
 

@@ -10,6 +10,7 @@
 
 #include "SIFoldOperands.h"
 #include "AMDGPU.h"
+#include "AMDGPULaneMaskUtils.h"
 #include "GCNSubtarget.h"
 #include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
@@ -257,6 +258,7 @@ public:
   bool tryConstantFoldOp(MachineInstr *MI) const;
   bool tryFoldCndMask(MachineInstr &MI) const;
   bool tryFoldRedundantAND(MachineInstr &ChildMI) const;
+  bool tryFoldAndExec(MachineInstr &MI) const;
   bool foldInstOperand(MachineInstr &MI, const FoldableDef &OpToFold) const;
 
   bool foldCopyToAGPRRegSequence(MachineInstr *CopyMI) const;
@@ -464,10 +466,6 @@ bool SIFoldOperandsImpl::foldCopyToVGPROfScalarAddOfFrameIndex(
   }
 
   return false;
-}
-
-FunctionPass *llvm::createSIFoldOperandsLegacyPass() {
-  return new SIFoldOperandsLegacy();
 }
 
 bool SIFoldOperandsImpl::canUseImmWithOpSel(const MachineInstr *MI,
@@ -1947,6 +1945,58 @@ bool SIFoldOperandsImpl::tryFoldRedundantAND(MachineInstr &ChildMI) const {
   return true;
 }
 
+/// Remove S_AND of a lane mask with EXEC, when the lane mask is already known
+/// to have 0 in the bits of all inactive lanes.
+///
+/// Instruction selection inserts these unconditionally because it has not
+/// analysed what produced the lane mask.
+bool SIFoldOperandsImpl::tryFoldAndExec(MachineInstr &MI) const {
+  const AMDGPU::LaneMaskConstants &LMC = AMDGPU::LaneMaskConstants::get(*ST);
+  if (MI.getOpcode() != LMC.AndOpc)
+    return false;
+
+  // The AND is going to be removed, so nothing may use the SCC it defines.
+  if (!MI.allImplicitDefsAreDead())
+    return false;
+
+  // Find the EXEC operand, and the lane mask it is being ANDed with.
+  unsigned ExecIdx = 0;
+  for (unsigned I : {1u, 2u}) {
+    const MachineOperand &MO = MI.getOperand(I);
+    if (MO.isReg() && MO.getReg() == LMC.ExecReg)
+      ExecIdx = I;
+  }
+  if (!ExecIdx)
+    return false;
+  MachineOperand &Src = MI.getOperand(3 - ExecIdx);
+  if (!Src.isReg() || !Src.getReg().isVirtual() || Src.getSubReg())
+    return false;
+
+  Register SrcReg = Src.getReg();
+  if (!TII->isMaskedByExec(SrcReg, MI, *MRI))
+    return false;
+
+  LLVM_DEBUG(dbgs() << "Folding redundant AND with EXEC: " << MI);
+
+  Register DstReg = MI.getOperand(0).getReg();
+  if (DstReg.isVirtual()) {
+    if (!MRI->constrainRegClass(SrcReg, MRI->getRegClass(DstReg)))
+      return false;
+    MRI->replaceRegWith(DstReg, SrcReg);
+  } else {
+    // A physical destination, e.g. the $vcc written by moveToVALU. Register
+    // allocation will usually make this copy an identity copy.
+    MachineBasicBlock *MBB = MI.getParent();
+    BuildMI(*MBB, MI, MI.getDebugLoc(), TII->get(AMDGPU::COPY), DstReg)
+        .addReg(SrcReg);
+  }
+
+  if (!Src.isKill())
+    MRI->clearKillFlags(SrcReg);
+  MI.eraseFromParent();
+  return true;
+}
+
 bool SIFoldOperandsImpl::foldInstOperand(MachineInstr &MI,
                                          const FoldableDef &OpToFold) const {
   // We need mutate the operands of new mov instructions to add implicit
@@ -2370,7 +2420,7 @@ bool SIFoldOperandsImpl::tryFoldClamp(MachineInstr &MI) {
   // Use of output modifiers forces VOP3 encoding for a VOP2 mac/fmac
   // instruction, so we might as well convert it to the more flexible VOP3-only
   // mad/fma form.
-  if (TII->convertToThreeAddress(*Def, nullptr, nullptr))
+  if (TII->convertToThreeAddress(*Def, /*LIS=*/nullptr))
     Def->eraseFromParent();
 
   return true;
@@ -2629,7 +2679,7 @@ bool SIFoldOperandsImpl::tryFoldOMod(MachineInstr &MI) {
   // Use of output modifiers forces VOP3 encoding for a VOP2 mac/fmac
   // instruction, so we might as well convert it to the more flexible VOP3-only
   // mad/fma form.
-  if (TII->convertToThreeAddress(*Def, nullptr, nullptr))
+  if (TII->convertToThreeAddress(*Def, /*LIS=*/nullptr))
     Def->eraseFromParent();
 
   return true;
@@ -3150,6 +3200,11 @@ bool SIFoldOperandsImpl::run(MachineFunction &MF, const MachineLoopInfo *MLI) {
       }
 
       if (tryFoldRedundantAND(MI)) {
+        Changed = true;
+        continue;
+      }
+
+      if (tryFoldAndExec(MI)) {
         Changed = true;
         continue;
       }

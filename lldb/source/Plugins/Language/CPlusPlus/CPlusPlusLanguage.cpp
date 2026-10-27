@@ -9,6 +9,7 @@
 #include "CPlusPlusLanguage.h"
 
 #include <cctype>
+#include <cstdlib>
 #include <cstring>
 
 #include <functional>
@@ -17,13 +18,16 @@
 #include <set>
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Demangle/Demangle.h"
 #include "llvm/Demangle/ItaniumDemangle.h"
 #include "llvm/Support/ErrorExtras.h"
 
 #include "lldb/Core/DemangledNameInfo.h"
 #include "lldb/Core/Mangled.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Core/ModuleList.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Core/RichManglingContext.h"
 #include "lldb/Core/UniqueCStringMap.h"
 #include "lldb/DataFormatters/CXXFunctionPointer.h"
 #include "lldb/DataFormatters/DataVisualization.h"
@@ -107,8 +111,175 @@ CPlusPlusLanguage::GetFunctionNameInfo(ConstString name) const {
 bool CPlusPlusLanguage::SymbolNameFitsToLanguage(const Mangled &mangled) const {
   auto mangling_scheme =
       Mangled::GetManglingScheme(mangled.GetMangledName().GetStringRef());
-  return mangling_scheme == Mangled::eManglingSchemeItanium ||
-         mangling_scheme == Mangled::eManglingSchemeMSVC;
+  return HandlesManglingScheme(mangling_scheme);
+}
+
+bool CPlusPlusLanguage::HandlesManglingScheme(
+    Mangled::ManglingScheme scheme) const {
+  return scheme == Mangled::eManglingSchemeItanium ||
+         scheme == Mangled::eManglingSchemeMSVC;
+}
+
+static char *GetMSVCDemangledStr(llvm::StringRef M) {
+  char *demangled_cstr = llvm::microsoftDemangle(
+      M, nullptr, nullptr,
+      llvm::MSDemangleFlags(
+          llvm::MSDF_NoAccessSpecifier | llvm::MSDF_NoCallingConvention |
+          llvm::MSDF_NoMemberType | llvm::MSDF_NoVariableType));
+
+  if (Log *log = GetLog(LLDBLog::Demangle)) {
+    if (demangled_cstr && demangled_cstr[0])
+      LLDB_LOGF(log, "demangled msvc: %s -> \"%s\"", M.data(), demangled_cstr);
+    else
+      LLDB_LOGF(log, "demangled msvc: %s -> error", M.data());
+  }
+
+  return demangled_cstr;
+}
+
+static std::pair<char *, DemangledNameInfo>
+GetItaniumDemangledStr(const char *M) {
+  char *demangled_cstr = nullptr;
+
+  DemangledNameInfo info;
+  llvm::ItaniumPartialDemangler ipd;
+  bool err = ipd.partialDemangle(M);
+  if (!err) {
+    // Default buffer and size (OutputBuffer will realloc in case it's too
+    // small).
+    size_t demangled_size = 80;
+    demangled_cstr = static_cast<char *>(std::malloc(80));
+
+    TrackingOutputBuffer OB(demangled_cstr, demangled_size);
+    demangled_cstr = ipd.finishDemangle(&OB);
+    info = std::move(OB.NameInfo);
+
+    assert(demangled_cstr &&
+           "finishDemangle must always succeed if partialDemangle did");
+    assert(demangled_cstr[OB.getCurrentPosition() - 1] == '\0' &&
+           "Expected demangled_size to return length including trailing null");
+  }
+
+  if (Log *log = GetLog(LLDBLog::Demangle)) {
+    if (demangled_cstr)
+      LLDB_LOGF(log, "demangled itanium: %s -> \"%s\"", M, demangled_cstr);
+    else
+      LLDB_LOGF(log, "demangled itanium: %s -> error: failed to demangle", M);
+
+    if (!info.hasBasename())
+      LLDB_LOGF(log,
+                "demangled itanium: %s -> error: failed to retrieve name info",
+                M);
+  }
+
+  return {demangled_cstr, std::move(info)};
+}
+
+Language::DemangledName
+CPlusPlusLanguage::DemangleSymbol(ConstString mangled,
+                                  Mangled::ManglingScheme scheme,
+                                  const DemangleOptions &options) const {
+  DemangledName demangled;
+  switch (scheme) {
+  case Mangled::eManglingSchemeItanium: {
+    auto [demangled_cstr, info] = GetItaniumDemangledStr(mangled.GetCString());
+    if (demangled_cstr) {
+      demangled.name = demangled_cstr;
+      std::free(demangled_cstr);
+    }
+    if (options.want_info)
+      demangled.info = std::move(info);
+    break;
+  }
+  case Mangled::eManglingSchemeMSVC:
+    if (char *demangled_cstr = GetMSVCDemangledStr(mangled.GetStringRef())) {
+      demangled.name = demangled_cstr;
+      std::free(demangled_cstr);
+    }
+    break;
+  default:
+    break;
+  }
+  return demangled;
+}
+
+/// Returns true for the Itanium names that aren't worth indexing as functions.
+static bool SkipItaniumName(llvm::StringRef mangled) {
+  if (mangled.size() < 3 || !mangled.starts_with("_Z"))
+    return true;
+
+  // Avoid the following types of symbols in the index.
+  switch (mangled[2]) {
+  case 'G': // guard variables
+  case 'T': // virtual tables, VTT structures, typeinfo structures + names
+  case 'Z': // named local entities (if we eventually handle
+            // eSymbolTypeData, we will want this back)
+    return true;
+
+  default:
+    return false;
+  }
+}
+
+namespace {
+/// Parses Itanium or MSVC mangled function names. Their mangling doesn't tell
+/// whether a declaration context is a class or a namespace.
+class CPlusPlusMangledNameParser : public Language::MangledNameParser {
+public:
+  explicit CPlusPlusMangledNameParser(Mangled::ManglingScheme scheme)
+      : m_scheme(scheme) {}
+
+  std::optional<Mangled::FunctionNameParts>
+  Parse(const Mangled &mangled) override {
+    if (!ParseRichManglingInfo(mangled))
+      return std::nullopt;
+
+    Mangled::FunctionNameParts parts;
+    llvm::StringRef base_name = m_rmc.ParseFunctionBaseName();
+    if (base_name.empty())
+      return parts;
+
+    // Parsing the context reuses the buffer that base_name points into.
+    parts.basename = ConstString(base_name);
+    llvm::StringRef decl_context = m_rmc.ParseFunctionDeclContextName();
+    if (decl_context.empty()) {
+      parts.kind = Mangled::FunctionNameKind::TopLevel;
+      return parts;
+    }
+
+    parts.decl_context = ConstString(decl_context);
+    parts.kind = m_rmc.IsCtorOrDtor()
+                     ? Mangled::FunctionNameKind::ConstructorOrDestructor
+                     : Mangled::FunctionNameKind::Unknown;
+    return parts;
+  }
+
+private:
+  bool ParseRichManglingInfo(const Mangled &mangled) {
+    ConstString mangled_name = mangled.GetMangledName();
+    if (m_scheme == Mangled::eManglingSchemeItanium)
+      return !SkipItaniumName(mangled_name) &&
+             m_rmc.FromItaniumName(mangled_name);
+
+    // There is no rich mangling info for MSVC names, so parse the demangled
+    // name with CPlusPlusLanguage::CxxMethodName instead.
+    ConstString demangled = mangled.GetDemangledName();
+    return !demangled.IsEmpty() && m_rmc.FromCxxMethodName(demangled);
+  }
+
+  Mangled::ManglingScheme m_scheme;
+  /// Instantiation of the demangler is expensive, so better use a single one
+  /// for all entries during batch processing.
+  RichManglingContext m_rmc;
+};
+} // namespace
+
+std::unique_ptr<Language::MangledNameParser>
+CPlusPlusLanguage::CreateMangledNameParser(
+    Mangled::ManglingScheme scheme) const {
+  if (!HandlesManglingScheme(scheme))
+    return nullptr;
+  return std::make_unique<CPlusPlusMangledNameParser>(scheme);
 }
 
 ConstString CPlusPlusLanguage::GetDemangledFunctionNameWithoutArguments(
@@ -257,6 +428,14 @@ static bool PrettyPrintFunctionNameWithArgs(Stream &out_stream,
   return true;
 }
 
+static DemangledNameInfoCache &GetDemangledInfoCache() {
+  static DemangledNameInfoCache g_cache;
+  // Pick up any changes to the size the user made since the last call.
+  g_cache.SetMaxEntries(ModuleList::GetGlobalModuleListProperties()
+                            .GetDemangledNameInfoCacheSize());
+  return g_cache;
+}
+
 static llvm::Expected<std::pair<llvm::StringRef, DemangledNameInfo>>
 GetAndValidateInfo(const SymbolContext &sc) {
   Mangled mangled = sc.GetPossiblyInlinedFunctionName();
@@ -269,7 +448,7 @@ GetAndValidateInfo(const SymbolContext &sc) {
         "function '{0}' does not have a demangled name",
         mangled.GetMangledName());
 
-  const DemangledNameInfo *info = mangled.GetDemangledInfo();
+  std::optional<DemangledNameInfo> info = GetDemangledInfoCache().Get(mangled);
   if (!info)
     return llvm::createStringErrorV(
         "function '{0}' does not have demangled info", demangled_name);

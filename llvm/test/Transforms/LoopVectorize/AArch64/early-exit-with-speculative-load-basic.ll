@@ -697,7 +697,7 @@ exit:
 ;
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
-; CHECK: attributes #[[ATTR1]] = { mustprogress noinline nosync nounwind optnone willreturn memory(argmem: read) }
+; CHECK: attributes #[[ATTR1]] = { mustprogress noinline nosync nounwind optnone willreturn memory(argmem: read) "oracle-function" }
 ; CHECK: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
 ; CHECK: attributes #[[ATTR3:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
 ;.

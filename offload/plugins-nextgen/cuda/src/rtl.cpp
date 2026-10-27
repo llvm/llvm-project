@@ -120,8 +120,8 @@ struct CUDAKernelTy : public GenericKernelTy {
     if (auto Err = Plugin::check(Res, "error in cuFuncGetAttribute: %s"))
       return Err;
 
-    // The maximum number of threads cannot exceed the maximum of the kernel.
-    MaxNumThreads = std::min(MaxNumThreads, (uint32_t)MaxThreads);
+    // The maximum number of threads per block for this kernel's function.
+    MaxNumThreads = (uint32_t)MaxThreads;
 
     int SharedMemSize;
     Res = cuFuncGetAttribute(&SharedMemSize,
@@ -161,12 +161,19 @@ struct CUDAKernelTy : public GenericKernelTy {
                               const uint32_t NumThreads[3],
                               uint32_t DynBlockMemSize) const override;
 
+  /// Return the maximum number of threads per block for this kernel's
+  /// function, as reported by the CUDA driver.
+  uint32_t getMaxThreads() const override { return MaxNumThreads; }
+
 private:
   /// The CUDA kernel function to execute.
   CUfunction Func;
   /// The maximum amount of dynamic shared memory per thread group. By default,
   /// this is set to 48 KB.
   mutable uint32_t MaxDynBlockMemSize = 49152;
+  /// The maximum number of threads per block this kernel's function may use,
+  /// as reported by the CUDA driver.
+  uint32_t MaxNumThreads = 0;
 };
 
 /// Class wrapping a CUDA stream reference. These are the objects handled by the
@@ -278,7 +285,8 @@ struct CUDADeviceTy : public GenericDeviceTy {
   ~CUDADeviceTy() {}
 
   /// Initialize the device, its resources and get its properties.
-  Error initImpl(GenericPluginTy &Plugin) override {
+  Error initImpl(GenericPluginTy &Plugin,
+                 GenericProfilerTy *ProfilerPtr) override {
     CUresult Res = cuDeviceGet(&Device, DeviceId);
     if (auto Err = Plugin::check(Res, "error in cuDeviceGet: %s"))
       return Err;
@@ -558,6 +566,17 @@ struct CUDADeviceTy : public GenericDeviceTy {
   /// Getters of CUDA references.
   CUcontext getCUDAContext() const { return Context; }
   CUdevice getCUDADevice() const { return Device; }
+
+  Expected<void *> getNativeHandle() override {
+    return reinterpret_cast<void *>(Device);
+  }
+
+  Expected<void *> getNativeQueueHandle(__tgt_async_info *AsyncInfo) override {
+    if (!AsyncInfo || !AsyncInfo->Queue)
+      return Plugin::error(error::ErrorCode::INVALID_ARGUMENT,
+                           "no queue associated with the async info");
+    return AsyncInfo->Queue;
+  }
 
   /// Load the binary image into the device and allocate an image object.
   Expected<DeviceImageTy *>
@@ -1673,6 +1692,16 @@ struct CUDAPluginContextTy final : public PluginContextTy {
 
     CUstream Stream;
     return CUDADevice.getStream(AsyncInfoWrapper, Stream);
+  }
+
+  Expected<void *> getNativeHandle() override {
+    // Each CUDA device carries its own CUcontext, so a single native handle
+    // only exists for a single-device context.
+    if (Devices.size() != 1)
+      return Plugin::error(error::ErrorCode::UNSUPPORTED,
+                           "CUDA context handle is only defined for a "
+                           "single-device context");
+    return static_cast<CUDADeviceTy &>(*Devices.front()).getCUDAContext();
   }
 
   Expected<PluginAllocInfoTy> getAllocInfo(const void *Ptr) override {
