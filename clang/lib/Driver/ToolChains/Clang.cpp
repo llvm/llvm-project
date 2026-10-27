@@ -5028,7 +5028,9 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
     if (DebuggerTuning != llvm::DebuggerKind::LLDB)
       CmdArgs.push_back("-ggnu-pubnames");
   } else if (EffectiveDWARFVersion >= 5 &&
-             DebugInfoKind > llvm::codegenoptions::DebugLineTablesOnly) {
+             DebugInfoKind > llvm::codegenoptions::DebugLineTablesOnly &&
+             !Args.hasFlag(options::OPT_fdebug_types_section,
+                           options::OPT_fno_debug_types_section, false)) {
     CmdArgs.push_back("-gpubnames");
   }
 

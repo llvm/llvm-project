@@ -4186,7 +4186,7 @@ Do not generate debug info for preprocessor macros (default).
 :::{option} -gpubnames, -gno-pubnames
 
 Enable or disable generation of DWARF name index sections (`.debug_names` in DWARF v5, or `.debug_pubnames` and `.debug_pubtypes` in earlier DWARF versions).
-**-gpubnames** is enabled by default when generating full or limited debug info (`-g2` and above) for DWARF v5 or later without **-gsplit-dwarf**.
+**-gpubnames** is enabled by default when generating full or limited debug info (`-g2` and above) for DWARF v5 or later without **-gsplit-dwarf** or **-fdebug-types-section**.
 Use **-gno-pubnames** to disable name table generation.
 :::
 

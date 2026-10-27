@@ -254,6 +254,9 @@
 // RUN: %clang -### -c -ggnu-pubnames %s 2>&1 | FileCheck -check-prefix=GPUB %s
 // RUN: %clang -### -c -gdwarf-4 -ggdb %s 2>&1 | FileCheck -check-prefix=NOPUB %s
 // RUN: %clang -### -c -gdwarf-5 -ggdb %s 2>&1 | FileCheck -check-prefix=PUB %s
+// RUN: %clang -### -c -gdwarf-5 -fdebug-types-section -target x86_64-unknown-linux %s 2>&1 | FileCheck -check-prefix=NOPUB %s
+// RUN: %clang -### -c -gdwarf-5 -fdebug-types-section -fno-debug-types-section -target x86_64-unknown-linux %s 2>&1 | FileCheck -check-prefix=PUB %s
+// RUN: %clang -### -c -gdwarf-5 -fdebug-types-section -gpubnames -target x86_64-unknown-linux %s 2>&1 | FileCheck -check-prefix=PUB %s
 // RUN: %clang -### -c -gdwarf-5 -g1 %s 2>&1 | FileCheck -check-prefix=NOPUB %s
 // RUN: %clang -### -c -gdwarf-5 -gline-tables-only %s 2>&1 | FileCheck -check-prefix=NOPUB %s
 // RUN: %clang -### -c -gdwarf-5 -gline-directives-only %s 2>&1 | FileCheck -check-prefix=NOPUB %s
