@@ -157,15 +157,16 @@ endfunction()
 
 # Invokes llvm-tblgen; see tablegen() for the calling convention.
 function(llvm_tablegen ofn)
+  set(extra_flags)
   if (LLVM_ENABLE_DAGISEL_COV AND "-gen-dag-isel" IN_LIST ARGN)
-    list(APPEND LLVM_TABLEGEN_FLAGS "-instrument-coverage")
+    list(APPEND extra_flags "-instrument-coverage")
   endif()
   if (LLVM_ENABLE_GISEL_COV AND "-gen-global-isel" IN_LIST ARGN)
-    list(APPEND LLVM_TABLEGEN_FLAGS "-instrument-gisel-coverage")
-    list(APPEND LLVM_TABLEGEN_FLAGS "-gisel-coverage-file=${LLVM_GISEL_COV_PREFIX}all")
+    list(APPEND extra_flags "-instrument-gisel-coverage")
+    list(APPEND extra_flags "-gisel-coverage-file=${LLVM_GISEL_COV_PREFIX}all")
   endif()
   if (LLVM_OMIT_DAGISEL_COMMENTS AND "-gen-dag-isel" IN_LIST ARGN)
-    list(APPEND LLVM_TABLEGEN_FLAGS "-omit-comments")
+    list(APPEND extra_flags "-omit-comments")
   endif()
 
   set(extra_outputs)
@@ -178,7 +179,9 @@ function(llvm_tablegen ofn)
          ${CMAKE_CURRENT_BINARY_DIR}/${output_basename}TargetDesc.inc)
   endif()
 
-  tablegen(LLVM ${ofn} ${ARGN} EXTRA_OUTPUTS ${extra_outputs})
+  # Pass extra_flags before ARGN: after they could land in a trailing
+  # DEPENDS or EXTRA_INCLUDES list.
+  tablegen(LLVM ${ofn} ${extra_flags} ${ARGN} EXTRA_OUTPUTS ${extra_outputs})
   set(TABLEGEN_OUTPUT ${TABLEGEN_OUTPUT} PARENT_SCOPE)
 endfunction()
 
