@@ -7,9 +7,7 @@
 define i1 @range_mul(i32 range(i32 -1, 11) %x) {
 ; CHECK-LABEL: define i1 @range_mul(
 ; CHECK-SAME: i32 range(i32 -1, 11) [[X:%.*]]) {
-; CHECK-NEXT:    [[M:%.*]] = mul i32 [[X]], 5
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[M]], 51
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
   %m = mul i32 %x, 5
   %c = icmp slt i32 %m, 51
@@ -31,9 +29,7 @@ define i1 @neg_range_mul_boundary(i32 range(i32 -1, 11) %x) {
 define i1 @mul_two_ranges(i32 range(i32 -1, 11) %x, i32 range(i32 0, 4) %y) {
 ; CHECK-LABEL: define i1 @mul_two_ranges(
 ; CHECK-SAME: i32 range(i32 -1, 11) [[X:%.*]], i32 range(i32 0, 4) [[Y:%.*]]) {
-; CHECK-NEXT:    [[M:%.*]] = mul i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[M]], 31
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
   %m = mul i32 %x, %y
   %c = icmp slt i32 %m, 31
@@ -43,9 +39,7 @@ define i1 @mul_two_ranges(i32 range(i32 -1, 11) %x, i32 range(i32 0, 4) %y) {
 define <2 x i1> @range_mul_splat(<2 x i32> range(i32 -1, 11) %x) {
 ; CHECK-LABEL: define <2 x i1> @range_mul_splat(
 ; CHECK-SAME: <2 x i32> range(i32 -1, 11) [[X:%.*]]) {
-; CHECK-NEXT:    [[M:%.*]] = mul <2 x i32> [[X]], splat (i32 5)
-; CHECK-NEXT:    [[C:%.*]] = icmp slt <2 x i32> [[M]], splat (i32 51)
-; CHECK-NEXT:    ret <2 x i1> [[C]]
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %m = mul <2 x i32> %x, splat (i32 5)
   %c = icmp slt <2 x i32> %m, splat (i32 51)
@@ -55,9 +49,7 @@ define <2 x i1> @range_mul_splat(<2 x i32> range(i32 -1, 11) %x) {
 define <2 x i1> @range_mul_nonsplat(<2 x i32> range(i32 -1, 11) %x) {
 ; CHECK-LABEL: define <2 x i1> @range_mul_nonsplat(
 ; CHECK-SAME: <2 x i32> range(i32 -1, 11) [[X:%.*]]) {
-; CHECK-NEXT:    [[M:%.*]] = mul <2 x i32> [[X]], <i32 5, i32 3>
-; CHECK-NEXT:    [[C:%.*]] = icmp slt <2 x i32> [[M]], splat (i32 51)
-; CHECK-NEXT:    ret <2 x i1> [[C]]
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %m = mul <2 x i32> %x, <i32 5, i32 3>
   %c = icmp slt <2 x i32> %m, splat (i32 51)

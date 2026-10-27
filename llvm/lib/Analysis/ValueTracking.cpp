@@ -10814,6 +10814,13 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
     // TODO: Return ConstantRange.
     setLimitsForBinOp(*BO, Lower, Upper, SQ.IIQ, ForSigned);
     CR = ConstantRange::getNonEmpty(Lower, Upper);
+    ConstantRange LHS =
+        computeConstantRange(BO->getOperand(0), ForSigned, SQ, Depth + 1);
+    ConstantRange RHS =
+        computeConstantRange(BO->getOperand(1), ForSigned, SQ, Depth + 1);
+    CR = CR.intersectWith(LHS.binaryOp(*BO, RHS), ForSigned
+                                                      ? ConstantRange::Signed
+                                                      : ConstantRange::Unsigned);
   } else if (auto *II = dyn_cast<IntrinsicInst>(V))
     CR = getRangeForIntrinsic(*II, SQ.IIQ.UseInstrInfo);
   else if (auto *SI = dyn_cast<SelectInst>(V)) {
