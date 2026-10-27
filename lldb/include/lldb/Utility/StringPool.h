@@ -39,7 +39,7 @@ public:
   static void Terminate();
 
   /// The system pool. Only valid between Initialize and Terminate.
-  static StringPoolRef GetSystem();
+  static StringPoolRef GetSystemPool();
 
   /// Returns the pooled copy of \p str, or nullptr if \p str has no data.
   const char *Intern(llvm::StringRef str);
@@ -76,6 +76,11 @@ public:
   explicit StringPoolRef(StringPool &pool) : m_pool(&pool) {}
 
   const char *Intern(llvm::StringRef str) const { return m_pool->Intern(str); }
+
+  /// Like Intern, but an empty string yields nullptr.
+  const char *InternNonEmpty(llvm::StringRef str) const {
+    return str.empty() ? nullptr : Intern(str);
+  }
 
 private:
   StringPool *m_pool;

@@ -1,9 +1,9 @@
-add_custom_target(libc_stdio_unittests)
+add_libc_testsuite(libc-stdio-tests)
 
 add_libc_test(
   freopen_test
   SUITE
-    libc_stdio_unittests
+    libc-stdio-tests
   SRCS
     freopen_test.cpp
   DEPENDS
@@ -34,7 +34,7 @@ add_libc_test(
 add_libc_test(
   fileop_test
   SUITE
-    libc_stdio_unittests
+    libc-stdio-tests
   SRCS
     fileop_test.cpp
   DEPENDS
@@ -57,7 +57,7 @@ add_libc_test(
 add_libc_test(
   rewind_test
   SUITE
-    libc_stdio_unittests
+    libc-stdio-tests
   SRCS
     rewind_test.cpp
   DEPENDS
@@ -76,7 +76,7 @@ add_libc_test(
 add_libc_test(
   ungetc_test
   SUITE
-    libc_stdio_unittests
+    libc-stdio-tests
   SRCS
     ungetc_test.cpp
   DEPENDS
@@ -92,7 +92,7 @@ add_libc_test(
 add_libc_test(
   setbuf_test
   SUITE
-    libc_stdio_unittests
+    libc-stdio-tests
   SRCS
     setbuf_test.cpp
   DEPENDS
@@ -108,7 +108,7 @@ add_libc_test(
 add_libc_test(
   setvbuf_test
   SUITE
-    libc_stdio_unittests
+    libc-stdio-tests
   SRCS
     setvbuf_test.cpp
   DEPENDS
@@ -125,7 +125,7 @@ add_libc_test(
 add_libc_test(
   unlocked_fileop_test
   SUITE
-    libc_stdio_unittests
+    libc-stdio-tests
   SRCS
     unlocked_fileop_test.cpp
   DEPENDS
@@ -146,7 +146,7 @@ add_libc_test(
 add_libc_test(
   fmemopen_test
   SUITE
-    libc_stdio_unittests
+    libc-stdio-tests
   SRCS
     fmemopen_test.cpp
   DEPENDS
@@ -177,7 +177,7 @@ add_libc_test(
 add_libc_test(
   fopencookie_test
   SUITE
-    libc_stdio_unittests
+    libc-stdio-tests
   SRCS
     fopencookie_test.cpp
   DEPENDS
@@ -230,7 +230,7 @@ endif()
 add_fp_unittest(
   sprintf_test
   SUITE
-    libc_stdio_unittests
+    libc-stdio-tests
   SRCS
     sprintf_test.cpp
   DEPENDS
@@ -246,7 +246,7 @@ add_fp_unittest(
 add_libc_test(
   snprintf_test
   SUITE
-    libc_stdio_unittests
+    libc-stdio-tests
   SRCS
     snprintf_test.cpp
   DEPENDS
@@ -269,7 +269,7 @@ endif()
 add_libc_test(
   fprintf_test
   SUITE
-    libc_stdio_unittests
+    libc-stdio-tests
   SRCS
     fprintf_test.cpp
   DEPENDS
@@ -285,7 +285,7 @@ add_libc_test(
 add_libc_test(
   printf_test
   SUITE
-    libc_stdio_unittests
+    libc-stdio-tests
   SRCS
     printf_test.cpp
   DEPENDS
@@ -295,7 +295,7 @@ add_libc_test(
 add_libc_test(
   asprintf_test
   SUITE
-    libc_stdio_unittests
+    libc-stdio-tests
   SRCS
     asprintf_test.cpp
   DEPENDS
@@ -308,7 +308,7 @@ add_libc_test(
 add_fp_unittest(
   vsprintf_test
   SUITE
-    libc_stdio_unittests
+    libc-stdio-tests
   SRCS
     vsprintf_test.cpp
   DEPENDS
@@ -318,7 +318,7 @@ add_fp_unittest(
 add_libc_test(
   vsnprintf_test
   SUITE
-    libc_stdio_unittests
+    libc-stdio-tests
   SRCS
     vsnprintf_test.cpp
   DEPENDS
@@ -328,7 +328,7 @@ add_libc_test(
 add_libc_test(
   vfprintf_test
   SUITE
-    libc_stdio_unittests
+    libc-stdio-tests
   SRCS
     vfprintf_test.cpp
   DEPENDS
@@ -341,7 +341,7 @@ add_libc_test(
 add_libc_test(
   vprintf_test
   SUITE
-    libc_stdio_unittests
+    libc-stdio-tests
   SRCS
     vprintf_test.cpp
   DEPENDS
@@ -351,7 +351,7 @@ add_libc_test(
 add_libc_test(
   vasprintf_test
   SUITE
-    libc_stdio_unittests
+    libc-stdio-tests
   SRCS
     vasprintf_test.cpp
   DEPENDS
@@ -377,7 +377,7 @@ if(NOT LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
   add_libc_test(
     fscanf_test
     SUITE
-      libc_stdio_unittests
+      libc-stdio-tests
     SRCS
       fscanf_test.cpp
     DEPENDS
@@ -392,7 +392,7 @@ if(NOT LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
   add_libc_test(
     vfscanf_test
     SUITE
-      libc_stdio_unittests
+      libc-stdio-tests
     SRCS
       vfscanf_test.cpp
     DEPENDS
@@ -414,7 +414,7 @@ endif()
 add_libc_test(
   sscanf_test
   SUITE
-    libc_stdio_unittests
+    libc-stdio-tests
   SRCS
     sscanf_test.cpp
   DEPENDS
@@ -427,7 +427,7 @@ add_libc_test(
 add_libc_test(
   vsscanf_test
   SUITE
-    libc_stdio_unittests
+    libc-stdio-tests
   SRCS
     vsscanf_test.cpp
   DEPENDS
@@ -440,7 +440,7 @@ add_libc_test(
 add_libc_test(
   puts_test
   SUITE
-    libc_stdio_unittests
+    libc-stdio-tests
   SRCS
     puts_test.cpp
   DEPENDS
@@ -450,7 +450,7 @@ add_libc_test(
 add_libc_test(
   perror_test
   SUITE
-    libc_stdio_unittests
+    libc-stdio-tests
   SRCS
     perror_test.cpp
   DEPENDS
@@ -461,7 +461,7 @@ add_libc_test(
 add_libc_test(
   fputs_test
   SUITE
-    libc_stdio_unittests
+    libc-stdio-tests
   SRCS
     fputs_test.cpp
   DEPENDS
@@ -473,7 +473,7 @@ add_libc_test(
 add_libc_test(
   fputc_test
   SUITE
-    libc_stdio_unittests
+    libc-stdio-tests
   SRCS
     fputc_test.cpp
   DEPENDS
@@ -499,7 +499,7 @@ endif()
 add_libc_test(
   fopen_test
   SUITE
-    libc_stdio_unittests
+    libc-stdio-tests
   SRCS
     fopen_test.cpp
   DEPENDS
@@ -515,7 +515,7 @@ add_libc_test(
 add_libc_test(
   putc_test
   SUITE
-    libc_stdio_unittests
+    libc-stdio-tests
   SRCS
     putc_test.cpp
   DEPENDS
@@ -530,7 +530,7 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
   add_libc_test(
     remove_test
     SUITE
-      libc_stdio_unittests
+      libc-stdio-tests
     SRCS
       remove_test.cpp
     DEPENDS
@@ -548,7 +548,7 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
   add_libc_test(
     rename_test
     SUITE
-      libc_stdio_unittests
+      libc-stdio-tests
     SRCS
       rename_test.cpp
     DEPENDS
@@ -565,7 +565,7 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
   add_libc_test(
     renameat_test
     SUITE
-      libc_stdio_unittests
+      libc-stdio-tests
     SRCS
       renameat_test.cpp
     DEPENDS
@@ -588,7 +588,7 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
   add_libc_test(
     fdopen_test
     SUITE
-      libc_stdio_unittests
+      libc-stdio-tests
     SRCS
       fdopen_test.cpp
     DEPENDS
@@ -605,12 +605,35 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
       libc.test.UnitTest.ErrnoCheckingTest
       libc.test.UnitTest.ErrnoSetterMatcher
   )
+
+  add_libc_test(
+    popen_pclose_test
+    SUITE
+      libc-stdio-tests
+    SRCS
+      popen_pclose_test.cpp
+    DEPENDS
+      libc.hdr.errno_macros
+      libc.hdr.fcntl_macros
+      libc.hdr.sys_wait_macros
+      libc.hdr.types.FILE
+      libc.src.fcntl.fcntl
+      libc.src.stdio.fgets
+      libc.src.stdio.fileno
+      libc.src.stdio.fputs
+      libc.src.stdio.pclose
+      libc.src.stdio.popen
+      libc.src.stdio.snprintf
+      libc.src.sys.wait.wait
+      libc.test.UnitTest.ErrnoCheckingTest
+      libc.test.UnitTest.ErrnoSetterMatcher
+  )
 endif()
 
 add_libc_test(
   fgetc_test
   SUITE
-    libc_stdio_unittests
+    libc-stdio-tests
   SRCS
     fgetc_test.cpp
   DEPENDS
@@ -631,7 +654,7 @@ add_libc_test(
 add_libc_test(
   fgetc_unlocked_test
   SUITE
-    libc_stdio_unittests
+    libc-stdio-tests
   SRCS
     fgetc_unlocked_test.cpp
   DEPENDS
@@ -656,7 +679,7 @@ add_libc_test(
 add_libc_test(
   fgets_test
   SUITE
-    libc_stdio_unittests
+    libc-stdio-tests
   SRCS
     fgets_test.cpp
   DEPENDS
@@ -676,7 +699,7 @@ add_libc_test(
 add_libc_test(
   ftell_test
   SUITE
-    libc_stdio_unittests
+    libc-stdio-tests
   SRCS
     ftell_test.cpp
   DEPENDS
@@ -696,7 +719,7 @@ add_libc_test(
 add_libc_test(
   tmpfile_test
   SUITE
-    libc_stdio_unittests
+    libc-stdio-tests
   SRCS
     tmpfile_test.cpp
   DEPENDS
@@ -709,9 +732,80 @@ add_libc_test(
 )
 
 add_libc_test(
+  fgetpos_test
+  SUITE
+    libc-stdio-tests
+  SRCS
+    fgetpos_test.cpp
+  DEPENDS
+    libc.hdr.stdio_macros
+    libc.hdr.types.FILE
+    libc.hdr.types.fpos_t
+    libc.hdr.types.off_t
+    libc.hdr.types.size_t
+    libc.hdr.types.wint_t
+    libc.src.__support.CPP.scope
+    libc.src.errno.errno
+    libc.src.stdio.fclose
+    libc.src.stdio.feof
+    libc.src.stdio.fgetpos
+    libc.src.stdio.fopen
+    libc.src.stdio.fread
+    libc.src.stdio.fseek
+    libc.src.stdio.fwrite
+    libc.src.stdio.remove
+    libc.src.stdio.setvbuf
+    libc.src.stdio.ungetc
+    libc.src.wchar.fgetwc
+    libc.src.wchar.fputwc
+    libc.src.wchar.fwide
+    libc.src.wchar.mbsinit
+    libc.src.wchar.ungetwc
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
+  fsetpos_test
+  SUITE
+    libc-stdio-tests
+  SRCS
+    fsetpos_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.stdio_macros
+    libc.hdr.types.FILE
+    libc.hdr.types.fpos_t
+    libc.hdr.types.off_t
+    libc.hdr.types.size_t
+    libc.hdr.types.wint_t
+    libc.src.__support.CPP.scope
+    libc.src.errno.errno
+    libc.src.stdio.fclose
+    libc.src.stdio.feof
+    libc.src.stdio.ferror
+    libc.src.stdio.fgetpos
+    libc.src.stdio.fopen
+    libc.src.stdio.fread
+    libc.src.stdio.fseek
+    libc.src.stdio.fsetpos
+    libc.src.stdio.fwrite
+    libc.src.stdio.remove
+    libc.src.stdio.setvbuf
+    libc.src.stdio.ungetc
+    libc.src.wchar.fgetwc
+    libc.src.wchar.fputwc
+    libc.src.wchar.fwide
+    libc.src.wchar.mbsinit
+    libc.src.wchar.ungetwc
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
   tmpnam_test
   SUITE
-    libc_stdio_unittests
+    libc-stdio-tests
   SRCS
     tmpnam_test.cpp
   DEPENDS

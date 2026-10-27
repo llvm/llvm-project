@@ -37,10 +37,10 @@ define void @foo() {
   ; NORMAL-NEXT:   successors: %bb.3(0x80000000)
   ; NORMAL-NEXT: {{  $}}
   ; NORMAL-NEXT:   [[MOVUPSrm:%[0-9]+]]:vr128 = MOVUPSrm %stack.1.i, 1, $noreg, 40, $noreg :: (load (s128) from %ir.i4, align 8)
-  ; NORMAL-NEXT:   MOVAPSmr $noreg, 1, $noreg, 0, $noreg, killed [[MOVUPSrm]] :: (store (s128) into `ptr null`, align 4294967296)
+  ; NORMAL-NEXT:   MOVAPSmr $noreg, 1, $noreg, 0, $noreg, [[MOVUPSrm]] :: (store (s128) into `ptr null`, align 4294967296)
   ; NORMAL-NEXT:   DBG_VALUE_LIST !3, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_plus_uconst, 40, DW_OP_stack_value), %stack.1.i, %stack.1.i, debug-location !10
   ; NORMAL-NEXT:   [[MOVUPSrm1:%[0-9]+]]:vr128 = MOVUPSrm %stack.1.i, 1, $noreg, 40, $noreg :: (load (s128) from %ir.i6, align 8)
-  ; NORMAL-NEXT:   MOVAPSmr $noreg, 1, $noreg, 0, $noreg, killed [[MOVUPSrm1]] :: (store (s128) into `ptr null`, align 4294967296)
+  ; NORMAL-NEXT:   MOVAPSmr $noreg, 1, $noreg, 0, $noreg, [[MOVUPSrm1]] :: (store (s128) into `ptr null`, align 4294967296)
   ; NORMAL-NEXT: {{  $}}
   ; NORMAL-NEXT: bb.3.bb_last:
   ; NORMAL-NEXT:   successors: %bb.1(0x80000000)
@@ -77,10 +77,10 @@ define void @foo() {
   ; INSTRREF-NEXT:   successors: %bb.3(0x80000000)
   ; INSTRREF-NEXT: {{  $}}
   ; INSTRREF-NEXT:   [[MOVUPSrm:%[0-9]+]]:vr128 = MOVUPSrm %stack.1.i, 1, $noreg, 40, $noreg :: (load (s128) from %ir.i4, align 8)
-  ; INSTRREF-NEXT:   MOVAPSmr $noreg, 1, $noreg, 0, $noreg, killed [[MOVUPSrm]] :: (store (s128) into `ptr null`, align 4294967296)
+  ; INSTRREF-NEXT:   MOVAPSmr $noreg, 1, $noreg, 0, $noreg, [[MOVUPSrm]] :: (store (s128) into `ptr null`, align 4294967296)
   ; INSTRREF-NEXT:   DBG_VALUE_LIST !3, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_plus_uconst, 40, DW_OP_stack_value), %stack.1.i, %stack.1.i, debug-location !10
   ; INSTRREF-NEXT:   [[MOVUPSrm1:%[0-9]+]]:vr128 = MOVUPSrm %stack.1.i, 1, $noreg, 40, $noreg :: (load (s128) from %ir.i6, align 8)
-  ; INSTRREF-NEXT:   MOVAPSmr $noreg, 1, $noreg, 0, $noreg, killed [[MOVUPSrm1]] :: (store (s128) into `ptr null`, align 4294967296)
+  ; INSTRREF-NEXT:   MOVAPSmr $noreg, 1, $noreg, 0, $noreg, [[MOVUPSrm1]] :: (store (s128) into `ptr null`, align 4294967296)
   ; INSTRREF-NEXT: {{  $}}
   ; INSTRREF-NEXT: bb.3.bb_last:
   ; INSTRREF-NEXT:   successors: %bb.1(0x80000000)

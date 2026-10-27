@@ -2105,12 +2105,14 @@ def int_allow_sanitize_hwaddress
                             [IntrInaccessibleMemOnly, NoUndef<RetIndex>]>;
 
 // Support for dynamic deoptimization (or de-specialization)
-def int_experimental_deoptimize : Intrinsic<[llvm_any_ty], [llvm_vararg_ty],
-                                            [Throws]>;
+def int_experimental_deoptimize
+    : Intrinsic<[llvm_any_ty], [llvm_vararg_ty],
+                [Throws, IntrWrite<[InaccessibleMem]>]>;
 
 // Support for speculative runtime guards
-def int_experimental_guard : Intrinsic<[], [llvm_i1_ty, llvm_vararg_ty],
-                                       [Throws]>;
+def int_experimental_guard
+    : Intrinsic<[], [llvm_i1_ty, llvm_vararg_ty],
+                [Throws, IntrWrite<[InaccessibleMem]>]>;
 
 // Supports widenable conditions for guards represented as explicit branches.
 def int_experimental_widenable_condition : DefaultAttrsIntrinsic<[llvm_i1_ty],
@@ -2398,6 +2400,11 @@ def int_get_active_lane_mask:
   DefaultAttrsIntrinsic<[llvm_any_vector_int_ty],
             [llvm_any_scalar_int_ty, LLVMMatchType<1>],
             [IntrNoMem, IntrSpeculatable]>;
+
+def int_mask_beforefirst:
+  DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                        [LLVMMatchType<0>],
+                        [IntrNoMem, IntrSpeculatable]>;
 
 def int_experimental_get_vector_length:
   DefaultAttrsIntrinsic<[llvm_i32_ty],

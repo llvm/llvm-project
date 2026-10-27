@@ -40,7 +40,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr32 = COPY $f10_f
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr32 = COPY $f11_f
-    ; CHECK-NEXT: [[FLT_S:%[0-9]+]]:gpr = FLT_S [[COPY1]], [[COPY]]
+    ; CHECK-NEXT: [[FLT_S:%[0-9]+]]:gpr = nofpexcept FLT_S [[COPY1]], [[COPY]]
     ; CHECK-NEXT: $x10 = COPY [[FLT_S]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:fprb(s32) = COPY $f10_f
@@ -64,7 +64,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr32 = COPY $f10_f
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr32 = COPY $f11_f
-    ; CHECK-NEXT: [[FLE_S:%[0-9]+]]:gpr = FLE_S [[COPY1]], [[COPY]]
+    ; CHECK-NEXT: [[FLE_S:%[0-9]+]]:gpr = nofpexcept FLE_S [[COPY1]], [[COPY]]
     ; CHECK-NEXT: $x10 = COPY [[FLE_S]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:fprb(s32) = COPY $f10_f
@@ -136,8 +136,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr32 = COPY $f10_f
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr32 = COPY $f11_f
-    ; CHECK-NEXT: [[FLT_S:%[0-9]+]]:gpr = FLT_S [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: [[FLT_S1:%[0-9]+]]:gpr = FLT_S [[COPY1]], [[COPY]]
+    ; CHECK-NEXT: [[FLT_S:%[0-9]+]]:gpr = nofpexcept FLT_S [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: [[FLT_S1:%[0-9]+]]:gpr = nofpexcept FLT_S [[COPY1]], [[COPY]]
     ; CHECK-NEXT: [[OR:%[0-9]+]]:gpr = OR [[FLT_S]], [[FLT_S1]]
     ; CHECK-NEXT: $x10 = COPY [[OR]]
     ; CHECK-NEXT: PseudoRET implicit $x10
@@ -162,8 +162,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr32 = COPY $f10_f
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr32 = COPY $f11_f
-    ; CHECK-NEXT: [[FEQ_S:%[0-9]+]]:gpr = FEQ_S [[COPY]], [[COPY]]
-    ; CHECK-NEXT: [[FEQ_S1:%[0-9]+]]:gpr = FEQ_S [[COPY1]], [[COPY1]]
+    ; CHECK-NEXT: [[FEQ_S:%[0-9]+]]:gpr = nofpexcept FEQ_S [[COPY]], [[COPY]]
+    ; CHECK-NEXT: [[FEQ_S1:%[0-9]+]]:gpr = nofpexcept FEQ_S [[COPY1]], [[COPY1]]
     ; CHECK-NEXT: [[AND:%[0-9]+]]:gpr = AND [[FEQ_S]], [[FEQ_S1]]
     ; CHECK-NEXT: $x10 = COPY [[AND]]
     ; CHECK-NEXT: PseudoRET implicit $x10
@@ -188,8 +188,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr32 = COPY $f10_f
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr32 = COPY $f11_f
-    ; CHECK-NEXT: [[FLT_S:%[0-9]+]]:gpr = FLT_S [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: [[FLT_S1:%[0-9]+]]:gpr = FLT_S [[COPY1]], [[COPY]]
+    ; CHECK-NEXT: [[FLT_S:%[0-9]+]]:gpr = nofpexcept FLT_S [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: [[FLT_S1:%[0-9]+]]:gpr = nofpexcept FLT_S [[COPY1]], [[COPY]]
     ; CHECK-NEXT: [[OR:%[0-9]+]]:gpr = OR [[FLT_S]], [[FLT_S1]]
     ; CHECK-NEXT: [[XORI:%[0-9]+]]:gpr = XORI [[OR]], 1
     ; CHECK-NEXT: $x10 = COPY [[XORI]]
@@ -215,7 +215,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr32 = COPY $f10_f
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr32 = COPY $f11_f
-    ; CHECK-NEXT: [[FLE_S:%[0-9]+]]:gpr = FLE_S [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: [[FLE_S:%[0-9]+]]:gpr = nofpexcept FLE_S [[COPY]], [[COPY1]]
     ; CHECK-NEXT: [[XORI:%[0-9]+]]:gpr = XORI [[FLE_S]], 1
     ; CHECK-NEXT: $x10 = COPY [[XORI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
@@ -240,7 +240,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr32 = COPY $f10_f
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr32 = COPY $f11_f
-    ; CHECK-NEXT: [[FLT_S:%[0-9]+]]:gpr = FLT_S [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: [[FLT_S:%[0-9]+]]:gpr = nofpexcept FLT_S [[COPY]], [[COPY1]]
     ; CHECK-NEXT: [[XORI:%[0-9]+]]:gpr = XORI [[FLT_S]], 1
     ; CHECK-NEXT: $x10 = COPY [[XORI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
@@ -265,7 +265,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr32 = COPY $f10_f
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr32 = COPY $f11_f
-    ; CHECK-NEXT: [[FLE_S:%[0-9]+]]:gpr = FLE_S [[COPY1]], [[COPY]]
+    ; CHECK-NEXT: [[FLE_S:%[0-9]+]]:gpr = nofpexcept FLE_S [[COPY1]], [[COPY]]
     ; CHECK-NEXT: [[XORI:%[0-9]+]]:gpr = XORI [[FLE_S]], 1
     ; CHECK-NEXT: $x10 = COPY [[XORI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
@@ -290,7 +290,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr32 = COPY $f10_f
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr32 = COPY $f11_f
-    ; CHECK-NEXT: [[FLT_S:%[0-9]+]]:gpr = FLT_S [[COPY1]], [[COPY]]
+    ; CHECK-NEXT: [[FLT_S:%[0-9]+]]:gpr = nofpexcept FLT_S [[COPY1]], [[COPY]]
     ; CHECK-NEXT: [[XORI:%[0-9]+]]:gpr = XORI [[FLT_S]], 1
     ; CHECK-NEXT: $x10 = COPY [[XORI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
@@ -315,7 +315,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr32 = COPY $f10_f
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr32 = COPY $f11_f
-    ; CHECK-NEXT: [[FEQ_S:%[0-9]+]]:gpr = FEQ_S [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: [[FEQ_S:%[0-9]+]]:gpr = nofpexcept FEQ_S [[COPY]], [[COPY1]]
     ; CHECK-NEXT: [[XORI:%[0-9]+]]:gpr = XORI [[FEQ_S]], 1
     ; CHECK-NEXT: $x10 = COPY [[XORI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
@@ -340,8 +340,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr32 = COPY $f10_f
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr32 = COPY $f11_f
-    ; CHECK-NEXT: [[FEQ_S:%[0-9]+]]:gpr = FEQ_S [[COPY]], [[COPY]]
-    ; CHECK-NEXT: [[FEQ_S1:%[0-9]+]]:gpr = FEQ_S [[COPY1]], [[COPY1]]
+    ; CHECK-NEXT: [[FEQ_S:%[0-9]+]]:gpr = nofpexcept FEQ_S [[COPY]], [[COPY]]
+    ; CHECK-NEXT: [[FEQ_S1:%[0-9]+]]:gpr = nofpexcept FEQ_S [[COPY1]], [[COPY1]]
     ; CHECK-NEXT: [[AND:%[0-9]+]]:gpr = AND [[FEQ_S]], [[FEQ_S1]]
     ; CHECK-NEXT: [[XORI:%[0-9]+]]:gpr = XORI [[AND]], 1
     ; CHECK-NEXT: $x10 = COPY [[XORI]]
@@ -391,7 +391,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY $f10_d
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr64 = COPY $f11_d
-    ; CHECK-NEXT: [[FLT_D:%[0-9]+]]:gpr = FLT_D [[COPY1]], [[COPY]]
+    ; CHECK-NEXT: [[FLT_D:%[0-9]+]]:gpr = nofpexcept FLT_D [[COPY1]], [[COPY]]
     ; CHECK-NEXT: $x10 = COPY [[FLT_D]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:fprb(s64) = COPY $f10_d
@@ -415,7 +415,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY $f10_d
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr64 = COPY $f11_d
-    ; CHECK-NEXT: [[FLE_D:%[0-9]+]]:gpr = FLE_D [[COPY1]], [[COPY]]
+    ; CHECK-NEXT: [[FLE_D:%[0-9]+]]:gpr = nofpexcept FLE_D [[COPY1]], [[COPY]]
     ; CHECK-NEXT: $x10 = COPY [[FLE_D]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:fprb(s64) = COPY $f10_d
@@ -487,8 +487,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY $f10_d
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr64 = COPY $f11_d
-    ; CHECK-NEXT: [[FLT_D:%[0-9]+]]:gpr = FLT_D [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: [[FLT_D1:%[0-9]+]]:gpr = FLT_D [[COPY1]], [[COPY]]
+    ; CHECK-NEXT: [[FLT_D:%[0-9]+]]:gpr = nofpexcept FLT_D [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: [[FLT_D1:%[0-9]+]]:gpr = nofpexcept FLT_D [[COPY1]], [[COPY]]
     ; CHECK-NEXT: [[OR:%[0-9]+]]:gpr = OR [[FLT_D]], [[FLT_D1]]
     ; CHECK-NEXT: $x10 = COPY [[OR]]
     ; CHECK-NEXT: PseudoRET implicit $x10
@@ -513,8 +513,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY $f10_d
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr64 = COPY $f11_d
-    ; CHECK-NEXT: [[FEQ_D:%[0-9]+]]:gpr = FEQ_D [[COPY]], [[COPY]]
-    ; CHECK-NEXT: [[FEQ_D1:%[0-9]+]]:gpr = FEQ_D [[COPY1]], [[COPY1]]
+    ; CHECK-NEXT: [[FEQ_D:%[0-9]+]]:gpr = nofpexcept FEQ_D [[COPY]], [[COPY]]
+    ; CHECK-NEXT: [[FEQ_D1:%[0-9]+]]:gpr = nofpexcept FEQ_D [[COPY1]], [[COPY1]]
     ; CHECK-NEXT: [[AND:%[0-9]+]]:gpr = AND [[FEQ_D]], [[FEQ_D1]]
     ; CHECK-NEXT: $x10 = COPY [[AND]]
     ; CHECK-NEXT: PseudoRET implicit $x10
@@ -539,8 +539,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY $f10_d
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr64 = COPY $f11_d
-    ; CHECK-NEXT: [[FLT_D:%[0-9]+]]:gpr = FLT_D [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: [[FLT_D1:%[0-9]+]]:gpr = FLT_D [[COPY1]], [[COPY]]
+    ; CHECK-NEXT: [[FLT_D:%[0-9]+]]:gpr = nofpexcept FLT_D [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: [[FLT_D1:%[0-9]+]]:gpr = nofpexcept FLT_D [[COPY1]], [[COPY]]
     ; CHECK-NEXT: [[OR:%[0-9]+]]:gpr = OR [[FLT_D]], [[FLT_D1]]
     ; CHECK-NEXT: [[XORI:%[0-9]+]]:gpr = XORI [[OR]], 1
     ; CHECK-NEXT: $x10 = COPY [[XORI]]
@@ -566,7 +566,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY $f10_d
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr64 = COPY $f11_d
-    ; CHECK-NEXT: [[FLE_D:%[0-9]+]]:gpr = FLE_D [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: [[FLE_D:%[0-9]+]]:gpr = nofpexcept FLE_D [[COPY]], [[COPY1]]
     ; CHECK-NEXT: [[XORI:%[0-9]+]]:gpr = XORI [[FLE_D]], 1
     ; CHECK-NEXT: $x10 = COPY [[XORI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
@@ -591,7 +591,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY $f10_d
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr64 = COPY $f11_d
-    ; CHECK-NEXT: [[FLT_D:%[0-9]+]]:gpr = FLT_D [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: [[FLT_D:%[0-9]+]]:gpr = nofpexcept FLT_D [[COPY]], [[COPY1]]
     ; CHECK-NEXT: [[XORI:%[0-9]+]]:gpr = XORI [[FLT_D]], 1
     ; CHECK-NEXT: $x10 = COPY [[XORI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
@@ -616,7 +616,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY $f10_d
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr64 = COPY $f11_d
-    ; CHECK-NEXT: [[FLE_D:%[0-9]+]]:gpr = FLE_D [[COPY1]], [[COPY]]
+    ; CHECK-NEXT: [[FLE_D:%[0-9]+]]:gpr = nofpexcept FLE_D [[COPY1]], [[COPY]]
     ; CHECK-NEXT: [[XORI:%[0-9]+]]:gpr = XORI [[FLE_D]], 1
     ; CHECK-NEXT: $x10 = COPY [[XORI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
@@ -641,7 +641,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY $f10_d
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr64 = COPY $f11_d
-    ; CHECK-NEXT: [[FLT_D:%[0-9]+]]:gpr = FLT_D [[COPY1]], [[COPY]]
+    ; CHECK-NEXT: [[FLT_D:%[0-9]+]]:gpr = nofpexcept FLT_D [[COPY1]], [[COPY]]
     ; CHECK-NEXT: [[XORI:%[0-9]+]]:gpr = XORI [[FLT_D]], 1
     ; CHECK-NEXT: $x10 = COPY [[XORI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
@@ -666,7 +666,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY $f10_d
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr64 = COPY $f11_d
-    ; CHECK-NEXT: [[FEQ_D:%[0-9]+]]:gpr = FEQ_D [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: [[FEQ_D:%[0-9]+]]:gpr = nofpexcept FEQ_D [[COPY]], [[COPY1]]
     ; CHECK-NEXT: [[XORI:%[0-9]+]]:gpr = XORI [[FEQ_D]], 1
     ; CHECK-NEXT: $x10 = COPY [[XORI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
@@ -691,8 +691,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY $f10_d
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr64 = COPY $f11_d
-    ; CHECK-NEXT: [[FEQ_D:%[0-9]+]]:gpr = FEQ_D [[COPY]], [[COPY]]
-    ; CHECK-NEXT: [[FEQ_D1:%[0-9]+]]:gpr = FEQ_D [[COPY1]], [[COPY1]]
+    ; CHECK-NEXT: [[FEQ_D:%[0-9]+]]:gpr = nofpexcept FEQ_D [[COPY]], [[COPY]]
+    ; CHECK-NEXT: [[FEQ_D1:%[0-9]+]]:gpr = nofpexcept FEQ_D [[COPY1]], [[COPY1]]
     ; CHECK-NEXT: [[AND:%[0-9]+]]:gpr = AND [[FEQ_D]], [[FEQ_D1]]
     ; CHECK-NEXT: [[XORI:%[0-9]+]]:gpr = XORI [[AND]], 1
     ; CHECK-NEXT: $x10 = COPY [[XORI]]

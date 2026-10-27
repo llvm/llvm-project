@@ -100,7 +100,7 @@ struct ArgInfo {
 struct ArgsUsageInLoop {
   /// Mapping between the memref operand of an array indexing
   /// operation (e.g. fir.coordinate_of) and the argument information.
-  llvm::DenseMap<mlir::Value, ArgInfo> usageInfo;
+  llvm::MapVector<mlir::Value, ArgInfo> usageInfo;
   /// Some array indexing operations inside a loop cannot be transformed.
   /// This vector holds the memref operands of such operations.
   /// The vector is used to make sure that we do not try to transform
@@ -141,7 +141,7 @@ struct ArgsUsageInLoop {
 
   // Erase usageInfo and cannotTransform entries for a set
   // of given arguments provided in the form of usageInfo map.
-  void eraseUsage(const llvm::DenseMap<mlir::Value, ArgInfo> &args) {
+  void eraseUsage(const llvm::MapVector<mlir::Value, ArgInfo> &args) {
     for (auto &arg : args) {
       usageInfo.erase(arg.first);
       cannotTransform.remove(arg.first);

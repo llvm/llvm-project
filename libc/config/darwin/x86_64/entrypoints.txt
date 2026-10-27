@@ -122,6 +122,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     #libc.src.math.copysign
     #libc.src.math.copysignf
     #libc.src.math.copysignf128
+    libc.src.math.copysignf80
     #libc.src.math.copysignl
     #libc.src.math.ceil
     #libc.src.math.ceilf
@@ -140,6 +141,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     #libc.src.math.fabs
     #libc.src.math.fabsf
     #libc.src.math.fabsf128
+    libc.src.math.fabsf80
     #libc.src.math.fabsl
     #libc.src.math.fdim
     #libc.src.math.fdimf
@@ -176,6 +178,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     #libc.src.math.fmodf
     #libc.src.math.frexp
     #libc.src.math.frexpf
+    #libc.src.math.frexpf128
     #libc.src.math.frexpl
     #libc.src.math.fsub
     #libc.src.math.fsubl
@@ -183,10 +186,12 @@ set(TARGET_LIBM_ENTRYPOINTS
     #libc.src.math.hypotf
     #libc.src.math.ilogb
     #libc.src.math.ilogbf
+    #libc.src.math.ilogbf128
     #libc.src.math.ilogbl
     #libc.src.math.iscanonicalf128
     #libc.src.math.isnanf128
     #libc.src.math.issignalingf128
+    #libc.src.math.llogbf128
     #libc.src.math.llrint
     #libc.src.math.llrintf
     #libc.src.math.llrintf128
@@ -212,6 +217,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     #libc.src.math.logf
     #libc.src.math.logb
     #libc.src.math.logbf
+    #libc.src.math.logbf128
     #libc.src.math.logbl
     #libc.src.math.modf
     #libc.src.math.modff
@@ -285,6 +291,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.canonicalizebf16
   libc.src.math.ceilbf16
   libc.src.math.copysignbf16
+  libc.src.math.exp2bf16
   libc.src.math.expbf16
   libc.src.math.fabsbf16
   libc.src.math.fdimbf16
@@ -338,6 +345,8 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.truncbf16
   libc.src.math.totalorderbf16
   libc.src.math.totalordermagbf16
+  libc.src.math.totalorderf128
+  libc.src.math.totalordermagf128
   libc.src.math.ufromfpbf16
   libc.src.math.ufromfpxbf16
 )

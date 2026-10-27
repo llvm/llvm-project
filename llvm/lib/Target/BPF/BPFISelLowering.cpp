@@ -76,7 +76,7 @@ BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
   setStackPointerRegisterToSaveRestore(BPF::R11);
 
   setOperationAction(ISD::BR_CC, MVT::i64, Custom);
-  setOperationAction(ISD::BR_JT, MVT::Other, Expand);
+  setOperationAction(ISD::BR_JT, MVT::Other, STI.hasGotox() ? Custom : Expand);
   setOperationAction(ISD::BRCOND, MVT::Other, Expand);
 
   if (!STI.hasGotox())
@@ -127,8 +127,10 @@ BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::SDIV, VT, Custom);
       setOperationAction(ISD::SREM, VT, Custom);
     }
-    setOperationAction(ISD::MULHU, VT, Expand);
-    setOperationAction(ISD::MULHS, VT, Expand);
+    if (VT == MVT::i32 || !STI.hasHmul()) {
+      setOperationAction(ISD::MULHU, VT, Expand);
+      setOperationAction(ISD::MULHS, VT, Expand);
+    }
     setOperationAction(ISD::UMUL_LOHI, VT, Expand);
     setOperationAction(ISD::SMUL_LOHI, VT, Expand);
     setOperationAction(ISD::ROTR, VT, Expand);
@@ -359,6 +361,8 @@ SDValue BPFTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerBR_CC(Op, DAG);
   case ISD::JumpTable:
     return LowerJumpTable(Op, DAG);
+  case ISD::BR_JT:
+    return LowerBR_JT(Op, DAG);
   case ISD::GlobalAddress:
     return LowerGlobalAddress(Op, DAG);
   case ISD::ConstantPool:
@@ -867,6 +871,39 @@ SDValue BPFTargetLowering::LowerTRAP(SDValue Op, SelectionDAG &DAG) const {
   CLI.NoMerge = false;
   CLI.DoesNotReturn = true;
   return LowerCall(CLI, InVals);
+}
+
+/// The verifier wants to see that the load from the table is within it. The
+/// range check in front of it doesn't always show that: it can be done on
+/// another copy of the value, e.g. 'w1 = w7; w1 &= 255; if w1 > 24 goto' and
+/// then 'r1 = r7; r1 &= 255' for the index. Make the size of the table a power
+/// of two and mask the index.
+SDValue BPFTargetLowering::LowerBR_JT(SDValue Op, SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SDValue Chain = Op.getOperand(0);
+  unsigned JTI = cast<JumpTableSDNode>(Op.getOperand(1))->getIndex();
+  SDValue Index = Op.getOperand(2);
+  MachineFunction &MF = DAG.getMachineFunction();
+  MachineJumpTableInfo *MJTI = MF.getJumpTableInfo();
+  std::vector<MachineBasicBlock *> MBBs = MJTI->getJumpTables()[JTI].MBBs;
+  uint64_t Size = PowerOf2Ceil(MBBs.size());
+
+  if (Size != MBBs.size()) {
+    // An index that gets there is out of range: any block of the table will do.
+    MBBs.resize(Size, MBBs.back());
+    MJTI->RemoveJumpTable(JTI);
+    JTI = MJTI->createJumpTableIndex(MBBs);
+  }
+
+  Index = DAG.getNode(ISD::AND, DL, MVT::i64, Index,
+                      DAG.getConstant(Size - 1, DL, MVT::i64));
+  Index = DAG.getNode(ISD::SHL, DL, MVT::i64, Index,
+                      DAG.getConstant(3, DL, MVT::i64));
+  SDValue Addr = DAG.getNode(ISD::ADD, DL, MVT::i64,
+                             DAG.getJumpTable(JTI, MVT::i64), Index);
+  SDValue Load = DAG.getLoad(MVT::i64, DL, Chain, Addr,
+                             MachinePointerInfo::getJumpTable(MF));
+  return DAG.getNode(ISD::BRIND, DL, MVT::Other, Load.getValue(1), Load);
 }
 
 SDValue BPFTargetLowering::LowerJumpTable(SDValue Op, SelectionDAG &DAG) const {
