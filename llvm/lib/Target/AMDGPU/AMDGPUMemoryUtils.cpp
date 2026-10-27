@@ -510,15 +510,15 @@ static const StringMap<SIAtomicAddrSpace> ASNames = {{
     {"local", SIAtomicAddrSpace::LDS},
 }};
 
-std::optional<SIAtomicAddrSpace>
-getSynchronizeAddrSpace(const MMRAMetadata &MMRA, const Function *DiagFn,
-                        const DebugLoc &DL) {
+SIAtomicAddrSpace getSynchronizeAddrSpace(const MMRAMetadata &MMRA,
+                                          const Function *DiagFn,
+                                          const DebugLoc &DL) {
   static constexpr StringLiteral FenceASPrefix = "amdgpu-synchronize-as";
 
   if (!MMRA)
-    return std::nullopt;
+    return SIAtomicAddrSpace::ATOMIC;
 
-  SIAtomicAddrSpace Result = SIAtomicAddrSpace::NONE;
+  SIAtomicAddrSpace Result{};
   for (const auto &[Prefix, Suffix] : MMRA) {
     if (Prefix != FenceASPrefix)
       continue;
@@ -538,12 +538,12 @@ getSynchronizeAddrSpace(const MMRAMetadata &MMRA, const Function *DiagFn,
   }
 
   if (Result == SIAtomicAddrSpace::NONE)
-    return std::nullopt;
+    return SIAtomicAddrSpace::ATOMIC;
 
   return Result;
 }
 
-std::optional<SIAtomicAddrSpace> getSynchronizeAddrSpace(const Instruction &I) {
+SIAtomicAddrSpace getSynchronizeAddrSpace(const Instruction &I) {
   return getSynchronizeAddrSpace(MMRAMetadata(I));
 }
 
