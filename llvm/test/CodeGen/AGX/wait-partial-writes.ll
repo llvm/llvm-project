@@ -6,10 +6,11 @@
 ; load. Only the matrix multiply-add waits, once, for both.
 
 ; CHECK-LABEL: fragment:
-; CHECK: device_load {{[01]}}, i32, x, r{{[0-9]+}},
+; CHECK: device_load
 ; CHECK-NOT: wait
-; CHECK: device_load {{[01]}}, i32, x, r{{[0-9]+}},
-; CHECK: device_load {{[01]}}, i32, xy,
+; CHECK: device_load
+; CHECK-NOT: wait
+; CHECK: device_load
 ; CHECK: wait
 ; CHECK-NOT: wait
 ; CHECK: simd_matrix_fmadd32

@@ -1,8 +1,11 @@
-; RUN: llc -mtriple=agx -mcpu=agx-g13g -verify-machineinstrs < %s | FileCheck %s
-; RUN: llc -mtriple=agx -mcpu=agx-g13g -verify-machineinstrs -agx-mem-cluster=0 < %s | FileCheck %s --check-prefix=OFF
+; RUN: llc -mtriple=agx -mcpu=agx-g13g -verify-machineinstrs -enable-post-misched=false < %s | FileCheck %s
+; RUN: llc -mtriple=agx -mcpu=agx-g13g -verify-machineinstrs -enable-post-misched=false -agx-mem-cluster=0 < %s | FileCheck %s --check-prefix=OFF
+; RUN: llc -mtriple=agx -mcpu=agx-g13g -verify-machineinstrs < %s | FileCheck %s --check-prefix=POST
 
 ; Device stores are kept together: a store issued just after an ALU
 ; instruction waits for the ALU pipeline to drain, a run of stores once.
+; After register allocation the top-down scheduler issues the store whose value
+; is ready first; the wait for the load then falls between the two.
 define agx_kernel void @stores(ptr addrspace(1) %in, ptr addrspace(1) %out) {
 ; CHECK-LABEL: stores:
 ; CHECK:         device_load 0, i16, x, [[V:r[0-9]+l]], u0_u1, 0, signed
@@ -11,6 +14,11 @@ define agx_kernel void @stores(ptr addrspace(1) %in, ptr addrspace(1) %out) {
 ; CHECK-NEXT:    device_store 0, i16, x, [[V]], u2_u3, 1, signed
 ; CHECK-NEXT:    device_store 0, i16, x, [[C]], u2_u3, 0, signed
 ; CHECK-NEXT:    stop
+; POST-LABEL: stores:
+; POST:         mov_imm [[C:r[0-9]+[lh]]], 22136
+; POST-NEXT:    device_store 0, i16, x, [[C]], u2_u3, 0, signed
+; POST-NEXT:    wait 0
+; POST-NEXT:    device_store 0, i16, x, {{r[0-9]+l}}, u2_u3, 1, signed
 ; OFF-LABEL: stores:
 ; OFF:         device_store 0, i16, x, {{r[0-9]+l}}, u2_u3, 1, signed
 ; OFF-NEXT:    mov_imm {{r[0-9]+[lh]}}, 22136

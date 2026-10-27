@@ -1,7 +1,7 @@
 {
  "cuda_argmax.ll:argmax:agx-g13g": {
   "bytes": 1188,
-  "cycles": 15584.3,
+  "cycles": 15583.2,
   "gprs": 14,
   "instructions": 187,
   "launch_inputs": true,
@@ -10,7 +10,7 @@
  },
  "cuda_argmax.ll:argmax:agx-g14c": {
   "bytes": 1188,
-  "cycles": 15584.3,
+  "cycles": 15583.2,
   "gprs": 14,
   "instructions": 187,
   "launch_inputs": true,
@@ -19,7 +19,7 @@
  },
  "cuda_attn_decode.ll:attn_decode:agx-g13g": {
   "bytes": 2294,
-  "cycles": 41283.6,
+  "cycles": 41194.6,
   "gprs": 40,
   "instructions": 334,
   "launch_inputs": true,
@@ -28,7 +28,7 @@
  },
  "cuda_attn_decode.ll:attn_decode:agx-g14c": {
   "bytes": 2294,
-  "cycles": 41283.6,
+  "cycles": 41194.6,
   "gprs": 40,
   "instructions": 334,
   "launch_inputs": true,
@@ -37,7 +37,7 @@
  },
  "cuda_bitonic_smem.ll:bitonic_smem:agx-g13g": {
   "bytes": 5106,
-  "cycles": 15106.4,
+  "cycles": 16759.6,
   "gprs": 32,
   "instructions": 879,
   "launch_inputs": true,
@@ -46,7 +46,7 @@
  },
  "cuda_bitonic_smem.ll:bitonic_smem:agx-g14c": {
   "bytes": 5106,
-  "cycles": 15106.4,
+  "cycles": 16759.6,
   "gprs": 32,
   "instructions": 879,
   "launch_inputs": true,
@@ -55,7 +55,7 @@
  },
  "cuda_blur_rgba8.ll:blur_rgba8:agx-g13g": {
   "bytes": 1152,
-  "cycles": 614.1,
+  "cycles": 529.9,
   "gprs": 17,
   "instructions": 164,
   "launch_inputs": true,
@@ -64,7 +64,7 @@
  },
  "cuda_blur_rgba8.ll:blur_rgba8:agx-g14c": {
   "bytes": 1152,
-  "cycles": 614.1,
+  "cycles": 529.9,
   "gprs": 17,
   "instructions": 164,
   "launch_inputs": true,
@@ -73,7 +73,7 @@
  },
  "cuda_conv3x3.ll:conv3x3:agx-g13g": {
   "bytes": 1328,
-  "cycles": 47442.4,
+  "cycles": 47450.8,
   "gprs": 44,
   "instructions": 198,
   "launch_inputs": true,
@@ -82,7 +82,7 @@
  },
  "cuda_conv3x3.ll:conv3x3:agx-g14c": {
   "bytes": 1328,
-  "cycles": 47442.4,
+  "cycles": 47450.8,
   "gprs": 44,
   "instructions": 198,
   "launch_inputs": true,
@@ -91,7 +91,7 @@
  },
  "cuda_ddot.ll:ddot:agx-g13g": {
   "bytes": 21252,
-  "cycles": 33036.2,
+  "cycles": 32992.5,
   "gprs": 58,
   "instructions": 2744,
   "launch_inputs": true,
@@ -100,7 +100,7 @@
  },
  "cuda_ddot.ll:ddot:agx-g14c": {
   "bytes": 21252,
-  "cycles": 33036.2,
+  "cycles": 32992.5,
   "gprs": 58,
   "instructions": 2744,
   "launch_inputs": true,
@@ -109,7 +109,7 @@
  },
  "cuda_embedding.ll:embedding:agx-g13g": {
   "bytes": 234,
-  "cycles": 716.9,
+  "cycles": 730.9,
   "gprs": 12,
   "instructions": 37,
   "launch_inputs": true,
@@ -118,7 +118,7 @@
  },
  "cuda_embedding.ll:embedding:agx-g14c": {
   "bytes": 234,
-  "cycles": 716.9,
+  "cycles": 730.9,
   "gprs": 12,
   "instructions": 37,
   "launch_inputs": true,
@@ -127,7 +127,7 @@
  },
  "cuda_gelu_f16.ll:gelu_f16:agx-g13g": {
   "bytes": 540,
-  "cycles": 1946.0,
+  "cycles": 1655.7,
   "gprs": 24,
   "instructions": 86,
   "launch_inputs": true,
@@ -136,7 +136,7 @@
  },
  "cuda_gelu_f16.ll:gelu_f16:agx-g14c": {
   "bytes": 540,
-  "cycles": 1946.0,
+  "cycles": 1655.7,
   "gprs": 24,
   "instructions": 86,
   "launch_inputs": true,
@@ -145,7 +145,7 @@
  },
  "cuda_index_add.ll:index_add:agx-g13g": {
   "bytes": 1006,
-  "cycles": 17459.2,
+  "cycles": 17438.5,
   "gprs": 32,
   "instructions": 155,
   "launch_inputs": true,
@@ -154,7 +154,7 @@
  },
  "cuda_index_add.ll:index_add:agx-g14c": {
   "bytes": 762,
-  "cycles": 8662.1,
+  "cycles": 8494.4,
   "gprs": 30,
   "instructions": 113,
   "launch_inputs": true,
@@ -163,7 +163,7 @@
  },
  "cuda_jacobi2d.ll:jacobi2d:agx-g13g": {
   "bytes": 654,
-  "cycles": 851.5,
+  "cycles": 850.5,
   "gprs": 19,
   "instructions": 102,
   "launch_inputs": true,
@@ -172,7 +172,7 @@
  },
  "cuda_jacobi2d.ll:jacobi2d:agx-g14c": {
   "bytes": 654,
-  "cycles": 851.5,
+  "cycles": 850.5,
   "gprs": 19,
   "instructions": 102,
   "launch_inputs": true,
@@ -181,7 +181,7 @@
  },
  "cuda_layernorm_f16.ll:layernorm_f16:agx-g13g": {
   "bytes": 946,
-  "cycles": 4078.0,
+  "cycles": 3710.1,
   "gprs": 19,
   "instructions": 154,
   "launch_inputs": true,
@@ -190,7 +190,7 @@
  },
  "cuda_layernorm_f16.ll:layernorm_f16:agx-g14c": {
   "bytes": 946,
-  "cycles": 4078.0,
+  "cycles": 3710.1,
   "gprs": 19,
   "instructions": 154,
   "launch_inputs": true,
@@ -199,7 +199,7 @@
  },
  "cuda_mandelbrot.ll:mandelbrot:agx-g13g": {
   "bytes": 368,
-  "cycles": 14752.1,
+  "cycles": 14498.9,
   "gprs": 13,
   "instructions": 61,
   "launch_inputs": true,
@@ -208,7 +208,7 @@
  },
  "cuda_mandelbrot.ll:mandelbrot:agx-g14c": {
   "bytes": 368,
-  "cycles": 14752.1,
+  "cycles": 14498.9,
   "gprs": 13,
   "instructions": 61,
   "launch_inputs": true,
@@ -217,7 +217,7 @@
  },
  "cuda_nbody.ll:nbody:agx-g13g": {
   "bytes": 798,
-  "cycles": 191323.5,
+  "cycles": 181863.9,
   "gprs": 52,
   "instructions": 126,
   "launch_inputs": true,
@@ -226,7 +226,7 @@
  },
  "cuda_nbody.ll:nbody:agx-g14c": {
   "bytes": 798,
-  "cycles": 191323.5,
+  "cycles": 181863.9,
   "gprs": 52,
   "instructions": 126,
   "launch_inputs": true,
@@ -235,7 +235,7 @@
  },
  "cuda_permute4d.ll:permute4d:agx-g13g": {
   "bytes": 15044,
-  "cycles": 1896.5,
+  "cycles": 1884.0,
   "gprs": 46,
   "instructions": 2096,
   "launch_inputs": true,
@@ -244,7 +244,7 @@
  },
  "cuda_permute4d.ll:permute4d:agx-g14c": {
   "bytes": 15044,
-  "cycles": 1896.5,
+  "cycles": 1884.0,
   "gprs": 46,
   "instructions": 2096,
   "launch_inputs": true,
@@ -253,7 +253,7 @@
  },
  "cuda_philox.ll:philox:agx-g13g": {
   "bytes": 832,
-  "cycles": 258.2,
+  "cycles": 259.3,
   "gprs": 14,
   "instructions": 124,
   "launch_inputs": true,
@@ -262,7 +262,7 @@
  },
  "cuda_philox.ll:philox:agx-g14c": {
   "bytes": 832,
-  "cycles": 258.2,
+  "cycles": 259.3,
   "gprs": 14,
   "instructions": 124,
   "launch_inputs": true,
@@ -271,7 +271,7 @@
  },
  "cuda_q4_matvec.ll:q4_matvec:agx-g13g": {
   "bytes": 1794,
-  "cycles": 3029.5,
+  "cycles": 2920.1,
   "gprs": 47,
   "instructions": 268,
   "launch_inputs": true,
@@ -280,7 +280,7 @@
  },
  "cuda_q4_matvec.ll:q4_matvec:agx-g14c": {
   "bytes": 1794,
-  "cycles": 3029.5,
+  "cycles": 2920.1,
   "gprs": 47,
   "instructions": 268,
   "launch_inputs": true,
@@ -289,7 +289,7 @@
  },
  "cuda_q8_matvec.ll:q8_matvec:agx-g13g": {
   "bytes": 1708,
-  "cycles": 5207.9,
+  "cycles": 5178.9,
   "gprs": 41,
   "instructions": 240,
   "launch_inputs": true,
@@ -298,7 +298,7 @@
  },
  "cuda_q8_matvec.ll:q8_matvec:agx-g14c": {
   "bytes": 1708,
-  "cycles": 5207.9,
+  "cycles": 5178.9,
   "gprs": 41,
   "instructions": 240,
   "launch_inputs": true,
@@ -307,7 +307,7 @@
  },
  "cuda_radix_hist.ll:radix_hist:agx-g13g": {
   "bytes": 266,
-  "cycles": 1936.0,
+  "cycles": 1901.6,
   "gprs": 12,
   "instructions": 45,
   "launch_inputs": true,
@@ -316,7 +316,7 @@
  },
  "cuda_radix_hist.ll:radix_hist:agx-g14c": {
   "bytes": 266,
-  "cycles": 1936.0,
+  "cycles": 1901.6,
   "gprs": 12,
   "instructions": 45,
   "launch_inputs": true,
@@ -325,7 +325,7 @@
  },
  "cuda_reduce_shfl.ll:reduce_shfl:agx-g13g": {
   "bytes": 246,
-  "cycles": 1516.7,
+  "cycles": 1514.6,
   "gprs": 6,
   "instructions": 43,
   "launch_inputs": true,
@@ -343,7 +343,7 @@
  },
  "cuda_rmsnorm.ll:rmsnorm:agx-g13g": {
   "bytes": 562,
-  "cycles": 4634.5,
+  "cycles": 4631.4,
   "gprs": 14,
   "instructions": 92,
   "launch_inputs": true,
@@ -352,7 +352,7 @@
  },
  "cuda_rmsnorm.ll:rmsnorm:agx-g14c": {
   "bytes": 562,
-  "cycles": 4634.5,
+  "cycles": 4631.4,
   "gprs": 14,
   "instructions": 92,
   "launch_inputs": true,
@@ -361,7 +361,7 @@
  },
  "cuda_rope.ll:rope:agx-g13g": {
   "bytes": 630,
-  "cycles": 279.8,
+  "cycles": 276.4,
   "gprs": 13,
   "instructions": 95,
   "launch_inputs": true,
@@ -370,7 +370,7 @@
  },
  "cuda_rope.ll:rope:agx-g14c": {
   "bytes": 630,
-  "cycles": 279.8,
+  "cycles": 276.4,
   "gprs": 13,
   "instructions": 95,
   "launch_inputs": true,
@@ -379,7 +379,7 @@
  },
  "cuda_scan_blelloch.ll:scan_blelloch:agx-g13g": {
   "bytes": 1594,
-  "cycles": 5703.0,
+  "cycles": 5702.8,
   "gprs": 28,
   "instructions": 262,
   "launch_inputs": true,
@@ -388,7 +388,7 @@
  },
  "cuda_scan_blelloch.ll:scan_blelloch:agx-g14c": {
   "bytes": 1594,
-  "cycles": 5703.0,
+  "cycles": 5702.8,
   "gprs": 28,
   "instructions": 262,
   "launch_inputs": true,
@@ -397,7 +397,7 @@
  },
  "cuda_sgemm_reg4x4.ll:sgemm_reg4x4:agx-g13g": {
   "bytes": 3550,
-  "cycles": 93337.1,
+  "cycles": 78102.9,
   "gprs": 70,
   "instructions": 466,
   "launch_inputs": true,
@@ -406,7 +406,7 @@
  },
  "cuda_sgemm_reg4x4.ll:sgemm_reg4x4:agx-g14c": {
   "bytes": 3550,
-  "cycles": 93337.1,
+  "cycles": 78102.9,
   "gprs": 70,
   "instructions": 466,
   "launch_inputs": true,
@@ -415,7 +415,7 @@
  },
  "cuda_softmax_online.ll:softmax_online:agx-g13g": {
   "bytes": 1600,
-  "cycles": 3513.5,
+  "cycles": 3504.6,
   "gprs": 20,
   "instructions": 248,
   "launch_inputs": true,
@@ -424,7 +424,7 @@
  },
  "cuda_softmax_online.ll:softmax_online:agx-g14c": {
   "bytes": 1600,
-  "cycles": 3513.5,
+  "cycles": 3504.6,
   "gprs": 20,
   "instructions": 248,
   "launch_inputs": true,
@@ -433,7 +433,7 @@
  },
  "cuda_spmv_csr.ll:spmv_csr:agx-g13g": {
   "bytes": 478,
-  "cycles": 909.6,
+  "cycles": 882.2,
   "gprs": 19,
   "instructions": 75,
   "launch_inputs": true,
@@ -442,7 +442,7 @@
  },
  "cuda_spmv_csr.ll:spmv_csr:agx-g14c": {
   "bytes": 478,
-  "cycles": 909.6,
+  "cycles": 882.2,
   "gprs": 19,
   "instructions": 75,
   "launch_inputs": true,
@@ -451,7 +451,7 @@
  },
  "cuda_spmv_csr_vector.ll:spmv_csr_vector:agx-g13g": {
   "bytes": 340,
-  "cycles": 468.3,
+  "cycles": 450.9,
   "gprs": 13,
   "instructions": 55,
   "launch_inputs": true,
@@ -460,7 +460,7 @@
  },
  "cuda_spmv_csr_vector.ll:spmv_csr_vector:agx-g14c": {
   "bytes": 340,
-  "cycles": 468.3,
+  "cycles": 450.9,
   "gprs": 13,
   "instructions": 55,
   "launch_inputs": true,
@@ -469,7 +469,7 @@
  },
  "cuda_swiglu.ll:swiglu:agx-g13g": {
   "bytes": 278,
-  "cycles": 429.8,
+  "cycles": 422.0,
   "gprs": 21,
   "instructions": 49,
   "launch_inputs": true,
@@ -478,7 +478,7 @@
  },
  "cuda_swiglu.ll:swiglu:agx-g14c": {
   "bytes": 278,
-  "cycles": 429.8,
+  "cycles": 422.0,
   "gprs": 21,
   "instructions": 49,
   "launch_inputs": true,
@@ -487,7 +487,7 @@
  },
  "histogram.ll:histogram:agx-g13g": {
   "bytes": 124,
-  "cycles": 248.3,
+  "cycles": 247.2,
   "gprs": 7,
   "instructions": 22,
   "launch_inputs": true,
@@ -496,7 +496,7 @@
  },
  "histogram.ll:histogram:agx-g14c": {
   "bytes": 124,
-  "cycles": 248.3,
+  "cycles": 247.2,
   "gprs": 7,
   "instructions": 22,
   "launch_inputs": true,
@@ -505,7 +505,7 @@
  },
  "matrixmul.ll:matrixMul:agx-g13g": {
   "bytes": 574,
-  "cycles": 4559.0,
+  "cycles": 4564.5,
   "gprs": 42,
   "instructions": 87,
   "launch_inputs": true,
@@ -514,7 +514,7 @@
  },
  "matrixmul.ll:matrixMul:agx-g14c": {
   "bytes": 574,
-  "cycles": 4559.0,
+  "cycles": 4564.5,
   "gprs": 42,
   "instructions": 87,
   "launch_inputs": true,
@@ -523,7 +523,7 @@
  },
  "reduce.ll:reduce:agx-g13g": {
   "bytes": 216,
-  "cycles": 1514.4,
+  "cycles": 1905.5,
   "gprs": 6,
   "instructions": 38,
   "launch_inputs": false,
@@ -532,7 +532,7 @@
  },
  "reduce.ll:reduce:agx-g14c": {
   "bytes": 168,
-  "cycles": 1412.9,
+  "cycles": 1803.1,
   "gprs": 6,
   "instructions": 29,
   "launch_inputs": false,
@@ -577,7 +577,7 @@
  },
  "softmax_row.ll:softmax_row:agx-g13g": {
   "bytes": 380,
-  "cycles": 236.3,
+  "cycles": 240.3,
   "gprs": 10,
   "instructions": 58,
   "launch_inputs": false,
@@ -586,7 +586,7 @@
  },
  "softmax_row.ll:softmax_row:agx-g14c": {
   "bytes": 380,
-  "cycles": 236.3,
+  "cycles": 240.3,
   "gprs": 10,
   "instructions": 58,
   "launch_inputs": false,
@@ -595,7 +595,7 @@
  },
  "stencil.ll:stencil:agx-g13g": {
   "bytes": 190,
-  "cycles": 139.9,
+  "cycles": 181.1,
   "gprs": 8,
   "instructions": 28,
   "launch_inputs": true,
@@ -604,7 +604,7 @@
  },
  "stencil.ll:stencil:agx-g14c": {
   "bytes": 190,
-  "cycles": 139.9,
+  "cycles": 181.1,
   "gprs": 8,
   "instructions": 28,
   "launch_inputs": true,
@@ -613,7 +613,7 @@
  },
  "transpose.ll:transpose:agx-g13g": {
   "bytes": 130,
-  "cycles": 189.9,
+  "cycles": 157.6,
   "gprs": 8,
   "instructions": 21,
   "launch_inputs": false,
@@ -622,7 +622,7 @@
  },
  "transpose.ll:transpose:agx-g14c": {
   "bytes": 130,
-  "cycles": 189.9,
+  "cycles": 157.6,
   "gprs": 8,
   "instructions": 21,
   "launch_inputs": false,

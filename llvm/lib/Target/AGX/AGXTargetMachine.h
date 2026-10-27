@@ -34,6 +34,8 @@ public:
 
   ScheduleDAGInstrs *
   createMachineScheduler(MachineSchedContext *C) const override;
+  ScheduleDAGInstrs *
+  createPostMachineScheduler(MachineSchedContext *C) const override;
 
   TargetLoweringObjectFile *getObjFileLowering() const override {
     return TLOF.get();

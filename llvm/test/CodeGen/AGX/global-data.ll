@@ -19,8 +19,8 @@ define agx_kernel void @kernel(ptr addrspace(1) %out, i32 %i) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    bitop 0101, r2, u6, 0
 ; CHECK-NEXT:    bitop 0101, r3, u7, 0
-; CHECK-NEXT:    iadd r2_r3, r2_r3, u2.sx, lsl 2
 ; CHECK-NEXT:    device_load 0, i32, x, r1, u6_u7, 0, signed
+; CHECK-NEXT:    iadd r2_r3, r2_r3, u2.sx, lsl 2
 ; CHECK-NEXT:    device_load 1, i32, x, r2, r2_r3, 4, signed
 ; CHECK-NEXT:    wait 0
 ; CHECK-NEXT:    convert s32_to_f, r3, r1, rte

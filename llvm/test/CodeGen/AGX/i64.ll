@@ -128,18 +128,18 @@ define agx_kernel void @bitcount(ptr addrspace(1) %out, i64 %a) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ffs r1, u2
 ; CHECK-NEXT:    ffs r2, u3
+; CHECK-NEXT:    bitrev r3, u3
 ; CHECK-NEXT:    isub r1, 31, r1
 ; CHECK-NEXT:    isub r2, 31, r2
 ; CHECK-NEXT:    iadd r1, r1, 32
-; CHECK-NEXT:    bitrev r3, u3
+; CHECK-NEXT:    ffs r3, r3
 ; CHECK-NEXT:    icmpsel ueq, r1, u3, 0, r1, r2
 ; CHECK-NEXT:    bitrev r2, u2
-; CHECK-NEXT:    ffs r3, r3
+; CHECK-NEXT:    popcount r6, u2
 ; CHECK-NEXT:    iadd r4_r5, r1, 0
 ; CHECK-NEXT:    ffs r1, r2
 ; CHECK-NEXT:    isub r2, 31, r3
 ; CHECK-NEXT:    popcount r3, u3
-; CHECK-NEXT:    popcount r6, u2
 ; CHECK-NEXT:    isub r1, 31, r1
 ; CHECK-NEXT:    iadd r2, r2, 32
 ; CHECK-NEXT:    iadd r3, r6, r3

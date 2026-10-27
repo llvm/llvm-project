@@ -158,6 +158,7 @@ public:
     // through from each construct into the next, as the vendor and Mesa
     // compilers lay it out.
     disablePass(&MachineBlockPlacementID);
+    substitutePass(&PostRASchedulerID, &PostMachineSchedulerID);
   }
 
   AGXTargetMachine &getAGXTargetMachine() const {
@@ -205,6 +206,13 @@ void AGXTargetMachine::registerEarlyDefaultAliasAnalyses(AAManager &AAM) {
 ScheduleDAGInstrs *
 AGXTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
   ScheduleDAGMILive *DAG = createSchedLive(C);
+  DAG->addMutation(createAGXMemClusterMutation());
+  return DAG;
+}
+
+ScheduleDAGInstrs *
+AGXTargetMachine::createPostMachineScheduler(MachineSchedContext *C) const {
+  ScheduleDAGMI *DAG = createSchedPostRA(C);
   DAG->addMutation(createAGXMemClusterMutation());
   return DAG;
 }

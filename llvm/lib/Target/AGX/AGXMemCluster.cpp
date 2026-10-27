@@ -35,6 +35,8 @@
 #include "MCTargetDesc/AGXMCTargetDesc.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/ADT/EquivalenceClasses.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
@@ -97,43 +99,44 @@ void AGXMemClusterMutation::apply(ScheduleDAGInstrs *DAG) {
   if (AGXMemClusterSize < 2)
     return;
   EquivalenceClasses<SUnit *> Clusters;
-  SUnit *Last[NumKinds] = {};
-  unsigned Length[NumKinds] = {};
+  SmallVector<SUnit *, 16> Run[NumKinds];
   for (SUnit &SU : DAG->SUnits) {
     int K = memKind(*SU.getInstr());
     if (K < 0 || !(AGXMemClusterKinds & (1u << K)))
       continue;
-    SUnit *Prev = Last[K];
-    Last[K] = &SU;
+    SmallVector<SUnit *, 16> &R = Run[K];
     bool Load = K == DeviceLoad || K == LocalLoad;
-    if (!Prev || Length[K] >= AGXMemClusterSize) {
-      Length[K] = 1;
-      continue;
-    }
-    // A data dependence between them (an address from a load) leaves work
-    // that must sit in between.
+    // A data dependence on the run (an address from a load) leaves work that
+    // must sit in between.
     bool Data = false;
     for (const SDep &D : SU.Preds)
-      if (D.getKind() == SDep::Data &&
-          (D.getSUnit() == Prev || DAG->IsReachable(D.getSUnit(), Prev)))
-        Data = true;
-    if (Data || !DAG->addEdge(&SU, SDep(Prev, SDep::Cluster))) {
-      Length[K] = 1;
+      if (D.getKind() == SDep::Data)
+        for (SUnit *M : R)
+          if (D.getSUnit() == M || DAG->IsReachable(D.getSUnit(), M))
+            Data = true;
+    if (R.empty() || R.size() >= AGXMemClusterSize || Data ||
+        !DAG->addEdge(&SU, SDep(R.back(), SDep::Cluster))) {
+      R.assign(1, &SU);
       continue;
     }
-    Clusters.unionSets(Prev, &SU);
-    ++Length[K];
-    if (Load) {
-      // The users of the earlier load wait for the later one.
-      for (const SDep &D : Prev->Succs)
-        if (D.getSUnit() != &SU)
-          DAG->addEdge(D.getSUnit(), SDep(&SU, SDep::Artificial));
-    } else {
-      // What the later store needs is ready before the earlier one.
-      for (const SDep &D : SU.Preds)
-        if (D.getSUnit() != Prev)
-          DAG->addEdge(Prev, SDep(D.getSUnit(), SDep::Artificial));
+    Clusters.unionSets(R.back(), &SU);
+    // Every member, not only the previous one: a post-RA top-down scheduler
+    // would otherwise issue the first stores as soon as their own values are
+    // ready, between the computations of the later ones.
+    for (SUnit *M : R) {
+      if (Load) {
+        // The users of the earlier loads wait for the later one.
+        for (const SDep &D : M->Succs)
+          if (!is_contained(R, D.getSUnit()) && D.getSUnit() != &SU)
+            DAG->addEdge(D.getSUnit(), SDep(&SU, SDep::Artificial));
+      } else {
+        // What the later store needs is ready before the earlier ones.
+        for (const SDep &D : SU.Preds)
+          if (!is_contained(R, D.getSUnit()))
+            DAG->addEdge(M, SDep(D.getSUnit(), SDep::Artificial));
+      }
     }
+    R.push_back(&SU);
   }
 
   auto &All = DAG->getClusters();

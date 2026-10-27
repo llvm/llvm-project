@@ -43,8 +43,8 @@ define agx_kernel void @signed_index(ptr addrspace(1) %a, i32 %i) {
 ; CHECK-NEXT:    // stack size: 0 bytes
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    bitop 0101, r1, u2, 0
-; CHECK-NEXT:    device_load 0, i16, x, r1l, u0_u1, r1, signed
 ; CHECK-NEXT:    bitop 0101, r2, u0, 0
+; CHECK-NEXT:    device_load 0, i16, x, r1l, u0_u1, r1, signed
 ; CHECK-NEXT:    bitop 0101, r3, u1, 0
 ; CHECK-NEXT:    iadd r2_r3, r2_r3, u2.sx, lsl 1
 ; CHECK-NEXT:    wait 0
@@ -75,12 +75,12 @@ define agx_kernel void @bytes(ptr addrspace(1) %a, ptr addrspace(1) %out) {
 ; CHECK-NEXT:    device_load 0, i8, x, r1l, u0_u1, 0, signed
 ; CHECK-NEXT:    wait 0
 ; CHECK-NEXT:    bitop 0101, r2, r1l, 0
+; CHECK-NEXT:    device_store 0, i8, x, r1l, u2_u3, 7, signed
 ; CHECK-NEXT:    bfi r3, 0, r2, 24
-; CHECK-NEXT:    asr r3, r3, 24
 ; CHECK-NEXT:    and r2, r2, 255
+; CHECK-NEXT:    asr r3, r3, 24
 ; CHECK-NEXT:    iadd r2, r3, r2
 ; CHECK-NEXT:    device_store 0, i32, x, r2, u2_u3, 0, signed
-; CHECK-NEXT:    device_store 0, i8, x, r1l, u2_u3, 7, signed
 ; CHECK-NEXT:    stop
 ; CHECK-NEXT:    trap
 ; CHECK-NEXT:    trap
@@ -136,8 +136,8 @@ define agx_kernel void @threadgroup(ptr addrspace(1) %out) {
 ; CHECK-NEXT:    // stack size: 0 bytes
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    get_sr r1, sr51 (thread_index_in_threadgroup)
-; CHECK-NEXT:    bfi r2, 0, r1, 2
 ; CHECK-NEXT:    xor r3, r1, 1
+; CHECK-NEXT:    bfi r2, 0, r1, 2
 ; CHECK-NEXT:    bfi r3, 0, r3, 2
 ; CHECK-NEXT:    threadgroup_store i32, x, r1, r2l, 0
 ; CHECK-NEXT:    threadgroup_barrier
@@ -171,11 +171,11 @@ define agx_kernel void @stack(ptr addrspace(1) %out, i32 %i) {
 ; CHECK-NEXT:    // threadgroup memory: 0 bytes
 ; CHECK-NEXT:    // stack size: 112 bytes
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    stack_adjust 28
-; CHECK-NEXT:    bitop 0101, r1, u2, 0
 ; CHECK-NEXT:    mov_imm r2, 0
+; CHECK-NEXT:    bitop 0101, r1, u2, 0
 ; CHECK-NEXT:    iadd r3, r2, u2, lsl 2
 ; CHECK-NEXT:    iadd r2, r2, 12
+; CHECK-NEXT:    stack_adjust 28
 ; CHECK-NEXT:    stack_store 0, i32, x, r1, r3
 ; CHECK-NEXT:    stack_load 0, i32, x, r1, r2
 ; CHECK-NEXT:    wait 0
