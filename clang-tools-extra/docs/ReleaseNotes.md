@@ -283,6 +283,11 @@ infrastructure are described first, followed by tool-specific sections.
   nested expressions involving different macros or a mix of macro and
   non-macro operands.
 
+- Improved {doc}`modernize-loop-convert
+  <clang-tidy/checks/modernize/loop-convert>` check to also convert iterator
+  loops that call `end()` in the condition when the iterator type has a
+  non-trivial destructor.
+
 - Fixed a crash in {doc}`modernize-raw-string-literal
   <clang-tidy/checks/modernize/raw-string-literal>` on synthetic string
   literals created for raw user-defined literal operators, such as `12_w`.
