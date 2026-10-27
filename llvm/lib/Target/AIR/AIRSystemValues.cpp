@@ -34,6 +34,9 @@ static constexpr StringLiteral kCallSimdlane("air.thread_index_in_simdgroup");
 static constexpr StringLiteral kCallNumProg("air.threadgroups_per_grid");
 static constexpr StringLiteral kCallTGSize("air.threads_per_threadgroup");
 static constexpr StringLiteral kCallSimdSize("air.threads_per_simdgroup");
+static constexpr StringLiteral kCallGridSize("air.threads_per_grid");
+static constexpr StringLiteral
+    kCallTGIndex("air.thread_index_in_threadgroup");
 static constexpr StringLiteral
     kCallNumSimd("air.simdgroups_per_threadgroup");
 static constexpr StringLiteral
@@ -54,6 +57,9 @@ static constexpr StringLiteral
     kMDThreadsPerThreadgroup("air.threads_per_threadgroup");
 static constexpr StringLiteral
     kMDThreadsPerSimdgroup("air.threads_per_simdgroup");
+static constexpr StringLiteral kMDThreadsPerGrid("air.threads_per_grid");
+static constexpr StringLiteral
+    kMDThreadIndexInThreadgroup("air.thread_index_in_threadgroup");
 static constexpr StringLiteral
     kMDSimdgroupsPerThreadgroup("air.simdgroups_per_threadgroup");
 static constexpr StringLiteral
@@ -92,6 +98,8 @@ static const SysValParam kSysVals[] = {
     {kCallSimdSize, "simdsize", false, {"simdsize", "", ""}},
     {kCallNumSimd, "numsimd", false, {"numsimd", "", ""}},
     {kCallSimdId, "simdid", false, {"simdid", "", ""}},
+    {kCallGridSize, "gridsize", true, {"gridsize_x", "gridsize_y", "gridsize_z"}},
+    {kCallTGIndex, "tgindex", false, {"tgindex", "", ""}},
 };
 
 static Function *findDeclByPrefix(Module &M, StringRef Prefix) {
@@ -391,11 +399,16 @@ static bool airSystemValues(Module &M) {
           AirAttr = kMDSimdgroupsPerThreadgroup;
         else if (Name.starts_with("simdid"))
           AirAttr = kMDSimdgroupIndexInThreadgroup;
+        else if (Name.starts_with("gridsize"))
+          AirAttr = kMDThreadsPerGrid;
+        else if (Name.starts_with("tgindex"))
+          AirAttr = kMDThreadIndexInThreadgroup;
         else
           continue;
 
         bool IsScalar = (Name == "simdlane" || Name == "simdsize" ||
-                         Name == "numsimd" || Name == "simdid");
+                         Name == "numsimd" || Name == "simdid" ||
+                         Name == "tgindex");
         StringRef TypeName = IsScalar ? "uint" : "uint3";
         ParamNodes.push_back(MDNode::get(
             Ctx,
