@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes=loop-vectorize -force-vector-interleave=1 -force-vector-width=4
+; RUN: opt < %s -passes=loop-vectorize -force-vector-interleave=1 -force-vector-width=4 -disable-output
 
 ; Check that we don't crash.
 
