@@ -19,9 +19,7 @@
 using namespace llvm;
 
 KnownFPClass::KnownFPClass(const APFloat &C)
-    : KnownFPClassesValue(C.classify()) {
-  setSignBit(C.isNegative());
-}
+    : KnownFPClass(C.classify(), C.isNegative()) {}
 
 KnownFPClass KnownFPClass::applyInputDenormalMode(const KnownFPClass &KnownSrc,
                                                   DenormalMode Mode) {
@@ -36,18 +34,12 @@ KnownFPClass KnownFPClass::applyInputDenormalMode(const KnownFPClass &KnownSrc,
       Known.setKnownFPClasses(Known.getKnownFPClasses() | fcNegZero);
     return Known;
   case DenormalMode::PositiveZero:
-    if (KnownSrc.getKnownFPClasses() & fcSubnormal) {
+    if (KnownSrc.getKnownFPClasses() & fcSubnormal)
       Known.setKnownFPClasses(Known.getKnownFPClasses() | fcPosZero);
-      if (KnownSrc.getKnownFPClasses() & fcNegSubnormal)
-        Known.setSignBit(std::nullopt);
-    }
     return Known;
   default:
-    if (KnownSrc.getKnownFPClasses() & fcSubnormal) {
+    if (KnownSrc.getKnownFPClasses() & fcSubnormal)
       Known.setKnownFPClasses(Known.getKnownFPClasses() | fcPosZero);
-      if (KnownSrc.getKnownFPClasses() & fcNegSubnormal)
-        Known.setSignBit(std::nullopt);
-    }
     if (KnownSrc.getKnownFPClasses() & fcNegSubnormal)
       Known.setKnownFPClasses(Known.getKnownFPClasses() | fcNegZero);
     return Known;
@@ -69,18 +61,12 @@ KnownFPClass KnownFPClass::applyOutputDenormalMode(const KnownFPClass &KnownSrc,
       Known.setKnownFPClasses(Known.getKnownFPClasses() | fcNegZero);
     return Known;
   case DenormalMode::PositiveZero:
-    if (KnownSrc.getKnownFPClasses() & fcSubnormal) {
+    if (KnownSrc.getKnownFPClasses() & fcSubnormal)
       Known.setKnownFPClasses(Known.getKnownFPClasses() | fcPosZero);
-      if (KnownSrc.getKnownFPClasses() & fcNegSubnormal)
-        Known.setSignBit(std::nullopt);
-    }
     return Known;
   default:
-    if (KnownSrc.getKnownFPClasses() & fcSubnormal) {
+    if (KnownSrc.getKnownFPClasses() & fcSubnormal)
       Known.setKnownFPClasses(Known.getKnownFPClasses() | fcPosZero);
-      if (KnownSrc.getKnownFPClasses() & fcNegSubnormal)
-        Known.setSignBit(std::nullopt);
-    }
     if (KnownSrc.getKnownFPClasses() & fcNegSubnormal)
       Known.setKnownFPClasses(Known.getKnownFPClasses() | fcNegZero);
     return Known;
