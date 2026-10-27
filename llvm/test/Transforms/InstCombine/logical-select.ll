@@ -1702,10 +1702,107 @@ define <2 x i1> @neg_test_logical_and_trunc_nuw_nsw_vec(<2 x i1> %c, <2 x i8> no
   ret <2 x i1> %and
 }
 
+define i1 @test_absorb_or(i1 %a, i1 %b) !prof !0 {
+; CHECK-LABEL: @test_absorb_or(
+; CHECK-NEXT:    [[INNER:%.*]] = select i1 [[A:%.*]], i1 true, i1 [[B:%.*]], !prof [[PROF2]], !unpredictable [[META3:![0-9]+]]
+; CHECK-NEXT:    call void @use1(i1 [[INNER]])
+; CHECK-NEXT:    [[OUTER:%.*]] = select i1 [[A]], i1 true, i1 [[B]], !prof [[PROF2]], !unpredictable [[META3]]
+; CHECK-NEXT:    ret i1 [[OUTER]]
+;
+  %inner = select i1 %a, i1 true, i1 %b, !prof !1, !unpredictable !3
+  call void @use1(i1 %inner)
+  %outer = select i1 %inner, i1 true, i1 %b, !prof !2
+  ret i1 %outer
+}
+
+define i1 @test_absorb_and(i1 %a, i1 %b) !prof !0 {
+; CHECK-LABEL: @test_absorb_and(
+; CHECK-NEXT:    [[INNER:%.*]] = select i1 [[A:%.*]], i1 [[B:%.*]], i1 false, !prof [[PROF2]]
+; CHECK-NEXT:    call void @use1(i1 [[INNER]])
+; CHECK-NEXT:    [[OUTER:%.*]] = select i1 [[A]], i1 [[B]], i1 false, !prof [[PROF2]]
+; CHECK-NEXT:    ret i1 [[OUTER]]
+;
+  %inner = select i1 %a, i1 %b, i1 false, !prof !1
+  call void @use1(i1 %inner)
+  %outer = select i1 %inner, i1 %b, i1 false, !prof !2, !unpredictable !3
+  ret i1 %outer
+}
+
+define i1 @neg_test_absorb_or_other_block(i1 %a, i1 %b, i1 %c) !prof !0 {
+; CHECK-LABEL: @neg_test_absorb_or_other_block(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[THEN:%.*]], label [[EXIT:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[OUTER:%.*]] = select i1 [[A:%.*]], i1 true, i1 [[B:%.*]], !prof [[PROF1]]
+; CHECK-NEXT:    ret i1 [[OUTER]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[INNER:%.*]] = select i1 [[A]], i1 true, i1 [[B]], !prof [[PROF2]]
+; CHECK-NEXT:    ret i1 [[INNER]]
+;
+entry:
+  %inner = select i1 %a, i1 true, i1 %b, !prof !1
+  br i1 %c, label %then, label %exit
+then:
+  %outer = select i1 %inner, i1 true, i1 %b, !prof !2
+  ret i1 %outer
+exit:
+  ret i1 %inner
+}
+
+define i1 @test_imply_or(i1 %a, i32 %x) !prof !0 {
+; CHECK-LABEL: @test_imply_or(
+; CHECK-NEXT:    [[B:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[X]], 0
+; CHECK-NEXT:    [[INNER:%.*]] = select i1 [[A:%.*]], i1 true, i1 [[B]], !prof [[PROF2]], !unpredictable [[META3]]
+; CHECK-NEXT:    call void @use1(i1 [[INNER]])
+; CHECK-NEXT:    [[OUTER:%.*]] = select i1 [[A]], i1 [[C]], i1 false, !prof [[PROF2]], !unpredictable [[META3]]
+; CHECK-NEXT:    ret i1 [[OUTER]]
+;
+  %b = icmp eq i32 %x, 0
+  %c = icmp slt i32 %x, 0
+  %inner = select i1 %a, i1 true, i1 %b, !prof !1, !unpredictable !3
+  call void @use1(i1 %inner)
+  %outer = select i1 %inner, i1 %c, i1 false, !prof !2
+  ret i1 %outer
+}
+
+define i1 @test_imply_and(i1 %a, i32 %x) !prof !0 {
+; CHECK-LABEL: @test_imply_and(
+; CHECK-NEXT:    [[B:%.*]] = icmp ne i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X]], 0
+; CHECK-NEXT:    [[INNER:%.*]] = select i1 [[A:%.*]], i1 [[B]], i1 false, !prof [[PROF2]]
+; CHECK-NEXT:    call void @use1(i1 [[INNER]])
+; CHECK-NEXT:    [[OUTER:%.*]] = select i1 [[A]], i1 true, i1 [[C]], !prof [[PROF2]]
+; CHECK-NEXT:    ret i1 [[OUTER]]
+;
+  %b = icmp ne i32 %x, 0
+  %c = icmp eq i32 %x, 0
+  %inner = select i1 %a, i1 %b, i1 false, !prof !1
+  call void @use1(i1 %inner)
+  %outer = select i1 %inner, i1 true, i1 %c, !prof !2, !unpredictable !3
+  ret i1 %outer
+}
+
+define i1 @neg_test_imply_or_nonselect(i1 %a, i1 %p, i32 %x) !prof !0 {
+; CHECK-LABEL: @neg_test_imply_or_nonselect(
+; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[OUTER:%.*]] = select i1 [[A:%.*]], i1 [[C]], i1 false, !prof [[PROF1]]
+; CHECK-NEXT:    ret i1 [[OUTER]]
+;
+  %b0 = icmp eq i32 %x, 0
+  %b = select i1 %p, i1 %b0, i1 false
+  %c = icmp ne i32 %x, 0
+  %or = or i1 %a, %b
+  %outer = select i1 %or, i1 %c, i1 false, !prof !2, !unpredictable !3
+  ret i1 %outer
+}
+
 !0 = !{!"function_entry_count", i32 5260116}
 !1 = !{!"branch_weights", i32 3, i32 7}
 !2 = !{!"branch_weights", i32 9, i32 1}
+!3 = !{}
 ;.
 ; CHECK: [[PROF1]] = !{!"unknown", !"instcombine"}
 ; CHECK: [[PROF2]] = !{!"branch_weights", i32 3, i32 7}
+; CHECK: [[META3]] = !{}
 ;.
