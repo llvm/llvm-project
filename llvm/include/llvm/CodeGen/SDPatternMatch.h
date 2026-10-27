@@ -1439,9 +1439,9 @@ inline BinaryOpc_match<ValTy, AllOnes_match, true> m_Not(const ValTy &V) {
 }
 
 template <typename TS> struct TypeSize_match {
-  TS *BindVal;
+  TS &BindVal;
 
-  explicit TypeSize_match(TS *V) : BindVal(V) {}
+  explicit TypeSize_match(TS &V) : BindVal(V) {}
 
   bool match(SDValue N) {
     bool Scalable;
@@ -1455,14 +1455,10 @@ template <typename TS> struct TypeSize_match {
       return false;
 
     if (KnownMin.isNegative() ||
-        KnownMin.getActiveBits() >
-            std::numeric_limits<typename TS::ScalarTy>::digits)
+        !KnownMin.isIntN(std::numeric_limits<typename TS::ScalarTy>::digits))
       return false;
 
-    if (BindVal)
-      *BindVal = Scalable ? TS::getScalable(KnownMin.getZExtValue())
-                          : TS::getFixed(KnownMin.getZExtValue());
-
+    BindVal = TS::get(KnownMin.getZExtValue(), Scalable);
     return true;
   }
 };
@@ -1470,7 +1466,7 @@ template <typename TS> struct TypeSize_match {
 /// Match any integer constant or constant multiple of VSCALE that can be
 /// represented using ElementCount.
 inline TypeSize_match<ElementCount> m_ElementCount(ElementCount &V) {
-  return TypeSize_match<ElementCount>(&V);
+  return TypeSize_match<ElementCount>(V);
 }
 
 template <unsigned IntrinsicId, typename... OpndPreds>
