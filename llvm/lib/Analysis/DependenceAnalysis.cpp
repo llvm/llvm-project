@@ -2686,7 +2686,7 @@ void DependenceInfo::updateLoopAliasScopes(const Loop *L) {
                                Intrinsic::experimental_noalias_scope_decl))
                          : nullptr;
   // No decls in this module. Parent loops cannot add any either.
-  if (F->getParent() && !(DeclFn && !DeclFn->use_empty()))
+  if (!DeclFn || DeclFn->use_empty())
     return;
 
   for (BasicBlock *BB : L->blocks()) {
