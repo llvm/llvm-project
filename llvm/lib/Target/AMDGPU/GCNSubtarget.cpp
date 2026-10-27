@@ -866,8 +866,7 @@ void GCNSubtarget::adjustSchedDependency(
     // queries.
     unsigned Latency = Dep.getLatency();
     unsigned IssueCycles = InstrInfo.getIssueCyclesForCopy(*DefI);
-    assert(IssueCycles > 0);
-    Latency += IssueCycles - 1;
+    Latency += IssueCycles ? IssueCycles - 1 : 0;
     Dep.setLatency(Latency);
     return;
   }
