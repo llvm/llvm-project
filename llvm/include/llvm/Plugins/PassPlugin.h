@@ -47,7 +47,8 @@ struct PassPluginLibraryInfo {
   /// The API version understood by this plugin, usually \c
   /// LLVM_PLUGIN_API_VERSION
   uint32_t APIVersion;
-  /// A meaningful name of the plugin.
+  /// A meaningful name of the plugin. -plugin-arg=<PluginName>,<arg> passes
+  /// <arg> to the plugin with this name.
   const char *PluginName;
   /// The version of the plugin.
   const char *PluginVersion;
@@ -121,14 +122,10 @@ private:
 };
 
 /// Passes each "<PluginName>,<arg>" in \p Args to the \c ParseArguments
-/// callback of the extension in \p Infos with that name. If two extensions have
-/// the same name, the last one receives the arguments.
+/// callback of the extension in \p Infos with that name. Two extensions with
+/// the same name are an error.
 LLVM_ABI Error passPluginArguments(ArrayRef<PassPluginLibraryInfo> Infos,
                                    ArrayRef<std::string> Args);
-
-// Deprecated: a migration aid for plugins that still use cl::opt.
-LLVM_ABI Error parsePassPluginCommandLine(const char *PluginName,
-                                          ArrayRef<const char *> Args);
 } // namespace llvm
 
 // The function returns a struct with default initializers.
@@ -150,9 +147,8 @@ LLVM_ABI Error parsePassPluginCommandLine(const char *PluginName,
 ///   };
 /// }
 /// ```
-extern "C" LLVM_ABI_NOT_EXPORTED ::llvm::PassPluginLibraryInfo
-    LLVM_ATTRIBUTE_WEAK
-    llvmGetPassPluginInfo();
+extern "C" LLVM_ABI_EXPORT ::llvm::PassPluginLibraryInfo LLVM_ATTRIBUTE_WEAK
+llvmGetPassPluginInfo();
 #ifdef __clang__
 #pragma clang diagnostic pop
 #endif

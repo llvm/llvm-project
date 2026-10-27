@@ -88,7 +88,7 @@ subroutine test_pointer_component(temp, temp_ptr)
   real, pointer :: temp_ptr(:)
   ! CHECK: %[[temp:.*]]:2 = hlfir.declare %[[arg_temp]]
   ! CHECK: %[[temp_ptr:.*]]:2 = hlfir.declare %[[arg_temp_ptr]]
-  ! CHECK: %[[ptr_comp:.*]] = hlfir.designate %[[temp]]#0{"ptr"}   {fortran_attrs = #fir.var_attrs<pointer>}
+  ! CHECK: %[[ptr_comp:.*]] = hlfir.designate %[[temp]]#0{"ptr"}   fortran_attrs<pointer>
   ! CHECK: %[[ptr:.*]] = fir.load %[[ptr_comp]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
   ! CHECK: fir.store %[[ptr]] to %[[temp_ptr]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
   temp_ptr => temp%ptr
@@ -299,7 +299,7 @@ subroutine boxed_derived_pointer_assignment(rhs)
   end type
   type(t), pointer :: rhs, lhs
   ! CHECK: %[[lhs_box:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.type<_QFboxed_derived_pointer_assignmentTt{i:i32}>>> <{bindc_name = "lhs", uniq_name = "_QFboxed_derived_pointer_assignmentElhs"}>
-  ! CHECK: %[[lhs:.*]]:2 = hlfir.declare %[[lhs_box]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFboxed_derived_pointer_assignmentElhs"}
+  ! CHECK: %[[lhs:.*]]:2 = hlfir.declare %[[lhs_box]] uniq_name("_QFboxed_derived_pointer_assignmentElhs") fortran_attrs<pointer>
   ! CHECK: %[[rhs:.*]]:2 = hlfir.declare %[[arg0]]
   ! CHECK: %[[box_load:.*]] = fir.load %[[rhs]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.type<_QFboxed_derived_pointer_assignmentTt{i:i32}>>>>
   ! CHECK: fir.store %[[box_load]] to %[[lhs]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.type<_QFboxed_derived_pointer_assignmentTt{i:i32}>>>>
@@ -314,7 +314,7 @@ subroutine boxed_derived_pointer_assignment_array(rhs)
   end type
   type(t), contiguous,  pointer :: rhs(:), lhs(:)
   ! CHECK: %[[lhs_box:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFboxed_derived_pointer_assignment_arrayTt{i:i32}>>>> <{bindc_name = "lhs", uniq_name = "_QFboxed_derived_pointer_assignment_arrayElhs"}>
-  ! CHECK: %[[lhs:.*]]:2 = hlfir.declare %[[lhs_box]] {fortran_attrs = #fir.var_attrs<contiguous, pointer>, uniq_name = "_QFboxed_derived_pointer_assignment_arrayElhs"}
+  ! CHECK: %[[lhs:.*]]:2 = hlfir.declare %[[lhs_box]] uniq_name("_QFboxed_derived_pointer_assignment_arrayElhs") fortran_attrs<contiguous, pointer>
   ! CHECK: %[[rhs:.*]]:2 = hlfir.declare %[[arg0]]
   ! CHECK: %[[box_load:.*]] = fir.load %[[rhs]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFboxed_derived_pointer_assignment_arrayTt{i:i32}>>>>>
   ! CHECK: fir.store %[[box_load]] to %[[lhs]]#0
@@ -329,7 +329,7 @@ subroutine boxed_derived_pointer_assignment_array_shift(rhs)
     integer :: i
   end type
   type(t), contiguous,  pointer :: rhs(:), lhs(:)
-  ! CHECK: %[[lhs:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<contiguous, pointer>, uniq_name = "_QFboxed_derived_pointer_assignment_array_shiftElhs"}
+  ! CHECK: %[[lhs:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFboxed_derived_pointer_assignment_array_shiftElhs") fortran_attrs<contiguous, pointer>
   ! CHECK: %[[rhs:.*]]:2 = hlfir.declare %[[arg0]]
   ! CHECK: %[[box_load:.*]] = fir.load %[[rhs]]#0
   ! CHECK: %[[c42:.*]] = fir.convert %c42{{.*}} : (i64) -> index
@@ -346,7 +346,7 @@ subroutine boxed_derived_pointer_assignment_array_remap(rhs)
     integer :: i
   end type
   type(t), contiguous,  pointer :: rhs(:, :), lhs(:)
-  ! CHECK: %[[lhs:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<contiguous, pointer>, uniq_name = "_QFboxed_derived_pointer_assignment_array_remapElhs"}
+  ! CHECK: %[[lhs:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFboxed_derived_pointer_assignment_array_remapElhs") fortran_attrs<contiguous, pointer>
   ! CHECK: %[[rhs:.*]]:2 = hlfir.declare %{{.*}}
   ! CHECK: %[[box_load:.*]] = fir.load %[[rhs]]#0
   ! CHECK: %[[c101:.*]] = fir.convert %c101{{.*}} : (i64) -> index
@@ -366,8 +366,8 @@ subroutine boxed_derived_pointer_assignment_char(rhs)
   ! Check that the character slice is correctly reboxed into the pointer descriptor.
   character(:), contiguous,  pointer ::  lhs1(:), lhs2(:, :)
   character(*), target ::  rhs(100)
-  ! CHECK: %[[lhs1:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<contiguous, pointer>, uniq_name = "_QFboxed_derived_pointer_assignment_charElhs1"}
-  ! CHECK: %[[lhs2:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<contiguous, pointer>, uniq_name = "_QFboxed_derived_pointer_assignment_charElhs2"}
+  ! CHECK: %[[lhs1:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFboxed_derived_pointer_assignment_charElhs1") fortran_attrs<contiguous, pointer>
+  ! CHECK: %[[lhs2:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFboxed_derived_pointer_assignment_charElhs2") fortran_attrs<contiguous, pointer>
   ! CHECK: %[[slice1:.*]] = hlfir.designate %{{.*}} ({{.*}}:{{.*}}:{{.*}})  shape %{{.*}} typeparams %{{.*}} : (!fir.box<!fir.array<100x!fir.char<1,?>>>, index, index, index, !fir.shape<1>, index) -> !fir.box<!fir.array<50x!fir.char<1,?>>>
   ! CHECK: %[[rebox1:.*]] = fir.rebox %[[slice1]] : (!fir.box<!fir.array<50x!fir.char<1,?>>>) -> !fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>
   ! CHECK: fir.store %[[rebox1]] to %[[lhs1]]#0

@@ -29,6 +29,7 @@
 #include "bolt/Passes/PointerAuthCFIAnalyzer.h"
 #include "bolt/Passes/PointerAuthCFIFixup.h"
 #include "bolt/Passes/ProfileQualityStats.h"
+#include "bolt/Passes/RISCVLongJmpPass.h"
 #include "bolt/Passes/RegReAssign.h"
 #include "bolt/Passes/ReorderData.h"
 #include "bolt/Passes/ReorderFunctions.h"
@@ -531,8 +532,9 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   // memory profiling data.
   Manager.registerPass(std::make_unique<ReorderData>());
 
-  // Patch original function entries
-  if (BC.HasRelocations)
+  // Patch original function entries. Skip it when the original code will
+  // be overwritten by new code, as the patches would be lost.
+  if (BC.HasRelocations && !opts::UseOldText)
     Manager.registerPass(std::make_unique<PatchEntries>());
 
   // Assign each function an output section.
@@ -550,6 +552,9 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
     Manager.registerPass(
         std::make_unique<PointerAuthCFIFixup>(PrintPAuthCFIFixup));
   }
+
+  if (BC.isRISCV())
+    Manager.registerPass(std::make_unique<RISCVLongJmpPass>(PrintLongJmp));
 
   // This pass should always run last.*
   Manager.registerPass(std::make_unique<FinalizeFunctions>(PrintFinalized));

@@ -17,7 +17,7 @@ using namespace llvm::jitlink::x86_64;
 
 TEST(X86_64, EmptyLinkGraph) {
   LinkGraph G("foo", std::make_shared<orc::SymbolStringPool>(),
-              Triple("x86_64-apple-darwin"), SubtargetFeatures(),
+              Triple("x86_64-apple-darwin"), 8, SubtargetFeatures(),
               getEdgeKindName);
   EXPECT_EQ(G.getName(), "foo");
   EXPECT_EQ(G.getTargetTriple().str(), "x86_64-apple-darwin");
@@ -31,7 +31,7 @@ TEST(X86_64, EmptyLinkGraph) {
 
 TEST(X86_64, GOTAndStubs) {
   LinkGraph G("foo", std::make_shared<orc::SymbolStringPool>(),
-              Triple("x86_64-apple-darwin"), SubtargetFeatures(),
+              Triple("x86_64-apple-darwin"), 8, SubtargetFeatures(),
               getEdgeKindName);
 
   auto &External = G.addExternalSymbol("external", 0, false);

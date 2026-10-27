@@ -14,7 +14,7 @@ end subroutine
 ! CHECK: %[[C12:.*]] = arith.constant 12 : index
 ! CHECK: %[[C2:.*]] = arith.constant 2 : index
 ! CHECK: %[[SHAPE:.*]] = fir.shape %[[C2]] : (index) -> !fir.shape<1>
-! CHECK: %[[R_DECL:.*]]:2 = hlfir.declare %[[R_ADDR]](%[[SHAPE]]) typeparams %[[C12]] {uniq_name = "_QFio_char_arrayEr"} : (!fir.ref<!fir.array<2x!fir.char<1,12>>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<2x!fir.char<1,12>>>, !fir.ref<!fir.array<2x!fir.char<1,12>>>)
+! CHECK: %[[R_DECL:.*]]:2 = hlfir.declare %[[R_ADDR]](%[[SHAPE]]) typeparams %[[C12]] uniq_name("_QFio_char_arrayEr") : (!fir.ref<!fir.array<2x!fir.char<1,12>>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<2x!fir.char<1,12>>>, !fir.ref<!fir.array<2x!fir.char<1,12>>>)
 ! CHECK: %[[C1_1:.*]] = arith.constant 1 : index
 ! CHECK: %[[C2_1:.*]] = arith.constant 2 : index
 ! CHECK: %[[C1_2:.*]] = arith.constant 1 : index

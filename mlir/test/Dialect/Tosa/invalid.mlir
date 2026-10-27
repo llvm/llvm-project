@@ -637,16 +637,6 @@ func.func @test_mul_int_type_mismatch(%arg0: tensor<1xf32>, %arg1: tensor<1xf32>
 
 // -----
 
-// CHECK-LABEL: test_mul_invalid_shift
-func.func @test_mul_invalid_shift(%arg0: tensor<13x21x3xf32>, %arg1: tensor<13x1x3xf32>) -> tensor<13x21x3xf32> {
-  %shift = "tosa.const"() <{values = dense<1> : tensor<1xi8>}> : () -> tensor<1xi8>
-  // expected-error@+1 {{'tosa.mul' op require shift to be 0 for float type}}
-  %0 = tosa.mul %arg0, %arg1, %shift : (tensor<13x21x3xf32>, tensor<13x1x3xf32>, tensor<1xi8>) -> tensor<13x21x3xf32>
-  return %0 : tensor<13x21x3xf32>
-}
-
-// -----
-
 // CHECK-LABEL: test_mul_missing_shift
 func.func @test_mul_missing_shift(%arg0: tensor<13x21x3xi32>, %arg1: tensor<13x1x3xi32>) -> tensor<13x21x3xi32> {
   // expected-error@+1 {{'tosa.mul' op expected 3 operands, but found 2}}
@@ -1412,6 +1402,14 @@ func.func @test_argmax_invalid_output_shape(%arg0: tensor<1x2x3xf32>) -> tensor<
 
 // -----
 
+func.func @test_argmin_invalid_output_shape(%arg0: tensor<1x2x3xf32>) -> tensor<1x2x3xi32> {
+  // expected-error@+1 {{'tosa.argmin' op expected output shape '2, 3', got '1, 2, 3'}}
+  %0 = tosa.argmin %arg0 axis(0): (tensor<1x2x3xf32>) -> tensor<1x2x3xi32>
+  return %0 : tensor<1x2x3xi32>
+}
+
+// -----
+
 func.func @test_rescale_invalid_input_type(%arg0: tensor<13x21x3xf32>) -> tensor<13x21x3xi32> {
   %multiplier = "tosa.const"() <{values = dense<1073741824> : tensor<1xi32> }> : () -> tensor<1xi32>
   %shift = "tosa.const"() <{values = dense<30> : tensor<1xi8> }> : () -> tensor<1xi8>
@@ -2005,6 +2003,14 @@ func.func @test_scalar_argmax(%arg0: tensor<i32>) -> tensor<i32> {
 
 // -----
 
+func.func @test_scalar_argmin(%arg0: tensor<i32>) -> tensor<i32> {
+  // expected-error@+1 {{'tosa.argmin' op operand #0 must be tosa-conformant tensor of at least rank 1 of number values, but got 'tensor<i32>'}}
+  %0 = tosa.argmin %arg0 axis(0) : (tensor<i32>) -> tensor<i32>
+  return %0 : tensor<i32>
+}
+
+// -----
+
 func.func @test_scalar_reduce_all(%arg0: tensor<i1>) -> tensor<i1> {
   // expected-error@+1 {{'tosa.reduce_all' op operand #0 must be tosa-conformant tensor of at least rank 1 of number values, but got 'tensor<i1>'}}
   %0 = tosa.reduce_all %arg0 axis(0) : (tensor<i1>) -> tensor<i1>
@@ -2223,4 +2229,24 @@ func.func @test_cast_fp6e3m2_block_scaled(%arg0: tensor<4x32xf6E3M2FN>) -> tenso
   // expected-error@+1 {{'tosa.cast' op illegal: operation operand/result data types did not align with any profile or extension, got (fp6e3m2,bs32_fp8e8m0_mxint8), did you mean (fp8e4m3,bs32_fp8e8m0_mxint8)? Otherwise, please refer to the 'supported data types' for 'tosa.cast' in the specification.}}
   %0 = tosa.cast %arg0 : (tensor<4x32xf6E3M2FN>) -> tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>>
   return %0 : tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>>
+}
+
+// -----
+
+func.func @test_conv3d_mxfp_invalid_accumulator(%input: tensor<1x4x4x4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, %weight: tensor<8x1x1x1x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, %bias: tensor<8xf32>) -> tensor<1x4x4x4x8xf32> {
+  %input_zp = tosa.const values(dense<0.0> : tensor<1xf32>) : () -> tensor<1xf32>
+  %weight_zp = tosa.const values(dense<0.0> : tensor<1xf32>) : () -> tensor<1xf32>
+  // expected-error@+1 {{'tosa.conv3d' op illegal: operation operand/result data types did not align with any profile or extension}}
+  %0 = tosa.conv3d %input, %weight, %bias, %input_zp, %weight_zp pad([0, 0, 0, 0, 0, 0]) stride([1, 1, 1]) dilation([1, 1, 1]) acc_type(f16) : (tensor<1x4x4x4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, tensor<8x1x1x1x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, tensor<8xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x4x4x4x8xf32>
+  return %0 : tensor<1x4x4x4x8xf32>
+}
+
+// -----
+
+func.func @test_conv3d_mxfp_fp32_to_fp16(%input: tensor<1x4x4x4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, %weight: tensor<8x1x1x1x32xf32>, %bias: tensor<8xf16>) -> tensor<1x4x4x4x8xf16> {
+  %input_zp = tosa.const values(dense<0.0> : tensor<1xf32>) : () -> tensor<1xf32>
+  %weight_zp = tosa.const values(dense<0.0> : tensor<1xf32>) : () -> tensor<1xf32>
+  // expected-error@+1 {{'tosa.conv3d' op illegal: operation operand/result data types did not align with any profile or extension}}
+  %0 = tosa.conv3d %input, %weight, %bias, %input_zp, %weight_zp pad([0, 0, 0, 0, 0, 0]) stride([1, 1, 1]) dilation([1, 1, 1]) acc_type(f32) : (tensor<1x4x4x4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, tensor<8x1x1x1x32xf32>, tensor<8xf16>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x4x4x4x8xf16>
+  return %0 : tensor<1x4x4x4x8xf16>
 }

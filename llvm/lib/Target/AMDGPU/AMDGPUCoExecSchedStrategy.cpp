@@ -21,9 +21,6 @@ using namespace llvm;
 using namespace llvm::AMDGPU;
 
 #define DEBUG_TYPE "machine-scheduler"
-namespace {
-enum class CarriedLatency { Off, Fence, All };
-} // namespace
 
 static cl::opt<CarriedLatency> BlockCarriedLatency(
     "amdgpu-block-carried-latency", cl::Hidden, cl::init(CarriedLatency::Off),
@@ -396,8 +393,7 @@ InstructionFlavor llvm::AMDGPU::classifyFlavor(const MachineInstr &MI,
   unsigned Opc = MI.getOpcode();
 
   // Check for specific opcodes first.
-  if (Opc == AMDGPU::ATOMIC_FENCE || Opc == AMDGPU::S_WAIT_ASYNCCNT ||
-      Opc == AMDGPU::S_WAIT_TENSORCNT || Opc == AMDGPU::S_BARRIER_WAIT ||
+  if (Opc == AMDGPU::ATOMIC_FENCE || Opc == AMDGPU::S_BARRIER_WAIT ||
       Opc == AMDGPU::S_BARRIER_SIGNAL_IMM || SII.isWaitcnt(Opc))
     return InstructionFlavor::Fence;
 
@@ -571,10 +567,6 @@ CandidateHeuristics::getHWUIFromFlavor(InstructionFlavor Flavor) {
 
 unsigned CandidateHeuristics::getMaxBlockingCycles(const MCSchedClassDesc *SC,
                                                    const MachineInstr *MI) {
-  // Loads and stores are not pipelined.
-  if (MI->mayLoadOrStore())
-    return SchedModel->computeInstrLatency(MI, false);
-
   unsigned ReleaseAtCycle = 0;
   for (TargetSchedModel::ProcResIter PI = SchedModel->getWriteProcResBegin(SC),
                                      PE = SchedModel->getWriteProcResEnd(SC);
@@ -586,31 +578,27 @@ unsigned CandidateHeuristics::getMaxBlockingCycles(const MCSchedClassDesc *SC,
   return ReleaseAtCycle;
 }
 
-unsigned CandidateHeuristics::getHWUICyclesForSU(SUnit *SU) {
-  assert(SchedModel && SchedModel->hasInstrSchedModel());
-  MachineInstr *MI = SU->getInstr();
-  if (SII->isDS(*MI))
-    return SchedModel->computeInstrLatency(MI);
-  return getMaxBlockingCycles(DAG->getSchedClass(SU), MI);
-}
-
 unsigned CandidateHeuristics::getHWUICyclesForMI(MachineInstr *MI) {
   assert(SchedModel && SchedModel->hasInstrSchedModel());
+  if (MI->mayLoadOrStore())
+    return SchedModel->computeInstrLatency(MI, false);
   return getMaxBlockingCycles(SchedModel->resolveSchedClass(MI), MI);
 }
 
 void CandidateHeuristics::updateForScheduling(SUnit *SU) {
-  HardwareUnitInfo *HWUI =
-      getHWUIFromFlavor(classifyFlavor(*SU->getInstr(), *SII));
+  MachineInstr *MI = SU->getInstr();
+  HardwareUnitInfo *HWUI = getHWUIFromFlavor(classifyFlavor(*MI, *SII));
   assert(HWUI);
-  HWUI->markScheduled(SU, getHWUICyclesForSU(SU));
+  HWUI->markScheduled(SU, getHWUICyclesForMI(MI));
 }
 
 void CandidateHeuristics::initialize(ScheduleDAGMI *SchedDAG,
                                      const TargetSchedModel *TargetSchedModel,
-                                     const TargetRegisterInfo *TRI) {
+                                     const TargetRegisterInfo *TRI,
+                                     const MachineLoopInfo *LoopInfo) {
   DAG = SchedDAG;
   SchedModel = TargetSchedModel;
+  MLI = LoopInfo;
   assert(SchedModel && SchedModel->hasInstrSchedModel());
 
   SRI = static_cast<const SIRegisterInfo *>(TRI);
@@ -636,7 +624,7 @@ void CandidateHeuristics::initialize(ScheduleDAGMI *SchedDAG,
 }
 
 unsigned CandidateHeuristics::getCarriedLatency(SUnit *SU) {
-  if (BlockCarriedLatency == CarriedLatency::Off)
+  if (RegionCarriedLatency == CarriedLatency::Off)
     return 0;
 
   MachineInstr *MI = SU->getInstr();
@@ -661,7 +649,7 @@ unsigned CandidateHeuristics::getCarriedLatency(SUnit *SU) {
     }
   }
 
-  if (BlockCarriedLatency == CarriedLatency::Fence)
+  if (RegionCarriedLatency == CarriedLatency::Fence)
     return CarriedLatency;
 
   for (MachineOperand &Op : MI->all_uses()) {
@@ -716,13 +704,74 @@ unsigned CandidateHeuristics::getCarriedLatency(SUnit *SU) {
 
 void CandidateHeuristics::collectRegionSummary() {
   CarriedLatencies.clear();
+  RegionCarriedLatency = CarriedLatency::Off;
+
   if (!SchedModel || !SchedModel->hasInstrSchedModel())
     return;
+
+  // In some cases, we may end up with loads at the end of a predecssor block.
+  // In these cases, it is preferable to defer scheduling a fence which
+  // corresponds with a waitcnt for those loads until the latency of the load
+  // has cleared. Unfortunately, there is no reliable way to determine whether
+  // or not a predecessor block will end up scheduling loads at the end. Here,
+  // we inspect the dependency structure to define a rough heuristic: if we
+  // must schedule  ds_loads after wmma, then we carry the latency of ds_loads
+  // to successor block fences. Currently this only checks for the loop-carried
+  // case, as this will generally have the largest impact on performance.
+  // TODO: 1. extend to different memory instructions, 2. teach carried
+  // latencies about fence legalization.
+  auto mustHaveDSAfter = [this]() {
+    if (!DAG->SUnits.size())
+      return false;
+
+    MachineBasicBlock *MBB = DAG->begin()->getParent();
+    MachineLoop *Loop = MLI->getLoopFor(MBB);
+    if (!Loop || Loop->getNumBlocks() != 1)
+      return false;
+
+    SmallVector<SUnit *, 16> RegionWMMAs;
+
+    for (auto &SU : DAG->SUnits) {
+      if (!SU.getInstr())
+        continue;
+      MachineInstr *MI = SU.getInstr();
+      const InstructionFlavor Flavor = classifyFlavor(*MI, *SII);
+      if (Flavor == InstructionFlavor::WMMA)
+        RegionWMMAs.push_back(&SU);
+    }
+
+    bool MustHaveDSAfter = RegionWMMAs.size();
+
+    for (SUnit *SU : RegionWMMAs) {
+      bool HasDSSucc = false;
+      for (auto &Succ : SU->Succs) {
+        if (!Succ.getSUnit()->getInstr())
+          continue;
+        if (classifyFlavor(*Succ.getSUnit()->getInstr(), *SII) ==
+            InstructionFlavor::DS) {
+          HasDSSucc = true;
+          break;
+        }
+      }
+
+      if (!HasDSSucc) {
+        MustHaveDSAfter = false;
+        break;
+      }
+    }
+
+    return MustHaveDSAfter;
+  };
+
+  RegionCarriedLatency = BlockCarriedLatency.getNumOccurrences()
+                             ? BlockCarriedLatency
+                         : mustHaveDSAfter() ? CarriedLatency::Fence
+                                             : CarriedLatency::Off;
 
   for (auto &SU : DAG->SUnits) {
     MachineInstr *MI = SU.getInstr();
     const InstructionFlavor Flavor = classifyFlavor(*MI, *SII);
-    HWUInfo[static_cast<int>(Flavor)].insert(&SU, getHWUICyclesForSU(&SU));
+    HWUInfo[static_cast<int>(Flavor)].insert(&SU, getHWUICyclesForMI(MI));
     unsigned CarriedLatency = getCarriedLatency(&SU);
     if (CarriedLatency)
       CarriedLatencies[MI] = CarriedLatency;
@@ -852,7 +901,7 @@ CandidateHeuristics::getStallCosts(SUnit *SU, SchedBoundary &Zone) {
       return 0;
 
     unsigned FenceStallFinish =
-        LastProducerCycle + getHWUICyclesForSU(LastProducer);
+        LastProducerCycle + getHWUICyclesForMI(LastProducer->getInstr());
     return FenceStallFinish <= CurrCycle ? 0 : FenceStallFinish - CurrCycle;
   };
 
@@ -1083,8 +1132,8 @@ void AMDGPUCoExecSchedStrategy::initPolicy(MachineBasicBlock::iterator Begin,
                                            MachineBasicBlock::iterator End,
                                            unsigned NumRegionInstrs) {
   GCNSchedStrategy::initPolicy(Begin, End, NumRegionInstrs);
-  if (PreRADirection == MISched::BottomUp ||
-      PreRADirection == MISched::Bidirectional)
+  if (getPreRADirection() == MISched::BottomUp ||
+      getPreRADirection() == MISched::Bidirectional)
     report_fatal_error("CoExecSchedStrategy only support TopDown scheduling.");
   RegionPolicy.OnlyTopDown = true;
   RegionPolicy.OnlyBottomUp = false;
@@ -1098,7 +1147,7 @@ void AMDGPUCoExecSchedStrategy::initialize(ScheduleDAGMI *DAG) {
   RegionPolicy.OnlyBottomUp = false;
 
   GCNSchedStrategy::initialize(DAG);
-  Heurs.initialize(DAG, SchedModel, TRI);
+  Heurs.initialize(DAG, SchedModel, TRI, Context->MLI);
 
   // Replace the default hazard recognizer with our PreRA one so that pre-RA
   // scheduling accounts for WMMA co-execution slot constraints. This must

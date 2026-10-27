@@ -94,7 +94,7 @@ else:
                 + " "
             )
             libc_bitcode_library = os.path.join(
-                config.llvm_shlib_dir, config.target_triple, "libcbitcode.bc"
+                config.llvm_shlib_dir, config.target_triple, "libc.bc"
             )
             if os.path.exists(libc_bitcode_library):
                 librt_flags += (

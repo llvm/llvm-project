@@ -33,10 +33,8 @@ define void @fptoui_v2f64_v2i32(ptr %res, ptr %in){
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    vld $vr0, $a1, 0
 ; LA32-NEXT:    vftintrz.l.d $vr0, $vr0
-; LA32-NEXT:    vpickve2gr.w $a1, $vr0, 2
-; LA32-NEXT:    st.w $a1, $a0, 4
-; LA32-NEXT:    vpickve2gr.w $a1, $vr0, 0
-; LA32-NEXT:    st.w $a1, $a0, 0
+; LA32-NEXT:    vstelm.w $vr0, $a0, 4, 2
+; LA32-NEXT:    vstelm.w $vr0, $a0, 0, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: fptoui_v2f64_v2i32:
