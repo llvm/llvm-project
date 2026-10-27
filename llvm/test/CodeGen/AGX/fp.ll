@@ -128,22 +128,22 @@ define agx_kernel void @transcendental(ptr addrspace(1) %out, float %a, float %b
 ; CHECK-NEXT:    fmadd32 r4, r3.neg, r5, r4
 ; CHECK-NEXT:    fmadd32 r4, r3.neg, r6, r4
 ; CHECK-NEXT:    fmul32 r5, r4, r4
-; CHECK-NEXT:    fcmpsel lt, r3, r7.abs, r8, r3, r1
 ; CHECK-NEXT:    fmadd32 r6, r5, r11, r10
-; CHECK-NEXT:    convert f_to_s32, r3, r3, rtz
+; CHECK-NEXT:    fcmpsel lt, r3, r7.abs, r8, r3, r1
 ; CHECK-NEXT:    fmadd32 r6, r6, r5, r13
+; CHECK-NEXT:    convert f_to_s32, r3, r3, rtz
 ; CHECK-NEXT:    fmul32 r6, r6, r5
-; CHECK-NEXT:    iadd r3, r3, 1
-; CHECK-NEXT:    fmadd32 r4, r6, r4, r4
-; CHECK-NEXT:    fmul32 r6, r7, r19
 ; CHECK-NEXT:    fmul32 r9, r5, r5
-; CHECK-NEXT:    fadd32 r6, r6, 0.25
 ; CHECK-NEXT:    fmadd32 r10, r5, r16, r15
-; CHECK-NEXT:    floor r11, r6
+; CHECK-NEXT:    fmul32 r11, r7, r19
 ; CHECK-NEXT:    fmadd32 r10, r10, r5, r18
+; CHECK-NEXT:    fadd32 r11, r11, 0.25
 ; CHECK-NEXT:    fmadd32 r5, r5, -0.5, 1.0
-; CHECK-NEXT:    fadd32 r6, r6, r11.neg
+; CHECK-NEXT:    floor r12, r11
+; CHECK-NEXT:    fmadd32 r4, r6, r4, r4
 ; CHECK-NEXT:    fmadd32 r5, r9, r10, r5
+; CHECK-NEXT:    fadd32 r6, r11, r12.neg
+; CHECK-NEXT:    iadd r3, r3, 1
 ; CHECK-NEXT:    fmul32 r6, r6, 4.0
 ; CHECK-NEXT:    and r9, r3, 1
 ; CHECK-NEXT:    sin_pt_1 r6, r6

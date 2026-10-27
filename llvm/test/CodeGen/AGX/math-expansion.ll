@@ -16,12 +16,12 @@
 ; CHECK: fpext half
 ; CHECK: fptrunc float {{.*}} to half
 ; CHECK-NOT: call half @llvm.atan.f16
-; CHECK-LABEL: @sc(
-; CHECK-NOT: call {{.*}}@llvm.sincos
-; CHECK: call float @llvm.roundeven.f32
 ; CHECK-LABEL: @fast(
 ; CHECK: call afn float @llvm.exp.f32
 ; CHECK: call afn float @llvm.log.f32
+; CHECK-LABEL: @sc(
+; CHECK-NOT: call {{.*}}@llvm.sincos
+; CHECK: call float @llvm.roundeven.f32
 ; ASM-LABEL: f:
 ; ASM-NOT: {{tanf|atanf|call}}
 
