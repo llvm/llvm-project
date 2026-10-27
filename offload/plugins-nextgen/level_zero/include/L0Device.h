@@ -533,7 +533,6 @@ public:
   }
 
   Expected<bool> isAccessiblePtrImpl(const void *Ptr, size_t Size) override;
-  Error dataFence(__tgt_async_info *Async) override;
   Error dataFillImpl(void *TgtPtr, const void *PatternPtr, int64_t PatternSize,
                      int64_t Size,
                      AsyncInfoWrapperTy &AsyncInfoWrapper) override;
@@ -596,6 +595,10 @@ public:
                               DeviceImageTy &Image) override;
 
   Error setDeviceStackSize(uint64_t V) override { return Plugin::success(); }
+
+  Expected<void *> getNativeHandle() override { return getZeDevice(); }
+
+  Expected<void *> getNativeQueueHandle(__tgt_async_info *AsyncInfo) override;
 
   Expected<omp_interop_val_t *>
   createInterop(int32_t InteropType, interop_spec_t &InteropSpec) override;

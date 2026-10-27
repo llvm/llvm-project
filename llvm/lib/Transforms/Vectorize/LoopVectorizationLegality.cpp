@@ -1715,10 +1715,10 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
     return false;
   }
 
-  if (Reductions.size() || FixedOrderRecurrences.size()) {
+  if (!FixedOrderRecurrences.empty()) {
     reportVectorizationFailure(
-        "Found reductions or recurrences in early-exit loop",
-        "Cannot vectorize early exit loop with reductions or recurrences",
+        "Found fixed-order recurrences in early-exit loop",
+        "Cannot vectorize early exit loop with fixed-order recurrences",
         "RecurrencesInEarlyExitLoop", ORE, TheLoop);
     return false;
   }
@@ -1752,7 +1752,7 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
   Predicates.clear();
 
   if (UncountableExitingBlocks.empty()) {
-    LLVM_DEBUG(dbgs() << "LV: Could not find any uncountable exits");
+    LLVM_DEBUG(dbgs() << "LV: Could not find any uncountable exits\n");
     return false;
   }
 

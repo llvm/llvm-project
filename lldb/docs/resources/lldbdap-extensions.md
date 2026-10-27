@@ -11,9 +11,25 @@ Conventions:
   would not make sense for any other debugger (e.g. `$__lldb_version`);
   otherwise, they use plain names (e.g. `compileUnitId`).
 
+
+## Summary
+
+:::{table}
+:width: 100%
+
+| Request | Added in |
+| -------------------------- | --- |
+| [compileUnits](#compileunits-request) | LLDB 11 |
+| [moduleSymbols](#modulesymbols-request) | LLDB 22 |
+
+:::
+
 ## Custom Requests
 
 ### CompileUnits Request
+
+:::{versionadded} 11
+:::
 
 The request is sent from the client to the debug adapter to list the compile
 units of a module. Use it with `compileUnitId` of a [`StackFrame`](#stackframe)
@@ -36,6 +52,7 @@ interface CompileUnitsArguments {
    * The compile units to return. If empty or omitted, all compile units of
    * the module are returned.
    * @format uint32
+   * @since LLDB 24
    */
   compileUnitIds?: number[];
 }
@@ -50,6 +67,7 @@ interface CompileUnit {
   /**
    * The ID of the compile unit, unique within its module.
    * @format uint32
+   * @since LLDB 24
    */
   id: number;
 
@@ -61,6 +79,9 @@ interface CompileUnit {
 ```
 
 ### ModuleSymbols Request
+
+:::{versionadded} 22
+:::
 
 The request is sent from the client to the debug adapter to list the symbols of
 a module. It is only available if the capability `supportsModuleSymbolsRequest`
@@ -168,7 +189,8 @@ interface Symbol {
 interface InitializeRequestArguments {
   /**
    * Whether the adapter sources `lldbinit` files when initializing the
-   * debugger.
+   * debugger. Before LLDB 21 this was `sourceInitFile`.
+   * @since LLDB 21
    */
   $__lldb_sourceInitFile?: boolean;
 }
@@ -181,12 +203,15 @@ interface InitializeResponse extends Response {
 
 interface Capabilities {
   /**
-   * The version of lldb same as (`version` command).
+   * The version of lldb same as (`version` command). Before LLDB 21 this was
+   * `__lldb.version`.
+   * @since LLDB 21
    */
   $__lldb_version?: string;
 
   /**
    * The debug adapter supports the `__lldb_moduleSymbols` request.
+   * @since LLDB 22
    */
   supportsModuleSymbolsRequest?: boolean;
 }
@@ -199,11 +224,13 @@ interface ExceptionInfoResponse extends Response {
   body: {
     /**
      * The raw JSON from `SBThread::GetStopReasonExtendedInfoAsJSON`.
+     * @since LLDB 24
      */
     $__lldb_stopReasonExtendedInfo?: any;
 
     /**
      * The raw JSON from `SBProcess::GetExtendedCrashInformation`.
+     * @since LLDB 24
      */
     $__lldb_extendedCrashInformation?: any;
   };
@@ -219,6 +246,7 @@ interface Module {
   /**
    * The size of the module's debug information as a human readable string,
    * e.g. '12.3 MB'.
+   * @since LLDB 12
    */
   debugInfoSize?: string;
 }
@@ -232,6 +260,7 @@ interface StackFrame {
    * The compile unit of the frame. Use with `moduleId` in the `compileUnits`
    * request.
    * @format uint32
+   * @since LLDB 24
    */
   compileUnitId?: number;
 }
