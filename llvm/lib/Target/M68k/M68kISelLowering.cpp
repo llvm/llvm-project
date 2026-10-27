@@ -2202,10 +2202,10 @@ SDValue M68kTargetLowering::LowerSETCCCARRY(SDValue Op,
 
   EVT CarryVT = Carry.getValueType();
   APInt NegOne = APInt::getAllOnes(CarryVT.getScalarSizeInBits());
-  Carry = DAG.getNode(M68kISD::ADD, DL, DAG.getVTList(CarryVT, MVT::i32), Carry,
+  Carry = DAG.getNode(M68kISD::ADD, DL, DAG.getVTList(CarryVT, MVT::i8), Carry,
                       DAG.getConstant(NegOne, DL, CarryVT));
 
-  SDVTList VTs = DAG.getVTList(LHS.getValueType(), MVT::i32);
+  SDVTList VTs = DAG.getVTList(LHS.getValueType(), MVT::i8);
   SDValue Cmp =
       DAG.getNode(M68kISD::SUBX, DL, VTs, LHS, RHS, Carry.getValue(1));
 
@@ -2276,7 +2276,7 @@ SDValue M68kTargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
       if (isNullConstant(Y) &&
           (isAllOnesConstant(Op1) == (CondCode == M68k::COND_NE))) {
 
-        SDVTList VTs = DAG.getVTList(CmpOp0.getValueType(), MVT::i32);
+        SDVTList VTs = DAG.getVTList(CmpOp0.getValueType(), MVT::i8);
 
         SDValue Neg =
             DAG.getNode(M68kISD::SUB, DL, VTs,
@@ -3586,7 +3586,7 @@ static SDValue combineM68kBrCond(SDNode *N, SelectionDAG &DAG,
 static SDValue combineSUBX(SDNode *N, SelectionDAG &DAG) {
   if (SDValue Flags = combineCarryThroughADD(N->getOperand(2))) {
     MVT VT = N->getSimpleValueType(0);
-    SDVTList VTs = DAG.getVTList(VT, MVT::i32);
+    SDVTList VTs = DAG.getVTList(VT, MVT::i8);
     return DAG.getNode(M68kISD::SUBX, SDLoc(N), VTs, N->getOperand(0),
                        N->getOperand(1), Flags);
   }
@@ -3599,7 +3599,7 @@ static SDValue combineADDX(SDNode *N, SelectionDAG &DAG,
                            TargetLowering::DAGCombinerInfo &DCI) {
   if (SDValue Flags = combineCarryThroughADD(N->getOperand(2))) {
     MVT VT = N->getSimpleValueType(0);
-    SDVTList VTs = DAG.getVTList(VT, MVT::i32);
+    SDVTList VTs = DAG.getVTList(VT, MVT::i8);
     return DAG.getNode(M68kISD::ADDX, SDLoc(N), VTs, N->getOperand(0),
                        N->getOperand(1), Flags);
   }

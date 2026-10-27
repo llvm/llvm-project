@@ -3107,6 +3107,10 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
                                           Size / PatternSize);
   }
 
+  Expected<void *> getNativeHandle() override {
+    return reinterpret_cast<void *>(Agent.handle);
+  }
+
   interop_spec_t selectInteropPreference(int32_t InteropType,
                                          int32_t NumPrefers,
                                          interop_spec_t *Prefers) override {

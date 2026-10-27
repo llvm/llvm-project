@@ -1091,3 +1091,37 @@ loop.header:
 exit:
   ret void
 }
+
+define void @pointer_stored_twice_after_load(ptr %a, ptr %b, i64 %n) {
+; CHECK-LABEL: define void @pointer_stored_twice_after_load(
+; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], [[SCALAR_PH:label %.*]], label %[[VECTOR_MEMCHECK:.*]]
+; CHECK:       [[VECTOR_MEMCHECK]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[N]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP0]]
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[A]], [[TMP2]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[B]], [[TMP1]]
+; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], [[SCALAR_PH]], [[VECTOR_PH:label %.*]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep.b = getelementptr inbounds i32, ptr %b, i64 %iv
+  %l.b = load i32, ptr %gep.b, align 4
+  %gep.a = getelementptr inbounds i32, ptr %a, i64 %iv
+  store i32 %l.b, ptr %gep.a, align 4
+  %add = add nsw i32 %l.b, 1
+  store i32 %add, ptr %gep.a, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}

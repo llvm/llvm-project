@@ -6725,11 +6725,13 @@ cc_library(
     name = "NVVMDialect",
     srcs = [
         "lib/Dialect/LLVMIR/IR/BasicPtxBuilderInterface.cpp",
+        "lib/Dialect/LLVMIR/IR/NVVMAttributes.cpp",
         "lib/Dialect/LLVMIR/IR/NVVMDialect.cpp",
         "lib/Dialect/LLVMIR/IR/NVVMRequiresSMTraits.cpp",
     ] + [":NVVMOpSrcs"],
     hdrs = [
         "include/mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.h",
+        "include/mlir/Dialect/LLVMIR/NVVMAttributes.h",
         "include/mlir/Dialect/LLVMIR/NVVMDialect.h",
         "include/mlir/Dialect/LLVMIR/NVVMDialectDecl.h",
         "include/mlir/Dialect/LLVMIR/NVVMRequiresSMTraits.h",
@@ -9295,6 +9297,7 @@ cc_library(
         "lib/Conversion/MathToEmitC",
     ],
     deps = [
+        ":ArithDialect",
         ":ConversionPassIncGen",
         ":ConvertToEmitCInterface",
         ":EmitCCommon",
