@@ -3229,10 +3229,6 @@ void test_in_scope() {
 }
 ```
 
-The `-analyzer-config cfg-lifetime=true` option is a prerequisite for these
-reports. Without it the checker does not report anything and no error is emitted
-by the analyzer.
-
 **Limitations**
 
 If the analyzer cannot analyze the body of the called function, for example because
