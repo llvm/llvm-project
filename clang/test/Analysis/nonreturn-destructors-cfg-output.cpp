@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -std=c++11 -fcxx-exceptions -fexceptions -analyzer-checker=debug.DumpCFG -analyzer-config cfg-rich-constructors=true,cfg-implicit-dtors=true,cfg-lifetime=true,cfg-scopes=true %s > %t 2>&1
+// RUN: %clang_analyze_cc1 -std=c++11 -fcxx-exceptions -fexceptions -analyzer-checker=debug.DumpCFG -analyzer-config cfg-rich-constructors=true,cfg-implicit-dtors=true,cfg-scopes=true %s > %t 2>&1
 // RUN: FileCheck --input-file=%t -check-prefixes=CHECK %s
 
 class A {

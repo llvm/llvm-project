@@ -24,7 +24,10 @@ struct Range {
 // CHECK-LABEL: void range_for_init_order(
 // CHECK:      [B1]
 // CHECK-NEXT:   1: [B5.12].~End() (Implicit destructor)
-// CHECK-NEXT:   2: [B5.7].~Begin() (Implicit destructor)
+// CHECK-NEXT:   2: [B5.12] (Lifetime ends)
+// CHECK-NEXT:   3: [B5.7].~Begin() (Implicit destructor)
+// CHECK-NEXT:   4: [B5.7] (Lifetime ends)
+// CHECK-NEXT:   5: [B5.2] (Lifetime ends)
 // CHECK-NEXT:   Preds (1): B2
 // CHECK-NEXT:   Succs (1): B0
 // CHECK-EMPTY:

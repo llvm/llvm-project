@@ -98,7 +98,7 @@ ANALYZER_OPTION(bool, ShouldIncludeTemporaryDtorsInCFG, "cfg-temporary-dtors",
 ANALYZER_OPTION(
     bool, ShouldIncludeLifetimeInCFG, "cfg-lifetime",
     "Whether or not end-of-lifetime information should be included in the CFG.",
-    false)
+    true)
 
 ANALYZER_OPTION(bool, ShouldIncludeLoopExitInCFG, "cfg-loopexit",
                 "Whether or not the end of the loop information should "

@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -fcxx-exceptions -fexceptions -analyzer-checker=debug.DumpCFG -analyzer-config cfg-lifetime=true %s > %t 2>&1
+// RUN: %clang_analyze_cc1 -fcxx-exceptions -fexceptions -analyzer-checker=debug.DumpCFG %s > %t 2>&1
 // RUN: FileCheck --input-file=%t %s
 
 struct TrivialDtor {};

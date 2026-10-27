@@ -37,7 +37,7 @@ class AnalysisOrderChecker
           check::PostStmt<OffsetOfExpr>, check::PreCall, check::PostCall,
           check::EndFunction, check::EndAnalysis, check::NewAllocator,
           check::Bind, check::PointerEscape, check::RegionChanges,
-          check::LiveSymbols, eval::Call> {
+          check::LiveSymbols, check::LifetimeEnd, eval::Call> {
 
   bool isCallbackEnabled(const AnalyzerOptions &Opts,
                          StringRef CallbackName) const {
@@ -170,6 +170,8 @@ public:
         llvm::errs() << "CFGStmt\n";
       else if (LastElement.getAs<CFGAutomaticObjDtor>())
         llvm::errs() << "CFGAutomaticObjDtor\n";
+      else if (LastElement.getAs<CFGLifetimeEnds>())
+        llvm::errs() << "CFGLifetimeEnds\n";
     }
   }
 
@@ -194,6 +196,11 @@ public:
   void checkLiveSymbols(ProgramStateRef State, SymbolReaper &SymReaper) const {
     if (isCallbackEnabled(State, "LiveSymbols"))
       llvm::errs() << "LiveSymbols\n";
+  }
+
+  void checkLifetimeEnd(const VarDecl *VD, CheckerContext &C) const {
+    if (isCallbackEnabled(C, "LifetimeEnd"))
+      llvm::errs() << "LifetimeEnd\n";
   }
 
   ProgramStateRef

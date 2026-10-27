@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG -analyzer-config cfg-lifetime=true,cfg-scopes=true %s > %t 2>&1
+// RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG -analyzer-config cfg-scopes=true %s > %t 2>&1
 // RUN: FileCheck --input-file=%t %s
 
 // Tests for lifetime-end CFG nodes.
