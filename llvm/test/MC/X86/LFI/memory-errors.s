@@ -75,6 +75,12 @@ lock btsq %rax, (%rdi)
 btrl %eax, %fs:(%rdi)
 // CHECK: error: unsupported bit test with a register bit offset
 
+btq %rax, %fs:0
+// CHECK: error: unsupported bit test with a register bit offset
+
+btsq %rax, %fs:0
+// CHECK: error: unsupported bit test with a register bit offset
+
 gs movq (%rsp), %rax
 // CHECK: error: unsupported instruction prefix
 
@@ -151,6 +157,12 @@ movdir64b (%rax), %rbx
 // CHECK: error: unsupported memory access
 
 enqcmd (%rax), %rbx
+// CHECK: error: unsupported memory access
+
+movdir64b %fs:0, %rbx
+// CHECK: error: unsupported memory access
+
+enqcmd %fs:0, %rbx
 // CHECK: error: unsupported memory access
 
 .code32

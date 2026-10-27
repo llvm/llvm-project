@@ -598,17 +598,6 @@ void X86::X86MCLFIRewriter::sandboxMemAccess(MCInst &Inst) const {
 void X86::X86MCLFIRewriter::rewriteMemAccess(const MCInst &Inst,
                                              MCStreamer &Out,
                                              const MCSubtargetInfo &STI) {
-  const MCInstrDesc &Desc = InstInfo->get(Inst.getOpcode());
-
-  // The moffs form of mov encodes an absolute address in the instruction
-  // instead of an addressing mode, so it is unsupported.
-  if ((Desc.TSFlags & X86II::FormMask) == X86II::RawFrmMemOffs ||
-      hasImplicitMemPointer(Inst.getOpcode()))
-    return error(Inst, "unsupported memory access");
-
-  if (isBitTestWithRegOffset(Inst.getOpcode()))
-    return error(Inst, "unsupported bit test with a register bit offset");
-
   MCInst Sandboxed(Inst);
   sandboxMemAccess(Sandboxed);
   emitWithPrefixes(Sandboxed, Out, STI);
@@ -948,6 +937,17 @@ void X86::X86MCLFIRewriter::doRewriteInst(const MCInst &Inst, MCStreamer &Out,
 
   if (MCRegister StackReg = getWrittenStackReg(Inst))
     return rewriteStackModification(StackReg, Inst, Out, STI);
+
+  // These accesses cannot be sandboxed by rewriting the addressing mode. The
+  // moffs form of mov encodes an absolute address in the instruction instead
+  // of an addressing mode.
+  if ((InstInfo->get(Inst.getOpcode()).TSFlags & X86II::FormMask) ==
+          X86II::RawFrmMemOffs ||
+      hasImplicitMemPointer(Inst.getOpcode()))
+    return error(Inst, "unsupported memory access");
+
+  if (isBitTestWithRegOffset(Inst.getOpcode()))
+    return error(Inst, "unsupported bit test with a register bit offset");
 
   if (isFSAccess(Inst))
     return rewriteFSAccess(Inst, Out, STI);
