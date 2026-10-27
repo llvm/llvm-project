@@ -1660,8 +1660,9 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
           // ValidAssumeForPtrContext checks; they're dominated by O1 and O2,
           // so strictly more assumptions are valid for them.
           if ((CtxI && isValidAssumeForContext(Assume, CtxI, DT,
-                                               /* AllowEphemerals */ true)) ||
-              ValidAssumeForPtrContext(V1) || ValidAssumeForPtrContext(V2)) {
+                                               AAQI.AllowEphemerals)) ||
+              (AAQI.AllowEphemerals && (ValidAssumeForPtrContext(V1) ||
+                                        ValidAssumeForPtrContext(V2)))) {
             return AliasResult::NoAlias;
           }
         }
