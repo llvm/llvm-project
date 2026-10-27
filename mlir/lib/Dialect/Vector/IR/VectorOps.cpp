@@ -8699,7 +8699,7 @@ DeinterleaveOp::getIterationShapeToUnroll() {
 namespace {
 /// A broadcast of a scalar condition selects the same arm in every lane.
 struct SelectBroadcastCondition : OpRewritePattern<arith::SelectOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(arith::SelectOp select,
                                 PatternRewriter &rewriter) const override {

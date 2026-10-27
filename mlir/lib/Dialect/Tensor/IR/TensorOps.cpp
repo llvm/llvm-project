@@ -4205,7 +4205,7 @@ struct FoldTensorCastProducerOp
 namespace {
 /// A splat of a scalar condition selects the same arm in every element.
 struct SelectSplatCondition : OpRewritePattern<arith::SelectOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(arith::SelectOp select,
                                 PatternRewriter &rewriter) const override {
