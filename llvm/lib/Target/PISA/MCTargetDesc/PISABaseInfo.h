@@ -14,8 +14,8 @@
 #ifndef LLVM_LIB_TARGET_PISA_MCTARGETDESC_PISABASEINFO_H
 #define LLVM_LIB_TARGET_PISA_MCTARGETDESC_PISABASEINFO_H
 
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
+#include <cassert>
+#include <cstdint>
 #include <string>
 
 namespace llvm {
