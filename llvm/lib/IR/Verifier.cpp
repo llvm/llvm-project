@@ -1197,7 +1197,8 @@ void Verifier::visitMDFunctionLocalContext(const MDFunctionLocalContext &N) {
             &N);
     CheckDI(!N.getInlinedCalls().empty(),
             "MDFunctionLocalContext that is NonDebug must contain at least one "
-            "inlined call", &N);
+            "inlined call",
+            &N);
   } else {
     CheckDI(!N.getScopes().empty(),
             "An MDFunctionLocalContext that is not NonDebug must contain its "
