@@ -102,7 +102,7 @@ enum class PtrauthCheckMode { Unchecked, Poison, Trap };
 /// reconstruct the state of the frame, whereas control flow may enter and exit
 /// such regions arbitrarily (such as in hot-cold-split, and shrinkwrapped
 /// fucntions), and thus the negate-based cfi is unable to encode the address of
-/// the signing instruciton in all program orders.
+/// the signing instruction in all program orders.
 ///
 /// Since .cfi_negate_ra_state is still sufficient for describing
 /// ptrauth-returns=pauth, we default to using the new CFI only for PAuth_LR, as
