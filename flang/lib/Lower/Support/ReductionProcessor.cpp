@@ -924,6 +924,8 @@ template <typename OpType>
 struct OpenMPReductionBinder {
   using ReductionIdentifier = ReductionProcessor::ReductionIdentifier;
 
+  bool bindUserReductionDecl(const semantics::Symbol &ultimate);
+
   bool processDefinedOperator(const omp::clause::DefinedOperator *redDefinedOp);
   bool processDefinedOpName(
       const omp::clause::DefinedOperator::DefinedOpName *definedOpName);
@@ -953,6 +955,70 @@ struct OpenMPReductionBinder {
   ReductionIdentifier &redId;
 };
 } // namespace
+
+/// Bind the omp.declare_reduction op declared for the user-defined reduction
+/// \p ultimate: look it up under its scoped name, materialize an imported one
+/// on demand, and append the resulting symbol to \c reductionDeclSymbols.
+///
+/// Returns false when lowering does not (yet) produce a declaration usable for
+/// this variable's shape, leaving \c reductionDeclSymbols untouched; the
+/// caller then emits a TODO naming the reduction form it was handling.
+template <typename OpType>
+bool OpenMPReductionBinder<OpType>::bindUserReductionDecl(
+    const semantics::Symbol &ultimate) {
+  // getScopedUserReductionName names from the symbol's ultimate (name, owner)
+  // plus the per-type suffix, byte-identical to the directive/materializer
+  // side. Reductions of the same spelling in different scopes therefore refer
+  // to distinct ops, and a declaration listing several types binds the op for
+  // the variable's type instead of colliding on the first type's op.
+  std::string opName = ReductionProcessor::getScopedUserReductionName(
+      converter, ultimate, namingType, isByRef);
+  mlir::ModuleOp module = builder.getModule();
+  auto existingDecl = module.lookupSymbol<OpType>(opName);
+  // Separate compilation: the primary pass lowers only this TU's own declare
+  // reductions, so an imported reduction's op is absent here. Materialize it
+  // on demand from the resolved symbol when its defining module is a mod file,
+  // then re-look it up. A same-file op already exists under the scoped name,
+  // so the ModFile gate keeps this separate-compilation only.
+  if (!existingDecl && semaCtx && ultimate.owner().symbol() &&
+      ultimate.owner().symbol()->test(semantics::Symbol::Flag::ModFile)) {
+    Fortran::lower::materializeUserReduction(converter, *semaCtx, ultimate,
+                                             opName, namingType, isByRef);
+    existingDecl = module.lookupSymbol<OpType>(opName);
+  }
+  if (isBoxedTrivialElemReduction) {
+    // Trivial-element allocatable/pointer: synthesize the boxed op.
+    if (OpType boxedDecl = getOrCreateBoxedUserReduction<OpType>(
+            converter, semaCtx, ultimate, redType, currentLocation)) {
+      reductionDeclSymbols.push_back(mlir::SymbolRefAttr::get(
+          builder.getContext(), boxedDecl.getSymName()));
+      return true;
+    }
+  }
+  // The MLIR verifier does not type-check these ops (they have no atomic
+  // region), so this is the only guard against binding a missing or mismatched
+  // declaration (e.g. a named declare reduction that does not list the
+  // variable's type). Compare unwrapped element types: namingType is the
+  // canonical reduction element type (allocatable/pointer storage wrappers
+  // stripped), matching the type the op was named and created from on the
+  // directive side. Report failure when lowering does not materialize an op
+  // for this variable's shape:
+  //   - !existingDecl or a type mismatch: an imported reduction whose shape
+  //     the materializer intentionally skips (a combiner-in-clause form, or an
+  //     unsupported element type), so no op was created; better a diagnostic
+  //     than binding a wrong op.
+  //   - isBoxedTrivialReduction: an allocatable/pointer reduction of a trivial
+  //     element type, deferred to #186765.
+  if (!existingDecl ||
+      fir::unwrapRefType(existingDecl.getType()) !=
+          fir::unwrapRefType(namingType) ||
+      isBoxedTrivialReduction) {
+    return false;
+  }
+  reductionDeclSymbols.push_back(mlir::SymbolRefAttr::get(
+      builder.getContext(), existingDecl.getSymName()));
+  return true;
+}
 
 template <typename OpType>
 bool OpenMPReductionBinder<OpType>::processDefinedOpName(
@@ -993,46 +1059,10 @@ bool OpenMPReductionBinder<OpType>::processDefinedOpName(
          "when the variable has no type or no matching reduction is "
          "visible for its type");
   }
-  std::string opName = ReductionProcessor::getScopedUserReductionName(
-      converter, *resolvedSym, namingType, isByRef);
-  mlir::ModuleOp module = builder.getModule();
-  auto existingDecl = module.lookupSymbol<OpType>(opName);
-  // Separate compilation: the primary pass lowers only this TU's own
-  // declare reductions, so an imported reduction's op is absent here.
-  // Materialize it on demand from the resolved symbol when its defining
-  // module is a mod file, then re-look it up. A same-file op already
-  // exists, so the ModFile gate keeps this separate-compilation only.
-  if (!existingDecl && semaCtx && ultimate->owner().symbol() &&
-      ultimate->owner().symbol()->test(semantics::Symbol::Flag::ModFile)) {
-    Fortran::lower::materializeUserReduction(converter, *semaCtx, *ultimate,
-                                             opName, namingType, isByRef);
-    existingDecl = module.lookupSymbol<OpType>(opName);
-  }
-  // The MLIR verifier does not type-check these ops (they have no
-  // atomic region), so this is the only guard against binding a
-  // mismatched declaration. Compare unwrapped element types: namingType
-  // is the canonical reduction element type (allocatable/pointer
-  // storage wrappers stripped), matching the type the op was named and
-  // created from on the directive side.
-  if (isBoxedTrivialElemReduction) {
-    // Trivial-element allocatable/pointer: synthesize the boxed op.
-    if (OpType boxedDecl = getOrCreateBoxedUserReduction<OpType>(
-            converter, semaCtx, *ultimate, redType, currentLocation)) {
-      reductionDeclSymbols.push_back(mlir::SymbolRefAttr::get(
-          builder.getContext(), boxedDecl.getSymName()));
-      return true;
-    }
-  }
-  if (!existingDecl ||
-      fir::unwrapRefType(existingDecl.getType()) !=
-          fir::unwrapRefType(namingType) ||
-      isBoxedTrivialReduction) {
+  if (!bindUserReductionDecl(*ultimate))
     TODO(currentLocation,
          "OpenMP user-defined operator reduction declaration was not "
          "materialized for this type");
-  }
-  reductionDeclSymbols.push_back(mlir::SymbolRefAttr::get(
-      builder.getContext(), existingDecl.getSymName()));
   return true;
 }
 
@@ -1085,40 +1115,12 @@ bool OpenMPReductionBinder<OpType>::processDefinedOperator(
             semantics::omp::FindUserReductionSymbol(converter.getCurrentScope(),
                                                     mangledOpName, varType)) {
       const semantics::Symbol &ultimate = userSym->GetUltimate();
-      std::string opName = ReductionProcessor::getScopedUserReductionName(
-          converter, ultimate, namingType, isByRef);
-      mlir::ModuleOp module = builder.getModule();
-      auto existingDecl = module.lookupSymbol<OpType>(opName);
-      // Separate compilation: materialize the imported reduction on
-      // demand when its defining module is a mod file, then re-look it up
-      // (a same-file op already exists here under the scoped name).
-      if (!existingDecl && ultimate.owner().symbol() &&
-          ultimate.owner().symbol()->test(semantics::Symbol::Flag::ModFile)) {
-        Fortran::lower::materializeUserReduction(converter, *semaCtx, ultimate,
-                                                 opName, namingType, isByRef);
-        existingDecl = module.lookupSymbol<OpType>(opName);
-      }
-      if (isBoxedTrivialElemReduction) {
-        // Trivial-element allocatable/pointer: synthesize the boxed op.
-        if (OpType boxedDecl = getOrCreateBoxedUserReduction<OpType>(
-                converter, semaCtx, ultimate, redType, currentLocation)) {
-          reductionDeclSymbols.push_back(mlir::SymbolRefAttr::get(
-              builder.getContext(), boxedDecl.getSymName()));
-          return true;
-        }
-      }
-      if (!existingDecl ||
-          fir::unwrapRefType(existingDecl.getType()) !=
-              fir::unwrapRefType(namingType) ||
-          isBoxedTrivialReduction) {
+      if (!bindUserReductionDecl(ultimate))
         TODO(currentLocation,
              "OpenMP user-defined intrinsic-operator reduction is not yet "
              "lowered for this variable's shape (an unsupported element "
              "type, a combiner-in-clause form, or an allocatable/pointer "
              "trivial reduction; the last deferred to #186765)");
-      }
-      reductionDeclSymbols.push_back(mlir::SymbolRefAttr::get(
-          builder.getContext(), existingDecl.getSymName()));
       return true;
     }
   }
@@ -1167,62 +1169,14 @@ bool OpenMPReductionBinder<OpType>::processProcedureDesignator(
       // than emitFatalError to stay safe for that case.
       TODO(currentLocation, "Lowering unrecognised reduction type");
     }
-    // Name the op from the resolved symbol's scoped ultimate (name,
-    // owner) plus the per-type suffix, byte-identical to the
-    // directive/materializer side, via getScopedUserReductionName.
-    // Reductions of the same spelling in different scopes refer to
-    // distinct ops, and a named reduction listing several types binds the
-    // op for the variable's type instead of colliding on the first type's
-    // op. namingType is the canonical element type (storage wrappers
-    // stripped) so the by-ref suffix matches the directive.
-    std::string redName = ReductionProcessor::getScopedUserReductionName(
-        converter, *sym, namingType, isByRef);
-    mlir::ModuleOp module = builder.getModule();
-    auto existingDecl = module.lookupSymbol<OpType>(redName);
-    // Separate compilation: materialize an imported named reduction's op
-    // on demand from the resolved symbol when its defining module is a
-    // mod file, then re-look it up (same-file ops already exist here).
-    const semantics::Symbol &namedUltimate = sym->GetUltimate();
-    if (!existingDecl && semaCtx && namedUltimate.owner().symbol() &&
-        namedUltimate.owner().symbol()->test(
-            semantics::Symbol::Flag::ModFile)) {
-      Fortran::lower::materializeUserReduction(
-          converter, *semaCtx, namedUltimate, redName, namingType, isByRef);
-      existingDecl = module.lookupSymbol<OpType>(redName);
-    }
-    // The MLIR verifier does not type-check these ops, so this is the
-    // only guard against binding a missing or mismatched declaration
-    // (e.g. a named declare reduction that does not list the variable's
-    // type). Compare unwrapped element types against namingType, the type
-    // the op was named and created from. The guard fires when lowering
-    // does not (yet) materialize an op for this variable's shape:
-    //   - !existingDecl or a type mismatch: an imported reduction whose
-    //     shape the materializer intentionally skips (a
-    //     combiner-in-clause form, or an unsupported element type), so no
-    //     op was created; better an error here than binding a wrong op.
-    //   - isBoxedTrivialReduction: an allocatable/pointer reduction of a
-    //     trivial element type, deferred to #186765.
-    if (isBoxedTrivialElemReduction) {
-      // Trivial-element allocatable/pointer: synthesize the boxed op.
-      if (OpType boxedDecl = getOrCreateBoxedUserReduction<OpType>(
-              converter, semaCtx, namedUltimate, redType, currentLocation)) {
-        reductionDeclSymbols.push_back(mlir::SymbolRefAttr::get(
-            builder.getContext(), boxedDecl.getSymName()));
-        return true;
-      }
-    }
-    if (!existingDecl ||
-        fir::unwrapRefType(existingDecl.getType()) !=
-            fir::unwrapRefType(namingType) ||
-        isBoxedTrivialReduction) {
+    // The clause references the (possibly USE-associated) reduction symbol,
+    // so bind the op declared for its ultimate.
+    if (!bindUserReductionDecl(sym->GetUltimate()))
       TODO(currentLocation,
            "OpenMP user-defined named reduction is not yet lowered for "
            "this variable's shape (an unsupported element type, a "
            "combiner-in-clause form, or an allocatable/pointer trivial "
            "reduction; the last deferred to #186765)");
-    }
-    reductionDeclSymbols.push_back(mlir::SymbolRefAttr::get(
-        builder.getContext(), existingDecl.getSymName()));
     return true;
   }
   // A user-defined reduction may shadow a built-in intrinsic reduction
@@ -1253,37 +1207,9 @@ bool OpenMPReductionBinder<OpType>::processProcedureDesignator(
     // intrinsic does not reach here: the renamed name resolves to the
     // intrinsic rather than the user reduction, so semantics rejects
     // the clause with a type-incompatibility error before lowering.
-    std::string opName = ReductionProcessor::getScopedUserReductionName(
-        converter, ultimate, namingType, isByRef);
-    mlir::ModuleOp module = builder.getModule();
-    auto existingDecl = module.lookupSymbol<OpType>(opName);
-    // Separate compilation: materialize the imported shadowing
-    // reduction on demand when its defining module is a mod file, then
-    // re-look it up (same-file ops already exist here).
-    if (!existingDecl && semaCtx && ultimate.owner().symbol() &&
-        ultimate.owner().symbol()->test(semantics::Symbol::Flag::ModFile)) {
-      Fortran::lower::materializeUserReduction(converter, *semaCtx, ultimate,
-                                               opName, namingType, isByRef);
-      existingDecl = module.lookupSymbol<OpType>(opName);
-    }
-    if (isBoxedTrivialElemReduction) {
-      // Trivial-element allocatable/pointer: synthesize the boxed op.
-      if (OpType boxedDecl = getOrCreateBoxedUserReduction<OpType>(
-              converter, semaCtx, ultimate, redType, currentLocation)) {
-        reductionDeclSymbols.push_back(mlir::SymbolRefAttr::get(
-            builder.getContext(), boxedDecl.getSymName()));
-        return true;
-      }
-    }
-    if (!existingDecl ||
-        fir::unwrapRefType(existingDecl.getType()) !=
-            fir::unwrapRefType(namingType) ||
-        isBoxedTrivialReduction) {
+    if (!bindUserReductionDecl(ultimate))
       TODO(currentLocation, "OpenMP user-defined reduction declaration was not "
                             "materialized for this type");
-    }
-    reductionDeclSymbols.push_back(mlir::SymbolRefAttr::get(
-        builder.getContext(), existingDecl.getSymName()));
     return true;
   }
 
