@@ -130,7 +130,6 @@ jobs:
       MACHINE: ${{ matrix.machine }}
       SAMPLES: ${{ matrix.samples }}
       MAX_IN_FLIGHT: ${{ matrix.max-in-flight }}
-      # Keep in sync with libcxx-lnt-submit.yml and libcxx-lnt-refine-commits.yml
       LNT_URL: https://lnt.llvm.org
 
       DRY_RUN: ${{ inputs.dry-run || 'false' }}

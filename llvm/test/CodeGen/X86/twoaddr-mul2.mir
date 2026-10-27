@@ -15,7 +15,7 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gr32 = COPY killed $edi
     ; CHECK-NEXT: undef %2.sub_32bit:gr64_nosp = COPY killed [[COPY]]
-    ; CHECK-NEXT: [[LEA64_32r:%[0-9]+]]:gr32 = LEA64_32r killed %2, 1, killed %2, 0, $noreg
+    ; CHECK-NEXT: [[LEA64_32r:%[0-9]+]]:gr32 = LEA64_32r %2, 1, %2, 0, $noreg
     ; CHECK-NEXT: $eax = COPY killed [[LEA64_32r]]
     ; CHECK-NEXT: RET 0, killed $eax
     %0:gr32 = COPY killed $edi

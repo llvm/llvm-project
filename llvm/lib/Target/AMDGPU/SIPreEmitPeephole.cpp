@@ -715,7 +715,7 @@ void SIPreEmitPeephole::collectUnpackingCandidates(
   auto *BB = BeginMI.getParent();
   auto E = BB->end();
   int TotalCyclesBetweenCandidates = 0;
-  auto SchedModel = TII->getSchedModel();
+  const TargetSchedModel &SchedModel = TII->getSchedModel();
   Register MFMADef = BeginMI.getOperand(0).getReg();
 
   for (auto I = std::next(BeginMI.getIterator()); I != E; ++I) {
@@ -776,13 +776,13 @@ void SIPreEmitPeephole::performF32Unpacking(MachineInstr &I) {
 
   MachineInstrBuilder Op0LOp1L =
       createUnpackedMI(I, UnpackedOpcode, /*IsHiBits=*/false);
-  MachineOperand LoDstOp = Op0LOp1L->getOperand(0);
+  MachineOperand &LoDstOp = Op0LOp1L->getOperand(0);
 
   LoDstOp.setIsUndef(DstOp.isUndef());
 
   MachineInstrBuilder Op0HOp1H =
       createUnpackedMI(I, UnpackedOpcode, /*IsHiBits=*/true);
-  MachineOperand HiDstOp = Op0HOp1H->getOperand(0);
+  MachineOperand &HiDstOp = Op0HOp1H->getOperand(0);
 
   uint32_t IFlags = I.getFlags();
   Op0LOp1L->setFlags(IFlags);
@@ -914,7 +914,7 @@ bool SIPreEmitPeephole::run(MachineFunction &MF, MachineLoopInfo *LoopInfo) {
   for (MachineBasicBlock &MBB : MF) {
     // Unpack packed instructions overlapped by MFMAs. This allows the
     // compiler to co-issue unpacked instructions with MFMA
-    auto SchedModel = TII->getSchedModel();
+    const TargetSchedModel &SchedModel = TII->getSchedModel();
     SetVector<MachineInstr *> InstrsToUnpack;
     for (auto &MI : make_early_inc_range(MBB.instrs())) {
       if (!SIInstrInfo::isMFMA(MI))

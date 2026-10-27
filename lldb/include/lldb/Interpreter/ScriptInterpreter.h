@@ -271,33 +271,33 @@ public:
                                           CommandReturnObject &result);
 
   /// Set the specified text as the callback for the breakpoint.
-  Status SetBreakpointCommandCallback(
+  llvm::Error SetBreakpointCommandCallback(
       std::vector<std::reference_wrapper<BreakpointOptions>> &bp_options_vec,
       const char *callback_text);
 
-  virtual Status SetBreakpointCommandCallback(BreakpointOptions &bp_options,
-                                              const char *callback_text,
-                                              bool is_callback) {
-    return Status::FromErrorString("not implemented");
+  virtual llvm::Error
+  SetBreakpointCommandCallback(BreakpointOptions &bp_options,
+                               const char *callback_text, bool is_callback) {
+    return llvm::createStringError("not implemented");
   }
 
   /// This one is for deserialization:
-  virtual Status SetBreakpointCommandCallback(
+  virtual llvm::Error SetBreakpointCommandCallback(
       BreakpointOptions &bp_options,
       std::unique_ptr<BreakpointOptions::CommandData> &data_up) {
-    return Status::FromErrorString("not implemented");
+    return llvm::createStringError("not implemented");
   }
 
-  Status SetBreakpointCommandCallbackFunction(
+  llvm::Error SetBreakpointCommandCallbackFunction(
       std::vector<std::reference_wrapper<BreakpointOptions>> &bp_options_vec,
       const char *function_name, StructuredData::ObjectSP extra_args_sp);
 
   /// Set a script function as the callback for the breakpoint.
-  virtual Status
+  virtual llvm::Error
   SetBreakpointCommandCallbackFunction(BreakpointOptions &bp_options,
                                        const char *function_name,
                                        StructuredData::ObjectSP extra_args_sp) {
-    return Status::FromErrorString("not implemented");
+    return llvm::createStringError("not implemented");
   }
 
   /// Set a one-liner as the callback for the watchpoint.
