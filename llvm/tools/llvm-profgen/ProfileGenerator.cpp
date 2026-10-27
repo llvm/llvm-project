@@ -906,17 +906,10 @@ CSProfileGenerator::getOrCreateFunctionSamples(ContextTrieNode *ContextNode,
     FProfile->setFunction(ContextNode->getFuncName());
     ContextNode->setFunctionSamples(FProfile);
   }
-  // Update ContextWasInlined attribute for existing contexts.
-  // The current function can be called in two ways:
-  //  - when processing a probe of the current frame
-  //  - when processing the entry probe of an inlinee's frame, which
-  //    is then used to update the callsite count of the current frame.
-  // The two can happen in any order, hence here we are making sure
-  // `ContextWasInlined` is always set as expected.
-  // TODO: Note that the former does not always happen if no probes of the
-  // current frame has samples, and if the latter happens, we could lose the
-  // attribute. This should be fixed.
-  if (WasLeafInlined)
+  // Update ContextWasInlined attribute. Use either the caller-provided flag
+  // or the WasInlined flag stored on the trie node (set during probe
+  // processing from the probe inline tree).
+  if (WasLeafInlined || ContextNode->getWasInlined())
     FProfile->getContext().setAttribute(ContextWasInlined);
   return FProfile;
 }
@@ -1256,10 +1249,13 @@ void ProfileGeneratorBase::extractProbesFromRange(
   }
 }
 
-static void extractPrefixContextStack(SampleContextFrameVector &ContextStack,
-                                      const SmallVectorImpl<uint64_t> &AddrVec,
-                                      ProfiledBinary *Binary) {
-  SmallVector<const MCDecodedPseudoProbe *, 16> Probes;
+// Probes receives the call probes of the caller frames, outermost first.
+static void
+extractPrefixContextStack(SampleContextFrameVector &ContextStack,
+                          SmallVectorImpl<const MCDecodedPseudoProbe *> &Probes,
+                          const SmallVectorImpl<uint64_t> &AddrVec,
+                          ProfiledBinary *Binary) {
+  assert(Probes.empty() && "Expect no call probes yet");
   for (auto Address : reverse(AddrVec)) {
     const MCDecodedPseudoProbe *CallProbe =
         Binary->getCallProbeForAddr(Address);
@@ -1291,16 +1287,20 @@ void CSProfileGenerator::generateProbeBasedProfile() {
   for (const auto &CI : *SampleCounters) {
     const AddrBasedCtxKey *CtxKey =
         dyn_cast<AddrBasedCtxKey>(CI.first.getPtr());
+    SmallPtrSet<ContextTrieNode *, 4> CallerWalkStarts;
     // Fill in function body samples from probes, also infer caller's samples
     // from callee's probe
-    populateBodySamplesWithProbes(CI.second.RangeCounter, CtxKey);
+    populateBodySamplesWithProbes(CI.second.RangeCounter, CtxKey,
+                                  CallerWalkStarts);
     // Fill in boundary samples for a call probe
-    populateBoundarySamplesWithProbes(CI.second.BranchCounter, CtxKey);
+    populateBoundarySamplesWithProbes(CI.second.BranchCounter, CtxKey,
+                                      CallerWalkStarts);
   }
 }
 
 void CSProfileGenerator::populateBodySamplesWithProbes(
-    const RangeSample &RangeCounter, const AddrBasedCtxKey *CtxKey) {
+    const RangeSample &RangeCounter, const AddrBasedCtxKey *CtxKey,
+    SmallPtrSetImpl<ContextTrieNode *> &CallerWalkStarts) {
   ProbeCounterMap ProbeCounter;
   // Extract the top frame probes by looking up each address among the range in
   // the Address2ProbeMap
@@ -1315,7 +1315,8 @@ void CSProfileGenerator::populateBodySamplesWithProbes(
     if (!Probe->isBlock() || Count == 0)
       continue;
 
-    ContextTrieNode *ContextNode = getContextNodeForLeafProbe(CtxKey, Probe);
+    ContextTrieNode *ContextNode =
+        getContextNodeForLeafProbe(CtxKey, Probe, CallerWalkStarts);
     FunctionSamples &FunctionProfile = *ContextNode->getFunctionSamples();
     // Record the current frame and FunctionProfile whenever samples are
     // collected for non-danglie probes. This is for reporting all of the
@@ -1334,7 +1335,8 @@ void CSProfileGenerator::populateBodySamplesWithProbes(
         // context id to infer caller's context id to ensure they share the
         // same context prefix.
         uint64_t CallerIndex = ContextNode->getCallSiteLoc().LineOffset;
-        uint64_t CallerDiscriminator = ContextNode->getCallSiteLoc().Discriminator;
+        uint64_t CallerDiscriminator =
+            ContextNode->getCallSiteLoc().Discriminator;
         assert(CallerIndex &&
                "Inferred caller's location index shouldn't be zero!");
         assert(!CallerDiscriminator &&
@@ -1364,7 +1366,8 @@ void CSProfileGenerator::populateBodySamplesWithProbes(
 }
 
 void CSProfileGenerator::populateBoundarySamplesWithProbes(
-    const BranchSample &BranchCounter, const AddrBasedCtxKey *CtxKey) {
+    const BranchSample &BranchCounter, const AddrBasedCtxKey *CtxKey,
+    SmallPtrSetImpl<ContextTrieNode *> &CallerWalkStarts) {
   for (const auto &BI : BranchCounter) {
     uint64_t SourceAddress = BI.first.first;
     uint64_t TargetAddress = BI.first.second;
@@ -1374,7 +1377,7 @@ void CSProfileGenerator::populateBoundarySamplesWithProbes(
     if (CallProbe == nullptr)
       continue;
     FunctionSamples &FunctionProfile =
-        getFunctionProfileForLeafProbe(CtxKey, CallProbe);
+        getFunctionProfileForLeafProbe(CtxKey, CallProbe, CallerWalkStarts);
     FunctionProfile.addBodySamples(CallProbe->getIndex(), 0, Count);
     FunctionProfile.addTotalSamples(Count);
     StringRef CalleeName = getCalleeNameForAddress(TargetAddress);
@@ -1476,8 +1479,98 @@ void CSProfileGenerator::inferCallsiteSamples() {
   }
 }
 
+static void markWasInlined(ContextTrieNode *Node) {
+  Node->setWasInlined(true);
+  if (FunctionSamples *FS = Node->getFunctionSamples())
+    FS->getContext().setAttribute(ContextWasInlined);
+}
+
+// Mark all intermediate inline frames as WasInlined. Walk up the probe inline
+// tree and set the flag on corresponding trie nodes.
+//
+// The context has one trie node per frame of the inline stacks of the prefix
+// call probes and of the leaf probe, so walking up the trie stays in step
+// with walking up their probe inline trees. Trimming, a zero callsite probe
+// index and a caller without a call probe only cut the path short, and the
+// walk stops at its top. Recursion compression is the exception: it drops the
+// inner copy of an adjacent repeated run of frames, after which the walk would
+// run one copy too far. Only then are the nodes checked against the probe
+// inline trees, and the walk stops at the first mismatch.
+static void
+markInlineFrames(ContextTrieNode *Root, ContextTrieNode *ContextNode,
+                 const MCDecodedPseudoProbe *LeafProbe,
+                 ArrayRef<const MCDecodedPseudoProbe *> PrefixProbes,
+                 bool Compressed,
+                 SmallPtrSetImpl<ContextTrieNode *> &CallerWalkStarts) {
+  // Whether trie node N is the frame of probe inline tree node T: the same
+  // function and, for an inline frame, entered at T's callsite from the
+  // function T was inlined into. A child of the root (a cut context) has no
+  // caller to compare.
+  auto IsFrameOf = [Root](ContextTrieNode *N,
+                          const MCDecodedPseudoProbeInlineTree *T) {
+    if (N->getFuncName().getHashCode() != T->Guid)
+      return false;
+    ContextTrieNode *Caller = N->getParentContext();
+    return !T->hasInlineSite() || Caller == Root ||
+           (N->getCallSiteLoc() ==
+                LineLocation(std::get<1>(T->getInlineSite()), 0) &&
+            Caller->getFuncName().getHashCode() == T->Parent->Guid);
+  };
+  auto InStep = [&](ContextTrieNode *N,
+                    const MCDecodedPseudoProbeInlineTree *T) {
+    assert((Compressed || IsFrameOf(N, T)) &&
+           "Context trie path out of step with the probe inline tree");
+    return !Compressed || IsFrameOf(N, T);
+  };
+  // Marks the frames of one inline stack WasInlined, walking up from trie node
+  // N, the frame of inline tree node T, to the stack's outermost frame. Returns
+  // the trie node of the outermost frame, or null if the walk reached the root
+  // or got out of step.
+  auto MarkInlineStack =
+      [&](ContextTrieNode *N,
+          const MCDecodedPseudoProbeInlineTree *T) -> ContextTrieNode * {
+    while (T->hasInlineSite()) {
+      if (N == Root || !InStep(N, T))
+        return nullptr;
+      markWasInlined(N);
+      T = static_cast<const MCDecodedPseudoProbeInlineTree *>(T->Parent);
+      N = N->getParentContext();
+    }
+    return N != Root && InStep(N, T) ? N : nullptr;
+  };
+
+  // Marks the inline frames of the leaf probe's inline stack.
+  ContextTrieNode *CurNode =
+      MarkInlineStack(ContextNode, LeafProbe->getInlineTreeNode());
+
+  // Continue with the inline frames of the caller frames' call probes,
+  // innermost first.
+  //
+  // This walk depends only on the context key and the frame it starts from, so
+  // it runs once per start frame of the key.
+  if (CurNode && CallerWalkStarts.insert(CurNode).second) {
+    for (const MCDecodedPseudoProbe *P : reverse(PrefixProbes)) {
+      // Trimming can drop the frames of P's inline stack and leave CurNode a
+      // child of the root.
+      if (CurNode->getParentContext() == Root)
+        break;
+      // CurNode is entered through P's call.
+      if (CurNode->getCallSiteLoc() != LineLocation(P->getIndex(), 0)) {
+        assert(Compressed &&
+               "Context trie path out of step with the call probes");
+        break;
+      }
+      CurNode =
+          MarkInlineStack(CurNode->getParentContext(), P->getInlineTreeNode());
+      if (!CurNode)
+        break;
+    }
+  }
+}
+
 ContextTrieNode *CSProfileGenerator::getContextNodeForLeafProbe(
-    const AddrBasedCtxKey *CtxKey, const MCDecodedPseudoProbe *LeafProbe) {
+    const AddrBasedCtxKey *CtxKey, const MCDecodedPseudoProbe *LeafProbe,
+    SmallPtrSetImpl<ContextTrieNode *> &CallerWalkStarts) {
 
   const SmallVectorImpl<uint64_t> *PContext = &CtxKey->Context;
   SmallVector<uint64_t, 16> NewContext;
@@ -1493,7 +1586,8 @@ ContextTrieNode *CSProfileGenerator::getContextNodeForLeafProbe(
   }
 
   SampleContextFrameVector ContextStack;
-  extractPrefixContextStack(ContextStack, *PContext, Binary);
+  SmallVector<const MCDecodedPseudoProbe *, 16> PrefixProbes;
+  extractPrefixContextStack(ContextStack, PrefixProbes, *PContext, Binary);
 
   // Explicitly copy the context for appending the leaf context
   SampleContextFrameVector NewContextStack(ContextStack.begin(),
@@ -1506,7 +1600,9 @@ ContextTrieNode *CSProfileGenerator::getContextNodeForLeafProbe(
   LeafFrame.Location = LineLocation(0, 0);
   NewContextStack.pop_back();
   // Compress the context string except for the leaf frame
+  size_t UncompressedSize = NewContextStack.size();
   CSProfileGenerator::compressRecursionContext(NewContextStack);
+  bool Compressed = NewContextStack.size() != UncompressedSize;
   CSProfileGenerator::trimContext(NewContextStack);
   NewContextStack.push_back(LeafFrame);
 
@@ -1515,12 +1611,17 @@ ContextTrieNode *CSProfileGenerator::getContextNodeForLeafProbe(
   ContextTrieNode *ContextNode =
       getOrCreateContextNode(NewContextStack, WasLeafInlined);
   ContextNode->getFunctionSamples()->setFunctionHash(FuncDesc->FuncHash);
+
+  markInlineFrames(&ContextTracker.getRootContext(), ContextNode, LeafProbe,
+                   PrefixProbes, Compressed, CallerWalkStarts);
   return ContextNode;
 }
 
 FunctionSamples &CSProfileGenerator::getFunctionProfileForLeafProbe(
-    const AddrBasedCtxKey *CtxKey, const MCDecodedPseudoProbe *LeafProbe) {
-  return *getContextNodeForLeafProbe(CtxKey, LeafProbe)->getFunctionSamples();
+    const AddrBasedCtxKey *CtxKey, const MCDecodedPseudoProbe *LeafProbe,
+    SmallPtrSetImpl<ContextTrieNode *> &CallerWalkStarts) {
+  return *getContextNodeForLeafProbe(CtxKey, LeafProbe, CallerWalkStarts)
+              ->getFunctionSamples();
 }
 
 } // end namespace sampleprof
