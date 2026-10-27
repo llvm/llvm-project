@@ -15,6 +15,7 @@
 #include "flang/Semantics/tools.h"
 #include "flang/Semantics/type.h"
 #include "flang/Support/Fortran.h"
+#include "llvm/Support/ErrorHandling.h"
 
 #include <optional>
 
@@ -810,14 +811,31 @@ void AccStructureChecker::CheckAtomicStmt(
   const auto *rhs{GetExpr(context_, expr)};
   const auto *lhs{GetExpr(context_, var)};
 
+  const auto isIntrinsicType{
+      [](const std::optional<evaluate::DynamicType> &type) {
+        if (!type) {
+          return true; // Unknown type: nothing to diagnose.
+        }
+        switch (type->category()) {
+        case TypeCategory::Integer:
+        case TypeCategory::Unsigned:
+        case TypeCategory::Real:
+        case TypeCategory::Complex:
+        case TypeCategory::Logical:
+        case TypeCategory::Character:
+          return true;
+        case TypeCategory::Derived:
+          return false;
+        }
+        llvm_unreachable("unknown TypeCategory");
+      }};
+
   if (lhs) {
     if (lhs->Rank() != 0) {
       context_.Say(var.GetSource(),
           "LHS of atomic %s statement must be scalar"_err_en_US, construct);
     }
-    // Restriction - atomic variables must be of intrinsic type.
-    if (const auto type{lhs->GetType()};
-        type && type->category() == TypeCategory::Derived) {
+    if (!isIntrinsicType(lhs->GetType())) {
       context_.Say(var.GetSource(),
           "LHS of atomic %s statement must be of intrinsic type"_err_en_US,
           construct);
@@ -828,9 +846,7 @@ void AccStructureChecker::CheckAtomicStmt(
       context_.Say(expr.source,
           "RHS of atomic %s statement must be scalar"_err_en_US, construct);
     }
-    // Restriction - atomic variables must be of intrinsic type.
-    if (const auto type{rhs->GetType()};
-        type && type->category() == TypeCategory::Derived) {
+    if (!isIntrinsicType(rhs->GetType())) {
       context_.Say(expr.source,
           "RHS of atomic %s statement must be of intrinsic type"_err_en_US,
           construct);
