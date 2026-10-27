@@ -231,6 +231,11 @@ infrastructure are described first, followed by tool-specific sections.
   <clang-tidy/checks/bugprone/std-namespace-modification>` when checking
   lambda closure types used as template arguments.
 
+- Improved {doc}`bugprone-string-literal-with-embedded-nul
+  <clang-tidy/checks/bugprone/string-literal-with-embedded-nul>` to also check
+  `std::basic_string_view` construction and `std::basic_string` construction
+  with an explicit allocator.
+
 - Improved {doc}`bugprone-unchecked-optional-access
   <clang-tidy/checks/bugprone/unchecked-optional-access>` by fixing false
   positives on `bsl::optional` and `bdlb::NullableValue` constructed from a
