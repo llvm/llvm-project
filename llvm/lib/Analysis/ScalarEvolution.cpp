@@ -3499,7 +3499,7 @@ SCEVUse ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS,
                                 SCEV::FlagNone)) {
             SmallVector<SCEVUse, 4> Operands;
             for (const SCEV *Op : AR->operands())
-              Operands.push_back(getUDivExpr(Op, RHS, Flags));
+              Operands.push_back(getUDivExpr(Op, RHS, SCEV::FlagNone));
             return getAddRecExpr(Operands, AR->getLoop(), SCEV::FlagNW);
           }
           /// Get a canonical UDivExpr for a recurrence.
@@ -3529,7 +3529,7 @@ SCEVUse ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS,
                   getAddRecExpr(NewStart, Step, AR->getLoop(),
                                 NoWrap ? SCEV::FlagNW : SCEV::FlagNone);
               if (LHS != NewLHS)
-                return getUDivExpr(NewLHS, RHS, Flags);
+                return getUDivExpr(NewLHS, RHS, SCEV::FlagNone);
             }
           }
         }
@@ -3539,7 +3539,7 @@ SCEVUse ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS,
           // Find an operand that's safely divisible.
           for (unsigned i = 0, e = M->getNumOperands(); i != e; ++i) {
             const SCEV *Op = M->getOperand(i);
-            const SCEV *Div = getUDivExpr(Op, RHSC, Flags);
+            const SCEV *Div = getUDivExpr(Op, RHSC, SCEV::FlagNone);
             if (!isa<SCEVUDivExpr>(Div) && getMulExpr(Div, RHSC) == Op) {
               SmallVector<SCEVUse, 4> Operands(M->operands());
               Operands[i] = Div;
@@ -3556,8 +3556,9 @@ SCEVUse ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS,
               NewOperands.push_back(getConstant(LHSC->getAPInt().udiv(Factor)));
               append_range(NewOperands, M->operands().drop_front());
               const SCEV *NewMul = getMulExpr(NewOperands);
-              return getUDivExpr(
-                  NewMul, getConstant(RHSC->getAPInt().udiv(Factor)), Flags);
+              return getUDivExpr(NewMul,
+                                 getConstant(RHSC->getAPInt().udiv(Factor)),
+                                 SCEV::FlagNone);
             }
           }
         }
@@ -3573,7 +3574,8 @@ SCEVUse ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS,
           if (Overflow) {
             return getConstant(RHSC->getType(), 0, false);
           }
-          return getUDivExpr(OtherDiv->getLHS(), getConstant(NewRHS), Flags);
+          return getUDivExpr(OtherDiv->getLHS(), getConstant(NewRHS),
+                             SCEV::FlagNone);
         }
       }
 
@@ -3583,7 +3585,7 @@ SCEVUse ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS,
         if (A->hasNoUnsignedWrap()) {
           SmallVector<SCEVUse, 4> Operands;
           for (unsigned i = 0, e = A->getNumOperands(); i != e; ++i) {
-            const SCEV *Op = getUDivExpr(A->getOperand(i), RHS, Flags);
+            const SCEV *Op = getUDivExpr(A->getOperand(i), RHS, SCEV::FlagNone);
             if (isa<SCEVUDivExpr>(Op) ||
                 getMulExpr(Op, RHS) != A->getOperand(i))
               break;
@@ -3610,7 +3612,7 @@ SCEVUse ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS,
             *NMinusM == N - *M) {
           return getUDivExpr(
               getAddExpr(getConstant(N - 1), getMulExpr(getConstant(*M), A)),
-              RHS, Flags);
+              RHS, SCEV::FlagNone);
         }
       }
 
@@ -3646,7 +3648,7 @@ SCEVUse ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS,
   const SCEV *NewLHS, *NewRHS;
   if (match(LHS, m_scev_c_NUWMul(m_SCEV(NewLHS), m_SCEVVScale())) &&
       match(RHS, m_scev_c_NUWMul(m_SCEV(NewRHS), m_SCEVVScale())))
-    return getUDivExpr(NewLHS, NewRHS, Flags);
+    return getUDivExpr(NewLHS, NewRHS, SCEV::FlagNone);
 
   return {getOrCreateUDivExpr(LHS, RHS, ExprFlags), UseFlags};
 }
