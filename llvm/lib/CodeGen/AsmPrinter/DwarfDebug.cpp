@@ -1639,8 +1639,8 @@ void DwarfDebug::endModule() {
   // Emit info into the dwarf accelerator table sections.
   switch (getAccelTableKind()) {
   case AccelTableKind::Apple:
-    if (llvm::any_of(CUMap, [](const auto &Pair) {
-          return !Pair.second->getCUNode()->isDebugDirectivesOnly();
+    if (llvm::any_of(M->debug_compile_units(), [](const DICompileUnit *CU) {
+          return !CU->isDebugDirectivesOnly();
         })) {
       emitAccelNames();
       emitAccelObjC();
