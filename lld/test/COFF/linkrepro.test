@@ -10,6 +10,7 @@
 # RUN: echo '_main@0' > %t.order
 # RUN: touch %t.def
 # RUN: touch %t.cg
+# RUN: touch %t.prof
 
 Test link.exe-style /linkrepro: flag.
 # RUN: mkdir -p %t.dir/build1
@@ -180,6 +181,19 @@ Test /start-lib / /end-lib with /linkrepro:
 # RSP-STARTLIB-NEXT: drectve.obj
 # RSP-STARTLIB-NEXT: /end-lib
 # RSP-STARTLIB: /out:
+
+Test /lto-sample-profile: with /linkrepro:
+# RUN: mkdir -p %t.dir/build9
+# RUN: cd %t.dir/build9
+# RUN: lld-link %t.obj %p/Inputs/std32.lib /subsystem:console \
+# RUN:   /entry:main@0 /linkrepro:. /out:%t.exe \
+# RUN:   /lto-sample-profile:%t.prof
+# RUN: tar xf repro.tar
+# RUN: diff %t.prof repro/%:t.prof
+# RUN: FileCheck %s --check-prefix=RSP-LTO < repro/response.txt
+# RUN: cd repro; lld-link @response.txt
+
+# RSP-LTO: {{^/lto-sample-profile:[^/].*linkrepro\.test\.tmp\.prof$}}
 
 #--- drectve.s
         .section .drectve, "yn"
