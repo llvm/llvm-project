@@ -2714,13 +2714,13 @@ struct FoldFillWithGenericOp : public OpRewritePattern<GenericOp> {
         genericOp.getNumParallelLoops() == genericOp.getNumLoops();
     for (OpOperand &operand : genericOp->getOpOperands()) {
       OpOperand *opOperand = &operand;
-      // An identity output map with only parallel loops visits each output
+      // A permutation output map with only parallel loops visits each output
       // element once, so its block argument reads the initial fill value.
       // Reduction accumulators and overlapping output accesses cannot use this
       // substitution. Leave sparse outputs to the sparsifier.
       if (genericOp.isDpsInit(opOperand) &&
           (!allParallel ||
-           !genericOp.getMatchingIndexingMap(opOperand).isIdentity() ||
+           !genericOp.getMatchingIndexingMap(opOperand).isPermutation() ||
            sparse_tensor::getSparseTensorEncoding(opOperand->get().getType())))
         continue;
       if (!genericOp.payloadUsesValueFromOperand(opOperand))
