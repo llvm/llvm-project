@@ -56,6 +56,36 @@ cycles over a set (negative = faster) unless stated.
 | R13 | Occupancy-targeted scheduling: register-pressure limits scaled to 104 / 83 / 64 / 48 GPRs | mixed, +-20% on tile GEMMs; kernels that gained resident groups gained little tput (mma_m16n8k32_s32_s8: 72 -> 34 GPRs, 22 -> 48 groups, tput -1.9%; conv3x3 32 -> 40 groups, tput +5%) | the model's latency hiding saturates near 20-30 groups. **Hardware check**: mma_m16n8k32_s32_s8_s8_s32 (ZLUDA PTX test) with `llc` at the default vs a register-limited schedule: if occupancy matters more on the M2 than in the model, revisit |
 | R14 | EarlyCSE or GVN after AGXCodeGenPrepare's division expansion (share the reciprocal work of divisions by the same divisor: permute4d's 12 div / rem pairs by 3 runtime sizes) | permute4d 2096 -> 2087 instructions, +0.6% cycles; elsewhere +-noise (G13/G14 tile GEMMs both ways) | the zero-divisor guards (select / umax per element, in separate structured blocks) keep the divisors distinct; not a backend problem |
 
+## Research sources (policy)
+
+Experiments are based only on publicly published work: open-access papers (arXiv, ACM / IEEE papers with public
+copies, university repositories), open-source compilers (LLVM, Mesa) and public documentation. **Patent documents
+are not used as sources**: search results that are patents or patent applications are skipped and nothing is
+implemented from them. This is not a freedom-to-operate review: a published technique can still be covered by a
+patent, which only a legal review can establish. Techniques already shipped in open-source compilers are preferred.
+
+| Round | Source | Kind | Used for |
+|---|---|---|---|
+| 1 | Saumya, Sundararajah, Kulkarni, "DARM: Control-Flow Melding for SIMT Thread Divergence Reduction", CGO 2022 (arXiv 2107.05681) | open-access paper | R7 |
+| 1 | Lee et al., "Convergence and scalarization for data-parallel architectures", CGO 2013 | paper (public copy, Berkeley) | R1-E6 (deferred) |
+| 1 | LLVM AMDGPU GCNSchedStrategy, UniformityAnalysis, SpeculativeExecution | open-source (Apache-2.0 with LLVM exception) | R11, R13, tput metric |
+| 1 | Magni, Dubach, O'Boyle, thread coarsening studies (Edinburgh) | papers (university repository) | R1-E6 (deferred) |
+| 1 | Lee et al., many-thread-aware prefetching for GPGPUs, MICRO 2010; NVIDIA developer blog on prefetching | paper, public blog | R12 |
+| 1 | "Characterizing Warp Divergence from Pascal to Blackwell" (arXiv); NVIDIA Research, SPMD divergence management (2014) | open-access papers | R11 |
+| 1 | Tillet, Kung, Cox, Triton (MAPL 2019); ML-Triton (arXiv 2503.14985) | open-access papers | background |
+
+## Compile time (policy)
+
+Every adopted change records its `llc` compile-time cost. A change that makes a real difference to the generated
+code but costs significantly more compile time (over ~10% of `llc` time on the kernel sets, or more than a few
+seconds on a single large kernel) is not enabled by default: it gets its own `llc` option, listed here, and
+`zoc` / ZLUDA pass it only on request (`ZLUDA_AGX_LLVM_ARGS`). So far none qualifies:
+
+| Change | llc time | Default |
+|---|---|---|
+| A3 post-RA MachineScheduler | +2% (4.45 -> 4.55 s over 209 files) | on |
+| A1 / A2 memory clustering | not measurable | on |
+
 ## Model gaps that decide the entries above
 
 1. Occupancy (`tput`): resident groups = min(96, 2 * floor(3328 / (2 * register halves))), whole workgroups,
