@@ -70,15 +70,10 @@ define void @blend_of_i1_false_nested(ptr noalias %a, ptr noalias %dst) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i32> [[WIDE_LOAD]], zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt <4 x i32> [[WIDE_LOAD]], splat (i32 100)
 ; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP1]], <4 x i1> [[TMP2]], <4 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp sge <4 x i32> [[WIDE_LOAD]], splat (i32 50)
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD]], splat (i32 42)
-; CHECK-NEXT:    [[TMP6:%.*]] = xor <4 x i1> [[TMP1]], splat (i1 true)
-; CHECK-NEXT:    [[TMP7:%.*]] = xor <4 x i1> [[TMP2]], splat (i1 true)
-; CHECK-NEXT:    [[TMP8:%.*]] = select <4 x i1> [[TMP1]], <4 x i1> [[TMP7]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp slt <4 x i32> [[WIDE_LOAD]], splat (i32 50)
 ; CHECK-NEXT:    [[TMP9:%.*]] = select <4 x i1> [[TMP3]], <4 x i1> [[TMP4]], <4 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP10:%.*]] = or <4 x i1> [[TMP9]], [[TMP8]]
-; CHECK-NEXT:    [[TMP11:%.*]] = or <4 x i1> [[TMP10]], [[TMP6]]
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP11]], <4 x i1> zeroinitializer, <4 x i1> [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD]], splat (i32 42)
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP9]], <4 x i1> [[TMP6]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP12:%.*]] = zext <4 x i1> [[PREDPHI]] to <4 x i8>
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[DST]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <4 x i8> [[TMP12]], ptr [[TMP13]], align 1
