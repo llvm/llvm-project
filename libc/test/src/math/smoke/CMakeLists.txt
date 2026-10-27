@@ -256,6 +256,20 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  fabsf80_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fabsf80_test.cpp
+  HDRS
+    FAbsTest.h
+  DEPENDS
+    libc.src.math.fabsf80
+    libc.src.__support.FPUtil.float80
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   fabsbf16_test
   SUITE
     libc-math-smoke-tests
@@ -1686,6 +1700,21 @@ add_fp_unittest(
     libc.src.math.copysignf128
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.float128
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  copysignf80_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    copysignf80_test.cpp
+  HDRS
+    CopySignTest.h
+  DEPENDS
+    libc.src.math.copysignf80
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.float80
     libc.src.__support.FPUtil.fp_bits
 )
 
