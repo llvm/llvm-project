@@ -19,6 +19,8 @@ clang_msan_cflags = (
     + [config.target_cflags]
     + config.debug_info_flags
 )
+if config.cmake_sysroot:
+    clang_msan_cflags += [f"--sysroot={config.cmake_sysroot}"]
 # Some Msan tests leverage backtrace() which requires libexecinfo on FreeBSD.
 if config.target_os == "FreeBSD":
     clang_msan_cflags += ["-lexecinfo", "-fPIC"]
