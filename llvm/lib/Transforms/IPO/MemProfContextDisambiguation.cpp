@@ -93,6 +93,12 @@ STATISTIC(FoundProfiledCalleeMaxDepth,
           "Maximum depth of profiled callees found via tail calls");
 STATISTIC(FoundProfiledCalleeNonUniquelyCount,
           "Number of profiled callees found via multiple tail call chains");
+STATISTIC(FoundProfiledCalleeIndirectTailCallCount,
+          "Number of tail calls in chains to profiled callees that are "
+          "indirect (thin link)");
+STATISTIC(IndirectTailCallsPromotedThinBackend,
+          "Number of indirect tail calls promoted for cloning during ThinLTO "
+          "backend");
 STATISTIC(DeferredBackedges, "Number of backedges with deferred cloning");
 STATISTIC(NewMergedNodes, "Number of new nodes created during merging");
 STATISTIC(NonNewMergedNodes, "Number of non new nodes used during merging");
@@ -196,6 +202,14 @@ static cl::opt<unsigned>
                         cl::Hidden,
                         cl::desc("Max depth to recursively search for missing "
                                  "frames through tail calls."));
+
+// Whether the ThinLTO search for frames missing due to tail calls should look
+// through indirect tail calls, via the summary call edges to their profiled
+// targets.
+static cl::opt<bool> IndirectTailCallSearch(
+    "memprof-indirect-tail-call-search", cl::init(true), cl::Hidden,
+    cl::desc("Search for missing frames through indirect tail calls to their "
+             "profiled targets (ThinLTO)."));
 
 // Optionally enable cloning of callsites involved with recursive cycles
 static cl::opt<bool> AllowRecursiveCallsites(
@@ -3206,6 +3220,11 @@ bool IndexCallsiteContextGraph::findProfiledCalleeThroughTailCalls(
     for (auto &CallEdge : FS->calls()) {
       if (!CallEdge.second.hasTailCall())
         continue;
+      // Edges marked indirect are the profiled targets of indirect calls.
+      // If the tail call is indirect, the ThinLTO backend will perform
+      // ICP to the target in order to call a clone of it.
+      if (CallEdge.second.hasIndirectCall() && !IndirectTailCallSearch)
+        continue;
       if (CallEdge.first == ProfiledCallee) {
         if (FoundSingleCalleeChain) {
           FoundMultipleCalleeChains = true;
@@ -3216,6 +3235,8 @@ bool IndexCallsiteContextGraph::findProfiledCalleeThroughTailCalls(
         FoundProfiledCalleeDepth += Depth;
         if (Depth > FoundProfiledCalleeMaxDepth)
           FoundProfiledCalleeMaxDepth = Depth;
+        if (CallEdge.second.hasIndirectCall())
+          FoundProfiledCalleeIndirectTailCallCount++;
         CreateAndSaveCallsiteInfo(CallEdge.first, FS);
         // Add FS to FSToVIMap  in case it isn't already there.
         assert(!FSToVIMap.count(FS) || FSToVIMap[FS] == FSVI);
@@ -3231,6 +3252,8 @@ bool IndexCallsiteContextGraph::findProfiledCalleeThroughTailCalls(
           return false;
         }
         FoundSingleCalleeChain = true;
+        if (CallEdge.second.hasIndirectCall())
+          FoundProfiledCalleeIndirectTailCallCount++;
         CreateAndSaveCallsiteInfo(CallEdge.first, FS);
         // Add FS to FSToVIMap  in case it isn't already there.
         assert(!FSToVIMap.count(FS) || FSToVIMap[FS] == FSVI);
@@ -6618,6 +6641,40 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
             assert(Callsite != MapTailCallCalleeVIToCallsite.end());
             CloneCallsite(Callsite->second, CB, CalledFunction, FS);
           }
+        } else if (CB->isTailCall() && !CalledFunction &&
+                   !MapTailCallCalleeVIToCallsite.empty()) {
+          // An indirect tail call, which the thin link may have identified as
+          // being on profiled contexts with a missing frame, via the profiled
+          // targets in its VP metadata. If so, the callsite infos synthesized
+          // for those targets are used to perform ICP so that each clone of
+          // this function calls the assigned clone of the target.
+          auto PrevNumICallAnalysisInfo = ICallAnalysisInfo.size();
+          auto NumClones = recordICPInfo(
+              CB,
+              [&](const InstrProfValueData &Candidate) -> const CallsiteInfo * {
+                // The callee of the synthesized record is normally the VP
+                // metadata GUID, but the thin link may have updated it to the
+                // GUID of the local target function (see
+                // updateValueInfoForIndirectCalls), so check both, preferring
+                // an exact match.
+                auto It = MapTailCallCalleeVIToCallsite.end();
+                if (ValueInfo VI = ImportSummary->getValueInfo(Candidate.Value))
+                  It = MapTailCallCalleeVIToCallsite.find(VI);
+                if (It == MapTailCallCalleeVIToCallsite.end())
+                  if (auto LocalGUID =
+                          ImportSummary->getGUIDFromOriginalID(Candidate.Value))
+                    if (ValueInfo LocalVI =
+                            ImportSummary->getValueInfo(LocalGUID))
+                      It = MapTailCallCalleeVIToCallsite.find(LocalVI);
+                if (It == MapTailCallCalleeVIToCallsite.end())
+                  return nullptr;
+                return &It->second;
+              },
+              ICallAnalysisInfo);
+          if (ICallAnalysisInfo.size() > PrevNumICallAnalysisInfo)
+            IndirectTailCallsPromotedThinBackend++;
+          if (NumClones)
+            CloneFuncIfNeeded(NumClones, FS);
         }
       }
     }
