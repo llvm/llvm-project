@@ -225,12 +225,19 @@ class MDFunctionLocalContext : public MDNode {
     setNonDebug(NonDebug);
     // MaxAtomGroup: Transient/non-serialized field, starts at 0 and mutates
     // in-place.
+    SubclassData16 = 0;
   }
   ~MDFunctionLocalContext() = default;
 
   SmallVector<FLScope, 0> Scopes;
   SmallVector<FLSrcLoc, 0> SrcLocs;
   SmallVector<FLInlinedCall, 0> InlinedCalls;
+
+  // Should generally only be used for deferred construction of an
+  // MDFunctionLocalContext, i.e. when we want to construct an instance before
+  // we know whether or not it is a NonDebug context, which may be important (or
+  // at least convenient) for tracking forward references.
+  void setNonDebug(bool IsNonDebug) { SubclassData1 = IsNonDebug; }
 
 public:
   friend class LLVMContextImpl;
