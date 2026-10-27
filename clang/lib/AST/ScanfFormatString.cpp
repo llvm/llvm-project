@@ -13,7 +13,6 @@
 
 #include "FormatStringParsing.h"
 #include "clang/AST/FormatString.h"
-#include "clang/Basic/TargetInfo.h"
 
 using clang::UpdateOnReturn;
 using clang::analyze_format_string::ArgType;
@@ -71,17 +70,16 @@ static bool ParseScanList(FormatStringHandler &H, ScanfConversionSpecifier &CS,
 
 // FIXME: Much of this is copy-paste from ParsePrintfSpecifier.
 // We can possibly refactor.
-static ScanfSpecifierResult ParseScanfSpecifier(FormatStringHandler &H,
-                                                const char *&Beg, const char *E,
-                                                unsigned &argIndex,
-                                                const LangOptions &LO,
-                                                const TargetInfo &Target) {
+static ScanfSpecifierResult
+ParseScanfSpecifier(FormatStringHandler &H, const char *&Beg, const char *E,
+                    unsigned &argIndex, const LangOptions &LO,
+                    const TargetInfo &Target,
+                    const llvm::TextEncodingConverter &FormatStrConverter) {
   using namespace clang::analyze_format_string;
   using namespace clang::analyze_scanf;
   const char *I = Beg;
   const char *Start = nullptr;
   UpdateOnReturn<const char *> UpdateBeg(Beg, I);
-
   // Look for a '%' character that indicates the start of a format specifier.
   for (; I != E; ++I) {
     char c = *I;
@@ -90,7 +88,7 @@ static ScanfSpecifierResult ParseScanfSpecifier(FormatStringHandler &H,
       H.HandleNullChar(I);
       return true;
     }
-    if (c == '%') {
+    if (FormatStrConverter.convertBasicChar(c) == u8'%') {
       Start = I++; // Record the start of the format specifier.
       break;
     }
@@ -107,7 +105,7 @@ static ScanfSpecifierResult ParseScanfSpecifier(FormatStringHandler &H,
   }
 
   ScanfSpecifier FS;
-  if (ParseArgPosition(H, FS, Start, I, E))
+  if (ParseArgPosition(H, FS, Start, I, E, FormatStrConverter))
     return true;
 
   if (I == E) {
@@ -117,7 +115,7 @@ static ScanfSpecifierResult ParseScanfSpecifier(FormatStringHandler &H,
   }
 
   // Look for '*' flag if it is present.
-  if (*I == '*') {
+  if (FormatStrConverter.convertBasicChar(*I) == u8'*') {
     FS.setSuppressAssignment(I);
     if (++I == E) {
       H.HandleIncompleteSpecifier(Start, E - Start);
@@ -127,7 +125,8 @@ static ScanfSpecifierResult ParseScanfSpecifier(FormatStringHandler &H,
 
   // Look for the field width (if any).  Unlike printf, this is either
   // a fixed integer or isn't present.
-  const OptionalAmount &Amt = clang::analyze_format_string::ParseAmount(I, E);
+  const OptionalAmount &Amt =
+      clang::analyze_format_string::ParseAmount(I, E, FormatStrConverter);
   if (Amt.getHowSpecified() != OptionalAmount::NotSpecified) {
     assert(Amt.getHowSpecified() == OptionalAmount::Constant);
     FS.setFieldWidth(Amt);
@@ -140,7 +139,9 @@ static ScanfSpecifierResult ParseScanfSpecifier(FormatStringHandler &H,
   }
 
   // Look for the length modifier.
-  if (ParseLengthModifier(FS, I, E, LO, /*IsScanf=*/true) && I == E) {
+  if (ParseLengthModifier(FS, I, E, LO, FormatStrConverter,
+                          /*IsScanf=*/true) &&
+      I == E) {
     // No more characters left?
     H.HandleIncompleteSpecifier(Start, E - Start);
     return true;
@@ -155,89 +156,89 @@ static ScanfSpecifierResult ParseScanfSpecifier(FormatStringHandler &H,
   // Finally, look for the conversion specifier.
   const char *conversionPosition = I++;
   ScanfConversionSpecifier::Kind k = ScanfConversionSpecifier::InvalidSpecifier;
-  switch (*conversionPosition) {
+  switch (FormatStrConverter.convertBasicChar(*conversionPosition)) {
   default:
     break;
-  case '%':
+  case u8'%':
     k = ConversionSpecifier::PercentArg;
     break;
-  case 'b':
+  case u8'b':
     k = ConversionSpecifier::bArg;
     break;
-  case 'A':
+  case u8'A':
     k = ConversionSpecifier::AArg;
     break;
-  case 'E':
+  case u8'E':
     k = ConversionSpecifier::EArg;
     break;
-  case 'F':
+  case u8'F':
     k = ConversionSpecifier::FArg;
     break;
-  case 'G':
+  case u8'G':
     k = ConversionSpecifier::GArg;
     break;
-  case 'X':
+  case u8'X':
     k = ConversionSpecifier::XArg;
     break;
-  case 'a':
+  case u8'a':
     k = ConversionSpecifier::aArg;
     break;
-  case 'd':
+  case u8'd':
     k = ConversionSpecifier::dArg;
     break;
-  case 'e':
+  case u8'e':
     k = ConversionSpecifier::eArg;
     break;
-  case 'f':
+  case u8'f':
     k = ConversionSpecifier::fArg;
     break;
-  case 'g':
+  case u8'g':
     k = ConversionSpecifier::gArg;
     break;
-  case 'i':
+  case u8'i':
     k = ConversionSpecifier::iArg;
     break;
-  case 'n':
+  case u8'n':
     k = ConversionSpecifier::nArg;
     break;
-  case 'c':
+  case u8'c':
     k = ConversionSpecifier::cArg;
     break;
-  case 'C':
+  case u8'C':
     k = ConversionSpecifier::CArg;
     break;
-  case 'S':
+  case u8'S':
     k = ConversionSpecifier::SArg;
     break;
-  case '[':
+  case u8'[':
     k = ConversionSpecifier::ScanListArg;
     break;
-  case 'u':
+  case u8'u':
     k = ConversionSpecifier::uArg;
     break;
-  case 'x':
+  case u8'x':
     k = ConversionSpecifier::xArg;
     break;
-  case 'o':
+  case u8'o':
     k = ConversionSpecifier::oArg;
     break;
-  case 's':
+  case u8's':
     k = ConversionSpecifier::sArg;
     break;
-  case 'p':
+  case u8'p':
     k = ConversionSpecifier::pArg;
     break;
   // Apple extensions
   // Apple-specific
-  case 'D':
+  case u8'D':
     if (Target.getTriple().isOSDarwin())
       k = ConversionSpecifier::DArg;
     break;
-  case 'O':
+  case u8'O':
     if (Target.getTriple().isOSDarwin())
       k = ConversionSpecifier::OArg;
     break;
-  case 'U':
+  case u8'U':
     if (Target.getTriple().isOSDarwin())
       k = ConversionSpecifier::UArg;
     break;
@@ -262,7 +263,8 @@ static ScanfSpecifierResult ParseScanfSpecifier(FormatStringHandler &H,
       FS.setConversionSpecifier(CS);
     }
     // Assume the conversion takes one argument.
-    return !H.HandleInvalidScanfConversionSpecifier(FS, Beg, Len);
+    return !H.HandleInvalidScanfConversionSpecifier(FS, Beg, Len,
+                                                    FormatStrConverter);
   }
   return ScanfSpecifierResult(Start, FS);
 }
@@ -610,17 +612,17 @@ void ScanfSpecifier::toString(raw_ostream &os) const {
 }
 
 bool clang::analyze_format_string::ParseScanfString(FormatStringHandler &H,
-                                                    const char *I,
-                                                    const char *E,
-                                                    const LangOptions &LO,
-                                                    const TargetInfo &Target) {
-
+                                                     const char *I,
+                                                     const char *E,
+                                                     const LangOptions &LO,
+                                                     const TargetInfo &Target) {
   unsigned argIndex = 0;
+  llvm::TextEncodingConverter Conv = makeFormatStrConverter(Target);
 
   // Keep looking for a format specifier until we have exhausted the string.
   while (I != E) {
     const ScanfSpecifierResult &FSR =
-        ParseScanfSpecifier(H, I, E, argIndex, LO, Target);
+        ParseScanfSpecifier(H, I, E, argIndex, LO, Target, Conv);
     // Did a fail-stop error of any kind occur when parsing the specifier?
     // If so, don't do any more processing.
     if (FSR.shouldStop())
