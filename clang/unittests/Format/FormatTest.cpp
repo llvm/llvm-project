@@ -20440,6 +20440,15 @@ TEST_F(FormatTest, BreakPenaltyScopeResolution) {
                Style);
 }
 
+TEST_F(FormatTest, PenaltyDoesNotOverflow) {
+  // The total penalty of this line is above 2^32.
+  std::string Code = "int t[] = {\n";
+  for (int I = 0; I < 81; ++I)
+    Code += "    0x" + std::string(100, '0') + ",\n";
+  Code += "};";
+  verifyFormat(Code);
+}
+
 TEST_F(FormatTest, WorksFor8bitEncodings) {
   // FIXME: unstable test case
   EXPECT_EQ("\"\xce\xe4\xed\xe0\xe6\xe4\xfb \xe2 \"\n"
