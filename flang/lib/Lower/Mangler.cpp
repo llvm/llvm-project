@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Lower/Mangler.h"
-#include "flang/Common/reference.h"
 #include "flang/Lower/Support/Utils.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
@@ -310,5 +309,9 @@ std::string Fortran::lower::mangle::mangleArrayLiteral(
 std::string Fortran::lower::mangle::globalNamelistDescriptorName(
     const Fortran::semantics::Symbol &sym) {
   std::string name = mangleName(sym);
-  return IsAllocatableOrObjectPointer(&sym) ? name : name + ".desc"s;
+  // All coarrays are heap-allocated and described by a box,
+  // so they are treated like allocatables/pointers here.
+  return IsAllocatableOrObjectPointer(&sym) || Fortran::evaluate::IsCoarray(sym)
+             ? name
+             : name + ".desc"s;
 }

@@ -144,18 +144,20 @@ void IDFCalculatorBase<NodeTy, IsPostDom>::calculate(
 
   DT.updateDFSNumbers();
 
+  // The DFS in-numbers are unique and dense in [0, number of nodes), with the
+  // root's DFS out-number being the number of nodes. Use them to index the
+  // visited sets.
+  const DomTreeNodeBase<NodeTy> *RootNode = DT.getRootNode();
+  unsigned NumNodes = RootNode ? RootNode->getDFSNumOut() : 0;
+
   SmallVector<DomTreeNodeBase<NodeTy> *, 32> Worklist;
-  SmallPtrSet<DomTreeNodeBase<NodeTy> *, 16> VisitedPQ;
-  SmallPtrSet<DomTreeNodeBase<NodeTy> *, 16> VisitedWorklist;
-  if (useLiveIn) {
-    VisitedPQ.reserve(LiveInBlocks->size());
-    VisitedWorklist.reserve(LiveInBlocks->size());
-  }
+  SmallVector<bool, 32> VisitedPQ(NumNodes, false);
+  SmallVector<bool, 32> VisitedWorklist(NumNodes, false);
 
   for (NodeTy *BB : *DefBlocks)
     if (DomTreeNodeBase<NodeTy> *Node = DT.getNode(BB)) {
       PQ.push({Node, std::make_pair(Node->getLevel(), Node->getDFSNumIn())});
-      VisitedWorklist.insert(Node);
+      VisitedWorklist[Node->getDFSNumIn()] = true;
     }
 
   while (!PQ.empty()) {
@@ -184,7 +186,7 @@ void IDFCalculatorBase<NodeTy, IsPostDom>::calculate(
         if (SuccLevel > RootLevel)
           return;
 
-        if (!VisitedPQ.insert(SuccNode).second)
+        if (std::exchange(VisitedPQ[SuccNode->getDFSNumIn()], true))
           return;
 
         NodeTy *SuccBB = SuccNode->getBlock();
@@ -201,7 +203,7 @@ void IDFCalculatorBase<NodeTy, IsPostDom>::calculate(
         DoWork(Succ);
 
       for (auto DomChild : *Node) {
-        if (VisitedWorklist.insert(DomChild).second)
+        if (!std::exchange(VisitedWorklist[DomChild->getDFSNumIn()], true))
           Worklist.push_back(DomChild);
       }
     }

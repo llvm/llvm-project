@@ -13,6 +13,8 @@
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/OpDefinition.h"
 
+#include <optional>
+
 namespace mlir {
 class ConversionTarget;
 class TypeConverter;

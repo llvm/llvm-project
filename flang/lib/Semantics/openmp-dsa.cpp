@@ -10,12 +10,14 @@
 
 namespace Fortran::semantics {
 
-Symbol::Flags GetSymbolDSA(const Symbol &symbol) {
-  Symbol::Flags dsaFlags{Symbol::Flag::OmpPrivate,
+Symbol::Flags GetDataSharingAttributeFlags() {
+  return Symbol::Flags{Symbol::Flag::OmpShared, Symbol::Flag::OmpPrivate,
       Symbol::Flag::OmpFirstPrivate, Symbol::Flag::OmpLastPrivate,
-      Symbol::Flag::OmpShared, Symbol::Flag::OmpLinear,
-      Symbol::Flag::OmpReduction};
-  Symbol::Flags dsa{symbol.flags() & dsaFlags};
+      Symbol::Flag::OmpReduction, Symbol::Flag::OmpLinear};
+}
+
+Symbol::Flags GetSymbolDSA(const Symbol &symbol) {
+  Symbol::Flags dsa{symbol.flags() & GetDataSharingAttributeFlags()};
   if (dsa.any()) {
     return dsa;
   }
@@ -24,6 +26,16 @@ Symbol::Flags GetSymbolDSA(const Symbol &symbol) {
     return GetSymbolDSA(details->symbol());
   }
   return {};
+}
+
+// Clear any previous data-sharing attribute flags and set the new ones.
+// Needed when setting PreDetermined DSAs, that take precedence over Implicit
+// ones.
+void SetSymbolDSA(Symbol &symbol, Symbol::Flags flags) {
+  symbol.flags() &= ~(GetDataSharingAttributeFlags() |
+      Symbol::Flags{Symbol::Flag::OmpExplicit, Symbol::Flag::OmpImplicit,
+          Symbol::Flag::OmpPreDetermined});
+  symbol.flags() |= flags;
 }
 
 } // namespace Fortran::semantics

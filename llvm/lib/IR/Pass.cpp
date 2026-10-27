@@ -20,6 +20,7 @@
 #include "llvm/IR/LegacyPassNameParser.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/OptBisect.h"
+#include "llvm/IR/PrintPasses.h"
 #include "llvm/PassInfo.h"
 #include "llvm/PassRegistry.h"
 #include "llvm/Support/Compiler.h"
@@ -67,7 +68,8 @@ bool ModulePass::skipModule(const Module &M) const {
   if (PassName.empty())
     PassName = this->getPassName();
 
-  return Gate.isEnabled() && !Gate.shouldRunPass(PassName, getDescription(M));
+  return Gate.isEnabled() &&
+         !Gate.shouldRunPass(PassName, getDescription(M), "");
 }
 
 bool Pass::mustPreserveAnalysisID(char &AID) const {
@@ -177,6 +179,13 @@ Pass *FunctionPass::createPrinterPass(raw_ostream &OS,
   return createPrintFunctionPass(OS, Banner);
 }
 
+bool FunctionPass::printIRUnit(raw_ostream &OS, Function &F) {
+  if (!shouldPrintFunction(F))
+    return false;
+  F.print(OS);
+  return true;
+}
+
 PassManagerType FunctionPass::getPotentialPassManagerType() const {
   return PMT_FunctionPassManager;
 }
@@ -192,7 +201,8 @@ bool FunctionPass::skipFunction(const Function &F) const {
   if (PassName.empty())
     PassName = this->getPassName();
 
-  if (Gate.isEnabled() && !Gate.shouldRunPass(PassName, getDescription(F)))
+  if (Gate.isEnabled() &&
+      !Gate.shouldRunPass(PassName, getDescription(F), F.getName()))
     return true;
 
   if (F.hasOptNone()) {

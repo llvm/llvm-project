@@ -201,6 +201,23 @@ define <vscale x 16 x i8> @masked_gather_nxv16i8(ptr %base, <vscale x 16 x i8> %
   ret <vscale x 16 x i8> %data
 }
 
+; Similar as above but only a fourth of the mask is defined and the other lanes are "false".
+; Expect a single ld1b.
+define <vscale x 16 x i8> @masked_gather_nxv16i8_undef_hi_mask(ptr %base, <vscale x 16 x i8> %indices, <vscale x 4 x i1> %mask) #0 {
+; CHECK-LABEL: masked_gather_nxv16i8_undef_hi_mask:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sunpklo z0.h, z0.b
+; CHECK-NEXT:    sunpklo z0.s, z0.h
+; CHECK-NEXT:    ld1b { z0.s }, p0/z, [x0, z0.s, sxtw]
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
+; CHECK-NEXT:    ret
+  %ptrs = getelementptr i8, ptr %base, <vscale x 16 x i8> %indices
+  %mask.false.hi = call <vscale x 16 x i1> @llvm.vector.insert.nxv16i1.nxv4i1(<vscale x 16 x i1> splat (i1 false), <vscale x 4 x i1> %mask, i64 0)
+  %data = call <vscale x 16 x i8> @llvm.masked.gather.nxv16i8(<vscale x 16 x ptr> align 1 %ptrs, <vscale x 16 x i1> %mask.false.hi, <vscale x 16 x i8> poison)
+  ret <vscale x 16 x i8> %data
+}
+
 ; Code generate the worst case scenario when all vector types are illegal.
 define <vscale x 32 x i32> @masked_gather_nxv32i32(ptr %base, <vscale x 32 x i32> %indices, <vscale x 32 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_gather_nxv32i32:
@@ -252,17 +269,3 @@ define <vscale x 4 x i32> @masked_sgather_nxv4i8(<vscale x 4 x ptr> %ptrs, <vsca
 }
 
 attributes #0 = { nounwind "target-features"="+sve,+bf16" }
-
-declare <vscale x 2 x i8> @llvm.masked.gather.nxv2i8(<vscale x 2 x ptr>, i32, <vscale x 2 x i1>, <vscale x 2 x i8>)
-declare <vscale x 2 x i16> @llvm.masked.gather.nxv2i16(<vscale x 2 x ptr>, i32, <vscale x 2 x i1>, <vscale x 2 x i16>)
-declare <vscale x 2 x i32> @llvm.masked.gather.nxv2i32(<vscale x 2 x ptr>, i32, <vscale x 2 x i1>, <vscale x 2 x i32>)
-declare <vscale x 4 x i8> @llvm.masked.gather.nxv4i8(<vscale x 4 x ptr>, i32, <vscale x 4 x i1>, <vscale x 4 x i8>)
-declare <vscale x 16 x i8> @llvm.masked.gather.nxv16i8(<vscale x 16 x ptr>, i32, <vscale x 16 x i1>, <vscale x 16 x i8>)
-declare <vscale x 32 x i32> @llvm.masked.gather.nxv32i32(<vscale x 32 x ptr>, i32, <vscale x 32 x i1>, <vscale x 32 x i32>)
-
-declare <vscale x 4 x half> @llvm.masked.gather.nxv4f16(<vscale x 4 x ptr>, i32, <vscale x 4 x i1>, <vscale x 4 x half>)
-declare <vscale x 8 x half> @llvm.masked.gather.nxv8f16(<vscale x 8 x ptr>, i32, <vscale x 8 x i1>, <vscale x 8 x half>)
-declare <vscale x 8 x bfloat> @llvm.masked.gather.nxv8bf16(<vscale x 8 x ptr>, i32, <vscale x 8 x i1>, <vscale x 8 x bfloat>)
-declare <vscale x 2 x float> @llvm.masked.gather.nxv2f32(<vscale x 2 x ptr>, i32, <vscale x 2 x i1>, <vscale x 2 x float>)
-declare <vscale x 8 x float> @llvm.masked.gather.nxv8f32(<vscale x 8 x ptr>, i32, <vscale x 8 x i1>, <vscale x 8 x float>)
-declare <vscale x 4 x double> @llvm.masked.gather.nxv4f64(<vscale x 4 x ptr>, i32, <vscale x 4 x i1>, <vscale x 4 x double>)

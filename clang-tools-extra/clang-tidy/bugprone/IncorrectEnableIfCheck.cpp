@@ -54,9 +54,9 @@ void IncorrectEnableIfCheck::check(const MatchFinder::MatchResult &Result) {
   const SourceLocation RAngleLoc =
       SM.getExpansionLoc(EnableIfSpecializationLoc->getRAngleLoc());
 
-  auto Diag = diag(EnableIf->getBeginLoc(),
-                   "incorrect std::enable_if usage detected; use "
-                   "'typename std::enable_if<...>::type'");
+  const auto Diag = diag(EnableIf->getBeginLoc(),
+                         "incorrect std::enable_if usage detected; use "
+                         "'typename std::enable_if<...>::type'");
   if (!getLangOpts().CPlusPlus20 &&
       EnableIfSpecializationLoc->getElaboratedKeywordLoc().isInvalid()) {
     Diag << FixItHint::CreateInsertion(EnableIfSpecializationLoc->getBeginLoc(),

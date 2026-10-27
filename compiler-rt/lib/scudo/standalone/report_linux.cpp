@@ -33,6 +33,14 @@ void NORETURN reportMapError(uptr SizeIfOOM) {
   reportRawError(Error.data());
 }
 
+void NORETURN reportMapFixedError(uptr ExpectedAddr, uptr RequestedAddr) {
+  ScopedString Error;
+  Error.append("Scudo ERROR: internal map failure using fixed address "
+               "(expected: 0x%zx requested: 0x%zx)\n",
+               ExpectedAddr, RequestedAddr);
+  reportRawError(Error.data());
+}
+
 void NORETURN reportUnmapError(uptr Addr, uptr Size) {
   ScopedString Error;
   Error.append("Scudo ERROR: internal unmap failure (error desc=%s) Addr 0x%zx "

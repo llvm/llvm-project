@@ -70,6 +70,7 @@ void llvm::pdb::discoverStreamPurposes(PDBFile &File,
   auto Tpi = File.getPDBTpiStream();
   auto Ipi = File.getPDBIpiStream();
   auto Info = File.getPDBInfoStream();
+  auto Dxc = File.getDXContainerStream();
 
   uint32_t StreamCount = File.getNumStreams();
   DenseMap<uint16_t, IndexedModuleDescriptor> ModStreams;
@@ -106,6 +107,9 @@ void llvm::pdb::discoverStreamPurposes(PDBFile &File,
       Streams[StreamIdx] = stream(StreamPurpose::TPI, "TPI Stream", StreamIdx);
     else if (StreamIdx == StreamIPI)
       Streams[StreamIdx] = stream(StreamPurpose::IPI, "IPI Stream", StreamIdx);
+    else if (Dxc && StreamIdx == StreamDXContainer)
+      Streams[StreamIdx] =
+          stream(StreamPurpose::DXContainer, "DXContainer Stream", StreamIdx);
     else if (Dbi && StreamIdx == Dbi->getGlobalSymbolStreamIndex())
       Streams[StreamIdx] =
           stream(StreamPurpose::GlobalHash, "Global Symbol Hash", StreamIdx);
@@ -190,4 +194,6 @@ void llvm::pdb::discoverStreamPurposes(PDBFile &File,
     consumeError(Ipi.takeError());
   if (!Info)
     consumeError(Info.takeError());
+  if (!Dxc)
+    consumeError(Dxc.takeError());
 }

@@ -1,0 +1,9 @@
+{
+  "type": "TUSummary",
+  "target_triple": "arm64-apple-macosx",
+  "namespace": {
+    "kind": "StaticLibrary",
+    "name": "libfoo"
+  },
+  "members": []
+}

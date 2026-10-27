@@ -40,7 +40,26 @@ def FIRToLLVMLowering : Pass<"fir-to-llvm-ir", "mlir::ModuleOp"> {
     Option<"typeDescriptorsRenamedForAssembly",
            "type-descriptors-renamed-for-assembly", "bool", /*default=*/"false",
            "Global variables created to describe derived types "
-           "have been renamed to avoid special symbols in their names.">
+           "have been renamed to avoid special symbols in their names.">,
+    Option<"cudaDescriptorAllocFunction", "cuda-descriptor-alloc-function",
+           "std::string", /*default=*/"",
+           "Name of the function to call to allocate CUDA Fortran descriptors. "
+           "Must have the same signature as CUFAllocDescriptor. "
+           "Defaults to CUFAllocDescriptor.">,
+    Option<"cudaDescriptorFreeFunction", "cuda-descriptor-free-function",
+           "std::string", /*default=*/"",
+           "Name of the function to call to free CUDA Fortran descriptors "
+           "allocated by the alloc function. "
+           "Must have the same signature as CUFFreeDescriptor. "
+           "Defaults to CUFFreeDescriptor.">,
+    Option<"unifiedHeapAllocSuffix", "unified-heap-alloc-suffix", "std::string",
+           /*default=*/"", "Suffix of the allocator entry points used for "
+           "allocations marked with the unified heap allocation mode.">,
+    Option<"managedHeapAllocSuffix", "managed-heap-alloc-suffix", "std::string",
+           /*default=*/"", "Suffix of the allocator entry points used for "
+           "allocations marked with the managed heap allocation mode.">,
+    Option<"lowerMemRef", "lower-memref", "bool", /*default=*/"false",
+           "Also convert memref dialect operations.">
   ];
 }
 
@@ -91,6 +110,8 @@ def TargetRewritePass : Pass<"target-rewrite", "mlir::ModuleOp"> {
            "Override module's tune CPU.">,
     Option<"forcedTargetFeatures", "target-features", "std::string",
            /*default=*/"", "Override module's target features.">,
+    Option<"forcedTargetABI", "target-abi", "std::string", /*default=*/"",
+           "Override module's target ABI.">,
     Option<"noCharacterConversion", "no-character-conversion",
            "bool", /*default=*/"false",
            "Disable target-specific conversion of CHARACTER.">,

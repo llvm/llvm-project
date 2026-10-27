@@ -67,7 +67,6 @@ def SparseReinterpretMap : Pass<"sparse-reinterpret-map", "ModuleOp"> {
   let dependentDialects = [
     "affine::AffineDialect",
     "linalg::LinalgDialect",
-    "sparse_tensor::SparseTensorDialect",
   ];
   let options = [
     Option<"scope", "scope", "mlir::ReinterpretMapScope",
@@ -87,7 +86,13 @@ def SparseReinterpretMap : Pass<"sparse-reinterpret-map", "ModuleOp"> {
          clEnumValN(mlir::sparse_tensor::LoopOrderingStrategy::kDefault, "default",
                     "Default strategy (eagerly selects last loop in topological sort)"),
          clEnumValN(mlir::sparse_tensor::LoopOrderingStrategy::kDenseOuter, "dense-outer",
-                    "Prefer dense, then compressed, then singleton dimensions outermost"))}]>,
+                    "Prefer dense, then compressed, then singleton dimensions outermost"),
+         clEnumValN(mlir::sparse_tensor::LoopOrderingStrategy::kSparseOuter, "sparse-outer",
+                    "Prefer singleton, then compressed, then dense dimensions outermost"),
+         clEnumValN(mlir::sparse_tensor::LoopOrderingStrategy::kLoopUseOuter, "loop-use-outer",
+                    "Prefer loops used by more input accesses outermost"),
+         clEnumValN(mlir::sparse_tensor::LoopOrderingStrategy::kLoopUseInner, "loop-use-inner",
+                    "Prefer loops used by more input accesses innermost"))}]>,
   ];
 }
 
@@ -104,7 +109,7 @@ def PreSparsificationRewrite : Pass<"pre-sparsification-rewrite", "ModuleOp"> {
     "linalg::LinalgDialect",
     "memref::MemRefDialect",
     "scf::SCFDialect",
-    "sparse_tensor::SparseTensorDialect",
+    "vector::VectorDialect",
   ];
 }
 
@@ -200,6 +205,7 @@ def StageSparseOperations : Pass<"stage-sparse-ops", "func::FuncOp"> {
   }];
   let constructor = "mlir::createStageSparseOperationsPass()";
   let dependentDialects = [
+    "bufferization::BufferizationDialect",
     "sparse_tensor::SparseTensorDialect",
   ];
 }
@@ -217,7 +223,6 @@ def LowerSparseOpsToForeach : Pass<"lower-sparse-ops-to-foreach", "ModuleOp"> {
     "linalg::LinalgDialect",
     "memref::MemRefDialect",
     "scf::SCFDialect",
-    "sparse_tensor::SparseTensorDialect",
   ];
   let options = [
     Option<"enableRuntimeLibrary", "enable-runtime-library", "bool",
@@ -497,6 +502,9 @@ def SparsificationAndBufferization : Pass<"sparsification-and-bufferization", "M
            "Enable i32 indexing into vectors (for efficient gather/scatter)">,
     Option<"enableGPULibgen", "enable-gpu-libgen", "bool", "false",
            "Enable GPU acceleration by means of direct library calls">,
+    //
+    // The options below are SparsificationPass' options copied over.
+    //
     Option<"sparseEmitStrategy", "sparse-emit-strategy", "mlir::SparseEmitStrategy",
            "mlir::SparseEmitStrategy::kFunctional",
            "Emit functional code or interfaces (to debug) for sparse loops", [{llvm::cl::values(
@@ -523,6 +531,8 @@ def SparsificationAndBufferization : Pass<"sparsification-and-bufferization", "M
              clEnumValN(mlir::SparseParallelizationStrategy::kAnyStorageAnyLoop,
                         "any-storage-any-loop",
                         "Enable sparse parallelization for any storage and loop."))}]>,
+    Option<"enableRuntimeLibrary", "enable-runtime-library", "bool",
+           "false", "Enable runtime library for manipulating sparse tensors">,
   ];
 }
 

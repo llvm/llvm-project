@@ -17,24 +17,29 @@
 #ifndef LLVM_TRANSFORMS_UTILS_ASSIGNGUID_H
 #define LLVM_TRANSFORMS_UTILS_ASSIGNGUID_H
 
+#include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Debug.h"
 
 namespace llvm {
 
-class AssignGUIDPass : public PassInfoMixin<AssignGUIDPass> {
+class AssignGUIDPass : public RequiredPassInfoMixin<AssignGUIDPass> {
 public:
   AssignGUIDPass() = default;
 
-  static void runOnModule(Module &M);
+  LLVM_ABI static void runOnModule(Module &M);
 
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM) {
     AssignGUIDPass::runOnModule(M);
     return PreservedAnalyses::all();
   }
 
-  static bool isRequired() { return true; }
+  // Let GlobalMerge assign a GUID for merged GVs, instead of needing to
+  // traverse all the module; or instead of making GlobalValue::assignGUID
+  // public.
+  LLVM_ABI static void assignGUIDForMergedGV(GlobalVariable &GV);
 };
 
 } // end namespace llvm

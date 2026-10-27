@@ -149,12 +149,39 @@ static bool typesCompatible(ASTContext &C, QualType A, QualType B) {
     if (A.getTypePtr() == B.getTypePtr())
       return true;
 
-    if (const PointerType *ptrA = A->getAs<PointerType>())
-      if (const PointerType *ptrB = B->getAs<PointerType>()) {
-        A = ptrA->getPointeeType();
-        B = ptrB->getPointeeType();
-        continue;
+    const PointerType *ptrA = A->getAs<PointerType>();
+    const PointerType *ptrB = B->getAs<PointerType>();
+
+    // When neither type is a pointer and exactly one is a record type, check
+    // target-specific size and alignment. This avoids false positives for
+    // types that wrap another type with the same layout (e.g.
+    // std::atomic<int32_t> vs int32_t, or struct{int32_t x;} vs int32_t),
+    // while preserving warnings for unrelated types that happen to share a
+    // size (e.g. long vs double, struct A vs struct B).
+    if (!ptrA && !ptrB && (A->isRecordType() != B->isRecordType()) &&
+        !A->isIncompleteType() && !B->isIncompleteType()) {
+      const RecordType *RecTy = A->getAs<RecordType>();
+      QualType Scalar = B;
+      if (!RecTy) {
+        RecTy = B->getAs<RecordType>();
+        Scalar = A;
       }
+      if (const CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(RecTy->getDecl())) {
+        if (RD->isStandardLayout()) {
+          const CXXRecordDecl *Base = RD->getStandardLayoutBaseWithFields();
+          auto F = Base->field_begin();
+          if (F != Base->field_end() && std::next(F) == Base->field_end() &&
+              C.getCanonicalType((*F)->getType()) == Scalar)
+            return true;
+        }
+      }
+    }
+
+    if (ptrA && ptrB) {
+      A = ptrA->getPointeeType();
+      B = ptrB->getPointeeType();
+      continue;
+    }
 
     break;
   }

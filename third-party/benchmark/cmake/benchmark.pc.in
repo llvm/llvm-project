@@ -5,8 +5,8 @@ includedir=@CMAKE_INSTALL_FULL_INCLUDEDIR@
 
 Name: @PROJECT_NAME@
 Description: Google microbenchmark framework
-Version: @VERSION@
+Version: @NORMALIZED_VERSION@
 
 Libs: -L${libdir} -lbenchmark
-Libs.private: -lpthread
+Libs.private: -lpthread @BENCHMARK_PRIVATE_LINK_LIBRARIES@
 Cflags: -I${includedir}

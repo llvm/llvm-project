@@ -24,6 +24,7 @@
 #include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/ExecutorBootstrapService.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/ExecutorResolver.h"
+#include "llvm/ExecutionEngine/Orc/TargetProcess/RemoteSymbolLookupSet.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/Error.h"
@@ -40,6 +41,9 @@ public:
   ~SimpleExecutorDylibManager() override;
 
   Expected<tpctypes::DylibHandle> open(const std::string &Path, uint64_t Mode);
+
+  ExecutorResolver::ResolveResult resolve(ExecutorAddr Resolver,
+                                          RemoteSymbolLookupSet Lookup);
 
   Error shutdown() override;
   void addBootstrapSymbols(StringMap<ExecutorAddr> &M) override;

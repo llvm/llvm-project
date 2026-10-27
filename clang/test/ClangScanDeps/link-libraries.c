@@ -43,6 +43,10 @@ module transitive {
 // CHECK-NEXT:       "command-line": [
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
+// CHECK-NEXT:       "directory-deps": [
+// CHECK-NEXT:         "[[PREFIX]]/Inputs/frameworks/Framework.framework/Frameworks",
+// CHECK-NEXT:         "[[PREFIX]]/Inputs/frameworks/Framework.framework/Headers"
+// CHECK-NEXT:       ],
 // CHECK-NEXT:       "file-deps": [
 // CHECK-NEXT:         "[[PREFIX]]/Inputs/frameworks/module.modulemap",
 // CHECK-NEXT:         "[[PREFIX]]/Inputs/frameworks/Framework.framework/Headers/Framework.h"

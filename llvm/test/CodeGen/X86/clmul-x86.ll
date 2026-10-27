@@ -3,6 +3,32 @@
 
 ; Minimal test for i686 PCLMULQDQ lowering
 
+define i8 @clmul_i8(i8 %a, i8 %b) nounwind {
+; CHECK-LABEL: clmul_i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    pclmulqdq $0, %xmm0, %xmm1
+; CHECK-NEXT:    movd %xmm1, %eax
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    retl
+  %res = call i8 @llvm.clmul.i8(i8 %a, i8 %b)
+  ret i8 %res
+}
+
+define i16 @clmul_i16(i16 %a, i16 %b) nounwind {
+; CHECK-LABEL: clmul_i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    pclmulqdq $0, %xmm0, %xmm1
+; CHECK-NEXT:    movd %xmm1, %eax
+; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    retl
+  %res = call i16 @llvm.clmul.i16(i16 %a, i16 %b)
+  ret i16 %res
+}
+
 define i32 @clmul_i32(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: clmul_i32:
 ; CHECK:       # %bb.0:
@@ -27,6 +53,182 @@ define i64 @clmul_i64(i64 %a, i64 %b) nounwind {
 ; CHECK-NEXT:    retl
   %res = call i64 @llvm.clmul.i64(i64 %a, i64 %b)
   ret i64 %res
+}
+
+define i96 @clmul_i96(i96 %x, i96 %y) nounwind {
+; CHECK-LABEL: clmul_i96:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    pclmulqdq $0, %xmm0, %xmm1
+; CHECK-NEXT:    movd %xmm1, %eax
+; CHECK-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movq {{.*#+}} xmm2 = mem[0],zero
+; CHECK-NEXT:    pclmulqdq $0, %xmm2, %xmm1
+; CHECK-NEXT:    movd %xmm1, %edx
+; CHECK-NEXT:    xorl %eax, %edx
+; CHECK-NEXT:    pclmulqdq $0, %xmm0, %xmm2
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[2,3,2,3]
+; CHECK-NEXT:    movd %xmm0, %ecx
+; CHECK-NEXT:    xorl %edx, %ecx
+; CHECK-NEXT:    movd %xmm2, %eax
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[1,1,1,1]
+; CHECK-NEXT:    movd %xmm0, %edx
+; CHECK-NEXT:    retl
+  %a = call i96 @llvm.clmul.i96(i96 %x, i96 %y)
+  ret i96 %a
+}
+
+define i128 @clmul_i128(i128 %x, i128 %y) nounwind {
+; CHECK-LABEL: clmul_i128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushl %ebp
+; CHECK-NEXT:    movl %esp, %ebp
+; CHECK-NEXT:    pushl %esi
+; CHECK-NEXT:    andl $-16, %esp
+; CHECK-NEXT:    subl $16, %esp
+; CHECK-NEXT:    movl 8(%ebp), %eax
+; CHECK-NEXT:    movq {{.*#+}} xmm2 = mem[0],zero
+; CHECK-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
+; CHECK-NEXT:    pclmulqdq $0, %xmm2, %xmm1
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
+; CHECK-NEXT:    movd %xmm0, %ecx
+; CHECK-NEXT:    movq {{.*#+}} xmm3 = mem[0],zero
+; CHECK-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    pclmulqdq $0, %xmm0, %xmm3
+; CHECK-NEXT:    pshufd {{.*#+}} xmm4 = xmm3[1,1,1,1]
+; CHECK-NEXT:    movd %xmm4, %edx
+; CHECK-NEXT:    xorl %ecx, %edx
+; CHECK-NEXT:    pclmulqdq $0, %xmm2, %xmm0
+; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[3,3,3,3]
+; CHECK-NEXT:    movd %xmm2, %ecx
+; CHECK-NEXT:    xorl %edx, %ecx
+; CHECK-NEXT:    movd %xmm1, %edx
+; CHECK-NEXT:    movd %xmm3, %esi
+; CHECK-NEXT:    xorl %edx, %esi
+; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; CHECK-NEXT:    movd %xmm1, %edx
+; CHECK-NEXT:    xorl %esi, %edx
+; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; CHECK-NEXT:    movd %xmm1, 4(%eax)
+; CHECK-NEXT:    movd %xmm0, (%eax)
+; CHECK-NEXT:    movl %edx, 8(%eax)
+; CHECK-NEXT:    movl %ecx, 12(%eax)
+; CHECK-NEXT:    leal -4(%ebp), %esp
+; CHECK-NEXT:    popl %esi
+; CHECK-NEXT:    popl %ebp
+; CHECK-NEXT:    retl $4
+  %a = call i128 @llvm.clmul.i128(i128 %x, i128 %y)
+  ret i128 %a
+}
+
+define i8 @clmulr_i8(i8 %a, i8 %b) nounwind {
+; CHECK-LABEL: clmulr_i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    movd %ecx, %xmm0
+; CHECK-NEXT:    movd %eax, %xmm1
+; CHECK-NEXT:    pclmulqdq $0, %xmm0, %xmm1
+; CHECK-NEXT:    movd %xmm1, %eax
+; CHECK-NEXT:    shrl $7, %eax
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    retl
+  %a.ext = zext i8 %a to i16
+  %b.ext = zext i8 %b to i16
+  %clmul = call i16 @llvm.clmul.i16(i16 %a.ext, i16 %b.ext)
+  %res.ext = lshr i16 %clmul, 7
+  %res = trunc i16 %res.ext to i8
+  ret i8 %res
+}
+
+define i16 @clmulr_i16(i16 %a, i16 %b) nounwind {
+; CHECK-LABEL: clmulr_i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    movd %ecx, %xmm0
+; CHECK-NEXT:    movd %eax, %xmm1
+; CHECK-NEXT:    pclmulqdq $0, %xmm0, %xmm1
+; CHECK-NEXT:    movd %xmm1, %eax
+; CHECK-NEXT:    shrl $15, %eax
+; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    retl
+  %a.ext = zext i16 %a to i32
+  %b.ext = zext i16 %b to i32
+  %clmul = call i32 @llvm.clmul.i32(i32 %a.ext, i32 %b.ext)
+  %res.ext = lshr i32 %clmul, 15
+  %res = trunc i32 %res.ext to i16
+  ret i16 %res
+}
+
+define i32 @clmulr_i32(i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: clmulr_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    bswapl %ecx
+; CHECK-NEXT:    movl %ecx, %edx
+; CHECK-NEXT:    andl $252645135, %edx # imm = 0xF0F0F0F
+; CHECK-NEXT:    shll $4, %edx
+; CHECK-NEXT:    shrl $4, %ecx
+; CHECK-NEXT:    andl $252645135, %ecx # imm = 0xF0F0F0F
+; CHECK-NEXT:    orl %edx, %ecx
+; CHECK-NEXT:    movl %ecx, %edx
+; CHECK-NEXT:    andl $858993459, %edx # imm = 0x33333333
+; CHECK-NEXT:    shrl $2, %ecx
+; CHECK-NEXT:    andl $858993459, %ecx # imm = 0x33333333
+; CHECK-NEXT:    leal (%ecx,%edx,4), %ecx
+; CHECK-NEXT:    movl %ecx, %edx
+; CHECK-NEXT:    andl $1431655765, %edx # imm = 0x55555555
+; CHECK-NEXT:    shrl %ecx
+; CHECK-NEXT:    andl $1431655765, %ecx # imm = 0x55555555
+; CHECK-NEXT:    leal (%ecx,%edx,2), %ecx
+; CHECK-NEXT:    movd %ecx, %xmm0
+; CHECK-NEXT:    bswapl %eax
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    andl $252645135, %ecx # imm = 0xF0F0F0F
+; CHECK-NEXT:    shll $4, %ecx
+; CHECK-NEXT:    shrl $4, %eax
+; CHECK-NEXT:    andl $252645135, %eax # imm = 0xF0F0F0F
+; CHECK-NEXT:    orl %ecx, %eax
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    andl $858993459, %ecx # imm = 0x33333333
+; CHECK-NEXT:    shrl $2, %eax
+; CHECK-NEXT:    andl $858993459, %eax # imm = 0x33333333
+; CHECK-NEXT:    leal (%eax,%ecx,4), %eax
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    andl $1431655765, %ecx # imm = 0x55555555
+; CHECK-NEXT:    shrl %eax
+; CHECK-NEXT:    andl $1431655765, %eax # imm = 0x55555555
+; CHECK-NEXT:    leal (%eax,%ecx,2), %eax
+; CHECK-NEXT:    movd %eax, %xmm1
+; CHECK-NEXT:    pclmulqdq $0, %xmm0, %xmm1
+; CHECK-NEXT:    movd %xmm1, %eax
+; CHECK-NEXT:    bswapl %eax
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    andl $252645135, %ecx # imm = 0xF0F0F0F
+; CHECK-NEXT:    shll $4, %ecx
+; CHECK-NEXT:    shrl $4, %eax
+; CHECK-NEXT:    andl $252645135, %eax # imm = 0xF0F0F0F
+; CHECK-NEXT:    orl %ecx, %eax
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    andl $858993459, %ecx # imm = 0x33333333
+; CHECK-NEXT:    shrl $2, %eax
+; CHECK-NEXT:    andl $858993459, %eax # imm = 0x33333333
+; CHECK-NEXT:    leal (%eax,%ecx,4), %eax
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    andl $1431655765, %ecx # imm = 0x55555555
+; CHECK-NEXT:    shrl %eax
+; CHECK-NEXT:    andl $1431655765, %eax # imm = 0x55555555
+; CHECK-NEXT:    leal (%eax,%ecx,2), %eax
+; CHECK-NEXT:    retl
+  %a.ext = zext i32 %a to i64
+  %b.ext = zext i32 %b to i64
+  %clmul = call i64 @llvm.clmul.i64(i64 %a.ext, i64 %b.ext)
+  %res.ext = lshr i64 %clmul, 31
+  %res = trunc i64 %res.ext to i32
+  ret i32 %res
 }
 
 define i64 @clmulr_i64(i64 %a, i64 %b) nounwind {
@@ -159,6 +361,115 @@ define i64 @clmulr_i64(i64 %a, i64 %b) nounwind {
   %res.ext = lshr i128 %clmul, 63
   %res = trunc i128 %res.ext to i64
   ret i64 %res
+}
+
+define i8 @clmulh_i8(i8 %a, i8 %b) nounwind {
+; CHECK-LABEL: clmulh_i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    movd %ecx, %xmm0
+; CHECK-NEXT:    movd %eax, %xmm1
+; CHECK-NEXT:    pclmulqdq $0, %xmm0, %xmm1
+; CHECK-NEXT:    movd %xmm1, %eax
+; CHECK-NEXT:    movb %ah, %al
+; CHECK-NEXT:    retl
+  %a.ext = zext i8 %a to i16
+  %b.ext = zext i8 %b to i16
+  %clmul = call i16 @llvm.clmul.i16(i16 %a.ext, i16 %b.ext)
+  %res.ext = lshr i16 %clmul, 8
+  %res = trunc i16 %res.ext to i8
+  ret i8 %res
+}
+
+define i16 @clmulh_i16(i16 %a, i16 %b) nounwind {
+; CHECK-LABEL: clmulh_i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    movd %ecx, %xmm0
+; CHECK-NEXT:    movd %eax, %xmm1
+; CHECK-NEXT:    pclmulqdq $0, %xmm0, %xmm1
+; CHECK-NEXT:    movd %xmm1, %eax
+; CHECK-NEXT:    shrl $16, %eax
+; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    retl
+  %a.ext = zext i16 %a to i32
+  %b.ext = zext i16 %b to i32
+  %clmul = call i32 @llvm.clmul.i32(i32 %a.ext, i32 %b.ext)
+  %res.ext = lshr i32 %clmul, 16
+  %res = trunc i32 %res.ext to i16
+  ret i16 %res
+}
+
+define i32 @clmulh_i32(i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: clmulh_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    bswapl %ecx
+; CHECK-NEXT:    movl %ecx, %edx
+; CHECK-NEXT:    andl $252645135, %edx # imm = 0xF0F0F0F
+; CHECK-NEXT:    shll $4, %edx
+; CHECK-NEXT:    shrl $4, %ecx
+; CHECK-NEXT:    andl $252645135, %ecx # imm = 0xF0F0F0F
+; CHECK-NEXT:    orl %edx, %ecx
+; CHECK-NEXT:    movl %ecx, %edx
+; CHECK-NEXT:    andl $858993459, %edx # imm = 0x33333333
+; CHECK-NEXT:    shrl $2, %ecx
+; CHECK-NEXT:    andl $858993459, %ecx # imm = 0x33333333
+; CHECK-NEXT:    leal (%ecx,%edx,4), %ecx
+; CHECK-NEXT:    movl %ecx, %edx
+; CHECK-NEXT:    andl $1431655765, %edx # imm = 0x55555555
+; CHECK-NEXT:    shrl %ecx
+; CHECK-NEXT:    andl $1431655765, %ecx # imm = 0x55555555
+; CHECK-NEXT:    leal (%ecx,%edx,2), %ecx
+; CHECK-NEXT:    movd %ecx, %xmm0
+; CHECK-NEXT:    bswapl %eax
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    andl $252645135, %ecx # imm = 0xF0F0F0F
+; CHECK-NEXT:    shll $4, %ecx
+; CHECK-NEXT:    shrl $4, %eax
+; CHECK-NEXT:    andl $252645135, %eax # imm = 0xF0F0F0F
+; CHECK-NEXT:    orl %ecx, %eax
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    andl $858993459, %ecx # imm = 0x33333333
+; CHECK-NEXT:    shrl $2, %eax
+; CHECK-NEXT:    andl $858993459, %eax # imm = 0x33333333
+; CHECK-NEXT:    leal (%eax,%ecx,4), %eax
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    andl $1431655765, %ecx # imm = 0x55555555
+; CHECK-NEXT:    shrl %eax
+; CHECK-NEXT:    andl $1431655765, %eax # imm = 0x55555555
+; CHECK-NEXT:    leal (%eax,%ecx,2), %eax
+; CHECK-NEXT:    movd %eax, %xmm1
+; CHECK-NEXT:    pclmulqdq $0, %xmm0, %xmm1
+; CHECK-NEXT:    movd %xmm1, %eax
+; CHECK-NEXT:    bswapl %eax
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    andl $252645135, %ecx # imm = 0xF0F0F0F
+; CHECK-NEXT:    shll $4, %ecx
+; CHECK-NEXT:    shrl $4, %eax
+; CHECK-NEXT:    andl $252645135, %eax # imm = 0xF0F0F0F
+; CHECK-NEXT:    orl %ecx, %eax
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    andl $858993459, %ecx # imm = 0x33333333
+; CHECK-NEXT:    shrl $2, %eax
+; CHECK-NEXT:    andl $858993459, %eax # imm = 0x33333333
+; CHECK-NEXT:    leal (%eax,%ecx,4), %eax
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    andl $1431655765, %ecx # imm = 0x55555555
+; CHECK-NEXT:    shrl %eax
+; CHECK-NEXT:    andl $1431655764, %eax # imm = 0x55555554
+; CHECK-NEXT:    leal (%eax,%ecx,2), %eax
+; CHECK-NEXT:    shrl %eax
+; CHECK-NEXT:    retl
+  %a.ext = zext i32 %a to i64
+  %b.ext = zext i32 %b to i64
+  %clmul = call i64 @llvm.clmul.i64(i64 %a.ext, i64 %b.ext)
+  %res.ext = lshr i64 %clmul, 32
+  %res = trunc i64 %res.ext to i32
+  ret i32 %res
 }
 
 define i64 @clmulh_i64(i64 %a, i64 %b) nounwind {

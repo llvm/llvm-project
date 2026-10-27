@@ -19,20 +19,20 @@ void Positive() {
   {
     std::lock_guard<std::mutex> l1(m);
     std::lock_guard<std::mutex> l2(m);
-    // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: use single 'std::scoped_lock' instead of multiple 'std::lock_guard'
+    // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: use single 'std::scoped_lock' instead of multiple locks
     // CHECK-MESSAGES: :[[@LINE-2]]:33: note: additional 'std::lock_guard' declared here
   }
 
   {
     std::lock_guard<std::mutex> l1(m), l2(m);
-    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use single 'std::scoped_lock' instead of multiple 'std::lock_guard'
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use single 'std::scoped_lock' instead of multiple locks
     // CHECK-MESSAGES: :[[@LINE-2]]:40: note: additional 'std::lock_guard' declared here
   }
 
   {
     std::lock_guard<std::mutex> l1(m), l2(m), l3(m);
     std::lock_guard<std::mutex> l4(m);
-    // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: use single 'std::scoped_lock' instead of multiple 'std::lock_guard'
+    // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: use single 'std::scoped_lock' instead of multiple locks
     // CHECK-MESSAGES: :[[@LINE-3]]:40: note: additional 'std::lock_guard' declared here
     // CHECK-MESSAGES: :[[@LINE-4]]:47: note: additional 'std::lock_guard' declared here
     // CHECK-MESSAGES: :[[@LINE-4]]:33: note: additional 'std::lock_guard' declared here
@@ -42,7 +42,7 @@ void Positive() {
     std::lock(m, m);
     std::lock_guard<std::mutex> l1(m, std::adopt_lock);
     std::lock_guard<std::mutex> l2(m, std::adopt_lock);
-    // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: use single 'std::scoped_lock' instead of multiple 'std::lock_guard'
+    // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: use single 'std::scoped_lock' instead of multiple locks
     // CHECK-MESSAGES: :[[@LINE-2]]:33: note: additional 'std::lock_guard' declared here
     int a = 0;
     std::lock_guard<std::mutex> l3(m);
@@ -77,7 +77,7 @@ void PositiveNested() {
       {
         std::lock_guard<std::mutex> l3(m1);
         std::lock_guard<std::mutex> l4(m1);
-        // CHECK-MESSAGES: :[[@LINE-2]]:9: warning: use single 'std::scoped_lock' instead of multiple 'std::lock_guard'
+        // CHECK-MESSAGES: :[[@LINE-2]]:9: warning: use single 'std::scoped_lock' instead of multiple locks
         // CHECK-MESSAGES: :[[@LINE-2]]:37: note: additional 'std::lock_guard' declared here
       }
       {
@@ -96,7 +96,7 @@ void PositiveNested() {
 void PositiveInsideArg(std::mutex &m1, std::mutex &m2, std::mutex &m3) {
   std::lock_guard<std::mutex> l1(m1);
   std::lock_guard<std::mutex> l2(m2);
-  // CHECK-MESSAGES: :[[@LINE-2]]:3: warning: use single 'std::scoped_lock' instead of multiple 'std::lock_guard'
+  // CHECK-MESSAGES: :[[@LINE-2]]:3: warning: use single 'std::scoped_lock' instead of multiple locks
   // CHECK-MESSAGES: :[[@LINE-2]]:31: note: additional 'std::lock_guard' declared here
   int a = 0;
   std::lock_guard<std::mutex> l3(m3);
@@ -143,12 +143,12 @@ void PositiveLambda() {
 
   std::lock_guard<std::mutex> l3(m);
   std::lock_guard<std::mutex> l4(m);
-  // CHECK-MESSAGES: :[[@LINE-2]]:3: warning: use single 'std::scoped_lock' instead of multiple 'std::lock_guard'
+  // CHECK-MESSAGES: :[[@LINE-2]]:3: warning: use single 'std::scoped_lock' instead of multiple locks
   // CHECK-MESSAGES: :[[@LINE-2]]:31: note: additional 'std::lock_guard' declared here
   auto lamda2 = [&]() {
     std::lock_guard<std::mutex> l3(m);
     std::lock_guard<std::mutex> l4(m);
-    // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: use single 'std::scoped_lock' instead of multiple 'std::lock_guard'
+    // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: use single 'std::scoped_lock' instead of multiple locks
     // CHECK-MESSAGES: :[[@LINE-2]]:33: note: additional 'std::lock_guard' declared here
   };
 
@@ -156,7 +156,7 @@ void PositiveLambda() {
     std::lock(m, m);
     std::lock_guard<std::mutex> l1(m, std::adopt_lock);
     std::lock_guard<std::mutex> l2(m, std::adopt_lock);
-    // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: use single 'std::scoped_lock' instead of multiple 'std::lock_guard'
+    // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: use single 'std::scoped_lock' instead of multiple locks
     // CHECK-MESSAGES: :[[@LINE-2]]:33: note: additional 'std::lock_guard' declared here
     int a = 0;
     std::lock_guard<std::mutex> l3(m);
@@ -191,7 +191,7 @@ void PositiveTemplated() {
   {
     std::lock_guard<std::mutex> l1(m1);
     std::lock_guard<std::mutex> l2(m2);
-    // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: use single 'std::scoped_lock' instead of multiple 'std::lock_guard'
+    // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: use single 'std::scoped_lock' instead of multiple locks
     // CHECK-MESSAGES: :[[@LINE-2]]:33: note: additional 'std::lock_guard' declared here
   }
 
@@ -199,7 +199,7 @@ void PositiveTemplated() {
     std::lock(m1, m2);
     std::lock_guard<std::mutex> l1(m1, std::adopt_lock);
     std::lock_guard<std::mutex> l2(m2, std::adopt_lock);
-    // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: use single 'std::scoped_lock' instead of multiple 'std::lock_guard'
+    // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: use single 'std::scoped_lock' instead of multiple locks
     // CHECK-MESSAGES: :[[@LINE-2]]:33: note: additional 'std::lock_guard' declared here
     int a = 0;
     std::lock_guard<std::mutex> l3(m3);
@@ -220,7 +220,7 @@ void PositiveTemplatedMutex() {
   {
     std::lock_guard<Mutex> l1(m1);
     std::lock_guard<Mutex> l2(m2);
-    // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: use single 'std::scoped_lock' instead of multiple 'std::lock_guard'
+    // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: use single 'std::scoped_lock' instead of multiple locks
     // CHECK-MESSAGES: :[[@LINE-2]]:28: note: additional 'std::lock_guard' declared here
   }
 
@@ -228,7 +228,7 @@ void PositiveTemplatedMutex() {
     std::lock(m1, m2);
     std::lock_guard<Mutex> l1(m1, std::adopt_lock);
     std::lock_guard<Mutex> l2(m2, std::adopt_lock);
-    // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: use single 'std::scoped_lock' instead of multiple 'std::lock_guard'
+    // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: use single 'std::scoped_lock' instead of multiple locks
     // CHECK-MESSAGES: :[[@LINE-2]]:28: note: additional 'std::lock_guard' declared here
     int a = 0;
     std::lock_guard<Mutex> l3(m3);
@@ -266,7 +266,7 @@ struct PositiveClass {
     {
       std::lock_guard<std::mutex> l1(m1);
       std::lock_guard<std::mutex> l2(m2);
-      // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: use single 'std::scoped_lock' instead of multiple 'std::lock_guard'
+      // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: use single 'std::scoped_lock' instead of multiple locks
       // CHECK-MESSAGES: :[[@LINE-2]]:35: note: additional 'std::lock_guard' declared here
     }
 
@@ -274,7 +274,7 @@ struct PositiveClass {
       std::lock(m1, m2);  
       std::lock_guard<std::mutex> l1(m1, std::adopt_lock);
       std::lock_guard<std::mutex> l2(m2, std::adopt_lock);
-      // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: use single 'std::scoped_lock' instead of multiple 'std::lock_guard'
+      // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: use single 'std::scoped_lock' instead of multiple locks
       // CHECK-MESSAGES: :[[@LINE-2]]:35: note: additional 'std::lock_guard' declared here
       int a = 0;
       std::lock_guard<std::mutex> l3(m3);
@@ -302,7 +302,7 @@ struct PositiveTemplatedClass {
       std::lock(m1, m2);  
       std::lock_guard<std::mutex> l1(m1, std::adopt_lock);
       std::lock_guard<std::mutex> l2(m2, std::adopt_lock);
-      // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: use single 'std::scoped_lock' instead of multiple 'std::lock_guard'
+      // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: use single 'std::scoped_lock' instead of multiple locks
       // CHECK-MESSAGES: :[[@LINE-2]]:35: note: additional 'std::lock_guard' declared here
       int a = 0;
       std::lock_guard<std::mutex> l3(m3);
@@ -323,7 +323,7 @@ struct PositiveTemplatedClass {
       std::lock(m1, m2);  
       std::lock_guard<std::mutex> l1(m1, std::adopt_lock);
       std::lock_guard<std::mutex> l2(m2, std::adopt_lock);
-      // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: use single 'std::scoped_lock' instead of multiple 'std::lock_guard'
+      // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: use single 'std::scoped_lock' instead of multiple locks
       // CHECK-MESSAGES: :[[@LINE-2]]:35: note: additional 'std::lock_guard' declared here
       int a = 0;
       std::lock_guard<std::mutex> l3(m3);
@@ -416,7 +416,7 @@ void PositiveInUsingTypedefs() {
     Lock<std::mutex> l1(m, std::adopt_lock);
     LockM l2(m, std::adopt_lock);
     LockDef l3(m), l4(m);
-    // CHECK-MESSAGES: :[[@LINE-3]]:5: warning: use single 'std::scoped_lock' instead of multiple 'std::lock_guard'
+    // CHECK-MESSAGES: :[[@LINE-3]]:5: warning: use single 'std::scoped_lock' instead of multiple locks
     // CHECK-MESSAGES: :[[@LINE-3]]:11: note: additional 'std::lock_guard' declared here
     // CHECK-MESSAGES: :[[@LINE-3]]:13: note: additional 'std::lock_guard' declared here
     // CHECK-MESSAGES: :[[@LINE-4]]:20: note: additional 'std::lock_guard' declared here
@@ -441,7 +441,7 @@ void PositiveInUsingTypedefsTemplated() {
     Lock<Mutex> l1(m, std::adopt_lock);
     LockM l2(m, std::adopt_lock);
     LockDef l3(m), l4(m);
-    // CHECK-MESSAGES: :[[@LINE-3]]:5: warning: use single 'std::scoped_lock' instead of multiple 'std::lock_guard'
+    // CHECK-MESSAGES: :[[@LINE-3]]:5: warning: use single 'std::scoped_lock' instead of multiple locks
     // CHECK-MESSAGES: :[[@LINE-3]]:11: note: additional 'std::lock_guard' declared here
     // CHECK-MESSAGES: :[[@LINE-3]]:13: note: additional 'std::lock_guard' declared here
     // CHECK-MESSAGES: :[[@LINE-4]]:20: note: additional 'std::lock_guard' declared here
@@ -467,5 +467,86 @@ void NegativeNonStdLockGuard() {
   {
     lock_guard<std::mutex> l1(m);
     lock_guard<std::mutex> l2(m);
+  }
+}
+
+void PositiveMultipleScopedLocks() {
+  std::mutex m1, m2;
+  {
+    std::scoped_lock<std::mutex> l1(m1);
+    std::scoped_lock<std::mutex> l2(m2);
+    // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: use single 'std::scoped_lock' instead of multiple locks
+    // CHECK-MESSAGES: :[[@LINE-2]]:34: note: additional 'std::scoped_lock' declared here
+  }
+
+  {
+    std::scoped_lock<std::mutex> l1(m1), l2(m2);
+    std::scoped_lock<std::mutex> l3(m1);
+    // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: use single 'std::scoped_lock' instead of multiple locks
+    // CHECK-MESSAGES: :[[@LINE-3]]:42: note: additional 'std::scoped_lock' declared here
+    // CHECK-MESSAGES: :[[@LINE-3]]:34: note: additional 'std::scoped_lock' declared here
+  }
+}
+
+void PositiveMixedLockGuardAndScopedLock() {
+  std::mutex m1, m2;
+  {
+    std::lock_guard<std::mutex> l1(m1);
+    std::scoped_lock<std::mutex> l2(m2);
+    // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: use single 'std::scoped_lock' instead of multiple locks
+    // CHECK-MESSAGES: :[[@LINE-2]]:34: note: additional 'std::scoped_lock' declared here
+  }
+
+  {
+    std::scoped_lock<std::mutex> l1(m1);
+    std::lock_guard<std::mutex> l2(m2);
+    // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: use single 'std::scoped_lock' instead of multiple locks
+    // CHECK-MESSAGES: :[[@LINE-2]]:33: note: additional 'std::lock_guard' declared here
+  }
+}
+
+void NegativeMultiMutexScopedLock() {
+  std::mutex m1, m2;
+  std::scoped_lock<std::mutex, std::mutex> l(m1, m2);
+}
+
+void PositiveMultipleMultiMutexLocks() {
+  std::mutex m1, m2, m3, m4;
+  std::scoped_lock<std::mutex, std::mutex> l1(m1, m2);
+  std::scoped_lock<std::mutex, std::mutex> l2(m3, m4);
+  // CHECK-MESSAGES: :[[@LINE-2]]:3: warning: use single 'std::scoped_lock' instead of multiple locks
+  // CHECK-MESSAGES: :[[@LINE-2]]:44: note: additional 'std::scoped_lock' declared here
+}
+
+void PositiveOneTwoOneLocks() {
+  std::mutex m1, m2, m3, m4;
+  std::scoped_lock<std::mutex> l1(m1);
+  std::scoped_lock<std::mutex, std::mutex> l2(m2, m3);
+  std::lock_guard<std::mutex> l3(m4);
+  // CHECK-MESSAGES: :[[@LINE-3]]:3: warning: use single 'std::scoped_lock' instead of multiple locks
+  // CHECK-MESSAGES: :[[@LINE-3]]:44: note: additional 'std::scoped_lock' declared here
+  // CHECK-MESSAGES: :[[@LINE-3]]:31: note: additional 'std::lock_guard' declared here
+}
+
+void PositiveOneOneTwoLocks() {
+  std::mutex m1, m2, m3, m4;
+  std::scoped_lock<std::mutex> l1(m1);
+  std::lock_guard<std::mutex> l2(m2);
+  std::scoped_lock<std::mutex, std::mutex> l3(m3, m4);
+  // CHECK-MESSAGES: :[[@LINE-3]]:3: warning: use single 'std::scoped_lock' instead of multiple locks
+  // CHECK-MESSAGES: :[[@LINE-3]]:31: note: additional 'std::lock_guard' declared here
+  // CHECK-MESSAGES: :[[@LINE-3]]:44: note: additional 'std::scoped_lock' declared here
+}
+
+void NegativeSingleScopedLock() {
+  std::mutex m1, m2;
+  {
+    std::scoped_lock<std::mutex> l(m1);
+  }
+
+  {
+    std::scoped_lock<std::mutex> l1(m1);
+    int a = 0;
+    std::scoped_lock<std::mutex> l2(m2);
   }
 }

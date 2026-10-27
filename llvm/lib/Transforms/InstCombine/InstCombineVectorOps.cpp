@@ -410,6 +410,62 @@ static ConstantInt *getPreferredVectorIndex(ConstantInt *IndexC) {
                           IndexC->getValue().zextOrTrunc(64));
 }
 
+/// Fold a variable extract from a vector of pointers that all point into the
+/// same object at a constant stride
+static Value *
+foldExtractOfStridedPointerVector(ExtractElementInst &EI,
+                                  InstCombiner::BuilderTy &Builder,
+                                  const DataLayout &DL) {
+  auto *VecTy = dyn_cast<FixedVectorType>(EI.getVectorOperandType());
+  if (!VecTy || !VecTy->getElementType()->isPointerTy())
+    return nullptr;
+
+  unsigned NumElts = VecTy->getNumElements();
+  if (NumElts < 2)
+    return nullptr;
+
+  // Every lane must resolve to the same base pointer plus a constant byte
+  // offset. findScalarElement returns poison for a lane the vector never
+  // defines; that poison is its own base, so a vector mixing defined and
+  // undefined lanes fails the base comparison below.
+  unsigned IdxWidth = DL.getIndexTypeSizeInBits(VecTy->getElementType());
+  Value *Base = nullptr;
+  SmallVector<APInt> Offsets;
+  for (unsigned I = 0; I != NumElts; ++I) {
+    Value *Elt = findScalarElement(EI.getVectorOperand(), I);
+    if (!Elt)
+      return nullptr;
+    Value *EltBase;
+    const APInt *C;
+    APInt Offset(IdxWidth, 0);
+    // m_Value may bind even when the offset is not constant, so reset it.
+    if (match(Elt, m_PtrAdd(m_Value(EltBase), m_APInt(C))))
+      Offset = C->sextOrTrunc(IdxWidth);
+    else
+      EltBase = Elt;
+    if (I == 0)
+      Base = EltBase;
+    else if (Base != EltBase)
+      return nullptr;
+    Offsets.push_back(Offset);
+  }
+
+  // The offsets must form an arithmetic sequence.
+  APInt Stride = Offsets[1] - Offsets[0];
+  for (unsigned I = 1; I != NumElts; ++I)
+    if (Offsets[I] - Offsets[0] != Stride * I)
+      return nullptr;
+
+  // Index off the common base, not off element 0: an element may be poison in
+  // a lane the extract never selects. The base is an operand of every element
+  // and the new GEPs have no flags, so the result is never more poisonous.
+  Type *IdxTy = DL.getIndexType(VecTy->getElementType());
+  Value *Idx = Builder.CreateZExtOrTrunc(EI.getIndexOperand(), IdxTy);
+  Value *Ptr = Builder.CreatePtrAdd(
+      Base, Builder.CreateMul(Idx, ConstantInt::get(IdxTy, Stride)));
+  return Builder.CreatePtrAdd(Ptr, ConstantInt::get(IdxTy, Offsets[0]));
+}
+
 Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
   Value *SrcVec = EI.getVectorOperand();
   Value *Index = EI.getIndexOperand();
@@ -430,6 +486,12 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
         isa<Constant>(EI.getIndexOperand()))
       if (Instruction *R = FoldOpIntoSelect(EI, SI))
         return R;
+
+  // Fold a variable index into a table of pointers into one object into
+  // address arithmetic
+  if (!isa<ConstantInt>(Index))
+    if (Value *V = foldExtractOfStridedPointerVector(EI, Builder, DL))
+      return replaceInstUsesWith(EI, V);
 
   // If extracting a specified index from the vector, see if we can recursively
   // find a previously computed scalar that was inserted into the vector.
@@ -798,6 +860,15 @@ static bool replaceExtractElements(InsertElementInst *InsElt,
   else
     IC.InsertNewInstWith(WideVec, ExtElt->getParent()->getFirstInsertionPt());
 
+  // WideVec is an extension of ExtVecOp to produce a more useful value for
+  // ExtractElement instructions. If ExtVecOp is an instruction, adopt its
+  // DebugLoc; if it is not, then this is materializing a constant value, so set
+  // a CompilerGenerated location.
+  if (ExtVecOpInst)
+    WideVec->setDebugLoc(ExtVecOpInst->getDebugLoc());
+  else
+    WideVec->setDebugLoc(DebugLoc::getCompilerGenerated());
+
   // Replace extracts from the original narrow vector with extracts from the new
   // wide vector.
   for (User *U : ExtVecOp->users()) {
@@ -837,7 +908,7 @@ static ShuffleOps collectShuffleElements(Value *V, SmallVectorImpl<int> &Mask,
         PermittedRHS ? PoisonValue::get(PermittedRHS->getType()) : V, nullptr);
   }
 
-  if (isa<ConstantAggregateZero>(V)) {
+  if (match(V, m_ZeroForbidPoison())) {
     Mask.assign(NumElts, 0);
     return std::make_pair(V, nullptr);
   }
@@ -1241,7 +1312,7 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
   // Note that the same block can be a predecessor more than once,
   // and we need to preserve that invariant for the PHI node.
   BuilderTy::InsertPointGuard Guard(Builder);
-  Builder.SetInsertPoint(UseBB, UseBB->getFirstNonPHIIt());
+  Builder.SetInsertPoint(UseBB->getFirstNonPHIIt());
   auto *PHI =
       Builder.CreatePHI(AggTy, Preds.size(), OrigIVI.getName() + ".merged");
   for (BasicBlock *Pred : Preds)
@@ -1998,14 +2069,18 @@ static Value *buildNew(Instruction *I, ArrayRef<Value*> NewOps,
       }
       return New;
     }
-    case Instruction::ICmp:
+    case Instruction::ICmp: {
       assert(NewOps.size() == 2 && "icmp with #ops != 2");
-      return Builder.CreateICmp(cast<ICmpInst>(I)->getPredicate(), NewOps[0],
-                                NewOps[1]);
+      Value *New = Builder.CreateICmp(cast<ICmpInst>(I)->getPredicate(),
+                                      NewOps[0], NewOps[1]);
+      if (auto *NewI = dyn_cast<Instruction>(New))
+        NewI->copyIRFlags(I);
+      return New;
+    }
     case Instruction::FCmp:
       assert(NewOps.size() == 2 && "fcmp with #ops != 2");
-      return Builder.CreateFCmp(cast<FCmpInst>(I)->getPredicate(), NewOps[0],
-                                NewOps[1]);
+      return Builder.CreateFCmpFMF(cast<FCmpInst>(I)->getPredicate(), NewOps[0],
+                                   NewOps[1], I);
     case Instruction::Trunc:
     case Instruction::ZExt:
     case Instruction::SExt:
@@ -2021,8 +2096,11 @@ static Value *buildNew(Instruction *I, ArrayRef<Value*> NewOps,
           I->getType()->getScalarType(),
           cast<VectorType>(NewOps[0]->getType())->getElementCount());
       assert(NewOps.size() == 1 && "cast with #ops != 1");
-      return Builder.CreateCast(cast<CastInst>(I)->getOpcode(), NewOps[0],
-                                DestTy);
+      Value *New =
+          Builder.CreateCast(cast<CastInst>(I)->getOpcode(), NewOps[0], DestTy);
+      if (auto *NewI = dyn_cast<Instruction>(New))
+        NewI->copyIRFlags(I);
+      return New;
     }
     case Instruction::GetElementPtr: {
       Value *Ptr = NewOps[0];
@@ -2290,8 +2368,9 @@ static Instruction *foldSelectShuffleWith1Binop(ShuffleVectorInst &Shuf,
   // This makes the transformation incorrect since the original program would
   // have preserved the exact NaN bit-pattern.
   // Avoid the folding if X can have NaN elements.
-  if (Shuf.getType()->getElementType()->isFloatingPointTy() &&
-      !isKnownNeverNaN(X, SQ))
+  bool IsFloatingPointTy =
+      Shuf.getType()->getElementType()->isFloatingPointTy();
+  if (IsFloatingPointTy && !isKnownNeverNaN(X, SQ))
     return nullptr;
 
   // Shuffle identity constants into the lanes that return the original value.
@@ -2310,8 +2389,14 @@ static Instruction *foldSelectShuffleWith1Binop(ShuffleVectorInst &Shuf,
 
   // shuf (bop X, C), X, M --> bop X, C'
   // shuf X, (bop X, C), M --> bop X, C'
-  Instruction *NewBO = BinaryOperator::Create(BOpcode, X, NewC);
+  BinaryOperator *NewBO = BinaryOperator::Create(BOpcode, X, NewC);
   NewBO->copyIRFlags(BO);
+
+  // Drop noinf FMF if X can be Inf. If X can have Inf elements and noinf FMF is
+  // set, the transformation may generate poison where the original program
+  // would preserve the Inf value.
+  if (IsFloatingPointTy && NewBO->hasNoInfs() && !isKnownNeverInfinity(X, SQ))
+    NewBO->setHasNoInfs(false);
 
   // An undef shuffle mask element may propagate as an undef constant element in
   // the new binop. That would produce poison where the original code might not.
@@ -3332,11 +3417,12 @@ InstCombinerImpl::foldExtractionOfVectorDeinterleave(ZExtInst &RootZExt) {
   Value *DIV;
 
   using namespace PatternMatch;
-  Value *SVI = nullptr, *DI = nullptr;
-  if (!match(&RootZExt,
-             m_ZExt(m_CombineOr(
-                 m_ExtractValue(m_Value(DI, m_Deinterleave2(m_Value(DIV)))),
-                 m_Value(SVI, m_Shuffle(m_Value(), m_Value()))))))
+  Instruction *SVI = nullptr, *DI = nullptr;
+  if (!match(
+          &RootZExt,
+          m_ZExt(m_CombineOr(
+              m_ExtractValue(m_Instruction(DI, m_Deinterleave2(m_Value(DIV)))),
+              m_Instruction(SVI, m_Shuffle(m_Value(), m_Value()))))))
     return nullptr;
 
   auto isDeinterleaveShuffle =
@@ -3363,7 +3449,7 @@ InstCombinerImpl::foldExtractionOfVectorDeinterleave(ZExtInst &RootZExt) {
   // the value they're de-interleaving.
   if (SVI) {
     // We will find other shufflevectors later.
-    DIV = isDeinterleaveShuffle(cast<Instruction>(SVI)).first;
+    DIV = isDeinterleaveShuffle(SVI).first;
     if (!DIV)
       return nullptr;
   } else {
@@ -3396,6 +3482,11 @@ InstCombinerImpl::foldExtractionOfVectorDeinterleave(ZExtInst &RootZExt) {
       if (V != DIV)
         continue;
       assert(Index < 2);
+      // Find the earliest field extraction instruction.
+      if (FieldI->getParent() != SVI->getParent())
+        continue;
+      if (FieldI != SVI && FieldI->comesBefore(SVI))
+        SVI = FieldI;
       Fields.push_back({FieldI, Index});
     }
   } else {
@@ -3424,6 +3515,9 @@ InstCombinerImpl::foldExtractionOfVectorDeinterleave(ZExtInst &RootZExt) {
       FieldReplacements.push_back({ZExt, FieldIdx});
     }
   }
+
+  // This will insert replacement instructions before all the fields users.
+  Builder.SetInsertPoint(DI ? DI : SVI);
 
   // Double the element size but half the vector length.
   auto *BitcastedTy = VectorType::getExtendedElementVectorType(InputVecTy);

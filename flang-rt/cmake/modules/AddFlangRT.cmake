@@ -295,13 +295,15 @@ function (add_flangrt_library name)
     endif ()
 
     # Add target specific options if necessary.
-    if ("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgcn")
+    if ("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgpu|^amdgcn")
       target_compile_options(${tgtname} PRIVATE
           $<$<COMPILE_LANGUAGE:CXX>:-nogpulib -flto -fvisibility=hidden>
+          $<$<COMPILE_LANGUAGE:Fortran>:-nogpulib -flto>
         )
     elseif ("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^nvptx")
       target_compile_options(${tgtname} PRIVATE
           $<$<COMPILE_LANGUAGE:CXX>:-nogpulib -flto -fvisibility=hidden -Wno-unknown-cuda-version --cuda-feature=+ptx63>
+          $<$<COMPILE_LANGUAGE:Fortran>:-nogpulib -flto>
         )
     elseif (APPLE)
       # Clang on Darwin enables non-POSIX extensions by default.
@@ -395,6 +397,7 @@ function (add_flangrt_library name)
         )
 
       install(TARGETS ${tgtname}
+          COMPONENT flang-rt
           ARCHIVE DESTINATION "${RUNTIMES_INSTALL_RESOURCE_LIB_PATH}"
           LIBRARY DESTINATION "${RUNTIMES_INSTALL_RESOURCE_LIB_PATH}"
         )

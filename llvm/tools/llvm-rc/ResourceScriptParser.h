@@ -48,7 +48,6 @@ public:
 
   private:
     std::string CurMessage;
-    LocIter ErrorLoc, FileEnd;
   };
 
   explicit RCParser(std::vector<RCToken> TokenList);

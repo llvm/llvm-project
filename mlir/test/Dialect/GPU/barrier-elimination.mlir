@@ -328,7 +328,7 @@ func.func @full_barrier_with_global_conflict(
 attributes {__parallel_region_boundary_for_test} {
   // CHECK: store
   memref.store %val, %global[%idx] : memref<?xf32, #gpu.address_space<global>>
-  // CHECK: gpu.barrier{{$}}
+  // CHECK: gpu.barrier{{ *}}{{$}}
   gpu.barrier
   // CHECK: load
   %0 = memref.load %global[%idx] : memref<?xf32, #gpu.address_space<global>>

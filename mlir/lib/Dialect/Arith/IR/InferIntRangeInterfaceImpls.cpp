@@ -41,6 +41,9 @@ void arith::ConstantOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
   }
   if (auto arrayCstAttr =
           llvm::dyn_cast_or_null<DenseIntElementsAttr>(getValue())) {
+    if (arrayCstAttr.empty())
+      return;
+
     if (arrayCstAttr.isSplat()) {
       setResultRange(getResult(), ConstantIntRanges::constant(
                                       arrayCstAttr.getSplatValue<APInt>()));
@@ -53,7 +56,6 @@ void arith::ConstantOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
       result = (result ? result->rangeUnion(range) : range);
     }
 
-    assert(result && "Zero-sized vectors are not allowed");
     setResultRange(getResult(), *result);
     return;
   }

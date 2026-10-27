@@ -32,8 +32,8 @@ define i64 @test_ptr_compare_guard(ptr %start, ptr %end) {
 ; N32-LABEL: define i64 @test_ptr_compare_guard(
 ; N32-SAME: ptr [[START:%.*]], ptr [[END:%.*]]) {
 ; N32-NEXT:  [[ENTRY:.*]]:
-; N32-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
-; N32-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
+; N32-NEXT:    [[START2:%.*]] = ptrtoaddr ptr [[START]] to i64
+; N32-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END]] to i64
 ; N32-NEXT:    [[C_0:%.*]] = icmp eq ptr [[START]], [[END]]
 ; N32-NEXT:    br i1 [[C_0]], label %[[EXIT:.*]], label %[[LOOP_HEADER_PREHEADER:.*]]
 ; N32:       [[LOOP_HEADER_PREHEADER]]:

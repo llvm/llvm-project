@@ -55,16 +55,21 @@ public:
                          EVT VT) const override;
 
   // Exception handling support.
-  Register getExceptionPointerRegister(const Constant *) const override {
+  Register getExceptionPointerRegister(ExceptionHandling EH,
+                                       const Constant *) const override {
     return BPF::R0;
   }
-  Register getExceptionSelectorRegister(const Constant *) const override {
+  Register getExceptionSelectorRegister(ExceptionHandling EH,
+                                        const Constant *) const override {
     return BPF::R0;
   }
 
   MVT getScalarShiftAmountTy(const DataLayout &, EVT) const override;
 
   unsigned getJumpTableEncoding() const override;
+
+  /// The entries are addresses of blocks, also in position independent code.
+  bool isJumpTableRelative() const override { return false; }
 
 private:
   // Control Instruction Selection Features
@@ -88,6 +93,7 @@ private:
   SDValue LowerTRAP(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerJumpTable(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerBR_JT(SDValue Op, SelectionDAG &DAG) const;
 
   template <class NodeTy>
   SDValue getAddr(NodeTy *N, SelectionDAG &DAG, unsigned Flags = 0) const;
@@ -117,11 +123,6 @@ private:
 
   void ReplaceNodeResults(SDNode *N, SmallVectorImpl<SDValue> &Results,
                           SelectionDAG &DAG) const override;
-
-  EVT getOptimalMemOpType(LLVMContext &Context, const MemOp &Op,
-                          const AttributeList &FuncAttributes) const override {
-    return Op.size() >= 8 ? MVT::i64 : MVT::i32;
-  }
 
   bool isIntDivCheap(EVT VT, AttributeList Attr) const override {
     return false;

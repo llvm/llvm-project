@@ -19,47 +19,23 @@
 
 namespace llvm {
 
-class LLVMContext;
-class VPValue;
-class VPBlendRecipe;
 class VPRecipeBase;
 class VPlan;
-class Value;
+class VPDominatorTree;
 class TargetTransformInfo;
-class Type;
 class InstructionCost;
 
 struct VPCostContext;
 
-/// An analysis for type-inference for VPValues.
-/// It infers the scalar type for a given VPValue by bottom-up traversing
-/// through defining recipes until root nodes with known types are reached (e.g.
-/// live-ins or load recipes). The types are then propagated top down through
-/// operations.
-/// Note that the analysis caches the inferred types. A new analysis object must
-/// be constructed once a VPlan has been modified in a way that invalidates any
-/// of the previously inferred types.
-class VPTypeAnalysis {
-  DenseMap<const VPValue *, Type *> CachedTypes;
-  LLVMContext &Ctx;
-  const DataLayout &DL;
-
-  Type *inferScalarTypeForRecipe(const VPBlendRecipe *R);
-
-public:
-  VPTypeAnalysis(const VPlan &Plan)
-      : Ctx(Plan.getContext()), DL(Plan.getDataLayout()) {}
-
-  /// Infer the type of \p V. Returns the scalar type of \p V.
-  Type *inferScalarType(const VPValue *V);
-
-  /// Return the LLVMContext used by the analysis.
-  LLVMContext &getContext() { return Ctx; }
-};
-
 // Collect a VPlan's ephemeral recipes (those used only by an assume).
 void collectEphemeralRecipesForVPlan(VPlan &Plan,
                                      DenseSet<VPRecipeBase *> &EphRecipes);
+
+/// Returns true if the memory accesses in outer loop plain CFG \p Plan can be
+/// vectorized.
+bool proveOuterLoopMemorySafety(VPlan &Plan, PredicatedScalarEvolution &PSE,
+                                AAResults &AA, const VPDominatorTree &VPDT,
+                                const Loop *OuterLoop);
 
 /// A struct that represents some properties of the register usage
 /// of a loop.
@@ -83,9 +59,9 @@ struct VPRegisterUsage {
 /// by calculating the highest number of values that are live at a single
 /// location as a rough estimate. Returns the register usage for each VF in \p
 /// VFs.
-SmallVector<VPRegisterUsage, 8> calculateRegisterUsageForPlan(
-    VPlan &Plan, ArrayRef<ElementCount> VFs, const TargetTransformInfo &TTI,
-    const SmallPtrSetImpl<const Value *> &ValuesToIgnore);
+SmallVector<VPRegisterUsage, 8>
+calculateRegisterUsageForPlan(VPlan &Plan, ArrayRef<ElementCount> VFs,
+                              const TargetTransformInfo &TTI);
 
 } // end namespace llvm
 

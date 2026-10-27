@@ -13,8 +13,8 @@
 // useful for targets like x86_64 that cannot lower fp convertions
 // with more than 128 bits.
 //
-// - Expansion of ‘frem‘ for types MVT::f16, MVT::f32, and MVT::f64 for
-// targets which use "Expand" as the legalization action for the
+// - Expansion of ‘frem‘ for types MVT::f16, MVT::bf16, MVT::f32, and MVT::f64
+// for targets which use "Expand" as the legalization action for the
 // corresponding type.
 //
 // - Expansion of ‘udiv‘, ‘sdiv‘, ‘urem‘, and ‘srem‘ instructions with
@@ -35,6 +35,7 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -218,8 +219,8 @@ class FRemExpander {
   /// The frem argument/return types that can be expanded by this class.
   // TODO: The expansion could work for other floating point types
   // as well, but this would require additional testing.
-  static constexpr std::array<MVT, 3> ExpandableTypes{MVT::f16, MVT::f32,
-                                                      MVT::f64};
+  static constexpr std::array<MVT, 4> ExpandableTypes{MVT::f16, MVT::bf16,
+                                                      MVT::f32, MVT::f64};
 
 public:
   static bool canExpandType(Type *Ty) {
@@ -229,24 +230,40 @@ public:
     return is_contained(ExpandableTypes, VT.getSimpleVT());
   }
 
-  static bool shouldExpandFremType(const TargetLowering &TLI, EVT VT) {
+  static bool shouldExpandFremType(const TargetLowering &TLI,
+                                   const LibcallLoweringInfo &Libcalls,
+                                   EVT VT) {
     assert(!VT.isVector() && "Cannot handle vector type; must scalarize first");
-    return TLI.getOperationAction(ISD::FREM, VT) ==
-           TargetLowering::LegalizeAction::Expand;
+    switch (TLI.getOperationAction(ISD::FREM, VT)) {
+    case TargetLowering::LegalizeAction::Expand:
+      return true;
+    case TargetLowering::LegalizeAction::LibCall:
+      // The target expects a libcall, but expand inline for the supported
+      // types when that libcall is unavailable.
+      return VT.isSimple() && is_contained(ExpandableTypes, VT.getSimpleVT()) &&
+             Libcalls.getLibcallImpl(RTLIB::getREM(VT)) == RTLIB::Unsupported;
+    default:
+      return false;
+    }
   }
 
-  static bool shouldExpandFremType(const TargetLowering &TLI, Type *Ty) {
+  static bool shouldExpandFremType(const TargetLowering &TLI,
+                                   const LibcallLoweringInfo &Libcalls,
+                                   Type *Ty) {
     // Consider scalar type for simplicity.  It seems unlikely that a
     // vector type can be legalized without expansion if the scalar
     // type cannot.
-    return shouldExpandFremType(TLI, EVT::getEVT(Ty->getScalarType()));
+    return shouldExpandFremType(TLI, Libcalls,
+                                EVT::getEVT(Ty->getScalarType()));
   }
 
   /// Return true if the pass should expand frem instructions of any type
   /// for the target represented by \p TLI.
-  static bool shouldExpandAnyFremType(const TargetLowering &TLI) {
-    return any_of(ExpandableTypes,
-                  [&](MVT V) { return shouldExpandFremType(TLI, EVT(V)); });
+  static bool shouldExpandAnyFremType(const TargetLowering &TLI,
+                                      const LibcallLoweringInfo &Libcalls) {
+    return any_of(ExpandableTypes, [&](MVT V) {
+      return shouldExpandFremType(TLI, Libcalls, EVT(V));
+    });
   }
 
   static FRemExpander create(IRBuilder<> &B, Type *Ty) {
@@ -260,7 +277,7 @@ public:
     // uses the same input/result type.
     unsigned MaxIter = 2;
 
-    if (Ty->isHalfTy()) {
+    if (Ty->is16bitFPTy()) {
       // Use the wider type and less iterations.
       ComputeTy = B.getFloatTy();
       MaxIter = 1;
@@ -611,7 +628,7 @@ static void expandFPToI(Instruction *FPToI, bool IsSaturating, bool IsSigned) {
   // FIXME: fp16's range is covered by i32. So `fptoi half` can convert
   // to i32 first following a sext/zext to target integer type.
   Value *A1 = nullptr;
-  if (FloatVal->getType()->isHalfTy() && BitWidth >= 32) {
+  if (FloatVal->getType()->isHalfTy() && BitWidth >= 32 && !IsSaturating) {
     if (FPToI->getOpcode() == Instruction::FPToUI) {
       Value *A0 = Builder.CreateFPToUI(FloatVal, Builder.getInt32Ty());
       A1 = Builder.CreateZExt(A0, IntTy);
@@ -694,22 +711,26 @@ static void expandFPToI(Instruction *FPToI, bool IsSaturating, bool IsSigned) {
       ZeroResultCond = Builder.CreateOr(ZeroResultCond, IsNeg);
     }
   }
-  Value *CondBr = Builder.CreateCondBr(
+  Instruction *CondBr = Builder.CreateCondBr(
       ZeroResultCond, End, IsSaturating ? CheckSaturateBB : CheckExpSizeBB);
   // We do not have any information on the value of the exponent, so mark the
   // branch weights as unkown.
-  if (auto *CondBrInstruction = dyn_cast<Instruction>(CondBr))
-    setExplicitlyUnknownBranchWeightsIfProfiled(*CondBrInstruction, DEBUG_TYPE,
-                                                F);
+  setExplicitlyUnknownBranchWeightsIfProfiled(*CondBr, DEBUG_TYPE, F);
 
   Value *Saturated;
   if (IsSaturating) {
     // check.saturate:
     Builder.SetInsertPoint(CheckSaturateBB);
+    uint64_t SaturatingBiasedExp =
+        static_cast<uint64_t>(ExponentBias) + BitWidth - IsSigned;
+    // Clamp to the all-ones (inf/NaN) exponent. Without this, when the integer
+    // is wide enough to hold every finite float the threshold exceeds any
+    // possible biased exponent, so +/-inf would never saturate.
+    uint64_t MaxBiasedExp = (1ULL << ExponentWidth) - 1;
+    if (SaturatingBiasedExp > MaxBiasedExp)
+      SaturatingBiasedExp = MaxBiasedExp;
     Value *Cmp3 = Builder.CreateICmpUGE(
-        BiasedExp, ConstantInt::getSigned(
-                       FloatIntTy, static_cast<int64_t>(ExponentBias +
-                                                        BitWidth - IsSigned)));
+        BiasedExp, ConstantInt::get(FloatIntTy, SaturatingBiasedExp));
     Value *CondBrSat = Builder.CreateCondBr(Cmp3, SaturateBB, CheckExpSizeBB);
     // Saturation is considered an unlikely event.
     applyProfMetadataIfEnabled(CondBrSat, [&](Instruction *Inst) {
@@ -771,7 +792,7 @@ static void expandFPToI(Instruction *FPToI, bool IsSaturating, bool IsSigned) {
   Builder.CreateBr(End);
 
   // cleanup:
-  Builder.SetInsertPoint(End, End->begin());
+  Builder.SetInsertPoint(End->begin());
   PHINode *Retval0 = Builder.CreatePHI(FPToI->getType(), 3 + IsSaturating);
 
   if (IsSaturating)
@@ -938,10 +959,9 @@ static void expandIToFP(Instruction *IToFP) {
   Value *Cmp = Builder.CreateICmpEQ(IntVal, ConstantInt::getSigned(IntTy, 0));
   Value *CondBrEntry = Builder.CreateCondBr(Cmp, End, IfEnd);
   applyProfMetadataIfEnabled(CondBrEntry, [&](Instruction *Inst) {
-    if (!ProfcheckDisableMetadataFixes)
-      Inst->setMetadata(
-          LLVMContext::MD_prof,
-          MDBuilder(Inst->getContext()).createUnlikelyBranchWeights());
+    Inst->setMetadata(
+        LLVMContext::MD_prof,
+        MDBuilder(Inst->getContext()).createUnlikelyBranchWeights());
   });
 
   // if.end:
@@ -964,10 +984,9 @@ static void expandIToFP(Instruction *IToFP) {
   // exponent. This is rare case, so the True path is mared as likely.
   Value *CondBrIfEnd = Builder.CreateCondBr(Cmp3, IfThen4, IfElse);
   applyProfMetadataIfEnabled(CondBrIfEnd, [&](Instruction *Inst) {
-    if (!ProfcheckDisableMetadataFixes)
-      Inst->setMetadata(
-          LLVMContext::MD_prof,
-          MDBuilder(Inst->getContext()).createLikelyBranchWeights());
+    Inst->setMetadata(
+        LLVMContext::MD_prof,
+        MDBuilder(Inst->getContext()).createLikelyBranchWeights());
   });
 
   // if.then4:
@@ -980,13 +999,12 @@ static void expandIToFP(Instruction *IToFP) {
   // order they were added (SwBB, then SwEpilog). Because the following cases
   // are rare, the defalut case is given a likely weight.
   if (!ProfcheckDisableMetadataFixes) {
-    if (!ProfcheckDisableMetadataFixes)
-      SI->setMetadata(
-          LLVMContext::MD_prof,
-          MDBuilder(SI->getContext())
-              .createBranchWeights({llvm::MDBuilder::kLikelyBranchWeight,
-                                    llvm::MDBuilder::kUnlikelyBranchWeight,
-                                    llvm::MDBuilder::kUnlikelyBranchWeight}));
+    SI->setMetadata(
+        LLVMContext::MD_prof,
+        MDBuilder(SI->getContext())
+            .createBranchWeights({llvm::MDBuilder::kLikelyBranchWeight,
+                                  llvm::MDBuilder::kUnlikelyBranchWeight,
+                                  llvm::MDBuilder::kUnlikelyBranchWeight}));
   }
 
   // sw.bb:
@@ -1045,10 +1063,9 @@ static void expandIToFP(Instruction *IToFP) {
   // overflow is rare. The False path is unlikely to be taken.
   Value *CondBrSwEpilog = Builder.CreateCondBr(PosOrNeg, IfEnd26, IfThen20);
   applyProfMetadataIfEnabled(CondBrSwEpilog, [&](Instruction *Inst) {
-    if (!ProfcheckDisableMetadataFixes)
-      Inst->setMetadata(
-          LLVMContext::MD_prof,
-          MDBuilder(Inst->getContext()).createLikelyBranchWeights());
+    Inst->setMetadata(
+        LLVMContext::MD_prof,
+        MDBuilder(Inst->getContext()).createLikelyBranchWeights());
   });
 
   // if.then20
@@ -1166,10 +1183,41 @@ static void expandIToFP(Instruction *IToFP) {
     A4 = Builder.CreateFPTrunc(A40, IToFP->getType());
   } else // float type
     A4 = Builder.CreateBitCast(Or35, IToFP->getType());
+
+  // Sub2 is the unbiased exponent (the index of the top set bit in the input).
+  // The exponent arithmetic above wraps to garbage instead of inf once it
+  // overflows the exponent field, so saturate to a correctly-signed infinity
+  // when Sub2 reaches 1 << (ExponentWidth - 1). Sub2 is at most BitWidth - 1,
+  // so skip the check entirely when even that can't reach the threshold.
+  // (Values that round *up* into inf, e.g. 2^n - 1, keep Sub2 = BitWidth - 1;
+  // these are handled by the conversion's own rounding, not by this
+  // saturation.)
+  unsigned ExponentWidth = FloatWidth - FPMantissaWidth - 1;
+  uint64_t MinInfExp = 1ULL << (ExponentWidth - 1);
+  if (BitWidth - 1 >= MinInfExp) {
+    Value *MinInfExpVal = Builder.getIntN(BitWidthNew, MinInfExp);
+    Value *Overflow = Builder.CreateICmpUGE(Sub2, MinInfExpVal);
+    Value *Inf = ConstantFP::getInfinity(IToFP->getType(), /*Negative=*/false);
+    if (IsSigned) {
+      Value *NegInf =
+          ConstantFP::getInfinity(IToFP->getType(), /*Negative=*/true);
+      Value *IsNeg =
+          Builder.CreateICmpSLT(IntVal, ConstantInt::getNullValue(IntTy));
+      Inf = Builder.CreateSelectWithUnknownProfile(IsNeg, NegInf, Inf,
+                                                   DEBUG_TYPE);
+    }
+    A4 = Builder.CreateSelect(Overflow, Inf, A4);
+    // We consider overflow to be an unlikely case.
+    applyProfMetadataIfEnabled(A4, [&](Instruction *Inst) {
+      Inst->setMetadata(
+          LLVMContext::MD_prof,
+          MDBuilder(Inst->getContext()).createUnlikelyBranchWeights());
+    });
+  }
   Builder.CreateBr(End);
 
   // return:
-  Builder.SetInsertPoint(End, End->begin());
+  Builder.SetInsertPoint(End->begin());
   PHINode *Retval0 = Builder.CreatePHI(IToFP->getType(), 2);
   Retval0->addIncoming(A4, IfEnd26);
   Retval0->addIncoming(ConstantFP::getZero(IToFP->getType(), false), Entry);
@@ -1243,7 +1291,7 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
       MaxLegalFpConvertBitWidth >= IntegerType::MAX_INT_BITS;
   bool DisableExpandLargeDivRem =
       MaxLegalDivRemBitWidth >= IntegerType::MAX_INT_BITS;
-  bool DisableFrem = !FRemExpander::shouldExpandAnyFremType(TLI);
+  bool DisableFrem = !FRemExpander::shouldExpandAnyFremType(TLI, Libcalls);
 
   if (DisableExpandLargeFp && DisableFrem && DisableExpandLargeDivRem)
     return false;
@@ -1256,7 +1304,8 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
 
     switch (I.getOpcode()) {
     case Instruction::FRem:
-      return !DisableFrem && FRemExpander::shouldExpandFremType(TLI, Ty);
+      return !DisableFrem &&
+             FRemExpander::shouldExpandFremType(TLI, Libcalls, Ty);
     case Instruction::FPToUI:
     case Instruction::FPToSI:
       return !DisableExpandLargeFp &&
@@ -1310,8 +1359,7 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
     case Instruction::FRem: {
       auto SQ = [&]() -> std::optional<SimplifyQuery> {
         if (AC) {
-          auto Res = std::make_optional<SimplifyQuery>(
-              I->getModule()->getDataLayout(), I);
+          auto Res = std::make_optional<SimplifyQuery>(I->getDataLayout(), I);
           Res->AC = AC;
           return Res;
         }
@@ -1428,7 +1476,7 @@ PreservedAnalyses ExpandIRInstsPass::run(Function &F,
 
   auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
 
-  const LibcallLoweringModuleAnalysisResult *LibcallLowering =
+  const ModuleLibcallLoweringInfo *LibcallLowering =
       MAMProxy.getCachedResult<LibcallLoweringModuleAnalysis>(*F.getParent());
 
   if (!LibcallLowering) {
@@ -1438,7 +1486,7 @@ PreservedAnalyses ExpandIRInstsPass::run(Function &F,
   }
 
   const LibcallLoweringInfo &Libcalls =
-      LibcallLowering->getLibcallLowering(*STI);
+      getLibcallLowering(*LibcallLowering, *STI);
 
   return runImpl(F, TLI, Libcalls, AC) ? PreservedAnalyses::none()
                                        : PreservedAnalyses::all();

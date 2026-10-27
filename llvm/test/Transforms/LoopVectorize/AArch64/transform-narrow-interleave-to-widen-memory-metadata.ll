@@ -47,8 +47,7 @@ exit:
   ret void
 }
 
-; All members share !tbaa !2.
-; FIXME: the narrowed wide load/store should preserve it.
+; All members share !tbaa !2. The narrowed wide load/store preserve it.
 define void @load_store_interleave_group_with_shared_metadata(ptr noalias %data) {
 ; VF2-LABEL: define void @load_store_interleave_group_with_shared_metadata(
 ; VF2-SAME: ptr noalias [[DATA:%.*]]) {
@@ -60,11 +59,11 @@ define void @load_store_interleave_group_with_shared_metadata(ptr noalias %data)
 ; VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF2-NEXT:    [[TMP0:%.*]] = shl nsw i64 [[INDEX]], 1
 ; VF2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP0]]
-; VF2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP1]], align 8
-; VF2-NEXT:    store <2 x i64> [[WIDE_LOAD]], ptr [[TMP1]], align 8
+; VF2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP1]], align 8, !tbaa [[TBAA3:![0-9]+]]
+; VF2-NEXT:    store <2 x i64> [[WIDE_LOAD]], ptr [[TMP1]], align 8, !tbaa [[TBAA3]]
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 1
 ; VF2-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
-; VF2-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; VF2-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; VF2:       [[MIDDLE_BLOCK]]:
 ; VF2-NEXT:    br label %[[EXIT:.*]]
 ; VF2:       [[EXIT]]:
@@ -93,14 +92,20 @@ exit:
 
 !0 = !{!"Simple C/C++ TBAA"}
 !1 = !{!"omnipotent char", !0, i64 0}
-!2 = !{!"A", !1, i64 0}
-!3 = !{!"B", !1, i64 0}
+!2 = !{!6, !6, i64 0, i64 0}
+!3 = !{!7, !7, i64 0, i64 0}
 !4 = !{ i64 0, i64 2 }
 !5 = !{ i64 0, i64 2 }
+!6 = !{!"A", !1}
+!7 = !{!"B", !1}
 
 ;.
 ; VF2: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; VF2: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
 ; VF2: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; VF2: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]], [[META2]]}
+; VF2: [[TBAA3]] = !{[[META4:![0-9]+]], [[META4]], i64 0, i64 0}
+; VF2: [[META4]] = !{!"A", [[META5:![0-9]+]]}
+; VF2: [[META5]] = !{!"omnipotent char", [[META6:![0-9]+]], i64 0}
+; VF2: [[META6]] = !{!"Simple C/C++ TBAA"}
+; VF2: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]], [[META2]]}
 ;.

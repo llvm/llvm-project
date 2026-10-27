@@ -54,6 +54,10 @@ bool Operator::hasPoisonGeneratingFlags() const {
     return false;
   case Instruction::ICmp:
     return cast<ICmpInst>(this)->hasSameSign();
+  case Instruction::AddrSpaceCast:
+    if (auto *ASC = dyn_cast<AddrSpaceCastInst>(this))
+      return ASC->hasNonNull();
+    return false;
   case Instruction::Call:
     if (auto *II = dyn_cast<IntrinsicInst>(this)) {
       switch (II->getIntrinsicID()) {
@@ -109,12 +113,13 @@ Align GEPOperator::getMaxPreservedAlignment(const DataLayout &DL) const {
 
     if (StructType *STy = GTI.getStructTypeOrNull()) {
       const StructLayout *SL = DL.getStructLayout(STy);
-      Offset = SL->getElementOffset(OpC->getZExtValue());
+      Offset =
+          SL->getElementOffset(OpC->getValue().getLoBits(32).getZExtValue());
     } else {
       assert(GTI.isSequential() && "should be sequencial");
       /// If the index isn't known, we take 1 because it is the index that will
       /// give the worse alignment of the offset.
-      const uint64_t ElemCount = OpC ? OpC->getZExtValue() : 1;
+      const uint64_t ElemCount = OpC ? OpC->getLimitedValue() : 1;
       Offset = GTI.getSequentialElementStride(DL) * ElemCount;
     }
     Result = Align(MinAlign(Offset, Result.value()));
@@ -191,9 +196,10 @@ bool GEPOperator::accumulateConstantOffset(
         unsigned ElementIdx = ConstOffset->getZExtValue();
         const StructLayout *SL = DL.getStructLayout(STy);
         // Element offset is in bytes.
-        if (!AccumulateOffset(
-                APInt(Offset.getBitWidth(), SL->getElementOffset(ElementIdx)),
-                1))
+        if (!AccumulateOffset(APInt(Offset.getBitWidth(),
+                                    SL->getElementOffset(ElementIdx),
+                                    /*isSigned=*/false, /*implicitTrunc=*/true),
+                              1))
           return false;
         continue;
       }
@@ -256,7 +262,8 @@ bool GEPOperator::collectOffset(
         unsigned ElementIdx = ConstOffset->getZExtValue();
         const StructLayout *SL = DL.getStructLayout(STy);
         // Element offset is in bytes.
-        CollectConstantOffset(APInt(BitWidth, SL->getElementOffset(ElementIdx)),
+        CollectConstantOffset(APInt(BitWidth, SL->getElementOffset(ElementIdx),
+                                    /*isSigned=*/false, /*implicitTrunc=*/true),
                               1);
         continue;
       }
@@ -319,6 +326,10 @@ FastMathFlags &FPMathOperator::getFastMathFlagsImpl() {
   if (FastMathFlagsStorage *Op = dyn_cast<SelectInst>(I))
     return Op->FMF;
   if (FastMathFlagsStorage *Op = dyn_cast<CallInst>(I))
+    return Op->FMF;
+  if (FastMathFlagsStorage *Op = dyn_cast<UIToFPInst>(I))
+    return Op->FMF;
+  if (FastMathFlagsStorage *Op = dyn_cast<SIToFPInst>(I))
     return Op->FMF;
 
   llvm_unreachable("Unknown FPMathOperator!");

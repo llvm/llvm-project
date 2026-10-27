@@ -241,9 +241,13 @@ struct StrtoTest : public LIBC_NAMESPACE::testing::ErrnoCheckingTest {
                   static_cast<ReturnT>(second_digit + (first_digit * base)));
               ASSERT_ERRNO_SUCCESS();
             } else if (first_digit < base) {
-              // if the base is 16 there is a special case for the prefix 0X.
-              // The number is treated as a one digit hexadecimal.
-              if (base == 16 && first_digit == 0 && second_digit == 33) {
+              /* Special case: if the string is "0x?" for base 16 or "0b?" for
+               * base 2, the "0x"/"0b" prefix is consumed and the third
+               * character is parsed as the actual digit. If the third character
+               * is also invalid for the base, the result is 0.
+               */
+              if ((base == 16 && first_digit == 0 && second_digit == 33) ||
+                  (base == 2 && first_digit == 0 && second_digit == 11)) {
                 if (third_digit < base) {
                   ASSERT_EQ(func(small_string, nullptr, base),
                             static_cast<ReturnT>(third_digit));
@@ -401,6 +405,16 @@ struct StrtoTest : public LIBC_NAMESPACE::testing::ErrnoCheckingTest {
     ASSERT_ERRNO_SUCCESS();
     EXPECT_EQ(str_end - base_eight_with_prefix, ptrdiff_t(6));
 
+    const char *base_two_with_prefix = "0b10101";
+    ASSERT_EQ(func(base_two_with_prefix, &str_end, 0), ReturnT(0b10101));
+    ASSERT_ERRNO_SUCCESS();
+    EXPECT_EQ(str_end - base_two_with_prefix, ptrdiff_t(7));
+
+    const char *octal_not_binary = "010101";
+    ASSERT_EQ(func(octal_not_binary, &str_end, 0), ReturnT(010101));
+    ASSERT_ERRNO_SUCCESS();
+    EXPECT_EQ(str_end - octal_not_binary, ptrdiff_t(6));
+
     const char *just_zero = "0";
     ASSERT_EQ(func(just_zero, &str_end, 0), ReturnT(0));
     ASSERT_ERRNO_SUCCESS();
@@ -415,6 +429,11 @@ struct StrtoTest : public LIBC_NAMESPACE::testing::ErrnoCheckingTest {
     ASSERT_EQ(func(just_zero_eight, &str_end, 0), ReturnT(0));
     ASSERT_ERRNO_SUCCESS();
     EXPECT_EQ(str_end - just_zero_eight, ptrdiff_t(1));
+
+    const char *just_zero_b = "0b";
+    ASSERT_EQ(func(just_zero_b, &str_end, 0), ReturnT(0));
+    ASSERT_ERRNO_SUCCESS();
+    EXPECT_EQ(str_end - just_zero_b, ptrdiff_t(1));
   }
 };
 

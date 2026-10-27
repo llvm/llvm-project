@@ -56,14 +56,14 @@ TEST_P(olLaunchKernelCooperativeTest, SuccessCooperative) {
       {OL_KERNEL_LAUNCH_PROP_TYPE_IS_COOPERATIVE, &IsCooperative},
       OL_KERNEL_LAUNCH_PROP_END};
 
-  ASSERT_SUCCESS(
-      olLaunchKernel(Queue, Device, Kernel, nullptr, 0, &LaunchArgs, Props));
+  ASSERT_SUCCESS(olLaunchKernel(Queue, Device, Kernel, &LaunchArgs, Props, 0,
+                                nullptr, nullptr));
   ASSERT_SUCCESS(olSyncQueue(Queue));
 }
 
 TEST_P(olLaunchKernelCooperativeTest, SuccessNonCooperative) {
-  ASSERT_SUCCESS(
-      olLaunchKernel(Queue, Device, Kernel, nullptr, 0, &LaunchArgs, nullptr));
+  ASSERT_SUCCESS(olLaunchKernel(Queue, Device, Kernel, &LaunchArgs, nullptr, 0,
+                                nullptr, nullptr));
   ASSERT_SUCCESS(olSyncQueue(Queue));
 }
 
@@ -79,8 +79,8 @@ TEST_P(olLaunchKernelCooperativeTest, TooManyGroups) {
       {OL_KERNEL_LAUNCH_PROP_TYPE_IS_COOPERATIVE, &IsCooperative},
       OL_KERNEL_LAUNCH_PROP_END};
 
-  ASSERT_ANY_ERROR(
-      olLaunchKernel(Queue, Device, Kernel, nullptr, 0, &LaunchArgs, Props));
+  ASSERT_ANY_ERROR(olLaunchKernel(Queue, Device, Kernel, &LaunchArgs, Props, 0,
+                                  nullptr, nullptr));
 }
 
 TEST_P(olLaunchKernelCooperativeTest, SynchronousLaunch) {
@@ -95,8 +95,8 @@ TEST_P(olLaunchKernelCooperativeTest, SynchronousLaunch) {
       {OL_KERNEL_LAUNCH_PROP_TYPE_IS_COOPERATIVE, &IsCooperative},
       OL_KERNEL_LAUNCH_PROP_END};
 
-  ASSERT_SUCCESS(
-      olLaunchKernel(nullptr, Device, Kernel, nullptr, 0, &LaunchArgs, Props));
+  ASSERT_SUCCESS(olLaunchKernel(nullptr, Device, Kernel, &LaunchArgs, Props, 0,
+                                nullptr, nullptr));
 }
 
 TEST_P(olLaunchKernelCooperativeTest, InvalidNullHandleKernel) {

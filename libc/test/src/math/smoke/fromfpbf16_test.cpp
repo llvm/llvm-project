@@ -11,4 +11,4 @@
 #include "src/__support/FPUtil/bfloat16.h"
 #include "src/math/fromfpbf16.h"
 
-LIST_FROMFP_TESTS(bfloat16, LIBC_NAMESPACE::fromfpbf16)
+LIST_FROMFP_TESTS(Fromfpbf16, bfloat16, LIBC_NAMESPACE::fromfpbf16)

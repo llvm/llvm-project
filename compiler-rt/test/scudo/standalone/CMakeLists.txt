@@ -16,4 +16,4 @@ add_lit_testsuite(check-scudo_standalone
   DEPENDS ${SCUDO_STANDALONE_TEST_DEPS})
 
 set_target_properties(check-scudo_standalone
-  PROPERTIES FOLDER "Compiler-RT Tests")
+  PROPERTIES FOLDER "compiler-rt Tests")

@@ -40,3 +40,14 @@ subroutine f04
   !$omp & when(target_device={device_num("device", "foo"(1))}: nothing)
 end
 
+subroutine f05
+  !$omp metadirective &
+!ERROR: 'context-selector' modifier is required
+  !$omp & when(nothing)
+end
+
+subroutine f06
+  !$omp metadirective &
+!ERROR: OTHERWISE should be the last clause
+  !$omp & otherwise(nothing) when(user={condition(.true.)}: nothing)
+end

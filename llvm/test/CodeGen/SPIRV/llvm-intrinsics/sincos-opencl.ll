@@ -38,5 +38,16 @@ define <2 x float> @test_sincos_vec2(<2 x float> %x) {
   ret <2 x float> %sum
 }
 
+; CHECK: %[[#XoParam:]] = OpFunctionParameter %[[#FloatTy]]
+; CHECK-NOT: OpLoad
+; CHECK: %[[#SinOnlyRes:]] = OpExtInst %[[#FloatTy]] %[[#ExtInstId]] sincos %[[#XoParam]] %[[#]]
+; CHECK-NOT: OpLoad
+; CHECK: OpReturnValue %[[#SinOnlyRes]]
+define float @test_sincos_sin_only(float %x) {
+  %result = call { float, float } @llvm.sincos.f32(float %x)
+  %sin = extractvalue { float, float } %result, 0
+  ret float %sin
+}
+
 declare { float, float } @llvm.sincos.f32(float)
 declare { <2 x float>, <2 x float> } @llvm.sincos.v2f32(<2 x float>)

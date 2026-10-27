@@ -556,14 +556,6 @@ private:
     return &(B->*Member);
   }
 
-  template <bool BundledEntry::*Member> const bool *onlyValue() const {
-    auto B = Bundled.begin(), E = Bundled.end();
-    for (auto *I = B + 1; I != E; ++I)
-      if (I->*Member != B->*Member)
-        return nullptr;
-    return &(B->*Member);
-  }
-
   std::string summarizeReturnType() const {
     if (auto *RT = onlyValue<&BundledEntry::ReturnType>())
       return *RT;
@@ -651,6 +643,7 @@ private:
     // 'CompletionItemKind::Interface' matches template type aliases.
     if (Completion.Kind == CompletionItemKind::Interface ||
         Completion.Kind == CompletionItemKind::Class ||
+        Completion.Kind == CompletionItemKind::Struct ||
         Completion.Kind == CompletionItemKind::Variable) {
       if (Snippet->front() != '<')
         return *Snippet; // Not an arg snippet?
@@ -1841,9 +1834,13 @@ private:
     }
 
     if (Opts.EnableInsertReplace) {
-      ReplaceRange.emplace();
-      ReplaceRange->start = InsertRange.start;
-      ReplaceRange->end = getEndOfCodeCompletionReplace(SM);
+      // Header-name completion always provides a replace-like range,
+      // including delimiters, even in the Insert mode.
+      const Position ReplaceRangeEnd =
+          CCContextKind == CodeCompletionContext::CCC_IncludedFile
+              ? InsertRange.end
+              : getEndOfCodeCompletionReplace(SM);
+      ReplaceRange = Range{InsertRange.start, ReplaceRangeEnd};
     }
     Filter = FuzzyMatcher(
         Recorder->CCSema->getPreprocessor().getCodeCompletionFilter());

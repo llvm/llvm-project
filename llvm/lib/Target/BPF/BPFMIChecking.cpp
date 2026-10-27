@@ -7,16 +7,20 @@
 //===----------------------------------------------------------------------===//
 //
 // This pass performs checking to signal errors for certain illegal usages at
-// MachineInstruction layer. Specially, the result of XADD{32,64} insn should
-// not be used. The pass is done at the PreEmit pass right before the
-// machine code is emitted at which point the register liveness information
+// MachineInstruction layer. Specially, the result of the locked atomic insns
+// (XADD, XAND, XOR and XXOR, 32 and 64 bit) should not be used, since they do
+// not return the old value. The pass is done at the PreEmit pass right before
+// the machine code is emitted at which point the register liveness information
 // is still available.
 //
 //===----------------------------------------------------------------------===//
 
 #include "BPF.h"
+#include "BPFRegisterInfo.h"
 #include "BPFTargetMachine.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/Support/Debug.h"
 
@@ -26,37 +30,16 @@ using namespace llvm;
 
 namespace {
 
-struct BPFMIPreEmitChecking : public MachineFunctionPass {
+struct BPFMIPreEmitCheckingLegacy : public MachineFunctionPass {
 
   static char ID;
-  MachineFunction *MF;
-  const TargetRegisterInfo *TRI;
 
-  BPFMIPreEmitChecking() : MachineFunctionPass(ID) {}
-
-private:
-  // Initialize class variables.
-  void initialize(MachineFunction &MFParm);
-
-  void processAtomicInsts();
+  BPFMIPreEmitCheckingLegacy() : MachineFunctionPass(ID) {}
 
 public:
   // Main entry point for this pass.
-  bool runOnMachineFunction(MachineFunction &MF) override {
-    if (!skipFunction(MF.getFunction())) {
-      initialize(MF);
-      processAtomicInsts();
-    }
-    return false;
-  }
+  bool runOnMachineFunction(MachineFunction &MF) override;
 };
-
-// Initialize class variables.
-void BPFMIPreEmitChecking::initialize(MachineFunction &MFParm) {
-  MF = &MFParm;
-  TRI = MF->getSubtarget<BPFSubtarget>().getRegisterInfo();
-  LLVM_DEBUG(dbgs() << "*** BPF PreEmit checking pass ***\n\n");
-}
 
 // Make sure all Defs of XADD are dead, meaning any result of XADD insn is not
 // used.
@@ -101,7 +84,7 @@ void BPFMIPreEmitChecking::initialize(MachineFunction &MFParm) {
 // Dead correctly, and it is safe to use such information or our purpose.
 static bool hasLiveDefs(const MachineInstr &MI, const TargetRegisterInfo *TRI) {
   const MCRegisterClass *GPR64RegClass =
-      &BPFMCRegisterClasses[BPF::GPRRegClassID];
+      &getBPFMCRegisterClass(BPF::GPRRegClassID);
   std::vector<unsigned> GPR32LiveDefs;
   std::vector<unsigned> GPR64DeadDefs;
 
@@ -147,20 +130,43 @@ static bool hasLiveDefs(const MachineInstr &MI, const TargetRegisterInfo *TRI) {
   return false;
 }
 
-void BPFMIPreEmitChecking::processAtomicInsts() {
-  if (MF->getSubtarget<BPFSubtarget>().getHasJmp32())
-    return;
+} // namespace
 
-  // Only check for cpu version 1 and 2.
-  for (MachineBasicBlock &MBB : *MF) {
+// The locked atomic insns do not return the old value, so a live result is a
+// selection bug regardless of the cpu version: for v1/v2 there is no fetching
+// insn, and for v3+ instruction selection must pick the atomic_fetch_*() insn
+// whenever the result is used.
+static bool isLockedAtomicInsn(unsigned Opcode) {
+  switch (Opcode) {
+  default:
+    return false;
+  case BPF::XADDW:
+  case BPF::XADDD:
+  case BPF::XANDD:
+  case BPF::XORD:
+  case BPF::XXORD:
+  case BPF::XADDW32:
+  case BPF::XANDW32:
+  case BPF::XORW32:
+  case BPF::XXORW32:
+    return true;
+  }
+}
+
+static void processAtomicInsts(MachineFunction &MF) {
+  LLVM_DEBUG(dbgs() << "*** BPF PreEmit checking pass ***\n\n");
+
+  const BPFRegisterInfo *TRI =
+      MF.getSubtarget<BPFSubtarget>().getRegisterInfo();
+  for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
-      if (MI.getOpcode() != BPF::XADDW && MI.getOpcode() != BPF::XADDD)
+      if (!isLockedAtomicInsn(MI.getOpcode()))
         continue;
 
       LLVM_DEBUG(MI.dump());
       if (hasLiveDefs(MI, TRI)) {
         const DebugLoc &DL = MI.getDebugLoc();
-        const Function &F = MF->getFunction();
+        const Function &F = MF.getFunction();
         F.getContext().diagnose(DiagnosticInfoUnsupported{
             F, "Invalid usage of the XADD return value", DL});
       }
@@ -168,12 +174,24 @@ void BPFMIPreEmitChecking::processAtomicInsts() {
   }
 }
 
-} // namespace
+bool BPFMIPreEmitCheckingLegacy::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+  processAtomicInsts(MF);
+  return false;
+}
 
-INITIALIZE_PASS(BPFMIPreEmitChecking, "bpf-mi-pemit-checking",
+PreservedAnalyses
+BPFMIPreEmitCheckingPass::run(MachineFunction &MF,
+                              MachineFunctionAnalysisManager &MFAM) {
+  processAtomicInsts(MF);
+  return PreservedAnalyses::all();
+}
+
+INITIALIZE_PASS(BPFMIPreEmitCheckingLegacy, "bpf-mi-checking",
                 "BPF PreEmit Checking", false, false)
 
-char BPFMIPreEmitChecking::ID = 0;
-FunctionPass *llvm::createBPFMIPreEmitCheckingPass() {
-  return new BPFMIPreEmitChecking();
+char BPFMIPreEmitCheckingLegacy::ID = 0;
+FunctionPass *llvm::createBPFMIPreEmitCheckingLegacyPass() {
+  return new BPFMIPreEmitCheckingLegacy();
 }

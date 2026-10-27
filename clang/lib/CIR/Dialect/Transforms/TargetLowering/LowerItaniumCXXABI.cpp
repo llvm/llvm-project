@@ -55,6 +55,10 @@ public:
       cir::DataMemberAttr attr, const mlir::DataLayout &layout,
       const mlir::TypeConverter &typeConverter) const override;
 
+  mlir::TypedAttr lowerDataMemberOffsetConstant(
+      cir::DataMemberOffsetAttr attr, const mlir::DataLayout &layout,
+      const mlir::TypeConverter &typeConverter) const override;
+
   mlir::TypedAttr
   lowerMethodConstant(cir::MethodAttr attr, const mlir::DataLayout &layout,
                       const mlir::TypeConverter &typeConverter) const override;
@@ -113,8 +117,7 @@ public:
                                      mlir::OpBuilder &builder) const override;
 
   clang::CharUnits
-  getArrayCookieSizeImpl(mlir::Type elementType,
-                         const mlir::DataLayout &dataLayout) const override;
+  getArrayCookieSizeImpl(clang::CharUnits elementAlign) const override;
 
   mlir::Value readArrayCookieImpl(mlir::Location loc, mlir::Value allocPtr,
                                   clang::CharUnits cookieSize,
@@ -147,11 +150,21 @@ std::unique_ptr<CIRCXXABI> createItaniumCXXABI(LowerModule &lm) {
   case clang::TargetCXXABI::GenericItanium:
     return std::make_unique<LowerItaniumCXXABI>(lm);
 
+  case clang::TargetCXXABI::GenericARM:
+  case clang::TargetCXXABI::iOS:
+  case clang::TargetCXXABI::WatchOS:
+  case clang::TargetCXXABI::Fuchsia:
+  case clang::TargetCXXABI::GenericMIPS:
+  case clang::TargetCXXABI::WebAssembly:
+  case clang::TargetCXXABI::XL:
+    // FIXME: these ABIS are not yet implemented by CIR. The error is reported
+    // by consumers of LowerModule/CIRCXXABI when missing CIRCXXABI is
+    // encountered.
+    return nullptr;
   case clang::TargetCXXABI::Microsoft:
     llvm_unreachable("Microsoft ABI is not Itanium-based");
-  default:
-    llvm_unreachable("Other Itanium ABI?");
   }
+  llvm_unreachable("bad ABI kind");
 }
 
 static cir::IntType getPtrDiffCIRTy(LowerModule &lm) {
@@ -186,9 +199,10 @@ mlir::Type LowerItaniumCXXABI::lowerMethodType(
 
   // Note that clang CodeGen emits struct{ptrdiff_t, ptrdiff_t} for member
   // function pointers. Let's follow this approach.
-  return cir::RecordType::get(type.getContext(), {ptrdiffCIRTy, ptrdiffCIRTy},
-                              /*packed=*/false, /*padded=*/false,
-                              cir::RecordType::Struct);
+  mlir::Type members[] = {ptrdiffCIRTy, ptrdiffCIRTy};
+  return cir::StructType::get(type.getContext(), members, /*packed=*/false,
+                              /*is_class=*/false,
+                              cir::RecordType::getAllDataKinds(members));
 }
 
 mlir::TypedAttr LowerItaniumCXXABI::lowerDataMemberConstant(
@@ -202,14 +216,30 @@ mlir::TypedAttr LowerItaniumCXXABI::lowerDataMemberConstant(
   } else {
     // Itanium C++ ABI 2.3:
     //   A pointer to data member is an offset from the base address of
-    //   the class object containing it, represented as a ptrdiff_t
-    unsigned memberIndex = attr.getMemberIndex().value();
-    memberOffset =
-        attr.getType().getClassTy().getElementOffset(layout, memberIndex);
+    //   the class object containing it, represented as a ptrdiff_t.
+    // Walk the GEP-style path, accumulating the byte offset at each step.
+    memberOffset = 0;
+    mlir::Type currentTy = attr.getType().getClassTy();
+    for (int32_t idx : attr.getPath()) {
+      auto recTy = mlir::cast<cir::RecordType>(currentTy);
+      memberOffset += static_cast<int64_t>(recTy.getElementOffset(layout, idx));
+      currentTy = recTy.getMembers()[idx];
+    }
   }
 
   mlir::Type abiTy = lowerDataMemberType(attr.getType(), typeConverter);
   return cir::IntAttr::get(abiTy, memberOffset);
+}
+
+mlir::TypedAttr LowerItaniumCXXABI::lowerDataMemberOffsetConstant(
+    cir::DataMemberOffsetAttr attr, const mlir::DataLayout &layout,
+    const mlir::TypeConverter &typeConverter) const {
+  // Itanium C++ ABI 2.3:
+  //   A pointer to data member is an offset from the base address of the class
+  //   object containing it, represented as a ptrdiff_t.
+  // The offset is already known (the member has no CIR field index).
+  mlir::Type abiTy = lowerDataMemberType(attr.getType(), typeConverter);
+  return cir::IntAttr::get(abiTy, static_cast<int64_t>(attr.getOffset()));
 }
 
 mlir::TypedAttr LowerItaniumCXXABI::lowerMethodConstant(
@@ -217,10 +247,7 @@ mlir::TypedAttr LowerItaniumCXXABI::lowerMethodConstant(
     const mlir::TypeConverter &typeConverter) const {
   cir::IntType ptrdiffCIRTy = getPtrDiffCIRTy(lm);
 
-  // lowerMethodType returns the CIR type used to represent the method pointer
-  // in an ABI-specific way. That's why lowerMethodType returns cir::RecordType
-  // here.
-  auto loweredMethodTy = mlir::cast<cir::RecordType>(
+  auto loweredMethodTy = mlir::cast<cir::StructType>(
       lowerMethodType(attr.getType(), typeConverter));
 
   auto zero = cir::IntAttr::get(ptrdiffCIRTy, 0);
@@ -380,9 +407,11 @@ void LowerItaniumCXXABI::lowerGetMethod(
     mlir::Value vtablePtr =
         cir::LoadOp::create(b, loc, vtablePtrPtr, /*isDeref=*/false,
                             /*isVolatile=*/false,
+                            /*isNontemporal=*/false,
                             /*alignment=*/mlir::IntegerAttr(),
                             /*sync_scope=*/cir::SyncScopeKindAttr{},
-                            /*mem_order=*/cir::MemOrderAttr());
+                            /*mem_order=*/cir::MemOrderAttr(),
+                            /*invariant=*/false);
 
     // Apply the offset.
     // On ARM64, to reserve extra space in virtual member function pointers,
@@ -407,9 +436,11 @@ void LowerItaniumCXXABI::lowerGetMethod(
                                              cir::CastKind::bitcast, vfpAddr);
     auto fnPtr = cir::LoadOp::create(b, loc, vfpPtr,
                                      /*isDeref=*/false, /*isVolatile=*/false,
+                                     /*isNontemporal=*/false,
                                      /*alignment=*/mlir::IntegerAttr(),
                                      /*sync_scope=*/cir::SyncScopeKindAttr{},
-                                     /*mem_order=*/cir::MemOrderAttr());
+                                     /*mem_order=*/cir::MemOrderAttr(),
+                                     /*invariant=*/false);
 
     cir::YieldOp::create(b, loc, fnPtr.getResult());
     assert(!cir::MissingFeatures::emitCFICheck());
@@ -684,6 +715,8 @@ mlir::Value LowerItaniumCXXABI::lowerMethodToBoolCast(
 
 static void buildBadCastCall(mlir::OpBuilder &builder, mlir::Location loc,
                              mlir::FlatSymbolRefAttr badCastFuncRef) {
+  // TODO(cir): set the runtime calling convention to this call.
+  assert(!cir::MissingFeatures::opFuncCallingConv());
   auto callOp = cir::CallOp::create(builder, loc, badCastFuncRef,
                                     /*resType=*/cir::VoidType(),
                                     /*operands=*/mlir::ValueRange{});
@@ -717,6 +750,9 @@ static mlir::Value buildDynamicCastAfterNullCheck(cir::DynamicCastOp op,
 
   mlir::FlatSymbolRefAttr dynCastFuncRef = castInfo.getRuntimeFunc();
   mlir::Value dynCastFuncArgs[4] = {srcPtr, srcRtti, destRtti, offsetHint};
+
+  // TODO(cir): set the runtime calling convention to this call.
+  assert(!cir::MissingFeatures::opFuncCallingConv());
 
   mlir::Value castedPtr = cir::CallOp::create(builder, loc, dynCastFuncRef,
                                               voidPtrTy, dynCastFuncArgs)
@@ -780,9 +816,11 @@ static mlir::Value buildDynamicCastToVoidAfterNullCheck(
       builder, loc, vptrPtr,
       /*isDeref=*/false,
       /*is_volatile=*/false,
+      /*isNontemporal=*/false,
       /*alignment=*/builder.getI64IntegerAttr(vtableElemAlign),
       /*sync_scope=*/cir::SyncScopeKindAttr(),
-      /*mem_order=*/cir::MemOrderAttr());
+      /*mem_order=*/cir::MemOrderAttr(),
+      /*invariant=*/false);
   mlir::Value elementPtr = cir::CastOp::create(builder, loc, vtableElemPtrTy,
                                                cir::CastKind::bitcast, vptr);
   mlir::Value minusTwo =
@@ -793,9 +831,11 @@ static mlir::Value buildDynamicCastToVoidAfterNullCheck(
       builder, loc, offsetToTopSlotPtr,
       /*isDeref=*/false,
       /*is_volatile=*/false,
+      /*isNontemporal=*/false,
       /*alignment=*/builder.getI64IntegerAttr(vtableElemAlign),
       /*sync_scope=*/cir::SyncScopeKindAttr(),
-      /*mem_order=*/cir::MemOrderAttr());
+      /*mem_order=*/cir::MemOrderAttr(),
+      /*invariant=*/false);
 
   auto voidPtrTy =
       cir::PointerType::get(cir::VoidType::get(builder.getContext()));
@@ -863,14 +903,12 @@ LowerItaniumCXXABI::lowerVTableGetTypeInfo(cir::VTableGetTypeInfoOp op,
 }
 
 clang::CharUnits LowerItaniumCXXABI::getArrayCookieSizeImpl(
-    mlir::Type elementType, const mlir::DataLayout &dataLayout) const {
+    clang::CharUnits elementAlign) const {
   // The array cookie is a size_t; pad that up to the element alignment.
   // The cookie is actually right-justified in that space.
   clang::CharUnits sizeOfSizeT =
       clang::CharUnits::fromQuantity(getPtrSizeInBits() / 8);
-  clang::CharUnits eltAlign = clang::CharUnits::fromQuantity(
-      dataLayout.getTypePreferredAlignment(elementType));
-  return std::max(sizeOfSizeT, eltAlign);
+  return std::max(sizeOfSizeT, elementAlign);
 }
 
 mlir::Value LowerItaniumCXXABI::readArrayCookieImpl(
@@ -902,8 +940,10 @@ mlir::Value LowerItaniumCXXABI::readArrayCookieImpl(
       builder, loc, countPtrTy, cir::CastKind::bitcast, countBytePtr);
   return cir::LoadOp::create(
       builder, loc, countPtr, /*isDeref=*/false, /*isVolatile=*/false,
+      /*isNontemporal=*/false,
       builder.getI64IntegerAttr(countAlignment.getQuantity()),
-      cir::SyncScopeKindAttr(), cir::MemOrderAttr());
+      cir::SyncScopeKindAttr(), cir::MemOrderAttr(),
+      /*invariant=*/false);
 }
 
 } // namespace cir

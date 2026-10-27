@@ -142,7 +142,7 @@ i:
 
 j:
     .seh_proc j
-    .seh_unwindversion 1
+    .seh_unwindversion 4
 # CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: Unsupported version specified in .seh_unwindversion in j
     .seh_unwindversion 2
     .seh_unwindversion 2
@@ -176,4 +176,26 @@ k:
 # CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: starting epilogue (.seh_startepilogue) before prologue has ended (.seh_endprologue) in k
     .seh_endepilogue
     ret
+    .seh_endproc
+
+# --- Test: .seh_pushreg inside epilog errors for V2 ---
+l:
+    .seh_proc l
+    .seh_unwindversion 2
+    pushq   %rbx
+    .seh_pushreg %rbx
+    subq    $32, %rsp
+    .seh_stackalloc 32
+    .seh_endprologue
+    nop
+    .seh_startepilogue
+    .seh_stackalloc 32
+# CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: .seh_stackalloc inside epilog requires unwind v3
+    addq    $32, %rsp
+    .seh_pushreg %rbx
+# CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: .seh_pushreg inside epilog requires unwind v3
+    popq    %rbx
+    .seh_unwindv2start
+    .seh_endepilogue
+    retq
     .seh_endproc

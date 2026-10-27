@@ -182,6 +182,8 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
     case llvm::Triple::Serenity:
       return std::make_unique<SerenityTargetInfo<AArch64leTargetInfo>>(Triple,
                                                                        Opts);
+    case llvm::Triple::UEFI:
+      return std::make_unique<UEFIAArch64TargetInfo>(Triple, Opts);
     case llvm::Triple::Win32:
       switch (Triple.getEnvironment()) {
       case llvm::Triple::GNU:
@@ -434,7 +436,7 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
     return std::make_unique<NVPTXTargetInfo>(Triple, Opts,
                                              /*TargetPointerWidth=*/64);
 
-  case llvm::Triple::amdgcn:
+  case llvm::Triple::amdgpu:
   case llvm::Triple::r600:
     return std::make_unique<AMDGPUTargetInfo>(Triple, Opts);
 
@@ -714,7 +716,7 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
   }
   case llvm::Triple::spirv32: {
     if ((os != llvm::Triple::UnknownOS && os != llvm::Triple::ChipStar &&
-         os != llvm::Triple::Vulkan && os != llvm::Triple::Mesa3D) ||
+         os != llvm::Triple::Vulkan) ||
         Triple.getEnvironment() != llvm::Triple::UnknownEnvironment)
       return nullptr;
     return std::make_unique<SPIRV32TargetInfo>(Triple, Opts);
@@ -723,7 +725,7 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
     if (os == llvm::Triple::OSType::AMDHSA)
       return std::make_unique<SPIRV64AMDGCNTargetInfo>(Triple, Opts);
     if ((os != llvm::Triple::UnknownOS && os != llvm::Triple::ChipStar &&
-         os != llvm::Triple::Vulkan && os != llvm::Triple::Mesa3D) ||
+         os != llvm::Triple::Vulkan) ||
         Triple.getEnvironment() != llvm::Triple::UnknownEnvironment)
       return nullptr;
     if (Triple.getVendor() == llvm::Triple::Intel)

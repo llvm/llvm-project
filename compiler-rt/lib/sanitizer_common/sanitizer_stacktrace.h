@@ -22,12 +22,12 @@ struct BufferedStackTrace;
 
 static const u32 kStackTraceMax = 255;
 
-#if SANITIZER_LINUX && defined(__mips__)
-# define SANITIZER_CAN_FAST_UNWIND 0
+#if SANITIZER_LINUX && (defined(__mips__) || defined(__alpha__))
+#  define SANITIZER_CAN_FAST_UNWIND 0
 #elif SANITIZER_WINDOWS
-# define SANITIZER_CAN_FAST_UNWIND 0
+#  define SANITIZER_CAN_FAST_UNWIND 0
 #else
-# define SANITIZER_CAN_FAST_UNWIND 1
+#  define SANITIZER_CAN_FAST_UNWIND 1
 #endif
 
 // Fast unwind is the only option on Mac for now; we will need to
@@ -92,7 +92,7 @@ uptr StackTrace::GetPreviousInstructionPc(uptr pc) {
   return pc - 8;
 #elif SANITIZER_RISCV64
   // RV-64 has variable instruction length...
-  // C extentions gives us 2-byte instructoins
+  // C extentions give us 2-byte instructions
   // RV-64 has 4-byte instructions
   // + RISC-V architecture allows instructions up to 8 bytes
   // It seems difficult to figure out the exact instruction length -

@@ -158,8 +158,6 @@ public:
 
   bool isFPReserved(const MachineFunction &MF) const;
 
-  bool needsWinCFI(const MachineFunction &MF) const;
-
   bool requiresSaveVG(const MachineFunction &MF) const;
 
   /// Returns the size of the entire ZPR stackframe (calleesaves + spills).
@@ -212,8 +210,8 @@ private:
                                 BitVector &SavedRegs) const;
 
   /// Emit target zero call-used regs.
-  void emitZeroCallUsedRegs(BitVector RegsToZero,
-                            MachineBasicBlock &MBB) const override;
+  void emitZeroCallUsedRegs(BitVector RegsToZero, MachineBasicBlock &MBB,
+                            RegScavenger *RS) const override;
 
   /// Replace a StackProbe stub (if any) with the actual probe code inline
   void inlineStackProbe(MachineFunction &MF,

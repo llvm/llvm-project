@@ -1330,6 +1330,72 @@ void test_builtin_elementwise_clmul(unsigned int ui1, unsigned int ui2,
   bi1 = __builtin_elementwise_clmul(bi1, bi2);
 }
 
+void test_builtin_elementwise_pext(unsigned int ui1, unsigned int ui2,
+                                   unsigned short us1, unsigned short us2,
+                                   u4 vu1, u4 vu2,
+                                   unsigned _BitInt(31) bi1,
+                                   unsigned _BitInt(31) bi2) {
+  // CHECK:      [[UI1:%.+]] = load i32, ptr %ui1.addr, align 4
+  // CHECK-NEXT: [[UI2:%.+]] = load i32, ptr %ui2.addr, align 4
+  // CHECK-NEXT: [[UI3:%.+]] = call i32 @llvm.pext.i32(i32 [[UI1]], i32 [[UI2]])
+  // CHECK-NEXT: store i32 [[UI3]], ptr %ui1.addr, align 4
+  ui1 = __builtin_elementwise_pext(ui1, ui2);
+
+  // CHECK:      [[US1:%.+]] = load i16, ptr %us1.addr, align 2
+  // CHECK-NEXT: [[US2:%.+]] = load i16, ptr %us2.addr, align 2
+  // CHECK-NEXT: [[US3:%.+]] = call i16 @llvm.pext.i16(i16 [[US1]], i16 [[US2]])
+  // CHECK-NEXT: store i16 [[US3]], ptr %us1.addr, align 2
+  us1 = __builtin_elementwise_pext(us1, us2);
+
+  // CHECK:      [[VU1:%.+]] = load <4 x i32>, ptr %vu1.addr, align 16
+  // CHECK-NEXT: [[VU2:%.+]] = load <4 x i32>, ptr %vu2.addr, align 16
+  // CHECK-NEXT: [[VU3:%.+]] = call <4 x i32> @llvm.pext.v4i32(<4 x i32> [[VU1]], <4 x i32> [[VU2]])
+  // CHECK-NEXT: store <4 x i32> [[VU3]], ptr %vu1.addr, align 16
+  vu1 = __builtin_elementwise_pext(vu1, vu2);
+
+  // CHECK:      [[BI1:%.+]] = load i32, ptr %bi1.addr, align 4
+  // CHECK-NEXT: [[BI1TRUNC:%.+]] = trunc i32 [[BI1]] to i31
+  // CHECK-NEXT: [[BI2:%.+]] = load i32, ptr %bi2.addr, align 4
+  // CHECK-NEXT: [[BI2TRUNC:%.+]] = trunc i32 [[BI2]] to i31
+  // CHECK-NEXT: [[BIRES:%.+]] = call i31 @llvm.pext.i31(i31 [[BI1TRUNC]], i31 [[BI2TRUNC]])
+  // CHECK-NEXT: [[BIRESZEXT:%.+]] = zext i31 [[BIRES]] to i32
+  // CHECK-NEXT: store i32 [[BIRESZEXT]], ptr %bi1.addr, align 4
+  bi1 = __builtin_elementwise_pext(bi1, bi2);
+}
+
+void test_builtin_elementwise_pdep(unsigned int ui1, unsigned int ui2,
+                                   unsigned short us1, unsigned short us2,
+                                   u4 vu1, u4 vu2,
+                                   unsigned _BitInt(31) bi1,
+                                   unsigned _BitInt(31) bi2) {
+  // CHECK:      [[UI1:%.+]] = load i32, ptr %ui1.addr, align 4
+  // CHECK-NEXT: [[UI2:%.+]] = load i32, ptr %ui2.addr, align 4
+  // CHECK-NEXT: [[UI3:%.+]] = call i32 @llvm.pdep.i32(i32 [[UI1]], i32 [[UI2]])
+  // CHECK-NEXT: store i32 [[UI3]], ptr %ui1.addr, align 4
+  ui1 = __builtin_elementwise_pdep(ui1, ui2);
+
+  // CHECK:      [[US1:%.+]] = load i16, ptr %us1.addr, align 2
+  // CHECK-NEXT: [[US2:%.+]] = load i16, ptr %us2.addr, align 2
+  // CHECK-NEXT: [[US3:%.+]] = call i16 @llvm.pdep.i16(i16 [[US1]], i16 [[US2]])
+  // CHECK-NEXT: store i16 [[US3]], ptr %us1.addr, align 2
+  us1 = __builtin_elementwise_pdep(us1, us2);
+
+  // CHECK:      [[VU1:%.+]] = load <4 x i32>, ptr %vu1.addr, align 16
+  // CHECK-NEXT: [[VU2:%.+]] = load <4 x i32>, ptr %vu2.addr, align 16
+  // CHECK-NEXT: [[VU3:%.+]] = call <4 x i32> @llvm.pdep.v4i32(<4 x i32> [[VU1]], <4 x i32> [[VU2]])
+  // CHECK-NEXT: store <4 x i32> [[VU3]], ptr %vu1.addr, align 16
+  vu1 = __builtin_elementwise_pdep(vu1, vu2);
+
+  // CHECK:      [[BI1:%.+]] = load i32, ptr %bi1.addr, align 4
+  // CHECK-NEXT: [[BI1TRUNC:%.+]] = trunc i32 [[BI1]] to i31
+  // CHECK-NEXT: [[BI2:%.+]] = load i32, ptr %bi2.addr, align 4
+  // CHECK-NEXT: [[BI2TRUNC:%.+]] = trunc i32 [[BI2]] to i31
+  // CHECK-NEXT: [[BIRES:%.+]] = call i31 @llvm.pdep.i31(i31 [[BI1TRUNC]], i31 [[BI2TRUNC]])
+  // CHECK-NEXT: [[BIRESZEXT:%.+]] = zext i31 [[BIRES]] to i32
+  // CHECK-NEXT: store i32 [[BIRESZEXT]], ptr %bi1.addr, align 4
+  bi1 = __builtin_elementwise_pdep(bi1, bi2);
+}
+
 void test_builtin_elementwise_clzg(si8 vs1, si8 vs2, u4 vu1,
                                    long long int lli, short si,
                                    _BitInt(31) bi, int i,

@@ -16,14 +16,14 @@
 #include "llvm/ADT/FunctionExtras.h"
 
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorSymbolDef.h"
-#include "llvm/ExecutionEngine/Orc/Shared/SimpleRemoteEPCUtils.h"
 #include "llvm/ExecutionEngine/Orc/Shared/TargetProcessControlTypes.h"
+#include "llvm/ExecutionEngine/Orc/TargetProcess/RemoteSymbolLookupSet.h"
 
 namespace llvm::orc {
 
 class ExecutorResolver {
 public:
-  using ResolveResult = Expected<std::vector<std::optional<ExecutorSymbolDef>>>;
+  using ResolveResult = Expected<std::vector<std::optional<ExecutorAddr>>>;
   using YieldResolveResultFn = unique_function<void(ResolveResult)>;
 
   virtual ~ExecutorResolver() = default;
@@ -32,7 +32,7 @@ public:
                             YieldResolveResultFn &&OnResolve) = 0;
 };
 
-class DylibSymbolResolver : public ExecutorResolver {
+class LLVM_ABI DylibSymbolResolver : public ExecutorResolver {
 public:
   DylibSymbolResolver(tpctypes::DylibHandle H) : Handle(H) {}
 

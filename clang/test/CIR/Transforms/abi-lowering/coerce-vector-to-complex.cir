@@ -1,0 +1,42 @@
+// RUN: cir-opt %s -cir-call-conv-lowering="classification-attr=test_classify" \
+// RUN:   | FileCheck %s
+
+#coerce_complex_to_vec2 = {
+  return = { kind = "direct" },
+  args   = [ { kind = "direct",
+               coerced_type = !cir.vector<2 x !cir.float> } ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<f32, dense<32>: vector<2xi64>>>
+} {
+
+  cir.func @takes_complex(%arg0: !cir.complex<!cir.float>)
+      attributes { test_classify = #coerce_complex_to_vec2 } {
+    cir.return
+  }
+
+  // Entry-block memory roundtrip recovers the complex from the vector arg.
+  // CHECK: cir.func{{.*}} @takes_complex(%[[ARG:.*]]: !cir.vector<2 x !cir.float>)
+  // CHECK:   %[[SLOT:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<!cir.vector<2 x !cir.float>>
+  // CHECK:   cir.store %[[ARG]], %[[SLOT]] : !cir.vector<2 x !cir.float>, !cir.ptr<!cir.vector<2 x !cir.float>>
+  // CHECK:   %[[CAST:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!cir.vector<2 x !cir.float>> -> !cir.ptr<!cir.complex<!cir.float>>
+  // CHECK:   %{{.*}} = cir.load %[[CAST]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
+
+  cir.func @caller(%arg0: !cir.complex<!cir.float>)
+      attributes { test_classify = #coerce_complex_to_vec2 } {
+    cir.call @takes_complex(%arg0) : (!cir.complex<!cir.float>) -> ()
+    cir.return
+  }
+
+  // Call site coerces the complex value to the vector type through memory.
+  // CHECK: cir.func{{.*}} @caller(%[[ARG:.*]]: !cir.vector<2 x !cir.float>)
+  // CHECK:   %[[COMPLEX:.*]] = cir.load %{{.*}} : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
+  // CHECK:   %[[CSLOT:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
+  // CHECK:   cir.store %[[COMPLEX]], %[[CSLOT]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
+  // CHECK:   %[[CCAST:.*]] = cir.cast bitcast %[[CSLOT]] : !cir.ptr<!cir.complex<!cir.float>> -> !cir.ptr<!cir.vector<2 x !cir.float>>
+  // CHECK:   %[[COERCED:.*]] = cir.load %[[CCAST]] : !cir.ptr<!cir.vector<2 x !cir.float>>, !cir.vector<2 x !cir.float>
+  // CHECK:   cir.call @takes_complex(%[[COERCED]]) : (!cir.vector<2 x !cir.float>) -> ()
+
+}

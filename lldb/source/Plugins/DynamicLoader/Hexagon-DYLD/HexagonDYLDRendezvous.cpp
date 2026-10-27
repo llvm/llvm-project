@@ -15,6 +15,8 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
 
+#include "llvm/Support/Error.h"
+
 #include "HexagonDYLDRendezvous.h"
 
 using namespace lldb;
@@ -25,16 +27,19 @@ using namespace lldb_private;
 static addr_t ResolveRendezvousAddress(Process *process) {
   addr_t info_location;
   addr_t info_addr;
-  Status error;
 
   info_location = process->GetImageInfoAddress();
 
   if (info_location == LLDB_INVALID_ADDRESS)
     return LLDB_INVALID_ADDRESS;
 
-  info_addr = process->ReadPointerFromMemory(info_location, error);
-  if (error.Fail())
+  llvm::Expected<lldb::addr_t> info_addr_or_err =
+      process->ReadPointerFromMemory(info_location);
+  if (!info_addr_or_err) {
+    llvm::consumeError(info_addr_or_err.takeError());
     return LLDB_INVALID_ADDRESS;
+  }
+  info_addr = *info_addr_or_err;
 
   if (info_addr == 0)
     return LLDB_INVALID_ADDRESS;
@@ -148,7 +153,6 @@ bool HexagonDYLDRendezvous::UpdateSOEntries() {
 
 bool HexagonDYLDRendezvous::UpdateSOEntriesForAddition() {
   SOEntry entry;
-  iterator pos;
 
   assert(m_previous.state == eAdd);
 
@@ -176,7 +180,6 @@ bool HexagonDYLDRendezvous::UpdateSOEntriesForAddition() {
 
 bool HexagonDYLDRendezvous::UpdateSOEntriesForDeletion() {
   SOEntryList entry_list;
-  iterator pos;
 
   assert(m_previous.state == eDelete);
 
@@ -226,11 +229,13 @@ addr_t HexagonDYLDRendezvous::ReadWord(addr_t addr, uint64_t *dst,
 }
 
 addr_t HexagonDYLDRendezvous::ReadPointer(addr_t addr, addr_t *dst) {
-  Status error;
-
-  *dst = m_process->ReadPointerFromMemory(addr, error);
-  if (error.Fail())
+  llvm::Expected<lldb::addr_t> dst_or_err =
+      m_process->ReadPointerFromMemory(addr);
+  if (!dst_or_err) {
+    llvm::consumeError(dst_or_err.takeError());
     return 0;
+  }
+  *dst = *dst_or_err;
 
   return addr + m_process->GetAddressByteSize();
 }

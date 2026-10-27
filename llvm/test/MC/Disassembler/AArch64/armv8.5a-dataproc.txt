@@ -69,7 +69,7 @@
 # Flag manipulation
 [0x3f,0x40,0x00,0xd5]
 # CHECK: xaflag
-# CHECK-NOV85: :[[@LINE-2]]:2: warning: invalid instruction encoding
+# CHECK-NOV85: msr	S0_0_C4_C0_1, xzr
 [0x5f,0x40,0x00,0xd5]
 # CHECK: axflag
-# CHECK-NOV85: :[[@LINE-2]]:2: warning: invalid instruction encoding
+# CHECK-NOV85: msr	S0_0_C4_C0_2, xzr

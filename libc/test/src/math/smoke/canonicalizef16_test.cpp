@@ -10,4 +10,5 @@
 
 #include "src/math/canonicalizef16.h"
 
-LIST_CANONICALIZE_TESTS(float16, LIBC_NAMESPACE::canonicalizef16)
+LIST_CANONICALIZE_TESTS(Canonicalizef16, float16,
+                        LIBC_NAMESPACE::canonicalizef16)

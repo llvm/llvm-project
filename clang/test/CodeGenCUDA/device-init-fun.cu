@@ -1,6 +1,6 @@
 // REQUIRES: amdgpu-registered-target
 
-// RUN: %clang_cc1 -triple amdgcn -fcuda-is-device -std=c++11 \
+// RUN: %clang_cc1 -triple amdgpu -fcuda-is-device -std=c++11 \
 // RUN:     -fgpu-allow-device-init -x hip \
 // RUN:     -fno-threadsafe-statics -emit-llvm -o - %s \
 // RUN:     | FileCheck %s

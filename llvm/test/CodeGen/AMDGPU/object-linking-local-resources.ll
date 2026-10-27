@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -filetype=asm < %s | FileCheck %s --check-prefix=DEFAULT
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -amdgpu-enable-object-linking -filetype=asm < %s | FileCheck %s --check-prefix=OL
+; RUN: llc -mtriple=amdgpu9.00-amd-amdhsa -filetype=asm < %s | FileCheck %s --check-prefix=DEFAULT
+; RUN: llc -mtriple=amdgpu9.00-amd-amdhsa -amdgpu-enable-object-linking -filetype=asm < %s | FileCheck %s --check-prefix=OL
 
 declare void @extern_callee()
 

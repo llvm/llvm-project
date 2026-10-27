@@ -5,12 +5,12 @@ target triple = "arm64-apple-macosx"
 
 define void @mul3_clamp_u8_select(ptr noalias %out, ptr noalias %in) {
 ; CHECK-LABEL: define void @mul3_clamp_u8_select(
-; CHECK-SAME: ptr noalias writeonly captures(none) [[OUT:%.*]], ptr noalias readonly captures(none) [[IN:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr noalias nofree writeonly captures(none) [[OUT:%.*]], ptr noalias nofree readonly captures(none) [[IN:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[VECTOR_PH:.*]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[IN]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[IN]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP0]], align 1
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <16 x i8>, ptr [[TMP1]], align 1
@@ -22,7 +22,7 @@ define void @mul3_clamp_u8_select(ptr noalias %out, ptr noalias %in) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = tail call <16 x i16> @llvm.umin.v16i16(<16 x i16> [[TMP5]], <16 x i16> splat (i16 255))
 ; CHECK-NEXT:    [[TMP8:%.*]] = trunc nuw <16 x i16> [[TMP6]] to <16 x i8>
 ; CHECK-NEXT:    [[TMP9:%.*]] = trunc nuw <16 x i16> [[TMP7]] to <16 x i8>
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[OUT]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw i8, ptr [[OUT]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP10]], i64 16
 ; CHECK-NEXT:    store <16 x i8> [[TMP8]], ptr [[TMP10]], align 1
 ; CHECK-NEXT:    store <16 x i8> [[TMP9]], ptr [[TMP11]], align 1

@@ -15,8 +15,6 @@
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/tools.h"
-#include <functional>
-#include <list>
 #include <map>
 #include <string>
 
@@ -476,8 +474,8 @@ const Symbol *RuntimeTableBuilder::DescribeType(
       sizeInBytes /= alignment;
       sizeInBytes *= alignment;
     }
-    AddValue(
-        dtValues, derivedTypeSchema_, "sizeinbytes"s, IntToExpr(sizeInBytes));
+    AddValue(dtValues, derivedTypeSchema_, sizeInBytesCompName,
+        IntToExpr(sizeInBytes));
   }
   if (const Symbol *
       uninstDescObject{isPDTInstantiation

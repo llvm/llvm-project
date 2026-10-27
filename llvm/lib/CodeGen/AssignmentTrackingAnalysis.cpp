@@ -70,12 +70,6 @@ static cl::opt<cl::boolOrDefault>
 // need to create a DenseMapInfo wrapper around the specified underlying type.
 template <> struct llvm::DenseMapInfo<VariableID> {
   using Wrapped = DenseMapInfo<unsigned>;
-  static inline VariableID getEmptyKey() {
-    return static_cast<VariableID>(Wrapped::getEmptyKey());
-  }
-  static inline VariableID getTombstoneKey() {
-    return static_cast<VariableID>(Wrapped::getTombstoneKey());
-  }
   static unsigned getHashValue(const VariableID &Val) {
     return Wrapped::getHashValue(static_cast<unsigned>(Val));
   }
@@ -1326,7 +1320,7 @@ private:
   /// Update \p LiveSet after encountering an instruction with a DIAssignID
   /// attachment, \p I.
   void processTaggedInstruction(Instruction &I, BlockInfo *LiveSet);
-  /// Update \p LiveSet after encountering an instruciton without a DIAssignID
+  /// Update \p LiveSet after encountering an instruction without a DIAssignID
   /// attachment, \p I.
   void processUntaggedInstruction(Instruction &I, BlockInfo *LiveSet);
   void processUnknownStoreToVariable(Instruction &I, VariableID &Var,
@@ -2294,7 +2288,7 @@ static AssignmentTrackingLowering::OverlapMap buildOverlapMapAndRecordDeclares(
             CB->paramHasAttr(ArgIdx, Attribute::ReadNone))
           continue;
         // Skip byval args.  The callee gets a copy, not the original.
-        if (CB->paramHasAttr(ArgIdx, Attribute::ByVal))
+        if (CB->isByValArgument(ArgIdx))
           continue;
 
         auto *AI = dyn_cast<AllocaInst>(getUnderlyingObject(Arg));

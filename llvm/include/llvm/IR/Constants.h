@@ -144,7 +144,7 @@ public:
   /// type is the integer type that corresponds to the bit width of the value.
   LLVM_ABI static ConstantInt *get(LLVMContext &Context, const APInt &V);
 
-  /// Return a ConstantInt constructed from the string strStart with the given
+  /// Return a ConstantInt constructed from the string Str with the given
   /// radix.
   LLVM_ABI static ConstantInt *get(IntegerType *Ty, StringRef Str,
                                    uint8_t Radix);
@@ -216,7 +216,7 @@ public:
   /// This is just a convenience method to make client code smaller for a
   /// common code. It also correctly performs the comparison without the
   /// potential for an assertion from getZExtValue().
-  bool isZero() const { return Val.isZero(); }
+  bool isZero() const { return isNullValue(); }
 
   /// This is just a convenience method to make client code smaller for a
   /// common case. It also correctly performs the comparison without the
@@ -481,6 +481,12 @@ public:
   /// Return true if the value is a NaN.
   bool isNaN() const { return Val.isNaN(); }
 
+  /// Returns true if this value is exactly +1.0.
+  bool isOne() const { return Val.isOne(); }
+
+  /// Returns true if this value is exactly -1.0.
+  bool isMinusOne() const { return Val.isMinusOne(); }
+
   /// We don't rely on operator== working on double values, as it returns true
   /// for things that are clearly not equal, like -0.0 and 0.0.
   /// As such, this method can be used to do an exact bit-for-bit comparison of
@@ -509,7 +515,9 @@ class ConstantAggregateZero final : public ConstantData {
   friend class Constant;
 
   explicit ConstantAggregateZero(Type *Ty)
-      : ConstantData(Ty, ConstantAggregateZeroVal) {}
+      : ConstantData(Ty, ConstantAggregateZeroVal) {
+    SubclassOptionalData = IsNullValue;
+  }
 
   void destroyConstantImpl();
 
@@ -709,7 +717,9 @@ class ConstantPointerNull final : public ConstantData {
   friend class Constant;
 
   explicit ConstantPointerNull(Type *T)
-      : ConstantData(T, Value::ConstantPointerNullVal) {}
+      : ConstantData(T, Value::ConstantPointerNullVal) {
+    SubclassOptionalData = IsNullValue;
+  }
 
   void destroyConstantImpl();
 
@@ -1026,7 +1036,9 @@ class ConstantTokenNone final : public ConstantData {
   friend class Constant;
 
   explicit ConstantTokenNone(LLVMContext &Context)
-      : ConstantData(Type::getTokenTy(Context), ConstantTokenNoneVal) {}
+      : ConstantData(Type::getTokenTy(Context), ConstantTokenNoneVal) {
+    SubclassOptionalData = IsNullValue;
+  }
 
   void destroyConstantImpl();
 
@@ -1047,7 +1059,9 @@ class ConstantTargetNone final : public ConstantData {
   friend class Constant;
 
   explicit ConstantTargetNone(TargetExtType *T)
-      : ConstantData(T, Value::ConstantTargetNoneVal) {}
+      : ConstantData(T, Value::ConstantTargetNoneVal) {
+    SubclassOptionalData = IsNullValue;
+  }
 
   void destroyConstantImpl();
 
@@ -1074,7 +1088,9 @@ public:
 class BlockAddress final : public Constant {
   friend class Constant;
 
-  constexpr static IntrusiveOperandsAllocMarker AllocMarker{1};
+  constexpr static IntrusiveOperandsAllocMarker AllocMarker{0};
+
+  BasicBlock *Block;
 
   BlockAddress(Type *Ty, BasicBlock *BB);
 
@@ -1106,7 +1122,7 @@ public:
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
-  BasicBlock *getBasicBlock() const { return cast<BasicBlock>(Op<0>().get()); }
+  BasicBlock *getBasicBlock() const { return Block; }
   Function *getFunction() const { return getBasicBlock()->getParent(); }
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
@@ -1117,7 +1133,7 @@ public:
 
 template <>
 struct OperandTraits<BlockAddress>
-    : public FixedNumOperandTraits<BlockAddress, 1> {};
+    : public FixedNumOperandTraits<BlockAddress, 0> {};
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(BlockAddress, Value)
 
@@ -1321,12 +1337,16 @@ public:
 
   /// getAlignOf constant expr - computes the alignment of a type in a target
   /// independent way (Note: the return type is an i64).
+  [[deprecated(
+      "Create a constant based on DataLayout::getABITypeAlign() instead")]]
   LLVM_ABI static Constant *getAlignOf(Type *Ty);
 
   /// getSizeOf constant expr - computes the (alloc) size of a type (in
   /// address-units, not bits) in a target independent way (Note: the return
   /// type is an i64).
   ///
+  [[deprecated(
+      "Create a constant based on DataLayout::getTypeAllocSize() instead")]]
   LLVM_ABI static Constant *getSizeOf(Type *Ty);
 
   LLVM_ABI static Constant *getNeg(Constant *C, bool HasNSW = false);
@@ -1445,11 +1465,14 @@ public:
                                 unsigned Flags = 0,
                                 Type *OnlyIfReducedTy = nullptr);
 
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
+
   /// Getelementptr form.  Value* is only accepted for convenience;
   /// all elements must be Constants.
   ///
   /// \param InRange the inrange range if present or std::nullopt.
   /// \param OnlyIfReducedTy see \a getWithOperands() docs.
+  [[deprecated("Use getPtrAdd() or the overload accepting DataLayout instead")]]
   static Constant *
   getGetElementPtr(Type *Ty, Constant *C, ArrayRef<Constant *> IdxList,
                    GEPNoWrapFlags NW = GEPNoWrapFlags::none(),
@@ -1459,6 +1482,7 @@ public:
         Ty, C, ArrayRef((Value *const *)IdxList.data(), IdxList.size()), NW,
         InRange, OnlyIfReducedTy);
   }
+  [[deprecated("Use getPtrAdd() or the overload accepting DataLayout instead")]]
   static Constant *
   getGetElementPtr(Type *Ty, Constant *C, Constant *Idx,
                    GEPNoWrapFlags NW = GEPNoWrapFlags::none(),
@@ -1470,8 +1494,21 @@ public:
     return getGetElementPtr(Ty, C, cast<Value>(Idx), NW, InRange,
                             OnlyIfReducedTy);
   }
+  [[deprecated("Use getPtrAdd() or the overload accepting DataLayout instead")]]
   LLVM_ABI static Constant *
   getGetElementPtr(Type *Ty, Constant *C, ArrayRef<Value *> IdxList,
+                   GEPNoWrapFlags NW = GEPNoWrapFlags::none(),
+                   std::optional<ConstantRange> InRange = std::nullopt,
+                   Type *OnlyIfReducedTy = nullptr);
+
+  /// Create a getelementptr constant expression in canonical ptradd form
+  /// (getelementptr i8) by converting GEP indices to offsets using the
+  /// provided data layout.
+  ///
+  /// Returns nullptr if the indices cannot be converted to ptradd form.
+  LLVM_ABI static Constant *
+  getGetElementPtr(const DataLayout &DL, Type *Ty, Constant *C,
+                   ArrayRef<Constant *> IdxList,
                    GEPNoWrapFlags NW = GEPNoWrapFlags::none(),
                    std::optional<ConstantRange> InRange = std::nullopt,
                    Type *OnlyIfReducedTy = nullptr);
@@ -1488,10 +1525,12 @@ public:
 
   /// Create an "inbounds" getelementptr. See the documentation for the
   /// "inbounds" flag in LangRef.html for details.
+  [[deprecated("Use getPtrAdd() or the overload accepting DataLayout instead")]]
   static Constant *getInBoundsGetElementPtr(Type *Ty, Constant *C,
                                             ArrayRef<Constant *> IdxList) {
     return getGetElementPtr(Ty, C, IdxList, GEPNoWrapFlags::inBounds());
   }
+  [[deprecated("Use getPtrAdd() or the overload accepting DataLayout instead")]]
   static Constant *getInBoundsGetElementPtr(Type *Ty, Constant *C,
                                             Constant *Idx) {
     // This form of the function only exists to avoid ambiguous overload
@@ -1499,10 +1538,13 @@ public:
     // ArrayRef<Value *>.
     return getGetElementPtr(Ty, C, Idx, GEPNoWrapFlags::inBounds());
   }
+  [[deprecated("Use getPtrAdd() or the overload accepting DataLayout instead")]]
   static Constant *getInBoundsGetElementPtr(Type *Ty, Constant *C,
                                             ArrayRef<Value *> IdxList) {
     return getGetElementPtr(Ty, C, IdxList, GEPNoWrapFlags::inBounds());
   }
+
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
 
   /// Create a getelementptr inbounds i8, ptr, offset constant expression.
   static Constant *getInBoundsPtrAdd(Constant *Ptr, Constant *Offset) {

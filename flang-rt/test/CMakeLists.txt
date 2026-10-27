@@ -44,6 +44,7 @@ add_custom_target(flang-rt-test-depends)
 set_target_properties(flang-rt-test-depends PROPERTIES FOLDER "Flang-RT/Meta")
 add_dependencies(flang-rt-test-depends
     flang_rt.runtime
+    flang-rt-mod
   )
 if (TARGET flang_rt.quadmath)
   add_dependencies(flang-rt-test-depends

@@ -13,8 +13,8 @@ subroutine distribute_parallel_do_simd_num_threads()
   ! CHECK:      omp.parallel num_threads({{.*}}) {
   ! CHECK:      omp.distribute {
   ! CHECK-NEXT: omp.wsloop {
-  ! DEFAULT-NEXT: omp.simd linear({{.*}}) private({{.*}}) {
-  ! OPENMP52-NEXT: omp.simd linear(val({{.*}})) private({{.*}}) {
+  ! DEFAULT-NEXT: omp.simd linear({{.*}}) linear_var_types([i32]) {
+  ! OPENMP52-NEXT: omp.simd linear(val({{.*}})) linear_var_types([i32]) {
   ! CHECK-NEXT: omp.loop_nest
   !$omp distribute parallel do simd num_threads(10)
   do index_ = 1, 10
@@ -31,8 +31,8 @@ subroutine distribute_parallel_do_simd_dist_schedule()
   ! CHECK:      omp.parallel  {
   ! CHECK:      omp.distribute dist_schedule_static dist_schedule_chunk_size({{.*}}) {
   ! CHECK-NEXT: omp.wsloop {
-  ! DEFAULT-NEXT: omp.simd linear({{.*}}) private({{.*}}) {
-  ! OPENMP52-NEXT: omp.simd linear(val({{.*}})) private({{.*}}) {
+  ! DEFAULT-NEXT: omp.simd linear({{.*}}) linear_var_types([i32]) {
+  ! OPENMP52-NEXT: omp.simd linear(val({{.*}})) linear_var_types([i32]) {
   ! CHECK-NEXT: omp.loop_nest
   !$omp distribute parallel do simd dist_schedule(static, 4)
   do index_ = 1, 10
@@ -42,6 +42,38 @@ subroutine distribute_parallel_do_simd_dist_schedule()
   !$omp end teams
 end subroutine distribute_parallel_do_simd_dist_schedule
 
+! A num_threads temporary is created outside omp.parallel and must be
+! destroyed once, after it.
+! CHECK-LABEL: func.func @_QPdistribute_parallel_do_simd_temp_cleanup(
+subroutine distribute_parallel_do_simd_temp_cleanup(n)
+  integer :: n
+  interface
+    function get(n) result(r)
+      integer, intent(in) :: n
+      integer, allocatable :: r(:)
+    end function
+  end interface
+  !$omp teams
+
+  ! CHECK:      omp.teams {
+  ! CHECK:      fir.call @_QPget(
+  ! CHECK:      %[[NT_TMP:.*]] = hlfir.as_expr
+  ! CHECK:      omp.parallel num_threads({{.*}}) {
+  ! CHECK-NOT:  hlfir.destroy
+  ! CHECK:      omp.distribute {
+  ! CHECK-NOT:  hlfir.destroy
+  ! CHECK:      omp.terminator
+  ! CHECK-NEXT: } {omp.composite}
+  ! CHECK:      hlfir.destroy %[[NT_TMP]] :
+  ! CHECK-NEXT: omp.terminator
+  !$omp distribute parallel do simd num_threads(size(get(n)))
+  do index_ = 1, 10
+  end do
+  !$omp end distribute parallel do simd
+
+  !$omp end teams
+end subroutine distribute_parallel_do_simd_temp_cleanup
+
 ! CHECK-LABEL: func.func @_QPdistribute_parallel_do_simd_schedule(
 subroutine distribute_parallel_do_simd_schedule()
   !$omp teams
@@ -49,8 +81,8 @@ subroutine distribute_parallel_do_simd_schedule()
   ! CHECK:      omp.parallel {
   ! CHECK:      omp.distribute {
   ! CHECK-NEXT: omp.wsloop schedule(static = {{.*}}) {
-  ! DEFAULT-NEXT: omp.simd linear({{.*}}) private({{.*}}) {
-  ! OPENMP52-NEXT: omp.simd linear(val({{.*}})) private({{.*}}) {
+  ! DEFAULT-NEXT: omp.simd linear({{.*}}) linear_var_types([i32]) {
+  ! OPENMP52-NEXT: omp.simd linear(val({{.*}})) linear_var_types([i32]) {
   ! CHECK-NEXT: omp.loop_nest
   !$omp distribute parallel do simd schedule(static, 4)
   do index_ = 1, 10
@@ -67,8 +99,8 @@ subroutine distribute_parallel_do_simd_simdlen()
   ! CHECK:      omp.parallel {
   ! CHECK:      omp.distribute {
   ! CHECK-NEXT: omp.wsloop {
-  ! DEFAULT-NEXT: omp.simd linear({{.*}}) simdlen(4) private({{.*}}) {
-  ! OPENMP52-NEXT: omp.simd linear(val({{.*}})) simdlen(4) private({{.*}}) {
+  ! DEFAULT-NEXT: omp.simd simdlen(4) linear({{.*}}) linear_var_types([i32]) {
+  ! OPENMP52-NEXT: omp.simd simdlen(4) linear(val({{.*}})) linear_var_types([i32]) {
   ! CHECK-NEXT: omp.loop_nest
   !$omp distribute parallel do simd simdlen(4)
   do index_ = 1, 10
@@ -92,13 +124,12 @@ subroutine distribute_parallel_do_simd_private()
   ! CHECK:      omp.parallel {
   ! CHECK:      omp.distribute {
   ! CHECK-NEXT: omp.wsloop {
-  ! DEFAULT-NEXT:  omp.simd linear(%{{.*}}) private(@{{.*}} %[[X]]#0 -> %[[X_ARG:[^,]+]],
-  ! DEFAULT-SAME:                   @{{.*}} %[[INDEX]]#0 -> %[[INDEX_ARG:.*]] : !fir.ref<i64>, !fir.ref<i32>) {
-  ! OPENMP52-NEXT: omp.simd linear(val(%{{.*}})) private(@{{.*}} %[[X]]#0 -> %[[X_ARG:[^,]+]],
-  ! OPENMP52-SAME:                  @{{.*}} %[[INDEX]]#0 -> %[[INDEX_ARG:.*]] : !fir.ref<i64>, !fir.ref<i32>) {
+  ! DEFAULT-NEXT: omp.simd linear({{.*}}) linear_var_types([i32]) private(@{{.*}} %[[X]]#0 -> %[[X_ARG:[^:]+]]
+  ! DEFAULT-SAME:                  : !fir.ref<i64>) {
+  ! OPENMP52-NEXT: omp.simd linear(val({{.*}})) linear_var_types([i32]) private(@{{.*}} %[[X]]#0 -> %[[X_ARG:[^:]+]]
+  ! OPENMP52-SAME:                  : !fir.ref<i64>) {
   ! CHECK-NEXT: omp.loop_nest
   ! CHECK:      %[[X_PRIV:.*]]:2 = hlfir.declare %[[X_ARG]]
-  ! CHECK:      %[[INDEX_PRIV:.*]]:2 = hlfir.declare %[[INDEX_ARG]]
   !$omp distribute parallel do simd private(x)
   do index_ = 1, 10
   end do
@@ -113,15 +144,15 @@ implicit none
 integer :: x_min,x_max,y_min,y_max
 integer :: i,j
 
-! CHECK:           omp.target {{.*}} {
-! CHECK:             %[[X_MAX_MAPPED:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "{{.*}}x_max"}
+! CHECK:           omp.target kernel_type(spmd) {{.*}} {
+! CHECK:             %[[X_MAX_MAPPED:.*]]:2 = hlfir.declare %{{.*}} uniq_name("{{.*}}x_max")
 ! CHECK:             omp.teams {
 ! CHECK:               omp.parallel {
 ! CHECK:                 omp.distribute {
 ! CHECK:                   omp.wsloop {
 ! CHECK:                     omp.simd private({{.*}}) {
 ! CHECK:                       omp.loop_nest (%[[I_IV:.*]], %[[J_IV:.*]]) : i32 = ({{.*}}) to ({{.*}}) inclusive step ({{.*}}) collapse(2) {
-! CHECK:                         %[[Y_MAX_PRIV:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "{{.*}}y_max"}
+! CHECK:                         %[[Y_MAX_PRIV:.*]]:2 = hlfir.declare %{{.*}} uniq_name("{{.*}}y_max")
 
 ! CHECK:                         %[[I_UB:.*]] = fir.load %[[X_MAX_MAPPED]]#0 : !fir.ref<i32>
 ! CHECK:                         %[[I_STEP:.*]] = arith.constant 1 : i32
@@ -150,4 +181,17 @@ integer :: i,j
     do j=y_min,y_max
     enddo
   enddo
+end subroutine
+
+! CHECK-LABEL:   func.func @_QPtarget_teams_distribute_parallel_do_simd_linear
+subroutine target_teams_distribute_parallel_do_simd_linear()
+  implicit none
+  integer :: iv
+
+  ! CHECK: omp.target
+  ! CHECK: %[[IV:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtarget_teams_distribute_parallel_do_simd_linearEiv")
+  ! CHECK: omp.simd private(@_QFtarget_teams_distribute_parallel_do_simd_linearEiv_private_i32 %[[IV]]#0 -> %{{.*}} : !fir.ref<i32>)
+  !$omp target teams distribute parallel do simd
+  do iv = 1, 10
+  end do
 end subroutine
