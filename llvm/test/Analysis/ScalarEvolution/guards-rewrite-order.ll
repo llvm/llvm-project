@@ -8,7 +8,7 @@ define void @umin_uge_16(i64 %n, i8 %k) {
 ; CHECK-LABEL: 'umin_uge_16'
 ; CHECK-NEXT:  Determining loop execution counts for: @umin_uge_16
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-16 + (16 * (zext i3 (trunc i64 (((zext i8 (64 + (-1 * %k)) to i64) umin %n) /u 16) to i3) to i64))<nuw><nsw>)<nsw> /u 16)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 1152921504606846975
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 3
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-16 + (16 * (zext i3 (trunc i64 (((zext i8 (64 + (-1 * %k)) to i64) umin %n) /u 16) to i3) to i64))<nuw><nsw>)<nsw> /u 16)
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
@@ -38,7 +38,7 @@ define void @smin_sge_16(i64 %n, i8 %k) {
 ; CHECK-LABEL: 'smin_sge_16'
 ; CHECK-NEXT:  Determining loop execution counts for: @smin_sge_16
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-16 + (16 * (zext i3 (trunc i64 (((sext i8 (64 + (-1 * %k)) to i64) smin %n) /u 16) to i3) to i64))<nuw><nsw>)<nsw> /u 16)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 6
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 3
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-16 + (16 * (zext i3 (trunc i64 (((sext i8 (64 + (-1 * %k)) to i64) smin %n) /u 16) to i3) to i64))<nuw><nsw>)<nsw> /u 16)
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
@@ -103,9 +103,10 @@ exit:
 define void @rewrite_chain(i64 %n, i64 %x, i64 %y) {
 ; CHECK-LABEL: 'rewrite_chain'
 ; CHECK-NEXT:  Determining loop execution counts for: @rewrite_chain
-; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 + %n) /u 16)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 1152921504606846974
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 + %n) /u 16)
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   %x.sgt = icmp sgt i64 %x, 1000
