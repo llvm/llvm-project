@@ -3065,8 +3065,8 @@ void VPlanTransforms::createInterleaveGroups(
         needsMaskForGaps(IG, !StoredValues.empty(), EpilogueAllowed);
 
     assert((IRMemberToRecipe.contains(IG->getInsertPos()) ||
-           isa<VPWidenLoadRecipe>(Start->getAsRecipe())) &&
-          "Dead member in non-load group?");
+            isa<VPWidenLoadRecipe>(Start->getAsRecipe())) &&
+           "Dead member in non-load group?");
     VPWidenMemoryRecipe *InsertPos =
         getInsertPosRecipe(IG, IRMemberToRecipe, Start, VPDT);
     Instruction *IRInsertPos = &InsertPos->getIngredient();
