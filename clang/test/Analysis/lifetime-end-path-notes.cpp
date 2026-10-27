@@ -1,4 +1,5 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection,alpha.core.DanglingPtrDeref -analyzer-config cfg-lifetime=true -analyzer-output=text -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection,alpha.core.DanglingPtrDeref\
+// RUN:  -analyzer-config cfg-lifetime=true -analyzer-output=text -verify %s
 
 void clang_analyzer_warnIfReached();
 
