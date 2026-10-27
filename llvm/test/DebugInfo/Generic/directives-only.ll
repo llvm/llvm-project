@@ -1,7 +1,13 @@
 ; XFAIL: target={{.*}}-aix{{.*}}
 ; RUN: llc -filetype=asm -asm-verbose=0 -O0 < %s | FileCheck %s
+; RUN: llc -dwarf-version=5 -filetype=asm -asm-verbose=0 -O0 < %s | FileCheck %s
+; RUN: llc -debugger-tune=lldb -filetype=asm -asm-verbose=0 -O0 < %s | FileCheck %s
+; RUN: llc -accel-tables=Apple -filetype=asm -asm-verbose=0 -O0 < %s | FileCheck %s
+; RUN: sed 's/emissionKind: DebugDirectivesOnly/emissionKind: DebugDirectivesOnly, nameTableKind: GNU/' %s | llc -filetype=asm -asm-verbose=0 -O0 | FileCheck %s
+; RUN: sed 's/emissionKind: DebugDirectivesOnly/emissionKind: DebugDirectivesOnly, nameTableKind: Apple/' %s | llc -dwarf-version=5 -filetype=asm -asm-verbose=0 -O0 | FileCheck %s
 
 ; Generated with clang from multiline.c:
+; int v;
 ; void f1();
 ; void f2() {
 ;   f1(); f1(); f1();
@@ -9,16 +15,19 @@
 ; }
 
 
-; CHECK: .file 1 "/tmp/dbginfo{{.*}}multiline.c"
-; CHECK: .loc 1 3 3
-; CHECK: .loc 1 3 9
-; CHECK: .loc 1 3 15
-; CHECK: .loc 1 4 3
-; CHECK: .loc 1 4 9
-; CHECK: .loc 1 4 15
-; CHECK: .loc 1 5 1
+; CHECK: .file {{[01]}} "/tmp/dbginfo{{.*}}multiline.c"
+; CHECK: .loc {{[01]}} 3 3
+; CHECK: .loc {{[01]}} 3 9
+; CHECK: .loc {{[01]}} 3 15
+; CHECK: .loc {{[01]}} 4 3
+; CHECK: .loc {{[01]}} 4 9
+; CHECK: .loc {{[01]}} 4 15
+; CHECK: .loc {{[01]}} 5 1
 
-; CHECK-NOT: .section .{{debug_.*}}
+; CHECK-NOT: .section{{.*}}debug_
+; CHECK-NOT: .section{{.*}}apple_
+
+@v = global i32 0, align 4, !dbg !18
 
 ; Function Attrs: nounwind uwtable
 define void @f2() #0 !dbg !4 {
@@ -41,7 +50,7 @@ attributes #1 = { "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp
 !llvm.module.flags = !{!8, !9}
 !llvm.ident = !{!10}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.6.0 (trunk 225000) (llvm/trunk 224999)", isOptimized: false, emissionKind: DebugDirectivesOnly, file: !1)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.6.0 (trunk 225000) (llvm/trunk 224999)", isOptimized: false, emissionKind: DebugDirectivesOnly, file: !1, globals: !19, macros: !22)
 !1 = !DIFile(filename: "multiline.c", directory: "/tmp/dbginfo")
 !4 = distinct !DISubprogram(name: "f2", line: 2, isLocal: false, isDefinition: true, isOptimized: false, unit: !0, scopeLine: 2, file: !1, scope: !5, type: !6)
 !5 = !DIFile(filename: "multiline.c", directory: "/tmp/dbginfo")
@@ -57,3 +66,9 @@ attributes #1 = { "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp
 !15 = !DILocation(line: 4, column: 9, scope: !4)
 !16 = !DILocation(line: 4, column: 15, scope: !4)
 !17 = !DILocation(line: 5, column: 1, scope: !4)
+!18 = !DIGlobalVariableExpression(var: !20, expr: !DIExpression())
+!19 = !{!18}
+!20 = distinct !DIGlobalVariable(name: "v", scope: !0, file: !1, line: 1, type: !21, isLocal: false, isDefinition: true)
+!21 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+!22 = !{!23}
+!23 = !DIMacro(type: DW_MACINFO_define, line: 1, name: "FOO", value: "1")

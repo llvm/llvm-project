@@ -681,6 +681,8 @@ void llvm::emitDWARF5AccelTable(
   int CUCount = 0;
   int TUCount = 0;
   for (const auto &CU : enumerate(CUs)) {
+    if (CU.value()->getCUNode()->isDebugDirectivesOnly())
+      continue;
     switch (CU.value()->getCUNode()->getNameTableKind()) {
     case DICompileUnit::DebugNameTableKind::Default:
     case DICompileUnit::DebugNameTableKind::Apple:
