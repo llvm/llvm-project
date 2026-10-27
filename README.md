@@ -33,6 +33,30 @@ page for information on building and running LLVM.
 For information on how to contribute to the LLVM project, please take a look at
 the [Contributing to LLVM](https://llvm.org/docs/Contributing.html) guide.
 
+## Apple GPU targets in this fork
+
+This fork carries two experimental LLVM targets for Apple GPUs:
+
+* **AGX** (`llvm/lib/Target/AGX`) generates native machine code for the GPUs
+  of Apple silicon. See `llvm/docs/AGXUsage.rst`.
+* **AIR** (`llvm/lib/Target/AIR`) generates Apple Intermediate Representation,
+  the bitcode that the Metal runtime loads, either as a `.metallib` library or,
+  with `-air-output=air`, as a `.air` object for Apple's `metallib` tool. See
+  `llvm/docs/AIR/index.rst`.
+
+Build them with `-DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD="AGX;AIR"`.
+
+### Attribution
+
+The AIR target, its `.metallib` writer, the MLIR `air` dialect and its tests
+are the work of **imperatormk** ([github.com/imperatormk](https://github.com/imperatormk)),
+developed on the `metal-target-poc` branch of
+[imperatormk/llvm-project](https://github.com/imperatormk/llvm-project/tree/metal-target-poc).
+They were brought into this fork by cherry-picking that branch's history:
+each of those commits keeps imperatormk as its author and records the
+original commit with a `(cherry picked from commit ...)` line. Changes made
+here afterwards are separate commits on top.
+
 ## Getting in touch
 
 Join the [LLVM Discourse forums](https://discourse.llvm.org/), [Discord
