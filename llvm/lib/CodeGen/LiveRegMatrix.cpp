@@ -27,6 +27,7 @@
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -34,6 +35,12 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "regalloc"
+
+static cl::opt<unsigned> MaxFreedRegs(
+    "live-reg-matrix-freed-history", cl::Hidden,
+    cl::desc("Number of recently freed registers LiveRegMatrix remembers "
+             "before dropping the history"),
+    cl::init(512));
 
 STATISTIC(NumAssigned   , "Number of registers assigned");
 STATISTIC(NumUnassigned , "Number of registers unassigned");
@@ -70,6 +77,11 @@ void LiveRegMatrix::init(MachineFunction &MF, LiveIntervals &pLIS,
   if (NumRegUnits != Matrix.size())
     Queries.reset(new LiveIntervalUnion::Query[NumRegUnits]);
   Matrix.init(*LIUAlloc, NumRegUnits);
+
+  // Advance past every recorded unassign so nothing holding an older position
+  // mistakes itself for up to date.
+  FreedBase += FreedRegs.size() + 1;
+  FreedRegs.clear();
 
   // Make sure no stale queries get reused.
   invalidateVirtRegs();
@@ -150,6 +162,19 @@ void LiveRegMatrix::unassign(const LiveInterval &VirtReg,
 
   ++NumUnassigned;
   LLVM_DEBUG(dbgs() << '\n');
+  if (!PhysReg || ClearAllReferencingSegments || VirtReg.empty()) {
+    // This unassign is not described either, so count it as well: an observer
+    // positioned at the old end must not think it has seen everything.
+    FreedBase += FreedRegs.size() + 1;
+    FreedRegs.clear();
+    return;
+  }
+  if (FreedRegs.size() >= MaxFreedRegs) {
+    FreedBase += FreedRegs.size();
+    FreedRegs.clear();
+  }
+  FreedRegs.push_back(
+      {PhysReg.asMCReg(), VirtReg.beginIndex(), VirtReg.endIndex()});
 }
 
 bool LiveRegMatrix::isPhysRegUsed(MCRegister PhysReg) const {
