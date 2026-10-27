@@ -4092,7 +4092,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     QualType ArgType = Arg->getType();
     // FIXME: The allowance for Obj-C pointers and block pointers is historical
     // and likely a mistake.
-    if (!ArgType->isIntegralOrEnumerationType() && !ArgType->isFloatingType() &&
+    if (!ArgType->isIntegralOrEnumerationType() &&
+        !ArgType->isRealFloatingType() && !ArgType->isAnyComplexType() &&
         !ArgType->isObjCObjectPointerType() && !ArgType->isBlockPointerType())
       // Per the GCC documentation, only numeric constants are recognized after
       // inlining.
@@ -4103,16 +4104,27 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       // side-effects.
       return RValue::get(ConstantInt::get(ResultType, 0));
 
-    Value *ArgValue = EmitScalarExpr(Arg);
-    if (ArgType->isObjCObjectPointerType()) {
-      // Convert Objective-C objects to id because we cannot distinguish between
-      // LLVM types for Obj-C classes as they are opaque.
-      ArgType = CGM.getContext().getObjCIdType();
-      ArgValue = Builder.CreateBitCast(ArgValue, ConvertType(ArgType));
+    Value *Result;
+    if (ArgType->isAnyComplexType()) {
+      // A complex value is constant when both of its components are.
+      ComplexPairTy ArgValue = EmitComplexExpr(Arg);
+      Function *F =
+          CGM.getIntrinsic(Intrinsic::is_constant, ArgValue.first->getType());
+      Value *Real = Builder.CreateCall(F, ArgValue.first);
+      Value *Imag = Builder.CreateCall(F, ArgValue.second);
+      Result = Builder.CreateAnd(Real, Imag);
+    } else {
+      Value *ArgValue = EmitScalarExpr(Arg);
+      if (ArgType->isObjCObjectPointerType()) {
+        // Convert Objective-C objects to id because we cannot distinguish
+        // between LLVM types for Obj-C classes as they are opaque.
+        ArgType = CGM.getContext().getObjCIdType();
+        ArgValue = Builder.CreateBitCast(ArgValue, ConvertType(ArgType));
+      }
+      Function *F =
+          CGM.getIntrinsic(Intrinsic::is_constant, ConvertType(ArgType));
+      Result = Builder.CreateCall(F, ArgValue);
     }
-    Function *F =
-        CGM.getIntrinsic(Intrinsic::is_constant, ConvertType(ArgType));
-    Value *Result = Builder.CreateCall(F, ArgValue);
     if (Result->getType() != ResultType)
       Result = Builder.CreateIntCast(Result, ResultType, /*isSigned*/false);
     return RValue::get(Result);
