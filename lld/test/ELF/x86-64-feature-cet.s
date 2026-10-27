@@ -73,6 +73,7 @@
 
 # RUN: ld.lld -e func1 %t.o %t4.o -o %t -z ibt-report=error 2>&1 | count 0
 # RUN: ld.lld -e func1 %t.o %t4.o -o %t -z cet-report=error -z shstk-report=none 2>&1 | count 0
+# RUN: ld.lld -e func1 %t.o %t4.o -o %t -z ibt-report=error -z shstk-report=error -z cet-report=none 2>&1 | count 0
 # RUN: llvm-readelf -n %t | FileCheck --check-prefix=NOSHSTK %s
 # RUN: not ld.lld -e func1 %t.o %t4.o -o /dev/null -z shstk-report=error 2>&1 \
 # RUN:   | FileCheck --check-prefix=SHSTK_REPORT %s

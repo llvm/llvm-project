@@ -402,14 +402,15 @@ static void checkOptions(Ctx &ctx) {
   }
 
   if (ctx.arg.emachine != EM_386 && ctx.arg.emachine != EM_X86_64) {
-    if (ctx.arg.zCetReport != ReportPolicy::None)
-      ErrAlways(ctx) << "-z cet-report only supported on X86 and X86_64";
     if (ctx.arg.zIbtReport != ReportPolicy::None &&
-        ctx.arg.zIbtReportSource == "-z ibt-report")
-      ErrAlways(ctx) << "-z ibt-report only supported on X86 and X86_64";
+        ctx.arg.zIbtReportSource != "-z force-ibt")
+      ErrAlways(ctx) << ctx.arg.zIbtReportSource
+                     << " only supported on X86 and X86_64";
     if (ctx.arg.zShstkReport != ReportPolicy::None &&
-        ctx.arg.zShstkReportSource == "-z shstk-report")
-      ErrAlways(ctx) << "-z shstk-report only supported on X86 and X86_64";
+        (ctx.arg.zShstkReportSource != ctx.arg.zIbtReportSource ||
+         ctx.arg.zIbtReport == ReportPolicy::None))
+      ErrAlways(ctx) << ctx.arg.zShstkReportSource
+                     << " only supported on X86 and X86_64";
   }
 
   if (ctx.arg.zMarkPlt) {
@@ -1770,13 +1771,11 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   }
 
   // Parse `-z *-report=` options in command-line order. On x86, `-z cet-report`
-  // sets the report policy for both IBT and SHSTK, while `-z ibt-report` and
-  // `-z shstk-report` set them individually (allowing e.g.
-  // `-fcf-protection=branch` builds to require IBT without requiring SHSTK, or
-  // `-z ibt-report=none` to silence the default warning from `-z force-ibt`).
+  // sets both `zIbtReport` and `zShstkReport`, while `-z ibt-report` and
+  // `-z shstk-report` set them individually.
   auto reports = {
       std::make_pair("bti-report", &ctx.arg.zBtiReport),
-      std::make_pair("cet-report", &ctx.arg.zCetReport),
+      std::make_pair("cet-report", &ctx.arg.zIbtReport),
       std::make_pair("execute-only-report", &ctx.arg.zExecuteOnlyReport),
       std::make_pair("gcs-report", &ctx.arg.zGcsReport),
       std::make_pair("gcs-report-dynamic", &ctx.arg.zGcsReportDynamic),
@@ -1810,9 +1809,8 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       if (option.first == "bti-report") {
         ctx.arg.zBtiReportSource = "-z bti-report";
       } else if (option.first == "cet-report") {
-        ctx.arg.zIbtReport = *reportArg.second;
         ctx.arg.zIbtReportSource = "-z cet-report";
-        ctx.arg.zShstkReport = *reportArg.second;
+        ctx.arg.zShstkReport = ctx.arg.zIbtReport;
         ctx.arg.zShstkReportSource = "-z cet-report";
       } else if (option.first == "gcs-report") {
         ctx.arg.zGcsReportSource = "-z gcs-report";
@@ -3137,12 +3135,10 @@ static void readSecurityNotes(Ctx &ctx) {
                      "GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED";
     }
 
-    if (ctx.arg.zForceBti && !(features & GNU_PROPERTY_AARCH64_FEATURE_1_BTI)) {
+    if (ctx.arg.zForceBti)
       features |= GNU_PROPERTY_AARCH64_FEATURE_1_BTI;
-    } else if (ctx.arg.zForceIbt &&
-               !(features & GNU_PROPERTY_X86_FEATURE_1_IBT)) {
+    else if (ctx.arg.zForceIbt)
       features |= GNU_PROPERTY_X86_FEATURE_1_IBT;
-    }
     if (ctx.arg.zPacPlt && !(hasValidPauthAbiCoreInfo ||
                              (features & GNU_PROPERTY_AARCH64_FEATURE_1_PAC))) {
       Warn(ctx) << f
