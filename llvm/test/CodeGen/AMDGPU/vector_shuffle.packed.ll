@@ -5262,10 +5262,9 @@ define amdgpu_kernel void @fma_shuffle_v2bf16(ptr addrspace(1) nocapture readonl
 ; GFX942-NEXT:    v_add3_u32 v11, v11, v7, s2
 ; GFX942-NEXT:    v_cndmask_b32_e32 v1, v9, v10, vcc
 ; GFX942-NEXT:    v_cmp_u_f32_e32 vcc, v7, v7
-; GFX942-NEXT:    v_perm_b32 v0, v2, v0, s3
-; GFX942-NEXT:    s_nop 0
 ; GFX942-NEXT:    v_cndmask_b32_e32 v3, v11, v12, vcc
 ; GFX942-NEXT:    v_perm_b32 v1, v3, v1, s3
+; GFX942-NEXT:    v_perm_b32 v0, v2, v0, s3
 ; GFX942-NEXT:    global_store_dwordx2 v6, v[0:1], s[0:1]
 ; GFX942-NEXT:    s_endpgm
 ;

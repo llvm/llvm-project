@@ -695,9 +695,8 @@ define amdgpu_kernel void @frem_constant_sel_constants(ptr addrspace(1) %p, i1 %
 ; GFX942-NEXT:    v_fma_f32 v5, -v5, v0, v4
 ; GFX942-NEXT:    v_add_f32_e32 v6, v5, v0
 ; GFX942-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v5
-; GFX942-NEXT:    v_add_u32_e32 v2, -12, v2
-; GFX942-NEXT:    s_nop 0
 ; GFX942-NEXT:    v_cndmask_b32_e32 v5, v5, v6, vcc
+; GFX942-NEXT:    v_add_u32_e32 v2, -12, v2
 ; GFX942-NEXT:    v_ldexp_f32 v5, v5, 12
 ; GFX942-NEXT:    v_cmp_lt_i32_e32 vcc, 12, v2
 ; GFX942-NEXT:    s_cbranch_vccnz .LBB26_3
@@ -709,7 +708,6 @@ define amdgpu_kernel void @frem_constant_sel_constants(ptr addrspace(1) %p, i1 %
 ; GFX942-NEXT:    v_fma_f32 v2, -v3, v0, v2
 ; GFX942-NEXT:    v_add_f32_e32 v0, v2, v0
 ; GFX942-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v2
-; GFX942-NEXT:    s_nop 1
 ; GFX942-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
 ; GFX942-NEXT:    v_ldexp_f32 v0, v0, v1
 ; GFX942-NEXT:    v_and_b32_e32 v0, 0x7fffffff, v0
@@ -717,12 +715,12 @@ define amdgpu_kernel void @frem_constant_sel_constants(ptr addrspace(1) %p, i1 %
 ; GFX942-NEXT:  .LBB26_5: ; %frem.else
 ; GFX942-NEXT:    v_mov_b32_e32 v0, 0x40a00000
 ; GFX942-NEXT:    v_cmp_eq_f32_e64 s[0:1], |v1|, s0
-; GFX942-NEXT:    s_nop 1
 ; GFX942-NEXT:    v_cndmask_b32_e64 v0, v0, 0, s[0:1]
 ; GFX942-NEXT:  .LBB26_6:
 ; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX942-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX942-NEXT:    s_nop 0
 ; GFX942-NEXT:    global_store_dword v1, v0, s[0:1]
 ; GFX942-NEXT:    s_endpgm
   %sel = select i1 %cond, float -4.0, float 3.0

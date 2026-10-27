@@ -445,10 +445,9 @@ define float @flat_agent_atomic_fsub_ret_f32__offset12b_neg(ptr %ptr, float %val
 ; GFX942:       ; %bb.0:
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    v_add_co_u32_e32 v4, vcc, 0xfffff800, v0
-; GFX942-NEXT:    s_movk_i32 s0, 0xf800
-; GFX942-NEXT:    s_nop 0
 ; GFX942-NEXT:    v_addc_co_u32_e32 v5, vcc, -1, v1, vcc
 ; GFX942-NEXT:    flat_load_dword v7, v[4:5]
+; GFX942-NEXT:    s_movk_i32 s0, 0xf800
 ; GFX942-NEXT:    s_mov_b32 s1, -1
 ; GFX942-NEXT:    v_lshl_add_u64 v[4:5], v[0:1], 0, s[0:1]
 ; GFX942-NEXT:    s_mov_b64 s[0:1], 0
@@ -1037,10 +1036,9 @@ define void @flat_agent_atomic_fsub_noret_f32__offset12b_neg(ptr %ptr, float %va
 ; GFX942:       ; %bb.0:
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    v_add_co_u32_e32 v4, vcc, 0xfffff800, v0
-; GFX942-NEXT:    s_movk_i32 s0, 0xf800
-; GFX942-NEXT:    s_nop 0
 ; GFX942-NEXT:    v_addc_co_u32_e32 v5, vcc, -1, v1, vcc
 ; GFX942-NEXT:    flat_load_dword v5, v[4:5]
+; GFX942-NEXT:    s_movk_i32 s0, 0xf800
 ; GFX942-NEXT:    s_mov_b32 s1, -1
 ; GFX942-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], 0, s[0:1]
 ; GFX942-NEXT:    s_mov_b64 s[0:1], 0
@@ -2052,10 +2050,9 @@ define float @flat_agent_atomic_fsub_ret_f32__offset12b_neg__ftz(ptr %ptr, float
 ; GFX942:       ; %bb.0:
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    v_add_co_u32_e32 v4, vcc, 0xfffff800, v0
-; GFX942-NEXT:    s_movk_i32 s0, 0xf800
-; GFX942-NEXT:    s_nop 0
 ; GFX942-NEXT:    v_addc_co_u32_e32 v5, vcc, -1, v1, vcc
 ; GFX942-NEXT:    flat_load_dword v7, v[4:5]
+; GFX942-NEXT:    s_movk_i32 s0, 0xf800
 ; GFX942-NEXT:    s_mov_b32 s1, -1
 ; GFX942-NEXT:    v_lshl_add_u64 v[4:5], v[0:1], 0, s[0:1]
 ; GFX942-NEXT:    s_mov_b64 s[0:1], 0
@@ -2644,10 +2641,9 @@ define void @flat_agent_atomic_fsub_noret_f32__offset12b_neg__ftz(ptr %ptr, floa
 ; GFX942:       ; %bb.0:
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    v_add_co_u32_e32 v4, vcc, 0xfffff800, v0
-; GFX942-NEXT:    s_movk_i32 s0, 0xf800
-; GFX942-NEXT:    s_nop 0
 ; GFX942-NEXT:    v_addc_co_u32_e32 v5, vcc, -1, v1, vcc
 ; GFX942-NEXT:    flat_load_dword v5, v[4:5]
+; GFX942-NEXT:    s_movk_i32 s0, 0xf800
 ; GFX942-NEXT:    s_mov_b32 s1, -1
 ; GFX942-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], 0, s[0:1]
 ; GFX942-NEXT:    s_mov_b64 s[0:1], 0
@@ -3319,7 +3315,6 @@ define double @flat_agent_atomic_fsub_ret_f64(ptr %ptr, double %val) #0 {
 ; GFX942-NEXT:    s_cbranch_execz .LBB16_6
 ; GFX942-NEXT:  ; %bb.5: ; %atomicrmw.private
 ; GFX942-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[0:1]
-; GFX942-NEXT:    s_nop 1
 ; GFX942-NEXT:    v_cndmask_b32_e32 v6, -1, v0, vcc
 ; GFX942-NEXT:    scratch_load_dwordx2 v[4:5], v6, off
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
@@ -3740,7 +3735,6 @@ define double @flat_agent_atomic_fsub_ret_f64__offset12b_pos(ptr %ptr, double %v
 ; GFX942-NEXT:    s_cbranch_execz .LBB17_2
 ; GFX942-NEXT:  .LBB17_6: ; %atomicrmw.private
 ; GFX942-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[8:9]
-; GFX942-NEXT:    s_nop 1
 ; GFX942-NEXT:    v_cndmask_b32_e32 v4, -1, v8, vcc
 ; GFX942-NEXT:    scratch_load_dwordx2 v[0:1], v4, off
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
@@ -4187,7 +4181,6 @@ define double @flat_agent_atomic_fsub_ret_f64__offset12b_neg(ptr %ptr, double %v
 ; GFX942-NEXT:    s_cbranch_execz .LBB18_2
 ; GFX942-NEXT:  .LBB18_6: ; %atomicrmw.private
 ; GFX942-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[8:9]
-; GFX942-NEXT:    s_nop 1
 ; GFX942-NEXT:    v_cndmask_b32_e32 v4, -1, v8, vcc
 ; GFX942-NEXT:    scratch_load_dwordx2 v[0:1], v4, off
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
@@ -4625,7 +4618,6 @@ define void @flat_agent_atomic_fsub_noret_f64(ptr %ptr, double %val) #0 {
 ; GFX942-NEXT:    s_cbranch_execz .LBB19_2
 ; GFX942-NEXT:  .LBB19_6: ; %atomicrmw.private
 ; GFX942-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[0:1]
-; GFX942-NEXT:    s_nop 1
 ; GFX942-NEXT:    v_cndmask_b32_e32 v4, -1, v0, vcc
 ; GFX942-NEXT:    scratch_load_dwordx2 v[0:1], v4, off
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
@@ -5047,7 +5039,6 @@ define void @flat_agent_atomic_fsub_noret_f64__offset12b_pos(ptr %ptr, double %v
 ; GFX942-NEXT:    s_cbranch_execz .LBB20_2
 ; GFX942-NEXT:  .LBB20_6: ; %atomicrmw.private
 ; GFX942-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[0:1]
-; GFX942-NEXT:    s_nop 1
 ; GFX942-NEXT:    v_cndmask_b32_e32 v4, -1, v0, vcc
 ; GFX942-NEXT:    scratch_load_dwordx2 v[0:1], v4, off
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
@@ -5484,7 +5475,6 @@ define void @flat_agent_atomic_fsub_noret_f64__offset12b_neg(ptr %ptr, double %v
 ; GFX942-NEXT:    s_cbranch_execz .LBB21_2
 ; GFX942-NEXT:  .LBB21_6: ; %atomicrmw.private
 ; GFX942-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[0:1]
-; GFX942-NEXT:    s_nop 1
 ; GFX942-NEXT:    v_cndmask_b32_e32 v4, -1, v0, vcc
 ; GFX942-NEXT:    scratch_load_dwordx2 v[0:1], v4, off
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
@@ -9510,7 +9500,6 @@ define bfloat @flat_agent_atomic_fsub_ret_bf16(ptr %ptr, bfloat %val) #0 {
 ; GFX942-NEXT:    v_or_b32_e32 v8, 0x400000, v4
 ; GFX942-NEXT:    v_add3_u32 v7, v7, v4, s2
 ; GFX942-NEXT:    v_cmp_u_f32_e32 vcc, v4, v4
-; GFX942-NEXT:    s_nop 1
 ; GFX942-NEXT:    v_cndmask_b32_e32 v4, v7, v8, vcc
 ; GFX942-NEXT:    v_lshlrev_b32_sdwa v4, v3, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX942-NEXT:    v_and_or_b32 v4, v5, v6, v4
@@ -9966,7 +9955,6 @@ define bfloat @flat_agent_atomic_fsub_ret_bf16__offset12b_pos(ptr %ptr, bfloat %
 ; GFX942-NEXT:    v_or_b32_e32 v8, 0x400000, v2
 ; GFX942-NEXT:    v_add3_u32 v7, v7, v2, s2
 ; GFX942-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
-; GFX942-NEXT:    s_nop 1
 ; GFX942-NEXT:    v_cndmask_b32_e32 v2, v7, v8, vcc
 ; GFX942-NEXT:    v_lshlrev_b32_sdwa v2, v4, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX942-NEXT:    v_and_or_b32 v2, v3, v5, v2
@@ -10432,7 +10420,6 @@ define bfloat @flat_agent_atomic_fsub_ret_bf16__offset12b_neg(ptr %ptr, bfloat %
 ; GFX942-NEXT:    v_or_b32_e32 v8, 0x400000, v2
 ; GFX942-NEXT:    v_add3_u32 v7, v7, v2, s2
 ; GFX942-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
-; GFX942-NEXT:    s_nop 1
 ; GFX942-NEXT:    v_cndmask_b32_e32 v2, v7, v8, vcc
 ; GFX942-NEXT:    v_lshlrev_b32_sdwa v2, v4, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX942-NEXT:    v_and_or_b32 v2, v3, v5, v2
@@ -10886,7 +10873,6 @@ define void @flat_agent_atomic_fsub_noret_bf16(ptr %ptr, bfloat %val) #0 {
 ; GFX942-NEXT:    v_or_b32_e32 v8, 0x400000, v4
 ; GFX942-NEXT:    v_add3_u32 v7, v7, v4, s2
 ; GFX942-NEXT:    v_cmp_u_f32_e32 vcc, v4, v4
-; GFX942-NEXT:    s_nop 1
 ; GFX942-NEXT:    v_cndmask_b32_e32 v4, v7, v8, vcc
 ; GFX942-NEXT:    v_lshlrev_b32_sdwa v4, v3, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX942-NEXT:    v_and_or_b32 v4, v5, v6, v4
@@ -11273,7 +11259,6 @@ define void @flat_agent_atomic_fsub_noret_bf16__offset12b_pos(ptr %ptr, bfloat %
 ; GFX942-NEXT:    v_or_b32_e32 v8, 0x400000, v2
 ; GFX942-NEXT:    v_add3_u32 v7, v7, v2, s2
 ; GFX942-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
-; GFX942-NEXT:    s_nop 1
 ; GFX942-NEXT:    v_cndmask_b32_e32 v2, v7, v8, vcc
 ; GFX942-NEXT:    v_lshlrev_b32_sdwa v2, v4, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX942-NEXT:    v_and_or_b32 v2, v3, v5, v2
@@ -11620,7 +11605,6 @@ define void @flat_agent_atomic_fsub_noret_bf16__offset12b_neg(ptr %ptr, bfloat %
 ; GFX942-NEXT:    v_or_b32_e32 v8, 0x400000, v2
 ; GFX942-NEXT:    v_add3_u32 v7, v7, v2, s2
 ; GFX942-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
-; GFX942-NEXT:    s_nop 1
 ; GFX942-NEXT:    v_cndmask_b32_e32 v2, v7, v8, vcc
 ; GFX942-NEXT:    v_lshlrev_b32_sdwa v2, v4, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX942-NEXT:    v_and_or_b32 v2, v3, v5, v2
@@ -11989,7 +11973,6 @@ define bfloat @flat_agent_atomic_fsub_ret_bf16__offset12b_pos__align4(ptr %ptr, 
 ; GFX942-NEXT:    v_or_b32_e32 v6, 0x400000, v2
 ; GFX942-NEXT:    v_add3_u32 v5, v5, v2, s2
 ; GFX942-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
-; GFX942-NEXT:    s_nop 1
 ; GFX942-NEXT:    v_cndmask_b32_e32 v2, v5, v6, vcc
 ; GFX942-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
 ; GFX942-NEXT:    v_and_or_b32 v2, v3, s3, v2
@@ -12312,7 +12295,6 @@ define void @flat_agent_atomic_fsub_noret_bf16__offset12b__align4_pos(ptr %ptr, 
 ; GFX942-NEXT:    v_or_b32_e32 v6, 0x400000, v2
 ; GFX942-NEXT:    v_add3_u32 v5, v5, v2, s2
 ; GFX942-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
-; GFX942-NEXT:    s_nop 1
 ; GFX942-NEXT:    v_cndmask_b32_e32 v2, v5, v6, vcc
 ; GFX942-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
 ; GFX942-NEXT:    v_and_or_b32 v2, v3, s3, v2
@@ -12674,7 +12656,6 @@ define bfloat @flat_system_atomic_fsub_ret_bf16__offset12b_pos(ptr %ptr, bfloat 
 ; GFX942-NEXT:    v_or_b32_e32 v8, 0x400000, v2
 ; GFX942-NEXT:    v_add3_u32 v7, v7, v2, s2
 ; GFX942-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
-; GFX942-NEXT:    s_nop 1
 ; GFX942-NEXT:    v_cndmask_b32_e32 v2, v7, v8, vcc
 ; GFX942-NEXT:    v_lshlrev_b32_sdwa v2, v4, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX942-NEXT:    v_and_or_b32 v2, v3, v5, v2
@@ -13084,7 +13065,6 @@ define void @flat_system_atomic_fsub_noret_bf16__offset12b_pos(ptr %ptr, bfloat 
 ; GFX942-NEXT:    v_or_b32_e32 v8, 0x400000, v2
 ; GFX942-NEXT:    v_add3_u32 v7, v7, v2, s2
 ; GFX942-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
-; GFX942-NEXT:    s_nop 1
 ; GFX942-NEXT:    v_cndmask_b32_e32 v2, v7, v8, vcc
 ; GFX942-NEXT:    v_lshlrev_b32_sdwa v2, v4, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX942-NEXT:    v_and_or_b32 v2, v3, v5, v2
@@ -13824,10 +13804,9 @@ define <2 x half> @flat_agent_atomic_fsub_ret_v2f16__offset12b_neg(ptr %ptr, <2 
 ; GFX942:       ; %bb.0:
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    v_add_co_u32_e32 v4, vcc, 0xfffff800, v0
-; GFX942-NEXT:    s_movk_i32 s0, 0xf800
-; GFX942-NEXT:    s_nop 0
 ; GFX942-NEXT:    v_addc_co_u32_e32 v5, vcc, -1, v1, vcc
 ; GFX942-NEXT:    flat_load_dword v7, v[4:5]
+; GFX942-NEXT:    s_movk_i32 s0, 0xf800
 ; GFX942-NEXT:    s_mov_b32 s1, -1
 ; GFX942-NEXT:    v_lshl_add_u64 v[4:5], v[0:1], 0, s[0:1]
 ; GFX942-NEXT:    s_mov_b64 s[0:1], 0
@@ -14467,10 +14446,9 @@ define void @flat_agent_atomic_fsub_noret_v2f16__offset12b_neg(ptr %ptr, <2 x ha
 ; GFX942:       ; %bb.0:
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    v_add_co_u32_e32 v4, vcc, 0xfffff800, v0
-; GFX942-NEXT:    s_movk_i32 s0, 0xf800
-; GFX942-NEXT:    s_nop 0
 ; GFX942-NEXT:    v_addc_co_u32_e32 v5, vcc, -1, v1, vcc
 ; GFX942-NEXT:    flat_load_dword v5, v[4:5]
+; GFX942-NEXT:    s_movk_i32 s0, 0xf800
 ; GFX942-NEXT:    s_mov_b32 s1, -1
 ; GFX942-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], 0, s[0:1]
 ; GFX942-NEXT:    s_mov_b64 s[0:1], 0
@@ -15230,9 +15208,8 @@ define <2 x bfloat> @flat_agent_atomic_fsub_ret_v2bf16(ptr %ptr, <2 x bfloat> %v
 ; GFX942-NEXT:    v_add3_u32 v9, v9, v6, s4
 ; GFX942-NEXT:    v_cmp_u_f32_e32 vcc, v6, v6
 ; GFX942-NEXT:    v_cmp_u_f32_e64 s[0:1], v2, v2
-; GFX942-NEXT:    s_nop 0
-; GFX942-NEXT:    v_cndmask_b32_e32 v6, v9, v10, vcc
 ; GFX942-NEXT:    v_cndmask_b32_e64 v2, v7, v8, s[0:1]
+; GFX942-NEXT:    v_cndmask_b32_e32 v6, v9, v10, vcc
 ; GFX942-NEXT:    v_perm_b32 v2, v6, v2, s5
 ; GFX942-NEXT:    buffer_wbl2 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
@@ -15680,9 +15657,8 @@ define <2 x bfloat> @flat_agent_atomic_fsub_ret_v2bf16__offset12b_pos(ptr %ptr, 
 ; GFX942-NEXT:    v_add3_u32 v9, v9, v6, s4
 ; GFX942-NEXT:    v_cmp_u_f32_e32 vcc, v6, v6
 ; GFX942-NEXT:    v_cmp_u_f32_e64 s[0:1], v2, v2
-; GFX942-NEXT:    s_nop 0
-; GFX942-NEXT:    v_cndmask_b32_e32 v6, v9, v10, vcc
 ; GFX942-NEXT:    v_cndmask_b32_e64 v2, v7, v8, s[0:1]
+; GFX942-NEXT:    v_cndmask_b32_e32 v6, v9, v10, vcc
 ; GFX942-NEXT:    v_perm_b32 v2, v6, v2, s5
 ; GFX942-NEXT:    buffer_wbl2 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
@@ -16115,10 +16091,9 @@ define <2 x bfloat> @flat_agent_atomic_fsub_ret_v2bf16__offset12b_neg(ptr %ptr, 
 ; GFX942:       ; %bb.0:
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    v_add_co_u32_e32 v4, vcc, 0xfffff800, v0
-; GFX942-NEXT:    s_movk_i32 s0, 0xf800
-; GFX942-NEXT:    s_nop 0
 ; GFX942-NEXT:    v_addc_co_u32_e32 v5, vcc, -1, v1, vcc
 ; GFX942-NEXT:    flat_load_dword v3, v[4:5]
+; GFX942-NEXT:    s_movk_i32 s0, 0xf800
 ; GFX942-NEXT:    s_mov_b32 s1, -1
 ; GFX942-NEXT:    v_lshl_add_u64 v[4:5], v[0:1], 0, s[0:1]
 ; GFX942-NEXT:    s_mov_b64 s[2:3], 0
@@ -16141,9 +16116,8 @@ define <2 x bfloat> @flat_agent_atomic_fsub_ret_v2bf16__offset12b_neg(ptr %ptr, 
 ; GFX942-NEXT:    v_add3_u32 v9, v9, v2, s4
 ; GFX942-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
 ; GFX942-NEXT:    v_cmp_u_f32_e64 s[0:1], v0, v0
-; GFX942-NEXT:    s_nop 0
-; GFX942-NEXT:    v_cndmask_b32_e32 v2, v9, v10, vcc
 ; GFX942-NEXT:    v_cndmask_b32_e64 v0, v7, v8, s[0:1]
+; GFX942-NEXT:    v_cndmask_b32_e32 v2, v9, v10, vcc
 ; GFX942-NEXT:    v_perm_b32 v2, v2, v0, s5
 ; GFX942-NEXT:    buffer_wbl2 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
@@ -16602,9 +16576,8 @@ define void @flat_agent_atomic_fsub_noret_v2bf16(ptr %ptr, <2 x bfloat> %val) #0
 ; GFX942-NEXT:    v_add3_u32 v9, v9, v6, s4
 ; GFX942-NEXT:    v_cmp_u_f32_e32 vcc, v6, v6
 ; GFX942-NEXT:    v_cmp_u_f32_e64 s[0:1], v2, v2
-; GFX942-NEXT:    s_nop 0
-; GFX942-NEXT:    v_cndmask_b32_e32 v6, v9, v10, vcc
 ; GFX942-NEXT:    v_cndmask_b32_e64 v2, v7, v8, s[0:1]
+; GFX942-NEXT:    v_cndmask_b32_e32 v6, v9, v10, vcc
 ; GFX942-NEXT:    v_perm_b32 v2, v6, v2, s5
 ; GFX942-NEXT:    buffer_wbl2 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
@@ -17034,9 +17007,8 @@ define void @flat_agent_atomic_fsub_noret_v2bf16__offset12b_pos(ptr %ptr, <2 x b
 ; GFX942-NEXT:    v_add3_u32 v9, v9, v6, s4
 ; GFX942-NEXT:    v_cmp_u_f32_e32 vcc, v6, v6
 ; GFX942-NEXT:    v_cmp_u_f32_e64 s[0:1], v2, v2
-; GFX942-NEXT:    s_nop 0
-; GFX942-NEXT:    v_cndmask_b32_e32 v6, v9, v10, vcc
 ; GFX942-NEXT:    v_cndmask_b32_e64 v2, v7, v8, s[0:1]
+; GFX942-NEXT:    v_cndmask_b32_e32 v6, v9, v10, vcc
 ; GFX942-NEXT:    v_perm_b32 v2, v6, v2, s5
 ; GFX942-NEXT:    buffer_wbl2 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
@@ -17453,10 +17425,9 @@ define void @flat_agent_atomic_fsub_noret_v2bf16__offset12b_neg(ptr %ptr, <2 x b
 ; GFX942:       ; %bb.0:
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    v_add_co_u32_e32 v4, vcc, 0xfffff800, v0
-; GFX942-NEXT:    s_movk_i32 s0, 0xf800
-; GFX942-NEXT:    s_nop 0
 ; GFX942-NEXT:    v_addc_co_u32_e32 v5, vcc, -1, v1, vcc
 ; GFX942-NEXT:    flat_load_dword v3, v[4:5]
+; GFX942-NEXT:    s_movk_i32 s0, 0xf800
 ; GFX942-NEXT:    s_mov_b32 s1, -1
 ; GFX942-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], 0, s[0:1]
 ; GFX942-NEXT:    s_mov_b64 s[2:3], 0
@@ -17479,9 +17450,8 @@ define void @flat_agent_atomic_fsub_noret_v2bf16__offset12b_neg(ptr %ptr, <2 x b
 ; GFX942-NEXT:    v_add3_u32 v9, v9, v6, s4
 ; GFX942-NEXT:    v_cmp_u_f32_e32 vcc, v6, v6
 ; GFX942-NEXT:    v_cmp_u_f32_e64 s[0:1], v2, v2
-; GFX942-NEXT:    s_nop 0
-; GFX942-NEXT:    v_cndmask_b32_e32 v6, v9, v10, vcc
 ; GFX942-NEXT:    v_cndmask_b32_e64 v2, v7, v8, s[0:1]
+; GFX942-NEXT:    v_cndmask_b32_e32 v6, v9, v10, vcc
 ; GFX942-NEXT:    v_perm_b32 v2, v6, v2, s5
 ; GFX942-NEXT:    buffer_wbl2 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
@@ -17940,9 +17910,8 @@ define <2 x bfloat> @flat_system_atomic_fsub_ret_v2bf16__offset12b_pos(ptr %ptr,
 ; GFX942-NEXT:    v_add3_u32 v9, v9, v6, s4
 ; GFX942-NEXT:    v_cmp_u_f32_e32 vcc, v6, v6
 ; GFX942-NEXT:    v_cmp_u_f32_e64 s[0:1], v2, v2
-; GFX942-NEXT:    s_nop 0
-; GFX942-NEXT:    v_cndmask_b32_e32 v6, v9, v10, vcc
 ; GFX942-NEXT:    v_cndmask_b32_e64 v2, v7, v8, s[0:1]
+; GFX942-NEXT:    v_cndmask_b32_e32 v6, v9, v10, vcc
 ; GFX942-NEXT:    v_perm_b32 v2, v6, v2, s5
 ; GFX942-NEXT:    buffer_wbl2 sc0 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
@@ -18396,9 +18365,8 @@ define void @flat_system_atomic_fsub_noret_v2bf16__offset12b_pos(ptr %ptr, <2 x 
 ; GFX942-NEXT:    v_add3_u32 v9, v9, v6, s4
 ; GFX942-NEXT:    v_cmp_u_f32_e32 vcc, v6, v6
 ; GFX942-NEXT:    v_cmp_u_f32_e64 s[0:1], v2, v2
-; GFX942-NEXT:    s_nop 0
-; GFX942-NEXT:    v_cndmask_b32_e32 v6, v9, v10, vcc
 ; GFX942-NEXT:    v_cndmask_b32_e64 v2, v7, v8, s[0:1]
+; GFX942-NEXT:    v_cndmask_b32_e32 v6, v9, v10, vcc
 ; GFX942-NEXT:    v_perm_b32 v2, v6, v2, s5
 ; GFX942-NEXT:    buffer_wbl2 sc0 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)

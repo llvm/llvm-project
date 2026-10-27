@@ -280,12 +280,11 @@ define float @from_e5m3fnu_f32(i8 %x) {
 ; GFX950-NEXT:    v_cndmask_b32_e32 v2, v3, v2, vcc
 ; GFX950-NEXT:    v_or_b32_e32 v3, v0, v1
 ; GFX950-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v3
-; GFX950-NEXT:    v_cmp_eq_u32_e64 s[0:1], 31, v0
-; GFX950-NEXT:    v_mov_b32_e32 v0, 0x7fc00000
 ; GFX950-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
 ; GFX950-NEXT:    v_cmp_eq_u32_e32 vcc, 7, v1
+; GFX950-NEXT:    v_cmp_eq_u32_e64 s[0:1], 31, v0
+; GFX950-NEXT:    v_mov_b32_e32 v0, 0x7fc00000
 ; GFX950-NEXT:    s_and_b64 vcc, s[0:1], vcc
-; GFX950-NEXT:    s_nop 0
 ; GFX950-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -359,12 +358,12 @@ define <2 x float> @v2_from_e5m3fnu(<2 x i8> %x) {
 ; GFX950-NEXT:    v_cndmask_b32_e32 v3, v4, v3, vcc
 ; GFX950-NEXT:    v_or_b32_e32 v4, v0, v2
 ; GFX950-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v4
-; GFX950-NEXT:    v_cmp_eq_u32_e64 s[0:1], 31, v0
-; GFX950-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX950-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc
 ; GFX950-NEXT:    v_cmp_eq_u32_e32 vcc, 7, v2
+; GFX950-NEXT:    v_cmp_eq_u32_e64 s[0:1], 31, v0
 ; GFX950-NEXT:    v_mov_b32_e32 v2, 0x7fc00000
 ; GFX950-NEXT:    s_and_b64 vcc, s[0:1], vcc
+; GFX950-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX950-NEXT:    v_cndmask_b32_e32 v0, v3, v2, vcc
 ; GFX950-NEXT:    v_and_b32_e32 v3, 7, v1
 ; GFX950-NEXT:    v_ffbh_u32_e32 v4, v3
@@ -385,12 +384,10 @@ define <2 x float> @v2_from_e5m3fnu(<2 x i8> %x) {
 ; GFX950-NEXT:    v_cndmask_b32_e32 v4, v5, v4, vcc
 ; GFX950-NEXT:    v_or_b32_e32 v5, v1, v3
 ; GFX950-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v5
-; GFX950-NEXT:    v_cmp_eq_u32_e64 s[0:1], 31, v1
-; GFX950-NEXT:    s_nop 0
 ; GFX950-NEXT:    v_cndmask_b32_e32 v4, 0, v4, vcc
 ; GFX950-NEXT:    v_cmp_eq_u32_e32 vcc, 7, v3
+; GFX950-NEXT:    v_cmp_eq_u32_e64 s[0:1], 31, v1
 ; GFX950-NEXT:    s_and_b64 vcc, s[0:1], vcc
-; GFX950-NEXT:    s_nop 0
 ; GFX950-NEXT:    v_cndmask_b32_e32 v1, v4, v2, vcc
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -496,12 +493,12 @@ define <4 x float> @v4_from_e5m3fnu(<4 x i8> %x) {
 ; GFX950-NEXT:    v_cndmask_b32_e32 v5, v6, v5, vcc
 ; GFX950-NEXT:    v_or_b32_e32 v6, v0, v4
 ; GFX950-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v6
-; GFX950-NEXT:    v_cmp_eq_u32_e64 s[0:1], 31, v0
-; GFX950-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX950-NEXT:    v_cndmask_b32_e32 v5, 0, v5, vcc
 ; GFX950-NEXT:    v_cmp_eq_u32_e32 vcc, 7, v4
+; GFX950-NEXT:    v_cmp_eq_u32_e64 s[0:1], 31, v0
 ; GFX950-NEXT:    v_mov_b32_e32 v4, 0x7fc00000
 ; GFX950-NEXT:    s_and_b64 vcc, s[0:1], vcc
+; GFX950-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX950-NEXT:    v_cndmask_b32_e32 v0, v5, v4, vcc
 ; GFX950-NEXT:    v_and_b32_e32 v5, 7, v1
 ; GFX950-NEXT:    v_ffbh_u32_e32 v6, v5
@@ -522,10 +519,10 @@ define <4 x float> @v4_from_e5m3fnu(<4 x i8> %x) {
 ; GFX950-NEXT:    v_cndmask_b32_e32 v6, v7, v6, vcc
 ; GFX950-NEXT:    v_or_b32_e32 v7, v1, v5
 ; GFX950-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v7
-; GFX950-NEXT:    v_cmp_eq_u32_e64 s[0:1], 31, v1
-; GFX950-NEXT:    v_and_b32_e32 v2, 0xffff, v2
 ; GFX950-NEXT:    v_cndmask_b32_e32 v6, 0, v6, vcc
 ; GFX950-NEXT:    v_cmp_eq_u32_e32 vcc, 7, v5
+; GFX950-NEXT:    v_cmp_eq_u32_e64 s[0:1], 31, v1
+; GFX950-NEXT:    v_and_b32_e32 v2, 0xffff, v2
 ; GFX950-NEXT:    s_and_b64 vcc, s[0:1], vcc
 ; GFX950-NEXT:    v_and_b32_e32 v5, 7, v2
 ; GFX950-NEXT:    v_cndmask_b32_e32 v1, v6, v4, vcc
@@ -547,10 +544,10 @@ define <4 x float> @v4_from_e5m3fnu(<4 x i8> %x) {
 ; GFX950-NEXT:    v_cndmask_b32_e32 v6, v7, v6, vcc
 ; GFX950-NEXT:    v_or_b32_e32 v7, v2, v5
 ; GFX950-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v7
-; GFX950-NEXT:    v_cmp_eq_u32_e64 s[0:1], 31, v2
-; GFX950-NEXT:    v_and_b32_e32 v3, 0xffff, v3
 ; GFX950-NEXT:    v_cndmask_b32_e32 v6, 0, v6, vcc
 ; GFX950-NEXT:    v_cmp_eq_u32_e32 vcc, 7, v5
+; GFX950-NEXT:    v_cmp_eq_u32_e64 s[0:1], 31, v2
+; GFX950-NEXT:    v_and_b32_e32 v3, 0xffff, v3
 ; GFX950-NEXT:    s_and_b64 vcc, s[0:1], vcc
 ; GFX950-NEXT:    v_and_b32_e32 v5, 7, v3
 ; GFX950-NEXT:    v_cndmask_b32_e32 v2, v6, v4, vcc
@@ -572,12 +569,10 @@ define <4 x float> @v4_from_e5m3fnu(<4 x i8> %x) {
 ; GFX950-NEXT:    v_cndmask_b32_e32 v6, v7, v6, vcc
 ; GFX950-NEXT:    v_or_b32_e32 v7, v3, v5
 ; GFX950-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v7
-; GFX950-NEXT:    v_cmp_eq_u32_e64 s[0:1], 31, v3
-; GFX950-NEXT:    s_nop 0
 ; GFX950-NEXT:    v_cndmask_b32_e32 v6, 0, v6, vcc
 ; GFX950-NEXT:    v_cmp_eq_u32_e32 vcc, 7, v5
+; GFX950-NEXT:    v_cmp_eq_u32_e64 s[0:1], 31, v3
 ; GFX950-NEXT:    s_and_b64 vcc, s[0:1], vcc
-; GFX950-NEXT:    s_nop 0
 ; GFX950-NEXT:    v_cndmask_b32_e32 v3, v6, v4, vcc
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;

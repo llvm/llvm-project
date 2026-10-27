@@ -4486,7 +4486,6 @@ define amdgpu_kernel void @private_system_monotonic_monotonic_cmpxchg(
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NOTTGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s1
-; GFX942-NOTTGSPLIT-NEXT:    s_nop 0
 ; GFX942-NOTTGSPLIT-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[2:3]
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v0, s0
 ; GFX942-NOTTGSPLIT-NEXT:    s_endpgm
@@ -4509,7 +4508,6 @@ define amdgpu_kernel void @private_system_monotonic_monotonic_cmpxchg(
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s1
-; GFX942-TGSPLIT-NEXT:    s_nop 0
 ; GFX942-TGSPLIT-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[2:3]
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v0, s0
 ; GFX942-TGSPLIT-NEXT:    s_endpgm
@@ -4844,7 +4842,6 @@ define amdgpu_kernel void @private_system_acquire_monotonic_cmpxchg(
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NOTTGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s1
-; GFX942-NOTTGSPLIT-NEXT:    s_nop 0
 ; GFX942-NOTTGSPLIT-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[2:3]
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v0, s0
 ; GFX942-NOTTGSPLIT-NEXT:    s_endpgm
@@ -4867,7 +4864,6 @@ define amdgpu_kernel void @private_system_acquire_monotonic_cmpxchg(
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s1
-; GFX942-TGSPLIT-NEXT:    s_nop 0
 ; GFX942-TGSPLIT-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[2:3]
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v0, s0
 ; GFX942-TGSPLIT-NEXT:    s_endpgm
@@ -5205,7 +5201,6 @@ define amdgpu_kernel void @private_system_release_monotonic_cmpxchg(
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NOTTGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s1
-; GFX942-NOTTGSPLIT-NEXT:    s_nop 0
 ; GFX942-NOTTGSPLIT-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[2:3]
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v0, s0
 ; GFX942-NOTTGSPLIT-NEXT:    s_endpgm
@@ -5228,7 +5223,6 @@ define amdgpu_kernel void @private_system_release_monotonic_cmpxchg(
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s1
-; GFX942-TGSPLIT-NEXT:    s_nop 0
 ; GFX942-TGSPLIT-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[2:3]
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v0, s0
 ; GFX942-TGSPLIT-NEXT:    s_endpgm
@@ -5568,7 +5562,6 @@ define amdgpu_kernel void @private_system_acq_rel_monotonic_cmpxchg(
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NOTTGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s1
-; GFX942-NOTTGSPLIT-NEXT:    s_nop 0
 ; GFX942-NOTTGSPLIT-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[2:3]
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v0, s0
 ; GFX942-NOTTGSPLIT-NEXT:    s_endpgm
@@ -5591,7 +5584,6 @@ define amdgpu_kernel void @private_system_acq_rel_monotonic_cmpxchg(
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s1
-; GFX942-TGSPLIT-NEXT:    s_nop 0
 ; GFX942-TGSPLIT-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[2:3]
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v0, s0
 ; GFX942-TGSPLIT-NEXT:    s_endpgm
@@ -5934,7 +5926,6 @@ define amdgpu_kernel void @private_system_seq_cst_monotonic_cmpxchg(
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NOTTGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s1
-; GFX942-NOTTGSPLIT-NEXT:    s_nop 0
 ; GFX942-NOTTGSPLIT-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[2:3]
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v0, s0
 ; GFX942-NOTTGSPLIT-NEXT:    s_endpgm
@@ -5957,7 +5948,6 @@ define amdgpu_kernel void @private_system_seq_cst_monotonic_cmpxchg(
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s1
-; GFX942-TGSPLIT-NEXT:    s_nop 0
 ; GFX942-TGSPLIT-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[2:3]
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v0, s0
 ; GFX942-TGSPLIT-NEXT:    s_endpgm
@@ -6300,7 +6290,6 @@ define amdgpu_kernel void @private_system_monotonic_acquire_cmpxchg(
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NOTTGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s1
-; GFX942-NOTTGSPLIT-NEXT:    s_nop 0
 ; GFX942-NOTTGSPLIT-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[2:3]
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v0, s0
 ; GFX942-NOTTGSPLIT-NEXT:    s_endpgm
@@ -6323,7 +6312,6 @@ define amdgpu_kernel void @private_system_monotonic_acquire_cmpxchg(
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s1
-; GFX942-TGSPLIT-NEXT:    s_nop 0
 ; GFX942-TGSPLIT-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[2:3]
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v0, s0
 ; GFX942-TGSPLIT-NEXT:    s_endpgm
@@ -6661,7 +6649,6 @@ define amdgpu_kernel void @private_system_acquire_acquire_cmpxchg(
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NOTTGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s1
-; GFX942-NOTTGSPLIT-NEXT:    s_nop 0
 ; GFX942-NOTTGSPLIT-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[2:3]
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v0, s0
 ; GFX942-NOTTGSPLIT-NEXT:    s_endpgm
@@ -6684,7 +6671,6 @@ define amdgpu_kernel void @private_system_acquire_acquire_cmpxchg(
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s1
-; GFX942-TGSPLIT-NEXT:    s_nop 0
 ; GFX942-TGSPLIT-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[2:3]
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v0, s0
 ; GFX942-TGSPLIT-NEXT:    s_endpgm
@@ -7022,7 +7008,6 @@ define amdgpu_kernel void @private_system_release_acquire_cmpxchg(
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NOTTGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s1
-; GFX942-NOTTGSPLIT-NEXT:    s_nop 0
 ; GFX942-NOTTGSPLIT-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[2:3]
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v0, s0
 ; GFX942-NOTTGSPLIT-NEXT:    s_endpgm
@@ -7045,7 +7030,6 @@ define amdgpu_kernel void @private_system_release_acquire_cmpxchg(
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s1
-; GFX942-TGSPLIT-NEXT:    s_nop 0
 ; GFX942-TGSPLIT-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[2:3]
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v0, s0
 ; GFX942-TGSPLIT-NEXT:    s_endpgm
@@ -7388,7 +7372,6 @@ define amdgpu_kernel void @private_system_acq_rel_acquire_cmpxchg(
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NOTTGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s1
-; GFX942-NOTTGSPLIT-NEXT:    s_nop 0
 ; GFX942-NOTTGSPLIT-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[2:3]
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v0, s0
 ; GFX942-NOTTGSPLIT-NEXT:    s_endpgm
@@ -7411,7 +7394,6 @@ define amdgpu_kernel void @private_system_acq_rel_acquire_cmpxchg(
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s1
-; GFX942-TGSPLIT-NEXT:    s_nop 0
 ; GFX942-TGSPLIT-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[2:3]
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v0, s0
 ; GFX942-TGSPLIT-NEXT:    s_endpgm
@@ -7754,7 +7736,6 @@ define amdgpu_kernel void @private_system_seq_cst_acquire_cmpxchg(
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NOTTGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s1
-; GFX942-NOTTGSPLIT-NEXT:    s_nop 0
 ; GFX942-NOTTGSPLIT-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[2:3]
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v0, s0
 ; GFX942-NOTTGSPLIT-NEXT:    s_endpgm
@@ -7777,7 +7758,6 @@ define amdgpu_kernel void @private_system_seq_cst_acquire_cmpxchg(
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s1
-; GFX942-TGSPLIT-NEXT:    s_nop 0
 ; GFX942-TGSPLIT-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[2:3]
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v0, s0
 ; GFX942-TGSPLIT-NEXT:    s_endpgm
@@ -8120,7 +8100,6 @@ define amdgpu_kernel void @private_system_seq_cst_seq_cst_cmpxchg(
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NOTTGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s1
-; GFX942-NOTTGSPLIT-NEXT:    s_nop 0
 ; GFX942-NOTTGSPLIT-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[2:3]
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v0, s0
 ; GFX942-NOTTGSPLIT-NEXT:    s_endpgm
@@ -8143,7 +8122,6 @@ define amdgpu_kernel void @private_system_seq_cst_seq_cst_cmpxchg(
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s1
-; GFX942-TGSPLIT-NEXT:    s_nop 0
 ; GFX942-TGSPLIT-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[2:3]
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v0, s0
 ; GFX942-TGSPLIT-NEXT:    s_endpgm
@@ -8506,7 +8484,6 @@ define amdgpu_kernel void @private_system_monotonic_monotonic_ret_cmpxchg(
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NOTTGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s4
-; GFX942-NOTTGSPLIT-NEXT:    s_nop 0
 ; GFX942-NOTTGSPLIT-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[2:3]
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v1, s1
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v0, s0
@@ -8532,7 +8509,6 @@ define amdgpu_kernel void @private_system_monotonic_monotonic_ret_cmpxchg(
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s4
-; GFX942-TGSPLIT-NEXT:    s_nop 0
 ; GFX942-TGSPLIT-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[2:3]
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v1, s1
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v0, s0
@@ -8895,7 +8871,6 @@ define amdgpu_kernel void @private_system_acquire_monotonic_ret_cmpxchg(
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NOTTGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s4
-; GFX942-NOTTGSPLIT-NEXT:    s_nop 0
 ; GFX942-NOTTGSPLIT-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[2:3]
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v1, s1
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v0, s0
@@ -8921,7 +8896,6 @@ define amdgpu_kernel void @private_system_acquire_monotonic_ret_cmpxchg(
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s4
-; GFX942-TGSPLIT-NEXT:    s_nop 0
 ; GFX942-TGSPLIT-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[2:3]
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v1, s1
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v0, s0
@@ -9286,7 +9260,6 @@ define amdgpu_kernel void @private_system_acq_rel_monotonic_ret_cmpxchg(
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NOTTGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s4
-; GFX942-NOTTGSPLIT-NEXT:    s_nop 0
 ; GFX942-NOTTGSPLIT-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[2:3]
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v1, s1
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v0, s0
@@ -9312,7 +9285,6 @@ define amdgpu_kernel void @private_system_acq_rel_monotonic_ret_cmpxchg(
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s4
-; GFX942-TGSPLIT-NEXT:    s_nop 0
 ; GFX942-TGSPLIT-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[2:3]
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v1, s1
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v0, s0
@@ -9682,7 +9654,6 @@ define amdgpu_kernel void @private_system_seq_cst_monotonic_ret_cmpxchg(
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NOTTGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s4
-; GFX942-NOTTGSPLIT-NEXT:    s_nop 0
 ; GFX942-NOTTGSPLIT-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[2:3]
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v1, s1
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v0, s0
@@ -9708,7 +9679,6 @@ define amdgpu_kernel void @private_system_seq_cst_monotonic_ret_cmpxchg(
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s4
-; GFX942-TGSPLIT-NEXT:    s_nop 0
 ; GFX942-TGSPLIT-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[2:3]
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v1, s1
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v0, s0
@@ -10078,7 +10048,6 @@ define amdgpu_kernel void @private_system_monotonic_acquire_ret_cmpxchg(
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NOTTGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s4
-; GFX942-NOTTGSPLIT-NEXT:    s_nop 0
 ; GFX942-NOTTGSPLIT-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[2:3]
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v1, s1
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v0, s0
@@ -10104,7 +10073,6 @@ define amdgpu_kernel void @private_system_monotonic_acquire_ret_cmpxchg(
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s4
-; GFX942-TGSPLIT-NEXT:    s_nop 0
 ; GFX942-TGSPLIT-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[2:3]
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v1, s1
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v0, s0
@@ -10469,7 +10437,6 @@ define amdgpu_kernel void @private_system_acquire_acquire_ret_cmpxchg(
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NOTTGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s4
-; GFX942-NOTTGSPLIT-NEXT:    s_nop 0
 ; GFX942-NOTTGSPLIT-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[2:3]
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v1, s1
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v0, s0
@@ -10495,7 +10462,6 @@ define amdgpu_kernel void @private_system_acquire_acquire_ret_cmpxchg(
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s4
-; GFX942-TGSPLIT-NEXT:    s_nop 0
 ; GFX942-TGSPLIT-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[2:3]
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v1, s1
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v0, s0
@@ -10860,7 +10826,6 @@ define amdgpu_kernel void @private_system_release_acquire_ret_cmpxchg(
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NOTTGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s4
-; GFX942-NOTTGSPLIT-NEXT:    s_nop 0
 ; GFX942-NOTTGSPLIT-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[2:3]
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v1, s1
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v0, s0
@@ -10886,7 +10851,6 @@ define amdgpu_kernel void @private_system_release_acquire_ret_cmpxchg(
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s4
-; GFX942-TGSPLIT-NEXT:    s_nop 0
 ; GFX942-TGSPLIT-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[2:3]
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v1, s1
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v0, s0
@@ -11256,7 +11220,6 @@ define amdgpu_kernel void @private_system_acq_rel_acquire_ret_cmpxchg(
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NOTTGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s4
-; GFX942-NOTTGSPLIT-NEXT:    s_nop 0
 ; GFX942-NOTTGSPLIT-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[2:3]
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v1, s1
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v0, s0
@@ -11282,7 +11245,6 @@ define amdgpu_kernel void @private_system_acq_rel_acquire_ret_cmpxchg(
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s4
-; GFX942-TGSPLIT-NEXT:    s_nop 0
 ; GFX942-TGSPLIT-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[2:3]
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v1, s1
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v0, s0
@@ -11652,7 +11614,6 @@ define amdgpu_kernel void @private_system_seq_cst_acquire_ret_cmpxchg(
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NOTTGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s4
-; GFX942-NOTTGSPLIT-NEXT:    s_nop 0
 ; GFX942-NOTTGSPLIT-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[2:3]
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v1, s1
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v0, s0
@@ -11678,7 +11639,6 @@ define amdgpu_kernel void @private_system_seq_cst_acquire_ret_cmpxchg(
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s4
-; GFX942-TGSPLIT-NEXT:    s_nop 0
 ; GFX942-TGSPLIT-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[2:3]
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v1, s1
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v0, s0
@@ -12048,7 +12008,6 @@ define amdgpu_kernel void @private_system_monotonic_seq_cst_ret_cmpxchg(
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NOTTGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s4
-; GFX942-NOTTGSPLIT-NEXT:    s_nop 0
 ; GFX942-NOTTGSPLIT-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[2:3]
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v1, s1
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v0, s0
@@ -12074,7 +12033,6 @@ define amdgpu_kernel void @private_system_monotonic_seq_cst_ret_cmpxchg(
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s4
-; GFX942-TGSPLIT-NEXT:    s_nop 0
 ; GFX942-TGSPLIT-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[2:3]
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v1, s1
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v0, s0
@@ -12444,7 +12402,6 @@ define amdgpu_kernel void @private_system_acquire_seq_cst_ret_cmpxchg(
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NOTTGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s4
-; GFX942-NOTTGSPLIT-NEXT:    s_nop 0
 ; GFX942-NOTTGSPLIT-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[2:3]
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v1, s1
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v0, s0
@@ -12470,7 +12427,6 @@ define amdgpu_kernel void @private_system_acquire_seq_cst_ret_cmpxchg(
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s4
-; GFX942-TGSPLIT-NEXT:    s_nop 0
 ; GFX942-TGSPLIT-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[2:3]
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v1, s1
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v0, s0
@@ -12840,7 +12796,6 @@ define amdgpu_kernel void @private_system_relese_seq_cst_ret_cmpxchg(
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NOTTGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s4
-; GFX942-NOTTGSPLIT-NEXT:    s_nop 0
 ; GFX942-NOTTGSPLIT-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[2:3]
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v1, s1
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v0, s0
@@ -12866,7 +12821,6 @@ define amdgpu_kernel void @private_system_relese_seq_cst_ret_cmpxchg(
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s4
-; GFX942-TGSPLIT-NEXT:    s_nop 0
 ; GFX942-TGSPLIT-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[2:3]
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v1, s1
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v0, s0
@@ -13236,7 +13190,6 @@ define amdgpu_kernel void @private_system_acq_rel_seq_cst_ret_cmpxchg(
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NOTTGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s4
-; GFX942-NOTTGSPLIT-NEXT:    s_nop 0
 ; GFX942-NOTTGSPLIT-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[2:3]
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v1, s1
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v0, s0
@@ -13262,7 +13215,6 @@ define amdgpu_kernel void @private_system_acq_rel_seq_cst_ret_cmpxchg(
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s4
-; GFX942-TGSPLIT-NEXT:    s_nop 0
 ; GFX942-TGSPLIT-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[2:3]
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v1, s1
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v0, s0
@@ -13632,7 +13584,6 @@ define amdgpu_kernel void @private_system_seq_cst_seq_cst_ret_cmpxchg(
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NOTTGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s4
-; GFX942-NOTTGSPLIT-NEXT:    s_nop 0
 ; GFX942-NOTTGSPLIT-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[2:3]
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v1, s1
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v0, s0
@@ -13658,7 +13609,6 @@ define amdgpu_kernel void @private_system_seq_cst_seq_cst_ret_cmpxchg(
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s4
-; GFX942-TGSPLIT-NEXT:    s_nop 0
 ; GFX942-TGSPLIT-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[2:3]
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v1, s1
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v0, s0
@@ -18285,7 +18235,6 @@ define amdgpu_kernel void @private_system_one_as_monotonic_monotonic_cmpxchg(
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NOTTGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s1
-; GFX942-NOTTGSPLIT-NEXT:    s_nop 0
 ; GFX942-NOTTGSPLIT-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[2:3]
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v0, s0
 ; GFX942-NOTTGSPLIT-NEXT:    s_endpgm
@@ -18308,7 +18257,6 @@ define amdgpu_kernel void @private_system_one_as_monotonic_monotonic_cmpxchg(
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s1
-; GFX942-TGSPLIT-NEXT:    s_nop 0
 ; GFX942-TGSPLIT-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[2:3]
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v0, s0
 ; GFX942-TGSPLIT-NEXT:    s_endpgm
@@ -18643,7 +18591,6 @@ define amdgpu_kernel void @private_system_one_as_acquire_monotonic_cmpxchg(
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NOTTGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s1
-; GFX942-NOTTGSPLIT-NEXT:    s_nop 0
 ; GFX942-NOTTGSPLIT-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[2:3]
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v0, s0
 ; GFX942-NOTTGSPLIT-NEXT:    s_endpgm
@@ -18666,7 +18613,6 @@ define amdgpu_kernel void @private_system_one_as_acquire_monotonic_cmpxchg(
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s1
-; GFX942-TGSPLIT-NEXT:    s_nop 0
 ; GFX942-TGSPLIT-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[2:3]
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v0, s0
 ; GFX942-TGSPLIT-NEXT:    s_endpgm
@@ -19004,7 +18950,6 @@ define amdgpu_kernel void @private_system_one_as_release_monotonic_cmpxchg(
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NOTTGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s1
-; GFX942-NOTTGSPLIT-NEXT:    s_nop 0
 ; GFX942-NOTTGSPLIT-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[2:3]
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v0, s0
 ; GFX942-NOTTGSPLIT-NEXT:    s_endpgm
@@ -19027,7 +18972,6 @@ define amdgpu_kernel void @private_system_one_as_release_monotonic_cmpxchg(
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s1
-; GFX942-TGSPLIT-NEXT:    s_nop 0
 ; GFX942-TGSPLIT-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[2:3]
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v0, s0
 ; GFX942-TGSPLIT-NEXT:    s_endpgm
@@ -19367,7 +19311,6 @@ define amdgpu_kernel void @private_system_one_as_acq_rel_monotonic_cmpxchg(
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NOTTGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s1
-; GFX942-NOTTGSPLIT-NEXT:    s_nop 0
 ; GFX942-NOTTGSPLIT-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[2:3]
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v0, s0
 ; GFX942-NOTTGSPLIT-NEXT:    s_endpgm
@@ -19390,7 +19333,6 @@ define amdgpu_kernel void @private_system_one_as_acq_rel_monotonic_cmpxchg(
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s1
-; GFX942-TGSPLIT-NEXT:    s_nop 0
 ; GFX942-TGSPLIT-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[2:3]
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v0, s0
 ; GFX942-TGSPLIT-NEXT:    s_endpgm
@@ -19733,7 +19675,6 @@ define amdgpu_kernel void @private_system_one_as_seq_cst_monotonic_cmpxchg(
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NOTTGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s1
-; GFX942-NOTTGSPLIT-NEXT:    s_nop 0
 ; GFX942-NOTTGSPLIT-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[2:3]
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v0, s0
 ; GFX942-NOTTGSPLIT-NEXT:    s_endpgm
@@ -19756,7 +19697,6 @@ define amdgpu_kernel void @private_system_one_as_seq_cst_monotonic_cmpxchg(
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s1
-; GFX942-TGSPLIT-NEXT:    s_nop 0
 ; GFX942-TGSPLIT-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[2:3]
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v0, s0
 ; GFX942-TGSPLIT-NEXT:    s_endpgm
@@ -20099,7 +20039,6 @@ define amdgpu_kernel void @private_system_one_as_monotonic_acquire_cmpxchg(
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NOTTGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s1
-; GFX942-NOTTGSPLIT-NEXT:    s_nop 0
 ; GFX942-NOTTGSPLIT-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[2:3]
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v0, s0
 ; GFX942-NOTTGSPLIT-NEXT:    s_endpgm
@@ -20122,7 +20061,6 @@ define amdgpu_kernel void @private_system_one_as_monotonic_acquire_cmpxchg(
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s1
-; GFX942-TGSPLIT-NEXT:    s_nop 0
 ; GFX942-TGSPLIT-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[2:3]
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v0, s0
 ; GFX942-TGSPLIT-NEXT:    s_endpgm
@@ -20460,7 +20398,6 @@ define amdgpu_kernel void @private_system_one_as_acquire_acquire_cmpxchg(
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NOTTGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s1
-; GFX942-NOTTGSPLIT-NEXT:    s_nop 0
 ; GFX942-NOTTGSPLIT-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[2:3]
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v0, s0
 ; GFX942-NOTTGSPLIT-NEXT:    s_endpgm
@@ -20483,7 +20420,6 @@ define amdgpu_kernel void @private_system_one_as_acquire_acquire_cmpxchg(
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s1
-; GFX942-TGSPLIT-NEXT:    s_nop 0
 ; GFX942-TGSPLIT-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[2:3]
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v0, s0
 ; GFX942-TGSPLIT-NEXT:    s_endpgm
@@ -20821,7 +20757,6 @@ define amdgpu_kernel void @private_system_one_as_release_acquire_cmpxchg(
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NOTTGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s1
-; GFX942-NOTTGSPLIT-NEXT:    s_nop 0
 ; GFX942-NOTTGSPLIT-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[2:3]
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v0, s0
 ; GFX942-NOTTGSPLIT-NEXT:    s_endpgm
@@ -20844,7 +20779,6 @@ define amdgpu_kernel void @private_system_one_as_release_acquire_cmpxchg(
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s1
-; GFX942-TGSPLIT-NEXT:    s_nop 0
 ; GFX942-TGSPLIT-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[2:3]
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v0, s0
 ; GFX942-TGSPLIT-NEXT:    s_endpgm
@@ -21187,7 +21121,6 @@ define amdgpu_kernel void @private_system_one_as_acq_rel_acquire_cmpxchg(
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NOTTGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s1
-; GFX942-NOTTGSPLIT-NEXT:    s_nop 0
 ; GFX942-NOTTGSPLIT-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[2:3]
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v0, s0
 ; GFX942-NOTTGSPLIT-NEXT:    s_endpgm
@@ -21210,7 +21143,6 @@ define amdgpu_kernel void @private_system_one_as_acq_rel_acquire_cmpxchg(
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s1
-; GFX942-TGSPLIT-NEXT:    s_nop 0
 ; GFX942-TGSPLIT-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[2:3]
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v0, s0
 ; GFX942-TGSPLIT-NEXT:    s_endpgm
@@ -21553,7 +21485,6 @@ define amdgpu_kernel void @private_system_one_as_seq_cst_acquire_cmpxchg(
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NOTTGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s1
-; GFX942-NOTTGSPLIT-NEXT:    s_nop 0
 ; GFX942-NOTTGSPLIT-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[2:3]
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v0, s0
 ; GFX942-NOTTGSPLIT-NEXT:    s_endpgm
@@ -21576,7 +21507,6 @@ define amdgpu_kernel void @private_system_one_as_seq_cst_acquire_cmpxchg(
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s1
-; GFX942-TGSPLIT-NEXT:    s_nop 0
 ; GFX942-TGSPLIT-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[2:3]
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v0, s0
 ; GFX942-TGSPLIT-NEXT:    s_endpgm
@@ -21919,7 +21849,6 @@ define amdgpu_kernel void @private_system_one_as_monotonic_seq_cst_cmpxchg(
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NOTTGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s1
-; GFX942-NOTTGSPLIT-NEXT:    s_nop 0
 ; GFX942-NOTTGSPLIT-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[2:3]
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v0, s0
 ; GFX942-NOTTGSPLIT-NEXT:    s_endpgm
@@ -21942,7 +21871,6 @@ define amdgpu_kernel void @private_system_one_as_monotonic_seq_cst_cmpxchg(
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s1
-; GFX942-TGSPLIT-NEXT:    s_nop 0
 ; GFX942-TGSPLIT-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[2:3]
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v0, s0
 ; GFX942-TGSPLIT-NEXT:    s_endpgm
@@ -22285,7 +22213,6 @@ define amdgpu_kernel void @private_system_one_as_acquire_seq_cst_cmpxchg(
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NOTTGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s1
-; GFX942-NOTTGSPLIT-NEXT:    s_nop 0
 ; GFX942-NOTTGSPLIT-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[2:3]
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v0, s0
 ; GFX942-NOTTGSPLIT-NEXT:    s_endpgm
@@ -22308,7 +22235,6 @@ define amdgpu_kernel void @private_system_one_as_acquire_seq_cst_cmpxchg(
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s1
-; GFX942-TGSPLIT-NEXT:    s_nop 0
 ; GFX942-TGSPLIT-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[2:3]
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v0, s0
 ; GFX942-TGSPLIT-NEXT:    s_endpgm
@@ -22651,7 +22577,6 @@ define amdgpu_kernel void @private_system_one_as_release_seq_cst_cmpxchg(
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NOTTGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s1
-; GFX942-NOTTGSPLIT-NEXT:    s_nop 0
 ; GFX942-NOTTGSPLIT-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[2:3]
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v0, s0
 ; GFX942-NOTTGSPLIT-NEXT:    s_endpgm
@@ -22674,7 +22599,6 @@ define amdgpu_kernel void @private_system_one_as_release_seq_cst_cmpxchg(
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s1
-; GFX942-TGSPLIT-NEXT:    s_nop 0
 ; GFX942-TGSPLIT-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[2:3]
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v0, s0
 ; GFX942-TGSPLIT-NEXT:    s_endpgm
@@ -23017,7 +22941,6 @@ define amdgpu_kernel void @private_system_one_as_acq_rel_seq_cst_cmpxchg(
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NOTTGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s1
-; GFX942-NOTTGSPLIT-NEXT:    s_nop 0
 ; GFX942-NOTTGSPLIT-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[2:3]
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v0, s0
 ; GFX942-NOTTGSPLIT-NEXT:    s_endpgm
@@ -23040,7 +22963,6 @@ define amdgpu_kernel void @private_system_one_as_acq_rel_seq_cst_cmpxchg(
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s1
-; GFX942-TGSPLIT-NEXT:    s_nop 0
 ; GFX942-TGSPLIT-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[2:3]
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v0, s0
 ; GFX942-TGSPLIT-NEXT:    s_endpgm
@@ -23383,7 +23305,6 @@ define amdgpu_kernel void @private_system_one_as_seq_cst_seq_cst_cmpxchg(
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NOTTGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s1
-; GFX942-NOTTGSPLIT-NEXT:    s_nop 0
 ; GFX942-NOTTGSPLIT-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[2:3]
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v0, s0
 ; GFX942-NOTTGSPLIT-NEXT:    s_endpgm
@@ -23406,7 +23327,6 @@ define amdgpu_kernel void @private_system_one_as_seq_cst_seq_cst_cmpxchg(
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s1
-; GFX942-TGSPLIT-NEXT:    s_nop 0
 ; GFX942-TGSPLIT-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[2:3]
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v0, s0
 ; GFX942-TGSPLIT-NEXT:    s_endpgm
@@ -23769,7 +23689,6 @@ define amdgpu_kernel void @private_system_one_as_monotonic_monotonic_ret_cmpxchg
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NOTTGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s4
-; GFX942-NOTTGSPLIT-NEXT:    s_nop 0
 ; GFX942-NOTTGSPLIT-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[2:3]
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v1, s1
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v0, s0
@@ -23795,7 +23714,6 @@ define amdgpu_kernel void @private_system_one_as_monotonic_monotonic_ret_cmpxchg
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s4
-; GFX942-TGSPLIT-NEXT:    s_nop 0
 ; GFX942-TGSPLIT-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[2:3]
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v1, s1
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v0, s0
@@ -24158,7 +24076,6 @@ define amdgpu_kernel void @private_system_one_as_acquire_monotonic_ret_cmpxchg(
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NOTTGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s4
-; GFX942-NOTTGSPLIT-NEXT:    s_nop 0
 ; GFX942-NOTTGSPLIT-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[2:3]
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v1, s1
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v0, s0
@@ -24184,7 +24101,6 @@ define amdgpu_kernel void @private_system_one_as_acquire_monotonic_ret_cmpxchg(
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s4
-; GFX942-TGSPLIT-NEXT:    s_nop 0
 ; GFX942-TGSPLIT-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[2:3]
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v1, s1
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v0, s0
@@ -24549,7 +24465,6 @@ define amdgpu_kernel void @private_system_one_as_release_monotonic_ret_cmpxchg(
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NOTTGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s4
-; GFX942-NOTTGSPLIT-NEXT:    s_nop 0
 ; GFX942-NOTTGSPLIT-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[2:3]
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v1, s1
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v0, s0
@@ -24575,7 +24490,6 @@ define amdgpu_kernel void @private_system_one_as_release_monotonic_ret_cmpxchg(
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s4
-; GFX942-TGSPLIT-NEXT:    s_nop 0
 ; GFX942-TGSPLIT-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[2:3]
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v1, s1
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v0, s0
@@ -24943,7 +24857,6 @@ define amdgpu_kernel void @private_system_one_as_acq_rel_monotonic_ret_cmpxchg(
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NOTTGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s4
-; GFX942-NOTTGSPLIT-NEXT:    s_nop 0
 ; GFX942-NOTTGSPLIT-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[2:3]
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v1, s1
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v0, s0
@@ -24969,7 +24882,6 @@ define amdgpu_kernel void @private_system_one_as_acq_rel_monotonic_ret_cmpxchg(
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s4
-; GFX942-TGSPLIT-NEXT:    s_nop 0
 ; GFX942-TGSPLIT-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[2:3]
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v1, s1
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v0, s0
@@ -25339,7 +25251,6 @@ define amdgpu_kernel void @private_system_one_as_seq_cst_monotonic_ret_cmpxchg(
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NOTTGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s4
-; GFX942-NOTTGSPLIT-NEXT:    s_nop 0
 ; GFX942-NOTTGSPLIT-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[2:3]
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v1, s1
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v0, s0
@@ -25365,7 +25276,6 @@ define amdgpu_kernel void @private_system_one_as_seq_cst_monotonic_ret_cmpxchg(
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s4
-; GFX942-TGSPLIT-NEXT:    s_nop 0
 ; GFX942-TGSPLIT-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[2:3]
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v1, s1
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v0, s0
@@ -25735,7 +25645,6 @@ define amdgpu_kernel void @private_system_one_as_monotonic_acquire_ret_cmpxchg(
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NOTTGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s4
-; GFX942-NOTTGSPLIT-NEXT:    s_nop 0
 ; GFX942-NOTTGSPLIT-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[2:3]
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v1, s1
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v0, s0
@@ -25761,7 +25670,6 @@ define amdgpu_kernel void @private_system_one_as_monotonic_acquire_ret_cmpxchg(
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s4
-; GFX942-TGSPLIT-NEXT:    s_nop 0
 ; GFX942-TGSPLIT-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[2:3]
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v1, s1
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v0, s0
@@ -26126,7 +26034,6 @@ define amdgpu_kernel void @private_system_one_as_acquire_acquire_ret_cmpxchg(
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NOTTGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s4
-; GFX942-NOTTGSPLIT-NEXT:    s_nop 0
 ; GFX942-NOTTGSPLIT-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[2:3]
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v1, s1
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v0, s0
@@ -26152,7 +26059,6 @@ define amdgpu_kernel void @private_system_one_as_acquire_acquire_ret_cmpxchg(
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s4
-; GFX942-TGSPLIT-NEXT:    s_nop 0
 ; GFX942-TGSPLIT-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[2:3]
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v1, s1
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v0, s0
@@ -26517,7 +26423,6 @@ define amdgpu_kernel void @private_system_one_as_release_acquire_ret_cmpxchg(
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NOTTGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s4
-; GFX942-NOTTGSPLIT-NEXT:    s_nop 0
 ; GFX942-NOTTGSPLIT-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[2:3]
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v1, s1
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v0, s0
@@ -26543,7 +26448,6 @@ define amdgpu_kernel void @private_system_one_as_release_acquire_ret_cmpxchg(
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s4
-; GFX942-TGSPLIT-NEXT:    s_nop 0
 ; GFX942-TGSPLIT-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[2:3]
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v1, s1
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v0, s0
@@ -26913,7 +26817,6 @@ define amdgpu_kernel void @private_system_one_as_acq_rel_acquire_ret_cmpxchg(
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NOTTGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s4
-; GFX942-NOTTGSPLIT-NEXT:    s_nop 0
 ; GFX942-NOTTGSPLIT-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[2:3]
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v1, s1
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v0, s0
@@ -26939,7 +26842,6 @@ define amdgpu_kernel void @private_system_one_as_acq_rel_acquire_ret_cmpxchg(
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s4
-; GFX942-TGSPLIT-NEXT:    s_nop 0
 ; GFX942-TGSPLIT-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[2:3]
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v1, s1
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v0, s0
@@ -27309,7 +27211,6 @@ define amdgpu_kernel void @private_system_one_as_seq_cst_acquire_ret_cmpxchg(
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NOTTGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s4
-; GFX942-NOTTGSPLIT-NEXT:    s_nop 0
 ; GFX942-NOTTGSPLIT-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[2:3]
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v1, s1
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v0, s0
@@ -27335,7 +27236,6 @@ define amdgpu_kernel void @private_system_one_as_seq_cst_acquire_ret_cmpxchg(
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s4
-; GFX942-TGSPLIT-NEXT:    s_nop 0
 ; GFX942-TGSPLIT-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[2:3]
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v1, s1
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v0, s0
@@ -27705,7 +27605,6 @@ define amdgpu_kernel void @private_system_one_as_monotonic_seq_cst_ret_cmpxchg(
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NOTTGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s4
-; GFX942-NOTTGSPLIT-NEXT:    s_nop 0
 ; GFX942-NOTTGSPLIT-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[2:3]
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v1, s1
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v0, s0
@@ -27731,7 +27630,6 @@ define amdgpu_kernel void @private_system_one_as_monotonic_seq_cst_ret_cmpxchg(
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s4
-; GFX942-TGSPLIT-NEXT:    s_nop 0
 ; GFX942-TGSPLIT-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[2:3]
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v1, s1
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v0, s0
@@ -28101,7 +27999,6 @@ define amdgpu_kernel void @private_system_one_as_acquire_seq_cst_ret_cmpxchg(
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NOTTGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s4
-; GFX942-NOTTGSPLIT-NEXT:    s_nop 0
 ; GFX942-NOTTGSPLIT-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[2:3]
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v1, s1
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v0, s0
@@ -28127,7 +28024,6 @@ define amdgpu_kernel void @private_system_one_as_acquire_seq_cst_ret_cmpxchg(
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s4
-; GFX942-TGSPLIT-NEXT:    s_nop 0
 ; GFX942-TGSPLIT-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[2:3]
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v1, s1
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v0, s0
@@ -28497,7 +28393,6 @@ define amdgpu_kernel void @private_system_one_as_release_seq_cst_ret_cmpxchg(
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NOTTGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s4
-; GFX942-NOTTGSPLIT-NEXT:    s_nop 0
 ; GFX942-NOTTGSPLIT-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[2:3]
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v1, s1
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v0, s0
@@ -28523,7 +28418,6 @@ define amdgpu_kernel void @private_system_one_as_release_seq_cst_ret_cmpxchg(
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s4
-; GFX942-TGSPLIT-NEXT:    s_nop 0
 ; GFX942-TGSPLIT-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[2:3]
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v1, s1
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v0, s0
@@ -28893,7 +28787,6 @@ define amdgpu_kernel void @private_system_one_as_acq_rel_seq_cst_ret_cmpxchg(
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NOTTGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s4
-; GFX942-NOTTGSPLIT-NEXT:    s_nop 0
 ; GFX942-NOTTGSPLIT-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[2:3]
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v1, s1
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v0, s0
@@ -28919,7 +28812,6 @@ define amdgpu_kernel void @private_system_one_as_acq_rel_seq_cst_ret_cmpxchg(
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s4
-; GFX942-TGSPLIT-NEXT:    s_nop 0
 ; GFX942-TGSPLIT-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[2:3]
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v1, s1
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v0, s0
@@ -29289,7 +29181,6 @@ define amdgpu_kernel void @private_system_one_as_seq_cst_seq_cst_ret_cmpxchg(
 ; GFX942-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NOTTGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s4
-; GFX942-NOTTGSPLIT-NEXT:    s_nop 0
 ; GFX942-NOTTGSPLIT-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[2:3]
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v1, s1
 ; GFX942-NOTTGSPLIT-NEXT:    scratch_store_dword off, v0, s0
@@ -29315,7 +29206,6 @@ define amdgpu_kernel void @private_system_one_as_seq_cst_seq_cst_ret_cmpxchg(
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s2
 ; GFX942-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s4
-; GFX942-TGSPLIT-NEXT:    s_nop 0
 ; GFX942-TGSPLIT-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[2:3]
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v1, s1
 ; GFX942-TGSPLIT-NEXT:    scratch_store_dword off, v0, s0

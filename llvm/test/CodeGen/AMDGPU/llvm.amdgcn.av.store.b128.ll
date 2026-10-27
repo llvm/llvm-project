@@ -480,7 +480,6 @@ define void @global_store_i8_zext_vgpr(ptr addrspace(1) %sbase, ptr addrspace(1)
 ; GFX942-ISEL-NEXT:    global_load_dword v2, v[2:3], off
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-ISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v2
-; GFX942-ISEL-NEXT:    s_nop 1
 ; GFX942-ISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX942-ISEL-NEXT:    global_store_dwordx4 v[0:1], v[4:7], off
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0)
@@ -766,7 +765,6 @@ define void @global_store_i8_zext_vgpr_offset_2047(ptr addrspace(1) %sbase, ptr 
 ; GFX942-ISEL-NEXT:    global_load_dword v2, v[2:3], off
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-ISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v2
-; GFX942-ISEL-NEXT:    s_nop 1
 ; GFX942-ISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX942-ISEL-NEXT:    global_store_dwordx4 v[0:1], v[4:7], off offset:2047 sc1
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0)
@@ -918,7 +916,6 @@ define void @global_store_i8_zext_vgpr_offset_neg2048(ptr addrspace(1) %sbase, p
 ; GFX942-ISEL-NEXT:    global_load_dword v2, v[2:3], off
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-ISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v2
-; GFX942-ISEL-NEXT:    s_nop 1
 ; GFX942-ISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX942-ISEL-NEXT:    global_store_dwordx4 v[0:1], v[4:7], off offset:-2048 sc0 sc1
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0)

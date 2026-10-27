@@ -8746,7 +8746,6 @@ define bfloat @global_agent_atomic_fmax_ret_bf16__amdgpu_no_fine_grained_memory(
 ; GFX942-NEXT:    v_or_b32_e32 v8, 0x400000, v4
 ; GFX942-NEXT:    v_add3_u32 v7, v7, v4, s2
 ; GFX942-NEXT:    v_cmp_u_f32_e32 vcc, v4, v4
-; GFX942-NEXT:    s_nop 1
 ; GFX942-NEXT:    v_cndmask_b32_e32 v4, v7, v8, vcc
 ; GFX942-NEXT:    v_lshlrev_b32_sdwa v4, v3, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX942-NEXT:    v_and_or_b32 v4, v5, v6, v4
@@ -9254,7 +9253,6 @@ define bfloat @global_agent_atomic_fmax_ret_bf16__offset12b_pos__amdgpu_no_fine_
 ; GFX942-NEXT:    v_or_b32_e32 v8, 0x400000, v2
 ; GFX942-NEXT:    v_add3_u32 v7, v7, v2, s2
 ; GFX942-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
-; GFX942-NEXT:    s_nop 1
 ; GFX942-NEXT:    v_cndmask_b32_e32 v2, v7, v8, vcc
 ; GFX942-NEXT:    v_lshlrev_b32_sdwa v2, v4, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX942-NEXT:    v_and_or_b32 v2, v3, v5, v2
@@ -9774,7 +9772,6 @@ define bfloat @global_agent_atomic_fmax_ret_bf16__offset12b_neg__amdgpu_no_fine_
 ; GFX942-NEXT:    v_or_b32_e32 v8, 0x400000, v2
 ; GFX942-NEXT:    v_add3_u32 v7, v7, v2, s2
 ; GFX942-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
-; GFX942-NEXT:    s_nop 1
 ; GFX942-NEXT:    v_cndmask_b32_e32 v2, v7, v8, vcc
 ; GFX942-NEXT:    v_lshlrev_b32_sdwa v2, v4, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX942-NEXT:    v_and_or_b32 v2, v3, v5, v2
@@ -10282,7 +10279,6 @@ define void @global_agent_atomic_fmax_noret_bf16__amdgpu_no_fine_grained_memory(
 ; GFX942-NEXT:    v_or_b32_e32 v8, 0x400000, v4
 ; GFX942-NEXT:    v_add3_u32 v7, v7, v4, s2
 ; GFX942-NEXT:    v_cmp_u_f32_e32 vcc, v4, v4
-; GFX942-NEXT:    s_nop 1
 ; GFX942-NEXT:    v_cndmask_b32_e32 v4, v7, v8, vcc
 ; GFX942-NEXT:    v_lshlrev_b32_sdwa v4, v3, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX942-NEXT:    v_and_or_b32 v4, v5, v6, v4
@@ -10721,7 +10717,6 @@ define void @global_agent_atomic_fmax_noret_bf16__offset12b_pos__amdgpu_no_fine_
 ; GFX942-NEXT:    v_or_b32_e32 v8, 0x400000, v2
 ; GFX942-NEXT:    v_add3_u32 v7, v7, v2, s2
 ; GFX942-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
-; GFX942-NEXT:    s_nop 1
 ; GFX942-NEXT:    v_cndmask_b32_e32 v2, v7, v8, vcc
 ; GFX942-NEXT:    v_lshlrev_b32_sdwa v2, v4, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX942-NEXT:    v_and_or_b32 v2, v3, v5, v2
@@ -11121,7 +11116,6 @@ define void @global_agent_atomic_fmax_noret_bf16__offset12b_neg__amdgpu_no_fine_
 ; GFX942-NEXT:    v_or_b32_e32 v8, 0x400000, v2
 ; GFX942-NEXT:    v_add3_u32 v7, v7, v2, s2
 ; GFX942-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
-; GFX942-NEXT:    s_nop 1
 ; GFX942-NEXT:    v_cndmask_b32_e32 v2, v7, v8, vcc
 ; GFX942-NEXT:    v_lshlrev_b32_sdwa v2, v4, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX942-NEXT:    v_and_or_b32 v2, v3, v5, v2
@@ -11543,7 +11537,6 @@ define bfloat @global_agent_atomic_fmax_ret_bf16__offset12b_pos__align4__amdgpu_
 ; GFX942-NEXT:    v_or_b32_e32 v6, 0x400000, v2
 ; GFX942-NEXT:    v_add3_u32 v5, v5, v2, s2
 ; GFX942-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
-; GFX942-NEXT:    s_nop 1
 ; GFX942-NEXT:    v_cndmask_b32_e32 v2, v5, v6, vcc
 ; GFX942-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
 ; GFX942-NEXT:    v_and_or_b32 v2, v3, s3, v2
@@ -11909,7 +11902,6 @@ define void @global_agent_atomic_fmax_noret_bf16__offset12b__align4_pos__amdgpu_
 ; GFX942-NEXT:    v_or_b32_e32 v6, 0x400000, v2
 ; GFX942-NEXT:    v_add3_u32 v5, v5, v2, s2
 ; GFX942-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
-; GFX942-NEXT:    s_nop 1
 ; GFX942-NEXT:    v_cndmask_b32_e32 v2, v5, v6, vcc
 ; GFX942-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
 ; GFX942-NEXT:    v_and_or_b32 v2, v3, s3, v2
@@ -12311,7 +12303,6 @@ define bfloat @global_system_atomic_fmax_ret_bf16__offset12b_pos__amdgpu_no_fine
 ; GFX942-NEXT:    v_or_b32_e32 v8, 0x400000, v2
 ; GFX942-NEXT:    v_add3_u32 v7, v7, v2, s2
 ; GFX942-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
-; GFX942-NEXT:    s_nop 1
 ; GFX942-NEXT:    v_cndmask_b32_e32 v2, v7, v8, vcc
 ; GFX942-NEXT:    v_lshlrev_b32_sdwa v2, v4, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX942-NEXT:    v_and_or_b32 v2, v3, v5, v2
@@ -12775,7 +12766,6 @@ define void @global_system_atomic_fmax_noret_bf16__offset12b_pos__amdgpu_no_fine
 ; GFX942-NEXT:    v_or_b32_e32 v8, 0x400000, v2
 ; GFX942-NEXT:    v_add3_u32 v7, v7, v2, s2
 ; GFX942-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
-; GFX942-NEXT:    s_nop 1
 ; GFX942-NEXT:    v_cndmask_b32_e32 v2, v7, v8, vcc
 ; GFX942-NEXT:    v_lshlrev_b32_sdwa v2, v4, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX942-NEXT:    v_and_or_b32 v2, v3, v5, v2
@@ -15447,9 +15437,8 @@ define <2 x bfloat> @global_agent_atomic_fmax_ret_v2bf16__amdgpu_no_fine_grained
 ; GFX942-NEXT:    v_add3_u32 v9, v9, v6, s4
 ; GFX942-NEXT:    v_cmp_u_f32_e32 vcc, v6, v6
 ; GFX942-NEXT:    v_cmp_u_f32_e64 s[0:1], v2, v2
-; GFX942-NEXT:    s_nop 0
-; GFX942-NEXT:    v_cndmask_b32_e32 v6, v9, v10, vcc
 ; GFX942-NEXT:    v_cndmask_b32_e64 v2, v7, v8, s[0:1]
+; GFX942-NEXT:    v_cndmask_b32_e32 v6, v9, v10, vcc
 ; GFX942-NEXT:    v_perm_b32 v2, v6, v2, s5
 ; GFX942-NEXT:    buffer_wbl2 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
@@ -15954,9 +15943,8 @@ define <2 x bfloat> @global_agent_atomic_fmax_ret_v2bf16__offset12b_pos__amdgpu_
 ; GFX942-NEXT:    v_add3_u32 v9, v9, v6, s4
 ; GFX942-NEXT:    v_cmp_u_f32_e32 vcc, v6, v6
 ; GFX942-NEXT:    v_cmp_u_f32_e64 s[0:1], v2, v2
-; GFX942-NEXT:    s_nop 0
-; GFX942-NEXT:    v_cndmask_b32_e32 v6, v9, v10, vcc
 ; GFX942-NEXT:    v_cndmask_b32_e64 v2, v7, v8, s[0:1]
+; GFX942-NEXT:    v_cndmask_b32_e32 v6, v9, v10, vcc
 ; GFX942-NEXT:    v_perm_b32 v2, v6, v2, s5
 ; GFX942-NEXT:    buffer_wbl2 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
@@ -16463,9 +16451,8 @@ define <2 x bfloat> @global_agent_atomic_fmax_ret_v2bf16__offset12b_neg__amdgpu_
 ; GFX942-NEXT:    v_add3_u32 v9, v9, v6, s4
 ; GFX942-NEXT:    v_cmp_u_f32_e32 vcc, v6, v6
 ; GFX942-NEXT:    v_cmp_u_f32_e64 s[0:1], v2, v2
-; GFX942-NEXT:    s_nop 0
-; GFX942-NEXT:    v_cndmask_b32_e32 v6, v9, v10, vcc
 ; GFX942-NEXT:    v_cndmask_b32_e64 v2, v7, v8, s[0:1]
+; GFX942-NEXT:    v_cndmask_b32_e32 v6, v9, v10, vcc
 ; GFX942-NEXT:    v_perm_b32 v2, v6, v2, s5
 ; GFX942-NEXT:    buffer_wbl2 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
@@ -16976,9 +16963,8 @@ define void @global_agent_atomic_fmax_noret_v2bf16__amdgpu_no_fine_grained_memor
 ; GFX942-NEXT:    v_add3_u32 v9, v9, v6, s4
 ; GFX942-NEXT:    v_cmp_u_f32_e32 vcc, v6, v6
 ; GFX942-NEXT:    v_cmp_u_f32_e64 s[0:1], v2, v2
-; GFX942-NEXT:    s_nop 0
-; GFX942-NEXT:    v_cndmask_b32_e32 v6, v9, v10, vcc
 ; GFX942-NEXT:    v_cndmask_b32_e64 v2, v7, v8, s[0:1]
+; GFX942-NEXT:    v_cndmask_b32_e32 v6, v9, v10, vcc
 ; GFX942-NEXT:    v_perm_b32 v2, v6, v2, s5
 ; GFX942-NEXT:    buffer_wbl2 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
@@ -17461,9 +17447,8 @@ define void @global_agent_atomic_fmax_noret_v2bf16__offset12b_pos__amdgpu_no_fin
 ; GFX942-NEXT:    v_add3_u32 v9, v9, v6, s4
 ; GFX942-NEXT:    v_cmp_u_f32_e32 vcc, v6, v6
 ; GFX942-NEXT:    v_cmp_u_f32_e64 s[0:1], v2, v2
-; GFX942-NEXT:    s_nop 0
-; GFX942-NEXT:    v_cndmask_b32_e32 v6, v9, v10, vcc
 ; GFX942-NEXT:    v_cndmask_b32_e64 v2, v7, v8, s[0:1]
+; GFX942-NEXT:    v_cndmask_b32_e32 v6, v9, v10, vcc
 ; GFX942-NEXT:    v_perm_b32 v2, v6, v2, s5
 ; GFX942-NEXT:    buffer_wbl2 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
@@ -17949,9 +17934,8 @@ define void @global_agent_atomic_fmax_noret_v2bf16__offset12b_neg__amdgpu_no_fin
 ; GFX942-NEXT:    v_add3_u32 v9, v9, v6, s4
 ; GFX942-NEXT:    v_cmp_u_f32_e32 vcc, v6, v6
 ; GFX942-NEXT:    v_cmp_u_f32_e64 s[0:1], v2, v2
-; GFX942-NEXT:    s_nop 0
-; GFX942-NEXT:    v_cndmask_b32_e32 v6, v9, v10, vcc
 ; GFX942-NEXT:    v_cndmask_b32_e64 v2, v7, v8, s[0:1]
+; GFX942-NEXT:    v_cndmask_b32_e32 v6, v9, v10, vcc
 ; GFX942-NEXT:    v_perm_b32 v2, v6, v2, s5
 ; GFX942-NEXT:    buffer_wbl2 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
@@ -18451,9 +18435,8 @@ define <2 x bfloat> @global_system_atomic_fmax_ret_v2bf16__offset12b_pos__amdgpu
 ; GFX942-NEXT:    v_add3_u32 v9, v9, v6, s4
 ; GFX942-NEXT:    v_cmp_u_f32_e32 vcc, v6, v6
 ; GFX942-NEXT:    v_cmp_u_f32_e64 s[0:1], v2, v2
-; GFX942-NEXT:    s_nop 0
-; GFX942-NEXT:    v_cndmask_b32_e32 v6, v9, v10, vcc
 ; GFX942-NEXT:    v_cndmask_b32_e64 v2, v7, v8, s[0:1]
+; GFX942-NEXT:    v_cndmask_b32_e32 v6, v9, v10, vcc
 ; GFX942-NEXT:    v_perm_b32 v2, v6, v2, s5
 ; GFX942-NEXT:    buffer_wbl2 sc0 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
@@ -18961,9 +18944,8 @@ define void @global_system_atomic_fmax_noret_v2bf16__offset12b_pos__amdgpu_no_fi
 ; GFX942-NEXT:    v_add3_u32 v9, v9, v6, s4
 ; GFX942-NEXT:    v_cmp_u_f32_e32 vcc, v6, v6
 ; GFX942-NEXT:    v_cmp_u_f32_e64 s[0:1], v2, v2
-; GFX942-NEXT:    s_nop 0
-; GFX942-NEXT:    v_cndmask_b32_e32 v6, v9, v10, vcc
 ; GFX942-NEXT:    v_cndmask_b32_e64 v2, v7, v8, s[0:1]
+; GFX942-NEXT:    v_cndmask_b32_e32 v6, v9, v10, vcc
 ; GFX942-NEXT:    v_perm_b32 v2, v6, v2, s5
 ; GFX942-NEXT:    buffer_wbl2 sc0 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
