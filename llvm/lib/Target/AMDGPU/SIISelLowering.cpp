@@ -57,6 +57,31 @@
 using namespace llvm;
 using namespace llvm::SDPatternMatch;
 
+void SITargetLowering::CollectTargetIntrinsicOperands(
+    const CallInst &Call, SmallVectorImpl<SDValue> &Ops,
+    SelectionDAG &DAG) const {
+  auto Policy = AMDGPU::getMFMACDRegClass(Call);
+  if (Policy != AMDGPU::MFMACDRegClass::AGPR &&
+      Policy != AMDGPU::MFMACDRegClass::VGPR)
+    return;
+
+  // A separate operand keeps policies distinct during DAG CSE. TableGen
+  // carries trailing intrinsic operands into the variadic MFMA instruction.
+  Ops.push_back(DAG.getTargetIndex(Policy == AMDGPU::MFMACDRegClass::AGPR
+                                       ? AMDGPU::TI_MFMA_CD_AGPR
+                                       : AMDGPU::TI_MFMA_CD_VGPR,
+                                   MVT::i32));
+}
+
+void SITargetLowering::CollectTargetIntrinsicOperands(
+    const CallBase &Call, MachineInstrBuilder &MIB) const {
+  auto Policy = AMDGPU::getMFMACDRegClass(Call);
+  if (Policy == AMDGPU::MFMACDRegClass::AGPR)
+    MIB.addTargetIndex(AMDGPU::TI_MFMA_CD_AGPR);
+  else if (Policy == AMDGPU::MFMACDRegClass::VGPR)
+    MIB.addTargetIndex(AMDGPU::TI_MFMA_CD_VGPR);
+}
+
 #define DEBUG_TYPE "si-lower"
 
 STATISTIC(NumTailCalls, "Number of tail calls");

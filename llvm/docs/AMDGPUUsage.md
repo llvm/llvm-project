@@ -2633,6 +2633,9 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
     - Matrix A scale values
     - 2-bit byte index to use for each lane for matrix B
     - Matrix B scale values
+
+    The optional `amdgpu-mfma-cd-regclass` call-site attribute controls the C/D
+    register-class policy described below.
 * - llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4
   - Emit `v_mfma_scale_f32_32x32x64_f8f6f4`
 * - llvm.amdgcn.permlane16.swap
@@ -2762,6 +2765,44 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
 :::{todo}
 List AMDGPU intrinsics.
 :::
+
+(amdgpu-mfma-cd-regclass)=
+
+#### MFMA C/D register-class policy
+
+Ordinary and scaled `llvm.amdgcn.mfma.*` intrinsic calls accept the string
+attribute `"amdgpu-mfma-cd-regclass"="agpr|vgpr"`. It constrains the
+register-valued accumulator C and result D of that instruction. Omitting the
+attribute preserves existing allocation heuristics;
+`agpr` and `vgpr` request the respective native C/D form. Immediate C operands
+remain foldable, and transfers for other uses remain allowed.
+
+```llvm
+%d = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x4f32(
+    float %a, float %b, <4 x float> %c,
+    i32 0, i32 0, i32 0) "amdgpu-mfma-cd-regclass"="agpr"
+```
+
+The intrinsic signatures and Clang builtin interfaces are unchanged.
+ROCDL exposes `cd_regclass` with values `auto`, `require_agpr`, and
+`require_vgpr`; `auto` omits the LLVM attribute, and the other values export
+the corresponding LLVM string attribute.
+AMDGPU diagnoses invalid values and placement outside MFMA call sites.
+VGPR C/D requires gfx90a or later CDNA; gfx908 only supports AGPR C/D.
+The requested intrinsic variant must also be supported by the target.
+The generic IR verifier and bitcode reader do not validate this target
+attribute. Older backends may silently ignore it.
+
+Instruction selection and register-bank selection use their original rules.
+SelectionDAG and GlobalISel carry explicit policies as independent trailing
+`target-index(amdgpu-mfma-cd-agpr)` or
+`target-index(amdgpu-mfma-cd-vgpr)` operands. Existing TableGen patterns
+preserve these operands on the original MFMA opcodes. When the attribute is
+absent, no policy operand is added, regardless of the selected AGPR/VGPR form;
+there is no explicit automatic-policy operand in MachineIR. These operands
+keep different policies distinct during DAG and MachineIR CSE, survive cloning and MIR round trips, and remain available to
+allocation and rewrite passes. They have no hardware encoding and are omitted
+when lowering to MC instructions. No hardware operand carries policy bits.
 
 (amdgpu-av-load-store)=
 

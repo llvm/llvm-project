@@ -26,6 +26,8 @@
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/InstIterator.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/TargetParser/AMDGPUTargetParser.h"
 #include <algorithm>
@@ -222,6 +224,45 @@ void GCNSubtarget::checkSubtargetFeatures(const Function &F) const {
       hasFeature(AMDGPU::FeatureWavefrontSize64)) {
     Ctx.diagnose(DiagnosticInfoUnsupported(
         F, "must specify exactly one of wavefrontsize32 and wavefrontsize64"));
+  }
+
+  auto Diagnose = [&](StringRef Reason, const DebugLoc &DL = DebugLoc()) {
+    Ctx.diagnose(DiagnosticInfoUnsupported(
+        F, Twine(AMDGPU::MFMACDRegClassAttr) + ": " + Reason, DL));
+  };
+  auto CheckPlacement = [&](AttributeList Attrs, bool IsCall,
+                            const DebugLoc &DL = DebugLoc()) {
+    for (unsigned Index : Attrs.indexes())
+      if ((!IsCall || Index != AttributeList::FunctionIndex) &&
+          Attrs.hasAttributeAtIndex(Index, AMDGPU::MFMACDRegClassAttr))
+        Diagnose("only valid on MFMA call sites", DL);
+  };
+  CheckPlacement(F.getAttributes(), false);
+  for (const Instruction &I : instructions(F)) {
+    const auto *Call = dyn_cast<CallBase>(&I);
+    if (!Call)
+      continue;
+    CheckPlacement(Call->getAttributes(), true, I.getDebugLoc());
+    if (const Function *Callee = Call->getCalledFunction())
+      CheckPlacement(Callee->getAttributes(), false, I.getDebugLoc());
+    auto Policy = AMDGPU::getMFMACDRegClass(*Call);
+    if (Policy == AMDGPU::MFMACDRegClass::Auto)
+      continue;
+    if (!Policy) {
+      bool IsMFMA = Call->getIntrinsicID() &&
+                    Intrinsic::getBaseName(Call->getIntrinsicID())
+                        .starts_with("llvm.amdgcn.mfma.");
+      Diagnose(IsMFMA ? "expected agpr or vgpr"
+                      : "only valid on MFMA call sites",
+               I.getDebugLoc());
+    } else if (!hasMAIInsts())
+      Diagnose("target does not support MFMA", I.getDebugLoc());
+    else if (Intrinsic::getBaseName(Call->getIntrinsicID())
+                 .starts_with("llvm.amdgcn.mfma.scale.") &&
+             !hasGFX950Insts())
+      Diagnose("target does not support scaled MFMA", I.getDebugLoc());
+    else if (Policy == AMDGPU::MFMACDRegClass::VGPR && !hasGFX90AInsts())
+      Diagnose("VGPR C/D form requires gfx90a or later CDNA", I.getDebugLoc());
   }
 }
 

@@ -85,6 +85,7 @@ class LLVMContext;
 class MachineBasicBlock;
 class MachineFunction;
 class MachineInstr;
+class MachineInstrBuilder;
 class MachineJumpTableInfo;
 class MachineLoop;
 class MachineRegisterInfo;
@@ -5619,6 +5620,11 @@ public:
   virtual void CollectTargetIntrinsicOperands(const CallInst &I,
                                               SmallVectorImpl<SDValue> &Ops,
                                               SelectionDAG &DAG) const;
+
+  /// Collect target-specific operand information from an intrinsic call after
+  /// translating its ordinary IR arguments.
+  virtual void CollectTargetIntrinsicOperands(const CallBase &Call,
+                                              MachineInstrBuilder &MIB) const {}
 
   //===--------------------------------------------------------------------===//
   // Div utility functions

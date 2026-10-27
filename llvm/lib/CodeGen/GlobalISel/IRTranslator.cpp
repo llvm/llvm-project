@@ -3730,6 +3730,8 @@ bool IRTranslatorImpl::translateIntrinsic(
     }
   }
 
+  TLI->CollectTargetIntrinsicOperands(CB, MIB);
+
   // Add MachineMemOperands for each memory access described by the target.
   for (const auto &Info : TgtMemIntrinsicInfos) {
     Align Alignment = Info.align.value_or(

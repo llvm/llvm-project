@@ -2305,11 +2305,25 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
     OM.addPredicate<RegisterBankOperandMatcher>(*RC);
   }
 
+  // Variadic intrinsic patterns preserve target-supplied trailing operands.
+  bool CopyIntrinsicOperands =
+      DstI.Operands.isVariadic && Src.getIntrinsicInfo(CGP);
+  if (CopyIntrinsicOperands) {
+    unsigned NumFixedOperands = InsnMatcher.getNumOperandMatchers();
+    InsnMatcher.addPredicate<InstructionNumOperandsMatcher>(
+        NumFixedOperands, InstructionNumOperandsMatcher::CheckKind::GE);
+    OperandMatcher &OM = InsnMatcher.addOperand(
+        NumFixedOperands, "__intrinsic_tail", TempOpIdx, /*IsVariadic=*/true);
+    M.defineOperand(OM.getSymbolicName(), OM);
+  }
+
   auto DstMIBuilderOrError =
       createAndImportInstructionRenderer(M, InsnMatcher, Dst);
   if (auto Error = DstMIBuilderOrError.takeError())
     return std::move(Error);
   BuildMIAction &DstMIBuilder = DstMIBuilderOrError.get();
+  if (CopyIntrinsicOperands)
+    DstMIBuilder.addRenderer<CopyRenderer>(M, "__intrinsic_tail");
 
   // Render the implicit defs.
   // These are only added to the root of the result.

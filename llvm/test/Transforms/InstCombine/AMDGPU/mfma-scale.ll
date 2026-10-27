@@ -310,3 +310,22 @@ define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4___v8i32_fp4__v8i32_fp4_
   i32 0, i32 0, i32 0, i32 0)
   ret <16 x float> %result
 }
+
+; Check that rebuilding a scaled MFMA preserves the per-call register class.
+define <4 x float> @shrink_agpr(<8 x i32> %a, <8 x i32> %b, <4 x float> %c, i32 %sa, i32 %sb) {
+; CHECK-LABEL: define <4 x float> @shrink_agpr(
+; CHECK: call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4.v4i32.v4i32({{.*}}) #[[AGPR:[0-9]+]]
+  %d = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4.v8i32.v8i32(<8 x i32> %a, <8 x i32> %b, <4 x float> %c, i32 4, i32 4, i32 0, i32 %sa, i32 0, i32 %sb) "amdgpu-mfma-cd-regclass"="agpr"
+  ret <4 x float> %d
+}
+
+; Check that rebuilding a scaled MFMA preserves the per-call register class.
+define <4 x float> @shrink_vgpr(<8 x i32> %a, <8 x i32> %b, <4 x float> %c, i32 %sa, i32 %sb) {
+; CHECK-LABEL: define <4 x float> @shrink_vgpr(
+; CHECK: call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4.v4i32.v4i32({{.*}}) #[[VGPR:[0-9]+]]
+  %d = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4.v8i32.v8i32(<8 x i32> %a, <8 x i32> %b, <4 x float> %c, i32 4, i32 4, i32 0, i32 %sa, i32 0, i32 %sb) "amdgpu-mfma-cd-regclass"="vgpr"
+  ret <4 x float> %d
+}
+
+; CHECK-DAG: attributes #[[AGPR]] = { {{.*}}"amdgpu-mfma-cd-regclass"="agpr"{{.*}} }
+; CHECK-DAG: attributes #[[VGPR]] = { {{.*}}"amdgpu-mfma-cd-regclass"="vgpr"{{.*}} }

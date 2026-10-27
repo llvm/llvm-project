@@ -434,6 +434,7 @@ namespace llvm {
       return TargetLowering::getInlineAsmMemConstraint(ConstraintCode);
     }
 
+    using TargetLowering::CollectTargetIntrinsicOperands;
     void CollectTargetIntrinsicOperands(const CallInst &I,
                                  SmallVectorImpl<SDValue> &Ops,
                                  SelectionDAG &DAG) const override;

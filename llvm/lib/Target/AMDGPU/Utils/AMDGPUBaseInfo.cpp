@@ -13,6 +13,7 @@
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "Utils/AMDKernelCodeTUtils.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"
@@ -3768,3 +3769,17 @@ raw_ostream &operator<<(raw_ostream &OS, const AMDGPU::TargetIDSetting S) {
 }
 
 } // namespace llvm
+
+std::optional<llvm::AMDGPU::MFMACDRegClass>
+llvm::AMDGPU::getMFMACDRegClass(const CallBase &Call) {
+  Attribute A = Call.getAttributes().getFnAttr(MFMACDRegClassAttr);
+  if (!A.isValid())
+    return MFMACDRegClass::Auto;
+  if (!Call.getIntrinsicID() || !Intrinsic::getBaseName(Call.getIntrinsicID())
+                                     .starts_with("llvm.amdgcn.mfma."))
+    return std::nullopt;
+  return StringSwitch<std::optional<MFMACDRegClass>>(A.getValueAsString())
+      .Case("agpr", MFMACDRegClass::AGPR)
+      .Case("vgpr", MFMACDRegClass::VGPR)
+      .Default(std::nullopt);
+}
