@@ -22,12 +22,16 @@
 
 using namespace llvm;
 
-// This flag is used by the template base class for BasicTTIImpl, and here to
-// provide a definition.
-cl::opt<unsigned>
-llvm::PartialUnrollingThreshold("partial-unrolling-threshold", cl::init(0),
-                                cl::desc("Threshold for partial unrolling"),
-                                cl::Hidden);
+static cl::opt<unsigned>
+    PartialUnrollingThreshold("partial-unrolling-threshold", cl::init(0),
+                              cl::desc("Threshold for partial unrolling"),
+                              cl::Hidden);
+
+std::optional<unsigned> llvm::getPartialUnrollingThreshold() {
+  if (PartialUnrollingThreshold.getNumOccurrences())
+    return PartialUnrollingThreshold;
+  return std::nullopt;
+}
 
 BasicTTIImpl::BasicTTIImpl(const TargetMachine *TM, const Function &F)
     : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl(F)),

@@ -44,8 +44,6 @@ LLVM_ABI std::vector<std::string> getMAttrs();
 LLVM_ABI Reloc::Model getRelocModel();
 LLVM_ABI std::optional<Reloc::Model> getExplicitRelocModel();
 
-LLVM_ABI ThreadModel getThreadModel();
-
 LLVM_ABI CodeModel::Model getCodeModel();
 LLVM_ABI std::optional<CodeModel::Model> getExplicitCodeModel();
 
@@ -107,8 +105,6 @@ LLVM_ABI bool getUniqueBasicBlockSectionNames();
 
 LLVM_ABI bool getSeparateNamedSections();
 
-LLVM_ABI llvm::EABI getEABIVersion();
-
 LLVM_ABI llvm::DebuggerKind getDebuggerTuningOpt();
 
 LLVM_ABI llvm::VectorLibrary getVectorLibrary();
@@ -120,8 +116,6 @@ LLVM_ABI bool getEnableAddrsig();
 LLVM_ABI bool getEnableCallGraphSection();
 
 LLVM_ABI bool getEmitCallSiteInfo();
-
-LLVM_ABI bool getEnableMachineFunctionSplitter();
 
 LLVM_ABI bool getEnableStaticDataPartitioning();
 
@@ -199,7 +193,7 @@ LLVM_ABI void setFunctionAttributes(Module &M, StringRef CPU,
 /// line. This can be used for tools that do not need further customization of
 /// the TargetOptions.
 LLVM_ABI Expected<std::unique_ptr<TargetMachine>> createTargetMachineForTriple(
-    const Triple &TargetTriple,
+    const cl::LibraryOptionsContext &LibraryOptions, const Triple &TargetTriple,
     CodeGenOptLevel OptLevel = CodeGenOptLevel::Default);
 
 /// Conditionally enables the collection of LLVM statistics during the tool run,

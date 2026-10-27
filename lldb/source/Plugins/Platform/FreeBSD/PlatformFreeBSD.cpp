@@ -165,7 +165,7 @@ bool PlatformFreeBSD::CanDebugProcess() {
 }
 
 void PlatformFreeBSD::CalculateTrapHandlerSymbolNames() {
-  m_trap_handlers.push_back(ConstString("_sigtramp"));
+  m_trap_handlers.push_back("_sigtramp");
 }
 
 MmapArgList PlatformFreeBSD::GetMmapArgumentList(const ArchSpec &arch,

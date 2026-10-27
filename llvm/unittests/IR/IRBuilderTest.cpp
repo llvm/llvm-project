@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/IRBuilder.h"
+#include "llvm-c/Core.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DIBuilder.h"
@@ -604,24 +605,6 @@ TEST_F(IRBuilderTest, GetIntTy) {
   IntegerType *IntPtrTy = Builder.getIntPtrTy(DL);
   unsigned IntPtrBitSize = DL.getPointerSizeInBits(0);
   EXPECT_EQ(IntPtrTy, IntegerType::get(Ctx, IntPtrBitSize));
-}
-
-TEST_F(IRBuilderTest, CreateBitPreservingCastChainByteTypes) {
-  M->setDataLayout("e-p:64:64");
-  IRBuilder<> Builder(BB);
-  const DataLayout &DL = M->getDataLayout();
-  Type *PtrTy = PointerType::getUnqual(Ctx);
-  Type *ByteVecTy = VectorType::get(Type::getByteNTy(Ctx, 32), 2,
-                                    /*Scalable=*/false);
-  Value *ByteVec = Builder.CreateLoad(ByteVecTy, Constant::getNullValue(PtrTy));
-  Value *Ptr = Builder.CreateLoad(PtrTy, Constant::getNullValue(PtrTy));
-  Value *ToPtr = Builder.CreateBitPreservingCastChain(DL, ByteVec, PtrTy);
-  ASSERT_TRUE(isa<IntToPtrInst>(ToPtr));
-  EXPECT_TRUE(isa<BitCastInst>(cast<IntToPtrInst>(ToPtr)->getOperand(0)));
-  Value *ToByteVec = Builder.CreateBitPreservingCastChain(DL, Ptr, ByteVecTy);
-  ASSERT_EQ(ToByteVec->getType(), ByteVecTy);
-  ASSERT_TRUE(isa<BitCastInst>(ToByteVec));
-  EXPECT_TRUE(isa<PtrToIntInst>(cast<BitCastInst>(ToByteVec)->getOperand(0)));
 }
 
 TEST_F(IRBuilderTest, UnaryOperators) {
@@ -1285,14 +1268,14 @@ TEST_F(IRBuilderTest, DebugLoc) {
   auto Br = UncondBrInst::Create(BB2, BB);
   Br->setDebugLoc(DL1);
 
-  IRBuilder<> Builder(Ctx);
+  IRBuilder<> Builder(*M);
   Builder.SetInsertPoint(Br);
   EXPECT_EQ(DL1, Builder.getCurrentDebugLocation());
   auto Call1 = Builder.CreateCall(Callee, {});
   EXPECT_EQ(DL1, Call1->getDebugLoc());
 
   Call1->setDebugLoc(DL2);
-  Builder.SetInsertPoint(Call1->getParent(), Call1->getIterator());
+  Builder.SetInsertPoint(Call1->getIterator());
   EXPECT_EQ(DL2, Builder.getCurrentDebugLocation());
   auto Call2 = Builder.CreateCall(Callee, {});
   EXPECT_EQ(DL2, Call2->getDebugLoc());
@@ -1402,10 +1385,10 @@ TEST_F(IRBuilderTest, CTAD) {
   };
   InstSimplifyFolder Folder(M->getDataLayout());
 
-  IRBuilder Builder1(Ctx, Folder, TestInserter());
+  IRBuilder Builder1(*M, Folder, TestInserter());
   static_assert(std::is_same_v<decltype(Builder1),
                                IRBuilder<InstSimplifyFolder, TestInserter>>);
-  IRBuilder Builder2(Ctx);
+  IRBuilder Builder2(*M);
   static_assert(std::is_same_v<decltype(Builder2), IRBuilder<>>);
   IRBuilder Builder3(BB, Folder);
   static_assert(
@@ -1415,10 +1398,10 @@ TEST_F(IRBuilderTest, CTAD) {
   // The block BB is empty, so don't test this one.
   // IRBuilder Builder5(BB->getTerminator());
   // static_assert(std::is_same_v<decltype(Builder5), IRBuilder<>>);
-  IRBuilder Builder6(BB, BB->end(), Folder);
+  IRBuilder Builder6(BB->end(), Folder);
   static_assert(
       std::is_same_v<decltype(Builder6), IRBuilder<InstSimplifyFolder>>);
-  IRBuilder Builder7(BB, BB->end());
+  IRBuilder Builder7(BB->end());
   static_assert(std::is_same_v<decltype(Builder7), IRBuilder<>>);
 }
 
@@ -1488,5 +1471,62 @@ TEST_F(IRBuilderTest, CreateAggregateRet) {
   CalleeBuilder.CreateAggregateRet({RV0, RV1});
 
   EXPECT_FALSE(verifyModule(*M));
+}
+
+TEST_F(IRBuilderTest, CreateInContext) {
+  // Test compatibility shim for LLVMCreateBuilderInContext API.
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
+
+  LLVMBuilderRef Builder0 = LLVMCreateBuilderInContext(wrap(&Ctx));
+  LLVMDisposeBuilder(Builder0);
+
+  LLVMBuilderRef Builder1 = LLVMCreateBuilderInContext(wrap(&Ctx));
+  LLVMPositionBuilderAtEnd(Builder1, wrap(BB));
+  LLVMValueRef Instr = LLVMBuildRetVoid(Builder1);
+  LLVMDisposeBuilder(Builder1);
+
+  LLVMBuilderRef Builder2 = LLVMCreateBuilderInContext(wrap(&Ctx));
+  LLVMPositionBuilderBefore(Builder2, Instr);
+  LLVMBuildFreeze(Builder2, wrap(GV), "");
+  LLVMDisposeBuilder(Builder2);
+
+#if GTEST_HAS_DEATH_TEST
+  LLVMBuilderRef Builder3 = LLVMCreateBuilderInContext(wrap(&Ctx));
+  EXPECT_DEATH(LLVMBuildFreeze(Builder3, wrap(GV), ""),
+               "Cannot use Builder without known module.");
+  LLVMDisposeBuilder(Builder3);
+
+  LLVMBuilderRef Builder4 = LLVMCreateBuilderInContext(wrap(&Ctx));
+  Instruction *FloatingInst = new FreezeInst(GV);
+  EXPECT_DEATH(LLVMPositionBuilderBefore(Builder4, wrap(FloatingInst)),
+               "Cannot set insertion point that is not connected to a Module");
+
+  BasicBlock *FloatingBB = BasicBlock::Create(Ctx);
+  FloatingInst->insertBefore(*FloatingBB, FloatingBB->end());
+  EXPECT_DEATH(LLVMPositionBuilderBefore(Builder4, wrap(FloatingInst)),
+               "Cannot set insertion point that is not connected to a Module");
+
+  Function *FloatingFn =
+      Function::Create(FunctionType::get(Type::getVoidTy(Ctx), false),
+                       Function::ExternalLinkage);
+  FloatingBB->insertInto(FloatingFn);
+  EXPECT_DEATH(LLVMPositionBuilderBefore(Builder4, wrap(FloatingInst)),
+               "Cannot set insertion point that is not connected to a Module");
+
+  M->getFunctionList().push_back(FloatingFn);
+  LLVMPositionBuilderBefore(Builder4, wrap(FloatingInst));
+  LLVMDisposeBuilder(Builder4);
+#endif
+
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
+}
+
+TEST_F(IRBuilderTest, Unwrap) {
+  // unwrap() on LLVMBuilderRef is available to interact with it via
+  // the C++ API.
+  LLVMBuilderRef Builder = LLVMCreateBuilderForModule(wrap(&*M));
+  LLVMPositionBuilderAtEnd(Builder, wrap(BB));
+  unwrap(Builder)->CreateRetVoid();
+  LLVMDisposeBuilder(Builder);
 }
 }

@@ -328,8 +328,9 @@ bool vector::isLinearizableVector(VectorType type) {
 ///
 /// If the pre-conditions are met, the method checks for each destination
 /// dimension `d`:
-///   (1) destDimSize[rankDiff + d] <= maskShape[d]
-///   (2) destDimSize[rankDiff + d] <= index[d] + maskSize[d]
+///   (1) maskShape[d] <= destDimSize[rankDiff + d]
+///   (2) index[d] + maskSize[d] <= destDimSize[rankDiff + d]
+///   (3) maskShape[d] <= maskSize[d]
 ///
 /// rankDiff = rank(dest) - rank(mask).
 ///
@@ -388,7 +389,8 @@ static bool isMaskTriviallyFoldable(SmallVector<OpFoldResult> &maskSizes,
   if (cstIndices.size() != baseShape.size())
     return false;
 
-  // Go over all destination dims and check (1) and (2). Take into account that:
+  // Go over all destination dims and check (1), (2) and (3). Take into account
+  // that:
   //  * The number of mask sizes will match the rank of the vector to
   //    load/store. This could be lower than the rank of the destination tensor.
   //  * Mask sizes could be larger than the corresponding mask shape (hence
@@ -399,7 +401,8 @@ static bool isMaskTriviallyFoldable(SmallVector<OpFoldResult> &maskSizes,
     if (/*(1)*/ maskShape[i] > baseShape[rankDiff + i] ||
         /*(2)*/ baseShape[rankDiff + i] <
             (std::clamp(cstMaskSizes[i], int64_t(0), maskShape[i]) +
-             cstIndices[i]))
+             cstIndices[i]) ||
+        /*(3)*/ maskShape[i] > cstMaskSizes[i])
       return false;
   }
 
@@ -581,37 +584,46 @@ Operation *vector::createWriteOrMaskedWrite(OpBuilder &builder, Location loc,
   if (useInBoundsInsteadOfMasking)
     return write;
 
-  // Check if masking is needed. If not, exit.
-  if (llvm::equal(vecToStoreShape, destShape.take_back(vecToStoreRank)))
+  // The dest dims written to are those the permutation map selects. A null map
+  // means a minor identity: the trailing dims.
+  AffineMap map = permutationMap
+                      ? permutationMap
+                      : AffineMap::getMinorIdentityMap(destRank, vecToStoreRank,
+                                                       builder.getContext());
+
+  // A write that starts at 0 and fills the dims it writes to needs no mask.
+  bool startsAtZero = llvm::all_of(map.getResults(), [&](AffineExpr expr) {
+    return isZeroInteger(writeIndices[cast<AffineDimExpr>(expr).getPosition()]);
+  });
+  if (startsAtZero &&
+      llvm::equal(vecToStoreShape, applyPermutationMap(map, destShape)))
     return write;
 
   // Compute the mask and mask the write Op.
-  auto writeMaskType = VectorType::get(vecToStoreShape, builder.getI1Type(),
-                                       vecToStoreType.getScalableDims());
+  VectorType writeMaskType = inferTransferOpMaskType(vecToStoreType, map);
 
   SmallVector<OpFoldResult> destSizes =
       isa<MemRefType>(dest.getType())
           ? memref::getMixedSizes(builder, loc, dest)
           : tensor::getMixedSizes(builder, loc, dest);
 
-  // Compute sizes for write-mask
+  // Compute sizes for write-mask: `dim - index` for each dest dim written to,
+  // in increasing order, as the mask dims are.
+  SmallVector<int64_t> writtenDims;
+  for (AffineExpr expr : map.getResults())
+    writtenDims.push_back(cast<AffineDimExpr>(expr).getPosition());
+  llvm::sort(writtenDims);
   SmallVector<OpFoldResult> maskSizes;
-  if (useDefaultWriteIdxs) {
-    maskSizes = SmallVector<OpFoldResult>(destSizes.end() - vecToStoreRank,
-                                          destSizes.end());
-  } else {
-    size_t diff = destShape.size() - vecToStoreRank;
-    for (int64_t idx = 0; idx < vecToStoreRank; idx++) {
-      auto value =
-          getValueOrCreateConstantIndexOp(builder, loc, destSizes[diff + idx]);
-      auto neg =
-          builder.createOrFold<arith::SubIOp>(loc, value, writeIndices[idx]);
-      maskSizes.push_back(OpFoldResult(neg));
-    }
+  for (int64_t dim : writtenDims) {
+    Value size = getValueOrCreateConstantIndexOp(builder, loc, destSizes[dim]);
+    maskSizes.push_back(
+        builder.createOrFold<arith::SubIOp>(loc, size, writeIndices[dim]));
   }
 
-  if (isMaskTriviallyFoldable(maskSizes, writeIndices, destShape,
-                              vecToStoreShape))
+  // TODO: isMaskTriviallyFoldable checks the trailing dims against the leading
+  // indices. Make it use the dims that the map selects and their indices.
+  if (!permutationMap && isMaskTriviallyFoldable(maskSizes, writeIndices,
+                                                 destShape, vecToStoreShape))
     return write;
 
   Value maskForWrite =

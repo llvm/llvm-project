@@ -32,6 +32,10 @@ LIBC_INLINE ThreadControlBlock *get_tcb() {
   return tp - 1;
 }
 
+LIBC_INLINE ThreadControlBlock *get_tcb(uintptr_t tp) {
+  return reinterpret_cast<ThreadControlBlock *>(tp) - 1;
+}
+
 LIBC_INLINE ThreadAttributes *get_current_thread_attrib() {
   return get_tcb()->attrib;
 }

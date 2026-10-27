@@ -1,13 +1,12 @@
-add_custom_target(libc_pthread_unittests)
+add_libc_testsuite(libc-pthread-tests)
 
 add_libc_test(
   pthread_attr_test
   SUITE
-    libc_pthread_unittests
+    libc-pthread-tests
   SRCS
     pthread_attr_test.cpp
   DEPENDS
-    libc.include.pthread
     libc.src.pthread.pthread_attr_destroy
     libc.src.pthread.pthread_attr_init
     libc.src.pthread.pthread_attr_getdetachstate
@@ -18,6 +17,8 @@ add_libc_test(
     libc.src.pthread.pthread_attr_setguardsize
     libc.src.pthread.pthread_attr_setstacksize
     libc.src.pthread.pthread_attr_setstack
+    libc.src.pthread.pthread_attr_getinheritsched
+    libc.src.pthread.pthread_attr_setinheritsched
     libc.src.pthread.pthread_attr_getschedparam
     libc.src.pthread.pthread_attr_setschedparam
     libc.src.pthread.pthread_attr_getschedpolicy
@@ -27,13 +28,14 @@ add_libc_test(
     libc.hdr.errno_macros
     libc.hdr.pthread_macros
     libc.hdr.sched_macros
+    libc.hdr.types.pthread_attr_t
     libc.hdr.types.struct_sched_param
 )
 
 add_libc_test(
   pthread_mutexattr_test
   SUITE
-    libc_pthread_unittests
+    libc-pthread-tests
   SRCS
     pthread_mutexattr_test.cpp
   DEPENDS
@@ -52,7 +54,7 @@ add_libc_test(
 add_libc_test(
   pthread_condattr_test
   SUITE
-    libc_pthread_unittests
+    libc-pthread-tests
   SRCS
     pthread_condattr_test.cpp
   DEPENDS
@@ -70,7 +72,7 @@ add_libc_test(
 add_libc_test(
   pthread_rwlockattr_test
   SUITE
-    libc_pthread_unittests
+    libc-pthread-tests
   SRCS
     pthread_rwlockattr_test.cpp
   DEPENDS

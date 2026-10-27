@@ -229,6 +229,9 @@ void GDBRemoteCommunicationServerLLGS::RegisterPacketHandlers() {
       StringExtractorGDBRemote::eServerPacketType_jMultiBreakpoint,
       &GDBRemoteCommunicationServerLLGS::Handle_jMultiBreakpoint);
   RegisterMemberFunctionHandler(
+      StringExtractorGDBRemote::eServerPacketType_jThreadExtendedInfo,
+      &GDBRemoteCommunicationServerLLGS::Handle_jThreadExtendedInfo);
+  RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_jAcceleratorPluginInitialize,
       &GDBRemoteCommunicationServerLLGS::Handle_jAcceleratorPluginInitialize);
   RegisterMemberFunctionHandler(
@@ -3007,7 +3010,7 @@ GDBRemoteCommunicationServerLLGS::Handle_qMemoryRegionInfo(
 
     LazyBool is_stack = region_info.IsStackMemory();
     if (is_stack != eLazyBoolDontKnow)
-      response.Printf("type: %s", is_stack ? "stack" : "heap");
+      response.Printf("type:%s;", is_stack ? "stack" : "heap");
   }
 
   return SendPacketNoLock(response.GetString());
@@ -3624,13 +3627,13 @@ GDBRemoteCommunicationServerLLGS::Handle_QSaveRegisterState(
 
   // Allocate a new save id.
   const uint32_t save_id = GetNextSavedRegistersID();
-  assert((m_saved_registers_map.find(save_id) == m_saved_registers_map.end()) &&
-         "GetNextRegisterSaveID() returned an existing register save id");
 
   // Save the register data buffer under the save id.
   {
-    std::lock_guard<std::mutex> guard(m_saved_registers_mutex);
-    m_saved_registers_map[save_id] = register_data_sp;
+    auto saved_registers = m_saved_registers.Lock();
+    assert((saved_registers->map.find(save_id) == saved_registers->map.end()) &&
+           "GetNextRegisterSaveID() returned an existing register save id");
+    saved_registers->map[save_id] = register_data_sp;
   }
 
   // Write the response.
@@ -3674,11 +3677,11 @@ GDBRemoteCommunicationServerLLGS::Handle_QRestoreRegisterState(
   // Retrieve register state buffer, then remove from the list.
   DataBufferSP register_data_sp;
   {
-    std::lock_guard<std::mutex> guard(m_saved_registers_mutex);
+    auto saved_registers = m_saved_registers.Lock();
 
     // Find the register set buffer for the given save id.
-    auto it = m_saved_registers_map.find(save_id);
-    if (it == m_saved_registers_map.end()) {
+    auto it = saved_registers->map.find(save_id);
+    if (it == saved_registers->map.end()) {
       LLDB_LOG(log,
                "pid {0} does not have a register set save buffer for id {1}",
                m_current_process->GetID(), save_id);
@@ -3687,7 +3690,7 @@ GDBRemoteCommunicationServerLLGS::Handle_QRestoreRegisterState(
     register_data_sp = it->second;
 
     // Remove it from the map.
-    m_saved_registers_map.erase(it);
+    saved_registers->map.erase(it);
   }
 
   Status error = reg_context.WriteAllRegisterValues(register_data_sp);
@@ -4476,8 +4479,7 @@ lldb::tid_t GDBRemoteCommunicationServerLLGS::GetCurrentThreadID() const {
 }
 
 uint32_t GDBRemoteCommunicationServerLLGS::GetNextSavedRegistersID() {
-  std::lock_guard<std::mutex> guard(m_saved_registers_mutex);
-  return m_next_saved_registers_id++;
+  return m_saved_registers.Lock()->next_id++;
 }
 
 void GDBRemoteCommunicationServerLLGS::ClearProcessSpecificData() {
@@ -4732,4 +4734,51 @@ GDBRemoteCommunication::PacketResult GDBRemoteCommunicationServerLLGS::
   }
   return SendErrorResponse(
       Status::FromErrorString("unknown accelerator plugin name"));
+}
+
+GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerLLGS::Handle_jThreadExtendedInfo(
+    StringExtractorGDBRemote &packet) {
+  llvm::StringRef packet_str = packet.GetStringRef();
+  if (!packet_str.consume_front("jThreadExtendedInfo:"))
+    return SendIllFormedResponse(packet,
+                                 "Invalid jThreadExtendedInfo packet prefix");
+  // Empty packet is sent to check if we support jThreadExtendedInfo.
+  if (packet_str.empty())
+    return SendOKResponse();
+
+  llvm::Expected<llvm::json::Value> parsed = llvm::json::parse(packet_str);
+  if (!parsed) {
+    llvm::consumeError(parsed.takeError());
+    return SendIllFormedResponse(
+        packet, "jThreadExtendedInfo did not contain valid JSON");
+  }
+  llvm::json::Object *request_dict = parsed->getAsObject();
+  if (!request_dict)
+    return SendIllFormedResponse(
+        packet, "jThreadExtendedInfo did not contain a JSON dictionary");
+
+  std::optional<int64_t> thread_id = request_dict->getInteger("thread");
+  if (!thread_id)
+    return SendIllFormedResponse(packet, "jThreadExtendedInfo did not contain "
+                                         "a valid 'thread' field");
+
+  if (!m_current_process)
+    return SendErrorResponse(createStringError("no current process"));
+
+  NativeThreadProtocol *thread = m_current_process->GetThreadByID(*thread_id);
+  if (!thread)
+    return SendErrorResponse(
+        createStringErrorV("no thread with specified ID ({0:x})", *thread_id));
+
+  StructuredData::ObjectSP ext_info = thread->GetExtendedInfo();
+
+  StreamString stream;
+  if (ext_info)
+    ext_info->Dump(stream, false);
+
+  StringRef response_str = stream.GetString();
+  StreamGDBRemote response;
+  response.PutEscapedBytes(response_str.data(), response_str.size());
+  return SendPacketNoLock(response.GetString());
 }

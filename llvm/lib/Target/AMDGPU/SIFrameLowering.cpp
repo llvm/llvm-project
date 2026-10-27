@@ -1024,10 +1024,10 @@ void SIFrameLowering::emitEntryFunctionScratchRsrcRegSetup(
           .addImm(0) // cpol
           .addMemOperand(MMO)
           .addReg(ScratchRsrcReg, RegState::ImplicitDefine);
-
-        MF.getRegInfo().addLiveIn(MFI->getImplicitBufferPtrUserSGPR());
-        MBB.addLiveIn(MFI->getImplicitBufferPtrUserSGPR());
       }
+
+      MF.getRegInfo().addLiveIn(MFI->getImplicitBufferPtrUserSGPR());
+      MBB.addLiveIn(MFI->getImplicitBufferPtrUserSGPR());
     } else {
       Register Rsrc0 = TRI->getSubReg(ScratchRsrcReg, AMDGPU::sub0);
       Register Rsrc1 = TRI->getSubReg(ScratchRsrcReg, AMDGPU::sub1);
@@ -1131,7 +1131,7 @@ void SIFrameLowering::emitPrologueEntryCFI(MachineBasicBlock &MBB,
   };
 
   // Emit CFI rules for caller saved Arch VGPRs which are clobbered
-  unsigned NumArchVGPRs = ST.has1024AddressableVGPRs() ? 1024 : 256;
+  unsigned NumArchVGPRs = ST.hasVGPRMSBs() ? 1024 : 256;
   for_each(AMDGPU::VGPR_32RegClass.getRegisters().take_front(NumArchVGPRs),
            ProcessReg);
 
@@ -1443,8 +1443,8 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
 
   bool HasFP = false;
   bool HasBP = false;
-  uint32_t NumBytes = MFI.getStackSize();
-  uint32_t RoundedSize = NumBytes;
+  int64_t NumBytes = MFI.getStackSize();
+  int64_t RoundedSize = NumBytes;
 
   // Functions that never return don't need to save and restore the FP or BP.
   const Function &F = MF.getFunction();
