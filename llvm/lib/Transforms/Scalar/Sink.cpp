@@ -34,7 +34,7 @@ STATISTIC(NumSunk, "Number of instructions sunk");
 STATISTIC(NumSinkIter, "Number of sinking iterations");
 
 static cl::opt<unsigned> SinkMaxUsesToScan(
-    "sink-max-uses-to-scan", cl::init(100), cl::Hidden,
+    "sink-max-uses-to-scan", cl::init(32), cl::Hidden,
     cl::desc("Maximum number of uses of an operand to scan when checking "
              "whether sinking into a postdominator extends its live range"));
 
@@ -133,11 +133,10 @@ static bool isLiveInto(Value *Op, Instruction *Inst, BasicBlock *Dest,
   BasicBlock *DefBlock = nullptr;
   if (auto *I = dyn_cast<Instruction>(Op))
     DefBlock = I->getParent();
+  if (Op->hasNUsesOrMore(SinkMaxUsesToScan + 1))
+    return true;
   SmallPtrSet<const BasicBlock *, 8> UseBlocks;
-  unsigned NumUses = 0;
   for (Use &U : Op->uses()) {
-    if (++NumUses > SinkMaxUsesToScan)
-      return true;
     auto *User = cast<Instruction>(U.getUser());
     if (User == Inst)
       continue;
@@ -182,6 +181,8 @@ static bool increasesLiveBits(Instruction *Inst, BasicBlock *Dest,
   auto IsDivergentUse = [&](const Use &U) {
     return !UI || UI->isDivergentAtUse(U);
   };
+  uint64_t FreedBits =
+      any_of(Inst->uses(), IsDivergentUse) ? SizeInBits(Inst) : 0;
   uint64_t ExtendedBits = 0;
   SmallPtrSet<Value *, 4> Seen;
   for (Use &U : Inst->operands()) {
@@ -189,12 +190,13 @@ static bool increasesLiveBits(Instruction *Inst, BasicBlock *Dest,
     if (!isa<Instruction, Argument>(Op) || !Seen.insert(Op).second)
       continue;
     uint64_t Bits = SizeInBits(Op);
-    if (Bits && IsDivergentUse(U) && !isLiveInto(Op, Inst, Dest, DT, LI))
+    if (Bits && IsDivergentUse(U) && !isLiveInto(Op, Inst, Dest, DT, LI)) {
       ExtendedBits += Bits;
+      if (ExtendedBits > FreedBits)
+        return true;
+    }
   }
-  uint64_t FreedBits =
-      any_of(Inst->uses(), IsDivergentUse) ? SizeInBits(Inst) : 0;
-  return ExtendedBits > FreedBits;
+  return false;
 }
 
 /// SinkInstruction - Determine whether it is safe to sink the specified machine
