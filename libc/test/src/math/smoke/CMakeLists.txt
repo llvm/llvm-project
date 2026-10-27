@@ -5469,6 +5469,7 @@ add_fp_unittest(
     TotalOrderTest.h
   DEPENDS
     libc.src.math.totalorderf128
+    libc.src.__support.FPUtil.float128
 )
 
 add_fp_unittest(
@@ -5542,6 +5543,7 @@ add_fp_unittest(
     TotalOrderMagTest.h
   DEPENDS
     libc.src.math.totalordermagf128
+    libc.src.__support.FPUtil.float128
 )
 
 add_fp_unittest(

@@ -2222,6 +2222,9 @@ math_test(
 math_test(
     name = "totalorderf128",
     hdrs = ["TotalOrderTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(
@@ -2255,6 +2258,9 @@ math_test(
 math_test(
     name = "totalordermagf128",
     hdrs = ["TotalOrderMagTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(
