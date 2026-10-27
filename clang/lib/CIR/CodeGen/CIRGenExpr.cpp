@@ -1517,11 +1517,11 @@ CIRGenFunction::emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e) {
     // GEP indexes are signed, and scaling an index isn't permitted to
     // signed-overflow, so we use the same semantics for our explicit
     // multiply.  We suppress this if overflow is not undefined behavior.
-    OverflowBehavior overflowBehavior = getLangOpts().PointerOverflowDefined
-                                            ? OverflowBehavior::None
-                                            : OverflowBehavior::NoSignedWrap;
+    cir::OverflowFlags overflowFlags = getLangOpts().PointerOverflowDefined
+                                           ? cir::OverflowFlags::none
+                                           : cir::OverflowFlags::nsw;
     idx = builder.createMul(cgm.getLoc(e->getExprLoc()), idx, numElements,
-                            overflowBehavior);
+                            overflowFlags);
 
     addr = emitArraySubscriptPtr(*this, cgm.getLoc(e->getBeginLoc()),
                                  cgm.getLoc(e->getEndLoc()), addr, e->getType(),

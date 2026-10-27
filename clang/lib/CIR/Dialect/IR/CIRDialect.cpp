@@ -504,6 +504,50 @@ static void printOmittedTerminatorRegion(mlir::OpAsmPrinter &printer,
                       /*printBlockTerminators=*/!omitRegionTerm(region));
 }
 
+// Parses the overflow flags as bare `nuw` and `nsw` keywords, in any order and
+// each at most once. Returns std::nullopt, leaving `flags` untouched, when
+// neither keyword is present.
+static mlir::OptionalParseResult parseOverflowFlags(mlir::AsmParser &parser,
+                                                    cir::OverflowFlags &flags) {
+  auto parsed = cir::OverflowFlags::none;
+  while (true) {
+    llvm::SMLoc loc = parser.getCurrentLocation();
+    cir::OverflowFlags flag;
+    if (succeeded(parser.parseOptionalKeyword("nuw")))
+      flag = cir::OverflowFlags::nuw;
+    else if (succeeded(parser.parseOptionalKeyword("nsw")))
+      flag = cir::OverflowFlags::nsw;
+    else
+      break;
+    if (cir::bitEnumContainsAll(parsed, flag))
+      return parser.emitError(loc, "duplicate '")
+             << cir::stringifyOverflowFlags(flag) << "' flag";
+    parsed = parsed | flag;
+  }
+  if (parsed == cir::OverflowFlags::none)
+    return std::nullopt;
+  flags = parsed;
+  return mlir::success();
+}
+
+// Prints the overflow flags in LLVM IR order, `nuw nsw`. Assembly formats elide
+// the default, so `none` only shows up where a property is always printed.
+static void printOverflowFlags(mlir::AsmPrinter &printer,
+                               cir::OverflowFlags flags) {
+  bool nuw = cir::bitEnumContainsAll(flags, cir::OverflowFlags::nuw);
+  bool nsw = cir::bitEnumContainsAll(flags, cir::OverflowFlags::nsw);
+  if (!nuw && !nsw) {
+    printer << "none";
+    return;
+  }
+  if (nuw)
+    printer << "nuw";
+  if (nuw && nsw)
+    printer << ' ';
+  if (nsw)
+    printer << "nsw";
+}
+
 mlir::OptionalParseResult
 parseGlobalMemorySpace(mlir::AsmParser &p,
                        mlir::ptr::MemorySpaceAttrInterface &attr);
@@ -3417,28 +3461,6 @@ mlir::LogicalResult cir::FuncOp::verify() {
   }
 
   return success();
-}
-
-//===----------------------------------------------------------------------===//
-// AddOp / SubOp
-//===----------------------------------------------------------------------===//
-
-// The integer-only type constraint on these ops makes the nsw/nuw/sat flag
-// type checks unnecessary. Only the mutual-exclusivity between nsw/nuw and
-// sat needs to be verified.
-
-LogicalResult cir::AddOp::verify() {
-  if (getSaturated() && (getNoSignedWrap() || getNoUnsignedWrap()))
-    return emitOpError()
-           << "the nsw/nuw flags and the saturated flag are mutually exclusive";
-  return mlir::success();
-}
-
-LogicalResult cir::SubOp::verify() {
-  if (getSaturated() && (getNoSignedWrap() || getNoUnsignedWrap()))
-    return emitOpError()
-           << "the nsw/nuw flags and the saturated flag are mutually exclusive";
-  return mlir::success();
 }
 
 //===----------------------------------------------------------------------===//

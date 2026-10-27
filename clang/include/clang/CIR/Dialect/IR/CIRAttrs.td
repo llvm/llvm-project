@@ -1122,6 +1122,21 @@ def CIR_FastMathFlags : CIR_I32BitEnum<
 def CIR_FastMathFlagsAttr : CIR_EnumAttr<CIR_FastMathFlags, "fastmath">;
 
 //===----------------------------------------------------------------------===//
+// OverflowFlags
+//===----------------------------------------------------------------------===//
+
+// The bit layout matches mlir::LLVM::IntegerOverflowFlags so that lowering can
+// cast between the two.
+def CIR_OFnone : I32BitEnumCaseNone<"none">;
+def CIR_OFnsw  : I32BitEnumCaseBit<"nsw", 0>;
+def CIR_OFnuw  : I32BitEnumCaseBit<"nuw", 1>;
+
+def CIR_OverflowFlags : CIR_I32BitEnum<
+    "OverflowFlags", "integer overflow flags", [
+  CIR_OFnone, CIR_OFnsw, CIR_OFnuw
+]>;
+
+//===----------------------------------------------------------------------===//
 // GlobalViewAttr
 //===----------------------------------------------------------------------===//
 

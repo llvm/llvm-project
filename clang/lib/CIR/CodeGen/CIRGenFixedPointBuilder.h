@@ -135,9 +135,15 @@ struct CIRGenFixedPointBuilder {
     mlir::Value wideRhs = createFixedToFixed(rhs, rhsSema, commonSema);
 
     mlir::Value result;
-    if (commonSema.isSaturated()) {
-      result = builder.createAdd(loc, wideLhs, wideRhs,
-                                 cir::OverflowBehavior::Saturated);
+    if (commonSema.isSaturated() && commonSema.hasUnsignedPadding()) {
+      // The padding bit keeps the value below the signed maximum, so saturate
+      // it as a signed value, as llvm::FixedPointBuilder does.
+      result = builder.createIntCast(cir::AddSatOp::create(builder, loc,
+                                                           toSigned(wideLhs),
+                                                           toSigned(wideRhs)),
+                                     wideLhs.getType());
+    } else if (commonSema.isSaturated()) {
+      result = cir::AddSatOp::create(builder, loc, wideLhs, wideRhs);
     } else {
       result = builder.createAdd(loc, wideLhs, wideRhs);
     }
@@ -156,20 +162,21 @@ struct CIRGenFixedPointBuilder {
     mlir::Value wideRhs = createFixedToFixed(rhs, rhsSema, commonSema);
 
     mlir::Value result;
-    if (commonSema.isSaturated()) {
-      result = builder.createSub(loc, wideLhs, wideRhs,
-                                 cir::OverflowBehavior::Saturated);
+    if (commonSema.isSaturated() && commonSema.hasUnsignedPadding()) {
+      // The padding bit keeps the value below the signed maximum, so saturate
+      // it as a signed value, as llvm::FixedPointBuilder does. Subtraction can
+      // then end up below 0, so clamp it while the value is still signed.
+      mlir::Value diff = cir::SubSatOp::create(builder, loc, toSigned(wideLhs),
+                                               toSigned(wideRhs));
+      mlir::Value zero = builder.getNullValue(diff.getType(), loc);
+      mlir::Value ltZero =
+          builder.createCompare(loc, cir::CmpOpKind::lt, diff, zero);
+      diff = builder.createSelect(loc, ltZero, zero, diff);
+      result = builder.createIntCast(diff, wideLhs.getType());
+    } else if (commonSema.isSaturated()) {
+      result = cir::SubSatOp::create(builder, loc, wideLhs, wideRhs);
     } else {
       result = builder.createSub(loc, wideLhs, wideRhs);
-    }
-
-    // Subtraction can end up below 0 for padded unsigned operations, so emit
-    // an extra clamp in that case.
-    if (commonSema.isSaturated() && commonSema.hasUnsignedPadding()) {
-      mlir::Value zero = builder.getNullValue(result.getType(), loc);
-      mlir::Value ltZero =
-          builder.createCompare(loc, cir::CmpOpKind::lt, result, zero);
-      result = builder.createSelect(loc, ltZero, zero, result);
     }
 
     return createFixedToFixed(result, commonSema,
@@ -390,6 +397,15 @@ private:
     return llvm::FixedPointSemantics(
         c.getWidth() + static_cast<unsigned>(bothPadded && c.isSaturated()),
         c.getScale(), c.isSigned(), c.isSaturated(), bothPadded);
+  }
+
+  /// Reinterprets an unsigned integer value as the signed type of the same
+  /// width.
+  mlir::Value toSigned(mlir::Value value) {
+    auto intTy = mlir::cast<cir::IntType>(value.getType());
+    return builder.createIntCast(value, cir::IntType::get(builder.getContext(),
+                                                          intTy.getWidth(),
+                                                          /*isSigned=*/true));
   }
 
   CIRGenBuilderTy &builder;
