@@ -12453,7 +12453,8 @@ static SDValue clampDynamicVectorIndex(SelectionDAG &DAG, SDValue Idx,
       return Idx;
     // Calculate end index as TypeSize to remove possibility of overflow.
     if (IdxAsEC.isScalable() == SubEC.isScalable() &&
-        TypeSize::isKnownLE(TypeSize(IdxAsEC) + SubEC, TypeSize(NElts)))
+        TypeSize::isKnownLE(TypeSize(IdxAsEC) + TypeSize(SubEC),
+                            TypeSize(NElts)))
       return Idx;
   }
 
