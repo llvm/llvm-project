@@ -72,6 +72,102 @@ define <4 x float> @exp_f32(<4 x float> %in) {
 
 declare <4 x float> @llvm.exp.v4f32(<4 x float>) #0
 
+define <4 x float> @exp2_f32(<4 x float> %in) {
+; SVML-LABEL: define {{[^@]+}}@exp2_f32
+; SVML-SAME: (<4 x float> [[IN:%.*]]) {
+; SVML-NEXT:    [[TMP1:%.*]] = call <4 x float> @__svml_exp2f4(<4 x float> [[IN]])
+; SVML-NEXT:    ret <4 x float> [[TMP1]]
+;
+; AMDLIBM-LABEL: define {{[^@]+}}@exp2_f32
+; AMDLIBM-SAME: (<4 x float> [[IN:%.*]]) {
+; AMDLIBM-NEXT:    [[TMP1:%.*]] = call <4 x float> @amd_vrs4_exp2f(<4 x float> [[IN]])
+; AMDLIBM-NEXT:    ret <4 x float> [[TMP1]]
+;
+; LIBMVEC-X86-LABEL: define {{[^@]+}}@exp2_f32
+; LIBMVEC-X86-SAME: (<4 x float> [[IN:%.*]]) {
+; LIBMVEC-X86-NEXT:    [[CALL:%.*]] = call <4 x float> @llvm.exp2.v4f32(<4 x float> [[IN]])
+; LIBMVEC-X86-NEXT:    ret <4 x float> [[CALL]]
+;
+; MASSV-LABEL: define {{[^@]+}}@exp2_f32
+; MASSV-SAME: (<4 x float> [[IN:%.*]]) {
+; MASSV-NEXT:    [[TMP1:%.*]] = call <4 x float> @__exp2f4(<4 x float> [[IN]])
+; MASSV-NEXT:    ret <4 x float> [[TMP1]]
+;
+; ACCELERATE-LABEL: define {{[^@]+}}@exp2_f32
+; ACCELERATE-SAME: (<4 x float> [[IN:%.*]]) {
+; ACCELERATE-NEXT:    [[TMP1:%.*]] = call <4 x float> @vexp2f(<4 x float> [[IN]])
+; ACCELERATE-NEXT:    ret <4 x float> [[TMP1]]
+;
+  %call = call <4 x float> @llvm.exp2.v4f32(<4 x float> %in)
+  ret <4 x float> %call
+}
+
+declare <4 x float> @llvm.exp2.v4f32(<4 x float>) #0
+
+define <4 x float> @log2_f32(<4 x float> %in) {
+; SVML-LABEL: define {{[^@]+}}@log2_f32
+; SVML-SAME: (<4 x float> [[IN:%.*]]) {
+; SVML-NEXT:    [[TMP1:%.*]] = call <4 x float> @__svml_log2f4(<4 x float> [[IN]])
+; SVML-NEXT:    ret <4 x float> [[TMP1]]
+;
+; AMDLIBM-LABEL: define {{[^@]+}}@log2_f32
+; AMDLIBM-SAME: (<4 x float> [[IN:%.*]]) {
+; AMDLIBM-NEXT:    [[TMP1:%.*]] = call <4 x float> @amd_vrs4_log2f(<4 x float> [[IN]])
+; AMDLIBM-NEXT:    ret <4 x float> [[TMP1]]
+;
+; LIBMVEC-X86-LABEL: define {{[^@]+}}@log2_f32
+; LIBMVEC-X86-SAME: (<4 x float> [[IN:%.*]]) {
+; LIBMVEC-X86-NEXT:    [[CALL:%.*]] = call <4 x float> @llvm.log2.v4f32(<4 x float> [[IN]])
+; LIBMVEC-X86-NEXT:    ret <4 x float> [[CALL]]
+;
+; MASSV-LABEL: define {{[^@]+}}@log2_f32
+; MASSV-SAME: (<4 x float> [[IN:%.*]]) {
+; MASSV-NEXT:    [[TMP1:%.*]] = call <4 x float> @__log2f4(<4 x float> [[IN]])
+; MASSV-NEXT:    ret <4 x float> [[TMP1]]
+;
+; ACCELERATE-LABEL: define {{[^@]+}}@log2_f32
+; ACCELERATE-SAME: (<4 x float> [[IN:%.*]]) {
+; ACCELERATE-NEXT:    [[TMP1:%.*]] = call <4 x float> @vlog2f(<4 x float> [[IN]])
+; ACCELERATE-NEXT:    ret <4 x float> [[TMP1]]
+;
+  %call = call <4 x float> @llvm.log2.v4f32(<4 x float> %in)
+  ret <4 x float> %call
+}
+
+declare <4 x float> @llvm.log2.v4f32(<4 x float>) #0
+
+define <4 x float> @pow_f32(<4 x float> %in) {
+; SVML-LABEL: define {{[^@]+}}@pow_f32
+; SVML-SAME: (<4 x float> [[IN:%.*]]) {
+; SVML-NEXT:    [[TMP1:%.*]] = call <4 x float> @__svml_powf4(<4 x float> [[IN]], <4 x float> [[IN]])
+; SVML-NEXT:    ret <4 x float> [[TMP1]]
+;
+; AMDLIBM-LABEL: define {{[^@]+}}@pow_f32
+; AMDLIBM-SAME: (<4 x float> [[IN:%.*]]) {
+; AMDLIBM-NEXT:    [[TMP1:%.*]] = call <4 x float> @amd_vrs4_powf(<4 x float> [[IN]], <4 x float> [[IN]])
+; AMDLIBM-NEXT:    ret <4 x float> [[TMP1]]
+;
+; LIBMVEC-X86-LABEL: define {{[^@]+}}@pow_f32
+; LIBMVEC-X86-SAME: (<4 x float> [[IN:%.*]]) {
+; LIBMVEC-X86-NEXT:    [[TMP1:%.*]] = call <4 x float> @_ZGVbN4vv_powf(<4 x float> [[IN]], <4 x float> [[IN]])
+; LIBMVEC-X86-NEXT:    ret <4 x float> [[TMP1]]
+;
+; MASSV-LABEL: define {{[^@]+}}@pow_f32
+; MASSV-SAME: (<4 x float> [[IN:%.*]]) {
+; MASSV-NEXT:    [[TMP1:%.*]] = call <4 x float> @__powf4(<4 x float> [[IN]], <4 x float> [[IN]])
+; MASSV-NEXT:    ret <4 x float> [[TMP1]]
+;
+; ACCELERATE-LABEL: define {{[^@]+}}@pow_f32
+; ACCELERATE-SAME: (<4 x float> [[IN:%.*]]) {
+; ACCELERATE-NEXT:    [[TMP1:%.*]] = call <4 x float> @vpowf(<4 x float> [[IN]], <4 x float> [[IN]])
+; ACCELERATE-NEXT:    ret <4 x float> [[TMP1]]
+;
+  %call = call <4 x float> @llvm.pow.v4f32(<4 x float> %in, <4 x float> %in)
+  ret <4 x float> %call
+}
+
+declare <4 x float> @llvm.pow.v4f32(<4 x float>, <4 x float>) #0
+
 ; No replacement should take place for non-vector intrinsic.
 define double @exp_f64(double %in) {
 ; COMMON-LABEL: define {{[^@]+}}@exp_f64
