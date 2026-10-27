@@ -208,116 +208,26 @@ void applyFoldGlobalOffset(MachineInstr &MI, MachineRegisterInfo &MRI,
       B.buildConstant(LLT::scalar(64), -static_cast<int64_t>(MinOffset)));
 }
 
-// Combines vecreduce_add(mul(ext(x), ext(y))) -> vecreduce_add([us]dot(x, y))
-// Or vecreduce_add(ext(mul(ext(x), ext(y)))) -> vecreduce_add([us]dot(x, y))
-// Or vecreduce_add(ext(x)) -> vecreduce_add([us]dot(x, 1))
-// Similar to performVecReduceAddCombine in SelectionDAG
-bool matchExtAddvToDotAddv(MachineInstr &MI, MachineRegisterInfo &MRI,
-                           const AArch64Subtarget &STI,
-                           std::tuple<Register, Register, bool> &MatchInfo) {
-  assert(MI.getOpcode() == TargetOpcode::G_VECREDUCE_ADD &&
-         "Expected a G_VECREDUCE_ADD instruction");
-  assert(STI.hasDotProd() && "Target should have Dot Product feature");
-
-  MachineInstr *I1 = getDefIgnoringCopies(MI.getOperand(1).getReg(), MRI);
-  Register DstReg = MI.getOperand(0).getReg();
-  Register MidReg = I1->getOperand(0).getReg();
-  LLT DstTy = MRI.getType(DstReg);
-  LLT MidTy = MRI.getType(MidReg);
-  if (DstTy.getScalarSizeInBits() != 32 || MidTy.getScalarSizeInBits() != 32)
-    return false;
-
-  // Detect mul(ext, ext) with symmetric ext's. If I1Opc is G_ZEXT or G_SEXT
-  // then the ext's must match the same opcode. It is set to the ext opcode on
-  // output.
-  auto tryMatchingMulOfExt = [&MRI](MachineInstr *MI, Register &Out1,
-                                    Register &Out2, unsigned &I1Opc) {
-    // If result of this has more than 1 use, then there is no point in creating
-    // a dot instruction
-    if (!MRI.hasOneNonDBGUse(MI->getOperand(0).getReg()))
-      return false;
-
-    MachineInstr *ExtMI1 =
-        getDefIgnoringCopies(MI->getOperand(1).getReg(), MRI);
-    MachineInstr *ExtMI2 =
-        getDefIgnoringCopies(MI->getOperand(2).getReg(), MRI);
-    LLT Ext1DstTy = MRI.getType(ExtMI1->getOperand(0).getReg());
-    LLT Ext2DstTy = MRI.getType(ExtMI2->getOperand(0).getReg());
-
-    if (ExtMI1->getOpcode() != ExtMI2->getOpcode() || Ext1DstTy != Ext2DstTy)
-      return false;
-    if ((I1Opc == TargetOpcode::G_ZEXT || I1Opc == TargetOpcode::G_SEXT) &&
-        I1Opc != ExtMI1->getOpcode())
-      return false;
-    Out1 = ExtMI1->getOperand(1).getReg();
-    Out2 = ExtMI2->getOperand(1).getReg();
-    I1Opc = ExtMI1->getOpcode();
-    return true;
-  };
-
-  LLT SrcTy;
-  unsigned I1Opc = I1->getOpcode();
-  if (I1Opc == TargetOpcode::G_MUL) {
-    Register Out1, Out2;
-    if (!tryMatchingMulOfExt(I1, Out1, Out2, I1Opc))
-      return false;
-    SrcTy = MRI.getType(Out1);
-    std::get<0>(MatchInfo) = Out1;
-    std::get<1>(MatchInfo) = Out2;
-  } else if (I1Opc == TargetOpcode::G_ZEXT || I1Opc == TargetOpcode::G_SEXT) {
-    Register I1Op = I1->getOperand(1).getReg();
-    MachineInstr *M = getDefIgnoringCopies(I1Op, MRI);
-    Register Out1, Out2;
-    if (M->getOpcode() == TargetOpcode::G_MUL &&
-        tryMatchingMulOfExt(M, Out1, Out2, I1Opc)) {
-      SrcTy = MRI.getType(Out1);
-      std::get<0>(MatchInfo) = Out1;
-      std::get<1>(MatchInfo) = Out2;
-    } else {
-      SrcTy = MRI.getType(I1Op);
-      std::get<0>(MatchInfo) = I1Op;
-      std::get<1>(MatchInfo) = 0;
-    }
-  } else {
-    return false;
-  }
-
-  if (I1Opc == TargetOpcode::G_ZEXT)
-    std::get<2>(MatchInfo) = 0;
-  else if (I1Opc == TargetOpcode::G_SEXT)
-    std::get<2>(MatchInfo) = 1;
-  else
-    return false;
-
-  if (SrcTy.getScalarSizeInBits() != 8 || SrcTy.getNumElements() % 8 != 0)
-    return false;
-
-  return true;
-}
-
 void applyExtAddvToDotAddv(MachineInstr &MI, MachineRegisterInfo &MRI,
                            MachineIRBuilder &Builder,
-                           GISelChangeObserver &Observer,
-                           const AArch64Subtarget &STI,
-                           std::tuple<Register, Register, bool> &MatchInfo) {
+                           GISelChangeObserver &Observer, Register Src1,
+                           Register Src2, bool IsSigned) {
   assert(MI.getOpcode() == TargetOpcode::G_VECREDUCE_ADD &&
          "Expected a G_VECREDUCE_ADD instruction");
-  assert(STI.hasDotProd() && "Target should have Dot Product feature");
 
   // Initialise the variables
-  unsigned DotOpcode =
-      std::get<2>(MatchInfo) ? AArch64::G_SDOT : AArch64::G_UDOT;
-  Register Ext1SrcReg = std::get<0>(MatchInfo);
+  unsigned DotOpcode = IsSigned ? AArch64::G_SDOT : AArch64::G_UDOT;
+  Register Ext1SrcReg = Src1;
 
   // If there is one source register, create a vector of 0s as the second
   // source register
   Register Ext2SrcReg;
-  if (std::get<1>(MatchInfo) == 0)
+  if (!Src2.isValid())
     Ext2SrcReg = Builder.buildConstant(MRI.getType(Ext1SrcReg), 1)
                      ->getOperand(0)
                      .getReg();
   else
-    Ext2SrcReg = std::get<1>(MatchInfo);
+    Ext2SrcReg = Src2;
 
   // Find out how many DOT instructions are needed
   LLT SrcTy = MRI.getType(Ext1SrcReg);

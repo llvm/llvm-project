@@ -1141,9 +1141,9 @@ def SDT_AArch64mull : SDTypeProfile<1, 2, [SDTCisInt<0>, SDTCisInt<1>,
                                     SDTCisSameAs<1, 2>]>;
 def AArch64pmull    : SDNode<"AArch64ISD::PMULL", SDT_AArch64mull,
                              [SDNPCommutative]>;
-def AArch64smull    : SDNode<"AArch64ISD::SMULL", SDT_AArch64mull,
+def smull           : SDNode<"AArch64ISD::SMULL", SDT_AArch64mull,
                              [SDNPCommutative]>;
-def AArch64umull    : SDNode<"AArch64ISD::UMULL", SDT_AArch64mull,
+def umull           : SDNode<"AArch64ISD::UMULL", SDT_AArch64mull,
                              [SDNPCommutative]>;
 def AArch64sqdmulh : SDNode<"AArch64ISD::SQDMULH",
                             SDTypeProfile<1, 2, [ SDTCisSameAs<1, 2>]>>;
@@ -3013,6 +3013,23 @@ def SMADDLrrr : WideMulAccum<0, 0b001, "smaddl", add_like, sext>;
 def SMSUBLrrr : WideMulAccum<1, 0b001, "smsubl", sub, sext>;
 def UMADDLrrr : WideMulAccum<0, 0b101, "umaddl", add_like, zext>;
 def UMSUBLrrr : WideMulAccum<1, 0b101, "umsubl", sub, zext>;
+
+def : Pat<(i64 (smull GPR32:$Rn, GPR32:$Rm)),
+          (SMADDLrrr GPR32:$Rn, GPR32:$Rm, XZR)>;
+def : Pat<(i64 (umull GPR32:$Rn, GPR32:$Rm)),
+          (UMADDLrrr GPR32:$Rn, GPR32:$Rm, XZR)>;
+def : Pat<(i64 (ineg (smull GPR32:$Rn, GPR32:$Rm))),
+          (SMSUBLrrr GPR32:$Rn, GPR32:$Rm, XZR)>;
+def : Pat<(i64 (ineg (umull GPR32:$Rn, GPR32:$Rm))),
+          (UMSUBLrrr GPR32:$Rn, GPR32:$Rm, XZR)>;
+def : Pat<(i64 (add_like (smull GPR32:$Rn, GPR32:$Rm), GPR64:$Ra)),
+          (SMADDLrrr GPR32:$Rn, GPR32:$Rm, GPR64:$Ra)>;
+def : Pat<(i64 (add_like (umull GPR32:$Rn, GPR32:$Rm), GPR64:$Ra)),
+          (UMADDLrrr GPR32:$Rn, GPR32:$Rm, GPR64:$Ra)>;
+def : Pat<(i64 (sub GPR64:$Ra, (smull GPR32:$Rn, GPR32:$Rm))),
+          (SMSUBLrrr GPR32:$Rn, GPR32:$Rm, GPR64:$Ra)>;
+def : Pat<(i64 (sub GPR64:$Ra, (umull GPR32:$Rn, GPR32:$Rm))),
+          (UMSUBLrrr GPR32:$Rn, GPR32:$Rm, GPR64:$Ra)>;
 
 def : Pat<(i64 (mul (sext_inreg GPR64:$Rn, i32), (sext_inreg GPR64:$Rm, i32))),
           (SMADDLrrr (EXTRACT_SUBREG GPR64:$Rn, sub_32), (EXTRACT_SUBREG GPR64:$Rm, sub_32), XZR)>;
@@ -7863,10 +7880,10 @@ defm SADDL   : SIMDLongThreeVectorBHS<   0, 0b0000, "saddl",
 defm SADDW   : SIMDWideThreeVectorBHS<   0, 0b0001, "saddw",
                  BinOpFrag<(add node:$LHS, (sext node:$RHS))>>;
 defm SMLAL   : SIMDLongThreeVectorTiedBHS<0, 0b1000, "smlal",
-                 TriOpFrag<(add_like node:$LHS, (AArch64smull node:$MHS, node:$RHS))>>;
+                 TriOpFrag<(add_like node:$LHS, (smull node:$MHS, node:$RHS))>>;
 defm SMLSL   : SIMDLongThreeVectorTiedBHS<0, 0b1010, "smlsl",
-                 TriOpFrag<(sub node:$LHS, (AArch64smull node:$MHS, node:$RHS))>>;
-defm SMULL   : SIMDLongThreeVectorBHS<0, 0b1100, "smull", AArch64smull>;
+                 TriOpFrag<(sub node:$LHS, (smull node:$MHS, node:$RHS))>>;
+defm SMULL   : SIMDLongThreeVectorBHS<0, 0b1100, "smull", smull>;
 defm SQDMLAL : SIMDLongThreeVectorSQDMLXTiedHS<0, 0b1001, "sqdmlal", saddsat>;
 defm SQDMLSL : SIMDLongThreeVectorSQDMLXTiedHS<0, 0b1011, "sqdmlsl", ssubsat>;
 defm SQDMULL : SIMDLongThreeVectorHS<0, 0b1101, "sqdmull", int_aarch64_neon_sqdmull>;
@@ -7884,10 +7901,10 @@ defm UADDL   : SIMDLongThreeVectorBHS<1, 0b0000, "uaddl",
 defm UADDW   : SIMDWideThreeVectorBHS<1, 0b0001, "uaddw",
                  BinOpFrag<(add node:$LHS, (zanyext node:$RHS))>>;
 defm UMLAL   : SIMDLongThreeVectorTiedBHS<1, 0b1000, "umlal",
-                 TriOpFrag<(add_like node:$LHS, (AArch64umull node:$MHS, node:$RHS))>>;
+                 TriOpFrag<(add_like node:$LHS, (umull node:$MHS, node:$RHS))>>;
 defm UMLSL   : SIMDLongThreeVectorTiedBHS<1, 0b1010, "umlsl",
-                 TriOpFrag<(sub node:$LHS, (AArch64umull node:$MHS, node:$RHS))>>;
-defm UMULL   : SIMDLongThreeVectorBHS<1, 0b1100, "umull", AArch64umull>;
+                 TriOpFrag<(sub node:$LHS, (umull node:$MHS, node:$RHS))>>;
+defm UMULL   : SIMDLongThreeVectorBHS<1, 0b1100, "umull", umull>;
 let isCommutable = 0 in
 defm USUBL   : SIMDLongThreeVectorBHS<1, 0b0010, "usubl",
                  BinOpFrag<(sub (zanyext node:$LHS), (zanyext node:$RHS))>>;
@@ -7923,13 +7940,13 @@ multiclass Neon_mul_acc_widen_patterns<SDPatternOperator opnode, SDPatternOperat
                                      V64:$Rn, V64:$Rm)), dsub)>;
 }
 
-defm : Neon_mul_acc_widen_patterns<add, AArch64umull,
+defm : Neon_mul_acc_widen_patterns<add, umull,
      UMLALv8i8_v8i16, UMLALv4i16_v4i32, UMLALv2i32_v2i64>;
-defm : Neon_mul_acc_widen_patterns<add, AArch64smull,
+defm : Neon_mul_acc_widen_patterns<add, smull,
      SMLALv8i8_v8i16, SMLALv4i16_v4i32, SMLALv2i32_v2i64>;
-defm : Neon_mul_acc_widen_patterns<sub, AArch64umull,
+defm : Neon_mul_acc_widen_patterns<sub, umull,
      UMLSLv8i8_v8i16, UMLSLv4i16_v4i32, UMLSLv2i32_v2i64>;
-defm : Neon_mul_acc_widen_patterns<sub, AArch64smull,
+defm : Neon_mul_acc_widen_patterns<sub, smull,
      SMLSLv8i8_v8i16, SMLSLv4i16_v4i32, SMLSLv2i32_v2i64>;
 
 
@@ -9741,10 +9758,10 @@ defm MLS   : SIMDVectorIndexedHSTied<1, 0b0100, "mls", null_frag>;
 
 defm MUL   : SIMDVectorIndexedHS<0, 0b1000, "mul", mul>;
 defm SMLAL : SIMDVectorIndexedLongSDTied<0, 0b0010, "smlal",
-    TriOpFrag<(add_like node:$LHS, (AArch64smull node:$MHS, node:$RHS))>>;
+    TriOpFrag<(add_like node:$LHS, (smull node:$MHS, node:$RHS))>>;
 defm SMLSL : SIMDVectorIndexedLongSDTied<0, 0b0110, "smlsl",
-    TriOpFrag<(sub node:$LHS, (AArch64smull node:$MHS, node:$RHS))>>;
-defm SMULL : SIMDVectorIndexedLongSD<0, 0b1010, "smull", AArch64smull>;
+    TriOpFrag<(sub node:$LHS, (smull node:$MHS, node:$RHS))>>;
+defm SMULL : SIMDVectorIndexedLongSD<0, 0b1010, "smull", smull>;
 defm SQDMLAL : SIMDIndexedLongSQDMLXSDTied<0, 0b0011, "sqdmlal", saddsat,
                                            AArch64sqadd, int_aarch64_neon_sqadd>;
 defm SQDMLSL : SIMDIndexedLongSQDMLXSDTied<0, 0b0111, "sqdmlsl", ssubsat,
@@ -9755,10 +9772,10 @@ defm SQRDMLSH : SIMDIndexedSQRDMLxHSDTied<1, 0b1111, "sqrdmlsh",
                                           AArch64sqrdmlsh, int_aarch64_neon_sqrdmlsh>;
 defm SQDMULL : SIMDIndexedLongSD<0, 0b1011, "sqdmull", int_aarch64_neon_sqdmull>;
 defm UMLAL   : SIMDVectorIndexedLongSDTied<1, 0b0010, "umlal",
-    TriOpFrag<(add_like node:$LHS, (AArch64umull node:$MHS, node:$RHS))>>;
+    TriOpFrag<(add_like node:$LHS, (umull node:$MHS, node:$RHS))>>;
 defm UMLSL   : SIMDVectorIndexedLongSDTied<1, 0b0110, "umlsl",
-    TriOpFrag<(sub node:$LHS, (AArch64umull node:$MHS, node:$RHS))>>;
-defm UMULL   : SIMDVectorIndexedLongSD<1, 0b1010, "umull", AArch64umull>;
+    TriOpFrag<(sub node:$LHS, (umull node:$MHS, node:$RHS))>>;
+defm UMULL   : SIMDVectorIndexedLongSD<1, 0b1010, "umull", umull>;
 
 // A scalar sqdmull with the second operand being a vector lane can be
 // handled directly with the indexed instruction encoding.
@@ -11145,7 +11162,7 @@ def : Pat<(v4i32 (AArch64sqdmulh (v4i32 V128:$Rn), (v4i32 V128:$Rm))),
           (SQDMULHv4i32 V128:$Rn, V128:$Rm)>;
 
 def AArch64sqdmulhPat : PatFrag<(ops node:$Rn, node:$Rm, node:$offset),
-                                (truncssat_s (AArch64vashr (AArch64smull node:$Rn, node:$Rm), node:$offset))>;
+                                (truncssat_s (AArch64vashr (smull node:$Rn, node:$Rm), node:$offset))>;
 def : Pat<(v4i16 (AArch64sqdmulhPat (v4i16 V64:$Rn), (v4i16 V64:$Rm), (i32 15))),
           (SQDMULHv4i16 V64:$Rn, V64:$Rm)>;
 def : Pat<(v2i32 (AArch64sqdmulhPat (v2i32 V64:$Rn), (v2i32 V64:$Rm), (i32 31))),
@@ -12204,10 +12221,10 @@ class dot_v16i8<Instruction DOT, SDPatternOperator mulop,
 let AddedComplexity = 10 in {
   def : dot_v4i8<SDOTv8i8, sextloadi8>;
   def : dot_v4i8<UDOTv8i8, zextloadi8>;
-  def : dot_v8i8<SDOTv8i8, AArch64smull, sext>;
-  def : dot_v8i8<UDOTv8i8, AArch64umull, zext>;
-  def : dot_v16i8<SDOTv16i8, AArch64smull, sext>;
-  def : dot_v16i8<UDOTv16i8, AArch64umull, zext>;
+  def : dot_v8i8<SDOTv8i8, smull, sext>;
+  def : dot_v8i8<UDOTv8i8, umull, zext>;
+  def : dot_v16i8<SDOTv16i8, smull, sext>;
+  def : dot_v16i8<UDOTv16i8, umull, zext>;
 
   // FIXME: add patterns to generate vector by element dot product.
   // FIXME: add SVE dot-product patterns.
