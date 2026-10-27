@@ -182,6 +182,7 @@ class DeclareAttrInterfaceMethods<AttrInterface interface,
     let cppNamespace = interface.cppNamespace;
     let methods = interface.methods;
     let baseInterfaces = interface.baseInterfaces;
+    let declaredIn = interface.declaredIn;
 }
 class DeclareOpInterfaceMethods<OpInterface interface,
                                 list<string> overridenMethods = []>
@@ -192,6 +193,7 @@ class DeclareOpInterfaceMethods<OpInterface interface,
     let cppNamespace = interface.cppNamespace;
     let methods = interface.methods;
     let baseInterfaces = interface.baseInterfaces;
+    let declaredIn = interface.declaredIn;
 }
 class DeclareTypeInterfaceMethods<TypeInterface interface,
                                   list<string> overridenMethods = []>
@@ -202,6 +204,7 @@ class DeclareTypeInterfaceMethods<TypeInterface interface,
     let cppNamespace = interface.cppNamespace;
     let methods = interface.methods;
     let baseInterfaces = interface.baseInterfaces;
+    let declaredIn = interface.declaredIn;
 }
 
 #endif // INTERFACES_TD

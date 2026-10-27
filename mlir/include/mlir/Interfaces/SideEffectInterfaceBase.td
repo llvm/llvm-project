@@ -174,6 +174,9 @@ class SideEffect<EffectOpInterfaceBase interface, string effectName,
   /// The cpp namespace of the interface trait.
   string cppNamespace = interface.cppNamespace;
 
+  /// The C++ headers declaring the interface trait.
+  list<string> declaredIn = interface.declaredIn;
+
   /// The derived effect that is being applied.
   string effect = effectName;
 
@@ -200,6 +203,9 @@ class SideEffectsTraitBase<EffectOpInterfaceBase parentInterface,
 
   /// The cpp namespace of the interface trait.
   string cppNamespace = parentInterface.cppNamespace;
+
+  /// The C++ headers declaring the interface trait.
+  let declaredIn = parentInterface.declaredIn;
 
   /// The name of the base effects class.
   string baseEffectName = parentInterface.baseEffectName;
