@@ -27,6 +27,7 @@ add_llvm_target(AGXCodeGen
   AGXAnnotateControlFlow.cpp
   AGXAsmPrinter.cpp
   AGXCodeGenPrepare.cpp
+  AGXMathExpansion.cpp
   AGXLowerRecursion.cpp
   AGXFoldOperands.cpp
   AGXHoistFromElseFlow.cpp

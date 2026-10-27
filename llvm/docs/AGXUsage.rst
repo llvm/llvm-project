@@ -381,7 +381,11 @@ print the limit (``up to N threads per threadgroup``). Two function
 attributes lower the register use, spilling the rest to the stack:
 
 * ``"agx-max-threads-per-threadgroup"="N"`` (PTX ``.maxntid`` and
-  ``.reqntid``): at most as many registers as let N threads fit.
+  ``.reqntid``, MLIR's ``known_block_size``): at most as many registers as let
+  N threads fit. With N at most 128 the threadgroup is one aligned block of 4
+  SIMD-groups, and on chips with ``block_barrier`` (G14, not ``agx-strict``)
+  its threadgroup barriers become block barriers, without the workgroup
+  fences around them (the block barrier orders the block's memory).
 * ``"agx-max-gprs"="N"`` (PTX ``.maxnreg``): at most N 32-bit registers, and
   no fewer than 16.
 
@@ -1061,31 +1065,26 @@ Calls to AIR functions become LLVM intrinsics and instructions:
 Any other AIR function is an error. The math functions are as accurate as the backend's lowering of the
 LLVM intrinsics, which is below what MSL requires of its precise functions
 for ``sqrt`` (without ``ieee-fp32``), ``sin``, ``cos``, ``log2``, ``log10``,
-``exp10`` and ``pow``; ``tan``, the inverse and hyperbolic functions,
-``sinpi``/``cospi``/``tanpi`` and the inverse hyperbolic functions have no
-lowering. The module then takes AGX's triple and data layout, and
-loses the AIR metadata and module flags.
+``exp10`` and ``pow``. ``tan``, the inverse and hyperbolic functions and their
+inverses, and ``sinpi``/``cospi``/``tanpi`` are built from the functions the
+hardware has (``AGXMathExpansion.cpp``, Cephes' single precision reductions
+and polynomials; half in float), for the LLVM intrinsics of any input. The
+module then takes AGX's triple and data layout, and loses the AIR metadata and
+module flags.
 
 MLIR
 ====
 
-MLIR targets AGX the way it targets AMDGPU:
-
-* The ``agxir`` dialect wraps the ``llvm.agx.*`` intrinsics one to one, like
-  ``rocdl``. Kernels carry the ``agxir.kernel`` attribute and use the
-  ``agx_kernelcc`` calling convention.
-* The ``agx`` dialect provides higher level operations, like ``amdgpu``:
-  ``agx.shuffle`` (any type, SIMD-group or quad scope), ``agx.reduce``,
-  ``agx.ballot`` and ``agx.threadgroup_barrier``. ``-convert-agx-to-agxir``
-  lowers them.
-* ``-convert-gpu-to-agxir`` lowers the ``gpu`` dialect, and
-  ``-agxir-attach-target`` attaches ``#agxir.target`` attributes.
-  ``-gpu-module-to-binary`` then produces AGX assembly, ELF objects or
-  bitcode.
+MLIR targets AGX through AIR (``mlir/docs/Dialects/AIR.md``):
+``-convert-gpu-to-air`` lowers the ``gpu`` dialect and the ``air`` dialect's
+SIMD-group matrices to AIR, ``-air-attach-target`` attaches ``#air.target``
+attributes, and ``-gpu-module-to-binary`` compiles a module whose target names
+an AGX chip through AIR's portable passes and this backend (``agx-lower-air``,
+above) to an AGX object.
 
 .. code-block:: console
 
-  $ mlir-opt kernel.mlir --pass-pipeline='builtin.module(agxir-attach-target{chip=agx-g14g},gpu.module(convert-gpu-to-agxir),gpu-module-to-binary{format=isa})'
+  $ mlir-opt kernel.mlir --pass-pipeline='builtin.module(air-attach-target{chip=agx-g14g},gpu.module(arith-emulate-f64,convert-gpu-to-air),gpu-module-to-binary)'
 
 Host code from ``gpu-to-llvm`` calls MLIR's GPU runtime wrappers (``mgpu*``).
 With ``-DMLIR_ENABLE_AGX_RUNNER=ON -DMLIR_AGX_LIBCUDA=<ZLUDA's
@@ -1094,7 +1093,7 @@ without a CUDA toolkit (``lib/ExecutionEngine/AGXCudaCompat/cuda.h`` declares
 the part of the driver API it uses) against ZLUDA's CUDA driver for Asahi
 Linux, so ``mlir-runner --shared-libs=libmlir_agx_runtime.so`` runs
 ``gpu.launch_func`` on the GPU with ZLUDA's tracing: launch records and fault
-dumps, and with ``#agxir.target<..., features = "+agx-checked">`` checked
+dumps, and with ``#air.target<chip = ..., features = "+agx-checked">`` checked
 mode, whose reports name the ``.mlir`` lines when the kernels have debug
 locations (``-ensure-debug-info-scope-on-llvm-func`` and
 ``-mlir-print-debuginfo`` between pipelines). ``test/Integration/GPU/AGX``

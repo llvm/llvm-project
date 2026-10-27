@@ -26,6 +26,11 @@
 //    the operands and results of their half operations.
 //  * There is no double precision hardware: the double precision arithmetic
 //    that AGXSoftF64 does not implement is diagnosed as unsupported.
+//  * Tangent, the inverse and the hyperbolic functions are built from the
+//    functions the hardware has (AGXMathExpansion.cpp).
+//  * A threadgroup of at most 4 SIMD-groups is one aligned block, whose
+//    barrier is cheaper: on subtargets with block-barrier its threadgroup
+//    barriers become block barriers.
 //
 //===----------------------------------------------------------------------===//
 
@@ -307,6 +312,8 @@ class AGXCodeGenPrepare : public FunctionPass {
   bool flushFloatMinMax(Function &F);
   bool diagnoseDoubles(Function &F);
   bool fenceHostCoherentAccesses(Function &F);
+  bool useBlockBarriers(Function &F, const AGXSubtarget &ST);
+  bool expandMath(Function &F);
 
 public:
   static char ID;
@@ -976,13 +983,65 @@ bool AGXCodeGenPrepare::runOnFunction(Function &F) {
   if (ST.hasQuadShuffleIndexMerge())
     Changed |= lowerDivergentShuffles(F, TTI);
   Changed |= lowerConstrainedFP(F);
+  Changed |= expandMath(F);
   Changed |= flushHalfDenormals(F);
   Changed |= flushFloatMinMax(F);
   Changed |= expandDivisions(F);
   Changed |= expandMemIntrinsics(F, TTI);
   Changed |= fenceHostCoherentAccesses(F);
+  Changed |= useBlockBarriers(F, ST);
   Changed |= unifyExits(F);
   return Changed;
+}
+
+bool AGXCodeGenPrepare::expandMath(Function &F) {
+  SmallVector<IntrinsicInst *, 8> Calls;
+  for (Instruction &I : instructions(F))
+    if (auto *II = dyn_cast<IntrinsicInst>(&I);
+        II && AGX::canExpandMath(II->getIntrinsicID(), II->getType()))
+      Calls.push_back(II);
+  for (IntrinsicInst *II : Calls) {
+    IRBuilder<> B(II);
+    B.setFastMathFlags(II->getFastMathFlags());
+    SmallVector<Value *, 2> Args(II->args());
+    Value *R = AGX::expandMath(B, II->getIntrinsicID(), Args);
+    R->takeName(II);
+    II->replaceAllUsesWith(R);
+    II->eraseFromParent();
+  }
+  return !Calls.empty();
+}
+
+/// With "agx-max-threads-per-threadgroup" at most 128, the threadgroup is one
+/// aligned block of 4 SIMD-groups (or less: a block cut short by the end of
+/// the threadgroup does not wait for the missing groups). Its block_barrier
+/// waits for the same threads as threadgroup_barrier, about 3x faster on G14,
+/// and orders their threadgroup and device memory, so the workgroup-scope
+/// fences right around the barrier go too.
+bool AGXCodeGenPrepare::useBlockBarriers(Function &F, const AGXSubtarget &ST) {
+  unsigned Threads =
+      F.getFnAttributeAsParsedInteger("agx-max-threads-per-threadgroup", 0);
+  if (!ST.hasBlockBarrier() || Threads == 0 || Threads > 128)
+    return false;
+  SmallVector<IntrinsicInst *, 4> Barriers;
+  for (Instruction &I : instructions(F))
+    if (auto *II = dyn_cast<IntrinsicInst>(&I);
+        II && II->getIntrinsicID() == Intrinsic::agx_threadgroup_barrier)
+      Barriers.push_back(II);
+  SyncScope::ID Workgroup = F.getContext().getOrInsertSyncScopeID("workgroup");
+  auto IsWorkgroupFence = [&](Instruction *I) {
+    auto *Fence = dyn_cast_or_null<FenceInst>(I);
+    return Fence && Fence->getSyncScopeID() == Workgroup;
+  };
+  for (IntrinsicInst *II : Barriers) {
+    for (Instruction *Fence : {II->getPrevNode(), II->getNextNode()})
+      if (IsWorkgroupFence(Fence))
+        Fence->eraseFromParent();
+    IRBuilder<> B(II);
+    B.CreateIntrinsic(Intrinsic::agx_block_barrier, {});
+    II->eraseFromParent();
+  }
+  return !Barriers.empty();
 }
 
 static bool isSystemScope(SyncScope::ID Scope, LLVMContext &Ctx) {

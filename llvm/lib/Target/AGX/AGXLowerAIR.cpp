@@ -650,18 +650,22 @@ bool LowerAIR::lowerMath(IRBuilder<> &B, CallInst &CI, StringRef Name,
   unsigned Signedness = Rest.consume_front("s.") ? 1
                         : Rest.consume_front("u.") ? 2
                                                    : 0;
-  auto It = ByAIRName.find(Base);
-  if (It == ByAIRName.end())
-    return false;
   const AIRFunction *Fn = nullptr;
-  for (const AIRFunction *F : It->second)
-    if (F->Signedness == Signedness && (!Fast || F->HasFast))
-      Fn = F;
+  if (auto It = ByAIRName.find(Base); It != ByAIRName.end())
+    for (const AIRFunction *F : It->second)
+      if (F->Signedness == Signedness && (!Fast || F->HasFast))
+        Fn = F;
   Intrinsic::ID ID =
       Fn ? Intrinsic::lookupIntrinsicID(getAIRFunctionStr(Fn->LLVMName))
          : Intrinsic::not_intrinsic;
-  if (ID == Intrinsic::not_intrinsic)
-    return false;
+  if (ID == Intrinsic::not_intrinsic) {
+    // AIR's functions without an LLVM intrinsic (asinh, sinpi, ...).
+    if (CI.arg_size() != 1 || CI.getArgOperand(0)->getType() != CI.getType())
+      return false;
+    B.setFastMathFlags(CI.getFastMathFlags());
+    Result = AGX::expandMath(B, Base, CI.getArgOperand(0));
+    return Result != nullptr;
+  }
   Function *Decl = Intrinsic::getOrInsertDeclaration(&M, ID, {CI.getType()});
   SmallVector<Value *, 4> Args(CI.args());
   // Operands AIR leaves out (llvm.abs's is_int_min_poison) are false.

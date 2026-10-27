@@ -88,9 +88,21 @@ public:
 };
 
 class Instruction;
+class IRBuilderBase;
 class MachineInstr;
+class Type;
+class Value;
 
 namespace AGX {
+/// Whether expandMath builds intrinsic \p ID (tan, asin, acos, atan, atan2,
+/// sinh, cosh, tanh) of type \p Ty (float, half or bfloat, or vectors).
+bool canExpandMath(Intrinsic::ID ID, Type *Ty);
+/// The math functions AGX has no instruction for, from the ones it has
+/// (AGXMathExpansion.cpp): the intrinsic \p ID of \p Args, or AIR's \p Fn
+/// (asinh, acosh, atanh, sinpi, cospi, tanpi) of \p X; nullptr for another.
+Value *expandMath(IRBuilderBase &B, Intrinsic::ID ID, ArrayRef<Value *> Args);
+Value *expandMath(IRBuilderBase &B, StringRef Fn, Value *X);
+
 /// Whether a device memory access must reach memory shared with the host while
 /// the dispatch runs: volatile and system-scope atomic loads and stores
 /// (PTX ld/st.volatile, .sys). They are encoded coherent, loads after an f59d
