@@ -22,6 +22,7 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Casting.h"
@@ -41,8 +42,12 @@ static bool skipUnit(const DICompileUnit *CU) {
   return CU->getEmissionKind() == DICompileUnit::NoDebug;
 }
 
+static bool skipSubprogram(const DISubprogram *SP) {
+  return !SP || (SP->getUnit() && skipUnit(SP->getUnit()));
+}
+
 void LexicalScopes::resetModule() {
-  FunctionMap.clear();
+  AttachedSubprograms.clear();
   resetFunction();
 }
 
@@ -58,10 +63,39 @@ void LexicalScopes::resetFunction() {
 
 void LexicalScopes::initialize(const Module &M) {
   resetModule();
+
   for (const Function &F : M) {
     DISubprogram *SP = F.getSubprogram();
-    if (SP && (!SP->getUnit() || !skipUnit(SP->getUnit())))
-      FunctionMap[SP] = &F;
+    if (!skipSubprogram(SP))
+      AttachedSubprograms[SP] = false;
+  }
+
+  for (const Function &F : M) {
+    DISubprogram *SP = F.getSubprogram();
+    if (skipSubprogram(SP))
+      continue;
+    const DILocation *PrevDL = nullptr;
+    auto processLocation = [&](const DILocation *DL) {
+      if (DL && DL != PrevDL)
+        scanSubprogramsAtLocation(DL);
+      PrevDL = DL;
+    };
+    for (const Instruction &I : llvm::instructions(F)) {
+      processLocation(I.getDebugLoc().get());
+      for (DbgRecord &DR : I.getDbgRecordRange())
+        processLocation(DR.getDebugLoc().get());
+    }
+  }
+}
+
+void LexicalScopes::scanSubprogramsAtLocation(const DILocation *DL) {
+  if (!DL)
+    return;
+  while (DL->getInlinedAt()) {
+    DISubprogram *SP = DL->getScope()->getSubprogram();
+    if (auto I = AttachedSubprograms.find(SP); I != AttachedSubprograms.end())
+      I->second = true;
+    DL = DL->getInlinedAt();
   }
 }
 
