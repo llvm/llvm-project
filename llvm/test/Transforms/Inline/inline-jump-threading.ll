@@ -34,11 +34,19 @@ exit:
 define void @caller_phi_simple(i32 %a) {
 ; CHECK-LABEL: define void @caller_phi_simple(
 ; CHECK-SAME: i32 [[A:%.*]]) {
-; CHECK-NEXT:    [[R_I:%.*]] = call i1 @test_phi_simple(i32 [[A]])
-; CHECK-NEXT:    br i1 [[R_I]], label %[[EXIT1:.*]], label %[[IF_THEN1:.*]]
+; CHECK-NEXT:    call void @work()
+; CHECK-NEXT:    [[COND_I:%.*]] = icmp eq i32 [[A]], 31
+; CHECK-NEXT:    br i1 [[COND_I]], label %[[IF_THEN1:.*]], label %[[B_B_I:.*]]
 ; CHECK:       [[IF_THEN1]]:
+; CHECK-NEXT:    br label %[[EXIT1:.*]]
+; CHECK:       [[B_B_I]]:
 ; CHECK-NEXT:    br label %[[EXIT1]]
 ; CHECK:       [[EXIT1]]:
+; CHECK-NEXT:    [[R_I:%.*]] = phi i1 [ false, %[[IF_THEN1]] ], [ true, %[[B_B_I]] ]
+; CHECK-NEXT:    br i1 [[R_I]], label %[[EXIT:.*]], label %[[IF_THEN:.*]]
+; CHECK:       [[IF_THEN]]:
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
   %c = call i1 @test_phi_simple(i32 %a)
@@ -148,8 +156,10 @@ exit:
 define void @caller_phi_dead_path(i32 %a) {
 ; CHECK-LABEL: define void @caller_phi_dead_path(
 ; CHECK-SAME: i32 [[A:%.*]]) {
-; CHECK-NEXT:    [[C:%.*]] = call i1 @test_phi_dead_path(i32 35, i32 [[A]])
-; CHECK-NEXT:    br i1 [[C]], label %[[EXIT:.*]], label %[[IF_THEN:.*]]
+; CHECK-NEXT:    [[D_I:%.*]] = add i32 [[A]], 5
+; CHECK-NEXT:    [[C2_I:%.*]] = icmp ult i32 [[D_I]], 59
+; CHECK-NEXT:    call void @work_val(i32 [[D_I]])
+; CHECK-NEXT:    br i1 false, label %[[EXIT:.*]], label %[[IF_THEN:.*]]
 ; CHECK:       [[IF_THEN]]:
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
@@ -187,11 +197,16 @@ exit:
 define void @caller_cond_simple(i32 %a) {
 ; CHECK-LABEL: define void @caller_cond_simple(
 ; CHECK-SAME: i32 [[A:%.*]]) {
-; CHECK-NEXT:    [[COND_I:%.*]] = call i1 @test_cond_simple(i32 [[A]])
-; CHECK-NEXT:    br i1 [[COND_I]], label %[[EXIT1:.*]], label %[[IF_THEN1:.*]]
+; CHECK-NEXT:    call void @work()
+; CHECK-NEXT:    [[COND_I:%.*]] = icmp eq i32 [[A]], 31
+; CHECK-NEXT:    br i1 [[COND_I]], label %[[IF_THEN1:.*]], label %[[EXIT1:.*]]
 ; CHECK:       [[IF_THEN1]]:
 ; CHECK-NEXT:    br label %[[EXIT1]]
 ; CHECK:       [[EXIT1]]:
+; CHECK-NEXT:    br i1 [[COND_I]], label %[[EXIT:.*]], label %[[IF_THEN:.*]]
+; CHECK:       [[IF_THEN]]:
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
   %c = call i1 @test_cond_simple(i32 %a)
@@ -238,11 +253,17 @@ exit:
 define void @caller_cond_dead_path(i32 %a) {
 ; CHECK-LABEL: define void @caller_cond_dead_path(
 ; CHECK-SAME: i32 [[A:%.*]]) {
-; CHECK-NEXT:    [[COND_I:%.*]] = call i1 @test_cond_dead_path(i32 [[A]], i32 67)
-; CHECK-NEXT:    br i1 [[COND_I]], label %[[EXIT1:.*]], label %[[IF_THEN1:.*]]
+; CHECK-NEXT:    call void @work()
+; CHECK-NEXT:    [[A_MUL2_I:%.*]] = mul i32 [[A]], 2
+; CHECK-NEXT:    [[COND_I:%.*]] = icmp ult i32 [[A_MUL2_I]], 52
+; CHECK-NEXT:    br i1 [[COND_I]], label %[[IF_THEN1:.*]], label %[[EXIT1:.*]]
 ; CHECK:       [[IF_THEN1]]:
 ; CHECK-NEXT:    br label %[[EXIT1]]
 ; CHECK:       [[EXIT1]]:
+; CHECK-NEXT:    br i1 [[COND_I]], label %[[EXIT:.*]], label %[[IF_THEN:.*]]
+; CHECK:       [[IF_THEN]]:
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
   %c = call i1 @test_cond_dead_path(i32 %a, i32 67)
@@ -328,7 +349,12 @@ exit:
 define void @caller_cond_invert(i1 %a) {
 ; CHECK-LABEL: define void @caller_cond_invert(
 ; CHECK-SAME: i1 [[A:%.*]]) {
-; CHECK-NEXT:    [[C:%.*]] = call i1 @test_cond_invert(i1 [[A]])
+; CHECK-NEXT:    call void @work()
+; CHECK-NEXT:    br i1 [[A]], label %[[B_I:.*]], label %[[TEST_COND_INVERT_EXIT:.*]]
+; CHECK:       [[B_I]]:
+; CHECK-NEXT:    br label %[[TEST_COND_INVERT_EXIT]]
+; CHECK:       [[TEST_COND_INVERT_EXIT]]:
+; CHECK-NEXT:    [[C:%.*]] = xor i1 [[A]], true
 ; CHECK-NEXT:    br i1 [[C]], label %[[EXIT:.*]], label %[[IF_THEN:.*]]
 ; CHECK:       [[IF_THEN]]:
 ; CHECK-NEXT:    br label %[[EXIT]]
