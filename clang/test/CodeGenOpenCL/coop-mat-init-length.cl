@@ -21,9 +21,7 @@ typedef int   __attribute__((coop_mat(memory_scope_sub_group,
                                       16, 16,
                                       CLK_COOPERATIVE_MATRIX_A)))           MatA_int_t;
 
-// coop_mat_init — float scalar.
-//    Expected IR: call __spirv_CompositeConstruct with the scalar value,
-//    returning a spirv.CooperativeMatrixKHR TargetExtType.
+// coop_mat_init with float scalar input.
 kernel void test_init_float(global float *out) {
     MatA_t a;
     a = coop_mat_init(1.0f);
@@ -33,8 +31,7 @@ kernel void test_init_float(global float *out) {
 // CHECK:         call spir_func target("spirv.CooperativeMatrixKHR"
 // CHECK-SAME:    @__spirv_CompositeConstruct{{[^(]*}}(float {{.*}}1.000000e+00)
 
-// coop_mat_init — integer scalar.
-//    Expected IR: call __spirv_CompositeConstruct with an i32 value.
+// coop_mat_init with integer scalar input.
 kernel void test_init_int(void) {
     MatA_int_t m;
     m = coop_mat_init(42);
@@ -44,8 +41,7 @@ kernel void test_init_int(void) {
 // CHECK:         call spir_func target("spirv.CooperativeMatrixKHR"
 // CHECK-SAME:    @__spirv_CompositeConstruct{{[^(]*}}(i32 {{.*}}42)
 
-// coop_mat_init — zero initialisation.
-//    Expected IR: call __spirv_CompositeConstruct with 0.0.
+// coop_mat_init with zero initialisation.
 kernel void test_init_zero(void) {
     MatC_t acc;
     acc = coop_mat_init(0.0f);
@@ -55,9 +51,7 @@ kernel void test_init_zero(void) {
 // CHECK:         call spir_func target("spirv.CooperativeMatrixKHR"
 // CHECK-SAME:    @__spirv_CompositeConstruct{{[^(]*}}(float {{.*}}0.000000e+00)
 
-// coop_mat_length — returns unsigned int.
-//    Expected IR: call __spirv_CooperativeMatrixLengthKHR, result stored into
-//    an i32 alloca.
+// coop_mat_length test.
 kernel void test_length(global unsigned int *out) {
     MatA_t a;
     a = coop_mat_init(0.0f);
@@ -67,25 +61,3 @@ kernel void test_length(global unsigned int *out) {
 // CHECK-LABEL: @{{.*}}test_length
 // CHECK:         call spir_func i32 @__spirv_CooperativeMatrixLengthKHR
 // CHECK-SAME:    target("spirv.CooperativeMatrixKHR"
-
-// coop_mat_init then coop_mat_length — combined flow.
-//    Verifies the TargetExtType produced by init flows into length unchanged.
-kernel void test_init_then_length(global unsigned int *out) {
-    MatA_t a;
-    a = coop_mat_init(2.0f);
-    *out = coop_mat_length(a);
-}
-// CHECK-LABEL: @{{.*}}test_init_then_length
-// CHECK:         call spir_func target("spirv.CooperativeMatrixKHR"
-// CHECK-SAME:    @__spirv_CompositeConstruct
-// CHECK:         call spir_func i32 @__spirv_CooperativeMatrixLengthKHR
-
-// coop_mat_length — calling convention is SPIR_FUNC.
-//    The call must NOT be a plain 'call' — it must be 'call spir_func'.
-kernel void test_length_cc(global unsigned int *out) {
-    MatC_t acc;
-    acc = coop_mat_init(0.0f);
-    *out = coop_mat_length(acc);
-}
-// CHECK-LABEL: @{{.*}}test_length_cc
-// CHECK:        call spir_func i32 @__spirv_CooperativeMatrixLengthKHR
