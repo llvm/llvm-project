@@ -8101,20 +8101,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Arg *inputCharset = Args.getLastArg(options::OPT_finput_charset_EQ)) {
     StringRef value = inputCharset->getValue();
     auto encoding = llvm::TextEncodingConverter::getKnownEncoding(value);
-#if CLANG_DEFAULT_INPUT_ENCODING_IBM1047
-    // -finput_charset=IBM-1047 is default
-    bool isValid = encoding && *encoding == llvm::TextEncoding::IBM1047;
-#else
     bool isValid = encoding && *encoding == llvm::TextEncoding::UTF8;
-#endif
     if (!isValid)
       D.Diag(diag::err_drv_invalid_value) << inputCharset->getAsString(Args)
                                           << value;
   }
-#if CLANG_DEFAULT_INPUT_ENCODING_IBM1047
-  CmdArgs.push_back("-finput-charset");
-  CmdArgs.push_back("IBM-1047");
-#endif
 
   // -fexec_charset=UTF-8 is default. Reject others
   if (Arg *execCharset = Args.getLastArg(options::OPT_fexec_charset_EQ)) {
