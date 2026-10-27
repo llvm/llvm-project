@@ -54,6 +54,7 @@ class DiagnosticsEngine;
 class LangOptions;
 class CodeGenOptions;
 class MacroBuilder;
+class OffloadArch;
 
 /// Contains information gathered from parsing the contents of TargetAttr.
 struct ParsedTargetAttr {
@@ -1424,6 +1425,10 @@ public:
   virtual bool isValidTuneCPUName(StringRef Name) const {
     return isValidCPUName(Name);
   }
+
+  /// Returns the OffloadArch if targeting an offload device, otherwise returns
+  /// OffloadArch::getUnused().
+  virtual OffloadArch getOffloadArch() const;
 
   virtual ParsedTargetAttr parseTargetAttr(StringRef Str) const;
 
