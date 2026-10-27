@@ -874,10 +874,10 @@ void CheckerManager::runCheckersForPrintStateJson(raw_ostream &Out,
 
   llvm::interleave(
       CheckerMsgs,
-      [&](const std::pair<std::string, std::string> &Msg) {
+      [&](const std::pair<std::string, std::string> &CM) {
         Indent(Out, Space, IsDot)
-            << "{ \"checker\": \"" << Msg.first << "\", \"messages\": [" << NL;
-        Indent(Out, InnerSpace, IsDot) << '\"' << Msg.second << '\"' << NL;
+            << "{ \"checker\": \"" << CM.first << "\", \"messages\": [" << NL;
+        Indent(Out, InnerSpace, IsDot) << '\"' << CM.second << '\"' << NL;
         Indent(Out, Space, IsDot) << "]}";
       },
       [&] { Out << ',' << NL; });
