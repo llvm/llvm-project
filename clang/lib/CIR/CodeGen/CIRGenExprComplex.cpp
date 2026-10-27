@@ -1087,8 +1087,7 @@ LValue CIRGenFunction::emitComplexAssignmentLValue(const BinaryOperator *e) {
 
   mlir::Value value; // ignored
   LValue lvalue = ComplexExprEmitter(*this).emitBinAssignLValue(e, value);
-  if (getLangOpts().OpenMP)
-    cgm.errorNYI("emitComplexAssignmentLValue OpenMP");
+  assert(!cir::MissingFeatures::openMPLastprivateConditional());
 
   return lvalue;
 }
@@ -1144,8 +1143,7 @@ mlir::Value CIRGenFunction::emitComplexPrePostIncDec(const UnaryOperator *e,
   // Store the updated result through the lvalue.
   emitStoreOfComplex(loc, incVal, lv, /*isInit=*/false);
 
-  if (getLangOpts().OpenMP)
-    cgm.errorNYI(loc, "emitComplexPrePostIncDec OpenMP");
+  assert(!cir::MissingFeatures::openMPLastprivateConditional());
 
   // If this is a postinc, return the value read from memory, otherwise use the
   // updated value.
