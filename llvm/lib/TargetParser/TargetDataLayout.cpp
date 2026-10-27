@@ -510,23 +510,13 @@ static std::string computeSPIRVDataLayout(const Triple &TT) {
 }
 
 static std::string computePISADataLayout(const Triple &) {
-  // little endian
-  std::string Ret = "e";
-  // pointers: 0-generic, 1-global, 2-constant, 3-shared, 4-private
-  Ret += "-p:64:64-p1:64:64-p2:64:64-p3:32:32-p4:32:32";
-  // data type alignment
-  Ret += "-i1:8:8-i8:8:8-i16:16:16-i32:32:32"
-         "-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v24:32:32"
-         "-v32:32:32-v48:64:64-v64:64:64-v96:128:128"
-         "-v128:128:128-v192:256:256-v256:256:256";
-  // native integer widths and natural stack alignment
-  Ret += "-n16:32:64-S64";
-  // default address space of global variable
-  Ret += "-G1";
-  // default address space for alloca
-  Ret += "-A4";
-
-  return Ret;
+  // Keep pointer specifications sorted by address space: 0-generic, 1-global,
+  // 2-constant, 3-shared, 4-private. Global variables default to address space
+  // 1, and allocas default to address space 4.
+  return "e-p:64:64-p1:64:64-p2:64:64-p3:32:32-p4:32:32-i1:8:8-i8:8:8-"
+         "i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-"
+         "v24:32:32-v32:32:32-v48:64:64-v64:64:64-v96:128:128-"
+         "v128:128:128-v192:256:256-v256:256:256-n16:32:64-S64-G1-A4";
 }
 
 static std::string computeLanaiDataLayout() {
