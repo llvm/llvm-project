@@ -11579,6 +11579,10 @@ ScalarEvolution::getLoopInvariantPredicate(CmpPredicate Pred, const SCEV *LHS,
   if (!ArLHS || ArLHS->getLoop() != L)
     return std::nullopt;
 
+  // Even if both are valid, we need to consistently choose the unsigned or the
+  // signed predicate for the monotonicity and backedge checks below, not
+  // mixtures of both. For now, prefer the unsigned predicate.
+  Pred = Pred.dropSameSign();
   auto MonotonicType = getMonotonicPredicateType(ArLHS, Pred);
   if (!MonotonicType)
     return std::nullopt;
