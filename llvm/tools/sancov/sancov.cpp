@@ -8,7 +8,9 @@
 // This file is a command-line tool for reading and analyzing sanitizer
 // coverage.
 //===----------------------------------------------------------------------===//
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
@@ -121,23 +123,34 @@ static const Regex SymcovFileRegex(".*\\.symcov");
 
 // --------- MAIN DATASTRUCTURES ----------
 
+using RawAddrSet = DenseSet<uint64_t>;
+
 // Contents of .sancov file: list of coverage point addresses that were
 // executed.
 struct RawCoverage {
-  explicit RawCoverage(std::unique_ptr<std::set<uint64_t>> Addrs,
-                       FileHeader Header)
+  explicit RawCoverage(std::unique_ptr<RawAddrSet> Addrs, FileHeader Header)
       : Addrs(std::move(Addrs)), Header(Header) {}
 
   // Read binary .sancov file.
   static ErrorOr<std::unique_ptr<RawCoverage>>
   read(const std::string &FileName);
 
+  // Add the addresses of binary .sancov file to Addrs and return its header.
+  static ErrorOr<FileHeader> append(const std::string &FileName,
+                                    RawAddrSet &Addrs);
+
   // Write binary .sancov file.
   static void write(const std::string &FileName, const RawCoverage &Coverage);
 
-  std::unique_ptr<std::set<uint64_t>> Addrs;
+  std::unique_ptr<RawAddrSet> Addrs;
   FileHeader Header;
 };
+
+static std::vector<uint64_t> sortedAddrs(const RawAddrSet &Addrs) {
+  std::vector<uint64_t> Sorted(Addrs.begin(), Addrs.end());
+  llvm::sort(Sorted);
+  return Sorted;
+}
 
 // Coverage point has an opaque Id and corresponds to multiple source locations.
 struct CoveragePoint {
@@ -215,15 +228,24 @@ static void failIfEmpty(const std::unique_ptr<T> &Ptr,
 
 // ----------- Coverage I/O ----------
 template <typename T>
-static void readInts(const char *Start, const char *End,
-                     std::set<uint64_t> *Ints) {
+static void readInts(const char *Start, const char *End, RawAddrSet *Ints) {
   const T *S = reinterpret_cast<const T *>(Start);
   const T *E = reinterpret_cast<const T *>(End);
-  std::copy(S, E, std::inserter(*Ints, Ints->end()));
+  Ints->reserve(Ints->size() + static_cast<size_t>(E - S));
+  Ints->insert(S, E);
 }
 
 ErrorOr<std::unique_ptr<RawCoverage>>
 RawCoverage::read(const std::string &FileName) {
+  auto Addrs = std::make_unique<RawAddrSet>();
+  ErrorOr<FileHeader> Header = append(FileName, *Addrs);
+  if (!Header)
+    return Header.getError();
+  return std::make_unique<RawCoverage>(std::move(Addrs), *Header);
+}
+
+ErrorOr<FileHeader> RawCoverage::append(const std::string &FileName,
+                                        RawAddrSet &Addrs) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
       MemoryBuffer::getFile(FileName);
   if (!BufOrErr)
@@ -241,16 +263,12 @@ RawCoverage::read(const std::string &FileName) {
     return make_error_code(errc::illegal_byte_sequence);
   }
 
-  auto Addrs = std::make_unique<std::set<uint64_t>>();
-
   switch (Header->Bitness) {
   case Bitness64:
-    readInts<uint64_t>(Buf->getBufferStart() + 8, Buf->getBufferEnd(),
-                       Addrs.get());
+    readInts<uint64_t>(Buf->getBufferStart() + 8, Buf->getBufferEnd(), &Addrs);
     break;
   case Bitness32:
-    readInts<uint32_t>(Buf->getBufferStart() + 8, Buf->getBufferEnd(),
-                       Addrs.get());
+    readInts<uint32_t>(Buf->getBufferStart() + 8, Buf->getBufferEnd(), &Addrs);
     break;
   default:
     errs() << "Unsupported bitness: " << Header->Bitness << '\n';
@@ -259,14 +277,14 @@ RawCoverage::read(const std::string &FileName) {
 
   // Ignore slots that are zero, so a runtime implementation is not required
   // to compactify the data.
-  Addrs->erase(0);
+  Addrs.erase(0);
 
-  return std::make_unique<RawCoverage>(std::move(Addrs), *Header);
+  return *Header;
 }
 
 // Print coverage addresses.
 raw_ostream &operator<<(raw_ostream &OS, const RawCoverage &CoverageData) {
-  for (auto Addr : *CoverageData.Addrs) {
+  for (uint64_t Addr : sortedAddrs(*CoverageData.Addrs)) {
     OS << "0x";
     OS.write_hex(Addr);
     OS << "\n";
@@ -284,15 +302,15 @@ void RawCoverage::write(const std::string &FileName,
   OS.write(reinterpret_cast<const char *>(&Coverage.Header),
            sizeof(Coverage.Header));
 
+  // Sort addresses to make the output deterministic.
+  std::vector<uint64_t> Addrs = sortedAddrs(*Coverage.Addrs);
   switch (Coverage.Header.Bitness) {
   case Bitness64:
-    for (auto Addr : *Coverage.Addrs) {
-      uint64_t Addr64 = Addr;
-      OS.write(reinterpret_cast<const char *>(&Addr64), sizeof(Addr64));
-    }
+    for (uint64_t Addr : Addrs)
+      OS.write(reinterpret_cast<const char *>(&Addr), sizeof(Addr));
     break;
   case Bitness32:
-    for (auto Addr : *Coverage.Addrs) {
+    for (uint64_t Addr : Addrs) {
       uint32_t Addr32 = static_cast<uint32_t>(Addr);
       OS.write(reinterpret_cast<const char *>(&Addr32), sizeof(Addr32));
     }
@@ -932,12 +950,13 @@ symbolize(const RawCoverage &Data, const std::string ObjectFile) {
     Coverage->CoveredIds.insert(utohexstr(Addr, true));
   }
 
+  std::set<uint64_t> CoveredAddrs(Data.Addrs->begin(), Data.Addrs->end());
   std::set<uint64_t> AllAddrs = findCoveragePointAddrs(ObjectFile);
-  if (!llvm::includes(AllAddrs, *Data.Addrs)) {
+  if (!llvm::includes(AllAddrs, CoveredAddrs)) {
     fail("Coverage points in binary and .sancov file do not match.");
   }
   Coverage->Points =
-      getCoveragePoints(ObjectFile, AllAddrs, *Data.Addrs, *Symbolizer);
+      getCoveragePoints(ObjectFile, AllAddrs, CoveredAddrs, *Symbolizer);
   return Coverage;
 }
 
@@ -1099,11 +1118,8 @@ static void diffRawCoverage(const std::string &FileA, const std::string &FileB,
 
   warnIfDifferentBitness(HeaderA, HeaderB, FileA, FileB);
 
-  // Compute A - B
-  auto DiffAddrs = std::make_unique<std::set<uint64_t>>();
-  std::set_difference(CovA.get()->Addrs->begin(), CovA.get()->Addrs->end(),
-                      CovB.get()->Addrs->begin(), CovB.get()->Addrs->end(),
-                      std::inserter(*DiffAddrs, DiffAddrs->end()));
+  auto DiffAddrs = std::make_unique<RawAddrSet>(
+      llvm::set_difference(*CovA.get()->Addrs, *CovB.get()->Addrs));
 
   RawCoverage DiffCov(std::move(DiffAddrs), HeaderA);
   RawCoverage::write(OutputFile, DiffCov);
@@ -1121,16 +1137,11 @@ static void unionRawCoverage(const std::vector<std::string> &InputFiles,
   const FileHeader &UnionHeader = UnionCov.get()->Header;
 
   for (size_t I = 1; I < InputFiles.size(); ++I) {
-    auto Cov = RawCoverage::read(InputFiles[I]);
-    failIfError(Cov);
+    auto CurHeader = RawCoverage::append(InputFiles[I], *UnionCov.get()->Addrs);
+    failIfError(CurHeader);
 
-    const FileHeader &CurHeader = Cov.get()->Header;
-
-    warnIfDifferentBitness(UnionHeader, CurHeader, InputFiles[0],
+    warnIfDifferentBitness(UnionHeader, *CurHeader, InputFiles[0],
                            InputFiles[I]);
-
-    UnionCov.get()->Addrs->insert(Cov.get()->Addrs->begin(),
-                                  Cov.get()->Addrs->end());
   }
 
   RawCoverage::write(OutputFile, *UnionCov.get());
