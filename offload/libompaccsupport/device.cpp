@@ -45,6 +45,11 @@ using namespace llvm::omp::target::error;
 using namespace llvm::omp::target::plugin;
 using namespace llvm::omp::target::debug;
 
+namespace llvm::offload::tmp {
+GenericPluginTy *__ol_tgt_GetPluginFromPlatform(ol_platform_handle_t Platform);
+int32_t __ol_tgt_GetPluginDeviceId(ol_device_handle_t Device);
+} // namespace llvm::offload::tmp
+
 int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,
                                             AsyncInfoTy &AsyncInfo) const {
   // First, check if the user disabled atomic map transfer/malloc/dealloc.
@@ -65,10 +70,10 @@ int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,
   return OFFLOAD_SUCCESS;
 }
 
-DeviceTy::DeviceTy(GenericPluginTy *RTL, int32_t DeviceID, int32_t RTLDeviceID,
+DeviceTy::DeviceTy(int32_t DeviceID, ol_platform_handle_t Platform,
                    ol_device_handle_t DeviceHandle, PluginManager *PM)
-    : DeviceID(DeviceID), RTL(RTL), RTLDeviceID(RTLDeviceID),
-      DeviceHandle(DeviceHandle), PM(PM), MappingInfo(*this) {}
+    : DeviceID(DeviceID), Platform(Platform), DeviceHandle(DeviceHandle),
+      PM(PM), MappingInfo(*this) {}
 
 DeviceTy::~DeviceTy() {
   if (DeviceID == -1 || !(getInfoLevel() & OMP_INFOTYPE_DUMP_TABLE))
@@ -111,6 +116,13 @@ llvm::Error DeviceTy::initGeometryProps() {
   if (auto Err = Query(DeviceInfo::WORK_GROUP_LOCAL_MEM_SIZE,
                        GeometryProps.MaxBlockSharedMemSize))
     return Err;
+  // Not every device reports its number of compute units; zero turns off the
+  // heuristics that need it.
+  GeometryProps.NumComputeUnits =
+      getInfo<uint32_t>(DeviceInfo::NUM_COMPUTE_UNITS);
+  // Some defaults depend on the backend. If it is unknown, the generic ones
+  // apply.
+  GeometryProps.Backend = Backend;
 
   return llvm::Error::success();
 }
@@ -130,6 +142,14 @@ llvm::Error DeviceTy::init() {
                        Res->Details);
   IsHostDevice =
       getInfo<ol_device_type_t>(DeviceInfo::TYPE) == OL_DEVICE_TYPE_HOST;
+
+  RTL = llvm::offload::tmp::__ol_tgt_GetPluginFromPlatform(Platform);
+  RTLDeviceID = llvm::offload::tmp::__ol_tgt_GetPluginDeviceId(DeviceHandle);
+
+  // Needs to be initialized before the GeometryProps.
+  if (olGetPlatformInfo(Platform, OL_PLATFORM_INFO_BACKEND, sizeof(Backend),
+                        &Backend))
+    Backend = OL_PLATFORM_BACKEND_UNKNOWN;
 
   getInfoString(DeviceInfo::UID, Uid);
   if (Uid.empty())
@@ -759,15 +779,12 @@ getKernelLaunchEnvironment(DeviceTy &Device, uint32_t OmpABIVersion,
     freeAfterSynchronization(Device, AsyncInfo, *ReductionAllocOrErr);
   }
 
-  INFO(OMP_INFOTYPE_DATA_TRANSFER, GenericDevice.getDeviceId(),
-       "Copying data from host to device, HstPtr=" DPxMOD ", TgtPtr=" DPxMOD
-       ", Size=%" PRId64 ", Name=KernelLaunchEnv\n",
-       DPxPTR(&LocalKLE), DPxPTR(*AllocOrErr),
-       sizeof(KernelLaunchEnvironmentTy));
-
-  if (auto Err = GenericDevice.dataSubmit(
-          *AllocOrErr, &LocalKLE, sizeof(KernelLaunchEnvironmentTy), AsyncInfo))
-    return Err;
+  if (Device.submitData(*AllocOrErr, &LocalKLE,
+                        sizeof(KernelLaunchEnvironmentTy), AsyncInfo,
+                        /*Entry=*/nullptr, /*HDTTMapPtr=*/nullptr,
+                        /*Loc=*/nullptr, /*Name=*/"KernelLaunchEnv"))
+    return createError(ErrorCode::BackendFailure,
+                       "failed to copy the kernel launch environment");
   return static_cast<KernelLaunchEnvironmentTy *>(*AllocOrErr);
 }
 
@@ -800,6 +817,21 @@ static uint32_t getDeviceBlockLimit(GenericDeviceTy &GenericDevice,
   return BlockLimit;
 }
 
+/// Get the default number of blocks for a kernel in Generic-SPMD mode.
+static uint32_t
+getDefaultNumBlocksGenericSPMD(const DeviceGeometryPropsTy &Props) {
+  // Envar to set the default number of blocks per compute unit for a kernel in
+  // Generic-SPMD mode. Currently only used on AMDGPU devices. Zero uses the
+  // default number of blocks of other kernels.
+  static UInt32Envar OMPX_GenericSPMDTeamsPerCU(
+      "LIBOMPTARGET_GENERIC_SPMD_TEAMS_PER_CU", 6);
+
+  if (Props.Backend != OL_PLATFORM_BACKEND_AMDGPU ||
+      !OMPX_GenericSPMDTeamsPerCU.get() || !Props.NumComputeUnits)
+    return Props.DefaultNumBlocks;
+  return Props.NumComputeUnits * OMPX_GenericSPMDTeamsPerCU.get();
+}
+
 /// Get the effective number of blocks for the kernel based on the
 /// user-defined number of blocks and the loop trip count.
 /// The number of threads \p EffectiveNumThreads can be adjusted by this
@@ -826,7 +858,9 @@ static uint32_t getEffectiveNumBlocks(
     return LoopTripCount > 0 ? (((LoopTripCount - 1) / EffectiveNumThreads) + 1)
                              : 1;
 
-  uint64_t DefaultNumBlocks = Props.DefaultNumBlocks;
+  uint64_t DefaultNumBlocks = KernelEnv.isGenericSPMDMode()
+                                  ? getDefaultNumBlocksGenericSPMD(Props)
+                                  : Props.DefaultNumBlocks;
   uint64_t TripCountNumBlocks = std::numeric_limits<uint64_t>::max();
   if (LoopTripCount > 0) {
     if (KernelEnv.isSPMDMode()) {
@@ -902,6 +936,27 @@ static uint32_t getEffectiveNumBlocks(
       "LIBOMPTARGET_REUSE_BLOCKS_FOR_HIGH_TRIP_COUNT", true);
   if (OMPX_ReuseBlocksForHighTripCount.get())
     PreferredNumBlocks = std::min(TripCountNumBlocks, DefaultNumBlocks);
+
+  // In Generic-SPMD mode, the threads of a block run the iterations of the
+  // inner parallel loops, whose trip counts are unknown. If they are lower than
+  // the number of threads, most threads idle. So trade threads for blocks, down
+  // to one warp per block, as long as the distribute loop has an iteration for
+  // every block. This keeps the device as busy if the inner trip counts are
+  // high. The trade is not done if the user set the number of threads, and the
+  // number of blocks stays within the device's limit, which OMP_NUM_TEAMS may
+  // lower.
+  if (KernelEnv.isGenericSPMDMode() && !IsNumThreadsFromUser &&
+      !IsNumThreadsStrict) {
+    while (EffectiveNumThreads > Props.WarpSize) {
+      uint64_t MaxNumBlocks = std::min<uint64_t>(
+          LoopTripCount,
+          getDeviceBlockLimit(GenericDevice, EffectiveNumThreads / 2));
+      if (uint64_t(PreferredNumBlocks) * 2 > MaxNumBlocks)
+        break;
+      EffectiveNumThreads /= 2;
+      PreferredNumBlocks *= 2;
+    }
+  }
   return std::min(PreferredNumBlocks,
                   getDeviceBlockLimit(GenericDevice, EffectiveNumThreads));
 }

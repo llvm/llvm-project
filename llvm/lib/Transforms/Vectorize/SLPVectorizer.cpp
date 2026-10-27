@@ -7200,11 +7200,21 @@ void BoUpSLP::reorderTopToBottom() {
       (getRootNode().getOpcode() == Instruction::InsertElement ||
        getRootNode().getOpcode() == Instruction::InsertValue ||
        getRootNode().getOpcode() == Instruction::Store);
+  // The operand subtree of a blended load builds the blend mask in the lane
+  // order of the load scalars, so it is not reordered with the graph.
+  auto IsBlendedLoadOperand = [](const TreeEntry *TE) {
+    for (; TE->UserTreeIndex; TE = TE->UserTreeIndex.UserTE)
+      if (TE->UserTreeIndex.UserTE->State == TreeEntry::BlendedLoadVectorize)
+        return true;
+    return false;
+  };
   // Find all reorderable nodes with the given VF.
   // Currently the are vectorized stores,loads,extracts + some gathering of
   // extracts.
   for_each(VectorizableTree, [&, &TTIRef = *TTI](
                                  const std::unique_ptr<TreeEntry> &TE) {
+    if (IsBlendedLoadOperand(TE.get()))
+      return;
     // Look for external users that will probably be vectorized.
     SmallVector<OrdersType, 1> ExternalUserReorderIndices =
         findExternalStoreUsersReorderIndices(TE.get());
@@ -7401,9 +7411,10 @@ void BoUpSLP::reorderTopToBottom() {
     // gathers fetch lanes by value.
     for (std::unique_ptr<TreeEntry> &TE : make_filter_range(
              VectorizableTree, [&](std::unique_ptr<TreeEntry> &TE) {
-               return TE->State != TreeEntry::Vectorize ||
-                      TE->getOpcode() != Instruction::Load ||
-                      !is_contained(SplatGatheredScalarsRoots, TE.get());
+               return (TE->State != TreeEntry::Vectorize ||
+                       TE->getOpcode() != Instruction::Load ||
+                       !is_contained(SplatGatheredScalarsRoots, TE.get())) &&
+                      !IsBlendedLoadOperand(TE.get());
              })) {
       // Just do the reordering for the nodes with the given VF.
       if (TE->Scalars.size() != VF) {
@@ -10677,6 +10688,20 @@ class InstructionsCompatibilityAnalysis {
         MainOp = nullptr;
         return;
       }
+      // fma lanes match the fmuladd main op; use an fma as the main op so the
+      // fused form is not weakened to fmuladd.
+      if (RecurrenceDescriptor::isFMulAddIntrinsic(MainOp)) {
+        auto *It = find_if(VL, [&](Value *V) {
+          return match(V, m_Intrinsic<Intrinsic::fma>()) &&
+                 cast<Instruction>(V)->getParent() == MainOp->getParent();
+        });
+        if (It != VL.end())
+          MainOp = cast<Instruction>(*It);
+        if (doesNotNeedToBeScheduled(MainOp) && R.isVectorized(MainOp)) {
+          MainOp = nullptr;
+          return;
+        }
+      }
       MainOpcode = MainOp->getOpcode();
     }
   }
@@ -10730,7 +10755,7 @@ class InstructionsCompatibilityAnalysis {
     }
     if (!S.isCopyableElement(V))
       return convertTo(cast<Instruction>(V), S).second;
-    if (RecurrenceDescriptor::isFMulAddIntrinsic(MainOp)) {
+    if (isFMAOrFMulAdd(MainOp)) {
       Type *Ty = MainOp->getType();
       if (S.hasAbsorbedCopyableFMulOrFAdd() &&
           isAbsorbableCopyableFMulOrFAdd(S, V)) {
@@ -11471,12 +11496,11 @@ public:
         return OrigS;
       return S;
     }
-    // Casts are the only 1-operand and fmuladd is the only 3-operand
-    // copyable.
+    // Casts are the only 1-operand and fma/fmuladd are the only 3-operand
+    // copyables.
     assert((Operands.size() == 2 ||
             (Operands.size() == 1 && isa<CastInst>(MainOp)) ||
-            (Operands.size() == 3 &&
-             RecurrenceDescriptor::isFMulAddIntrinsic(MainOp))) &&
+            (Operands.size() == 3 && isFMAOrFMulAdd(MainOp))) &&
            "Unexpected number of operands!");
     if (CopyableNum < VL.size() / 2)
       return S;
@@ -14449,9 +14473,10 @@ bool BoUpSLP::matchesInversedZExtSelect(
   auto MatchCmp = m_Cmp(Pred, m_Value(), m_Value());
   if (!match(Cmp, MatchCmp))
     return false;
-  CmpPredicate MainPred = Pred;
-  CmpPredicate InversedPred(CmpInst::getInversePredicate(Pred),
-                            Pred.hasSameSign());
+  // The vector compare keeps the main predicate, so only the lanes with
+  // samesign may match it with the flipped signedness.
+  CmpPredicate MainPred = Pred.dropSameSign();
+  CmpPredicate InversedPred = CmpInst::getInversePredicate(Pred);
   for (const auto [Idx, V] :
        make_filter_range(enumerate(CmpTE->Scalars), [&](const auto &P) {
          return match(P.value(), MatchCmp);
@@ -16675,6 +16700,30 @@ getVectorInstrContextHint(ArrayRef<Value *> VL, const APInt &DemandedElts) {
   return VIC;
 }
 
+/// \returns the cast opcode, which gives the same result for the operand,
+/// demoted with the signedness \p IsSigned, as \p Opcode gives for the original
+/// operand, or std::nullopt if the operand must be extended back first.
+static std::optional<unsigned> getCastOpcodeForDemotedOperand(unsigned Opcode,
+                                                              bool IsSigned) {
+  switch (Opcode) {
+  case Instruction::SExt:
+  case Instruction::SIToFP:
+    // The zero extended operand is non-negative.
+    if (IsSigned)
+      return Opcode;
+    return Opcode == Instruction::SExt ? Instruction::ZExt
+                                       : Instruction::UIToFP;
+  case Instruction::ZExt:
+  case Instruction::UIToFP:
+    // Cannot absorb the sign extension of the operand.
+    if (IsSigned)
+      return std::nullopt;
+    return Opcode;
+  default:
+    return std::nullopt;
+  }
+}
+
 InstructionCost
 BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                       SmallPtrSetImpl<Value *> &CheckedExtracts) {
@@ -17231,6 +17280,16 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     auto *SrcVecTy = getWidenedType(SrcScalarTy, VL.size());
     unsigned Opcode = ShuffleOrOp;
     unsigned VecOpcode = Opcode;
+    // zext and uitofp cannot absorb the sign extension of a signed demoted
+    // operand and inttoptr needs the original type, so extend it back first.
+    std::optional<std::pair<uint64_t, bool>> ExtBackBW;
+    if (SrcIt != MinBWs.end() &&
+        (Opcode == Instruction::IntToPtr ||
+         (SrcIt->second.second &&
+          (Opcode == Instruction::UIToFP || Opcode == Instruction::ZExt)))) {
+      ExtBackBW = SrcIt->second;
+      SrcIt = MinBWs.end();
+    }
     if (!ScalarTy->isFPOrFPVectorTy() && !SrcScalarTy->isFPOrFPVectorTy() &&
         (SrcIt != MinBWs.end() || It != MinBWs.end())) {
       // Check if the values are candidates to demote.
@@ -17259,8 +17318,6 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                !SrcIt->second.second) {
       VecOpcode = Instruction::UIToFP;
     }
-    const bool IsSExtBack = VecOpcode == Instruction::UIToFP &&
-                            SrcIt != MinBWs.end() && SrcIt->second.second;
     auto GetScalarCost = [&](unsigned Idx) -> InstructionCost {
       assert(Idx == 0 && "Expected 0 index only");
       return TTI->getCastInstrCost(Opcode, VL0->getType(),
@@ -17268,12 +17325,16 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                                    TTI::getCastContextHint(VL0), CostKind, VL0);
     };
     auto GetVectorCost = [=](InstructionCost CommonCost) {
+      TTI::CastContextHint CCH = GetCastContextHint(VL0->getOperand(0));
+      if (ExtBackBW)
+        CommonCost += TTI->getCastInstrCost(
+            ExtBackBW->second ? Instruction::SExt : Instruction::ZExt, SrcVecTy,
+            SrcVecTy->getWithNewBitWidth(ExtBackBW->first), CCH, CostKind);
       // Do not count cost here if minimum bitwidth is in effect and it is just
       // a bitcast (here it is just a noop).
       if (VecOpcode != Opcode && VecOpcode == Instruction::BitCast)
         return CommonCost;
       auto *VI = VL0->getOpcode() == Opcode ? VL0 : nullptr;
-      TTI::CastContextHint CCH = GetCastContextHint(VL0->getOperand(0));
 
       bool IsArithmeticExtendedReduction =
           E->Idx == 0 && UserIgnoreList &&
@@ -17288,12 +17349,6 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       if (IsArithmeticExtendedReduction &&
           (VecOpcode == Instruction::ZExt || VecOpcode == Instruction::SExt))
         return CommonCost;
-      if (IsSExtBack) {
-        auto *DemotedVecTy = getWidenedType(
-            IntegerType::get(F->getContext(), SrcIt->second.first), VL.size());
-        CommonCost += TTI->getCastInstrCost(Instruction::SExt, SrcVecTy,
-                                            DemotedVecTy, CCH, CostKind);
-      }
       return CommonCost +
              TTI->getCastInstrCost(VecOpcode, VecTy, SrcVecTy, CCH, CostKind,
                                    VecOpcode == Opcode ? VI : nullptr);
@@ -18164,23 +18219,39 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
             cast<CmpInst>(E->getAltOp())->getPredicate(), CostKind, Op0Info,
             Op1Info, E->getAltOp());
       } else {
-        Type *SrcSclTy = E->getMainOp()->getOperand(0)->getType();
-        auto *SrcTy = getWidenedType(SrcSclTy, VL.size());
-        if (SrcSclTy->isIntegerTy() && ScalarTy->isIntegerTy()) {
-          auto SrcIt = MinBWs.find(getOperandEntry(E, 0));
-          unsigned BWSz = DL->getTypeSizeInBits(ScalarTy);
-          unsigned SrcBWSz =
-              DL->getTypeSizeInBits(E->getMainOp()->getOperand(0)->getType());
-          if (SrcIt != MinBWs.end()) {
-            SrcBWSz = SrcIt->second.first;
-            SrcSclTy = IntegerType::get(SrcSclTy->getContext(), SrcBWSz);
-            SrcTy = getWidenedType(SrcSclTy, VL.size());
+        Type *SrcTy =
+            getWidenedType(E->getMainOp()->getOperand(0)->getType(), VL.size());
+        TTI::CastContextHint CCH =
+            GetCastContextHint(E->getMainOp()->getOperand(0));
+        unsigned Opcode0 = E->getOpcode();
+        unsigned Opcode1 = E->getAltOpcode();
+        // The casts of the demoted operand must take its signedness into
+        // account. If any of them cannot do it, the operand is extended back
+        // first.
+        if (auto SrcIt = MinBWs.find(getOperandEntry(E, 0));
+            SrcIt != MinBWs.end()) {
+          Type *DemotedSrcTy = SrcTy->getWithNewBitWidth(SrcIt->second.first);
+          std::optional<unsigned> DemotedOpcode0 =
+              getCastOpcodeForDemotedOperand(Opcode0, SrcIt->second.second);
+          std::optional<unsigned> DemotedOpcode1 =
+              getCastOpcodeForDemotedOperand(Opcode1, SrcIt->second.second);
+          if (DemotedOpcode0 && DemotedOpcode1) {
+            Opcode0 = *DemotedOpcode0;
+            Opcode1 = *DemotedOpcode1;
+            SrcTy = DemotedSrcTy;
+          } else {
+            VecCost += TTIRef.getCastInstrCost(
+                SrcIt->second.second ? Instruction::SExt : Instruction::ZExt,
+                SrcTy, DemotedSrcTy, CCH, CostKind);
           }
+        }
+        if (SrcTy->isIntOrIntVectorTy() && ScalarTy->isIntegerTy()) {
+          unsigned BWSz = DL->getTypeSizeInBits(ScalarTy);
+          unsigned SrcBWSz = DL->getTypeSizeInBits(SrcTy->getScalarType());
           if (BWSz <= SrcBWSz) {
             if (BWSz < SrcBWSz)
-              VecCost = TTIRef.getCastInstrCost(
-                  Instruction::Trunc, VecTy, SrcTy,
-                  GetCastContextHint(E->getMainOp()->getOperand(0)), CostKind);
+              VecCost += TTIRef.getCastInstrCost(Instruction::Trunc, VecTy,
+                                                 SrcTy, CCH, CostKind);
             LLVM_DEBUG({
               dbgs()
                   << "SLP: alternate extension, which should be truncated.\n";
@@ -18189,14 +18260,14 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
             return VecCost;
           }
         }
-        VecCost = TTIRef.getCastInstrCost(
-            E->getOpcode(), VecTy, SrcTy,
-            GetCastContextHint(E->getMainOp()->getOperand(0)), CostKind,
-            E->getMainOp());
-        VecCost += TTIRef.getCastInstrCost(
-            E->getAltOpcode(), VecTy, SrcTy,
-            GetCastContextHint(E->getMainOp()->getOperand(0)), CostKind,
-            E->getAltOp());
+        // Same casts of the demoted operand, no need to shuffle.
+        if (Opcode0 == Opcode1)
+          return VecCost +
+                 TTIRef.getCastInstrCost(Opcode0, VecTy, SrcTy, CCH, CostKind);
+        VecCost += TTIRef.getCastInstrCost(Opcode0, VecTy, SrcTy, CCH, CostKind,
+                                           E->getMainOp());
+        VecCost += TTIRef.getCastInstrCost(Opcode1, VecTy, SrcTy, CCH, CostKind,
+                                           E->getAltOp());
       }
       SmallVector<int> Mask;
       E->buildAltOpShuffleMask(
@@ -24301,10 +24372,15 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
     // a known-zero narrow sign bit), or a converted lane's adjusted constant
     // flips the sign.
     if (auto *ICmp = dyn_cast<ICmpInst>(I); ICmp && It == MinBWs.end()) {
+      // The bit tests compare and L, R, which sign-extends from the narrow
+      // type only if both L and R do.
+      bool IsSigned0 =
+          GetOperandSignedness(0) &&
+          (none_of(E->Scalars, IsaPred<TruncInst>) || GetOperandSignedness(1));
       bool SignChange =
           ICmp->getOperand(0)->getType()->getScalarType() !=
               VL0->getOperand(0)->getType()->getScalarType() &&
-          ((!GetOperandSignedness(0) &&
+          ((!IsSigned0 &&
             !isKnownNonNegative(ICmp->getOperand(0), SimplifyQuery(*DL))) ||
            (!GetOperandSignedness(1) &&
             !isKnownNonNegative(ICmp->getOperand(1), SimplifyQuery(*DL))));
@@ -24641,6 +24717,16 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       Instruction::CastOps VecOpcode = CI->getOpcode();
       Type *SrcScalarTy = cast<VectorType>(InVec->getType())->getElementType();
       auto SrcIt = MinBWs.find(getOperandEntry(E, 0));
+      if (SrcIt != MinBWs.end() &&
+          (VecOpcode == Instruction::IntToPtr ||
+           (SrcIt->second.second && (VecOpcode == Instruction::UIToFP ||
+                                     VecOpcode == Instruction::ZExt)))) {
+        InVec = Builder.CreateIntCast(
+            InVec, getWidenedType(CI->getSrcTy(), E->Scalars.size()),
+            SrcIt->second.second);
+        SrcScalarTy = CI->getSrcTy()->getScalarType();
+        SrcIt = MinBWs.end();
+      }
       if (!ScalarTy->isFPOrFPVectorTy() && !SrcScalarTy->isFPOrFPVectorTy() &&
           (SrcIt != MinBWs.end() || It != MinBWs.end() ||
            SrcScalarTy != CI->getOperand(0)->getType()->getScalarType())) {
@@ -24671,11 +24757,6 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
             getWidenedType(OrigSrcScalarTy, E->Scalars.size());
         InVec =
             Builder.CreateIntCast(InVec, OrigSrcVectorTy, SrcIt->second.second);
-      } else if (VecOpcode == Instruction::UIToFP && SrcIt != MinBWs.end() &&
-                 SrcIt->second.second) {
-        auto *OrigSrcVectorTy =
-            getWidenedType(CI->getSrcTy(), E->Scalars.size());
-        InVec = Builder.CreateSExt(InVec, OrigSrcVectorTy);
       }
       Value *V = (VecOpcode != ShuffleOrOp && VecOpcode == Instruction::BitCast)
                      ? InVec
@@ -25661,6 +25742,28 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
           CmpInst::Predicate AltPred = AltCI->getPredicate();
           V1 = Builder.CreateCmp(AltPred, LHS, RHS);
         } else {
+          unsigned Opcode0 = E->getOpcode();
+          unsigned Opcode1 = E->getAltOpcode();
+          // The casts of the demoted operand must take its signedness into
+          // account. If any of them cannot do it, the operand is extended back
+          // first.
+          if (auto SrcIt = MinBWs.find(getOperandEntry(E, 0));
+              SrcIt != MinBWs.end()) {
+            std::optional<unsigned> DemotedOpcode0 =
+                getCastOpcodeForDemotedOperand(Opcode0, SrcIt->second.second);
+            std::optional<unsigned> DemotedOpcode1 =
+                getCastOpcodeForDemotedOperand(Opcode1, SrcIt->second.second);
+            if (DemotedOpcode0 && DemotedOpcode1) {
+              Opcode0 = *DemotedOpcode0;
+              Opcode1 = *DemotedOpcode1;
+            } else {
+              LHS = Builder.CreateIntCast(
+                  LHS,
+                  getWidenedType(E->getMainOp()->getOperand(0)->getType(),
+                                 E->Scalars.size()),
+                  SrcIt->second.second);
+            }
+          }
           if (LHS->getType()->isIntOrIntVectorTy() && ScalarTy->isIntegerTy()) {
             unsigned SrcBWSz = DL->getTypeSizeInBits(
                 cast<VectorType>(LHS->getType())->getElementType());
@@ -25677,10 +25780,20 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
               return LHS;
             }
           }
-          V0 = Builder.CreateCast(
-              static_cast<Instruction::CastOps>(E->getOpcode()), LHS, VecTy);
-          V1 = Builder.CreateCast(
-              static_cast<Instruction::CastOps>(E->getAltOpcode()), LHS, VecTy);
+          // Same casts of the demoted operand, no need to shuffle.
+          if (Opcode0 == Opcode1) {
+            V = Builder.CreateCast(static_cast<Instruction::CastOps>(Opcode0),
+                                   LHS, VecTy);
+            V = FinalShuffle(V, E);
+            E->VectorizedValue = V;
+            ++NumVectorInstructions;
+            return V;
+          }
+          V0 = Builder.CreateCast(static_cast<Instruction::CastOps>(Opcode0),
+                                  LHS, VecTy);
+          V1 = Builder.CreateCast(static_cast<Instruction::CastOps>(Opcode1),
+                                  LHS, VecTy);
+          NumVectorInstructions += 2;
         }
         // Add V0 and V1 to later analysis to try to find and remove matching
         // instruction, if any.
@@ -29717,7 +29830,7 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
                                 LoopInfo *LI_, DominatorTree *DT_,
                                 AssumptionCache *AC_, DemandedBits *DB_,
                                 OptimizationRemarkEmitter *ORE_) {
-  Opts = &F.getContext().getLibraryOptions().get<VectorizeOptions>();
+  Opts = &getVectorizeOptions(F);
   if (!Opts->vectorize_slp)
     return false;
   SE = SE_;

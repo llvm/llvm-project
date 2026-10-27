@@ -2345,6 +2345,11 @@ public:
     return false;
   }
 
+  /// Whether a fence between the load-linked and the store-conditional can
+  /// clear the reservation. If true, AtomicExpandPass places the release fence
+  /// of a weak cmpxchg before the load-linked. Defaults to false.
+  virtual bool fenceClearsLoadLinkedReservation() const { return false; }
+
   /// Whether AtomicExpandPass should automatically insert a seq_cst trailing
   /// fence without reducing the ordering for this atomic store. Defaults to
   /// false.
@@ -5780,6 +5785,13 @@ public:
   /// \param N Node to expand
   /// \returns The expansion if successful, SDValue() otherwise
   SDValue expandCLMUL(SDNode *N, SelectionDAG &DAG) const;
+
+  /// Expand MODF node into fractional and integer parts.
+  /// \param N Node to expand
+  /// \param Results Vector to store the resulting fractional and integer parts
+  /// \returns true if the node has been expanded, false if it has not
+  bool expandMODF(SDNode *N, SelectionDAG &DAG,
+                  SmallVectorImpl<SDValue> &Results) const;
 
   /// Expand parallel bit extract (compress).
   /// \param N Node to expand

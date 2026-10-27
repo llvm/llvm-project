@@ -1995,25 +1995,25 @@ Value *LibCallSimplifier::optimizeNew(CallInst *CI, IRBuilderBase &B,
   case LibFunc_size_returning_new:
     NewCall = emitHotColdSizeReturningNew(CI->getArgOperand(0), B, TLI,
                                           LibFunc_size_returning_new_hot_cold,
-                                          HotColdVal);
+                                          HotColdVal, CI->getType());
     break;
   case LibFunc_size_returning_new_hot_cold:
     if (ShouldOptimizeExistingHotColdNew)
-      NewCall = emitHotColdSizeReturningNew(CI->getArgOperand(0), B, TLI,
-                                            LibFunc_size_returning_new_hot_cold,
-                                            getHotColdHintForExisting(HotCold));
+      NewCall = emitHotColdSizeReturningNew(
+          CI->getArgOperand(0), B, TLI, LibFunc_size_returning_new_hot_cold,
+          getHotColdHintForExisting(HotCold), CI->getType());
     break;
   case LibFunc_size_returning_new_aligned:
     NewCall = emitHotColdSizeReturningNewAligned(
         CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
-        LibFunc_size_returning_new_aligned_hot_cold, HotColdVal);
+        LibFunc_size_returning_new_aligned_hot_cold, HotColdVal, CI->getType());
     break;
   case LibFunc_size_returning_new_aligned_hot_cold:
     if (ShouldOptimizeExistingHotColdNew)
       NewCall = emitHotColdSizeReturningNewAligned(
           CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
           LibFunc_size_returning_new_aligned_hot_cold,
-          getHotColdHintForExisting(HotCold));
+          getHotColdHintForExisting(HotCold), CI->getType());
     break;
   default:
     return nullptr;

@@ -251,6 +251,10 @@ void AArch64PointerAuthImpl::signLR(MachineFunction &MF,
   // No SEH opcode for this one; it doesn't materialize into an
   // instruction on Windows.
   if (MFnI.branchProtectionPAuthLR() && Subtarget->hasPAuthLR()) {
+    if (!MF.getTarget().getTargetTriple().isOSBinFormatMachO())
+      BuildMI(MBB, MBBI, DL, TII->get(AArch64::EMITNONHINTED))
+          .setMIFlag(MachineInstr::FrameSetup);
+
     decoratePACWithCFI(MBB, MBBI, EmitCFI, [&]() {
       BuildMI(MBB, MBBI, DL,
               TII->get(UseBKey ? AArch64::PACIBSPPC : AArch64::PACIASPPC))

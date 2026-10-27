@@ -666,11 +666,6 @@ static cl::opt<bool> EnableUniformIntrinsicCombine(
     cl::init(true), cl::Hidden);
 
 static cl::opt<bool>
-    EnableMachinePipeliner("amdgpu-enable-pipeliner",
-                           cl::desc("Enable Machine Pipeliner for AMDGCN"),
-                           cl::init(false), cl::Hidden);
-
-static cl::opt<bool>
     UseSSAMachineScheduler("amdgpu-use-ssa-machine-scheduler",
                            cl::desc("Use the machine scheduler in SSA mode."),
                            cl::init(false), cl::Hidden);
@@ -1848,8 +1843,6 @@ void GCNPassConfig::addFastRegAlloc() {
 void GCNPassConfig::addPreRegAlloc() {
   if (getOptLevel() != CodeGenOptLevel::None)
     addPass(&AMDGPUPrepareAGPRAllocLegacyID);
-  if (getOptLevel() >= CodeGenOptLevel::Default && EnableMachinePipeliner)
-    addPass(&MachinePipelinerID);
 }
 
 void GCNPassConfig::addOptimizedRegAlloc() {
@@ -2710,8 +2703,6 @@ Error AMDGPUCodeGenPassBuilder::addOptimizedRegAlloc(PassManagerWrapper &PMW) {
 void AMDGPUCodeGenPassBuilder::addPreRegAlloc(PassManagerWrapper &PMW) {
   if (getOptLevel() != CodeGenOptLevel::None)
     addMachineFunctionPass(AMDGPUPrepareAGPRAllocPass(), PMW);
-  if (getOptLevel() >= CodeGenOptLevel::Default && EnableMachinePipeliner)
-    addMachineFunctionPass(MachinePipelinerPass(), PMW);
 }
 
 Expected<bool> AMDGPUCodeGenPassBuilder::addRegAssignAndRewriteOptimized(
