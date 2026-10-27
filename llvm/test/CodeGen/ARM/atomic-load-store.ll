@@ -733,16 +733,9 @@ define void @store_atomic_bf16__seq_cst(ptr %ptr, bfloat %val1) {
 ;
 ; ARMOPTNONE-LABEL: store_atomic_bf16__seq_cst:
 ; ARMOPTNONE:       @ %bb.0:
-; ARMOPTNONE-NEXT:    sub sp, sp, #4
-; ARMOPTNONE-NEXT:    str r1, [sp] @ 4-byte Spill
-; ARMOPTNONE-NEXT:    mov r1, r0
-; ARMOPTNONE-NEXT:    ldr r0, [sp] @ 4-byte Reload
-; ARMOPTNONE-NEXT:    vmov s0, r0
-; ARMOPTNONE-NEXT:    vmov r0, s0
 ; ARMOPTNONE-NEXT:    dmb ish
-; ARMOPTNONE-NEXT:    strh r0, [r1]
+; ARMOPTNONE-NEXT:    strh r1, [r0]
 ; ARMOPTNONE-NEXT:    dmb ish
-; ARMOPTNONE-NEXT:    add sp, sp, #4
 ; ARMOPTNONE-NEXT:    bx lr
 ;
 ; THUMBTWO-LABEL: store_atomic_bf16__seq_cst:

@@ -10,10 +10,6 @@ define bfloat @fptrunc_f32(float %x) nounwind {
 ; NO-SSE2-NEXT:    flds {{[0-9]+}}(%esp)
 ; NO-SSE2-NEXT:    fstps (%esp)
 ; NO-SSE2-NEXT:    calll __truncsfbf2
-; NO-SSE2-NEXT:    # kill: def $ax killed $ax def $eax
-; NO-SSE2-NEXT:    shll $16, %eax
-; NO-SSE2-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; NO-SSE2-NEXT:    flds {{[0-9]+}}(%esp)
 ; NO-SSE2-NEXT:    addl $12, %esp
 ; NO-SSE2-NEXT:    retl
 ;
@@ -48,10 +44,6 @@ define bfloat @fptrunc_f64(double %x) nounwind {
 ; NO-SSE2-NEXT:    fldl {{[0-9]+}}(%esp)
 ; NO-SSE2-NEXT:    fstpl (%esp)
 ; NO-SSE2-NEXT:    calll __truncdfbf2
-; NO-SSE2-NEXT:    # kill: def $ax killed $ax def $eax
-; NO-SSE2-NEXT:    shll $16, %eax
-; NO-SSE2-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; NO-SSE2-NEXT:    flds {{[0-9]+}}(%esp)
 ; NO-SSE2-NEXT:    addl $12, %esp
 ; NO-SSE2-NEXT:    retl
 ;
@@ -83,11 +75,6 @@ define bfloat @fptrunc_f32_strict(float %x) strictfp {
 ; NO-SSE2-NEXT:    fstps (%esp)
 ; NO-SSE2-NEXT:    wait
 ; NO-SSE2-NEXT:    calll __truncsfbf2
-; NO-SSE2-NEXT:    # kill: def $ax killed $ax def $eax
-; NO-SSE2-NEXT:    shll $16, %eax
-; NO-SSE2-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; NO-SSE2-NEXT:    flds {{[0-9]+}}(%esp)
-; NO-SSE2-NEXT:    wait
 ; NO-SSE2-NEXT:    addl $12, %esp
 ; NO-SSE2-NEXT:    .cfi_def_cfa_offset 4
 ; NO-SSE2-NEXT:    retl

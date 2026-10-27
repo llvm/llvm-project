@@ -791,20 +791,9 @@ define double @load_double_seq_cst(ptr %fptr) {
 define void @store_bfloat(ptr %fptr, bfloat %v) {
 ; X86-SSE1-LABEL: store_bfloat:
 ; X86-SSE1:       # %bb.0:
-; X86-SSE1-NEXT:    pushl %esi
-; X86-SSE1-NEXT:    .cfi_def_cfa_offset 8
-; X86-SSE1-NEXT:    subl $8, %esp
-; X86-SSE1-NEXT:    .cfi_def_cfa_offset 16
-; X86-SSE1-NEXT:    .cfi_offset %esi, -8
-; X86-SSE1-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-SSE1-NEXT:    movss %xmm0, (%esp)
-; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-SSE1-NEXT:    calll __truncsfbf2
-; X86-SSE1-NEXT:    movw %ax, (%esi)
-; X86-SSE1-NEXT:    addl $8, %esp
-; X86-SSE1-NEXT:    .cfi_def_cfa_offset 8
-; X86-SSE1-NEXT:    popl %esi
-; X86-SSE1-NEXT:    .cfi_def_cfa_offset 4
+; X86-SSE1-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE1-NEXT:    movw %ax, (%ecx)
 ; X86-SSE1-NEXT:    retl
 ;
 ; X86-SSE2-LABEL: store_bfloat:
@@ -823,20 +812,9 @@ define void @store_bfloat(ptr %fptr, bfloat %v) {
 ;
 ; X86-NOSSE-LABEL: store_bfloat:
 ; X86-NOSSE:       # %bb.0:
-; X86-NOSSE-NEXT:    pushl %esi
-; X86-NOSSE-NEXT:    .cfi_def_cfa_offset 8
-; X86-NOSSE-NEXT:    subl $8, %esp
-; X86-NOSSE-NEXT:    .cfi_def_cfa_offset 16
-; X86-NOSSE-NEXT:    .cfi_offset %esi, -8
-; X86-NOSSE-NEXT:    flds {{[0-9]+}}(%esp)
-; X86-NOSSE-NEXT:    fstps (%esp)
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NOSSE-NEXT:    calll __truncsfbf2
-; X86-NOSSE-NEXT:    movw %ax, (%esi)
-; X86-NOSSE-NEXT:    addl $8, %esp
-; X86-NOSSE-NEXT:    .cfi_def_cfa_offset 8
-; X86-NOSSE-NEXT:    popl %esi
-; X86-NOSSE-NEXT:    .cfi_def_cfa_offset 4
+; X86-NOSSE-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NOSSE-NEXT:    movw %ax, (%ecx)
 ; X86-NOSSE-NEXT:    retl
 ;
 ; X64-SSE-LABEL: store_bfloat:
@@ -857,15 +835,8 @@ define void @store_bfloat(ptr %fptr, bfloat %v) {
 define bfloat @load_bfloat(ptr %fptr) {
 ; X86-SSE1-LABEL: load_bfloat:
 ; X86-SSE1:       # %bb.0:
-; X86-SSE1-NEXT:    pushl %eax
-; X86-SSE1-NEXT:    .cfi_def_cfa_offset 8
 ; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE1-NEXT:    movzwl (%eax), %eax
-; X86-SSE1-NEXT:    shll $16, %eax
-; X86-SSE1-NEXT:    movl %eax, (%esp)
-; X86-SSE1-NEXT:    flds (%esp)
-; X86-SSE1-NEXT:    popl %eax
-; X86-SSE1-NEXT:    .cfi_def_cfa_offset 4
 ; X86-SSE1-NEXT:    retl
 ;
 ; X86-SSE2-LABEL: load_bfloat:
@@ -884,15 +855,8 @@ define bfloat @load_bfloat(ptr %fptr) {
 ;
 ; X86-NOSSE-LABEL: load_bfloat:
 ; X86-NOSSE:       # %bb.0:
-; X86-NOSSE-NEXT:    pushl %eax
-; X86-NOSSE-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NOSSE-NEXT:    movzwl (%eax), %eax
-; X86-NOSSE-NEXT:    shll $16, %eax
-; X86-NOSSE-NEXT:    movl %eax, (%esp)
-; X86-NOSSE-NEXT:    flds (%esp)
-; X86-NOSSE-NEXT:    popl %eax
-; X86-NOSSE-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NOSSE-NEXT:    retl
 ;
 ; X64-SSE-LABEL: load_bfloat:
