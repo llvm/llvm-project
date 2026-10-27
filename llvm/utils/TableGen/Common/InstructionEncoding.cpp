@@ -8,6 +8,7 @@
 
 #include "InstructionEncoding.h"
 #include "CodeGenInstruction.h"
+#include "CodeGenTarget.h"
 #include "VarLenCodeEmitterGen.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/TableGen/Error.h"
@@ -85,12 +86,12 @@ void InstructionEncoding::parseVarLenEncoding(const VarLenInst &VLI) {
 }
 
 void InstructionEncoding::parseFixedLenEncoding(
-    const BitsInit &RecordInstBits) {
+    ArrayRef<const Init *> RecordInstBits) {
   // For fixed length instructions, sometimes the `Inst` field specifies more
   // bits than the actual size of the instruction, which is specified in `Size`.
   // In such cases, we do some basic validation and drop the upper bits.
   unsigned BitWidth = EncodingDef->getValueAsInt("Size") * 8;
-  unsigned InstNumBits = RecordInstBits.getNumBits();
+  unsigned InstNumBits = RecordInstBits.size();
 
   // Returns true if all bits in `Bits` are zero or unset.
   auto CheckAllZeroOrUnset = [&](ArrayRef<const Init *> Bits,
@@ -116,14 +117,12 @@ void InstructionEncoding::parseFixedLenEncoding(
   if (InstNumBits > BitWidth) {
     // Ensure that all the bits beyond 'Size' are 0 or unset (i.e., carry no
     // actual encoding).
-    ArrayRef<const Init *> UpperBits =
-        RecordInstBits.getBits().drop_front(BitWidth);
+    ArrayRef<const Init *> UpperBits = RecordInstBits.drop_front(BitWidth);
     const RecordVal *InstField = EncodingDef->getValue("Inst");
     CheckAllZeroOrUnset(UpperBits, InstField);
   }
 
-  ArrayRef<const Init *> ActiveInstBits =
-      RecordInstBits.getBits().take_front(BitWidth);
+  ArrayRef<const Init *> ActiveInstBits = RecordInstBits.take_front(BitWidth);
   InstBits = KnownBits(BitWidth);
   SoftFailMask = APInt(BitWidth, 0);
 
@@ -235,7 +234,7 @@ static void debugDumpRecord(const Record &Rec) {
 /// constant-valued bit values, and OpInfo.Fields with the ranges of bits to
 /// insert from the decoded instruction.
 static void addOneOperandFields(const Record *EncodingDef,
-                                const BitsInit &InstBits,
+                                ArrayRef<const Init *> InstBits,
                                 std::map<StringRef, StringRef> &TiedNames,
                                 const Record *OpRec, StringRef OpName,
                                 OperandInfo &OpInfo) {
@@ -292,11 +291,11 @@ static void addOneOperandFields(const Record *EncodingDef,
   // op{4...3}   1    2     3
   // op{5}       6    1     5
   //
-  for (unsigned I = 0, J = 0; I != InstBits.getNumBits(); I = J) {
+  for (unsigned I = 0, J = 0; I != InstBits.size(); I = J) {
     const VarInit *Var;
     unsigned Offset = 0;
-    for (; J != InstBits.getNumBits(); ++J) {
-      const Init *BitJ = InstBits.getBit(J);
+    for (; J != InstBits.size(); ++J) {
+      const Init *BitJ = InstBits[J];
       if (const auto *VBI = dyn_cast<VarBitInit>(BitJ)) {
         Var = dyn_cast<VarInit>(VBI->getBitVar());
         if (I == J)
@@ -325,7 +324,7 @@ static void addOneOperandFields(const Record *EncodingDef,
   }
 }
 
-void InstructionEncoding::parseFixedLenOperands(const BitsInit &Bits) {
+void InstructionEncoding::parseFixedLenOperands(ArrayRef<const Init *> Bits) {
   // Search for tied operands, so that we can correctly instantiate
   // operands that are not explicitly represented in the encoding.
   std::map<StringRef, StringRef> TiedNames;
@@ -398,7 +397,8 @@ void InstructionEncoding::parseFixedLenOperands(const BitsInit &Bits) {
   }
 }
 
-InstructionEncoding::InstructionEncoding(const Record *EncodingDef,
+InstructionEncoding::InstructionEncoding(const CodeGenTarget &Target,
+                                         const Record *EncodingDef,
                                          const CodeGenInstruction *Inst)
     : EncodingDef(EncodingDef), Inst(Inst) {
   const Record *InstDef = Inst->TheDef;
@@ -421,11 +421,12 @@ InstructionEncoding::InstructionEncoding(const Record *EncodingDef,
     if (DecoderMethod.empty())
       parseVarLenOperands(VLI);
   } else {
-    const auto *BI = cast<BitsInit>(InstField->getValue());
-    parseFixedLenEncoding(*BI);
+    ArrayRef<const Init *> InstBits =
+        Target.getInstructionEncodingBits(EncodingDef);
+    parseFixedLenEncoding(InstBits);
     // If the encoding has a custom decoder, don't bother parsing the operands.
     if (DecoderMethod.empty())
-      parseFixedLenOperands(*BI);
+      parseFixedLenOperands(InstBits);
   }
 
   if (DecoderMethod.empty()) {

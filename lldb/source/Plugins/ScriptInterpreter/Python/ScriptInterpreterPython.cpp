@@ -1731,21 +1731,17 @@ void ScriptInterpreterPythonImpl::CollectDataForWatchpointCommandCallback(
       "    ", *this, wp_options);
 }
 
-Status ScriptInterpreterPythonImpl::SetBreakpointCommandCallbackFunction(
+llvm::Error ScriptInterpreterPythonImpl::SetBreakpointCommandCallbackFunction(
     BreakpointOptions &bp_options, const char *function_name,
     StructuredData::ObjectSP extra_args_sp) {
-  Status error;
   // For now just cons up a oneliner that calls the provided function.
   std::string function_signature = function_name;
 
   llvm::Expected<unsigned> maybe_args =
       GetMaxPositionalArgumentsForCallable(function_name);
-  if (!maybe_args) {
-    error = Status::FromErrorStringWithFormat(
-        "could not get num args: %s",
-        llvm::toString(maybe_args.takeError()).c_str());
-    return error;
-  }
+  if (!maybe_args)
+    return llvm::createStringErrorV("could not get num args: {0}",
+                                    llvm::fmt_consume(maybe_args.takeError()));
   size_t max_args = *maybe_args;
 
   bool uses_extra_args = false;
@@ -1753,45 +1749,39 @@ Status ScriptInterpreterPythonImpl::SetBreakpointCommandCallbackFunction(
     uses_extra_args = true;
     function_signature += "(frame, bp_loc, extra_args, internal_dict)";
   } else if (max_args >= 3) {
-    if (extra_args_sp) {
-      error = Status::FromErrorStringWithFormat(
+    if (extra_args_sp)
+      return llvm::createStringError(
           "cannot pass extra_args to a three argument callback");
-      return error;
-    }
     uses_extra_args = false;
     function_signature += "(frame, bp_loc, internal_dict)";
   } else {
-    error = Status::FromErrorStringWithFormat("expected 3 or 4 argument "
-                                              "function, %s can only take %zu",
-                                              function_name, max_args);
-    return error;
+    return llvm::createStringErrorV(
+        "expected 3 or 4 argument function, {0} can only take {1}",
+        function_name, max_args);
   }
 
-  SetBreakpointCommandCallback(bp_options, function_signature.c_str(),
-                               extra_args_sp, uses_extra_args,
-                               /*is_callback=*/true);
-  return error;
+  return SetBreakpointCommandCallback(bp_options, function_signature.c_str(),
+                                      extra_args_sp, uses_extra_args,
+                                      /*is_callback=*/true);
 }
 
-Status ScriptInterpreterPythonImpl::SetBreakpointCommandCallback(
+llvm::Error ScriptInterpreterPythonImpl::SetBreakpointCommandCallback(
     BreakpointOptions &bp_options,
     std::unique_ptr<BreakpointOptions::CommandData> &cmd_data_up) {
-  Status error;
-  error = GenerateBreakpointCommandCallbackData(cmd_data_up->user_source,
-                                                cmd_data_up->script_source,
-                                                /*has_extra_args=*/false,
-                                                /*is_callback=*/false);
-  if (error.Fail()) {
-    return error;
-  }
+  Status error = GenerateBreakpointCommandCallbackData(
+      cmd_data_up->user_source, cmd_data_up->script_source,
+      /*has_extra_args=*/false,
+      /*is_callback=*/false);
+  if (error.Fail())
+    return error.takeError();
   auto baton_sp =
       std::make_shared<BreakpointOptions::CommandBaton>(std::move(cmd_data_up));
   bp_options.SetCallback(
       ScriptInterpreterPythonImpl::BreakpointCallbackFunction, baton_sp);
-  return error;
+  return llvm::Error::success();
 }
 
-Status ScriptInterpreterPythonImpl::SetBreakpointCommandCallback(
+llvm::Error ScriptInterpreterPythonImpl::SetBreakpointCommandCallback(
     BreakpointOptions &bp_options, const char *command_body_text,
     bool is_callback) {
   return SetBreakpointCommandCallback(bp_options, command_body_text, {},
@@ -1799,7 +1789,7 @@ Status ScriptInterpreterPythonImpl::SetBreakpointCommandCallback(
 }
 
 // Set a Python one-liner as the callback for the breakpoint.
-Status ScriptInterpreterPythonImpl::SetBreakpointCommandCallback(
+llvm::Error ScriptInterpreterPythonImpl::SetBreakpointCommandCallback(
     BreakpointOptions &bp_options, const char *command_body_text,
     StructuredData::ObjectSP extra_args_sp, bool uses_extra_args,
     bool is_callback) {
@@ -1813,14 +1803,13 @@ Status ScriptInterpreterPythonImpl::SetBreakpointCommandCallback(
   Status error = GenerateBreakpointCommandCallbackData(
       data_up->user_source, data_up->script_source, uses_extra_args,
       is_callback);
-  if (error.Success()) {
-    auto baton_sp =
-        std::make_shared<BreakpointOptions::CommandBaton>(std::move(data_up));
-    bp_options.SetCallback(
-        ScriptInterpreterPythonImpl::BreakpointCallbackFunction, baton_sp);
-    return error;
-  }
-  return error;
+  if (error.Fail())
+    return error.takeError();
+  auto baton_sp =
+      std::make_shared<BreakpointOptions::CommandBaton>(std::move(data_up));
+  bp_options.SetCallback(
+      ScriptInterpreterPythonImpl::BreakpointCallbackFunction, baton_sp);
+  return llvm::Error::success();
 }
 
 // Set a Python one-liner as the callback for the watchpoint.

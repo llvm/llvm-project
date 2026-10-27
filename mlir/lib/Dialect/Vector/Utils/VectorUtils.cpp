@@ -591,8 +591,12 @@ Operation *vector::createWriteOrMaskedWrite(OpBuilder &builder, Location loc,
                       : AffineMap::getMinorIdentityMap(destRank, vecToStoreRank,
                                                        builder.getContext());
 
-  // Check if masking is needed. If not, exit.
-  if (llvm::equal(vecToStoreShape, applyPermutationMap(map, destShape)))
+  // A write that starts at 0 and fills the dims it writes to needs no mask.
+  bool startsAtZero = llvm::all_of(map.getResults(), [&](AffineExpr expr) {
+    return isZeroInteger(writeIndices[cast<AffineDimExpr>(expr).getPosition()]);
+  });
+  if (startsAtZero &&
+      llvm::equal(vecToStoreShape, applyPermutationMap(map, destShape)))
     return write;
 
   // Compute the mask and mask the write Op.

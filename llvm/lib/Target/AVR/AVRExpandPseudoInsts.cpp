@@ -797,6 +797,44 @@ bool AVRExpandPseudo::expand<AVR::LDWRdPtrPd>(Block &MBB, BlockIt MBBI) {
 }
 
 template <>
+bool AVRExpandPseudo::expand<AVR::LDDRdPtrQ>(Block &MBB, BlockIt MBBI) {
+  MachineInstr &MI = *MBBI;
+  const AVRSubtarget &STI = MBB.getParent()->getSubtarget<AVRSubtarget>();
+
+  // LDDRdPtrQ is a real instruction on ordinary AVR devices, but we treat it
+  // as a pseudo instruction on AVR tiny devices.
+  if (!STI.hasTinyEncoding())
+    return false;
+
+  Register DstReg = MI.getOperand(0).getReg();
+  bool DstIsDead = MI.getOperand(0).isDead();
+  Register SrcReg = MI.getOperand(1).getReg();
+  bool SrcIsKill = MI.getOperand(1).isKill();
+  unsigned Imm = MI.getOperand(2).getImm();
+
+  assert((Imm == 0 || SrcIsKill || !TRI->regsOverlap(DstReg, SrcReg)) &&
+         "Cannot restore a pointer that the load overwrites");
+
+  if (Imm != 0)
+    buildMI(MBB, MBBI, AVR::SUBIWRdK, SrcReg)
+        .addReg(SrcReg, RegState::Kill)
+        .addImm(0x10000 - Imm);
+
+  buildMI(MBB, MBBI, AVR::LDRdPtr)
+      .addReg(DstReg, RegState::Define | getDeadRegState(DstIsDead))
+      .addReg(SrcReg, getKillRegState(SrcIsKill))
+      .setMemRefs(MI.memoperands());
+
+  if (Imm != 0 && !SrcIsKill)
+    buildMI(MBB, MBBI, AVR::SUBIWRdK, SrcReg)
+        .addReg(SrcReg, RegState::Kill)
+        .addImm(Imm);
+
+  MI.eraseFromParent();
+  return true;
+}
+
+template <>
 bool AVRExpandPseudo::expand<AVR::LDDWRdPtrQ>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   Register DstReg = MI.getOperand(0).getReg();
@@ -1289,6 +1327,44 @@ bool AVRExpandPseudo::expand<AVR::STWPtrPdRr>(Block &MBB, BlockIt MBBI) {
 
   MIBLO.setMemRefs(MI.memoperands());
   MIBHI.setMemRefs(MI.memoperands());
+
+  MI.eraseFromParent();
+  return true;
+}
+
+template <>
+bool AVRExpandPseudo::expand<AVR::STDPtrQRr>(Block &MBB, BlockIt MBBI) {
+  MachineInstr &MI = *MBBI;
+  const AVRSubtarget &STI = MBB.getParent()->getSubtarget<AVRSubtarget>();
+
+  // STDPtrQRr is a real instruction on ordinary AVR devices, but we treat it
+  // as a pseudo instruction on AVR tiny devices.
+  if (!STI.hasTinyEncoding())
+    return false;
+
+  Register DstReg = MI.getOperand(0).getReg();
+  bool DstIsKill = MI.getOperand(0).isKill();
+  unsigned Imm = MI.getOperand(1).getImm();
+  Register SrcReg = MI.getOperand(2).getReg();
+  bool SrcIsKill = MI.getOperand(2).isKill();
+
+  assert((Imm == 0 || !TRI->regsOverlap(DstReg, SrcReg)) &&
+         "Cannot adjust a pointer that holds the value to store");
+
+  if (Imm != 0)
+    buildMI(MBB, MBBI, AVR::SUBIWRdK, DstReg)
+        .addReg(DstReg, RegState::Kill)
+        .addImm(0x10000 - Imm);
+
+  buildMI(MBB, MBBI, AVR::STPtrRr)
+      .addReg(DstReg, getKillRegState(DstIsKill))
+      .addReg(SrcReg, getKillRegState(SrcIsKill))
+      .setMemRefs(MI.memoperands());
+
+  if (Imm != 0 && !DstIsKill)
+    buildMI(MBB, MBBI, AVR::SUBIWRdK, DstReg)
+        .addReg(DstReg, RegState::Kill)
+        .addImm(Imm);
 
   MI.eraseFromParent();
   return true;
@@ -2708,6 +2784,7 @@ bool AVRExpandPseudo::expandMI(Block &MBB, BlockIt MBBI) {
     EXPAND(AVR::LDWRdPtr);
     EXPAND(AVR::LDWRdPtrPi);
     EXPAND(AVR::LDWRdPtrPd);
+    EXPAND(AVR::LDDRdPtrQ);
   case AVR::LDDWRdYQ: // FIXME: Remove this once PR13375 gets fixed.
     EXPAND(AVR::LDDWRdPtrQ);
     EXPAND(AVR::LPMBRdZ);
@@ -2726,6 +2803,7 @@ bool AVRExpandPseudo::expandMI(Block &MBB, BlockIt MBBI) {
     EXPAND(AVR::STWPtrRr);
     EXPAND(AVR::STWPtrPiRr);
     EXPAND(AVR::STWPtrPdRr);
+    EXPAND(AVR::STDPtrQRr);
     EXPAND(AVR::STDWPtrQRr);
     EXPAND(AVR::STDSPQRr);
     EXPAND(AVR::STDWSPQRr);

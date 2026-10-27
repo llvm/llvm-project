@@ -6886,7 +6886,12 @@ private:
     createGlobals();
     if (mlir::Region *region = func.getCallableRegion())
       region->dropAllReferences();
-    func.erase();
+    // createFunction registered the sham function in the symbol table: erase
+    // it through the table so that no dangling entry is left behind.
+    if (symbolTable)
+      symbolTable->erase(func);
+    else
+      func.erase();
     delete builder;
     builder = nullptr;
     localSymbols.clear();
@@ -7306,10 +7311,10 @@ private:
   /// utilities to deal with procedure pointer components whose arguments have
   /// the type of the containing derived type.
   Fortran::lower::TypeConstructionStack typeConstructionStack;
-  /// MLIR symbol table of the fir.global/func.func operations. Note that it is
-  /// not guaranteed to contain all operations of the ModuleOp with Symbol
-  /// attribute since mlirSymbolTable must pro-actively be maintained when
-  /// new Symbol operations are created.
+  /// MLIR symbol table of the fir.global/func.func/fir.type_info operations.
+  /// The FirOpBuilder lookups trust it, so it must pro-actively be maintained:
+  /// every one of these operations created during lowering must go through the
+  /// FirOpBuilder creation helpers or be registered with fir::registerSymbol.
   mlir::SymbolTable mlirSymbolTable;
 
   /// Used to store context while recursing into regions during lowering.

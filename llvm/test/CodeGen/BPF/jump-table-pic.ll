@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=bpfel -mcpu=v4 -relocation-model=pic < %s | FileCheck %s
+; RUN: llc -mtriple=bpfel -mcpu=v4 -relocation-model=static < %s | FileCheck %s
 
 declare void @use(i64)
 

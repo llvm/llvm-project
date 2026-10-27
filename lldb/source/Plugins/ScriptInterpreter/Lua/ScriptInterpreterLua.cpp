@@ -116,12 +116,12 @@ public:
           static_cast<std::vector<std::reference_wrapper<BreakpointOptions>> *>(
               io_handler.GetUserData());
       for (BreakpointOptions &bp_options : *bp_options_vec) {
-        Status error = m_script_interpreter.SetBreakpointCommandCallback(
-            bp_options, data.c_str(), /*is_callback=*/false);
-        if (error.Fail()) {
+        if (llvm::Error error =
+                m_script_interpreter.SetBreakpointCommandCallback(
+                    bp_options, data.c_str(), /*is_callback=*/false)) {
           LockedStreamFile locked_stream =
               io_handler.GetErrorStreamFileSP()->Lock();
-          locked_stream << error.AsCString() << '\n';
+          locked_stream << llvm::toString(std::move(error)) << '\n';
         }
       }
       io_handler.SetIsDone(true);
@@ -350,7 +350,7 @@ void ScriptInterpreterLua::CollectDataForWatchpointCommandCallback(
   m_debugger.RunIOHandlerAsync(io_handler_sp);
 }
 
-Status ScriptInterpreterLua::SetBreakpointCommandCallbackFunction(
+llvm::Error ScriptInterpreterLua::SetBreakpointCommandCallbackFunction(
     BreakpointOptions &bp_options, const char *function_name,
     StructuredData::ObjectSP extra_args_sp) {
   const char *fmt_str = "return {0}(frame, bp_loc, ...)";
@@ -359,25 +359,24 @@ Status ScriptInterpreterLua::SetBreakpointCommandCallbackFunction(
                                     extra_args_sp);
 }
 
-Status ScriptInterpreterLua::SetBreakpointCommandCallback(
+llvm::Error ScriptInterpreterLua::SetBreakpointCommandCallback(
     BreakpointOptions &bp_options, const char *command_body_text,
     bool is_callback) {
   return RegisterBreakpointCallback(bp_options, command_body_text, {});
 }
 
-Status ScriptInterpreterLua::RegisterBreakpointCallback(
+llvm::Error ScriptInterpreterLua::RegisterBreakpointCallback(
     BreakpointOptions &bp_options, const char *command_body_text,
     StructuredData::ObjectSP extra_args_sp) {
   auto data_up = std::make_unique<CommandDataLua>(extra_args_sp);
-  llvm::Error err =
-      m_lua_state->RegisterBreakpointCallback(data_up.get(), command_body_text);
-  if (err)
-    return Status::FromError(std::move(err));
+  if (llvm::Error err = m_lua_state->RegisterBreakpointCallback(
+          data_up.get(), command_body_text))
+    return err;
   auto baton_sp =
       std::make_shared<BreakpointOptions::CommandBaton>(std::move(data_up));
   bp_options.SetCallback(ScriptInterpreterLua::BreakpointCallbackFunction,
                          baton_sp);
-  return {};
+  return llvm::Error::success();
 }
 
 void ScriptInterpreterLua::SetWatchpointCommandCallback(

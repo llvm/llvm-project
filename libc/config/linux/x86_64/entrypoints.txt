@@ -525,6 +525,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.getpgrp
     libc.src.unistd.getpid
     libc.src.unistd.getppid
+    libc.src.unistd.getresgid
+    libc.src.unistd.getresuid
     libc.src.unistd.getsid
     libc.src.unistd.gettid
     libc.src.unistd.getgid
@@ -1637,6 +1639,8 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.threads.thrd_equal
     libc.src.threads.thrd_exit
     libc.src.threads.thrd_join
+    libc.src.threads.thrd_sleep
+    libc.src.threads.thrd_yield
     libc.src.threads.tss_create
     libc.src.threads.tss_delete
     libc.src.threads.tss_get

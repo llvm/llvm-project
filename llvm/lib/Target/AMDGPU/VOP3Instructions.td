@@ -575,8 +575,11 @@ defm: Ternary_i16_Pats<imad, V_MAD_U16_e64>;
 multiclass Ternary_i16_Pats_gfx9<SDPatternOperator op1, SDPatternOperator op2,
                                  Instruction inst> {
   def : GCNPat <
-    (op2 (op1 i16:$src0, i16:$src1), i16:$src2),
-    (inst SRCMODS.NONE, $src0, SRCMODS.NONE, $src1, SRCMODS.NONE, $src2, DSTCLAMP.NONE)
+    (op2 (op1 (i16 (VOP3OpSel i16:$src0, i32:$src0_modifiers)),
+              (i16 (VOP3OpSel i16:$src1, i32:$src1_modifiers))),
+         (i16 (VOP3OpSel i16:$src2, i32:$src2_modifiers))),
+    (inst $src0_modifiers, $src0, $src1_modifiers, $src1,
+          $src2_modifiers, $src2, DSTCLAMP.NONE)
   >;
 }
 
