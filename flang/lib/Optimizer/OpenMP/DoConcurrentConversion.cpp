@@ -325,6 +325,8 @@ inlineCopyRegionToLoopBody(mlir::ConversionPatternRewriter &rewriter,
   return mlir::success();
 }
 
+} // namespace looputils
+
 /// Returns true if \p value is an integer constant, possibly wrapped in
 /// `fir.convert` ops.
 static bool isIntConstant(mlir::Value value) {
@@ -332,7 +334,6 @@ static bool isIntConstant(mlir::Value value) {
     value = convertOp.getValue();
   return fir::getIntIfConstant(value).has_value();
 }
-} // namespace looputils
 
 class DoConcurrentConversion
     : public mlir::OpConversionPattern<fir::DoConcurrentOp> {
@@ -932,7 +933,7 @@ private:
     // inside the target region instead of being mapped through a temporary.
     auto mapShapeValue = [&](mlir::Value value, llvm::StringRef kind,
                              size_t dim) -> mlir::Value {
-      if (looputils::isIntConstant(value))
+      if (isIntConstant(value))
         return value;
       return Fortran::utils::openmp::mapTemporaryValue(
           builder, targetOp, value,
