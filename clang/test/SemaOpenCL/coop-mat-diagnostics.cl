@@ -152,7 +152,7 @@ kernel void test_binary_operation_on_coopmat_with_different_component_types() {
 kernel void test_incompatible_coopmat_assignment() {
     MatA_t a;
     MatB_t b;
-    a = b; // expected-error {{incompatible cooperative matrix types}}
+    a = b; // expected-error-re {{assigning to{{.*}}from incompatible type}}
 }
 
 // Test of cooperative matrix cast assignment.
