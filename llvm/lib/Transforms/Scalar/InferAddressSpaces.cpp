@@ -459,10 +459,23 @@ InferAddressSpacesImpl::getIntToPtrPointerOperand(const Operator *I2P) const {
   if (auto *OldPtr = PtrIntCastPairs.lookup(I2P))
     return OldPtr;
 
-  Value *LogicalOp = I2P->getOperand(0);
+  // Not m_c_BitwiseLogic: the binary-op matchers only match instructions, and
+  // a round trip over a compile-time address folds into a constant expression.
+  // m_PtrToInt below accepts either form.
+  auto *LogicalOp = dyn_cast<Operator>(I2P->getOperand(0));
+  if (!LogicalOp || !Instruction::isBitwiseLogicOp(LogicalOp->getOpcode()))
+    return nullptr;
+
+  // Either side can hold the pointer; the other is then the mask. Both sides
+  // being a pointer needs no special case: such a "mask" has no known bits, so
+  // its worst-case bit change is unbounded and the check below rejects it.
+  Value *LHS = LogicalOp->getOperand(0), *RHS = LogicalOp->getOperand(1);
   Value *OldPtr, *Mask;
-  if (!match(LogicalOp,
-             m_c_BitwiseLogic(m_PtrToInt(m_Value(OldPtr)), m_Value(Mask))))
+  if (match(LHS, m_PtrToInt(m_Value(OldPtr))))
+    Mask = RHS;
+  else if (match(RHS, m_PtrToInt(m_Value(OldPtr))))
+    Mask = LHS;
+  else
     return nullptr;
 
   Operator *AsCast = dyn_cast<AddrSpaceCastOperator>(OldPtr);
@@ -475,7 +488,7 @@ InferAddressSpacesImpl::getIntToPtrPointerOperand(const Operator *I2P) const {
   if (PreservedPtrMask.isZero())
     return nullptr;
   APInt ChangedPtrBits =
-      computeMaxChangedPtrBits(cast<Operator>(LogicalOp), Mask, *DL, &AC, DT);
+      computeMaxChangedPtrBits(LogicalOp, Mask, *DL, &AC, DT);
   // Check if the address bits change is within the preserved mask. If the bits
   // change is not preserved, it is not safe to perform address space cast.
   // The following pattern is not safe to cast address space.
@@ -490,13 +503,40 @@ InferAddressSpacesImpl::getIntToPtrPointerOperand(const Operator *I2P) const {
 }
 
 void InferAddressSpacesImpl::collectIntToPtrPointerOperand() {
-  // Only collect inttoptr instruction.
-  // TODO: We need to collect inttoptr constant expression as well.
+  auto Collect = [&](const Operator *I2P) {
+    if (auto *OldPtr = getIntToPtrPointerOperand(I2P))
+      PtrIntCastPairs.insert({I2P, OldPtr});
+  };
+
+  // A compile-time address folds the whole round trip into a constant
+  // expression, which is not an instruction. Within a function it is reached
+  // as an operand of an instruction, possibly nested under further constant
+  // expressions as when a gep indexes it. Without walking those, every access
+  // to a fixed address stays flat. The rewrite side already handles them; see
+  // cloneConstantExprWithNewAddressSpace. Only constant expressions reachable
+  // from instruction operands are visited; the initializers of global values
+  // are not, and the originals are never modified, so those are unaffected.
+  DenseSet<ConstantExpr *> VisitedCE;
+  SmallVector<ConstantExpr *, 8> Worklist;
+  auto PushConstantExpr = [&](Value *V) {
+    if (auto *CE = dyn_cast<ConstantExpr>(V))
+      if (VisitedCE.insert(CE).second)
+        Worklist.push_back(CE);
+  };
+
   for (Instruction &I : instructions(F)) {
-    if (!dyn_cast<IntToPtrInst>(&I))
-      continue;
-    if (auto *OldPtr = getIntToPtrPointerOperand(cast<Operator>(&I)))
-      PtrIntCastPairs.insert({&I, OldPtr});
+    if (isa<IntToPtrInst>(&I))
+      Collect(cast<Operator>(&I));
+    for (Value *Op : I.operands())
+      PushConstantExpr(Op);
+  }
+
+  while (!Worklist.empty()) {
+    ConstantExpr *CE = Worklist.pop_back_val();
+    if (CE->getOpcode() == Instruction::IntToPtr)
+      Collect(cast<Operator>(CE));
+    for (Value *Op : CE->operands())
+      PushConstantExpr(Op);
   }
 }
 
@@ -1162,6 +1202,20 @@ void InferAddressSpacesImpl::enqueueUsers(
       continue;
 
     Worklist.insert(User);
+  }
+
+  // An inttoptr that round-trips a pointer depends on that pointer, but the
+  // chain between them runs through a ptrtoint, which is not an address
+  // expression and so is absent from InferredAddrSpace. Requeue such
+  // dependents directly; PtrIntCastPairs holds only round trips already proven
+  // safe, so this scan is over a handful of entries rather than the function.
+  for (auto &[I2P, OldPtr] : PtrIntCastPairs) {
+    if (OldPtr != &V)
+      continue;
+    auto Pos = InferredAddrSpace.find(I2P);
+    if (Pos == InferredAddrSpace.end() || Pos->second == FlatAddrSpace)
+      continue;
+    Worklist.insert(const_cast<Value *>(I2P));
   }
 }
 

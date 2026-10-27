@@ -343,7 +343,7 @@ def CIR_CastOp : CIR_Op<"cast", !listconcat([
     %4 = cir.cast int_to_bool %3 : i32 -> !cir.bool
     ...
     %x = cir.cast array_to_ptrdecay %0 
-       : !cir.ptr<!cir.array<i32 x 10>> -> !cir.ptr<i32>
+       : !cir.ptr<!cir.array<!s32i x 10>> -> !cir.ptr<!s32i>
     %y = cir.cast floating %f : !cir.double -> !cir.float fenv<>
     ```
   }];
@@ -547,8 +547,8 @@ def CIR_PtrStrideOp : CIR_Op<"ptr_stride", [
     It moves the pointer by `stride * sizeof(element_type)` bytes.
 
     ```
-    %3 = cir.const 0 : i32
-    %3 = cir.ptr_stride %1, %2 : (!cir.ptr<i32>, i32) -> !cir.ptr<i32>
+    %2 = cir.const #cir.int<1> : !s32i
+    %3 = cir.ptr_stride %1, %2 : (!cir.ptr<!s32i>, !s32i) -> !cir.ptr<!s32i>
     ```
   }];
 
@@ -782,10 +782,10 @@ def CIR_AllocaOp : CIR_Op<"alloca", [
 
     ```
     // int count;
-    %0 = cir.alloca "count" align(4) : !cir.ptr<i32>
+    %0 = cir.alloca "count" align(4) : !cir.ptr<!s32i>
 
     // int *ptr;
-    %1 = cir.alloca "ptr" align(8) : !cir.ptr<!cir.ptr<i32>>
+    %1 = cir.alloca "ptr" align(8) : !cir.ptr<!cir.ptr<!s32i>>
     ...
     ```
   }];
@@ -870,20 +870,20 @@ def CIR_LoadOp : CIR_Op<"load", [
     ```
 
     // Read from local variable, address in %0.
-    %1 = cir.load %0 : !cir.ptr<i32>, i32
+    %1 = cir.load %0 : !cir.ptr<!s32i>, !s32i
 
     // Load address from memory at address %0. %3 is used by at least one
     // operation that dereferences a pointer.
-    %3 = cir.load deref %0 : !cir.ptr<!cir.ptr<i32>>
+    %3 = cir.load deref %0 : !cir.ptr<!cir.ptr<!s32i>>
 
     // Perform a volatile load from address in %0.
-    %4 = cir.load volatile %0 : !cir.ptr<i32>, i32
+    %4 = cir.load volatile %0 : !cir.ptr<!s32i>, !s32i
 
     // Perform an invariant load from address in %0.
-    %5 = cir.load invariant %0 : !cir.ptr<i32>, i32
+    %5 = cir.load invariant %0 : !cir.ptr<!s32i>, !s32i
 
     // Others
-    %x = cir.load align(16) atomic(seq_cst) %0 : !cir.ptr<i32>, i32
+    %x = cir.load align(16) atomic(seq_cst) %0 : !cir.ptr<!s32i>, !s32i
     ```
   }];
 
@@ -950,7 +950,7 @@ def CIR_VecMaskedLoadOp : CIR_Op<"vec.masked_load", [
 
     ```
     %v = cir.masked_load align(16) %ptr, %mask, %passthru
-         : !cir.ptr<i32>, <4xi1>, <4xi32> -> <4xi32>
+         : !cir.ptr<!s32i>, <4xi1>, <4xi32> -> <4xi32>
     ```
   }];
 
@@ -995,13 +995,13 @@ def CIR_StoreOp : CIR_Op<"store", [
 
     ```
     // Store a function argument to local storage, address in %0.
-    cir.store %arg0, %0 : i32, !cir.ptr<i32>
+    cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
 
     // Perform a volatile store into memory location at the address in %0.
-    cir.store volatile %arg0, %0 : i32, !cir.ptr<i32>
+    cir.store volatile %arg0, %0 : !s32i, !cir.ptr<!s32i>
 
     // Others
-    cir.store align(16) atomic(seq_cst) %x, %addr : i32, !cir.ptr<i32>
+    cir.store align(16) atomic(seq_cst) %x, %addr : !s32i, !cir.ptr<!s32i>
     ```
   }];
 
@@ -3639,11 +3639,11 @@ def CIR_GetGlobalOp : CIR_Op<"get_global", [
 
     Example:
     ```
-    %x = cir.get_global @gv : !cir.ptr<i32>
+    %x = cir.get_global @gv : !cir.ptr<!s32i>
     ...
-    %y = cir.get_global thread_local @tls_gv : !cir.ptr<i32>
+    %y = cir.get_global thread_local @tls_gv : !cir.ptr<!s32i>
     ...
-    %w = cir.get_global static_local @func_static : !cir.ptr<i32>
+    %w = cir.get_global static_local @func_static : !cir.ptr<!s32i>
     ```
   }];
 
@@ -4389,7 +4389,7 @@ def CIR_FuncOp : CIR_Op<"func", [
     cir.func no_inline @some_method(...)
     
     // Builtin function
-    cir.func builtin @__builtin_coro_end(!cir.ptr<i8>, !cir.bool) -> !cir.bool
+    cir.func builtin @__builtin_coro_end(!cir.ptr<!s8i>, !cir.bool) -> !cir.bool
     // Coroutine
     cir.func coroutine @_Z10silly_taskv() -> !CoroTask {
       ...
@@ -8195,9 +8195,9 @@ def CIR_ObjSizeOp : CIR_Op<"objsize", [Pure]> {
     Example:
 
     ```
-    %size = cir.objsize min %ptr : !cir.ptr<i32> -> i64
-    %dsize = cir.objsize max dynamic %ptr : !cir.ptr<i32> -> i64
-    %nsize = cir.objsize min nullunknown %ptr : !cir.ptr<i32> -> i64
+    %size = cir.objsize min %ptr : !cir.ptr<!s32i> -> !u64i
+    %dsize = cir.objsize max dynamic %ptr : !cir.ptr<!s32i> -> !u64i
+    %nsize = cir.objsize min nullunknown %ptr : !cir.ptr<!s32i> -> !u64i
     ```
   }];
 

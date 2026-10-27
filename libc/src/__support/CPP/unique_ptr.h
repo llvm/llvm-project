@@ -18,7 +18,6 @@
 #include "src/__support/CPP/new.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/CPP/utility.h"
-#include "src/__support/libc_assert.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 
@@ -135,13 +134,9 @@ public:
 
   LIBC_INLINE constexpr typename add_lvalue_reference<T>::type
   operator*() const {
-    LIBC_ASSERT(ptr != nullptr);
     return *ptr;
   }
-  LIBC_INLINE constexpr pointer operator->() const {
-    LIBC_ASSERT(ptr != nullptr);
-    return ptr;
-  }
+  LIBC_INLINE constexpr pointer operator->() const { return ptr; }
 };
 
 /// A smart pointer that owns and manages an array of objects through a pointer.
@@ -204,10 +199,7 @@ public:
       deleter(old_ptr);
   }
 
-  LIBC_INLINE constexpr T &operator[](size_t i) const {
-    LIBC_ASSERT(ptr != nullptr);
-    return ptr[i];
-  }
+  LIBC_INLINE constexpr T &operator[](size_t i) const { return ptr[i]; }
 };
 
 } // namespace cpp

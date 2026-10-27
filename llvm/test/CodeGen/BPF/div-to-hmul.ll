@@ -26,10 +26,10 @@ define i64 @udiv_by_10(i64 %a) {
 define i64 @sdiv_by_10(i64 %a) {
 ; V5-LABEL: sdiv_by_10:
 ; V5:       r[[REG1:[0-9]+]] = 7378697629483820647 ll
-; V5:       r0 sh*= r[[REG1]]
-; V5-DAG:   r[[REG2:[0-9]+]] = r0
-; V5-DAG:   r[[REG2]] >>= 63
-; V5-DAG:   r0 s>>= 2
+; V5:       r[[REG2:[0-9]+]] sh*= r[[REG1]]
+; V5:       r0 = r[[REG2]]
+; V5-DAG:   r0 >>= 63
+; V5-DAG:   r[[REG2]] s>>= 2
 ; V5-NEXT:  r0 += r[[REG2]]
 ; V5-NEXT:  exit
 ; NO-HMUL-LABEL: sdiv_by_10:
@@ -43,10 +43,10 @@ define i64 @sdiv_by_10(i64 %a) {
 define i64 @sdiv_by_neg10(i64 %a) {
 ; V5-LABEL: sdiv_by_neg10:
 ; V5:       r[[REG1:[0-9]+]] = -7378697629483820647 ll
-; V5:       r0 sh*= r[[REG1]]
-; V5-DAG:   r[[REG2:[0-9]+]] = r0
-; V5-DAG:   r[[REG2]] >>= 63
-; V5-DAG:   r0 s>>= 2
+; V5:       r[[REG2:[0-9]+]] sh*= r[[REG1]]
+; V5:       r0 = r[[REG2]]
+; V5-DAG:   r0 >>= 63
+; V5-DAG:   r[[REG2]] s>>= 2
 ; V5-NEXT:  r0 += r[[REG2]]
 ; V5-NEXT:  exit
 ; NO-HMUL-LABEL: sdiv_by_neg10:
