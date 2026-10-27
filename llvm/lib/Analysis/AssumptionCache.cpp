@@ -65,8 +65,8 @@ void AssumptionCache::findValuesAffectedByOperandBundle(
       InsertAffected(V);
   };
 
-  if (auto Attr = getBundleAttrFromOBU(Bundle);
-      Attr == BundleAttr::SeparateStorage) {
+  auto Attr = getBundleAttrFromOBU(Bundle);
+  if (Attr == BundleAttr::SeparateStorage) {
     assert(Bundle.Inputs.size() == 2 && "separate_storage must have two args");
     AddAffectedVal(getUnderlyingObject(Bundle.Inputs[0]));
     AddAffectedVal(getUnderlyingObject(Bundle.Inputs[1]));

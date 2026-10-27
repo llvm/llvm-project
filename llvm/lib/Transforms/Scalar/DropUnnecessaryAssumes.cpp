@@ -85,8 +85,8 @@ DropUnnecessaryAssumesPass::run(Function &F, FunctionAnalysisManager &FAM) {
           case BundleAttr::Ignore:
             return true;
 
-            // "dereferenceable" operand bundles are only dropped if requested
-            // (e.g., after loop vectorization has run).
+          // "dereferenceable" operand bundles are only dropped if requested
+          // (e.g., after loop vectorization has run).
           case BundleAttr::Dereferenceable:
             return DropDereferenceable;
 
