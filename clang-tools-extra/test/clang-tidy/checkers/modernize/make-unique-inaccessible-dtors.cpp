@@ -47,6 +47,20 @@ private:
   ~TemplatedWithMultipleDestructors() requires(sizeof(T) == 1) = default;   // selected for TemplatedWithMultipleDestructors<char>
 };
 
+
+struct WithFriend {
+  friend struct std::default_delete<WithFriend>;
+
+private:
+  ~WithFriend() = default;
+};
+
+void check_new() {
+  std::unique_ptr<WithFriend> p(new WithFriend());
+  // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: use std::make_unique instead
+  // CHECK-FIXES: std::unique_ptr<WithFriend> p = std::make_unique<WithFriend>();
+}
+
 void check_reset() {
   std::unique_ptr<Base> p;
   p.reset(new ChildWithPublicDestructor());
