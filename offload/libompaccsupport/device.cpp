@@ -915,7 +915,7 @@ getKernelLaunchEnvironment(DeviceTy &Device, uint32_t OmpABIVersion,
   }
 
   // Downstream: stage the launch environment in pinned memory if the plugin
-  // transfers it faster from there, so the dataSubmit below can take that path.
+  // transfers it faster from there, so the copy below can take that path.
   const void *LaunchEnvSrc = &LocalKLE;
   KernelLaunchEnvironmentTy *PinnedKLE =
       GenericDevice.getPinnedLaunchEnvBuffer();
@@ -935,15 +935,19 @@ getKernelLaunchEnvironment(DeviceTy &Device, uint32_t OmpABIVersion,
   // being a kernel launch and the data submit here being an implementation
   // detail. We temporarily set the ProfilerData to nullptr, such that we
   // disable the timing etc. further down to not trigger assertions or report
-  // implementation detail.
+  // implementation detail. For the same reason, copy with olMemcpy rather
+  // than Device.submitData(), which would report an OMPT data operation.
   __tgt_async_info *AI = AsyncInfo;
   void *ProfilerData = AI->ProfilerData;
   AI->ProfilerData = nullptr;
-  auto Err = GenericDevice.dataSubmit(
-      *AllocOrErr, LaunchEnvSrc, sizeof(KernelLaunchEnvironmentTy), AsyncInfo);
+  auto Res = olMemcpy(AsyncInfo.getQueue(), *AllocOrErr, Device.DeviceHandle,
+                      LaunchEnvSrc, /*SrcDevice=*/nullptr,
+                      sizeof(KernelLaunchEnvironmentTy));
   AI->ProfilerData = ProfilerData;
-  if (Err)
-    return Err;
+  if (Res)
+    return createError(ErrorCode::BackendFailure,
+                       "failed to copy the kernel launch environment: %s",
+                       Res->Details);
 
   // Register the staging buffer only now that the transfer reading it has been
   // issued. Registering it earlier would let a concurrent finalization that
