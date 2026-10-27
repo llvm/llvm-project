@@ -149,6 +149,9 @@ public:
 
   /// Return first entry whose name matches Str, or null.
   const EnumString *fromString(StringRef Str, unsigned StrIdx = 0) const {
+    // TODO: optimize with binary search when entries are sorted by name. Also
+    // decide whether to start sorting entries by name or by value as we usually
+    // can't do both at the same time.
     for (const auto &EnumItem : EnumValues)
       if (EnumItem.name(StrIdx) == Str)
         return &EnumItem;

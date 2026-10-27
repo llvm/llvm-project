@@ -835,8 +835,9 @@ IdentifierTable::getFutureCompatDiagKind(const IdentifierInfo &II,
 #undef KEYWORD
   };
   static constexpr auto FlagsData = BUILD_ENUM_STRINGS(FlagsDefs);
-  unsigned Flags =
-      llvm::EnumStrings(FlagsData).fromString(II.getName())->value();
+  const auto *Entry = llvm::EnumStrings(FlagsData).fromString(II.getName());
+  assert(Entry && "future compat keyword should be in keyword list");
+  uint32_t Flags = Entry->value();
 
   if (LangOpts.CPlusPlus) {
     if ((Flags & KEYCXX11) == KEYCXX11)
