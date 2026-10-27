@@ -38,7 +38,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "agx-uniform-constants"
+#define DEBUG_TYPE "agx-uniform-constants-pass"
 
 static cl::opt<bool> AGXUniformConstants(
     "agx-uniform-constants", cl::init(false), cl::Hidden,
