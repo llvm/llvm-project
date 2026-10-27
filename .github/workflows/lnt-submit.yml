@@ -1,10 +1,14 @@
 # This file defines a reusable workflow that submits the LNT reports contained in an artifact
-# of the current workflow run to our LNT instance.
+# of the current workflow run to LLVM's LNT instance.
 #
 # This allows separating concerns around submission (e.g. access tokens) and generating the
-# actual benchmarking data.
+# actual data. It is not specific to any project: any workflow that produces LNT v5 run
+# submissions can use it.
+#
+# The artifact must contain one or more `*.json` files at its root, each holding a single LNT v5
+# run submission. All the runs are submitted to the given test suite, which must already exist.
 
-name: "[libc++] Submit benchmark results to LNT"
+name: "[LNT] Submit runs"
 
 permissions:
   contents: read
@@ -27,6 +31,7 @@ on:
 
 jobs:
   submit:
+    name: Submit runs to ${{ inputs.test-suite }}
     runs-on: ubuntu-26.04
     # This environment stores the token used to submit to LNT. Using an environment makes the token
     # available in this job only.
@@ -34,19 +39,21 @@ jobs:
       name: lnt
       deployment: false
     env:
-      # Keep in sync with libcxx-benchmark-cron.yml.
       LNT_URL: https://lnt.llvm.org
     steps:
-      - name: Checkout the LNT tooling
+      - name: Checkout the LNT requirements
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          sparse-checkout: libcxx/utils/ci/lnt
+          sparse-checkout: .github/workflows
 
       - name: Install Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.14'
+
+      - name: Install LNT
+        run: pip install --require-hashes -r .github/workflows/lnt-submit.requirements.lock.txt
 
       - name: Download the LNT reports
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
@@ -67,9 +74,6 @@ jobs:
             exit 1
           fi
 
-          for report in "${reports[@]}"; do
-            libcxx/utils/ci/lnt/submit-benchmarks             \
-              --lnt-url "${LNT_URL}"                          \
-              --test-suite "${TEST_SUITE}"                    \
-              "${report}"
-          done
+          # `lnt v5 submit` reads one run per line, so compact each report onto a single line.
+          jq -c . "${reports[@]}" > "${RUNNER_TEMP}/runs.jsonl"
+          lnt v5 submit "${LNT_URL}" "${RUNNER_TEMP}/runs.jsonl" --suite "${TEST_SUITE}"
