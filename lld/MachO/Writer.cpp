@@ -1308,19 +1308,9 @@ void Writer::buildFixupChains() {
   TimeTraceScope timeScope("Build fixup chains");
 
   const uint64_t pageSize = target->getPageSize();
-  constexpr uint32_t stride = 4; // for DYLD_CHAINED_PTR_64
+  constexpr uint32_t stride = ChainedFixupsSection::stride;
 
   for (size_t i = 0, count = loc.size(); i < count;) {
-    // The distance between consecutive fixups can't show that the first fixup
-    // on a page is unaligned, so check each page's first fixup directly.
-    if (loc[i].offset % stride != 0) {
-      error(loc[i].isec->getSegName() + "," + loc[i].isec->getName() +
-            ", offset " +
-            Twine(loc[i].offset - loc[i].isec->parent->getSegmentOffset()) +
-            ": fixup is unaligned (its address is not a multiple of the "
-            "stride). Re-link with -no_fixup_chains");
-      return;
-    }
     const OutputSegment *oseg = loc[i].isec->parent->parent;
     uint8_t *buf = buffer->getBufferStart() + oseg->fileOff;
     uint64_t pageIdx = loc[i].offset / pageSize;
@@ -1339,10 +1329,8 @@ void Writer::buildFixupChains() {
 
       if (offset < target->wordSize)
         return fail("fixups overlap");
-      if (offset % stride != 0)
-        return fail(
-            "fixups are unaligned (offset " + Twine(offset) +
-            " is not a multiple of the stride). Re-link with -no_fixup_chains");
+      assert(offset % stride == 0 &&
+             "ChainedFixupsSection::finalizeContents rejects unaligned fixups");
 
       // The "next" field is in the same location for bind and rebase entries.
       reinterpret_cast<dyld_chained_ptr_64_bind *>(buf + loc[i - 1].offset)
