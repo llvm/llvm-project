@@ -372,7 +372,7 @@ void MCResourceInfo::gatherResourceInfo(
       if (!Seen.insert(Callee).second)
         continue;
 
-      // Chain callees use the same stack frame. Exclude them.
+      // Chain callees use the same stack space. Exclude them.
       if (!Callee->isDeclaration() &&
           !AMDGPU::isChainCC(Callee->getCallingConv())) {
         MCSymbol *CalleeFnSym = TM.getSymbol(&Callee->getFunction());
