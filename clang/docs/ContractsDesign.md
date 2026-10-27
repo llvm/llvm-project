@@ -46,8 +46,7 @@ class ContractStmtBitfields {
 class ContractStmtBase : public Stmt {
   Expr *Predicate = nullptr;
   SourceLocation KeywordLoc, LParenLoc, RParenLoc;
-  // llvm::ArrayRef<const Attr *> Attributes; // The design allows contracts to have attributes but none
-                                              // contracts attribute are presenting right now.
+  // Contract attributes can use trailing storage when supported.
 };
 
 class ContractAssertStmt : public ContractStmtBase {};
@@ -55,7 +54,7 @@ class ContractAssertStmt : public ContractStmtBase {};
 class ContractPreStmt : public ContractStmtBase {};
 
 class ContractPostStmt : public ContractStmtBase {
-  ResultNameDecl *ResultName = nullptr;
+  ContractResultBindingDecl *ResultName = nullptr;
 };
 ```
 
@@ -65,11 +64,11 @@ We though to use a simple struct to represent `pre` and `post` contracts. But we
 them into Stmt system. The major reason is that now the users can reuse components like 
 `TraverseStmt(...)` more easily.
 
-For attributes, as we don't have any attributes for contracts yet, we can save this on first implemenation.
+For attributes, we can save them in the trailing objects.
 
 We split them into 3 Stmt kinds so we can save the bits for ResultName for other contracts types.
 
-For `ResultNameDecl`, see following sections.
+For `ContractResultBindingDecl`, see the [result binding section](#contractresultbindingdecl).
 
 ### FunctionDecl
 
@@ -92,25 +91,30 @@ public:
 
 class FunctionDecl : /*...*/ {
   /*...*/
-private:
-  // The actual contracts of the function.
-  // Even if it is not explicitly written.
-  FunctionContractSequence *Contracts = nullptr;
-
 public:
-  bool hasContracts() const {
-    return Contracts;
-  }
+  bool hasContracts() const;
+  void setContracts(FunctionContractSequence *ContractsSeq);
+  const FunctionContractSequence *getContracts() const;
+};
 
-  void setContracts(FunctionContractSequence *ContractsSeq) {
-    Contracts = ContractsSeq;
-  }
+...
 
-  const FunctionContractSequence *getContracts() const {
-    return Contracts;
-  }
+class DeclaratorDecl : public ValueDecl {
+  struct ExtInfo : public QualifierInfo {
+    TypeSourceInfo *TInfo = nullptr;
+    AssociatedConstraint TrailingRequiresClause;
+    FunctionContractSequence *Contracts = nullptr;
+  };
+
+  llvm::PointerUnion<TypeSourceInfo *, ExtInfo *> DeclInfo;
+
+  /*...*/
 };
 ```
+
+We put the storage of FunctionContractsSequence into
+DeclaratorDecl::ExtInfo to save the space for functions
+which doesn't have contracts.
 
 Discussion:
 
@@ -166,6 +170,14 @@ sequence when it saw a redeclaration if the first function has
 contracts, no matter if the redeclaration has contracts written
 or not**.
 
+This duplicates some Sema work and AST storage. But consumers can directly
+use the contracts on the current declaration without maintaining a parameter
+map. We prefer this simpler model for the first version.
+
+Later, if we find this is a performance bottleneck, we
+can try to optimize that by refactoring it into parameter
+mapping mechanism.
+
 #### Possible Later Changes
 
 If needed, we can add `IsWritten` information to `FunctionContractSequence`
@@ -174,7 +186,7 @@ This may be helpful for toolings.
 
 But in the first version, we don't have to do that.
 
-### ResultNameDecl
+### ContractResultBindingDecl
 
 A post contract can introduce a name to represent the return value of the
 function. e.g.,
@@ -186,22 +198,42 @@ int f(int x) post(result: result > x);
 We introduce a new `ValueDecl` for this name.
 
 ```C++
-class ResultNameDecl final : public ValueDecl {
-  ResultNameDecl(DeclContext *DC, SourceLocation Loc,
-                 IdentifierInfo *Name, QualType T);
+class ContractResultBindingDecl final : public ValueDecl {
+  ContractResultBindingDecl(DeclContext *DC, SourceLocation Loc,
+                            IdentifierInfo *Name, QualType T);
 
 public:
-  static ResultNameDecl *Create(ASTContext &Ctx, FunctionDecl *FD,
-                                SourceLocation Loc, IdentifierInfo *Name,
-                                QualType T);
+  static ContractResultBindingDecl *Create(
+      ASTContext &Ctx, FunctionDecl *FD, SourceLocation Loc,
+      IdentifierInfo *Name, QualType T);
 };
 ```
 
 We don't use `VarDecl` here because the result name doesn't introduce a new
 variable. It doesn't have its own storage, initializer or lifetime. During
-code generation, references to the `ResultNameDecl` are bound to the return
-value of the function. Sema rejects a result name on a function returning
-`void`.
+code generation, references to the `ContractResultBindingDecl` are bound to
+the return value of the function. Sema rejects a result name on a function
+returning `void`.
+
+Sema should diagnose result names that conflict with function parameters or
+lambda captures, as required by
+[basic.scope.contract](https://eel.is/c++draft/basic.scope.contract#2). e.g.,
+
+```C++
+int f(int result) post(result: true); // Illegal, conflicts with the parameter.
+auto l = [result = 1]() post(result: true) { return 1; }; // Illegal, conflicts with the capture.
+```
+
+Result bindings should also participate in unused-name and shadowing
+diagnostics. With the corresponding warnings enabled, we should warn for
+the following examples. These are valid declarations, not language errors.
+
+```C++
+int g() post(result: true); // Warn: result is unused.
+
+int result;
+int h() post(result: result > 0); // Warn: result shadows the global variable.
+```
 
 ## Parser
 
@@ -230,15 +262,26 @@ So for contracts on a member function declared inside a class, Parser only
 collects the tokens of the predicate and keeps their source locations. After
 the class is completely parsed, Parser re-enters the class and function scope,
 puts the parameters and `this` back into scope, and parses the cached tokens
-through the normal Sema path.
+as normal, calling Sema for expression analysis.
 
-Free functions and out-of-class member declarations don't have this problem
-and can parse their predicates immediately. `contract_assert` is parsed in a
-function body and doesn't need this delayed parsing either.
+Free functions and out-of-class member declarations don't have this
+complete-class problem. `contract_assert` is parsed in a function body and
+doesn't need this delayed parsing either.
 
 We should reuse Clang's existing late-parsed method declaration mechanism,
 which is already used for other complete-class contexts. We shouldn't add a
 second delayed parsing mechanism only for Contracts.
+
+For a deduced return type, we also need to delay parsing the postcondition.
+e.g.,
+
+```C++
+auto f() post(r: r > 0) { return 1; }
+auto l = []() post(r: r > 0) { return 1; };
+```
+
+Here the type of `r` isn't known until we analyze the body. We should cache
+the postcondition tokens first. Then parse them after return type deduction.
 
 ## Construct Contracts
 
@@ -277,6 +320,25 @@ the predicate, before overload resolution. We shouldn't change the type of
 `ParmVarDecl`, since that would also change the function body. Applying const
 after the predicate is built is too late: we may already have selected the
 wrong overload.
+
+Note that we won't change the parameter declaration into implicit const or create a new const parameter declaration.
+We just ask the expression type to be const.
+
+```C++
+void f(int x)
+  pre(std::is_same_v<decltype(x), int>) // Uses the declared type of x.
+  pre(std::is_same_v<decltype((x)), const int &>) { // Uses the expression type.
+  static_assert(std::is_same_v<decltype((x)), int &>); // No implicit const here.
+}
+```
+
+And also, the const qualification doesn't propagate 
+through indirection. e.g.,
+
+```C++
+void f(int *p) pre((*p = 1, true)); // OK, p is treated as int *const.
+void g(int x) pre(++x > 0);        // Illegal.
+```
 
 Another point we need to care is, when deciding if we're still in the contracts,
 we need to look at the decl contexts too instead of looking at the contract context
@@ -337,7 +399,7 @@ declaration context and function scope stack inconsistent.
 So we should use the recorded contract scope boundary when analyzing these
 captures, and keep the declaration context and function scope stack consistent.
 Each intervening lambda still needs its own capture. For `[r]`, capture
-analysis also needs to accept `ResultNameDecl` as a capturable local entity,
+analysis also needs to accept `ContractResultBindingDecl` as a capturable local entity,
 instead of assuming that every captured name is a `VarDecl`.
 
 The standard allows a capture-default or simple-capture when the enclosing
@@ -350,13 +412,17 @@ states:
 
 ### Template Instantiation
 
-For templates, we also need to instantiate contracts on odr-use, even when
-the function body isn't available. So we shouldn't tie contract instantiation
-only to function body instantiation. e.g.,
+For templates, we need to instantiate contracts when the function is defined
+or odr-used, even when the function body isn't available. See
+[dcl.contract.func](https://eel.is/c++draft/dcl.contract.func#9).
+So we shouldn't tie contract instantiation only to function body instantiation.
+e.g.,
 
 ```C++
 template <typename T>
 void f(T value) pre(value.size() > 0);
+
+void f(...);
 
 void use_f() {
   f(1); // Illegal: int has no member named size.
@@ -367,6 +433,9 @@ The call odr-uses `f<int>`, so Sema needs to instantiate its predicate. There
 is no function body available here, but we still need to diagnose the invalid
 member access. If we only instantiate contracts when instantiating the body,
 we will miss this error.
+
+Contracts don't participate in overload resolution. The error above isn't
+SFINAE, so we can't fall back to `f(...)`.
 
 ## Constract Semantics Checking
 
@@ -485,6 +554,25 @@ doesn't support such mapping semantics.
 
 We think, in the early versions, we should use our current existing
 ODRHash mechanism to decide the contracts equality.
+
+We can support the mapping later to tell `void f(int x) pre(x > 0);` are the same with `void f(int y) pre(y > 0)` but
+we don't have to make it in the first version.
+
+## Constant Evaluation
+
+To be done in following commits.
+
+## Serialization, Modules and ODR
+
+The new AST nodes need serialization support.
+
+Different evaluation semantics may produce different constant-expression
+values. We shouldn't assume that PCMs built with different semantics are interchangeable.
+
+The conservatve design right now is that we don't allow
+the importers to import a TU with different contract
+evaluation semantics. This is just a conservative design
+choice in the first version. We can change that later.
 
 ## ABI: Contract Violation Object and Handler
 
@@ -694,11 +782,12 @@ hidden arguments carrying contract information. A definition compiled with
 
 ### Virtual calls
 
-Always emitting contracts in the callee can't handle the case for virtual
-calls.
+In C++26, virtual functions can't have function contracts. The first
+implementation should diagnose them, rather than accept them and skip the
+checks.
 
-But for simplicity, we can skip the case of virtual calls in the first
-version.
+[P3097R3](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2026/p3097r3.pdf)
+adds virtual function contracts for C++29. But we don't need to implement this extension in the first version.
 
 ### Postconditions and cleanups
 
@@ -737,7 +826,7 @@ of a void function, but doesn't evaluate postconditions while unwinding out
 of the body. Within each entry or exit phase, we visit the corresponding
 contracts in source order.
 
-A `ResultNameDecl` doesn't introduce storage. While emitting a postcondition,
+A `ContractResultBindingDecl` doesn't introduce storage. While emitting a postcondition,
 we should map it to the source-level object in the existing return storage,
 before the result is converted to its ABI representation. For a reference
 return, this means the referred-to object, not the return slot which contains
@@ -801,10 +890,10 @@ S::~S D2     = check preconditions
                 + check postconditions
 ```
 
-Clang may forward `C1` to `C2` and forward `D1` to `D2` as an optimization
-to decrease the code size. However, if contracts are involved, we can't do
-such forwarding because it may cause the contract checks to be evaluated
-multiple times.
+Without virtual bases, `C1` can still alias or forward to `C2`, as long as
+we don't emit duplicate checks. With virtual bases, forwarding `D1` to a
+checked `D2` would run postconditions too early, before virtual-base
+destruction.
 
 ### Predicate evaluation and exceptions
 
