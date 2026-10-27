@@ -15,11 +15,11 @@
 //      then asks the updater to rename the def and repair SSA in one step.
 //      Covered by: SimpleLinearSpillReload.
 //
-//   2. repairSSAForReload(NewVReg, OrigVReg, DefMask, DefBB)
-//      The caller builds a reload MI that already defines a FRESH vreg, then
-//      asks the updater to insert PHIs at IDF blocks and rewrite dominated
-//      uses. No renaming happens inside the updater.
-//      Covered by: RepairSSAForReloadInsertsPHI.
+//   2. repairSSAForNewDefs(OrigVReg, NewDefs, OnChange)
+//      The caller indexes the reload and recomputes its reaching interval.
+//      Batch repair renames the definition, inserts the required merge PHI,
+//      rewrites uses, and finalizes affected live intervals.
+//      Covered by: RepairBatchForReloadInsertsPHI.
 //
 //===----------------------------------------------------------------------===//
 
@@ -204,7 +204,7 @@ body: |
 //===----------------------------------------------------------------------===//
 //
 // This test demonstrates that repairSSAForNewDef() works for spill/reload
-// scenarios without any special handling.
+// scenarios after the caller indexes the reload and refreshes its interval.
 //
 // CFG Structure:
 //    BB0 (entry)
@@ -220,13 +220,14 @@ body: |
 // Scenario:
 // - %0 is defined in BB0 and used in BB2
 // - Insert a reload instruction in BB2 that redefines %0 (violating SSA)
+// - Index the reload and refresh the reaching interval before SSA repair
 // - Call repairSSAForNewDef() to fix the SSA violation
 // - Verify that uses are rewritten and LiveIntervals are correct
 //
 // Expected Behavior:
 // - Reload renamed to define a new register
 // - Uses after reload rewritten to new register
-// - OrigReg's LiveInterval naturally pruned to BB0 only
+// - OrigReg has no remaining uses; its interval retains only the dead def
 // - No PHI needed (linear CFG)
 //
 TEST(MachineLaneSSAUpdaterSpillReloadTest, SimpleLinearSpillReload) {
@@ -287,6 +288,10 @@ TEST(MachineLaneSSAUpdaterSpillReloadTest, SimpleLinearSpillReload) {
       //   - Naturally prune OrigReg's LiveInterval via recomputation
       MachineLaneSSAUpdater Updater(MF, LIS, MDT, *TRI);
       SmallVector<MachineOperand *, 4> PHIDefOps;
+      // Refresh the reaching values before SSA repair snapshots the interval.
+      LIS.InsertMachineInstrInMaps(*ReloadMI);
+      LIS.removeInterval(OrigReg);
+      LIS.createAndComputeVirtRegInterval(OrigReg);
       Register ReloadReg = Updater.repairSSAForNewDef(*ReloadMI, OrigReg, PHIDefOps);
       
       // VERIFY RESULTS:
@@ -316,13 +321,13 @@ TEST(MachineLaneSSAUpdaterSpillReloadTest, SimpleLinearSpillReload) {
       EXPECT_FALSE(FoundPHI) 
           << "Linear CFG should not require PHI nodes";
       
-      // 5. Verify OrigReg's LiveInterval was naturally pruned
-      //    It should only cover BB0 now (definition to end of block)
+      // 5. OrigReg has no remaining uses, so its interval retains only the
+      //    dead definition in BB0, not liveness through the end of the block.
       EXPECT_TRUE(LIS.hasInterval(OrigReg)) 
           << "Original register should still have live interval";
       const LiveInterval &OrigLI = LIS.getInterval(OrigReg);
       
-      // The performSSARepair recomputation naturally prunes OrigReg
+      // Repair recomputes the full-register interval and prunes OrigReg
       // because all uses in BB2 were rewritten to ReloadReg
       SlotIndex OrigEnd = OrigLI.endIndex();
       
@@ -334,20 +339,14 @@ TEST(MachineLaneSSAUpdaterSpillReloadTest, SimpleLinearSpillReload) {
 }
 
 //===----------------------------------------------------------------------===//
-// Test 2: repairSSAForReload on a diamond CFG (new API coverage)
-//
-// Unlike repairSSAForNewDef, this API assumes the caller has ALREADY built an
-// MI that defines a fresh NewVReg (a reload). The updater is asked to insert
-// PHIs at IDF blocks and rewrite dominated uses of OrigVReg.
-//
-// CFG:
-//       bb.0 (entry: %0 = orig def, cond branch)
-//       /  \
-//    bb.1   bb.2     bb.1 = spill path: test builds "%reload = V_MOV 42"
-//       \  /                            and calls repairSSAForReload
-//       bb.3 (use %0)
+// Test 2: batch repair of a reload on one arm of a diamond.
+// bb.0 defines OrigReg and branches to bb.1 and bb.2, which join at bb.3.
+// A redefinition in bb.1 must reach the join on that edge; bb.2 must retain
+// the original value. The join use therefore needs a PHI of those two values.
+// Prepare the indexed reaching interval before invoking batch repair, as the
+// caller does for an inserted reload.
 //===----------------------------------------------------------------------===//
-TEST(MachineLaneSSAUpdaterSpillReloadTest, RepairSSAForReloadInsertsPHI) {
+TEST(MachineLaneSSAUpdaterSpillReloadTest, RepairBatchForReloadInsertsPHI) {
   liveIntervalsTest(R"MIR(
     successors: %bb.1, %bb.2
     %0:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
@@ -389,31 +388,25 @@ TEST(MachineLaneSSAUpdaterSpillReloadTest, RepairSSAForReloadInsertsPHI) {
       unsigned MovOpcode = OrigDefMI->getOpcode();
       Register ExecReg = OrigDefMI->getOperand(2).getReg();
 
-      // Build a reload-like MI in bb.1 that defines a FRESH vreg.
+      // Insert a redefinition of OrigReg, then capture both definitions in LIS.
       const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
-      const TargetRegisterClass *RC = MRI.getRegClass(OrigReg);
-      Register ReloadReg = MRI.createVirtualRegister(RC);
-
       auto InsertPt = BB1->getFirstTerminator();
       MachineInstr *ReloadMI = BuildMI(*BB1, InsertPt, DebugLoc(),
-                                       TII->get(MovOpcode), ReloadReg)
+                                       TII->get(MovOpcode), OrigReg)
                                   .addImm(42)
                                   .addReg(ExecReg, RegState::Implicit);
       LIS.InsertMachineInstrInMaps(*ReloadMI);
-
-      MF.getProperties().set(MachineFunctionProperties::Property::IsSSA);
+      LIS.removeInterval(OrigReg);
+      LIS.createAndComputeVirtRegInterval(OrigReg);
       MF.getProperties().reset(MachineFunctionProperties::Property::NoPHIs);
 
-      LaneBitmask DefMask = MRI.getMaxLaneMaskForVReg(OrigReg);
-
       MachineLaneSSAUpdater Updater(MF, LIS, MDT, *TRI);
-      SmallVector<MachineOperand *, 4> PHIDefOps =
-          Updater.repairSSAForReload(ReloadReg, OrigReg, DefMask, BB1);
+      Updater.repairSSAForNewDefs(OrigReg, {ReloadMI},
+                                  [](ArrayRef<Register>) {});
+      Register ReloadReg = ReloadMI->getOperand(0).getReg();
+      ASSERT_TRUE(ReloadReg.isVirtual());
+      EXPECT_NE(ReloadReg, OrigReg);
 
-      ASSERT_FALSE(PHIDefOps.empty())
-          << "repairSSAForReload should return PHI def operands";
-
-      EXPECT_EQ(ReloadMI->getOperand(0).getReg(), ReloadReg);
 
       MachineInstr *JoinPHI = nullptr;
       for (MachineInstr &MI : *BB3) {
