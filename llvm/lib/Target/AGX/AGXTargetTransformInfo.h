@@ -42,8 +42,11 @@ public:
     return AGX::GENERIC_ADDRESS;
   }
 
+  // No vector registers (class 1): vectors are scalarized, and the SLP and
+  // loop vectorizers, which only cost compile time here, give up at once.
+  // Neighbouring loads and stores still merge (getLoadStoreVecRegBitWidth).
   unsigned getNumberOfRegisters(unsigned ClassID) const override {
-    return ST->getMaxGPRs();
+    return ClassID == 1 ? 0 : ST->getMaxGPRs();
   }
 
   TypeSize

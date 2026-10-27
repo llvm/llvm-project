@@ -32,6 +32,7 @@ Fat AGX object layout (little-endian):
 """
 
 import argparse
+import concurrent.futures
 import os
 import struct
 import subprocess
@@ -110,6 +111,8 @@ def main():
                     help="leave out the CHIP+agx-strict entries")
     # The only pipeline now; accepted for the builds that still pass it.
     ap.add_argument("--via-air", action="store_true", help=argparse.SUPPRESS)
+    ap.add_argument("-j", dest="jobs", type=int, default=os.cpu_count() or 1,
+                    help="chips to compile at once (default: the processor count)")
     ap.add_argument("-o", dest="out", required=True)
     ap.add_argument("source")
     a = ap.parse_args()
@@ -117,11 +120,14 @@ def main():
     with tempfile.TemporaryDirectory() as tmp:
         chips = [c for c in a.chips.split(",") if c]
         a.portable = portable_air(a, a.source, tmp)
-        objects = [(c, compile_for(a, c, tmp)) for c in chips]
+        builds = [(c, "") for c in chips]
         if a.agx_strict:
             # Mesa compiles for G13 and G14 only.
-            objects += [(c + STRICT, compile_for(a, c, tmp, STRICT)) for c in chips
-                        if c.startswith(("agx-g13", "agx-g14"))]
+            builds += [(c, STRICT) for c in chips if c.startswith(("agx-g13", "agx-g14"))]
+        # The builds are independent opt and llc processes: run them side by side.
+        with concurrent.futures.ThreadPoolExecutor(a.jobs) as pool:
+            objs = list(pool.map(lambda b: compile_for(a, b[0], tmp, b[1]), builds))
+        objects = [(c + f, o) for (c, f), o in zip(builds, objs)]
     open(a.out, "wb").write(pack(objects))
     return 0
 

@@ -7,7 +7,9 @@
 ; CHECK-NOT: call {{.*}}@air.
 ; CHECK: call float @llvm.log.f32
 ; CHECK: call float @llvm.roundeven.f32
-; CHECK: call float @llvm.sin.f32
+; precise sinpi: pi r as a hi / lo pair, then the sine polynomial (no llvm.sin)
+; CHECK: call float @llvm.fma.f32(float %{{.*}}, float f0x40490FDB,
+; CHECK-NEXT: call float @llvm.fma.f32(float %{{.*}}, float f0xB3BBBD2E,
 ; CHECK: ret void
 
 declare float @air.asinh.f32(float)
