@@ -6511,9 +6511,7 @@ bool VPlanTransforms::handleCompressingPatterns(
     }
 
     // Remove all memory operations we've handled.
-    MemOps.erase(
-        remove_if(MemOps, [](VPInstruction *VPI) { return VPI == nullptr; }),
-        MemOps.end());
+    MemOps.erase(remove_if(MemOps, equal_to(nullptr)), MemOps.end());
 
     // Update the conditional induction to increment by the number of active
     // lanes in the mask.

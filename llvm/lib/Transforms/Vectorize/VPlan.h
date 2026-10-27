@@ -2996,8 +2996,8 @@ protected:
 };
 
 /// A recipe for handling conditional induction PHIs. The start value is the
-/// first operand of the recipe, the incoming value from the backedge is the
-/// second operand, and the third operand is the step.
+/// first operand of the recipe and the incoming value from the backedge is the
+/// second operand.
 class VPConditionalInductionPHIRecipe : public VPHeaderPHIRecipe {
   ConditionalInductionDescriptor CondID;
 
