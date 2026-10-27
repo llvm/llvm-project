@@ -757,6 +757,49 @@ def : Pat<(f16 (fma (AGXFPSrc16 f16:$a, i32:$am), (AGXFPSrc16 f16:$b, i32:$bm),
                     (AGXFPSrc16 f16:$c, i32:$cm))),
           (FMADD16_F16 $am, $a, $bm, $b, $cm, $c)>;
 
+// A single precision operation with a 16-bit destination rounds its result to
+// single precision and converts that to half precision (applegpu's
+// saturate_and_set_thread_result), as fptrunc of the operation does: the
+// conversion folds into the operation it converts.
+def FMUL32_F16_F32 : AGXALUPseudo<FMUL32_g13, (outs GPR16:$dst),
+                                  (ins SrcMods:$src0_mods, Src32Op:$src0,
+                                       SrcMods:$src1_mods, Src32Op:$src1), [],
+                                  [WriteFP]>;
+def FMADD32_F16_F32 : AGXALUPseudo<FMADD32_g13, (outs GPR16:$dst),
+                                   (ins SrcMods:$src0_mods, Src32Op:$src0,
+                                        SrcMods:$src1_mods, Src32Op:$src1,
+                                        SrcMods:$src2_mods, Src32Op:$src2), [],
+                                   [WriteFP3]>;
+// Not when a source extends half precision: the FADD32_M / FMADD32_M forms
+// read it directly (and their result converts with an fadd).
+class AGXOneUseF32Op<dag ops, dag frag> : PatFrag<ops, frag, [{
+  if (!N->hasOneUse())
+    return false;
+  for (SDValue Op : N->ops()) {
+    while (Op.getOpcode() == ISD::FNEG || Op.getOpcode() == ISD::FABS)
+      Op = Op.getOperand(0);
+    if (Op.getOpcode() == ISD::FP_EXTEND)
+      return false;
+  }
+  return true;
+}]>;
+def agx_fadd_oneuse : AGXOneUseF32Op<(ops node:$a, node:$b),
+                                     (fadd node:$a, node:$b)>;
+def agx_fmul_oneuse : AGXOneUseF32Op<(ops node:$a, node:$b),
+                                     (fmul node:$a, node:$b)>;
+def agx_fma_oneuse : AGXOneUseF32Op<(ops node:$a, node:$b, node:$c),
+                                    (fma node:$a, node:$b, node:$c)>;
+def : Pat<(f16 (fpround (f32 (agx_fadd_oneuse (AGXFPSrc32 f32:$a, i32:$am),
+                                              (AGXFPSrc32 f32:$b, i32:$bm))))),
+          (FADD32_F16_F32 $am, $a, $bm, $b)>;
+def : Pat<(f16 (fpround (f32 (agx_fmul_oneuse (AGXFPSrc32 f32:$a, i32:$am),
+                                              (AGXFPSrc32 f32:$b, i32:$bm))))),
+          (FMUL32_F16_F32 $am, $a, $bm, $b)>;
+def : Pat<(f16 (fpround (f32 (agx_fma_oneuse (AGXFPSrc32 f32:$a, i32:$am),
+                                             (AGXFPSrc32 f32:$b, i32:$bm),
+                                             (AGXFPSrc32 f32:$c, i32:$cm))))),
+          (FMADD32_F16_F32 $am, $a, $bm, $b, $cm, $c)>;
+
 // Single precision operations convert half precision sources exactly, so an
 // extension from half precision is folded into its uses (as Mesa's
 // agx_optimizer_fmov folds f2f32): FADD32_M<a><b> and FMADD32_M<a><b><c>
