@@ -680,6 +680,10 @@ bool llvm::stripDebugInfo(Function &F) {
     Changed = true;
     F.setSubprogram(nullptr);
   }
+  if (F.hasMetadata(LLVMContext::MD_flmd)) {
+    Changed = true;
+    F.setFLContext(nullptr);
+  }
 
   DenseMap<MDNode *, MDNode *> LoopIDsMap;
   for (BasicBlock &BB : F) {
