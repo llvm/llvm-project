@@ -5,27 +5,35 @@ target triple = "aarch64"
 
 ;; Ensure we don't crash here with the i12 elts being extended.
 
-define <16 x i32> @invalid_elt_type(<16 x i32> %acc, ptr %p) {
+define void @invalid_elt_type(ptr %a, ptr %b, ptr %c) {
 ; CHECK-LABEL: invalid_elt_type:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q4, [x0]
-; CHECK-NEXT:    umull2 v5.8h, v4.16b, v4.16b
-; CHECK-NEXT:    umull v4.8h, v4.8b, v4.8b
-; CHECK-NEXT:    mov d6, v4.d[1]
-; CHECK-NEXT:    mov d7, v5.d[1]
-; CHECK-NEXT:    bic v4.4h, #240, lsl #8
-; CHECK-NEXT:    bic v5.4h, #240, lsl #8
-; CHECK-NEXT:    uaddw v0.4s, v0.4s, v4.4h
-; CHECK-NEXT:    bic v6.4h, #240, lsl #8
-; CHECK-NEXT:    bic v7.4h, #240, lsl #8
-; CHECK-NEXT:    uaddw v2.4s, v2.4s, v5.4h
-; CHECK-NEXT:    uaddw v3.4s, v3.4s, v7.4h
-; CHECK-NEXT:    uaddw v1.4s, v1.4s, v6.4h
+; CHECK-NEXT:    ldr q0, [x1]
+; CHECK-NEXT:    ldp q4, q5, [x0, #32]
+; CHECK-NEXT:    umull2 v1.8h, v0.16b, v0.16b
+; CHECK-NEXT:    umull v0.8h, v0.8b, v0.8b
+; CHECK-NEXT:    mov d2, v1.d[1]
+; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $q1
+; CHECK-NEXT:    mov d3, v0.d[1]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    bic v1.4h, #240, lsl #8
+; CHECK-NEXT:    bic v0.4h, #240, lsl #8
+; CHECK-NEXT:    bic v2.4h, #240, lsl #8
+; CHECK-NEXT:    bic v3.4h, #240, lsl #8
+; CHECK-NEXT:    uaddw v1.4s, v4.4s, v1.4h
+; CHECK-NEXT:    ldp q4, q6, [x0]
+; CHECK-NEXT:    uaddw v2.4s, v5.4s, v2.4h
+; CHECK-NEXT:    uaddw v0.4s, v4.4s, v0.4h
+; CHECK-NEXT:    uaddw v3.4s, v6.4s, v3.4h
+; CHECK-NEXT:    stp q1, q2, [x2, #32]
+; CHECK-NEXT:    stp q0, q3, [x2]
 ; CHECK-NEXT:    ret
-  %load = load <16 x i8>, ptr %p
+  %acc = load <16 x i32>, ptr %a
+  %load = load <16 x i8>, ptr %b
   %zext.12 = zext <16 x i8> %load to <16 x i12>
   %mul = mul <16 x i12> %zext.12, %zext.12
   %zext.32 = zext <16 x i12> %mul to <16 x i32>
   %prdx = call <16 x i32> @llvm.vector.partial.reduce.add(<16 x i32> %acc, <16 x i32> %zext.32)
-  ret <16 x i32> %prdx
+  store <16 x i32> %prdx, ptr %c
+  ret void
 }
