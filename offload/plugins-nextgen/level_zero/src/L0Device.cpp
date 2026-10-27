@@ -205,6 +205,8 @@ Error L0DeviceTy::initImpl(GenericPluginTy &Plugin,
     return QueueGroupInfoOrErr.takeError();
   QueueConfig = *QueueGroupInfoOrErr;
 
+  MaxBlockSharedMemSize = ComputeProperties.maxSharedLocalMemory;
+
   if (auto Err = MemAllocator.initDevicePools(*this, Options,
                                               L0Context.getZeContext()))
     return Err;
