@@ -10,7 +10,7 @@
 
 declare void @use(i1)
 
-; FIXME: %cmp must not be replaced with %start samesign >u %inv.
+; %cmp must not be replaced with %start samesign >u %inv.
 ; E.g. for %start = 127, %inv = -1, %cmp is poison at %iv = 127, and false at
 ; %iv = -128.
 ; Monotonicity: needs the poison at %iv = 127 to be picked false, because
@@ -24,7 +24,7 @@ define void @samesign_ugt_signed_latch(i8 %start, i8 %inv) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ [[START]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i8 [[START]], [[INV]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i8 [[IV]], [[INV]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP]])
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw i8 [[IV]], 1
 ; CHECK-NEXT:    [[LATCH_COND:%.*]] = icmp sgt i8 [[IV]], [[INV]]
@@ -78,7 +78,7 @@ exit:
   ret void
 }
 
-; %cmp can be replaced with %start samesign >u %inv.
+; TODO: %cmp can be replaced with %start samesign >u %inv.
 ; Backedge guard: %inv >=s 0, so when the latch %iv >s %inv is true, both
 ; operands are non-negative, and %cmp is %iv >u %inv, which is true.
 ; Monotonicity: once %iv >u %inv is true, it stays true, because %iv only grows
@@ -95,7 +95,7 @@ define void @samesign_ugt_signed_latch_nonneg_inv(i8 %start, i8 %inv) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ [[START]], %[[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i8 [[START]], [[INV]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i8 [[IV]], [[INV]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP]])
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw i8 [[IV]], 1
 ; CHECK-NEXT:    [[LATCH_COND:%.*]] = icmp sgt i8 [[IV]], [[INV]]
@@ -119,7 +119,7 @@ exit:
   ret void
 }
 
-; %cmp can be replaced with %start samesign >u %inv.
+; TODO: %cmp can be replaced with %start samesign >u %inv.
 ; %start >=s 0 and %iv steps with nuw nsw, so %iv stays non-negative.
 ; %inv <s 0, so the operand signs always differ, and %cmp is poison on
 ; every iteration, so it is safe to use the value on the first iteration.
@@ -134,8 +134,10 @@ define void @samesign_ugt_signed_latch_iv_keeps_sign(i8 %start, i8 %inv) {
 ; CHECK:       [[LOOP_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i8 [[START]], [[INV]]
+; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ [[START]], %[[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i8 [[IV]], [[INV]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP]])
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
 ; CHECK-NEXT:    [[LATCH_COND:%.*]] = icmp sgt i8 [[START]], [[INV]]
 ; CHECK-NEXT:    br i1 [[LATCH_COND]], label %[[LOOP]], label %[[EXIT_LOOPEXIT:.*]]
 ; CHECK:       [[EXIT_LOOPEXIT]]:
