@@ -2318,6 +2318,36 @@ bool SymbolFileDWARF::DeclContextMatchesThisSymbolFile(
   return false;
 }
 
+/// Split a name up into a basename and template parameters.
+static bool SplitTemplateParams(llvm::StringRef fullname,
+                                llvm::StringRef &basename,
+                                llvm::StringRef &template_params) {
+  auto it = fullname.find('<');
+  if (it == llvm::StringRef::npos) {
+    basename = fullname;
+    template_params = llvm::StringRef();
+    return false;
+  }
+  basename = fullname.slice(0, it);
+  template_params = fullname.slice(it, fullname.size());
+  return true;
+}
+
+static bool UpdateCompilerContextForSimpleTemplateNames(TypeQuery &match) {
+  // We need to find any names in the context that have template parameters
+  // and strip them so the context can be matched when -gsimple-template-names
+  // is being used. Returns true if any of the context items were updated.
+  bool any_context_updated = false;
+  for (auto &context : match.GetContextRef()) {
+    llvm::StringRef basename, params;
+    if (SplitTemplateParams(context.name.GetStringRef(), basename, params)) {
+      context.name = ConstString(basename);
+      any_context_updated = true;
+    }
+  }
+  return any_context_updated;
+}
+
 void SymbolFileDWARF::FindGlobalVariables(
     ConstString name, const CompilerDeclContext &parent_decl_ctx,
     uint32_t max_matches, VariableList &variables) {
@@ -2359,7 +2389,7 @@ void SymbolFileDWARF::FindGlobalVariables(
   uint32_t pruned_idx = original_size;
 
   SymbolContext sc;
-  m_index->GetGlobalVariables(ConstString(basename), [&](DWARFDIE die) {
+  auto process_die = [&](DWARFDIE die) {
     if (!sc.module_sp)
       sc.module_sp = m_objfile_sp->GetModule();
     assert(sc.module_sp);
@@ -2402,7 +2432,54 @@ void SymbolFileDWARF::FindGlobalVariables(
       return IterationAction::Continue;
 
     return IterationAction::Stop;
-  });
+  };
+
+  m_index->GetGlobalVariables(ConstString(basename), process_die);
+
+  // Constant-initialized static data members without out-of-line definitions
+  // are emitted as in-class declaration DIEs with DW_AT_const_value and are
+  // not indexed in accelerator tables (.debug_names or .apple_names). If
+  // looking up a scoped name found no global variables, look up the enclosing
+  // record type and check its children for matching static data members.
+  if (!context.empty() && variables.GetSize() == original_size) {
+    auto process_type_die = [&](DWARFDIE type_die) {
+      if (!type_die.IsStructUnionOrClass())
+        return IterationAction::Continue;
+      for (DWARFDIE child_die : type_die.children()) {
+        const dw_tag_t child_tag = child_die.Tag();
+        if (child_tag != DW_TAG_variable && child_tag != DW_TAG_member)
+          continue;
+        if (child_tag == DW_TAG_member &&
+            !child_die.GetAttributeValueAsUnsigned(DW_AT_declaration, 0))
+          continue;
+        if (llvm::StringRef(child_die.GetName()) != basename)
+          continue;
+        DWARFFormValue form_value;
+        if (!child_die.GetDIE()->GetAttributeValue(
+                child_die.GetCU(), DW_AT_const_value, form_value) &&
+            !child_die.GetDIE()->GetAttributeValue(child_die.GetCU(),
+                                                   DW_AT_location, form_value))
+          continue;
+        if (process_die(child_die) == IterationAction::Stop)
+          return IterationAction::Stop;
+      }
+      return IterationAction::Continue;
+    };
+
+    TypeQuery query(context);
+    m_index->GetTypesWithQuery(query, process_type_die);
+    if (variables.GetSize() == original_size) {
+      TypeQuery query_simple(query);
+      if (UpdateCompilerContextForSimpleTemplateNames(query_simple)) {
+        m_index->GetTypesWithQuery(query_simple, [&](DWARFDIE die) {
+          if (query.ContextMatches(
+                  die.GetTypeLookupContext(/*derive_template_names=*/true)))
+            return process_type_die(die);
+          return IterationAction::Continue;
+        });
+      }
+    }
+  }
 
   // Return the number of variable that were appended to the list
   const uint32_t num_matches = variables.GetSize() - original_size;
@@ -2812,36 +2889,6 @@ void SymbolFileDWARF::GetMangledNamesForFunction(
     DWARFDIE die = GetDIE(die_ref);
     mangled_names.push_back(ConstString(die.GetMangledName()));
   }
-}
-
-/// Split a name up into a basename and template parameters.
-static bool SplitTemplateParams(llvm::StringRef fullname,
-                                llvm::StringRef &basename,
-                                llvm::StringRef &template_params) {
-  auto it = fullname.find('<');
-  if (it == llvm::StringRef::npos) {
-    basename = fullname;
-    template_params = llvm::StringRef();
-    return false;
-  }
-  basename = fullname.slice(0, it);
-  template_params = fullname.slice(it, fullname.size());
-  return true;
-}
-
-static bool UpdateCompilerContextForSimpleTemplateNames(TypeQuery &match) {
-  // We need to find any names in the context that have template parameters
-  // and strip them so the context can be matched when -gsimple-template-names
-  // is being used. Returns true if any of the context items were updated.
-  bool any_context_updated = false;
-  for (auto &context : match.GetContextRef()) {
-    llvm::StringRef basename, params;
-    if (SplitTemplateParams(context.name.GetStringRef(), basename, params)) {
-      context.name = ConstString(basename);
-      any_context_updated = true;
-    }
-  }
-  return any_context_updated;
 }
 
 uint64_t SymbolFileDWARF::GetDebugInfoSize(bool load_all_debug_info) {

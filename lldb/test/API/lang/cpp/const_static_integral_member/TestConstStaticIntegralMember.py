@@ -148,14 +148,16 @@ class TestCase(TestBase):
 
     # Fails on Windows for unknown reasons.
     @skipIfWindows
-    # On linux this passes due to the manual index
-    @expectedFailureDarwin(debug_info=no_match(["dsym"]))
     @skipIf(debug_info=["dsym"], compiler=["clang"], compiler_version=["<", "19.0"])
     def test_inline_static_members_dwarf5(self):
         self.check_inline_static_members("-gdwarf-5")
 
-    # On linux this passes due to the manual index
-    @expectedFailureDarwin
+    # dsymutil strips the debug info for classes that only have const static
+    # data members without locations in DWARF v4 and earlier.
+    @expectedFailureDarwin(
+        debug_info=["dsym"],
+        bugnumber="https://github.com/llvm/llvm-project/issues/165079",
+    )
     def test_inline_static_members_dwarf4(self):
         self.check_inline_static_members("-gdwarf-4")
 
@@ -202,14 +204,10 @@ class TestCase(TestBase):
 
     # Fails on Windows for unknown reasons.
     @skipIfWindows
-    # On linux this passes due to the manual index
-    @expectedFailureDarwin(debug_info=no_match(["dsym"]))
     @skipIf(debug_info=["dsym"], compiler=["clang"], compiler_version=["<", "19.0"])
     def test_shadowed_static_inline_members_dwarf5(self):
         self.check_shadowed_static_inline_members("-gdwarf-5")
 
-    # On linux this passes due to the manual index
-    @expectedFailureDarwin
     def test_shadowed_static_inline_members_dwarf4(self):
         self.check_shadowed_static_inline_members("-gdwarf-4")
 
