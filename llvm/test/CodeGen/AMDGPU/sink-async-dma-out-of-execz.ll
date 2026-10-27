@@ -54,23 +54,23 @@ define amdgpu_kernel void @sink_dma_operand_used_after(ptr addrspace(1) readonly
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x3c nv
-; GFX1250-NEXT:    v_and_b32_e32 v2, 0x3ff, v0
+; GFX1250-NEXT:    v_and_b32_e32 v3, 0x3ff, v0
 ; GFX1250-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0
-; GFX1250-NEXT:    ; implicit-def: $vgpr3
+; GFX1250-NEXT:    ; implicit-def: $vgpr2
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX1250-NEXT:    v_cmp_gt_u32_e32 vcc_lo, s0, v2
+; GFX1250-NEXT:    v_cmp_gt_u32_e32 vcc_lo, s0, v3
 ; GFX1250-NEXT:    ; implicit-def: $sgpr0_sgpr1
 ; GFX1250-NEXT:    s_and_saveexec_b32 s3, vcc_lo
 ; GFX1250-NEXT:    s_cbranch_execz .LBB1_2
 ; GFX1250-NEXT:  ; %bb.1: ; %then
 ; GFX1250-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_add_nc_u32_e32 v3, s2, v2
+; GFX1250-NEXT:    v_add_nc_u32_e32 v2, s2, v3
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_add_nc_u32_e32 v1, 4, v3
+; GFX1250-NEXT:    v_add_nc_u32_e32 v1, 4, v2
 ; GFX1250-NEXT:  .LBB1_2: ; %join
-; GFX1250-NEXT:    global_load_async_to_lds_b128 v3, v0, s[0:1]
+; GFX1250-NEXT:    global_load_async_to_lds_b128 v2, v0, s[0:1]
 ; GFX1250-NEXT:    s_or_b32 exec_lo, exec_lo, s3
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x34 nv
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
