@@ -42,6 +42,7 @@ add_public_tablegen_target(CodeGenOptionsTableGen)
 add_llvm_component_library(LLVMCodeGen
   AggressiveAntiDepBreaker.cpp
   AllocationOrder.cpp
+  FailedReassignCache.cpp
   Analysis.cpp
   AssignmentTrackingAnalysis.cpp
   AtomicExpandPass.cpp
