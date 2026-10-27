@@ -49,8 +49,12 @@ public:
   /// Skip relocations that we don't want to handle in BOLT
   virtual bool skipRelocationType(uint32_t Type) const = 0;
 
+  /// Return true if encoding needs the original instruction to preserve bits
+  /// outside the relocation field.
+  virtual bool needsOriginalInstruction(uint32_t Type) const { return false; }
+
   /// Adjust value depending on relocation type (make it PC relative or not).
-  /// OriginalInst is to be able to encode instructions for AArch64.
+  /// OriginalInst preserves instruction bits outside the relocation field.
   virtual uint64_t encodeValue(uint32_t Type, uint64_t Value, uint64_t PC,
                                uint32_t OriginalInst = 0) const = 0;
 
