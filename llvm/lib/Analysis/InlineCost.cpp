@@ -1588,10 +1588,9 @@ bool CallAnalyzer::visitAlloca(AllocaInst &I) {
       // being too pessimistic and prevent inlining non-problematic code. This
       // could result in unintended perf regressions. A better overall strategy
       // is needed to track stack usage during inlining.
-      Type *Ty = I.getAllocatedType();
       AllocatedSize = SaturatingMultiplyAdd(
           AllocSize->getLimitedValue(),
-          DL.getTypeAllocSize(Ty).getKnownMinValue(), AllocatedSize);
+          I.getAllocationBaseSize(DL).getKnownMinValue(), AllocatedSize);
       if (AllocatedSize > InlineConstants::MaxSimplifiedDynamicAllocaToInline)
         HasDynamicAlloca = true;
       return false;
@@ -2151,7 +2150,13 @@ void InlineCostCallAnalyzer::updateThreshold(CallBase &Call, Function &Callee) {
       // behavior to prevent inlining of hot callsites during ThinLTO
       // compile phase.
       Threshold = *HotCallSiteThreshold;
-    } else if (isColdCallSite(Call, CallerBFI)) {
+    } else if (isCallableCC(Caller->getCallingConv()) &&
+               isColdCallSite(Call, CallerBFI)) {
+      // In a function that is a hardware entry point rather than something
+      // callable, e.g. a GPU kernel, register allocation is whole-function and
+      // occupancy is set by the worst case over it. A call left out of line
+      // there costs the hot path too, however cold the call itself is, so the
+      // reduced threshold does not apply.
       LLVM_DEBUG(dbgs() << "Cold callsite.\n");
       // Do not apply bonuses for a cold callsite including the
       // LastCallToStatic bonus. While this bonus might result in code size
@@ -2431,8 +2436,11 @@ bool CallAnalyzer::simplifyCallSite(Function *F, CallBase &Call) {
 
 bool CallAnalyzer::isLoweredToCall(Function *F, CallBase &Call) {
   const TargetLibraryInfo *TLI = GetTLI ? &GetTLI(*F) : nullptr;
-  LibFunc LF;
-  if (!TLI || !TLI->getLibFunc(*F, LF) || !TLI->has(LF))
+  if (!TLI)
+    return TTI.isLoweredToCall(F);
+
+  LibFunc LF = TLI->getLibFunc(*F);
+  if (!TLI->has(LF))
     return TTI.isLoweredToCall(F);
 
   switch (LF) {
@@ -2527,7 +2535,6 @@ bool CallAnalyzer::visitCallBase(CallBase &Call) {
       InitsVargArgs = true;
       return false;
     case Intrinsic::launder_invariant_group:
-    case Intrinsic::strip_invariant_group:
       if (auto *SROAArg = getSROAArgForValueOrNull(II->getOperand(0)))
         SROAArgValues[II] = SROAArg;
       return true;
@@ -2741,12 +2748,11 @@ CallAnalyzer::analyzeBlock(BasicBlock *BB,
     // FIXME: Currently, the number of instructions in a function regardless of
     // our ability to simplify them during inline to constants or dead code,
     // are actually used by the vector bonus heuristic. As long as that's true,
-    // we have to special case debug intrinsics here to prevent differences in
-    // inlining due to debug symbols. Eventually, the number of unsimplified
+    // we have to special case pseudo-probes here to prevent differences in
+    // inlining due to sample profiling. Eventually, the number of unsimplified
     // instructions shouldn't factor into the cost computation, but until then,
     // hack around it here.
-    // Similarly, skip pseudo-probes.
-    if (I.isDebugOrPseudoInst())
+    if (isa<PseudoProbeInst>(I))
       continue;
 
     // Skip ephemeral values.

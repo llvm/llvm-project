@@ -14,7 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/ADCE.h"
-#include "llvm/ADT/DenseMap.h"
+#include "ScalarOptions.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/PostOrderIterator.h"
@@ -39,13 +39,11 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/Value.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -59,16 +57,6 @@ using namespace llvm;
 
 STATISTIC(NumRemoved, "Number of instructions removed");
 STATISTIC(NumBranchesRemoved, "Number of branch instructions removed");
-
-// This is a temporary option until we change the interface to this pass based
-// on optimization level.
-static cl::opt<bool> RemoveControlFlowFlag("adce-remove-control-flow",
-                                           cl::init(true), cl::Hidden);
-
-// This option enables removing of may-be-infinite loops which have no other
-// effect.
-static cl::opt<bool> RemoveLoops("adce-remove-loops", cl::init(false),
-                                 cl::Hidden);
 
 namespace {
 
@@ -94,6 +82,7 @@ struct ADCEChanged {
 };
 
 class AggressiveDeadCodeElimination {
+  const ScalarOptions &Opts;
   Function &F;
 
   // ADCE does not use DominatorTree per se, but it updates it to preserve the
@@ -174,9 +163,9 @@ class AggressiveDeadCodeElimination {
   void makeUnconditional(BasicBlock *BB, BasicBlock *Target);
 
 public:
-  AggressiveDeadCodeElimination(Function &F, DominatorTree *DT,
-                                PostDominatorTree &PDT)
-      : F(F), DT(DT), PDT(PDT) {}
+  AggressiveDeadCodeElimination(const ScalarOptions &Opts, Function &F,
+                                DominatorTree *DT, PostDominatorTree &PDT)
+      : Opts(Opts), F(F), DT(DT), PDT(PDT) {}
 
   ADCEChanged performDeadCodeElimination();
 };
@@ -201,10 +190,10 @@ void AggressiveDeadCodeElimination::initialize() {
     if (isAlwaysLive(I))
       markLive(&I);
 
-  if (!RemoveControlFlowFlag)
+  if (!Opts.adce_remove_control_flow)
     return;
 
-  if (!RemoveLoops) {
+  if (!Opts.adce_remove_loops) {
     // Mark all terminators that have backedges as live.
     SmallVector<std::pair<const BasicBlock *, const BasicBlock *>> Backedges;
     FindFunctionBackedges(F, Backedges);
@@ -254,7 +243,8 @@ bool AggressiveDeadCodeElimination::isAlwaysLive(Instruction &I) {
   }
   if (!I.isTerminator())
     return false;
-  if (RemoveControlFlowFlag && isa<UncondBrInst, CondBrInst, SwitchInst>(I))
+  if (Opts.adce_remove_control_flow &&
+      isa<UncondBrInst, CondBrInst, SwitchInst>(I))
     return false;
   return true;
 }
@@ -425,32 +415,6 @@ ADCEChanged AggressiveDeadCodeElimination::removeDeadInstructions() {
   ADCEChanged Changed;
   // Updates control and dataflow around dead blocks
   Changed.ChangedControlFlow = updateDeadRegions();
-
-  LLVM_DEBUG({
-    for (Instruction &I : instructions(F)) {
-      // Check if the instruction is alive.
-      if (isLive(&I))
-        continue;
-
-      if (auto *DII = dyn_cast<DbgVariableIntrinsic>(&I)) {
-        // Check if the scope of this variable location is alive.
-        if (AliveScopes.count(DII->getDebugLoc()->getScope()))
-          continue;
-
-        // If intrinsic is pointing at a live SSA value, there may be an
-        // earlier optimization bug: if we know the location of the variable,
-        // why isn't the scope of the location alive?
-        for (Value *V : DII->location_ops()) {
-          if (Instruction *II = dyn_cast<Instruction>(V)) {
-            if (isLive(II)) {
-              dbgs() << "Dropping debug info for " << *DII << "\n";
-              break;
-            }
-          }
-        }
-      }
-    }
-  });
 
   // The inverse of the live set is the dead set.  These are those instructions
   // that have no side effects and do not influence the control flow or return
@@ -624,8 +588,9 @@ PreservedAnalyses ADCEPass::run(Function &F, FunctionAnalysisManager &FAM) {
   // to update analysis if it is already available.
   auto *DT = FAM.getCachedResult<DominatorTreeAnalysis>(F);
   auto &PDT = FAM.getResult<PostDominatorTreeAnalysis>(F);
-  ADCEChanged Changed =
-      AggressiveDeadCodeElimination(F, DT, PDT).performDeadCodeElimination();
+  const ScalarOptions &Opts = getScalarOptions(F);
+  ADCEChanged Changed = AggressiveDeadCodeElimination(Opts, F, DT, PDT)
+                            .performDeadCodeElimination();
   if (!Changed.ChangedAnything)
     return PreservedAnalyses::all();
 

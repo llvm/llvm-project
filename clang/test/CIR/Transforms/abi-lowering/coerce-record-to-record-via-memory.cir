@@ -3,8 +3,8 @@
 
 !s32i = !cir.int<s, 32>
 !s64i = !cir.int<s, 64>
-!rec_Vec4   = !cir.struct<"Vec4"   {!s32i, !s32i, !s32i, !s32i}>
-!rec_TwoI64 = !cir.struct<"TwoI64" {!s64i, !s64i}>
+!rec_Vec4   = !cir.struct<"Vec4"   {data !s32i, data !s32i, data !s32i, data !s32i}>
+!rec_TwoI64 = !cir.struct<"TwoI64" {data !s64i, data !s64i}>
 
 #coerce_vec4_to_twoi64 = {
   return = { kind = "direct" },
@@ -34,9 +34,8 @@ module attributes {
   // CHECK:        %[[SLOT:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<!rec_TwoI64>
   // CHECK:        cir.store %[[ARG]], %[[SLOT]] : !rec_TwoI64, !cir.ptr<!rec_TwoI64>
   // CHECK:        %[[CAST:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!rec_TwoI64> -> !cir.ptr<!rec_Vec4>
-  // CHECK:        %[[REC:.*]] = cir.load %[[CAST]] : !cir.ptr<!rec_Vec4>, !rec_Vec4
   // CHECK:        %[[V:.*]] = cir.alloca "v" {{.*}} : !cir.ptr<!rec_Vec4>
-  // CHECK:        cir.store %[[REC]], %[[V]] : !rec_Vec4, !cir.ptr<!rec_Vec4>
+  // CHECK:        cir.copy %[[CAST]] align(8) to %[[V]] align(4) : !cir.ptr<!rec_Vec4>
 
   cir.func @caller()
       attributes { test_classify = #caller_no_args } {
@@ -48,10 +47,9 @@ module attributes {
 
   // Call site coerces the !rec_Vec4 operand to !rec_TwoI64 through memory.
   // CHECK:      cir.func{{.*}} @caller()
-  // CHECK:        %[[VAL:.*]] = cir.load %{{.*}} : !cir.ptr<!rec_Vec4>, !rec_Vec4
-  // CHECK:        cir.store %[[VAL]], %{{.*}} : !rec_Vec4, !cir.ptr<!rec_Vec4>
-  // CHECK:        %[[ARGCAST:.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!rec_Vec4> -> !cir.ptr<!rec_TwoI64>
-  // CHECK:        %[[ARGREC:.*]] = cir.load %[[ARGCAST]] : !cir.ptr<!rec_TwoI64>, !rec_TwoI64
+  // CHECK:        %[[V:.*]] = cir.alloca "v" {{.*}} : !cir.ptr<!rec_Vec4>
+  // CHECK:        %[[ARGCAST:.*]] = cir.cast bitcast %[[V]] : !cir.ptr<!rec_Vec4> -> !cir.ptr<!rec_TwoI64>
+  // CHECK:        %[[ARGREC:.*]] = cir.load align(4) %[[ARGCAST]] : !cir.ptr<!rec_TwoI64>, !rec_TwoI64
   // CHECK:        cir.call @takes_vec(%[[ARGREC]]) : (!rec_TwoI64) -> ()
 
 }

@@ -4,8 +4,8 @@
 define float @test() {
 ; CHECK-LABEL: define float @test() {
 ; CHECK-NEXT:  [[LABEL:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <12 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float undef, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float undef>, float 0.000000e+00, i64 5
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <12 x float> <float undef, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float undef, float 0.000000e+00, float 0.000000e+00, float undef>, float 0.000000e+00, i64 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <12 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float poison, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float poison>, float 0.000000e+00, i64 5
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <12 x float> <float poison, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float poison, float 0.000000e+00, float 0.000000e+00, float poison>, float 0.000000e+00, i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <12 x float> [[TMP1]], float 0.000000e+00, i64 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul <12 x float> [[TMP0]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = fadd <12 x float> [[TMP3]], <float 0.000000e+00, float 0.000000e+00, float -0.000000e+00, float 0.000000e+00, float -0.000000e+00, float 0.000000e+00, float -0.000000e+00, float 0.000000e+00, float 0.000000e+00, float -0.000000e+00, float 0.000000e+00, float poison>

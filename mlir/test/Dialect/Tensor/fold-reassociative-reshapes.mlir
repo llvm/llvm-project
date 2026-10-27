@@ -24,6 +24,36 @@ func.func @expand_shape_of_rank_reducing_extract(
 
 // -----
 
+// CHECK-LABEL: func @fold_extract_slice_of_expand_shape(
+//  CHECK-SAME:   %[[ARG0:.*]]: tensor<4096xf32>
+//   CHECK-NOT:   tensor.expand_shape
+//   CHECK-NOT:   tensor.extract_slice
+//       CHECK:   return %[[ARG0]] : tensor<4096xf32>
+func.func @fold_extract_slice_of_expand_shape(
+    %arg0 : tensor<4096xf32>) -> tensor<4096xf32> {
+  %expanded = tensor.expand_shape %arg0 [[0, 1]] output_shape [4096, 1]
+    : tensor<4096xf32> into tensor<4096x1xf32>
+  %slice = tensor.extract_slice %expanded[0, 0] [4096, 1] [1, 1]
+    : tensor<4096x1xf32> to tensor<4096xf32>
+  return %slice : tensor<4096xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @dont_fold_extract_slice_of_expand_shape_with_different_sizes(
+//       CHECK:   tensor.expand_shape
+//       CHECK:   tensor.extract_slice
+func.func @dont_fold_extract_slice_of_expand_shape_with_different_sizes(
+    %arg0 : tensor<4096xf32>) -> tensor<1024xf32> {
+  %expanded = tensor.expand_shape %arg0 [[0, 1]] output_shape [4096, 1]
+    : tensor<4096xf32> into tensor<4096x1xf32>
+  %slice = tensor.extract_slice %expanded[0, 0] [1024, 1] [1, 1]
+    : tensor<4096x1xf32> to tensor<1024xf32>
+  return %slice : tensor<1024xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @unpadding_collapse_of_extract_slice(
 //  CHECK-SAME:     %[[t:.*]]: tensor<?x?x?x?xf32>
 //  CHECK-SAME:     %[[x:[a-zA-Z0-9_]+]]: index
@@ -238,3 +268,4 @@ func.func @parallel_insert_of_non_padding_expand_shape(
   }
   return %1 : tensor<?x?x?x?xf32>
 }
+

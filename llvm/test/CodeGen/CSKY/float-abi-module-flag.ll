@@ -16,8 +16,8 @@
 ; no "float-abi" flag.
 ; RUN: llc -csky-no-aliases -mtriple=csky -mattr=+2e3,+fpuv2_sf,+fpuv2_df,+hard-float -float-abi=hard < %t/none.ll | FileCheck %s --check-prefix=HARD
 
-; An explicit module flag takes precedence over the legacy -float-abi option.
-; RUN: llc -csky-no-aliases -mtriple=csky -mattr=+2e3,+fpuv2_sf,+fpuv2_df,+hard-float -float-abi=hard < %t/soft.ll | FileCheck %s --check-prefix=SOFT
+; A -float-abi option conflicting with the module flag is an error.
+; RUN: not llc -csky-no-aliases -mtriple=csky -mattr=+2e3,+fpuv2_sf,+fpuv2_df,+hard-float -float-abi=hard < %t/soft.ll -filetype=null 2>&1 | FileCheck %s --check-prefix=CONFLICT
 
 ;--- none.ll
 define float @f(float %x, float %y) {
@@ -43,3 +43,4 @@ define float @f(float %x, float %y) {
 
 ; SOFT: fmtvrl
 ; HARD-NOT: fmtvrl
+; CONFLICT: -float-abi=hard conflicts with the "float-abi" module flag "soft"

@@ -86,6 +86,13 @@ void constant_idx_unsafe(unsigned idx) {
   buffer[10] = 0;       // expected-note{{used in buffer access here}}
 }
 
+// FIXME: This is a false negative. The casted type int[10] requires 40 bytes,
+// but the underlying array only has 10 bytes, so accessing index 9 is out-of-bounds.
+void cast_array_subscript_false_negative() {
+  char a[10];
+  ((int(&)[10])a)[9] = 4;
+}
+
 void constant_id_string(unsigned idx) {
   char safe_char = "abc"[1]; // no-warning
   safe_char = ""[0];

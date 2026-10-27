@@ -60,34 +60,26 @@ define <vscale x 16 x i1> @match_nxv16i8_v2i8(<vscale x 16 x i8> %op1, <2 x i8> 
   ret <vscale x 16 x i1> %r
 }
 
+define <vscale x 16 x i1> @match_nxv16i8_v3i8(<vscale x 16 x i8> %op1, <3 x i8> %op2, <vscale x 16 x i1> %mask) #0 {
+; CHECK-LABEL: match_nxv16i8_v3i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov s1, w0
+; CHECK-NEXT:    mov v1.b[1], w1
+; CHECK-NEXT:    mov v1.b[2], w2
+; CHECK-NEXT:    mov v1.b[3], w0
+; CHECK-NEXT:    mov z1.s, s1
+; CHECK-NEXT:    match p0.b, p0/z, z0.b, z1.b
+; CHECK-NEXT:    ret
+  %r = tail call <vscale x 16 x i1> @llvm.experimental.vector.match(<vscale x 16 x i8> %op1, <3 x i8> %op2, <vscale x 16 x i1> %mask)
+  ret <vscale x 16 x i1> %r
+}
+
 define <vscale x 16 x i1> @match_nxv16i8_v4i8(<vscale x 16 x i8> %op1, <4 x i8> %op2, <vscale x 16 x i1> %mask) #0 {
 ; CHECK-LABEL: match_nxv16i8_v4i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Spill
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
-; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    umov w8, v1.h[1]
-; CHECK-NEXT:    umov w9, v1.h[0]
-; CHECK-NEXT:    umov w10, v1.h[2]
-; CHECK-NEXT:    ptrue p1.b
-; CHECK-NEXT:    mov z2.b, w8
-; CHECK-NEXT:    mov z3.b, w9
-; CHECK-NEXT:    umov w8, v1.h[3]
-; CHECK-NEXT:    mov z1.b, w10
-; CHECK-NEXT:    cmpeq p2.b, p1/z, z0.b, z2.b
-; CHECK-NEXT:    cmpeq p3.b, p1/z, z0.b, z3.b
-; CHECK-NEXT:    mov z2.b, w8
-; CHECK-NEXT:    cmpeq p4.b, p1/z, z0.b, z1.b
-; CHECK-NEXT:    cmpeq p1.b, p1/z, z0.b, z2.b
-; CHECK-NEXT:    mov p2.b, p3/m, p3.b
-; CHECK-NEXT:    sel p2.b, p2, p2.b, p4.b
-; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Reload
-; CHECK-NEXT:    orr p0.b, p0/z, p2.b, p1.b
-; CHECK-NEXT:    addvl sp, sp, #1
-; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    uzp1 v1.8b, v1.8b, v0.8b
+; CHECK-NEXT:    mov z1.s, s1
+; CHECK-NEXT:    match p0.b, p0/z, z0.b, z1.b
 ; CHECK-NEXT:    ret
   %r = tail call <vscale x 16 x i1> @llvm.experimental.vector.match(<vscale x 16 x i8> %op1, <4 x i8> %op2, <vscale x 16 x i1> %mask)
   ret <vscale x 16 x i1> %r
@@ -142,22 +134,38 @@ define <16 x i1> @match_v16i8_v2i8(<16 x i8> %op1, <2 x i8> %op2, <16 x i1> %mas
   ret <16 x i1> %r
 }
 
+define <16 x i1> @match_v16i8_v3i8(<16 x i8> %op1, <3 x i8> %op2, <16 x i1> %mask) #0 {
+; CHECK-LABEL: match_v16i8_v3i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov s2, w0
+; CHECK-NEXT:    shl v1.16b, v1.16b, #7
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.b, vl16
+; CHECK-NEXT:    mov v2.b[1], w1
+; CHECK-NEXT:    cmpne p1.b, p0/z, z1.b, #0
+; CHECK-NEXT:    mov v2.b[2], w2
+; CHECK-NEXT:    mov v2.b[3], w0
+; CHECK-NEXT:    mov z1.s, s2
+; CHECK-NEXT:    match p0.b, p1/z, z0.b, z1.b
+; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-NEXT:    ret
+  %r = tail call <16 x i1> @llvm.experimental.vector.match(<16 x i8> %op1, <3 x i8> %op2, <16 x i1> %mask)
+  ret <16 x i1> %r
+}
+
 define <16 x i1> @match_v16i8_v4i8(<16 x i8> %op1, <4 x i8> %op2, <16 x i1> %mask) #0 {
 ; CHECK-LABEL: match_v16i8_v4i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    dup v3.16b, v1.b[2]
-; CHECK-NEXT:    dup v4.16b, v1.b[0]
-; CHECK-NEXT:    dup v5.16b, v1.b[4]
-; CHECK-NEXT:    dup v1.16b, v1.b[6]
-; CHECK-NEXT:    cmeq v3.16b, v0.16b, v3.16b
-; CHECK-NEXT:    cmeq v4.16b, v0.16b, v4.16b
-; CHECK-NEXT:    cmeq v5.16b, v0.16b, v5.16b
-; CHECK-NEXT:    cmeq v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    orr v1.16b, v4.16b, v3.16b
-; CHECK-NEXT:    orr v0.16b, v5.16b, v0.16b
-; CHECK-NEXT:    orr v0.16b, v1.16b, v0.16b
-; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    uzp1 v1.8b, v1.8b, v0.8b
+; CHECK-NEXT:    shl v2.16b, v2.16b, #7
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.b, vl16
+; CHECK-NEXT:    cmpne p1.b, p0/z, z2.b, #0
+; CHECK-NEXT:    mov z1.s, s1
+; CHECK-NEXT:    match p0.b, p1/z, z0.b, z1.b
+; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %r = tail call <16 x i1> @llvm.experimental.vector.match(<16 x i8> %op1, <4 x i8> %op2, <16 x i1> %mask)
   ret <16 x i1> %r
@@ -224,6 +232,17 @@ define <vscale x 8 x i1> @match_nxv8i16_v8i16(<vscale x 8 x i16> %op1, <8 x i16>
   ret <vscale x 8 x i1> %r
 }
 
+define <vscale x 8 x i1> @match_nxv8i16_v4i16(<vscale x 8 x i16> %op1, <4 x i16> %op2, <vscale x 8 x i1> %mask) #0 {
+; CHECK-LABEL: match_nxv8i16_v4i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    mov z1.d, d1
+; CHECK-NEXT:    match p0.h, p0/z, z0.h, z1.h
+; CHECK-NEXT:    ret
+  %r = tail call <vscale x 8 x i1> @llvm.experimental.vector.match(<vscale x 8 x i16> %op1, <4 x i16> %op2, <vscale x 8 x i1> %mask)
+  ret <vscale x 8 x i1> %r
+}
+
 define <8 x i1> @match_v8i16(<8 x i16> %op1, <8 x i16> %op2, <8 x i1> %mask) #0 {
 ; CHECK-LABEL: match_v8i16:
 ; CHECK:       // %bb.0:
@@ -238,6 +257,24 @@ define <8 x i1> @match_v8i16(<8 x i16> %op1, <8 x i16> %op2, <8 x i1> %mask) #0 
 ; CHECK-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-NEXT:    ret
   %r = tail call <8 x i1> @llvm.experimental.vector.match(<8 x i16> %op1, <8 x i16> %op2, <8 x i1> %mask)
+  ret <8 x i1> %r
+}
+
+define <8 x i1> @match_v8i16_v4i16(<8 x i16> %op1, <4 x i16> %op2, <8 x i1> %mask) #0 {
+; CHECK-LABEL: match_v8i16_v4i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ushll v2.8h, v2.8b, #0
+; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    mov z1.d, d1
+; CHECK-NEXT:    shl v2.8h, v2.8h, #15
+; CHECK-NEXT:    cmpne p1.h, p0/z, z2.h, #0
+; CHECK-NEXT:    match p0.h, p1/z, z0.h, z1.h
+; CHECK-NEXT:    mov z0.h, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    xtn v0.8b, v0.8h
+; CHECK-NEXT:    ret
+  %r = tail call <8 x i1> @llvm.experimental.vector.match(<8 x i16> %op1, <4 x i16> %op2, <8 x i1> %mask)
   ret <8 x i1> %r
 }
 
@@ -272,6 +309,40 @@ define <vscale x 16 x i1> @match_nxv16i8_v32i8(<vscale x 16 x i8> %op1, <32 x i8
 ; CHECK-NEXT:    ret
   %r = tail call <vscale x 16 x i1> @llvm.experimental.vector.match(<vscale x 16 x i8> %op1, <32 x i8> %op2, <vscale x 16 x i1> %mask)
   ret <vscale x 16 x i1> %r
+}
+
+define <vscale x 16 x i1> @match_nxv16i8_v32i8_vscale_range(<vscale x 16 x i8> %op1, <32 x i8> %op2, <vscale x 16 x i1> %mask) #0 vscale_range(2, 2) {
+; CHECK-LABEL: match_nxv16i8_v32i8_vscale_range:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $q2 killed $q2 def $z2
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    mov z2.q, q2
+; CHECK-NEXT:    mov z1.q, q1
+; CHECK-NEXT:    match p1.b, p0/z, z0.b, z2.b
+; CHECK-NEXT:    match p2.b, p0/z, z0.b, z1.b
+; CHECK-NEXT:    sel p0.b, p2, p2.b, p1.b
+; CHECK-NEXT:    ret
+  %r = tail call <vscale x 16 x i1> @llvm.experimental.vector.match(<vscale x 16 x i8> %op1, <32 x i8> %op2, <vscale x 16 x i1> %mask)
+  ret <vscale x 16 x i1> %r
+}
+
+define <16 x i1> @match_v16i8_v32i8_vscale_range(<16 x i8> %op1, <32 x i8> %op2, <16 x i1> %mask) #0 vscale_range(2, 2) {
+; CHECK-LABEL: match_v16i8_v32i8_vscale_range:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shl v3.16b, v3.16b, #7
+; CHECK-NEXT:    ptrue p0.b, vl16
+; CHECK-NEXT:    // kill: def $q2 killed $q2 def $z2
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    cmpne p1.b, p0/z, z3.b, #0
+; CHECK-NEXT:    match p0.b, p1/z, z0.b, z2.b
+; CHECK-NEXT:    match p2.b, p1/z, z0.b, z1.b
+; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    mov z1.b, p2/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    orr v0.16b, v1.16b, v0.16b
+; CHECK-NEXT:    ret
+  %r = tail call <16 x i1> @llvm.experimental.vector.match(<16 x i8> %op1, <32 x i8> %op2, <16 x i1> %mask)
+  ret <16 x i1> %r
 }
 
 define <16 x i1> @match_v16i8_v32i8(<16 x i8> %op1, <32 x i8> %op2, <16 x i1> %mask) #0 {
@@ -411,6 +482,116 @@ define <2 x i1> @match_v2xi64_v2i64(<2 x i64> %op1, <2 x i64> %op2, <2 x i1> %ma
 ; CHECK-NEXT:    ret
   %r = tail call <2 x i1> @llvm.experimental.vector.match(<2 x i64> %op1, <2 x i64> %op2, <2 x i1> %mask)
   ret <2 x i1> %r
+}
+
+; Ensure we don't try to custom lower nodes with v3i8 source operands.
+; TODO: It may be worth extending the source operand so this case can use match.
+define <3 x i1> @match_v3i8_v3i1(<3 x i8> %op1, <8 x i8> %op2, <3 x i1> %mask) #0 {
+; CHECK-LABEL: match_v3i8_v3i1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov s1, w0
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    umov w8, v0.b[1]
+; CHECK-NEXT:    umov w9, v0.b[0]
+; CHECK-NEXT:    umov w10, v0.b[2]
+; CHECK-NEXT:    umov w11, v0.b[3]
+; CHECK-NEXT:    umov w12, v0.b[4]
+; CHECK-NEXT:    umov w13, v0.b[5]
+; CHECK-NEXT:    mov v1.h[1], w1
+; CHECK-NEXT:    dup v2.4h, w8
+; CHECK-NEXT:    umov w8, v0.b[6]
+; CHECK-NEXT:    dup v3.4h, w9
+; CHECK-NEXT:    dup v4.4h, w10
+; CHECK-NEXT:    dup v5.4h, w11
+; CHECK-NEXT:    dup v6.4h, w12
+; CHECK-NEXT:    dup v7.4h, w13
+; CHECK-NEXT:    mov v1.h[2], w2
+; CHECK-NEXT:    dup v16.4h, w8
+; CHECK-NEXT:    bic v2.4h, #255, lsl #8
+; CHECK-NEXT:    bic v3.4h, #255, lsl #8
+; CHECK-NEXT:    bic v4.4h, #255, lsl #8
+; CHECK-NEXT:    bic v5.4h, #255, lsl #8
+; CHECK-NEXT:    bic v6.4h, #255, lsl #8
+; CHECK-NEXT:    bic v7.4h, #255, lsl #8
+; CHECK-NEXT:    umov w8, v0.b[7]
+; CHECK-NEXT:    bic v1.4h, #255, lsl #8
+; CHECK-NEXT:    bic v16.4h, #255, lsl #8
+; CHECK-NEXT:    cmeq v0.4h, v1.4h, v2.4h
+; CHECK-NEXT:    cmeq v2.4h, v1.4h, v3.4h
+; CHECK-NEXT:    cmeq v3.4h, v1.4h, v4.4h
+; CHECK-NEXT:    cmeq v4.4h, v1.4h, v5.4h
+; CHECK-NEXT:    cmeq v5.4h, v1.4h, v6.4h
+; CHECK-NEXT:    cmeq v6.4h, v1.4h, v7.4h
+; CHECK-NEXT:    orr v0.8b, v2.8b, v0.8b
+; CHECK-NEXT:    orr v2.8b, v3.8b, v4.8b
+; CHECK-NEXT:    orr v4.8b, v5.8b, v6.8b
+; CHECK-NEXT:    cmeq v5.4h, v1.4h, v16.4h
+; CHECK-NEXT:    dup v3.4h, w8
+; CHECK-NEXT:    orr v0.8b, v0.8b, v2.8b
+; CHECK-NEXT:    orr v2.8b, v4.8b, v5.8b
+; CHECK-NEXT:    fmov s4, w3
+; CHECK-NEXT:    bic v3.4h, #255, lsl #8
+; CHECK-NEXT:    mov v4.h[1], w4
+; CHECK-NEXT:    orr v0.8b, v0.8b, v2.8b
+; CHECK-NEXT:    cmeq v1.4h, v1.4h, v3.4h
+; CHECK-NEXT:    mov v4.h[2], w5
+; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    shl v0.4h, v0.4h, #8
+; CHECK-NEXT:    shl v1.4h, v4.4h, #15
+; CHECK-NEXT:    sshr v0.4h, v0.4h, #8
+; CHECK-NEXT:    cmlt v1.4h, v1.4h, #0
+; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    umov w0, v0.h[0]
+; CHECK-NEXT:    umov w1, v0.h[1]
+; CHECK-NEXT:    umov w2, v0.h[2]
+; CHECK-NEXT:    ret
+  %r = tail call <3 x i1> @llvm.experimental.vector.match(<3 x i8> %op1, <8 x i8> %op2, <3 x i1> %mask)
+  ret <3 x i1> %r
+}
+
+define <8 x i1> @match_v8i32_v8i32_vscale_range(<8 x i32> %op1, <8 x i32> %op2, <8 x i1> %mask) #0 vscale_range(2, 2) {
+; CHECK-LABEL: match_v8i32_v8i32_vscale_range:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $q3 killed $q3 killed $z2_z3 def $z2_z3
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    // kill: def $q2 killed $q2 killed $z2_z3 def $z2_z3
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    splice z2.s, p0, { z2.s, z3.s }
+; CHECK-NEXT:    splice z0.s, p0, { z0.s, z1.s }
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    mov z1.s, z2.s[1]
+; CHECK-NEXT:    mov z3.s, s2
+; CHECK-NEXT:    mov z5.s, z2.s[2]
+; CHECK-NEXT:    cmpeq p1.s, p0/z, z0.s, z1.s
+; CHECK-NEXT:    cmpeq p2.s, p0/z, z0.s, z3.s
+; CHECK-NEXT:    mov z1.s, z2.s[3]
+; CHECK-NEXT:    cmpeq p3.s, p0/z, z0.s, z5.s
+; CHECK-NEXT:    mov z3.s, z2.s[4]
+; CHECK-NEXT:    mov p1.b, p2/m, p2.b
+; CHECK-NEXT:    cmpeq p2.s, p0/z, z0.s, z1.s
+; CHECK-NEXT:    mov z1.s, z2.s[5]
+; CHECK-NEXT:    sel p1.b, p1, p1.b, p3.b
+; CHECK-NEXT:    cmpeq p3.s, p0/z, z0.s, z3.s
+; CHECK-NEXT:    mov z3.s, z2.s[6]
+; CHECK-NEXT:    sel p1.b, p1, p1.b, p2.b
+; CHECK-NEXT:    cmpeq p2.s, p0/z, z0.s, z1.s
+; CHECK-NEXT:    mov z1.s, z2.s[7]
+; CHECK-NEXT:    sel p1.b, p1, p1.b, p3.b
+; CHECK-NEXT:    cmpeq p3.s, p0/z, z0.s, z3.s
+; CHECK-NEXT:    sel p1.b, p1, p1.b, p2.b
+; CHECK-NEXT:    cmpeq p2.s, p0/z, z0.s, z1.s
+; CHECK-NEXT:    shl v1.8b, v4.8b, #7
+; CHECK-NEXT:    sel p0.b, p1, p1.b, p3.b
+; CHECK-NEXT:    cmlt v1.8b, v1.8b, #0
+; CHECK-NEXT:    sel p0.b, p0, p0.b, p2.b
+; CHECK-NEXT:    mov z0.s, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
+; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    ret
+  %r = tail call <8 x i1> @llvm.experimental.vector.match(<8 x i32> %op1, <8 x i32> %op2, <8 x i1> %mask)
+  ret <8 x i1> %r
 }
 
 attributes #0 = { "target-features"="+sve2" }

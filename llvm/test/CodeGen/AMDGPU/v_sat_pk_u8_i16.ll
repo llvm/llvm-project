@@ -616,7 +616,7 @@ define <2 x i16> @vec_smax_smin(<2 x i16> %src) {
 ; SDAG-GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-GFX11-NEXT:    v_pk_max_i16 v0, v0, 0
 ; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; SDAG-GFX11-NEXT:    v_pk_min_i16 v0, 0xff, v0 op_sel_hi:[0,1]
+; SDAG-GFX11-NEXT:    v_pk_min_i16 v0, v0, 0xff op_sel_hi:[1,0]
 ; SDAG-GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-GFX12-LABEL: vec_smax_smin:
@@ -628,7 +628,7 @@ define <2 x i16> @vec_smax_smin(<2 x i16> %src) {
 ; SDAG-GFX12-NEXT:    s_wait_kmcnt 0x0
 ; SDAG-GFX12-NEXT:    v_pk_max_i16 v0, v0, 0
 ; SDAG-GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; SDAG-GFX12-NEXT:    v_pk_min_i16 v0, 0xff, v0 op_sel_hi:[0,1]
+; SDAG-GFX12-NEXT:    v_pk_min_i16 v0, v0, 0xff op_sel_hi:[1,0]
 ; SDAG-GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-VI-LABEL: vec_smax_smin:
@@ -656,7 +656,7 @@ define <2 x i16> @vec_smax_smin(<2 x i16> %src) {
 ; GISEL-GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-GFX11-NEXT:    v_pk_max_i16 v0, v0, 0
 ; GISEL-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-GFX11-NEXT:    v_pk_min_i16 v0, 0xff00ff, v0
+; GISEL-GFX11-NEXT:    v_pk_min_i16 v0, v0, 0xff00ff
 ; GISEL-GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-GFX12-LABEL: vec_smax_smin:
@@ -668,7 +668,7 @@ define <2 x i16> @vec_smax_smin(<2 x i16> %src) {
 ; GISEL-GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GISEL-GFX12-NEXT:    v_pk_max_i16 v0, v0, 0
 ; GISEL-GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-GFX12-NEXT:    v_pk_min_i16 v0, 0xff00ff, v0
+; GISEL-GFX12-NEXT:    v_pk_min_i16 v0, v0, 0xff00ff
 ; GISEL-GFX12-NEXT:    s_setpc_b64 s[30:31]
 
   %src.max = call <2 x i16> @llvm.smax.v2i16(<2 x i16> %src, <2 x i16> <i16 0, i16 0>)
@@ -716,7 +716,7 @@ define amdgpu_kernel void @vec_smax_smin_sgpr(ptr addrspace(1) %out, <2 x i16> i
 ; SDAG-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-GFX11-NEXT:    v_pk_max_i16 v0, s2, 0
 ; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; SDAG-GFX11-NEXT:    v_pk_min_i16 v0, 0xff, v0 op_sel_hi:[0,1]
+; SDAG-GFX11-NEXT:    v_pk_min_i16 v0, v0, 0xff op_sel_hi:[1,0]
 ; SDAG-GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; SDAG-GFX11-NEXT:    s_endpgm
 ;
@@ -727,7 +727,7 @@ define amdgpu_kernel void @vec_smax_smin_sgpr(ptr addrspace(1) %out, <2 x i16> i
 ; SDAG-GFX12-NEXT:    s_wait_kmcnt 0x0
 ; SDAG-GFX12-NEXT:    v_pk_max_i16 v0, s2, 0
 ; SDAG-GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; SDAG-GFX12-NEXT:    v_pk_min_i16 v0, 0xff, v0 op_sel_hi:[0,1]
+; SDAG-GFX12-NEXT:    v_pk_min_i16 v0, v0, 0xff op_sel_hi:[1,0]
 ; SDAG-GFX12-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; SDAG-GFX12-NEXT:    s_endpgm
 ;
@@ -855,7 +855,7 @@ define <2 x i16> @vec_smin_smax(<2 x i16> %src) {
 ; SDAG-GFX11-LABEL: vec_smin_smax:
 ; SDAG-GFX11:       ; %bb.0:
 ; SDAG-GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX11-NEXT:    v_pk_min_i16 v0, 0xff, v0 op_sel_hi:[0,1]
+; SDAG-GFX11-NEXT:    v_pk_min_i16 v0, v0, 0xff op_sel_hi:[1,0]
 ; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; SDAG-GFX11-NEXT:    v_pk_max_i16 v0, v0, 0
 ; SDAG-GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -867,7 +867,7 @@ define <2 x i16> @vec_smin_smax(<2 x i16> %src) {
 ; SDAG-GFX12-NEXT:    s_wait_samplecnt 0x0
 ; SDAG-GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; SDAG-GFX12-NEXT:    s_wait_kmcnt 0x0
-; SDAG-GFX12-NEXT:    v_pk_min_i16 v0, 0xff, v0 op_sel_hi:[0,1]
+; SDAG-GFX12-NEXT:    v_pk_min_i16 v0, v0, 0xff op_sel_hi:[1,0]
 ; SDAG-GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; SDAG-GFX12-NEXT:    v_pk_max_i16 v0, v0, 0
 ; SDAG-GFX12-NEXT:    s_setpc_b64 s[30:31]
@@ -895,7 +895,7 @@ define <2 x i16> @vec_smin_smax(<2 x i16> %src) {
 ; GISEL-GFX11-LABEL: vec_smin_smax:
 ; GISEL-GFX11:       ; %bb.0:
 ; GISEL-GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX11-NEXT:    v_pk_min_i16 v0, 0xff00ff, v0
+; GISEL-GFX11-NEXT:    v_pk_min_i16 v0, v0, 0xff00ff
 ; GISEL-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GISEL-GFX11-NEXT:    v_pk_max_i16 v0, v0, 0
 ; GISEL-GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -907,7 +907,7 @@ define <2 x i16> @vec_smin_smax(<2 x i16> %src) {
 ; GISEL-GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GISEL-GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GISEL-GFX12-NEXT:    s_wait_kmcnt 0x0
-; GISEL-GFX12-NEXT:    v_pk_min_i16 v0, 0xff00ff, v0
+; GISEL-GFX12-NEXT:    v_pk_min_i16 v0, v0, 0xff00ff
 ; GISEL-GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GISEL-GFX12-NEXT:    v_pk_max_i16 v0, v0, 0
 ; GISEL-GFX12-NEXT:    s_setpc_b64 s[30:31]
@@ -1086,8 +1086,8 @@ define i16 @basic_umax_umin_bit_or(i16 %src0, i16 %src1) {
 ; SDAG-GFX11-TRUE16-LABEL: basic_umax_umin_bit_or:
 ; SDAG-GFX11-TRUE16:       ; %bb.0:
 ; SDAG-GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX11-TRUE16-NEXT:    v_min_u16 v0.h, 0xff, v1.l
-; SDAG-GFX11-TRUE16-NEXT:    v_min_u16 v0.l, 0xff, v0.l
+; SDAG-GFX11-TRUE16-NEXT:    v_min_u16 v0.h, v1.l, 0xff
+; SDAG-GFX11-TRUE16-NEXT:    v_min_u16 v0.l, v0.l, 0xff
 ; SDAG-GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; SDAG-GFX11-TRUE16-NEXT:    v_lshlrev_b16 v0.h, 8, v0.h
 ; SDAG-GFX11-TRUE16-NEXT:    v_or_b16 v0.l, v0.l, v0.h
@@ -1096,8 +1096,8 @@ define i16 @basic_umax_umin_bit_or(i16 %src0, i16 %src1) {
 ; SDAG-GFX11-FAKE16-LABEL: basic_umax_umin_bit_or:
 ; SDAG-GFX11-FAKE16:       ; %bb.0:
 ; SDAG-GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX11-FAKE16-NEXT:    v_min_u16 v1, 0xff, v1
-; SDAG-GFX11-FAKE16-NEXT:    v_min_u16 v0, 0xff, v0
+; SDAG-GFX11-FAKE16-NEXT:    v_min_u16 v1, v1, 0xff
+; SDAG-GFX11-FAKE16-NEXT:    v_min_u16 v0, v0, 0xff
 ; SDAG-GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; SDAG-GFX11-FAKE16-NEXT:    v_lshlrev_b16 v1, 8, v1
 ; SDAG-GFX11-FAKE16-NEXT:    v_or_b32_e32 v0, v0, v1
@@ -1110,8 +1110,8 @@ define i16 @basic_umax_umin_bit_or(i16 %src0, i16 %src1) {
 ; SDAG-GFX12-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; SDAG-GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; SDAG-GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; SDAG-GFX12-TRUE16-NEXT:    v_min_u16 v0.h, 0xff, v1.l
-; SDAG-GFX12-TRUE16-NEXT:    v_min_u16 v0.l, 0xff, v0.l
+; SDAG-GFX12-TRUE16-NEXT:    v_min_u16 v0.h, v1.l, 0xff
+; SDAG-GFX12-TRUE16-NEXT:    v_min_u16 v0.l, v0.l, 0xff
 ; SDAG-GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; SDAG-GFX12-TRUE16-NEXT:    v_lshlrev_b16 v0.h, 8, v0.h
 ; SDAG-GFX12-TRUE16-NEXT:    v_or_b16 v0.l, v0.l, v0.h
@@ -1124,8 +1124,8 @@ define i16 @basic_umax_umin_bit_or(i16 %src0, i16 %src1) {
 ; SDAG-GFX12-FAKE16-NEXT:    s_wait_samplecnt 0x0
 ; SDAG-GFX12-FAKE16-NEXT:    s_wait_bvhcnt 0x0
 ; SDAG-GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; SDAG-GFX12-FAKE16-NEXT:    v_min_u16 v1, 0xff, v1
-; SDAG-GFX12-FAKE16-NEXT:    v_min_u16 v0, 0xff, v0
+; SDAG-GFX12-FAKE16-NEXT:    v_min_u16 v1, v1, 0xff
+; SDAG-GFX12-FAKE16-NEXT:    v_min_u16 v0, v0, 0xff
 ; SDAG-GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; SDAG-GFX12-FAKE16-NEXT:    v_lshlrev_b16 v1, 8, v1
 ; SDAG-GFX12-FAKE16-NEXT:    v_or_b32_e32 v0, v0, v1
@@ -1152,8 +1152,8 @@ define i16 @basic_umax_umin_bit_or(i16 %src0, i16 %src1) {
 ; GISEL-GFX11-TRUE16-LABEL: basic_umax_umin_bit_or:
 ; GISEL-GFX11-TRUE16:       ; %bb.0:
 ; GISEL-GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX11-TRUE16-NEXT:    v_min_u16 v0.h, 0xff, v1.l
-; GISEL-GFX11-TRUE16-NEXT:    v_min_u16 v0.l, 0xff, v0.l
+; GISEL-GFX11-TRUE16-NEXT:    v_min_u16 v0.h, v1.l, 0xff
+; GISEL-GFX11-TRUE16-NEXT:    v_min_u16 v0.l, v0.l, 0xff
 ; GISEL-GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GISEL-GFX11-TRUE16-NEXT:    v_lshlrev_b16 v0.h, 8, v0.h
 ; GISEL-GFX11-TRUE16-NEXT:    v_or_b16 v0.l, v0.l, v0.h
@@ -1162,8 +1162,8 @@ define i16 @basic_umax_umin_bit_or(i16 %src0, i16 %src1) {
 ; GISEL-GFX11-FAKE16-LABEL: basic_umax_umin_bit_or:
 ; GISEL-GFX11-FAKE16:       ; %bb.0:
 ; GISEL-GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX11-FAKE16-NEXT:    v_min_u16 v1, 0xff, v1
-; GISEL-GFX11-FAKE16-NEXT:    v_min_u16 v0, 0xff, v0
+; GISEL-GFX11-FAKE16-NEXT:    v_min_u16 v1, v1, 0xff
+; GISEL-GFX11-FAKE16-NEXT:    v_min_u16 v0, v0, 0xff
 ; GISEL-GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GISEL-GFX11-FAKE16-NEXT:    v_lshlrev_b16 v1, 8, v1
 ; GISEL-GFX11-FAKE16-NEXT:    v_or_b32_e32 v0, v0, v1
@@ -1176,8 +1176,8 @@ define i16 @basic_umax_umin_bit_or(i16 %src0, i16 %src1) {
 ; GISEL-GFX12-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; GISEL-GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GISEL-GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GISEL-GFX12-TRUE16-NEXT:    v_min_u16 v0.h, 0xff, v1.l
-; GISEL-GFX12-TRUE16-NEXT:    v_min_u16 v0.l, 0xff, v0.l
+; GISEL-GFX12-TRUE16-NEXT:    v_min_u16 v0.h, v1.l, 0xff
+; GISEL-GFX12-TRUE16-NEXT:    v_min_u16 v0.l, v0.l, 0xff
 ; GISEL-GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GISEL-GFX12-TRUE16-NEXT:    v_lshlrev_b16 v0.h, 8, v0.h
 ; GISEL-GFX12-TRUE16-NEXT:    v_or_b16 v0.l, v0.l, v0.h
@@ -1190,8 +1190,8 @@ define i16 @basic_umax_umin_bit_or(i16 %src0, i16 %src1) {
 ; GISEL-GFX12-FAKE16-NEXT:    s_wait_samplecnt 0x0
 ; GISEL-GFX12-FAKE16-NEXT:    s_wait_bvhcnt 0x0
 ; GISEL-GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GISEL-GFX12-FAKE16-NEXT:    v_min_u16 v1, 0xff, v1
-; GISEL-GFX12-FAKE16-NEXT:    v_min_u16 v0, 0xff, v0
+; GISEL-GFX12-FAKE16-NEXT:    v_min_u16 v1, v1, 0xff
+; GISEL-GFX12-FAKE16-NEXT:    v_min_u16 v0, v0, 0xff
 ; GISEL-GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GISEL-GFX12-FAKE16-NEXT:    v_lshlrev_b16 v1, 8, v1
 ; GISEL-GFX12-FAKE16-NEXT:    v_or_b32_e32 v0, v0, v1
@@ -1235,7 +1235,7 @@ define i16 @basic_smax_smin_vec_cast(i16 %src0, i16 %src1) {
 ; SDAG-GFX11-TRUE16-NEXT:    v_med3_i16 v0.l, v0.l, 0, 0xff
 ; SDAG-GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; SDAG-GFX11-TRUE16-NEXT:    v_lshlrev_b16 v0.h, 8, v0.h
-; SDAG-GFX11-TRUE16-NEXT:    v_and_b16 v0.l, 0xff, v0.l
+; SDAG-GFX11-TRUE16-NEXT:    v_and_b16 v0.l, v0.l, 0xff
 ; SDAG-GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; SDAG-GFX11-TRUE16-NEXT:    v_or_b16 v0.l, v0.l, v0.h
 ; SDAG-GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
@@ -1263,7 +1263,7 @@ define i16 @basic_smax_smin_vec_cast(i16 %src0, i16 %src1) {
 ; SDAG-GFX12-TRUE16-NEXT:    v_med3_i16 v0.l, v0.l, 0, 0xff
 ; SDAG-GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; SDAG-GFX12-TRUE16-NEXT:    v_lshlrev_b16 v0.h, 8, v0.h
-; SDAG-GFX12-TRUE16-NEXT:    v_and_b16 v0.l, 0xff, v0.l
+; SDAG-GFX12-TRUE16-NEXT:    v_and_b16 v0.l, v0.l, 0xff
 ; SDAG-GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; SDAG-GFX12-TRUE16-NEXT:    v_or_b16 v0.l, v0.l, v0.h
 ; SDAG-GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
@@ -1534,19 +1534,18 @@ define i16 @basic_smax_smin_vec_input(<2 x i16> %src) {
 ; SDAG-GFX11-TRUE16-LABEL: basic_smax_smin_vec_input:
 ; SDAG-GFX11-TRUE16:       ; %bb.0:
 ; SDAG-GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX11-TRUE16-NEXT:    v_pk_min_i16 v0, 0xff, v0 op_sel_hi:[0,1]
+; SDAG-GFX11-TRUE16-NEXT:    v_pk_min_i16 v0, v0, 0xff op_sel_hi:[1,0]
 ; SDAG-GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; SDAG-GFX11-TRUE16-NEXT:    v_pk_max_i16 v1, v0, 0
-; SDAG-GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v0, 16, v1
-; SDAG-GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; SDAG-GFX11-TRUE16-NEXT:    v_lshlrev_b16 v0.l, 8, v0.l
+; SDAG-GFX11-TRUE16-NEXT:    v_lshlrev_b16 v0.l, 8, v1.h
+; SDAG-GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; SDAG-GFX11-TRUE16-NEXT:    v_or_b16 v0.l, v1.l, v0.l
 ; SDAG-GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-GFX11-FAKE16-LABEL: basic_smax_smin_vec_input:
 ; SDAG-GFX11-FAKE16:       ; %bb.0:
 ; SDAG-GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX11-FAKE16-NEXT:    v_pk_min_i16 v0, 0xff, v0 op_sel_hi:[0,1]
+; SDAG-GFX11-FAKE16-NEXT:    v_pk_min_i16 v0, v0, 0xff op_sel_hi:[1,0]
 ; SDAG-GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; SDAG-GFX11-FAKE16-NEXT:    v_pk_max_i16 v0, v0, 0
 ; SDAG-GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
@@ -1562,12 +1561,11 @@ define i16 @basic_smax_smin_vec_input(<2 x i16> %src) {
 ; SDAG-GFX12-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; SDAG-GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; SDAG-GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; SDAG-GFX12-TRUE16-NEXT:    v_pk_min_i16 v0, 0xff, v0 op_sel_hi:[0,1]
+; SDAG-GFX12-TRUE16-NEXT:    v_pk_min_i16 v0, v0, 0xff op_sel_hi:[1,0]
 ; SDAG-GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; SDAG-GFX12-TRUE16-NEXT:    v_pk_max_i16 v1, v0, 0
-; SDAG-GFX12-TRUE16-NEXT:    v_lshrrev_b32_e32 v0, 16, v1
-; SDAG-GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; SDAG-GFX12-TRUE16-NEXT:    v_lshlrev_b16 v0.l, 8, v0.l
+; SDAG-GFX12-TRUE16-NEXT:    v_lshlrev_b16 v0.l, 8, v1.h
+; SDAG-GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; SDAG-GFX12-TRUE16-NEXT:    v_or_b16 v0.l, v1.l, v0.l
 ; SDAG-GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1578,7 +1576,7 @@ define i16 @basic_smax_smin_vec_input(<2 x i16> %src) {
 ; SDAG-GFX12-FAKE16-NEXT:    s_wait_samplecnt 0x0
 ; SDAG-GFX12-FAKE16-NEXT:    s_wait_bvhcnt 0x0
 ; SDAG-GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; SDAG-GFX12-FAKE16-NEXT:    v_pk_min_i16 v0, 0xff, v0 op_sel_hi:[0,1]
+; SDAG-GFX12-FAKE16-NEXT:    v_pk_min_i16 v0, v0, 0xff op_sel_hi:[1,0]
 ; SDAG-GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; SDAG-GFX12-FAKE16-NEXT:    v_pk_max_i16 v0, v0, 0
 ; SDAG-GFX12-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
@@ -1617,9 +1615,9 @@ define i16 @basic_smax_smin_vec_input(<2 x i16> %src) {
 ; GISEL-GFX11-TRUE16-NEXT:    v_pk_min_i16 v0, 0xff00ff, v0
 ; GISEL-GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GISEL-GFX11-TRUE16-NEXT:    v_pk_max_i16 v1, 0, v0
-; GISEL-GFX11-TRUE16-NEXT:    v_and_b16 v0.l, 0xff, v1.h
+; GISEL-GFX11-TRUE16-NEXT:    v_and_b16 v0.l, v1.h, 0xff
 ; GISEL-GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GISEL-GFX11-TRUE16-NEXT:    v_and_b16 v0.h, 0xff, v1.l
+; GISEL-GFX11-TRUE16-NEXT:    v_and_b16 v0.h, v1.l, 0xff
 ; GISEL-GFX11-TRUE16-NEXT:    v_lshlrev_b16 v0.l, 8, v0.l
 ; GISEL-GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GISEL-GFX11-TRUE16-NEXT:    v_or_b16 v0.l, v0.h, v0.l
@@ -1650,9 +1648,9 @@ define i16 @basic_smax_smin_vec_input(<2 x i16> %src) {
 ; GISEL-GFX12-TRUE16-NEXT:    v_pk_min_i16 v0, 0xff00ff, v0
 ; GISEL-GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GISEL-GFX12-TRUE16-NEXT:    v_pk_max_i16 v1, 0, v0
-; GISEL-GFX12-TRUE16-NEXT:    v_and_b16 v0.l, 0xff, v1.h
+; GISEL-GFX12-TRUE16-NEXT:    v_and_b16 v0.l, v1.h, 0xff
 ; GISEL-GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GISEL-GFX12-TRUE16-NEXT:    v_and_b16 v0.h, 0xff, v1.l
+; GISEL-GFX12-TRUE16-NEXT:    v_and_b16 v0.h, v1.l, 0xff
 ; GISEL-GFX12-TRUE16-NEXT:    v_lshlrev_b16 v0.l, 8, v0.l
 ; GISEL-GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GISEL-GFX12-TRUE16-NEXT:    v_or_b16 v0.l, v0.h, v0.l
@@ -1712,10 +1710,9 @@ define i16 @basic_smax_smin_vec_input_rev(<2 x i16> %src) {
 ; SDAG-GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-GFX11-TRUE16-NEXT:    v_pk_max_i16 v0, v0, 0
 ; SDAG-GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; SDAG-GFX11-TRUE16-NEXT:    v_pk_min_i16 v1, 0xff, v0 op_sel_hi:[0,1]
-; SDAG-GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v0, 16, v1
-; SDAG-GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; SDAG-GFX11-TRUE16-NEXT:    v_lshlrev_b16 v0.l, 8, v0.l
+; SDAG-GFX11-TRUE16-NEXT:    v_pk_min_i16 v1, v0, 0xff op_sel_hi:[1,0]
+; SDAG-GFX11-TRUE16-NEXT:    v_lshlrev_b16 v0.l, 8, v1.h
+; SDAG-GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; SDAG-GFX11-TRUE16-NEXT:    v_or_b16 v0.l, v1.l, v0.l
 ; SDAG-GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1724,7 +1721,7 @@ define i16 @basic_smax_smin_vec_input_rev(<2 x i16> %src) {
 ; SDAG-GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-GFX11-FAKE16-NEXT:    v_pk_max_i16 v0, v0, 0
 ; SDAG-GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; SDAG-GFX11-FAKE16-NEXT:    v_pk_min_i16 v0, 0xff, v0 op_sel_hi:[0,1]
+; SDAG-GFX11-FAKE16-NEXT:    v_pk_min_i16 v0, v0, 0xff op_sel_hi:[1,0]
 ; SDAG-GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; SDAG-GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; SDAG-GFX11-FAKE16-NEXT:    v_lshlrev_b16 v1, 8, v1
@@ -1740,10 +1737,9 @@ define i16 @basic_smax_smin_vec_input_rev(<2 x i16> %src) {
 ; SDAG-GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; SDAG-GFX12-TRUE16-NEXT:    v_pk_max_i16 v0, v0, 0
 ; SDAG-GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; SDAG-GFX12-TRUE16-NEXT:    v_pk_min_i16 v1, 0xff, v0 op_sel_hi:[0,1]
-; SDAG-GFX12-TRUE16-NEXT:    v_lshrrev_b32_e32 v0, 16, v1
-; SDAG-GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; SDAG-GFX12-TRUE16-NEXT:    v_lshlrev_b16 v0.l, 8, v0.l
+; SDAG-GFX12-TRUE16-NEXT:    v_pk_min_i16 v1, v0, 0xff op_sel_hi:[1,0]
+; SDAG-GFX12-TRUE16-NEXT:    v_lshlrev_b16 v0.l, 8, v1.h
+; SDAG-GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; SDAG-GFX12-TRUE16-NEXT:    v_or_b16 v0.l, v1.l, v0.l
 ; SDAG-GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1756,7 +1752,7 @@ define i16 @basic_smax_smin_vec_input_rev(<2 x i16> %src) {
 ; SDAG-GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; SDAG-GFX12-FAKE16-NEXT:    v_pk_max_i16 v0, v0, 0
 ; SDAG-GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; SDAG-GFX12-FAKE16-NEXT:    v_pk_min_i16 v0, 0xff, v0 op_sel_hi:[0,1]
+; SDAG-GFX12-FAKE16-NEXT:    v_pk_min_i16 v0, v0, 0xff op_sel_hi:[1,0]
 ; SDAG-GFX12-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; SDAG-GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; SDAG-GFX12-FAKE16-NEXT:    v_lshlrev_b16 v1, 8, v1

@@ -10,7 +10,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
-#include "llvm/DebugInfo/DWARF/DWARFExpressionPrinter.h"
+#include "llvm/DebugInfo/DWARF/DWARFExpressionUnit.h"
 #include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/LEB128.h"
@@ -208,6 +208,88 @@ TEST_F(DWARFExpressionCompactPrinterTest, Test_OP_LLVM_user_unknown_subop) {
                          "DW_OP_LLVM_form_aspace_address (2)>");
 }
 
+// Negative control for the test below: a sub-opcode that is not registered at
+// all cannot be named, so its diagnostic carries no sub-operation. The pair
+// pins that DW_OP_LLVM_NVIDIA_mux is registered rather than merely undecodable.
+TEST_F(DWARFExpressionCompactPrinterTest,
+       Test_OP_LLVM_user_unregistered_subop) {
+  TestExprPrinterFailure({DW_OP_LLVM_user, 0x0e, 0xa5, 0x01},
+                         "<unknown op DW_OP_LLVM_user (233)>");
+}
+
+// DW_OP_LLVM_NVIDIA_mux carries an opaque selector, so the compact printer
+// cannot know its stack effect and must bail out naming both opcodes.
+TEST_F(DWARFExpressionCompactPrinterTest, Test_OP_LLVM_NVIDIA_mux) {
+  TestExprPrinterFailure({DW_OP_LLVM_user, DW_OP_LLVM_NVIDIA_mux, 0xa5, 0x01},
+                         "<unknown op DW_OP_LLVM_user (233) subop "
+                         "DW_OP_LLVM_NVIDIA_mux (13)>");
+}
+
+// No NVIDIA operation is known here, so the selector cannot be resolved and
+// decoding must stop rather than guess how long the operation is.
+TEST(NVIDIAMux, Full_DW_OP_LLVM_NVIDIA_mux_UnknownSelector) {
+  const uint8_t Enc[] = {DW_OP_LLVM_user, DW_OP_LLVM_NVIDIA_mux, 0xa5, 0x01};
+
+  std::string Result;
+  raw_string_ostream OS(Result);
+  DataExtractor DE(Enc, true);
+  DWARFExpression Expr(DE, 8);
+
+  DIDumpOptions DumpOpts;
+  printDwarfExpression(&Expr, OS, DumpOpts, nullptr);
+
+  EXPECT_EQ(OS.str(), "<decoding error> e9 0d a5 01");
+}
+
+// An unknown selector may imply operands of its own, so nothing after it can
+// be located. A trailing operation must be reported as undecoded bytes rather
+// than parsed from a guessed offset.
+TEST(NVIDIAMux, Full_DW_OP_LLVM_NVIDIA_mux_TrailingOpNotDecoded) {
+  const uint8_t Enc[] = {DW_OP_LLVM_user, DW_OP_LLVM_NVIDIA_mux, 0xa5, 0x01,
+                         DW_OP_stack_value};
+
+  std::string Result;
+  raw_string_ostream OS(Result);
+  DataExtractor DE(Enc, true);
+  DWARFExpression Expr(DE, 8);
+
+  DIDumpOptions DumpOpts;
+  printDwarfExpression(&Expr, OS, DumpOpts, nullptr);
+
+  EXPECT_EQ(OS.str(), "<decoding error> e9 0d a5 01 9f");
+}
+
+// A selector whose ULEB128 encoding runs off the end of the expression must
+// be reported, not silently accepted as a complete operation.
+TEST(NVIDIAMux, Full_DW_OP_LLVM_NVIDIA_mux_TruncatedSelector) {
+  const uint8_t Enc[] = {DW_OP_LLVM_user, DW_OP_LLVM_NVIDIA_mux, 0xa5};
+
+  std::string Result;
+  raw_string_ostream OS(Result);
+  DataExtractor DE(Enc, true);
+  DWARFExpression Expr(DE, 8);
+
+  DIDumpOptions DumpOpts;
+  printDwarfExpression(&Expr, OS, DumpOpts, nullptr);
+
+  EXPECT_EQ(OS.str(), "<decoding error> e9 0d a5");
+}
+
+// The selector may also be missing entirely.
+TEST(NVIDIAMux, Full_DW_OP_LLVM_NVIDIA_mux_MissingSelector) {
+  const uint8_t Enc[] = {DW_OP_LLVM_user, DW_OP_LLVM_NVIDIA_mux};
+
+  std::string Result;
+  raw_string_ostream OS(Result);
+  DataExtractor DE(Enc, true);
+  DWARFExpression Expr(DE, 8);
+
+  DIDumpOptions DumpOpts;
+  printDwarfExpression(&Expr, OS, DumpOpts, nullptr);
+
+  EXPECT_EQ(OS.str(), "<decoding error> e9 0d");
+}
+
 // NVPTX packs virtual register names into DWARF register numbers, so compact
 // printing without a callback must recover the name and return true.
 TEST(NVPTXPackedRegister, Compact_DW_OP_regx_NoMRI) {
@@ -258,4 +340,30 @@ TEST(NVPTXPackedRegister, Full_DW_OP_regx_CallbackMiss) {
   printDwarfExpression(&Expr, OS, DumpOpts, nullptr);
 
   EXPECT_EQ(OS.str(), "DW_OP_regx %rs2");
+}
+
+// Without a DWARFUnit, base type references are printed as raw offsets. The
+// overload that takes no unit must match passing a null unit.
+TEST(PrintWithoutUnit, BaseTypeRefs) {
+  const uint8_t Enc[] = {DW_OP_convert, 0x2a, DW_OP_regval_type,
+                         0x01,          0x2a, DW_OP_stack_value};
+  DataExtractor DE(Enc, true);
+  DWARFExpression Expr(DE, 8);
+
+  DIDumpOptions DumpOpts;
+  DumpOpts.GetNameForDWARFReg = [](uint64_t RegNum, bool) -> StringRef {
+    return RegNum == 1 ? "R1" : "";
+  };
+
+  std::string WithNullUnit;
+  raw_string_ostream NullOS(WithNullUnit);
+  printDwarfExpression(&Expr, NullOS, DumpOpts, nullptr);
+
+  std::string WithoutUnit;
+  raw_string_ostream OS(WithoutUnit);
+  printDwarfExpression(&Expr, OS, DumpOpts);
+
+  EXPECT_EQ(WithoutUnit, "DW_OP_convert 0x2a, DW_OP_regval_type R1 "
+                         "<base_type ref: 0x2a>, DW_OP_stack_value");
+  EXPECT_EQ(WithoutUnit, WithNullUnit);
 }

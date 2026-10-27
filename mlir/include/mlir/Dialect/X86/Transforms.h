@@ -12,14 +12,12 @@
 #include "mlir/IR/Value.h"
 
 namespace mlir {
-
 class ImplicitLocOpBuilder;
 class LLVMConversionTarget;
 class LLVMTypeConverter;
 class RewritePatternSet;
 
 namespace x86 {
-
 /// Helper class to factor out the creation and extraction of masks from nibs.
 struct MaskHelper {
   /// b0 captures the lowest bit, b7 captures the highest bit.
@@ -115,6 +113,15 @@ void populateVectorContractToAMXDotProductPatterns(RewritePatternSet &patterns);
 void populateMoveAccumulatorForContractLoopPatterns(
     RewritePatternSet &patterns);
 
+// Adds patterns to prepare vector contractions inside scf.for loops for
+// subsequent lowering (e.g. multi-level-unroll).
+void populatePrepareVectorContractLoopsPatterns(RewritePatternSet &patterns);
+
+// A set of patterns that tile and unroll contractions in order to prepare them
+// for the AMX nanokernel lowerings.
+void populateVectorContractMultiLevelUnrollForAMXPatterns(
+    RewritePatternSet &patterns);
+
 //===----------------------------------------------------------------------===//
 /// Helpers extracted from:
 ///   - clang/lib/Headers/avxintrin.h
@@ -128,7 +135,6 @@ void populateMoveAccumulatorForContractLoopPatterns(
 //===----------------------------------------------------------------------===//
 
 namespace avx2 {
-
 namespace inline_asm {
 //===----------------------------------------------------------------------===//
 /// Methods in the inline_asm namespace  emit calls to LLVM::InlineAsmOp.
@@ -136,7 +142,6 @@ namespace inline_asm {
 /// If bit i of `mask` is zero, take f32@i from v1 else take it from v2.
 Value mm256BlendPsAsm(ImplicitLocOpBuilder &b, Value v1, Value v2,
                       uint8_t mask);
-
 } // namespace inline_asm
 
 namespace intrin {
@@ -205,7 +210,6 @@ struct LoweringOptions {
 void populateSpecializedTransposeLoweringPatterns(
     RewritePatternSet &patterns, LoweringOptions options = LoweringOptions(),
     int benefit = 10);
-
 } // namespace avx2
 } // namespace x86
 
@@ -220,7 +224,6 @@ void configureX86LegalizeForExportTarget(LLVMConversionTarget &target);
 
 /// Register LLVM conversion interface for X86 dialect.
 void registerConvertX86ToLLVMInterface(DialectRegistry &registry);
-
 } // namespace mlir
 
 #endif // MLIR_DIALECT_X86_TRANSFORMS_H

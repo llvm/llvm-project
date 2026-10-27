@@ -1,9 +1,8 @@
-; RUN: opt -S -passes=loop-vectorize -mattr=+sve -mtriple aarch64-unknown-linux-gnu -force-vector-width=2 -pass-remarks-analysis=loop-vectorize -pass-remarks-missed=loop-vectorize < %s 2>%t | FileCheck %s
+; RUN: opt -S -passes=loop-vectorize -mattr=+sve -mtriple aarch64-unknown-linux-gnu -force-vector-width=2 -epilogue-vectorization-force-VF=2  -pass-remarks-analysis=loop-vectorize -pass-remarks-missed=loop-vectorize < %s 2>%t | FileCheck %s
 ; RUN: FileCheck %s --check-prefix=CHECK-REMARKS < %t
 
 ; CHECK-REMARKS: UserVF ignored because of invalid costs.
 ; CHECK-REMARKS: Recipe with invalid costs prevented vectorization at VF=(vscale x 1, vscale x 2): alloca
-; CHECK-REMARKS: Recipe with invalid costs prevented vectorization at VF=(vscale x 1): store
 define void @alloca(ptr %vla, i64 %N) {
 ; CHECK-LABEL: @alloca(
 ; CHECK-NOT: <vscale x

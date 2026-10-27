@@ -270,7 +270,7 @@ public:
   /// The address is always null for a non-local 'call' dependence.
   ///
   /// If the result is a select dependency (\see MemDepResult::isSelect), the
-  /// returned SelectAddr instead carries the select condition and the two
+  /// returned SelectAddr instead carries the select instruction and the two
   /// translated addresses (true/false side).
   SelectAddr getAddress() const { return Address; }
 };
@@ -495,9 +495,6 @@ public:
   /// with the same queried instruction.
   LLVM_ABI MemDepResult getInvariantGroupPointerDependency(LoadInst *LI,
                                                            BasicBlock *BB);
-
-  /// Release memory in caches.
-  LLVM_ABI void releaseMemory();
 
   /// Return the clobber offset to dependent instruction.
   std::optional<int32_t> getClobberOffset(LoadInst *DepInst) const {

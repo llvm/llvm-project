@@ -22,7 +22,6 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/X86BaseInfo.h"
 #include "X86.h"
 #include "X86Subtarget.h"
 #include "llvm/ADT/Statistic.h"
@@ -34,7 +33,6 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 
 using namespace llvm;
@@ -50,7 +48,6 @@ STATISTIC(SubFragmentSplits,
 static constexpr unsigned MaxV3PrologOps = 31;
 static constexpr unsigned MaxV3Epilogs = 7;
 static constexpr unsigned MaxV3EpilogOps = 31;
-static constexpr unsigned EpilogDistanceThreshold = 32767;
 
 /// Approximate byte distance between an epilog and its fragment tail beyond
 /// which the funclet is split into a new chained sub-fragment. The V3
@@ -59,12 +56,7 @@ static constexpr unsigned EpilogDistanceThreshold = 32767;
 /// exact byte offsets aren't known until MC layout, so (like the V2 pass) an
 /// approximate byte count is used as a proxy — instructions are charged
 /// ApproxBytesPerInstr each and alignment padding is added.
-static cl::opt<unsigned> ApproxBytesPerInstr(
-    "x86-wineh-unwindv3-instr-avg-size", cl::Hidden,
-    cl::desc(
-        "Average size of an instruction. This value is used in determining "
-        "split points for chained unwinder info"),
-    cl::init(7));
+static constexpr unsigned EpilogDistanceThreshold = 32767;
 
 /// After reporting a recoverable error for `MF`, erase all SEH pseudo-
 /// instructions and clear the WinCFI flag so the AsmPrinter doesn't try to
@@ -161,6 +153,8 @@ FuncletInfo X86WinEHUnwindV3::analyzeFunclet(MachineFunction &MF,
   bool InEpilog = false;
   bool SeenProlog = false;
   unsigned CurrentEpilogOpCount = 0;
+  const unsigned ApproxBytesPerInstr =
+      MF.getSubtarget<X86Subtarget>().getCLOpts().wineh_unwindv3_instr_avg_size;
 
   for (; Iter != MF.end(); ++Iter) {
     MachineBasicBlock &MBB = *Iter;
@@ -310,7 +304,8 @@ bool X86WinEHUnwindV3::runOnMachineFunction(MachineFunction &MF) {
     auto SplitAfter = [&](const EpilogSplitPoint &Epilog) {
       MachineBasicBlock *MBB = Epilog.BeginEpilog->getParent();
       BuildMI(*MBB, MBB->begin(), Epilog.BeginEpilog->getDebugLoc(),
-              TII->get(X86::SEH_SplitChainedAtEndOfBlock));
+              TII->get(X86::SEH_SplitChainedAtEndOfBlock))
+          .setMIFlag(MachineInstr::FrameDestroy);
       SubFragmentSplits++;
       Changed = true;
     };

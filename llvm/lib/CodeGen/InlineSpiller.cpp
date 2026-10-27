@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "InlineSpiller.h"
 #include "AllocationOrder.h"
 #include "SplitKit.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -216,8 +217,7 @@ private:
   bool hoistSpillInsideBB(LiveInterval &SpillLI, MachineInstr &CopyMI);
   void eliminateRedundantSpills(LiveInterval &LI, VNInfo *VNI);
 
-  void markValueUsed(LiveInterval*, VNInfo*);
-  bool canGuaranteeAssignmentAfterRemat(Register VReg, MachineInstr &MI);
+  void markValueUsed(LiveInterval *, VNInfo *);
   bool hasPhysRegAvailable(const MachineInstr &MI);
   bool reMaterializeFor(LiveInterval &, MachineInstr &MI);
   void reMaterializeAll();
@@ -515,7 +515,7 @@ bool InlineSpiller::hoistSpillInsideBB(LiveInterval &SpillLI,
   }
 
   // If there is only 1 store instruction is required for spill, add it
-  // to mergeable list. In X86 AMX, 2 intructions are required to store.
+  // to mergeable list. In X86 AMX, 2 instructions are required to store.
   // We disable the merge for this case.
   if (MIS.begin() == MII)
     HSpiller.addToMergeableSpills(*MII, StackSlot, Original);
@@ -619,8 +619,8 @@ void InlineSpiller::markValueUsed(LiveInterval *LI, VNInfo *VNI) {
   } while (!WorkList.empty());
 }
 
-bool InlineSpiller::canGuaranteeAssignmentAfterRemat(Register VReg,
-                                                     MachineInstr &MI) {
+bool llvm::canGuaranteeAssignmentAfterRemat(Register VReg,
+                                            const MachineInstr &MI) {
   if (!RestrictStatepointRemat)
     return true;
   // Here's a quick explanation of the problem we're trying to handle here:
@@ -646,7 +646,7 @@ bool InlineSpiller::canGuaranteeAssignmentAfterRemat(Register VReg,
   for (unsigned Idx = StatepointOpers(&MI).getVarIdx(),
                 EndIdx = MI.getNumOperands();
        Idx < EndIdx; ++Idx) {
-    MachineOperand &MO = MI.getOperand(Idx);
+    const MachineOperand &MO = MI.getOperand(Idx);
     if (MO.isReg() && MO.getReg() == VReg)
       return false;
   }
@@ -1235,7 +1235,7 @@ foldMemoryOperand(ArrayRef<std::pair<MachineInstr *, unsigned>> Ops,
   else if (Ops.front().second == 0) {
     ++NumSpills;
     // If there is only 1 store instruction is required for spill, add it
-    // to mergeable list. In X86 AMX, 2 intructions are required to store.
+    // to mergeable list. In X86 AMX, 2 instructions are required to store.
     // We disable the merge for this case.
     if (std::distance(MIS.begin(), MIS.end()) <= 1)
       HSpiller.addToMergeableSpills(*FoldMI, StackSlot, Original);
@@ -1305,7 +1305,7 @@ void InlineSpiller::insertSpill(Register NewVReg, bool isKill,
       dumpMachineInstrRangeWithSlotIndex(Spill, MIS.end(), LIS, "spill"));
   ++NumSpills;
   // If there is only 1 store instruction is required for spill, add it
-  // to mergeable list. In X86 AMX, 2 intructions are required to store.
+  // to mergeable list. In X86 AMX, 2 instructions are required to store.
   // We disable the merge for this case.
   if (IsRealSpill && std::distance(Spill, MIS.end()) <= 1)
     HSpiller.addToMergeableSpills(*Spill, StackSlot, Original);

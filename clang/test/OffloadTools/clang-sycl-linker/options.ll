@@ -11,10 +11,10 @@ target triple = "spirv64"
 ; RUN: rm -rf %t.dir && mkdir -p %t.dir
 
 ; Test --spirv-dump-device-code: the linker creates the (nested) directory if
-; missing and copies the generated SPIR-V file there. Files are named
-; "<output-stem>_<index>.spv" and shared across split modules.
+; missing and copies the generated SPIR-V file there, keeping the same unique
+; name that the temporary SPIR-V file was given.
 ; RUN: clang-sycl-linker %t.bc --spirv-dump-device-code=%t.dir/nested -o out.spv
-; RUN: test -f %t.dir/nested/out_0.spv
+; RUN: ls %t.dir/nested/out-*.spv | count 1
 
 ; Test --spirv-dump-device-code with an empty value: expect an error.
 ; RUN: not clang-sycl-linker %t.bc --spirv-dump-device-code= -o %t.out 2>&1 \

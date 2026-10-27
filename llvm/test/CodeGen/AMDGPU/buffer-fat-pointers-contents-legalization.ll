@@ -3669,7 +3669,6 @@ define void @store_v2i6(<2 x i6> %data, ptr addrspace(8) inreg %buf) {
 ; SDAG-NEXT:    v_and_b32_e32 v0, 63, v0
 ; SDAG-NEXT:    v_or_b32_e32 v0, v0, v1
 ; SDAG-NEXT:    v_and_b32_e32 v0, 0xfff, v0
-; SDAG-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; SDAG-NEXT:    buffer_store_short v0, off, s[16:19], 0
 ; SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]

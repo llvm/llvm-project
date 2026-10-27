@@ -2815,6 +2815,30 @@ static bool neverReturns(const CFGBlock *B) {
     if (isa<CXXThrowExpr>(S->getStmt()))
       return true;
   }
+
+  // If B constructed a temporary whose destructor is noreturn, control entering
+  // the decision block will always branch to the non-returning destructor.
+  if (B->succ_size() == 1) {
+    if (const CFGBlock *Succ = *B->succ_begin()) {
+      if (Succ->getTerminator().isTemporaryDtorsBranch() &&
+          Succ->succ_size() == 2) {
+        // The decision block's terminator is the CXXBindTemporaryExpr; if B
+        // bound this temporary, entering Succ from B takes the true (dtor)
+        // edge; otherwise it takes the false (alternative dtor / continuation)
+        // edge.
+        const Stmt *Term = Succ->getTerminatorStmt();
+        bool Bound = llvm::any_of(*B, [Term](const CFGElement &CE) {
+          auto CS = CE.getAs<CFGStmt>();
+          return CS && CS->getStmt() == Term;
+        });
+        if (const auto *Next =
+                (Bound ? *Succ->succ_begin() : *(Succ->succ_begin() + 1))
+                    .getReachableBlock())
+          return neverReturns(Next);
+      }
+    }
+  }
+
   return false;
 }
 

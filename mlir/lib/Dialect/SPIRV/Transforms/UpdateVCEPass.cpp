@@ -205,6 +205,16 @@ void UpdateVCEPass::runOnOperation() {
           return WalkResult::interrupt();
     }
 
+    // Spec constants have no results, so their types are conveyed by
+    // attributes.
+    if (auto specConst = dyn_cast<spirv::SpecConstantOp>(op))
+      valueTypes.push_back(specConst.getDefaultValue().getType());
+    if (auto specComposite = dyn_cast<spirv::SpecConstantCompositeOp>(op))
+      valueTypes.push_back(specComposite.getType());
+    if (auto specReplicate =
+            dyn_cast<spirv::EXTSpecConstantCompositeReplicateOp>(op))
+      valueTypes.push_back(specReplicate.getType());
+
     if (auto funcOp = dyn_cast<spirv::FuncOp>(op))
       if (auto linkage = funcOp.getLinkageAttributes())
         if (failed(requireLinkage(linkage->getLinkageType().getValue())))
@@ -259,5 +269,5 @@ void UpdateVCEPass::runOnOperation() {
   auto triple = spirv::VerCapExtAttr::get(
       deducedVersion, deducedCapabilities.getArrayRef(),
       deducedExtensions.getArrayRef(), &getContext());
-  module->setAttr(spirv::ModuleOp::getVCETripleAttrName(), triple);
+  module.setVceTripleAttr(triple);
 }

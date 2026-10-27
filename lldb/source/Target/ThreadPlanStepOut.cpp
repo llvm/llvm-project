@@ -29,7 +29,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
-uint32_t ThreadPlanStepOut::s_default_flag_values = 0;
+uint32_t ThreadPlanStepOut::s_default_flag_values =
+    ThreadPlanShouldStopHere::eStepPastLine0;
 
 /// Computes the target frame this plan should step out to.
 static StackFrameSP
@@ -378,14 +379,12 @@ bool ThreadPlanStepOut::ShouldStop(Event *event_ptr) {
   bool done = false;
   if (m_step_out_to_inline_plan_sp) {
     if (m_step_out_to_inline_plan_sp->MischiefManaged()) {
+      m_step_out_to_inline_plan_sp.reset();
       // Now step through the inlined stack we are in:
-      if (QueueInlinedStepPlan(true)) {
-        // If we can't queue a plan to do this, then just call ourselves done.
-        m_step_out_to_inline_plan_sp.reset();
-        SetPlanComplete(false);
-        return true;
-      } else
-        done = true;
+      if (QueueInlinedStepPlan(true))
+        return false;
+      // If we can't queue a plan to do this, then just call ourselves done.
+      done = true;
     } else
       return m_step_out_to_inline_plan_sp->ShouldStop(event_ptr);
   } else if (m_step_through_inline_plan_sp) {

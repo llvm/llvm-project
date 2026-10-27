@@ -327,7 +327,7 @@ MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDIStringTypeAttrGet(
     MlirContext ctx, unsigned int tag, MlirAttribute name, uint64_t sizeInBits,
     uint32_t alignInBits, MlirAttribute stringLength,
     MlirAttribute stringLengthExp, MlirAttribute stringLocationExp,
-    MlirLLVMTypeEncoding encoding);
+    MlirLLVMTypeEncoding encoding, MlirAttribute charType);
 
 MLIR_CAPI_EXPORTED MlirStringRef mlirLLVMDIStringTypeAttrGetName(void);
 
@@ -382,6 +382,18 @@ mlirLLVMDICompileUnitAttrGetWithSourceLanguageDialect(
     MlirContext ctx, MlirAttribute recId, bool isRecSelf, MlirAttribute id,
     unsigned int sourceLanguage, unsigned int sourceLanguageDialect,
     MlirAttribute file, MlirAttribute producer, bool isOptimized,
+    MlirLLVMDIEmissionKind emissionKind, bool isDebugInfoForProfiling,
+    MlirLLVMDINameTableKind nameTableKind, MlirAttribute splitDebugFilename,
+    intptr_t nImportedEntities, MlirAttribute const *importedEntities);
+
+/// Creates an LLVM DICompileUnit attribute with a DWARF v6 source language
+/// name, version, and optional source language dialect.
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirLLVMDICompileUnitAttrGetWithSourceLanguageName(
+    MlirContext ctx, MlirAttribute recId, bool isRecSelf, MlirAttribute id,
+    unsigned int sourceLanguageName, uint32_t sourceLanguageVersion,
+    unsigned int sourceLanguageDialect, MlirAttribute file,
+    MlirAttribute producer, bool isOptimized,
     MlirLLVMDIEmissionKind emissionKind, bool isDebugInfoForProfiling,
     MlirLLVMDINameTableKind nameTableKind, MlirAttribute splitDebugFilename,
     intptr_t nImportedEntities, MlirAttribute const *importedEntities);

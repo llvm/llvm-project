@@ -150,24 +150,21 @@ static bool isArithmeticCbzPair(const MachineInstr *FirstMI,
   return false;
 }
 
-// True unless the pair provably writes non overlapping physical registers.
-// Pre-RA the dests are still virtual, and post-RA it requires a genuine WAW,
-// that is overlapping dest regs. Overlapping includes sub and super register
-// relations, e.g. W0 and X0, which matches the register unit based dependency
-// model of the scheduling DAG.
+// True unless the pair provably writes different physical registers. Pre-RA
+// the dests are still virtual, and post-RA it requires a genuine WAW (same dest
+// reg).
 static bool mayHaveWAWDependency(const MachineInstr &FirstMI,
-                                 const MachineInstr &SecondMI,
-                                 const TargetRegisterInfo *TRI) {
+                                 const MachineInstr &SecondMI) {
   Register DestFirst = FirstMI.getOperand(0).getReg();
   Register DestSecond = SecondMI.getOperand(0).getReg();
   if (!DestFirst.isPhysical() || !DestSecond.isPhysical())
     return true;
-  return TRI->regsOverlap(DestFirst, DestSecond);
+  return DestFirst == DestSecond;
 }
 
 /// AES crypto encoding or decoding.
-static bool isAESPair(const MachineInstr *FirstMI, const MachineInstr &SecondMI,
-                      const TargetRegisterInfo *TRI) {
+static bool isAESPair(const MachineInstr *FirstMI,
+                      const MachineInstr &SecondMI) {
   // Assume the 1st instr to be a wildcard if it is unspecified.
   unsigned SecondOpcode = SecondMI.getOpcode();
   switch (SecondOpcode) {
@@ -179,7 +176,7 @@ static bool isAESPair(const MachineInstr *FirstMI, const MachineInstr &SecondMI,
     if (FirstMI->getOpcode() != AArch64::AESErr)
       return false;
     return SecondOpcode == AArch64::AESMCrrTied ||
-           mayHaveWAWDependency(*FirstMI, SecondMI, TRI);
+           mayHaveWAWDependency(*FirstMI, SecondMI);
   // AES decode.
   case AArch64::AESIMCrr:
   case AArch64::AESIMCrrTied:
@@ -188,7 +185,7 @@ static bool isAESPair(const MachineInstr *FirstMI, const MachineInstr &SecondMI,
     if (FirstMI->getOpcode() != AArch64::AESDrr)
       return false;
     return SecondOpcode == AArch64::AESIMCrrTied ||
-           mayHaveWAWDependency(*FirstMI, SecondMI, TRI);
+           mayHaveWAWDependency(*FirstMI, SecondMI);
   }
 
   return false;
@@ -223,33 +220,6 @@ static bool isAdrpAddPair(const MachineInstr *FirstMI,
   if ((FirstMI == nullptr || FirstMI->getOpcode() == AArch64::ADRP) &&
       SecondMI.getOpcode() == AArch64::ADDXri)
     return true;
-  return false;
-}
-
-/// Literal generation.
-static bool isLiteralsPair(const MachineInstr *FirstMI,
-                           const MachineInstr &SecondMI) {
-  // Assume the 1st instr to be a wildcard if it is unspecified.
-  // 32 bit immediate.
-  if ((FirstMI == nullptr || FirstMI->getOpcode() == AArch64::MOVZWi) &&
-      (SecondMI.getOpcode() == AArch64::MOVKWi &&
-       SecondMI.getOperand(3).getImm() == 16))
-    return true;
-
-  // Lower half of 64 bit immediate.
-  if((FirstMI == nullptr || FirstMI->getOpcode() == AArch64::MOVZXi) &&
-     (SecondMI.getOpcode() == AArch64::MOVKXi &&
-      SecondMI.getOperand(3).getImm() == 16))
-    return true;
-
-  // Upper half of 64 bit immediate.
-  if ((FirstMI == nullptr ||
-       (FirstMI->getOpcode() == AArch64::MOVKXi &&
-        FirstMI->getOperand(3).getImm() == 32)) &&
-      (SecondMI.getOpcode() == AArch64::MOVKXi &&
-       SecondMI.getOperand(3).getImm() == 48))
-    return true;
-
   return false;
 }
 
@@ -655,8 +625,7 @@ static bool isFMinFMax(unsigned Opcode) {
 
 // FMIN + FMAX.
 static bool isFMinFMaxPair(const MachineInstr *FirstMI,
-                           const MachineInstr &SecondMI,
-                           const TargetRegisterInfo *TRI) {
+                           const MachineInstr &SecondMI) {
   if (!isFMinFMax(SecondMI.getOpcode()))
     return false;
 
@@ -667,7 +636,7 @@ static bool isFMinFMaxPair(const MachineInstr *FirstMI,
   if (!isFMinFMax(FirstMI->getOpcode()))
     return false;
 
-  return mayHaveWAWDependency(*FirstMI, SecondMI, TRI);
+  return mayHaveWAWDependency(*FirstMI, SecondMI);
 }
 
 /// \brief Check if the instr pair, FirstMI and SecondMI, should be fused
@@ -706,7 +675,7 @@ static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
     ++NumFusedArithmeticCbz;
     return true;
   }
-  if (ST.hasFuseAES() && isAESPair(FirstMI, SecondMI, TRI)) {
+  if (ST.hasFuseAES() && isAESPair(FirstMI, SecondMI)) {
     ++NumFusedAES;
     return true;
   }
@@ -718,7 +687,7 @@ static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
     ++NumFusedAdrpAdd;
     return true;
   }
-  if (ST.hasFuseLiterals() && isLiteralsPair(FirstMI, SecondMI)) {
+  if (ST.hasFuseLiterals() && ST.fusesMOVImmPair(FirstMI, SecondMI)) {
     ++NumFusedLiterals;
     return true;
   }
@@ -747,7 +716,7 @@ static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
     ++NumFusedAddSub2RegAndConstOne;
     return true;
   }
-  if (ST.hasFuseFMinFMax() && isFMinFMaxPair(FirstMI, SecondMI, TRI)) {
+  if (ST.hasFuseFMinFMax() && isFMinFMaxPair(FirstMI, SecondMI)) {
     ++NumFusedFMinFMax;
     return true;
   }

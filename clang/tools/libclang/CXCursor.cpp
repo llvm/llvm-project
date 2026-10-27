@@ -614,6 +614,7 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
   case Stmt::SubstNonTypeTemplateParmPackExprClass:
   case Stmt::FunctionParmPackExprClass:
   case Stmt::UnresolvedLookupExprClass:
+  case Stmt::DependentTemplateIdExprClass:
     K = CXCursor_DeclRefExpr;
     break;
 
@@ -705,6 +706,9 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
     break;
   case Stmt::OMPInterchangeDirectiveClass:
     K = CXCursor_OMPInterchangeDirective;
+    break;
+  case Stmt::OMPFlattenDirectiveClass:
+    K = CXCursor_OMPFlattenDirective;
     break;
   case Stmt::OMPFuseDirectiveClass:
     K = CXCursor_OMPFuseDirective;

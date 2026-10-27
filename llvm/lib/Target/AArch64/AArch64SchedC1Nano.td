@@ -33,7 +33,7 @@ def C1NanoModel : SchedMachineModel {
 
   list<Predicate> UnsupportedFeatures = !listconcat(SVE2Unsupported.F,
                                                     SME2Unsupported.F,
-                                                    [HasSVEB16B16,
+                                                    [HasSVEB16B16, HasSVEBFSCALE,
                                                      HasCPA, HasMTE, HasCSSC]);
 }
 

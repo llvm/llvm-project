@@ -29,7 +29,10 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Target/TargetOptions.h"
@@ -39,32 +42,33 @@ using namespace llvm;
 #define DEBUG_TYPE "riscv-load-store-opt"
 #define RISCV_LOAD_STORE_OPT_NAME "RISC-V Load / Store Optimizer"
 
-// The LdStLimit limits number of instructions how far we search for load/store
-// pairs.
-static cl::opt<unsigned> LdStLimit("riscv-load-store-scan-limit", cl::init(128),
-                                   cl::Hidden);
 STATISTIC(NumLD2LW, "Number of LD instructions split back to LW");
 STATISTIC(NumSD2SW, "Number of SD instructions split back to SW");
 
 namespace {
 
-struct RISCVLoadStoreOpt : public MachineFunctionPass {
+class RISCVLoadStoreOptLegacy : public MachineFunctionPass {
+public:
   static char ID;
   bool runOnMachineFunction(MachineFunction &Fn) override;
 
-  RISCVLoadStoreOpt() : MachineFunctionPass(ID) {}
+  RISCVLoadStoreOptLegacy() : MachineFunctionPass(ID) {}
 
   MachineFunctionProperties getRequiredProperties() const override {
     return MachineFunctionProperties().setNoVRegs();
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
     AU.addRequired<AAResultsWrapperPass>();
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
   StringRef getPassName() const override { return RISCV_LOAD_STORE_OPT_NAME; }
+};
 
+class RISCVLoadStoreOptImpl {
   // Find and pair load/store instructions.
   bool tryToPairLdStInst(MachineBasicBlock::iterator &MBBI);
 
@@ -96,35 +100,37 @@ struct RISCVLoadStoreOpt : public MachineFunctionPass {
   void splitLdSdIntoTwo(MachineBasicBlock &MBB,
                         MachineBasicBlock::iterator &MBBI, bool IsLoad);
 
-private:
   AliasAnalysis *AA;
   MachineRegisterInfo *MRI;
   const RISCVInstrInfo *TII;
   const RISCVRegisterInfo *TRI;
   const RISCVSubtarget *STI = nullptr;
   LiveRegUnits ModifiedRegUnits, UsedRegUnits;
+
+public:
+  bool runOnMachineFunction(MachineFunction &MF,
+                            function_ref<AliasAnalysis *()> GetAA);
 };
 } // end anonymous namespace
 
-char RISCVLoadStoreOpt::ID = 0;
-INITIALIZE_PASS(RISCVLoadStoreOpt, DEBUG_TYPE, RISCV_LOAD_STORE_OPT_NAME, false,
-                false)
+char RISCVLoadStoreOptLegacy::ID = 0;
+INITIALIZE_PASS(RISCVLoadStoreOptLegacy, DEBUG_TYPE, RISCV_LOAD_STORE_OPT_NAME,
+                false, false)
 
-bool RISCVLoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {
-  if (skipFunction(Fn.getFunction()))
-    return false;
+bool RISCVLoadStoreOptImpl::runOnMachineFunction(
+    MachineFunction &MF, function_ref<AliasAnalysis *()> GetAA) {
 
   bool MadeChange = false;
-  STI = &Fn.getSubtarget<RISCVSubtarget>();
+  STI = &MF.getSubtarget<RISCVSubtarget>();
   TII = STI->getInstrInfo();
   TRI = STI->getRegisterInfo();
-  MRI = &Fn.getRegInfo();
-  AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
+  MRI = &MF.getRegInfo();
+  AA = GetAA();
   ModifiedRegUnits.init(*TRI);
   UsedRegUnits.init(*TRI);
 
   if (STI->useMIPSLoadStorePairs() || STI->hasVendorXqcilsm()) {
-    for (MachineBasicBlock &MBB : Fn) {
+    for (MachineBasicBlock &MBB : MF) {
       LLVM_DEBUG(dbgs() << "MBB: " << MBB.getName() << "\n");
 
       for (MachineBasicBlock::iterator MBBI = MBB.begin(), E = MBB.end();
@@ -139,7 +145,7 @@ bool RISCVLoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {
   }
 
   if (!STI->is64Bit() && STI->hasStdExtZilsd()) {
-    for (auto &MBB : Fn) {
+    for (auto &MBB : MF) {
       for (auto MBBI = MBB.begin(), E = MBB.end(); MBBI != E;) {
         if (fixInvalidRegPairOp(MBB, MBBI)) {
           MadeChange = true;
@@ -156,7 +162,8 @@ bool RISCVLoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {
 
 // Find loads and stores that can be merged into a single load or store pair
 // instruction.
-bool RISCVLoadStoreOpt::tryToPairLdStInst(MachineBasicBlock::iterator &MBBI) {
+bool RISCVLoadStoreOptImpl::tryToPairLdStInst(
+    MachineBasicBlock::iterator &MBBI) {
   MachineInstr &MI = *MBBI;
 
   // If this is volatile, it is not a candidate.
@@ -193,7 +200,7 @@ static bool isMemOpAligned(MachineInstr &MI, Align RequiredAlignment) {
 // For now this only handles consecutive loads and stores traversing the basic
 // block top-down.
 // TODO: Traverse the basic block bottom-up as well.
-bool RISCVLoadStoreOpt::tryConvertToXqcilsmMultiLdSt(
+bool RISCVLoadStoreOptImpl::tryConvertToXqcilsmMultiLdSt(
     MachineBasicBlock::iterator &FirstIt) {
   MachineInstr &FirstMI = *FirstIt;
   MachineFunction *MF = FirstMI.getMF();
@@ -378,7 +385,7 @@ bool RISCVLoadStoreOpt::tryConvertToXqcilsmMultiLdSt(
   return true;
 }
 
-bool RISCVLoadStoreOpt::tryConvertToXqcilsmLdStPair(
+bool RISCVLoadStoreOptImpl::tryConvertToXqcilsmLdStPair(
     MachineFunction *MF, MachineBasicBlock::iterator First,
     MachineBasicBlock::iterator Second) {
   unsigned Opc = First->getOpcode();
@@ -479,7 +486,7 @@ bool RISCVLoadStoreOpt::tryConvertToXqcilsmLdStPair(
   return true;
 }
 
-bool RISCVLoadStoreOpt::tryConvertToMIPSLdStPair(
+bool RISCVLoadStoreOptImpl::tryConvertToMIPSLdStPair(
     MachineFunction *MF, MachineBasicBlock::iterator First,
     MachineBasicBlock::iterator Second) {
   // Try converting to SWP/LWP/LDP/SDP.
@@ -539,7 +546,7 @@ bool RISCVLoadStoreOpt::tryConvertToMIPSLdStPair(
 // appropriate paired opcode, verifies that the memory operand is properly
 // aligned, and checks that the offset is valid. If all conditions are met, it
 // builds and inserts the paired instruction.
-bool RISCVLoadStoreOpt::tryConvertToLdStPair(
+bool RISCVLoadStoreOptImpl::tryConvertToLdStPair(
     MachineBasicBlock::iterator First, MachineBasicBlock::iterator Second) {
   MachineFunction *MF = First->getMF();
 
@@ -568,8 +575,8 @@ static bool mayAlias(MachineInstr &MIa,
 // This requires more sophisticated checks for aliasing, register
 // liveness, and potential scheduling hazards.
 MachineBasicBlock::iterator
-RISCVLoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
-                                    bool &MergeForward) {
+RISCVLoadStoreOptImpl::findMatchingInsn(MachineBasicBlock::iterator I,
+                                        bool &MergeForward) {
   MachineBasicBlock::iterator E = I->getParent()->end();
   MachineBasicBlock::iterator MBBI = I;
   MachineInstr &FirstMI = *I;
@@ -591,7 +598,8 @@ RISCVLoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
   // Remember any instructions that read/write memory between FirstMI and MI.
   SmallVector<MachineInstr *, 4> MemInsns;
 
-  for (unsigned Count = 0; MBBI != E && Count < LdStLimit;
+  for (unsigned Count = 0;
+       MBBI != E && Count < STI->getCLOpts().load_store_scan_limit;
        MBBI = next_nodbg(MBBI, E)) {
     MachineInstr &MI = *MBBI;
 
@@ -680,9 +688,9 @@ RISCVLoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
 }
 
 MachineBasicBlock::iterator
-RISCVLoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
-                                    MachineBasicBlock::iterator Paired,
-                                    bool MergeForward) {
+RISCVLoadStoreOptImpl::mergePairedInsns(MachineBasicBlock::iterator I,
+                                        MachineBasicBlock::iterator Paired,
+                                        bool MergeForward) {
   MachineBasicBlock::iterator E = I->getParent()->end();
   MachineBasicBlock::iterator NextI = next_nodbg(I, E);
   // If NextI is the second of the two instructions to be merged, skip one
@@ -766,7 +774,8 @@ RISCVLoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
 // Post reg-alloc zilsd pass implementation
 //===----------------------------------------------------------------------===//
 
-bool RISCVLoadStoreOpt::isValidZilsdRegPair(Register First, Register Second) {
+bool RISCVLoadStoreOptImpl::isValidZilsdRegPair(Register First,
+                                                Register Second) {
   // Special case: First register can not be zero unless both registers are
   // zeros.
   // Spec says: LD instructions with destination x0 are processed as any other
@@ -784,9 +793,9 @@ bool RISCVLoadStoreOpt::isValidZilsdRegPair(Register First, Register Second) {
   return (FirstNum % 2 == 0) && (SecondNum == FirstNum + 1);
 }
 
-void RISCVLoadStoreOpt::splitLdSdIntoTwo(MachineBasicBlock &MBB,
-                                         MachineBasicBlock::iterator &MBBI,
-                                         bool IsLoad) {
+void RISCVLoadStoreOptImpl::splitLdSdIntoTwo(MachineBasicBlock &MBB,
+                                             MachineBasicBlock::iterator &MBBI,
+                                             bool IsLoad) {
   MachineInstr *MI = &*MBBI;
   DebugLoc DL = MI->getDebugLoc();
 
@@ -822,23 +831,19 @@ void RISCVLoadStoreOpt::splitLdSdIntoTwo(MachineBasicBlock &MBB,
     // X10 = LW killed X10, 0
     if (FirstReg == BaseReg) {
       MIB2 = BuildMI(MBB, MBBI, DL, TII->get(Opc))
-                 .addReg(SecondReg,
-                         RegState::Define | getDeadRegState(SecondOp.isDead()))
+                 .addDef(SecondReg, getDeadRegState(SecondOp.isDead()))
                  .addReg(BaseReg);
       MIB1 = BuildMI(MBB, MBBI, DL, TII->get(Opc))
-                 .addReg(FirstReg,
-                         RegState::Define | getDeadRegState(FirstOp.isDead()))
+                 .addDef(FirstReg, getDeadRegState(FirstOp.isDead()))
                  .addReg(BaseReg, getKillRegState(BaseOp.isKill()));
 
     } else {
       MIB1 = BuildMI(MBB, MBBI, DL, TII->get(Opc))
-                 .addReg(FirstReg,
-                         RegState::Define | getDeadRegState(FirstOp.isDead()))
+                 .addDef(FirstReg, getDeadRegState(FirstOp.isDead()))
                  .addReg(BaseReg);
 
       MIB2 = BuildMI(MBB, MBBI, DL, TII->get(Opc))
-                 .addReg(SecondReg,
-                         RegState::Define | getDeadRegState(SecondOp.isDead()))
+                 .addDef(SecondReg, getDeadRegState(SecondOp.isDead()))
                  .addReg(BaseReg, getKillRegState(BaseOp.isKill()));
     }
 
@@ -884,8 +889,8 @@ void RISCVLoadStoreOpt::splitLdSdIntoTwo(MachineBasicBlock &MBB,
   MBBI = MBB.erase(MBBI);
 }
 
-bool RISCVLoadStoreOpt::fixInvalidRegPairOp(MachineBasicBlock &MBB,
-                                            MachineBasicBlock::iterator &MBBI) {
+bool RISCVLoadStoreOptImpl::fixInvalidRegPairOp(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator &MBBI) {
   MachineInstr *MI = &*MBBI;
   unsigned Opcode = MI->getOpcode();
 
@@ -923,8 +928,7 @@ bool RISCVLoadStoreOpt::fixInvalidRegPairOp(MachineBasicBlock &MBB,
 
   if (IsLoad) {
     // For LD, the register pair is the destination
-    MIB.addReg(RegPair, RegState::Define | getDeadRegState(FirstOp.isDead() &&
-                                                           SecondOp.isDead()));
+    MIB.addDef(RegPair, getDeadRegState(FirstOp.isDead() && SecondOp.isDead()));
   } else {
     // For SD, the register pair is the source
     MIB.addReg(RegPair, getKillRegState(FirstOp.isKill() && SecondOp.isKill()));
@@ -944,6 +948,29 @@ bool RISCVLoadStoreOpt::fixInvalidRegPairOp(MachineBasicBlock &MBB,
 }
 
 // Returns an instance of the Load / Store Optimization pass.
-FunctionPass *llvm::createRISCVLoadStoreOptPass() {
-  return new RISCVLoadStoreOpt();
+FunctionPass *llvm::createRISCVLoadStoreOptLegacyPass() {
+  return new RISCVLoadStoreOptLegacy();
+}
+
+bool RISCVLoadStoreOptLegacy::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+  RISCVLoadStoreOptImpl Impl;
+  return Impl.runOnMachineFunction(MF, [&]() {
+    return &getAnalysis<AAResultsWrapperPass>().getAAResults();
+  });
+}
+
+PreservedAnalyses
+RISCVLoadStoreOptPass::run(MachineFunction &MF,
+                           MachineFunctionAnalysisManager &MFAM) {
+  RISCVLoadStoreOptImpl Impl;
+  bool Changed = Impl.runOnMachineFunction(MF, [&]() {
+    return &MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
+                .getManager()
+                .getResult<AAManager>(MF.getFunction());
+  });
+  return Changed ? getMachineFunctionPassPreservedAnalyses()
+                       .preserveSet<CFGAnalyses>()
+                 : PreservedAnalyses::all();
 }

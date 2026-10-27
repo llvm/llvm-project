@@ -16,6 +16,132 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
+#include "clang/CIR/MissingFeatures.h"
+
+namespace {
+/// A _BitInt(N) whose padded storage integer iM has a larger alloc size than
+/// its M/8 store size is laid out by clang as a byte array, not a plain
+/// integer (e.g. _BitInt(129) -> i192 with alloc size 32 != store size 24).
+/// That "split" storage form is not yet implemented; lowerings must detect
+/// it and report errorNYI rather than emit the wrong-sized integer.
+bool isSplitStorageBitInt(cir::IntType ty, const mlir::DataLayout &dataLayout) {
+  if (!ty.isBitInt())
+    return false;
+  unsigned storageBits = ty.getStorageTypeWidth(dataLayout);
+  auto storageTy = mlir::IntegerType::get(ty.getContext(), storageBits);
+  uint64_t storeSize = storageBits / 8;
+  uint64_t allocSize =
+      llvm::alignTo(storeSize, dataLayout.getTypeABIAlignment(storageTy));
+  return allocSize != storeSize;
+}
+
+/// Checks if `dataLayout` describes a big endian layout.
+bool isBigEndian(const mlir::DataLayout &dataLayout) {
+  auto endiannessStr =
+      mlir::dyn_cast_or_null<mlir::StringAttr>(dataLayout.getEndianness());
+  return endiannessStr && endiannessStr == "big";
+}
+} // namespace
+
+mlir::Attribute getBitIntStorageAttr(mlir::ConversionPatternRewriter &rewriter,
+                                     cir::IntAttr attr,
+                                     const mlir::DataLayout &dataLayout) {
+  auto intTy = mlir::cast<cir::IntType>(attr.getType());
+  unsigned storageBits = intTy.getStorageTypeWidth(dataLayout);
+  llvm::APInt val = attr.getValue();
+  val = intTy.isSigned() ? val.sext(storageBits) : val.zext(storageBits);
+
+  if (!isSplitStorageBitInt(intTy, dataLayout))
+    return rewriter.getIntegerAttr(
+        mlir::IntegerType::get(intTy.getContext(), storageBits), val);
+
+  if (isBigEndian(dataLayout))
+    val = val.byteSwap();
+
+  // If we have to do split storage, we are an array of bytes.  Split this up
+  // into the array that matches convertTypeForMemory.
+  unsigned numBytes = storageBits / 8;
+  llvm::SmallVector<mlir::APInt> bytes;
+  bytes.reserve(numBytes);
+  for (unsigned i = 0; i != numBytes; ++i)
+    bytes.emplace_back(8, val.extractBitsAsZExtValue(8, i * 8));
+
+  auto i8Ty = mlir::IntegerType::get(intTy.getContext(), 8);
+  return mlir::DenseElementsAttr::get(
+      mlir::RankedTensorType::get({numBytes}, i8Ty), bytes);
+}
+
+mlir::Type convertTypeForMemory(const mlir::TypeConverter &converter,
+                                mlir::DataLayout const &dataLayout,
+                                mlir::Type type, bool isForHLSL) {
+  // TODO(cir): Handle other types similarly to clang's codegen
+  // convertTypeForMemory
+  if (mlir::isa<cir::BoolType>(type)) {
+    return mlir::IntegerType::get(type.getContext(),
+                                  dataLayout.getTypeSizeInBits(type));
+  }
+
+  if (auto matrixTy = mlir::dyn_cast<cir::MatrixType>(type)) {
+    if (isForHLSL) {
+      unsigned vecLen = matrixTy.getNumRows();
+      unsigned arrayLen = matrixTy.getNumColumns();
+      mlir::Type elementType = converter.convertType(matrixTy.getElementType());
+      auto vecTy = mlir::VectorType::get(vecLen, elementType);
+      return mlir::LLVM::LLVMArrayType::get(vecTy, arrayLen);
+    }
+
+    uint64_t size = matrixTy.getNumRows() * matrixTy.getNumColumns();
+    mlir::Type elementType = converter.convertType(matrixTy.getElementType());
+    return mlir::LLVM::LLVMArrayType::get(elementType, size);
+  }
+
+  if (auto vecTy = mlir::dyn_cast<cir::VectorType>(type)) {
+    if (mlir::isa<cir::BoolType>(vecTy.getElementType())) {
+      assert(!cir::MissingFeatures::hlsl());
+      return mlir::IntegerType::get(type.getContext(),
+                                    vecTy.getBoolStorageWidth());
+    }
+  }
+
+  // _BitInt(N) keeps its literal width as a value but is stored in a padded
+  // integer iM in memory, the same way bool is i1 as a value and i8 in
+  // memory. When iM's own LLVM alloc size would overshoot the AST-exact
+  // M/8 byte count (isSplitStorageBitInt), use a byte array instead so the
+  // size stays exact.
+  if (auto intTy = mlir::dyn_cast<cir::IntType>(type);
+      intTy && intTy.isBitInt()) {
+    if (isSplitStorageBitInt(intTy, dataLayout))
+      return mlir::LLVM::LLVMArrayType::get(
+          mlir::IntegerType::get(type.getContext(), 8),
+          intTy.getStorageTypeWidth(dataLayout) / 8);
+    return mlir::IntegerType::get(type.getContext(),
+                                  intTy.getStorageTypeWidth(dataLayout));
+  }
+
+  return converter.convertType(type);
+}
+
+mlir::Type convertTypeForLoadStore(const mlir::TypeConverter &converter,
+                                   mlir::DataLayout const &dataLayout,
+                                   mlir::Type type) {
+  // A split-storage _BitInt's memory type is a byte array (see
+  // convertTypeForMemory), but a load/store must still access the whole
+  // integer as-is.
+  if (auto intTy = mlir::dyn_cast<cir::IntType>(type);
+      intTy && intTy.isBitInt())
+    return mlir::IntegerType::get(type.getContext(),
+                                  intTy.getStorageTypeWidth(dataLayout));
+
+  // Convert the Matrix type to a vector type (the value type of
+  // MatrixType), if it points to a array (the memory type of MatrixType).
+  if (auto matrixTy = mlir::dyn_cast<cir::MatrixType>(type)) {
+    uint64_t size = matrixTy.getNumRows() * matrixTy.getNumColumns();
+    mlir::Type elemTy = converter.convertType(matrixTy.getElementType());
+    return mlir::VectorType::get(size, elemTy);
+  }
+
+  return convertTypeForMemory(converter, dataLayout, type);
+}
 
 static unsigned getIntOrBoolBitWidth(mlir::Type ty) {
   if (auto intTy = mlir::dyn_cast<cir::IntType>(ty))
@@ -70,7 +196,7 @@ template <> mlir::APFloat getZeroInitFromType(mlir::Type ty) {
 /// \param dimIndex the current dimension we're processing
 /// \param currentIndex the current index in the values array
 template <typename AttrTy, typename StorageTy>
-void convertToDenseElementsAttrImpl(
+bool convertToDenseElementsAttrImpl(
     cir::ConstArrayAttr attr, llvm::SmallVectorImpl<StorageTy> &values,
     const llvm::SmallVectorImpl<int64_t> &currentDims, int64_t dimIndex,
     int64_t currentIndex) {
@@ -82,7 +208,7 @@ void convertToDenseElementsAttrImpl(
       }
       // Remaining slots are trailing zeros; values was zero-initialized.
       currentIndex += attr.getTrailingZerosNum();
-      return;
+      return true;
     }
   }
 
@@ -117,12 +243,18 @@ void convertToDenseElementsAttrImpl(
       continue;
     }
 
+    // A global view can be the result of pointer conversions, so we can't
+    // represent them as an APInt/APFloat.  So give up if we see one.
+    if (auto global = mlir::dyn_cast<cir::GlobalViewAttr>(eltAttr))
+      return false;
+
     llvm_unreachable("unknown element in ConstArrayAttr");
   }
+  return true;
 }
 
 template <typename AttrTy, typename StorageTy>
-mlir::DenseElementsAttr convertToDenseElementsAttr(
+std::optional<mlir::DenseElementsAttr> convertToDenseElementsAttr(
     cir::ConstArrayAttr attr, const llvm::SmallVectorImpl<int64_t> &dims,
     mlir::Type elementType, mlir::Type convertedElementType) {
   unsigned vectorSize = 1;
@@ -130,8 +262,12 @@ mlir::DenseElementsAttr convertToDenseElementsAttr(
     vectorSize *= dim;
   auto values = llvm::SmallVector<StorageTy, 8>(
       vectorSize, getZeroInitFromType<StorageTy>(elementType));
-  convertToDenseElementsAttrImpl<AttrTy>(attr, values, dims, /*currentDim=*/0,
-                                         /*initialIndex=*/0);
+
+  if (!convertToDenseElementsAttrImpl<AttrTy>(attr, values, dims,
+                                              /*currentDim=*/0,
+                                              /*initialIndex=*/0))
+    return std::nullopt;
+
   return mlir::DenseElementsAttr::get(
       mlir::RankedTensorType::get(dims, convertedElementType),
       llvm::ArrayRef(values));
@@ -216,9 +352,119 @@ static bool containsPoison(mlir::Attribute attr) {
   return false;
 }
 
+/// Block-address attributes (address-of-label and label differences) are
+/// lowered to relocation expressions that cannot be materialized as part of a
+/// dense/aggregate constant attribute; they require the per-element
+/// insertvalue region lowering. Return true if \p attr contains any such
+/// element.
+static bool containsBlockAddress(mlir::Attribute attr) {
+  if (mlir::isa<cir::BlockAddrInfoAttr, cir::BlockAddrDiffAttr>(attr))
+    return true;
+  if (auto elts = mlir::dyn_cast<mlir::ArrayAttr>(attr))
+    return llvm::any_of(elts, containsBlockAddress);
+  if (auto constArr = mlir::dyn_cast<cir::ConstArrayAttr>(attr)) {
+    if (mlir::isa<mlir::StringAttr>(constArr.getElts()))
+      return false;
+    if (auto elts = mlir::dyn_cast<mlir::ArrayAttr>(constArr.getElts()))
+      return llvm::any_of(elts, containsBlockAddress);
+  }
+  return false;
+}
+
+/// The fewest trailing zeros that adjustGlobalArrayTypeForInit splits off an
+/// array constant into a zero-initialized tail, as in classic codegen.
+static constexpr int minSplitTrailingZeros = 8;
+
+static bool shouldSplitTrailingZeros(cir::ConstArrayAttr attr) {
+  auto elts = mlir::dyn_cast<mlir::ArrayAttr>(attr.getElts());
+  return elts && !elts.empty() &&
+         attr.getTrailingZerosNum() >= minSplitTrailingZeros;
+}
+
+static bool containsSplitTrailingZeros(mlir::Attribute attr) {
+  if (auto record = mlir::dyn_cast<cir::ConstRecordAttr>(attr))
+    return llvm::any_of(record.getMembers(), containsSplitTrailingZeros);
+  auto array = mlir::dyn_cast<cir::ConstArrayAttr>(attr);
+  if (!array)
+    return false;
+  if (shouldSplitTrailingZeros(array))
+    return true;
+  auto elts = mlir::dyn_cast<mlir::ArrayAttr>(array.getElts());
+  return elts && llvm::any_of(elts, containsSplitTrailingZeros);
+}
+
+mlir::Attribute spellOutSplitTrailingZeros(mlir::Attribute attr) {
+  if (!containsSplitTrailingZeros(attr))
+    return attr;
+
+  if (auto record = mlir::dyn_cast<cir::ConstRecordAttr>(attr)) {
+    auto members =
+        llvm::map_to_vector(record.getMembers(), spellOutSplitTrailingZeros);
+    return cir::ConstRecordAttr::get(
+        mlir::cast<cir::RecordType>(record.getType()),
+        mlir::ArrayAttr::get(attr.getContext(), members));
+  }
+
+  auto array = mlir::cast<cir::ConstArrayAttr>(attr);
+  auto arrayTy = mlir::cast<cir::ArrayType>(array.getType());
+  auto elts = llvm::map_to_vector(mlir::cast<mlir::ArrayAttr>(array.getElts()),
+                                  spellOutSplitTrailingZeros);
+  if (!shouldSplitTrailingZeros(array))
+    return cir::ConstArrayAttr::get(
+        arrayTy, mlir::ArrayAttr::get(attr.getContext(), elts),
+        array.getTrailingZerosNum());
+  elts.append(array.getTrailingZerosNum(),
+              cir::ZeroAttr::get(arrayTy.getElementType()));
+  return cir::ConstArrayAttr::get(arrayTy,
+                                  mlir::ArrayAttr::get(attr.getContext(), elts),
+                                  /*trailingZerosNum=*/0);
+}
+
 static std::optional<mlir::Attribute> lowerConstRecordMemberAttr(
     mlir::Attribute attr, mlir::SymbolTableCollection &symbolTables,
     const mlir::TypeConverter *converter, mlir::ModuleOp moduleOp);
+
+/// Lower \p constArr, which is or contains an array split by
+/// adjustGlobalArrayTypeForInit, element by element into the shape of its
+/// adjusted type. A dense attribute would span the split-off zeros.
+static std::optional<mlir::Attribute> lowerConstArrayAttrByElement(
+    cir::ConstArrayAttr constArr, mlir::SymbolTableCollection &symbolTables,
+    const mlir::TypeConverter *converter, mlir::ModuleOp moduleOp) {
+  mlir::MLIRContext *ctx = constArr.getContext();
+  auto arrayTy = mlir::cast<cir::ArrayType>(constArr.getType());
+  auto elts = mlir::cast<mlir::ArrayAttr>(constArr.getElts());
+  mlir::Type adjustedTy =
+      adjustGlobalTypeForInit(converter->convertType(arrayTy), constArr,
+                              *converter, mlir::DataLayout(moduleOp));
+
+  llvm::SmallVector<mlir::Attribute> lowered;
+  // Fewer members than elements: the elements were grouped into one array.
+  auto structTy = mlir::dyn_cast<mlir::LLVM::LLVMStructType>(adjustedTy);
+  if (structTy && structTy.getBody().size() < elts.size()) {
+    auto prefix = cir::ConstArrayAttr::get(
+        cir::ArrayType::get(arrayTy.getElementType(), elts.size()), elts);
+    std::optional<mlir::Attribute> loweredPrefix =
+        lowerConstArrayAttr(prefix, symbolTables, converter, moduleOp);
+    if (!loweredPrefix)
+      return std::nullopt;
+    lowered.push_back(*loweredPrefix);
+  } else {
+    for (mlir::Attribute elt : elts) {
+      std::optional<mlir::Attribute> loweredElt =
+          lowerConstRecordMemberAttr(elt, symbolTables, converter, moduleOp);
+      if (!loweredElt)
+        return std::nullopt;
+      lowered.push_back(*loweredElt);
+    }
+  }
+
+  // A split array ends in one zero-initialized member; otherwise its few
+  // trailing zeros are spelled out.
+  lowered.append(
+      shouldSplitTrailingZeros(constArr) ? 1 : constArr.getTrailingZerosNum(),
+      mlir::LLVM::ZeroAttr::get(ctx));
+  return mlir::ArrayAttr::get(ctx, lowered);
+}
 
 std::optional<mlir::Attribute> lowerConstArrayAttr(
     cir::ConstArrayAttr constArr, mlir::SymbolTableCollection &symbolTables,
@@ -239,6 +485,15 @@ std::optional<mlir::Attribute> lowerConstArrayAttr(
 
   if (containsPoison(constArr))
     return std::nullopt;
+
+  // Block-address initializers cannot be represented as a dense/aggregate
+  // constant attribute; fall back to the per-element insertvalue lowering.
+  if (containsBlockAddress(constArr))
+    return std::nullopt;
+
+  if (containsSplitTrailingZeros(constArr))
+    return lowerConstArrayAttrByElement(constArr, symbolTables, converter,
+                                        moduleOp);
 
   if (mlir::isa<mlir::StringAttr>(constArr.getElts()))
     return convertStringAttrToDenseElementsAttr(constArr,
@@ -392,13 +647,23 @@ static bool shouldPackFAMStruct(const mlir::DataLayout &dataLayout,
 // Additionally, the struct itself could contain a struct with a FAM or a union
 // that needed adjustment, so it recurses to check those.  If no such type has
 // been found/no adjustment needed, this returns the type unchanged.
+//
+// Additionally, a union having an active member of not-the-largest
+// alignment can cause the need for a small padding array. We also capture the
+// original indices of the fields that had this padding prepended, so the
+// lowerConstRecordAttr can later put in a 'zero' init there.
 static mlir::Type adjustGlobalStructTypeForInit(
     mlir::LLVM::LLVMStructType structTy, cir::ConstRecordAttr constRecord,
-    const mlir::TypeConverter &converter, const mlir::DataLayout &dataLayout) {
-
+    const mlir::TypeConverter &converter, const mlir::DataLayout &dataLayout,
+    llvm::SmallVectorImpl<unsigned> &paddingAddedIndexes) {
+  assert(paddingAddedIndexes.empty() &&
+         "Not for accumulation, just single depth");
   llvm::ArrayRef<mlir::Attribute> initMembers =
       constRecord.getMembers().getValue();
-  llvm::SmallVector<mlir::Type> newBody{structTy.getBody()};
+  llvm::SmallVector<mlir::Type> origBody{structTy.getBody()};
+  llvm::SmallVector<mlir::Type> newBody{};
+  bool packed = structTy.isPacked();
+  uint64_t curOffset = 0;
   bool changed = false;
 
   // Recursively adjust each member. A member that is itself a union (or a
@@ -406,14 +671,46 @@ static mlir::Type adjustGlobalStructTypeForInit(
   // field type, and this struct has to adopt that adjusted type so the
   // enclosing insertvalue chain type-checks.
   for (auto [idx, member] : llvm::enumerate(initMembers)) {
-    if (idx >= newBody.size())
+    if (idx >= origBody.size())
       break;
     mlir::Type adjusted =
-        adjustGlobalTypeForInit(newBody[idx], member, converter, dataLayout);
-    if (adjusted != newBody[idx]) {
-      newBody[idx] = adjusted;
+        adjustGlobalTypeForInit(origBody[idx], member, converter, dataLayout);
+    if (!adjusted)
+      return {};
+    unsigned adjustedAlign = dataLayout.getTypeABIAlignment(adjusted);
+
+    if (adjusted != origBody[idx]) {
+      // We're always going to 'change' the layout if it has changed, but we
+      // need to see if there is new 'padding' that won't happen automatically
+      // here based on alignment.
+      unsigned origAlign = dataLayout.getTypeABIAlignment(origBody[idx]);
+
+      uint64_t origOffset =
+          packed ? curOffset : llvm::alignTo(curOffset, origAlign);
+      uint64_t adjustedOffset =
+          packed ? curOffset : llvm::alignTo(curOffset, adjustedAlign);
+
+      if (adjustedOffset != origOffset) {
+        // If the offset would change, we have to insert padding to make up for
+        // it. This should only happen since alignment will decrease with
+        // unions, so we should be able to assume adjusted-offset < origOffset?
+        assert(adjustedOffset < origOffset);
+        // Rather than just pad the difference between the offsets, we have to
+        // fill in since the end of the last field, else we leave room thanks to
+        // alignment between this field and the padding.
+        uint64_t difference = origOffset - curOffset;
+        newBody.push_back(mlir::LLVM::LLVMArrayType::get(
+            mlir::IntegerType::get(structTy.getContext(), 8), difference));
+        paddingAddedIndexes.push_back(idx);
+        curOffset = origOffset;
+      }
       changed = true;
     }
+    newBody.push_back(adjusted);
+
+    if (!packed)
+      curOffset = llvm::alignTo(curOffset, adjustedAlign);
+    curOffset += dataLayout.getTypeSize(adjusted).getFixedValue();
   }
 
   // CIR supports flexible-array-members in its struct types. That is, a
@@ -422,21 +719,39 @@ static mlir::Type adjustGlobalStructTypeForInit(
   // these, and our verifier allows it. However, the LLVM implementation does
   // NOT permit this, so we widen that trailing member to the initializer's
   // array type (packing the struct if that changes the layout).
-  bool packed = structTy.isPacked();
+  bool widenedFAM = false;
   if (auto fam =
           mlir::dyn_cast<mlir::LLVM::LLVMArrayType>(structTy.getBody().back());
       fam && fam.getNumElements() == 0) {
     mlir::Type lastInitType =
         mlir::cast<mlir::TypedAttr>(initMembers.back()).getType();
     if (mlir::cast<cir::ArrayType>(lastInitType).getSize() != 0) {
-      newBody.back() = converter.convertType(lastInitType);
+      newBody.back() =
+          adjustGlobalTypeForInit(converter.convertType(lastInitType),
+                                  initMembers.back(), converter, dataLayout);
+      if (!newBody.back())
+        return {};
       packed = packed || shouldPackFAMStruct(dataLayout, newBody);
+      widenedFAM = true;
       changed = true;
     }
   }
 
   if (!changed)
     return structTy;
+
+  // We've likely reduced the alignment, so make sure we put padding 'behind'
+  // it.  We can skip this in the FAM case, since a Flexible array member is not
+  // allowed to be initialized unless it is the 'last' element.  So it doesn't
+  // need to be padded out.
+  if (!widenedFAM) {
+    uint64_t declaredSize = dataLayout.getTypeSize(structTy).getFixedValue();
+    assert(curOffset <= declaredSize && "body bigger than type?");
+    if (curOffset < declaredSize)
+      newBody.push_back(mlir::LLVM::LLVMArrayType::get(
+          mlir::IntegerType::get(structTy.getContext(), 8),
+          declaredSize - curOffset));
+  }
 
   return mlir::LLVM::LLVMStructType::getLiteral(structTy.getContext(), newBody,
                                                 packed);
@@ -459,12 +774,14 @@ static mlir::Type adjustGlobalUnionTypeForInit(
   // Unions can only initialize one field, so this has to be sizeof-one.
   assert(constRecord.getMembers().size() == 1);
   mlir::Attribute member = constRecord.getMembers()[0];
-  mlir::Type memberTy =
-      converter.convertType(mlir::cast<mlir::TypedAttr>(member).getType());
+  mlir::Type memberTy = convertTypeForMemory(
+      converter, dataLayout, mlir::cast<mlir::TypedAttr>(member).getType());
 
   // The active member may itself need adjusting (e.g. it is a nested union, or
   // a struct containing one), so recurse before using its type below.
   memberTy = adjustGlobalTypeForInit(memberTy, member, converter, dataLayout);
+  if (!memberTy)
+    return {};
 
   // The converted union type is { storage, [padding] }, where storage is the
   // union's most-aligned member. When the active member IS that storage type,
@@ -475,12 +792,10 @@ static mlir::Type adjustGlobalUnionTypeForInit(
 
   uint64_t unionSize = dataLayout.getTypeSize(unionTy).getFixedValue();
   uint64_t initSize = dataLayout.getTypeSize(memberTy).getFixedValue();
-  assert(initSize <= unionSize && "union initializer larger than the union");
-
   llvm::SmallVector<mlir::Type> newBody;
   newBody.push_back(memberTy);
 
-  // Fill the rest of the union's allocated size with byte padding.
+  // Pad to the union size unless a flexible array initializer is larger.
   if (initSize < unionSize)
     newBody.push_back(mlir::LLVM::LLVMArrayType::get(
         mlir::IntegerType::get(structTy.getContext(), 8),
@@ -490,10 +805,86 @@ static mlir::Type adjustGlobalUnionTypeForInit(
                                                 unionTy.getPacked());
 }
 
+// Unions in an array can cause individual elements to be of different types.
+// This function adjusts the array type and replaces it with a struct type if
+// necessary, OR leaves it as a 'new' array type if necessary.
+//
+// Like classic codegen, an array ending in many zeros becomes a packed struct
+// of its explicit elements and one zero-initialized array, so the zeros are
+// never spelled out:
+//   <{ T0, T1, [N x T] }>
+// or, when 8 or more elements share a type,
+//   <{ [M x T], [N x T] }>
+static mlir::Type adjustGlobalArrayTypeForInit(
+    mlir::LLVM::LLVMArrayType arrayTy, cir::ConstArrayAttr arrayInit,
+    const mlir::TypeConverter &converter, const mlir::DataLayout &dataLayout) {
+  auto elts = mlir::dyn_cast<mlir::ArrayAttr>(arrayInit.getElts());
+
+  if (!elts)
+    return arrayTy;
+
+  mlir::Type origEltTy = arrayTy.getElementType();
+  llvm::SmallVector<mlir::Type> adjustedElts;
+  adjustedElts.reserve(elts.size());
+  bool changed = elts.size() > arrayTy.getNumElements();
+
+  for (mlir::Attribute elt : elts) {
+    mlir::Type adjusted =
+        adjustGlobalTypeForInit(origEltTy, elt, converter, dataLayout);
+    if (!adjusted)
+      return {};
+    changed |= adjusted != origEltTy;
+    adjustedElts.push_back(adjusted);
+  }
+
+  if (shouldSplitTrailingZeros(arrayInit)) {
+    mlir::Type commonEltTy =
+        llvm::all_equal(adjustedElts) ? adjustedElts.front() : mlir::Type{};
+    llvm::SmallVector<mlir::Type> body;
+    if (commonEltTy && elts.size() >= minSplitTrailingZeros)
+      body.push_back(
+          mlir::LLVM::LLVMArrayType::get(commonEltTy, adjustedElts.size()));
+    else
+      body.append(adjustedElts);
+    body.push_back(
+        mlir::LLVM::LLVMArrayType::get(commonEltTy ? commonEltTy : origEltTy,
+                                       arrayInit.getTrailingZerosNum()));
+    return mlir::LLVM::LLVMStructType::getLiteral(arrayTy.getContext(), body,
+                                                  /*isPacked=*/true);
+  }
+
+  if (!changed)
+    return arrayTy;
+
+  adjustedElts.resize(
+      std::max<size_t>(adjustedElts.size(), arrayTy.getNumElements()),
+      origEltTy);
+
+  if (llvm::all_equal(adjustedElts))
+    return mlir::LLVM::LLVMArrayType::get(adjustedElts.front(),
+                                          adjustedElts.size());
+
+  // Packed, because arrays shouldn't be subject to padding.
+  return mlir::LLVM::LLVMStructType::getLiteral(
+      arrayTy.getContext(), adjustedElts, /*isPacked=*/true);
+}
+
 // Apply various adjustments required for struct/union types.
-mlir::Type adjustGlobalTypeForInit(mlir::Type llvmType, mlir::Attribute init,
-                                   const mlir::TypeConverter &converter,
-                                   const mlir::DataLayout &dataLayout) {
+mlir::Type
+adjustGlobalTypeForInit(mlir::Type llvmType, mlir::Attribute init,
+                        const mlir::TypeConverter &converter,
+                        const mlir::DataLayout &dataLayout,
+                        llvm::SmallVectorImpl<unsigned> &paddingAddedIndexes) {
+  if (!llvmType)
+    return {};
+  if (auto arrayInit = mlir::dyn_cast_if_present<cir::ConstArrayAttr>(init)) {
+    auto arrayTy = mlir::dyn_cast<mlir::LLVM::LLVMArrayType>(llvmType);
+    if (!arrayTy)
+      return llvmType;
+    return adjustGlobalArrayTypeForInit(arrayTy, arrayInit, converter,
+                                        dataLayout);
+  }
+
   // Conversions for both only happen if we have a record init.
   auto constRecord = mlir::dyn_cast_if_present<cir::ConstRecordAttr>(init);
   if (!constRecord)
@@ -508,16 +899,25 @@ mlir::Type adjustGlobalTypeForInit(mlir::Type llvmType, mlir::Attribute init,
   // Structs can have a flexible array member, adjust that.
   if (mlir::isa<cir::StructType>(constRecord.getType()))
     return adjustGlobalStructTypeForInit(structTy, constRecord, converter,
-                                         dataLayout);
+                                         dataLayout, paddingAddedIndexes);
   if (mlir::isa<cir::UnionType>(constRecord.getType()))
     return adjustGlobalUnionTypeForInit(structTy, constRecord, converter,
                                         dataLayout);
   return llvmType;
 }
 
+mlir::Type adjustGlobalTypeForInit(mlir::Type llvmType, mlir::Attribute init,
+                                   const mlir::TypeConverter &converter,
+                                   const mlir::DataLayout &dataLayout) {
+  llvm::SmallVector<unsigned> ignoredAddedIndexes;
+  return adjustGlobalTypeForInit(llvmType, init, converter, dataLayout,
+                                 ignoredAddedIndexes);
+}
+
 std::optional<mlir::Attribute> lowerConstRecordAttr(
     cir::ConstRecordAttr constRecord, mlir::SymbolTableCollection &symbolTables,
     const mlir::TypeConverter *converter, mlir::ModuleOp moduleOp) {
+
   // Build one constant attribute per record member. The LLVM dialect global
   // translation accepts an ArrayAttr (one element per struct field) and emits
   // an llvm::ConstantStruct, so the whole initializer can be a single
@@ -534,18 +934,39 @@ std::optional<mlir::Attribute> lowerConstRecordAttr(
   }
 
   // The lowered LLVM type may have more fields than the CIR record has members
-  // -- e.g. a union lowers to { active-member, [pad x i8] } (see
-  // adjustGlobalTypeForInit, the single source of truth for the shape). Fill
-  // any such synthesized (padding) fields with undef so this ArrayAttr has
-  // exactly one entry per LLVM field, matching the type the global is declared
-  // with.
+  // for a few reasons:
+  // 1- a union lowers to { active-member, [pad x i8]).
+  // 2- A struct that contains such a union can have its alignment changed too,
+  //    so it needs tail padding to fill that in.
+  // 3- A struct containing a union whose initializer doesn't use the
+  // highest-aligned field will have to prepend a bit of padding, such as struct
+  // { i32, union { i64, i32 } }.  Typically the union gets lowered to a struct
+  // { i64 } (as i64 has the greatest alignment), but if the init causes it to
+  // be the i32(or any such smaller field) we have to prepend it with padding:
+  // struct { i32, [4 x i8], struct { i32 }}
+  // instead of (with no init):
+  // struct { i32, struct { i64 }}
+  llvm::SmallVector<unsigned> paddingAddedIndexes;
   mlir::Type adjustedTy = adjustGlobalTypeForInit(
       converter->convertType(constRecord.getType()), constRecord, *converter,
-      mlir::DataLayout(moduleOp));
+      mlir::DataLayout(moduleOp), paddingAddedIndexes);
+  if (!adjustedTy)
+    return std::nullopt;
+
+  // This handles #3 from above. adjustGlobalTypeForInit ensures the
+  // indexes are in increasing order, so we can insert 'backwards' without
+  // causing problems.
+  for (unsigned paddedElt : llvm::reverse(paddingAddedIndexes))
+    loweredMembers.insert(loweredMembers.begin() + paddedElt,
+                          mlir::LLVM::ZeroAttr::get(constRecord.getContext()));
+
+  // Any remaining difference will be the union/struct padding case. We don't
+  // have a great handle/way to tell when to zero-vs-undef init, so always
+  // zero init, as it is always safe to do so.
   if (auto structTy = mlir::dyn_cast<mlir::LLVM::LLVMStructType>(adjustedTy))
     while (loweredMembers.size() < structTy.getBody().size())
       loweredMembers.push_back(
-          mlir::LLVM::UndefAttr::get(constRecord.getContext()));
+          mlir::LLVM::ZeroAttr::get(constRecord.getContext()));
 
   return mlir::ArrayAttr::get(constRecord.getContext(), loweredMembers);
 }

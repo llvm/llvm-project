@@ -3,8 +3,7 @@ if(NOT (EXISTS ${LIBC_SOURCE_DIR}/startup/linux/${LIBC_TARGET_ARCHITECTURE}))
   return()
 endif()
 
-add_custom_target(libc-startup-tests)
-add_dependencies(libc-integration-tests libc-startup-tests)
+add_libc_testsuite(libc-startup-tests PARENT libc-integration-tests)
 
 add_integration_test(
   startup_args_test
@@ -75,4 +74,14 @@ add_integration_test(
   SUITE libc-startup-tests
   SRCS
     irelative_no_ifunc_test.cpp
+)
+
+add_integration_test(
+  startup_r_debug_test
+  SUITE libc-startup-tests
+  SRCS
+    r_debug_test.cpp
+  DEPENDS
+    libc.include.link
+    libc.src.link._r_debug
 )

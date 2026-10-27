@@ -31,17 +31,17 @@ func.func @test_boxed_private_vs_arg(
   %c4 = arith.constant 4 : index
   %c10 = arith.constant 10 : index
   %0 = fir.shape %c10, %c10, %c4 : (index, index, index) -> !fir.shape<3>
-  %1:2 = hlfir.declare %arg0(%0) {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFmysubEgrid"} : (!fir.ref<!fir.array<10x10x4xf64>>, !fir.shape<3>) -> (!fir.ref<!fir.array<10x10x4xf64>>, !fir.ref<!fir.array<10x10x4xf64>>)
+  %1:2 = hlfir.declare %arg0(%0) uniq_name("_QFmysubEgrid") fortran_attrs<intent_in> : (!fir.ref<!fir.array<10x10x4xf64>>, !fir.shape<3>) -> (!fir.ref<!fir.array<10x10x4xf64>>, !fir.ref<!fir.array<10x10x4xf64>>)
   %2 = fir.alloca !fir.array<4xf64> {bindc_name = "buf", uniq_name = "_QFmysubEbuf"}
   %3 = fir.shape %c4 : (index) -> !fir.shape<1>
-  %4:2 = hlfir.declare %2(%3) {uniq_name = "_QFmysubEbuf"} : (!fir.ref<!fir.array<4xf64>>, !fir.shape<1>) -> (!fir.ref<!fir.array<4xf64>>, !fir.ref<!fir.array<4xf64>>)
+  %4:2 = hlfir.declare %2(%3) uniq_name("_QFmysubEbuf") : (!fir.ref<!fir.array<4xf64>>, !fir.shape<1>) -> (!fir.ref<!fir.array<4xf64>>, !fir.ref<!fir.array<4xf64>>)
 
   %5 = fir.alloca !fir.box<!fir.array<4xf64>>
   %6 = fir.embox %4#0(%3) : (!fir.ref<!fir.array<4xf64>>, !fir.shape<1>) -> !fir.box<!fir.array<4xf64>>
   fir.store %6 to %5 : !fir.ref<!fir.box<!fir.array<4xf64>>>
 
   omp.parallel private(@buf_privatizer %5 -> %arg2 : !fir.ref<!fir.box<!fir.array<4xf64>>>) {
-    %10:2 = hlfir.declare %arg2 {uniq_name = "_QFmysubEbuf"} : (!fir.ref<!fir.box<!fir.array<4xf64>>>) -> (!fir.ref<!fir.box<!fir.array<4xf64>>>, !fir.ref<!fir.box<!fir.array<4xf64>>>)
+    %10:2 = hlfir.declare %arg2 uniq_name("_QFmysubEbuf") : (!fir.ref<!fir.box<!fir.array<4xf64>>>) -> (!fir.ref<!fir.box<!fir.array<4xf64>>>, !fir.ref<!fir.box<!fir.array<4xf64>>>)
 
     // Designate into the dummy argument array: grid(1, 1, 1:4)
     %c1 = arith.constant 1 : index

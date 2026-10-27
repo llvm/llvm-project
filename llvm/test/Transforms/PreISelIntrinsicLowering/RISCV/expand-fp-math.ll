@@ -10,8 +10,8 @@ define <vscale x 4 x float> @scalable_vec_sin(<vscale x 4 x float> %input) {
 ; RV32-NEXT:    br label %[[BB3:.*]]
 ; RV32:       [[BB3]]:
 ; RV32-NEXT:    [[TMP4:%.*]] = phi i32 [ 0, [[TMP0:%.*]] ], [ [[TMP9:%.*]], %[[BB3]] ]
-; RV32-NEXT:    [[TMP5:%.*]] = phi <vscale x 4 x float> [ [[INPUT]], [[TMP0]] ], [ [[TMP8:%.*]], %[[BB3]] ]
-; RV32-NEXT:    [[TMP6:%.*]] = extractelement <vscale x 4 x float> [[TMP5]], i32 [[TMP4]]
+; RV32-NEXT:    [[TMP5:%.*]] = phi <vscale x 4 x float> [ poison, [[TMP0]] ], [ [[TMP8:%.*]], %[[BB3]] ]
+; RV32-NEXT:    [[TMP6:%.*]] = extractelement <vscale x 4 x float> [[INPUT]], i32 [[TMP4]]
 ; RV32-NEXT:    [[TMP7:%.*]] = call float @llvm.sin.f32(float [[TMP6]])
 ; RV32-NEXT:    [[TMP8]] = insertelement <vscale x 4 x float> [[TMP5]], float [[TMP7]], i32 [[TMP4]]
 ; RV32-NEXT:    [[TMP9]] = add i32 [[TMP4]], 1
@@ -27,8 +27,8 @@ define <vscale x 4 x float> @scalable_vec_sin(<vscale x 4 x float> %input) {
 ; RV64-NEXT:    br label %[[BB3:.*]]
 ; RV64:       [[BB3]]:
 ; RV64-NEXT:    [[TMP4:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP9:%.*]], %[[BB3]] ]
-; RV64-NEXT:    [[TMP5:%.*]] = phi <vscale x 4 x float> [ [[INPUT]], [[TMP0]] ], [ [[TMP8:%.*]], %[[BB3]] ]
-; RV64-NEXT:    [[TMP6:%.*]] = extractelement <vscale x 4 x float> [[TMP5]], i64 [[TMP4]]
+; RV64-NEXT:    [[TMP5:%.*]] = phi <vscale x 4 x float> [ poison, [[TMP0]] ], [ [[TMP8:%.*]], %[[BB3]] ]
+; RV64-NEXT:    [[TMP6:%.*]] = extractelement <vscale x 4 x float> [[INPUT]], i64 [[TMP4]]
 ; RV64-NEXT:    [[TMP7:%.*]] = call float @llvm.sin.f32(float [[TMP6]])
 ; RV64-NEXT:    [[TMP8]] = insertelement <vscale x 4 x float> [[TMP5]], float [[TMP7]], i64 [[TMP4]]
 ; RV64-NEXT:    [[TMP9]] = add i64 [[TMP4]], 1
@@ -49,8 +49,8 @@ define <vscale x 4 x float> @scalable_vec_exp(<vscale x 4 x float> %input) {
 ; RV32-NEXT:    br label %[[BB3:.*]]
 ; RV32:       [[BB3]]:
 ; RV32-NEXT:    [[TMP4:%.*]] = phi i32 [ 0, [[TMP0:%.*]] ], [ [[TMP9:%.*]], %[[BB3]] ]
-; RV32-NEXT:    [[TMP5:%.*]] = phi <vscale x 4 x float> [ [[INPUT]], [[TMP0]] ], [ [[TMP8:%.*]], %[[BB3]] ]
-; RV32-NEXT:    [[TMP6:%.*]] = extractelement <vscale x 4 x float> [[TMP5]], i32 [[TMP4]]
+; RV32-NEXT:    [[TMP5:%.*]] = phi <vscale x 4 x float> [ poison, [[TMP0]] ], [ [[TMP8:%.*]], %[[BB3]] ]
+; RV32-NEXT:    [[TMP6:%.*]] = extractelement <vscale x 4 x float> [[INPUT]], i32 [[TMP4]]
 ; RV32-NEXT:    [[TMP7:%.*]] = call float @llvm.exp.f32(float [[TMP6]])
 ; RV32-NEXT:    [[TMP8]] = insertelement <vscale x 4 x float> [[TMP5]], float [[TMP7]], i32 [[TMP4]]
 ; RV32-NEXT:    [[TMP9]] = add i32 [[TMP4]], 1
@@ -66,8 +66,8 @@ define <vscale x 4 x float> @scalable_vec_exp(<vscale x 4 x float> %input) {
 ; RV64-NEXT:    br label %[[BB3:.*]]
 ; RV64:       [[BB3]]:
 ; RV64-NEXT:    [[TMP4:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP9:%.*]], %[[BB3]] ]
-; RV64-NEXT:    [[TMP5:%.*]] = phi <vscale x 4 x float> [ [[INPUT]], [[TMP0]] ], [ [[TMP8:%.*]], %[[BB3]] ]
-; RV64-NEXT:    [[TMP6:%.*]] = extractelement <vscale x 4 x float> [[TMP5]], i64 [[TMP4]]
+; RV64-NEXT:    [[TMP5:%.*]] = phi <vscale x 4 x float> [ poison, [[TMP0]] ], [ [[TMP8:%.*]], %[[BB3]] ]
+; RV64-NEXT:    [[TMP6:%.*]] = extractelement <vscale x 4 x float> [[INPUT]], i64 [[TMP4]]
 ; RV64-NEXT:    [[TMP7:%.*]] = call float @llvm.exp.f32(float [[TMP6]])
 ; RV64-NEXT:    [[TMP8]] = insertelement <vscale x 4 x float> [[TMP5]], float [[TMP7]], i64 [[TMP4]]
 ; RV64-NEXT:    [[TMP9]] = add i64 [[TMP4]], 1
@@ -88,8 +88,8 @@ define <vscale x 4 x float> @scalable_vec_log(<vscale x 4 x float> %input) {
 ; RV32-NEXT:    br label %[[BB3:.*]]
 ; RV32:       [[BB3]]:
 ; RV32-NEXT:    [[TMP4:%.*]] = phi i32 [ 0, [[TMP0:%.*]] ], [ [[TMP9:%.*]], %[[BB3]] ]
-; RV32-NEXT:    [[TMP5:%.*]] = phi <vscale x 4 x float> [ [[INPUT]], [[TMP0]] ], [ [[TMP8:%.*]], %[[BB3]] ]
-; RV32-NEXT:    [[TMP6:%.*]] = extractelement <vscale x 4 x float> [[TMP5]], i32 [[TMP4]]
+; RV32-NEXT:    [[TMP5:%.*]] = phi <vscale x 4 x float> [ poison, [[TMP0]] ], [ [[TMP8:%.*]], %[[BB3]] ]
+; RV32-NEXT:    [[TMP6:%.*]] = extractelement <vscale x 4 x float> [[INPUT]], i32 [[TMP4]]
 ; RV32-NEXT:    [[TMP7:%.*]] = call float @llvm.log.f32(float [[TMP6]])
 ; RV32-NEXT:    [[TMP8]] = insertelement <vscale x 4 x float> [[TMP5]], float [[TMP7]], i32 [[TMP4]]
 ; RV32-NEXT:    [[TMP9]] = add i32 [[TMP4]], 1
@@ -105,8 +105,8 @@ define <vscale x 4 x float> @scalable_vec_log(<vscale x 4 x float> %input) {
 ; RV64-NEXT:    br label %[[BB3:.*]]
 ; RV64:       [[BB3]]:
 ; RV64-NEXT:    [[TMP4:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP9:%.*]], %[[BB3]] ]
-; RV64-NEXT:    [[TMP5:%.*]] = phi <vscale x 4 x float> [ [[INPUT]], [[TMP0]] ], [ [[TMP8:%.*]], %[[BB3]] ]
-; RV64-NEXT:    [[TMP6:%.*]] = extractelement <vscale x 4 x float> [[TMP5]], i64 [[TMP4]]
+; RV64-NEXT:    [[TMP5:%.*]] = phi <vscale x 4 x float> [ poison, [[TMP0]] ], [ [[TMP8:%.*]], %[[BB3]] ]
+; RV64-NEXT:    [[TMP6:%.*]] = extractelement <vscale x 4 x float> [[INPUT]], i64 [[TMP4]]
 ; RV64-NEXT:    [[TMP7:%.*]] = call float @llvm.log.f32(float [[TMP6]])
 ; RV64-NEXT:    [[TMP8]] = insertelement <vscale x 4 x float> [[TMP5]], float [[TMP7]], i64 [[TMP4]]
 ; RV64-NEXT:    [[TMP9]] = add i64 [[TMP4]], 1
