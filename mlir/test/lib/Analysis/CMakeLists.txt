@@ -49,6 +49,7 @@ mlir_target_link_libraries(MLIRTestAnalysis PUBLIC
   MLIRAnalysisBase
   MLIRAnalysisDataFlow
   MLIRArithDialect
+  MLIRArithAnalysis
   MLIRFunctionInterfaces
   MLIRMemRefDialect
   MLIRPass

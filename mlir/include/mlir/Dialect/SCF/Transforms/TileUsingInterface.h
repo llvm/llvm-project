@@ -317,12 +317,15 @@ struct SCFTileAndFuseOptions {
   /// `tensor.extract_slice` ops and update the worklist.
   std::optional<FrozenRewritePatternSet> cleanupPatterns = std::nullopt;
 
-  /// Optional cleanup callback invoked after tiling and after each fusion step,
-  /// instead of `cleanupPatterns`. This permits analysis-backed cleanup to
-  /// analyze the generated IR at each phase. All rewrites must notify
-  /// `listener` so the extract_slice worklist remains up to date.
-  std::function<LogicalResult(ArrayRef<Operation *>, RewriterBase::Listener *)>
-      cleanupFn;
+  /// Optional batch transformation before the greedy cleanup patterns, called
+  /// after tiling and after each fusion step. Return the surviving and inserted
+  /// operations to pass to the patterns. Use the supplied rewriter so that the
+  /// extract_slice worklist tracks replacements. This provides a phase boundary
+  /// for analysis-backed transformations without retaining analysis across
+  /// greedy rewrites.
+  using PreCleanupFnTy = std::function<FailureOr<SmallVector<Operation *>>(
+      RewriterBase &, ArrayRef<Operation *>)>;
+  PreCleanupFnTy preCleanupFn;
 };
 
 /// Result of fusing the producer of the source of a `tensor.extract_slice`.

@@ -753,26 +753,16 @@ transform::FuseOp::apply(transform::TransformRewriter &rewriter,
     tensor::ExtractSliceOp::getCanonicalizationPatterns(patterns, context);
     tensor::populateMergeConsecutiveInsertExtractSlicePatterns(patterns);
     tensor::populateBubbleUpExtractSliceOpPatterns(patterns);
-    tileAndFuseOptions.cleanupFn =
-        [context, patterns = FrozenRewritePatternSet(std::move(patterns))](
-            ArrayRef<Operation *> ops, RewriterBase::Listener *listener) {
-          // Tiling and fusion can create or replace loops. Analyze the
-          // enclosing isolated scope for each batch rather than keeping
-          // pre-tiling facts.
-          Operation *scope = ops.front();
-          while (!scope->hasTrait<OpTrait::IsIsolatedFromAbove>() &&
-                 scope->getParentOp())
-            scope = scope->getParentOp();
-          IRRewriter cleanupRewriter(context, listener);
-          auto cleaned = tensor::bubbleUpExtractSlicesThroughCollapseShape(
-              cleanupRewriter, scope, ops);
-          if (failed(cleaned))
-            return failure();
-          return applyOpPatternsGreedily(
-              *cleaned, patterns,
-              GreedyRewriteConfig().setListener(listener).setStrictness(
-                  GreedyRewriteStrictness::ExistingAndNewOps));
-        };
+    tileAndFuseOptions.cleanupPatterns = std::move(patterns);
+    tileAndFuseOptions.preCleanupFn = [](RewriterBase &rewriter,
+                                         ArrayRef<Operation *> ops) {
+      Operation *scope = ops.front();
+      while (!scope->hasTrait<OpTrait::IsIsolatedFromAbove>() &&
+             scope->getParentOp())
+        scope = scope->getParentOp();
+      return tensor::bubbleUpExtractSlicesThroughCollapseShape(rewriter, scope,
+                                                               ops);
+    };
   }
 
   size_t numLoops;

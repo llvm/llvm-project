@@ -10,14 +10,12 @@
 #include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
 #include "mlir/Analysis/DataFlow/IntegerDivisibilityAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Arith/Analysis/IntegerDivisibility.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tensor/Transforms/Transforms.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Value.h"
-#include "mlir/Interfaces/InferIntDivisibilityOpInterface.h"
-#include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -626,10 +624,11 @@ LogicalResult mlir::tensor::getCollapsedExtractSliceInfo(
   return success();
 }
 
-// Check static and affine divisibility, or consult the caller's alignment
-// proof. The query must remain valid until all slice information is computed.
-static bool isMultipleOf(OpFoldResult ofr, int64_t factor,
-                         llvm::function_ref<bool(Value, int64_t)> isAligned) {
+// Check static and affine divisibility, or consult an additional proof. The
+// proof must remain valid until all slice information is computed.
+static bool
+isMultipleOf(OpFoldResult ofr, int64_t factor,
+             llvm::function_ref<bool(Value, int64_t)> isKnownMultipleOf) {
   if (factor <= 0)
     return false;
   if (auto constant = getConstantIntValue(ofr))
@@ -638,7 +637,7 @@ static bool isMultipleOf(OpFoldResult ofr, int64_t factor,
   Value value = dyn_cast<Value>(ofr);
   if (!value)
     return false;
-  if (isAligned && isAligned(value, factor))
+  if (isKnownMultipleOf && isKnownMultipleOf(value, factor))
     return true;
   auto applyOp = value.getDefiningOp<affine::AffineApplyOp>();
   if (!applyOp)
@@ -662,7 +661,7 @@ static LogicalResult computeExpandedSliceInfoForReassocGroup(
     OpBuilder &b, OpFoldResult collapsedSize, OpFoldResult collapsedOffset,
     const ReassociationIndices &reassocIndices, ArrayRef<int64_t> expandedShape,
     SmallVectorImpl<OpFoldResult> &groupSizes,
-    llvm::function_ref<bool(Value, int64_t)> isAligned) {
+    llvm::function_ref<bool(Value, int64_t)> isKnownMultipleOf) {
   assert(groupSizes.empty() && "Group sizes must be empty");
   // The first case is when there's only one non-unit dimension in the
   // reassociation group.
@@ -744,7 +743,7 @@ static LogicalResult computeExpandedSliceInfoForReassocGroup(
 
     // Check dynamic/static offset divisibility.
     currentOffsetDivisor *= expandedShapeSize;
-    if (!isMultipleOf(collapsedOffset, currentOffsetDivisor, isAligned))
+    if (!isMultipleOf(collapsedOffset, currentOffsetDivisor, isKnownMultipleOf))
       return failure();
 
     // Trailing dims get full shape and zero offset.
@@ -772,7 +771,7 @@ static LogicalResult computeExpandedSliceInfoForReassocGroup(
       // to check the validity of the range.
       if ((expandedShapeSize % currentCollapsedsize) != 0)
         return failure();
-      if (!isMultipleOf(collapsedOffset, staticSize.value(), isAligned))
+      if (!isMultipleOf(collapsedOffset, staticSize.value(), isKnownMultipleOf))
         return failure();
     }
     // Slicing dimension gets the remaining collapsed size.
@@ -794,130 +793,73 @@ static LogicalResult computeExpandedSliceInfoForReassocGroup(
   return success();
 }
 
-LogicalResult mlir::tensor::getExpandedExtractSliceInfo(
-    OpBuilder &b, tensor::ExtractSliceOp sliceOp,
+/// Validate the geometry and compute sizes without inserting operations.
+static LogicalResult computeExpandedExtractSliceSizes(
+    OpBuilder &b, ExtractSliceOp sliceOp,
     ArrayRef<ReassociationIndices> reassociation, Value expandedValue,
-    SmallVectorImpl<OpFoldResult> &expandedOffsets,
     SmallVectorImpl<OpFoldResult> &expandedSizes,
-    SmallVectorImpl<OpFoldResult> &expandedStrides,
-    llvm::function_ref<bool(Value, int64_t)> isAligned) {
-  if (!sliceOp.hasUnitStride()) {
+    llvm::function_ref<bool(Value, int64_t)> isKnownMultipleOf) {
+  if (!sliceOp.hasUnitStride())
     return failure();
-  }
-
-  // The tensor.extract_slice before applying the pattern works on the result
-  // of the tensor.collapse_shape, so variables (i.e. inputs for
-  // ExtractSliceOp) referring to the state before applying the pattern are
-  // named with the prefix "collapsed", and ones referring to the state after
-  // applying the pattern are named with the prefix "expanded".
   SmallVector<OpFoldResult> collapsedOffsets = sliceOp.getMixedOffsets();
   SmallVector<OpFoldResult> collapsedSizes = sliceOp.getMixedSizes();
   if (static_cast<size_t>(sliceOp.getResultType().getRank()) !=
-      collapsedSizes.size()) {
+      collapsedSizes.size())
     return failure();
-  }
 
-  // Compute new offsets, sizes, and strides for tensor.extract_slice.
-  // The new tensor.extract_slice will work on a tensor that has has a rank
-  // equal to the rank of the src of the collapse_shape. In each iteration of
-  // the loop, the offsets and sizes will be computed per reassociation group.
   ArrayRef<int64_t> expandedShape =
       cast<RankedTensorType>(expandedValue.getType()).getShape();
-  SmallVector<SmallVector<OpFoldResult>> groupResults;
+  SmallVector<OpFoldResult> sizes;
   for (auto [collapsedSize, collapsedOffset, reassocIndices] :
        llvm::zip_equal(collapsedSizes, collapsedOffsets, reassociation)) {
-
     SmallVector<OpFoldResult> groupSizes;
-    LogicalResult result = computeExpandedSliceInfoForReassocGroup(
-        b, collapsedSize, collapsedOffset, reassocIndices, expandedShape,
-        groupSizes, isAligned);
-    if (failed(result))
+    if (failed(computeExpandedSliceInfoForReassocGroup(
+            b, collapsedSize, collapsedOffset, reassocIndices, expandedShape,
+            groupSizes, isKnownMultipleOf)))
       return failure();
-    groupResults.emplace_back(groupSizes);
+    sizes.append(groupSizes);
   }
+  expandedSizes.append(sizes);
+  return success();
+}
 
-  expandedStrides.resize(expandedShape.size(), b.getIndexAttr(1));
+/// Materialize offsets and strides after the slice geometry has been checked.
+static void materializeExpandedExtractSliceInfo(
+    OpBuilder &b, ExtractSliceOp sliceOp,
+    ArrayRef<ReassociationIndices> reassociation, Value expandedValue,
+    SmallVectorImpl<OpFoldResult> &expandedOffsets,
+    SmallVectorImpl<OpFoldResult> &expandedStrides) {
+  auto expandedType = cast<RankedTensorType>(expandedValue.getType());
+  expandedStrides.resize(expandedType.getRank(), b.getIndexAttr(1));
+  SmallVector<OpFoldResult> collapsedOffsets = sliceOp.getMixedOffsets();
   for (auto [groupIdx, reassocIndices] : llvm::enumerate(reassociation)) {
-    auto &sizes = groupResults[groupIdx];
-    expandedSizes.append(sizes);
-
     SmallVector<OpFoldResult> basis;
     for (int64_t expandedShapeIdx : reassocIndices)
       basis.push_back(tensor::getMixedSize(b, sliceOp.getLoc(), expandedValue,
                                            expandedShapeIdx));
 
-    OpFoldResult collapsedOffset = collapsedOffsets[groupIdx];
-    Value offsetVal =
-        getValueOrCreateConstantIndexOp(b, sliceOp.getLoc(), collapsedOffset);
+    Value offsetVal = getValueOrCreateConstantIndexOp(
+        b, sliceOp.getLoc(), collapsedOffsets[groupIdx]);
     auto delinearizeOp = affine::AffineDelinearizeIndexOp::create(
         b, sliceOp.getLoc(), offsetVal, basis, /*hasOuterBound=*/true);
     for (OpResult result : delinearizeOp.getResults())
       expandedOffsets.push_back(result);
   }
-  return success();
 }
 
-namespace {
-/// Restrict operation transfer functions to facts that survive modular integer
-/// arithmetic. Reuse the existing analysis for the fixed point, control flow,
-/// and induction variables; do not propagate general divisors through division.
-class SliceAlignmentAnalysis : public dataflow::IntegerDivisibilityAnalysis {
-public:
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(SliceAlignmentAnalysis)
-  using IntegerDivisibilityAnalysis::IntegerDivisibilityAnalysis;
-
-  LogicalResult visitOperation(
-      Operation *op,
-      ArrayRef<const dataflow::IntegerDivisibilityLattice *> operands,
-      ArrayRef<dataflow::IntegerDivisibilityLattice *> results) override {
-    if (auto constant = dyn_cast<arith::ConstantOp>(op)) {
-      auto attr = dyn_cast<IntegerAttr>(constant.getValue());
-      if (!attr) {
-        setAllToEntryStates(results);
-        return success();
-      }
-      const APInt &value = attr.getValue();
-      // Avoid signed absolute values and support constants wider than uint64_t.
-      uint64_t divisor =
-          value.isZero() ? 0
-                         : uint64_t{1} << std::min(value.countr_zero(), 63u);
-      propagateIfChanged(
-          results.front(),
-          results.front()->join(ConstantIntDivisibility(divisor, divisor)));
-      return success();
-    }
-    if (!isa<arith::AddIOp, arith::SubIOp, arith::MulIOp, arith::SelectOp>(
-            op)) {
-      setAllToEntryStates(results);
-      return success();
-    }
-    if (llvm::any_of(operands, [](const auto *lattice) {
-          return lattice->getValue().isUninitialized();
-        }))
-      return success();
-    return IntegerDivisibilityAnalysis::visitOperation(op, operands, results);
-  }
-
-  void visitNonControlFlowArguments(
-      Operation *op, const RegionSuccessor &successor,
-      ValueRange successorInputs,
-      ArrayRef<dataflow::IntegerDivisibilityLattice *> argLattices) override {
-    // The existing loop-bound query represents constants in int64_t.
-    if (auto loop = dyn_cast<LoopLikeOpInterface>(op)) {
-      auto ivs = loop.getLoopInductionVars();
-      if (ivs && llvm::any_of(*ivs, [](Value iv) {
-            auto type = dyn_cast<IntegerType>(iv.getType());
-            return type && type.getWidth() > 64;
-          })) {
-        return SparseForwardDataFlowAnalysis::visitNonControlFlowArguments(
-            op, successor, successorInputs, argLattices);
-      }
-    }
-    IntegerDivisibilityAnalysis::visitNonControlFlowArguments(
-        op, successor, successorInputs, argLattices);
-  }
-};
-} // namespace
+LogicalResult mlir::tensor::getExpandedExtractSliceInfo(
+    OpBuilder &b, tensor::ExtractSliceOp sliceOp,
+    ArrayRef<ReassociationIndices> reassociation, Value expandedValue,
+    SmallVectorImpl<OpFoldResult> &expandedOffsets,
+    SmallVectorImpl<OpFoldResult> &expandedSizes,
+    SmallVectorImpl<OpFoldResult> &expandedStrides) {
+  if (failed(computeExpandedExtractSliceSizes(
+          b, sliceOp, reassociation, expandedValue, expandedSizes, nullptr)))
+    return failure();
+  materializeExpandedExtractSliceInfo(b, sliceOp, reassociation, expandedValue,
+                                      expandedOffsets, expandedStrides);
+  return success();
+}
 
 FailureOr<SmallVector<Operation *>>
 mlir::tensor::bubbleUpExtractSlicesThroughCollapseShape(
@@ -929,63 +871,74 @@ mlir::tensor::bubbleUpExtractSlicesThroughCollapseShape(
       }))
     return llvm::to_vector(operations);
 
-  DataFlowSolver solver;
-  solver.load<dataflow::DeadCodeAnalysis>();
-  solver.load<dataflow::SparseConstantPropagation>();
-  solver.load<SliceAlignmentAnalysis>();
-  if (failed(solver.initializeAndRun(analysisScope)))
-    return failure();
-
-  auto isAligned = [&](Value value, int64_t factor) {
-    if (!llvm::isPowerOf2_64(factor))
-      return false;
-    const auto *lattice =
-        solver.lookupState<dataflow::IntegerDivisibilityLattice>(value);
-    if (!lattice || lattice->getValue().isUninitialized())
-      return false;
-    return lattice->getValue().getValue().udiv() % factor == 0;
+  struct SliceRewritePlan {
+    Operation *op;
+    CollapseShapeOp collapse;
+    SmallVector<OpFoldResult> sizes;
   };
+  SmallVector<SliceRewritePlan> plans;
+  {
+    DataFlowSolver solver;
+    solver.load<dataflow::DeadCodeAnalysis>();
+    solver.load<dataflow::SparseConstantPropagation>();
+    solver.load<arith::PowerOfTwoDivisibilityAnalysis>();
+    if (failed(solver.initializeAndRun(analysisScope)))
+      return failure();
 
-  // Complete every analysis query before replacing any operation. Building
-  // slices only inserts operations: existing integer definitions, loop bounds,
-  // and control flow stay unchanged throughout matching.
-  SmallVector<std::pair<Operation *, Operation *>> replacements;
+    auto isKnownMultipleOf = [&](Value value, int64_t factor) {
+      if (!llvm::isPowerOf2_64(factor))
+        return false;
+      const auto *lattice =
+          solver.lookupState<dataflow::IntegerDivisibilityLattice>(value);
+      if (!lattice || lattice->getValue().isUninitialized())
+        return false;
+      return lattice->getValue().getValue().udiv() % factor == 0;
+    };
+
+    // Plan the batch without inserting or modifying any operation. Only sizes
+    // and handles to existing operations survive the analysis scope.
+    llvm::SmallPtrSet<Operation *, 16> seen;
+    for (Operation *op : operations) {
+      if (!seen.insert(op).second)
+        continue;
+      auto slice = dyn_cast<ExtractSliceOp>(op);
+      auto collapse = slice ? slice.getSource().getDefiningOp<CollapseShapeOp>()
+                            : CollapseShapeOp();
+      plans.push_back({op, collapse, {}});
+      if (collapse &&
+          failed(computeExpandedExtractSliceSizes(
+              rewriter, slice, collapse.getReassociationIndices(),
+              collapse.getSrc(), plans.back().sizes, isKnownMultipleOf)))
+        plans.back().collapse = nullptr;
+    }
+  }
+
+  // The solver has been destroyed: rewriting cannot consume stale facts.
   SmallVector<Operation *> cleanedOperations;
   OpBuilder::InsertionGuard guard(rewriter);
-  llvm::SmallPtrSet<Operation *, 16> seen;
-  for (Operation *op : operations) {
-    if (!seen.insert(op).second)
-      continue;
-    auto slice = dyn_cast<ExtractSliceOp>(op);
-    auto collapse = slice ? slice.getSource().getDefiningOp<CollapseShapeOp>()
-                          : CollapseShapeOp();
-    if (!collapse) {
-      cleanedOperations.push_back(op);
+  for (const SliceRewritePlan &plan : plans) {
+    if (!plan.collapse) {
+      cleanedOperations.push_back(plan.op);
       continue;
     }
+    auto slice = cast<ExtractSliceOp>(plan.op);
+    auto collapse = plan.collapse;
     rewriter.setInsertionPoint(slice);
-    SmallVector<OpFoldResult> offsets, sizes, strides;
-    if (failed(getExpandedExtractSliceInfo(
-            rewriter, slice, collapse.getReassociationIndices(),
-            collapse.getSrc(), offsets, sizes, strides, isAligned))) {
-      cleanedOperations.push_back(op);
-      continue;
-    }
-    auto expandedSlice = ExtractSliceOp::create(
-        rewriter, slice.getLoc(), collapse.getSrc(), offsets, sizes, strides);
+    SmallVector<OpFoldResult> offsets, strides;
+    materializeExpandedExtractSliceInfo(rewriter, slice,
+                                        collapse.getReassociationIndices(),
+                                        collapse.getSrc(), offsets, strides);
+    auto expandedSlice =
+        ExtractSliceOp::create(rewriter, slice.getLoc(), collapse.getSrc(),
+                               offsets, plan.sizes, strides);
     auto replacement = CollapseShapeOp::create(
         rewriter, slice.getLoc(), slice.getType(), expandedSlice,
         collapse.getReassociationIndices());
-    replacements.emplace_back(slice, replacement);
+    rewriter.replaceOp(slice, replacement);
     // Include the expanded slice so the greedy cleanup can visit its producer.
     cleanedOperations.push_back(expandedSlice);
     cleanedOperations.push_back(replacement);
   }
-
-  // No lattice is queried after this point. The next cleanup phase constructs
-  // a solver for the IR containing any newly fused or replaced loops.
-  for (auto [slice, replacement] : replacements)
-    rewriter.replaceOp(slice, replacement);
   return cleanedOperations;
 }
 

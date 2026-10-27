@@ -171,15 +171,14 @@ getCollapsedExtractSliceInfo(OpBuilder &b, tensor::ExtractSliceOp sliceOp,
 /// the shape of `expandedValue`.
 ///
 /// This fails when the specified expansion cannot be represented by a valid
-/// ExtractSliceOp. `isAligned` may provide additional divisibility proofs for
-/// offsets and must remain valid during this call.
-LogicalResult getExpandedExtractSliceInfo(
-    OpBuilder &b, tensor::ExtractSliceOp sliceOp,
-    ArrayRef<ReassociationIndices> reassociation, Value expandedValue,
-    SmallVectorImpl<OpFoldResult> &expandedOffsets,
-    SmallVectorImpl<OpFoldResult> &expandedSizes,
-    SmallVectorImpl<OpFoldResult> &expandedStrides,
-    llvm::function_ref<bool(Value, int64_t)> isAligned = nullptr);
+/// ExtractSliceOp.
+LogicalResult
+getExpandedExtractSliceInfo(OpBuilder &b, tensor::ExtractSliceOp sliceOp,
+                            ArrayRef<ReassociationIndices> reassociation,
+                            Value expandedValue,
+                            SmallVectorImpl<OpFoldResult> &expandedOffsets,
+                            SmallVectorImpl<OpFoldResult> &expandedSizes,
+                            SmallVectorImpl<OpFoldResult> &expandedStrides);
 } // namespace tensor
 } // namespace mlir
 

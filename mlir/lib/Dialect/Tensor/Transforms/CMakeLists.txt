@@ -20,18 +20,17 @@ add_mlir_dialect_library(MLIRTensorTransforms
   MLIRTensorTransformsIncGen
 
   LINK_LIBS PUBLIC
-  MLIRAnalysis
+  MLIRAnalysisDataFlow
   MLIRAffineDialect
   MLIRAffineTransforms
   MLIRAffineUtils
+  MLIRArithAnalysis
   MLIRArithDialect
   MLIRArithUtils
   MLIRDialectUtils
   MLIRFuncDialect # Dependency of scalarize-single-element-tensor-return
   MLIRIR
-  MLIRInferIntDivisibilityOpInterface
   MLIRLinalgDialect
-  MLIRLoopLikeInterface
   MLIRMemRefDialect
   MLIRPass
   MLIRRuntimeVerifiableOpInterface

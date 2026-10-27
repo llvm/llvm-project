@@ -1649,14 +1649,13 @@ private:
   /// Optional pattern set to apply when adding new operations to the
   /// worklist.
   std::optional<FrozenRewritePatternSet> patterns = std::nullopt;
-  std::function<LogicalResult(ArrayRef<Operation *>, RewriterBase::Listener *)>
-      cleanupFn;
+  scf::SCFTileAndFuseOptions::PreCleanupFnTy preCleanupFn;
 };
 
 SliceTrackingListener::SliceTrackingListener(
     const scf::SCFTileAndFuseOptions &options) {
   patterns = options.cleanupPatterns;
-  cleanupFn = options.cleanupFn;
+  preCleanupFn = options.preCleanupFn;
 }
 
 LogicalResult
@@ -1668,13 +1667,19 @@ SliceTrackingListener::insertAndApplyPatterns(ArrayRef<Operation *> ops) {
 
   if (ops.empty())
     return success();
-  if (cleanupFn)
-    return cleanupFn(ops, this);
+  SmallVector<Operation *> cleanedOps(ops);
+  if (preCleanupFn) {
+    IRRewriter rewriter(ops.front()->getContext(), this);
+    auto result = preCleanupFn(rewriter, ops);
+    if (failed(result))
+      return failure();
+    cleanedOps = std::move(*result);
+  }
   if (!patterns)
     return success();
 
   return applyOpPatternsGreedily(
-      ops, patterns.value(),
+      cleanedOps, patterns.value(),
       GreedyRewriteConfig().setListener(this).setStrictness(
           GreedyRewriteStrictness::ExistingAndNewOps));
 }
