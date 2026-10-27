@@ -25,6 +25,52 @@
 using namespace clang;
 using namespace clang::CIRGen;
 
+void CallLifetimeEnd::emit(CIRGenFunction &cgf, Flags flags) {
+  cgf.emitLifetimeEndOp(addr.getLoc(), addr);
+}
+
+void CIRGenFunction::pushFullExprLifetimeEnd(Address addr) {
+  assert(addr.getDefiningOp<cir::AllocaOp>() &&
+         "lifetime cleanup requires the raw alloca address");
+  if (!isInConditionalBranch()) {
+    ehStack.pushCleanup<CallLifetimeEnd>(NormalEHLifetimeMarker,
+                                         addr.getPointer());
+    return;
+  }
+
+  Address activeFlag = createCleanupActiveFlag();
+  deferredConditionalCleanupStack.push_back(
+      {NormalEHLifetimeMarker, addr, QualType(), nullptr, activeFlag});
+}
+
+void CIRGenFunction::pushLifetimeEndAfterFullExpr(
+    Address addr, const ValueDecl *extendingDecl) {
+  assert(addr.getDefiningOp<cir::AllocaOp>() &&
+         "lifetime cleanup requires the raw alloca address");
+  Address activeFlag =
+      isInConditionalBranch() ? createCleanupActiveFlag() : Address::invalid();
+  PendingCleanupEntry entry{NormalEHLifetimeMarker, addr, QualType(), nullptr,
+                            activeFlag};
+  // A loop condition variable's temporary ends its lifetime in the loop's
+  // cleanup region. Unlike its destructor, this is not guarded by the
+  // variable's active flag.
+  if (lifetimeExtensionCapture &&
+      lifetimeExtensionCapture->extendingDecl == extendingDecl)
+    entry.capturedBy = lifetimeExtensionCapture->cleanups;
+  lifetimeExtendedCleanupStack.push_back(entry);
+}
+
+void CIRGenFunction::emitPendingCleanup(const PendingCleanupEntry &entry) {
+  if (entry.kind & LifetimeMarker) {
+    assert(entry.addr.getDefiningOp<cir::AllocaOp>() &&
+           "lifetime cleanup requires the raw alloca address");
+    CallLifetimeEnd(entry.addr.getPointer())
+        .emit(*this, EHScopeStack::Cleanup::Flags());
+    return;
+  }
+  emitDestroy(entry.addr, entry.type, entry.destroyer);
+}
+
 namespace {
 /// Return true if the expression tree contains a construct that causes cleanups
 /// to be deferred via pushFullExprCleanup.
@@ -322,12 +368,11 @@ static void closeConditionalCleanupScope(
         cir::IfOp::create(builder, scope.getLoc(), flag,
                           /*withElseRegion=*/false,
                           [&](mlir::OpBuilder &b, mlir::Location loc) {
-                            cgf.emitDestroy(entry.addr, entry.type,
-                                            entry.destroyer);
+                            cgf.emitPendingCleanup(entry);
                             builder.createYield(loc);
                           });
       } else {
-        cgf.emitDestroy(entry.addr, entry.type, entry.destroyer);
+        cgf.emitPendingCleanup(entry);
       }
     }
     builder.createYield(scope.getLoc());

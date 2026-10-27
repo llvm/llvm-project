@@ -1169,15 +1169,15 @@ mlir::LogicalResult CIRGenFunction::emitForStmt(const ForStmt &s,
     // per-iteration cleanup region. This scope is constructed after the
     // init-statement so the init-statement's cleanups are not captured.
     const VarDecl *condVar = s.getConditionVariable();
-    SmallVector<QualType, 2> condVarExtendedTemporaries;
+    ExtendedTemporaries condVarTemps;
     if (condVar)
-      condVarExtendedTemporaries =
-          getLifetimeExtendedTemporariesWithDestructor(*condVar);
+      condVarTemps = getLifetimeExtendedTemporaries(*condVar);
     bool needsCondCleanup =
         condVar &&
         (condVar->needsDestruction(getContext()) != QualType::DK_none ||
          shouldEmitLifetimeMarkersForAutoVar() ||
-         !condVarExtendedTemporaries.empty());
+         !condVarTemps.withDestructor.empty() ||
+         extendedTemporariesNeedLifetimeEnd(condVarTemps));
     CapturedCleanups loopCondScope(*this, needsCondCleanup);
 
     auto condBuilder = [&](mlir::OpBuilder &b, mlir::Location loc) {
@@ -1187,8 +1187,7 @@ mlir::LogicalResult CIRGenFunction::emitForStmt(const ForStmt &s,
       if (s.getCond()) {
         // If the for statement declares a condition variable, emit that here.
         if (condVar)
-          emitLoopConditionVariable(*condVar, loopCondScope,
-                                    condVarExtendedTemporaries);
+          emitLoopConditionVariable(*condVar, loopCondScope, condVarTemps);
         // C99 6.8.5p2/p4: The first substatement is executed if the
         // expression compares unequal to 0. The condition must be a
         // scalar type.
@@ -1316,15 +1315,15 @@ CIRGenFunction::emitWhileStmt(const WhileStmt &s,
     // its initializer lifetime-extends, and emit them into the loop's
     // per-iteration cleanup region.
     const VarDecl *condVar = s.getConditionVariable();
-    SmallVector<QualType, 2> condVarExtendedTemporaries;
+    ExtendedTemporaries condVarTemps;
     if (condVar)
-      condVarExtendedTemporaries =
-          getLifetimeExtendedTemporariesWithDestructor(*condVar);
+      condVarTemps = getLifetimeExtendedTemporaries(*condVar);
     bool needsCondCleanup =
         condVar &&
         (condVar->needsDestruction(getContext()) != QualType::DK_none ||
          shouldEmitLifetimeMarkersForAutoVar() ||
-         !condVarExtendedTemporaries.empty());
+         !condVarTemps.withDestructor.empty() ||
+         extendedTemporariesNeedLifetimeEnd(condVarTemps));
     CapturedCleanups loopCondScope(*this, needsCondCleanup);
 
     auto condBuilder = [&](mlir::OpBuilder &b, mlir::Location loc) {
@@ -1332,8 +1331,7 @@ CIRGenFunction::emitWhileStmt(const WhileStmt &s,
       assert(!cir::MissingFeatures::emitCondLikelihoodViaExpectIntrinsic());
       // If the while statement declares a condition variable, emit that here.
       if (condVar)
-        emitLoopConditionVariable(*condVar, loopCondScope,
-                                  condVarExtendedTemporaries);
+        emitLoopConditionVariable(*condVar, loopCondScope, condVarTemps);
       // C99 6.8.5p2/p4: The first substatement is executed if the
       // expression compares unequal to 0. The condition must be a
       // scalar type.
