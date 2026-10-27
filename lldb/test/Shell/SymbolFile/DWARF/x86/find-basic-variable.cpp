@@ -74,7 +74,7 @@ struct sbar {
 // NAME-DAG: name = "foo", type = {{.*}} (int), {{.*}} decl = find-basic-variable.cpp:[[@LINE-1]]
 // REGEX-DAG: name = "foo", type = {{.*}} (int), {{.*}} decl = find-basic-variable.cpp:[[@LINE-2]]
   static const int cbar = 42;
-// STATIC_CONST-DAG: name = "cbar", type = {{.*}} (const int), {{.*}} decl = find-basic-variable.cpp:[[@LINE-1]]
+  // STATIC_CONST-DAG: name = "cbar", type = {{.*}} (const int), {{.*}} decl = find-basic-variable.cpp:[[@LINE-1]]
 };
 int sbar::foo;
 
