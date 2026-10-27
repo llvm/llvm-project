@@ -40,16 +40,16 @@ ldnt1d {z0.d-z1.d}, pn8.d, [x13, #-8, mul vl]
 // Invalid immediate range
 
 ldnt1d {z0.d-z3.d}, pn8/z, [x0, #-9, mul vl]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 4 in range [-32, 28]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 4 in range [-32, 28]
 // CHECK-NEXT: ldnt1d {z0.d-z3.d}, pn8/z, [x0, #-9, mul vl]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ldnt1d {z0.d-z3.d}, pn8/z, [x0, #-36, mul vl]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 4 in range [-32, 28]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 4 in range [-32, 28]
 // CHECK-NEXT: ldnt1d {z0.d-z3.d}, pn8/z, [x0, #-36, mul vl]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ldnt1d {z0.d-z3.d}, pn8/z, [x0, #32, mul vl]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 4 in range [-32, 28]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 4 in range [-32, 28]
 // CHECK-NEXT: ldnt1d {z0.d-z3.d}, pn8/z, [x0, #32, mul vl]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:

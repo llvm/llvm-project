@@ -30,6 +30,7 @@
 ; O0-NEXT:   scalarize-masked-mem-intrin
 ; O0-NEXT:   expand-reductions
 ; O0-NEXT:   indirectbr-expand
+; O0-NEXT:   x86-fence-nontemporal-stores
 ; O0-NEXT:   sjlj-eh-prepare
 ; O0-NEXT:   dwarf-eh-prepare
 ; O0-NEXT:   inline-asm-prepare
@@ -114,6 +115,7 @@
 ; O2-NEXT:   interleaved-access
 ; O2-NEXT:   x86-partial-reduction
 ; O2-NEXT:   indirectbr-expand
+; O2-NEXT:   x86-fence-nontemporal-stores
 ; O2-NEXT:   codegenprepare
 ; O2-NEXT:   sjlj-eh-prepare
 ; O2-NEXT:   dwarf-eh-prepare
@@ -237,6 +239,7 @@
 ; O0-WINDOWS-NEXT:   expand-reductions
 ; O0-WINDOWS-NEXT:   indirectbr-expand
 ; O0-WINDOWS-NEXT:   cfguard
+; O0-WINDOWS-NEXT:   x86-fence-nontemporal-stores
 ; O0-WINDOWS-NEXT:   sjlj-eh-prepare
 ; O0-WINDOWS-NEXT:   win-eh-prepare
 ; O0-WINDOWS-NEXT:   dwarf-eh-prepare
@@ -284,6 +287,7 @@
 ; O0-WINDOWS-NEXT:     x86-seses
 ; O0-WINDOWS-NEXT:     x86-return-thunks
 ; O0-WINDOWS-NEXT:     x86-avoid-trailing-call
+; O0-WINDOWS-NEXT:     cfi-instr-inserter
 ; O0-WINDOWS-NEXT:     cfguard-longjmp
 ; O0-WINDOWS-NEXT:     eh-cont-guard-targets
 ; O0-WINDOWS-NEXT:     x86-lvi-ret
@@ -326,6 +330,7 @@
 ; O3-WINDOWS-NEXT:   x86-partial-reduction
 ; O3-WINDOWS-NEXT:   indirectbr-expand
 ; O3-WINDOWS-NEXT:   cfguard
+; O3-WINDOWS-NEXT:   x86-fence-nontemporal-stores
 ; O3-WINDOWS-NEXT:   codegenprepare
 ; O3-WINDOWS-NEXT:   sjlj-eh-prepare
 ; O3-WINDOWS-NEXT:   win-eh-prepare
@@ -420,6 +425,7 @@
 ; O3-WINDOWS-NEXT:     x86-seses
 ; O3-WINDOWS-NEXT:     x86-return-thunks
 ; O3-WINDOWS-NEXT:     x86-avoid-trailing-call
+; O3-WINDOWS-NEXT:     cfi-instr-inserter
 ; O3-WINDOWS-NEXT:     cfguard-longjmp
 ; O3-WINDOWS-NEXT:     eh-cont-guard-targets
 ; O3-WINDOWS-NEXT:     x86-lvi-ret
