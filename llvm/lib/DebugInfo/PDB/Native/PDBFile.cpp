@@ -100,10 +100,10 @@ uint32_t PDBFile::getNumStreams() const {
   return ContainerLayout.StreamSizes.size();
 }
 
-uint32_t PDBFile::getMaxStreamSize() const {
+uint64_t PDBFile::getMaxStreamSize() const {
 #if LLVM_ENABLE_ZSTD
   if (MSFZ) {
-    uint32_t MaxSize = 0;
+    uint64_t MaxSize = 0;
     for (uint32_t I = 0; I != getNumStreams(); ++I)
       MaxSize = std::max(MaxSize, getStreamByteSize(I));
     return MaxSize;
@@ -112,7 +112,7 @@ uint32_t PDBFile::getMaxStreamSize() const {
   return *llvm::max_element(ContainerLayout.StreamSizes);
 }
 
-uint32_t PDBFile::getStreamByteSize(uint32_t StreamIndex) const {
+uint64_t PDBFile::getStreamByteSize(uint32_t StreamIndex) const {
 #if LLVM_ENABLE_ZSTD
   if (MSFZ)
     return MSFZ->getStreamByteSize(StreamIndex);
@@ -333,13 +333,14 @@ bool PDBFile::isMSFZ() const {
 
 Expected<std::unique_ptr<BinaryStream>>
 PDBFile::safelyCreateStream(uint32_t StreamIndex) const {
-  if (StreamIndex == kInvalidStreamIndex || StreamIndex >= getNumStreams() ||
-      getStreamByteSize(StreamIndex) == std::numeric_limits<uint32_t>::max())
+  if (StreamIndex == kInvalidStreamIndex || StreamIndex >= getNumStreams())
     return make_error<RawError>(raw_error_code::no_stream);
 #if LLVM_ENABLE_ZSTD
   if (MSFZ)
     return MSFZ->createStream(StreamIndex);
 #endif
+  if (getStreamByteSize(StreamIndex) == std::numeric_limits<uint32_t>::max())
+    return make_error<RawError>(raw_error_code::no_stream);
   return std::unique_ptr<BinaryStream>(MappedBlockStream::createIndexedStream(
       ContainerLayout, *Buffer, StreamIndex, Allocator));
 }

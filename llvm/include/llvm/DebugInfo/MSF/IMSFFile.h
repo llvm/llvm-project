@@ -25,7 +25,7 @@ public:
   virtual uint32_t getBlockCount() const = 0;
 
   virtual uint32_t getNumStreams() const = 0;
-  virtual uint32_t getStreamByteSize(uint32_t StreamIndex) const = 0;
+  virtual uint64_t getStreamByteSize(uint32_t StreamIndex) const = 0;
   virtual ArrayRef<support::ulittle32_t>
   getStreamBlockList(uint32_t StreamIndex) const = 0;
 

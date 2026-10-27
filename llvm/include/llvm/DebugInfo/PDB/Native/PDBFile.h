@@ -65,8 +65,10 @@ public:
   uint64_t getBlockMapOffset() const;
 
   uint32_t getNumStreams() const override;
-  uint32_t getMaxStreamSize() const;
-  uint32_t getStreamByteSize(uint32_t StreamIndex) const override;
+  uint64_t getMaxStreamSize() const;
+  /// Return the logical byte size for MSFZ, or the classic MSF directory size
+  /// value (including UINT32_MAX for nil streams) for MSF.
+  uint64_t getStreamByteSize(uint32_t StreamIndex) const override;
   ArrayRef<support::ulittle32_t>
   getStreamBlockList(uint32_t StreamIndex) const override;
   uint64_t getFileSize() const;

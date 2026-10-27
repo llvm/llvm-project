@@ -91,9 +91,9 @@ public:
 
   /// Return the byte size of stream \p StreamIndex.
   ///
-  /// \p StreamIndex must be less than getNumStreams(). Nil streams return the
-  /// MSF nil-stream sentinel, UINT32_MAX.
-  uint32_t getStreamByteSize(uint32_t StreamIndex) const;
+  /// \p StreamIndex must be less than getNumStreams(). Nil streams have size
+  /// zero; use isNilStream() to distinguish them from empty non-nil streams.
+  uint64_t getStreamByteSize(uint32_t StreamIndex) const;
 
   /// Return whether \p StreamIndex denotes a nil stream.
   ///
@@ -123,8 +123,9 @@ public:
   /// Create a writer using zstd's fastest compression level.
   ///
   /// \p Layout defines the logical streams and their source MSF block
-  /// locations. Output is staged in a temporary file; creation errors include
-  /// invalid layouts and failures opening that file.
+  /// locations, using classic MSF's 32-bit stream sizes and nil markers.
+  /// Output is staged in a temporary file; creation errors include invalid
+  /// layouts and failures opening that file.
   static Expected<std::unique_ptr<MSFZWriter>> create(StringRef Path,
                                                       const MSFLayout &Layout);
 

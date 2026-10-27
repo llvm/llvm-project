@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/DebugInfo/CodeView/DebugStringTableSubsection.h"
 #include "llvm/DebugInfo/CodeView/GUID.h"
@@ -32,6 +33,7 @@
 #include "llvm/Testing/Support/Error.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include "gtest/gtest.h"
+#include <algorithm>
 #include <memory>
 #include <string>
 #include <system_error>
@@ -49,6 +51,112 @@ static std::string getInputPath(StringRef FileName) {
 }
 
 static std::string getPdbPath() { return getInputPath("SimpleTest.pdb"); }
+
+TEST(MSFZReaderTest, ReadsLargeLogicalStreams) {
+  constexpr uint32_t MaxFragmentSize = UINT32_MAX - 1;
+  constexpr uint64_t FirstStreamSize = UINT32_MAX;
+  constexpr uint64_t SecondStreamSize = uint64_t(UINT32_MAX) + 2;
+  constexpr uint64_t DataOffset = 4096;
+  constexpr uint64_t FileSize = DataOffset + FirstStreamSize + SecondStreamSize;
+  SmallVector<uint8_t, 0> Metadata(sizeof(msf::MSFZHeader) + 64);
+  MutableBinaryByteStream MetadataStream(Metadata, llvm::endianness::little);
+  BinaryStreamWriter Writer(MetadataStream);
+  msf::MSFZHeader Header = {};
+  std::memcpy(Header.Magic, msf::MSFZMagic, sizeof(Header.Magic));
+  Header.NumStreams = 4;
+  Header.StreamDirectoryOffset = sizeof(Header);
+  Header.StreamDirectorySizeCompressed = 64;
+  Header.StreamDirectorySizeUncompressed = 64;
+  Header.ChunkTableOffset = Metadata.size();
+  ASSERT_THAT_ERROR(Writer.writeObject(Header), Succeeded());
+  ASSERT_THAT_ERROR(Writer.writeInteger<uint32_t>(UINT32_MAX), Succeeded());
+  ASSERT_THAT_ERROR(Writer.writeInteger<uint32_t>(0), Succeeded());
+  for (uint32_t TailSize : {1u, 3u}) {
+    ASSERT_THAT_ERROR(Writer.writeInteger(MaxFragmentSize), Succeeded());
+    ASSERT_THAT_ERROR(Writer.writeInteger<uint64_t>(
+                          DataOffset + (TailSize == 1 ? 0 : FirstStreamSize)),
+                      Succeeded());
+    ASSERT_THAT_ERROR(Writer.writeInteger(TailSize), Succeeded());
+    ASSERT_THAT_ERROR(Writer.writeInteger<uint64_t>(
+                          DataOffset + (TailSize == 1 ? 0 : FirstStreamSize) +
+                          MaxFragmentSize),
+                      Succeeded());
+    ASSERT_THAT_ERROR(Writer.writeInteger<uint32_t>(0), Succeeded());
+  }
+  ASSERT_EQ(Writer.bytesRemaining(), 0u);
+
+  // Model a large uncompressed file without allocating its stream payloads.
+  class LargeFileStream : public BinaryStream {
+  public:
+    LargeFileStream(ArrayRef<uint8_t> Metadata, uint64_t Length)
+        : Metadata(Metadata, llvm::endianness::little), Length(Length) {}
+
+    llvm::endianness getEndian() const override {
+      return llvm::endianness::little;
+    }
+
+    Error readBytes(uint64_t Offset, uint64_t Size,
+                    ArrayRef<uint8_t> &Buffer) override {
+      if (Offset > Length || Size > Length - Offset)
+        return createStringError("read outside test file");
+      if (Offset < Metadata.getLength())
+        return Metadata.readBytes(Offset, Size, Buffer);
+      if (Size > sizeof(Payload))
+        return createStringError("test payload read is too large");
+      Buffer = ArrayRef(Payload).take_front(Size);
+      return Error::success();
+    }
+
+    Error readLongestContiguousChunk(uint64_t Offset,
+                                     ArrayRef<uint8_t> &Buffer) override {
+      if (Offset < Metadata.getLength())
+        return Metadata.readLongestContiguousChunk(Offset, Buffer);
+      if (Offset >= Length)
+        return createStringError("read outside test file");
+      return readBytes(
+          Offset, std::min<uint64_t>(sizeof(Payload), Length - Offset), Buffer);
+    }
+
+    uint64_t getLength() override { return Length; }
+
+  private:
+    BinaryByteStream Metadata;
+    uint64_t Length;
+    const uint8_t Payload[8] = {'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x'};
+  };
+
+  BumpPtrAllocator Allocator;
+  PDBFile File("large.pdz",
+               std::make_unique<LargeFileStream>(Metadata, FileSize),
+               Allocator);
+  ASSERT_THAT_ERROR(File.parseFileHeaders(), Succeeded());
+  ASSERT_THAT_ERROR(File.parseStreamData(), Succeeded());
+  EXPECT_EQ(File.getStreamByteSize(0), 0u);
+  EXPECT_EQ(File.getStreamByteSize(1), 0u);
+  EXPECT_THAT_EXPECTED(File.safelyCreateStream(0), Failed());
+  auto EmptyStream = File.safelyCreateStream(1);
+  ASSERT_THAT_EXPECTED(EmptyStream, Succeeded());
+  EXPECT_EQ((*EmptyStream)->getLength(), 0u);
+  EXPECT_EQ(File.getMaxStreamSize(), SecondStreamSize);
+  for (uint32_t StreamIndex : {2u, 3u}) {
+    uint64_t Size = StreamIndex == 2 ? FirstStreamSize : SecondStreamSize;
+    EXPECT_EQ(File.getStreamByteSize(StreamIndex), Size);
+    auto Stream = File.safelyCreateStream(StreamIndex);
+    ASSERT_THAT_EXPECTED(Stream, Succeeded());
+    EXPECT_EQ((*Stream)->getLength(), Size);
+    ArrayRef<uint8_t> Data;
+    ASSERT_THAT_ERROR((*Stream)->readBytes(MaxFragmentSize - 1, 2, Data),
+                      Succeeded());
+    EXPECT_EQ(toStringRef(Data), "xx");
+    ASSERT_THAT_ERROR((*Stream)->readBytes(Size - 1, 1, Data), Succeeded());
+    EXPECT_EQ(toStringRef(Data), "x");
+    ASSERT_THAT_ERROR((*Stream)->readLongestContiguousChunk(Size - 1, Data),
+                      Succeeded());
+    EXPECT_EQ(toStringRef(Data), "x");
+    EXPECT_THAT_ERROR((*Stream)->readBytes(Size - 1, 2, Data), Failed());
+    EXPECT_THAT_ERROR((*Stream)->readBytes(Size + 1, 0, Data), Failed());
+  }
+}
 
 TEST(MSFZReaderTest, NativeSessionReadsPdbRsFixture) {
   // Generated from SimpleTest.pdb by pdb-rs pdbtool commit

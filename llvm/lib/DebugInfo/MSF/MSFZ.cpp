@@ -38,7 +38,7 @@ using namespace llvm::msf;
 namespace {
 
 constexpr uint32_t ChunkSize = 1024 * 1024;
-constexpr uint32_t NilStreamSize = std::numeric_limits<uint32_t>::max();
+constexpr uint32_t NilStreamMarker = std::numeric_limits<uint32_t>::max();
 constexpr uint32_t InvalidStreamIndex = std::numeric_limits<uint32_t>::max();
 constexpr uint64_t MaxChunks = uint64_t{1} << 31;
 constexpr uint64_t CompressedFragmentBit = uint64_t{1} << 63;
@@ -94,8 +94,9 @@ class MSFZFile::Impl {
   };
 
   struct Stream {
-    uint32_t Size;
+    uint64_t Size = 0;
     SmallVector<Fragment, 1> Fragments;
+    bool IsNil = false;
   };
 
   class StreamReader;
@@ -158,14 +159,14 @@ public:
 
   uint32_t getNumStreams() const { return Streams.size(); }
 
-  uint32_t getStreamByteSize(uint32_t StreamIndex) const {
+  uint64_t getStreamByteSize(uint32_t StreamIndex) const {
     assert(StreamIndex < Streams.size() && "MSFZ stream index out of range");
     return Streams[StreamIndex].Size;
   }
 
   bool isNilStream(uint32_t StreamIndex) const {
     assert(StreamIndex < Streams.size() && "MSFZ stream index out of range");
-    return Streams[StreamIndex].Size == NilStreamSize;
+    return Streams[StreamIndex].IsNil;
   }
 
   Expected<std::unique_ptr<BinaryStream>>
@@ -261,33 +262,30 @@ private:
     Streams.reserve(Header.NumStreams);
     for (uint32_t StreamIndex = 0; StreamIndex != Header.NumStreams;
          ++StreamIndex) {
-      Stream S = {0, {}};
+      Stream S;
       uint64_t StreamSize = 0;
       while (true) {
         uint32_t FragmentSize;
         if (!readU32(Directory, Offset, FragmentSize))
           return streamError("MSFZ stream directory is truncated");
 
-        if (FragmentSize == NilStreamSize) {
+        if (FragmentSize == NilStreamMarker) {
           if (StreamSize != 0 || !S.Fragments.empty())
             return streamError(
                 "MSFZ stream directory has an invalid nil stream");
-          S.Size = NilStreamSize;
+          S.IsNil = true;
           break;
         }
         if (FragmentSize == 0) {
-          if (StreamSize > std::numeric_limits<uint32_t>::max())
-            return streamError(
-                "MSFZ logical stream exceeds the PDB size limit");
-          S.Size = static_cast<uint32_t>(StreamSize);
+          S.Size = StreamSize;
           break;
         }
 
         uint64_t FragmentLocation;
         if (!readU64(Directory, Offset, FragmentLocation))
           return streamError("MSFZ stream directory is truncated");
-        if (FragmentSize > std::numeric_limits<uint32_t>::max() - StreamSize)
-          return streamError("MSFZ logical stream exceeds the PDB size limit");
+        if (FragmentSize > std::numeric_limits<uint64_t>::max() - StreamSize)
+          return streamError("MSFZ logical stream size overflows");
 
         Fragment F = {};
         F.StreamOffset = StreamSize;
@@ -582,7 +580,7 @@ MSFZFile::create(BinaryStream &File, BumpPtrAllocator &Allocator) {
 
 uint32_t MSFZFile::getNumStreams() const { return PImpl->getNumStreams(); }
 
-uint32_t MSFZFile::getStreamByteSize(uint32_t StreamIndex) const {
+uint64_t MSFZFile::getStreamByteSize(uint32_t StreamIndex) const {
   return PImpl->getStreamByteSize(StreamIndex);
 }
 
@@ -609,6 +607,7 @@ class MSFZWriter::Impl {
     uint32_t NextOffset = 0;
     MD5 Hash;
     SmallVector<OutputFragment, 1> Fragments;
+    bool IsNil = false;
   };
 
   struct BlockLocation {
@@ -711,7 +710,7 @@ public:
     if (StreamIndex >= Streams.size())
       return streamError("MSFZ output: invalid patchable stream");
     if (PatchablePrefixSize > Streams[StreamIndex].Size ||
-        Streams[StreamIndex].Size == NilStreamSize)
+        Streams[StreamIndex].IsNil)
       return streamError("MSFZ output: invalid patchable stream prefix");
     if (PatchableStream != InvalidStreamIndex)
       return streamError("MSFZ output: patchable prefix already set");
@@ -762,7 +761,7 @@ public:
     Digest.update(StringRef(Prefix, sizeof(Prefix) - 1));
     updateDigestU32(Digest, static_cast<uint32_t>(Streams.size()));
     for (const OutputStream &Stream : Streams) {
-      updateDigestU32(Digest, Stream.Size);
+      updateDigestU32(Digest, Stream.IsNil ? NilStreamMarker : Stream.Size);
       MD5 StreamHash = Stream.Hash;
       MD5::MD5Result StreamDigest = StreamHash.result();
       Digest.update({StreamDigest.data(), StreamDigest.size()});
@@ -847,8 +846,11 @@ private:
     for (size_t I = 0; I != Layout.StreamSizes.size(); ++I) {
       uint32_t Size = Layout.StreamSizes[I];
       ArrayRef<support::ulittle32_t> Blocks = Layout.StreamMap[I];
-      Streams.push_back({Size});
-      if (Size == NilStreamSize) {
+      bool IsNil = Size == NilStreamMarker;
+      OutputStream &Stream = Streams.emplace_back();
+      Stream.Size = IsNil ? 0 : Size;
+      Stream.IsNil = IsNil;
+      if (IsNil) {
         if (!Blocks.empty())
           return streamError("MSFZ output: nil stream has blocks");
         continue;
@@ -998,7 +1000,7 @@ private:
     uint64_t Size = 0;
     for (const OutputStream &Stream : Streams) {
       uint64_t StreamSize = sizeof(uint32_t);
-      if (Stream.Size != NilStreamSize) {
+      if (!Stream.IsNil) {
         if (Stream.Fragments.size() >
             (std::numeric_limits<uint64_t>::max() - StreamSize) /
                 (sizeof(uint32_t) + sizeof(uint64_t)))
@@ -1017,8 +1019,8 @@ private:
 
   Error writeDirectory() {
     for (const OutputStream &Stream : Streams) {
-      if (Stream.Size == NilStreamSize) {
-        writeU32(OS, NilStreamSize);
+      if (Stream.IsNil) {
+        writeU32(OS, NilStreamMarker);
         continue;
       }
       for (const OutputFragment &Fragment : Stream.Fragments) {
@@ -1042,7 +1044,7 @@ private:
 
   Error checkStreamsComplete() const {
     for (const OutputStream &Stream : Streams) {
-      if (Stream.Size != NilStreamSize && Stream.NextOffset != Stream.Size)
+      if (!Stream.IsNil && Stream.NextOffset != Stream.Size)
         return streamError("MSFZ output: stream is incomplete");
     }
     return Error::success();
@@ -1165,7 +1167,7 @@ Error llvm::msf::writeMSFZ(StringRef Path, const MSFLayout &Layout,
   for (size_t StreamIndex = 0; StreamIndex != Layout.StreamSizes.size();
        ++StreamIndex) {
     uint32_t Size = Layout.StreamSizes[StreamIndex];
-    if (Size == 0 || Size == NilStreamSize)
+    if (Size == 0 || Size == NilStreamMarker)
       continue;
     uint32_t Remaining = Size;
     for (uint32_t Block : Layout.StreamMap[StreamIndex]) {

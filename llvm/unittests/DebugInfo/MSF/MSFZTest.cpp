@@ -157,7 +157,14 @@ TEST(MSFZTest, CompatibilityWrapperWritesCompressedStreams) {
   auto ReaderOrErr = MSFZFile::create(Input, Allocator);
   ASSERT_THAT_EXPECTED(ReaderOrErr, Succeeded());
   ASSERT_EQ((*ReaderOrErr)->getNumStreams(), 3u);
+  EXPECT_FALSE((*ReaderOrErr)->isNilStream(0));
+  EXPECT_EQ((*ReaderOrErr)->getStreamByteSize(0), 0u);
   EXPECT_TRUE((*ReaderOrErr)->isNilStream(2));
+  EXPECT_EQ((*ReaderOrErr)->getStreamByteSize(2), 0u);
+  auto EmptyStream = (*ReaderOrErr)->createStream(0);
+  ASSERT_THAT_EXPECTED(EmptyStream, Succeeded());
+  EXPECT_EQ((*EmptyStream)->getLength(), 0u);
+  EXPECT_THAT_EXPECTED((*ReaderOrErr)->createStream(2), Failed());
 
   auto StreamOrErr = (*ReaderOrErr)->createStream(1);
   ASSERT_THAT_EXPECTED(StreamOrErr, Succeeded());

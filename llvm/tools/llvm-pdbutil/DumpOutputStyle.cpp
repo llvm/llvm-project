@@ -366,7 +366,7 @@ Error DumpOutputStyle::dumpStreamSummary() {
     discoverStreamPurposes(getPdb(), StreamPurposes);
 
   uint32_t StreamCount = getPdb().getNumStreams();
-  uint32_t MaxStreamSize = getPdb().getMaxStreamSize();
+  uint64_t MaxStreamSize = getPdb().getMaxStreamSize();
 
   if (opts::dump::DumpStreamBlocks && getPdb().isMSFZ())
     P.formatLine("Physical stream blocks are unavailable for MSFZ.");
