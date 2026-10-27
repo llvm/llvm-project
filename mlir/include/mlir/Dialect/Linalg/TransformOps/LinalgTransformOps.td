@@ -2560,6 +2560,11 @@ def VectorizeChildrenAndApplyPatternsOp :
     - `disable_multi_reduction_to_contract_patterns`: a `UnitAttr` to deactivate
       the rewrite of `vector.multi_reduction` to `vector.contract`. This is
       intended to be used in tests only.
+    - `allow_fast_math_flag_loss`: a `BoolAttr`, `true` by default. The rewrite
+      of `vector.multi_reduction` to `vector.contract` gives the contract only
+      the fast-math flags that both the multiply and the reduction carry. If
+      `false`, a multiply and a reduction whose flags differ are not rewritten,
+      so no flag is lost.
     - `disable_transfer_permutation_map_lowering_patterns`: a `UnitAttr` to
       deactivate the rewrite of `vector.transfer` with permutation maps into
       explicit `vector.transpose` operations. This is intended to be used in
@@ -2579,7 +2584,8 @@ def VectorizeChildrenAndApplyPatternsOp :
                    UnitAttr:$vectorize_nd_extract,
                    UnitAttr:$flatten_1d_depthwise_conv,
                    UnitAttr:$disable_multi_reduction_to_contract_patterns,
-                   UnitAttr:$disable_transfer_permutation_map_lowering_patterns);
+                   UnitAttr:$disable_transfer_permutation_map_lowering_patterns,
+                   DefaultValuedAttr<BoolAttr, "true">:$allow_fast_math_flag_loss);
   let results = (outs TransformHandleTypeInterface:$transformed);
 
   let assemblyFormat =

@@ -615,9 +615,21 @@ def ApplyVectorReductionToContractPatternsOp : Op<Transform_Dialect,
 
     These patterns have the effect of rewriting a vector.multi_reduce into a
     vector.contract.
+
+    The new contract keeps only the fast-math flags that both the multiply and
+    the reduction carry. With `allow_fast_math_flag_loss = false`, a multiply
+    and a reduction whose flags differ are not rewritten, so no flag is lost.
   }];
 
-  let assemblyFormat = "attr-dict";
+  let arguments = (ins
+     DefaultValuedAttr<BoolAttr, "true">:$allow_fast_math_flag_loss
+  );
+
+  let assemblyFormat = [{
+    oilist (
+      `allow_fast_math_flag_loss` `=` $allow_fast_math_flag_loss
+    ) attr-dict
+  }];
 }
 
 def ApplySinkVectorPatternsOp : Op<Transform_Dialect,
