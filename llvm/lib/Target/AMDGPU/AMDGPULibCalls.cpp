@@ -557,7 +557,7 @@ bool AMDGPULibCalls::fold_read_write_pipe(CallInst *CI, IRBuilder<> &B,
   if (!PacketSize || !PacketAlign)
     return false;
 
-  unsigned Size = PacketSize->getZExtValue();
+  uint64_t Size = PacketSize->getZExtValue();
   Align Alignment = PacketAlign->getAlignValue();
   if (Alignment != Size)
     return false;
@@ -1154,7 +1154,8 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
   nval = Exp2Call;
 
   if (needcopysign) {
-    Type* nTyS = B.getIntNTy(eltType->getPrimitiveSizeInBits());
+    Type *nTyS =
+        B.getIntNTy(static_cast<unsigned>(eltType->getPrimitiveSizeInBits()));
     Type *nTy = FPOp->getType()->getWithNewType(nTyS);
     Value *opr_n = FPOp->getOperand(1);
     if (opr_n->getType()->getScalarType()->isIntegerTy())

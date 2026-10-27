@@ -55,6 +55,24 @@ default rules, `attr-dict` contains only discardable attributes. See
   manually setting a triple/chipset/features combination is a low-level
   operation that should require a manual `rocdl-attach-target` call.
 
+### Target-Independent GPU Transforms
+
+`MLIRGPUTransforms` no longer links any target dialect or target library. The
+target-specific GPU passes and patterns moved into per-target libraries with
+their own pass headers; pass names and options are unchanged:
+
+| Library | Header | Contents |
+| --- | --- | --- |
+| `MLIRGPUNVVMTransforms` | `mlir/Dialect/GPU/Transforms/NVVM/Passes.h` | `nvvm-attach-target` |
+| `MLIRGPUROCDLTransforms` | `mlir/Dialect/GPU/Transforms/ROCDL/Passes.h` | `rocdl-attach-target`, `populateGpuPromoteShuffleToAMDGPUPatterns`, `populateGpuLowerSubgroupReduceToDPPPatterns`, `populateGpuLowerClusteredSubgroupReduceToDPPPatterns` |
+| `MLIRGPUSPIRVTransforms` | `mlir/Dialect/GPU/Transforms/SPIRV/Passes.h` | `spirv-attach-target` |
+| `MLIRGPUXeVMTransforms` | `mlir/Dialect/GPU/Transforms/XeVM/Passes.h` | `xevm-attach-target` |
+
+Each header provides its own registration function (for example
+`registerGPUNVVMPasses()`). The C API functions for these passes are renamed
+to match, e.g. `mlirCreateGPUGpuNVVMAttachTarget` is now
+`mlirCreateGPUNVVMGpuNVVMAttachTarget`.
+
 ## LLVM 21
 
 ### GPU/NVVM Changes

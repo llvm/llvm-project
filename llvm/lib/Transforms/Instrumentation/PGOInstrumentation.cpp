@@ -184,8 +184,10 @@ extern cl::opt<bool> EnableVTableValueProfiling;
 extern cl::opt<bool> EnableVTableProfileUse;
 } // namespace llvm
 
-bool llvm::isPGOInstrumentColdFunctionOnly() {
-  return InstrumentationOptions::Global.pgo_instrument_cold_function_only;
+bool llvm::isPGOInstrumentColdFunctionOnly(
+    const cl::LibraryOptionsContext &LibraryOptions) {
+  return LibraryOptions.get<InstrumentationOptions>()
+      .pgo_instrument_cold_function_only;
 }
 
 namespace {
@@ -1890,11 +1892,11 @@ static bool instrumentAllFunctions(
 PreservedAnalyses
 PGOInstrumentationGenCreateVar::run(Module &M, ModuleAnalysisManager &MAM) {
   createProfileFileNameVar(M, CSInstrName);
+  const InstrumentationOptions &Opts = getInstrumentationOptions(M);
   // The variable in a comdat may be discarded by LTO. Ensure the declaration
   // will be retained.
   appendToCompilerUsed(
-      M, createIRLevelProfileFlagVar(InstrumentationOptions::Global, M,
-                                     PGOInstrumentationType::CSFDO));
+      M, createIRLevelProfileFlagVar(Opts, M, PGOInstrumentationType::CSFDO));
   if (ProfileSampling)
     createProfileSamplingVar(M);
   PreservedAnalyses PA;
@@ -1919,9 +1921,9 @@ PreservedAnalyses PGOInstrumentationGen::run(Module &M,
     return &FAM.getResult<LoopAnalysis>(F);
   };
 
-  if (!instrumentAllFunctions(InstrumentationOptions::Global, M, LookupTLI,
-                              LookupBPI, LookupBFI, LookupLI,
-                              InstrumentationType))
+  const InstrumentationOptions &Opts = getInstrumentationOptions(M);
+  if (!instrumentAllFunctions(Opts, M, LookupTLI, LookupBPI, LookupBFI,
+                              LookupLI, InstrumentationType))
     return PreservedAnalyses::all();
 
   return PreservedAnalyses::none();
@@ -2255,11 +2257,6 @@ PGOInstrumentationUse::PGOInstrumentationUse(
     : ProfileFileName(std::move(Filename)),
       ProfileRemappingFileName(std::move(RemappingFilename)), IsCS(IsCS),
       FS(std::move(VFS)) {
-  const InstrumentationOptions &Opts = InstrumentationOptions::Global;
-  if (!Opts.pgo_test_profile_file.empty())
-    ProfileFileName = Opts.pgo_test_profile_file;
-  if (!Opts.pgo_test_profile_remapping_file.empty())
-    ProfileRemappingFileName = Opts.pgo_test_profile_remapping_file;
   if (!FS)
     FS = vfs::getRealFileSystem();
 }
@@ -2282,9 +2279,15 @@ PreservedAnalyses PGOInstrumentationUse::run(Module &M,
   };
 
   auto *PSI = &MAM.getResult<ProfileSummaryAnalysis>(M);
-  if (!annotateAllFunctions(InstrumentationOptions::Global, M, ProfileFileName,
-                            ProfileRemappingFileName, *FS, LookupTLI, LookupBPI,
-                            LookupBFI, LookupLI, PSI, IsCS))
+  const InstrumentationOptions &Opts = getInstrumentationOptions(M);
+  StringRef ProfileFile = ProfileFileName;
+  if (!Opts.pgo_test_profile_file.empty())
+    ProfileFile = Opts.pgo_test_profile_file;
+  StringRef RemappingFile = ProfileRemappingFileName;
+  if (!Opts.pgo_test_profile_remapping_file.empty())
+    RemappingFile = Opts.pgo_test_profile_remapping_file;
+  if (!annotateAllFunctions(Opts, M, ProfileFile, RemappingFile, *FS, LookupTLI,
+                            LookupBPI, LookupBFI, LookupLI, PSI, IsCS))
     return PreservedAnalyses::all();
 
   return PreservedAnalyses::none();
@@ -2312,7 +2315,9 @@ void llvm::setProfMetadata(Instruction *TI, ArrayRef<uint64_t> EdgeCounts,
 
   setBranchWeights(*TI, Weights, /*IsExpected=*/false);
 
-  if (InstrumentationOptions::Global.pgo_emit_branch_prob) {
+  const InstrumentationOptions &Opts =
+      getInstrumentationOptions(*TI->getFunction());
+  if (Opts.pgo_emit_branch_prob) {
     std::string BrCondStr = getBranchCondString(TI);
     if (BrCondStr.empty())
       return;
@@ -2391,7 +2396,9 @@ template <> struct DOTGraphTraits<PGOUseFunc *> : DefaultDOTGraphTraits {
     else
       OS << "Unknown\\l";
 
-    if (!InstrumentationOptions::Global.pgo_instr_select)
+    const InstrumentationOptions &Opts =
+        getInstrumentationOptions(*Node->getParent());
+    if (!Opts.pgo_instr_select)
       return Result;
 
     for (const Instruction &I : *Node) {
