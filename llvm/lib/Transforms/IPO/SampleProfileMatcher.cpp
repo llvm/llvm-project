@@ -534,7 +534,7 @@ void SampleProfileMatcher::recordCallsiteMatchStates(
   bool IsPostMatch = IRToProfileLocationMap != nullptr;
   auto &CallsiteMatchStates =
       FuncCallsiteMatchStates[Function::getGUIDAssumingExternalLinkage(
-          FunctionSamples::getCanonicalFnName(F))];
+          FunctionSamples::getCanonicalFnName(F.getName()))];
 
   auto MapIRLocToProfileLoc = [&](const LineLocation &IRLoc) {
     // IRToProfileLocationMap is null in pre-match phrase.
