@@ -178,8 +178,9 @@ struct MapInfoOpConversion
         }
         mlir::Value stride = original.getStride();
         if (stride) {
-          // Bounds operands may use different integer widths. Match the i64
-          // character extent before scaling the physical element stride.
+          // Bounds operands have independent integer types (including lowered
+          // index types). Preserve signed strides and match the i64 LEN bound
+          // at the point where whole-string strides become code-unit strides.
           unsigned strideWidth =
               mlir::cast<mlir::IntegerType>(stride.getType()).getWidth();
           if (strideWidth < 64)

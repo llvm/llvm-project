@@ -169,6 +169,47 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
 
 // -----
 
+// A scalar subscript's bounds extent is one, rather than the full source
+// extent. With legacy unit strides, the static type must still determine the
+// physical layout. For integer(4) :: a(4,5), a(2,3:5) has an outer stride of
+// 16 bytes, even though the first bound has extent one.
+module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
+  llvm.func @static_scalar_subscript_update(%array: !llvm.ptr) {
+    %c1 = llvm.mlir.constant(1 : i64) : i64
+    %c2 = llvm.mlir.constant(2 : i64) : i64
+    %c4 = llvm.mlir.constant(4 : i64) : i64
+    %c5 = llvm.mlir.constant(5 : i64) : i64
+    %b0 = omp.map.bounds lower_bound(%c1 : i64) upper_bound(%c1 : i64) extent(%c1 : i64) stride(%c1 : i64) start_idx(%c1 : i64)
+    %b1 = omp.map.bounds lower_bound(%c2 : i64) upper_bound(%c4 : i64) extent(%c5 : i64) stride(%c1 : i64) start_idx(%c1 : i64)
+    %section = omp.map.info var_ptr(%array : !llvm.ptr, !llvm.array<5 x array<4 x i32>>) map_clauses(to) capture(ByRef) bounds(%b0, %b1) -> !llvm.ptr
+    omp.target_update map_entries(%section : !llvm.ptr)
+    llvm.return
+  }
+}
+
+// CHECK: @.offload_sizes = {{.*}}[1 x i64] [i64 3]
+// CHECK: @.offload_maptypes = {{.*}}[1 x i64] [i64 17592186044417]
+// CHECK-LABEL: define void @static_scalar_subscript_update(
+// CHECK-SAME: ptr %[[ARRAY:.*]])
+// CHECK: %[[DIMS:.*]] = alloca [3 x %struct.descriptor_dim]
+// CHECK: %[[IS_NULL:.*]] = icmp eq ptr %[[ARRAY]], null
+// CHECK-NEXT: %[[INNER_COUNT:.*]] = select i1 %[[IS_NULL]], i64 0, i64 1
+// CHECK: getelementptr inbounds [3 x %struct.descriptor_dim], ptr %[[DIMS]], i64 0, i64 0
+// CHECK: store i64 32,
+// CHECK: store i64 3,
+// CHECK: store i64 16,
+// CHECK: getelementptr inbounds [3 x %struct.descriptor_dim], ptr %[[DIMS]], i64 0, i64 1
+// CHECK: store i64 4,
+// CHECK: store i64 %[[INNER_COUNT]],
+// CHECK: store i64 4,
+// CHECK: getelementptr inbounds [3 x %struct.descriptor_dim], ptr %[[DIMS]], i64 0, i64 2
+// CHECK: store i64 0,
+// CHECK: store i64 4,
+// CHECK: store i64 1,
+// CHECK: call void @__tgt_target_data_update_mapper
+
+// -----
+
 // A full innermost dimension followed by a section of the outermost dimension
 // is contiguous. Keep the usual byte size and the selected starting address.
 module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {

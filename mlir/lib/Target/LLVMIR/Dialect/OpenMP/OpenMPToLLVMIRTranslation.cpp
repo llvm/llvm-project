@@ -7953,9 +7953,13 @@ getOverlappedMembers(llvm::SmallVectorImpl<size_t> &overlapMapDataIdxs,
       overlapMapDataIdxs.push_back(i);
 }
 
-/// Describe a bounded update as a set of contiguous pieces. The runtime uses
-/// byte offsets and strides, with the slowest varying dimension first (the
-/// OpenMPIRBuilder reverses the vectors below when emitting the descriptor).
+/// Describe a bounded update as a set of contiguous pieces. Bounds follow the
+/// dialect's normalized fastest-to-slowest varying order, which matches
+/// Fortran's column-major dimension order. Frontends for row-major languages
+/// such as C/C++ must normalize their source dimensions to this order.
+/// OpenMPIRBuilder reverses the vectors when emitting the runtime descriptor,
+/// which uses byte offsets and strides with the slowest varying dimension
+/// first.
 static void addNonContiguousUpdate(LLVM::ModuleTranslation &moduleTranslation,
                                    llvm::IRBuilderBase &builder,
                                    MapInfoData &mapData, size_t mapDataIdx,
@@ -7967,6 +7971,9 @@ static void addNonContiguousUpdate(LLVM::ModuleTranslation &moduleTranslation,
     return;
 
   llvm::Type *elementType = mapData.BaseType[mapDataIdx];
+  // Bounds extents may be absent, and a scalar subscript has extent one.
+  // Preserve the full source shape: for a(4,5), a(2,:) still needs a
+  // second-dimension stride of four elements.
   SmallVector<uint64_t> arrayExtents;
   while (auto *arrayType = dyn_cast<llvm::ArrayType>(elementType)) {
     arrayExtents.push_back(arrayType->getNumElements());
@@ -7983,6 +7990,8 @@ static void addNonContiguousUpdate(LLVM::ModuleTranslation &moduleTranslation,
   llvm::OpenMPIRBuilder::MapValuesArrayTy strides{builder.getInt64(1)};
   llvm::Value *sourceStride = elementSize;
   llvm::Value *contiguousSize = elementSize;
+  // Unknown descriptor strides conservatively use a descriptor. The runtime
+  // merges contiguous dimensions from their actual values.
   bool isContiguous = true;
   for (auto [dim, bound] : llvm::enumerate(mapOp.getBounds())) {
     auto bounds = cast<omp::MapBoundsOp>(bound.getDefiningOp());
