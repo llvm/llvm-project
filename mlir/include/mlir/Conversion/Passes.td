@@ -738,6 +738,35 @@ def ConvertGpuOpsToAGXIROps : Pass<"convert-gpu-to-agxir", "gpu::GPUModuleOp"> {
   ];
 }
 
+def ConvertGpuOpsToAIROps : Pass<"convert-gpu-to-air", "gpu::GPUModuleOp"> {
+  let summary = "Generate AIR for gpu operations";
+  let description = [{
+    Lowers GPU modules to the LLVM IR the AIR target compiles (to a
+    `.metallib`, or through the AGX backend to an AGX object): GPU and AIR
+    dialect operations become calls to AIR's functions (system values,
+    `air.wg.barrier`, SIMD-group functions and matrices), kernels are marked
+    `air-kernel`, and the other dialects are converted to the LLVM dialect in
+    AIR's address spaces.
+  }];
+  let dependentDialects = [
+    "air::AIRDialect",
+    "cf::ControlFlowDialect",
+    "math::MathDialect",
+    "memref::MemRefDialect",
+    "scf::SCFDialect",
+    "vector::VectorDialect",
+  ];
+  let options = [
+    Option<"indexBitwidth", "index-bitwidth", "unsigned",
+           /*default=kDeriveIndexBitwidthFromDataLayout*/ "0",
+           "Bitwidth of the index type, 0 to use size of machine word">,
+    Option<"useBarePtrCallConv", "use-bare-ptr-memref-call-conv", "bool",
+           /*default=*/"false",
+           "Replace memref arguments in GPU functions with bare pointers. "
+           "All memrefs must have static shape">,
+  ];
+}
+
 def ConvertGpuOpsToROCDLOps : Pass<"convert-gpu-to-rocdl", "gpu::GPUModuleOp"> {
   let summary = "Generate ROCDL operations for gpu operations";
   let dependentDialects = [

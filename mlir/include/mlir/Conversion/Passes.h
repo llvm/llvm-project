@@ -42,6 +42,7 @@
 #include "mlir/Conversion/GPUToLLVMSPV/GPUToLLVMSPVPass.h"
 #include "mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h"
 #include "mlir/Conversion/GPUToAGXIR/GPUToAGXIRPass.h"
+#include "mlir/Conversion/GPUToAIR/GPUToAIRPass.h"
 #include "mlir/Conversion/GPUToROCDL/GPUToROCDLPass.h"
 #include "mlir/Conversion/GPUToSPIRV/GPUToSPIRVPass.h"
 #include "mlir/Conversion/IndexToLLVM/IndexToLLVM.h"
