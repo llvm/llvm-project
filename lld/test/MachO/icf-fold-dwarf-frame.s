@@ -3,9 +3,11 @@
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-macos11 %s -o %t.o
 # RUN: %lld -arch arm64 %t.o -o %t.dylib -undefined dynamic_lookup --icf=all
 # RUN: llvm-objdump --macho --syms --dwarf=frames --unwind-info %t.dylib | FileCheck %s
+# RUN: llvm-objdump --macho --syms %t.dylib | FileCheck %s --check-prefix=PERSONALITY
 
 # CHECK-LABEL: SYMBOL TABLE:
-# CHECK-DAG:  [[#%.16x,FOLD0:]] {{.*}} __TEXT,__text _foldA
+# CHECK-DAG:  [[#%.16x,FOLD0:]] {{.*}} __TEXT,__text _padA
+# CHECK-DAG:  [[#FOLD0]]        {{.*}} __TEXT,__text _foldA
 # CHECK-DAG:  [[#FOLD0]]        {{.*}} __TEXT,__text _foldB
 # CHECK-DAG:  [[#FOLD0]]        {{.*}} __TEXT,__text _foldC
 # CHECK-NOT:  [[#FOLD0]]        {{.*}} __TEXT,__text _diffLSDA
@@ -15,6 +17,9 @@
 # CHECK-DAG:  [[#FOLD1]]        {{.*}} __TEXT,__gcc_except_tab GCC_except_table1
 # CHECK-NOT:  [[#FOLD1]]        {{.*}} __TEXT,__gcc_except_tab GCC_except_table2
 
+# PERSONALITY-DAG: [[#%.16x,FOLD2:]] {{.*}} __TEXT,__text _padB
+# PERSONALITY-DAG: [[#FOLD2]]        {{.*}} __TEXT,__text _diffPersonality
+
 # CHECK-LABEL: Contents of __unwind_info section:
 
 # CHECK-LABEL: .eh_frame contents:
@@ -22,14 +27,11 @@
 # CHECK: FDE cie=[[#%.8x,CIE0]]
 # CHECK: FDE cie=[[#%.8x,CIE0]]
 # CHECK: FDE cie=[[#%.8x,CIE0]]
-# CHECK: FDE cie=[[#%.8x,CIE0]]
+# CHECK-NOT: FDE
 # CHECK: {{^}}[[#%.8x,CIE1:]] {{.*}} CIE
 # CHECK: FDE cie=[[#%.8x,CIE1]]
-# CHECK: FDE cie=[[#%.8x,CIE1]]
+# CHECK-NOT: FDE
 
-# Due to padding, we need to emit a throwaway FDE for each personality, so that
-# subsequent FDEs are the same size and can be folded
-# TODO: Could we detect padding differences and fold anyway?
 _padA:
   .cfi_startproc
   .cfi_personality 155, _p0
