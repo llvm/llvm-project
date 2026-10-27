@@ -1049,6 +1049,10 @@ struct CompileUnit {
 
   /// Path of compile unit.
   String compileUnitPath;
+
+  /// The language of the compile unit, with its version where known, for
+  /// example `c11` or `c++17`.
+  std::optional<String> language;
 };
 llvm::json::Value toJSON(const CompileUnit &);
 

@@ -1172,6 +1172,8 @@ json::Value toJSON(const ExceptionDetails &ED) {
 
 llvm::json::Value toJSON(const CompileUnit &CU) {
   json::Object result{{"id", CU.id}, {"compileUnitPath", CU.compileUnitPath}};
+  if (CU.language)
+    result.insert({"language", *CU.language});
   return result;
 }
 

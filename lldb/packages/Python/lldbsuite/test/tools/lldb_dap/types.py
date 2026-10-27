@@ -783,6 +783,7 @@ class Thread:
 class CompileUnit:
     id: int
     compileUnitPath: str
+    language: Optional[str] = None
 
 
 @dataclass(frozen=True)
