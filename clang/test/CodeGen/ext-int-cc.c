@@ -159,7 +159,7 @@ void ParamPassing4(_BitInt(129) a) {}
 #endif
 
 _BitInt(63) ReturnPassing(void) { return 0; }
-// LIN64: define{{.*}} i64 @ReturnPassing(
+// LIN64: define{{.*}} i63 @ReturnPassing(
 // WIN64: define dso_local i63 @ReturnPassing(
 // LIN32: define{{.*}} i63 @ReturnPassing(
 // WIN32: define dso_local i63 @ReturnPassing(
