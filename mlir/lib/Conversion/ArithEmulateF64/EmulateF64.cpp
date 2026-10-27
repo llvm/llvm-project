@@ -21,6 +21,8 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Func/Transforms/FuncConversions.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/GPU/Transforms/Passes.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -31,6 +33,7 @@
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Parser/Parser.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/APFloat.h"
 
 namespace mlir {
@@ -601,6 +604,26 @@ struct EmulateF64Pass final : impl::ArithEmulateF64Base<EmulateF64Pass> {
       getOperation()->emitError("cannot parse the soft-f64 library");
       return signalPassFailure();
     }
+    // SIMD-group reductions of f64 become 64-bit shuffles and the arith ops
+    // that combine them (emulated below): a reduction is not a structural op,
+    // its integer form would add the bit patterns.
+    SmallVector<Operation *> reductions;
+    getOperation()->walk([&](gpu::SubgroupReduceOp op) {
+      if (getElementTypeOrSelf(op.getType()).isF64())
+        reductions.push_back(op);
+    });
+    if (!reductions.empty()) {
+      RewritePatternSet shuffles(ctx);
+      populateGpuLowerSubgroupReduceToShufflePatterns(
+          shuffles, /*subgroupSize=*/32, /*shuffleBitwidth=*/64);
+      populateGpuLowerClusteredSubgroupReduceToShufflePatterns(
+          shuffles, /*subgroupSize=*/32, /*shuffleBitwidth=*/64);
+      bool changed = false;
+      if (failed(applyOpPatternsGreedily(reductions, std::move(shuffles),
+                                         GreedyRewriteConfig(), &changed)))
+        return signalPassFailure();
+    }
+
     F64Converter converter;
     ConversionTarget target(*ctx);
     target.markUnknownOpDynamicallyLegal([&](Operation *op) {

@@ -705,10 +705,13 @@ def ArithEmulateF64 : Pass<"arith-emulate-f64"> {
     only 32- and 64-bit integer operations), which the pass inserts, as LLVM
     dialect functions, into the symbol table that uses it. Negation, absolute
     value and copysign are bit operations; atomic f64 updates are
-    compare-and-swap loops. An f64 operation without an emulation, such as
-    math.exp, is an error.
+    compare-and-swap loops. SIMD-group reductions of f64 become shuffles of
+    32-bit halves and emulated combining operations. An f64 operation without
+    an emulation, such as math.exp, is an error.
   }];
   let dependentDialects = [
+    "arith::ArithDialect",
+    "gpu::GPUDialect",
     "LLVM::LLVMDialect",
     "memref::MemRefDialect",
     "scf::SCFDialect",

@@ -8,6 +8,8 @@ add_mlir_conversion_library(MLIRArithEmulateF64
   MLIRArithDialect
   MLIRFuncDialect
   MLIRFuncTransforms
+  MLIRGPUDialect
+  MLIRGPUTransforms
   MLIRLLVMDialect
   MLIRMathDialect
   MLIRMemRefDialect

@@ -98,3 +98,27 @@ func.func @loop(%n: index, %x: f64) -> f64 {
   }
   return %r : f64
 }
+
+// -----
+
+// A SIMD-group sum of f64: five shuffles of the bit patterns, each added by the
+// library (not an integer reduction of the bit patterns).
+// CHECK-LABEL: func.func @subgroup_sum
+// CHECK-NOT: gpu.subgroup_reduce
+// CHECK-COUNT-5: gpu.shuffle xor {{.*}} : i64
+// CHECK-NOT: gpu.subgroup_reduce
+// CHECK: llvm.call @__air_f64_add
+func.func @subgroup_sum(%x: f64) -> f64 {
+  %r = gpu.subgroup_reduce add %x : (f64) -> f64
+  return %r : f64
+}
+
+// -----
+
+// f32 reductions stay for the target's own lowering.
+// CHECK-LABEL: func.func @subgroup_sum_f32
+// CHECK: gpu.subgroup_reduce add %{{.*}} : (f32) -> f32
+func.func @subgroup_sum_f32(%x: f32) -> f32 {
+  %r = gpu.subgroup_reduce add %x : (f32) -> f32
+  return %r : f32
+}
