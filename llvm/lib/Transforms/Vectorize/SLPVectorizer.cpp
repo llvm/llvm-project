@@ -34636,6 +34636,16 @@ private:
                  DT.dominates(Phi->getParent(),
                               cast<Instruction>(ReductionRoot)->getParent());
         });
+    // The root does not fold the accumulator phi itself: the scalar chain
+    // through the phi has more than one operation.
+    const bool IsLongLoopCarriedChain =
+        IsLoopCarriedRoot &&
+        none_of(cast<Instruction>(ReductionRoot)->operands(), [&](Value *Op) {
+          auto *Phi = dyn_cast<PHINode>(Op);
+          return Phi && (Phi->getNumIncomingValues() > MaxPHINumOperands ||
+                         is_contained(Phi->incoming_values(),
+                                      cast<Instruction>(ReductionRoot)));
+        });
     auto EvaluateScalarCost =
         [&](function_ref<InstructionCost(Instruction *)> GenCostFn) {
           InstructionCost Cost = 0;
@@ -34667,10 +34677,14 @@ private:
               // The loop-carried root is not removed: the horizontal form
               // folds the accumulator phi back through it, the accumulator
               // form replaces it with the lane-wise operation, costed by
-              // the accumulation cost.
+              // the accumulation cost. A longer scalar chain is bound by its
+              // latency, which the vector code cuts down to a single operation.
               if (RdxKind == RecurKind::FAdd && RdxOp == ReductionRoot &&
-                  IsLoopCarriedRoot)
+                  IsLoopCarriedRoot) {
+                if (IsLongLoopCarriedChain)
+                  ScalarCost += GenCostFn(RdxOp);
                 continue;
+              }
               // The reduction root is used outside of the reduction any
               // number of times, its fmul operand is still fused into it.
               if ((RdxKind == RecurKind::FAdd && RdxOp == ReductionRoot) ||
