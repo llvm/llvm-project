@@ -2790,7 +2790,7 @@ static Instruction *foldSelectGEP(GetElementPtrInst &GEP,
   Instruction *Sel;
   Value *Cond;
   Constant *TrueC, *FalseC;
-  if (!match(GEP.getPointerOperand(), m_Instruction(Sel)) ||
+  if (!match(GEP.getPointerOperand(), m_OneUse(m_Instruction(Sel))) ||
       !match(Sel,
              m_Select(m_Value(Cond), m_Constant(TrueC), m_Constant(FalseC))))
     return nullptr;
@@ -4892,6 +4892,37 @@ Instruction *InstCombinerImpl::visitExtractValueInst(ExtractValueInst &EV) {
   // and if again single-use then via load (gep (gep)) to load (gep).
   // However, double extracts from e.g. function arguments or return values
   // aren't handled yet.
+  return nullptr;
+}
+
+Instruction *InstCombinerImpl::visitBitInsertInst(BitInsertInst &BI) {
+  Value *Base = BI.getOperand(0);
+  Value *Val = BI.getOperand(1);
+  Value *Offset = BI.getOperand(2);
+  if (Value *V =
+          simplifyBitInsertInst(Base, Val, Offset, SQ.getWithInstruction(&BI)))
+    return replaceInstUsesWith(BI, V);
+
+  // bitinsert (bN x), (ty y), 0 -> bitcast y to bN, if ty is N bits wide
+  if (match(Offset, m_Zero()) && DL.getTypeSizeInBits(Val->getType()) ==
+                                     DL.getTypeSizeInBits(Base->getType()))
+    return new BitCastInst(Val, Base->getType());
+
+  return nullptr;
+}
+
+Instruction *InstCombinerImpl::visitBitExtractInst(BitExtractInst &BE) {
+  Value *Src = BE.getOperand(0);
+  Value *Offset = BE.getOperand(1);
+  if (Value *V = simplifyBitExtractInst(BE.getType(), Src, Offset,
+                                        SQ.getWithInstruction(&BE)))
+    return replaceInstUsesWith(BE, V);
+
+  // bitextract ty, (bN x), 0 -> bitcast x to ty, if ty is N bits wide
+  if (match(Offset, m_Zero()) && DL.getTypeSizeInBits(BE.getType()) ==
+                                     DL.getTypeSizeInBits(Src->getType()))
+    return new BitCastInst(Src, BE.getType());
+
   return nullptr;
 }
 

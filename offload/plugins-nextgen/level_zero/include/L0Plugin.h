@@ -50,6 +50,8 @@ public:
                          GenericProfilerTy *ProfilerPtr) override;
   Expected<PluginAllocInfoTy> getAllocInfo(const void *Ptr) override;
 
+  Expected<void *> getNativeHandle() override { return ZeContext; }
+
   /// Get kernel indirect access flags from all allocators in this context.
   ze_kernel_indirect_access_flags_t getIndirectFlags() {
     ze_kernel_indirect_access_flags_t Flags = 0;
