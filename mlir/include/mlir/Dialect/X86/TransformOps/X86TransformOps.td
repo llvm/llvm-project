@@ -97,7 +97,13 @@ def ApplyPrepareVectorContractLoopsPatternsOp : Op<Transform_Dialect,
     "apply_patterns.x86.prepare_vector_contract_loops",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
-    Collect patterns that prepare vector contraction loops for x86 lowering.
+    Apply patterns that rewrite bf16 and i8 matmul loops to contract packed
+    VNNI operands directly, avoiding RHS unpacking. Supported unpacking uses
+    shape casts and transposes, or bf16 even/odd split-and-join sequences.
+
+    Before applying these patterns, remove leading unit dimensions from
+    vectors with
+    `apply_patterns.vector.cast_away_vector_leading_one_dim`.
   }];
 
   let assemblyFormat = "attr-dict";

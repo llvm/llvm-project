@@ -12,8 +12,8 @@
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/X86/Transforms.h"
-#include "mlir/Dialect/X86/Utils/X86Utils.h"
 #include "mlir/IR/PatternMatch.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/Support/DebugLog.h"
 
 #define DEBUG_TYPE "x86-prepare-vector-contract-loops"
@@ -34,7 +34,6 @@ static vector::ContractionOp getCandidate(scf::ForOp loop) {
     if (contract.getKind() != vector::CombiningKind::ADD ||
         contract.getAcc() != loop.getRegionIterArgs().front() ||
         !contract.getAcc().hasOneUse() || !contract.getResult().hasOneUse() ||
-        yield->getNumOperands() != 1 ||
         yield->getOperand(0) != contract.getResult()) {
       LDBG() << "reject contraction at " << contract.getLoc()
              << ": not a single loop-carried accumulation";
@@ -54,18 +53,199 @@ static vector::ContractionOp getCandidate(scf::ForOp loop) {
         maps[1] == AffineMap::get(3, 0, {k, n}, ctx) &&
         maps[2] == AffineMap::get(3, 0, {m, n}, ctx))
       return contract;
-
-    auto v = getAffineDimExpr(3, ctx);
-    if (x86::isInVnniLayout(contract, maps) &&
-        llvm::equal(iterators, ArrayRef{par, par, red, red}) &&
-        maps[0] == AffineMap::get(4, 0, {m, k, v}, ctx) &&
-        maps[1] == AffineMap::get(4, 0, {k, n, v}, ctx) &&
-        maps[2] == AffineMap::get(4, 0, {m, n}, ctx))
-      return contract;
     LDBG() << "reject contraction at " << contract.getLoc()
            << ": noncanonical matmul layout or iterators";
   }
   return {};
+}
+
+// Look through reshapes/broadcasts without changing the row-major element
+// order. A broadcast is safe to skip if it adds unit dimensions only.
+static Value skipReshapes(Value v) {
+  while (isa_and_present<vector::ShapeCastOp, vector::BroadcastOp>(
+      v.getDefiningOp())) {
+    Value source = v.getDefiningOp()->getOperand(0);
+    auto sourceType = dyn_cast<VectorType>(source.getType());
+    if (!sourceType || sourceType.getNumElements() !=
+                           cast<VectorType>(v.getType()).getNumElements())
+      break;
+    v = source;
+  }
+  return v;
+}
+
+// Find the source and parity of an even/odd split: v[i] = src[2 * i + j].
+// Match either pattern below (unit dimensions may also be present):
+//
+//   %even, %odd = vector.deinterleave %src
+//       : vector<4x8xbf16> -> vector<4x4xbf16>
+//
+// or:
+//
+//   %packed = vector.shape_cast %src
+//       : vector<4x8xbf16> to vector<4x4x2xbf16>
+//   %split = vector.transpose %packed, [2, 0, 1]
+//       : vector<4x4x2xbf16> to vector<2x4x4xbf16>
+//   %even = vector.extract %split[0]
+//       : vector<4x4xbf16> from vector<2x4x4xbf16>
+//   %odd = vector.extract %split[1]
+//       : vector<4x4xbf16> from vector<2x4x4xbf16>
+static std::optional<std::pair<Value, int64_t>> matchEvenOrOdd(Value v) {
+  v = skipReshapes(v);
+  if (auto deinterleave = v.getDefiningOp<vector::DeinterleaveOp>())
+    return std::pair(skipReshapes(deinterleave.getSource()),
+                     int64_t(cast<OpResult>(v).getResultNumber()));
+
+  auto extract = v.getDefiningOp<vector::ExtractOp>();
+  auto transpose =
+      extract ? extract.getSource().getDefiningOp<vector::TransposeOp>()
+              : vector::TransposeOp();
+  auto type = dyn_cast<VectorType>(v.getType());
+  if (!transpose || !type || extract.hasDynamicPosition() ||
+      transpose.getSourceVectorType().isScalable())
+    return std::nullopt;
+
+  ArrayRef<int64_t> shape = transpose.getSourceVectorType().getShape();
+  auto isNonUnit = [&](int64_t dim) { return shape[dim] != 1; };
+  SmallVector<int64_t> order =
+      llvm::filter_to_vector(llvm::seq<int64_t>(0, shape.size()), isNonUnit);
+  if (order.empty() || shape[order.back()] != 2)
+    return std::nullopt;
+
+  std::rotate(order.begin(), std::prev(order.end()), order.end());
+  ArrayRef<int64_t> perm = transpose.getPermutation();
+  if (llvm::filter_to_vector(perm, isNonUnit) != order)
+    return std::nullopt;
+
+  // The dimension of size 2 is now first among the non-unit dimensions.
+  // Keeping exactly half the elements means the extract indexes that
+  // dimension; any other dimensions it indexes must be unit dimensions.
+  if (2 * type.getNumElements() !=
+      transpose.getSourceVectorType().getNumElements())
+    return std::nullopt;
+
+  int64_t j =
+      extract
+          .getStaticPosition()[llvm::find(perm, order.front()) - perm.begin()];
+  if (j != 0 && j != 1)
+    return std::nullopt;
+
+  return std::pair(skipReshapes(transpose.getVector()), j);
+}
+
+// Find the even and odd inputs of either pattern below. The slice inserts may
+// appear in either order.
+//
+//   %joined = vector.interleave %even, %odd
+//       : vector<4x1xbf16> -> vector<4x2xbf16>
+//
+// or:
+//
+//   %poison = ub.poison : vector<4x2xbf16>
+//   %partial = vector.insert_strided_slice %odd, %poison
+//       offsets = [0, 1], strides = [1, 1]
+//       : vector<4x1xbf16> into vector<4x2xbf16>
+//   %joined = vector.insert_strided_slice %even, %partial
+//       offsets = [0, 0], strides = [1, 1]
+//       : vector<4x1xbf16> into vector<4x2xbf16>
+static std::optional<std::array<Value, 2>> matchInterleave(Value v) {
+  v = skipReshapes(v);
+  if (auto interleave = v.getDefiningOp<vector::InterleaveOp>())
+    return std::array<Value, 2>{interleave.getLhs(), interleave.getRhs()};
+
+  // Both slices must be complete and disjoint so the original destination
+  // contributes no elements to the result.
+  std::array<Value, 2> halves;
+  for (int i = 0; i < 2; ++i) {
+    auto insert = v.getDefiningOp<vector::InsertStridedSliceOp>();
+    if (!insert)
+      return std::nullopt;
+
+    ArrayRef<int64_t> shape = insert.getDestVectorType().getShape();
+    SmallVector<int64_t> slice(shape.drop_back());
+    slice.push_back(1);
+    auto offsets = extractFromIntegerArrayAttr<int64_t>(insert.getOffsets());
+    int64_t j = offsets.back();
+    if (shape.back() != 2 ||
+        insert.getSourceVectorType().getShape() != ArrayRef(slice) || halves[j])
+      return std::nullopt;
+
+    halves[j] = insert.getValueToStore();
+    v = insert.getDest();
+  }
+  return halves;
+}
+
+// Find the packed RHS so the contraction can use it without unpacking.
+// For a K x N RHS and VNNI factor f, require
+//   rhs[f * r + j][c] = src[r][c][j], with src viewed as K/f x N x f.
+// Match transpose/shape_cast unpacking (shown for f = 2):
+//
+//   %packed = vector.shape_cast %src
+//       : vector<4x6xbf16> to vector<4x3x2xbf16>
+//   %transposed = vector.transpose %packed, [0, 2, 1]
+//       : vector<4x3x2xbf16> to vector<4x2x3xbf16>
+//   %rhs = vector.shape_cast %transposed
+//       : vector<4x2x3xbf16> to vector<8x3xbf16>
+//
+// or, for f = 2, split/transpose/join/transpose unpacking:
+//
+//   %even, %odd = vector.deinterleave %src
+//       : vector<4x6xbf16> -> vector<4x3xbf16>
+//   %even_t = vector.transpose %even, [1, 0]
+//       : vector<4x3xbf16> to vector<3x4xbf16>
+//   %odd_t = vector.transpose %odd, [1, 0]
+//       : vector<4x3xbf16> to vector<3x4xbf16>
+//   %joined = vector.interleave %even_t, %odd_t
+//       : vector<3x4xbf16> -> vector<3x8xbf16>
+//   %rhs = vector.transpose %joined, [1, 0]
+//       : vector<3x8xbf16> to vector<8x3xbf16>
+static Value matchUnpackedRhs(Value rhs, int64_t factor) {
+  auto type = cast<VectorType>(rhs.getType());
+  int64_t k = type.getDimSize(0) / factor, n = type.getDimSize(1);
+  auto transpose = skipReshapes(rhs).getDefiningOp<vector::TransposeOp>();
+  if (!transpose)
+    return {};
+
+  ArrayRef<int64_t> shape = transpose.getSourceVectorType().getShape();
+  ArrayRef<int64_t> perm = transpose.getPermutation();
+  if (shape.size() >= 3) {
+    size_t leading = shape.size() - 3;
+    auto expected = llvm::to_vector(llvm::seq<int64_t>(0, shape.size()));
+    std::swap(expected[leading + 1], expected[leading + 2]);
+    bool isUnpacking =
+        llvm::all_of(shape.take_front(leading),
+                     [](int64_t dim) { return dim == 1; }) &&
+        shape.drop_front(leading) == ArrayRef<int64_t>{k, n, factor} &&
+        perm == ArrayRef(expected);
+    return isUnpacking ? skipReshapes(transpose.getVector()) : Value();
+  }
+
+  const int64_t swap[] = {1, 0};
+  if (factor != 2 || perm != ArrayRef(swap) ||
+      shape != ArrayRef<int64_t>{n, 2 * k})
+    return {};
+
+  std::optional<std::array<Value, 2>> halves =
+      matchInterleave(transpose.getVector());
+  if (!halves)
+    return {};
+
+  Value src;
+  for (auto [j, half] : llvm::enumerate(*halves)) {
+    auto transpose = skipReshapes(half).getDefiningOp<vector::TransposeOp>();
+    if (!transpose || transpose.getPermutation() != ArrayRef(swap) ||
+        transpose.getSourceVectorType().getShape() != ArrayRef<int64_t>{k, n})
+      return {};
+
+    auto evenOrOdd = matchEvenOrOdd(transpose.getVector());
+    if (!evenOrOdd || evenOrOdd->second != int64_t(j) ||
+        (src && evenOrOdd->first != src))
+      return {};
+
+    src = evenOrOdd->first;
+  }
+  return src;
 }
 
 static bool isSimpleReadOutsideLoop(vector::TransferReadOp read,
@@ -171,10 +351,10 @@ static Value buildExpandedRead(PatternRewriter &rewriter, Location loc,
 
 namespace {
 // Fold RHS unpacking into a VNNI contraction:
-//   - Match a packed RHS read transposed and flattened for a flat matmul.
-//   - Split the LHS memref's K dimension and reread it in packed lanes.
+//   - Match a packed RHS read unpacked for a flat matmul.
+//   - Split the LHS memref's K dimension and reread it in VNNI layout.
 //     A dynamic K dimension is first narrowed to the read's static extent.
-//   - Contract the packed reads directly over K and the VNNI lane dimension.
+//   - Contract the packed reads directly over K and the VNNI dimension.
 // For bf16, 32x32 LHS and RHS become 32x16x2 LHS and 16x32x2 RHS.
 struct FoldVNNIUnpacking : OpRewritePattern<vector::ContractionOp> {
   using OpRewritePattern::OpRewritePattern;
@@ -191,71 +371,28 @@ struct FoldVNNIUnpacking : OpRewritePattern<vector::ContractionOp> {
 
     auto lhsType = contract.getLhsType();
     auto rhsType = contract.getRhsType();
-    auto accType = dyn_cast<VectorType>(contract.getAccType());
     Type element = lhsType.getElementType();
-    if (!accType || lhsType.getRank() != 2 || rhsType.getRank() != 2 ||
-        accType.getRank() != 2)
-      return rewriter.notifyMatchFailure(
-          contract, "expected 2D operands and accumulator");
     if (lhsType.isScalable() || rhsType.isScalable())
       return rewriter.notifyMatchFailure(contract, "scalable operand vectors");
-    if (element != rhsType.getElementType())
-      return rewriter.notifyMatchFailure(contract,
-                                         "operand element types differ");
     if (!(element.isBF16() || element.isInteger(8)))
       return rewriter.notifyMatchFailure(contract,
                                          "expected bf16 or i8 operands");
     unsigned factor = 32 / element.getIntOrFloatBitWidth();
-    if (lhsType.getDimSize(1) != rhsType.getDimSize(0))
-      return rewriter.notifyMatchFailure(contract, "K dimensions differ");
     if (lhsType.getDimSize(1) % factor != 0)
       return rewriter.notifyMatchFailure(
           contract, "K dimension is not divisible by VNNI factor");
 
-    auto shapeCast = contract.getRhs().getDefiningOp<vector::ShapeCastOp>();
-    auto transpose =
-        shapeCast ? shapeCast.getSource().getDefiningOp<vector::TransposeOp>()
-                  : vector::TransposeOp();
-    if (!transpose || transpose->getParentOp() != loop)
-      return rewriter.notifyMatchFailure(
-          contract, "RHS is not an in-loop transpose followed by shape_cast");
+    Value packedSource = matchUnpackedRhs(contract.getRhs(), factor);
+    if (!packedSource)
+      return rewriter.notifyMatchFailure(contract,
+                                         "RHS does not unpack a packed vector");
     VectorType rhsPackedType =
         VectorType::get({lhsType.getDimSize(1) / factor, rhsType.getDimSize(1),
                          int64_t(factor)},
                         element);
-    auto sourceType = cast<VectorType>(transpose.getVector().getType());
-    if (sourceType.getRank() < rhsPackedType.getRank())
-      return rewriter.notifyMatchFailure(contract,
-                                         "RHS source rank is too small");
-    unsigned leading = sourceType.getRank() - rhsPackedType.getRank();
-    if (!llvm::all_of(sourceType.getShape().take_front(leading),
-                      [](int64_t dim) { return dim == 1; }) ||
-        !llvm::equal(sourceType.getShape().drop_front(leading),
-                     rhsPackedType.getShape()))
-      return rewriter.notifyMatchFailure(contract,
-                                         "RHS source is not VNNI packed");
-    for (unsigned i = 0; i < leading + 1; ++i)
-      if (transpose.getPermutation()[i] != i)
-        return rewriter.notifyMatchFailure(
-            contract, "transpose reorders leading or K dimensions");
-    if (transpose.getPermutation()[leading + 1] != leading + 2 ||
-        transpose.getPermutation()[leading + 2] != leading + 1)
-      return rewriter.notifyMatchFailure(
-          contract, "transpose does not swap N and VNNI lanes");
-
     auto lhsRead = contract.getLhs().getDefiningOp<vector::TransferReadOp>();
     auto lhs = getExpandableRead(lhsRead, factor, loop);
-    auto broadcast = transpose.getVector().getDefiningOp<vector::BroadcastOp>();
-    Value packedSource =
-        broadcast ? broadcast.getSource() : transpose.getVector();
-    if (broadcast && packedSource.getType() != rhsPackedType)
-      return rewriter.notifyMatchFailure(contract,
-                                         "broadcast source is not VNNI packed");
-    auto packedCast = packedSource.getDefiningOp<vector::ShapeCastOp>();
-    auto rhsRead =
-        packedCast
-            ? packedCast.getSource().getDefiningOp<vector::TransferReadOp>()
-            : packedSource.getDefiningOp<vector::TransferReadOp>();
+    auto rhsRead = packedSource.getDefiningOp<vector::TransferReadOp>();
     if (!lhs)
       return rewriter.notifyMatchFailure(
           contract, "LHS read cannot be expanded into VNNI layout");
@@ -263,7 +400,7 @@ struct FoldVNNIUnpacking : OpRewritePattern<vector::ContractionOp> {
       return rewriter.notifyMatchFailure(contract,
                                          "RHS is not a simple transfer read");
     std::optional<ExpandedRead> splitRhs;
-    if (packedCast) {
+    if (rhsRead.getVectorType() != rhsPackedType) {
       auto flatType = rhsRead.getVectorType();
       if (flatType.getRank() != 2 ||
           flatType.getDimSize(0) != rhsPackedType.getDimSize(0) ||
@@ -275,9 +412,6 @@ struct FoldVNNIUnpacking : OpRewritePattern<vector::ContractionOp> {
         return rewriter.notifyMatchFailure(
             contract, "RHS read cannot be expanded into VNNI layout");
     } else {
-      if (rhsRead.getVectorType() != rhsPackedType)
-        return rewriter.notifyMatchFailure(contract,
-                                           "RHS read is not VNNI packed");
       if (getConstantIntValue(rhsRead.getIndices().back()) != 0)
         return rewriter.notifyMatchFailure(
             contract, "packed RHS has nonzero inner offset");
@@ -310,6 +444,7 @@ struct FoldVNNIUnpacking : OpRewritePattern<vector::ContractionOp> {
     rewriter.replaceOpWithNewOp<vector::ContractionOp>(
         contract, packedLhs, packedRhs, contract.getAcc(), vnniMaps, iterators,
         contract.getKind(), contract.getFastmath());
+    LDBG() << "Replaced contract with VNNI-compatible contraction";
     return success();
   }
 };
