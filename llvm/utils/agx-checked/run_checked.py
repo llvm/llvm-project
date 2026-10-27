@@ -29,6 +29,7 @@ class Kernel:
         self.tg_bytes = 0
         self.checked = None  # (record half, tg bytes half, [(arg, offset, lo half, hi half)])
         self.table = None  # (table half, count half): extension 3
+        self.constants = []  # [(half, value)]: extension 6, preloaded 32-bit constants
 
 
 def kernels(obj_path, objcopy):
@@ -63,6 +64,12 @@ def kernels(obj_path, objcopy):
             elif tag == 3:
                 k.table = struct.unpack_from("<2I", d, q + 4)
                 q += 12
+            elif tag in (4, 5):
+                q += 8
+            elif tag == 6:
+                (n,) = struct.unpack_from("<I", d, q + 4)
+                k.constants = [struct.unpack_from("<2I", d, q + 8 + 8 * i) for i in range(n)]
+                q += 8 + 8 * n
             else:
                 break
         out[k.name] = k

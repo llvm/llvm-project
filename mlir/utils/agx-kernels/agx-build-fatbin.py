@@ -28,7 +28,8 @@ Fat AGX object layout (little-endian):
       then the objects (AGX ELF files), each 16-byte aligned. Entries with the same code share one object.
 
   agx-build-fatbin.py --mlir-opt MLIR_OPT --mlir-translate MLIR_TRANSLATE --llc LLC [--opt OPT]
-                      [--chips agx-g13g,agx-g14c,...] [--no-agx-strict] kernels.mlir -o out.agxfat
+                      [--chips agx-g13g,agx-g14c,...] [--no-agx-strict] [--llc-arg OPTION ...] kernels.mlir
+                      -o out.agxfat
 """
 
 import argparse
@@ -93,8 +94,8 @@ def optimize(a, chip, tmp, features):
 def compile_for(a, chip, tmp, features, optimized):
     mattr = ["-mattr=" + features] if features else []
     obj = os.path.join(tmp, chip + features + ".o")
-    subprocess.run([a.llc, "-mtriple=agx", "-mcpu=" + chip, *mattr, "-O3", "-filetype=obj", optimized, "-o", obj],
-                   check=True)
+    subprocess.run([a.llc, "-mtriple=agx", "-mcpu=" + chip, *mattr, "-O3", *a.llc_args, "-filetype=obj", optimized,
+                    "-o", obj], check=True)
     return open(obj, "rb").read()
 
 
@@ -138,6 +139,8 @@ def main():
     ap.add_argument("--llc", required=True)
     ap.add_argument("--opt", default=None, help="LLVM opt (default: next to llc)")
     ap.add_argument("--chips", default=",".join(DEFAULT_CHIPS))
+    ap.add_argument("--llc-arg", dest="llc_args", action="append", default=[],
+                    help="an extra llc option (repeatable), e.g. --llc-arg=-agx-uniform-constants")
     ap.add_argument("--no-agx-strict", dest="agx_strict", action="store_false",
                     help="leave out the CHIP+agx-strict entries")
     # The only pipeline now; accepted for the builds that still pass it.

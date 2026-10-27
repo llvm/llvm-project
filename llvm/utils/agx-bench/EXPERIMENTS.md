@@ -42,6 +42,7 @@ cycles over a set (negative = faster) unless stated.
 | A12 | ZLUDA cuBLAS sgemm split-K: single f32 products with <= 16 output tiles and K >= 1024 cut into S = min(16, 64 / tiles, K / 256) slices (one batched launch into scratch, then agx_ssum_slices sums into beta C in one pass) | `ZLUDA_AGX_GEMM_SPLITK=0` (runtime) | not measurable in agx_cost (one SIMD-group, not the spread over cores); expected ~S x on wall clock for 64 x 64 x 4096 minus one pass over S m x n partials | the tile counts per core; that scratch traffic is cheap | `cublasSgemm` at 64x64x4096, 128x128x8192, 64x512x4096 |
 | A13 | MachineSink sinks preheader instructions into loops under register pressure (`-sink-insts-to-avoid-spills`, now on for AGX through a new `TargetSubtargetInfo::sinkInstsIntoCyclesToAvoidSpills` hook) | `-sink-insts-to-avoid-spills=false` | cycles: n-body -4.3%, ~-1.5% total on every set, none slower; tput: 26 lb kernels better, 4 worse by <= 2.2%; llc time unchanged | spill cost (stack accesses) vs. recomputing inside the loop | cuda_nbody, kernels that spill |
 | A14 | 64-bit add of a constant that fits 32 bits as `iadd` with a zero-extended 32-bit register (one mov_imm and GPR instead of a materialized pair) | revert "[AGX] 64-bit add of a 32-bit constant..." | 4 suite kernels -0.1..-0.2%, none worse; lb -0.2% (tile GEMMs move both ways) | | specialized kernels (pointer steps become constants) |
+| A15 | **Wide constants of kernels in uniform registers** (AGXUniformConstants, `-agx-uniform-constants`, off in `llc`): each 32-bit `mov_imm` of a kernel becomes a uniform preloaded after the arguments (one per value, at most 64), listed in `.agx.kernels` extension 6 for the launcher; AGXFoldOperands folds them into the users. **On in ZLUDA** (`compile_agx`, agx_libs builds; agx_runtime sets the uniforms) | `ZLUDA_AGX_UNIFORM_CONSTANTS=0` (ZLUDA, rebuild agx_libs too); `-agx-uniform-constants` in `llc` | tput geomean rw -2.4% (sgemm_reg4x4 -27.6%: 70 -> 66 GPRs, ddot -7%), co -2.0% (transcendental -29.9%), lb -1.0%; cycles ~0 (-0.1..-0.5% geomean; gelu_f16 +15% and softmax_online +4% from a different store / stall order, not from uniform reads); specialized CUDA kernels (R21) 2-5 GPRs fewer, tput -2..-4% (rmsnorm still above its unspecialized form); PTX tests and agx_libs simulator tests unchanged; llc time within noise | a uniform source costs the same as a GPR source (the model has no uniform penalty); preloading ~2 more uniform words per constant is free at dispatch | `cuda_sgemm_reg4x4`, `cuda_ddot`, `softmax_row`, `transcendental`, agx_libs dnn / blas; compare `ZLUDA_AGX_UNIFORM_CONSTANTS=0`; watch gelu_f16-like store tails |
 
 ## Measured and rejected (model)
 
@@ -99,6 +100,7 @@ seconds on a single large kernel) is not enabled by default: it gets its own `ll
 |---|---|---|
 | A3 post-RA MachineScheduler | +2% (4.45 -> 4.55 s over 209 files) | on |
 | A1 / A2 memory clustering | not measurable | on |
+| A15 uniform constants | within noise (3.28-3.41 s vs 3.41-3.45 s over the agx_libs kernels) | off in llc, on in ZLUDA |
 
 ## Model gaps that decide the entries above
 
@@ -109,5 +111,7 @@ seconds on a single large kernel) is not enabled by default: it gets its own `ll
 3. G13 numbers reuse G14C rows; G13 tile GEMMs (matrix ops emulated, 128 GPRs, spills) move +-20% with any
    scheduling change.
 4. Launch overhead, coalescing and cache behaviour are not in `cycles` / `tput`.
+5. Uniform registers (A15): the model charges nothing for a uniform source or for more preloaded uniforms. Does a
+   larger uniform count slow the dispatch, or limit resident workgroups?
 
 AGX-Performance-Simulator `tasks/zluda-agx-followups.md` lists the same gaps from the simulator's side.

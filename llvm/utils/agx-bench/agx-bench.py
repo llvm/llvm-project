@@ -139,6 +139,18 @@ def throughput(costbin, code, tmp, args, groups):
         return None
 
 
+def constant_uniforms(obj, name, objcopy):
+    """agx_cost uniforms for the constants a kernel has the driver preload (.agx.kernels extension 6,
+    llc -agx-uniform-constants)."""
+    sys.path.insert(0, os.path.join(HERE, "..", "agx-checked"))
+    import run_checked
+    try:
+        k = run_checked.kernels(obj, objcopy).get(name)
+    except subprocess.CalledProcessError:  # no .agx.kernels: no kernels
+        return []
+    return [x for half, v in (k.constants if k else []) for x in ("--uniform", "%d=%d" % (half // 2, v))]
+
+
 def checked_uniforms(obj, name, objcopy, given=()):
     """agx_cost uniforms for the hidden arguments of a checked kernel: no error recorded, 64 KiB of threadgroup
     memory, and bounds covering all of memory, so that every check passes."""
@@ -238,6 +250,9 @@ def main():
                     code = single_kernel_code(asm, obj, name, objcopy, tmp)
                     m["bytes"] = len(code)
                     args = launch_args(src)
+                    consts = constant_uniforms(obj, name, objcopy)
+                    if consts:
+                        args = (args or []) + consts
                     if a.agx_checked:
                         hidden = checked_uniforms(obj, name, objcopy, args or [])
                         args = (args or []) + hidden

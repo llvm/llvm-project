@@ -152,6 +152,8 @@ void AGXAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
 ///     threadgroup memory of the dispatch (static and dynamic bytes).
 ///     5, half: the 64-bit texture heap address goes in the uniforms from
 ///     half (0), for llvm.agx.texture.sample.
+///     6, N, then N pairs (half, value): the 32-bit constants the driver
+///     preloads into the uniforms from half (-agx-uniform-constants).
 ///
 /// Argument values are packed little-endian from their first half in 32-bit
 /// words (16-bit arguments in one half).
@@ -250,6 +252,11 @@ void AGXAsmPrinter::recordKernel() {
   }
   if (MFI->hasTextureHeap())
     R.append({5, 0});
+  if (!MFI->UniformConstants.empty()) {
+    R.append({6, uint32_t(MFI->UniformConstants.size())});
+    for (auto [Half, Value] : MFI->UniformConstants)
+      R.append({Half, Value});
+  }
   Kernels.push_back({std::string(getSymbol(&F)->getName()), std::move(R)});
 }
 

@@ -84,6 +84,9 @@ public:
   unsigned getImplicitArgHalfIndex() const { return ImplicitArgHalfIndex; }
   /// The first uniform half of each IR argument (~0u if it has none).
   SmallVector<unsigned, 8> ArgHalves;
+  /// Constants the driver preloads into uniform registers (first half, value;
+  /// AGXUniformConstants).
+  SmallVector<std::pair<unsigned, uint32_t>, 8> UniformConstants;
 
   void setUniformHalfCount(unsigned N) { UniformHalfCount = N; }
   unsigned getUniformHalfCount() const { return UniformHalfCount; }

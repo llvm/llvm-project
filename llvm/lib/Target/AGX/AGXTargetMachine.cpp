@@ -67,6 +67,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAGXTarget() {
   initializeAGXLowerGenericAddressesPass(PR);
   initializeAGXDAGToDAGISelLegacyPass(PR);
   initializeAGXFoldOperandsPass(PR);
+  initializeAGXUniformConstantsPassPass(PR);
   initializeAGXHoistFromElseFlowPass(PR);
   initializeAGXLowerControlFlowPass(PR);
   initializeAGXInsertWaitsPass(PR);
@@ -301,6 +302,7 @@ bool AGXPassConfig::addInstSelector() {
 
 void AGXPassConfig::addMachineSSAOptimization() {
   TargetPassConfig::addMachineSSAOptimization();
+  addPass(createAGXUniformConstantsPass());
   addPass(createAGXFoldOperandsPass());
   // MachineCSE and MachineSink may have put code where only the threads of
   // a then side run it.

@@ -495,6 +495,13 @@ The extensions are:
   kernel's threadgroup memory bytes plus the dynamic ones of the launch.
 * ``5, half``: the driver sets the 64-bit uniform from ``half`` (always 0)
   to the address of the texture heap (see "Textures").
+* ``6, n``, then ``n`` pairs ``half, value``: with ``-agx-uniform-constants``,
+  the kernel reads its 32-bit constants too wide for an immediate from
+  uniforms instead of materializing them with ``mov_imm``; the driver sets
+  the 32-bit uniform from each ``half`` to its ``value``. They follow the
+  arguments and ``threadgroups_per_grid``, within the uniform halves of the
+  record. A driver that does not set them must not use the option, since a
+  reader that skips the extension leaves the constants zero.
 
 Each kernel ends with ``stop`` followed by eight ``trap`` instructions, since
 the instruction prefetcher reads past the end of the program.
