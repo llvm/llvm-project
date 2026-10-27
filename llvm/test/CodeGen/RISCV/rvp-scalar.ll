@@ -2133,8 +2133,7 @@ define i32 @macc_h01(i32 %rd, i16 %a, i32 %b) nounwind {
 define i32 @maccu_h01(i32 %rd, i16 %a, i32 %b) nounwind {
 ; RV32-LABEL: maccu_h01:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    srli a2, a2, 16
-; RV32-NEXT:    maccu.h00 a0, a1, a2
+; RV32-NEXT:    maccu.h01 a0, a1, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: maccu_h01:
@@ -2174,8 +2173,7 @@ define i32 @macc_h01_commute(i32 %rd, i16 %a, i32 %b) nounwind {
 define i32 @maccu_h01_commute(i32 %rd, i16 %a, i32 %b) nounwind {
 ; RV32-LABEL: maccu_h01_commute:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    srli a2, a2, 16
-; RV32-NEXT:    maccu.h00 a0, a1, a2
+; RV32-NEXT:    maccu.h01 a0, a1, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: maccu_h01_commute:
@@ -2216,8 +2214,7 @@ define i32 @macc_h01_swap_operands(i32 %rd, i16 %a, i32 %b) nounwind {
 define i32 @maccu_h01_swap_operands(i32 %rd, i16 %a, i32 %b) nounwind {
 ; RV32-LABEL: maccu_h01_swap_operands:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    srli a2, a2, 16
-; RV32-NEXT:    maccu.h00 a0, a2, a1
+; RV32-NEXT:    maccu.h01 a0, a1, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: maccu_h01_swap_operands:
@@ -2257,9 +2254,7 @@ define i32 @macc_h11(i32 %rd, i32 %a, i32 %b) nounwind {
 define i32 @maccu_h11(i32 %rd, i32 %a, i32 %b) nounwind {
 ; RV32-LABEL: maccu_h11:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    srli a1, a1, 16
-; RV32-NEXT:    srli a2, a2, 16
-; RV32-NEXT:    maccu.h00 a0, a1, a2
+; RV32-NEXT:    maccu.h11 a0, a1, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: maccu_h11:
@@ -2299,9 +2294,7 @@ define i32 @macc_h11_commute(i32 %rd, i32 %a, i32 %b) nounwind {
 define i32 @maccu_h11_commute(i32 %rd, i32 %a, i32 %b) nounwind {
 ; RV32-LABEL: maccu_h11_commute:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    srli a1, a1, 16
-; RV32-NEXT:    srli a2, a2, 16
-; RV32-NEXT:    maccu.h00 a0, a1, a2
+; RV32-NEXT:    maccu.h11 a0, a1, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: maccu_h11_commute:
