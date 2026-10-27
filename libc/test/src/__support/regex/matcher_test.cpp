@@ -510,4 +510,11 @@ TEST(LlvmLibcRegexMatcherTest, AlternationAndGroupingStabilization) {
   ASSERT_TRUE(ab.has_value());
   ASSERT_TRUE(grouped_ab.has_value());
   EXPECT_EQ(*grouped_ab, *ab);
+
+  // Right-to-left alternation folding interns only the 2 base nodes, 4 literal
+  // nodes, and 3 Alt spine nodes (9 total) with zero orphaned Alt nodes.
+  ExprPool alt_pool;
+  ErrorOr<ExprId> multi_alt = parse_ere("a|b|c|d", REG_EXTENDED, alt_pool);
+  ASSERT_TRUE(multi_alt.has_value());
+  EXPECT_EQ(alt_pool.size(), size_t(9));
 }
