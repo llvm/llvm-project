@@ -334,6 +334,38 @@ module @ir attributes { test.apply_rewrite_4 } {
 
 // -----
 
+// Check that a native rewrite taking a derived attribute parameter
+// (StringAttr) can be registered and invoked.
+module @patterns {
+  pdl_interp.func @matcher(%root : !pdl.operation) {
+    pdl_interp.check_operation_name of %root is "test.op" -> ^pat, ^end
+
+  ^pat:
+    pdl_interp.record_match @rewriters::@success(%root : !pdl.operation) : benefit(1), loc([%root]) -> ^end
+
+  ^end:
+    pdl_interp.finalize
+  }
+
+  module @rewriters {
+    pdl_interp.func @success(%root : !pdl.operation) {
+      %attr = pdl_interp.create_attribute "test.str"
+      %same = pdl_interp.apply_rewrite "identity_str_attr"(%attr : !pdl.attribute) : !pdl.attribute
+      %newOp = pdl_interp.create_operation "test.success" {"attr" = %same}
+      pdl_interp.erase %root
+      pdl_interp.finalize
+    }
+  }
+}
+
+// CHECK-LABEL: test.apply_rewrite_5
+// CHECK: "test.success"() {attr = "test.str"} : () -> ()
+module @ir attributes { test.apply_rewrite_5 } {
+  "test.op"() : () -> ()
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // pdl_interp::AreEqualOp
 //===----------------------------------------------------------------------===//
