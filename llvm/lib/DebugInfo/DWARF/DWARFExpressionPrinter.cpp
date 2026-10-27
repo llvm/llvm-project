@@ -7,9 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/DWARF/DWARFExpressionPrinter.h"
+#include "DWARFExpressionPrinterImpl.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/DebugInfo/DWARF/DWARFUnit.h"
+#include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -74,31 +75,9 @@ static std::string resolveRegName(
   return "";
 }
 
-static void prettyPrintBaseTypeRef(DWARFUnit *U, raw_ostream &OS,
-                                   DIDumpOptions DumpOpts,
-                                   ArrayRef<uint64_t> Operands,
-                                   unsigned Operand) {
-  assert(Operand < Operands.size() && "operand out of bounds");
-  if (!U) {
-    OS << formatv(" <base_type ref: {0:x}>", Operands[Operand]);
-    return;
-  }
-  auto Die = U->getDIEForOffset(U->getOffset() + Operands[Operand]);
-  if (Die && Die.getTag() == dwarf::DW_TAG_base_type) {
-    OS << " (";
-    if (DumpOpts.Verbose)
-      OS << formatv("{0:x8} -> ", Operands[Operand]);
-    OS << formatv("{0:x8})", U->getOffset() + Operands[Operand]);
-    if (auto Name = dwarf::toString(Die.find(dwarf::DW_AT_name)))
-      OS << " \"" << *Name << "\"";
-  } else {
-    OS << formatv(" <invalid base_type ref: {0:x}>", Operands[Operand]);
-  }
-}
-
 static bool printOp(const DWARFExpression::Operation *Op, raw_ostream &OS,
                     DIDumpOptions DumpOpts, const DWARFExpression *Expr,
-                    DWARFUnit *U) {
+                    detail::BaseTypeRefPrinter PrintBaseTypeRef) {
   if (Op->isError()) {
     if (!DumpOpts.PrintRegisterOnly)
       OS << "<decoding error>";
@@ -120,8 +99,8 @@ static bool printOp(const DWARFExpression::Operation *Op, raw_ostream &OS,
         Op->getCode() == DW_OP_regval_type ||
         SubOpcode == DW_OP_LLVM_call_frame_entry_reg ||
         SubOpcode == DW_OP_LLVM_aspace_bregx) {
-      if (prettyPrintRegisterOp(U, OS, DumpOpts, Op->getCode(),
-                                Op->getRawOperands()))
+      if (detail::prettyPrintRegisterOp(PrintBaseTypeRef, OS, DumpOpts,
+                                        Op->getCode(), Op->getRawOperands()))
         return true;
       // If we couldn't pretty-print, fall through and suppress.
     }
@@ -163,8 +142,8 @@ static bool printOp(const DWARFExpression::Operation *Op, raw_ostream &OS,
       Op->getCode() == DW_OP_regval_type ||
       SubOpcode == DW_OP_LLVM_call_frame_entry_reg ||
       SubOpcode == DW_OP_LLVM_aspace_bregx)
-    if (prettyPrintRegisterOp(U, OS, DumpOpts, Op->getCode(),
-                              Op->getRawOperands()))
+    if (detail::prettyPrintRegisterOp(PrintBaseTypeRef, OS, DumpOpts,
+                                      Op->getCode(), Op->getRawOperands()))
       return true;
 
   if (!DumpOpts.PrintRegisterOnly) {
@@ -176,15 +155,15 @@ static bool printOp(const DWARFExpression::Operation *Op, raw_ostream &OS,
       if (Size == DWARFExpression::Operation::SizeSubOpLEB) {
         assert(Operand == 0 && "DW_OP SubOp must be the first operand");
         assert(SubOpcode && "DW_OP SubOp description is inconsistent");
-      } else if (Size == DWARFExpression::Operation::BaseTypeRef && U) {
+      } else if (Size == DWARFExpression::Operation::BaseTypeRef &&
+                 PrintBaseTypeRef) {
         // For DW_OP_convert the operand may be 0 to indicate that conversion to
         // the generic type should be done. The same holds for
         // DW_OP_reinterpret, which is currently not supported.
         if (Op->getCode() == DW_OP_convert && Op->getRawOperand(Operand) == 0)
           OS << " 0x0";
         else
-          prettyPrintBaseTypeRef(U, OS, DumpOpts, Op->getRawOperands(),
-                                 Operand);
+          PrintBaseTypeRef(OS, DumpOpts, Op->getRawOperands(), Operand);
       } else if (Size == DWARFExpression::Operation::WasmLocationArg) {
         assert(Operand == 1);
         switch (Op->getRawOperand(0)) {
@@ -215,8 +194,10 @@ static bool printOp(const DWARFExpression::Operation *Op, raw_ostream &OS,
   return true;
 }
 
-void printDwarfExpression(const DWARFExpression *E, raw_ostream &OS,
-                          DIDumpOptions DumpOpts, DWARFUnit *U, bool IsEH) {
+void detail::printDwarfExpression(const DWARFExpression *E, raw_ostream &OS,
+                                  DIDumpOptions DumpOpts,
+                                  BaseTypeRefPrinter PrintBaseTypeRef,
+                                  bool IsEH) {
   uint32_t EntryValExprSize = 0;
   uint64_t EntryValStartOffset = 0;
   if (E->getData().empty())
@@ -224,7 +205,8 @@ void printDwarfExpression(const DWARFExpression *E, raw_ostream &OS,
 
   for (auto &Op : *E) {
     DumpOpts.IsEH = IsEH;
-    if (!printOp(&Op, OS, DumpOpts, E, U) && !DumpOpts.PrintRegisterOnly) {
+    if (!printOp(&Op, OS, DumpOpts, E, PrintBaseTypeRef) &&
+        !DumpOpts.PrintRegisterOnly) {
       uint64_t FailOffset = Op.getEndOffset();
       while (FailOffset < E->getData().size())
         OS << formatv(" {0:x-2}",
@@ -406,15 +388,21 @@ static bool printCompactDWARFExpr(
   return true;
 }
 
+void printDwarfExpression(const DWARFExpression *E, raw_ostream &OS,
+                          DIDumpOptions DumpOpts, bool IsEH) {
+  detail::printDwarfExpression(E, OS, DumpOpts, nullptr, IsEH);
+}
+
 bool printDwarfExpressionCompact(
     const DWARFExpression *E, raw_ostream &OS,
     std::function<StringRef(uint64_t RegNum, bool IsEH)> GetNameForDWARFReg) {
   return printCompactDWARFExpr(OS, E->begin(), E->end(), GetNameForDWARFReg);
 }
 
-bool prettyPrintRegisterOp(DWARFUnit *U, raw_ostream &OS,
-                           DIDumpOptions DumpOpts, uint8_t Opcode,
-                           ArrayRef<uint64_t> Operands) {
+bool detail::prettyPrintRegisterOp(BaseTypeRefPrinter PrintBaseTypeRef,
+                                   raw_ostream &OS, DIDumpOptions DumpOpts,
+                                   uint8_t Opcode,
+                                   ArrayRef<uint64_t> Operands) {
   uint64_t DwarfRegNum;
   unsigned OpNum = 0;
 
@@ -444,8 +432,12 @@ bool prettyPrintRegisterOp(DWARFUnit *U, raw_ostream &OS,
     else
       OS << ' ' << RegName;
 
-    if (Opcode == DW_OP_regval_type)
-      prettyPrintBaseTypeRef(U, OS, DumpOpts, Operands, 1);
+    if (Opcode == DW_OP_regval_type) {
+      if (PrintBaseTypeRef)
+        PrintBaseTypeRef(OS, DumpOpts, Operands, 1);
+      else
+        OS << formatv(" <base_type ref: {0:x}>", Operands[1]);
+    }
     return true;
   }
 

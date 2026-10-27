@@ -179,9 +179,10 @@ class DebugMapModule : public Module {
 public:
   DebugMapModule(const ModuleSP &exe_module_sp, uint32_t cu_idx,
                  const FileSpec &file_spec, const ArchSpec &arch,
-                 ConstString object_name, off_t object_offset,
+                 std::string object_name, off_t object_offset,
                  const llvm::sys::TimePoint<> object_mod_time)
-      : Module(file_spec, arch, object_name, object_offset, object_mod_time),
+      : Module(file_spec, arch, std::move(object_name), object_offset,
+               object_mod_time),
         m_exe_module_wp(exe_module_sp), m_cu_idx(cu_idx) {}
 
   ~DebugMapModule() override = default;
@@ -472,7 +473,7 @@ Module *SymbolFileDWARFDebugMap::GetModuleByCompUnitInfo(
                              .c_str());
       comp_unit_info->oso_sp->module_sp = std::make_shared<DebugMapModule>(
           obj_file->GetModule(), GetCompUnitInfoIndex(comp_unit_info), oso_file,
-          oso_arch, ConstString(oso_object), 0,
+          oso_arch, oso_object.str(), 0,
           !oso_object.empty() ? comp_unit_info->oso_mod_time
                               : llvm::sys::TimePoint<>());
 

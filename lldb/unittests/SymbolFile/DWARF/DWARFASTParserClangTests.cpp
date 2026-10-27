@@ -2384,11 +2384,9 @@ DWARF:
 
   clang::ObjCInterfaceDecl *renamed = parse_objc_class(renamed_die);
   ASSERT_NE(renamed, nullptr);
-  auto *attr = renamed->getAttr<clang::ObjCRuntimeNameAttr>();
-  ASSERT_NE(attr, nullptr);
-  EXPECT_EQ(attr->getMetadataName(), "_$s4main7RenamedC");
+  EXPECT_EQ(renamed->getObjCRuntimeNameAsString(), "_$s4main7RenamedC");
 
   clang::ObjCInterfaceDecl *plain = parse_objc_class(plain_die);
   ASSERT_NE(plain, nullptr);
-  EXPECT_FALSE(plain->hasAttr<clang::ObjCRuntimeNameAttr>());
+  EXPECT_EQ(plain->getObjCRuntimeNameAsString(), "Plain");
 }

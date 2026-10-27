@@ -16,7 +16,7 @@ def Sleef_powdx_u10rvvm2 : RuntimeLibcallImpl<POW_NXV2F64>;
 def Lib : LibcallLibrary<"lib", (add _ZGVsMxv_acos, _ZGVnN2vv_pow, _ZGVsMxvv_pow,
                                      Sleef_powdx_u10rvvm2)>;
 
-def TheSystemLibrary : SystemRuntimeLibrary<AlwaysAvailable, (add Lib)>;
+def TheSystemLibrary : SystemRuntimeLibrary<AlwaysAvailable, ["lib"]>;
 
 // CHECK:      enum Libcall : unsigned short {
 // CHECK-NEXT:   ACOS_MASKED_NXV2F64 = 0,
