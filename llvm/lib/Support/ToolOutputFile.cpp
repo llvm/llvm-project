@@ -54,7 +54,8 @@ ToolOutputFile::ToolOutputFile(StringRef Filename, std::error_code &EC,
       Installer.Keep = true;
       return;
     }
-    EC = setFileTag(FD, CCSID_UTF_8, /*IsText=*/true);
+    EC = setFileTag(sys::fs::convertFDToNativeFile(FD), CCSID_UTF_8,
+                    /*IsText=*/true);
     OSHolder.emplace(FD, /*shouldClose=*/true);
   } else
     OSHolder.emplace(Filename, EC, Flags);
