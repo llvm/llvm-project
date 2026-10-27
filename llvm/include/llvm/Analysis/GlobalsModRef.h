@@ -23,6 +23,7 @@
 namespace llvm {
 class CallGraph;
 class Function;
+class LazyCallGraph;
 
 /// An alias analysis result set for globals.
 ///
@@ -50,11 +51,6 @@ class GlobalsAAResult : public AAResultBase {
 
   /// For each function, keep track of what globals are modified or read.
   DenseMap<const Function *, FunctionInfo> FunctionInfos;
-
-  /// A map of functions to SCC. The SCCs are described by a simple integer
-  /// ID that is only useful for comparing for equality (are two functions
-  /// in the same SCC or not?)
-  DenseMap<const Function *, unsigned> FunctionToSCCMap;
 
   /// Handle to clear this analysis on deletion of values.
   struct LLVM_ABI DeletionCallbackHandle final : CallbackVH {
@@ -91,6 +87,11 @@ public:
                 std::function<const TargetLibraryInfo &(Function &F)> GetTLI,
                 CallGraph &CG);
 
+  LLVM_ABI static GlobalsAAResult
+  analyzeModule(Module &M,
+                std::function<const TargetLibraryInfo &(Function &F)> GetTLI,
+                LazyCallGraph &LCG);
+
   //------------------------------------------------
   // Implement the AliasAnalysis API
   //
@@ -114,12 +115,15 @@ private:
 
   void AnalyzeGlobals(Module &M);
   void AnalyzeCallGraph(CallGraph &CG, Module &M);
+  void AnalyzeCallGraph(LazyCallGraph &LCG, Module &M);
+  static bool maySyncOrCallIntoModule(const Function &F);
+  static bool addFunctionAttributeInfo(const Function &F, FunctionInfo &FI);
+  static void scanFunctionBodyForModRef(Function &F, FunctionInfo &FI);
   bool AnalyzeUsesOfPointer(Value *V,
                             SmallPtrSetImpl<Function *> *Readers = nullptr,
                             SmallPtrSetImpl<Function *> *Writers = nullptr,
                             GlobalValue *OkayStoreDest = nullptr);
   bool AnalyzeIndirectGlobalMemory(GlobalVariable *GV);
-  void CollectSCCMembership(CallGraph &CG);
 
   bool isNonEscapingGlobalNoAlias(const GlobalValue *GV, const Value *V,
                                   const Instruction *CtxI);
