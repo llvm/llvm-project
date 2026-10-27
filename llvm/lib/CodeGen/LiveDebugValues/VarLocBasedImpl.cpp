@@ -2257,6 +2257,13 @@ bool VarLocBasedLDV::ExtendRanges(MachineFunction &MF,
       DICompileUnit::NoDebug)
     return false;
 
+  // Skip expensive analysis if there are no DBG_VALUEs.
+  if (none_of(MF, [](const MachineBasicBlock &MBB) {
+        return any_of(MBB.instrs(),
+                      [](const MachineInstr &MI) { return MI.isDebugValue(); });
+      }))
+    return true;
+
   TRI = MF.getSubtarget().getRegisterInfo();
   TII = MF.getSubtarget().getInstrInfo();
   TFI = MF.getSubtarget().getFrameLowering();
