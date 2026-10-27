@@ -122,12 +122,13 @@ private:
     Type convertedType = replace(type);
     if (type == convertedType)
       return attr;
-    // Dense array assembly only supports byte-sized integers and i1.
-    unsigned width = cast<IntegerType>(convertedType).getWidth();
+    // For dense array the element type must be bool or its bitwidth must be a
+    // multiple of 8.
+    const unsigned width = cast<IntegerType>(convertedType).getWidth();
     if (width != 1 && width % 8 != 0)
       return nullptr;
     // Unlike dense elements, arrays always store every element, even splats.
-    SmallVector<char> data =
+    const SmallVector<char> data =
         convertRawValues(attr.getRawData(), cast<IntegerType>(type),
                          cast<IntegerType>(convertedType));
     return DenseArrayAttr::get(convertedType, attr.size(), data);
@@ -139,19 +140,21 @@ private:
       return nullptr;
 
     Type elementType = attr.getElementType();
-    DenseElementsAttr convertedAttr = attr;
-    if (elementType != convertedType.getElementType()) {
-      auto convertedElementType =
-          dyn_cast<IntegerType>(convertedType.getElementType());
-      if (!convertedElementType)
-        return nullptr;
-      convertedAttr = attr.mapValues(
-          convertedType.getElementType(),
-          [convertedElementType](const APInt &value) {
-            return value.sextOrTrunc(convertedElementType.getWidth());
-          });
+    Type convertedElementType = convertedType.getElementType();
+    if (elementType == convertedElementType) {
+      // reshape is still necessary to handle any encoding changes.
+      return attr.reshape(convertedType);
     }
-    return convertedAttr.reshape(convertedType);
+
+    auto convertedIntegerType = dyn_cast<IntegerType>(convertedElementType);
+    if (!convertedIntegerType)
+      return nullptr;
+    return attr
+        .mapValues(convertedElementType,
+                   [convertedIntegerType](const APInt &value) {
+                     return value.sextOrTrunc(convertedIntegerType.getWidth());
+                   })
+        .reshape(convertedType);
   }
 
   Attribute convertDenseResource(DenseResourceElementsAttr attr) {
