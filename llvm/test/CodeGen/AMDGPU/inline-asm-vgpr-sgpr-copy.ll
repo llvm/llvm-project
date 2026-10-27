@@ -282,6 +282,36 @@ entry:
   ret void
 }
 
+define amdgpu_kernel void @untied_sgpr_constraint_uniform_vgpr(i32 %divisor) {
+; CHECK-LABEL: untied_sgpr_constraint_uniform_vgpr:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK:       v_readfirstlane_b32
+; CHECK-NOT:   illegal copy
+; CHECK:       ;;#ASMSTART
+; CHECK-NEXT:  s_mov_b32
+; CHECK-NEXT:  ;;#ASMEND
+entry:
+  %limited = call i32 @llvm.umin.i32(i32 %divisor, i32 4)
+  %truncated = trunc i32 %limited to i8
+  %nonzero = or i8 %truncated, 1
+  %quotient = sdiv i8 1, %nonzero
+  %extended = sext i8 %quotient to i32
+  %result = call i32 asm sideeffect "s_mov_b32 $0, $1", "=s,s"(i32 %extended)
+  ret void
+}
+
+define amdgpu_kernel void @untied_sgpr_constraint_uniform_sgpr(i32 %value) {
+; CHECK-LABEL: untied_sgpr_constraint_uniform_sgpr:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NOT:   v_readfirstlane_b32
+; CHECK:       ;;#ASMSTART
+; CHECK-NEXT:  s_mov_b32
+; CHECK-NEXT:  ;;#ASMEND
+entry:
+  %result = call i32 asm sideeffect "s_mov_b32 $0, $1", "=s,s"(i32 %value)
+  ret void
+}
+
 define amdgpu_kernel void @tied_sgpr_constraint_divergent_value(ptr addrspace(1) %out) {
 ; CHECK-LABEL: tied_sgpr_constraint_divergent_value:
 ; CHECK:       ; %bb.0: ; %entry
@@ -315,22 +345,19 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @tied_sgpr_tuple_uniform_vgpr(i32 %divisor) {
+define amdgpu_kernel void @tied_sgpr_tuple_uniform_vgpr(<4 x i8> %divisors) {
 ; CHECK-LABEL: tied_sgpr_tuple_uniform_vgpr:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-COUNT-2: v_readfirstlane_b32
+; CHECK-NOT:   illegal copy
+; CHECK-COUNT-4: v_readfirstlane_b32
 ; CHECK-NOT:   illegal copy
 ; CHECK:       ;;#ASMSTART
 ; CHECK-NEXT:  ;;#ASMEND
 entry:
-  %limited = call i32 @llvm.umin.i32(i32 %divisor, i32 4)
-  %truncated = trunc i32 %limited to i8
-  %nonzero = or i8 %truncated, 1
-  %quotient = sdiv i8 1, %nonzero
-  %extended = sext i8 %quotient to i64
-  %pair = insertelement <2 x i64> zeroinitializer, i64 %extended, i64 0
-  %tuple = bitcast <2 x i64> %pair to <4 x i32>
-  %result = call <4 x i32> asm sideeffect "", "=s,0"(<4 x i32> %tuple)
+  %nonzero = or <4 x i8> %divisors, splat (i8 1)
+  %quotient = sdiv <4 x i8> splat (i8 1), %nonzero
+  %extended = sext <4 x i8> %quotient to <4 x i32>
+  %result = call <4 x i32> asm sideeffect "", "=s,0"(<4 x i32> %extended)
   ret void
 }
 
