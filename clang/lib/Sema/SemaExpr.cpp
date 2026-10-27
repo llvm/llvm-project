@@ -16025,8 +16025,7 @@ ExprResult Sema::CreateCoopMatScalarOp(SourceLocation OpLoc,
   // Check types.
   QualType LHSTy = LHSExpr->getType();
   QualType RHSTy = RHSExpr->getType();
-  if (!Context.hasSameType(
-          LHSTy->getAs<CooperativeMatrixType>()->getElementType(), RHSTy)) {
+  if (!Context.hasSameType(LHSTy->getAs<CooperativeMatrixType>()->getElementType().getUnqualifiedType(), RHSTy.getUnqualifiedType())) {
     Diag(LHSExpr->getBeginLoc(), diag::err_incompatible_coopmat_types);
     return ExprError();
   }
@@ -16079,12 +16078,14 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
     QualType LHSTy = LHSExpr->getType();
     QualType RHSTy = RHSExpr->getType();
     // Cooperative matrix support
-    if (LHSTy->isCooperativeMatrixType() && RHSTy->isCooperativeMatrixType())
-      return CreateCoopMatBinOp(OpLoc, Opc, LHSExpr, RHSExpr);
-    else if (LHSTy->isCooperativeMatrixType() && RHSTy->isScalarType()) {
-      return CreateCoopMatScalarOp(OpLoc, Opc, LHSExpr, RHSExpr);
-    } else if (RHSTy->isCooperativeMatrixType() && LHSTy->isScalarType())
-      return CreateCoopMatScalarOp(OpLoc, Opc, RHSExpr, LHSExpr);
+    if (BO_Assign != Opc) {
+      if (LHSTy->isCooperativeMatrixType() && RHSTy->isCooperativeMatrixType())
+        return CreateCoopMatBinOp(OpLoc, Opc, LHSExpr, RHSExpr);
+      else if (LHSTy->isCooperativeMatrixType() && RHSTy->isScalarType()) {
+        return CreateCoopMatScalarOp(OpLoc, Opc, LHSExpr, RHSExpr);
+      } else if (RHSTy->isCooperativeMatrixType() && LHSTy->isScalarType())
+        return CreateCoopMatScalarOp(OpLoc, Opc, RHSExpr, LHSExpr);
+    }
     // OpenCLC v2.0 s6.13.11.1 allows atomic variables to be initialized by
     // the ATOMIC_VAR_INIT macro.
     if (LHSTy->isAtomicType() || RHSTy->isAtomicType()) {
