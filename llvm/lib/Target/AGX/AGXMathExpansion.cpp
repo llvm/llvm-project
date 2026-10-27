@@ -13,6 +13,13 @@
 // are those of the Cephes single precision library (atanf, asinf, acosf,
 // sinhf, coshf, tanhf, asinhf, acoshf, atanhf).
 //
+// Also the precise float sin, cos, exp, exp2, exp10, log, log2, log10 and
+// pow, where the hardware's approximations (which the afn forms keep) are
+// tens of units in the last place off: the argument reduced exactly (a
+// three-part pi / 2, the exponent split from a log or exp argument), Cephes'
+// sinf, cosf, expf and logf polynomials, and for pow a log and exp carried
+// with a low-order part.
+//
 //===----------------------------------------------------------------------===//
 
 #include "AGX.h"
@@ -50,6 +57,7 @@ public:
   }
   Value *sqrt(Value *X) { return call(Intrinsic::sqrt, {X}); }
   Value *exp(Value *X) { return call(Intrinsic::exp, {X}); }
+  Value *expPrecise(Value *X) { return expHiLo(X, k(0.0)); }
   Value *log(Value *X) { return call(Intrinsic::log, {X}); }
   Value *sel(Value *C, Value *T, Value *F) { return B.CreateSelect(C, T, F); }
   Value *gt(Value *A, double V) { return B.CreateFCmpOGT(A, k(V)); }
@@ -206,27 +214,246 @@ public:
     return sel(lt(A, 0.5), Small, Big);
   }
 
-  /// x - 2 round(x / 2), exactly: in [-1, 1], a zero with the sign of x.
+  /// x - 2 round(x / 2), exactly: in [-1, 1].
   Value *halfTurns(Value *X) {
-    Value *R = sub(X, mul(k(2.0), call(Intrinsic::roundeven,
-                                      {mul(X, k(0.5))})));
-    return sel(B.CreateFCmpOEQ(R, k(0.0)), copysign(k(0.0), X), R);
+    return sub(X, mul(k(2.0), call(Intrinsic::roundeven, {mul(X, k(0.5))})));
+  }
+
+  /// sin(pi r) and cos(pi r) for |r| <= 1/4, with pi r as a rounded
+  /// product and its error.
+  std::pair<Value *, Value *> sinCosPi(Value *R) {
+    constexpr double PiLo = 3.14159265358979323846 - (double)(float)M_PI;
+    Value *Hi = mul(R, k(M_PI));
+    Value *Lo = fma(R, k(M_PI), B.CreateFNeg(Hi));
+    Lo = fma(R, k(PiLo), Lo);
+    auto [S, C] = sinCosPolys(Hi);
+    return {fma(Lo, C, S), fma(B.CreateFNeg(Lo), S, C)};
   }
 
   Value *sinpi(Value *X) {
+    // sin(pi r) = sin(pi (sign(r) - r)) folds r into [-1/2, 1/2], and
+    // = cos(pi (sign(r) / 2 - r)) beyond 1/4; every step is exact.
     Value *R = halfTurns(X);
-    Value *S = call(Intrinsic::sin, {mul(R, k(M_PI))});
-    // Exact zeros at the integers (with the sign of the reduced argument).
-    return sel(B.CreateFCmpOEQ(R, call(Intrinsic::trunc, {R})),
-               copysign(k(0.0), R), S);
+    Value *R2 = sel(gt(abs(R), 0.5), sub(copysign(k(1.0), R), R), R);
+    Value *UseCos = gt(abs(R2), 0.25);
+    Value *R3 = sel(UseCos, sub(copysign(k(0.5), R2), R2), R2);
+    auto [S, C] = sinCosPi(R3);
+    Value *V = sel(UseCos, copysign(C, R2), S);
+    // Integers: a zero with the sign of x.
+    return sel(B.CreateFCmpOEQ(X, call(Intrinsic::trunc, {X})),
+               copysign(k(0.0), X), V);
   }
 
   Value *cospi(Value *X) {
-    // cos(pi r) = sin(pi (1/2 - |r|)), exactly 0 at the half integers.
-    return sinpi(sub(k(0.5), abs(halfTurns(X))));
+    // cos(pi r) = -cos(pi (1 - r)) folds |r| into [0, 1/2], and
+    // = sin(pi (1/2 - r)) beyond 1/4, exactly 0 at the half integers.
+    Value *R = abs(halfTurns(X));
+    Value *Big = gt(R, 0.5);
+    Value *R2 = sel(Big, sub(k(1.0), R), R);
+    Value *UseSin = gt(R2, 0.25);
+    Value *R3 = sel(UseSin, sub(k(0.5), R2), R2);
+    auto [S, C] = sinCosPi(R3);
+    Value *V = sel(UseSin, S, C);
+    return sel(Big, B.CreateFNeg(V), V);
   }
 
   Value *tanpi(Value *X) { return div(sinpi(X), cospi(X)); }
+
+  // Precise sin, cos, exp and log.
+
+  Type *intTy() { return Ty->getWithNewType(B.getInt32Ty()); }
+  Value *ki(int32_t V) { return ConstantInt::get(intTy(), V); }
+  Value *isNaN(Value *X) { return B.CreateFCmpUNO(X, X); }
+  /// a + b as the rounded sum and its error (Knuth's two-sum).
+  std::pair<Value *, Value *> twoSum(Value *A, Value *X) {
+    Value *S = add(A, X);
+    Value *BB = sub(S, A);
+    Value *Err = add(sub(A, sub(S, BB)), sub(X, BB));
+    return {S, Err};
+  }
+
+  /// 2^n for an integral n in [-126, 127].
+  Value *pow2(Value *N) {
+    Value *E = B.CreateAdd(B.CreateFPToSI(N, intTy()), ki(127));
+    return B.CreateBitCast(B.CreateShl(E, ki(23)), Ty);
+  }
+  /// v * 2^n for an integral n in [-252, 254], in two steps.
+  Value *ldexp(Value *V, Value *N) {
+    Value *N1 = call(Intrinsic::trunc, {mul(N, k(0.5))});
+    return mul(mul(V, pow2(N1)), pow2(sub(N, N1)));
+  }
+
+  /// e^r for |r| <= ln(2) / 2 (Cephes expf).
+  Value *expCore(Value *R) {
+    Value *P = poly(R, {1.9875691500e-4, 1.3981999507e-3, 8.3334519073e-3,
+                        4.1665795894e-2, 1.6666665459e-1, 5.0000001201e-1});
+    return add(fma(P, mul(R, R), R), k(1.0));
+  }
+
+  /// e^(hi + lo), lo a small correction: n = round(hi / ln 2) is split off
+  /// exactly (ln 2 in two parts) and the rest goes to expCore.
+  Value *expHiLo(Value *Hi, Value *Lo) {
+    Value *C = sel(gt(Hi, 89.0), k(89.0), sel(lt(Hi, -104.0), k(-104.0), Hi));
+    Value *N = call(Intrinsic::roundeven, {mul(C, k(M_LOG2E))});
+    Value *R = fma(B.CreateFNeg(N), k(0.693359375), C);
+    R = fma(B.CreateFNeg(N), k(-2.12194440e-4), R);
+    Value *E = ldexp(expCore(add(R, Lo)), N);
+    E = sel(gt(Hi, 89.0), k(INFINITY), sel(lt(Hi, -104.0), k(0.0), E));
+    return sel(isNaN(Hi), Hi, E);
+  }
+
+  Value *exp2Precise(Value *X) {
+    // 2^x = e^(x ln 2), with x ln 2 as a rounded product and its error.
+    Value *Hi = mul(X, k(M_LN2));
+    Value *Lo = fma(X, k(M_LN2), B.CreateFNeg(Hi));
+    Lo = fma(X, k(M_LN2 - (double)(float)M_LN2), Lo);
+    return expHiLo(Hi, Lo);
+  }
+  Value *exp10Precise(Value *X) {
+    constexpr double LN10 = 2.302585092994045684;
+    Value *Hi = mul(X, k(LN10));
+    Value *Lo = fma(X, k(LN10), B.CreateFNeg(Hi));
+    Lo = fma(X, k(LN10 - (double)(float)LN10), Lo);
+    return expHiLo(Hi, Lo);
+  }
+
+  /// A positive finite x as 2^e * (1 + f), 1 + f in [sqrt(1/2), sqrt(2)),
+  /// with log(1 + f) = f + y (Cephes logf). Denormals are scaled first.
+  struct LogParts {
+    Value *E, *F, *Y;
+  };
+  LogParts logParts(Value *X) {
+    Value *Tiny = lt(X, 1.17549435e-38);
+    Value *XS = sel(Tiny, mul(X, k(8388608.0)), X);
+    Value *Bits = B.CreateBitCast(XS, intTy());
+    Value *E = B.CreateSIToFP(
+        B.CreateSub(B.CreateLShr(Bits, ki(23)), ki(127)), Ty);
+    E = sel(Tiny, sub(E, k(23.0)), E);
+    Value *M = B.CreateBitCast(
+        B.CreateOr(B.CreateAnd(Bits, ki(0x7fffff)), ki(0x3f800000)), Ty);
+    Value *Big = gt(M, 1.41421356);
+    M = sel(Big, mul(M, k(0.5)), M);
+    E = sel(Big, add(E, k(1.0)), E);
+    Value *F = sub(M, k(1.0));
+    Value *Z = mul(F, F);
+    Value *P = poly(F, {7.0376836292e-2, -1.1514610310e-1, 1.1676998740e-1,
+                        -1.2420140846e-1, 1.4249322787e-1, -1.6668057665e-1,
+                        2.0000714765e-1, -2.4999993993e-1, 3.3333331174e-1});
+    Value *Y = fma(k(-0.5), Z, mul(mul(F, Z), P));
+    return {E, F, Y};
+  }
+  /// The value of log for the special inputs (NaN, negative, 0, infinity),
+  /// else \p R.
+  Value *logSpecial(Value *X, Value *R) {
+    R = sel(B.CreateFCmpOEQ(X, k(INFINITY)), X, R);
+    R = sel(B.CreateFCmpOEQ(X, k(0.0)), k(-INFINITY), R);
+    return sel(B.CreateFCmpULT(X, k(0.0)), k(NAN), R);
+  }
+  /// log(x) for a positive finite x as a sum hi + lo.
+  std::pair<Value *, Value *> logHiLo(Value *X) {
+    LogParts L = logParts(X);
+    auto [S, Err] = twoSum(L.F, L.Y);
+    // e ln 2 in two parts, the first exact for |e| < 2^15.
+    auto [Hi, Err2] = twoSum(mul(L.E, k(0.693359375)), S);
+    Value *Lo = add(add(Err, Err2), mul(L.E, k(-2.12194440e-4)));
+    return {Hi, Lo};
+  }
+  Value *logPrecise(Value *X) {
+    auto [Hi, Lo] = logHiLo(X);
+    return logSpecial(X, add(Hi, Lo));
+  }
+  /// log2 and log10: e log_b(2) + (f + y) log_b(e), each constant in a
+  /// part with few bits and a correction (Cephes log10f).
+  Value *logBase(Value *X, double EHi, double ELo, double L2Hi, double L2Lo) {
+    LogParts L = logParts(X);
+    Value *R = mul(L.Y, k(ELo));
+    R = fma(L.F, k(ELo), R);
+    R = fma(L.Y, k(EHi), R);
+    R = fma(L.F, k(EHi), R);
+    R = fma(L.E, k(L2Lo), R);
+    R = fma(L.E, k(L2Hi), R);
+    return logSpecial(X, R);
+  }
+  Value *log2Precise(Value *X) {
+    // log2(e) = 1.4375 + 0.0051950..., log2(2) = 1.
+    return logBase(X, 1.4375, M_LOG2E - 1.4375, 1.0, 0.0);
+  }
+  Value *log10Precise(Value *X) {
+    return logBase(X, 0.43359375, 7.00731903251827651129e-4, 3.0078125e-1,
+                   2.48745663981195213739e-4);
+  }
+
+  Value *powPrecise(Value *X, Value *Y) {
+    Value *AX = abs(X);
+    auto [LHi, LLo] = logHiLo(AX);
+    Value *Hi = mul(Y, LHi);
+    Value *Lo = fma(Y, LHi, B.CreateFNeg(Hi));
+    Lo = fma(Y, LLo, Lo);
+    Value *R = expHiLo(Hi, Lo);
+    // log(0) = -inf and log(inf) = inf: the product is +-inf (or NaN for a
+    // zero y, handled below), the result 0 or inf.
+    Value *L = logSpecial(AX, LHi);
+    Value *Inf = mul(Y, L);
+    R = sel(B.CreateFCmpOEQ(abs(Inf), k(INFINITY)),
+            sel(gt(Inf, 0.0), k(INFINITY), k(0.0)), R);
+    // A negative x: an odd integer y gives the sign, any other non-integer
+    // a NaN.
+    Value *YInt = B.CreateFCmpOEQ(call(Intrinsic::trunc, {Y}), Y);
+    Value *Half = mul(Y, k(0.5));
+    Value *YOdd = B.CreateAnd(
+        YInt, B.CreateFCmpONE(call(Intrinsic::trunc, {Half}), Half));
+    Value *Neg = lt(copysign(k(1.0), X), 0.0);
+    R = sel(B.CreateAnd(Neg, YOdd), B.CreateFNeg(R), R);
+    Value *YFinite = B.CreateFCmpOLT(abs(Y), k(INFINITY));
+    R = sel(B.CreateAnd(B.CreateAnd(lt(X, 0.0), YFinite),
+                        B.CreateNot(YInt)),
+            k(NAN), R);
+    // |x| = 1 with y infinite, x = 1, y = 0: 1 (even with a NaN).
+    R = sel(B.CreateAnd(B.CreateFCmpOEQ(AX, k(1.0)),
+                        B.CreateNot(YFinite)),
+            k(1.0), R);
+    R = sel(B.CreateFCmpUNO(X, Y), k(NAN), R);
+    R = sel(B.CreateFCmpOEQ(X, k(1.0)), k(1.0), R);
+    return sel(B.CreateFCmpOEQ(Y, k(0.0)), k(1.0), R);
+  }
+
+  /// sin(r) and cos(r) for |r| <= pi / 4 (Cephes sinf and cosf).
+  std::pair<Value *, Value *> sinCosPolys(Value *R) {
+    Value *Z = mul(R, R);
+    Value *S = fma(mul(poly(Z, {-1.9515295891e-4, 8.3321608736e-3,
+                                -1.6666654611e-1}),
+                       Z),
+                   R, R);
+    Value *C = fma(mul(Z, Z),
+                   poly(Z, {2.443315711809948e-5, -1.388731625493765e-3,
+                            4.166664568298827e-2}),
+                   fma(k(-0.5), Z, k(1.0)));
+    return {S, C};
+  }
+
+  /// sin(x) or cos(x): x - j pi / 2 with pi / 2 in three parts, exact for
+  /// |x| below 2^22, then Cephes' sinf and cosf polynomials by quadrant.
+  /// Beyond that the hardware's reduction (afn) is used.
+  Value *sinCos(Value *X, bool Cos) {
+    Value *J = call(Intrinsic::roundeven, {mul(X, k(M_2_PI))});
+    Value *NJ = B.CreateFNeg(J);
+    Value *R = fma(NJ, k(1.57079637050628662109375), X);
+    R = fma(NJ, k(-4.371139000189375e-8), R);
+    R = fma(NJ, k(-1.7151245100059780e-15), R);
+    Value *Q = B.CreateFPToSI(sel(lt(abs(X), 4194304.0), J, k(0.0)), intTy());
+    if (Cos)
+      Q = B.CreateAdd(Q, ki(1));
+    auto [S, C] = sinCosPolys(R);
+    // Quadrants 1 and 3 take the cosine, 2 and 3 the minus sign.
+    Value *Odd = B.CreateICmpNE(B.CreateAnd(Q, ki(1)), ki(0));
+    Value *Minus = B.CreateICmpNE(B.CreateAnd(Q, ki(2)), ki(0));
+    Value *V = sel(Odd, C, S);
+    V = sel(Minus, B.CreateFNeg(V), V);
+    Value *Hw = B.CreateIntrinsic(Cos ? Intrinsic::cos : Intrinsic::sin, {Ty},
+                                  {X});
+    cast<Instruction>(Hw)->setHasApproxFunc(true);
+    return sel(lt(abs(X), 4194304.0), V, Hw);
+  }
 };
 
 /// Computes \p Fn in float for values of \p Ty, a floating point type or a
@@ -244,7 +471,8 @@ static Value *inFloat(IRBuilderBase &B, Type *Ty, ArrayRef<Value *> Args,
 }
 } // namespace
 
-bool AGX::canExpandMath(Intrinsic::ID ID, Type *Ty) {
+bool AGX::canExpandMath(Intrinsic::ID ID, Type *Ty, bool Approx) {
+  Type *E = Ty->getScalarType();
   switch (ID) {
   case Intrinsic::tan:
   case Intrinsic::asin:
@@ -254,12 +482,21 @@ bool AGX::canExpandMath(Intrinsic::ID ID, Type *Ty) {
   case Intrinsic::sinh:
   case Intrinsic::cosh:
   case Intrinsic::tanh:
-    break;
+    return E->isFloatTy() || E->isHalfTy() || E->isBFloatTy();
+  case Intrinsic::sin:
+  case Intrinsic::cos:
+  case Intrinsic::exp:
+  case Intrinsic::exp2:
+  case Intrinsic::exp10:
+  case Intrinsic::log:
+  case Intrinsic::log2:
+  case Intrinsic::log10:
+  case Intrinsic::pow:
+    // The hardware's are precise enough for half, and are what afn asks.
+    return E->isFloatTy() && !Approx;
   default:
     return false;
   }
-  Type *E = Ty->getScalarType();
-  return E->isFloatTy() || E->isHalfTy() || E->isBFloatTy();
 }
 
 Value *AGX::expandMath(IRBuilderBase &B, Intrinsic::ID ID,
@@ -283,6 +520,24 @@ Value *AGX::expandMath(IRBuilderBase &B, Intrinsic::ID ID,
                      return M.cosh(A[0]);
                    case Intrinsic::tanh:
                      return M.tanh(A[0]);
+                   case Intrinsic::sin:
+                     return M.sinCos(A[0], false);
+                   case Intrinsic::cos:
+                     return M.sinCos(A[0], true);
+                   case Intrinsic::exp:
+                     return M.expPrecise(A[0]);
+                   case Intrinsic::exp2:
+                     return M.exp2Precise(A[0]);
+                   case Intrinsic::exp10:
+                     return M.exp10Precise(A[0]);
+                   case Intrinsic::log:
+                     return M.logPrecise(A[0]);
+                   case Intrinsic::log2:
+                     return M.log2Precise(A[0]);
+                   case Intrinsic::log10:
+                     return M.log10Precise(A[0]);
+                   case Intrinsic::pow:
+                     return M.powPrecise(A[0], A[1]);
                    default:
                      llvm_unreachable("not an expanded math intrinsic");
                    }

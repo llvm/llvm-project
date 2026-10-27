@@ -1062,15 +1062,19 @@ Calls to AIR functions become LLVM intrinsics and instructions:
   ``<64 x T>``, which would depend on how AIR orders its elements, are
   errors.
 
-Any other AIR function is an error. The math functions are as accurate as the backend's lowering of the
-LLVM intrinsics, which is below what MSL requires of its precise functions
-for ``sqrt`` (without ``ieee-fp32``), ``sin``, ``cos``, ``log2``, ``log10``,
-``exp10`` and ``pow``. ``tan``, the inverse and hyperbolic functions and their
-inverses, and ``sinpi``/``cospi``/``tanpi`` are built from the functions the
-hardware has (``AGXMathExpansion.cpp``, Cephes' single precision reductions
-and polynomials; half in float), for the LLVM intrinsics of any input. The
-module then takes AGX's triple and data layout, and loses the AIR metadata and
-module flags.
+Any other AIR function is an error. The math functions are as accurate as the
+backend's lowering of the LLVM intrinsics. Without ``afn`` (and without
+``ieee-fp32``, whose AGXStrictFP has its own exact forms), float ``sin``,
+``cos``, ``exp``, ``exp2``, ``exp10``, ``log``, ``log2``, ``log10`` and
+``pow`` are built in software (``AGXMathExpansion.cpp``: the argument reduced
+exactly, Cephes' single precision polynomials; within 1 unit in the last place
+on the AIR hardware suite's inputs), where the hardware's approximations,
+which the ``afn`` forms keep, are tens of units off; ``sin`` and ``cos`` use
+the hardware's reduction beyond 2^22. ``tan``, the inverse and hyperbolic
+functions and their inverses, and ``sinpi``/``cospi``/``tanpi`` are built the
+same way (half in float). ``sqrt`` is the hardware's (within 1 unit) unless
+``ieee-fp32`` asks for correct rounding. The module then takes AGX's triple
+and data layout, and loses the AIR metadata and module flags.
 
 MLIR
 ====

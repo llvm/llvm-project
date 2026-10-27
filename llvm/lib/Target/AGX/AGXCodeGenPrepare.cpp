@@ -313,7 +313,7 @@ class AGXCodeGenPrepare : public FunctionPass {
   bool diagnoseDoubles(Function &F);
   bool fenceHostCoherentAccesses(Function &F);
   bool useBlockBarriers(Function &F, const AGXSubtarget &ST);
-  bool expandMath(Function &F);
+  bool expandMath(Function &F, const AGXSubtarget &ST);
 
 public:
   static char ID;
@@ -983,7 +983,7 @@ bool AGXCodeGenPrepare::runOnFunction(Function &F) {
   if (ST.hasQuadShuffleIndexMerge())
     Changed |= lowerDivergentShuffles(F, TTI);
   Changed |= lowerConstrainedFP(F);
-  Changed |= expandMath(F);
+  Changed |= expandMath(F, ST);
   Changed |= flushHalfDenormals(F);
   Changed |= flushFloatMinMax(F);
   Changed |= expandDivisions(F);
@@ -994,22 +994,34 @@ bool AGXCodeGenPrepare::runOnFunction(Function &F) {
   return Changed;
 }
 
-bool AGXCodeGenPrepare::expandMath(Function &F) {
-  SmallVector<IntrinsicInst *, 8> Calls;
-  for (Instruction &I : instructions(F))
-    if (auto *II = dyn_cast<IntrinsicInst>(&I);
-        II && AGX::canExpandMath(II->getIntrinsicID(), II->getType()))
-      Calls.push_back(II);
-  for (IntrinsicInst *II : Calls) {
-    IRBuilder<> B(II);
-    B.setFastMathFlags(II->getFastMathFlags());
-    SmallVector<Value *, 2> Args(II->args());
-    Value *R = AGX::expandMath(B, II->getIntrinsicID(), Args);
-    R->takeName(II);
-    II->replaceAllUsesWith(R);
-    II->eraseFromParent();
+bool AGXCodeGenPrepare::expandMath(Function &F, const AGXSubtarget &ST) {
+  bool Changed = false;
+  // An expansion may use functions that are expanded in turn (tan's sin).
+  for (;;) {
+    SmallVector<IntrinsicInst *, 8> Calls;
+    for (Instruction &I : instructions(F)) {
+      auto *II = dyn_cast<IntrinsicInst>(&I);
+      if (!II)
+        continue;
+      // With ieee-fp32, AGXStrictFP computes the precise functions exactly.
+      bool Approx = (isa<FPMathOperator>(II) && II->hasApproxFunc()) ||
+                    ST.hasIEEEFP32();
+      if (AGX::canExpandMath(II->getIntrinsicID(), II->getType(), Approx))
+        Calls.push_back(II);
+    }
+    if (Calls.empty())
+      return Changed;
+    for (IntrinsicInst *II : Calls) {
+      IRBuilder<> B(II);
+      B.setFastMathFlags(II->getFastMathFlags());
+      SmallVector<Value *, 2> Args(II->args());
+      Value *R = AGX::expandMath(B, II->getIntrinsicID(), Args);
+      R->takeName(II);
+      II->replaceAllUsesWith(R);
+      II->eraseFromParent();
+    }
+    Changed = true;
   }
-  return !Calls.empty();
 }
 
 /// With "agx-max-threads-per-threadgroup" at most 128, the threadgroup is one

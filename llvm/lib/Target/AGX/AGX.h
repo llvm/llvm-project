@@ -94,9 +94,11 @@ class Type;
 class Value;
 
 namespace AGX {
-/// Whether expandMath builds intrinsic \p ID (tan, asin, acos, atan, atan2,
-/// sinh, cosh, tanh) of type \p Ty (float, half or bfloat, or vectors).
-bool canExpandMath(Intrinsic::ID ID, Type *Ty);
+/// Whether expandMath builds intrinsic \p ID of type \p Ty (and with afn
+/// if \p Approx): tan, asin, acos, atan, atan2, sinh, cosh and tanh of float,
+/// half or bfloat (or vectors), and the precise (not afn) float sin, cos,
+/// exp, exp2, exp10, log, log2, log10 and pow.
+bool canExpandMath(Intrinsic::ID ID, Type *Ty, bool Approx);
 /// The math functions AGX has no instruction for, from the ones it has
 /// (AGXMathExpansion.cpp): the intrinsic \p ID of \p Args, or AIR's \p Fn
 /// (asinh, acosh, atanh, sinpi, cospi, tanpi) of \p X; nullptr for another.
