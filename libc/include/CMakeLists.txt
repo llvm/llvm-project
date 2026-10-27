@@ -1320,6 +1320,7 @@ add_header_macro(
     .llvm-libc-types.wchar_t
     .llvm-libc-types.FILE
     .llvm-libc-types.struct_tm
+    .llvm-libc-types.char32_t
 )
 
 add_header_macro(
