@@ -738,6 +738,27 @@ def ConvertGpuOpsToAGXIROps : Pass<"convert-gpu-to-agxir", "gpu::GPUModuleOp"> {
   ];
 }
 
+def ArithEmulateF64 : Pass<"arith-emulate-f64"> {
+  let summary = "Emulate f64 with 64-bit integers and a soft-float library";
+  let description = [{
+    For targets without double precision (AIR, AGX): f64 values become their
+    bit patterns in i64, in every type (memrefs, vectors, function
+    signatures), and f64 operations calls of a library of IEEE 754 binary64
+    arithmetic on 64-bit integers (rounding to nearest even, with denormals;
+    only 32- and 64-bit integer operations), which the pass inserts, as LLVM
+    dialect functions, into the symbol table that uses it. Negation, absolute
+    value and copysign are bit operations; atomic f64 updates are
+    compare-and-swap loops. An f64 operation without an emulation, such as
+    math.exp, is an error.
+  }];
+  let dependentDialects = [
+    "LLVM::LLVMDialect",
+    "memref::MemRefDialect",
+    "scf::SCFDialect",
+    "vector::VectorDialect",
+  ];
+}
+
 def ConvertGpuOpsToAIROps : Pass<"convert-gpu-to-air", "gpu::GPUModuleOp"> {
   let summary = "Generate AIR for gpu operations";
   let description = [{

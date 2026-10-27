@@ -18,7 +18,8 @@ instructions Mesa's asahi compiler emits are used). A runtime in strict mode loa
 With --via-air, the kernel source is compiled through AIR (standard dialects and air operations; agx operations are
 not accepted), the same for every chip up to AGX's code generation:
 
-  mlir-opt --convert-gpu-to-air=use-bare-ptr-memref-call-conv=1 --reconcile-unrealized-casts
+  mlir-opt --arith-emulate-f64 --convert-gpu-to-air=use-bare-ptr-memref-call-conv=1   (in the gpu.module)
+           --reconcile-unrealized-casts
   mlir-translate --mlir-to-llvmir   (the functions of the gpu.module)
   opt -mtriple=air -passes=air-portable            (AIR's portable passes)
   opt -mtriple=agx -mcpu=CHIP -O3                  (agx-lower-air first)
@@ -69,8 +70,10 @@ STRICT = "+agx-strict"
 def portable_air(a, src, tmp):
     """The kernel source as AIR, after the AIR target's portable passes (bitcode)."""
     lowered = os.path.join(tmp, "air.mlir")
-    subprocess.run([a.mlir_opt, src, "--convert-gpu-to-air=use-bare-ptr-memref-call-conv=1",
-                    "--reconcile-unrealized-casts", "-o", lowered], check=True)
+    # AIR has no double precision: f64 is emulated (arith-emulate-f64).
+    subprocess.run([a.mlir_opt, src, "--pass-pipeline=builtin.module(gpu.module(arith-emulate-f64,"
+                    "convert-gpu-to-air{use-bare-ptr-memref-call-conv=1}),reconcile-unrealized-casts)",
+                    "-o", lowered], check=True)
     body = os.path.join(tmp, "air.body.mlir")
     open(body, "w").write(gpu_module_body(lowered))
     ll = os.path.join(tmp, "air.ll")
