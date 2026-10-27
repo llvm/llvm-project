@@ -16,11 +16,13 @@
 #include "flang/Parser/message.h"
 #include "flang/Parser/provenance.h"
 #include "flang/Support/Fortran.h"
+#include <algorithm>
 #include <list>
 #include <map>
 #include <optional>
 #include <set>
 #include <string>
+#include <vector>
 
 namespace llvm {
 class raw_ostream;
@@ -289,6 +291,21 @@ public:
     return openACCMappedSymbols_.count(symbol.GetUltimate()) != 0;
   }
 
+  // CUDA and OpenACC compute bodies may execute on the device, while
+  // their directives and associated loop bounds are evaluated by the host.
+  bool IsCUDACompute() const { return cudaComputeHostSources_.has_value(); }
+  void MarkCUDACompute() { cudaComputeHostSources_.emplace(); }
+  void AddCUDAComputeHostSource(parser::CharBlock source) {
+    CHECK(cudaComputeHostSources_);
+    cudaComputeHostSources_->push_back(source);
+  }
+  bool IsCUDAComputeHostSource(parser::CharBlock source) const {
+    return cudaComputeHostSources_ &&
+        std::any_of(cudaComputeHostSources_->begin(),
+            cudaComputeHostSources_->end(),
+            [&](parser::CharBlock host) { return host.Contains(source); });
+  }
+
   // Attempts to find a match for a derived type instance
   const DeclTypeSpec *FindInstantiatedDerivedType(const DerivedTypeSpec &,
       DeclTypeSpec::Category = DeclTypeSpec::TypeDerived) const;
@@ -327,6 +344,7 @@ private:
   std::optional<ImportKind> importKind_;
   std::set<SourceName> importNames_;
   UnorderedSymbolSet openACCMappedSymbols_;
+  std::optional<std::vector<parser::CharBlock>> cudaComputeHostSources_;
   DerivedTypeSpec *derivedTypeSpec_{nullptr}; // dTS->scope() == this
   parser::Message::Reference instantiationContext_;
   bool hasSAVE_{false}; // scope has a bare SAVE statement
