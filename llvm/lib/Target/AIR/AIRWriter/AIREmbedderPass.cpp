@@ -29,6 +29,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/PassRegistry.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
@@ -36,6 +37,19 @@
 #include <vector>
 
 using namespace llvm;
+
+namespace {
+enum class AIROutputKind { MetalLib, Object };
+} // namespace
+
+static cl::opt<AIROutputKind> AIROutput(
+    "air-output", cl::desc("Output produced by -filetype=obj for AIR"),
+    cl::init(AIROutputKind::MetalLib),
+    cl::values(clEnumValN(AIROutputKind::MetalLib, "metallib",
+                          "A .metallib container, one module per kernel"),
+               clEnumValN(AIROutputKind::Object, "air",
+                          "A single wrapped AIR bitcode object (.air) for "
+                          "linking with metallib")));
 
 static void emitTGBytesRemark(Module &M) {
   Function *F = nullptr;
@@ -82,7 +96,9 @@ static void embedAIRLibImpl(Module &M) {
   metal::lowerConstantExprs(M);
   metal::PointeeTypeMap PTM = metal::buildPointeeTypeMap(M);
   emitTGBytesRemark(M);
-  std::vector<uint8_t> Bytes = metal::serializeAIRLib(M, PTM);
+  std::vector<uint8_t> Bytes = AIROutput == AIROutputKind::Object
+                                   ? metal::serializeAIRObject(M, PTM)
+                                   : metal::serializeAIRLib(M, PTM);
 
   ArrayRef<uint8_t> Ref(Bytes.data(), Bytes.size());
   Constant *Init = ConstantDataArray::get(M.getContext(), Ref);

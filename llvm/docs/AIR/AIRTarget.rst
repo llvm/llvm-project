@@ -47,6 +47,20 @@ File Type Matrix
   ``AIRLibObjectWriter``; the actual container is built by
   ``AIREmbedderPass`` inside the AIR writer.
 
+``-air-output`` selects what ``-filetype=obj`` writes:
+
+* ``-air-output=metallib`` (default) writes the ``.metallib`` container
+  described above, one bitcode module per kernel.
+* ``-air-output=air`` writes the whole module as a single wrapped AIR bitcode
+  object: a ``.air`` file, the input that Apple's ``metallib`` tool links into
+  a library. Use it to package the output with Apple's tools, or to hand AIR
+  to a consumer that expects an unlinked object.
+
+  .. code-block:: console
+
+     $ llc -mtriple=air64-apple-macosx -filetype=obj -air-output=air k.ll -o k.air
+     $ xcrun metallib k.air -o k.metallib
+
 Pass Pipeline
 =============
 

@@ -60,6 +60,11 @@ struct AIRLibOptions {
 bool writeAIRLib(llvm::Module &M, PointeeTypeMap &PTM,
                    llvm::raw_ostream &OS, const AIRLibOptions &Opts = {});
 
+/// Serialize the whole module as a single wrapped AIR bitcode object (the
+/// `.air` file a Metal front end produces and Apple's `metallib` tool links),
+/// rather than splitting it per kernel into a .metallib container.
+std::vector<uint8_t> serializeAIRObject(llvm::Module &M, PointeeTypeMap &PTM);
+
 // Convenience: write to a byte vector.
 std::vector<uint8_t> serializeAIRLib(llvm::Module &M,
                                        PointeeTypeMap &PTM,

@@ -327,6 +327,10 @@ bool writeAIRLib(Module &M, PointeeTypeMap &PTM, raw_ostream &OS,
   return true;
 }
 
+std::vector<uint8_t> serializeAIRObject(Module &M, PointeeTypeMap &PTM) {
+  return wrapBitcode(emitAIRBitcode(M, PTM));
+}
+
 std::vector<uint8_t> serializeAIRLib(Module &M, PointeeTypeMap &PTM,
                                        const AIRLibOptions &Opts) {
   std::string Buf;
