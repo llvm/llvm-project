@@ -384,6 +384,12 @@ public:
   /// calling resetNoncacheableConstantBuffer after all references are dropped.
   const MaterializedConstant *getConstantValue(Constant *C);
   void resetNoncacheableConstantBuffer();
+  /// Returns true if an object of \p Size bytes in address space \p AS is
+  /// larger than the largest signed integer that fits into the index type.
+  /// Creating such an object is undefined behavior.
+  bool exceedsMaxObjectSize(uint64_t Size, unsigned AS) const {
+    return !isUIntN(DL.getIndexSizeInBits(AS) - 1, Size);
+  }
   IntrusiveRefCntPtr<MemoryObject> allocate(uint64_t Size, uint64_t Align,
                                             StringRef Name, unsigned AS,
                                             MemInitKind InitKind,
