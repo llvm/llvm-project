@@ -13245,45 +13245,19 @@ bool ScalarEvolution::isImpliedCondOperandsHelper(CmpPredicate Pred,
                                                   const SCEV *RHS,
                                                   const SCEV *FoundLHS,
                                                   const SCEV *FoundRHS) {
-  switch (Pred) {
-  default:
-    llvm_unreachable("Unexpected CmpPredicate value!");
-  case ICmpInst::ICMP_EQ:
-  case ICmpInst::ICMP_NE:
+  if (ICmpInst::isEquality(Pred)) {
     if (HasSameValue(LHS, FoundLHS) && HasSameValue(RHS, FoundRHS))
       return true;
-    break;
-  case ICmpInst::ICMP_SLT:
-  case ICmpInst::ICMP_SLE:
-    if (isKnownViaNonRecursiveReasoning(ICmpInst::ICMP_SLE, LHS, FoundLHS) &&
-        isKnownViaNonRecursiveReasoning(ICmpInst::ICMP_SGE, RHS, FoundRHS))
+  } else {
+    ICmpInst::Predicate NonStrictPred = ICmpInst::getNonStrictPredicate(Pred);
+    if (isKnownViaNonRecursiveReasoning(NonStrictPred, LHS, FoundLHS) &&
+        isKnownViaNonRecursiveReasoning(
+            ICmpInst::getSwappedPredicate(NonStrictPred), RHS, FoundRHS))
       return true;
-    break;
-  case ICmpInst::ICMP_SGT:
-  case ICmpInst::ICMP_SGE:
-    if (isKnownViaNonRecursiveReasoning(ICmpInst::ICMP_SGE, LHS, FoundLHS) &&
-        isKnownViaNonRecursiveReasoning(ICmpInst::ICMP_SLE, RHS, FoundRHS))
-      return true;
-    break;
-  case ICmpInst::ICMP_ULT:
-  case ICmpInst::ICMP_ULE:
-    if (isKnownViaNonRecursiveReasoning(ICmpInst::ICMP_ULE, LHS, FoundLHS) &&
-        isKnownViaNonRecursiveReasoning(ICmpInst::ICMP_UGE, RHS, FoundRHS))
-      return true;
-    break;
-  case ICmpInst::ICMP_UGT:
-  case ICmpInst::ICMP_UGE:
-    if (isKnownViaNonRecursiveReasoning(ICmpInst::ICMP_UGE, LHS, FoundLHS) &&
-        isKnownViaNonRecursiveReasoning(ICmpInst::ICMP_ULE, RHS, FoundRHS))
-      return true;
-    break;
   }
 
   // Maybe it can be proved via operations?
-  if (isImpliedViaOperations(Pred, LHS, RHS, FoundLHS, FoundRHS))
-    return true;
-
-  return false;
+  return isImpliedViaOperations(Pred, LHS, RHS, FoundLHS, FoundRHS);
 }
 
 bool ScalarEvolution::isImpliedCondOperandsViaRanges(
