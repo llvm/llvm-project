@@ -189,6 +189,11 @@ infrastructure are described first, followed by tool-specific sections.
   assignments inside GNU statement expressions unless they form the value of
   the statement expression.
 
+- Fixed a crash in {doc}`bugprone-crtp-constructor-accessibility
+  <clang-tidy/checks/bugprone/crtp-constructor-accessibility>` when a
+  constructor begins with a macro, and fix-its that inserted `private:` into
+  the preceding token, comment or macro argument.
+
 - Improved {doc}`bugprone-easily-swappable-parameters
   <clang-tidy/checks/bugprone/easily-swappable-parameters>` check by no longer
   emitting empty notes for type aliases when {option}`ModelImplicitConversions`

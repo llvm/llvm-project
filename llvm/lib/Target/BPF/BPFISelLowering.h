@@ -68,6 +68,9 @@ public:
 
   unsigned getJumpTableEncoding() const override;
 
+  /// The entries are addresses of blocks, also in position independent code.
+  bool isJumpTableRelative() const override { return false; }
+
 private:
   // Control Instruction Selection Features
   bool HasAlu32;
@@ -90,6 +93,7 @@ private:
   SDValue LowerTRAP(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerJumpTable(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerBR_JT(SDValue Op, SelectionDAG &DAG) const;
 
   template <class NodeTy>
   SDValue getAddr(NodeTy *N, SelectionDAG &DAG, unsigned Flags = 0) const;
