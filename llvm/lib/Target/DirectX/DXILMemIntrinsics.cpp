@@ -25,8 +25,7 @@ void expandMemSet(MemSetInst *MemSet) {
   ConstantInt *LengthCI = dyn_cast<ConstantInt>(MemSet->getLength());
   assert(LengthCI && "Expected length to be a ConstantInt");
 
-  [[maybe_unused]] const DataLayout &DL =
-      Builder.GetInsertBlock()->getDataLayout();
+  [[maybe_unused]] const DataLayout &DL = Builder.getDataLayout();
   [[maybe_unused]] uint64_t OrigLength = LengthCI->getZExtValue();
 
   AllocaInst *Alloca = dyn_cast<AllocaInst>(Dst);
@@ -141,7 +140,7 @@ void expandMemCpy(MemCpyInst *MemCpy) {
   if (ByteLength == 0)
     return;
 
-  const DataLayout &DL = Builder.GetInsertBlock()->getDataLayout();
+  const DataLayout &DL = Builder.getDataLayout();
 
   SmallVector<std::pair<Type *, size_t>> FlattenedTypes;
   [[maybe_unused]] size_t MaxLength =

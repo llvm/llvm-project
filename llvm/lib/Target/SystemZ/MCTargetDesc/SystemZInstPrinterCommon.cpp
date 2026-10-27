@@ -118,6 +118,15 @@ void SystemZInstPrinterCommon::printU8ImmOperand(const MCInst *MI, int OpNum,
   printUImmOperand<8>(MI, OpNum, O);
 }
 
+void SystemZInstPrinterCommon::printX8ImmOperand(const MCInst *MI, int OpNum,
+                                                 raw_ostream &O) {
+  int64_t Value = MI->getOperand(OpNum).getImm();
+  if (Value >= 0)
+    printUImmOperand<8>(MI, OpNum, O);
+  else
+    printSImmOperand<8>(MI, OpNum, O);
+}
+
 void SystemZInstPrinterCommon::printU12ImmOperand(const MCInst *MI, int OpNum,
                                                   raw_ostream &O) {
   printUImmOperand<12>(MI, OpNum, O);
@@ -133,6 +142,15 @@ void SystemZInstPrinterCommon::printU16ImmOperand(const MCInst *MI, int OpNum,
   printUImmOperand<16>(MI, OpNum, O);
 }
 
+void SystemZInstPrinterCommon::printX16ImmOperand(const MCInst *MI, int OpNum,
+                                                  raw_ostream &O) {
+  int64_t Value = MI->getOperand(OpNum).getImm();
+  if (Value >= 0)
+    printUImmOperand<16>(MI, OpNum, O);
+  else
+    printSImmOperand<16>(MI, OpNum, O);
+}
+
 void SystemZInstPrinterCommon::printS32ImmOperand(const MCInst *MI, int OpNum,
                                                   raw_ostream &O) {
   printSImmOperand<32>(MI, OpNum, O);
@@ -141,6 +159,15 @@ void SystemZInstPrinterCommon::printS32ImmOperand(const MCInst *MI, int OpNum,
 void SystemZInstPrinterCommon::printU32ImmOperand(const MCInst *MI, int OpNum,
                                                   raw_ostream &O) {
   printUImmOperand<32>(MI, OpNum, O);
+}
+
+void SystemZInstPrinterCommon::printX32ImmOperand(const MCInst *MI, int OpNum,
+                                                  raw_ostream &O) {
+  int64_t Value = MI->getOperand(OpNum).getImm();
+  if (Value >= 0)
+    printUImmOperand<32>(MI, OpNum, O);
+  else
+    printSImmOperand<32>(MI, OpNum, O);
 }
 
 void SystemZInstPrinterCommon::printU48ImmOperand(const MCInst *MI, int OpNum,
@@ -264,5 +291,8 @@ void SystemZInstPrinterCommon::printCond4Operand(const MCInst *MI, int OpNum,
                                           "nl", "le", "nh",  "no"};
   uint64_t Imm = MI->getOperand(OpNum).getImm();
   assert(Imm > 0 && Imm < 15 && "Invalid condition");
+  if (MAI.getAssemblerDialect() == AD_HLASM)
+    assert(Imm != 3 && Imm != 5 && Imm != 6 && Imm != 9 && Imm != 10 &&
+           Imm != 12 && "Restricted HLASM dialect");
   O << CondNames[Imm - 1];
 }

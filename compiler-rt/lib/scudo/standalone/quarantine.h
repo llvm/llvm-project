@@ -35,17 +35,20 @@ struct QuarantineBatch {
   uptr getQuarantinedSize() const { return Size - sizeof(QuarantineBatch); }
 
   void push_back(void *Ptr, uptr Size) {
-    DCHECK_LT(Count, MaxCount);
+    CHECK_LT(Count, MaxCount);
     Batch[Count++] = Ptr;
     this->Size += Size;
   }
 
   bool canMerge(const QuarantineBatch *const From) const {
-    return Count + From->Count <= MaxCount;
+    // Validate both counts before computing the available capacity.
+    CHECK_LE(Count, MaxCount);
+    CHECK_LE(From->Count, MaxCount);
+    return From->Count <= MaxCount - Count;
   }
 
   void merge(QuarantineBatch *const From) {
-    DCHECK_LE(Count + From->Count, MaxCount);
+    CHECK(canMerge(From));
     DCHECK_GE(Size, sizeof(QuarantineBatch));
 
     for (uptr I = 0; I < From->Count; ++I)
@@ -57,13 +60,17 @@ struct QuarantineBatch {
     From->Size = sizeof(QuarantineBatch);
   }
 
-  void shuffle(u32 State) { ::scudo::shuffle(Batch, Count, &State); }
+  void shuffle(u32 State) {
+    CHECK_LE(Count, MaxCount);
+    ::scudo::shuffle(Batch, Count, &State);
+  }
 };
 
 static_assert(sizeof(QuarantineBatch) <= (1U << 13), ""); // 8Kb.
 
 // Per-thread cache of memory blocks.
-template <typename Callback> class QuarantineCache {
+template <typename Callback, bool QuarantineDisabled = false>
+class QuarantineCache {
 public:
   void init() { DCHECK_EQ(atomic_load_relaxed(&Size), 0U); }
 
@@ -164,14 +171,29 @@ private:
   void subFromSize(uptr sub) { atomic_store_relaxed(&Size, getSize() - sub); }
 };
 
+template <typename Callback>
+class QuarantineCache<Callback, /*QuarantineDisabled*/ true> {
+public:
+  void init() {}
+  uptr getSize() const { return 0U; }
+  uptr getOverheadSize() const { return 0U; }
+  void enqueue(UNUSED Callback Cb, UNUSED void *Ptr, UNUSED uptr Size) {}
+  void transfer(UNUSED QuarantineCache *From) {}
+  void enqueueBatch(UNUSED QuarantineBatch *B) {}
+  QuarantineBatch *dequeueBatch() { return nullptr; }
+  void mergeBatches(UNUSED QuarantineCache *ToDeallocate) {}
+  void getStats(UNUSED ScopedString *Str) const {}
+};
+
 // The callback interface is:
 // void Callback::recycle(Node *Ptr);
 // void *Callback::allocate(uptr Size);
 // void Callback::deallocate(void *Ptr);
-template <typename Callback, typename Node> class GlobalQuarantine {
+template <typename Callback, typename Node, bool QuarantineDisabled = false>
+class GlobalQuarantine {
 public:
-  typedef QuarantineCache<Callback> CacheT;
-  using ThisT = GlobalQuarantine<Callback, Node>;
+  typedef QuarantineCache<Callback, QuarantineDisabled> CacheT;
+  using ThisT = GlobalQuarantine<Callback, Node, QuarantineDisabled>;
 
   void init(uptr Size, uptr CacheSize) NO_THREAD_SAFETY_ANALYSIS {
     DCHECK(isAligned(reinterpret_cast<uptr>(this), alignof(ThisT)));
@@ -302,6 +324,24 @@ private:
       Cb.deallocate(B);
     }
   }
+};
+
+template <typename Callback, typename Node>
+class GlobalQuarantine<Callback, Node, /*QuarantineDisabled*/ true> {
+public:
+  typedef QuarantineCache<Callback, /*QuarantineDisabled*/ true> CacheT;
+
+  void init(UNUSED uptr Size, UNUSED uptr CacheSize) {}
+  uptr getMaxSize() const { return 0U; }
+  uptr getCacheSize() const { return 0U; }
+  bool isEmpty() const { return true; }
+  void put(UNUSED CacheT *C, UNUSED Callback Cb, UNUSED Node *Ptr,
+           UNUSED uptr Size) {}
+  void drain(UNUSED CacheT *C, UNUSED Callback Cb) {}
+  void drainAndRecycle(UNUSED CacheT *C, UNUSED Callback Cb) {}
+  void getStats(UNUSED ScopedString *Str) const {}
+  void disable() {}
+  void enable() {}
 };
 
 } // namespace scudo

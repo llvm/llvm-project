@@ -1,0 +1,47 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+// CIR types admit only CIR types as their nested types.
+
+// expected-error @below {{failed to verify 'pointee': any type from the CIR dialect}}
+!ptr = !cir.ptr<i32>
+
+module {}
+
+// -----
+
+// expected-error @below {{failed to verify 'elementType': any CIR type except void}}
+!arr = !cir.array<f32 x 4>
+
+module {}
+
+// -----
+
+!rec_Foo = !cir.struct<"Foo" {data !cir.int<s, 32>}>
+// expected-error @below {{failed to verify 'member_ty': any type from the CIR dialect}}
+!mp = !cir.data_member<i32 in !rec_Foo>
+
+module {}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+// expected-error @below {{bit-field access unit storage must be a CIR type, got 'i32'}}
+!rec_S = !cir.struct<"S" {bitfield !cir.bitfield<i32, [#cir.bitfield_decl<!s32i, 4>]>}>
+
+module {}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+// expected-error @below {{record member at index 1 must be a CIR type, got 'i32'}}
+!rec_S = !cir.struct<"S" {data !s32i, data i32}>
+
+module {}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+// expected-error @below {{record member at index 1 must be a CIR type, got 'i32'}}
+!rec_U = !cir.union<"U" {data !s32i, data i32}>
+
+module {}

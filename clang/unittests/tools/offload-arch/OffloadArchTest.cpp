@@ -8,7 +8,6 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
@@ -34,8 +33,6 @@ int printGPUsByKFD(llvm::StringRef NodePath);
 std::string getIntelGPUArchName(uint32_t IPVersion);
 
 using namespace llvm;
-
-cl::opt<bool> Verbose("offload-arch-test-verbose", cl::Hidden, cl::init(false));
 
 #ifdef _WIN32
 

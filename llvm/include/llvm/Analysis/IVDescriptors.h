@@ -437,7 +437,7 @@ public:
   /// Returns floating-point induction operator that does not allow
   /// reassociation (transforming the induction requires an override of normal
   /// floating-point rules).
-  Instruction *getExactFPMathInst() {
+  Instruction *getExactFPMathInst() const {
     if (IK == IK_FpInduction && InductionBinOp &&
         !InductionBinOp->hasAllowReassoc())
       return InductionBinOp;
@@ -516,6 +516,12 @@ public:
 
   /// Returns the SCEV no-wrap flags that apply to StepInst.
   SCEVFlags getSCEVNoWrapFlags() const { return NoWrapFlags; }
+
+  /// Returns an over-approximation of the conditional induction as a SCEVAddRec
+  /// assuming the condition is always true. The loop \p L must be the loop
+  /// containing the conditional induction.
+  LLVM_ABI const SCEV *getUnconditionalAddRec(ScalarEvolution &SE,
+                                              const Loop &L) const;
 
 private:
   ConditionalInductionDescriptor(PHINode *HeaderPHI, PHINode *BackedgePHI,

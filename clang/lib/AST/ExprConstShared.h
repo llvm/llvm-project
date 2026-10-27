@@ -32,6 +32,10 @@ class CharUnits;
 class Expr;
 class CallExpr;
 class CXXRecordDecl;
+class FunctionDecl;
+
+CharUnits GetAlignOfDynamicAlloc(const ASTContext &Ctx, QualType AllocType,
+                                 DynAllocKind AllocKind);
 } // namespace clang
 using namespace clang;
 /// Values returned by __builtin_classify_type, chosen to match the values
@@ -124,6 +128,7 @@ inline bool isForManglingOnly(ConstantExprKind Kind) {
   case ConstantExprKind::Normal:
   case ConstantExprKind::ClassTemplateArgument:
   case ConstantExprKind::ImmediateInvocation:
+  case ConstantExprKind::Initializer:
     // Note that non-type template arguments of class type are emitted as
     // template parameter objects.
     return false;
@@ -138,6 +143,7 @@ inline bool isTemplateArgument(ConstantExprKind Kind) {
   switch (Kind) {
   case ConstantExprKind::Normal:
   case ConstantExprKind::ImmediateInvocation:
+  case ConstantExprKind::Initializer:
     return false;
 
   case ConstantExprKind::ClassTemplateArgument:
@@ -157,5 +163,8 @@ inline bool isOpaqueConstantCall(const CallExpr *E) {
 }
 
 bool isGlobalLValue(const ValueDecl *D, const Expr *E);
+
+/// Whether we can instantiate FD during constant evaluation
+bool FunctionDefinitionCanBeLazilyInstantiated(const FunctionDecl *FD);
 
 #endif
