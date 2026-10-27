@@ -1619,8 +1619,7 @@ namespace {
 /// fusion algorithm to apply cleanup patterns in between fusion steps.
 class SliceTrackingListener : public RewriterBase::Listener {
 public:
-  explicit SliceTrackingListener(
-      std::optional<FrozenRewritePatternSet> patterns);
+  explicit SliceTrackingListener(const scf::SCFTileAndFuseOptions &options);
   SliceTrackingListener() = default;
 
   /// Adds the given list of operations to the worklist, and if present,
@@ -1650,11 +1649,14 @@ private:
   /// Optional pattern set to apply when adding new operations to the
   /// worklist.
   std::optional<FrozenRewritePatternSet> patterns = std::nullopt;
+  std::function<LogicalResult(ArrayRef<Operation *>, RewriterBase::Listener *)>
+      cleanupFn;
 };
 
 SliceTrackingListener::SliceTrackingListener(
-    std::optional<FrozenRewritePatternSet> p) {
-  patterns = std::move(p);
+    const scf::SCFTileAndFuseOptions &options) {
+  patterns = options.cleanupPatterns;
+  cleanupFn = options.cleanupFn;
 }
 
 LogicalResult
@@ -1664,6 +1666,10 @@ SliceTrackingListener::insertAndApplyPatterns(ArrayRef<Operation *> ops) {
       worklist.push_back(slice);
   }
 
+  if (ops.empty())
+    return success();
+  if (cleanupFn)
+    return cleanupFn(ops, this);
   if (!patterns)
     return success();
 
@@ -1806,8 +1812,7 @@ mlir::scf::tileConsumerAndFuseProducersUsingSCF(
     SCFTileAndFuseOptions::ControlFnResult controlFnResult;
   };
 
-  SliceTrackingListener sliceTracker =
-      SliceTrackingListener(options.cleanupPatterns);
+  SliceTrackingListener sliceTracker = SliceTrackingListener(options);
 
   if (failed(
           sliceTracker.insertAndApplyPatterns(tilingResult->generatedSlices))) {

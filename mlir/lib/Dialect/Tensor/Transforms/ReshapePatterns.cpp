@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Analysis/DataFlow/ConstantPropagationAnalysis.h"
+#include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
+#include "mlir/Analysis/DataFlow/IntegerDivisibilityAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
@@ -17,10 +20,9 @@
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/MathExtras.h"
-
-#include <numeric>
 
 using namespace mlir;
 using namespace mlir::tensor;
@@ -624,87 +626,20 @@ LogicalResult mlir::tensor::getCollapsedExtractSliceInfo(
   return success();
 }
 
-/// Infer a power-of-two divisor from integer expressions and induction variable
-/// bounds. The query is local to a match: no facts are retained across
-/// rewrites. The budget bounds work on shared expression DAGs and nested loop
-/// bounds.
-static uint64_t inferKnownPowerOfTwoDivisor(OpFoldResult ofr,
-                                            unsigned &budget) {
-  if (!budget)
-    return 1;
-  --budget;
-
-  if (auto constant = getConstantIntValue(ofr)) {
-    uint64_t bits = static_cast<uint64_t>(*constant);
-    // Keep only the power-of-two part, valid for both signed and unsigned
-    // interpretations. Zero remains divisible by every factor.
-    return bits & (uint64_t{0} - bits);
-  }
-
-  Value value = cast<Value>(ofr);
-  if (auto arg = dyn_cast<BlockArgument>(value)) {
-    auto loop = dyn_cast<LoopLikeOpInterface>(arg.getOwner()->getParentOp());
-    if (!loop)
-      return 1;
-    auto ivs = loop.getLoopInductionVars();
-    auto lbs = loop.getLoopLowerBounds();
-    auto steps = loop.getLoopSteps();
-    if (!ivs || !lbs || !steps)
-      return 1;
-    auto it = llvm::find(*ivs, value);
-    if (it == ivs->end())
-      return 1;
-    unsigned index = std::distance(ivs->begin(), it);
-    if (index >= lbs->size() || index >= steps->size())
-      return 1;
-    // An induction variable is lb + iteration * step.
-    uint64_t lbDivisor = inferKnownPowerOfTwoDivisor((*lbs)[index], budget);
-    uint64_t stepDivisor = inferKnownPowerOfTwoDivisor((*steps)[index], budget);
-    return std::gcd(lbDivisor, stepDivisor);
-  }
-
-  Operation *op = value.getDefiningOp();
-  // For these operations, power-of-two divisibility is preserved even when
-  // arithmetic wraps. Other operations are left to the affine proof below.
-  if (!isa<arith::AddIOp, arith::SubIOp, arith::MulIOp, arith::SelectOp>(op))
-    return 1;
-  auto inferable = cast<InferIntDivisibilityOpInterface>(op);
-  SmallVector<IntegerDivisibility> operands;
-  for (Value operand : op->getOperands()) {
-    uint64_t divisor = inferKnownPowerOfTwoDivisor(operand, budget);
-    operands.emplace_back(ConstantIntDivisibility(divisor, divisor));
-  }
-  uint64_t divisor = 1;
-  inferable.inferResultDivisibility(
-      operands, [&](Value result, const ConstantIntDivisibility &inferred) {
-        if (result != value)
-          return;
-        // Saturate overflowing divisor products rather than treating them
-        // as a proof that the result is exactly zero.
-        divisor = inferred.udiv() ? inferred.udiv() : uint64_t{1} << 63;
-      });
-  return divisor;
-}
-
-// Check static and affine divisibility, or power-of-two alignment inferred
-// from integer expressions and loop bounds. Restricting the latter proof to
-// powers of two makes it independent of the index bit width and wraparound.
-static bool isMultipleOf(OpFoldResult ofr, int64_t factor) {
+// Check static and affine divisibility, or consult the caller's alignment
+// proof. The query must remain valid until all slice information is computed.
+static bool isMultipleOf(OpFoldResult ofr, int64_t factor,
+                         llvm::function_ref<bool(Value, int64_t)> isAligned) {
   if (factor <= 0)
     return false;
-  std::optional<int64_t> staticValue = getConstantIntValue(ofr);
-  if (staticValue.has_value())
-    return staticValue.value() % factor == 0;
-
-  if (llvm::isPowerOf2_64(factor)) {
-    unsigned budget = 32;
-    if (inferKnownPowerOfTwoDivisor(ofr, budget) % factor == 0)
-      return true;
-  }
+  if (auto constant = getConstantIntValue(ofr))
+    return *constant % factor == 0;
 
   Value value = dyn_cast<Value>(ofr);
   if (!value)
     return false;
+  if (isAligned && isAligned(value, factor))
+    return true;
   auto applyOp = value.getDefiningOp<affine::AffineApplyOp>();
   if (!applyOp)
     return false;
@@ -726,7 +661,8 @@ static bool isMultipleOf(OpFoldResult ofr, int64_t factor) {
 static LogicalResult computeExpandedSliceInfoForReassocGroup(
     OpBuilder &b, OpFoldResult collapsedSize, OpFoldResult collapsedOffset,
     const ReassociationIndices &reassocIndices, ArrayRef<int64_t> expandedShape,
-    SmallVectorImpl<OpFoldResult> &groupSizes) {
+    SmallVectorImpl<OpFoldResult> &groupSizes,
+    llvm::function_ref<bool(Value, int64_t)> isAligned) {
   assert(groupSizes.empty() && "Group sizes must be empty");
   // The first case is when there's only one non-unit dimension in the
   // reassociation group.
@@ -808,7 +744,7 @@ static LogicalResult computeExpandedSliceInfoForReassocGroup(
 
     // Check dynamic/static offset divisibility.
     currentOffsetDivisor *= expandedShapeSize;
-    if (!isMultipleOf(collapsedOffset, currentOffsetDivisor))
+    if (!isMultipleOf(collapsedOffset, currentOffsetDivisor, isAligned))
       return failure();
 
     // Trailing dims get full shape and zero offset.
@@ -836,7 +772,7 @@ static LogicalResult computeExpandedSliceInfoForReassocGroup(
       // to check the validity of the range.
       if ((expandedShapeSize % currentCollapsedsize) != 0)
         return failure();
-      if (!isMultipleOf(collapsedOffset, staticSize.value()))
+      if (!isMultipleOf(collapsedOffset, staticSize.value(), isAligned))
         return failure();
     }
     // Slicing dimension gets the remaining collapsed size.
@@ -863,7 +799,8 @@ LogicalResult mlir::tensor::getExpandedExtractSliceInfo(
     ArrayRef<ReassociationIndices> reassociation, Value expandedValue,
     SmallVectorImpl<OpFoldResult> &expandedOffsets,
     SmallVectorImpl<OpFoldResult> &expandedSizes,
-    SmallVectorImpl<OpFoldResult> &expandedStrides) {
+    SmallVectorImpl<OpFoldResult> &expandedStrides,
+    llvm::function_ref<bool(Value, int64_t)> isAligned) {
   if (!sliceOp.hasUnitStride()) {
     return failure();
   }
@@ -893,7 +830,7 @@ LogicalResult mlir::tensor::getExpandedExtractSliceInfo(
     SmallVector<OpFoldResult> groupSizes;
     LogicalResult result = computeExpandedSliceInfoForReassocGroup(
         b, collapsedSize, collapsedOffset, reassocIndices, expandedShape,
-        groupSizes);
+        groupSizes, isAligned);
     if (failed(result))
       return failure();
     groupResults.emplace_back(groupSizes);
@@ -918,6 +855,138 @@ LogicalResult mlir::tensor::getExpandedExtractSliceInfo(
       expandedOffsets.push_back(result);
   }
   return success();
+}
+
+namespace {
+/// Restrict operation transfer functions to facts that survive modular integer
+/// arithmetic. Reuse the existing analysis for the fixed point, control flow,
+/// and induction variables; do not propagate general divisors through division.
+class SliceAlignmentAnalysis : public dataflow::IntegerDivisibilityAnalysis {
+public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(SliceAlignmentAnalysis)
+  using IntegerDivisibilityAnalysis::IntegerDivisibilityAnalysis;
+
+  LogicalResult visitOperation(
+      Operation *op,
+      ArrayRef<const dataflow::IntegerDivisibilityLattice *> operands,
+      ArrayRef<dataflow::IntegerDivisibilityLattice *> results) override {
+    if (auto constant = dyn_cast<arith::ConstantOp>(op)) {
+      auto attr = dyn_cast<IntegerAttr>(constant.getValue());
+      if (!attr) {
+        setAllToEntryStates(results);
+        return success();
+      }
+      const APInt &value = attr.getValue();
+      // Avoid signed absolute values and support constants wider than uint64_t.
+      uint64_t divisor =
+          value.isZero() ? 0
+                         : uint64_t{1} << std::min(value.countr_zero(), 63u);
+      propagateIfChanged(
+          results.front(),
+          results.front()->join(ConstantIntDivisibility(divisor, divisor)));
+      return success();
+    }
+    if (!isa<arith::AddIOp, arith::SubIOp, arith::MulIOp, arith::SelectOp>(
+            op)) {
+      setAllToEntryStates(results);
+      return success();
+    }
+    if (llvm::any_of(operands, [](const auto *lattice) {
+          return lattice->getValue().isUninitialized();
+        }))
+      return success();
+    return IntegerDivisibilityAnalysis::visitOperation(op, operands, results);
+  }
+
+  void visitNonControlFlowArguments(
+      Operation *op, const RegionSuccessor &successor,
+      ValueRange successorInputs,
+      ArrayRef<dataflow::IntegerDivisibilityLattice *> argLattices) override {
+    // The existing loop-bound query represents constants in int64_t.
+    if (auto loop = dyn_cast<LoopLikeOpInterface>(op)) {
+      auto ivs = loop.getLoopInductionVars();
+      if (ivs && llvm::any_of(*ivs, [](Value iv) {
+            auto type = dyn_cast<IntegerType>(iv.getType());
+            return type && type.getWidth() > 64;
+          })) {
+        return SparseForwardDataFlowAnalysis::visitNonControlFlowArguments(
+            op, successor, successorInputs, argLattices);
+      }
+    }
+    IntegerDivisibilityAnalysis::visitNonControlFlowArguments(
+        op, successor, successorInputs, argLattices);
+  }
+};
+} // namespace
+
+FailureOr<SmallVector<Operation *>>
+mlir::tensor::bubbleUpExtractSlicesThroughCollapseShape(
+    RewriterBase &rewriter, Operation *analysisScope,
+    ArrayRef<Operation *> operations) {
+  if (llvm::none_of(operations, [](Operation *op) {
+        auto slice = dyn_cast<ExtractSliceOp>(op);
+        return slice && slice.getSource().getDefiningOp<CollapseShapeOp>();
+      }))
+    return llvm::to_vector(operations);
+
+  DataFlowSolver solver;
+  solver.load<dataflow::DeadCodeAnalysis>();
+  solver.load<dataflow::SparseConstantPropagation>();
+  solver.load<SliceAlignmentAnalysis>();
+  if (failed(solver.initializeAndRun(analysisScope)))
+    return failure();
+
+  auto isAligned = [&](Value value, int64_t factor) {
+    if (!llvm::isPowerOf2_64(factor))
+      return false;
+    const auto *lattice =
+        solver.lookupState<dataflow::IntegerDivisibilityLattice>(value);
+    if (!lattice || lattice->getValue().isUninitialized())
+      return false;
+    return lattice->getValue().getValue().udiv() % factor == 0;
+  };
+
+  // Complete every analysis query before replacing any operation. Building
+  // slices only inserts operations: existing integer definitions, loop bounds,
+  // and control flow stay unchanged throughout matching.
+  SmallVector<std::pair<Operation *, Operation *>> replacements;
+  SmallVector<Operation *> cleanedOperations;
+  OpBuilder::InsertionGuard guard(rewriter);
+  llvm::SmallPtrSet<Operation *, 16> seen;
+  for (Operation *op : operations) {
+    if (!seen.insert(op).second)
+      continue;
+    auto slice = dyn_cast<ExtractSliceOp>(op);
+    auto collapse = slice ? slice.getSource().getDefiningOp<CollapseShapeOp>()
+                          : CollapseShapeOp();
+    if (!collapse) {
+      cleanedOperations.push_back(op);
+      continue;
+    }
+    rewriter.setInsertionPoint(slice);
+    SmallVector<OpFoldResult> offsets, sizes, strides;
+    if (failed(getExpandedExtractSliceInfo(
+            rewriter, slice, collapse.getReassociationIndices(),
+            collapse.getSrc(), offsets, sizes, strides, isAligned))) {
+      cleanedOperations.push_back(op);
+      continue;
+    }
+    auto expandedSlice = ExtractSliceOp::create(
+        rewriter, slice.getLoc(), collapse.getSrc(), offsets, sizes, strides);
+    auto replacement = CollapseShapeOp::create(
+        rewriter, slice.getLoc(), slice.getType(), expandedSlice,
+        collapse.getReassociationIndices());
+    replacements.emplace_back(slice, replacement);
+    // Include the expanded slice so the greedy cleanup can visit its producer.
+    cleanedOperations.push_back(expandedSlice);
+    cleanedOperations.push_back(replacement);
+  }
+
+  // No lattice is queried after this point. The next cleanup phase constructs
+  // a solver for the IR containing any newly fused or replaced loops.
+  for (auto [slice, replacement] : replacements)
+    rewriter.replaceOp(slice, replacement);
+  return cleanedOperations;
 }
 
 void mlir::tensor::populateReassociativeReshapeFoldingPatterns(

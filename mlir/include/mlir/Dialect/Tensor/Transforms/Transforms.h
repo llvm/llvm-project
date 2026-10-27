@@ -70,6 +70,16 @@ void populateMergeConsecutiveInsertExtractSlicePatterns(
 /// tiling interface.
 void populateBubbleUpExtractSliceOpPatterns(RewritePatternSet &patterns);
 
+/// Bubble up the extract_slice operations in `operations` through their
+/// collapse_shape producers. Analyze integer alignment in `analysisScope` once,
+/// complete matching without modifying existing definitions, then replace the
+/// slices. Return the surviving operations and the inserted slice/reshape ops
+/// for subsequent cleanup. The analysis is not retained across invocations.
+FailureOr<SmallVector<Operation *>>
+bubbleUpExtractSlicesThroughCollapseShape(RewriterBase &rewriter,
+                                          Operation *analysisScope,
+                                          ArrayRef<Operation *> operations);
+
 /// Populates `patterns` with patterns that drop redundant tensor.insert_slice
 /// rank expansions.
 void populateDropRedundantInsertSliceRankExpansionPatterns(
@@ -161,15 +171,15 @@ getCollapsedExtractSliceInfo(OpBuilder &b, tensor::ExtractSliceOp sliceOp,
 /// the shape of `expandedValue`.
 ///
 /// This fails when the specified expansion cannot be represented by a valid
-/// ExtractSliceOp.
-LogicalResult
-getExpandedExtractSliceInfo(OpBuilder &b, tensor::ExtractSliceOp sliceOp,
-                            ArrayRef<ReassociationIndices> reassociation,
-                            Value expandedValue,
-                            SmallVectorImpl<OpFoldResult> &expandedOffsets,
-                            SmallVectorImpl<OpFoldResult> &expandedSizes,
-                            SmallVectorImpl<OpFoldResult> &expandedStrides);
-
+/// ExtractSliceOp. `isAligned` may provide additional divisibility proofs for
+/// offsets and must remain valid during this call.
+LogicalResult getExpandedExtractSliceInfo(
+    OpBuilder &b, tensor::ExtractSliceOp sliceOp,
+    ArrayRef<ReassociationIndices> reassociation, Value expandedValue,
+    SmallVectorImpl<OpFoldResult> &expandedOffsets,
+    SmallVectorImpl<OpFoldResult> &expandedSizes,
+    SmallVectorImpl<OpFoldResult> &expandedStrides,
+    llvm::function_ref<bool(Value, int64_t)> isAligned = nullptr);
 } // namespace tensor
 } // namespace mlir
 

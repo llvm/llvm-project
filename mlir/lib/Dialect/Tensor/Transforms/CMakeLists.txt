@@ -20,6 +20,7 @@ add_mlir_dialect_library(MLIRTensorTransforms
   MLIRTensorTransformsIncGen
 
   LINK_LIBS PUBLIC
+  MLIRAnalysis
   MLIRAffineDialect
   MLIRAffineTransforms
   MLIRAffineUtils
