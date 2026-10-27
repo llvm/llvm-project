@@ -62,6 +62,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/IntegerDivision.h"
@@ -314,6 +315,7 @@ class AGXCodeGenPrepare : public FunctionPass {
   bool fenceHostCoherentAccesses(Function &F);
   bool useBlockBarriers(Function &F, const AGXSubtarget &ST);
   bool expandMath(Function &F, const AGXSubtarget &ST);
+  bool combineUniformAtomics(Function &F, const TargetTransformInfo &TTI);
 
 public:
   static char ID;
@@ -982,6 +984,7 @@ bool AGXCodeGenPrepare::runOnFunction(Function &F) {
   Changed |= lowerMatrixFMA(F, ST);
   if (ST.hasQuadShuffleIndexMerge())
     Changed |= lowerDivergentShuffles(F, TTI);
+  Changed |= combineUniformAtomics(F, TTI);
   Changed |= lowerConstrainedFP(F);
   Changed |= expandMath(F, ST);
   Changed |= flushHalfDenormals(F);
@@ -991,6 +994,131 @@ bool AGXCodeGenPrepare::runOnFunction(Function &F) {
   Changed |= fenceHostCoherentAccesses(F);
   Changed |= useBlockBarriers(F, ST);
   Changed |= unifyExits(F);
+  return Changed;
+}
+
+static cl::opt<bool> AGXAtomicOptimizer(
+    "agx-atomic-optimizer", cl::init(false), cl::Hidden,
+    cl::desc("Combine the atomics of a SIMD-group to one uniform address into "
+             "one atomic of the group's reduction (as AMDGPUAtomicOptimizer)"));
+
+/// The AGX SIMD-group reduction operation (AGX::SIMDOp numbering of
+/// llvm.agx.simd.reduce) for an atomicrmw, or -1.
+static int simdOpFor(const AtomicRMWInst &RMW) {
+  bool Int32 = RMW.getType()->isIntegerTy(32);
+  switch (RMW.getOperation()) {
+  case AtomicRMWInst::Add:
+  case AtomicRMWInst::Sub:
+    return Int32 ? 16 : -1;
+  case AtomicRMWInst::And:
+    return Int32 ? 0 : -1;
+  case AtomicRMWInst::Or:
+    return Int32 ? 2 : -1;
+  case AtomicRMWInst::Xor:
+    return Int32 ? 4 : -1;
+  case AtomicRMWInst::Min:
+    return Int32 ? 20 : -1;
+  case AtomicRMWInst::Max:
+    return Int32 ? 22 : -1;
+  case AtomicRMWInst::UMin:
+    return Int32 ? 28 : -1;
+  case AtomicRMWInst::UMax:
+    return Int32 ? 30 : -1;
+  default:
+    // Not fadd: a reduction rounds and flushes denormals unlike the atomic
+    // (PTX-formalization atom-f32-ftz).
+    return -1;
+  }
+}
+
+/// Atomics of every active thread of a SIMD-group to one (uniform) address
+/// become one atomic, done by the first active thread, of the reduction of
+/// their operands; the others' results are rebuilt from the old value and an
+/// exclusive scan (only for add and sub, which have one). 32-bit integers. Same-address
+/// atomics serialize in the memory system, which agx_cost does not model:
+/// off by default until hardware measurements decide it (EXPERIMENTS.md).
+bool AGXCodeGenPrepare::combineUniformAtomics(Function &F,
+                                              const TargetTransformInfo &TTI) {
+  if (!AGXAtomicOptimizer)
+    return false;
+  SmallVector<AtomicRMWInst *, 8> Candidates;
+  for (Instruction &I : instructions(F))
+    if (auto *RMW = dyn_cast<AtomicRMWInst>(&I))
+      if (!RMW->isVolatile() && simdOpFor(*RMW) >= 0)
+        Candidates.push_back(RMW);
+  if (Candidates.empty())
+    return false;
+  DominatorTree DT(F);
+  CycleInfo CI;
+  CI.compute(F);
+  UniformityInfo UI(DT, CI, &TTI);
+  UI.compute();
+
+  bool Changed = false;
+  for (AtomicRMWInst *RMW : Candidates) {
+    Value *Ptr = RMW->getPointerOperand();
+    if (UI.isDivergentAtUse(RMW->getOperandUse(AtomicRMWInst::getPointerOperandIndex())))
+      continue;
+    AtomicRMWInst::BinOp Op = RMW->getOperation();
+    bool Scan = Op == AtomicRMWInst::Add || Op == AtomicRMWInst::Sub;
+    if (!RMW->use_empty() && !Scan)
+      continue;
+    Type *Ty = RMW->getType();
+    Value *V = RMW->getValOperand();
+    int HWOp = simdOpFor(*RMW);
+    IRBuilder<> B(RMW);
+    Value *Total, *Before = nullptr;
+    // From the ballot of the active threads (the active-thread special
+    // registers disagree with it in agx_run).
+    Value *Ballot = B.CreateIntrinsic(Intrinsic::agx_simd_ballot,
+                                      ArrayRef<Type *>(), {B.getTrue()});
+    Value *Lane = B.CreateIntrinsic(Intrinsic::agx_thread_index_in_simdgroup,
+                                    ArrayRef<Type *>(), ArrayRef<Value *>());
+    Value *Active =
+        B.CreateIntrinsic(Intrinsic::ctpop, {B.getInt32Ty()}, {Ballot});
+    Value *Below = B.CreateAnd(
+        Ballot, B.CreateSub(B.CreateShl(B.getInt32(1), Lane), B.getInt32(1)));
+    Value *Index =
+        B.CreateIntrinsic(Intrinsic::ctpop, {B.getInt32Ty()}, {Below});
+    if (!UI.isDivergentAtUse(RMW->getOperandUse(1)) && Ty->isIntegerTy()) {
+      // A uniform operand: n times it for add and sub, itself otherwise.
+      bool Sum = Op == AtomicRMWInst::Add || Op == AtomicRMWInst::Sub;
+      Total = Sum ? B.CreateMul(V, Active) : V;
+      if (Sum && !RMW->use_empty())
+        Before = B.CreateMul(V, Index);
+    } else {
+      Total = B.CreateIntrinsic(Intrinsic::agx_simd_reduce, {Ty},
+                                {V, B.getInt32(HWOp)});
+      if (!RMW->use_empty())
+        Before = B.CreateIntrinsic(Intrinsic::agx_simd_prefix, {Ty},
+                                   {V, B.getInt32(HWOp)});
+    }
+    Value *First = B.CreateICmpEQ(Index, B.getInt32(0));
+    Instruction *Then = SplitBlockAndInsertIfThen(First, RMW, false);
+    BasicBlock *ThenBB = Then->getParent(), *Tail = RMW->getParent();
+    B.SetInsertPoint(Then);
+    AtomicRMWInst *One = B.CreateAtomicRMW(Op, Ptr, Total, RMW->getAlign(),
+                                           RMW->getOrdering(),
+                                           RMW->getSyncScopeID());
+    One->setVolatile(false);
+    if (!RMW->use_empty()) {
+      B.SetInsertPoint(RMW);
+      PHINode *Old = B.CreatePHI(Ty, 2);
+      Old->addIncoming(One, ThenBB);
+      Old->addIncoming(PoisonValue::get(Ty), ThenBB->getSinglePredecessor());
+      // The first active thread's lane: the lowest set bit of the ballot.
+      Value *FirstLane = B.CreateIntrinsic(Intrinsic::cttz, {B.getInt32Ty()},
+                                           {Ballot, B.getTrue()});
+      Value *Base = B.CreateIntrinsic(Intrinsic::agx_simd_shuffle, {Ty},
+                                      {Old, FirstLane});
+      Value *Result = Op == AtomicRMWInst::Sub ? B.CreateSub(Base, Before)
+                                               : B.CreateAdd(Base, Before);
+      RMW->replaceAllUsesWith(Result);
+    }
+    (void)Tail;
+    RMW->eraseFromParent();
+    Changed = true;
+  }
   return Changed;
 }
 

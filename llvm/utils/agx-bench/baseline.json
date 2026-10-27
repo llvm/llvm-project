@@ -95,6 +95,30 @@
   "uniform_halves": 18,
   "waits": 2
  },
+ "cuda_compact.ll:compact:agx-g13g": {
+  "bytes": 136,
+  "cycles": 2529.9,
+  "gprs": 6,
+  "groups": 96,
+  "instructions": 24,
+  "launch_inputs": true,
+  "tg_bytes": 0,
+  "tput": 77.5,
+  "uniform_halves": 20,
+  "waits": 2
+ },
+ "cuda_compact.ll:compact:agx-g14c": {
+  "bytes": 136,
+  "cycles": 2529.9,
+  "gprs": 6,
+  "groups": 96,
+  "instructions": 24,
+  "launch_inputs": true,
+  "tg_bytes": 0,
+  "tput": 77.5,
+  "uniform_halves": 20,
+  "waits": 2
+ },
  "cuda_conv3x3.ll:conv3x3:agx-g13g": {
   "bytes": 1328,
   "cycles": 47450.8,
