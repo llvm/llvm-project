@@ -26,8 +26,11 @@ def main():
     with tempfile.TemporaryDirectory() as tmp:
         ll = os.path.join(tmp, "soft.ll")
         subprocess.run([a.clang, "--target=x86_64-unknown-linux-gnu", "-O2", "-fno-vectorize",
-                        "-fno-slp-vectorize", "-fno-unroll-loops", "-ffreestanding", "-fno-builtin",
-                        "-fno-asynchronous-unwind-tables", "-fno-stack-protector", "-S", "-emit-llvm",
+                        "-fno-slp-vectorize", "-ffreestanding", "-fno-builtin", "-fno-math-errno",
+                        "-fno-asynchronous-unwind-tables", "-fno-stack-protector",
+                        # Branch free: if-convert every special case (soft_f64.c).
+                        "-mllvm", "-phi-node-folding-threshold=1000",
+                        "-mllvm", "-two-entry-phi-node-folding-threshold=1000", "-S", "-emit-llvm",
                         os.path.join(HERE, "soft_f64.c"), "-o", ll], check=True)
         ir = open(ll).read()
         code = "\n".join(l for l in ir.splitlines() if not l.startswith("target "))

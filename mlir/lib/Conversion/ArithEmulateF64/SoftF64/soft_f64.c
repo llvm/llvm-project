@@ -12,6 +12,12 @@
 // integers, which AIR does not have). A NaN result is the default quiet NaN
 // 0x7ff8000000000000 unless an operand NaN is propagated (quieted).
 //
+// The functions are branch free where it is cheap: each computes the result
+// for finite nonzero operands whatever the operands are, then selects the
+// result of the special cases. On a GPU a branch that every lane skips still
+// costs more than the few instructions it guards. Shift amounts stay in range
+// on every path.
+//
 // gen_soft_f64.sh compiles this file to LLVM IR and imports it as the MLIR in
 // SoftF64.inc; test_soft_f64.c checks it against the host's double arithmetic.
 //
@@ -32,7 +38,18 @@ typedef int i32;
 #define API
 #define LOCAL static __attribute__((always_inline)) inline
 
-LOCAL int clz64(u64 x) { return x ? __builtin_clzll(x) : 64; }
+// Leading zeros of a nonzero x (of x | 1 otherwise).
+LOCAL int clz64(u64 x) { return __builtin_clzll(x | 1); }
+
+// x >> n and x << n for any n >= 0.
+LOCAL u64 lshr(u64 x, int n) { return n < 64 ? x >> (n & 63) : 0; }
+LOCAL u64 shl(u64 x, int n) { return n < 64 ? x << (n & 63) : 0; }
+
+// x >> n for any n >= 0, with the bits shifted out ORed into bit 0 (sticky).
+LOCAL u64 shr_sticky64(u64 x, int n) {
+  u64 out = n == 0 ? 0 : n < 64 ? x << ((64 - n) & 63) : x;
+  return lshr(x, n) | (out != 0);
+}
 
 // A 128-bit unsigned value.
 typedef struct {
@@ -49,35 +66,32 @@ LOCAL u128 mul64(u64 a, u64 b) {
   return r;
 }
 
-// x >> n (0 <= n), with the bits shifted out ORed into bit 0 (sticky).
+// x >> n for any n >= 0, with the bits shifted out ORed into bit 0 (sticky).
 LOCAL u128 shr_sticky(u128 x, int n) {
+  int m = n & 63;
+  u64 lo_out = m ? x.lo << (64 - m) : 0; // n < 64: lo's bits shifted out
+  u64 cross = m ? x.hi << (64 - m) : 0;
   u128 r;
-  if (n == 0)
-    return x;
   if (n < 64) {
-    u64 out = x.lo << (64 - n);
-    r.lo = (x.lo >> n) | (x.hi << (64 - n)) | (out != 0);
-    r.hi = x.hi >> n;
-  } else if (n < 128) {
-    u64 out = x.lo | (n > 64 ? x.hi << (128 - n) : 0);
-    r.lo = (n == 64 ? x.hi : x.hi >> (n - 64)) | (out != 0);
-    r.hi = 0;
+    r.lo = (x.lo >> m) | cross | (lo_out != 0);
+    r.hi = x.hi >> m;
   } else {
-    r.lo = (x.hi | x.lo) != 0;
+    u64 out = n < 128 ? x.lo | cross : x.lo | x.hi;
+    r.lo = (n < 128 ? x.hi >> m : 0) | (out != 0);
     r.hi = 0;
   }
   return r;
 }
 
+// x << n for 0 <= n < 128.
 LOCAL u128 shl128(u128 x, int n) {
+  int m = n & 63;
   u128 r;
-  if (n == 0)
-    return x;
   if (n < 64) {
-    r.hi = (x.hi << n) | (x.lo >> (64 - n));
-    r.lo = x.lo << n;
+    r.hi = (x.hi << m) | (m ? x.lo >> (64 - m) : 0);
+    r.lo = x.lo << m;
   } else {
-    r.hi = x.lo << (n - 64);
+    r.hi = x.lo << m;
     r.lo = 0;
   }
   return r;
@@ -95,88 +109,53 @@ LOCAL u64 nan2(u64 a, u64 b) { return (is_nan(a) ? a : b) | QUIET; }
 // result), to nearest even. The low 10 bits are guard bits; sticky
 // information must already be ORed into bit 0.
 LOCAL u64 round_pack(u64 sign, i32 exp, u64 sig) {
-  if (sig == 0)
-    return sign;
   // Normalize: leading one at bit 62.
   int lz = clz64(sig) - 1;
-  sig <<= lz;
+  u64 s = sig << lz;
   exp -= lz;
-  if (exp <= 0) {
-    // Denormal (or underflow to zero): shift right with sticky.
-    int sh = 1 - exp;
-    if (sh > 63)
-      sig = sig != 0;
-    else
-      sig = (sig >> sh) | ((sig << (64 - sh)) != 0);
-    exp = 0;
-  }
-  u64 rem = sig & 0x3ff, frac = sig >> 10;
-  if (rem > 0x200 || (rem == 0x200 && (frac & 1)))
-    frac++;
+  // Denormal (or underflow to zero): shift right with sticky.
+  int den = exp <= 0;
+  s = shr_sticky64(s, den ? 1 - exp : 0);
+  exp = den ? 0 : exp;
+  u64 rem = s & 0x3ff, frac = s >> 10;
+  frac += (rem > 0x200) | ((rem == 0x200) & frac);
   // frac has the implicit bit at bit 52; a carry out of the significand
   // increments the exponent (and makes a denormal normal).
-  if (exp == 0)
-    return sign | frac; // implicit bit, if set, is exponent 1
-  u64 bits = ((u64)(exp - 1) << 52) + frac;
-  if (bits >= INF)
-    return sign | INF;
-  return sign | bits;
+  u64 bits = den ? frac : ((u64)(exp - 1) << 52) + frac;
+  bits = bits >= INF ? INF : bits;
+  return sig ? sign | bits : sign;
 }
 
 // The significand (with its implicit bit) and the exponent (as if normal) of a
-// finite nonzero value.
+// finite nonzero value; something for any other.
 LOCAL u64 unpack(u64 x, i32 *exp) {
   i32 e = (x >> 52) & 0x7ff;
-  u64 sig = x & FRAC;
-  if (e == 0) {
-    int sh = clz64(sig) - 11;
-    sig <<= sh;
-    e = 1 - sh;
-  } else {
-    sig |= IMPLICIT;
-  }
-  *exp = e;
-  return sig;
+  u64 frac = x & FRAC;
+  int den = e == 0;
+  int sh = den ? clz64(frac) - 11 : 0;
+  *exp = den ? 1 - sh : e;
+  return (den ? frac : frac | IMPLICIT) << sh;
 }
 
 API u64 __air_f64_add(u64 a, u64 b) {
   u64 aa = a & ~SIGN, ba = b & ~SIGN;
-  if (aa >= INF || ba >= INF) {
-    if (is_nan(a) || is_nan(b))
-      return nan2(a, b);
-    if (aa == INF && ba == INF && ((a ^ b) & SIGN))
-      return DEFAULT_NAN;
-    return aa == INF ? a : b;
-  }
-  if (ba == 0)
-    return aa == 0 ? (a & b) : a;
-  if (aa == 0)
-    return b;
-  if (ba > aa) {
-    u64 t = a;
-    a = b;
-    b = t;
-  }
-  i32 ae, be;
-  u64 as = unpack(a, &ae), bs = unpack(b, &be);
+  // The larger magnitude first.
+  int swap = ba > aa;
+  u64 x = swap ? b : a, y = swap ? a : b;
+  i32 xe, ye;
+  u64 xs = unpack(x, &xe), ys = unpack(y, &ye);
   // Leading one at bit 61 (10 guard bits, one spare bit for the carry).
-  as <<= 9;
-  bs <<= 9;
-  int d = ae - be;
-  if (d > 63)
-    bs = bs != 0;
-  else if (d > 0)
-    bs = (bs >> d) | ((bs << (64 - d)) != 0);
-  u64 sign = a & SIGN;
-  u64 sum;
-  if ((a ^ b) & SIGN) {
-    sum = as - bs;
-    if (sum == 0)
-      return 0;
-  } else {
-    sum = as + bs;
-  }
-  return round_pack(sign, ae + 1, sum);
+  xs <<= 9;
+  ys = shr_sticky64(ys << 9, xe - ye);
+  int sub = ((a ^ b) & SIGN) != 0;
+  u64 sum = sub ? xs - ys : xs + ys;
+  u64 r = round_pack(x & SIGN, xe + 1, sum);
+  r = sum == 0 ? 0 : r; // exact cancellation is +0
+  r = aa == 0 ? b : r;
+  r = ba == 0 ? (aa == 0 ? a & b : a) : r;
+  u64 inf = ((aa == INF) & (ba == INF) & sub) ? DEFAULT_NAN : aa == INF ? a : b;
+  inf = (is_nan(a) | is_nan(b)) ? nan2(a, b) : inf;
+  return ((aa >= INF) | (ba >= INF)) ? inf : r;
 }
 
 API u64 __air_f64_sub(u64 a, u64 b) {
@@ -186,341 +165,285 @@ API u64 __air_f64_sub(u64 a, u64 b) {
 API u64 __air_f64_mul(u64 a, u64 b) {
   u64 sign = (a ^ b) & SIGN;
   u64 aa = a & ~SIGN, ba = b & ~SIGN;
-  if (aa >= INF || ba >= INF) {
-    if (is_nan(a) || is_nan(b))
-      return nan2(a, b);
-    if (aa == 0 || ba == 0)
-      return DEFAULT_NAN;
-    return sign | INF;
-  }
-  if (aa == 0 || ba == 0)
-    return sign;
   i32 ae, be;
   u64 as = unpack(a, &ae), bs = unpack(b, &be);
   // 53 x 53 bits: the product has its leading one at bit 104 or 105.
   u128 p = mul64(as << 11, bs); // leading one at bit 115 or 116
   // Keep the top 63 bits, sticky the rest.
   u64 sig = (p.hi << 11) | (p.lo >> 53) | ((p.lo & ((1ULL << 53) - 1)) != 0);
-  // as = 1.x * 2^52, bs = 1.x * 2^52; product 2^104 * (as*bs): the leading
-  // one of sig is at bit 62 (product < 2) or 63 (product >= 2).
-  i32 exp = ae + be - 1023;
-  if (sig >> 63) {
-    sig = (sig >> 1) | (sig & 1);
-    exp++;
-  }
-  return round_pack(sign, exp, sig);
+  // The leading one of sig is at bit 62 (product < 2) or 63 (>= 2).
+  int carry = sig >> 63;
+  sig = carry ? (sig >> 1) | (sig & 1) : sig;
+  u64 r = round_pack(sign, ae + be - 1023 + carry, sig);
+  r = ((aa == 0) | (ba == 0)) ? sign : r;
+  u64 inf = ((aa == 0) | (ba == 0)) ? DEFAULT_NAN : sign | INF;
+  inf = (is_nan(a) | is_nan(b)) ? nan2(a, b) : inf;
+  return ((aa >= INF) | (ba >= INF)) ? inf : r;
 }
+
+// The low 64 bits of x >> n, for 0 < n < 128; signed shifts x.hi as an i64.
+LOCAL u64 hi_bits(u128 x, int n, int is_signed) {
+  if (n >= 64)
+    return is_signed ? (u64)((i64)x.hi >> (n - 64)) : x.hi >> (n - 64);
+  return (x.lo >> n) | (x.hi << (64 - n));
+}
+
+LOCAL u128 sub128(u128 x, u128 y) {
+  u128 r;
+  r.lo = x.lo - y.lo;
+  r.hi = x.hi - y.hi - (x.lo < y.lo);
+  return r;
+}
+
+// x * y for an unsigned x and a signed y.
+LOCAL u128 mul64_signed(u64 x, i64 y) {
+  u128 r = mul64(x, (u64)y);
+  r.hi -= y < 0 ? x : 0;
+  return r;
+}
+
+// An estimate below the exact value of e * 2^scale (e the result of an f32
+// operation within a few units of the last place), as an integer: lowered by
+// 2^-19 so that it is below.
+LOCAL u64 scaled_estimate(float e, float scale) {
+  return (u32)(e * (scale * (1.0f - 0x1p-19f)));
+}
+
+// The quotient and square root take a reciprocal (root) from an f32 estimate
+// to 2^-18 below the exact value, refined by two Newton steps (each squaring
+// the error and staying below) to two units, which the exact remainder
+// corrects.
 
 API u64 __air_f64_div(u64 a, u64 b) {
   u64 sign = (a ^ b) & SIGN;
   u64 aa = a & ~SIGN, ba = b & ~SIGN;
-  if (aa >= INF || ba >= INF) {
-    if (is_nan(a) || is_nan(b))
-      return nan2(a, b);
-    if (aa == INF && ba == INF)
-      return DEFAULT_NAN;
-    return aa == INF ? sign | INF : sign;
-  }
-  if (ba == 0)
-    return aa == 0 ? DEFAULT_NAN : sign | INF;
-  if (aa == 0)
-    return sign;
   i32 ae, be;
-  u64 as = unpack(a, &ae), bs = unpack(b, &be);
-  i32 exp = ae - be + 1023;
-  if (as < bs) {
-    as <<= 1;
-    exp--;
+  u64 n = unpack(a, &ae), d = unpack(b, &be);
+  // A significand for a zero divisor too: no out of range conversion.
+  d = ba == 0 ? IMPLICIT : d;
+  int less = n < d;
+  n <<= less;
+  i32 exp = ae - be + 1023 - less;
+  // q = floor(n * 2^54 / d), 55 bits. y0 ~ 2^82 / d, z ~ 2^115 / d to 2^-36,
+  // z2 to 2^-60.
+  u64 y0 = scaled_estimate(1.0f / (float)(u32)(d >> 29), 0x1p53f);
+  u64 e0 = -(d * y0); // 2^82 - d * y0
+  u64 z = (y0 << 33) + hi_bits(mul64(y0, e0), 49, 0);
+  u128 two115 = {1ULL << 51, 0};
+  u128 e1 = sub128(two115, mul64(d, z));
+  u64 z2 = z + hi_bits(mul64(z, hi_bits(e1, 16, 0)), 99, 0);
+  u64 q = hi_bits(mul64(n, z2), 61, 0);
+  u64 r = (n << 54) - q * d;
+  for (int i = 0; i < 2; ++i) {
+    int ge = r >= d;
+    q += ge;
+    r -= ge ? d : 0;
   }
-  // 63 quotient bits by restoring division, leading one at bit 62.
-  u64 q = 0, r = as;
-  for (int i = 0; i < 63; ++i) {
-    q <<= 1;
-    if (r >= bs) {
-      r -= bs;
-      q |= 1;
-    }
-    r <<= 1;
-  }
-  return round_pack(sign, exp, q | (r != 0));
+  // Leading one at bit 62, the remainder sticky below the guard bits.
+  u64 res = round_pack(sign, exp, (q << 8) | ((u64)(r != 0) << 7));
+  res = ((aa == 0) | (ba == INF)) ? sign : res;
+  res = ((aa == INF) | (ba == 0)) ? sign | INF : res;
+  int invalid = ((aa == 0) & (ba == 0)) | ((aa == INF) & (ba == INF));
+  res = invalid ? DEFAULT_NAN : res;
+  return (is_nan(a) | is_nan(b)) ? nan2(a, b) : res;
 }
 
 API u64 __air_f64_sqrt(u64 a) {
-  if (is_nan(a))
-    return a | QUIET;
-  if ((a & ~SIGN) == 0)
-    return a;
-  if (a & SIGN)
-    return DEFAULT_NAN;
-  if (a == INF)
-    return a;
   i32 e;
-  u64 m = unpack(a, &e); // m in [2^52, 2^53)
-  i32 u = e - 1023;      // value = m * 2^(u - 52)
-  if (u & 1) {
-    m <<= 1;
-    u--;
+  u64 n = unpack(a, &e); // n in [2^52, 2^53)
+  n = (a & ~SIGN) == 0 ? IMPLICIT : n;
+  i32 u = e - 1023; // value = n * 2^(u - 52)
+  int odd = u & 1;
+  n <<= odd;
+  u -= odd;
+  // root = floor(sqrt(n * 2^56)), 55 bits. y0 ~ 2^57 / sqrt(n), y1 ~
+  // 2^89 / sqrt(n) to 2^-35, y2 to 2^-58.
+  u64 y0 = scaled_estimate(1.0f / __builtin_sqrtf((float)(u32)(n >> 30)),
+                           0x1p42f);
+  u128 two114 = {1ULL << 50, 0};
+  u128 d0 = sub128(two114, mul64(n, y0 * y0));
+  u64 y1 = (y0 << 32) +
+           hi_bits(mul64_signed(y0, (i64)hi_bits(d0, 40, 1)), 43, 1);
+  u128 d1 = sub128(two114, mul64(n, mul64(y1, y1).hi));
+  u64 y2 = y1 + hi_bits(mul64_signed(y1, (i64)hi_bits(d1, 18, 1)), 97, 1);
+  i64 root = (i64)hi_bits(mul64(n, y2), 61, 0);
+  i64 rem = (i64)((n << 56) - (u64)root * (u64)root);
+  for (int i = 0; i < 2; ++i) {
+    int neg = rem < 0;
+    rem += neg ? 2 * root - 1 : 0;
+    root -= neg;
   }
-  // q = floor(sqrt(m * 2^72)): 63 bits, leading one at bit 62; the input
-  // goes in two bits at a time, m first (27 pairs), then zeros.
-  u64 q = 0, r = 0;
-  for (int i = 0; i < 63; ++i) {
-    u64 pair = i < 27 ? (m >> (52 - 2 * i)) & 3 : 0;
-    r = (r << 2) | pair;
-    u64 t = (q << 2) | 1;
-    if (r >= t) {
-      r -= t;
-      q = (q << 1) | 1;
-    } else {
-      q <<= 1;
-    }
+  for (int i = 0; i < 2; ++i) {
+    int big = rem > 2 * root;
+    rem -= big ? 2 * root + 1 : 0;
+    root += big;
   }
-  // sqrt(m * 2^(u-52)) = q * 2^(u/2 - 62); biased: u/2 + 1023.
-  return round_pack(0, u / 2 + 1023, q | (r != 0));
+  // sqrt(n * 2^(u-52)) = root * 2^(u/2 - 54): leading one at bit 62 with
+  // the biased exponent u/2 + 1023.
+  u64 res =
+      round_pack(0, u / 2 + 1023, ((u64)root << 8) | ((u64)(rem != 0) << 7));
+  res = (((a & ~SIGN) == 0) | (a == INF)) ? a : res;
+  res = (a > SIGN) ? DEFAULT_NAN : res; // negative, not -0
+  return is_nan(a) ? a | QUIET : res;
 }
 
 API u64 __air_f64_fma(u64 a, u64 b, u64 c) {
-  u64 psign = (a ^ b) & SIGN;
+  u64 psign = (a ^ b) & SIGN, csign = c & SIGN;
   u64 aa = a & ~SIGN, ba = b & ~SIGN, ca = c & ~SIGN;
-  if (aa >= INF || ba >= INF || ca >= INF) {
-    if (is_nan(a) || is_nan(b))
-      return nan2(a, b);
-    if ((aa == INF && ba == 0) || (ba == INF && aa == 0))
-      return DEFAULT_NAN;
-    if (is_nan(c))
-      return c | QUIET;
-    if (aa == INF || ba == INF) {
-      if (ca == INF && ((psign ^ c) & SIGN))
-        return DEFAULT_NAN;
-      return psign | INF;
-    }
-    return c;
-  }
-  if (aa == 0 || ba == 0) {
-    // The exact product is a signed zero.
-    // +0 + -0 is +0 when rounding to nearest.
-    if (ca == 0)
-      return psign & c;
-    return c;
-  }
-  i32 ae, be;
-  u64 as = unpack(a, &ae), bs = unpack(b, &be);
+  i32 ae, be, ce;
+  u64 as = unpack(a, &ae), bs = unpack(b, &be), cs = unpack(c, &ce);
   // Values are X * 2^(E - 1148) for the 128-bit X and exponent E below.
   // Product: 106 bits, leading one at bit 104 or 105; moved to bit 125 or
-  // 126 (the top bit stays clear for the sum's carry).
+  // 126 (the top bit stays clear for the sum's carry), then to 126 for both
+  // terms, so that the larger exponent is the larger magnitude.
   u128 p = shl128(mul64(as, bs), 21);
-  i32 pe = ae + be - 1023;
-  // Leading one at bit 126 for both terms, so that the larger exponent is the
-  // larger magnitude.
-  if (!(p.hi >> 62)) {
-    p = shl128(p, 1);
-    pe--;
-  }
+  int low = !(p.hi >> 62);
+  p = shl128(p, low);
+  i32 pe = ae + be - 1023 - low;
+  // A zero addend is a term far below the product.
+  u128 cv = {ca == 0 ? 0 : cs << 10, 0};
+  ce = ca == 0 ? pe - 256 : ce - 1;
+  csign = ca == 0 ? psign : csign;
+  // The larger term in p.
+  int swap = (ce > pe) | ((ce == pe) & ((cv.hi > p.hi) |
+                                        ((cv.hi == p.hi) & (cv.lo > p.lo))));
+  u128 t = p;
+  p.hi = swap ? cv.hi : p.hi;
+  p.lo = swap ? cv.lo : p.lo;
+  cv.hi = swap ? t.hi : cv.hi;
+  cv.lo = swap ? t.lo : cv.lo;
+  i32 hi_e = swap ? ce : pe, lo_e = swap ? pe : ce;
+  u64 sign = swap ? csign : psign;
+  cv = shr_sticky(cv, hi_e - lo_e);
   u128 s;
-  i32 se;
-  u64 csign = c & SIGN;
-  if (ca == 0) {
-    s = p;
-    se = pe;
-    csign = psign;
+  if (psign == csign) {
+    s.lo = p.lo + cv.lo;
+    s.hi = p.hi + cv.hi + (s.lo < p.lo);
   } else {
-    i32 ce;
-    u64 cs = unpack(c, &ce);
-    u128 cv; // leading one at bit 126
-    cv.hi = cs << 10;
-    cv.lo = 0;
-    ce -= 1;
-    // Align to the larger exponent.
-    if (ce > pe || (ce == pe && (cv.hi > p.hi || (cv.hi == p.hi && cv.lo > p.lo)))) {
-      // c dominates: swap roles.
-      u128 t = p;
-      p = cv;
-      cv = t;
-      i32 te = pe;
-      pe = ce;
-      ce = te;
-      u64 ts = psign;
-      psign = csign;
-      csign = ts;
-    }
-    cv = shr_sticky(cv, pe - ce);
-    if (psign == csign) {
-      s.lo = p.lo + cv.lo;
-      s.hi = p.hi + cv.hi + (s.lo < p.lo);
-    } else {
-      s.lo = p.lo - cv.lo;
-      s.hi = p.hi - cv.hi - (p.lo < cv.lo);
-      if ((s.hi | s.lo) == 0)
-        return 0;
-    }
-    se = pe;
+    s.lo = p.lo - cv.lo;
+    s.hi = p.hi - cv.hi - (p.lo < cv.lo);
   }
-  // Normalize the leading one to bit 126 of s (s.hi bit 62), keep s.hi with
-  // the rest as sticky.
+  // The leading one to bit 126 of s (s.hi bit 62); a carry put it at 127.
   int lz = clz128(s) - 1;
-  i32 exp = se + 1 - lz;
-  if (lz > 0)
-    s = shl128(s, lz);
-  else if (lz < 0)
-    s = shr_sticky(s, -lz);
-  return round_pack(psign, exp, s.hi | (s.lo != 0));
+  i32 exp = hi_e + 1 - lz;
+  s = lz < 0 ? shr_sticky(s, 1) : shl128(s, lz & 127);
+  u64 r = round_pack(sign, exp, s.hi | (s.lo != 0));
+  r = (s.hi | s.lo) == 0 ? 0 : r; // exact cancellation is +0
+  // A zero product: the exact result is the addend (+0 + -0 is +0).
+  r = ((aa == 0) | (ba == 0)) ? (ca == 0 ? psign & c : c) : r;
+  u64 inf = c;
+  inf = ((aa == INF) | (ba == INF))
+            ? (((ca == INF) & (psign != csign)) ? DEFAULT_NAN : psign | INF)
+            : inf;
+  inf = is_nan(c) ? c | QUIET : inf;
+  int invalid = ((aa == INF) & (ba == 0)) | ((ba == INF) & (aa == 0));
+  inf = invalid ? DEFAULT_NAN : inf;
+  inf = (is_nan(a) | is_nan(b)) ? nan2(a, b) : inf;
+  return ((aa >= INF) | (ba >= INF) | (ca >= INF)) ? inf : r;
 }
 
 // Comparisons of non-NaN values; NaN handling is the caller's.
-API i32 __air_f64_unord(u64 a, u64 b) { return is_nan(a) || is_nan(b); }
+API i32 __air_f64_unord(u64 a, u64 b) { return is_nan(a) | is_nan(b); }
 
 API i32 __air_f64_eq(u64 a, u64 b) {
-  if (is_nan(a) || is_nan(b))
-    return 0;
-  return a == b || ((a | b) & ~SIGN) == 0;
+  return !(is_nan(a) | is_nan(b)) & ((a == b) | (((a | b) & ~SIGN) == 0));
 }
 
 API i32 __air_f64_lt(u64 a, u64 b) {
-  if (is_nan(a) || is_nan(b))
-    return 0;
-  if (((a | b) & ~SIGN) == 0)
-    return 0;
-  if ((a & b) & SIGN)
-    return a > b; // both negative
-  if (a & SIGN)
-    return 1;
-  if (b & SIGN)
-    return 0;
-  return a < b;
-}
-
-API u64 __air_f64_from_i64(i64 x) {
-  if (x == 0)
-    return 0;
-  u64 sign = x < 0 ? SIGN : 0;
-  u64 m = x < 0 ? (u64)0 - (u64)x : (u64)x;
-  // m = value; leading one placed at bit 62 by round_pack, exponent of bit
-  // 62 is 62 + 1023 + 10 - 10.
-  if (m >> 63)
-    return round_pack(sign, 1023 + 63, (m >> 1) | (m & 1));
-  return round_pack(sign, 1023 + 62, m);
+  // Ordered as sign-magnitude integers: both negative compare reversed.
+  int lt = (a & b & SIGN) ? a > b : (i64)a < (i64)b;
+  return !(is_nan(a) | is_nan(b)) & (((a | b) & ~SIGN) != 0) & lt;
 }
 
 API u64 __air_f64_from_u64(u64 m) {
-  if (m == 0)
-    return 0;
-  if (m >> 63)
-    return round_pack(0, 1023 + 63, (m >> 1) | (m & 1));
-  return round_pack(0, 1023 + 62, m);
+  // The leading one at bit 62 for round_pack (bit 63 shifted, sticky).
+  int top = m >> 63;
+  return round_pack(0, 1023 + 62 + top, top ? (m >> 1) | (m & 1) : m);
+}
+
+API u64 __air_f64_from_i64(i64 x) {
+  u64 sign = x < 0 ? SIGN : 0;
+  u64 m = x < 0 ? (u64)0 - (u64)x : (u64)x;
+  return __air_f64_from_u64(m) | sign;
 }
 
 // Truncation toward zero, saturating, NaN to 0.
-API i64 __air_f64_to_i64(u64 a) {
-  if (is_nan(a))
-    return 0;
+API u64 __air_f64_to_u64(u64 a) {
   i32 e = (a >> 52) & 0x7ff;
-  int neg = (a & SIGN) != 0;
-  if (e < 1023)
-    return 0;
-  if (e >= 1023 + 63)
-    return neg ? (i64)SIGN : (i64)(~SIGN);
   u64 m = (a & FRAC) | IMPLICIT;
   i32 sh = e - 1023 - 52;
-  u64 v = sh >= 0 ? m << sh : m >> -sh;
-  return neg ? -(i64)v : (i64)v;
+  u64 v = sh >= 0 ? shl(m, sh) : lshr(m, -sh);
+  v = e >= 1023 + 64 ? ~0ULL : v;
+  return (is_nan(a) | (a >= SIGN) | (e < 1023)) ? 0 : v;
 }
 
-API u64 __air_f64_to_u64(u64 a) {
-  if (is_nan(a) || (a & SIGN))
-    return 0;
+API i64 __air_f64_to_i64(u64 a) {
   i32 e = (a >> 52) & 0x7ff;
-  if (e < 1023)
-    return 0;
-  if (e >= 1023 + 64)
-    return ~0ULL;
-  u64 m = (a & FRAC) | IMPLICIT;
-  i32 sh = e - 1023 - 52;
-  return sh >= 0 ? m << sh : m >> -sh;
+  int neg = (a & SIGN) != 0;
+  u64 v = __air_f64_to_u64(a & ~SIGN);
+  i64 r = neg ? -(i64)v : (i64)v;
+  r = e >= 1023 + 63 ? (neg ? (i64)SIGN : (i64)~SIGN) : r;
+  return is_nan(a) ? 0 : r;
 }
 
 // float (as its bits) to double: exact.
 API u64 __air_f64_from_f32(u32 f) {
   u64 sign = (u64)(f >> 31) << 63;
-  u32 e = (f >> 23) & 0xff, m = f & 0x7fffff;
-  if (e == 0xff)
-    return sign | INF | ((u64)m << 29) | (m ? QUIET : 0);
-  if (e == 0) {
-    if (m == 0)
-      return sign;
-    int sh = clz64(m) - 40; // leading one to bit 23
-    m <<= sh;
-    e = 1 - sh;
-    m &= 0x7fffff;
-  }
-  return sign | ((u64)(e - 127 + 1023) << 52) | ((u64)m << 29);
+  u32 e = (f >> 23) & 0xff;
+  u64 m = f & 0x7fffff;
+  // A denormal's leading one to bit 23.
+  int sh = e == 0 ? clz64(m) - 40 : 0;
+  u64 r = sign | ((u64)(e - sh - 127 + 1023 + (e == 0)) << 52) |
+          (((m << sh) & 0x7fffff) << 29);
+  r = ((e == 0) & (m == 0)) ? sign : r;
+  return e == 0xff ? sign | INF | (m << 29) | (m ? QUIET : 0) : r;
 }
 
 // double to float (bits), rounded to nearest even, with denormals.
 API u32 __air_f64_to_f32(u64 a) {
   u32 sign = (u32)(a >> 32) & 0x80000000u;
   u64 aa = a & ~SIGN;
-  if (aa > INF)
-    return sign | 0x7fc00000u | (u32)((aa & FRAC) >> 29);
-  if (aa == INF)
-    return sign | 0x7f800000u;
-  if (aa == 0)
-    return sign;
   i32 e;
   u64 m = unpack(a, &e); // leading one at bit 52
   i32 fe = e - 1023 + 127;
-  if (fe >= 255)
-    return sign | 0x7f800000u;
-  // 24-bit result with the bits below as guard and sticky.
-  u64 keep;
-  int sh = 29; // 52 - 23
-  if (fe <= 0) {
-    sh += 1 - fe;
-    fe = 0;
-  }
-  if (sh > 63) // below half the smallest denormal
-    return sign;
-  keep = m >> sh;
+  // 24 bits kept, the bits below as guard and sticky; below half the
+  // smallest denormal everything goes.
+  int sh = 29 + (fe <= 0 ? 1 - fe : 0); // 52 - 23
+  sh = sh > 63 ? 63 : sh;
+  fe = fe <= 0 ? 0 : fe;
+  u64 keep = m >> sh;
   u64 rem = m & ((1ULL << sh) - 1), half = 1ULL << (sh - 1);
-  if (rem > half || (rem == half && (keep & 1)))
-    keep++;
-  if (fe == 0)
-    return sign | (u32)keep; // may round up to the smallest normal
-  u32 bits = ((u32)(fe - 1) << 23) + (u32)keep;
-  if (bits >= 0x7f800000u)
-    return sign | 0x7f800000u;
+  keep += (rem > half) | ((rem == half) & keep);
+  // A denormal may round up to the smallest normal.
+  u32 bits = fe == 0 ? (u32)keep : ((u32)(fe - 1) << 23) + (u32)keep;
+  bits = ((fe >= 255) | (bits >= 0x7f800000u)) ? 0x7f800000u : bits;
+  bits = aa == 0 ? 0 : bits;
+  bits = aa == INF ? 0x7f800000u : bits;
+  bits = aa > INF ? 0x7fc00000u | (u32)((aa & FRAC) >> 29) : bits;
   return sign | bits;
 }
 
 // Rounding to integral values.
 API u64 __air_f64_floor(u64 a) {
   i32 e = (a >> 52) & 0x7ff;
-  if (e >= 1023 + 52)
-    return is_nan(a) ? a | QUIET : a;
-  if (e < 1023) {
-    if ((a & ~SIGN) == 0)
-      return a;
-    return (a & SIGN) ? 0xbff0000000000000ULL : 0; // -1 or +0
-  }
-  u64 mask = FRAC >> (e - 1023);
-  if ((a & mask) == 0)
-    return a;
-  if (a & SIGN)
-    a += mask + 1; // away from zero; a carry goes into the exponent
-  return a & ~mask;
+  u64 mask = lshr(FRAC, e - 1023);
+  // Away from zero for a negative value; a carry goes into the exponent.
+  int up = ((a & mask) != 0) & (a >= SIGN);
+  u64 r = (up ? a + mask + 1 : a) & ~mask;
+  // |a| < 1: -1 or +0.
+  u64 small = (a & ~SIGN) == 0 ? a : (a & SIGN) ? 0xbff0000000000000ULL : 0;
+  r = e < 1023 ? small : r;
+  return e >= 1023 + 52 ? (is_nan(a) ? a | QUIET : a) : r;
 }
 
 API u64 __air_f64_roundeven(u64 a) {
   i32 e = (a >> 52) & 0x7ff;
-  if (e >= 1023 + 52)
-    return is_nan(a) ? a | QUIET : a;
-  if (e < 1022) // |a| < 0.5
-    return a & SIGN;
-  if (e == 1022) // 0.5 <= |a| < 1: 0 at 0.5, 1 above
-    return (a & SIGN) | ((a & FRAC) ? 0x3ff0000000000000ULL : 0);
-  u64 one = 1ULL << (1023 + 52 - e), mask = one - 1, half = one >> 1;
-  u64 rem = a & mask;
-  a &= ~mask;
-  if (rem > half || (rem == half && (a & one)))
-    a += one;
-  return a;
+  int sh = 1023 + 52 - e;
+  u64 one = shl(1, sh & 63), mask = one - 1, half = one >> 1;
+  u64 rem = a & mask, t = a & ~mask;
+  u64 r = t + ((rem > half) | ((rem == half) & ((t & one) != 0)) ? one : 0);
+  // 0.5 <= |a| < 1: 0 at 0.5, 1 above; |a| < 0.5: 0.
+  r = e == 1022 ? (a & SIGN) | ((a & FRAC) ? 0x3ff0000000000000ULL : 0) : r;
+  r = e < 1022 ? a & SIGN : r;
+  return e >= 1023 + 52 ? (is_nan(a) ? a | QUIET : a) : r;
 }
