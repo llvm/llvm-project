@@ -19,7 +19,6 @@
 #include "TGParser.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/Support/AutoConvert.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -39,10 +38,6 @@
 #include <string>
 #include <system_error>
 #include <utility>
-#ifdef __MVS__
-#include <fcntl.h>
-#include <unistd.h>
-#endif
 using namespace llvm;
 
 static cl::opt<std::string>
@@ -132,38 +127,11 @@ static int WriteOutput(const char *argv0, StringRef Filename,
         return 0;
   }
   std::error_code EC;
-#ifdef __MVS__
-  // On z/OS, text files default to IBM-1047, but generated files are UTF-8.
-  // If the file does not yet exist, create it and tag it as UTF-8 before
-  // ToolOutputFile opens it. Re-tagging after ToolOutputFile has opened the
-  // file does not work: the file is opened with O_TRUNC and has already been
-  // tagged as IBM-1047, and a subsequent F_SETTAG is silently ignored.
-  if (Filename != "-" && !sys::fs::exists(Filename)) {
-    int FD = ::open(Filename.str().c_str(), O_WRONLY | O_CREAT | O_EXCL, 0666);
-    if (FD == -1)
-      return reportError(argv0, "error creating " + Filename + ": " +
-                                    std::strerror(errno) + "\n");
-    EC = setzOSFileTag(FD, CCSID_UTF_8, /*IsText=*/true);
-    ::close(FD);
-    if (EC)
-      return reportError(argv0, "error tagging " + Filename + ": " +
-                                    EC.message() + "\n");
-  }
-#endif
-  ToolOutputFile OutFile(Filename, EC, sys::fs::OF_Text);
+  // Set the file tag to UTF-8 on z/OS, this is a no-op on other platforms
+  ToolOutputFile OutFile(Filename, EC, sys::fs::OF_Text, /*ForceUTF8=*/true);
   if (EC)
     return reportError(argv0, "error opening " + Filename + ": " +
                                   EC.message() + "\n");
-#ifdef __MVS__
-  // On z/OS, text files default to IBM-1047, but generated files are UTF-8.
-  // Tag the file as UTF-8 before any content is written.
-  if (Filename != "-") {
-    EC = setzOSFileTag(OutFile.os().get_fd(), CCSID_UTF_8, /*IsText=*/true);
-    if (EC)
-      return reportError(argv0, "error tagging " + Filename + ": " +
-                                    EC.message() + "\n");
-  }
-#endif
   OutFile.os() << Content;
   if (ErrorsPrinted == 0)
     OutFile.keep();

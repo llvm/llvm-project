@@ -54,8 +54,9 @@ class ToolOutputFile {
 public:
   /// This constructor's arguments are passed to raw_fd_ostream's
   /// constructor.
+  /// \param ForceUTF8 If true on z/OS, tags the file as UTF-8
   LLVM_ABI ToolOutputFile(StringRef Filename, std::error_code &EC,
-                          sys::fs::OpenFlags Flags);
+                          sys::fs::OpenFlags Flags, bool ForceUTF8 = false);
 
   LLVM_ABI ToolOutputFile(StringRef Filename, int FD);
 
