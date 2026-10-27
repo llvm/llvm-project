@@ -190,8 +190,7 @@ define half @test_constant_fold_sqrt_f16_0() nounwind {
 
 define float @test_constant_fold_sqrt_f32_0() nounwind {
 ; CHECK-LABEL: @test_constant_fold_sqrt_f32_0(
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.sqrt.f32(float 0.000000e+00) #[[ATTR12]]
-; CHECK-NEXT:    ret float [[VAL]]
+; CHECK-NEXT:    ret float 0.000000e+00
 ;
   %val = call float @llvm.amdgcn.sqrt.f32(float 0.0) nounwind readnone
   ret float %val
@@ -199,8 +198,7 @@ define float @test_constant_fold_sqrt_f32_0() nounwind {
 
 define double @test_constant_fold_sqrt_f64_0() nounwind {
 ; CHECK-LABEL: @test_constant_fold_sqrt_f64_0(
-; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.sqrt.f64(double 0.000000e+00) #[[ATTR12]]
-; CHECK-NEXT:    ret double [[VAL]]
+; CHECK-NEXT:    ret double 0.000000e+00
 ;
   %val = call double @llvm.amdgcn.sqrt.f64(double 0.0) nounwind readnone
   ret double %val

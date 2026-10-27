@@ -1942,6 +1942,7 @@ static bool canConstantFoldIntrinsic(Intrinsic::ID ID, bool IsStrictFP) {
   case Intrinsic::amdgcn_fma_legacy:
   case Intrinsic::amdgcn_fract:
   case Intrinsic::amdgcn_sin:
+  case Intrinsic::amdgcn_sqrt:
   // The intrinsics below depend on rounding mode in MXCSR.
   case Intrinsic::x86_sse_cvtss2si:
   case Intrinsic::x86_sse_cvtss2si64:
@@ -3115,6 +3116,13 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
                 nvvm::UnaryMathIntrinsicShouldFTZ(IntrinsicID)));
 
       // AMDGCN Intrinsics:
+      case Intrinsic::amdgcn_sqrt:
+        if (APF.isNegative())
+          return nullptr;
+        return ConstantFoldFP(sqrt, APF, Ty,
+                              Ty->isFloatTy() ? DenormalMode::getPositiveZero()
+                                              : DenormalMode::getIEEE());
+
       case Intrinsic::amdgcn_cos:
       case Intrinsic::amdgcn_sin: {
         double V = getValueAsDouble(Op);
