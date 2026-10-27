@@ -114,7 +114,7 @@ static cl::opt<bool, true> XPollyProcessUnprofitable(
 // that the loop vectorizer can handle them.
 bool polly::PollyVectorizeMetadata;
 static cl::opt<bool, true> XPollyVectorizeMetadata(
-    "polly-annotate-metadata-vectorize",
+    "polly-vectorize",
     cl::desc("Append vectorize enable/disable metadata from polly"),
     cl::location(PollyVectorizeMetadata), cl::init(false),
     cl::cat(PollyCategory));
