@@ -42,6 +42,7 @@ add_llvm_target(AGXCodeGen
   AGXLowerControlFlow.cpp
   AGXCheckedAccesses.cpp
   AGXLowerAIR.cpp
+  AGXRaiseToAIR.cpp
   AGXAliasAnalysis.cpp
   AGXLowerGenericAddresses.cpp
   AGXMachineFunctionInfo.cpp
@@ -63,12 +64,14 @@ add_llvm_target(AGXCodeGen
   AGXInfo
   AGXUtils
   Analysis
+  AsmParser
   AsmPrinter
   CodeGen
   CodeGenTypes
   Core
   IPO
   InstCombine
+  Linker
   MC
   Passes
   Scalar

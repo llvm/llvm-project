@@ -73,6 +73,21 @@ constexpr StringLiteral SimdgroupsPerThreadgroup =
 /// of that order. Metal-bound output does not carry it.
 constexpr StringLiteral AtomicOrderingMD = "agx.atomic.ordering";
 
+/// Hints: operations that AIR does not have but a consumer may (AGX), in a
+/// form every AIR consumer can still compile (llvm/docs/AIR/AIRHints.rst).
+///
+/// A function hint is a call to an internal, noinline function whose body
+/// computes the operation in AIR (its emulation) and that carries the
+/// attribute HintAttr naming the operation. A consumer that has the
+/// operation replaces the call with it; any other inlines the body.
+constexpr StringLiteral HintAttr = "air-hint";
+/// The prefix of the names of hint functions.
+constexpr StringLiteral HintPrefix = "__air_hint.";
+/// An address-space hint: pointers that may point to any memory (CUDA's and
+/// AGX's generic address space). A consumer without generic pointers treats
+/// them as device pointers.
+constexpr unsigned GenericHintAS = 4;
+
 } // namespace air
 } // namespace llvm
 

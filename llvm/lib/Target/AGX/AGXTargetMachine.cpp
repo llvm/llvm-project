@@ -184,6 +184,10 @@ void AGXTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
   PB.registerPipelineParsingCallback(
       [this](StringRef Name, ModulePassManager &MPM,
              ArrayRef<PassBuilder::PipelineElement>) {
+        if (Name == "agx-raise-to-air") {
+          MPM.addPass(AGXRaiseToAIRPass());
+          return true;
+        }
         if (Name != "agx-lower-air")
           return false;
         MPM.addPass(AGXLowerAIRPass(*this));

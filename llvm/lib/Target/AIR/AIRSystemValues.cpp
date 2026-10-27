@@ -337,9 +337,16 @@ static bool airSystemValues(Module &M) {
   // Emit !air.kernel metadata (always; skip if pre-baked).
   if (!M.getNamedMetadata(kNMDKernel)) {
     auto *KernelMD = M.getOrInsertNamedMetadata(kNMDKernel);
+    // Kernels are the functions marked "air-kernel" when the module marks
+    // any (as in AIRInlineNonKernel and AIRScalarArgsToConstantBuffers).
+    bool HaveKernelAttr = any_of(M, [](const Function &F) {
+      return !F.isDeclaration() && F.hasFnAttribute("air-kernel");
+    });
 
     for (Function &F : M) {
       if (F.isDeclaration())
+        continue;
+      if (HaveKernelAttr && !F.hasFnAttribute("air-kernel"))
         continue;
 
       bool IsCalled = false;

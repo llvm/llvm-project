@@ -106,6 +106,8 @@ public:
       return AGX::PRIVATE_ADDRESS;
     case air::AS::Constant:
       return AGX::CONSTANT_ADDRESS;
+    case air::GenericHintAS:
+      return AGX::GENERIC_ADDRESS;
     default:
       return AS;
     }
@@ -174,6 +176,7 @@ private:
   void passConstantBuffersByReference(AIRKernel &K, Function *NewF);
   void lowerMatrices(Function &F);
   void foldOrderedAtomics(Function &F);
+  void lowerHints();
   void lowerCalls();
   bool lowerCall(CallInst &CI, StringRef Name, Value *&Result);
   bool lowerAtomic(IRBuilder<> &B, CallInst &CI, StringRef Name,
@@ -287,7 +290,8 @@ static bool isAIRType(Type *T) {
   if (auto *IT = dyn_cast<IntegerType>(T))
     return is_contained({1u, 8u, 16u, 32u, 64u}, IT->getBitWidth());
   if (auto *PT = dyn_cast<PointerType>(T))
-    return PT->getAddressSpace() <= air::AS::Threadgroup;
+    return PT->getAddressSpace() <= air::AS::Threadgroup ||
+           PT->getAddressSpace() == air::GenericHintAS;
   return T->isHalfTy() || T->isBFloatTy() || T->isFloatTy() ||
          T->isVoidTy() || T->isLabelTy() || T->isMetadataTy() ||
          T->isTokenTy();
@@ -312,7 +316,10 @@ void LowerAIR::checkTypes() {
       auto Bad = [&](const Twine &What) {
         error(&F, What + " in " + F.getName() + " (AIR does not have it)");
       };
-      if (isa<AddrSpaceCastInst>(I)) {
+      // Only generic pointers (the address-space hint) are cast.
+      if (auto *ASC = dyn_cast<AddrSpaceCastInst>(&I);
+          ASC && ASC->getSrcAddressSpace() != air::GenericHintAS &&
+          ASC->getDestAddressSpace() != air::GenericHintAS) {
         Bad("an address space cast");
         break;
       }
@@ -447,6 +454,11 @@ Function *LowerAIR::newKernel(AIRKernel &K, AIRToAGXTypes &Types) {
   Function *NewF = Function::Create(FT, F.getLinkage(), F.getAddressSpace(),
                                     F.getName() + ".agx", &M);
   NewF->setCallingConv(CallingConv::AGX_KERNEL);
+  // The kernel's own function attributes (AGX ones from agx-raise-to-air:
+  // stack size, threadgroup size limits).
+  AttrBuilder FnAttrs(Ctx, F.getAttributes().getFnAttrs());
+  FnAttrs.removeAttribute("air-kernel");
+  NewF->addFnAttrs(FnAttrs);
   return NewF;
 }
 
@@ -1345,6 +1357,136 @@ void LowerAIR::foldOrderedAtomics(Function &F) {
   }
 }
 
+// A hint (llvm/IR/AIR.h) names its operation in its "air-hint" attribute:
+// "call:<function>|<doubles>[|<metadata string operand>...]" or
+// "inst:<opcode>[:<predicate>]|<doubles>", where <doubles> has a 'd' for the
+// result and each operand that is a double (carried as i64 bits in AIR). Each
+// call to the hint becomes that operation, and the hint's body (its AIR
+// emulation) goes away with the soft-f64 library it calls.
+static Value *nativeHint(IRBuilder<> &B, CallInst &CI, StringRef Key) {
+  Module &M = *CI.getModule();
+  LLVMContext &Ctx = M.getContext();
+  SmallVector<StringRef, 4> Parts;
+  Key.split(Parts, '|');
+  if (Parts.size() < 2 || Parts[1].size() != CI.arg_size() + 1)
+    return nullptr;
+  StringRef Op = Parts[0], Mask = Parts[1];
+  auto Ty = [&](Type *T, char C) {
+    return C == 'd' ? B.getDoubleTy() : T;
+  };
+  SmallVector<Value *, 4> Args;
+  for (auto [I, A] : enumerate(CI.args()))
+    Args.push_back(Mask[I + 1] == 'd' ? B.CreateBitCast(A, B.getDoubleTy())
+                                      : A.get());
+  Type *Ret = Ty(CI.getType(), Mask[0]);
+  Value *R = nullptr;
+  if (Op.consume_front("call:")) {
+    SmallVector<Type *, 6> Params;
+    for (Value *A : Args)
+      Params.push_back(A->getType());
+    for (StringRef MD : drop_begin(Parts, 2)) {
+      Args.push_back(MetadataAsValue::get(Ctx, MDString::get(Ctx, MD)));
+      Params.push_back(Type::getMetadataTy(Ctx));
+    }
+    FunctionCallee Fn =
+        M.getOrInsertFunction(Op, FunctionType::get(Ret, Params, false));
+    R = B.CreateCall(Fn, Args);
+  } else if (Op.consume_front("inst:")) {
+    auto [Name, Pred] = Op.split(':');
+    auto P = StringSwitch<CmpInst::Predicate>(Pred)
+                 .Case("false", CmpInst::FCMP_FALSE)
+                 .Case("oeq", CmpInst::FCMP_OEQ)
+                 .Case("ogt", CmpInst::FCMP_OGT)
+                 .Case("oge", CmpInst::FCMP_OGE)
+                 .Case("olt", CmpInst::FCMP_OLT)
+                 .Case("ole", CmpInst::FCMP_OLE)
+                 .Case("one", CmpInst::FCMP_ONE)
+                 .Case("ord", CmpInst::FCMP_ORD)
+                 .Case("uno", CmpInst::FCMP_UNO)
+                 .Case("ueq", CmpInst::FCMP_UEQ)
+                 .Case("ugt", CmpInst::FCMP_UGT)
+                 .Case("uge", CmpInst::FCMP_UGE)
+                 .Case("ult", CmpInst::FCMP_ULT)
+                 .Case("ule", CmpInst::FCMP_ULE)
+                 .Case("une", CmpInst::FCMP_UNE)
+                 .Case("true", CmpInst::FCMP_TRUE)
+                 .Default(CmpInst::BAD_FCMP_PREDICATE);
+    auto BinOp = StringSwitch<std::optional<Instruction::BinaryOps>>(Name)
+                     .Case("fadd", Instruction::FAdd)
+                     .Case("fsub", Instruction::FSub)
+                     .Case("fmul", Instruction::FMul)
+                     .Case("fdiv", Instruction::FDiv)
+                     .Case("frem", Instruction::FRem)
+                     .Default(std::nullopt);
+    auto Cast = StringSwitch<std::optional<Instruction::CastOps>>(Name)
+                    .Case("fptosi", Instruction::FPToSI)
+                    .Case("fptoui", Instruction::FPToUI)
+                    .Case("sitofp", Instruction::SIToFP)
+                    .Case("uitofp", Instruction::UIToFP)
+                    .Case("fpext", Instruction::FPExt)
+                    .Case("fptrunc", Instruction::FPTrunc)
+                    .Default(std::nullopt);
+    if (BinOp && Args.size() == 2)
+      R = B.CreateBinOp(*BinOp, Args[0], Args[1]);
+    else if (Name == "fneg" && Args.size() == 1)
+      R = B.CreateFNeg(Args[0]);
+    else if (Name == "fcmp" && P != CmpInst::BAD_FCMP_PREDICATE &&
+             Args.size() == 2)
+      R = B.CreateFCmp(P, Args[0], Args[1]);
+    else if (Cast && Args.size() == 1)
+      R = B.CreateCast(*Cast, Args[0], Ret);
+  }
+  if (!R)
+    return nullptr;
+  if (auto *I = dyn_cast<Instruction>(R))
+    I->copyMetadata(CI);
+  if (Mask[0] == 'd')
+    R = B.CreateBitCast(R, CI.getType());
+  return R;
+}
+
+void LowerAIR::lowerHints() {
+  bool Any = false;
+  for (Function &F : make_early_inc_range(M)) {
+    if (!F.hasFnAttribute(air::HintAttr))
+      continue;
+    Any = true;
+    StringRef Key = F.getFnAttribute(air::HintAttr).getValueAsString();
+    for (User *U : make_early_inc_range(F.users())) {
+      auto *CI = dyn_cast<CallInst>(U);
+      if (!CI || CI->getCalledFunction() != &F)
+        continue;
+      IRBuilder<> B(CI);
+      if (Value *R = nativeHint(B, *CI, Key)) {
+        if (!CI->getType()->isVoidTy()) {
+          R->takeName(CI);
+          CI->replaceAllUsesWith(R);
+        }
+        CI->eraseFromParent();
+        continue;
+      }
+      // Otherwise the hint's AIR emulation runs, inline (AGX has no calls).
+      InlineFunctionInfo IFI;
+      if (!InlineFunction(*CI, IFI).isSuccess())
+        error(CI->getFunction(), "cannot inline the AIR emulation of " + Key);
+    }
+    if (F.use_empty())
+      F.eraseFromParent();
+  }
+  if (!Any)
+    return;
+  // The soft-f64 library of the emulations, once nothing calls it.
+  for (bool Erased = true; Erased;) {
+    Erased = false;
+    for (Function &F : make_early_inc_range(M))
+      if (F.hasLocalLinkage() && F.getName().starts_with("__air_f64_") &&
+          F.use_empty()) {
+        F.eraseFromParent();
+        Erased = true;
+      }
+  }
+}
+
 void LowerAIR::lowerCalls() {
   for (Function &F : make_early_inc_range(M)) {
     if (!F.isDeclaration() || !F.getName().starts_with("air."))
@@ -1416,7 +1558,16 @@ bool LowerAIR::run() {
   for (AIRKernel &K : Kernels)
     KernelOf[K.F] = &K;
 
-  for (GlobalVariable &GV : M.globals()) {
+  // The module's own globals and functions: those created below already have
+  // AGX's types (AIR's generic hint space is AGX's constant space).
+  SmallVector<GlobalVariable *, 8> OldGlobals;
+  for (GlobalVariable &GV : M.globals())
+    OldGlobals.push_back(&GV);
+  SmallVector<Function *, 16> OldFunctions;
+  for (Function &F : M)
+    OldFunctions.push_back(&F);
+  for (GlobalVariable *GVP : OldGlobals) {
+    GlobalVariable &GV = *GVP;
     Type *T = Types.remapType(GV.getValueType());
     unsigned AS = AIRToAGXTypes::addrSpace(GV.getAddressSpace());
     if (T == GV.getValueType() && AS == GV.getAddressSpace())
@@ -1428,7 +1579,8 @@ bool LowerAIR::run() {
     VMap[&GV] = NewGV;
     Globals.push_back({&GV, NewGV});
   }
-  for (Function &F : make_early_inc_range(M)) {
+  for (Function *FP : OldFunctions) {
+    Function &F = *FP;
     if (AIRKernel *K = KernelOf.lookup(&F)) {
       Function *NewF = K->NewF = newKernel(*K, Types);
       VMap[&F] = NewF;
@@ -1503,6 +1655,7 @@ bool LowerAIR::run() {
     lowerMatrices(F);
     foldOrderedAtomics(F);
   }
+  lowerHints();
   lowerCalls();
   dropAIRMetadata();
   M.setTargetTriple(TM.getTargetTriple());
