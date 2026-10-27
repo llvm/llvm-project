@@ -5,7 +5,10 @@
 
 @constant_pointer_global = internal global i8 0
 
+@returned_function_pointer_alias = internal alias void (), ptr @returned_function_pointer_target
+
 declare i32 @read_other(ptr readonly)
+declare void @declared_function_pointer_target()
 
 define internal i32 @constant_fields(ptr readonly %descriptor) {
 ; COPY-LABEL: define internal i32 @constant_fields() {
@@ -1656,6 +1659,126 @@ entry:
 define internal i32 @indirect_call_target(i32 %value) addrspace(1) {
 entry:
   ret i32 %value
+}
+
+; Returning a propagated function pointer would add a reference edge to the
+; lazy call graph which argument promotion doesn't update
+define internal { ptr, i32 } @returned_function_pointer(ptr readonly %descriptor) {
+; COMMON-LABEL: define internal { ptr, i32 } @returned_function_pointer(
+; COMMON-SAME: ptr readonly [[DESCRIPTOR:%.*]]) {
+; COMMON-NEXT:  [[ENTRY:.*:]]
+; COMMON-NEXT:    [[FP:%.*]] = load ptr, ptr [[DESCRIPTOR]], align 8
+; COMMON-NEXT:    [[FIELD1_PTR:%.*]] = getelementptr i8, ptr [[DESCRIPTOR]], i64 8
+; COMMON-NEXT:    [[FIELD1:%.*]] = load i32, ptr [[FIELD1_PTR]], align 4
+; COMMON-NEXT:    [[FIELD2_PTR:%.*]] = getelementptr i8, ptr [[DESCRIPTOR]], i64 12
+; COMMON-NEXT:    [[FIELD2:%.*]] = load i32, ptr [[FIELD2_PTR]], align 4
+; COMMON-NEXT:    [[SUM:%.*]] = add i32 [[FIELD1]], [[FIELD2]]
+; COMMON-NEXT:    [[RESULT0:%.*]] = insertvalue { ptr, i32 } poison, ptr [[FP]], 0
+; COMMON-NEXT:    [[RESULT1:%.*]] = insertvalue { ptr, i32 } [[RESULT0]], i32 [[SUM]], 1
+; COMMON-NEXT:    ret { ptr, i32 } [[RESULT1]]
+;
+entry:
+  %fp = load ptr, ptr %descriptor, align 8
+  %field1.ptr = getelementptr i8, ptr %descriptor, i64 8
+  %field1 = load i32, ptr %field1.ptr, align 4
+  %field2.ptr = getelementptr i8, ptr %descriptor, i64 12
+  %field2 = load i32, ptr %field2.ptr, align 4
+  %sum = add i32 %field1, %field2
+  %result0 = insertvalue { ptr, i32 } poison, ptr %fp, 0
+  %result1 = insertvalue { ptr, i32 } %result0, i32 %sum, 1
+  ret { ptr, i32 } %result1
+}
+
+define { ptr, i32 } @returned_function_pointer_caller() {
+; COPY-LABEL: define { ptr, i32 } @returned_function_pointer_caller() {
+; COPY-NEXT:  [[ENTRY:.*:]]
+; COPY-NEXT:    [[DESCRIPTOR:%.*]] = alloca [16 x i8], align 8
+; COPY-NEXT:    store ptr @returned_function_pointer_alias, ptr [[DESCRIPTOR]], align 8
+; COPY-NEXT:    [[FIELD1_PTR:%.*]] = getelementptr i8, ptr [[DESCRIPTOR]], i64 8
+; COPY-NEXT:    store i32 1, ptr [[FIELD1_PTR]], align 4
+; COPY-NEXT:    [[FIELD2_PTR:%.*]] = getelementptr i8, ptr [[DESCRIPTOR]], i64 12
+; COPY-NEXT:    store i32 2, ptr [[FIELD2_PTR]], align 4
+; COPY-NEXT:    [[RESULT:%.*]] = call { ptr, i32 } @returned_function_pointer(ptr [[DESCRIPTOR]])
+; COPY-NEXT:    ret { ptr, i32 } [[RESULT]]
+;
+; FOLD-LABEL: define { ptr, i32 } @returned_function_pointer_caller() {
+; FOLD-NEXT:  [[ENTRY:.*:]]
+; FOLD-NEXT:    [[DESCRIPTOR:%.*]] = alloca [16 x i8], align 8
+; FOLD-NEXT:    store ptr @returned_function_pointer_alias, ptr [[DESCRIPTOR]], align 8
+; FOLD-NEXT:    [[FIELD1_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[DESCRIPTOR]], i64 8
+; FOLD-NEXT:    store i32 1, ptr [[FIELD1_PTR]], align 4
+; FOLD-NEXT:    [[FIELD2_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[DESCRIPTOR]], i64 12
+; FOLD-NEXT:    store i32 2, ptr [[FIELD2_PTR]], align 4
+; FOLD-NEXT:    [[RESULT:%.*]] = call { ptr, i32 } @returned_function_pointer(ptr nonnull [[DESCRIPTOR]])
+; FOLD-NEXT:    ret { ptr, i32 } [[RESULT]]
+;
+entry:
+  %descriptor = alloca [16 x i8], align 8
+  store ptr @returned_function_pointer_alias, ptr %descriptor, align 8
+  %field1.ptr = getelementptr i8, ptr %descriptor, i64 8
+  store i32 1, ptr %field1.ptr, align 4
+  %field2.ptr = getelementptr i8, ptr %descriptor, i64 12
+  store i32 2, ptr %field2.ptr, align 4
+  %result = call { ptr, i32 } @returned_function_pointer(ptr %descriptor)
+  ret { ptr, i32 } %result
+}
+
+define internal void @returned_function_pointer_target() {
+entry:
+  ret void
+}
+
+; Function declarations don't prevent constant propagation.
+define internal { ptr, i32 } @returned_declared_function_pointer(ptr readonly %descriptor) {
+; COPY-LABEL: define internal { ptr, i32 } @returned_declared_function_pointer() {
+; COPY-NEXT:  [[ENTRY:.*:]]
+; COPY-NEXT:    [[SUM:%.*]] = add i32 1, 2
+; COPY-NEXT:    [[RESULT0:%.*]] = insertvalue { ptr, i32 } poison, ptr @declared_function_pointer_target, 0
+; COPY-NEXT:    [[RESULT1:%.*]] = insertvalue { ptr, i32 } [[RESULT0]], i32 [[SUM]], 1
+; COPY-NEXT:    ret { ptr, i32 } [[RESULT1]]
+;
+; FOLD-LABEL: define internal { ptr, i32 } @returned_declared_function_pointer() {
+; FOLD-NEXT:  [[ENTRY:.*:]]
+; FOLD-NEXT:    ret { ptr, i32 } { ptr @declared_function_pointer_target, i32 3 }
+;
+entry:
+  %fp = load ptr, ptr %descriptor, align 8
+  %field1.ptr = getelementptr i8, ptr %descriptor, i64 8
+  %field1 = load i32, ptr %field1.ptr, align 4
+  %field2.ptr = getelementptr i8, ptr %descriptor, i64 12
+  %field2 = load i32, ptr %field2.ptr, align 4
+  %sum = add i32 %field1, %field2
+  %result0 = insertvalue { ptr, i32 } poison, ptr %fp, 0
+  %result1 = insertvalue { ptr, i32 } %result0, i32 %sum, 1
+  ret { ptr, i32 } %result1
+}
+
+define { ptr, i32 } @returned_declared_function_pointer_caller() {
+; COPY-LABEL: define { ptr, i32 } @returned_declared_function_pointer_caller() {
+; COPY-NEXT:  [[ENTRY:.*:]]
+; COPY-NEXT:    [[DESCRIPTOR:%.*]] = alloca [16 x i8], align 8
+; COPY-NEXT:    store ptr @declared_function_pointer_target, ptr [[DESCRIPTOR]], align 8
+; COPY-NEXT:    [[FIELD1_PTR:%.*]] = getelementptr i8, ptr [[DESCRIPTOR]], i64 8
+; COPY-NEXT:    store i32 1, ptr [[FIELD1_PTR]], align 4
+; COPY-NEXT:    [[FIELD2_PTR:%.*]] = getelementptr i8, ptr [[DESCRIPTOR]], i64 12
+; COPY-NEXT:    store i32 2, ptr [[FIELD2_PTR]], align 4
+; COPY-NEXT:    [[RESULT:%.*]] = call { ptr, i32 } @returned_declared_function_pointer()
+; COPY-NEXT:    ret { ptr, i32 } [[RESULT]]
+;
+; FOLD-LABEL: define { ptr, i32 } @returned_declared_function_pointer_caller() {
+; FOLD-NEXT:  [[ENTRY:.*:]]
+; FOLD-NEXT:    [[RESULT:%.*]] = call { ptr, i32 } @returned_declared_function_pointer()
+; FOLD-NEXT:    ret { ptr, i32 } [[RESULT]]
+;
+entry:
+  %descriptor = alloca [16 x i8], align 8
+  store ptr @declared_function_pointer_target, ptr %descriptor, align 8
+  %field1.ptr = getelementptr i8, ptr %descriptor, i64 8
+  store i32 1, ptr %field1.ptr, align 4
+  %field2.ptr = getelementptr i8, ptr %descriptor, i64 12
+  store i32 2, ptr %field2.ptr, align 4
+  %result = call { ptr, i32 } @returned_declared_function_pointer(ptr %descriptor)
+  ret { ptr, i32 } %result
 }
 
 define internal i32 @no_callers_doesnt_run_infinitely(ptr readonly %descriptor) {

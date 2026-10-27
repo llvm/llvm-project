@@ -1113,27 +1113,17 @@ static bool propagateConstantParts(Argument &Arg,
       assert(C->getType() == Load->getType() &&
              "constant type does not match promotable load");
 
-      // Do not turn an indirect call into a direct call because this pass does
-      // not update the lazy call graph. Also handle pointer casts by adding
-      // them to the worklist.
-      if (isa<Function>(C->stripPointerCasts())) {
-        SmallVector<Value *, 4> Worklist;
-        SmallPtrSet<Value *, 4> Visited;
-        Worklist.push_back(Load);
-        while (!Worklist.empty()) {
-          Value *V = Worklist.pop_back_val();
-          if (!Visited.insert(V).second)
-            continue;
-          for (Use &U : V->uses()) {
-            if (auto *Call = dyn_cast<CallBase>(U.getUser());
-                Call && Call->isCallee(&U))
-              return false;
-            Value *UserV = U.getUser();
-            if (UserV->stripPointerCasts() == Load)
-              Worklist.push_back(UserV);
-          }
-        }
-      }
+      // Propagating a constant that references a defined function creates a
+      // reference edge in the lazy call graph, which this pass does not
+      // update.
+      SmallVector<Constant *, 1> Worklist(1, C);
+      SmallPtrSet<Constant *, 4> Visited;
+      Visited.insert(C);
+      bool ReferencesFunction = false;
+      LazyCallGraph::visitReferences(
+          Worklist, Visited, [&](Function &) { ReferencesFunction = true; });
+      if (ReferencesFunction)
+        return false;
       LoadsToReplace.emplace_back(Load, C);
     }
   }
