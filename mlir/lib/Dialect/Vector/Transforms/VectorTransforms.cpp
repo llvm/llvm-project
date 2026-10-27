@@ -87,17 +87,18 @@ struct MultiReduceToContract
 
   LogicalResult matchAndRewrite(vector::MultiDimReductionOp reduceOp,
                                 PatternRewriter &rewriter) const override {
+    // TODO: Support the other combining kinds that vector.contract supports.
     if (reduceOp.getKind() != vector::CombiningKind::ADD)
       return failure();
     Operation *mulOp = reduceOp.getSource().getDefiningOp();
     if (!mulOp || !isa<arith::MulIOp, arith::MulFOp>(mulOp))
       return failure();
-    // The contraction's flags apply to both its multiply and its add, so keep
-    // only the flags that both the multiply and the reduction carry. Each of
-    // the two ops then keeps a subset of its own flags, as in the `mulf` +
-    // `addf` to `math.fma` rewrite of `math-uplift-to-fma`. In particular,
-    // `contract` is kept only if both carry it. An `arith.muli` has no flags,
-    // so an integer contraction gets none.
+    // The fast-math flags of a vector.contract apply to both its elementwise
+    // multiply and its combining op. So the contract can only take the flags
+    // that both the multiply and the reduction carry; then neither of the two
+    // gains a flag it did not have. In particular, `contract` is kept only if
+    // both carry it. An `arith.muli` has no flags, so an integer contraction
+    // gets none. If any flag would be lost, convert only when allowed.
     arith::FastMathFlags mulFlags = arith::FastMathFlags::none;
     if (auto mulFOp = dyn_cast<arith::MulFOp>(mulOp))
       mulFlags = mulFOp.getFastmath();

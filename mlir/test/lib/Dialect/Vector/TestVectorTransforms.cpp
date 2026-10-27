@@ -469,7 +469,7 @@ struct TestVectorReduceToContractPatternsPatterns
       *this, "allow-fast-math-flag-loss",
       llvm::cl::desc("Convert even if the contract would drop fast-math "
                      "flags of the multiply or the reduction"),
-      llvm::cl::init(true)};
+      llvm::cl::init(false)};
 
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());

@@ -101,12 +101,12 @@ void populateVectorContractCanonicalizeMatmulToMMT(
 /// Collect patterns to convert reduction op to vector.contract and fold
 /// transpose/broadcast ops into the contract.
 ///
-/// The new contract keeps only the fast-math flags that both the multiply and
-/// the reduction carry. If `allowFastMathFlagLoss` is false, a multiply and a
-/// reduction with different flags are not converted, so no flag is lost.
+/// By default, a multiply and a reduction with different fast-math flags are
+/// not converted, so no flag is lost. If `allowFastMathFlagLoss` is true, they
+/// are converted, and the new contract keeps only the flags that both carry.
 void populateVectorReductionToContractPatterns(
     RewritePatternSet &patterns, PatternBenefit benefit = 1,
-    bool allowFastMathFlagLoss = true);
+    bool allowFastMathFlagLoss = false);
 
 /// Populate `patterns` with the following patterns.
 ///
