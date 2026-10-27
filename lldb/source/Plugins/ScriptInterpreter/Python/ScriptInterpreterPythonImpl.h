@@ -36,7 +36,7 @@ public:
       llvm::StringRef command, CommandReturnObject *result,
       const ExecuteScriptOptions &options = ExecuteScriptOptions()) override;
 
-  void ExecuteInterpreterLoop() override;
+  llvm::Error ExecuteInterpreterLoop() override;
 
   bool ExecuteOneLineWithReturn(
       llvm::StringRef in_string,
@@ -199,9 +199,9 @@ public:
                                bool uses_extra_args, bool is_callback);
 
   /// Set a one-liner as the callback for the watchpoint.
-  void SetWatchpointCommandCallback(WatchpointOptions *wp_options,
-                                    const char *user_input,
-                                    bool is_callback) override;
+  llvm::Error SetWatchpointCommandCallback(WatchpointOptions *wp_options,
+                                           const char *user_input,
+                                           bool is_callback) override;
 
   const char *GetDictionaryName() { return m_dictionary_name.c_str(); }
 
@@ -218,7 +218,8 @@ public:
   void IOHandlerInputComplete(IOHandler &io_handler,
                               std::string &data) override;
 
-  static lldb::ScriptInterpreterSP CreateInstance(Debugger &debugger);
+  static lldb::ScriptInterpreterSP CreateInstance(Debugger &debugger,
+                                                  lldb::ScriptLanguage);
 
   // PluginInterface protocol
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }

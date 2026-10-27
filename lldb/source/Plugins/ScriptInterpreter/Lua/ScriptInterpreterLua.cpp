@@ -129,9 +129,12 @@ public:
     case eIOHandlerWatchpoint: {
       auto *wp_options =
           static_cast<WatchpointOptions *>(io_handler.GetUserData());
-      m_script_interpreter.SetWatchpointCommandCallback(wp_options,
-                                                        data.c_str(),
-                                                        /*is_callback=*/false);
+      if (llvm::Error error = m_script_interpreter.SetWatchpointCommandCallback(
+              wp_options, data.c_str(), /*is_callback=*/false)) {
+        LockedStreamFile locked_stream =
+            io_handler.GetErrorStreamFileSP()->Lock();
+        locked_stream << llvm::toString(std::move(error)) << '\n';
+      }
       io_handler.SetIsDone(true);
     } break;
     case eIOHandlerNone:
@@ -210,7 +213,7 @@ bool ScriptInterpreterLua::ExecuteOneLine(llvm::StringRef command,
   return true;
 }
 
-void ScriptInterpreterLua::ExecuteInterpreterLoop() {
+llvm::Error ScriptInterpreterLua::ExecuteInterpreterLoop() {
   LLDB_SCOPED_TIMER();
 
   // At the moment, the only time the debugger does not have an input file
@@ -219,10 +222,11 @@ void ScriptInterpreterLua::ExecuteInterpreterLoop() {
   // a running interpreter loop inside the already running lua interpreter
   // loop, so we won't do it.
   if (!m_debugger.GetInputFile().IsValid())
-    return;
+    return llvm::Error::success();
 
   IOHandlerSP io_handler_sp(new IOHandlerLuaInterpreter(m_debugger, *this));
   m_debugger.RunIOHandlerAsync(io_handler_sp);
+  return llvm::Error::success();
 }
 
 bool ScriptInterpreterLua::LoadScriptingModule(
@@ -379,10 +383,11 @@ llvm::Error ScriptInterpreterLua::RegisterBreakpointCallback(
   return llvm::Error::success();
 }
 
-void ScriptInterpreterLua::SetWatchpointCommandCallback(
+llvm::Error ScriptInterpreterLua::SetWatchpointCommandCallback(
     WatchpointOptions *wp_options, const char *command_body_text,
     bool is_callback) {
-  RegisterWatchpointCallback(wp_options, command_body_text, {});
+  return RegisterWatchpointCallback(wp_options, command_body_text, {})
+      .takeError();
 }
 
 Status ScriptInterpreterLua::RegisterWatchpointCallback(
@@ -401,7 +406,7 @@ Status ScriptInterpreterLua::RegisterWatchpointCallback(
 }
 
 lldb::ScriptInterpreterSP
-ScriptInterpreterLua::CreateInstance(Debugger &debugger) {
+ScriptInterpreterLua::CreateInstance(Debugger &debugger, lldb::ScriptLanguage) {
   return std::make_shared<ScriptInterpreterLua>(debugger);
 }
 

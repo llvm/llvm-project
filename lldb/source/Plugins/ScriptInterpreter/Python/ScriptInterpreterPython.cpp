@@ -690,11 +690,13 @@ void ScriptInterpreterPython::Initialize() {
   llvm::Expected<ScriptInterpreterRuntimeLoader &> loader =
       ScriptInterpreterRuntimeLoader::Get(lldb::eScriptLanguagePython);
   if (!loader) {
-    LLDB_LOG_ERROR(GetLog(LLDBLog::Script), loader.takeError(), "{0}");
+    PluginManager::SetScriptInterpreterError(lldb::eScriptLanguagePython,
+                                             loader.takeError());
     return;
   }
   if (llvm::Error error = loader->Load()) {
-    LLDB_LOG_ERROR(GetLog(LLDBLog::Script), std::move(error), "{0}");
+    PluginManager::SetScriptInterpreterError(lldb::eScriptLanguagePython,
+                                             std::move(error));
     return;
   }
 
@@ -718,7 +720,8 @@ void ScriptInterpreterPython::Initialize() {
   // GetScriptInterpreterForLanguage then hands out ScriptInterpreterNone and
   // the rest of lldb keeps working without scripting.
   if (llvm::Error error = ScriptInterpreterPythonImpl::Initialize()) {
-    LLDB_LOG_ERROR(GetLog(LLDBLog::Script), std::move(error), "{0}");
+    PluginManager::SetScriptInterpreterError(lldb::eScriptLanguagePython,
+                                             std::move(error));
     return;
   }
 
@@ -1035,7 +1038,8 @@ void ScriptInterpreterPythonImpl::IOHandlerInputComplete(IOHandler &io_handler,
 }
 
 lldb::ScriptInterpreterSP
-ScriptInterpreterPythonImpl::CreateInstance(Debugger &debugger) {
+ScriptInterpreterPythonImpl::CreateInstance(Debugger &debugger,
+                                            lldb::ScriptLanguage) {
   return std::make_shared<ScriptInterpreterPythonImpl>(debugger);
 }
 
@@ -1480,7 +1484,7 @@ bool ScriptInterpreterPythonImpl::ExecuteOneLine(
   return false;
 }
 
-void ScriptInterpreterPythonImpl::ExecuteInterpreterLoop() {
+llvm::Error ScriptInterpreterPythonImpl::ExecuteInterpreterLoop() {
   LLDB_SCOPED_TIMER();
 
   Debugger &debugger = m_debugger;
@@ -1492,12 +1496,13 @@ void ScriptInterpreterPythonImpl::ExecuteInterpreterLoop() {
   // loop, so we won't do it.
 
   if (!debugger.GetInputFile().IsValid())
-    return;
+    return llvm::Error::success();
 
   IOHandlerSP io_handler_sp(new IOHandlerPythonInterpreter(debugger, this));
   if (io_handler_sp) {
     debugger.RunIOHandlerAsync(io_handler_sp);
   }
+  return llvm::Error::success();
 }
 
 bool ScriptInterpreterPythonImpl::Interrupt() {
@@ -1813,7 +1818,7 @@ llvm::Error ScriptInterpreterPythonImpl::SetBreakpointCommandCallback(
 }
 
 // Set a Python one-liner as the callback for the watchpoint.
-void ScriptInterpreterPythonImpl::SetWatchpointCommandCallback(
+llvm::Error ScriptInterpreterPythonImpl::SetWatchpointCommandCallback(
     WatchpointOptions *wp_options, const char *user_input, bool is_callback) {
   auto data_up = std::make_unique<WatchpointOptions::CommandData>();
 
@@ -1825,13 +1830,15 @@ void ScriptInterpreterPythonImpl::SetWatchpointCommandCallback(
   data_up->user_source.AppendString(user_input);
   data_up->script_source.assign(user_input);
 
-  if (GenerateWatchpointCommandCallbackData(
-          data_up->user_source, data_up->script_source, is_callback)) {
-    auto baton_sp =
-        std::make_shared<WatchpointOptions::CommandBaton>(std::move(data_up));
-    wp_options->SetCallback(
-        ScriptInterpreterPythonImpl::WatchpointCallbackFunction, baton_sp);
-  }
+  if (!GenerateWatchpointCommandCallbackData(
+          data_up->user_source, data_up->script_source, is_callback))
+    return llvm::createStringError("failed to generate watchpoint callback");
+
+  auto baton_sp =
+      std::make_shared<WatchpointOptions::CommandBaton>(std::move(data_up));
+  wp_options->SetCallback(
+      ScriptInterpreterPythonImpl::WatchpointCallbackFunction, baton_sp);
+  return llvm::Error::success();
 }
 
 Status ScriptInterpreterPythonImpl::ExportFunctionDefinitionToInterpreter(
