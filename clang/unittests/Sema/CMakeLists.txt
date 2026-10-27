@@ -7,6 +7,7 @@ add_distinct_clang_unittest(SemaTests
   CodeCompleteTest.cpp
   HeuristicResolverTest.cpp
   GslOwnerPointerInference.cpp
+  LifetimeBoundImplicitThisTest.cpp
   SemaLookupTest.cpp
   SemaModuleTest.cpp
   SemaNoloadLookupTest.cpp

@@ -6395,7 +6395,7 @@ LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan, VFRange &Range,
           vputils::onlyFirstLaneUsed(&VPI))
         continue;
 
-      // Only VPInstrutions with an underlying value need to be processed.
+      // Only VPInstructions with an underlying value need to be processed.
       if (!VPI.getUnderlyingValue())
         continue;
 

@@ -10,9 +10,11 @@
 
 #include "shared/math.h"
 #include "src/__support/FPUtil/float128.h"
+#include "src/__support/FPUtil/float80.h"
 #include "test/UnitTest/Test.h"
 
 using LIBC_NAMESPACE::fputil::Float128;
+using LIBC_NAMESPACE::fputil::Float80;
 
 #ifdef LIBC_USE_CONSTEXPR
 
@@ -404,6 +406,9 @@ static_assert(Float128(0.0) ==
                                                    Float128(0.0)));
 static_assert(Float128(1.0) ==
               LIBC_NAMESPACE::shared::fabsf128(Float128(-1.0)));
+static_assert(Float80(0.0) ==
+              LIBC_NAMESPACE::shared::copysignf80(Float80(0.0), Float80(0.0)));
+static_assert(Float80(1.0) == LIBC_NAMESPACE::shared::fabsf80(Float80(-1.0)));
 static_assert(Float128(1.0) ==
               LIBC_NAMESPACE::shared::fdimf128(Float128(1.0), Float128(0.0)));
 static_assert(Float128(0.0) ==

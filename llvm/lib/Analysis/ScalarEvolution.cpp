@@ -13848,6 +13848,10 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
             isKnownPredicate(CondGE, GuardedRHS, GuardedStart))
           return true;
 
+        if ((GuardedRHS != GELHS || GuardedStart != GERHS) &&
+            isKnownPredicate(CondGE, GELHS, GERHS))
+          return true;
+
         // (RHS > Start - 1) implies RHS >= Start.
         // * "RHS >= Start" is trivially equivalent to "RHS > Start - 1" if
         //   "Start - 1" doesn't overflow.
