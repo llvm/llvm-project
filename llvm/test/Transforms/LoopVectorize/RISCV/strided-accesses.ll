@@ -1398,17 +1398,17 @@ define void @interleaved_load_instead_of_strided(ptr %a) vscale_range(2, 1024) {
 ; CHECK-UF2-NEXT:    [[TMP22:%.*]] = trunc i64 [[TMP3]] to i32
 ; CHECK-UF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-UF2:       [[VECTOR_BODY]]:
-; CHECK-UF2-NEXT:    [[TMP6:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-UF2-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP3]], 1
-; CHECK-UF2-NEXT:    [[TMP5:%.*]] = add i64 [[TMP6]], [[TMP4]]
+; CHECK-UF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-UF2-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP3]], 1
+; CHECK-UF2-NEXT:    [[TMP6:%.*]] = add i64 [[INDEX]], [[TMP5]]
+; CHECK-UF2-NEXT:    [[TMP7:%.*]] = getelementptr [4 x i32], ptr [[A]], i64 [[INDEX]]
 ; CHECK-UF2-NEXT:    [[TMP9:%.*]] = getelementptr [4 x i32], ptr [[A]], i64 [[TMP6]]
-; CHECK-UF2-NEXT:    [[TMP7:%.*]] = getelementptr [4 x i32], ptr [[A]], i64 [[TMP5]]
-; CHECK-UF2-NEXT:    [[WIDE_VEC:%.*]] = load <vscale x 16 x i32>, ptr [[TMP9]], align 4
+; CHECK-UF2-NEXT:    [[WIDE_VEC:%.*]] = load <vscale x 16 x i32>, ptr [[TMP7]], align 4
 ; CHECK-UF2-NEXT:    [[STRIDED_VEC:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave4.nxv16i32(<vscale x 16 x i32> [[WIDE_VEC]])
 ; CHECK-UF2-NEXT:    [[TMP10:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[STRIDED_VEC]], 0
 ; CHECK-UF2-NEXT:    [[TMP11:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[STRIDED_VEC]], 1
 ; CHECK-UF2-NEXT:    [[TMP12:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[STRIDED_VEC]], 3
-; CHECK-UF2-NEXT:    [[WIDE_VEC1:%.*]] = load <vscale x 16 x i32>, ptr [[TMP7]], align 4
+; CHECK-UF2-NEXT:    [[WIDE_VEC1:%.*]] = load <vscale x 16 x i32>, ptr [[TMP9]], align 4
 ; CHECK-UF2-NEXT:    [[STRIDED_VEC2:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave4.nxv16i32(<vscale x 16 x i32> [[WIDE_VEC1]])
 ; CHECK-UF2-NEXT:    [[TMP13:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[STRIDED_VEC2]], 0
 ; CHECK-UF2-NEXT:    [[TMP14:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[STRIDED_VEC2]], 1
@@ -1417,13 +1417,13 @@ define void @interleaved_load_instead_of_strided(ptr %a) vscale_range(2, 1024) {
 ; CHECK-UF2-NEXT:    [[TMP17:%.*]] = add <vscale x 4 x i32> [[TMP13]], [[TMP14]]
 ; CHECK-UF2-NEXT:    [[TMP18:%.*]] = add <vscale x 4 x i32> [[TMP16]], [[TMP12]]
 ; CHECK-UF2-NEXT:    [[TMP19:%.*]] = add <vscale x 4 x i32> [[TMP17]], [[TMP15]]
-; CHECK-UF2-NEXT:    [[TMP23:%.*]] = shl i64 [[TMP6]], 4
+; CHECK-UF2-NEXT:    [[TMP23:%.*]] = shl i64 [[INDEX]], 4
 ; CHECK-UF2-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP23]]
 ; CHECK-UF2-NEXT:    [[TMP25:%.*]] = mul i64 [[TMP3]], 16
 ; CHECK-UF2-NEXT:    [[TMP21:%.*]] = getelementptr i8, ptr [[TMP24]], i64 [[TMP25]]
 ; CHECK-UF2-NEXT:    call void @llvm.experimental.vp.strided.store.nxv4i32.p0.i64(<vscale x 4 x i32> [[TMP18]], ptr align 4 [[TMP24]], i64 16, <vscale x 4 x i1> splat (i1 true), i32 [[TMP22]])
 ; CHECK-UF2-NEXT:    call void @llvm.experimental.vp.strided.store.nxv4i32.p0.i64(<vscale x 4 x i32> [[TMP19]], ptr align 4 [[TMP21]], i64 16, <vscale x 4 x i1> splat (i1 true), i32 [[TMP22]])
-; CHECK-UF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP6]], [[TMP1]]
+; CHECK-UF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; CHECK-UF2-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-UF2-NEXT:    br i1 [[TMP20]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
 ; CHECK-UF2:       [[MIDDLE_BLOCK]]:
