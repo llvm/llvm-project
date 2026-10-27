@@ -1777,7 +1777,7 @@ def sme_elm_idx0_56s8 : Operand<i64>, ImmLeaf<i64,
 class UImmScaledRangeOperand<int Width, int Scale, int OffsetVal>
     : AsmOperandClass {
   let Name = "UImm" # Width # "s" # Scale # "Range";
-  let DiagnosticType = "InvalidUImm" # Width # "s" # Scale # "Range";
+  let DiagnosticType = "InvalidVecSelRange" # Width # "s" # Scale;
   let RenderMethod = "addImmScaledRangeOperands<" # Scale # ">";
   let PredicateMethod = "isUImmScaled<" # Width # ", " # Scale # ", " # OffsetVal # ", /*IsRange=*/true>";
   let ParserMethod = "tryParseImmRange";
@@ -1785,12 +1785,8 @@ class UImmScaledRangeOperand<int Width, int Scale, int OffsetVal>
 
 // Implicit immediate ranges 0:1 and 0:3, scale has no meaning
 // since the immediate is zero
-def UImm0s2RangeOperand : UImmScaledRangeOperand<0, 2, 1> {
-  let DiagnosticType = "InvalidVecSelRange0_1";
-}
-def UImm0s4RangeOperand : UImmScaledRangeOperand<0, 4, 3> {
-  let DiagnosticType = "InvalidVecSelRange0_3";
-}
+def UImm0s2RangeOperand : UImmScaledRangeOperand<0, 2, 1>;
+def UImm0s4RangeOperand : UImmScaledRangeOperand<0, 4, 3>;
 
 def UImm1s2RangeOperand : UImmScaledRangeOperand<1, 2, 1>;
 def UImm1s4RangeOperand : UImmScaledRangeOperand<1, 4, 3>;

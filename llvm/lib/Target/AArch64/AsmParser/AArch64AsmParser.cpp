@@ -6091,16 +6091,15 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
     return Error(Loc,
                  "expected 'lsl' or 'sxtx' with optional shift of #0 or #4");
   case Match_InvalidUImm12Offset1:
-    return Error(Loc, "immediate must be an integer in range [0, 4095].");
+    return Error(Loc, "offset must be an integer in range [0, 4095].");
   case Match_InvalidUImm12Offset2:
-    return Error(Loc, "immediate must be a multiple of 2 in range [0, 8190].");
+    return Error(Loc, "offset must be a multiple of 2 in range [0, 8190].");
   case Match_InvalidUImm12Offset4:
-    return Error(Loc, "immediate must be a multiple of 4 in range [0, 16380].");
+    return Error(Loc, "offset must be a multiple of 4 in range [0, 16380].");
   case Match_InvalidUImm12Offset8:
-    return Error(Loc, "immediate must be a multiple of 8 in range [0, 32760].");
+    return Error(Loc, "offset must be a multiple of 8 in range [0, 32760].");
   case Match_InvalidUImm12Offset16:
-    return Error(Loc,
-                 "immediate must be a multiple of 16 in range [0, 65520].");
+    return Error(Loc, "offset must be a multiple of 16 in range [0, 65520].");
   case Match_InvalidImm0_0:
     return Error(Loc, "immediate must be 0.");
   case Match_InvalidImm0_1:
@@ -6146,15 +6145,15 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
     return Error(Loc, "immediate must be an integer in range [-255, 256].");
   case Match_InvalidImmM257_254:
     return Error(Loc, "immediate must be an integer in range [-257, 254].");
-  case Match_InvalidVecSelRange0_1:
+  case Match_InvalidVecSelRange0s2:
     return Error(Loc, "vector select offset must be the immediate range 0:1.");
-  case Match_InvalidUImm1s2Range:
+  case Match_InvalidVecSelRange1s2:
     return Error(Loc, "vector select offset must be an immediate range of the "
                       "form <immf>:<imml>, where the first "
                       "immediate is a multiple of 2 in the range [0, 2], and "
                       "the second immediate is immf + 1.");
-  case Match_InvalidUImm2s2Range:
-  case Match_InvalidUImm3s2Range:
+  case Match_InvalidVecSelRange2s2:
+  case Match_InvalidVecSelRange3s2:
     return Error(
         Loc,
         "vector select offset must be an immediate range of the form "
@@ -6162,10 +6161,10 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
         "where the first immediate is a multiple of 2 in the range [0, 6] or "
         "[0, 14] "
         "depending on the instruction, and the second immediate is immf + 1.");
-  case Match_InvalidVecSelRange0_3:
+  case Match_InvalidVecSelRange0s4:
     return Error(Loc, "vector select offset must be the immediate range 0:3.");
-  case Match_InvalidUImm1s4Range:
-  case Match_InvalidUImm2s4Range:
+  case Match_InvalidVecSelRange1s4:
+  case Match_InvalidVecSelRange2s4:
     return Error(
         Loc,
         "vector select offset must be an immediate range of the form "
@@ -6933,13 +6932,13 @@ bool AArch64AsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidImmM1_510:
   case Match_InvalidImmM255_256:
   case Match_InvalidImmM257_254:
-  case Match_InvalidVecSelRange0_1:
-  case Match_InvalidUImm1s2Range:
-  case Match_InvalidUImm2s2Range:
-  case Match_InvalidUImm3s2Range:
-  case Match_InvalidVecSelRange0_3:
-  case Match_InvalidUImm1s4Range:
-  case Match_InvalidUImm2s4Range:
+  case Match_InvalidVecSelRange0s2:
+  case Match_InvalidVecSelRange1s2:
+  case Match_InvalidVecSelRange2s2:
+  case Match_InvalidVecSelRange3s2:
+  case Match_InvalidVecSelRange0s4:
+  case Match_InvalidVecSelRange1s4:
+  case Match_InvalidVecSelRange2s4:
   case Match_InvalidSVEAddSubImm8:
   case Match_InvalidSVEAddSubImm16:
   case Match_InvalidSVEAddSubImm32:
