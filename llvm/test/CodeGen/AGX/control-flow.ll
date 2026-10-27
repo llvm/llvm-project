@@ -21,7 +21,7 @@ define agx_kernel void @if_then_else(ptr addrspace(1) %out, i32 %n) {
 ; CHECK-NEXT:  // %bb.2: // %Flow
 ; CHECK-NEXT:    else_fcmp r0l, eq, 0.0, 0.0, 1
 ; CHECK-NEXT:  // %bb.3: // %then
-; CHECK-NEXT:    imadd r2, r1, 3, 0
+; CHECK-NEXT:    iadd r2, r1, r1, lsl 1
 ; CHECK-NEXT:  // %bb.4: // %end
 ; CHECK-NEXT:    pop_exec r0l, 1
 ; CHECK-NEXT:    device_store 0, i32, x, r2, u0_u1, r1, signed

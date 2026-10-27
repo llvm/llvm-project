@@ -242,6 +242,21 @@ bool AGXTargetLowering::isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
   return VT == MVT::f32 || VT == MVT::f16;
 }
 
+static cl::opt<bool> AGXDecomposeMul(
+    "agx-decompose-mul", cl::Hidden, cl::init(true),
+    cl::desc("Multiply 32-bit values by 3, 5, 9 or 17 with a shifted iadd"));
+
+bool AGXTargetLowering::decomposeMulByConstant(LLVMContext &Context, EVT VT,
+                                               SDValue C) const {
+  // x * (2^k + 1), k <= 4: iadd x, x << k (an ALU instruction) instead of
+  // imadd (SFU).
+  auto *N = dyn_cast<ConstantSDNode>(C);
+  if (!AGXDecomposeMul || VT != MVT::i32 || !N)
+    return false;
+  const APInt &V = N->getAPIntValue();
+  return V == 3 || V == 5 || V == 9 || V == 17;
+}
+
 bool AGXTargetLowering::isTruncateFree(EVT SrcVT, EVT DstVT) const {
   // Truncation reads a subregister.
   return SrcVT.isScalarInteger() && DstVT.isScalarInteger() &&

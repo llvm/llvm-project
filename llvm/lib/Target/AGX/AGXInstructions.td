@@ -283,6 +283,11 @@ def : Pat<(i64 (add i64:$a, (sext i32:$x))),
           (IADD_I64_I32 0, $a, MOD_SX, $x, 0)>;
 def : Pat<(i64 (add i64:$a, (shl i64:$b, agx_iadd_shift:$s))),
           (IADD_I64 0, $a, 0, $b, imm:$s)>;
+// The shift applies to the second source (and to the addend of imadd).
+def : Pat<(i32 (add AGXIntSrc32:$a, (shl AGXIntSrc32:$b, agx_iadd_shift:$s))),
+          (IADD_I32 0, $a, 0, $b, imm:$s)>;
+def : Pat<(i32 (sub AGXIntSrc32:$a, (shl AGXIntSrc32:$b, agx_iadd_shift:$s))),
+          (ISUB_I32 0, $a, 0, $b, imm:$s)>;
 
 def : Pat<(i32 (sext i16:$a)), (IADD_I32_FROM16 MOD_SX, $a, 0, (i16 0), 0)>;
 def : Pat<(i64 (sext i32:$a)), (IADD_I64_FROM32 MOD_SX, $a, 0, (i32 0), 0)>;
@@ -330,6 +335,9 @@ multiclass IMAddPseudos<RegisterClass rc, RegisterOperand src,
 
 defm IMADD_I16 : IMAddPseudos<GPR16, Src16Op, Src16Op, i16, AGXIntSrc16>;
 defm IMADD_I32 : IMAddPseudos<GPR32, Src32Op, Src32Op, i32, AGXIntSrc32>;
+def : Pat<(i32 (add (mul AGXIntSrc32:$a, AGXIntSrc32:$b),
+                   (shl AGXIntSrc32:$c, agx_iadd_shift:$s))),
+          (IMADD_I32 0, $a, 0, $b, 0, $c, imm:$s)>;
 
 // 32 x 32 -> 64-bit multiply-add.
 def IMADD_I64_FROM32 : AGXALUPseudo<IMADD_g13, (outs GPR64:$dst),

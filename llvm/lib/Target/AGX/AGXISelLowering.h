@@ -103,6 +103,8 @@ public:
     return VT == MVT::f32 || VT == MVT::f16;
   }
   bool isTruncateFree(EVT SrcVT, EVT DstVT) const override;
+  bool decomposeMulByConstant(LLVMContext &Context, EVT VT,
+                              SDValue C) const override;
   bool isCheapToSpeculateCttz(Type *Ty) const override { return true; }
   bool isCheapToSpeculateCtlz(Type *Ty) const override { return true; }
   bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override {
