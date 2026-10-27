@@ -21,6 +21,7 @@
 #include "AGXMachineFunctionInfo.h"
 #include "AGXTargetTransformInfo.h"
 #include "TargetInfo/AGXTargetInfo.h"
+#include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -199,6 +200,13 @@ void AGXTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 
 void AGXTargetMachine::registerEarlyDefaultAliasAnalyses(AAManager &AAM) {
   AAM.registerFunctionAnalysis<AGXAA>();
+}
+
+ScheduleDAGInstrs *
+AGXTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
+  ScheduleDAGMILive *DAG = createSchedLive(C);
+  DAG->addMutation(createAGXMemClusterMutation());
+  return DAG;
 }
 
 TargetPassConfig *AGXTargetMachine::createPassConfig(PassManagerBase &PM) {

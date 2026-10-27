@@ -19,6 +19,7 @@
 namespace llvm {
 
 class AGXTargetMachine;
+class ScheduleDAGMutation;
 class FunctionPass;
 class Module;
 class ModulePass;
@@ -54,6 +55,9 @@ FunctionPass *createAGXFoldOperandsPass();
 FunctionPass *createAGXHoistFromElseFlowPass();
 FunctionPass *createAGXLowerControlFlowPass();
 FunctionPass *createAGXInsertWaitsPass();
+
+// Machine scheduler: keeps runs of memory accesses of one kind together.
+std::unique_ptr<ScheduleDAGMutation> createAGXMemClusterMutation();
 
 void initializeAGXAlwaysInlinePass(PassRegistry &);
 void initializeAGXLowerAIRLegacyPass(PassRegistry &);

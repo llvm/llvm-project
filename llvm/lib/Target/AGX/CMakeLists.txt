@@ -28,6 +28,7 @@ add_llvm_target(AGXCodeGen
   AGXAsmPrinter.cpp
   AGXCodeGenPrepare.cpp
   AGXMathExpansion.cpp
+  AGXMemCluster.cpp
   AGXLowerRecursion.cpp
   AGXFoldOperands.cpp
   AGXHoistFromElseFlow.cpp
