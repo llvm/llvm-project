@@ -1664,6 +1664,18 @@ TEST_F(ExtractFunctionTest, ExpressionExtractionAssignmentRHS) {
               HasSubstr("x = extracted(a, b);"));
 }
 
+TEST_F(ExtractFunctionTest, ExpressionExtractionFromReturn) {
+  // A return statement's operand is a value-consuming slot just like a
+  // condition (see ExpressionExtractionFromCondition): replacing it with a
+  // call to a void-returning extracted function would not compile, so this
+  // must fall through from whole-statement to expression extraction.
+  Context = File;
+  EXPECT_THAT(apply("int f(int a, int b) { return [[a + b]]; }"),
+              AllOf(HasSubstr("int extracted(int a, int b) {\nreturn a + "
+                              "b;\n}"),
+                    HasSubstr("return extracted(a, b);")));
+}
+
 TEST_F(ExtractFunctionTest, ExpressionExtractionRejectVoid) {
   Context = File;
   EXPECT_THAT(apply("void g(); void f() { (void)([[g()]]); }"),
@@ -1676,6 +1688,21 @@ TEST_F(ExtractFunctionTest, ExpressionExtractionRejectLValue) {
   // assignment target. Not yet supported.
   Context = File;
   EXPECT_THAT(apply("void f(int a) { [[a]] = 5; }"), StartsWith("unavailable"));
+}
+
+TEST_F(ExtractFunctionTest, ExpressionExtractionRejectArrayType) {
+  // A function can't return an array type. Reached through a prvalue
+  // struct's array member, an xvalue since C++11 (member access on a
+  // non-lvalue base yields an xvalue, not a prvalue) -- so this isn't
+  // caught by ExpressionExtractionRejectLValue above.
+  Context = File;
+  EXPECT_THAT(apply(R"cpp(
+    struct S { int Arr[3]; };
+    S getS();
+    void use(const int *);
+    void f() { use([[getS().Arr]]); }
+  )cpp"),
+              StartsWith("unavailable"));
 }
 
 TEST_F(ExtractFunctionTest, ExpressionExtractionConstexprCaseLabel) {
@@ -1693,6 +1720,34 @@ TEST_F(ExtractFunctionTest, ExpressionExtractionConstexprCaseLabel) {
     })cpp"),
               AllOf(HasSubstr("constexpr int extracted() {\nreturn 1 + 1;\n}"),
                     HasSubstr("case extracted():")));
+}
+
+TEST_F(ExtractFunctionTest, ExpressionExtractionConstexprNestedCaseLabel) {
+  // The selected sub-expression isn't the whole case value, just an operand
+  // of the outer `+ 1`: the constant-expression requirement still has to
+  // propagate down to it through that enclosing BinaryOperator.
+  Context = File;
+  EXPECT_THAT(apply(R"cpp(
+    int f(int x) {
+      switch (x) {
+        case [[1 + 1]] + 1:
+          return 0;
+      }
+      return 1;
+    })cpp"),
+              AllOf(HasSubstr("constexpr int extracted() {\nreturn 1 + 1;\n}"),
+                    HasSubstr("case extracted() + 1:")));
+}
+
+TEST_F(ExtractFunctionTest, ExpressionExtractionConstexprIfConstexpr) {
+  Context = File;
+  ExtraArgs.push_back("-std=c++17");
+  EXPECT_THAT(apply(R"cpp(
+    void f() {
+      if constexpr ([[1 + 1]] > 0) {}
+    })cpp"),
+              AllOf(HasSubstr("constexpr int extracted() {\nreturn 1 + 1;\n}"),
+                    HasSubstr("if constexpr (extracted() > 0)")));
 }
 
 TEST_F(ExtractFunctionTest, ExpressionExtractionConstexprBitFieldWidth) {
@@ -1730,6 +1785,21 @@ TEST_F(ExtractFunctionTest, CFileRejectConstantExpressionContext) {
   // context is still rejected outright there.
   FileName = "a.c";
   Context = File;
+  EXPECT_THAT(apply(R"cpp(
+    int f(int x) {
+      switch (x) {
+        case [[1 + 1]]:
+          return 0;
+      }
+      return 1;
+    })cpp"),
+              StartsWith("unavailable"));
+}
+
+TEST_F(ExtractFunctionTest, PreCpp11RejectConstantExpressionContext) {
+  // constexpr functions don't exist before C++11 either, same as C.
+  Context = File;
+  ExtraArgs.push_back("-std=c++03");
   EXPECT_THAT(apply(R"cpp(
     int f(int x) {
       switch (x) {

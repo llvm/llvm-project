@@ -123,10 +123,11 @@ bool isUnselectedRootStmtCandidate(const Node *N) {
 }
 
 // Whether Child is the condition (or condition-variable declaration) of a
-// control-flow Parent, or the range-expression of a range-based for. These
-// are the only slots whose *value* is actually consumed by the construct
-// itself -- to decide whether to keep looping/branching, or to build the
-// hidden begin/end iterators -- so replacing them with a call to a
+// control-flow Parent, the range-expression of a range-based for, or the
+// operand of a return. These are the only slots whose *value* is actually
+// consumed by the construct itself -- to decide whether to keep
+// looping/branching, to build the hidden begin/end iterators, or to be
+// returned to the caller -- so replacing them with a call to a
 // void-returning extracted function would not compile. Other slots, like a
 // loop's init-statement or increment expression, have their value discarded
 // just like an ordinary expression-statement (and any hazard from
@@ -156,6 +157,8 @@ bool isConditionClause(const Stmt *Parent, const Stmt *Child) {
            Child == Switch->getConditionVariableDeclStmt();
   if (const auto *ForRange = llvm::dyn_cast<CXXForRangeStmt>(Parent))
     return Child == ForRange->getRangeInit();
+  if (const auto *Return = llvm::dyn_cast<ReturnStmt>(Parent))
+    return Child == Return->getRetValue();
   return false;
 }
 
@@ -183,6 +186,23 @@ bool isConditionClause(const Stmt *Parent, const Stmt *Child) {
 //   each has its own ad hoc SelectionTree shape to verify per attribute
 //   or builtin, for constructs rare enough in practice that it isn't
 //   worth the per-case verification cost yet.
+// Whether Parent is an ordinary expression that passes along a requirement
+// that its own value be a constant expression to every subexpression that
+// directly contributes to computing it: if Parent itself turns out to sit
+// in a constant-expression context, so does its operand. This excludes the
+// standard operators whose expression operand isn't actually evaluated --
+// sizeof/alignof's expression form (UnaryExprOrTypeTraitExpr), the
+// noexcept operator (CXXNoexceptExpr), and typeid (CXXTypeidExpr) -- where
+// a non-constexpr call inside the operand is never a problem.
+bool propagatesConstantRequirement(const Expr *Parent) {
+  return isa<ParenExpr>(Parent) || isa<UnaryOperator>(Parent) ||
+         isa<BinaryOperator>(Parent) ||
+         isa<AbstractConditionalOperator>(Parent) || isa<CastExpr>(Parent) ||
+         isa<InitListExpr>(Parent) || isa<MemberExpr>(Parent) ||
+         isa<ArraySubscriptExpr>(Parent) || isa<CallExpr>(Parent) ||
+         isa<CXXConstructExpr>(Parent);
+}
+
 bool isConstantExpressionContext(const Node *N) {
   // Sema wraps a "manifestly constant evaluated" expression (exactly
   // these contexts: case labels, bit-field widths, enum initializers,
@@ -191,36 +211,58 @@ bool isConstantExpressionContext(const Node *N) {
   // an ImplicitCastExpr -- that aren't the real construct itself and
   // share N's own source range. outerImplicit() walks up through any
   // number of those to the real parent.
-  const Node *Parent = N->outerImplicit().Parent;
-  if (!Parent)
-    return false;
-  if (Parent->ASTNode.get<CaseStmt>())
-    return true;
-  if (const auto *Field = Parent->ASTNode.get<FieldDecl>())
-    return Field->isBitField();
-  if (Parent->ASTNode.get<EnumConstantDecl>())
-    return true;
-  if (const auto *Var = Parent->ASTNode.get<VarDecl>())
-    // constinit (unlike constexpr) isn't tracked as a VarDecl bit; it's
-    // just an attribute, but requires a constant initializer all the same.
-    return Var->isConstexpr() || Var->hasAttr<ConstInitAttr>();
-  // A TemplateSpecializationTypeLoc's Expr children (as opposed to TypeLoc
-  // children) are exactly its non-type template arguments -- the
-  // SelectionTree has no separate node for the intervening
-  // TemplateArgumentLoc. Other ways to name a non-type template argument
-  // (a bare function-template call's explicit arguments, a variable
-  // template) aren't verified and so aren't covered here yet.
-  if (Parent->ASTNode.get<TemplateSpecializationTypeLoc>())
-    return true;
-  if (Parent->ASTNode.get<StaticAssertDecl>())
-    return true;
-  // A FunctionProtoTypeLoc's only Expr child is its noexcept-specifier's
-  // operand (verified empirically that a parameter's default argument,
-  // the other candidate Expr near a function's type, instead has that
-  // ParmVarDecl itself as its parent, not the enclosing
-  // FunctionProtoTypeLoc).
-  if (Parent->ASTNode.get<FunctionProtoTypeLoc>())
-    return true;
+  //
+  // N itself need not be the whole constant expression: it may be a
+  // sub-expression nested inside a larger one (e.g. the `1 + 2` in
+  // `case (1 + 2) + 3:`), so this keeps climbing through ordinary
+  // operators (see propagatesConstantRequirement) until it either reaches
+  // one of the known constant-expression-requiring contexts below, or a
+  // node that doesn't propagate the requirement any further.
+  const Node *Cur = N;
+  while (const Node *Parent = Cur->outerImplicit().Parent) {
+    if (Parent->ASTNode.get<CaseStmt>())
+      return true;
+    if (const auto *Field = Parent->ASTNode.get<FieldDecl>())
+      return Field->isBitField();
+    if (Parent->ASTNode.get<EnumConstantDecl>())
+      return true;
+    if (const auto *Var = Parent->ASTNode.get<VarDecl>())
+      // constinit (unlike constexpr) isn't tracked as a VarDecl bit; it's
+      // just an attribute, but requires a constant initializer all the same.
+      return Var->isConstexpr() || Var->hasAttr<ConstInitAttr>();
+    // A TemplateSpecializationTypeLoc's Expr children (as opposed to TypeLoc
+    // children) are exactly its non-type template arguments -- the
+    // SelectionTree has no separate node for the intervening
+    // TemplateArgumentLoc. Other ways to name a non-type template argument
+    // (a bare function-template call's explicit arguments, a variable
+    // template) aren't verified and so aren't covered here yet.
+    if (Parent->ASTNode.get<TemplateSpecializationTypeLoc>())
+      return true;
+    if (Parent->ASTNode.get<StaticAssertDecl>())
+      return true;
+    // A FunctionProtoTypeLoc's only Expr child is its noexcept-specifier's
+    // operand (verified empirically that a parameter's default argument,
+    // the other candidate Expr near a function's type, instead has that
+    // ParmVarDecl itself as its parent, not the enclosing
+    // FunctionProtoTypeLoc).
+    if (Parent->ASTNode.get<FunctionProtoTypeLoc>())
+      return true;
+    // `if consteval`/`if !consteval` (isConsteval()) needs no check here:
+    // unlike `if constexpr`, it takes no parenthesized condition at all
+    // (If->getCond() is null for it), so there's nothing under it a
+    // selection could ever resolve to except ordinary statements in its
+    // then/else branches -- neither of which needs to itself be a constant
+    // expression.
+    if (const auto *If = Parent->ASTNode.get<IfStmt>()) {
+      const Stmt *Child = Cur->outerImplicit().ASTNode.get<Stmt>();
+      return If->isConstexpr() && (Child == If->getCond() ||
+                                   Child == If->getConditionVariableDeclStmt());
+    }
+    const auto *ParentExpr = Parent->ASTNode.get<Expr>();
+    if (!ParentExpr || !propagatesConstantRequirement(ParentExpr))
+      return false;
+    Cur = Parent;
+  }
   return false;
 }
 
@@ -243,6 +285,15 @@ bool eligibleForExpressionExtraction(const Expr *E) {
   // stay usable the same way it was (e.g. as an assignment target).
   // FIXME: support lvalue-returning extraction.
   if (E->isLValue())
+    return false;
+
+  // A function can't return an array type. E->isLValue() above already
+  // excludes the common case (a plain array variable is an lvalue), but an
+  // array-typed xvalue can still reach here, e.g. accessing an array member
+  // through a prvalue struct (`getStruct().arr`): since C++11, member access
+  // on a non-lvalue base yields an xvalue, not a prvalue, so it isn't an
+  // lvalue either.
+  if (E->getType()->isArrayType())
     return false;
 
   // A plain reference to a name (e.g. a variable, or an enum constant,
@@ -722,10 +773,10 @@ findExpressionExtractionZone(const Node *CommonAnc, const SourceManager &SM,
   if (isTrivialExtraction(E, SM))
     return std::nullopt;
   bool RequiresConstexpr = isConstantExpressionContext(&Target);
-  // C has no constexpr-function escape hatch for this (see
-  // isConstantExpressionContext), so there's no way to make the
+  // Neither C nor pre-C++11 has a constexpr-function escape hatch for this
+  // (see isConstantExpressionContext), so there's no way to make the
   // extraction compile.
-  if (RequiresConstexpr && !LangOpts.CPlusPlus)
+  if (RequiresConstexpr && !LangOpts.CPlusPlus11)
     return std::nullopt;
 
   ExtractionZone ExtZone;
