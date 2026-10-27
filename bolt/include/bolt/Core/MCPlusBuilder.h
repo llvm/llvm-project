@@ -913,6 +913,20 @@ public:
     return false;
   }
 
+  /// Create an in-place RISC-V reference patch, preserving instruction sizes
+  /// and registers. NextInst, if provided, is the adjacent decoded instruction
+  /// and may be consumed with Inst as a call pair. Return an empty
+  /// sequence if unsupported. For a PCREL_LO12 instruction, IsLow is true and
+  /// RelType is the paired high relocation's type.
+  virtual InstructionListType createReferencePatch(const MCInst &Inst,
+                                                   const MCInst *NextInst,
+                                                   const MCSymbol *Target,
+                                                   uint32_t RelType, bool IsLow,
+                                                   MCContext *Ctx) const {
+    llvm_unreachable("not implemented");
+    return {};
+  }
+
   /// Used to fill the executable space with instructions
   /// that will trap.
   virtual StringRef getTrapFillValue() const {
