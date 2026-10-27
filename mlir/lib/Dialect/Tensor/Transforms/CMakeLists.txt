@@ -28,7 +28,9 @@ add_mlir_dialect_library(MLIRTensorTransforms
   MLIRDialectUtils
   MLIRFuncDialect # Dependency of scalarize-single-element-tensor-return
   MLIRIR
+  MLIRInferIntDivisibilityOpInterface
   MLIRLinalgDialect
+  MLIRLoopLikeInterface
   MLIRMemRefDialect
   MLIRPass
   MLIRRuntimeVerifiableOpInterface

@@ -7,14 +7,20 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tensor/Transforms/Transforms.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Value.h"
+#include "mlir/Interfaces/InferIntDivisibilityOpInterface.h"
+#include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/LogicalResult.h"
+#include "llvm/Support/MathExtras.h"
+
+#include <numeric>
 
 using namespace mlir;
 using namespace mlir::tensor;
@@ -618,13 +624,83 @@ LogicalResult mlir::tensor::getCollapsedExtractSliceInfo(
   return success();
 }
 
-// Checks if the `ofr` is a multiple of the `factor`.
-// Handles both static integer and dynamic values
-// where the value is the result of an affine.apply.
+/// Infer a power-of-two divisor from integer expressions and induction variable
+/// bounds. The query is local to a match: no facts are retained across
+/// rewrites. The budget bounds work on shared expression DAGs and nested loop
+/// bounds.
+static uint64_t inferKnownPowerOfTwoDivisor(OpFoldResult ofr,
+                                            unsigned &budget) {
+  if (!budget)
+    return 1;
+  --budget;
+
+  if (auto constant = getConstantIntValue(ofr)) {
+    uint64_t bits = static_cast<uint64_t>(*constant);
+    // Keep only the power-of-two part, valid for both signed and unsigned
+    // interpretations. Zero remains divisible by every factor.
+    return bits & (uint64_t{0} - bits);
+  }
+
+  Value value = cast<Value>(ofr);
+  if (auto arg = dyn_cast<BlockArgument>(value)) {
+    auto loop = dyn_cast<LoopLikeOpInterface>(arg.getOwner()->getParentOp());
+    if (!loop)
+      return 1;
+    auto ivs = loop.getLoopInductionVars();
+    auto lbs = loop.getLoopLowerBounds();
+    auto steps = loop.getLoopSteps();
+    if (!ivs || !lbs || !steps)
+      return 1;
+    auto it = llvm::find(*ivs, value);
+    if (it == ivs->end())
+      return 1;
+    unsigned index = std::distance(ivs->begin(), it);
+    if (index >= lbs->size() || index >= steps->size())
+      return 1;
+    // An induction variable is lb + iteration * step.
+    uint64_t lbDivisor = inferKnownPowerOfTwoDivisor((*lbs)[index], budget);
+    uint64_t stepDivisor = inferKnownPowerOfTwoDivisor((*steps)[index], budget);
+    return std::gcd(lbDivisor, stepDivisor);
+  }
+
+  Operation *op = value.getDefiningOp();
+  // For these operations, power-of-two divisibility is preserved even when
+  // arithmetic wraps. Other operations are left to the affine proof below.
+  if (!isa<arith::AddIOp, arith::SubIOp, arith::MulIOp, arith::SelectOp>(op))
+    return 1;
+  auto inferable = cast<InferIntDivisibilityOpInterface>(op);
+  SmallVector<IntegerDivisibility> operands;
+  for (Value operand : op->getOperands()) {
+    uint64_t divisor = inferKnownPowerOfTwoDivisor(operand, budget);
+    operands.emplace_back(ConstantIntDivisibility(divisor, divisor));
+  }
+  uint64_t divisor = 1;
+  inferable.inferResultDivisibility(
+      operands, [&](Value result, const ConstantIntDivisibility &inferred) {
+        if (result != value)
+          return;
+        // Saturate overflowing divisor products rather than treating them
+        // as a proof that the result is exactly zero.
+        divisor = inferred.udiv() ? inferred.udiv() : uint64_t{1} << 63;
+      });
+  return divisor;
+}
+
+// Check static and affine divisibility, or power-of-two alignment inferred
+// from integer expressions and loop bounds. Restricting the latter proof to
+// powers of two makes it independent of the index bit width and wraparound.
 static bool isMultipleOf(OpFoldResult ofr, int64_t factor) {
+  if (factor <= 0)
+    return false;
   std::optional<int64_t> staticValue = getConstantIntValue(ofr);
   if (staticValue.has_value())
     return staticValue.value() % factor == 0;
+
+  if (llvm::isPowerOf2_64(factor)) {
+    unsigned budget = 32;
+    if (inferKnownPowerOfTwoDivisor(ofr, budget) % factor == 0)
+      return true;
+  }
 
   Value value = dyn_cast<Value>(ofr);
   if (!value)

@@ -492,3 +492,283 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
+
+// -----
+
+// Power-of-two alignment through integer expressions and loop bounds.
+
+// CHECK-LABEL: func.func @bubble_collapse_muli_offset(
+// CHECK-SAME: %[[SRC:.*]]: tensor<4x8xf32>
+// CHECK: %[[SLICE:.*]] = tensor.extract_slice %[[SRC]]
+// CHECK-SAME: [1, 8] [1, 1]
+// CHECK: tensor.collapse_shape %[[SLICE]]
+func.func @bubble_collapse_muli_offset(%src: tensor<4x8xf32>, %row: index) -> tensor<8xf32> {
+  %c8 = arith.constant 8 : index
+  %offset = arith.muli %row, %c8 : index
+  %flat = tensor.collapse_shape %src [[0, 1]] : tensor<4x8xf32> into tensor<32xf32>
+  %slice = tensor.extract_slice %flat[%offset] [8] [1] : tensor<32xf32> to tensor<8xf32>
+  return %slice : tensor<8xf32>
+}
+
+// CHECK-LABEL: func.func @bubble_collapse_addi_offset(
+// CHECK-SAME: %[[SRC:.*]]: tensor<4x8xf32>
+// CHECK: %[[SLICE:.*]] = tensor.extract_slice %[[SRC]]
+// CHECK-SAME: [1, 8] [1, 1]
+// CHECK: tensor.collapse_shape %[[SLICE]]
+func.func @bubble_collapse_addi_offset(%src: tensor<4x8xf32>, %row: index) -> tensor<8xf32> {
+  %c8 = arith.constant 8 : index
+  %base = arith.muli %row, %c8 : index
+  %offset = arith.addi %base, %c8 : index
+  %flat = tensor.collapse_shape %src [[0, 1]] : tensor<4x8xf32> into tensor<32xf32>
+  %slice = tensor.extract_slice %flat[%offset] [8] [1] : tensor<32xf32> to tensor<8xf32>
+  return %slice : tensor<8xf32>
+}
+
+// CHECK-LABEL: func.func @bubble_collapse_subi_offset(
+// CHECK-SAME: %[[SRC:.*]]: tensor<4x8xf32>
+// CHECK: %[[SLICE:.*]] = tensor.extract_slice %[[SRC]]
+// CHECK-SAME: [1, 8] [1, 1]
+// CHECK: tensor.collapse_shape %[[SLICE]]
+func.func @bubble_collapse_subi_offset(%src: tensor<4x8xf32>, %row: index) -> tensor<8xf32> {
+  %c8 = arith.constant 8 : index
+  %base = arith.muli %row, %c8 : index
+  %offset = arith.subi %base, %c8 : index
+  %flat = tensor.collapse_shape %src [[0, 1]] : tensor<4x8xf32> into tensor<32xf32>
+  %slice = tensor.extract_slice %flat[%offset] [8] [1] : tensor<32xf32> to tensor<8xf32>
+  return %slice : tensor<8xf32>
+}
+
+// CHECK-LABEL: func.func @bubble_collapse_select_offset(
+// CHECK-SAME: %[[SRC:.*]]: tensor<4x8xf32>
+// CHECK: %[[SLICE:.*]] = tensor.extract_slice %[[SRC]]
+// CHECK-SAME: [1, 8] [1, 1]
+// CHECK: tensor.collapse_shape %[[SLICE]]
+func.func @bubble_collapse_select_offset(%src: tensor<4x8xf32>, %row: index, %cond: i1) -> tensor<8xf32> {
+  %c8 = arith.constant 8 : index
+  %a = arith.muli %row, %c8 : index
+  %b = arith.addi %a, %c8 : index
+  %offset = arith.select %cond, %a, %b : index
+  %flat = tensor.collapse_shape %src [[0, 1]] : tensor<4x8xf32> into tensor<32xf32>
+  %slice = tensor.extract_slice %flat[%offset] [8] [1] : tensor<32xf32> to tensor<8xf32>
+  return %slice : tensor<8xf32>
+}
+
+// CHECK-LABEL: func.func @no_bubble_collapse_misaligned_add(
+// CHECK-SAME: %[[SRC:.*]]: tensor<4x8xf32>
+// CHECK: %[[FLAT:.*]] = tensor.collapse_shape %[[SRC]]
+// CHECK: tensor.extract_slice %[[FLAT]]
+func.func @no_bubble_collapse_misaligned_add(%src: tensor<4x8xf32>, %row: index) -> tensor<8xf32> {
+  %c8 = arith.constant 8 : index
+  %c1 = arith.constant 1 : index
+  %base = arith.muli %row, %c8 : index
+  %offset = arith.addi %base, %c1 : index
+  %flat = tensor.collapse_shape %src [[0, 1]] : tensor<4x8xf32> into tensor<32xf32>
+  %slice = tensor.extract_slice %flat[%offset] [8] [1] : tensor<32xf32> to tensor<8xf32>
+  return %slice : tensor<8xf32>
+}
+
+// CHECK-LABEL: func.func @no_bubble_collapse_misaligned_select(
+// CHECK-SAME: %[[SRC:.*]]: tensor<4x8xf32>
+// CHECK: %[[FLAT:.*]] = tensor.collapse_shape %[[SRC]]
+// CHECK: tensor.extract_slice %[[FLAT]]
+func.func @no_bubble_collapse_misaligned_select(%src: tensor<4x8xf32>, %row: index, %cond: i1) -> tensor<8xf32> {
+  %c8 = arith.constant 8 : index
+  %c1 = arith.constant 1 : index
+  %a = arith.muli %row, %c8 : index
+  %b = arith.addi %a, %c1 : index
+  %offset = arith.select %cond, %a, %b : index
+  %flat = tensor.collapse_shape %src [[0, 1]] : tensor<4x8xf32> into tensor<32xf32>
+  %slice = tensor.extract_slice %flat[%offset] [8] [1] : tensor<32xf32> to tensor<8xf32>
+  return %slice : tensor<8xf32>
+}
+
+// CHECK-LABEL: func.func @no_bubble_collapse_non_power_of_two_muli(
+// CHECK-SAME: %[[SRC:.*]]: tensor<4x6xf32>
+// CHECK: %[[FLAT:.*]] = tensor.collapse_shape %[[SRC]]
+// CHECK: tensor.extract_slice %[[FLAT]]
+func.func @no_bubble_collapse_non_power_of_two_muli(%src: tensor<4x6xf32>, %row: index) -> tensor<6xf32> {
+  %c6 = arith.constant 6 : index
+  %offset = arith.muli %row, %c6 : index
+  %flat = tensor.collapse_shape %src [[0, 1]] : tensor<4x6xf32> into tensor<24xf32>
+  %slice = tensor.extract_slice %flat[%offset] [6] [1] : tensor<24xf32> to tensor<6xf32>
+  return %slice : tensor<6xf32>
+}
+
+// CHECK-LABEL: func.func @no_bubble_collapse_unsupported_division(
+// CHECK-SAME: %[[SRC:.*]]: tensor<4x8xf32>
+// CHECK: %[[FLAT:.*]] = tensor.collapse_shape %[[SRC]]
+// CHECK: tensor.extract_slice %[[FLAT]]
+func.func @no_bubble_collapse_unsupported_division(%src: tensor<4x8xf32>, %row: index) -> tensor<8xf32> {
+  %c8 = arith.constant 8 : index
+  %c2 = arith.constant 2 : index
+  %base = arith.muli %row, %c8 : index
+  %offset = arith.divui %base, %c2 : index
+  %flat = tensor.collapse_shape %src [[0, 1]] : tensor<4x8xf32> into tensor<32xf32>
+  %slice = tensor.extract_slice %flat[%offset] [8] [1] : tensor<32xf32> to tensor<8xf32>
+  return %slice : tensor<8xf32>
+}
+
+// CHECK-LABEL: func.func @no_bubble_collapse_query_budget(
+// CHECK-SAME: %[[SRC:.*]]: tensor<4x8xf32>
+// CHECK: %[[FLAT:.*]] = tensor.collapse_shape %[[SRC]]
+// CHECK: tensor.extract_slice %[[FLAT]]
+func.func @no_bubble_collapse_query_budget(%src: tensor<4x8xf32>, %row: index) -> tensor<8xf32> {
+  %c8 = arith.constant 8 : index
+  %v0 = arith.muli %row, %c8 : index
+  %v1 = arith.addi %v0, %v0 : index
+  %v2 = arith.addi %v1, %v1 : index
+  %v3 = arith.addi %v2, %v2 : index
+  %v4 = arith.addi %v3, %v3 : index
+  %v5 = arith.addi %v4, %v4 : index
+  %v6 = arith.addi %v5, %v5 : index
+  %offset = arith.addi %v6, %v6 : index
+  %flat = tensor.collapse_shape %src [[0, 1]] : tensor<4x8xf32> into tensor<32xf32>
+  %slice = tensor.extract_slice %flat[%offset] [8] [1] : tensor<32xf32> to tensor<8xf32>
+  return %slice : tensor<8xf32>
+}
+
+// CHECK-LABEL: func.func @bubble_collapse_multiple_groups(
+// CHECK-SAME: %[[SRC:.*]]: tensor<4x8x2x4xf32>
+// CHECK: %[[SLICE:.*]] = tensor.extract_slice %[[SRC]]
+// CHECK-SAME: [1, 8, 1, 4] [1, 1, 1, 1]
+// CHECK: tensor.collapse_shape %[[SLICE]]
+func.func @bubble_collapse_multiple_groups(%src: tensor<4x8x2x4xf32>, %row: index, %col: index) -> tensor<8x4xf32> {
+  %c8 = arith.constant 8 : index
+  %c4 = arith.constant 4 : index
+  %a = arith.muli %row, %c8 : index
+  %b = arith.muli %col, %c4 : index
+  %flat = tensor.collapse_shape %src [[0, 1], [2, 3]] : tensor<4x8x2x4xf32> into tensor<32x8xf32>
+  %slice = tensor.extract_slice %flat[%a, %b] [8, 4] [1, 1] : tensor<32x8xf32> to tensor<8x4xf32>
+  return %slice : tensor<8x4xf32>
+}
+
+// CHECK-LABEL: func.func @bubble_collapse_loop_iv(
+// CHECK-SAME: %[[SRC:.*]]: tensor<4x8xf32>
+// CHECK: scf.for
+// CHECK: %[[SLICE:.*]] = tensor.extract_slice %[[SRC]]
+// CHECK-SAME: [1, 8] [1, 1]
+// CHECK: tensor.collapse_shape %[[SLICE]]
+func.func @bubble_collapse_loop_iv(%src: tensor<4x8xf32>, %dst: tensor<32xf32>) -> tensor<32xf32> {
+  %lb = arith.constant 0 : index
+  %ub = arith.constant 25 : index
+  %step = arith.constant 8 : index
+  %flat = tensor.collapse_shape %src [[0, 1]] : tensor<4x8xf32> into tensor<32xf32>
+  %r = scf.for %iv = %lb to %ub step %step iter_args(%out = %dst) -> tensor<32xf32> {
+    %slice = tensor.extract_slice %flat[%iv] [8] [1] : tensor<32xf32> to tensor<8xf32>
+    %insert = tensor.insert_slice %slice into %out[%iv] [8] [1] : tensor<8xf32> into tensor<32xf32>
+    scf.yield %insert : tensor<32xf32>
+  }
+  return %r : tensor<32xf32>
+}
+
+// CHECK-LABEL: func.func @bubble_collapse_aligned_loop_lb(
+// CHECK-SAME: %[[SRC:.*]]: tensor<4x8xf32>
+// CHECK: scf.for
+// CHECK: %[[SLICE:.*]] = tensor.extract_slice %[[SRC]]
+// CHECK-SAME: [1, 8] [1, 1]
+// CHECK: tensor.collapse_shape %[[SLICE]]
+func.func @bubble_collapse_aligned_loop_lb(%src: tensor<4x8xf32>, %dst: tensor<32xf32>) -> tensor<32xf32> {
+  %lb = arith.constant 8 : index
+  %ub = arith.constant 25 : index
+  %step = arith.constant 8 : index
+  %flat = tensor.collapse_shape %src [[0, 1]] : tensor<4x8xf32> into tensor<32xf32>
+  %r = scf.for %iv = %lb to %ub step %step iter_args(%out = %dst) -> tensor<32xf32> {
+    %slice = tensor.extract_slice %flat[%iv] [8] [1] : tensor<32xf32> to tensor<8xf32>
+    %insert = tensor.insert_slice %slice into %out[%iv] [8] [1] : tensor<8xf32> into tensor<32xf32>
+    scf.yield %insert : tensor<32xf32>
+  }
+  return %r : tensor<32xf32>
+}
+
+// CHECK-LABEL: func.func @no_bubble_collapse_misaligned_loop_lb(
+// CHECK-SAME: %[[SRC:.*]]: tensor<4x8xf32>
+// CHECK: %[[FLAT:.*]] = tensor.collapse_shape %[[SRC]]
+// CHECK: scf.for
+// CHECK: tensor.extract_slice %[[FLAT]]
+func.func @no_bubble_collapse_misaligned_loop_lb(%src: tensor<4x8xf32>, %dst: tensor<32xf32>) -> tensor<32xf32> {
+  %lb = arith.constant 1 : index
+  %ub = arith.constant 25 : index
+  %step = arith.constant 8 : index
+  %flat = tensor.collapse_shape %src [[0, 1]] : tensor<4x8xf32> into tensor<32xf32>
+  %r = scf.for %iv = %lb to %ub step %step iter_args(%out = %dst) -> tensor<32xf32> {
+    %slice = tensor.extract_slice %flat[%iv] [8] [1] : tensor<32xf32> to tensor<8xf32>
+    %insert = tensor.insert_slice %slice into %out[%iv] [8] [1] : tensor<8xf32> into tensor<32xf32>
+    scf.yield %insert : tensor<32xf32>
+  }
+  return %r : tensor<32xf32>
+}
+
+// CHECK-LABEL: func.func @no_bubble_collapse_misaligned_loop_step(
+// CHECK-SAME: %[[SRC:.*]]: tensor<4x8xf32>
+// CHECK: %[[FLAT:.*]] = tensor.collapse_shape %[[SRC]]
+// CHECK: scf.for
+// CHECK: tensor.extract_slice %[[FLAT]]
+func.func @no_bubble_collapse_misaligned_loop_step(%src: tensor<4x8xf32>, %dst: tensor<32xf32>) -> tensor<32xf32> {
+  %lb = arith.constant 0 : index
+  %ub = arith.constant 25 : index
+  %step = arith.constant 4 : index
+  %flat = tensor.collapse_shape %src [[0, 1]] : tensor<4x8xf32> into tensor<32xf32>
+  %r = scf.for %iv = %lb to %ub step %step iter_args(%out = %dst) -> tensor<32xf32> {
+    %slice = tensor.extract_slice %flat[%iv] [8] [1] : tensor<32xf32> to tensor<8xf32>
+    %insert = tensor.insert_slice %slice into %out[%iv] [8] [1] : tensor<8xf32> into tensor<32xf32>
+    scf.yield %insert : tensor<32xf32>
+  }
+  return %r : tensor<32xf32>
+}
+
+// CHECK-LABEL: func.func @no_bubble_collapse_iter_arg(
+// CHECK: %[[FLAT:.*]] = tensor.collapse_shape
+// CHECK: scf.for
+// CHECK: tensor.extract_slice %[[FLAT]]
+func.func @no_bubble_collapse_iter_arg(%src: tensor<4x8xf32>, %dst: tensor<32xf32>) -> tensor<32xf32> {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+  %c8 = arith.constant 8 : index
+  %flat = tensor.collapse_shape %src [[0, 1]] : tensor<4x8xf32> into tensor<32xf32>
+  %r:2 = scf.for %iv = %c0 to %c4 step %c1 iter_args(%offset = %c0, %out = %dst) -> (index, tensor<32xf32>) {
+    %slice = tensor.extract_slice %flat[%offset] [8] [1] : tensor<32xf32> to tensor<8xf32>
+    %insert = tensor.insert_slice %slice into %out[%offset] [8] [1] : tensor<8xf32> into tensor<32xf32>
+    %next = arith.addi %offset, %c8 : index
+    scf.yield %next, %insert : index, tensor<32xf32>
+  }
+  return %r#1 : tensor<32xf32>
+}
+
+// CHECK-LABEL: func.func @bubble_collapse_negative_multiplier(
+// CHECK-SAME: %[[SRC:.*]]: tensor<4x8xf32>
+// CHECK: %[[SLICE:.*]] = tensor.extract_slice %[[SRC]]
+// CHECK-SAME: [1, 8] [1, 1]
+// CHECK: tensor.collapse_shape %[[SLICE]]
+func.func @bubble_collapse_negative_multiplier(%src: tensor<4x8xf32>, %row: index) -> tensor<8xf32> {
+  %cneg8 = arith.constant -8 : index
+  %offset = arith.muli %row, %cneg8 : index
+  %flat = tensor.collapse_shape %src [[0, 1]] : tensor<4x8xf32> into tensor<32xf32>
+  %slice = tensor.extract_slice %flat[%offset] [8] [1] : tensor<32xf32> to tensor<8xf32>
+  return %slice : tensor<8xf32>
+}
+
+// CHECK-LABEL: func.func @bubble_collapse_divisor_product_overflow(
+// CHECK-SAME: %[[SRC:.*]]: tensor<4x8xf32>
+// CHECK: %[[SLICE:.*]] = tensor.extract_slice %[[SRC]]
+// CHECK-SAME: [1, 8] [1, 1]
+// CHECK: tensor.collapse_shape %[[SLICE]]
+func.func @bubble_collapse_divisor_product_overflow(%src: tensor<4x8xf32>, %row: index) -> tensor<8xf32> {
+  %c = arith.constant -9223372036854775808 : index
+  %c2 = arith.constant 2 : index
+  %a = arith.muli %row, %c : index
+  %offset = arith.muli %a, %c2 : index
+  %flat = tensor.collapse_shape %src [[0, 1]] : tensor<4x8xf32> into tensor<32xf32>
+  %slice = tensor.extract_slice %flat[%offset] [8] [1] : tensor<32xf32> to tensor<8xf32>
+  return %slice : tensor<8xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%root: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %root : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.tensor.bubble_up_extract_slice
+    } : !transform.any_op
+    transform.yield
+  }
+}
