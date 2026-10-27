@@ -43,7 +43,7 @@ func.func @non_elementwise(%mask: vector<4xi1>, %a: vector<4xf32>, %b: vector<4x
 }
 
 // If the regions capture different values, do not transform.
-// CHECK-LABEL: func.func @region(
+// CHECK-LABEL: func.func @region_diff(
 // CHECK-NEXT: %[[X:.*]] = "test.pure_elementwise_region"(%arg1) ({
 // CHECK-NEXT: ^bb0(%[[A:.*]]: f32):
 // CHECK-NEXT: %[[SUM0:.*]] = arith.addf %[[A]], %arg3 : f32
@@ -56,7 +56,7 @@ func.func @non_elementwise(%mask: vector<4xi1>, %a: vector<4xf32>, %b: vector<4x
 // CHECK-NEXT: }) : (f32) -> f32
 // CHECK-NEXT: %[[R:.*]] = arith.select %arg0, %[[X]], %[[Y]] : f32
 // CHECK-NEXT: return %[[R]] : f32
-func.func @region(%mask: i1, %a: f32, %b: f32, %k0: f32, %k1: f32) -> f32 {
+func.func @region_diff(%mask: i1, %a: f32, %b: f32, %k0: f32, %k1: f32) -> f32 {
   %x = "test.pure_elementwise_region"(%a) ({
   ^bb0(%v: f32):
     %sum = arith.addf %v, %k0 : f32
@@ -65,6 +65,36 @@ func.func @region(%mask: i1, %a: f32, %b: f32, %k0: f32, %k1: f32) -> f32 {
   %y = "test.pure_elementwise_region"(%b) ({
   ^bb0(%v: f32):
     %sum = arith.addf %v, %k1 : f32
+    "test.return"(%sum) : (f32) -> ()
+  }) : (f32) -> f32
+  %r = arith.select %mask, %x, %y : f32
+  return %r : f32
+}
+
+// The transformation is meant to be valid but our current implementation
+// limitations can't handle the case properly.
+// CHECK-LABEL: func.func @region_same(
+// CHECK-NEXT: %[[X:.*]] = "test.pure_elementwise_region"(%arg1) ({
+// CHECK-NEXT: ^bb0(%[[A:.*]]: f32):
+// CHECK-NEXT: %[[SUM0:.*]] = arith.addf %[[A]], %arg3 : f32
+// CHECK-NEXT: "test.return"(%[[SUM0]]) : (f32) -> ()
+// CHECK-NEXT: }) : (f32) -> f32
+// CHECK-NEXT: %[[Y:.*]] = "test.pure_elementwise_region"(%arg2) ({
+// CHECK-NEXT: ^bb0(%[[B:.*]]: f32):
+// CHECK-NEXT: %[[SUM1:.*]] = arith.addf %[[B]], %arg3 : f32
+// CHECK-NEXT: "test.return"(%[[SUM1]]) : (f32) -> ()
+// CHECK-NEXT: }) : (f32) -> f32
+// CHECK-NEXT: %[[R:.*]] = arith.select %arg0, %[[X]], %[[Y]] : f32
+// CHECK-NEXT: return %[[R]] : f32
+func.func @region_same(%mask: i1, %a: f32, %b: f32, %k0: f32) -> f32 {
+  %x = "test.pure_elementwise_region"(%a) ({
+  ^bb0(%v: f32):
+    %sum = arith.addf %v, %k0 : f32
+    "test.return"(%sum) : (f32) -> ()
+  }) : (f32) -> f32
+  %y = "test.pure_elementwise_region"(%b) ({
+  ^bb0(%v: f32):
+    %sum = arith.addf %v, %k0 : f32
     "test.return"(%sum) : (f32) -> ()
   }) : (f32) -> f32
   %r = arith.select %mask, %x, %y : f32

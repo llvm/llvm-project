@@ -3186,34 +3186,14 @@ struct SelectCommonElementwiseOp : public OpRewritePattern<arith::SelectOp> {
       return failure();
 
     for (Operation *producer : {lhs, rhs}) {
-      // Conservative design. The motivation is we don't want to transfer:
+      // Avoid sinking loop invariant code into the loop.
       //
-      //  x = F(a)
-      //  y = F(b)
-      //  for i:
-      //      r = select(c[i], x, y)
-      //
-      // into:
-      //
-      // for i:
-      //    s = select(c[i], a, b)
-      //    r = F(s)
-      //
-      // TODO: maybe we can handle other cases by introducing more CFG/Loop
-      // related analysis.
+      // TODO: handle the cases by introducing more CFG/Loop analysis.
       if (producer->getBlock() != op->getBlock())
         return failure();
 
-      // Skipping hard cases.
-      //
-      // For regions, a counter example is,
-      //
-      //   lhs = F(a) { v -> v + k0 }
-      //   rhs = F(b) { v -> v + k1 }
-      //   r = select(c, lhs, rhs)
-      //
-      // We can't rewrite this. The following check `isEquivalentTo` won't reject
-      // this as we passed ignoreValueEquivalence.
+      // `isEquivalentTo` doesn't catch all cases, so we conservatively match
+      // the cases we know how to convert
       if (producer->getNumResults() != 1 || !producer->hasOneUse() ||
           producer->getNumRegions() != 0 || producer->getNumSuccessors() != 0 ||
           !producer->hasTrait<OpTrait::Elementwise>() || !isPure(producer))
@@ -3248,21 +3228,7 @@ struct SelectCommonElementwiseOp : public OpRewritePattern<arith::SelectOp> {
         return failure();
       }
 
-      // If we always create new pair, we may transfer
-      //
-      //   select(c, F(a, a, a), F(b, b, b))
-      //
-      // into
-      //
-      //   s0 = select(c, a, b)
-      //   s1 = select(c, a, b)
-      //   s2 = select(c, a, b)
-      //   F(s0, s1, s2)
-      //
-      // instead of
-      //
-      //   s = select(c, a, b)
-      //   F = (s, s, s)
+      // Always creating a new pair would not merging equivalent results.
       auto [it, inserted] = selected.try_emplace(std::make_pair(a, b));
       if (inserted) {
         auto select = arith::SelectOp::create(rewriter, op.getLoc(),
