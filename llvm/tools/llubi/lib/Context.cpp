@@ -831,6 +831,25 @@ void Context::toBytes(const AnyValue &Val, Type *Ty,
   llvm_unreachable("Unsupported first class type.");
 }
 
+AnyValue Context::extractBits(const ByteValue &Src, uint32_t OffsetInBits,
+                              Type *Ty) {
+  assert(OffsetInBits + DL.getTypeSizeInBits(Ty).getFixedValue() <=
+             Src.getBitWidth() &&
+         "Bit range out of bounds");
+  return fromBytes(ConstBytesView(Src.bytes(), DL), Ty, OffsetInBits,
+                   /*CheckPaddingBits=*/false,
+                   /*ContainsUndefinedBits=*/nullptr);
+}
+
+void Context::insertBits(ByteValue &Base, uint32_t OffsetInBits,
+                         const AnyValue &Val, Type *Ty) {
+  assert(OffsetInBits + DL.getTypeSizeInBits(Ty).getFixedValue() <=
+             Base.getBitWidth() &&
+         "Bit range out of bounds");
+  toBytes(Val, Ty, OffsetInBits, MutableBytesView(Base.mutableBytes(), DL),
+          /*PaddingBits=*/false);
+}
+
 AnyValue Context::load(MemoryObject &MO, uint64_t Offset, Type *ValTy,
                        bool *ContainsUndefinedBits) {
   return fromBytes(
@@ -1060,7 +1079,8 @@ Context::computeGEP(GEPOperator &GEP,
 
     // Handle a struct index, which adds its field offset to the pointer.
     if (StructType *STy = GTI.getStructTypeOrNull()) {
-      unsigned ElementIdx = cast<ConstantInt>(V)->getZExtValue();
+      unsigned ElementIdx =
+          cast<Constant>(V)->getUniqueInteger().getZExtValue();
       const StructLayout *SL = DL.getStructLayout(STy);
       // Element offset is in bytes.
       ApplyScaledOffset(APInt(IndexBitWidth, SL->getElementOffset(ElementIdx),
@@ -1106,6 +1126,8 @@ IntrusiveRefCntPtr<MemoryObject>
 Context::allocate(uint64_t Size, uint64_t Align, StringRef Name, unsigned AS,
                   MemInitKind InitKind, MemAllocKind AllocKind,
                   bool IsIRGlobalValue) {
+  if (exceedsMaxObjectSize(Size, AS))
+    return nullptr;
   // Even if the memory object is zero-sized, it still occupies a byte to obtain
   // a unique address.
   uint64_t AllocateSize = std::max(Size, (uint64_t)1);

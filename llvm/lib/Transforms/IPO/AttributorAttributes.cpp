@@ -1466,7 +1466,8 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
       int64_t ElementSize = DL.getTypeStoreSize(ElementType).getFixedValue();
       auto *ConstContent = cast<Constant>(*Content);
       Type *Int32Ty = Type::getInt32Ty(ElementType->getContext());
-      SmallVector<int64_t> ElementOffsets(Offsets.begin(), Offsets.end());
+      SmallVector<int64_t> ElementOffsets(OffsetsSorted.begin(),
+                                          OffsetsSorted.end());
 
       for (int i = 0, e = VT->getElementCount().getFixedValue(); i != e; ++i) {
         Value *ElementContent = ConstantExpr::getExtractElement(
@@ -12989,8 +12990,12 @@ struct AAInvariantLoadPointerCallSiteReturned final
       : AAInvariantLoadPointerImpl(IRP, A) {}
 
   void initialize(Attributor &A) override {
+    // Nothing is known about the result of an indirect call.
     const Function *F = getAssociatedFunction();
-    assert(F && "no associated function for return from call");
+    if (!F) {
+      indicatePessimisticFixpoint();
+      return;
+    }
 
     if (!F->isDeclaration() && !F->isIntrinsic())
       return AAInvariantLoadPointerImpl::initialize(A);

@@ -417,8 +417,8 @@ bool LLVMPointerType::areCompatible(
       });
     }
     if (it != oldLayout.end()) {
-      size = *extractPointerSpecValue(*it, PtrDLEntryPos::Size);
-      abi = *extractPointerSpecValue(*it, PtrDLEntryPos::Abi);
+      size = *extractPointerSpecValue(it->getValue(), PtrDLEntryPos::Size);
+      abi = *extractPointerSpecValue(it->getValue(), PtrDLEntryPos::Abi);
     }
 
     Attribute newSpec = llvm::cast<DenseIntElementsAttr>(newEntry.getValue());
@@ -550,27 +550,51 @@ LLVMStructType::verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
   return success();
 }
 
+/// Returns the byte offset of the element of the specified structure at the
+/// given index and the strictest alignment requirement of the elements up to
+/// the index. For the index past the last element it thus returns the size and
+/// alignment of the whole structure.
+static uint64_t getOffsetAndAlignment(const DataLayout &dataLayout,
+                                      LLVMStructType structType, unsigned index,
+                                      uint64_t &structAlignment) {
+  uint64_t offset = 0;
+  structAlignment = 1;
+  for (auto [i, element] : llvm::enumerate(structType.getBody())) {
+    // Align the element unless the structure is packed.
+    uint64_t elementAlignment = dataLayout.getTypeABIAlignment(element);
+    if (!structType.isPacked()) {
+      offset = llvm::alignTo(offset, elementAlignment);
+
+      // The structure alignment is the strictest alignment of its
+      // elements.
+      structAlignment = std::max(structAlignment, elementAlignment);
+    }
+    if (i == index)
+      return offset;
+
+    // Each element gets its allocation size, even in packed structures.
+    offset += dataLayout.getTypeAllocSize(element);
+  }
+  return offset;
+}
+
+uint64_t LLVMStructType::getElementOffset(const DataLayout &dataLayout,
+                                          unsigned index) const {
+  assert(index < getBody().size() && "expected a valid struct element index");
+  uint64_t structAlignment;
+  return getOffsetAndAlignment(dataLayout, *this, index, structAlignment);
+}
+
 llvm::TypeSize
 LLVMStructType::getTypeSizeInBits(const DataLayout &dataLayout,
                                   DataLayoutEntryListRef params) const {
-  auto structSize = llvm::TypeSize::getFixed(0);
-  uint64_t structAlignment = 1;
-  for (Type element : getBody()) {
-    uint64_t elementAlignment =
-        isPacked() ? 1 : dataLayout.getTypeABIAlignment(element);
-    // Add padding to align the element unless the struct is packed.
-    structSize = llvm::alignTo(structSize, elementAlignment);
-    // Elements occupy their allocation size, even in packed structs.
-    structSize += dataLayout.getTypeAllocSize(element);
-
-    // The alignment requirement of a struct is equal to the strictest alignment
-    // requirement of its elements.
-    structAlignment = std::max(elementAlignment, structAlignment);
-  }
+  uint64_t structAlignment;
+  uint64_t structSize = getOffsetAndAlignment(
+      dataLayout, *this, getBody().size(), structAlignment);
   // At the end, add padding to the struct to satisfy its own alignment
   // requirement. Otherwise structs inside of arrays would be misaligned.
   structSize = llvm::alignTo(structSize, structAlignment);
-  return structSize * kBitsInByte;
+  return llvm::TypeSize::getFixed(structSize * kBitsInByte);
 }
 
 namespace {

@@ -86,6 +86,18 @@ func.func @test_resize_invalid_boarder_x(%arg0: tensor<1x8x8x8xf32>) -> tensor<?
 
 // -----
 
+// CHECK-LABEL: test_resize_nonpositive_scale
+func.func @test_resize_nonpositive_scale(%arg0: tensor<1x8x8x8xf32>) -> tensor<?x?x?x?xf32> {
+  %scale = tosa.const_shape values(dense<[2, 0, -1, 2]> : tensor<4xindex>) : () -> !tosa.shape<4>
+  %offset = tosa.const_shape values(dense<0> : tensor<2xindex>) : () -> !tosa.shape<2>
+  %border = tosa.const_shape values(dense<0> : tensor<2xindex>) : () -> !tosa.shape<2>
+  // expected-error@+1 {{'tosa.resize' op expect all scale values to be > 0, got 2, 0, -1, 2}}
+  %1 = tosa.resize %arg0, %scale, %offset, %border mode<BILINEAR> : (tensor<1x8x8x8xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<?x?x?x?xf32>
+  return %1 : tensor<?x?x?x?xf32>
+}
+
+// -----
+
 // CHECK-LABEL: test_reshape_inferable_dim
 func.func @test_reshape_inferable_dim(%arg0: tensor<4xf32>) -> tensor<?x2xf32> {
   %shape = tosa.const_shape values(dense<[-1, 2]> : tensor<2xindex>) : () -> !tosa.shape<2>
@@ -144,6 +156,16 @@ func.func @test_mul_non_zero_shift(%arg0: tensor<1x8x8x8xi16>, %arg1: tensor<1x8
   // expected-error@+1 {{'tosa.mul' op requires shift = 0 for all input data types that are not int32_t, but got: 1}}
   %mul = tosa.mul %arg0, %arg1, %shift : (tensor<1x8x8x8xi16>, tensor<1x8x8x8xi16>, tensor<1xi8>) -> tensor<1x8x8x8xi32>
   return %mul : tensor<1x8x8x8xi32>
+}
+
+// -----
+
+// CHECK-LABEL: test_mul_invalid_shift
+func.func @test_mul_invalid_shift(%arg0: tensor<13x21x3xf32>, %arg1: tensor<13x1x3xf32>) -> tensor<13x21x3xf32> {
+  %shift = "tosa.const"() <{values = dense<1> : tensor<1xi8>}> : () -> tensor<1xi8>
+  // expected-error@+1 {{'tosa.mul' op requires shift = 0 for all input data types that are not int32_t, but got: 1}}
+  %0 = tosa.mul %arg0, %arg1, %shift : (tensor<13x21x3xf32>, tensor<13x1x3xf32>, tensor<1xi8>) -> tensor<13x21x3xf32>
+  return %0 : tensor<13x21x3xf32>
 }
 
 // -----

@@ -32,9 +32,42 @@ using namespace llvm;
 using namespace llvm::VPlanPatternMatch;
 using namespace llvm::SCEVPatternMatch;
 
+bool vputils::propagatesFirstLaneUse(const VPUser *U, const VPValue *Op) {
+  if (isa<VPBlendRecipe>(U))
+    return true;
+  auto *VPI = dyn_cast<VPInstruction>(U);
+  if (!VPI)
+    return false;
+  unsigned Opcode = VPI->getOpcode();
+  switch (Opcode) {
+  case Instruction::ExtractValue:
+  case Instruction::FCmp:
+  case Instruction::ICmp:
+  case Instruction::Select:
+  case Instruction::Freeze:
+  case VPInstruction::Not:
+    // TODO: Cover additional opcodes.
+    return true;
+  case VPInstruction::PtrAdd:
+    return Op != VPI->getOperand(0);
+  default:
+    return Instruction::isBinaryOp(Opcode) || Instruction::isCast(Opcode);
+  }
+}
+
 bool vputils::onlyFirstLaneUsed(const VPValue *Def) {
-  return all_of(Def->users(),
-                [Def](const VPUser *U) { return U->usesFirstLaneOnly(Def); });
+  SmallSetVector<const VPValue *, 8> Worklist;
+  Worklist.insert(Def);
+  for (unsigned I = 0; I != Worklist.size(); ++I) {
+    const VPValue *Cur = Worklist[I];
+    for (const VPUser *U : Cur->users()) {
+      if (propagatesFirstLaneUse(U, Cur))
+        Worklist.insert(cast<VPSingleDefRecipe>(U));
+      else if (!U->usesFirstLaneOnly(Cur))
+        return false;
+    }
+  }
+  return true;
 }
 
 bool vputils::onlyFirstPartUsed(const VPValue *Def) {
@@ -730,9 +763,9 @@ VPIRFlags vputils::getFlagsForInduction(const InductionDescriptor &ID,
   if (match(Inc, m_Sub(m_Specific(PhiR), m_VPValue()))) {
     // The step of a sub induction is negated, so NUW cannot be preserved. NSW
     // can, if the step is not the signed minimum.
-    ConstantInt *Step = ID.getConstIntStepValue();
+    std::optional<APInt> Step = ID.getConstStepValue();
     bool NSW = cast<VPInstruction>(Inc)->getNoWrapFlagsOrNone().HasNSW &&
-               Step && !Step->isMinValue(/*IsSigned=*/true);
+               Step && !Step->isMinSignedValue();
     return VPIRFlags::WrapFlagsTy(/*NUW*/ false, NSW);
   }
 
@@ -864,8 +897,10 @@ bool vputils::isUsedByLoadStoreAddress(const VPValue *V) {
 
     // The legacy cost model only supports scalarization loads/stores with phi
     // addresses, if the phi is directly used as load/store address. Don't
-    // traverse further for Blends.
-    if (Blend)
+    // traverse further for Blends and first-order recurrence splices.
+    if (Blend ||
+        match(Cur,
+              m_VPInstruction<VPInstruction::FirstOrderRecurrenceSplice>()))
       continue;
 
     // Only traverse further through users that also define a value (and can
@@ -915,6 +950,15 @@ VPValue *VPSCEVExpander::tryToReuseIRValue(const SCEV *S) {
   return nullptr;
 }
 
+VPValue *VPSCEVExpander::expandAsPtrAdd(const SCEVNAryExpr *S) {
+  VPValue *Base = expand(SE.getPointerBase(S));
+  VPValue *Offset = expand(SE.removePointerBase(S));
+  GEPNoWrapFlags GEPFlags = S->hasNoUnsignedWrap()
+                                ? GEPNoWrapFlags::noUnsignedWrap()
+                                : GEPNoWrapFlags::none();
+  return Builder.createNoWrapPtrAdd(Base, Offset, GEPFlags, DL);
+}
+
 VPValue *VPSCEVExpander::expand(const SCEV *S) {
   if (VPValue *V = tryToReuseIRValue(S))
     return V;
@@ -933,14 +977,8 @@ VPValue *VPSCEVExpander::expand(const SCEV *S) {
 
     // Expand pointer SCEVAddExpr as a ptradd of the pointer base and the
     // integer offset, matching SCEVExpander.
-    if (S->getType()->isPointerTy()) {
-      VPValue *Base = expand(SE.getPointerBase(S));
-      VPValue *Offset = expand(SE.removePointerBase(S));
-      GEPNoWrapFlags GEPFlags = WrapFlags.HasNUW
-                                    ? GEPNoWrapFlags::noUnsignedWrap()
-                                    : GEPNoWrapFlags::none();
-      return Builder.createNoWrapPtrAdd(Base, Offset, GEPFlags, DL);
-    }
+    if (S->getType()->isPointerTy())
+      return expandAsPtrAdd(AddE);
 
     // Non-constant-negative add operands are expanded negated and subtracted
     // from the running result below, instead of being negated and added.
@@ -1143,32 +1181,35 @@ VPValue *VPSCEVExpander::expand(const SCEV *S) {
       return Builder.createAdd(BaseV, DiffV, DL);
     }
 
-    // Try to expand AR by re-using an existing canonical IV in the Plan's
-    // entry. A canonical IV must be affine and integer typed.
-    if (!AR->isAffine() || !AR->getType()->isIntegerTy())
-      return vputils::getOrCreateVPValueForSCEVExpr(Plan, AR);
-    auto FoundCanIV =
-        find_if(Plan.getEntry()->phis(), [&](const VPRecipeBase &R) {
-          if (!SE.isSCEVable(cast<VPIRPhi>(R).getIRPhi().getType()))
-            return false;
-          const SCEV *Candidate = SE.getSCEV(&cast<VPIRPhi>(R).getIRPhi());
-          return match(Candidate,
-                       m_scev_AffineAddRec(m_scev_Zero(), m_scev_One(),
-                                           m_SpecificLoop(AR->getLoop()))) &&
-                 Candidate->getType() == AR->getType();
-        });
-    if (FoundCanIV == Plan.getEntry()->phis().end())
+    // Mirror SCEVExpander::visitAddRecExpr, but only expand the canonical IV
+    // {0,+,1} and non-affine AddRecs to IR (which will be created outside the
+    // scope of VPlan). The AddRec is then scaled and offset using
+    // VPInstructions.
+    const Loop *L = AR->getLoop();
+    auto m_scev_CanonicalIV = // NOLINT
+        m_scev_AffineAddRec(m_scev_Zero(), m_scev_One(), m_SpecificLoop(L));
+    if (!AR->isAffine() || match(AR, m_scev_CanonicalIV))
       return vputils::getOrCreateVPValueForSCEVExpr(Plan, AR);
 
-    // {Start, +, Step} --> Start + IV * Step, since the AddRec is affine.
-    // Compute Offset = IV * Step.
+    const SCEV *Step = AR->getStepRecurrence(SE);
+    // {0,+,F} --> {0,+,1} * F
+    if (AR->getStart()->isZero()) {
+      const SCEV *CanIV =
+          SE.getAddRecExpr(SE.getZero(Ty), SE.getOne(Ty), L, SCEV::FlagNone);
+      return Builder.createOverflowingOp(
+          Instruction::Mul, {expand(CanIV), expand(Step)},
+          {SE.willNotOverflow(Instruction::Mul, /*Signed=*/false, CanIV, Step),
+           SE.willNotOverflow(Instruction::Mul, /*Signed=*/true, CanIV, Step)},
+          DL);
+    }
+
+    // {X,+,F} --> X + {0,+,F}
+    if (Ty->isPointerTy())
+      return expandAsPtrAdd(AR);
     VPValue *Start = expand(AR->getStart());
-    Value *CanonicalIV = &cast<VPIRPhi>(FoundCanIV)->getIRPhi();
-    VPValue *Offset = expand(
-        SE.getMulExpr(SE.getUnknown(CanonicalIV), AR->getStepRecurrence(SE)));
-
-    // Compute Start + Offset with nuw from the AddRec.
-    return Builder.createAdd(Start, Offset, DL, "",
+    VPValue *Rest = expand(SE.getAddRecExpr(SE.getZero(Ty), Step, L,
+                                            AR->getNoWrapFlags(SCEV::FlagNW)));
+    return Builder.createAdd(Start, Rest, DL, "",
                              {AR->hasNoUnsignedWrap(), false});
   }
   case scCouldNotCompute:

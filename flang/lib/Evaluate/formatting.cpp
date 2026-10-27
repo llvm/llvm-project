@@ -810,6 +810,10 @@ llvm::raw_ostream &CoarrayRef::AsFortran(llvm::raw_ostream &o) const {
     EmitVar(o << separator, stat_, "STAT=");
     separator = ',';
   }
+  if (notify_) {
+    EmitVar(o << separator, notify_, "NOTIFY=");
+    separator = ',';
+  }
   if (team_) {
     EmitVar(o << separator, team_,
         std::holds_alternative<Expr<SomeInteger>>(team_->value().u)

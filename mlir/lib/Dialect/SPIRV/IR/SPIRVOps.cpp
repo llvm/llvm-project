@@ -1580,7 +1580,9 @@ ParseResult spirv::INTELSubgroupBlockWriteOp::parse(OpAsmParser &parser,
 }
 
 void spirv::INTELSubgroupBlockWriteOp::print(OpAsmPrinter &printer) {
-  printer << " " << getPtr() << ", " << getValue() << " : "
+  StringRef sc = stringifyStorageClass(
+      cast<spirv::PointerType>(getPtr().getType()).getStorageClass());
+  printer << " \"" << sc << "\" " << getPtr() << ", " << getValue() << " : "
           << getValue().getType();
 }
 
@@ -2298,10 +2300,10 @@ LogicalResult spirv::CLRootnOp::verify() {
 LogicalResult spirv::CLSincosOp::verify() {
   auto storageClass =
       cast<spirv::PointerType>(getCosval().getType()).getStorageClass();
-  if (storageClass != spirv::StorageClass::CrossWorkgroup &&
-      storageClass != spirv::StorageClass::Workgroup &&
-      storageClass != spirv::StorageClass::Function &&
-      storageClass != spirv::StorageClass::Generic)
+  if (!llvm::is_contained(
+          {spirv::StorageClass::CrossWorkgroup, spirv::StorageClass::Workgroup,
+           spirv::StorageClass::Function, spirv::StorageClass::Generic},
+          storageClass))
     return emitOpError("cosval must point to CrossWorkgroup, Workgroup, "
                        "Function, or Generic storage");
   return success();
