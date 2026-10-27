@@ -28894,6 +28894,10 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
     }
   }
 
+  // Collect demands from the actual source's users. Looking through a bitcast
+  // hides its extracts and makes each one walk the insert chain separately.
+  V = N->getOperand(0);
+
   // If only EXTRACT_SUBVECTOR nodes use the source vector we can
   // simplify it based on the (valid) extractions.
   if (!V.getValueType().isScalableVector() &&
