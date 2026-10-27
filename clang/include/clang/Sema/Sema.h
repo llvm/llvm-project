@@ -1186,9 +1186,18 @@ public:
   NamedDecl *getCurFunctionOrMethodDecl() const;
 
   /// Warn if we're implicitly casting from a _Nullable pointer type to a
-  /// _Nonnull one.
+  /// _Nonnull one. Suppressed when the nullability safety analysis covers the
+  /// enclosing function (see clang::isNullabilitySafetyOptedIn), since the
+  /// flow-sensitive check reports the same conversions more precisely.
   void diagnoseNullableToNonnullConversion(QualType DstType, QualType SrcType,
                                            SourceLocation Loc);
+
+
+  /// Function and method definitions whose body began inside a
+  /// `#pragma clang assume_nonnull` region, recorded under
+  /// -fnullability-safety so the end-of-TU analysis can opt them in after
+  /// the pragma state is gone.
+  llvm::SmallPtrSet<const Decl *, 8> NullabilitySafetyAssumeNonnullDefs;
 
   /// Warn when implicitly casting 0 to nullptr.
   void diagnoseZeroToNullptrConversion(CastKind Kind, const Expr *E);

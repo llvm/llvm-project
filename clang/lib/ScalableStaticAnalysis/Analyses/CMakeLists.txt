@@ -8,6 +8,9 @@ add_clang_library(clangScalableStaticAnalysisAnalyses
   CallGraph/CallGraphJSONFormat.cpp
   EntityPointerLevel/EntityPointerLevel.cpp
   EntityPointerLevel/EntityPointerLevelFormat.cpp
+  NullabilitySafety/NullabilitySafetyAnalysis.cpp
+  NullabilitySafety/NullabilitySafetyExtractor.cpp
+  NullabilitySafety/NullabilitySafetyFormat.cpp
   PointerFlow/PointerFlow.cpp
   PointerFlow/PointerFlowAnalysis.cpp
   PointerFlow/PointerFlowExtractor.cpp

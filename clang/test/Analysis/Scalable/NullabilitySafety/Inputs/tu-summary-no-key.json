@@ -1,0 +1,145 @@
+{
+  "data": [
+    {
+      "summary_data": [
+        {
+          "entity_id": 1,
+          "entity_summary": {
+            "AllReturnsNonnull": [
+              [
+                {
+                  "@": 0
+                },
+                1
+              ]
+            ],
+            "NullableEvidence": []
+          }
+        },
+        {
+          "entity_id": 5,
+          "entity_summary": {
+            "AllReturnsNonnull": [],
+            "NonnullEvidence": [
+              [
+                {
+                  "@": 2
+                },
+                1
+              ]
+            ],
+            "NullableEvidence": [
+              [
+                {
+                  "@": 2
+                },
+                1
+              ],
+              [
+                {
+                  "@": 3
+                },
+                1
+              ],
+              [
+                {
+                  "@": 4
+                },
+                1
+              ]
+            ]
+          }
+        }
+      ],
+      "summary_name": "NullabilitySafety"
+    }
+  ],
+  "id_table": [
+    {
+      "id": 5,
+      "name": {
+        "suffix": "",
+        "usr": "c:@F@g"
+      }
+    },
+    {
+      "id": 1,
+      "name": {
+        "suffix": "",
+        "usr": "c:@F@get"
+      }
+    },
+    {
+      "id": 0,
+      "name": {
+        "suffix": "0",
+        "usr": "c:@F@get"
+      }
+    },
+    {
+      "id": 3,
+      "name": {
+        "suffix": "1",
+        "usr": "c:@F@get"
+      }
+    },
+    {
+      "id": 2,
+      "name": {
+        "suffix": "1",
+        "usr": "c:@F@take"
+      }
+    },
+    {
+      "id": 4,
+      "name": {
+        "suffix": "",
+        "usr": "c:@S@S@FI@f"
+      }
+    }
+  ],
+  "linkage_table": [
+    {
+      "id": 0,
+      "linkage": {
+        "type": "External"
+      }
+    },
+    {
+      "id": 1,
+      "linkage": {
+        "type": "External"
+      }
+    },
+    {
+      "id": 2,
+      "linkage": {
+        "type": "External"
+      }
+    },
+    {
+      "id": 3,
+      "linkage": {
+        "type": "External"
+      }
+    },
+    {
+      "id": 4,
+      "linkage": {
+        "type": "External"
+      }
+    },
+    {
+      "id": 5,
+      "linkage": {
+        "type": "External"
+      }
+    }
+  ],
+  "target_triple": "x86_64-unknown-linux-gnu",
+  "tu_namespace": {
+    "kind": "CompilationUnit",
+    "name": "tu-1"
+  },
+  "type": "TUSummary"
+}

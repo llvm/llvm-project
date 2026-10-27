@@ -19,6 +19,7 @@
 
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/GraphTraits.h"
@@ -145,6 +146,26 @@ public:
 
   // We are only collecting the declarations, so do not step into the bodies.
   bool TraverseStmt(Stmt *S) override { return true; }
+
+  // Works around an upstream RecursiveASTVisitor bug unrelated to
+  // nullability. DEF_TRAVERSE_TMPL_SPEC_DECL (added in PR #110899,
+  // d2ac21d328a4) asserts that a VarTemplateSpecializationDecl with non-null
+  // getTemplateArgsAsWritten() is not an implicit instantiation. That doesn't
+  // hold for a variable template used with explicit arguments in another
+  // template's SFINAE, e.g. enable_if_t<is_same_v<U, T>> in a constructor's
+  // default template argument. When the enclosing template is implicitly
+  // instantiated, the inner specialization is TSK_ImplicitInstantiation, yet
+  // instantiation still calls setTemplateArgsAsWritten
+  // (SemaTemplateInstantiateDecl.cpp). Any full-TU CallGraph::addToCallGraph
+  // walk hits this in an asserts build, including upstream's
+  // LifetimeSafetyTUAnalysis and the static analyzer, so this override
+  // protects them too. Remove it once upstream fixes the bug.
+  bool TraverseVarTemplateSpecializationDecl(
+      VarTemplateSpecializationDecl *D) override {
+    if (D->getTemplateSpecializationKind() == TSK_ImplicitInstantiation)
+      return true;
+    return DynamicRecursiveASTVisitor::TraverseVarTemplateSpecializationDecl(D);
+  }
 
 private:
   /// Add the given declaration to the call graph.

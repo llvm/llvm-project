@@ -1499,6 +1499,86 @@ $ cat foo/bar.cc
 See {doc}`WarningSuppressionMappings` for details about the file format and
 functionality.
 
+#### Nullability Safety Checking
+
+Clang can flow-sensitively check uses of `_Nullable` pointers, diagnosing
+dereferences, arithmetic, returns, assignments, and arguments that may be null
+on the path where they occur. The analysis is off by default and is enabled
+with:
+
+:::{option} -fnullability-safety
+
+Enable the flow-sensitive, intraprocedural nullability analysis. Use
+`-fno-nullability-safety` to disable it.
+:::
+
+:::{option} -fno-nullability-libc-nullable-returns
+
+Stop treating the results of C library functions that return null on failure
+(`malloc`, `fopen`, `getenv`, `strchr`, and similar) as `_Nullable`.
+:::
+
+:::{option} -fno-nullability-libc-nonnull-params
+
+Stop treating C library and POSIX pointer parameters that must not be null
+(`strlen`, `fclose`, `strcmp`, `memcpy`, and similar) as `_Nonnull`.
+:::
+
+:::{option} -fnullability-default=<value>
+
+Set how *unannotated* pointers are treated by the analysis. Accepted values
+are `unspecified` (the default), `nullable`, and `nonnull`. A value
+other than `unspecified` also opts every function in the translation unit
+into the analysis. Under `nonnull`, passing a value that may be null to an
+unannotated pointer parameter of a function declared outside system headers
+warns, as it would for a `_Nonnull` parameter.
+:::
+
+The analysis is active per function only when the function is inside a
+`#pragma clang assume_nonnull` region, `-fnullability-default` is set to a
+non-`unspecified` value, the function has explicit `_Nullable` /
+`_Nonnull` annotations on its parameters or return type, or its body uses a
+declaration or type with explicit nullability outside system headers (so
+annotating an API checks its callers). Under the `unspecified` default unannotated pointers stay
+unspecified in an opted-in function. This allows gradual adoption one API at
+a time.
+
+The diagnostics are grouped under `-Wnullability-safety`, with the subgroups
+`-Wnullability-safety-dereference`, `-Wnullability-safety-arithmetic`,
+`-Wnullability-safety-return`, `-Wnullability-safety-assignment`, and
+`-Wnullability-safety-argument`. The `nullability-annotations` Scalable Static
+Analysis Framework transformation infers `_Nonnull` across a whole program and
+inserts it (see Language Extensions).
+
+```console
+$ cat deref.c
+#pragma clang assume_nonnull begin
+int f(int *_Nullable p) {
+  return *p;            // warning: dereference of nullable pointer
+}
+int g(int *_Nullable p) {
+  if (!p) return 0;
+  return *p;            // ok: narrowed to non-null by the guard
+}
+#pragma clang assume_nonnull end
+
+$ clang -fnullability-safety -Wnullability-safety -c deref.c
+```
+
+See [Nullability Safety
+Analysis](LanguageExtensions.html#nullability-safety-analysis) in the
+language extensions documentation for the narrowing idioms, smart-pointer
+support, and known limitations.
+
+:::{note}
+`-fnullability-safety` and `-fnullability-default=` are recorded
+as build-compatibility constraints: all precompiled headers and modules used
+in a build must agree on their values, and mixing translation units compiled
+with different settings is rejected. Adoption is therefore per-function
+*within* a translation unit, but the flags themselves must match across PCH
+and module boundaries.
+:::
+
 #### Controlling Static Analyzer Diagnostics
 
 While not strictly part of the compiler, the diagnostics from Clang's

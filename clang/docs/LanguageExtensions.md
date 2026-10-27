@@ -5621,6 +5621,170 @@ invariants and rules for static analysis tools, such as the [Clang Static
 Analyzer](https://clang-analyzer.llvm.org/). These attributes are documented
 in the analyzer's {doc}`list of annotations for analysis <analyzer/user-docs/Annotations>`.
 
+## Nullability Safety Analysis
+
+When enabled with `-fnullability-safety` (off by default), Clang runs
+a flow-sensitive, intraprocedural analysis that proves whether a `_Nullable`
+pointer may be null at the point it is used. Unlike the type-only nullability
+checks, this analysis tracks the *flow* of a function: a `_Nullable` pointer
+that has been guarded by a null check is treated as non-null on the paths where
+the check succeeded, so only genuinely unguarded uses are diagnosed.
+
+The analysis is built on the CFG and follows the same model as Clang's thread
+safety and uninitialized-variable analyses. A translation-unit pass visits
+functions in call-graph order (callees before callers, via Tarjan SCCs) so that
+`always returns non-null` can be inferred for a callee before its callers are
+analyzed.
+
+### What it diagnoses
+
+The diagnostics live under the `-Wnullability-safety` umbrella group:
+
+* `-Wnullability-safety-dereference`: dereference (`*p`, `p->m`, `p[i]`) of a
+  pointer that may be null on that path, including a call through a function
+  pointer that may be null (`f()`, `s->cb()`, reported as "calling nullable
+  function pointer").
+* `-Wnullability-safety-arithmetic`: pointer arithmetic on a possibly-null pointer.
+* `-Wnullability-safety-return`: returning a possibly-null value from a function
+  whose return type is `_Nonnull`.
+* `-Wnullability-safety-assignment`: assigning a possibly-null value to a
+  `_Nonnull` variable.
+* `-Wnullability-safety-argument`: passing a possibly-null value as a `_Nonnull`
+  parameter, as a C library parameter that must not be null (see below), or,
+  under `-fnullability-default=nonnull`, as an unannotated pointer parameter of
+  a function declared outside system headers.
+
+### Opt-in
+
+Per function, the analysis is active when any of the following holds:
+
+* the function's body begins in a `#pragma clang assume_nonnull` region, or
+* `-fnullability-default` is set to something other than `unspecified`, or
+* the function has explicit `_Nullable` / `_Nonnull` annotations on its
+  parameters or return type (checked across the entire redeclaration chain, so a
+  function annotated only on a header prototype still opts in), or
+* the function's body uses a declaration or type that carries explicit
+  nullability: it calls a function, reads a variable or field, or names a
+  type (a typedef'd function pointer, a cast, a local's declared type) whose
+  type mentions `_Nullable`, `_Nonnull`, or `_Null_unspecified` anywhere.
+
+The last rule is what makes an annotated API checked in its callers:
+annotating `struct L *_Nullable split(void);` makes every unannotated caller
+that dereferences `split()`'s result, or passes it to a `_Nonnull` parameter,
+warn. Under the `unspecified` default, opting a function in does not change
+how its unannotated pointers are read: they stay unspecified, so only
+explicitly annotated sources (and the C library lists below) can warn in it.
+Declarations in system headers do not count for the body rule (Apple's libc
+annotates `qsort`'s comparator, which would otherwise opt in most C code), and
+definitions in system headers are not opted in by the region or body rules.
+
+This makes adoption gradual: functions that neither carry nor use annotations
+are left untouched until they are annotated or the region/flag opts them in.
+
+### Narrowing idioms
+
+The analysis recognizes the common ways a null check narrows a pointer to
+non-null on the guarded path:
+
+```c++
+void f(int *_Nullable p, int *_Nullable q) {
+  if (p)                 *p = 1;   // narrowed by truthiness test
+  if (q != nullptr)      *q = 1;   // narrowed by explicit comparison
+  if (!p) return;        *p = 1;   // narrowed by early return
+  if (p && q) { *p = *q; }         // && / || are decomposed
+  if (!(p && q)) return; *p = *q;  // negation of a conjunction
+  bool ok = (p != nullptr);
+  if (ok)                *p = 1;   // bool guard variable
+  int *r = p; if (p)     *r = 1;   // depth-1 alias of a narrowed pointer
+  __builtin_assume(p);   *p = 1;   // __builtin_assume
+}
+```
+
+Member-access paths (`o.field`, `this->field`, `o.inner.x`) are narrowed at
+any depth.
+
+### Smart pointers
+
+`std::unique_ptr`, `std::shared_ptr`, and `std::weak_ptr` are modeled:
+
+* `std::make_unique` / `std::make_shared` and construction from a
+  `new`-expression produce a non-null pointer.
+* `reset()` and being moved-from make the pointer possibly-null again.
+* `operator bool` (including `if (sp)`) narrows the pointer.
+* `.get()`, `operator*`, and `operator->` are checked against the current
+  state.
+
+### Lambdas
+
+A lambda's pointer parameters default to `_Nonnull` and are auto-narrowed
+inside the body, unless a parameter is explicitly annotated `_Nullable`. This
+is an intentional asymmetry with ordinary functions, whose unannotated
+parameters follow `-fnullability-default`.
+
+### Known limitations (false negatives)
+
+The analysis is intentionally conservative in the direction of *not* warning, to
+keep the diagnostic noise low. The following cases are not diagnosed by design:
+
+* **Address escape.** Only the direct pattern `T **pp = &p; *pp = ...;` is
+  understood; narrowing that escapes through more indirect aliasing of a
+  pointer's address is not invalidated.
+* **Deep aliasing.** Only depth-1 aliases (`q = p`) are tracked; chains of
+  aliases are not.
+* **Function calls do not invalidate narrowing.** Once a pointer is narrowed,
+  an intervening call does not reset it. This is deliberate and matches the
+  behavior of the thread safety analysis.
+
+### C library functions
+
+The results of C library functions that return null on failure (`malloc`,
+`calloc`, `realloc`, `aligned_alloc`, `fopen`, `freopen`, `tmpfile`, `getenv`,
+`strtok`, `strstr`, `strchr`, `strrchr`, `strpbrk`, `memchr`, `bsearch`,
+`tmpnam`, `setlocale`) are treated as `_Nullable` regardless of how the system
+headers declare them, whether the result is stored first or dereferenced
+directly (`*strchr(s, ':')`). Only functions at global or `std` scope match.
+`-fno-nullability-libc-nullable-returns` disables this.
+
+Pointer parameters of C library and POSIX functions that must not be null
+(C17 7.1.4p1: a null argument is undefined unless the function's description
+allows it) are treated as `_Nonnull`: streams (`fclose`, `fputs`, `fgets`,
+`fread`, `fwrite`, `fprintf`, ...), format strings, string arguments (`strlen`,
+`strcmp`, `strcpy`, `strchr`, `strstr`, `strdup`, `atoi`, `strtol`'s `nptr`, ...),
+`memcpy`/`memmove`/`memset`/`memcmp`, paths (`fopen`, `opendir`, `stat`, ...),
+and `closedir`/`readdir`. Parameters documented to accept null are not on the
+list: `free`, `realloc`'s pointer, `fflush(NULL)`, `time(NULL)`, `strtol`'s
+`endptr`, `strtok`'s first argument, `setvbuf`'s buffer, `snprintf`'s buffer,
+and others. Together with the nullable-return list this diagnoses
+`fclose(fopen(path, "r"))` and `strcmp(strrchr(s, '/'), x)`.
+`-fno-nullability-libc-nonnull-params` disables this.
+
+### Default nullability modes
+
+`-fnullability-default=` sets how an unannotated pointer is read:
+
+* `unspecified` (the default): unannotated pointers are neither nullable nor
+  nonnull; only explicit annotations, the pragma, and the C library lists
+  produce warnings.
+* `nullable`: an unannotated pointer may be null, so dereferencing it unchecked
+  warns.
+* `nonnull`: an unannotated pointer is non-null. Its own dereferences do not
+  warn, but a value that may be null (a `NULL` constant, a `_Nullable` source,
+  a C library failure result, or a local the flow shows may be null) warns when
+  it is dereferenced or passed to an unannotated pointer parameter of a function
+  declared outside system headers, since the callee's body reads that parameter
+  as non-null. Mark parameters that accept null `_Nullable`. System-header
+  declarations stay unspecified.
+
+### Annotation inference
+
+The analysis records the nullability it observes for parameters, members, and
+return values as Scalable Static Analysis Framework summaries
+(`--ssaf-extract-summaries=NullabilitySafety`). The
+`NullabilityInferenceAnalysisResult` whole-program analysis combines them with
+pointer flow, and the `nullability-annotations` source transformation
+(`--ssaf-source-transformation=nullability-annotations`) inserts the inferred
+`_Nonnull` annotations and reports inferred `_Nullable` ones for review.
+
 ## Extensions for Dynamic Analysis
 
 Use `__has_feature(address_sanitizer)` to check if the code is being built

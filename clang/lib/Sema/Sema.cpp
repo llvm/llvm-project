@@ -710,6 +710,34 @@ void Sema::diagnoseNullableToNonnullConversion(QualType DstType,
   if (!TypeNullability || *TypeNullability != NullabilityKind::NonNull)
     return;
 
+  // The flow-sensitive analysis subsumes this type-based warning: it respects
+  // null checks, tracks reset/move/reassignment, and handles
+  // -fnullability-default=nullable. Warning here as well would only add false
+  // positives, e.g. on `if (p) return p;` where p is declared _Nullable but is
+  // known to be nonnull.
+  //
+  // The flow analysis only covers functions that opted in (see
+  // clang::isNullabilitySafetyOptedIn), and the opt-in can only be decided
+  // once the body is complete. A function containing this conversion always
+  // opts in, though: the _Nonnull destination and the _Nullable source are
+  // both explicit nullability its body (or signature) references, which the
+  // opt-in's body scan finds. So suppress inside any function; outside one
+  // (a global initializer) nothing else would report the conversion.
+  if (getLangOpts().NullabilitySafety) {
+    // The enclosing decl may be a block or an ObjC method, where
+    // getCurFunctionDecl returns null. Use the innermost of block, method, and
+    // function so an annotated block or method doesn't get both warnings.
+    const Decl *EnclosingDecl = nullptr;
+    if (sema::BlockScopeInfo *BSI = getCurBlock())
+      EnclosingDecl = BSI->TheDecl;
+    else if (ObjCMethodDecl *MD = getCurMethodDecl())
+      EnclosingDecl = MD;
+    else
+      EnclosingDecl = getCurFunctionDecl(/*AllowLambda=*/true);
+    if (EnclosingDecl)
+      return;
+  }
+
   Diag(Loc, diag::warn_nullability_lost) << SrcType << DstType;
 }
 
