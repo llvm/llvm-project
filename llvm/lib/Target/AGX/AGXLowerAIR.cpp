@@ -36,6 +36,7 @@
 #include "AGXTargetMachine.h"
 #include "Utils/AGXBaseInfo.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringTable.h"
@@ -170,6 +171,7 @@ private:
                    AIRToAGXTypes &Types);
   Value *systemValue(IRBuilder<> &B, StringRef Role, Type *Ty, Function *F);
   void passConstantBuffersByReference(AIRKernel &K, Function *NewF);
+  void lowerMatrices(Function &F);
   void lowerCalls();
   bool lowerCall(CallInst &CI, StringRef Name, Value *&Result);
   bool lowerAtomic(IRBuilder<> &B, CallInst &CI, StringRef Name,
@@ -1022,6 +1024,200 @@ bool LowerAIR::lowerCall(CallInst &CI, StringRef Name, Value *&Result) {
   return lowerOther(B, CI, Name, Result) || lowerMath(B, CI, Name, Result);
 }
 
+// AIR's SIMD-group matrix: an 8x8 matrix of half, bfloat or float as one
+// <64 x T> value.
+static bool isMatrix(Type *T) {
+  auto *VT = dyn_cast<FixedVectorType>(T);
+  return VT && VT->getNumElements() == 64 &&
+         (VT->getElementType()->isFloatTy() ||
+          VT->getElementType()->isHalfTy() ||
+          VT->getElementType()->isBFloatTy());
+}
+
+static bool usesMatrix(const Instruction &I) {
+  return isMatrix(I.getType()) || any_of(I.operands(), [](const Use &U) {
+           return isMatrix(U->getType());
+         });
+}
+
+// The SIMD-group matrices of AIR (air.simdgroup_matrix_8x8_*) as AGX's: each
+// thread holds the elements (r, c) and (r, c + 1) in a <2 x T>
+// (llvm.agx.simdgroup.matrix.fma's layout, AGXUsage.rst "SIMD-group
+// matrices"). A load or store moves the thread's two elements, at
+// (c + j + origin.x) * stride.x + (r + origin.y) * stride.y; element-wise
+// operations, selects and phis apply to the two elements. Anything that
+// depends on how AIR orders the 64 elements is an error.
+void LowerAIR::lowerMatrices(Function &F) {
+  if (F.isDeclaration() || none_of(instructions(F), usesMatrix))
+    return;
+  if (any_of(F.args(), [](Argument &A) { return isMatrix(A.getType()); })) {
+    error(&F, "a SIMD-group matrix argument");
+    return;
+  }
+  IRBuilder<> B(&*F.getEntryBlock().getFirstInsertionPt());
+  Value *T = B.CreateIntrinsic(Intrinsic::agx_thread_index_in_simdgroup, {});
+  // r = 4 * (t / 16) + (t / 2) % 4, c = 4 * ((t / 8) % 2) + 2 * (t % 2)
+  Value *Row = B.CreateAdd(B.CreateShl(B.CreateLShr(T, 4), 2),
+                           B.CreateAnd(B.CreateLShr(T, 1), 3));
+  Value *Col = B.CreateAdd(B.CreateShl(B.CreateAnd(B.CreateLShr(T, 3), 1), 2),
+                           B.CreateShl(B.CreateAnd(T, 1), 1));
+  Value *Row64 = B.CreateZExt(Row, B.getInt64Ty(), "matrix.row");
+  Value *Col64 = B.CreateZExt(Col, B.getInt64Ty(), "matrix.col");
+
+  auto FragTy = [](Type *MT) {
+    return FixedVectorType::get(cast<VectorType>(MT)->getElementType(), 2);
+  };
+  DenseMap<Value *, Value *> Frag;
+  SmallVector<Instruction *, 16> Old;
+  bool Bad = false;
+  auto Get = [&](Value *V) -> Value * {
+    if (Value *R = Frag.lookup(V))
+      return R;
+    if (auto *C = dyn_cast<Constant>(V)) {
+      if (isa<UndefValue>(C))
+        return isa<PoisonValue>(C) ? PoisonValue::get(FragTy(V->getType()))
+                                   : UndefValue::get(FragTy(V->getType()));
+      if (Constant *Splat = C->getSplatValue())
+        return ConstantVector::getSplat(ElementCount::getFixed(2), Splat);
+    }
+    Bad = true;
+    return PoisonValue::get(FragTy(V->getType()));
+  };
+  // The addresses of the thread's two elements.
+  auto Element = [&](IRBuilder<> &B, Type *EltTy, Value *Ptr, Value *Strides,
+                     Value *Origin, unsigned J) {
+    Value *R = B.CreateAdd(Row64, B.CreateExtractElement(Origin, 1));
+    Value *C = B.CreateAdd(B.CreateAdd(Col64, B.getInt64(J)),
+                           B.CreateExtractElement(Origin, uint64_t(0)));
+    Value *Idx = B.CreateAdd(B.CreateMul(C, B.CreateExtractElement(Strides, uint64_t(0))),
+                             B.CreateMul(R, B.CreateExtractElement(Strides, 1)));
+    return B.CreateGEP(EltTy, Ptr, Idx);
+  };
+
+  SmallVector<std::pair<PHINode *, PHINode *>, 4> Phis;
+  for (Instruction &I : instructions(F))
+    if (auto *P = dyn_cast<PHINode>(&I); P && isMatrix(P->getType())) {
+      auto *NP = PHINode::Create(FragTy(P->getType()), P->getNumIncomingValues(),
+                                 P->getName(), P->getIterator());
+      Frag[P] = NP;
+      Phis.push_back({P, NP});
+    }
+
+  ReversePostOrderTraversal<Function *> RPOT(&F);
+  for (BasicBlock *BB : RPOT) {
+    for (Instruction &I : *BB) {
+      if (!usesMatrix(I) || isa<PHINode>(I))
+        continue;
+      IRBuilder<> IB(&I);
+      Old.push_back(&I);
+      if (auto *BO = dyn_cast<BinaryOperator>(&I)) {
+        Value *V = IB.CreateBinOp(BO->getOpcode(), Get(BO->getOperand(0)),
+                                  Get(BO->getOperand(1)), I.getName());
+        if (auto *VI = dyn_cast<Instruction>(V))
+          VI->copyIRFlags(&I);
+        Frag[&I] = V;
+        continue;
+      }
+      if (auto *UO = dyn_cast<UnaryOperator>(&I)) {
+        Value *V = IB.CreateUnOp(UO->getOpcode(), Get(UO->getOperand(0)),
+                                 I.getName());
+        if (auto *VI = dyn_cast<Instruction>(V))
+          VI->copyIRFlags(&I);
+        Frag[&I] = V;
+        continue;
+      }
+      if (auto *S = dyn_cast<SelectInst>(&I);
+          S && !S->getCondition()->getType()->isVectorTy()) {
+        Frag[&I] = IB.CreateSelect(S->getCondition(), Get(S->getTrueValue()),
+                                   Get(S->getFalseValue()), I.getName());
+        continue;
+      }
+      if (isa<FreezeInst>(I)) {
+        Frag[&I] = IB.CreateFreeze(Get(I.getOperand(0)), I.getName());
+        continue;
+      }
+      auto *CI = dyn_cast<CallInst>(&I);
+      Function *Callee = CI ? CI->getCalledFunction() : nullptr;
+      StringRef Name = Callee ? Callee->getName() : "";
+      if (!Name.consume_front("air.simdgroup_matrix_8x8_")) {
+        error(&F, "a SIMD-group matrix used other than as a matrix");
+        return;
+      }
+      unsigned N = CI->arg_size();
+      auto Arg = [&](unsigned K) { return CI->getArgOperand(K); };
+      // The dimensions, strides and origin of a load or store: <2 x i64>.
+      auto Shape = [&](unsigned First) {
+        Type *V2I64 = FixedVectorType::get(IB.getInt64Ty(), 2);
+        return N == First + 3 && Arg(First)->getType() == V2I64 &&
+               Arg(First + 1)->getType() == V2I64 &&
+               Arg(First + 2)->getType() == V2I64;
+      };
+      if (Name.starts_with("load.") && Shape(1) &&
+          Arg(0)->getType()->isPointerTy()) {
+        Type *EltTy = cast<VectorType>(CI->getType())->getElementType();
+        Value *V = PoisonValue::get(FragTy(CI->getType()));
+        for (unsigned J = 0; J < 2; ++J)
+          V = IB.CreateInsertElement(
+              V,
+              IB.CreateLoad(EltTy, Element(IB, EltTy, Arg(0), Arg(2), Arg(3), J)),
+              J);
+        Frag[&I] = V;
+      } else if (Name.starts_with("store.") && Shape(2) &&
+                 Arg(1)->getType()->isPointerTy()) {
+        Value *V = Get(Arg(0));
+        Type *EltTy = cast<VectorType>(Arg(0)->getType())->getElementType();
+        for (unsigned J = 0; J < 2; ++J)
+          IB.CreateStore(IB.CreateExtractElement(V, J),
+                         Element(IB, EltTy, Arg(1), Arg(3), Arg(4), J));
+      } else if (Name.starts_with("multiply_accumulate.") && N == 3) {
+        Frag[&I] = IB.CreateIntrinsic(Intrinsic::agx_simdgroup_matrix_fma,
+                                      {FragTy(CI->getType())},
+                                      {Get(Arg(0)), Get(Arg(1)), Get(Arg(2))});
+      } else if (Name.starts_with("multiply.") && N == 2) {
+        Type *FT = FragTy(CI->getType());
+        Frag[&I] = IB.CreateIntrinsic(Intrinsic::agx_simdgroup_matrix_fma, {FT},
+                                      {Get(Arg(0)), Get(Arg(1)),
+                                       Constant::getNullValue(FT)});
+      } else if (Name.starts_with("init_filled.") && N == 1) {
+        Frag[&I] = IB.CreateVectorSplat(2, Arg(0));
+      } else if (Name.starts_with("init_diagonal.") && N == 1) {
+        // x where r == c + j, else 0.
+        Type *FT = FragTy(CI->getType());
+        Value *V = PoisonValue::get(FT), *Zero =
+            Constant::getNullValue(FT->getScalarType());
+        for (unsigned J = 0; J < 2; ++J) {
+          Value *OnDiag =
+              IB.CreateICmpEQ(Row, IB.CreateAdd(Col, IB.getInt32(J)));
+          V = IB.CreateInsertElement(V, IB.CreateSelect(OnDiag, Arg(0), Zero),
+                                     J);
+        }
+        Frag[&I] = V;
+      } else {
+        error(&F, "the AIR function " + Callee->getName() +
+                      " has no AGX lowering");
+        return;
+      }
+    }
+  }
+  for (auto [P, NP] : Phis)
+    for (unsigned K = 0; K < P->getNumIncomingValues(); ++K)
+      NP->addIncoming(Get(P->getIncomingValue(K)), P->getIncomingBlock(K));
+  if (Bad) {
+    error(&F, "a SIMD-group matrix built other than by AIR's matrix "
+              "functions or a splat");
+    return;
+  }
+  for (auto [P, NP] : Phis)
+    Old.push_back(P);
+  for (Instruction *I : Old)
+    if (auto *New = dyn_cast_or_null<Instruction>(Frag.lookup(I)))
+      New->takeName(I);
+  for (Instruction *I : Old)
+    I->replaceAllUsesWith(PoisonValue::get(I->getType()));
+  for (Instruction *I : Old)
+    I->eraseFromParent();
+}
+
 void LowerAIR::lowerCalls() {
   for (Function &F : make_early_inc_range(M)) {
     if (!F.isDeclaration() || !F.getName().starts_with("air."))
@@ -1176,6 +1372,8 @@ bool LowerAIR::run() {
     if (F.isIntrinsic() && F.use_empty())
       F.eraseFromParent();
 
+  for (Function &F : M)
+    lowerMatrices(F);
   lowerCalls();
   dropAIRMetadata();
   M.setTargetTriple(TM.getTargetTriple());

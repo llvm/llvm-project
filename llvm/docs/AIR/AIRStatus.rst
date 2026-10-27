@@ -263,8 +263,8 @@ threadgroup-scope fences.
 ``llvm/utils/air-gpu/air_gpu_suite.py --agx-run`` runs the suite's kernels
 through the portable passes and ``agx-lower-air`` on the AGX Performance
 Simulator (``agx_run``, G14G), against the same references as on the M2 Max.
-On 2026-10-27: 167 pass, 47 do not compile (the functions above: 42
-transcendental functions and 5 matrix cases), the probe for ``air.copysign``
+On 2026-10-27: 172 pass (the matrix group exactly), 42 do not compile (the
+transcendental functions above), the probe for ``air.copysign``
 is rejected as expected, and one case is skipped: it has no barrier and
 relies on ``air-tg-barrier-insert``, which only the Metal pipeline runs. 16
 compute the right function less accurately than MSL requires of its precise

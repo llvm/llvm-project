@@ -1042,8 +1042,17 @@ Calls to AIR functions become LLVM intrinsics and instructions:
   stores are volatile, which the backend encodes coherent (with the barriers
   that makes host-coherent, more than device coherence needs).
 
-Any other AIR function (SIMD-group matrices among them, for now) is an
-error. The math functions are as accurate as the backend's lowering of the
+* the SIMD-group matrices (``air.simdgroup_matrix_8x8_load``, ``store``,
+  ``multiply_accumulate``, ``multiply``, ``init_filled``, ``init_diagonal``)
+  are fragments in the layout of ``llvm.agx.simdgroup.matrix.fma`` (see
+  `SIMD-group matrices`_): a ``<64 x T>`` becomes the thread's ``<2 x T>``,
+  loads and stores move its two elements at
+  (c + j + origin.x) * stride.x + (r + origin.y) * stride.y, and element-wise
+  operations, selects and phis apply to the fragment. Other uses of a
+  ``<64 x T>``, which would depend on how AIR orders its elements, are
+  errors.
+
+Any other AIR function is an error. The math functions are as accurate as the backend's lowering of the
 LLVM intrinsics, which is below what MSL requires of its precise functions
 for ``sqrt`` (without ``ieee-fp32``), ``sin``, ``cos``, ``log2``, ``log10``,
 ``exp10`` and ``pow``; ``tan``, the inverse and hyperbolic functions,

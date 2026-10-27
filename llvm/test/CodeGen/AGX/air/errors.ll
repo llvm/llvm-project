@@ -10,6 +10,7 @@
 ; RUN: not opt -mtriple=agx -passes=agx-lower-air -disable-output %t/argbuf.ll 2>&1 | FileCheck %s --check-prefix=ARGBUF
 ; RUN: not opt -mtriple=agx -passes=agx-lower-air -disable-output %t/order.ll 2>&1 | FileCheck %s --check-prefix=ORDER
 ; RUN: not opt -mtriple=agx -passes=agx-lower-air -disable-output %t/unknown.ll 2>&1 | FileCheck %s --check-prefix=UNKNOWN
+; RUN: not opt -mtriple=agx -passes=agx-lower-air -disable-output %t/matrix-element.ll 2>&1 | FileCheck %s --check-prefix=MATRIX
 ; RUN: not opt -mtriple=agx -passes=agx-lower-air -disable-output %t/no-suffix.ll 2>&1 | FileCheck %s --check-prefix=NOSUFFIX
 
 ; DOUBLE: error: {{.*}}a value of a type AIR does not have in k (AIR does not have it)
@@ -21,6 +22,7 @@
 ; ARGBUF: error: {{.*}}argument buffers (air.indirect_buffer) are not supported
 ; ORDER: error: {{.*}}buffer locations are not in parameter order
 ; UNKNOWN: error: {{.*}}the AIR function air.simdgroup_matrix_8x8_load.v64f32.p1f32 has no AGX lowering
+; MATRIX: error: {{.*}}a SIMD-group matrix used other than as a matrix
 ; NOSUFFIX: error: {{.*}}the AIR function air.atomic.global.xchg has no AGX lowering
 ; NOSUFFIX: error: {{.*}}the AIR function air.simd_nosuchop has no AGX lowering
 ; NOSUFFIX: error: {{.*}}the AIR function air.nosuffix has no AGX lowering
@@ -95,10 +97,23 @@ define void @k(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 !1 = !{i32 0, !"air.buffer", !"air.location_index", i32 1, i32 1, !"air.read_write", !"air.address_space", i32 1}
 !2 = !{i32 1, !"air.buffer", !"air.location_index", i32 0, i32 1, !"air.read_write", !"air.address_space", i32 1}
 
+;--- matrix-element.ll
+declare <64 x float> @air.simdgroup_matrix_8x8_init_filled.v64f32.f32(float)
+define void @k(ptr addrspace(1) %a) {
+  %m = call <64 x float> @air.simdgroup_matrix_8x8_init_filled.v64f32.f32(float 1.0)
+  %e = extractelement <64 x float> %m, i32 3
+  store float %e, ptr addrspace(1) %a
+  ret void
+}
+!air.kernel = !{!0}
+!0 = !{ptr @k, !{}, !{!1}}
+!1 = !{i32 0, !"air.buffer", !"air.location_index", i32 0, i32 1, !"air.read_write", !"air.address_space", i32 1}
+
 ;--- unknown.ll
 declare <64 x float> @air.simdgroup_matrix_8x8_load.v64f32.p1f32(ptr addrspace(1), <2 x i64>, <2 x i64>, i1)
 define void @k(ptr addrspace(1) %a) {
   %m = call <64 x float> @air.simdgroup_matrix_8x8_load.v64f32.p1f32(ptr addrspace(1) %a, <2 x i64> zeroinitializer, <2 x i64> zeroinitializer, i1 false)
+  %e = extractelement <64 x float> %m, i32 3
   ret void
 }
 !air.kernel = !{!0}
