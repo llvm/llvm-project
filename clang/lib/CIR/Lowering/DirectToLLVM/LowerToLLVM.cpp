@@ -145,6 +145,7 @@ lowerCIRVisibilityToLLVMVisibility(cir::VisibilityKind visibilityKind) {
   case cir::VisibilityKind::Protected:
     return ::mlir::LLVM::Visibility::Protected;
   }
+  llvm_unreachable("fully covered switch");
 }
 
 static mlir::Value
@@ -182,15 +183,17 @@ static mlir::Value emitFromMemory(mlir::ConversionPatternRewriter &rewriter,
   // Convert the `iN` back to boolean vectors
   if (auto vecTy = mlir::dyn_cast<cir::VectorType>(op.getType())) {
     if (mlir::isa<cir::BoolType>(vecTy.getElementType())) {
+      if (vecTy.isScalable())
+        return value;
       auto rawIntTy = mlir::cast<mlir::IntegerType>(value.getType());
-      auto paddedVecTy =
-          cir::VectorType::get(vecTy.getElementType(), rawIntTy.getWidth());
+      auto paddedVecTy = cir::VectorType::getFixed(vecTy.getElementType(),
+                                                   rawIntTy.getWidth());
       mlir::Type mlirVecTy = converter.convertType(paddedVecTy);
       // Bitcast iP --> <P x i1>.
       auto v = mlir::LLVM::BitcastOp::create(rewriter, value.getLoc(),
                                              mlirVecTy, value);
       // Shuffle <P x i1> --> <N x i1> (N is the actual bit size).
-      return emitBoolVecConversion(rewriter, v, vecTy.getSize());
+      return emitBoolVecConversion(rewriter, v, vecTy.getFixedSize());
     }
   }
 
@@ -225,9 +228,10 @@ static mlir::Value emitToMemory(mlir::ConversionPatternRewriter &rewriter,
   if (auto vecTy = mlir::dyn_cast<cir::VectorType>(origType)) {
     if (mlir::isa<cir::BoolType>(vecTy.getElementType())) {
       mlir::Type resultTy;
-      if (vecTy.getIsScalable())
-        resultTy = mlir::VectorType::get(
-            vecTy.getSize(), vecTy.getElementType(), vecTy.getIsScalable());
+      if (vecTy.isScalable())
+        resultTy =
+            mlir::VectorType::get(vecTy.getSize().getKnownMinValue(),
+                                  vecTy.getElementType(), vecTy.isScalable());
       else {
         resultTy = mlir::IntegerType::get(origType.getContext(),
                                           vecTy.getBoolStorageWidth());
@@ -3132,6 +3136,8 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewriteAlias(
   auto aliasOp = rewriter.replaceOpWithNewOp<mlir::LLVM::AliasOp>(
       op, ty, convertLinkage(op.getLinkage()), op.getName(), op.getDsoLocal(),
       mlir::LLVM::ThreadLocalMode::NotThreadLocal, attributes);
+  aliasOp.setVisibility_(
+      lowerCIRVisibilityToLLVMVisibility(op.getGlobalVisibility()));
 
   // Create the alias body
   mlir::OpBuilder builder(op.getContext());
@@ -3716,13 +3722,11 @@ mlir::LogicalResult CIRToLLVMNotOpLowering::matchAndRewrite(
   if (mlir::isa<cir::IntType>(elementType)) {
     mlir::Value minusOne;
     if (isVector) {
-      const uint64_t numElements =
-          mlir::cast<cir::VectorType>(op.getType()).getSize();
       const unsigned eltWidth =
           mlir::cast<cir::IntType>(elementType).getWidth();
-      SmallVector<APInt> values(numElements, APInt::getAllOnes(eltWidth));
-      mlir::DenseIntElementsAttr denseVec = mlir::DenseIntElementsAttr::get(
-          mlir::cast<mlir::ShapedType>(llvmType), values);
+      mlir::DenseElementsAttr denseVec =
+          mlir::DenseElementsAttr::get(mlir::cast<mlir::ShapedType>(llvmType),
+                                       {APInt::getAllOnes(eltWidth)});
       minusOne =
           mlir::LLVM::ConstantOp::create(rewriter, loc, llvmType, denseVec);
     } else {
@@ -3738,10 +3742,8 @@ mlir::LogicalResult CIRToLLVMNotOpLowering::matchAndRewrite(
   if (mlir::isa<cir::BoolType>(elementType)) {
     mlir::Value one;
     if (isVector) {
-      const uint64_t numElements =
-          mlir::cast<cir::VectorType>(op.getType()).getSize();
-      SmallVector<bool> values(numElements, true);
-      mlir::DenseIntElementsAttr denseVec = rewriter.getBoolVectorAttr(values);
+      mlir::DenseElementsAttr denseVec = mlir::DenseElementsAttr::get(
+          mlir::cast<mlir::ShapedType>(llvmType), {APInt(1, 1)});
       one = mlir::LLVM::ConstantOp::create(rewriter, loc, llvmType, denseVec);
     } else {
       one = mlir::LLVM::ConstantOp::create(rewriter, loc, llvmType, 1);
@@ -4371,7 +4373,8 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
     const mlir::Type ty = converter.convertType(type.getElementType());
     if (!ty)
       return {};
-    return mlir::VectorType::get(type.getSize(), ty, {type.getIsScalable()});
+    return mlir::VectorType::get(type.getSize().getKnownMinValue(), ty,
+                                 {type.isScalable()});
   });
   converter.addConversion([&](cir::MatrixType type) -> mlir::Type {
     const uint64_t size = type.getNumRows() * type.getNumColumns();
@@ -5423,10 +5426,11 @@ mlir::LogicalResult CIRToLLVMVecCreateOpLowering::matchAndRewrite(
   const mlir::Type llvmTy = typeConverter->convertType(vecTy);
   const mlir::Location loc = op.getLoc();
   mlir::Value result = mlir::LLVM::PoisonOp::create(rewriter, loc, llvmTy);
-  assert(vecTy.getSize() == op.getElements().size() &&
+  const uint64_t vectorSize = vecTy.getFixedSize();
+  assert(vectorSize == op.getElements().size() &&
          "cir.vec.create op count doesn't match vector type elements count");
 
-  for (uint64_t i = 0; i < vecTy.getSize(); ++i) {
+  for (uint64_t i = 0; i < vectorSize; ++i) {
     const mlir::Value indexValue =
         mlir::LLVM::ConstantOp::create(rewriter, loc, rewriter.getI64Type(), i);
     result = mlir::LLVM::InsertElementOp::create(
@@ -5518,8 +5522,9 @@ mlir::LogicalResult CIRToLLVMVecCmpOpLowering::matchAndRewrite(
         adaptor.getLhs(), adaptor.getRhs());
   } else if (mlir::isa<cir::FPTypeInterface>(elementType)) {
     if (cir::FenvAttr fenv = op.getFenvAttr()) {
-      auto i1VecTy = mlir::VectorType::get(op.getLhs().getType().getSize(),
-                                           rewriter.getI1Type());
+      llvm::ElementCount size = op.getLhs().getType().getSize();
+      auto i1VecTy = mlir::VectorType::get(
+          size.getKnownMinValue(), rewriter.getI1Type(), {size.isScalable()});
       bitResult = createConstrainedFCmpCall(rewriter, op.getLoc(),
                                             adaptor.getLhs(), adaptor.getRhs(),
                                             op.getKind(), fenv, i1VecTy)
@@ -5632,7 +5637,7 @@ mlir::LogicalResult CIRToLLVMVecShuffleDynamicOpLowering::matchAndRewrite(
       getTypeConverter()->convertType(op.getIndices().getType());
   mlir::Type llvmIndexType = getTypeConverter()->convertType(
       op.getIndices().getType().getElementType());
-  uint64_t numElements = op.getVec().getType().getSize();
+  uint64_t numElements = op.getVec().getType().getFixedSize();
 
   uint64_t maskBits = llvm::NextPowerOf2(numElements - 1) - 1;
   mlir::Value maskValue = mlir::LLVM::ConstantOp::create(
