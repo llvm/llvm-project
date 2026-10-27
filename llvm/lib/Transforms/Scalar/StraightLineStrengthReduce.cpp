@@ -71,7 +71,6 @@
 #include "llvm/Transforms/Scalar/StraightLineStrengthReduce.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DepthFirstIterator.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -225,6 +224,10 @@ public:
     // List of instructions whose poison-generating annotations must be dropped
     // if this candidate is used as the basis of an executed rewrite.
     SmallVector<Instruction *> DropList;
+
+    // List of instructions whose poison-generating annotations must be dropped
+    // for Delta if this candidate is rewritten.
+    SmallVector<Instruction *> DeltaDropList;
 
     /// Cost model: Evaluate the computational efficiency of the candidate.
     ///
@@ -417,15 +420,6 @@ private:
   TargetTransformInfo *TTI = nullptr;
   std::list<Candidate> Candidates;
 
-  // Map from SCEV to instructions that represent the value,
-  // instructions are sorted in depth-first order.
-  DenseMap<const SCEV *, SmallSetVector<Instruction *, 2>> SCEVToInsts;
-
-  // Map from reusable delta instruction to instructions whose poison-generating
-  // annotations must be dropped if the instruction is used as a delta in an
-  // executed rewrite.
-  DenseMap<Instruction *, SmallVector<Instruction *>> InstDropLists;
-
   using SCEVUnknownSet = SmallPtrSet<const SCEVUnknown *, 4>;
   DenseMap<const SCEV *, SCEVUnknownSet> SCEVUnknownsCache;
 
@@ -508,26 +502,6 @@ private:
     }
   } CandidateDict;
 
-  const SCEV *getAndRecordSCEV(Value *V) {
-    auto *S = SE->getSCEV(V);
-    if (auto *I = dyn_cast<Instruction>(V);
-        I && !(isa<SCEVCouldNotCompute>(S) || isa<SCEVUnknown>(S) ||
-               isa<SCEVConstant>(S))) {
-      auto &Insts = SCEVToInsts[S];
-      if (!Insts.contains(I)) {
-        SmallVector<Instruction *> DropList;
-        if (!EnablePoisonReuseGuard ||
-            SE->canReuseInstruction(S, I, DropList)) {
-          Insts.insert(I);
-          if (!DropList.empty())
-            InstDropLists[I] = std::move(DropList);
-        }
-      }
-    }
-
-    return S;
-  }
-
   bool candidatePredicate(Candidate *Basis, Candidate &C, Candidate::DKind K);
 
   bool hasSameSCEVUnknowns(const SCEV *A, const SCEV *B);
@@ -538,7 +512,9 @@ private:
   // Get the nearest instruction before CI that represents the value of S,
   // return nullptr if no instruction is associated with S or S is not a
   // reusable expression.
-  Value *getNearestValueOfSCEV(const SCEV *S, const Instruction *CI) const {
+  Value *getNearestValueOfSCEV(const SCEV *S, const Instruction *CI,
+                               SmallVectorImpl<Instruction *> &DropList) const {
+    DropList.clear();
     if (isa<SCEVCouldNotCompute>(S))
       return nullptr;
 
@@ -547,17 +523,24 @@ private:
     if (auto *SC = dyn_cast<SCEVConstant>(S))
       return SC->getValue();
 
-    auto It = SCEVToInsts.find(S);
-    if (It == SCEVToInsts.end())
-      return nullptr;
+    Instruction *Best = nullptr;
+    for (Value *V : reverse(SE->getSCEVValues(S))) {
+      auto *I = dyn_cast<Instruction>(V);
+      if (!I || I->getType() != S->getType() || !DT->dominates(I, CI))
+        continue;
+      if (Best && (Best->getParent() == I->getParent()
+                       ? !Best->comesBefore(I)
+                       : !DT->dominates(Best->getParent(), I->getParent())))
+        continue;
+      SmallVector<Instruction *> CandidateDropList;
+      if (!EnablePoisonReuseGuard ||
+          SE->canReuseInstruction(S, I, CandidateDropList)) {
+        Best = I;
+        DropList = std::move(CandidateDropList);
+      }
+    }
 
-    // Instructions are sorted in depth-first order, so search for the nearest
-    // instruction by walking the list in reverse order.
-    for (Instruction *I : reverse(It->second))
-      if (DT->dominates(I, CI))
-        return I;
-
-    return nullptr;
+    return Best;
   }
 
   struct DeltaInfo {
@@ -579,7 +562,8 @@ private:
   Candidate *pickRewriteCandidate(Instruction *I) const;
   void sortCandidateInstructions();
   Value *getDelta(const Candidate &C, const Candidate &Basis,
-                  Candidate::DKind K) const;
+                  Candidate::DKind K,
+                  SmallVectorImpl<Instruction *> &DropList) const;
   static bool isSimilar(Candidate &C, Candidate &Basis, Candidate::DKind K);
 
   // Add Basis -> C in DependencyGraph and propagate
@@ -702,9 +686,10 @@ static bool isSafeToFactorGepIndex(const Value *Idx, GetElementPtrInst *GEP,
   return !isSignExtendedGepIndex(Idx, GEP, DL) || !mayHaveSignedWrap(Idx);
 }
 
-Value *StraightLineStrengthReduce::getDelta(const Candidate &C,
-                                            const Candidate &Basis,
-                                            Candidate::DKind K) const {
+Value *StraightLineStrengthReduce::getDelta(
+    const Candidate &C, const Candidate &Basis, Candidate::DKind K,
+    SmallVectorImpl<Instruction *> &DropList) const {
+  DropList.clear();
   if (K == Candidate::IndexDelta) {
     APInt Idx = C.Index->getValue();
     APInt BasisIdx = Basis.Index->getValue();
@@ -719,7 +704,7 @@ Value *StraightLineStrengthReduce::getDelta(const Candidate &C,
     const SCEV *CandPart = (K == Candidate::BaseDelta) ? C.Base : C.StrideSCEV;
     ++NumSCEVCandidateBasisDifferences;
     const SCEV *Diff = SE->getMinusSCEV(CandPart, BasisPart);
-    return getNearestValueOfSCEV(Diff, C.Ins);
+    return getNearestValueOfSCEV(Diff, C.Ins, DropList);
   }
   return nullptr;
 }
@@ -791,7 +776,8 @@ bool StraightLineStrengthReduce::candidatePredicate(Candidate *Basis,
   }
 
   assert(DT->dominates(Basis->Ins, C.Ins));
-  Value *Delta = getDelta(C, *Basis, K);
+  SmallVector<Instruction *> DeltaDropList;
+  Value *Delta = getDelta(C, *Basis, K, DeltaDropList);
   if (!Delta)
     return false;
 
@@ -830,6 +816,7 @@ bool StraightLineStrengthReduce::candidatePredicate(Candidate *Basis,
     C.Delta = Delta;
     C.Basis = Basis;
     C.DeltaKind = K;
+    C.DeltaDropList = std::move(DeltaDropList);
   }
   return isa<ConstantInt>(C.Delta);
 }
@@ -925,8 +912,9 @@ auto StraightLineStrengthReduce::compressPath(Candidate &C,
     Candidate *NextRoot = Root->Basis;
     if (C.Base == NextRoot->Base && C.StrideSCEV == NextRoot->StrideSCEV &&
         isSimilar(C, *NextRoot, Candidate::IndexDelta)) {
-      ConstantInt *CI =
-          cast<ConstantInt>(getDelta(C, *NextRoot, Candidate::IndexDelta));
+      SmallVector<Instruction *> UnusedDropList;
+      ConstantInt *CI = cast<ConstantInt>(
+          getDelta(C, *NextRoot, Candidate::IndexDelta, UnusedDropList));
       if (CI->isZero() || CI->isOne() || isa<SCEVConstant>(C.StrideSCEV)) {
         Root = NextRoot;
         NewKind = Candidate::IndexDelta;
@@ -1081,10 +1069,7 @@ void StraightLineStrengthReduce::allocateCandidatesAndFindBasis(
     Instruction *I) {
   bool IsSafe = CT != Candidate::GEP ||
                 isSafeToFactorGepIndex(S, cast<GetElementPtrInst>(I), DL);
-  // Record the SCEV of S that we may use it as a variable delta.
-  // Ensure that we rewrite C with a existing IR that reproduces delta value.
-
-  Candidate C(CT, B, Idx, S, I, getAndRecordSCEV(S));
+  Candidate C(CT, B, Idx, S, I, SE->getSCEV(S));
   // If we can fold I into an addressing mode, computing I is likely free or
   // takes only one instruction. So, we don't need to analyze or rewrite it.
   //
@@ -1103,6 +1088,7 @@ void StraightLineStrengthReduce::allocateCandidatesAndFindBasis(
       C.Basis = Res.Cand;
       C.DeltaKind = Res.DeltaKind;
       C.Delta = Res.Delta;
+      C.DeltaDropList.clear();
     }
   }
   // Regardless of whether we find a basis for C, we need to push C to the
@@ -1368,11 +1354,8 @@ void StraightLineStrengthReduce::rewriteCandidate(const Candidate &C) {
 
   for (Instruction *I : Basis.DropList)
     I->dropPoisonGeneratingAnnotations();
-  if (auto *DeltaInst = dyn_cast<Instruction>(C.Delta)) {
-    if (auto It = InstDropLists.find(DeltaInst); It != InstDropLists.end())
-      for (Instruction *I : It->second)
-        I->dropPoisonGeneratingAnnotations();
-  }
+  for (Instruction *I : C.DeltaDropList)
+    I->dropPoisonGeneratingAnnotations();
 
   IRBuilder<> Builder(C.Ins);
   Value *Bump = emitBump(Basis, C, Builder, DL);
