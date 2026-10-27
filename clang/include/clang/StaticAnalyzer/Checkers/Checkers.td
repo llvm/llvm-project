@@ -231,6 +231,16 @@ def NonnullGlobalConstantsChecker: Checker<"NonnilStringConstants">,
   Documentation<NotDocumented>,
   Hidden;
 
+def LifetimeModeling : Checker<"LifetimeModeling">,
+  HelpText<"Model lifetime annotations for other checkers">,
+  Documentation<NotDocumented>,
+  Hidden;
+
+def StackUseAfterScope : Checker<"StackUseAfterScope">,
+  HelpText<"Check for uses of stack objects after their scope has ended">,
+  Dependencies<[LifetimeModeling]>,
+  Documentation<HasDocumentation>;
+
 } // end "core"
 
 let ParentPackage = CoreAlpha in {
@@ -289,19 +299,9 @@ def StdVariantChecker : Checker<"StdVariant">,
   HelpText<"Check for bad type access for std::variant.">,
   Documentation<HasDocumentation>;
 
-def LifetimeModeling : Checker<"LifetimeModeling">,
-  HelpText<"Model lifetime annotations for other checkers">,
-  Documentation<NotDocumented>,
-  Hidden;
-
 def UseAfterLifetimeEnd : Checker<"UseAfterLifetimeEnd">,
   HelpText<"Check for uses of references or pointers that "
            "outlive their bound object">,
-  Dependencies<[LifetimeModeling]>,
-  Documentation<HasDocumentation>;
-
-def DanglingPtrDeref : Checker<"DanglingPtrDeref">,
-  HelpText<"Check for dereferences of a dangling pointer">,
   Dependencies<[LifetimeModeling]>,
   Documentation<HasDocumentation>;
 

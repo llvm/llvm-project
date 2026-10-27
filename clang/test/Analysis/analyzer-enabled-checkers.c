@@ -15,11 +15,13 @@
 // CHECK-NEXT: core.CallAndMessage
 // CHECK-NEXT: core.DivideZero
 // CHECK-NEXT: core.DynamicTypePropagation
+// CHECK-NEXT: core.LifetimeModeling
 // CHECK-NEXT: core.NonNullParamChecker
 // CHECK-NEXT: core.NonnilStringConstants
 // CHECK-NEXT: core.NullDereference
 // CHECK-NEXT: core.NullPointerArithm
 // CHECK-NEXT: core.StackAddressEscape
+// CHECK-NEXT: core.StackUseAfterScope
 // CHECK-NEXT: core.UndefinedBinaryOperatorResult
 // CHECK-NEXT: core.VLASize
 // CHECK-NEXT: core.builtin.AssumeModeling
