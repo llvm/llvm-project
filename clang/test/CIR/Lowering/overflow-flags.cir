@@ -1,0 +1,75 @@
+// RUN: cir-opt %s -cir-to-llvm -o - | FileCheck %s -check-prefix=MLIR
+// RUN: cir-translate %s -cir-to-llvmir --target x86_64-unknown-linux-gnu --disable-cc-lowering | FileCheck %s -check-prefix=LLVM
+
+!s32i = !cir.int<s, 32>
+!u32i = !cir.int<u, 32>
+
+// Both overflow flags must survive lowering together.
+
+module {
+  cir.func @add(%a: !s32i, %b: !s32i) -> !s32i {
+    %0 = cir.add nuw|nsw %a, %b : !s32i
+    cir.return %0 : !s32i
+  }
+  // MLIR-LABEL: llvm.func @add
+  // MLIR: llvm.add %{{.*}}, %{{.*}} overflow<nsw, nuw> : i32
+  // LLVM-LABEL: define {{.*}}@add(
+  // LLVM: add nuw nsw i32
+
+  cir.func @sub(%a: !u32i, %b: !u32i) -> !u32i {
+    %0 = cir.sub nuw|nsw %a, %b : !u32i
+    cir.return %0 : !u32i
+  }
+  // MLIR-LABEL: llvm.func @sub
+  // MLIR: llvm.sub %{{.*}}, %{{.*}} overflow<nsw, nuw> : i32
+  // LLVM-LABEL: define {{.*}}@sub(
+  // LLVM: sub nuw nsw i32
+
+  cir.func @mul(%a: !s32i, %b: !s32i) -> !s32i {
+    %0 = cir.mul nuw|nsw %a, %b : !s32i
+    cir.return %0 : !s32i
+  }
+  // MLIR-LABEL: llvm.func @mul
+  // MLIR: llvm.mul %{{.*}}, %{{.*}} overflow<nsw, nuw> : i32
+  // LLVM-LABEL: define {{.*}}@mul(
+  // LLVM: mul nuw nsw i32
+
+  cir.func @vec_add(%a: !cir.vector<4 x !s32i>, %b: !cir.vector<4 x !s32i>) -> !cir.vector<4 x !s32i> {
+    %0 = cir.add nuw|nsw %a, %b : !cir.vector<4 x !s32i>
+    cir.return %0 : !cir.vector<4 x !s32i>
+  }
+  // MLIR-LABEL: llvm.func @vec_add
+  // MLIR: llvm.add %{{.*}}, %{{.*}} overflow<nsw, nuw> : vector<4xi32>
+  // LLVM-LABEL: define {{.*}}@vec_add(
+  // LLVM: add nuw nsw <4 x i32>
+
+  cir.func @matrix_mul(%a: !cir.matrix<2 x 3 x !s32i>, %b: !cir.matrix<2 x 3 x !s32i>) -> !cir.matrix<2 x 3 x !s32i> {
+    %0 = cir.mul nuw|nsw %a, %b : !cir.matrix<2 x 3 x !s32i>
+    cir.return %0 : !cir.matrix<2 x 3 x !s32i>
+  }
+  // MLIR-LABEL: llvm.func @matrix_mul
+  // MLIR: llvm.mul %{{.*}}, %{{.*}} overflow<nsw, nuw> : vector<6xi32>
+  // LLVM-LABEL: define {{.*}}@matrix_mul(
+  // LLVM: mul nuw nsw <6 x i32>
+
+  // Saturating ops pick the signed or unsigned intrinsic from the element
+  // type, elementwise for vectors and matrices.
+
+  cir.func @vec_add_sat(%a: !cir.vector<4 x !u32i>, %b: !cir.vector<4 x !u32i>) -> !cir.vector<4 x !u32i> {
+    %0 = cir.add.sat %a, %b : !cir.vector<4 x !u32i>
+    cir.return %0 : !cir.vector<4 x !u32i>
+  }
+  // MLIR-LABEL: llvm.func @vec_add_sat
+  // MLIR: llvm.intr.uadd.sat(%{{.*}}, %{{.*}}) : (vector<4xi32>, vector<4xi32>) -> vector<4xi32>
+  // LLVM-LABEL: define {{.*}}@vec_add_sat(
+  // LLVM: call <4 x i32> @llvm.uadd.sat.v4i32(
+
+  cir.func @matrix_sub_sat(%a: !cir.matrix<2 x 3 x !s32i>, %b: !cir.matrix<2 x 3 x !s32i>) -> !cir.matrix<2 x 3 x !s32i> {
+    %0 = cir.sub.sat %a, %b : !cir.matrix<2 x 3 x !s32i>
+    cir.return %0 : !cir.matrix<2 x 3 x !s32i>
+  }
+  // MLIR-LABEL: llvm.func @matrix_sub_sat
+  // MLIR: llvm.intr.ssub.sat(%{{.*}}, %{{.*}}) : (vector<6xi32>, vector<6xi32>) -> vector<6xi32>
+  // LLVM-LABEL: define {{.*}}@matrix_sub_sat(
+  // LLVM: call <6 x i32> @llvm.ssub.sat.v6i32(
+}

@@ -134,13 +134,10 @@ struct CIRGenFixedPointBuilder {
     mlir::Value wideLhs = createFixedToFixed(lhs, lhsSema, commonSema);
     mlir::Value wideRhs = createFixedToFixed(rhs, rhsSema, commonSema);
 
-    mlir::Value result;
-    if (commonSema.isSaturated()) {
-      result = builder.createAdd(loc, wideLhs, wideRhs,
-                                 cir::OverflowBehavior::Saturated);
-    } else {
-      result = builder.createAdd(loc, wideLhs, wideRhs);
-    }
+    mlir::Value result =
+        commonSema.isSaturated()
+            ? createSaturating<cir::AddSatOp>(wideLhs, wideRhs, commonSema)
+            : builder.createAdd(loc, wideLhs, wideRhs);
 
     return createFixedToFixed(result, commonSema,
                               lhsSema.getCommonSemantics(rhsSema));
@@ -155,22 +152,10 @@ struct CIRGenFixedPointBuilder {
     mlir::Value wideLhs = createFixedToFixed(lhs, lhsSema, commonSema);
     mlir::Value wideRhs = createFixedToFixed(rhs, rhsSema, commonSema);
 
-    mlir::Value result;
-    if (commonSema.isSaturated()) {
-      result = builder.createSub(loc, wideLhs, wideRhs,
-                                 cir::OverflowBehavior::Saturated);
-    } else {
-      result = builder.createSub(loc, wideLhs, wideRhs);
-    }
-
-    // Subtraction can end up below 0 for padded unsigned operations, so emit
-    // an extra clamp in that case.
-    if (commonSema.isSaturated() && commonSema.hasUnsignedPadding()) {
-      mlir::Value zero = builder.getNullValue(result.getType(), loc);
-      mlir::Value ltZero =
-          builder.createCompare(loc, cir::CmpOpKind::lt, result, zero);
-      result = builder.createSelect(loc, ltZero, zero, result);
-    }
+    mlir::Value result =
+        commonSema.isSaturated()
+            ? createSaturating<cir::SubSatOp>(wideLhs, wideRhs, commonSema)
+            : builder.createSub(loc, wideLhs, wideRhs);
 
     return createFixedToFixed(result, commonSema,
                               lhsSema.getCommonSemantics(rhsSema));
@@ -390,6 +375,29 @@ private:
     return llvm::FixedPointSemantics(
         c.getWidth() + static_cast<unsigned>(bothPadded && c.isSaturated()),
         c.getScale(), c.isSigned(), c.isSaturated(), bothPadded);
+  }
+
+  /// Emits a saturating add or sub of operands in \p sema. With unsigned
+  /// padding, the padding bit keeps the value below the signed maximum, so it
+  /// saturates as a signed value, as llvm::FixedPointBuilder does; a difference
+  /// below 0 is then clamped while the value is still signed.
+  template <typename SatOp>
+  mlir::Value createSaturating(mlir::Value lhs, mlir::Value rhs,
+                               const llvm::FixedPointSemantics &sema) {
+    if (!sema.hasUnsignedPadding())
+      return SatOp::create(builder, loc, lhs, rhs);
+
+    mlir::Type signedTy = builder.getSIntNTy(sema.getWidth());
+    mlir::Value result =
+        SatOp::create(builder, loc, builder.createIntCast(lhs, signedTy),
+                      builder.createIntCast(rhs, signedTy));
+    if constexpr (std::is_same_v<SatOp, cir::SubSatOp>) {
+      mlir::Value zero = builder.getNullValue(signedTy, loc);
+      mlir::Value ltZero =
+          builder.createCompare(loc, cir::CmpOpKind::lt, result, zero);
+      result = builder.createSelect(loc, ltZero, zero, result);
+    }
+    return builder.createIntCast(result, lhs.getType());
   }
 
   CIRGenBuilderTy &builder;
