@@ -10091,8 +10091,11 @@ SDValue DAGCombiner::mergeTruncStores(StoreSDNode *N) {
     // transform may not be safe because order of loads/stores outside of this
     // set may not be preserved.
     // TODO: We could allow multiple sizes by tracking each stored byte.
-    if (Store->getMemoryVT() != MemVT || !Store->isSimple() ||
-        Store->isIndexed() || !Store->hasOneUse())
+    // Keep a differently-sized store in the incoming chain and try to merge
+    // the stores collected after it.
+    if (Store->getMemoryVT() != MemVT)
+      break;
+    if (!Store->isSimple() || Store->isIndexed() || !Store->hasOneUse())
       return SDValue();
     Stores.push_back(Store);
     Chain = Store->getChain();
@@ -12407,21 +12410,16 @@ SDValue DAGCombiner::foldABSToABD(SDNode *N, const SDLoc &DL) {
 
     // fold (abs (sub nsw x, y)) -> abds(x, y)
     // fold (abs (add nsw x, -y)) -> abds(x, y)
-    bool AbsOpWillNSW =
-        AbsOp0->getFlags().hasNoSignedWrap() ||
-        (IsAdd ? DAG.willNotOverflowAdd(/*IsSigned=*/true, Op0, Op1)
-               : DAG.willNotOverflowSub(/*IsSigned=*/true, Op0, Op1));
-
     // Don't fold this for unsupported types as we lose the NSW handling.
     if (hasOperation(ISD::ABDS, VT) && TLI.preferABDSToABSWithNSW(VT) &&
-        AbsOpWillNSW)
+        (AbsOp0->getFlags().hasNoSignedWrap() ||
+         (IsAdd ? DAG.willNotOverflowAdd(/*IsSigned=*/true, Op0, Op1)
+                : DAG.willNotOverflowSub(/*IsSigned=*/true, Op0, Op1))))
       return CreateZextedAbd(ISD::ABDS);
 
     // fold (abs (sub x, y)) -> abdu(x, y)
-    bool AbsOpWillNUW =
-        !IsAdd && DAG.SignBitIsZero(Op0) && DAG.SignBitIsZero(Op1);
-
-    if (hasOperation(ISD::ABDU, VT) && AbsOpWillNUW)
+    if (!IsAdd && hasOperation(ISD::ABDU, VT) && DAG.SignBitIsZero(Op0) &&
+        DAG.SignBitIsZero(Op1))
       return CreateZextedAbd(ISD::ABDU);
 
     return SDValue();
@@ -13356,10 +13354,13 @@ SDValue DAGCombiner::foldSelectToABD(SDValue LHS, SDValue RHS, SDValue True,
   }
 
   // (setcc (add nsw A, Const), 0, sets??) --> (setcc A, -Const, sets??)
+  // Ensure -Const doesn't overflow.
   SDValue A, B;
   if (ISD::isSignedIntSetCC(CC) && LHS->getFlags().hasNoSignedWrap() &&
       isZeroOrZeroSplat(RHS) && sd_match(LHS, m_Add(m_Value(A), m_Value(B))) &&
-      DAG.isConstantIntBuildVectorOrConstantInt(B)) {
+      ISD::matchUnaryPredicate(B, [](ConstantSDNode *C) {
+        return !C->getAPIntValue().isMinSignedValue();
+      })) {
     RHS = DAG.getNegative(B, LHS, B.getValueType());
     LHS = A;
   }
@@ -28152,6 +28153,33 @@ SDValue DAGCombiner::visitVECTOR_INTERLEAVE(SDNode *N) {
     return DAG.getMergeValues(Ops, DL);
   }
 
+  // interleave2(extract_lo/hi(a), extract_lo/hi(b))#{0,1}
+  //   -> extract_lo/hi(interleave2(a, b)#{0,1})
+  if (Factor == 2 && Op0.getOpcode() == ISD::EXTRACT_SUBVECTOR) {
+    SDValue Op1 = N->getOperand(1);
+    if (Op1.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+        Op0.getOperand(1) == Op1.getOperand(1)) {
+      EVT WideVT = Op0.getOperand(0).getValueType();
+      if (WideVT == VT.getDoubleNumVectorElementsVT(*DAG.getContext()) &&
+          (!LegalOperations || TLI.isVectorInterleaveLegalOrCustom(
+                                   ISD::VECTOR_INTERLEAVE, Factor, WideVT))) {
+        APInt Idx = Op0.getConstantOperandAPInt(1);
+        unsigned HalfNumElts = VT.getVectorMinNumElements();
+        if (Idx.isZero() || Idx == HalfNumElts) {
+          SDLoc DL(N);
+          SDValue Interleave =
+              DAG.getNode(ISD::VECTOR_INTERLEAVE, DL, {WideVT, WideVT},
+                          {Op0.getOperand(0), Op1.getOperand(0)});
+          SDValue WideResult = Interleave.getValue(Idx.isZero() ? 0 : 1);
+          SDValue Results[] = {
+              DAG.getExtractSubvector(DL, VT, WideResult, 0),
+              DAG.getExtractSubvector(DL, VT, WideResult, HalfNumElts)};
+          return CombineTo(N, Results[0], Results[1]);
+        }
+      }
+    }
+  }
+
   // Fold an interleave of fixed-length BUILD_VECTORs by rearranging their
   // scalar operands directly.
   if (Op0.getOpcode() == ISD::BUILD_VECTOR) {
@@ -30377,10 +30405,19 @@ SDValue DAGCombiner::visitSCALAR_TO_VECTOR(SDNode *N) {
     }
   }
 
+  if (Opcode != ISD::EXTRACT_VECTOR_ELT)
+    return SDValue();
+
+  // scalar_to_vector (extract_vector_elt X, 0) --> extract_subvector X, 0
+  // X can be scalable.
+  if (VT.getVectorElementCount().isScalar() &&
+      isNullConstant(Scalar.getOperand(1)) &&
+      Scalar.getOperand(0).getValueType().getVectorElementType() == VecEltVT)
+    return DAG.getExtractSubvector(SDLoc(N), VT, Scalar.getOperand(0), 0);
+
   // Replace a SCALAR_TO_VECTOR(EXTRACT_VECTOR_ELT(V,C0)) pattern
   // with a VECTOR_SHUFFLE and possible truncate.
-  if (Opcode != ISD::EXTRACT_VECTOR_ELT ||
-      !Scalar.getOperand(0).getValueType().isFixedLengthVector())
+  if (!Scalar.getOperand(0).getValueType().isFixedLengthVector())
     return SDValue();
 
   // If we have an implicit truncate, truncate here if it is legal.

@@ -368,8 +368,8 @@ bool LoongArchMergeBaseOffsetOpt::foldLargeOffset(
     if (Reg == LoongArch::R0)
       break;
 
-    // Can't fold if the register has more than one use.
-    if (!Reg.isVirtual() || !MRI->hasOneUse(Reg))
+    // Can't fold if the register has more than one non-debug use.
+    if (!Reg.isVirtual() || !MRI->hasOneNonDBGUse(Reg))
       return false;
 
     MachineInstr *Curr = MRI->getVRegDef(Reg);
@@ -429,6 +429,9 @@ bool LoongArchMergeBaseOffsetOpt::foldLargeOffset(
   LLVM_DEBUG(dbgs() << "  Offset Instrs:\n");
   for (auto I : Instrs) {
     LLVM_DEBUG(dbgs() << "                 " << *I);
+    // The offset instruction is about to be erased, so its debug users can no
+    // longer be described.
+    MRI->markUsesInDebugValueAsUndef(I->getOperand(0).getReg());
     I->eraseFromParent();
   }
 

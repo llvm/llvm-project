@@ -327,6 +327,8 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
         NewBr->setMetadata(LLVMContext::MD_prof,
                            MDBuilder(BB->getContext())
                                .createBranchWeights(CaseWeight, DefWeight));
+      } else {
+        setExplicitlyUnknownBranchWeightsIfProfiled(*NewBr, DEBUG_TYPE);
       }
 
       // Update make.implicit metadata to the newly-created conditional branch.

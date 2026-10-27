@@ -530,7 +530,7 @@ def MxCONDle  : PatLeaf<(i8 15)>; // Less or Equal
 // Complex Patterns
 //===----------------------------------------------------------------------===//
 
-// NOTE Though this CP is not strictly necessarily it will simplify instruciton
+// NOTE Though this CP is not strictly necessarily it will simplify instruction
 // definitions
 let WantsParent = true in {
   def MxCP_ARI   : ComplexPattern<iPTR, 1, "SelectARI">;

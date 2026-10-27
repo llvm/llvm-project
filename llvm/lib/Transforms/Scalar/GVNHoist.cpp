@@ -1187,8 +1187,7 @@ PreservedAnalyses GVNHoistPass::run(Function &F, FunctionAnalysisManager &AM) {
   PostDominatorTree &PDT = AM.getResult<PostDominatorTreeAnalysis>(F);
   AliasAnalysis &AA = AM.getResult<AAManager>(F);
   MemorySSA &MSSA = AM.getResult<MemorySSAAnalysis>(F).getMSSA();
-  const ScalarOptions &Opts =
-      F.getContext().getLibraryOptions().get<ScalarOptions>();
+  const ScalarOptions &Opts = getScalarOptions(F);
   GVNHoist G(Opts, &DT, &PDT, &AA, &MSSA);
   if (!G.run(F))
     return PreservedAnalyses::all();
