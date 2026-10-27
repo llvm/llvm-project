@@ -13,6 +13,8 @@
 #ifndef LLVM_CODEGEN_MIRFORMATTER_H
 #define LLVM_CODEGEN_MIRFORMATTER_H
 
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -52,6 +54,15 @@ public:
                                 StringRef Src, int64_t &Imm,
                                 ErrorCallbackType ErrorCallback) const {
     llvm_unreachable("target did not implement parsing MIR immediate mnemonic");
+  }
+
+  /// Names for a trailing codegen-only intrinsic immediate, indexed by its
+  /// value. ArgIdx excludes defs and the intrinsic ID. At this position MIR
+  /// requires a name; omission supplies the first value (zero). An empty list
+  /// leaves the operand's syntax and presence unchanged.
+  virtual ArrayRef<StringRef>
+  getIntrinsicImmOperandNames(unsigned IntrinsicID, unsigned ArgIdx) const {
+    return {};
   }
 
   /// Implement target specific printing of target custom pseudo source value.

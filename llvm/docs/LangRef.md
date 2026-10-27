@@ -2110,6 +2110,22 @@ define void @f() optsize { ... }
 define void @f() "no-sse" { ... }
 ```
 
+`cd_regclass(auto|agpr|vgpr)`
+: This call-site-only enum attribute constrains the accumulator C/D register
+  file of an `llvm.amdgcn.mfma.*` intrinsic, including scaled MFMA. `auto`
+  preserves automatic selection, `agpr` requires AGPRs and `vgpr` requires
+  VGPRs. The default is `auto`. Legal immediate C operands remain legal.
+  Unsupported hard requests are diagnosed by the AMDGPU backend. The attribute
+  does not add an instruction or an ordering dependency. It is invalid on
+  functions or on calls to other intrinsics. See the AMDGPU usage guide's
+  [MFMA register-class policy](AMDGPUUsage.md#amdgpu-mfma-cd-regclass).
+
+  This native attribute validates the closed set of policy values and makes
+  unsupported readers reject the request instead of silently ignoring it.
+  Calls with different policies cannot be merged by discarding the attribute.
+  Exact string attributes can also preserve such differences; native encoding
+  additionally provides validation and explicit rejection by older consumers.
+
 `alignstack(<n>)`
 :   This attribute indicates that, when emitting the prologue and
     epilogue, the backend should forcibly align the stack pointer.

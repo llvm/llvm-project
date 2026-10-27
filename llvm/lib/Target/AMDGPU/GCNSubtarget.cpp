@@ -26,6 +26,8 @@
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/TargetParser/AMDGPUTargetParser.h"
 #include <algorithm>
@@ -223,6 +225,78 @@ void GCNSubtarget::checkSubtargetFeatures(const Function &F) const {
     Ctx.diagnose(DiagnosticInfoUnsupported(
         F, "must specify exactly one of wavefrontsize32 and wavefrontsize64"));
   }
+}
+
+bool GCNSubtarget::checkMFMACDRegClass(unsigned IntrID, uint64_t Policy,
+                                       const Function &F,
+                                       const DebugLoc &DL) const {
+  using AMDGPU::MFMACDRegClass;
+  if (Policy == unsigned(MFMACDRegClass::Auto))
+    return true;
+
+  auto Diagnose = [&](StringRef Reason) {
+    F.getContext().diagnose(DiagnosticInfoUnsupported(
+        F, Twine("MFMA cd_regclass request cannot be satisfied: ") + Reason,
+        DL));
+    return false;
+  };
+  if (Policy > unsigned(MFMACDRegClass::RequireVGPR))
+    return Diagnose("expected 0 (auto), 1 (require_agpr), or 2 (require_vgpr)");
+  if (!hasMAIInsts())
+    return Diagnose("target does not support MFMA");
+  if (Policy == unsigned(MFMACDRegClass::RequireVGPR) && !hasGFX90AInsts())
+    return Diagnose("VGPR C/D form requires gfx90a or later CDNA");
+
+  bool Supported = true;
+  switch (IntrID) {
+  case Intrinsic::amdgcn_mfma_f32_32x32x4bf16_1k:
+  case Intrinsic::amdgcn_mfma_f32_16x16x4bf16_1k:
+  case Intrinsic::amdgcn_mfma_f32_4x4x4bf16_1k:
+  case Intrinsic::amdgcn_mfma_f32_32x32x8bf16_1k:
+  case Intrinsic::amdgcn_mfma_f32_16x16x16bf16_1k:
+  case Intrinsic::amdgcn_mfma_f64_16x16x4f64:
+  case Intrinsic::amdgcn_mfma_f64_4x4x4f64:
+    Supported = hasGFX90AInsts();
+    break;
+  case Intrinsic::amdgcn_mfma_i32_16x16x16i8:
+  case Intrinsic::amdgcn_mfma_i32_32x32x8i8:
+  case Intrinsic::amdgcn_mfma_f32_32x32x2bf16:
+  case Intrinsic::amdgcn_mfma_f32_16x16x2bf16:
+  case Intrinsic::amdgcn_mfma_f32_4x4x2bf16:
+  case Intrinsic::amdgcn_mfma_f32_32x32x4bf16:
+  case Intrinsic::amdgcn_mfma_f32_16x16x8bf16:
+    Supported = !hasGFX940Insts();
+    break;
+  case Intrinsic::amdgcn_mfma_i32_16x16x32_i8:
+  case Intrinsic::amdgcn_mfma_i32_32x32x16_i8:
+    Supported = hasGFX940Insts();
+    break;
+  case Intrinsic::amdgcn_mfma_f32_16x16x8_xf32:
+  case Intrinsic::amdgcn_mfma_f32_32x32x4_xf32:
+    Supported = hasXF32Insts();
+    break;
+  case Intrinsic::amdgcn_mfma_f32_16x16x32_bf8_bf8:
+  case Intrinsic::amdgcn_mfma_f32_16x16x32_bf8_fp8:
+  case Intrinsic::amdgcn_mfma_f32_16x16x32_fp8_bf8:
+  case Intrinsic::amdgcn_mfma_f32_16x16x32_fp8_fp8:
+  case Intrinsic::amdgcn_mfma_f32_32x32x16_bf8_bf8:
+  case Intrinsic::amdgcn_mfma_f32_32x32x16_bf8_fp8:
+  case Intrinsic::amdgcn_mfma_f32_32x32x16_fp8_bf8:
+  case Intrinsic::amdgcn_mfma_f32_32x32x16_fp8_fp8:
+    Supported = hasFP8Insts();
+    break;
+  case Intrinsic::amdgcn_mfma_f32_16x16x32_f16:
+  case Intrinsic::amdgcn_mfma_f32_32x32x16_f16:
+  case Intrinsic::amdgcn_mfma_i32_16x16x64_i8:
+  case Intrinsic::amdgcn_mfma_i32_32x32x32_i8:
+  case Intrinsic::amdgcn_mfma_f32_16x16x32_bf16:
+  case Intrinsic::amdgcn_mfma_f32_32x32x16_bf16:
+  case Intrinsic::amdgcn_mfma_scale_f32_16x16x128_f8f6f4:
+  case Intrinsic::amdgcn_mfma_scale_f32_32x32x64_f8f6f4:
+    Supported = hasGFX950Insts();
+    break;
+  }
+  return Supported || Diagnose("instruction variant is unavailable on target");
 }
 
 // TODO: Validate subarch for subtarget

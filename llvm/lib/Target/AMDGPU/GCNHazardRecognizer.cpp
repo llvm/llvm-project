@@ -3387,6 +3387,7 @@ int GCNHazardRecognizer::checkMAIHazards908(MachineInstr *MI) const {
 /// vdst to src2 instead of taking them as separate operands. \returns the AGPR,
 /// non-mac opcode, so that every form of the same MFMA maps to one value.
 static unsigned getMFMANonMacAGPRFormOp(unsigned Opc) {
+  Opc = AMDGPU::getMFMABaseOpcode(Opc);
   if (int NonMacOp = AMDGPU::getMFMAEarlyClobberOp(Opc); NonMacOp != -1)
     Opc = NonMacOp;
   if (int AGPROp = AMDGPU::getAGPRFormOp(Opc); AGPROp != -1)
@@ -3467,7 +3468,7 @@ int GCNHazardRecognizer::getMFMAOverlappedSrcCWaitStates(
   if (TII.isXDL(*Reader) && !TII.isXDL(*Writer))
     return 0;
 
-  switch (Writer->getOpcode()) {
+  switch (AMDGPU::getMFMABaseOpcode(Writer->getOpcode())) {
   case AMDGPU::V_MFMA_F64_16X16X4F64_e64:
   case AMDGPU::V_MFMA_F64_16X16X4F64_vgprcd_e64:
   case AMDGPU::V_MFMA_F64_16X16X4F64_mac_e64:
@@ -3514,7 +3515,7 @@ int GCNHazardRecognizer::getMFMAReadWaitStates(const MachineInstr &Consumer,
                                                const MachineInstr &Producer,
                                                Register Reg,
                                                bool IsSrcC) const {
-  unsigned Opc = Consumer.getOpcode();
+  unsigned Opc = AMDGPU::getMFMABaseOpcode(Consumer.getOpcode());
   const int SMFMA4x4WritesVGPROverlappedSrcABWaitStates = 5;
   const int SMFMA16x16WritesVGPROverlappedSrcABWaitStates = 11;
   const int SMFMA32x32WritesVGPROverlappedSrcABWaitStates = 19;
@@ -3525,7 +3526,7 @@ int GCNHazardRecognizer::getMFMAReadWaitStates(const MachineInstr &Consumer,
   const int GFX940_SMFMA4x4WritesVGPRFullSrcCWaitStates = 2;
 
   bool FullReg = Producer.getOperand(0).getReg() == Reg;
-  unsigned Opc1 = Producer.getOpcode();
+  unsigned Opc1 = AMDGPU::getMFMABaseOpcode(Producer.getOpcode());
   int NeedWaitStates = 0;
   if (IsSrcC) {
     if (!SIInstrInfo::isDGEMM(Opc) &&

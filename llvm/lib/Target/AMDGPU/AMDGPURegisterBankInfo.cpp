@@ -81,6 +81,7 @@
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/RegisterBank.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 
 #define GET_TARGET_REGBANK_IMPL
@@ -5089,6 +5090,11 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[4] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, Size);
       break;
     }
+    case Intrinsic::amdgcn_mfma_scale_f32_16x16x128_f8f6f4:
+    case Intrinsic::amdgcn_mfma_scale_f32_32x32x64_f8f6f4:
+      OpdsMapping[8] = getVGPROpMapping(MI.getOperand(8).getReg(), MRI, *TRI);
+      OpdsMapping[10] = getVGPROpMapping(MI.getOperand(10).getReg(), MRI, *TRI);
+      [[fallthrough]];
     case Intrinsic::amdgcn_mfma_f32_4x4x1f32:
     case Intrinsic::amdgcn_mfma_f32_4x4x4f16:
     case Intrinsic::amdgcn_mfma_i32_4x4x4i8:
@@ -5132,7 +5138,8 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_mfma_f32_32x32x16_f16:
     case Intrinsic::amdgcn_mfma_i32_16x16x64_i8:
     case Intrinsic::amdgcn_mfma_i32_32x32x32_i8:
-    case Intrinsic::amdgcn_mfma_f32_16x16x32_bf16: {
+    case Intrinsic::amdgcn_mfma_f32_16x16x32_bf16:
+    case Intrinsic::amdgcn_mfma_f32_32x32x16_bf16: {
       unsigned DstSize = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
       unsigned MinNumRegsRequired = DstSize / 32;
 
@@ -5144,8 +5151,15 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       // vdst, srcA, srcB, srcC
       const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
 
-      bool UseAGPRForm = !Subtarget.hasGFX90AInsts() ||
-                         Info->selectAGPRFormMFMA(MinNumRegsRequired);
+      unsigned PolicyIdx = *AMDGPU::getMFMACDRegClassOperandIndex(
+                               cast<GIntrinsic>(MI).getIntrinsicID()) +
+                           2;
+      auto Policy = static_cast<AMDGPU::MFMACDRegClass>(
+          MI.getOperand(PolicyIdx).getImm());
+      bool UseAGPRForm = Policy == AMDGPU::MFMACDRegClass::RequireAGPR ||
+                         (Policy == AMDGPU::MFMACDRegClass::Auto &&
+                          (!Subtarget.hasGFX90AInsts() ||
+                           Info->selectAGPRFormMFMA(MinNumRegsRequired)));
 
       OpdsMapping[0] =
           UseAGPRForm ? getAGPROpMapping(MI.getOperand(0).getReg(), MRI, *TRI)
@@ -5155,28 +5169,6 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[4] =
           UseAGPRForm ? getAGPROpMapping(MI.getOperand(4).getReg(), MRI, *TRI)
                       : getVGPROpMapping(MI.getOperand(4).getReg(), MRI, *TRI);
-      break;
-    }
-    case Intrinsic::amdgcn_mfma_scale_f32_16x16x128_f8f6f4:
-    case Intrinsic::amdgcn_mfma_scale_f32_32x32x64_f8f6f4: {
-      unsigned DstSize = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
-      unsigned MinNumRegsRequired = DstSize / 32;
-
-      const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
-      bool UseAGPRForm = Info->selectAGPRFormMFMA(MinNumRegsRequired);
-
-      OpdsMapping[0] =
-          UseAGPRForm ? getAGPROpMapping(MI.getOperand(0).getReg(), MRI, *TRI)
-                      : getVGPROpMapping(MI.getOperand(0).getReg(), MRI, *TRI);
-
-      OpdsMapping[2] = getVGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
-      OpdsMapping[3] = getVGPROpMapping(MI.getOperand(3).getReg(), MRI, *TRI);
-      OpdsMapping[4] =
-          UseAGPRForm ? getAGPROpMapping(MI.getOperand(4).getReg(), MRI, *TRI)
-                      : getVGPROpMapping(MI.getOperand(4).getReg(), MRI, *TRI);
-
-      OpdsMapping[8] = getVGPROpMapping(MI.getOperand(8).getReg(), MRI, *TRI);
-      OpdsMapping[10] = getVGPROpMapping(MI.getOperand(10).getReg(), MRI, *TRI);
       break;
     }
     case Intrinsic::amdgcn_smfmac_f32_16x16x32_f16:

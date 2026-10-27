@@ -824,6 +824,11 @@ class Intrinsic<list<LLVMType> ret_types,
   string TargetFeatures = ""; // Target features required by this intrinsic.
   list<LLVMType> RetTypes = ret_types;
   list<LLVMType> ParamTypes = param_types;
+  // Extra immediate operands declared for SelectionDAG patterns and GlobalISel
+  // pattern import, for example to carry call-site attributes into selection.
+  // Target lowering must append their values; this field does not generate
+  // operands or change ParamTypes, the IR signature, or IR immarg attributes.
+  list<LLVMType> CodeGenOnlyImmArgTypes = [];
   list<IntrinsicProperty> IntrProperties = intr_properties;
   let Properties = sd_properties;
 

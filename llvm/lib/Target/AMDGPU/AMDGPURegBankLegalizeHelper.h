@@ -57,6 +57,9 @@ class RegBankLegalizeHelper {
   const RegisterBank *AgprRB;
   const RegisterBank *VccRB;
 
+  const RegisterBank *getMAIRegBank(const MachineInstr &MI,
+                                    unsigned NumRegs) const;
+
   static constexpr LLT S1 = LLT::scalar(1);
   static constexpr LLT S16 = LLT::scalar(16);
   static constexpr LLT S32 = LLT::scalar(32);

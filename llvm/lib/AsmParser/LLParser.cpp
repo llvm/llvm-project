@@ -1771,6 +1771,30 @@ bool LLParser::parseEnumAttribute(Attribute::AttrKind Attr, AttrBuilder &B,
     B.addUWTableAttr(Kind);
     return false;
   }
+  case Attribute::AMDGPUMFMACDRegClass: {
+    Lex.Lex();
+    if (parseToken(lltok::lparen, "expected '('"))
+      return true;
+    AMDGPU::MFMACDRegClass Policy;
+    switch (Lex.getKind()) {
+    case lltok::kw_auto:
+      Policy = AMDGPU::MFMACDRegClass::Auto;
+      break;
+    case lltok::kw_agpr:
+      Policy = AMDGPU::MFMACDRegClass::RequireAGPR;
+      break;
+    case lltok::kw_vgpr:
+      Policy = AMDGPU::MFMACDRegClass::RequireVGPR;
+      break;
+    default:
+      return tokError("expected MFMA C/D register class: auto, agpr, or vgpr");
+    }
+    Lex.Lex();
+    if (parseToken(lltok::rparen, "expected ')'"))
+      return true;
+    B.addAttribute(AMDGPU::getMFMACDRegClassAttr(Context, Policy));
+    return false;
+  }
   case Attribute::AllocKind: {
     AllocFnKind Kind = AllocFnKind::Unknown;
     if (parseAllocKind(Kind))

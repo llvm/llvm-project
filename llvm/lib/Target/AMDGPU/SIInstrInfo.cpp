@@ -11019,6 +11019,9 @@ static bool isRenamedInGFX9(int Opcode) {
 }
 
 int SIInstrInfo::pseudoToMCOpcode(int Opcode) const {
+  // Required C/D pseudos have the same encoding as the selected ordinary
+  // form. Their register constraints must remain distinct until this point.
+  Opcode = AMDGPU::getMFMABaseOpcode(Opcode);
   assert(Opcode == (int)SIInstrInfo::getNonSoftWaitcntOpcode(Opcode) &&
          "SIInsertWaitcnts should have promoted soft waitcnt instructions!");
 

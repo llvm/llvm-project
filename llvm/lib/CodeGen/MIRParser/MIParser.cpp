@@ -16,7 +16,9 @@
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -1118,6 +1120,17 @@ bool MIParser::parse(MachineInstr *&MI) {
   if (Token.isError() || parseInstruction(OpCode, Flags))
     return true;
 
+  const MIRFormatter *Formatter =
+      MF.getSubtarget().getInstrInfo()->getMIRFormatter();
+  std::optional<Intrinsic::ID> ParsedIntrinsicID;
+  unsigned FirstIntrinsicArg = 0;
+  auto GetIntrinsicImmNames = [&]() -> ArrayRef<StringRef> {
+    if (!Formatter || !ParsedIntrinsicID)
+      return {};
+    return Formatter->getIntrinsicImmOperandNames(
+        *ParsedIntrinsicID, Operands.size() - FirstIntrinsicArg);
+  };
+
   // Parse the remaining machine operands.
   while (!Token.isNewlineOrEOF() && Token.isNot(MIToken::kw_pre_instr_symbol) &&
          Token.isNot(MIToken::kw_post_instr_symbol) &&
@@ -1130,16 +1143,42 @@ bool MIParser::parse(MachineInstr *&MI) {
          Token.isNot(MIToken::coloncolon) && Token.isNot(MIToken::lbrace)) {
     auto Loc = Token.location();
     std::optional<unsigned> TiedDefIdx;
-    if (parseMachineOperandAndTargetFlags(OpCode, Operands.size(), MO, TiedDefIdx))
+    if (ArrayRef<StringRef> Names = GetIntrinsicImmNames(); !Names.empty()) {
+      // An omitted trailing immediate precedes any implicit register operands.
+      if (Token.is(MIToken::kw_implicit) ||
+          Token.is(MIToken::kw_implicit_define)) {
+        Operands.emplace_back(MachineOperand::CreateImm(0), Loc, Loc,
+                              TiedDefIdx);
+        continue;
+      }
+      auto It = llvm::find(Names, Token.range());
+      if (It == Names.end())
+        return error("expected intrinsic immediate mnemonic: " +
+                     join(Names, ", "));
+      MO = MachineOperand::CreateImm(It - Names.begin());
+      lex();
+    } else if (parseMachineOperandAndTargetFlags(OpCode, Operands.size(), MO,
+                                                 TiedDefIdx)) {
       return true;
+    }
     Operands.push_back(
         ParsedMachineOperand(MO, Loc, Token.location(), TiedDefIdx));
+    if (MO.isIntrinsicID()) {
+      ParsedIntrinsicID = MO.getIntrinsicID();
+      FirstIntrinsicArg = Operands.size();
+    }
     if (Token.isNewlineOrEOF() || Token.is(MIToken::coloncolon) ||
         Token.is(MIToken::lbrace))
       break;
     if (Token.isNot(MIToken::comma))
       return error("expected ',' before the next machine operand");
     lex();
+  }
+
+  while (!GetIntrinsicImmNames().empty()) {
+    std::optional<unsigned> TiedDefIdx;
+    Operands.emplace_back(MachineOperand::CreateImm(0), Token.location(),
+                          Token.location(), TiedDefIdx);
   }
 
   MCSymbol *PreInstrSymbol = nullptr;

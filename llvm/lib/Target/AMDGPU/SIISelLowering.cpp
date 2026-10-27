@@ -43,6 +43,7 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/IR/MDBuilder.h"
@@ -56,6 +57,20 @@
 
 using namespace llvm;
 using namespace llvm::SDPatternMatch;
+
+void SITargetLowering::CollectTargetIntrinsicOperands(
+    const CallInst &Call, SmallVectorImpl<SDValue> &Ops,
+    SelectionDAG &DAG) const {
+  if (AMDGPU::getMFMACDRegClassOperandIndex(Call.getIntrinsicID()))
+    Ops.push_back(DAG.getTargetConstant(
+        unsigned(AMDGPU::getMFMACDRegClass(Call)), SDLoc(), MVT::i32));
+}
+
+void SITargetLowering::collectGlobalISelTargetIntrinsicOperands(
+    const CallBase &Call, MachineInstrBuilder &MIB) const {
+  if (AMDGPU::getMFMACDRegClassOperandIndex(Call.getIntrinsicID()))
+    MIB.addImm(unsigned(AMDGPU::getMFMACDRegClass(Call)));
+}
 
 #define DEBUG_TYPE "si-lower"
 

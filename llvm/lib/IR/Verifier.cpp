@@ -3253,6 +3253,8 @@ void Verifier::verifySiblingFuncletUnwinds() {
 //
 void Verifier::visitFunction(const Function &F) {
   visitGlobalValue(F);
+  Check(!F.hasFnAttribute(Attribute::AMDGPUMFMACDRegClass),
+        "cd_regclass is only valid on MFMA call sites", &F);
 
   // Check function arguments.
   FunctionType *FT = F.getFunctionType();
@@ -4103,6 +4105,14 @@ void Verifier::visitCallBase(CallBase &Call) {
   auto *Callee =
       dyn_cast<Function>(Call.getCalledOperand()->stripPointerCasts());
   bool IsIntrinsic = Callee && Callee->isIntrinsic();
+  if (Attribute A = Attrs.getFnAttr(Attribute::AMDGPUMFMACDRegClass);
+      A.isValid()) {
+    Check(IsIntrinsic &&
+              AMDGPU::getMFMACDRegClassOperandIndex(Callee->getIntrinsicID()),
+          "cd_regclass is only valid on MFMA call sites", Call);
+    Check(A.getValueAsInt() <= unsigned(AMDGPU::MFMACDRegClass::RequireVGPR),
+          "invalid cd_regclass value", Call);
+  }
   if (IsIntrinsic)
     Check(Callee->getFunctionType() == FTy,
           "Intrinsic called with incompatible signature", Call);

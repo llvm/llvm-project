@@ -75,6 +75,7 @@ class Constant;
 enum class ExceptionHandling : int;
 class FastISel;
 class FunctionLoweringInfo;
+class MachineInstrBuilder;
 class GlobalValue;
 class Loop;
 class GISelValueTracking;
@@ -5619,6 +5620,12 @@ public:
   virtual void CollectTargetIntrinsicOperands(const CallInst &I,
                                               SmallVectorImpl<SDValue> &Ops,
                                               SelectionDAG &DAG) const;
+
+  /// Append codegen-only operands derived from a target intrinsic call, such
+  /// as per-instruction codegen attributes, after its ordinary IR arguments.
+  virtual void
+  collectGlobalISelTargetIntrinsicOperands(const CallBase &Call,
+                                           MachineInstrBuilder &MIB) const {}
 
   //===--------------------------------------------------------------------===//
   // Div utility functions

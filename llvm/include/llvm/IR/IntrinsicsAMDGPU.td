@@ -3673,13 +3673,19 @@ def int_amdgcn_dot4_f32_bf8_bf8 : AMDGPU8bitFloatDot4Intrinsic;
 // ===----------------------------------------------------------------------===//
 
 // llvm.amdgcn.mfma.*.* vdst, srcA, srcB, srcC, cbsz, abid, blgp
+// Ordinary and scaled MFMA share selection patterns that also match the
+// cd_regclass call-site policy. Declare its extra i32 for pattern arity/type
+// checking and GlobalISel import; target lowering appends the actual enum value.
+// The public IR signatures and their immarg attributes remain unchanged.
 class AMDGPUMfmaIntrinsic<LLVMType DestTy, LLVMType SrcABTy> :
   ClangBuiltin<!subst("int", "__builtin", NAME)>,
   DefaultAttrsIntrinsic<[DestTy],
             [SrcABTy, SrcABTy, DestTy,
              llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
             [IntrConvergent, IntrNoMem, IntrNoCreateUndefOrPoison,
-             ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>, ImmArg<ArgIndex<5>>]>;
+             ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>, ImmArg<ArgIndex<5>>]> {
+  let CodeGenOnlyImmArgTypes = [llvm_i32_ty];
+}
 
 
 // srcA's format is determined by cbsz. srcB's format is determined by
@@ -3706,7 +3712,9 @@ class AMDGPUMfmaScaleIntrinsic<LLVMType DestTy> :
             [IntrConvergent, IntrNoMem, IntrNoCreateUndefOrPoison,
              ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>,
              ImmArg<ArgIndex<5>>, ImmArg<ArgIndex<7>>
-             ]>;
+             ]> {
+  let CodeGenOnlyImmArgTypes = [llvm_i32_ty];
+}
 
 defset list<Intrinsic> AMDGPUMFMAIntrinsics908 = {
 def int_amdgcn_mfma_f32_32x32x1f32  : AMDGPUMfmaIntrinsic<llvm_v32f32_ty, llvm_float_ty>;

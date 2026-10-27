@@ -27,6 +27,7 @@
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/ConstantRangeList.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/Type.h"
@@ -598,6 +599,16 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
     UWTableKind Kind = getUWTableKind();
     assert(Kind != UWTableKind::None && "uwtable attribute should not be none");
     return Kind == UWTableKind::Default ? "uwtable" : "uwtable(sync)";
+  }
+
+  if (hasAttribute(Attribute::AMDGPUMFMACDRegClass)) {
+    if (getValueAsInt() > unsigned(AMDGPU::MFMACDRegClass::RequireVGPR))
+      return ("cd_regclass(" + Twine(getValueAsInt()) + ")").str();
+    return ("cd_regclass(" +
+            AMDGPU::stringifyMFMACDRegClass(
+                static_cast<AMDGPU::MFMACDRegClass>(getValueAsInt())) +
+            ")")
+        .str();
   }
 
   if (hasAttribute(Attribute::AllocKind)) {

@@ -2344,6 +2344,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::NoOutline;
   case bitc::ATTR_KIND_NOIPA:
     return Attribute::NoIPA;
+  case bitc::ATTR_KIND_AMDGPU_MFMA_CD_REGCLASS:
+    return Attribute::AMDGPUMFMACDRegClass;
   }
 }
 
@@ -2491,6 +2493,8 @@ Error BitcodeReader::parseAttributeGroupBlock() {
             B.addUWTableAttr(UWTableKind(Record[++i]));
           else if (Kind == Attribute::AllocKind)
             B.addAllocKindAttr(static_cast<AllocFnKind>(Record[++i]));
+          else if (Kind == Attribute::AMDGPUMFMACDRegClass)
+            B.addRawIntAttr(Kind, Record[++i]);
           else if (Kind == Attribute::Memory) {
             uint64_t EncodedME = Record[++i];
             const uint8_t Version = (EncodedME >> 56);

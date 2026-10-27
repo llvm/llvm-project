@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -3331,6 +3332,16 @@ void AMDGPUDAGToDAGISel::SelectINTRINSIC_W_CHAIN(SDNode *N) {
 
 void AMDGPUDAGToDAGISel::SelectINTRINSIC_WO_CHAIN(SDNode *N) {
   unsigned IntrID = N->getConstantOperandVal(0);
+  if (auto ArgIndex = AMDGPU::getMFMACDRegClassOperandIndex(IntrID)) {
+    if (!Subtarget->checkMFMACDRegClass(IntrID,
+                                        N->getConstantOperandVal(*ArgIndex + 1),
+                                        MF->getFunction(), N->getDebugLoc())) {
+      // The diagnostic already rejects this compilation. Avoid following it
+      // with a misleading instruction-selection failure.
+      CurDAG->SelectNodeTo(N, TargetOpcode::IMPLICIT_DEF, N->getValueType(0));
+      return;
+    }
+  }
   unsigned Opcode = AMDGPU::INSTRUCTION_LIST_END;
   SDNode *ConvGlueNode = N->getGluedNode();
   if (ConvGlueNode) {

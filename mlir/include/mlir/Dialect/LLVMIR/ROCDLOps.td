@@ -818,17 +818,27 @@ def ROCDL_IglpOpt : ROCDL_ConcreteNonMemIntrOp<"iglp.opt", [], 0, [0], ["variant
 
 class ROCDL_Mfma_IntrOpBase<string mnemonic, ROCDL_NamedType ABType,
                             ROCDL_NamedType CDType, Attr blgpAttr> :
-  ROCDL_IntrOp<mnemonic, [], [], [], 1, 0, 0, 0, [3, 4, 5], ["cbsz", "abid", "blgp"]>,
+  ROCDL_IntrOp<mnemonic, [], [], [], 1, 0, 0, 0, [3, 4, 5],
+                ["cbsz", "abid", "blgp"]>,
   Arguments<(ins
              ABType:$a,
              ABType:$b,
              CDType:$c,
              I32Attr:$cbsz,
              I32Attr:$abid,
-             blgpAttr:$blgp)> {
+             blgpAttr:$blgp,
+             DefaultValuedAttr<ROCDL_MFMACDRegClassAttr,
+                              "MFMACDRegClass::Auto">:$cd_regclass)> {
   let results = (outs CDType:$res);
+  let llvmBuilder = baseLlvmBuilder # [{
+    inst->addFnAttr(llvm::AMDGPU::getMFMACDRegClassAttr(
+        builder.getContext(), static_cast<llvm::AMDGPU::MFMACDRegClass>(
+            $cd_regclass)));
+  }] # baseLlvmBuilderCoda;
+
   let assemblyFormat = [{
     $a `,` $b `,` $c `,` $cbsz `,` $abid `,` enum($blgp)
+    (`cd_regclass` `=` enum($cd_regclass)^)?
     attr-dict `:` functional-type(operands, $res)
   }];
 }
@@ -839,7 +849,9 @@ class ROCDL_Mfma_IntrOp<string mnemonic, ROCDL_NamedType ABType,
   let description = [{
     Matrix fused multiply-add (MFMA) intrinsic. Computes `D = A * B + C`
     with matrix operands. The `cbsz`, `abid`, and `blgp` attributes control
-    broadcast and block layout modes.
+    broadcast and block layout modes. `cd_regclass` defaults to `auto` and may
+    require the instruction's C/D operands to use AGPRs or VGPRs. Immediate C
+    operands remain legal. Unsupported hard requests are diagnosed by codegen.
 
     Example:
     ```mlir
@@ -866,7 +878,8 @@ class ROCDL_Mfma_F64_IntrOp<string mnemonic, ROCDL_NamedType ABType,
 }
 
 class ROCDL_Mfma_Scale_IntrOp<string mnemonic, Type AB, Type CD> :
-  ROCDL_IntrOp<mnemonic, [], [0, 1], [], 1, 0, 0, 0, [3, 4, 5, 7], ["cbsz", "blgp", "opselA", "opselB"]>,
+  ROCDL_IntrOp<mnemonic, [], [0, 1], [], 1, 0, 0, 0, [3, 4, 5, 7],
+                ["cbsz", "blgp", "opselA", "opselB"]>,
   Arguments<(ins
              LLVM_VectorOf<AB>:$a,
              LLVM_VectorOf<AB>:$b,
@@ -876,11 +889,20 @@ class ROCDL_Mfma_Scale_IntrOp<string mnemonic, Type AB, Type CD> :
              I32Attr:$opselA,
              I32:$scaleA,
              I32Attr:$opselB,
-             I32:$scaleB)> {
+             I32:$scaleB,
+             DefaultValuedAttr<ROCDL_MFMACDRegClassAttr,
+                              "MFMACDRegClass::Auto">:$cd_regclass)> {
   let results = (outs LLVM_ScalarOrVectorOf<CD>:$res);
+  let llvmBuilder = baseLlvmBuilder # [{
+    inst->addFnAttr(llvm::AMDGPU::getMFMACDRegClassAttr(
+        builder.getContext(), static_cast<llvm::AMDGPU::MFMACDRegClass>(
+            $cd_regclass)));
+  }] # baseLlvmBuilderCoda;
+
   let assemblyFormat = [{
     $a `,` $b `,` $c `,` enum($cbsz) `,` enum($blgp) `,` $opselA `,`
-    $scaleA `,` $opselB `,` $scaleB attr-dict `:`
+    $scaleA `,` $opselB `,` $scaleB
+    (`cd_regclass` `=` enum($cd_regclass)^)? attr-dict `:`
     functional-type(operands, $res)
   }];
   let description = [{

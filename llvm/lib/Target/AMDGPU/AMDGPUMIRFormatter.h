@@ -41,6 +41,10 @@ public:
                         StringRef Src, int64_t &Imm,
                         ErrorCallbackType ErrorCallback) const override;
 
+  ArrayRef<StringRef>
+  getIntrinsicImmOperandNames(unsigned IntrinsicID,
+                              unsigned ArgIdx) const override;
+
   /// Implement target specific parsing of target custom pseudo source value.
   bool
   parseCustomPseudoSourceValue(StringRef Src, MachineFunction &MF,

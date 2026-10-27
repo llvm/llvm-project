@@ -83,6 +83,12 @@ def Alignment : IntAttr<"align", IntersectCustom, [ParamAttr, RetAttr]>;
 /// aligned_alloc and aligned ::operator::new.
 def AllocAlign: EnumAttr<"allocalign", IntersectAnd, [ParamAttr]>;
 
+/// Per-call MFMA C/D register-file constraint. Only valid on MFMA intrinsics.
+/// Use a native enum for value validation and rejection by unsupported readers.
+/// IntersectPreserve retains differences; string attributes also compare exactly.
+def AMDGPUMFMACDRegClass : IntAttr<"cd_regclass",
+                                 IntersectPreserve, [FnAttr]>;
+
 /// Describes behavior of an allocator function in terms of known properties.
 def AllocKind: IntAttr<"allockind", IntersectPreserve, [FnAttr]>;
 

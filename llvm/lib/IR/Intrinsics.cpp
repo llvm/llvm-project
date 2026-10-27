@@ -15,6 +15,7 @@
 #include "llvm/ADT/StringTable.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsARM.h"
@@ -69,6 +70,38 @@ StringRef Intrinsic::getName(ID id) {
   assert(!Intrinsic::isOverloaded(id) &&
          "This version of getName does not support overloading");
   return getBaseName(id);
+}
+
+std::optional<unsigned>
+AMDGPU::getMFMACDRegClassOperandIndex(Intrinsic::ID ID) {
+  StringRef Name = Intrinsic::getBaseName(ID);
+  if (!Name.consume_front("llvm.amdgcn.mfma."))
+    return std::nullopt;
+  return Name.starts_with("scale.") ? 9 : 6;
+}
+
+StringRef AMDGPU::stringifyMFMACDRegClass(MFMACDRegClass Policy) {
+  switch (Policy) {
+  case MFMACDRegClass::Auto:
+    return "auto";
+  case MFMACDRegClass::RequireAGPR:
+    return "agpr";
+  case MFMACDRegClass::RequireVGPR:
+    return "vgpr";
+  }
+  llvm_unreachable("invalid MFMA C/D register class");
+}
+
+AMDGPU::MFMACDRegClass AMDGPU::getMFMACDRegClass(const CallBase &Call) {
+  Attribute A = Call.getAttributes().getFnAttr(Attribute::AMDGPUMFMACDRegClass);
+  return A.isValid() ? static_cast<MFMACDRegClass>(A.getValueAsInt())
+                     : MFMACDRegClass::Auto;
+}
+
+Attribute AMDGPU::getMFMACDRegClassAttr(LLVMContext &Ctx,
+                                        MFMACDRegClass Policy) {
+  return Attribute::get(Ctx, Attribute::AMDGPUMFMACDRegClass,
+                        static_cast<uint64_t>(Policy));
 }
 
 /// Returns a stable mangling for the type specified for use in the name

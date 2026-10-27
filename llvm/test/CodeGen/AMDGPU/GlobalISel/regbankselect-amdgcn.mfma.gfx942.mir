@@ -16,7 +16,7 @@ body: |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s64) = COPY $vgpr2_vgpr3
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(<4 x s32>) = COPY $agpr0_agpr1_agpr2_agpr3
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:agpr(<4 x s32>) = COPY [[COPY2]](<4 x s32>)
-    ; CHECK-NEXT: [[INTRINSIC_CONVERGENT:%[0-9]+]]:agpr(<4 x s32>) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.mfma.i32.16x16x32.i8), [[COPY]](s64), [[COPY1]](s64), [[COPY3]](<4 x s32>), 0, 0, 0
+    ; CHECK-NEXT: [[INTRINSIC_CONVERGENT:%[0-9]+]]:agpr(<4 x s32>) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.mfma.i32.16x16x32.i8), [[COPY]](s64), [[COPY1]](s64), [[COPY3]](<4 x s32>), 0, 0, 0, auto
     ; CHECK-NEXT: [[COPY4:%[0-9]+]]:vgpr(<4 x s32>) = COPY [[INTRINSIC_CONVERGENT]](<4 x s32>)
     ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[COPY4]](<4 x s32>)
     %0:_(s64) = COPY $vgpr0_vgpr1
@@ -41,13 +41,13 @@ body: |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s64) = COPY $vgpr2_vgpr3
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(<16 x s32>) = COPY $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:agpr(<16 x s32>) = COPY [[COPY2]](<16 x s32>)
-    ; CHECK-NEXT: [[INTRINSIC_CONVERGENT:%[0-9]+]]:agpr(<16 x s32>) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.mfma.i32.32x32x16.i8), [[COPY]](s64), [[COPY1]](s64), [[COPY3]](<16 x s32>), 0, 0, 0
+    ; CHECK-NEXT: [[INTRINSIC_CONVERGENT:%[0-9]+]]:agpr(<16 x s32>) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.mfma.i32.32x32x16.i8), [[COPY]](s64), [[COPY1]](s64), [[COPY3]](<16 x s32>), 0, 0, 0, auto
     ; CHECK-NEXT: [[COPY4:%[0-9]+]]:vgpr(<16 x s32>) = COPY [[INTRINSIC_CONVERGENT]](<16 x s32>)
     ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = COPY [[COPY4]](<16 x s32>)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s64) = COPY $vgpr2_vgpr3
     %2:_(<16 x s32>) = COPY $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
-    %3:_(<16 x s32>) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.mfma.i32.32x32x16.i8), %0, %1, %2, 0, 0, 0
+    %3:_(<16 x s32>) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.mfma.i32.32x32x16.i8), %0, %1, %2, 0, 0, 0, auto
     $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = COPY %3
 ...
 
@@ -66,13 +66,13 @@ body: |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s64) = COPY $vgpr2_vgpr3
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(<4 x s32>) = COPY $agpr0_agpr1_agpr2_agpr3
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:agpr(<4 x s32>) = COPY [[COPY2]](<4 x s32>)
-    ; CHECK-NEXT: [[INTRINSIC_CONVERGENT:%[0-9]+]]:agpr(<4 x s32>) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.mfma.f32.16x16x8.xf32), [[COPY]](s64), [[COPY1]](s64), [[COPY3]](<4 x s32>), 0, 0, 0
+    ; CHECK-NEXT: [[INTRINSIC_CONVERGENT:%[0-9]+]]:agpr(<4 x s32>) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.mfma.f32.16x16x8.xf32), [[COPY]](s64), [[COPY1]](s64), [[COPY3]](<4 x s32>), 0, 0, 0, auto
     ; CHECK-NEXT: [[COPY4:%[0-9]+]]:vgpr(<4 x s32>) = COPY [[INTRINSIC_CONVERGENT]](<4 x s32>)
     ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[COPY4]](<4 x s32>)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s64) = COPY $vgpr2_vgpr3
     %2:_(<4 x s32>) = COPY $agpr0_agpr1_agpr2_agpr3
-    %3:_(<4 x s32>) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.mfma.f32.16x16x8.xf32), %0, %1, %2, 0, 0, 0
+    %3:_(<4 x s32>) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.mfma.f32.16x16x8.xf32), %0, %1, %2, 0, 0, 0, auto
     $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %3
 ...
 
@@ -91,13 +91,13 @@ body: |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s64) = COPY $vgpr2_vgpr3
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(<16 x s32>) = COPY $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:agpr(<16 x s32>) = COPY [[COPY2]](<16 x s32>)
-    ; CHECK-NEXT: [[INTRINSIC_CONVERGENT:%[0-9]+]]:agpr(<16 x s32>) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.mfma.f32.32x32x4.xf32), [[COPY]](s64), [[COPY1]](s64), [[COPY3]](<16 x s32>), 0, 0, 0
+    ; CHECK-NEXT: [[INTRINSIC_CONVERGENT:%[0-9]+]]:agpr(<16 x s32>) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.mfma.f32.32x32x4.xf32), [[COPY]](s64), [[COPY1]](s64), [[COPY3]](<16 x s32>), 0, 0, 0, auto
     ; CHECK-NEXT: [[COPY4:%[0-9]+]]:vgpr(<16 x s32>) = COPY [[INTRINSIC_CONVERGENT]](<16 x s32>)
     ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = COPY [[COPY4]](<16 x s32>)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s64) = COPY $vgpr2_vgpr3
     %2:_(<16 x s32>) = COPY $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
-    %3:_(<16 x s32>) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.mfma.f32.32x32x4.xf32), %0, %1, %2, 0, 0, 0
+    %3:_(<16 x s32>) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.mfma.f32.32x32x4.xf32), %0, %1, %2, 0, 0, 0, auto
     $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = COPY %3
 ...
 

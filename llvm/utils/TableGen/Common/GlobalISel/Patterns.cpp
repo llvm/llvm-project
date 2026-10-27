@@ -402,7 +402,7 @@ unsigned CodeGenInstructionPattern::getNumInstDefs() const {
 
 unsigned CodeGenInstructionPattern::getNumInstOperands() const {
   if (isIntrinsic())
-    return IntrinInfo->IS.RetTys.size() + IntrinInfo->IS.ParamTys.size();
+    return IntrinInfo->IS.RetTys.size() + IntrinInfo->IS.getNumCodeGenParams();
 
   unsigned NumCGIOps = I.Operands.size();
   return isVariadic() ? std::max<unsigned>(NumCGIOps, Operands.size())

@@ -401,6 +401,9 @@ CodeGenIntrinsic::CodeGenIntrinsic(const Record *R,
     IS.ParamTys.push_back(ParamTy);
   }
 
+  if (R->getValue("CodeGenOnlyImmArgTypes"))
+    IS.CodeGenOnlyImmArgTys = R->getValueAsListOfDefs("CodeGenOnlyImmArgTypes");
+
   // Parse the intrinsic properties.
   const ListInit *PropList = R->getValueAsListInit("IntrProperties");
   for (unsigned i = 0, e = PropList->size(); i != e; ++i) {
@@ -662,6 +665,8 @@ bool CodeGenIntrinsic::isParamAPointer(unsigned ParamIdx) const {
 }
 
 bool CodeGenIntrinsic::isParamImmArg(unsigned ParamIdx) const {
+  if (ParamIdx >= IS.ParamTys.size() && ParamIdx < IS.getNumCodeGenParams())
+    return true;
   // Convert argument index to attribute index starting from `FirstArgIndex`.
   ++ParamIdx;
   if (ParamIdx >= ArgumentAttributes.size())

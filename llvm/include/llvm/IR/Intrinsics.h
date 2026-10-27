@@ -26,8 +26,10 @@
 namespace llvm {
 
 class APInt;
+class Attribute;
 class AttributeList;
 class AttributeSet;
+class CallBase;
 class Constant;
 class Function;
 class FunctionType;
@@ -342,6 +344,30 @@ LLVM_ABI bool isImmArgValueInRangeSet(ID IID, unsigned ArgIdx,
                                       const APInt &Value);
 
 } // namespace Intrinsic
+
+namespace AMDGPU {
+
+/// C/D register-file constraint on an individual MFMA, including scaled MFMA.
+/// Other uses of the accumulator may require real bank transfers.
+enum class MFMACDRegClass : unsigned {
+  Auto = 0,
+  RequireAGPR = 1,
+  RequireVGPR = 2,
+};
+
+/// Return the appended codegen operand index (excluding the intrinsic ID).
+/// This is not a public LLVM IR argument.
+LLVM_ABI std::optional<unsigned>
+getMFMACDRegClassOperandIndex(Intrinsic::ID ID);
+
+LLVM_ABI StringRef stringifyMFMACDRegClass(MFMACDRegClass Policy);
+
+LLVM_ABI MFMACDRegClass getMFMACDRegClass(const CallBase &Call);
+
+LLVM_ABI Attribute getMFMACDRegClassAttr(LLVMContext &Ctx,
+                                         MFMACDRegClass Policy);
+
+} // namespace AMDGPU
 
 } // namespace llvm
 

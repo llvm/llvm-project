@@ -790,6 +790,9 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(usub_sat);
 
   KEYWORD(splat);
+  KEYWORD(auto);
+  KEYWORD(agpr);
+  KEYWORD(vgpr);
   KEYWORD(vscale);
   KEYWORD(x);
   KEYWORD(blockaddress);

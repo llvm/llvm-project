@@ -25,6 +25,7 @@
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineUniformityAnalysis.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 
 #define DEBUG_TYPE "amdgpu-reg-bank-legalize"
@@ -44,6 +45,22 @@ RegBankLegalizeHelper::RegBankLegalizeHelper(
       VgprRB(&RBI.getRegBank(AMDGPU::VGPRRegBankID)),
       AgprRB(&RBI.getRegBank(AMDGPU::AGPRRegBankID)),
       VccRB(&RBI.getRegBank(AMDGPU::VCCRegBankID)) {}
+
+const RegisterBank *
+RegBankLegalizeHelper::getMAIRegBank(const MachineInstr &MI,
+                                     unsigned NumRegs) const {
+  // This mapping is shared with SMFMAC, whose interface is unchanged.
+  if (auto ArgIndex = getMFMACDRegClassOperandIndex(
+          cast<GIntrinsic>(MI).getIntrinsicID())) {
+    auto Policy =
+        static_cast<MFMACDRegClass>(MI.getOperand(*ArgIndex + 2).getImm());
+    if (Policy == MFMACDRegClass::RequireAGPR)
+      return AgprRB;
+    if (Policy == MFMACDRegClass::RequireVGPR)
+      return VgprRB;
+  }
+  return MFI->selectAGPRFormMFMA(NumRegs) ? AgprRB : VgprRB;
+}
 
 bool RegBankLegalizeHelper::findRuleAndApplyMapping(MachineInstr &MI) {
   const SetOfRulesForOpcode *RuleSet = RBLRules.getRulesForOpc(MI);
@@ -2200,8 +2217,7 @@ bool RegBankLegalizeHelper::applyMappingDst(
     }
     case VgprOrAgprAnyTy: {
       const unsigned NumRegs = Ty.getSizeInBits() / 32;
-      const RegisterBank *DstRB =
-          MFI->selectAGPRFormMFMA(NumRegs) ? AgprRB : VgprRB;
+      const RegisterBank *DstRB = getMAIRegBank(MI, NumRegs);
       if (RB == DstRB)
         break;
       Register NewDst = MRI.createVirtualRegister({DstRB, Ty});
@@ -2432,8 +2448,7 @@ bool RegBankLegalizeHelper::applyMappingSrc(
     }
     case VgprOrAgprAnyTy: {
       const unsigned NumRegs = Ty.getSizeInBits() / 32;
-      const RegisterBank *SrcRB =
-          MFI->selectAGPRFormMFMA(NumRegs) ? AgprRB : VgprRB;
+      const RegisterBank *SrcRB = getMAIRegBank(MI, NumRegs);
       if (RB != SrcRB)
         Op.setReg(B.buildCopy({SrcRB, Ty}, Reg).getReg(0));
       break;

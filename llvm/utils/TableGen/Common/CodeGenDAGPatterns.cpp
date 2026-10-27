@@ -2648,7 +2648,7 @@ bool TreePatternNode::ApplyTypeConstraints(TreePattern &TP, bool NotRegisters) {
 
     // Apply the result type to the node.
     unsigned NumRetVTs = Int->IS.RetTys.size();
-    unsigned NumParamVTs = Int->IS.ParamTys.size();
+    unsigned NumParamVTs = Int->IS.getNumCodeGenParams();
 
     for (unsigned i = 0, e = NumRetVTs; i != e; ++i)
       MadeChange |= UpdateNodeType(
@@ -2666,7 +2666,8 @@ bool TreePatternNode::ApplyTypeConstraints(TreePattern &TP, bool NotRegisters) {
     for (unsigned i = 0, e = getNumChildren() - 1; i != e; ++i) {
       MadeChange |= getChild(i + 1).ApplyTypeConstraints(TP, NotRegisters);
 
-      MVT OpVT = getValueType(Int->IS.ParamTys[i]->getValueAsDef("VT"));
+      MVT OpVT =
+          getValueType(Int->IS.getCodeGenParamType(i)->getValueAsDef("VT"));
       assert(getChild(i + 1).getNumTypes() == 1 && "Unhandled case");
       MadeChange |= getChild(i + 1).UpdateNodeType(0, OpVT, TP);
     }

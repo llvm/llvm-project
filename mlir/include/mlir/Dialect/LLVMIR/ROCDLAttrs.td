@@ -62,6 +62,10 @@ def ROCDL_TBufferOOBModeModuleFlagAttr :
 def ROCDL_MFMAPermBAttr
     : ROCDL_IntrinsicIntegerEnumAttr<ROCDL_MFMAPermB, "mfma_perm_b">;
 
+def ROCDL_MFMACDRegClassAttr
+    : ROCDL_IntrinsicIntegerEnumAttr<ROCDL_MFMACDRegClass,
+                                     "mfma_cd_regclass">;
+
 def ROCDL_MFMANegModifierAttr
     : ROCDL_IntrinsicIntegerEnumAttr<ROCDL_MFMANegModifier,
                                      "mfma_neg_modifier">;

@@ -58,6 +58,15 @@ struct CodeGenIntrinsic {
     /// Intrinsics.td, this isn't available, because we don't know the target
     /// pointer size.
     std::vector<const Record *> ParamTys;
+    std::vector<const Record *> CodeGenOnlyImmArgTys;
+
+    unsigned getNumCodeGenParams() const {
+      return ParamTys.size() + CodeGenOnlyImmArgTys.size();
+    }
+    const Record *getCodeGenParamType(unsigned I) const {
+      return I < ParamTys.size() ? ParamTys[I]
+                                 : CodeGenOnlyImmArgTys[I - ParamTys.size()];
+    }
   };
 
   IntrinsicSignature IS;

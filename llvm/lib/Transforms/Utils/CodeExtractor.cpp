@@ -875,6 +875,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
       switch (Attr.getKindAsEnum()) {
       // Those attributes cannot be propagated safely. Explicitly list them
       // here so we get a warning if new attributes are added.
+      case Attribute::AMDGPUMFMACDRegClass:
       case Attribute::AllocSize:
       case Attribute::Builtin:
       case Attribute::Convergent:

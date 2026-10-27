@@ -38,6 +38,9 @@ enum Kind {
   colon,   // :
   hash,    // #
 
+  kw_auto,
+  kw_agpr,
+  kw_vgpr,
   kw_vscale,
   kw_x,
   kw_true,

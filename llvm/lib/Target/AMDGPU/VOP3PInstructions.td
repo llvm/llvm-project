@@ -1231,38 +1231,50 @@ class MFMA_F8F6F4_WithSizeTable_Helper<VOP3_Pseudo  ps, string F8F8Op> :
                             !cast<Instruction>(F8F8Op)> {
 }
 
-// Currently assumes scaled instructions never have abid
-class MAIFrag<SDPatternOperator Op, bit HasAbid = true, bit Scaled = false> : PatFrag <
+def MFMACDRegClass {
+  int Auto = 0;
+  int RequireAGPR = 1;
+  int RequireVGPR = 2;
+}
+
+// Auto only matches the automatic policy. Both automatic forms retain their
+// existing selection rules, including CanUseAGPR_MAI's profitability check.
+// Only explicit AGPR/VGPR requests match the required forms below.
+// Currently assumes scaled instructions never have abid.
+class MAIFrag<SDPatternOperator Op, bit HasAbid = true, bit Scaled = false,
+              int CDPolicy = MFMACDRegClass.Auto> : PatFrag <
   !if(Scaled, (ops node:$src0, node:$src1, node:$src2, node:$cbsz, node:$blgp,
                    node:$src0_modifiers, node:$scale_src0,
                    node:$src1_modifiers, node:$scale_src1),
               !con((ops node:$src0, node:$src1, node:$src2, node:$cbsz),
                    !if(HasAbid, (ops node:$abid), (ops)),
                     (ops node:$blgp))),
-  !if(Scaled, (Op $src0, $src1, $src2, $cbsz, $blgp, $src0_modifiers, $scale_src0, $src1_modifiers, $scale_src1),
-              !if(HasAbid, (Op $src0, $src1, $src2, $cbsz, $abid, $blgp),
-                           (Op $src0, $src1, $src2, $cbsz, $blgp)))>;
+  !if(Scaled, (Op $src0, $src1, $src2, $cbsz, $blgp, $src0_modifiers, $scale_src0, $src1_modifiers, $scale_src1, CDPolicy),
+              !if(HasAbid, (Op $src0, $src1, $src2, $cbsz, $abid, $blgp, CDPolicy),
+                           (Op $src0, $src1, $src2, $cbsz, $blgp, CDPolicy)))>;
 
-class CanUseAGPR_MAI<ValueType vt> {
-  code PredicateCode = [{
+class CanUseAGPR_MAI<ValueType vt, bit Required = false> {
+  code PredicateCode = !if(Required, [{ return true; }], [{
     return !Subtarget->hasGFX90AInsts() ||
       MF->getInfo<SIMachineFunctionInfo>()->selectAGPRFormMFMA(
-        }] # !srl(vt.Size, 5) # ");";
+        }] # !srl(vt.Size, 5) # ");");
 
-  code GISelPredicateCode = [{
+  code GISelPredicateCode = !if(Required, [{ return true; }], [{
     return !Subtarget->hasGFX90AInsts() ||
       MF.getInfo<SIMachineFunctionInfo>()->selectAGPRFormMFMA(
-  }] # !srl(vt.Size, 5) # ");";
+  }] # !srl(vt.Size, 5) # ");");
 }
 
 class AgprMAIFrag<SDPatternOperator Op, ValueType vt, bit HasAbid = true,
-                  bit Scaled = false> :
-  MAIFrag<Op, HasAbid, Scaled>,
-  CanUseAGPR_MAI<vt>;
+                  bit Scaled = false, bit Required = false> :
+  MAIFrag<Op, HasAbid, Scaled,
+          !if(Required, MFMACDRegClass.RequireAGPR, MFMACDRegClass.Auto)>,
+  CanUseAGPR_MAI<vt, Required>;
 
 class VgprMAIFrag<SDPatternOperator Op, bit HasAbid = true,
-                  bit Scaled = false> :
-  MAIFrag<Op, HasAbid, Scaled>;
+                  bit Scaled = false, bit Required = false> :
+  MAIFrag<Op, HasAbid, Scaled,
+          !if(Required, MFMACDRegClass.RequireVGPR, MFMACDRegClass.Auto)>;
 
 let isAsCheapAsAMove = 1, isReMaterializable = 1 in {
   defm V_ACCVGPR_READ_B32  : VOP3Inst<"v_accvgpr_read_b32",  VOPProfileAccRead>;
@@ -1275,6 +1287,11 @@ class MAIInst<string OpName, VOPProfile P, SDPatternOperator node, bit Scaled = 
   : VOP3InstBase<OpName, P, node, /*IsVOP2=*/0, Scaled> {
   let SubtargetPredicate = HasMAIInsts;
   Instruction Opcode = !cast<Instruction>(NAME);
+  // The base opcode omits the policy marker but keeps the same AGPR/VGPR form.
+  // Query it for hardware semantics; only replace the pseudo at MC lowering.
+  // Keep the policy distinction through selection, scheduling and RA.
+  Instruction BaseOpcode =
+      !cast<Instruction>(!subst("_cd_", "_", NAME));
   bit is_dgemm = 0;
   bit is_gfx940_xdl = 0;
   let isConvergent = 1;
@@ -1315,34 +1332,39 @@ multiclass MAIInst<string OpName, string P, SDPatternOperator node = null_frag,
   defvar ProfileVGPR = !cast<VOPProfileMAI>("VOPProfileMAI_" # P # "_VCD");
 
 
+  foreach Required = [false, true] in {
+    defvar Suffix = !if(Required, "_cd", "");
+    defvar PolicyName = NAME # Suffix;
   let mayRaiseFPException = 0, ReadsModeReg = 1 in {
     // FP32 denorm mode is respected, rounding mode is not. Exceptions are not supported.
     let Constraints = !if(NoDstOverlap, "@earlyclobber $vdst", "") in {
-      def _e64 : MAIInst<OpName, ProfileAGPR,
-                         !if(!or(NoDstOverlap, !eq(node, null_frag)), null_frag, AgprMAIFrag<node, ProfileAGPR.DstVT, HasAbid, Scaled>), Scaled>,
-                 MFMATable<0, "AGPR", NAME # "_e64">;
+      def Suffix # "_e64" : MAIInst<OpName, ProfileAGPR,
+                         !if(!or(NoDstOverlap, !eq(node, null_frag)), null_frag, AgprMAIFrag<node, ProfileAGPR.DstVT, HasAbid, Scaled, Required>), Scaled>,
+                 MFMATable<0, "AGPR", PolicyName # "_e64">;
 
       let OtherPredicates = [isGFX90APlus], Mnemonic = OpName in
-      def _vgprcd_e64 : MAIInst<OpName # "_vgprcd", ProfileVGPR,
-                                !if(!or(NoDstOverlap, !eq(node, null_frag)), null_frag, VgprMAIFrag<node, HasAbid, Scaled>), Scaled>,
-                        MFMATable<0, "VGPR", NAME # "_vgprcd_e64", NAME # "_e64">;
+      def Suffix # "_vgprcd_e64" : MAIInst<OpName # "_vgprcd", ProfileVGPR,
+                                !if(!or(NoDstOverlap, !eq(node, null_frag)), null_frag, VgprMAIFrag<node, HasAbid, Scaled, Required>), Scaled>,
+                        MFMATable<0, "VGPR", PolicyName # "_vgprcd_e64", PolicyName # "_e64">;
     }
 
     if NoDstOverlap then {
       let Constraints = !if(NoDstOverlap, "$vdst = $src2", ""),
           isConvertibleToThreeAddress = NoDstOverlap,
           Mnemonic = OpName in {
-        def "_mac_e64" : MAIInst<OpName # "_mac", ProfileAGPR,
-                                 !if(!eq(node, null_frag), null_frag, AgprMAIFrag<node, ProfileAGPR.DstVT, HasAbid, Scaled>), Scaled>,
-                         MFMATable<1, "AGPR", NAME # "_e64", NAME # "_mac_e64">;
+        def Suffix # "_mac_e64" : MAIInst<OpName # "_mac", ProfileAGPR,
+                                 !if(!eq(node, null_frag), null_frag, AgprMAIFrag<node, ProfileAGPR.DstVT, HasAbid, Scaled, Required>), Scaled>,
+                         MFMATable<1, "AGPR", PolicyName # "_e64", PolicyName # "_mac_e64">;
 
         let OtherPredicates = [isGFX90APlus] in
-        def _mac_vgprcd_e64 : MAIInst<OpName # "_mac_vgprcd", ProfileVGPR,
-                                      !if(!eq(node, null_frag), null_frag, VgprMAIFrag<node, HasAbid, Scaled>), Scaled>,
-                              MFMATable<1, "VGPR", NAME # "_vgprcd_e64", NAME # "_mac_e64">;
+        def Suffix # "_mac_vgprcd_e64" : MAIInst<OpName # "_mac_vgprcd", ProfileVGPR,
+                                      !if(!eq(node, null_frag), null_frag, VgprMAIFrag<node, HasAbid, Scaled, Required>), Scaled>,
+                              MFMATable<1, "VGPR", PolicyName # "_vgprcd_e64", PolicyName # "_mac_e64">;
       }
     }
   } // mayRaiseFPException = 0, ReadsModeReg = 1
+  } // Required
+
 }
 
 // Provide a wrapper around MAIInst that provides the appended operands from V_MFMA_LD_SCALE_B32
@@ -1354,27 +1376,32 @@ multiclass ScaledMAIInst_mc<string OpName, string UnscaledOpName_, SDPatternOper
   defvar Profile = !cast<VOPProfileMAI>(!cast<MAIInst>(UnscaledOpName#"_e64").Pfl);
   defvar NoDstOverlap = Profile.NoDstOverlap;
 
-  def _e64 : ScaledMAIInst<OpName,
-        !cast<MAIInst>(UnscaledOpName#"_e64"), !if(NoDstOverlap, null_frag, AgprMAIFrag<node, Profile.DstVT, HasAbid, true>)>,
-      MFMATable<0, "AGPR", NAME # "_e64">;
+  foreach Required = [false, true] in {
+    defvar Suffix = !if(Required, "_cd", "");
+    defvar PolicyName = NAME # Suffix;
+  def Suffix # "_e64" : ScaledMAIInst<OpName,
+        !cast<MAIInst>(UnscaledOpName#"_e64"), !if(NoDstOverlap, null_frag, AgprMAIFrag<node, Profile.DstVT, HasAbid, true, Required>)>,
+      MFMATable<0, "AGPR", PolicyName # "_e64">;
 
-  def _vgprcd_e64 : ScaledMAIInst<OpName # "_vgprcd",
-          !cast<MAIInst>(UnscaledOpName#"_vgprcd_e64"), !if(NoDstOverlap, null_frag, VgprMAIFrag<node, HasAbid, true>)>,
-        MFMATable<0, "VGPR", NAME # "_vgprcd_e64", NAME # "_e64">;
+  def Suffix # "_vgprcd_e64" : ScaledMAIInst<OpName # "_vgprcd",
+          !cast<MAIInst>(UnscaledOpName#"_vgprcd_e64"), !if(NoDstOverlap, null_frag, VgprMAIFrag<node, HasAbid, true, Required>)>,
+        MFMATable<0, "VGPR", PolicyName # "_vgprcd_e64", PolicyName # "_e64">;
 
  if NoDstOverlap then {
    let Constraints = !if(NoDstOverlap, "$vdst = $src2", ""),
        isConvertibleToThreeAddress = NoDstOverlap,
        Mnemonic = UnscaledOpName_ in {
-     def _mac_e64 : ScaledMAIInst<OpName # "_mac",
-          !cast<MAIInst>(UnscaledOpName # "_mac_e64"), AgprMAIFrag<node, Profile.DstVT, HasAbid, true>>,
-        MFMATable<1, "AGPR", NAME # "_e64">;
+     def Suffix # "_mac_e64" : ScaledMAIInst<OpName # "_mac",
+          !cast<MAIInst>(UnscaledOpName # "_mac_e64"), AgprMAIFrag<node, Profile.DstVT, HasAbid, true, Required>>,
+        MFMATable<1, "AGPR", PolicyName # "_e64">;
 
-     def _mac_vgprcd_e64 : ScaledMAIInst<OpName # " _mac_vgprcd",
-          !cast<MAIInst>(UnscaledOpName # "_mac_vgprcd_e64"), VgprMAIFrag<node, HasAbid, true>>,
-        MFMATable<1, "VGPR", NAME # "_vgprcd_e64", NAME # "_mac_e64">;
+     def Suffix # "_mac_vgprcd_e64" : ScaledMAIInst<OpName # " _mac_vgprcd",
+          !cast<MAIInst>(UnscaledOpName # "_mac_vgprcd_e64"), VgprMAIFrag<node, HasAbid, true, Required>>,
+        MFMATable<1, "VGPR", PolicyName # "_vgprcd_e64", PolicyName # "_mac_e64">;
     }
   }
+  } // Required
+
 }
 
 // Each of SrcA and SrcB can be encoded using 3 different sizes, so
@@ -1542,7 +1569,7 @@ def MAIInstInfoTable : GenericTable {
   let FilterClass = "MAIInst";
   let CppTypeName = "MAIInstInfo";
   let Fields = [
-    "Opcode", "is_dgemm", "is_gfx940_xdl"
+    "Opcode", "BaseOpcode", "is_dgemm", "is_gfx940_xdl"
   ];
 
   let PrimaryKey = ["Opcode"];

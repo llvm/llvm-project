@@ -132,6 +132,11 @@ public:
   /// function \p F.
   void checkSubtargetFeatures(const Function &F) const;
 
+  /// Diagnose an unsupported hard per-instruction MFMA C/D request before
+  /// falling through to a generic instruction-selection failure.
+  bool checkMFMACDRegClass(unsigned IntrID, uint64_t Policy, const Function &F,
+                           const DebugLoc &DL) const;
+
   const SIInstrInfo *getInstrInfo() const override { return &InstrInfo; }
 
   const SIFrameLowering *getFrameLowering() const override {

@@ -2627,12 +2627,15 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
     For example, ballot(i1 true) return EXEC mask.
 * - llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4
   - Emit `v_mfma_scale_f32_16x16x128_f8f6f4` to set the scale factor.
-    The last 4 operands correspond to the scale inputs.
+    Operands 5 through 8 correspond to the scale inputs (indices start at 0).
 
     - 2-bit byte index to use for each lane for matrix A
     - Matrix A scale values
     - 2-bit byte index to use for each lane for matrix B
     - Matrix B scale values
+
+    The optional `cd_regclass` call-site attribute controls the C/D
+    register-class policy described below.
 * - llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4
   - Emit `v_mfma_scale_f32_32x32x64_f8f6f4`
 * - llvm.amdgcn.permlane16.swap
@@ -2762,6 +2765,84 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
 :::{todo}
 List AMDGPU intrinsics.
 :::
+
+(amdgpu-mfma-cd-regclass)=
+
+#### MFMA C/D register-class policy
+
+Ordinary `llvm.amdgcn.mfma.*` intrinsics and the two
+`llvm.amdgcn.mfma.scale.*` intrinsics accept the native call-site enum attribute
+`cd_regclass`. It constrains the register-valued accumulator input C
+and result D **of that instruction**:
+
+| Attribute value | Behavior |
+| --------------- | -------- |
+| `auto` | Use existing selection heuristics and allow later form rewrites. |
+| `agpr` | Require the native AGPR C/D form. |
+| `vgpr` | Require the native VGPR C/D form. |
+
+Omitting the attribute means `auto`. The existing six-argument ordinary and
+nine-argument scaled intrinsic signatures, old textual IR, old bitcode, and
+Clang builtin interfaces are unchanged. The attribute is valid only on calls
+to these intrinsics, not on functions, other calls, parameters or results.
+Unknown values are rejected. Frontends can create it using
+`llvm::AMDGPU::getMFMACDRegClassAttr` and the `MFMACDRegClass` C++ enum.
+ROCDL MFMA operations expose a default-valued `cd_regclass` enum attribute;
+`require_agpr` and `require_vgpr` export the corresponding native LLVM attribute.
+
+The policy is per instruction. Legal immediate C operands, including zero,
+remain foldable, and real bank transfers for other uses remain allowed.
+An explicit policy survives scaled-to-unscaled folding and instruction
+selection. Constrained MachineIR opcodes distinguish the requested form so
+machine optimizations can query it with `AMDGPU::isMFMARequiredCD`.
+The representation adds no annotation instruction, chain, glue, memory effect,
+or scheduling barrier. Changing banks can still change real transfers,
+register pressure, scheduling, and hardware hazards.
+
+Both selection paths diagnose unsupported hard requests before instruction
+selection fails. The instruction variant itself must also exist on the target:
+
+| Target | Ordinary MFMA C/D forms | Scaled MFMA C/D forms |
+| ------ | ---------------------- | -------------------- |
+| `gfx908` | AGPR | Unavailable |
+| `gfx90a` | AGPR and VGPR | Unavailable |
+| `gfx940`, `gfx941`, `gfx942` | AGPR and VGPR | Unavailable |
+| `gfx950` | AGPR and VGPR | AGPR and VGPR |
+
+For ordinary variants, legacy BF16 (without `.1k`) and the original
+`i32.16x16x16i8`/`i32.32x32x8i8` require `gfx908` or `gfx90a`.
+BF16 `.1k` and FP64 require `gfx90a` or later; the i64-input I8 variants,
+XF32, and FP8 require their corresponding CDNA3 features. The larger K
+FP16/BF16/I8 variants and F8/F6/F4 variants require CDNA4 (`gfx950`).
+WMMA and SMFMAC interfaces are unchanged.
+
+For example, the following requires AGPR C/D without an inline-assembly pin:
+
+```llvm
+%d = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x4f32(
+    float %a, float %b, <4 x float> %c,
+    i32 0, i32 0, i32 0) cd_regclass(agpr)
+```
+
+Use `cd_regclass(vgpr)` for VGPR C/D, or omit it for automatic choice.
+Unlike empty inline assembly on tile-boundary values, these hard requests
+constrain each MFMA's native form. For example, a VGPR request on `gfx908`
+is rejected even though a boundary pin could have been satisfied using copies.
+
+Target lowering appends the call-site enum as an immediate operand of the
+SelectionDAG/GlobalISel intrinsic, without a separate instruction. In
+GlobalISel's generic-intrinsic stage, MIR writes this trailing operand as
+`auto`, `agpr`, or `vgpr`, after the unchanged intrinsic arguments. Omitting it
+in MIR means `auto`; explicit policies require the corresponding name rather
+than a numeric value. The internal operand remains an immediate with value
+0, 1, or 2 for the shared instruction-selection patterns. During
+instruction selection, explicit requests select `_cd` MFMA pseudos
+with the required operand register classes. Opcode mapping tables preserve the
+distinction when converting tied/untied forms. MIR prints and parses the
+pseudo opcode, so cloning and pass tests retain it without an extra operand.
+Hazard and coexecution queries use the corresponding ordinary opcode's
+semantics. `SIInstrInfo::pseudoToMCOpcode` finally maps the pseudo to that
+ordinary form for encoding; no policy immediate reaches MC or becomes a move.
 
 (amdgpu-av-load-store)=
 

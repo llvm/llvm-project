@@ -79,6 +79,7 @@ static void allowCoExec(llvm::AMDGPU::CoExecInfo &Info,
 llvm::AMDGPU::CoExecInfo llvm::AMDGPU::getMFMACoExecInfo(unsigned Opcode) {
   using namespace llvm;
   using namespace llvm::AMDGPU;
+  Opcode = getMFMABaseOpcode(Opcode);
   CoExecInfo Res;
   for (unsigned I = 0; I < MaxCoExecStages; ++I)
     Res.Slots[I].Mask = CoExecMask::None;

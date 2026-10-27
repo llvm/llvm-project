@@ -33,6 +33,7 @@
 #include "llvm/CodeGen/PseudoSourceValueManager.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
@@ -8364,6 +8365,15 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
 
   // Replace the use G_BRCOND with the exec manipulate and branch pseudos.
   auto IntrID = cast<GIntrinsic>(MI).getIntrinsicID();
+  if (auto ArgIndex = AMDGPU::getMFMACDRegClassOperandIndex(IntrID)) {
+    // One definition and the intrinsic ID precede the IR arguments.
+    if (!ST.checkMFMACDRegClass(IntrID, MI.getOperand(*ArgIndex + 2).getImm(),
+                                B.getMF().getFunction(), MI.getDebugLoc())) {
+      B.buildUndef(MI.getOperand(0).getReg());
+      MI.eraseFromParent();
+      return true;
+    }
+  }
   switch (IntrID) {
   case Intrinsic::sponentry:
     if (B.getMF().getInfo<SIMachineFunctionInfo>()->isBottomOfStack()) {

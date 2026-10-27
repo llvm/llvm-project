@@ -13,6 +13,8 @@
 
 #include "AMDGPUMIRFormatter.h"
 #include "SIMachineFunctionInfo.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/TargetParser/AMDGPUTargetParser.h"
 
 using namespace llvm;
@@ -36,6 +38,17 @@ StringLiteral LgkmcntName = "Lgkmcnt";
 
 StringLiteral LoadcntName = "Loadcnt";
 StringLiteral DscntName = "Dscnt";
+
+ArrayRef<StringRef>
+AMDGPUMIRFormatter::getIntrinsicImmOperandNames(unsigned IntrinsicID,
+                                                unsigned ArgIdx) const {
+  if (AMDGPU::getMFMACDRegClassOperandIndex(
+          static_cast<Intrinsic::ID>(IntrinsicID)) == ArgIdx) {
+    static constexpr StringRef Names[] = {"auto", "agpr", "vgpr"};
+    return Names;
+  }
+  return {};
+}
 
 void AMDGPUMIRFormatter::printSWaitAluImm(uint64_t Imm, raw_ostream &OS) const {
   bool NonePrinted = true;
@@ -111,6 +124,17 @@ void AMDGPUMIRFormatter::printSWaitLoadcntDscntImm(uint64_t Imm,
 
 void AMDGPUMIRFormatter::printImm(raw_ostream &OS, const MachineInstr &MI,
                       std::optional<unsigned int> OpIdx, int64_t Imm) const {
+  if (const auto *Intrinsic = dyn_cast<GIntrinsic>(&MI); Intrinsic && OpIdx) {
+    unsigned FirstArg = MI.getNumExplicitDefs() + 1;
+    if (*OpIdx >= FirstArg) {
+      ArrayRef<StringRef> Names = getIntrinsicImmOperandNames(
+          Intrinsic->getIntrinsicID(), *OpIdx - FirstArg);
+      if (Imm >= 0 && static_cast<uint64_t>(Imm) < Names.size()) {
+        OS << Names[Imm];
+        return;
+      }
+    }
+  }
 
   switch (MI.getOpcode()) {
   case AMDGPU::S_WAITCNT:

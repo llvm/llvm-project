@@ -2271,7 +2271,12 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     Args[1] = Src1;
 
     Value *NewII = IC.Builder.CreateIntrinsic(
-        IID, {Src0->getType(), Src1->getType()}, Args, &II);
+        IID, {Src0->getType(), Src1->getType()}, Args, &II, "", {},
+        [&](CallInst *NewCall) {
+          if (Attribute A = II.getFnAttr(Attribute::AMDGPUMFMACDRegClass);
+              A.isValid())
+            NewCall->addFnAttr(A);
+        });
     NewII->takeName(&II);
     return IC.replaceInstUsesWith(II, NewII);
   }

@@ -108,6 +108,7 @@ struct GcnBufferFormatInfo {
 
 struct MAIInstInfo {
   uint32_t Opcode;
+  uint32_t BaseOpcode;
   bool is_dgemm;
   bool is_gfx940_xdl;
 };
@@ -156,6 +157,16 @@ struct WMMAInstInfo {
 #define GET_True16D16Table_DECL
 #define GET_WMMAInstInfoTable_DECL
 #include "AMDGPUGenSearchableTables.inc"
+
+inline bool isMFMARequiredCD(unsigned Opcode) {
+  const auto *Info = getMAIInstInfoHelper(Opcode);
+  return Info && Info->BaseOpcode != Opcode;
+}
+
+inline unsigned getMFMABaseOpcode(unsigned Opcode) {
+  const auto *Info = getMAIInstInfoHelper(Opcode);
+  return Info ? Info->BaseOpcode : Opcode;
+}
 
 using TargetIDSetting = AMDGPU::TargetIDSetting;
 using TargetID = AMDGPU::TargetID;
