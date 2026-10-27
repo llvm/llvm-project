@@ -400,13 +400,13 @@ C++23, informally referred to as C++26.</p>
  <tr>
   <td><pre>#embed</pre></td>
   <td><a href="https://wg21.link/P1967">P1967R14</a></td>
-  <td class="partial" align="center">
+  <td class="full" align="center">
     <details>
-      <summary>Clang 24 (Partial)</summary>
-      The directive and its parameters are supported since Clang 19. A
-      multi-byte <tt>#embed</tt> in a braced initializer list that initializes
-      a non-aggregate object is not yet handled correctly in some contexts, so
-      the <tt>__cpp_pp_embed</tt> feature-test macro is not defined yet.
+      <summary>Clang 24</summary>
+      The directive and its parameters are supported since Clang 19; Clang 24
+      fixed the remaining initialization bugs with multi-byte <tt>#embed</tt>
+      in braced lists and defines the <tt>__cpp_pp_embed</tt> feature-test
+      macro.
     </details>
   </td>
  </tr>
