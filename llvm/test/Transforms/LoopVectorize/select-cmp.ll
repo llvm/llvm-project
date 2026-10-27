@@ -1546,6 +1546,84 @@ exit:
   ret i32 %sel
 }
 
+define i32 @select_const_i32_from_and_of_icmps(ptr %v, i64 %n) {
+; CHECK-LABEL: define i32 @select_const_i32_from_and_of_icmps(
+; CHECK-SAME: ptr [[V:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RDX:%.*]] = phi i32 [ 3, %[[ENTRY]] ], [ [[SEL:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[GEP_V_IV:%.*]] = getelementptr inbounds i32, ptr [[V]], i64 [[IV]]
+; CHECK-NEXT:    [[LOAD_V_IV:%.*]] = load i32, ptr [[GEP_V_IV]], align 4
+; CHECK-NEXT:    [[CMP_LO:%.*]] = icmp sgt i32 [[LOAD_V_IV]], 3
+; CHECK-NEXT:    [[CMP_HI:%.*]] = icmp slt i32 [[LOAD_V_IV]], 7
+; CHECK-NEXT:    [[IN_RANGE:%.*]] = and i1 [[CMP_LO]], [[CMP_HI]]
+; CHECK-NEXT:    [[SEL]] = select i1 [[IN_RANGE]], i32 [[RDX]], i32 7
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[EXIT_COND:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[EXIT_COND]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[SEL_LCSSA:%.*]] = phi i32 [ [[SEL]], %[[LOOP]] ]
+; CHECK-NEXT:    ret i32 [[SEL_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %rdx = phi i32 [ 3, %entry ], [ %sel, %loop ]
+  %gep.v.iv = getelementptr inbounds i32, ptr %v, i64 %iv
+  %load.v.iv = load i32, ptr %gep.v.iv, align 4
+  %cmp.lo = icmp sgt i32 %load.v.iv, 3
+  %cmp.hi = icmp slt i32 %load.v.iv, 7
+  %in.range = and i1 %cmp.lo, %cmp.hi
+  %sel = select i1 %in.range, i32 %rdx, i32 7
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exit.cond = icmp eq i64 %iv.next, %n
+  br i1 %exit.cond, label %exit, label %loop
+
+exit:
+  ret i32 %sel
+}
+
+define i32 @select_const_i32_from_trunc_i1(ptr %v, i64 %n) {
+; CHECK-LABEL: define i32 @select_const_i32_from_trunc_i1(
+; CHECK-SAME: ptr [[V:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RDX:%.*]] = phi i32 [ 3, %[[ENTRY]] ], [ [[SEL:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[GEP_V_IV:%.*]] = getelementptr inbounds i8, ptr [[V]], i64 [[IV]]
+; CHECK-NEXT:    [[LOAD_V_IV:%.*]] = load i8, ptr [[GEP_V_IV]], align 1
+; CHECK-NEXT:    [[C:%.*]] = trunc i8 [[LOAD_V_IV]] to i1
+; CHECK-NEXT:    [[SEL]] = select i1 [[C]], i32 7, i32 [[RDX]]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[EXIT_COND:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[EXIT_COND]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[SEL_LCSSA:%.*]] = phi i32 [ [[SEL]], %[[LOOP]] ]
+; CHECK-NEXT:    ret i32 [[SEL_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %rdx = phi i32 [ 3, %entry ], [ %sel, %loop ]
+  %gep.v.iv = getelementptr inbounds i8, ptr %v, i64 %iv
+  %load.v.iv = load i8, ptr %gep.v.iv, align 1
+  %c = trunc i8 %load.v.iv to i1
+  %sel = select i1 %c, i32 7, i32 %rdx
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exit.cond = icmp eq i64 %iv.next, %n
+  br i1 %exit.cond, label %exit, label %loop
+
+exit:
+  ret i32 %sel
+}
+
 ;; Negative tests
 
 ; We only support selects where the input comes from the same PHI as the
@@ -1582,6 +1660,130 @@ loop:
 
 exit:
   ret i32 %sel
+}
+
+; The select condition uses the reduction PHI through an and.
+define i32 @select_i32_from_and_of_icmp_of_redux_phi(ptr %v, i64 %n) {
+; CHECK-LABEL: define i32 @select_i32_from_and_of_icmp_of_redux_phi(
+; CHECK-SAME: ptr [[V:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RDX:%.*]] = phi i32 [ 3, %[[ENTRY]] ], [ [[SEL:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[GEP_V_IV:%.*]] = getelementptr inbounds i32, ptr [[V]], i64 [[IV]]
+; CHECK-NEXT:    [[LOAD_V_IV:%.*]] = load i32, ptr [[GEP_V_IV]], align 4
+; CHECK-NEXT:    [[CMP_RDX:%.*]] = icmp eq i32 [[RDX]], 3
+; CHECK-NEXT:    [[CMP_V:%.*]] = icmp sgt i32 [[LOAD_V_IV]], 3
+; CHECK-NEXT:    [[C:%.*]] = and i1 [[CMP_RDX]], [[CMP_V]]
+; CHECK-NEXT:    [[SEL]] = select i1 [[C]], i32 [[RDX]], i32 7
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[EXIT_COND:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[EXIT_COND]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[SEL_LCSSA:%.*]] = phi i32 [ [[SEL]], %[[LOOP]] ]
+; CHECK-NEXT:    ret i32 [[SEL_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %rdx = phi i32 [ 3, %entry ], [ %sel, %loop ]
+  %gep.v.iv = getelementptr inbounds i32, ptr %v, i64 %iv
+  %load.v.iv = load i32, ptr %gep.v.iv, align 4
+  %cmp.rdx = icmp eq i32 %rdx, 3
+  %cmp.v = icmp sgt i32 %load.v.iv, 3
+  %c = and i1 %cmp.rdx, %cmp.v
+  %sel = select i1 %c, i32 %rdx, i32 7
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exit.cond = icmp eq i64 %iv.next, %n
+  br i1 %exit.cond, label %exit, label %loop
+
+exit:
+  ret i32 %sel
+}
+
+; The select condition is the reduction PHI.
+define i1 @select_i1_from_redux_phi_cond(i1 %inv, i64 %n) {
+; CHECK-LABEL: define i1 @select_i1_from_redux_phi_cond(
+; CHECK-SAME: i1 [[INV:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RDX:%.*]] = phi i1 [ true, %[[ENTRY]] ], [ [[SEL:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[SEL]] = select i1 [[RDX]], i1 [[INV]], i1 [[RDX]]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[EXIT_COND:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[EXIT_COND]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[SEL_LCSSA:%.*]] = phi i1 [ [[SEL]], %[[LOOP]] ]
+; CHECK-NEXT:    ret i1 [[SEL_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %rdx = phi i1 [ true, %entry ], [ %sel, %loop ]
+  %sel = select i1 %rdx, i1 %inv, i1 %rdx
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exit.cond = icmp eq i64 %iv.next, %n
+  br i1 %exit.cond, label %exit, label %loop
+
+exit:
+  ret i1 %sel
+}
+
+; The select condition is a PHI in the reduction chain.
+define i1 @select_i1_from_redux_chain_phi_cond(ptr %v, i1 %inv, i64 %n) {
+; CHECK-LABEL: define i1 @select_i1_from_redux_chain_phi_cond(
+; CHECK-SAME: ptr [[V:%.*]], i1 [[INV:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
+; CHECK-NEXT:    [[RDX:%.*]] = phi i1 [ true, %[[ENTRY]] ], [ [[SEL:%.*]], %[[LATCH]] ]
+; CHECK-NEXT:    [[GEP_V_IV:%.*]] = getelementptr inbounds i32, ptr [[V]], i64 [[IV]]
+; CHECK-NEXT:    [[LOAD_V_IV:%.*]] = load i32, ptr [[GEP_V_IV]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[LOAD_V_IV]], 3
+; CHECK-NEXT:    br i1 [[CMP]], label %[[THEN:.*]], label %[[LATCH]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    br label %[[LATCH]]
+; CHECK:       [[LATCH]]:
+; CHECK-NEXT:    [[M:%.*]] = phi i1 [ [[RDX]], %[[THEN]] ], [ [[RDX]], %[[LOOP]] ]
+; CHECK-NEXT:    [[SEL]] = select i1 [[M]], i1 [[INV]], i1 [[RDX]]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[EXIT_COND:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[EXIT_COND]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[SEL_LCSSA:%.*]] = phi i1 [ [[SEL]], %[[LATCH]] ]
+; CHECK-NEXT:    ret i1 [[SEL_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %latch ]
+  %rdx = phi i1 [ true, %entry ], [ %sel, %latch ]
+  %gep.v.iv = getelementptr inbounds i32, ptr %v, i64 %iv
+  %load.v.iv = load i32, ptr %gep.v.iv, align 4
+  %cmp = icmp sgt i32 %load.v.iv, 3
+  br i1 %cmp, label %then, label %latch
+
+then:
+  br label %latch
+
+latch:
+  %m = phi i1 [ %rdx, %then ], [ %rdx, %loop ]
+  %sel = select i1 %m, i1 %inv, i1 %rdx
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exit.cond = icmp eq i64 %iv.next, %n
+  br i1 %exit.cond, label %exit, label %loop
+
+exit:
+  ret i1 %sel
 }
 ;.
 ; CHECK-VF4IC1: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
