@@ -136,17 +136,23 @@ define amdgpu_kernel void @prefetch_after_loads(ptr addrspace(1) noalias %a, ptr
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX12-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    s_load_b64 s[2:3], s[4:5], 0x34
+; GFX12-NEXT:    s_load_b64 s[4:5], s[4:5], 0x34
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_clause 0x1
 ; GFX12-NEXT:    global_load_b32 v1, v0, s[0:1]
 ; GFX12-NEXT:    global_load_b32 v2, v0, s[0:1] offset:1024
+; GFX12-NEXT:    v_add_co_u32 v3, s0, s2, v0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v4, null, s3, 0, s0
+; GFX12-NEXT:    v_readfirstlane_b32 s0, v3
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX12-NEXT:    v_readfirstlane_b32 s1, v4
+; GFX12-NEXT:    s_prefetch_data s[0:1], 0x0, null, 0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_add_f32_e32 v1, v1, v2
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    global_store_b32 v0, v1, s[2:3]
+; GFX12-NEXT:    global_store_b32 v0, v1, s[4:5]
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX1250-SI-LABEL: prefetch_after_loads:
@@ -298,19 +304,24 @@ define amdgpu_kernel void @prefetch_unrolled_loop(ptr addrspace(1) noalias %in, 
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_add_co_u32 v4, vcc_lo, s8, v2
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v5, null, s9, v3, vcc_lo
 ; GFX12-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 0x8000
+; GFX12-NEXT:    v_readfirstlane_b32 s4, v4
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3)
+; GFX12-NEXT:    v_readfirstlane_b32 s5, v5
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
-; GFX12-NEXT:    s_clause 0x3
-; GFX12-NEXT:    global_load_b32 v6, v[4:5], off
-; GFX12-NEXT:    global_load_b32 v7, v[4:5], off offset:32768
-; GFX12-NEXT:    global_load_b32 v8, v[4:5], off offset:65536
-; GFX12-NEXT:    global_load_b32 v4, v[4:5], off offset:98304
 ; GFX12-NEXT:    v_add_co_u32 v2, s0, s10, v2
+; GFX12-NEXT:    s_prefetch_data s[4:5], 0x0, null, 0
+; GFX12-NEXT:    global_load_b32 v6, v[4:5], off
+; GFX12-NEXT:    s_prefetch_data s[4:5], 0x8000, null, 0
+; GFX12-NEXT:    global_load_b32 v7, v[4:5], off offset:32768
+; GFX12-NEXT:    s_prefetch_data s[4:5], 0x10000, null, 0
+; GFX12-NEXT:    global_load_b32 v8, v[4:5], off offset:65536
+; GFX12-NEXT:    s_prefetch_data s[4:5], 0x18000, null, 0
+; GFX12-NEXT:    global_load_b32 v4, v[4:5], off offset:98304
 ; GFX12-NEXT:    v_cmp_le_u64_e32 vcc_lo, s[2:3], v[0:1]
-; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v3, null, s11, v3, s0
 ; GFX12-NEXT:    s_or_b32 s1, vcc_lo, s1
 ; GFX12-NEXT:    s_wait_loadcnt 0x2
