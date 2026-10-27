@@ -17,6 +17,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/VectorUtils.h"
+#include "llvm/IR/BundleAttributes.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/Intrinsics.h"
@@ -1167,10 +1168,9 @@ public:
             break;
           }
           const Pointer &WasOnPtr = WasOn.asPointer();
-          Attribute::AttrKind Kind =
-              Attribute::getAttrKindFromName(OBU.getTagName());
+          auto Kind = getBundleAttrFromOBU(OBU);
           switch (Kind) {
-          case Attribute::Alignment: {
+          case BundleAttr::Align: {
             // Alignment assumptions should have 2 or 3 arguments.
             APInt Alignment = getIntNonPoison(getValue(GetBundleArg(1)));
             APInt CheckedAddr = WasOnPtr.address();
@@ -1192,13 +1192,13 @@ public:
                   << ") assumption.";
             break;
           }
-          case Attribute::NonNull:
+          case BundleAttr::NonNull:
             if (WasOnPtr.isNullPtr(AS, DL))
               reportImmediateUB()
                   << "The pointer " << WasOn << " violates nonnull assumption.";
             break;
-          case Attribute::Dereferenceable:
-          case Attribute::DereferenceableOrNull: {
+          case BundleAttr::Dereferenceable:
+          case BundleAttr::DereferenceableOrNull: {
             APInt DereferenceableBytes =
                 getIntNonPoison(getValue(GetBundleArg(1)));
             // Only n > 0 implies that the pointer is dereferenceable.
@@ -1206,9 +1206,9 @@ public:
               break;
             if (violatesDereferenceableBytesAttr(
                     WasOn, DereferenceableBytes.getLimitedValue(),
-                    Kind == Attribute::DereferenceableOrNull, AS, Ctx))
+                    Kind == BundleAttr::DereferenceableOrNull, AS, Ctx))
               reportImmediateUB() << "The pointer " << WasOn << " violates "
-                                  << (Kind == Attribute::DereferenceableOrNull
+                                  << (Kind == BundleAttr::DereferenceableOrNull
                                           ? "dereferenceable_or_null("
                                           : "dereferenceable(")
                                   << DereferenceableBytes << ") assumption.";

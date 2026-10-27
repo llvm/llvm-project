@@ -9607,7 +9607,7 @@ bool X86InstrInfo::setExecutionDomainCustom(MachineInstr &MI,
         lookupAVX512(MI.getOpcode(), dom, ReplaceableCustomAVX512LogicInstrs);
     assert(table && "Instruction not found in table?");
     // Don't change integer Q instructions to D instructions and
-    // use D intructions if we started with a PS instruction.
+    // use D instructions if we started with a PS instruction.
     if (Domain == 3 && (dom == 1 || table[3] == MI.getOpcode()))
       Domain = 4;
     MI.setDesc(get(table[Domain - 1]));
