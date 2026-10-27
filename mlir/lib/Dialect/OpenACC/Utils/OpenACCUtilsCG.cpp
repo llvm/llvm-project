@@ -644,7 +644,7 @@ MapFlags computePrivatizeMapFlags(PrivatizeOp privatizeOp,
   addLevelFlags(parDims.getArray());
   // Ownership par_dims may be narrower than the dimensions the kernel indexes
   // the storage by, so replicate across the active dimensions as well.
-  if(ActiveParDimsAttr activeParDims = getActiveParDimsAttr(privatizeOp)) {
+  if (ActiveParDimsAttr activeParDims = getActiveParDimsAttr(privatizeOp)) {
     addLevelFlags(activeParDims.getArray());
   }
   return flags;
