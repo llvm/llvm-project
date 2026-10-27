@@ -25,6 +25,108 @@
 using namespace clang;
 using namespace clang::CIRGen;
 
+void CallLifetimeEnd::emit(CIRGenFunction &cgf, Flags flags) {
+  cgf.emitLifetimeEndOp(addr.getLoc(), addr);
+}
+
+void CIRGenFunction::pushFullExprLifetimeEnd(Address addr) {
+  assert(addr.getDefiningOp<cir::AllocaOp>() &&
+         "lifetime cleanup requires the raw alloca address");
+  if (!isInConditionalBranch()) {
+    ehStack.pushCleanup<CallLifetimeEnd>(NormalEHLifetimeMarker,
+                                         addr.getPointer());
+    return;
+  }
+
+  Address activeFlag = createCleanupActiveFlag();
+  deferredConditionalCleanupStack.push_back(
+      {NormalEHLifetimeMarker, addr, QualType(), nullptr, activeFlag});
+}
+
+/// Whether the sanitizers in effect need lifetime markers that are exactly as
+/// precise as the temporary's lifetime, so a start must not run on a path
+/// where the temporary is never created.
+static bool needsPreciseLifetimeMarkers(CIRGenFunction &cgf) {
+  const SanitizerSet &sanitizers = cgf.getLangOpts().Sanitize;
+  return sanitizers.has(SanitizerKind::HWAddress) ||
+         sanitizers.has(SanitizerKind::Memory) ||
+         sanitizers.has(SanitizerKind::MemtagStack) ||
+         cgf.cgm.getCodeGenOpts().SanitizeAddressUseAfterScope;
+}
+
+void CIRGenFunction::emitTemporaryLifetimeStart(
+    const MaterializeTemporaryExpr *m, const Expr *e, cir::AllocaOp alloca,
+    CharUnits alignment) {
+  assert(shouldEmitLifetimeMarkers && "lifetime markers are disabled");
+  mlir::Location loc = getLoc(m->getSourceRange());
+  Address addr(alloca.getResult(), alignment);
+
+  switch (m->getStorageDuration()) {
+  case SD_Automatic:
+    if (emitLifetimeStartOp(loc, alloca.getResult()))
+      pushLifetimeEndAfterFullExpr(addr, m->getExtendingDecl());
+    return;
+
+  case SD_FullExpression:
+    // Avoid creating a conditional cleanup just to hold a lifetime end.
+    // Instead, start the lifetime of a conditional temporary before the
+    // conditional so that its end is unconditional too. A temporary with a
+    // destructor needs a conditional cleanup anyway, and the sanitizers that
+    // need precise lifetimes must not see the temporary live on a path that
+    // never creates it.
+    if (isInConditionalBranch() && !e->getType().isDestructedType() &&
+        !needsPreciseLifetimeMarkers(*this)) {
+      {
+        mlir::OpBuilder::InsertionGuard guard(builder);
+        builder.restoreInsertionPoint(outermostConditional->getInsertPoint());
+        emitLifetimeStartOp(loc, alloca.getResult());
+        outermostConditional->advanceInsertPoint(
+            &*std::prev(builder.getInsertionPoint()));
+      }
+      // Without an active flag, the end runs whether or not the branch did.
+      deferredConditionalCleanupStack.push_back({NormalEHLifetimeMarker, addr,
+                                                 QualType(), nullptr,
+                                                 Address::invalid()});
+      return;
+    }
+
+    if (emitLifetimeStartOp(loc, alloca.getResult()))
+      pushFullExprLifetimeEnd(addr);
+    return;
+
+  default:
+    llvm_unreachable("alloca-backed temporary has unexpected duration");
+  }
+}
+
+void CIRGenFunction::pushLifetimeEndAfterFullExpr(
+    Address addr, const ValueDecl *extendingDecl) {
+  assert(addr.getDefiningOp<cir::AllocaOp>() &&
+         "lifetime cleanup requires the raw alloca address");
+  Address activeFlag =
+      isInConditionalBranch() ? createCleanupActiveFlag() : Address::invalid();
+  PendingCleanupEntry entry{NormalEHLifetimeMarker, addr, QualType(), nullptr,
+                            activeFlag};
+  // A loop condition variable's temporary ends its lifetime in the loop's
+  // cleanup region. Unlike its destructor, this is not guarded by the
+  // variable's active flag.
+  if (lifetimeExtensionCapture &&
+      lifetimeExtensionCapture->extendingDecl == extendingDecl)
+    entry.capturedBy = lifetimeExtensionCapture->cleanups;
+  lifetimeExtendedCleanupStack.push_back(entry);
+}
+
+void CIRGenFunction::emitPendingCleanup(const PendingCleanupEntry &entry) {
+  if (entry.kind & LifetimeMarker) {
+    assert(entry.addr.getDefiningOp<cir::AllocaOp>() &&
+           "lifetime cleanup requires the raw alloca address");
+    mlir::Value addr = entry.addr.getPointer();
+    emitLifetimeEndOp(addr.getLoc(), addr);
+    return;
+  }
+  emitDestroy(entry.addr, entry.type, entry.destroyer);
+}
+
 namespace {
 /// Return true if the expression tree contains a construct that causes cleanups
 /// to be deferred via pushFullExprCleanup.
@@ -322,12 +424,11 @@ static void closeConditionalCleanupScope(
         cir::IfOp::create(builder, scope.getLoc(), flag,
                           /*withElseRegion=*/false,
                           [&](mlir::OpBuilder &b, mlir::Location loc) {
-                            cgf.emitDestroy(entry.addr, entry.type,
-                                            entry.destroyer);
+                            cgf.emitPendingCleanup(entry);
                             builder.createYield(loc);
                           });
       } else {
-        cgf.emitDestroy(entry.addr, entry.type, entry.destroyer);
+        cgf.emitPendingCleanup(entry);
       }
     }
     builder.createYield(scope.getLoc());
