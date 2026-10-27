@@ -116,8 +116,8 @@ define amdgpu_ps float @add_shl_vgpr_const_inline_const(i32 %a) {
 ;
 ; GFX9-LABEL: add_shl_vgpr_const_inline_const:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    v_mov_b32_e32 v1, 0x7e800
-; GFX9-NEXT:    v_lshl_add_u32 v0, v0, 9, v1
+; GFX9-NEXT:    s_mov_b32 s0, 0x7e800
+; GFX9-NEXT:    v_lshl_add_u32 v0, v0, 9, s0
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10P-LABEL: add_shl_vgpr_const_inline_const:
@@ -139,8 +139,8 @@ define amdgpu_ps float @add_shl_vgpr_inline_const_x2(i32 %a) {
 ;
 ; GFX9-LABEL: add_shl_vgpr_inline_const_x2:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    v_mov_b32_e32 v1, 0x600
-; GFX9-NEXT:    v_lshl_add_u32 v0, v0, 9, v1
+; GFX9-NEXT:    s_movk_i32 s0, 0x600
+; GFX9-NEXT:    v_lshl_add_u32 v0, v0, 9, s0
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10P-LABEL: add_shl_vgpr_inline_const_x2:

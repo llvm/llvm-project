@@ -316,14 +316,14 @@ define i32 @v_srem_i32_oddk_denom(i32 %num) {
 ; CHECK-LABEL: v_srem_i32_oddk_denom:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_mov_b32_e32 v1, 0xd9528441
-; CHECK-NEXT:    v_mul_hi_i32 v1, v0, v1
+; CHECK-NEXT:    s_mov_b32 s4, 0xd9528441
+; CHECK-NEXT:    v_mul_hi_i32 v1, v0, s4
+; CHECK-NEXT:    s_mov_b32 s4, 0xffed2705
 ; CHECK-NEXT:    v_add_i32_e32 v1, vcc, v1, v0
 ; CHECK-NEXT:    v_ashrrev_i32_e32 v1, 20, v1
 ; CHECK-NEXT:    v_lshrrev_b32_e32 v2, 31, v1
 ; CHECK-NEXT:    v_add_i32_e32 v1, vcc, v1, v2
-; CHECK-NEXT:    v_mov_b32_e32 v2, 0xffed2705
-; CHECK-NEXT:    v_mul_lo_u32 v1, v1, v2
+; CHECK-NEXT:    v_mul_lo_u32 v1, v1, s4
 ; CHECK-NEXT:    v_add_i32_e32 v0, vcc, v0, v1
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %result = srem i32 %num, 1235195
@@ -378,22 +378,22 @@ define <2 x i32> @v_srem_v2i32_oddk_denom(<2 x i32> %num) {
 ; CGP-LABEL: v_srem_v2i32_oddk_denom:
 ; CGP:       ; %bb.0:
 ; CGP-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CGP-NEXT:    v_mov_b32_e32 v2, 0xd9528441
-; CGP-NEXT:    v_mul_hi_i32 v3, v0, v2
-; CGP-NEXT:    v_mul_hi_i32 v2, v1, v2
-; CGP-NEXT:    v_add_i32_e32 v3, vcc, v3, v0
-; CGP-NEXT:    v_add_i32_e32 v2, vcc, v2, v1
-; CGP-NEXT:    v_ashrrev_i32_e32 v3, 20, v3
+; CGP-NEXT:    s_mov_b32 s4, 0xd9528441
+; CGP-NEXT:    v_mul_hi_i32 v2, v0, s4
+; CGP-NEXT:    v_add_i32_e32 v2, vcc, v2, v0
 ; CGP-NEXT:    v_ashrrev_i32_e32 v2, 20, v2
+; CGP-NEXT:    v_lshrrev_b32_e32 v3, 31, v2
+; CGP-NEXT:    v_add_i32_e32 v2, vcc, v2, v3
+; CGP-NEXT:    v_mul_hi_i32 v3, v1, s4
+; CGP-NEXT:    s_mov_b32 s4, 0xffed2705
+; CGP-NEXT:    v_mul_lo_u32 v2, v2, s4
+; CGP-NEXT:    v_add_i32_e32 v3, vcc, v3, v1
+; CGP-NEXT:    v_ashrrev_i32_e32 v3, 20, v3
 ; CGP-NEXT:    v_lshrrev_b32_e32 v4, 31, v3
-; CGP-NEXT:    v_lshrrev_b32_e32 v5, 31, v2
 ; CGP-NEXT:    v_add_i32_e32 v3, vcc, v3, v4
-; CGP-NEXT:    v_mov_b32_e32 v4, 0xffed2705
-; CGP-NEXT:    v_add_i32_e32 v2, vcc, v2, v5
-; CGP-NEXT:    v_mul_lo_u32 v3, v3, v4
-; CGP-NEXT:    v_mul_lo_u32 v2, v2, v4
-; CGP-NEXT:    v_add_i32_e32 v0, vcc, v0, v3
-; CGP-NEXT:    v_add_i32_e32 v1, vcc, v1, v2
+; CGP-NEXT:    v_mul_lo_u32 v3, v3, s4
+; CGP-NEXT:    v_add_i32_e32 v0, vcc, v0, v2
+; CGP-NEXT:    v_add_i32_e32 v1, vcc, v1, v3
 ; CGP-NEXT:    s_setpc_b64 s[30:31]
   %result = srem <2 x i32> %num, <i32 1235195, i32 1235195>
   ret <2 x i32> %result

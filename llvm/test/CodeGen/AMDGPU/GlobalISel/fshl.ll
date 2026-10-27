@@ -4203,10 +4203,10 @@ define <2 x i16> @v_fshl_v2i16_4_8(<2 x i16> %lhs, <2 x i16> %rhs) {
 ; GFX9-LABEL: v_fshl_v2i16_4_8:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v2, 0x80004
-; GFX9-NEXT:    v_pk_lshlrev_b16 v0, v2, v0
-; GFX9-NEXT:    v_mov_b32_e32 v2, 0x8000c
-; GFX9-NEXT:    v_pk_lshrrev_b16 v1, v2, v1
+; GFX9-NEXT:    s_mov_b32 s4, 0x80004
+; GFX9-NEXT:    s_mov_b32 s5, 0x8000c
+; GFX9-NEXT:    v_pk_lshlrev_b16 v0, s4, v0
+; GFX9-NEXT:    v_pk_lshrrev_b16 v1, s5, v1
 ; GFX9-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ; GFX10-LABEL: v_fshl_v2i16_4_8:

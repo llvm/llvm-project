@@ -1599,21 +1599,21 @@ define <2 x half> @v_rcp_v2f16(<2 x half> %x) {
 ; GFX9-FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-FLUSH-NEXT:    v_cvt_f32_f16_e32 v1, v0
 ; GFX9-FLUSH-NEXT:    v_cvt_f32_f16_sdwa v2, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX9-FLUSH-NEXT:    v_mov_b32_e32 v3, 1.0
+; GFX9-FLUSH-NEXT:    s_mov_b32 s4, 1.0
 ; GFX9-FLUSH-NEXT:    v_rcp_f32_e32 v1, v1
 ; GFX9-FLUSH-NEXT:    v_rcp_f32_e32 v2, v2
-; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v4, -v0, v1, v3 op_sel_hi:[1,0,0]
-; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v5, -v0, v2, v3 op_sel:[1,0,0] op_sel_hi:[1,0,0]
-; GFX9-FLUSH-NEXT:    v_mad_f32 v4, v4, v1, v1
-; GFX9-FLUSH-NEXT:    v_mad_f32 v5, v5, v2, v2
-; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v6, -v0, v4, v3 op_sel_hi:[1,0,0]
-; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v3, -v0, v5, v3 op_sel:[1,0,0] op_sel_hi:[1,0,0]
-; GFX9-FLUSH-NEXT:    v_mul_f32_e32 v1, v6, v1
-; GFX9-FLUSH-NEXT:    v_mul_f32_e32 v2, v3, v2
+; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v3, -v0, v1, s4 op_sel_hi:[1,0,0]
+; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v4, -v0, v2, s4 op_sel:[1,0,0] op_sel_hi:[1,0,0]
+; GFX9-FLUSH-NEXT:    v_mad_f32 v3, v3, v1, v1
+; GFX9-FLUSH-NEXT:    v_mad_f32 v4, v4, v2, v2
+; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v5, -v0, v3, s4 op_sel_hi:[1,0,0]
+; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v6, -v0, v4, s4 op_sel:[1,0,0] op_sel_hi:[1,0,0]
+; GFX9-FLUSH-NEXT:    v_mul_f32_e32 v1, v5, v1
+; GFX9-FLUSH-NEXT:    v_mul_f32_e32 v2, v6, v2
 ; GFX9-FLUSH-NEXT:    v_and_b32_e32 v1, 0xff800000, v1
 ; GFX9-FLUSH-NEXT:    v_and_b32_e32 v2, 0xff800000, v2
-; GFX9-FLUSH-NEXT:    v_mad_mixlo_f16 v1, v1, 1.0, v4 op_sel_hi:[0,1,0]
-; GFX9-FLUSH-NEXT:    v_mad_mixlo_f16 v2, v2, 1.0, v5 op_sel_hi:[0,1,0]
+; GFX9-FLUSH-NEXT:    v_mad_mixlo_f16 v1, v1, 1.0, v3 op_sel_hi:[0,1,0]
+; GFX9-FLUSH-NEXT:    v_mad_mixlo_f16 v2, v2, 1.0, v4 op_sel_hi:[0,1,0]
 ; GFX9-FLUSH-NEXT:    v_div_fixup_f16 v1, v1, v0, 1.0
 ; GFX9-FLUSH-NEXT:    v_div_fixup_f16 v0, v2, v0, 1.0 op_sel:[0,1,0,0]
 ; GFX9-FLUSH-NEXT:    v_pack_b32_f16 v0, v1, v0
@@ -1676,26 +1676,25 @@ define <2 x half> @v_rcp_v2f16(<2 x half> %x) {
 ; GFX11-LABEL: v_rcp_v2f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_cvt_f32_f16_e32 v2, v0
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX11-NEXT:    v_rcp_f32_e32 v2, v2
-; GFX11-NEXT:    v_mov_b32_e32 v3, 1.0
+; GFX11-NEXT:    v_cvt_f32_f16_e32 v2, v0
+; GFX11-NEXT:    s_mov_b32 s0, 1.0
 ; GFX11-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; GFX11-NEXT:    v_rcp_f32_e32 v2, v2
 ; GFX11-NEXT:    v_rcp_f32_e32 v1, v1
 ; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
-; GFX11-NEXT:    v_fma_mix_f32 v4, -v0, v2, v3 op_sel_hi:[1,0,0]
-; GFX11-NEXT:    v_fma_f32 v4, v4, v2, v2
-; GFX11-NEXT:    v_fma_mix_f32 v6, -v0, v4, v3 op_sel_hi:[1,0,0]
-; GFX11-NEXT:    v_mul_f32_e32 v2, v6, v2
-; GFX11-NEXT:    v_fma_mix_f32 v5, -v0, v1, v3 op_sel:[1,0,0] op_sel_hi:[1,0,0]
+; GFX11-NEXT:    v_fma_mix_f32 v3, -v0, v2, s0 op_sel_hi:[1,0,0]
+; GFX11-NEXT:    v_fma_mix_f32 v4, -v0, v1, s0 op_sel:[1,0,0] op_sel_hi:[1,0,0]
+; GFX11-NEXT:    v_fma_f32 v3, v3, v2, v2
+; GFX11-NEXT:    v_fma_f32 v4, v4, v1, v1
+; GFX11-NEXT:    v_fma_mix_f32 v5, -v0, v3, s0 op_sel_hi:[1,0,0]
+; GFX11-NEXT:    v_fma_mix_f32 v6, -v0, v4, s0 op_sel:[1,0,0] op_sel_hi:[1,0,0]
+; GFX11-NEXT:    v_dual_mul_f32 v2, v5, v2 :: v_dual_mul_f32 v1, v6, v1
 ; GFX11-NEXT:    v_and_b32_e32 v2, 0xff800000, v2
-; GFX11-NEXT:    v_fma_f32 v5, v5, v1, v1
-; GFX11-NEXT:    v_fma_mixlo_f16 v2, v2, 1.0, v4 op_sel_hi:[0,1,0]
-; GFX11-NEXT:    v_fma_mix_f32 v3, -v0, v5, v3 op_sel:[1,0,0] op_sel_hi:[1,0,0]
-; GFX11-NEXT:    v_div_fixup_f16 v2, v2, v0, 1.0
-; GFX11-NEXT:    v_mul_f32_e32 v1, v3, v1
 ; GFX11-NEXT:    v_and_b32_e32 v1, 0xff800000, v1
-; GFX11-NEXT:    v_fma_mixlo_f16 v1, v1, 1.0, v5 op_sel_hi:[0,1,0]
+; GFX11-NEXT:    v_fma_mixlo_f16 v2, v2, 1.0, v3 op_sel_hi:[0,1,0]
+; GFX11-NEXT:    v_fma_mixlo_f16 v1, v1, 1.0, v4 op_sel_hi:[0,1,0]
+; GFX11-NEXT:    v_div_fixup_f16 v2, v2, v0, 1.0
 ; GFX11-NEXT:    v_div_fixup_f16 v0, v1, v0, 1.0 op_sel:[0,1,0,0]
 ; GFX11-NEXT:    v_pack_b32_f16 v0, v2, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -1882,21 +1881,21 @@ define <2 x half> @v_neg_rcp_v2f16(<2 x half> %x) {
 ; GFX9-FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-FLUSH-NEXT:    v_cvt_f32_f16_e32 v1, v0
 ; GFX9-FLUSH-NEXT:    v_cvt_f32_f16_sdwa v2, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX9-FLUSH-NEXT:    v_mov_b32_e32 v3, -1.0
+; GFX9-FLUSH-NEXT:    s_mov_b32 s4, -1.0
 ; GFX9-FLUSH-NEXT:    v_rcp_f32_e32 v1, v1
 ; GFX9-FLUSH-NEXT:    v_rcp_f32_e32 v2, v2
-; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v4, v0, v1, v3 op_sel_hi:[1,0,0]
-; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v5, v0, v2, v3 op_sel:[1,0,0] op_sel_hi:[1,0,0]
-; GFX9-FLUSH-NEXT:    v_mad_f32 v4, v4, v1, -v1
-; GFX9-FLUSH-NEXT:    v_mad_f32 v5, v5, v2, -v2
-; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v6, -v0, v4, v3 op_sel_hi:[1,0,0]
-; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v3, -v0, v5, v3 op_sel:[1,0,0] op_sel_hi:[1,0,0]
-; GFX9-FLUSH-NEXT:    v_mul_f32_e32 v1, v6, v1
-; GFX9-FLUSH-NEXT:    v_mul_f32_e32 v2, v3, v2
+; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v3, v0, v1, s4 op_sel_hi:[1,0,0]
+; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v4, v0, v2, s4 op_sel:[1,0,0] op_sel_hi:[1,0,0]
+; GFX9-FLUSH-NEXT:    v_mad_f32 v3, v3, v1, -v1
+; GFX9-FLUSH-NEXT:    v_mad_f32 v4, v4, v2, -v2
+; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v5, -v0, v3, s4 op_sel_hi:[1,0,0]
+; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v6, -v0, v4, s4 op_sel:[1,0,0] op_sel_hi:[1,0,0]
+; GFX9-FLUSH-NEXT:    v_mul_f32_e32 v1, v5, v1
+; GFX9-FLUSH-NEXT:    v_mul_f32_e32 v2, v6, v2
 ; GFX9-FLUSH-NEXT:    v_and_b32_e32 v1, 0xff800000, v1
 ; GFX9-FLUSH-NEXT:    v_and_b32_e32 v2, 0xff800000, v2
-; GFX9-FLUSH-NEXT:    v_mad_mixlo_f16 v1, v1, 1.0, v4 op_sel_hi:[0,1,0]
-; GFX9-FLUSH-NEXT:    v_mad_mixlo_f16 v2, v2, 1.0, v5 op_sel_hi:[0,1,0]
+; GFX9-FLUSH-NEXT:    v_mad_mixlo_f16 v1, v1, 1.0, v3 op_sel_hi:[0,1,0]
+; GFX9-FLUSH-NEXT:    v_mad_mixlo_f16 v2, v2, 1.0, v4 op_sel_hi:[0,1,0]
 ; GFX9-FLUSH-NEXT:    v_div_fixup_f16 v1, v1, v0, -1.0
 ; GFX9-FLUSH-NEXT:    v_div_fixup_f16 v0, v2, v0, -1.0 op_sel:[0,1,0,0]
 ; GFX9-FLUSH-NEXT:    v_pack_b32_f16 v0, v1, v0
@@ -1959,26 +1958,25 @@ define <2 x half> @v_neg_rcp_v2f16(<2 x half> %x) {
 ; GFX11-LABEL: v_neg_rcp_v2f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_cvt_f32_f16_e32 v2, v0
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX11-NEXT:    v_rcp_f32_e32 v2, v2
-; GFX11-NEXT:    v_mov_b32_e32 v3, -1.0
+; GFX11-NEXT:    v_cvt_f32_f16_e32 v2, v0
+; GFX11-NEXT:    s_mov_b32 s0, -1.0
 ; GFX11-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; GFX11-NEXT:    v_rcp_f32_e32 v2, v2
 ; GFX11-NEXT:    v_rcp_f32_e32 v1, v1
 ; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
-; GFX11-NEXT:    v_fma_mix_f32 v4, v0, v2, v3 op_sel_hi:[1,0,0]
-; GFX11-NEXT:    v_fma_f32 v4, v4, v2, -v2
-; GFX11-NEXT:    v_fma_mix_f32 v6, -v0, v4, v3 op_sel_hi:[1,0,0]
-; GFX11-NEXT:    v_mul_f32_e32 v2, v6, v2
-; GFX11-NEXT:    v_fma_mix_f32 v5, v0, v1, v3 op_sel:[1,0,0] op_sel_hi:[1,0,0]
+; GFX11-NEXT:    v_fma_mix_f32 v3, v0, v2, s0 op_sel_hi:[1,0,0]
+; GFX11-NEXT:    v_fma_mix_f32 v4, v0, v1, s0 op_sel:[1,0,0] op_sel_hi:[1,0,0]
+; GFX11-NEXT:    v_fma_f32 v3, v3, v2, -v2
+; GFX11-NEXT:    v_fma_f32 v4, v4, v1, -v1
+; GFX11-NEXT:    v_fma_mix_f32 v5, -v0, v3, s0 op_sel_hi:[1,0,0]
+; GFX11-NEXT:    v_fma_mix_f32 v6, -v0, v4, s0 op_sel:[1,0,0] op_sel_hi:[1,0,0]
+; GFX11-NEXT:    v_dual_mul_f32 v2, v5, v2 :: v_dual_mul_f32 v1, v6, v1
 ; GFX11-NEXT:    v_and_b32_e32 v2, 0xff800000, v2
-; GFX11-NEXT:    v_fma_f32 v5, v5, v1, -v1
-; GFX11-NEXT:    v_fma_mixlo_f16 v2, v2, 1.0, v4 op_sel_hi:[0,1,0]
-; GFX11-NEXT:    v_fma_mix_f32 v3, -v0, v5, v3 op_sel:[1,0,0] op_sel_hi:[1,0,0]
-; GFX11-NEXT:    v_div_fixup_f16 v2, v2, v0, -1.0
-; GFX11-NEXT:    v_mul_f32_e32 v1, v3, v1
 ; GFX11-NEXT:    v_and_b32_e32 v1, 0xff800000, v1
-; GFX11-NEXT:    v_fma_mixlo_f16 v1, v1, 1.0, v5 op_sel_hi:[0,1,0]
+; GFX11-NEXT:    v_fma_mixlo_f16 v2, v2, 1.0, v3 op_sel_hi:[0,1,0]
+; GFX11-NEXT:    v_fma_mixlo_f16 v1, v1, 1.0, v4 op_sel_hi:[0,1,0]
+; GFX11-NEXT:    v_div_fixup_f16 v2, v2, v0, -1.0
 ; GFX11-NEXT:    v_div_fixup_f16 v0, v1, v0, -1.0 op_sel:[0,1,0,0]
 ; GFX11-NEXT:    v_pack_b32_f16 v0, v2, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -2171,21 +2169,21 @@ define <2 x half> @v_rcp_v2f16_fabs(<2 x half> %x) {
 ; GFX9-FLUSH-NEXT:    v_and_b32_e32 v1, 0x7fff7fff, v0
 ; GFX9-FLUSH-NEXT:    v_cvt_f32_f16_e32 v2, v1
 ; GFX9-FLUSH-NEXT:    v_cvt_f32_f16_sdwa v3, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX9-FLUSH-NEXT:    v_mov_b32_e32 v4, 1.0
+; GFX9-FLUSH-NEXT:    s_mov_b32 s4, 1.0
 ; GFX9-FLUSH-NEXT:    v_rcp_f32_e32 v2, v2
 ; GFX9-FLUSH-NEXT:    v_rcp_f32_e32 v3, v3
-; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v5, -|v0|, v2, v4 op_sel_hi:[1,0,0]
-; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v6, -|v0|, v3, v4 op_sel:[1,0,0] op_sel_hi:[1,0,0]
-; GFX9-FLUSH-NEXT:    v_mad_f32 v5, v5, v2, v2
-; GFX9-FLUSH-NEXT:    v_mad_f32 v6, v6, v3, v3
-; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v7, -|v0|, v5, v4 op_sel_hi:[1,0,0]
-; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v0, -|v0|, v6, v4 op_sel:[1,0,0] op_sel_hi:[1,0,0]
-; GFX9-FLUSH-NEXT:    v_mul_f32_e32 v2, v7, v2
+; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v4, -|v0|, v2, s4 op_sel_hi:[1,0,0]
+; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v5, -|v0|, v3, s4 op_sel:[1,0,0] op_sel_hi:[1,0,0]
+; GFX9-FLUSH-NEXT:    v_mad_f32 v4, v4, v2, v2
+; GFX9-FLUSH-NEXT:    v_mad_f32 v5, v5, v3, v3
+; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v6, -|v0|, v4, s4 op_sel_hi:[1,0,0]
+; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v0, -|v0|, v5, s4 op_sel:[1,0,0] op_sel_hi:[1,0,0]
+; GFX9-FLUSH-NEXT:    v_mul_f32_e32 v2, v6, v2
 ; GFX9-FLUSH-NEXT:    v_mul_f32_e32 v0, v0, v3
 ; GFX9-FLUSH-NEXT:    v_and_b32_e32 v2, 0xff800000, v2
 ; GFX9-FLUSH-NEXT:    v_and_b32_e32 v0, 0xff800000, v0
-; GFX9-FLUSH-NEXT:    v_mad_mixlo_f16 v2, v2, 1.0, v5 op_sel_hi:[0,1,0]
-; GFX9-FLUSH-NEXT:    v_mad_mixlo_f16 v0, v0, 1.0, v6 op_sel_hi:[0,1,0]
+; GFX9-FLUSH-NEXT:    v_mad_mixlo_f16 v2, v2, 1.0, v4 op_sel_hi:[0,1,0]
+; GFX9-FLUSH-NEXT:    v_mad_mixlo_f16 v0, v0, 1.0, v5 op_sel_hi:[0,1,0]
 ; GFX9-FLUSH-NEXT:    v_div_fixup_f16 v2, v2, v1, 1.0
 ; GFX9-FLUSH-NEXT:    v_div_fixup_f16 v0, v0, v1, 1.0 op_sel:[0,1,0,0]
 ; GFX9-FLUSH-NEXT:    v_pack_b32_f16 v0, v2, v0
@@ -2250,26 +2248,27 @@ define <2 x half> @v_rcp_v2f16_fabs(<2 x half> %x) {
 ; GFX11-LABEL: v_rcp_v2f16_fabs:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_dual_mov_b32 v4, 1.0 :: v_dual_and_b32 v1, 0x7fff7fff, v0
+; GFX11-NEXT:    v_and_b32_e32 v1, 0x7fff7fff, v0
+; GFX11-NEXT:    s_mov_b32 s0, 1.0
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
 ; GFX11-NEXT:    v_cvt_f32_f16_e32 v3, v1
 ; GFX11-NEXT:    v_cvt_f32_f16_e32 v2, v2
 ; GFX11-NEXT:    v_rcp_f32_e32 v3, v3
 ; GFX11-NEXT:    v_rcp_f32_e32 v2, v2
 ; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
-; GFX11-NEXT:    v_fma_mix_f32 v5, -|v0|, v3, v4 op_sel_hi:[1,0,0]
-; GFX11-NEXT:    v_fma_mix_f32 v6, -|v0|, v2, v4 op_sel:[1,0,0] op_sel_hi:[1,0,0]
-; GFX11-NEXT:    v_fma_f32 v5, v5, v3, v3
-; GFX11-NEXT:    v_fma_f32 v6, v6, v2, v2
-; GFX11-NEXT:    v_fma_mix_f32 v7, -|v0|, v5, v4 op_sel_hi:[1,0,0]
-; GFX11-NEXT:    v_fma_mix_f32 v0, -|v0|, v6, v4 op_sel:[1,0,0] op_sel_hi:[1,0,0]
-; GFX11-NEXT:    v_dual_mul_f32 v3, v7, v3 :: v_dual_mul_f32 v0, v0, v2
+; GFX11-NEXT:    v_fma_mix_f32 v4, -|v0|, v3, s0 op_sel_hi:[1,0,0]
+; GFX11-NEXT:    v_fma_mix_f32 v5, -|v0|, v2, s0 op_sel:[1,0,0] op_sel_hi:[1,0,0]
+; GFX11-NEXT:    v_fma_f32 v4, v4, v3, v3
+; GFX11-NEXT:    v_fma_f32 v5, v5, v2, v2
+; GFX11-NEXT:    v_fma_mix_f32 v6, -|v0|, v4, s0 op_sel_hi:[1,0,0]
+; GFX11-NEXT:    v_fma_mix_f32 v0, -|v0|, v5, s0 op_sel:[1,0,0] op_sel_hi:[1,0,0]
+; GFX11-NEXT:    v_mul_f32_e32 v0, v0, v2
+; GFX11-NEXT:    v_dual_mul_f32 v3, v6, v3 :: v_dual_and_b32 v0, 0xff800000, v0
 ; GFX11-NEXT:    v_and_b32_e32 v2, 0xff800000, v3
-; GFX11-NEXT:    v_and_b32_e32 v0, 0xff800000, v0
-; GFX11-NEXT:    v_fma_mixlo_f16 v2, v2, 1.0, v5 op_sel_hi:[0,1,0]
-; GFX11-NEXT:    v_fma_mixlo_f16 v0, v0, 1.0, v6 op_sel_hi:[0,1,0]
-; GFX11-NEXT:    v_div_fixup_f16 v2, v2, v1, 1.0
+; GFX11-NEXT:    v_fma_mixlo_f16 v0, v0, 1.0, v5 op_sel_hi:[0,1,0]
+; GFX11-NEXT:    v_fma_mixlo_f16 v2, v2, 1.0, v4 op_sel_hi:[0,1,0]
 ; GFX11-NEXT:    v_div_fixup_f16 v0, v0, v1, 1.0 op_sel:[0,1,0,0]
+; GFX11-NEXT:    v_div_fixup_f16 v2, v2, v1, 1.0
 ; GFX11-NEXT:    v_pack_b32_f16 v0, v2, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %x.fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %x)
@@ -2462,21 +2461,21 @@ define <2 x half> @v_neg_rcp_v2f16_fabs(<2 x half> %x) {
 ; GFX9-FLUSH-NEXT:    v_and_b32_e32 v1, 0x7fff7fff, v0
 ; GFX9-FLUSH-NEXT:    v_cvt_f32_f16_e32 v2, v1
 ; GFX9-FLUSH-NEXT:    v_cvt_f32_f16_sdwa v3, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX9-FLUSH-NEXT:    v_mov_b32_e32 v4, -1.0
+; GFX9-FLUSH-NEXT:    s_mov_b32 s4, -1.0
 ; GFX9-FLUSH-NEXT:    v_rcp_f32_e32 v2, v2
 ; GFX9-FLUSH-NEXT:    v_rcp_f32_e32 v3, v3
-; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v5, |v0|, v2, v4 op_sel_hi:[1,0,0]
-; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v6, |v0|, v3, v4 op_sel:[1,0,0] op_sel_hi:[1,0,0]
-; GFX9-FLUSH-NEXT:    v_mad_f32 v5, v5, v2, -v2
-; GFX9-FLUSH-NEXT:    v_mad_f32 v6, v6, v3, -v3
-; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v7, -|v0|, v5, v4 op_sel_hi:[1,0,0]
-; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v0, -|v0|, v6, v4 op_sel:[1,0,0] op_sel_hi:[1,0,0]
-; GFX9-FLUSH-NEXT:    v_mul_f32_e32 v2, v7, v2
+; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v4, |v0|, v2, s4 op_sel_hi:[1,0,0]
+; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v5, |v0|, v3, s4 op_sel:[1,0,0] op_sel_hi:[1,0,0]
+; GFX9-FLUSH-NEXT:    v_mad_f32 v4, v4, v2, -v2
+; GFX9-FLUSH-NEXT:    v_mad_f32 v5, v5, v3, -v3
+; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v6, -|v0|, v4, s4 op_sel_hi:[1,0,0]
+; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v0, -|v0|, v5, s4 op_sel:[1,0,0] op_sel_hi:[1,0,0]
+; GFX9-FLUSH-NEXT:    v_mul_f32_e32 v2, v6, v2
 ; GFX9-FLUSH-NEXT:    v_mul_f32_e32 v0, v0, v3
 ; GFX9-FLUSH-NEXT:    v_and_b32_e32 v2, 0xff800000, v2
 ; GFX9-FLUSH-NEXT:    v_and_b32_e32 v0, 0xff800000, v0
-; GFX9-FLUSH-NEXT:    v_mad_mixlo_f16 v2, v2, 1.0, v5 op_sel_hi:[0,1,0]
-; GFX9-FLUSH-NEXT:    v_mad_mixlo_f16 v0, v0, 1.0, v6 op_sel_hi:[0,1,0]
+; GFX9-FLUSH-NEXT:    v_mad_mixlo_f16 v2, v2, 1.0, v4 op_sel_hi:[0,1,0]
+; GFX9-FLUSH-NEXT:    v_mad_mixlo_f16 v0, v0, 1.0, v5 op_sel_hi:[0,1,0]
 ; GFX9-FLUSH-NEXT:    v_div_fixup_f16 v2, v2, v1, -1.0
 ; GFX9-FLUSH-NEXT:    v_div_fixup_f16 v0, v0, v1, -1.0 op_sel:[0,1,0,0]
 ; GFX9-FLUSH-NEXT:    v_pack_b32_f16 v0, v2, v0
@@ -2541,26 +2540,27 @@ define <2 x half> @v_neg_rcp_v2f16_fabs(<2 x half> %x) {
 ; GFX11-LABEL: v_neg_rcp_v2f16_fabs:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_dual_mov_b32 v4, -1.0 :: v_dual_and_b32 v1, 0x7fff7fff, v0
+; GFX11-NEXT:    v_and_b32_e32 v1, 0x7fff7fff, v0
+; GFX11-NEXT:    s_mov_b32 s0, -1.0
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
 ; GFX11-NEXT:    v_cvt_f32_f16_e32 v3, v1
 ; GFX11-NEXT:    v_cvt_f32_f16_e32 v2, v2
 ; GFX11-NEXT:    v_rcp_f32_e32 v3, v3
 ; GFX11-NEXT:    v_rcp_f32_e32 v2, v2
 ; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
-; GFX11-NEXT:    v_fma_mix_f32 v5, |v0|, v3, v4 op_sel_hi:[1,0,0]
-; GFX11-NEXT:    v_fma_mix_f32 v6, |v0|, v2, v4 op_sel:[1,0,0] op_sel_hi:[1,0,0]
-; GFX11-NEXT:    v_fma_f32 v5, v5, v3, -v3
-; GFX11-NEXT:    v_fma_f32 v6, v6, v2, -v2
-; GFX11-NEXT:    v_fma_mix_f32 v7, -|v0|, v5, v4 op_sel_hi:[1,0,0]
-; GFX11-NEXT:    v_fma_mix_f32 v0, -|v0|, v6, v4 op_sel:[1,0,0] op_sel_hi:[1,0,0]
-; GFX11-NEXT:    v_dual_mul_f32 v3, v7, v3 :: v_dual_mul_f32 v0, v0, v2
+; GFX11-NEXT:    v_fma_mix_f32 v4, |v0|, v3, s0 op_sel_hi:[1,0,0]
+; GFX11-NEXT:    v_fma_mix_f32 v5, |v0|, v2, s0 op_sel:[1,0,0] op_sel_hi:[1,0,0]
+; GFX11-NEXT:    v_fma_f32 v4, v4, v3, -v3
+; GFX11-NEXT:    v_fma_f32 v5, v5, v2, -v2
+; GFX11-NEXT:    v_fma_mix_f32 v6, -|v0|, v4, s0 op_sel_hi:[1,0,0]
+; GFX11-NEXT:    v_fma_mix_f32 v0, -|v0|, v5, s0 op_sel:[1,0,0] op_sel_hi:[1,0,0]
+; GFX11-NEXT:    v_mul_f32_e32 v0, v0, v2
+; GFX11-NEXT:    v_dual_mul_f32 v3, v6, v3 :: v_dual_and_b32 v0, 0xff800000, v0
 ; GFX11-NEXT:    v_and_b32_e32 v2, 0xff800000, v3
-; GFX11-NEXT:    v_and_b32_e32 v0, 0xff800000, v0
-; GFX11-NEXT:    v_fma_mixlo_f16 v2, v2, 1.0, v5 op_sel_hi:[0,1,0]
-; GFX11-NEXT:    v_fma_mixlo_f16 v0, v0, 1.0, v6 op_sel_hi:[0,1,0]
-; GFX11-NEXT:    v_div_fixup_f16 v2, v2, v1, -1.0
+; GFX11-NEXT:    v_fma_mixlo_f16 v0, v0, 1.0, v5 op_sel_hi:[0,1,0]
+; GFX11-NEXT:    v_fma_mixlo_f16 v2, v2, 1.0, v4 op_sel_hi:[0,1,0]
 ; GFX11-NEXT:    v_div_fixup_f16 v0, v0, v1, -1.0 op_sel:[0,1,0,0]
+; GFX11-NEXT:    v_div_fixup_f16 v2, v2, v1, -1.0
 ; GFX11-NEXT:    v_pack_b32_f16 v0, v2, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %x.fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %x)
@@ -2920,21 +2920,21 @@ define <2 x half> @v_rcp_v2f16_ulp25(<2 x half> %x) {
 ; GFX9-FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-FLUSH-NEXT:    v_cvt_f32_f16_e32 v1, v0
 ; GFX9-FLUSH-NEXT:    v_cvt_f32_f16_sdwa v2, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX9-FLUSH-NEXT:    v_mov_b32_e32 v3, 1.0
+; GFX9-FLUSH-NEXT:    s_mov_b32 s4, 1.0
 ; GFX9-FLUSH-NEXT:    v_rcp_f32_e32 v1, v1
 ; GFX9-FLUSH-NEXT:    v_rcp_f32_e32 v2, v2
-; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v4, -v0, v1, v3 op_sel_hi:[1,0,0]
-; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v5, -v0, v2, v3 op_sel:[1,0,0] op_sel_hi:[1,0,0]
-; GFX9-FLUSH-NEXT:    v_mad_f32 v4, v4, v1, v1
-; GFX9-FLUSH-NEXT:    v_mad_f32 v5, v5, v2, v2
-; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v6, -v0, v4, v3 op_sel_hi:[1,0,0]
-; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v3, -v0, v5, v3 op_sel:[1,0,0] op_sel_hi:[1,0,0]
-; GFX9-FLUSH-NEXT:    v_mul_f32_e32 v1, v6, v1
-; GFX9-FLUSH-NEXT:    v_mul_f32_e32 v2, v3, v2
+; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v3, -v0, v1, s4 op_sel_hi:[1,0,0]
+; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v4, -v0, v2, s4 op_sel:[1,0,0] op_sel_hi:[1,0,0]
+; GFX9-FLUSH-NEXT:    v_mad_f32 v3, v3, v1, v1
+; GFX9-FLUSH-NEXT:    v_mad_f32 v4, v4, v2, v2
+; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v5, -v0, v3, s4 op_sel_hi:[1,0,0]
+; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v6, -v0, v4, s4 op_sel:[1,0,0] op_sel_hi:[1,0,0]
+; GFX9-FLUSH-NEXT:    v_mul_f32_e32 v1, v5, v1
+; GFX9-FLUSH-NEXT:    v_mul_f32_e32 v2, v6, v2
 ; GFX9-FLUSH-NEXT:    v_and_b32_e32 v1, 0xff800000, v1
 ; GFX9-FLUSH-NEXT:    v_and_b32_e32 v2, 0xff800000, v2
-; GFX9-FLUSH-NEXT:    v_mad_mixlo_f16 v1, v1, 1.0, v4 op_sel_hi:[0,1,0]
-; GFX9-FLUSH-NEXT:    v_mad_mixlo_f16 v2, v2, 1.0, v5 op_sel_hi:[0,1,0]
+; GFX9-FLUSH-NEXT:    v_mad_mixlo_f16 v1, v1, 1.0, v3 op_sel_hi:[0,1,0]
+; GFX9-FLUSH-NEXT:    v_mad_mixlo_f16 v2, v2, 1.0, v4 op_sel_hi:[0,1,0]
 ; GFX9-FLUSH-NEXT:    v_div_fixup_f16 v1, v1, v0, 1.0
 ; GFX9-FLUSH-NEXT:    v_div_fixup_f16 v0, v2, v0, 1.0 op_sel:[0,1,0,0]
 ; GFX9-FLUSH-NEXT:    v_pack_b32_f16 v0, v1, v0
@@ -2997,26 +2997,25 @@ define <2 x half> @v_rcp_v2f16_ulp25(<2 x half> %x) {
 ; GFX11-LABEL: v_rcp_v2f16_ulp25:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_cvt_f32_f16_e32 v2, v0
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX11-NEXT:    v_rcp_f32_e32 v2, v2
-; GFX11-NEXT:    v_mov_b32_e32 v3, 1.0
+; GFX11-NEXT:    v_cvt_f32_f16_e32 v2, v0
+; GFX11-NEXT:    s_mov_b32 s0, 1.0
 ; GFX11-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; GFX11-NEXT:    v_rcp_f32_e32 v2, v2
 ; GFX11-NEXT:    v_rcp_f32_e32 v1, v1
 ; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
-; GFX11-NEXT:    v_fma_mix_f32 v4, -v0, v2, v3 op_sel_hi:[1,0,0]
-; GFX11-NEXT:    v_fma_f32 v4, v4, v2, v2
-; GFX11-NEXT:    v_fma_mix_f32 v6, -v0, v4, v3 op_sel_hi:[1,0,0]
-; GFX11-NEXT:    v_mul_f32_e32 v2, v6, v2
-; GFX11-NEXT:    v_fma_mix_f32 v5, -v0, v1, v3 op_sel:[1,0,0] op_sel_hi:[1,0,0]
+; GFX11-NEXT:    v_fma_mix_f32 v3, -v0, v2, s0 op_sel_hi:[1,0,0]
+; GFX11-NEXT:    v_fma_mix_f32 v4, -v0, v1, s0 op_sel:[1,0,0] op_sel_hi:[1,0,0]
+; GFX11-NEXT:    v_fma_f32 v3, v3, v2, v2
+; GFX11-NEXT:    v_fma_f32 v4, v4, v1, v1
+; GFX11-NEXT:    v_fma_mix_f32 v5, -v0, v3, s0 op_sel_hi:[1,0,0]
+; GFX11-NEXT:    v_fma_mix_f32 v6, -v0, v4, s0 op_sel:[1,0,0] op_sel_hi:[1,0,0]
+; GFX11-NEXT:    v_dual_mul_f32 v2, v5, v2 :: v_dual_mul_f32 v1, v6, v1
 ; GFX11-NEXT:    v_and_b32_e32 v2, 0xff800000, v2
-; GFX11-NEXT:    v_fma_f32 v5, v5, v1, v1
-; GFX11-NEXT:    v_fma_mixlo_f16 v2, v2, 1.0, v4 op_sel_hi:[0,1,0]
-; GFX11-NEXT:    v_fma_mix_f32 v3, -v0, v5, v3 op_sel:[1,0,0] op_sel_hi:[1,0,0]
-; GFX11-NEXT:    v_div_fixup_f16 v2, v2, v0, 1.0
-; GFX11-NEXT:    v_mul_f32_e32 v1, v3, v1
 ; GFX11-NEXT:    v_and_b32_e32 v1, 0xff800000, v1
-; GFX11-NEXT:    v_fma_mixlo_f16 v1, v1, 1.0, v5 op_sel_hi:[0,1,0]
+; GFX11-NEXT:    v_fma_mixlo_f16 v2, v2, 1.0, v3 op_sel_hi:[0,1,0]
+; GFX11-NEXT:    v_fma_mixlo_f16 v1, v1, 1.0, v4 op_sel_hi:[0,1,0]
+; GFX11-NEXT:    v_div_fixup_f16 v2, v2, v0, 1.0
 ; GFX11-NEXT:    v_div_fixup_f16 v0, v1, v0, 1.0 op_sel:[0,1,0,0]
 ; GFX11-NEXT:    v_pack_b32_f16 v0, v2, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -4380,27 +4379,27 @@ define amdgpu_ps i32 @s_rsq_v2f16(i32 inreg %a.arg) {
 ; GFX9-FLUSH-NEXT:    v_sqrt_f16_e32 v0, s0
 ; GFX9-FLUSH-NEXT:    s_lshr_b32 s0, s0, 16
 ; GFX9-FLUSH-NEXT:    v_sqrt_f16_e32 v1, s0
-; GFX9-FLUSH-NEXT:    v_mov_b32_e32 v4, -1.0
+; GFX9-FLUSH-NEXT:    s_mov_b32 s0, -1.0
 ; GFX9-FLUSH-NEXT:    v_cvt_f32_f16_e32 v2, v0
 ; GFX9-FLUSH-NEXT:    v_cvt_f32_f16_e32 v3, v1
 ; GFX9-FLUSH-NEXT:    v_rcp_f32_e32 v2, v2
 ; GFX9-FLUSH-NEXT:    v_rcp_f32_e32 v3, v3
-; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v5, v0, v2, v4 op_sel_hi:[1,0,0]
-; GFX9-FLUSH-NEXT:    v_mad_f32 v5, v5, v2, -v2
-; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v6, v1, v3, v4 op_sel_hi:[1,0,0]
-; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v7, -v0, v5, v4 op_sel_hi:[1,0,0]
-; GFX9-FLUSH-NEXT:    v_mad_f32 v6, v6, v3, -v3
-; GFX9-FLUSH-NEXT:    v_mul_f32_e32 v2, v7, v2
-; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v4, -v1, v6, v4 op_sel_hi:[1,0,0]
+; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v4, v0, v2, s0 op_sel_hi:[1,0,0]
+; GFX9-FLUSH-NEXT:    v_mad_f32 v4, v4, v2, -v2
+; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v5, v1, v3, s0 op_sel_hi:[1,0,0]
+; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v6, -v0, v4, s0 op_sel_hi:[1,0,0]
+; GFX9-FLUSH-NEXT:    v_mad_f32 v5, v5, v3, -v3
+; GFX9-FLUSH-NEXT:    v_mul_f32_e32 v2, v6, v2
+; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v6, -v1, v5, s0 op_sel_hi:[1,0,0]
 ; GFX9-FLUSH-NEXT:    v_readfirstlane_b32 s0, v2
-; GFX9-FLUSH-NEXT:    v_mul_f32_e32 v2, v4, v3
+; GFX9-FLUSH-NEXT:    v_mul_f32_e32 v2, v6, v3
 ; GFX9-FLUSH-NEXT:    s_and_b32 s0, s0, 0xff800000
-; GFX9-FLUSH-NEXT:    v_mad_mixlo_f16 v3, s0, 1.0, v5 op_sel_hi:[0,1,0]
+; GFX9-FLUSH-NEXT:    v_mad_mixlo_f16 v3, s0, 1.0, v4 op_sel_hi:[0,1,0]
 ; GFX9-FLUSH-NEXT:    v_readfirstlane_b32 s1, v2
 ; GFX9-FLUSH-NEXT:    v_div_fixup_f16 v0, v3, v0, -1.0
 ; GFX9-FLUSH-NEXT:    s_and_b32 s1, s1, 0xff800000
 ; GFX9-FLUSH-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX9-FLUSH-NEXT:    v_mad_mixlo_f16 v0, s1, 1.0, v6 op_sel_hi:[0,1,0]
+; GFX9-FLUSH-NEXT:    v_mad_mixlo_f16 v0, s1, 1.0, v5 op_sel_hi:[0,1,0]
 ; GFX9-FLUSH-NEXT:    v_div_fixup_f16 v0, v0, v1, -1.0
 ; GFX9-FLUSH-NEXT:    v_readfirstlane_b32 s1, v0
 ; GFX9-FLUSH-NEXT:    s_pack_ll_b32_b16 s0, s0, s1
@@ -4411,25 +4410,25 @@ define amdgpu_ps i32 @s_rsq_v2f16(i32 inreg %a.arg) {
 ; GFX10-IEEE-NEXT:    s_lshr_b32 s1, s0, 16
 ; GFX10-IEEE-NEXT:    v_sqrt_f16_e32 v0, s0
 ; GFX10-IEEE-NEXT:    v_sqrt_f16_e32 v1, s1
-; GFX10-IEEE-NEXT:    v_mov_b32_e32 v4, -1.0
+; GFX10-IEEE-NEXT:    s_mov_b32 s0, -1.0
 ; GFX10-IEEE-NEXT:    v_cvt_f32_f16_e32 v2, v0
 ; GFX10-IEEE-NEXT:    v_cvt_f32_f16_e32 v3, v1
 ; GFX10-IEEE-NEXT:    v_rcp_f32_e32 v2, v2
 ; GFX10-IEEE-NEXT:    v_rcp_f32_e32 v3, v3
-; GFX10-IEEE-NEXT:    v_fma_mix_f32 v5, v0, v2, v4 op_sel_hi:[1,0,0]
-; GFX10-IEEE-NEXT:    v_fma_mix_f32 v6, v1, v3, v4 op_sel_hi:[1,0,0]
-; GFX10-IEEE-NEXT:    v_fma_f32 v5, v5, v2, -v2
-; GFX10-IEEE-NEXT:    v_fma_f32 v6, v6, v3, -v3
-; GFX10-IEEE-NEXT:    v_fma_mix_f32 v7, -v0, v5, v4 op_sel_hi:[1,0,0]
-; GFX10-IEEE-NEXT:    v_fma_mix_f32 v4, -v1, v6, v4 op_sel_hi:[1,0,0]
-; GFX10-IEEE-NEXT:    v_mul_f32_e32 v2, v7, v2
-; GFX10-IEEE-NEXT:    v_mul_f32_e32 v3, v4, v3
+; GFX10-IEEE-NEXT:    v_fma_mix_f32 v4, v0, v2, s0 op_sel_hi:[1,0,0]
+; GFX10-IEEE-NEXT:    v_fma_mix_f32 v5, v1, v3, s0 op_sel_hi:[1,0,0]
+; GFX10-IEEE-NEXT:    v_fma_f32 v4, v4, v2, -v2
+; GFX10-IEEE-NEXT:    v_fma_f32 v5, v5, v3, -v3
+; GFX10-IEEE-NEXT:    v_fma_mix_f32 v6, -v0, v4, s0 op_sel_hi:[1,0,0]
+; GFX10-IEEE-NEXT:    v_fma_mix_f32 v7, -v1, v5, s0 op_sel_hi:[1,0,0]
+; GFX10-IEEE-NEXT:    v_mul_f32_e32 v2, v6, v2
+; GFX10-IEEE-NEXT:    v_mul_f32_e32 v3, v7, v3
 ; GFX10-IEEE-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX10-IEEE-NEXT:    v_readfirstlane_b32 s1, v3
 ; GFX10-IEEE-NEXT:    s_and_b32 s0, s0, 0xff800000
 ; GFX10-IEEE-NEXT:    s_and_b32 s1, s1, 0xff800000
-; GFX10-IEEE-NEXT:    v_fma_mixlo_f16 v2, s0, 1.0, v5 op_sel_hi:[0,1,0]
-; GFX10-IEEE-NEXT:    v_fma_mixlo_f16 v3, s1, 1.0, v6 op_sel_hi:[0,1,0]
+; GFX10-IEEE-NEXT:    v_fma_mixlo_f16 v2, s0, 1.0, v4 op_sel_hi:[0,1,0]
+; GFX10-IEEE-NEXT:    v_fma_mixlo_f16 v3, s1, 1.0, v5 op_sel_hi:[0,1,0]
 ; GFX10-IEEE-NEXT:    v_div_fixup_f16 v0, v2, v0, -1.0
 ; GFX10-IEEE-NEXT:    v_div_fixup_f16 v1, v3, v1, -1.0
 ; GFX10-IEEE-NEXT:    v_readfirstlane_b32 s0, v0
@@ -4472,26 +4471,26 @@ define amdgpu_ps i32 @s_rsq_v2f16(i32 inreg %a.arg) {
 ; GFX11-NEXT:    s_lshr_b32 s1, s0, 16
 ; GFX11-NEXT:    v_sqrt_f16_e32 v0, s0
 ; GFX11-NEXT:    v_sqrt_f16_e32 v1, s1
-; GFX11-NEXT:    v_mov_b32_e32 v4, -1.0
+; GFX11-NEXT:    s_mov_b32 s0, -1.0
 ; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX11-NEXT:    v_cvt_f32_f16_e32 v2, v0
 ; GFX11-NEXT:    v_cvt_f32_f16_e32 v3, v1
 ; GFX11-NEXT:    v_rcp_f32_e32 v2, v2
 ; GFX11-NEXT:    v_rcp_f32_e32 v3, v3
 ; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
-; GFX11-NEXT:    v_fma_mix_f32 v5, v0, v2, v4 op_sel_hi:[1,0,0]
-; GFX11-NEXT:    v_fma_mix_f32 v6, v1, v3, v4 op_sel_hi:[1,0,0]
-; GFX11-NEXT:    v_fma_f32 v5, v5, v2, -v2
-; GFX11-NEXT:    v_fma_f32 v6, v6, v3, -v3
-; GFX11-NEXT:    v_fma_mix_f32 v7, -v0, v5, v4 op_sel_hi:[1,0,0]
-; GFX11-NEXT:    v_fma_mix_f32 v4, -v1, v6, v4 op_sel_hi:[1,0,0]
-; GFX11-NEXT:    v_dual_mul_f32 v2, v7, v2 :: v_dual_mul_f32 v3, v4, v3
+; GFX11-NEXT:    v_fma_mix_f32 v4, v0, v2, s0 op_sel_hi:[1,0,0]
+; GFX11-NEXT:    v_fma_mix_f32 v5, v1, v3, s0 op_sel_hi:[1,0,0]
+; GFX11-NEXT:    v_fma_f32 v4, v4, v2, -v2
+; GFX11-NEXT:    v_fma_f32 v5, v5, v3, -v3
+; GFX11-NEXT:    v_fma_mix_f32 v6, -v0, v4, s0 op_sel_hi:[1,0,0]
+; GFX11-NEXT:    v_fma_mix_f32 v7, -v1, v5, s0 op_sel_hi:[1,0,0]
+; GFX11-NEXT:    v_dual_mul_f32 v2, v6, v2 :: v_dual_mul_f32 v3, v7, v3
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX11-NEXT:    v_readfirstlane_b32 s1, v3
 ; GFX11-NEXT:    s_and_b32 s0, s0, 0xff800000
 ; GFX11-NEXT:    s_and_b32 s1, s1, 0xff800000
-; GFX11-NEXT:    v_fma_mixlo_f16 v2, s0, 1.0, v5 op_sel_hi:[0,1,0]
-; GFX11-NEXT:    v_fma_mixlo_f16 v3, s1, 1.0, v6 op_sel_hi:[0,1,0]
+; GFX11-NEXT:    v_fma_mixlo_f16 v2, s0, 1.0, v4 op_sel_hi:[0,1,0]
+; GFX11-NEXT:    v_fma_mixlo_f16 v3, s1, 1.0, v5 op_sel_hi:[0,1,0]
 ; GFX11-NEXT:    v_div_fixup_f16 v0, v2, v0, -1.0
 ; GFX11-NEXT:    v_div_fixup_f16 v1, v3, v1, -1.0
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
@@ -5467,24 +5466,24 @@ define <2 x half> @v_rsq_v2f16(<2 x half> %a) {
 ; GFX9-FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-FLUSH-NEXT:    v_sqrt_f16_e32 v1, v0
 ; GFX9-FLUSH-NEXT:    v_sqrt_f16_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX9-FLUSH-NEXT:    v_mov_b32_e32 v4, 1.0
+; GFX9-FLUSH-NEXT:    s_mov_b32 s4, 1.0
 ; GFX9-FLUSH-NEXT:    v_cvt_f32_f16_e32 v2, v1
 ; GFX9-FLUSH-NEXT:    v_cvt_f32_f16_e32 v3, v0
 ; GFX9-FLUSH-NEXT:    v_rcp_f32_e32 v2, v2
 ; GFX9-FLUSH-NEXT:    v_rcp_f32_e32 v3, v3
-; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v5, -v1, v2, v4 op_sel_hi:[1,0,0]
-; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v6, -v0, v3, v4 op_sel_hi:[1,0,0]
-; GFX9-FLUSH-NEXT:    v_mad_f32 v5, v5, v2, v2
-; GFX9-FLUSH-NEXT:    v_mad_f32 v6, v6, v3, v3
-; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v7, -v1, v5, v4 op_sel_hi:[1,0,0]
-; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v4, -v0, v6, v4 op_sel_hi:[1,0,0]
-; GFX9-FLUSH-NEXT:    v_mul_f32_e32 v2, v7, v2
-; GFX9-FLUSH-NEXT:    v_mul_f32_e32 v3, v4, v3
+; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v4, -v1, v2, s4 op_sel_hi:[1,0,0]
+; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v5, -v0, v3, s4 op_sel_hi:[1,0,0]
+; GFX9-FLUSH-NEXT:    v_mad_f32 v4, v4, v2, v2
+; GFX9-FLUSH-NEXT:    v_mad_f32 v5, v5, v3, v3
+; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v6, -v1, v4, s4 op_sel_hi:[1,0,0]
+; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v7, -v0, v5, s4 op_sel_hi:[1,0,0]
+; GFX9-FLUSH-NEXT:    v_mul_f32_e32 v2, v6, v2
+; GFX9-FLUSH-NEXT:    v_mul_f32_e32 v3, v7, v3
 ; GFX9-FLUSH-NEXT:    v_and_b32_e32 v2, 0xff800000, v2
 ; GFX9-FLUSH-NEXT:    v_and_b32_e32 v3, 0xff800000, v3
-; GFX9-FLUSH-NEXT:    v_mad_mixlo_f16 v2, v2, 1.0, v5 op_sel_hi:[0,1,0]
+; GFX9-FLUSH-NEXT:    v_mad_mixlo_f16 v2, v2, 1.0, v4 op_sel_hi:[0,1,0]
 ; GFX9-FLUSH-NEXT:    v_div_fixup_f16 v1, v2, v1, 1.0
-; GFX9-FLUSH-NEXT:    v_mad_mixlo_f16 v2, v3, 1.0, v6 op_sel_hi:[0,1,0]
+; GFX9-FLUSH-NEXT:    v_mad_mixlo_f16 v2, v3, 1.0, v5 op_sel_hi:[0,1,0]
 ; GFX9-FLUSH-NEXT:    v_div_fixup_f16 v0, v2, v0, 1.0
 ; GFX9-FLUSH-NEXT:    v_pack_b32_f16 v0, v1, v0
 ; GFX9-FLUSH-NEXT:    s_setpc_b64 s[30:31]
@@ -5494,23 +5493,23 @@ define <2 x half> @v_rsq_v2f16(<2 x half> %a) {
 ; GFX10-IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-IEEE-NEXT:    v_sqrt_f16_e32 v1, v0
 ; GFX10-IEEE-NEXT:    v_sqrt_f16_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX10-IEEE-NEXT:    v_mov_b32_e32 v4, 1.0
+; GFX10-IEEE-NEXT:    s_mov_b32 s4, 1.0
 ; GFX10-IEEE-NEXT:    v_cvt_f32_f16_e32 v2, v1
 ; GFX10-IEEE-NEXT:    v_cvt_f32_f16_e32 v3, v0
 ; GFX10-IEEE-NEXT:    v_rcp_f32_e32 v2, v2
 ; GFX10-IEEE-NEXT:    v_rcp_f32_e32 v3, v3
-; GFX10-IEEE-NEXT:    v_fma_mix_f32 v5, -v1, v2, v4 op_sel_hi:[1,0,0]
-; GFX10-IEEE-NEXT:    v_fma_mix_f32 v6, -v0, v3, v4 op_sel_hi:[1,0,0]
-; GFX10-IEEE-NEXT:    v_fma_f32 v5, v5, v2, v2
-; GFX10-IEEE-NEXT:    v_fma_f32 v6, v6, v3, v3
-; GFX10-IEEE-NEXT:    v_fma_mix_f32 v7, -v1, v5, v4 op_sel_hi:[1,0,0]
-; GFX10-IEEE-NEXT:    v_fma_mix_f32 v4, -v0, v6, v4 op_sel_hi:[1,0,0]
-; GFX10-IEEE-NEXT:    v_mul_f32_e32 v2, v7, v2
-; GFX10-IEEE-NEXT:    v_mul_f32_e32 v3, v4, v3
+; GFX10-IEEE-NEXT:    v_fma_mix_f32 v4, -v1, v2, s4 op_sel_hi:[1,0,0]
+; GFX10-IEEE-NEXT:    v_fma_mix_f32 v5, -v0, v3, s4 op_sel_hi:[1,0,0]
+; GFX10-IEEE-NEXT:    v_fma_f32 v4, v4, v2, v2
+; GFX10-IEEE-NEXT:    v_fma_f32 v5, v5, v3, v3
+; GFX10-IEEE-NEXT:    v_fma_mix_f32 v6, -v1, v4, s4 op_sel_hi:[1,0,0]
+; GFX10-IEEE-NEXT:    v_fma_mix_f32 v7, -v0, v5, s4 op_sel_hi:[1,0,0]
+; GFX10-IEEE-NEXT:    v_mul_f32_e32 v2, v6, v2
+; GFX10-IEEE-NEXT:    v_mul_f32_e32 v3, v7, v3
 ; GFX10-IEEE-NEXT:    v_and_b32_e32 v2, 0xff800000, v2
 ; GFX10-IEEE-NEXT:    v_and_b32_e32 v3, 0xff800000, v3
-; GFX10-IEEE-NEXT:    v_fma_mixlo_f16 v2, v2, 1.0, v5 op_sel_hi:[0,1,0]
-; GFX10-IEEE-NEXT:    v_fma_mixlo_f16 v3, v3, 1.0, v6 op_sel_hi:[0,1,0]
+; GFX10-IEEE-NEXT:    v_fma_mixlo_f16 v2, v2, 1.0, v4 op_sel_hi:[0,1,0]
+; GFX10-IEEE-NEXT:    v_fma_mixlo_f16 v3, v3, 1.0, v5 op_sel_hi:[0,1,0]
 ; GFX10-IEEE-NEXT:    v_div_fixup_f16 v1, v2, v1, 1.0
 ; GFX10-IEEE-NEXT:    v_div_fixup_f16 v0, v3, v0, 1.0
 ; GFX10-IEEE-NEXT:    v_pack_b32_f16 v0, v1, v0
@@ -5547,7 +5546,7 @@ define <2 x half> @v_rsq_v2f16(<2 x half> %a) {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; GFX11-NEXT:    v_sqrt_f16_e32 v0, v0
-; GFX11-NEXT:    v_mov_b32_e32 v4, 1.0
+; GFX11-NEXT:    s_mov_b32 s0, 1.0
 ; GFX11-NEXT:    v_sqrt_f16_e32 v1, v1
 ; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX11-NEXT:    v_cvt_f32_f16_e32 v2, v0
@@ -5555,17 +5554,17 @@ define <2 x half> @v_rsq_v2f16(<2 x half> %a) {
 ; GFX11-NEXT:    v_rcp_f32_e32 v2, v2
 ; GFX11-NEXT:    v_rcp_f32_e32 v3, v3
 ; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
-; GFX11-NEXT:    v_fma_mix_f32 v5, -v0, v2, v4 op_sel_hi:[1,0,0]
-; GFX11-NEXT:    v_fma_mix_f32 v6, -v1, v3, v4 op_sel_hi:[1,0,0]
-; GFX11-NEXT:    v_fma_f32 v5, v5, v2, v2
-; GFX11-NEXT:    v_fma_f32 v6, v6, v3, v3
-; GFX11-NEXT:    v_fma_mix_f32 v7, -v0, v5, v4 op_sel_hi:[1,0,0]
-; GFX11-NEXT:    v_fma_mix_f32 v4, -v1, v6, v4 op_sel_hi:[1,0,0]
-; GFX11-NEXT:    v_dual_mul_f32 v2, v7, v2 :: v_dual_mul_f32 v3, v4, v3
+; GFX11-NEXT:    v_fma_mix_f32 v4, -v0, v2, s0 op_sel_hi:[1,0,0]
+; GFX11-NEXT:    v_fma_mix_f32 v5, -v1, v3, s0 op_sel_hi:[1,0,0]
+; GFX11-NEXT:    v_fma_f32 v4, v4, v2, v2
+; GFX11-NEXT:    v_fma_f32 v5, v5, v3, v3
+; GFX11-NEXT:    v_fma_mix_f32 v6, -v0, v4, s0 op_sel_hi:[1,0,0]
+; GFX11-NEXT:    v_fma_mix_f32 v7, -v1, v5, s0 op_sel_hi:[1,0,0]
+; GFX11-NEXT:    v_dual_mul_f32 v2, v6, v2 :: v_dual_mul_f32 v3, v7, v3
 ; GFX11-NEXT:    v_and_b32_e32 v2, 0xff800000, v2
 ; GFX11-NEXT:    v_and_b32_e32 v3, 0xff800000, v3
-; GFX11-NEXT:    v_fma_mixlo_f16 v2, v2, 1.0, v5 op_sel_hi:[0,1,0]
-; GFX11-NEXT:    v_fma_mixlo_f16 v3, v3, 1.0, v6 op_sel_hi:[0,1,0]
+; GFX11-NEXT:    v_fma_mixlo_f16 v2, v2, 1.0, v4 op_sel_hi:[0,1,0]
+; GFX11-NEXT:    v_fma_mixlo_f16 v3, v3, 1.0, v5 op_sel_hi:[0,1,0]
 ; GFX11-NEXT:    v_div_fixup_f16 v0, v2, v0, 1.0
 ; GFX11-NEXT:    v_div_fixup_f16 v1, v3, v1, 1.0
 ; GFX11-NEXT:    v_pack_b32_f16 v0, v0, v1
@@ -5765,24 +5764,24 @@ define <2 x half> @v_neg_rsq_v2f16(<2 x half> %a) {
 ; GFX9-FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-FLUSH-NEXT:    v_sqrt_f16_e32 v1, v0
 ; GFX9-FLUSH-NEXT:    v_sqrt_f16_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX9-FLUSH-NEXT:    v_mov_b32_e32 v4, -1.0
+; GFX9-FLUSH-NEXT:    s_mov_b32 s4, -1.0
 ; GFX9-FLUSH-NEXT:    v_cvt_f32_f16_e32 v2, v1
 ; GFX9-FLUSH-NEXT:    v_cvt_f32_f16_e32 v3, v0
 ; GFX9-FLUSH-NEXT:    v_rcp_f32_e32 v2, v2
 ; GFX9-FLUSH-NEXT:    v_rcp_f32_e32 v3, v3
-; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v5, v1, v2, v4 op_sel_hi:[1,0,0]
-; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v6, v0, v3, v4 op_sel_hi:[1,0,0]
-; GFX9-FLUSH-NEXT:    v_mad_f32 v5, v5, v2, -v2
-; GFX9-FLUSH-NEXT:    v_mad_f32 v6, v6, v3, -v3
-; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v7, -v1, v5, v4 op_sel_hi:[1,0,0]
-; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v4, -v0, v6, v4 op_sel_hi:[1,0,0]
-; GFX9-FLUSH-NEXT:    v_mul_f32_e32 v2, v7, v2
-; GFX9-FLUSH-NEXT:    v_mul_f32_e32 v3, v4, v3
+; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v4, v1, v2, s4 op_sel_hi:[1,0,0]
+; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v5, v0, v3, s4 op_sel_hi:[1,0,0]
+; GFX9-FLUSH-NEXT:    v_mad_f32 v4, v4, v2, -v2
+; GFX9-FLUSH-NEXT:    v_mad_f32 v5, v5, v3, -v3
+; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v6, -v1, v4, s4 op_sel_hi:[1,0,0]
+; GFX9-FLUSH-NEXT:    v_mad_mix_f32 v7, -v0, v5, s4 op_sel_hi:[1,0,0]
+; GFX9-FLUSH-NEXT:    v_mul_f32_e32 v2, v6, v2
+; GFX9-FLUSH-NEXT:    v_mul_f32_e32 v3, v7, v3
 ; GFX9-FLUSH-NEXT:    v_and_b32_e32 v2, 0xff800000, v2
 ; GFX9-FLUSH-NEXT:    v_and_b32_e32 v3, 0xff800000, v3
-; GFX9-FLUSH-NEXT:    v_mad_mixlo_f16 v2, v2, 1.0, v5 op_sel_hi:[0,1,0]
+; GFX9-FLUSH-NEXT:    v_mad_mixlo_f16 v2, v2, 1.0, v4 op_sel_hi:[0,1,0]
 ; GFX9-FLUSH-NEXT:    v_div_fixup_f16 v1, v2, v1, -1.0
-; GFX9-FLUSH-NEXT:    v_mad_mixlo_f16 v2, v3, 1.0, v6 op_sel_hi:[0,1,0]
+; GFX9-FLUSH-NEXT:    v_mad_mixlo_f16 v2, v3, 1.0, v5 op_sel_hi:[0,1,0]
 ; GFX9-FLUSH-NEXT:    v_div_fixup_f16 v0, v2, v0, -1.0
 ; GFX9-FLUSH-NEXT:    v_pack_b32_f16 v0, v1, v0
 ; GFX9-FLUSH-NEXT:    s_setpc_b64 s[30:31]
@@ -5792,23 +5791,23 @@ define <2 x half> @v_neg_rsq_v2f16(<2 x half> %a) {
 ; GFX10-IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-IEEE-NEXT:    v_sqrt_f16_e32 v1, v0
 ; GFX10-IEEE-NEXT:    v_sqrt_f16_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX10-IEEE-NEXT:    v_mov_b32_e32 v4, -1.0
+; GFX10-IEEE-NEXT:    s_mov_b32 s4, -1.0
 ; GFX10-IEEE-NEXT:    v_cvt_f32_f16_e32 v2, v1
 ; GFX10-IEEE-NEXT:    v_cvt_f32_f16_e32 v3, v0
 ; GFX10-IEEE-NEXT:    v_rcp_f32_e32 v2, v2
 ; GFX10-IEEE-NEXT:    v_rcp_f32_e32 v3, v3
-; GFX10-IEEE-NEXT:    v_fma_mix_f32 v5, v1, v2, v4 op_sel_hi:[1,0,0]
-; GFX10-IEEE-NEXT:    v_fma_mix_f32 v6, v0, v3, v4 op_sel_hi:[1,0,0]
-; GFX10-IEEE-NEXT:    v_fma_f32 v5, v5, v2, -v2
-; GFX10-IEEE-NEXT:    v_fma_f32 v6, v6, v3, -v3
-; GFX10-IEEE-NEXT:    v_fma_mix_f32 v7, -v1, v5, v4 op_sel_hi:[1,0,0]
-; GFX10-IEEE-NEXT:    v_fma_mix_f32 v4, -v0, v6, v4 op_sel_hi:[1,0,0]
-; GFX10-IEEE-NEXT:    v_mul_f32_e32 v2, v7, v2
-; GFX10-IEEE-NEXT:    v_mul_f32_e32 v3, v4, v3
+; GFX10-IEEE-NEXT:    v_fma_mix_f32 v4, v1, v2, s4 op_sel_hi:[1,0,0]
+; GFX10-IEEE-NEXT:    v_fma_mix_f32 v5, v0, v3, s4 op_sel_hi:[1,0,0]
+; GFX10-IEEE-NEXT:    v_fma_f32 v4, v4, v2, -v2
+; GFX10-IEEE-NEXT:    v_fma_f32 v5, v5, v3, -v3
+; GFX10-IEEE-NEXT:    v_fma_mix_f32 v6, -v1, v4, s4 op_sel_hi:[1,0,0]
+; GFX10-IEEE-NEXT:    v_fma_mix_f32 v7, -v0, v5, s4 op_sel_hi:[1,0,0]
+; GFX10-IEEE-NEXT:    v_mul_f32_e32 v2, v6, v2
+; GFX10-IEEE-NEXT:    v_mul_f32_e32 v3, v7, v3
 ; GFX10-IEEE-NEXT:    v_and_b32_e32 v2, 0xff800000, v2
 ; GFX10-IEEE-NEXT:    v_and_b32_e32 v3, 0xff800000, v3
-; GFX10-IEEE-NEXT:    v_fma_mixlo_f16 v2, v2, 1.0, v5 op_sel_hi:[0,1,0]
-; GFX10-IEEE-NEXT:    v_fma_mixlo_f16 v3, v3, 1.0, v6 op_sel_hi:[0,1,0]
+; GFX10-IEEE-NEXT:    v_fma_mixlo_f16 v2, v2, 1.0, v4 op_sel_hi:[0,1,0]
+; GFX10-IEEE-NEXT:    v_fma_mixlo_f16 v3, v3, 1.0, v5 op_sel_hi:[0,1,0]
 ; GFX10-IEEE-NEXT:    v_div_fixup_f16 v1, v2, v1, -1.0
 ; GFX10-IEEE-NEXT:    v_div_fixup_f16 v0, v3, v0, -1.0
 ; GFX10-IEEE-NEXT:    v_pack_b32_f16 v0, v1, v0
@@ -5845,7 +5844,7 @@ define <2 x half> @v_neg_rsq_v2f16(<2 x half> %a) {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; GFX11-NEXT:    v_sqrt_f16_e32 v0, v0
-; GFX11-NEXT:    v_mov_b32_e32 v4, -1.0
+; GFX11-NEXT:    s_mov_b32 s0, -1.0
 ; GFX11-NEXT:    v_sqrt_f16_e32 v1, v1
 ; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX11-NEXT:    v_cvt_f32_f16_e32 v2, v0
@@ -5853,17 +5852,17 @@ define <2 x half> @v_neg_rsq_v2f16(<2 x half> %a) {
 ; GFX11-NEXT:    v_rcp_f32_e32 v2, v2
 ; GFX11-NEXT:    v_rcp_f32_e32 v3, v3
 ; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
-; GFX11-NEXT:    v_fma_mix_f32 v5, v0, v2, v4 op_sel_hi:[1,0,0]
-; GFX11-NEXT:    v_fma_mix_f32 v6, v1, v3, v4 op_sel_hi:[1,0,0]
-; GFX11-NEXT:    v_fma_f32 v5, v5, v2, -v2
-; GFX11-NEXT:    v_fma_f32 v6, v6, v3, -v3
-; GFX11-NEXT:    v_fma_mix_f32 v7, -v0, v5, v4 op_sel_hi:[1,0,0]
-; GFX11-NEXT:    v_fma_mix_f32 v4, -v1, v6, v4 op_sel_hi:[1,0,0]
-; GFX11-NEXT:    v_dual_mul_f32 v2, v7, v2 :: v_dual_mul_f32 v3, v4, v3
+; GFX11-NEXT:    v_fma_mix_f32 v4, v0, v2, s0 op_sel_hi:[1,0,0]
+; GFX11-NEXT:    v_fma_mix_f32 v5, v1, v3, s0 op_sel_hi:[1,0,0]
+; GFX11-NEXT:    v_fma_f32 v4, v4, v2, -v2
+; GFX11-NEXT:    v_fma_f32 v5, v5, v3, -v3
+; GFX11-NEXT:    v_fma_mix_f32 v6, -v0, v4, s0 op_sel_hi:[1,0,0]
+; GFX11-NEXT:    v_fma_mix_f32 v7, -v1, v5, s0 op_sel_hi:[1,0,0]
+; GFX11-NEXT:    v_dual_mul_f32 v2, v6, v2 :: v_dual_mul_f32 v3, v7, v3
 ; GFX11-NEXT:    v_and_b32_e32 v2, 0xff800000, v2
 ; GFX11-NEXT:    v_and_b32_e32 v3, 0xff800000, v3
-; GFX11-NEXT:    v_fma_mixlo_f16 v2, v2, 1.0, v5 op_sel_hi:[0,1,0]
-; GFX11-NEXT:    v_fma_mixlo_f16 v3, v3, 1.0, v6 op_sel_hi:[0,1,0]
+; GFX11-NEXT:    v_fma_mixlo_f16 v2, v2, 1.0, v4 op_sel_hi:[0,1,0]
+; GFX11-NEXT:    v_fma_mixlo_f16 v3, v3, 1.0, v5 op_sel_hi:[0,1,0]
 ; GFX11-NEXT:    v_div_fixup_f16 v0, v2, v0, -1.0
 ; GFX11-NEXT:    v_div_fixup_f16 v1, v3, v1, -1.0
 ; GFX11-NEXT:    v_pack_b32_f16 v0, v0, v1
