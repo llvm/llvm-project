@@ -207,9 +207,8 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
 
 /// Helper for extra no-alias checks via known-safe recipe and SCEV.
 class SinkStoreInfo {
-  SmallPtrSet<VPReplicateRecipe *, 4> ExcludeRecipes;
-  VPReplicateRecipe *GroupLeader;
-  Instruction *GroupLeaderI = nullptr;
+  SmallPtrSet<VPRecipeBase *, 4> ExcludeRecipes;
+  VPRecipeBase *GroupLeader;
   PredicatedScalarEvolution *PSE = nullptr;
   const Loop *L = nullptr;
 
@@ -258,27 +257,23 @@ public:
                 VPReplicateRecipe &GroupLeader, PredicatedScalarEvolution &PSE,
                 const Loop &L)
       : ExcludeRecipes(ExcludeRecipes.begin(), ExcludeRecipes.end()),
-        GroupLeader(&GroupLeader),
-        GroupLeaderI(GroupLeader.getUnderlyingInstr()), PSE(&PSE), L(&L) {}
+        GroupLeader(&GroupLeader), PSE(&PSE), L(&L) {}
 
-  SinkStoreInfo(VPReplicateRecipe &GroupLeader)
-      : GroupLeader(&GroupLeader),
-        GroupLeaderI(GroupLeader.getUnderlyingInstr()) {}
-
-  SinkStoreInfo(Instruction &GroupLeader)
-      : GroupLeader(nullptr), GroupLeaderI(&GroupLeader) {}
+  SinkStoreInfo(VPRecipeBase &GroupLeader) : GroupLeader(&GroupLeader) {}
+  SinkStoreInfo(ArrayRef<VPRecipeBase *> ExcludeRecipes,
+                VPRecipeBase &GroupLeader)
+      : ExcludeRecipes(ExcludeRecipes.begin(), ExcludeRecipes.end()),
+        GroupLeader(&GroupLeader) {}
 
   /// Return true if \p R should be skipped during alias checking, either
   /// because it's in the exclude set or because no-alias can be proven via
   /// SCEV.
   bool shouldSkip(VPRecipeBase &R) const {
+    if (ExcludeRecipes.contains(&R))
+      return true;
     auto *Store = dyn_cast<VPReplicateRecipe>(&R);
-    if (ExcludeRecipes.contains(Store))
-      return true;
-    if (Store && GroupLeader && isNoAliasViaDistance(Store, GroupLeader))
-      return true;
-    auto *WidenStore = dyn_cast<VPWidenStoreRecipe>(&R);
-    return WidenStore && GroupLeaderI == &WidenStore->getIngredient();
+    auto *Leader = dyn_cast<VPReplicateRecipe>(GroupLeader);
+    return Store && Leader && isNoAliasViaDistance(Store, Leader);
   }
 };
 
@@ -1907,7 +1902,7 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
         // Only narrow scatters that can be sunk to the middle block.
         VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
         auto MemLoc = vputils::getMemoryLocation(*WidenStoreR);
-        SinkStoreInfo SinkInfo(WidenStoreR->getIngredient());
+        SinkStoreInfo SinkInfo({WidenStoreR}, *WidenStoreR);
         if (!MemLoc || !canHoistOrSinkWithNoAliasCheck(
                            *MemLoc, LoopRegion->getEntryBasicBlock(),
                            LoopRegion->getExitingBasicBlock(), SinkInfo))
