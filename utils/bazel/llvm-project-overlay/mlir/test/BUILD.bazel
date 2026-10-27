@@ -571,6 +571,7 @@ cc_library(
         "//mlir:FuncDialect",
         "//mlir:FuncToSPIRV",
         "//mlir:GPUDialect",
+        "//mlir:GPUSPIRVTransforms",
         "//mlir:GPUToGPURuntimeTransforms",
         "//mlir:GPUToSPIRV",
         "//mlir:GPUTransforms",
@@ -793,6 +794,7 @@ cc_library(
         "//mlir:FuncDialect",
         "//mlir:FuncToLLVM",
         "//mlir:GPUDialect",
+        "//mlir:GPUROCDLTransforms",
         "//mlir:GPUToGPURuntimeTransforms",
         "//mlir:GPUToNVVMTransforms",
         "//mlir:GPUTransforms",
@@ -1081,6 +1083,7 @@ cc_library(
     includes = ["lib/Dialect/Test"],
     deps = [
         ":TestDialect",
+        "//llvm:Support",
         "//mlir:BufferizationDialect",
         "//mlir:BufferizationInterfaces",
         "//mlir:BufferizationTransforms",

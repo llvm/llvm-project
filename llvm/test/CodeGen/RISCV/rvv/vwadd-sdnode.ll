@@ -1630,9 +1630,8 @@ define <vscale x 4 x i32> @vwadd_sext_chain_nxv4i8_nxv4i32(<vscale x 4 x i32> %a
 ; CHECK-NEXT:    vwadd.vv v14, v12, v13
 ; CHECK-NEXT:    vwadd.vv v12, v10, v11
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vwadd.vv v10, v12, v14
-; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vadd.vv v8, v10, v8
+; CHECK-NEXT:    vadd.vv v10, v12, v14
+; CHECK-NEXT:    vwadd.wv v8, v8, v10
 ; CHECK-NEXT:    ret
   %sa = sext <vscale x 4 x i8> %a to <vscale x 4 x i32>
   %sb = sext <vscale x 4 x i8> %b to <vscale x 4 x i32>
