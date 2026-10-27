@@ -12,10 +12,11 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64common = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
-    ; CHECK-NEXT: [[SBFMXri:%[0-9]+]]:gpr64common = SBFMXri [[COPY1]], 0, 31
-    ; CHECK-NEXT: [[LDRSroX:%[0-9]+]]:fpr32 = LDRSroX [[COPY]], [[SBFMXri]], 0, 1
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr32 = COPY $s0
-    ; CHECK-NEXT: STRSroX [[COPY2]], [[COPY]], [[SBFMXri]], 0, 1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr32 = COPY [[COPY1]].sub_32
+    ; CHECK-NEXT: [[LDRSroW:%[0-9]+]]:fpr32 = LDRSroW [[COPY]], [[COPY2]], 1, 1
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:fpr32 = COPY $s0
+    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:gpr32 = COPY [[COPY1]].sub_32
+    ; CHECK-NEXT: STRSroW [[COPY3]], [[COPY]], [[COPY4]], 1, 1
     ; CHECK-NEXT: RET_ReallyLR
     %0:gpr64common = COPY $x0
     %1:gpr64 = COPY $x1
@@ -36,12 +37,11 @@ body: |
     ; CHECK: liveins: $x0, $s0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK-NEXT: [[ADDXri:%[0-9]+]]:gpr64sp = ADDXri [[COPY]], 16, 0
-    ; CHECK-NEXT: [[LDRSui:%[0-9]+]]:fpr32 = LDRSui [[ADDXri]], 100
-    ; CHECK-NEXT: [[LDURSi:%[0-9]+]]:fpr32 = LDURSi [[ADDXri]], 1
+    ; CHECK-NEXT: [[LDRSui:%[0-9]+]]:fpr32 = LDRSui [[COPY]], 104
+    ; CHECK-NEXT: [[LDURSi:%[0-9]+]]:fpr32 = LDURSi [[COPY]], 17
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr32 = COPY $s0
-    ; CHECK-NEXT: STRSui [[COPY1]], [[ADDXri]], 1000
-    ; CHECK-NEXT: STURSi [[COPY1]], [[ADDXri]], -4
+    ; CHECK-NEXT: STRSui [[COPY1]], [[COPY]], 1004
+    ; CHECK-NEXT: STURSi [[COPY1]], [[COPY]], 12
     ; CHECK-NEXT: RET_ReallyLR
     %0:gpr64sp = COPY $x0
     %1:gpr64sp = ADDXri %0, 16, 0
@@ -64,10 +64,9 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64common = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
-    ; CHECK-NEXT: [[ADDXrx:%[0-9]+]]:gpr64common = ADDXrx [[COPY]], [[COPY1]], 50
-    ; CHECK-NEXT: [[LDRSui:%[0-9]+]]:fpr32 = LDRSui [[ADDXrx]], 0
+    ; CHECK-NEXT: [[LDRSroW:%[0-9]+]]:fpr32 = LDRSroW [[COPY]], [[COPY1]], 1, 1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr32 = COPY $s0
-    ; CHECK-NEXT: STURSi [[COPY2]], [[ADDXrx]], 0
+    ; CHECK-NEXT: STRSroW [[COPY2]], [[COPY]], [[COPY1]], 1, 1
     ; CHECK-NEXT: RET_ReallyLR
     %0:gpr64common = COPY $x0
     %1:gpr32 = COPY $w1
@@ -89,10 +88,9 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64common = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
-    ; CHECK-NEXT: [[ADDXrx:%[0-9]+]]:gpr64common = ADDXrx [[COPY]], [[COPY1]], 18
-    ; CHECK-NEXT: [[LDURSi:%[0-9]+]]:fpr32 = LDURSi [[ADDXrx]], 0
+    ; CHECK-NEXT: [[LDRSroW:%[0-9]+]]:fpr32 = LDRSroW [[COPY]], [[COPY1]], 0, 1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr32 = COPY $s0
-    ; CHECK-NEXT: STRSui [[COPY2]], [[ADDXrx]], 0
+    ; CHECK-NEXT: STRSroW [[COPY2]], [[COPY]], [[COPY1]], 0, 1
     ; CHECK-NEXT: RET_ReallyLR
     %0:gpr64common = COPY $x0
     %1:gpr32 = COPY $w1
@@ -114,10 +112,9 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64common = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
-    ; CHECK-NEXT: [[ADDXrs:%[0-9]+]]:gpr64common = ADDXrs [[COPY]], [[COPY1]], 2
-    ; CHECK-NEXT: [[LDRSui:%[0-9]+]]:fpr32 = LDRSui [[ADDXrs]], 0
+    ; CHECK-NEXT: [[LDRSroX:%[0-9]+]]:fpr32 = LDRSroX [[COPY]], [[COPY1]], 0, 1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr32 = COPY $s0
-    ; CHECK-NEXT: STRSui [[COPY2]], [[ADDXrs]], 0
+    ; CHECK-NEXT: STRSroX [[COPY2]], [[COPY]], [[COPY1]], 0, 1
     ; CHECK-NEXT: RET_ReallyLR
     %0:gpr64common = COPY $x0
     %1:gpr64 = COPY $x1
@@ -139,10 +136,9 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64common = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
-    ; CHECK-NEXT: [[ADDXrs:%[0-9]+]]:gpr64common = ADDXrs [[COPY]], [[COPY1]], 2
-    ; CHECK-NEXT: [[LDURSi:%[0-9]+]]:fpr32 = LDURSi [[ADDXrs]], 0
+    ; CHECK-NEXT: [[LDRSroX:%[0-9]+]]:fpr32 = LDRSroX [[COPY]], [[COPY1]], 0, 1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr32 = COPY $s0
-    ; CHECK-NEXT: STURSi [[COPY2]], [[ADDXrs]], 0
+    ; CHECK-NEXT: STRSroX [[COPY2]], [[COPY]], [[COPY1]], 0, 1
     ; CHECK-NEXT: RET_ReallyLR
     %0:gpr64common = COPY $x0
     %1:gpr64 = COPY $x1
@@ -163,10 +159,9 @@ body: |
     ; CHECK: liveins: $x0, $s0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK-NEXT: [[ADDXri:%[0-9]+]]:gpr64sp = ADDXri [[COPY]], 1, 0
-    ; CHECK-NEXT: [[LDRSui:%[0-9]+]]:fpr32 = LDRSui [[ADDXri]], 1
+    ; CHECK-NEXT: [[LDURSi:%[0-9]+]]:fpr32 = LDURSi [[COPY]], 5
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr32 = COPY $s0
-    ; CHECK-NEXT: STRSui [[COPY1]], [[ADDXri]], 1
+    ; CHECK-NEXT: STURSi [[COPY1]], [[COPY]], 5
     ; CHECK-NEXT: RET_ReallyLR
     %0:gpr64sp = COPY $x0
     %1:gpr64sp = ADDXri %0, 1, 0
@@ -186,10 +181,9 @@ body: |
     ; CHECK: liveins: $x0, $s0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK-NEXT: [[ADDXri:%[0-9]+]]:gpr64sp = ADDXri [[COPY]], 1, 0
-    ; CHECK-NEXT: [[LDURSi:%[0-9]+]]:fpr32 = LDURSi [[ADDXri]], 255
+    ; CHECK-NEXT: [[LDRSui:%[0-9]+]]:fpr32 = LDRSui [[COPY]], 64
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr32 = COPY $s0
-    ; CHECK-NEXT: STURSi [[COPY1]], [[ADDXri]], 255
+    ; CHECK-NEXT: STRSui [[COPY1]], [[COPY]], 64
     ; CHECK-NEXT: RET_ReallyLR
     %0:gpr64sp = COPY $x0
     %1:gpr64sp = ADDXri %0, 1, 0
