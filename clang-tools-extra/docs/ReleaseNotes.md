@@ -146,7 +146,8 @@ infrastructure are described first, followed by tool-specific sections.
 - {program}`clang-tidy` now warns when `HeaderFilterRegex` or
   `ExcludeHeaderFilterRegex` (or `--header-filter` or
   `--exclude-header-filter`) is not a valid POSIX extended regular expression,
-  and `--verify-config` reports it. Previously such a filter silently matched
+  and `--verify-config` reports it. Previously an invalid header filter
+  silently matched no headers and an invalid exclude filter silently excluded
   no headers.
 
 #### New checks

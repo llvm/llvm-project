@@ -42,6 +42,9 @@
 // CHECK-VERIFY-REGEX-DAG: command-line option '-config': warning: invalid ExcludeHeaderFilterRegex '(': parentheses not balanced [-verify-config]
 
 // RUN: not clang-tidy -verify-config --config='' -header-filter='(?!x)' 2>&1 | FileCheck %s -check-prefix=CHECK-VERIFY-REGEX-CLI -implicit-check-not='{{warning|error}}:'
-// CHECK-VERIFY-REGEX-CLI: warning: invalid HeaderFilterRegex '(?!x)': repetition-operator operand invalid [-verify-config]
+// CHECK-VERIFY-REGEX-CLI: command-line option '-header-filter': warning: invalid HeaderFilterRegex '(?!x)': repetition-operator operand invalid [-verify-config]
+
+// RUN: not clang-tidy -verify-config --config='' -exclude-header-filter='(' 2>&1 | FileCheck %s -check-prefix=CHECK-VERIFY-EXCLUDE-REGEX-CLI -implicit-check-not='{{warning|error}}:'
+// CHECK-VERIFY-EXCLUDE-REGEX-CLI: command-line option '-exclude-header-filter': warning: invalid ExcludeHeaderFilterRegex '(': parentheses not balanced [-verify-config]
 
 // RUN: clang-tidy -verify-config --config='{HeaderFilterRegex: "", ExcludeHeaderFilterRegex: ""}' | FileCheck %s -check-prefix=CHECK-VERIFY-OK

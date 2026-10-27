@@ -737,10 +737,18 @@ int clangTidyMain(int argc, const char **argv) {
       // --exclude-header-filter, which are also reported as command-line
       // overrides when set, so checking them here would report them twice.
       if (Source != ClangTidyOptionsProvider::OptionsSourceTypeDefaultBinary) {
-        AnyInvalid |= verifyFilterRegex(Opts.HeaderFilterRegex,
-                                        "HeaderFilterRegex", Source);
-        AnyInvalid |= verifyFilterRegex(Opts.ExcludeHeaderFilterRegex,
-                                        "ExcludeHeaderFilterRegex", Source);
+        // The raw command-line override entry is labeled as '-checks'; name the
+        // flag that actually carries the filter instead.
+        const bool IsOverride =
+            Source ==
+            ClangTidyOptionsProvider::OptionsSourceTypeCheckCommandLineOption;
+        AnyInvalid |= verifyFilterRegex(
+            Opts.HeaderFilterRegex, "HeaderFilterRegex",
+            IsOverride ? "command-line option '-header-filter'" : Source);
+        AnyInvalid |= verifyFilterRegex(
+            Opts.ExcludeHeaderFilterRegex, "ExcludeHeaderFilterRegex",
+            IsOverride ? "command-line option '-exclude-header-filter'"
+                       : Source);
       }
     }
     if (AnyInvalid)
