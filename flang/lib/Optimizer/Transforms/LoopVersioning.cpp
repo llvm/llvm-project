@@ -493,6 +493,8 @@ void LoopVersioningPass::runOnOperation() {
   // over the dummy. All decisions are made before any IR is changed.
   {
     fir::AliasAnalysis aliasAnalysis;
+    // This pass runs on a function, so it must not look up callees or globals.
+    aliasAnalysis.disableSymbolLookups();
     llvm::SmallVector<std::pair<fir::LoadOp, mlir::Value>> forwards;
     func.walk([&](fir::LoadOp load) {
       if (!load->getParentOfType<fir::DoLoopOp>() ||
@@ -659,6 +661,8 @@ void LoopVersioningPass::runOnOperation() {
   // loops.
   {
     fir::AliasAnalysis aliasAnalysis;
+    // This pass runs on a function, so it must not look up callees or globals.
+    aliasAnalysis.disableSymbolLookups();
     llvm::DenseMap<mlir::Operation *, llvm::SmallPtrSet<mlir::Value, 4>> added;
     llvm::SmallVector<std::pair<fir::LoadOp, mlir::Operation *>> hoists;
     for (OpsWithArgs &info : llvm::reverse(loopsOfInterest)) {
