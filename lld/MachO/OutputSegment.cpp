@@ -450,8 +450,10 @@ BoundaryTable::findExtenderPlacementInRange(uint64_t lowVA, uint64_t highVA,
       partition_point(boundaries, [&](const InputSectionBoundary &boundary) {
         return boundary.getInputEndVA() <= highVA;
       });
-  return findInDirection(make_pointer_range(make_range(begin, end)), preference,
-                         isUsable);
+  auto range =
+      llvm::map_range(llvm::make_range(begin, end),
+                      [](InputSectionBoundary &boundary) { return &boundary; });
+  return findInDirection(range, preference, isUsable);
 }
 
 struct CallSite {
