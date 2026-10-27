@@ -28,14 +28,9 @@ class DomTreeUpdater;
 class Function;
 class LoopInfo;
 
-/// Positive entry count, or branch weights on some terminator.
-LLVM_ABI bool functionHasScalableBranchProfile(const Function &F);
-
-/// True when a branch weight needs more than 32 bits.
-/// BranchProbabilityInfo extracts weights as uint32_t and asserts if a weight
-/// needs more bits, so callers skip BlockFrequencyInfo instead of using
-/// truncated probabilities.
-LLVM_ABI bool functionHasBranchWeightsWiderThan32Bits(const Function &F);
+/// True when \p F has a positive function_entry_count, or any terminator
+/// carries branch_weights metadata.
+LLVM_ABI bool functionHasEntryCountOrBranchWeights(const Function &F);
 
 /// Blocks that exist now. Ones added later are not in this set.
 LLVM_ABI void recordBlocksBeforeTransform(
@@ -104,8 +99,8 @@ struct ProfileInfo {
 /// Limitations:
 /// -----------
 /// 1. This assumes that all terminators in the CFG are direct branches (the
-///    "br" instruction). indirectbr still asserts. switch and callbr edges
-///    must first be split and added via addSplitTarget().
+///    "br" instruction). The presence of any other control flow such as
+///    indirectbr, switch or callbr will cause an assert.
 ///
 /// 2. The updates to the PHINodes are not sufficient to restore SSA
 ///    form. Consider a definition Def, its use Use, incoming block In2 and

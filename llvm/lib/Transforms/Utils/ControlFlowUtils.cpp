@@ -284,31 +284,13 @@ static void reconnectPhis(BasicBlock *Out, BasicBlock *GuardBlock,
   }
 }
 
-bool llvm::functionHasScalableBranchProfile(const Function &F) {
+bool llvm::functionHasEntryCountOrBranchWeights(const Function &F) {
   if (F.getEntryCount().value_or(0) > 0)
     return true;
   for (const BasicBlock &BB : F) {
     if (const Instruction *Term = BB.getTerminator())
       if (hasBranchWeightMD(*Term))
         return true;
-  }
-  return false;
-}
-
-bool llvm::functionHasBranchWeightsWiderThan32Bits(const Function &F) {
-  for (const BasicBlock &BB : F) {
-    const Instruction *Term = BB.getTerminator();
-    if (!Term)
-      continue;
-    const MDNode *MD = getBranchWeightMDNode(*Term);
-    if (!MD)
-      continue;
-    for (unsigned I = getBranchWeightOffset(MD), E = MD->getNumOperands();
-         I != E; ++I) {
-      const auto *Weight = mdconst::dyn_extract<ConstantInt>(MD->getOperand(I));
-      if (Weight && Weight->getValue().getActiveBits() > 32)
-        return true;
-    }
   }
   return false;
 }
@@ -372,19 +354,13 @@ struct RedirectedEdge {
   bool HadBranchWeights = false;
 };
 
-// False when a weight is not an integer or needs more than 64 bits.
-static bool readBranchWeights64(const MDNode &MD,
-                                SmallVectorImpl<uint64_t> &Weights) {
-  Weights.clear();
-  unsigned Offset = getBranchWeightOffset(&MD);
-  if (Offset >= MD.getNumOperands())
+// Branch weights are unsigned 32-bit values.
+static bool readBranchWeights(const MDNode &MD,
+                              SmallVectorImpl<uint64_t> &Weights) {
+  SmallVector<uint32_t, 8> Raw;
+  if (!extractBranchWeights(&MD, Raw))
     return false;
-  for (unsigned I = Offset, E = MD.getNumOperands(); I != E; ++I) {
-    const auto *Weight = mdconst::dyn_extract<ConstantInt>(MD.getOperand(I));
-    if (!Weight || Weight->getValue().getActiveBits() > 64)
-      return false;
-    Weights.push_back(Weight->getValue().getZExtValue());
-  }
+  Weights.assign(Raw.begin(), Raw.end());
   return true;
 }
 
@@ -394,6 +370,13 @@ static RedirectedEdge
 countFromPredecessor(BlockFrequencyInfo &BFI,
                      const SmallPtrSetImpl<const BasicBlock *> &KnownBlocks,
                      const BasicBlock *SplitBlock) {
+  //   Pred (count = 100)
+  //      |
+  //      +-- weight 10 --> SplitBlock --> Target
+  //      |
+  //      +-- weight 30 --> Other
+  //
+  // SplitBlock count = 100 * 10 / (10 + 30) = 25.
   RedirectedEdge Result;
   const BasicBlock *Pred = SplitBlock->getUniquePredecessor();
   if (!Pred)
@@ -409,7 +392,7 @@ countFromPredecessor(BlockFrequencyInfo &BFI,
     return Result;
   }
   SmallVector<uint64_t, 8> Weights;
-  if (!readBranchWeights64(*MD, Weights) || Weights.size() != NumSuccessors) {
+  if (!readBranchWeights(*MD, Weights) || Weights.size() != NumSuccessors) {
     Result.HadBranchWeights = true;
     return Result;
   }
@@ -443,8 +426,7 @@ struct CollectedRedirectedFlows {
   bool SawBranchWeights = false;
 };
 
-// Counts for both edges of a conditional branch. The 32-bit weight helper
-// drops the top bits, so the 64-bit metadata is read here.
+// Counts for both edges of a conditional branch.
 static void addConditionalBranchFlows(
     const CondBrInst &Br, BasicBlock *FromBlock, BasicBlock *FirstTarget,
     BasicBlock *SecondTarget, BlockFrequencyInfo *BFI,
@@ -471,8 +453,7 @@ static void addConditionalBranchFlows(
     return;
   }
   SmallVector<uint64_t, 2> Weights;
-  // A weight past 64 bits leaves both targets unknown.
-  if (!readBranchWeights64(*MD, Weights) || Weights.size() != 2) {
+  if (!readBranchWeights(*MD, Weights) || Weights.size() != 2) {
     AddFlow(FirstTarget, /*HadBranchWeights=*/true, std::nullopt);
     AddFlow(SecondTarget, /*HadBranchWeights=*/true, std::nullopt);
     return;
@@ -541,8 +522,6 @@ collectRedirectedFlows(ArrayRef<EdgeDescriptor> Branches,
                                 BlocksSeenBefore, addFlow);
       continue;
     }
-    if (!FirstTarget && !SecondTarget)
-      continue;
     // Two different successors that are not a conditional branch. Neither
     // edge has a weight of its own.
     if (FirstTarget && SecondTarget && FirstTarget != SecondTarget) {
@@ -698,15 +677,7 @@ std::pair<BasicBlock *, bool> ControlFlowHub::finalize(
     //                         [exit.b]
     DenseMap<BasicBlock *, uint64_t> TargetWeight;
     DenseSet<BasicBlock *> Unresolved;
-    // If a redirected edge has no target, the corresponding flow cannot be
-    // recovered, so every synthesized guard is marked unknown.
-    bool MissingTarget = any_of(Branches, [&](const EdgeDescriptor &Branch) {
-      auto [FromBlock, FirstTarget, SecondTarget] = Branch;
-      return !FirstTarget && !SecondTarget &&
-             !SplitTargets.contains(FromBlock) &&
-             !isa<CondBrInst>(FromBlock->getTerminator());
-    });
-    if (!BFI || MissingTarget) {
+    if (!BFI) {
       for (BasicBlock *Out : Outgoing)
         Unresolved.insert(Out);
     } else {

@@ -299,9 +299,7 @@ static bool hasMultiExitLoop(const LoopInfo &LI) {
 
 // BPI extracts weights as uint32_t and asserts when one needs more bits.
 static bool shouldCollectProfileInfo(const Function &F, const LoopInfo &LI) {
-  // Profile first. An unprofiled function is one metadata scan.
-  return functionHasScalableBranchProfile(F) &&
-         !functionHasBranchWeightsWiderThan32Bits(F) && hasMultiExitLoop(LI);
+  return functionHasEntryCountOrBranchWeights(F) && hasMultiExitLoop(LI);
 }
 
 static bool runImpl(LoopInfo &LI, DominatorTree &DT, ProfileInfo Profile) {

@@ -465,9 +465,7 @@ bool FixIrreducible::runOnFunction(Function &F) {
   std::optional<BlockFrequencyInfo> OwnedBFI;
   ProfileInfo Profile;
   SmallPtrSet<const BasicBlock *, 32> BlocksSeenBefore;
-  // BPI extracts weights as uint32_t and asserts when one needs more bits.
-  if (hasIrreducibleCycle(CI) && functionHasScalableBranchProfile(F) &&
-      !functionHasBranchWeightsWiderThan32Bits(F)) {
+  if (hasIrreducibleCycle(CI) && functionHasEntryCountOrBranchWeights(F)) {
     // Use TLI if the legacy pipeline already computed it.
     const TargetLibraryInfo *TLI = nullptr;
     if (auto *TLIWP = getAnalysisIfAvailable<TargetLibraryInfoWrapperPass>())
@@ -475,7 +473,6 @@ bool FixIrreducible::runOnFunction(Function &F) {
     BPI.emplace(F, CI, TLI, &DT);
     OwnedBFI.emplace(F, *BPI, CI);
     Profile.BFI = &*OwnedBFI;
-    // Record which blocks this BFI covers before transforming the CFG.
     recordBlocksBeforeTransform(F, BlocksSeenBefore);
     Profile.KnownBlocks = &BlocksSeenBefore;
   }
@@ -493,11 +490,8 @@ PreservedAnalyses FixIrreduciblePass::run(Function &F,
 
   ProfileInfo Profile;
   SmallPtrSet<const BasicBlock *, 32> BlocksSeenBefore;
-  // BPI extracts weights as uint32_t and asserts when one needs more bits.
-  if (functionHasScalableBranchProfile(F) &&
-      !functionHasBranchWeightsWiderThan32Bits(F)) {
+  if (functionHasEntryCountOrBranchWeights(F)) {
     Profile.BFI = &AM.getResult<BlockFrequencyAnalysis>(F);
-    // Record which blocks this BFI covers before transforming the CFG.
     recordBlocksBeforeTransform(F, BlocksSeenBefore);
     Profile.KnownBlocks = &BlocksSeenBefore;
   }
