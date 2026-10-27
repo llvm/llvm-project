@@ -1139,6 +1139,32 @@ void LowerAIR::lowerMatrices(Function &F) {
       auto *CI = dyn_cast<CallInst>(&I);
       Function *Callee = CI ? CI->getCalledFunction() : nullptr;
       StringRef Name = Callee ? Callee->getName() : "";
+      // An element-wise AIR function of matrices (air.fma.v64f32) applies to
+      // the fragments (air.fma.v2f32), lowered with the other AIR calls.
+      if (Name.starts_with("air.") &&
+          !Name.starts_with("air.simdgroup_matrix_") &&
+          isMatrix(CI->getType()) &&
+          all_of(CI->args(), [&](Value *A) {
+            return !isMatrix(A->getType()) || A->getType() == CI->getType();
+          })) {
+        std::string FragName = Name.str();
+        for (size_t P; (P = FragName.find("v64")) != std::string::npos;)
+          FragName.replace(P, 3, "v2");
+        SmallVector<Value *, 4> Args;
+        SmallVector<Type *, 4> Params;
+        for (Value *A : CI->args()) {
+          Args.push_back(isMatrix(A->getType()) ? Get(A) : A);
+          Params.push_back(Args.back()->getType());
+        }
+        FunctionCallee Fn = M.getOrInsertFunction(
+            FragName,
+            FunctionType::get(FragTy(CI->getType()), Params, false));
+        CallInst *New = IB.CreateCall(Fn, Args);
+        if (isa<FPMathOperator>(New))
+          New->setFastMathFlags(CI->getFastMathFlags());
+        Frag[&I] = New;
+        continue;
+      }
       if (!Name.consume_front("air.simdgroup_matrix_8x8_")) {
         error(&F, "a SIMD-group matrix used other than as a matrix");
         return;

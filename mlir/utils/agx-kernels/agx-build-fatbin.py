@@ -15,6 +15,15 @@ With --agx-strict (the default), each chip also gets an entry named "CHIP+agx-st
 +agx-strict in #agxir.target (so the agx operations take their portable forms) and in opt / llc (so only the
 instructions Mesa's asahi compiler emits are used). A runtime in strict mode loads those entries.
 
+With --via-air, the kernel source is compiled through AIR (standard dialects and air operations; agx operations are
+not accepted), the same for every chip up to AGX's code generation:
+
+  mlir-opt --convert-gpu-to-air=use-bare-ptr-memref-call-conv=1 --reconcile-unrealized-casts
+  mlir-translate --mlir-to-llvmir   (the functions of the gpu.module)
+  opt -mtriple=air -passes=air-portable            (AIR's portable passes)
+  opt -mtriple=agx -mcpu=CHIP -O3                  (agx-lower-air first)
+  llc -mtriple=agx -mcpu=CHIP -O3 -filetype=obj
+
 Fat AGX object layout (little-endian):
 
   0   8 bytes  magic "ZAGXFAT1"
@@ -27,7 +36,7 @@ Fat AGX object layout (little-endian):
       then the objects (AGX ELF files), each 16-byte aligned.
 
   agx-build-fatbin.py --mlir-opt MLIR_OPT --mlir-translate MLIR_TRANSLATE --llc LLC [--opt OPT]
-                      [--chips agx-g13g,agx-g14c,...] [--no-agx-strict] kernels.mlir -o out.agxfat
+                      [--chips agx-g13g,agx-g14c,...] [--no-agx-strict] [--via-air] kernels.mlir -o out.agxfat
 """
 
 import argparse
@@ -57,10 +66,32 @@ def gpu_module_body(path):
 STRICT = "+agx-strict"
 
 
+def portable_air(a, src, tmp):
+    """The kernel source as AIR, after the AIR target's portable passes (bitcode)."""
+    lowered = os.path.join(tmp, "air.mlir")
+    subprocess.run([a.mlir_opt, src, "--convert-gpu-to-air=use-bare-ptr-memref-call-conv=1",
+                    "--reconcile-unrealized-casts", "-o", lowered], check=True)
+    body = os.path.join(tmp, "air.body.mlir")
+    open(body, "w").write(gpu_module_body(lowered))
+    ll = os.path.join(tmp, "air.ll")
+    subprocess.run([a.mlir_translate, "--mlir-to-llvmir", body, "-o", ll], check=True)
+    portable = os.path.join(tmp, "air.portable.bc")
+    subprocess.run([a.opt, "-mtriple=air", "-passes=air-portable", ll, "-o", portable], check=True)
+    return portable
+
+
 def compile_for(a, src, chip, tmp, features=""):
     name = chip + features
-    attach = "--agxir-attach-target=chip=" + chip + (" features=" + features if features else "")
     mattr = ["-mattr=" + features] if features else []
+    if a.via_air:
+        optimized = os.path.join(tmp, name + ".opt.bc")
+        subprocess.run([a.opt, "-mtriple=agx", "-mcpu=" + chip, *mattr, "-O3", a.portable, "-o", optimized],
+                       check=True)
+        obj = os.path.join(tmp, name + ".o")
+        subprocess.run([a.llc, "-mtriple=agx", "-mcpu=" + chip, *mattr, "-O3", "-filetype=obj", optimized, "-o",
+                        obj], check=True)
+        return open(obj, "rb").read()
+    attach = "--agxir-attach-target=chip=" + chip + (" features=" + features if features else "")
     lowered = os.path.join(tmp, name + ".mlir")
     subprocess.run([a.mlir_opt, src, attach,
                     "--convert-gpu-to-agxir=use-bare-ptr-memref-call-conv=1", "--reconcile-unrealized-casts",
@@ -101,12 +132,16 @@ def main():
     ap.add_argument("--chips", default=",".join(DEFAULT_CHIPS))
     ap.add_argument("--no-agx-strict", dest="agx_strict", action="store_false",
                     help="leave out the CHIP+agx-strict entries")
+    ap.add_argument("--via-air", action="store_true",
+                    help="compile through AIR (convert-gpu-to-air, air-portable, agx-lower-air)")
     ap.add_argument("-o", dest="out", required=True)
     ap.add_argument("source")
     a = ap.parse_args()
     a.opt = a.opt or os.path.join(os.path.dirname(a.llc), "opt")
     with tempfile.TemporaryDirectory() as tmp:
         chips = [c for c in a.chips.split(",") if c]
+        if a.via_air:
+            a.portable = portable_air(a, a.source, tmp)
         objects = [(c, compile_for(a, a.source, c, tmp)) for c in chips]
         if a.agx_strict:
             # Mesa compiles for G13 and G14 only.

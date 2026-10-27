@@ -3,7 +3,7 @@
 ; c = 4 * ((t / 8) % 2) + 2 * (t % 2). Loads and stores move those two
 ; elements at (c + j + origin.x) * stride.x + (r + origin.y) * stride.y,
 ; multiply-accumulate is llvm.agx.simdgroup.matrix.fma, and element-wise
-; operations and phis apply to the fragment.
+; operations, AIR's element-wise functions and phis apply to the fragment.
 ; RUN: opt -mtriple=agx -passes=agx-lower-air -S %s | FileCheck %s
 ; RUN: llc -mtriple=agx -mcpu=agx-g14g %s -o /dev/null
 
@@ -19,6 +19,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; CHECK: %next = call <2 x float> @llvm.agx.simdgroup.matrix.fma.v2f32(<2 x float> %{{.*}}, <2 x float> %{{.*}}, <2 x float> %acc)
 ; CHECK: done:
 ; CHECK: %scaled = fmul <2 x float> %next, splat (float 2.000000e+00)
+; CHECK: %fused = call <2 x float> @llvm.fma.v2f32(<2 x float> %scaled, <2 x float> %scaled, <2 x float> %next)
 ; CHECK: store float %{{.*}}, ptr addrspace(1)
 ; CHECK-NOT: <64 x float>
 
@@ -26,6 +27,7 @@ declare <64 x float> @air.simdgroup_matrix_8x8_load.v64f32.p1f32(ptr addrspace(1
 declare void @air.simdgroup_matrix_8x8_store.v64f32.p1f32(<64 x float>, ptr addrspace(1), <2 x i64>, <2 x i64>, <2 x i64>)
 declare <64 x float> @air.simdgroup_matrix_8x8_multiply_accumulate.v64f32.v64f32.v64f32.v64f32(<64 x float>, <64 x float>, <64 x float>)
 declare <64 x float> @air.simdgroup_matrix_8x8_init_filled.v64f32.f32(float)
+declare <64 x float> @air.fma.v64f32(<64 x float>, <64 x float>, <64 x float>)
 
 define void @k(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %c) {
 entry:
@@ -42,7 +44,8 @@ loop:
   br i1 %last, label %done, label %loop
 done:
   %scaled = fmul <64 x float> %next, splat (float 2.0)
-  call void @air.simdgroup_matrix_8x8_store.v64f32.p1f32(<64 x float> %scaled, ptr addrspace(1) %c, <2 x i64> <i64 8, i64 8>, <2 x i64> <i64 1, i64 8>, <2 x i64> zeroinitializer)
+  %fused = call <64 x float> @air.fma.v64f32(<64 x float> %scaled, <64 x float> %scaled, <64 x float> %next)
+  call void @air.simdgroup_matrix_8x8_store.v64f32.p1f32(<64 x float> %fused, ptr addrspace(1) %c, <2 x i64> <i64 8, i64 8>, <2 x i64> <i64 1, i64 8>, <2 x i64> zeroinitializer)
   ret void
 }
 
