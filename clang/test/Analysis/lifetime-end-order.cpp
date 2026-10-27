@@ -1,3 +1,6 @@
+// RUN: %clang_analyze_cc1 -analyzer-checker=debug.AnalysisOrder -analyze-function="testLocalVar()"\
+// RUN:   -analyzer-config debug.AnalysisOrder:LifetimeEnd=true,debug.AnalysisOrder:PreCall=true,debug.AnalysisOrder:PostCall=true,debug.AnalysisOrder:EndFunction=true\
+// RUN:   %s 2>&1 | FileCheck %s --check-prefix=CHECK-LOCAL-VAR
 // RUN: %clang_analyze_cc1 -analyzer-checker=debug.AnalysisOrder -analyze-function="testLocalInts()"\
 // RUN:   -analyzer-config debug.AnalysisOrder:LifetimeEnd=true,debug.AnalysisOrder:PreCall=true,debug.AnalysisOrder:PostCall=true,debug.AnalysisOrder:EndFunction=true\
 // RUN:   %s 2>&1 | FileCheck %s --check-prefix=CHECK-LOCAL-INTS
@@ -13,6 +16,15 @@
 
 // Tests when does the check::LifetimeEnd callback fires compared to
 // other callbacks.
+
+// Local variable end its lifetime at the closing brace of the
+// function body.
+void testLocalVar() { int i = 42; }
+
+// CHECK-LOCAL-VAR:      LifetimeEnd
+// CHECK-LOCAL-VAR-NEXT: EndFunction
+// CHECK-LOCAL-VAR-NEXT: ReturnStmt: no
+// CHECK-LOCAL-VAR-NOT:  LifetimeEnd
 
 // Local integers end their lifetime at the closing brace of the
 // inner block.
