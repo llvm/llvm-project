@@ -10480,10 +10480,10 @@ define amdgpu_kernel void @local_ds_fadd(ptr addrspace(1) %out, ptr addrspace(3)
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX13-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX13-NEXT:    v_mbcnt_lo_u32_b32 v3, exec_lo, 0
-; GFX13-NEXT:    s_bcnt1_i32_b32 s0, s0
 ; GFX13-NEXT:    v_readfirstlane_b32 s3, v1
-; GFX13-NEXT:    v_cvt_f32_i32_e32 v2, s0
+; GFX13-NEXT:    s_bcnt1_i32_b32 s0, s0
 ; GFX13-NEXT:    s_mov_b32 s6, exec_lo
+; GFX13-NEXT:    v_cvt_f32_i32_e32 v2, s0
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_mul_f32_e32 v2, 0x42280000, v2
 ; GFX13-NEXT:    v_readfirstlane_b32 s7, v2
@@ -11284,11 +11284,11 @@ define amdgpu_kernel void @local_ds_fadd_one_as(ptr addrspace(1) %out, ptr addrs
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX13-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX13-NEXT:    v_mbcnt_lo_u32_b32 v3, exec_lo, 0
-; GFX13-NEXT:    s_bcnt1_i32_b32 s0, s0
 ; GFX13-NEXT:    s_wait_dscnt 0x0
 ; GFX13-NEXT:    v_readfirstlane_b32 s3, v1
-; GFX13-NEXT:    v_cvt_f32_i32_e32 v2, s0
+; GFX13-NEXT:    s_bcnt1_i32_b32 s0, s0
 ; GFX13-NEXT:    s_mov_b32 s6, exec_lo
+; GFX13-NEXT:    v_cvt_f32_i32_e32 v2, s0
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_mul_f32_e32 v2, 0x42280000, v2
 ; GFX13-NEXT:    v_readfirstlane_b32 s7, v2

@@ -3829,9 +3829,9 @@ define amdgpu_kernel void @sudiv64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; GFX1250-NEXT:    s_branch .LBB16_3
 ; GFX1250-NEXT:  .LBB16_2:
 ; GFX1250-NEXT:    v_cvt_f32_u32_e32 v0, s6
-; GFX1250-NEXT:    s_sub_co_i32 s4, 0, s6
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(TRANS32_DEP_1)
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(TRANS32_DEP_1)
 ; GFX1250-NEXT:    v_rcp_iflag_f32_e32 v0, v0
+; GFX1250-NEXT:    s_sub_co_i32 s4, 0, s6
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    v_mul_f32_e32 v1, 0x4f7ffffe, v0
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -3975,9 +3975,9 @@ define amdgpu_kernel void @sudiv64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; GFX13-NEXT:    s_branch .LBB16_3
 ; GFX13-NEXT:  .LBB16_2:
 ; GFX13-NEXT:    v_cvt_f32_u32_e32 v0, s4
-; GFX13-NEXT:    s_sub_co_i32 s5, 0, s4
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(TRANS32_DEP_1)
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(TRANS32_DEP_1)
 ; GFX13-NEXT:    v_rcp_iflag_f32_e32 v0, v0
+; GFX13-NEXT:    s_sub_co_i32 s5, 0, s4
 ; GFX13-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_cvt_u32_f32_e32 v0, v0

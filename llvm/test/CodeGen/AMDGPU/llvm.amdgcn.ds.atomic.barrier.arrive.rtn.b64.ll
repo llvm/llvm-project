@@ -72,10 +72,10 @@ define amdgpu_ps void @test_ds_atomic_barrier_arrive_rtn_b64_ss(ptr addrspace(3)
 ; SDAG-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; SDAG-NEXT:    v_dual_mov_b32 v0, s1 :: v_dual_mov_b32 v1, s2
 ; SDAG-NEXT:    v_mov_b32_e32 v2, s0
-; SDAG-NEXT:    s_mov_b32 s5, s4
-; SDAG-NEXT:    s_mov_b32 s4, s3
 ; SDAG-NEXT:    ds_atomic_barrier_arrive_rtn_b64 v[0:1], v2, v[0:1]
 ; SDAG-NEXT:    v_mov_b32_e32 v2, 0
+; SDAG-NEXT:    s_mov_b32 s5, s4
+; SDAG-NEXT:    s_mov_b32 s4, s3
 ; SDAG-NEXT:    s_wait_dscnt 0x0
 ; SDAG-NEXT:    flat_store_b64 v2, v[0:1], s[4:5]
 ; SDAG-NEXT:    s_endpgm
@@ -90,10 +90,10 @@ define amdgpu_ps void @test_ds_atomic_barrier_arrive_rtn_b64_ss(ptr addrspace(3)
 ; GISEL-NEXT:    s_mov_b32 s7, s2
 ; GISEL-NEXT:    v_mov_b32_e32 v2, s0
 ; GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[6:7]
-; GISEL-NEXT:    s_mov_b32 s2, s3
-; GISEL-NEXT:    s_mov_b32 s3, s4
 ; GISEL-NEXT:    ds_atomic_barrier_arrive_rtn_b64 v[0:1], v2, v[0:1]
 ; GISEL-NEXT:    v_mov_b32_e32 v2, 0
+; GISEL-NEXT:    s_mov_b32 s2, s3
+; GISEL-NEXT:    s_mov_b32 s3, s4
 ; GISEL-NEXT:    s_wait_dscnt 0x0
 ; GISEL-NEXT:    flat_store_b64 v2, v[0:1], s[2:3]
 ; GISEL-NEXT:    s_endpgm
