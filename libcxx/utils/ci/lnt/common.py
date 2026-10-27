@@ -111,7 +111,7 @@ def benchmarked_commits(lnt_url: str, test_suite: str, machine: str,
 
 def write_lnt_report(path: pathlib.Path, machine: str, machine_fields: dict, commit: dict, tests: List[dict],
                      measured_at: datetime.datetime, run_parameters: Optional[dict] = None) -> None:
-    """Write a LNT v5 run submission, ready to be submitted with submit-benchmarks."""
+    """Write a LNT v5 run submission, ready to be submitted with `lnt v5 submit`."""
     report = {
         'format_version': '5',
         # Pick the UUID ourselves so that we can safely retry submitting this run if needed without

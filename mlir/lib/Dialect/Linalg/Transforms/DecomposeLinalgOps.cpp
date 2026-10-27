@@ -266,6 +266,13 @@ DecomposeLinalgOp::matchAndRewrite(GenericOp genericOp,
                                        "operation has less than 3 statements");
   }
 
+  /// The peeled statement is expected to produce at least one result.
+  if (body->getOperations().begin()->getNumResults() == 0) {
+    return rewriter.notifyMatchFailure(
+        &(*body->getOperations().begin()),
+        "peeled statement is expected to have at least one result");
+  }
+
   /// Check that the peeled statement has a scalar element type.
   if (llvm::any_of(body->getOperations().begin()->getResultTypes(),
                    [](Type t) { return !t.isIntOrIndexOrFloat(); })) {
