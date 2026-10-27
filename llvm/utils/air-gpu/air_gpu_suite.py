@@ -613,6 +613,112 @@ def group_atomics():
     return cases
 
 
+def tg_kernel(name, body, decls=()):
+    """A kernel over in0/out with a 64-element threadgroup array @tg_<name>."""
+    return ('@tg_{n} = internal addrspace(3) global [64 x i32] undef, align 4\n'
+            'define void @{n}(ptr addrspace(1) %in0, ptr addrspace(1) %out) {{\n'
+            'entry:\n'
+            '  %t = call {{ i32, i32, i32 }} @air.thread_position_in_grid.v3i32()\n'
+            '  %tid = extractvalue {{ i32, i32, i32 }} %t, 0\n'
+            '  %lt = call {{ i32, i32, i32 }} @air.thread_position_in_threadgroup.v3i32()\n'
+            '  %lid = extractvalue {{ i32, i32, i32 }} %lt, 0\n'
+            '  %p0 = getelementptr i32, ptr addrspace(1) %in0, i32 %tid\n'
+            '  %a0 = load i32, ptr addrspace(1) %p0\n'
+            '  %po = getelementptr i32, ptr addrspace(1) %out, i32 %tid\n'
+            '  ' + body.strip().replace('\n', '\n  ').replace('@tg', '@tg_{n}') + '\n'
+            '  ret void\n}}').format(n=name)
+
+
+TG_DECLS = {'declare { i32, i32, i32 } @air.thread_position_in_threadgroup.v3i32()',
+            'declare void @air.wg.barrier(i32, i32)'}
+
+
+def group_threadgroup():
+    """Threadgroup memory, barriers and threadgroup atomics.
+
+    Threadgroups of 64 threads are two SIMD-groups, so reading what another
+    SIMD-group stored needs the barrier (one SIMD-group runs in lockstep and
+    would pass without it).
+    """
+    rev = ('%sp = getelementptr [64 x i32], ptr addrspace(3) @tg, i32 0, i32 %lid\n'
+           'store i32 %a0, ptr addrspace(3) %sp\n'
+           'BARRIER\n'
+           '%rl = sub i32 63, %lid\n'
+           '%rp = getelementptr [64 x i32], ptr addrspace(3) @tg, i32 0, i32 %rl\n'
+           '%r = load i32, ptr addrspace(3) %rp\n'
+           'store i32 %r, ptr addrspace(1) %po')
+    reverse = lambda i, v: v[0][63 - i]
+    cases = []
+    for name, barrier, decl in (
+            ('tg_reverse_barrier2', 'call void @air.wg.barrier(i32 2, i32 1)',
+             'declare void @air.wg.barrier(i32, i32)'),
+            ('tg_reverse_barrier3', 'call void @air.wg.barrier(i32 2, i32 5, i32 1)',
+             'declare void @air.wg.barrier(i32, i32, i32)')):
+        c = Case(name, ['i32'], 'i32', None, {decl, 'declare { i32, i32, i32 } '
+                 '@air.thread_position_in_threadgroup.v3i32()'}, reverse, tgsize=64,
+                 source='floor metal.hpp (2 operands); Metal.jl synchronization.jl (3, AIR 2.9)')
+        c.full = tg_kernel(name, rev.replace('BARRIER', barrier))
+        cases.append(c)
+    # A kernel with no explicit barrier: AIRTGBarrierInsert is meant to add one.
+    c = Case('tg_reverse_auto_barrier', ['i32'], 'i32', None,
+             {'declare { i32, i32, i32 } @air.thread_position_in_threadgroup.v3i32()'},
+             reverse, tgsize=64, source='AIRTGBarrierInsert')
+    c.full = tg_kernel(c.name, rev.replace('BARRIER\n', ''))
+    cases.append(c)
+    # Threadgroup atomic: every thread adds its input; after a barrier each
+    # thread reads the threadgroup total.
+    c = Case('tg_atomic_add', ['i32'], 'i32', None, TG_DECLS,
+             lambda i, v: s32(sum(v[0])), tgsize=64,
+             gen=[lambda i, r: r.randrange(-1000, 1000)])
+    c.full = tg_kernel(c.name, (
+        '%z = icmp eq i32 %lid, 0\n'
+        'br i1 %z, label %init, label %go\n'
+        'init:\n'
+        'store i32 0, ptr addrspace(3) @tg\n'
+        'br label %go\n'
+        'go:\n'
+        'call void @air.wg.barrier(i32 2, i32 1)\n'
+        '%old = atomicrmw add ptr addrspace(3) @tg, i32 %a0 monotonic\n'
+        'call void @air.wg.barrier(i32 2, i32 1)\n'
+        '%r = load i32, ptr addrspace(3) @tg\n'
+        'store i32 %r, ptr addrspace(1) %po'))
+    cases.append(c)
+    return cases
+
+
+# (role, vector?, value for thread i of a 64-thread grid in threadgroups of 32)
+SYSVALS = [
+    ('thread_position_in_grid', True, lambda i: i),
+    ('thread_position_in_threadgroup', True, lambda i: i % 32),
+    ('threadgroup_position_in_grid', True, lambda i: i // 32),
+    ('threads_per_threadgroup', True, lambda i: 32),
+    ('threadgroups_per_grid', True, lambda i: 2),
+    ('threads_per_grid', True, lambda i: 64),
+    ('thread_index_in_threadgroup', False, lambda i: i % 32),
+    ('thread_index_in_simdgroup', False, lambda i: i % 32),
+    ('simdgroup_index_in_threadgroup', False, lambda i: 0),
+    ('threads_per_simdgroup', False, lambda i: 32),
+    ('simdgroups_per_threadgroup', False, lambda i: 1),
+]
+
+
+def group_sysvals():
+    """Every system value, read as a call and written out (x component)."""
+    cases = []
+    for role, vec, ref in SYSVALS:
+        if vec:
+            decl = 'declare { i32, i32, i32 } @air.%s.v3i32()' % role
+            body = ('%%s = call { i32, i32, i32 } @air.%s.v3i32()\n'
+                    '%%r = extractvalue { i32, i32, i32 } %%s, 0') % role
+        else:
+            decl = 'declare i32 @air.%s.i32()' % role
+            body = '%%r = call i32 @air.%s.i32()' % role
+        cases.append(Case('sv_' + role, ['u32'], 'u32', body, {decl},
+                          lambda i, v, ref=ref: ref(i), tgsize=32,
+                          source='Metal attribute [[%s]]' % role))
+    return cases
+
+
 GROUPS = {
     'llvm-math-f32': group_llvm_math_f32,
     'air-math-f32': group_air_math_f32,
@@ -620,6 +726,8 @@ GROUPS = {
     'llvm-int': group_llvm_int,
     'simd': group_simd,
     'atomics': group_atomics,
+    'threadgroup': group_threadgroup,
+    'sysvals': group_sysvals,
 }
 
 

@@ -13,6 +13,7 @@
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Function.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
@@ -49,12 +50,20 @@ static bool isBarrierCall(const Instruction *I) {
   return false;
 }
 
+/// A threadgroup barrier on threadgroup memory, in the form the module already
+/// uses: air.wg.barrier(flags, scope), or from AIR 2.9 (flags, order, scope).
 static CallInst *createBarrier(IRBuilder<> &B, Module &M) {
   LLVMContext &Ctx = M.getContext();
   Type *I32 = Type::getInt32Ty(Ctx);
-  FunctionType *FTy =
-      FunctionType::get(Type::getVoidTy(Ctx), {I32, I32}, false);
-  FunctionCallee FC = M.getOrInsertFunction(kBarrier, FTy);
+  Function *Existing = M.getFunction(kBarrier);
+  bool WithOrder = Existing && Existing->arg_size() == 3;
+  SmallVector<Type *, 3> Params(WithOrder ? 3 : 2, I32);
+  FunctionCallee FC = M.getOrInsertFunction(
+      kBarrier, FunctionType::get(Type::getVoidTy(Ctx), Params, false));
+  // mem_threadgroup, (seq_cst,) thread_scope_threadgroup.
+  if (WithOrder)
+    return B.CreateCall(FC, {ConstantInt::get(I32, 2), ConstantInt::get(I32, 5),
+                             ConstantInt::get(I32, 1)});
   return B.CreateCall(FC, {ConstantInt::get(I32, 2), ConstantInt::get(I32, 1)});
 }
 
@@ -266,6 +275,55 @@ static bool tgBarrierInsert(Module &M) {
         }
         Changed = true;
       }
+    }
+
+    // Strategy 4: RAW hazard - barrier between a TG store and a later TG
+    // load, which may read what another thread stored.
+    for (BasicBlock &BB : F) {
+      if (!TGStoreBlocks.count(&BB) || !uniformlyExecuted(&BB))
+        continue;
+
+      bool SeenUnguardedStore = false;
+      for (auto It = BB.begin(); It != BB.end(); ++It) {
+        if (isTGStore(&*It)) {
+          SeenUnguardedStore = true;
+        } else if (isBarrierCall(&*It)) {
+          SeenUnguardedStore = false;
+        } else if (isTGLoad(&*It) && SeenUnguardedStore) {
+          IRBuilder<> B(&*It);
+          createBarrier(B, M);
+          Changed = true;
+          SeenUnguardedStore = false;
+        }
+      }
+
+      if (!SeenUnguardedStore)
+        continue;
+
+      // A TG load in a successor, before any barrier there.
+      Instruction *Term = BB.getTerminator();
+      bool SuccLoadsFirst = false;
+      for (BasicBlock *Succ : successors(&BB)) {
+        for (Instruction &SI : *Succ) {
+          if (isBarrierCall(&SI))
+            break;
+          if (isTGLoad(&SI)) {
+            SuccLoadsFirst = true;
+            break;
+          }
+        }
+      }
+      if (!SuccLoadsFirst)
+        continue;
+      if (isa<CondBrInst>(Term)) {
+        BB.splitBasicBlock(Term, BB.getName() + ".raw");
+        IRBuilder<> B(BB.getTerminator());
+        createBarrier(B, M);
+      } else {
+        IRBuilder<> B(Term);
+        createBarrier(B, M);
+      }
+      Changed = true;
     }
 
     for (BasicBlock &BB : F) {
