@@ -24,6 +24,11 @@ struct BackendConfig {
   /// version (OMP_KERNEL_ARG_VERSION).
   bool RequiresLatestKernelArgVersion = false;
 
+  // Default number of blocks per compute unit for a kernel in Generic-SPMD
+  // mode. If zero, uses the default number of blocks of other kernels. Can be
+  // overridden by the user with LIBOMPTARGET_GENERIC_SPMD_TEAMS_PER_CU.
+  uint32_t DefaultGenericSPMDTeamsPerCU = 0;
+
   /// Get the configuration of \p Backend.
   static const BackendConfig &get(ol_platform_backend_t Backend);
 };
