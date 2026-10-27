@@ -1,6 +1,7 @@
 include_directories(
   ${PROJECT_SOURCE_DIR}/lib/Target/AMDGPU
   ${PROJECT_BINARY_DIR}/lib/Target/AMDGPU
+  ${PROJECT_SOURCE_DIR}/lib/CodeGen
   ${PROJECT_SOURCE_DIR}/unittests/CodeGen
   )
 
@@ -28,6 +29,7 @@ add_llvm_target_unittest(AMDGPUTests
   CSETest.cpp
   DwarfRegMappings.cpp
   ExecMayBeModifiedBeforeAnyUse.cpp
+  FailedReassignCacheTest.cpp
   GCNRegPressureTest.cpp
   InstSizes.cpp
   LiveRegUnits.cpp

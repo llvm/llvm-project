@@ -21,6 +21,7 @@
 #include "llvm/MC/MCRegister.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Compiler.h"
+#include <memory>
 
 namespace llvm {
 class AllocationOrder;
@@ -97,12 +98,16 @@ struct EvictionCost {
 
 /// Interface to the eviction advisor, which is responsible for making a
 /// decision as to which live ranges should be evicted (if any).
+namespace reassign {
+class Cache;
+} // namespace reassign
+
 class RAGreedy;
-class RegAllocEvictionAdvisor {
+class LLVM_ABI RegAllocEvictionAdvisor {
 public:
   RegAllocEvictionAdvisor(const RegAllocEvictionAdvisor &) = delete;
   RegAllocEvictionAdvisor(RegAllocEvictionAdvisor &&) = delete;
-  virtual ~RegAllocEvictionAdvisor() = default;
+  virtual ~RegAllocEvictionAdvisor();
 
   /// Find a physical register that can be freed by evicting the FixedRegisters,
   /// or return NoRegister. The eviction decision is assumed to be correct (i.e.
@@ -119,32 +124,29 @@ public:
 
   /// Return an unused callee-saved register that would be used by assigning
   /// \p VirtReg to \p PhysReg, or NoRegister if there is none.
-  LLVM_ABI MCRegister getUnusedCalleeSavedReg(const LiveInterval &VirtReg,
-                                              MCRegister PhysReg) const;
+  MCRegister getUnusedCalleeSavedReg(const LiveInterval &VirtReg,
+                                     MCRegister PhysReg) const;
 
   /// Returns true if this is an urgent eviction.
-  LLVM_ABI bool isUrgentEviction(const LiveInterval &VirtReg,
-                                 const LiveInterval &Intf) const;
+  bool isUrgentEviction(const LiveInterval &VirtReg,
+                        const LiveInterval &Intf) const;
 
 protected:
-  LLVM_ABI RegAllocEvictionAdvisor(const MachineFunction &MF,
-                                   const RAGreedy &RA);
+  RegAllocEvictionAdvisor(const MachineFunction &MF, const RAGreedy &RA);
 
-  LLVM_ABI bool canReassign(const LiveInterval &VirtReg,
-                            MCRegister FromReg) const;
+  bool canReassign(const LiveInterval &VirtReg, MCRegister FromReg) const;
 
   // Get the upper limit of elements in the given Order we need to analize.
   // TODO: is this heuristic,  we could consider learning it.
-  LLVM_ABI std::optional<unsigned>
-  getOrderLimit(const LiveInterval &VirtReg, const AllocationOrder &Order,
-                unsigned CostPerUseLimit) const;
+  std::optional<unsigned> getOrderLimit(const LiveInterval &VirtReg,
+                                        const AllocationOrder &Order,
+                                        unsigned CostPerUseLimit) const;
 
   // Determine if it's worth trying to allocate this reg, given the
   // CostPerUseLimit
   // TODO: this is a heuristic component we could consider learning, too.
-  LLVM_ABI bool canAllocatePhysReg(const LiveInterval &VirtReg,
-                                   unsigned CostPerUseLimit,
-                                   MCRegister PhysReg) const;
+  bool canAllocatePhysReg(const LiveInterval &VirtReg, unsigned CostPerUseLimit,
+                          MCRegister PhysReg) const;
 
   const MachineFunction &MF;
   const RAGreedy &RA;
@@ -159,6 +161,17 @@ protected:
   /// Run or not the local reassignment heuristic. This information is
   /// obtained from the TargetSubtargetInfo.
   const bool EnableLocalReassign;
+
+private:
+  mutable std::unique_ptr<reassign::Cache> FailedCache;
+
+  void rememberFailedReassign(const LiveInterval &VirtReg, bool HintOnly) const;
+  void forgetFailedReassign(const LiveInterval &VirtReg) const;
+  void noteUnassign(const LiveInterval &Unassigned, MCRegister PhysReg,
+                    bool ClearAllReferencingSegments) const;
+  static void unassignListener(void *Ctx, const LiveInterval &Unassigned,
+                               MCRegister PhysReg,
+                               bool ClearAllReferencingSegments);
 };
 
 /// Common provider for legacy and new pass managers.
