@@ -1376,32 +1376,51 @@ LinkEditData:
 ...
 )");
 
+  //
+  // Create a binary for the 0-address YAML, serialize it
+  // to a buffer.
+  //
   ASSERT_THAT_EXPECTED(ExpectedFileZeroOffset, llvm::Succeeded());
   auto zero_module_sp =
       std::make_shared<Module>(ExpectedFileZeroOffset->moduleSpec());
   ObjectFile *zero_objfile = zero_module_sp->GetObjectFile();
   ASSERT_NE(zero_objfile, nullptr);
-  // Now encode and decode an actual symbol table from our yaml.
-  Symtab *module_symtab = zero_module_sp->GetSymtab();
-  ASSERT_NE(module_symtab, nullptr);
-  module_symtab->PreloadSymbols();
+
+  Symtab *zero_module_symtab = zero_module_sp->GetSymtab();
+  zero_module_symtab->PreloadSymbols();
   const uint8_t addr_size = 8;
+
   DataEncoder zero_file(eByteOrderLittle, addr_size);
-  module_symtab->Encode(zero_file);
+  zero_module_symtab->Encode(zero_file);
   llvm::ArrayRef<uint8_t> zero_filebytes = zero_file.GetData();
 
+  //
+  // Create a binary for the non-0-address YAML, serialize it
+  // to a buffer.
+  //
   ASSERT_THAT_EXPECTED(ExpectedFileNonZeroOffset, llvm::Succeeded());
   auto nonzero_module_sp =
       std::make_shared<Module>(ExpectedFileNonZeroOffset->moduleSpec());
   ObjectFile *nonzero_objfile = nonzero_module_sp->GetObjectFile();
   ASSERT_NE(nonzero_objfile, nullptr);
-  // Now encode and decode an actual symbol table from our yaml.
+
   Symtab *nonzero_module_symtab = nonzero_module_sp->GetSymtab();
   ASSERT_NE(nonzero_module_symtab, nullptr);
   nonzero_module_symtab->PreloadSymbols();
+
   DataEncoder nonzero_file(eByteOrderLittle, addr_size);
-  module_symtab->Encode(nonzero_file);
+  nonzero_module_symtab->Encode(nonzero_file);
   llvm::ArrayRef<uint8_t> nonzero_filebytes = nonzero_file.GetData();
 
+  //
+  // Compare the two serialized buffers, they must be identical.
+  //
   ASSERT_EQ(zero_filebytes, nonzero_filebytes);
+
+  //
+  // Test that the symtabs round-trip through serialization and yield
+  // the same Symtab as the original binary.
+  //
+  EncodeDecode(*zero_module_symtab);
+  EncodeDecode(*nonzero_module_symtab);
 }
