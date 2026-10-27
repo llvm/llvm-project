@@ -9,7 +9,7 @@
 // RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,ROCMDIR
 
 
-// Test subtarget with flushing off by ddefault.
+// Test subtarget with flushing off by default.
 // RUN: %clang -### --target=x86_64-linux-gnu \
 // RUN:  --cuda-gpu-arch=gfx900 \
 // RUN:  --rocm-path=%S/Inputs/rocm \
@@ -84,6 +84,13 @@
 // RUN:   --rocm-path=%S/Inputs/rocm \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,ROCMDIR
+
+// Test TheRock toolchain layout
+// RUN: %clang -### --target=x86_64-linux-gnu \
+// RUN:   --offload-arch=gfx803 -nogpuinc \
+// RUN:   --rocm-path=%S/Inputs/rocm-therock \
+// RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
+// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,FLUSHD,ROCMDIR-THEROCK
 
 // Test finding device lib in resource dir
 // RUN: %clang -### --target=x86_64-linux-gnu \
@@ -210,6 +217,7 @@
 
 // RESDIR-SAME: "-mlink-builtin-bitcode" "[[DEVICELIB_DIR:[^"]+(/|\\\\)rocm_resource_dir(/|\\\\)lib(64)?(/|\\\\)amdgcn(/|\\\\).*]]ocml.bc"
 // ROCMDIR-SAME: "-mlink-builtin-bitcode" "[[DEVICELIB_DIR:[^"]+(/|\\\\)rocm(/|\\\\)amdgcn(/|\\\\).*]]ocml.bc"
+// ROCMDIR-THEROCK-SAME: "-mlink-builtin-bitcode" "[[DEVICELIB_DIR:[^"]+(/|\\\\)rocm-therock(/|\\\\)lib(/|\\\\)llvm(/|\\\\)amdgcn(/|\\\\).*]]ocml.bc"
 
 // ALL-SAME: "-mlink-builtin-bitcode" "[[DEVICELIB_DIR]]ockl.bc"
 
