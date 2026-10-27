@@ -11,8 +11,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_NET_LINUX_IF_NAMEINDEX_IMPL_H
-#define LLVM_LIBC_SRC_NET_LINUX_IF_NAMEINDEX_IMPL_H
+#ifndef LLVM_LIBC_SRC_NET_IF_LINUX_IF_NAMEINDEX_IMPL_H
+#define LLVM_LIBC_SRC_NET_IF_LINUX_IF_NAMEINDEX_IMPL_H
 
 #include "hdr/errno_macros.h"
 #include "hdr/net_if_macros.h"
@@ -199,4 +199,4 @@ LIBC_INLINE ErrorOr<struct if_nameindex *> if_nameindex() {
 } // namespace net
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_NET_LINUX_IF_NAMEINDEX_IMPL_H
+#endif // LLVM_LIBC_SRC_NET_IF_LINUX_IF_NAMEINDEX_IMPL_H

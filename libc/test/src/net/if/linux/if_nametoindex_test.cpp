@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/errno_macros.h"
-#include "src/net/if_nametoindex.h"
+#include "src/net/if/if_nametoindex.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/Test.h"
 
