@@ -807,20 +807,16 @@ static uint32_t getEffectiveNumThreads(const DeviceGeometryPropsTy &Props,
                                                : KernelEnv.PreferredNumThreads);
 }
 
-/// Get the number of teams the user set with OMP_NUM_TEAMS, or zero.
-static uint32_t getOMPNumTeams() {
-  static Int32Envar OMP_NumTeams("OMP_NUM_TEAMS");
-  return OMP_NumTeams > 0 ? uint32_t(OMP_NumTeams) : 0;
-}
-
 /// Get the maximum number of blocks the device can launch for a kernel using
 /// \p NumThreads threads per block, further limited by OMP_NUM_TEAMS if the
 /// user set it.
 static uint32_t getDeviceBlockLimit(GenericDeviceTy &GenericDevice,
                                     uint32_t NumThreads) {
+  static Int32Envar OMP_NumTeams("OMP_NUM_TEAMS");
+
   uint32_t BlockLimit = GenericDevice.getBlockLimit(NumThreads);
-  if (uint32_t NumTeams = getOMPNumTeams())
-    return std::min(BlockLimit, NumTeams);
+  if (OMP_NumTeams > 0)
+    return std::min(BlockLimit, uint32_t(OMP_NumTeams));
   return BlockLimit;
 }
 
@@ -949,11 +945,17 @@ static uint32_t getEffectiveNumBlocks(
   // the number of threads, most threads idle. So trade threads for blocks, down
   // to one warp per block, as long as the distribute loop has an iteration for
   // every block. This keeps the device as busy if the inner trip counts are
-  // high. Neither is done if the user set the number of threads or teams.
+  // high. The trade is not done if the user set the number of threads, and the
+  // number of blocks stays within the device's limit, which OMP_NUM_TEAMS may
+  // lower.
   if (KernelEnv.isGenericSPMDMode() && !IsNumThreadsFromUser &&
-      !IsNumThreadsStrict && !getOMPNumTeams()) {
-    while (uint64_t(PreferredNumBlocks) * 2 <= LoopTripCount &&
-           EffectiveNumThreads > Props.WarpSize) {
+      !IsNumThreadsStrict) {
+    while (EffectiveNumThreads > Props.WarpSize) {
+      uint64_t MaxNumBlocks = std::min<uint64_t>(
+          LoopTripCount,
+          getDeviceBlockLimit(GenericDevice, EffectiveNumThreads / 2));
+      if (uint64_t(PreferredNumBlocks) * 2 > MaxNumBlocks)
+        break;
       EffectiveNumThreads /= 2;
       PreferredNumBlocks *= 2;
     }
