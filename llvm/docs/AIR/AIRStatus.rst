@@ -189,9 +189,13 @@ the target triple cannot express it yet.
 What the service cannot run
 ---------------------------
 
-``execute`` dispatches compute kernels on buffers. Vertex, fragment, mesh and
-tessellation functions, textures and samplers cannot be bound, so the AIR
-for them (which the reference implementations use) cannot be verified here.
+``execute`` dispatches compute kernels, and binds buffers only: a binding is
+exactly ``{index, buffer}``, and requests with ``textures`` or ``samplers``
+fields are refused. So compute kernels that take textures or samplers, which
+Metal allows and the reference implementations use, cannot be run, and
+neither can vertex, fragment, mesh or tessellation functions. Adding texture
+and sampler bindings to the service would make the compute texture functions
+testable like the rest.
 
 AGX Performance Simulator gaps
 ==============================

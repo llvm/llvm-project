@@ -148,24 +148,29 @@ convention but not run.
 Not available through the AIR service
 =====================================
 
-The service runs compute kernels on buffers, so these are passed through but
-cannot be checked here. The backend has no lowering of its own for any of
-them; front ends call them directly.
+These are passed through but cannot be checked here. The backend has no
+lowering of its own for any of them; front ends call them directly.
 
-* Textures and samplers: ``air.sample_*``, ``air.sample_compare_*``,
+* Textures and samplers. These are part of compute as much as of graphics:
+  a compute kernel can take ``texture2d``, ``texture_buffer`` or ``sampler``
+  arguments and call ``air.sample_*``, ``air.sample_compare_*``,
   ``air.gather_*``, ``air.read_*``, ``air.write_*``, texture atomics
-  (``air.atomic_*``), ``air.calculate_[un]clamped_lod_*``, ``air.get_*``
-  queries, ``air.fence_*`` (texture fences).
-* Graphics stages and their attributes: vertex (``air.vertex_id``,
-  ``air.instance_id``, ``air.base_vertex``, ``air.base_instance``, vertex
-  inputs and outputs, ``air.position``, ``air.clip_distance``,
-  ``air.point_size``), fragment (``air.discard_fragment``,
-  ``air.front_facing``, ``air.sample_id``, ``air.sample_mask``,
-  ``air.point_coord``, ``air.barycentric_coord``, ``air.render_target``,
-  ``air.depth``, ``air.stencil``, ``air.raster_order_group``), interpolation
-  (``air.interpolate_*``), tessellation (``air.patch_*``,
-  ``air.position_in_patch``), mesh and object stages (``air.set_*_mesh``,
-  ``air.mesh_*``, payloads).
+  (``air.atomic_*``), ``air.calculate_[un]clamped_lod_*``, the ``air.get_*``
+  queries and ``air.fence_*`` (texture fences). They are unverified only
+  because the AIR service's ``execute`` binds buffers and nothing else: a
+  binding is exactly ``{index, buffer}``, and ``textures`` or ``samplers``
+  fields are refused.
+* Graphics stages and their attributes, which the service cannot dispatch:
+  vertex (``air.vertex_id``, ``air.instance_id``, ``air.base_vertex``,
+  ``air.base_instance``, vertex inputs and outputs, ``air.position``,
+  ``air.clip_distance``, ``air.point_size``), fragment
+  (``air.discard_fragment``, ``air.front_facing``, ``air.sample_id``,
+  ``air.sample_mask``, ``air.point_coord``, ``air.barycentric_coord``,
+  ``air.render_target``, ``air.depth``, ``air.stencil``,
+  ``air.raster_order_group``), interpolation (``air.interpolate_*``),
+  tessellation (``air.patch_*``, ``air.position_in_patch``), mesh and object
+  stages (``air.set_*_mesh``, ``air.mesh_*``, payloads).
 * Function constants (``air.function_constants``,
-  ``air.is_function_constant_defined``), visible and intersection functions,
-  ``air.os_log``, ``air.source_file_name`` and other debug metadata.
+  ``air.is_function_constant_defined``), which need values set when the
+  pipeline is created; visible and intersection functions; ``air.os_log``;
+  ``air.source_file_name`` and other debug metadata.
