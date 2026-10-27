@@ -63,6 +63,24 @@ static Type *inferConstPtrLoadType(Function &F, unsigned ParamIdx) {
   return nullptr;
 }
 
+/// Whether a constant-address-space parameter is a scalar passed by
+/// reference (Triton's convention): unused, or only ever loaded directly, all
+/// with one type. Any other use (a GEP, a pointer passed on, ...) makes it a
+/// real constant buffer, which must stay a buffer argument.
+static bool isByRefScalar(Function &F, unsigned ParamIdx) {
+  Argument *Arg = F.getArg(ParamIdx);
+  Type *Ty = nullptr;
+  for (User *U : Arg->users()) {
+    auto *LI = dyn_cast<LoadInst>(U);
+    if (!LI || LI->getPointerOperand() != Arg)
+      return false;
+    if (Ty && Ty != LI->getType())
+      return false;
+    Ty = LI->getType();
+  }
+  return true;
+}
+
 static bool scalarBufferPacking(Module &M) {
   bool Changed = false;
 
@@ -203,7 +221,7 @@ static bool scalarBufferPacking(Module &M) {
         continue;
       Type *T = F.getArg(i)->getType();
       if (T->isPointerTy()) {
-        if (T->getPointerAddressSpace() == ASConstant) {
+        if (T->getPointerAddressSpace() == ASConstant && isByRefScalar(F, i)) {
           Type *LoadTy = inferConstPtrLoadType(F, i);
           if (LoadTy && LoadTy->isPointerTy())
             LoadTy = Type::getInt64Ty(M.getContext());

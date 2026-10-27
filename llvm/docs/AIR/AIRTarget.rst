@@ -94,6 +94,19 @@ Pass name                                    Responsibility
 ``air-prepare``                            Final AIR-conformance fixups
 ============================================ ====================================
 
+Kernel Arguments
+================
+
+Every pointer argument of a kernel is a buffer, bound at the next
+``[[buffer(n)]]`` index (its ``air.location_index``), in argument order.
+Arguments passed by value (integers, floats, and constant-address-space
+pointers that are only ever loaded directly, which is how Triton passes
+scalars) are packed, by ``air-scalar-buffer-packing``, into one more device
+buffer, ``_scalar_buf``, bound after the pointer arguments. Each field is
+aligned to its size, at most 4 bytes; 64-bit values take two 32-bit words, the
+low one first. A host passes them by binding a buffer with those bytes at that
+index.
+
 Address Spaces
 ==============
 
