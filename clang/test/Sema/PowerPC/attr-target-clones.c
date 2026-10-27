@@ -22,8 +22,8 @@ int __attribute__((target_clones("cpu=pwr7", "default")))
 redecl4(void) { return 1; }
 
 int __attribute__((target_clones("cpu=pwr7", "default"))) redecl7(void);
-// expected-error@+2 {{multiversioning attributes cannot be combined}}
-// expected-note@-2 {{previous declaration is here}}
+// expected-error@+2 {{'target' and 'target_clones' attributes are not compatible}}
+// expected-note@-2 {{conflicting attribute is here}}
 int __attribute__((target("cpu=pwr8"))) redecl7(void) { return 1; }
 
 int __attribute__((target("cpu=pwr9"))) redef2(void) { return 1; }

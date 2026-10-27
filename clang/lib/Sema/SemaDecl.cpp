@@ -12384,6 +12384,10 @@ static bool CheckMultiVersionFunction(Sema &S, FunctionDecl *NewFD,
   if (NewTA && TI.getTriple().isRISCV())
     return false;
 
+  // Target attribute on AIX is not used for multiversioning
+  if (NewTA && TI.getTriple().isOSAIX())
+    return false;
+
   if (!OldDecl || !OldDecl->getAsFunction() ||
       !OldDecl->getDeclContext()->getRedeclContext()->Equals(
           NewFD->getDeclContext()->getRedeclContext())) {
