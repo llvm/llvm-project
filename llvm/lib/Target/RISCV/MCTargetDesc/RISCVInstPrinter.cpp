@@ -36,6 +36,11 @@ using namespace llvm;
 static bool ArchRegNames;
 static bool EmitX8AsFP;
 
+RISCVInstPrinter::RISCVInstPrinter(const MCAsmInfo &MAI, const MCInstrInfo &MII,
+                                   const MCRegisterInfo &MRI)
+    : MCInstPrinter(MAI, MII, MRI),
+      CLOpts(RISCV_MC::getCLOpts(MAI.getTargetOptions())) {}
+
 // -riscv-no-aliases and -riscv-emit-x8-as-fp are used by llvm-mc and llc. They
 // can be used by `llvm-objdump`, but we override their values here to handle
 // options passed to `llvm-objdump` with `-M` (which matches GNU objdump). There
@@ -76,7 +81,7 @@ void RISCVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
 }
 
 void RISCVInstPrinter::printRegName(raw_ostream &O, MCRegister Reg) {
-  markup(O, Markup::Register) << getRegisterName(Reg);
+  markup(O, Markup::Register) << getRegisterName(CLOpts, Reg);
 }
 
 void RISCVInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
@@ -386,14 +391,14 @@ void RISCVInstPrinter::printImm(const MCInst *MI, unsigned OpNo,
     markup(O, Markup::Immediate) << formatImm(Imm);
 }
 
-const char *RISCVInstPrinter::getRegisterName(MCRegister Reg) {
+const char *RISCVInstPrinter::getRegisterName(const RISCVMCOptions &CLOpts,
+                                              MCRegister Reg) {
   // When PrintAliases is enabled, and EmitX8AsFP is enabled, x8 will be printed
   // as fp instead of s0. Note that these similar registers are not replaced:
   // - X8_H: used for f16 register in zhinx
   // - X8_W: used for f32 register in zfinx
   // - X8_X9: used for GPR Pair
-  if (!ArchRegNames && (EmitX8AsFP || RISCVMCOptions::Global.emit_x8_as_fp) &&
-      Reg == RISCV::X8)
+  if (!ArchRegNames && (EmitX8AsFP || CLOpts.emit_x8_as_fp) && Reg == RISCV::X8)
     return "fp";
   return getRegisterName(Reg, ArchRegNames ? RISCV::NoRegAltName
                                            : RISCV::ABIRegAltName);
