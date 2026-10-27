@@ -2,9 +2,9 @@
 ; RUN: llc -O0 -mtriple=nvptx64 -mcpu=sm_80 -mattr=+ptx70 -verify-machineinstrs < %s | FileCheck %s
 
 ; Use -O0 to skip EarlyCSE and let the constant operations reach the DAG folders.
-; FIXME: Honor the function denormal environment in all these constant folds.
+; Constant folds honor the function's per-type input/output denormal modes.
 
-; FIXME: Flush the subnormal inputs so all seven FP results store +0 and
+; Flush the subnormal inputs so all seven FP results store +0 and
 ; fcmp stores true instead of false.
 define void @arithmetic(ptr %fadd_res, ptr %fsub_res, ptr %fmul_res, ptr %fdiv_res, ptr %fmuladd_res, ptr %fma_res, ptr %fcmp_res, ptr %ceil_res) denormal_fpenv(float: preservesign) {
 ; CHECK-LABEL: arithmetic(
@@ -14,20 +14,20 @@ define void @arithmetic(ptr %fadd_res, ptr %fsub_res, ptr %fmul_res, ptr %fdiv_r
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [arithmetic_param_0];
 ; CHECK-NEXT:    ld.param.b64 %rd2, [arithmetic_param_1];
-; CHECK-NEXT:    st.b32 [%rd1], 2;
+; CHECK-NEXT:    st.b32 [%rd1], 0;
 ; CHECK-NEXT:    ld.param.b64 %rd3, [arithmetic_param_2];
 ; CHECK-NEXT:    ld.param.b64 %rd4, [arithmetic_param_3];
-; CHECK-NEXT:    st.b32 [%rd2], 2;
+; CHECK-NEXT:    st.b32 [%rd2], 0;
 ; CHECK-NEXT:    ld.param.b64 %rd5, [arithmetic_param_4];
 ; CHECK-NEXT:    ld.param.b64 %rd6, [arithmetic_param_5];
-; CHECK-NEXT:    st.b32 [%rd3], 2;
+; CHECK-NEXT:    st.b32 [%rd3], 0;
 ; CHECK-NEXT:    ld.param.b64 %rd7, [arithmetic_param_6];
 ; CHECK-NEXT:    ld.param.b64 %rd8, [arithmetic_param_7];
-; CHECK-NEXT:    st.b32 [%rd4], 2;
-; CHECK-NEXT:    st.b32 [%rd5], 1;
-; CHECK-NEXT:    st.b32 [%rd6], 1;
-; CHECK-NEXT:    st.b8 [%rd7], 0;
-; CHECK-NEXT:    st.b32 [%rd8], 1065353216;
+; CHECK-NEXT:    st.b32 [%rd4], 0;
+; CHECK-NEXT:    st.b32 [%rd5], 0;
+; CHECK-NEXT:    st.b32 [%rd6], 0;
+; CHECK-NEXT:    st.b8 [%rd7], 1;
+; CHECK-NEXT:    st.b32 [%rd8], 0;
 ; CHECK-NEXT:    ret;
   %fadd = fadd float f0x00000001, f0x00000001
   store float %fadd, ptr %fadd_res
@@ -48,7 +48,7 @@ define void @arithmetic(ptr %fadd_res, ptr %fsub_res, ptr %fmul_res, ptr %fdiv_r
   ret void
 }
 
-; FIXME: Flush the subnormal inputs so all six min/max results store +0.
+; Flush the subnormal inputs so all six min/max results store +0.
 define void @minmax(ptr %minnum_res, ptr %maxnum_res, ptr %minimum_res, ptr %maximum_res, ptr %minimumnum_res, ptr %maximumnum_res) denormal_fpenv(float: preservesign) {
 ; CHECK-LABEL: minmax(
 ; CHECK:       {
@@ -57,16 +57,16 @@ define void @minmax(ptr %minnum_res, ptr %maxnum_res, ptr %minimum_res, ptr %max
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [minmax_param_0];
 ; CHECK-NEXT:    ld.param.b64 %rd2, [minmax_param_1];
-; CHECK-NEXT:    st.b32 [%rd1], 1;
+; CHECK-NEXT:    st.b32 [%rd1], 0;
 ; CHECK-NEXT:    ld.param.b64 %rd3, [minmax_param_2];
 ; CHECK-NEXT:    ld.param.b64 %rd4, [minmax_param_3];
-; CHECK-NEXT:    st.b32 [%rd2], 1;
+; CHECK-NEXT:    st.b32 [%rd2], 0;
 ; CHECK-NEXT:    ld.param.b64 %rd5, [minmax_param_4];
 ; CHECK-NEXT:    ld.param.b64 %rd6, [minmax_param_5];
-; CHECK-NEXT:    st.b32 [%rd3], 1;
-; CHECK-NEXT:    st.b32 [%rd4], 1;
-; CHECK-NEXT:    st.b32 [%rd5], 1;
-; CHECK-NEXT:    st.b32 [%rd6], 1;
+; CHECK-NEXT:    st.b32 [%rd3], 0;
+; CHECK-NEXT:    st.b32 [%rd4], 0;
+; CHECK-NEXT:    st.b32 [%rd5], 0;
+; CHECK-NEXT:    st.b32 [%rd6], 0;
 ; CHECK-NEXT:    ret;
   %minnum = call float @llvm.minnum.f32(float f0x00000001, float 1.000000e+00)
   store float %minnum, ptr %minnum_res
@@ -83,26 +83,32 @@ define void @minmax(ptr %minnum_res, ptr %maxnum_res, ptr %minimum_res, ptr %max
   ret void
 }
 
-; FIXME: Leave these operations unfolded instead of storing minimum-normal.
+; Leave these operations unfolded instead of storing minimum-normal.
 ; Their exact results are subnormal and FTZ produces signed zero before rounding.
 define void @ftz_boundaries(ptr %fmul_ftz_boundary_res, ptr %fdiv_ftz_boundary_res, ptr %fma_ftz_boundary_res, ptr %fmul_ftz_boundary_negative_res) denormal_fpenv(float: preservesign) {
 ; CHECK-LABEL: ftz_boundaries(
 ; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [ftz_boundaries_param_0];
 ; CHECK-NEXT:    ld.param.b64 %rd2, [ftz_boundaries_param_1];
-; CHECK-NEXT:    st.b32 [%rd1], 8388608;
+; CHECK-NEXT:    mul.rn.ftz.f32 %r1, 0f00800000, 0f3F7FFFFF;
+; CHECK-NEXT:    st.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ld.param.b64 %rd3, [ftz_boundaries_param_2];
 ; CHECK-NEXT:    ld.param.b64 %rd4, [ftz_boundaries_param_3];
-; CHECK-NEXT:    st.b32 [%rd2], 8388608;
-; CHECK-NEXT:    st.b32 [%rd3], 8388608;
-; CHECK-NEXT:    st.b32 [%rd4], -2139095040;
+; CHECK-NEXT:    mul.rn.ftz.f32 %r2, 0f00FFFFFF, 0f3F000000;
+; CHECK-NEXT:    st.b32 [%rd2], %r2;
+; CHECK-NEXT:    fma.rn.ftz.f32 %r3, 0f00800000, 0f3F7FFFFF, 0f00000000;
+; CHECK-NEXT:    st.b32 [%rd3], %r3;
+; CHECK-NEXT:    mul.rn.ftz.f32 %r4, 0f80800000, 0f3F7FFFFF;
+; CHECK-NEXT:    st.b32 [%rd4], %r4;
 ; CHECK-NEXT:    ret;
   %fmul_ftz_boundary = fmul float f0x00800000, f0x3F7FFFFF
   store float %fmul_ftz_boundary, ptr %fmul_ftz_boundary_res
-  ; Division by two is folded using gradual underflow, as is multiplication.
+  ; Division by two may become multiplication by 0.5, but must not be
+  ; constant-folded using gradual underflow.
   %fdiv_ftz_boundary = fdiv float f0x00FFFFFF, 2.000000e+00
   store float %fdiv_ftz_boundary, ptr %fdiv_ftz_boundary_res
   %fma_ftz_boundary = call float @llvm.fma.f32(float f0x00800000, float f0x3F7FFFFF, float 0.0)
@@ -112,27 +118,37 @@ define void @ftz_boundaries(ptr %fmul_ftz_boundary_res, ptr %fdiv_ftz_boundary_r
   ret void
 }
 
-; FIXME: Keep all six floating-point operations unfolded: their results depend
+; Keep all six floating-point operations unfolded: their results depend
 ; on dynamic input/output flushing. ceil can produce 1 or +0, and fcmp can
 ; produce false or true; the other results can be subnormal or +0.
 define void @dynamic(ptr %fadd_res, ptr %fma_res, ptr %ceil_res, ptr %minnum_res, ptr %fcmp_res, ptr %output_mul_res) denormal_fpenv(float: dynamic) {
 ; CHECK-LABEL: dynamic(
 ; CHECK:       {
+; CHECK-NEXT:    .reg .pred %p<2>;
+; CHECK-NEXT:    .reg .b16 %rs<2>;
+; CHECK-NEXT:    .reg .b32 %r<6>;
 ; CHECK-NEXT:    .reg .b64 %rd<7>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [dynamic_param_0];
 ; CHECK-NEXT:    ld.param.b64 %rd2, [dynamic_param_1];
-; CHECK-NEXT:    st.b32 [%rd1], 2;
+; CHECK-NEXT:    add.rn.f32 %r1, 0f00000001, 0f00000001;
+; CHECK-NEXT:    st.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ld.param.b64 %rd3, [dynamic_param_2];
 ; CHECK-NEXT:    ld.param.b64 %rd4, [dynamic_param_3];
-; CHECK-NEXT:    st.b32 [%rd2], 1;
+; CHECK-NEXT:    add.rn.f32 %r2, 0f00000001, 0f00000000;
+; CHECK-NEXT:    st.b32 [%rd2], %r2;
 ; CHECK-NEXT:    ld.param.b64 %rd5, [dynamic_param_4];
 ; CHECK-NEXT:    ld.param.b64 %rd6, [dynamic_param_5];
-; CHECK-NEXT:    st.b32 [%rd3], 1065353216;
-; CHECK-NEXT:    st.b32 [%rd4], 1;
-; CHECK-NEXT:    st.b8 [%rd5], 0;
-; CHECK-NEXT:    st.b32 [%rd6], 4194304;
+; CHECK-NEXT:    cvt.rpi.f32.f32 %r3, 0f00000001;
+; CHECK-NEXT:    st.b32 [%rd3], %r3;
+; CHECK-NEXT:    min.f32 %r4, 0f00000001, 0f3F800000;
+; CHECK-NEXT:    st.b32 [%rd4], %r4;
+; CHECK-NEXT:    setp.eq.f32 %p1, 0f00000001, 0f00000000;
+; CHECK-NEXT:    selp.b16 %rs1, 1, 0, %p1;
+; CHECK-NEXT:    st.b8 [%rd5], %rs1;
+; CHECK-NEXT:    mul.rn.f32 %r5, 0f00800000, 0f3F000000;
+; CHECK-NEXT:    st.b32 [%rd6], %r5;
 ; CHECK-NEXT:    ret;
   %fadd = fadd float f0x00000001, f0x00000001
   store float %fadd, ptr %fadd_res
@@ -151,7 +167,7 @@ define void @dynamic(ptr %fadd_res, ptr %fma_res, ptr %ceil_res, ptr %minnum_res
 
 ; Each f16 result below is stored in its own eight-byte slot.
 
-; FIXME: All FP results should store +0, and fcmp should store true (zext to 1),
+; All FP results should store +0, and fcmp should store true (zext to 1),
 ; independently of float: ieee. %output_mul has normal inputs but a subnormal
 ; result, so it tests output flushing separately from input flushing.
 define void @f16_ftz(ptr %out) denormal_fpenv(preservesign, float: ieee) {
@@ -161,20 +177,20 @@ define void @f16_ftz(ptr %out) denormal_fpenv(preservesign, float: ieee) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [f16_ftz_param_0];
-; CHECK-NEXT:    st.b16 [%rd1], 0x0002;
-; CHECK-NEXT:    st.b16 [%rd1+8], 0x0002;
-; CHECK-NEXT:    st.b16 [%rd1+16], 0x0002;
-; CHECK-NEXT:    st.b16 [%rd1+24], 0x0002;
-; CHECK-NEXT:    st.b16 [%rd1+32], 0x0001;
-; CHECK-NEXT:    st.b16 [%rd1+40], 0x3C00;
-; CHECK-NEXT:    st.b16 [%rd1+48], 0x0001;
-; CHECK-NEXT:    st.b16 [%rd1+56], 0x0001;
-; CHECK-NEXT:    st.b16 [%rd1+64], 0x0001;
-; CHECK-NEXT:    st.b16 [%rd1+72], 0x0001;
-; CHECK-NEXT:    st.b16 [%rd1+80], 0x0001;
-; CHECK-NEXT:    st.b16 [%rd1+88], 0x0001;
-; CHECK-NEXT:    st.b32 [%rd1+96], 0;
-; CHECK-NEXT:    st.b16 [%rd1+104], 0x0200;
+; CHECK-NEXT:    st.b16 [%rd1], 0x0000;
+; CHECK-NEXT:    st.b16 [%rd1+8], 0x0000;
+; CHECK-NEXT:    st.b16 [%rd1+16], 0x0000;
+; CHECK-NEXT:    st.b16 [%rd1+24], 0x0000;
+; CHECK-NEXT:    st.b16 [%rd1+32], 0x0000;
+; CHECK-NEXT:    st.b16 [%rd1+40], 0x0000;
+; CHECK-NEXT:    st.b16 [%rd1+48], 0x0000;
+; CHECK-NEXT:    st.b16 [%rd1+56], 0x0000;
+; CHECK-NEXT:    st.b16 [%rd1+64], 0x0000;
+; CHECK-NEXT:    st.b16 [%rd1+72], 0x0000;
+; CHECK-NEXT:    st.b16 [%rd1+80], 0x0000;
+; CHECK-NEXT:    st.b16 [%rd1+88], 0x0000;
+; CHECK-NEXT:    st.b32 [%rd1+96], 1;
+; CHECK-NEXT:    st.b16 [%rd1+104], 0x0000;
 ; CHECK-NEXT:    ret;
   %fadd = fadd half f0x0001, f0x0001
   %fadd_res = getelementptr i8, ptr %out, i64 0
@@ -222,22 +238,37 @@ define void @f16_ftz(ptr %out) denormal_fpenv(preservesign, float: ieee) {
   ret void
 }
 
-; FIXME: Keep all six floating-point operations unfolded: the default dynamic
+; Keep all six floating-point operations unfolded: the default dynamic
 ; mode applies to f16 despite float: ieee. ceil can produce 1 or +0, fcmp
 ; can produce false or true, and the other results can be subnormal or +0.
 define void @f16_dynamic(ptr %out) denormal_fpenv(dynamic, float: ieee) {
 ; CHECK-LABEL: f16_dynamic(
 ; CHECK:       {
+; CHECK-NEXT:    .reg .pred %p<2>;
+; CHECK-NEXT:    .reg .b16 %rs<11>;
+; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [f16_dynamic_param_0];
-; CHECK-NEXT:    st.b16 [%rd1], 0x0002;
-; CHECK-NEXT:    st.b16 [%rd1+8], 0x0001;
-; CHECK-NEXT:    st.b16 [%rd1+16], 0x3C00;
-; CHECK-NEXT:    st.b16 [%rd1+24], 0x0001;
-; CHECK-NEXT:    st.b32 [%rd1+32], 0;
-; CHECK-NEXT:    st.b16 [%rd1+40], 0x0200;
+; CHECK-NEXT:    mov.b16 %rs1, 0x0001;
+; CHECK-NEXT:    add.rn.f16 %rs2, %rs1, %rs1;
+; CHECK-NEXT:    st.b16 [%rd1], %rs2;
+; CHECK-NEXT:    mov.b16 %rs3, 0x0000;
+; CHECK-NEXT:    add.rn.f16 %rs4, %rs1, %rs3;
+; CHECK-NEXT:    st.b16 [%rd1+8], %rs4;
+; CHECK-NEXT:    cvt.rpi.f16.f16 %rs5, %rs1;
+; CHECK-NEXT:    st.b16 [%rd1+16], %rs5;
+; CHECK-NEXT:    mov.b16 %rs6, 0x3C00;
+; CHECK-NEXT:    min.f16 %rs7, %rs1, %rs6;
+; CHECK-NEXT:    st.b16 [%rd1+24], %rs7;
+; CHECK-NEXT:    setp.eq.f16 %p1, %rs1, %rs3;
+; CHECK-NEXT:    selp.b32 %r1, 1, 0, %p1;
+; CHECK-NEXT:    st.b32 [%rd1+32], %r1;
+; CHECK-NEXT:    mov.b16 %rs8, 0x3800;
+; CHECK-NEXT:    mov.b16 %rs9, 0x0400;
+; CHECK-NEXT:    mul.rn.f16 %rs10, %rs9, %rs8;
+; CHECK-NEXT:    st.b16 [%rd1+40], %rs10;
 ; CHECK-NEXT:    ret;
   %fadd = fadd half f0x0001, f0x0001
   %fadd_res = getelementptr i8, ptr %out, i64 0
