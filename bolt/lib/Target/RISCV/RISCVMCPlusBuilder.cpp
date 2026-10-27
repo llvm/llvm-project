@@ -883,19 +883,15 @@ public:
     uint32_t Type;
     switch (Fixup.getKind()) {
     case RISCV::fixup_riscv_jal:
-    case ELF::R_RISCV_JAL:
       Type = ELF::R_RISCV_JAL;
       break;
     case RISCV::fixup_riscv_branch:
-    case ELF::R_RISCV_BRANCH:
       Type = ELF::R_RISCV_BRANCH;
       break;
     case RISCV::fixup_riscv_rvc_jump:
-    case ELF::R_RISCV_RVC_JUMP:
       Type = ELF::R_RISCV_RVC_JUMP;
       break;
     case RISCV::fixup_riscv_rvc_branch:
-    case ELF::R_RISCV_RVC_BRANCH:
       Type = ELF::R_RISCV_RVC_BRANCH;
       break;
     default:

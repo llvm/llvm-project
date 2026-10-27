@@ -1652,13 +1652,11 @@ static BinaryFunction *collectRISCVExternalReferencePatch(
       return nullptr;
     }
     const uint64_t Address = *SymbolAddress + Addend;
-    Symbol = nullptr;
-    Target->forEachEntryPoint(
-        [&](uint64_t EntryOffset, const MCSymbol *EntrySymbol) {
-          if (Target->getAddress() + EntryOffset == Address)
-            Symbol = EntrySymbol;
-          return true;
-        });
+    const uint64_t EntryOffset = Address - Target->getAddress();
+    Symbol = EntryOffset
+                 ? Target->getSecondaryEntryPointSymbol(
+                       Target->getLabelAtOffset(EntryOffset))
+                 : Target->getSymbol();
     if (!Symbol && !Target->hasCFG())
       Symbol = BC.handleExternalBranchTarget(Address, Function, *Target);
     if (!Symbol) {
