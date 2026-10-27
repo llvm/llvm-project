@@ -54,6 +54,7 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
@@ -61,6 +62,11 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "agx-lower-air"
+
+static cl::opt<bool> NativeHints(
+    "agx-air-native-hints", cl::init(true), cl::Hidden,
+    cl::desc("Compile AIR hints as the AGX operations they name; false runs "
+             "their AIR emulation, as a consumer without them does"));
 
 namespace {
 // Layout must match the struct emitted by -gen-searchable-tables for the
@@ -287,8 +293,9 @@ static bool isAIRType(Type *T) {
     return all_of(ST->elements(), isAIRType);
   if (auto *FT = dyn_cast<FunctionType>(T))
     return isAIRType(FT->getReturnType()) && all_of(FT->params(), isAIRType);
+  // i128 is a type hint (llvm/IR/AIR.h): AGX has it.
   if (auto *IT = dyn_cast<IntegerType>(T))
-    return is_contained({1u, 8u, 16u, 32u, 64u}, IT->getBitWidth());
+    return is_contained({1u, 8u, 16u, 32u, 64u, 128u}, IT->getBitWidth());
   if (auto *PT = dyn_cast<PointerType>(T))
     return PT->getAddressSpace() <= air::AS::Threadgroup ||
            PT->getAddressSpace() == air::GenericHintAS;
@@ -1368,7 +1375,12 @@ static Value *nativeHint(IRBuilder<> &B, CallInst &CI, StringRef Key) {
   LLVMContext &Ctx = M.getContext();
   SmallVector<StringRef, 4> Parts;
   Key.split(Parts, '|');
-  if (Parts.size() < 2 || Parts[1].size() != CI.arg_size() + 1)
+  // "+lane": a trailing operand that only the emulation uses.
+  bool Lane = Parts.back() == "+lane";
+  if (Lane)
+    Parts.pop_back();
+  unsigned NumArgs = CI.arg_size() - Lane;
+  if (Parts.size() < 2 || Parts[1].size() != NumArgs + 1)
     return nullptr;
   StringRef Op = Parts[0], Mask = Parts[1];
   auto Ty = [&](Type *T, char C) {
@@ -1376,8 +1388,9 @@ static Value *nativeHint(IRBuilder<> &B, CallInst &CI, StringRef Key) {
   };
   SmallVector<Value *, 4> Args;
   for (auto [I, A] : enumerate(CI.args()))
-    Args.push_back(Mask[I + 1] == 'd' ? B.CreateBitCast(A, B.getDoubleTy())
-                                      : A.get());
+    if (I < NumArgs)
+      Args.push_back(Mask[I + 1] == 'd' ? B.CreateBitCast(A, B.getDoubleTy())
+                                        : A.get());
   Type *Ret = Ty(CI.getType(), Mask[0]);
   Value *R = nullptr;
   if (Op.consume_front("call:")) {
@@ -1457,7 +1470,7 @@ void LowerAIR::lowerHints() {
       if (!CI || CI->getCalledFunction() != &F)
         continue;
       IRBuilder<> B(CI);
-      if (Value *R = nativeHint(B, *CI, Key)) {
+      if (Value *R = NativeHints ? nativeHint(B, *CI, Key) : nullptr) {
         if (!CI->getType()->isVoidTy()) {
           R->takeName(CI);
           CI->replaceAllUsesWith(R);

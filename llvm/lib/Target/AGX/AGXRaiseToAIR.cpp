@@ -453,6 +453,15 @@ void RaiseToAIR::raiseFunction(Function &F) {
       }
       std::string Key =
           ("call:" + Name + "|" + doubleMask(II->getType(), Tys) + MD).str();
+      if (II->getIntrinsicID() == Intrinsic::agx_simdgroup_matrix_fma) {
+        // The emulation needs the thread's lane, which only a kernel can
+        // read (a system value): a trailing operand, "+lane".
+        IRBuilder<> B(II);
+        Args.push_back(B.CreateCall(
+            M.getOrInsertFunction("air.thread_index_in_simdgroup",
+                                  B.getInt32Ty())));
+        Key += "|+lane";
+      }
       hintCall(*II, Key, Args);
       continue;
     }
@@ -712,6 +721,57 @@ void RaiseToAIR::emulate(Function &F, StringRef Key) {
                                   ? Intrinsic::sin
                                   : Intrinsic::cos,
                               {Ret}, {X}));
+  } else if (Intr.starts_with("llvm.agx.simdgroup.matrix.fma.") &&
+             A.size() == 4) {
+    // D = A * B + C on 8x8 matrices; thread t holds (r, c) and (r, c + 1),
+    // r = 4 * (t / 16) + (t / 2) % 4, c = 4 * ((t / 8) % 2) + 2 * (t % 2)
+    // (AGXUsage.rst). Each thread gathers its row of A and its columns of B
+    // and accumulates in order of k from C, as the AGX expansion does.
+    auto *VT = cast<FixedVectorType>(Ret);
+    Type *ET = VT->getElementType();
+    Type *I16 = B.getInt16Ty();
+    Value *T = A[3];
+    auto U = [&](unsigned V) { return B.getInt32(V); };
+    Value *R = B.CreateAdd(
+        B.CreateMul(B.CreateLShr(T, U(4)), U(4)),
+        B.CreateAnd(B.CreateLShr(T, U(1)), U(3)));
+    Value *C = B.CreateAdd(
+        B.CreateMul(B.CreateAnd(B.CreateLShr(T, U(3)), U(1)), U(4)),
+        B.CreateMul(B.CreateAnd(T, U(1)), U(2)));
+    // The lane holding (row, col), and which of its two elements.
+    auto LaneOf = [&](Value *Row, Value *Col) {
+      Value *L = B.CreateMul(B.CreateLShr(Row, U(2)), U(16));
+      L = B.CreateAdd(L, B.CreateMul(B.CreateLShr(Col, U(2)), U(8)));
+      L = B.CreateAdd(L, B.CreateMul(B.CreateAnd(Row, U(3)), U(2)));
+      L = B.CreateAdd(L, B.CreateLShr(B.CreateAnd(Col, U(3)), U(1)));
+      return B.CreateTrunc(L, I16);
+    };
+    // Shuffles of bfloat go through their bits.
+    Type *ShTy = ET->isBFloatTy() ? I16 : ET;
+    std::string Sfx = ET->isFloatTy()  ? "f32"
+                      : ET->isHalfTy() ? "f16"
+                                       : "u.i16";
+    FunctionCallee Shuffle = M.getOrInsertFunction(
+        "air.simd_shuffle." + Sfx, FunctionType::get(ShTy, {ShTy, I16}, false));
+    auto Read = [&](Value *Vec, unsigned Elt, Value *Lane) {
+      Value *X = B.CreateExtractElement(Vec, Elt);
+      if (ShTy != ET)
+        X = B.CreateBitCast(X, ShTy);
+      Value *V = B.CreateCall(Shuffle, {X, Lane});
+      return ShTy != ET ? B.CreateBitCast(V, ET) : V;
+    };
+    Value *D0 = B.CreateExtractElement(A[2], uint64_t(0));
+    Value *D1 = B.CreateExtractElement(A[2], uint64_t(1));
+    for (unsigned K = 0; K < 8; ++K) {
+      Value *Av = Read(A[0], K % 2, LaneOf(R, U(K)));
+      Value *BLane = LaneOf(U(K), C);
+      Value *B0 = Read(A[1], 0, BLane), *B1 = Read(A[1], 1, BLane);
+      D0 = B.CreateIntrinsic(Intrinsic::fma, {ET}, {Av, B0, D0});
+      D1 = B.CreateIntrinsic(Intrinsic::fma, {ET}, {Av, B1, D1});
+    }
+    Value *Out = B.CreateInsertElement(PoisonValue::get(Ret), D0, uint64_t(0));
+    R = B.CreateInsertElement(Out, D1, uint64_t(1));
+    return Fin(R);
   } else {
     error(&F, "no AIR emulation of " + Intr);
     R = Ret->isVoidTy() ? nullptr : PoisonValue::get(Ret);
@@ -722,10 +782,19 @@ void RaiseToAIR::emulate(Function &F, StringRef Key) {
 bool RaiseToAIR::run() {
   if (M.getTargetTriple().getArch() != Triple::agx)
     return false;
+  // Kernels: agx_kernel functions and, as AGX compiles every function as a
+  // kernel, the other void functions nothing calls.
   SmallVector<Function *, 8> Kernels;
-  for (Function &F : M)
-    if (F.getCallingConv() == CallingConv::AGX_KERNEL && !F.isDeclaration())
+  for (Function &F : M) {
+    if (F.isDeclaration())
+      continue;
+    bool Called = any_of(F.users(), [](const User *U) {
+      return isa<CallBase>(U);
+    });
+    if (F.getCallingConv() == CallingConv::AGX_KERNEL ||
+        (!F.hasLocalLinkage() && !Called && F.getReturnType()->isVoidTy()))
       Kernels.push_back(&F);
+  }
   if (Kernels.empty())
     return false;
   for (Function *K : Kernels)
@@ -844,7 +913,7 @@ bool RaiseToAIR::run() {
   DenseMap<Function *, Function *> NewOf;
   for (auto [Old, New] : Functions) {
     std::string Name = Old->getName().str();
-    bool Kernel = Old->getCallingConv() == CallingConv::AGX_KERNEL;
+    bool Kernel = is_contained(Kernels, Old);
     NewOf[Old] = New;
     Old->replaceAllUsesWith(PoisonValue::get(Old->getType()));
     Old->eraseFromParent();
