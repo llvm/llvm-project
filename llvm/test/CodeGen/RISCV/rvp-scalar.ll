@@ -2130,6 +2130,26 @@ define i32 @macc_h01(i32 %rd, i16 %a, i32 %b) nounwind {
   ret i32 %result
 }
 
+define i32 @maccu_h01(i32 %rd, i16 %a, i32 %b) nounwind {
+; RV32-LABEL: maccu_h01:
+; RV32:       # %bb.0:
+; RV32-NEXT:    maccu.h01 a0, a1, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: maccu_h01:
+; RV64:       # %bb.0:
+; RV64-NEXT:    zext.h a1, a1
+; RV64-NEXT:    srliw a2, a2, 16
+; RV64-NEXT:    macc.w00 a0, a1, a2
+; RV64-NEXT:    sext.w a0, a0
+; RV64-NEXT:    ret
+  %aext = zext i16 %a to i32
+  %bhi = lshr i32 %b, 16
+  %mul = mul i32 %aext, %bhi
+  %result = add i32 %rd, %mul
+  ret i32 %result
+}
+
 define i32 @macc_h01_commute(i32 %rd, i16 %a, i32 %b) nounwind {
 ; RV32-LABEL: macc_h01_commute:
 ; RV32:       # %bb.0:
@@ -2145,6 +2165,26 @@ define i32 @macc_h01_commute(i32 %rd, i16 %a, i32 %b) nounwind {
 ; RV64-NEXT:    ret
   %aext = sext i16 %a to i32
   %bhi = ashr i32 %b, 16
+  %mul = mul i32 %aext, %bhi
+  %result = add i32 %mul, %rd
+  ret i32 %result
+}
+
+define i32 @maccu_h01_commute(i32 %rd, i16 %a, i32 %b) nounwind {
+; RV32-LABEL: maccu_h01_commute:
+; RV32:       # %bb.0:
+; RV32-NEXT:    maccu.h01 a0, a1, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: maccu_h01_commute:
+; RV64:       # %bb.0:
+; RV64-NEXT:    zext.h a1, a1
+; RV64-NEXT:    srliw a2, a2, 16
+; RV64-NEXT:    macc.w00 a0, a1, a2
+; RV64-NEXT:    sext.w a0, a0
+; RV64-NEXT:    ret
+  %aext = zext i16 %a to i32
+  %bhi = lshr i32 %b, 16
   %mul = mul i32 %aext, %bhi
   %result = add i32 %mul, %rd
   ret i32 %result
@@ -2171,6 +2211,26 @@ define i32 @macc_h01_swap_operands(i32 %rd, i16 %a, i32 %b) nounwind {
   ret i32 %result
 }
 
+define i32 @maccu_h01_swap_operands(i32 %rd, i16 %a, i32 %b) nounwind {
+; RV32-LABEL: maccu_h01_swap_operands:
+; RV32:       # %bb.0:
+; RV32-NEXT:    maccu.h01 a0, a1, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: maccu_h01_swap_operands:
+; RV64:       # %bb.0:
+; RV64-NEXT:    zext.h a1, a1
+; RV64-NEXT:    srliw a2, a2, 16
+; RV64-NEXT:    macc.w00 a0, a2, a1
+; RV64-NEXT:    sext.w a0, a0
+; RV64-NEXT:    ret
+  %aext = zext i16 %a to i32
+  %bhi = lshr i32 %b, 16
+  %mul = mul i32 %bhi, %aext
+  %result = add i32 %rd, %mul
+  ret i32 %result
+}
+
 define i32 @macc_h11(i32 %rd, i32 %a, i32 %b) nounwind {
 ; RV32-LABEL: macc_h11:
 ; RV32:       # %bb.0:
@@ -2191,6 +2251,26 @@ define i32 @macc_h11(i32 %rd, i32 %a, i32 %b) nounwind {
   ret i32 %result
 }
 
+define i32 @maccu_h11(i32 %rd, i32 %a, i32 %b) nounwind {
+; RV32-LABEL: maccu_h11:
+; RV32:       # %bb.0:
+; RV32-NEXT:    maccu.h11 a0, a1, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: maccu_h11:
+; RV64:       # %bb.0:
+; RV64-NEXT:    srliw a1, a1, 16
+; RV64-NEXT:    srliw a2, a2, 16
+; RV64-NEXT:    macc.w00 a0, a1, a2
+; RV64-NEXT:    sext.w a0, a0
+; RV64-NEXT:    ret
+  %ahi = lshr i32 %a, 16
+  %bhi = lshr i32 %b, 16
+  %mul = mul i32 %ahi, %bhi
+  %result = add i32 %rd, %mul
+  ret i32 %result
+}
+
 define i32 @macc_h11_commute(i32 %rd, i32 %a, i32 %b) nounwind {
 ; RV32-LABEL: macc_h11_commute:
 ; RV32:       # %bb.0:
@@ -2206,6 +2286,26 @@ define i32 @macc_h11_commute(i32 %rd, i32 %a, i32 %b) nounwind {
 ; RV64-NEXT:    ret
   %ahi = ashr i32 %a, 16
   %bhi = ashr i32 %b, 16
+  %mul = mul i32 %ahi, %bhi
+  %result = add i32 %mul, %rd
+  ret i32 %result
+}
+
+define i32 @maccu_h11_commute(i32 %rd, i32 %a, i32 %b) nounwind {
+; RV32-LABEL: maccu_h11_commute:
+; RV32:       # %bb.0:
+; RV32-NEXT:    maccu.h11 a0, a1, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: maccu_h11_commute:
+; RV64:       # %bb.0:
+; RV64-NEXT:    srliw a1, a1, 16
+; RV64-NEXT:    srliw a2, a2, 16
+; RV64-NEXT:    macc.w00 a0, a1, a2
+; RV64-NEXT:    sext.w a0, a0
+; RV64-NEXT:    ret
+  %ahi = lshr i32 %a, 16
+  %bhi = lshr i32 %b, 16
   %mul = mul i32 %ahi, %bhi
   %result = add i32 %mul, %rd
   ret i32 %result
@@ -2236,6 +2336,31 @@ define i32 @macc_h11_multiple_uses(i32 %a, i32 %b, i32 %c, ptr %out) nounwind {
   ret i32 %result
 }
 
+; Negative test: multiply result has multiple uses, should not combine to maccu
+define i32 @maccu_h11_multiple_uses(i32 %a, i32 %b, i32 %c, ptr %out) nounwind {
+; RV32-LABEL: maccu_h11_multiple_uses:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mulu.h11 a1, a0, a1
+; RV32-NEXT:    add a0, a2, a1
+; RV32-NEXT:    sw a1, 0(a3)
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: maccu_h11_multiple_uses:
+; RV64:       # %bb.0:
+; RV64-NEXT:    srliw a0, a0, 16
+; RV64-NEXT:    srliw a1, a1, 16
+; RV64-NEXT:    mul a1, a0, a1
+; RV64-NEXT:    addw a0, a2, a1
+; RV64-NEXT:    sw a1, 0(a3)
+; RV64-NEXT:    ret
+  %ahi = lshr i32 %a, 16
+  %bhi = lshr i32 %b, 16
+  %mul = mul i32 %ahi, %bhi
+  %result = add i32 %c, %mul
+  store i32 %mul, ptr %out
+  ret i32 %result
+}
+
 ; Negative test: shift amount is not 16, should not use macc.h11
 define i32 @macc_h11_wrong_shamt(i32 %rd, i32 %a, i32 %b) nounwind {
 ; RV32-LABEL: macc_h11_wrong_shamt:
@@ -2255,6 +2380,30 @@ define i32 @macc_h11_wrong_shamt(i32 %rd, i32 %a, i32 %b) nounwind {
 ; RV64-NEXT:    ret
   %ahi = ashr i32 %a, 15
   %bhi = ashr i32 %b, 16
+  %mul = mul i32 %ahi, %bhi
+  %result = add i32 %rd, %mul
+  ret i32 %result
+}
+
+; Negative test: shift amount is not 16, should not use maccu.h11
+define i32 @maccu_h11_wrong_shamt(i32 %rd, i32 %a, i32 %b) nounwind {
+; RV32-LABEL: maccu_h11_wrong_shamt:
+; RV32:       # %bb.0:
+; RV32-NEXT:    srli a1, a1, 15
+; RV32-NEXT:    srli a2, a2, 16
+; RV32-NEXT:    mul a1, a1, a2
+; RV32-NEXT:    add a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: maccu_h11_wrong_shamt:
+; RV64:       # %bb.0:
+; RV64-NEXT:    srliw a1, a1, 15
+; RV64-NEXT:    srliw a2, a2, 16
+; RV64-NEXT:    macc.w00 a0, a1, a2
+; RV64-NEXT:    sext.w a0, a0
+; RV64-NEXT:    ret
+  %ahi = lshr i32 %a, 15
+  %bhi = lshr i32 %b, 16
   %mul = mul i32 %ahi, %bhi
   %result = add i32 %rd, %mul
   ret i32 %result
