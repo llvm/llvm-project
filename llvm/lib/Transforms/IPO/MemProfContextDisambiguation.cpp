@@ -6634,23 +6634,6 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
   return Changed;
 }
 
-ValueInfo MemProfContextDisambiguation::getSummaryCalleeForCandidate(
-    uint64_t CandidateGUID) const {
-  ValueInfo VI = ImportSummary->getValueInfo(CandidateGUID);
-  if (VI && !VI.getSummaryList().empty())
-    return VI;
-  auto LocalGUID = ImportSummary->getGUIDFromOriginalID(CandidateGUID);
-  if (!LocalGUID)
-    return VI;
-  ValueInfo LocalVI = ImportSummary->getValueInfo(LocalGUID);
-  // The original name GUID may map to a local variable, which is ignored.
-  if (!LocalVI || llvm::any_of(LocalVI.getSummaryList(), [](const auto &S) {
-        return S->getSummaryKind() == GlobalValueSummary::GlobalVarKind;
-      }))
-    return VI;
-  return LocalVI;
-}
-
 unsigned MemProfContextDisambiguation::recordICPInfo(
     CallBase *CB,
     function_ref<const CallsiteInfo *(const InstrProfValueData &)> GetCallsite,
@@ -6716,11 +6699,6 @@ void MemProfContextDisambiguation::performICP(
       const CallsiteInfo *StackNode = Info.Callsites[I];
       // All calls in the same function must have the same number of clones.
       assert(!StackNode || NumClones == StackNode->Clones.size());
-      // The callee recorded in the summary for this target. If there is no
-      // record, use the callee the thin link would have recorded.
-      ValueInfo SummaryCallee =
-          StackNode ? StackNode->Callee
-                    : getSummaryCalleeForCandidate(Candidate.Value);
 
       // See if the target is in the module. If it wasn't imported, it is
       // possible that this profile could have been collected on a different
@@ -6734,10 +6712,12 @@ void MemProfContextDisambiguation::performICP(
       // the thin link translates to the actual GUID of the local function
       // (see updateValueInfoForIndirectCalls). The latter is recorded in the
       // function's !guid metadata, which is preserved across promotion and
-      // importing, and is added to the Symtab.
-      if (!TargetFunction && SummaryCallee &&
-          SummaryCallee.getGUID() != Candidate.Value)
-        TargetFunction = Symtab->getFunction(SummaryCallee.getGUID());
+      // importing, and is added to the Symtab. If there is no summary record,
+      // the target was not cloned, so we conservatively only promote it if
+      // found directly via the VP metadata GUID.
+      if (!TargetFunction && StackNode && StackNode->Callee &&
+          StackNode->Callee.getGUID() != Candidate.Value)
+        TargetFunction = Symtab->getFunction(StackNode->Callee.getGUID());
       if (TargetFunction == nullptr ||
           // Any ThinLTO global dead symbol removal should have already
           // occurred, so it should be safe to promote when the target is a

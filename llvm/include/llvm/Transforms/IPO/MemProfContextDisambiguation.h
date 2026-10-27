@@ -58,13 +58,6 @@ class MemProfContextDisambiguation
     SmallVector<const CallsiteInfo *> Callsites;
   };
 
-  // Returns the ValueInfo the thin link would use as the summary callee for
-  // profiled target CandidateGUID in an indirect call's VP metadata: the
-  // ValueInfo for CandidateGUID, unless it has no summaries and there is a
-  // unique local function whose original name GUID is CandidateGUID (see
-  // updateValueInfoForIndirectCalls). May return an empty ValueInfo.
-  ValueInfo getSummaryCalleeForCandidate(uint64_t CandidateGUID) const;
-
   // Record information needed for ICP of an indirect call, depending on its
   // profile information and the clone information recorded in the
   // CallsiteInfo records for its profiled targets. GetCallsite is invoked once
