@@ -6,11 +6,13 @@ add_lldb_unittest(SymbolTests
   MangledTest.cpp
   PostfixExpressionTest.cpp
   SymbolLocatorTest.cpp
+  SymbolFileTest.cpp
   SymbolTest.cpp
   SymtabTest.cpp
   SymStoreTest.cpp
   TestTypeSystem.cpp
   TestTypeSystemClang.cpp
+  TestTypeSystemFortran.cpp
   TestClangASTImporter.cpp
   TestDWARFCallFrameInfo.cpp
   TestType.cpp
@@ -22,11 +24,13 @@ add_lldb_unittest(SymbolTests
     lldbHost
     lldbSymbol
     lldbUtilityHelpers
+    lldbPluginCPlusPlusLanguage
     lldbPluginObjectFileELF
     lldbPluginObjectFileMachO
     lldbPluginSymbolFileDWARF
     lldbPluginSymbolFileSymtab
     lldbPluginTypeSystemClang
+    lldbPluginTypeSystemFortran
     lldbPluginSymbolLocatorSymStore
     LLVMTestingSupport
   )

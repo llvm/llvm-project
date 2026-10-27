@@ -60,6 +60,7 @@ private:
   llvm::DenseMap<LoanID, PendingWarning> FinalWarningsMap;
   llvm::DenseMap<AnnotationTarget, EscapingTarget> AnnotationWarningsMap;
   llvm::DenseMap<const ParmVarDecl *, EscapingTarget> NoescapeWarningsMap;
+  llvm::DenseMap<const FieldDecl *, const Expr *> FieldOriginEscapesMap;
   llvm::DenseSet<const Decl *> VerifiedLiftimeboundEscapes;
   const LoanPropagationAnalysis &LoanPropagation;
   const MovedLoansAnalysis &MovedLoans;
@@ -105,6 +106,8 @@ public:
           checkAnnotations(OEF);
     issuePendingWarnings();
     suggestAnnotations();
+    if (LSOpts.CheckFieldOriginEscape)
+      reportFieldOriginEscapes();
     if (LSOpts.CheckNoescapeViolations)
       reportNoescapeViolations();
     if (LSOpts.CheckLifetimeboundViolations)
@@ -171,6 +174,24 @@ public:
           AnnotationWarningsMap.try_emplace(MD, ReturnEsc->getReturnExpr());
       }
     };
+    // Identifies methods whose return value derives from a field's origin
+    // rather than *this, e.g., Span::data() or Vector::data().
+    auto CheckField = [&](const FieldDecl *Field) {
+      if (!LSOpts.CheckFieldOriginEscape)
+        return;
+      // Lifetimebound marks the field as owned by *this (e.g., Vector::data()).
+      const auto *MD = dyn_cast<CXXMethodDecl>(FD);
+      if (MD && implicitObjectParamIsLifetimeBound(MD))
+        return;
+      if (auto *ReturnEsc = dyn_cast<ReturnEscapeFact>(OEF)) {
+        // Ignore field loans in inner origins, e.g., returning a reference to
+        // a view field borrows *this.
+        if (OriginList *RetList = FactMgr.getOriginMgr().getOrCreateList(
+                ReturnEsc->getReturnExpr());
+            RetList && RetList->getOuterOriginID() == EscapedOID)
+          FieldOriginEscapesMap.try_emplace(Field, ReturnEsc->getReturnExpr());
+      }
+    };
     auto MovedAtEscape = MovedLoans.getMovedLoans(OEF);
     for (LoanID LID : EscapedLoans) {
       const Loan *L = FactMgr.getLoanMgr().getLoan(LID);
@@ -181,6 +202,8 @@ public:
         CheckParam(PVD, /*IsMoved=*/MovedAtEscape.lookup(LID));
       else if (const auto *MD = PB->getImplicitThisParent())
         CheckImplicitThis(MD);
+      else if (const auto *Field = PB->getFieldDecl())
+        CheckField(Field);
     }
   }
 
@@ -277,7 +300,7 @@ public:
       const Expr *MovedExpr = Warning.MovedExpr;
       SourceLocation ExpiryLoc = Warning.ExpiryLoc;
 
-      if (const auto *UF = CausingFact.dyn_cast<const UseFact *>()) {
+      if (const auto *UF = dyn_cast<const UseFact *>(CausingFact)) {
         llvm::SmallVector<const Expr *> ExprChain =
             getExprChain(LoanPropagation.buildOriginFlowChain(UF, LID, Cfg));
         if (Warning.InvalidatedByExpr) {
@@ -298,7 +321,7 @@ public:
                                           MovedExpr, ExpiryLoc, ExprChain);
 
       } else if (const auto *OEF =
-                     CausingFact.dyn_cast<const OriginEscapesFact *>()) {
+                     dyn_cast<const OriginEscapesFact *>(CausingFact)) {
         if (Warning.InvalidatedByExpr) {
           if (const auto *FieldEscape = dyn_cast<FieldEscapeFact>(OEF)) {
             // Invalidated object escapes to a field.
@@ -328,13 +351,28 @@ public:
                                                   Warning.InvalidatedByExpr);
           } else if (isa<ReturnEscapeFact>(OEF)) {
             // FIXME: Diagnose invalidated return escapes separately.
+          } else if (const auto *ThisEscape = dyn_cast<ThisEscapeFact>(OEF)) {
+            // A loan still held by the object at the method's exit was
+            // invalidated.
+            llvm::SmallVector<const Expr *> ExprChain = getExprChain(
+                LoanPropagation.buildOriginFlowChain(OEF, LID, Cfg));
+            if (IssueExpr)
+              SemaHelper->reportUseAfterInvalidation(
+                  IssueExpr, ThisEscape->getLoc(), Warning.InvalidatedByExpr,
+                  ExprChain);
+            else if (InvalidatedPVD)
+              SemaHelper->reportUseAfterInvalidation(
+                  InvalidatedPVD, ThisEscape->getLoc(),
+                  Warning.InvalidatedByExpr, ExprChain);
           } else
             llvm_unreachable("Unhandled OriginEscapesFact type");
-        } else if (const auto *RetEscape = dyn_cast<ReturnEscapeFact>(OEF))
+        } else if (const auto *RetEscape = dyn_cast<ReturnEscapeFact>(OEF)) {
           // Return stack address.
           SemaHelper->reportUseAfterReturn(
-              IssueExpr, RetEscape->getReturnExpr(), MovedExpr);
-        else if (const auto *FieldEscape = dyn_cast<FieldEscapeFact>(OEF)) {
+              IssueExpr, RetEscape->getReturnExpr(), MovedExpr,
+              getExprChain(
+                  LoanPropagation.buildOriginFlowChain(OEF, LID, Cfg)));
+        } else if (const auto *FieldEscape = dyn_cast<FieldEscapeFact>(OEF)) {
           // Dangling field.
           bool IsCapturedByLambda =
               FactMgr.isFieldCapturedByLambda(FieldEscape->getFieldDecl());
@@ -348,7 +386,16 @@ public:
             IsMain = Func->isMain();
           SemaHelper->reportDanglingGlobal(IssueExpr, GlobalEscape->getGlobal(),
                                            MovedExpr, ExpiryLoc, IsMain);
-        } else
+        } else if (const auto *ThisEscape = dyn_cast<ThisEscapeFact>(OEF))
+          // A borrow is still held by the object (e.g. captured via
+          // lifetime_capture_by_this) when the captured local goes out of
+          // scope; reuse the use-after-scope diagnostic at the capturing
+          // method.
+          SemaHelper->reportUseAfterScope(
+              IssueExpr, ThisEscape->getLoc(), MovedExpr, ExpiryLoc,
+              getExprChain(
+                  LoanPropagation.buildOriginFlowChain(OEF, LID, Cfg)));
+        else
           llvm_unreachable("Unhandled OriginEscapesFact type");
       } else
         llvm_unreachable("Unhandled CausingFact type");
@@ -442,6 +489,17 @@ public:
           llvm_unreachable("Implicit this can only escape via Expr (return)");
       }
     }
+  }
+
+  void reportFieldOriginEscapes() {
+    if (!SemaHelper)
+      return;
+    const auto *MD = dyn_cast<CXXMethodDecl>(FD);
+    if (!MD)
+      return;
+    llvm::TimeTraceScope TimeTrace("ReportFieldOriginEscapes");
+    for (auto [Field, EscapeExpr] : FieldOriginEscapesMap)
+      SemaHelper->reportFieldOriginEscape(MD, Field, EscapeExpr);
   }
 
   void reportNoescapeViolations() {

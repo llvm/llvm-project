@@ -235,10 +235,6 @@ public:
 
   LLVM_ABI static StringRef getNameFromAttrKind(Attribute::AttrKind AttrKind);
 
-  /// Return true if the provided string matches the IR name of an attribute.
-  /// example: "noalias" return true but not "NoAlias"
-  LLVM_ABI static bool isExistingAttribute(StringRef Name);
-
   //===--------------------------------------------------------------------===//
   // Attribute Accessors
   //===--------------------------------------------------------------------===//
@@ -453,6 +449,13 @@ public:
   LLVM_ABI AttributeSet addAttributes(LLVMContext &C,
                                       const AttrBuilder &B) const;
 
+  /// Add attributes to the attribute set, replacing attributes of the same
+  /// kind. \p Attrs must be sorted like an attribute set, with at most one
+  /// attribute of each kind. Returns a new set because attribute sets are
+  /// immutable.
+  [[nodiscard]] LLVM_ABI AttributeSet
+  addSortedAttributes(LLVMContext &C, ArrayRef<Attribute> Attrs) const;
+
   /// Remove the specified attribute from this set. Returns a new set because
   /// attribute sets are immutable.
   [[nodiscard]] LLVM_ABI AttributeSet
@@ -643,6 +646,12 @@ public:
   [[nodiscard]] LLVM_ABI AttributeList addAttributesAtIndex(
       LLVMContext &C, unsigned Index, const AttrBuilder &B) const;
 
+  /// Add attributes to the attribute set at the given index, as
+  /// AttributeSet::addAttributes does. Returns a new list because attribute
+  /// lists are immutable.
+  [[nodiscard]] LLVM_ABI AttributeList addSortedAttributesAtIndex(
+      LLVMContext &C, unsigned Index, ArrayRef<Attribute> Attrs) const;
+
   /// Add a function attribute to the list. Returns a new list because
   /// attribute lists are immutable.
   [[nodiscard]] AttributeList addFnAttribute(LLVMContext &C,
@@ -691,6 +700,15 @@ public:
   [[nodiscard]] AttributeList addRetAttributes(LLVMContext &C,
                                                const AttrBuilder &B) const {
     return addAttributesAtIndex(C, ReturnIndex, B);
+  }
+
+  /// Add a return value attribute to the list. Returns a new list because
+  /// attribute lists are immutable.
+  [[nodiscard]] AttributeList
+  maybeAddRetAttribute(LLVMContext &C, Attribute::AttrKind Kind) const {
+    if (Kind != Attribute::AttrKind::None)
+      return addAttributeAtIndex(C, ReturnIndex, Kind);
+    return *this;
   }
 
   /// Add an argument attribute to the list. Returns a new list because

@@ -370,6 +370,16 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "DumpNotifications",
+    hdrs = ["lib/IR/DumpNotifications.h"],
+    includes = ["lib/IR"],
+    deps = [
+        "//llvm:Support",
+        "//mlir:IR",
+    ],
+)
+
 gentbl_sharded_ops(
     name = "TestDialectOpSrcs",
     hdr_out = "lib/Dialect/Test/TestOps.h.inc",
@@ -394,6 +404,7 @@ cc_library(
         "lib/Dialect/Test",
     ],
     deps = [
+        ":DumpNotifications",
         ":TestAttrDefsIncGen",
         ":TestEnumDefsIncGen",
         ":TestInterfacesIncGen",
@@ -470,6 +481,7 @@ cc_library(
     name = "TestIR",
     srcs = glob(["lib/IR/*.cpp"]),
     deps = [
+        ":DumpNotifications",
         ":TestDialect",
         "//llvm:Support",
         "//mlir:Analysis",
@@ -552,12 +564,14 @@ cc_library(
     deps = [
         ":TestDialect",
         "//llvm:Support",
+        "//mlir:ArithCommonConversion",
         "//mlir:ArithToSPIRV",
         "//mlir:ArithTransforms",
         "//mlir:ControlFlowToSPIRV",
         "//mlir:FuncDialect",
         "//mlir:FuncToSPIRV",
         "//mlir:GPUDialect",
+        "//mlir:GPUSPIRVTransforms",
         "//mlir:GPUToGPURuntimeTransforms",
         "//mlir:GPUToSPIRV",
         "//mlir:GPUTransforms",
@@ -644,6 +658,7 @@ cc_library(
     srcs = glob(["lib/Transforms/*.cpp"]),
     includes = ["lib/Dialect/Test"],
     deps = [
+        ":DumpNotifications",
         ":TestDialect",
         ":TestDialectConversionPDLLPatternsIncGen",
         ":TestTransformsOpsIncGen",
@@ -779,6 +794,7 @@ cc_library(
         "//mlir:FuncDialect",
         "//mlir:FuncToLLVM",
         "//mlir:GPUDialect",
+        "//mlir:GPUROCDLTransforms",
         "//mlir:GPUToGPURuntimeTransforms",
         "//mlir:GPUToNVVMTransforms",
         "//mlir:GPUTransforms",
@@ -1067,6 +1083,7 @@ cc_library(
     includes = ["lib/Dialect/Test"],
     deps = [
         ":TestDialect",
+        "//llvm:Support",
         "//mlir:BufferizationDialect",
         "//mlir:BufferizationInterfaces",
         "//mlir:BufferizationTransforms",

@@ -412,8 +412,8 @@ void FormatManager::ForEachCategory(TypeCategoryMap::ForEachCallback callback) {
   }
 }
 
-lldb::TypeCategoryImplSP
-FormatManager::GetCategory(ConstString category_name, bool can_create) {
+lldb::TypeCategoryImplSP FormatManager::GetCategory(ConstString category_name,
+                                                    bool can_create) {
   if (!category_name)
     return GetCategory(m_default_category_name);
   lldb::TypeCategoryImplSP category;
@@ -424,7 +424,8 @@ FormatManager::GetCategory(ConstString category_name, bool can_create) {
     return lldb::TypeCategoryImplSP();
 
   m_categories_map.Add(category_name,
-                       std::make_shared<TypeCategoryImpl>(this, category_name));
+                       std::make_shared<TypeCategoryImpl>(
+                           this, category_name.GetStringRef().str()));
   return GetCategory(category_name);
 }
 
