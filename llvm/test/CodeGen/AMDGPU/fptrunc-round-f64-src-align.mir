@@ -1,0 +1,18 @@
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -run-pass=machineverifier -o /dev/null %s
+
+# The 64-bit VGPR source of FPTRUNC_ROUND_F32_F64_PSEUDO must be an even-aligned
+# VGPR tuple on subtargets that require aligned VGPRs: SIModeRegister lowers the
+# pseudo to V_CVT_F32_F64_e32, whose source must be even-aligned. This is a
+# pre-commit test: the machine verifier does not yet reject the misaligned
+# odd-start physical source register below. A following change routes this
+# operand through an aligned operand register class so the verifier rejects it.
+
+---
+name: fptrunc_round_f64_misaligned_src0
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr1_vgpr2
+    $vgpr0 = FPTRUNC_ROUND_F32_F64_PSEUDO $vgpr1_vgpr2, 1, implicit $mode, implicit $exec
+    S_ENDPGM 0
+...
