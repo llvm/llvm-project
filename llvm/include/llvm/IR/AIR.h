@@ -87,8 +87,9 @@ constexpr StringLiteral HintPrefix = "__air_hint.";
 /// AGX's generic address space). A consumer without generic pointers treats
 /// them as device pointers.
 constexpr unsigned GenericHintAS = 4;
-/// A type hint: 128-bit integers (128-bit atomics, 128-bit accesses), which
-/// AIR does not have. A consumer without them must legalize them.
+/// A type hint: integers of widths AIR does not have, up to 128 bits (128-bit
+/// atomics and accesses, the odd widths optimizations make). A consumer
+/// without them must legalize them.
 constexpr unsigned WideIntHintBits = 128;
 
 } // namespace air

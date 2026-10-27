@@ -989,17 +989,22 @@ Function *RaiseToAIR::byValueToByRef(Function &K) {
 bool RaiseToAIR::run() {
   if (M.getTargetTriple().getArch() != Triple::agx)
     return false;
-  // Kernels: agx_kernel functions and, as AGX compiles every function as a
-  // kernel, the other void functions nothing calls.
+  // Kernels: the agx_kernel functions or, in a module without them, the
+  // external void functions nothing calls (AGX compiles each external
+  // function of such a module as an entry point, AGXUsage.rst).
   SmallVector<Function *, 8> Kernels;
+  bool HaveKernelCC = any_of(M, [](const Function &F) {
+    return !F.isDeclaration() && F.getCallingConv() == CallingConv::AGX_KERNEL;
+  });
   for (Function &F : M) {
     if (F.isDeclaration())
       continue;
     bool Called = any_of(F.users(), [](const User *U) {
       return isa<CallBase>(U);
     });
-    if (F.getCallingConv() == CallingConv::AGX_KERNEL ||
-        (!F.hasLocalLinkage() && !Called && F.getReturnType()->isVoidTy()))
+    if (HaveKernelCC ? F.getCallingConv() == CallingConv::AGX_KERNEL
+                     : !F.hasLocalLinkage() && !Called &&
+                           F.getReturnType()->isVoidTy())
       Kernels.push_back(&F);
   }
   if (Kernels.empty())

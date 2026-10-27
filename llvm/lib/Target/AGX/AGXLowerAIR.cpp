@@ -300,9 +300,10 @@ static bool isAIRType(Type *T) {
     return all_of(ST->elements(), isAIRType);
   if (auto *FT = dyn_cast<FunctionType>(T))
     return isAIRType(FT->getReturnType()) && all_of(FT->params(), isAIRType);
-  // i128 is a type hint (llvm/IR/AIR.h): AGX has it.
+  // Integers of other widths up to 128 bits are a type hint (llvm/IR/AIR.h):
+  // AGX legalizes them.
   if (auto *IT = dyn_cast<IntegerType>(T))
-    return is_contained({1u, 8u, 16u, 32u, 64u, 128u}, IT->getBitWidth());
+    return IT->getBitWidth() <= air::WideIntHintBits;
   if (auto *PT = dyn_cast<PointerType>(T))
     return PT->getAddressSpace() <= air::AS::Threadgroup ||
            PT->getAddressSpace() == air::GenericHintAS;
