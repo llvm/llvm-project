@@ -8,14 +8,18 @@
 
 #include "SLPUtils.h"
 #include "SLPMemoryUtils.h"
+#include "SLPTypeUtils.h"
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Constants.h"
@@ -27,6 +31,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/VectorTypeUtils.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
@@ -183,6 +188,158 @@ Intrinsic::ID isEquivalentIntrinsicID(Intrinsic::ID LHS, Intrinsic::ID RHS) {
       (RHS == Intrinsic::fma || RHS == Intrinsic::fmuladd))
     return Intrinsic::fma;
   return Intrinsic::not_intrinsic;
+}
+
+bool isVectorizableArgMemCall(const CallInst *CI, const TargetLibraryInfo *TLI,
+                              bool ReVec) {
+  return !isa<IntrinsicInst>(CI) && CI->onlyAccessesArgMemory() &&
+         ((ReVec && TLI->getScalarizedMappingInfo(*CI)) ||
+          CI->hasFnAttr(VFABI::MappingsAttrName));
+}
+
+FunctionType *getScalarFunctionType(FunctionType *FTy) {
+  return FunctionType::get(
+      toScalarizedTy(FTy->getReturnType()),
+      map_to_vector(FTy->params(), [](Type *Ty) { return toScalarizedTy(Ty); }),
+      FTy->isVarArg());
+}
+
+/// Returns true if the trailing arguments of the calls \p VL are the linear
+/// arguments of the vector variant \p Info, which advance by the linear steps
+/// for each \p LaneVF elements across the lanes.
+static bool isLinearVariant(const VFInfo &Info, ArrayRef<Value *> VL,
+                            unsigned LaneVF, ScalarEvolution &SE) {
+  ArrayRef<VFParameter> Params = Info.Shape.Parameters;
+  const VFParameter *FirstLinear = find_if(Params, [](const VFParameter &P) {
+    return P.ParamKind != VFParamKind::Vector;
+  });
+  if (FirstLinear == Params.end())
+    return false;
+  for (const VFParameter &P : make_range(FirstLinear, Params.end())) {
+    if (P.ParamKind != VFParamKind::OMP_Linear)
+      return false;
+    Value *Lane0Arg = cast<CallInst>(VL.front())->getArgOperand(P.ParamPos);
+    if (!SE.isSCEVable(Lane0Arg->getType()))
+      return false;
+    const SCEV *Lane0SCEV = SE.getSCEV(Lane0Arg);
+    for (auto [Lane, V] : enumerate(VL)) {
+      const auto *Diff = dyn_cast<SCEVConstant>(SE.getMinusSCEV(
+          SE.getSCEV(cast<CallInst>(V)->getArgOperand(P.ParamPos)), Lane0SCEV));
+      if (!Diff || Diff->getAPInt().trySExtValue() !=
+                       static_cast<int64_t>(Lane * LaneVF) * P.LinearStepOrPos)
+        return false;
+    }
+  }
+  return true;
+}
+
+/// Returns the narrowest variant of \p Mappings for more than \p VF elements
+/// with all the arguments of \p CI vectorized, or nullptr if there is none.
+static const VFInfo *getPaddedVariant(ArrayRef<VFInfo> Mappings,
+                                      const CallInst *CI, unsigned VF) {
+  const VFInfo *Padded = nullptr;
+  for (const VFInfo &Info : Mappings) {
+    ElementCount InfoVF = Info.Shape.VF;
+    if (InfoVF.isScalable() || InfoVF.getFixedValue() <= VF ||
+        (Padded &&
+         Padded->Shape.VF.getFixedValue() <= InfoVF.getFixedValue()) ||
+        !(Info.Shape == VFShape::get(CI->getFunctionType(), InfoVF,
+                                     /*HasGlobalPred=*/false)))
+      continue;
+    Padded = &Info;
+  }
+  return Padded;
+}
+
+std::optional<VFInfo> getCallVectorVariant(const CallInst *CI, unsigned VF,
+                                           ArrayRef<Value *> VL,
+                                           ScalarEvolution *SE,
+                                           const TargetLibraryInfo *TLI) {
+  // The calls of the vector function, processing LaneVF elements each, use the
+  // vector function of the same scalar function for all the elements.
+  unsigned LaneVF = 1;
+  SmallVector<VFInfo, 8> Mappings;
+  if (const VecDesc *VD = TLI->getScalarizedMappingInfo(*CI)) {
+    LaneVF = VD->getVectorizationFactor().getFixedValue();
+    const VecDesc *WideVD =
+        VF % LaneVF == 0 ? TLI->getVectorMappingInfo(VD->getScalarFnName(),
+                                                     ElementCount::getFixed(VF),
+                                                     /*Masked=*/false)
+                         : nullptr;
+    if (WideVD) {
+      if (std::optional<VFInfo> Info = VFABI::tryDemangleForVFABI(
+              WideVD->getVectorFunctionABIVariantString(),
+              getScalarFunctionType(CI->getFunctionType())))
+        Mappings.push_back(*Info);
+    }
+  } else {
+    Mappings = VFDatabase::getMappings(*CI);
+  }
+  if (Mappings.empty())
+    return std::nullopt;
+  ElementCount EC = ElementCount::getFixed(VF);
+  // Each lane of the vector call accesses the memory through the linear
+  // pointers, so all the lanes must be the calls to the same function.
+  if (VL.size() * LaneVF == VF && all_of(VL, IsaPred<CallInst>) &&
+      all_of(make_isa_range<CallInst>(VL), [&](CallInst *Call) {
+        return Call->getCalledFunction() == CI->getCalledFunction();
+      })) {
+    const auto *It = find_if(Mappings, [&](const VFInfo &Info) {
+      return Info.Shape.VF == EC && !Info.isMasked() &&
+             isLinearVariant(Info, VL, LaneVF, *SE);
+    });
+    if (It != Mappings.end())
+      return *It;
+  }
+  VFShape Shape =
+      VFShape::get(CI->getFunctionType(), EC, /*HasGlobalPred=*/false);
+  const auto *It = find_if(
+      Mappings, [&](const VFInfo &Info) { return Info.Shape == Shape; });
+  if (It != Mappings.end())
+    return *It;
+  // The non-power-of-2 lanes of the calls without memory accesses are padded
+  // up to the narrowest wider variant with all the arguments vectorized.
+  if (LaneVF == 1 && !has_single_bit(VF) && !CI->getType()->isStructTy() &&
+      CI->doesNotAccessMemory()) {
+    if (const VFInfo *Padded = getPaddedVariant(Mappings, CI, VF))
+      return *Padded;
+  }
+  return std::nullopt;
+}
+
+/// Returns the number of the elements, processed by the calls \p VL.
+static unsigned getNumCallElements(ArrayRef<Value *> VL) {
+  return VL.size() * getNumElements(getValueType(VL.front(), /*ReVec=*/true));
+}
+
+unsigned getCallVariantPartVF(const CallInst *CI, ArrayRef<Value *> VL,
+                              ScalarEvolution *SE,
+                              const TargetLibraryInfo *TLI) {
+  if (getCallVectorVariant(CI, getNumCallElements(VL), VL, SE, TLI))
+    return VL.size();
+  if (VL.size() < 4)
+    return 0;
+  for (unsigned PartVF = bit_floor(VL.size() - 2); PartVF >= 2; PartVF /= 2) {
+    if (getCallVectorVariant(CI, getNumCallElements(VL.take_front(PartVF)),
+                             VL.take_front(PartVF), SE, TLI)) {
+      return getCallVariantPartVF(CI, VL.drop_front(PartVF), SE, TLI) ? PartVF
+                                                                      : 0;
+    }
+  }
+  return 0;
+}
+
+unsigned getNumVectorCallArgs(const CallInst *CI, ArrayRef<Value *> VL,
+                              ScalarEvolution *SE,
+                              const TargetLibraryInfo *TLI) {
+  std::optional<VFInfo> Variant =
+      getCallVectorVariant(CI, getNumCallElements(VL), VL, SE, TLI);
+  if (!Variant)
+    return CI->arg_size();
+  const auto *It = find_if(Variant->Shape.Parameters, [](const VFParameter &P) {
+    return P.ParamKind == VFParamKind::OMP_Linear;
+  });
+  return It == Variant->Shape.Parameters.end() ? CI->arg_size() : It->ParamPos;
 }
 
 bool isCommutative(const Instruction *I, const Value *ValWithUses,

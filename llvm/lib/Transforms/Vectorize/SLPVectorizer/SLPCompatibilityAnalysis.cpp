@@ -17,6 +17,7 @@
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/bit.h"
 #include "llvm/Analysis/IVDescriptors.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/InstrTypes.h"
@@ -848,7 +849,8 @@ InstructionsState getSameOpcode(ArrayRef<Value *> VL,
   if (auto *CallBase = dyn_cast<CallInst>(MainOp)) {
     BaseID = getVectorIntrinsicIDForCall(CallBase, &TLI);
     BaseMappings = VFDatabase(*CallBase).getMappings(*CallBase);
-    if (!isTriviallyVectorizable(BaseID) && BaseMappings.empty())
+    if (!isTriviallyVectorizable(BaseID) && BaseMappings.empty() &&
+        !TLI.getScalarizedMappingInfo(*CallBase))
       return InstructionsState::invalid();
   }
   bool AnyPoison = InstCnt != VL.size();
@@ -965,7 +967,7 @@ InstructionsState getSameOpcode(ArrayRef<Value *> VL,
           return InstructionsState::invalid();
         if (ID != BaseID && Equivalent == Intrinsic::not_intrinsic)
           return InstructionsState::invalid();
-        if (!ID) {
+        if (!ID && !BaseMappings.empty()) {
           SmallVector<VFInfo, 4> Mappings =
               VFDatabase(*Call).getMappings(*Call);
           if (Mappings.size() != BaseMappings.size() ||

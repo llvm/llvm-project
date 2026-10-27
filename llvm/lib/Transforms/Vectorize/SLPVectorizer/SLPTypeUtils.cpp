@@ -38,8 +38,13 @@ bool isValidElementType(Type *Ty, bool ReVec) {
 }
 
 Type *getValueType(Value *V, bool ReVec, bool LookThroughCmp) {
-  if (auto *SI = dyn_cast<StoreInst>(V))
-    return SI->getValueOperand()->getType();
+  if (V->getType()->isVoidTy()) {
+    if (auto *SI = dyn_cast<StoreInst>(V))
+      return SI->getValueOperand()->getType();
+    if (auto *CI = dyn_cast<CallInst>(V);
+        CI && CI->getFunctionType()->getNumParams() > 0)
+      return CI->getFunctionType()->getParamType(0);
+  }
   if (LookThroughCmp)
     if (auto *CI = dyn_cast<CmpInst>(V))
       return CI->getOperand(0)->getType();

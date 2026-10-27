@@ -88,7 +88,8 @@ private:
   /// Collect store and getelementptr instructions and organize them
   /// according to the underlying object of their pointer operands. We sort the
   /// instructions by their underlying objects to reduce the cost of
-  /// consecutive access queries.
+  /// consecutive access queries. The void calls of the vectorizable functions
+  /// are organized by the called function.
   ///
   /// TODO: We can further reduce this cost if we flush the chain creation
   ///       every time we run into a memory barrier.
@@ -139,6 +140,9 @@ private:
   /// Try to vectorize the instructions with the single user in \p BB as the
   /// standalone seeds.
   bool vectorizeOnceUsedSeeds(BasicBlock *BB, slpvectorizer::BoUpSLP &R);
+
+  /// Vectorize the void calls collected in VoidCalls.
+  bool vectorizeVoidCalls(slpvectorizer::BoUpSLP &R);
 
   /// Vectorize the index computations of the getelementptr instructions
   /// collected in GEPs.
@@ -226,6 +230,10 @@ private:
 
   /// The getelementptr instructions in a basic block organized by base pointer.
   GEPListMap GEPs;
+
+  /// The void calls of the vectorizable functions in a basic block organized
+  /// by the called function.
+  MapVector<Function *, SmallVector<Value *>> VoidCalls;
 };
 
 } // end namespace llvm
