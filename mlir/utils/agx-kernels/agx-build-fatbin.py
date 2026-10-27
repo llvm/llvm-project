@@ -25,7 +25,7 @@ Fat AGX object layout (little-endian):
         32 bytes  chip name (an LLVM AGX -mcpu, NUL padded)
         u64       offset of the object from the start of the file
         u64       size of the object
-      then the objects (AGX ELF files), each 16-byte aligned.
+      then the objects (AGX ELF files), each 16-byte aligned. Entries with the same code share one object.
 
   agx-build-fatbin.py --mlir-opt MLIR_OPT --mlir-translate MLIR_TRANSLATE --llc LLC [--opt OPT]
                       [--chips agx-g13g,agx-g14c,...] [--no-agx-strict] kernels.mlir -o out.agxfat
@@ -34,6 +34,7 @@ Fat AGX object layout (little-endian):
 import argparse
 import concurrent.futures
 import os
+import re
 import struct
 import subprocess
 import sys
@@ -97,17 +98,36 @@ def compile_for(a, chip, tmp, features, optimized):
     return open(obj, "rb").read()
 
 
+PROCESSORS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../llvm/lib/Target/AGX/AGXProcessors.td")
+
+
+def same_code(chips):
+    """chip -> the first of `chips` with the same scheduling model and features (AGXProcessors.td): llc emits the
+    same object for both, so it runs once. Without the definitions, each chip is its own."""
+    try:
+        td = re.sub(r"//[^\n]*", "", open(PROCESSORS).read())
+    except OSError:
+        return {c: c for c in chips}
+    defs = {name: (model, frozenset(f.strip() for f in features.split(",")))
+            for name, model, features in re.findall(r'AGXProc<"([^"]+)",\s*(\w+),\s*\[([^\]]*)\]>', td)}
+    first = {}
+    return {c: first.setdefault(defs[c], c) if c in defs else c for c in chips}
+
+
 def pack(objects):
     header = MAGIC + struct.pack("<II", len(objects), 0)
     offset = len(header) + 48 * len(objects)
     entries, blobs = b"", b""
+    placed = {}
     for chip, data in objects:
-        pad = (-offset) % 16
-        blobs += b"\0" * pad
-        offset += pad
-        entries += chip.encode().ljust(32, b"\0") + struct.pack("<QQ", offset, len(data))
-        blobs += data
-        offset += len(data)
+        if data not in placed:
+            pad = (-offset) % 16
+            blobs += b"\0" * pad
+            offset += pad
+            placed[data] = offset
+            blobs += data
+            offset += len(data)
+        entries += chip.encode().ljust(32, b"\0") + struct.pack("<QQ", placed[data], len(data))
     return header + entries + blobs
 
 
@@ -137,16 +157,16 @@ def main():
             builds += [(c, STRICT) for c in chips if c.startswith(("agx-g13", "agx-g14"))]
         # The builds are independent opt and llc processes: run them side by side.
         with concurrent.futures.ThreadPoolExecutor(a.jobs) as pool:
-            opts = {}
+            opts, objs, alias = {}, {}, same_code(chips)
             for c, f in builds:
                 key = (None if c.startswith(SHARED_OPT) else c, f)
                 if key not in opts:
                     opts[key] = pool.submit(optimize, a, key[0], tmp, f)
-            objs = list(pool.map(
-                lambda b: compile_for(a, b[0], tmp, b[1],
-                                      opts[(None if b[0].startswith(SHARED_OPT) else b[0], b[1])].result()),
-                builds))
-        objects = [(c + f, o) for (c, f), o in zip(builds, objs)]
+                if (alias[c], f) not in objs:
+                    # Submitted after the opt run it waits for, so that one has a worker first.
+                    objs[(alias[c], f)] = pool.submit(lambda c, f, o: compile_for(a, c, tmp, f, o.result()),
+                                                      c, f, opts[key])
+            objects = [(c + f, objs[(alias[c], f)].result()) for c, f in builds]
     open(a.out, "wb").write(pack(objects))
     return 0
 
