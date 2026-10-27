@@ -2374,7 +2374,7 @@ const DefInit *VarDefInit::instantiate() {
       Records.getNewAnonymousName(), Loc, Records, Record::RK_AnonymousDef);
   Record *NewRec = NewRecOwner.get();
 
-  // Copy values from class to instance
+  // Copy fields from class to instance.
   for (const RecordVal &Val : Class->getValues()) {
     NewRec->addValue(Val);
     NewRec->appendValueReferenceLocs(*Class, Val.getNameInit());
@@ -2386,18 +2386,17 @@ const DefInit *VarDefInit::instantiate() {
   // Copy dumps from class to instance.
   NewRec->appendDumps(Class);
 
-  // Substitute and resolve template arguments
-  ArrayRef<const Init *> TArgs = Class->getTemplateArgs();
+  // Substitute and resolve template arguments, starting with their default
+  // values.
+  ArrayRef<RecordVal> TArgs = Class->getTemplateArgs();
   MapResolver R(NewRec);
 
-  for (const Init *Arg : TArgs) {
-    R.set(Arg, NewRec->getValue(Arg)->getValue());
-    NewRec->removeValue(Arg);
-  }
+  for (const RecordVal &Arg : TArgs)
+    R.set(Arg.getNameInit(), Arg.getValue());
 
   for (auto *Arg : args()) {
     if (Arg->isPositional())
-      R.set(TArgs[Arg->getIndex()], Arg->getValue());
+      R.set(TArgs[Arg->getIndex()].getNameInit(), Arg->getValue());
     if (Arg->isNamed())
       R.set(Arg->getName(), Arg->getValue());
   }
@@ -2861,8 +2860,9 @@ void Record::resolveReferences(Resolver &R, const RecordVal *SkipVal) {
     setName(NewName);
   }
 
-  // Resolve the field values.
-  for (RecordVal &Value : Values) {
+  // Resolve the template argument and field values. Template arguments come
+  // first, as they are declared before any fields.
+  for (RecordVal &Value : concat<RecordVal>(TemplateArgs, Values)) {
     if (SkipVal == &Value) // Skip resolve the same field as the given one
       continue;
     const Init *VR = Value.getValue()->resolveReferences(R);
@@ -2909,15 +2909,13 @@ LLVM_DUMP_METHOD void Record::dump() const { errs() << *this; }
 raw_ostream &llvm::operator<<(raw_ostream &OS, const Record &R) {
   OS << R.getNameInitAsString();
 
-  ArrayRef<const Init *> TArgs = R.getTemplateArgs();
+  ArrayRef<RecordVal> TArgs = R.getTemplateArgs();
   if (!TArgs.empty()) {
     OS << "<";
     ListSeparator LS;
-    for (const Init *TA : TArgs) {
-      const RecordVal *RV = R.getValue(TA);
-      assert(RV && "Template argument record not found??");
+    for (const RecordVal &TA : TArgs) {
       OS << LS;
-      RV->print(OS, false);
+      TA.print(OS, false);
     }
     OS << ">";
   }
@@ -2932,10 +2930,10 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const Record &R) {
   OS << "\n";
 
   for (const RecordVal &Val : R.getValues())
-    if (Val.isNonconcreteOK() && !R.isTemplateArg(Val.getNameInit()))
+    if (Val.isNonconcreteOK())
       OS << Val;
   for (const RecordVal &Val : R.getValues())
-    if (!Val.isNonconcreteOK() && !R.isTemplateArg(Val.getNameInit()))
+    if (!Val.isNonconcreteOK())
       OS << Val;
 
   return OS << "}\n";
@@ -3136,11 +3134,10 @@ void Record::emitRecordDumps() {
 
 // Report a warning if the record has unused template arguments.
 void Record::checkUnusedTemplateArgs() {
-  for (const Init *TA : getTemplateArgs()) {
-    const RecordVal *Arg = getValue(TA);
-    if (!Arg->isUsed())
-      PrintWarning(Arg->getLoc(),
-                   "unused template argument: " + Twine(Arg->getName()));
+  for (const RecordVal &Arg : getTemplateArgs()) {
+    if (!Arg.isUsed())
+      PrintWarning(Arg.getLoc(),
+                   "unused template argument: " + Twine(Arg.getName()));
   }
 }
 

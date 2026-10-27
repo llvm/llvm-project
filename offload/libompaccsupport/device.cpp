@@ -924,12 +924,6 @@ getKernelLaunchEnvironment(DeviceTy &Device, uint32_t OmpABIVersion,
     LaunchEnvSrc = PinnedKLE;
   }
 
-  INFO(OMP_INFOTYPE_DATA_TRANSFER, GenericDevice.getDeviceId(),
-       "Copying data from host to device, HstPtr=" DPxMOD ", TgtPtr=" DPxMOD
-       ", Size=%" PRId64 ", Name=KernelLaunchEnv\n",
-       DPxPTR(LaunchEnvSrc), DPxPTR(*AllocOrErr),
-       sizeof(KernelLaunchEnvironmentTy));
-
   // Downstream: the ProfilerData at this point will have a callback for a
   // kernel launch, not a data-op. This is due to the "external" operation
   // being a kernel launch and the data submit here being an implementation
