@@ -4018,6 +4018,13 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         };
         MaybeSimplifyHint(Ptr1);
         MaybeSimplifyHint(Ptr2);
+        SimpleAAQueryInfo AAQI(*AA);
+        AAQI.AllowEphemerals = false;
+        if (AA->alias(MemoryLocation::getBeforeOrAfter(Ptr1),
+                      MemoryLocation::getBeforeOrAfter(Ptr2), AAQI,
+                      II) == AliasResult::NoAlias) {
+          return RemoveBundle();
+        }
       } break;
 
       // TODO: Drop these assumes when they are redundant
