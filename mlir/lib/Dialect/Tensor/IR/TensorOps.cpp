@@ -2276,7 +2276,10 @@ struct ConvertToStaticExpandShape : public OpRewritePattern<ExpandShapeOp> {
 
         APInt cst;
         if (matchPattern(val, m_ConstantInt(&cst))) {
-          newOutputShape[outDim] = cst.getSExtValue();
+          int64_t dim = cst.getSExtValue();
+          if (dim < 0)
+            return failure();
+          newOutputShape[outDim] = dim;
         } else {
           dynamicOutputShape.push_back(val);
         }
