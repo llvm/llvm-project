@@ -321,19 +321,12 @@ define <2 x double> @sitofp_v2f64_fdiv_max(<2 x i64> %in) {
 }
 
 define <4 x half> @sitofp_v4f16_fdiv_max(<4 x i16> %in) {
-; CHECK-SD-LABEL: sitofp_v4f16_fdiv_max:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    movi d1, #0000000000000000
-; CHECK-SD-NEXT:    scvtf.4h v0, v0
-; CHECK-SD-NEXT:    fmul.4h v0, v0, v1
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: sitofp_v4f16_fdiv_max:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi.4h v1, #124, lsl #8
-; CHECK-GI-NEXT:    scvtf.4h v0, v0
-; CHECK-GI-NEXT:    fdiv.4h v0, v0, v1
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: sitofp_v4f16_fdiv_max:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi.4h v1, #124, lsl #8
+; CHECK-NEXT:    scvtf.4h v0, v0
+; CHECK-NEXT:    fdiv.4h v0, v0, v1
+; CHECK-NEXT:    ret
   ; 2^16 = 65536.0 — max valid shift for i16 (but not representable in f16)
   ; f16 max is 65504, so 65536.0 overflows to inf. This should NOT match.
   %conv = sitofp <4 x i16> %in to <4 x half>

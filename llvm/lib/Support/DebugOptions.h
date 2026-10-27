@@ -27,6 +27,7 @@ void initTimerOptions();
 void initWithColorOptions();
 void initDebugOptions();
 void initRandomSeedOptions();
+void initFPFoldOptions();
 
 } // namespace llvm
 

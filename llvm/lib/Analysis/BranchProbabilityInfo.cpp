@@ -507,9 +507,14 @@ computeUnlikelySuccessors(const BasicBlock *BB, const CycleInfo &CI, CycleRef C,
         continue;
       // First collapse InstChain
       const DataLayout &DL = BB->getDataLayout();
+      const Function *F = Cmp->getFunction();
+      auto DenormMode = DenormalMode::getDynamic();
+      if (auto LHSFP = dyn_cast<ConstantFP>(CmpLHSConst))
+        DenormMode = F->getDenormalMode(LHSFP->getType()->getFltSemantics());
       for (Instruction *I : llvm::reverse(InstChain)) {
         CmpLHSConst = ConstantFoldBinaryOpOperands(
-            I->getOpcode(), CmpLHSConst, cast<Constant>(I->getOperand(1)), DL);
+            I->getOpcode(), CmpLHSConst, cast<Constant>(I->getOperand(1)), DL,
+            DenormMode);
         if (!CmpLHSConst)
           break;
       }
@@ -517,7 +522,7 @@ computeUnlikelySuccessors(const BasicBlock *BB, const CycleInfo &CI, CycleRef C,
         continue;
       // Now constant-evaluate the compare
       Constant *Result = ConstantFoldCompareInstOperands(
-          Cmp->getPredicate(), CmpLHSConst, CmpConst, DL);
+          Cmp->getPredicate(), CmpLHSConst, CmpConst, DL, nullptr, F);
       // If the result means we don't branch to the block then that block is
       // unlikely.
       if (Result && ((Result->isNullValue() && B == BI->getSuccessor(0)) ||
