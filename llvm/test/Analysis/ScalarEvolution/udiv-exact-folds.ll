@@ -12,9 +12,9 @@ define void @addrec_div_operands(i64 %x, ptr %p) {
 ; CHECK-NEXT:    %iv = phi i64 [ %x, %entry ], [ %iv.next, %loop ]
 ; CHECK-NEXT:    --> {%x,+,8}<nuw><%loop> U: full-set S: full-set Exits: ((8 * ((1016 + (-1 * %x)) /u 8))<nuw> + %x)<u nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %d = udiv exact i64 %iv, 4
-; CHECK-NEXT:    --> {(%x /u 4)<exact>,+,2}<nw><%loop> U: [0,9223372036854775806) S: [0,9223372036854775806) Exits: ((2 * ((1016 + (-1 * %x)) /u 8))<nuw><nsw> + (%x /u 4)<exact>)<u nuw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(%x /u 4),+,2}<nw><%loop> U: [0,9223372036854775806) S: [0,9223372036854775806) Exits: ((2 * ((1016 + (-1 * %x)) /u 8))<nuw><nsw> + (%x /u 4))<u nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %gep = getelementptr inbounds i32, ptr %p, i64 %d
-; CHECK-NEXT:    --> {((4 * (%x /u 4)<exact>)<nuw> + %p),+,8}<nw><%loop> U: full-set S: full-set Exits: ((4 * (%x /u 4)<exact>)<nuw> + (8 * ((1016 + (-1 * %x)) /u 8))<nuw> + %p) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {((4 * (%x /u 4))<nuw> + %p),+,8}<nw><%loop> U: full-set S: full-set Exits: ((4 * (%x /u 4))<nuw> + (8 * ((1016 + (-1 * %x)) /u 8))<nuw> + %p) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add nuw i64 %iv, 8
 ; CHECK-NEXT:    --> {(8 + %x)<nuw>,+,8}<nuw><%loop> U: [8,0) S: [8,0) Exits: (8 + (8 * ((1016 + (-1 * %x)) /u 8))<nuw> + %x) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @addrec_div_operands
@@ -49,9 +49,9 @@ define void @addrec_start_rem(i64 %a, ptr %p) {
 ; CHECK-NEXT:    %iv = phi i64 [ %start, %entry ], [ %iv.next, %loop ]
 ; CHECK-NEXT:    --> {(2 + (4 * %a))<nuw><nsw>,+,4}<%loop> U: [0,-1) S: [-9223372036854775808,9223372036854775807) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %d = udiv exact i64 %iv, 8
-; CHECK-NEXT:    --> ({(4 * %a),+,4}<%loop> /u 8)<exact> U: [0,2305843009213693952) S: [0,2305843009213693952) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> ({(4 * %a),+,4}<%loop> /u 8) U: [0,2305843009213693952) S: [0,2305843009213693952) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %gep = getelementptr inbounds i32, ptr %p, i64 %d
-; CHECK-NEXT:    --> ((4 * ({(4 * %a),+,4}<%loop> /u 8)<exact>)<nuw><nsw> + %p)<nuw> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> ((4 * ({(4 * %a),+,4}<%loop> /u 8))<nuw><nsw> + %p)<nuw> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add i64 %iv, 4
 ; CHECK-NEXT:    --> {(6 + (4 * %a)),+,4}<%loop> U: [0,-1) S: [-9223372036854775808,9223372036854775807) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @addrec_start_rem
@@ -87,9 +87,9 @@ define void @mul_operand_probe(i64 %a, i64 %b, ptr %p) {
 ; CHECK-NEXT:    %gep = getelementptr inbounds i32, ptr %p, i64 %d
 ; CHECK-NEXT:    --> ((4 * ((%a * %b)<nuw> /u 2)<exact>)<nuw><nsw> + %p) U: full-set S: full-set
 ; CHECK-NEXT:    %d.inexact = udiv i64 %a, 2
-; CHECK-NEXT:    --> (%a /u 2)<exact> U: [0,-9223372036854775808) S: [0,-9223372036854775808)
+; CHECK-NEXT:    --> (%a /u 2) U: [0,-9223372036854775808) S: [0,-9223372036854775808)
 ; CHECK-NEXT:    %gep.inexact = getelementptr inbounds i32, ptr %p, i64 %d.inexact
-; CHECK-NEXT:    --> ((4 * (%a /u 2)<exact>)<nuw><nsw> + %p) U: full-set S: full-set
+; CHECK-NEXT:    --> ((4 * (%a /u 2))<nuw><nsw> + %p) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @mul_operand_probe
 ;
   %m = mul nuw i64 %a, %b
@@ -108,9 +108,9 @@ define void @mul_common_factor(i64 %a, ptr %p) {
 ; CHECK-NEXT:    %m = mul nuw i64 %a, 6
 ; CHECK-NEXT:    --> (6 * %a)<nuw> U: [0,-3) S: [-9223372036854775808,9223372036854775807)
 ; CHECK-NEXT:    %d = udiv exact i64 %m, 4
-; CHECK-NEXT:    --> ((3 * %a) /u 2)<exact> U: [0,-9223372036854775808) S: [0,-9223372036854775808)
+; CHECK-NEXT:    --> ((3 * %a) /u 2) U: [0,-9223372036854775808) S: [0,-9223372036854775808)
 ; CHECK-NEXT:    %gep = getelementptr inbounds i32, ptr %p, i64 %d
-; CHECK-NEXT:    --> ((4 * ((3 * %a) /u 2)<exact>)<nuw><nsw> + %p) U: full-set S: full-set
+; CHECK-NEXT:    --> ((4 * ((3 * %a) /u 2))<nuw><nsw> + %p) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @mul_common_factor
 ;
   %m = mul nuw i64 %a, 6
@@ -126,9 +126,9 @@ define void @udiv_of_udiv(i64 %a, ptr %p) {
 ; CHECK-NEXT:    %d1 = udiv i64 %a, 3
 ; CHECK-NEXT:    --> (%a /u 3) U: [0,6148914691236517206) S: [0,6148914691236517206)
 ; CHECK-NEXT:    %d2 = udiv exact i64 %d1, 5
-; CHECK-NEXT:    --> (%a /u 15)<exact> U: [0,1229782938247303442) S: [0,1229782938247303442)
+; CHECK-NEXT:    --> (%a /u 15) U: [0,1229782938247303442) S: [0,1229782938247303442)
 ; CHECK-NEXT:    %gep = getelementptr inbounds i32, ptr %p, i64 %d2
-; CHECK-NEXT:    --> ((4 * (%a /u 15)<exact>)<nuw><nsw> + %p)<nuw> U: full-set S: full-set
+; CHECK-NEXT:    --> ((4 * (%a /u 15))<nuw><nsw> + %p)<nuw> U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @udiv_of_udiv
 ;
   %d1 = udiv i64 %a, 3
@@ -148,9 +148,9 @@ define void @add_operand_probe(i64 %a, i64 %b, ptr %p) {
 ; CHECK-NEXT:    %gep = getelementptr inbounds i32, ptr %p, i64 %d
 ; CHECK-NEXT:    --> ((4 * ((%a + %b)<nuw> /u 2)<exact>)<nuw><nsw> + %p) U: full-set S: full-set
 ; CHECK-NEXT:    %d.inexact = udiv i64 %a, 2
-; CHECK-NEXT:    --> (%a /u 2)<exact> U: [0,-9223372036854775808) S: [0,-9223372036854775808)
+; CHECK-NEXT:    --> (%a /u 2) U: [0,-9223372036854775808) S: [0,-9223372036854775808)
 ; CHECK-NEXT:    %gep.inexact = getelementptr inbounds i32, ptr %p, i64 %d.inexact
-; CHECK-NEXT:    --> ((4 * (%a /u 2)<exact>)<nuw><nsw> + %p) U: full-set S: full-set
+; CHECK-NEXT:    --> ((4 * (%a /u 2))<nuw><nsw> + %p) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @add_operand_probe
 ;
   %s = add nuw i64 %a, %b
@@ -171,9 +171,9 @@ define void @round_up_idiom(i64 %a, ptr %p) {
 ; CHECK-NEXT:    %s = add i64 %m, 4
 ; CHECK-NEXT:    --> (4 + (4 * %a)) U: [0,-3) S: [-9223372036854775808,9223372036854775805)
 ; CHECK-NEXT:    %d = udiv exact i64 %s, 8
-; CHECK-NEXT:    --> ((7 + (4 * %a)) /u 8)<exact> U: [0,2305843009213693952) S: [0,2305843009213693952)
+; CHECK-NEXT:    --> ((7 + (4 * %a)) /u 8) U: [0,2305843009213693952) S: [0,2305843009213693952)
 ; CHECK-NEXT:    %gep = getelementptr inbounds i32, ptr %p, i64 %d
-; CHECK-NEXT:    --> ((4 * ((7 + (4 * %a)) /u 8)<exact>)<nuw><nsw> + %p)<nuw> U: full-set S: full-set
+; CHECK-NEXT:    --> ((4 * ((7 + (4 * %a)) /u 8))<nuw><nsw> + %p)<nuw> U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @round_up_idiom
 ;
   %m = shl i64 %a, 2
@@ -194,9 +194,9 @@ define void @vscale_common_factor(i64 %a, i64 %b, ptr %p) {
 ; CHECK-NEXT:    %y = mul nuw i64 %b, %vs
 ; CHECK-NEXT:    --> (vscale * %b)<nuw> U: full-set S: full-set
 ; CHECK-NEXT:    %d = udiv exact i64 %x, %y
-; CHECK-NEXT:    --> (%a /u %b)<exact> U: full-set S: full-set
+; CHECK-NEXT:    --> (%a /u %b) U: full-set S: full-set
 ; CHECK-NEXT:    %gep = getelementptr inbounds i32, ptr %p, i64 %d
-; CHECK-NEXT:    --> ((4 * (%a /u %b)<exact>)<nsw> + %p) U: full-set S: full-set
+; CHECK-NEXT:    --> ((4 * (%a /u %b))<nsw> + %p) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @vscale_common_factor
 ;
   %vs = call i64 @llvm.vscale.i64()
