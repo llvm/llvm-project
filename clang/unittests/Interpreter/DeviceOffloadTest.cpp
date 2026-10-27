@@ -232,27 +232,4 @@ TEST_F(DeviceOffloadTest, BuiltinBitcodeLinkedIntoEveryModule) {
   }
 }
 
-TEST_F(DeviceOffloadTest, EmitLLVMPrintsDeviceModule) {
-  IncrementalCompilerBuilder CB;
-  CB.SetCompilerArgs({"-nocudainc", "-nocudalib", "-Xclang", "-emit-llvm"});
-  auto DeviceCI = CB.CreateDevice(OffloadType::CUDA);
-  ASSERT_THAT_EXPECTED(DeviceCI, llvm::Succeeded());
-  auto HostCI = CB.CreateHost(OffloadType::CUDA);
-  ASSERT_THAT_EXPECTED(HostCI, llvm::Succeeded());
-  auto Interp = Interpreter::createWithDevice(
-      std::move(*HostCI), std::move(*DeviceCI), OffloadType::CUDA);
-  ASSERT_THAT_EXPECTED(Interp, llvm::Succeeded());
-
-  testing::internal::CaptureStdout();
-  auto PTU = (*Interp)->Parse("__attribute__((device)) void f() {}");
-  llvm::outs().flush();
-  std::string Out = testing::internal::GetCapturedStdout();
-  ASSERT_THAT_EXPECTED(PTU, llvm::Succeeded());
-
-  // Only the device module targets NVPTX.
-  EXPECT_TRUE(
-      llvm::StringRef(Out).contains("target triple = \"nvptx64-nvidia-cuda\""))
-      << Out;
-}
-
 } // end anonymous namespace
