@@ -148,6 +148,13 @@ void initializeAIRScalarBufferPackingLegacyPass(PassRegistry &);
 /// `addrspace(1)` device-buffer parameter (matching the Python driver).
 ModulePass *createAIRScalarBufferPackingLegacyPass();
 
+/// Initializer for the AIR scalar-arguments-to-constant-buffers pass.
+void initializeAIRScalarArgsToConstantBuffersLegacyPass(PassRegistry &);
+
+/// Pass to turn each by-value scalar kernel argument into a constant buffer
+/// argument holding it (AIR's form of a scalar argument).
+ModulePass *createAIRScalarArgsToConstantBuffersLegacyPass();
+
 /// Initializer for the AIR alias-metadata annotate pass.
 void initializeAIRAliasAnnotateLegacyPass(PassRegistry &);
 

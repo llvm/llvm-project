@@ -32,6 +32,7 @@
 #include "AIRNaNMinMax.h"
 #include "AIRNormalizeAllocas.h"
 #include "AIRPrepare.h"
+#include "AIRScalarArgsToConstantBuffers.h"
 #include "AIRScalarBufferPacking.h"
 #include "AIRScalarStoreGuard.h"
 #include "AIRSplitI64Shuffle.h"
@@ -94,6 +95,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAIRTarget() {
   initializeAIRNormalizeAllocasLegacyPass(*PR);
   initializeAIRBFloat16CastDecomposeLegacyPass(*PR);
   initializeAIRScalarBufferPackingLegacyPass(*PR);
+  initializeAIRScalarArgsToConstantBuffersLegacyPass(*PR);
   initializeAIRArgumentBufferLegacyPass(*PR);
   initializeAIRSystemValuesLegacyPass(*PR);
   initializeAIRAliasAnnotateLegacyPass(*PR);
@@ -209,12 +211,15 @@ static cl::opt<bool> AIRPortable(
 
 // The passes of the full pipeline (AIRPassConfig::addCodeGenPrepare) that
 // define AIR rather than work around the Metal driver, in the same order.
+// Scalar arguments become constant buffers, AIR's own form, where the full
+// pipeline packs them into _scalar_buf for the Triton host.
 void llvm::addAIRPortablePasses(legacy::PassManagerBase &PM) {
   PM.add(createAIRFromGenericGPULegacyPass());
   PM.add(createAIRNaNMinMaxLegacyPass());
   PM.add(createLLVMToAIRIntrinsicsLegacyPass());
   PM.add(createAIRBarrierRenameLegacyPass());
   PM.add(createAIRLowerAtomicRMWLegacyPass());
+  PM.add(createAIRScalarArgsToConstantBuffersLegacyPass());
   PM.add(createAIRSystemValuesLegacyPass());
 }
 

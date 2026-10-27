@@ -28,6 +28,7 @@ add_llvm_target(AIRCodeGen
   AIRNaNMinMax.cpp
   AIRNormalizeAllocas.cpp
   AIRPrepare.cpp
+  AIRScalarArgsToConstantBuffers.cpp
   AIRScalarBufferPacking.cpp
   AIRScalarStoreGuard.cpp
   AIRSplitI64Shuffle.cpp
