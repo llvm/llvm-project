@@ -3978,11 +3978,14 @@ void store_atomic_different_size(S a) {
   _Atomic(S) b;
   __c11_atomic_store(&b, a, __ATOMIC_SEQ_CST);
 
+ // CIR: %[[COERCE:.*]] = cir.alloca "coerce" align(4) : !cir.ptr<!cir.int<u, 24>>
+ // CIR: cir.store %{{.+}}, %[[COERCE]] : !cir.int<u, 24>, !cir.ptr<!cir.int<u, 24>>
+ // CIR: %[[COERCE_S:.*]] = cir.cast bitcast %[[COERCE]] : !cir.ptr<!cir.int<u, 24>> -> !cir.ptr<!rec_S>
  // CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!rec_S>
  // CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} : !cir.ptr<!rec_anon_struct2>
  // CIR: %[[A_ATOMIC_TMP_ADDR:.*]] = cir.alloca ".atomictmp" {{.*}} : !cir.ptr<!rec_S>
  // CIR: %[[ATOMIC_TMP_ADDR:.*]] = cir.alloca "atomic-temp" {{.*}} : !cir.ptr<!rec_anon_struct2>
- // CIR: cir.store %[[A:.*]], %[[A_ADDR]] : !rec_S, !cir.ptr<!rec_S>
+ // CIR: cir.copy %[[COERCE_S]] align(4) to %[[A_ADDR]] align(1) : !cir.ptr<!rec_S>
  // CIR: cir.copy %[[A_ADDR]] {{.*}} to %[[A_ATOMIC_TMP_ADDR]] {{.*}} : !cir.ptr<!rec_S>
  // CIR: %[[B_VOID_PTR:.*]] = cir.cast bitcast %[[B_ADDR]] : !cir.ptr<!rec_anon_struct2> -> !cir.ptr<!u32i>
  // CIR: %[[CONST_0:.*]] = cir.const #cir.int<0> : !u8i
@@ -3998,12 +4001,11 @@ void store_atomic_different_size(S a) {
 
  // LLVM: %[[COERCE:.*]] = alloca i24, align 4
  // LLVM: store i24 %{{.+}}, ptr %[[COERCE]], align 4
- // LLVM: %[[A:.*]] = load %struct.S, ptr %[[COERCE]], align 1
  // LLVM: %[[A_ADDR:.*]] = alloca %struct.S, align 1
  // LLVM: %[[B_ADDR:.*]] = alloca { %struct.S, [1 x i8] }, align 4
  // LLVM: %[[A_ATOMIC_TMP_ADDR:.*]] = alloca %struct.S, align 1
  // LLVM: %[[ATOMIC_TMP_ADDR:.*]] = alloca { %struct.S, [1 x i8] }, align 4
- // LLVM: store %struct.S %[[A]], ptr %[[A_ADDR]], align 1
+ // LLVM: call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[A_ADDR]], ptr align 4 %[[COERCE]], i64 3, i1 false)
  // LLVM: call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[A_ATOMIC_TMP_ADDR]], ptr align 1 %[[A_ADDR]], i64 3, i1 false)
  // LLVM: call void @llvm.memset.p0.i64(ptr align 4 %[[ATOMIC_TMP_ADDR]], i8 0, i64 4, i1 false)
  // LLVM: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[ATOMIC_TMP_ADDR]], ptr align 1 %[[A_ATOMIC_TMP_ADDR]], i64 3, i1 false)

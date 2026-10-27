@@ -830,8 +830,8 @@ std::pair<IteratorT, bool> findAttrSorted(IteratorT first, IteratorT last,
 template <typename IteratorT>
 std::pair<IteratorT, bool> findAttrSorted(IteratorT first, IteratorT last,
                                           StringAttr name) {
-  constexpr unsigned kSmallAttributeList = 16;
-  if (std::distance(first, last) > kSmallAttributeList)
+  constexpr size_t kSmallAttributeList = 16;
+  if (static_cast<size_t>(std::distance(first, last)) > kSmallAttributeList)
     return findAttrSorted(first, last, name.strref());
   return findAttrUnsorted(first, last, name);
 }
@@ -1295,6 +1295,13 @@ public:
   /// Print SSA IDs using their NameLoc, if provided, as prefix.
   OpPrintingFlags &printNameLocAsPrefix(bool enable = true);
 
+  /// Always use aliases even for non top-level ops. When set, printing any
+  /// op initializes aliases and prints via the top-level path, so dumps of
+  /// nested ops (e.g. per-function pass instrumentation) use type and
+  /// attribute aliases instead of expanding them. Takes precedence over
+  /// local scope.
+  OpPrintingFlags &alwaysUseAliases(bool enable = true);
+
   /// Return if the given ElementsAttr should be elided.
   bool shouldElideElementsAttr(ElementsAttr attr) const;
 
@@ -1324,6 +1331,9 @@ public:
 
   /// Return if operation verification should be skipped.
   bool shouldAssumeVerified() const;
+
+  /// Return if aliases should always be used.
+  bool shouldAlwaysUseAliases() const;
 
   /// Return if the printer should use local scope when dumping the IR.
   bool shouldUseLocalScope() const;
@@ -1362,6 +1372,9 @@ private:
 
   /// Skip operation verification.
   bool assumeVerifiedFlag : 1;
+
+  /// Always use aliases even for non top-level ops.
+  bool alwaysUseAliasesFlag : 1;
 
   /// Print operations with numberings local to the current operation.
   bool printLocalScope : 1;

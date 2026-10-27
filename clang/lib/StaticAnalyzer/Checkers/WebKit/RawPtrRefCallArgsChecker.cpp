@@ -15,6 +15,7 @@
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/Analysis/DomainSpecific/CocoaConventions.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
@@ -204,7 +205,8 @@ public:
     if (auto *Receiver = E->getInstanceReceiver()) {
       std::optional<bool> IsUnsafe = Model->isUnsafePtr(E->getReceiverType());
       const Expr *Origin = nullptr;
-      if (IsUnsafe && *IsUnsafe && !isPtrOriginSafe(Receiver, &Origin)) {
+      if (IsUnsafe && *IsUnsafe &&
+          !isPtrOriginSafe(Receiver, &Origin, E->getReceiverType())) {
         if (isAllocInit(E))
           return;
         reportBugOnReceiver(E->getMethodDecl(), Receiver, D, Origin);
@@ -225,7 +227,7 @@ public:
       if (!IsUnsafe || !(*IsUnsafe))
         continue;
       const Expr *Origin = nullptr;
-      if (isPtrOriginSafe(Arg, &Origin))
+      if (isPtrOriginSafe(Arg, &Origin, ArgType))
         continue;
       reportBug(MethodDecl, Arg, Param, D, Origin);
     }
@@ -261,7 +263,7 @@ public:
       return;
 
     const Expr *Origin = nullptr;
-    if (isPtrOriginSafe(Receiver, &Origin))
+    if (isPtrOriginSafe(Receiver, &Origin, ParamType))
       return;
 
     reportBugOnThis(Callee, Receiver, DeclWithIssue, Origin);
@@ -277,13 +279,14 @@ public:
       Arg = DefaultArg->getExpr();
 
     const Expr *Origin = nullptr;
-    if (isPtrOriginSafe(Arg, &Origin))
+    if (isPtrOriginSafe(Arg, &Origin, ParamType))
       return;
 
     reportBug(Callee, Arg, Param, DeclWithIssue, Origin);
   }
 
-  bool isPtrOriginSafe(const Expr *Arg, const Expr **Origin = nullptr) const {
+  bool isPtrOriginSafe(const Expr *Arg, const Expr **Origin = nullptr,
+                       QualType SinkType = QualType()) const {
     return tryToFindPtrOrigin(
         Arg, /*StopAtFirstRefCountedObj=*/true,
         Model->checksForInteriorDestruction(),
@@ -321,7 +324,8 @@ public:
             if (isPtrOriginSafe(MCE->getImplicitObjectArgument()))
               return true;
           }
-          if (Model->isSafeExpr(ArgOrigin, PtrIsLifetimeBoundToOrigin))
+          if (Model->isSafeExpr(ArgOrigin, PtrIsLifetimeBoundToOrigin, SinkType,
+                                /*SinkMayEscape=*/false))
             return true;
           if (Origin && !*Origin)
             *Origin = ArgOrigin;
@@ -571,8 +575,8 @@ public:
 class UnborrowedCallArgsChecker final : public RawPtrRefCallArgsChecker {
 public:
   UnborrowedCallArgsChecker()
-      : RawPtrRefCallArgsChecker("Loan on a CanBorrow object not guarded by "
-                                 "a Borrow",
+      : RawPtrRefCallArgsChecker("Unborrowed call argument for a raw "
+                                 "pointer/reference parameter",
                                  makeBorrowSafetyModel()) {}
 };
 

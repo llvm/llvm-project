@@ -1,5 +1,41 @@
 // RUN: mlir-opt --split-input-file --test-single-fold %s | FileCheck %s
 
+// CHECK-LABEL: @argmax_fold_dim_size_1
+func.func @argmax_fold_dim_size_1(%arg0: tensor<2x1x3xf32>) -> tensor<2x3xi32> {
+  // CHECK: tosa.const values(dense<0> : tensor<2x3xi32>) : () -> tensor<2x3xi32>
+  %0 = tosa.argmax %arg0 axis(1): (tensor<2x1x3xf32>) -> tensor<2x3xi32>
+  return %0 : tensor<2x3xi32>
+}
+
+// -----
+
+// CHECK-LABEL: @argmax_dynamic_shape_no_fold_dim_size_1
+func.func @argmax_dynamic_shape_no_fold_dim_size_1(%arg0: tensor<?x1x3xf32>) -> tensor<?x3xi32> {
+  // CHECK: tosa.argmax
+  %0 = tosa.argmax %arg0 axis(1): (tensor<?x1x3xf32>) -> tensor<?x3xi32>
+  return %0 : tensor<?x3xi32>
+}
+
+// -----
+
+// CHECK-LABEL: @argmin_fold_dim_size_1
+func.func @argmin_fold_dim_size_1(%arg0: tensor<2x1x3xf32>) -> tensor<2x3xi32> {
+  // CHECK: tosa.const values(dense<0> : tensor<2x3xi32>) : () -> tensor<2x3xi32>
+  %0 = tosa.argmin %arg0 axis(1): (tensor<2x1x3xf32>) -> tensor<2x3xi32>
+  return %0 : tensor<2x3xi32>
+}
+
+// -----
+
+// CHECK-LABEL: @argmin_dynamic_shape_no_fold_dim_size_1
+func.func @argmin_dynamic_shape_no_fold_dim_size_1(%arg0: tensor<?x1x3xf32>) -> tensor<?x3xi32> {
+  // CHECK: tosa.argmin
+  %0 = tosa.argmin %arg0 axis(1): (tensor<?x1x3xf32>) -> tensor<?x3xi32>
+  return %0 : tensor<?x3xi32>
+}
+
+// -----
+
 // CHECK-LABEL: func @test_const
 func.func @test_const(%arg0 : index) -> tensor<4xi32> {
   // CHECK: tosa.const
