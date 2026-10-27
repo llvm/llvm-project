@@ -5305,9 +5305,6 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
         GCR.setOperand(2, ConstantInt::get(OpIntTy, GCR.getBasePtrIndex()));
       }
 
-      // TODO: bitcast(relocate(p)) -> relocate(bitcast(p))
-      // Canonicalize on the type from the uses to the defs
-
       // TODO: relocate((gep p, C, C2, ...)) -> gep(relocate(p), C, C2, ...)
       LiveGcValues.insert(BasePtr);
       LiveGcValues.insert(DerivedPtr);
