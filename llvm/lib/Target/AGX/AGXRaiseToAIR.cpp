@@ -143,6 +143,7 @@ private:
   void raiseFunction(Function &F);
   void emulate(Function &F, StringRef Key);
   bool linkSoftF64();
+  Function *byValueToByRef(Function &K);
 };
 
 /// A key's double mask: one character for the result and each operand of the
@@ -403,18 +404,49 @@ static Constant *doubleBits(Constant *C) {
   if (auto *FP = dyn_cast<ConstantFP>(C); FP && T->isDoubleTy())
     return ConstantInt::get(Type::getInt64Ty(Ctx),
                             FP->getValueAPF().bitcastToAPInt());
-  if (isa<UndefValue, ConstantAggregateZero>(C) || !C->getNumOperands()) {
-    auto *VT = dyn_cast<FixedVectorType>(T);
-    if (auto *CDS = dyn_cast<ConstantDataSequential>(C);
-        CDS && CDS->getElementType()->isDoubleTy()) {
-      SmallVector<uint64_t, 8> Bits;
-      for (unsigned I = 0; I < CDS->getNumElements(); ++I)
-        Bits.push_back(CDS->getElementAsAPFloat(I)
-                           .bitcastToAPInt()
-                           .getZExtValue());
-      return VT ? ConstantDataVector::get(Ctx, Bits)
-                : ConstantDataArray::get(Ctx, Bits);
+  if (auto *CDS = dyn_cast<ConstantDataSequential>(C)) {
+    if (!CDS->getElementType()->isDoubleTy())
+      return nullptr;
+    SmallVector<uint64_t, 8> Bits;
+    for (unsigned I = 0; I < CDS->getNumElements(); ++I)
+      Bits.push_back(
+          CDS->getElementAsAPFloat(I).bitcastToAPInt().getZExtValue());
+    return isa<VectorType>(T) ? ConstantDataVector::get(Ctx, Bits)
+                              : ConstantDataArray::get(Ctx, Bits);
+  }
+  if (auto *CA = dyn_cast<ConstantAggregate>(C)) {
+    SmallVector<Constant *, 8> Ops;
+    bool Changed = false;
+    for (Use &U : CA->operands()) {
+      Constant *Op = cast<Constant>(U);
+      if (Constant *Bits = doubleBits(Op)) {
+        Op = Bits;
+        Changed = true;
+      } else if (Op->getType()->getScalarType()->isDoubleTy()) {
+        // undef, poison or zero doubles
+        Type *To = Type::getInt64Ty(Ctx);
+        if (auto *VT = dyn_cast<VectorType>(Op->getType()))
+          To = VectorType::get(To, VT);
+        Op = isa<PoisonValue>(Op)  ? PoisonValue::get(To)
+             : isa<UndefValue>(Op) ? UndefValue::get(To)
+                                   : Constant::getNullValue(To);
+        Changed = true;
+      }
+      Ops.push_back(Op);
     }
+    if (!Changed)
+      return nullptr;
+    if (isa<ConstantVector>(CA))
+      return ConstantVector::get(Ops);
+    if (auto *ST = dyn_cast<StructType>(T)) {
+      SmallVector<Type *, 8> Tys;
+      for (Constant *Op : Ops)
+        Tys.push_back(Op->getType());
+      return ConstantStruct::get(
+          StructType::get(Ctx, Tys, ST->isPacked()), Ops);
+    }
+    return ConstantArray::get(ArrayType::get(Ops[0]->getType(), Ops.size()),
+                              Ops);
   }
   return nullptr;
 }
@@ -515,6 +547,15 @@ void RaiseToAIR::emulate(Function &F, StringRef Key) {
     else
       B.CreateRet(V ? V : PoisonValue::get(Ret));
   };
+  // A hint without an emulation: only a consumer that has the operation can
+  // compile it (agx-lower-air); for any other it is unreachable.
+  auto NoEmulation = [&] {
+    while (!BB->empty())
+      BB->back().eraseFromParent();
+    B.SetInsertPoint(BB);
+    B.CreateUnreachable();
+    F.addFnAttr("air-hint-no-emulation");
+  };
 
   SmallVector<StringRef, 4> Parts;
   Key.split(Parts, '|');
@@ -591,6 +632,31 @@ void RaiseToAIR::emulate(Function &F, StringRef Key) {
                                : ArrayRef<Value *>{A[1], A[0]}));
       Value *ANaN = Bool(Lib("__air_f64_unord", I32, {A[0], A[0]}));
       R = B.CreateSelect(ANaN, A[1], B.CreateSelect(Lt, A[0], A[1]));
+    } else if (B2 == "minimum" || B2 == "maximum" || B2 == "minimumnum" ||
+               B2 == "maximumnum") {
+      // -0 orders below +0; minimum / maximum return a NaN operand (quiet),
+      // the *num forms the other operand.
+      bool Min = B2.starts_with("min");
+      Value *X = A[0], *Y = A[1];
+      Value *Lt = Bool(Lib("__air_f64_lt", I32,
+                           Min ? ArrayRef<Value *>{X, Y}
+                               : ArrayRef<Value *>{Y, X}));
+      Value *Eq = Bool(Lib("__air_f64_eq", I32, {X, Y}));
+      // equal values: the one with the sign bit for min, without for max
+      Value *XNeg = B.CreateICmpSLT(X, B.getInt64(0));
+      Value *PickX = B.CreateOr(
+          Lt, B.CreateAnd(Eq, Min ? XNeg : B.CreateNot(XNeg)));
+      Value *XNaN = Bool(Lib("__air_f64_unord", I32, {X, X}));
+      Value *YNaN = Bool(Lib("__air_f64_unord", I32, {Y, Y}));
+      R = B.CreateSelect(PickX, X, Y);
+      Value *Quiet = B.getInt64(0x0008000000000000ull);
+      if (B2.ends_with("num")) {
+        R = B.CreateSelect(YNaN, X, R);
+        R = B.CreateSelect(XNaN, Y, R);
+      } else {
+        R = B.CreateSelect(YNaN, B.CreateOr(Y, Quiet), R);
+        R = B.CreateSelect(XNaN, B.CreateOr(X, Quiet), R);
+      }
     } else if (B2 == "fcmp" || B2 == "fcmps") {
       Value *Uno = Bool(Lib("__air_f64_unord", I32, {A[0], A[1]}));
       Value *Eq = Bool(Lib("__air_f64_eq", I32, {A[0], A[1]}));
@@ -633,10 +699,8 @@ void RaiseToAIR::emulate(Function &F, StringRef Key) {
       if (!Ret->isFloatTy())
         R = B.CreateFPTrunc(R, Ret);
     }
-    if (!R) {
-      error(&F, "no emulation of the double precision operation " + Key);
-      R = PoisonValue::get(Ret);
-    }
+    if (!R)
+      return NoEmulation();
     return Fin(R);
   }
 
@@ -672,10 +736,8 @@ void RaiseToAIR::emulate(Function &F, StringRef Key) {
     else if (Base == "fpext") R = B.CreateFPExt(A[0], Ret);
     else if (Base == "fptrunc") R = B.CreateFPTrunc(A[0], Ret);
     else if (Base == "fcmp" || Base == "fcmps") R = B.CreateFCmp(Pred(), A[0], A[1]);
-    if (!R) {
-      error(&F, "no emulation of " + Key);
-      R = PoisonValue::get(Ret);
-    }
+    if (!R)
+      return NoEmulation();
     return Fin(R);
   }
 
@@ -773,10 +835,49 @@ void RaiseToAIR::emulate(Function &F, StringRef Key) {
     R = B.CreateInsertElement(Out, D1, uint64_t(1));
     return Fin(R);
   } else {
-    error(&F, "no AIR emulation of " + Intr);
-    R = Ret->isVoidTy() ? nullptr : PoisonValue::get(Ret);
+    return NoEmulation();
   }
   Fin(R);
+}
+
+Function *RaiseToAIR::byValueToByRef(Function &K) {
+  if (all_of(K.args(), [](Argument &A) { return A.getType()->isPointerTy(); }))
+    return &K;
+  SmallVector<Type *, 8> Params;
+  for (Argument &A : K.args())
+    Params.push_back(A.getType()->isPointerTy()
+                         ? A.getType()
+                         : PointerType::get(Ctx, AGX::CONSTANT_ADDRESS));
+  auto *FT = FunctionType::get(K.getReturnType(), Params, false);
+  Function *New = Function::Create(FT, K.getLinkage(), K.getAddressSpace(),
+                                   K.getName(), &M);
+  New->copyAttributesFrom(&K);
+  New->setAttributes(AttributeList::get(Ctx, K.getAttributes().getFnAttrs(),
+                                        K.getAttributes().getRetAttrs(), {}));
+  New->splice(New->begin(), &K);
+  IRBuilder<> B(&*New->getEntryBlock().getFirstInsertionPt());
+  for (auto [Old, NewA] : zip(K.args(), New->args())) {
+    NewA.takeName(&Old);
+    AttributeSet Attrs = K.getAttributes().getParamAttrs(Old.getArgNo());
+    AttrBuilder AB(Ctx);
+    if (Old.getType()->isPointerTy()) {
+      AB.merge(AttrBuilder(Ctx, Attrs));
+      Old.replaceAllUsesWith(&NewA);
+    } else {
+      // Only the string attributes apply to the buffer.
+      for (Attribute At : Attrs)
+        if (At.isStringAttribute())
+          AB.addAttribute(At);
+      AB.addByRefAttr(Old.getType());
+      Old.replaceAllUsesWith(B.CreateLoad(Old.getType(), &NewA));
+    }
+    New->addParamAttrs(NewA.getArgNo(), AB);
+  }
+  std::string Name = K.getName().str();
+  K.replaceAllUsesWith(New);
+  K.eraseFromParent();
+  New->setName(Name);
+  return New;
 }
 
 bool RaiseToAIR::run() {
@@ -797,16 +898,11 @@ bool RaiseToAIR::run() {
   }
   if (Kernels.empty())
     return false;
-  for (Function *K : Kernels)
-    for (Argument &A : K->args())
-      if (K->getAttributes().hasParamAttr(A.getArgNo(), "agx-hidden"))
-        error(K, "a hidden kernel argument (" +
-                     K->getAttributes()
-                         .getParamAttr(A.getArgNo(), "agx-hidden")
-                         .getValueAsString() +
-                     ") has no AIR form yet");
-  if (Failed)
-    return false;
+  // A kernel parameter passed by value (an AGX hidden argument such as the
+  // threadgroup memory size) becomes a byref constant buffer like the others,
+  // with its attributes ("agx-hidden").
+  for (Function *&K : Kernels)
+    K = byValueToByRef(*K);
 
   for (Function &F : make_early_inc_range(M))
     if (!F.isDeclaration())
@@ -922,9 +1018,8 @@ bool RaiseToAIR::run() {
       New->setCallingConv(CallingConv::C);
       New->addFnAttr("air-kernel");
       // A byref parameter (in the constant address space) is a constant
-      // buffer that the kernel reads.
-      for (Argument &A : New->args())
-        A.removeAttr(Attribute::ByRef);
+      // buffer that the kernel reads. Its byref type stays, as a hint of its
+      // exact size (AIR describes a buffer by the type its uses load).
     }
   }
   for (auto [Old, New] : Globals) {

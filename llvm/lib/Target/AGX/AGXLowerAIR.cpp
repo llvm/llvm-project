@@ -91,6 +91,11 @@ struct Param {
   unsigned Location = 0;
   unsigned TypeSize = 0;
   StringRef TypeName;
+  /// The parameter's byref type, when the AIR kept one (agx-raise-to-air):
+  /// the exact size of a constant buffer.
+  Type *ByRef = nullptr;
+  /// Its string attributes ("agx-hidden" from agx-raise-to-air).
+  SmallVector<Attribute, 1> StringAttrs;
   // System value: its role, such as air.thread_position_in_grid.
   StringRef Role;
 };
@@ -185,6 +190,7 @@ private:
   void lowerHints();
   void lowerCalls();
   void inlineCalls();
+  Function *hiddenByValue(Function &K);
   bool lowerCall(CallInst &CI, StringRef Name, Value *&Result);
   bool lowerAtomic(IRBuilder<> &B, CallInst &CI, StringRef Name,
                    Value *&Result);
@@ -454,7 +460,12 @@ Function *LowerAIR::newKernel(AIRKernel &K, AIRToAGXTypes &Types) {
   Function &F = *K.F;
   SmallVector<Type *, 8> Params;
   for (Argument &A : F.args()) {
-    const Param &Pm = K.Params[A.getArgNo()];
+    Param &Pm = K.Params[A.getArgNo()];
+    if (Type *T = F.getParamByRefType(A.getArgNo()))
+      Pm.ByRef = Types.remapType(T);
+    for (Attribute At : F.getAttributes().getParamAttrs(A.getArgNo()))
+      if (At.isStringAttribute())
+        Pm.StringAttrs.push_back(At);
     if (Pm.Kind == Param::Buffer && Pm.AddrSpace != air::AS::Threadgroup)
       Params.push_back(Types.remapType(A.getType()));
   }
@@ -539,8 +550,14 @@ void LowerAIR::passConstantBuffersByReference(AIRKernel &K, Function *NewF) {
     if (Pm.Kind != Param::Buffer || Pm.AddrSpace == air::AS::Threadgroup)
       continue;
     Argument &A = *NewArg++;
+    for (Attribute At : Pm.StringAttrs)
+      A.addAttr(At);
     if (Pm.AddrSpace != air::AS::Constant)
       continue;
+    if (Pm.ByRef) {
+      A.addAttr(Attribute::getWithByRefType(Ctx, Pm.ByRef));
+      continue;
+    }
     Type *T = namedType(Pm.TypeName, Ctx);
     if (!T || DL.getTypeAllocSize(T) != Pm.TypeSize) {
       // A type AIR describes by size alone (a structure) is held in bytes.
@@ -1529,6 +1546,57 @@ void LowerAIR::inlineCalls() {
       F.eraseFromParent();
 }
 
+// AGX's hidden kernel arguments ("agx-hidden") are passed by value; AIR has
+// them as byref constant buffers (agx-raise-to-air). A kernel that only loads
+// them whole takes them by value again.
+Function *LowerAIR::hiddenByValue(Function &K) {
+  SmallVector<unsigned, 2> Hidden;
+  for (Argument &A : K.args()) {
+    Type *T = K.getParamByRefType(A.getArgNo());
+    if (!T || !K.getAttributes().hasParamAttr(A.getArgNo(), "agx-hidden"))
+      continue;
+    if (!all_of(A.users(), [&](User *U) {
+          auto *L = dyn_cast<LoadInst>(U);
+          return L && L->isSimple() && L->getType() == T;
+        }))
+      continue;
+    Hidden.push_back(A.getArgNo());
+  }
+  if (Hidden.empty())
+    return &K;
+  SmallVector<Type *, 8> Params(K.getFunctionType()->params());
+  for (unsigned I : Hidden)
+    Params[I] = K.getParamByRefType(I);
+  auto *FT = FunctionType::get(K.getReturnType(), Params, false);
+  Function *New =
+      Function::Create(FT, K.getLinkage(), K.getAddressSpace(), "", &M);
+  New->copyAttributesFrom(&K);
+  New->splice(New->begin(), &K);
+  for (auto [Old, NewA] : zip(K.args(), New->args())) {
+    NewA.takeName(&Old);
+    if (!is_contained(Hidden, Old.getArgNo())) {
+      Old.replaceAllUsesWith(&NewA);
+      continue;
+    }
+    for (User *U : make_early_inc_range(Old.users())) {
+      U->replaceAllUsesWith(&NewA);
+      cast<Instruction>(U)->eraseFromParent();
+    }
+    AttrBuilder AB(Ctx);
+    for (Attribute At : K.getAttributes().getParamAttrs(Old.getArgNo()))
+      if (At.isStringAttribute())
+        AB.addAttribute(At);
+    New->setAttributes(New->getAttributes()
+                           .removeParamAttributes(Ctx, NewA.getArgNo())
+                           .addParamAttributes(Ctx, NewA.getArgNo(), AB));
+  }
+  std::string Name = K.getName().str();
+  K.replaceAllUsesWith(New);
+  K.eraseFromParent();
+  New->setName(Name);
+  return New;
+}
+
 void LowerAIR::lowerCalls() {
   for (Function &F : make_early_inc_range(M)) {
     if (!F.isDeclaration() || !F.getName().starts_with("air."))
@@ -1705,6 +1773,8 @@ bool LowerAIR::run() {
   for (AIRKernel &K : Kernels)
     passConstantBuffersByReference(K, K.NewF);
   inlineCalls();
+  for (AIRKernel &K : Kernels)
+    K.NewF = hiddenByValue(*K.NewF);
   return true;
 }
 

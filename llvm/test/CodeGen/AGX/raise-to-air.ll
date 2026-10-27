@@ -11,7 +11,7 @@
 ; AIR: target triple = "air"
 ; AIR: define internal i32 @__air_hint.call_llvm.agx.get.fpmode__() #[[F:[0-9]+]]
 ; AIR-NEXT: ret i32 0
-; AIR-LABEL: define void @k(ptr addrspace(2) %pp, ptr addrspace(2) %pd)
+; AIR-LABEL: define void @k(ptr addrspace(2) byref(i64) %pp, ptr addrspace(2) byref(double) %pd)
 ; AIR: inttoptr i64 %p to ptr addrspace(4)
 ; AIR: load i64, ptr addrspace(2) %pd
 ; AIR: call <3 x i32> @air.thread_position_in_grid.v3i32()
