@@ -5717,13 +5717,6 @@ void ASTWriter::prepareLazyUpdates() {
   DeclUpdateMap DeclUpdatesTmp;
   // Move updates to DeclUpdatesLazy but leave the updates that may be needed by
   // code generation eager.
-  //
-  // Added function definitions are critical to the AST. If we don't take care
-  // of them, users might meet missing definition errors at linking time. Here
-  // we leave all CXXAddedFunctionDefinition updates eager unconditionally to
-  // avoid potential issues.
-  // TODO: Try to refine the strategy to handle CXXAddedFunctionDefinition
-  // precisely.
   for (auto &DeclUpdate : DeclUpdates) {
     const Decl *D = DeclUpdate.first;
 
@@ -5731,6 +5724,12 @@ void ASTWriter::prepareLazyUpdates() {
       DeclUpdateKind Kind = Update.getKind();
 
       if (Kind == DeclUpdateKind::CXXAddedFunctionDefinition)
+        // Added function definitions are critical to the AST. If we don't take
+        // care of them, users might meet missing definition errors at linking
+        // time. Here we leave all CXXAddedFunctionDefinition updates eager
+        // unconditionally to avoid potential issues.
+        // TODO: Try to refine the strategy to handle CXXAddedFunctionDefinition
+        // precisely.
         DeclUpdatesTmp[D].push_back(
             ASTWriter::DeclUpdate(DeclUpdateKind::CXXAddedFunctionDefinition));
       else if (Kind == DeclUpdateKind::CXXResolvedDtorDelete ||
