@@ -36,6 +36,7 @@ cycles over a set (negative = faster) unless stated.
 | A6 | One bitop for a&~b, a\|~b, xnor, nand, nor; bfeil for single-use low masks wider than 8 bits | revert "One bitop for and-not..." | co -0.32% (16 better, 10 worse by <= 1.1%: bfeil latency 3 vs and 2) | bitop truth-table encoding; bfeil mask semantics | `cvt_*`, `mma_*bf16*`, `copysign` PTX tests |
 | A7 | Software f64: shorter add / mul / fma / div / sqrt (9acacf2bd, 7fafed9d5, a64a6f0af) | revert | 100 operations x 2048 inputs bit-exact (`agx_f64_check.py`, both NaN modes) | integer ALU costs | `cuda_ddot`, PTX f64 tests |
 | A8 | fatbin builds: one opt run shared by G13/G14, same-code chips compiled once (2e6011be4, 1a0d3648e) | revert | build 37 -> 15.9 s, objects 10x smaller | `AGXProcessors.td` same-code groups | build time only |
+| A9 | ZLUDA agx_libs: in the `_ta` tile GEMMs, load each B fragment just before its four matrix products (ZLUDA "tile GEMM with A transposed loads each B fragment...") | revert that ZLUDA commit (`gen_tile_gemm.py`) | K = 256: sgemm _ta -19% G13G / -8% G14G, hgemm _ta -32..-35% G13G / -1..-4% G14G (one sgemm _u_ta +0.8%); other variants moved +-10% both ways and keep their order | register pressure / spills (G14 `_tb` still spills 6 values at 128 GPRs) | cuBLAS sgemm / hgemm with transa = T |
 
 ## Measured and rejected (model)
 
