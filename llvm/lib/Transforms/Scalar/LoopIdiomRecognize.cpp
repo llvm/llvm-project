@@ -263,7 +263,8 @@ private:
   void transformLoopToPopcount(BasicBlock *PreCondBB, Instruction *CntInst,
                                PHINode *CntPhi, Value *Var);
   bool isProfitableToInsertFFS(Intrinsic::ID IntrinID, Value *InitX,
-                               bool ZeroCheck, size_t CanonicalSize);
+                               bool ZeroCheck, size_t CanonicalSize,
+                               ConstantInt *ShiftAmt = nullptr);
   bool insertFFSIfProfitable(Intrinsic::ID IntrinID, Value *InitX,
                              Instruction *DefX, PHINode *CntPhi,
                              Instruction *CntInst);
@@ -2624,13 +2625,15 @@ static bool detectShiftUntilZeroIdiom(Loop *CurLoop, const DataLayout &DL,
     return false;
   DefX = dyn_cast_or_null<Instruction>(matchCondition(LoopTerm, LoopEntry));
 
-  // step 2: detect instructions corresponding to "x.next = x >> 1 or x << 1"
+  // step 2: detect instructions corresponding to "x.next = x >> C or x << 1"
   if (!DefX || !DefX->isShift())
     return false;
-  IntrinID = DefX->getOpcode() == Instruction::Shl ? Intrinsic::cttz :
-                                                     Intrinsic::ctlz;
+  IntrinID =
+      DefX->getOpcode() == Instruction::Shl ? Intrinsic::cttz : Intrinsic::ctlz;
   ConstantInt *Shft = dyn_cast<ConstantInt>(DefX->getOperand(1));
-  if (!Shft || !Shft->isOne())
+  if (!Shft || Shft->isZero() ||
+      Shft->getValue().uge(DefX->getType()->getIntegerBitWidth()) ||
+      (!Shft->isOne() && DefX->getOpcode() != Instruction::LShr))
     return false;
   VarX = DefX->getOperand(0);
 
@@ -2676,11 +2679,12 @@ static bool detectShiftUntilZeroIdiom(Loop *CurLoop, const DataLayout &DL,
   return true;
 }
 
-// Check if CTLZ / CTTZ intrinsic is profitable. Assume it is always
-// profitable if we delete the loop.
+// Check if CTLZ / CTTZ intrinsic is profitable. For shift-by-one idioms,
+// assume it is always profitable if we delete the loop.
 bool LoopIdiomRecognize::isProfitableToInsertFFS(Intrinsic::ID IntrinID,
                                                  Value *InitX, bool ZeroCheck,
-                                                 size_t CanonicalSize) {
+                                                 size_t CanonicalSize,
+                                                 ConstantInt *ShiftAmt) {
   const Value *Args[] = {InitX,
                          ConstantInt::getBool(InitX->getContext(), ZeroCheck)};
 
@@ -2689,8 +2693,23 @@ bool LoopIdiomRecognize::isProfitableToInsertFFS(Intrinsic::ID IntrinID,
   IntrinsicCostAttributes Attrs(IntrinID, InitX->getType(), Args);
   InstructionCost Cost = TTI->getIntrinsicInstrCost(
       Attrs, TargetTransformInfo::TCK_SizeAndLatency);
-  if (HeaderSize != CanonicalSize && Cost > TargetTransformInfo::TCC_Basic)
+  bool HasDivision = ShiftAmt && !ShiftAmt->isOne();
+  // For wider shifts, only handle the canonical counting loop. Additional
+  // work may keep the loop alive without amortizing the trip count setup.
+  if (HasDivision && HeaderSize != CanonicalSize)
     return false;
+  if ((HeaderSize != CanonicalSize || HasDivision) &&
+      Cost > TargetTransformInfo::TCC_Basic)
+    return false;
+
+  if (HasDivision) {
+    InstructionCost DivCost = TTI->getArithmeticInstrCost(
+        Instruction::UDiv, InitX->getType(),
+        TargetTransformInfo::TCK_SizeAndLatency, {},
+        TargetTransformInfo::getOperandInfo(ShiftAmt),
+        {PoisonValue::get(InitX->getType()), ShiftAmt});
+    return DivCost <= TargetTransformInfo::TCC_Expensive;
+  }
 
   return true;
 }
@@ -2750,7 +2769,9 @@ bool LoopIdiomRecognize::insertFFSIfProfitable(Intrinsic::ID IntrinID,
   //  %inc = add nsw %i.0, 1
   //  br i1 %tobool
   size_t IdiomCanonicalSize = 6;
-  if (!isProfitableToInsertFFS(IntrinID, InitX, ZeroCheck, IdiomCanonicalSize))
+  auto *ShiftAmt = cast<ConstantInt>(DefX->getOperand(1));
+  if (!isProfitableToInsertFFS(IntrinID, InitX, ZeroCheck, IdiomCanonicalSize,
+                               ShiftAmt))
     return false;
 
   transformLoopToCountable(IntrinID, PH, CntInst, CntPhi, InitX, DefX,
@@ -2954,18 +2975,19 @@ void LoopIdiomRecognize::transformLoopToCountable(
   IRBuilder<> Builder(Preheader->getTerminator());
   Builder.SetCurrentDebugLocation(DL);
 
-  // If there are no uses of CntPhi crate:
-  //   Count = BitWidth - CTLZ(InitX);
+  // If there are no uses of CntPhi create:
+  //   Count = ceil((BitWidth - CTLZ(InitX)) / ShiftAmt);
   //   NewCount = Count;
   // If there are uses of CntPhi create:
-  //   NewCount = BitWidth - CTLZ(InitX >> 1);
+  //   NewCount = ceil((BitWidth - CTLZ(InitX >>ShiftAmt)) / ShiftAmt);
   //   Count = NewCount + 1;
+  auto *ShiftAmt = cast<ConstantInt>(DefX->getOperand(1));
   Value *InitXNext;
   if (IsCntPhiUsedOutsideLoop) {
     if (DefX->getOpcode() == Instruction::AShr)
       InitXNext = Builder.CreateAShr(InitX, 1);
     else if (DefX->getOpcode() == Instruction::LShr)
-      InitXNext = Builder.CreateLShr(InitX, 1);
+      InitXNext = Builder.CreateLShr(InitX, ShiftAmt);
     else if (DefX->getOpcode() == Instruction::Shl) // cttz
       InitXNext = Builder.CreateShl(InitX, 1);
     else
@@ -2977,6 +2999,11 @@ void LoopIdiomRecognize::transformLoopToCountable(
   Type *CountTy = Count->getType();
   Count = Builder.CreateSub(
       ConstantInt::get(CountTy, CountTy->getIntegerBitWidth()), Count);
+  if (!ShiftAmt->isOne()) {
+    Count = Builder.CreateAdd(
+        Count, ConstantInt::get(CountTy, ShiftAmt->getZExtValue() - 1));
+    Count = Builder.CreateUDiv(Count, ShiftAmt);
+  }
   if (InsertSub)
     Count = Builder.CreateSub(Count, ConstantInt::get(CountTy, 1));
   Value *NewCount = Count;
