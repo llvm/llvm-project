@@ -231,6 +231,10 @@ public:
   /// True if the subtarget should run MachinePipeliner
   virtual bool enableMachinePipeliner() const { return true; };
 
+  /// True if MachineSink should sink instructions from loop preheaders into
+  /// the loops when register pressure is high (as -sink-insts-to-avoid-spills).
+  virtual bool sinkInstsIntoCyclesToAvoidSpills() const { return false; }
+
   /// True if the subtarget should run WindowScheduler.
   virtual bool enableWindowScheduler() const { return true; }
 

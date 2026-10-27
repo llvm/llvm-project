@@ -95,6 +95,10 @@ public:
   }
 
   bool enableMachineScheduler() const override { return true; }
+  // A spill is a stack store and load (device memory): sinking cheap
+  // preheader values into loops under pressure avoids some (agx-bench: n-body
+  // -4%, nothing slower in cycles).
+  bool sinkInstsIntoCyclesToAvoidSpills() const override { return true; }
   // Alias analysis (AGXAliasAnalysis: disjoint address spaces) orders memory
   // accesses in the DAG combiner and the machine scheduler.
   bool useAA() const override { return true; }
