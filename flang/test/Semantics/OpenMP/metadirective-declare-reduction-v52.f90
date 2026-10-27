@@ -42,3 +42,17 @@ subroutine f05
   !$omp& declare reduction(/ : integer : omp_out = omp_out + omp_in)) &
   !$omp& otherwise(error)
 end
+
+subroutine f06
+  !$omp metadirective &
+  !$omp& otherwise( &
+!ERROR: Invalid reduction intrinsic operator in DECLARE REDUCTION directive
+  !$omp& declare reduction(/ : integer : omp_out = omp_out + omp_in))
+end
+
+subroutine f07
+  !$omp metadirective &
+  !$omp& otherwise( &
+! Ok
+  !$omp& declare reduction(plus : integer : omp_out = omp_out + omp_in))
+end
