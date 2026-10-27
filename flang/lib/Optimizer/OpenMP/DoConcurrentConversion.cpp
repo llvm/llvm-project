@@ -282,9 +282,10 @@ struct LocalInitCopyInfo {
 ///     %val = fir.load %originalVar : !fir.ref<f32>
 ///     fir.store %val to %privateVar : !fir.ref<f32>
 ///     ... rest of loop body ...
-static mlir::LogicalResult inlineCopyRegionToLoopBody(
-    mlir::ConversionPatternRewriter &rewriter, mlir::Region &copyRegion,
-    mlir::Value originalVar, mlir::Value privateVar, mlir::Block &loopBody) {
+static mlir::LogicalResult
+inlineCopyRegionToLoopBody(mlir::ConversionPatternRewriter &rewriter,
+                           mlir::Region &copyRegion, mlir::Value originalVar,
+                           mlir::Value privateVar, mlir::Block &loopBody) {
   // At this point in the pipeline (before CFG conversion), control-flow
   // constructs like `if` are still represented by their encapsulating
   // structured FIR ops (e.g. fir.if), so regions are expected to have a
@@ -577,10 +578,8 @@ public:
   }
 
 private:
-  mlir::omp::ParallelOp
-  genParallelOp(
-      mlir::ConversionPatternRewriter &rewriter,
-      fir::DoConcurrentLoopOp loop,
+  mlir::omp::ParallelOp genParallelOp(
+      mlir::ConversionPatternRewriter &rewriter, fir::DoConcurrentLoopOp loop,
       looputils::InductionVariableInfos &ivInfos, mlir::IRMapping &mapper,
       llvm::SmallVectorImpl<looputils::LocalInitCopyInfo> &localInitCopies)
       const {
@@ -668,12 +667,11 @@ private:
   }
 
   std::pair<mlir::omp::LoopNestOp, mlir::omp::WsloopOp>
-  genWsLoopOp(
-      mlir::ConversionPatternRewriter &rewriter,
-      fir::DoConcurrentLoopOp loop, mlir::IRMapping &mapper,
-      const mlir::omp::LoopNestOperands &clauseOps, bool isComposite,
-      llvm::SmallVectorImpl<looputils::LocalInitCopyInfo> &localInitCopies)
-      const {
+  genWsLoopOp(mlir::ConversionPatternRewriter &rewriter,
+              fir::DoConcurrentLoopOp loop, mlir::IRMapping &mapper,
+              const mlir::omp::LoopNestOperands &clauseOps, bool isComposite,
+              llvm::SmallVectorImpl<looputils::LocalInitCopyInfo>
+                  &localInitCopies) const {
     mlir::omp::WsloopOperands wsloopClauseOps;
     // On the host path, private variables are attached to omp.wsloop
     // (not omp.parallel). genPrivatizers populates localInitCopies for any
@@ -1021,12 +1019,11 @@ private:
   /// \param [out] localInitCopies - info for LOCAL_INIT variables that need
   ///   per-iteration copy inlining. Populated here, consumed after block arg
   ///   remapping in matchAndRewrite().
-  void genPrivatizers(
-      mlir::ConversionPatternRewriter &rewriter, mlir::IRMapping &mapper,
-      fir::DoConcurrentLoopOp loop,
-      mlir::omp::PrivateClauseOps &privateClauseOps,
-      llvm::SmallVectorImpl<looputils::LocalInitCopyInfo> &localInitCopies)
-      const {
+  void genPrivatizers(mlir::ConversionPatternRewriter &rewriter,
+                      mlir::IRMapping &mapper, fir::DoConcurrentLoopOp loop,
+                      mlir::omp::PrivateClauseOps &privateClauseOps,
+                      llvm::SmallVectorImpl<looputils::LocalInitCopyInfo>
+                          &localInitCopies) const {
     // For `local` and `local_init` operands, emit corresponding `private`
     // clauses and attach these clauses to the workshare loop (host) or
     // parallel op (device).
@@ -1073,10 +1070,9 @@ private:
         // block arg remapping has established the final SSA values.
         if (localizer.getLocalitySpecifierType() ==
             fir::LocalitySpecifierType::LocalInit) {
-          localInitCopies.push_back(
-              {/*localizer=*/localizer,
-               /*originalVar=*/actualVar,
-               /*privateVarIdx=*/privateVarIdx});
+          localInitCopies.push_back({/*localizer=*/localizer,
+                                     /*originalVar=*/actualVar,
+                                     /*privateVarIdx=*/privateVarIdx});
         }
 
         ++privateVarIdx;
