@@ -1619,7 +1619,8 @@ namespace {
 /// fusion algorithm to apply cleanup patterns in between fusion steps.
 class SliceTrackingListener : public RewriterBase::Listener {
 public:
-  explicit SliceTrackingListener(const scf::SCFTileAndFuseOptions &options);
+  explicit SliceTrackingListener(
+      std::optional<FrozenRewritePatternSet> patterns);
   SliceTrackingListener() = default;
 
   /// Adds the given list of operations to the worklist, and if present,
@@ -1649,13 +1650,11 @@ private:
   /// Optional pattern set to apply when adding new operations to the
   /// worklist.
   std::optional<FrozenRewritePatternSet> patterns = std::nullopt;
-  scf::SCFTileAndFuseOptions::PreCleanupFnTy preCleanupFn;
 };
 
 SliceTrackingListener::SliceTrackingListener(
-    const scf::SCFTileAndFuseOptions &options) {
-  patterns = options.cleanupPatterns;
-  preCleanupFn = options.preCleanupFn;
+    std::optional<FrozenRewritePatternSet> p) {
+  patterns = std::move(p);
 }
 
 LogicalResult
@@ -1665,21 +1664,11 @@ SliceTrackingListener::insertAndApplyPatterns(ArrayRef<Operation *> ops) {
       worklist.push_back(slice);
   }
 
-  if (ops.empty())
-    return success();
-  SmallVector<Operation *> cleanedOps(ops);
-  if (preCleanupFn) {
-    IRRewriter rewriter(ops.front()->getContext(), this);
-    auto result = preCleanupFn(rewriter, ops);
-    if (failed(result))
-      return failure();
-    cleanedOps = std::move(*result);
-  }
   if (!patterns)
     return success();
 
   return applyOpPatternsGreedily(
-      cleanedOps, patterns.value(),
+      ops, patterns.value(),
       GreedyRewriteConfig().setListener(this).setStrictness(
           GreedyRewriteStrictness::ExistingAndNewOps));
 }
@@ -1817,7 +1806,8 @@ mlir::scf::tileConsumerAndFuseProducersUsingSCF(
     SCFTileAndFuseOptions::ControlFnResult controlFnResult;
   };
 
-  SliceTrackingListener sliceTracker = SliceTrackingListener(options);
+  SliceTrackingListener sliceTracker =
+      SliceTrackingListener(options.cleanupPatterns);
 
   if (failed(
           sliceTracker.insertAndApplyPatterns(tilingResult->generatedSlices))) {

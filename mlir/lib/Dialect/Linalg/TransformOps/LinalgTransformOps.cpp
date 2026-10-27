@@ -754,15 +754,6 @@ transform::FuseOp::apply(transform::TransformRewriter &rewriter,
     tensor::populateMergeConsecutiveInsertExtractSlicePatterns(patterns);
     tensor::populateBubbleUpExtractSliceOpPatterns(patterns);
     tileAndFuseOptions.cleanupPatterns = std::move(patterns);
-    tileAndFuseOptions.preCleanupFn = [](RewriterBase &rewriter,
-                                         ArrayRef<Operation *> ops) {
-      Operation *scope = ops.front();
-      while (!scope->hasTrait<OpTrait::IsIsolatedFromAbove>() &&
-             scope->getParentOp())
-        scope = scope->getParentOp();
-      return tensor::bubbleUpExtractSlicesThroughCollapseShape(rewriter, scope,
-                                                               ops);
-    };
   }
 
   size_t numLoops;

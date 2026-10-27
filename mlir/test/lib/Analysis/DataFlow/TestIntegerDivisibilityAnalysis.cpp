@@ -11,7 +11,6 @@
 #include "mlir/Analysis/DataFlow/IntegerDivisibilityAnalysis.h"
 #include "mlir/Analysis/DataFlowFramework.h"
 #include "mlir/Dialect/Affine/IR/AffineDialect.h"
-#include "mlir/Dialect/Arith/Analysis/IntegerDivisibility.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/DialectRegistry.h"
@@ -29,16 +28,6 @@ struct TestIntegerDivisibilityAnalysisPass
     : public PassWrapper<TestIntegerDivisibilityAnalysisPass, OperationPass<>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
       TestIntegerDivisibilityAnalysisPass)
-
-  TestIntegerDivisibilityAnalysisPass() = default;
-  TestIntegerDivisibilityAnalysisPass(
-      const TestIntegerDivisibilityAnalysisPass &pass)
-      : PassWrapper(pass) {}
-
-  Option<bool> powerOfTwo{
-      *this, "power-of-two",
-      llvm::cl::desc("Infer only modular power-of-two divisibility"),
-      llvm::cl::init(false)};
 
   StringRef getArgument() const override {
     return "test-int-divisibility-analysis";
@@ -74,10 +63,7 @@ struct TestIntegerDivisibilityAnalysisPass
     // visitNonControlFlowArguments and analyze arguments like loop induction
     // variables.
     solver.load<SparseConstantPropagation>();
-    if (powerOfTwo)
-      solver.load<arith::PowerOfTwoDivisibilityAnalysis>();
-    else
-      solver.load<IntegerDivisibilityAnalysis>();
+    solver.load<IntegerDivisibilityAnalysis>();
     if (failed(solver.initializeAndRun(rootOp)))
       return signalPassFailure();
 

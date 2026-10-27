@@ -77,11 +77,6 @@ struct TestTensorTransforms
       llvm::cl::desc("Test folding of expand_shape/collapse_shape"),
       llvm::cl::init(false)};
 
-  Option<bool> testBubbleUpExtractSliceAlignment{
-      *this, "test-bubble-up-extract-slice-alignment",
-      llvm::cl::desc("Test analysis-backed extract_slice bubbling"),
-      llvm::cl::init(false)};
-
   Option<bool> testFoldExtractFromCollapseShape{
       *this, "test-fold-extract-from-collapse-shape",
       llvm::cl::desc("Test folding of extract from collapse_shape"),
@@ -382,35 +377,6 @@ static LogicalResult testTrackingListenerReplacements(Operation *rootOp) {
 
 void TestTensorTransforms::runOnOperation() {
   Operation *rootOp = getOperation();
-  if (testBubbleUpExtractSliceAlignment) {
-    IRRewriter rewriter(rootOp->getContext());
-    auto bubbleSlices = [&]() {
-      SmallVector<Operation *> slices;
-      rootOp->walk(
-          [&](tensor::ExtractSliceOp slice) { slices.push_back(slice); });
-      return tensor::bubbleUpExtractSlicesThroughCollapseShape(rewriter, rootOp,
-                                                               slices);
-    };
-    if (failed(bubbleSlices()))
-      return signalPassFailure();
-    SmallVector<scf::ForOp> loopsToReplace;
-    rootOp->walk([&](scf::ForOp loop) {
-      if (loop->hasAttr("test.replacement_step"))
-        loopsToReplace.push_back(loop);
-    });
-    for (scf::ForOp loop : loopsToReplace) {
-      rewriter.setInsertionPoint(loop);
-      auto stepAttr = loop->getAttrOfType<IntegerAttr>("test.replacement_step");
-      Value step = arith::ConstantIndexOp::create(rewriter, loop.getLoc(),
-                                                  stepAttr.getInt());
-      auto replacement = cast<scf::ForOp>(rewriter.clone(*loop));
-      replacement.getStepMutable().assign(step);
-      replacement->removeAttr("test.replacement_step");
-      rewriter.replaceOp(loop, replacement);
-    }
-    if (!loopsToReplace.empty() && failed(bubbleSlices()))
-      return signalPassFailure();
-  }
   if (testFoldConstantExtractSlice)
     applyFoldConstantExtractSlicePatterns(rootOp);
   if (testFoldConsecutiveInsertExtractSlice)

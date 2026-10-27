@@ -70,16 +70,6 @@ void populateMergeConsecutiveInsertExtractSlicePatterns(
 /// tiling interface.
 void populateBubbleUpExtractSliceOpPatterns(RewritePatternSet &patterns);
 
-/// Bubble up the extract_slice operations in `operations` through their
-/// collapse_shape producers. Analyze integer alignment in `analysisScope` once,
-/// complete matching without modifying existing definitions, then replace the
-/// slices. Return the surviving operations and the inserted slice/reshape ops
-/// for subsequent cleanup. The analysis is not retained across invocations.
-FailureOr<SmallVector<Operation *>>
-bubbleUpExtractSlicesThroughCollapseShape(RewriterBase &rewriter,
-                                          Operation *analysisScope,
-                                          ArrayRef<Operation *> operations);
-
 /// Populates `patterns` with patterns that drop redundant tensor.insert_slice
 /// rank expansions.
 void populateDropRedundantInsertSliceRankExpansionPatterns(
@@ -179,6 +169,7 @@ getExpandedExtractSliceInfo(OpBuilder &b, tensor::ExtractSliceOp sliceOp,
                             SmallVectorImpl<OpFoldResult> &expandedOffsets,
                             SmallVectorImpl<OpFoldResult> &expandedSizes,
                             SmallVectorImpl<OpFoldResult> &expandedStrides);
+
 } // namespace tensor
 } // namespace mlir
 
