@@ -201,18 +201,6 @@ def G_AARCH64_RANGE_PREFETCH : AArch64GenericInstruction {
   let hasSideEffects = 1;
 }
 
-def G_UMULL : AArch64GenericInstruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src1, type0:$src2);
-  let hasSideEffects = 0;
-}
-
-def G_SMULL : AArch64GenericInstruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src1, type0:$src2);
-  let hasSideEffects = 0;
-}
-
 def G_PMULL : AArch64GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src1, type1:$src2);
@@ -327,8 +315,8 @@ def : GINodeEquiv<G_FCMGT, AArch64fcmgt>;
 def : GINodeEquiv<G_BSP, AArch64bsp>;
 
 def : GINodeEquiv<G_PMULL, AArch64pmull>;
-def : GINodeEquiv<G_UMULL, AArch64umull>;
-def : GINodeEquiv<G_SMULL, AArch64smull>;
+def : GINodeEquiv<G_UMULL, umull>;
+def : GINodeEquiv<G_SMULL, smull>;
 
 def : GINodeEquiv<G_SADDLP, AArch64saddlp_n>;
 def : GINodeEquiv<G_UADDLP, AArch64uaddlp_n>;
