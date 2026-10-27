@@ -14,6 +14,13 @@ tablegen(LLVM AGXGenSDNodeInfo.inc -gen-sd-node-info)
 tablegen(LLVM AGXGenSearchableTables.inc -gen-searchable-tables)
 tablegen(LLVM AGXGenSubtargetInfo.inc -gen-subtarget)
 
+# The AIR target's mapping between LLVM intrinsics and AIR functions, which
+# agx-lower-air inverts. Generated here from the same file, so that the AGX
+# target does not depend on the AIR target being built.
+set(LLVM_TARGET_DEFINITIONS ${CMAKE_CURRENT_SOURCE_DIR}/../AIR/AIRIntrinsicMappings.td)
+tablegen(LLVM AGXGenAIRFunctions.inc -gen-searchable-tables)
+set(LLVM_TARGET_DEFINITIONS AGX.td)
+
 add_public_tablegen_target(AGXCommonTableGen)
 
 add_llvm_target(AGXCodeGen

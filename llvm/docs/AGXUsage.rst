@@ -1014,8 +1014,26 @@ AIR system value                     AGX
 ``simdgroups_per_threadgroup``       threads per threadgroup / 32, rounded up
 ==================================== ==========================================
 
-The module then takes AGX's triple and data layout, and loses the AIR
-metadata and module flags.
+Calls to AIR functions become LLVM intrinsics and instructions:
+
+* the math functions by the inverse of the AIR target's mapping
+  (``llvm/lib/Target/AIR/AIRIntrinsicMappings.td``, generated into this
+  target): ``air.sin.f32`` is ``llvm.sin.f32``, ``air.fast_sin.f32`` the same
+  with ``afn``, ``air.min.u.i32`` is ``llvm.umin.i32``;
+* ``air.atomic.<space>.<op>`` and ``air.atomic.<space>.cmpxchg.weak.i32`` are
+  ``atomicrmw`` and ``cmpxchg`` in their memory order, with workgroup scope
+  for threadgroup memory and ``thread_scope_threadgroup``, volatile when AIR
+  says so; the compare-exchange leaves the value it found in its expected
+  operand;
+* ``air.atomic.fence`` is a ``fence``;
+* ``air.wg.barrier`` is ``llvm.agx.threadgroup_barrier``, between
+  workgroup-scope release and acquire fences when it orders memory, and
+  ``air.simdgroup.barrier`` a workgroup-scope fence (SIMD-groups run in
+  lockstep).
+
+Any other AIR function (SIMD-group functions and matrices among them, for
+now) is an error. The module then takes AGX's triple and data layout, and
+loses the AIR metadata and module flags.
 
 MLIR
 ====

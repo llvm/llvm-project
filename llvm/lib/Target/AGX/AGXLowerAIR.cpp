@@ -21,7 +21,14 @@
 // within the size !air.kernel gives it, is passed by reference (byref), so its
 // bytes go in uniform registers. System-value parameters become reads of AGX's
 // special registers, and the threadgroup buffer becomes the launch's dynamic
-// threadgroup memory. Finally the module takes AGX's triple and data layout.
+// threadgroup memory.
+//
+// Calls to AIR functions become LLVM intrinsics and instructions: the math
+// functions by the inverse of the AIR target's mapping
+// (AIRIntrinsicMappings.td, "fast_" functions with afn), atomics and fences
+// as atomicrmw, cmpxchg and fence, and barriers as AGX's threadgroup barrier
+// between threadgroup-scope fences. An AIR function with no lowering is an
+// error. Finally the module takes AGX's triple and data layout.
 //
 //===----------------------------------------------------------------------===//
 
@@ -30,6 +37,8 @@
 #include "Utils/AGXBaseInfo.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringTable.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/IR/AIR.h"
 #include "llvm/IR/Constants.h"
@@ -52,6 +61,19 @@ using namespace llvm;
 #define DEBUG_TYPE "agx-lower-air"
 
 namespace {
+// Layout must match the struct emitted by -gen-searchable-tables for the
+// AIRFunction class in AIRIntrinsicMappings.td.
+struct AIRFunction {
+  StringTable::Offset LLVMName;
+  StringTable::Offset AIRName;
+  uint8_t Signedness;
+  bool HasFast;
+  uint8_t NumArgs;
+  bool Invertible;
+};
+
+#define GET_AIRFunctions_IMPL
+#include "AGXGenAIRFunctions.inc"
 
 /// What !air.kernel says a kernel parameter is.
 struct Param {
@@ -148,6 +170,12 @@ private:
                    AIRToAGXTypes &Types);
   Value *systemValue(IRBuilder<> &B, StringRef Role, Type *Ty, Function *F);
   void passConstantBuffersByReference(AIRKernel &K, Function *NewF);
+  void lowerCalls();
+  bool lowerCall(CallInst &CI, StringRef Name, Value *&Result);
+  bool lowerAtomic(IRBuilder<> &B, CallInst &CI, StringRef Name,
+                   Value *&Result);
+  bool lowerMath(IRBuilder<> &B, CallInst &CI, StringRef Name,
+                 Value *&Result);
   void dropAIRMetadata();
 };
 
@@ -497,6 +525,203 @@ void LowerAIR::passConstantBuffersByReference(AIRKernel &K, Function *NewF) {
   }
 }
 
+// MSL's memory_order, as AIR's atomic functions take it.
+static AtomicOrdering ordering(Value *Order) {
+  auto *C = dyn_cast<ConstantInt>(Order);
+  switch (C ? C->getZExtValue() : 5) {
+  case 0:
+    return AtomicOrdering::Monotonic;
+  case 1: // consume
+  case 2:
+    return AtomicOrdering::Acquire;
+  case 3:
+    return AtomicOrdering::Release;
+  case 4:
+    return AtomicOrdering::AcquireRelease;
+  default:
+    return AtomicOrdering::SequentiallyConsistent;
+  }
+}
+
+// MSL's thread_scope: threadgroup (1) or device (2, and anything wider).
+static SyncScope::ID syncScope(LLVMContext &Ctx, Value *Scope) {
+  auto *C = dyn_cast<ConstantInt>(Scope);
+  if (C && C->getZExtValue() <= 1)
+    return Ctx.getOrInsertSyncScopeID("workgroup");
+  return SyncScope::System;
+}
+
+static bool isVolatile(Value *V) {
+  auto *C = dyn_cast<ConstantInt>(V);
+  return !C || !C->isZero();
+}
+
+// air.atomic.fence(flags, order, scope), the atomic operations
+//   air.atomic.<space>.<op>.[s.|u.]<type>(ptr, value, order, scope, volatile)
+// and air.atomic.<space>.cmpxchg.weak.i32(ptr, ptr expected, desired,
+// success order, failure order, scope, volatile), which returns the value it
+// found and, as MSL's compare-exchange does, leaves it in *expected.
+bool LowerAIR::lowerAtomic(IRBuilder<> &B, CallInst &CI, StringRef Name,
+                           Value *&Result) {
+  if (Name == "air.atomic.fence") {
+    if (CI.arg_size() != 3)
+      return false;
+    AtomicOrdering O = ordering(CI.getArgOperand(1));
+    if (O != AtomicOrdering::Monotonic)
+      B.CreateFence(O, syncScope(Ctx, CI.getArgOperand(2)));
+    return true;
+  }
+  StringRef Rest = Name.drop_front(strlen("air.atomic."));
+  if (!Rest.consume_front("global.") && !Rest.consume_front("local."))
+    return false;
+  Value *Ptr = CI.getArgOperand(0);
+  if (Rest == "cmpxchg.weak.i32") {
+    if (CI.arg_size() != 7)
+      return false;
+    Value *ExpectedPtr = CI.getArgOperand(1);
+    Value *Expected = B.CreateLoad(B.getInt32Ty(), ExpectedPtr);
+    AtomicOrdering Success = ordering(CI.getArgOperand(3));
+    AtomicOrdering Failure = ordering(CI.getArgOperand(4));
+    if (Failure == AtomicOrdering::Release)
+      Failure = AtomicOrdering::Monotonic;
+    else if (Failure == AtomicOrdering::AcquireRelease)
+      Failure = AtomicOrdering::Acquire;
+    auto *X = B.CreateAtomicCmpXchg(Ptr, Expected, CI.getArgOperand(2),
+                                    MaybeAlign(), Success, Failure,
+                                    syncScope(Ctx, CI.getArgOperand(5)));
+    X->setVolatile(isVolatile(CI.getArgOperand(6)));
+    Result = B.CreateExtractValue(X, 0);
+    B.CreateStore(Result, ExpectedPtr);
+    return true;
+  }
+  StringRef Op = Rest.take_until([](char C) { return C == '.'; });
+  Rest = Rest.drop_front(Op.size() + 1);
+  bool Unsigned = Rest.consume_front("u.");
+  Rest.consume_front("s.");
+  bool Float = Rest.starts_with("f");
+  std::optional<AtomicRMWInst::BinOp> BinOp =
+      StringSwitch<std::optional<AtomicRMWInst::BinOp>>(Op)
+          .Case("xchg", AtomicRMWInst::Xchg)
+          .Case("add", Float ? AtomicRMWInst::FAdd : AtomicRMWInst::Add)
+          .Case("sub", Float ? AtomicRMWInst::FSub : AtomicRMWInst::Sub)
+          .Case("max", Unsigned ? AtomicRMWInst::UMax : AtomicRMWInst::Max)
+          .Case("min", Unsigned ? AtomicRMWInst::UMin : AtomicRMWInst::Min)
+          .Case("and", AtomicRMWInst::And)
+          .Case("or", AtomicRMWInst::Or)
+          .Case("xor", AtomicRMWInst::Xor)
+          .Default(std::nullopt);
+  if (!BinOp || CI.arg_size() != 5 || (Float && Op != "xchg" && Op != "add" &&
+                                       Op != "sub"))
+    return false;
+  auto *RMW = B.CreateAtomicRMW(*BinOp, Ptr, CI.getArgOperand(1), MaybeAlign(),
+                                ordering(CI.getArgOperand(2)),
+                                syncScope(Ctx, CI.getArgOperand(3)));
+  RMW->setVolatile(isVolatile(CI.getArgOperand(4)));
+  Result = RMW;
+  return true;
+}
+
+// air.<name>.[s.|u.]<type> and air.fast_<name>.<type>, by the inverse of
+// AIRIntrinsicMappings.td.
+bool LowerAIR::lowerMath(IRBuilder<> &B, CallInst &CI, StringRef Name,
+                         Value *&Result) {
+  static const StringMap<SmallVector<const AIRFunction *, 2>> ByAIRName = [] {
+    StringMap<SmallVector<const AIRFunction *, 2>> Map;
+    for (const AIRFunction &F : AIRFunctions)
+      if (F.Invertible)
+        Map[getAIRFunctionStr(F.AIRName)].push_back(&F);
+    return Map;
+  }();
+  StringRef Rest = Name.drop_front(strlen("air."));
+  bool Fast = Rest.consume_front("fast_");
+  StringRef Base = Rest.take_until([](char C) { return C == '.'; });
+  Rest = Rest.drop_front(Base.size()).drop_front();
+  unsigned Signedness = Rest.consume_front("s.") ? 1
+                        : Rest.consume_front("u.") ? 2
+                                                   : 0;
+  auto It = ByAIRName.find(Base);
+  if (It == ByAIRName.end())
+    return false;
+  const AIRFunction *Fn = nullptr;
+  for (const AIRFunction *F : It->second)
+    if (F->Signedness == Signedness && (!Fast || F->HasFast))
+      Fn = F;
+  Intrinsic::ID ID =
+      Fn ? Intrinsic::lookupIntrinsicID(getAIRFunctionStr(Fn->LLVMName))
+         : Intrinsic::not_intrinsic;
+  if (ID == Intrinsic::not_intrinsic)
+    return false;
+  Function *Decl = Intrinsic::getOrInsertDeclaration(&M, ID, {CI.getType()});
+  SmallVector<Value *, 4> Args(CI.args());
+  // Operands AIR leaves out (llvm.abs's is_int_min_poison) are false.
+  while (Args.size() < Decl->arg_size())
+    Args.push_back(B.getFalse());
+  if (Args.size() != Decl->arg_size())
+    return false;
+  CallInst *New = B.CreateCall(Decl, Args);
+  if (isa<FPMathOperator>(New)) {
+    FastMathFlags FMF = CI.getFastMathFlags();
+    FMF.setApproxFunc(FMF.approxFunc() || Fast);
+    New->setFastMathFlags(FMF);
+  }
+  Result = New;
+  return true;
+}
+
+bool LowerAIR::lowerCall(CallInst &CI, StringRef Name, Value *&Result) {
+  IRBuilder<> B(&CI);
+  if (Name.starts_with("air.atomic."))
+    return lowerAtomic(B, CI, Name, Result);
+  if (Name == "air.wg.barrier" || Name == "air.simdgroup.barrier") {
+    // The first operand is the memory to order (mem_flags: device 1,
+    // threadgroup 2, texture 4). The threads of a threadgroup share a core,
+    // where threadgroup-scope fences order device memory too. A SIMD-group
+    // runs in lockstep, so its barrier only orders memory.
+    auto *Flags = CI.arg_size() ? dyn_cast<ConstantInt>(CI.getArgOperand(0))
+                                : nullptr;
+    bool Memory = !Flags || !Flags->isZero();
+    SyncScope::ID Scope = Ctx.getOrInsertSyncScopeID("workgroup");
+    if (Name == "air.simdgroup.barrier") {
+      if (Memory)
+        B.CreateFence(AtomicOrdering::AcquireRelease, Scope);
+      return true;
+    }
+    if (Memory)
+      B.CreateFence(AtomicOrdering::Release, Scope);
+    B.CreateIntrinsic(Intrinsic::agx_threadgroup_barrier, {});
+    if (Memory)
+      B.CreateFence(AtomicOrdering::Acquire, Scope);
+    return true;
+  }
+  return lowerMath(B, CI, Name, Result);
+}
+
+void LowerAIR::lowerCalls() {
+  for (Function &F : make_early_inc_range(M)) {
+    if (!F.isDeclaration() || !F.getName().starts_with("air."))
+      continue;
+    std::string Name = F.getName().str();
+    for (User *U : make_early_inc_range(F.users())) {
+      auto *CI = dyn_cast<CallInst>(U);
+      Value *Result = nullptr;
+      if (!CI || CI->getCalledFunction() != &F ||
+          !lowerCall(*CI, Name, Result)) {
+        const Function *In =
+            isa<Instruction>(U) ? cast<Instruction>(U)->getFunction() : nullptr;
+        error(In, "the AIR function " + Name + " has no AGX lowering");
+        continue;
+      }
+      if (Result) {
+        Result->takeName(CI);
+        CI->replaceAllUsesWith(Result);
+      }
+      CI->eraseFromParent();
+    }
+    if (F.use_empty())
+      F.eraseFromParent();
+  }
+}
+
 void LowerAIR::dropAIRMetadata() {
   for (StringRef Name : {"air.kernel", "air.version", "air.language_version",
                          "air.compile_options"})
@@ -625,6 +850,7 @@ bool LowerAIR::run() {
     if (F.isIntrinsic() && F.use_empty())
       F.eraseFromParent();
 
+  lowerCalls();
   dropAIRMetadata();
   M.setTargetTriple(TM.getTargetTriple());
   M.setDataLayout(TM.createDataLayout());
