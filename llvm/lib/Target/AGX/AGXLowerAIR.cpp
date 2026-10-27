@@ -1563,14 +1563,17 @@ void LowerAIR::inlineCalls() {
       F.eraseFromParent();
 }
 
-// AGX's hidden kernel arguments ("agx-hidden") are passed by value; AIR has
-// them as byref constant buffers (agx-raise-to-air). A kernel that only loads
-// them whole takes them by value again.
+// AGX's hidden kernel arguments ("agx-hidden") and by-value parameters are
+// passed by value; AIR has them as byref constant buffers ("air-by-value" from
+// agx-raise-to-air). A kernel that only loads them whole takes them by value
+// again, so that, among others, negations and absolute values of them fold
+// into source modifiers.
 Function *LowerAIR::hiddenByValue(Function &K) {
   SmallVector<unsigned, 2> Hidden;
   for (Argument &A : K.args()) {
     Type *T = K.getParamByRefType(A.getArgNo());
-    if (!T || !K.getAttributes().hasParamAttr(A.getArgNo(), "agx-hidden"))
+    if (!T || !(K.getAttributes().hasParamAttr(A.getArgNo(), "agx-hidden") ||
+                K.getAttributes().hasParamAttr(A.getArgNo(), "air-by-value")))
       continue;
     if (!all_of(A.users(), [&](User *U) {
           auto *L = dyn_cast<LoadInst>(U);
@@ -1601,7 +1604,7 @@ Function *LowerAIR::hiddenByValue(Function &K) {
     }
     AttrBuilder AB(Ctx);
     for (Attribute At : K.getAttributes().getParamAttrs(Old.getArgNo()))
-      if (At.isStringAttribute())
+      if (At.isStringAttribute() && At.getKindAsString() != "air-by-value")
         AB.addAttribute(At);
     New->setAttributes(New->getAttributes()
                            .removeParamAttributes(Ctx, NewA.getArgNo())

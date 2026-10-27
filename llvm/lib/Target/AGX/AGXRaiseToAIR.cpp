@@ -1005,6 +1005,8 @@ Function *RaiseToAIR::byValueToByRef(Function &K) {
         if (At.isStringAttribute())
           AB.addAttribute(At);
       AB.addByRefAttr(Old.getType());
+      // A hint that AGX had it by value.
+      AB.addAttribute("air-by-value");
       Old.replaceAllUsesWith(B.CreateLoad(Old.getType(), &NewA));
     }
     New->addParamAttrs(NewA.getArgNo(), AB);
