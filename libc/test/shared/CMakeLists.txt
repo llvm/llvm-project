@@ -19,6 +19,7 @@ else()
     DEPENDS
       libc.hdr.fenv_macros
       libc.src.__support.FPUtil.float128
+      libc.src.__support.FPUtil.float80
       libc.src.__support.FPUtil.fp_bits
       libc.src.__support.math.acos
       libc.src.__support.math.acosbf16
@@ -88,6 +89,7 @@ else()
       libc.src.__support.math.copysignbf16
       libc.src.__support.math.copysignf
       libc.src.__support.math.copysignf128
+      libc.src.__support.math.copysignf80
       libc.src.__support.math.copysignf16
       libc.src.__support.math.copysignl
       libc.src.__support.math.cos
@@ -157,6 +159,7 @@ else()
       libc.src.__support.math.fabsbf16
       libc.src.__support.math.fabsf
       libc.src.__support.math.fabsf128
+      libc.src.__support.math.fabsf80
       libc.src.__support.math.fabsf16
       libc.src.__support.math.fabsl
       libc.src.__support.math.fadd
@@ -530,6 +533,7 @@ else()
       shared_math_constexpr_test.cpp
     DEPENDS
       libc.src.__support.FPUtil.float128
+      libc.src.__support.FPUtil.float80
       libc.src.__support.math.asinbf16
       libc.src.__support.math.bf16subl
       libc.src.__support.math.canonicalize
@@ -548,6 +552,7 @@ else()
       libc.src.__support.math.copysignbf16
       libc.src.__support.math.copysignf
       libc.src.__support.math.copysignf128
+      libc.src.__support.math.copysignf80
       libc.src.__support.math.copysignf16
       libc.src.__support.math.copysignl
       libc.src.__support.math.ddivf128
@@ -581,6 +586,7 @@ else()
       libc.src.__support.math.fabsbf16
       libc.src.__support.math.fabsf
       libc.src.__support.math.fabsf128
+      libc.src.__support.math.fabsf80
       libc.src.__support.math.fabsf16
       libc.src.__support.math.fabsl
       libc.src.__support.math.fmaximum

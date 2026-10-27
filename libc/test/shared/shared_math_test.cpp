@@ -10,10 +10,12 @@
 #include "shared/math.h"
 #include "shared/static_rounding_math.h"
 #include "src/__support/FPUtil/float128.h"
+#include "src/__support/FPUtil/float80.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
 using LIBC_NAMESPACE::fputil::Float128;
+using LIBC_NAMESPACE::fputil::Float80;
 
 #ifdef LIBC_TYPES_HAS_FLOAT16
 
@@ -647,6 +649,13 @@ TEST(LlvmLibcSharedMathTest, AllEmuFloat128) {
 
   EXPECT_FP_EQ(Float128(1.0), LIBC_NAMESPACE::shared::sqrtf128(Float128(1.0)));
   EXPECT_FP_EQ(Float128(0.0), LIBC_NAMESPACE::shared::truncf128(Float128(0.0)));
+}
+
+// Float80 tests
+TEST(LlvmLibcSharedMathTest, AllFloat80) {
+  EXPECT_FP_EQ(Float80(0.0),
+               LIBC_NAMESPACE::shared::copysignf80(Float80(0.0), Float80(0.0)));
+  EXPECT_FP_EQ(Float80(0.0), LIBC_NAMESPACE::shared::fabsf80(Float80(0.0)));
 }
 
 #ifdef LIBC_TYPES_HAS_NATIVE_FLOAT128
