@@ -55,8 +55,9 @@ class RISCVReg128<RISCVReg64 subreg>
 // A subreg index for the address part of capability registers (this is just the
 // default XLEN-wide X<N> register).
 def sub_cap_addr : SubRegIndex<32> {
-  let SubRegRanges =
-      SubRegRangeByHwMode<[RV32, RV64], [SubRegRange<32>, SubRegRange<64>]>;
+  let SubRegRanges = SubRegRangeByHwMode<
+    [RV32I, RV64I, RV32Y, RV64Y],
+    [SubRegRange<32>, SubRegRange<64>, SubRegRange<32>, SubRegRange<64>]>;
 }
 class RISCVCapReg<RISCVRegWithSubRegs subreg, string n, list<string> alt = []>
     : RISCVRegWithSubRegs<subreg.HWEncoding{4 -0}, n, [subreg], alt> {
@@ -83,12 +84,14 @@ def sub_vrm1_7 : ComposedSubRegIndex<sub_vrm2_3, sub_vrm1_1>;
 
 // GPR sizes change with HwMode.
 def sub_gpr_even : SubRegIndex<32> {
-  let SubRegRanges = SubRegRangeByHwMode<[RV32, RV64],
-                                         [SubRegRange<32>, SubRegRange<64>]>;
+  let SubRegRanges = SubRegRangeByHwMode<
+    [RV32I, RV64I, RV32Y, RV64Y],
+    [SubRegRange<32>, SubRegRange<64>, SubRegRange<32>, SubRegRange<64>]>;
 }
 def sub_gpr_odd  : SubRegIndex<32, 32> {
-  let SubRegRanges = SubRegRangeByHwMode<[RV32, RV64],
-                                         [SubRegRange<32, 32>, SubRegRange<64, 64>]>;
+  let SubRegRanges = SubRegRangeByHwMode<
+    [RV32I, RV64I, RV32Y, RV64Y],
+    [SubRegRange<32, 32>, SubRegRange<64, 64>, SubRegRange<32, 32>, SubRegRange<64, 64>]>;
 }
 } // Namespace = "RISCV"
 
@@ -264,36 +267,39 @@ let RegAltNameIndices = [ABIRegAltName] in {
   }
 }
 
-def XLenVT : ValueTypeByHwMode<[RV32, RV64],
-                               [i32,  i64]>;
+def XLenVT : ValueTypeByHwMode<[RV32I, RV64I, RV32Y, RV64Y],
+                               [i32,   i64,   i32,   i64]>;
 defvar XLenPairVT = untyped;
 
-// Allow f64 in GPR for ZDINX on RV64.
-def XLenFVT : ValueTypeByHwMode<[RV64],
-                                [f64]>;
-def XLenPairFVT : ValueTypeByHwMode<[RV32],
-                                    [f64]>;
-def XLenPairVecI8VT : ValueTypeByHwMode<[RV32],
-                                        [v8i8]>;
-def XLenPairVecI16VT : ValueTypeByHwMode<[RV32],
-                                         [v4i16]>;
-def XLenPairVecI32VT : ValueTypeByHwMode<[RV32],
-                                         [v2i32]>;
+// Allow f64 in GPR for ZDINX on RV64 (repeat i32 for RV32 modes since
+// RegClassByHwMode requires all modes to be present in every ValueTypeByHwMode).
+def XLenFVT : ValueTypeByHwMode<[RV32I, RV64I, RV32Y, RV64Y],
+                                [i32,   f64,   i32,   f64]>;
+def XLenPairFVT : ValueTypeByHwMode<[RV32I, RV32Y],
+                                    [f64,   f64]>;
+def XLenPairVecI8VT : ValueTypeByHwMode<[RV32I, RV32Y],
+                                        [v8i8,  v8i8]>;
+def XLenPairVecI16VT : ValueTypeByHwMode<[RV32I, RV32Y],
+                                         [v4i16, v4i16]>;
+def XLenPairVecI32VT : ValueTypeByHwMode<[RV32I, RV32Y],
+                                         [v2i32, v2i32]>;
 
 // P extension
-def XLenVecI8VT : ValueTypeByHwMode<[RV32, RV64],
-                                    [v4i8, v8i8]>;
-def XLenVecI16VT : ValueTypeByHwMode<[RV32,  RV64],
-                                     [v2i16, v4i16]>;
-def XLenVecI32VT : ValueTypeByHwMode<[RV64],
-                                     [v2i32]>;
+def XLenVecI8VT : ValueTypeByHwMode<[RV32I, RV64I, RV32Y, RV64Y],
+                                    [v4i8,  v8i8,  v4i8,  v8i8]>;
+def XLenVecI16VT : ValueTypeByHwMode<[RV32I, RV64I, RV32Y, RV64Y],
+                                     [v2i16, v4i16, v2i16, v4i16]>;
+def XLenVecI32VT : ValueTypeByHwMode<[RV32I, RV64I, RV32Y, RV64Y],
+                                     [i32,   v2i32, i32,   v2i32]>;
 
 def XLenRI : RegInfoByHwMode<
-      [RV32,              RV64],
-      [RegInfo<32,32,32>, RegInfo<64,64,64>]>;
-def YLenVT : ValueTypeByHwMode<[RV32, RV64], [c64, c128]>;
-def YLenRI : RegInfoByHwMode<[RV32, RV64], [RegInfo<64, 64, 64>,
-                                            RegInfo<128, 128, 128>]>;
+      [RV32I,             RV64I,             RV32Y,             RV64Y],
+      [RegInfo<32,32,32>, RegInfo<64,64,64>, RegInfo<32,32,32>, RegInfo<64,64,64>]>;
+def YLenVT : ValueTypeByHwMode<[RV32I, RV64I, RV32Y, RV64Y],
+                               [c64,   c128,  c64,   c128]>;
+def YLenRI : RegInfoByHwMode<
+      [RV32I,               RV64I,                  RV32Y,               RV64Y],
+      [RegInfo<64, 64, 64>, RegInfo<128, 128, 128>, RegInfo<64, 64, 64>, RegInfo<128, 128, 128>]>;
 
 class RISCVRegisterClass<list<ValueType> regTypes, int align, dag regList>
     : RegisterClass<"RISCV", regTypes, align, regList> {
@@ -337,6 +343,15 @@ def YGPR : YGPRRegisterClass<(add (sequence "X%u_Y", 10, 17),
                                   (sequence "X%u_Y", 18, 27),
                                   (sequence "X%u_Y", 0, 4))> {
   let DiagnosticString = GPR.DiagnosticString;
+}
+
+// Note: We have to use a multiclass here instead of inheriting from
+// RegClassByHwMode since tablegen does not allow subclasses.
+multiclass PtrRegClassByHwMode<RegisterClass AddrRC, RegisterClass CapRC> {
+  assert !eq(!head(AddrRC.RegTypes), XLenVT), "AddrRC must be XLenVT";
+  assert !eq(!head(CapRC.RegTypes), YLenVT), "CapRC must be YLenVT";
+  def "" : RegClassByHwMode<[RV32I,  RV64I,  RV32Y, RV64Y],
+                            [AddrRC, AddrRC, CapRC, CapRC]>;
 }
 
 def GPRX0 : GPRRegisterClass<(add X0)> {
@@ -390,6 +405,18 @@ def GPRC : GPRRegisterClass<(add (sequence "X%u", 10, 15),
   let DiagnosticString = "register must be a GPR from x8 to x15";
 }
 
+def YGPRC : YGPRRegisterClass<(add (sequence "X%u_Y", 10, 15),
+                                   (sequence "X%u_Y", 8, 9))> {
+  let DecoderMethod = "DecodeSimpleRegisterClass<RISCV::X8_Y, 8>";
+  let DiagnosticString = GPRC.DiagnosticString;
+}
+
+// Note: For RVY, the encodings using x0/zero (a null capability) as the base
+// are reserved. Therefore, we use YGPRNoX0 to reject them in the assembler
+// while allowing the encodings for RVI mode.
+defm BasePtrRegClass : PtrRegClassByHwMode<GPR, YGPRNoX0>;
+defm BasePtrCRegClass : PtrRegClassByHwMode<GPRC, YGPRC>;
+
 // For indirect tail calls, we can't use callee-saved registers, as they are
 // restored to the saved value before the tail call, which would clobber a call
 // address. We shouldn't use x5 since that is a hint for to pop the return
@@ -399,11 +426,16 @@ def GPRTC : GPRRegisterClass<(add (sequence "X%u", 6, 7),
                                   (sequence "X%u", 28, 31))>;
 def GPRTCNonX7 : GPRRegisterClass<(sub GPRTC, X7)>;
 
-def SP : GPRRegisterClass<(add X2)> {
+def SP_X : GPRRegisterClass<(add X2)> {
   let DecoderMethod = "DecodeSingleRegister<RISCV::X2, 2>";
   let DiagnosticType = "InvalidRegClassSP";
   let DiagnosticString = "register must be sp (x2)";
 }
+def SP_Y : YGPRRegisterClass<(add X2_Y)> {
+  let DecoderMethod = "DecodeSingleRegister<RISCV::X2_Y, 2>";
+  let DiagnosticString = SP_X.DiagnosticString;
+}
+defm SP : PtrRegClassByHwMode<SP_X, SP_Y>;
 
 // Callee-saved Registers from s0 to s7, used by instructions in Zcmp and Xqccmp.
 def GPRS07 : GPRRegisterClass<(add (sequence "X%u", 8, 9),
@@ -431,8 +463,8 @@ def GPRNoX31 : GPRRegisterClass<(sub GPR, X31)> {
 //===----------------------------------------------------------------------===//
 
 def XLenPairRI : RegInfoByHwMode<
-      [RV32,                RV64],
-      [RegInfo<64, 64, 32>, RegInfo<128, 128, 64>]>;
+      [RV32I,               RV64I,                 RV32Y,               RV64Y],
+      [RegInfo<64, 64, 32>, RegInfo<128, 128, 64>, RegInfo<64, 64, 32>, RegInfo<128, 128, 64>]>;
 
 let RegAltNameIndices = [ABIRegAltName] in {
   def X0_Pair : RISCVRegWithSubRegs<0, X0.AsmName, [X0], X0.AltNames> {
