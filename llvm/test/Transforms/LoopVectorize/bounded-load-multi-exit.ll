@@ -15,10 +15,8 @@ define i64 @bounded_load_multi_exit(ptr %src, i64 %x, i64 %N) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[N]], -1
 ; CHECK-NEXT:    [[TMP4:%.*]] = freeze i64 [[TMP3]]
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP4]], i64 [[X]])
-; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[UMIN]] to i1
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp ugt i64 [[UMIN]], 1
-; CHECK-NEXT:    [[TMP7:%.*]] = or i1 [[TMP5]], [[TMP6]]
-; CHECK-NEXT:    br i1 [[TMP7]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br i1 [[TMP6]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP2]], 7
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[N_MOD_VF]], 0
