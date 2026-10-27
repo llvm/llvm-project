@@ -629,7 +629,7 @@ public:
       OldSize = Header.SizeOrUnusedBytes;
       UsableSize = BlockEnd - reinterpret_cast<uptr>(OldTaggedPtr);
     } else {
-      BlockEnd = SecondaryT::getBlockEnd(BlockBegin);
+      BlockEnd = Secondary.getBlockEnd(BlockBegin);
       UsableSize = BlockEnd - reinterpret_cast<uptr>(OldTaggedPtr);
       OldSize = UsableSize - Header.SizeOrUnusedBytes;
     }
@@ -837,7 +837,7 @@ public:
       UntaggedPtr = untagPointer(UntaggedPtr);
       BlockBegin = untagPointer(BlockBegin);
     }
-    return SecondaryT::getBlockEnd(BlockBegin) - UntaggedPtr;
+    return Secondary.getBlockEnd(BlockBegin) - UntaggedPtr;
   }
 
   // Return the usable size for a given chunk. If MTE is enabled or if the
@@ -1317,7 +1317,7 @@ private:
       return SizeOrUnusedBytes;
     if (allocatorSupportsMemoryTagging<AllocatorConfig>())
       Ptr = untagPointer(const_cast<void *>(Ptr));
-    return SecondaryT::getBlockEnd(getBlockBegin(Ptr, Header)) -
+    return Secondary.getBlockEnd(getBlockBegin(Ptr, Header)) -
            reinterpret_cast<uptr>(Ptr) - SizeOrUnusedBytes;
   }
 

@@ -851,6 +851,37 @@ TEST(ScudoCombinedDeathTest, DeathCombined) {
   SCUDO_EXPECT_DEATH(Allocator->getUsableSize(P), "");
 }
 
+// The header that the Secondary keeps in front of a chunk is verified too, when
+// the chunk header itself is left intact.
+TEST(ScudoCombinedDeathTest, SecondaryHeaderCorruption) {
+  using AllocatorT = TestAllocator<DeathConfig>;
+  auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
+
+  // Too large for the Primary, so it is served by the Secondary.
+  const scudo::uptr Size = 1U << 16;
+  const scudo::uptr PageSize = scudo::getPageSizeCached();
+  void *P = Allocator->allocate(Size, Origin);
+  ASSERT_NE(P, nullptr);
+  void *BlockBegin = reinterpret_cast<void *>(reinterpret_cast<scudo::uptr>(P) -
+                                              scudo::Chunk::getHeaderSize());
+  scudo::LargeBlock::Header *H =
+      scudo::LargeBlock::getHeader<scudo::SecondaryConfig<DeathConfig>>(
+          BlockBegin);
+
+  H->CommitBase -= PageSize;
+  SCUDO_EXPECT_DEATH(Allocator->deallocate(P, Origin),
+                     "corrupted secondary header");
+  H->CommitBase += PageSize;
+
+  H->CommitSize += PageSize;
+  SCUDO_EXPECT_DEATH(Allocator->getUsableSize(P), "corrupted secondary header");
+  SCUDO_EXPECT_DEATH(Allocator->reallocate(P, Size + PageSize),
+                     "corrupted secondary header");
+  H->CommitSize -= PageSize;
+
+  Allocator->deallocate(P, Origin);
+}
+
 // Verify that when a region gets full, the allocator will still manage to
 // fulfill the allocation through a larger size class.
 TEST(ScudoCombinedTest, FullRegion) {
