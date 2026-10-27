@@ -200,7 +200,8 @@ static bool lowerAtomicRMW(Module &M, bool OrderingHints) {
                                   false));
       CallInst *Old = B.CreateCall(
           F, {Ptr, Expected, CX->getNewValOperand(), B.getInt32(OrderRelaxed),
-              B.getInt32(OrderRelaxed), B.getInt32(Scope), B.getTrue()});
+              B.getInt32(OrderRelaxed), B.getInt32(Scope),
+              B.getInt1(!OrderingHints || CX->isVolatile())});
       if (Ordered) {
         emitFence(B, M, Scope);
         if (OrderingHints)
@@ -240,7 +241,8 @@ static bool lowerAtomicRMW(Module &M, bool OrderingHints) {
       emitFence(B, M, Scope);
     CallInst *Result = B.CreateCall(
         FC, {RMW->getPointerOperand(), RMW->getValOperand(),
-             B.getInt32(OrderRelaxed), B.getInt32(Scope), B.getTrue()},
+             B.getInt32(OrderRelaxed), B.getInt32(Scope),
+             B.getInt1(!OrderingHints || RMW->isVolatile())},
         RMW->getName());
     if (Ordered) {
       emitFence(B, M, Scope);
