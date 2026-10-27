@@ -39,7 +39,7 @@ public:
 } // namespace
 
 void StackUseAfterScope::checkLocation(SVal Loc, bool IsLoad, const Stmt *S,
-                                     CheckerContext &C) const {
+                                       CheckerContext &C) const {
   ProgramStateRef State = C.getState();
 
   if (const MemRegion *LocRegion = Loc.getAsRegion()) {
@@ -51,7 +51,7 @@ void StackUseAfterScope::checkLocation(SVal Loc, bool IsLoad, const Stmt *S,
 }
 
 void StackUseAfterScope::checkPostCall(const CallEvent &Call,
-                                     CheckerContext &C) const {
+                                       CheckerContext &C) const {
   ProgramStateRef State = C.getState();
   // Only check calls arguments if it is not inlined by the engine. In case a
   // function is inlined checkLocation handles any dereference in its body.
@@ -67,8 +67,8 @@ void StackUseAfterScope::checkPostCall(const CallEvent &Call,
 }
 
 void StackUseAfterScope::reportUseAfterScope(const MemRegion *Region,
-                                           const Stmt *S, ExplodedNode *N,
-                                           CheckerContext &C) const {
+                                             const Stmt *S, ExplodedNode *N,
+                                             CheckerContext &C) const {
   ProgramStateRef ReportedState =
       lifetime_modeling::markAsReported(N->getState(), Region);
   if (!ReportedState)
