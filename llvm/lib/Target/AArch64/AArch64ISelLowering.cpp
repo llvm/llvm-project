@@ -1902,8 +1902,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     if (Subtarget->hasSVEB16B16() &&
         Subtarget->isNonStreamingSVEorSME2Available()) {
       // Note: Use SVE for bfloat16 operations when +sve-b16b16 is available.
-      for (auto VT : {MVT::v4bf16, MVT::v8bf16, MVT::nxv2bf16, MVT::nxv4bf16,
-                      MVT::nxv8bf16}) {
+      for (auto VT : {MVT::nxv2bf16, MVT::nxv4bf16, MVT::nxv8bf16}) {
         setOperationAction({ISD::FADD, ISD::STRICT_FADD}, VT, Custom);
         setOperationAction({ISD::FMA, ISD::STRICT_FMA}, VT, Custom);
         setOperationAction({ISD::FMAXIMUM, ISD::STRICT_FMAXIMUM}, VT, Custom);
@@ -1912,6 +1911,17 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
         setOperationAction({ISD::FMINNUM, ISD::STRICT_FMINNUM}, VT, Custom);
         setOperationAction({ISD::FMUL, ISD::STRICT_FMUL}, VT, Custom);
         setOperationAction({ISD::FSUB, ISD::STRICT_FSUB}, VT, Custom);
+      }
+      // TODO: Add fixed-length strict-fp support to LowerToPredicatedOp.
+      for (auto VT : {MVT::v4bf16, MVT::v8bf16}) {
+        setOperationAction(ISD::FADD, VT, Custom);
+        setOperationAction(ISD::FMA, VT, Custom);
+        setOperationAction(ISD::FMAXIMUM, VT, Custom);
+        setOperationAction(ISD::FMAXNUM, VT, Custom);
+        setOperationAction(ISD::FMINIMUM, VT, Custom);
+        setOperationAction(ISD::FMINNUM, VT, Custom);
+        setOperationAction(ISD::FMUL, VT, Custom);
+        setOperationAction(ISD::FSUB, VT, Custom);
       }
     }
 

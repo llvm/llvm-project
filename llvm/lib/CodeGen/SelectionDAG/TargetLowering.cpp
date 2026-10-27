@@ -14750,8 +14750,8 @@ SDValue TargetLowering::expandVectorNaryOpBySplitting(SDNode *Node,
   if (!IsStrict)
     return Res;
 
-  SDValue Chain =
-      DAG.getMergeValues({SplitOpLo.getValue(1), SplitOpHi.getValue(1)}, DL);
+  SDValue Chain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other,
+                              SplitOpLo.getValue(1), SplitOpHi.getValue(1));
   return DAG.getMergeValues({Res, Chain}, DL);
 }
 
