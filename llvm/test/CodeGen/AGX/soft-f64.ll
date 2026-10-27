@@ -7,8 +7,10 @@
 ; CHECK-LABEL: @arith(
 ; CHECK-NOT: {{fadd|fmul|fdiv|fpext|fptrunc|fcmp}} double
 ; CHECK: call i64 @llvm.ctlz.i64
+; The product of two normalized significands has 105 or 106 bits: its top
+; 64 bits (and a sticky bit) are kept by a fixed shift.
 ; CHECK: mul i128
-; CHECK: call i128 @llvm.ctlz.i128
+; CHECK: lshr i128 {{.*}}, 42
 ; CHECK: bitcast i64 {{.*}} to double
 ; ASM-LABEL: arith:
 ; ASM-NOT: error
