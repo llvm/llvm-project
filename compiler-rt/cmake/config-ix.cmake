@@ -497,6 +497,11 @@ if(APPLE)
       ${DARWIN_xrossim_MIN_VER_FLAG}=${DARWIN_xrossim_MTARGETOS_PREFIX}${DARWIN_xros_MIN_VER}${DARWIN_xrossim_MTARGETOS_SUFFIX})
   endif()
 
+  # DriverKit can't support C++ exceptions.
+  foreach(os ios osx xros)
+    set(DARWIN_driverkit_${os}_CXX_EXCEPTIONS OFF)
+  endforeach()
+
   set(SANITIZER_COMMON_SUPPORTED_OS osx)
   set(PROFILE_SUPPORTED_OS osx)
   set(TSAN_SUPPORTED_OS osx)
