@@ -48,6 +48,7 @@ add_flang_library(FortranSemantics
   runtime-type-info.cpp
   scope.cpp
   semantics.cpp
+  symbol-dependence.cpp
   symbol.cpp
   tools.cpp
   type.cpp
