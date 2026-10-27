@@ -20,35 +20,6 @@ using namespace clang::driver::toolchains;
 using namespace clang;
 using namespace llvm::opt;
 
-void dragonfly::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
-                                        const InputInfo &Output,
-                                        const InputInfoList &Inputs,
-                                        const ArgList &Args,
-                                        const char *LinkingOutput) const {
-  const auto &ToolChain = static_cast<const DragonFly &>(getToolChain());
-  ArgStringList CmdArgs;
-
-  claimNoWarnArgs(Args);
-
-  // When building 32-bit code on DragonFly/pc64, we have to explicitly
-  // instruct as in the base system to assemble 32-bit code.
-  if (ToolChain.getArch() == llvm::Triple::x86)
-    CmdArgs.push_back("--32");
-
-  Args.AddAllArgValues(CmdArgs, options::OPT_Wa_COMMA, options::OPT_Xassembler);
-
-  CmdArgs.push_back("-o");
-  CmdArgs.push_back(Output.getFilename());
-
-  for (const auto &II : Inputs)
-    CmdArgs.push_back(II.getFilename());
-
-  const char *Exec = Args.MakeArgString(ToolChain.GetProgramPath("as"));
-  C.addCommand(std::make_unique<Command>(JA, *this,
-                                         ResponseFileSupport::AtFileCurCP(),
-                                         Exec, CmdArgs, Inputs, Output));
-}
-
 void dragonfly::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                      const InputInfo &Output,
                                      const InputInfoList &Inputs,
@@ -239,10 +210,6 @@ void DragonFly::addLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
                                          llvm::opt::ArgStringList &CC1Args) const {
   addLibStdCXXIncludePaths(concat(getDriver().SysRoot, "/usr/include/c++/8.0"), "", "",
                            DriverArgs, CC1Args);
-}
-
-Tool *DragonFly::buildAssembler() const {
-  return new tools::dragonfly::Assembler(*this);
 }
 
 Tool *DragonFly::buildLinker() const {
