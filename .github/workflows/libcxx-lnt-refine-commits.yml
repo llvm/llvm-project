@@ -48,7 +48,6 @@ jobs:
       METRIC: ${{ inputs.metric }}
       DIRECTION: ${{ inputs.direction }}
       MAX_COMMITS: ${{ inputs.max-commits }}
-      # Keep in sync with libcxx-lnt-submit.yml and libcxx-benchmark-cron.yml
       LNT_URL: https://lnt.llvm.org
     steps:
       # The selection only changes as new runs are submitted to LNT, and computing it takes several minutes.
