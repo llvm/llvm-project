@@ -14,6 +14,11 @@
 // end of every block with pending results (so that no wait is needed across
 // control flow). At most eight requests are kept outstanding.
 //
+// A write of part of a register pair carries an implicit use and def of the
+// pair, which keep its other half live; they neither read nor write that
+// half, so they make no request pending and wait for none (two loads into the
+// halves of one pair run together).
+//
 // Each request goes to a group by where its result is first needed: requests
 // needed at the same instruction share a group, and a request does not join a
 // group that holds one needed earlier than itself (whose wait would then stall
@@ -66,6 +71,21 @@ static bool isBarrier(const MachineInstr &MI) {
          MI.getOpcode() == AGX::MEMORY_BARRIER;
 }
 
+/// Whether \p MO is an implicit operand that only keeps the rest of a register
+/// live around \p MI's write of part of it: a super-register of one of MI's
+/// explicit definitions.
+static bool isPartialWriteBookkeeping(const MachineInstr &MI,
+                                      const MachineOperand &MO,
+                                      const TargetRegisterInfo &TRI) {
+  if (!MO.isReg() || !MO.isImplicit() || !MO.getReg())
+    return false;
+  for (const MachineOperand &D : MI.explicit_operands())
+    if (D.isReg() && D.isDef() && D.getReg() &&
+        TRI.isSuperRegister(D.getReg(), MO.getReg()))
+      return true;
+  return false;
+}
+
 /// Where the result of each asynchronous instruction of MBB is first needed:
 /// the index of the first later instruction that touches one of its results,
 /// is a barrier or ends the block.
@@ -86,11 +106,15 @@ firstUses(MachineBasicBlock &MBB, const TargetRegisterInfo &TRI) {
         Use = J;
         break;
       }
-      for (const MachineOperand &D : MI.defs())
+      for (const MachineOperand &D : MI.defs()) {
+        if (isPartialWriteBookkeeping(MI, D, TRI))
+          continue;
         for (const MachineOperand &MO : UI.operands())
           if (MO.isReg() && MO.getReg() && MO.getReg() != AGX::R0L &&
+              !isPartialWriteBookkeeping(UI, MO, TRI) &&
               TRI.regsOverlap(MO.getReg(), D.getReg()))
             Use = J;
+      }
     }
     Out[&MI] = Use;
   }
@@ -145,7 +169,8 @@ bool AGXInsertWaits::runOnMachineFunction(MachineFunction &MF) {
     };
     auto Touches = [&](const MachineInstr &MI, unsigned G) {
       for (const MachineOperand &MO : MI.operands()) {
-        if (!MO.isReg() || !MO.getReg() || MO.getReg() == AGX::R0L)
+        if (!MO.isReg() || !MO.getReg() || MO.getReg() == AGX::R0L ||
+            isPartialWriteBookkeeping(MI, MO, TRI))
           continue;
         for (MCRegUnit U : TRI.regunits(MO.getReg().asMCReg()))
           if (Groups[G].Pending.test(static_cast<unsigned>(U)))
@@ -197,8 +222,9 @@ bool AGXInsertWaits::runOnMachineFunction(MachineFunction &MF) {
         Wait(MI.getIterator(), E);
       }
       for (const MachineOperand &MO : MI.defs())
-        for (MCRegUnit U : TRI.regunits(MO.getReg().asMCReg()))
-          Groups[G].Pending.set(static_cast<unsigned>(U));
+        if (!isPartialWriteBookkeeping(MI, MO, TRI))
+          for (MCRegUnit U : TRI.regunits(MO.getReg().asMCReg()))
+            Groups[G].Pending.set(static_cast<unsigned>(U));
       ++Groups[G].Count;
       Groups[G].Needed = std::min(Groups[G].Needed, Use);
       Changed = true;
