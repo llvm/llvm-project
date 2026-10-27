@@ -49,7 +49,7 @@ cc_library(
     ],
     includes = ["."],
     deps = [
-        "//lldb:CoreHeaders",
+        "//lldb:Headers",
         "//lldb:Utility",
         "//llvm:ObjectYAML",
         "//llvm:Support",
@@ -140,8 +140,8 @@ cc_test(
     name = "SignalsTests",
     srcs = ["Signals/UnixSignalsTest.cpp"],
     deps = [
+        "//lldb:Headers",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
         "//llvm:Support",
         "//third-party/unittest:gmock",
