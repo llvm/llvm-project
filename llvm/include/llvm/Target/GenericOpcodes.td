@@ -688,6 +688,22 @@ def G_SMULO : GenericInstruction {
   let isCommutable = true;
 }
 
+// Multiply two numbers at twice the incoming bit width (unsigned).
+def G_UMULL : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$src1, type1:$src2);
+  let hasSideEffects = false;
+  let isCommutable = true;
+}
+
+// Multiply two numbers at twice the incoming bit width (signed).
+def G_SMULL : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$src1, type1:$src2);
+  let hasSideEffects = false;
+  let isCommutable = true;
+}
+
 // Multiply two numbers at twice the incoming bit width (unsigned) and return
 // the high half of the result.
 def G_UMULH : GenericInstruction {
