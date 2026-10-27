@@ -3511,6 +3511,11 @@ private:
                 std::tuple<SmallVector<int>, VectorType *, unsigned, bool>>
       CompressEntryToData;
 
+  /// Returns the mask data of the compress entry \p E, building it on the
+  /// first request.
+  const std::tuple<SmallVector<int>, VectorType *, unsigned, bool> &
+  getCompressEntryData(const TreeEntry &E);
+
   /// The loop nest, used to check if only a single loop nest is vectorized, not
   /// multiple, to avoid side-effects from the loop-aware cost model.
   SmallVector<const Loop *> CurrentLoopNest;
@@ -16746,6 +16751,27 @@ static std::optional<unsigned> getCastOpcodeForDemotedOperand(unsigned Opcode,
   }
 }
 
+const std::tuple<SmallVector<int>, VectorType *, unsigned, bool> &
+BoUpSLP::getCompressEntryData(const TreeEntry &E) {
+  auto [It, Inserted] = CompressEntryToData.try_emplace(&E);
+  if (!Inserted)
+    return It->second;
+  auto &[CompressMask, LoadVecTy, InterleaveFactor, IsMasked] = It->second;
+  ValueList Scalars(E.Scalars);
+  if (!E.ReorderIndices.empty()) {
+    SmallVector<int> Mask(E.ReorderIndices.begin(), E.ReorderIndices.end());
+    reorderScalars(Scalars, Mask);
+  }
+  SmallVector<Value *> PointerOps(Scalars.size());
+  for (auto [I, V] : enumerate(Scalars))
+    PointerOps[I] = cast<LoadInst>(V)->getPointerOperand();
+  [[maybe_unused]] bool IsVectorized = isMaskedLoadCompress(
+      Scalars, PointerOps, E.ReorderIndices, *TTI, *DL, *SE, *AC, *DT, *TLI,
+      CostKind, [](Value *) { return true; }, Opts.slp_revec, IsMasked,
+      InterleaveFactor, CompressMask, LoadVecTy, Cache);
+  return It->second;
+}
+
 InstructionCost
 BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                       SmallPtrSetImpl<Value *> &CheckedExtracts) {
@@ -17919,25 +17945,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         break;
       }
       case TreeEntry::CompressVectorize: {
-        bool IsMasked;
-        unsigned InterleaveFactor;
-        SmallVector<int> CompressMask;
-        VectorType *LoadVecTy;
-        SmallVector<Value *> Scalars(VL);
-        if (!E->ReorderIndices.empty()) {
-          SmallVector<int> Mask(E->ReorderIndices.begin(),
-                                E->ReorderIndices.end());
-          reorderScalars(Scalars, Mask);
-        }
-        SmallVector<Value *> PointerOps(Scalars.size());
-        for (auto [I, V] : enumerate(Scalars))
-          PointerOps[I] = cast<LoadInst>(V)->getPointerOperand();
-        [[maybe_unused]] bool IsVectorized = isMaskedLoadCompress(
-            Scalars, PointerOps, E->ReorderIndices, *TTI, *DL, *SE, *AC, *DT,
-            *TLI, CostKind, [](Value *) { return true; }, Opts.slp_revec,
-            IsMasked, InterleaveFactor, CompressMask, LoadVecTy, Cache);
-        CompressEntryToData.try_emplace(E, CompressMask, LoadVecTy,
-                                        InterleaveFactor, IsMasked);
+        auto [CompressMask, LoadVecTy, InterleaveFactor, IsMasked] =
+            getCompressEntryData(*E);
         Align CommonAlignment = LI0->getAlign();
         // For REVEC the emitted shuffle uses the compress mask expanded to the
         // individual elements of the vector scalars.
