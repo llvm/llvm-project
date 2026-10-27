@@ -44,6 +44,7 @@
 #include "llvm/IR/IntrinsicsAGX.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Linker/Linker.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Transforms/Utils/Cloning.h"
@@ -56,6 +57,7 @@ using namespace llvm;
 #include "AGXAIRSoftF64.inc"
 
 namespace {
+Constant *doubleBits(Constant *C);
 
 /// The data layout of the AIR target's modules.
 constexpr StringLiteral AIRDataLayout =
@@ -115,6 +117,21 @@ public:
     }
     Cache[T] = R;
     return R;
+  }
+};
+
+/// Constants with doubles, wherever the value mapper meets them (operands of
+/// constant expressions, metadata): their bits.
+class DoubleMaterializer final : public ValueMaterializer {
+public:
+  Value *materialize(Value *V) override {
+    auto *C = dyn_cast<Constant>(V);
+    if (!C || isa<GlobalValue>(C))
+      return nullptr;
+    Constant *Bits = doubleBits(C);
+    LLVM_DEBUG(if (!Bits && C->getType()->getScalarType()->isDoubleTy())
+                   dbgs() << "agx-raise-to-air: unmapped " << *C << "\n");
+    return Bits;
   }
 };
 
@@ -398,12 +415,16 @@ bool RaiseToAIR::raiseIntrinsic(IntrinsicInst &II) {
 }
 
 /// C with its doubles as i64 bit patterns, or null if it has none.
-static Constant *doubleBits(Constant *C) {
+Constant *doubleBits(Constant *C) {
   Type *T = C->getType();
   LLVMContext &Ctx = T->getContext();
-  if (auto *FP = dyn_cast<ConstantFP>(C); FP && T->isDoubleTy())
-    return ConstantInt::get(Type::getInt64Ty(Ctx),
-                            FP->getValueAPF().bitcastToAPInt());
+  // (a vector ConstantFP is a splat)
+  if (auto *FP = dyn_cast<ConstantFP>(C); FP && T->getScalarType()->isDoubleTy()) {
+    Type *I64 = Type::getInt64Ty(Ctx);
+    if (auto *VT = dyn_cast<VectorType>(T))
+      I64 = VectorType::get(I64, VT);
+    return ConstantInt::get(I64, FP->getValueAPF().bitcastToAPInt());
+  }
   if (auto *CDS = dyn_cast<ConstantDataSequential>(C)) {
     if (!CDS->getElementType()->isDoubleTy())
       return nullptr;
@@ -451,9 +472,56 @@ static Constant *doubleBits(Constant *C) {
   return nullptr;
 }
 
+/// A vector operation on doubles as one per element (the soft-f64 library is
+/// scalar). False if I is not one this can split.
+static bool scalarizeDoubles(Instruction &I) {
+  auto *VT = dyn_cast<FixedVectorType>(I.getType());
+  auto *OpVT = I.getNumOperands()
+                   ? dyn_cast<FixedVectorType>(I.getOperand(0)->getType())
+                   : nullptr;
+  auto *Any = VT ? VT : OpVT;
+  if (!Any || !(isDoubleOp(I) ||
+                (isa<IntrinsicInst>(I) &&
+                 (I.getType()->getScalarType()->isDoubleTy()))))
+    return false;
+  auto *II = dyn_cast<IntrinsicInst>(&I);
+  if (II && (isa<ConstrainedFPIntrinsic>(II) || II->arg_size() > 3 ||
+             !all_of(II->args(), [&](const Use &U) {
+               return U->getType() == I.getType();
+             })))
+    return false;
+  IRBuilder<> B(&I);
+  Value *R = PoisonValue::get(I.getType());
+  for (unsigned E = 0; E < Any->getNumElements(); ++E) {
+    SmallVector<Value *, 3> Ops;
+    for (Value *Op : (II ? II->args() : I.operands()))
+      Ops.push_back(B.CreateExtractElement(Op, E));
+    Value *X;
+    Type *Ty = I.getType()->getScalarType();
+    if (II)
+      X = B.CreateIntrinsic(II->getIntrinsicID(), {Ty}, Ops);
+    else if (auto *C = dyn_cast<FCmpInst>(&I))
+      X = B.CreateFCmp(C->getPredicate(), Ops[0], Ops[1]);
+    else if (auto *Cast = dyn_cast<CastInst>(&I))
+      X = B.CreateCast(Cast->getOpcode(), Ops[0], Ty);
+    else if (I.getOpcode() == Instruction::FNeg)
+      X = B.CreateFNeg(Ops[0]);
+    else
+      X = B.CreateBinOp(cast<BinaryOperator>(I).getOpcode(), Ops[0], Ops[1]);
+    if (auto *XI = dyn_cast<Instruction>(X))
+      XI->copyIRFlags(&I);
+    R = B.CreateInsertElement(R, X, E);
+  }
+  I.replaceAllUsesWith(R);
+  I.eraseFromParent();
+  return true;
+}
+
 /// The operations of F that AIR does not have become AIR or hints.
 void RaiseToAIR::raiseFunction(Function &F) {
   SmallVector<Instruction *, 32> Work;
+  for (Instruction &I : make_early_inc_range(instructions(F)))
+    scalarizeDoubles(I);
   for (Instruction &I : instructions(F))
     Work.push_back(&I);
   for (Instruction *I : Work) {
@@ -468,7 +536,13 @@ void RaiseToAIR::raiseFunction(Function &F) {
                       return U->getType()->getScalarType()->isDoubleTy();
                     });
       bool Constrained = isa<ConstrainedFPIntrinsic>(II);
-      if (!AGXOp && !Double && !Constrained)
+      // Intrinsics whose AIR forms are less exact (air-nan-min-max makes
+      // minimum and maximum Metal's fmin and fmax with NaN checks, which
+      // differ in signed zeros and denormals).
+      bool Exact = is_contained({Intrinsic::minimum, Intrinsic::maximum,
+                                 Intrinsic::minimumnum, Intrinsic::maximumnum},
+                                II->getIntrinsicID());
+      if (!AGXOp && !Double && !Constrained && !Exact)
         continue;
       // "call:<intrinsic>|<double mask>[|<metadata operand>...]"
       SmallVector<Value *, 4> Args;
@@ -495,6 +569,28 @@ void RaiseToAIR::raiseFunction(Function &F) {
         Key += "|+lane";
       }
       hintCall(*II, Key, Args);
+      continue;
+    }
+    if (auto *RMW = dyn_cast<AtomicRMWInst>(I);
+        RMW && RMW->getValOperand()->getType()->isDoubleTy()) {
+      // "atomic:<operation>|<doubles>|<ordering>|<sync scope>|<align>", with
+      // no emulation (AIR has no 64-bit atomics to build one from).
+      SmallVector<StringRef, 4> Scopes;
+      Ctx.getSyncScopeNames(Scopes);
+      std::string Key =
+          ("atomic:" + AtomicRMWInst::getOperationName(RMW->getOperation()) +
+           "|d-d|" + Twine(unsigned(RMW->getOrdering())) + "|" +
+           Scopes[RMW->getSyncScopeID()] + "|" +
+           Twine(RMW->getAlign().value()))
+              .str();
+      Value *Ptr = RMW->getPointerOperand(), *Val = RMW->getValOperand();
+      FunctionType *FT = FunctionType::get(
+          RMW->getType(), {Ptr->getType(), Val->getType()}, false);
+      CallInst *New = CallInst::Create(hint(Key, FT), {Ptr, Val}, "",
+                                       RMW->getIterator());
+      New->takeName(RMW);
+      RMW->replaceAllUsesWith(New);
+      RMW->eraseFromParent();
       continue;
     }
     if (isDoubleOp(*I))
@@ -560,6 +656,8 @@ void RaiseToAIR::emulate(Function &F, StringRef Key) {
   SmallVector<StringRef, 4> Parts;
   Key.split(Parts, '|');
   StringRef Op = Parts[0], Mask = Parts.size() > 1 ? Parts[1] : "";
+  if (Op.starts_with("atomic:"))
+    return NoEmulation();
   bool DblIn = Mask.size() > 1 && Mask[1] == 'd';
   bool DblOut = !Mask.empty() && Mask[0] == 'd';
   // The operation of a constrained intrinsic, or of an instruction.
@@ -704,6 +802,14 @@ void RaiseToAIR::emulate(Function &F, StringRef Key) {
     return Fin(R);
   }
 
+  if (Intrinsic::ID ID = Intrinsic::lookupIntrinsicID(
+          Op.starts_with("call:") ? Op.drop_front(5) : StringRef());
+      is_contained({Intrinsic::minimum, Intrinsic::maximum,
+                    Intrinsic::minimumnum, Intrinsic::maximumnum},
+                   ID)) {
+    // AIR lowers the intrinsic itself, as well as it can.
+    return Fin(B.CreateIntrinsic(ID, {Ret}, A));
+  }
   if (Op.starts_with("call:llvm.experimental.constrained.")) {
     // Rounded to nearest: the rounding direction is the hint's.
     Value *R = nullptr;
@@ -990,6 +1096,11 @@ bool RaiseToAIR::run() {
   for (auto [Old, New] : Globals)
     if (Old->hasInitializer())
       New->setInitializer(MapInit(Old->getInitializer()));
+  // The globals that keep their types may still refer to the functions and
+  // globals that change (a table of function addresses).
+  for (GlobalVariable *GV : OldGlobals)
+    if (!is_contained(make_first_range(Globals), GV) && GV->hasInitializer())
+      GV->setInitializer(MapInit(GV->getInitializer()));
   for (auto [Old, New] : Functions) {
     if (Old->isDeclaration())
       continue;
@@ -999,8 +1110,14 @@ bool RaiseToAIR::run() {
       VMap[&A] = &*NewArg++;
     }
     SmallVector<ReturnInst *, 4> Returns;
+    DoubleMaterializer Materializer;
     CloneFunctionInto(New, Old, VMap, CloneFunctionChangeType::LocalChangesOnly,
-                      Returns, "", nullptr, &Types);
+                      Returns, "", nullptr, &Types, &Materializer);
+  }
+  SmallVector<GlobalVariable *, 8> Order;
+  for (GlobalVariable *GV : OldGlobals) {
+    auto It = find_if(Globals, [&](auto &P) { return P.first == GV; });
+    Order.push_back(It != Globals.end() ? It->second : GV);
   }
   for (auto [Old, New] : Functions)
     Old->dropAllReferences();
@@ -1027,6 +1144,11 @@ bool RaiseToAIR::run() {
     Old->replaceAllUsesWith(PoisonValue::get(Old->getType()));
     Old->eraseFromParent();
     New->setName(Name);
+  }
+  // The globals in their order (it decides the layout of the global data).
+  for (GlobalVariable *GV : Order) {
+    GV->removeFromParent();
+    M.insertGlobalVariable(GV);
   }
   for (Function &F : make_early_inc_range(M))
     if (F.isIntrinsic() && F.use_empty())

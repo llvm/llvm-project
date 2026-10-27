@@ -1422,6 +1422,22 @@ static Value *nativeHint(IRBuilder<> &B, CallInst &CI, StringRef Key) {
     FunctionCallee Fn =
         M.getOrInsertFunction(Op, FunctionType::get(Ret, Params, false));
     R = B.CreateCall(Fn, Args);
+  } else if (Op.consume_front("atomic:")) {
+    // "atomic:<operation>|<doubles>|<ordering>|<sync scope>|<align>"
+    auto RMWOp = StringSwitch<std::optional<AtomicRMWInst::BinOp>>(Op)
+                     .Case("fadd", AtomicRMWInst::FAdd)
+                     .Case("fsub", AtomicRMWInst::FSub)
+                     .Case("fmax", AtomicRMWInst::FMax)
+                     .Case("fmin", AtomicRMWInst::FMin)
+                     .Case("xchg", AtomicRMWInst::Xchg)
+                     .Default(std::nullopt);
+    unsigned Order = 0, Align = 0;
+    if (!RMWOp || Parts.size() != 5 || Args.size() != 2 ||
+        Parts[2].getAsInteger(10, Order) || Parts[4].getAsInteger(10, Align))
+      return nullptr;
+    R = B.CreateAtomicRMW(*RMWOp, Args[0], Args[1], llvm::Align(Align),
+                          AtomicOrdering(Order),
+                          Ctx.getOrInsertSyncScopeID(Parts[3]));
   } else if (Op.consume_front("inst:")) {
     auto [Name, Pred] = Op.split(':');
     auto P = StringSwitch<CmpInst::Predicate>(Pred)
@@ -1723,6 +1739,11 @@ bool LowerAIR::run() {
     if (Old->hasInitializer())
       New->setInitializer(
           MapValue(Old->getInitializer(), VMap, RF_None, &Types));
+  // The globals that keep their types may still refer to the functions and
+  // globals that change (a table of function addresses).
+  for (GlobalVariable *GV : OldGlobals)
+    if (!is_contained(make_first_range(Globals), GV) && GV->hasInitializer())
+      GV->setInitializer(MapValue(GV->getInitializer(), VMap, RF_None, &Types));
   for (auto [Old, New] : Functions) {
     if (Old->isDeclaration())
       continue;
@@ -1740,6 +1761,11 @@ bool LowerAIR::run() {
                       Returns, "", nullptr, &Types);
   }
 
+  SmallVector<GlobalVariable *, 8> Order;
+  for (GlobalVariable *GV : OldGlobals) {
+    auto It = find_if(Globals, [&](auto &P) { return P.first == GV; });
+    Order.push_back(It != Globals.end() ? It->second : GV);
+  }
   for (auto [Old, New] : Functions)
     Old->dropAllReferences();
   for (auto [Old, New] : Globals)
@@ -1755,6 +1781,11 @@ bool LowerAIR::run() {
     Old->replaceAllUsesWith(PoisonValue::get(Old->getType()));
     Old->eraseFromParent();
     New->setName(Name);
+  }
+  // The globals in their order (it decides the layout of the global data).
+  for (GlobalVariable *GV : Order) {
+    GV->removeFromParent();
+    M.insertGlobalVariable(GV);
   }
   // Intrinsic declarations left without uses.
   for (Function &F : make_early_inc_range(M))

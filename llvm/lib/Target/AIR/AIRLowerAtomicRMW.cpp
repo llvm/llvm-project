@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "AIRLowerAtomicRMW.h"
+#include "llvm/IR/AIR.h"
+#include "llvm/IR/Instructions.h"
 #include "AIR.h"
 #include "AIRAddressSpaces.h"
 #include "llvm/ADT/SmallVector.h"
@@ -160,8 +162,19 @@ static bool lowerAtomicRMW(Module &M, bool OrderingHints) {
   for (Function &F : M)
     for (BasicBlock &BB : F)
       for (Instruction &I : BB)
-        if (isa<AtomicRMWInst, AtomicCmpXchgInst, FenceInst>(I))
+        if (isa<AtomicRMWInst, AtomicCmpXchgInst, FenceInst>(I)) {
+          // An atomic through a generic pointer (the address-space hint,
+          // llvm/IR/AIR.h) has no AIR function; the portable form keeps it.
+          Value *Ptr = nullptr;
+          if (auto *RMW = dyn_cast<AtomicRMWInst>(&I))
+            Ptr = RMW->getPointerOperand();
+          else if (auto *CX = dyn_cast<AtomicCmpXchgInst>(&I))
+            Ptr = CX->getPointerOperand();
+          if (OrderingHints && Ptr &&
+              Ptr->getType()->getPointerAddressSpace() == air::GenericHintAS)
+            continue;
           Atomics.push_back(&I);
+        }
 
   for (Instruction *I : Atomics) {
     IRBuilder<> B(I);
