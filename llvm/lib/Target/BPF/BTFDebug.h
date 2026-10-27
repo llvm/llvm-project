@@ -106,7 +106,7 @@ class BTFTypeEnum : public BTFTypeBase {
   std::vector<struct BTF::BTFEnum> EnumValues;
 
 public:
-  BTFTypeEnum(const DICompositeType *ETy, uint32_t NumValues, bool IsSigned);
+  BTFTypeEnum(const DICompositeType *ETy, uint32_t Size, bool IsSigned);
   uint32_t getSize() override {
     return BTFTypeBase::getSize() + EnumValues.size() * BTF::BTFEnumSize;
   }
@@ -234,7 +234,7 @@ class BTFTypeEnum64 : public BTFTypeBase {
   std::vector<struct BTF::BTFEnum64> EnumValues;
 
 public:
-  BTFTypeEnum64(const DICompositeType *ETy, uint32_t NumValues, bool IsSigned);
+  BTFTypeEnum64(const DICompositeType *ETy, bool IsSigned);
   uint32_t getSize() override {
     return BTFTypeBase::getSize() + EnumValues.size() * BTF::BTFEnum64Size;
   }
