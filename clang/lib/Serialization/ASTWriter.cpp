@@ -5715,13 +5715,28 @@ void ASTWriter::prepareLazyUpdates() {
     return;
 
   DeclUpdateMap DeclUpdatesTmp;
-  // Move updates to DeclUpdatesLazy but leave CXXAddedFunctionDefinition as is.
-  // Since added function definition is critical to the AST. If we don't take
-  // care of it, user might meet missing definition error at linking time.
-  // Here we leave all CXXAddedFunctionDefinition unconditionally to avoid
-  // potential issues.
+  // Move updates to DeclUpdatesLazy but leave the updates that may be needed by
+  // code generation eager.
+  //
+  // Added function definitions are critical to the AST. If we don't take care
+  // of them, users might meet missing definition errors at linking time. Here
+  // we leave all CXXAddedFunctionDefinition updates eager unconditionally to
+  // avoid potential issues.
   // TODO: Try to refine the strategy to handle CXXAddedFunctionDefinition
   // precisely.
+  //
+  // The CXXResolvedDtor* updates record the 'operator delete' that Sema
+  // resolved for a virtual destructor. They are only produced for the Microsoft
+  // ABI: both paths that can record them for an imported destructor declaration
+  // are Microsoft-ABI-only (the vtable-use hook in Sema::MarkVTableUsed() and
+  // vector deleting destructors in Sema::BuildCXXNew()). In that ABI the
+  // deleting destructor is emitted together with the vtable, so an importer can
+  // need the resolution without a declaration reference to the destructor, and
+  // it cannot recompute it: the destructor may already have a body, or be
+  // defined in another TU. Keep these updates eager as well. The branch is
+  // deliberately not guarded by the ABI because the updates do not exist for
+  // other ABIs, and the writer should not silently drop them if another path
+  // starts creating them.
   for (auto &DeclUpdate : DeclUpdates) {
     const Decl *D = DeclUpdate.first;
 
@@ -5735,11 +5750,9 @@ void ASTWriter::prepareLazyUpdates() {
                Kind == DeclUpdateKind::CXXResolvedDtorGlobDelete ||
                Kind == DeclUpdateKind::CXXResolvedDtorArrayDelete ||
                Kind == DeclUpdateKind::CXXResolvedDtorGlobArrayDelete)
-        // These record the 'operator delete' that Sema resolved for a virtual
-        // destructor in this TU.  An importer cannot recompute it: the
-        // destructor may already have a body or be defined in another TU.  But
-        // codegen needs it, since in the Microsoft ABI the deleting destructor
-        // is emitted along with the vtable.  Keep them eager.
+        // These are only produced for the Microsoft ABI (see the comment
+        // above), but a consumer may need the resolved 'operator delete'
+        // without a declaration reference to the destructor.
         DeclUpdatesTmp[D].push_back(Update);
       else
         DeclUpdatesLazy[D].push_back(Update);
