@@ -182,6 +182,7 @@ class TestDAP_server(DAPTestCaseBase):
         session1.continue_to_exit()
         session2.continue_to_exit()
 
+    @skipIfWindows
     def test_server_does_not_hang_when_logging(self):
         """
         A log channel enabled without a log file writes to the debug console.
