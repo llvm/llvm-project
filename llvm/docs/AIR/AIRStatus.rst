@@ -144,13 +144,12 @@ AIR features with no AGX lowering
 
 *What:* ``agx-lower-air`` (see "AIR to AGX" below) reports an error, rather
 than miscompiling, for the AIR it has no AGX equivalent for yet: SIMD-group
-and quad-group functions (shuffles, reductions, ballots), SIMD-group matrices
-(``air.simdgroup_matrix_8x8_*``), SIMD-group async copies, tensors
+matrices (``air.simdgroup_matrix_8x8_*``), SIMD-group async copies, tensors
 (``air.*_private_tensor``), argument buffers (``air.indirect_buffer``),
-function groups, more than one threadgroup buffer, the AIR math functions
-that no LLVM intrinsic maps to (``rsqrt``, ``fract``, ``sinpi``, ``dot``,
-``convert``, ``pack`` ...) and the 8-operand
-``air.atomic.global.cmpxchg.weak.i32``.
+function groups and more than one threadgroup buffer. The AGX backend has no
+lowering of ``llvm.tan``, ``asin``, ``acos``, ``atan``, ``atan2``, ``sinh``,
+``cosh`` and ``tanh``, nor of AIR's ``sinpi``, ``cospi``, ``tanpi``,
+``asinh``, ``acosh`` and ``atanh``.
 
 Device and service limits
 =========================
@@ -261,11 +260,22 @@ from the same file), atomics and fences to ``atomicrmw``, ``cmpxchg`` and
 ``fence``, and barriers to ``llvm.agx.threadgroup_barrier`` between
 threadgroup-scope fences.
 
+``llvm/utils/air-gpu/air_gpu_suite.py --agx-run`` runs the suite's kernels
+through the portable passes and ``agx-lower-air`` on the AGX Performance
+Simulator (``agx_run``, G14G), against the same references as on the M2 Max.
+On 2026-10-27: 167 pass, 47 do not compile (the functions above: 42
+transcendental functions and 5 matrix cases), the probe for ``air.copysign``
+is rejected as expected, and one case is skipped: it has no barrier and
+relies on ``air-tg-barrier-insert``, which only the Metal pipeline runs. 16
+compute the right function less accurately than MSL requires of its precise
+functions: ``sqrt`` (1 ulp), ``sin`` (24, 132 for ``<4 x float>``), ``cos``
+(207), ``log2`` (10), ``log10`` (39), ``exp10`` (7), ``pow`` (20) and
+``sincos`` (23), the accuracy of the AGX backend's lowering of these
+intrinsics. The results are the simulator's model of G14, not hardware.
+
 Not done: the functions listed in "AIR features with no AGX lowering", and
-the differential validation (the same kernel through AIR on the M2 Max and
-through AGX on the AGX Performance Simulator, compared with each other and
-with a CPU reference); the AIR service is not reachable from every
-environment. An ordered atomic reaches AGX as a relaxed one between two
+running the same cases on both targets in one run (the AIR service is not
+reachable from every environment). An ordered atomic reaches AGX as a relaxed one between two
 sequentially consistent fences, as AIR expresses it, which costs more than
 the AGX backend's own lowering of the ordered atomic.
 

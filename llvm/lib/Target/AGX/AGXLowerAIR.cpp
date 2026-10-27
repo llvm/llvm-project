@@ -176,6 +176,10 @@ private:
                    Value *&Result);
   bool lowerMath(IRBuilder<> &B, CallInst &CI, StringRef Name,
                  Value *&Result);
+  bool lowerSIMD(IRBuilder<> &B, CallInst &CI, StringRef Name,
+                 Value *&Result);
+  bool lowerOther(IRBuilder<> &B, CallInst &CI, StringRef Name,
+                  Value *&Result);
   void dropAIRMetadata();
 };
 
@@ -576,7 +580,8 @@ bool LowerAIR::lowerAtomic(IRBuilder<> &B, CallInst &CI, StringRef Name,
     return false;
   Value *Ptr = CI.getArgOperand(0);
   if (Rest == "cmpxchg.weak.i32") {
-    if (CI.arg_size() != 7)
+    // AIR 2.9 adds a memory flags operand before the volatile one.
+    if (CI.arg_size() != 7 && CI.arg_size() != 8)
       return false;
     Value *ExpectedPtr = CI.getArgOperand(1);
     Value *Expected = B.CreateLoad(B.getInt32Ty(), ExpectedPtr);
@@ -589,13 +594,14 @@ bool LowerAIR::lowerAtomic(IRBuilder<> &B, CallInst &CI, StringRef Name,
     auto *X = B.CreateAtomicCmpXchg(Ptr, Expected, CI.getArgOperand(2),
                                     MaybeAlign(), Success, Failure,
                                     syncScope(Ctx, CI.getArgOperand(5)));
-    X->setVolatile(isVolatile(CI.getArgOperand(6)));
+    X->setVolatile(isVolatile(CI.getArgOperand(CI.arg_size() - 1)));
     Result = B.CreateExtractValue(X, 0);
     B.CreateStore(Result, ExpectedPtr);
     return true;
   }
   StringRef Op = Rest.take_until([](char C) { return C == '.'; });
-  Rest = Rest.drop_front(Op.size() + 1);
+  Rest = Rest.drop_front(Op.size());
+  Rest.consume_front(".");
   bool Unsigned = Rest.consume_front("u.");
   Rest.consume_front("s.");
   bool Float = Rest.starts_with("f");
@@ -635,7 +641,8 @@ bool LowerAIR::lowerMath(IRBuilder<> &B, CallInst &CI, StringRef Name,
   StringRef Rest = Name.drop_front(strlen("air."));
   bool Fast = Rest.consume_front("fast_");
   StringRef Base = Rest.take_until([](char C) { return C == '.'; });
-  Rest = Rest.drop_front(Base.size()).drop_front();
+  Rest = Rest.drop_front(Base.size());
+  Rest.consume_front(".");
   unsigned Signedness = Rest.consume_front("s.") ? 1
                         : Rest.consume_front("u.") ? 2
                                                    : 0;
@@ -668,6 +675,323 @@ bool LowerAIR::lowerMath(IRBuilder<> &B, CallInst &CI, StringRef Name,
   return true;
 }
 
+// The SIMD-group and quad-group functions, air.simd_<op>.<type> and
+// air.quad_<op>.<type> (signed and unsigned integer types are s.i32 and u.i32):
+// shuffles, reductions, prefix scans, ballots and votes.
+bool LowerAIR::lowerSIMD(IRBuilder<> &B, CallInst &CI, StringRef Name,
+                         Value *&Result) {
+  using namespace Intrinsic;
+  bool Quad = Name.starts_with("air.quad_");
+  StringRef Rest = Name.drop_front(strlen(Quad ? "air.quad_" : "air.simd_"));
+  StringRef Op = Rest.take_until([](char C) { return C == '.'; });
+  Rest = Rest.drop_front(Op.size());
+  Rest.consume_front(".");
+  bool Unsigned = Rest.starts_with("u.");
+  Type *Ty = CI.getType();
+  auto Lane = [&](unsigned I) {
+    return B.CreateZExtOrTrunc(CI.getArgOperand(I), B.getInt32Ty());
+  };
+  auto Active = [&] {
+    return B.CreateIntrinsic(Quad ? agx_quad_ballot : agx_simd_ballot,
+                             {B.getTrue()});
+  };
+
+  ID Shuffle = StringSwitch<ID>(Op)
+                   .Cases({"shuffle", "broadcast"},
+                          Quad ? agx_quad_shuffle : agx_simd_shuffle)
+                   .Case("shuffle_xor",
+                         Quad ? agx_quad_shuffle_xor : agx_simd_shuffle_xor)
+                   .Case("shuffle_up",
+                         Quad ? agx_quad_shuffle_up : agx_simd_shuffle_up)
+                   .Case("shuffle_down",
+                         Quad ? agx_quad_shuffle_down : agx_simd_shuffle_down)
+                   .Default(not_intrinsic);
+  if (Shuffle != not_intrinsic && CI.arg_size() == 2) {
+    Result = B.CreateIntrinsic(Shuffle, {Ty}, {CI.getArgOperand(0), Lane(1)});
+    return true;
+  }
+  if (Op == "broadcast_first" && CI.arg_size() == 1) {
+    Value *First = B.CreateIntrinsic(Intrinsic::cttz, {B.getInt32Ty()},
+                                     {Active(), B.getFalse()});
+    Result = B.CreateIntrinsic(Quad ? agx_quad_shuffle : agx_simd_shuffle, {Ty},
+                               {CI.getArgOperand(0), First});
+    return true;
+  }
+  // shuffle_and_fill_{down,up}(data, fill, delta, modulo): within segments
+  // of modulo threads, a thread reads data delta threads away, and the
+  // threads that would read outside the segment read fill from the other end.
+  if ((Op == "shuffle_and_fill_down" || Op == "shuffle_and_fill_up") &&
+      CI.arg_size() == 4) {
+    bool Down = Op == "shuffle_and_fill_down";
+    Value *Self = B.CreateIntrinsic(agx_thread_index_in_simdgroup, {});
+    if (Quad)
+      Self = B.CreateAnd(Self, B.getInt32(3));
+    Value *Delta = Lane(2), *Mod = Lane(3);
+    Value *Pos = B.CreateURem(Self, Mod);
+    Value *Base = B.CreateSub(Self, Pos);
+    Value *Inside, *Src;
+    if (Down) {
+      Value *To = B.CreateAdd(Pos, Delta);
+      Inside = B.CreateICmpULT(To, Mod);
+      Src = B.CreateAdd(Base, B.CreateSelect(Inside, To, B.CreateSub(To, Mod)));
+    } else {
+      Inside = B.CreateICmpUGE(Pos, Delta);
+      Value *From = B.CreateSub(Pos, Delta);
+      Src = B.CreateAdd(Base,
+                        B.CreateSelect(Inside, From, B.CreateAdd(From, Mod)));
+    }
+    ID Read = Quad ? agx_quad_shuffle : agx_simd_shuffle;
+    Value *Data = B.CreateIntrinsic(Read, {Ty}, {CI.getArgOperand(0), Src});
+    Value *Fill = B.CreateIntrinsic(Read, {Ty}, {CI.getArgOperand(1), Src});
+    Result = B.CreateSelect(Inside, Data, Fill);
+    return true;
+  }
+  if (Op == "ballot" && CI.arg_size() == 1) {
+    Value *Mask = B.CreateIntrinsic(Quad ? agx_quad_ballot : agx_simd_ballot,
+                                    {CI.getArgOperand(0)});
+    Result = B.CreateZExtOrTrunc(Mask, Ty);
+    return true;
+  }
+  if ((Op == "vote_any" || Op == "vote_all") && CI.arg_size() == 1) {
+    // Of a ballot: any thread, or every active thread.
+    Value *Mask = CI.getArgOperand(0);
+    Result = Op == "vote_any"
+                 ? B.CreateIsNotNull(Mask)
+                 : B.CreateICmpEQ(Mask,
+                                  B.CreateZExtOrTrunc(Active(), Mask->getType()));
+    return true;
+  }
+
+  // Reductions and scans, by AGX::SIMDOp.
+  bool Float = Ty->getScalarType()->isFloatingPointTy();
+  bool Prefix = Op.consume_front("prefix_");
+  bool Inclusive = Prefix && Op.consume_front("inclusive_");
+  if (Prefix && !Inclusive && !Op.consume_front("exclusive_"))
+    return false;
+  std::optional<unsigned> HWOp =
+      StringSwitch<std::optional<unsigned>>(Op)
+          .Case("sum", Float ? AGX::SIMD_FADD : AGX::SIMD_IADD)
+          .Case("product", Float ? std::optional<unsigned>(AGX::SIMD_FMUL)
+                                 : std::nullopt)
+          .Case("min", Float      ? AGX::SIMD_FMIN
+                       : Unsigned ? AGX::SIMD_UMIN
+                                  : AGX::SIMD_SMIN)
+          .Case("max", Float      ? AGX::SIMD_FMAX
+                       : Unsigned ? AGX::SIMD_UMAX
+                                  : AGX::SIMD_SMAX)
+          .Case("and", Float ? std::optional<unsigned>() : AGX::SIMD_AND)
+          .Case("or", Float ? std::optional<unsigned>() : AGX::SIMD_OR)
+          .Case("xor", Float ? std::optional<unsigned>() : AGX::SIMD_XOR)
+          .Default(std::nullopt);
+  if (!HWOp || CI.arg_size() != 1 || (Prefix && Op != "sum" && Op != "product"))
+    return false;
+  ID Fn = Prefix ? (Quad ? agx_quad_prefix : agx_simd_prefix)
+                 : (Quad ? agx_quad_reduce : agx_simd_reduce);
+  Value *X = CI.getArgOperand(0);
+  Result = B.CreateIntrinsic(Fn, {Ty}, {X, B.getInt32(*HWOp)});
+  // The hardware scans are exclusive.
+  if (Inclusive)
+    Result = Op == "sum" ? (Float ? B.CreateFAdd(Result, X)
+                                  : B.CreateAdd(Result, X))
+                         : B.CreateFMul(Result, X);
+  return true;
+}
+
+// The value of an OpenCL-style work-item function for dimension Dim.
+static Value *workItem(IRBuilder<> &B, Intrinsic::ID X, Intrinsic::ID Y,
+                       Intrinsic::ID Z, Value *Dim) {
+  Value *V[] = {B.CreateIntrinsic(X, {}), B.CreateIntrinsic(Y, {}),
+                B.CreateIntrinsic(Z, {})};
+  if (auto *C = dyn_cast<ConstantInt>(Dim))
+    return C->getZExtValue() < 3 ? V[C->getZExtValue()] : B.getInt32(0);
+  Value *D = B.CreateZExtOrTrunc(Dim, B.getInt32Ty());
+  return B.CreateSelect(B.CreateICmpEQ(D, B.getInt32(0)), V[0],
+                        B.CreateSelect(B.CreateICmpEQ(D, B.getInt32(1)), V[1],
+                                       V[2]));
+}
+
+// AIR functions that are neither LLVM intrinsics nor SIMD-group functions:
+// OpenCL-style work-item functions, conversions, packing, and math with no
+// LLVM intrinsic.
+bool LowerAIR::lowerOther(IRBuilder<> &B, CallInst &CI, StringRef Name,
+                          Value *&Result) {
+  using namespace Intrinsic;
+  SmallVector<StringRef, 6> Parts;
+  Name.drop_front(strlen("air.")).split(Parts, '.');
+  StringRef Fn = Parts[0];
+  Type *Ty = CI.getType();
+  unsigned N = CI.arg_size();
+  auto Arg = [&](unsigned I) { return CI.getArgOperand(I); };
+
+  if (Fn.starts_with("get_") && N == 1) {
+    Value *D = Arg(0), *V = nullptr;
+    if (Fn == "get_global_id")
+      V = workItem(B, agx_thread_position_in_grid_x,
+                   agx_thread_position_in_grid_y,
+                   agx_thread_position_in_grid_z, D);
+    else if (Fn == "get_local_id")
+      V = workItem(B, agx_thread_position_in_threadgroup_x,
+                   agx_thread_position_in_threadgroup_y,
+                   agx_thread_position_in_threadgroup_z, D);
+    else if (Fn == "get_group_id")
+      V = workItem(B, agx_threadgroup_position_in_grid_x,
+                   agx_threadgroup_position_in_grid_y,
+                   agx_threadgroup_position_in_grid_z, D);
+    else if (Fn == "get_local_size")
+      V = workItem(B, agx_threads_per_threadgroup_x,
+                   agx_threads_per_threadgroup_y,
+                   agx_threads_per_threadgroup_z, D);
+    else if (Fn == "get_num_groups")
+      V = workItem(B, agx_threadgroups_per_grid_x, agx_threadgroups_per_grid_y,
+                   agx_threadgroups_per_grid_z, D);
+    else if (Fn == "get_global_size")
+      V = B.CreateMul(workItem(B, agx_threadgroups_per_grid_x,
+                               agx_threadgroups_per_grid_y,
+                               agx_threadgroups_per_grid_z, D),
+                      workItem(B, agx_threads_per_threadgroup_x,
+                               agx_threads_per_threadgroup_y,
+                               agx_threads_per_threadgroup_z, D));
+    if (!V || !Ty->isIntegerTy())
+      return false;
+    Result = B.CreateZExtOrTrunc(V, Ty);
+    return true;
+  }
+  // air.convert.<to>.<from>, each a kind (f, s or u) and a type.
+  if (Fn == "convert" && Parts.size() == 5 && N == 1) {
+    Value *X = Arg(0);
+    char To = Parts[1][0], From = Parts[3][0];
+    if (To == 'f')
+      Result = From == 'f'   ? B.CreateFPCast(X, Ty)
+               : From == 's' ? B.CreateSIToFP(X, Ty)
+                             : B.CreateUIToFP(X, Ty);
+    else if (From == 'f')
+      Result = B.CreateIntrinsic(To == 's' ? fptosi_sat : fptoui_sat,
+                                 {Ty, X->getType()}, {X});
+    else
+      Result = B.CreateIntCast(X, Ty, From == 's');
+    return true;
+  }
+  if (Fn == "dot" && N == 2) {
+    Value *A = Arg(0), *Bv = Arg(1);
+    auto *VT = dyn_cast<FixedVectorType>(A->getType());
+    if (!VT)
+      return false;
+    Value *Sum = nullptr;
+    for (unsigned I = 0; I < VT->getNumElements(); ++I) {
+      Value *P = B.CreateFMul(B.CreateExtractElement(A, I),
+                              B.CreateExtractElement(Bv, I));
+      Sum = Sum ? B.CreateFAdd(Sum, P) : P;
+    }
+    Result = Sum;
+    return true;
+  }
+  // air.pack.{unorm,snorm}{4x8,2x16}.<vector> and air.unpack.<same>.<vector>:
+  // normalized integers, rounded to nearest even, the first element lowest.
+  if ((Fn == "pack" || Fn == "unpack") && Parts.size() >= 2 && N == 1) {
+    StringRef Format = Parts[1];
+    bool Signed = Format.starts_with("snorm");
+    unsigned Count, Bits;
+    if (Format.ends_with("4x8"))
+      Count = 4, Bits = 8;
+    else if (Format.ends_with("2x16"))
+      Count = 2, Bits = 16;
+    else
+      return false;
+    if (!Signed && !Format.starts_with("unorm"))
+      return false;
+    double Scale = Signed ? (1 << (Bits - 1)) - 1 : (1 << Bits) - 1;
+    Type *F32 = B.getFloatTy();
+    if (Fn == "pack") {
+      Value *Word = B.getInt32(0);
+      for (unsigned I = 0; I < Count; ++I) {
+        Value *X = B.CreateExtractElement(Arg(0), I);
+        X = B.CreateFPCast(X, F32);
+        // maxnum first, so that NaN becomes 0.
+        X = B.CreateMaxNum(X, ConstantFP::get(F32, Signed ? -1.0 : 0.0));
+        X = B.CreateMinNum(X, ConstantFP::get(F32, 1.0));
+        X = B.CreateIntrinsic(Intrinsic::rint, {F32},
+                              {B.CreateFMul(X, ConstantFP::get(F32, Scale))});
+        Value *I32 = B.CreateFPToSI(X, B.getInt32Ty());
+        I32 = B.CreateAnd(I32, B.getInt32((1u << Bits) - 1));
+        Word = B.CreateOr(Word, B.CreateShl(I32, I * Bits));
+      }
+      Result = B.CreateZExtOrTrunc(Word, Ty);
+      return true;
+    }
+    auto *VT = dyn_cast<FixedVectorType>(Ty);
+    if (!VT || VT->getNumElements() != Count)
+      return false;
+    Value *Word = B.CreateZExtOrTrunc(Arg(0), B.getInt32Ty());
+    Value *V = PoisonValue::get(VT);
+    for (unsigned I = 0; I < Count; ++I) {
+      Value *E = B.CreateLShr(Word, I * Bits);
+      E = B.CreateTrunc(E, B.getIntNTy(Bits));
+      Value *F = Signed ? B.CreateSIToFP(E, F32) : B.CreateUIToFP(E, F32);
+      F = B.CreateFDiv(F, ConstantFP::get(F32, Scale));
+      if (Signed)
+        F = B.CreateMaxNum(F, ConstantFP::get(F32, -1.0));
+      V = B.CreateInsertElement(V, B.CreateFPCast(F, VT->getElementType()), I);
+    }
+    Result = V;
+    return true;
+  }
+  // sincos(x, ptr cos) returns the sine and stores the cosine.
+  if ((Fn == "sincos" || Fn == "fast_sincos") && N == 2) {
+    FastMathFlags FMF = CI.getFastMathFlags();
+    FMF.setApproxFunc(FMF.approxFunc() || Fn == "fast_sincos");
+    IRBuilder<>::FastMathFlagGuard Guard(B);
+    B.setFastMathFlags(FMF);
+    Result = B.CreateUnaryIntrinsic(Intrinsic::sin, Arg(0));
+    B.CreateStore(B.CreateUnaryIntrinsic(Intrinsic::cos, Arg(0)), Arg(1));
+    return true;
+  }
+  if (Fn == "fract" && N == 1) {
+    // x - floor(x), below 1 (fract of tiny negative values rounds up to 1).
+    Value *X = Arg(0);
+    Value *F = B.CreateFSub(X, B.CreateUnaryIntrinsic(Intrinsic::floor, X));
+    APFloat BelowOne = APFloat::getOne(Ty->getScalarType()->getFltSemantics());
+    BelowOne.next(/*nextDown=*/true);
+    Result = B.CreateMinNum(F, ConstantFP::get(Ty, BelowOne));
+    return true;
+  }
+  if (Fn == "rsqrt" && N == 1) {
+    Result = B.CreateFDiv(ConstantFP::get(Ty, 1.0),
+                          B.CreateUnaryIntrinsic(Intrinsic::sqrt, Arg(0)));
+    return true;
+  }
+  if (Fn == "fast_rsqrt" && N == 1 && Ty->getScalarType()->isFloatTy() &&
+      !Ty->isVectorTy()) {
+    Result = B.CreateIntrinsic(agx_rsqrt, {Ty}, {Arg(0)});
+    return true;
+  }
+  if (Fn == "fmod" && N == 2) {
+    Result = B.CreateFRem(Arg(0), Arg(1));
+    return true;
+  }
+  if (Fn == "mul_hi" && Parts.size() == 3 && N == 2) {
+    bool Signed = Parts[1] == "s";
+    unsigned Bits = Ty->getScalarSizeInBits();
+    Type *Wide = Ty->getWithNewBitWidth(Bits * 2);
+    Value *P = B.CreateMul(B.CreateIntCast(Arg(0), Wide, Signed),
+                           B.CreateIntCast(Arg(1), Wide, Signed));
+    Result = B.CreateTrunc(B.CreateLShr(P, Bits), Ty);
+    return true;
+  }
+  // Device-coherent accesses are volatile, which the backend encodes
+  // coherent.
+  if (Fn == "load" && Parts.size() >= 2 && Parts[1] == "device_coherent" &&
+      N == 1) {
+    Result = B.CreateLoad(Ty, Arg(0), /*isVolatile=*/true);
+    return true;
+  }
+  if (Fn == "store" && Parts.size() >= 2 && Parts[1] == "device_coherent" &&
+      N == 2) {
+    B.CreateStore(Arg(0), Arg(1), /*isVolatile=*/true);
+    return true;
+  }
+  return false;
+}
+
 bool LowerAIR::lowerCall(CallInst &CI, StringRef Name, Value *&Result) {
   IRBuilder<> B(&CI);
   if (Name.starts_with("air.atomic."))
@@ -693,7 +1017,9 @@ bool LowerAIR::lowerCall(CallInst &CI, StringRef Name, Value *&Result) {
       B.CreateFence(AtomicOrdering::Acquire, Scope);
     return true;
   }
-  return lowerMath(B, CI, Name, Result);
+  if (Name.starts_with("air.simd_") || Name.starts_with("air.quad_"))
+    return lowerSIMD(B, CI, Name, Result);
+  return lowerOther(B, CI, Name, Result) || lowerMath(B, CI, Name, Result);
 }
 
 void LowerAIR::lowerCalls() {

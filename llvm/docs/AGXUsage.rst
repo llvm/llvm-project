@@ -1029,10 +1029,26 @@ Calls to AIR functions become LLVM intrinsics and instructions:
 * ``air.wg.barrier`` is ``llvm.agx.threadgroup_barrier``, between
   workgroup-scope release and acquire fences when it orders memory, and
   ``air.simdgroup.barrier`` a workgroup-scope fence (SIMD-groups run in
-  lockstep).
+  lockstep);
+* the SIMD-group and quad-group functions are AGX's: shuffles (and
+  ``broadcast``), ``shuffle_and_fill_up``/``down``, reductions and scans by
+  ``AGX::SIMDOp`` (an inclusive scan adds the element to the hardware's
+  exclusive one), ballots widened to AIR's mask type, and ``vote_any`` /
+  ``vote_all`` on the mask;
+* the OpenCL-style work-item functions (``air.get_global_id`` ...), ``convert``
+  (float to integer saturating), ``dot``, ``pack`` / ``unpack`` of
+  ``unorm`` / ``snorm`` ``4x8`` and ``2x16``, ``sincos``, ``fract``,
+  ``rsqrt``, ``fmod`` and ``mul_hi`` are expanded; device-coherent loads and
+  stores are volatile, which the backend encodes coherent (with the barriers
+  that makes host-coherent, more than device coherence needs).
 
-Any other AIR function (SIMD-group functions and matrices among them, for
-now) is an error. The module then takes AGX's triple and data layout, and
+Any other AIR function (SIMD-group matrices among them, for now) is an
+error. The math functions are as accurate as the backend's lowering of the
+LLVM intrinsics, which is below what MSL requires of its precise functions
+for ``sqrt`` (without ``ieee-fp32``), ``sin``, ``cos``, ``log2``, ``log10``,
+``exp10`` and ``pow``; ``tan``, the inverse and hyperbolic functions,
+``sinpi``/``cospi``/``tanpi`` and the inverse hyperbolic functions have no
+lowering. The module then takes AGX's triple and data layout, and
 loses the AIR metadata and module flags.
 
 MLIR
