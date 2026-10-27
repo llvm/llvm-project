@@ -58,27 +58,26 @@ namespace mlir::tosa {
 using namespace mlir;
 
 namespace {
-APInt convertValue(const APInt &value, Type type, unsigned width) {
-  return value.sextOrTrunc(width);
-}
-
 // Convert a validated byte-aligned payload, retaining storage for every
 // element. In particular, each i4 element occupies one byte, not half a byte.
 SmallVector<char> convertRawValues(ArrayRef<char> rawData, IntegerType type,
                                    IntegerType convertedType) {
-  const unsigned inputBytes = llvm::divideCeil(type.getWidth(), 8);
-  const unsigned outputBytes = llvm::divideCeil(convertedType.getWidth(), 8);
-  const size_t numElements = rawData.size() / inputBytes;
-  SmallVector<char> data(numElements * outputBytes);
+  const unsigned inputElementSizeInBytes = llvm::divideCeil(type.getWidth(), 8);
+  const unsigned outputElementSizeInBytes =
+      llvm::divideCeil(convertedType.getWidth(), 8);
+  const size_t numElements = rawData.size() / inputElementSizeInBytes;
+  SmallVector<char> data(numElements * outputElementSizeInBytes);
   const auto *input = reinterpret_cast<const uint8_t *>(rawData.data());
   auto *output = reinterpret_cast<uint8_t *>(data.data());
   for (size_t i = 0; i < numElements; ++i) {
-    APInt value(inputBytes * 8, 0);
-    llvm::LoadIntFromMemory(value, input + i * inputBytes, inputBytes);
+    APInt value(inputElementSizeInBytes * 8, 0);
+    llvm::LoadIntFromMemory(value, input + i * inputElementSizeInBytes,
+                            inputElementSizeInBytes);
     // Discard padding bits before interpreting the source sign bit.
     value = value.trunc(type.getWidth());
-    llvm::StoreIntToMemory(convertValue(value, type, convertedType.getWidth()),
-                           output + i * outputBytes, outputBytes);
+    llvm::StoreIntToMemory(value.sextOrTrunc(convertedType.getWidth()),
+                           output + i * outputElementSizeInBytes,
+                           outputElementSizeInBytes);
   }
   return data;
 }
@@ -113,10 +112,9 @@ private:
     Type convertedType = replace(type);
     if (type == convertedType)
       return attr;
-    return IntegerAttr::get(
-        convertedType,
-        convertValue(attr.getValue(), type,
-                     cast<IntegerType>(convertedType).getWidth()));
+    return IntegerAttr::get(convertedType,
+                            attr.getValue().sextOrTrunc(
+                                cast<IntegerType>(convertedType).getWidth()));
   }
 
   Attribute convertDenseArray(DenseArrayAttr attr) {
@@ -149,9 +147,8 @@ private:
         return nullptr;
       convertedAttr = attr.mapValues(
           convertedType.getElementType(),
-          [elementType, convertedElementType](const APInt &value) {
-            return convertValue(value, elementType,
-                                convertedElementType.getWidth());
+          [convertedElementType](const APInt &value) {
+            return value.sextOrTrunc(convertedElementType.getWidth());
           });
     }
     return convertedAttr.reshape(convertedType);
@@ -174,18 +171,20 @@ private:
     if (!blob)
       return nullptr;
     ArrayRef<char> rawData = blob->getData();
-    const unsigned inputBytes = llvm::divideCeil(integerType.getWidth(), 8);
-    if (rawData.size() % inputBytes != 0)
+    const unsigned elementSizeInBytes =
+        llvm::divideCeil(integerType.getWidth(), 8);
+    if (rawData.size() % elementSizeInBytes != 0)
       return nullptr;
+    // Check resource is correct size.
     if (type.hasStaticShape() &&
         rawData.size() !=
-            inputBytes * static_cast<uint64_t>(type.getNumElements()))
+            elementSizeInBytes * static_cast<uint64_t>(type.getNumElements()))
       return nullptr;
-    SmallVector<char> data =
+    const SmallVector<char> data =
         convertRawValues(rawData, integerType, convertedIntegerType);
     // Alignment must be a power of two, including for sub-byte and
     // non-power-of-two destination widths.
-    unsigned alignment = llvm::PowerOf2Ceil(
+    const unsigned alignment = llvm::PowerOf2Ceil(
         llvm::divideCeil(convertedIntegerType.getWidth(), 8));
     return DenseResourceElementsAttr::get(
         convertedType, attr.getRawHandle().getKey(),
