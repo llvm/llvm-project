@@ -45,6 +45,28 @@ cycles over a set (negative = faster) unless stated.
 | A15 | **Wide constants of kernels in uniform registers** (AGXUniformConstants, `-agx-uniform-constants`, off in `llc`): each 32-bit `mov_imm` of a kernel becomes a uniform preloaded after the arguments (one per value, at most 64), listed in `.agx.kernels` extension 6 for the launcher; AGXFoldOperands folds them into the users. **On in ZLUDA** (`compile_agx`, agx_libs builds; agx_runtime sets the uniforms) | `ZLUDA_AGX_UNIFORM_CONSTANTS=0` (ZLUDA, rebuild agx_libs too); `-agx-uniform-constants` in `llc` | tput geomean rw -2.4% (sgemm_reg4x4 -27.6%: 70 -> 66 GPRs, ddot -7%), co -2.0% (transcendental -29.9%), lb -1.0%; cycles ~0 (-0.1..-0.5% geomean; gelu_f16 +15% and softmax_online +4% from a different store / stall order, not from uniform reads); specialized CUDA kernels (R21) 2-5 GPRs fewer, tput -2..-4% (rmsnorm still above its unspecialized form); PTX tests and agx_libs simulator tests unchanged; llc time within noise | a uniform source costs the same as a GPR source (the model has no uniform penalty); preloading ~2 more uniform words per constant is free at dispatch | `cuda_sgemm_reg4x4`, `cuda_ddot`, `softmax_row`, `transcendental`, agx_libs dnn / blas; compare `ZLUDA_AGX_UNIFORM_CONSTANTS=0`; watch gelu_f16-like store tails |
 | A16 | Post-RA strategy (AGXPostRASchedStrategy): the next access of a memory cluster ranks ahead of latency stalls, and the scheduler waits up to 8 cycles for a pending one instead of putting another instruction between two accesses | `-agx-postra-cluster-wait=0` vs default 8 (3 and 16 give the same) | cycles: gelu_f16 -13.9%, ldmatrix -15.1%, none worse (rw geomean -0.42%, co -0.19%); tput +-1% noise (attn_decode +1.0%: three moves reordered); agx_libs simulator tests unchanged; llc time not measurable | `mem_quiet_device_store_ref` (as A1): an ALU op between stores costs more than a few cycles' stall | `cuda_gelu_f16` (two 16-bit stores per iteration), `ldmatrix*` PTX tests |
 
+## Cumulative (model): session start (41842c90f) to A16 (ab8a3ff4c)
+
+The same IR through the `llc` of 41842c90f (before A1-A16 and the earlier precise-math, wait and soft-f64 changes)
+and the current one, G13G and G14C, agx-bench. Geomean / total over kernel x chip; negative is faster.
+
+| Set | Metric | `llc` default | ZLUDA (+ `-agx-uniform-constants`) |
+|---|---|---|---|
+| CUDA suite (36 kernels) | cycles | -5.0% / -10.7% | -5.5% / -10.7% |
+| | tput | -0.2% / -6.5% | -2.6% / -12.9% |
+| | GPRs | -0.4% | -4.3% |
+| PTX tests (200 files) | cycles | -1.2% / -1.2% | -1.7% / -2.3% |
+| | tput | +0.7% / +0.3% | -1.3% / -2.3% |
+| | GPRs | +1.1% | -2.1% |
+| agx_libs (198 kernels) | cycles | -4.0% / -18.0% | -4.1% / -18.4% |
+| | tput | -0.7% / -3.3% | -1.4% / -4.0% |
+| | GPRs | -2.0% | -5.8% |
+
+Largest gains (G14C cycles): hgemm tile64 variants -45..-50%, vector_operand -43%, gelu_f16 -37%, blur_rgba8 -37%,
+attn_decode -34%; tput: sgemm_reg4x4 -39%, layernorm_f16 -26%, match_sync -24%. Slower by design: `transcendental`
++279% and softmax_row +23% (precise sin / cos / exp / log instead of the hardware approximations), div_ftz +19% and
+min_nan_f16 +33% (IEEE results). Slower as a scheduling trade-off (A3): stencil +29%, reduce +28%, bitonic_smem +12%.
+
 ## Measured and rejected (model)
 
 | # | Change | Model result | Why rejected / note for hardware |
