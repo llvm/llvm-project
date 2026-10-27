@@ -865,7 +865,9 @@ void GCNSubtarget::adjustSchedDependency(
     // TODO: Plug this into getInstrLatency override to use consistent latency
     // queries.
     unsigned Latency = Dep.getLatency();
-    Latency += InstrInfo.getIssueCyclesForCopy(*DefI) - 1;
+    unsigned IssueCycles = InstrInfo.getIssueCyclesForCopy(*DefI);
+    assert(IssueCycles > 0);
+    Latency += IssueCycles - 1;
     Dep.setLatency(Latency);
     return;
   }

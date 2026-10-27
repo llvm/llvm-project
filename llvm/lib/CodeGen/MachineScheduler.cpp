@@ -3391,8 +3391,8 @@ void SchedBoundary::bumpNode(SUnit *SU) {
   // for this as additional issue cycles.
   if (MachineInstr *MI = SU->getInstr()) {
     if (MI->isCopy()) {
-      unsigned ExtraCycles = DAG->TII->getIssueCyclesForCopy(*MI);
-      IncMOps = std::max(IncMOps, ExtraCycles);
+      unsigned CopyCycles = DAG->TII->getIssueCyclesForCopy(*MI);
+      IncMOps = std::max(IncMOps, CopyCycles);
     }
   }
 

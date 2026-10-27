@@ -1107,40 +1107,40 @@ define amdgpu_kernel void @v_sad_u32_vector_pat2(ptr addrspace(1) %out, <4 x i32
 ; GFX12-5-GISEL-NEXT:    s_clause 0x2
 ; GFX12-5-GISEL-NEXT:    s_load_b256 s[8:15], s[4:5], 0x34 nv
 ; GFX12-5-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x54 nv
-; GFX12-5-GISEL-NEXT:    s_load_b64 s[4:5], s[4:5], 0x24 nv
+; GFX12-5-GISEL-NEXT:    s_load_b64 s[6:7], s[4:5], 0x24 nv
 ; GFX12-5-GISEL-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX12-5-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-5-GISEL-NEXT:    s_cmp_gt_u32 s8, s12
-; GFX12-5-GISEL-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX12-5-GISEL-NEXT:    s_cmp_gt_u32 s9, s13
-; GFX12-5-GISEL-NEXT:    s_cselect_b32 s7, 1, 0
-; GFX12-5-GISEL-NEXT:    s_cmp_gt_u32 s10, s14
 ; GFX12-5-GISEL-NEXT:    s_cselect_b32 s16, 1, 0
-; GFX12-5-GISEL-NEXT:    s_cmp_gt_u32 s11, s15
+; GFX12-5-GISEL-NEXT:    s_cmp_gt_u32 s9, s13
 ; GFX12-5-GISEL-NEXT:    s_cselect_b32 s17, 1, 0
-; GFX12-5-GISEL-NEXT:    s_sub_co_i32 s18, s8, s12
-; GFX12-5-GISEL-NEXT:    s_sub_co_i32 s19, s9, s13
+; GFX12-5-GISEL-NEXT:    s_cmp_gt_u32 s10, s14
+; GFX12-5-GISEL-NEXT:    s_cselect_b32 s18, 1, 0
+; GFX12-5-GISEL-NEXT:    s_cmp_gt_u32 s11, s15
+; GFX12-5-GISEL-NEXT:    s_cselect_b32 s19, 1, 0
+; GFX12-5-GISEL-NEXT:    s_sub_co_i32 s4, s8, s12
+; GFX12-5-GISEL-NEXT:    s_sub_co_i32 s5, s9, s13
 ; GFX12-5-GISEL-NEXT:    s_sub_co_i32 s20, s10, s14
 ; GFX12-5-GISEL-NEXT:    s_sub_co_i32 s21, s11, s15
 ; GFX12-5-GISEL-NEXT:    s_sub_co_i32 s8, s12, s8
 ; GFX12-5-GISEL-NEXT:    s_sub_co_i32 s9, s13, s9
 ; GFX12-5-GISEL-NEXT:    s_sub_co_i32 s10, s14, s10
 ; GFX12-5-GISEL-NEXT:    s_sub_co_i32 s11, s15, s11
-; GFX12-5-GISEL-NEXT:    s_cmp_lg_u32 s6, 0
-; GFX12-5-GISEL-NEXT:    s_cselect_b32 s6, s18, s8
-; GFX12-5-GISEL-NEXT:    s_cmp_lg_u32 s7, 0
-; GFX12-5-GISEL-NEXT:    s_cselect_b32 s7, s19, s9
 ; GFX12-5-GISEL-NEXT:    s_cmp_lg_u32 s16, 0
-; GFX12-5-GISEL-NEXT:    s_cselect_b32 s8, s20, s10
+; GFX12-5-GISEL-NEXT:    s_cselect_b32 s4, s4, s8
 ; GFX12-5-GISEL-NEXT:    s_cmp_lg_u32 s17, 0
+; GFX12-5-GISEL-NEXT:    s_cselect_b32 s5, s5, s9
+; GFX12-5-GISEL-NEXT:    s_cmp_lg_u32 s18, 0
+; GFX12-5-GISEL-NEXT:    s_cselect_b32 s8, s20, s10
+; GFX12-5-GISEL-NEXT:    s_cmp_lg_u32 s19, 0
 ; GFX12-5-GISEL-NEXT:    s_cselect_b32 s9, s21, s11
-; GFX12-5-GISEL-NEXT:    s_add_co_i32 s0, s6, s0
-; GFX12-5-GISEL-NEXT:    s_add_co_i32 s1, s7, s1
+; GFX12-5-GISEL-NEXT:    s_add_co_i32 s0, s4, s0
+; GFX12-5-GISEL-NEXT:    s_add_co_i32 s1, s5, s1
 ; GFX12-5-GISEL-NEXT:    s_add_co_i32 s2, s8, s2
 ; GFX12-5-GISEL-NEXT:    s_add_co_i32 s3, s9, s3
 ; GFX12-5-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GFX12-5-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX12-5-GISEL-NEXT:    global_store_b128 v4, v[0:3], s[4:5]
+; GFX12-5-GISEL-NEXT:    global_store_b128 v4, v[0:3], s[6:7]
 ; GFX12-5-GISEL-NEXT:    s_endpgm
   %icmp0 = icmp ugt <4 x i32> %a, %b
   %sub0 = sub <4 x i32> %a, %b

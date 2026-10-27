@@ -1940,7 +1940,7 @@ public:
   virtual unsigned getInstrLatency(const InstrItineraryData *ItinData,
                                    SDNode *Node) const;
 
-  /// Return the number of additional scheduling cycles that should be
+  /// Return the number of issue cycles that should be
   /// accounted for when scheduling a COPY instruction. This is used by
   /// targets where wide copies expand to multiple instructions.
   /// \returns How many MOps the scheduler should account for issuing this
