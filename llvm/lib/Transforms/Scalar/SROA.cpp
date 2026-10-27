@@ -5408,6 +5408,7 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
       for (auto Part : Splitter) {
         LoadInst *PLoad = SplitLoads[Part.Idx];
         StoreInst *PStore = Splitter.createStore(PLoad, StoreBasePtr, Part, SI);
+        (void)PStore;
         LLVM_DEBUG(dbgs() << "      +" << Part.getOffset() << ":" << *PStore
                           << "\n");
       }
