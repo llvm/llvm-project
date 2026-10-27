@@ -189,13 +189,16 @@ the target triple cannot express it yet.
 What the service cannot run
 ---------------------------
 
-``execute`` dispatches compute kernels, and binds buffers only: a binding is
-exactly ``{index, buffer}``, and requests with ``textures`` or ``samplers``
-fields are refused. So compute kernels that take textures or samplers, which
-Metal allows and the reference implementations use, cannot be run, and
-neither can vertex, fragment, mesh or tessellation functions. Adding texture
-and sampler bindings to the service would make the compute texture functions
-testable like the rest.
+``execute`` dispatches compute kernels only, so vertex, fragment, mesh and
+tessellation functions cannot be run, and function constants cannot be set.
+
+Since 2026-10-27 it also binds textures (1D, 2D, 3D; 15 formats from
+``r8unorm`` to ``rgba32float``) and samplers (nearest, linear), with
+``/air/client/verify_textures.py`` as acceptance test. This backend has not
+yet been made to emit texture code (texture handle types,
+``air.sample_texture_*``/``read``/``write`` calls, ``air.texture`` and
+``air.sampler`` argument metadata); that, and a texture group in
+``llvm/utils/air-gpu``, is the next step for compute textures.
 
 AGX Performance Simulator gaps
 ==============================
@@ -228,3 +231,41 @@ shows how), and ``floor/etc/example/nbody.metallib`` is another. None is
 used. ``llvm/utils/air-gpu`` generates every kernel itself, and its README
 says not to add such files. The service accepts any AIR it is sent, so it
 would not catch one.
+
+Not done yet
+============
+
+MLIR AIR target
+---------------
+
+The MLIR ``air`` dialect and ``Target/LLVM/AIR`` were cherry-picked onto
+LLVM 24, with their registration resolved next to AGX's, but ``mlir-opt`` has
+not been built here (the build was interrupted, with no errors up to then) and
+``module-to-binary-air.mlir`` has not been run.
+
+AIR to AGX
+----------
+
+Lowering AIR to AGX is designed but not implemented. The design:
+
+* The upstream bitcode reader already parses this backend's ``.air``,
+  upgrading its typed pointers to opaque ones, so ``llc -mtriple=agx k.air``
+  can read it; no AIR reader is needed.
+* An ``agx-lower-air`` module pass, first in the AGX pipeline and a no-op
+  without ``!air.kernel``, reads each kernel's argument roles from
+  ``!air.kernel``; turns system-value parameters and calls into
+  ``llvm.agx.*`` special-register reads; maps AIR math back to LLVM
+  intrinsics with an inverse of ``AIRIntrinsicMappings.td`` (generated in the
+  AGX target from the same file, with ``Invertible`` excluding
+  ``llvm.minimum``/``maximum``); lowers barriers to
+  ``llvm.agx.threadgroup_barrier`` between scoped fences, AIR atomics to
+  ``atomicrmw``/``cmpxchg``, shuffles, ballots and reductions to their AGX
+  intrinsics; and diagnoses AIR functions without an AGX equivalent.
+* Address spaces are remapped by cloning with a type remapper: AIR 0
+  (thread) becomes AGX 5 (private), 2 (constant) becomes 4, 1 and 3 stay.
+  Kernels are rebuilt as ``agx_kernel`` with their buffers in location-index
+  order and the system-value parameters removed.
+* Validation: the same kernel through AIR on the M2 Max and through AGX on the
+  AGX Performance Simulator (``agx_run``, with
+  ``llvm/utils/agx-checked/run_checked.py``'s ``launch()``), compared with each
+  other and with a CPU reference.
