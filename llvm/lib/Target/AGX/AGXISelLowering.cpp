@@ -107,6 +107,10 @@ AGXTargetLowering::AGXTargetLowering(const TargetMachine &TM,
   // and naturally aligned device loads of 2 or 4 bytes become one access of
   // the byte format (ReplaceNodeResults)
   setOperationAction({ISD::LOAD, ISD::STORE}, {MVT::v2i8, MVT::v4i8}, Custom);
+  // 4-byte aligned loads of 2 or 4 16-bit elements: one 32-bit access per
+  // pair, whose halves are the elements (ReplaceNodeResults)
+  setOperationAction(ISD::LOAD, {MVT::v2i16, MVT::v4i16, MVT::v2f16, MVT::v4f16},
+                     Custom);
 
   //===--------------------------------------------------------------------===//
   // Integer operations
@@ -729,6 +733,37 @@ void AGXTargetLowering::ReplaceNodeResults(SDNode *N,
       Elts.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i8, Load.getValue(I)));
     Results.push_back(DAG.getBuildVector(VT, DL, Elts));
     Results.push_back(Load.getValue(NumElts));
+    return;
+  }
+  // Pairs of 16-bit elements: a 32-bit access each, its low half the first
+  // element (a 16-bit half register, no instruction to split it).
+  if (auto *L = dyn_cast<LoadSDNode>(N);
+      L && L->getExtensionType() == ISD::NON_EXTLOAD && !L->isIndexed() &&
+      L->isSimple() && L->getAlign() >= Align(4) &&
+      (L->getAddressSpace() == AGX::DEVICE_ADDRESS ||
+       L->getAddressSpace() == AGX::THREADGROUP_ADDRESS) &&
+      (L->getValueType(0) == MVT::v2i16 || L->getValueType(0) == MVT::v4i16 ||
+       L->getValueType(0) == MVT::v2f16 || L->getValueType(0) == MVT::v4f16)) {
+    SDLoc DL(N);
+    EVT VT = L->getValueType(0);
+    unsigned Words = VT.getVectorNumElements() / 2;
+    EVT WordsVT = Words == 1 ? EVT(MVT::i32) : EVT(MVT::v2i32);
+    SDValue Load = DAG.getLoad(WordsVT, DL, L->getChain(), L->getBasePtr(),
+                               L->getMemOperand());
+    SmallVector<SDValue, 4> Elts;
+    for (unsigned W = 0; W < Words; ++W) {
+      SDValue Word = Words == 1 ? Load
+                                : DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL,
+                                              MVT::i32, Load,
+                                              DAG.getVectorIdxConstant(W, DL));
+      SDValue Hi = DAG.getNode(ISD::SRL, DL, MVT::i32, Word,
+                               DAG.getConstant(16, DL, MVT::i32));
+      for (SDValue Half : {Word, Hi})
+        Elts.push_back(DAG.getBitcast(
+            VT.getScalarType(), DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, Half)));
+    }
+    Results.push_back(DAG.getBuildVector(VT, DL, Elts));
+    Results.push_back(Load.getValue(1));
     return;
   }
   // Vector loads: one access with a 32-bit result per element.

@@ -303,6 +303,11 @@ def : Pat<(i64 (sext_inreg i64:$a, i32)),
           (IADD_I64_FROM32 MOD_SX, (EXTRACT_SUBREG $a, sub0), 0, (i32 0), 0)>;
 
 def : Pat<(i16 (trunc i32:$a)), (EXTRACT_SUBREG $a, lo16)>;
+// The high half of a 32-bit register is a 16-bit register of its own.
+let AddedComplexity = 10 in {
+def : Pat<(i16 (trunc (srl i32:$a, (i32 16)))), (EXTRACT_SUBREG $a, hi16)>;
+def : Pat<(i16 (trunc (sra i32:$a, (i32 16)))), (EXTRACT_SUBREG $a, hi16)>;
+}
 def : Pat<(i32 (trunc i64:$a)), (EXTRACT_SUBREG $a, sub0)>;
 def : Pat<(i32 (AGXhi32 i64:$a)), (EXTRACT_SUBREG $a, sub1)>;
 def : Pat<(i16 (trunc i64:$a)),
