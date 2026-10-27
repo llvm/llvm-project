@@ -54,16 +54,17 @@ void PrefetchOrdering::apply(ScheduleDAGInstrs *DAG) {
   SmallVector<SUnit *, 8> Loads;
   for (SUnit &SU : DAG->SUnits) {
     const MachineInstr &MI = *SU.getInstr();
-    bool IsLoad = anyInBundle(MI, isNonPrefetchLoad);
-    if (IsLoad)
+    bool IsPrefetch = anyInBundle(MI, SIInstrInfo::isPrefetch);
+    if (anyInBundle(MI, isNonPrefetchLoad)) {
       for (SUnit *Pf : Pending)
         DAG->addEdge(&SU, SDep(Pf, SDep::Artificial));
-
-    if (!anyInBundle(MI, SIInstrInfo::isPrefetch)) {
-      if (IsLoad)
+      // A bundle that also holds a prefetch must not be ordered after itself.
+      if (!IsPrefetch)
         Loads.push_back(&SU);
-      continue;
     }
+
+    if (!IsPrefetch)
+      continue;
 
     for (SUnit *L : Loads)
       DAG->addEdge(&SU, SDep(L, SDep::Artificial));
