@@ -2487,6 +2487,8 @@ void RewriteMFMAFormStage::resetRewriteCandsToVGPR(
 }
 
 bool RewriteMFMAFormStage::isRewriteCandidate(MachineInstr *MI) const {
+  if (TII->getMFMACDRegClass(*MI))
+    return false;
   if (!static_cast<const SIInstrInfo *>(DAG.TII)->isMAI(*MI))
     return false;
   if (AMDGPU::getAGPRFormOp(MI->getOpcode()) == -1)

@@ -1841,8 +1841,7 @@ void GCNPassConfig::addFastRegAlloc() {
 }
 
 void GCNPassConfig::addPreRegAlloc() {
-  if (getOptLevel() != CodeGenOptLevel::None)
-    addPass(&AMDGPUPrepareAGPRAllocLegacyID);
+  addPass(&AMDGPUPrepareAGPRAllocLegacyID);
 }
 
 void GCNPassConfig::addOptimizedRegAlloc() {
@@ -2701,8 +2700,7 @@ Error AMDGPUCodeGenPassBuilder::addOptimizedRegAlloc(PassManagerWrapper &PMW) {
 }
 
 void AMDGPUCodeGenPassBuilder::addPreRegAlloc(PassManagerWrapper &PMW) {
-  if (getOptLevel() != CodeGenOptLevel::None)
-    addMachineFunctionPass(AMDGPUPrepareAGPRAllocPass(), PMW);
+  addMachineFunctionPass(AMDGPUPrepareAGPRAllocPass(), PMW);
 }
 
 Expected<bool> AMDGPUCodeGenPassBuilder::addRegAssignAndRewriteOptimized(

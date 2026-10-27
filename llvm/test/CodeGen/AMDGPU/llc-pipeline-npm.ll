@@ -68,6 +68,7 @@
 ; GCN-O0-NEXT:   function
 ; GCN-O0-NEXT:     machine-function
 ; GCN-O0-NEXT:       reg-usage-propagation
+; GCN-O0-NEXT:       amdgpu-prepare-agpr-alloc
 ; GCN-O0-NEXT:       phi-node-elimination
 ; GCN-O0-NEXT:       si-lower-control-flow
 ; GCN-O0-NEXT:       two-address-instruction
