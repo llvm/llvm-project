@@ -301,7 +301,7 @@ public:
                           int> = 0>
   _LIBCPP_HIDE_FROM_ABI explicit shared_ptr(_Yp* __p) : __ptr_(__p) {
 #if _LIBCPP_STD_VER >= 17
-    unique_ptr<_If<is_array<_Tp>::value, _Yp[], _Yp> > __hold(__p);
+    unique_ptr<_If<is_array_v<_Tp>, _Yp[], _Yp>> __hold(__p);
 #else
     unique_ptr<_Yp> __hold(__p);
 #endif
