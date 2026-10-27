@@ -20,6 +20,8 @@ namespace llvm {
 
 class AGXTargetMachine;
 class ScheduleDAGMutation;
+class ScheduleDAGMI;
+struct MachineSchedContext;
 class FunctionPass;
 class Module;
 class ModulePass;
@@ -59,6 +61,9 @@ FunctionPass *createAGXInsertWaitsPass();
 
 // Machine scheduler: keeps runs of memory accesses of one kind together.
 std::unique_ptr<ScheduleDAGMutation> createAGXMemClusterMutation();
+/// The post-RA machine scheduler: AGXMemClusterMutation, and cluster members
+/// kept together ahead of latency stalls.
+ScheduleDAGMI *createAGXPostRAScheduler(MachineSchedContext *C);
 
 void initializeAGXAlwaysInlinePass(PassRegistry &);
 void initializeAGXLowerAIRLegacyPass(PassRegistry &);

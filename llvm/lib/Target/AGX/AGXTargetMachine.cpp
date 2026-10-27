@@ -213,9 +213,7 @@ AGXTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
 
 ScheduleDAGInstrs *
 AGXTargetMachine::createPostMachineScheduler(MachineSchedContext *C) const {
-  ScheduleDAGMI *DAG = createSchedPostRA(C);
-  DAG->addMutation(createAGXMemClusterMutation());
-  return DAG;
+  return createAGXPostRAScheduler(C);
 }
 
 TargetPassConfig *AGXTargetMachine::createPassConfig(PassManagerBase &PM) {

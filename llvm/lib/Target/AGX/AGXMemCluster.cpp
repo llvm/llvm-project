@@ -158,3 +158,66 @@ void AGXMemClusterMutation::apply(ScheduleDAGInstrs *DAG) {
 std::unique_ptr<ScheduleDAGMutation> llvm::createAGXMemClusterMutation() {
   return std::make_unique<AGXMemClusterMutation>();
 }
+
+static cl::opt<unsigned> AGXPostRAClusterWait(
+    "agx-postra-cluster-wait", cl::Hidden, cl::init(8),
+    cl::desc("After register allocation, wait up to this many cycles for the "
+             "next access of a memory cluster rather than schedule another "
+             "instruction in between (0: off)"));
+
+namespace {
+
+/// The generic post-RA strategy schedules a ready instruction ahead of the next
+/// access of a cluster that would still stall a few cycles on its operands.
+/// On AGX, an ALU instruction between two memory accesses costs more than such
+/// a stall (see AGXMemClusterMutation): keep the cluster first, waiting for
+/// its next access if it is a few cycles from ready.
+class AGXPostRASchedStrategy : public PostGenericScheduler {
+public:
+  using PostGenericScheduler::PostGenericScheduler;
+
+  SUnit *pickNode(bool &IsTopNode) override {
+    if (AGXPostRAClusterWait && RegionPolicy.OnlyTopDown &&
+        TopClusterID != InvalidClusterId) {
+      auto InCluster = [&](SUnit *SU) {
+        return isTheSameCluster(TopClusterID, SU->ParentClusterIdx);
+      };
+      unsigned Limit = Top.getCurrCycle() + AGXPostRAClusterWait;
+      while (Top.getCurrCycle() < Limit) {
+        Top.releasePending();
+        if (any_of(Top.Available, [&](SUnit *SU) {
+              return InCluster(SU) && !Top.checkHazard(SU);
+            }))
+          break;
+        if (none_of(Top.Pending, [&](SUnit *SU) {
+              return InCluster(SU) && SU->TopReadyCycle <= Limit;
+            }))
+          break;
+        Top.bumpCycle(Top.getCurrCycle() + 1);
+      }
+    }
+    return PostGenericScheduler::pickNode(IsTopNode);
+  }
+
+protected:
+  bool tryCandidate(SchedCandidate &Cand, SchedCandidate &TryCand) override {
+    if (AGXPostRAClusterWait && Cand.isValid()) {
+      bool CandNext = isTheSameCluster(Cand.AtTop ? TopClusterID : BotClusterID,
+                                       Cand.SU->ParentClusterIdx);
+      bool TryNext =
+          isTheSameCluster(TryCand.AtTop ? TopClusterID : BotClusterID,
+                           TryCand.SU->ParentClusterIdx);
+      if (tryGreater(TryNext, CandNext, TryCand, Cand, Cluster))
+        return TryCand.Reason != NoCand;
+    }
+    return PostGenericScheduler::tryCandidate(Cand, TryCand);
+  }
+};
+
+} // namespace
+
+ScheduleDAGMI *llvm::createAGXPostRAScheduler(MachineSchedContext *C) {
+  ScheduleDAGMI *DAG = createSchedPostRA<AGXPostRASchedStrategy>(C);
+  DAG->addMutation(createAGXMemClusterMutation());
+  return DAG;
+}
