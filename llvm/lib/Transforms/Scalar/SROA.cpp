@@ -6449,12 +6449,7 @@ static std::optional<TwoSlotGEP> analyzeTwoSlotGEP(GetElementPtrInst &GEP,
     if (AccessSize.isScalable())
       return std::nullopt;
 
-    if (!LoadStoreSize)
-      LoadStoreSize = AccessSize.getFixedValue();
-    else if (LoadStoreSize != AccessSize.getFixedValue()) {
-      // GEP used with different sized loads and/or stores.
-      return std::nullopt;
-    }
+    LoadStoreSize = std::max(LoadStoreSize, AccessSize.getFixedValue());
   }
 
   if (!LoadStoreSize)
@@ -6473,6 +6468,15 @@ static std::optional<TwoSlotGEP> analyzeTwoSlotGEP(GetElementPtrInst &GEP,
     // Alloca can be accessed with more than two index values.
     return std::nullopt;
   }
+
+  // If the valid Idx values do not fit into the variable as sign extended, do
+  // not transform.
+  // We could still transform (we know that at most one of the indices are
+  // valid, maybe none of them are), but it doesn't matter what we do here in
+  // practice.
+  unsigned IdxBits = IdxTy->getBitWidth();
+  if (!isIntN(IdxBits, IdxMin) || !isIntN(IdxBits, IdxMax))
+    return std::nullopt;
 
   return TwoSlotGEP{&GEP,
                     Idx,
