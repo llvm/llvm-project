@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection,alpha.core.DanglingPtrDeref\
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection,alpha.core.DanglingPtrDeref \
 // RUN:  -analyzer-config cfg-lifetime=true -analyzer-output=text -verify %s
 
 void clang_analyzer_warnIfReached();
@@ -9,9 +9,9 @@ void clang_analyzer_warnIfReached();
 void testPathNotesWithLoopScopeEnd() {
   int *p = nullptr;
   for (int i = 0; i < 3; ++i) {
-  // expected-note@-1 3 {{Loop condition is true.  Entering loop body}}
-  // expected-note@-2   {{The value 2 is assigned to 'i'}}
-  // expected-note@-3   {{Loop condition is false. Execution continues on line 17}}
+    // expected-note@-1 3 {{Loop condition is true.  Entering loop body}}
+    // expected-note@-2   {{The value 2 is assigned to 'i'}}
+    // expected-note@-3   {{Loop condition is false. Execution continues on line 17}}
     p = &i; // expected-note {{Value assigned to 'p'}}
   } // expected-note {{'i' is destroyed here}}
   *p = 4;
