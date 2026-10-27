@@ -108,7 +108,7 @@ void test9(unsigned a) {
 void test10(void) {
   goto c;
   d:
-  goto e; // expected-warning {{never executed}}
+  goto e;
   c: ;
   int i;
   return;
@@ -120,7 +120,7 @@ void test10(void) {
   i = 2;  // no-warning
   goto f;
   e:
-  goto d;
+  goto d; // expected-warning {{never executed}}
   f: ;
 }
 

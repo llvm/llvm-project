@@ -30,8 +30,9 @@ public:
 // CXX11-NEXT:     8: [B1.7] (BindTemporary)
 // Double brackets trigger FileCheck variables, escape.
 // CXX11-NEXT:     9: {{\[}}[B1.2] foo:[B1.8]]
-// CXX11-NEXT:    10: ~D() (Temporary object destructor)
+// CXX11-NEXT:    10: (FullExprCleanup collected 1 MTE: [B1.5])
 // CXX11-NEXT:    11: ~D() (Temporary object destructor)
+// CXX11-NEXT:    12: ~D() (Temporary object destructor)
 // CXX17-NEXT:     3: D() (CXXConstructExpr, [B1.4], [B1.5]+0, D)
 // CXX17-NEXT:     4: [B1.3] (BindTemporary)
 // Double brackets trigger FileCheck variables, escape.
@@ -53,8 +54,10 @@ void passArgumentIntoMessage(E *e) {
 // CXX11-NEXT:     6: [B1.5]
 // CXX11-NEXT:     7: [B1.6] (CXXConstructExpr, [B1.8], D)
 // CXX11-NEXT:     8: D d = [e bar];
-// CXX11-NEXT:     9: ~D() (Temporary object destructor)
-// CXX11-NEXT:    10: [B1.8].~D() (Implicit destructor)
+// CXX11-NEXT:     9: (FullExprCleanup collected 1 MTE: [B1.5])
+// CXX11-NEXT:    10: ~D() (Temporary object destructor)
+// CXX11-NEXT:    11: [B1.8].~D() (Implicit destructor)
+// CXX11-NEXT:    12: [B1.8] (Lifetime ends)
 // Double brackets trigger FileCheck variables, escape.
 // CXX17-NEXT:     3: {{\[}}[B1.2] bar] (CXXRecordTypedCall, [B1.5], [B1.4])
 // CXX17-NEXT:     4: [B1.3] (BindTemporary)
