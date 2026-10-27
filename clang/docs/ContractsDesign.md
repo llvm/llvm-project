@@ -1,26 +1,26 @@
 # Introduction
 
-This is a high level design documentation for Contracts implementation in Clang.
-This summarized experiences from several implementors in seperate branches.
+This is a high-level design document for the contracts implementation in Clang.
+It summarizes the experiences of several implementers working on separate
+branches.
 
-This is also tend to be some developer policy/guide of contracts for how should clang
-developers continue working on this.
+It is also intended to guide Clang developers working on contracts.
 
-## High Level Developing Style
+## High-Level Development Approach
 
-We plan to implement contracts in different small PRs. We don't want to implement
-contracts in a single PR. Smaller PR helps reviewers to understand the patch and give
-higher quality reviewers. Samller PR is also easier for testers to test and find the
-problems.
+We plan to implement contracts in several small PRs. We don't want to implement
+contracts in a single PR. Smaller PRs help reviewers understand the patches and
+give higher-quality reviews. They also make it easier for testers to test the
+changes and find problems.
 
-The implementation contracts is marked as experimental before we announce it is 
-implemented completely.
+The contracts implementation will remain experimental until we announce full
+support.
 
 ### ABI
 
-We'd like to keep ABI unstable during the experimental process. We all understand
-ABI's importance. But getting consensus for ABI needs a long time. We prefer to
-move faster instead of waiting the consensus for ABI consensus.
+The ABI is considered unstable until we claim full support for the feature.
+We understand the importance of ABI stability. But reaching consensus on an ABI
+takes time. We prefer to move faster instead of waiting for ABI consensus.
 
 For GCC/libstdc++ interoperability, we need to identify the ABI revision
 which a toolchain targets. We shouldn't assume that one experimental GCC ABI
@@ -28,8 +28,8 @@ will remain unchanged.
 
 ### Driver flags
 
-Before we think the support of contracts are minimal usable, users are unable
-to get access to contracts unless users pass `-Xclang` explicitly. 
+Until we consider contracts support minimally usable, users must pass `-Xclang`
+explicitly to enable it.
 
 ## AST structure
 
@@ -37,10 +37,9 @@ to get access to contracts unless users pass `-Xclang` explicitly.
 
 ```C++
 class Stmt {
-
-class ContractStmtBitfields {
+  class ContractStmtBitfields {
     unsigned Invalid : 1;
-};
+  };
 };
 
 class ContractStmtBase : public Stmt {
@@ -60,15 +59,16 @@ class ContractPostStmt : public ContractStmtBase {
 
 Discussion:
 
-We though to use a simple struct to represent `pre` and `post` contracts. But we decided to put all of
-them into Stmt system. The major reason is that now the users can reuse components like 
-`TraverseStmt(...)` more easily.
+We considered using a simple struct to represent `pre` and `post` contracts.
+But we decided to represent them as `Stmt` nodes so users can reuse components
+like `TraverseStmt(...)` more easily.
 
-For attributes, we can save them in the trailing objects.
+We can store attributes in trailing objects.
 
-We split them into 3 Stmt kinds so we can save the bits for ResultName for other contracts types.
+We use three `Stmt` kinds so only postconditions need storage for `ResultName`.
 
-For `ContractResultBindingDecl`, see the [result binding section](#contractresultbindingdecl).
+For `ContractResultBindingDecl`, see the
+[result binding section](#contractresultbindingdecl).
 
 ### FunctionDecl
 
@@ -112,13 +112,12 @@ class DeclaratorDecl : public ValueDecl {
 };
 ```
 
-We put the storage of FunctionContractsSequence into
-DeclaratorDecl::ExtInfo to save the space for functions
-which doesn't have contracts.
+We store the `FunctionContractSequence` pointer in `DeclaratorDecl::ExtInfo`
+to save space for functions that don't have contracts.
 
 Discussion:
 
-We need to use a single sequence for the contracts of a function. e.g.,
+We need to use a single sequence for the contracts of a function. For example:
 
 ```C++
 int f(int x)
@@ -130,23 +129,22 @@ int f(int x)
   pre(x > 0); // Illegal
 ```
 
-So that we can't use a sequence for `pre` and another sequence for `post`.
+So we can't use one sequence for `pre` and another for `post`.
 
 Another problem is that we allow redeclarations without contracts, or
-with semantically equal contracts. So
+with semantically equivalent contracts. For example:
 
 ```C++
 int func(int lhs, int rhs) pre(lhs != rhs); // FD1
 int func(int lhs1, int rhs1) { return lhs1 == rhs1; } // FD2
 ```
 
-we should think the function declaration `int func(int lhs1, int rhs1)`
-(FD2) have the same contracts as the first one.
-Then it is a problem that how should we store/access the contracts for
-`FD2`.
+The function declaration `int func(int lhs1, int rhs1)` (`FD2`) has the same
+contracts as the first declaration. We need to decide how to store and access
+the contracts for `FD2`.
 
-Usually, as this is related to redeclarations, we might think we can
-get it by iterating redecls. e.g.,
+Since this involves redeclarations, we might try to find the contracts by
+iterating over the redeclaration chain. For example:
 
 ```C++
 for (auto *RD : this->redecls())
@@ -156,40 +154,37 @@ for (auto *RD : this->redecls())
 
 But if we follow this, the contracts we get for `FD2` will be the contracts
 of `FD1`, `pre(lhs != rhs)`. While this is semantically correct,
-`FD2` doesn't have `lhs` or `rhs`. It is not only they have
-different name but they are actually different AST nodes.
-So it will be problematic for code generation or static analysis
-if we simply store the contracts to the declaration
-which the contracts are written.
+`FD2` doesn't have `lhs` or `rhs`. The parameters have different names and
+are represented by different AST nodes. This causes problems for code
+generation and static analysis if we store the contracts only on the
+declaration where they are written.
 
-The simplest solution is that Sema to put the corresponding
+The simplest solution is for Sema to put the corresponding
 contracts on every function redeclaration.
 
-This means, **Sema is responsible to construct a new contract
-sequence when it saw a redeclaration if the first function has
-contracts, no matter if the redeclaration has contracts written
-or not**.
+This means **Sema is responsible for constructing a new contract sequence
+when it sees a redeclaration if the first declaration has contracts,
+whether or not the redeclaration has written contracts**.
 
 This duplicates some Sema work and AST storage. But consumers can directly
 use the contracts on the current declaration without maintaining a parameter
 map. We prefer this simpler model for the first version.
 
-Later, if we find this is a performance bottleneck, we
-can try to optimize that by refactoring it into parameter
-mapping mechanism.
+Later, if this becomes a performance bottleneck, we can try to optimize it
+by introducing a parameter mapping mechanism.
 
 #### Possible Later Changes
 
 If needed, we can add `IsWritten` information to `FunctionContractSequence`
-to indicate if this sequence is written in source or not.
-This may be helpful for toolings.
+to indicate whether this sequence is written in the source.
+This may be helpful for tooling.
 
 But in the first version, we don't have to do that.
 
 ### ContractResultBindingDecl
 
-A post contract can introduce a name to represent the return value of the
-function. e.g.,
+A postcondition can introduce a name to represent the return value of the
+function. For example:
 
 ```C++
 int f(int x) post(result: result > x);
@@ -200,7 +195,7 @@ We introduce a new `ValueDecl` for this name.
 ```C++
 class ContractResultBindingDecl final : public ValueDecl {
   ContractResultBindingDecl(DeclContext *DC, SourceLocation Loc,
-                            IdentifierInfo *Name, QualType T);
+                           IdentifierInfo *Name, QualType T);
 
 public:
   static ContractResultBindingDecl *Create(
@@ -217,11 +212,13 @@ returning `void`.
 
 Sema should diagnose result names that conflict with function parameters or
 lambda captures, as required by
-[basic.scope.contract](https://eel.is/c++draft/basic.scope.contract#2). e.g.,
+[basic.scope.contract](https://eel.is/c++draft/basic.scope.contract#2).
+For example:
 
 ```C++
 int f(int result) post(result: true); // Illegal, conflicts with the parameter.
-auto l = [result = 1]() post(result: true) { return 1; }; // Illegal, conflicts with the capture.
+// Illegal, conflicts with the capture.
+auto l = [result = 1]() post(result: true) { return 1; };
 ```
 
 Result bindings should also participate in unused-name and shadowing
@@ -237,8 +234,8 @@ int h() post(result: result > 0); // Warn: result shadows the global variable.
 
 ## Parser
 
-When implementing parser, an important detail is that we need to
-deley parsing for member functions.
+When implementing the parser, we need to delay parsing contracts on member
+functions.
 
 ```C++
 struct S {
@@ -253,16 +250,16 @@ A function contract specifier in a member declaration is a complete-class
 context. So `value` and `valid` are both valid names in the predicate, even
 though they are declared after `f`.
 
-When Parser first sees the `pre` specifier, the class is not complete yet. If
-we parse the predicate immediately, name lookup can't find these members. It
+When the parser first sees the `pre` specifier, the class is not complete yet.
+If we parse the predicate immediately, name lookup can't find these members. It
 may also see an incomplete overload set when the predicate calls a member
 function. This will reject valid programs.
 
-So for contracts on a member function declared inside a class, Parser only
+So for contracts on a member function declared inside a class, the parser only
 collects the tokens of the predicate and keeps their source locations. After
-the class is completely parsed, Parser re-enters the class and function scope,
-puts the parameters and `this` back into scope, and parses the cached tokens
-as normal, calling Sema for expression analysis.
+the class is completely parsed, the parser re-enters the class and function
+scopes, puts the parameters and `this` back into scope, and parses the cached
+tokens as normal, calling Sema for expression analysis.
 
 Free functions and out-of-class member declarations don't have this
 complete-class problem. `contract_assert` is parsed in a function body and
@@ -270,10 +267,10 @@ doesn't need this delayed parsing either.
 
 We should reuse Clang's existing late-parsed method declaration mechanism,
 which is already used for other complete-class contexts. We shouldn't add a
-second delayed parsing mechanism only for Contracts.
+second delayed parsing mechanism only for contracts.
 
 For a deduced return type, we also need to delay parsing the postcondition.
-e.g.,
+For example:
 
 ```C++
 auto f() post(r: r > 0) { return 1; }
@@ -283,35 +280,36 @@ auto l = []() post(r: r > 0) { return 1; };
 Here the type of `r` isn't known until we analyze the body. We should cache
 the postcondition tokens first. Then parse them after return type deduction.
 
-## Construct Contracts
+## Constructing Contracts
 
 We should reuse normal expression analysis for contract predicates, including
 the contextual conversion to `bool` and full-expression cleanup handling.
 We still check the predicate when the evaluation semantic is `ignore`.
 
-In the above FunctionDecl section, we've mentioned that, Sema is reponsible
-to rebuild the contracts for every redeclaration to make sure the relationships
-between parameters and contracts are correct.
+As mentioned in the `FunctionDecl` section, Sema is responsible for rebuilding
+the contracts for every redeclaration to keep the relationships between
+parameters and contracts correct.
 
-Except this, there are several other details which need special care.
+Several other details also need special care.
 
-### contract context
+### Contract Context
 
-We need a contract context in Sema.We maintain a stack of contract contexts in Sema.
-Before analyzing each pre, post or contract_assert predicate, we push a new context.
-When the analysis finishes, we pop it and restore the previous context. It records
-the scope where the predicate starts and the result name, if there is one. The result
-name is only visible in its own postcondition. The context needs to support nesting,
-since a lambda in a predicate can contain another `contract_assert`.
+We maintain a stack of contract contexts in Sema.
+Before analyzing each `pre`, `post`, or `contract_assert` predicate, we push a
+new context. When the analysis finishes, we pop it and restore the previous
+context. It records the scope where the predicate starts and the result name,
+if there is one. The result name is only visible in its own postcondition.
+The context needs to support nesting, since a lambda in a predicate can contain
+another `contract_assert`.
 
-An important use of this context is implicit const qualification. e.g.,
+An important use of this context is implicit const qualification. For example:
 
 ```C++
 bool check(int &);
 bool check(const int &);
 
 void f(int x) pre(check(x)) { // Calls check(const int &).
-  check(x);                   // Calls check(int &).
+  check(x); // Calls check(int &).
 }
 ```
 
@@ -321,29 +319,29 @@ the predicate, before overload resolution. We shouldn't change the type of
 after the predicate is built is too late: we may already have selected the
 wrong overload.
 
-Note that we won't change the parameter declaration into implicit const or create a new const parameter declaration.
-We just ask the expression type to be const.
+Note that we don't make the parameter declaration const or create a new const
+parameter declaration. We only apply implicit const to the expression type.
 
 ```C++
 void f(int x)
   pre(std::is_same_v<decltype(x), int>) // Uses the declared type of x.
   pre(std::is_same_v<decltype((x)), const int &>) { // Uses the expression type.
-  static_assert(std::is_same_v<decltype((x)), int &>); // No implicit const here.
+  // No implicit const here.
+  static_assert(std::is_same_v<decltype((x)), int &>);
 }
 ```
 
-And also, the const qualification doesn't propagate 
-through indirection. e.g.,
+Also, the const qualification doesn't propagate through indirection.
+For example:
 
 ```C++
 void f(int *p) pre((*p = 1, true)); // OK, p is treated as int *const.
 void g(int x) pre(++x > 0);        // Illegal.
 ```
 
-Another point we need to care is, when deciding if we're still in the contracts,
-we need to look at the decl contexts too instead of looking at the contract context
-only. Otherwise, we may meet problems if the predicate triggers some instantiations.
-e.g.,
+When deciding whether an expression is inside a contract, we also need to check
+the declaration context. Relying only on the contract context can cause problems
+if the predicate triggers template instantiation. For example:
 
 ```C++
 template <typename T>
@@ -355,13 +353,13 @@ auto positive_after_increment(T value) {
 void f(int x) pre(positive_after_increment(x));
 ```
 
-If we decide if we're in contracts by contract context only, we may think `++value`
-in the instantiation as incorrect due to it didn't meet the bar of implicit
-constness.
+If we rely only on the contract context, we may incorrectly apply implicit const
+to `value` and reject `++value` during instantiation.
 
 ### Lambdas
 
-We need to extend lambda capture analysis to handle contract scopes. e.g.,
+We need to extend lambda capture analysis to handle contract scopes.
+For example:
 
 ```C++
 void f(int x) pre([x]() mutable { return ++x > 0; }()); // OK.
@@ -370,13 +368,14 @@ int h() post(r: [r] { return r > 0; }());              // OK
 ```
 
 In `f`, `x` refers to a copy introduced inside the predicate. We shouldn't
-reject as `x` changes. In `g`, it still refers to the parameter outside the
-predicate, so the reference is implicitly const. We need to follow the capture
-chain for nested lambdas to make this distinction. Simply making every expression
-const while a contract is being checked will reject valid programs.
+reject the code because it modifies `x`. In `g`, it still refers to the parameter
+outside the predicate, so the reference is implicitly const. We need to follow
+the capture chain for nested lambdas to make this distinction. Simply making
+every expression const while a contract is being checked will reject valid
+programs.
 
 Another problem is that we parse a function's contracts before entering its
-body. e.g.,
+body. For example:
 
 ```C++
 int check(int x)
@@ -399,8 +398,8 @@ declaration context and function scope stack inconsistent.
 So we should use the recorded contract scope boundary when analyzing these
 captures, and keep the declaration context and function scope stack consistent.
 Each intervening lambda still needs its own capture. For `[r]`, capture
-analysis also needs to accept `ContractResultBindingDecl` as a capturable local entity,
-instead of assuming that every captured name is a `VarDecl`.
+analysis also needs to accept `ContractResultBindingDecl` as a capturable local
+entity, instead of assuming that every captured name is a `VarDecl`.
 
 The standard allows a capture-default or simple-capture when the enclosing
 scope is a contract-assertion scope, even without a function body.
@@ -416,7 +415,7 @@ For templates, we need to instantiate contracts when the function is defined
 or odr-used, even when the function body isn't available. See
 [dcl.contract.func](https://eel.is/c++draft/dcl.contract.func#9).
 So we shouldn't tie contract instantiation only to function body instantiation.
-e.g.,
+For example:
 
 ```C++
 template <typename T>
@@ -437,7 +436,7 @@ we will miss this error.
 Contracts don't participate in overload resolution. The error above isn't
 SFINAE, so we can't fall back to `f(...)`.
 
-## Constract Semantics Checking
+## Contract Semantics Checking
 
 We should share the function-level checks between normal function declarations,
 late-parsed member contracts, lambda call operators and template instantiations.
@@ -453,7 +452,7 @@ invalid so later checks don't diagnose the same broken predicate again.
 
 Sema needs to check the declared type of a non-reference parameter odr-used
 by a postcondition. It must be const on every redeclaration, including those
-without written contracts. e.g.,
+without written contracts. For example:
 
 ```C++
 int f(const int x) post(r: r >= x);
@@ -486,7 +485,7 @@ requires:
 
 For each implicit capture, Sema should record whether the entity is also
 referenced outside the lambda's contracts. We check this after analyzing the
-whole lambda body. e.g.,
+whole lambda body. For example:
 
 ```C++
 void test(int x) {
@@ -514,7 +513,7 @@ account for captures required by nested lambdas. See
 Sema should diagnose implicit access to the current object in a constructor's
 precondition or a destructor's postcondition when building the implicit member
 access. We shouldn't reject every `CXXThisExpr` found in these predicates.
-e.g.,
+For example:
 
 ```C++
 struct S {
@@ -538,52 +537,52 @@ runs when the transformation happens during instantiation.
 
 ### Comparing redeclarations
 
-The redeclaration can have semantically equal contracts with parameter mappings.
-e.g.,
+Redeclarations can have semantically equivalent contracts after parameter
+mapping.
+For example:
 
 ```C++
 void f(int x) pre(x > 0);
 void f(int y) pre(y > 0); // OK, the parameter was renamed.
 ```
 
-Here we should think `void f(int x) pre(x > 0);` are semantically equal
-with `void f(int y) pre(y > 0)`.
+Here we should consider `void f(int x) pre(x > 0);` semantically equivalent
+to `void f(int y) pre(y > 0);`.
 
-But our current tools to decide declaration/expression similarity
-doesn't support such mapping semantics.
+But our current tools for comparing declarations and expressions don't support
+such parameter mapping.
 
-We think, in the early versions, we should use our current existing
-ODRHash mechanism to decide the contracts equality.
+In the early versions, we should use our existing `ODRHash` mechanism to
+compare contracts.
 
-We can support the mapping later to tell `void f(int x) pre(x > 0);` are the same with `void f(int y) pre(y > 0)` but
-we don't have to make it in the first version.
+We can add parameter mapping later to recognize that `void f(int x) pre(x > 0);`
+and `void f(int y) pre(y > 0);` are equivalent. We don't have to support this
+in the first version.
 
 ## Constant Evaluation
 
-To be done in following commits.
+To be covered in later commits.
 
 ## Serialization, Modules and ODR
 
 The new AST nodes need serialization support.
 
 Different evaluation semantics may produce different constant-expression
-values. We shouldn't assume that PCMs built with different semantics are interchangeable.
+values. We shouldn't assume that PCMs built with different semantics are
+interchangeable.
 
-The conservatve design right now is that we don't allow
-the importers to import a TU with different contract
-evaluation semantics. This is just a conservative design
-choice in the first version. We can change that later.
+For now, we don't allow importing a TU built with different contract evaluation
+semantics. This is a conservative choice for the first version. We can change
+it later.
 
 ## ABI: Contract Violation Object and Handler
 
-Contract Violation Object and Handler is critical to ABI. This section
-we tried to describe the ABI choice of GCC first and then try to figure
-out what's we wanted. Note GCC's implementation and ABI of contracts
-is still experimental.
+The contract violation object and handler are critical to the ABI. This section
+first describes GCC's ABI choices and then discusses our approach. GCC's
+contracts implementation and ABI are still experimental.
 
-Note again that our ABI won't be stable during the developing process
-so that the discussing here won't block us developing other parts
-of contracts.
+Our ABI will remain unstable during development, so this discussion won't
+block work on other parts of contracts.
 
 ### GCC/libstdc++'s implementation choice
 
@@ -628,19 +627,19 @@ class contract_violation {
   uint16_t Version; // Layout version. Currently 1.
 
   uint16_t AssertionKind; // std::contracts::assertion_kind:
-                          // pre = 1, post = 2, assert = 3.
+                         // pre = 1, post = 2, assert = 3.
 
   uint16_t EvaluationSemantic; // std::contracts::evaluation_semantic:
-                               // ignore = 1, observe = 2, enforce = 3,
-                               // quick_enforce = 4.
+                              // ignore = 1, observe = 2, enforce = 3,
+                              // quick_enforce = 4.
 
   uint16_t DetectionMode; // std::contracts::detection_mode:
-                          // predicate_false = 1, evaluation_exception = 2.
+                         // predicate_false = 1, evaluation_exception = 2.
 
   const char *Comment; // Text describing the violated predicate.
 
   const void *SourceLocation; // Pointer to libstdc++'s private representation
-                              // of std::source_location.
+                             // of std::source_location.
 
   void *VendorExtension; // Optional implementation-defined data. Currently null.
 };
@@ -680,19 +679,18 @@ GCC conceptually generates code like this:
 
 ```C++
 static const LibstdcxxSourceLocationImpl FPreLocation = {
-  "file.cpp", "f", 2, 15
+    "file.cpp", "f", 2, 15
 };
 
-static const std::contracts::contract_violation FPreViolation =
-    {
-        /* Version */            1,
-        /* AssertionKind */      std::contracts::assertion_kind::pre,
-        /* EvaluationSemantic */ std::contracts::evaluation_semantic::enforce,
-        /* DetectionMode */      std::contracts::detection_mode::predicate_false,
-        /* Comment */            "valid(x)",
-        /* SourceLocation */     &FPreLocation,
-        /* VendorExtension */    nullptr
-    };
+static const std::contracts::contract_violation FPreViolation = {
+    /* Version */            1,
+    /* AssertionKind */      std::contracts::assertion_kind::pre,
+    /* EvaluationSemantic */ std::contracts::evaluation_semantic::enforce,
+    /* DetectionMode */      std::contracts::detection_mode::predicate_false,
+    /* Comment */            "valid(x)",
+    /* SourceLocation */     &FPreLocation,
+    /* VendorExtension */    nullptr
+};
 
 void f(int x) {
   bool Failed;
@@ -700,9 +698,9 @@ void f(int x) {
     Failed = !valid(x);
   } catch (...) {
     std::contracts::contract_violation ExceptionViolation =
-      FPreViolation; // compiler-internal copy
+        FPreViolation; // Compiler-internal copy.
     ExceptionViolation.DetectionMode =
-      std::contracts::detection_mode::evaluation_exception;
+        std::contracts::detection_mode::evaluation_exception;
     ::handle_contract_violation(ExceptionViolation);
     std::terminate();
   }
@@ -718,24 +716,23 @@ void f(int x) {
 
 ### What we are going to do
 
-As we won't claim ABI's stability, we propose we should follow GCC's current
-ABI in the first version. This is simple and easier to implement. What's more
-important is, it keeps the ABI compatibility with GCC. This is very important
-for the whole C++ community.
+Since we don't promise ABI stability, we propose following GCC's current ABI
+in the first version. This is simple to implement and maintains ABI
+compatibility with GCC, which is important for the C++ community.
 
-However, this is not saying we should follow everything GCC did. We should
-discuss the ABI of contracts in an ABI standard group and finalize the ABI
-there. We can do that parallelly with our initial implementation of contracts.
+However, this doesn't mean we should follow everything GCC does. We should
+discuss the contracts ABI in an ABI standards group and finalize it there.
+We can do that in parallel with our initial implementation of contracts.
 
 ## CodeGen
 
-The function entry and exit paths decide when to evaluate `pre` and `post`, 
-while `contract_assert` is emitted at its position in the body. They should 
+The function entry and exit paths decide when to evaluate `pre` and `post`,
+while `contract_assert` is emitted at its position in the body. They should
 share the same predicate emission.
 
-CodeGen consumes the contracts stored on the current `FunctionDecl`. As mentioned
-above, CodeGen doesn't have to search the redeclaration chain or instantiate
-predicates.
+CodeGen consumes the contracts stored on the current `FunctionDecl`. As
+mentioned above, CodeGen doesn't have to search the redeclaration chain or
+instantiate predicates.
 
 ### Emitting a violation
 
@@ -760,7 +757,7 @@ weak default definition provides the fallback.
 
 We should emit a function's own preconditions and postconditions in the
 callee. This keeps the checks available through function pointers and when
-the caller doesn't see the contracts. e.g.,
+the caller doesn't see the contracts. For example:
 
 ```C++
 extern "C" int positive(int x) pre(x > 0) {
@@ -787,7 +784,8 @@ implementation should diagnose them, rather than accept them and skip the
 checks.
 
 [P3097R3](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2026/p3097r3.pdf)
-adds virtual function contracts for C++29. But we don't need to implement this extension in the first version.
+adds virtual function contracts for C++29. But we don't need to implement this
+extension in the first version.
 
 ### Postconditions and cleanups
 
@@ -795,7 +793,7 @@ We should emit preconditions after the function parameters are available,
 before starting the body. For postconditions, we need a normal-exit cleanup
 on `EHScopeStack`, placed above parameter cleanups and below body-local
 cleanups. It runs after the return value is initialized and the body's local
-variables are destroyed, but before the parameters are destroyed. e.g.,
+variables are destroyed, but before the parameters are destroyed. For example:
 
 ```C++
 struct SetOnExit {
@@ -826,11 +824,11 @@ of a void function, but doesn't evaluate postconditions while unwinding out
 of the body. Within each entry or exit phase, we visit the corresponding
 contracts in source order.
 
-A `ContractResultBindingDecl` doesn't introduce storage. While emitting a postcondition,
-we should map it to the source-level object in the existing return storage,
-before the result is converted to its ABI representation. For a reference
-return, this means the referred-to object, not the return slot which contains
-its address.
+A `ContractResultBindingDecl` doesn't introduce storage. While emitting a
+postcondition, we should map it to the source-level object in the existing
+return storage, before the result is converted to its ABI representation.
+For a reference return, this means the referred-to object, not the return slot
+which contains its address.
 
 For a constructor, the generated base and member initializers are part of the
 function body for contract ordering. For a destructor, the generated base and
@@ -897,12 +895,12 @@ destruction.
 
 ### Predicate evaluation and exceptions
 
-#### Pairing contracts handler and exception handlers
+#### Pairing contract violation handlers and exception handlers
 
-When the contracts handler throws, we should be able to get the
-correct exception being throwing.
+When the contract violation handler throws, we should propagate its exception
+correctly.
 
-So we should generate code look like:
+So we should generate code that looks like:
 
 ```C++
 bool Failed;
@@ -925,28 +923,28 @@ if (Failed) {
 Done:;
 ```
 
-instead of
+Instead of:
 
 ```C++
 try {
-    if (!predicate()) {
-      ::handle_contract_violation(PredicateFalseViolation);
-
-      if (Semantic == enforce)
-        contract_terminate();
-    }
-  } catch (...) {
-    ::handle_contract_violation(EvaluationExceptionViolation);
+  if (!predicate()) {
+    ::handle_contract_violation(PredicateFalseViolation);
 
     if (Semantic == enforce)
       contract_terminate();
   }
+} catch (...) {
+  ::handle_contract_violation(EvaluationExceptionViolation);
+
+  if (Semantic == enforce)
+    contract_terminate();
+}
 ```
 
-As if `::handle_contract_violation` throws, the exception from `::handle_contract_violation`
-may be treated as an exception from the `predicate`.
+In the second version, an exception thrown by `::handle_contract_violation`
+may be mistaken for an exception from the predicate.
 
-#### Lifetime of the result variable if postcondition throws
+#### Lifetime of the result variable if a postcondition throws
 
 Another problem is that a postcondition's handler can throw after the
 result has already been constructed. For example, assume that the violation
@@ -963,7 +961,7 @@ struct Result {
 };
 
 Result make() post(false) {
-  //... logics in make
+  // ... logic in make
   return Result{};
 }
 
@@ -978,13 +976,12 @@ void use() {
 
 The result has been constructed when the postcondition runs, but the
 initialization of `result` doesn't complete when the handler throws. The
-caller therefore won't run its normal destructor. So that if we generate
-code like:
+caller therefore won't run its normal destructor. If we generate code like this:
 
 ```C++
 // Assuming we pass the result in the return address slot
 void make(Result *__result) {
-  // ... logics in make
+  // ... logic in make
 
   // Construct Result at the specified address
   new (__result) Result;
@@ -998,14 +995,14 @@ void make(Result *__result) {
 }
 ```
 
-then the caller of `make` may not destruct `Result` as the initialization
-of `Result` is not completed. Then `Result` may be leaked.
+The caller of `make` won't destroy the `Result` object because initialization
+didn't complete. Resources owned by `Result` may then leak.
 
-So that we need to handle the lifetime of the result in `make` correctly:
+So we need to handle the lifetime of the result in `make` correctly:
 
 ```C++
 void make(Result *__result) {
-  //... logics in make
+  // ... logic in make
 
   bool ResultConstructed = false;
 
@@ -1028,5 +1025,5 @@ void make(Result *__result) {
 }
 ```
 
-The `try`/`catch` here are pesudo code. We should use `EHScopeStack` in
+The `try`/`catch` here is pseudocode. We should use `EHScopeStack` in
 CodeGen.
