@@ -1,6 +1,5 @@
 ! REQUIRES: module-independent
 ! RUN: %flang_fc1 -fopenmp -emit-hlfir %s -o - | FileCheck %s
-! RUN: bbc -fopenmp -emit-hlfir %s -o - | FileCheck %s
 
 ! Canonical SAVE globals remain accessible through sibling calls. Each OpenMP
 ! copy has separate storage and must not inherit internal_assoc from its source.

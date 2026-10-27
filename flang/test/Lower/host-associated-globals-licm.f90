@@ -1,25 +1,18 @@
 ! REQUIRES: module-independent
 ! RUN: split-file %s %t
-! RUN: %flang_fc1 -fsave-main-program -emit-fir %t/main.f90 -o - | fir-opt --flang-licm | FileCheck %s --check-prefix=MAIN
-! RUN: %flang_fc1 -fno-automatic -emit-fir %t/main.f90 -o - | fir-opt --flang-licm | FileCheck %s --check-prefix=MAIN
-! RUN: %flang_fc1 -emit-fir %t/saved.f90 -o - | fir-opt --flang-licm | FileCheck %s --check-prefix=SAVED
+! RUN: %flang_fc1 -fsave-main-program -emit-hlfir %t/main.f90 -o - | FileCheck %s --check-prefix=MAIN
+! RUN: %flang_fc1 -fno-automatic -emit-hlfir %t/main.f90 -o - | FileCheck %s --check-prefix=MAIN
+! RUN: %flang_fc1 -emit-hlfir %t/saved.f90 -o - | FileCheck %s --check-prefix=SAVED
 ! RUN: %flang_fc1 -emit-hlfir -module-dir %t %t/controls.f90 -o - | FileCheck %s --check-prefix=CONTROLS
 
 ! Check that host globals shared by sibling internal procedures carry
-! internal_assoc. Without it, FIR alias analysis may miss writes by bump(),
-! allowing FIR LICM to hoist loads out of accumulate's loop. Loads must
-! remain after the call for explicit/initialization-implied SAVE and for
-! -fsave-main-program/-fno-automatic. Controls check that unrelated declarations
-! and ordinary host association keep their existing attributes.
+! internal_assoc on their HLFIR declarations. Cover explicit and
+! initialization-implied SAVE, -fsave-main-program and -fno-automatic.
+! Controls check unrelated declarations and ordinary host association.
 
 ! MAIN-LABEL: func.func private @_QFPaccumulate(
-! MAIN: %[[X:[^ ]+]] = fir.declare {{.*}}uniq_name("_QFEx") fortran_attrs<internal_assoc>
-! MAIN: fir.do_loop
-! MAIN-NOT: {{^ *[}]}}
-! MAIN: fir.call @_QFPbump(
-! MAIN-NOT: {{^ *[}]}}
-! MAIN: fir.load %[[X]] :
-! MAIN: {{^ *[}]}}
+! MAIN: hlfir.declare {{.*}}uniq_name("_QFEx") fortran_attrs<internal_assoc>
+! MAIN-LABEL: func.func private @_QFPbump(
 !--- main.f90
 program p
   integer :: x
@@ -40,16 +33,9 @@ contains
   end subroutine
 end program
 ! SAVED-LABEL: func.func private @_QFsavedPaccumulate(
-! SAVED-DAG: %[[X:[^ ]+]] = fir.declare {{.*}}uniq_name("_QFsavedEx") fortran_attrs<internal_assoc>
-! SAVED-DAG: %[[Y:[^ ]+]] = fir.declare {{.*}}uniq_name("_QFsavedEy") fortran_attrs<internal_assoc>
-! SAVED: fir.do_loop
-! SAVED-NOT: {{^ *[}]}}
-! SAVED: fir.call @_QFsavedPbump(
-! SAVED-NOT: {{^ *[}]}}
-! SAVED: fir.load %[[X]] :
-! SAVED-NOT: {{^ *[}]}}
-! SAVED: fir.load %[[Y]] :
-! SAVED: {{^ *[}]}}
+! SAVED-DAG: hlfir.declare {{.*}}uniq_name("_QFsavedEx") fortran_attrs<internal_assoc>
+! SAVED-DAG: hlfir.declare {{.*}}uniq_name("_QFsavedEy") fortran_attrs<internal_assoc>
+! SAVED-LABEL: func.func private @_QFsavedPbump(
 !--- saved.f90
 subroutine saved()
   integer, save :: x

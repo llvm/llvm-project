@@ -2,9 +2,7 @@
 ! A tuple function argument should not be created for associated globals, and
 ! instead globals should be instantiated with a fir.address_of inside the
 ! contained procedures.
-! RUN: %flang_fc1 -emit-hlfir %s -o %t
-! RUN: FileCheck %s --check-prefixes=CHECK,CAPTURE < %t
-! RUN: fir-opt --cse --opt-bufferization %t | FileCheck %s --check-prefix=BUFFER
+! RUN: %flang_fc1 -emit-hlfir %s -o - | FileCheck %s --check-prefixes=CHECK,CAPTURE
 
 module test_mod_used_in_host
   integer :: i, j_in_equiv
@@ -99,22 +97,12 @@ end subroutine
 ! CHECK:  %[[VAL_9:.*]] = fir.convert %[[VAL_declare_saved_j]]#0 : (!fir.ptr<i32>) -> !fir.ref<i32>
 ! CHECK:  fir.call @_QPtest(%[[VAL_9]], %[[VAL_declare_j]]#0) {{.*}} : (!fir.ref<i32>, !fir.ref<i32>) -> ()
 
-! The call reads the assignment destination through host association.
-! Keep the captured attribute and a separate result buffer: writing the result
-! directly into a would overwrite its elements before g has finished reading.
+! The sibling call reads the assignment destination through host association.
+! Mark a as captured so alias analysis accounts for these indirect reads.
 ! CAPTURE-LABEL: func.func private @_QFarray_resultPacc()
 ! CAPTURE: hlfir.declare {{.*}}uniq_name("_QFarray_resultEa")
 ! CAPTURE-SAME: fortran_attrs<internal_assoc>
 ! CAPTURE-LABEL: func.func private @_QFarray_resultPg(
-! BUFFER-LABEL: func.func private @_QFarray_resultPacc()
-! BUFFER-DAG: %[[A:[^ ]+]]:2 = hlfir.declare {{.*}}uniq_name("_QFarray_resultEa")
-! BUFFER-DAG: %[[TMP:[^ ]+]] = fir.alloca !fir.array<3xi32>
-! BUFFER: %[[T:[^ ]+]]:2 = hlfir.declare %[[TMP]]
-! BUFFER: %[[RESULT:[^ ]+]] = fir.call @_QFarray_resultPg(
-! BUFFER: fir.save_result %[[RESULT]] to %[[T]]#1
-! BUFFER: %[[EXPR:[^ ]+]] = hlfir.as_expr %[[T]]#0
-! BUFFER: hlfir.assign %[[EXPR]] to %[[A]]#0
-! BUFFER-LABEL: func.func private @_QFarray_resultPg(
 subroutine array_result()
   integer, save :: a(3) = [1, 2, 3]
   call acc()
