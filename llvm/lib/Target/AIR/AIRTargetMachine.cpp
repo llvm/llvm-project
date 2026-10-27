@@ -223,6 +223,19 @@ void llvm::addAIRPortablePasses(legacy::PassManagerBase &PM) {
   PM.add(createAIRSystemValuesLegacyPass());
 }
 
+namespace {
+/// addAIRPortablePasses for the new pass manager ("air-portable"), for
+/// consumers that run AIR's portable passes by name (MLIR's AIR target for
+/// AGX output, opt).
+struct AIRPortablePass : RequiredPassInfoMixin<AIRPortablePass> {
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &) {
+    legacy::PassManager PM;
+    addAIRPortablePasses(PM);
+    return PM.run(M) ? PreservedAnalyses::none() : PreservedAnalyses::all();
+  }
+};
+} // namespace
+
 void AIRTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB){
 #define GET_PASS_REGISTRY "AIRPassRegistry.def"
 #include "llvm/Passes/TargetPassRegistry.inc"

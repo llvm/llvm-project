@@ -305,6 +305,8 @@ add_mlir_dialect_library(MLIRAIRTarget
 
   LINK_COMPONENTS
   ${AIR_LIBS}
+  ${AGX_LIBS}
+  Passes
 
   LINK_LIBS PUBLIC
   MLIRIR
@@ -314,3 +316,11 @@ add_mlir_dialect_library(MLIRAIRTarget
   MLIRAIRDialect
   MLIRTargetLLVM
 )
+
+# AGX chips in #air.target: AGX objects through the AGX backend.
+if ("AGX" IN_LIST LLVM_TARGETS_TO_BUILD)
+  target_compile_definitions(obj.MLIRAIRTarget
+    PRIVATE
+    MLIR_AIR_AGX_ENABLED=1
+  )
+endif()

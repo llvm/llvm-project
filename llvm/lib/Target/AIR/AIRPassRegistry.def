@@ -39,6 +39,7 @@ MODULE_PASS("air-alias-annotate", AIRAliasAnnotatePass())
 MODULE_PASS("air-prepare", AIRPreparePass())
 MODULE_PASS("air-cross-buffer-store-separate", AIRCrossBufferStoreSeparatePass())
 MODULE_PASS("air-embed", AIREmbedderPass())
+MODULE_PASS("air-portable", AIRPortablePass())
 #undef MODULE_PASS
 
 #ifndef FUNCTION_PASS

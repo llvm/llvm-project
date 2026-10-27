@@ -44,11 +44,19 @@ def AIR_TargetAttr : AIR_Attr<"AIRTarget", "target"> {
 
     Examples:
 
-    1. Target with default values.
+    1. Target with default values: a `.metallib` for Apple's Metal driver.
     ```
       gpu.module @mymodule [#air.target] attributes {...} {
         ...
       }
+    ```
+
+    2. An AGX chip (an LLVM AGX processor, such as `agx-g14g`) as `chip`: an
+       AGX object, compiled from the module's AIR by the AGX backend
+       (agx-lower-air), with the AGX target features `features`.
+    ```
+      gpu.module @mymodule [#air.target<chip = "agx-g14g">,
+                            #air.target<chip = "agx-g13g", features = "+agx-strict">]
     ```
   }];
   let parameters =
@@ -56,17 +64,23 @@ def AIR_TargetAttr : AIR_Attr<"AIRTarget", "target"> {
                                   "Optimization level to apply.">:$O,
           StringRefParameter<"Target triple.",
                              "\"air64_v28-apple-macosx26.0.0\"">:$triple,
-          StringRefParameter<"Target chip.", "\"\"">:$chip);
+          StringRefParameter<"Target chip.", "\"\"">:$chip,
+          StringRefParameter<"Target features (AGX chips).", "\"\"">:$features);
   let assemblyFormat = [{
-    (`<` struct($O, $triple, $chip)^ `>`)?
+    (`<` struct($O, $triple, $chip, $features)^ `>`)?
   }];
   let builders = [AttrBuilder<
       (ins CArg<"int", "3">:$optLevel,
           CArg<"::llvm::StringRef", "\"air64_v28-apple-macosx26.0.0\"">:$triple,
-          CArg<"::llvm::StringRef", "\"\"">:$chip),
+          CArg<"::llvm::StringRef", "\"\"">:$chip,
+          CArg<"::llvm::StringRef", "\"\"">:$features),
       [{
-      return Base::get($_ctxt, optLevel, triple, chip);
+      return Base::get($_ctxt, optLevel, triple, chip, features);
     }]>];
+  let extraClassDeclaration = [{
+    /// Whether the chip is an AGX processor: the target is then an AGX object.
+    bool isAGX() const { return getChip().starts_with("agx-"); }
+  }];
   let skipDefaultBuilders = 1;
 }
 

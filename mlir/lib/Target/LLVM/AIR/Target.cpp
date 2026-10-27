@@ -23,6 +23,8 @@
 #include "mlir/Target/LLVMIR/Export.h"
 
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/MC/TargetRegistry.h"
+#include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
@@ -38,6 +40,13 @@ extern "C" void LLVMInitializeAIRTarget();
 extern "C" void LLVMInitializeAIRTargetInfo();
 extern "C" void LLVMInitializeAIRTargetMC();
 extern "C" void LLVMInitializeAIRAsmPrinter();
+#if MLIR_AIR_AGX_ENABLED
+// Defined by the AGX LLVM backend (llvm/lib/Target/AGX), for AGX chips.
+extern "C" void LLVMInitializeAGXTarget();
+extern "C" void LLVMInitializeAGXTargetInfo();
+extern "C" void LLVMInitializeAGXTargetMC();
+extern "C" void LLVMInitializeAGXAsmPrinter();
+#endif
 
 namespace {
 // Implementation of the `TargetAttrInterface` model.
@@ -70,7 +79,9 @@ void mlir::air::registerAIRTargetInterfaceExternalModels(MLIRContext &context) {
 SerializeGPUModuleBase::SerializeGPUModuleBase(
     Operation &module, AIRTargetAttr target,
     const gpu::TargetOptions &targetOptions)
-    : ModuleToObject(module, target.getTriple(), target.getChip(), "",
+    // An AGX chip is not an AIR processor: AIR's own passes run for any.
+    : ModuleToObject(module, target.getTriple(),
+                     target.isAGX() ? "" : target.getChip(), "",
                      target.getO()),
       target(target), targetOptions(targetOptions) {}
 
@@ -98,10 +109,46 @@ public:
       : SerializeGPUModuleBase(module, target, targetOptions) {}
 
   /// Drives the AIR LLVM backend codegen pipeline on `llvmModule`, emitting the
-  /// `.metallib` container bytes.
+  /// `.metallib` container bytes, or for an AGX chip an AGX object.
   FailureOr<SmallVector<char, 0>>
   moduleToObject(llvm::Module &llvmModule) override;
+
+  /// For an AGX chip the module is optimized by the AGX backend, once it is
+  /// AGX IR, in agxObject.
+  LogicalResult optimizeModule(llvm::Module &module, int optLevel) override {
+    if (getTarget().isAGX())
+      return success();
+    return SerializeGPUModuleBase::optimizeModule(module, optLevel);
+  }
+
+private:
+  /// AIR's portable passes (with the AIR target machine), then the AGX
+  /// backend: agx-lower-air at the start of its optimization pipeline, and
+  /// code generation to an ELF object.
+  FailureOr<SmallVector<char, 0>> agxObject(llvm::Module &llvmModule);
 };
+
+/// Runs a textual new pass manager pipeline with `tm`'s passes.
+LogicalResult runPipeline(llvm::TargetMachine &tm, llvm::Module &module,
+                          StringRef pipeline, std::string &error) {
+  llvm::LoopAnalysisManager lam;
+  llvm::FunctionAnalysisManager fam;
+  llvm::CGSCCAnalysisManager cgam;
+  llvm::ModuleAnalysisManager mam;
+  llvm::PassBuilder pb(&tm);
+  pb.registerModuleAnalyses(mam);
+  pb.registerCGSCCAnalyses(cgam);
+  pb.registerFunctionAnalyses(fam);
+  pb.registerLoopAnalyses(lam);
+  pb.crossRegisterProxies(lam, fam, cgam, mam);
+  llvm::ModulePassManager mpm;
+  if (llvm::Error e = pb.parsePassPipeline(mpm, pipeline)) {
+    error = llvm::toString(std::move(e));
+    return failure();
+  }
+  mpm.run(module, mam);
+  return success();
+}
 } // namespace
 
 static void
@@ -142,6 +189,9 @@ AIRSerializer::moduleToObject(llvm::Module &llvmModule) {
       llvmModule.print(os, nullptr);
   }
 
+  if (getTarget().isAGX())
+    return agxObject(llvmModule);
+
   FailureOr<llvm::TargetMachine *> targetMachine = getOrCreateTargetMachine();
   if (failed(targetMachine))
     return getOperation().emitError()
@@ -165,6 +215,60 @@ AIRSerializer::moduleToObject(llvm::Module &llvmModule) {
     codegenPasses.run(llvmModule);
   }
   return metallib;
+}
+
+FailureOr<SmallVector<char, 0>>
+AIRSerializer::agxObject(llvm::Module &llvmModule) {
+#if !MLIR_AIR_AGX_ENABLED
+  return getOperation().emitError()
+         << "the AGX target is not built, so there is no AGX object for "
+         << getTarget().getChip();
+#else
+  static llvm::once_flag initializeAGXOnce;
+  llvm::call_once(initializeAGXOnce, []() {
+    LLVMInitializeAGXTargetInfo();
+    LLVMInitializeAGXTarget();
+    LLVMInitializeAGXTargetMC();
+    LLVMInitializeAGXAsmPrinter();
+  });
+  FailureOr<llvm::TargetMachine *> airMachine = getOrCreateTargetMachine();
+  if (failed(airMachine))
+    return getOperation().emitError()
+           << "Target Machine unavailable for triple " << triple;
+  std::string error;
+  if (failed(runPipeline(**airMachine, llvmModule, "air-portable", error)))
+    return getOperation().emitError() << "AIR's portable passes: " << error;
+
+  llvm::Triple agxTriple("agx");
+  const llvm::Target *agx = llvm::TargetRegistry::lookupTarget(agxTriple, error);
+  if (!agx)
+    return getOperation().emitError() << error;
+  int optLevel = getTarget().getO();
+  std::unique_ptr<llvm::TargetMachine> agxMachine(agx->createTargetMachine(
+      agxTriple, getTarget().getChip(), getTarget().getFeatures(), {}, {},
+      std::nullopt, static_cast<llvm::CodeGenOptLevel>(optLevel)));
+  if (!agxMachine)
+    return getOperation().emitError()
+           << "no AGX target machine for " << getTarget().getChip();
+  // agx-lower-air runs at the start of the default pipelines.
+  if (failed(runPipeline(*agxMachine, llvmModule,
+                         "default<O" + std::to_string(optLevel) + ">",
+                         error)))
+    return getOperation().emitError() << "AGX optimization: " << error;
+
+  SmallVector<char, 0> object;
+  {
+    llvm::raw_svector_ostream stream(object);
+    llvm::buffer_ostream pstream(stream);
+    llvm::legacy::PassManager codegenPasses;
+    if (agxMachine->addPassesToEmitFile(codegenPasses, pstream, nullptr,
+                                        llvm::CodeGenFileType::ObjectFile))
+      return getOperation().emitError()
+             << "the AGX target machine cannot emit an object";
+    codegenPasses.run(llvmModule);
+  }
+  return object;
+#endif
 }
 
 std::optional<mlir::gpu::SerializedObject>
