@@ -2014,6 +2014,19 @@ static void simplifyBlends(VPlan &Plan) {
       if (Blend.isNormalized())
         continue;
 
+      // BLEND X/M, false, ..., false -> M && X
+      auto NonFalse = make_filter_range(
+          seq<unsigned>(Blend.getNumIncomingValues()), [&Blend](unsigned I) {
+            return !match(Blend.getIncomingValue(I), m_False());
+          });
+      if (hasSingleElement(NonFalse)) {
+        unsigned I = *NonFalse.begin();
+        Blend.replaceAllUsesWith(VPBuilder(&Blend).createLogicalAnd(
+            Blend.getMask(I), Blend.getIncomingValue(I)));
+        Blend.eraseFromParent();
+        continue;
+      }
+
       // Normalize the blend so its first incoming value is used as the initial
       // value with the others blended into it.
 
