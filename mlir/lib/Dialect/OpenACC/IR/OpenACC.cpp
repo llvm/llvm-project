@@ -4654,6 +4654,37 @@ RoutineOp::getBindNameValue(mlir::acc::DeviceType deviceType) {
   return std::nullopt;
 }
 
+std::optional<std::variant<mlir::SymbolRefAttr, mlir::StringAttr>>
+RoutineOp::getEffectiveBindName(mlir::acc::DeviceType targetDeviceType) {
+  assert(targetDeviceType != DeviceType::Star &&
+         "expected a valid target device type");
+
+  if (!getBindIdName() && !getBindStrName())
+    return std::nullopt;
+
+  // None queries the default bind.
+  if (targetDeviceType == DeviceType::None)
+    return getBindNameValue();
+
+  // Prefer an exact device-specific bind.
+  if (auto bindName = getBindNameValue(targetDeviceType))
+    return bindName;
+
+  // The device_type(*) clause applies only if no other device_type clause names
+  // the target device.
+  bool hasNamedDeviceType = hasGang(targetDeviceType) ||
+                            getGangDimValue(targetDeviceType).has_value() ||
+                            hasWorker(targetDeviceType) ||
+                            hasVector(targetDeviceType) ||
+                            hasSeq(targetDeviceType);
+  if (!hasNamedDeviceType) {
+    if (auto bindName = getBindNameValue(DeviceType::Star))
+      return bindName;
+  }
+
+  return getBindNameValue();
+}
+
 bool RoutineOp::hasGang() { return hasGang(mlir::acc::DeviceType::None); }
 
 bool RoutineOp::hasGang(mlir::acc::DeviceType deviceType) {

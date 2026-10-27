@@ -242,6 +242,14 @@ math_test(
 )
 
 math_test(
+    name = "copysignf80",
+    hdrs = ["CopySignTest.h"],
+    deps = [
+        "//libc:__support_fputil_float80",
+    ],
+)
+
+math_test(
     name = "copysignf16",
     hdrs = ["CopySignTest.h"],
 )
@@ -499,7 +507,13 @@ math_test(name = "erfcf16")
 
 math_test(name = "erff16")
 
-math_test(name = "exp")
+math_test(
+    name = "exp",
+    deps = [
+        "//libc:__support_macros_attributes",
+        "//libc:__support_math_exp_double_eval",
+    ],
+)
 
 math_test(
     name = "expf",
@@ -571,6 +585,14 @@ math_test(
     hdrs = ["FAbsTest.h"],
     deps = [
         "//libc:__support_fputil_float128",
+    ],
+)
+
+math_test(
+    name = "fabsf80",
+    hdrs = ["FAbsTest.h"],
+    deps = [
+        "//libc:__support_fputil_float80",
     ],
 )
 
@@ -1155,6 +1177,9 @@ math_test(
 math_test(
     name = "frexpf128",
     hdrs = ["FrexpTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(
@@ -1269,6 +1294,9 @@ math_test(
 math_test(
     name = "getpayloadf128",
     hdrs = ["GetPayloadTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(
@@ -1325,6 +1353,9 @@ math_test(
 math_test(
     name = "ilogbf128",
     hdrs = ["ILogbTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(
@@ -1386,6 +1417,9 @@ math_test(
 math_test(
     name = "llogbf128",
     hdrs = ["ILogbTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(
@@ -1542,6 +1576,9 @@ math_test(
 math_test(
     name = "logbf128",
     hdrs = ["LogbTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(
@@ -1644,7 +1681,13 @@ math_test(
     hdrs = ["ModfTest.h"],
 )
 
-# TODO: add nan tests.
+math_test(
+    name = "nanf128",
+    deps = [
+        "//libc:__support_fputil_float128",
+        "//libc:hdr_signal_macros",
+    ],
+)
 
 math_test(
     name = "nearbyint",
@@ -2094,6 +2137,9 @@ math_test(
 math_test(
     name = "setpayloadf128",
     hdrs = ["SetPayloadTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(
@@ -2127,6 +2173,9 @@ math_test(
 math_test(
     name = "setpayloadsigf128",
     hdrs = ["SetPayloadSigTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(

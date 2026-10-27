@@ -211,6 +211,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     # stdio.h entrypoints
     libc.src.stdio.tmpfile
 
+    # sys/eventfd.h entrypoints
+    libc.src.sys.eventfd.eventfd
+
     # sys/inotify.h entrypoints
     libc.src.sys.inotify.inotify_add_watch
     libc.src.sys.inotify.inotify_init
@@ -274,6 +277,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.getpgrp
     libc.src.unistd.getpid
     libc.src.unistd.getppid
+    libc.src.unistd.getresgid
+    libc.src.unistd.getresuid
     libc.src.unistd.getsid
     libc.src.unistd.gettid
     libc.src.unistd.getgid
@@ -417,6 +422,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.copysign
     libc.src.math.copysignf
     libc.src.math.copysignf128
+    libc.src.math.copysignf80
     libc.src.math.copysignl
     libc.src.math.cos
     libc.src.math.cosf
@@ -435,6 +441,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fabs
     libc.src.math.fabsf
     libc.src.math.fabsf128
+    libc.src.math.fabsf80
     libc.src.math.fabsl
     libc.src.math.fadd
     libc.src.math.faddl
@@ -499,6 +506,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fmul
     libc.src.math.frexp
     libc.src.math.frexpf
+    libc.src.math.frexpf128
     libc.src.math.frexpl
     libc.src.math.fromfp
     libc.src.math.fromfpf
@@ -510,11 +518,13 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fsubl
     libc.src.math.getpayload
     libc.src.math.getpayloadf
+    libc.src.math.getpayloadf128
     libc.src.math.getpayloadl
     libc.src.math.hypot
     libc.src.math.hypotf
     libc.src.math.ilogb
     libc.src.math.ilogbf
+    libc.src.math.ilogbf128
     libc.src.math.ilogbl
     libc.src.math.iscanonicalf128
     libc.src.math.isnanf128
@@ -525,6 +535,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.lgammaf
     libc.src.math.llogb
     libc.src.math.llogbf
+    libc.src.math.llogbf128
     libc.src.math.llogbl
     libc.src.math.llrint
     libc.src.math.llrintf
@@ -543,6 +554,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.log2f
     libc.src.math.logb
     libc.src.math.logbf
+    libc.src.math.logbf128
     libc.src.math.logbl
     libc.src.math.logf
     libc.src.math.lrint
@@ -558,6 +570,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.modfl
     libc.src.math.nan
     libc.src.math.nanf
+    libc.src.math.nanf128
     libc.src.math.nanl
     libc.src.math.nearbyint
     libc.src.math.nearbyintf
@@ -600,9 +613,11 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.scalbnl
     libc.src.math.setpayload
     libc.src.math.setpayloadf
+    libc.src.math.setpayloadf128
     libc.src.math.setpayloadl
     libc.src.math.setpayloadsig
     libc.src.math.setpayloadsigf
+    libc.src.math.setpayloadsigf128
     libc.src.math.setpayloadsigl
     libc.src.math.sin
     libc.src.math.sincos
@@ -753,6 +768,8 @@ if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
       libc.src.unistd.seteuid
       libc.src.unistd.setgid
       libc.src.unistd.setregid
+      libc.src.unistd.setresgid
+      libc.src.unistd.setresuid
       libc.src.unistd.setreuid
       libc.src.unistd.setuid
     )

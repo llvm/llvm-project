@@ -99,7 +99,7 @@ Pred Property::getPredicate() const {
   if (!def)
     return Pred();
   const llvm::RecordVal *maybePred = def->getValue("predicate");
-  if (!maybePred || !maybePred->getValue())
+  if (!maybePred)
     return Pred();
   return Pred(maybePred->getValue());
 }

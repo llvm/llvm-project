@@ -11,6 +11,7 @@
 
 #include "DWARFLinkerCompileUnit.h"
 #include "DWARFLinkerGlobalData.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 
@@ -20,7 +21,6 @@ class DWARFDebugInfoEntry;
 namespace dwarf_linker {
 namespace parallel {
 struct LinkContext;
-class TypeTableUnit;
 class CompileUnit;
 
 /// The helper class to build type name based on DIE properties.
@@ -96,7 +96,9 @@ protected:
   void addDieNameFromDeclFileAndDeclLine(UnitEntryPairTy &InputUnitEntryPair,
                                          bool &HasDeclFileName);
 
-  /// Add contents of the unnamed type \p InputUnitEntryPair.
+  /// Add a fixed-size digest of the contents of the unnamed type \p
+  /// InputUnitEntryPair, so the names of the types referring to it do not grow
+  /// with its size or nesting depth.
   Error addUnnamedTypeContents(UnitEntryPairTy InputUnitEntryPair);
 
   /// Add the type \p InputUnitEntryPair refers to, without parent scopes. A
@@ -130,6 +132,9 @@ protected:
 
   /// Buffer keeping bult name.
   SmallString<1000> SyntheticName;
+
+  /// Digests of the contents of unnamed types, by DIE.
+  DenseMap<const DWARFDebugInfoEntry *, std::string> ContentsDigests;
 
   /// Recursion counter
   size_t RecursionDepth = 0;

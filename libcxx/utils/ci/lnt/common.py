@@ -10,7 +10,9 @@ from typing import Callable, Dict, Iterable, List, NamedTuple, Optional
 import argparse
 import datetime
 import json
+import logging
 import pathlib
+import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
@@ -22,6 +24,13 @@ USER_AGENT = 'libcxx-lnt-tooling'
 
 # LNT instances can be slow: timeout after that many seconds.
 LNT_TIMEOUT_SECONDS = 120
+
+# How many results to ask for at once when paging. This is the largest page size LNT allows.
+LNT_PAGE_SIZE = 10000
+
+# Commits that cannot change the performance of the library are not worth
+# benchmarking. This is the set of paths we consider for libc++ changes.
+BENCHMARK_PATHS = ['libcxx/include', 'libcxx/src']
 
 
 class LNTError(Exception):
@@ -52,9 +61,57 @@ def lnt_request(url: str, body: Optional[bytes] = None, token: Optional[str] = N
         return json.loads(response.read().decode())
 
 
+def lnt_get(url: str) -> Optional[dict]:
+    """GET a JSON resource, returning None if the server answers 404."""
+    logging.debug(f'GET {url}')
+    try:
+        return lnt_request(url)
+    except urllib.error.HTTPError as error:
+        if error.code == 404:
+            return None
+        raise LNTError(f'GET {url} failed with HTTP {error.code}: {error.reason}')
+    except urllib.error.URLError as error:
+        raise LNTError(f'GET {url} failed: {error.reason}')
+    except (json.JSONDecodeError, UnicodeDecodeError) as error:
+        raise LNTError(f'GET {url} returned a malformed response: {error}')
+
+
+def benchmarked_commits(lnt_url: str, test_suite: str, machine: str,
+                        submitted_before: Optional[str] = None) -> Optional[Dict[str, int]]:
+    """
+    Return {commit: number of runs} for a machine, or None if the instance has no
+    such machine. With `submitted_before` (an ISO 8601 timestamp), only the runs
+    submitted before that time are counted.
+    """
+    base = lnt_suite_url(lnt_url, test_suite)
+    # Listing runs answers 404 both for an unknown suite and for an unknown machine: tell them apart.
+    if lnt_get(base) is None:
+        raise LNTError(f'{lnt_url} has no test suite named {test_suite}')
+
+    counts: Dict[str, int] = {}
+    params = {'machine': machine, 'limit': LNT_PAGE_SIZE}
+    if submitted_before is not None:
+        params['submitted_before'] = submitted_before
+    while True:
+        page = lnt_get(f'{base}/runs?{urllib.parse.urlencode(params)}')
+        if page is None:
+            if 'cursor' in params:
+                raise LNTError(f'machine {machine} disappeared from {lnt_url} while listing its runs')
+            return None
+        for run in page.get('items', []):
+            if 'commit' not in run:
+                raise LNTError(f'run {run.get("uuid")} has no commit')
+            commit = str(run['commit']).strip().lower() # normalize commit SHAs
+            counts[commit] = counts.get(commit, 0) + 1
+        cursor = (page.get('cursor') or {}).get('next')
+        if cursor is None:
+            return counts
+        params['cursor'] = cursor
+
+
 def write_lnt_report(path: pathlib.Path, machine: str, machine_fields: dict, commit: dict, tests: List[dict],
                      measured_at: datetime.datetime, run_parameters: Optional[dict] = None) -> None:
-    """Write a LNT v5 run submission, ready to be submitted with submit-benchmarks."""
+    """Write a LNT v5 run submission, ready to be submitted with `lnt v5 submit`."""
     report = {
         'format_version': '5',
         # Pick the UUID ourselves so that we can safely retry submitting this run if needed without
