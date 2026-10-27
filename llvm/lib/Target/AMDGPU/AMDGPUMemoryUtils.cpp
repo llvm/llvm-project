@@ -417,11 +417,8 @@ bool isReallyAClobber(const Value *Ptr, MemoryDef *Def, AAResults *AA) {
       return false;
     SIAtomicAddrSpace AccessedAS =
         toSIAtomicAddrSpace(Ptr->getType()->getPointerAddressSpace());
-    std::optional<SIAtomicAddrSpace> SynchronizedAS =
-        getSynchronizeAddrSpace(*F);
-    // If SynchronizedAS is std::nullopt, it refers to all address spaces.
-    return !SynchronizedAS ||
-           (*SynchronizedAS & AccessedAS) != SIAtomicAddrSpace::NONE;
+    return (AccessedAS & getSynchronizeAddrSpace(*F)) !=
+           SIAtomicAddrSpace::NONE;
   }
 
   if (const auto *I = dyn_cast<AtomicRMWInst>(DefInst))
