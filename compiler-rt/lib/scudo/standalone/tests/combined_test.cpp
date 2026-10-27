@@ -1251,6 +1251,10 @@ struct TestQuarantineDisabledConfig : TestQuarantineConfig {
 
 TEST(ScudoCombinedTest, QuarantineDisabled) {
   using AllocatorT = TestAllocator<TestQuarantineDisabledConfig>;
+  EXPECT_LT(sizeof(scudo::Allocator<TestQuarantineDisabledConfig>),
+            sizeof(scudo::Allocator<TestQuarantineConfig>));
+  EXPECT_LT(sizeof(scudo::TSD<scudo::Allocator<TestQuarantineDisabledConfig>>),
+            sizeof(scudo::TSD<scudo::Allocator<TestQuarantineConfig>>));
   auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
 
   const scudo::uptr Size = 1000U;

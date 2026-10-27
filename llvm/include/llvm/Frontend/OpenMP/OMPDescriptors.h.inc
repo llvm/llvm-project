@@ -149,6 +149,7 @@
   ActionClause,
   First_ = ActionClause,
   DataEnvironmentClause,
+  DeclareMapperClauseSet1,
   DepobjClauseSet1,
   GranularityClause,
   ScanClauseSet1,
