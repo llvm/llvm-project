@@ -2874,7 +2874,7 @@ public:
 
     const TargetLoweringBase *TLI = getTLI();
 
-    // Scalar pdep/pext are not lane-separable
+    // pdep/pext span the full scalar width; multi-register scalars can't split
     bool BitManipSplit = (ISD == ISD::PDEP || ISD == ISD::PEXT) &&
                          LT.first > 1 && !LT.second.isVector();
 
