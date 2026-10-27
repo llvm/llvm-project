@@ -205,10 +205,10 @@ Error L0DeviceTy::initImpl(GenericPluginTy &Plugin,
     return QueueGroupInfoOrErr.takeError();
   QueueConfig = *QueueGroupInfoOrErr;
 
-  if (auto Err = MemAllocator.initDevicePools(*this, Options,
-                                              L0Context.getZeContext()))
+  if (auto Err =
+          MemAllocator.initDevicePools(*this, Options, L0Driver.getZeContext()))
     return Err;
-  L0Context.getHostMemAllocator().updateMaxAllocSize(*this);
+  L0Driver.getHostMemAllocator().updateMaxAllocSize(*this);
   reportDeviceInfo();
   return Plugin::success();
 }
@@ -224,7 +224,7 @@ Expected<DeviceImageTy *>
 L0DeviceTy::loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage,
                            int32_t ImageId, PluginContextTy *UserCtx) {
   auto &Ctx = UserCtx ? static_cast<LevelZeroPluginContextTy &>(*UserCtx)
-                      : L0Context.getDefaultUserCtx();
+                      : L0Driver.getDefaultUserCtx();
   auto ZeContext = Ctx.getZeContext();
 
   auto *PGM = getProgramFromImage(TgtImage->getMemBufferRef(), ZeContext);
@@ -278,7 +278,7 @@ L0DeviceTy::getOrCreateQueue(__tgt_async_info *AsyncInfo,
                              LevelZeroPluginContextTy *UserCtx) {
   L0QueueTy *Queue = static_cast<L0QueueTy *>(AsyncInfo->Queue);
   if (!Queue) {
-    auto &Ctx = UserCtx ? *UserCtx : L0Context.getDefaultUserCtx();
+    auto &Ctx = UserCtx ? *UserCtx : L0Driver.getDefaultUserCtx();
     auto NewQueueOrErr = Ctx.takeCachedQueue(this);
     if (!NewQueueOrErr)
       return NewQueueOrErr.takeError();
@@ -446,7 +446,7 @@ Expected<InfoTreeNode> L0DeviceTy::obtainInfoImpl() {
   Info.add("Device Type", "GPU", "", DeviceInfo::TYPE);
   Info.add("Vendor", "Intel", "", DeviceInfo::VENDOR);
   Info.add("Vendor ID", getVendorId(), "", DeviceInfo::VENDOR_ID);
-  Info.add("Driver Version", L0Context.getDriverVersion(), "",
+  Info.add("Driver Version", L0Driver.getDriverVersion(), "",
            DeviceInfo::DRIVER_VERSION);
   Info.add("Device PCI ID", getPCIId());
   Info.add("Device UUID", getUuid().data());
@@ -769,14 +769,6 @@ L0DeviceTy::createImmCmdList(uint32_t Ordinal, uint32_t Index,
                     << " (Ordinal: " << Ordinal << ", Index: " << Index
                     << ", Flags: " << Flags << ") for device " << getZeIdCStr();
   return CmdList;
-}
-
-Error L0DeviceTy::dataFence(__tgt_async_info *Async) {
-  auto QueueOrErr = getOrCreateQueue(Async);
-  if (!QueueOrErr)
-    return QueueOrErr.takeError();
-  L0QueueTy *Queue = *QueueOrErr;
-  return Queue->dataFence();
 }
 
 Expected<bool> L0DeviceTy::isAccessiblePtrImpl(const void *Ptr, size_t Size) {

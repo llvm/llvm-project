@@ -1752,7 +1752,7 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
   Predicates.clear();
 
   if (UncountableExitingBlocks.empty()) {
-    LLVM_DEBUG(dbgs() << "LV: Could not find any uncountable exits");
+    LLVM_DEBUG(dbgs() << "LV: Could not find any uncountable exits\n");
     return false;
   }
 

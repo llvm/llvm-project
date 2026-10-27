@@ -312,6 +312,10 @@ Error DWARFDebugFrame::parse(DWARFDataExtractor Data, bool ParseCFIProgram) {
             // untagged on unwind.
           case 'G':
             break;
+          case 'N':
+            // Non hint-space FEAT_PAuth_LR instructions used for signing
+            // functions associated with this augmentation string.
+            break;
           }
         }
 
