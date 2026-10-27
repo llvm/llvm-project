@@ -2456,6 +2456,9 @@ void VPlanTransforms::cse(VPlan &Plan, const VPDominatorTree &VPDT) {
       if (auto *Call = dyn_cast<VPWidenCallRecipe>(V))
         Call->intersectAttrs(*cast<VPWidenCallRecipe>(Def), Plan.getContext());
       Def->replaceAllUsesWith(V);
+      // Reset Plan's TC when TC expressions are CSE'd.
+      if (Def == Plan.getTripCount())
+        Plan.resetTripCount(V);
     }
     LoadCSEMap.clear();
   }

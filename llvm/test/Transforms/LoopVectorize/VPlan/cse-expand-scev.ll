@@ -6,11 +6,11 @@
 define void @cse_trip_count_expression(ptr %a, ptr %p) {
 ; CHECK-LABEL: VPlan for loop in 'cse_trip_count_expression'
 ; CHECK:  VPlan 'Initial VPlan for VF={4},UF={1}' {
+; CHECK-NEXT:  vp<[[VP2:%[0-9]+]]> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<entry>:
 ; CHECK-NEXT:    IR   %n = load i64, ptr %p, align 4
-; CHECK-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = EXPAND SCEV %n
-; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = EXPAND SCEV %n
+; CHECK-NEXT:    EMIT vp<[[VP2]]> = EXPAND SCEV %n
 ; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult vp<[[VP2]]>, ir<2>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
 ; CHECK-NEXT:  Successor(s): scalar.ph, vector.main.loop.iter.check
@@ -23,26 +23,26 @@ define void @cse_trip_count_expression(ptr %a, ptr %p) {
 ; CHECK-NEXT:  vector.ph:
 ; CHECK-NEXT:    EMIT vp<%n.mod.vf> = urem vp<[[VP2]]>, ir<4>
 ; CHECK-NEXT:    EMIT vp<%n.vec> = sub vp<[[VP2]]>, vp<%n.mod.vf>
-; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = mul vp<%n.vec>, vp<[[VP2]]>
-; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = add ir<0>, vp<[[VP6]]>
-; CHECK-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = step-vector i64
-; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = broadcast ir<0>
-; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = broadcast vp<[[VP2]]>
-; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = mul vp<[[VP8]]>, vp<[[VP10]]>
-; CHECK-NEXT:    EMIT vp<%induction> = add vp<[[VP9]]>, vp<[[VP11]]>
-; CHECK-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = mul vp<[[VP2]]>, ir<4>
-; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = broadcast vp<[[VP12]]>
+; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = mul vp<%n.vec>, vp<[[VP2]]>
+; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = add ir<0>, vp<[[VP5]]>
+; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = step-vector i64
+; CHECK-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = broadcast ir<0>
+; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = broadcast vp<[[VP2]]>
+; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = mul vp<[[VP7]]>, vp<[[VP9]]>
+; CHECK-NEXT:    EMIT vp<%induction> = add vp<[[VP8]]>, vp<[[VP10]]>
+; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = mul vp<[[VP2]]>, ir<4>
+; CHECK-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = broadcast vp<[[VP11]]>
 ; CHECK-NEXT:  Successor(s): vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.body:
 ; CHECK-NEXT:    EMIT-SCALAR vp<%index> = phi [ ir<0>, vector.ph ], [ vp<%index.next>, vector.body ]
-; CHECK-NEXT:    WIDEN-PHI vp<[[VP14:%[0-9]+]]> = phi [ vp<%induction>, vector.ph ], [ vp<%vec.ind.next>, vector.body ]
+; CHECK-NEXT:    WIDEN-PHI vp<[[VP13:%[0-9]+]]> = phi [ vp<%induction>, vector.ph ], [ vp<%vec.ind.next>, vector.body ]
 ; CHECK-NEXT:    CLONE ir<%gep> = getelementptr ir<%a>, vp<%index>
-; CHECK-NEXT:    WIDEN store ir<%gep>, vp<[[VP14]]>
+; CHECK-NEXT:    WIDEN store ir<%gep>, vp<[[VP13]]>
 ; CHECK-NEXT:    EMIT vp<%index.next> = add nuw vp<%index>, ir<4>
-; CHECK-NEXT:    EMIT vp<%vec.ind.next> = add vp<[[VP14]]>, vp<[[VP13]]>
-; CHECK-NEXT:    EMIT vp<[[VP15:%[0-9]+]]> = icmp eq vp<%index.next>, vp<%n.vec>
-; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP15]]>
+; CHECK-NEXT:    EMIT vp<%vec.ind.next> = add vp<[[VP13]]>, vp<[[VP12]]>
+; CHECK-NEXT:    EMIT vp<[[VP14:%[0-9]+]]> = icmp eq vp<%index.next>, vp<%n.vec>
+; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP14]]>
 ; CHECK-NEXT:  Successor(s): middle.block, vector.body
 ;
 entry:
