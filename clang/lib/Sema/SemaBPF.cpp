@@ -63,10 +63,12 @@ static bool isValidPreserveTypeInfoArg(Expr *Arg) {
   return false;
 }
 
-static bool isValidPreserveEnumValueArg(Expr *Arg) {
+// Return the enumerator in a valid argument of __builtin_preserve_enum_value(),
+// or nullptr if the argument is invalid.
+static const EnumConstantDecl *getPreserveEnumValueArg(Expr *Arg) {
   QualType ArgType = Arg->getType();
   if (ArgType->getAsPlaceholderType())
-    return false;
+    return nullptr;
 
   // for ENUM_VALUE_EXISTENCE/ENUM_VALUE reloc type
   // format:
@@ -74,32 +76,34 @@ static bool isValidPreserveEnumValueArg(Expr *Arg) {
   //                                 flag);
   const auto *UO = dyn_cast<UnaryOperator>(Arg->IgnoreParens());
   if (!UO)
-    return false;
+    return nullptr;
 
   const auto *CE = dyn_cast<CStyleCastExpr>(UO->getSubExpr());
   if (!CE)
-    return false;
+    return nullptr;
   if (CE->getCastKind() != CK_IntegralToPointer &&
       CE->getCastKind() != CK_NullToPointer)
-    return false;
+    return nullptr;
 
   // The integer must be from an EnumConstantDecl.
   const auto *DR = dyn_cast<DeclRefExpr>(CE->getSubExpr());
   if (!DR)
-    return false;
+    return nullptr;
 
   const EnumConstantDecl *Enumerator =
       dyn_cast<EnumConstantDecl>(DR->getDecl());
   if (!Enumerator)
-    return false;
+    return nullptr;
 
   // The type must be EnumType.
   const auto *ED = ArgType->getAsEnumDecl();
   if (!ED)
-    return false;
+    return nullptr;
 
   // The enum value must be supported.
-  return llvm::is_contained(ED->enumerators(), Enumerator);
+  if (!llvm::is_contained(ED->enumerators(), Enumerator))
+    return nullptr;
+  return Enumerator;
 }
 
 bool SemaBPF::CheckBPFBuiltinFunctionCall(unsigned BuiltinID,
@@ -133,25 +137,35 @@ bool SemaBPF::CheckBPFBuiltinFunctionCall(unsigned BuiltinID,
   // The first argument
   Arg = TheCall->getArg(0);
   bool InvalidArg = false;
-  bool ReturnUnsignedInt = true;
   if (BuiltinID == BPF::BI__builtin_preserve_field_info) {
     if (!isValidPreserveFieldInfoArg(Arg)) {
       InvalidArg = true;
       kind = diag::err_preserve_field_info_not_field;
     }
+    TheCall->setType(Context.UnsignedIntTy);
   } else if (BuiltinID == BPF::BI__builtin_preserve_type_info) {
     if (!isValidPreserveTypeInfoArg(Arg)) {
       InvalidArg = true;
       kind = diag::err_preserve_type_info_invalid;
     }
+    TheCall->setType(Context.UnsignedIntTy);
   } else if (BuiltinID == BPF::BI__builtin_preserve_enum_value) {
-    if (!isValidPreserveEnumValueArg(Arg)) {
+    const EnumConstantDecl *Enumerator = getPreserveEnumValueArg(Arg);
+    if (!Enumerator) {
       InvalidArg = true;
       kind = diag::err_preserve_enum_value_invalid;
+    } else {
+      // The value has the type of the enumerator, e.g., int, or the underlying
+      // type of an enum with a fixed underlying type, so it compares the same
+      // as the enumerator. In C23, an enumerator may have its enum type, so use
+      // the underlying type of the enum then.
+      QualType Ty = Enumerator->getType();
+      if (const EnumDecl *ED = Ty->getAsEnumDecl())
+        Ty = ED->getIntegerType();
+      TheCall->setType(Ty);
     }
-    ReturnUnsignedInt = false;
   } else if (BuiltinID == BPF::BI__builtin_btf_type_id) {
-    ReturnUnsignedInt = false;
+    TheCall->setType(Context.UnsignedLongTy);
   }
 
   if (InvalidArg) {
@@ -159,10 +173,6 @@ bool SemaBPF::CheckBPFBuiltinFunctionCall(unsigned BuiltinID,
     return true;
   }
 
-  if (ReturnUnsignedInt)
-    TheCall->setType(Context.UnsignedIntTy);
-  else
-    TheCall->setType(Context.UnsignedLongTy);
   return false;
 }
 

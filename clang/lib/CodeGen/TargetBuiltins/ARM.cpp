@@ -7395,7 +7395,10 @@ Value *CodeGenFunction::EmitBPFBuiltinExpr(unsigned BuiltinID,
     CallInst *Fn =
         Builder.CreateCall(IntrinsicFn, {SeqNumVal, EnumStrVal, FlagValue});
     Fn->setMetadata(LLVMContext::MD_preserve_access_index, DbgInfo);
-    return Fn;
+    // The intrinsic returns i64. Convert it to the type of the builtin call,
+    // which is the type of the enumerator, e.g., int.
+    return EmitScalarConversion(Fn, getContext().LongTy, E->getType(),
+                                E->getExprLoc());
   }
   }
 }

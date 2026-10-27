@@ -102,3 +102,26 @@ unsigned invalid17(void) {
 unsigned invalid18(struct s *arg) {
   return __builtin_preserve_type_info(arg->a + 2, 0); // expected-error {{__builtin_preserve_type_info argument 1 invalid}}
 }
+
+// The return types of the builtins match BuiltinsBPF.td.
+_Static_assert(_Generic(__builtin_preserve_field_info(((struct s *)0)->a, 1), unsigned int: 1, default: 0), "");
+_Static_assert(_Generic(__builtin_btf_type_id(*(struct s *)0, 0), unsigned long: 1, default: 0), "");
+_Static_assert(_Generic(__builtin_preserve_type_info(*(struct s *)0, 1), unsigned int: 1, default: 0), "");
+
+// __builtin_preserve_enum_value() returns the type of the enumerator, e.g., int,
+// or unsigned long for an enumerator of enum AA, which has a 64-bit value. For
+// an enum with a fixed underlying type, it returns that type.
+_Static_assert(_Generic(__builtin_preserve_enum_value(*(__BB *)VAL10, 1), int: 1, default: 0), "");
+_Static_assert(_Generic(__builtin_preserve_enum_value(*(enum AA *)VAL1, 1), unsigned long: 1, default: 0), "");
+enum F1 : unsigned { F1_A = 1 };
+enum F2 : signed { F2_A = -1 };
+enum F3 : unsigned long { F3_A = 1 };
+enum F4 : long { F4_A = -1 };
+typedef enum : unsigned char { F5_A = 1 } F5;
+enum F6 : _Bool { F6_A, F6_B };
+_Static_assert(_Generic(__builtin_preserve_enum_value(*(enum F1 *)F1_A, 1), unsigned int: 1, default: 0), "");
+_Static_assert(_Generic(__builtin_preserve_enum_value(*(enum F2 *)F2_A, 1), int: 1, default: 0), "");
+_Static_assert(_Generic(__builtin_preserve_enum_value(*(enum F3 *)F3_A, 1), unsigned long: 1, default: 0), "");
+_Static_assert(_Generic(__builtin_preserve_enum_value(*(enum F4 *)F4_A, 1), long: 1, default: 0), "");
+_Static_assert(_Generic(__builtin_preserve_enum_value(*(F5 *)F5_A, 0), unsigned char: 1, default: 0), "");
+_Static_assert(_Generic(__builtin_preserve_enum_value(*(enum F6 *)F6_B, 1), _Bool: 1, default: 0), "");

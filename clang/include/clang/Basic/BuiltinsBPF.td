@@ -26,7 +26,7 @@ def BtfTypeID : TargetBuiltin {
 def PreserveTypeInfo : TargetBuiltin {
   let Spellings = ["__builtin_preserve_type_info"];
   let Attributes = [CustomTypeChecking];
-  let Prototype = "long unsigned int(...)";
+  let Prototype = "unsigned int(...)";
 }
 
 // Preserve enum value

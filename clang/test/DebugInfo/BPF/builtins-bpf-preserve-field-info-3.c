@@ -36,6 +36,17 @@ unsigned unit3() {
 // CHECK: call i32 @llvm.bpf.preserve.type.info(i32 4, i64 0), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[ENUM_AA:[0-9]+]]
 // CHECK: call i32 @llvm.bpf.preserve.type.info(i32 5, i64 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[ENUM_AA]]
 
+// The builtin returns unsigned int, the same as the intrinsic, so its result
+// is zero extended when converted to long.
+long unit4(long x) {
+  return x + _(*(struct s *)0, 1);
+}
+
+// CHECK: define {{.*}}i64 @unit4
+// CHECK: [[V:%[0-9a-z]+]] = call i32 @llvm.bpf.preserve.type.info(i32 6, i64 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[STRUCT_S]]
+// CHECK-NEXT: [[Z:%[0-9a-z]+]] = zext i32 [[V]] to i64
+// CHECK-NEXT: add nsw i64 %{{[0-9a-z]+}}, [[Z]]
+
 // CHECK: ![[ENUM_AA]] = !DICompositeType(tag: DW_TAG_enumeration_type, name: "AA"
 // CHECK: ![[TYPEDEF_INT]] = !DIDerivedType(tag: DW_TAG_typedef, name: "__int"
 // CHECK: ![[STRUCT_S]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "s"
