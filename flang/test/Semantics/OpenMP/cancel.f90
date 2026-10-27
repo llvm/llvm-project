@@ -1,5 +1,4 @@
-!RUN: %python %S/../test_errors.py %s %flang -fopenmp
-!XFAIL: *
+!RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=45
 
 subroutine f00
 !$omp parallel

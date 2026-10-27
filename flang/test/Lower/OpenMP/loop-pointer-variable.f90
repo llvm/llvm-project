@@ -1,5 +1,4 @@
 ! This test checks lowering of OpenMP loops with pointer or allocatable loop index variable
-!XFAIL: *
 
 !RUN: bbc -emit-hlfir -fopenmp %s -o - 2>&1 | FileCheck %s
 !RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - 2>&1 | FileCheck %s
@@ -28,7 +27,7 @@ program loop_var
   end do
   !$omp end do
 
-!CHECK:    omp.simd linear(@_QFEia1_linear_box_heap_i32 %[[IA1]]#0 -> %[[IA1_PVT:.*]] : !fir.ref<!fir.box<!fir.heap<i32>>> = %{{.*}} : i32) linear_var_types([i32])
+!CHECK:    omp.simd linear(val(@_QFEia1_linear_box_heap_i32 %[[IA1]]#0 -> %[[IA1_PVT:.*]] : !fir.ref<!fir.box<!fir.heap<i32>>> = %{{.*}} : i32)) linear_var_types([i32])
 !CHECK:      omp.loop_nest (%[[IA1_INDX:.*]]) : i32 = ({{.*}}) to ({{.*}}) inclusive step ({{.*}})
 !CHECK:        %[[IA1_PVT_DECL:.*]]:2 = hlfir.declare %[[IA1_PVT]] uniq_name("_QFEia1") fortran_attrs<allocatable>
 !CHECK:        %[[IA1_BOX:.*]] = fir.load %[[IA1_PVT_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<i32>>>
