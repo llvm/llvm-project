@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUCoExecSchedStrategy.h"
+#include "AMDGPUBarrierLatency.h"
 #include "AMDGPUIGroupLP.h"
 #include "GCNHazardRecognizer.h"
 #include "llvm/Support/Debug.h"
@@ -37,6 +38,9 @@ static cl::opt<CarriedLatency> BlockCarriedLatency(
         clEnumValN(
             CarriedLatency::All, "all",
             "Pad latency for any SU with an incoming ds_load dependency.")));
+
+// Default VGPR threshold percent for coexec scheduler.
+static constexpr unsigned DefaultCoExecVGPRThresholdPercent = 100;
 
 namespace {
 
@@ -1066,9 +1070,13 @@ AMDGPUCoExecSchedStrategy::AMDGPUCoExecSchedStrategy(
     : GCNSchedStrategy(C) {
   SchedStages.push_back(GCNSchedStageID::ILPInitialSchedule);
   SchedStages.push_back(GCNSchedStageID::RewriteMFMAForm);
+  SchedStages.push_back(GCNSchedStageID::LiveIntervalRPReschedule);
   SchedStages.push_back(GCNSchedStageID::PreRARematerialize);
   // Use more accurate GCN pressure trackers.
   UseGCNTrackers = true;
+
+  if (!VGPRThresholdPercentOpt.getNumOccurrences())
+    VGPRThresholdPercent = DefaultCoExecVGPRThresholdPercent;
 }
 
 void AMDGPUCoExecSchedStrategy::initPolicy(MachineBasicBlock::iterator Begin,
@@ -1349,6 +1357,7 @@ llvm::createGCNCoExecMachineScheduler(MachineSchedContext *C) {
   ScheduleDAGMILive *DAG = new GCNScheduleDAGMILive(
       C, std::make_unique<AMDGPUCoExecSchedStrategy>(C));
   DAG->addMutation(createIGroupLPDAGMutation(AMDGPU::SchedulingPhase::Initial));
+  DAG->addMutation(createAMDGPUBarrierLatencyDAGMutation(C->MF));
   return DAG;
 }
 

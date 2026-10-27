@@ -5674,8 +5674,10 @@ ConvertF32x2ToF16x2Op::getIntrinsicIDAndArgs(NVVM::ConvertF32x2ToF16x2Op &op,
   if (op.getRandomBits())
     args.push_back(mt.lookupValue(op.getRandomBits()));
 
+  // The PZO modifier is not supported with the RS rounding mode.
   // TODO: Add support for PZO modifier
-  args.push_back(builder.getInt1(false));
+  if (op.getRnd() != FPRoundingMode::RS)
+    args.push_back(builder.getInt1(false));
 
   switch (op.getRnd()) {
   case FPRoundingMode::RN:
@@ -5726,7 +5728,8 @@ ConvertF32x2ToBF16x2Op::getIntrinsicIDAndArgs(NVVM::ConvertF32x2ToBF16x2Op &op,
     args.push_back(mt.lookupValue(op.getRandomBits()));
 
   // TODO: Add support for PZO modifier
-  args.push_back(builder.getInt1(false));
+  if (op.getRnd() != FPRoundingMode::RS)
+    args.push_back(builder.getInt1(false));
 
   switch (op.getRnd()) {
   case FPRoundingMode::RN:

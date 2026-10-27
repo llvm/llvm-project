@@ -1184,9 +1184,8 @@ public:
     Expr *SizeArg = TheCall->getArg(NewIndex);
     if (!SizeArg->EvaluateAsInt(Result, S.getASTContext()))
       return std::nullopt;
-    llvm::APSInt Integer = Result.Val.getInt();
-    assert(Integer.isUnsigned() &&
-           "size arg should be unsigned after implicit conversion to size_t");
+    llvm::APSInt Integer = Result.Val.getInt().extOrTrunc(SizeTypeWidth);
+    Integer.setIsUnsigned(true);
     return Integer;
   }
 
@@ -1464,6 +1463,19 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     SourceSize =
         Checker.ComputeExplicitObjectSizeArgument(TheCall->getNumArgs() - 1);
     DestinationSize = Checker.ComputeSizeArgument(0);
+    break;
+  }
+
+  case Builtin::BIrecv:
+  case Builtin::BIrecvfrom: {
+    unsigned ExpectedArgs = BuiltinID == Builtin::BIrecv ? 4 : 6;
+    if (TheCall->getNumArgs() != ExpectedArgs ||
+        !TheCall->getArg(1)->getType()->isPointerType() ||
+        !TheCall->getArg(2)->getType()->isIntegerType())
+      return;
+    DiagID = diag::warn_fortify_source_size_mismatch;
+    SourceSize = Checker.ComputeExplicitObjectSizeArgument(2);
+    DestinationSize = Checker.ComputeSizeArgument(1);
     break;
   }
 

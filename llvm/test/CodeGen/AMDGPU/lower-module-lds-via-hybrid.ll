@@ -102,9 +102,9 @@ define void @f2() {
 
 define void @f3() {
 ; OPT-LABEL: @f3(
-; OPT-NEXT:    [[LD:%.*]] = load i8, ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_K23_LDS_T:%.*]], ptr addrspace(3) @llvm.amdgcn.kernel.k23.lds, i32 0, i32 1), align 8
+; OPT-NEXT:    [[LD:%.*]] = load i8, ptr addrspace(3) getelementptr inbounds (i8, ptr addrspace(3) @llvm.amdgcn.kernel.k23.lds, i32 8), align 8
 ; OPT-NEXT:    [[MUL:%.*]] = mul i8 [[LD]], 5
-; OPT-NEXT:    store i8 [[MUL]], ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_K23_LDS_T]], ptr addrspace(3) @llvm.amdgcn.kernel.k23.lds, i32 0, i32 1), align 8
+; OPT-NEXT:    store i8 [[MUL]], ptr addrspace(3) getelementptr inbounds (i8, ptr addrspace(3) @llvm.amdgcn.kernel.k23.lds, i32 8), align 8
 ; OPT-NEXT:    ret void
 ;
 ; GCN-LABEL: f3:
@@ -246,9 +246,9 @@ define amdgpu_kernel void @k123() {
 ; OPT-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds) ], !alias.scope [[META11:![0-9]+]], !noalias [[META14:![0-9]+]]
 ; OPT-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.module.lds) ]
 ; OPT-NEXT:    call void @f1()
-; OPT-NEXT:    [[LD:%.*]] = load i8, ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_K123_LDS_T:%.*]], ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds, i32 0, i32 1), align 8, !alias.scope [[META14]], !noalias [[META11]]
+; OPT-NEXT:    [[LD:%.*]] = load i8, ptr addrspace(3) getelementptr inbounds (i8, ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds, i32 8), align 8, !alias.scope [[META14]], !noalias [[META11]]
 ; OPT-NEXT:    [[MUL:%.*]] = mul i8 [[LD]], 8
-; OPT-NEXT:    store i8 [[MUL]], ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_K123_LDS_T]], ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds, i32 0, i32 1), align 8, !alias.scope [[META14]], !noalias [[META11]]
+; OPT-NEXT:    store i8 [[MUL]], ptr addrspace(3) getelementptr inbounds (i8, ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds, i32 8), align 8, !alias.scope [[META14]], !noalias [[META11]]
 ; OPT-NEXT:    call void @f2()
 ; OPT-NEXT:    ret void
 ;

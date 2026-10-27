@@ -260,7 +260,7 @@ The following "string" options are available:
 :::
 
 Additional flags can be specified, for example if Scudo if compiled with
-{doc}`GWP-ASan <GwpAsan>` support.
+[GWP-ASan](GwpAsan.rst) support.
 
 The following "mallopt" options are available (options are defined in
 `include/scudo/interface.h`):

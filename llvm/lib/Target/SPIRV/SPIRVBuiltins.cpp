@@ -3291,6 +3291,20 @@ static bool generateAsyncCopy(const SPIRV::IncomingCall *Call,
   }
 }
 
+// Same type S/U/FConvert are invalid. OpSatConvert* are valid and must stay.
+static bool foldNoOpConvert(unsigned Opcode, const SPIRV::IncomingCall *Call,
+                            MachineIRBuilder &MIRBuilder,
+                            SPIRVGlobalRegistry *GR) {
+  if (Opcode != SPIRV::OpSConvert && Opcode != SPIRV::OpUConvert &&
+      Opcode != SPIRV::OpFConvert)
+    return false;
+  if (Call->Arguments.size() != 1 ||
+      GR->getSPIRVTypeForVReg(Call->Arguments[0]) != Call->ReturnType)
+    return false;
+  MIRBuilder.buildCopy(Call->ReturnRegister, Call->Arguments[0]);
+  return true;
+}
+
 static bool generateConvertInst(StringRef DemangledCall,
                                 const SPIRV::IncomingCall *Call,
                                 MachineIRBuilder &MIRBuilder,
@@ -3303,29 +3317,13 @@ static bool generateConvertInst(StringRef DemangledCall,
     const SPIRV::DemangledBuiltin *Builtin = Call->Builtin;
     unsigned Opcode =
         SPIRV::lookupNativeBuiltin(Builtin->name(), Builtin->Set)->Opcode;
+    if (foldNoOpConvert(Opcode, Call, MIRBuilder, GR))
+      return true;
     return buildOpFromWrapper(MIRBuilder, Opcode, Call,
                               GR->getSPIRVTypeID(Call->ReturnType));
   }
 
   assert(Builtin && "Conversion builtin not found.");
-  if (Builtin->IsSaturated)
-    buildOpDecorate(Call->ReturnRegister, MIRBuilder,
-                    SPIRV::Decoration::SaturatedConversion, {});
-
-  if (Builtin->IsRounded) {
-    bool AnyTypeIsFloat =
-        GR->isScalarOrVectorOfType(Call->ReturnRegister, SPIRV::OpTypeFloat) ||
-        GR->isScalarOrVectorOfType(Call->Arguments[0], SPIRV::OpTypeFloat);
-
-    // Rounding mode decorations are only valid for floating point types.
-    // Conversion builtins from integer to integer are equivalent to their
-    // non-rounded counterparts.
-    if (AnyTypeIsFloat) {
-      buildOpDecorate(Call->ReturnRegister, MIRBuilder,
-                      SPIRV::Decoration::FPRoundingMode,
-                      {(unsigned)Builtin->RoundingMode});
-    }
-  }
 
   std::string NeedExtMsg;              // no errors if empty
   bool IsRightComponentsNumber = true; // check if input/output accepts vectors
@@ -3412,6 +3410,29 @@ static bool generateConvertInst(StringRef DemangledCall,
   }
   assert(Opcode != SPIRV::OpNop &&
          "Conversion between the types not implemented!");
+
+  // Must run before the decorations below: a folded conversion has none.
+  if (foldNoOpConvert(Opcode, Call, MIRBuilder, GR))
+    return true;
+
+  if (Builtin->IsSaturated)
+    buildOpDecorate(Call->ReturnRegister, MIRBuilder,
+                    SPIRV::Decoration::SaturatedConversion, {});
+
+  if (Builtin->IsRounded) {
+    bool AnyTypeIsFloat =
+        GR->isScalarOrVectorOfType(Call->ReturnRegister, SPIRV::OpTypeFloat) ||
+        GR->isScalarOrVectorOfType(Call->Arguments[0], SPIRV::OpTypeFloat);
+
+    // Rounding mode decorations are only valid for floating point types.
+    // Conversion builtins from integer to integer are equivalent to their
+    // non-rounded counterparts.
+    if (AnyTypeIsFloat) {
+      buildOpDecorate(Call->ReturnRegister, MIRBuilder,
+                      SPIRV::Decoration::FPRoundingMode,
+                      {(unsigned)Builtin->RoundingMode});
+    }
+  }
 
   MIRBuilder.buildInstr(Opcode)
       .addDef(Call->ReturnRegister)

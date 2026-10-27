@@ -200,8 +200,7 @@ m_scev_Trunc(const Op0_t &Op0) {
 
 /// Match a binary SCEV.
 template <typename SCEVTy, typename Op0_t, typename Op1_t,
-          SCEV::NoWrapFlags WrapFlags = SCEV::FlagAnyWrap,
-          bool Commutable = false>
+          SCEV::NoWrapFlags WrapFlags = SCEV::FlagNone, bool Commutable = false>
 struct SCEVBinaryExpr_match {
   Op0_t Op0;
   Op1_t Op1;
@@ -223,8 +222,7 @@ struct SCEVBinaryExpr_match {
 };
 
 template <typename SCEVTy, typename Op0_t, typename Op1_t,
-          SCEV::NoWrapFlags WrapFlags = SCEV::FlagAnyWrap,
-          bool Commutable = false>
+          SCEV::NoWrapFlags WrapFlags = SCEV::FlagNone, bool Commutable = false>
 inline SCEVBinaryExpr_match<SCEVTy, Op0_t, Op1_t, WrapFlags, Commutable>
 m_scev_Binary(const Op0_t &Op0, const Op1_t &Op1) {
   return SCEVBinaryExpr_match<SCEVTy, Op0_t, Op1_t, WrapFlags, Commutable>(Op0,
@@ -244,10 +242,10 @@ m_scev_Mul(const Op0_t &Op0, const Op1_t &Op1) {
 }
 
 template <typename Op0_t, typename Op1_t>
-inline SCEVBinaryExpr_match<SCEVMulExpr, Op0_t, Op1_t, SCEV::FlagAnyWrap, true>
+inline SCEVBinaryExpr_match<SCEVMulExpr, Op0_t, Op1_t, SCEV::FlagNone, true>
 m_scev_c_Mul(const Op0_t &Op0, const Op1_t &Op1) {
-  return m_scev_Binary<SCEVMulExpr, Op0_t, Op1_t, SCEV::FlagAnyWrap, true>(Op0,
-                                                                           Op1);
+  return m_scev_Binary<SCEVMulExpr, Op0_t, Op1_t, SCEV::FlagNone, true>(Op0,
+                                                                        Op1);
 }
 
 template <typename Op0_t, typename Op1_t>
@@ -264,17 +262,17 @@ m_scev_UDiv(const Op0_t &Op0, const Op1_t &Op1) {
 }
 
 template <typename Op0_t, typename Op1_t>
-inline SCEVBinaryExpr_match<SCEVSMaxExpr, Op0_t, Op1_t, SCEV::FlagAnyWrap, true>
+inline SCEVBinaryExpr_match<SCEVSMaxExpr, Op0_t, Op1_t, SCEV::FlagNone, true>
 m_scev_SMax(const Op0_t &Op0, const Op1_t &Op1) {
-  return m_scev_Binary<SCEVSMaxExpr, Op0_t, Op1_t, SCEV::FlagAnyWrap, true>(
-      Op0, Op1);
+  return m_scev_Binary<SCEVSMaxExpr, Op0_t, Op1_t, SCEV::FlagNone, true>(Op0,
+                                                                         Op1);
 }
 
 template <typename Op0_t, typename Op1_t>
-inline SCEVBinaryExpr_match<SCEVUMaxExpr, Op0_t, Op1_t, SCEV::FlagAnyWrap, true>
+inline SCEVBinaryExpr_match<SCEVUMaxExpr, Op0_t, Op1_t, SCEV::FlagNone, true>
 m_scev_UMax(const Op0_t &Op0, const Op1_t &Op1) {
-  return m_scev_Binary<SCEVUMaxExpr, Op0_t, Op1_t, SCEV::FlagAnyWrap, true>(
-      Op0, Op1);
+  return m_scev_Binary<SCEVUMaxExpr, Op0_t, Op1_t, SCEV::FlagNone, true>(Op0,
+                                                                         Op1);
 }
 
 template <typename Op0_t, typename Op1_t>

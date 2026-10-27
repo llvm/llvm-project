@@ -234,7 +234,7 @@ bool DWARFFormValue::SkipValue(dw_form_t form,
   }
     return true;
 
-  // Inlined NULL terminated C-strings
+  // Inlined null-terminated C-strings
   case DW_FORM_string:
     debug_info_data.GetCStr(offset_ptr);
     return true;

@@ -1290,12 +1290,25 @@ void SymbolFileNativePDB::AddSymbols(Symtab &symtab) {
       return;
 
     if (next && last_sym.Segment == next->Segment) {
-      assert(last_sym.Offset <= next->Offset);
+      if (next->Offset < last_sym.Offset) {
+        LLDB_LOG(GetLog(LLDBLog::Symbols),
+                 "Ignoring size estimate for '{0}': segment {1} offset {2} is "
+                 "greater than the following offset {3}",
+                 last_sym.Name, last_sym.Segment, last_sym.Offset,
+                 next->Offset);
+        return;
+      }
       last->SetByteSize(next->Offset - last_sym.Offset);
     } else {
       // the last symbol was the last in its section
-      assert(section_sp->GetByteSize() >= last_sym.Offset);
-      assert(!next || next->Segment > last_sym.Segment);
+      if (section_sp->GetByteSize() < last_sym.Offset) {
+        LLDB_LOG(GetLog(LLDBLog::Symbols),
+                 "Ignoring size estimate for '{0}': segment {1} offset {2} is "
+                 "past the end of section '{3}' (size {4})",
+                 last_sym.Name, last_sym.Segment, last_sym.Offset,
+                 section_sp->GetName(), section_sp->GetByteSize());
+        return;
+      }
       last->SetByteSize(section_sp->GetByteSize() - last_sym.Offset);
     }
   };

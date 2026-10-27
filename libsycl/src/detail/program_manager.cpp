@@ -15,7 +15,9 @@
 #include <detail/device_impl.hpp>
 #include <detail/offload/offload_utils.hpp>
 
+_LIBSYCL_SUPPRESS_EXTRA_WARNINGS_BEGIN
 #include <llvm/Frontend/Offloading/Utility.h>
+_LIBSYCL_SUPPRESS_EXTRA_WARNINGS_END
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 namespace detail {

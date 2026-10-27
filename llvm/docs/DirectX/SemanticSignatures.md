@@ -147,34 +147,6 @@ in-memory element representation they operate on is declared in
 
 [SemanticSignaturePacking.h]: https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/Frontend/HLSL/SemanticSignaturePacking.h
 
-### Stacked Packing
-
-Stacked packing is used for a vertex shader input signature. Eligible elements
-are visited in declaration order. Each starts at column zero of the first row
-after the preceding element, and a multi-row element occupies consecutive rows.
-Elements are never co-packed into the unused columns of another element, and
-interpolation mode, component type, and semantic interpretation do not otherwise
-affect placement.
-
-For example:
-
-```hlsl
-struct VSIn {
-  float A       : A;
-  float3 B[2]   : B;
-  uint VertexID : SV_VertexID;
-};
-```
-
-The signature is allocated as:
-
-```text
-reg0: A.x        | unused.yzw
-reg1: B[0].xyz   | unused.w
-reg2: B[1].xyz   | unused.w
-reg3: VertexID.x | unused.yzw
-```
-
 ### Prefix-Stable Packing
 
 Prefix-stable packing is used for signatures that connect programmable shader
@@ -193,8 +165,8 @@ constraints are satisfied:
 - Within each row, elements are ordered by category: arbitrary values first,
   followed by system values, and then system-generated values. For example, a
   system value can never be packed to the left of an arbitrary value.
-  `ClipCull` and `TessFactor` follow these categories in the internal ordering,
-  with the additional placement rules described below.
+  Indexed tessellation factors follow these categories in the component
+  ordering. Clip/cull values occupy dedicated rows as described below.
 - A system value or system generated value cannot be placed in a dynamically
   indexed row. A dynamically indexed row is a row within the range covered by
   a multi-row element, where the row is selected using a dynamic index.
@@ -230,6 +202,59 @@ reg0: A[0].xyz | B[0][0].w
 reg1: A[1].xyz | B[0][1].w
 reg2: A[2].xyz | D.w
 reg3: C.xy     | unused.zw
+```
+
+### Optimized Packing
+
+Optimized packing partitions eligible elements into groups and packs the groups
+in this order:
+
+1. Arbitrary and system-value elements that occupy a full register.
+2. Multi-row tessellation factors, which are restricted to the last column.
+3. Arbitrary elements.
+4. System-value elements, including single-row tessellation factors.
+5. `SV_ClipDistance` and `SV_CullDistance` elements.
+6. System-generated-value elements.
+
+Within each group, elements are ordered first by the numeric value of their
+interpolation mode, then by decreasing row count, then by decreasing column
+count, and finally by increasing signature ID.
+
+Unlike prefix-stable packing, optimized packing does not reserve whole rows for
+clip/cull values. They may share compatible rows with other values following the
+same constraints.
+
+This is a greedy optimized ordering rather than an exhaustive search for a
+minimum-row layout. Reordering can reduce the number of rows occupied, but
+means that appending an element may change locations assigned to existing
+elements.
+
+### Stacked Packing
+
+Stacked packing is used for a vertex shader input signature. Eligible elements
+are visited in declaration order. Each starts at column zero of the first row
+after the preceding element, and a multi-row element occupies consecutive rows.
+Elements are never co-packed into the unused columns of another element, and
+interpolation mode, component type, and semantic interpretation do not otherwise
+affect placement.
+
+For example:
+
+```hlsl
+struct VSIn {
+  float A       : A;
+  float3 B[2]   : B;
+  uint VertexID : SV_VertexID;
+};
+```
+
+The signature is allocated as:
+
+```text
+reg0: A.x        | unused.yzw
+reg1: B[0].xyz   | unused.w
+reg2: B[1].xyz   | unused.w
+reg3: VertexID.x | unused.yzw
 ```
 
 ### Indexed Packing

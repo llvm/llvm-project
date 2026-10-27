@@ -301,10 +301,12 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
     raw_string_ostream MaskOS(Mask);
     ListSeparator Sep(" | ");
     for (const Init *I : *R.getValueAsListInit(Field))
-      MaskOS << Sep << cast<DefInit>(I)->getDef()->getName();
+      MaskOS << Sep << "static_cast<unsigned>("
+             << cast<DefInit>(I)->getDef()->getName() << ")";
     if (const DefInit *DI = dyn_cast<DefInit>(R.getValueInit("Group")))
       for (const Init *I : *DI->getDef()->getValueAsListInit(Field))
-        MaskOS << Sep << cast<DefInit>(I)->getDef()->getName();
+        MaskOS << Sep << "static_cast<unsigned>("
+               << cast<DefInit>(I)->getDef()->getName() << ")";
     return Mask.empty() ? std::string("0") : Mask;
   };
 

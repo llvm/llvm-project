@@ -42,6 +42,17 @@ public:
   Error initAsyncInfoImpl(GenericDeviceTy &Device,
                           AsyncInfoWrapperTy &AsyncInfoWrapper) override;
 
+  llvm::Expected<void *> allocate(GenericDeviceTy &Device, int64_t Size,
+                                  void *HostPtr, TargetAllocTy Kind,
+                                  size_t Alignment) override;
+  llvm::Error deallocate(GenericDeviceTy &Device, void *Ptr,
+                         TargetAllocTy Kind) override;
+  Expected<PluginAllocInfoTy> getAllocInfo(const void *Ptr) override;
+
+  /// Initialize per-plugin-context memory allocators. Runs the pool
+  /// probe L0 calls up-front so the first user allocation is not delayed.
+  Error initAllocators();
+
   /// Pop an idle queue for \p Device from the cache, or create a new one.
   Expected<L0QueueTy *> takeCachedQueue(L0DeviceTy *Device) {
     return QueueCache.getQueue(*Device);
@@ -56,6 +67,11 @@ private:
   bool OwnsZeContext;
 
   L0QueueCacheTy QueueCache;
+
+  /// Per-plugin-context allocators; scoped to this context's ze_context.
+  llvm::DenseMap<L0DeviceTy *, std::unique_ptr<MemAllocatorTy>>
+      DeviceAllocators;
+  std::unique_ptr<MemAllocatorTy> HostAllocator;
 };
 
 /// Class implementing the LevelZero specific functionalities of the plugin.

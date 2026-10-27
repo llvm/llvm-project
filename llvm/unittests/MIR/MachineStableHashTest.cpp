@@ -61,7 +61,7 @@ protected:
     if (!Mod)
       return nullptr;
 
-    Mod->setDataLayout(TM.createDataLayout());
+    Mod->setDataLayout(TM.getTargetTriple().computeDataLayout());
 
     if (MIR->parseMachineFunctions(*Mod, MMI)) {
       M.reset();

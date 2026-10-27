@@ -169,6 +169,102 @@ public:
     return checker;
   }
 
+  /// Diagnose every abstract-method violation on \a obj_class at once.
+  ///
+  /// \a obj_class is a class object, whether resolved by name or taken from an
+  /// instance's `__class__`. Resolving it by name means this can run before any
+  /// instance exists (see CreatePluginObject), which uses it to reject a
+  /// malformed class without executing its `__init__`.
+  llvm::Error CheckAbstractMethods(const python::PythonObject &obj_class,
+                                   llvm::StringRef qualified_class_name) const {
+    Log *log = GetLog(LLDBLog::Script);
+
+    // Per-method diagnostics name the class the way Python does, unqualified.
+    python::PythonString obj_class_name =
+        obj_class.GetAttributeValue("__name__").AsType<python::PythonString>();
+    llvm::StringRef class_name = obj_class_name.IsValid()
+                                     ? obj_class_name.GetString()
+                                     : qualified_class_name;
+    auto create_error = [](llvm::StringLiteral format, auto &&...ts) {
+      return llvm::createStringError(
+          llvm::formatv(format.data(), std::forward<decltype(ts)>(ts)...)
+              .str());
+    };
+
+    auto checker_or_err = CheckAbstractMethodImplementation(obj_class);
+    if (!checker_or_err)
+      return checker_or_err.takeError();
+
+    llvm::Error abstract_method_errors = llvm::Error::success();
+    for (const auto &method_checker : *checker_or_err)
+      switch (method_checker.second.checker_case) {
+      case AbstractMethodCheckerCases::eNotImplemented:
+        abstract_method_errors = llvm::joinErrors(
+            std::move(abstract_method_errors),
+            create_error("abstract method {0}.{1} not implemented", class_name,
+                         method_checker.first));
+        break;
+      case AbstractMethodCheckerCases::eNotAllocated:
+        abstract_method_errors = llvm::joinErrors(
+            std::move(abstract_method_errors),
+            create_error("abstract method {0}.{1} not allocated", class_name,
+                         method_checker.first));
+        break;
+      case AbstractMethodCheckerCases::eNotCallable:
+        abstract_method_errors = llvm::joinErrors(
+            std::move(abstract_method_errors),
+            create_error("abstract method {0}.{1} not callable", class_name,
+                         method_checker.first));
+        break;
+      case AbstractMethodCheckerCases::eUnknownArgumentCount: {
+        const std::string *py_error =
+            std::get_if<std::string>(&method_checker.second.payload);
+        abstract_method_errors = llvm::joinErrors(
+            std::move(abstract_method_errors),
+            create_error(
+                "abstract method {0}.{1} has unknown argument count: {2}",
+                class_name, method_checker.first,
+                py_error ? *py_error : "<no further information>"));
+      } break;
+      case AbstractMethodCheckerCases::eInvalidArgumentCount: {
+        auto &payload_variant = method_checker.second.payload;
+        if (!std::holds_alternative<
+                AbstractMethodCheckerPayload::InvalidArgumentCountPayload>(
+                payload_variant)) {
+          abstract_method_errors = llvm::joinErrors(
+              std::move(abstract_method_errors),
+              create_error(
+                  "abstract method {0}.{1} has unexpected argument count",
+                  class_name, method_checker.first));
+        } else {
+          auto payload = std::get<
+              AbstractMethodCheckerPayload::InvalidArgumentCountPayload>(
+              payload_variant);
+          abstract_method_errors = llvm::joinErrors(
+              std::move(abstract_method_errors),
+              create_error("abstract method {0}.{1} has unexpected "
+                           "argument count (expected {2} but has {3})",
+                           class_name, method_checker.first,
+                           payload.required_argument_count,
+                           payload.actual_argument_count));
+        }
+      } break;
+      case AbstractMethodCheckerCases::eValid:
+        LLDB_LOG(log, "Abstract method {0}.{1} implemented & valid.",
+                 class_name, method_checker.first);
+        break;
+      }
+
+    if (abstract_method_errors) {
+      Status error = Status::FromError(std::move(abstract_method_errors));
+      LLDB_LOG(log, "Abstract method error in {0}:\n{1}", qualified_class_name,
+               error.AsCString());
+      return error.ToError();
+    }
+
+    return llvm::Error::success();
+  }
+
   template <typename... Args>
   llvm::Expected<StructuredData::GenericSP>
   CreatePluginObject(const ScriptedMetadata &scripted_metadata,
@@ -176,7 +272,6 @@ public:
     using namespace python;
     using Locker = ScriptInterpreterPythonImpl::Locker;
 
-    Log *log = GetLog(LLDBLog::Script);
     auto create_error = [](llvm::StringLiteral format, auto &&...ts) {
       return llvm::createStringError(
           llvm::formatv(format.data(), std::forward<decltype(ts)>(ts)...)
@@ -239,6 +334,9 @@ public:
         return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                        error_string);
       }
+
+      if (llvm::Error error = CheckAbstractMethods(init, class_name))
+        return std::move(error);
 
       llvm::Expected<PythonObject> expected_return_object =
           create_error("resulting object is not initialized");
@@ -309,80 +407,12 @@ public:
     PythonString obj_class_name =
         obj_class.GetAttributeValue("__name__").AsType<PythonString>();
 
-    auto checker_or_err = CheckAbstractMethodImplementation(obj_class);
-    if (!checker_or_err)
-      return checker_or_err.takeError();
-
-    llvm::Error abstract_method_errors = llvm::Error::success();
-    for (const auto &method_checker : *checker_or_err)
-      switch (method_checker.second.checker_case) {
-      case AbstractMethodCheckerCases::eNotImplemented:
-        abstract_method_errors = llvm::joinErrors(
-            std::move(abstract_method_errors),
-            std::move(create_error("abstract method {0}.{1} not implemented",
-                                   obj_class_name.GetString(),
-                                   method_checker.first)));
-        break;
-      case AbstractMethodCheckerCases::eNotAllocated:
-        abstract_method_errors = llvm::joinErrors(
-            std::move(abstract_method_errors),
-            std::move(create_error("abstract method {0}.{1} not allocated",
-                                   obj_class_name.GetString(),
-                                   method_checker.first)));
-        break;
-      case AbstractMethodCheckerCases::eNotCallable:
-        abstract_method_errors = llvm::joinErrors(
-            std::move(abstract_method_errors),
-            std::move(create_error("abstract method {0}.{1} not callable",
-                                   obj_class_name.GetString(),
-                                   method_checker.first)));
-        break;
-      case AbstractMethodCheckerCases::eUnknownArgumentCount: {
-        const std::string *py_error =
-            std::get_if<std::string>(&method_checker.second.payload);
-        abstract_method_errors = llvm::joinErrors(
-            std::move(abstract_method_errors),
-            std::move(create_error(
-                "abstract method {0}.{1} has unknown argument count: {2}",
-                obj_class_name.GetString(), method_checker.first,
-                py_error ? *py_error : "<no further information>")));
-      } break;
-      case AbstractMethodCheckerCases::eInvalidArgumentCount: {
-        auto &payload_variant = method_checker.second.payload;
-        if (!std::holds_alternative<
-                AbstractMethodCheckerPayload::InvalidArgumentCountPayload>(
-                payload_variant)) {
-          abstract_method_errors = llvm::joinErrors(
-              std::move(abstract_method_errors),
-              std::move(create_error(
-                  "abstract method {0}.{1} has unexpected argument count",
-                  obj_class_name.GetString(), method_checker.first)));
-        } else {
-          auto payload = std::get<
-              AbstractMethodCheckerPayload::InvalidArgumentCountPayload>(
-              payload_variant);
-          abstract_method_errors = llvm::joinErrors(
-              std::move(abstract_method_errors),
-              std::move(
-                  create_error("abstract method {0}.{1} has unexpected "
-                               "argument count (expected {2} but has {3})",
-                               obj_class_name.GetString(), method_checker.first,
-                               payload.required_argument_count,
-                               payload.actual_argument_count)));
-        }
-      } break;
-      case AbstractMethodCheckerCases::eValid:
-        LLDB_LOG(log, "Abstract method {0}.{1} implemented & valid.",
-                 obj_class_name.GetString(), method_checker.first);
-        break;
-      }
-
-    if (abstract_method_errors) {
-      Status error = Status::FromError(std::move(abstract_method_errors));
-      LLDB_LOG(log, "Abstract method error in {0}:\n{1}", class_name,
-               error.AsCString());
-      return error.ToError();
-    }
+    // We were handed an instance rather than building one, so there was no
+    // constructor to run the check ahead of; validate it now.
+    if (script_obj)
+      if (llvm::Error error =
+              CheckAbstractMethods(obj_class, obj_class_name.GetString()))
+        return std::move(error);
 
     m_object_instance_sp = StructuredData::GenericSP(
         new StructuredPythonObject(std::move(result)));

@@ -2,12 +2,12 @@
 ; RUN: opt -S -passes=slp-vectorizer -mtriple=x86_64-unknown-linux-gnu -mcpu=x86-64-v3 < %s | FileCheck %s
 
 ; Two independent products of vector-loadable inputs whose only users are
-; contractable scalar fadds, returned on different paths. The backend fuses
-; each product into its fadd (fmadd), so the products have to stay scalar: a
+; contractable scalar fadds. The backend fuses each product into its fadd
+; (fmadd) only in the same block, then the products have to stay scalar: a
 ; vector fmul with two extracts breaks both fusions.
 
-; The fmul is the first operand of the fadd: the fusion was already recognized
-; and the products are not vectorized (decision preserved).
+; The fadds are returned on different paths, in the successor blocks of the
+; products, which are not fused and are vectorized.
 define double @fmul_lhs_of_scalar_fadd(ptr %p, ptr %q, double %x, double %y, i1 %c) {
 ; CHECK-LABEL: define double @fmul_lhs_of_scalar_fadd(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]], double [[X:%.*]], double [[Y:%.*]], i1 [[C:%.*]]) #[[ATTR0:[0-9]+]] {
@@ -48,9 +48,7 @@ f:
   ret double %s1
 }
 
-; The fmul is the second operand of the fadd: it used to be vectorized with
-; two extracts, the fusion was only recognized for the first operand. It is
-; fused into the scalar fadd just the same and stays scalar now.
+; Same with the fmuls as the second operands of the fadds.
 define double @fmul_rhs_of_scalar_fadd(ptr %p, ptr %q, double %x, double %y, i1 %c) {
 ; CHECK-LABEL: define double @fmul_rhs_of_scalar_fadd(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]], double [[X:%.*]], double [[Y:%.*]], i1 [[C:%.*]]) #[[ATTR0]] {
@@ -86,4 +84,69 @@ t:
 f:
   %s1 = fadd contract double %y, %m1
   ret double %s1
+}
+
+; The fadds are in the block of the products and are selected: the products
+; are fused and stay scalar.
+define double @fmul_lhs_of_scalar_fadd_same_block(ptr %p, ptr %q, double %x, double %y, i1 %c) {
+; CHECK-LABEL: define double @fmul_lhs_of_scalar_fadd_same_block(
+; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]], double [[X:%.*]], double [[Y:%.*]], i1 [[C:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[A0:%.*]] = load double, ptr [[P]], align 8
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds double, ptr [[P]], i64 1
+; CHECK-NEXT:    [[A1:%.*]] = load double, ptr [[P1]], align 8
+; CHECK-NEXT:    [[B0:%.*]] = load double, ptr [[Q]], align 8
+; CHECK-NEXT:    [[Q1:%.*]] = getelementptr inbounds double, ptr [[Q]], i64 1
+; CHECK-NEXT:    [[B1:%.*]] = load double, ptr [[Q1]], align 8
+; CHECK-NEXT:    [[M0:%.*]] = fmul contract double [[A0]], [[B0]]
+; CHECK-NEXT:    [[M1:%.*]] = fmul contract double [[A1]], [[B1]]
+; CHECK-NEXT:    [[S0:%.*]] = fadd contract double [[M0]], [[X]]
+; CHECK-NEXT:    [[S1:%.*]] = fadd contract double [[M1]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], double [[S0]], double [[S1]]
+; CHECK-NEXT:    ret double [[R]]
+;
+entry:
+  %a0 = load double, ptr %p, align 8
+  %p1 = getelementptr inbounds double, ptr %p, i64 1
+  %a1 = load double, ptr %p1, align 8
+  %b0 = load double, ptr %q, align 8
+  %q1 = getelementptr inbounds double, ptr %q, i64 1
+  %b1 = load double, ptr %q1, align 8
+  %m0 = fmul contract double %a0, %b0
+  %m1 = fmul contract double %a1, %b1
+  %s0 = fadd contract double %m0, %x
+  %s1 = fadd contract double %m1, %y
+  %r = select i1 %c, double %s0, double %s1
+  ret double %r
+}
+
+; Same with the fmuls as the second operands of the fadds: the fusion is
+; recognized for either operand.
+define double @fmul_rhs_of_scalar_fadd_same_block(ptr %p, ptr %q, double %x, double %y, i1 %c) {
+; CHECK-LABEL: define double @fmul_rhs_of_scalar_fadd_same_block(
+; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]], double [[X:%.*]], double [[Y:%.*]], i1 [[C:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[P]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[Q]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul contract <2 x double> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[M0:%.*]] = extractelement <2 x double> [[TMP2]], i64 0
+; CHECK-NEXT:    [[S0:%.*]] = fadd contract double [[X]], [[M0]]
+; CHECK-NEXT:    [[M1:%.*]] = extractelement <2 x double> [[TMP2]], i64 1
+; CHECK-NEXT:    [[S1:%.*]] = fadd contract double [[Y]], [[M1]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], double [[S0]], double [[S1]]
+; CHECK-NEXT:    ret double [[R]]
+;
+entry:
+  %a0 = load double, ptr %p, align 8
+  %p1 = getelementptr inbounds double, ptr %p, i64 1
+  %a1 = load double, ptr %p1, align 8
+  %b0 = load double, ptr %q, align 8
+  %q1 = getelementptr inbounds double, ptr %q, i64 1
+  %b1 = load double, ptr %q1, align 8
+  %m0 = fmul contract double %a0, %b0
+  %m1 = fmul contract double %a1, %b1
+  %s0 = fadd contract double %x, %m0
+  %s1 = fadd contract double %y, %m1
+  %r = select i1 %c, double %s0, double %s1
+  ret double %r
 }

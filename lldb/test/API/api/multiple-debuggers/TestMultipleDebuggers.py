@@ -19,7 +19,6 @@ class TestMultipleSimultaneousDebuggers(TestBase):
     # https://github.com/llvm/llvm-project/issues/101162
     @skipIfLinux
     @skipIfNoSBHeaders
-    @skipIfWindows
     @skipIfHostIncompatibleWithTarget
     def test_multiple_debuggers(self):
         self.driver_exe = self.getBuildArtifact("multi-process-driver")

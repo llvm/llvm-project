@@ -986,7 +986,8 @@ AArch64PostLegalizerCombinerPass::run(MachineFunction &MF,
     return PreservedAnalyses::all();
 
   const bool IsOptNone = TM->isGlobalISelOptNone();
-  bool EnableOpt = !IsOptNone;
+  bool EnableOpt =
+      !IsOptNone && !shouldSkipOptimizationForOptBisect(MF.getFunction());
 
   GISelValueTracking *VT = &MFAM.getResult<GISelValueTrackingAnalysis>(MF);
   MachineDominatorTree *MDT =

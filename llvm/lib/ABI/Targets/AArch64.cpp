@@ -88,7 +88,7 @@ ArgInfo AArch64TargetInfo::classifyReturnType(const Type *RetTy,
     if (const auto *IntTy = dyn_cast<IntegerType>(RetTy)) {
       if (IntTy->isBitInt())
         if (RetTy->getSizeInBits().getFixedValue() > 128)
-          return getNaturalAlignIndirect(RetTy);
+          return getNaturalAlignIndirect(RetTy, getAllocaAddrSpace());
 
       if (isPromotableInteger(IntTy) && isDarwinPCS())
         return ArgInfo::getExtend(IntTy);
@@ -128,7 +128,8 @@ ArgInfo AArch64TargetInfo::classifyArgumentType(
     if (const auto *IntTy = dyn_cast<IntegerType>(Ty)) {
       if (IntTy->isBitInt())
         if (Ty->getSizeInBits().getFixedValue() > 128)
-          return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
+          return getNaturalAlignIndirect(Ty, getAllocaAddrSpace(),
+                                         /*ByVal=*/false);
 
       if (isPromotableInteger(IntTy) && isDarwinPCS())
         return ArgInfo::getExtend(IntTy);
@@ -146,8 +147,9 @@ ArgInfo AArch64TargetInfo::classifyArgumentType(
   // Structures with either a non-trivial destructor or a non-trivial
   // copy constructor are always indirect.
   if (auto RecordRAA = getRecordArgABI(Ty)) {
-    return getNaturalAlignIndirect(Ty, RecordRAA ==
-                                           RecordArgABI::RAA_DirectInMemory);
+    return getNaturalAlignIndirect(Ty, getAllocaAddrSpace(),
+                                   /*ByVal=*/RecordRAA ==
+                                       RecordArgABI::RAA_DirectInMemory);
   }
 
   // AAPCS64 does not say that empty C records are ignored as arguments,

@@ -8712,9 +8712,10 @@ CGObjCNonFragileABIMac::GetInterfaceEHType(const ObjCInterfaceDecl *ID,
       VTableGV->setDLLStorageClass(getStorage(CGM, VTableName));
   }
 
-  llvm::Value *VTableIdx = llvm::ConstantInt::get(CGM.Int32Ty, 2);
-  llvm::Constant *VTablePtr = llvm::ConstantExpr::getInBoundsGetElementPtr(
-      VTableGV->getValueType(), VTableGV, VTableIdx);
+  llvm::Constant *VTableIdx = llvm::ConstantInt::get(CGM.Int32Ty, 2);
+  llvm::Constant *VTablePtr = llvm::ConstantExpr::getGetElementPtr(
+      CGM.getDataLayout(), VTableGV->getValueType(), VTableGV, VTableIdx,
+      llvm::GEPNoWrapFlags::inBounds());
 
   ConstantInitBuilder builder(CGM);
   auto values = builder.beginStruct(ObjCTypes.EHTypeTy);

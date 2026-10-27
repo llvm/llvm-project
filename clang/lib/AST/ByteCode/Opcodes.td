@@ -327,6 +327,10 @@ def Null : SuccessOpcode {
   let HasGroup = 1;
 }
 
+def CastAddressSpace : Opcode {
+  let Args = [ArgUint64, ArgTypePtr];
+}
+
 //===----------------------------------------------------------------------===//
 // Pointer generation
 //===----------------------------------------------------------------------===//

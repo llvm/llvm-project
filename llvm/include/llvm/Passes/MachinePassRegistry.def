@@ -111,7 +111,10 @@ MACHINE_FUNCTION_PASS("postra-machine-sink", PostRAMachineSinkingPass())
 MACHINE_FUNCTION_PASS("postmisched", PostMachineSchedulerPass(TM))
 MACHINE_FUNCTION_PASS("post-ra-pseudos", ExpandPostRAPseudosPass())
 MACHINE_FUNCTION_PASS("print", PrintMIRPass())
-MACHINE_FUNCTION_PASS("print<gisel-value-tracking>", GISelValueTrackingPrinterPass(errs()))
+MACHINE_FUNCTION_PASS("print<gisel-value-tracking-fpclass>",
+                      GISelValueTrackingFPClassPrinterPass(errs()))
+MACHINE_FUNCTION_PASS("print<gisel-value-tracking>",
+                      GISelValueTrackingPrinterPass(errs()))
 MACHINE_FUNCTION_PASS("print<livedebugvars>", LiveDebugVariablesPrinterPass(errs()))
 MACHINE_FUNCTION_PASS("print<live-intervals>", LiveIntervalsPrinterPass(errs()))
 MACHINE_FUNCTION_PASS("print<live-stacks>", LiveStacksPrinterPass(errs()))

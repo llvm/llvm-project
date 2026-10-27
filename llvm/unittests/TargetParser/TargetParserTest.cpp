@@ -2833,6 +2833,13 @@ TEST(TargetParserTest, testAMDGPUfillAMDGPUFeatureMap) {
   EXPECT_FALSE(HasFeature("gfx950", "lds-alloc-granularity-1280"));
   EXPECT_FALSE(HasFeature("gfx1310", "lds-alloc-granularity-1024"));
   EXPECT_FALSE(HasFeature("gfx1250", "lds-alloc-granularity-2048"));
+
+  // Encoding granularity is also queried through the bitset only.
+  EXPECT_FALSE(HasFeature("gfx600", "lds-encoding-granularity-256"));
+  EXPECT_FALSE(HasFeature("gfx1030", "lds-encoding-granularity-512"));
+  EXPECT_FALSE(HasFeature("gfx950", "lds-encoding-granularity-1280"));
+  EXPECT_FALSE(HasFeature("gfx1310", "lds-encoding-granularity-1024"));
+  EXPECT_FALSE(HasFeature("gfx1250", "lds-encoding-granularity-2048"));
 }
 
 TEST(TargetParserTest, testAMDGPUgetFeatureBitset) {
@@ -2887,30 +2894,41 @@ TEST(TargetParserTest, testAMDGPUHalfAddressableLDSFeature) {
   EXPECT_FALSE(Has(AMDGPU::GK_GFX1310));
 }
 
-TEST(TargetParserTest, testAMDGPULDSAllocGranularityFeatures) {
+TEST(TargetParserTest, testAMDGPULDSGranularityFeatures) {
   auto Has = [](AMDGPU::GPUKind AK, AMDGPU::AMDGPUFeature Feature) {
     return AMDGPU::getFeatureBitset(AK).test(Feature);
   };
-  auto Count = [&Has](AMDGPU::GPUKind AK) {
+  auto CountAlloc = [&Has](AMDGPU::GPUKind AK) {
     return Has(AK, AMDGPU::FEAT_LDS_ALLOC_GRANULARITY_256) +
            Has(AK, AMDGPU::FEAT_LDS_ALLOC_GRANULARITY_512) +
            Has(AK, AMDGPU::FEAT_LDS_ALLOC_GRANULARITY_1024) +
            Has(AK, AMDGPU::FEAT_LDS_ALLOC_GRANULARITY_1280) +
            Has(AK, AMDGPU::FEAT_LDS_ALLOC_GRANULARITY_2048);
   };
+  auto CountEncoding = [&Has](AMDGPU::GPUKind AK) {
+    return Has(AK, AMDGPU::FEAT_LDS_ENCODING_GRANULARITY_256) +
+           Has(AK, AMDGPU::FEAT_LDS_ENCODING_GRANULARITY_512) +
+           Has(AK, AMDGPU::FEAT_LDS_ENCODING_GRANULARITY_1024) +
+           Has(AK, AMDGPU::FEAT_LDS_ENCODING_GRANULARITY_1280) +
+           Has(AK, AMDGPU::FEAT_LDS_ENCODING_GRANULARITY_2048);
+  };
 
-  // Exactly one allocation granularity is set per GPU.
+  // Exactly one granularity of each kind is set per GPU, including generics.
   SmallVector<StringRef> AllGPUs;
   AMDGPU::fillValidArchListAMDGCN(AllGPUs, Triple::NoSubArch);
   for (StringRef Name : AllGPUs) {
     AMDGPU::GPUKind Kind = AMDGPU::parseArchAMDGCN(Name);
-    if (!AMDGPU::isPseudoTarget(Kind))
-      EXPECT_EQ(Count(Kind), 1) << Name;
+    if (!AMDGPU::isPseudoTarget(Kind)) {
+      EXPECT_EQ(CountAlloc(Kind), 1) << Name;
+      EXPECT_EQ(CountEncoding(Kind), 1) << Name;
+    }
   }
 
   // The legacy pseudo-targets do not represent hardware.
-  EXPECT_EQ(Count(AMDGPU::GK_GENERIC), 0);
-  EXPECT_EQ(Count(AMDGPU::GK_GENERIC_HSA), 0);
+  EXPECT_EQ(CountAlloc(AMDGPU::GK_GENERIC), 0);
+  EXPECT_EQ(CountAlloc(AMDGPU::GK_GENERIC_HSA), 0);
+  EXPECT_EQ(CountEncoding(AMDGPU::GK_GENERIC), 0);
+  EXPECT_EQ(CountEncoding(AMDGPU::GK_GENERIC_HSA), 0);
 
   EXPECT_TRUE(Has(AMDGPU::GK_GFX600, AMDGPU::FEAT_LDS_ALLOC_GRANULARITY_256));
   EXPECT_TRUE(Has(AMDGPU::GK_GFX900, AMDGPU::FEAT_LDS_ALLOC_GRANULARITY_512));
@@ -2918,13 +2936,15 @@ TEST(TargetParserTest, testAMDGPULDSAllocGranularityFeatures) {
   EXPECT_TRUE(Has(AMDGPU::GK_GFX1310, AMDGPU::FEAT_LDS_ALLOC_GRANULARITY_1024));
   EXPECT_TRUE(Has(AMDGPU::GK_GFX1250, AMDGPU::FEAT_LDS_ALLOC_GRANULARITY_2048));
 
-  // RDNA2 and later 64 KiB targets allocate LDS in 1024-byte blocks.
+  // RDNA2 and later 64 KiB targets allocate 1024 bytes but encode 512-byte
+  // units.
   for (AMDGPU::GPUKind Kind :
        {AMDGPU::GK_GFX1030, AMDGPU::GK_GFX1100, AMDGPU::GK_GFX1170,
         AMDGPU::GK_GFX1200, AMDGPU::GK_GFX10_3_GENERIC,
         AMDGPU::GK_GFX11_GENERIC, AMDGPU::GK_GFX11_7_GENERIC,
         AMDGPU::GK_GFX12_GENERIC}) {
     EXPECT_TRUE(Has(Kind, AMDGPU::FEAT_LDS_ALLOC_GRANULARITY_1024));
+    EXPECT_TRUE(Has(Kind, AMDGPU::FEAT_LDS_ENCODING_GRANULARITY_512));
   }
 
   // A generic target uses the largest allocation granularity of the GPUs it
@@ -2933,6 +2953,8 @@ TEST(TargetParserTest, testAMDGPULDSAllocGranularityFeatures) {
       Has(AMDGPU::GK_GFX9_4_GENERIC, AMDGPU::FEAT_LDS_ALLOC_GRANULARITY_1280));
   EXPECT_FALSE(
       Has(AMDGPU::GK_GFX9_4_GENERIC, AMDGPU::FEAT_LDS_ALLOC_GRANULARITY_512));
+  EXPECT_TRUE(Has(AMDGPU::GK_GFX9_4_GENERIC,
+                  AMDGPU::FEAT_LDS_ENCODING_GRANULARITY_1280));
 }
 
 TEST(TargetParserTest, testAMDGPUfillValidArchListAMDGCN) {
@@ -3390,43 +3412,47 @@ TEST(TargetParserTest, testAMDGPUgetAddressableLocalMemorySize) {
       65536u);
 }
 
-TEST(TargetParserTest, testAMDGPUgetLDSAllocGranule) {
+TEST(TargetParserTest, testAMDGPUgetLDSGranules) {
   struct {
     AMDGPU::GPUKind Kind;
     Triple::SubArchType SubArch;
     unsigned Alloc;
+    unsigned Encoding;
   } Cases[] = {
-      {AMDGPU::GK_GFX600, Triple::AMDGPUSubArch600, 256},
-      {AMDGPU::GK_GFX700, Triple::AMDGPUSubArch700, 512},
-      {AMDGPU::GK_GFX900, Triple::AMDGPUSubArch900, 512},
-      {AMDGPU::GK_GFX942, Triple::AMDGPUSubArch942, 512},
-      {AMDGPU::GK_GFX950, Triple::AMDGPUSubArch950, 1280},
-      {AMDGPU::GK_GFX1010, Triple::AMDGPUSubArch1010, 512},
-      {AMDGPU::GK_GFX1030, Triple::AMDGPUSubArch1030, 1024},
-      {AMDGPU::GK_GFX1100, Triple::AMDGPUSubArch1100, 1024},
-      {AMDGPU::GK_GFX1150, Triple::AMDGPUSubArch1150, 1024},
-      {AMDGPU::GK_GFX1170, Triple::AMDGPUSubArch1170, 1024},
-      {AMDGPU::GK_GFX1200, Triple::AMDGPUSubArch1200, 1024},
-      {AMDGPU::GK_GFX1250, Triple::AMDGPUSubArch1250, 2048},
-      {AMDGPU::GK_GFX1251, Triple::AMDGPUSubArch1251, 2048},
-      {AMDGPU::GK_GFX1310, Triple::AMDGPUSubArch1310, 1024},
-      {AMDGPU::GK_GFX9_4_GENERIC, Triple::AMDGPUSubArch9_4, 1280},
-      {AMDGPU::GK_GFX10_1_GENERIC, Triple::AMDGPUSubArch10_1, 512},
-      {AMDGPU::GK_GFX10_3_GENERIC, Triple::AMDGPUSubArch10_3, 1024},
-      {AMDGPU::GK_GFX11_GENERIC, Triple::AMDGPUSubArch11, 1024},
-      {AMDGPU::GK_GFX11_7_GENERIC, Triple::AMDGPUSubArch11_7, 1024},
-      {AMDGPU::GK_GFX12_GENERIC, Triple::AMDGPUSubArch12, 1024},
-      {AMDGPU::GK_GFX12_5_GENERIC, Triple::AMDGPUSubArch12_5, 2048},
-      {AMDGPU::GK_NONE, Triple::NoSubArch, 256},
+      {AMDGPU::GK_GFX600, Triple::AMDGPUSubArch600, 256, 256},
+      {AMDGPU::GK_GFX700, Triple::AMDGPUSubArch700, 512, 512},
+      {AMDGPU::GK_GFX900, Triple::AMDGPUSubArch900, 512, 512},
+      {AMDGPU::GK_GFX942, Triple::AMDGPUSubArch942, 512, 512},
+      {AMDGPU::GK_GFX950, Triple::AMDGPUSubArch950, 1280, 1280},
+      {AMDGPU::GK_GFX1010, Triple::AMDGPUSubArch1010, 512, 512},
+      {AMDGPU::GK_GFX1030, Triple::AMDGPUSubArch1030, 1024, 512},
+      {AMDGPU::GK_GFX1100, Triple::AMDGPUSubArch1100, 1024, 512},
+      {AMDGPU::GK_GFX1150, Triple::AMDGPUSubArch1150, 1024, 512},
+      {AMDGPU::GK_GFX1170, Triple::AMDGPUSubArch1170, 1024, 512},
+      {AMDGPU::GK_GFX1200, Triple::AMDGPUSubArch1200, 1024, 512},
+      {AMDGPU::GK_GFX1250, Triple::AMDGPUSubArch1250, 2048, 2048},
+      {AMDGPU::GK_GFX1251, Triple::AMDGPUSubArch1251, 2048, 2048},
+      {AMDGPU::GK_GFX1310, Triple::AMDGPUSubArch1310, 1024, 1024},
+      {AMDGPU::GK_GFX9_4_GENERIC, Triple::AMDGPUSubArch9_4, 1280, 1280},
+      {AMDGPU::GK_GFX10_1_GENERIC, Triple::AMDGPUSubArch10_1, 512, 512},
+      {AMDGPU::GK_GFX10_3_GENERIC, Triple::AMDGPUSubArch10_3, 1024, 512},
+      {AMDGPU::GK_GFX11_GENERIC, Triple::AMDGPUSubArch11, 1024, 512},
+      {AMDGPU::GK_GFX11_7_GENERIC, Triple::AMDGPUSubArch11_7, 1024, 512},
+      {AMDGPU::GK_GFX12_GENERIC, Triple::AMDGPUSubArch12, 1024, 512},
+      {AMDGPU::GK_GFX12_5_GENERIC, Triple::AMDGPUSubArch12_5, 2048, 2048},
+      {AMDGPU::GK_NONE, Triple::NoSubArch, 256, 0},
   };
   for (const auto &Case : Cases) {
     SCOPED_TRACE(AMDGPU::getArchNameAMDGCN(Case.Kind));
     EXPECT_EQ(AMDGPU::getLDSAllocGranule(Case.Kind), Case.Alloc);
     EXPECT_EQ(AMDGPU::getLDSAllocGranule(Case.SubArch), Case.Alloc);
+    EXPECT_EQ(AMDGPU::getLDSEncodingGranule(Case.Kind), Case.Encoding);
+    EXPECT_EQ(AMDGPU::getLDSEncodingGranule(Case.SubArch), Case.Encoding);
   }
 
   for (AMDGPU::GPUKind Kind : {AMDGPU::GK_GENERIC, AMDGPU::GK_GENERIC_HSA}) {
     EXPECT_EQ(AMDGPU::getLDSAllocGranule(Kind), 256u);
+    EXPECT_EQ(AMDGPU::getLDSEncodingGranule(Kind), 0u);
   }
 }
 

@@ -39,6 +39,16 @@ getTypeSizeInBytes(mlir::Type type, const mlir::DataLayout &dataLayout) {
   return size.getFixedValue();
 }
 
+/// Return the number of bytes an access through \p ptr touches, that is, the
+/// size of its pointee type.
+static std::optional<int64_t>
+getAccessSize(mlir::Value ptr, const mlir::DataLayout &dataLayout) {
+  auto ptrTy = mlir::dyn_cast<cir::PointerType>(ptr.getType());
+  if (!ptrTy)
+    return std::nullopt;
+  return getTypeSizeInBytes(ptrTy.getPointee(), dataLayout);
+}
+
 /// If \p val is a constant integer that fits in an int64_t, return its value.
 /// The constant is interpreted according to the signedness of its type.
 static std::optional<int64_t> getConstantIndex(mlir::Value val) {
@@ -273,11 +283,30 @@ mlir::AliasResult CIRBasicAliasAnalysis::alias(mlir::Value lhs,
     return mlir::AliasResult::MustAlias;
   }
 
-  // TODO: Two pointers at different offsets into the same object only overlap
-  // if the accesses are large enough to reach one another. Comparing the byte
-  // ranges the accesses cover would prove NoAlias or PartialAlias here.
-  LDBG() << "Same object at different offsets, may alias";
-  return mlir::AliasResult::MayAlias;
+  // The pointers start at different addresses, so whether they overlap depends
+  // on how far each access reaches. Without the extent of both accesses there
+  // is no way to tell.
+  std::optional<int64_t> lhsSize = getAccessSize(lhs, dataLayout);
+  std::optional<int64_t> rhsSize = getAccessSize(rhs, dataLayout);
+  if (!lhsSize || !rhsSize) {
+    LDBG() << "Same object but unknown access size, may alias";
+    return mlir::AliasResult::MayAlias;
+  }
+
+  auto [lhsEnd, lhsOverflow] = AddOverflow(*lhsPtr.offset, *lhsSize);
+  auto [rhsEnd, rhsOverflow] = AddOverflow(*rhsPtr.offset, *rhsSize);
+  if (lhsOverflow || rhsOverflow) {
+    LDBG() << "Access range overflows, may alias";
+    return mlir::AliasResult::MayAlias;
+  }
+
+  if (lhsEnd <= *rhsPtr.offset || rhsEnd <= *lhsPtr.offset) {
+    LDBG() << "No alias between disjoint ranges of the same object";
+    return mlir::AliasResult::NoAlias;
+  }
+
+  LDBG() << "Partial alias between overlapping ranges of the same object";
+  return mlir::AliasResult::PartialAlias;
 }
 
 mlir::ModRefResult CIRBasicAliasAnalysis::getModRef(mlir::Operation *op,

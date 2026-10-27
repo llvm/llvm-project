@@ -432,6 +432,7 @@ foreach S = !listconcat(F32VectorSuffixes, F64VectorSuffixes) in {
   def MODF_#S : RuntimeLibcall;
   def NEXTAFTER_#S : RuntimeLibcall;
   def POW_#S : RuntimeLibcall;
+  def REMAINDER_#S : RuntimeLibcall;
   def SINCOS_#S : RuntimeLibcall;
   def SINCOSPI_#S : RuntimeLibcall;
   def SIN_#S : RuntimeLibcall;
@@ -440,6 +441,7 @@ foreach S = !listconcat(F32VectorSuffixes, F64VectorSuffixes) in {
   def SQRT_#S : RuntimeLibcall;
   def TAN_#S : RuntimeLibcall;
   def TANH_#S : RuntimeLibcall;
+  def TANPI_#S : RuntimeLibcall;
   def TGAMMA_#S : RuntimeLibcall;
   def CDFNORM_#S : RuntimeLibcall;
   def CDFNORMINV_#S : RuntimeLibcall;
@@ -3729,20 +3731,52 @@ defset list<RuntimeLibcallImpl> DARWIN_LIBSYSTEM_M_VECFUNCS = {
   def _simd_cos_f4 : RuntimeLibcallImpl<COS_V4F32>;
   def _simd_cosh_d2 : RuntimeLibcallImpl<COSH_V2F64>;
   def _simd_cosh_f4 : RuntimeLibcallImpl<COSH_V4F32>;
+  def _simd_cospi_d2 : RuntimeLibcallImpl<COSPI_V2F64>;
+  def _simd_cospi_f4 : RuntimeLibcallImpl<COSPI_V4F32>;
   def _simd_erf_d2 : RuntimeLibcallImpl<ERF_V2F64>;
   def _simd_erf_f4 : RuntimeLibcallImpl<ERF_V4F32>;
+  def _simd_erfc_d2 : RuntimeLibcallImpl<ERFC_V2F64>;
+  def _simd_erfc_f4 : RuntimeLibcallImpl<ERFC_V4F32>;
+  def _simd_exp10_d2 : RuntimeLibcallImpl<EXP10_V2F64>;
+  def _simd_exp10_f4 : RuntimeLibcallImpl<EXP10_V4F32>;
+  def _simd_exp2_d2 : RuntimeLibcallImpl<EXP2_V2F64>;
+  def _simd_exp2_f4 : RuntimeLibcallImpl<EXP2_V4F32>;
   def _simd_exp_d2 : RuntimeLibcallImpl<EXP_V2F64>;
   def _simd_exp_f4 : RuntimeLibcallImpl<EXP_V4F32>;
+  def _simd_expm1_d2 : RuntimeLibcallImpl<EXPM1_V2F64>;
+  def _simd_expm1_f4 : RuntimeLibcallImpl<EXPM1_V4F32>;
+  def _simd_hypot_d2 : RuntimeLibcallImpl<HYPOT_V2F64>;
+  def _simd_hypot_f4 : RuntimeLibcallImpl<HYPOT_V4F32>;
+  def _simd_lgamma_d2 : RuntimeLibcallImpl<LGAMMA_V2F64>;
+  def _simd_lgamma_f4 : RuntimeLibcallImpl<LGAMMA_V4F32>;
+  def _simd_log10_d2 : RuntimeLibcallImpl<LOG10_V2F64>;
+  def _simd_log10_f4 : RuntimeLibcallImpl<LOG10_V4F32>;
+  def _simd_log1p_d2 : RuntimeLibcallImpl<LOG1P_V2F64>;
+  def _simd_log1p_f4 : RuntimeLibcallImpl<LOG1P_V4F32>;
+  def _simd_log2_d2 : RuntimeLibcallImpl<LOG2_V2F64>;
+  def _simd_log2_f4 : RuntimeLibcallImpl<LOG2_V4F32>;
+  def _simd_log_d2 : RuntimeLibcallImpl<LOG_V2F64>;
+  def _simd_log_f4 : RuntimeLibcallImpl<LOG_V4F32>;
+  def _simd_nextafter_d2 : RuntimeLibcallImpl<NEXTAFTER_V2F64>;
+  def _simd_nextafter_f4 : RuntimeLibcallImpl<NEXTAFTER_V4F32>;
   def _simd_pow_d2 : RuntimeLibcallImpl<POW_V2F64>;
   def _simd_pow_f4 : RuntimeLibcallImpl<POW_V4F32>;
+  def _simd_remainder_d2 : RuntimeLibcallImpl<REMAINDER_V2F64>;
+  def _simd_remainder_f4 : RuntimeLibcallImpl<REMAINDER_V4F32>;
   def _simd_sin_d2 : RuntimeLibcallImpl<SIN_V2F64>;
   def _simd_sin_f4 : RuntimeLibcallImpl<SIN_V4F32>;
   def _simd_sinh_d2 : RuntimeLibcallImpl<SINH_V2F64>;
   def _simd_sinh_f4 : RuntimeLibcallImpl<SINH_V4F32>;
+  def _simd_sinpi_d2 : RuntimeLibcallImpl<SINPI_V2F64>;
+  def _simd_sinpi_f4 : RuntimeLibcallImpl<SINPI_V4F32>;
   def _simd_tan_d2 : RuntimeLibcallImpl<TAN_V2F64>;
   def _simd_tan_f4 : RuntimeLibcallImpl<TAN_V4F32>;
   def _simd_tanh_d2 : RuntimeLibcallImpl<TANH_V2F64>;
   def _simd_tanh_f4 : RuntimeLibcallImpl<TANH_V4F32>;
+  def _simd_tanpi_d2 : RuntimeLibcallImpl<TANPI_V2F64>;
+  def _simd_tanpi_f4 : RuntimeLibcallImpl<TANPI_V4F32>;
+  def _simd_tgamma_d2 : RuntimeLibcallImpl<TGAMMA_V2F64>;
+  def _simd_tgamma_f4 : RuntimeLibcallImpl<TGAMMA_V4F32>;
 }
 
 //===----------------------------------------------------------------------===//

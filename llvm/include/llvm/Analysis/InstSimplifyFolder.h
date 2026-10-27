@@ -123,7 +123,7 @@ public:
   Value *FoldIntrinsic(Intrinsic::ID ID, ArrayRef<Value *> Ops, Type *Ty,
                        FastMathFlags FMF = {},
                        Function *CtxF = nullptr) const override {
-    return simplifyIntrinsic(ID, Ty, Ops, FMF, SQ, CtxF);
+    return simplifyIntrinsic(ID, Ty, Ops, FMF, SQ.getWithFunction(CtxF));
   }
 
   //===--------------------------------------------------------------------===//

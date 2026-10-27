@@ -681,6 +681,10 @@ bool SIFoldOperandsImpl::updateOperand(FoldCandidate &Fold) const {
       BuildMI(*MBB, MI, MI->getDebugLoc(), TII->get(AMDGPU::COPY),
               Dst1.getReg())
         .addReg(AMDGPU::VCC, RegState::Kill);
+    } else {
+      // We only reach here when the carry-out vcc is dead so propagate the dead
+      // flag.
+      Inst32->getOperand(3).setIsDead();
     }
 
     // Keep the old instruction around to avoid breaking iterators, but

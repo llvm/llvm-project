@@ -1711,8 +1711,7 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   }
   case Intrinsic::clmul: {
     auto LT = getTypeLegalizationCost(RetTy);
-    if (!LT.second.isVector() && ST->hasStdExtZvbc() && !ST->hasStdExtZbc() &&
-        !ST->hasStdExtZbkc()) {
+    if (!LT.second.isVector() && ST->hasStdExtZvbc() && !ST->hasStdExtZbkc()) {
       // TODO: Once custom lowering in this case for RV32 is added, this guard
       // should be removed and the cost model should be updated.
       if (!ST->is64Bit() || LT.second != MVT::i64)

@@ -1,15 +1,21 @@
 #ifndef LLDB_TEST_API_COMMON_H
 #define LLDB_TEST_API_COMMON_H
 
-#include <condition_variable>
 #include <chrono>
+#include <condition_variable>
+#include <cstdlib>
 #include <exception>
 #include <iostream>
 #include <mutex>
-#include <string>
 #include <queue>
+#include <string>
 
+#ifdef _WIN32
+#include <direct.h>
+#include <io.h>
+#else
 #include <unistd.h>
+#endif
 
 /// Simple exception class with a message
 struct Exception : public std::exception
@@ -56,14 +62,24 @@ public:
   }
 };
 
-/// Allocates a char buffer with the current working directory
-inline char* get_working_dir() {
+/// Returns the current working directory.
+///
+/// The platform accessors all return a malloc'd buffer, so the result is
+/// copied into a std::string and freed here.
+inline std::string get_working_dir() {
 #if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) ||       \
     defined(__OpenBSD__)
-    return getwd(0);
+  char *dir = getwd(0);
+#elif defined(_WIN32)
+  char *dir = _getcwd(0, 0);
 #else
-    return get_current_dir_name();
+  char *dir = get_current_dir_name();
 #endif
+  if (!dir)
+    return std::string();
+  std::string result(dir);
+  free(dir);
+  return result;
 }
 
 #endif // LLDB_TEST_API_COMMON_H

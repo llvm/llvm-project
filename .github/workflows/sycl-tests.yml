@@ -19,7 +19,7 @@ jobs:
   check_sycl:
     if: github.repository_owner == 'llvm'
     name: Test SYCL
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     container:
       image: ghcr.io/llvm/ci-ubuntu-26.04:latest@sha256:7ac659feb90ac48dd8676e4eb305b9aa5b31fc8b329b7e39379c38af06efc6e1
     steps:
@@ -30,7 +30,7 @@ jobs:
         uses: hendrikmuhs/ccache-action@d62db5f07c26379fc4b4e0916f098a92573c3b03 # v1.2.23
         with:
           max-size: 2G
-          key: sycl-ubuntu-24.04
+          key: sycl-ubuntu-26.04
           variant: sccache
       - name: Build and Test
         run: |

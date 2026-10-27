@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCVELFStreamer.h"
-#include "RISCVAsmBackend.h"
 #include "RISCVBaseInfo.h"
 #include "RISCVMCTargetDesc.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -28,23 +27,6 @@ using namespace llvm;
 RISCVTargetELFStreamer::RISCVTargetELFStreamer(MCStreamer &S,
                                                const MCSubtargetInfo &STI)
     : RISCVTargetStreamer(S), CurrentVendor("riscv") {
-  MCAssembler &MCA = getStreamer().getAssembler();
-  auto &MAB = static_cast<RISCVAsmBackend &>(MCA.getBackend());
-  StringRef ABIName = MAB.getTargetOptions().getABIName();
-  // We have to recompute the ABI rather than casting STI to RISCVSubtarget
-  // since MC tools like llvm-mc call this when STI is MCSubtargetInfo instead.
-  // Using RISCVSubtarget requires a TargetMachine, which the MC-only tools
-  // deliberately don't link.
-  // TODO: Might be cleaner to have callers set the ABI instead of computing
-  // it twice which introduces a chance of it being out of sync.
-  if (auto ABIOrErr = RISCVABI::computeTargetABI(STI, ABIName)) {
-    setTargetABI(*ABIOrErr);
-  } else {
-    // Do not set TargetABI here if invalid: RISCVSubtarget/RISCVAsmPrinter
-    // (in codegen) or RISCVAsmParser::onBeginOfFile() (in llvm-mc) will
-    // resolve or diagnose it with proper contexts.
-    consumeError(ABIOrErr.takeError());
-  }
   setFlagsFromFeatures(STI);
 
   // Compute the initial ISA string.  This serves two purposes:
@@ -157,7 +139,7 @@ void RISCVTargetELFStreamer::finish() {
     EFlags |= ELF::EF_RISCV_RVE;
     break;
   case RISCVABI::ABI_Unknown:
-    llvm_unreachable("Improperly initialised target ABI");
+    break;
   }
 
   W.setELFHeaderEFlags(EFlags);

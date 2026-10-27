@@ -438,15 +438,6 @@ private:
 
   SDValue unwrapAddress(SDValue N) const override;
 
-  // If the last instruction before MBBI in MBB was some form of COMPARE,
-  // try to replace it with a COMPARE AND BRANCH just before MBBI.
-  // CCMask and Target are the BRC-like operands for the branch.
-  // Return true if the change was made.
-  bool convertPrevCompareToBranch(MachineBasicBlock *MBB,
-                                  MachineBasicBlock::iterator MBBI,
-                                  unsigned CCMask,
-                                  MachineBasicBlock *Target) const;
-
   // Implement EmitInstrWithCustomInserter for individual operation types.
   MachineBasicBlock *emitAdjCallStack(MachineInstr &MI,
                                       MachineBasicBlock *BB) const;

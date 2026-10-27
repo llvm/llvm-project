@@ -1,4 +1,5 @@
 ! RUN: %flang_fc1 -emit-hlfir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir %s -o - | FileCheck %s --check-prefix=FIR-CHECK
 
 subroutine trans_test(store, word)
     ! CHECK-LABEL: func @_QPtrans_test(
@@ -150,4 +151,31 @@ subroutine trans_test(store, word)
     integer :: store
     real, allocatable :: src
     store = transfer(src, store)
+  end subroutine
+
+  ! TRANSFER into a SEQUENCE derived type with tail padding: the assignment back
+  ! to the derived-type variable must use fir.copy (full storage size including
+  ! tail padding) rather than a field-by-field copy that silently drops padding.
+  subroutine trans_test_seq_tail_pad(raw, x)
+    ! CHECK-LABEL: func @_QPtrans_test_seq_tail_pad(
+    ! CHECK:         fir.call @_FortranATransfer(
+    ! CHECK:         hlfir.assign {{.*}} to %[[xDecl:.*]]#0
+    ! CHECK-NOT:     hlfir.assign
+    ! CHECK:         return
+    ! CHECK:       }
+    ! FIR-CHECK-LABEL: func @_QPtrans_test_seq_tail_pad(
+    ! FIR-CHECK:         fir.call @_FortranATransfer(
+    ! FIR-CHECK:         fir.copy {{.*}} no_overlap : !fir.ref<!fir.type<_QFtrans_test_seq_tail_padTt,sequence{a:i32,b:i8}>>, !fir.ref<!fir.type<_QFtrans_test_seq_tail_padTt,sequence{a:i32,b:i8}>>
+    ! FIR-CHECK-NOT:     fir.coordinate_of
+    ! FIR-CHECK:         return
+    ! FIR-CHECK:       }
+    use iso_c_binding, only: c_int, c_int8_t
+    type :: t
+      sequence
+      integer(c_int)    :: a
+      integer(c_int8_t) :: b
+    end type
+    character(len=8), intent(inout) :: raw
+    type(t), intent(out)            :: x
+    x = transfer(raw, x)
   end subroutine

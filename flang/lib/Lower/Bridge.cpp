@@ -1239,9 +1239,15 @@ public:
   }
   std::string
   mangleName(const Fortran::semantics::Symbol &symbol) override final {
-    return Fortran::lower::mangle::mangleName(
+    std::string mangledName = Fortran::lower::mangle::mangleName(
         symbol, scopeBlockIdMap, /*keepExternalInScope=*/false,
         getLoweringOptions().getUnderscoring());
+    const std::string &hash = bridge.getModuleNameHash();
+    if (!hash.empty() &&
+        Fortran::semantics::ClassifyProcedure(symbol) ==
+            Fortran::semantics::ProcedureDefinitionClass::Internal)
+      mangledName += hash;
+    return mangledName;
   }
   std::string mangleName(
       const Fortran::semantics::DerivedTypeSpec &derivedType) override final {
@@ -2014,8 +2020,7 @@ private:
       bridge.openAccCtx().finalizeAndKeep();
       if (bridge.cudaCleanupCtx().hasCode()) {
         mlir::Location loc = toLocation();
-        mlir::Value active =
-            fir::runtime::cuda::genDeviceIsActive(*builder, loc);
+        mlir::Value active = cuf::DeviceIsActiveOp::create(*builder, loc);
         builder->genIfThen(loc, active)
             .genThen([&]() {
               fir::runtime::cuda::genCUDADeviceSynchronize(*builder, loc);
@@ -7136,6 +7141,13 @@ Fortran::lower::LoweringBridge::LoweringBridge(
   else if (languageFeatures.IsEnabled(
                Fortran::common::LanguageFeature::CudaManaged))
     fir::setCudaHeapAllocMode(*module, fir::CudaHeapAllocMode::Managed);
+
+  if (cgOpts.UniqueInternalLinkageNames) {
+    if (auto fileLoc = mlir::dyn_cast<mlir::FileLineColLoc>(module->getLoc())) {
+      moduleNameHash =
+          llvm::getUniqueInternalLinkagePostfix(fileLoc.getFilename());
+    }
+  }
 }
 
 Fortran::lower::LoweringBridge::~LoweringBridge() {

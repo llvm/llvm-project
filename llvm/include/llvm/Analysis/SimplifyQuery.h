@@ -69,6 +69,10 @@ struct CondContext {
 };
 
 struct SimplifyQuery {
+private:
+  const Function *CxtF = nullptr;
+
+public:
   const DataLayout &DL;
   const TargetLibraryInfo *TLI = nullptr;
   const DominatorTree *DT = nullptr;
@@ -110,6 +114,18 @@ struct SimplifyQuery {
     SimplifyQuery Copy(*this);
     Copy.CxtI = I;
     return Copy;
+  }
+  SimplifyQuery getWithFunction(const Function *F) const {
+    SimplifyQuery Copy(*this);
+    Copy.CxtF = F;
+    return Copy;
+  }
+  const Function *getFunction() const {
+    if (CxtF)
+      return CxtF;
+    if (CxtI)
+      return CxtI->getFunction();
+    return nullptr;
   }
   SimplifyQuery getWithoutUndef() const {
     SimplifyQuery Copy(*this);

@@ -5850,6 +5850,8 @@ struct FoldPresentAbsentIfOp : public mlir::OpRewritePattern<fir::IfOp> {
 void fir::IfOp::getCanonicalizationPatterns(mlir::RewritePatternSet &patterns,
                                             mlir::MLIRContext *context) {
   patterns.add<FoldPresentAbsentIfOp>(context);
+  mlir::populateRegionBranchOpInterfaceInliningPattern(
+      patterns, fir::IfOp::getOperationName());
 }
 
 //===----------------------------------------------------------------------===//

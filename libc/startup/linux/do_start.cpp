@@ -55,7 +55,6 @@ void _r_debug_state() { // NOLINT
 }
 
 namespace LIBC_NAMESPACE_DECL {
-AppProperties app;
 
 static struct link_map main_map;
 

@@ -929,28 +929,27 @@ static llvm::cl::opt<bool>
 /// Return a string containing the given Fortran intrinsic name
 /// with the type of its arguments specified in funcType
 /// surrounded by the given prefix/suffix.
-static std::string
-prettyPrintIntrinsicName(fir::FirOpBuilder &builder, mlir::Location loc,
-                         llvm::StringRef prefix, llvm::StringRef name,
-                         llvm::StringRef suffix, mlir::FunctionType funcType) {
+static std::string prettyPrintIntrinsicName(mlir::Location loc,
+                                            llvm::StringRef prefix,
+                                            llvm::StringRef name,
+                                            llvm::StringRef suffix,
+                                            mlir::FunctionType funcType) {
   std::string output = prefix.str();
   llvm::raw_string_ostream sstream(output);
   if (name == "pow" || name == "pow-unsigned") {
     assert(funcType.getNumInputs() == 2 && "power operator has two arguments");
     std::string displayName{" ** "};
-    sstream << mlirTypeToIntrinsicFortran(builder, funcType.getInput(0), loc,
+    sstream << mlirTypeToIntrinsicFortran(funcType.getInput(0), loc,
                                           displayName)
             << displayName
-            << mlirTypeToIntrinsicFortran(builder, funcType.getInput(1), loc,
+            << mlirTypeToIntrinsicFortran(funcType.getInput(1), loc,
                                           displayName);
   } else {
     sstream << name.upper() << "(";
     if (funcType.getNumInputs() > 0)
-      sstream << mlirTypeToIntrinsicFortran(builder, funcType.getInput(0), loc,
-                                            name);
+      sstream << mlirTypeToIntrinsicFortran(funcType.getInput(0), loc, name);
     for (mlir::Type argType : funcType.getInputs().drop_front()) {
-      sstream << ", "
-              << mlirTypeToIntrinsicFortran(builder, argType, loc, name);
+      sstream << ", " << mlirTypeToIntrinsicFortran(argType, loc, name);
     }
     sstream << ")";
   }
@@ -1786,7 +1785,7 @@ searchMathOperation(fir::FirOpBuilder &builder,
 static void checkPrecisionLoss(llvm::StringRef name,
                                mlir::FunctionType funcType,
                                const FunctionDistance &distance,
-                               fir::FirOpBuilder &builder, mlir::Location loc) {
+                               mlir::Location loc) {
   if (!distance.isLosingPrecision())
     return;
 
@@ -1797,8 +1796,8 @@ static void checkPrecisionLoss(llvm::StringRef name,
   // generating the code with the narrowing cast so that the user
   // can get a complete list of the problematic intrinsic calls.
   std::string message = prettyPrintIntrinsicName(
-      builder, loc, "not yet implemented: no math runtime available for '",
-      name, "'", funcType);
+      loc, "not yet implemented: no math runtime available for '", name, "'",
+      funcType);
   mlir::emitError(loc, message);
 }
 
@@ -2444,7 +2443,7 @@ static IntrinsicLibrary::RuntimeCallGenerator getRuntimeCallGeneratorHelper(
   if (!mathOp && bestNearMatch) {
     // Use the best near match, optionally issuing an error,
     // if types conversions cause precision loss.
-    checkPrecisionLoss(name, soughtFuncType, bestMatchDistance, builder, loc);
+    checkPrecisionLoss(name, soughtFuncType, bestMatchDistance, loc);
     mathOp = bestNearMatch;
   }
 

@@ -13,4 +13,4 @@ B x;
 
 // CIR: cir.global external @x = #cir.const_record<{#cir.global_view<@_ZTV1B, [0 : i32, 2 : i32]> : !cir.vptr}> : !rec_B
 // LLVM: @x = global %struct.B { ptr getelementptr inbounds nuw (i8, ptr @_ZTV1B, i64 16) }, align 8
-// OGCG: @x = global %struct.B { ptr getelementptr inbounds inrange(-16, 24) ({ [5 x ptr] }, ptr @_ZTV1B, i32 0, i32 0, i32 2) }, align 8
+// OGCG: @x = global %struct.B { ptr getelementptr inbounds inrange(-16, 24) (i8, ptr @_ZTV1B, i64 16) }, align 8

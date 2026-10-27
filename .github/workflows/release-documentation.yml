@@ -60,7 +60,7 @@ concurrency:
 jobs:
   release-documentation:
     name: Build and Upload Release Documentation and Man Pages
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     env:
       DOXYGEN_FILE_PATTERN: '*doxygen*.tar.xz'
     if: >-
@@ -149,7 +149,7 @@ jobs:
 
   upload-release-notes:
     name: "Upload Release Notes"
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     environment:
       deployment: false
       name: release
@@ -195,7 +195,7 @@ jobs:
 
   upload-documentation:
     name: "Upload Documentation"
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     environment:
       deployment: false
       name: release

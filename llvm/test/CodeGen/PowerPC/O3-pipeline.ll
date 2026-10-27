@@ -138,6 +138,8 @@
 ; CHECK-NEXT:       Machine Block Frequency Analysis
 ; CHECK-NEXT:       PowerPC MI Peephole Optimization
 ; CHECK-NEXT:       Remove dead machine instructions
+; CHECK-NEXT:       Remove unreachable machine basic blocks
+; CHECK-NEXT:       Live Variable Analysis
 ; CHECK-NEXT:       Slot index numbering
 ; CHECK-NEXT:       Live Interval Analysis
 ; CHECK-NEXT:       PowerPC TLS Dynamic Call Fixup

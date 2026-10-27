@@ -62,7 +62,7 @@ static bool isTooComplex(PWACtx PWAC) {
 static SCEV::NoWrapFlags getNoWrapFlags(const SCEV *Expr) {
   if (auto *NAry = dyn_cast<SCEVNAryExpr>(Expr))
     return NAry->getNoWrapFlags();
-  return SCEV::NoWrapMask;
+  return SCEV::FlagsMask;
 }
 
 static PWACtx combine(PWACtx PWAC0, PWACtx PWAC1,

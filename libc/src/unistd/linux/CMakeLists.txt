@@ -511,6 +511,19 @@ add_object_library(
 )
 
 add_entrypoint_object(
+  pause
+  SRCS
+    pause.cpp
+  HDRS
+    ../pause.h
+  DEPENDS
+    libc.src.__support.OSUtil.linux.syscall_wrappers.pause
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   pipe
   SRCS
     pipe.cpp

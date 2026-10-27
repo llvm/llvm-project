@@ -747,6 +747,16 @@ void codegen::setFunctionAttributes(Module &M, StringRef CPU,
     }
   }
 
+  // Synthesize the "target-abi" module flag from the -target-abi option.
+  //
+  // FIXME: verifyOptionsConsistency validates consistency for target-abi. We
+  // should consistently handle all ABI module flags either here or there.
+  StringRef ABIName = mc::getABIName();
+  if (!ABIName.empty() && !M.getModuleFlag("target-abi")) {
+    M.addModuleFlag(Module::Error, "target-abi",
+                    MDString::get(M.getContext(), ABIName));
+  }
+
   for (Function &F : M)
     setFunctionAttributes(F, CPU, Features, TuneCPU);
 }

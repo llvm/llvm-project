@@ -221,7 +221,7 @@ following ``main`` function:
   }
 
   int main(int, char**) {
-    test()
+    test();
     static_assert(test());
 
     return 0;
@@ -268,8 +268,8 @@ This macro requires its ``CONDITION`` to evaluate to ``true``. If that fails it
 will fail the test with a log message ``ARG``.
 
 
-TEST_LIBCPP_REQUIRE((CONDITION, ARG)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TEST_LIBCPP_REQUIRE(CONDITION, ARG)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 If the library under test is libc++ it behaves like ``TEST_REQUIRE``, else it
 is a no-op. This makes it possible to test libc++ specific behaviour. For
@@ -338,7 +338,7 @@ written to ``stderr``.
 This macro is in a different header as ``assert_macros.h`` since it pulls in
 additional headers.
 
- .. note: This macro can only be used in test using C++20 or newer. The macro
+.. note:: This macro can only be used in test using C++20 or newer. The macro
           was added at a time where most of libc++'s C++17 support was complete.
           Since it is not expected to add this to existing tests no effort was
           taken to make it work in earlier language versions.
@@ -411,7 +411,7 @@ libc++-Specific Lit Features
 Custom Directives
 ~~~~~~~~~~~~~~~~~
 
-Lit has many directives built in (e.g., ``DEFINE``, ``UNSUPPORTED``). In addition to those directives, libc++ adds two additional libc++-specific directives that makes
+Lit has many directives built in (e.g., ``DEFINE``, ``UNSUPPORTED``). In addition to those directives, libc++ adds three additional libc++-specific directives that makes
 writing tests easier. See `libc++-specific Lit Directives`_ for more information about the ``FILE_DEPENDENCIES``, ``ADDITIONAL_COMPILE_FLAGS``, and ``MODULE_DEPENDENCIES`` libc++-specific directives.
 
 .. _libc++-specific Lit Directives:

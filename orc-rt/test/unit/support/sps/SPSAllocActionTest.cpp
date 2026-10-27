@@ -19,6 +19,7 @@
 #include "gtest/gtest.h"
 
 using namespace orc_rt;
+using namespace orc_rt::test;
 
 static bool AAEQ(const AllocAction &LHS, const AllocAction &RHS) {
   if (LHS.Fn != RHS.Fn)

@@ -151,6 +151,7 @@ TEST_F(X86TargetInfoTest, AtomicRecordIsIndirect) {
   ASSERT_TRUE(Info.isIndirect());
   EXPECT_TRUE(Info.getIndirectByVal());
   EXPECT_EQ(Info.getIndirectAlign(), llvm::Align(8));
+  EXPECT_EQ(Info.getIndirectAddrSpace(), 0u);
 }
 
 // Atomic fields classify Memory rather than inheriting the underlying float's
@@ -169,6 +170,7 @@ TEST_F(X86TargetInfoTest, RecordOfAtomicFloatsIsIndirect) {
   ASSERT_TRUE(Info.isIndirect());
   EXPECT_TRUE(Info.getIndirectByVal());
   EXPECT_EQ(Info.getIndirectAlign(), llvm::Align(8));
+  EXPECT_EQ(Info.getIndirectAddrSpace(), 0u);
 }
 
 // Without the atomic wrappers, the same record is passed in an SSE register.

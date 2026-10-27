@@ -148,6 +148,10 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
   }
   theModule->setAttr(cir::CIRDialect::getTripleAttrName(),
                      builder.getStringAttr(getTriple().str()));
+  if (llvm::VersionTuple sdkVersion = getTarget().getSDKVersion();
+      !sdkVersion.empty())
+    theModule->setAttr(cir::CIRDialect::getSDKVersionAttrName(),
+                       builder.getStringAttr(sdkVersion.getAsString()));
   // TODO(CIR): These attributes should eventually be replaced by
   // TypeSizeInfoAttr once it is upstreamed.
   theModule->setAttr(cir::CIRDialect::getSizeTypeWidthAttrName(),
@@ -2145,7 +2149,12 @@ void CIRGenModule::replaceUsesOfNonProtoTypeWithRealFunction(
   assert(!cir::MissingFeatures::opFuncExceptions());
   assert(!cir::MissingFeatures::opFuncParameterAttributes());
   assert(!cir::MissingFeatures::opFuncOperandBundles());
-  if (oldFn->getAttrs().size() <= 1)
+  unsigned numInherentAttrs = 0;
+  oldFn->getName().walkInherentAttrs(
+      oldFn, [&](llvm::StringRef, mlir::Attribute &attr) {
+        numInherentAttrs += bool(attr);
+      });
+  if (numInherentAttrs <= 1)
     errorNYI(old->getLoc(),
              "replaceUsesOfNonProtoTypeWithRealFunction: Attribute forwarding");
 
@@ -2486,7 +2495,8 @@ bool CIRGenModule::findFieldMemberPath(const CXXRecordDecl *currentClass,
       getTypes().getCIRGenRecordLayout(currentClass);
 
   // The field is declared directly in this class.
-  if (astContext.isSameEntity(field->getParent(), currentClass)) {
+  if (astContext.isSameEntity(field->getParent()->getMostRecentDecl(),
+                              currentClass->getMostRecentDecl())) {
     int32_t fieldIdx;
     if (currentClass->isUnion()) {
       // For unions, getCIRFieldNo always returns 0 for every union member (all
@@ -3660,10 +3670,10 @@ cir::FuncOp CIRGenModule::getOrCreateCIRFunction(
 
   if (d)
     setFunctionAttributes(gd, funcOp, /*isIncompleteFunction=*/false, isThunk);
-  if (!extraAttrs.empty()) {
-    extraAttrs.append(funcOp->getAttrs());
-    funcOp->setAttrs(extraAttrs);
-  }
+  if (!extraAttrs.empty())
+    for (mlir::NamedAttribute attr : extraAttrs)
+      if (!funcOp->hasDiscardableAttr(attr.getName()))
+        funcOp->setDiscardableAttr(attr.getName(), attr.getValue());
 
   // 'dontDefer' actually means don't move this to the deferredDeclsToEmit list.
   if (dontDefer) {
@@ -3974,8 +3984,19 @@ void CIRGenModule::release() {
   emitLLVMUsed();
 
   // Precompute the mangled C++20 named-module initializer function name and
-  // stash it on the ModuleOp so LoweringPrepare (which may run without a live
-  // ASTContext in split-compilation flows) can read it back as an attribute.
+  // stash it on the ModuleOp so LoweringPrepare (which runs without a live
+  // ASTContext) can read it back as an attribute.  This attribute is the only
+  // channel through which the named-module initializer reaches lowering: its
+  // presence tells LoweringPrepare both what to call the global-init function
+  // and that the function needs external linkage, and its absence selects the
+  // `_GLOBAL__sub_I_` form.  Lowering therefore never has to rediscover the
+  // module from the AST.
+  //
+  // The mangler-kind check mirrors classic codegen's `CXX20ModuleInits` (see
+  // CodeGenModule.cpp), which only enables C++20 module initializers for the
+  // Itanium mangler because no Microsoft mangling for them has been settled
+  // on yet.  Non-Itanium named modules fall back to `_GLOBAL__sub_I_` exactly
+  // as they do in classic codegen.
   if (langOpts.CPlusPlusModules &&
       getCXXABI().getMangleContext().getKind() ==
           clang::ItaniumMangleContext::MK_Itanium) {

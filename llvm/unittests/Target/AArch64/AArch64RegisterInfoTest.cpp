@@ -165,7 +165,7 @@ TEST(AArch64ReservedRegs, ArtificialHIRegistersAreReserved) {
   // Create an empty machine function
   LLVMContext Context;
   Module M("", Context);
-  M.setDataLayout(TM->createDataLayout());
+  M.setDataLayout(TM->getTargetTriple().computeDataLayout());
   Function *F = Function::Create(
       FunctionType::get(Type::getVoidTy(Context), /*isVarArg=*/false),
       GlobalValue::ExternalLinkage, "f", &M);

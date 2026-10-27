@@ -342,6 +342,12 @@ def CIR_AnyIntOrVecOfIntType
     let cppFunctionName = "isIntOrVectorOfIntType";
 }
 
+def CIR_AnyIntOrVecOfIntOrBoolType
+    : AnyTypeOf<[CIR_AnyIntType, CIR_VectorOfIntOrBoolType],
+        "integer or vector of bool or integer type"> {
+    let cppFunctionName = "isIntOrVecOfIntOrBoolType";
+}
+
 def CIR_AnySIntOrVecOfSIntType
     : AnyTypeOf<[CIR_AnySIntType, CIR_VectorOfSIntType],
         "signed integer or vector of signed integer type"> {
@@ -365,6 +371,16 @@ def CIR_AnyFloatOrVecOfFloatType
 def CIR_AnyBitwiseType
     : AnyTypeOf<[CIR_AnyIntType, CIR_AnyBoolType, CIR_VectorOfIntOrBoolType],
                 "integer, boolean, or vector of bool or integer">;
+
+//===----------------------------------------------------------------------===//
+// Matrix Type predicates
+//===----------------------------------------------------------------------===//
+
+def CIR_MatrixElementType
+    : AnyTypeOf<[CIR_AnyBoolType, CIR_AnyIntOrFloatType],
+                "any cir boolean, integer, floating point"> {
+  let cppFunctionName = "isValidMatrixTypeElementType";
+}
 
 //===----------------------------------------------------------------------===//
 // Data member type predicates

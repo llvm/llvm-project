@@ -148,7 +148,6 @@ private:
   /// \name Countable Loop Idiom Handling
   /// @{
 
-  bool runOnCountableLoop();
   bool runOnLoopBlock(BasicBlock *BB, const SCEV *BECount,
                       SmallVectorImpl<BasicBlock *> &ExitBlocks);
 

@@ -420,6 +420,90 @@ void foo(RefPtr<RefCountable>& arg) {
 
 } // namespace local_assignment_to_guardian
 
+namespace raw_pointer_or_reference_guardian_parameter {
+
+void consume(RefCountable&);
+void consumeConst(const RefCountable&);
+void consumePtr(RefCountable*);
+void reseat(RefCountable*&);
+
+void memberCallThroughReference(RefCountable& obj) {
+  RefCountable& ref = obj;
+  obj.method();
+  ref.method();
+}
+
+void memberCallThroughPointer(RefCountable* obj) {
+  RefCountable* ptr = obj;
+  obj->method();
+  ptr->method();
+}
+
+void passReferenceToNonConstReference(RefCountable& obj) {
+  RefCountable& ref = obj;
+  consume(obj);
+  ref.method();
+}
+
+void passConstReferenceToConstReference(const RefCountable& obj) {
+  const RefCountable& ref = obj;
+  consumeConst(obj);
+  ref.constMethod();
+}
+
+void passPointerByValue(RefCountable* obj) {
+  RefCountable* ptr = obj;
+  consumePtr(obj);
+  ptr->method();
+}
+
+void passPointerByNonConstReference(RefCountable* obj) {
+  RefCountable* ptr = obj;
+  // expected-warning@-1{{Local variable 'ptr' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
+  reseat(obj);
+  ptr->method();
+}
+
+void assignToPointer(RefCountable* obj, RefCountable* other) {
+  RefCountable* ptr = obj;
+  // expected-warning@-1{{Local variable 'ptr' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
+  obj = other;
+  ptr->method();
+}
+
+void reseatViaPointerToPointer(RefCountable**);
+void readViaPointerToConstPointer(RefCountable* const*);
+
+void passAddressOfPointer(RefCountable* obj) {
+  RefCountable* ptr = obj;
+  // expected-warning@-1{{Local variable 'ptr' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
+  reseatViaPointerToPointer(&obj);
+  ptr->method();
+}
+
+void passAddressOfPointerAsConst(RefCountable* obj) {
+  RefCountable* ptr = obj;
+  readViaPointerToConstPointer(&obj);
+  ptr->method();
+}
+
+void passAddressOfReference(RefCountable& obj) {
+  RefCountable& ref = obj;
+  consumePtr(&obj);
+  ref.method();
+}
+
+void reseatSmartPointer(RefPtr<RefCountable>*);
+
+void passAddressOfSmartPointerParameter(RefPtr<RefCountable>& guardian) {
+  RefCountable* ptr = guardian.get();
+  // expected-warning@-1{{Local variable 'ptr' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
+  reseatSmartPointer(&guardian);
+  ptr->method();
+}
+
+} // namespace raw_pointer_or_reference_guardian_parameter
+
 namespace local_assignment_to_parameter {
 
 RefCountable *provide_ref_cntbl();
@@ -707,6 +791,13 @@ namespace binding_raw_ptr {
   void bind_temp_with_safe_ptr() {
     auto [a, b] = pair<RefCountable*, RefPtr<RefCountable>> { provide(), provide() };
     // expected-warning@-1{{Local variable 'a' is a raw reference to RefPtr-capable type 'binding_raw_ptr::pair<RefCountable *, RefPtr<RefCountable>>' [alpha.webkit.UncountedLocalVarsChecker]}}
+    a->method();
+  }
+
+  void bind_temp_from_guarded(RefPtr<RefCountable> owner) {
+    auto [a, b] = pair<RefCountable*, RefCountable*> { owner.get(), owner.get() };
+    // expected-warning@-1{{Local variable 'a' is a raw reference to RefPtr-capable type 'binding_raw_ptr::pair<RefCountable *, RefCountable *>' [alpha.webkit.UncountedLocalVarsChecker]}}
+    // expected-warning@-2{{Local variable 'b' is a raw reference to RefPtr-capable type 'binding_raw_ptr::pair<RefCountable *, RefCountable *>' [alpha.webkit.UncountedLocalVarsChecker]}}
     a->method();
   }
 

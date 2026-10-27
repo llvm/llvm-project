@@ -52,14 +52,13 @@ static cl::opt<OMPGeneralSchedulingType, true> XPollyScheduling(
                clEnumValN(OMPGeneralSchedulingType::Runtime, "runtime",
                           "Runtime determined (OMP_SCHEDULE)")),
     cl::Hidden, cl::location(polly::PollyScheduling),
-    cl::init(OMPGeneralSchedulingType::Runtime), cl::Optional,
-    cl::cat(PollyCategory));
+    cl::init(OMPGeneralSchedulingType::Runtime), cl::cat(PollyCategory));
 
 static cl::opt<int, true>
     XPollyChunkSize("polly-scheduling-chunksize",
                     cl::desc("Chunksize to use by the OpenMP runtime calls"),
                     cl::Hidden, cl::location(polly::PollyChunkSize),
-                    cl::init(0), cl::Optional, cl::cat(PollyCategory));
+                    cl::init(0), cl::cat(PollyCategory));
 
 // We generate a loop of either of the following structures:
 //

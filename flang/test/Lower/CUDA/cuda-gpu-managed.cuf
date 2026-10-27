@@ -80,6 +80,50 @@ end subroutine
 ! CHECK: cuf.allocate %[[BOX_DECL]]#0 : {{.*}} {data_attr = #cuf.cuda<managed>, pointer}
 
 ! -----------------------------------------------------------------------------
+! Test 5b: Scalar pointers are also implicitly managed (same as arrays)
+! -----------------------------------------------------------------------------
+subroutine test_scalar_pointer_managed()
+  integer, pointer :: p
+  type t
+    integer :: n
+  end type
+  type(t), pointer :: node
+  allocate(p)
+  allocate(node)
+  deallocate(p)
+  deallocate(node)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_scalar_pointer_managed()
+! CHECK: cuf.alloc {{.*}} {bindc_name = "node", data_attr = #cuf.cuda<managed>
+! CHECK: cuf.alloc !fir.box<!fir.ptr<i32>> {bindc_name = "p", data_attr = #cuf.cuda<managed>
+! CHECK: cuf.allocate {{.*}} {data_attr = #cuf.cuda<managed>, pointer}
+! CHECK: cuf.allocate {{.*}} {data_attr = #cuf.cuda<managed>, pointer}
+
+! -----------------------------------------------------------------------------
+! Test 5c: Explicit CUDA attributes on scalars that convert to ObjectEntity
+! before SetCUDADataAttr (ALLOCATABLE / VOLATILE) must not collide with
+! implicit managed.
+! -----------------------------------------------------------------------------
+subroutine test_scalar_explicit_attrs()
+  real, allocatable, device :: x
+  real, allocatable, pinned :: y
+  integer, pointer, volatile, device :: p
+  integer, pointer, device :: q
+  allocate(x, y, p, q)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_scalar_explicit_attrs()
+! CHECK: cuf.alloc !fir.box<!fir.ptr<i32>> {bindc_name = "p", data_attr = #cuf.cuda<device>
+! CHECK: cuf.alloc !fir.box<!fir.ptr<i32>> {bindc_name = "q", data_attr = #cuf.cuda<device>
+! CHECK: cuf.alloc !fir.box<!fir.heap<f32>> {bindc_name = "x", data_attr = #cuf.cuda<device>
+! CHECK: cuf.alloc !fir.box<!fir.heap<f32>> {bindc_name = "y", data_attr = #cuf.cuda<pinned>
+! CHECK: cuf.allocate {{.*}} {data_attr = #cuf.cuda<device>}
+! CHECK: cuf.allocate {{.*}} {data_attr = #cuf.cuda<pinned>}
+! CHECK: cuf.allocate {{.*}} {data_attr = #cuf.cuda<device>, pointer}
+! CHECK: cuf.allocate {{.*}} {data_attr = #cuf.cuda<device>, pointer}
+
+! -----------------------------------------------------------------------------
 ! Test 6: Multiple allocatables - mix of implicit and explicit
 ! -----------------------------------------------------------------------------
 subroutine test_mixed_allocatables()

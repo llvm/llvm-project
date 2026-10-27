@@ -82,6 +82,24 @@ if(LLVM_LIBC_FULL_BUILD AND NOT LIBC_TARGET_OS_IS_GPU)
       libc.src.string.memory_utils.inline_memset
   )
 
+  # Same tests, but with the heap rotating between several free stores, so that
+  # both configurations get covered by a single build.
+  add_libc_test(
+    freelist_heap_rotation_test
+    SUITE
+      libc-support-tests
+    SRCS
+      freelist_heap_test.cpp
+    COMPILE_OPTIONS
+      -DLIBC_COPT_BAREMETAL_HEAP_ENABLE_FREESTORE_ROTATION
+    DEPENDS
+      libc.src.__support.CPP.span
+      libc.src.__support.freelist_heap
+      libc.src.string.memcmp
+      libc.src.string.memcpy
+      libc.src.string.memory_utils.inline_memset
+  )
+
   add_libc_test(
     freelist_heap_death_test
     SUITE

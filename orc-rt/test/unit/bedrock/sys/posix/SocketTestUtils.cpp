@@ -16,7 +16,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-using namespace orc_rt;
+namespace orc_rt::test {
 
 std::optional<NativeSocketHandle> makeNativeSocket() {
   // Unbound, so this needs no network, peer or filesystem entry.
@@ -34,3 +34,5 @@ bool isNativeSocketOpen(NativeSocketHandle H) {
 }
 
 void closeNativeSocket(NativeSocketHandle H) { ::close(H); }
+
+} // namespace orc_rt::test

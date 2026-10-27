@@ -38,11 +38,6 @@
 </style>
 ```
 
-```{contents}
----
-local:
----
-```
 
 This document outlines the OpenMP API features supported by Flang. It is
 intended as a general reference.  For the most accurate information on

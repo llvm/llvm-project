@@ -12,8 +12,10 @@
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
 #include "clang/Analysis/DomainSpecific/CocoaConventions.h"
 #include <optional>
 
@@ -131,6 +133,64 @@ std::optional<bool> isCheckedPtrCapable(const clang::CXXRecordDecl *R) {
                               "decrementCheckedPtrCount");
 }
 
+std::optional<bool> isBorrowable(const clang::CXXRecordDecl *R) {
+  assert(R);
+  return hasPublicMethodInHierarchy(R, "crashIfBorrowed");
+}
+
+bool isBorrow(const clang::CXXRecordDecl *R) {
+  if (!R)
+    return false;
+  return isBorrow(safeGetName(R));
+}
+
+bool isBorrowType(const clang::QualType T) {
+  return isBorrow(T->getAsCXXRecordDecl());
+}
+
+QualType pointeeType(QualType T) {
+  while (!T.isNull()) {
+    QualType Pointee = T->getPointeeType();
+    if (Pointee.isNull())
+      break;
+    T = Pointee;
+  }
+  return T;
+}
+
+QualType borrowedType(QualType T) {
+  const auto *Specialization =
+      dyn_cast_or_null<ClassTemplateSpecializationDecl>(
+          T->getAsCXXRecordDecl());
+  if (!Specialization)
+    return QualType();
+  const auto &Args = Specialization->getTemplateArgs();
+  if (!Args.size() || Args[0].getKind() != TemplateArgument::Type)
+    return QualType();
+  return Args[0].getAsType();
+}
+
+static bool hasLifetimeBoundCtor(const clang::CXXRecordDecl *R) {
+  if (!R || !R->hasDefinition())
+    return false;
+  for (const CXXConstructorDecl *Ctor : R->ctors()) {
+    for (const ParmVarDecl *Param : Ctor->parameters()) {
+      if (Param->hasAttr<LifetimeBoundAttr>() ||
+          Param->hasAttr<LifetimeCaptureByAttr>())
+        return true;
+    }
+  }
+  return false;
+}
+
+bool isView(const clang::QualType T) {
+  if (T->isReferenceType())
+    return true;
+  if (lifetimes::isPointerLikeType(T))
+    return true;
+  return hasLifetimeBoundCtor(T->getAsCXXRecordDecl());
+}
+
 bool isRefType(const std::string &Name) {
   return Name == "Ref" || Name == "RefAllowingPartiallyDestroyed" ||
          Name == "RefPtr" || Name == "RefPtrAllowingPartiallyDestroyed";
@@ -148,6 +208,8 @@ bool isCheckedPtr(const std::string &Name) {
 bool isUniquePtr(const std::string &Name) {
   return Name == "unique_ptr" || Name == "UniqueRef" || Name == "LazyUniqueRef";
 }
+
+bool isBorrow(const std::string &Name) { return Name == "Borrow"; }
 
 bool isOwnerPtr(const std::string &Name) {
   return isRefType(Name) || isCheckedPtr(Name) || isRetainPtrOrOSPtr(Name) ||

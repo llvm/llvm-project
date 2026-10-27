@@ -1287,6 +1287,38 @@ int32x2_t test_psshar_s_i32x2_neg_imm(int32x2_t a) {
   return __riscv_psshar_s_i32x2(a, -5);
 }
 
+/* Packed Saturation (32-bit) */
+// CHECK-LABEL: test_pusati_u16x2:
+// CHECK:       pusati.h{{[[:space:]]}}
+uint16x2_t test_pusati_u16x2(int16x2_t a) { return __riscv_pusati_u16x2(a, 8); }
+
+// CHECK-LABEL: test_psati_i16x2:
+// CHECK:       psati.h{{[[:space:]]}}
+int16x2_t test_psati_i16x2(int16x2_t a) { return __riscv_psati_i16x2(a, 8); }
+
+/* Packed Saturation (64-bit) */
+// CHECK-LABEL: test_pusati_u16x4:
+// RV32:        pusati.dh{{[[:space:]]}}
+// RV64:        pusati.h{{[[:space:]]}}
+uint16x4_t test_pusati_u16x4(int16x4_t a) { return __riscv_pusati_u16x4(a, 8); }
+
+// CHECK-LABEL: test_pusati_u32x2:
+// RV32:        pusati.dw{{[[:space:]]}}
+// RV64:        pusati.w{{[[:space:]]}}
+uint32x2_t test_pusati_u32x2(int32x2_t a) {
+  return __riscv_pusati_u32x2(a, 16);
+}
+
+// CHECK-LABEL: test_psati_i16x4:
+// RV32:        psati.dh{{[[:space:]]}}
+// RV64:        psati.h{{[[:space:]]}}
+int16x4_t test_psati_i16x4(int16x4_t a) { return __riscv_psati_i16x4(a, 8); }
+
+// CHECK-LABEL: test_psati_i32x2:
+// RV32:        psati.dw{{[[:space:]]}}
+// RV64:        psati.w{{[[:space:]]}}
+int32x2_t test_psati_i32x2(int32x2_t a) { return __riscv_psati_i32x2(a, 16); }
+
 // CHECK-LABEL: test_pand_i8x4:
 // CHECK:       and{{[[:space:]]}}
 int8x4_t test_pand_i8x4(int8x4_t a, int8x4_t b) {
@@ -2428,6 +2460,46 @@ uint16x4_t test_pwaddau_u16x4(uint16x4_t rd, uint8x4_t rs1, uint8x4_t rs2) {
 // RV64:        pm2addau.h
 uint32x2_t test_pwaddau_u32x2(uint32x2_t rd, uint16x2_t rs1, uint16x2_t rs2) {
   return __riscv_pwaddau_u32x2(rd, rs1, rs2);
+}
+
+// CHECK-LABEL: test_pwsuba_i16x4:
+// RV32:        pwsuba.b
+// RV64:        zip8p
+// RV64:        psrai.h
+// RV64:        psext.h.b
+// RV64:        psub.h
+// RV64:        padd.h
+int16x4_t test_pwsuba_i16x4(int16x4_t rd, int8x4_t rs1, int8x4_t rs2) {
+  return __riscv_pwsuba_i16x4(rd, rs1, rs2);
+}
+
+// CHECK-LABEL: test_pwsuba_i32x2:
+// RV32:        pwsuba.h
+// RV64:        zip16p
+// RV64:        pli.h
+// RV64:        pm2suba.h
+int32x2_t test_pwsuba_i32x2(int32x2_t rd, int16x2_t rs1, int16x2_t rs2) {
+  return __riscv_pwsuba_i32x2(rd, rs1, rs2);
+}
+
+// CHECK-LABEL: test_pwsubau_u16x4:
+// RV32:        pwsubau.b
+// RV64:        pwcvtu.wb
+// RV64:        pwcvtu.wb
+// RV64:        psub.h
+// RV64:        padd.h
+uint16x4_t test_pwsubau_u16x4(uint16x4_t rd, uint8x4_t rs1, uint8x4_t rs2) {
+  return __riscv_pwsubau_u16x4(rd, rs1, rs2);
+}
+
+// CHECK-LABEL: test_pwsubau_u32x2:
+// RV32:        pwsubau.h
+// RV64:        pwcvtu.wh
+// RV64:        pwcvtu.wh
+// RV64:        psub.w
+// RV64:        padd.w
+uint32x2_t test_pwsubau_u32x2(uint32x2_t rd, uint16x2_t rs1, uint16x2_t rs2) {
+  return __riscv_pwsubau_u32x2(rd, rs1, rs2);
 }
 
 // CHECK-LABEL: test_pwcvth_i16x4:
@@ -4260,6 +4332,114 @@ int64_t test_mulsu_w11_i64(int32x2_t a, uint32x2_t b) {
   return __riscv_mulsu_w11_i64(a, b);
 }
 
+// CHECK-LABEL: test_pmulh_b0_i16x2:
+// CHECK:       pmulh.h.b0
+int16x2_t test_pmulh_b0_i16x2(int16x2_t a, int8x4_t b) {
+  return __riscv_pmulh_b0_i16x2(a, b);
+}
+
+// CHECK-LABEL: test_pmulh_b1_i16x2:
+// CHECK:       pmulh.h.b1
+int16x2_t test_pmulh_b1_i16x2(int16x2_t a, int8x4_t b) {
+  return __riscv_pmulh_b1_i16x2(a, b);
+}
+
+// CHECK-LABEL: test_pmulhsu_b0_i16x2:
+// CHECK:       pmulhsu.h.b0
+int16x2_t test_pmulhsu_b0_i16x2(int16x2_t a, uint8x4_t b) {
+  return __riscv_pmulhsu_b0_i16x2(a, b);
+}
+
+// CHECK-LABEL: test_pmulhsu_b1_i16x2:
+// CHECK:       pmulhsu.h.b1
+int16x2_t test_pmulhsu_b1_i16x2(int16x2_t a, uint8x4_t b) {
+  return __riscv_pmulhsu_b1_i16x2(a, b);
+}
+
+// CHECK-LABEL: test_mulh_h0_i32:
+// RV32:        mulh.h0
+// RV64:        pmulh.w.h0
+int32_t test_mulh_h0_i32(int32_t a, int16x2_t b) {
+  return __riscv_mulh_h0_i32(a, b);
+}
+
+// CHECK-LABEL: test_mulh_h1_i32:
+// RV32:        mulh.h1
+// RV64:        pmulh.w.h1
+int32_t test_mulh_h1_i32(int32_t a, int16x2_t b) {
+  return __riscv_mulh_h1_i32(a, b);
+}
+
+// CHECK-LABEL: test_mulhsu_h0_i32:
+// RV32:        mulhsu.h0
+// RV64:        pmulhsu.w.h0
+int32_t test_mulhsu_h0_i32(int32_t a, uint16x2_t b) {
+  return __riscv_mulhsu_h0_i32(a, b);
+}
+
+// CHECK-LABEL: test_mulhsu_h1_i32:
+// RV32:        mulhsu.h1
+// RV64:        pmulhsu.w.h1
+int32_t test_mulhsu_h1_i32(int32_t a, uint16x2_t b) {
+  return __riscv_mulhsu_h1_i32(a, b);
+}
+
+// CHECK-LABEL: test_pmulh_b0_i16x4:
+// RV32-COUNT-2: pmulh.h.b0
+// RV64:         pmulh.h.b0
+int16x4_t test_pmulh_b0_i16x4(int16x4_t a, int8x8_t b) {
+  return __riscv_pmulh_b0_i16x4(a, b);
+}
+
+// CHECK-LABEL: test_pmulh_b1_i16x4:
+// RV32-COUNT-2: pmulh.h.b1
+// RV64:         pmulh.h.b1
+int16x4_t test_pmulh_b1_i16x4(int16x4_t a, int8x8_t b) {
+  return __riscv_pmulh_b1_i16x4(a, b);
+}
+
+// CHECK-LABEL: test_pmulhsu_b0_i16x4:
+// RV32-COUNT-2: pmulhsu.h.b0
+// RV64:         pmulhsu.h.b0
+int16x4_t test_pmulhsu_b0_i16x4(int16x4_t a, uint8x8_t b) {
+  return __riscv_pmulhsu_b0_i16x4(a, b);
+}
+
+// CHECK-LABEL: test_pmulhsu_b1_i16x4:
+// RV32-COUNT-2: pmulhsu.h.b1
+// RV64:         pmulhsu.h.b1
+int16x4_t test_pmulhsu_b1_i16x4(int16x4_t a, uint8x8_t b) {
+  return __riscv_pmulhsu_b1_i16x4(a, b);
+}
+
+// CHECK-LABEL: test_pmulh_h0_i32x2:
+// RV32-COUNT-2: mulh.h0
+// RV64:         pmulh.w.h0
+int32x2_t test_pmulh_h0_i32x2(int32x2_t a, int16x4_t b) {
+  return __riscv_pmulh_h0_i32x2(a, b);
+}
+
+// CHECK-LABEL: test_pmulh_h1_i32x2:
+// RV32-COUNT-2: mulh.h1
+// RV64:         pmulh.w.h1
+int32x2_t test_pmulh_h1_i32x2(int32x2_t a, int16x4_t b) {
+  return __riscv_pmulh_h1_i32x2(a, b);
+}
+
+// CHECK-LABEL: test_pmulhsu_h0_i32x2:
+// RV32-COUNT-2: mulhsu.h0
+// RV64:         pmulhsu.w.h0
+int32x2_t test_pmulhsu_h0_i32x2(int32x2_t a, uint16x4_t b) {
+  return __riscv_pmulhsu_h0_i32x2(a, b);
+}
+
+// CHECK-LABEL: test_pmulhsu_h1_i32x2:
+// RV32-COUNT-2: mulhsu.h1
+// RV64:         pmulhsu.w.h1
+int32x2_t test_pmulhsu_h1_i32x2(int32x2_t a, uint16x4_t b) {
+  return __riscv_pmulhsu_h1_i32x2(a, b);
+}
+
 // CHECK-LABEL: test_pget_i8x4_i8:
 // CHECK:       srai
 int8_t test_pget_i8x4_i8(int8x4_t v) { return __riscv_pget_i8x4_i8(v, 3); }
@@ -4872,4 +5052,60 @@ uint16x2_t test_pget_u16x4_u16x2(uint16x4_t v) {
 // RV64:         srli{{[[:space:]]}}
 uint16x2_t test_pget_u16x4_u16x2_idx1(uint16x4_t v) {
   return __riscv_pget_u16x4_u16x2(v, 1);
+}
+
+// CHECK-LABEL: test_pset_i8x4_i8x8_lo:
+// RV32:         mv{{[[:space:]]}}
+// RV64:         ppaireo.w{{[[:space:]]}}
+int8x8_t test_pset_i8x4_i8x8_lo(int8x8_t v, int8x4_t s) {
+  return __riscv_pset_i8x4_i8x8(v, s, 0);
+}
+
+// CHECK-LABEL: test_pset_i8x4_i8x8_hi:
+// RV32:         mv{{[[:space:]]}}
+// RV64:         pack{{[[:space:]]}}
+int8x8_t test_pset_i8x4_i8x8_hi(int8x8_t v, int8x4_t s) {
+  return __riscv_pset_i8x4_i8x8(v, s, 1);
+}
+
+// CHECK-LABEL: test_pset_u8x4_u8x8_lo:
+// RV32:         mv{{[[:space:]]}}
+// RV64:         ppaireo.w{{[[:space:]]}}
+uint8x8_t test_pset_u8x4_u8x8_lo(uint8x8_t v, uint8x4_t s) {
+  return __riscv_pset_u8x4_u8x8(v, s, 0);
+}
+
+// CHECK-LABEL: test_pset_u8x4_u8x8_hi:
+// RV32:         mv{{[[:space:]]}}
+// RV64:         pack{{[[:space:]]}}
+uint8x8_t test_pset_u8x4_u8x8_hi(uint8x8_t v, uint8x4_t s) {
+  return __riscv_pset_u8x4_u8x8(v, s, 1);
+}
+
+// CHECK-LABEL: test_pset_i16x2_i16x4_lo:
+// RV32:         mv{{[[:space:]]}}
+// RV64:         ppaireo.w{{[[:space:]]}}
+int16x4_t test_pset_i16x2_i16x4_lo(int16x4_t v, int16x2_t s) {
+  return __riscv_pset_i16x2_i16x4(v, s, 0);
+}
+
+// CHECK-LABEL: test_pset_i16x2_i16x4_hi:
+// RV32:         mv{{[[:space:]]}}
+// RV64:         pack{{[[:space:]]}}
+int16x4_t test_pset_i16x2_i16x4_hi(int16x4_t v, int16x2_t s) {
+  return __riscv_pset_i16x2_i16x4(v, s, 1);
+}
+
+// CHECK-LABEL: test_pset_u16x2_u16x4_lo:
+// RV32:         mv{{[[:space:]]}}
+// RV64:         ppaireo.w{{[[:space:]]}}
+uint16x4_t test_pset_u16x2_u16x4_lo(uint16x4_t v, uint16x2_t s) {
+  return __riscv_pset_u16x2_u16x4(v, s, 0);
+}
+
+// CHECK-LABEL: test_pset_u16x2_u16x4_hi:
+// RV32:         mv{{[[:space:]]}}
+// RV64:         pack{{[[:space:]]}}
+uint16x4_t test_pset_u16x2_u16x4_hi(uint16x4_t v, uint16x2_t s) {
+  return __riscv_pset_u16x2_u16x4(v, s, 1);
 }

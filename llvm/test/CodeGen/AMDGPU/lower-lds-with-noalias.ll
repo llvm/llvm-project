@@ -32,10 +32,10 @@ define amdgpu_kernel void @ds_load_stores_aainfo(ptr addrspace(1) %arg, i32 %i) 
 ; CHECK-SAME: ptr addrspace(1) [[ARG:%.*]], i32 [[I:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[BB:.*:]]
 ; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds [64 x i32], ptr addrspace(3) @llvm.amdgcn.kernel.ds_load_stores_aainfo.lds, i32 0, i32 [[I]]
-; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds [64 x i32], ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_DS_LOAD_STORES_AAINFO_LDS_T:%.*]], ptr addrspace(3) @llvm.amdgcn.kernel.ds_load_stores_aainfo.lds, i32 0, i32 1), i32 0, i32 [[I]]
+; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds [64 x i32], ptr addrspace(3) getelementptr inbounds (i8, ptr addrspace(3) @llvm.amdgcn.kernel.ds_load_stores_aainfo.lds, i32 256), i32 0, i32 [[I]]
 ; CHECK-NEXT:    [[VAL_A:%.*]] = load i64, ptr addrspace(3) [[GEP_A]], align 4, !tbaa [[TBAA1:![0-9]+]], !alias.scope [[META4:![0-9]+]], !noalias [[META7:![0-9]+]]
 ; CHECK-NEXT:    [[VAL_B:%.*]] = load i64, ptr addrspace(3) [[GEP_B]], align 4, !tbaa [[TBAA1]], !alias.scope [[META12:![0-9]+]], !noalias [[META13:![0-9]+]]
-; CHECK-NEXT:    store i64 1, ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_DS_LOAD_STORES_AAINFO_LDS_T]], ptr addrspace(3) @llvm.amdgcn.kernel.ds_load_stores_aainfo.lds, i32 0, i32 2), align 16, !tbaa [[TBAA1]], !alias.scope [[META14:![0-9]+]], !noalias [[META15:![0-9]+]]
+; CHECK-NEXT:    store i64 1, ptr addrspace(3) getelementptr inbounds (i8, ptr addrspace(3) @llvm.amdgcn.kernel.ds_load_stores_aainfo.lds, i32 512), align 16, !tbaa [[TBAA1]], !alias.scope [[META14:![0-9]+]], !noalias [[META15:![0-9]+]]
 ; CHECK-NEXT:    [[VAL:%.*]] = add i64 [[VAL_A]], [[VAL_B]]
 ; CHECK-NEXT:    store i64 [[VAL]], ptr addrspace(1) [[ARG]], align 4
 ; CHECK-NEXT:    tail call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 1, i32 0)

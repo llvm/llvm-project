@@ -360,7 +360,7 @@ public:
 };
 
 /// A VPRecipeValue defined by a VPSingleDefRecipe.
-class VPSingleDefValue : public VPRecipeValue {
+class LLVM_ABI_FOR_TEST VPSingleDefValue : public VPRecipeValue {
   friend class VPDef;
   friend class VPSingleDefRecipe;
 

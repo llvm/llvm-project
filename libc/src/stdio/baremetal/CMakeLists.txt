@@ -7,6 +7,7 @@ add_object_library(
   DEPENDS
     libc.hdr.types.FILE
     libc.src.__support.CPP.string_view
+    libc.src.__support.File.file_io_result
     libc.src.__support.OSUtil.osutil
 )
 

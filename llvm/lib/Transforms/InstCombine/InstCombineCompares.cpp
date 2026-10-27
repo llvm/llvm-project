@@ -7694,12 +7694,12 @@ static Instruction *foldICmpInvariantGroup(ICmpInst &I) {
           I.getOperand(0)->getType()->getPointerAddressSpace())) {
     return nullptr;
   }
-  Instruction *Op;
-  if (match(I.getOperand(0), m_Instruction(Op)) &&
-      match(I.getOperand(1), m_Zero()) &&
-      Op->isLaunderOrStripInvariantGroup()) {
-    return ICmpInst::Create(Instruction::ICmp, I.getPredicate(),
-                            Op->getOperand(0), I.getOperand(1));
+  Value *Ptr;
+  if (match(I.getOperand(0),
+            m_Intrinsic<Intrinsic::launder_invariant_group>(m_Value(Ptr))) &&
+      match(I.getOperand(1), m_Zero())) {
+    return ICmpInst::Create(Instruction::ICmp, I.getPredicate(), Ptr,
+                            I.getOperand(1));
   }
   return nullptr;
 }

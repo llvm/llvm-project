@@ -20,31 +20,33 @@
 
 ; RUN: llc -o /dev/null -mtriple=x86_64-linux-unknown -regalloc=greedy \
 ; RUN:   -regalloc-enable-advisor=development -regalloc-training-log=%t3.log < %S/Inputs/two-large-fcts.ll
-; RUN: %python %S/../../../lib/Analysis/models/log_reader.py %t3.log | FileCheck %s --check-prefixes=CHECK-TWO-FCTS
+; RUN: %python %S/../../../lib/Analysis/models/log_reader.py %t3.log > %t3.readable
+; RUN: cp -f %t3.readable /tmp/test
+; RUN: FileCheck --input-file %t3.readable %s --check-prefixes=CHECK-TWO-FCTS
 
 ; CHECK-NOT: nan
 ; CHECK-LABEL: context: SyFgets
 ; CHECK-NEXT: observation: 0
 ; ML: index_to_evict: 9
-; NOML: index_to_evict: 11
+; NOML: index_to_evict: 32
 ; CHECK-NEXT: reward: 0
 ; CHECK-NEXT: observation: 1
 ; CHECK-NEXT: mask:
-; NOML:      observation: 17
-; ML:      observation: 83
-; ML: reward: 38.97
+; NOML:      observation: 15
+; ML:      observation: 80
+; ML: reward: 38.90
 ; NOML: reward: 37.60
 
 
 ; CHECK-TWO-FCTS: context: SyFgets
 ; CHECK-TWO-FCTS-NEXT: observation: 0
-; CHECK-TWO-FCTS-NEXT: mask: 0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1
-; CHECK-TWO-FCTS: index_to_evict: 11
-; CHECK-TWO-FCTS: observation: 17
+; CHECK-TWO-FCTS-NEXT: mask: 0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1
+; CHECK-TWO-FCTS: index_to_evict: 32
+; CHECK-TWO-FCTS: observation: 15
 ; CHECK-TWO-FCTS: reward: 37.60
 ; CHECK-TWO-FCTS: context: SyFgetsCopy
 ; CHECK-TWO-FCTS-NEXT: observation: 0
-; CHECK-TWO-FCTS-NEXT: mask: 0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1
-; CHECK-TWO-FCTS: index_to_evict: 11
-; CHECK-TWO-FCTS: observation: 17
+; CHECK-TWO-FCTS-NEXT: mask: 0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1
+; CHECK-TWO-FCTS: index_to_evict: 32
+; CHECK-TWO-FCTS: observation: 15
 ; CHECK-TWO-FCTS: reward: 37.60

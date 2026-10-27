@@ -34,33 +34,42 @@ struct B {
 bool make_temp(const B &) { return false; }
 bool test_temp_or() { return make_temp(1) || make_temp(2); }
 
+// The B(2) temporary lives in the right-hand side of the ||, which is only
+// evaluated when the left-hand side is false, so its destructor is guarded by
+// an active flag. B(1) is constructed first, so its cleanup scope is the outer
+// one and B(2) is destroyed first.
 // CIR: cir.func{{.*}} @_Z12test_temp_orv()
 // CIR:   %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.bool>
 // CIR:   %[[REF_TMP0:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_B>
+// CIR:   %[[REF_TMP1:.*]] = cir.alloca "ref.tmp1" {{.*}} : !cir.ptr<!rec_B>
+// CIR:   %[[CLEANUP_COND:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
 // CIR:   %[[ONE:.*]] = cir.const #cir.int<1>
 // CIR:   cir.call @_ZN1BC2Ei(%[[REF_TMP0]], %[[ONE]])
 // CIR:   cir.cleanup.scope {
 // CIR:     %[[MAKE_TEMP0:.*]] = cir.call @_Z9make_tempRK1B(%[[REF_TMP0]])
-// CIR:     %[[TERNARY:.*]] = cir.ternary(%[[MAKE_TEMP0]], true {
-// CIR:       %[[TRUE:.*]] = cir.const #true
-// CIR:       cir.yield %[[TRUE]] : !cir.bool
-// CIR:     }, false {
-// CIR:       %[[REF_TMP1:.*]] = cir.alloca "ref.tmp1" {{.*}} : !cir.ptr<!rec_B>
-// CIR:       %[[CLEANUP_TMP:.*]] = cir.alloca "tmp.exprcleanup" {{.*}} : !cir.ptr<!cir.bool>
-// CIR:       %[[TWO:.*]] = cir.const #cir.int<2>
-// CIR:       cir.call @_ZN1BC2Ei(%[[REF_TMP1]], %[[TWO]])
-// CIR:       cir.cleanup.scope {
-// CIR:         %[[MAKE_TEMP1:.*]] = cir.call @_Z9make_tempRK1B(%[[REF_TMP1]]) : (!cir.ptr<!rec_B>
-// CIR:         cir.store{{.*}} %[[MAKE_TEMP1]], %[[CLEANUP_TMP]]
-// CIR:         cir.yield
-// CIR:       } cleanup normal {
+// CIR:     cir.cleanup.scope {
+// CIR:       %[[FALSE:.*]] = cir.const #false
+// CIR:       cir.store %[[FALSE]], %[[CLEANUP_COND]]
+// CIR:       %[[TERNARY:.*]] = cir.ternary(%[[MAKE_TEMP0]], true {
+// CIR:         %[[TRUE:.*]] = cir.const #true
+// CIR:         cir.yield %[[TRUE]] : !cir.bool
+// CIR:       }, false {
+// CIR:         %[[TWO:.*]] = cir.const #cir.int<2>
+// CIR:         cir.call @_ZN1BC2Ei(%[[REF_TMP1]], %[[TWO]])
+// CIR:         %[[SET_TRUE:.*]] = cir.const #true
+// CIR:         cir.store %[[SET_TRUE]], %[[CLEANUP_COND]]
+// CIR:         %[[MAKE_TEMP1:.*]] = cir.call @_Z9make_tempRK1B(%[[REF_TMP1]])
+// CIR:         cir.yield %[[MAKE_TEMP1]] : !cir.bool
+// CIR:       })
+// CIR:       cir.store{{.*}} %[[TERNARY]], %[[RET_ADDR]]
+// CIR:       cir.yield
+// CIR:     } cleanup normal {
+// CIR:       %[[IS_ACTIVE:.*]] = cir.load{{.*}} %[[CLEANUP_COND]]
+// CIR:       cir.if %[[IS_ACTIVE]] {
 // CIR:         cir.call @_ZN1BD2Ev(%[[REF_TMP1]])
-// CIR:         cir.yield
 // CIR:       }
-// CIR:       %[[TERNARY_TMP:.*]] = cir.load{{.*}} %[[CLEANUP_TMP]]
-// CIR:       cir.yield %[[TERNARY_TMP]] : !cir.bool
-// CIR:     })
-// CIR:     cir.store{{.*}} %[[TERNARY]], %[[RET_ADDR]]
+// CIR:       cir.yield
+// CIR:     }
 // CIR:     cir.yield
 // CIR:   } cleanup normal {
 // CIR:     cir.call @_ZN1BD2Ev(%[[REF_TMP0]])
@@ -70,42 +79,30 @@ bool test_temp_or() { return make_temp(1) || make_temp(2); }
 // CIR:   cir.return %[[RETVAL]]
 
 // LLVM: define{{.*}} i1 @_Z12test_temp_orv(){{.*}} {
-// LLVM:   %[[REF_TMP1:.*]] = alloca %struct.B
-// LLVM:   %[[TMP_RESULT1:.*]] = alloca i8
-// LLVM:   %[[TMP_RESULT2:.*]] = alloca i8
+// LLVM:   %[[RETVAL:.*]] = alloca i8
 // LLVM:   %[[REF_TMP0:.*]] = alloca %struct.B
+// LLVM:   %[[REF_TMP1:.*]] = alloca %struct.B
+// LLVM:   %[[CLEANUP_COND:.*]] = alloca i8
 // LLVM:   call void @_ZN1BC2Ei(ptr {{.*}} %[[REF_TMP0]], i32 {{.*}} 1)
-// LLVM:   br label %[[SCOPE_BEGIN:.*]]
-// LLVM: [[SCOPE_BEGIN]]:
 // LLVM:   %[[MAKE_TEMP0:.*]] = call {{.*}} i1 @_Z9make_tempRK1B(ptr {{.*}} %[[REF_TMP0]])
+// LLVM:   store i8 0, ptr %[[CLEANUP_COND]]
 // LLVM:   br i1 %[[MAKE_TEMP0]], label %[[TERN_TRUE:.*]], label %[[TERN_FALSE:.*]]
 // LLVM: [[TERN_TRUE]]:
 // LLVM:   br label %[[RESULT_BLOCK:.*]]
 // LLVM: [[TERN_FALSE]]:
 // LLVM:   call void @_ZN1BC2Ei(ptr {{.*}} %[[REF_TMP1]], i32 {{.*}} 2)
-// LLVM:   br label %[[FALSE_CLEANUP_SCOPE:.*]]
-// LLVM: [[FALSE_CLEANUP_SCOPE]]:
+// LLVM:   store i8 1, ptr %[[CLEANUP_COND]]
 // LLVM:   %[[MAKE_TEMP1:.*]] = call {{.*}} i1 @_Z9make_tempRK1B(ptr {{.*}} %[[REF_TMP1]])
-// LLVM:   %[[ZEXT:.*]] = zext i1 %[[MAKE_TEMP1]] to i8
-// LLVM:   store i8 %[[ZEXT]], ptr %[[TMP_RESULT1]]
-// LLVM:   br label %[[FALSE_CLEANUP:.*]]
-// LLVM: [[FALSE_CLEANUP]]:
-// LLVM:   call void @_ZN1BD2Ev(ptr {{.*}} %[[REF_TMP1]])
-// LLVM:   br label %[[FALSE_END:.*]]
-// LLVM: [[FALSE_END]]:
-// LLVM:   br label %[[FALSE_RESULT:.*]]
-// LLVM: [[FALSE_RESULT]]:
-// LLVM:   %[[LOAD_TEMP1:.*]] = load i8, ptr %[[TMP_RESULT1]]
-// LLVM:   %[[TRUNC:.*]] = trunc i8 %[[LOAD_TEMP1]] to i1
-// LLVM:   br label %[[RESULT_BLOCK:.*]]
+// LLVM:   br label %[[RESULT_BLOCK]]
 // LLVM: [[RESULT_BLOCK]]:
-// LLVM:   %[[RESULT:.*]] = phi i1 [ %[[TRUNC]], %[[FALSE_RESULT]] ], [ true, %[[TERN_TRUE]] ]
-// LLVM:   br label %[[TERN_END:.*]]
-// LLVM: [[TERN_END]]:
-// LLVM:   %[[ZEXT_RESULT:.*]] = zext i1 %[[RESULT]] to i8
-// LLVM:   store i8 %[[ZEXT_RESULT]], ptr %[[TMP_RESULT2]]
-// LLVM:   br label %[[LOR_END:.*]]
-// LLVM: [[LOR_END]]:
+// LLVM:   %[[RESULT:.*]] = phi i1 [ %[[MAKE_TEMP1]], %[[TERN_FALSE]] ], [ true, %[[TERN_TRUE]] ]
+// LLVM:   %[[FLAG_BYTE:.*]] = load i8, ptr %[[CLEANUP_COND]]
+// LLVM:   %[[FLAG:.*]] = trunc i8 %[[FLAG_BYTE]] to i1
+// LLVM:   br i1 %[[FLAG]], label %[[DTOR1:.*]], label %[[DONE:.*]]
+// LLVM: [[DTOR1]]:
+// LLVM:   call void @_ZN1BD2Ev(ptr {{.*}} %[[REF_TMP1]])
+// LLVM:   br label %[[DONE]]
+// LLVM: [[DONE]]:
 // LLVM:   call void @_ZN1BD2Ev(ptr {{.*}} %[[REF_TMP0]])
 
 // OGCG: define {{.*}} i1 @_Z12test_temp_orv()
@@ -136,33 +133,41 @@ bool test_temp_or() { return make_temp(1) || make_temp(2); }
 
 bool test_temp_and() { return make_temp(1) && make_temp(2); }
 
+// As with test_temp_or, the B(2) temporary is created in the conditionally
+// evaluated right-hand side, so its destructor is guarded by an active flag
+// and lives in the inner scope, which runs first.
 // CIR: cir.func{{.*}} @_Z13test_temp_andv()
 // CIR:   %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.bool>
 // CIR:   %[[REF_TMP0:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_B>
+// CIR:   %[[REF_TMP1:.*]] = cir.alloca "ref.tmp1" {{.*}} : !cir.ptr<!rec_B>
+// CIR:   %[[CLEANUP_COND:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
 // CIR:   %[[ONE:.*]] = cir.const #cir.int<1>
 // CIR:   cir.call @_ZN1BC2Ei(%[[REF_TMP0]], %[[ONE]])
 // CIR:   cir.cleanup.scope {
 // CIR:     %[[MAKE_TEMP0:.*]] = cir.call @_Z9make_tempRK1B(%[[REF_TMP0]])
-// CIR:     %[[TERNARY:.*]] = cir.ternary(%[[MAKE_TEMP0]], true {
-// CIR:       %[[REF_TMP1:.*]] = cir.alloca "ref.tmp1" {{.*}} : !cir.ptr<!rec_B>
-// CIR:       %[[CLEANUP_TMP:.*]] = cir.alloca "tmp.exprcleanup" {{.*}} : !cir.ptr<!cir.bool>
-// CIR:       %[[TWO:.*]] = cir.const #cir.int<2>
-// CIR:       cir.call @_ZN1BC2Ei(%[[REF_TMP1]], %[[TWO]])
-// CIR:       cir.cleanup.scope {
-// CIR:         %[[MAKE_TEMP1:.*]] = cir.call @_Z9make_tempRK1B(%[[REF_TMP1]]) : (!cir.ptr<!rec_B>
-// CIR:         cir.store{{.*}} %[[MAKE_TEMP1]], %[[CLEANUP_TMP]]
-// CIR:         cir.yield
-// CIR:       } cleanup normal {
-// CIR:         cir.call @_ZN1BD2Ev(%[[REF_TMP1]])
-// CIR:         cir.yield
-// CIR:       }
-// CIR:       %[[TERNARY_TMP:.*]] = cir.load{{.*}} %[[CLEANUP_TMP]]
-// CIR:       cir.yield %[[TERNARY_TMP]] : !cir.bool
-// CIR:     }, false {
+// CIR:     cir.cleanup.scope {
 // CIR:       %[[FALSE:.*]] = cir.const #false
-// CIR:       cir.yield %[[FALSE]] : !cir.bool
-// CIR:     })
-// CIR:     cir.store{{.*}} %[[TERNARY]], %[[RET_ADDR]]
+// CIR:       cir.store %[[FALSE]], %[[CLEANUP_COND]]
+// CIR:       %[[TERNARY:.*]] = cir.ternary(%[[MAKE_TEMP0]], true {
+// CIR:         %[[TWO:.*]] = cir.const #cir.int<2>
+// CIR:         cir.call @_ZN1BC2Ei(%[[REF_TMP1]], %[[TWO]])
+// CIR:         %[[SET_TRUE:.*]] = cir.const #true
+// CIR:         cir.store %[[SET_TRUE]], %[[CLEANUP_COND]]
+// CIR:         %[[MAKE_TEMP1:.*]] = cir.call @_Z9make_tempRK1B(%[[REF_TMP1]])
+// CIR:         cir.yield %[[MAKE_TEMP1]] : !cir.bool
+// CIR:       }, false {
+// CIR:         %[[RES_FALSE:.*]] = cir.const #false
+// CIR:         cir.yield %[[RES_FALSE]] : !cir.bool
+// CIR:       })
+// CIR:       cir.store{{.*}} %[[TERNARY]], %[[RET_ADDR]]
+// CIR:       cir.yield
+// CIR:     } cleanup normal {
+// CIR:       %[[IS_ACTIVE:.*]] = cir.load{{.*}} %[[CLEANUP_COND]]
+// CIR:       cir.if %[[IS_ACTIVE]] {
+// CIR:         cir.call @_ZN1BD2Ev(%[[REF_TMP1]])
+// CIR:       }
+// CIR:       cir.yield
+// CIR:     }
 // CIR:     cir.yield
 // CIR:   } cleanup normal {
 // CIR:     cir.call @_ZN1BD2Ev(%[[REF_TMP0]])
@@ -172,50 +177,34 @@ bool test_temp_and() { return make_temp(1) && make_temp(2); }
 // CIR:   cir.return %[[RETVAL]]
 
 // LLVM: define{{.*}} i1 @_Z13test_temp_andv(){{.*}} {
-// LLVM:   %[[REF_TMP1:.*]] = alloca %struct.B{{.*}}
-// LLVM:   %[[TMP_RESULT:.*]] = alloca i8{{.*}}
-// LLVM:   %[[TMP_RESULT2:.*]] = alloca i8{{.*}}
+// LLVM:   %[[RETVAL:.*]] = alloca i8{{.*}}
 // LLVM:   %[[REF_TMP0:.*]] = alloca %struct.B{{.*}}
+// LLVM:   %[[REF_TMP1:.*]] = alloca %struct.B{{.*}}
+// LLVM:   %[[CLEANUP_COND:.*]] = alloca i8{{.*}}
 // LLVM:   call void @_ZN1BC2Ei(ptr {{.*}} %[[REF_TMP0]], i32 {{.*}} 1)
-// LLVM:   br label %[[SCOPE_BEGIN:.*]]
-// LLVM: [[SCOPE_BEGIN]]:
 // LLVM:   %[[MAKE_TEMP0:.*]] = call {{.*}} i1 @_Z9make_tempRK1B(ptr {{.*}} %[[REF_TMP0]])
+// LLVM:   store i8 0, ptr %[[CLEANUP_COND]]
 // LLVM:   br i1 %[[MAKE_TEMP0]], label %[[TERN_TRUE:.*]], label %[[TERN_FALSE:.*]]
 // LLVM: [[TERN_TRUE]]:
 // LLVM:   call void @_ZN1BC2Ei(ptr {{.*}} %[[REF_TMP1]], i32 {{.*}} 2)
-// LLVM:   br label %[[TRUE_CLEANUP_SCOPE:.*]]
-// LLVM: [[TRUE_CLEANUP_SCOPE]]:
+// LLVM:   store i8 1, ptr %[[CLEANUP_COND]]
 // LLVM:   %[[MAKE_TEMP1:.*]] = call {{.*}} i1 @_Z9make_tempRK1B(ptr {{.*}} %[[REF_TMP1]])
-// LLVM:   %[[ZEXT_MAKE_TEMP1:.*]] = zext i1 %[[MAKE_TEMP1]] to i8
-// LLVM:   store i8 %[[ZEXT_MAKE_TEMP1]], ptr %[[TMP_RESULT]], align 1
-// LLVM:   br label %[[TRUE_CLEANUP:.*]]
-// LLVM: [[TRUE_CLEANUP]]:
-// LLVM:   call void @_ZN1BD2Ev(ptr {{.*}} %[[REF_TMP1]])
-// LLVM:   br label %[[TRUE_END:.*]]
-// LLVM: [[TRUE_END]]:
-// LLVM:   br label %[[TRUE_RESULT:.*]]
-// LLVM: [[TRUE_RESULT]]:
-// LLVM:   %[[TMP_LOAD:.*]] = load i8, ptr %[[TMP_RESULT]], align 1
-// LLVM:   %[[TMP_TRUNC:.*]] = trunc i8 %[[TMP_LOAD]] to i1
 // LLVM:   br label %[[RESULT_BLOCK:.*]]
 // LLVM: [[TERN_FALSE]]:
 // LLVM:   br label %[[RESULT_BLOCK]]
 // LLVM: [[RESULT_BLOCK]]:
-// LLVM:   %[[RESULT:.*]] = phi i1 [ false, %[[TERN_FALSE]] ], [ %[[TMP_TRUNC]], %[[TRUE_RESULT]] ]
-// LLVM:   br label %[[TERN_END:.*]]
-// LLVM: [[TERN_END]]:
-// LLVM:   %[[ZEXT_RESULT:.*]] = zext i1 %[[RESULT]] to i8
-// LLVM:   store i8 %[[ZEXT_RESULT]], ptr %[[TMP_RESULT2]], align 1
-// LLVM:   br label %[[LAND_END:.*]]
-// LLVM: [[LAND_END]]:
+// LLVM:   %[[RESULT:.*]] = phi i1 [ false, %[[TERN_FALSE]] ], [ %[[MAKE_TEMP1]], %[[TERN_TRUE]] ]
+// LLVM:   %[[FLAG_BYTE:.*]] = load i8, ptr %[[CLEANUP_COND]]
+// LLVM:   %[[FLAG:.*]] = trunc i8 %[[FLAG_BYTE]] to i1
+// LLVM:   br i1 %[[FLAG]], label %[[DTOR1:.*]], label %[[DONE:.*]]
+// LLVM: [[DTOR1]]:
+// LLVM:   call void @_ZN1BD2Ev(ptr {{.*}} %[[REF_TMP1]])
+// LLVM:   br label %[[DONE]]
+// LLVM: [[DONE]]:
 // LLVM:   call void @_ZN1BD2Ev(ptr {{.*}} %[[REF_TMP0]])
-// LLVM:   br label %[[LAND_END2:.*]]
-// LLVM: [[LAND_END2]]:
-// LLVM:   br label %[[RETURN_BLOCK:.*]]
-// LLVM: [[RETURN_BLOCK]]:
-// LLVM:   %[[TMP2_LOAD:.*]] = load i8, ptr %[[TMP_RESULT2]], align 1
-// LLVM:   %[[TMP2_TRUNC:.*]] = trunc i8 %[[TMP2_LOAD]] to i1
-// LLVM:   ret i1 %[[TMP2_TRUNC]]
+// LLVM:   %[[RET_LOAD:.*]] = load i8, ptr %[[RETVAL]], align 1
+// LLVM:   %[[RET_TRUNC:.*]] = trunc i8 %[[RET_LOAD]] to i1
+// LLVM:   ret i1 %[[RET_TRUNC]]
 
 // OGCG: define {{.*}} i1 @_Z13test_temp_andv()
 // OGCG: [[ENTRY:.*]]:

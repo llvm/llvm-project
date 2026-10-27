@@ -343,8 +343,10 @@ void mock::MockLiboffload::initDefault() {
       });
 
   ON_CALL(*this, olGetMemInfo)
-      .WillByDefault([this](const void *Ptr, ol_mem_info_t PropName,
-                            size_t PropSize, void *PropValue) -> ol_result_t {
+      .WillByDefault([this](ol_context_handle_t Context, const void *Ptr,
+                            ol_mem_info_t PropName, size_t PropSize,
+                            void *PropValue) -> ol_result_t {
+        EXPECT_NE(Context, nullptr);
         EXPECT_NE(Ptr, nullptr);
         // Other properties are not used by the runtime yet
         EXPECT_EQ(PropName, OL_MEM_INFO_DEVICE);
@@ -361,8 +363,10 @@ void mock::MockLiboffload::initDefault() {
       });
 
   ON_CALL(*this, olMemAlloc)
-      .WillByDefault([](ol_device_handle_t Device, ol_alloc_type_t Type,
-                        size_t Size, void **AllocationOut) -> ol_result_t {
+      .WillByDefault([](ol_context_handle_t Context, ol_device_handle_t Device,
+                        ol_alloc_type_t Type, size_t Size,
+                        void **AllocationOut) -> ol_result_t {
+        EXPECT_NE(Context, nullptr);
         EXPECT_NE(Device, nullptr);
         EXPECT_NE(Type, OL_ALLOC_TYPE_HOST);
         EXPECT_GT(Size, 0);
@@ -372,8 +376,9 @@ void mock::MockLiboffload::initDefault() {
       });
 
   ON_CALL(*this, olMemAllocHost)
-      .WillByDefault([](ol_device_handle_t Device, size_t Size,
-                        void **AllocationOut) -> ol_result_t {
+      .WillByDefault([](ol_context_handle_t Context, ol_device_handle_t Device,
+                        size_t Size, void **AllocationOut) -> ol_result_t {
+        EXPECT_NE(Context, nullptr);
         EXPECT_NE(Device, nullptr);
         EXPECT_GT(Size, 0);
         EXPECT_NE(AllocationOut, nullptr);
@@ -381,17 +386,22 @@ void mock::MockLiboffload::initDefault() {
         return OL_SUCCESS;
       });
 
-  ON_CALL(*this, olMemFree).WillByDefault([](void *Address) -> ol_result_t {
-    EXPECT_NE(Address, nullptr);
-    mock::releaseDummyHandle(Address);
-    return OL_SUCCESS;
-  });
+  ON_CALL(*this, olMemFree)
+      .WillByDefault(
+          [](ol_context_handle_t Context, void *Address) -> ol_result_t {
+            EXPECT_NE(Context, nullptr);
+            EXPECT_NE(Address, nullptr);
+            mock::releaseDummyHandle(Address);
+            return OL_SUCCESS;
+          });
 
   ON_CALL(*this, olMemAllocAligned)
-      .WillByDefault([this](ol_device_handle_t Device,
+      .WillByDefault([this](ol_context_handle_t Context,
+                            ol_device_handle_t Device,
                             ol_alloc_type_t AllocType, size_t Size,
                             size_t Alignment,
                             void **AllocationOut) -> ol_result_t {
+        EXPECT_NE(Context, nullptr);
         EXPECT_NE(Device, nullptr);
         EXPECT_TRUE(AllocType == OL_ALLOC_TYPE_DEVICE ||
                     AllocType == OL_ALLOC_TYPE_MANAGED);
@@ -407,9 +417,11 @@ void mock::MockLiboffload::initDefault() {
       });
 
   ON_CALL(*this, olMemAllocAlignedHost)
-      .WillByDefault([this](ol_device_handle_t Device, size_t Size,
+      .WillByDefault([this](ol_context_handle_t Context,
+                            ol_device_handle_t Device, size_t Size,
                             size_t Alignment,
                             void **AllocationOut) -> ol_result_t {
+        EXPECT_NE(Context, nullptr);
         EXPECT_NE(Device, nullptr);
         EXPECT_GT(Size, 0);
         EXPECT_GT(Alignment, 0);

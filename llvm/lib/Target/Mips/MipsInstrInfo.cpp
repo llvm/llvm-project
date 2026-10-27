@@ -688,6 +688,8 @@ bool MipsInstrInfo::HasLoadDelaySlot(const MachineInstr &MI) const {
   case Mips::LW:
   case Mips::LWR:
   case Mips::LWL:
+  // On MIPS-I, the only float load there is; the rest came with later ISAs.
+  case Mips::LWC1:
     return true;
   default:
     return false;

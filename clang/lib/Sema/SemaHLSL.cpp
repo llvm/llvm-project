@@ -885,6 +885,8 @@ static bool isVkPipelineBuiltin(const ASTContext &AstContext, FunctionDecl *FD,
            (ST == llvm::Triple::Pixel && IsInput);
   case SemanticKind::VertexID:
     return true;
+  case SemanticKind::InstanceID:
+    return ST == llvm::Triple::Vertex && IsInput;
   default:
     return false;
   }
@@ -1098,6 +1100,7 @@ void SemaHLSL::checkSemanticAnnotation(
   case SemanticKind::GroupID:
   case SemanticKind::GroupIndex:
   case SemanticKind::GroupThreadID:
+  case SemanticKind::InstanceID:
     if (SemanticAttr->getSemanticIndex() != 0) {
       std::string PrettyName =
           "'" + SemanticAttr->getSemanticName().str() + "'";
@@ -1928,6 +1931,16 @@ void SemaHLSL::diagnoseSystemSemanticAttr(Decl *D, const ParsedAttr &AL,
   case SemanticKind::VertexID: {
     uint64_t SizeInBits = SemaRef.Context.getTypeSize(ValueType);
     if (!ValueType->isUnsignedIntegerType() || SizeInBits != 32)
+      Diag(AL.getLoc(), diag::err_hlsl_attr_invalid_type) << AL << "uint";
+    break;
+  }
+  case SemanticKind::InstanceID: {
+    uint64_t SizeInBits = SemaRef.Context.getTypeSize(ValueType);
+    // DXIL permits U32 or U16. SPIR-V requires a 32-bit scalar per
+    // VUID-InstanceIndex-InstanceIndex-04265.
+    bool IsSPIRV = getASTContext().getTargetInfo().getTriple().isSPIRV();
+    if (!ValueType->isUnsignedIntegerType() ||
+        !(SizeInBits == 32 || (!IsSPIRV && SizeInBits == 16)))
       Diag(AL.getLoc(), diag::err_hlsl_attr_invalid_type) << AL << "uint";
     break;
   }

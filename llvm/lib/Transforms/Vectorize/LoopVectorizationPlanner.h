@@ -102,33 +102,32 @@ class VPBuilder {
 private:
   class VPInsertPoint {
     VPBasicBlock *Block = nullptr;
-    VPBasicBlock::iterator Point;
+    VPBasicBlock::iterator Iterator;
 
   public:
     /// Creates a new insertion point which doesn't point to anything.
     VPInsertPoint() = default;
 
-    /// Creates a new insertion point to insert at \p Point in \p Block.
-    VPInsertPoint(VPBasicBlock *Block, VPBasicBlock::iterator Point)
-        : Block(Block), Point(Point) {}
+    /// Creates a new insertion point to insert at \p Iterator in \p Block.
+    VPInsertPoint(VPBasicBlock *Block, VPBasicBlock::iterator Iterator)
+        : Block(Block), Iterator(Iterator) {}
 
     /// Creates a new insertion point to insert before \p R.
     VPInsertPoint(VPRecipeBase *R)
-        : Block(R->getParent()), Point(R->getIterator()) {}
+        : Block(R->getParent()), Iterator(R->getIterator()) {}
 
     /// Creates a new insertion point to insert at the end of \p Block.
-    VPInsertPoint(VPBasicBlock *Block) : Block(Block), Point(Block->end()) {}
+    VPInsertPoint(VPBasicBlock *Block) : Block(Block), Iterator(Block->end()) {}
 
     /// Returns true if this insert point is set.
     operator bool() const { return Block; }
 
     VPBasicBlock *getBlock() const { return Block; }
+    VPBasicBlock::iterator getIterator() const { return Iterator; }
 
     operator VPRecipeBase *() const {
-      return Point == Block->end() ? nullptr : &*Point;
+      return Iterator == Block->end() ? nullptr : &*Iterator;
     }
-
-    template <typename T> void insert(T &R) { return Block->insert(R, Point); }
   };
 
   VPInsertPoint InsertPt;
@@ -136,7 +135,7 @@ private:
   /// Insert \p VPI in BB at InsertPt if BB is set.
   template <typename T> T *tryInsertInstruction(T *R) {
     if (InsertPt)
-      InsertPt.insert(R);
+      InsertPt.getBlock()->insert(R, InsertPt.getIterator());
     return R;
   }
 
@@ -183,7 +182,7 @@ public:
 
   /// Insert \p R at the current insertion point. Returns \p R unchanged.
   template <typename T> [[maybe_unused]] T *insert(T *R) {
-    InsertPt.insert(R);
+    InsertPt.getBlock()->insert(R, InsertPt.getIterator());
     return R;
   }
 

@@ -696,8 +696,7 @@ static const Value *stripPointerCastsAndOffsets(
         // but it can't be marked with returned attribute, that's why it needs
         // special case.
         if (StripKind == PSK_ForAliasAnalysis &&
-            (Call->getIntrinsicID() == Intrinsic::launder_invariant_group ||
-             Call->getIntrinsicID() == Intrinsic::strip_invariant_group)) {
+            Call->getIntrinsicID() == Intrinsic::launder_invariant_group) {
           V = Call->getArgOperand(0);
           continue;
         }
@@ -797,7 +796,8 @@ const Value *Value::stripAndAccumulateConstantOffsets(
     } else if (const auto *Call = dyn_cast<CallBase>(V)) {
       if (const Value *RV = Call->getReturnedArgOperand())
         V = RV;
-      if (AllowInvariantGroup && Call->isLaunderOrStripInvariantGroup())
+      if (AllowInvariantGroup &&
+          Call->getIntrinsicID() == Intrinsic::launder_invariant_group)
         V = Call->getArgOperand(0);
     } else if (auto *Int2Ptr = dyn_cast<Operator>(V)) {
       // Try to accumulate across (inttoptr (add (ptrtoint p), off)).

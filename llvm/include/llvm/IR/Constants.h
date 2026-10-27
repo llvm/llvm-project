@@ -1496,6 +1496,18 @@ public:
                    std::optional<ConstantRange> InRange = std::nullopt,
                    Type *OnlyIfReducedTy = nullptr);
 
+  /// Create a getelementptr constant expression in canonical ptradd form
+  /// (getelementptr i8) by converting GEP indices to offsets using the
+  /// provided data layout.
+  ///
+  /// Returns nullptr if the indices cannot be converted to ptradd form.
+  LLVM_ABI static Constant *
+  getGetElementPtr(const DataLayout &DL, Type *Ty, Constant *C,
+                   ArrayRef<Constant *> IdxList,
+                   GEPNoWrapFlags NW = GEPNoWrapFlags::none(),
+                   std::optional<ConstantRange> InRange = std::nullopt,
+                   Type *OnlyIfReducedTy = nullptr);
+
   /// Create a getelementptr i8, ptr, offset constant expression.
   static Constant *
   getPtrAdd(Constant *Ptr, Constant *Offset,

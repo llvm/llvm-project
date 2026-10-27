@@ -157,17 +157,16 @@ public:
     const var_ref_t var_ref =
         HasInnerVarref(v)
             ? m_storage.Insert(v, /*is_permanent=*/m_is_permanent, is_internal)
-            : var_ref_t(var_ref_t::k_no_child);
+            : var_ref_t::k_no_child;
 
     if (var.indexedVariables || v.MightHaveChildren())
       var.variablesReference = var_ref;
 
     if (v.GetDeclaration().IsValid())
-      var.declarationLocationReference =
-          PackLocation(var_ref.AsUInt32(), false);
+      var.declarationLocationReference = PackLocation(var_ref, false);
 
     if (ValuePointsToCode(v))
-      var.valueLocationReference = PackLocation(var_ref.AsUInt32(), true);
+      var.valueLocationReference = PackLocation(var_ref, true);
 
     if (lldb::addr_t addr = v.GetLoadAddress(); addr != LLDB_INVALID_ADDRESS)
       var.memoryReference = addr;

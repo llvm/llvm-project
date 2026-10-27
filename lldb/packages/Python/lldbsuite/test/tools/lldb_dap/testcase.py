@@ -51,7 +51,7 @@ class DAPTestCaseBase(Base, metaclass=LLDBTestCaseFactory):
         self.logger.propagate = False
         self.logger.setLevel(logging.DEBUG)
 
-        log_path = f"{self.getLogBasenameForCurrentTest()}-test_dap.log"
+        log_path = f"{self.getLogBasenameForCurrentTest()}-testcase.log"
         handler = logging.FileHandler(log_path, mode="w")
 
         # The Log name gets quite long and becomes noise. use the last log scope.

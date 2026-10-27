@@ -176,11 +176,6 @@ public:
   // This collects additional help to be printed.
   std::vector<StringRef> MoreHelp;
 
-  // This collects Options added with the cl::DefaultOption flag. Since they can
-  // be overridden, they are not added to the appropriate SubCommands until
-  // ParseCommandLineOptions actually runs.
-  SmallVector<Option*, 4> DefaultOptions;
-
   // This collects the different option categories that have been registered.
   SmallPtrSet<OptionCategory *, 16> RegisteredOptionCategories;
 
@@ -232,10 +227,6 @@ public:
   void addOption(Option *O, SubCommand *SC) {
     bool HadErrors = false;
     if (O->hasArgStr()) {
-      // If it's a DefaultOption, check to make sure it isn't already there.
-      if (O->isDefaultOption() && SC->OptionsMap.contains(O->ArgStr))
-        return;
-
       // Add argument to the argument map!
       if (!SC->OptionsMap.insert(std::make_pair(O->ArgStr, O)).second) {
         errs() << ProgramName << ": CommandLine Error: Option '" << O->ArgStr
@@ -263,11 +254,7 @@ public:
       report_fatal_error("inconsistency in registered CommandLine options");
   }
 
-  void addOption(Option *O, bool ProcessDefaultOption = false) {
-    if (!ProcessDefaultOption && O->isDefaultOption()) {
-      DefaultOptions.push_back(O);
-      return;
-    }
+  void addOption(Option *O) {
     forEachSubCommand(*O, [&](SubCommand &SC) { addOption(O, &SC); });
   }
 
@@ -397,8 +384,6 @@ public:
     SubCommand::getTopLevel().reset();
     SubCommand::getAll().reset();
     registerSubCommand(&SubCommand::getTopLevel());
-
-    DefaultOptions.clear();
   }
 
 private:
@@ -489,8 +474,6 @@ void Option::addCategory(OptionCategory &C) {
 void Option::reset() {
   NumOccurrences = 0;
   setDefault();
-  if (isDefaultOption())
-    removeArgument();
 }
 
 void OptionCategory::registerCategory() {
@@ -1544,10 +1527,6 @@ bool CommandLineParser::ParseCommandLineOptions(
   auto &ConsumeAfterOpt = ChosenSubCommand->ConsumeAfterOpt;
   auto &PositionalOpts = ChosenSubCommand->PositionalOpts;
   auto &OptionsMap = ChosenSubCommand->OptionsMap;
-
-  for (auto *O: DefaultOptions) {
-    addOption(O, true);
-  }
 
   if (ConsumeAfterOpt) {
     assert(PositionalOpts.size() > 0 &&
@@ -2659,8 +2638,7 @@ struct CommandLineCommonOptions {
       cl::cat(GenericCategory),
       cl::sub(SubCommand::getAll())};
 
-  cl::alias HOpA{"h", cl::desc("Alias for --help"), cl::aliasopt(HOp),
-                 cl::DefaultOption};
+  cl::alias HOpA{"h", cl::desc("Alias for --help"), cl::aliasopt(HOp)};
 
   cl::opt<HelpPrinterWrapper, true, parser<bool>> HHOp{
       "help-hidden",

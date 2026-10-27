@@ -2270,7 +2270,7 @@ protected:
     /// increments towards the beginning.
     /// Positive non-zero number represents the index + 1.
     /// Zero means this is not substituted from an expansion.
-    unsigned PackIndex : 15;
+    unsigned PackIndex : 16;
   };
 
   class SubstPackTypeBitfields {

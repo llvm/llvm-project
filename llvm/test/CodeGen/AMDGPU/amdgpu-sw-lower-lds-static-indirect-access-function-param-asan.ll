@@ -112,7 +112,7 @@ define amdgpu_kernel void @my_kernel() sanitize_address {
 ; CHECK-NEXT:    [[XYZCOND:%.*]] = phi i1 [ false, [[WID:%.*]] ], [ true, [[MALLOC]] ]
 ; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier()
 ; CHECK-NEXT:    [[TMP17:%.*]] = load ptr addrspace(1), ptr addrspace(3) @llvm.amdgcn.sw.lds.my_kernel, align 8
-; CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds ([[LLVM_AMDGCN_SW_LDS_MY_KERNEL_MD_TYPE]], ptr addrspace(1) @llvm.amdgcn.sw.lds.my_kernel.md, i32 0, i32 1, i32 0), align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @llvm.amdgcn.sw.lds.my_kernel.md, i64 12), align 4
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr addrspace(3) @llvm.amdgcn.sw.lds.my_kernel, i32 [[TMP8]]
 ; CHECK-NEXT:    [[LDS_PTR:%.*]] = getelementptr [1024 x i32], ptr addrspace(3) [[TMP9]], i32 0, i32 0
 ; CHECK-NEXT:    call void @my_function(ptr addrspace(3) [[LDS_PTR]])

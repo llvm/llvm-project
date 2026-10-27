@@ -327,6 +327,9 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
       args.hasFlag(clang::options::OPT_floop_interchange,
                    clang::options::OPT_fno_loop_interchange, true);
 
+  if (args.hasArg(clang::options::OPT_funique_internal_linkage_names))
+    opts.UniqueInternalLinkageNames = 1;
+
   if (args.getLastArg(clang::options::OPT_fexperimental_loop_fusion))
     opts.FuseLoops = 1;
 
@@ -1790,6 +1793,29 @@ bool CompilerInvocation::createFromArgs(
     invoc.loweringOpts.setInitGlobalZero(true);
   else
     invoc.loweringOpts.setInitGlobalZero(false);
+
+  // -finit-local=<zero|0x<hex>>  and  -finit-local-zero
+  // (-finit-local-zero is an alias that the driver already expands to
+  //  -finit-local=zero, so we only need to handle OPT_finit_local_EQ here.)
+  if (const llvm::opt::Arg *a =
+          args.getLastArg(clang::options::OPT_finit_local_EQ)) {
+    llvm::StringRef val = a->getValue();
+    if (val == "zero") {
+      invoc.loweringOpts.setInitLocalMode(Fortran::lower::InitLocalKind::Zero);
+    } else if (val.starts_with("0x") || val.starts_with("0X")) {
+      unsigned long long hexVal = 0;
+      if (val.drop_front(2).getAsInteger(16, hexVal) || hexVal > 0xFF) {
+        diags.Report(clang::diag::err_drv_invalid_value)
+            << a->getAsString(args) << val;
+      } else {
+        invoc.loweringOpts.setInitLocalMode(Fortran::lower::InitLocalKind::Hex);
+        invoc.loweringOpts.setInitLocalPattern(static_cast<uint8_t>(hexVal));
+      }
+    } else {
+      diags.Report(clang::diag::err_drv_invalid_value)
+          << a->getAsString(args) << val;
+    }
+  }
 
   // Preserve all the remark options requested, i.e. -Rpass, -Rpass-missed or
   // -Rpass-analysis. This will be used later when processing and outputting the

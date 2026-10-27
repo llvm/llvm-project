@@ -92,3 +92,11 @@ functions:
       - type: off64_t
       - type: off64_t
       - type: int
+  - name: posix_fallocate
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: int
+      - type: off_t
+      - type: off_t

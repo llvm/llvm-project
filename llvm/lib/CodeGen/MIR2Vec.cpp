@@ -38,28 +38,29 @@ cl::OptionCategory MIR2VecCategory("MIR2Vec Options");
 
 // FIXME: Use a default vocab when not specified
 static cl::opt<std::string>
-    VocabFile("mir2vec-vocab-path", cl::Optional,
+    VocabFile("mir2vec-vocab-path",
               cl::desc("Path to the vocabulary file for MIR2Vec"), cl::init(""),
               cl::cat(MIR2VecCategory));
-cl::opt<float> OpcWeight("mir2vec-opc-weight", cl::Optional, cl::init(1.0),
+cl::opt<float> OpcWeight("mir2vec-opc-weight", cl::init(1.0),
                          cl::desc("Weight for machine opcode embeddings"),
                          cl::cat(MIR2VecCategory));
-cl::opt<float> CommonOperandWeight(
-    "mir2vec-common-operand-weight", cl::Optional, cl::init(1.0),
-    cl::desc("Weight for common operand embeddings"), cl::cat(MIR2VecCategory));
 cl::opt<float>
-    RegOperandWeight("mir2vec-reg-operand-weight", cl::Optional, cl::init(1.0),
+    CommonOperandWeight("mir2vec-common-operand-weight", cl::init(1.0),
+                        cl::desc("Weight for common operand embeddings"),
+                        cl::cat(MIR2VecCategory));
+cl::opt<float>
+    RegOperandWeight("mir2vec-reg-operand-weight", cl::init(1.0),
                      cl::desc("Weight for register operand embeddings"),
                      cl::cat(MIR2VecCategory));
 cl::opt<MIR2VecKind> MIR2VecEmbeddingKind(
-    "mir2vec-kind", cl::Optional,
+    "mir2vec-kind",
     cl::values(clEnumValN(MIR2VecKind::Symbolic, "symbolic",
                           "Generate symbolic embeddings for MIR")),
     cl::init(MIR2VecKind::Symbolic), cl::desc("MIR2Vec embedding kind"),
     cl::cat(MIR2VecCategory));
 
 static cl::opt<bool> PrintAllVocabEntries(
-    "mir2vec-print-all-vocab-entries", cl::Optional, cl::init(false),
+    "mir2vec-print-all-vocab-entries", cl::init(false),
     cl::desc("Print all vocabulary entries including zero embeddings"),
     cl::cat(MIR2VecCategory));
 

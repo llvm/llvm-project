@@ -18,6 +18,7 @@
 #include "gtest/gtest.h"
 
 using namespace orc_rt;
+using namespace orc_rt::test;
 
 static DirectCaller caller(orc_rt_WrapperFunction Fn) { return {nullptr, Fn}; }
 

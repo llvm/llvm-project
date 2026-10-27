@@ -280,7 +280,7 @@ static cl::opt<std::string> ShowLinkGraphs(
     "show-graphs",
     cl::desc("Takes a posix regex and prints the link graphs of all files "
              "matching that regex after fixups have been applied"),
-    cl::Optional, cl::cat(JITLinkCategory));
+    cl::cat(JITLinkCategory));
 
 static cl::opt<bool> ShowTimes("show-times",
                                cl::desc("Show times for llvm-jitlink phases"),

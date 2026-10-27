@@ -345,6 +345,7 @@ public:
   static constexpr llvm::StringLiteral symbolPrefix = "_objc_msgSend$";
   static bool isObjCStubSymbol(Symbol *sym);
   static StringRef getMethname(Symbol *sym);
+  ArrayRef<Defined *> getSymbols() const { return symbols; }
 
   /// Stably sort the stubs by \p priorities and reassign their offsets. Must
   /// run before addresses are assigned.

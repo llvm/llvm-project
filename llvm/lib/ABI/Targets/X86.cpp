@@ -1299,8 +1299,9 @@ ArgInfo X86_64TargetInfo::getIndirectResult(const Type *Ty,
 
   // Check if this is a record type that needs special handling
   if (auto RecordRAA = getRecordArgABI(Ty))
-    return getNaturalAlignIndirect(Ty, RecordRAA ==
-                                           RecordArgABI::RAA_DirectInMemory);
+    return getNaturalAlignIndirect(Ty, getAllocaAddrSpace(),
+                                   /*ByVal=*/RecordRAA ==
+                                       RecordArgABI::RAA_DirectInMemory);
 
   // Compute the byval alignment. We specify the alignment of the byval in all
   // cases so that the mid-level optimizer knows the alignment of the byval.
@@ -1350,14 +1351,14 @@ ArgInfo X86_64TargetInfo::getIndirectReturnResult(const Type *Ty) const {
     // Bit-precise integers are returned indirectly regardless of size.
     if (const auto *IntTy = dyn_cast<IntegerType>(Ty)) {
       if (IntTy->isBitInt())
-        return getNaturalAlignIndirect(IntTy, /*ByVal=*/true);
+        return getNaturalAlignIndirect(IntTy, getAllocaAddrSpace());
       if (isPromotableInteger(IntTy))
         return ArgInfo::getExtend(Ty);
     }
     return ArgInfo::getDirect();
   }
 
-  return getNaturalAlignIndirect(Ty, /*ByVal=*/true);
+  return getNaturalAlignIndirect(Ty, getAllocaAddrSpace());
 }
 
 void X86_64TargetInfo::computeInfo(FunctionInfo &FI) const {

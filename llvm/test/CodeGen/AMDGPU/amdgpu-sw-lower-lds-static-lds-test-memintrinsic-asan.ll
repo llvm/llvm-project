@@ -40,7 +40,7 @@ define amdgpu_kernel void @memset_kernel() sanitize_address {
 ; CHECK-NEXT:    [[XYZCOND:%.*]] = phi i1 [ false, %[[WID]] ], [ true, %[[MALLOC]] ]
 ; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier()
 ; CHECK-NEXT:    [[TMP19:%.*]] = load ptr addrspace(1), ptr addrspace(3) @llvm.amdgcn.sw.lds.memset_kernel, align 8
-; CHECK-NEXT:    [[TMP20:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds ([[LLVM_AMDGCN_SW_LDS_MEMSET_KERNEL_MD_TYPE]], ptr addrspace(1) @llvm.amdgcn.sw.lds.memset_kernel.md, i32 0, i32 1, i32 0), align 4
+; CHECK-NEXT:    [[TMP20:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @llvm.amdgcn.sw.lds.memset_kernel.md, i64 12), align 4
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i8, ptr addrspace(3) @llvm.amdgcn.sw.lds.memset_kernel, i32 [[TMP20]]
 ; CHECK-NEXT:    [[A:%.*]] = getelementptr [16 x i8], ptr addrspace(3) [[TMP21]], i32 0, i32 0
 ; CHECK-NEXT:    [[TMP22:%.*]] = ptrtoint ptr addrspace(3) [[A]] to i32
@@ -96,7 +96,7 @@ define amdgpu_kernel void @memcpy_kernel(ptr addrspace(1) %src) sanitize_address
 ; CHECK-NEXT:    [[XYZCOND:%.*]] = phi i1 [ false, %[[WID]] ], [ true, %[[MALLOC]] ]
 ; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier()
 ; CHECK-NEXT:    [[TMP19:%.*]] = load ptr addrspace(1), ptr addrspace(3) @llvm.amdgcn.sw.lds.memcpy_kernel, align 8
-; CHECK-NEXT:    [[TMP20:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds ([[LLVM_AMDGCN_SW_LDS_MEMCPY_KERNEL_MD_TYPE]], ptr addrspace(1) @llvm.amdgcn.sw.lds.memcpy_kernel.md, i32 0, i32 1, i32 0), align 4
+; CHECK-NEXT:    [[TMP20:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @llvm.amdgcn.sw.lds.memcpy_kernel.md, i64 12), align 4
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i8, ptr addrspace(3) @llvm.amdgcn.sw.lds.memcpy_kernel, i32 [[TMP20]]
 ; CHECK-NEXT:    [[A:%.*]] = getelementptr [16 x i8], ptr addrspace(3) [[TMP21]], i32 0, i32 0
 ; CHECK-NEXT:    [[TMP22:%.*]] = ptrtoint ptr addrspace(3) [[A]] to i32
@@ -155,9 +155,9 @@ define amdgpu_kernel void @memmove_kernel() sanitize_address {
 ; CHECK-NEXT:    [[XYZCOND:%.*]] = phi i1 [ false, %[[WID]] ], [ true, %[[MALLOC]] ]
 ; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier()
 ; CHECK-NEXT:    [[TMP21:%.*]] = load ptr addrspace(1), ptr addrspace(3) @llvm.amdgcn.sw.lds.memmove_kernel, align 8
-; CHECK-NEXT:    [[TMP22:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds ([[LLVM_AMDGCN_SW_LDS_MEMMOVE_KERNEL_MD_TYPE]], ptr addrspace(1) @llvm.amdgcn.sw.lds.memmove_kernel.md, i32 0, i32 1, i32 0), align 4
+; CHECK-NEXT:    [[TMP22:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @llvm.amdgcn.sw.lds.memmove_kernel.md, i64 12), align 4
 ; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i8, ptr addrspace(3) @llvm.amdgcn.sw.lds.memmove_kernel, i32 [[TMP22]]
-; CHECK-NEXT:    [[TMP24:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds ([[LLVM_AMDGCN_SW_LDS_MEMMOVE_KERNEL_MD_TYPE]], ptr addrspace(1) @llvm.amdgcn.sw.lds.memmove_kernel.md, i32 0, i32 2, i32 0), align 4
+; CHECK-NEXT:    [[TMP24:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @llvm.amdgcn.sw.lds.memmove_kernel.md, i64 24), align 4
 ; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i8, ptr addrspace(3) @llvm.amdgcn.sw.lds.memmove_kernel, i32 [[TMP24]]
 ; CHECK-NEXT:    [[A:%.*]] = getelementptr [16 x i8], ptr addrspace(3) [[TMP23]], i32 0, i32 0
 ; CHECK-NEXT:    [[B:%.*]] = getelementptr [16 x i8], ptr addrspace(3) [[TMP25]], i32 0, i32 0
@@ -217,7 +217,7 @@ define amdgpu_kernel void @memset_atomic_kernel() sanitize_address {
 ; CHECK-NEXT:    [[XYZCOND:%.*]] = phi i1 [ false, %[[WID]] ], [ true, %[[MALLOC]] ]
 ; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier()
 ; CHECK-NEXT:    [[TMP19:%.*]] = load ptr addrspace(1), ptr addrspace(3) @llvm.amdgcn.sw.lds.memset_atomic_kernel, align 8
-; CHECK-NEXT:    [[TMP20:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds ([[LLVM_AMDGCN_SW_LDS_MEMSET_ATOMIC_KERNEL_MD_TYPE]], ptr addrspace(1) @llvm.amdgcn.sw.lds.memset_atomic_kernel.md, i32 0, i32 1, i32 0), align 4
+; CHECK-NEXT:    [[TMP20:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @llvm.amdgcn.sw.lds.memset_atomic_kernel.md, i64 12), align 4
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i8, ptr addrspace(3) @llvm.amdgcn.sw.lds.memset_atomic_kernel, i32 [[TMP20]]
 ; CHECK-NEXT:    [[A:%.*]] = getelementptr [16 x i8], ptr addrspace(3) [[TMP21]], i32 0, i32 0
 ; CHECK-NEXT:    [[TMP22:%.*]] = ptrtoint ptr addrspace(3) [[A]] to i32
@@ -273,7 +273,7 @@ define amdgpu_kernel void @memcpy_atomic_kernel(ptr addrspace(1) %src) sanitize_
 ; CHECK-NEXT:    [[XYZCOND:%.*]] = phi i1 [ false, %[[WID]] ], [ true, %[[MALLOC]] ]
 ; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier()
 ; CHECK-NEXT:    [[TMP19:%.*]] = load ptr addrspace(1), ptr addrspace(3) @llvm.amdgcn.sw.lds.memcpy_atomic_kernel, align 8
-; CHECK-NEXT:    [[TMP20:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds ([[LLVM_AMDGCN_SW_LDS_MEMCPY_ATOMIC_KERNEL_MD_TYPE]], ptr addrspace(1) @llvm.amdgcn.sw.lds.memcpy_atomic_kernel.md, i32 0, i32 1, i32 0), align 4
+; CHECK-NEXT:    [[TMP20:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @llvm.amdgcn.sw.lds.memcpy_atomic_kernel.md, i64 12), align 4
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i8, ptr addrspace(3) @llvm.amdgcn.sw.lds.memcpy_atomic_kernel, i32 [[TMP20]]
 ; CHECK-NEXT:    [[A:%.*]] = getelementptr [16 x i8], ptr addrspace(3) [[TMP21]], i32 0, i32 0
 ; CHECK-NEXT:    [[TMP22:%.*]] = ptrtoint ptr addrspace(3) [[A]] to i32
@@ -332,9 +332,9 @@ define amdgpu_kernel void @memmove_atomic_kernel() sanitize_address {
 ; CHECK-NEXT:    [[XYZCOND:%.*]] = phi i1 [ false, %[[WID]] ], [ true, %[[MALLOC]] ]
 ; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier()
 ; CHECK-NEXT:    [[TMP21:%.*]] = load ptr addrspace(1), ptr addrspace(3) @llvm.amdgcn.sw.lds.memmove_atomic_kernel, align 8
-; CHECK-NEXT:    [[TMP22:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds ([[LLVM_AMDGCN_SW_LDS_MEMMOVE_ATOMIC_KERNEL_MD_TYPE]], ptr addrspace(1) @llvm.amdgcn.sw.lds.memmove_atomic_kernel.md, i32 0, i32 1, i32 0), align 4
+; CHECK-NEXT:    [[TMP22:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @llvm.amdgcn.sw.lds.memmove_atomic_kernel.md, i64 12), align 4
 ; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i8, ptr addrspace(3) @llvm.amdgcn.sw.lds.memmove_atomic_kernel, i32 [[TMP22]]
-; CHECK-NEXT:    [[TMP24:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds ([[LLVM_AMDGCN_SW_LDS_MEMMOVE_ATOMIC_KERNEL_MD_TYPE]], ptr addrspace(1) @llvm.amdgcn.sw.lds.memmove_atomic_kernel.md, i32 0, i32 2, i32 0), align 4
+; CHECK-NEXT:    [[TMP24:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @llvm.amdgcn.sw.lds.memmove_atomic_kernel.md, i64 24), align 4
 ; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i8, ptr addrspace(3) @llvm.amdgcn.sw.lds.memmove_atomic_kernel, i32 [[TMP24]]
 ; CHECK-NEXT:    [[A:%.*]] = getelementptr [16 x i8], ptr addrspace(3) [[TMP23]], i32 0, i32 0
 ; CHECK-NEXT:    [[B:%.*]] = getelementptr [16 x i8], ptr addrspace(3) [[TMP25]], i32 0, i32 0

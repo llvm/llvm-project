@@ -9,9 +9,13 @@
 #include "SLPReductionUtils.h"
 
 #include "SLPCostAnalysis.h"
+#include "SLPUtils.h"
 
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Analysis/IVDescriptors.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
@@ -66,6 +70,30 @@ Type *getBoolReduxWideTy(RecurKind RdxKind, Type *RootTy, Type *LeafTy) {
       !LeafTy->isIntegerTy(1))
     return LeafTy;
   return nullptr;
+}
+
+BoolBitmask isBoolBitmaskRdx(
+    RecurKind RdxKind,
+    const SmallDenseMap<Value *, NarrowedLeafInfo> &NarrowedLeafShifts,
+    const DataLayout &DL) {
+  if (RdxKind != RecurKind::Or || DL.isBigEndian() ||
+      NarrowedLeafShifts.empty())
+    return BoolBitmask::None;
+  unsigned NumLeaves = NarrowedLeafShifts.size();
+  SmallBitVector Seen(NumLeaves);
+  bool NeedMask = false;
+  for (const auto &[V, L] : NarrowedLeafShifts) {
+    if (L.Shift >= NumLeaves || Seen.test(L.Shift))
+      return BoolBitmask::None;
+    Seen.set(L.Shift);
+    KnownBits Known = computeKnownBits(V, DL);
+    // The masked leaf must be known to be 0 or 1.
+    if ((L.Mask & ~Known.Zero).ugt(1))
+      return BoolBitmask::None;
+    // The mask is redundant if it keeps all not-known-zero bits.
+    NeedMask |= !(Known.Zero | L.Mask).isAllOnes();
+  }
+  return NeedMask ? BoolBitmask::NeedMask : BoolBitmask::NoMask;
 }
 
 Value *tryEmitBoolReduxBitcastCmp(IRBuilderBase &Builder,

@@ -177,7 +177,7 @@ Child::Child() {}
 // OGCG:   call void @_ZN6MotherC2Ev(ptr {{.*}} %[[THIS]])
 // OGCG:   %[[FATHER_BASE:.*]] = getelementptr{{.*}} i8, ptr %[[THIS]], i64 8
 // OGCG:   call void @_ZN6FatherC2Ev(ptr{{.*}} %[[FATHER_BASE]])
-// OGCG:   store ptr getelementptr inbounds inrange(-16, 16) ({ [4 x ptr], [3 x ptr] }, ptr @_ZTV5Child, i32 0, i32 0, i32 2), ptr %[[THIS]]
+// OGCG:   store ptr getelementptr inbounds inrange(-16, 16) (i8, ptr @_ZTV5Child, i64 16), ptr %[[THIS]]
 // OGCG:   %[[FATHER_BASE:.*]] = getelementptr{{.*}} i8, ptr %[[THIS]], i64 8
-// OGCG:   store ptr getelementptr inbounds inrange(-16, 8) ({ [4 x ptr], [3 x ptr] }, ptr @_ZTV5Child, i32 0, i32 1, i32 2), ptr %[[FATHER_BASE]]
+// OGCG:   store ptr getelementptr inbounds inrange(-16, 8) (i8, ptr @_ZTV5Child, i64 48), ptr %[[FATHER_BASE]]
 // OGCG:   ret void

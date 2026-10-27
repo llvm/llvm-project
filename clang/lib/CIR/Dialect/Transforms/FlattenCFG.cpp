@@ -844,6 +844,51 @@ static cir::AllocaOp getOrCreateCleanupDestSlot(cir::FuncOp funcOp,
 /// Shared EH flattening utilities used by both CIRCleanupScopeOpFlattening
 /// and CIRTryOpFlattening.
 
+// Lifetime markers participate in existing EH paths, but do not require an
+// unwind edge on their own. Conservatively treat other cleanup code as real
+// cleanup, including regions with control flow.
+static bool isLifetimeMarkerOnly(mlir::Region &region) {
+  return llvm::hasSingleElement(region) &&
+         llvm::any_of(
+             region.front(),
+             [](mlir::Operation &op) { return isa<cir::LifetimeEndOp>(op); }) &&
+         llvm::all_of(region.front(), [](mlir::Operation &op) {
+           return isa<cir::LifetimeEndOp, cir::YieldOp>(op);
+         });
+}
+
+// Look for an enclosing handler or non-marker EH cleanup that protects this
+// operation. Follow regions, rather than just parent ops: a try does not catch
+// exceptions from its own handlers, and a cleanup does not protect itself.
+static bool hasEnclosingEHRequirement(mlir::Operation *op) {
+  for (mlir::Region *region = op->getParentRegion(); region;
+       region = region->getParentRegion()) {
+    mlir::Operation *parent = region->getParentOp();
+    if (!parent || isa<cir::FuncOp>(parent))
+      break;
+    if (auto tryOp = dyn_cast<cir::TryOp>(parent)) {
+      auto handlers = tryOp.getHandlerTypesAttr();
+      if (region == &tryOp.getTryRegion() && handlers &&
+          llvm::any_of(handlers, [](mlir::Attribute handler) {
+            return !isa<cir::UnwindAttr>(handler);
+          }))
+        return true;
+    } else if (auto cleanupOp = dyn_cast<cir::CleanupScopeOp>(parent)) {
+      if (region == &cleanupOp.getBodyRegion() &&
+          cleanupOp.getCleanupKindAttr().isEH() &&
+          !isLifetimeMarkerOnly(cleanupOp.getCleanupRegion()))
+        return true;
+    } else if (auto loopOp = dyn_cast<cir::LoopOpInterface>(parent)) {
+      // The enclosing loop may not yet have been rewritten to a cleanup scope.
+      mlir::Region *cleanup = loopOp.maybeGetCleanup();
+      if (cleanup && region != cleanup && loopOp.maybeGetCleanupKind().isEH() &&
+          !isLifetimeMarkerOnly(*cleanup))
+        return true;
+    }
+  }
+  return false;
+}
+
 // Collect all function calls in a region that may throw exceptions and need
 // to be replaced with try_call operations. Skips calls marked nothrow.
 // Nested cleanup scopes and try ops are always flattened before their
@@ -1678,7 +1723,7 @@ public:
     if (hasNestedOpsToFlatten(cleanupOp.getBodyRegion()))
       return mlir::failure();
 
-    cir::CleanupKind cleanupKind = cleanupOp.getCleanupKind();
+    bool hasEHCleanup = cleanupOp.getCleanupKindAttr().isEH();
 
     // Collect all exits from the body region.
     llvm::SmallVector<CleanupExit> exits;
@@ -1696,19 +1741,21 @@ public:
 #endif
 
     // Collect non-nothrow calls and throws that need to be converted to
-    // try_call/try_throw. This is only needed for EH and All cleanup kinds,
-    // but the vectors will simply be empty for Normal cleanup.
+    // try_call/try_throw. A marker-only cleanup must not introduce an unwind
+    // edge unless an enclosing handler or real EH cleanup requires one.
     llvm::SmallVector<cir::CallOp> callsToRewrite;
     llvm::SmallVector<cir::ThrowOp> throwsToRewrite;
-    if (cleanupKind != cir::CleanupKind::Normal) {
+    if (hasEHCleanup && (!isLifetimeMarkerOnly(cleanupOp.getCleanupRegion()) ||
+                         hasEnclosingEHRequirement(cleanupOp))) {
       collectThrowingCalls(cleanupOp.getBodyRegion(), callsToRewrite);
       collectThrows(cleanupOp.getBodyRegion(), throwsToRewrite);
     }
 
     // Collect resume ops from already-flattened inner cleanup scopes that
-    // need to chain through this cleanup's EH handler.
+    // need to chain through this cleanup's EH handler, including lifetime
+    // markers even when they did not introduce any unwind edges themselves.
     llvm::SmallVector<cir::ResumeOp> resumeOpsToChain;
-    if (cleanupKind != cir::CleanupKind::Normal)
+    if (hasEHCleanup)
       collectResumeOps(cleanupOp.getBodyRegion(), resumeOpsToChain);
 
     return flattenCleanup(cleanupOp, exits, callsToRewrite, throwsToRewrite,

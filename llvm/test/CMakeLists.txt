@@ -203,6 +203,10 @@ if (TARGET llvm-calc-occupancy)
   list(APPEND LLVM_TEST_DEPENDS llvm-calc-occupancy)
 endif ()
 
+if (TARGET CGTestPlugin)
+  list(APPEND LLVM_TEST_DEPENDS CGTestPlugin)
+endif()
+
 if(LLVM_INCLUDE_EXAMPLES)
   list(APPEND LLVM_TEST_DEPENDS
     Kaleidoscope-Ch3

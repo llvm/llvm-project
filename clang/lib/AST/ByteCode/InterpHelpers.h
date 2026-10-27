@@ -42,6 +42,8 @@ bool CheckLive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 /// Checks if a pointer is a dummy pointer.
 bool CheckDummy(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                 AccessKinds AK);
+bool diagnoseDummy(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                   AccessKinds AK);
 
 bool arrayElemPtrOpaque(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                         APSInt &&Index, bool AllowReplace = true);
@@ -75,6 +77,8 @@ inline bool CheckMutable(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 
 /// Checks if a value can be loaded from a block.
 bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+               AccessKinds AK = AK_Read);
+bool CheckLoad(InterpState &S, CodePtr OpPC, PtrView Ptr,
                AccessKinds AK = AK_Read);
 
 /// Diagnose mismatched new[]/delete or new/delete[] pairs.

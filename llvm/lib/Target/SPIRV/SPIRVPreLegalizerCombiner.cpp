@@ -186,7 +186,9 @@ PreservedAnalyses
 SPIRVPreLegalizerCombinerPass::run(MachineFunction &MF,
                                    MachineFunctionAnalysisManager &MFAM) {
   bool Changed = runPreLegalizerCombiner(
-      MF, MF.getFunction().hasOptNone(),
+      MF,
+      MF.getFunction().hasOptNone() ||
+          shouldSkipOptimizationForOptBisect(MF.getFunction()),
       [&]() { return &MFAM.getResult<GISelValueTrackingAnalysis>(MF); },
       [&]() { return &MFAM.getResult<MachineDominatorTreeAnalysis>(MF); });
   if (!Changed)

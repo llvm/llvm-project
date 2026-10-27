@@ -17,6 +17,7 @@
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/StackFrame.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/ValueObject/DILAST.h"
 #include "lldb/ValueObject/DILEval.h"
 #include "llvm/ADT/StringRef.h"
@@ -102,8 +103,12 @@ llvm::Expected<ASTNodeUP> DILParser::Parse(llvm::StringRef dil_input_expr,
   ASTNodeUP node_up = parser.Run();
   assert(node_up && "ASTNodeUP must not contain a nullptr");
 
-  if (error)
+  if (error) {
+    LLDB_LOG(GetLog(LLDBLog::Expressions),
+             "[DILParser::Parse] DIL parser failed:\n{0}",
+             llvm::toStringWithoutConsuming(error));
     return error;
+  }
 
   return node_up;
 }

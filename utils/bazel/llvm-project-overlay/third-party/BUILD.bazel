@@ -66,7 +66,7 @@ cc_library_wrapper(
 
 bool_flag(
     name = "llvm_enable_lzma",
-    build_setting_default = False,
+    build_setting_default = True,
 )
 
 config_setting(
@@ -74,11 +74,7 @@ config_setting(
     flag_values = {":llvm_enable_lzma": "true"},
 )
 
-# Unlike zlib and zstd there is no liblzma module in the Bazel registry, so this
-# links the system library rather than building one from source. That is why it
-# is a plain cc_library with linkopts instead of a cc_library_wrapper, and why
-# it defaults to off.
-cc_library(
+cc_library_wrapper(
     name = "lzma",
     defines = select({
         ":llvm_lzma_enabled": [
@@ -88,9 +84,9 @@ cc_library(
             "LLVM_ENABLE_LZMA=0",
         ],
     }),
-    linkopts = select({
+    deps = select({
         ":llvm_lzma_enabled": [
-            "-llzma",
+            "@llvm_xz//:lzma",
         ],
         "//conditions:default": [],
     }),

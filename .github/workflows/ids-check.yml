@@ -2,6 +2,10 @@ name: "Check LLVM ABI annotations"
 
 on:
   pull_request:
+    paths:
+      - 'llvm/**'
+      - '.github/workflows/ids-check.yml'
+      - '!llvm/docs/**'
 
 permissions:
   contents: read
@@ -14,7 +18,7 @@ jobs:
   build:
     if: github.repository_owner == 'llvm'
     name: Check LLVM_ABI annotations with ids
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     container:
       image: 'ghcr.io/llvm/ci-ubuntu-26.04-ids-checks:latest@sha256:610825c41aea545132a5b441ee864acf050ac54ff40009fbaaf3e158f139e5d7'
     timeout-minutes: 20
@@ -43,7 +47,6 @@ jobs:
                 -D CMAKE_BUILD_TYPE=Release \
                 -D CMAKE_C_COMPILER=clang \
                 -D CMAKE_CXX_COMPILER=clang++ \
-                -D LLVM_ENABLE_PROJECTS=clang \
                 -D LLVM_TARGETS_TO_BUILD="host" \
                 -D LLVM_INCLUDE_TESTS=OFF \
                 -D LLVM_INCLUDE_BENCHMARKS=OFF \
@@ -58,7 +61,6 @@ jobs:
             llvm_vcsrevision_h \
             intrinsics_gen omp_gen acc_gen analysis_gen target_parser_gen vt_gen \
             DllOptionsTableGen LibOptionsTableGen \
-            clang-tablegen-targets \
             lib/ExecutionEngine/JITLink/COFFOptions.inc
 
           # Build per-target tablegen output for every enabled target.
@@ -96,4 +98,4 @@ jobs:
         with:
           name: workflow-args
           path: |
-            llvm-project/comments
+            comments

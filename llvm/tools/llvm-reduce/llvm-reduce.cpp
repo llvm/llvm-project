@@ -32,8 +32,6 @@ using namespace llvm;
 
 cl::OptionCategory LLVMReduceOptions("llvm-reduce options");
 
-static cl::opt<bool> Help("h", cl::desc("Alias for -help"), cl::Hidden,
-                          cl::cat(LLVMReduceOptions));
 static cl::opt<bool> Version("v", cl::desc("Alias for -version"), cl::Hidden,
                              cl::cat(LLVMReduceOptions));
 

@@ -26,13 +26,11 @@ namespace llvm {
 
 class MipsTargetMachine : public CodeGenTargetMachineImpl {
   bool isLittle;
-  std::unique_ptr<TargetLoweringObjectFile> TLOF;
   // Selected ABI
   MipsABIInfo ABI;
-  const MipsSubtarget *Subtarget;
+  // Used to initialize module-wide object-file policy.
   MipsSubtarget DefaultSubtarget;
-  MipsSubtarget NoMips16Subtarget;
-  MipsSubtarget Mips16Subtarget;
+  std::unique_ptr<TargetLoweringObjectFile> TLOF;
 
   mutable StringMap<std::unique_ptr<MipsSubtarget>> SubtargetMap;
 
@@ -46,16 +44,7 @@ public:
 
   TargetTransformInfo getTargetTransformInfo(const Function &F) const override;
 
-  const MipsSubtarget *getSubtargetImpl() const {
-    if (Subtarget)
-      return Subtarget;
-    return &DefaultSubtarget;
-  }
-
   const MipsSubtarget *getSubtargetImpl(const Function &F) const override;
-
-  /// Reset the subtarget for the Mips target.
-  void resetSubtarget(MachineFunction *MF);
 
   // Pass Pipeline Configuration
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;

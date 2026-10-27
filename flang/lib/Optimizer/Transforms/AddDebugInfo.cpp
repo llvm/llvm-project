@@ -148,13 +148,17 @@ private:
                            fir::cg::XDeclareOp typeGenDeclOp);
 };
 
+/// Whether \p loc already carries debug information of type \c AttrT, fused
+/// onto it by this pass. A location is fused for unrelated reasons too, most
+/// notably one that came from an INCLUDE'd file, so what the fusion holds has
+/// to be examined rather than the fusion merely detected. Each caller names
+/// the attribute it would attach itself, so nothing here needs updating when
+/// another kind of debug information is generated elsewhere. Only the
+/// outermost fusion is examined, because that is the one this pass adds.
+template <typename AttrT>
 bool debugInfoIsAlreadySet(mlir::Location loc) {
-  if (mlir::isa<mlir::FusedLoc>(loc)) {
-    if (loc->findInstanceOf<mlir::FusedLocWith<fir::LocationKindAttr>>())
-      return false;
-    return true;
-  }
-  return false;
+  auto fusedLoc = mlir::dyn_cast<mlir::FusedLoc>(loc);
+  return fusedLoc && mlir::isa_and_present<AttrT>(fusedLoc.getMetadata());
 }
 
 // Generates the name for the artificial DISubprogram that we are going to
@@ -430,7 +434,8 @@ void AddDebugInfoPass::handleLocalVariable(Op declOp, llvm::StringRef name,
   }
 
   auto localVarAttr = mlir::LLVM::DILocalVariableAttr::get(
-      context, scopeAttr, mlir::StringAttr::get(context, name), fileAttr,
+      context, scopeAttr, mlir::StringAttr::get(context, name),
+      fir::getFileAttrFromLoc(declOp.getLoc(), fileAttr),
       fir::getLineFromLoc(declOp.getLoc()), argNo, /* alignInBits*/ 0, tyAttr,
       mlir::LLVM::DIFlags::Zero);
   declOp->setLoc(builder.getFusedLoc({declOp->getLoc()}, localVarAttr));
@@ -514,8 +519,10 @@ AddDebugInfoPass::getOrCreateModuleAttr(const std::string &name,
     // The location of the fir.module_debug_imports is that of the MODULE
     // statement. A module that has none is not defined here, and gets no line.
     if (auto iter{moduleDebugImportsByName.find(name)};
-        iter != moduleDebugImportsByName.end())
+        iter != moduleDebugImportsByName.end()) {
       line = fir::getLineFromLoc(iter->second.getLoc());
+      fileAttr = fir::getFileAttrFromLoc(iter->second.getLoc(), fileAttr);
+    }
 
     // When decl is true, it means that module is only being used in this
     // compilation unit and it is defined elsewhere. But if the file/line/scope
@@ -568,7 +575,8 @@ void AddDebugInfoPass::handleGlobalOp(fir::GlobalOp globalOp,
                                       fir::DebugTypeGenerator &typeGen,
                                       mlir::SymbolTable *symbolTable,
                                       fir::cg::XDeclareOp declOp) {
-  if (debugInfoIsAlreadySet(globalOp.getLoc()))
+  // A global is described by an array of DIGlobalVariableExpressionAttr.
+  if (debugInfoIsAlreadySet<mlir::ArrayAttr>(globalOp.getLoc()))
     return;
   mlir::MLIRContext *context = &getContext();
   mlir::OpBuilder builder(context);
@@ -619,7 +627,8 @@ void AddDebugInfoPass::handleGlobalOp(fir::GlobalOp globalOp,
       typeGen.convertType(globalOp.getType(), fileAttr, scope, declOp);
   auto gvAttr = mlir::LLVM::DIGlobalVariableAttr::get(
       context, scope, mlir::StringAttr::get(context, result.second.name),
-      linkageName, fileAttr, line, diType, isLocalToUnit,
+      linkageName, fir::getFileAttrFromLoc(globalOp.getLoc(), fileAttr), line,
+      diType, isLocalToUnit,
       /*isDefinition*/ globalOp.isInitialized(), /* alignInBits*/ 0);
   auto dbgExpr = mlir::LLVM::DIGlobalVariableExpressionAttr::get(
       globalOp.getContext(), gvAttr, nullptr);
@@ -646,22 +655,16 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
                                     mlir::SymbolTable *symbolTable) {
   mlir::Location l = funcOp->getLoc();
   // If fused location has already been created then nothing to do
-  // Otherwise, create a fused location.
-  if (debugInfoIsAlreadySet(l))
+  // Otherwise, create a fused location. A function is described by a
+  // DISubprogramAttr.
+  if (debugInfoIsAlreadySet<mlir::LLVM::DISubprogramAttr>(l))
     return;
 
   mlir::MLIRContext *context = &getContext();
   mlir::OpBuilder builder(context);
-  llvm::StringRef fileName(fileAttr.getName());
-  llvm::StringRef filePath(fileAttr.getDirectory());
   unsigned int CC = (funcOp.getName() == fir::NameUniquer::doProgramEntry())
                         ? llvm::dwarf::getCallingConvention("DW_CC_program")
                         : llvm::dwarf::getCallingConvention("DW_CC_normal");
-
-  if (auto funcLoc = mlir::dyn_cast<mlir::FileLineColLoc>(l)) {
-    fileName = llvm::sys::path::filename(funcLoc.getFilename().getValue());
-    filePath = llvm::sys::path::parent_path(funcLoc.getFilename().getValue());
-  }
 
   mlir::StringAttr fullName = mlir::StringAttr::get(context, funcOp.getName());
   mlir::Attribute attr = funcOp->getAttr(fir::getInternalFuncNameAttrName());
@@ -708,8 +711,7 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
 
   mlir::LLVM::DISubroutineTypeAttr subTypeAttr =
       mlir::LLVM::DISubroutineTypeAttr::get(context, CC, types);
-  mlir::LLVM::DIFileAttr funcFileAttr =
-      mlir::LLVM::DIFileAttr::get(context, fileName, filePath);
+  mlir::LLVM::DIFileAttr funcFileAttr = fir::getFileAttrFromLoc(l, fileAttr);
 
   // Only definitions need a distinct identifier and a compilation unit.
   mlir::DistinctAttr id, id2;

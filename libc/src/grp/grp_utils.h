@@ -52,6 +52,9 @@ ErrorOr<bool> find_by_name(cpp::string_view name, struct group *grp,
 ErrorOr<bool> find_by_gid(gid_t gid, struct group *grp, cpp::span<char> buffer,
                           const char *path = nullptr);
 
+ErrorOr<struct group *> find_by_name(cpp::string_view name);
+ErrorOr<struct group *> find_by_gid(gid_t gid);
+
 } // namespace grp
 } // namespace LIBC_NAMESPACE_DECL
 

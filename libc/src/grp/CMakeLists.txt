@@ -33,6 +33,22 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  getgrgid
+  SRCS
+    getgrgid.cpp
+  HDRS
+    getgrgid.h
+  DEPENDS
+    libc.hdr.types.gid_t
+    libc.hdr.types.struct_group
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+    .grp_utils
+)
+
+add_entrypoint_object(
   getgrgid_r
   SRCS
     getgrgid_r.cpp
@@ -46,6 +62,23 @@ add_entrypoint_object(
     libc.src.__support.common
     libc.src.__support.macros.config
     libc.src.__support.macros.null_check
+    .grp_utils
+)
+
+add_entrypoint_object(
+  getgrnam
+  SRCS
+    getgrnam.cpp
+  HDRS
+    getgrnam.h
+  DEPENDS
+    libc.hdr.types.struct_group
+    libc.src.__support.CPP.string_view
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    libc.src.errno.errno
     .grp_utils
 )
 

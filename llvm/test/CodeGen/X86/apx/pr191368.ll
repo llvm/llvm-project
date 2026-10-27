@@ -276,13 +276,12 @@ define i32 @pr190962(ptr %a, ptr %b, ptr %c, i64 %d, i64 %e, i64 %f) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %r15
 ; CHECK-NEXT:    pushq %r14
-; CHECK-NEXT:    pushq %r13
 ; CHECK-NEXT:    pushq %r12
 ; CHECK-NEXT:    pushq %rsi
 ; CHECK-NEXT:    pushq %rdi
 ; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    subq $56, %rsp
+; CHECK-NEXT:    subq $64, %rsp
 ; CHECK-NEXT:    movq %r9, %rdi
 ; CHECK-NEXT:    movq %rdx, %rbx
 ; CHECK-NEXT:    movq %rcx, %rsi
@@ -292,19 +291,20 @@ define i32 @pr190962(ptr %a, ptr %b, ptr %c, i64 %d, i64 %e, i64 %f) nounwind {
 ; CHECK-NEXT:    testq %rax, %rax
 ; CHECK-NEXT:    je .LBB3_3
 ; CHECK-NEXT:  # %bb.1: # %l1
-; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %r13
-; CHECK-NEXT:    movq 0, %r15
-; CHECK-NEXT:    callq f2
+; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %r15
 ; CHECK-NEXT:    movq 0, %r12
+; CHECK-NEXT:    callq f2
+; CHECK-NEXT:    movq 0, %rcx
 ; CHECK-NEXT:    xorl %ebp, %ebp
-; CHECK-NEXT:    orq %r13, %r15
+; CHECK-NEXT:    orq %r12, %r15
 ; CHECK-NEXT:    jne .LBB3_2
 ; CHECK-NEXT:  # %bb.4: # %l2
-; CHECK-NEXT:    movq %rax, %r14
+; CHECK-NEXT:    movq %rcx, %r15
 ; CHECK-NEXT:    movq %rbx, %rcx
+; CHECK-NEXT:    movq %rax, %rbx
 ; CHECK-NEXT:    callq f4
 ; CHECK-NEXT:    movl $1, %ebp
-; CHECK-NEXT:    orq %r12, %r14
+; CHECK-NEXT:    orq %r15, %rbx
 ; CHECK-NEXT:    je .LBB3_5
 ; CHECK-NEXT:  .LBB3_2: # %common.ret1.sink.split
 ; CHECK-NEXT:    callq f3
@@ -316,23 +316,21 @@ define i32 @pr190962(ptr %a, ptr %b, ptr %c, i64 %d, i64 %e, i64 %f) nounwind {
 ; CHECK-NEXT:    callq f3
 ; CHECK-NEXT:  .LBB3_3: # %common.ret1
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    addq $56, %rsp
+; CHECK-NEXT:    addq $64, %rsp
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    popq %rdi
 ; CHECK-NEXT:    popq %rsi
 ; CHECK-NEXT:    popq %r12
-; CHECK-NEXT:    popq %r13
 ; CHECK-NEXT:    popq %r14
 ; CHECK-NEXT:    popq %r15
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB3_5: # %l3
 ; CHECK-NEXT:    testq %rdi, %rdi
-; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rax
 ; CHECK-NEXT:    je .LBB3_3
 ; CHECK-NEXT:  # %bb.6: # %l4
 ; CHECK-NEXT:    movl $0, (%rsi)
-; CHECK-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq %r14, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq $0, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq $0, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    xorl %ecx, %ecx

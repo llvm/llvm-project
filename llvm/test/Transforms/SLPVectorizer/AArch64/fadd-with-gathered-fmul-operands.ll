@@ -2,12 +2,11 @@
 ; RUN: opt -S -passes=slp-vectorizer -mtriple=aarch64-unknown-linux-gnu -mcpu=neoverse-v2 < %s | FileCheck %s
 
 ; The fmul operands of the fadds are computed in different blocks, so they
-; cannot form a vector node and would be gathered. In the scalar code every
-; fadd fuses with its fmul into an fmadd, so a vectorized fadd lane only saves
-; (fmadd - fmul) = 0 on neoverse-v2: the vector fadd plus the gather of the
-; four products is not profitable and the fadds are not vectorized on their
-; own. Previously the scalar fadd lanes were priced as whole fmadds (2 each)
-; and the tree was vectorized.
+; cannot form a vector node and are gathered. The backend fuses an fmul with
+; its fadd user in the same block only, so only the last fadd fuses with its
+; fmul into an fmadd in the scalar code, and a vectorized lane saves
+; (fmadd - fmul) = 0 for it on neoverse-v2. The first two fadds are vectorized
+; with their gathered products, the last two stay scalar.
 define void @fadd_with_gathered_fmul_operands(double %a0, double %b0, double %a1, double %b1, double %a2, double %b2, double %a3, double %b3, ptr %x, ptr %out) {
 ;
 ; CHECK-LABEL: define void @fadd_with_gathered_fmul_operands(

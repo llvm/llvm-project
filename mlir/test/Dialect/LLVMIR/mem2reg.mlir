@@ -419,7 +419,6 @@ llvm.func @ignore_invariant_group() {
   %0 = llvm.mlir.constant(1 : i32) : i32
   %1 = llvm.alloca %0 x i32 {alignment = 4 : i64} : (i32) -> !llvm.ptr
   %2 = llvm.intr.launder.invariant.group %1 : !llvm.ptr
-  %3 = llvm.intr.strip.invariant.group %2 : !llvm.ptr
   llvm.return
 }
 
@@ -551,6 +550,22 @@ llvm.func @trivial_get_element_ptr() {
   %3 = llvm.bitcast %2 : !llvm.ptr to !llvm.ptr
   %4 = llvm.getelementptr %3[0] : (!llvm.ptr) -> !llvm.ptr, i8
   llvm.intr.lifetime.start %3 : !llvm.ptr
+  llvm.intr.lifetime.start %4 : !llvm.ptr
+  llvm.return
+}
+
+// -----
+
+// `inrange` is only valid on constant GEP expressions, so an inrange GEP on an
+// alloca is illegal. mem2reg should bail out and leave the GEP in place.
+// CHECK-LABEL: llvm.func @inrange_get_element_ptr
+llvm.func @inrange_get_element_ptr() {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: = llvm.alloca
+  %2 = llvm.alloca %0 x i8 {alignment = 8 : i64} : (i32) -> !llvm.ptr
+  // CHECK: llvm.getelementptr inrange <i64, -4, 4>
+  %4 = llvm.getelementptr inrange <i64, -4, 4> %2[0] : (!llvm.ptr) -> !llvm.ptr, i8
+  llvm.intr.lifetime.start %2 : !llvm.ptr
   llvm.intr.lifetime.start %4 : !llvm.ptr
   llvm.return
 }

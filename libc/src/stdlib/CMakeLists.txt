@@ -701,6 +701,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  secure_getenv
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.secure_getenv
+)
+
+add_entrypoint_object(
   setenv
   ALIAS
   DEPENDS

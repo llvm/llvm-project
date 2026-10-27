@@ -4194,6 +4194,96 @@ Here are some examples of situations that we warn about as they *might* be poten
 > }
 > ```
 
+#### alpha.webkit.UnborrowedLocalVarsChecker
+
+A *CanBorrow* type tracks views into its interior at runtime. It calls `crashIfBorrowed()` in methods that destroy its interior. `WTF::Vector` is a motivating example: `append()` calls `crashIfBorrowed()`.
+
+`Borrow<T>` is an RAII object that tracks a view into a `CanBorrow` type: while a `Borrow<T>` on a `CanBorrow` object is in scope, views into the object remain valid (otherwise the program crashes).
+
+The goal of this rule is to require a pointer/reference/view into a `CanBorrow` type to be guarded by an overlooking `Borrow<T>`.
+
+These are examples do not warn:
+
+> ```cpp
+> void foo1(Vector<char>& buffer) {
+>   Borrow<Vector<char>> borrowed(buffer);
+>   char& c = borrowed.get()[0]; // ok, the loan is reached through a Borrow
+> }
+>
+> void foo2(Vector<char>& buffer) {
+>   Vector<char>& alias = buffer; // ok, names the object rather than its interior
+>   Vector<char>* p = &buffer;    // ok, same
+> }
+>
+> void foo3(Vector<char>& buffer) {
+>   char c = buffer[0]; // ok, a copy of an element is not a loan
+> }
+>
+> void foo4(Vector<char>& buffer) {
+>   // ok, every loan is bound to the Borrow temporary, which C++23 extends
+>   // across the loop
+>   for (char& c : borrow(buffer).get()) { }
+> }
+> ```
+
+These are examples warn:
+
+> ```cpp
+> void foo1(Vector<char>& buffer) {
+>   char& c = buffer[0];    // warn
+>   buffer.append('x');     // this would invalidate c without a crash
+> }
+>
+> void foo2(Vector<char>& buffer) {
+>   char* data = buffer.data(); // warn
+>   someFunction();             // this might invalidate data without a crash
+> }
+>
+> void foo3(Vector<Vector<char>>& outer) {
+>   Vector<char>& inner = outer[0]; // warn
+>   someFunction();                 // this might invalidate inner without a crash
+> }
+>
+> void foo4(Vector<char>& buffer) {
+>   for (char& c : buffer) { // warn
+>     someFunction();        // this might invalidate c without a crash
+>   }
+> }
+>
+> void foo5() {
+>   // warn: the temporary lives across the loop, but an iterator can hold a
+>   // pointer back to it, so its interior can still be destroyed. Bind it to
+>   // a name and borrow it instead.
+>   for (char& c : makeVector()) {
+>     someFunction();
+>   }
+> }
+>
+> class Node : public CanBorrow {   // owns a Vector<Node> of children
+> public:
+>   Node& firstChild() [[clang::lifetimebound]];
+>   void appendChild();
+> };
+>
+> void foo6(Node& node) {
+>   Node& child = node.firstChild(); // warn
+>   node.appendChild();              // this would invalidate child without a crash
+> }
+> ```
+
+A value counts as a loan when it reaches its origin through a `[[clang::lifetimebound]]` edge. That attribute does not distinguish a view into an object's interior from another name for the object itself. `foo6` shows why the checker resolves that ambiguity toward reporting.
+
+The cost is that an identity function is reported even though its result really is an alias:
+
+> ```cpp
+> Vector<char>& identity(Vector<char>& v [[clang::lifetimebound]]);
+>
+> void foo7(Vector<char>& buffer) {
+>   Vector<char>& alias = identity(buffer); // warn, although this is an alias
+>   someFunction();
+> }
+> ```
+
 #### webkit.RetainPtrCtorAdoptChecker
 
 The goal of this rule is to make sure the constructors of RetainPtr and OSObjectPtr as well as adoptNS, adoptCF, and adoptOSObject are used correctly.

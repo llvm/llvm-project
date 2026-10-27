@@ -417,7 +417,7 @@ bool IndexedReference::delinearize(const LoopInfo &LI) {
       if (StepRec && SE.isKnownNegative(StepRec))
         AccessFn = SE.getAddRecExpr(
             AccessFnAR->getStart(), SE.getNegativeSCEV(StepRec),
-            AccessFnAR->getLoop(), SCEV::NoWrapFlags::FlagAnyWrap);
+            AccessFnAR->getLoop(), SCEV::NoWrapFlags::FlagNone);
       const SCEV *Div = SE.getUDivExactExpr(AccessFn, ElemSize);
       Subscripts.push_back(Div);
       Sizes.push_back(ElemSize);

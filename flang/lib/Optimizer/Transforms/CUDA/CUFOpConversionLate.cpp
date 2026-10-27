@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Builder/CUFCommon.h"
+#include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/CUDA/Descriptor.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
@@ -15,8 +16,10 @@
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Transforms/Passes.h"
+#include "flang/Runtime/CUDA/allocatable.h"
 #include "flang/Runtime/CUDA/descriptor.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -107,6 +110,33 @@ private:
   const mlir::SymbolTable &symTab;
 };
 
+struct CUFDeviceIsActiveOpConversion
+    : public mlir::OpRewritePattern<cuf::DeviceIsActiveOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cuf::DeviceIsActiveOp op,
+                  mlir::PatternRewriter &rewriter) const override {
+    mlir::Location loc = op.getLoc();
+    // Fold to false in device code so host-only cleanup (and nested calls
+    // such as cudaDeviceSynchronize) is DCE'd from GPU functions.
+    if (op->getParentOfType<mlir::gpu::GPUModuleOp>() ||
+        cuf::isCUDADeviceContext(op.getOperation())) {
+      rewriter.replaceOpWithNewOp<mlir::arith::ConstantOp>(
+          op, rewriter.getBoolAttr(false));
+      return mlir::success();
+    }
+    auto mod = op->getParentOfType<mlir::ModuleOp>();
+    fir::FirOpBuilder builder(rewriter, mod);
+    mlir::func::FuncOp callee =
+        fir::runtime::getRuntimeFunc<mkRTKey(CUFDeviceIsActive)>(loc, builder);
+    auto call = fir::CallOp::create(rewriter, loc, callee, mlir::ValueRange{});
+    rewriter.replaceOp(op, createConvertOp(rewriter, loc, rewriter.getI1Type(),
+                                           call.getResult(0)));
+    return mlir::success();
+  }
+};
+
 class CUFOpConversionLate
     : public fir::impl::CUFOpConversionLateBase<CUFOpConversionLate> {
   using CUFOpConversionLateBase::CUFOpConversionLateBase;
@@ -125,6 +155,7 @@ public:
                            mlir::gpu::GPUDialect>();
     patterns.insert<CUFDeviceAddressOpConversion>(patterns.getContext(),
                                                   symtab);
+    patterns.insert<CUFDeviceIsActiveOpConversion>(patterns.getContext());
     if (mlir::failed(mlir::applyPartialConversion(getOperation(), target,
                                                   std::move(patterns)))) {
       mlir::emitError(mlir::UnknownLoc::get(ctx),

@@ -140,6 +140,10 @@ using MaxNumFOpLowering =
     VectorConvertToLLVMPattern<arith::MaxNumFOp, LLVM::MaxNumOp,
                                arith::AttrConvertFastMathToLLVM,
                                /*FailOnUnsupportedFP=*/true>;
+using MaximumNumFOpLowering =
+    VectorConvertToLLVMPattern<arith::MaximumNumFOp, LLVM::MaximumNumOp,
+                               arith::AttrConvertFastMathToLLVM,
+                               /*FailOnUnsupportedFP=*/true>;
 using MaxSIOpLowering =
     VectorConvertToLLVMPattern<arith::MaxSIOp, LLVM::SMaxOp>;
 using MaxUIOpLowering =
@@ -150,6 +154,10 @@ using MinimumFOpLowering =
                                /*FailOnUnsupportedFP=*/true>;
 using MinNumFOpLowering =
     VectorConvertToLLVMPattern<arith::MinNumFOp, LLVM::MinNumOp,
+                               arith::AttrConvertFastMathToLLVM,
+                               /*FailOnUnsupportedFP=*/true>;
+using MinimumNumFOpLowering =
+    VectorConvertToLLVMPattern<arith::MinimumNumFOp, LLVM::MinimumNumOp,
                                arith::AttrConvertFastMathToLLVM,
                                /*FailOnUnsupportedFP=*/true>;
 using MinSIOpLowering =
@@ -887,10 +895,12 @@ void mlir::arith::populateArithToLLVMConversionPatterns(
     IndexCastOpUILowering,
     MaximumFOpLowering,
     MaxNumFOpLowering,
+    MaximumNumFOpLowering,
     MaxSIOpLowering,
     MaxUIOpLowering,
     MinimumFOpLowering,
     MinNumFOpLowering,
+    MinimumNumFOpLowering,
     MinSIOpLowering,
     MinUIOpLowering,
     MulFOpLowering,

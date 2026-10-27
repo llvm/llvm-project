@@ -301,7 +301,7 @@ Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info,
 
 Environment Host::GetEnvironment() {
   Environment env;
-  // The environment block on Windows is a contiguous buffer of NULL terminated
+  // The environment block on Windows is a contiguous buffer of null-terminated
   // strings, where the end of the environment block is indicated by two
   // consecutive NULLs.
   LPWCH environment_block = ::GetEnvironmentStringsW();

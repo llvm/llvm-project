@@ -32,6 +32,7 @@ ORC_RT_SPS_WRAPPER_IMPL(add_via_function_sps_wrapper, int32_t(int32_t, int32_t),
                         add_via_function);
 
 using namespace orc_rt;
+using namespace orc_rt::test;
 
 static void void_noop_sps_wrapper(orc_rt_SessionRef S,
                                   orc_rt_WrapperFunctionBuffer ArgBytes,

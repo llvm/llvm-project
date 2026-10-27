@@ -32,7 +32,7 @@ static cl::opt<bool> SPVPreserveAuxData(
     cl::desc("Preserve LLVM attributes and metadata as "
              "NonSemantic.AuxData ExtInst annotations (requires "
              "SPV_KHR_non_semantic_info)"),
-    cl::Optional, cl::Hidden, cl::init(false));
+    cl::Hidden, cl::init(false));
 
 namespace {
 enum AuxDataLinkageType : uint32_t {

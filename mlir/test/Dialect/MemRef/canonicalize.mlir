@@ -1591,6 +1591,25 @@ func.func @subview_rank_reduction(%arg0: memref<1x384x384xf32>, %idx: index)
 
 // -----
 
+// Ensure memref.subview doesn't crash when an offset/size/stride value
+// overflows to ShapedType::kDynamic (INT64_MIN). The static representation
+// uses that value as the "dynamic" marker, so such a value must remain a
+// dynamic operand instead of being folded into a static entry.
+// CHECK-LABEL: func @subview_wrapped_stride(
+//  CHECK-SAME:     %[[ARG0:.*]]: memref<8xf32, strided<[1]>>
+func.func @subview_wrapped_stride(%mem: memref<8xf32, strided<[1]>>) -> memref<?xf32, strided<[?], offset: ?>> {
+  // CHECK: %[[MIN:.*]] = arith.constant -9223372036854775808 : index
+  // CHECK: memref.subview %[[ARG0]][%[[MIN]]] [1] [%[[MIN]]]
+  %i64max = arith.constant 9223372036854775807 : i64
+  %maxIdx = arith.index_cast %i64max : i64 to index
+  %c1 = arith.constant 1 : index
+  %wrapped = arith.addi %maxIdx, %c1 : index
+  %sub = memref.subview %mem[%wrapped] [%c1] [%wrapped] : memref<8xf32, strided<[1]>> to memref<?xf32, strided<[?], offset: ?>>
+  return %sub : memref<?xf32, strided<[?], offset: ?>>
+}
+
+// -----
+
 // CHECK-LABEL: func @fold_double_transpose(
 //  CHECK-SAME:     %[[arg0:.*]]: memref<1x2x3x4x5xf32>
 func.func @fold_double_transpose(%arg0: memref<1x2x3x4x5xf32>) -> memref<5x3x2x4x1xf32, strided<[1, 20, 60, 5, 120]>> {

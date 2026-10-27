@@ -444,8 +444,12 @@ Error TextInstrProfReader::readNextRecord(NamedInstrProfRecord &Record) {
     Record.Counts.push_back(Count);
   }
 
-  // Bitmap byte information is indicated with special character.
-  if (Line->starts_with("$")) {
+  // Bitmap byte information is indicated by '$' followed by an integer. Only
+  // treat numeric-looking lines as bitmap records so function names such as
+  // Swift manglings beginning with "$s" remain unambiguous.
+  StringRef BitmapSize =
+      Line->starts_with("$") ? Line->drop_front(1).trim() : StringRef();
+  if (!BitmapSize.empty() && isDigit(BitmapSize.front())) {
     Record.BitmapBytes.clear();
     // Read the number of bitmap bytes.
     uint64_t NumBitmapBytes;

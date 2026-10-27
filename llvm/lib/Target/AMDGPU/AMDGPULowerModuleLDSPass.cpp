@@ -1393,7 +1393,8 @@ private:
     for (size_t I = 0; I < LocalVars.size(); I++) {
       GlobalVariable *GV = LocalVars[I];
       Constant *GEPIdx[] = {ConstantInt::get(I32, 0), ConstantInt::get(I32, I)};
-      Constant *GEP = ConstantExpr::getGetElementPtr(LDSTy, SGV, GEPIdx, true);
+      Constant *GEP = ConstantExpr::getGetElementPtr(
+          DL, LDSTy, SGV, GEPIdx, GEPNoWrapFlags::inBounds());
       if (IsPaddingField[I]) {
         assert(GV->use_empty());
         GV->eraseFromParent();

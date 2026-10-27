@@ -9,6 +9,9 @@
 // RUN: %clang_cc1 -xc++ -triple x86_64-apple-macosx10.14.0 %s -verify -DUSE_BUILTINS -fexperimental-new-constant-interpreter
 
 typedef unsigned long size_t;
+typedef long ssize_t;
+typedef unsigned int socklen_t;
+struct sockaddr;
 
 #ifdef __cplusplus
 extern "C" {
@@ -18,8 +21,13 @@ extern int sprintf(char *str, const char *format, ...);
 
 #if defined(USE_BUILTINS)
 #define memcpy(x,y,z) __builtin_memcpy(x,y,z)
+// Also test the Windows winsock2.h signature where len is a signed int.
+int recv(int, char *, int, int);
+int recvfrom(int, char *, int, int, struct sockaddr *, int *);
 #else
 void *memcpy(void *dst, const void *src, size_t c);
+ssize_t recv(int, void *, size_t, int);
+ssize_t recvfrom(int, void *, size_t, int, struct sockaddr *, socklen_t *);
 #endif
 void bcopy(const void *src, void *dst, size_t n);
 void bzero(void *dst, size_t n);
@@ -268,6 +276,34 @@ void call_umask(mode_t runtime_mode) {
   umask(7777);    // expected-warning {{'umask' argument sets non-file-permission bits (017000); those bits are ignored}}
   umask(-1);      // expected-warning {{'umask' argument sets non-file-permission bits (}}
   umask(runtime_mode); // no warning, not a constant
+}
+
+void call_recv(int fd) {
+  char buf[10];
+  recv(fd, buf, 10, 0);
+  recv(fd, buf, 11, 0); // expected-warning {{'recv' size argument is too large; destination buffer has size 10, but size argument is 11}}
+  recv(fd, buf, -1, 0); // expected-warning {{'recv' size argument is too large; destination buffer has size 10, but size argument is 18446744073709551615}}
+}
+
+void call_recvfrom(int fd) {
+  char buf[10];
+  recvfrom(fd, buf, 10, 0, (struct sockaddr *)0, 0);
+  recvfrom(fd, buf, 11, 0, (struct sockaddr *)0, 0); // expected-warning {{'recvfrom' size argument is too large; destination buffer has size 10, but size argument is 11}}
+  recvfrom(fd, buf, -1, 0, (struct sockaddr *)0, 0); // expected-warning {{'recvfrom' size argument is too large; destination buffer has size 10, but size argument is 18446744073709551615}}
+}
+
+void call_recv_subobject(int fd) {
+  struct {
+    char first[10];
+    char second[20];
+  } s;
+  recv(fd, s.first, 35, 0); // expected-warning {{'recv' size argument is too large; destination buffer has size 30, but size argument is 35}}
+}
+
+void call_recv_runtime(int fd, int n) {
+  char buf[10];
+  recv(fd, buf, n, 0);
+  recvfrom(fd, buf, n, 0, (struct sockaddr *)0, 0);
 }
 
 #ifdef __cplusplus

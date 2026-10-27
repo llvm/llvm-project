@@ -80,4 +80,17 @@ mlir::Value createLShR(mlir::OpBuilder &bld, mlir::Value lhs, unsigned rhs);
 mlir::Type convertTypeForMemory(const mlir::TypeConverter &converter,
                                 mlir::DataLayout const &dataLayout,
                                 mlir::Type type);
+
+/// The type of a load/store's *value*, as opposed to convertTypeForMemory's
+/// type of the memory it lives in. The two are effectively identical except
+/// with split-storage bit-int.
+mlir::Type convertTypeForLoadStore(const mlir::TypeConverter &converter,
+                                   mlir::DataLayout const &dataLayout,
+                                   mlir::Type type);
+
+// Convert a bit-int value to its llvm value, which can be either an array, or
+// just a large-power-of-2 integer.
+mlir::Attribute getBitIntStorageAttr(mlir::ConversionPatternRewriter &rewriter,
+                                     cir::IntAttr attr,
+                                     const mlir::DataLayout &dataLayout);
 #endif

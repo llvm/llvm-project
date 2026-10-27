@@ -18,18 +18,22 @@
 
 #include <optional>
 
+namespace orc_rt::test {
+
 /// Creates a socket for a test to own, or nullopt if the system refuses one.
 /// The socket is neither bound nor connected.
-std::optional<orc_rt::NativeSocketHandle> makeNativeSocket();
+std::optional<NativeSocketHandle> makeNativeSocket();
 
 /// True if H names a socket this process still has open.
 ///
 /// Only meaningful while nothing else in the process is opening sockets: a
 /// closed handle's value can be reissued to the next caller, which is
 /// indistinguishable from the original still being open.
-bool isNativeSocketOpen(orc_rt::NativeSocketHandle H);
+bool isNativeSocketOpen(NativeSocketHandle H);
 
 /// Closes H, which must be open and owned by no SocketHandle.
-void closeNativeSocket(orc_rt::NativeSocketHandle H);
+void closeNativeSocket(NativeSocketHandle H);
+
+} // namespace orc_rt::test
 
 #endif // ORC_RT_UNITTEST_BEDROCK_SOCKETTESTUTILS_H

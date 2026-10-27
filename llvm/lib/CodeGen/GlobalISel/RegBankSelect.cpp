@@ -63,7 +63,7 @@ static constexpr unsigned ImpossibleRepairCost =
     std::numeric_limits<unsigned>::max();
 
 static cl::opt<RegBankSelectMode> RegBankSelectModeOption(
-    cl::desc("Mode of the RegBankSelect pass"), cl::Hidden, cl::Optional,
+    cl::desc("Mode of the RegBankSelect pass"), cl::Hidden,
     cl::values(clEnumValN(RegBankSelectMode::Fast, "regbankselect-fast",
                           "Run the Fast mode (default mapping)"),
                clEnumValN(RegBankSelectMode::Greedy, "regbankselect-greedy",

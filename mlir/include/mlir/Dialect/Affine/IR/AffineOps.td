@@ -630,7 +630,8 @@ def AffineMaxOp : AffineMinMaxOpBase<"max",
 }
 
 def AffineParallelOp : Affine_Op<"parallel",
-    [AutomaticAllocationScope, ImplicitAffineTerminator, RecursivelySpeculatable,
+    [AutomaticAllocationScope, HasParallelRegion, ImplicitAffineTerminator,
+     RecursivelySpeculatable,
      RecursiveMemoryEffects, DeclareOpInterfaceMethods<LoopLikeOpInterface>,
      MemRefsNormalizable]> {
   let summary = "multi-index parallel band operation";

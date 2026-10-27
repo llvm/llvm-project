@@ -4273,6 +4273,13 @@ FieldDecl *Expr::getSourceBitField() {
       break;
   }
 
+  if (StmtExpr *SE = dyn_cast<StmtExpr>(E)) {
+    CompoundStmt *CS = SE->getSubStmt();
+    if (ValueStmt *VS = dyn_cast_or_null<ValueStmt>(CS->body_back()))
+      if (Expr *EX = VS->getExprStmt())
+        return EX->getSourceBitField();
+  }
+
   if (MemberExpr *MemRef = dyn_cast<MemberExpr>(E))
     if (FieldDecl *Field = dyn_cast<FieldDecl>(MemRef->getMemberDecl()))
       if (Field->isBitField())

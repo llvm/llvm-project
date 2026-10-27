@@ -727,8 +727,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   const std::initializer_list<LLT> FPTypesBase = {F32, F64};
   const std::initializer_list<LLT> FPTypes16 = {F32, F64, F16};
   const std::initializer_list<LLT> FPTypesPK16 = {F32, F64, F16, V2F16};
-  const std::initializer_list<LLT> FPTypesPK16_64 = {F32, F64, F16, V2F16,
-                                                     V2F64};
 
   const LLT I1 = LLT::integer(1);
   const LLT I16 = LLT::integer(16);
@@ -998,6 +996,13 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     FDIVActions.customFor({F16});
   }
 
+  if (ST.hasBF16PackedInsts()) {
+    FPOpActions.legalFor({V2BF16}).clampMaxNumElementsStrict(0, BF16, 2);
+    FCanonicalizeActions.legalFor({V2BF16}).clampMaxNumElementsStrict(0, BF16,
+                                                                      2);
+    StrictFPOpActions.legalFor({V2BF16}).clampMaxNumElementsStrict(0, BF16, 2);
+  }
+
   FPOpActions.widenScalarFor({BF16}, changeElementTo(0, F32));
   FCanonicalizeActions.widenScalarFor({BF16}, changeElementTo(0, F32));
 
@@ -1021,37 +1026,51 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   auto &MinNumMaxNumIeee =
       getActionDefinitionsBuilder({G_FMINNUM_IEEE, G_FMAXNUM_IEEE});
-
-  if (ST.hasVOP3PInsts()) {
-    MinNumMaxNumIeee.legalFor(FPTypesPK16)
-        .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
-        .clampMaxNumElements(0, F16, 2)
-        .scalarize(0);
-  } else if (ST.has16BitInsts()) {
-    MinNumMaxNumIeee.legalFor(FPTypes16).scalarize(0);
-  } else {
-    MinNumMaxNumIeee.legalFor(FPTypesBase).scalarize(0);
-  }
-
   auto &MinNumMaxNum = getActionDefinitionsBuilder(
       {G_FMINNUM, G_FMAXNUM, G_FMINIMUMNUM, G_FMAXIMUMNUM});
 
-  if (ST.hasAnyPackedFP64Ops()) {
-    MinNumMaxNum.customFor(FPTypesPK16_64)
-        .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
-        .clampMaxNumElements(0, F16, 2)
-        .clampMaxNumElements(0, F64, 2)
-        .scalarize(0);
-  } else if (ST.hasVOP3PInsts()) {
-    MinNumMaxNum.customFor(FPTypesPK16)
-        .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
-        .clampMaxNumElements(0, F16, 2)
-        .scalarize(0);
-  } else if (ST.has16BitInsts()) {
-    MinNumMaxNum.customFor(FPTypes16).scalarize(0);
-  } else {
-    MinNumMaxNum.customFor(FPTypesBase).scalarize(0);
+  MinNumMaxNumIeee.legalFor({F32, F64});
+  MinNumMaxNum.customFor({F32, F64});
+
+  if (ST.has16BitInsts()) {
+    MinNumMaxNumIeee.legalFor({F16});
+    MinNumMaxNum.customFor({F16});
   }
+
+  // V2F16
+  if (ST.hasVOP3PInsts()) {
+    MinNumMaxNumIeee.legalFor({V2F16})
+        .moreElementsIf(all(elementTypeIs(0, F16), isSmallOddVector(0)),
+                        oneMoreElement(0))
+        .clampMaxNumElements(0, F16, 2);
+    MinNumMaxNum.customFor({V2F16})
+        .moreElementsIf(all(elementTypeIs(0, F16), isSmallOddVector(0)),
+                        oneMoreElement(0))
+        .clampMaxNumElements(0, F16, 2);
+  }
+
+  // V2F64
+  if (ST.hasAnyPackedFP64Ops()) {
+    MinNumMaxNum.customFor({V2F64})
+        .moreElementsIf(all(elementTypeIs(0, F64), isSmallOddVector(0)),
+                        oneMoreElement(0))
+        .clampMaxNumElements(0, F64, 2);
+  }
+
+  // V2BF16
+  if (ST.hasBF16PackedInsts()) {
+    MinNumMaxNumIeee.legalFor({V2BF16})
+        .moreElementsIf(all(elementTypeIs(0, BF16), isSmallOddVector(0)),
+                        oneMoreElement(0))
+        .clampMaxNumElements(0, BF16, 2);
+    MinNumMaxNum.customFor({V2BF16})
+        .moreElementsIf(all(elementTypeIs(0, BF16), isSmallOddVector(0)),
+                        oneMoreElement(0))
+        .clampMaxNumElements(0, BF16, 2);
+  }
+
+  MinNumMaxNumIeee.scalarize(0);
+  MinNumMaxNum.scalarize(0);
 
   if (!ST.has16BitInsts()) {
     MinNumMaxNumIeee.minScalar(0, F32);
@@ -1183,6 +1202,10 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
         .legalFor({F32})
         // Must use fadd + fneg
         .lowerFor({F64, F16, V2F16});
+  }
+
+  if (ST.hasBF16PackedInsts()) {
+    FSubActions.lowerFor({V2BF16}).clampMaxNumElements(0, BF16, 2);
   }
 
   if (ST.hasAnyPackedFP32Ops())

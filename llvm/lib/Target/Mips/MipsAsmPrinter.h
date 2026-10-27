@@ -42,8 +42,6 @@ class TargetMachine;
 class LLVM_LIBRARY_VISIBILITY MipsAsmPrinter : public AsmPrinter {
   MipsTargetStreamer &getTargetStreamer() const;
 
-  void EmitInstrWithMacroNoAT(const MachineInstr *MI);
-
   //===------------------------------------------------------------------===//
   // XRay implementation
   //===------------------------------------------------------------------===//

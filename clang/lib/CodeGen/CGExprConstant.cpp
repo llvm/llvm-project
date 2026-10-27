@@ -1885,8 +1885,9 @@ namespace {
         IndexValues[i] = llvm::ConstantInt::get(CGM.Int32Ty, Indices[i]);
       }
 
-      llvm::Constant *location = llvm::ConstantExpr::getInBoundsGetElementPtr(
-          BaseValueTy, Base, IndexValues);
+      llvm::Constant *location = llvm::ConstantExpr::getGetElementPtr(
+          CGM.getDataLayout(), BaseValueTy, Base, IndexValues,
+          llvm::GEPNoWrapFlags::inBounds());
 
       Locations.insert({placeholder, location});
     }

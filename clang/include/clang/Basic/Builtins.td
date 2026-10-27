@@ -3868,6 +3868,23 @@ def Umask : LibBuiltin<"sys/stat.h"> {
   let Prototype = ""; // mode_t(mode_t); mode_t is target-specific
 }
 
+// POSIX sys/socket.h
+
+def Recv : LibBuiltin<"sys/socket.h"> {
+  let Spellings = ["recv"];
+  let Attributes = [IgnoreSignature];
+  // ssize_t(int, void*, size_t, int); ssize_t is target-specific
+  let Prototype = "";
+}
+
+def RecvFrom : LibBuiltin<"sys/socket.h"> {
+  let Spellings = ["recvfrom"];
+  let Attributes = [IgnoreSignature];
+  // ssize_t(int, void*, size_t, int, struct sockaddr*, socklen_t*);
+  // types are target-specific
+  let Prototype = "";
+}
+
 // POSIX pthread.h
 
 def PthreadCreate : GNULibBuiltin<"pthread.h"> {

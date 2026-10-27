@@ -24,7 +24,9 @@ class AddressableBitsScriptedProcess(ScriptedProcess):
         self, addr: int, size: int, error: lldb.SBError
     ) -> lldb.SBData:
         data = lldb.SBData()
-        data.SetData(
+        # The buffer has to outlive this call, so the SBData needs to own it
+        # rather than alias a Python object we're about to drop.
+        data.SetDataWithOwnership(
             error,
             bytes(size),
             self.target.GetByteOrder(),

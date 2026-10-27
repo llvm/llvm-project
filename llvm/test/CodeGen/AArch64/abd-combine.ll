@@ -504,10 +504,9 @@ define <8 x i16> @abds_i_reassoc(<8 x i16> %src1) {
 define <1 x i64> @recursive() {
 ; CHECK-LABEL: recursive:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v0.8b, #254
-; CHECK-NEXT:    ushll v1.8h, v0.8b, #0
-; CHECK-NEXT:    dup v0.8b, v0.b[0]
-; CHECK-NEXT:    saddlp v1.1d, v1.2s
+; CHECK-NEXT:    movi v0.4h, #254
+; CHECK-NEXT:    movi v1.8b, #254
+; CHECK-NEXT:    saddlp v0.1d, v0.2s
 ; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    ret
   %1 = tail call <8 x i8> @llvm.aarch64.neon.umax.v8i8(<8 x i8> zeroinitializer, <8 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>)

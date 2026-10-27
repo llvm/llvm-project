@@ -238,7 +238,6 @@ on support follow.
 | `Zvfbfwma` | Supported |
 | `Zvfh` | Supported |
 | `Zvfhmin` | Supported |
-| `Zvfofp8min` | Assembly Support |
 | `Zvkb` | Supported |
 | `Zvkg` | Supported ([See note](#riscv-vector-crypto-note)) |
 | `Zvkn` | Supported ([See note](#riscv-vector-crypto-note)) |
@@ -253,10 +252,6 @@ on support follow.
 | `Zvksg` | Supported ([See note](#riscv-vector-crypto-note)) |
 | `Zvksh` | Supported ([See note](#riscv-vector-crypto-note)) |
 | `Zvkt` | Supported |
-| `Zvvfmm` | Assembly Support |
-| `Zvvmm` | Assembly Support |
-| `Zvvmtls` | Assembly Support |
-| `Zvvmttls` | Assembly Support |
 | `Zvl32b` | ([Partially](#riscv-vlen-32-note)) Supported |
 | `Zvl64b` | Supported |
 | `Zvl128b` | Supported |
@@ -411,6 +406,10 @@ The primary goal of experimental support is to assist in the process of ratifica
 `experimental-zilx`
 
 : LLVM implements the [0.1 draft specification](https://github.com/riscv/riscv-zilx).
+
+`experimental-zvfofp8min`
+
+: LLVM implements the [0.9 draft specification](https://github.com/riscv/riscv-isa-manual/pull/2979).
 
 To use an experimental extension from `clang`, you must add `-menable-experimental-extensions` to the command line, and specify the exact version of the experimental extension you are using. To use an experimental extension with LLVM's internal developer tools (e.g. `llc`, `llvm-objdump`, `llvm-mc`), you must prefix the extension name with `experimental-`. Note that you don't need to specify the version with internal tools, and shouldn't include the `experimental-` prefix with `clang`.
 

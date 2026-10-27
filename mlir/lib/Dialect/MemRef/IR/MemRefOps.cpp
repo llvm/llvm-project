@@ -9,6 +9,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/Utils/VerificationUtils.h"
 #include "mlir/IR/AffineMap.h"
@@ -2638,6 +2639,9 @@ void ExpandShapeOp::build(OpBuilder &builder, OperationState &result,
 }
 
 LogicalResult ExpandShapeOp::verify() {
+  if (failed(verifyReassociationIndicesNotEmpty(*this)))
+    return failure();
+
   MemRefType srcType = getSrcType();
   MemRefType resultType = getResultType();
 
@@ -2903,6 +2907,9 @@ void CollapseShapeOp::build(OpBuilder &b, OperationState &result, Value src,
 }
 
 LogicalResult CollapseShapeOp::verify() {
+  if (failed(verifyReassociationIndicesNotEmpty(*this)))
+    return failure();
+
   MemRefType srcType = getSrcType();
   MemRefType resultType = getResultType();
 

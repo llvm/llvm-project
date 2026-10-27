@@ -77,11 +77,11 @@ Expected<std::string> createX64EHFrameHeader(Section &EHFrame,
 }
 
 constexpr SymbolNameSpec RegisterPerfStartSymbolName =
-    SymbolNameSpec::verbatim("llvm_orc_registerJITLoaderPerfStart");
+    SymbolNameSpec::c("llvm_orc_registerJITLoaderPerfStart");
 constexpr SymbolNameSpec RegisterPerfEndSymbolName =
-    SymbolNameSpec::verbatim("llvm_orc_registerJITLoaderPerfEnd");
+    SymbolNameSpec::c("llvm_orc_registerJITLoaderPerfEnd");
 constexpr SymbolNameSpec RegisterPerfImplSymbolName =
-    SymbolNameSpec::verbatim("llvm_orc_registerJITLoaderPerfImpl");
+    SymbolNameSpec::c("llvm_orc_registerJITLoaderPerfImpl");
 
 static PerfJITCodeLoadRecord
 getCodeLoadRecord(const Symbol &Sym, std::atomic<uint64_t> &CodeIndex) {

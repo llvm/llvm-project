@@ -604,6 +604,26 @@ OMPInterchangeDirective::CreateEmpty(const ASTContext &C, unsigned NumClauses,
       SourceLocation(), SourceLocation(), NumLoops);
 }
 
+OMPFlattenDirective *OMPFlattenDirective::Create(
+    const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
+    ArrayRef<OMPClause *> Clauses, unsigned NumLoops, Stmt *AssociatedStmt,
+    Stmt *TransformedStmt, Stmt *PreInits, Stmt *Finals) {
+  OMPFlattenDirective *Dir = createDirective<OMPFlattenDirective>(
+      C, Clauses, AssociatedStmt, FinalsOffset + 1, StartLoc, EndLoc, NumLoops);
+  Dir->setTransformedStmt(TransformedStmt);
+  Dir->setPreInits(PreInits);
+  Dir->setFinals(Finals);
+  return Dir;
+}
+
+OMPFlattenDirective *OMPFlattenDirective::CreateEmpty(const ASTContext &C,
+                                                      unsigned NumClauses,
+                                                      unsigned NumLoops) {
+  return createEmptyDirective<OMPFlattenDirective>(
+      C, NumClauses, /*HasAssociatedStmt=*/true, FinalsOffset + 1,
+      SourceLocation(), SourceLocation(), NumLoops);
+}
+
 OMPSplitDirective *
 OMPSplitDirective::Create(const ASTContext &C, SourceLocation StartLoc,
                           SourceLocation EndLoc, ArrayRef<OMPClause *> Clauses,

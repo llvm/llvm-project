@@ -86,8 +86,13 @@ createLinkGraphFromELFObject(MemoryBufferRef ObjectBuffer,
     return TargetMachineArch.takeError();
 
   switch (*TargetMachineArch) {
-  case ELF::EM_AARCH64:
-    return createLinkGraphFromELFObject_aarch64(ObjectBuffer, std::move(SSP));
+  case ELF::EM_AARCH64: {
+    if (DataEncoding == ELF::ELFDATA2LSB)
+      return createLinkGraphFromELFObject_aarch64(ObjectBuffer, std::move(SSP));
+    else
+      return createLinkGraphFromELFObject_aarch64_be(ObjectBuffer,
+                                                     std::move(SSP));
+  }
   case ELF::EM_ARM:
     return createLinkGraphFromELFObject_aarch32(ObjectBuffer, std::move(SSP));
   case ELF::EM_HEXAGON:
@@ -120,6 +125,9 @@ void link_ELF(std::unique_ptr<LinkGraph> G,
   switch (G->getTargetTriple().getArch()) {
   case Triple::aarch64:
     link_ELF_aarch64(std::move(G), std::move(Ctx));
+    return;
+  case Triple::aarch64_be:
+    link_ELF_aarch64_be(std::move(G), std::move(Ctx));
     return;
   case Triple::arm:
   case Triple::armeb:

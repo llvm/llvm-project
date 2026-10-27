@@ -1211,23 +1211,6 @@ Value *IRBuilderBase::CreateLaunderInvariantGroup(Value *Ptr) {
   return CreateCall(FnLaunderInvariantGroup, {Ptr});
 }
 
-Value *IRBuilderBase::CreateStripInvariantGroup(Value *Ptr) {
-  assert(isa<PointerType>(Ptr->getType()) &&
-         "strip.invariant.group only applies to pointers.");
-
-  auto *PtrType = Ptr->getType();
-  Module *M = BB->getParent()->getParent();
-  Function *FnStripInvariantGroup = Intrinsic::getOrInsertDeclaration(
-      M, Intrinsic::strip_invariant_group, {PtrType});
-
-  assert(FnStripInvariantGroup->getReturnType() == PtrType &&
-         FnStripInvariantGroup->getFunctionType()->getParamType(0) ==
-             PtrType &&
-         "StripInvariantGroup should take and return the same type");
-
-  return CreateCall(FnStripInvariantGroup, {Ptr});
-}
-
 Value *IRBuilderBase::CreateVectorReverse(Value *V, const Twine &Name) {
   auto *Ty = cast<VectorType>(V->getType());
   if (isa<ScalableVectorType>(Ty)) {
