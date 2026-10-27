@@ -240,10 +240,9 @@ static bool parseFileExtensions(llvm::ArrayRef<std::string> AllFileExtensions,
 // An invalid llvm::Regex never matches, so a filter that fails to compile
 // would silently match no header. An empty filter is not a valid llvm::Regex
 // either, but it intentionally matches nothing and is not an error.
-static std::optional<std::string>
-getFilterRegexError(const std::optional<std::string> &Regex) {
+static std::optional<std::string> getFilterRegexError(StringRef Regex) {
   std::string Error;
-  if (!Regex || Regex->empty() || llvm::Regex(*Regex).isValid(Error))
+  if (Regex.empty() || llvm::Regex(Regex).isValid(Error))
     return std::nullopt;
   return Error;
 }
@@ -270,16 +269,17 @@ void ClangTidyContext::setCurrentFile(StringRef File) {
                            ImplementationFileExtensions) &&
       DiagEngine)
     this->configurationDiag("Invalid implementation file extensions");
-  if (const std::optional<std::string> Error =
-          getFilterRegexError(getOptions().HeaderFilterRegex);
-      Error && DiagEngine)
-    this->configurationDiag("Invalid header filter regex '%0': %1")
-        << *getOptions().HeaderFilterRegex << *Error;
-  if (const std::optional<std::string> Error =
-          getFilterRegexError(getOptions().ExcludeHeaderFilterRegex);
-      Error && DiagEngine)
-    this->configurationDiag("Invalid exclude header filter regex '%0': %1")
-        << *getOptions().ExcludeHeaderFilterRegex << *Error;
+  const ClangTidyOptions &Options = getOptions();
+  if (Options.HeaderFilterRegex && DiagEngine)
+    if (const std::optional<std::string> Error =
+            getFilterRegexError(*Options.HeaderFilterRegex))
+      this->configurationDiag("Invalid header filter regex '%0': %1")
+          << *Options.HeaderFilterRegex << *Error;
+  if (Options.ExcludeHeaderFilterRegex && DiagEngine)
+    if (const std::optional<std::string> Error =
+            getFilterRegexError(*Options.ExcludeHeaderFilterRegex))
+      this->configurationDiag("Invalid exclude header filter regex '%0': %1")
+          << *Options.ExcludeHeaderFilterRegex << *Error;
 }
 
 void ClangTidyContext::setASTContext(ASTContext *Context) {
