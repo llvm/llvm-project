@@ -370,6 +370,7 @@ void LoopInvariantCodeMotion::runOnOperation() {
         // (e.g. an inner loop of an OpenACC parallel loop that ends up outside
         // of the parallel region is no longer executed by every iteration of
         // the parallel loop).
+        // TODO This is a workaround, we should find a better solution here.
         if (isa<LoopLikeOpInterface>(op)) {
           LDBG() << "Not hoisting loop-like operation: " << *op;
           return false;
