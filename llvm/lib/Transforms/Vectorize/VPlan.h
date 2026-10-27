@@ -4917,10 +4917,6 @@ class VPlan {
   /// the tail.
   VPValue *TripCount = nullptr;
 
-  /// Represents the backedge taken count of the original loop, for folding
-  /// the tail. It equals TripCount - 1.
-  VPSymbolicValue *BackedgeTakenCount = nullptr;
-
   /// Represents the vector trip count.
   VPSymbolicValue VectorTripCount;
 
@@ -5071,15 +5067,6 @@ public:
            "TripCount must be set when resetting");
     TripCount = NewTripCount;
   }
-
-  /// The backedge taken count of the original loop.
-  VPValue *getOrCreateBackedgeTakenCount() {
-    // BTC shares the canonical IV type with VectorTripCount.
-    if (!BackedgeTakenCount)
-      BackedgeTakenCount = new VPSymbolicValue(VectorTripCount.getType());
-    return BackedgeTakenCount;
-  }
-  VPValue *getBackedgeTakenCount() const { return BackedgeTakenCount; }
 
   /// The vector trip count.
   VPSymbolicValue &getVectorTripCount() { return VectorTripCount; }
