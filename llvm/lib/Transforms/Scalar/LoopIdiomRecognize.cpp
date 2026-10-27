@@ -1068,6 +1068,111 @@ static const SCEV *getNumBytes(const SCEV *BECount, Type *IntPtr,
                         SCEV::FlagNUW);
 }
 
+/// (type, byte offset) pairs; each type extends to the next offset.
+using ByteTypes = SmallVector<std::pair<MDString *, int64_t>, 4>;
+
+/// Get the byte types of the value accessed by \p I from its Enzyme
+/// "enzyme_truetype" or "enzyme_type" metadata.
+static std::optional<ByteTypes> getEnzymeByteTypes(const Instruction *I) {
+  if (MDNode *MD = I->getMetadata("enzyme_truetype")) {
+    ByteTypes Res;
+    if (MD->getNumOperands() % 2 != 0)
+      return std::nullopt;
+    for (unsigned Op = 0; Op < MD->getNumOperands(); Op += 2) {
+      auto *Ty = dyn_cast<MDString>(MD->getOperand(Op));
+      auto *Off = mdconst::dyn_extract<ConstantInt>(MD->getOperand(Op + 1));
+      if (!Ty || !Off)
+        return std::nullopt;
+      Res.emplace_back(Ty, Off->getSExtValue());
+    }
+    return Res;
+  }
+  if (MDNode *MD = I->getMetadata("enzyme_type")) {
+    if (MD->getNumOperands() % 2 != 1)
+      return std::nullopt;
+    ByteTypes Res;
+    bool AnyOffset = false;
+    for (unsigned Op = 1; Op < MD->getNumOperands(); Op += 2) {
+      auto *Off = mdconst::dyn_extract<ConstantInt>(MD->getOperand(Op));
+      auto *Child = dyn_cast<MDNode>(MD->getOperand(Op + 1));
+      if (!Off || !Child || Child->getNumOperands() == 0)
+        return std::nullopt;
+      auto *Ty = dyn_cast<MDString>(Child->getOperand(0));
+      if (!Ty)
+        return std::nullopt;
+      if (Off->getSExtValue() == -1) {
+        AnyOffset = true;
+        Res.emplace_back(Ty, 0);
+      } else {
+        Res.emplace_back(Ty, Off->getSExtValue());
+      }
+    }
+    // Bail on -1 (any offset) mixed with specific offsets.
+    if (AnyOffset && Res.size() != 1)
+      return std::nullopt;
+    return Res;
+  }
+  return std::nullopt;
+}
+
+/// Get the "enzyme_truetype" metadata for a mem intrinsic replacing
+/// \p Accesses, if their Enzyme type annotations agree.
+static MDNode *getEnzymeTrueType(ArrayRef<Instruction *> Accesses,
+                                 std::optional<uint64_t> ElementSize,
+                                 std::optional<uint64_t> NumBytes) {
+  std::optional<ByteTypes> Elem;
+  for (Instruction *I : Accesses) {
+    std::optional<ByteTypes> Cur = getEnzymeByteTypes(I);
+    if (!Cur) {
+      if (I->hasMetadata("enzyme_truetype") || I->hasMetadata("enzyme_type"))
+        return nullptr;
+      continue;
+    }
+    llvm::sort(
+        *Cur, [](const auto &A, const auto &B) { return A.second < B.second; });
+    // Merge adjacent entries of the same type.
+    ByteTypes Merged;
+    for (auto &Entry : *Cur) {
+      if (Entry.second < 0 ||
+          (ElementSize && Entry.second >= (int64_t)*ElementSize))
+        return nullptr;
+      if (Merged.empty() || Merged.back().first != Entry.first)
+        Merged.push_back(Entry);
+    }
+    if (Elem && *Elem != Merged)
+      return nullptr;
+    Elem = std::move(Merged);
+  }
+  if (!Elem || Elem->empty())
+    return nullptr;
+
+  ByteTypes All;
+  if (Elem->size() == 1 && Elem->front().second == 0) {
+    // A single type covers the whole range.
+    All = *Elem;
+  } else {
+    // Otherwise repeat the element layout over the range.
+    constexpr uint64_t MaxEntries = 256;
+    if (!ElementSize || !NumBytes || *ElementSize == 0 ||
+        *NumBytes % *ElementSize != 0 ||
+        *NumBytes / *ElementSize * Elem->size() > MaxEntries)
+      return nullptr;
+    for (uint64_t Start = 0; Start < *NumBytes; Start += *ElementSize)
+      for (auto &Entry : *Elem)
+        if (All.empty() || All.back().first != Entry.first)
+          All.emplace_back(Entry.first, Start + Entry.second);
+  }
+
+  LLVMContext &Ctx = Accesses.front()->getContext();
+  SmallVector<Metadata *, 8> Ops;
+  for (auto &Entry : All) {
+    Ops.push_back(Entry.first);
+    Ops.push_back(ConstantAsMetadata::get(
+        ConstantInt::getSigned(Type::getInt64Ty(Ctx), Entry.second)));
+  }
+  return MDNode::get(Ctx, Ops);
+}
+
 /// processLoopStridedStore - We see a strided store of some value.  If we can
 /// transform this into a memset or memset_pattern in the loop preheader, do so.
 bool LoopIdiomRecognize::processLoopStridedStore(
@@ -1215,6 +1320,21 @@ bool LoopIdiomRecognize::processLoopStridedStore(
   }
 
   NewCall->setDebugLoc(TheStore->getDebugLoc());
+
+  {
+    SmallVector<Instruction *, 4> Accesses = {TheStore};
+    for (Instruction *Store : Stores)
+      if (Store != TheStore)
+        Accesses.push_back(Store);
+    std::optional<uint64_t> ElementSize;
+    if (auto *C = dyn_cast<SCEVConstant>(StoreSizeSCEV))
+      ElementSize = C->getValue()->getZExtValue();
+    std::optional<uint64_t> NumBytes;
+    if (BytesWritten)
+      NumBytes = *BytesWritten;
+    if (MDNode *TrueType = getEnzymeTrueType(Accesses, ElementSize, NumBytes))
+      NewCall->setMetadata("enzyme_truetype", TrueType);
+  }
 
   if (MSSAU) {
     MemoryAccess *NewMemAcc = MSSAU->createMemoryAccessInBB(
@@ -1522,6 +1642,15 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
         AATags);
   }
   NewCall->setDebugLoc(TheStore->getDebugLoc());
+
+  {
+    std::optional<uint64_t> NumBytesC;
+    if (auto *CI = dyn_cast<ConstantInt>(NumBytes))
+      NumBytesC = CI->getZExtValue();
+    if (MDNode *TrueType = getEnzymeTrueType({TheLoad, TheStore},
+                                             (uint64_t)StoreSize, NumBytesC))
+      NewCall->setMetadata("enzyme_truetype", TrueType);
+  }
 
   if (MSSAU) {
     MemoryAccess *NewMemAcc = MSSAU->createMemoryAccessInBB(
