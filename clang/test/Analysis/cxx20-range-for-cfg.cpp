@@ -11,8 +11,8 @@ void range_for_init() {
 // CHECK-NEXT:    Succs (1): B5
 
 // CHECK:       [B1]
-// CHECK-NEXT:    1: [B5.14] (Lifetime ends)
-// CHECK-NEXT:    2: [B5.17] (Lifetime ends)
+// CHECK-NEXT:    1: [B5.17] (Lifetime ends)
+// CHECK-NEXT:    2: [B5.12] (Lifetime ends)
 // CHECK-NEXT:    3: [B5.9] (Lifetime ends)
 // CHECK-NEXT:    4: [B5.2].~A() (Implicit destructor)
 // CHECK-NEXT:    5: [B5.2] (Lifetime ends)

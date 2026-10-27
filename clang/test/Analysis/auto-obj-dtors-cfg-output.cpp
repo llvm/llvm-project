@@ -1179,8 +1179,8 @@ void test_for_implicit_scope() {
 // CHECK:      [B6 (ENTRY)]
 // CHECK-NEXT:   Succs (1): B5
 // CHECK:      [B1]
-// CHECK-NEXT:   1: [B5.8] (Lifetime ends)
-// CHECK-NEXT:   2: [B5.11] (Lifetime ends)
+// CHECK-NEXT:   1: [B5.11] (Lifetime ends)
+// CHECK-NEXT:   2: [B5.6] (Lifetime ends)
 // CHECK-NEXT:   3: [B5.3] (Lifetime ends)
 // CHECK-NEXT:   4: [B5.1] (Lifetime ends)
 // CHECK-NEXT:   Preds (1): B2

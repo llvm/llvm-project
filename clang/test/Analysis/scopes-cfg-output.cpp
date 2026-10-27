@@ -961,11 +961,11 @@ void test_for_compound_and_break() {
 // CHECK:      [B6 (ENTRY)]
 // CHECK-NEXT:   Succs (1): B5
 // CHECK:      [B1]
-// CHECK-NEXT:   1: [B5.11] (Lifetime ends)
+// CHECK-NEXT:   1: [B5.16] (Lifetime ends)
 // CHECK-NEXT:   2: CFGScopeEnd(__end1)
-// CHECK-NEXT:   3: [B5.14] (Lifetime ends)
+// CHECK-NEXT:   3: [B5.10] (Lifetime ends)
 // CHECK-NEXT:   4: CFGScopeEnd(__begin1)
-// CHECK-NEXT:   5: [B5.5] (Lifetime ends)
+// CHECK-NEXT:   5: [B5.6] (Lifetime ends)
 // CHECK-NEXT:   6: CFGScopeEnd(__range1)
 // CHECK-NEXT:   7: [B5.3].~A[10]() (Implicit destructor)
 // CHECK-NEXT:   8: [B5.3] (Lifetime ends)
