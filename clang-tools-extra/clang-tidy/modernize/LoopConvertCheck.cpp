@@ -197,8 +197,7 @@ static StatementMatcher makeIteratorLoopMatcher(bool IsReverse) {
   const StatementMatcher IteratorBoundMatcher =
       expr(anyOf(ignoringParenImpCasts(
                      declRefExpr(to(varDecl(equalsBoundNode(EndVarName))))),
-                 ignoringParenImpCasts(expr(EndCallMatcher).bind(EndCallName)),
-                 materializeTemporaryExpr(ignoringParenImpCasts(
+                 ignoringParenImpCasts(ignoringImplicit(
                      expr(EndCallMatcher).bind(EndCallName)))));
 
   const StatementMatcher IteratorComparisonMatcher = expr(ignoringParenImpCasts(
