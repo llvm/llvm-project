@@ -336,7 +336,8 @@ public:
     Term P{B.CreateXor(TX.Sign, TY.Sign),
            B.CreateMul(B.CreateZExt(TX.M, I128), B.CreateZExt(TY.M, I128)),
            B.CreateAdd(TX.E, TY.E)};
-    Term S = compress(addTerms(P, widen(TZ)));
+    // round() takes the 128-bit sum as it is (no compress to 64 bits first)
+    Term S = addTerms(P, widen(TZ));
     Value *PZero = B.CreateOr(isZero(X, F), isZero(Y, F));
     Value *R = withZeroSign(
         S, zeroSumSign(B.CreateAnd(PZero, isZero(Z, F)), P.Sign, TZ.Sign), F);
