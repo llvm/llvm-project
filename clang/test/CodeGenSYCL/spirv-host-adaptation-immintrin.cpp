@@ -41,8 +41,9 @@
 
 #ifdef X86_BUILTIN
 // The diagnostic is reported in the intrinsic header, not here.
-// x86-builtin-error@*:* {{cannot compile this builtin function yet}}
+// x86-builtin-error@*:* {{builtin is not supported on this target}}
 [[clang::sycl_external]] __m128i madd(__m128i a, __m128i b) {
+  // x86-builtin-note@+1 {{called by 'madd'}}
   return _mm_madd_epi16(a, b);
 }
 #endif
