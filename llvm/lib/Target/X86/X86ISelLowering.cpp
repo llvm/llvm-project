@@ -2322,13 +2322,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
   if (!Subtarget.useSoftFloat() && Subtarget.hasFP16()) {
     auto setGroup = [&] (MVT VT) {
-      setOperationAction(ISD::FADD,               VT, Legal);
       setOperationAction(ISD::STRICT_FADD,        VT, Legal);
-      setOperationAction(ISD::FSUB,               VT, Legal);
       setOperationAction(ISD::STRICT_FSUB,        VT, Legal);
-      setOperationAction(ISD::FMUL,               VT, Legal);
       setOperationAction(ISD::STRICT_FMUL,        VT, Legal);
-      setOperationAction(ISD::FDIV,               VT, Legal);
       setOperationAction(ISD::STRICT_FDIV,        VT, Legal);
       setOperationAction(ISD::FSQRT,              VT, Legal);
       setOperationAction(ISD::STRICT_FSQRT,       VT, Legal);
@@ -2351,7 +2347,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::LOAD,               VT, Legal);
       setOperationAction(ISD::STORE,              VT, Legal);
 
-      setOperationAction(ISD::FMA,                VT, Legal);
       setOperationAction(ISD::STRICT_FMA,         VT, Legal);
       setOperationAction(ISD::VSELECT,            VT, Legal);
       setOperationAction(ISD::BUILD_VECTOR,       VT, Custom);
@@ -2441,8 +2436,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::SETCC, MVT::v8f16, Custom);
     setOperationAction(ISD::SETCC, MVT::v16f16, Custom);
 
-    // Without VLX, these are widened to 512-bit ops during isel.
-    for (auto VT : {MVT::v8f16, MVT::v16f16})
+    // Without VLX, v8f16/v16f16 are widened to 512-bit ops during isel.
+    for (auto VT : {MVT::f16, MVT::v8f16, MVT::v16f16, MVT::v32f16})
       for (unsigned Opc :
            {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV, ISD::FMA})
         setOperationAction(Opc, VT, Legal);
