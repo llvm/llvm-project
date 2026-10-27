@@ -1396,6 +1396,7 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 ### Static Analyzer
 
 #### Crash and bug fixes
+- Correctly model `mtx_timedlock` as 2-parameter function in the ``unix.BlockInCriticalSection`` checker.
 
 % comment:
 % This is for the Static Analyzer.

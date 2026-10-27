@@ -178,7 +178,7 @@ private:
       {{CDM::CLibrary, {"mtx_unlock"}, 1}, {RoleKind::Unlock}},
       {{CDM::CLibrary, {"pthread_mutex_trylock"}, 1}, {RoleKind::Lock}},
       {{CDM::CLibrary, {"mtx_trylock"}, 1}, {RoleKind::Lock}},
-      {{CDM::CLibrary, {"mtx_timedlock"}, 1}, {RoleKind::Lock}},
+      {{CDM::CLibrary, {"mtx_timedlock"}, 2}, {RoleKind::Lock}},
       {{CDM::CXXMethod, {"lock_guard", "lock_guard"}},
        {RoleKind::Lock, getObjectUnderConstruction}},
       {{CDM::CXXMethod, {"lock_guard", "~lock_guard"}},
