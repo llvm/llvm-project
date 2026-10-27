@@ -37,9 +37,11 @@ void RTDECL(CUFRegisterManagedVariable)(
 /// unified memory addresses.
 void RTDECL(CUFInitModule)(void **module);
 
-/// Register the pages spanning [\p begin, \p end) with the CUDA runtime so
-/// device code can access them through their host address. Registering the
-/// same range more than once is allowed.
+/// Register the pages holding [\p begin, \p end) with the CUDA runtime so
+/// device code can access them through their host address. When \p end - 1 is
+/// on a page boundary, its page is left out.
+/// Nothing is registered when the device can access pageable host memory.
+/// Registering the same range more than once is allowed.
 void RTDECL(CUFRegisterHostMemoryRange)(void *begin, void *end);
 
 } // extern "C"

@@ -9428,9 +9428,17 @@ support `nointerpolation`.
 
 Unqualified pixel shader inputs and vertex shader outputs default to `linear`
 for floating-point components of at most 32 bits and `nointerpolation` otherwise.
-`SV_Position` uses the corresponding `noperspective` mode. Vertex shader inputs,
-pixel shader outputs, and signatures in other shader stages have no
-interpolation mode; their interpolation modifiers are ignored.
+In DirectX signatures, `SV_Position` uses the corresponding `noperspective` mode.
+Vertex shader inputs, pixel shader outputs, and signatures in other shader
+stages have no interpolation mode so their interpolation modifiers are ignored.
+
+For SPIR-V targets, `nointerpolation`, `noperspective`, `centroid`, and `sample`
+emit `Flat`, `NoPerspective`, `Centroid`, and `Sample` decorations, respectively.
+`linear` and `center` use the SPIR-V defaults and require no decoration.
+Sample-qualified interfaces also require the `SampleRateShading` capability.
+For `SV_Barycentrics` inputs, `noperspective` selects the `BaryCoordNoPerspKHR`
+built-in instead of adding a `NoPerspective` decoration; `centroid` and `sample`
+still decorate the selected built-in.
   }];
 }
 

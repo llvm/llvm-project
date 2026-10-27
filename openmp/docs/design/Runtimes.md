@@ -1401,6 +1401,18 @@ number of compute units (CUs) of the AMDGPU device. The default number of teams
 is `#default_teams = #teams_per_CU * #CUs`. The default value of teams per CU
 is `4`.
 
+#### LIBOMPTARGET_GENERIC_SPMD_TEAMS_PER_CU
+
+This environment variable controls the default number of teams relative to the
+number of compute units (CUs) for kernels in Generic-SPMD mode, e.g., `target
+teams distribute` with a nested `parallel for`. The default value is `6`
+(currently only active for AMDGPU); `0` uses
+{ref}`LIBOMPTARGET_AMDGPU_TEAMS_PER_CU` instead. Unless the user sets the
+number of threads, the runtime then halves the number of threads of such a
+kernel, down to one wavefront, and doubles the number of teams, as long as the
+distribute loop has an iteration for every team and the number of teams stays
+within the device's limit and `OMP_NUM_TEAMS`.
+
 #### LIBOMPTARGET_AMDGPU_MAX_ASYNC_COPY_BYTES
 
 This environment variable specifies the maximum size in bytes where the memory

@@ -1421,6 +1421,10 @@ class ConstantExpr : public Constant {
   friend class Context; // For constructor.
 
 public:
+  LLVM_ABI static Constant *getPtrToInt(Constant *C, Type *Ty);
+  LLVM_ABI static Constant *getIntToPtr(Constant *C, Type *Ty);
+  LLVM_ABI static Constant *getBitCast(Constant *C, Type *Ty);
+
   /// For isa/dyn_cast.
   static bool classof(const sandboxir::Value *From) {
     return From->getSubclassID() == ClassID::ConstantExpr;

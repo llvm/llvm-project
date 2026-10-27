@@ -130,6 +130,7 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION(Frac, frac)
   GENERATE_HLSL_INTRINSIC_FUNCTION(FlattenedThreadIdInGroup,
                                    flattened_thread_id_in_group)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(IsFinite, isfinite)
   GENERATE_HLSL_INTRINSIC_FUNCTION(IsInf, isinf)
   GENERATE_HLSL_INTRINSIC_FUNCTION(IsNaN, isnan)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Rsqrt, rsqrt)
@@ -244,7 +245,7 @@ protected:
       HLSLAppliedSemanticAttr *Semantic,
       llvm::dxbc::PSV::SemanticKind SemanticKind,
       llvm::Triple::EnvironmentType Stage, std::optional<unsigned> Index,
-      SemanticSignatures &Signature);
+      SemanticSignatures &Signature, llvm::hlsl::InterpolationMode InterpMode);
 
   void emitSystemSemanticStore(llvm::IRBuilder<> &B, llvm::Value *Source,
                                const clang::DeclaratorDecl *Decl,
@@ -252,20 +253,20 @@ protected:
                                llvm::dxbc::PSV::SemanticKind SemanticKind,
                                llvm::Triple::EnvironmentType Stage,
                                std::optional<unsigned> Index,
-                               SemanticSignatures &Signature);
+                               SemanticSignatures &Signature,
+                               llvm::hlsl::InterpolationMode InterpMode);
 
-  llvm::Value *handleScalarSemanticLoad(llvm::IRBuilder<> &B,
-                                        const FunctionDecl *FD,
-                                        llvm::Type *Type,
-                                        const clang::DeclaratorDecl *Decl,
-                                        HLSLAppliedSemanticAttr *Semantic,
-                                        SemanticSignatures &Signature);
+  llvm::Value *handleScalarSemanticLoad(
+      llvm::IRBuilder<> &B, const FunctionDecl *FD, llvm::Type *Type,
+      const clang::DeclaratorDecl *Decl, HLSLAppliedSemanticAttr *Semantic,
+      SemanticSignatures &Signature, llvm::hlsl::InterpolationMode InterpMode);
 
   void handleScalarSemanticStore(llvm::IRBuilder<> &B, const FunctionDecl *FD,
                                  llvm::Value *Source,
                                  const clang::DeclaratorDecl *Decl,
                                  HLSLAppliedSemanticAttr *Semantic,
-                                 SemanticSignatures &Signature);
+                                 SemanticSignatures &Signature,
+                                 llvm::hlsl::InterpolationMode InterpMode);
 
   std::pair<llvm::Value *, specific_attr_iterator<HLSLAppliedSemanticAttr>>
   handleStructSemanticLoad(
@@ -365,28 +366,27 @@ private:
                                    llvm::GlobalVariable *GV,
                                    HLSLResourceBindingAttr *RBA);
 
-  llvm::Value *emitSPIRVUserSemanticLoad(llvm::IRBuilder<> &B,
-                                         const FunctionDecl *FD,
-                                         llvm::Type *Type,
-                                         const clang::DeclaratorDecl *Decl,
-                                         HLSLAppliedSemanticAttr *Semantic,
-                                         std::optional<unsigned> Index);
+  llvm::Value *emitSPIRVUserSemanticLoad(
+      llvm::IRBuilder<> &B, llvm::Type *Type, const clang::DeclaratorDecl *Decl,
+      HLSLAppliedSemanticAttr *Semantic, std::optional<unsigned> Index,
+      llvm::hlsl::InterpolationMode InterpMode);
   llvm::Value *emitDXILUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
                                         const clang::DeclaratorDecl *Decl,
                                         HLSLAppliedSemanticAttr *Semantic,
                                         std::optional<unsigned> Index,
                                         SemanticSignatures &Signature);
-  llvm::Value *emitUserSemanticLoad(llvm::IRBuilder<> &B,
-                                    const FunctionDecl *FD, llvm::Type *Type,
+  llvm::Value *emitUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
                                     const clang::DeclaratorDecl *Decl,
                                     HLSLAppliedSemanticAttr *Semantic,
                                     std::optional<unsigned> Index,
-                                    SemanticSignatures &Signature);
+                                    SemanticSignatures &Signature,
+                                    llvm::hlsl::InterpolationMode InterpMode);
 
   void emitSPIRVUserSemanticStore(llvm::IRBuilder<> &B, llvm::Value *Source,
                                   const clang::DeclaratorDecl *Decl,
                                   HLSLAppliedSemanticAttr *Semantic,
-                                  std::optional<unsigned> Index);
+                                  std::optional<unsigned> Index,
+                                  llvm::hlsl::InterpolationMode InterpMode);
   void emitDXILUserSemanticStore(llvm::IRBuilder<> &B, llvm::Value *Source,
                                  const clang::DeclaratorDecl *Decl,
                                  HLSLAppliedSemanticAttr *Semantic,
@@ -396,7 +396,8 @@ private:
                              const clang::DeclaratorDecl *Decl,
                              HLSLAppliedSemanticAttr *Semantic,
                              std::optional<unsigned> Index,
-                             SemanticSignatures &Signature);
+                             SemanticSignatures &Signature,
+                             llvm::hlsl::InterpolationMode InterpMode);
 
   bool initializeGlobalResourceArray(CodeGenFunction &CGF,
                                      const VarDecl *ArrayDecl,

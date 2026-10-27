@@ -10,8 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "TosaToLinalgUtils.h"
 #include "mlir/Conversion/TosaToLinalg/TosaToLinalg.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
@@ -603,6 +605,16 @@ public:
   }
 };
 
+static SmallVector<ReassociationIndices>
+getMatMulBatchCollapseReassociation(int64_t rank) {
+  SmallVector<ReassociationIndices> reassociation(3);
+  for (int64_t dim = 0; dim < rank - 2; ++dim)
+    reassociation[0].push_back(dim);
+  reassociation[1].push_back(rank - 2);
+  reassociation[2].push_back(rank - 1);
+  return reassociation;
+}
+
 class MatMulConverter : public OpConversionPattern<tosa::MatMulOp> {
 public:
   using OpConversionPattern<tosa::MatMulOp>::OpConversionPattern;
@@ -610,78 +622,188 @@ public:
   matchAndRewrite(tosa::MatMulOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const final {
     Location loc = op.getLoc();
-
-    auto outputTy = cast<ShapedType>(op.getType());
-    auto outputElementTy = outputTy.getElementType();
-
-    SmallVector<Value> dynDims;
-    dynDims.resize(cast<ShapedType>(op->getResult(0).getType()).getRank());
-
-    if (!outputTy.hasRank() || outputTy.isDynamicDim(0)) {
-      dynDims[0] = tensor::DimOp::create(rewriter, loc, op->getOperand(0), 0);
-    }
-
-    if (!outputTy.hasRank() || outputTy.isDynamicDim(1)) {
-      dynDims[1] = tensor::DimOp::create(rewriter, loc, op->getOperand(0), 1);
-    }
-
-    if (!outputTy.hasRank() || outputTy.isDynamicDim(2)) {
-      dynDims[2] = tensor::DimOp::create(rewriter, loc, op->getOperand(1), 2);
-    }
-
-    SmallVector<Value> filteredDims = condenseValues(dynDims);
-
-    auto zeroAttr = rewriter.getZeroAttr(outputElementTy);
-    Value zero = arith::ConstantOp::create(rewriter, loc, zeroAttr);
-    auto emptyTensor =
-        tensor::EmptyOp::create(rewriter, loc, outputTy.getShape(),
-                                outputTy.getElementType(), filteredDims);
-    Value zeroTensor = linalg::FillOp::create(rewriter, loc, ValueRange{zero},
-                                              ValueRange{emptyTensor})
-                           .result();
+    auto aType = dyn_cast<RankedTensorType>(adaptor.getA().getType());
+    auto bType = dyn_cast<RankedTensorType>(adaptor.getB().getType());
+    auto outputType = dyn_cast<RankedTensorType>(op.getType());
+    if (!aType || !bType || !outputType)
+      return rewriter.notifyMatchFailure(op, "only supports ranked tensors");
 
     FailureOr<int64_t> maybeAZp = op.getAZeroPoint();
     FailureOr<int64_t> maybeBZp = op.getBZeroPoint();
     if (failed(maybeAZp))
       return rewriter.notifyMatchFailure(
-          op, "input a zero point cannot be statically determined");
+          op, "input A zero point cannot be statically determined");
     if (failed(maybeBZp))
       return rewriter.notifyMatchFailure(
-          op, "input b zero point cannot be statically determined");
+          op, "input B zero point cannot be statically determined");
 
     const int64_t aZpVal = *maybeAZp;
     const int64_t bZpVal = *maybeBZp;
 
     if (op.verifyAZeroPoint(aZpVal).failed())
       return rewriter.notifyMatchFailure(
-          op, "input a zero point must be zero for non-int8 integer types");
+          op, "input A zero point must be zero for non-int8 integer types");
 
     if (op.verifyBZeroPoint(bZpVal).failed())
       return rewriter.notifyMatchFailure(
-          op, "input b zero point must be zero for non-int8 integer types");
+          op, "input B zero point must be zero for non-int8 integer types");
 
-    if (aZpVal == 0 && bZpVal == 0) {
-      rewriter.replaceOpWithNewOp<linalg::BatchMatmulOp>(
-          op, TypeRange{op.getType()},
-          ValueRange{adaptor.getA(), adaptor.getB()}, ValueRange{zeroTensor});
+    const int64_t outputRank = outputType.getRank();
+    auto [a, b, zeroTensor] =
+        prepareMatMulOperands(rewriter, loc, adaptor.getA(), adaptor.getB(),
+                              outputType, /*transposeB=*/false);
+
+    Value aZp, bZp;
+    const bool hasNonzeroZeroPoint = aZpVal != 0 || bZpVal != 0;
+    if (hasNonzeroZeroPoint) {
+      aZp = arith::ConstantOp::create(rewriter, loc,
+                                      rewriter.getI32IntegerAttr(aZpVal));
+      bZp = arith::ConstantOp::create(rewriter, loc,
+                                      rewriter.getI32IntegerAttr(bZpVal));
+    }
+
+    if (outputRank == 2) {
+      if (!hasNonzeroZeroPoint) {
+        rewriter.replaceOpWithNewOp<linalg::MatmulOp>(op, TypeRange{outputType},
+                                                      ValueRange{a, b},
+                                                      ValueRange{zeroTensor});
+      } else {
+        rewriter.replaceOpWithNewOp<linalg::QuantizedMatmulOp>(
+            op, TypeRange{outputType}, ValueRange{a, b, aZp, bZp},
+            ValueRange{zeroTensor});
+      }
       return success();
     }
 
-    auto aZp = arith::ConstantOp::create(rewriter, loc,
-                                         rewriter.getI32IntegerAttr(aZpVal));
-    auto bZp = arith::ConstantOp::create(rewriter, loc,
-                                         rewriter.getI32IntegerAttr(bZpVal));
-    rewriter.replaceOpWithNewOp<linalg::QuantizedBatchMatmulOp>(
-        op, TypeRange{op.getType()},
-        ValueRange{adaptor.getA(), adaptor.getB(), aZp, bZp}, zeroTensor);
+    if (outputRank == 3) {
+      if (!hasNonzeroZeroPoint) {
+        rewriter.replaceOpWithNewOp<linalg::BatchMatmulOp>(
+            op, TypeRange{outputType}, ValueRange{a, b},
+            ValueRange{zeroTensor});
+      } else {
+        rewriter.replaceOpWithNewOp<linalg::QuantizedBatchMatmulOp>(
+            op, TypeRange{outputType}, ValueRange{a, b, aZp, bZp},
+            ValueRange{zeroTensor});
+      }
+      return success();
+    }
 
+    SmallVector<ReassociationIndices> reassociation =
+        getMatMulBatchCollapseReassociation(outputRank);
+    auto collapse = [&](Value value) {
+      auto type = cast<RankedTensorType>(value.getType());
+      auto collapsedType =
+          tensor::CollapseShapeOp::inferCollapsedType(type, reassociation);
+      return tensor::CollapseShapeOp::create(rewriter, loc, collapsedType,
+                                             value, reassociation);
+    };
+
+    Value collapsedA = collapse(a);
+    Value collapsedB = collapse(b);
+    Value collapsedInit = collapse(zeroTensor);
+    auto collapsedOutputType = cast<RankedTensorType>(collapsedInit.getType());
+    Value collapsedResult;
+
+    if (!hasNonzeroZeroPoint) {
+      collapsedResult =
+          linalg::BatchMatmulOp::create(
+              rewriter, loc, TypeRange{collapsedOutputType},
+              ValueRange{collapsedA, collapsedB}, ValueRange{collapsedInit})
+              .getResult(0);
+    } else {
+      collapsedResult = linalg::QuantizedBatchMatmulOp::create(
+                            rewriter, loc, TypeRange{collapsedOutputType},
+                            ValueRange{collapsedA, collapsedB, aZp, bZp},
+                            ValueRange{collapsedInit})
+                            .getResult(0);
+    }
+
+    Value result = tensor::ExpandShapeOp::create(
+        rewriter, loc, outputType, collapsedResult, reassociation,
+        tensor::getMixedSizes(rewriter, loc, zeroTensor));
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+};
+
+class MatMulTConverter : public OpConversionPattern<tosa::MatMulTOp> {
+public:
+  using OpConversionPattern<tosa::MatMulTOp>::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(tosa::MatMulTOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const final {
+    Location loc = op.getLoc();
+    auto aType = dyn_cast<RankedTensorType>(adaptor.getA().getType());
+    auto bType = dyn_cast<RankedTensorType>(adaptor.getB().getType());
+    auto outputType = dyn_cast<RankedTensorType>(op.getType());
+    if (!aType || !bType || !outputType)
+      return rewriter.notifyMatchFailure(op, "only supports ranked tensors");
+
+    FailureOr<int64_t> maybeAZp = op.getAZeroPoint();
+    FailureOr<int64_t> maybeBZp = op.getBZeroPoint();
+    if (failed(maybeAZp))
+      return rewriter.notifyMatchFailure(
+          op, "input A zero point cannot be statically determined");
+    if (failed(maybeBZp))
+      return rewriter.notifyMatchFailure(
+          op, "input B zero point cannot be statically determined");
+
+    const int64_t aZpVal = *maybeAZp;
+    const int64_t bZpVal = *maybeBZp;
+
+    if (aZpVal != 0 || bZpVal != 0)
+      return rewriter.notifyMatchFailure(
+          op, "nonzero zero points require the generic MATMUL_T lowering");
+
+    const int64_t outputRank = outputType.getRank();
+    auto [a, b, zeroTensor] =
+        prepareMatMulOperands(rewriter, loc, adaptor.getA(), adaptor.getB(),
+                              outputType, /*transposeB=*/true);
+
+    if (outputRank == 2) {
+      rewriter.replaceOpWithNewOp<linalg::MatmulTransposeBOp>(
+          op, TypeRange{outputType}, ValueRange{a, b}, ValueRange{zeroTensor});
+      return success();
+    }
+
+    if (outputRank == 3) {
+      rewriter.replaceOpWithNewOp<linalg::BatchMatmulTransposeBOp>(
+          op, TypeRange{outputType}, ValueRange{a, b}, ValueRange{zeroTensor});
+      return success();
+    }
+
+    SmallVector<ReassociationIndices> reassociation =
+        getMatMulBatchCollapseReassociation(outputRank);
+    auto collapse = [&](Value value) {
+      auto type = cast<RankedTensorType>(value.getType());
+      auto collapsedType =
+          tensor::CollapseShapeOp::inferCollapsedType(type, reassociation);
+      return tensor::CollapseShapeOp::create(rewriter, loc, collapsedType,
+                                             value, reassociation);
+    };
+    Value collapsedA = collapse(a);
+    Value collapsedB = collapse(b);
+    Value collapsedInit = collapse(zeroTensor);
+    auto collapsedOutputType = cast<RankedTensorType>(collapsedInit.getType());
+    Value collapsedResult =
+        linalg::BatchMatmulTransposeBOp::create(
+            rewriter, loc, TypeRange{collapsedOutputType},
+            ValueRange{collapsedA, collapsedB}, ValueRange{collapsedInit})
+            .getResult(0);
+    Value result = tensor::ExpandShapeOp::create(
+        rewriter, loc, outputType, collapsedResult, reassociation,
+        tensor::getMixedSizes(rewriter, loc, zeroTensor));
+    rewriter.replaceOp(op, result);
     return success();
   }
 };
 
 class MaxPool2dConverter : public OpConversionPattern<tosa::MaxPool2dOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  MaxPool2dConverter(const TypeConverter &typeConverter, MLIRContext *context,
+                     bool allowNonFinites)
+      : OpConversionPattern(typeConverter, context),
+        allowNonFinites(allowNonFinites) {}
 
   // Compute the dynamic output sizes of the maxpool operation.
   static SmallVector<Value>
@@ -754,9 +876,11 @@ public:
           cast<FloatType>(resultETy).getFloatSemantics();
       if (llvm::APFloat::semanticsHasNaN(semantics))
         initialAttr = rewriter.getFloatAttr(
-            resultETy, nanMode == NanPropagationMode::IGNORE
-                           ? APFloat::getNaN(semantics)
-                           : APFloat::getLargest(semantics, true));
+            resultETy,
+            nanMode == NanPropagationMode::IGNORE
+                ? APFloat::getNaN(semantics)
+                : getFloatMinMaxIdentity(semantics,
+                                         /*negative=*/true, allowNonFinites));
     }
 
     else if (isUnsigned)
@@ -777,6 +901,9 @@ public:
     llvm::append_range(pad, op.getPad());
     pad.resize(pad.size() + 2, 0);
 
+    // The initial value doubles as the padding value. This is safe for every
+    // seed above because the verifier rejects a pad as wide as the kernel on
+    // any side, so no window consists purely of padding.
     Value paddedInput = applyPad(loc, input, pad, initialAttr, rewriter);
 
     Value initialValue = arith::ConstantOp::create(rewriter, loc, initialAttr);
@@ -855,6 +982,9 @@ public:
 
     return success();
   }
+
+private:
+  bool allowNonFinites;
 };
 
 class AvgPool2dConverter : public OpRewritePattern<tosa::AvgPool2dOp> {
@@ -1146,12 +1276,13 @@ void mlir::tosa::populateTosaToLinalgNamedConversionPatterns(
       ConvConverter<tosa::Conv3DOp, linalg::Conv3DNdhwcDhwcfOp, linalg::Conv3DNdhwcDhwcfQOp>,
       DepthwiseConvConverter,
       MatMulConverter,
+      MatMulTConverter,
       AvgPool2dConverter,
       TransposeConverter
   >(patterns->getContext());
 
   patterns->add<
       MaxPool2dConverter
-    >(converter, patterns->getContext());
+    >(converter, patterns->getContext(), options.allowNonFinites);
   // clang-format on
 }
