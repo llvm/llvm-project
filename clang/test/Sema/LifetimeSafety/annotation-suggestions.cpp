@@ -272,6 +272,22 @@ auto test_auto_return_implicit_this() {
   return b.make(); // expected-warning {{stack memory associated with local variable 'b' is returned}} expected-note {{returned here}}
 }
 
+struct AutoReturnSelfNonTemplate;
+
+struct SelfCapturingIterNonTemplate {
+  AutoReturnSelfNonTemplate *c; // expected-note {{escapes to this field}}
+  explicit SelfCapturingIterNonTemplate(AutoReturnSelfNonTemplate &x) : c(&x) {} // expected-warning {{parameter in intra-TU constructor should be marked [[clang::lifetimebound]]}}
+};
+
+struct AutoReturnSelfNonTemplate {
+  auto make() { return SelfCapturingIterNonTemplate(*this); } // expected-warning {{implicit this in intra-TU function should be marked [[clang::lifetimebound]]}} expected-note {{param returned here}}
+};
+
+auto test_auto_return_implicit_this_non_template() {
+  AutoReturnSelfNonTemplate b;
+  return b.make(); // expected-warning {{stack memory associated with local variable 'b' is returned}} expected-note {{returned here}}
+}
+
 struct ReturnThisAnnotated {
   const ReturnThisAnnotated& get() [[clang::lifetimebound]] { return *this; }
 };
