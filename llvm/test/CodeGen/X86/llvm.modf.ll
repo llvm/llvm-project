@@ -17,21 +17,44 @@ define { float, float } @test_modf_f32(float %a) nounwind {
 ;
 ; SSE42-LABEL: test_modf_f32:
 ; SSE42:       # %bb.0:
-; SSE42-NEXT:    pushq %rax
-; SSE42-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; SSE42-NEXT:    callq modff@PLT
-; SSE42-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; SSE42-NEXT:    popq %rax
+; SSE42-NEXT:    roundss $11, %xmm0, %xmm1
+; SSE42-NEXT:    movaps %xmm0, %xmm3
+; SSE42-NEXT:    subss %xmm1, %xmm3
+; SSE42-NEXT:    movaps {{.*#+}} xmm2 = [NaN,NaN,NaN,NaN]
+; SSE42-NEXT:    movaps %xmm0, %xmm4
+; SSE42-NEXT:    andps %xmm2, %xmm4
+; SSE42-NEXT:    cmpeqss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4
+; SSE42-NEXT:    andnps %xmm3, %xmm4
+; SSE42-NEXT:    andps %xmm2, %xmm4
+; SSE42-NEXT:    andnps %xmm0, %xmm2
+; SSE42-NEXT:    orps %xmm4, %xmm2
+; SSE42-NEXT:    movaps %xmm2, %xmm0
 ; SSE42-NEXT:    retq
 ;
-; AVX-LABEL: test_modf_f32:
-; AVX:       # %bb.0:
-; AVX-NEXT:    pushq %rax
-; AVX-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX-NEXT:    callq modff@PLT
-; AVX-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; AVX-NEXT:    popq %rax
-; AVX-NEXT:    retq
+; AVX2-LABEL: test_modf_f32:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vroundss $11, %xmm0, %xmm0, %xmm1
+; AVX2-NEXT:    vsubss %xmm1, %xmm0, %xmm2
+; AVX2-NEXT:    vbroadcastss {{.*#+}} xmm3 = [NaN,NaN,NaN,NaN]
+; AVX2-NEXT:    vandps %xmm3, %xmm0, %xmm4
+; AVX2-NEXT:    vcmpeqss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4, %xmm4
+; AVX2-NEXT:    vandnps %xmm2, %xmm4, %xmm2
+; AVX2-NEXT:    vandps %xmm3, %xmm2, %xmm2
+; AVX2-NEXT:    vandnps %xmm0, %xmm3, %xmm0
+; AVX2-NEXT:    vorps %xmm0, %xmm2, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: test_modf_f32:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vroundss $11, %xmm0, %xmm0, %xmm1
+; AVX512-NEXT:    vsubss %xmm1, %xmm0, %xmm2
+; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm3 = [NaN,NaN,NaN,NaN]
+; AVX512-NEXT:    vandps %xmm3, %xmm0, %xmm4
+; AVX512-NEXT:    vcmpeqss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4, %k1
+; AVX512-NEXT:    vxorps %xmm4, %xmm4, %xmm4
+; AVX512-NEXT:    vmovss %xmm4, %xmm2, %xmm2 {%k1}
+; AVX512-NEXT:    vpternlogd {{.*#+}} xmm0 = xmm0 ^ (xmm3 & (xmm0 ^ xmm2))
+; AVX512-NEXT:    retq
   %result = call { float, float } @llvm.modf.f32(float %a)
   ret { float, float } %result
 }
@@ -48,21 +71,31 @@ define { float, float } @test_modf_f32_ninf(float %a) nounwind {
 ;
 ; SSE42-LABEL: test_modf_f32_ninf:
 ; SSE42:       # %bb.0:
-; SSE42-NEXT:    pushq %rax
-; SSE42-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; SSE42-NEXT:    callq modff@PLT
-; SSE42-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; SSE42-NEXT:    popq %rax
+; SSE42-NEXT:    roundss $11, %xmm0, %xmm1
+; SSE42-NEXT:    movaps %xmm0, %xmm2
+; SSE42-NEXT:    subss %xmm1, %xmm2
+; SSE42-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE42-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE42-NEXT:    orps %xmm2, %xmm0
 ; SSE42-NEXT:    retq
 ;
-; AVX-LABEL: test_modf_f32_ninf:
-; AVX:       # %bb.0:
-; AVX-NEXT:    pushq %rax
-; AVX-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX-NEXT:    callq modff@PLT
-; AVX-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; AVX-NEXT:    popq %rax
-; AVX-NEXT:    retq
+; AVX2-LABEL: test_modf_f32_ninf:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vbroadcastss {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; AVX2-NEXT:    vandps %xmm1, %xmm0, %xmm2
+; AVX2-NEXT:    vroundss $11, %xmm0, %xmm0, %xmm1
+; AVX2-NEXT:    vsubss %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vbroadcastss {{.*#+}} xmm3 = [NaN,NaN,NaN,NaN]
+; AVX2-NEXT:    vandps %xmm3, %xmm0, %xmm0
+; AVX2-NEXT:    vorps %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: test_modf_f32_ninf:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vroundss $11, %xmm0, %xmm0, %xmm1
+; AVX512-NEXT:    vsubss %xmm1, %xmm0, %xmm2
+; AVX512-NEXT:    vpternlogd {{.*#+}} xmm0 = xmm0 ^ (m32bcst & (xmm0 ^ xmm2))
+; AVX512-NEXT:    retq
   %result = call ninf { float, float } @llvm.modf.f32(float %a)
   ret { float, float } %result
 }
@@ -79,21 +112,46 @@ define { double, double } @test_modf_f64(double %a) nounwind {
 ;
 ; SSE42-LABEL: test_modf_f64:
 ; SSE42:       # %bb.0:
-; SSE42-NEXT:    pushq %rax
-; SSE42-NEXT:    movq %rsp, %rdi
-; SSE42-NEXT:    callq modf@PLT
-; SSE42-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
-; SSE42-NEXT:    popq %rax
+; SSE42-NEXT:    roundsd $11, %xmm0, %xmm1
+; SSE42-NEXT:    movapd %xmm0, %xmm3
+; SSE42-NEXT:    subsd %xmm1, %xmm3
+; SSE42-NEXT:    movapd {{.*#+}} xmm2 = [NaN,NaN]
+; SSE42-NEXT:    movapd %xmm0, %xmm4
+; SSE42-NEXT:    andpd %xmm2, %xmm4
+; SSE42-NEXT:    cmpeqsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4
+; SSE42-NEXT:    andnpd %xmm3, %xmm4
+; SSE42-NEXT:    andpd %xmm2, %xmm4
+; SSE42-NEXT:    andnpd %xmm0, %xmm2
+; SSE42-NEXT:    orpd %xmm4, %xmm2
+; SSE42-NEXT:    movapd %xmm2, %xmm0
 ; SSE42-NEXT:    retq
 ;
-; AVX-LABEL: test_modf_f64:
-; AVX:       # %bb.0:
-; AVX-NEXT:    pushq %rax
-; AVX-NEXT:    movq %rsp, %rdi
-; AVX-NEXT:    callq modf@PLT
-; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; AVX-NEXT:    popq %rax
-; AVX-NEXT:    retq
+; AVX2-LABEL: test_modf_f64:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vroundsd $11, %xmm0, %xmm0, %xmm1
+; AVX2-NEXT:    vsubsd %xmm1, %xmm0, %xmm2
+; AVX2-NEXT:    vmovddup {{.*#+}} xmm3 = [NaN,NaN]
+; AVX2-NEXT:    # xmm3 = mem[0,0]
+; AVX2-NEXT:    vandpd %xmm3, %xmm0, %xmm4
+; AVX2-NEXT:    vcmpeqsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4, %xmm4
+; AVX2-NEXT:    vandnpd %xmm2, %xmm4, %xmm2
+; AVX2-NEXT:    vandpd %xmm3, %xmm2, %xmm2
+; AVX2-NEXT:    vandnpd %xmm0, %xmm3, %xmm0
+; AVX2-NEXT:    vorpd %xmm0, %xmm2, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: test_modf_f64:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vroundsd $11, %xmm0, %xmm0, %xmm1
+; AVX512-NEXT:    vsubsd %xmm1, %xmm0, %xmm2
+; AVX512-NEXT:    vmovddup {{.*#+}} xmm3 = [NaN,NaN]
+; AVX512-NEXT:    # xmm3 = mem[0,0]
+; AVX512-NEXT:    vandpd %xmm3, %xmm0, %xmm4
+; AVX512-NEXT:    vcmpeqsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4, %k1
+; AVX512-NEXT:    vxorpd %xmm4, %xmm4, %xmm4
+; AVX512-NEXT:    vmovsd %xmm4, %xmm2, %xmm2 {%k1}
+; AVX512-NEXT:    vpternlogq {{.*#+}} xmm0 = xmm0 ^ (xmm3 & (xmm0 ^ xmm2))
+; AVX512-NEXT:    retq
   %result = call { double, double } @llvm.modf.f64(double %a)
   ret { double, double } %result
 }
@@ -139,72 +197,43 @@ define { <4 x float>, <4 x float> } @test_modf_v4f32(<4 x float> %a) nounwind {
 ;
 ; SSE42-LABEL: test_modf_v4f32:
 ; SSE42:       # %bb.0:
-; SSE42-NEXT:    subq $56, %rsp
-; SSE42-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE42-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; SSE42-NEXT:    callq modff@PLT
-; SSE42-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE42-NEXT:    movshdup {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; SSE42-NEXT:    # xmm0 = mem[1,1,3,3]
-; SSE42-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; SSE42-NEXT:    callq modff@PLT
-; SSE42-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; SSE42-NEXT:    insertps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[2,3]
-; SSE42-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE42-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE42-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
-; SSE42-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; SSE42-NEXT:    callq modff@PLT
-; SSE42-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; SSE42-NEXT:    insertps {{.*#+}} xmm1 = xmm1[0,1],xmm0[0],xmm1[3]
-; SSE42-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE42-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE42-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
-; SSE42-NEXT:    movq %rsp, %rdi
-; SSE42-NEXT:    callq modff@PLT
-; SSE42-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 16-byte Reload
-; SSE42-NEXT:    insertps {{.*#+}} xmm2 = xmm2[0,1,2],xmm0[0]
-; SSE42-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; SSE42-NEXT:    insertps {{.*#+}} xmm1 = xmm1[0],mem[0],xmm1[2,3]
-; SSE42-NEXT:    insertps {{.*#+}} xmm1 = xmm1[0,1],mem[0],xmm1[3]
-; SSE42-NEXT:    insertps {{.*#+}} xmm1 = xmm1[0,1,2],mem[0]
+; SSE42-NEXT:    roundps $11, %xmm0, %xmm1
+; SSE42-NEXT:    movaps %xmm0, %xmm3
+; SSE42-NEXT:    subps %xmm1, %xmm3
+; SSE42-NEXT:    movaps {{.*#+}} xmm2 = [NaN,NaN,NaN,NaN]
+; SSE42-NEXT:    movaps %xmm0, %xmm4
+; SSE42-NEXT:    andps %xmm2, %xmm4
+; SSE42-NEXT:    cmpeqps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4
+; SSE42-NEXT:    andnps %xmm3, %xmm4
+; SSE42-NEXT:    andps %xmm2, %xmm4
+; SSE42-NEXT:    andnps %xmm0, %xmm2
+; SSE42-NEXT:    orps %xmm4, %xmm2
 ; SSE42-NEXT:    movaps %xmm2, %xmm0
-; SSE42-NEXT:    addq $56, %rsp
 ; SSE42-NEXT:    retq
 ;
-; AVX-LABEL: test_modf_v4f32:
-; AVX:       # %bb.0:
-; AVX-NEXT:    subq $56, %rsp
-; AVX-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX-NEXT:    callq modff@PLT
-; AVX-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX-NEXT:    vmovshdup {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX-NEXT:    # xmm0 = mem[1,1,3,3]
-; AVX-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX-NEXT:    callq modff@PLT
-; AVX-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
-; AVX-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX-NEXT:    # xmm0 = mem[1,0]
-; AVX-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX-NEXT:    callq modff@PLT
-; AVX-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0],xmm1[3]
-; AVX-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX-NEXT:    vpermilps $255, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX-NEXT:    # xmm0 = mem[3,3,3,3]
-; AVX-NEXT:    movq %rsp, %rdi
-; AVX-NEXT:    callq modff@PLT
-; AVX-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
-; AVX-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; AVX-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],mem[0],xmm1[2,3]
-; AVX-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],mem[0],xmm1[3]
-; AVX-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],mem[0]
-; AVX-NEXT:    addq $56, %rsp
-; AVX-NEXT:    retq
+; AVX2-LABEL: test_modf_v4f32:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vroundps $11, %xmm0, %xmm1
+; AVX2-NEXT:    vsubps %xmm1, %xmm0, %xmm2
+; AVX2-NEXT:    vbroadcastss {{.*#+}} xmm3 = [NaN,NaN,NaN,NaN]
+; AVX2-NEXT:    vandps %xmm3, %xmm0, %xmm4
+; AVX2-NEXT:    vbroadcastss {{.*#+}} xmm5 = [+Inf,+Inf,+Inf,+Inf]
+; AVX2-NEXT:    vcmpeqps %xmm5, %xmm4, %xmm4
+; AVX2-NEXT:    vandnps %xmm2, %xmm4, %xmm2
+; AVX2-NEXT:    vandps %xmm3, %xmm2, %xmm2
+; AVX2-NEXT:    vandnps %xmm0, %xmm3, %xmm0
+; AVX2-NEXT:    vorps %xmm0, %xmm2, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: test_modf_v4f32:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vroundps $11, %xmm0, %xmm1
+; AVX512-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm2
+; AVX512-NEXT:    vcmpeqps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm2, %k0
+; AVX512-NEXT:    knotw %k0, %k1
+; AVX512-NEXT:    vsubps %xmm1, %xmm0, %xmm2 {%k1} {z}
+; AVX512-NEXT:    vpternlogd {{.*#+}} xmm0 = xmm0 ^ (m32bcst & (xmm0 ^ xmm2))
+; AVX512-NEXT:    retq
   %result = call { <4 x float>, <4 x float> } @llvm.modf.v4f32(<4 x float> %a)
   ret { <4 x float>, <4 x float> } %result
 }
@@ -250,72 +279,31 @@ define { <4 x float>, <4 x float> } @test_modf_v4f32_ninf(<4 x float> %a) nounwi
 ;
 ; SSE42-LABEL: test_modf_v4f32_ninf:
 ; SSE42:       # %bb.0:
-; SSE42-NEXT:    subq $56, %rsp
-; SSE42-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE42-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; SSE42-NEXT:    callq modff@PLT
-; SSE42-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE42-NEXT:    movshdup {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; SSE42-NEXT:    # xmm0 = mem[1,1,3,3]
-; SSE42-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; SSE42-NEXT:    callq modff@PLT
-; SSE42-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; SSE42-NEXT:    insertps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[2,3]
-; SSE42-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE42-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE42-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
-; SSE42-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; SSE42-NEXT:    callq modff@PLT
-; SSE42-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; SSE42-NEXT:    insertps {{.*#+}} xmm1 = xmm1[0,1],xmm0[0],xmm1[3]
-; SSE42-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE42-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE42-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
-; SSE42-NEXT:    movq %rsp, %rdi
-; SSE42-NEXT:    callq modff@PLT
-; SSE42-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 16-byte Reload
-; SSE42-NEXT:    insertps {{.*#+}} xmm2 = xmm2[0,1,2],xmm0[0]
-; SSE42-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; SSE42-NEXT:    insertps {{.*#+}} xmm1 = xmm1[0],mem[0],xmm1[2,3]
-; SSE42-NEXT:    insertps {{.*#+}} xmm1 = xmm1[0,1],mem[0],xmm1[3]
-; SSE42-NEXT:    insertps {{.*#+}} xmm1 = xmm1[0,1,2],mem[0]
-; SSE42-NEXT:    movaps %xmm2, %xmm0
-; SSE42-NEXT:    addq $56, %rsp
+; SSE42-NEXT:    roundps $11, %xmm0, %xmm1
+; SSE42-NEXT:    movaps %xmm0, %xmm2
+; SSE42-NEXT:    subps %xmm1, %xmm2
+; SSE42-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE42-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE42-NEXT:    orps %xmm2, %xmm0
 ; SSE42-NEXT:    retq
 ;
-; AVX-LABEL: test_modf_v4f32_ninf:
-; AVX:       # %bb.0:
-; AVX-NEXT:    subq $56, %rsp
-; AVX-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX-NEXT:    callq modff@PLT
-; AVX-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX-NEXT:    vmovshdup {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX-NEXT:    # xmm0 = mem[1,1,3,3]
-; AVX-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX-NEXT:    callq modff@PLT
-; AVX-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
-; AVX-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX-NEXT:    # xmm0 = mem[1,0]
-; AVX-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX-NEXT:    callq modff@PLT
-; AVX-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0],xmm1[3]
-; AVX-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX-NEXT:    vpermilps $255, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX-NEXT:    # xmm0 = mem[3,3,3,3]
-; AVX-NEXT:    movq %rsp, %rdi
-; AVX-NEXT:    callq modff@PLT
-; AVX-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
-; AVX-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; AVX-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],mem[0],xmm1[2,3]
-; AVX-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],mem[0],xmm1[3]
-; AVX-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],mem[0]
-; AVX-NEXT:    addq $56, %rsp
-; AVX-NEXT:    retq
+; AVX2-LABEL: test_modf_v4f32_ninf:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vbroadcastss {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; AVX2-NEXT:    vandps %xmm1, %xmm0, %xmm2
+; AVX2-NEXT:    vroundps $11, %xmm0, %xmm1
+; AVX2-NEXT:    vsubps %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vbroadcastss {{.*#+}} xmm3 = [NaN,NaN,NaN,NaN]
+; AVX2-NEXT:    vandps %xmm3, %xmm0, %xmm0
+; AVX2-NEXT:    vorps %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: test_modf_v4f32_ninf:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vroundps $11, %xmm0, %xmm1
+; AVX512-NEXT:    vsubps %xmm1, %xmm0, %xmm2
+; AVX512-NEXT:    vpternlogd {{.*#+}} xmm0 = xmm0 ^ (m32bcst & (xmm0 ^ xmm2))
+; AVX512-NEXT:    retq
   %result = call ninf { <4 x float>, <4 x float> } @llvm.modf.v4f32(<4 x float> %a)
   ret { <4 x float>, <4 x float> } %result
 }
@@ -342,40 +330,43 @@ define { <2 x double>, <2 x double> } @test_modf_v2f64(<2 x double> %a) nounwind
 ;
 ; SSE42-LABEL: test_modf_v2f64:
 ; SSE42:       # %bb.0:
-; SSE42-NEXT:    subq $56, %rsp
-; SSE42-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE42-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; SSE42-NEXT:    callq modf@PLT
-; SSE42-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE42-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE42-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
-; SSE42-NEXT:    movq %rsp, %rdi
-; SSE42-NEXT:    callq modf@PLT
-; SSE42-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 16-byte Reload
-; SSE42-NEXT:    movlhps {{.*#+}} xmm2 = xmm2[0],xmm0[0]
-; SSE42-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
-; SSE42-NEXT:    movhps {{.*#+}} xmm1 = xmm1[0,1],mem[0,1]
-; SSE42-NEXT:    movaps %xmm2, %xmm0
-; SSE42-NEXT:    addq $56, %rsp
+; SSE42-NEXT:    roundpd $11, %xmm0, %xmm1
+; SSE42-NEXT:    movapd %xmm0, %xmm3
+; SSE42-NEXT:    subpd %xmm1, %xmm3
+; SSE42-NEXT:    movapd {{.*#+}} xmm2 = [NaN,NaN]
+; SSE42-NEXT:    movapd %xmm0, %xmm4
+; SSE42-NEXT:    andpd %xmm2, %xmm4
+; SSE42-NEXT:    cmpeqpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4
+; SSE42-NEXT:    andnpd %xmm3, %xmm4
+; SSE42-NEXT:    andpd %xmm2, %xmm4
+; SSE42-NEXT:    andnpd %xmm0, %xmm2
+; SSE42-NEXT:    orpd %xmm4, %xmm2
+; SSE42-NEXT:    movapd %xmm2, %xmm0
 ; SSE42-NEXT:    retq
 ;
-; AVX-LABEL: test_modf_v2f64:
-; AVX:       # %bb.0:
-; AVX-NEXT:    subq $56, %rsp
-; AVX-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX-NEXT:    callq modf@PLT
-; AVX-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX-NEXT:    # xmm0 = mem[1,0]
-; AVX-NEXT:    movq %rsp, %rdi
-; AVX-NEXT:    callq modf@PLT
-; AVX-NEXT:    vmovapd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; AVX-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; AVX-NEXT:    vmovhps {{.*#+}} xmm1 = xmm1[0,1],mem[0,1]
-; AVX-NEXT:    addq $56, %rsp
-; AVX-NEXT:    retq
+; AVX2-LABEL: test_modf_v2f64:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vroundpd $11, %xmm0, %xmm1
+; AVX2-NEXT:    vsubpd %xmm1, %xmm0, %xmm2
+; AVX2-NEXT:    vmovddup {{.*#+}} xmm3 = [NaN,NaN]
+; AVX2-NEXT:    # xmm3 = mem[0,0]
+; AVX2-NEXT:    vandpd %xmm3, %xmm0, %xmm4
+; AVX2-NEXT:    vcmpeqpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4, %xmm4
+; AVX2-NEXT:    vandnpd %xmm2, %xmm4, %xmm2
+; AVX2-NEXT:    vandpd %xmm3, %xmm2, %xmm2
+; AVX2-NEXT:    vandnpd %xmm0, %xmm3, %xmm0
+; AVX2-NEXT:    vorpd %xmm0, %xmm2, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: test_modf_v2f64:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vroundpd $11, %xmm0, %xmm1
+; AVX512-NEXT:    vandpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm2
+; AVX512-NEXT:    vcmpeqpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm2, %k0
+; AVX512-NEXT:    knotw %k0, %k1
+; AVX512-NEXT:    vsubpd %xmm1, %xmm0, %xmm2 {%k1} {z}
+; AVX512-NEXT:    vpternlogq {{.*#+}} xmm0 = xmm0 ^ (m64bcst & (xmm0 ^ xmm2))
+; AVX512-NEXT:    retq
   %result = call { <2 x double>, <2 x double> } @llvm.modf.v2f64(<2 x double> %a)
   ret { <2 x double>, <2 x double> } %result
 }
@@ -454,348 +445,55 @@ define { <8 x float>, <8 x float> } @test_modf_v8f32(<8 x float> %a) nounwind {
 ;
 ; SSE42-LABEL: test_modf_v8f32:
 ; SSE42:       # %bb.0:
-; SSE42-NEXT:    subq $88, %rsp
-; SSE42-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE42-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
-; SSE42-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; SSE42-NEXT:    callq modff@PLT
-; SSE42-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE42-NEXT:    movshdup (%rsp), %xmm0 # 16-byte Folded Reload
-; SSE42-NEXT:    # xmm0 = mem[1,1,3,3]
-; SSE42-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; SSE42-NEXT:    callq modff@PLT
-; SSE42-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; SSE42-NEXT:    insertps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[2,3]
-; SSE42-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE42-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; SSE42-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
-; SSE42-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; SSE42-NEXT:    callq modff@PLT
-; SSE42-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; SSE42-NEXT:    insertps {{.*#+}} xmm1 = xmm1[0,1],xmm0[0],xmm1[3]
-; SSE42-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE42-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; SSE42-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
-; SSE42-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; SSE42-NEXT:    callq modff@PLT
-; SSE42-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; SSE42-NEXT:    insertps {{.*#+}} xmm1 = xmm1[0,1,2],xmm0[0]
-; SSE42-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE42-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; SSE42-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE42-NEXT:    callq modff@PLT
-; SSE42-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
-; SSE42-NEXT:    movshdup {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; SSE42-NEXT:    # xmm0 = mem[1,1,3,3]
-; SSE42-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; SSE42-NEXT:    callq modff@PLT
-; SSE42-NEXT:    movaps (%rsp), %xmm1 # 16-byte Reload
-; SSE42-NEXT:    insertps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[2,3]
-; SSE42-NEXT:    movaps %xmm1, (%rsp) # 16-byte Spill
-; SSE42-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE42-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
-; SSE42-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; SSE42-NEXT:    callq modff@PLT
-; SSE42-NEXT:    movaps (%rsp), %xmm1 # 16-byte Reload
-; SSE42-NEXT:    insertps {{.*#+}} xmm1 = xmm1[0,1],xmm0[0],xmm1[3]
-; SSE42-NEXT:    movaps %xmm1, (%rsp) # 16-byte Spill
-; SSE42-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE42-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
-; SSE42-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; SSE42-NEXT:    callq modff@PLT
-; SSE42-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; SSE42-NEXT:    insertps {{.*#+}} xmm2 = xmm2[0],mem[0],xmm2[2,3]
-; SSE42-NEXT:    insertps {{.*#+}} xmm2 = xmm2[0,1],mem[0],xmm2[3]
-; SSE42-NEXT:    insertps {{.*#+}} xmm2 = xmm2[0,1,2],mem[0]
-; SSE42-NEXT:    movaps (%rsp), %xmm1 # 16-byte Reload
-; SSE42-NEXT:    insertps {{.*#+}} xmm1 = xmm1[0,1,2],xmm0[0]
-; SSE42-NEXT:    movss {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; SSE42-NEXT:    insertps {{.*#+}} xmm3 = xmm3[0],mem[0],xmm3[2,3]
-; SSE42-NEXT:    insertps {{.*#+}} xmm3 = xmm3[0,1],mem[0],xmm3[3]
-; SSE42-NEXT:    insertps {{.*#+}} xmm3 = xmm3[0,1,2],mem[0]
-; SSE42-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE42-NEXT:    addq $88, %rsp
+; SSE42-NEXT:    roundps $11, %xmm0, %xmm2
+; SSE42-NEXT:    movaps {{.*#+}} xmm5 = [NaN,NaN,NaN,NaN]
+; SSE42-NEXT:    movaps %xmm0, %xmm3
+; SSE42-NEXT:    movaps %xmm5, %xmm4
+; SSE42-NEXT:    andnps %xmm0, %xmm4
+; SSE42-NEXT:    subps %xmm2, %xmm0
+; SSE42-NEXT:    andps %xmm5, %xmm3
+; SSE42-NEXT:    movaps {{.*#+}} xmm6 = [+Inf,+Inf,+Inf,+Inf]
+; SSE42-NEXT:    cmpeqps %xmm6, %xmm3
+; SSE42-NEXT:    andnps %xmm0, %xmm3
+; SSE42-NEXT:    andps %xmm5, %xmm3
+; SSE42-NEXT:    orps %xmm3, %xmm4
+; SSE42-NEXT:    roundps $11, %xmm1, %xmm3
+; SSE42-NEXT:    movaps %xmm1, %xmm0
+; SSE42-NEXT:    subps %xmm3, %xmm0
+; SSE42-NEXT:    movaps %xmm1, %xmm7
+; SSE42-NEXT:    andps %xmm5, %xmm7
+; SSE42-NEXT:    cmpeqps %xmm6, %xmm7
+; SSE42-NEXT:    andnps %xmm0, %xmm7
+; SSE42-NEXT:    andps %xmm5, %xmm7
+; SSE42-NEXT:    andnps %xmm1, %xmm5
+; SSE42-NEXT:    orps %xmm7, %xmm5
+; SSE42-NEXT:    movaps %xmm4, %xmm0
+; SSE42-NEXT:    movaps %xmm5, %xmm1
 ; SSE42-NEXT:    retq
 ;
 ; AVX2-LABEL: test_modf_v8f32:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    subq $104, %rsp
-; AVX2-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX2-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX2-NEXT:    vzeroupper
-; AVX2-NEXT:    callq modff@PLT
-; AVX2-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX2-NEXT:    vmovshdup {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX2-NEXT:    # xmm0 = mem[1,1,3,3]
-; AVX2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX2-NEXT:    callq modff@PLT
-; AVX2-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
-; AVX2-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX2-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX2-NEXT:    # xmm0 = mem[1,0]
-; AVX2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX2-NEXT:    callq modff@PLT
-; AVX2-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0],xmm1[3]
-; AVX2-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX2-NEXT:    vpermilps $255, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX2-NEXT:    # xmm0 = mem[3,3,3,3]
-; AVX2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX2-NEXT:    callq modff@PLT
-; AVX2-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
-; AVX2-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX2-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
-; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
-; AVX2-NEXT:    vzeroupper
-; AVX2-NEXT:    callq modff@PLT
-; AVX2-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX2-NEXT:    vmovshdup {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX2-NEXT:    # xmm0 = mem[1,1,3,3]
-; AVX2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX2-NEXT:    callq modff@PLT
-; AVX2-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
-; AVX2-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX2-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX2-NEXT:    # xmm0 = mem[1,0]
-; AVX2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX2-NEXT:    callq modff@PLT
-; AVX2-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0],xmm1[3]
-; AVX2-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX2-NEXT:    vpermilps $255, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX2-NEXT:    # xmm0 = mem[3,3,3,3]
-; AVX2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX2-NEXT:    callq modff@PLT
-; AVX2-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; AVX2-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],mem[0],xmm1[2,3]
-; AVX2-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],mem[0],xmm1[3]
-; AVX2-NEXT:    vmovaps (%rsp), %xmm2 # 16-byte Reload
-; AVX2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm2[0,1,2],xmm0[0]
-; AVX2-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],mem[0]
-; AVX2-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; AVX2-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0],mem[0],xmm2[2,3]
-; AVX2-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1],mem[0],xmm2[3]
-; AVX2-NEXT:    vinsertf128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
-; AVX2-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1,2],mem[0]
-; AVX2-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
-; AVX2-NEXT:    addq $104, %rsp
+; AVX2-NEXT:    vroundps $11, %ymm0, %ymm1
+; AVX2-NEXT:    vsubps %ymm1, %ymm0, %ymm2
+; AVX2-NEXT:    vbroadcastss {{.*#+}} ymm3 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
+; AVX2-NEXT:    vandps %ymm3, %ymm0, %ymm4
+; AVX2-NEXT:    vbroadcastss {{.*#+}} ymm5 = [+Inf,+Inf,+Inf,+Inf,+Inf,+Inf,+Inf,+Inf]
+; AVX2-NEXT:    vcmpeqps %ymm5, %ymm4, %ymm4
+; AVX2-NEXT:    vandnps %ymm2, %ymm4, %ymm2
+; AVX2-NEXT:    vandps %ymm3, %ymm2, %ymm2
+; AVX2-NEXT:    vandnps %ymm0, %ymm3, %ymm0
+; AVX2-NEXT:    vorps %ymm0, %ymm2, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: test_modf_v8f32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    subq $104, %rsp
-; AVX512-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX512-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX512-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    callq modff@PLT
-; AVX512-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX512-NEXT:    vmovshdup {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX512-NEXT:    # xmm0 = mem[1,1,3,3]
-; AVX512-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX512-NEXT:    callq modff@PLT
-; AVX512-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX512-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
-; AVX512-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX512-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX512-NEXT:    # xmm0 = mem[1,0]
-; AVX512-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX512-NEXT:    callq modff@PLT
-; AVX512-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX512-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0],xmm1[3]
-; AVX512-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX512-NEXT:    vpermilps $255, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX512-NEXT:    # xmm0 = mem[3,3,3,3]
-; AVX512-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX512-NEXT:    callq modff@PLT
-; AVX512-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX512-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
-; AVX512-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX512-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX512-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
-; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    callq modff@PLT
-; AVX512-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX512-NEXT:    vmovshdup {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX512-NEXT:    # xmm0 = mem[1,1,3,3]
-; AVX512-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX512-NEXT:    callq modff@PLT
-; AVX512-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX512-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
-; AVX512-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX512-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX512-NEXT:    # xmm0 = mem[1,0]
-; AVX512-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX512-NEXT:    callq modff@PLT
-; AVX512-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX512-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0],xmm1[3]
-; AVX512-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX512-NEXT:    vpermilps $255, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX512-NEXT:    # xmm0 = mem[3,3,3,3]
-; AVX512-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX512-NEXT:    callq modff@PLT
-; AVX512-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX512-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
-; AVX512-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; AVX512-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],mem[0],xmm1[2,3]
-; AVX512-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],mem[0],xmm1[3]
-; AVX512-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],mem[0]
-; AVX512-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; AVX512-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0],mem[0],xmm2[2,3]
-; AVX512-NEXT:    vinsertf128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
-; AVX512-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1],mem[0],xmm2[3]
-; AVX512-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1,2],mem[0]
-; AVX512-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
-; AVX512-NEXT:    addq $104, %rsp
+; AVX512-NEXT:    vroundps $11, %ymm0, %ymm1
+; AVX512-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm2
+; AVX512-NEXT:    vcmpeqps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm2, %k0
+; AVX512-NEXT:    knotb %k0, %k1
+; AVX512-NEXT:    vsubps %ymm1, %ymm0, %ymm2 {%k1} {z}
+; AVX512-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm0 ^ (m32bcst & (ymm0 ^ ymm2))
 ; AVX512-NEXT:    retq
-;
-; AVX10_1-LABEL: test_modf_v8f32:
-; AVX10_1:       # %bb.0:
-; AVX10_1-NEXT:    subq $104, %rsp
-; AVX10_1-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX10_1-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX10_1-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX10_1-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_1-NEXT:    vzeroupper
-; AVX10_1-NEXT:    callq modff@PLT
-; AVX10_1-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX10_1-NEXT:    vmovshdup {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX10_1-NEXT:    # xmm0 = mem[1,1,3,3]
-; AVX10_1-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_1-NEXT:    callq modff@PLT
-; AVX10_1-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX10_1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
-; AVX10_1-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX10_1-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX10_1-NEXT:    # xmm0 = mem[1,0]
-; AVX10_1-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_1-NEXT:    callq modff@PLT
-; AVX10_1-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX10_1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0],xmm1[3]
-; AVX10_1-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX10_1-NEXT:    vpermilps $255, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX10_1-NEXT:    # xmm0 = mem[3,3,3,3]
-; AVX10_1-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_1-NEXT:    callq modff@PLT
-; AVX10_1-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX10_1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
-; AVX10_1-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX10_1-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_1-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
-; AVX10_1-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
-; AVX10_1-NEXT:    vzeroupper
-; AVX10_1-NEXT:    callq modff@PLT
-; AVX10_1-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX10_1-NEXT:    vmovshdup {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX10_1-NEXT:    # xmm0 = mem[1,1,3,3]
-; AVX10_1-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_1-NEXT:    callq modff@PLT
-; AVX10_1-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX10_1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
-; AVX10_1-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX10_1-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX10_1-NEXT:    # xmm0 = mem[1,0]
-; AVX10_1-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_1-NEXT:    callq modff@PLT
-; AVX10_1-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX10_1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0],xmm1[3]
-; AVX10_1-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX10_1-NEXT:    vpermilps $255, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX10_1-NEXT:    # xmm0 = mem[3,3,3,3]
-; AVX10_1-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_1-NEXT:    callq modff@PLT
-; AVX10_1-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX10_1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
-; AVX10_1-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; AVX10_1-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],mem[0],xmm1[2,3]
-; AVX10_1-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],mem[0],xmm1[3]
-; AVX10_1-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],mem[0]
-; AVX10_1-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; AVX10_1-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0],mem[0],xmm2[2,3]
-; AVX10_1-NEXT:    vinsertf128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
-; AVX10_1-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1],mem[0],xmm2[3]
-; AVX10_1-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1,2],mem[0]
-; AVX10_1-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
-; AVX10_1-NEXT:    addq $104, %rsp
-; AVX10_1-NEXT:    retq
-;
-; AVX10_2-LABEL: test_modf_v8f32:
-; AVX10_2:       # %bb.0:
-; AVX10_2-NEXT:    subq $104, %rsp
-; AVX10_2-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX10_2-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX10_2-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX10_2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_2-NEXT:    vzeroupper
-; AVX10_2-NEXT:    callq modff@PLT
-; AVX10_2-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX10_2-NEXT:    vmovshdup {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX10_2-NEXT:    # xmm0 = mem[1,1,3,3]
-; AVX10_2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_2-NEXT:    callq modff@PLT
-; AVX10_2-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX10_2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
-; AVX10_2-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX10_2-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX10_2-NEXT:    # xmm0 = mem[1,0]
-; AVX10_2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_2-NEXT:    callq modff@PLT
-; AVX10_2-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX10_2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0],xmm1[3]
-; AVX10_2-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX10_2-NEXT:    vpermilps $255, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX10_2-NEXT:    # xmm0 = mem[3,3,3,3]
-; AVX10_2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_2-NEXT:    callq modff@PLT
-; AVX10_2-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX10_2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
-; AVX10_2-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX10_2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_2-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
-; AVX10_2-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
-; AVX10_2-NEXT:    vzeroupper
-; AVX10_2-NEXT:    callq modff@PLT
-; AVX10_2-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX10_2-NEXT:    vmovshdup {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX10_2-NEXT:    # xmm0 = mem[1,1,3,3]
-; AVX10_2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_2-NEXT:    callq modff@PLT
-; AVX10_2-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX10_2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
-; AVX10_2-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX10_2-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX10_2-NEXT:    # xmm0 = mem[1,0]
-; AVX10_2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_2-NEXT:    callq modff@PLT
-; AVX10_2-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX10_2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0],xmm1[3]
-; AVX10_2-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX10_2-NEXT:    vpermilps $255, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX10_2-NEXT:    # xmm0 = mem[3,3,3,3]
-; AVX10_2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_2-NEXT:    callq modff@PLT
-; AVX10_2-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX10_2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
-; AVX10_2-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; AVX10_2-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],mem[0],xmm1[2,3]
-; AVX10_2-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],mem[0],xmm1[3]
-; AVX10_2-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],mem[0]
-; AVX10_2-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; AVX10_2-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0],mem[0],xmm2[2,3]
-; AVX10_2-NEXT:    vinsertf128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
-; AVX10_2-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1],mem[0],xmm2[3]
-; AVX10_2-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1,2],mem[0]
-; AVX10_2-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
-; AVX10_2-NEXT:    addq $104, %rsp
-; AVX10_2-NEXT:    retq
   %result = call { <8 x float>, <8 x float> } @llvm.modf.v8f32(<8 x float> %a)
   ret { <8 x float>, <8 x float> } %result
 }
@@ -836,188 +534,55 @@ define { <4 x double>, <4 x double> } @test_modf_v4f64(<4 x double> %a) nounwind
 ;
 ; SSE42-LABEL: test_modf_v4f64:
 ; SSE42:       # %bb.0:
-; SSE42-NEXT:    subq $88, %rsp
-; SSE42-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE42-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
-; SSE42-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; SSE42-NEXT:    callq modf@PLT
-; SSE42-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE42-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; SSE42-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
-; SSE42-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; SSE42-NEXT:    callq modf@PLT
-; SSE42-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; SSE42-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
-; SSE42-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE42-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; SSE42-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE42-NEXT:    callq modf@PLT
-; SSE42-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
-; SSE42-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE42-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
-; SSE42-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; SSE42-NEXT:    callq modf@PLT
-; SSE42-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
-; SSE42-NEXT:    movhps {{.*#+}} xmm2 = xmm2[0,1],mem[0,1]
-; SSE42-NEXT:    movaps (%rsp), %xmm1 # 16-byte Reload
-; SSE42-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
-; SSE42-NEXT:    movsd {{.*#+}} xmm3 = mem[0],zero
-; SSE42-NEXT:    movhps {{.*#+}} xmm3 = xmm3[0,1],mem[0,1]
-; SSE42-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE42-NEXT:    addq $88, %rsp
+; SSE42-NEXT:    roundpd $11, %xmm0, %xmm2
+; SSE42-NEXT:    movapd {{.*#+}} xmm5 = [NaN,NaN]
+; SSE42-NEXT:    movapd %xmm0, %xmm3
+; SSE42-NEXT:    movapd %xmm5, %xmm4
+; SSE42-NEXT:    andnpd %xmm0, %xmm4
+; SSE42-NEXT:    subpd %xmm2, %xmm0
+; SSE42-NEXT:    andpd %xmm5, %xmm3
+; SSE42-NEXT:    movapd {{.*#+}} xmm6 = [+Inf,+Inf]
+; SSE42-NEXT:    cmpeqpd %xmm6, %xmm3
+; SSE42-NEXT:    andnpd %xmm0, %xmm3
+; SSE42-NEXT:    andpd %xmm5, %xmm3
+; SSE42-NEXT:    orpd %xmm3, %xmm4
+; SSE42-NEXT:    roundpd $11, %xmm1, %xmm3
+; SSE42-NEXT:    movapd %xmm1, %xmm0
+; SSE42-NEXT:    subpd %xmm3, %xmm0
+; SSE42-NEXT:    movapd %xmm1, %xmm7
+; SSE42-NEXT:    andpd %xmm5, %xmm7
+; SSE42-NEXT:    cmpeqpd %xmm6, %xmm7
+; SSE42-NEXT:    andnpd %xmm0, %xmm7
+; SSE42-NEXT:    andpd %xmm5, %xmm7
+; SSE42-NEXT:    andnpd %xmm1, %xmm5
+; SSE42-NEXT:    orpd %xmm7, %xmm5
+; SSE42-NEXT:    movapd %xmm4, %xmm0
+; SSE42-NEXT:    movapd %xmm5, %xmm1
 ; SSE42-NEXT:    retq
 ;
 ; AVX2-LABEL: test_modf_v4f64:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    subq $104, %rsp
-; AVX2-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX2-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX2-NEXT:    vzeroupper
-; AVX2-NEXT:    callq modf@PLT
-; AVX2-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX2-NEXT:    vpermilpd $1, (%rsp), %xmm0 # 16-byte Folded Reload
-; AVX2-NEXT:    # xmm0 = mem[1,0]
-; AVX2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX2-NEXT:    callq modf@PLT
-; AVX2-NEXT:    vmovapd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; AVX2-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX2-NEXT:    vmovapd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX2-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
-; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
-; AVX2-NEXT:    vzeroupper
-; AVX2-NEXT:    callq modf@PLT
-; AVX2-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX2-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX2-NEXT:    # xmm0 = mem[1,0]
-; AVX2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX2-NEXT:    callq modf@PLT
-; AVX2-NEXT:    vmovapd (%rsp), %xmm1 # 16-byte Reload
-; AVX2-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX2-NEXT:    vinsertf128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
-; AVX2-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; AVX2-NEXT:    vmovhps {{.*#+}} xmm1 = xmm1[0,1],mem[0,1]
-; AVX2-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
-; AVX2-NEXT:    vmovhps {{.*#+}} xmm2 = xmm2[0,1],mem[0,1]
-; AVX2-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
-; AVX2-NEXT:    addq $104, %rsp
+; AVX2-NEXT:    vroundpd $11, %ymm0, %ymm1
+; AVX2-NEXT:    vsubpd %ymm1, %ymm0, %ymm2
+; AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm3 = [NaN,NaN,NaN,NaN]
+; AVX2-NEXT:    vandpd %ymm3, %ymm0, %ymm4
+; AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm5 = [+Inf,+Inf,+Inf,+Inf]
+; AVX2-NEXT:    vcmpeqpd %ymm5, %ymm4, %ymm4
+; AVX2-NEXT:    vandnpd %ymm2, %ymm4, %ymm2
+; AVX2-NEXT:    vandpd %ymm3, %ymm2, %ymm2
+; AVX2-NEXT:    vandnpd %ymm0, %ymm3, %ymm0
+; AVX2-NEXT:    vorpd %ymm0, %ymm2, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: test_modf_v4f64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    subq $104, %rsp
-; AVX512-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX512-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX512-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    callq modf@PLT
-; AVX512-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX512-NEXT:    vpermilpd $1, (%rsp), %xmm0 # 16-byte Folded Reload
-; AVX512-NEXT:    # xmm0 = mem[1,0]
-; AVX512-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX512-NEXT:    callq modf@PLT
-; AVX512-NEXT:    vmovapd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; AVX512-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX512-NEXT:    vmovapd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX512-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX512-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
-; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    callq modf@PLT
-; AVX512-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX512-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX512-NEXT:    # xmm0 = mem[1,0]
-; AVX512-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX512-NEXT:    callq modf@PLT
-; AVX512-NEXT:    vmovapd (%rsp), %xmm1 # 16-byte Reload
-; AVX512-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX512-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; AVX512-NEXT:    vmovhps {{.*#+}} xmm1 = xmm1[0,1],mem[0,1]
-; AVX512-NEXT:    vinsertf128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
-; AVX512-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
-; AVX512-NEXT:    vmovhps {{.*#+}} xmm2 = xmm2[0,1],mem[0,1]
-; AVX512-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
-; AVX512-NEXT:    addq $104, %rsp
+; AVX512-NEXT:    vroundpd $11, %ymm0, %ymm1
+; AVX512-NEXT:    vandpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %ymm2
+; AVX512-NEXT:    vcmpeqpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm2, %k0
+; AVX512-NEXT:    knotw %k0, %k1
+; AVX512-NEXT:    vsubpd %ymm1, %ymm0, %ymm2 {%k1} {z}
+; AVX512-NEXT:    vpternlogq {{.*#+}} ymm0 = ymm0 ^ (m64bcst & (ymm0 ^ ymm2))
 ; AVX512-NEXT:    retq
-;
-; AVX10_1-LABEL: test_modf_v4f64:
-; AVX10_1:       # %bb.0:
-; AVX10_1-NEXT:    subq $104, %rsp
-; AVX10_1-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX10_1-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX10_1-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX10_1-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_1-NEXT:    vzeroupper
-; AVX10_1-NEXT:    callq modf@PLT
-; AVX10_1-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX10_1-NEXT:    vpermilpd $1, (%rsp), %xmm0 # 16-byte Folded Reload
-; AVX10_1-NEXT:    # xmm0 = mem[1,0]
-; AVX10_1-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_1-NEXT:    callq modf@PLT
-; AVX10_1-NEXT:    vmovapd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; AVX10_1-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX10_1-NEXT:    vmovapd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX10_1-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_1-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
-; AVX10_1-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
-; AVX10_1-NEXT:    vzeroupper
-; AVX10_1-NEXT:    callq modf@PLT
-; AVX10_1-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX10_1-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX10_1-NEXT:    # xmm0 = mem[1,0]
-; AVX10_1-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_1-NEXT:    callq modf@PLT
-; AVX10_1-NEXT:    vmovapd (%rsp), %xmm1 # 16-byte Reload
-; AVX10_1-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX10_1-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; AVX10_1-NEXT:    vmovhps {{.*#+}} xmm1 = xmm1[0,1],mem[0,1]
-; AVX10_1-NEXT:    vinsertf128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
-; AVX10_1-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
-; AVX10_1-NEXT:    vmovhps {{.*#+}} xmm2 = xmm2[0,1],mem[0,1]
-; AVX10_1-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
-; AVX10_1-NEXT:    addq $104, %rsp
-; AVX10_1-NEXT:    retq
-;
-; AVX10_2-LABEL: test_modf_v4f64:
-; AVX10_2:       # %bb.0:
-; AVX10_2-NEXT:    subq $104, %rsp
-; AVX10_2-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX10_2-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX10_2-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX10_2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_2-NEXT:    vzeroupper
-; AVX10_2-NEXT:    callq modf@PLT
-; AVX10_2-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX10_2-NEXT:    vpermilpd $1, (%rsp), %xmm0 # 16-byte Folded Reload
-; AVX10_2-NEXT:    # xmm0 = mem[1,0]
-; AVX10_2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_2-NEXT:    callq modf@PLT
-; AVX10_2-NEXT:    vmovapd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; AVX10_2-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX10_2-NEXT:    vmovapd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX10_2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_2-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
-; AVX10_2-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
-; AVX10_2-NEXT:    vzeroupper
-; AVX10_2-NEXT:    callq modf@PLT
-; AVX10_2-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX10_2-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX10_2-NEXT:    # xmm0 = mem[1,0]
-; AVX10_2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_2-NEXT:    callq modf@PLT
-; AVX10_2-NEXT:    vmovapd (%rsp), %xmm1 # 16-byte Reload
-; AVX10_2-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX10_2-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; AVX10_2-NEXT:    vmovhps {{.*#+}} xmm1 = xmm1[0,1],mem[0,1]
-; AVX10_2-NEXT:    vinsertf128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
-; AVX10_2-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
-; AVX10_2-NEXT:    vmovhps {{.*#+}} xmm2 = xmm2[0,1],mem[0,1]
-; AVX10_2-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
-; AVX10_2-NEXT:    addq $104, %rsp
-; AVX10_2-NEXT:    retq
   %result = call { <4 x double>, <4 x double> } @llvm.modf.v4f64(<4 x double> %a)
   ret { <4 x double>, <4 x double> } %result
 }
@@ -1176,693 +741,90 @@ define { <16 x float>, <16 x float> } @test_modf_v16f32(<16 x float> %a) nounwin
 ;
 ; SSE42-LABEL: test_modf_v16f32:
 ; SSE42:       # %bb.0:
-; SSE42-NEXT:    pushq %rbx
-; SSE42-NEXT:    subq $144, %rsp
-; SSE42-NEXT:    movaps %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE42-NEXT:    movaps %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE42-NEXT:    movaps %xmm1, (%rsp) # 16-byte Spill
-; SSE42-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE42-NEXT:    movq %rdi, %rbx
-; SSE42-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; SSE42-NEXT:    callq modff@PLT
-; SSE42-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE42-NEXT:    movshdup {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; SSE42-NEXT:    # xmm0 = mem[1,1,3,3]
-; SSE42-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; SSE42-NEXT:    callq modff@PLT
-; SSE42-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; SSE42-NEXT:    insertps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[2,3]
-; SSE42-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE42-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE42-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
-; SSE42-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; SSE42-NEXT:    callq modff@PLT
-; SSE42-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; SSE42-NEXT:    insertps {{.*#+}} xmm1 = xmm1[0,1],xmm0[0],xmm1[3]
-; SSE42-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE42-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE42-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
-; SSE42-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; SSE42-NEXT:    callq modff@PLT
-; SSE42-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; SSE42-NEXT:    insertps {{.*#+}} xmm1 = xmm1[0,1,2],xmm0[0]
-; SSE42-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE42-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; SSE42-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; SSE42-NEXT:    callq modff@PLT
-; SSE42-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE42-NEXT:    movshdup (%rsp), %xmm0 # 16-byte Folded Reload
-; SSE42-NEXT:    # xmm0 = mem[1,1,3,3]
-; SSE42-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; SSE42-NEXT:    callq modff@PLT
-; SSE42-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; SSE42-NEXT:    insertps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[2,3]
-; SSE42-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE42-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; SSE42-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
-; SSE42-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; SSE42-NEXT:    callq modff@PLT
-; SSE42-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; SSE42-NEXT:    insertps {{.*#+}} xmm1 = xmm1[0,1],xmm0[0],xmm1[3]
-; SSE42-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE42-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; SSE42-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
-; SSE42-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; SSE42-NEXT:    callq modff@PLT
-; SSE42-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; SSE42-NEXT:    insertps {{.*#+}} xmm1 = xmm1[0,1,2],xmm0[0]
-; SSE42-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE42-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; SSE42-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE42-NEXT:    callq modff@PLT
-; SSE42-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
-; SSE42-NEXT:    movshdup {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; SSE42-NEXT:    # xmm0 = mem[1,1,3,3]
-; SSE42-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; SSE42-NEXT:    callq modff@PLT
-; SSE42-NEXT:    movaps (%rsp), %xmm1 # 16-byte Reload
-; SSE42-NEXT:    insertps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[2,3]
-; SSE42-NEXT:    movaps %xmm1, (%rsp) # 16-byte Spill
-; SSE42-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE42-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
-; SSE42-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; SSE42-NEXT:    callq modff@PLT
-; SSE42-NEXT:    movaps (%rsp), %xmm1 # 16-byte Reload
-; SSE42-NEXT:    insertps {{.*#+}} xmm1 = xmm1[0,1],xmm0[0],xmm1[3]
-; SSE42-NEXT:    movaps %xmm1, (%rsp) # 16-byte Spill
-; SSE42-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE42-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
-; SSE42-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; SSE42-NEXT:    callq modff@PLT
-; SSE42-NEXT:    movaps (%rsp), %xmm1 # 16-byte Reload
-; SSE42-NEXT:    insertps {{.*#+}} xmm1 = xmm1[0,1,2],xmm0[0]
-; SSE42-NEXT:    movaps %xmm1, (%rsp) # 16-byte Spill
-; SSE42-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; SSE42-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE42-NEXT:    callq modff@PLT
-; SSE42-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE42-NEXT:    movshdup {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; SSE42-NEXT:    # xmm0 = mem[1,1,3,3]
-; SSE42-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; SSE42-NEXT:    callq modff@PLT
-; SSE42-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; SSE42-NEXT:    insertps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[2,3]
-; SSE42-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE42-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE42-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
-; SSE42-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; SSE42-NEXT:    callq modff@PLT
-; SSE42-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; SSE42-NEXT:    insertps {{.*#+}} xmm1 = xmm1[0,1],xmm0[0],xmm1[3]
-; SSE42-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE42-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE42-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
-; SSE42-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; SSE42-NEXT:    callq modff@PLT
-; SSE42-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; SSE42-NEXT:    insertps {{.*#+}} xmm1 = xmm1[0],mem[0],xmm1[2,3]
-; SSE42-NEXT:    insertps {{.*#+}} xmm1 = xmm1[0,1],mem[0],xmm1[3]
-; SSE42-NEXT:    insertps {{.*#+}} xmm1 = xmm1[0,1,2],mem[0]
-; SSE42-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; SSE42-NEXT:    insertps {{.*#+}} xmm2 = xmm2[0],mem[0],xmm2[2,3]
-; SSE42-NEXT:    insertps {{.*#+}} xmm2 = xmm2[0,1],mem[0],xmm2[3]
-; SSE42-NEXT:    insertps {{.*#+}} xmm2 = xmm2[0,1,2],mem[0]
-; SSE42-NEXT:    movss {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; SSE42-NEXT:    insertps {{.*#+}} xmm3 = xmm3[0],mem[0],xmm3[2,3]
-; SSE42-NEXT:    insertps {{.*#+}} xmm3 = xmm3[0,1],mem[0],xmm3[3]
-; SSE42-NEXT:    insertps {{.*#+}} xmm3 = xmm3[0,1,2],mem[0]
-; SSE42-NEXT:    movss {{.*#+}} xmm4 = mem[0],zero,zero,zero
-; SSE42-NEXT:    insertps {{.*#+}} xmm4 = xmm4[0],mem[0],xmm4[2,3]
-; SSE42-NEXT:    insertps {{.*#+}} xmm4 = xmm4[0,1],mem[0],xmm4[3]
-; SSE42-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm5 # 16-byte Reload
-; SSE42-NEXT:    insertps {{.*#+}} xmm5 = xmm5[0,1,2],xmm0[0]
-; SSE42-NEXT:    insertps {{.*#+}} xmm4 = xmm4[0,1,2],mem[0]
-; SSE42-NEXT:    movaps %xmm4, 112(%rbx)
-; SSE42-NEXT:    movaps %xmm3, 96(%rbx)
-; SSE42-NEXT:    movaps %xmm2, 80(%rbx)
-; SSE42-NEXT:    movaps %xmm1, 64(%rbx)
-; SSE42-NEXT:    movaps %xmm5, 48(%rbx)
-; SSE42-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; SSE42-NEXT:    movaps %xmm0, 32(%rbx)
-; SSE42-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE42-NEXT:    movaps %xmm0, 16(%rbx)
-; SSE42-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE42-NEXT:    movaps %xmm0, (%rbx)
-; SSE42-NEXT:    movq %rbx, %rax
-; SSE42-NEXT:    addq $144, %rsp
-; SSE42-NEXT:    popq %rbx
+; SSE42-NEXT:    movq %rdi, %rax
+; SSE42-NEXT:    roundps $11, %xmm0, %xmm4
+; SSE42-NEXT:    movaps {{.*#+}} xmm5 = [NaN,NaN,NaN,NaN]
+; SSE42-NEXT:    movaps %xmm0, %xmm8
+; SSE42-NEXT:    movaps %xmm5, %xmm6
+; SSE42-NEXT:    andnps %xmm0, %xmm6
+; SSE42-NEXT:    subps %xmm4, %xmm0
+; SSE42-NEXT:    andps %xmm5, %xmm8
+; SSE42-NEXT:    movaps {{.*#+}} xmm7 = [+Inf,+Inf,+Inf,+Inf]
+; SSE42-NEXT:    cmpeqps %xmm7, %xmm8
+; SSE42-NEXT:    andnps %xmm0, %xmm8
+; SSE42-NEXT:    andps %xmm5, %xmm8
+; SSE42-NEXT:    orps %xmm8, %xmm6
+; SSE42-NEXT:    roundps $11, %xmm1, %xmm0
+; SSE42-NEXT:    movaps %xmm1, %xmm8
+; SSE42-NEXT:    subps %xmm0, %xmm8
+; SSE42-NEXT:    movaps %xmm5, %xmm9
+; SSE42-NEXT:    andnps %xmm1, %xmm9
+; SSE42-NEXT:    andps %xmm5, %xmm1
+; SSE42-NEXT:    cmpeqps %xmm7, %xmm1
+; SSE42-NEXT:    andnps %xmm8, %xmm1
+; SSE42-NEXT:    andps %xmm5, %xmm1
+; SSE42-NEXT:    orps %xmm9, %xmm1
+; SSE42-NEXT:    roundps $11, %xmm2, %xmm8
+; SSE42-NEXT:    movaps %xmm2, %xmm9
+; SSE42-NEXT:    subps %xmm8, %xmm9
+; SSE42-NEXT:    movaps %xmm5, %xmm10
+; SSE42-NEXT:    andnps %xmm2, %xmm10
+; SSE42-NEXT:    andps %xmm5, %xmm2
+; SSE42-NEXT:    cmpeqps %xmm7, %xmm2
+; SSE42-NEXT:    andnps %xmm9, %xmm2
+; SSE42-NEXT:    andps %xmm5, %xmm2
+; SSE42-NEXT:    orps %xmm10, %xmm2
+; SSE42-NEXT:    roundps $11, %xmm3, %xmm9
+; SSE42-NEXT:    movaps %xmm3, %xmm10
+; SSE42-NEXT:    subps %xmm9, %xmm10
+; SSE42-NEXT:    movaps %xmm3, %xmm11
+; SSE42-NEXT:    andps %xmm5, %xmm11
+; SSE42-NEXT:    cmpeqps %xmm7, %xmm11
+; SSE42-NEXT:    andnps %xmm10, %xmm11
+; SSE42-NEXT:    andps %xmm5, %xmm11
+; SSE42-NEXT:    andnps %xmm3, %xmm5
+; SSE42-NEXT:    orps %xmm11, %xmm5
+; SSE42-NEXT:    movaps %xmm9, 112(%rdi)
+; SSE42-NEXT:    movaps %xmm8, 96(%rdi)
+; SSE42-NEXT:    movaps %xmm0, 80(%rdi)
+; SSE42-NEXT:    movaps %xmm4, 64(%rdi)
+; SSE42-NEXT:    movaps %xmm5, 48(%rdi)
+; SSE42-NEXT:    movaps %xmm2, 32(%rdi)
+; SSE42-NEXT:    movaps %xmm1, 16(%rdi)
+; SSE42-NEXT:    movaps %xmm6, (%rdi)
 ; SSE42-NEXT:    retq
 ;
 ; AVX2-LABEL: test_modf_v16f32:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    subq $184, %rsp
-; AVX2-NEXT:    vmovups %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX2-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX2-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX2-NEXT:    vzeroupper
-; AVX2-NEXT:    callq modff@PLT
-; AVX2-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX2-NEXT:    vmovshdup {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX2-NEXT:    # xmm0 = mem[1,1,3,3]
-; AVX2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX2-NEXT:    callq modff@PLT
-; AVX2-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
-; AVX2-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX2-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX2-NEXT:    # xmm0 = mem[1,0]
-; AVX2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX2-NEXT:    callq modff@PLT
-; AVX2-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0],xmm1[3]
-; AVX2-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX2-NEXT:    vpermilps $255, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX2-NEXT:    # xmm0 = mem[3,3,3,3]
-; AVX2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX2-NEXT:    callq modff@PLT
-; AVX2-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
-; AVX2-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX2-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
-; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
-; AVX2-NEXT:    vzeroupper
-; AVX2-NEXT:    callq modff@PLT
-; AVX2-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX2-NEXT:    vmovshdup {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX2-NEXT:    # xmm0 = mem[1,1,3,3]
-; AVX2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX2-NEXT:    callq modff@PLT
-; AVX2-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
-; AVX2-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX2-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX2-NEXT:    # xmm0 = mem[1,0]
-; AVX2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX2-NEXT:    callq modff@PLT
-; AVX2-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0],xmm1[3]
-; AVX2-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX2-NEXT:    vpermilps $255, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX2-NEXT:    # xmm0 = mem[3,3,3,3]
-; AVX2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX2-NEXT:    callq modff@PLT
-; AVX2-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
-; AVX2-NEXT:    vinsertf128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
-; AVX2-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX2-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
-; AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX2-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX2-NEXT:    vzeroupper
-; AVX2-NEXT:    callq modff@PLT
-; AVX2-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX2-NEXT:    vmovshdup {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX2-NEXT:    # xmm0 = mem[1,1,3,3]
-; AVX2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX2-NEXT:    callq modff@PLT
-; AVX2-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
-; AVX2-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX2-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX2-NEXT:    # xmm0 = mem[1,0]
-; AVX2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX2-NEXT:    callq modff@PLT
-; AVX2-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0],xmm1[3]
-; AVX2-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX2-NEXT:    vpermilps $255, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX2-NEXT:    # xmm0 = mem[3,3,3,3]
-; AVX2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX2-NEXT:    callq modff@PLT
-; AVX2-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
-; AVX2-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX2-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
-; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
-; AVX2-NEXT:    vzeroupper
-; AVX2-NEXT:    callq modff@PLT
-; AVX2-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX2-NEXT:    vmovshdup {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX2-NEXT:    # xmm0 = mem[1,1,3,3]
-; AVX2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX2-NEXT:    callq modff@PLT
-; AVX2-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
-; AVX2-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX2-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX2-NEXT:    # xmm0 = mem[1,0]
-; AVX2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX2-NEXT:    callq modff@PLT
-; AVX2-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0],xmm1[3]
-; AVX2-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX2-NEXT:    vpermilps $255, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX2-NEXT:    # xmm0 = mem[3,3,3,3]
-; AVX2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX2-NEXT:    callq modff@PLT
-; AVX2-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; AVX2-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],mem[0],xmm1[2,3]
-; AVX2-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],mem[0],xmm1[3]
-; AVX2-NEXT:    vinsertps {{.*#+}} xmm2 = xmm1[0,1,2],mem[0]
-; AVX2-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; AVX2-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],mem[0],xmm1[2,3]
-; AVX2-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],mem[0],xmm1[3]
-; AVX2-NEXT:    vmovaps (%rsp), %xmm3 # 16-byte Reload
-; AVX2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm3[0,1,2],xmm0[0]
-; AVX2-NEXT:    vinsertps {{.*#+}} xmm3 = xmm1[0,1,2],mem[0]
-; AVX2-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; AVX2-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],mem[0],xmm1[2,3]
-; AVX2-NEXT:    vinsertps {{.*#+}} xmm4 = xmm1[0,1],mem[0],xmm1[3]
-; AVX2-NEXT:    vinsertf128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm1 # 16-byte Folded Reload
-; AVX2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm4[0,1,2],mem[0]
-; AVX2-NEXT:    vmovss {{.*#+}} xmm4 = mem[0],zero,zero,zero
-; AVX2-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0],mem[0],xmm4[2,3]
-; AVX2-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0,1],mem[0],xmm4[3]
-; AVX2-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
-; AVX2-NEXT:    vinsertps {{.*#+}} xmm3 = xmm4[0,1,2],mem[0]
-; AVX2-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm3
-; AVX2-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
-; AVX2-NEXT:    addq $184, %rsp
+; AVX2-NEXT:    vroundps $11, %ymm0, %ymm2
+; AVX2-NEXT:    vsubps %ymm2, %ymm0, %ymm3
+; AVX2-NEXT:    vbroadcastss {{.*#+}} ymm4 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
+; AVX2-NEXT:    vandps %ymm4, %ymm0, %ymm5
+; AVX2-NEXT:    vbroadcastss {{.*#+}} ymm6 = [+Inf,+Inf,+Inf,+Inf,+Inf,+Inf,+Inf,+Inf]
+; AVX2-NEXT:    vcmpeqps %ymm6, %ymm5, %ymm5
+; AVX2-NEXT:    vandnps %ymm3, %ymm5, %ymm3
+; AVX2-NEXT:    vandps %ymm4, %ymm3, %ymm5
+; AVX2-NEXT:    vandnps %ymm0, %ymm4, %ymm0
+; AVX2-NEXT:    vroundps $11, %ymm1, %ymm3
+; AVX2-NEXT:    vorps %ymm0, %ymm5, %ymm0
+; AVX2-NEXT:    vsubps %ymm3, %ymm1, %ymm5
+; AVX2-NEXT:    vandps %ymm4, %ymm1, %ymm7
+; AVX2-NEXT:    vcmpeqps %ymm6, %ymm7, %ymm6
+; AVX2-NEXT:    vandnps %ymm5, %ymm6, %ymm5
+; AVX2-NEXT:    vandps %ymm4, %ymm5, %ymm5
+; AVX2-NEXT:    vandnps %ymm1, %ymm4, %ymm1
+; AVX2-NEXT:    vorps %ymm1, %ymm5, %ymm1
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: test_modf_v16f32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    subq $200, %rsp
-; AVX512-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512-NEXT:    vextractf32x4 $3, %zmm0, %xmm0
-; AVX512-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX512-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    callq modff@PLT
-; AVX512-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX512-NEXT:    vmovshdup {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX512-NEXT:    # xmm0 = mem[1,1,3,3]
-; AVX512-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX512-NEXT:    callq modff@PLT
-; AVX512-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; AVX512-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
-; AVX512-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX512-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX512-NEXT:    # xmm0 = mem[1,0]
-; AVX512-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX512-NEXT:    callq modff@PLT
-; AVX512-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; AVX512-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0],xmm1[3]
-; AVX512-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX512-NEXT:    vpermilps $255, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX512-NEXT:    # xmm0 = mem[3,3,3,3]
-; AVX512-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX512-NEXT:    callq modff@PLT
-; AVX512-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; AVX512-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
-; AVX512-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX512-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
-; AVX512-NEXT:    vextractf32x4 $2, %zmm0, %xmm0
-; AVX512-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX512-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    callq modff@PLT
-; AVX512-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX512-NEXT:    vmovshdup {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX512-NEXT:    # xmm0 = mem[1,1,3,3]
-; AVX512-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX512-NEXT:    callq modff@PLT
-; AVX512-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX512-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
-; AVX512-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX512-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX512-NEXT:    # xmm0 = mem[1,0]
-; AVX512-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX512-NEXT:    callq modff@PLT
-; AVX512-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX512-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0],xmm1[3]
-; AVX512-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX512-NEXT:    vpermilps $255, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX512-NEXT:    # xmm0 = mem[3,3,3,3]
-; AVX512-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX512-NEXT:    callq modff@PLT
-; AVX512-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX512-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
-; AVX512-NEXT:    vinsertf128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
-; AVX512-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX512-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
-; AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX512-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX512-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    callq modff@PLT
-; AVX512-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX512-NEXT:    vmovshdup {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX512-NEXT:    # xmm0 = mem[1,1,3,3]
-; AVX512-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX512-NEXT:    callq modff@PLT
-; AVX512-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX512-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
-; AVX512-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX512-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX512-NEXT:    # xmm0 = mem[1,0]
-; AVX512-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX512-NEXT:    callq modff@PLT
-; AVX512-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX512-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0],xmm1[3]
-; AVX512-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX512-NEXT:    vpermilps $255, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX512-NEXT:    # xmm0 = mem[3,3,3,3]
-; AVX512-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX512-NEXT:    callq modff@PLT
-; AVX512-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX512-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
-; AVX512-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX512-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX512-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
-; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    callq modff@PLT
-; AVX512-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX512-NEXT:    vmovshdup {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX512-NEXT:    # xmm0 = mem[1,1,3,3]
-; AVX512-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX512-NEXT:    callq modff@PLT
-; AVX512-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX512-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
-; AVX512-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX512-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX512-NEXT:    # xmm0 = mem[1,0]
-; AVX512-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX512-NEXT:    callq modff@PLT
-; AVX512-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX512-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0],xmm1[3]
-; AVX512-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX512-NEXT:    vpermilps $255, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX512-NEXT:    # xmm0 = mem[3,3,3,3]
-; AVX512-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX512-NEXT:    callq modff@PLT
-; AVX512-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX512-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
-; AVX512-NEXT:    vinsertf128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
-; AVX512-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; AVX512-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],mem[0],xmm1[2,3]
-; AVX512-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],mem[0],xmm1[3]
-; AVX512-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],mem[0]
-; AVX512-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; AVX512-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0],mem[0],xmm2[2,3]
-; AVX512-NEXT:    vinsertf64x4 $1, {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm0 # 32-byte Folded Reload
-; AVX512-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1],mem[0],xmm2[3]
-; AVX512-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1,2],mem[0]
-; AVX512-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
-; AVX512-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; AVX512-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0],mem[0],xmm2[2,3]
-; AVX512-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1],mem[0],xmm2[3]
-; AVX512-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1,2],mem[0]
-; AVX512-NEXT:    vmovss {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; AVX512-NEXT:    vinsertps {{.*#+}} xmm3 = xmm3[0],mem[0],xmm3[2,3]
-; AVX512-NEXT:    vinsertps {{.*#+}} xmm3 = xmm3[0,1],mem[0],xmm3[3]
-; AVX512-NEXT:    vinsertps {{.*#+}} xmm3 = xmm3[0,1,2],mem[0]
-; AVX512-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
-; AVX512-NEXT:    vinsertf64x4 $1, %ymm1, %zmm2, %zmm1
-; AVX512-NEXT:    addq $200, %rsp
+; AVX512-NEXT:    vrndscaleps $11, %zmm0, %zmm1
+; AVX512-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %zmm2
+; AVX512-NEXT:    vcmpeqps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm2, %k0
+; AVX512-NEXT:    knotw %k0, %k1
+; AVX512-NEXT:    vsubps %zmm1, %zmm0, %zmm2 {%k1} {z}
+; AVX512-NEXT:    vpternlogd {{.*#+}} zmm0 = zmm0 ^ (m32bcst & (zmm0 ^ zmm2))
 ; AVX512-NEXT:    retq
-;
-; AVX10_1-LABEL: test_modf_v16f32:
-; AVX10_1:       # %bb.0:
-; AVX10_1-NEXT:    subq $200, %rsp
-; AVX10_1-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX10_1-NEXT:    vextractf32x4 $3, %zmm0, %xmm0
-; AVX10_1-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX10_1-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_1-NEXT:    vzeroupper
-; AVX10_1-NEXT:    callq modff@PLT
-; AVX10_1-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX10_1-NEXT:    vmovshdup {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX10_1-NEXT:    # xmm0 = mem[1,1,3,3]
-; AVX10_1-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_1-NEXT:    callq modff@PLT
-; AVX10_1-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; AVX10_1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
-; AVX10_1-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX10_1-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX10_1-NEXT:    # xmm0 = mem[1,0]
-; AVX10_1-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_1-NEXT:    callq modff@PLT
-; AVX10_1-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; AVX10_1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0],xmm1[3]
-; AVX10_1-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX10_1-NEXT:    vpermilps $255, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX10_1-NEXT:    # xmm0 = mem[3,3,3,3]
-; AVX10_1-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_1-NEXT:    callq modff@PLT
-; AVX10_1-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; AVX10_1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
-; AVX10_1-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX10_1-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
-; AVX10_1-NEXT:    vextractf32x4 $2, %zmm0, %xmm0
-; AVX10_1-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX10_1-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_1-NEXT:    vzeroupper
-; AVX10_1-NEXT:    callq modff@PLT
-; AVX10_1-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX10_1-NEXT:    vmovshdup {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX10_1-NEXT:    # xmm0 = mem[1,1,3,3]
-; AVX10_1-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_1-NEXT:    callq modff@PLT
-; AVX10_1-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX10_1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
-; AVX10_1-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX10_1-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX10_1-NEXT:    # xmm0 = mem[1,0]
-; AVX10_1-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_1-NEXT:    callq modff@PLT
-; AVX10_1-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX10_1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0],xmm1[3]
-; AVX10_1-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX10_1-NEXT:    vpermilps $255, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX10_1-NEXT:    # xmm0 = mem[3,3,3,3]
-; AVX10_1-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_1-NEXT:    callq modff@PLT
-; AVX10_1-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX10_1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
-; AVX10_1-NEXT:    vinsertf128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
-; AVX10_1-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX10_1-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
-; AVX10_1-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX10_1-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX10_1-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_1-NEXT:    vzeroupper
-; AVX10_1-NEXT:    callq modff@PLT
-; AVX10_1-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX10_1-NEXT:    vmovshdup {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX10_1-NEXT:    # xmm0 = mem[1,1,3,3]
-; AVX10_1-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_1-NEXT:    callq modff@PLT
-; AVX10_1-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX10_1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
-; AVX10_1-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX10_1-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX10_1-NEXT:    # xmm0 = mem[1,0]
-; AVX10_1-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_1-NEXT:    callq modff@PLT
-; AVX10_1-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX10_1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0],xmm1[3]
-; AVX10_1-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX10_1-NEXT:    vpermilps $255, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX10_1-NEXT:    # xmm0 = mem[3,3,3,3]
-; AVX10_1-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_1-NEXT:    callq modff@PLT
-; AVX10_1-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX10_1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
-; AVX10_1-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX10_1-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_1-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
-; AVX10_1-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
-; AVX10_1-NEXT:    vzeroupper
-; AVX10_1-NEXT:    callq modff@PLT
-; AVX10_1-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX10_1-NEXT:    vmovshdup {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX10_1-NEXT:    # xmm0 = mem[1,1,3,3]
-; AVX10_1-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_1-NEXT:    callq modff@PLT
-; AVX10_1-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX10_1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
-; AVX10_1-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX10_1-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX10_1-NEXT:    # xmm0 = mem[1,0]
-; AVX10_1-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_1-NEXT:    callq modff@PLT
-; AVX10_1-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX10_1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0],xmm1[3]
-; AVX10_1-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX10_1-NEXT:    vpermilps $255, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX10_1-NEXT:    # xmm0 = mem[3,3,3,3]
-; AVX10_1-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_1-NEXT:    callq modff@PLT
-; AVX10_1-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX10_1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
-; AVX10_1-NEXT:    vinsertf128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
-; AVX10_1-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; AVX10_1-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],mem[0],xmm1[2,3]
-; AVX10_1-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],mem[0],xmm1[3]
-; AVX10_1-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],mem[0]
-; AVX10_1-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; AVX10_1-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0],mem[0],xmm2[2,3]
-; AVX10_1-NEXT:    vinsertf64x4 $1, {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm0 # 32-byte Folded Reload
-; AVX10_1-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1],mem[0],xmm2[3]
-; AVX10_1-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1,2],mem[0]
-; AVX10_1-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
-; AVX10_1-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; AVX10_1-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0],mem[0],xmm2[2,3]
-; AVX10_1-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1],mem[0],xmm2[3]
-; AVX10_1-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1,2],mem[0]
-; AVX10_1-NEXT:    vmovss {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; AVX10_1-NEXT:    vinsertps {{.*#+}} xmm3 = xmm3[0],mem[0],xmm3[2,3]
-; AVX10_1-NEXT:    vinsertps {{.*#+}} xmm3 = xmm3[0,1],mem[0],xmm3[3]
-; AVX10_1-NEXT:    vinsertps {{.*#+}} xmm3 = xmm3[0,1,2],mem[0]
-; AVX10_1-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
-; AVX10_1-NEXT:    vinsertf64x4 $1, %ymm1, %zmm2, %zmm1
-; AVX10_1-NEXT:    addq $200, %rsp
-; AVX10_1-NEXT:    retq
-;
-; AVX10_2-LABEL: test_modf_v16f32:
-; AVX10_2:       # %bb.0:
-; AVX10_2-NEXT:    subq $200, %rsp
-; AVX10_2-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX10_2-NEXT:    vextractf32x4 $3, %zmm0, %xmm0
-; AVX10_2-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX10_2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_2-NEXT:    vzeroupper
-; AVX10_2-NEXT:    callq modff@PLT
-; AVX10_2-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX10_2-NEXT:    vmovshdup {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX10_2-NEXT:    # xmm0 = mem[1,1,3,3]
-; AVX10_2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_2-NEXT:    callq modff@PLT
-; AVX10_2-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; AVX10_2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
-; AVX10_2-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX10_2-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX10_2-NEXT:    # xmm0 = mem[1,0]
-; AVX10_2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_2-NEXT:    callq modff@PLT
-; AVX10_2-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; AVX10_2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0],xmm1[3]
-; AVX10_2-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX10_2-NEXT:    vpermilps $255, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX10_2-NEXT:    # xmm0 = mem[3,3,3,3]
-; AVX10_2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_2-NEXT:    callq modff@PLT
-; AVX10_2-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; AVX10_2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
-; AVX10_2-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX10_2-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
-; AVX10_2-NEXT:    vextractf32x4 $2, %zmm0, %xmm0
-; AVX10_2-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX10_2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_2-NEXT:    vzeroupper
-; AVX10_2-NEXT:    callq modff@PLT
-; AVX10_2-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX10_2-NEXT:    vmovshdup {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX10_2-NEXT:    # xmm0 = mem[1,1,3,3]
-; AVX10_2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_2-NEXT:    callq modff@PLT
-; AVX10_2-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX10_2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
-; AVX10_2-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX10_2-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX10_2-NEXT:    # xmm0 = mem[1,0]
-; AVX10_2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_2-NEXT:    callq modff@PLT
-; AVX10_2-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX10_2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0],xmm1[3]
-; AVX10_2-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX10_2-NEXT:    vpermilps $255, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX10_2-NEXT:    # xmm0 = mem[3,3,3,3]
-; AVX10_2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_2-NEXT:    callq modff@PLT
-; AVX10_2-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX10_2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
-; AVX10_2-NEXT:    vinsertf128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
-; AVX10_2-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX10_2-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
-; AVX10_2-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX10_2-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX10_2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_2-NEXT:    vzeroupper
-; AVX10_2-NEXT:    callq modff@PLT
-; AVX10_2-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX10_2-NEXT:    vmovshdup {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX10_2-NEXT:    # xmm0 = mem[1,1,3,3]
-; AVX10_2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_2-NEXT:    callq modff@PLT
-; AVX10_2-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX10_2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
-; AVX10_2-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX10_2-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX10_2-NEXT:    # xmm0 = mem[1,0]
-; AVX10_2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_2-NEXT:    callq modff@PLT
-; AVX10_2-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX10_2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0],xmm1[3]
-; AVX10_2-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX10_2-NEXT:    vpermilps $255, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX10_2-NEXT:    # xmm0 = mem[3,3,3,3]
-; AVX10_2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_2-NEXT:    callq modff@PLT
-; AVX10_2-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX10_2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
-; AVX10_2-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX10_2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_2-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
-; AVX10_2-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
-; AVX10_2-NEXT:    vzeroupper
-; AVX10_2-NEXT:    callq modff@PLT
-; AVX10_2-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX10_2-NEXT:    vmovshdup {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX10_2-NEXT:    # xmm0 = mem[1,1,3,3]
-; AVX10_2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_2-NEXT:    callq modff@PLT
-; AVX10_2-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX10_2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
-; AVX10_2-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX10_2-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX10_2-NEXT:    # xmm0 = mem[1,0]
-; AVX10_2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_2-NEXT:    callq modff@PLT
-; AVX10_2-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX10_2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0],xmm1[3]
-; AVX10_2-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX10_2-NEXT:    vpermilps $255, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX10_2-NEXT:    # xmm0 = mem[3,3,3,3]
-; AVX10_2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_2-NEXT:    callq modff@PLT
-; AVX10_2-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; AVX10_2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
-; AVX10_2-NEXT:    vinsertf128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
-; AVX10_2-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; AVX10_2-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],mem[0],xmm1[2,3]
-; AVX10_2-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],mem[0],xmm1[3]
-; AVX10_2-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],mem[0]
-; AVX10_2-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; AVX10_2-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0],mem[0],xmm2[2,3]
-; AVX10_2-NEXT:    vinsertf64x4 $1, {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm0 # 32-byte Folded Reload
-; AVX10_2-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1],mem[0],xmm2[3]
-; AVX10_2-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1,2],mem[0]
-; AVX10_2-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
-; AVX10_2-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; AVX10_2-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0],mem[0],xmm2[2,3]
-; AVX10_2-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1],mem[0],xmm2[3]
-; AVX10_2-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1,2],mem[0]
-; AVX10_2-NEXT:    vmovss {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; AVX10_2-NEXT:    vinsertps {{.*#+}} xmm3 = xmm3[0],mem[0],xmm3[2,3]
-; AVX10_2-NEXT:    vinsertps {{.*#+}} xmm3 = xmm3[0,1],mem[0],xmm3[3]
-; AVX10_2-NEXT:    vinsertps {{.*#+}} xmm3 = xmm3[0,1,2],mem[0]
-; AVX10_2-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
-; AVX10_2-NEXT:    vinsertf64x4 $1, %ymm1, %zmm2, %zmm1
-; AVX10_2-NEXT:    addq $200, %rsp
-; AVX10_2-NEXT:    retq
   %result = call { <16 x float>, <16 x float> } @llvm.modf.v16f32(<16 x float> %a)
   ret { <16 x float>, <16 x float> } %result
 }
@@ -1945,374 +907,93 @@ define { <8 x double>, <8 x double> } @test_modf_v8f64(<8 x double> %a) nounwind
 ;
 ; SSE42-LABEL: test_modf_v8f64:
 ; SSE42:       # %bb.0:
-; SSE42-NEXT:    pushq %rbx
-; SSE42-NEXT:    subq $144, %rsp
-; SSE42-NEXT:    movaps %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE42-NEXT:    movaps %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE42-NEXT:    movaps %xmm1, (%rsp) # 16-byte Spill
-; SSE42-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE42-NEXT:    movq %rdi, %rbx
-; SSE42-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; SSE42-NEXT:    callq modf@PLT
-; SSE42-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE42-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE42-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
-; SSE42-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; SSE42-NEXT:    callq modf@PLT
-; SSE42-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; SSE42-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
-; SSE42-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE42-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; SSE42-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; SSE42-NEXT:    callq modf@PLT
-; SSE42-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE42-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; SSE42-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
-; SSE42-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; SSE42-NEXT:    callq modf@PLT
-; SSE42-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; SSE42-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
-; SSE42-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE42-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; SSE42-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE42-NEXT:    callq modf@PLT
-; SSE42-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
-; SSE42-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE42-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
-; SSE42-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; SSE42-NEXT:    callq modf@PLT
-; SSE42-NEXT:    movaps (%rsp), %xmm1 # 16-byte Reload
-; SSE42-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
-; SSE42-NEXT:    movaps %xmm1, (%rsp) # 16-byte Spill
-; SSE42-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; SSE42-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE42-NEXT:    callq modf@PLT
-; SSE42-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE42-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE42-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
-; SSE42-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; SSE42-NEXT:    callq modf@PLT
-; SSE42-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
-; SSE42-NEXT:    movhps {{.*#+}} xmm1 = xmm1[0,1],mem[0,1]
-; SSE42-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
-; SSE42-NEXT:    movhps {{.*#+}} xmm2 = xmm2[0,1],mem[0,1]
-; SSE42-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm4 # 16-byte Reload
-; SSE42-NEXT:    movlhps {{.*#+}} xmm4 = xmm4[0],xmm0[0]
-; SSE42-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE42-NEXT:    movhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
-; SSE42-NEXT:    movsd {{.*#+}} xmm3 = mem[0],zero
-; SSE42-NEXT:    movhps {{.*#+}} xmm3 = xmm3[0,1],mem[0,1]
-; SSE42-NEXT:    movaps %xmm3, 112(%rbx)
-; SSE42-NEXT:    movaps %xmm0, 96(%rbx)
-; SSE42-NEXT:    movaps %xmm2, 80(%rbx)
-; SSE42-NEXT:    movaps %xmm1, 64(%rbx)
-; SSE42-NEXT:    movaps %xmm4, 48(%rbx)
-; SSE42-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; SSE42-NEXT:    movaps %xmm0, 32(%rbx)
-; SSE42-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE42-NEXT:    movaps %xmm0, 16(%rbx)
-; SSE42-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE42-NEXT:    movaps %xmm0, (%rbx)
-; SSE42-NEXT:    movq %rbx, %rax
-; SSE42-NEXT:    addq $144, %rsp
-; SSE42-NEXT:    popq %rbx
+; SSE42-NEXT:    movq %rdi, %rax
+; SSE42-NEXT:    roundpd $11, %xmm0, %xmm4
+; SSE42-NEXT:    movapd {{.*#+}} xmm5 = [NaN,NaN]
+; SSE42-NEXT:    movapd %xmm0, %xmm8
+; SSE42-NEXT:    movapd %xmm5, %xmm6
+; SSE42-NEXT:    andnpd %xmm0, %xmm6
+; SSE42-NEXT:    subpd %xmm4, %xmm0
+; SSE42-NEXT:    andpd %xmm5, %xmm8
+; SSE42-NEXT:    movapd {{.*#+}} xmm7 = [+Inf,+Inf]
+; SSE42-NEXT:    cmpeqpd %xmm7, %xmm8
+; SSE42-NEXT:    andnpd %xmm0, %xmm8
+; SSE42-NEXT:    andpd %xmm5, %xmm8
+; SSE42-NEXT:    orpd %xmm8, %xmm6
+; SSE42-NEXT:    roundpd $11, %xmm1, %xmm0
+; SSE42-NEXT:    movapd %xmm1, %xmm8
+; SSE42-NEXT:    subpd %xmm0, %xmm8
+; SSE42-NEXT:    movapd %xmm5, %xmm9
+; SSE42-NEXT:    andnpd %xmm1, %xmm9
+; SSE42-NEXT:    andpd %xmm5, %xmm1
+; SSE42-NEXT:    cmpeqpd %xmm7, %xmm1
+; SSE42-NEXT:    andnpd %xmm8, %xmm1
+; SSE42-NEXT:    andpd %xmm5, %xmm1
+; SSE42-NEXT:    orpd %xmm9, %xmm1
+; SSE42-NEXT:    roundpd $11, %xmm2, %xmm8
+; SSE42-NEXT:    movapd %xmm2, %xmm9
+; SSE42-NEXT:    subpd %xmm8, %xmm9
+; SSE42-NEXT:    movapd %xmm5, %xmm10
+; SSE42-NEXT:    andnpd %xmm2, %xmm10
+; SSE42-NEXT:    andpd %xmm5, %xmm2
+; SSE42-NEXT:    cmpeqpd %xmm7, %xmm2
+; SSE42-NEXT:    andnpd %xmm9, %xmm2
+; SSE42-NEXT:    andpd %xmm5, %xmm2
+; SSE42-NEXT:    orpd %xmm10, %xmm2
+; SSE42-NEXT:    roundpd $11, %xmm3, %xmm9
+; SSE42-NEXT:    movapd %xmm3, %xmm10
+; SSE42-NEXT:    subpd %xmm9, %xmm10
+; SSE42-NEXT:    movapd %xmm3, %xmm11
+; SSE42-NEXT:    andpd %xmm5, %xmm11
+; SSE42-NEXT:    cmpeqpd %xmm7, %xmm11
+; SSE42-NEXT:    andnpd %xmm10, %xmm11
+; SSE42-NEXT:    andpd %xmm5, %xmm11
+; SSE42-NEXT:    andnpd %xmm3, %xmm5
+; SSE42-NEXT:    orpd %xmm11, %xmm5
+; SSE42-NEXT:    movapd %xmm9, 112(%rdi)
+; SSE42-NEXT:    movapd %xmm8, 96(%rdi)
+; SSE42-NEXT:    movapd %xmm0, 80(%rdi)
+; SSE42-NEXT:    movapd %xmm4, 64(%rdi)
+; SSE42-NEXT:    movapd %xmm5, 48(%rdi)
+; SSE42-NEXT:    movapd %xmm2, 32(%rdi)
+; SSE42-NEXT:    movapd %xmm1, 16(%rdi)
+; SSE42-NEXT:    movapd %xmm6, (%rdi)
 ; SSE42-NEXT:    retq
 ;
 ; AVX2-LABEL: test_modf_v8f64:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    subq $168, %rsp
-; AVX2-NEXT:    vmovups %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX2-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX2-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX2-NEXT:    vzeroupper
-; AVX2-NEXT:    callq modf@PLT
-; AVX2-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX2-NEXT:    vpermilpd $1, (%rsp), %xmm0 # 16-byte Folded Reload
-; AVX2-NEXT:    # xmm0 = mem[1,0]
-; AVX2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX2-NEXT:    callq modf@PLT
-; AVX2-NEXT:    vmovapd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; AVX2-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX2-NEXT:    vmovapd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX2-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
-; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
-; AVX2-NEXT:    vzeroupper
-; AVX2-NEXT:    callq modf@PLT
-; AVX2-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX2-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX2-NEXT:    # xmm0 = mem[1,0]
-; AVX2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX2-NEXT:    callq modf@PLT
-; AVX2-NEXT:    vmovapd (%rsp), %xmm1 # 16-byte Reload
-; AVX2-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX2-NEXT:    vinsertf128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
-; AVX2-NEXT:    vmovupd %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX2-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
-; AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX2-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX2-NEXT:    vzeroupper
-; AVX2-NEXT:    callq modf@PLT
-; AVX2-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX2-NEXT:    vpermilpd $1, (%rsp), %xmm0 # 16-byte Folded Reload
-; AVX2-NEXT:    # xmm0 = mem[1,0]
-; AVX2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX2-NEXT:    callq modf@PLT
-; AVX2-NEXT:    vmovapd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; AVX2-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX2-NEXT:    vmovapd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX2-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
-; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
-; AVX2-NEXT:    vzeroupper
-; AVX2-NEXT:    callq modf@PLT
-; AVX2-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX2-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX2-NEXT:    # xmm0 = mem[1,0]
-; AVX2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX2-NEXT:    callq modf@PLT
-; AVX2-NEXT:    vmovapd (%rsp), %xmm1 # 16-byte Reload
-; AVX2-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX2-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; AVX2-NEXT:    vmovhps {{.*#+}} xmm2 = xmm1[0,1],mem[0,1]
-; AVX2-NEXT:    vinsertf128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm1 # 16-byte Folded Reload
-; AVX2-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX2-NEXT:    vmovhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
-; AVX2-NEXT:    vinsertf128 $1, %xmm0, %ymm2, %ymm2
-; AVX2-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX2-NEXT:    vmovhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
-; AVX2-NEXT:    vmovsd {{.*#+}} xmm3 = mem[0],zero
-; AVX2-NEXT:    vmovhps {{.*#+}} xmm3 = xmm3[0,1],mem[0,1]
-; AVX2-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm3
-; AVX2-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
-; AVX2-NEXT:    addq $168, %rsp
+; AVX2-NEXT:    vroundpd $11, %ymm0, %ymm2
+; AVX2-NEXT:    vsubpd %ymm2, %ymm0, %ymm3
+; AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm4 = [NaN,NaN,NaN,NaN]
+; AVX2-NEXT:    vandpd %ymm4, %ymm0, %ymm5
+; AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm6 = [+Inf,+Inf,+Inf,+Inf]
+; AVX2-NEXT:    vcmpeqpd %ymm6, %ymm5, %ymm5
+; AVX2-NEXT:    vandnpd %ymm3, %ymm5, %ymm3
+; AVX2-NEXT:    vandpd %ymm4, %ymm3, %ymm5
+; AVX2-NEXT:    vandnpd %ymm0, %ymm4, %ymm0
+; AVX2-NEXT:    vroundpd $11, %ymm1, %ymm3
+; AVX2-NEXT:    vorpd %ymm0, %ymm5, %ymm0
+; AVX2-NEXT:    vsubpd %ymm3, %ymm1, %ymm5
+; AVX2-NEXT:    vandpd %ymm4, %ymm1, %ymm7
+; AVX2-NEXT:    vcmpeqpd %ymm6, %ymm7, %ymm6
+; AVX2-NEXT:    vandnpd %ymm5, %ymm6, %ymm5
+; AVX2-NEXT:    vandpd %ymm4, %ymm5, %ymm5
+; AVX2-NEXT:    vandnpd %ymm1, %ymm4, %ymm1
+; AVX2-NEXT:    vorpd %ymm1, %ymm5, %ymm1
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: test_modf_v8f64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    subq $200, %rsp
-; AVX512-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512-NEXT:    vextractf32x4 $3, %zmm0, %xmm0
-; AVX512-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX512-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    callq modf@PLT
-; AVX512-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX512-NEXT:    vpermilpd $1, (%rsp), %xmm0 # 16-byte Folded Reload
-; AVX512-NEXT:    # xmm0 = mem[1,0]
-; AVX512-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX512-NEXT:    callq modf@PLT
-; AVX512-NEXT:    vmovapd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; AVX512-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX512-NEXT:    vmovapd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX512-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
-; AVX512-NEXT:    vextractf32x4 $2, %zmm0, %xmm0
-; AVX512-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX512-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    callq modf@PLT
-; AVX512-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX512-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX512-NEXT:    # xmm0 = mem[1,0]
-; AVX512-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX512-NEXT:    callq modf@PLT
-; AVX512-NEXT:    vmovapd (%rsp), %xmm1 # 16-byte Reload
-; AVX512-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX512-NEXT:    vinsertf128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
-; AVX512-NEXT:    vmovupd %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX512-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
-; AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX512-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX512-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    callq modf@PLT
-; AVX512-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX512-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX512-NEXT:    # xmm0 = mem[1,0]
-; AVX512-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX512-NEXT:    callq modf@PLT
-; AVX512-NEXT:    vmovapd (%rsp), %xmm1 # 16-byte Reload
-; AVX512-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX512-NEXT:    vmovapd %xmm0, (%rsp) # 16-byte Spill
-; AVX512-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX512-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
-; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    callq modf@PLT
-; AVX512-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX512-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX512-NEXT:    # xmm0 = mem[1,0]
-; AVX512-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX512-NEXT:    callq modf@PLT
-; AVX512-NEXT:    vmovapd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; AVX512-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX512-NEXT:    vinsertf128 $1, (%rsp), %ymm0, %ymm0 # 16-byte Folded Reload
-; AVX512-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; AVX512-NEXT:    vmovhps {{.*#+}} xmm1 = xmm1[0,1],mem[0,1]
-; AVX512-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
-; AVX512-NEXT:    vmovhps {{.*#+}} xmm2 = xmm2[0,1],mem[0,1]
-; AVX512-NEXT:    vinsertf64x4 $1, {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm0 # 32-byte Folded Reload
-; AVX512-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
-; AVX512-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
-; AVX512-NEXT:    vmovhps {{.*#+}} xmm2 = xmm2[0,1],mem[0,1]
-; AVX512-NEXT:    vmovsd {{.*#+}} xmm3 = mem[0],zero
-; AVX512-NEXT:    vmovhps {{.*#+}} xmm3 = xmm3[0,1],mem[0,1]
-; AVX512-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
-; AVX512-NEXT:    vinsertf64x4 $1, %ymm1, %zmm2, %zmm1
-; AVX512-NEXT:    addq $200, %rsp
+; AVX512-NEXT:    vrndscalepd $11, %zmm0, %zmm1
+; AVX512-NEXT:    vandpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm2
+; AVX512-NEXT:    vcmpeqpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm2, %k0
+; AVX512-NEXT:    knotb %k0, %k1
+; AVX512-NEXT:    vsubpd %zmm1, %zmm0, %zmm2 {%k1} {z}
+; AVX512-NEXT:    vpternlogq {{.*#+}} zmm0 = zmm0 ^ (m64bcst & (zmm0 ^ zmm2))
 ; AVX512-NEXT:    retq
-;
-; AVX10_1-LABEL: test_modf_v8f64:
-; AVX10_1:       # %bb.0:
-; AVX10_1-NEXT:    subq $200, %rsp
-; AVX10_1-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX10_1-NEXT:    vextractf32x4 $3, %zmm0, %xmm0
-; AVX10_1-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX10_1-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_1-NEXT:    vzeroupper
-; AVX10_1-NEXT:    callq modf@PLT
-; AVX10_1-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX10_1-NEXT:    vpermilpd $1, (%rsp), %xmm0 # 16-byte Folded Reload
-; AVX10_1-NEXT:    # xmm0 = mem[1,0]
-; AVX10_1-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_1-NEXT:    callq modf@PLT
-; AVX10_1-NEXT:    vmovapd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; AVX10_1-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX10_1-NEXT:    vmovapd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX10_1-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
-; AVX10_1-NEXT:    vextractf32x4 $2, %zmm0, %xmm0
-; AVX10_1-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX10_1-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_1-NEXT:    vzeroupper
-; AVX10_1-NEXT:    callq modf@PLT
-; AVX10_1-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX10_1-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX10_1-NEXT:    # xmm0 = mem[1,0]
-; AVX10_1-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_1-NEXT:    callq modf@PLT
-; AVX10_1-NEXT:    vmovapd (%rsp), %xmm1 # 16-byte Reload
-; AVX10_1-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX10_1-NEXT:    vinsertf128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
-; AVX10_1-NEXT:    vmovupd %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX10_1-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
-; AVX10_1-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX10_1-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX10_1-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_1-NEXT:    vzeroupper
-; AVX10_1-NEXT:    callq modf@PLT
-; AVX10_1-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX10_1-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX10_1-NEXT:    # xmm0 = mem[1,0]
-; AVX10_1-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_1-NEXT:    callq modf@PLT
-; AVX10_1-NEXT:    vmovapd (%rsp), %xmm1 # 16-byte Reload
-; AVX10_1-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX10_1-NEXT:    vmovapd %xmm0, (%rsp) # 16-byte Spill
-; AVX10_1-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_1-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
-; AVX10_1-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
-; AVX10_1-NEXT:    vzeroupper
-; AVX10_1-NEXT:    callq modf@PLT
-; AVX10_1-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX10_1-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX10_1-NEXT:    # xmm0 = mem[1,0]
-; AVX10_1-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_1-NEXT:    callq modf@PLT
-; AVX10_1-NEXT:    vmovapd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; AVX10_1-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX10_1-NEXT:    vinsertf128 $1, (%rsp), %ymm0, %ymm0 # 16-byte Folded Reload
-; AVX10_1-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; AVX10_1-NEXT:    vmovhps {{.*#+}} xmm1 = xmm1[0,1],mem[0,1]
-; AVX10_1-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
-; AVX10_1-NEXT:    vmovhps {{.*#+}} xmm2 = xmm2[0,1],mem[0,1]
-; AVX10_1-NEXT:    vinsertf64x4 $1, {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm0 # 32-byte Folded Reload
-; AVX10_1-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
-; AVX10_1-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
-; AVX10_1-NEXT:    vmovhps {{.*#+}} xmm2 = xmm2[0,1],mem[0,1]
-; AVX10_1-NEXT:    vmovsd {{.*#+}} xmm3 = mem[0],zero
-; AVX10_1-NEXT:    vmovhps {{.*#+}} xmm3 = xmm3[0,1],mem[0,1]
-; AVX10_1-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
-; AVX10_1-NEXT:    vinsertf64x4 $1, %ymm1, %zmm2, %zmm1
-; AVX10_1-NEXT:    addq $200, %rsp
-; AVX10_1-NEXT:    retq
-;
-; AVX10_2-LABEL: test_modf_v8f64:
-; AVX10_2:       # %bb.0:
-; AVX10_2-NEXT:    subq $200, %rsp
-; AVX10_2-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX10_2-NEXT:    vextractf32x4 $3, %zmm0, %xmm0
-; AVX10_2-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX10_2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_2-NEXT:    vzeroupper
-; AVX10_2-NEXT:    callq modf@PLT
-; AVX10_2-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX10_2-NEXT:    vpermilpd $1, (%rsp), %xmm0 # 16-byte Folded Reload
-; AVX10_2-NEXT:    # xmm0 = mem[1,0]
-; AVX10_2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_2-NEXT:    callq modf@PLT
-; AVX10_2-NEXT:    vmovapd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; AVX10_2-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX10_2-NEXT:    vmovapd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX10_2-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
-; AVX10_2-NEXT:    vextractf32x4 $2, %zmm0, %xmm0
-; AVX10_2-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX10_2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_2-NEXT:    vzeroupper
-; AVX10_2-NEXT:    callq modf@PLT
-; AVX10_2-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX10_2-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX10_2-NEXT:    # xmm0 = mem[1,0]
-; AVX10_2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_2-NEXT:    callq modf@PLT
-; AVX10_2-NEXT:    vmovapd (%rsp), %xmm1 # 16-byte Reload
-; AVX10_2-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX10_2-NEXT:    vinsertf128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
-; AVX10_2-NEXT:    vmovupd %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX10_2-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
-; AVX10_2-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX10_2-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX10_2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_2-NEXT:    vzeroupper
-; AVX10_2-NEXT:    callq modf@PLT
-; AVX10_2-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX10_2-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX10_2-NEXT:    # xmm0 = mem[1,0]
-; AVX10_2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_2-NEXT:    callq modf@PLT
-; AVX10_2-NEXT:    vmovapd (%rsp), %xmm1 # 16-byte Reload
-; AVX10_2-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX10_2-NEXT:    vmovapd %xmm0, (%rsp) # 16-byte Spill
-; AVX10_2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_2-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
-; AVX10_2-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
-; AVX10_2-NEXT:    vzeroupper
-; AVX10_2-NEXT:    callq modf@PLT
-; AVX10_2-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX10_2-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX10_2-NEXT:    # xmm0 = mem[1,0]
-; AVX10_2-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; AVX10_2-NEXT:    callq modf@PLT
-; AVX10_2-NEXT:    vmovapd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; AVX10_2-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX10_2-NEXT:    vinsertf128 $1, (%rsp), %ymm0, %ymm0 # 16-byte Folded Reload
-; AVX10_2-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; AVX10_2-NEXT:    vmovhps {{.*#+}} xmm1 = xmm1[0,1],mem[0,1]
-; AVX10_2-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
-; AVX10_2-NEXT:    vmovhps {{.*#+}} xmm2 = xmm2[0,1],mem[0,1]
-; AVX10_2-NEXT:    vinsertf64x4 $1, {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm0 # 32-byte Folded Reload
-; AVX10_2-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
-; AVX10_2-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
-; AVX10_2-NEXT:    vmovhps {{.*#+}} xmm2 = xmm2[0,1],mem[0,1]
-; AVX10_2-NEXT:    vmovsd {{.*#+}} xmm3 = mem[0],zero
-; AVX10_2-NEXT:    vmovhps {{.*#+}} xmm3 = xmm3[0,1],mem[0,1]
-; AVX10_2-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
-; AVX10_2-NEXT:    vinsertf64x4 $1, %ymm1, %zmm2, %zmm1
-; AVX10_2-NEXT:    addq $200, %rsp
-; AVX10_2-NEXT:    retq
   %result = call { <8 x double>, <8 x double> } @llvm.modf.v8f64(<8 x double> %a)
   ret { <8 x double>, <8 x double> } %result
 }
 
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; AVX: {{.*}}
