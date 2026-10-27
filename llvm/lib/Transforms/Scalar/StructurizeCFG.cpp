@@ -18,7 +18,6 @@
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/RegionInfo.h"
 #include "llvm/Analysis/RegionIterator.h"
-#include "llvm/Analysis/RegionPass.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/IR/BasicBlock.h"
@@ -271,7 +270,6 @@ class StructurizeCFG {
   Function *Func;
   Region *ParentRegion;
 
-  UniformityInfo *UA = nullptr;
   DominatorTree *DT;
 
   SmallVector<RegionNode *, 8> Order;
@@ -357,37 +355,21 @@ class StructurizeCFG {
 public:
   void init(Region *R);
   bool run(Region *R, DominatorTree *DT, const TargetTransformInfo *TTI);
-  bool makeUniformRegion(Region *R, UniformityInfo &UA);
+  bool makeUniformRegion(Region *R, const UniformityInfo &UA);
 };
 
-class StructurizeCFGLegacyPass : public RegionPass {
+class StructurizeCFGLegacyPass : public FunctionPass {
   bool SkipUniformRegions;
 
 public:
   static char ID;
 
   explicit StructurizeCFGLegacyPass(bool SkipUniformRegions_ = false)
-      : RegionPass(ID), SkipUniformRegions(SkipUniformRegions_) {
+      : FunctionPass(ID), SkipUniformRegions(SkipUniformRegions_) {
     initializeStructurizeCFGLegacyPassPass(*PassRegistry::getPassRegistry());
   }
 
-  bool runOnRegion(Region *R, RGPassManager &RGM) override {
-    StructurizeCFG SCFG;
-    SCFG.init(R);
-    const ScalarOptions &Opts =
-        R->getEntry()->getContext().getLibraryOptions().get<ScalarOptions>();
-    if (valueOr(Opts.structurizecfg_skip_uniform_regions, SkipUniformRegions)) {
-      UniformityInfo &UA =
-          getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
-      if (SCFG.makeUniformRegion(R, UA))
-        return false;
-    }
-    Function *F = R->getEntry()->getParent();
-    const TargetTransformInfo *TTI =
-        &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(*F);
-    DominatorTree *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-    return SCFG.run(R, DT, TTI);
-  }
+  bool runOnFunction(Function &F) override;
 
   StringRef getPassName() const override { return "Structurize control flow"; }
 
@@ -395,9 +377,9 @@ public:
     AU.addRequired<UniformityInfoWrapperPass>();
     AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
+    AU.addRequired<RegionInfoPass>();
 
     AU.addPreserved<DominatorTreeWrapperPass>();
-    RegionPass::getAnalysisUsage(AU);
   }
 };
 
@@ -1307,15 +1289,11 @@ void StructurizeCFG::init(Region *R) {
   BoolTrue = ConstantInt::getTrue(Context);
   BoolFalse = ConstantInt::getFalse(Context);
   BoolPoison = PoisonValue::get(Boolean);
-
-  this->UA = nullptr;
 }
 
-bool StructurizeCFG::makeUniformRegion(Region *R, UniformityInfo &UA) {
+bool StructurizeCFG::makeUniformRegion(Region *R, const UniformityInfo &UA) {
   if (R->isTopLevelRegion())
     return false;
-
-  this->UA = &UA;
 
   if (hasOnlyUniformBranches(R, UA)) {
     LLVM_DEBUG(dbgs() << "Skipping region with uniform control flow: " << *R
@@ -1407,21 +1385,11 @@ void StructurizeCFGPass::printPipeline(
     OS << "<skip-uniform-regions>";
 }
 
-PreservedAnalyses StructurizeCFGPass::run(Function &F,
-                                          FunctionAnalysisManager &AM) {
-
+/// Structurize every region in \p RI, processing inner regions before the
+/// regions that contain them. If \p UI is non-null, skip uniform regions.
+static bool runImpl(DominatorTree &DT, RegionInfo &RI,
+                    const TargetTransformInfo &TTI, const UniformityInfo *UI) {
   bool Changed = false;
-  DominatorTree *DT = &AM.getResult<DominatorTreeAnalysis>(F);
-  auto &RI = AM.getResult<RegionInfoAnalysis>(F);
-  TargetTransformInfo *TTI = &AM.getResult<TargetIRAnalysis>(F);
-  const ScalarOptions &Opts =
-      F.getContext().getLibraryOptions().get<ScalarOptions>();
-  bool SkipUniform =
-      valueOr(Opts.structurizecfg_skip_uniform_regions, SkipUniformRegions);
-  UniformityInfo *UI = nullptr;
-  if (SkipUniform)
-    UI = &AM.getResult<UniformityInfoAnalysis>(F);
-
   std::vector<Region *> Regions;
   addRegionIntoQueue(*RI.getTopLevelRegion(), Regions);
   while (!Regions.empty()) {
@@ -1431,14 +1399,39 @@ PreservedAnalyses StructurizeCFGPass::run(Function &F,
     StructurizeCFG SCFG;
     SCFG.init(R);
 
-    if (SkipUniform && SCFG.makeUniformRegion(R, *UI)) {
+    if (UI && SCFG.makeUniformRegion(R, *UI)) {
       Changed = true; // May have added metadata.
       continue;
     }
 
-    Changed |= SCFG.run(R, DT, TTI);
+    Changed |= SCFG.run(R, &DT, &TTI);
   }
-  if (!Changed)
+  return Changed;
+}
+
+bool StructurizeCFGLegacyPass::runOnFunction(Function &F) {
+  const ScalarOptions &Opts = getScalarOptions(F);
+  const UniformityInfo *UI = nullptr;
+  if (valueOr(Opts.structurizecfg_skip_uniform_regions, SkipUniformRegions))
+    UI = &getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
+  DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+  RegionInfo &RI = getAnalysis<RegionInfoPass>().getRegionInfo();
+  const TargetTransformInfo &TTI =
+      getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
+  return runImpl(DT, RI, TTI, UI);
+}
+
+PreservedAnalyses StructurizeCFGPass::run(Function &F,
+                                          FunctionAnalysisManager &AM) {
+  DominatorTree &DT = AM.getResult<DominatorTreeAnalysis>(F);
+  auto &RI = AM.getResult<RegionInfoAnalysis>(F);
+  TargetTransformInfo &TTI = AM.getResult<TargetIRAnalysis>(F);
+  const ScalarOptions &Opts = getScalarOptions(F);
+  const UniformityInfo *UI = nullptr;
+  if (valueOr(Opts.structurizecfg_skip_uniform_regions, SkipUniformRegions))
+    UI = &AM.getResult<UniformityInfoAnalysis>(F);
+
+  if (!runImpl(DT, RI, TTI, UI))
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
   PA.preserve<DominatorTreeAnalysis>();

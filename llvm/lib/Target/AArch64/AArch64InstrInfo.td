@@ -243,6 +243,10 @@ def HasLSC64B        : Predicate<"Subtarget->hasLSC64B()">,
                                  AssemblerPredicateWithAll<(all_of FeatureLSC64B), "lsc64b">;
 def HasSVE_LRCPC     : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE_LRCPC()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVE_LRCPC), "sve-lrcpc">;
+def HasSMEF16F8F16   : Predicate<"Subtarget->isStreaming() && Subtarget->hasSMEF16F8F16()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureSMEF16F8F16), "sme-f16f8f16">;
+def HasFPv2          : Predicate<"Subtarget->hasFPv2()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureFPv2), "fpv2">;
 
 // A subset of SVE(2) instructions are legal in Streaming SVE execution mode,
 // they should be enabled if either has been specified.
@@ -321,6 +325,11 @@ def HasNonStreamingSVE2p2_or_SME2p2
                 "(Subtarget->isSVEorStreamingSVEAvailable() && Subtarget->hasSME2p2())">,
                 AssemblerPredicateWithAll<(any_of FeatureSVE2p2, FeatureSME2p2),
                 "sme2p2 or sve2p2">;
+
+def HasNonStreamingMatMulFP64_or_SVE_PERM256
+    : Predicate<"(Subtarget->isSVEorStreamingSVEAvailable()  && Subtarget->hasSVE_PERM256()) || (Subtarget->isSVEAvailable() && Subtarget->hasMatMulFP64())">,
+                AssemblerPredicateWithAll<(any_of FeatureMatMulFP64, FeatureSVE_PERM256),
+                "f64mm or sve-perm256">;
 
 def HasSMEF16F16_or_SMEF8F16
     : Predicate<"Subtarget->isStreaming() && (Subtarget->hasSMEF16F16() || Subtarget->hasSMEF8F16())">,
@@ -5952,6 +5961,15 @@ defm FNMUL  : TwoOperandFPDataNeg<0b1000, "fnmul", any_fmul>;
 }
 defm FSUB   : TwoOperandFPData<0b0011, "fsub", any_fsub>;
 
+let Predicates = [HasFPv2] in {
+defm FMAXINM   : TwoOperandFPData<0b1010, "fmaxinm">;
+defm FMAXMG    : TwoOperandFPData<0b1100, "fmaxmg">;
+defm FMAXMGINM : TwoOperandFPData<0b1110, "fmaxmginm">;
+defm FMININM   : TwoOperandFPData<0b1011, "fmininm">;
+defm FMINMG    : TwoOperandFPData<0b1101, "fminmg">;
+defm FMINMGINM : TwoOperandFPData<0b1111, "fminmginm">;
+}
+
 multiclass FMULScalarFromIndexedLane0Patterns<string inst,
                                               string inst_f16_suffix,
                                               string inst_f32_suffix,
@@ -6066,6 +6084,11 @@ def : Pat<(f64 (fma (fneg FPR64:$Rn), FPR64:$Rm, (fneg FPR64:$Ra))),
 
 defm FCMPE : FPComparison<1, "fcmpe", AArch64strict_fcmpe>;
 defm FCMP  : FPComparison<0, "fcmp", AArch64any_fcmp>;
+
+let Predicates = [HasFPv2] in {
+defm FCMTL   : FPTotalOrderComparison<0, "fcmtl">;
+defm FCMTLMG : FPTotalOrderComparison<1, "fcmtlmg">;
+}
 
 //===----------------------------------------------------------------------===//
 // Floating point conditional comparison instructions.

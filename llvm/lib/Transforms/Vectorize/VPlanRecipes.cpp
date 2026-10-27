@@ -1789,7 +1789,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
 
 bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
   assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
-  if (Instruction::isBinaryOp(getOpcode()) || Instruction::isCast(getOpcode()))
+  if (vputils::propagatesFirstLaneUse(this, Op))
     return vputils::onlyFirstLaneUsed(this);
 
   switch (getOpcode()) {
@@ -1802,16 +1802,6 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
   case VPInstruction::ExtractLastActive:
     return Op == getOperand(0);
   case Instruction::PHI:
-    return true;
-  case Instruction::ExtractValue:
-  case Instruction::FCmp:
-  case Instruction::ICmp:
-  case Instruction::Select:
-  case Instruction::Or:
-  case Instruction::Freeze:
-  case VPInstruction::Not:
-    // TODO: Cover additional opcodes.
-    return vputils::onlyFirstLaneUsed(this);
   case Instruction::Load:
   case VPInstruction::ActiveLaneMask:
   case VPInstruction::WideActiveLaneMask:
@@ -1827,18 +1817,13 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
   case VPInstruction::WideVectorLoad:
   case VPInstruction::BuildVector:
     return true;
-  case VPInstruction::PtrAdd:
-    return Op == getOperand(0) || vputils::onlyFirstLaneUsed(this);
-  case VPInstruction::WidePtrAdd:
-    // WidePtrAdd supports scalar and vector base addresses.
-    return false;
   case VPInstruction::WideVectorStore:
     return Op == getOperand(0) || Op == getOperand(1) || Op == getOperand(2);
+  case VPInstruction::PtrAdd:
   case VPInstruction::ExitingIVValue:
   case VPInstruction::ExtractLane:
     return Op == getOperand(0);
-  };
-  llvm_unreachable("switch should return");
+  }
 }
 
 bool VPInstruction::usesFirstPartOnly(const VPValue *Op) const {
@@ -1992,13 +1977,29 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
   case VPInstruction::StepVector:
     O << "step-vector " << *getScalarType();
     break;
-  case VPInstruction::Intrinsic: {
-    O << "call " << *getScalarType() << " @"
-      << Intrinsic::getBaseName(vputils::getIntrinsicID(this)) << "(";
-    interleaveComma(drop_end(operands()), O, [&O, &SlotTracker](VPValue *Op) {
-      Op->printAsOperand(O, SlotTracker);
-    });
+  case VPInstruction::Intrinsic:
+  case Instruction::Call: {
+    O << "call";
+    printFlags(O);
+    O << *getScalarType() << " ";
+    unsigned NumArgs;
+    if (getOpcode() == VPInstruction::Intrinsic) {
+      O << "@" << Intrinsic::getBaseName(vputils::getIntrinsicID(this));
+      NumArgs = getNumOperands() - 1;
+    } else {
+      getCalledFunction(operands())->printAsOperand(O, /*PrintType=*/false);
+      NumArgs = getCalledFnOperandIndex(operands());
+    }
+    O << "(";
+    interleaveComma(drop_end(operands(), getNumOperands() - NumArgs), O,
+                    [&O, &SlotTracker](VPValue *Op) {
+                      Op->printAsOperand(O, SlotTracker);
+                    });
     O << ")";
+    if (VPValue *Mask = getMask()) {
+      O << ", ";
+      Mask->printAsOperand(O, SlotTracker);
+    }
     return;
   }
   case Instruction::Load:
@@ -4108,6 +4109,8 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
       Cloned->mutateType(ResultTy);
   }
 
+  Cloned->dropUBImplyingAttrsAndUnknownMetadata();
+  Cloned->dropPoisonGeneratingAttributes();
   applyFlags(*Cloned);
   applyMetadata(*Cloned);
 
@@ -5282,6 +5285,8 @@ void VPReductionPHIRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 
 bool VPBlendRecipe::usesFirstLaneOnly(const VPValue *Op) const {
   assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
+  assert(vputils::propagatesFirstLaneUse(this, Op) &&
+         "Blend should propagate first lane use");
   return vputils::onlyFirstLaneUsed(this);
 }
 
