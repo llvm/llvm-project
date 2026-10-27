@@ -59,6 +59,7 @@
 #include "VPlan.h"
 #include "VPlanAnalysis.h"
 #include "VPlanCFG.h"
+#include "VPlanCrossPartCSE.h"
 #include "VPlanHelpers.h"
 #include "VPlanPatternMatch.h"
 #include "VPlanTransforms.h"
@@ -3365,6 +3366,33 @@ std::unique_ptr<VPlan> LoopVectorizationPlanner::selectBestEpiloguePlan(
 unsigned
 LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
                                                 InstructionCost LoopCost) {
+  // Evaluate cross-part savings only when the ordinary heuristics are about to
+  // return IC=1. All cost state remains local to this UF-selection call.
+  auto shouldInterleaveForCrossPartCSE = [&](unsigned MaxIC) {
+    if (!Opts.enable_interleave_cse)
+      return false;
+
+    // Cross-part CSE only augments ordinary heuristic selection. These checks
+    // preserve target, trip-count, and user-hint restrictions. Loops vectorized
+    // with partial-alias masking are excluded explicitly because processLoop
+    // resets their interleave count to 1 after this selection; analyzing them
+    // would only spend cost-model queries and report a discarded decision.
+    if (MaxIC < CrossPartCSERequiredInterleaveCount || !VF.isVector() ||
+        !OrigLoop->isInnermost() || Config.getHints().getInterleave() != 0 ||
+        CM->maskPartialAliasing())
+      return false;
+
+    VPCostContext CostCtx(*TLI, Plan, *CM, Config);
+    CrossPartCSEOptions Options;
+    Options.MinSavingPct = Opts.interleave_cse_min_pct;
+    if (!isCrossPartCSEProfitable(Plan, VF, LoopCost, CostCtx, Options))
+      return false;
+
+    LLVM_DEBUG(dbgs() << "LV: Exact cross-part load redundancy predicts a "
+                         "downstream saving; raising IC to 2.\n");
+    return true;
+  };
+
   // -- The interleave heuristics --
   // We interleave the loop in order to expose ILP and reduce the loop overhead.
   // There are many micro-architectural considerations that we can't predict
@@ -3688,6 +3716,9 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
       return std::max(IC / 2, SmallIC);
     }
 
+    if (SmallIC == 1 && shouldInterleaveForCrossPartCSE(IC))
+      return CrossPartCSERequiredInterleaveCount;
+
     LLVM_DEBUG(dbgs() << "LV: Interleaving to reduce branch cost.\n");
     return SmallIC;
   }
@@ -3698,6 +3729,9 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
     LLVM_DEBUG(dbgs() << "LV: Interleaving to expose ILP.\n");
     return IC;
   }
+
+  if (shouldInterleaveForCrossPartCSE(IC))
+    return CrossPartCSERequiredInterleaveCount;
 
   LLVM_DEBUG(dbgs() << "LV: Not Interleaving.\n");
   return 1;
