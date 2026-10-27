@@ -462,13 +462,9 @@ std::optional<FPValueAndVReg> llvm::getFConstantVRegValWithLookThrough(
   // width).
   LLT Ty = MRI.getType(VReg);
   unsigned BitWidth = Reg->Value.getBitWidth();
-  const fltSemantics *Sem;
-  if (Ty.isFloat()) {
-    Sem = &getFltSemanticForLLT(Ty);
-  } else if (BitWidth == 16 || BitWidth == 32 || BitWidth == 64 ||
-             BitWidth == 128) {
-    Sem = &getFltSemanticForLLT(LLT::scalar(BitWidth));
-  } else {
+  const fltSemantics *Sem =
+      getFltSemanticForLLTOrNull(Ty.isFloat() ? Ty : LLT::scalar(BitWidth));
+  if (!Sem) {
     Sem = &getConstantFPVRegVal(Reg->VReg, MRI)->getValueAPF().getSemantics();
     if (APFloat::getSizeInBits(*Sem) != BitWidth)
       return std::nullopt;
