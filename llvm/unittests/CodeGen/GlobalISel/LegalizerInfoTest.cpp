@@ -376,6 +376,38 @@ TEST(LegalizerInfoTest, MSVCDebugMiscompile) {
   (void)Builder.legalForCartesianProduct({S1}, {P0});
 }
 
+// scalarSameSizeAs() (and its min/maxScalarSameAs() halves) must compare the
+// *element* sizes of the two types: the mutation they emit is
+// changeElementSizeTo(), and NarrowScalar/WidenScalar are only sane when the
+// element count stays the same and the element size changes.  Comparing an
+// element size against a whole-vector size made vector queries match rules
+// whose mutation was a no-op, which tripped mutationIsSane().
+TEST(LegalizerInfoTest, ScalarSameSizeAsVector) {
+  const LLT s16 = LLT::scalar(16);
+  const LLT s32 = LLT::scalar(32);
+  const LLT v4s16 = LLT::fixed_vector(4, 16);
+  const LLT v4s32 = LLT::fixed_vector(4, 32);
+
+  LegalizerInfo LI;
+  LI.getActionDefinitionsBuilder(TargetOpcode::G_ANYEXT)
+      .scalarSameSizeAs(0, 1);
+
+  // Scalar behavior is unchanged: s16 is widened to the element size of s32.
+  EXPECT_ACTION(WidenScalar, 0, s32,
+                LegalityQuery(TargetOpcode::G_ANYEXT, {s16, s32}));
+
+  // Element sizes decide the match.  <4 x s16> has 16-bit elements and is
+  // widened element-wise.  The old predicate compared 32 (the element size of
+  // s32) against 64 (the total size of the vector) and did not match.
+  EXPECT_ACTION(WidenScalar, 0, v4s32,
+                LegalityQuery(TargetOpcode::G_ANYEXT, {v4s16, s32}));
+
+  // The element sizes already match, so no rule may fire.  maxScalarSameAs()
+  // used to compare 32 (element size) against 128 (total size) and return a
+  // mutation that changed nothing.
+  EXPECT_ACTION(Unsupported, 0, LLT(),
+                LegalityQuery(TargetOpcode::G_ANYEXT, {v4s32, v4s32}));
+}
 // AArch64GISemMITest instead of LegalizerInfoTest
 // as we need a target machine for MRI.
 //
