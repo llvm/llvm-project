@@ -13,6 +13,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
@@ -444,6 +445,13 @@ static bool airSystemValues(Module &M) {
       AIRMinor = 9;
       MSLMajor = 4;
       MSLMinor = 1;
+      // The target's own version cannot express the call, and a system
+      // without MSL 4.1 rejects the module ("expecting 2.8").
+      Ctx.diagnose(DiagnosticInfoGeneric(
+          "air.atomic.global.cmpxchg.weak.i32 with memory flags needs AIR "
+          "2.9 (MSL 4.1); raising air.version above the target's, so the "
+          "library loads only on systems with MSL 4.1",
+          DS_Warning));
     }
 
   auto *VerMD = M.getOrInsertNamedMetadata(kNMDVersion);

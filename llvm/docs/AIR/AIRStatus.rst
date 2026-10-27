@@ -34,7 +34,19 @@ Verification so far
                     barriers, inserted barriers, threadgroup atomics, all
                     with two SIMD-groups per threadgroup
   ``sysvals``       all eleven compute system values
+  ``types``         half, ``<4 x float>``, i8/i16/i64, 64-bit division,
+                    conversions
+  ``memory``        struct GEPs through a pointer select, nested aggregates
+                    through a pointer phi, private arrays, divergent loops,
+                    constant tables and buffers, ``memcpy``, scalar arguments
+  ``matrix``        8x8 SIMD-group matrices: f32, f16, accumulate, transposed,
+                    from threadgroup memory (results exact)
+  ``misc``          device-coherent loads and stores, ``air.mul_hi``
   ================= =========================================================
+
+  In all, 219 cases pass. One probe records a function AIR does not have
+  (``air.copysign``), and one case needs a newer OS than the device runs
+  (below).
 
 * No AIR in any test or fixture was produced by Apple's Metal compiler. The
   ``.metallib`` and ``.air`` files in ``Metal.jl/test/metallib`` are built
@@ -63,6 +75,9 @@ Each of these passed the FileCheck tests of the original branch.
   inserted in the two-operand form in modules using the three-operand one.
 * ``air.threads_per_grid`` and ``air.thread_index_in_threadgroup`` were not
   lowered.
+* A constant-address-space buffer argument was taken for a Triton scalar
+  passed by reference: it was packed away and its uses replaced with
+  ``undef``, so the kernel read zeros.
 
 Blockers
 ========
@@ -158,6 +173,16 @@ expected value both on success and on a spurious failure. The backend lowers
 LLVM's strong ``cmpxchg`` to a single call and treats a match as success;
 on the M2 Max no spurious failure was seen. If Apple GPUs can fail it
 spuriously, a strong ``cmpxchg`` can report a success that did not happen.
+
+The device's OS accepts AIR 2.8, not 2.9
+----------------------------------------
+
+The M2 Max behind the service rejects AIR 2.9 modules (``air version set to
+2.9.0 ..., but expecting 2.8``): its OS has MSL 4.0. The compare-and-exchange
+with a memory-flags operand exists only from AIR 2.9 (MSL 4.1), so modules
+using it, for which the backend raises ``air.version`` (with a warning), are
+unverified here. Apple does not document which OS versions bring MSL 4.1, so
+the target triple cannot express it yet.
 
 What the service cannot run
 ---------------------------

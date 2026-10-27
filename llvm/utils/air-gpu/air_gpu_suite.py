@@ -15,6 +15,7 @@ For each case the suite reports one of:
   MISMATCH  the device ran the kernel and some result is wrong
   REJECTED  the device refused the library (the case is then retried alone,
             so a rejection is attributed to the one kernel that causes it)
+  HOST-LIMIT the device rejected a case that needs a newer OS than it runs
   COMPILE   llc failed
   ABSENT    the device rejected a probe for a function AIR does not have, as
             expected (these record what the catalogue must not emit)
@@ -90,7 +91,7 @@ class Case:
 
     def __init__(self, name, ins, out, body, decls, ref, gen=None, ulps=None,
                  source='', tgsize=N, full=None, abstol=None, absent=False, out_init=None,
-                 scalars=None):
+                 scalars=None, host_limit=None):
         self.name = name
         self.ins = ins
         self.out = out
@@ -108,6 +109,9 @@ class Case:
         # Packed scalar arguments: the kernel is (out, scalars...), and the
         # backend passes the scalars in a buffer bound after out.
         self.scalars = scalars
+        # Needs something this device's OS lacks (a reason): a rejection is
+        # then HOST-LIMIT, not a failure.
+        self.host_limit = host_limit
 
 
 def kernel_ir(c):
@@ -270,8 +274,10 @@ def run_group(cases, llc, queue, tmp, log):
         values = data[c.name]
         reply = run_case(c, mine, [pack(t, v) for t, v in zip(c.ins, values)], queue)
         if not reply.get('ok'):
-            results[c.name] = {'status': 'ABSENT' if c.absent else 'REJECTED',
-                               'detail': reply.get('error', '')}
+            results[c.name] = {'status': 'ABSENT' if c.absent else
+                               'HOST-LIMIT' if c.host_limit else 'REJECTED',
+                               'detail': (c.host_limit + ': ' if c.host_limit else '') +
+                               reply.get('error', '')}
             continue
         if c.absent:
             results[c.name] = {'status': 'MISMATCH', 'detail': 'expected the device to reject it'}
@@ -1013,6 +1019,123 @@ def group_memory():
     return cases
 
 
+def matmul(X, Y, tx=False):
+    """Row-major 8x8 product; tx transposes X first."""
+    at = (lambda r, k: X[k * 8 + r]) if tx else (lambda r, k: X[r * 8 + k])
+    return [sum(at(r, k) * Y[k * 8 + c] for k in range(8)) for r in range(8) for c in range(8)]
+
+
+def matrix_case(name, ty, a_strides, c_init, tx, tg=False):
+    t, sfx = ('float', 'f32') if ty == 'f32' else ('half', 'f16')
+    asp = 3 if tg else 1
+    vt = '<64 x %s>' % t
+    load = 'air.simdgroup_matrix_8x8_load.v64%s.p%d%s' % (sfx, asp, sfx)
+    store = 'air.simdgroup_matrix_8x8_store.v64%s.p1%s' % (sfx, sfx)
+    mma = 'air.simdgroup_matrix_8x8_multiply_accumulate.v64{0}.v64{0}.v64{0}.v64{0}'.format(sfx)
+    fill = 'air.simdgroup_matrix_8x8_init_filled.v64%s.%s' % (sfx, sfx)
+    rs = '<2 x i64> <i64 8, i64 8>, <2 x i64> <i64 1, i64 8>, <2 x i64> zeroinitializer'
+    as_ = '<2 x i64> <i64 8, i64 8>, <2 x i64> <i64 %d, i64 %d>, <2 x i64> zeroinitializer' % a_strides
+    decls = {'declare %s @%s(ptr addrspace(%d), <2 x i64>, <2 x i64>, <2 x i64>)' % (vt, load, asp),
+             'declare void @%s(%s, ptr addrspace(1), <2 x i64>, <2 x i64>, <2 x i64>)' % (store, vt),
+             'declare %s @%s(%s, %s, %s)' % (vt, mma, vt, vt, vt),
+             'declare %s @%s(%s)' % (vt, fill, t)}
+    if tg:
+        decls |= TG_DECLS
+        stage = ('@mtg_a_{n} = internal addrspace(3) global [64 x {t}] undef, align 4\n'
+                 '@mtg_b_{n} = internal addrspace(3) global [64 x {t}] undef, align 4\n').format(n=name, t=t)
+        copy = ('  %lt = call { i32, i32, i32 } @air.thread_position_in_threadgroup.v3i32()\n'
+                '  %lid = extractvalue { i32, i32, i32 } %lt, 0\n'
+                '  %l2 = shl i32 %lid, 1\n'
+                + ''.join(
+                    '  %%sa{k} = getelementptr {t}, ptr addrspace(1) %%in0, i32 %%i{k}\n'
+                    '  %%va{k} = load {t}, ptr addrspace(1) %%sa{k}\n'
+                    '  %%da{k} = getelementptr [64 x {t}], ptr addrspace(3) @mtg_a_{n}, i32 0, i32 %%i{k}\n'
+                    '  store {t} %%va{k}, ptr addrspace(3) %%da{k}\n'
+                    '  %%sb{k} = getelementptr {t}, ptr addrspace(1) %%in1, i32 %%i{k}\n'
+                    '  %%vb{k} = load {t}, ptr addrspace(1) %%sb{k}\n'
+                    '  %%db{k} = getelementptr [64 x {t}], ptr addrspace(3) @mtg_b_{n}, i32 0, i32 %%i{k}\n'
+                    '  store {t} %%vb{k}, ptr addrspace(3) %%db{k}\n'.format(k=k, t=t, n=name)
+                    .replace('%%', '%') for k in (0, 1))
+                .replace('%i0', '%l2').replace('%i1', '%l2p')
+                .replace('  %sa0', '  %l2p = add i32 %l2, 1\n  %sa0', 1)
+                + '  call void @air.wg.barrier(i32 2, i32 1)\n')
+        pa, pb = '@mtg_a_%s' % name, '@mtg_b_%s' % name
+    else:
+        stage, copy, pa, pb = '', '', '%in0', '%in1'
+    if c_init:
+        cinit = '  %mc = call {vt} @{fill}({t} 0.0)\n  %mc1 = fadd {vt} %mc, splat ({t} 2.0)\n'.format(vt=vt, fill=fill, t=t)
+        cname = '%mc1'
+    else:
+        cinit = '  %mc = call {vt} @{fill}({t} 0.0)\n'.format(vt=vt, fill=fill, t=t)
+        cname = '%mc'
+    body = (stage +
+            'define void @{n}(ptr addrspace(1) %in0, ptr addrspace(1) %in1, ptr addrspace(1) %out) {{\n'
+            'entry:\n'.format(n=name) + copy +
+            '  %ma = call {vt} @{load}(ptr addrspace({asp}) {pa}, {as_})\n'
+            '  %mb = call {vt} @{load}(ptr addrspace({asp}) {pb}, {rs})\n'.format(
+                vt=vt, load=load, asp=asp, pa=pa, pb=pb, as_=as_, rs=rs) + cinit +
+            '  %r = call {vt} @{mma}({vt} %ma, {vt} %mb, {vt} {c})\n'
+            '  call void @{store}({vt} %r, ptr addrspace(1) %out, {rs})\n'
+            '  ret void\n}}'.format(vt=vt, mma=mma, c=cname, store=store, rs=rs))
+    small = lambda i, r: float(r.randrange(-4, 5))
+    extra = 2.0 if c_init else 0.0
+    c = Case(name, [ty, ty], ty, None, decls,
+             lambda i, v: matmul(v[0], v[1], tx)[i] + extra, [small, small],
+             0 if ty == 'f32' else None, 'Metal.jl simd.jl (AIR 2.8 matrix signatures)',
+             tgsize=32)
+    if ty == 'f16':
+        c.abstol = 0.0
+    c.full = body
+    return c
+
+
+def group_matrix():
+    """SIMD-group 8x8 matrices: load, multiply-accumulate, store."""
+    return [
+        matrix_case('mma_f32', 'f32', (1, 8), False, False),
+        matrix_case('mma_f32_acc', 'f32', (1, 8), True, False),
+        matrix_case('mma_f32_transposed_a', 'f32', (8, 1), False, True),
+        matrix_case('mma_f16', 'f16', (1, 8), False, False),
+        matrix_case('mma_f32_threadgroup', 'f32', (1, 8), False, False, tg=True),
+    ]
+
+
+def group_misc():
+    """Device-coherent memory, mul_hi, the AIR 2.9 atomic form."""
+    cases = []
+    cases.append(full_case(
+        'device_coherent_load_store', ['i32'], 'i32', lambda i, v: s32(v[0][i] + 9),
+        '%pa = getelementptr i32, ptr addrspace(1) %in0, i32 %tid\n'
+        '%a = call i32 @air.load.device_coherent.i32.p1i32(ptr addrspace(1) %pa)\n'
+        '%r = add i32 %a, 9\n'
+        '%po = getelementptr i32, ptr addrspace(1) %out, i32 %tid\n'
+        'call void @air.store.device_coherent.i32.p1i32(i32 %r, ptr addrspace(1) %po)\nret void',
+        {'declare i32 @air.load.device_coherent.i32.p1i32(ptr addrspace(1))',
+         'declare void @air.store.device_coherent.i32.p1i32(i32, ptr addrspace(1))'},
+        source='dxmt CreateDeviceCoherentLoad/Store'))
+    for sfx, ty, ref in (('s.i32', 'i32', lambda a, b: (a * b) >> 32),
+                         ('u.i32', 'u32', lambda a, b: (a * b) >> 32)):
+        cases.append(int_case('air_mul_hi_' + sfx.replace('.', '_'), 'air.mul_hi.' + sfx, ty, 2,
+                              lambda i, v, ref=ref: ref(v[0][i], v[1][i])))
+    # AIR 2.9 compare-and-exchange, with memory flags (8 operands); the
+    # backend raises the module's AIR version for it.
+    c = full_case(
+        'cmpxchg_air29_flags', ['i32'], 'i32', lambda i, v: v[0][i],
+        '%exp = alloca i32\n'
+        'store i32 %tid, ptr %exp\n'
+        '%sp = getelementptr i32, ptr addrspace(1) %out, i32 %tid\n'
+        '%old = call i32 @air.atomic.global.cmpxchg.weak.i32(ptr addrspace(1) %sp, ptr %exp, i32 %a0, i32 0, i32 0, i32 2, i32 1, i1 true)\n'
+        'ret void',
+        {'declare i32 @air.atomic.global.cmpxchg.weak.i32(ptr addrspace(1), ptr, i32, i32, i32, i32, i32, i1)'},
+        source='floor metal_atomic.hpp (MSL 4.1 flags operand)')
+    c.host_limit = 'needs MSL 4.1 (AIR 2.9)'
+    c.full = c.full.replace('entry:\n', 'entry:\n  %p0 = getelementptr i32, ptr addrspace(1) %in0, i32 0\n', 1)
+    c.full = c.full.replace('%exp = alloca i32', '%pa0 = getelementptr i32, ptr addrspace(1) %in0, i32 %tid\n  %a0 = load i32, ptr addrspace(1) %pa0\n  %exp = alloca i32')
+    c.out_init = list(range(N))
+    cases.append(c)
+    return cases
+
+
 GROUPS = {
     'llvm-math-f32': group_llvm_math_f32,
     'air-math-f32': group_air_math_f32,
@@ -1024,6 +1147,8 @@ GROUPS = {
     'sysvals': group_sysvals,
     'types': group_types,
     'memory': group_memory,
+    'matrix': group_matrix,
+    'misc': group_misc,
 }
 
 
@@ -1058,7 +1183,7 @@ def main():
     print('summary: ' + ', '.join('%s %d' % kv for kv in sorted(counts.items())))
     if args.json:
         json.dump(all_results, open(args.json, 'w'), indent=1)
-    return 1 if set(counts) - {'PASS', 'ABSENT'} else 0
+    return 1 if set(counts) - {'PASS', 'ABSENT', 'HOST-LIMIT'} else 0
 
 
 if __name__ == '__main__':
