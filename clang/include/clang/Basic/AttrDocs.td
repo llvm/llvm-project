@@ -4843,6 +4843,139 @@ struct string {
 
 This attribute is inspired by the C++ committee paper [P0936R0](http://wg21.link/p0936r0), but does not affect whether temporary objects
 have their lifetimes extended.
+
+**Borrowing a place of the argument.** For the lifetime safety analysis
+(``-Wlifetime-safety``), the attribute may name *which* storage of the
+argument the result borrows:
+
+* ``[[clang::lifetimebound]]`` -- the argument object itself. The result stays
+  valid for as long as the object is alive, even if the object is modified.
+* ``[[clang::lifetimebound(interior)]]`` -- storage *owned* by the argument
+  (a container's buffer, a string's characters, a ``unique_ptr``'s pointee).
+  Such results are additionally invalidated by operations that modify what the
+  object owns, see ``[[clang::invalidates]]``.
+* ``[[clang::lifetimebound(place)]]`` -- a named place of the argument
+  declared with ``[[clang::places]]``.
+
+```c++
+struct Arena {
+  char *Alloc(unsigned n) [[clang::lifetimebound(interior)]]; // into the arena's storage
+  const Arena &Self() const [[clang::lifetimebound]];         // the arena object
+  void Reset() [[clang::invalidates(interior)]];              // frees the storage
+};
+
+void f(Arena &a) {
+  char *p = a.Alloc(8);
+  const Arena &s = a.Self();
+  a.Reset();
+  s.Alloc(1); // OK: `s` refers to the arena object, which is still alive.
+  p[0] = 1;   // warning: 'a' is later invalidated
+}
+```
+
+For standard library types annotated ``[[gsl::Owner]]`` the analysis knows
+which accessors return interior borrows (``begin()``, ``data()``,
+``operator[]``, ``get()``, conversions to views, ...) and which operations
+invalidate them (``push_back()``, ``clear()``, ``reset()``, ...) without
+annotations.
+  }];
+}
+
+def LifetimeInvalidatesDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``invalidates`` attribute on a pointer or reference parameter, or on the
+implicit object parameter of a member function, declares that calling the
+function invalidates pointers, references, iterators and views that were
+previously obtained from that argument. It is the counterpart of
+``[[clang::lifetimebound]]`` for the lifetime safety analysis
+(``-Wlifetime-safety``): ``lifetimebound`` says where a borrow comes from,
+``invalidates`` says when it ends.
+
+Which borrows die depends on the form:
+
+* ``[[clang::invalidates]]`` -- the argument object itself is destroyed or
+  released. Everything that refers to it or to what it owns dangles, like after
+  ``delete``.
+* ``[[clang::invalidates(interior)]]`` -- the object stays alive but the
+  storage it *owns* may have moved or been freed (like ``std::vector::push_back``
+  or ``std::unique_ptr::reset``). Borrows obtained with
+  ``lifetimebound(interior)`` or a named place dangle; borrows of the object
+  itself (``lifetimebound``) and of its sub-objects stay valid.
+* ``[[clang::invalidates(place, ...)]]`` -- only the named places declared with
+  ``[[clang::places]]`` (and the fields bound to them with ``[[clang::place]]``)
+  are invalidated. A borrow of an unspecified interior
+  (``lifetimebound(interior)``) is conservatively considered invalidated too.
+
+```c++
+void Grow(std::vector<int> &v [[clang::invalidates(interior)]]);
+void Release(std::vector<int> *v [[clang::invalidates]]);
+
+void f() {
+  std::vector<int> v;
+  std::vector<int> *pv = &v;
+  auto it = v.begin();
+  Grow(v);     // warning: 'v' is later invalidated ...
+  pv->size();  // OK: the vector object is alive.
+  *it;         // ... note: later used here
+}
+```
+
+Inside a member function, calling a method annotated ``invalidates`` on
+``*this`` (or modifying a field in a way that invalidates it) is itself an
+invalidation that the enclosing method must declare; see
+``[[clang::places]]``.
+  }];
+}
+
+def LifetimePlacesDocs : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+The ``places`` attribute on a class declares named *places*: regions of storage
+owned by an object that can be borrowed and invalidated independently of each
+other. Accessors name the place their result borrows with
+``[[clang::lifetimebound(place)]]`` and mutators name the places they
+invalidate with ``[[clang::invalidates(place)]]``, so that the lifetime safety
+analysis (``-Wlifetime-safety``) does not report a borrow of one place as
+invalidated by a modification of another.
+
+A field may be bound to a place with ``[[clang::place(name)]]``. Borrows into
+that field (``t.key_storage_.begin()``) then belong to the place, and the
+class's own methods are checked against their contracts: a method that
+invalidates a bound field must declare the place, and a method declared
+``lifetimebound(place)`` must only return borrows of that place.
+
+```c++
+struct [[clang::places(keys, values)]] SymbolTable {
+  [[clang::place(keys)]]   std::vector<std::string> key_storage_;
+  [[clang::place(values)]] std::vector<int>         value_storage_;
+
+  std::string_view     Key(int i) const [[clang::lifetimebound(keys)]];
+  std::span<const int> Values()   const [[clang::lifetimebound(values)]];
+
+  int  Intern(std::string_view key) [[clang::invalidates(keys)]];
+  void Clear()                      [[clang::invalidates(interior)]];  // every place
+};
+
+void f(SymbolTable &t) {
+  std::string_view     k = t.Key(0);
+  std::span<const int> v = t.Values();
+  t.Intern("x"); // warning: 't' is later invalidated ...
+  v.size();      // OK: 'values' is a different place.
+  k.size();      // ... note: later used here
+}
+```
+
+The name ``interior`` is reserved for the anonymous interior of any object and
+cannot be declared as a place.
+  }];
+}
+
+def LifetimePlaceDocs : Documentation {
+  let Category = DocCatField;
+  let Content = [{
+The ``place`` attribute binds a non-static data member to one of the places
+declared on its class with ``[[clang::places]]``. See ``[[clang::places]]``.
   }];
 }
 

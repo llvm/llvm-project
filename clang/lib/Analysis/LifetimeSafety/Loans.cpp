@@ -7,8 +7,24 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/Analyses/LifetimeSafety/Loans.h"
+#include "llvm/ADT/STLExtras.h"
 
 namespace clang::lifetimes::internal {
+
+void PathElement::dump(llvm::raw_ostream &OS) const {
+  switch (K) {
+  case Kind::Field:
+    OS << "." << getFieldDecl()->getNameAsString();
+    return;
+  case Kind::Interior:
+    OS << ".*";
+    return;
+  case Kind::Place:
+    OS << "." << getPlaceName()->getName();
+    return;
+  }
+  llvm_unreachable("unknown PathElement kind");
+}
 
 void AccessPath::dump(llvm::raw_ostream &OS) const {
   if (const clang::ValueDecl *VD = getAsValueDecl())
@@ -29,12 +45,48 @@ void AccessPath::dump(llvm::raw_ostream &OS) const {
     llvm_unreachable("access path base invalid");
   for (const auto &E : Elements)
     E.dump(OS);
+  if (Truncated)
+    OS << "...";
 }
 
 void Loan::dump(llvm::raw_ostream &OS) const {
   OS << getID() << " (Path: ";
   Path.dump(OS);
   OS << ")";
+}
+
+const Loan *LoanManager::getOrCreateProjectedLoan(LoanID BaseLoanID,
+                                                  PathElement Element) {
+  auto [It, Inserted] = ProjectedLoans.try_emplace({BaseLoanID, Element});
+  if (!Inserted)
+    return It->second;
+
+  const Loan *Base = getLoan(BaseLoanID);
+  const AccessPath &BasePath = Base->getAccessPath();
+
+  const Loan *Result;
+  if (BasePath.isTruncated()) {
+    // Already truncated: it stands for every extension, including this one.
+    Result = Base;
+  } else {
+    // A field can only recur in a path through a recursive type, and the
+    // number of interior levels is bounded by the static nesting of owners;
+    // either growing without bound means a loop over a data-dependent
+    // structure. Truncate instead of growing.
+    bool Truncate =
+        Element.isField()
+            ? llvm::is_contained(BasePath.getElements(), Element)
+            : llvm::count_if(BasePath.getElements(), [](const PathElement &E) {
+                return E.isInteriorOrPlace();
+              }) >= MaxInteriorDepth;
+    Result = createLoan(Truncate ? AccessPath::getTruncated(BasePath)
+                                 : AccessPath(BasePath, Element),
+                        Base->getIssueExpr());
+    BaseLoans[Result->getID()] = BaseLoanID;
+  }
+  // `It` is still valid: `createLoan` does not touch `ProjectedLoans`.
+  It->second = Result;
+  return Result;
 }
 
 const PlaceholderBase *

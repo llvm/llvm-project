@@ -367,36 +367,46 @@ void IteratorInvalidatedThroughPointerParameter(std::vector<int> *v) { // expect
 }
 
 void ParenthesizedContainerInvalidatesIterator() {
-  // FIXME: Support invalidation through non-DRE lvalue expressions.
   std::vector<int> v;
-  auto it = v.begin();
-  (v).push_back(42);
-  use(it);
+  auto it = v.begin(); // expected-warning {{local variable 'v' is later invalidated}} \
+                       // expected-note {{result of call to 'begin' aliases the storage of local variable 'v'}}
+  (v).push_back(42);   // expected-note {{local variable 'v' is invalidated here}}
+  use(it);             // expected-note {{later used here}}
 }
 
 } // namespace InvalidatingThroughContainerAliases
 
+// Modifying a container invalidates borrows of what it owns (its interior:
+// iterators, element references, `data()`), not borrows of the container
+// object itself.
 namespace ContainerObjectAliases {
-// FIXME: Distinguish owner-borrow from content-borrow.
-void PointerParameterObjectUseIsOk(std::vector<int> *v) { // expected-warning {{parameter 'v' is later invalidated}}
-  v->push_back(42); // expected-note {{parameter 'v' is invalidated here}}
-  use(v);           // expected-note {{later used here}}
+void PointerParameterObjectUseIsOk(std::vector<int> *v) {
+  v->push_back(42);
+  use(v);
 }
 
-// FIXME: Distinguish owner-borrow from content-borrow.
 void LocalPointerAliasObjectUseIsOk() {
   std::vector<int> vv;
-  std::vector<int> *v = &vv; // expected-warning {{local variable 'vv' is later invalidated}}
-  v->push_back(42);          // expected-note {{local variable 'vv' is invalidated here}}
-  use(*v);                   // expected-note {{later used here}}
+  std::vector<int> *v = &vv;
+  v->push_back(42);
+  use(*v);
 }
 
-// FIXME: Distinguish owner-borrow from content-borrow.
 void LocalReferenceAliasObjectUseIsOk() {
   std::vector<int> vv;
-  std::vector<int> &v = vv; // expected-warning {{local variable 'vv' is later invalidated}}
-  v.push_back(42);          // expected-note {{local variable 'vv' is invalidated here}}
-  use(v);                   // expected-note {{later used here}}
+  std::vector<int> &v = vv;
+  v.push_back(42);
+  use(v);
+}
+
+void ObjectBorrowSurvivesButInteriorDoesNot() {
+  std::vector<int> vv;
+  std::vector<int> *v = &vv;
+  const int *data = vv.data(); // expected-warning {{local variable 'vv' is later invalidated}} \
+                               // expected-note {{result of call to 'data' aliases the storage of local variable 'vv'}}
+  v->push_back(42);            // expected-note {{local variable 'vv' is invalidated here}}
+  use(*v);                     // OK: the container object is still alive.
+  use(*data);                  // expected-note {{later used here}}
 }
 } // namespace ContainerObjectAliases
 
@@ -436,20 +446,10 @@ void SelfInvalidatingMap() {
   // Therefore the following is safe in practice.
   // On the other hand, std::flat_map (since C++23) does not provide pointer stability on
   // insertion and following is unsafe for this container.
-  // FIXME: The warnings below are false positives (self-invalidation of the Owner).
-  // Modifying a container should not invalidate the container object itself.
-  // To resolve this, we need to:
-  // 1. Distinguish owner-borrow (borrowing the container object) from content-borrow (borrowing elements inside the container).
-  // 2. Make AccessPaths more precise to reason at element/field granularity rather than treating the whole container as a single storage location.
-  mp[1] = "42"; // expected-warning {{local variable 'mp' is later invalidated}} \
-                // expected-note {{local variable 'mp' is invalidated here}} \
-                // expected-note {{later used here}}
+  mp[1] = "42";  // OK: modifying the container does not invalidate the container object itself.
   mp[2] = mp[1]; // expected-warning {{local variable 'mp' is later invalidated}} \
-                 // expected-warning {{local variable 'mp' is later invalidated}} \
                  // expected-note {{local variable 'mp' is invalidated here}} \
                  // expected-note {{result of call to 'operator[]' aliases the storage of local variable 'mp' because the implicit object parameter is inferred as lifetimebound}} \
-                 // expected-note {{later used here}} \
-                 // expected-note {{local variable 'mp' is invalidated here}} \
                  // expected-note {{later used here}}
 }
 
@@ -492,14 +492,14 @@ struct S {
   std::vector<std::string> strings1;
   std::vector<std::string> strings2;
 };
-// FIXME: Make Paths more precise to reason at field granularity.
-//        Currently we only detect invalidations to direct declarations and not members.
+// Loans are field-sensitive: an iterator into `s.strings1` borrows
+// `s.strings1.*` and is only invalidated by modifications of `s.strings1`.
 void Invalidate1Use1IsInvalid() {
-  // FIXME: Detect this.
   S s;
-  auto it = s.strings1.begin();
-  s.strings1.push_back("1");
-  *it;
+  auto it = s.strings1.begin(); // expected-warning {{local variable 's' is later invalidated}} \
+                                // expected-note {{result of call to 'begin' aliases the storage of local variable 's'}}
+  s.strings1.push_back("1");    // expected-note {{local variable 's' is invalidated here}}
+  *it;                          // expected-note {{later used here}}
 }
 void Invalidate2Use1IsOk() {
     S s;
@@ -508,23 +508,29 @@ void Invalidate2Use1IsOk() {
     *it;
 }
 void ConditionalContainerInvalidatesIterator(bool flag) {
-    // FIXME: Support invalidation through conditional lvalue expressions.
     std::vector<int> v1, v2;
-    auto it = v1.begin();
-    (flag ? v1 : v2).push_back(42);
-    use(it);
+    auto it = v1.begin();           // expected-warning {{local variable 'v1' is later invalidated}} \
+                                    // expected-note {{result of call to 'begin' aliases the storage of local variable 'v1'}}
+    (flag ? v1 : v2).push_back(42); // expected-note {{local variable 'v1' is invalidated here}}
+    use(it);                        // expected-note {{later used here}}
 }
 void ConditionalFieldInvalidatesIterator(bool flag) {
-    // FIXME: Support conditional invalidation through field expressions.
     S s;
-    auto it = s.strings1.begin();
-    (flag ? s.strings1 : s.strings2).push_back("1");
-    *it;
+    auto it = s.strings1.begin();                     // expected-warning {{local variable 's' is later invalidated}} \
+                                                      // expected-note {{result of call to 'begin' aliases the storage of local variable 's'}}
+    (flag ? s.strings1 : s.strings2).push_back("1");  // expected-note {{local variable 's' is invalidated here}}
+    *it;                                              // expected-note {{later used here}}
 }
-// FIXME: Requires field-sensitive AccessPaths to fix.
 void Invalidate1Use2ViaRefIsOk() {
     S s;
-    auto it = s.strings2.begin(); // expected-warning {{local variable 's' is later invalidated}} \
+    auto it = s.strings2.begin();
+    auto& strings1 = s.strings1;
+    strings1.push_back("1");
+    *it;
+}
+void Invalidate1Use1ViaRefIsInvalid() {
+    S s;
+    auto it = s.strings1.begin(); // expected-warning {{local variable 's' is later invalidated}} \
                                   // expected-note {{result of call to 'begin' aliases the storage of local variable 's'}}
     auto& strings1 = s.strings1;
     strings1.push_back("1");      // expected-note {{local variable 's' is invalidated here}}
@@ -536,12 +542,17 @@ void Invalidate1UseSIsOk() {
   s.strings2.push_back("1");
   use(*p);
 }
-// FIXME: Distinguish owner-borrow from content-borrow.
+void PointerToSubobjectSurvivesInvalidation() {
+  S s;
+  std::vector<std::string>* p = &s.strings1;
+  s.strings1.push_back("1");
+  use(*p);
+}
 void PointerToContainerIsOk() {
   std::vector<std::string> s;
-  std::vector<std::string>* p = &s; // expected-warning {{local variable 's' is later invalidated}}
-  p->push_back("1");                // expected-note {{local variable 's' is invalidated here}}
-  use(*p);                          // expected-note {{later used here}}
+  std::vector<std::string>* p = &s;
+  p->push_back("1");
+  use(*p);
 }
 void IteratorFromPointerToContainerIsInvalidated() {
   std::vector<std::string> s;
@@ -551,13 +562,19 @@ void IteratorFromPointerToContainerIsInvalidated() {
   p->push_back("1");                // expected-note {{local variable 's' is invalidated here}}
   *it;                              // expected-note {{later used here}}
 }
-// FIXME: Distinguish invalidating an element's contents from invalidating
-// iterators into the outer container.
+// Assigning to an element invalidates what the element owns (`subdirs.*.*`),
+// not the iterators into the outer container (`subdirs.*`).
 void ChangingRegionOwnedByContainerIsOk() {
   std::vector<std::string> subdirs;
-  for (std::string& path : subdirs) // expected-warning {{local variable 'subdirs' is later invalidated}} expected-note {{later used here}} \
-                                    // expected-note {{result of call to 'begin' aliases the storage of local variable 'subdirs'}}
-    path = std::string();           // expected-note {{local variable 'subdirs' is invalidated here}}
+  for (std::string& path : subdirs)
+    path = std::string();
+}
+void ViewIntoElementIsInvalidatedByElementAssignment() {
+  std::vector<std::string> subdirs = {"a"};
+  std::string_view v = subdirs[0]; // expected-warning {{local variable 'subdirs' is later invalidated}} \
+                                   // expected-note {{result of call to 'operator[]' aliases the storage of local variable 'subdirs'}}
+  subdirs[0] = std::string();      // expected-note {{local variable 'subdirs' is invalidated here}}
+  use(v);                          // expected-note {{later used here}}
 }
 
 } // namespace ContainersAsFields
@@ -565,13 +582,15 @@ void ChangingRegionOwnedByContainerIsOk() {
 namespace InvalidatedField {
 std::string StableString;
 
-// FIXME: Distinguish owner-borrow from interior-borrow.
+// `clear()` invalidates what the string owns, not the string object: a stored
+// pointer to the string stays valid, a stored pointer into its characters does
+// not.
 struct SinkOwnerBorrow {
-  std::string *dest_; // expected-note {{this field dangles}}
+  std::string *dest_;
 
-  SinkOwnerBorrow(std::string *dest, int n) : dest_(dest) { // expected-warning {{parameter 'dest' escapes to the field 'dest_' and is later invalidated}}
+  SinkOwnerBorrow(std::string *dest, int n) : dest_(dest) {
     if (n > 0)
-      dest->clear(); // expected-note {{parameter 'dest' is invalidated here}}
+      dest->clear();
   }
 };
 
@@ -791,16 +810,11 @@ void MapSubscriptMultipleCallsDoesNotInvalidate(std::map<int, int> mp, int a, in
 }
 
 void FlatMapSubscriptMultipleCallsInvalidate(std::flat_map<int, int> mp, int a, int b) {
-    // FIXME: The duplicate warning below is a false positive caused by self-invalidation of the Owner 'mp'.
-    // While the warning on the temporary reference returned by mp[a] is a true positive (it dangles),
-    // the second warning on 'mp' itself is redundant and incorrect.
-    // Resolving this requires distinguishing owner-borrow from content-borrow.
+    // The reference returned by the first `mp[a]` is invalidated by the second
+    // subscript (a flat_map may reallocate on insertion).
     PrintMax(mp[a], mp[b]); // expected-warning {{parameter 'mp' is later invalidated}} \
-                            // expected-warning {{parameter 'mp' is later invalidated}} \
                             // expected-note {{parameter 'mp' is invalidated here}} \
-                            // expected-note 2 {{result of call to 'operator[]' aliases the storage of parameter 'mp' because the implicit object parameter is inferred as lifetimebound}} \
-                            // expected-note {{later used here}} \
-                            // expected-note {{parameter 'mp' is invalidated here}} \
+                            // expected-note {{result of call to 'operator[]' aliases the storage of parameter 'mp' because the implicit object parameter is inferred as lifetimebound}} \
                             // expected-note {{later used here}}
 }
 
@@ -944,12 +958,19 @@ struct StringOwner {
   std::string s, t;
 };
 
-// FIXME: False-positive
+// Destroying one field does not invalidate pointers into a sibling field.
+void member_destructor_does_not_invalidate_sibling_pointer() {
+  StringOwner owner = {"42", "43"};
+  const char *p = owner.s.data();
+  owner.t.~basic_string();
+  use(*p);
+}
+
 void member_destructor_invalidates_pointer() {
   StringOwner owner = {"42", "43"};
   const char *p = owner.s.data(); // expected-warning {{local variable 'owner' is later invalidated}} \
                                   // expected-note {{result of call to 'data' aliases the storage of local variable 'owner'}}
-  owner.t.~basic_string();        // expected-note {{local variable 'owner' is invalidated here}}
+  owner.s.~basic_string();        // expected-note {{local variable 'owner' is invalidated here}}
   use(*p);                        // expected-note {{later used here}}
 }
 

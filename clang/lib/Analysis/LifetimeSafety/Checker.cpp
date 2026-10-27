@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/Analyses/LifetimeSafety/Checker.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
@@ -62,6 +63,11 @@ private:
   llvm::DenseMap<const ParmVarDecl *, EscapingTarget> NoescapeWarningsMap;
   llvm::DenseMap<const FieldDecl *, const Expr *> FieldOriginEscapesMap;
   llvm::DenseSet<const Decl *> VerifiedLiftimeboundEscapes;
+  /// Place-contract violations already reported, to report each site once.
+  llvm::DenseSet<const InvalidateOriginFact *> UndeclaredInvalidations;
+  llvm::DenseSet<std::pair<const Expr *, LoanID>> BorrowViolations;
+  /// Cached `getContractMethod()` result.
+  std::optional<const CXXMethodDecl *> ContractMethod;
   const LoanPropagationAnalysis &LoanPropagation;
   const MovedLoansAnalysis &MovedLoans;
   const LiveOriginsAnalysis &LiveOrigins;
@@ -100,10 +106,15 @@ public:
       for (const Fact *F : FactMgr.getFacts(B))
         if (const auto *EF = F->getAs<ExpireFact>())
           checkExpiry(EF);
-        else if (const auto *IOF = F->getAs<InvalidateOriginFact>())
+        else if (const auto *IOF = F->getAs<InvalidateOriginFact>()) {
           checkInvalidation(IOF);
-        else if (const auto *OEF = F->getAs<OriginEscapesFact>())
+          if (LSOpts.CheckPlaceContracts)
+            checkInvalidationContract(IOF);
+        } else if (const auto *OEF = F->getAs<OriginEscapesFact>()) {
           checkAnnotations(OEF);
+          if (LSOpts.CheckPlaceContracts)
+            checkBorrowContract(OEF);
+        }
     issuePendingWarnings();
     suggestAnnotations();
     if (LSOpts.CheckFieldOriginEscape)
@@ -242,13 +253,217 @@ public:
       }
   }
 
-  /// Checks for use-after-invalidation errors when a container is modified.
+  /// Returns true if invalidating `Invalidated` in the given form kills a
+  /// borrow of `Borrowed`. See `InvalidateOriginFact::Form`.
   ///
-  /// When a container is invalidated, loans pointing into its interior are
-  /// invalidated. For example, if container `v` is invalidated, iterators with
-  /// loans to `v.*` are invalidated. This method finds live origins holding
-  /// such loans and reports warnings. A loan is invalidated if its path extends
-  /// an invalidated container's path (e.g., `v.*` extends `v`).
+  /// For `t` with field `ks_` bound to place `keys`:
+  ///
+  ///   borrowed   | Object | Interior | Places(keys)
+  ///   -----------+--------+----------+-------------
+  ///   t          | dies   |          |
+  ///   t.ks_      | dies   |          |               (sub-object)
+  ///   t.ks_.*    | dies   | dies     | dies          (bound field)
+  ///   t.vs_.*    | dies   | dies     |
+  ///   t.keys     | dies   | dies     | dies
+  ///   t.values   | dies   | dies     |
+  ///   t.*        | dies   | dies     | dies          (unknown interior)
+  bool isKilledBy(const AccessPath &Borrowed, const AccessPath &Invalidated,
+                  const InvalidateOriginFact *IOF) const {
+    switch (IOF->getForm()) {
+    case InvalidateOriginFact::Form::Object:
+      return Invalidated.isPrefixOf(Borrowed);
+    case InvalidateOriginFact::Form::Interior:
+      // Everything owned by the object, i.e. reached through an interior or
+      // place element below it; not the object or its sub-objects.
+      return Invalidated.isPrefixOf(Borrowed) &&
+             Borrowed.hasInteriorFrom(Invalidated.getElements().size());
+    case InvalidateOriginFact::Form::Places: {
+      for (const IdentifierInfo *Place : IOF->getPlaces()) {
+        AccessPath PlacePath(Invalidated, PathElement::getPlace(*Place));
+        if (PlacePath.coversPrefixOf(Borrowed))
+          return true;
+        // The fields bound to the place: their interior is the place's.
+        for (const FieldDecl *FD :
+             getFieldsBoundToPlace(IOF->getRecord(), Place)) {
+          AccessPath FieldPath(Invalidated, PathElement::getField(*FD));
+          if (FieldPath.isPrefixOf(Borrowed) &&
+              Borrowed.hasInteriorFrom(FieldPath.getElements().size()))
+            return true;
+        }
+      }
+      return false;
+    }
+    }
+    llvm_unreachable("unknown invalidation form");
+  }
+
+  /// Returns the fields of `RD` (and its bases) bound to `Place` with
+  /// [[clang::place(Place)]].
+  static llvm::SmallVector<const FieldDecl *, 2>
+  getFieldsBoundToPlace(const CXXRecordDecl *RD, const IdentifierInfo *Place) {
+    llvm::SmallVector<const FieldDecl *, 2> Result;
+    if (!RD || !(RD = RD->getDefinition()))
+      return Result;
+    auto Collect = [&](const CXXRecordDecl *R) {
+      for (const FieldDecl *FD : R->fields())
+        if (const auto *A = FD->getAttr<LifetimePlaceAttr>();
+            A && A->getPlace() == Place)
+          Result.push_back(FD);
+      return true;
+    };
+    Collect(RD);
+    RD->forallBases(Collect);
+    return Result;
+  }
+
+  //===------------------------------------------------------------------===//
+  // Place contracts: the method being analyzed is checked against its own
+  // [[clang::invalidates]] / [[clang::lifetimebound(place)]] annotations.
+  // Only classes that opted in by declaring places or using `invalidates` are
+  // checked. See [[clang::places]].
+  //===------------------------------------------------------------------===//
+
+  /// Returns the method being analyzed if its class takes part in place
+  /// contracts, null otherwise. Constructors and destructors are exempt: they
+  /// build and tear down every place.
+  const CXXMethodDecl *getContractMethod() {
+    if (ContractMethod)
+      return *ContractMethod;
+    ContractMethod = nullptr;
+    const auto *MD = dyn_cast_if_present<CXXMethodDecl>(FD);
+    if (!MD || !MD->isInstance() || isa<CXXConstructorDecl>(MD) ||
+        isa<CXXDestructorDecl>(MD))
+      return nullptr;
+    const CXXRecordDecl *RD = MD->getParent()->getDefinition();
+    if (!RD)
+      return nullptr;
+    bool Annotated = RD->hasAttr<LifetimePlacesAttr>();
+    for (const CXXMethodDecl *M : RD->methods()) {
+      if (Annotated)
+        break;
+      Annotated =
+          getImplicitObjectParamInvalidatesAttr(M) ||
+          !getPlaceRef(getImplicitObjectParamLifetimeBoundAttr(M)).isObject();
+    }
+    if (Annotated)
+      ContractMethod = MD;
+    return *ContractMethod;
+  }
+
+  /// The place of `*this` a path into the implicit object refers to, by its
+  /// first projection: a named place, a field (bound to a place or not), the
+  /// anonymous interior, or the object itself (no projection).
+  struct ThisPlace {
+    const IdentifierInfo *Place = nullptr;
+    const FieldDecl *Field = nullptr;
+    bool IsInterior = false;
+    bool IsObject = false;
+  };
+
+  static std::optional<ThisPlace> getThisPlace(const AccessPath &Path) {
+    const PlaceholderBase *PB = Path.getAsPlaceholderBase();
+    if (!PB || !PB->getImplicitThisParent())
+      return std::nullopt;
+    ThisPlace Result;
+    if (Path.getElements().empty()) {
+      Result.IsObject = true;
+      return Result;
+    }
+    const PathElement &First = Path.getElements().front();
+    if (First.isPlace())
+      Result.Place = First.getPlaceName();
+    else if (First.isInterior())
+      Result.IsInterior = true;
+    else {
+      Result.Field = First.getFieldDecl();
+      if (const auto *A = Result.Field->getAttr<LifetimePlaceAttr>())
+        Result.Place = A->getPlace();
+    }
+    return Result;
+  }
+
+  /// Checks that an interior invalidation of `*this` is declared by the
+  /// method's [[clang::invalidates]] annotation.
+  void checkInvalidationContract(const InvalidateOriginFact *IOF) {
+    if (IOF->getForm() == InvalidateOriginFact::Form::Object)
+      return;
+    const CXXMethodDecl *MD = getContractMethod();
+    if (!MD)
+      return;
+    PlaceRef Declared = getPlaceRef(getImplicitObjectParamInvalidatesAttr(MD));
+    if (Declared.isInterior())
+      return;
+    auto IsDeclared = [&](const IdentifierInfo *Place) {
+      return Declared.isPlaces() && llvm::is_contained(Declared.Names, Place);
+    };
+    auto Report = [&](const IdentifierInfo *Place, const FieldDecl *Field) {
+      if (SemaHelper && UndeclaredInvalidations.insert(IOF).second)
+        SemaHelper->reportUndeclaredInvalidation(MD, IOF->getInvalidationExpr(),
+                                                 Place, Field);
+    };
+    for (LoanID LID :
+         LoanPropagation.getLoans(IOF->getInvalidatedOrigin(), IOF)) {
+      std::optional<ThisPlace> P =
+          getThisPlace(FactMgr.getLoanMgr().getLoan(LID)->getAccessPath());
+      if (!P)
+        continue;
+      if (P->IsObject) {
+        // `this->Mutator()`: the callee's contract must be covered.
+        if (IOF->getForm() == InvalidateOriginFact::Form::Interior)
+          Report(nullptr, nullptr);
+        else
+          for (const IdentifierInfo *Place : IOF->getPlaces())
+            if (!IsDeclared(Place))
+              Report(Place, nullptr);
+        continue;
+      }
+      // Modifying a field, a place or the interior below `*this`.
+      if (P->Place ? !IsDeclared(P->Place) : true)
+        Report(P->Place, P->Field);
+    }
+  }
+
+  /// Checks that a value returned under `[[clang::lifetimebound(...)]]` on the
+  /// implicit object parameter borrows only the declared places of `*this`.
+  void checkBorrowContract(const OriginEscapesFact *OEF) {
+    const auto *RetEsc = dyn_cast<ReturnEscapeFact>(OEF);
+    if (!RetEsc)
+      return;
+    const CXXMethodDecl *MD = getContractMethod();
+    if (!MD)
+      return;
+    PlaceRef Declared =
+        getPlaceRef(getImplicitObjectParamLifetimeBoundAttr(MD));
+    if (Declared.isObject())
+      return;
+    for (LoanID LID :
+         LoanPropagation.getLoans(OEF->getEscapedOriginID(), OEF)) {
+      std::optional<ThisPlace> P =
+          getThisPlace(FactMgr.getLoanMgr().getLoan(LID)->getAccessPath());
+      if (!P)
+        continue;
+      bool Violation;
+      if (Declared.isInterior())
+        // Any storage below the object is (part of) its interior.
+        Violation = P->IsObject;
+      else
+        // A sub-object dies only with the object, so a borrow of a field not
+        // bound to any place is never invalidated behind the caller's back.
+        Violation = P->IsObject || P->IsInterior ||
+                    (P->Place && !llvm::is_contained(Declared.Names, P->Place));
+      if (Violation && SemaHelper &&
+          BorrowViolations.insert({RetEsc->getReturnExpr(), LID}).second)
+        SemaHelper->reportPlaceBorrowViolation(MD, RetEsc->getReturnExpr(),
+                                               P->Place, P->Field, P->IsObject);
+    }
+  }
+
+  /// Checks for use-after-invalidation errors when storage is invalidated
+  /// (`v.push_back(..)`, `delete p`).
+  ///
+  /// The loans of the invalidated origin name the invalidated objects. For
+  /// each live origin, every loan killed by one of them (see `isKilledBy`) is
+  /// reported.
   void checkInvalidation(const InvalidateOriginFact *IOF) {
     OriginID InvalidatedOrigin = IOF->getInvalidatedOrigin();
     /// Get loans directly pointing to the invalidated container
@@ -257,7 +472,7 @@ public:
     auto IsInvalidated = [&](const Loan *L) {
       for (LoanID InvalidID : DirectlyInvalidatedLoans) {
         const Loan *InvalidL = FactMgr.getLoanMgr().getLoan(InvalidID);
-        if (InvalidL->getAccessPath().isPrefixOf(L->getAccessPath()))
+        if (isKilledBy(L->getAccessPath(), InvalidL->getAccessPath(), IOF))
           return true;
       }
       return false;
@@ -292,8 +507,19 @@ public:
       const Loan *L = FactMgr.getLoanMgr().getLoan(LID);
       const Expr *IssueExpr = L->getIssueExpr();
       const ParmVarDecl *InvalidatedPVD = nullptr;
-      if (const PlaceholderBase *PB = L->getAccessPath().getAsPlaceholderBase())
+      // Set when the loan is into the implicit object of the method, with the
+      // field of `*this` it goes through, if any.
+      const CXXMethodDecl *InvalidatedThis = nullptr;
+      const FieldDecl *InvalidatedThisField = nullptr;
+      if (const PlaceholderBase *PB =
+              L->getAccessPath().getAsPlaceholderBase()) {
         InvalidatedPVD = PB->getParmVarDecl();
+        if ((InvalidatedThis = PB->getImplicitThisParent()))
+          if (llvm::ArrayRef<PathElement> Elts =
+                  L->getAccessPath().getElements();
+              !Elts.empty())
+            InvalidatedThisField = Elts.front().getFieldDecl();
+      }
 
       llvm::PointerUnion<const UseFact *, const OriginEscapesFact *>
           CausingFact = Warning.CausingFact;
@@ -314,6 +540,11 @@ public:
             SemaHelper->reportUseAfterInvalidation(
                 InvalidatedPVD, UF->getUseExpr(), Warning.InvalidatedByExpr,
                 ExprChain);
+          else if (InvalidatedThis)
+            // Use-after-invalidation of (a field of) the implicit object.
+            SemaHelper->reportUseAfterInvalidation(
+                InvalidatedThis, InvalidatedThisField, UF->getUseExpr(),
+                Warning.InvalidatedByExpr, ExprChain);
 
         } else
           // Scope-based expiry (use-after-scope).
@@ -604,8 +835,8 @@ public:
         ParmVarDecl *InferredPVD = const_cast<ParmVarDecl *>(
             FD->getParamDecl(PVD->getFunctionScopeIndex()));
         if (!InferredPVD->hasAttr<LifetimeBoundAttr>())
-          InferredPVD->addAttr(
-              LifetimeBoundAttr::CreateImplicit(AST, PVD->getLocation()));
+          InferredPVD->addAttr(LifetimeBoundAttr::CreateImplicit(
+              AST, nullptr, 0, PVD->getLocation()));
       }
     }
   }

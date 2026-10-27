@@ -18,6 +18,7 @@
 
 namespace clang {
 class LifetimeBoundAttr;
+class LifetimeInvalidatesAttr;
 } // namespace clang
 
 namespace clang ::lifetimes {
@@ -79,6 +80,61 @@ struct FunctionCallInfo {
 std::optional<LifetimeBoundParamInfo>
 getTrackedArgInfo(const FunctionDecl *FD, llvm::ArrayRef<const Expr *> Args,
                   unsigned I);
+
+/// Which storage of an object a contract refers to: the object itself, its
+/// anonymous interior, or a named place. This is the common vocabulary of
+/// `[[clang::lifetimebound]]` ("the result borrows this") and
+/// `[[clang::invalidates]]` ("the call invalidates this").
+struct PlaceRef {
+  enum Kind : uint8_t {
+    /// The object (`[[clang::lifetimebound]]`, `[[clang::invalidates]]`).
+    Object,
+    /// Storage owned by the object: a container's buffer, a string's
+    /// characters, a `unique_ptr`'s pointee (`(interior)`).
+    Interior,
+    /// Named places declared with `[[clang::places]]` (`(keys, ...)`).
+    Places,
+  } K = Object;
+  /// For `Places`: the place names.
+  llvm::SmallVector<const IdentifierInfo *, 1> Names;
+
+  static PlaceRef getObject() { return {}; }
+  static PlaceRef getInterior() {
+    return {Interior, {}};
+  }
+  bool isObject() const { return K == Object; }
+  bool isInterior() const { return K == Interior; }
+  bool isPlaces() const { return K == Places; }
+};
+
+/// Returns the place an attribute with place arguments (`lifetimebound`,
+/// `invalidates`) refers to.
+PlaceRef getPlaceRef(const LifetimeBoundAttr *A);
+PlaceRef getPlaceRef(const LifetimeInvalidatesAttr *A);
+
+/// Returns what the result of calling FD borrows from tracked argument I.
+///
+/// For `std::`/GSL types this is decided by the built-in table (the same one
+/// `shouldTrackImplicitObjectArg` and `shouldTrackFirstArgument` use): an
+/// accessor of a `gsl::Owner` returning a pointer, reference or `gsl::Pointer`
+/// borrows the owner's interior. Otherwise the `[[clang::lifetimebound]]`
+/// attribute decides: bare is an object borrow, `(interior)` and `(place)`
+/// name the borrowed storage.
+PlaceRef getTrackedArgBorrow(const FunctionDecl *FD,
+                             llvm::ArrayRef<const Expr *> Args, unsigned I);
+
+/// Returns the `[[clang::invalidates]]` attribute on the implicit object
+/// parameter of FD (checking all redeclarations), if any.
+const LifetimeInvalidatesAttr *
+getImplicitObjectParamInvalidatesAttr(const FunctionDecl *FD);
+
+/// Returns what calling FD invalidates in argument I, if anything: the
+/// built-in table for standard containers (`push_back`, `clear`, `reset`, ...
+/// invalidate the interior), or the `[[clang::invalidates]]` attribute on the
+/// corresponding parameter or implicit object parameter.
+std::optional<PlaceRef> getArgInvalidation(const FunctionDecl *FD,
+                                           llvm::ArrayRef<const Expr *> Args,
+                                           unsigned I);
 
 /// Returns lifetime safety tracking info for the call argument containing
 /// Source.

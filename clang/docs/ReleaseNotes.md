@@ -587,6 +587,22 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   - `-Wlifetime-safety-experimental-field-origin-escape`, which warns when a
     member function returns a value derived from a pointer, reference, or view
     field rather than from `*this`.
+  - `-Wlifetime-safety-experimental-place-contract`, which verifies methods of
+    classes annotated with `[[clang::places]]` or `[[clang::invalidates]]`
+    against their place contracts.
+
+- The lifetime safety analysis now tracks borrows per *place*: the object, a
+  field, the anonymous interior (storage owned by the object) or a named place.
+  Modifying a container no longer invalidates pointers to the container object
+  or to sibling fields, and modifying a container field invalidates iterators
+  into that field. New annotations describe the contracts of user-defined
+  types: `[[clang::lifetimebound(interior)]]` and
+  `[[clang::lifetimebound(place)]]` say what a result borrows,
+  `[[clang::invalidates]]`, `[[clang::invalidates(interior)]]` and
+  `[[clang::invalidates(place)]]` say what a call invalidates, and
+  `[[clang::places(...)]]` / `[[clang::place(name)]]` declare the places of a
+  class and bind fields to them. See the
+  [documentation](https://clang.llvm.org/docs/LifetimeSafety.html).
 
 - Lifetime safety analysis is now enabled for C by default. The `-fexperimental-lifetime-safety-c`
   flag is renamed to `-flifetime-safety-c`. Use `-fno-lifetime-safety-c` to disable it.

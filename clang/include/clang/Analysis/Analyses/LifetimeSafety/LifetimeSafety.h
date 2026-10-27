@@ -47,6 +47,9 @@ struct LifetimeSafetyOpts {
   bool CheckMisplacedLifetimebound = false;
   bool CheckInapplicableLifetimebound = false;
   bool CheckFieldOriginEscape = false;
+  /// Whether to verify methods of classes annotated with [[clang::places]] or
+  /// [[clang::invalidates]] against their place contracts.
+  bool CheckPlaceContracts = false;
 };
 
 /// Enum to track functions visible across or within TU.
@@ -119,6 +122,14 @@ public:
   reportUseAfterInvalidation(const ParmVarDecl *PVD, SourceLocation UseLoc,
                              const Expr *InvalidationExpr,
                              llvm::ArrayRef<const Expr *> ExprChain) {}
+  // The invalidated storage is reached through the implicit object of the
+  // method `MD` being analyzed (`this`); `Field` is the sub-object of `*this`
+  // it belongs to, if any (e.g. `auto it = c.begin(); c.push_back(1); *it;`
+  // in a method of a class with a field `c`).
+  virtual void
+  reportUseAfterInvalidation(const CXXMethodDecl *MD, const FieldDecl *Field,
+                             const Expr *UseExpr, const Expr *InvalidationExpr,
+                             llvm::ArrayRef<const Expr *> ExprChain) {}
   virtual void reportInvalidatedField(const Expr *IssueExpr,
                                       const FieldDecl *Field,
                                       const Expr *InvalidationExpr) {}
@@ -184,6 +195,26 @@ public:
   virtual void reportFieldOriginEscape(const CXXMethodDecl *MD,
                                        const FieldDecl *FD,
                                        const Expr *EscapeExpr) {}
+
+  // Place contracts (see [[clang::places]]). What was invalidated or borrowed
+  // is identified by the first projection below `*this`: a named `Place`, a
+  // `Field` of `*this`, or neither (the anonymous interior / the object).
+
+  // Reports that method `MD` invalidates storage of `*this` that its
+  // [[clang::invalidates]] annotation (if any) does not declare.
+  virtual void reportUndeclaredInvalidation(const CXXMethodDecl *MD,
+                                            const Expr *InvalidationExpr,
+                                            const IdentifierInfo *Place,
+                                            const FieldDecl *Field) {}
+
+  // Reports that method `MD`, annotated `[[clang::lifetimebound(...)]]` on its
+  // implicit object parameter, returns a borrow of a different place of
+  // `*this`. `IsObject` means the object itself (`*this`) is returned.
+  virtual void reportPlaceBorrowViolation(const CXXMethodDecl *MD,
+                                          const Expr *ReturnExpr,
+                                          const IdentifierInfo *Place,
+                                          const FieldDecl *Field,
+                                          bool IsObject) {}
 
   // Adds inferred lifetime bound attribute for implicit this to its
   // TypeSourceInfo.

@@ -139,25 +139,37 @@ public:
             const LoanPropagationAnalysis *LPA = nullptr) const override;
 };
 
+/// An origin is propagated from a source to a destination (e.g., p = q),
+/// optionally projecting each flowing loan by a path element.
+///
+/// Examples:
+///   - `p = q`: Dest=p, Src=q, no projection.
+///   - `&s.f`: Dest=glvalue `s.f`, Src=glvalue `s`, Projection=`.f`, so a loan
+///     to `s` flows in as a loan to `s.f`.
+///   - `v.begin()`: Dest=call result, Src=`v`, Projection=`.*`, so the
+///     iterator borrows `v.*`, the interior of `v`.
 class OriginFlowFact : public Fact {
   OriginID OIDDest;
   OriginID OIDSrc;
   // True if the destination origin should be killed (i.e., its current loans
   // cleared) before the source origin's loans are flowed into it.
   bool KillDest;
+  std::optional<PathElement> Projection;
 
 public:
   static bool classof(const Fact *F) {
     return F->getKind() == Kind::OriginFlow;
   }
 
-  OriginFlowFact(OriginID OIDDest, OriginID OIDSrc, bool KillDest)
+  OriginFlowFact(OriginID OIDDest, OriginID OIDSrc, bool KillDest,
+                 std::optional<PathElement> Projection = std::nullopt)
       : Fact(Kind::OriginFlow), OIDDest(OIDDest), OIDSrc(OIDSrc),
-        KillDest(KillDest) {}
+        KillDest(KillDest), Projection(Projection) {}
 
   OriginID getDestOriginID() const { return OIDDest; }
   OriginID getSrcOriginID() const { return OIDSrc; }
   bool getKillDest() const { return KillDest; }
+  std::optional<PathElement> getProjection() const { return Projection; }
 
   void dump(llvm::raw_ostream &OS, const LoanManager &, const OriginManager &OM,
             const LoanPropagationAnalysis *LPA = nullptr) const override;
@@ -284,25 +296,52 @@ public:
             const LoanPropagationAnalysis *LPA = nullptr) const override;
 };
 
-/// Represents that an origin's storage has been invalidated by a container
-/// operation (e.g., vector::push_back may reallocate, invalidating iterators).
-/// Created when a container method that may invalidate references/iterators
-/// is called on the container.
+/// Represents that storage reachable from an origin has been invalidated.
+///
+/// Which borrows die depends on the form:
+///   - Object: the pointee itself is destroyed (`delete p`, `p->~T()`,
+///     `std::destroy_at(p)`, a parameter annotated `[[clang::invalidates]]`).
+///     Every loan into the object or anything it owns dies.
+///   - Interior: the pointee stays alive but everything it *owns* may have
+///     moved (`v.push_back(x)`, `u.reset()`,
+///     `[[clang::invalidates(interior)]]`). Loans into the interior (`v.*`,
+///     `v.f.*`, named places) die; loans to the object or its sub-objects (`v`,
+///     `v.f`) survive.
+///   - Places: like Interior, restricted to the named places
+///     (`[[clang::invalidates(keys)]]`) and the fields bound to them.
 class InvalidateOriginFact : public Fact {
+public:
+  enum class Form : uint8_t { Object, Interior, Places };
+
+private:
   OriginID OID;
   const Expr *InvalidationExpr;
+  Form InvalidationForm;
+  /// For `Form::Places`: the invalidated places.
+  llvm::SmallVector<const IdentifierInfo *, 1> Places;
+  /// For `Form::Places`: the class declaring the places, whose fields may be
+  /// bound to them with [[clang::place]]. May be null.
+  const CXXRecordDecl *Record;
 
 public:
   static bool classof(const Fact *F) {
     return F->getKind() == Kind::InvalidateOrigin;
   }
 
-  InvalidateOriginFact(OriginID OID, const Expr *InvalidationExpr)
+  InvalidateOriginFact(OriginID OID, const Expr *InvalidationExpr, Form F,
+                       llvm::ArrayRef<const IdentifierInfo *> Places = {},
+                       const CXXRecordDecl *Record = nullptr)
       : Fact(Kind::InvalidateOrigin), OID(OID),
-        InvalidationExpr(InvalidationExpr) {}
+        InvalidationExpr(InvalidationExpr), InvalidationForm(F),
+        Places(Places.begin(), Places.end()), Record(Record) {
+    assert((F == Form::Places) == !Places.empty());
+  }
 
   OriginID getInvalidatedOrigin() const { return OID; }
   const Expr *getInvalidationExpr() const { return InvalidationExpr; }
+  Form getForm() const { return InvalidationForm; }
+  llvm::ArrayRef<const IdentifierInfo *> getPlaces() const { return Places; }
+  const CXXRecordDecl *getRecord() const { return Record; }
   void dump(llvm::raw_ostream &OS, const LoanManager &, const OriginManager &OM,
             const LoanPropagationAnalysis *LPA = nullptr) const override;
 };

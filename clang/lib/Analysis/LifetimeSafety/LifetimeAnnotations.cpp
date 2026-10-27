@@ -83,25 +83,6 @@ getDirectImplicitObjectLifetimeBoundAttr(const FunctionDecl *FD) {
   return nullptr;
 }
 
-const LifetimeBoundAttr *
-getImplicitObjectParamLifetimeBoundAttr(const FunctionDecl *FD) {
-  FD = getDeclWithMergedLifetimeBoundAttrs(FD);
-  // Attribute merging doesn't work well with attributes on function types (like
-  // 'this' param). We need to check all redeclarations.
-  auto CheckRedecls = [](const FunctionDecl *F) -> const LifetimeBoundAttr * {
-    for (const FunctionDecl *Redecl : F->redecls())
-      if (const auto *Attr = getDirectImplicitObjectLifetimeBoundAttr(Redecl))
-        return Attr;
-    return nullptr;
-  };
-
-  if (const auto *Attr = CheckRedecls(FD))
-    return Attr;
-  if (const FunctionDecl *Pattern = FD->getTemplateInstantiationPattern())
-    return CheckRedecls(Pattern);
-  return nullptr;
-}
-
 bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD) {
   if (getImplicitObjectParamLifetimeBoundAttr(FD))
     return true;
@@ -154,6 +135,136 @@ getTrackedArgInfo(const FunctionDecl *FD, llvm::ArrayRef<const Expr *> Args,
   if (PVD && PVD->hasAttr<clang::LifetimeBoundAttr>())
     return LifetimeBoundParamInfo(PVD);
 
+  return std::nullopt;
+}
+
+/// Returns true if `QT` is (a pointer or reference to) a `gsl::Owner`.
+static bool isOwnerOrPointerToOwner(QualType QT) {
+  if (QT->isPointerOrReferenceType())
+    QT = QT->getPointeeType();
+  return isGslOwnerType(QT);
+}
+
+template <typename AttrT> static PlaceRef getPlaceRefImpl(const AttrT *A) {
+  PlaceRef Result;
+  if (!A || A->places_size() == 0)
+    return Result;
+  if (A->places_size() == 1 && (*A->places_begin())->isStr("interior")) {
+    Result.K = PlaceRef::Interior;
+    return Result;
+  }
+  Result.K = PlaceRef::Places;
+  Result.Names.assign(A->places_begin(), A->places_end());
+  return Result;
+}
+
+PlaceRef getPlaceRef(const LifetimeBoundAttr *A) { return getPlaceRefImpl(A); }
+PlaceRef getPlaceRef(const LifetimeInvalidatesAttr *A) {
+  return getPlaceRefImpl(A);
+}
+
+/// Returns the implicit-object attribute of type `AttrT` from the function
+/// type of any redeclaration of FD (or its template pattern).
+template <typename AttrT>
+static const AttrT *getImplicitObjectTypeAttr(const FunctionDecl *FD) {
+  auto FromTSI = [](const FunctionDecl *F) -> const AttrT * {
+    const TypeSourceInfo *TSI = F->getTypeSourceInfo();
+    if (!TSI)
+      return nullptr;
+    TypeLoc TL = TSI->getTypeLoc();
+    while (auto ATL = TL.getAsAdjusted<AttributedTypeLoc>()) {
+      if (const auto *A = ATL.template getAttrAs<AttrT>())
+        return A;
+      TL = ATL.getModifiedLoc();
+    }
+    return nullptr;
+  };
+  auto CheckRedecls = [&](const FunctionDecl *F) -> const AttrT * {
+    for (const FunctionDecl *Redecl : F->redecls())
+      if (const AttrT *A = FromTSI(Redecl))
+        return A;
+    return nullptr;
+  };
+  FD = getDeclWithMergedLifetimeBoundAttrs(FD);
+  if (const AttrT *A = CheckRedecls(FD))
+    return A;
+  if (const FunctionDecl *Pattern = FD->getTemplateInstantiationPattern())
+    return CheckRedecls(Pattern);
+  return nullptr;
+}
+
+const LifetimeInvalidatesAttr *
+getImplicitObjectParamInvalidatesAttr(const FunctionDecl *FD) {
+  return getImplicitObjectTypeAttr<LifetimeInvalidatesAttr>(FD);
+}
+
+const LifetimeBoundAttr *
+getImplicitObjectParamLifetimeBoundAttr(const FunctionDecl *FD) {
+  // Attribute merging doesn't work well with attributes on function types (like
+  // 'this' param). We need to check all redeclarations.
+  return getImplicitObjectTypeAttr<LifetimeBoundAttr>(FD);
+}
+
+PlaceRef getTrackedArgBorrow(const FunctionDecl *FD,
+                             llvm::ArrayRef<const Expr *> Args, unsigned I) {
+  FD = getDeclWithMergedLifetimeBoundAttrs(FD);
+  if (!FD || I >= Args.size())
+    return PlaceRef::getObject();
+
+  if (const auto *Method = dyn_cast<CXXMethodDecl>(FD);
+      Method && Method->isInstance() && !isa<CXXConstructorDecl>(FD)) {
+    if (I != 0)
+      return getPlaceRef(
+          I - 1 < Method->getNumParams()
+              ? Method->getParamDecl(I - 1)->getAttr<LifetimeBoundAttr>()
+              : nullptr);
+    // The built-in table for standard owners decides first (`begin()`,
+    // `data()`, `operator[]`, `get()`, conversion to a view, ...). Everything
+    // it tracks on an owner hands out the owner's interior; what it tracks on
+    // a `gsl::Pointer` (iterator arithmetic, `operator*`) merely propagates
+    // the view's own borrow.
+    if (shouldTrackImplicitObjectArg(*Args[0], Method,
+                                     /*RunningUnderLifetimeSafety=*/true) &&
+        (isGslOwnerType(Method->getFunctionObjectParameterType()) ||
+         isGslOwnerType(Args[0]->getBestDynamicClassType())))
+      return PlaceRef::getInterior();
+    return getPlaceRef(getImplicitObjectParamLifetimeBoundAttr(Method));
+  }
+  // `std::begin(v)`, `std::data(v)`, `std::get(tuple)`, ...: interior of an
+  // owner. Algorithms over iterators (`std::find(first, last, ..)`) propagate
+  // the iterator's borrow.
+  if (I == 0 && shouldTrackFirstArgument(FD) &&
+      isOwnerOrPointerToOwner(FD->getParamDecl(0)->getType()))
+    return PlaceRef::getInterior();
+  if (I < FD->getNumParams())
+    return getPlaceRef(FD->getParamDecl(I)->getAttr<LifetimeBoundAttr>());
+  return PlaceRef::getObject();
+}
+
+std::optional<PlaceRef> getArgInvalidation(const FunctionDecl *FD,
+                                           llvm::ArrayRef<const Expr *> Args,
+                                           unsigned I) {
+  FD = getDeclWithMergedLifetimeBoundAttrs(FD);
+  if (!FD || I >= Args.size())
+    return std::nullopt;
+  const auto *Method = dyn_cast<CXXMethodDecl>(FD);
+  bool HasImplicitObject =
+      Method && Method->isInstance() && !isa<CXXConstructorDecl>(FD);
+  if (HasImplicitObject && I == 0) {
+    // Standard containers: the built-in table says which methods invalidate
+    // what the container owns.
+    if (isInvalidationMethod(*Method))
+      return PlaceRef::getInterior();
+    if (const auto *A = getImplicitObjectParamInvalidatesAttr(Method))
+      return getPlaceRef(A);
+    return std::nullopt;
+  }
+  unsigned ParamIdx = HasImplicitObject ? I - 1 : I;
+  if (ParamIdx >= FD->getNumParams())
+    return std::nullopt;
+  if (const auto *A =
+          FD->getParamDecl(ParamIdx)->getAttr<LifetimeInvalidatesAttr>())
+    return getPlaceRef(A);
   return std::nullopt;
 }
 

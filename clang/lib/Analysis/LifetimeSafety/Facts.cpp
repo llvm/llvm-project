@@ -120,6 +120,10 @@ void OriginFlowFact::dump(llvm::raw_ostream &OS, const LoanManager &LM,
   OS << "\tSrc:  ";
   OM.dump(getSrcOriginID(), OS);
   OS << (getKillDest() ? "" : ", Merge");
+  if (auto P = getProjection()) {
+    OS << ", Projection: ";
+    P->dump(OS);
+  }
   OS << "\n";
 }
 
@@ -183,6 +187,19 @@ void InvalidateOriginFact::dump(llvm::raw_ostream &OS, const LoanManager &,
                                 const LoanPropagationAnalysis *) const {
   OS << "InvalidateOrigin (";
   OM.dump(getInvalidatedOrigin(), OS);
+  switch (getForm()) {
+  case Form::Object:
+    OS << ", Object";
+    break;
+  case Form::Interior:
+    OS << ", Interior";
+    break;
+  case Form::Places:
+    OS << ", Places:";
+    for (const IdentifierInfo *II : getPlaces())
+      OS << " " << II->getName();
+    break;
+  }
   OS << ")\n";
 }
 

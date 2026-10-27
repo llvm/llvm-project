@@ -256,8 +256,8 @@ void Sema::inferLifetimeBoundAttribute(FunctionDecl *FD) {
     case Builtin::BImove_if_noexcept:
       if (ParmVarDecl *P = FD->getParamDecl(0u);
           !P->hasAttr<LifetimeBoundAttr>())
-        P->addAttr(
-            LifetimeBoundAttr::CreateImplicit(Context, FD->getLocation()));
+        P->addAttr(LifetimeBoundAttr::CreateImplicit(Context, nullptr, 0,
+                                                     FD->getLocation()));
       break;
     default:
       break;
@@ -283,7 +283,7 @@ void Sema::inferLifetimeBoundAttribute(FunctionDecl *FD) {
                   Ctor->getParamDecl(I)->hasAttr<LifetimeBoundAttr>() &&
                   Ctor->getParamDecl(I)->getType()->isReferenceType())
                 FD->getParamDecl(I)->addAttr(LifetimeBoundAttr::CreateImplicit(
-                    Context, FD->getLocation()));
+                    Context, nullptr, 0, FD->getLocation()));
     return;
   }
 
@@ -301,15 +301,15 @@ void Sema::inferLifetimeBoundAttribute(FunctionDecl *FD) {
         // construct from a char array pointed by a pointer.
         //   basic_string_view(const CharT* s);
         //   basic_string_view(const CharT* s, size_type count);
-        Param->addAttr(
-            LifetimeBoundAttr::CreateImplicit(Context, FD->getLocation()));
+        Param->addAttr(LifetimeBoundAttr::CreateImplicit(Context, nullptr, 0,
+                                                         FD->getLocation()));
       } else if (CRD->getName() == "span") {
         // construct from a reference of array.
         //   span(std::type_identity_t<element_type> (&arr)[N]);
         const auto *LRT = Param->getType()->getAs<LValueReferenceType>();
         if (LRT && LRT->getPointeeType().IgnoreParens()->isArrayType())
-          Param->addAttr(
-              LifetimeBoundAttr::CreateImplicit(Context, FD->getLocation()));
+          Param->addAttr(LifetimeBoundAttr::CreateImplicit(Context, nullptr, 0,
+                                                           FD->getLocation()));
       }
     }
   }

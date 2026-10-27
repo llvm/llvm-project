@@ -754,10 +754,22 @@ method ``[[clang::lifetimebound]]``.
   }];
 }
 
+def LifetimeSafetyPlaceContract
+    : DiagGroup<"lifetime-safety-experimental-place-contract"> {
+  code Documentation = [{
+Experimental. Verifies the bodies of methods of classes annotated with
+``[[clang::places]]`` or ``[[clang::invalidates]]`` against their contracts: a
+method must declare (with ``[[clang::invalidates]]``) every place of ``*this``
+it invalidates, and a method annotated ``[[clang::lifetimebound(place)]]`` must
+only return borrows of that place.
+  }];
+}
+
 def LifetimeSafetyExperimental
     : DiagGroup<"lifetime-safety-experimental",
                 [LifetimeSafetyInvalidation,
-                 LifetimeSafetyFieldOriginEscape]> {
+                 LifetimeSafetyFieldOriginEscape,
+                 LifetimeSafetyPlaceContract]> {
   code Documentation = [{
 Experimental lifetime safety warnings. These may have known false positives and
 their behavior may change. Not enabled by -Wlifetime-safety-all.
