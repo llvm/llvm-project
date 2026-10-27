@@ -66,8 +66,7 @@ define agx_kernel void @shifts(ptr addrspace(1) %out, i64 %a, i64 %s) {
 ; CHECK-NEXT:    // stack size: 0 bytes
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    bfeil r1, 0, u3, 5
-; CHECK-NEXT:    mov_imm r2, 16777215
-; CHECK-NEXT:    and r1, r1, r2
+; CHECK-NEXT:    bfeil r1, 0, r1, 0, mask 0xFFFFFF
 ; CHECK-NEXT:    extr r2, r1, 0, u4
 ; CHECK-NEXT:    mov_imm r3, 0
 ; CHECK-NEXT:    device_store 0, i32, xy, r2_r3, u0_u1, 0, signed

@@ -120,6 +120,11 @@ defvar TT_OR = 0b1110;
 defvar TT_XOR = 0b0110;
 defvar TT_MOV = 0b1010;
 defvar TT_NOT = 0b0101;
+defvar TT_ANDN = 0b0010; // a & ~b
+defvar TT_ORN = 0b1011;  // a | ~b
+defvar TT_XNOR = 0b1001;
+defvar TT_NAND = 0b0111;
+defvar TT_NOR = 0b0001;
 
 multiclass BitopPseudos<RegisterClass rc, RegisterOperand src, ValueType vt,
                         ComplexPattern srcPat> {
@@ -135,6 +140,17 @@ multiclass BitopPseudos<RegisterClass rc, RegisterOperand src, ValueType vt,
             (!cast<Instruction>(NAME) TT_XOR, 0, $a, 0, $b)>;
   def : Pat<(vt (not srcPat:$a)),
             (!cast<Instruction>(NAME) TT_NOT, 0, $a, 0, (vt 0))>;
+  // Any function of two sources is one bitop (bit b * 2 + a of the table).
+  def : Pat<(vt (and srcPat:$a, (not srcPat:$b))),
+            (!cast<Instruction>(NAME) TT_ANDN, 0, $a, 0, $b)>;
+  def : Pat<(vt (or srcPat:$a, (not srcPat:$b))),
+            (!cast<Instruction>(NAME) TT_ORN, 0, $a, 0, $b)>;
+  def : Pat<(vt (not (xor srcPat:$a, srcPat:$b))),
+            (!cast<Instruction>(NAME) TT_XNOR, 0, $a, 0, $b)>;
+  def : Pat<(vt (not (and srcPat:$a, srcPat:$b))),
+            (!cast<Instruction>(NAME) TT_NAND, 0, $a, 0, $b)>;
+  def : Pat<(vt (not (or srcPat:$a, srcPat:$b))),
+            (!cast<Instruction>(NAME) TT_NOR, 0, $a, 0, $b)>;
 }
 
 defm BITOP_I16 : BitopPseudos<GPR16, Src16Op, i16, AGXIntSrc16>;
@@ -395,6 +411,18 @@ def : Pat<(i32 (srl AGXIntSrc32:$a, AGXIntSrc32:$s)),
           (BFEIL_I32 0, (i32 0), 0, $a, 0, $s, 0)>;
 def : Pat<(i32 (sra AGXIntSrc32:$a, AGXIntSrc32:$s)),
           (ASR_I32 0, $a, 0, $s)>;
+// x & (2^k - 1) beyond the 8-bit immediates: bfeil keeps the low k bits
+// without a mov_imm for the mask, unless the mask has other uses.
+def agx_low_mask32 : PatLeaf<(imm), [{
+  uint32_t V = N->getZExtValue();
+  return N->hasOneUse() && V > 0xff && isMask_32(V) && V != ~0u;
+}]>;
+def AGXMaskWidth : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(llvm::popcount(uint32_t(N->getZExtValue())),
+                                   SDLoc(N), MVT::i32);
+}]>;
+def : Pat<(i32 (and AGXIntSrc32:$a, agx_low_mask32:$m)),
+          (BFEIL_I32 0, (i32 0), 0, $a, 0, (i32 0), (AGXMaskWidth $m))>;
 def : Pat<(i32 (AGXbfi7 AGXIntSrc32:$a, AGXIntSrc32:$b, AGXIntSrc32:$s)),
           (BFI_I32 0, $a, 0, $b, 0, $s, 0)>;
 def : Pat<(i32 (AGXextr7 AGXIntSrc32:$lo, AGXIntSrc32:$hi, AGXIntSrc32:$s)),
