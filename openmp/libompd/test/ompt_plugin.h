@@ -153,15 +153,6 @@ ompt_start_tool_result_t *ompt_start_tool(unsigned int omp_version,
   return &ompt_start_tool_result;
 }
 
-ompt_start_tool_result_t *ompt_start_tool(
-        unsigned int omp_version,
-        const char *runtime_version
-)
-{
-        static ompt_start_tool_result_t ompt_start_tool_result = {&ompt_initialize,&ompt_finalize, 0};
-        return &ompt_start_tool_result;
-}
-
 void collectParallelData(omp_t_data_t * data)
 {
         data->omp_num_threads = omp_get_num_threads();
