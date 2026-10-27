@@ -39,6 +39,7 @@ class MachineRegisterInfo;
 class MachineInstr;
 class MachineOperand;
 class GISelValueTracking;
+struct KnownBits;
 class MachineDominatorTree;
 class LegalizerInfo;
 struct LegalityQuery;
@@ -291,8 +292,10 @@ public:
   LLVM_ABI void applyCombineShuffleConcat(MachineInstr &MI,
                                           SmallVector<Register> &Ops) const;
 
-  /// Replace \p MI with a build_vector.
+  /// Replace shuffle \p MI with a build_vector.
   LLVM_ABI void applyCombineShuffleToBuildVector(MachineInstr &MI) const;
+  /// Replace shuffle of build_vector with a build_vector.
+  LLVM_ABI void applyCombineShuffleOfBuildVector(MachineInstr &MI) const;
 
   /// Combine G_BUILD_VECTOR(G_UNMERGE(G_BITCAST), Undef) to
   /// G_BITCAST(G_BUILD_VECTOR(..))
@@ -1065,7 +1068,28 @@ public:
   LLVM_ABI bool matchCountZeroToZeroPoison(MachineInstr &MI, unsigned Opc,
                                            unsigned ZeroPoisonOpc) const;
 
+  /// Simplify a register use under \p DemandedBits and compute \p Known in
+  /// the same walk. Partial-demand rewrites of shared values update only this
+  /// use.
+  LLVM_ABI bool simplifyDemandedBits(MachineInstr &MI, unsigned OpNo,
+                                     const APInt &DemandedBits,
+                                     KnownBits &Known,
+                                     unsigned Depth = 0) const;
+
+  /// Match demanded-bits simplification of a root's register use.
+  LLVM_ABI bool matchSimplifyDemandedBits(MachineInstr &MI,
+                                          BuildFnTy &MatchInfo) const;
+
 private:
+  Register simplifyMultipleUseDemandedBits(Register R,
+                                           const APInt &DemandedBits,
+                                           unsigned Depth) const;
+
+  /// Walk a use operand; \p DoRewrite false probes without changing MIR.
+  bool simplifyDemandedBitsImpl(MachineInstr &MI, unsigned OpNo,
+                                const APInt &DemandedBits, KnownBits &Known,
+                                unsigned Depth, bool DoRewrite) const;
+
   /// Checks for legality of an indexed variant of \p LdSt.
   bool isIndexedLoadStoreLegal(GLoadStore &LdSt) const;
 
