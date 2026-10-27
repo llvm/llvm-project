@@ -13,6 +13,59 @@
 #include <optional>
 #include <string>
 
+namespace clang::ast_matchers::dynamic::internal {
+
+VariantMatcher DynCastAllOfMatcherDescriptor::create(SourceRange,
+                                                     ArrayRef<ParserValue> Args,
+                                                     Diagnostics *Error) const {
+  std::vector<ast_matchers::internal::DynTypedMatcher> InnerMatchers;
+  InnerMatchers.reserve(Args.size());
+  for (size_t I = 0; I != Args.size(); ++I) {
+    const ParserValue &Arg = Args[I];
+    if (!Arg.Value.isMatcher() ||
+        !Arg.Value.getMatcher().hasTypedMatcher(DerivedKind)) {
+      Error->addError(Arg.Range, Error->ET_RegistryWrongArgType)
+          << (I + 1) << ArgKind::MakeMatcherArg(DerivedKind).asString()
+          << Arg.Value.getTypeAsString();
+      return {};
+    }
+    InnerMatchers.push_back(Arg.Value.getMatcher()
+                                .getTypedMatcher(DerivedKind)
+                                .dynCastTo(DerivedKind));
+  }
+
+  ast_matchers::internal::DynTypedMatcher Result =
+      InnerMatchers.empty()
+          ? ast_matchers::internal::DynTypedMatcher::trueMatcher(DerivedKind)
+      : InnerMatchers.size() == 1
+          ? InnerMatchers.front()
+          : ast_matchers::internal::DynTypedMatcher::constructVariadic(
+                ast_matchers::internal::DynTypedMatcher::VO_AllOf, DerivedKind,
+                std::move(InnerMatchers));
+  Result = Result.dynCastTo(BaseKind);
+  Result.setAllowBind(true);
+  return VariantMatcher::SingleMatcher(Result);
+}
+
+bool DynCastAllOfMatcherDescriptor::isConvertibleTo(
+    ASTNodeKind Kind, unsigned *Specificity,
+    ASTNodeKind *LeastDerivedKind) const {
+  if (!isRetKindConvertibleTo(ArrayRef(BaseKind), Kind, Specificity,
+                              LeastDerivedKind))
+    return false;
+
+  // If Kind is not a base of DerivedKind, either DerivedKind is a base of Kind
+  // (in which case the match will always succeed) or Kind and DerivedKind are
+  // unrelated (in which case it will always fail), so set Specificity to 0.
+  if (Kind.isSame(DerivedKind) || !Kind.isBaseOf(DerivedKind)) {
+    if (Specificity)
+      *Specificity = 0;
+  }
+  return true;
+}
+
+} // namespace clang::ast_matchers::dynamic::internal
+
 static std::optional<std::string>
 getBestGuess(llvm::StringRef Search, llvm::ArrayRef<llvm::StringRef> Allowed,
              llvm::StringRef DropPrefix = "", unsigned MaxEditDistance = 3) {

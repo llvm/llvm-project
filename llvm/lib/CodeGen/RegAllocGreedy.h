@@ -313,7 +313,8 @@ private:
 
   bool hasVirtRegAlloc();
   BlockFrequency calcBlockSplitCost();
-  bool addSplitConstraints(InterferenceCache::Cursor, BlockFrequency &);
+  bool addSplitConstraints(InterferenceCache::Cursor, BlockFrequency &,
+                           BlockFrequency MaxCost);
   bool addThroughConstraints(InterferenceCache::Cursor, ArrayRef<unsigned>);
   bool growRegion(GlobalSplitCandidate &Cand);
   BlockFrequency calcGlobalSplitCost(GlobalSplitCandidate &,
@@ -360,6 +361,10 @@ private:
                                    AllocationOrder &Order, MCRegister PhysReg,
                                    uint8_t &CostPerUseLimit,
                                    SmallVectorImpl<Register> &NewVRegs);
+  /// Return the rematerialization cost, or BlockFrequency::max() if
+  /// rematerialization is not possible.
+  BlockFrequency calcRematCost(const LiveInterval &VirtReg,
+                               AllocationOrder &Order) const;
   BlockFrequency calcSpillCost(const LiveInterval &LI);
   void initializeCSRCost();
   MCRegister tryBlockSplit(const LiveInterval &, AllocationOrder &,
@@ -376,21 +381,21 @@ private:
                                      unsigned);
   bool tryRecoloringCandidates(PQueue &, SmallVectorImpl<Register> &,
                                SmallVirtRegSet &, RecoloringStack &, unsigned);
-  void tryHintRecoloring(const LiveInterval &);
+  void tryHintRecoloring(const LiveInterval &, DenseSet<Register> &);
   void tryHintsRecoloring();
 
   /// Model the information carried by one end of a copy.
   struct HintInfo {
-    /// The frequency of the copy.
-    BlockFrequency Freq;
+    /// The block containing the copy.
+    const MachineBasicBlock *MBB;
     /// The virtual register or physical register.
     Register Reg;
     /// Its currently assigned register.
     /// In case of a physical register Reg == PhysReg.
     MCRegister PhysReg;
 
-    HintInfo(BlockFrequency Freq, Register Reg, MCRegister PhysReg)
-        : Freq(Freq), Reg(Reg), PhysReg(PhysReg) {}
+    HintInfo(const MachineBasicBlock *MBB, Register Reg, MCRegister PhysReg)
+        : MBB(MBB), Reg(Reg), PhysReg(PhysReg) {}
   };
   using HintsInfo = SmallVector<HintInfo, 4>;
 

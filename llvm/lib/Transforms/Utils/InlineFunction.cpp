@@ -985,9 +985,13 @@ propagateAllocTokenMetadata(Function *CalledFunc, CallBase &CB,
     if (InlinedFunctionInfo.isSimplified(OrigCall, ClonedCall))
       continue;
     // Fill missing only: never overwrite a more specific token the wrapper
-    // already set on an internal allocation.
-    if (ClonedCall->getMetadata(LLVMContext::MD_alloc_token))
-      continue;
+    // already set on an internal allocation. An unknown type (empty type name
+    // with function name) is not more specific.
+    if (MDNode *MD = ClonedCall->getMetadata(LLVMContext::MD_alloc_token)) {
+      if (MD->getNumOperands() != 3 ||
+          !cast<MDString>(MD->getOperand(0))->getString().empty())
+        continue;
+    }
     ClonedCall->setMetadata(LLVMContext::MD_alloc_token, AllocTokenMD);
   }
 }
@@ -1244,9 +1248,11 @@ static void AddAliasScopeMetadata(CallBase &CB, ValueToValueMapTy &VMap,
   DenseMap<const Argument *, MDNode *> NewScopes;
   MDBuilder MDB(CalledFunc->getContext());
 
-  // Create a new scope domain for this function.
-  MDNode *NewDomain =
-    MDB.createAnonymousAliasScopeDomain(CalledFunc->getName());
+  // Create a new scope domain for this function. Its scopes are disjoint,
+  // since accesses based on one noalias argument don't alias accesses based on
+  // another one.
+  MDNode *NewDomain = MDB.createAnonymousAliasScopeDomain(
+      CalledFunc->getName(), /*DisjointScopes=*/true);
   for (unsigned i = 0, e = NoAliasArgs.size(); i != e; ++i) {
     const Argument *A = NoAliasArgs[i];
 
@@ -1399,7 +1405,34 @@ static void AddAliasScopeMetadata(CallBase &CB, ValueToValueMapTy &VMap,
       if (IsFuncCall && !IsArgMemOnlyCall)
         RequiresNoCaptureBefore = true;
 
-      // First, we want to figure out all of the sets with which we definitely
+      // First, we want to figure out all of the sets to which we might belong.
+      // We might belong to a set if the noalias argument is in the set of
+      // underlying objects. If there is some non-noalias argument in our list
+      // of underlying objects, then we cannot add a scope because the fact
+      // that some access does not alias with any set of our noalias arguments
+      // cannot itself guarantee that it does not alias with this access
+      // (because there is some pointer of unknown origin involved and the
+      // other access might also depend on this pointer). We also cannot add
+      // scopes to arbitrary functions unless we know they don't access any
+      // non-parameter pointer-values.
+      bool CanAddScopes = !UsesAliasingPtr && (!IsFuncCall || IsArgMemOnlyCall);
+      if (CanAddScopes) {
+        for (const Argument *A : NoAliasArgs) {
+          if (ObjSet.count(A))
+            Scopes.push_back(NewScopes[A]);
+        }
+      }
+
+      if (!Scopes.empty()) {
+        NI->setMetadata(
+            LLVMContext::MD_alias_scope,
+            MDNode::concatenate(NI->getMetadata(LLVMContext::MD_alias_scope),
+                                MDNode::get(CalledFunc->getContext(), Scopes)));
+        // Being in these scopes already means being noalias with the rest.
+        continue;
+      }
+
+      // Next, we want to figure out all of the sets with which we definitely
       // don't alias. Iterate over all noalias set, and add those for which:
       //   1. The noalias argument is not in the set of objects from which we
       //      definitely derive.
@@ -1427,32 +1460,6 @@ static void AddAliasScopeMetadata(CallBase &CB, ValueToValueMapTy &VMap,
                         MDNode::concatenate(
                             NI->getMetadata(LLVMContext::MD_noalias),
                             MDNode::get(CalledFunc->getContext(), NoAliases)));
-
-      // Next, we want to figure out all of the sets to which we might belong.
-      // We might belong to a set if the noalias argument is in the set of
-      // underlying objects. If there is some non-noalias argument in our list
-      // of underlying objects, then we cannot add a scope because the fact
-      // that some access does not alias with any set of our noalias arguments
-      // cannot itself guarantee that it does not alias with this access
-      // (because there is some pointer of unknown origin involved and the
-      // other access might also depend on this pointer). We also cannot add
-      // scopes to arbitrary functions unless we know they don't access any
-      // non-parameter pointer-values.
-      bool CanAddScopes = !UsesAliasingPtr;
-      if (CanAddScopes && IsFuncCall)
-        CanAddScopes = IsArgMemOnlyCall;
-
-      if (CanAddScopes)
-        for (const Argument *A : NoAliasArgs) {
-          if (ObjSet.count(A))
-            Scopes.push_back(NewScopes[A]);
-        }
-
-      if (!Scopes.empty())
-        NI->setMetadata(
-            LLVMContext::MD_alias_scope,
-            MDNode::concatenate(NI->getMetadata(LLVMContext::MD_alias_scope),
-                                MDNode::get(CalledFunc->getContext(), Scopes)));
     }
   }
 }
@@ -1824,10 +1831,10 @@ static void HandleByValArgumentInit(Type *ByValType, Value *Dst, Value *Src,
                                     BasicBlock *InsertBlock,
                                     InlineFunctionInfo &IFI,
                                     Function *CalledFunc) {
-  IRBuilder<> Builder(InsertBlock, InsertBlock->begin());
+  IRBuilder<> Builder(InsertBlock->begin());
 
   Value *Size =
-      Builder.getInt64(M->getDataLayout().getTypeStoreSize(ByValType));
+      Builder.getInt64(M->getDataLayout().getTypeAllocSize(ByValType));
 
   Align DstAlign = Dst->getPointerAlignment(M->getDataLayout());
 
@@ -1894,33 +1901,6 @@ static Value *HandleByValArgument(Type *ByValType, Value *Arg,
   // Uses of the argument in the function should use our new alloca
   // instead.
   return NewAlloca;
-}
-
-// Check whether this Value is used by a lifetime intrinsic.
-static bool isUsedByLifetimeMarker(Value *V) {
-  for (User *U : V->users())
-    if (isa<LifetimeIntrinsic>(U))
-      return true;
-  return false;
-}
-
-// Check whether the given alloca already has
-// lifetime.start or lifetime.end intrinsics.
-static bool hasLifetimeMarkers(AllocaInst *AI) {
-  Type *Ty = AI->getType();
-  Type *Int8PtrTy =
-      PointerType::get(Ty->getContext(), Ty->getPointerAddressSpace());
-  if (Ty == Int8PtrTy)
-    return isUsedByLifetimeMarker(AI);
-
-  // Do a scan to find all the casts to i8*.
-  for (User *U : AI->users()) {
-    if (U->getType() != Int8PtrTy) continue;
-    if (U->stripPointerCasts() != AI) continue;
-    if (isUsedByLifetimeMarker(U))
-      return true;
-  }
-  return false;
 }
 
 /// Return the result of AI->isStaticAlloca() if AI were moved to the entry
@@ -2280,7 +2260,7 @@ inlineRetainOrClaimRVCalls(CallBase &CB, objcarc::ARCInstKind RVCallKind,
   for (auto *RI : Returns) {
     Value *RetOpnd = objcarc::GetRCIdentityRoot(RI->getOperand(0));
     bool InsertRetainCall = IsRetainRV;
-    IRBuilder<> Builder(RI->getContext());
+    IRBuilder<> Builder(*RI->getModule());
 
     // Walk backwards through the basic block looking for either a matching
     // autoreleaseRV call or an unannotated call.
@@ -3156,7 +3136,7 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
   // `Caller->isPresplitCoroutine()` would affect AlwaysInliner at O0 only.
   if ((InsertLifetime || Caller->isPresplitCoroutine()) &&
       !IFI.StaticAllocas.empty()) {
-    IRBuilder<> builder(&*FirstNewBlock, FirstNewBlock->begin());
+    IRBuilder<> builder(FirstNewBlock->begin());
     for (AllocaInst *AI : IFI.StaticAllocas) {
       // Don't mark swifterror allocas. They can't have bitcast uses.
       if (AI->isSwiftError())
@@ -3164,7 +3144,7 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
 
       // If the alloca is already scoped to something smaller than the whole
       // function then there's no need to add redundant, less accurate markers.
-      if (hasLifetimeMarkers(AI))
+      if (any_of(AI->users(), IsaPred<LifetimeIntrinsic>))
         continue;
 
       std::optional<TypeSize> Size = AI->getAllocationSize(AI->getDataLayout());
@@ -3190,8 +3170,8 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
   // code with llvm.stacksave/llvm.stackrestore intrinsics.
   if (InlinedFunctionInfo.ContainsDynamicAllocas) {
     // Insert the llvm.stacksave.
-    CallInst *SavedPtr = IRBuilder<>(&*FirstNewBlock, FirstNewBlock->begin())
-                             .CreateStackSave("savedstack");
+    CallInst *SavedPtr =
+        IRBuilder<>(FirstNewBlock->begin()).CreateStackSave("savedstack");
 
     // Insert a call to llvm.stackrestore before any return instructions in the
     // inlined function.

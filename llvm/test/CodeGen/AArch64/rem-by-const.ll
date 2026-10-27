@@ -21,7 +21,6 @@ define i8 @si8_7(i8 %a, i8 %b) {
 ; CHECK-GI-NEXT:    sxtb w8, w0
 ; CHECK-GI-NEXT:    mov w9, #-109 // =0xffffff93
 ; CHECK-GI-NEXT:    mul w8, w8, w9
-; CHECK-GI-NEXT:    sxth w8, w8
 ; CHECK-GI-NEXT:    add w8, w0, w8, asr #8
 ; CHECK-GI-NEXT:    sbfx w8, w8, #2, #6
 ; CHECK-GI-NEXT:    ubfx w9, w8, #7, #1
@@ -51,8 +50,7 @@ define i8 @si8_100(i8 %a, i8 %b) {
 ; CHECK-GI-NEXT:    sxtb w8, w0
 ; CHECK-GI-NEXT:    mov w9, #41 // =0x29
 ; CHECK-GI-NEXT:    mul w8, w8, w9
-; CHECK-GI-NEXT:    sbfx w8, w8, #8, #8
-; CHECK-GI-NEXT:    asr w8, w8, #4
+; CHECK-GI-NEXT:    asr w8, w8, #12
 ; CHECK-GI-NEXT:    ubfx w9, w8, #7, #1
 ; CHECK-GI-NEXT:    add w8, w8, w9
 ; CHECK-GI-NEXT:    mov w9, #-100 // =0xffffff9c
@@ -113,8 +111,7 @@ define i8 @ui8_100(i8 %a, i8 %b) {
 ; CHECK-GI-NEXT:    and w9, w0, #0xff
 ; CHECK-GI-NEXT:    mul w8, w9, w8
 ; CHECK-GI-NEXT:    mov w9, #-100 // =0xffffff9c
-; CHECK-GI-NEXT:    lsr w8, w8, #8
-; CHECK-GI-NEXT:    lsr w8, w8, #4
+; CHECK-GI-NEXT:    lsr w8, w8, #12
 ; CHECK-GI-NEXT:    madd w0, w8, w9, w0
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -139,8 +136,7 @@ define i16 @si16_7(i16 %a, i16 %b) {
 ; CHECK-GI-NEXT:    sxth w8, w0
 ; CHECK-GI-NEXT:    mov w9, #18725 // =0x4925
 ; CHECK-GI-NEXT:    mul w8, w8, w9
-; CHECK-GI-NEXT:    asr w8, w8, #16
-; CHECK-GI-NEXT:    asr w8, w8, #1
+; CHECK-GI-NEXT:    asr w8, w8, #17
 ; CHECK-GI-NEXT:    ubfx w9, w8, #15, #1
 ; CHECK-GI-NEXT:    add w8, w8, w9
 ; CHECK-GI-NEXT:    sub w8, w8, w8, lsl #3
@@ -168,8 +164,7 @@ define i16 @si16_100(i16 %a, i16 %b) {
 ; CHECK-GI-NEXT:    sxth w8, w0
 ; CHECK-GI-NEXT:    mov w9, #5243 // =0x147b
 ; CHECK-GI-NEXT:    mul w8, w8, w9
-; CHECK-GI-NEXT:    asr w8, w8, #16
-; CHECK-GI-NEXT:    asr w8, w8, #3
+; CHECK-GI-NEXT:    asr w8, w8, #19
 ; CHECK-GI-NEXT:    ubfx w9, w8, #15, #1
 ; CHECK-GI-NEXT:    add w8, w8, w9
 ; CHECK-GI-NEXT:    mov w9, #-100 // =0xffffff9c
@@ -230,8 +225,7 @@ define i16 @ui16_100(i16 %a, i16 %b) {
 ; CHECK-GI-NEXT:    mov w9, #5243 // =0x147b
 ; CHECK-GI-NEXT:    mul w8, w8, w9
 ; CHECK-GI-NEXT:    mov w9, #-100 // =0xffffff9c
-; CHECK-GI-NEXT:    lsr w8, w8, #16
-; CHECK-GI-NEXT:    lsr w8, w8, #1
+; CHECK-GI-NEXT:    lsr w8, w8, #17
 ; CHECK-GI-NEXT:    madd w0, w8, w9, w0
 ; CHECK-GI-NEXT:    ret
 entry:

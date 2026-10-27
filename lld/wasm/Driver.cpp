@@ -145,43 +145,13 @@ bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
   return errorCount() == 0;
 }
 
-#define OPTTABLE_STR_TABLE_CODE
+#define OPTTABLE_CODE
 #include "Options.inc"
-#undef OPTTABLE_STR_TABLE_CODE
-
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "Options.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-// Create table mapping all options defined in Options.td
-static constexpr opt::OptTable::Info optInfo[] = {
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS,         \
-               VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR,     \
-               VALUES, SUBCOMMANDIDS_OFFSET)                                   \
-  {PREFIX,                                                                     \
-   NAME,                                                                       \
-   HELPTEXT,                                                                   \
-   HELPTEXTSFORVARIANTS,                                                       \
-   METAVAR,                                                                    \
-   OPT_##ID,                                                                   \
-   opt::Option::KIND##Class,                                                   \
-   PARAM,                                                                      \
-   FLAGS,                                                                      \
-   VISIBILITY,                                                                 \
-   OPT_##GROUP,                                                                \
-   OPT_##ALIAS,                                                                \
-   ALIASARGS,                                                                  \
-   VALUES,                                                                     \
-   SUBCOMMANDIDS_OFFSET},
-#include "Options.inc"
-#undef OPTION
-};
 
 namespace {
-class WasmOptTable : public opt::GenericOptTable {
+class WasmOptTable : public opt::OptTable {
 public:
-  WasmOptTable()
-      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, optInfo) {}
+  WasmOptTable() : opt::OptTable(optionTables()) {}
   opt::InputArgList parse(ArrayRef<const char *> argv);
 };
 } // namespace
@@ -1151,8 +1121,11 @@ static void processStubLibraries() {
         }
       }
 
-      // Secondly looks for any symbols with an `importName` that matches
-      for (Symbol *sym : symtab->symbols()) {
+      // Secondly looks for any symbols with an `importName` that matches.
+      // Note: addStubSymbolDeps can add new symbols and reallocate the
+      // underlying symbol vector, invalidating range-for iterators.
+      for (size_t i = 0; i < symtab->symbols().size(); ++i) {
+        Symbol *sym = symtab->symbols()[i];
         if (sym->isUndefined() && sym->importName.has_value()) {
           auto it = stub_file->symbolDependencies.find(sym->importName.value());
           if (it != stub_file->symbolDependencies.end()) {
@@ -1348,7 +1321,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   for (auto *arg : args.filtered(OPT_mllvm))
     v.push_back(arg->getValue());
   cl::ResetAllOptionOccurrences();
-  cl::ParseCommandLineOptions(v.size(), v.data());
+  cl::parseCommandLineOptions(ctx.arg.libraryOptions, v);
 
   readConfigs(args);
   setConfigs();

@@ -648,7 +648,9 @@ class DAPConnection:
         self._is_ready.set()
         error = None
         try:
-            while self.is_alive():
+            # Read until EOF, so messages the adapter sent right before closing
+            # the connection are not lost.
+            while True:
                 message = DAPConnection.read_message(self._transport)
                 if not message:
                     break
@@ -832,7 +834,9 @@ class _SocketTransport:
             self._writer.flush()
 
         if self._socket.fileno() != -1:
-            self._socket.shutdown(socket.SHUT_RDWR)
+            # Fails if the adapter has already closed the connection.
+            with contextlib.suppress(OSError):
+                self._socket.shutdown(socket.SHUT_RDWR)
 
         self._writer.close()
         self._socket.close()

@@ -17,12 +17,57 @@
 #include "flang/Parser/tools.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
+#include "llvm/Frontend/OpenMP/OMPDescriptors.h"
 
 #include <tuple>
 #include <type_traits>
 #include <variant>
 
 namespace Fortran::parser::omp {
+namespace descriptor {
+llvm::omp::Modifiers GetElements(
+    const llvm::omp::descriptor::Clause &desc, llvm::omp::Version version) {
+  return desc.getModifiers(version);
+}
+
+llvm::omp::ModifierSets GetSets(
+    const llvm::omp::descriptor::Clause &desc, llvm::omp::Version version) {
+  return desc.getModifierSets(version);
+}
+llvm::omp::Clauses GetElements(
+    const llvm::omp::descriptor::Directive &desc, llvm::omp::Version version) {
+  return desc.getClauses(version);
+}
+
+llvm::omp::ClauseSets GetSets(
+    const llvm::omp::descriptor::Directive &desc, llvm::omp::Version version) {
+  return desc.getClauseSets(version);
+}
+
+llvm::omp::Clauses GetElements(
+    const llvm::omp::descriptor::ClauseSet &desc, llvm::omp::Version version) {
+  return desc.getClauses(version);
+}
+
+llvm::omp::Modifiers GetElements(const llvm::omp::descriptor::ModifierSet &desc,
+    llvm::omp::Version version) {
+  return desc.getModifiers(version);
+}
+
+llvm::directive::VersionRange GetVersionRangeForDirective(
+    llvm::omp::Directive dirId) {
+  llvm::omp::Version minVer{std::numeric_limits<int>::max()};
+  llvm::omp::Version maxVer{0u};
+  auto &desc = llvm::omp::getDescriptor(dirId);
+  for (llvm::omp::Version v : desc.getVersions()) {
+    minVer = std::min(minVer, v);
+    maxVer = std::max(maxVer, v);
+  }
+  return llvm::directive::VersionRange{
+      static_cast<int>(static_cast<unsigned>(minVer)),
+      static_cast<int>(static_cast<unsigned>(maxVer))};
+}
+} // namespace descriptor
 
 const parser::Designator *GetDesignatorFromObj(
     const parser::OmpObject &object) {
@@ -117,14 +162,46 @@ const OmpDirectiveSpecification &GetOmpDirectiveSpecification(
       x.u);
 }
 
-std::string GetUpperName(llvm::omp::Clause id, llvm::omp::Version version) {
+std::string GetUpperName(
+    llvm::omp::Clause id, llvm::omp::Version version, bool annotate) {
+  if (id == llvm::omp::Clause::OMPC_cancellation_construct_type) {
+    return "cancel-directive-name";
+  }
+
+  llvm::StringRef annot("");
+  if (annotate) {
+    switch (id) {
+    case llvm::omp::Clause::OMPC_default_variant:
+      annot = " (variant)";
+      break;
+    case llvm::omp::Clause::OMPC_update_depend_objects:
+      annot = " (depend-objects)";
+      break;
+    default:
+      break;
+    }
+  }
   llvm::StringRef name{llvm::omp::getOpenMPClauseName(id, version)};
-  return parser::ToUpperCaseLetters(name);
+  return parser::ToUpperCaseLetters(name) + annot.str();
 }
 
-std::string GetUpperName(llvm::omp::Directive id, llvm::omp::Version version) {
+std::string GetUpperName(
+    llvm::omp::Directive id, llvm::omp::Version version, bool annotate) {
+  llvm::StringRef annot("");
+  if (annotate) {
+    switch (id) {
+    case llvm::omp::Directive::OMPD_ordered_standalone:
+      annot = " (standalone)";
+      break;
+    case llvm::omp::Directive::OMPD_ordered_blockassoc:
+      annot = " (block-associated)";
+      break;
+    default:
+      break;
+    }
+  }
   llvm::StringRef name{llvm::omp::getOpenMPDirectiveName(id, version)};
-  return parser::ToUpperCaseLetters(name);
+  return parser::ToUpperCaseLetters(name) + annot.str();
 }
 
 const OpenMPDeclarativeConstruct *GetOmp(const DeclarationConstruct &x) {
