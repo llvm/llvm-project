@@ -650,7 +650,7 @@ entry:
 !6 = !{i64 0, i64 4, !2, i64 4, i64 12, !2}
 !7 = !{!8}
 !8 = distinct !{!8, !9, !"scope"}
-!9 = distinct !{!9, !"scope domain"}
+!9 = distinct !{!9, i1 false, !"scope domain"}
 !10 = !{!11}
 !11 = distinct !{!11, !9, !"other scope"}
 ;.
@@ -662,7 +662,7 @@ entry:
 ; CHECK: [[META5]] = !{!"Simple C/C++ TBAA"}
 ; CHECK: [[META6]] = !{[[META7:![0-9]+]]}
 ; CHECK: [[META7]] = distinct !{[[META7]], [[META8:![0-9]+]], !"scope"}
-; CHECK: [[META8]] = distinct !{[[META8]], !"scope domain"}
+; CHECK: [[META8]] = distinct !{[[META8]], i1 false, !"scope domain"}
 ; CHECK: [[META9]] = !{[[META10:![0-9]+]]}
 ; CHECK: [[META10]] = distinct !{[[META10]], [[META8]], !"other scope"}
 ;.
