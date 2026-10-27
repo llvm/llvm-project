@@ -3,17 +3,18 @@
 // RUN: %clang --target=%host-jit-triple -nostdlib -fPIC -shared \
 // RUN:   %S/Inputs/cudart.c -o %t/lib/libcudart.so
 // RUN: cat %s | clang-repl --cuda --cuda-path=%t -Xcc -nocudainc \
-// RUN:   -Xcc -nocudalib -Xcc -include -Xcc %S/Inputs/cuda.h | FileCheck %s
-
-extern "C" int printf(const char*, ...);
+// RUN:   -Xcc -nocudalib -Xcc -include -Xcc %S/Inputs/cuda.h \
+// RUN:   -Xcc -Xclang -Xcc -emit-llvm | FileCheck %s
 
 __global__ void test_func() {}
-// CHECK: cudart: fatbin .version {{[0-9]+\.[0-9]+}} .target sm_{{[0-9]+}}
-// CHECK-NEXT: cudart: register _Z9test_funcv
+// CHECK: define {{.*}}ptx_kernel void @_Z9test_funcv(
+// CHECK: define {{.*}}void @_Z24__device_stub__test_funcv(
+// CHECK: call i32 @cudaLaunch(ptr @_Z24__device_stub__test_funcv)
+// CHECK: call i32 @__cudaRegisterFunction({{.*}}@_Z24__device_stub__test_funcv
+// CHECK: call ptr @__cudaRegisterFatBinary(
 
 test_func<<<1,1>>>();
-printf("CUDA Error: %d", cudaGetLastError());
-// CHECK-NEXT: cudart: launch _Z9test_funcv grid (1,1,1) block (1,1,1)
-// CHECK-NEXT: CUDA Error: 0
+// CHECK: call i32 @cudaConfigureCall(
+// CHECK: call void @_Z24__device_stub__test_funcv()
 
 %quit

@@ -1,5 +1,4 @@
-/* Minimal declarations for the tests, which run against the stub runtime in
-   cudart.c instead of a CUDA installation. Testing purposes only. */
+/* Minimal declarations for CUDA support.  Testing purposes only. */
 
 #include <stddef.h>
 
@@ -26,7 +25,6 @@ enum cudaMemcpyKind {
 extern "C" int cudaConfigureCall(dim3 gridSize, dim3 blockSize,
                                  size_t sharedSize = 0,
                                  cudaStream_t stream = 0);
-// The device compilation checks a top-level launch as a device-side launch.
 extern "C" __device__ cudaError_t cudaLaunchDevice(void *func,
                                                    void *parameterBuffer,
                                                    dim3 gridDim, dim3 blockDim,

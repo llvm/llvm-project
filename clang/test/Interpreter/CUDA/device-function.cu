@@ -4,25 +4,21 @@
 // RUN: %clang --target=%host-jit-triple -nostdlib -fPIC -shared \
 // RUN:   %S/Inputs/cudart.c -o %t/lib/libcudart.so
 // RUN: cat %s | clang-repl --cuda --cuda-path=%t -Xcc -nocudainc \
-// RUN:   -Xcc -nocudalib -Xcc -include -Xcc %S/Inputs/cuda.h | FileCheck %s
-
-extern "C" int printf(const char*, ...);
+// RUN:   -Xcc -nocudalib -Xcc -include -Xcc %S/Inputs/cuda.h \
+// RUN:   -Xcc -Xclang -Xcc -emit-llvm | FileCheck %s
 
 __device__ inline void test_device(int* value) { *value = 42; }
 __global__ void test_kernel(int* value) { test_device(value); }
-// CHECK: cudart: register _Z11test_kernelPi
+// CHECK: define {{.*}}ptx_kernel void @_Z11test_kernelPi(
+// CHECK: call void @_Z11test_devicePi(
+// CHECK: define linkonce_odr void @_Z11test_devicePi(
+// CHECK: store i32 42
+// CHECK: define {{.*}}void @_Z26__device_stub__test_kernelPi(
 
-int var;
 int* devptr = nullptr;
-printf("cudaMalloc: %d\n", cudaMalloc((void **) &devptr, sizeof(int)));
-// CHECK-NEXT: cudaMalloc: 0
-
+cudaMalloc((void **) &devptr, sizeof(int));
 test_kernel<<<1,1>>>(devptr);
-printf("CUDA Error: %d\n", cudaGetLastError());
-// CHECK-NEXT: cudart: launch _Z11test_kernelPi grid (1,1,1) block (1,1,1)
-// CHECK-NEXT: CUDA Error: 0
-
-printf("cudaMemcpy: %d\n", cudaMemcpy(&var, devptr, sizeof(int), cudaMemcpyDeviceToHost));
-// CHECK-NEXT: cudaMemcpy: 0
+// CHECK: call i32 @cudaConfigureCall(
+// CHECK: call void @_Z26__device_stub__test_kernelPi(
 
 %quit

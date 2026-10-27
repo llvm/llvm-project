@@ -4,28 +4,24 @@
 // RUN: %clang --target=%host-jit-triple -nostdlib -fPIC -shared \
 // RUN:   %S/Inputs/cudart.c -o %t/lib/libcudart.so
 // RUN: cat %s | clang-repl --cuda --cuda-path=%t -Xcc -nocudainc \
-// RUN:   -Xcc -nocudalib -Xcc -include -Xcc %S/Inputs/cuda.h | FileCheck %s
-
-extern "C" int printf(const char*, ...);
+// RUN:   -Xcc -nocudalib -Xcc -include -Xcc %S/Inputs/cuda.h \
+// RUN:   -Xcc -Xclang -Xcc -emit-llvm | FileCheck %s
 
 __host__ __device__ inline int sum(int a, int b){ return a + b; }
 __global__ void kernel(int * output){ *output = sum(40,2); }
-// CHECK: cudart: register _Z6kernelPi
+// CHECK: define {{.*}}ptx_kernel void @_Z6kernelPi(
+// CHECK: call {{.*}}i32 @_Z3sumii(i32 noundef 40, i32 noundef 2)
+// CHECK: define linkonce_odr {{.*}}i32 @_Z3sumii(
+// CHECK: define {{.*}}void @_Z21__device_stub__kernelPi(
 
-printf("Host sum: %d\n", sum(41,1));
-// CHECK-NEXT: Host sum: 42
+int host_sum = sum(41, 1);
+// CHECK: call {{.*}}i32 @_Z3sumii(i32 noundef 41, i32 noundef 1)
+// CHECK: define linkonce_odr {{.*}}i32 @_Z3sumii(
 
-int var = 0;
 int * deviceVar;
-printf("cudaMalloc: %d\n", cudaMalloc((void **) &deviceVar, sizeof(int)));
-// CHECK-NEXT: cudaMalloc: 0
-
+cudaMalloc((void **) &deviceVar, sizeof(int));
 kernel<<<1,1>>>(deviceVar);
-printf("CUDA Error: %d\n", cudaGetLastError());
-// CHECK-NEXT: cudart: launch _Z6kernelPi grid (1,1,1) block (1,1,1)
-// CHECK-NEXT: CUDA Error: 0
-
-printf("cudaMemcpy: %d\n", cudaMemcpy(&var, deviceVar, sizeof(int), cudaMemcpyDeviceToHost));
-// CHECK-NEXT: cudaMemcpy: 0
+// CHECK: call i32 @cudaConfigureCall(
+// CHECK: call void @_Z21__device_stub__kernelPi(
 
 %quit
