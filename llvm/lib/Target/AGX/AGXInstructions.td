@@ -295,6 +295,15 @@ def : Pat<(i64 (add i64:$a, (shl (zext i32:$x), agx_iadd_shift:$s))),
 def : Pat<(i64 (add i64:$a, (shl (sext i32:$x), agx_iadd_shift:$s))),
           (IADD_I64_I32 0, $a, MOD_SX, $x, imm:$s)>;
 def : Pat<(i64 (add i64:$a, (zext i32:$x))), (IADD_I64_I32 0, $a, 0, $x, 0)>;
+// A constant that fits 32 bits (beyond the 8-bit immediates) is added as a zero-extended 32-bit register: one
+// mov_imm and one GPR instead of a materialized 64-bit pair.
+def agx_u32_not_imm8 : ImmLeaf<i64, [{ return Imm > 0xff && isUInt<32>(Imm); }]>;
+def AGXLo32 : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getZExtValue(), SDLoc(N), MVT::i32);
+}]>;
+let AddedComplexity = 5 in
+def : Pat<(i64 (add i64:$a, agx_u32_not_imm8:$c)),
+          (IADD_I64_I32 0, $a, 0, (MOV_IMM32 (AGXLo32 $c)), 0)>;
 def : Pat<(i64 (add i64:$a, (sext i32:$x))),
           (IADD_I64_I32 0, $a, MOD_SX, $x, 0)>;
 def : Pat<(i64 (add i64:$a, (shl i64:$b, agx_iadd_shift:$s))),

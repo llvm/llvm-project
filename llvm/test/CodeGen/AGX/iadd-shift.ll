@@ -58,3 +58,15 @@ define agx_kernel void @mul7(ptr addrspace(1) %out, i32 %a) {
   store i32 %r, ptr addrspace(1) %out
   ret void
 }
+
+; A 64-bit add of a constant that fits 32 bits: the constant zero-extended
+; from one register, not a 64-bit pair.
+; CHECK-LABEL: add64_const:
+; CHECK:         mov_imm [[C:r[0-9]+]], 1024
+; CHECK-NOT:     mov_imm
+; CHECK:         iadd r{{[0-9]+}}_r{{[0-9]+}}, r{{[0-9]+}}_r{{[0-9]+}}, [[C]]{{$}}
+define agx_kernel void @add64_const(ptr addrspace(1) %out, i64 %a) {
+  %r = add i64 %a, 1024
+  store i64 %r, ptr addrspace(1) %out
+  ret void
+}
