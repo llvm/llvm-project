@@ -242,6 +242,10 @@ struct InlineParams {
 
   /// Indicate whether we allow inlining for recursive call.
   std::optional<bool> AllowRecursiveCall = false;
+
+  /// Indicate whether to ignore profile information (the profile summary and
+  /// profile-derived block frequencies) when computing the inline threshold.
+  std::optional<bool> IgnoreProfile;
 };
 
 LLVM_ABI std::optional<int> getStringFnAttrAsInt(CallBase &CB,

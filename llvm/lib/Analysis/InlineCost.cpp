@@ -1219,6 +1219,9 @@ public:
         CostBenefitAnalysisEnabled(isCostBenefitAnalysisEnabled()),
         Writer(this) {
     AllowRecursiveCall = *Params.AllowRecursiveCall;
+    // If requested, make the analysis independent of any profile information.
+    if (Params.IgnoreProfile.value_or(false))
+      this->PSI = nullptr;
   }
 
   /// Annotation Writer for instruction details
@@ -2141,7 +2144,9 @@ void InlineCostCallAnalyzer::updateThreshold(CallBase &Call, Function &Callee) {
     // Callsite hotness and coldness can be determined if sample profile is
     // used (which adds hotness metadata to calls) or if caller's
     // BlockFrequencyInfo is available.
-    BlockFrequencyInfo *CallerBFI = GetBFI ? &(GetBFI(*Caller)) : nullptr;
+    BlockFrequencyInfo *CallerBFI =
+        GetBFI && !Params.IgnoreProfile.value_or(false) ? &(GetBFI(*Caller))
+                                                        : nullptr;
     auto HotCallSiteThreshold = getHotCallSiteThreshold(Call, CallerBFI);
     if (!Caller->hasOptSize() && HotCallSiteThreshold) {
       LLVM_DEBUG(dbgs() << "Hot callsite.\n");
