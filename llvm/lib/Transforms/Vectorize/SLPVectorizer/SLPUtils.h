@@ -430,9 +430,11 @@ struct NarrowedLeafInfo {
   NarrowedLeafInfo(Value *V, unsigned Shift, APInt Mask)
       : V(V), Shift(Shift), Mask(std::move(Mask)) {}
 
-  Value *V;
-  unsigned Shift;
+  Value *V = nullptr;
+  unsigned Shift = 0;
   APInt Mask;
+  /// Set to false, if the or chain is not disjoint
+  bool Disjoint = true;
 };
 
 /// Recursively collects the narrow leaves of the widened reduction value

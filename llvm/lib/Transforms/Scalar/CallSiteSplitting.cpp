@@ -56,13 +56,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/CallSiteSplitting.h"
+#include "ScalarOptions.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -73,15 +73,6 @@ using namespace PatternMatch;
 #define DEBUG_TYPE "callsite-splitting"
 
 STATISTIC(NumCallSiteSplit, "Number of call-site split");
-
-/// Only allow instructions before a call, if their CodeSize cost is below
-/// DuplicationThreshold. Those instructions need to be duplicated in all
-/// split blocks.
-static cl::opt<unsigned>
-    DuplicationThreshold("callsite-splitting-duplication-threshold", cl::Hidden,
-                         cl::desc("Only allow instructions before a call, if "
-                                  "their cost is below DuplicationThreshold"),
-                         cl::init(5));
 
 static void addNonNullAttribute(CallBase &CB, Value *Op) {
   unsigned ArgNo = 0;
@@ -211,7 +202,7 @@ static bool canSplitCallSite(CallBase &CB, TargetTransformInfo &TTI) {
        llvm::make_range(CallSiteBB->begin(), CB.getIterator())) {
     Cost += TTI.getInstructionCost(&InstBeforeCall,
                                    TargetTransformInfo::TCK_CodeSize);
-    if (Cost >= DuplicationThreshold)
+    if (Cost >= ScalarOptions::Global.callsite_splitting_duplication_threshold)
       return false;
   }
 

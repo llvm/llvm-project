@@ -48,7 +48,7 @@ def isNotX86_32 : RuntimeLibcallAvailability<(not IsX86_32)>;
 def IsTargetArch : LibcallPredicate<[{isTargetArch()}]>;
 def isTargetArch : RuntimeLibcallAvailability<(all_of IsTargetArch)>;
 
-def TheSystemLibrary : SystemRuntimeLibrary<isTargetArch,
+def Libc : LibcallLibrary<"libc",
   (add LibcallImpls<(add impl0), isAArch64_ExceptArm64EC>,
        LibcallImpls<(add impl1), isDarwinOrGNU>,
        LibcallImpls<(add impl2), isNotDarwin>,
@@ -57,8 +57,11 @@ def TheSystemLibrary : SystemRuntimeLibrary<isTargetArch,
        LibcallImpls<(add impl5), isNotX86_32>)
 >;
 
+def TheSystemLibrary : SystemRuntimeLibrary<isTargetArch, (add Libc)>;
+
 // Predicate groups emit sorted by predicate def name
 
+// CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setAvailableLibFuncs_libc(
 // CHECK: if (TT.isAArch64() && (TT.isOSDarwin() || TT.isGNUEnvironment()) && !(TT.isWindowsArm64EC())) {
 // CHECK: RTLIB::impl_impl3
 // CHECK: if (TT.isAArch64() || !(TT.isOSDarwin() || TT.isGNUEnvironment())) {

@@ -28,6 +28,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/LoopIdiomRecognize.h"
+#include "ScalarOptions.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -156,41 +157,12 @@ static cl::opt<bool, true>
                              cl::location(DisableLIRP::HashRecognize),
                              cl::init(false), cl::ReallyHidden);
 
-static cl::opt<bool> UseLIRCodeSizeHeurs(
-    "use-lir-code-size-heurs",
-    cl::desc("Use loop idiom recognition code size heuristics when compiling "
-             "with -Os/-Oz"),
-    cl::init(true), cl::Hidden);
-
-static cl::opt<bool> ForceMemsetPatternIntrinsic(
-    "loop-idiom-force-memset-pattern-intrinsic",
-    cl::desc("Use memset.pattern intrinsic whenever possible"), cl::init(false),
-    cl::Hidden);
-
-enum class CRCStrategyKind {
-  Disable,
-  Auto,
-  Table,
-  Clmul,
-};
-static cl::opt<CRCStrategyKind> CRCStrategy(
-    DEBUG_TYPE "-crc-strategy",
-    cl::desc("Preferred strategy for optimizing CRC loops"),
-    cl::init(CRCStrategyKind::Auto), cl::Hidden,
-    cl::values(clEnumValN(CRCStrategyKind::Disable, "disable",
-                          "Do not optimize CRC loops"),
-               clEnumValN(CRCStrategyKind::Auto, "auto",
-                          "Use costing to determine strategy"),
-               clEnumValN(CRCStrategyKind::Table, "table",
-                          "Use a Sarwate table when possible"),
-               clEnumValN(CRCStrategyKind::Clmul, "clmul",
-                          "Use carry-less multiplication when possible")));
-
 } // namespace llvm
 
 namespace {
 
 class LoopIdiomRecognize {
+  const ScalarOptions &Opts;
   Loop *CurLoop = nullptr;
   AliasAnalysis *AA;
   DominatorTree *DT;
@@ -210,7 +182,8 @@ public:
                               const TargetTransformInfo *TTI, MemorySSA *MSSA,
                               const DataLayout *DL,
                               OptimizationRemarkEmitter &ORE)
-      : AA(AA), DT(DT), LI(LI), SE(SE), TLI(TLI), TTI(TTI), DL(DL), ORE(ORE) {
+      : Opts(ScalarOptions::Global), AA(AA), DT(DT), LI(LI), SE(SE), TLI(TLI),
+        TTI(TTI), DL(DL), ORE(ORE) {
     if (MSSA)
       MSSAU = std::make_unique<MemorySSAUpdater>(MSSA);
   }
@@ -361,7 +334,7 @@ bool LoopIdiomRecognize::runOnLoop(Loop *L) {
 
   // Determine if code size heuristics need to be applied.
   ApplyCodeSizeHeuristics =
-      L->getHeader()->getParent()->hasOptSize() && UseLIRCodeSizeHeurs;
+      L->getHeader()->getParent()->hasOptSize() && Opts.use_lir_code_size_heurs;
 
   HasMemset = TLI->has(LibFunc_memset);
   // TODO: Unconditionally enable use of the memset pattern intrinsic (or at
@@ -372,8 +345,9 @@ bool LoopIdiomRecognize::runOnLoop(Loop *L) {
   HasMemsetPattern = TLI->has(LibFunc_memset_pattern16);
   HasMemcpy = TLI->has(LibFunc_memcpy);
 
-  if (HasMemset || HasMemsetPattern || ForceMemsetPatternIntrinsic ||
-      HasMemcpy || !DisableLIRP::HashRecognize)
+  if (HasMemset || HasMemsetPattern ||
+      Opts.loop_idiom_force_memset_pattern_intrinsic || HasMemcpy ||
+      !DisableLIRP::HashRecognize)
     if (SE->hasLoopInvariantBackedgeTakenCount(L))
       return runOnCountableLoop();
 
@@ -417,7 +391,8 @@ bool LoopIdiomRecognize::runOnCountableLoop() {
   }
 
   // Attempt to optimize a CRC loop if one is detected by HashRecognize.
-  if (!DisableLIRP::HashRecognize && CRCStrategy != CRCStrategyKind::Disable)
+  if (!DisableLIRP::HashRecognize &&
+      Opts.loop_idiom_crc_strategy != CRCStrategyKind::Disable)
     if (auto Res = HashRecognize(*CurLoop, *SE).getResult())
       MadeChange |= optimizeCRCLoop(*Res);
 
@@ -541,7 +516,7 @@ LoopIdiomRecognize::isLegalStore(StoreInst *SI) {
     return LegalStoreKind::Memset;
   }
   if (!MustPreserveExternalState && !UnorderedAtomic &&
-      (HasMemsetPattern || ForceMemsetPatternIntrinsic) &&
+      (HasMemsetPattern || Opts.loop_idiom_force_memset_pattern_intrinsic) &&
       !DisableLIRP::Memset &&
       // Don't create memset_pattern16s with address spaces.
       StorePtr->getType()->getPointerAddressSpace() == 0 &&
@@ -1166,7 +1141,8 @@ bool LoopIdiomRecognize::processLoopStridedStore(
   Value *MemsetArg;
   std::optional<int64_t> BytesWritten;
 
-  if (PatternValue && (HasMemsetPattern || ForceMemsetPatternIntrinsic)) {
+  if (PatternValue &&
+      (HasMemsetPattern || Opts.loop_idiom_force_memset_pattern_intrinsic)) {
     const SCEV *TripCountS =
         SE->getTripCountFromExitCount(BECount, IntIdxTy, CurLoop);
     if (!Expander.isSafeToExpand(TripCountS))
@@ -1220,7 +1196,7 @@ bool LoopIdiomRecognize::processLoopStridedStore(
     NewCall = Builder.CreateMemSet(BasePtr, SplatValue, MemsetArg,
                                    MaybeAlign(StoreAlignment),
                                    /*isVolatile=*/false, AATags);
-  } else if (ForceMemsetPatternIntrinsic ||
+  } else if (Opts.loop_idiom_force_memset_pattern_intrinsic ||
              isLibFuncEmittable(M, TLI, LibFunc_memset_pattern16)) {
     assert(isa<SCEVConstant>(StoreSizeSCEV) && "Expected constant store size");
 
@@ -1683,7 +1659,7 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
     });
   };
 
-  switch (CRCStrategy) {
+  switch (Opts.loop_idiom_crc_strategy) {
   default:
     ReportMissed("disabled by user");
     return false;

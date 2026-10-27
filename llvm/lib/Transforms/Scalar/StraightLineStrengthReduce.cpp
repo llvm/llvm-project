@@ -69,6 +69,7 @@
 // - Floating point arithmetics when fast math is enabled.
 
 #include "llvm/Transforms/Scalar/StraightLineStrengthReduce.h"
+#include "ScalarOptions.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SetVector.h"
@@ -116,11 +117,6 @@ static const unsigned UnknownAddressSpace =
 
 DEBUG_COUNTER(StraightLineStrengthReduceCounter, "slsr-counter",
               "Controls whether rewriteCandidate is executed.");
-
-// Only for testing.
-static cl::opt<bool>
-    EnablePoisonReuseGuard("enable-poison-reuse-guard", cl::init(true),
-                           cl::desc("Enable poison-reuse guard"));
 
 STATISTIC(NumSCEVCandidateBasisDifferences,
           "Number of candidate-basis SCEV differences computed by SLSR");
@@ -1098,7 +1094,7 @@ void StraightLineStrengthReduce::allocateCandidatesAndFindBasis(
   // doing this early we avoid calling canReuseInstruction repeatedly for the
   // same instruction. The DropList is stored on the Candidate so the flags can
   // be dropped only if this candidate is used by an executed rewrite.
-  if (!EnablePoisonReuseGuard ||
+  if (!ScalarOptions::Global.enable_poison_reuse_guard ||
       SE->canReuseInstruction(SE->getSCEV(I), I, Candidates.back().DropList)) {
     CandidateDict.add(Candidates.back());
   }

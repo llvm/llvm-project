@@ -340,6 +340,10 @@ public:
 
   void clearMaxPressure() { MaxPressure.clear(); }
 
+  const GCNRegPressure &getMaxPressure() const { return MaxPressure; }
+
+  void resetMaxPressure() { MaxPressure = CurPressure; }
+
   GCNRegPressure getPressure() const { return CurPressure; }
 
   decltype(LiveRegs) moveLiveRegs() {
@@ -373,10 +377,6 @@ public:
   /// \p returns whether the tracker's state after receding MI corresponds
   /// to reported by LIS.
   bool isValid() const;
-
-  const GCNRegPressure &getMaxPressure() const { return MaxPressure; }
-
-  void resetMaxPressure() { MaxPressure = CurPressure; }
 
   GCNRegPressure getMaxPressureAndReset() {
     GCNRegPressure RP = MaxPressure;

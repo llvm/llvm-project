@@ -96,9 +96,8 @@ mlir::Type convertTypeForMemory(const mlir::TypeConverter &converter,
   if (auto vecTy = mlir::dyn_cast<cir::VectorType>(type)) {
     if (mlir::isa<cir::BoolType>(vecTy.getElementType())) {
       assert(!cir::MissingFeatures::hlsl());
-      // Pad to at least one byte.
-      uint64_t bytePadded = std::max<uint64_t>(vecTy.getSize(), 8);
-      return mlir::IntegerType::get(type.getContext(), bytePadded);
+      return mlir::IntegerType::get(type.getContext(),
+                                    vecTy.getBoolStorageWidth());
     }
   }
 

@@ -61,6 +61,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/SpeculativeExecution.h"
+#include "ScalarOptions.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -68,7 +69,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Scalar.h"
 
@@ -76,38 +76,16 @@ using namespace llvm;
 
 #define DEBUG_TYPE "speculative-execution"
 
-// The risk that speculation will not pay off increases with the
-// number of instructions speculated, so we put a limit on that.
-static cl::opt<unsigned> SpecExecMaxSpeculationCost(
-    "spec-exec-max-speculation-cost", cl::init(7), cl::Hidden,
-    cl::desc("Speculative execution is not applied to basic blocks where "
-             "the cost of the instructions to speculatively execute "
-             "exceeds this limit."));
-
-// Speculating just a few instructions from a larger block tends not
-// to be profitable and this limit prevents that. A reason for that is
-// that small basic blocks are more likely to be candidates for
-// further optimization.
-static cl::opt<unsigned> SpecExecMaxNotHoisted(
-    "spec-exec-max-not-hoisted", cl::init(5), cl::Hidden,
-    cl::desc("Speculative execution is not applied to basic blocks where the "
-             "number of instructions that would not be speculatively executed "
-             "exceeds this limit."));
-
-static cl::opt<bool> SpecExecOnlyIfDivergentTarget(
-    "spec-exec-only-if-divergent-target", cl::init(false), cl::Hidden,
-    cl::desc("Speculative execution is applied only to targets with divergent "
-             "branches, even if the pass was configured to apply only to all "
-             "targets."));
-
 namespace {
 
 class SpeculativeExecutionLegacyPass : public FunctionPass {
 public:
   static char ID;
   explicit SpeculativeExecutionLegacyPass(bool OnlyIfDivergentTarget = false)
-      : FunctionPass(ID), OnlyIfDivergentTarget(OnlyIfDivergentTarget ||
-                                                SpecExecOnlyIfDivergentTarget),
+      : FunctionPass(ID),
+        OnlyIfDivergentTarget(
+            OnlyIfDivergentTarget ||
+            ScalarOptions::Global.spec_exec_only_if_divergent_target),
         Impl(OnlyIfDivergentTarget) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
@@ -281,6 +259,7 @@ static InstructionCost ComputeSpeculationCost(const Instruction *I,
 
 bool SpeculativeExecutionPass::considerHoistingFromTo(
     BasicBlock &FromBlock, BasicBlock &ToBlock) {
+  const ScalarOptions &Opts = ScalarOptions::Global;
   SmallPtrSet<const Instruction *, 8> NotHoisted;
   auto HasNoUnhoistedInstr = [&NotHoisted](auto Values) {
     for (const Value *V : Values) {
@@ -302,11 +281,11 @@ bool SpeculativeExecutionPass::considerHoistingFromTo(
     if (Cost.isValid() && isSafeToSpeculativelyExecute(&I) &&
         AllPrecedingUsesFromBlockHoisted(&I)) {
       TotalSpeculationCost += Cost;
-      if (TotalSpeculationCost > SpecExecMaxSpeculationCost)
+      if (TotalSpeculationCost > Opts.spec_exec_max_speculation_cost)
         return false;  // too much to hoist
     } else {
       NotHoistedInstCount++;
-      if (NotHoistedInstCount > SpecExecMaxNotHoisted)
+      if (NotHoistedInstCount > Opts.spec_exec_max_not_hoisted)
         return false; // too much left behind
       NotHoisted.insert(&I);
     }
@@ -334,8 +313,9 @@ FunctionPass *llvm::createSpeculativeExecutionIfHasBranchDivergencePass() {
 }
 
 SpeculativeExecutionPass::SpeculativeExecutionPass(bool OnlyIfDivergentTarget)
-    : OnlyIfDivergentTarget(OnlyIfDivergentTarget ||
-                            SpecExecOnlyIfDivergentTarget) {}
+    : OnlyIfDivergentTarget(
+          OnlyIfDivergentTarget ||
+          ScalarOptions::Global.spec_exec_only_if_divergent_target) {}
 
 PreservedAnalyses SpeculativeExecutionPass::run(Function &F,
                                                 FunctionAnalysisManager &AM) {

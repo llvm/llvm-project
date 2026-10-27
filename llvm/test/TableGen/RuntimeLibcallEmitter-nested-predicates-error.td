@@ -17,6 +17,8 @@ def func0 : RuntimeLibcallImpl<FUNC0>;
 def func1 : RuntimeLibcallImpl<FUNC1>;
 
 // ERR: :[[@LINE+2]]:8: error: combining nested libcall set predicates currently unhandled
-def TheSystemLibrary : SystemRuntimeLibrary<isTargetArch,
+def Libc : LibcallLibrary<"libc",
   (add LibcallImpls<(add func0, LibcallImpls<(add func1), isBar>), isFoo>)
 >;
+
+def TheSystemLibrary : SystemRuntimeLibrary<isTargetArch, (add Libc)>;

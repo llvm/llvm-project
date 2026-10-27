@@ -185,9 +185,36 @@ mlir::Value createIgnoredValue(mlir::OpBuilder &builder, mlir::Location loc,
   return cir::ConstantOp::create(builder, loc, ty, cir::PoisonAttr::get(ty));
 }
 
+/// Whether \p coercedTy is wider than the type a value of type \p origTy has
+/// in memory, so the coerced value passes bits the value does not define and
+/// cannot be noundef.  This is the comparison classic CodeGen makes.  A bool
+/// vector's memory type is its storage integer, one bit per element and at
+/// least a byte wide, not its power-of-two size.
+static bool isCoercionWiderThanMemory(mlir::Type origTy, mlir::Type coercedTy,
+                                      const mlir::DataLayout &dl) {
+  uint64_t memoryBits = dl.getTypeSizeInBits(origTy).getFixedValue();
+  if (auto vecTy = mlir::dyn_cast<cir::VectorType>(origTy);
+      vecTy && mlir::isa<cir::BoolType>(vecTy.getElementType()))
+    memoryBits = vecTy.getBoolStorageWidth();
+  return dl.getTypeSizeInBits(coercedTy).getFixedValue() > memoryBits;
+}
+
+/// Whether updateArgAttrs has anything to change: an arg that is Ignore (its
+/// slot is dropped), Extend (needs llvm.signext / llvm.zeroext), Indirect
+/// (needs the pointer attributes), Expand (changes the argument count), or a
+/// coerced Direct, which may be flattened or may lose llvm.noundef.
+static bool needsArgAttrUpdate(const FunctionClassification &fc) {
+  return llvm::any_of(fc.argInfos, [](const ArgClassification &ac) {
+    return ac.kind == ArgKind::Ignore || ac.kind == ArgKind::Extend ||
+           ac.kind == ArgKind::Indirect || ac.kind == ArgKind::Expand ||
+           (ac.kind == ArgKind::Direct && ac.coercedType);
+  });
+}
+
 /// Build an updated arg_attrs ArrayAttr that drops Ignore'd args, adds
-/// llvm.signext / llvm.zeroext on Extend args, and adds the pointer
-/// attributes for Indirect args.  Preserves any existing arg attributes on
+/// llvm.signext / llvm.zeroext on Extend args, adds the pointer attributes
+/// for Indirect args, and drops llvm.noundef from a coerced Direct arg that
+/// passes undefined bits.  Preserves any other existing arg attributes on
 /// retained arg slots.  \p origArgTypes provides the pre-rewrite type for
 /// each arg slot.
 mlir::ArrayAttr updateArgAttrs(mlir::MLIRContext *ctx,
@@ -255,6 +282,12 @@ mlir::ArrayAttr updateArgAttrs(mlir::MLIRContext *ctx,
                       dl.getTypeSize(pointeeTy).getFixedValue()));
       }
       newArgAttrs.push_back(attrs.getDictionary(ctx));
+    } else if (ac.kind == ArgKind::Direct && ac.coercedType &&
+               isCoercionWiderThanMemory(origArgTypes[oldIdx], ac.coercedType,
+                                         dl)) {
+      mlir::NamedAttrList attrs(existing);
+      attrs.erase(mlir::LLVM::LLVMDialect::getNoUndefAttrName());
+      newArgAttrs.push_back(attrs.getDictionary(ctx));
     } else {
       newArgAttrs.push_back(existing);
     }
@@ -264,22 +297,31 @@ mlir::ArrayAttr updateArgAttrs(mlir::MLIRContext *ctx,
 
 /// Build an updated res_attrs ArrayAttr (single entry, since CIR funcs have
 /// at most one result) that adds llvm.signext / llvm.zeroext on an Extend
-/// return.  Preserves any existing res attributes.
+/// return and drops llvm.noundef from a coerced return that passes undefined
+/// bits.  Preserves any other existing res attributes.  Returns
+/// \p existingResAttrs unchanged, which may be null, when there is nothing to
+/// add or drop.
 mlir::ArrayAttr updateResAttrs(mlir::MLIRContext *ctx,
                                mlir::ArrayAttr existingResAttrs,
-                               const ArgClassification &retInfo) {
-  if (retInfo.kind != ArgKind::Extend)
+                               const ArgClassification &retInfo,
+                               mlir::Type origRetTy,
+                               const mlir::DataLayout &dl) {
+  bool needsNoUndefDrop =
+      retInfo.kind == ArgKind::Direct && retInfo.coercedType &&
+      isCoercionWiderThanMemory(origRetTy, retInfo.coercedType, dl);
+  if (retInfo.kind != ArgKind::Extend && !needsNoUndefDrop)
     return existingResAttrs;
 
-  SmallVector<mlir::NamedAttribute> attrs;
+  mlir::NamedAttrList attrs;
   if (existingResAttrs && !existingResAttrs.empty())
-    for (mlir::NamedAttribute na :
-         mlir::cast<mlir::DictionaryAttr>(existingResAttrs[0]))
-      attrs.push_back(na);
-  StringRef attrName = retInfo.signExtend ? "llvm.signext" : "llvm.zeroext";
-  attrs.push_back(mlir::NamedAttribute(mlir::StringAttr::get(ctx, attrName),
-                                       mlir::UnitAttr::get(ctx)));
-  return mlir::ArrayAttr::get(ctx, {mlir::DictionaryAttr::get(ctx, attrs)});
+    attrs.append(
+        mlir::cast<mlir::DictionaryAttr>(existingResAttrs[0]).getValue());
+  if (retInfo.kind == ArgKind::Extend)
+    attrs.set(retInfo.signExtend ? "llvm.signext" : "llvm.zeroext",
+              mlir::UnitAttr::get(ctx));
+  if (needsNoUndefDrop)
+    attrs.erase(mlir::LLVM::LLVMDialect::getNoUndefAttrName());
+  return mlir::ArrayAttr::get(ctx, {attrs.getDictionary(ctx)});
 }
 
 /// The number of bytes a coercion memory slot needs to hold a value of type
@@ -1274,19 +1316,11 @@ void rewriteIndirectReturnCall(cir::CallOp call,
   copyCallAttributes(call, newCall);
   newCall->removeAttr("res_attrs");
 
-  // Shape the per-argument attrs exactly as the non-sret path does
-  // (signext / zeroext for Extend, drop Ignore slots, byval / align for
-  // Indirect, flatten for Expand and Direct+canFlatten) before prepending the
-  // sret slot, so sret composes correctly with Extend / Ignore / Indirect /
-  // Expand / Direct+canFlatten args.
+  // Shape the per-argument attrs exactly as the non-sret path does, through
+  // updateArgAttrs, before prepending the sret slot, so sret composes with
+  // every argument classification.
   mlir::ArrayAttr argAttrs = call->getAttrOfType<mlir::ArrayAttr>("arg_attrs");
-  bool needsArgAttrUpdate =
-      llvm::any_of(fc.argInfos, [](const ArgClassification &ac) {
-        return ac.kind == ArgKind::Ignore || ac.kind == ArgKind::Extend ||
-               ac.kind == ArgKind::Indirect || ac.kind == ArgKind::Expand ||
-               getFlattenedCoercedType(ac);
-      });
-  if (needsArgAttrUpdate)
+  if (needsArgAttrUpdate(fc))
     argAttrs = updateArgAttrs(ctx, origCallArgTypes, argAttrs, fc, dl);
   applySretSlotAttrs(newCall, argAttrs, origRetTy, sretAlign, builder);
 
@@ -1624,17 +1658,8 @@ mlir::LogicalResult CIRABIRewriteContext::rewriteFunctionDefinition(
   funcOp.setFunctionTypeAttr(mlir::TypeAttr::get(newFnTy));
 
   // Rebuild arg_attrs when the function has an sret slot (slot 0 needs the
-  // sret attribute set) or any arg is Ignore (dropped from the output array),
-  // Extend (needs llvm.signext / llvm.zeroext), Indirect (gains the pointer
-  // attributes updateArgAttrs applies), Expand or Direct+canFlatten (both
-  // change the argument count).
-  bool needsArgAttrUpdate =
-      hasSRet || llvm::any_of(fc.argInfos, [](const ArgClassification &ac) {
-        return ac.kind == ArgKind::Ignore || ac.kind == ArgKind::Extend ||
-               ac.kind == ArgKind::Indirect || ac.kind == ArgKind::Expand ||
-               getFlattenedCoercedType(ac);
-      });
-  if (needsArgAttrUpdate) {
+  // sret attribute set) or any arg needs updateArgAttrs.
+  if (hasSRet || needsArgAttrUpdate(fc)) {
     auto existing = funcOp->getAttrOfType<mlir::ArrayAttr>("arg_attrs");
     mlir::ArrayAttr updated =
         updateArgAttrs(ctx, oldArgTypes, existing, fc, dl);
@@ -1656,10 +1681,12 @@ mlir::LogicalResult CIRABIRewriteContext::rewriteFunctionDefinition(
 
   if (mlir::isa<cir::VoidType>(newRetTy)) {
     funcOp->removeAttr("res_attrs");
-  } else if (fc.returnInfo.kind == ArgKind::Extend) {
-    // Layer llvm.signext / llvm.zeroext onto an Extend return.
+  } else if (fc.returnInfo.kind == ArgKind::Extend ||
+             fc.returnInfo.kind == ArgKind::Direct) {
     auto existing = funcOp->getAttrOfType<mlir::ArrayAttr>("res_attrs");
-    funcOp->setAttr("res_attrs", updateResAttrs(ctx, existing, fc.returnInfo));
+    if (mlir::ArrayAttr updated =
+            updateResAttrs(ctx, existing, fc.returnInfo, origRetTy, dl))
+      funcOp->setAttr("res_attrs", updated);
   }
 
   return mlir::success();
@@ -1889,24 +1916,19 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
     call.getResult().replaceAllUsesWith(coercedBack);
   }
 
-  // Layer llvm.signext / llvm.zeroext onto the new call's arg_attrs and
-  // res_attrs for Extend args/return.  Ignore args require a rebuild because
-  // their slots are dropped; Indirect args need llvm.byval / llvm.align;
-  // Expand and Direct+canFlatten args change the argument count.
-  bool needsArgAttrUpdate =
-      llvm::any_of(fc.argInfos, [](const ArgClassification &ac) {
-        return ac.kind == ArgKind::Ignore || ac.kind == ArgKind::Extend ||
-               ac.kind == ArgKind::Indirect || ac.kind == ArgKind::Expand ||
-               getFlattenedCoercedType(ac);
-      });
-  if (needsArgAttrUpdate) {
+  if (needsArgAttrUpdate(fc)) {
     auto existing = call->getAttrOfType<mlir::ArrayAttr>("arg_attrs");
     newCall->setAttr("arg_attrs",
                      updateArgAttrs(ctx, origCallArgTypes, existing, fc, dl));
   }
-  if (fc.returnInfo.kind == ArgKind::Extend) {
+  // Add llvm.signext / llvm.zeroext to an Extend return, and drop llvm.noundef
+  // from a coerced Direct return that passes undefined bits.
+  if (fc.returnInfo.kind == ArgKind::Extend ||
+      (hasResult && fc.returnInfo.kind == ArgKind::Direct)) {
     auto existing = call->getAttrOfType<mlir::ArrayAttr>("res_attrs");
-    newCall->setAttr("res_attrs", updateResAttrs(ctx, existing, fc.returnInfo));
+    if (mlir::ArrayAttr updated =
+            updateResAttrs(ctx, existing, fc.returnInfo, origRetTy, dl))
+      newCall->setAttr("res_attrs", updated);
   } else if (hasResult && mlir::isa<cir::VoidType>(callRetTy)) {
     newCall->removeAttr("res_attrs");
   }

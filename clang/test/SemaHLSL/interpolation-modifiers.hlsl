@@ -104,7 +104,7 @@ float4 valid_types(nointerpolation int a : A, nointerpolation bool2 b : B,
 // SV_Target currently rejects integer types independently of interpolation.
 [shader("pixel")]
 // expected-error@+2 {{cannot be used with type 'uint'}}
-// expected-error@+1 {{attribute 'SV_Target' only applies to a field or parameter of type}}
+// expected-error@+1 {{semantic 'SV_Target' must be a scalar or vector of up to 4 components of 16 or 32 bit floating-point type (was 'uint' (aka 'unsigned int'))}}
 void invalid_inout(linear inout uint a : SV_Target) {
   a = 0;
 }

@@ -1290,39 +1290,40 @@ bool LoopVectorizationLegality::canVectorizeFPMath(
   // If the EnableStrictReductions flag is set, first check if we have any
   // Exact FP induction vars, which we cannot vectorize.
   if (!EnableStrictReductions ||
-      any_of(getInductionVars(), [&](auto &Induction) -> bool {
-        InductionDescriptor IndDesc = Induction.second;
-        return IndDesc.getExactFPMathInst();
-      }))
+      any_of(getInductionVars().values(),
+             [](const InductionDescriptor &IndDesc) -> bool {
+               return IndDesc.getExactFPMathInst();
+             }))
     return false;
 
   // We can now only vectorize if all reductions with Exact FP math also
   // have the isOrdered flag set, which indicates that we can move the
   // reduction operations in-loop.
-  return (all_of(getReductionVars(), [&](auto &Reduction) -> bool {
-    const RecurrenceDescriptor &RdxDesc = Reduction.second;
-    return !RdxDesc.hasExactFPMath() || RdxDesc.isOrdered();
-  }));
+  return (all_of(getReductionVars().values(),
+                 [](const RecurrenceDescriptor &RdxDesc) -> bool {
+                   return !RdxDesc.hasExactFPMath() || RdxDesc.isOrdered();
+                 }));
 }
 
 bool LoopVectorizationLegality::isInvariantStoreOfReduction(StoreInst *SI) {
-  return any_of(getReductionVars(), [&](auto &Reduction) -> bool {
-    const RecurrenceDescriptor &RdxDesc = Reduction.second;
-    return RdxDesc.IntermediateStore == SI;
-  });
+  return any_of(getReductionVars().values(),
+                [&](const RecurrenceDescriptor &RdxDesc) -> bool {
+                  return RdxDesc.IntermediateStore == SI;
+                });
 }
 
 bool LoopVectorizationLegality::isInvariantAddressOfReduction(Value *V) {
-  return any_of(getReductionVars(), [&](auto &Reduction) -> bool {
-    const RecurrenceDescriptor &RdxDesc = Reduction.second;
-    if (!RdxDesc.IntermediateStore)
-      return false;
+  return any_of(getReductionVars().values(),
+                [&](const RecurrenceDescriptor &RdxDesc) -> bool {
+                  if (!RdxDesc.IntermediateStore)
+                    return false;
 
-    ScalarEvolution *SE = PSE.getSE();
-    Value *InvariantAddress = RdxDesc.IntermediateStore->getPointerOperand();
-    return V == InvariantAddress ||
-           SE->getSCEV(V) == SE->getSCEV(InvariantAddress);
-  });
+                  ScalarEvolution *SE = PSE.getSE();
+                  Value *InvariantAddress =
+                      RdxDesc.IntermediateStore->getPointerOperand();
+                  return V == InvariantAddress ||
+                         SE->getSCEV(V) == SE->getSCEV(InvariantAddress);
+                });
 }
 
 bool LoopVectorizationLegality::isInductionPhi(const Value *V) const {

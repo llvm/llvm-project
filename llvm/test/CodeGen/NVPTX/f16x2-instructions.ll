@@ -247,20 +247,19 @@ define <2 x half> @test_fneg(<2 x half> %a) #0 {
 ; CHECK-NOF16-LABEL: test_fneg(
 ; CHECK-NOF16:       {
 ; CHECK-NOF16-NEXT:    .reg .b16 %rs<5>;
-; CHECK-NOF16-NEXT:    .reg .b32 %r<8>;
+; CHECK-NOF16-NEXT:    .reg .b32 %r<7>;
 ; CHECK-NOF16-EMPTY:
 ; CHECK-NOF16-NEXT:  // %bb.0:
 ; CHECK-NOF16-NEXT:    ld.param.b32 %r1, [test_fneg_param_0];
 ; CHECK-NOF16-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
 ; CHECK-NOF16-NEXT:    cvt.f32.f16 %r2, %rs2;
-; CHECK-NOF16-NEXT:    mov.b32 %r3, 0f00000000;
-; CHECK-NOF16-NEXT:    sub.rn.f32 %r4, %r3, %r2;
-; CHECK-NOF16-NEXT:    cvt.rn.f16.f32 %rs3, %r4;
-; CHECK-NOF16-NEXT:    cvt.f32.f16 %r5, %rs1;
-; CHECK-NOF16-NEXT:    sub.rn.f32 %r6, %r3, %r5;
-; CHECK-NOF16-NEXT:    cvt.rn.f16.f32 %rs4, %r6;
-; CHECK-NOF16-NEXT:    mov.b32 %r7, {%rs4, %rs3};
-; CHECK-NOF16-NEXT:    st.param.b32 [func_retval0], %r7;
+; CHECK-NOF16-NEXT:    sub.rn.f32 %r3, 0f00000000, %r2;
+; CHECK-NOF16-NEXT:    cvt.rn.f16.f32 %rs3, %r3;
+; CHECK-NOF16-NEXT:    cvt.f32.f16 %r4, %rs1;
+; CHECK-NOF16-NEXT:    sub.rn.f32 %r5, 0f00000000, %r4;
+; CHECK-NOF16-NEXT:    cvt.rn.f16.f32 %rs4, %r5;
+; CHECK-NOF16-NEXT:    mov.b32 %r6, {%rs4, %rs3};
+; CHECK-NOF16-NEXT:    st.param.b32 [func_retval0], %r6;
 ; CHECK-NOF16-NEXT:    ret;
   %r = fsub <2 x half> <half 0.0, half 0.0>, %a
   ret <2 x half> %r

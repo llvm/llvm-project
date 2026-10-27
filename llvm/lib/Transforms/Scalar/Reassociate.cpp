@@ -20,6 +20,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/Reassociate.h"
+#include "ScalarOptions.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
@@ -52,7 +53,6 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
@@ -70,12 +70,6 @@ using namespace PatternMatch;
 STATISTIC(NumChanged, "Number of insts reassociated");
 STATISTIC(NumAnnihil, "Number of expr tree annihilated");
 STATISTIC(NumFactor , "Number of multiplies factored");
-
-static cl::opt<bool>
-    UseCSELocalOpt(DEBUG_TYPE "-use-cse-local",
-                   cl::desc("Only reorder expressions within a basic block "
-                            "when exposing CSE opportunities"),
-                   cl::init(true), cl::Hidden);
 
 #ifndef NDEBUG
 /// Print out the expression identified in the Ops list.
@@ -2559,7 +2553,7 @@ void ReassociatePass::ReassociateExpression(BinaryOperator *I) {
     // reordering on the values that live in the first seen basic block.
     // The main idea is that we want to avoid forming expressions that would
     // become loop dependent.
-    if (UseCSELocalOpt) {
+    if (ScalarOptions::Global.reassociate_use_cse_local) {
       const BasicBlock *FirstSeenBB = nullptr;
       int StartIdx = Ops.size() - 1;
       // Skip the first value of the expression since we need at least two

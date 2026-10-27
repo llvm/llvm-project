@@ -1223,3 +1223,77 @@ llvm.func @indirect_blocking_use_in_different_region(%arg0 : i1) {
   }
   llvm.return
 }
+
+// -----
+
+// Removing an unused merge argument must skip dead predecessors, whose
+// branches carry no operand for it (else MutableOperandRange::erase asserts).
+// Depends on region-simplify=false in the RUN line: simplifying the region
+// first would drop the dead block before mem2reg sees it.
+
+// CHECK-LABEL: llvm.func @dead_pred_unused_merge_arg
+// CHECK-NOT: llvm.alloca
+// CHECK-NOT: llvm.store
+// CHECK-NOT: llvm.load
+// CHECK: llvm.br ^[[BB3:bb[0-9]+]]
+// CHECK-NEXT: ^bb{{[0-9]+}}:
+// CHECK-NEXT: %{{.*}} = llvm.mlir.constant
+// CHECK-NEXT: llvm.br ^[[BB3]]
+// CHECK-NEXT: ^[[BB3]]:
+// CHECK-NEXT: llvm.return
+// CHECK-NEXT: ^bb{{[0-9]+}}:
+// CHECK-NEXT: llvm.br ^[[BB3]]{{$}}
+llvm.func @dead_pred_unused_merge_arg(%cond: i1) {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  %1 = llvm.alloca %0 x i32 : (i32) -> !llvm.ptr
+  llvm.cond_br %cond, ^bb1, ^bb2
+^bb1:
+  %c1 = llvm.mlir.constant(10 : i32) : i32
+  llvm.store %c1, %1 : i32, !llvm.ptr
+  llvm.br ^bb3
+^bb2:
+  %c2 = llvm.mlir.constant(20 : i32) : i32
+  llvm.store %c2, %1 : i32, !llvm.ptr
+  llvm.br ^bb3
+^bb3:
+  %v = llvm.load %1 : !llvm.ptr -> i32
+  llvm.return
+^bbdead:
+  llvm.br ^bb3
+}
+
+// -----
+
+// Same, with a pre-existing merge block argument: the dead branch carries an
+// operand for it but none for the merge argument.
+
+// CHECK-LABEL: llvm.func @dead_pred_unused_merge_arg_with_arg
+// CHECK-NOT: llvm.alloca
+// CHECK-NOT: llvm.store
+// CHECK-NOT: llvm.load
+// CHECK: llvm.br ^[[BB3:bb[0-9]+]](%{{[^,]*}} : i32)
+// CHECK-NEXT: ^bb{{[0-9]+}}:
+// CHECK-NEXT: %{{.*}} = llvm.mlir.constant
+// CHECK-NEXT: llvm.br ^[[BB3]](%{{[^,]*}} : i32)
+// CHECK-NEXT: ^[[BB3]](%{{[^,]*}}: i32):
+// CHECK-NEXT: llvm.return
+// CHECK-NEXT: ^bb{{[0-9]+}}:
+// CHECK-NEXT: llvm.br ^[[BB3]](%{{[^,]*}} : i32){{$}}
+llvm.func @dead_pred_unused_merge_arg_with_arg(%cond: i1, %x: i32) {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  %1 = llvm.alloca %0 x i32 : (i32) -> !llvm.ptr
+  llvm.cond_br %cond, ^bb1, ^bb2
+^bb1:
+  %c1 = llvm.mlir.constant(10 : i32) : i32
+  llvm.store %c1, %1 : i32, !llvm.ptr
+  llvm.br ^bb3(%x : i32)
+^bb2:
+  %c2 = llvm.mlir.constant(20 : i32) : i32
+  llvm.store %c2, %1 : i32, !llvm.ptr
+  llvm.br ^bb3(%x : i32)
+^bb3(%a: i32):
+  %v = llvm.load %1 : !llvm.ptr -> i32
+  llvm.return
+^bbdead:
+  llvm.br ^bb3(%x : i32)
+}

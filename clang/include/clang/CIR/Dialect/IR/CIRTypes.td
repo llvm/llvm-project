@@ -509,6 +509,11 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
     !cir.vector<2 x !cir.float>
     ```
 
+    A fixed-length vector of `!cir.bool` is packed one bit per element, and its
+    size is rounded up to a power of two of at least one byte, so
+    `!cir.vector<4 x !cir.bool>` occupies one byte and
+    `!cir.vector<17 x !cir.bool>` occupies four.
+
     Scalable vectors are indicated by enclosing size in square brackets.
 
     Example:
@@ -531,6 +536,12 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
         return $_get(element_type.getContext(), element_type, size, is_scalable);
     }]>,
   ];
+
+  let extraClassDeclaration = [{
+    /// The width of the integer a vector of `!cir.bool` is stored as: one bit
+    /// per element, at least a byte.
+    uint64_t getBoolStorageWidth() const;
+  }];
 
   let extraClassDefinition = [{
     bool $cppClass::isSized() const {

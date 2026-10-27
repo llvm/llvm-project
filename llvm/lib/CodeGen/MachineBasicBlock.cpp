@@ -1330,12 +1330,14 @@ MachineBasicBlock::SplitCriticalEdge(MachineBasicBlock *Succ,
     }
 
     auto UpdateLiveOutReg = [&](Register Reg) {
-      if (PHISrcRegs.count(Reg) || !LIS->hasInterval(Reg))
-        return;
+      if (PHISrcRegs.count(Reg))
+        return true;
+      if (!LIS->hasInterval(Reg))
+        return false;
 
       LiveInterval &LI = LIS->getInterval(Reg);
       if (!LI.liveAt(PrevIndex))
-        return;
+        return false;
 
       bool isLiveOut = LI.liveAt(LIS->getMBBStartIdx(Succ));
       if (isLiveOut && isLastMBB) {
@@ -1357,19 +1359,15 @@ MachineBasicBlock::SplitCriticalEdge(MachineBasicBlock *Succ,
             SR.removeSegment(StartIndex, EndIndex);
         }
       }
+      return isLiveOut;
     };
 
     if (std::vector<SparseBitVector<>> *LiveOutSets = Analyses.LiveOutSets) {
-      const SparseBitVector<> &LiveOut = (*LiveOutSets)[getNumber()];
-      for (unsigned Idx : LiveOut)
-        UpdateLiveOutReg(Register::index2VirtReg(Idx));
-
       LiveOutSets->resize(MF->getNumBlockIDs());
+      const SparseBitVector<> &LiveOut = (*LiveOutSets)[getNumber()];
       SparseBitVector<> &NewLiveOut = (*LiveOutSets)[NMBB->getNumber()];
-      SlotIndex NewPrevIndex = EndIndex.getPrevSlot();
-      for (unsigned Idx : (*LiveOutSets)[getNumber()]) {
-        Register Reg = Register::index2VirtReg(Idx);
-        if (LIS->hasInterval(Reg) && LIS->getInterval(Reg).liveAt(NewPrevIndex))
+      for (unsigned Idx : LiveOut) {
+        if (UpdateLiveOutReg(Register::index2VirtReg(Idx)))
           NewLiveOut.set(Idx);
       }
     } else {

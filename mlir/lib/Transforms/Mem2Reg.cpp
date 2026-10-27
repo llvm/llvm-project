@@ -981,7 +981,14 @@ void MemorySlotPromoter::removeUnusedItems() {
       auto branch = cast<BranchOpInterface>(use.getOwner());
       SuccessorOperands succOperands =
           branch.getSuccessorOperands(use.getOperandNumber());
-      succOperands.erase(arg.getArgNumber());
+      // A dead predecessor's branch carries no operand for this merge point:
+      // operands are appended during the dominator-tree walk, which dead
+      // blocks are not part of, and only the used-argument path above appends
+      // a placeholder to such branches, so there is nothing to erase.
+      assert(succOperands.size() == mergePoint->getNumArguments() ||
+             succOperands.size() + 1 == mergePoint->getNumArguments());
+      if (succOperands.size() == mergePoint->getNumArguments())
+        succOperands.erase(arg.getArgNumber());
     }
   }
 

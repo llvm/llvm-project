@@ -80,6 +80,10 @@ namespace {
 
 static constexpr llvm::StringRef cudaFortranCtorName{
     "__cudaFortranConstructor"};
+static constexpr llvm::StringRef cudaFortranInitCtorName{
+    "__cudaFortranInitConstructor"};
+static constexpr llvm::StringRef cudaModuleHandleName{
+    "__cudaFortranModuleHandle"};
 static constexpr llvm::StringRef managedPtrSuffix{".managed.ptr"};
 static constexpr llvm::StringRef cudaCompiledSymbolName{"Mcuda_compiled"};
 
@@ -392,6 +396,7 @@ struct CUFAddConstructor
     func.setLinkage(mlir::LLVM::Linkage::Internal);
     auto entryBlock = func.addEntryBlock(builder);
     builder.setInsertionPointToStart(entryBlock);
+    mlir::LLVM::LLVMFuncOp initCtor;
 
     if (needAllocatorRegistration) {
       llvm::StringRef allocatorRegistrationFunctionName =
@@ -530,14 +535,47 @@ struct CUFAddConstructor
 
         if (hasNonAllocManagedGlobal) {
           // Initialize the module after all variables are registered so the
-          // runtime populates managed variable unified memory pointers.
+          // runtime populates managed variable unified memory pointers. With
+          // relocatable device code, every unit registers its variables with
+          // the same module, and the runtime ignores the ones registered after
+          // the module is initialized. The initialization therefore runs in a
+          // second constructor with the next priority value, after the
+          // registration constructors of every unit in the same executable or
+          // shared library.
+          mlir::OpBuilder::InsertionGuard guard(builder);
+          builder.setInsertionPointToEnd(mod.getBody());
+          auto handleGlobal = mlir::LLVM::GlobalOp::create(
+              builder, loc, llvmPtrTy, /*isConstant=*/false,
+              mlir::LLVM::Linkage::Internal, cudaModuleHandleName,
+              mlir::Attribute{});
+          builder.createBlock(&handleGlobal.getInitializerRegion());
+          mlir::Value nullHandle =
+              mlir::LLVM::ZeroOp::create(builder, loc, llvmPtrTy);
+          mlir::LLVM::ReturnOp::create(builder, loc, nullHandle);
+
+          builder.setInsertionPointToEnd(mod.getBody());
+          initCtor = mlir::LLVM::LLVMFuncOp::create(
+              builder, loc, cudaFortranInitCtorName, funcTy);
+          initCtor.setLinkage(mlir::LLVM::Linkage::Internal);
+          mlir::Block *initBlock = initCtor.addEntryBlock(builder);
+
+          builder.setInsertionPointToEnd(entryBlock);
+          mlir::LLVM::StoreOp::create(
+              builder, loc, registeredMod,
+              mlir::LLVM::AddressOfOp::create(builder, loc, handleGlobal));
+
+          builder.setInsertionPointToStart(initBlock);
+          mlir::Value handle = mlir::LLVM::LoadOp::create(
+              builder, loc, llvmPtrTy,
+              mlir::LLVM::AddressOfOp::create(builder, loc, handleGlobal));
           mlir::func::FuncOp initFunc =
               fir::runtime::getRuntimeFunc<mkRTKey(CUFInitModule)>(loc,
                                                                    builder);
           mlir::FunctionType initFTy = initFunc.getFunctionType();
-          llvm::SmallVector<mlir::Value> initArgs{fir::runtime::createArguments(
-              builder, loc, initFTy, registeredMod)};
+          llvm::SmallVector<mlir::Value> initArgs{
+              fir::runtime::createArguments(builder, loc, initFTy, handle)};
           fir::CallOp::create(builder, loc, initFunc, initArgs);
+          mlir::LLVM::ReturnOp::create(builder, loc, mlir::ValueRange{});
         }
       }
     }
@@ -582,6 +620,12 @@ struct CUFAddConstructor
     llvm::SmallVector<mlir::Attribute> data;
     priorities.push_back(priority);
     data.push_back(mlir::LLVM::ZeroAttr::get(mod.getContext()));
+    if (initCtor) {
+      funcs.push_back(mlir::FlatSymbolRefAttr::get(mod.getContext(),
+                                                   initCtor.getSymName()));
+      priorities.push_back(priority + 1);
+      data.push_back(mlir::LLVM::ZeroAttr::get(mod.getContext()));
+    }
     mlir::LLVM::GlobalCtorsOp::create(
         builder, mod.getLoc(), builder.getArrayAttr(funcs),
         builder.getI32ArrayAttr(priorities), builder.getArrayAttr(data));

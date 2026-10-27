@@ -826,6 +826,13 @@ public:
     return createVecShuffle(loc, vec1, poison, mask);
   }
 
+  cir::MatrixExtractOp createMatrixExtract(mlir::Location loc,
+                                           mlir::Value matrix,
+                                           mlir::Value rowIdx,
+                                           mlir::Value columnIdx) {
+    return cir::MatrixExtractOp::create(*this, loc, matrix, rowIdx, columnIdx);
+  }
+
   cir::MatrixColumnMajorLoadOp createMatrixColumnMajorLoad(mlir::Location loc,
                                                            mlir::Type resultTy,
                                                            mlir::Value value,

@@ -606,10 +606,19 @@ static bool determineNoUndef(QualType clangTy, CIRGenTypes &types,
     // bits from the perspective of LLVM IR.
     return false;
 
+  // Classic CodeGen stores a packed bool vector as an integer with one bit per
+  // element, at least a byte wide, so the check above drops noundef when that
+  // integer is not a whole number of bytes.  The CIR vector type is sized to a
+  // power of two of at least a byte, which always passes that check, so test
+  // the storage integer's width directly.
+  if (clangTy->isPackedVectorBoolType(types.getASTContext()) &&
+      mlir::cast<cir::VectorType>(ty).getBoolStorageWidth() % 8)
+    return false;
+
   assert(!cir::MissingFeatures::opCallCallConv());
-  // TODO(cir): The calling convention code needs to figure if the
-  // coerced-to-type is larger than the actual type, and remove the noundef
-  // attribute. Classic compiler did it here.
+  // The coerced type is not known until CallConvLowering, which drops noundef
+  // when it is wider than the value's memory type, the check classic
+  // DetermineNoUndef makes at this point.
   if (clangTy->isBitIntType())
     return true;
   if (clangTy->isReferenceType())

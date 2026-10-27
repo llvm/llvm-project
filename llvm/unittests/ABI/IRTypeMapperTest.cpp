@@ -99,6 +99,26 @@ TEST_F(IRTypeMapperTest, SVEDataTupleMapsToStructOfVectors) {
     EXPECT_EQ(Struct->getElementType(I), ExpectedVec);
 }
 
+TEST_F(IRTypeMapperTest, PackedRecordMapsToPackedStruct) {
+  const llvm::abi::Type *I32 =
+      TB.getIntegerType(32, llvm::Align(4), /*Signed=*/true);
+  const llvm::abi::VectorType *SVInt32 =
+      TB.getVectorType(I32, llvm::ElementCount::getScalable(4), llvm::Align(16),
+                       llvm::abi::VectorKind::SVEData);
+  const llvm::abi::RecordType *Packed = TB.getRecordType(
+      {llvm::abi::FieldInfo(SVInt32, 0), llvm::abi::FieldInfo(SVInt32, 0)},
+      llvm::TypeSize::getFixed(0), llvm::Align(1),
+      /*UnadjustedAlign=*/llvm::Align(1), llvm::abi::StructPacking::Packed);
+
+  auto *Struct = llvm::dyn_cast<llvm::StructType>(Mapper.convertType(Packed));
+  ASSERT_NE(Struct, nullptr);
+  EXPECT_TRUE(Struct->isPacked());
+  ASSERT_EQ(Struct->getNumElements(), 2u);
+  llvm::Type *Vec = Mapper.convertType(SVInt32);
+  EXPECT_EQ(Struct->getElementType(0), Vec);
+  EXPECT_EQ(Struct->getElementType(1), Vec);
+}
+
 TEST_F(IRTypeMapperTest, SameSizeAtomicMapsToValueType) {
   const llvm::abi::Type *F32 =
       TB.getFloatType(llvm::APFloat::IEEEsingle(), llvm::Align(4));

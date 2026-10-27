@@ -19,6 +19,7 @@
 #include "llvm/DebugInfo/CodeView/RecordSerialization.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
+#include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/ScopedPrinter.h"
@@ -410,20 +411,47 @@ Error TypeRecordMapping::visitKnownRecord(CVType &CVR, ArrayRecord &Record) {
 }
 
 Error TypeRecordMapping::visitKnownRecord(CVType &CVR, ClassRecord &Record) {
-  assert((CVR.kind() == TypeLeafKind::LF_STRUCTURE) ||
-         (CVR.kind() == TypeLeafKind::LF_CLASS) ||
-         (CVR.kind() == TypeLeafKind::LF_INTERFACE));
-
   std::string PropertiesNames = getFlagNames(
       IO, static_cast<uint16_t>(Record.Options), getClassOptionNames());
-  error(IO.mapInteger(Record.MemberCount, "MemberCount"));
-  error(IO.mapEnum(Record.Options, "Properties" + PropertiesNames));
-  error(IO.mapInteger(Record.FieldList, "FieldList"));
-  error(IO.mapInteger(Record.DerivationList, "DerivedFrom"));
-  error(IO.mapInteger(Record.VTableShape, "VShape"));
-  error(IO.mapEncodedInteger(Record.Size, "SizeOf"));
-  error(mapNameAndUniqueName(IO, Record.Name, Record.UniqueName,
-                             Record.hasUniqueName()));
+
+  // The original and *2 versions are handled in the same high level record as
+  // they're almost identical except for the widths of members. The *2 versions
+  // store the properties as 32 bits and the member count as an encoded integer.
+  TypeLeafKind Kind = CVR.kind();
+  if (Kind == TypeLeafKind::LF_STRUCTURE2 || Kind == TypeLeafKind::LF_CLASS2 ||
+      Kind == TypeLeafKind::LF_INTERFACE2) {
+    uint32_t Options = llvm::to_underlying(Record.Options);
+    error(IO.mapInteger(Options, "Properties" + PropertiesNames));
+    if (IO.isReading())
+      Record.Options = static_cast<ClassOptions>(Options);
+
+    error(IO.mapInteger(Record.FieldList, "FieldList"));
+    error(IO.mapInteger(Record.DerivationList, "DerivedFrom"));
+    error(IO.mapInteger(Record.VTableShape, "VShape"));
+    error(IO.mapEncodedInteger(Record.MemberCount, "MemberCount"));
+    error(IO.mapEncodedInteger(Record.Size, "SizeOf"));
+    error(mapNameAndUniqueName(IO, Record.Name, Record.UniqueName,
+                               Record.hasUniqueName()));
+  } else {
+    assert(Kind == TypeLeafKind::LF_STRUCTURE ||
+           Kind == TypeLeafKind::LF_CLASS ||
+           Kind == TypeLeafKind::LF_INTERFACE);
+
+    // This is not an error to avoid failing to write all type records.
+    assert(
+        (IO.isReading() ||
+         Record.MemberCount <= std::numeric_limits<uint16_t>::max()) &&
+        "use the *2 versions of this record if there are 2^16 or more members");
+
+    error(IO.mapTruncInteger<uint16_t>(Record.MemberCount, "MemberCount"));
+    error(IO.mapEnum(Record.Options, "Properties" + PropertiesNames));
+    error(IO.mapInteger(Record.FieldList, "FieldList"));
+    error(IO.mapInteger(Record.DerivationList, "DerivedFrom"));
+    error(IO.mapInteger(Record.VTableShape, "VShape"));
+    error(IO.mapEncodedInteger(Record.Size, "SizeOf"));
+    error(mapNameAndUniqueName(IO, Record.Name, Record.UniqueName,
+                               Record.hasUniqueName()));
+  }
 
   return Error::success();
 }
@@ -431,12 +459,33 @@ Error TypeRecordMapping::visitKnownRecord(CVType &CVR, ClassRecord &Record) {
 Error TypeRecordMapping::visitKnownRecord(CVType &CVR, UnionRecord &Record) {
   std::string PropertiesNames = getFlagNames(
       IO, static_cast<uint16_t>(Record.Options), getClassOptionNames());
-  error(IO.mapInteger(Record.MemberCount, "MemberCount"));
-  error(IO.mapEnum(Record.Options, "Properties" + PropertiesNames));
-  error(IO.mapInteger(Record.FieldList, "FieldList"));
-  error(IO.mapEncodedInteger(Record.Size, "SizeOf"));
-  error(mapNameAndUniqueName(IO, Record.Name, Record.UniqueName,
-                             Record.hasUniqueName()));
+
+  if (CVR.kind() == LF_UNION2) {
+    uint32_t Options = llvm::to_underlying(Record.Options);
+    error(IO.mapInteger(Options, "Properties" + PropertiesNames));
+    if (IO.isReading())
+      Record.Options = static_cast<ClassOptions>(Options);
+
+    error(IO.mapInteger(Record.FieldList, "FieldList"));
+    error(IO.mapEncodedInteger(Record.MemberCount, "MemberCount"));
+    error(IO.mapEncodedInteger(Record.Size, "SizeOf"));
+    error(mapNameAndUniqueName(IO, Record.Name, Record.UniqueName,
+                               Record.hasUniqueName()));
+  } else {
+    // This is not an error to avoid failing to write all type records.
+    assert(
+        (IO.isReading() ||
+         Record.MemberCount <= std::numeric_limits<uint16_t>::max()) &&
+        "use the *2 versions of this record if there are 2^16 or more members");
+
+    error(IO.mapTruncInteger<uint16_t>(Record.MemberCount, "MemberCount"));
+
+    error(IO.mapEnum(Record.Options, "Properties" + PropertiesNames));
+    error(IO.mapInteger(Record.FieldList, "FieldList"));
+    error(IO.mapEncodedInteger(Record.Size, "SizeOf"));
+    error(mapNameAndUniqueName(IO, Record.Name, Record.UniqueName,
+                               Record.hasUniqueName()));
+  }
 
   return Error::success();
 }
@@ -444,7 +493,7 @@ Error TypeRecordMapping::visitKnownRecord(CVType &CVR, UnionRecord &Record) {
 Error TypeRecordMapping::visitKnownRecord(CVType &CVR, EnumRecord &Record) {
   std::string PropertiesNames = getFlagNames(
       IO, static_cast<uint16_t>(Record.Options), getClassOptionNames());
-  error(IO.mapInteger(Record.MemberCount, "NumEnumerators"));
+  error(IO.mapTruncInteger<uint16_t>(Record.MemberCount, "NumEnumerators"));
   error(IO.mapEnum(Record.Options, "Properties" + PropertiesNames));
   error(IO.mapInteger(Record.UnderlyingType, "UnderlyingType"));
   error(IO.mapInteger(Record.FieldList, "FieldListType"));

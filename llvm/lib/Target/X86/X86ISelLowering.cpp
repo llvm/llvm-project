@@ -58296,15 +58296,15 @@ static SDValue combineExtSetcc(SDNode *N, SelectionDAG &DAG,
       SVT != MVT::i64 && SVT != MVT::f32 && SVT != MVT::f64)
     return SDValue();
 
-  // We don't have CMPP Instruction for vxf16
-  if (N0.getOperand(0).getValueType().getVectorElementType() == MVT::f16)
+  // We don't have CMPP Instruction for vxf16/vxbf16.
+  EVT N00VT = N0.getOperand(0).getValueType();
+  EVT N00SVT = N00VT.getVectorElementType();
+  if (N00SVT == MVT::f16 || N00SVT == MVT::bf16)
     return SDValue();
   // We can only do this if the vector size in 256 bits or less.
   unsigned Size = VT.getSizeInBits();
   if (Size > 256 && Subtarget.useAVX512Regs())
     return SDValue();
-
-  EVT N00VT = N0.getOperand(0).getValueType();
 
   // Don't fold if the condition code can't be handled by PCMPEQ/PCMPGT since
   // that's the only integer compares with we have.
