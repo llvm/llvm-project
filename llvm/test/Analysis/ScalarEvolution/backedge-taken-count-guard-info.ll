@@ -128,7 +128,7 @@ define void @narrower_zext_bounded_by_operand(i32 %m, i8 %k) {
 ; CHECK-LABEL: 'narrower_zext_bounded_by_operand'
 ; CHECK-NEXT:  Determining loop execution counts for: @narrower_zext_bounded_by_operand
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (2 * (zext i8 %k to i64))<nuw><nsw>)<nsw>
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 8589934589
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 509
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (2 * (zext i8 %k to i64))<nuw><nsw>)<nsw>
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 2
 ;
@@ -186,7 +186,7 @@ define void @narrower_zext_provides_lower_bound(i32 %m, i8 %k) {
 ; CHECK-LABEL: 'narrower_zext_provides_lower_bound'
 ; CHECK-NEXT:  Determining loop execution counts for: @narrower_zext_provides_lower_bound
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (2 * (zext i8 %k to i64))<nuw><nsw>)<nsw>
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 8589934591
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 509
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (2 * (zext i8 %k to i64))<nuw><nsw>)<nsw>
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 2
 ;
