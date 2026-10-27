@@ -90,19 +90,19 @@
   "waits": 1
  },
  "softmax_row.ll:softmax_row:agx-g13g": {
-  "bytes": 120,
-  "cycles": 180.8,
-  "gprs": 7,
-  "instructions": 20,
+  "bytes": 380,
+  "cycles": 236.3,
+  "gprs": 10,
+  "instructions": 58,
   "launch_inputs": false,
   "uniform_halves": 10,
   "waits": 1
  },
  "softmax_row.ll:softmax_row:agx-g14c": {
-  "bytes": 120,
-  "cycles": 180.8,
-  "gprs": 7,
-  "instructions": 20,
+  "bytes": 380,
+  "cycles": 236.3,
+  "gprs": 10,
+  "instructions": 58,
   "launch_inputs": false,
   "uniform_halves": 10,
   "waits": 1
