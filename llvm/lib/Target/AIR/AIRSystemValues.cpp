@@ -161,6 +161,10 @@ static bool airSystemValues(Module &M) {
       ++NewArgIt;
     }
 
+    // Keep metadata that names the kernel (e.g. a pre-baked !air.kernel)
+    // pointing at the rewritten function; erasing F would null it out.
+    ValueAsMetadata::handleRAUW(&F, NewF);
+
     std::string FName = F.getName().str();
     F.eraseFromParent();
     NewF->setName(FName);
