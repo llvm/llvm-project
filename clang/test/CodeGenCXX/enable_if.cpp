@@ -20,6 +20,18 @@ void test2(int i) __attribute__((enable_if(&ext != 0, ""))) {}
 // CHECK: _Z5test3Ua9enable_ifIXeqfL0p_Li1EEXeqfL0p0_Li2EEEii
 void test3(int i, int j) __attribute__((enable_if(i == 1, ""), enable_if(j == 2, ""))) {}
 
+namespace GH233087 {
+  // CHECK: _ZN8GH2330873getILi1EEEUa9enable_ifIXclLNS_3$_0EEEEEiv
+  template <int N = 1>
+  int get() __attribute__((enable_if([]() { return N; }(), ""))) { return 0; }
+  template <int N = 1>
+  struct B {
+    // CHECK: _ZN8GH2330871BILi1EE3getEUa9enable_ifIXclLNS_1BUlvE_EEEEEv
+    int get() __attribute__((enable_if([]() { return N; }(), ""))) { return 0; }
+  };
+  int h = get() + B().get();
+}
+
 // CHECK: _ZN5test4IdE1fEUa9enable_ifIXeqfL0p_Li1EEXeqfL0p0_Li2EEEi
 template <typename T>
 class test4 {
