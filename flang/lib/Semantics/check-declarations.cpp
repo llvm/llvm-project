@@ -258,23 +258,13 @@ static bool IsBlockData(const Symbol &symbol) {
 }
 
 // Was this entity declared with an explicit-shape-bounds-spec (F2023 R818),
-// i.e. a rank-1 integer array as its bounds?  Name resolution stores such a
-// bound as a RankOneBoundElement in every dimension's ShapeSpec; a zero-size
-// base yields a scalar whose bounds were stashed for checking instead.
+// i.e. a rank-1 integer array as its bounds?  Name resolution marks the
+// resulting shape (a constant bounds array is folded into ordinary
+// per-dimension bounds, so the bounds themselves need not show it); a
+// zero-size base yields a scalar whose bounds were stashed for checking.
 static bool HasRankOneBounds(const ObjectEntityDetails &details) {
-  if (!details.droppedBoundsToCheck().empty()) {
-    return true;
-  }
-  if (!details.shape().empty()) {
-    const ShapeSpec &first{details.shape().front()};
-    for (const Bound *bound : {&first.lbound(), &first.ubound()}) {
-      if (const auto &expr{bound->GetExplicit()};
-          expr && evaluate::UnwrapExpr<evaluate::RankOneBoundElement>(*expr)) {
-        return true;
-      }
-    }
-  }
-  return false;
+  return details.shape().isFromRankOneBounds() ||
+      !details.droppedBoundsToCheck().empty();
 }
 
 void CheckHelper::Check(const Symbol &symbol) {

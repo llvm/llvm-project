@@ -61,7 +61,6 @@ static void PutBound(llvm::raw_ostream &, const Bound &);
 static void PutShapeSpec(llvm::raw_ostream &, const ShapeSpec &);
 static void PutShape(
     llvm::raw_ostream &, const ArraySpec &, char open, char close);
-static bool HasRankOneBound(const ArraySpec &);
 static void PutMapper(llvm::raw_ostream &, const Symbol &, SemanticsContext &);
 
 static llvm::raw_ostream &PutAttr(llvm::raw_ostream &, Attr);
@@ -1200,54 +1199,58 @@ static void CheckWritableType(const DeclTypeSpec &type) {
   }
 }
 
-// Check whether any bound in an ArraySpec holds a RankOneBoundElement,
-// indicating the shape came from a rank-1 integer array expression.
-bool HasRankOneBound(const ArraySpec &shape) {
-  const auto &first{shape.front()};
-  if (auto lb{first.lbound().GetExplicit()}) {
-    if (evaluate::UnwrapExpr<evaluate::RankOneBoundElement>(*lb)) {
-      return true;
+// Writes one side (lower or upper) of a shape declared with a rank-1 bounds
+// array (ArraySpec::isFromRankOneBounds()) in the form it was declared.  A
+// side written as a scalar was broadcast to every dimension and is written
+// back as that scalar.  A side written as a rank-1 array is written back
+// whole: a non-constant base survives as a RankOneBoundElement in every
+// dimension and is written as that base; a constant base was folded into
+// per-dimension constants at declaration and is re-synthesized as a constant
+// array.
+static void PutRankOneBoundSide(
+    llvm::raw_ostream &os, const ArraySpec &shape, bool upper) {
+  auto boundOf{[upper](const ShapeSpec &spec) -> const Bound & {
+    return upper ? spec.ubound() : spec.lbound();
+  }};
+  const Bound &first{boundOf(shape.front())};
+  if (first.isColon()) {
+    return;
+  }
+  if (!(upper ? shape.uboundIsRankOne() : shape.lboundIsRankOne())) {
+    PutBound(os, first);
+    return;
+  }
+  if (const auto &expr{first.GetExplicit()}) {
+    if (const auto *robe{
+            evaluate::UnwrapExpr<evaluate::RankOneBoundElement>(*expr)}) {
+      CheckWritableExpr(robe->base());
+      robe->base().AsFortran(os);
+      return;
     }
   }
-  if (auto ub{first.ubound().GetExplicit()}) {
-    if (evaluate::UnwrapExpr<evaluate::RankOneBoundElement>(*ub)) {
-      return true;
-    }
+  std::vector<evaluate::Scalar<evaluate::SubscriptInteger>> values;
+  for (const ShapeSpec &spec : shape) {
+    auto value{evaluate::ToInt64(boundOf(spec).GetExplicit())};
+    // A rank-1 side without a RankOneBoundElement is a folded constant array.
+    CHECK(value);
+    values.emplace_back(*value);
   }
-  return false;
+  evaluate::Constant<evaluate::SubscriptInteger>{std::move(values),
+      evaluate::ConstantSubscripts{
+          static_cast<evaluate::ConstantSubscript>(shape.size())}}
+      .AsFortran(os);
 }
 
 void PutShape(
     llvm::raw_ostream &os, const ArraySpec &shape, char open, char close) {
   if (!shape.empty()) {
     os << open;
-    if (HasRankOneBound(shape)) {
-      // Rank-1 bounds: all ShapeSpecs share the same rank-1 expression
-      // wrapped in RankOneBoundElement. Extract the base expression from the
-      // first element and emit it whole so the mod file round-trips through
-      // the parser as an ExplicitShapeBoundsSpec.
-      const auto &first{shape.front()};
-      if (!first.lbound().isColon()) {
-        auto lb{first.lbound().GetExplicit()};
-        if (auto *robe =
-                evaluate::UnwrapExpr<evaluate::RankOneBoundElement>(*lb)) {
-          CheckWritableExpr(robe->base());
-          robe->base().AsFortran(os);
-        } else {
-          PutBound(os, first.lbound());
-        }
-      }
+    if (shape.isFromRankOneBounds()) {
+      // Rank-1 bounds: emit each side whole so the mod file round-trips
+      // through the parser as an ExplicitShapeBoundsSpec.
+      PutRankOneBoundSide(os, shape, /*upper=*/false);
       os << ':';
-      if (!first.ubound().isColon()) {
-        auto ub{first.ubound().GetExplicit()};
-        if (auto *robe =
-                evaluate::UnwrapExpr<evaluate::RankOneBoundElement>(*ub)) {
-          CheckWritableExpr(robe->base());
-          robe->base().AsFortran(os);
-        } else {
-          PutBound(os, first.ubound());
-        }
-      }
+      PutRankOneBoundSide(os, shape, /*upper=*/true);
     } else {
       bool first{true};
       for (const auto &shapeSpec : shape) {

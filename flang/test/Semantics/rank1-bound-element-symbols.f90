@@ -15,6 +15,24 @@ subroutine s(n)
   a = 0.0
 end subroutine
 
+! A constant bounds array is folded into ordinary per-dimension constant
+! bounds when the entity is declared, so consumers that read bounds directly
+! (here EQUIVALENCE storage-sequence offsets) see the same shape as the
+! equivalent explicit-shape-spec-list: a(2,3) is element 8, so b starts at
+! byte 28, and a(1,2) of a(0:2,0:3) is element 8 as well.
+subroutine s_equivalence
+  !SYMBOLS: a size=48 offset=0: ObjectEntity type: REAL(4) shape: 1_8:3_8,1_8:4_8
+  !SYMBOLS: b size=48 offset=28: ObjectEntity type: REAL(4) shape: 1_8:12_8
+  real :: a([3,4]), b(12)
+  equivalence (a(2,3), b(1))
+end subroutine
+subroutine s_equivalence_lb
+  !SYMBOLS: a size=48 offset=0: ObjectEntity type: REAL(4) shape: 0_8:2_8,0_8:3_8
+  !SYMBOLS: b size=48 offset=28: ObjectEntity type: REAL(4) shape: 1_8:12_8
+  real :: a([0,0]:[2,3]), b(12)
+  equivalence (a(1,2), b(1))
+end subroutine
+
 subroutine s2
   ! A zero-size bounds array overrides the DIMENSION attribute and declares a
   ! scalar (size=4, no shape), rather than a size=5*4 array.

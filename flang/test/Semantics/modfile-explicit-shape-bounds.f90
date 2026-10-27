@@ -530,6 +530,37 @@ end module
 !end
 !end
 
+! The same irreducible base with an explicit all-ones rank-1 lower bound.  The
+! constant lower bound is folded into per-dimension constants at declaration,
+! so the extent of b is max(0,ub) exactly as for b(1:merge(...)) and size(b,2)
+! is stamped with ubound() provenance and serialized as the real intrinsic.
+! (Were the lower bound left as an unfolded element, the lower bound would not
+! be recognized as 1, no provenance would be stamped, and e would serialize as
+! the intact size(b,2_4) call.)
+module mmergeones
+contains
+  subroutine s(n, m, c, b, e)
+    integer, intent(in) :: n(2), m(2)
+    logical, intent(in) :: c(2)
+    real :: b([1, 1] : merge(n, m, c))
+    real :: e(size(b, 2))
+    e(1) = 1.0
+    b(1,1) = e(1)
+  end subroutine
+end module
+
+!Expect: mmergeones.mod
+!module mmergeones
+!contains
+!subroutine s(n,m,c,b,e)
+!integer(4),intent(in)::n(1_8:2_8)
+!integer(4),intent(in)::m(1_8:2_8)
+!logical(4),intent(in)::c(1_8:2_8)
+!real(4)::b([INTEGER(8)::1_8,1_8]:__builtin_int(merge(n,m,c),kind=8))
+!real(4)::e(1_8:__builtin_int(__builtin_int(max(0_8,ubound(b,dim=2,kind=8)),kind=4),kind=8))
+!end
+!end
+
 ! SIZE(a,dim) on a dimension with the default lower bound of 1 folds to the same
 ! provenance ROBE as UBOUND(a,dim) (size == ubound when the lower bound is 1), so
 ! it serializes as max(0,ubound(a,dim)...) and lowers to the shared bound

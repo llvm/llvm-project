@@ -170,6 +170,19 @@ subroutine size_constant_base()
   integer(kind=merge(4, -1, count == 12)) :: ok
   ok = 0
 end subroutine
+! A constant rank-1 lower bound is folded into per-dimension constants at
+! declaration, so a lower bound of 1 is recognized regardless of the (unknown)
+! extent and LBOUND is a constant expression exactly as for a(1:n).  (A lower
+! bound other than 1 is correctly not constant here: LBOUND is 1 for an empty
+! dimension, and n(2) is not known.)
+subroutine lbound_constant_base(n)
+  integer, intent(in) :: n(2)
+  integer, parameter :: ones(2) = 1
+  real :: a(ones:n), b([1, 1]:n)
+  integer, parameter :: la = lbound(a, 1), lb2 = lbound(b, 2)
+  integer(kind=merge(4, -1, la == 1 .and. lb2 == 1)) :: ok
+  ok = 0
+end subroutine
 ! F2023 C816 permits only an explicit-shape-spec-list for a nonallocatable
 ! nonpointer function result, so a rank-1 integer array as the result's bounds
 ! is an extension and gets a portability warning.  The same bounds on a dummy
@@ -192,6 +205,13 @@ contains
   function res_zero_size() result(r)
     !PORTABILITY: Function result 'r' should not be declared with a rank-1 integer array as its bounds (F2023 C816) [-Wrank-one-bounds-on-function-result]
     real :: r([integer::])
+    r = 0.0
+  end function
+  ! A constant bounds array is folded into ordinary bounds at declaration,
+  ! but the shape still records that it was written as a rank-1 array.
+  function res_constant_base() result(r)
+    !PORTABILITY: Function result 'r' should not be declared with a rank-1 integer array as its bounds (F2023 C816) [-Wrank-one-bounds-on-function-result]
+    real :: r([2, 3])
     r = 0.0
   end function
   function res_alloc(n) result(r)

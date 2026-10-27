@@ -5,9 +5,9 @@
 ! dimension's element from it, rather than re-evaluating the base per dimension.
 ! RUN: bbc -emit-hlfir -o - %s -I nowhere | FileCheck %s
 
-! Test with PARAMETER rank-1 bounds: the shared constant array is folded, so
-! each dimension's bound is a compile-time constant and no base array is
-! materialized.
+! Test with PARAMETER rank-1 bounds: the constant bounds array is folded into
+! per-dimension constants when the entity is declared, so each bound is a
+! compile-time constant and no base array is materialized.
 module test_param
 contains
   subroutine test_param_bounds()
@@ -23,6 +23,22 @@ end module
 ! CHECK:  %[[C4:.*]] = arith.constant 4 : index
 ! CHECK:  fir.alloca !fir.array<2x3x4xf32>
 ! CHECK:  fir.shape %[[C2]], %[[C3]], %[[C4]]
+
+! Because the constant bounds are folded at declaration, storage association
+! sees the same shape as for a(3,4): a(2,3) is element 8, so the storage
+! sequence is 19 elements (76 bytes) and b starts at byte 28.
+module test_equivalence
+contains
+  subroutine test_equivalence_offsets()
+    real :: a([3, 4]), b(12)
+    equivalence (a(2, 3), b(1))
+    b(1) = 1.0
+  end subroutine
+end module
+! CHECK-LABEL: func.func @_QMtest_equivalencePtest_equivalence_offsets()
+! CHECK:  %[[SEQ:.*]] = fir.alloca !fir.array<76xi8>
+! CHECK:  hlfir.declare {{.*}} storage(%[[SEQ]][0]) {{.*}}Ea"
+! CHECK:  hlfir.declare {{.*}} storage(%[[SEQ]][28]) {{.*}}Eb"
 
 ! Test with rank-1 dummy as upper bounds only.
 module test_dummy_upper
