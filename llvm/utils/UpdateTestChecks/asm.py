@@ -22,7 +22,7 @@ else:
 # and "func_name_separator"
 
 ASM_FUNCTION_X86_RE = re.compile(
-    r'^_?(?P<func>[^:]+):[ \t]*#+[ \t]*(@"?(?P=func)"?| -- Begin function (?P=func))\n(?:\s*\.?Lfunc_begin[^:\n]*:\n)?'
+    r'^_?(?P<func>[^:]+?)(?P<func_name_separator>(?:@@\d+)?:)[ \t]*#+[ \t]*(@"?(?P=func)"?| -- Begin function (?P=func))\n(?:\s*\.?Lfunc_begin[^:\n]*:\n)?'
     r"(?:\.L(?P=func)\$local:\n)?"  # drop .L<func>$local:
     r"(?:\s*\.type\s+\.L(?P=func)\$local,@function\n)?"  # drop .type .L<func>$local
     r"(?:[ \t]*(?:\.cfi_startproc|\.cfi_personality|\.cfi_lsda|\.seh_proc|\.seh_handler)\b[^\n]*\n)*"  # drop optional cfi
