@@ -5191,6 +5191,29 @@ mapping of default visibility to an explicit shared object export
   export behavior similar to ELF platforms where all entities with default
   visibility are exported.
 
+#### z/OS
+
+##### CSECT Options
+
+Clang supports the `-mcsect`, `-mcsect=<qualifier>`, and `-mno-csect` options
+to control CSECT (control section) names in the output object module on z/OS.
+
+When `-mcsect` or `-mcsect=<qualifier>` is specified the CSECT names for the
+output object module will be:
+
+`qualifier#basename#suffix`
+
+Where:
+
+- `qualifier` is the `<qualifier>` specified by `-mcsect=<qualifier>`. If
+  `qualifier` is empty, the syntax becomes just `basename#suffix`.
+- `basename` is the output file name with path information and the right-most
+  extension information removed.
+- `suffix` is `C` for the code section and `S` for the static section.
+
+`-mno-csect` is the default. `-mcsect` is the same as `-mcsect=` with an empty
+qualifier.
+
 (spir-v)=
 
 ### SPIR-V support
