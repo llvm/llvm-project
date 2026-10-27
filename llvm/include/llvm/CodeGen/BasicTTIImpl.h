@@ -444,6 +444,14 @@ public:
     return false;
   }
 
+  bool isReadOnlyAndFastAddressSpace(unsigned AddressSpace) const override {
+    return false;
+  }
+
+  bool isTriviallyMovableIntrinsic(IntrinsicInst *II) const override {
+    return false;
+  }
+
   bool isNoopAddrSpaceCast(unsigned FromAS, unsigned ToAS) const override {
     return getTLI()->getTargetMachine().isNoopAddrSpaceCast(DL, FromAS, ToAS);
   }

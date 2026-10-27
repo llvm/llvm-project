@@ -319,6 +319,15 @@ bool TargetTransformInfo::collectFlatAddressOperands(
   return TTIImpl->collectFlatAddressOperands(OpIndexes, IID);
 }
 
+bool TargetTransformInfo::isReadOnlyAndFastAddressSpace(
+    unsigned AddressSpace) const {
+  return TTIImpl->isReadOnlyAndFastAddressSpace(AddressSpace);
+}
+
+bool TargetTransformInfo::isTriviallyMovableIntrinsic(IntrinsicInst *II) const {
+  return TTIImpl->isTriviallyMovableIntrinsic(II);
+}
+
 bool TargetTransformInfo::isNoopAddrSpaceCast(unsigned FromAS,
                                               unsigned ToAS) const {
   return TTIImpl->isNoopAddrSpaceCast(FromAS, ToAS);

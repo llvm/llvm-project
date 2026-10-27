@@ -591,6 +591,10 @@ public:
   LLVM_ABI bool collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
                                            Intrinsic::ID IID) const;
 
+  LLVM_ABI bool isReadOnlyAndFastAddressSpace(unsigned AddressSpace) const;
+
+  LLVM_ABI bool isTriviallyMovableIntrinsic(IntrinsicInst *II) const;
+
   LLVM_ABI bool isNoopAddrSpaceCast(unsigned FromAS, unsigned ToAS) const;
 
   // Given an address space cast of the given pointer value, calculate the known
