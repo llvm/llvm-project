@@ -16,6 +16,9 @@
 ; CHECK: fpext half
 ; CHECK: fptrunc float {{.*}} to half
 ; CHECK-NOT: call half @llvm.atan.f16
+; CHECK-LABEL: @sc(
+; CHECK-NOT: call {{.*}}@llvm.sincos
+; CHECK: call float @llvm.roundeven.f32
 ; CHECK-LABEL: @fast(
 ; CHECK: call afn float @llvm.exp.f32
 ; CHECK: call afn float @llvm.log.f32
@@ -48,5 +51,15 @@ define agx_kernel void @fast(ptr addrspace(1) %p) {
   %a = call afn float @llvm.exp.f32(float %x)
   %b = call afn float @llvm.log.f32(float %a)
   store float %b, ptr addrspace(1) %p
+  ret void
+}
+
+define agx_kernel void @sc(ptr addrspace(1) %p) {
+  %x = load float, ptr addrspace(1) %p
+  %sc = call { float, float } @llvm.sincos.f32(float %x)
+  %s = extractvalue { float, float } %sc, 0
+  %c = extractvalue { float, float } %sc, 1
+  %t = fdiv float %s, %c
+  store float %t, ptr addrspace(1) %p
   ret void
 }

@@ -431,29 +431,42 @@ public:
     return {S, C};
   }
 
-  /// sin(x) or cos(x): x - j pi / 2 with pi / 2 in three parts, exact for
+  /// sin(x) and cos(x): x - j pi / 2 with pi / 2 in three parts, exact for
   /// |x| below 2^22, then Cephes' sinf and cosf polynomials by quadrant.
   /// Beyond that the hardware's reduction (afn) is used.
-  Value *sinCos(Value *X, bool Cos) {
+  std::pair<Value *, Value *> sinAndCos(Value *X) {
     Value *J = call(Intrinsic::roundeven, {mul(X, k(M_2_PI))});
     Value *NJ = B.CreateFNeg(J);
     Value *R = fma(NJ, k(1.57079637050628662109375), X);
     R = fma(NJ, k(-4.371139000189375e-8), R);
     R = fma(NJ, k(-1.7151245100059780e-15), R);
-    Value *Q = B.CreateFPToSI(sel(lt(abs(X), 4194304.0), J, k(0.0)), intTy());
-    if (Cos)
-      Q = B.CreateAdd(Q, ki(1));
+    Value *Small = lt(abs(X), 4194304.0);
+    Value *Q = B.CreateFPToSI(sel(Small, J, k(0.0)), intTy());
     auto [S, C] = sinCosPolys(R);
-    // Quadrants 1 and 3 take the cosine, 2 and 3 the minus sign.
-    Value *Odd = B.CreateICmpNE(B.CreateAnd(Q, ki(1)), ki(0));
-    Value *Minus = B.CreateICmpNE(B.CreateAnd(Q, ki(2)), ki(0));
-    Value *V = sel(Odd, C, S);
-    V = sel(Minus, B.CreateFNeg(V), V);
-    Value *Hw = B.CreateIntrinsic(Cos ? Intrinsic::cos : Intrinsic::sin, {Ty},
-                                  {X});
-    cast<Instruction>(Hw)->setHasApproxFunc(true);
-    return sel(lt(abs(X), 4194304.0), V, Hw);
+    // sin: quadrants 1 and 3 take the cosine, 2 and 3 the minus sign; cos
+    // is a quadrant ahead.
+    auto Quadrant = [&](Value *Q) {
+      Value *Odd = B.CreateICmpNE(B.CreateAnd(Q, ki(1)), ki(0));
+      Value *Minus = B.CreateICmpNE(B.CreateAnd(Q, ki(2)), ki(0));
+      Value *V = sel(Odd, C, S);
+      return sel(Minus, B.CreateFNeg(V), V);
+    };
+    Value *Sin = Quadrant(Q), *Cos = Quadrant(B.CreateAdd(Q, ki(1)));
+    auto Hw = [&](Intrinsic::ID ID) {
+      Value *V = B.CreateIntrinsic(ID, {Ty}, {X});
+      cast<Instruction>(V)->setHasApproxFunc(true);
+      return V;
+    };
+    return {sel(Small, Sin, Hw(Intrinsic::sin)),
+            sel(Small, Cos, Hw(Intrinsic::cos))};
   }
+
+  /// The half not asked for is left to dead code elimination.
+  Value *sinCos(Value *X, bool Cos) {
+    auto [S, C] = sinAndCos(X);
+    return Cos ? C : S;
+  }
+
 };
 
 /// Computes \p Fn in float for values of \p Ty, a floating point type or a
@@ -492,6 +505,7 @@ bool AGX::canExpandMath(Intrinsic::ID ID, Type *Ty, bool Approx) {
   case Intrinsic::log2:
   case Intrinsic::log10:
   case Intrinsic::pow:
+  case Intrinsic::sincos:
     // The hardware's are precise enough for half, and are what afn asks.
     return E->isFloatTy() && !Approx;
   default:
@@ -538,6 +552,13 @@ Value *AGX::expandMath(IRBuilderBase &B, Intrinsic::ID ID,
                      return M.log10Precise(A[0]);
                    case Intrinsic::pow:
                      return M.powPrecise(A[0], A[1]);
+                   case Intrinsic::sincos: {
+                     auto [S, C] = M.sinAndCos(A[0]);
+                     Value *R = PoisonValue::get(StructType::get(
+                         S->getType()->getContext(), {S->getType(), C->getType()}));
+                     R = B.CreateInsertValue(R, S, 0);
+                     return B.CreateInsertValue(R, C, 1);
+                   }
                    default:
                      llvm_unreachable("not an expanded math intrinsic");
                    }

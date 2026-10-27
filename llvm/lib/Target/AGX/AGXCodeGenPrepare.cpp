@@ -1006,7 +1006,10 @@ bool AGXCodeGenPrepare::expandMath(Function &F, const AGXSubtarget &ST) {
       // With ieee-fp32, AGXStrictFP computes the precise functions exactly.
       bool Approx = (isa<FPMathOperator>(II) && II->hasApproxFunc()) ||
                     ST.hasIEEEFP32();
-      if (AGX::canExpandMath(II->getIntrinsicID(), II->getType(), Approx))
+      // The type of the operand: sincos returns a pair.
+      if (II->arg_size() &&
+          AGX::canExpandMath(II->getIntrinsicID(),
+                             II->getArgOperand(0)->getType(), Approx))
         Calls.push_back(II);
     }
     if (Calls.empty())
