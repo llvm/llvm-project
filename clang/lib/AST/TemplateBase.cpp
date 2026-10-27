@@ -562,7 +562,7 @@ void TemplateArgument::print(const PrintingPolicy &Policy, raw_ostream &Out,
     }
     if (needsAmpersandOnTemplateArg(getParamTypeForDecl(), VD->getType()))
       Out << "&";
-    VD->printQualifiedName(Out);
+    VD->printQualifiedName(Out, Policy);
     break;
   }
 
