@@ -1,0 +1,18 @@
+{
+  "sources": [
+    {
+      "type": "git",
+      "repo_url": "https://github.com/llvm/llvm-project",
+      "commit_sha": "3391bdc255f1a75c59d71c7305959e84d8d5f468"
+    }
+  ],
+  "folder_name": "llvm-project",
+  "build_system": "cmake",
+  "cmake_flags": {
+    "CMAKE_BUILD_TYPE": "Release",
+    "LLVM_ENABLE_PROJECTS": "all"
+  },
+  "cmake_root": "./llvm",
+  "license": "Apache-2.0",
+  "license_source": "manual"
+}
