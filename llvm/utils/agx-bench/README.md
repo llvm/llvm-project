@@ -4,7 +4,12 @@
 - code bytes;
 - GPRs and uniform halves (occupancy);
 - `wait` count;
-- `agx_cost` cycles of one SIMD-group, from the AGX Performance Simulator.
+- `agx_cost` cycles of one SIMD-group, from the AGX Performance Simulator;
+- `tput`: agx_cost cycles per SIMD-group with as many groups sharing a core as the kernel's registers, workgroup
+  size and threadgroup memory let reside (the simulator's measured occupancy model: min(96, 2 * floor(3328 /
+  (2 * register halves))) groups, whole workgroups, 64 KiB of threadgroup memory). One group's cycles reward
+  latency; `tput` also charges registers that cost occupancy (e.g. clustering threadgroup loads takes the tiled
+  SGEMM from 70 to 77 GPRs: -16% cycles, +57% tput) and credits latency other groups hide.
 
 It compares the results with `baseline.json` and exits with 1 on a regression. Run it after every backend change:
 

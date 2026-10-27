@@ -33,7 +33,7 @@ import tempfile
 HERE = os.path.dirname(os.path.abspath(__file__))
 CHIPS = ["agx-g13g", "agx-g14c"]
 # Higher is worse for every metric.
-METRICS = ["bytes", "gprs", "uniform_halves", "waits", "cycles"]
+METRICS = ["bytes", "gprs", "uniform_halves", "waits", "cycles", "tput"]
 
 
 def run(cmd, **kw):
@@ -49,6 +49,8 @@ def kernel_metrics(asm, name):
     out["uniform_halves"] = int(m.group(1)) if m else 0
     m = re.search(r"general purpose registers: (\d+)", text)
     out["gprs"] = int(m.group(1)) if m else 0
+    m = re.search(r"threadgroup memory: (\d+)", text)
+    out["tg_bytes"] = int(m.group(1)) if m else 0
     insts = [l.strip() for l in text.splitlines() if l.startswith("\t") and not l.strip().startswith(("//", "."))]
     insts = [i for i in insts if i != "trap"]
     out["instructions"] = len(insts)
@@ -98,6 +100,43 @@ def cost(costbin, code, tmp, args=()):
         except (subprocess.CalledProcessError, ValueError, IndexError):
             continue
     return None, False
+
+
+def resident_groups(gprs, tg_bytes, args):
+    """SIMD groups resident on a core (AGX Performance Simulator dispatch.rs, measured): registers allow
+    min(96, 2 * floor(3328 / (2 * halves))) groups, 32- and 64-lane workgroups at most 55 and 84, and only whole
+    workgroups fit, as many as 64 KiB of threadgroup memory holds."""
+    wg = [1, 1, 1]
+    if "--wg" in args:
+        for i, v in enumerate(args[args.index("--wg") + 1].split(",")):
+            wg[i] = int(v)
+    else:
+        wg[0] = 32
+    threads = wg[0] * wg[1] * wg[2]
+    cap = min(96, 2 * (3328 // (2 * max(8, 2 * gprs))))
+    if threads <= 32:
+        cap = min(cap, 55)
+    elif threads <= 64:
+        cap = min(cap, 84)
+    per_wg = -(-threads // 32)
+    wgs = cap // per_wg
+    if tg_bytes:
+        wgs = min(wgs, 65536 // tg_bytes)
+    return wgs * per_wg
+
+
+def throughput(costbin, code, tmp, args, groups):
+    """agx_cost cycles per SIMD group with `groups` of them sharing a core: what the kernel's register and
+    threadgroup memory use leave of latency hiding, which the one-group cycles do not show."""
+    if groups <= 1:
+        return None
+    p = os.path.join(tmp, "k.bin")
+    open(p, "wb").write(code)
+    try:
+        r = run([costbin, p, "--allow-unknown"] + COST_ARGS + list(args) + ["--groups", str(groups)])
+        return round(json.loads(r.stdout.strip().splitlines()[-1])["cycles"] / groups, 1)
+    except (subprocess.CalledProcessError, ValueError, IndexError, KeyError):
+        return None
 
 
 def checked_uniforms(obj, name, objcopy, given=()):
@@ -203,6 +242,8 @@ def main():
                         hidden = checked_uniforms(obj, name, objcopy, args or [])
                         args = (args or []) + hidden
                     m["cycles"], m["launch_inputs"] = cost(a.cost, code, tmp, args)
+                    m["groups"] = resident_groups(m["gprs"], m["tg_bytes"], args if m["launch_inputs"] else [])
+                    m["tput"] = throughput(a.cost, code, tmp, args if m["launch_inputs"] else [], m["groups"])
                     key = "%s:%s:%s" % (os.path.basename(src), name, chip)
                     results[key] = m
                     print(json.dumps(dict(key=key, **m)))
@@ -220,7 +261,7 @@ def main():
             continue
         for k in METRICS:
             # cycles from different paths (with and without launch inputs) do not compare
-            if k == "cycles" and b.get("launch_inputs", False) != m.get("launch_inputs", False):
+            if k in ("cycles", "tput") and b.get("launch_inputs", False) != m.get("launch_inputs", False):
                 continue
             x, y = b.get(k), m.get(k)
             if x is None or y is None:
