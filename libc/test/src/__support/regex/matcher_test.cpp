@@ -261,8 +261,8 @@ TEST(LlvmLibcRegexMatcherTest, ParseEreEscapesAndErrors) {
     EXPECT_EQ(err.error(), REG_BADRPT);
   }
 
-  const string_view ebrack_patterns[] = {"[",  "[^",    "[abc",
-                                         "[]", "a[[.x", "a[[.x."};
+  const string_view ebrack_patterns[] = {
+      "[", "[^", "[abc", "[]", "a[[.x", "a[[.x.", "a[[:digit:", "a[[:digit"};
   for (string_view pat : ebrack_patterns) {
     ErrorOr<ExprId> err = parse_ere(pat, REG_EXTENDED, pool);
     ASSERT_FALSE(err.has_value());
@@ -270,7 +270,7 @@ TEST(LlvmLibcRegexMatcherTest, ParseEreEscapesAndErrors) {
   }
 
   const string_view erange_patterns[] = {"a[3-1]c", "a[1-3-5]c", "a[1-",
-                                         "a[a-[:digit:]]c"};
+                                         "a[a-[:digit:]]c", "a[[:alpha:]-z]c"};
   for (string_view pat : erange_patterns) {
     ErrorOr<ExprId> err = parse_ere(pat, REG_EXTENDED, pool);
     ASSERT_FALSE(err.has_value());
@@ -285,12 +285,19 @@ TEST(LlvmLibcRegexMatcherTest, ParseEreEscapesAndErrors) {
     EXPECT_EQ(err.error(), REG_ECOLLATE);
   }
 
+  const string_view ectype_patterns[] = {"a[[:notdef:]]b", "a[[:alph:]]b",
+                                         "a[[:]:]]b", "a[[:-:]]b"};
+  for (string_view pat : ectype_patterns) {
+    ErrorOr<ExprId> err = parse_ere(pat, REG_EXTENDED, pool);
+    ASSERT_FALSE(err.has_value());
+    EXPECT_EQ(err.error(), REG_ECTYPE);
+  }
+
   const string_view bad_patterns[] = {
-      "a+",    "a?",    "a{1}",  "{",     "(",     ")",     "[[:alpha:]]",
-      "|",     R"(\1)", R"(\2)", R"(\3)", R"(\4)", R"(\5)", R"(\6)",
-      R"(\7)", R"(\8)", R"(\9)", R"(\b)", R"(\B)", R"(\<)", R"(\>)",
-      R"(\A)", R"(\Z)", R"(\`)", R"(\')", R"(\w)", R"(\W)", R"(\s)",
-      R"(\S)", R"(\d)", R"(\D)"};
+      "a+",      "a?",    "a{1}",  "{",     "(",     ")",     "[[:<:]]",
+      "[[:>:]]", "|",     R"(\1)", R"(\2)", R"(\3)", R"(\4)", R"(\5)",
+      R"(\6)",   R"(\7)", R"(\8)", R"(\9)", R"(\b)", R"(\B)", R"(\<)",
+      R"(\>)",   R"(\A)", R"(\Z)", R"(\`)", R"(\')"};
   for (string_view bad : bad_patterns) {
     ErrorOr<ExprId> err = parse_ere(bad, REG_EXTENDED, pool);
     ASSERT_FALSE(err.has_value());
@@ -373,6 +380,41 @@ TEST(LlvmLibcRegexMatcherTest, BracketMatchingAndRanges) {
   EXPECT_EQ(match(pool, *star_range, ""), MatchResult::Match);
   EXPECT_EQ(match(pool, *star_range, "abcba"), MatchResult::Match);
   EXPECT_EQ(match(pool, *star_range, "abzcba"), MatchResult::NoMatch);
+
+  ErrorOr<ExprId> alpha = parse_ere("^[[:alpha:]]*$", REG_EXTENDED, pool);
+  ASSERT_TRUE(alpha.has_value());
+  EXPECT_EQ(match(pool, *alpha, ""), MatchResult::Match);
+  EXPECT_EQ(match(pool, *alpha, "HelloWorld"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *alpha, "Hello1World"), MatchResult::NoMatch);
+
+  ErrorOr<ExprId> sh_w = parse_ere(R"(^\w*$)", REG_EXTENDED, pool);
+  ASSERT_TRUE(sh_w.has_value());
+  EXPECT_EQ(match(pool, *sh_w, ""), MatchResult::Match);
+  EXPECT_EQ(match(pool, *sh_w, "Hello_123"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *sh_w, "Hello-123"), MatchResult::NoMatch);
+
+  ErrorOr<ExprId> sh_d = parse_ere(R"(^\d*$)", REG_EXTENDED, pool);
+  ASSERT_TRUE(sh_d.has_value());
+  EXPECT_EQ(match(pool, *sh_d, ""), MatchResult::Match);
+  EXPECT_EQ(match(pool, *sh_d, "12345"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *sh_d, "123a45"), MatchResult::NoMatch);
+
+  ErrorOr<ExprId> sh_neg = parse_ere(R"(x\Wy)", REG_EXTENDED, pool);
+  ASSERT_TRUE(sh_neg.has_value());
+  EXPECT_EQ(match(pool, *sh_neg, "x y"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *sh_neg, "x_y"), MatchResult::NoMatch);
+
+  ErrorOr<ExprId> sh_neg_nl =
+      parse_ere(R"(x\Wy)", REG_EXTENDED | REG_NEWLINE, pool);
+  ASSERT_TRUE(sh_neg_nl.has_value());
+  EXPECT_EQ(match(pool, *sh_neg_nl, "x\ny", REG_NEWLINE, 0),
+            MatchResult::NoMatch);
+
+  ErrorOr<ExprId> multi_class =
+      parse_ere("^[[:alpha:][:blank:]]*$", REG_EXTENDED, pool);
+  ASSERT_TRUE(multi_class.has_value());
+  EXPECT_EQ(match(pool, *multi_class, "Hello World"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *multi_class, "Hello1World"), MatchResult::NoMatch);
 }
 
 TEST(LlvmLibcRegexMatcherTest, PoolExhaustionPropagation) {

@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
-//  Level Zero Context abstraction.
+//  Level Zero Driver abstraction.
 //
 //===----------------------------------------------------------------------===//
 
-#include "L0Context.h"
+#include "L0Driver.h"
 #include "L0Plugin.h"
 
 namespace llvm::omp::target::plugin {
@@ -29,13 +29,13 @@ getDriverVersionFromProperties(ze_driver_handle_t zeDriver) {
          std::to_string(PackedVersion & 0x0000FFFF);
 }
 
-L0ContextTy::L0ContextTy(LevelZeroPluginTy &Plugin, ze_driver_handle_t zeDriver,
-                         int32_t DriverId)
+L0DriverTy::L0DriverTy(LevelZeroPluginTy &Plugin, ze_driver_handle_t zeDriver,
+                       int32_t DriverId)
     : Plugin(Plugin), zeDriver(zeDriver), DriverId(DriverId) {}
 
-L0ContextTy::~L0ContextTy() = default;
+L0DriverTy::~L0DriverTy() = default;
 
-Expected<std::string> L0ContextTy::tryGetIntelDriverVersion() {
+Expected<std::string> L0DriverTy::tryGetIntelDriverVersion() {
   size_t VersionSize = 0;
   CALL_ZE_RET_ERROR(IntelGetDriverVersionString, zeDriver, nullptr,
                     &VersionSize);
@@ -47,7 +47,7 @@ Expected<std::string> L0ContextTy::tryGetIntelDriverVersion() {
   return Version;
 }
 
-Error L0ContextTy::init() {
+Error L0DriverTy::init() {
   auto CleanupOnError = [&]() {
     if (zeContext) {
       zeContextDestroy(zeContext);
@@ -130,7 +130,7 @@ Error L0ContextTy::init() {
   return Plugin::success();
 }
 
-Error L0ContextTy::deinit() {
+Error L0DriverTy::deinit() {
   // Release the default context (drains its queue cache) before zeContext.
   if (DefaultUserCtx) {
     if (auto Err = DefaultUserCtx->deinit())

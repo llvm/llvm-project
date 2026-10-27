@@ -10470,7 +10470,7 @@ multiclass avx512_gather_scatter_prefetch<bits<8> opc, Format F, string OpcodeSt
                        RegisterClass KRC, X86MemOperand memop> {
   let mayLoad = 1, mayStore = 1 in
   def m  : AVX5128I<opc, F, (outs), (ins KRC:$mask, memop:$src),
-            !strconcat(OpcodeStr, "\t{$src {${mask}}|{${mask}}, $src}"), []>,
+            !strconcat(OpcodeStr, "\t{$src {${mask}}|$src {${mask}}}"), []>,
             EVEX, EVEX_K, Sched<[WriteLoad]>;
 }
 

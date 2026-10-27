@@ -1015,6 +1015,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed a crash issue when a value dependent recovery init appeared in constant
   evaluation context in default constant evaluator.
 
+- Fixed crashes when parsing lambdas containing errors. (#GH175173), (#GH150733), and (#GH170185)
+
 - Fixed a bug where Clang incorrectly required `promise.return_value()` for a
   dependent `co_return` operand that inits to `void`, instead of using
   `promise.return_void()`. (#GH218368)

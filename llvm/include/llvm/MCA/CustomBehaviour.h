@@ -83,7 +83,7 @@ public:
   /// The return value of this method is the number of cycles that the
   /// instruction needs to wait for.
   /// It's safe to underestimate the number of cycles to wait for since these
-  /// checks will be invoked again before the intruction gets dispatched.
+  /// checks will be invoked again before the instruction gets dispatched.
   /// However, it's not safe (accurate) to overestimate the number of cycles
   /// to wait for since the instruction will wait for AT LEAST that number of
   /// cycles before attempting to be dispatched again.
