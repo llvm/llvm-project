@@ -48,6 +48,7 @@
 #include "mlir/Conversion/MathToLibm/MathToLibm.h"
 #include "mlir/Conversion/MathToNVVM/MathToNVVM.h"
 #include "mlir/Conversion/MathToROCDL/MathToROCDL.h"
+#include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
 #include "mlir/Conversion/OpenMPToLLVM/ConvertOpenMPToLLVM.h"
 #include "mlir/Conversion/UBToLLVM/UBToLLVM.h"
 #include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
@@ -71,6 +72,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Support/CommandLine.h"
 
 namespace fir {
@@ -369,8 +371,23 @@ public:
       if (auto varAttr =
               mlir::dyn_cast_or_null<mlir::LLVM::DILocalVariableAttr>(
                   fusedLoc.getMetadata())) {
-        mlir::LLVM::DbgDeclareOp::create(rewriter, fusedLoc, memRef, varAttr,
-                                         nullptr);
+        mlir::Value addr = memRef;
+        mlir::LLVM::DIExpressionAttr expr;
+        // A variable whose storage address is returned by a call has no stack
+        // slot to point at, and a declare on an SSA value only describes it
+        // where that value is live. Spill the address to a slot and deref it.
+        if (addr.getDefiningOp<mlir::LLVM::CallOp>()) {
+          mlir::Value slot = this->genAllocaAndAddrCastWithType(
+              fusedLoc, addr.getType(), defaultAlign, rewriter);
+          mlir::LLVM::StoreOp::create(rewriter, fusedLoc, addr, slot);
+          addr = slot;
+          expr = mlir::LLVM::DIExpressionAttr::get(
+              rewriter.getContext(),
+              {mlir::LLVM::DIExpressionElemAttr::get(
+                  rewriter.getContext(), llvm::dwarf::DW_OP_deref, {})});
+        }
+        mlir::LLVM::DbgDeclareOp::create(rewriter, fusedLoc, addr, varAttr,
+                                         expr);
       }
     }
     rewriter.replaceOp(declareOp, memRef);
@@ -480,13 +497,21 @@ struct AllocaOpConversion : public fir::FIROpConversion<fir::AllocaOp> {
       rewriter.setInsertionPointAfter(size.getDefiningOp());
     }
 
+    // A requested alignment is a minimum: never go below the ABI alignment of
+    // the allocated type, which is what an alloca without an explicit
+    // alignment gets.
+    unsigned alignment = 0;
+    if (std::optional<std::int64_t> requested = alloc.getAlignment())
+      alignment = static_cast<unsigned>(std::max<std::uint64_t>(
+          *requested, getDataLayout().getTypeABIAlignment(llvmObjectType)));
+
     // NOTE: we used to pass alloc->getAttrs() in the builder for non opaque
     // pointers! Only propagate pinned and bindc_name to help debugging, but
     // this should have no functional purpose (and passing the operand segment
     // attribute like before is certainly bad).
     auto llvmAlloc = mlir::LLVM::AllocaOp::create(
         rewriter, loc, ::getLlvmPtrType(alloc.getContext(), allocaAs),
-        llvmObjectType, size);
+        llvmObjectType, size, alignment);
     if (alloc.getPinned())
       llvmAlloc->setDiscardableAttr(alloc.getPinnedAttrName(),
                                     alloc.getPinnedAttr());
@@ -1872,6 +1897,73 @@ genCUFAllocDescriptor(mlir::Location loc,
       .getResult();
 }
 
+/// Free the managed descriptor \p desc after the last use of the FIR box value
+/// \p box it was allocated for. The kernel launch may be asynchronous, so the
+/// device is synchronized first. Nothing is emitted, and the descriptor is
+/// left allocated, unless every user of \p box (looking through conversions)
+/// is a call or a kernel launch in the block defining \p box, so that the end
+/// of the lifetime is known.
+static void genCUFFreeDescriptorAfterLastUse(
+    mlir::Location loc, mlir::ConversionPatternRewriter &rewriter,
+    mlir::ModuleOp mod, mlir::Value desc, mlir::Value box,
+    llvm::StringRef cudaDescriptorFreeFunction,
+    mlir::SymbolTableCollection *symbolTables) {
+  mlir::Operation *boxOp = box.getDefiningOp();
+  if (!boxOp || boxOp->getParentOfType<mlir::gpu::GPUModuleOp>())
+    return;
+  mlir::Block *block = boxOp->getBlock();
+  mlir::Operation *lastUser = nullptr;
+  llvm::SmallVector<mlir::Value, 4> worklist{box};
+  while (!worklist.empty()) {
+    mlir::Value current = worklist.pop_back_val();
+    for (mlir::Operation *user : current.getUsers()) {
+      if (user->getBlock() != block)
+        return;
+      if (auto convert = mlir::dyn_cast<fir::ConvertOp>(user))
+        worklist.push_back(convert.getResult());
+      else if (!mlir::isa<fir::CallOp, mlir::gpu::LaunchFuncOp>(user))
+        return;
+      if (!lastUser || lastUser->isBeforeInBlock(user))
+        lastUser = user;
+    }
+  }
+  if (!lastUser || lastUser->hasTrait<mlir::OpTrait::IsTerminator>())
+    return;
+
+  mlir::MLIRContext *ctx = mod.getContext();
+  mlir::LLVM::LLVMPointerType llvmPointerType =
+      mlir::LLVM::LLVMPointerType::get(ctx);
+  mlir::Type llvmInt32Type = mlir::IntegerType::get(ctx, 32);
+  auto declareIfMissing = [&](llvm::StringRef name,
+                              mlir::LLVM::LLVMFunctionType fctTy) {
+    if (fir::lookupSymbolIn<mlir::LLVM::LLVMFuncOp>(mod, name, symbolTables) ||
+        fir::lookupSymbolIn<mlir::func::FuncOp>(mod, name, symbolTables))
+      return;
+    auto builder = mlir::OpBuilder::atBlockEnd(mod.getBody());
+    auto decl = mlir::LLVM::LLVMFuncOp::create(builder, loc, name, fctTy);
+    fir::registerSymbol(symbolTables, mod, decl);
+  };
+  auto syncTy = mlir::LLVM::LLVMFunctionType::get(llvmInt32Type, {});
+  auto freeTy = mlir::LLVM::LLVMFunctionType::get(
+      mlir::LLVM::LLVMVoidType::get(ctx),
+      {llvmPointerType, llvmPointerType, llvmInt32Type});
+  llvm::StringRef syncName = "cudadevicesynchronize_";
+  llvm::StringRef freeName = cudaDescriptorFreeFunction.empty()
+                                 ? RTNAME_STRING(CUFFreeDescriptor)
+                                 : cudaDescriptorFreeFunction;
+  declareIfMissing(syncName, syncTy);
+  declareIfMissing(freeName, freeTy);
+
+  mlir::OpBuilder::InsertionGuard guard(rewriter);
+  rewriter.setInsertionPointAfter(lastUser);
+  mlir::LLVM::CallOp::create(rewriter, loc, syncTy, syncName,
+                             mlir::ValueRange{});
+  mlir::Value sourceFile = genSourceFile(loc, mod, rewriter, symbolTables);
+  mlir::Value sourceLine = genSourceLine(loc, rewriter);
+  llvm::SmallVector args = {desc, sourceFile, sourceLine};
+  mlir::LLVM::CallOp::create(rewriter, loc, freeTy, freeName, args);
+}
+
 static bool isUsedByGPULaunchFunc(mlir::Value val);
 
 /// Get the address of the type descriptor global variable that was created by
@@ -2325,11 +2417,10 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
   /// If the embox is not in a globalOp body, allocate storage for the box;
   /// store the value inside and return the generated alloca. Return the input
   /// value otherwise.
-  mlir::Value
-  placeInMemoryIfNotGlobalInit(mlir::ConversionPatternRewriter &rewriter,
-                               mlir::Location loc, mlir::Type boxTy,
-                               mlir::Value boxValue,
-                               bool needDeviceAllocation = false) const {
+  mlir::Value placeInMemoryIfNotGlobalInit(
+      mlir::ConversionPatternRewriter &rewriter, mlir::Location loc,
+      mlir::Type boxTy, mlir::Value boxValue, bool needDeviceAllocation = false,
+      mlir::Value firBox = {}) const {
     if (isInGlobalOp(rewriter))
       return boxValue;
     mlir::Type llvmBoxTy = boxValue.getType();
@@ -2340,6 +2431,10 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
       storage = genCUFAllocDescriptor(
           loc, rewriter, mod, baseBoxTy, this->lowerTy(),
           this->options.cudaDescriptorAllocFunction, this->symbolTables);
+      if (firBox)
+        genCUFFreeDescriptorAfterLastUse(
+            loc, rewriter, mod, storage, firBox,
+            this->options.cudaDescriptorFreeFunction, this->symbolTables);
     } else {
       storage = this->genAllocaAndAddrCastWithType(loc, llvmBoxTy, defaultAlign,
                                                    rewriter);
@@ -2397,8 +2492,9 @@ struct EmboxOpConversion : public EmboxCommonConversion<fir::EmboxOp> {
       return mlir::failure();
     }
     bool needsDeviceAlloc = isUsedByGPULaunchFunc(embox);
-    auto result = placeInMemoryIfNotGlobalInit(rewriter, embox.getLoc(), boxTy,
-                                               dest, needsDeviceAlloc);
+    auto result =
+        placeInMemoryIfNotGlobalInit(rewriter, embox.getLoc(), boxTy, dest,
+                                     needsDeviceAlloc, embox.getResult());
     rewriter.replaceOp(embox, result);
     return mlir::success();
   }
@@ -2486,8 +2582,8 @@ struct CreateBoxOpConversion : public EmboxCommonConversion<fir::CreateBoxOp> {
     dest = insertBaseAddress(rewriter, loc, dest, adaptor.getMemref());
 
     bool needsDeviceAlloc = isUsedByGPULaunchFunc(createBox);
-    mlir::Value result = placeInMemoryIfNotGlobalInit(rewriter, loc, boxTy,
-                                                      dest, needsDeviceAlloc);
+    mlir::Value result = placeInMemoryIfNotGlobalInit(
+        rewriter, loc, boxTy, dest, needsDeviceAlloc, createBox.getResult());
     rewriter.replaceOp(createBox, result);
     return mlir::success();
   }
@@ -2682,8 +2778,8 @@ struct XEmboxOpConversion : public EmboxCommonConversion<fir::cg::XEmboxOp> {
     if (fir::isDerivedTypeWithLenParams(boxTy))
       TODO(loc, "fir.embox codegen of derived with length parameters");
     bool needsDeviceAlloc = isUsedByGPULaunchFunc(xbox);
-    mlir::Value result = placeInMemoryIfNotGlobalInit(rewriter, loc, boxTy,
-                                                      dest, needsDeviceAlloc);
+    mlir::Value result = placeInMemoryIfNotGlobalInit(
+        rewriter, loc, boxTy, dest, needsDeviceAlloc, xbox.getResult());
     rewriter.replaceOp(xbox, result);
     return mlir::success();
   }
@@ -2800,8 +2896,9 @@ private:
     }
     dest = insertBaseAddress(rewriter, loc, dest, base);
     bool needsDeviceAlloc = isUsedByGPULaunchFunc(rebox);
-    mlir::Value result = placeInMemoryIfNotGlobalInit(
-        rewriter, rebox.getLoc(), destBoxTy, dest, needsDeviceAlloc);
+    mlir::Value result =
+        placeInMemoryIfNotGlobalInit(rewriter, rebox.getLoc(), destBoxTy, dest,
+                                     needsDeviceAlloc, rebox.getResult());
     rewriter.replaceOp(rebox, result);
     return mlir::success();
   }
@@ -3848,8 +3945,11 @@ struct GlobalOpConversion : public fir::FIROpConversion<fir::GlobalOp> {
         0, getGlobalAddressSpace(rewriter), false,
         mlir::LLVM::ThreadLocalMode::NotThreadLocal, comdat, attrs, dbgExprs);
 
+    // A requested alignment is a minimum: never go below the ABI alignment of
+    // the global's type.
     if (global.getAlignment() && *global.getAlignment() > 0)
-      g.setAlignment(*global.getAlignment());
+      g.setAlignment(std::max<std::uint64_t>(
+          *global.getAlignment(), getDataLayout().getTypeABIAlignment(tyAttr)));
     if (auto section = global.getSection())
       g.setSection(*section);
 
@@ -4066,6 +4166,9 @@ struct LoadOpConversion : public fir::FIROpConversion<fir::LoadOp> {
         newBoxStorage = genCUFAllocDescriptor(
             loc, rewriter, mod, boxTy, lowerTy(),
             this->options.cudaDescriptorAllocFunction, this->symbolTables);
+        genCUFFreeDescriptorAfterLastUse(
+            loc, rewriter, mod, newBoxStorage, load.getResult(),
+            this->options.cudaDescriptorFreeFunction, this->symbolTables);
       }
       if (!newBoxStorage)
         newBoxStorage = genAllocaAndAddrCastWithType(loc, llvmLoadTy,
@@ -5097,6 +5200,9 @@ public:
     if (!cudaDescriptorAllocFunction.empty())
       options.cudaDescriptorAllocFunction = cudaDescriptorAllocFunction;
 
+    if (!cudaDescriptorFreeFunction.empty())
+      options.cudaDescriptorFreeFunction = cudaDescriptorFreeFunction;
+
     if (!unifiedHeapAllocSuffix.empty())
       options.unifiedHeapAllocSuffix = unifiedHeapAllocSuffix;
     if (!managedHeapAllocSuffix.empty())
@@ -5193,6 +5299,9 @@ public:
     mlir::index::populateIndexToLLVMConversionPatterns(typeConverter, pattern);
     mlir::populateVectorToLLVMConversionPatterns(typeConverter, pattern);
     mlir::ub::populateUBToLLVMConversionPatterns(typeConverter, pattern);
+    if (lowerMemRef)
+      mlir::populateFinalizeMemRefToLLVMConversionPatterns(
+          typeConverter, pattern, &symbolTables);
 
     // Flang specific overloads for OpenMP operations, to allow for special
     // handling of things like Box types.

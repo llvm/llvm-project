@@ -119,7 +119,6 @@ struct MissingFeatures {
   static bool noUniqueAddressLayout() { return false; }
 
   // Coroutines
-  static bool coroAwaitFullExprCleanups() { return false; }
   static bool coroOutsideFrameMD() { return false; }
   static bool coroGetRetObjManager() { return false; };
   static bool coroUnwindRegion() { return false; };
@@ -128,7 +127,6 @@ struct MissingFeatures {
   static bool cgmRelease() { return false; }
   static bool checkAliases() { return false; }
   static bool emitModuleLinkOptions() { return false; }
-  static bool shouldSkipAliasEmission() { return false; }
 
   // CXXABI
   static bool cxxABI() { return false; }
@@ -216,10 +214,8 @@ struct MissingFeatures {
   static bool ctorMemcpyizer() { return false; }
   static bool cudaSupport() { return false; }
   static bool cudaTextureType() { return false; }
-  static bool hipModuleCtor() { return false; }
   static bool dataLayoutTypeAllocSize() { return false; }
   static bool dataLayoutPtrHandlingBasedOnLangAS() { return false; }
-  static bool deadOnReturnAttr() { return false; }
   static bool noaliasOnByvalAttr() { return false; }
   static bool deferredCXXGlobalInit() { return false; }
   static bool deleteArray() { return false; }
@@ -275,6 +271,8 @@ struct MissingFeatures {
   static bool msvcBuiltins() { return false; }
   static bool openCL() { return false; }
   static bool openMP() { return false; }
+  static bool openMPLastprivateConditional() { return false; }
+  static bool openMPNontemporalDecl() { return false; }
   static bool sycl() { return false; }
   static bool opTBAA() { return false; }
   static bool peepholeProtection() { return false; }
