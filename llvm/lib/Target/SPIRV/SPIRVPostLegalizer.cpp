@@ -329,6 +329,8 @@ static SPIRVTypeInst deduceResultTypeFromOperands(MachineInstr *I,
     auto IntrinsicID = cast<GIntrinsic>(I)->getIntrinsicID();
     if (IntrinsicID == Intrinsic::spv_gep)
       return deduceGEPType(I, GR, MIB);
+    if (IntrinsicID == Intrinsic::spv_extractelt)
+      return deduceTypeFromSingleOperand(I, MIB, GR, 2);
     break;
   }
   case TargetOpcode::G_LOAD: {
