@@ -2324,6 +2324,69 @@ SDValue WebAssemblyTargetLowering::LowerIntrinsic(SDValue Op,
   case Intrinsic::thread_pointer: {
     return SDValue(WebAssembly::getTLSBase(DAG, DL, Subtarget), 0);
   }
+
+  case Intrinsic::swift_async_context_addr: {
+    auto *FuncInfo = MF.getInfo<WebAssemblyFunctionInfo>();
+    MachineFrameInfo &MFI = MF.getFrameInfo();
+    EVT PtrVT = getPointerTy(MF.getDataLayout());
+    std::optional<int> FI = FuncInfo->getSwiftAsyncContextFrameIdx();
+    auto Result = [&] {
+      return DAG.getMergeValues(
+          {DAG.getFrameIndex(*FI, PtrVT), Op.getOperand(0)}, DL);
+    };
+
+    // Without a swiftasync argument, there is no async context. Use a stack
+    // slot, as X86 does without an extended frame.
+    if (none_of(MF.getFunction().args(), [](const Argument &Arg) {
+          return Arg.hasAttribute(Attribute::SwiftAsync);
+        })) {
+      if (!FI) {
+        unsigned PtrSize = PtrVT.getStoreSize();
+        FI = MFI.CreateStackObject(PtrSize, Align(PtrSize),
+                                   /*isSpillSlot=*/false);
+        FuncInfo->setSwiftAsyncContextFrameIdx(*FI);
+      }
+      return Result();
+    }
+
+    // The async context is in local 0, the swiftasync parameter, which has no
+    // address. Return a stack object for it, which LowerLoad and LowerStore
+    // turn into local.get and local.set. Any other use would need an address.
+    // The ABI contract requires await resume funclets to store their own
+    // context once, in straight-line code at their start, which is where Swift
+    // emits it.
+    SDValue Addr = Op.getValue(0);
+    bool Supported = true;
+    for (SDUse &Use : Op->uses()) {
+      if (Use.getResNo() != 0)
+        continue;
+      if (auto *LN = dyn_cast<LoadSDNode>(Use.getUser()))
+        Supported &= LN->getBasePtr() == Addr &&
+                     LN->getExtensionType() == ISD::NON_EXTLOAD &&
+                     LN->getMemoryVT() == PtrVT;
+      else if (auto *SN = dyn_cast<StoreSDNode>(Use.getUser()))
+        Supported &= SN->getBasePtr() == Addr && SN->getValue() != Addr &&
+                     !SN->isTruncatingStore() && SN->getMemoryVT() == PtrVT;
+      else
+        Supported = false;
+    }
+    if (!Supported) {
+      fail(DL, DAG,
+           "llvm.swift.async.context.addr can only be the address of loads "
+           "and stores");
+      return DAG.getMergeValues({DAG.getPOISON(PtrVT), Op.getOperand(0)}, DL);
+    }
+
+    if (!FI) {
+      // The object offset is the index of its first local and the object
+      // size the number of locals, see getLocalForStackObject.
+      FI = MFI.CreateStackObject(1, Align(1), /*isSpillSlot=*/false,
+                                 /*Alloca=*/nullptr, TargetStackID::WasmLocal);
+      MFI.setObjectOffset(*FI, 0);
+      FuncInfo->setSwiftAsyncContextFrameIdx(*FI);
+    }
+    return Result();
+  }
   }
 }
 
