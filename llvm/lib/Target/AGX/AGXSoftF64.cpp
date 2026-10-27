@@ -383,8 +383,9 @@ public:
     // is the smaller: the quotient Q = floor(N * 2^54 / Dv) has 55 bits.
     Value *SX = B.CreateSub(c32(53), bitLength(TX.M));
     Value *SY = B.CreateSub(c32(53), bitLength(TY.M));
-    Value *N = shl(TX.M, SX);
-    Value *Dv = shl(TY.M, SY);
+    // At most 53 places (for a zero significand): no clamp needed.
+    Value *N = B.CreateShl(TX.M, B.CreateZExt(SX, I64));
+    Value *Dv = B.CreateShl(TY.M, B.CreateZExt(SY, I64));
     Value *Less = B.CreateICmpULT(N, Dv);
     N = select(Less, B.CreateShl(N, 1), N);
     // A reciprocal from below: Y0 ~ 2^82 / Dv to 2^-18, then two Newton
@@ -428,7 +429,7 @@ public:
     Value *S = B.CreateSub(c32(53), bitLength(TX.M));
     Value *Odd = B.CreateTrunc(B.CreateSub(TX.E, S), I1);
     S = B.CreateAdd(S, B.CreateZExt(Odd, I32));
-    Value *N = shl(TX.M, S);
+    Value *N = B.CreateShl(TX.M, B.CreateZExt(S, I64)); // at most 54 places
     Value *E = B.CreateSub(TX.E, S);
     // A reciprocal root Y0 ~ 2^57 / sqrt(N) to 2^-18, then two Newton steps
     // (Y1 ~ 2^89 / sqrt(N) to 2^-35, Y2 to 2^-58) give S to 2 units, which
