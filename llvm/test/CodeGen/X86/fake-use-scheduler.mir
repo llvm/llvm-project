@@ -7,13 +7,13 @@
 # scheduler. We don't bother to check that the order of the FAKE_USEs
 # remains the same. They should, but it is irrelevant.
 #
-# CHECK: ********** MI Scheduling **********
+# CHECK: Current Schedule Region
 # CHECK-NEXT: foo:%bb.0 entry
 # CHECK-NEXT:   From: %0:gr64 = COPY $rdi
 # CHECK-NEXT:     To: FAKE_USE %5:gr64
 # CHECK-NEXT:  RegionInstrs: 7
 #
-# CHECK: ********** MI Scheduling **********
+# CHECK: Current Schedule Region
 # CHECK-NEXT: bar:%bb.0 entry
 # CHECK-NEXT:   From: %0:gr64 = COPY $rdi
 # CHECK-NEXT:     To: RET 0, killed $rax

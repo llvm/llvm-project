@@ -516,9 +516,9 @@ func.func @vectorize_reverse_like_tensor_extract(%arg0: tensor<1x2x3xf32>, %arg1
 // CHECK-DAG:    %[[PASSTHRU:.*]] = arith.constant dense<0.000000e+00> : vector<1x1x3xf32>
 // CHECK-DAG:    %[[INIT_IDX:.+]] = arith.constant dense<[2, 1, 0]> : vector<3xindex>
 // CHECK:        %[[T0:.+]] = arith.muli %[[ARG2]], %[[C3]] : index
-// CHECK:        %[[T1:.+]] = vector.broadcast %[[T0]] : index to vector<1x1x3xindex>
-// CHECK:        %[[T2:.+]] = vector.broadcast %[[INIT_IDX]]
-// CHECK:        %[[T3:.+]] = arith.addi %[[T2]], %[[T1]]
+// CHECK:        %[[T1:.+]] = vector.broadcast %[[T0]] : index to vector<3xindex>
+// CHECK:        %[[T2:.+]] = arith.addi %[[T1]], %[[INIT_IDX]] : vector<3xindex>
+// CHECK:        %[[T3:.+]] = vector.broadcast %[[T2]] : vector<3xindex> to vector<1x1x3xindex>
 // CHECK:        %[[GATHER:.*]] = vector.gather %[[ARG0]][%[[C0]], %[[C0]], %[[C0]]] [%[[T3]]], %[[MASK]], %[[PASSTHRU]]
 // CHECK:        vector.transfer_write %[[GATHER]]
 

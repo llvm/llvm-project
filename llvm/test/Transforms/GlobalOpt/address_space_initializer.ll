@@ -1,6 +1,6 @@
 ; RUN: opt -passes=globalopt < %s -S | FileCheck %s
 ; RUN: opt -passes=globalopt --mtriple=nvptx64 < %s -S | FileCheck %s --check-prefix=GPU
-; RUN: opt -passes=globalopt --mtriple=amdgcn < %s -S | FileCheck %s --check-prefix=GPU
+; RUN: opt -passes=globalopt --mtriple=amdgpu < %s -S | FileCheck %s --check-prefix=GPU
 ; REQUIRES: amdgpu-registered-target, nvptx-registered-target
 
 ; Check that we don't try to set a global initializer for non AS(0) globals.

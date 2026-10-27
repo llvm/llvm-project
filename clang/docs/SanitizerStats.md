@@ -1,8 +1,5 @@
 # SanitizerStats
 
-```{contents}
-:local:
-```
 
 ## Introduction
 

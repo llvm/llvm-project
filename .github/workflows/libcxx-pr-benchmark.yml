@@ -5,9 +5,10 @@
 #   /libcxx-bot benchmark <path-to-benchmarks-to-run>
 #
 # That will cause the specified benchmarks to be run on the PR and on the pull-request target, and
-# their results to be compared.
+# their results to be compared. Only machines defined in machines.json that opt into the PR
+# benchmarking are triggered.
 
-name: Benchmark libc++ PR
+name: "[libc++] Benchmark PR"
 
 permissions:
   contents: read
@@ -23,12 +24,12 @@ jobs:
     if: >-
       github.event.issue.pull_request &&
       contains(github.event.comment.body, '/libcxx-bot benchmark')
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     environment:
       name: main-branch-only
       deployment: false
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           sparse-checkout: |
@@ -42,166 +43,151 @@ jobs:
           LLVM_TOKEN_GENERATOR_PRIVATE_KEY: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
 
   extract-info:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     needs:
       - permission-check
     permissions:
       pull-requests: write
     steps:
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+      - name: Checkout the LNT configurations
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          python-version: '3.14'
-
-      - name: Setup virtual environment
-        run: |
-          python3 -m venv .venv
-          source .venv/bin/activate
-          python -m pip install pygithub==2.8.1
+          persist-credentials: false
+          # Disabling cone mode allows checking out exactly the single file we need.
+          sparse-checkout: libcxx/utils/ci/lnt/machines.json
+          sparse-checkout-cone-mode: false
 
       - name: Extract information from the PR
         id: vars
-        env:
-          COMMENT_BODY: ${{ github.event.comment.body }}
-        run: |
-          source .venv/bin/activate
-          cat <<EOF | python >> ${GITHUB_OUTPUT}
-          import github
-          repo = github.Github(auth=github.Auth.Token("${{ github.token }}")).get_repo("${{ github.repository }}")
-          pr = repo.get_pull(${{ github.event.issue.number }})
-          print(f"pr_base={pr.base.sha}")
-          print(f"pr_head={pr.head.sha}")
-          EOF
-          BENCHMARKS=$(echo "$COMMENT_BODY" | sed -nE 's/\/libcxx-bot benchmark (.+)/\1/p')
-          echo "benchmarks=${BENCHMARKS}" >> ${GITHUB_OUTPUT}
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const pr = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+            });
+
+            // Compare the PR against the commit where it diverged from its target branch.
+            const { data: comparison } = await github.rest.repos.compareCommitsWithBasehead({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              basehead: `${pr.data.base.sha}...${pr.data.head.sha}`,
+              per_page: 1,
+            });
+            core.setOutput('baseline', comparison.merge_base_commit.sha);
+            core.setOutput('candidate', pr.data.head.sha);
+
+            const match = context.payload.comment.body.match(/\/libcxx-bot benchmark (.+)/);
+            core.setOutput('benchmarks', match ? match[1] : '');
+
+            // Benchmark the configurations defined in machines.json that opt into PR benchmarking.
+            const config = JSON.parse(require('fs').readFileSync('libcxx/utils/ci/lnt/machines.json', 'utf8'));
+            const selected = config.filter(cfg => cfg['pr-benchmarks']);
+            core.setOutput('matrix', JSON.stringify(selected.map(cfg => ({'lnt-machine': cfg['lnt-machine'], setup: cfg.setup}))));
 
       - name: Update comment with link to the run
-        run: |
-          source .venv/bin/activate
-          cat <<EOF | python
-          import github
-          repo = github.Github(auth=github.Auth.Token("${{ github.token }}")).get_repo("${{ github.repository }}")
-          pr = repo.get_pull(${{ github.event.issue.number }})
-          comment = pr.get_issue_comment(${{ github.event.comment.id }})
-          add_text = "> _Running benchmarks in ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}_"
-          comment.edit('\n\n'.join([comment.body, add_text]))
-          EOF
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const { data: comment } = await github.rest.issues.getComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+            });
+            const run_url = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const note = `> _Running benchmarks in ${run_url}_`;
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              body: [comment.body, note].join('\n\n'),
+            });
     outputs:
-      pr_base: ${{ steps.vars.outputs.pr_base }}
-      pr_head: ${{ steps.vars.outputs.pr_head }}
+      baseline: ${{ steps.vars.outputs.baseline }}
+      candidate: ${{ steps.vars.outputs.candidate }}
       benchmarks: ${{ steps.vars.outputs.benchmarks }}
+      matrix: ${{ steps.vars.outputs.matrix }}
 
   run-benchmarks:
-    strategy:
-      matrix:
-        include:
-          - platform: macOS 26.5 arm64
-            runner: ["self-hosted", "macOS", "ARM64", "26", "26.5"]
-            cc: clang
-            cxx: clang++
-            install-python: false
-            install-macos-dependencies: true
-          - platform: Linux x86_64
-            runner: llvm-premerge-libcxx-next-runners
-            cc: clang-22
-            cxx: clang++-22
-            install-python: true
-            install-macos-dependencies: false
-      fail-fast: false
-    permissions:
-      pull-requests: write
-    runs-on: ${{ matrix.runner }}
+    name: Benchmark ${{ matrix.lnt-machine }}
     needs:
       - extract-info
-    env:
-      CC: ${{ matrix.cc }}
-      CXX: ${{ matrix.cxx }}
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        include: ${{ fromJSON(needs.extract-info.outputs.matrix) }}
+      fail-fast: false
+    uses: $/.github/workflows/libcxx-run-ab-benchmarks.yml
+    with:
+      baseline: ${{ needs.extract-info.outputs.baseline }}
+      candidate: ${{ needs.extract-info.outputs.candidate }}
+      # Use the benchmark suite from the PR, which allows benchmarking newly-introduced benchmarks.
+      benchmark-suite-version: ${{ needs.extract-info.outputs.candidate }}
+      lnt-machine: ${{ matrix.lnt-machine }}
+      setup: ${{ toJSON(matrix.setup) }}
+      benchmarks: ${{ needs.extract-info.outputs.benchmarks }}
+      artifact-name: ab-results-${{ matrix.lnt-machine }}
+
+  report:
+    needs:
+      - extract-info
+      - run-benchmarks
+    # Report results even if some of the benchmark runs failed.
+    if: ${{ always() && needs.extract-info.result == 'success' }}
+    runs-on: ubuntu-26.04
+    permissions:
+      pull-requests: write
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Download the results
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          persist-credentials: false
-          ref: ${{ needs.extract-info.outputs.pr_head }}
-          fetch-depth: 0
-          fetch-tags: true # This job requires access to all the Git branches so it can diff against (usually) main
-
-      - name: Install Python
-        if: ${{ matrix.install-python }}
-        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
-        with:
-          python-version: '3.14'
-
-      - name: Install Ninja and CMake
-        if: ${{ matrix.install-macos-dependencies }}
-        run: |
-          brew install ninja cmake
-
-      - name: Setup virtual environment
-        run: |
-          python3 -m venv .venv
-          source .venv/bin/activate
-          python -m pip install -r libcxx/utils/requirements.txt
-          python -m pip install pygithub==2.8.1
-
-      - name: Build the baseline and the candidate
-        env:
-          PR_HEAD: ${{ needs.extract-info.outputs.pr_head }}
-          PR_BASE: ${{ needs.extract-info.outputs.pr_base }}
-        run: |
-          source .venv/bin/activate
-          baseline_commit=$(git merge-base $PR_BASE $PR_HEAD)
-          ./libcxx/utils/build-at-commit --commit ${baseline_commit} --install-dir install/baseline -- -DCMAKE_BUILD_TYPE=RelWithDebInfo
-          ./libcxx/utils/build-at-commit --commit $PR_HEAD --install-dir install/candidate -- -DCMAKE_BUILD_TYPE=RelWithDebInfo
-
-      - name: Run baseline and candidate interleaved
-        env:
-          BENCHMARKS: ${{ needs.extract-info.outputs.benchmarks }}
-        run: |
-          source .venv/bin/activate
-          # Run 3 times so we can pick the median, and interleave to mitigate the impact of environmental noise
-          ./libcxx/utils/test-at-commit --libcxx-installation install/baseline -B benchmarks/baseline -- -sv -j1 --param optimization=speed "$BENCHMARKS"
-          ./libcxx/utils/consolidate-benchmarks benchmarks/baseline | tee baseline.lnt
-          ./libcxx/utils/test-at-commit --libcxx-installation install/candidate -B benchmarks/candidate -- -sv -j1 --param optimization=speed "$BENCHMARKS"
-          ./libcxx/utils/consolidate-benchmarks benchmarks/candidate | tee candidate.lnt
-
-          ./libcxx/utils/test-at-commit --libcxx-installation install/baseline -B benchmarks/baseline -- -sv -j1 --param optimization=speed "$BENCHMARKS"
-          ./libcxx/utils/consolidate-benchmarks benchmarks/baseline | tee -a baseline.lnt
-          ./libcxx/utils/test-at-commit --libcxx-installation install/candidate -B benchmarks/candidate -- -sv -j1 --param optimization=speed "$BENCHMARKS"
-          ./libcxx/utils/consolidate-benchmarks benchmarks/candidate | tee -a candidate.lnt
-
-          ./libcxx/utils/test-at-commit --libcxx-installation install/baseline -B benchmarks/baseline -- -sv -j1 --param optimization=speed "$BENCHMARKS"
-          ./libcxx/utils/consolidate-benchmarks benchmarks/baseline | tee -a baseline.lnt
-          ./libcxx/utils/test-at-commit --libcxx-installation install/candidate -B benchmarks/candidate -- -sv -j1 --param optimization=speed "$BENCHMARKS"
-          ./libcxx/utils/consolidate-benchmarks benchmarks/candidate | tee -a candidate.lnt
-
-      - name: Compare baseline and candidate runs
-        run: |
-          source .venv/bin/activate
-          ./libcxx/utils/compare-benchmarks baseline.lnt candidate.lnt | tee results.txt
+          pattern: ab-results-*
+          path: ${{ runner.temp }}/results
+          merge-multiple: true
 
       - name: Update comment with results
-        run: |
-          source .venv/bin/activate
-          cat <<EOF | python
-          import github
-          repo = github.Github(auth=github.Auth.Token("${{ github.token }}")).get_repo("${{ github.repository }}")
-          pr = repo.get_pull(${{ github.event.issue.number }})
-          comment = pr.get_issue_comment(${{ github.event.comment.id }})
-          with open('results.txt', 'r') as f:
-            benchmark_results = f.read()
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          MATRIX: ${{ needs.extract-info.outputs.matrix }}
+          RESULTS_DIR: ${{ runner.temp }}/results
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            const run_url = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
 
-          new_comment_text = f"""
-          {comment.body}
+            // Report the results of every machine we benchmarked on. Machines without results are those where
+            // the comparison failed.
+            const machines = JSON.parse(process.env.MATRIX).map(cfg => cfg['lnt-machine']);
+            const sections = machines.map(machine => {
+              const results = path.join(process.env.RESULTS_DIR, `ab-results-${machine}`, 'results.txt');
+              if (!fs.existsSync(results)) {
+                return `> _:x: Benchmarks for ${machine} failed. See ${run_url} for details._`;
+              }
+              return [
+                '<details>',
+                '<summary>',
+                `Benchmark results for ${machine}:`,
+                '</summary>',
+                '',
+                '```',
+                fs.readFileSync(results, 'utf8'),
+                '```',
+                '',
+                '</details>',
+              ].join('\n');
+            });
 
-          <details>
-          <summary>
-          Benchmark results for ${{ matrix.platform }}:
-          </summary>
-
-          \`\`\`
-          {benchmark_results}
-          \`\`\`
-
-          </details>
-          """
-
-          comment.edit(new_comment_text)
-          EOF
+            const { data: comment } = await github.rest.issues.getComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+            });
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              body: [comment.body, ...sections].join('\n\n'),
+            });

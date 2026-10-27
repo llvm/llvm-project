@@ -40,8 +40,8 @@
 
 // LLVM-LABEL: define dso_local i32 @main()
 // LLVM: %[[STRUCTARG:.*]] = alloca { ptr }, align 8
-// LLVM: %[[RETVAL:.*]] = alloca i32, i64 1, align 4
-// LLVM: %[[J:.*]] = alloca i32, i64 1, align 4
+// LLVM: %[[RETVAL:.*]] = alloca i32, align 4
+// LLVM: %[[J:.*]] = alloca i32, align 4
 // LLVM: br label %[[ENTRY:.*]]
 
 // LLVM: [[ENTRY]]:
@@ -58,7 +58,7 @@
 // LLVM: %[[LOAD:.*]] = load i32, ptr %[[RETVAL]], align 4
 // LLVM: ret i32 %[[LOAD]]
 
-// LLVM-LABEL: define internal void @main..omp_par(ptr noalias %{{.*}}, ptr noalias %{{.*}}, ptr %{{.*}})
+// LLVM-LABEL: define internal void @main..omp_par(ptr noalias %{{.*}}, ptr noalias %{{.*}}, ptr noalias nofreeobj %{{.*}})
 // LLVM: [[PAR_ENTRY:.*]]:
 // LLVM: %[[GEP_J:.*]] = getelementptr { ptr }, ptr %{{.*}}, i32 0, i32 0
 // LLVM: %[[LOAD_J:.*]] = load ptr, ptr %[[GEP_J]], align 8
@@ -66,7 +66,7 @@
 // LLVM: %[[TID_VAL:.*]] = load i32, ptr %{{.*}}, align 4
 // LLVM: store i32 %[[TID_VAL]], ptr %[[TID_LOCAL]], align 4
 // LLVM: %{{.*}} = load i32, ptr %[[TID_LOCAL]], align 4
-// LLVM: %[[I:.*]] = alloca i32, i64 1, align 4
+// LLVM: %[[I:.*]] = alloca i32, align 4
 // LLVM: br label %[[AFTER_ALLOCA:.*]]
 
 // LLVM: [[AFTER_ALLOCA]]:
@@ -123,7 +123,7 @@
 // OGCG: call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @1, i32 1, ptr @main.omp_outlined, ptr %[[J]])
 // OGCG: ret i32 0
 
-// OGCG-LABEL: define internal void @main.omp_outlined(ptr noalias noundef %{{.*}}, ptr noalias noundef %{{.*}}, ptr noundef nonnull align 4 dereferenceable(4) %{{.*}})
+// OGCG-LABEL: define internal void @main.omp_outlined(ptr noalias noundef %{{.*}}, ptr noalias noundef %{{.*}}, ptr nofreeobj noundef nonnull align 4 dereferenceable(4) %{{.*}})
 // OGCG: [[OUTLINED_ENTRY:.*]]:
 // OGCG: %[[GLOBAL_TID_ADDR:.*]] = alloca ptr, align 8
 // OGCG: %[[BOUND_TID_ADDR:.*]] = alloca ptr, align 8

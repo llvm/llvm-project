@@ -191,12 +191,16 @@ template <typename ArrayRefT> class BytesView {
   bool IsLittleEndian;
 
 public:
+  explicit BytesView(ArrayRefT Ref, bool IsLittleEndian)
+      : Bytes(Ref), IsLittleEndian(IsLittleEndian) {}
   explicit BytesView(ArrayRefT Ref, const DataLayout &DL)
-      : Bytes(Ref), IsLittleEndian(DL.isLittleEndian()) {}
+      : BytesView(Ref, DL.isLittleEndian()) {}
 
   auto &operator[](uint32_t Index) {
     return Bytes[IsLittleEndian ? Index : Bytes.size() - 1 - Index];
   }
+
+  size_t size() const { return Bytes.size(); }
 };
 
 using ConstBytesView = BytesView<ArrayRef<Byte>>;
@@ -296,9 +300,6 @@ class Context {
                          GEPNoWrapFlags Flags, AnyValue &AccumulatedOffset);
   AnyValue computePtrAdd(const AnyValue &Ptr, const APInt &Offset,
                          GEPNoWrapFlags Flags, AnyValue &AccumulatedOffset);
-  AnyValue computeScaledPtrAdd(const AnyValue &Ptr, const AnyValue &Index,
-                               const APInt &Scale, GEPNoWrapFlags Flags,
-                               AnyValue &AccumulatedOffset);
 
   // Constants
   // Use std::map to avoid iterator/reference invalidation.
@@ -383,6 +384,12 @@ public:
   /// calling resetNoncacheableConstantBuffer after all references are dropped.
   const MaterializedConstant *getConstantValue(Constant *C);
   void resetNoncacheableConstantBuffer();
+  /// Returns true if an object of \p Size bytes in address space \p AS is
+  /// larger than the largest signed integer that fits into the index type.
+  /// Creating such an object is undefined behavior.
+  bool exceedsMaxObjectSize(uint64_t Size, unsigned AS) const {
+    return !isUIntN(DL.getIndexSizeInBits(AS) - 1, Size);
+  }
   IntrusiveRefCntPtr<MemoryObject> allocate(uint64_t Size, uint64_t Align,
                                             StringRef Name, unsigned AS,
                                             MemInitKind InitKind,
@@ -416,6 +423,13 @@ public:
                      bool *ContainsUndefinedBits = nullptr);
   /// Convert a value to byte sequence. Padding bits are set to zero.
   void toBytes(const AnyValue &Val, Type *Ty, MutableArrayRef<Byte> Bytes);
+  /// Read the bits [OffsetInBits, OffsetInBits + bitwidth(Ty)) of \p Src as a
+  /// value of type \p Ty. The bit range must be within \p Src.
+  AnyValue extractBits(const ByteValue &Src, uint32_t OffsetInBits, Type *Ty);
+  /// Overwrite the bits [OffsetInBits, OffsetInBits + bitwidth(Ty)) of \p Base
+  /// with \p Val. The bit range must be within \p Base.
+  void insertBits(ByteValue &Base, uint32_t OffsetInBits, const AnyValue &Val,
+                  Type *Ty);
   /// Direct memory load without checks.
   AnyValue load(MemoryObject &MO, uint64_t Offset, Type *ValTy,
                 bool *ContainsUndefinedBits = nullptr);
@@ -430,6 +444,9 @@ public:
 
   AnyValue computeGEP(GEPOperator &GEP,
                       function_ref<const AnyValue &(Value *V)> GetValue);
+  AnyValue computeScaledPtrAdd(const AnyValue &Ptr, const AnyValue &Index,
+                               const APInt &Scale, GEPNoWrapFlags Flags,
+                               AnyValue &AccumulatedOffset);
 
   Function *getTargetFunction(const Pointer &Ptr);
   BasicBlock *getTargetBlock(const Pointer &Ptr);

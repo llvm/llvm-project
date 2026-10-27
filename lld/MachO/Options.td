@@ -78,6 +78,9 @@ def no_deduplicate_strings: Flag<["--"], "no-deduplicate-strings">,
 def dead_strip_duplicates: Flag<["--"], "dead-strip-duplicates">,
     HelpText<"Do not error on duplicate symbols that will be dead stripped.">,
     Group<grp_lld>;
+defm strip_swift_force_load: BB<"strip-swift-force-load",
+  "Strip the swift FORCE_LOAD sections containing fixups",
+  "Do not strip the the swift FORCE_LOAD sections (default)">, Group<grp_lld>;
 def print_dylib_search: Flag<["--"], "print-dylib-search">,
     HelpText<"Print which paths lld searched when trying to find dylibs">,
     Group<grp_lld>;
@@ -216,6 +219,9 @@ defm pgo_warn_mismatch: BB<"pgo-warn-mismatch",
 defm warn_thin_archive_missing_members : BB<"warn-thin-archive-missing-members",
   "Warn on missing object files referenced by thin archives (default)",
   "Do not warn on missing object files referenced by thin archives">, Group<grp_lld>;
+defm warn_missing_subsections_via_symbols : BB<"warn-missing-subsections-via-symbols",
+  "Warn if an input object file is missing MH_SUBSECTIONS_VIA_SYMBOLS",
+  "Do not warn if an input object file is missing MH_SUBSECTIONS_VIA_SYMBOLS (default)">, Group<grp_lld>;
 
 // This is a complete Options.td compiled from Apple's ld(1) manpage
 // dated 2018-03-07 and cross checked with ld64 source code in repo

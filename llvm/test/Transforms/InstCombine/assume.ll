@@ -7,6 +7,7 @@ target triple = "x86_64-unknown-linux-gnu"
 declare void @llvm.assume(i1) #1
 declare ptr @get_ptr()
 declare void @use_i64(i64)
+declare void @use_i1(i1)
 
 ; Check that the assume has not been removed:
 
@@ -137,8 +138,7 @@ define i1 @align_with_offset_on_gep(ptr %base) {
 
 define void @align_with_constant_offset_0(ptr %ptr) {
 ; CHECK-LABEL: @align_with_constant_offset_0(
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 16) ]
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR]], i64 8, i64 0) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 16), "align"(ptr [[PTR]], i64 8, i64 0) ]
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 16) ]
@@ -148,8 +148,7 @@ define void @align_with_constant_offset_0(ptr %ptr) {
 
 define void @align_with_constant_offset_1(ptr %ptr) {
 ; CHECK-LABEL: @align_with_constant_offset_1(
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 16) ]
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR]], i64 8, i64 -8) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 16), "align"(ptr [[PTR]], i64 8, i64 -8) ]
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 16) ]
@@ -160,8 +159,7 @@ define void @align_with_constant_offset_1(ptr %ptr) {
 
 define void @align_with_constant_offset_4(ptr %ptr) {
 ; CHECK-LABEL: @align_with_constant_offset_4(
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 16) ]
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR]], i64 8, i64 0) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 16), "align"(ptr [[PTR]], i64 8, i64 0) ]
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 16) ]
@@ -172,8 +170,7 @@ define void @align_with_constant_offset_4(ptr %ptr) {
 
 define void @align_with_constant_offset_8(ptr %ptr) {
 ; CHECK-LABEL: @align_with_constant_offset_8(
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 16) ]
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR]], i64 8, i64 8) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 16), "align"(ptr [[PTR]], i64 8, i64 8) ]
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 16) ]
@@ -183,8 +180,7 @@ define void @align_with_constant_offset_8(ptr %ptr) {
 
 define void @align_with_variable_offset(ptr %ptr, i64 %offset) {
 ; CHECK-LABEL: @align_with_variable_offset(
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 16) ]
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR]], i64 8, i64 [[OFFSET:%.*]]) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 16), "align"(ptr [[PTR]], i64 8, i64 [[OFFSET:%.*]]) ]
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 16) ]
@@ -591,6 +587,25 @@ define i1 @nonnull5(ptr %a) {
   ret i1 %rval
 }
 
+define i1 @nonnullNotEq(ptr %a) {
+; CHECK-LABEL: @nonnullNotEq(
+; CHECK-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[A:%.*]], align 8
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[LOAD]], null
+; CHECK-NEXT:    call void @use_i1(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[LOAD]]) ]
+; CHECK-NEXT:    tail call void @escape(ptr nonnull [[LOAD]])
+; CHECK-NEXT:    ret i1 false
+;
+  %load = load ptr, ptr %a
+  %cmp = icmp eq ptr %load, null
+  call void @use_i1(i1 %cmp)
+  %not = xor i1 %cmp, true
+  tail call void @llvm.assume(i1 %not)
+  tail call void @escape(ptr %load)
+  %rval = icmp eq ptr %load, null
+  ret i1 %rval
+}
+
 define void @redundant_nonnull1(ptr nonnull %ptr) {
 ; CHECK-LABEL: @redundant_nonnull1(
 ; CHECK-NEXT:    ret void
@@ -630,10 +645,7 @@ define void @redundant_nonnull3(ptr %ptr) {
 
 define void @partially_redundant(ptr %ptr, ptr %ptr2, ptr %ptr3, ptr %ptr4, ptr %ptr5) {
 ; CHECK-LABEL: @partially_redundant(
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[PTR2:%.*]]) ]
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[PTR:%.*]]) ]
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[PTR4:%.*]]), "nonnull"(ptr [[PTR3:%.*]]) ]
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[PTR5:%.*]]) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[PTR5:%.*]]), "nonnull"(ptr [[PTR4:%.*]]), "nonnull"(ptr [[PTR3:%.*]]), "nonnull"(ptr [[PTR:%.*]]), "nonnull"(ptr [[PTR2:%.*]]) ]
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.assume(i1 true) [ "nonnull"(ptr %ptr), "nonnull"(ptr %ptr2) ]
@@ -1411,6 +1423,22 @@ define i32 @assume_noundef_on_load_after_call(ptr %ptr) {
   call void @block()
   call void @llvm.assume(i1 true) [ "noundef"(i32 %val) ]
   ret i32 %val
+}
+
+define ptr @avoid_get_operand_bundle() {
+; CHECK-LABEL: @avoid_get_operand_bundle(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[LOAD:%.*]] = load volatile ptr, ptr null, align 8
+; CHECK-NEXT:    [[PTRTOINT_I:%.*]] = ptrtoint ptr [[LOAD]] to i64
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr null, i64 [[PTRTOINT_I]]), "dereferenceable"(ptr null, i64 [[PTRTOINT_I]]) ]
+; CHECK-NEXT:    ret ptr null
+;
+bb:
+  %load = load volatile ptr, ptr null, align 8
+  %ptrtoint.i = ptrtoint ptr %load to i64
+  call void @llvm.assume(i1 true) [ "dereferenceable"(ptr null, i64 %ptrtoint.i) ]
+  call void @llvm.assume(i1 true) [ "dereferenceable"(ptr null, i64 %ptrtoint.i) ]
+  ret ptr null
 }
 
 declare void @use(i1)

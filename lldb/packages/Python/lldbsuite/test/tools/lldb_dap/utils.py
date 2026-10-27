@@ -16,7 +16,7 @@ from dataclasses import asdict, dataclass, field, replace
 from pprint import pformat
 from typing import IO, Callable, Optional, Protocol, Tuple, Type, runtime_checkable
 
-from .dap_types import (
+from .types import (
     AnyEvent,
     DAPError,
     Event,
@@ -156,6 +156,7 @@ class DebugAdapter:
             self._process.wait(timeout=2.0)
         except subprocess.TimeoutExpired:
             self._process.kill()
+            self._process.wait()
 
     def _read_listening_uri(self) -> str:
         # lldb-dap will print the listening address once the listener is
@@ -343,6 +344,7 @@ class EventHistory:
             after: The prior event or response. Only events whose `seq`
                 is strictly greater are considered.
             timeout: Override the history's default timeout, in seconds.
+                With 0, only the events already recorded are checked.
             timeout_msg: Extra context appended to the `TimeoutError`
                 message if the wait times out.
 
@@ -428,7 +430,7 @@ class EventHistory:
             matches = until(evt)
             return matches
 
-        timeout = timeout or self._timeout
+        timeout = self._timeout if timeout is None else timeout
         try:
             event = self.__wait_until(
                 is_event_and_matches_condition, after_seq=after_seq, timeout=timeout
@@ -647,7 +649,9 @@ class DAPConnection:
         self._is_ready.set()
         error = None
         try:
-            while self.is_alive():
+            # Read until EOF, so messages the adapter sent right before closing
+            # the connection are not lost.
+            while True:
                 message = DAPConnection.read_message(self._transport)
                 if not message:
                     break
@@ -831,7 +835,9 @@ class _SocketTransport:
             self._writer.flush()
 
         if self._socket.fileno() != -1:
-            self._socket.shutdown(socket.SHUT_RDWR)
+            # Fails if the adapter has already closed the connection.
+            with contextlib.suppress(OSError):
+                self._socket.shutdown(socket.SHUT_RDWR)
 
         self._writer.close()
         self._socket.close()

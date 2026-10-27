@@ -21,6 +21,12 @@
 
 namespace clang {
 
+/// Constants for TokenKinds.def
+enum TokenKey : unsigned {
+#define EMIT_TOKENKEY
+#include "clang/Basic/BuiltinTraits.inc"
+};
+
 namespace tok {
 
 /// Provides a simple uniform namespace for tokens from all C languages.

@@ -55,12 +55,12 @@ coro_t f() {
 // CHECK-LPAD:   invoke void @_Z9may_throwv()
 // CHECK-LPAD:       to label %[[CONT:.+]] unwind label %[[CLEANUP:.+]]
 // CHECK-LPAD: [[CLEANUP]]:
-// CHECK-LPAD:   call void @_ZN7CleanupD1Ev(ptr {{[^,]*}} %x) #2
+// CHECK-LPAD:   call void @_ZN7CleanupD1Ev(ptr {{[^,]*}} %x) #[[ATTR:[0-9]+]]
 // CHECK-LPAD:   br label %[[CATCH:.+]]
 
 // CHECK-LPAD: [[CATCH]]:
 // CHECK-LPAD:    call ptr @__cxa_begin_catch
-// CHECK-LPAD:    call void @_ZN6coro_t12promise_type19unhandled_exceptionEv(ptr {{[^,]*}} %__promise) #2
+// CHECK-LPAD:    call void @_ZN6coro_t12promise_type19unhandled_exceptionEv(ptr {{[^,]*}} %__promise) #[[ATTR]]
 // CHECK-LPAD:    invoke void @__cxa_end_catch()
 // CHECK-LPAD-NEXT:  to label %[[CATCHRETDEST:.+]] unwind label
 // CHECK-LPAD: [[CATCHRETDEST]]:

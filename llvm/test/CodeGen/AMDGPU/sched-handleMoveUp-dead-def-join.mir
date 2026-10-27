@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -verify-misched -run-pass=machine-scheduler -misched-only-block=2 -filetype=null %s
+# RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -verify-misched -run-pass=machine-scheduler -misched-only-block=2 -filetype=null %s
 # REQUIRES: asserts
 
 # This used to assert while moving a dead subregister def upward. The moved
@@ -8,7 +8,6 @@
 # the problematic move.
 
 --- |
-  target triple = "amdgcn-unknown-amdhsa"
   define amdgpu_kernel void @rock_attention(ptr addrspace(1) inreg %0, ptr addrspace(1) inreg %1, ptr addrspace(1) inreg %2, ptr addrspace(1) inreg %3, ptr addrspace(1) inreg %4, ptr addrspace(1) inreg %5) #0 {
     ret void
   }

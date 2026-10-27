@@ -303,7 +303,7 @@ void MultiplexExternalSemaSource::ReadDeclsToCheckForDeferredDiags(
 }
 
 void MultiplexExternalSemaSource::ReadUnusedLocalTypedefNameCandidates(
-    llvm::SmallSetVector<const TypedefNameDecl *, 4> &Decls) {
+    llvm::SmallPtrSetImpl<const TypedefNameDecl *> &Decls) {
   for(size_t i = 0; i < Sources.size(); ++i)
     Sources[i]->ReadUnusedLocalTypedefNameCandidates(Decls);
 }
@@ -371,8 +371,14 @@ bool MultiplexExternalSemaSource::MaybeDiagnoseMissingCompleteType(
   return false;
 }
 
-void MultiplexExternalSemaSource::AssignedLambdaNumbering(
-    CXXRecordDecl *Lambda) {
-  for (auto &Source : Sources)
-    Source->AssignedLambdaNumbering(Lambda);
+void MultiplexExternalSemaSource::StartedQualifiedLookup(
+    const DeclContext *DC) {
+  for (size_t I = 0, E = Sources.size(); I < E; ++I)
+    Sources[I]->StartedQualifiedLookup(DC);
+}
+
+void MultiplexExternalSemaSource::FinishedQualifiedLookup(
+    const DeclContext *DC) {
+  for (size_t I = 0, E = Sources.size(); I < E; ++I)
+    Sources[I]->FinishedQualifiedLookup(DC);
 }

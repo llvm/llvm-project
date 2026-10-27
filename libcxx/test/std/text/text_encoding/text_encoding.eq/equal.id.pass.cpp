@@ -16,7 +16,7 @@
 #include <text_encoding>
 
 #include "test_macros.h"
-#include "../test_text_encoding.h"
+#include "test_text_encoding.h"
 
 using id = std::text_encoding::id;
 

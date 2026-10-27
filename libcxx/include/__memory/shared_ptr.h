@@ -18,6 +18,7 @@
 #include <__cstddef/ptrdiff_t.h>
 #include <__exception/exception.h>
 #include <__functional/binary_function.h>
+#include <__functional/hash.h>
 #include <__functional/operations.h>
 #include <__functional/reference_wrapper.h>
 #include <__fwd/ostream.h>
@@ -35,6 +36,7 @@
 #include <__memory/uninitialized_algorithms.h>
 #include <__memory/uninitialized_multidimensional_algorithms.h>
 #include <__memory/unique_ptr.h>
+#include <__new/exceptions.h>
 #include <__type_traits/add_reference.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/conjunction.h>
@@ -50,6 +52,7 @@
 #include <__type_traits/remove_extent.h>
 #include <__type_traits/remove_pointer.h>
 #include <__type_traits/remove_reference.h>
+#include <__type_traits/type_identity.h>
 #include <__type_traits/void_t.h>
 #include <__utility/declval.h>
 #include <__utility/exception_guard.h>
@@ -473,7 +476,7 @@ public:
   }
 
   template <class _Yp, __enable_if_t<__compatible_with_v<_Yp, _Tp>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp>& operator=(shared_ptr<_Yp>&& __r) {
+  _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp>& operator=(shared_ptr<_Yp>&& __r) _NOEXCEPT {
     shared_ptr(std::move(__r)).swap(*this);
     return *this;
   }
@@ -554,6 +557,22 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI bool __owner_equivalent(const shared_ptr& __p) const { return __cntrl_ == __p.__cntrl_; }
+
+#if _LIBCPP_STD_VER >= 26
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI size_t owner_hash() const noexcept {
+    return std::hash<__shared_weak_count*>()(__cntrl_);
+  }
+
+  template <class _Up>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool owner_equal(shared_ptr<_Up> const& __p) const noexcept {
+    return __cntrl_ == __p.__cntrl_;
+  }
+
+  template <class _Up>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool owner_equal(weak_ptr<_Up> const& __p) const noexcept {
+    return __cntrl_ == __p.__cntrl_;
+  }
+#endif
 
 #if _LIBCPP_STD_VER >= 17
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI __add_lvalue_reference_t<element_type> operator[](ptrdiff_t __i) const {
@@ -658,8 +677,9 @@ _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> __allocate_shared_impl(const _Alloc& __all
 
 template <class _Tp, class _Alloc, class... _Args, __enable_if_t<!is_array<_Tp>::value, int> = 0>
 [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> allocate_shared(const _Alloc& __a, _Args&&... __args) {
-  using _ControlBlock = __shared_ptr_emplace<_Tp, __allocator_traits_rebind_t<_Alloc, __remove_cv_t<_Tp> > >;
-  return std::__allocate_shared_impl<_ControlBlock, _Tp>(__a, std::forward<_Args>(__args)...);
+  using _CanonicalAlloc = __allocator_traits_rebind_t<_Alloc, __remove_cv_t<_Tp> >;
+  using _ControlBlock   = __shared_ptr_emplace<_Tp, _CanonicalAlloc>;
+  return std::__allocate_shared_impl<_ControlBlock, _Tp>(_CanonicalAlloc(__a), std::forward<_Args>(__args)...);
 }
 
 template <class _Tp, class... _Args, __enable_if_t<!is_array<_Tp>::value, int> = 0>
@@ -671,9 +691,9 @@ template <class _Tp, class... _Args, __enable_if_t<!is_array<_Tp>::value, int> =
 
 template <class _Tp, class _Alloc, __enable_if_t<!is_array<_Tp>::value, int> = 0>
 [[nodiscard]] _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> allocate_shared_for_overwrite(const _Alloc& __a) {
-  using _ControlBlock =
-      __shared_ptr_emplace_for_overwrite<_Tp, __allocator_traits_rebind_t<_Alloc, __remove_cv_t<_Tp>>>;
-  return std::__allocate_shared_impl<_ControlBlock, _Tp>(__a);
+  using _CanonicalAlloc = __allocator_traits_rebind_t<_Alloc, remove_cv_t<_Tp>>;
+  using _ControlBlock   = __shared_ptr_emplace_for_overwrite<_Tp, _CanonicalAlloc>;
+  return std::__allocate_shared_impl<_ControlBlock, _Tp>(_CanonicalAlloc(__a));
 }
 
 template <class _Tp, __enable_if_t<!is_array<_Tp>::value, int> = 0>
@@ -720,17 +740,28 @@ struct __unbounded_array_control_block<_Tp[], _Alloc> : __shared_weak_count {
 
   // Returns the number of bytes required to store a control block followed by the given number
   // of elements of _Tp, with the whole storage being aligned to a multiple of _Tp's alignment.
+  //
+  // Throws std::bad_array_new_length if that number of bytes is not representable as a size_t.
   _LIBCPP_HIDE_FROM_ABI static constexpr size_t __bytes_for(size_t __elements) {
+    constexpr size_t __align = alignof(__unbounded_array_control_block);
+
     // When there's 0 elements, the control block alone is enough since it holds one element.
     // Otherwise, we allocate one fewer element than requested because the control block already
-    // holds one. Also, we use the bitwise formula below to ensure that we allocate enough bytes
-    // for the whole allocation to be a multiple of _Tp's alignment. That formula is taken from [1].
+    // holds one.
+    size_t __bytes = sizeof(__unbounded_array_control_block);
+    if (__elements != 0) {
+      if (__builtin_mul_overflow(__elements - 1, sizeof(_Tp), &__bytes) ||
+          __builtin_add_overflow(__bytes, sizeof(__unbounded_array_control_block), &__bytes))
+        std::__throw_bad_array_new_length();
+    }
+
+    // We use the bitwise formula below to ensure that we allocate enough bytes for the whole
+    // allocation to be a multiple of _Tp's alignment. That formula is taken from [1].
     //
     // [1]: https://en.wikipedia.org/wiki/Data_structure_alignment#Computing_padding
-    size_t __bytes           = __elements == 0 ? sizeof(__unbounded_array_control_block)
-                                               : (__elements - 1) * sizeof(_Tp) + sizeof(__unbounded_array_control_block);
-    constexpr size_t __align = alignof(__unbounded_array_control_block);
-    return (__bytes + __align - 1) & ~(__align - 1);
+    if (__builtin_add_overflow(__bytes, __align - 1, &__bytes))
+      std::__throw_bad_array_new_length();
+    return __bytes & ~(__align - 1);
   }
 
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL
@@ -1244,6 +1275,22 @@ public:
     return __cntrl_ < __r.__cntrl_;
   }
 
+#if _LIBCPP_STD_VER >= 26
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI size_t owner_hash() const noexcept {
+    return std::hash<__shared_weak_count*>()(__cntrl_);
+  }
+
+  template <class _Up>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool owner_equal(shared_ptr<_Up> const& __p) const noexcept {
+    return __cntrl_ == __p.__cntrl_;
+  }
+
+  template <class _Up>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool owner_equal(weak_ptr<_Up> const& __p) const noexcept {
+    return __cntrl_ == __p.__cntrl_;
+  }
+#endif
+
   template <class _Up>
   friend class weak_ptr;
   template <class _Up>
@@ -1314,6 +1361,46 @@ struct owner_less<void> {
     return __x.owner_before(__y);
   }
   typedef void is_transparent;
+};
+#endif
+
+#if _LIBCPP_STD_VER >= 26
+struct owner_hash {
+  template <class _Tp>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI size_t operator()(shared_ptr<_Tp> const& __p) const noexcept {
+    return __p.owner_hash();
+  }
+  template <class _Tp>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI size_t operator()(weak_ptr<_Tp> const& __p) const noexcept {
+    return __p.owner_hash();
+  }
+
+  using is_transparent = void;
+};
+
+struct owner_equal {
+  template <class _Tp, class _Up>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool
+  operator()(shared_ptr<_Tp> const& __x, shared_ptr<_Up> const& __y) const noexcept {
+    return __x.owner_equal(__y);
+  }
+  template <class _Tp, class _Up>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool
+  operator()(shared_ptr<_Tp> const& __x, weak_ptr<_Up> const& __y) const noexcept {
+    return __x.owner_equal(__y);
+  }
+  template <class _Tp, class _Up>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool
+  operator()(weak_ptr<_Tp> const& __x, shared_ptr<_Up> const& __y) const noexcept {
+    return __x.owner_equal(__y);
+  }
+  template <class _Tp, class _Up>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool
+  operator()(weak_ptr<_Tp> const& __x, weak_ptr<_Up> const& __y) const noexcept {
+    return __x.owner_equal(__y);
+  }
+
+  using is_transparent = void;
 };
 #endif
 

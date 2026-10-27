@@ -49,6 +49,7 @@ protected:
     RHS.TheTable = nullptr;
     RHS.NumBuckets = 0;
     RHS.NumItems = 0;
+    RHS.incrementEpoch();
   }
 
   LLVM_ABI StringMapImpl(unsigned InitSize, unsigned ItemSize);
@@ -514,10 +515,7 @@ public:
 
   friend bool operator==(const StringMapIterBase &LHS,
                          const StringMapIterBase &RHS) {
-    assert((!LHS.getEpochAddress() || LHS.isHandleInSync()) &&
-           "handle not in sync!");
-    assert((!RHS.getEpochAddress() || RHS.isHandleInSync()) &&
-           "handle not in sync!");
+    assert(LHS.isComparableWith(RHS) && "incomparable iterators!");
     return LHS.Ptr == RHS.Ptr;
   }
 

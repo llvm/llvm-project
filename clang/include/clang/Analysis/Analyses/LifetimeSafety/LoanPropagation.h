@@ -16,18 +16,17 @@
 #define LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_LOAN_PROPAGATION_H
 
 #include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/Utils.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
-#include "llvm/ADT/ImmutableMap.h"
-#include "llvm/ADT/ImmutableSet.h"
 
 namespace clang::lifetimes::internal {
 
 // Using LLVM's immutable collections is efficient for dataflow analysis
 // as it avoids deep copies during state transitions.
 // TODO(opt): Consider using a bitset to represent the set of loans.
-using LoanSet = llvm::ImmutableSet<LoanID>;
-using OriginLoanMap = llvm::ImmutableMap<OriginID, LoanSet>;
+using LoanSet = utils::SetTy<LoanID>;
+using OriginLoanMap = utils::MapTy<OriginID, LoanSet>;
 
 class LoanPropagationAnalysis {
 public:
@@ -52,7 +51,15 @@ public:
                                                    const LoanID TargetLoan,
                                                    const CFG *Cfg) const;
 
+  /// Like the above, starting from the used origin holding \p TargetLoan. The
+  /// casts that load the used variable itself are left out.
   llvm::SmallVector<OriginID> buildOriginFlowChain(const UseFact *UF,
+                                                   const LoanID TargetLoan,
+                                                   const CFG *Cfg) const;
+
+  /// Like the above, starting from the origin \p OEF lets escape. Empty if it
+  /// does not hold \p TargetLoan.
+  llvm::SmallVector<OriginID> buildOriginFlowChain(const OriginEscapesFact *OEF,
                                                    const LoanID TargetLoan,
                                                    const CFG *Cfg) const;
 

@@ -33,13 +33,9 @@ ManagedEventThread::~ManagedEventThread() {
 }
 
 DAPSessionManager &DAPSessionManager::GetInstance() {
-  static std::once_flag initialized;
-  static DAPSessionManager *instance =
-      nullptr; // NOTE: intentional leak to avoid issues with C++ destructor
-               // chain
-
-  std::call_once(initialized, []() { instance = new DAPSessionManager(); });
-
+  // NOTE: Intentional leak. Detached client threads may still notify
+  // m_sessions_condition at exit, so it has to outlive them.
+  static auto *instance = new DAPSessionManager();
   return *instance;
 }
 

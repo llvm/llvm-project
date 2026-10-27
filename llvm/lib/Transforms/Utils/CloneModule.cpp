@@ -155,8 +155,8 @@ std::unique_ptr<Module> llvm::CloneModule(
     }
 
     if (!ShouldCloneDefinition(&I)) {
-      if (auto *MD = I.getMetadata(LLVMContext::MD_unique_id))
-        F->setMetadata(LLVMContext::MD_unique_id, MapMetadata(MD, VMap));
+      if (auto *MD = I.getMetadata(LLVMContext::MD_guid))
+        F->setMetadata(LLVMContext::MD_guid, MapMetadata(MD, VMap));
       // Skip after setting the correct linkage for an external reference.
       F->setLinkage(GlobalValue::ExternalLinkage);
       // Personality function is not valid on a declaration.

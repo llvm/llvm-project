@@ -1,4 +1,4 @@
-;RUN: opt < %s -mtriple=amdgcn-amd-amdhsa -passes=asan -S | FileCheck %s
+;RUN: opt < %s -mtriple=amdgpu-amd-amdhsa -passes=asan -S | FileCheck %s
 
 declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg)
 declare void @llvm.memcpy.p0.p1.i64(ptr noalias nocapture writeonly, ptr addrspace(1) noalias nocapture readonly, i64, i1 immarg)

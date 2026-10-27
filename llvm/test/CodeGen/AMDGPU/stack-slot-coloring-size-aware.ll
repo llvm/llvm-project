@@ -349,7 +349,8 @@ define amdgpu_kernel void @spill_multiple_slots_size_aware(ptr addrspace(1) %p) 
 ; GCN-NEXT:    v_add_f32_e32 v18, v6, v2
 ; GCN-NEXT:    buffer_load_dword v0, off, s[20:23], 0 offset:236 ; 4-byte Folded Reload
 ; GCN-NEXT:    buffer_load_dword v2, off, s[20:23], 0 offset:260 ; 4-byte Folded Reload
-; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    buffer_load_dword v11, off, s[20:23], 0 ; 4-byte Folded Reload
+; GCN-NEXT:    s_waitcnt vmcnt(1)
 ; GCN-NEXT:    v_add_f32_e32 v0, v0, v2
 ; GCN-NEXT:    buffer_load_dword v2, off, s[20:23], 0 offset:136 ; 4-byte Folded Reload
 ; GCN-NEXT:    buffer_load_dword v3, off, s[20:23], 0 offset:188 ; 4-byte Folded Reload
@@ -375,7 +376,8 @@ define amdgpu_kernel void @spill_multiple_slots_size_aware(ptr addrspace(1) %p) 
 ; GCN-NEXT:    v_add_f32_e32 v16, v0, v4
 ; GCN-NEXT:    buffer_load_dword v0, off, s[20:23], 0 offset:220 ; 4-byte Folded Reload
 ; GCN-NEXT:    buffer_load_dword v1, off, s[20:23], 0 offset:248 ; 4-byte Folded Reload
-; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    buffer_load_dword v2, off, s[20:23], 0 offset:16 ; 4-byte Folded Reload
+; GCN-NEXT:    s_waitcnt vmcnt(1)
 ; GCN-NEXT:    v_add_f32_e32 v4, v0, v1
 ; GCN-NEXT:    buffer_load_dword v0, off, s[20:23], 0 offset:216 ; 4-byte Folded Reload
 ; GCN-NEXT:    buffer_load_dword v1, off, s[20:23], 0 offset:244 ; 4-byte Folded Reload
@@ -401,8 +403,7 @@ define amdgpu_kernel void @spill_multiple_slots_size_aware(ptr addrspace(1) %p) 
 ; GCN-NEXT:    v_add_f32_e32 v6, v9, v6
 ; GCN-NEXT:    v_add_f32_e32 v9, v10, v9
 ; GCN-NEXT:    v_add_f32_e32 v6, v6, v9
-; GCN-NEXT:    buffer_load_dword v10, off, s[20:23], 0 ; 4-byte Folded Reload
-; GCN-NEXT:    s_waitcnt vmcnt(1)
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_add_f32_e32 v4, v0, v1
 ; GCN-NEXT:    buffer_load_dword v0, off, s[20:23], 0 offset:104 ; 4-byte Folded Reload
 ; GCN-NEXT:    buffer_load_dword v1, off, s[20:23], 0 offset:124 ; 4-byte Folded Reload
@@ -436,7 +437,7 @@ define amdgpu_kernel void @spill_multiple_slots_size_aware(ptr addrspace(1) %p) 
 ; GCN-NEXT:    buffer_load_dword v0, off, s[20:23], 0 offset:152 ; 4-byte Folded Reload
 ; GCN-NEXT:    buffer_load_dword v1, off, s[20:23], 0 offset:204 ; 4-byte Folded Reload
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_add_f32_e32 v4, v0, v1
+; GCN-NEXT:    v_add_f32_e32 v10, v0, v1
 ; GCN-NEXT:    buffer_load_dword v0, off, s[20:23], 0 offset:144 ; 4-byte Folded Reload
 ; GCN-NEXT:    buffer_load_dword v1, off, s[20:23], 0 offset:200 ; 4-byte Folded Reload
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
@@ -448,7 +449,7 @@ define amdgpu_kernel void @spill_multiple_slots_size_aware(ptr addrspace(1) %p) 
 ; GCN-NEXT:    buffer_load_dword v0, off, s[20:23], 0 offset:132 ; 4-byte Folded Reload
 ; GCN-NEXT:    buffer_load_dword v1, off, s[20:23], 0 offset:192 ; 4-byte Folded Reload
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_add_f32_e32 v11, v0, v1
+; GCN-NEXT:    v_add_f32_e32 v8, v0, v1
 ; GCN-NEXT:    buffer_load_dword v0, off, s[20:23], 0 offset:128 ; 4-byte Folded Reload
 ; GCN-NEXT:    buffer_load_dword v1, off, s[20:23], 0 offset:184 ; 4-byte Folded Reload
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
@@ -456,7 +457,7 @@ define amdgpu_kernel void @spill_multiple_slots_size_aware(ptr addrspace(1) %p) 
 ; GCN-NEXT:    buffer_load_dword v0, off, s[20:23], 0 offset:68 ; 4-byte Folded Reload
 ; GCN-NEXT:    buffer_load_dword v1, off, s[20:23], 0 offset:108 ; 4-byte Folded Reload
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_add_f32_e32 v3, v0, v1
+; GCN-NEXT:    v_add_f32_e32 v4, v0, v1
 ; GCN-NEXT:    v_add_f32_e32 v0, v23, v0
 ; GCN-NEXT:    buffer_store_dword v0, off, s[20:23], 0 offset:68 ; 4-byte Folded Spill
 ; GCN-NEXT:    buffer_load_dword v0, off, s[20:23], 0 offset:64 ; 4-byte Folded Reload
@@ -507,46 +508,48 @@ define amdgpu_kernel void @spill_multiple_slots_size_aware(ptr addrspace(1) %p) 
 ; GCN-NEXT:    v_add_f32_e32 v12, v31, v30
 ; GCN-NEXT:    v_add_f32_e32 v15, v15, v12
 ; GCN-NEXT:    v_add_f32_e32 v14, v13, v14
+; GCN-NEXT:    s_waitcnt vmcnt(1)
+; GCN-NEXT:    v_add_f32_e32 v3, v2, v0
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_add_f32_e32 v8, v0, v1
-; GCN-NEXT:    buffer_load_dword v1, off, s[20:23], 0 offset:16 ; 4-byte Folded Reload
-; GCN-NEXT:    v_add_f32_e32 v11, v8, v11
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_add_f32_e32 v2, v1, v0
-; GCN-NEXT:    buffer_load_dword v1, off, s[20:23], 0 offset:36 ; 4-byte Folded Reload
+; GCN-NEXT:    v_add_f32_e32 v1, v0, v1
+; GCN-NEXT:    buffer_load_dword v2, off, s[20:23], 0 offset:36 ; 4-byte Folded Reload
 ; GCN-NEXT:    buffer_load_dword v0, off, s[20:23], 0 offset:72 ; 4-byte Folded Reload
-; GCN-NEXT:    v_add_f32_e32 v8, v2, v8
-; GCN-NEXT:    v_add_f32_e32 v2, v21, v28
-; GCN-NEXT:    v_add_f32_e32 v21, v26, v22
-; GCN-NEXT:    v_add_f32_e32 v22, v27, v26
-; GCN-NEXT:    v_add_f32_e32 v13, v11, v8
-; GCN-NEXT:    v_add_f32_e32 v22, v21, v22
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_add_f32_e32 v0, v1, v0
-; GCN-NEXT:    v_add_f32_e32 v1, v10, v1
+; GCN-NEXT:    v_add_f32_e32 v0, v2, v0
+; GCN-NEXT:    v_add_f32_e32 v2, v11, v2
+; GCN-NEXT:    buffer_load_dword v11, off, s[20:23], 0 offset:112 ; 4-byte Folded Reload
 ; GCN-NEXT:    v_add_f32_e32 v9, v0, v9
 ; GCN-NEXT:    buffer_store_dword v9, off, s[20:23], 0 offset:36 ; 4-byte Folded Spill
-; GCN-NEXT:    v_add_f32_e32 v9, v1, v0
-; GCN-NEXT:    v_add_f32_e32 v0, v20, v4
-; GCN-NEXT:    buffer_load_dword v4, off, s[20:23], 0 offset:112 ; 4-byte Folded Reload
-; GCN-NEXT:    v_add_f32_e32 v20, v29, v20
+; GCN-NEXT:    v_add_f32_e32 v0, v2, v0
+; GCN-NEXT:    v_add_f32_e32 v9, v1, v8
+; GCN-NEXT:    v_add_f32_e32 v8, v3, v1
+; GCN-NEXT:    v_add_f32_e32 v2, v21, v28
+; GCN-NEXT:    v_add_f32_e32 v3, v26, v22
+; GCN-NEXT:    v_add_f32_e32 v21, v25, v23
+; GCN-NEXT:    buffer_load_dword v22, off, s[20:23], 0 offset:104 ; 4-byte Folded Reload
 ; GCN-NEXT:    v_add_f32_e32 v1, v28, v24
-; GCN-NEXT:    buffer_load_dword v24, off, s[20:23], 0 offset:68 ; 4-byte Folded Reload
+; GCN-NEXT:    buffer_store_dword v0, off, s[20:23], 0 offset:40 ; 4-byte Folded Spill
+; GCN-NEXT:    v_add_f32_e32 v0, v20, v10
+; GCN-NEXT:    v_add_f32_e32 v20, v29, v20
 ; GCN-NEXT:    v_add_f32_e32 v20, v0, v20
-; GCN-NEXT:    buffer_load_dword v0, off, s[20:23], 0 offset:36 ; 4-byte Folded Reload
-; GCN-NEXT:    v_add_f32_e32 v21, v1, v2
+; GCN-NEXT:    v_add_f32_e32 v10, v27, v26
+; GCN-NEXT:    v_add_f32_e32 v13, v9, v8
+; GCN-NEXT:    s_waitcnt vmcnt(3)
+; GCN-NEXT:    v_add_f32_e32 v11, v23, v11
+; GCN-NEXT:    buffer_load_dword v23, off, s[20:23], 0 offset:68 ; 4-byte Folded Reload
 ; GCN-NEXT:    s_waitcnt vmcnt(2)
-; GCN-NEXT:    v_add_f32_e32 v10, v23, v4
-; GCN-NEXT:    buffer_load_dword v4, off, s[20:23], 0 offset:104 ; 4-byte Folded Reload
-; GCN-NEXT:    v_add_f32_e32 v23, v25, v23
-; GCN-NEXT:    v_add_f32_e32 v23, v10, v23
-; GCN-NEXT:    s_waitcnt vmcnt(1)
-; GCN-NEXT:    v_add_f32_e32 v12, v0, v9
+; GCN-NEXT:    v_add_f32_e32 v22, v4, v22
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    v_add_f32_e32 v4, v23, v4
+; GCN-NEXT:    v_add_f32_e32 v23, v11, v21
+; GCN-NEXT:    v_add_f32_e32 v21, v1, v2
+; GCN-NEXT:    buffer_load_dword v0, off, s[20:23], 0 offset:36 ; 4-byte Folded Reload
+; GCN-NEXT:    buffer_load_dword v1, off, s[20:23], 0 offset:40 ; 4-byte Folded Reload
+; GCN-NEXT:    v_add_f32_e32 v4, v22, v4
+; GCN-NEXT:    v_add_f32_e32 v22, v3, v10
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    v_add_f32_e32 v12, v0, v1
 ; GCN-NEXT:    buffer_load_dword v0, off, s[20:23], 0 offset:32 ; 4-byte Folded Reload
-; GCN-NEXT:    s_waitcnt vmcnt(1)
-; GCN-NEXT:    v_add_f32_e32 v4, v3, v4
-; GCN-NEXT:    v_add_f32_e32 v3, v24, v3
-; GCN-NEXT:    v_add_f32_e32 v4, v4, v3
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    global_store_dwordx4 v0, v[12:15], s[0:1] offset:32
 ; GCN-NEXT:    s_waitcnt vmcnt(0)

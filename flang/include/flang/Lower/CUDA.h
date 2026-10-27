@@ -49,6 +49,22 @@ static inline unsigned getAllocatorIdx(const Fortran::semantics::Symbol &sym) {
   return kDefaultAllocator;
 }
 
+// Under -gpu=unified, redirect a plain (unattributed)
+// allocatable/pointer from the default allocator to the unified allocator, so
+// its managed backing is carried by the descriptor and honored by every
+// allocation path (ALLOCATE, allocate-on-assignment, SOURCE=, ...). Objects
+// with an explicit CUDA data attribute keep their own allocator.
+static inline unsigned
+getAllocatorIdxForUnified(const Fortran::semantics::Symbol &sym,
+                          bool unifiedEnabled) {
+  unsigned idx = getAllocatorIdx(sym);
+  if (unifiedEnabled && idx == kDefaultAllocator &&
+      (Fortran::semantics::IsAllocatable(sym) ||
+       Fortran::semantics::IsPointer(sym)))
+    return kUnifiedAllocatorPos;
+  return idx;
+}
+
 mlir::Type gatherDeviceComponentCoordinatesAndType(
     fir::FirOpBuilder &builder, mlir::Location loc,
     const Fortran::semantics::Symbol &sym, fir::RecordType recTy,

@@ -46,10 +46,10 @@
 #include <cstdint>
 #include <utility>
 
-using namespace llvm::PatternMatchHelpers;
-
 namespace llvm {
 namespace PatternMatch {
+
+using namespace llvm::PatternMatchHelpers;
 
 template <typename Val, typename Pattern> bool match(Val *V, const Pattern &P) {
   return P.match(V);
@@ -218,33 +218,33 @@ template <typename SubPattern_t> struct Splat_match {
       auto *Splat = C->getSplatValue();
       return Splat ? SubPattern.match(Splat) : false;
     }
-    // TODO: Extend to other cases (e.g. shufflevectors).
-    return false;
+
+    auto *Shuffle = dyn_cast<ShuffleVectorInst>(V);
+    if (!Shuffle || !Shuffle->isZeroEltSplat())
+      return false;
+
+    // Look for an insertelement.
+    auto *Insert = dyn_cast<InsertElementInst>(Shuffle->getOperand(0));
+    if (!Insert)
+      return false;
+
+    Value *SplatElt = Insert->getOperand(1);
+    ConstantInt *Idx = dyn_cast<ConstantInt>(Insert->getOperand(2));
+    if (!Idx || !Idx->isZero())
+      return false;
+
+    return SubPattern.match(SplatElt);
   }
 };
 
-/// Match a constant splat. TODO: Extend this to non-constant splats.
-template <typename T>
-inline Splat_match<T> m_ConstantSplat(const T &SubPattern) {
+/// Match a vector splat. May be a constant splat or a shufflevector of the
+/// first element.
+template <typename T> inline Splat_match<T> m_Splat(const T &SubPattern) {
   return SubPattern;
 }
 
 /// Match an arbitrary basic block value and ignore it.
 inline auto m_BasicBlock() { return m_Isa<BasicBlock>(); }
-
-/// Inverting matcher
-template <typename Ty> struct match_unless {
-  Ty M;
-
-  match_unless(const Ty &Matcher) : M(Matcher) {}
-
-  template <typename ITy> bool match(ITy *V) const { return !M.match(V); }
-};
-
-/// Match if the inner matcher does *NOT* match.
-template <typename Ty> inline match_unless<Ty> m_Unless(const Ty &M) {
-  return match_unless<Ty>(M);
-}
 
 template <typename APTy> struct ap_match {
   static_assert(std::is_same_v<APTy, APInt> || std::is_same_v<APTy, APFloat>);
@@ -596,16 +596,18 @@ inline cst_pred_ty<is_non_zero_int> m_NonZeroInt() {
   return cst_pred_ty<is_non_zero_int>();
 }
 
-struct is_zero {
+template <bool AllowPoison> struct is_zero {
   template <typename ITy> bool match(ITy *V) const {
     auto *C = dyn_cast<Constant>(V);
     // FIXME: this should be able to do something for scalable vectors
-    return C && (C->isNullValue() || cst_pred_ty<is_zero_int>().match(C));
+    return C && (C->isNullValue() ||
+                 cst_pred_ty<is_zero_int, AllowPoison>().match(C));
   }
 };
 /// Match any null constant or a vector with all elements equal to 0.
 /// For vectors, this includes constants with undefined elements.
-inline is_zero m_Zero() { return is_zero(); }
+inline is_zero<true> m_Zero() { return is_zero<true>(); }
+inline is_zero<false> m_ZeroForbidPoison() { return is_zero<false>(); }
 
 inline auto m_ZeroOrPoison() { return m_CombineOr(m_Zero(), m_Poison()); }
 
@@ -697,6 +699,17 @@ struct icmp_pred_with_threshold {
 inline cst_pred_ty<icmp_pred_with_threshold>
 m_SpecificInt_ICMP(ICmpInst::Predicate Predicate, const APInt &Threshold) {
   cst_pred_ty<icmp_pred_with_threshold> P;
+  P.Pred = Predicate;
+  P.Thr = &Threshold;
+  return P;
+}
+
+/// Match an integer or vector with every element comparing 'pred' (eg/ne/...)
+/// to Threshold. For vectors, this includes constants with undefined elements.
+inline cst_pred_ty<icmp_pred_with_threshold, false>
+m_SpecificInt_ICMP_ForbidPoison(ICmpInst::Predicate Predicate,
+                                const APInt &Threshold) {
+  cst_pred_ty<icmp_pred_with_threshold, false> P;
   P.Pred = Predicate;
   P.Thr = &Threshold;
   return P;
@@ -878,6 +891,9 @@ inline match_bind<const WithOverflowInst>
 m_WithOverflowInst(const WithOverflowInst *&I) {
   return I;
 }
+
+/// Match a PHI node, capturing it if we match.
+inline match_bind<PHINode> m_Phi(PHINode *&PN) { return PN; }
 
 /// Match an UndefValue, capturing the value if we match.
 inline match_bind<UndefValue> m_UndefValue(UndefValue *&U) { return U; }
@@ -1089,6 +1105,39 @@ inline match_deferred<BasicBlock> m_Deferred(BasicBlock *const &BB) {
 inline match_deferred<const BasicBlock>
 m_Deferred(const BasicBlock *const &BB) {
   return BB;
+}
+
+template <typename Pattern> struct SpecificType_match {
+  Type *RefTy;
+  Pattern P;
+
+  SpecificType_match(Type *RefTy, const Pattern &P) : RefTy(RefTy), P(P) {}
+
+  template <typename ITy> bool match(ITy *V) const {
+    return V->getType() == RefTy && P.match(V);
+  }
+};
+
+// Explicit deduction guide.
+template <typename Pattern>
+SpecificType_match(const Type *, const Pattern &)
+    -> SpecificType_match<Pattern>;
+
+/// Match a value of a specific type.
+template <typename Pattern>
+inline auto m_SpecificType(Type *RefTy, const Pattern &P) {
+  return SpecificType_match<Pattern>(RefTy, P);
+}
+inline auto m_SpecificType(Type *RefTy) {
+  return m_SpecificType(RefTy, m_Value());
+}
+
+/// Match a value of a specific type, capturing it if we match.
+inline auto m_SpecificType(Type *RefTy, Value *&V) {
+  return m_SpecificType(RefTy, m_Value(V));
+}
+inline auto m_SpecificType(Type *RefTy, const Value *&V) {
+  return m_SpecificType(RefTy, m_Value(V));
 }
 
 //===----------------------------------------------------------------------===//
@@ -1953,6 +2002,21 @@ template <typename Val_t, typename Idx_t>
 inline TwoOps_match<Val_t, Idx_t, Instruction::ExtractElement>
 m_ExtractElt(const Val_t &Val, const Idx_t &Idx) {
   return TwoOps_match<Val_t, Idx_t, Instruction::ExtractElement>(Val, Idx);
+}
+
+/// Matches BitInsertInst.
+template <typename Base_t, typename Val_t, typename Off_t>
+inline ThreeOps_match<Base_t, Val_t, Off_t, Instruction::BitInsert>
+m_BitInsert(const Base_t &Base, const Val_t &Val, const Off_t &Off) {
+  return ThreeOps_match<Base_t, Val_t, Off_t, Instruction::BitInsert>(Base, Val,
+                                                                      Off);
+}
+
+/// Matches BitExtractInst.
+template <typename Src_t, typename Off_t>
+inline TwoOps_match<Src_t, Off_t, Instruction::BitExtract>
+m_BitExtract(const Src_t &Src, const Off_t &Off) {
+  return TwoOps_match<Src_t, Off_t, Instruction::BitExtract>(Src, Off);
 }
 
 /// Matches shuffle.
@@ -2960,6 +3024,12 @@ template <typename LHS, typename RHS>
 inline CmpClass_match<LHS, RHS, ICmpInst, true> m_c_ICmp(const LHS &L,
                                                          const RHS &R) {
   return CmpClass_match<LHS, RHS, ICmpInst, true>(L, R);
+}
+
+template <typename LHS, typename RHS>
+inline CmpClass_match<LHS, RHS, CmpInst, true> m_c_Cmp(const LHS &L,
+                                                       const RHS &R) {
+  return CmpClass_match<LHS, RHS, CmpInst, true>(L, R);
 }
 
 /// Matches a specific opcode with LHS and RHS in either order.

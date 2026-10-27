@@ -14,6 +14,8 @@
 // CHECK-MESSAGES: :[[@LINE-1]]:33: warning: macro argument should be enclosed in parentheses [bugprone-macro-parentheses]
 #define BAD7(x, y)        if (x) goto y; else x;
 // CHECK-MESSAGES: :[[@LINE-1]]:47: warning: macro argument should be enclosed in parentheses [bugprone-macro-parentheses]
+#define BAD8(name, x)     using name = decltype(x + 1)
+// CHECK-MESSAGES: :[[@LINE-1]]:49: warning: macro argument should be enclosed in parentheses
 
 #define GOOD1             1
 #define GOOD2             (1+2)
@@ -50,6 +52,14 @@
 #define GOOD33(x)         if (!a__##x) a_##x = &f(#x)
 #define GOOD34(x, y)      if (x) goto y;
 #define GOOD35(x, y)      if (x) goto *(y);
+
+struct something {};
+#define GOOD36(name)      using name = something
+#define GOOD37(name)      using name = something &
+#define GOOD38(name)      using name = decltype(#name)
+GOOD36(foo);
+GOOD37(bar);
+GOOD38(baz);
 
 // These are allowed for now..
 #define MAYBE1            *12.34

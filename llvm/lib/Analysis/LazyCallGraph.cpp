@@ -37,8 +37,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "lcg"
 
-template struct LLVM_EXPORT_TEMPLATE Any::TypeId<const LazyCallGraph::SCC *>;
-
 void LazyCallGraph::EdgeSequence::insertEdgeInternal(Node &TargetN,
                                                      Edge::Kind EK) {
   EdgeIndexMap.try_emplace(&TargetN, Edges.size());
@@ -144,12 +142,10 @@ LLVM_DUMP_METHOD void LazyCallGraph::Node::dump() const {
 #endif
 
 static bool isKnownLibFunction(Function &F, TargetLibraryInfo &TLI) {
-  LibFunc LF;
-
   // Either this is a normal library function or a "vectorizable"
   // function.  Not using the VFDatabase here because this query
   // is related only to libraries handled via the TLI.
-  return TLI.getLibFunc(F, LF) ||
+  return TLI.getLibFunc(F) != NotLibFunc ||
          TLI.isKnownVectorFunctionInLibrary(F.getName());
 }
 

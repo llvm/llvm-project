@@ -107,7 +107,6 @@ sw.epilog:                                        ; preds = %entry, %sw.bb9, %sw
 }
 
 ; CHECK:             r{{[0-9]+}} = 4
-; CHECK:             r{{[0-9]+}} = 4
 ; CHECK-EB:          r{{[0-9]+}} <<= 41
 ; CHECK64:           r{{[0-9]+}} s>>= 60
 ; CHECK64:           r{{[0-9]+}} >>= 60
@@ -122,11 +121,15 @@ sw.epilog:                                        ; preds = %entry, %sw.bb9, %sw
 
 ; CHECK:             .long   16                      # FieldReloc
 ; CHECK-NEXT:        .long   30                      # Field reloc section string offset=30
-; CHECK-NEXT:        .long   8
+; CHECK-NEXT:        .long   9
 ; CHECK-NEXT:        .long   .Ltmp{{[0-9]+}}
 ; CHECK-NEXT:        .long   2
 ; CHECK-NEXT:        .long   36
 ; CHECK-NEXT:        .long   1
+; CHECK-NEXT:        .long   .Ltmp{{[0-9]+}}
+; CHECK-NEXT:        .long   2
+; CHECK-NEXT:        .long   36
+; CHECK-NEXT:        .long   0
 ; CHECK-NEXT:        .long   .Ltmp{{[0-9]+}}
 ; CHECK-NEXT:        .long   2
 ; CHECK-NEXT:        .long   36

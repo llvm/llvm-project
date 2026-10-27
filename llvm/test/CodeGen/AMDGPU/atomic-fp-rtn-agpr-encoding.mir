@@ -1,0 +1,79 @@
+# RUN: llc -mtriple=amdgpu9.42 -start-before=amdgpu-resource-usage -show-mc-encoding -o - %s | FileCheck --check-prefix=GFX942 %s
+# RUN: llc -mtriple=amdgpu9.50 -start-before=amdgpu-resource-usage -show-mc-encoding -o - %s | FileCheck --check-prefix=GFX942 %s
+
+# Check that the AGPR-result forms of these atomics encode sc1 correctly.
+
+# GFX942-LABEL: f64_rtn_agpr:
+# GFX942: flat_atomic_add_f64 a[4:5], v[0:1], a[2:3] sc0 ; encoding: [0x00,0x00,0x3d,0xdd,0x00,0x02,0x80,0x04]
+# GFX942-NEXT: global_atomic_add_f64 a[4:5], v[0:1], a[2:3], off sc0 ; encoding: [0x00,0x80,0x3d,0xdd,0x00,0x02,0xff,0x04]
+# GFX942-NEXT: global_atomic_add_f64 a[4:5], v0, a[2:3], s[0:1] sc0 ; encoding: [0x00,0x80,0x3d,0xdd,0x00,0x02,0x80,0x04]
+# GFX942-NEXT: flat_atomic_add_f64 a[4:5], v[0:1], a[2:3] sc0 sc1 ; encoding: [0x00,0x00,0x3d,0xdf,0x00,0x02,0x80,0x04]
+# GFX942-NEXT: global_atomic_add_f64 a[4:5], v[0:1], a[2:3], off sc0 sc1 ; encoding: [0x00,0x80,0x3d,0xdf,0x00,0x02,0xff,0x04]
+# GFX942-NEXT: global_atomic_add_f64 a[4:5], v0, a[2:3], s[0:1] sc0 sc1 ; encoding: [0x00,0x80,0x3d,0xdf,0x00,0x02,0x80,0x04]
+# GFX942-NEXT: flat_atomic_min_f64 a[4:5], v[0:1], a[2:3] sc0 ; encoding: [0x00,0x00,0x41,0xdd,0x00,0x02,0x80,0x04]
+# GFX942-NEXT: global_atomic_min_f64 a[4:5], v[0:1], a[2:3], off sc0 ; encoding: [0x00,0x80,0x41,0xdd,0x00,0x02,0xff,0x04]
+# GFX942-NEXT: global_atomic_min_f64 a[4:5], v0, a[2:3], s[0:1] sc0 ; encoding: [0x00,0x80,0x41,0xdd,0x00,0x02,0x80,0x04]
+# GFX942-NEXT: flat_atomic_min_f64 a[4:5], v[0:1], a[2:3] sc0 sc1 ; encoding: [0x00,0x00,0x41,0xdf,0x00,0x02,0x80,0x04]
+# GFX942-NEXT: global_atomic_min_f64 a[4:5], v[0:1], a[2:3], off sc0 sc1 ; encoding: [0x00,0x80,0x41,0xdf,0x00,0x02,0xff,0x04]
+# GFX942-NEXT: global_atomic_min_f64 a[4:5], v0, a[2:3], s[0:1] sc0 sc1 ; encoding: [0x00,0x80,0x41,0xdf,0x00,0x02,0x80,0x04]
+# GFX942-NEXT: flat_atomic_max_f64 a[4:5], v[0:1], a[2:3] sc0 ; encoding: [0x00,0x00,0x45,0xdd,0x00,0x02,0x80,0x04]
+# GFX942-NEXT: global_atomic_max_f64 a[4:5], v[0:1], a[2:3], off sc0 ; encoding: [0x00,0x80,0x45,0xdd,0x00,0x02,0xff,0x04]
+# GFX942-NEXT: global_atomic_max_f64 a[4:5], v0, a[2:3], s[0:1] sc0 ; encoding: [0x00,0x80,0x45,0xdd,0x00,0x02,0x80,0x04]
+# GFX942-NEXT: flat_atomic_max_f64 a[4:5], v[0:1], a[2:3] sc0 sc1 ; encoding: [0x00,0x00,0x45,0xdf,0x00,0x02,0x80,0x04]
+# GFX942-NEXT: global_atomic_max_f64 a[4:5], v[0:1], a[2:3], off sc0 sc1 ; encoding: [0x00,0x80,0x45,0xdf,0x00,0x02,0xff,0x04]
+# GFX942-NEXT: global_atomic_max_f64 a[4:5], v0, a[2:3], s[0:1] sc0 sc1 ; encoding: [0x00,0x80,0x45,0xdf,0x00,0x02,0x80,0x04]
+# GFX942-NEXT: s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
+---
+name: f64_rtn_agpr
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $agpr2_agpr3, $sgpr0_sgpr1
+    $agpr4_agpr5 = FLAT_ATOMIC_ADD_F64_RTN_agpr $vgpr0_vgpr1, $agpr2_agpr3, 0, 1, implicit $exec, implicit $flat_scr
+    $agpr4_agpr5 = GLOBAL_ATOMIC_ADD_F64_RTN_agpr $vgpr0_vgpr1, $agpr2_agpr3, 0, 1, implicit $exec
+    $agpr4_agpr5 = GLOBAL_ATOMIC_ADD_F64_SADDR_RTN_agpr $vgpr0, $agpr2_agpr3, $sgpr0_sgpr1, 0, 1, implicit $exec
+    $agpr4_agpr5 = FLAT_ATOMIC_ADD_F64_RTN_agpr $vgpr0_vgpr1, $agpr2_agpr3, 0, 17, implicit $exec, implicit $flat_scr
+    $agpr4_agpr5 = GLOBAL_ATOMIC_ADD_F64_RTN_agpr $vgpr0_vgpr1, $agpr2_agpr3, 0, 17, implicit $exec
+    $agpr4_agpr5 = GLOBAL_ATOMIC_ADD_F64_SADDR_RTN_agpr $vgpr0, $agpr2_agpr3, $sgpr0_sgpr1, 0, 17, implicit $exec
+    $agpr4_agpr5 = FLAT_ATOMIC_MIN_F64_RTN_agpr $vgpr0_vgpr1, $agpr2_agpr3, 0, 1, implicit $exec, implicit $flat_scr
+    $agpr4_agpr5 = GLOBAL_ATOMIC_MIN_F64_RTN_agpr $vgpr0_vgpr1, $agpr2_agpr3, 0, 1, implicit $exec
+    $agpr4_agpr5 = GLOBAL_ATOMIC_MIN_F64_SADDR_RTN_agpr $vgpr0, $agpr2_agpr3, $sgpr0_sgpr1, 0, 1, implicit $exec
+    $agpr4_agpr5 = FLAT_ATOMIC_MIN_F64_RTN_agpr $vgpr0_vgpr1, $agpr2_agpr3, 0, 17, implicit $exec, implicit $flat_scr
+    $agpr4_agpr5 = GLOBAL_ATOMIC_MIN_F64_RTN_agpr $vgpr0_vgpr1, $agpr2_agpr3, 0, 17, implicit $exec
+    $agpr4_agpr5 = GLOBAL_ATOMIC_MIN_F64_SADDR_RTN_agpr $vgpr0, $agpr2_agpr3, $sgpr0_sgpr1, 0, 17, implicit $exec
+    $agpr4_agpr5 = FLAT_ATOMIC_MAX_F64_RTN_agpr $vgpr0_vgpr1, $agpr2_agpr3, 0, 1, implicit $exec, implicit $flat_scr
+    $agpr4_agpr5 = GLOBAL_ATOMIC_MAX_F64_RTN_agpr $vgpr0_vgpr1, $agpr2_agpr3, 0, 1, implicit $exec
+    $agpr4_agpr5 = GLOBAL_ATOMIC_MAX_F64_SADDR_RTN_agpr $vgpr0, $agpr2_agpr3, $sgpr0_sgpr1, 0, 1, implicit $exec
+    $agpr4_agpr5 = FLAT_ATOMIC_MAX_F64_RTN_agpr $vgpr0_vgpr1, $agpr2_agpr3, 0, 17, implicit $exec, implicit $flat_scr
+    $agpr4_agpr5 = GLOBAL_ATOMIC_MAX_F64_RTN_agpr $vgpr0_vgpr1, $agpr2_agpr3, 0, 17, implicit $exec
+    $agpr4_agpr5 = GLOBAL_ATOMIC_MAX_F64_SADDR_RTN_agpr $vgpr0, $agpr2_agpr3, $sgpr0_sgpr1, 0, 17, implicit $exec
+    S_ENDPGM 0
+...
+
+# GFX942-LABEL: f32_rtn_agpr:
+# GFX942: global_atomic_add_f32 a1, v[0:1], a2, off sc0 ; encoding: [0x00,0x80,0x35,0xdd,0x00,0x02,0xff,0x01]
+# GFX942-NEXT: global_atomic_add_f32 a1, v0, a2, s[0:1] sc0 ; encoding: [0x00,0x80,0x35,0xdd,0x00,0x02,0x80,0x01]
+# GFX942-NEXT: global_atomic_add_f32 a1, v[0:1], a2, off sc0 sc1 ; encoding: [0x00,0x80,0x35,0xdf,0x00,0x02,0xff,0x01]
+# GFX942-NEXT: global_atomic_add_f32 a1, v0, a2, s[0:1] sc0 sc1 ; encoding: [0x00,0x80,0x35,0xdf,0x00,0x02,0x80,0x01]
+# GFX942-NEXT: global_atomic_pk_add_f16 a1, v[0:1], a2, off sc0 ; encoding: [0x00,0x80,0x39,0xdd,0x00,0x02,0xff,0x01]
+# GFX942-NEXT: global_atomic_pk_add_f16 a1, v0, a2, s[0:1] sc0 ; encoding: [0x00,0x80,0x39,0xdd,0x00,0x02,0x80,0x01]
+# GFX942-NEXT: global_atomic_pk_add_f16 a1, v[0:1], a2, off sc0 sc1 ; encoding: [0x00,0x80,0x39,0xdf,0x00,0x02,0xff,0x01]
+# GFX942-NEXT: global_atomic_pk_add_f16 a1, v0, a2, s[0:1] sc0 sc1 ; encoding: [0x00,0x80,0x39,0xdf,0x00,0x02,0x80,0x01]
+# GFX942-NEXT: s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
+---
+name: f32_rtn_agpr
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $agpr2, $sgpr0_sgpr1
+    $agpr1 = GLOBAL_ATOMIC_ADD_F32_RTN_agpr $vgpr0_vgpr1, $agpr2, 0, 1, implicit $exec
+    $agpr1 = GLOBAL_ATOMIC_ADD_F32_SADDR_RTN_agpr $vgpr0, $agpr2, $sgpr0_sgpr1, 0, 1, implicit $exec
+    $agpr1 = GLOBAL_ATOMIC_ADD_F32_RTN_agpr $vgpr0_vgpr1, $agpr2, 0, 17, implicit $exec
+    $agpr1 = GLOBAL_ATOMIC_ADD_F32_SADDR_RTN_agpr $vgpr0, $agpr2, $sgpr0_sgpr1, 0, 17, implicit $exec
+    $agpr1 = GLOBAL_ATOMIC_PK_ADD_F16_RTN_agpr $vgpr0_vgpr1, $agpr2, 0, 1, implicit $exec
+    $agpr1 = GLOBAL_ATOMIC_PK_ADD_F16_SADDR_RTN_agpr $vgpr0, $agpr2, $sgpr0_sgpr1, 0, 1, implicit $exec
+    $agpr1 = GLOBAL_ATOMIC_PK_ADD_F16_RTN_agpr $vgpr0_vgpr1, $agpr2, 0, 17, implicit $exec
+    $agpr1 = GLOBAL_ATOMIC_PK_ADD_F16_SADDR_RTN_agpr $vgpr0, $agpr2, $sgpr0_sgpr1, 0, 17, implicit $exec
+    S_ENDPGM 0
+...
+## NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:

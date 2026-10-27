@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -std=hlsl2021 -finclude-default-header -triple \
-// RUN:   dxil-pc-shadermodel6.3-compute %s -emit-llvm \
+// RUN:   dxil-pc-shadermodel6.3-library %s -emit-llvm \
 // RUN:   -disable-llvm-passes -o - |  FileCheck %s --check-prefixes=CHECK,CHECK-DXIL
 
 // RUN: %clang_cc1 -std=hlsl2021 -finclude-default-header -triple \
-// RUN:   spirv-pc-vulkan-compute %s -emit-llvm  \
+// RUN:   spirv-pc-vulkan-library %s -emit-llvm  \
 // RUN:   -disable-llvm-passes -o - | FileCheck %s --check-prefixes=CHECK,CHECK-SPIRV
 
 // Test basic lowering to runtime function call.

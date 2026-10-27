@@ -16,9 +16,9 @@ define <4 x float> @test(ptr %x, float %v, float %a) {
 ; CHECK-LABEL: define <4 x float> @test(
 ; CHECK-SAME: ptr [[X:%.*]], float [[V:%.*]], float [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[X]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> poison, float [[A]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> poison, float [[A]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> poison, float [[V]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> poison, float [[V]], i64 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x float> [[TMP4]], <4 x float> poison, <4 x i32> <i32 0, i32 0, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x float> [[TMP5]], <4 x float> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>

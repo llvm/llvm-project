@@ -39,6 +39,8 @@ class LLVM_LIBRARY_VISIBILITY MachOTool : public Tool {
 protected:
   void AddMachOArch(const llvm::opt::ArgList &Args,
                     llvm::opt::ArgStringList &CmdArgs) const;
+  void AddMachOArchOnly(const llvm::opt::ArgList &Args,
+                        llvm::opt::ArgStringList &CmdArgs) const;
 
   const toolchains::MachO &getMachOToolChain() const {
     return reinterpret_cast<const toolchains::MachO &>(getToolChain());
@@ -288,7 +290,7 @@ public:
 
   llvm::ExceptionHandling
   GetExceptionModel(const llvm::opt::ArgList &Args) const override {
-    return llvm::ExceptionHandling::None;
+    return llvm::ExceptionHandling::Default;
   }
 
   virtual StringRef getOSLibraryNameSuffix(bool IgnoreSim = false) const {
@@ -354,6 +356,11 @@ public:
   // the "default target for arguments" selection process, once we get out of
   // the argument translation business.
   mutable bool TargetInitialized;
+
+  /// Whether the target was lazily initialized from the triple by
+  /// ensureTargetInitialized() rather than by AddDeploymentTarget(). Such a
+  /// target is a best-effort guess that setTarget() may overwrite.
+  mutable bool TargetInitializedLazily = false;
 
   // TODO: Are these useful? Can we use Triple::OSType/EnvironmentType instead?
   enum DarwinPlatformKind {
@@ -447,10 +454,17 @@ protected:
     if (TargetInitialized && TargetPlatform == Platform &&
         TargetEnvironment == Environment &&
         (Environment == MacCatalyst ? OSTargetVersion : TargetVersion) ==
-            VersionTuple(Major, Minor, Micro))
+            VersionTuple(Major, Minor, Micro)) {
+      TargetInitializedLazily = false;
       return;
+    }
 
-    assert(!TargetInitialized && "Target already initialized!");
+    // A lazily-initialized target (see ensureTargetInitialized()) is a
+    // best-effort guess from the triple alone; the authoritative
+    // initialization from AddDeploymentTarget() may overwrite it.
+    assert((!TargetInitialized || TargetInitializedLazily) &&
+           "Target already initialized!");
+    TargetInitializedLazily = false;
     TargetInitialized = true;
     TargetPlatform = Platform;
     TargetEnvironment = Environment;

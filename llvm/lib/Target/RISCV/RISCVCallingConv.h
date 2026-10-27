@@ -27,6 +27,7 @@ namespace RISCV {
 
 ArrayRef<MCPhysReg> getArgGPRs(const RISCVSubtarget &STI);
 ArrayRef<MCPhysReg> getArgFPRs(const RISCVSubtarget &STI);
+ArrayRef<MCPhysReg> getArgVRs(const RISCVSubtarget &STI);
 
 } // end namespace RISCV
 

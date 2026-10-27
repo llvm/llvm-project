@@ -9,6 +9,7 @@ unittest("BasicTests") {
     "//llvm/lib/Testing/Support",
   ]
   sources = [
+    "AtomicLineLoggerTest.cpp",
     "CharInfoTest.cpp",
     "DarwinSDKInfoTest.cpp",
     "DiagnosticTest.cpp",
