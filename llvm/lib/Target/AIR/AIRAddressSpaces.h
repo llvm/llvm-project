@@ -15,16 +15,12 @@
 #ifndef LLVM_LIB_TARGET_AIR_AIRADDRESSSPACES_H
 #define LLVM_LIB_TARGET_AIR_AIRADDRESSSPACES_H
 
+#include "llvm/IR/AIR.h"
+
 namespace llvm {
 namespace metal {
-namespace AS {
-
-constexpr unsigned Default = 0;
-constexpr unsigned Device = 1;
-constexpr unsigned Constant = 2;
-constexpr unsigned Threadgroup = 3;
-
-} // namespace AS
+// The numbering is shared with AIR's consumers (llvm/IR/AIR.h).
+namespace AS = air::AS;
 } // namespace metal
 } // namespace llvm
 

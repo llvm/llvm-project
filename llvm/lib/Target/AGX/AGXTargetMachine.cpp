@@ -49,6 +49,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAGXTarget() {
   RegisterTargetMachine<AGXTargetMachine> X(getTheAGXTarget());
   PassRegistry &PR = *PassRegistry::getPassRegistry();
   initializeAGXAlwaysInlinePass(PR);
+  initializeAGXLowerAIRLegacyPass(PR);
   initializeAGXAAWrapperPassPass(PR);
   initializeAGXExternalAAWrapperPass(PR);
   initializeAGXPromoteKernelArgsPass(PR);
@@ -172,6 +173,19 @@ public:
 } // namespace
 
 void AGXTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
+  // AIR input becomes AGX before anything optimizes it.
+  PB.registerPipelineStartEPCallback(
+      [this](ModulePassManager &MPM, OptimizationLevel) {
+        MPM.addPass(AGXLowerAIRPass(*this));
+      });
+  PB.registerPipelineParsingCallback(
+      [this](StringRef Name, ModulePassManager &MPM,
+             ArrayRef<PassBuilder::PipelineElement>) {
+        if (Name != "agx-lower-air")
+          return false;
+        MPM.addPass(AGXLowerAIRPass(*this));
+        return true;
+      });
   PB.registerAnalysisRegistrationCallback([](FunctionAnalysisManager &FAM) {
     FAM.registerPass([] { return AGXAA(); });
   });
@@ -192,6 +206,8 @@ TargetPassConfig *AGXTargetMachine::createPassConfig(PassManagerBase &PM) {
 }
 
 void AGXPassConfig::addIRPasses() {
+  // AIR input becomes AGX kernels first (a no-op without !air.kernel).
+  addPass(createAGXLowerAIRPass(&getAGXTargetMachine()));
   // Disjoint address spaces do not alias (for every IR and machine pass that
   // asks alias analysis, the scheduler's memory dependences among them).
   addPass(createAGXAAWrapperPass());

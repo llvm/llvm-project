@@ -956,6 +956,67 @@ the OR of their low two bits for the whole quad. The backend therefore:
 
 Immediate and uniform register indices are used directly.
 
+AIR input
+=========
+
+The backend compiles AIR, Apple's LLVM IR for its GPUs, in the form the AIR
+target's portable passes leave it (``addAIRPortablePasses``,
+``llc -mtriple=air -air-portable``): a module whose kernels are described by
+``!air.kernel``. The ``agx-lower-air`` pass, first in the backend's IR passes
+and at the start of ``opt``'s pipelines, turns such a module into an AGX
+module; it does nothing to a module without ``!air.kernel``. It is not a
+reader of ``.air`` files.
+
+The module may only use what AIR has: integers of 8, 16, 32 and 64 bits (and
+``i1`` outside memory), ``half``, ``bfloat`` and ``float``, and pointers in
+AIR's address spaces, with no casts between them. ``double``, other types,
+``i1`` in memory and address space casts are errors, as are kernel
+parameters that ``!air.kernel`` does not describe, argument buffers and more
+than one threadgroup buffer.
+
+.. table:: AIR address spaces on AGX
+
+   ============= ======================= =================
+   AIR           Memory                  AGX address space
+   ============= ======================= =================
+   0             thread                  5 (private)
+   1             device                  1
+   2             constant                4
+   3             threadgroup             3
+   ============= ======================= =================
+
+Each kernel becomes an ``agx_kernel`` whose arguments are its device and
+constant buffers, in location order (``air.location_index``, which must
+follow the parameter order). A constant buffer that the kernel only loads
+from, at constant offsets within the size ``!air.kernel`` gives it
+(``air.arg_type_size``, typed by ``air.arg_type_name``, or bytes for a
+structure), is passed by reference (``byref``), so that its bytes are
+uniform registers; the AIR target's portable passes give each scalar kernel
+argument such a buffer. Other buffers are pointers. The threadgroup buffer is
+the launch's dynamic threadgroup memory.
+
+System-value parameters become values computed at the kernel's entry:
+
+==================================== ==========================================
+AIR system value                     AGX
+==================================== ==========================================
+``thread_position_in_grid``          ``llvm.agx.thread.position.in.grid.*``
+``threadgroup_position_in_grid``     ``llvm.agx.threadgroup.position.in.grid.*``
+``thread_position_in_threadgroup``   ``llvm.agx.thread.position.in.threadgroup.*``
+``threads_per_threadgroup``          ``llvm.agx.threads.per.threadgroup.*``
+``threadgroups_per_grid``            ``llvm.agx.threadgroups.per.grid.*``
+``threads_per_grid``                 threadgroups per grid times threads per
+                                     threadgroup (grids are whole threadgroups)
+``thread_index_in_threadgroup``      ``llvm.agx.thread.index.in.threadgroup``
+``thread_index_in_simdgroup``        ``llvm.agx.thread.index.in.simdgroup``
+``simdgroup_index_in_threadgroup``   ``llvm.agx.simdgroup.index.in.threadgroup``
+``threads_per_simdgroup``            32
+``simdgroups_per_threadgroup``       threads per threadgroup / 32, rounded up
+==================================== ==========================================
+
+The module then takes AGX's triple and data layout, and loses the AIR
+metadata and module flags.
+
 MLIR
 ====
 

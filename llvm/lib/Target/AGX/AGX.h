@@ -13,6 +13,7 @@
 #ifndef LLVM_LIB_TARGET_AGX_AGX_H
 #define LLVM_LIB_TARGET_AGX_AGX_H
 
+#include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 
 namespace llvm {
@@ -27,6 +28,7 @@ bool agxExperimentalLeafCallsEnabled();
 
 // IR passes.
 ModulePass *createAGXAlwaysInlinePass();
+ModulePass *createAGXLowerAIRPass(const AGXTargetMachine *TM);
 ModulePass *createAGXPromoteKernelArgsPass();
 ModulePass *createAGXCheckedAccessesPass(const AGXTargetMachine *TM);
 FunctionPass *createAGXCodeGenPreparePass();
@@ -54,6 +56,7 @@ FunctionPass *createAGXLowerControlFlowPass();
 FunctionPass *createAGXInsertWaitsPass();
 
 void initializeAGXAlwaysInlinePass(PassRegistry &);
+void initializeAGXLowerAIRLegacyPass(PassRegistry &);
 void initializeAGXPromoteKernelArgsPass(PassRegistry &);
 void initializeAGXCheckedAccessesPass(PassRegistry &);
 void initializeAGXCodeGenPreparePass(PassRegistry &);
@@ -72,6 +75,17 @@ void initializeAGXHoistFromElseFlowPass(PassRegistry &);
 void initializeAGXLowerControlFlowPass(PassRegistry &);
 void initializeAGXInsertWaitsPass(PassRegistry &);
 void initializeAGXAsmPrinterPass(PassRegistry &);
+
+class TargetMachine;
+
+/// Compiles a module described by !air.kernel (AIR) as AGX kernels.
+class AGXLowerAIRPass : public RequiredPassInfoMixin<AGXLowerAIRPass> {
+  const TargetMachine &TM;
+
+public:
+  explicit AGXLowerAIRPass(const TargetMachine &TM) : TM(TM) {}
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+};
 
 class Instruction;
 class MachineInstr;

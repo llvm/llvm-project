@@ -31,6 +31,7 @@ add_llvm_target(AGXCodeGen
   AGXInstrInfo.cpp
   AGXLowerControlFlow.cpp
   AGXCheckedAccesses.cpp
+  AGXLowerAIR.cpp
   AGXAliasAnalysis.cpp
   AGXLowerGenericAddresses.cpp
   AGXMachineFunctionInfo.cpp
