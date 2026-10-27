@@ -842,6 +842,7 @@ void OmpStructureChecker::CheckDoacross(
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Ordered &x) {
   llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
+  auto leafs{llvm::omp::getLeafConstructsOrSelf(dirStack_.back()->DirId())};
   parser::CharBlock source{GetContext().clauseSource};
   std::string clauseName{
       parser::omp::GetUpperName(llvm::omp::Clause::OMPC_ordered, version)};
@@ -871,6 +872,17 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Ordered &x) {
             .Attach(source, "%s clause specified here"_en_US, clauseName);
       }
     }
+  }
+
+  // ORDERED is not allowed on DISTRIBUTE, so if it is the only leaf,
+  // a diagnostic has already been emitted.
+  if (leafs.size() > 1 &&
+      llvm::is_contained(leafs, llvm::omp::OMPD_distribute)) {
+    context_.Say(GetContext().clauseSource,
+        "%s clause is not allowed on a compound directive with %s as a constituent"_err_en_US,
+        clauseName,
+        parser::omp::GetUpperName(
+            llvm::omp::Directive::OMPD_distribute, version));
   }
 }
 
