@@ -9,7 +9,7 @@
 /// \file
 /// Convert AIR system-value intrinsic calls (e.g.
 /// `air.thread_position_in_grid`) into kernel function parameters and emit the
-/// `!air.kernel` metadata that the AIR runtime needs to create a pipeline
+/// `!air.kernel` metadata that the Metal runtime needs to create a pipeline
 /// state object.
 ///
 //===----------------------------------------------------------------------===//

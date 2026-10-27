@@ -1,4 +1,4 @@
-; AIR/AIR has no call stack: the helper must be inlined into @kernel and then
+; AIR has no call stack: the helper must be inlined into @kernel and then
 ; erased, since AIR kernels cannot call defined functions.
 ; RUN: llc -mtriple=air %s -o - | FileCheck %s
 

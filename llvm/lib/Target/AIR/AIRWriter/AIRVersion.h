@@ -44,7 +44,7 @@ struct AIRVersion {
   unsigned AIRMinor;      // OSMajor - 8 (air.version / VERS minor)
   unsigned SubarchVer;    // OSMajor + 12 (the `_vNN` subarch)
   unsigned TripleOSMajor; // OSMajor, except 16 -> 26 (Apple renumber)
-  unsigned MSLMajor;      // AIR Shading Language major: <=15 -> 3, >=16 -> 4
+  unsigned MSLMajor;      // Metal Shading Language major: <=15 -> 3, >=16 -> 4
   unsigned MSLMinor;      // 13->0, 14->1, 15->2, 16->0  (from `xcrun metal`)
   unsigned ContainerByte; // MTLB header byte 8: 13->7,14->7,15->8,16->9
 

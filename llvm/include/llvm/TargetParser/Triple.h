@@ -953,7 +953,7 @@ public:
   /// Tests whether the target is DXIL.
   bool isDXIL() const { return getArch() == Triple::dxil; }
 
-  /// Tests whether the target is AIR/AIR.
+  /// Tests whether the target is AIR (Apple Intermediate Representation).
   bool isAIR() const { return getArch() == Triple::air; }
 
   bool isShaderModelOS() const { return getOS() == Triple::ShaderModel; }

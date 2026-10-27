@@ -10,10 +10,10 @@ Status
 
 Apple does not publish a specification for the ``.metallib`` container or
 for the AIR bitcode dialect it carries. The layout described here was
-reconstructed empirically from the output of Apple's AIR toolchain and is
+reconstructed empirically from the output of Apple's Metal toolchain and is
 byte-identical to it for the kernels in the LLVM AIR test suite. Field
 names mirror the implementation in
-``llvm/lib/Target/AIRWriter/AIRLibWriter.{h,cpp}``.
+``llvm/lib/Target/AIR/AIRWriter/AIRLibWriter.{h,cpp}``.
 
 All integers are little-endian.
 

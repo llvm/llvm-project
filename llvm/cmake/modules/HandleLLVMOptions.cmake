@@ -500,10 +500,8 @@ if((NOT ("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")) AND
   # about use of the attributes. As long as we don't use the attributes (to
   # override the default) we shouldn't set the command line options either.
   # GCC on AIX warns if -fvisibility-inlines-hidden is used and Clang on AIX doesn't currently support visibility.
-  if(NOT APPLE)
-    check_cxx_compiler_flag("-fvisibility-inlines-hidden" SUPPORTS_FVISIBILITY_INLINES_HIDDEN_FLAG)
-    append_if(SUPPORTS_FVISIBILITY_INLINES_HIDDEN_FLAG "-fvisibility-inlines-hidden" CMAKE_CXX_FLAGS)
-  endif()
+  check_cxx_compiler_flag("-fvisibility-inlines-hidden" SUPPORTS_FVISIBILITY_INLINES_HIDDEN_FLAG)
+  append_if(SUPPORTS_FVISIBILITY_INLINES_HIDDEN_FLAG "-fvisibility-inlines-hidden" CMAKE_CXX_FLAGS)
 endif()
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 8 AND MINGW)

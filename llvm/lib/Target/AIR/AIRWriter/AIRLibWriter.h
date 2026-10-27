@@ -28,7 +28,7 @@ enum class AIRPlatform : uint8_t {
 /// writer pins this to 26 regardless of host SDK.
 inline constexpr uint16_t DefaultAIRLibOSMajor = 26;
 
-/// Default AIR Shading Language version recorded in the metallib `LANG`
+/// Default Metal Shading Language version recorded in the metallib `LANG`
 /// field (3.2 == latest stable at time of writing).
 inline constexpr uint16_t DefaultAIRLangMajor = 3;
 inline constexpr uint16_t DefaultAIRLangMinor = 2;

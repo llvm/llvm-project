@@ -1,4 +1,4 @@
-; The AIR GPU JIT does not support `fneg`; it is lowered to `fsub -0.0, x`.
+; The Metal GPU JIT does not support `fneg`; it is lowered to `fsub -0.0, x`.
 ; RUN: llc -mtriple=air %s -o - | FileCheck %s
 
 ; CHECK-LABEL: define void @kernel

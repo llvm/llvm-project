@@ -14,6 +14,7 @@
 #include "mlir/InitAllDialects.h"
 
 #include "mlir/Dialect/AGX/IR/AGXDialect.h"
+#include "mlir/Dialect/AIR/IR/AIRDialect.h"
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialectDecl.h"
 #include "mlir/Dialect/AMDGPU/Transforms/MemoryAccessOpInterfacesImpl.h"
 #include "mlir/Dialect/Affine/IR/AffineDialect.h"
@@ -110,7 +111,6 @@
 #include "mlir/IR/Dialect.h"
 #include "mlir/Interfaces/CastInterfaces.h"
 #include "mlir/Target/LLVM/AGXIR/Target.h"
-#include "mlir/Dialect/AIR/IR/AIRDialect.h"
 #include "mlir/Target/LLVM/AIR/Target.h"
 #include "mlir/Target/LLVM/NVVM/Target.h"
 #include "mlir/Target/LLVM/ROCDL/Target.h"

@@ -22,7 +22,7 @@ namespace metal {
 
 // ── Pointee Type Map ─────────────────────────────────────────────────────
 //
-// AIR GPU JIT requires typed pointers in bitcode (POINTER records with
+// Metal GPU JIT requires typed pointers in bitcode (POINTER records with
 // pointee type), but LLVM 19+ only has opaque pointers (ptr addrspace(N)).
 //
 // This side table tracks what each pointer "actually points to" as the IR
@@ -47,7 +47,7 @@ namespace metal {
 // IR) lets the LLVM Module stay valid with opaque pointers throughout the
 // pipeline; only the bitcode writer needs the resolved pointee types.
 //
-// ── Key rules from AIR GPU JIT ─────────────────────────────────────────
+// ── Key rules from Metal GPU JIT ─────────────────────────────────────────
 //
 // 1. ALL device pointers (addrspace 1) must be typed in bitcode
 // 2. When MMA intrinsics are present, ALL device ptrs must be float*

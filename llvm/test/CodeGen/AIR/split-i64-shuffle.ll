@@ -1,4 +1,4 @@
-; AIR GPU JIT rejects i64 air.simd_shuffle; rewrite as bitcast-to-v2i32 +
+; The Metal GPU JIT rejects i64 air.simd_shuffle; rewrite as bitcast-to-v2i32 +
 ; vector shuffle. Empirically the JIT accepts the v2i32 vector form (see
 ; PASS_GUARDS.md G3.6).
 ; RUN: llc -mtriple=air %s -o - | FileCheck %s

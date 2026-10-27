@@ -1,4 +1,4 @@
-; Phase 1 smoke test: the AIR/AIR target loads and llc runs its (currently
+; Phase 1 smoke test: the AIR target loads and llc runs its (currently
 ; empty) pass pipeline, printing the module back out.
 ; RUN: llc -mtriple=air %s -o - | FileCheck %s
 

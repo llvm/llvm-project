@@ -9,7 +9,7 @@
 /// \file
 /// Merge `__tg_cvt_*` threadgroup globals into `__tg_dot_ab_*` globals when
 /// MMA intrinsics are present. The cvt and dot buffers don't overlap in
-/// lifetime, so they can share storage; this works around a AIR GPU JIT
+/// lifetime, so they can share storage; this works around a Metal GPU JIT
 /// crash that triggers when a kernel contains multiple TG globals together
 /// with MMA intrinsics.
 ///

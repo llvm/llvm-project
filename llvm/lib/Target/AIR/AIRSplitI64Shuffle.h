@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// The AIR GPU JIT crashes on i64 `air.simd_shuffle`. Split each i64
+/// The Metal GPU JIT crashes on i64 `air.simd_shuffle`. Split each i64
 /// shuffle into two i32 shuffles (lo/hi halves) and recombine.
 ///
 //===----------------------------------------------------------------------===//

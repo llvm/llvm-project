@@ -14,13 +14,13 @@ Introduction
 
 The AIR target turns LLVM IR into Apple `AIR <Apple Intermediate
 Representation>`_ bitcode wrapped in a ``.metallib`` container. The container
-is what Apple's AIR runtime loads with ``MTLLibrary``; AIR itself is a
-typed-pointer LLVM bitcode dialect that the AIR GPU JIT lowers to native
+is what Apple's Metal runtime loads with ``MTLLibrary``; AIR itself is a
+typed-pointer LLVM bitcode dialect that the Metal GPU JIT lowers to native
 M-series GPU code at load time.
 
 There is no public Apple specification for either AIR or the ``.metallib``
 container format. The layout documented in :doc:`AIRLibFormat` was
-reconstructed empirically from the output of Apple's AIR toolchain and is
+reconstructed empirically from the output of Apple's Metal toolchain and is
 byte-identical to it for the kernels exercised by the test suite.
 
 Target Triples
@@ -65,7 +65,7 @@ Pass Pipeline
 =============
 
 The AIR-specific module pipeline (registered in
-``llvm/lib/Target/AIRPassRegistry.def``) runs the following passes in
+``llvm/lib/Target/AIR/AIRPassRegistry.def``) runs the following passes in
 order:
 
 ============================================ ====================================
@@ -98,7 +98,7 @@ Address Spaces
 ==============
 
 AIR uses the following address-space numbering, centralised in
-``llvm/lib/Target/AIRAddressSpaces.h``:
+``llvm/lib/Target/AIR/AIRAddressSpaces.h``:
 
 ============== ===== ====================
 Name           Value Description
@@ -121,7 +121,7 @@ Known Limitations
   bitcode version and metallib container format used by AIR 4 on
   macOS 26 only, and hardcodes ``air64_v28-apple-macosx26.0.0`` together
   with the corresponding container header bytes (see
-  ``llvm/lib/Target/AIRWriter/AIRLibWriter.h``). Older OS / AIR
+  ``llvm/lib/Target/AIR/AIRWriter/AIRLibWriter.h``). Older OS / AIR
   versions are out of scope for the initial submission. A future
   ``Triple`` sub-architecture set (``metal3.0``/``3.1``/``3.2``) could
   expose per-version emission, but Apple has not published the AIR
@@ -130,15 +130,15 @@ Known Limitations
   corresponding Xcode toolchain.
 * The metallib container is monolithic; ``AIRLibObjectWriter`` asserts
   that exactly one non-empty section is present.
-* ``f64`` in device memory is not supported (AIR Shading Language does not
+* ``f64`` in device memory is not supported (Metal Shading Language does not
   expose double precision on Apple GPUs).
-* Threadgroup memory is capped at 32 KiB per the AIR Shading Language
+* Threadgroup memory is capped at 32 KiB per the Metal Shading Language
   Specification.
 
 Typed-Pointer Reconstruction
 ============================
 
-LLVM 17+ uses opaque pointers in memory, but the AIR GPU JIT requires
+LLVM 17+ uses opaque pointers in memory, but the Metal GPU JIT requires
 typed ``POINTER`` records (code 8) in bitcode. The AIR writer recovers the
 pointee type from use-sites and emits the typed records by way of
 ``PointeeTypeMap``. See :doc:`AIRLibFormat` for the bitcode-level
@@ -148,6 +148,6 @@ Intrinsic Mapping
 =================
 
 The mapping from generic LLVM intrinsics to AIR-specific names is defined
-declaratively in ``llvm/lib/Target/AIRIntrinsicMappings.td`` and
+declaratively in ``llvm/lib/Target/AIR/AIRIntrinsicMappings.td`` and
 consumed by ``LLVMToAIRIntrinsics``. New intrinsics are added by editing
 the TableGen file; no C++ pass changes are required for routine additions.

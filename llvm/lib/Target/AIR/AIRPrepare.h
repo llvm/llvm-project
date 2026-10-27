@@ -13,7 +13,7 @@
 ///
 /// Specifically:
 ///   * Normalize `getelementptr i1, ...` to `getelementptr i8, ...` because
-///     the AIR GPU JIT has no i1 memory type.
+///     the Metal GPU JIT has no i1 memory type.
 ///   * Convert pointer-typed phi nodes to i64 phis (with ptrtoint/inttoptr
 ///     bridges) when a block exceeds the JIT's ~63 ptr-phi limit, or when
 ///     any ptr phi in the function has an undef/poison incoming value.

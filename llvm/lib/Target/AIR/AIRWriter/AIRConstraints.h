@@ -57,7 +57,7 @@ struct AIRConstraints {
   static constexpr bool RemapBFloatToHalf = true;
 
   /// Maximum threadgroup memory in bytes.
-  /// Per AIR Shading Language Specification v3.2, threadgroup memory is
+  /// Per Metal Shading Language Specification v3.2, threadgroup memory is
   /// capped at 32 KiB on Apple GPUs (M-series; verify per-target).
   static constexpr unsigned MaxTGBytes = 32 * 1024;
 

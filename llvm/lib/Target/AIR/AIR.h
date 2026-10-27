@@ -86,7 +86,7 @@ ModulePass *createAIRSplitI64ShuffleLegacyPass();
 void initializeAIRDeviceLoadsVolatileLegacyPass(PassRegistry &);
 
 /// Pass to mark loop device loads as volatile (and all device loads/stores
-/// in CAS-atomic functions) to defeat AIR GPU JIT reordering.
+/// in CAS-atomic functions) to defeat Metal GPU JIT reordering.
 ModulePass *createAIRDeviceLoadsVolatileLegacyPass();
 
 /// Initializer for the AIR scalar-store-guard pass.

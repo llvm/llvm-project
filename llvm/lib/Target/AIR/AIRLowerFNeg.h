@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// The AIR GPU JIT does not support `fneg`; rewrite it to `fsub -0.0, x`.
+/// The Metal GPU JIT does not support `fneg`; rewrite it to `fsub -0.0, x`.
 ///
 //===----------------------------------------------------------------------===//
 
