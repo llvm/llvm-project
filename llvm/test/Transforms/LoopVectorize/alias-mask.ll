@@ -79,8 +79,8 @@ define void @alias_mask_multiple(ptr %a, ptr %b, ptr %c, i64 %n) {
 ; CHECK-LABEL: define void @alias_mask_multiple(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[C1:%.*]] = ptrtoaddr ptr [[C]] to i64
 ; CHECK-NEXT:    [[B2:%.*]] = ptrtoaddr ptr [[B]] to i64
+; CHECK-NEXT:    [[C1:%.*]] = ptrtoaddr ptr [[C]] to i64
 ; CHECK-NEXT:    [[A3:%.*]] = ptrtoaddr ptr [[A]] to i64
 ; CHECK-NEXT:    br label %[[VECTOR_CLAMPED_VF_CHECK:.*]]
 ; CHECK:       [[VECTOR_CLAMPED_VF_CHECK]]:
@@ -575,13 +575,13 @@ define i64 @any_of_reduction(i64 %a, ptr %src, ptr %dst, i32 %n) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST]] to i64
 ; CHECK-NEXT:    [[SRC2:%.*]] = ptrtoaddr ptr [[SRC]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[DST1]], 4
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[SRC2]], 4
 ; CHECK-NEXT:    br label %[[VECTOR_SCEVCHECK:.*]]
 ; CHECK:       [[VECTOR_SCEVCHECK]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[N]], 1
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[SCALAR_PH:.*]], label %[[VECTOR_CLAMPED_VF_CHECK:.*]]
 ; CHECK:       [[VECTOR_CLAMPED_VF_CHECK]]:
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[SRC2]], 4
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[DST1]], 4
 ; CHECK-NEXT:    [[ALIAS_MASK:%.*]] = call <4 x i1> @llvm.loop.dependence.war.mask.v4i1.i64(i64 [[TMP1]], i64 [[TMP0]], i64 4)
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext <4 x i1> [[ALIAS_MASK]] to <4 x i64>
 ; CHECK-NEXT:    [[NUM_ACTIVE_LANES:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[TMP4]])
@@ -759,15 +759,15 @@ define void @alias_mask_bound_with_versioned_stride_udiv(ptr %dst, ptr %src, i64
 ; CHECK-NEXT:    [[D:%.*]] = add i64 [[STRIDE]], [[Y]]
 ; CHECK-NEXT:    [[Q:%.*]] = udiv i64 [[N]], [[D]]
 ; CHECK-NEXT:    [[SRC_OFF:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[Q]]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[Y]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = udiv i64 [[N]], [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP1]], 2
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[SRC1]], [[TMP2]]
 ; CHECK-NEXT:    br label %[[VECTOR_SCEVCHECK:.*]]
 ; CHECK:       [[VECTOR_SCEVCHECK]]:
 ; CHECK-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; CHECK-NEXT:    br i1 [[IDENT_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_CLAMPED_VF_CHECK:.*]]
 ; CHECK:       [[VECTOR_CLAMPED_VF_CHECK]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[Y]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = udiv i64 [[N]], [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP1]], 2
+; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[SRC1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = call <4 x i1> @llvm.loop.dependence.war.mask.v4i1.i64(i64 [[TMP3]], i64 [[DST2]], i64 4)
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext <4 x i1> [[TMP4]] to <4 x i64>
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[TMP5]])
