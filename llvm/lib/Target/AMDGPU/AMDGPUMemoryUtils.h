@@ -146,19 +146,18 @@ SIAtomicAddrSpace toSIAtomicAddrSpace(unsigned AS);
 
 /// Reads \p I's MMRAs to parse the "amdgpu-synchronize-as" MMRA.
 /// If this tag isn't present, or if it has no meaningful values, returns
-/// \p none, otherwise returns the address spaces specified by the MD.
+/// \p ATOMIC, otherwise returns the address spaces specified by the MD.
 /// Does not diagnose unexpected MMRA tag suffixes.
-std::optional<SIAtomicAddrSpace> getSynchronizeAddrSpace(const Instruction &I);
+SIAtomicAddrSpace getSynchronizeAddrSpace(const Instruction &I);
 
 /// Parses the values for the "amdgpu-synchronize-as" MMRA.
 /// If this tag isn't present, or if it has no meaningful values, returns
-/// \p none, otherwise returns the address spaces specified by the MD.
+/// \p ATOMIC, otherwise returns the address spaces specified by the MD.
 /// If \p DiagFn is non-null, unexpected suffixes for the MMRA tag are reported
 /// as warnings to \p DiagFn's context, located at \p DL.
-std::optional<SIAtomicAddrSpace>
-getSynchronizeAddrSpace(const MMRAMetadata &MMRA,
-                        const Function *DiagFn = nullptr,
-                        const DebugLoc &DL = {});
+SIAtomicAddrSpace getSynchronizeAddrSpace(const MMRAMetadata &MMRA,
+                                          const Function *DiagFn = nullptr,
+                                          const DebugLoc &DL = {});
 
 } // end namespace AMDGPU
 
