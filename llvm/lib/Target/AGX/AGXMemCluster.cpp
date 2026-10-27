@@ -17,11 +17,16 @@
 // generic load / store clustering needs base + offset operands; AGX addresses
 // are a base and a register index, so this clusters by program order instead.
 //
-// Only stores are clustered by default. In agx-bench (ZLUDA PTX tests and
-// agx_libs, agx_cost) store clusters of up to 16 lower the total by 0.8% and
-// 9.5% with no kernel slower except the G13 tile GEMMs, whose allocation at
-// 128 GPRs moves both ways (at K = 256: -2.3% over the eight sgemm variants);
-// clustering loads as well makes that 0.6% / 9.4% with loads waiting longer.
+// Device loads and stores and threadgroup stores are clustered by default,
+// in runs of up to 16. In agx-bench (agx_cost) stores alone lowered the ZLUDA
+// PTX tests by 0.8% and agx_libs by 9.5%; the real-world CUDA kernels
+// (kernels/cuda_*.ll) showed what device loads add: decode attention -34%,
+// RGBA8 blur -28%, q4_0 / q8_0 mat-vec -10% / -5%, 3.8% in total, with only
+// index_add on G13 slower (+17%). Runs of 4 or 6 loads lose (+0.2% to +0.7%):
+// the attention loop's 8 loads must stay together. Threadgroup loads stay
+// apart: they speed up tiled SGEMM and n-body but take SGEMM from 70 to 77
+// GPRs (occupancy, which agx_cost does not model) and slow the f64 dot
+// product by 33%.
 //
 //===----------------------------------------------------------------------===//
 
@@ -40,7 +45,7 @@ static cl::opt<unsigned> AGXMemClusterSize(
              "keeps together (0 or 1: off)"));
 
 static cl::opt<unsigned> AGXMemClusterKinds(
-    "agx-mem-cluster-kinds", cl::Hidden, cl::init(10),
+    "agx-mem-cluster-kinds", cl::Hidden, cl::init(11),
     cl::desc("Mask of the AGX memory access kinds to cluster (1 device load, "
              "2 device store, 4 threadgroup load, 8 threadgroup store)"));
 
@@ -100,6 +105,7 @@ void AGXMemClusterMutation::apply(ScheduleDAGInstrs *DAG) {
       continue;
     SUnit *Prev = Last[K];
     Last[K] = &SU;
+    bool Load = K == DeviceLoad || K == LocalLoad;
     if (!Prev || Length[K] >= AGXMemClusterSize) {
       Length[K] = 1;
       continue;
@@ -117,7 +123,7 @@ void AGXMemClusterMutation::apply(ScheduleDAGInstrs *DAG) {
     }
     Clusters.unionSets(Prev, &SU);
     ++Length[K];
-    if (K == DeviceLoad || K == LocalLoad) {
+    if (Load) {
       // The users of the earlier load wait for the later one.
       for (const SDep &D : Prev->Succs)
         if (D.getSUnit() != &SU)

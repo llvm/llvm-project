@@ -18,22 +18,22 @@
   "waits": 1
  },
  "cuda_attn_decode.ll:attn_decode:agx-g13g": {
-  "bytes": 2298,
-  "cycles": 62070.8,
+  "bytes": 2294,
+  "cycles": 41283.6,
   "gprs": 40,
-  "instructions": 336,
+  "instructions": 334,
   "launch_inputs": true,
   "uniform_halves": 26,
-  "waits": 6
+  "waits": 4
  },
  "cuda_attn_decode.ll:attn_decode:agx-g14c": {
-  "bytes": 2298,
-  "cycles": 62070.8,
+  "bytes": 2294,
+  "cycles": 41283.6,
   "gprs": 40,
-  "instructions": 336,
+  "instructions": 334,
   "launch_inputs": true,
   "uniform_halves": 26,
-  "waits": 6
+  "waits": 4
  },
  "cuda_bitonic_smem.ll:bitonic_smem:agx-g13g": {
   "bytes": 5106,
@@ -54,22 +54,22 @@
   "waits": 2
  },
  "cuda_blur_rgba8.ll:blur_rgba8:agx-g13g": {
-  "bytes": 1156,
-  "cycles": 813.9,
-  "gprs": 18,
-  "instructions": 166,
+  "bytes": 1152,
+  "cycles": 614.1,
+  "gprs": 17,
+  "instructions": 164,
   "launch_inputs": true,
   "uniform_halves": 18,
-  "waits": 4
+  "waits": 2
  },
  "cuda_blur_rgba8.ll:blur_rgba8:agx-g14c": {
-  "bytes": 1156,
-  "cycles": 813.9,
-  "gprs": 18,
-  "instructions": 166,
+  "bytes": 1152,
+  "cycles": 614.1,
+  "gprs": 17,
+  "instructions": 164,
   "launch_inputs": true,
   "uniform_halves": 18,
-  "waits": 4
+  "waits": 2
  },
  "cuda_conv3x3.ll:conv3x3:agx-g13g": {
   "bytes": 1328,
@@ -145,7 +145,7 @@
  },
  "cuda_index_add.ll:index_add:agx-g13g": {
   "bytes": 1006,
-  "cycles": 14982.4,
+  "cycles": 17459.2,
   "gprs": 32,
   "instructions": 155,
   "launch_inputs": true,
@@ -270,36 +270,36 @@
   "waits": 0
  },
  "cuda_q4_matvec.ll:q4_matvec:agx-g13g": {
-  "bytes": 1796,
-  "cycles": 4199.9,
+  "bytes": 1794,
+  "cycles": 3029.5,
   "gprs": 47,
-  "instructions": 269,
+  "instructions": 268,
   "launch_inputs": true,
   "uniform_halves": 20,
-  "waits": 7
+  "waits": 6
  },
  "cuda_q4_matvec.ll:q4_matvec:agx-g14c": {
-  "bytes": 1796,
-  "cycles": 4199.9,
+  "bytes": 1794,
+  "cycles": 3029.5,
   "gprs": 47,
-  "instructions": 269,
+  "instructions": 268,
   "launch_inputs": true,
   "uniform_halves": 20,
-  "waits": 7
+  "waits": 6
  },
  "cuda_q8_matvec.ll:q8_matvec:agx-g13g": {
-  "bytes": 1706,
-  "cycles": 6473.5,
-  "gprs": 39,
+  "bytes": 1708,
+  "cycles": 5207.9,
+  "gprs": 41,
   "instructions": 240,
   "launch_inputs": true,
   "uniform_halves": 20,
   "waits": 10
  },
  "cuda_q8_matvec.ll:q8_matvec:agx-g14c": {
-  "bytes": 1706,
-  "cycles": 6473.5,
-  "gprs": 39,
+  "bytes": 1708,
+  "cycles": 5207.9,
+  "gprs": 41,
   "instructions": 240,
   "launch_inputs": true,
   "uniform_halves": 20,
