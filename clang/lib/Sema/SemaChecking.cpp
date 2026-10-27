@@ -17758,7 +17758,8 @@ ExprResult Sema::BuiltinCoopMatrixScalarOp(CallExpr *TheCall,
     Diag(Arg0->getBeginLoc(), diag::err_invalid_coopmat_arg);
     return ExprError();
   }
-  if (!Context.hasSameType(M0Ty->getElementType().getUnqualifiedType(), Arg1->getType().getUnqualifiedType())) {
+  if (!Context.hasSameType(M0Ty->getElementType().getUnqualifiedType(),
+                           Arg1->getType().getUnqualifiedType())) {
     Diag(Arg0->getBeginLoc(), diag::err_incompatible_coopmat_types);
     return ExprError();
   }

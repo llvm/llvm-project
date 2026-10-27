@@ -16025,7 +16025,10 @@ ExprResult Sema::CreateCoopMatScalarOp(SourceLocation OpLoc,
   // Check types.
   QualType LHSTy = LHSExpr->getType();
   QualType RHSTy = RHSExpr->getType();
-  if (!Context.hasSameType(LHSTy->getAs<CooperativeMatrixType>()->getElementType().getUnqualifiedType(), RHSTy.getUnqualifiedType())) {
+  if (!Context.hasSameType(LHSTy->getAs<CooperativeMatrixType>()
+                               ->getElementType()
+                               .getUnqualifiedType(),
+                           RHSTy.getUnqualifiedType())) {
     Diag(LHSExpr->getBeginLoc(), diag::err_incompatible_coopmat_types);
     return ExprError();
   }
