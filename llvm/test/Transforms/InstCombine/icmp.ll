@@ -1311,7 +1311,7 @@ define zeroext i1 @cmp_posorneg_eq1(i64 %val, i1 %cond) {
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[VAL]], 0
 ; CHECK-NEXT:    ret i1 [[TOBOOL]]
 ;
-  %sub = sub nsw i64 0, %val
+  %sub = sub i64 0, %val
   %val.or.sub = select i1 %cond, i64 %sub, i64 %val
   %tobool = icmp eq i64 %val.or.sub, 0
   ret i1 %tobool
@@ -1323,7 +1323,7 @@ define zeroext i1 @cmp_posorneg_eq2(i64 %val, i1 %cond) {
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[VAL]], 0
 ; CHECK-NEXT:    ret i1 [[TOBOOL]]
 ;
-  %sub = sub nsw i64 0, %val
+  %sub = sub i64 0, %val
   %val.or.sub = select i1 %cond, i64 %val, i64 %sub
   %tobool = icmp eq i64 %val.or.sub, 0
   ret i1 %tobool
