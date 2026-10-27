@@ -4202,13 +4202,30 @@ struct FoldTensorCastProducerOp
   }
 };
 
+namespace {
+/// A splat of a scalar condition selects the same arm in every element.
+struct SelectSplatCondition : OpRewritePattern<arith::SelectOp> {
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(arith::SelectOp select,
+                                PatternRewriter &rewriter) const override {
+    auto splat = select.getCondition().getDefiningOp<SplatOp>();
+    if (!splat)
+      return failure();
+    rewriter.modifyOpInPlace(
+        select, [&] { select.getConditionMutable().assign(splat.getInput()); });
+    return success();
+  }
+};
+} // namespace
+
 //===----------------------------------------------------------------------===//
 // TensorDialect
 //===----------------------------------------------------------------------===//
 
 void TensorDialect::getCanonicalizationPatterns(
     RewritePatternSet &results) const {
-  results.add<FoldTensorCastProducerOp>(getContext());
+  results.add<FoldTensorCastProducerOp, SelectSplatCondition>(getContext());
 }
 
 //===----------------------------------------------------------------------===//
