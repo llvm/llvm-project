@@ -1147,6 +1147,7 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed a crash when the operand of `__builtin_addressof` is an overload set.
   A function template specialization such as `f<int>` is now resolved like the
   argument of `std::addressof`, and an unresolvable overload set is diagnosed.
+  (#GH77928)
 
 #### Bug Fixes to AST Handling
 
