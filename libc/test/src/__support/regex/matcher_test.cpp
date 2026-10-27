@@ -261,16 +261,160 @@ TEST(LlvmLibcRegexMatcherTest, ParseEreEscapesAndErrors) {
     EXPECT_EQ(err.error(), REG_BADRPT);
   }
 
+  const string_view ebrack_patterns[] = {
+      "[", "[^", "[abc", "[]", "a[[.x", "a[[.x.", "a[[:digit:", "a[[:digit"};
+  for (string_view pat : ebrack_patterns) {
+    ErrorOr<ExprId> err = parse_ere(pat, REG_EXTENDED, pool);
+    ASSERT_FALSE(err.has_value());
+    EXPECT_EQ(err.error(), REG_EBRACK);
+  }
+
+  const string_view erange_patterns[] = {"a[3-1]c", "a[1-3-5]c", "a[1-",
+                                         "a[a-[:digit:]]c", "a[[:alpha:]-z]c"};
+  for (string_view pat : erange_patterns) {
+    ErrorOr<ExprId> err = parse_ere(pat, REG_EXTENDED, pool);
+    ASSERT_FALSE(err.has_value());
+    EXPECT_EQ(err.error(), REG_ERANGE);
+  }
+
+  const string_view ecollate_patterns[] = {"a[[.notdef.]]b", "a[[.x,.]]",
+                                           "a[[=b,=]]"};
+  for (string_view pat : ecollate_patterns) {
+    ErrorOr<ExprId> err = parse_ere(pat, REG_EXTENDED, pool);
+    ASSERT_FALSE(err.has_value());
+    EXPECT_EQ(err.error(), REG_ECOLLATE);
+  }
+
+  const string_view ectype_patterns[] = {"a[[:notdef:]]b", "a[[:alph:]]b",
+                                         "a[[:]:]]b", "a[[:-:]]b"};
+  for (string_view pat : ectype_patterns) {
+    ErrorOr<ExprId> err = parse_ere(pat, REG_EXTENDED, pool);
+    ASSERT_FALSE(err.has_value());
+    EXPECT_EQ(err.error(), REG_ECTYPE);
+  }
+
   const string_view bad_patterns[] = {
-      "a+",    "a?",    "a{1}",  "{",     "(",     ")",     "[",     "|",
-      R"(\1)", R"(\2)", R"(\3)", R"(\4)", R"(\5)", R"(\6)", R"(\7)", R"(\8)",
-      R"(\9)", R"(\b)", R"(\B)", R"(\<)", R"(\>)", R"(\A)", R"(\Z)", R"(\`)",
-      R"(\')", R"(\w)", R"(\W)", R"(\s)", R"(\S)", R"(\d)", R"(\D)"};
+      "a+",      "a?",    "a{1}",  "{",     "(",     ")",     "[[:<:]]",
+      "[[:>:]]", "|",     R"(\1)", R"(\2)", R"(\3)", R"(\4)", R"(\5)",
+      R"(\6)",   R"(\7)", R"(\8)", R"(\9)", R"(\b)", R"(\B)", R"(\<)",
+      R"(\>)",   R"(\A)", R"(\Z)", R"(\`)", R"(\')"};
   for (string_view bad : bad_patterns) {
     ErrorOr<ExprId> err = parse_ere(bad, REG_EXTENDED, pool);
     ASSERT_FALSE(err.has_value());
     EXPECT_EQ(err.error(), REG_BADPAT);
   }
+}
+
+TEST(LlvmLibcRegexMatcherTest, BracketMatchingAndRanges) {
+  ExprPool pool;
+  ErrorOr<ExprId> range = parse_ere("x[c-f]y", REG_EXTENDED, pool);
+  ASSERT_TRUE(range.has_value());
+  EXPECT_EQ(match(pool, *range, "xcy"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *range, "xdy"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *range, "xey"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *range, "xfy"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *range, "xby"), MatchResult::NoMatch);
+  EXPECT_EQ(match(pool, *range, "xgy"), MatchResult::NoMatch);
+  EXPECT_EQ(match(pool, *range, "xy"), MatchResult::NoMatch);
+  EXPECT_EQ(match(pool, *range, "xccy"), MatchResult::NoMatch);
+  EXPECT_EQ(match(pool, *range, "x-y"), MatchResult::NoMatch);
+
+  ErrorOr<ExprId> negated = parse_ere("x[^c-f]y", REG_EXTENDED, pool);
+  ASSERT_TRUE(negated.has_value());
+  EXPECT_EQ(match(pool, *negated, "xby"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *negated, "xgy"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *negated, "xcy"), MatchResult::NoMatch);
+  EXPECT_EQ(match(pool, *negated, "xfy"), MatchResult::NoMatch);
+  EXPECT_EQ(match(pool, *negated, "xy"), MatchResult::NoMatch);
+
+  ErrorOr<ExprId> nl_neg =
+      parse_ere("x[^c-f]y", REG_EXTENDED | REG_NEWLINE, pool);
+  ASSERT_TRUE(nl_neg.has_value());
+  EXPECT_EQ(match(pool, *nl_neg, "x\ny", REG_NEWLINE, 0), MatchResult::NoMatch);
+
+  ErrorOr<ExprId> first_rb = parse_ere("a[]b]c", REG_EXTENDED, pool);
+  ASSERT_TRUE(first_rb.has_value());
+  EXPECT_EQ(match(pool, *first_rb, "a]c"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *first_rb, "abc"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *first_rb, "ac"), MatchResult::NoMatch);
+
+  ErrorOr<ExprId> lead_dash = parse_ere("a[-b]c", REG_EXTENDED, pool);
+  ASSERT_TRUE(lead_dash.has_value());
+  EXPECT_EQ(match(pool, *lead_dash, "a-c"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *lead_dash, "abc"), MatchResult::Match);
+
+  ErrorOr<ExprId> trail_dash = parse_ere("a[b-]c", REG_EXTENDED, pool);
+  ASSERT_TRUE(trail_dash.has_value());
+  EXPECT_EQ(match(pool, *trail_dash, "a-c"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *trail_dash, "abc"), MatchResult::Match);
+
+  ErrorOr<ExprId> dash_start_range = parse_ere("a[--0]c", REG_EXTENDED, pool);
+  ASSERT_TRUE(dash_start_range.has_value());
+  EXPECT_EQ(match(pool, *dash_start_range, "a-c"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *dash_start_range, "a.c"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *dash_start_range, "a/c"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *dash_start_range, "a0c"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *dash_start_range, "a1c"), MatchResult::NoMatch);
+
+  ErrorOr<ExprId> dash_end_range = parse_ere("a[!--]c", REG_EXTENDED, pool);
+  ASSERT_TRUE(dash_end_range.has_value());
+  EXPECT_EQ(match(pool, *dash_end_range, "a!c"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *dash_end_range, "a+c"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *dash_end_range, "a-c"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *dash_end_range, "a.c"), MatchResult::NoMatch);
+
+  ErrorOr<ExprId> coll_sym = parse_ere("a[[.x.]]b", REG_EXTENDED, pool);
+  ASSERT_TRUE(coll_sym.has_value());
+  EXPECT_EQ(match(pool, *coll_sym, "axb"), MatchResult::Match);
+
+  ErrorOr<ExprId> coll_rb = parse_ere("a[[.].]]b", REG_EXTENDED, pool);
+  ASSERT_TRUE(coll_rb.has_value());
+  EXPECT_EQ(match(pool, *coll_rb, "a]b"), MatchResult::Match);
+
+  ErrorOr<ExprId> coll_one = parse_ere("a[[.one.]]b", REG_EXTENDED, pool);
+  ASSERT_TRUE(coll_one.has_value());
+  EXPECT_EQ(match(pool, *coll_one, "a1b"), MatchResult::Match);
+
+  ErrorOr<ExprId> star_range = parse_ere("^[a-c]*$", REG_EXTENDED, pool);
+  ASSERT_TRUE(star_range.has_value());
+  EXPECT_EQ(match(pool, *star_range, ""), MatchResult::Match);
+  EXPECT_EQ(match(pool, *star_range, "abcba"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *star_range, "abzcba"), MatchResult::NoMatch);
+
+  ErrorOr<ExprId> alpha = parse_ere("^[[:alpha:]]*$", REG_EXTENDED, pool);
+  ASSERT_TRUE(alpha.has_value());
+  EXPECT_EQ(match(pool, *alpha, ""), MatchResult::Match);
+  EXPECT_EQ(match(pool, *alpha, "HelloWorld"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *alpha, "Hello1World"), MatchResult::NoMatch);
+
+  ErrorOr<ExprId> sh_w = parse_ere(R"(^\w*$)", REG_EXTENDED, pool);
+  ASSERT_TRUE(sh_w.has_value());
+  EXPECT_EQ(match(pool, *sh_w, ""), MatchResult::Match);
+  EXPECT_EQ(match(pool, *sh_w, "Hello_123"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *sh_w, "Hello-123"), MatchResult::NoMatch);
+
+  ErrorOr<ExprId> sh_d = parse_ere(R"(^\d*$)", REG_EXTENDED, pool);
+  ASSERT_TRUE(sh_d.has_value());
+  EXPECT_EQ(match(pool, *sh_d, ""), MatchResult::Match);
+  EXPECT_EQ(match(pool, *sh_d, "12345"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *sh_d, "123a45"), MatchResult::NoMatch);
+
+  ErrorOr<ExprId> sh_neg = parse_ere(R"(x\Wy)", REG_EXTENDED, pool);
+  ASSERT_TRUE(sh_neg.has_value());
+  EXPECT_EQ(match(pool, *sh_neg, "x y"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *sh_neg, "x_y"), MatchResult::NoMatch);
+
+  ErrorOr<ExprId> sh_neg_nl =
+      parse_ere(R"(x\Wy)", REG_EXTENDED | REG_NEWLINE, pool);
+  ASSERT_TRUE(sh_neg_nl.has_value());
+  EXPECT_EQ(match(pool, *sh_neg_nl, "x\ny", REG_NEWLINE, 0),
+            MatchResult::NoMatch);
+
+  ErrorOr<ExprId> multi_class =
+      parse_ere("^[[:alpha:][:blank:]]*$", REG_EXTENDED, pool);
+  ASSERT_TRUE(multi_class.has_value());
+  EXPECT_EQ(match(pool, *multi_class, "Hello World"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *multi_class, "Hello1World"), MatchResult::NoMatch);
 }
 
 TEST(LlvmLibcRegexMatcherTest, PoolExhaustionPropagation) {

@@ -198,7 +198,7 @@ PHINode *Loop::getCanonicalInductionVariable() const {
 /// Get the latch condition instruction.
 ICmpInst *Loop::getLatchCmpInst() const {
   if (BasicBlock *Latch = getLoopLatch())
-    if (CondBrInst *BI = dyn_cast_or_null<CondBrInst>(Latch->getTerminator()))
+    if (CondBrInst *BI = dyn_cast<CondBrInst>(Latch->getTerminator()))
       return dyn_cast<ICmpInst>(BI->getCondition());
 
   return nullptr;
@@ -408,8 +408,6 @@ CondBrInst *Loop::getLoopGuardBranch() const {
   BasicBlock *GuardBB = Preheader->getUniquePredecessor();
   if (!GuardBB)
     return nullptr;
-
-  assert(GuardBB->getTerminator() && "Expecting valid guard terminator");
 
   CondBrInst *GuardBI = dyn_cast<CondBrInst>(GuardBB->getTerminator());
   if (!GuardBI)

@@ -492,6 +492,37 @@ void CombinerHelper::applyCombineShuffleToBuildVector(MachineInstr &MI) const {
   MI.eraseFromParent();
 }
 
+void CombinerHelper::applyCombineShuffleOfBuildVector(MachineInstr &MI) const {
+  auto &Shuffle = cast<GShuffleVector>(MI);
+  Register SrcVec1 = Shuffle.getSrc1Reg();
+  Register SrcVec2 = Shuffle.getSrc2Reg();
+  auto *BuildMI1 = getOpcodeDef<GBuildVector>(SrcVec1, MRI);
+  auto *BuildMI2 = getOpcodeDef<GBuildVector>(SrcVec2, MRI);
+  assert((BuildMI1 && (BuildMI2 || MRI.getVRegDef(SrcVec2)->getOpcode() ==
+                                       TargetOpcode::G_IMPLICIT_DEF)) &&
+         "Unexpected input to applyCombineShuffleOfBuildVector");
+  LLT EltTy = MRI.getType(SrcVec1).getElementType();
+  int NumElts = MRI.getType(SrcVec1).getNumElements();
+
+  SmallVector<Register> Extracts;
+  for (int Val : Shuffle.getMask()) {
+    if (Val == -1)
+      Extracts.push_back(Builder.buildUndef(EltTy).getReg(0));
+    else if (Val < NumElts)
+      Extracts.push_back(BuildMI1->getSourceReg(Val));
+    else if (BuildMI2)
+      Extracts.push_back(BuildMI2->getSourceReg(Val - NumElts));
+    else
+      Extracts.push_back(Builder.buildUndef(EltTy).getReg(0));
+  }
+
+  if (Extracts.size() == 1)
+    Builder.buildCopy(MI.getOperand(0).getReg(), Extracts[0]);
+  else
+    Builder.buildBuildVector(MI.getOperand(0).getReg(), Extracts);
+  MI.eraseFromParent();
+}
+
 bool CombinerHelper::matchCombineShuffleConcat(
     MachineInstr &MI, SmallVector<Register> &Ops) const {
   ArrayRef<int> Mask = MI.getOperand(3).getShuffleMask();

@@ -230,6 +230,14 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 #### C++2c Feature Support
 
+- `#embed` ([P1967R14](https://wg21.link/P1967R14)) is no longer diagnosed as
+  an extension in C++26 mode. In earlier C++ language modes, the directive is
+  now diagnosed as a C++26 extension under `-Wc++26-extensions` (previously it
+  was diagnosed as a Clang extension under `-Wc23-extensions`), and a new
+  `-Wpre-c++26-compat` warning is available in C++26 mode. The
+  `__cpp_pp_embed` feature-test macro is not yet defined because of known
+  issues in the implementation.
+
 - Added `__builtin_type_order` for compatibility with GCC as part of the
   implementation of [P2830R10](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p2830r10.html) (Constexpr Type Ordering).
 
@@ -809,6 +817,7 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 #### Bug Fixes to Compiler Builtins
 
+- Dropped invalid ``constexpr`` specifier from ``__builtin_assume_separate_storage``, which is not supported in constexpr evaluation. (#GH225335)
 - Fixed a crash when classifying a call to a builtin with dependent arguments,
   such as when the call is used as an `auto` non-type template argument.
 - Fixed an assertion failure when diagnosing a constant evaluation failure
@@ -871,6 +880,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   `sized_by_or_null` describe the size in bytes rather than a count of elements,
   they are now correctly accepted on such pointers.
 
+- Fixed rejecting valid reference initialization with conversion function templates whose returned type is depending on 
+  template parameters. (#GH226984)
+
 - Fixed a crash when an `address_space` attribute with a dependent argument was
   written after the declarator-id, where it appertains to the declared entity
   rather than to a declarator chunk. (#GH196982, #GH111463)
@@ -911,6 +923,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed an assertion failure when `#embed` was used in the braced initializer
   of an array new-expression, or of an array whose elements are of class type.
   (#GH128985)
+
+- Fixed list-initialization from `#embed` passing only the first embedded
+  element to a constructor, reference, scalar or `auto` deduction. (#GH222796)
 
 - Fixed a bug where top-level CV qualifiers (such as ``const``) were dropped from pointers modified by Microsoft pointer attributes (like ``__ptr32`` and ``__ptr64``) and WebAssembly's ``__funcref``.
 
@@ -999,6 +1014,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 - Fixed a crash issue when a value dependent recovery init appeared in constant
   evaluation context in default constant evaluator.
+
+- Fixed crashes when parsing lambdas containing errors. (#GH175173), (#GH150733), and (#GH170185)
 
 - Fixed a bug where Clang incorrectly required `promise.return_value()` for a
   dependent `co_return` operand that inits to `void`, instead of using

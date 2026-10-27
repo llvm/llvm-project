@@ -819,17 +819,26 @@ func.func @insert_extract_transpose_3d(
 
 // CHECK-LABEL: fold_extracts
 //  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: vector<3x4x5x6xf32>
-func.func @fold_extracts(%a : vector<3x4x5x6xf32>) -> (f32, vector<4x5x6xf32>) {
-  %b = vector.extract %a[0] : vector<4x5x6xf32> from vector<3x4x5x6xf32>
-  %c = vector.extract %b[1, 2] : vector<6xf32> from vector<4x5x6xf32>
-  //  CHECK-NEXT: vector.extract %[[A]][0, 1, 2, 3] : f32 from vector<3x4x5x6xf32>
-  %d = vector.extract %c[3] : f32 from vector<6xf32>
+//  CHECK-SAME:   %[[I:[a-zA-Z0-9]*]]: index
+//  CHECK-SAME:   %[[J:[a-zA-Z0-9]*]]: index
+func.func @fold_extracts(%a : vector<3x4x5x6xf32>, %i : index, %j : index) -> (f32, f32, f32) {
+  // Dynamic position (%i) in the inner extract.
+  %b = vector.extract %a[%i] : vector<4x5x6xf32> from vector<3x4x5x6xf32>
+  //  CHECK-NEXT: vector.extract %[[A]][%[[I]], 1, 2, 3] : f32 from vector<3x4x5x6xf32>
+  %c = vector.extract %b[1, 2, 3] : f32 from vector<4x5x6xf32>
 
-  //  CHECK-NEXT: vector.extract %[[A]][0] : vector<4x5x6xf32> from vector<3x4x5x6xf32>
-  %e = vector.extract %a[0] : vector<4x5x6xf32> from vector<3x4x5x6xf32>
+  // Dynamic position (%j) in the outer extract.
+  %d = vector.extract %a[0, 1] : vector<5x6xf32> from vector<3x4x5x6xf32>
+  //  CHECK-NEXT: vector.extract %[[A]][0, 1, %[[J]], 3] : f32 from vector<3x4x5x6xf32>
+  %e = vector.extract %d[%j, 3] : f32 from vector<5x6xf32>
+
+  // Dynamic positions (%i, %j) in both extracts.
+  %f = vector.extract %a[%i, 1] : vector<5x6xf32> from vector<3x4x5x6xf32>
+  //  CHECK-NEXT: vector.extract %[[A]][%[[I]], 1, %[[J]], 3] : f32 from vector<3x4x5x6xf32>
+  %g = vector.extract %f[%j, 3] : f32 from vector<5x6xf32>
 
   //  CHECK-NEXT: return
-  return %d, %e : f32, vector<4x5x6xf32>
+  return %c, %e, %g : f32, f32, f32
 }
 
 // -----
@@ -2778,18 +2787,6 @@ func.func @extract_insert_chain(%a: vector<2x16xf32>, %b: vector<12x8x16xf32>, %
     : vector<2x16xf32> into vector<12x8x16xf32>
   %2 = vector.extract %1[4, 2] : vector<16xf32> from vector<12x8x16xf32>
   return %2 : vector<16xf32>
-}
-
-// -----
-
-// CHECK-LABEL: extract_from_extract_chain_should_not_fold_dynamic_extracts
-//  CHECK-SAME: (%[[VEC:.*]]: vector<2x4xf32>, %[[IDX:.*]]: index)
-//       CHECK: %[[A:.*]] = vector.extract %[[VEC]][%[[IDX]]] : vector<4xf32> from vector<2x4xf32>
-//       CHECK: %[[B:.*]] = vector.extract %[[A]][1] : f32 from vector<4xf32>
-func.func @extract_from_extract_chain_should_not_fold_dynamic_extracts(%v: vector<2x4xf32>, %index: index) -> f32 {
-  %0 = vector.extract %v[%index] : vector<4xf32> from vector<2x4xf32>
-  %1 = vector.extract %0[1] : f32 from vector<4xf32>
-  return %1 : f32
 }
 
 // -----

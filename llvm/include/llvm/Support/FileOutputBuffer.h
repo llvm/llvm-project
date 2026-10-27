@@ -32,8 +32,9 @@ public:
     /// Set the 'x' bit on the resulting file.
     F_executable = 1,
 
-    /// Use mmap for in-memory file buffer.
-    F_mmap = 2,
+    /// Build the output in an anonymous memory buffer and write it to the file
+    /// on commit() instead of mapping the file.
+    F_in_memory = 2,
   };
 
   /// Factory method to create an OutputBuffer object which manages a read/write

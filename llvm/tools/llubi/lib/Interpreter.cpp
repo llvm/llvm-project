@@ -967,6 +967,61 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     return Ctx.fromBytes(Bytes, RetTy);
   }
 
+  /// Implements llvm.masked.load, llvm.masked.expandload and
+  /// llvm.masked.store. For loads, \p Data holds the pass-through values and
+  /// is updated with the loaded lanes; for stores, it holds the values to
+  /// store.
+  AnyValue callMaskedLoadStoreIntrinsic(CallBase &CB, const AnyValue &Ptr,
+                                        const AnyValue &Mask, AnyValue Data) {
+    const bool IsStore = CB.getIntrinsicID() == Intrinsic::masked_store;
+    StringRef IntrinsicName = Intrinsic::getBaseName(CB.getIntrinsicID());
+    Type *ElemTy = (IsStore ? CB.getArgOperand(0)->getType() : CB.getType())
+                       ->getScalarType();
+    // TODO: Support element types that are not a whole number of bytes.
+    if (!DL.typeSizeEqualsStoreSize(ElemTy)) {
+      reportError() << IntrinsicName << " with element type " << *ElemTy
+                    << " is not supported.";
+      return AnyValue();
+    }
+
+    const uint64_t AccessSize = Ctx.getEffectiveTypeStoreSize(ElemTy);
+    const unsigned IndexBW =
+        DL.getIndexTypeSizeInBits(CB.getArgOperand(IsStore ? 1 : 0)->getType());
+    AnyValue LanePtr = Ptr;
+    GEPNoWrapFlags Flags = GEPNoWrapFlags::none();
+
+    bool IsExpandLoad = CB.getIntrinsicID() == Intrinsic::masked_expandload;
+
+    for (auto [I, Lane] : enumerate(Data.asAggregate())) {
+      AnyValue AccumulatedOffset = AnyValue::poison();
+      BooleanKind MaskLane = getMaskLane(Mask, I);
+
+      if (MaskLane == BooleanKind::Poison) {
+        reportImmediateUB() << "Poison mask lane in " << IntrinsicName << '.';
+        return AnyValue();
+      }
+
+      assert(MaskLane == BooleanKind::True || MaskLane == BooleanKind::False);
+
+      if (MaskLane == BooleanKind::True) {
+        if (IsStore)
+          store(LanePtr, Align(1), Lane, ElemTy);
+        else
+          Lane = load(LanePtr, Align(1), ElemTy, /*NoUndef=*/false);
+        // The first enabled base pointer may not be inbounds, but pointers
+        // after that must be inbounds.
+        Flags = GEPNoWrapFlags::inBounds();
+      }
+
+      if (!IsExpandLoad || MaskLane == BooleanKind::True)
+        LanePtr = Ctx.computeScaledPtrAdd(LanePtr, APInt(IndexBW, 1),
+                                          APInt(IndexBW, AccessSize), Flags,
+                                          AccumulatedOffset);
+    }
+
+    return IsStore ? AnyValue() : Data;
+  }
+
 public:
   InstExecutor(Context &C, EventHandler &H, Function &F,
                ArrayRef<AnyValue> Args, AnyValue &RetVal)
@@ -1839,6 +1894,11 @@ public:
       assert(!getSpeculativeLoadOracle(CB) &&
              "oracle form must be handled earlier");
       return callSpeculativeLoadIntrinsic(CB, Args[0], Args[2]);
+    case Intrinsic::masked_load:
+    case Intrinsic::masked_expandload:
+      return callMaskedLoadStoreIntrinsic(CB, Args[0], Args[1], Args[2]);
+    case Intrinsic::masked_store:
+      return callMaskedLoadStoreIntrinsic(CB, Args[1], Args[2], Args[0]);
     case Intrinsic::experimental_noalias_scope_decl:
       // FIXME: Not implemented yet. Currently it acts as a noop.
       return AnyValue();

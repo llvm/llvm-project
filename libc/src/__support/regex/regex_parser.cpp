@@ -23,6 +23,7 @@
 #include "src/__support/error_or.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/regex/regex_ast.h"
+#include "src/__support/regex/regex_charclass.h"
 #include "src/__support/regex/regex_expr_pool.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -52,16 +53,113 @@ constexpr bool is_unimplemented_ere_escape(char c) {
   case 'Z':
   case '`':
   case '\'':
-  case 'w':
-  case 'W':
-  case 's':
-  case 'S':
-  case 'd':
-  case 'D':
     return true;
   default:
     return false;
   }
+}
+
+// Parses a single collating element [[.c.]] or equivalence class [[=c=]].
+ErrorOr<uint8_t> parse_coll_elem(cpp::string_view &rem) {
+  cpp::string_view close_delim = rem.starts_with("[.") ? ".]" : "=]";
+  rem.remove_prefix(2);
+  // TODO: Adopt cpp::string_view::find once implemented in
+  // src/__support/CPP/string_view.h.
+  size_t delim_pos = 0;
+  while (delim_pos + 2 <= rem.size() &&
+         !rem.substr(delim_pos).starts_with(close_delim))
+    ++delim_pos;
+  if (delim_pos + 2 > rem.size())
+    return Error(REG_EBRACK);
+  cpp::string_view elem = rem.substr(0, delim_pos);
+  rem.remove_prefix(delim_pos + 2);
+  if (elem.size() == 1)
+    return static_cast<uint8_t>(elem.front());
+  if (elem == "one")
+    return static_cast<uint8_t>('1');
+  return Error(REG_ECOLLATE);
+}
+
+// Parses a single bracket expression item (collating element or single byte).
+ErrorOr<uint8_t> parse_bracket_elem(cpp::string_view &rem) {
+  if (rem.starts_with("[.") || rem.starts_with("[="))
+    return parse_coll_elem(rem);
+  uint8_t c = static_cast<uint8_t>(rem.front());
+  rem.remove_prefix(1);
+  return c;
+}
+
+// Parses a POSIX bracket expression [...], returning a ByteSet node.
+ErrorOr<ExprId> parse_bracket_expr(cpp::string_view &rem, int cflags,
+                                   ExprPool &pool) {
+  bool negate = false;
+  if (rem.starts_with('^')) {
+    negate = true;
+    rem.remove_prefix(1);
+  }
+
+  ByteSet bs;
+  bool first = true;
+  while (!rem.empty()) {
+    if (rem.starts_with(']') && !first) {
+      rem.remove_prefix(1);
+      if (negate) {
+        bs.flip();
+        bs.reset(0);
+        if (cflags & REG_NEWLINE)
+          bs.reset('\n');
+      }
+      return pool.make_byte_set(bs);
+    }
+    first = false;
+
+    if (rem.starts_with("[:")) {
+      rem.remove_prefix(2);
+      // TODO: Adopt cpp::string_view::find once implemented in
+      // src/__support/CPP/string_view.h.
+      size_t delim_pos = 0;
+      while (delim_pos + 2 <= rem.size() &&
+             !rem.substr(delim_pos).starts_with(":]"))
+        ++delim_pos;
+      if (delim_pos + 2 > rem.size())
+        return Error(REG_EBRACK);
+      cpp::string_view name = rem.substr(0, delim_pos);
+      rem.remove_prefix(delim_pos + 2);
+      if (name == "<" || name == ">")
+        return Error(REG_BADPAT);
+      cpp::optional<ByteSet> opt = lookup_posix_class(name);
+      if (!opt.has_value())
+        return Error(REG_ECTYPE);
+      bs |= *opt;
+      if (rem.starts_with('-') && !rem.starts_with("-]"))
+        return Error(REG_ERANGE);
+      continue;
+    }
+
+    ErrorOr<uint8_t> c1 = parse_bracket_elem(rem);
+    if (!c1.has_value())
+      return Error(c1.error());
+
+    if (rem.starts_with('-') && !rem.starts_with("-]")) {
+      rem.remove_prefix(1);
+      if (rem.empty())
+        return Error(REG_ERANGE);
+      if (rem.starts_with("[:"))
+        return Error(REG_ERANGE);
+      ErrorOr<uint8_t> c2 = parse_bracket_elem(rem);
+      if (!c2.has_value())
+        return Error(c2.error());
+      if (*c1 > *c2)
+        return Error(REG_ERANGE);
+      bs.set_range(*c1, *c2);
+      if (rem.starts_with('-') && !rem.starts_with("-]"))
+        return Error(REG_ERANGE);
+    } else {
+      bs.set(*c1);
+    }
+  }
+
+  return Error(REG_EBRACK);
 }
 
 // Parses a single ERE atom and an optional trailing '*' quantifier.
@@ -77,9 +175,35 @@ ErrorOr<ExprId> parse_quantified_atom(cpp::string_view &rem, int cflags,
       return Error(REG_EESCAPE);
     c = rem.front();
     rem.remove_prefix(1);
-    if (is_unimplemented_ere_escape(c))
-      return Error(REG_BADPAT);
-    atom = pool.make_lit(c);
+    switch (c) {
+    case 'd':
+    case 's':
+    case 'w': {
+      const ByteSet bs = (c == 'd')   ? digit_class_set()
+                         : (c == 's') ? space_class_set()
+                                      : word_class_set();
+      atom = pool.make_byte_set(bs);
+      break;
+    }
+    case 'D':
+    case 'S':
+    case 'W': {
+      ByteSet bs = (c == 'D')   ? digit_class_set()
+                   : (c == 'S') ? space_class_set()
+                                : word_class_set();
+      bs.flip();
+      bs.reset(0);
+      if (cflags & REG_NEWLINE)
+        bs.reset('\n');
+      atom = pool.make_byte_set(bs);
+      break;
+    }
+    default:
+      if (is_unimplemented_ere_escape(c))
+        return Error(REG_BADPAT);
+      atom = pool.make_lit(c);
+      break;
+    }
     break;
   }
   case '.': {
@@ -112,11 +236,13 @@ ErrorOr<ExprId> parse_quantified_atom(cpp::string_view &rem, int cflags,
     if (!rem.empty() && rem.front() >= '0' && rem.front() <= '9')
       return Error(REG_BADRPT);
     return Error(REG_BADPAT);
+  case '[':
+    atom = parse_bracket_expr(rem, cflags, pool);
+    break;
   // TODO: Wire ERE metacharacters as each operator is implemented in
   // subsequent patches.
   case '(':
   case ')':
-  case '[':
   case '|':
     return Error(REG_BADPAT);
   default:

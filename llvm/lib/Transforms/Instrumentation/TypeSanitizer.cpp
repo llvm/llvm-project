@@ -966,8 +966,7 @@ PreservedAnalyses TypeSanitizerPass::run(Module &M,
                                           kTysanInitName, /*InitArgTypes=*/{},
                                           /*InitArgs=*/{});
 
-  const InstrumentationOptions &Opts =
-      M.getContext().getLibraryOptions().get<InstrumentationOptions>();
+  const InstrumentationOptions &Opts = getInstrumentationOptions(M);
   TypeSanitizer TySan(Opts, M);
   TySan.instrumentGlobals(M);
   appendToGlobalCtors(M, TysanCtorFunction, 0);
