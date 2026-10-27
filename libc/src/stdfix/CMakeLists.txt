@@ -106,7 +106,7 @@ foreach(suffix IN ITEMS r lr k lk ur ulr uk ulk)
   )
 endforeach()
 
-foreach(suffix IN ITEMS k)
+foreach(suffix IN ITEMS r lr k lk ur ulr uk ulk)
   add_entrypoint_object(
     muli${suffix}
     HDRS
