@@ -15299,6 +15299,8 @@ static SDValue PerformLegalizedVECTOR_DEINTERLEAVECombine(
   }
 
   LoadSDNode *BaseLoad = Loads[0];
+  if (Subtarget->hasMVEIntegerOps() && BaseLoad->getAlign() < EltBits / 8)
+    return SDValue();
   unsigned Bytes = SubVecTy.getStoreSize().getFixedValue();
   for (auto [Idx, Load] : enumerate(Loads)) {
     if (!DAG.areNonVolatileConsecutiveLoads(Load, BaseLoad, Bytes, Idx))
@@ -15401,6 +15403,8 @@ PerformVECTOR_DEINTERLEAVECombine(SDNode *N,
   auto *Load = dyn_cast<LoadSDNode>(WideVec);
   if (!Load || !Load->hasNUsesOfValue(NumParts, 0) || !Load->isSimple() ||
       !ISD::isNormalLoad(Load) || !Load->getOffset().isUndef())
+    return SDValue();
+  if (Subtarget->hasMVEIntegerOps() && Load->getAlign() < EltBits / 8)
     return SDValue();
 
   static constexpr Intrinsic::ID NEONLoads[] = {Intrinsic::arm_neon_vld2,
