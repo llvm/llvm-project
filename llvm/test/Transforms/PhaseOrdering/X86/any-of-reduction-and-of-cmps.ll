@@ -10,88 +10,95 @@ define i8 @all_in_range(ptr %p, i64 %n) {
 ; CHECK-NEXT:    [[CONT1:%.*]] = icmp sgt i64 [[N]], 0
 ; CHECK-NEXT:    br i1 [[CONT1]], label %[[BODY_PREHEADER:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[BODY_PREHEADER]]:
-; CHECK-NEXT:    [[XTRAITER:%.*]] = and i64 [[N]], 7
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i64 [[N]], 8
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i64 [[N]], 4
 ; CHECK-NEXT:    br i1 [[TMP0]], label %[[BODY_EPIL_PREHEADER:.*]], label %[[BODY_PREHEADER_NEW:.*]]
 ; CHECK:       [[BODY_PREHEADER_NEW]]:
-; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = and i64 [[N]], 9223372036854775800
+; CHECK-NEXT:    [[MIN_ITERS_CHECK4:%.*]] = icmp ult i64 [[N]], 32
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK4]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[XTRAITER:%.*]] = and i64 [[N]], 28
+; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = and i64 [[N]], 9223372036854775776
 ; CHECK-NEXT:    br label %[[BODY:.*]]
 ; CHECK:       [[BODY]]:
-; CHECK-NEXT:    [[I3:%.*]] = phi i64 [ 0, %[[BODY_PREHEADER_NEW]] ], [ [[I_NEXT_7:%.*]], %[[BODY]] ]
-; CHECK-NEXT:    [[FLAG2:%.*]] = phi i8 [ 1, %[[BODY_PREHEADER_NEW]] ], [ [[FLAG_NEXT_7:%.*]], %[[BODY]] ]
-; CHECK-NEXT:    [[NITER:%.*]] = phi i64 [ 0, %[[BODY_PREHEADER_NEW]] ], [ [[NITER_NEXT_7:%.*]], %[[BODY]] ]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[P]], i64 [[I3]]
-; CHECK-NEXT:    [[X:%.*]] = load float, ptr [[GEP]], align 4
-; CHECK-NEXT:    [[LO:%.*]] = fcmp oge float [[X]], 1.000000e+00
-; CHECK-NEXT:    [[HI:%.*]] = fcmp ole float [[X]], 2.000000e+00
-; CHECK-NEXT:    [[IN_RANGE:%.*]] = and i1 [[LO]], [[HI]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[P]], i64 [[I3]]
-; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 4
-; CHECK-NEXT:    [[X_1:%.*]] = load float, ptr [[GEP_1]], align 4
-; CHECK-NEXT:    [[LO_1:%.*]] = fcmp oge float [[X_1]], 1.000000e+00
-; CHECK-NEXT:    [[HI_1:%.*]] = fcmp ole float [[X_1]], 2.000000e+00
-; CHECK-NEXT:    [[IN_RANGE_1:%.*]] = and i1 [[LO_1]], [[HI_1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[P]], i64 [[I3]]
-; CHECK-NEXT:    [[GEP_2:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP2]], i64 8
-; CHECK-NEXT:    [[X_2:%.*]] = load float, ptr [[GEP_2]], align 4
-; CHECK-NEXT:    [[LO_2:%.*]] = fcmp oge float [[X_2]], 1.000000e+00
-; CHECK-NEXT:    [[HI_2:%.*]] = fcmp ole float [[X_2]], 2.000000e+00
-; CHECK-NEXT:    [[IN_RANGE_2:%.*]] = and i1 [[LO_2]], [[HI_2]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[P]], i64 [[I3]]
-; CHECK-NEXT:    [[GEP_3:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP3]], i64 12
-; CHECK-NEXT:    [[X_3:%.*]] = load float, ptr [[GEP_3]], align 4
-; CHECK-NEXT:    [[LO_3:%.*]] = fcmp oge float [[X_3]], 1.000000e+00
-; CHECK-NEXT:    [[HI_3:%.*]] = fcmp ole float [[X_3]], 2.000000e+00
-; CHECK-NEXT:    [[IN_RANGE_3:%.*]] = and i1 [[LO_3]], [[HI_3]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[P]], i64 [[I3]]
-; CHECK-NEXT:    [[GEP_4:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP4]], i64 16
-; CHECK-NEXT:    [[X_4:%.*]] = load float, ptr [[GEP_4]], align 4
-; CHECK-NEXT:    [[LO_4:%.*]] = fcmp oge float [[X_4]], 1.000000e+00
-; CHECK-NEXT:    [[HI_4:%.*]] = fcmp ole float [[X_4]], 2.000000e+00
-; CHECK-NEXT:    [[IN_RANGE_4:%.*]] = and i1 [[LO_4]], [[HI_4]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[P]], i64 [[I3]]
-; CHECK-NEXT:    [[GEP_5:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP5]], i64 20
-; CHECK-NEXT:    [[X_5:%.*]] = load float, ptr [[GEP_5]], align 4
-; CHECK-NEXT:    [[LO_5:%.*]] = fcmp oge float [[X_5]], 1.000000e+00
-; CHECK-NEXT:    [[HI_5:%.*]] = fcmp ole float [[X_5]], 2.000000e+00
-; CHECK-NEXT:    [[IN_RANGE_5:%.*]] = and i1 [[LO_5]], [[HI_5]]
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[P]], i64 [[I3]]
-; CHECK-NEXT:    [[GEP_6:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP6]], i64 24
-; CHECK-NEXT:    [[X_6:%.*]] = load float, ptr [[GEP_6]], align 4
-; CHECK-NEXT:    [[LO_6:%.*]] = fcmp oge float [[X_6]], 1.000000e+00
-; CHECK-NEXT:    [[HI_6:%.*]] = fcmp ole float [[X_6]], 2.000000e+00
-; CHECK-NEXT:    [[IN_RANGE_6:%.*]] = and i1 [[LO_6]], [[HI_6]]
+; CHECK-NEXT:    [[I3:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[NITER_NEXT_7:%.*]], %[[BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <8 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP13:%.*]], %[[BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI5:%.*]] = phi <8 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP14:%.*]], %[[BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI6:%.*]] = phi <8 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP15:%.*]], %[[BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI7:%.*]] = phi <8 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP16:%.*]], %[[BODY]] ]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[P]], i64 [[I3]]
-; CHECK-NEXT:    [[GEP_7:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP7]], i64 28
-; CHECK-NEXT:    [[X_7:%.*]] = load float, ptr [[GEP_7]], align 4
-; CHECK-NEXT:    [[LO_7:%.*]] = fcmp oge float [[X_7]], 1.000000e+00
-; CHECK-NEXT:    [[HI_7:%.*]] = fcmp ole float [[X_7]], 2.000000e+00
-; CHECK-NEXT:    [[IN_RANGE_7:%.*]] = and i1 [[LO_7]], [[HI_7]]
-; CHECK-NEXT:    [[TMP8:%.*]] = select i1 [[IN_RANGE_7]], i1 [[IN_RANGE_6]], i1 false
-; CHECK-NEXT:    [[TMP9:%.*]] = select i1 [[TMP8]], i1 [[IN_RANGE_5]], i1 false
-; CHECK-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], i1 [[IN_RANGE_4]], i1 false
-; CHECK-NEXT:    [[TMP11:%.*]] = select i1 [[TMP10]], i1 [[IN_RANGE_3]], i1 false
-; CHECK-NEXT:    [[TMP12:%.*]] = select i1 [[TMP11]], i1 [[IN_RANGE_2]], i1 false
-; CHECK-NEXT:    [[TMP13:%.*]] = select i1 [[TMP12]], i1 [[IN_RANGE_1]], i1 false
-; CHECK-NEXT:    [[TMP14:%.*]] = select i1 [[TMP13]], i1 [[IN_RANGE]], i1 false
-; CHECK-NEXT:    [[FLAG_NEXT_7]] = select i1 [[TMP14]], i8 [[FLAG2]], i8 0
-; CHECK-NEXT:    [[I_NEXT_7]] = add nuw nsw i64 [[I3]], 8
-; CHECK-NEXT:    [[NITER_NEXT_7]] = add nuw nsw i64 [[NITER]], 8
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP7]], i64 32
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP7]], i64 64
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP7]], i64 96
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x float>, ptr [[TMP7]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD8:%.*]] = load <8 x float>, ptr [[TMP2]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD9:%.*]] = load <8 x float>, ptr [[TMP3]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD10:%.*]] = load <8 x float>, ptr [[TMP4]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = fcmp ult <8 x float> [[WIDE_LOAD]], splat (float 1.000000e+00)
+; CHECK-NEXT:    [[TMP6:%.*]] = fcmp ult <8 x float> [[WIDE_LOAD8]], splat (float 1.000000e+00)
+; CHECK-NEXT:    [[TMP17:%.*]] = fcmp ult <8 x float> [[WIDE_LOAD9]], splat (float 1.000000e+00)
+; CHECK-NEXT:    [[TMP8:%.*]] = fcmp ult <8 x float> [[WIDE_LOAD10]], splat (float 1.000000e+00)
+; CHECK-NEXT:    [[TMP9:%.*]] = fcmp ugt <8 x float> [[WIDE_LOAD]], splat (float 2.000000e+00)
+; CHECK-NEXT:    [[TMP10:%.*]] = fcmp ugt <8 x float> [[WIDE_LOAD8]], splat (float 2.000000e+00)
+; CHECK-NEXT:    [[TMP11:%.*]] = fcmp ugt <8 x float> [[WIDE_LOAD9]], splat (float 2.000000e+00)
+; CHECK-NEXT:    [[TMP12:%.*]] = fcmp ugt <8 x float> [[WIDE_LOAD10]], splat (float 2.000000e+00)
+; CHECK-NEXT:    [[DOTNOT22:%.*]] = or <8 x i1> [[TMP5]], [[TMP9]]
+; CHECK-NEXT:    [[DOTNOT24:%.*]] = or <8 x i1> [[TMP6]], [[TMP10]]
+; CHECK-NEXT:    [[DOTNOT26:%.*]] = or <8 x i1> [[TMP17]], [[TMP11]]
+; CHECK-NEXT:    [[DOTNOT28:%.*]] = or <8 x i1> [[TMP8]], [[TMP12]]
+; CHECK-NEXT:    [[TMP13]] = or <8 x i1> [[VEC_PHI]], [[DOTNOT22]]
+; CHECK-NEXT:    [[TMP14]] = or <8 x i1> [[VEC_PHI5]], [[DOTNOT24]]
+; CHECK-NEXT:    [[TMP15]] = or <8 x i1> [[VEC_PHI6]], [[DOTNOT26]]
+; CHECK-NEXT:    [[TMP16]] = or <8 x i1> [[VEC_PHI7]], [[DOTNOT28]]
+; CHECK-NEXT:    [[NITER_NEXT_7]] = add nuw i64 [[I3]], 32
 ; CHECK-NEXT:    [[NITER_NCMP_7:%.*]] = icmp eq i64 [[NITER_NEXT_7]], [[UNROLL_ITER]]
-; CHECK-NEXT:    br i1 [[NITER_NCMP_7]], label %[[EXIT_LOOPEXIT_UNR_LCSSA:.*]], label %[[BODY]]
+; CHECK-NEXT:    br i1 [[NITER_NCMP_7]], label %[[MIDDLE_BLOCK:.*]], label %[[BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[BIN_RDX:%.*]] = or <8 x i1> [[TMP14]], [[TMP13]]
+; CHECK-NEXT:    [[BIN_RDX11:%.*]] = or <8 x i1> [[TMP15]], [[BIN_RDX]]
+; CHECK-NEXT:    [[BIN_RDX12:%.*]] = or <8 x i1> [[TMP16]], [[BIN_RDX11]]
+; CHECK-NEXT:    [[BIN_RDX12_FR:%.*]] = freeze <8 x i1> [[BIN_RDX12]]
+; CHECK-NEXT:    [[TMP18:%.*]] = bitcast <8 x i1> [[BIN_RDX12_FR]] to i8
+; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i8 [[TMP18]], 0
+; CHECK-NEXT:    [[RDX_SELECT:%.*]] = zext i1 [[DOTNOT]] to i8
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[UNROLL_ITER]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT]], label %[[EXIT_LOOPEXIT_UNR_LCSSA:.*]]
 ; CHECK:       [[EXIT_LOOPEXIT_UNR_LCSSA]]:
 ; CHECK-NEXT:    [[LCMP_MOD_NOT:%.*]] = icmp eq i64 [[XTRAITER]], 0
-; CHECK-NEXT:    br i1 [[LCMP_MOD_NOT]], label %[[EXIT]], label %[[BODY_EPIL_PREHEADER]]
+; CHECK-NEXT:    br i1 [[LCMP_MOD_NOT]], label %[[BODY_EPIL_PREHEADER]], label %[[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
+; CHECK:       [[VEC_EPILOG_PH]]:
+; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[UNROLL_ITER]], %[[EXIT_LOOPEXIT_UNR_LCSSA]] ], [ 0, %[[BODY_PREHEADER_NEW]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i8 [ [[RDX_SELECT]], %[[EXIT_LOOPEXIT_UNR_LCSSA]] ], [ 1, %[[BODY_PREHEADER_NEW]] ]
+; CHECK-NEXT:    [[N_VEC13:%.*]] = and i64 [[N]], 9223372036854775804
+; CHECK-NEXT:    [[TMP19:%.*]] = icmp eq i8 [[BC_MERGE_RDX]], 0
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[TMP19]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
+; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX14:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT17:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI15:%.*]] = phi <4 x i1> [ [[BROADCAST_SPLAT]], %[[VEC_EPILOG_PH]] ], [ [[DOTFR32:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[P]], i64 [[INDEX14]]
+; CHECK-NEXT:    [[WIDE_LOAD16:%.*]] = load <4 x float>, ptr [[TMP20]], align 4
+; CHECK-NEXT:    [[TMP21:%.*]] = fcmp ult <4 x float> [[WIDE_LOAD16]], splat (float 1.000000e+00)
+; CHECK-NEXT:    [[TMP22:%.*]] = fcmp ugt <4 x float> [[WIDE_LOAD16]], splat (float 2.000000e+00)
+; CHECK-NEXT:    [[DOTNOT31:%.*]] = or <4 x i1> [[TMP21]], [[TMP22]]
+; CHECK-NEXT:    [[TMP23:%.*]] = or <4 x i1> [[VEC_PHI15]], [[DOTNOT31]]
+; CHECK-NEXT:    [[DOTFR32]] = freeze <4 x i1> [[TMP23]]
+; CHECK-NEXT:    [[INDEX_NEXT17]] = add nuw i64 [[INDEX14]], 4
+; CHECK-NEXT:    [[TMP24:%.*]] = icmp eq i64 [[INDEX_NEXT17]], [[N_VEC13]]
+; CHECK-NEXT:    br i1 [[TMP24]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP25:%.*]] = bitcast <4 x i1> [[DOTFR32]] to i4
+; CHECK-NEXT:    [[DOTNOT33:%.*]] = icmp eq i4 [[TMP25]], 0
+; CHECK-NEXT:    [[RDX_SELECT18:%.*]] = zext i1 [[DOTNOT33]] to i8
+; CHECK-NEXT:    [[CMP_N19:%.*]] = icmp eq i64 [[N]], [[N_VEC13]]
+; CHECK-NEXT:    br i1 [[CMP_N19]], label %[[EXIT]], label %[[BODY_EPIL_PREHEADER]]
 ; CHECK:       [[BODY_EPIL_PREHEADER]]:
-; CHECK-NEXT:    [[I3_EPIL_INIT:%.*]] = phi i64 [ 0, %[[BODY_PREHEADER]] ], [ [[I_NEXT_7]], %[[EXIT_LOOPEXIT_UNR_LCSSA]] ]
-; CHECK-NEXT:    [[FLAG2_EPIL_INIT:%.*]] = phi i8 [ 1, %[[BODY_PREHEADER]] ], [ [[FLAG_NEXT_7]], %[[EXIT_LOOPEXIT_UNR_LCSSA]] ]
-; CHECK-NEXT:    [[LCMP_MOD5:%.*]] = icmp ne i64 [[XTRAITER]], 0
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[LCMP_MOD5]])
+; CHECK-NEXT:    [[I3_PH:%.*]] = phi i64 [ 0, %[[BODY_PREHEADER]] ], [ [[UNROLL_ITER]], %[[EXIT_LOOPEXIT_UNR_LCSSA]] ], [ [[N_VEC13]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[FLAG2_PH:%.*]] = phi i8 [ 1, %[[BODY_PREHEADER]] ], [ [[RDX_SELECT]], %[[EXIT_LOOPEXIT_UNR_LCSSA]] ], [ [[RDX_SELECT18]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    br label %[[BODY_EPIL:.*]]
 ; CHECK:       [[BODY_EPIL]]:
-; CHECK-NEXT:    [[I3_EPIL:%.*]] = phi i64 [ [[I_NEXT_EPIL:%.*]], %[[BODY_EPIL]] ], [ [[I3_EPIL_INIT]], %[[BODY_EPIL_PREHEADER]] ]
-; CHECK-NEXT:    [[FLAG2_EPIL:%.*]] = phi i8 [ [[FLAG_NEXT_EPIL:%.*]], %[[BODY_EPIL]] ], [ [[FLAG2_EPIL_INIT]], %[[BODY_EPIL_PREHEADER]] ]
-; CHECK-NEXT:    [[EPIL_ITER:%.*]] = phi i64 [ [[EPIL_ITER_NEXT:%.*]], %[[BODY_EPIL]] ], [ 0, %[[BODY_EPIL_PREHEADER]] ]
+; CHECK-NEXT:    [[I3_EPIL:%.*]] = phi i64 [ [[I_NEXT_EPIL:%.*]], %[[BODY_EPIL]] ], [ [[I3_PH]], %[[BODY_EPIL_PREHEADER]] ]
+; CHECK-NEXT:    [[FLAG2_EPIL:%.*]] = phi i8 [ [[FLAG_NEXT_EPIL:%.*]], %[[BODY_EPIL]] ], [ [[FLAG2_PH]], %[[BODY_EPIL_PREHEADER]] ]
 ; CHECK-NEXT:    [[GEP_EPIL:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[P]], i64 [[I3_EPIL]]
 ; CHECK-NEXT:    [[X_EPIL:%.*]] = load float, ptr [[GEP_EPIL]], align 4
 ; CHECK-NEXT:    [[LO_EPIL:%.*]] = fcmp oge float [[X_EPIL]], 1.000000e+00
@@ -99,11 +106,10 @@ define i8 @all_in_range(ptr %p, i64 %n) {
 ; CHECK-NEXT:    [[IN_RANGE_EPIL:%.*]] = and i1 [[LO_EPIL]], [[HI_EPIL]]
 ; CHECK-NEXT:    [[FLAG_NEXT_EPIL]] = select i1 [[IN_RANGE_EPIL]], i8 [[FLAG2_EPIL]], i8 0
 ; CHECK-NEXT:    [[I_NEXT_EPIL]] = add nuw nsw i64 [[I3_EPIL]], 1
-; CHECK-NEXT:    [[EPIL_ITER_NEXT]] = add i64 [[EPIL_ITER]], 1
-; CHECK-NEXT:    [[EPIL_ITER_CMP_NOT:%.*]] = icmp eq i64 [[EPIL_ITER_NEXT]], [[XTRAITER]]
-; CHECK-NEXT:    br i1 [[EPIL_ITER_CMP_NOT]], label %[[EXIT]], label %[[BODY_EPIL]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[I_NEXT_EPIL]], [[N]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[BODY_EPIL]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[FLAG_LCSSA:%.*]] = phi i8 [ 1, %[[ENTRY]] ], [ [[FLAG_NEXT_7]], %[[EXIT_LOOPEXIT_UNR_LCSSA]] ], [ [[FLAG_NEXT_EPIL]], %[[BODY_EPIL]] ]
+; CHECK-NEXT:    [[FLAG_LCSSA:%.*]] = phi i8 [ 1, %[[ENTRY]] ], [ [[RDX_SELECT18]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[RDX_SELECT]], %[[MIDDLE_BLOCK]] ], [ [[FLAG_NEXT_EPIL]], %[[BODY_EPIL]] ]
 ; CHECK-NEXT:    ret i8 [[FLAG_LCSSA]]
 ;
 entry:
@@ -131,6 +137,10 @@ exit:
   ret i8 %flag
 }
 ;.
-; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]]}
-; CHECK: [[META1]] = !{!"llvm.loop.unroll.disable"}
+; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
+; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
+; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK: [[PROF3]] = !{!"branch_weights", i32 4, i32 28}
+; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
+; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META2]], [[META1]]}
 ;.
