@@ -2774,6 +2774,16 @@ add_header_library(
 )
 
 add_header_library(
+  copysignf80
+  HDRS
+    copysignf80.h
+  DEPENDS
+    libc.src.__support.FPUtil.float80
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   copysignf16
   HDRS
     copysignf16.h
@@ -3355,6 +3365,16 @@ add_header_library(
     fabsf128.h
   DEPENDS
     libc.src.__support.FPUtil.float128
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  fabsf80
+  HDRS
+    fabsf80.h
+  DEPENDS
+    libc.src.__support.FPUtil.float80
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.macros.config
 )
