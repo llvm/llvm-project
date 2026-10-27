@@ -1065,7 +1065,7 @@ void WalkAST::checkUncheckedReturnValue(CallExpr *CE) {
   SmallString<256> buf2;
   llvm::raw_svector_ostream os2(buf2);
   os2 << "The return value from the call to '" << *FD
-      << "' is not checked. If an error occurs in '" << *FD
+      << "' is not checked; if an error occurs in '" << *FD
       << "', the following code may execute with unexpected privileges";
 
   PathDiagnosticLocation CELoc =

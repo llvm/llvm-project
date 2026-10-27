@@ -100,8 +100,8 @@ void abort(void);
 
 void test_setuid(void) 
 {
-  setuid(2); // expected-warning{{The return value from the call to 'setuid' is not checked. If an error occurs in 'setuid', the following code may execute with unexpected privileges}}
-  setuid(0); // expected-warning{{The return value from the call to 'setuid' is not checked. If an error occurs in 'setuid', the following code may execute with unexpected privileges}}
+  setuid(2); // expected-warning{{The return value from the call to 'setuid' is not checked; if an error occurs in 'setuid', the following code may execute with unexpected privileges}}
+  setuid(0); // expected-warning{{The return value from the call to 'setuid' is not checked; if an error occurs in 'setuid', the following code may execute with unexpected privileges}}
   if (setuid (2) != 0)
     abort();
 
@@ -113,8 +113,8 @@ void test_setuid(void)
 
   check(setuid (2)); // no-warning
 
-  setreuid(2,2); // expected-warning{{The return value from the call to 'setreuid' is not checked. If an error occurs in 'setreuid', the following code may execute with unexpected privileges}}
-  setregid(2,2); // expected-warning{{The return value from the call to 'setregid' is not checked. If an error occurs in 'setregid', the following code may execute with unexpected privileges}}
+  setreuid(2,2); // expected-warning{{The return value from the call to 'setreuid' is not checked; if an error occurs in 'setreuid', the following code may execute with unexpected privileges}}
+  setregid(2,2); // expected-warning{{The return value from the call to 'setregid' is not checked; if an error occurs in 'setregid', the following code may execute with unexpected privileges}}
 }
 
 // CWE-338: Use of cryptographically weak prng
