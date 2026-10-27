@@ -844,3 +844,564 @@ DWARF:
   Symtab *cached_symtab = symbol_file->GetSymtab(/*can_create=*/false);
   ASSERT_EQ(symtab, cached_symtab);
 }
+
+TEST_F(SymtabTest, TestSymbolTableRelativeFileAddresses) {
+  // Section-relative in a serialized symbol table are expressed as
+  // offsets from the base file address of the binary.  It is possible
+  // for a binary to be zero-address offset initially, but then included
+  // in a Darwin shared cache with all of the segment and file addresses
+  // slid to a non-zero value -- with the same filename and UUID.  To make
+  // the serialized symtab work for both, we must make the file addresses
+  // relative ot the file base.
+  //
+  // static int c = 10;
+  // int d = 20;
+  // int foo() { return c; }
+  // int bar() { return foo() + d; }
+  // int main() { int var = bar() + c; return var; }
+  //
+  // clang -dynamiclib -mmacosx-version-min=11 -o liba.dylib a.c
+  // obj2yaml liba.dylib > zero.yaml
+  // clang -image_base 0x3c000 -dynamiclib -mmacosx-version-min=11 -o liba.dylib
+  // a.c obj2yaml liba.dylib > nonzero.yaml
+  //
+  // hand-edit the UUID from one of them to match the other.
+  // Any macOS version higher than 11 results in chained fixups in the binary,
+  // and you can't compile the dylib to a non-zero offset with chained fixups.
+  //
+  // These two YAMLs are below are then serialized into a buffer, and we
+  // compare the buffers -- they must be byte-by-byte identical.
+
+  auto ExpectedFileZeroOffset = TestFile::fromYaml(R"(
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x100000C
+  cpusubtype:      0x0
+  filetype:        0x6
+  ncmds:           14
+  sizeofcmds:      824
+  flags:           0x100085
+  reserved:        0x0
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         232
+    segname:         __TEXT
+    vmaddr:          0
+    vmsize:          16384
+    fileoff:         0
+    filesize:        16384
+    maxprot:         5
+    initprot:        5
+    nsects:          2
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x388
+        size:            96
+        offset:          0x388
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         28000090000540B9C0035FD6FD7BBFA9FD030091FBFFFF9728000090080140B90000080BFD7BC1A8C0035FD6FF8300D1FD7B01A9FD430091BFC31FB8F4FFFF9728000090080540B90800080BE80B00B9E00B40B9FD7B41A9FF830091C0035FD6
+      - sectname:        __unwind_info
+        segname:         __TEXT
+        addr:            0x3E8
+        size:            96
+        offset:          0x3E8
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         010000001C000000000000001C000000000000001C00000002000000880300004000000040000000E90300000000000040000000000000000000000000000000030000000C00020014000200000000000C000001000000020000000400000000
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         152
+    segname:         __DATA
+    vmaddr:          16384
+    vmsize:          16384
+    fileoff:         16384
+    filesize:        16384
+    maxprot:         3
+    initprot:        3
+    nsects:          1
+    flags:           0
+    Sections:
+      - sectname:        __data
+        segname:         __DATA
+        addr:            0x4000
+        size:            8
+        offset:          0x4000
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         140000000A000000
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __LINKEDIT
+    vmaddr:          32768
+    vmsize:          16384
+    fileoff:         32768
+    filesize:        584
+    maxprot:         1
+    initprot:        1
+    nsects:          0
+    flags:           0
+  - cmd:             LC_ID_DYLIB
+    cmdsize:         40
+    dylib:
+      name:            24
+      timestamp:       1
+      current_version: 0
+      compatibility_version: 0
+    Content:         liba.dylib
+    ZeroPadBytes:    6
+  - cmd:             LC_DYLD_INFO_ONLY
+    cmdsize:         48
+    rebase_off:      0
+    rebase_size:     0
+    bind_off:        0
+    bind_size:       0
+    weak_bind_off:   0
+    weak_bind_size:  0
+    lazy_bind_off:   0
+    lazy_bind_size:  0
+    export_off:      32768
+    export_size:     56
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          32832
+    nsyms:           5
+    stroff:          32912
+    strsize:         24
+  - cmd:             LC_DYSYMTAB
+    cmdsize:         80
+    ilocalsym:       0
+    nlocalsym:       1
+    iextdefsym:      1
+    nextdefsym:      4
+    iundefsym:       5
+    nundefsym:       0
+    tocoff:          0
+    ntoc:            0
+    modtaboff:       0
+    nmodtab:         0
+    extrefsymoff:    0
+    nextrefsyms:     0
+    indirectsymoff:  0
+    nindirectsyms:   0
+    extreloff:       0
+    nextrel:         0
+    locreloff:       0
+    nlocrel:         0
+  - cmd:             LC_UUID
+    cmdsize:         24
+    uuid:            9927BB37-87F9-3AAA-B3C2-98C5C531CBD5
+  - cmd:             LC_BUILD_VERSION
+    cmdsize:         32
+    platform:        1
+    minos:           720896
+    sdk:             1769472
+    ntools:          1
+    Tools:
+      - tool:            3
+        version:         1771897088
+  - cmd:             LC_SOURCE_VERSION
+    cmdsize:         16
+    version:         0
+  - cmd:             LC_LOAD_DYLIB
+    cmdsize:         56
+    dylib:
+      name:            24
+      timestamp:       2
+      current_version: 89063424
+      compatibility_version: 65536
+    Content:         '/usr/lib/libSystem.B.dylib'
+    ZeroPadBytes:    6
+  - cmd:             LC_FUNCTION_STARTS
+    cmdsize:         16
+    dataoff:         32824
+    datasize:        8
+  - cmd:             LC_DATA_IN_CODE
+    cmdsize:         16
+    dataoff:         32832
+    datasize:        0
+  - cmd:             LC_CODE_SIGNATURE
+    cmdsize:         16
+    dataoff:         32944
+    datasize:        408
+LinkEditData:
+  ExportTrie:
+    TerminalSize:    0
+    NodeOffset:      0
+    Name:            ''
+    Flags:           0x0
+    Address:         0x0
+    Other:           0x0
+    ImportName:      ''
+    Children:
+      - TerminalSize:    0
+        NodeOffset:      30
+        Name:            _
+        Flags:           0x0
+        Address:         0x0
+        Other:           0x0
+        ImportName:      ''
+        Children:
+          - TerminalSize:    3
+            NodeOffset:      9
+            Name:            bar
+            Flags:           0x0
+            Address:         0x394
+            Other:           0x0
+            ImportName:      ''
+          - TerminalSize:    4
+            NodeOffset:      14
+            Name:            d
+            Flags:           0x0
+            Address:         0x4000
+            Other:           0x0
+            ImportName:      ''
+          - TerminalSize:    3
+            NodeOffset:      20
+            Name:            foo
+            Flags:           0x0
+            Address:         0x388
+            Other:           0x0
+            ImportName:      ''
+          - TerminalSize:    3
+            NodeOffset:      25
+            Name:            main
+            Flags:           0x0
+            Address:         0x3B4
+            Other:           0x0
+            ImportName:      ''
+  NameList:
+    - n_strx:          21
+      n_type:          0xE
+      n_sect:          3
+      n_desc:          0
+      n_value:         16388
+    - n_strx:          2
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         916
+    - n_strx:          7
+      n_type:          0xF
+      n_sect:          3
+      n_desc:          0
+      n_value:         16384
+    - n_strx:          10
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         904
+    - n_strx:          15
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         948
+  StringTable:
+    - ' '
+    - _bar
+    - _d
+    - _foo
+    - _main
+    - _c
+  FunctionStarts:  [ 0x388, 0x394, 0x3B4 ]
+...
+)");
+
+  auto ExpectedFileNonZeroOffset = TestFile::fromYaml(R"(
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x100000C
+  cpusubtype:      0x0
+  filetype:        0x6
+  ncmds:           14
+  sizeofcmds:      824
+  flags:           0x100085
+  reserved:        0x0
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         232
+    segname:         __TEXT
+    vmaddr:          245760
+    vmsize:          16384
+    fileoff:         0
+    filesize:        16384
+    maxprot:         5
+    initprot:        5
+    nsects:          2
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x3C388
+        size:            96
+        offset:          0x388
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         28000090000540B9C0035FD6FD7BBFA9FD030091FBFFFF9728000090080140B90000080BFD7BC1A8C0035FD6FF8300D1FD7B01A9FD430091BFC31FB8F4FFFF9728000090080540B90800080BE80B00B9E00B40B9FD7B41A9FF830091C0035FD6
+      - sectname:        __unwind_info
+        segname:         __TEXT
+        addr:            0x3C3E8
+        size:            96
+        offset:          0x3E8
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         010000001C000000000000001C000000000000001C00000002000000880300004000000040000000E90300000000000040000000000000000000000000000000030000000C00020014000200000000000C000001000000020000000400000000
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         152
+    segname:         __DATA
+    vmaddr:          262144
+    vmsize:          16384
+    fileoff:         16384
+    filesize:        16384
+    maxprot:         3
+    initprot:        3
+    nsects:          1
+    flags:           0
+    Sections:
+      - sectname:        __data
+        segname:         __DATA
+        addr:            0x40000
+        size:            8
+        offset:          0x4000
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         140000000A000000
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __LINKEDIT
+    vmaddr:          278528
+    vmsize:          16384
+    fileoff:         32768
+    filesize:        584
+    maxprot:         1
+    initprot:        1
+    nsects:          0
+    flags:           0
+  - cmd:             LC_ID_DYLIB
+    cmdsize:         40
+    dylib:
+      name:            24
+      timestamp:       1
+      current_version: 0
+      compatibility_version: 0
+    Content:         liba.dylib
+    ZeroPadBytes:    6
+  - cmd:             LC_DYLD_INFO_ONLY
+    cmdsize:         48
+    rebase_off:      0
+    rebase_size:     0
+    bind_off:        0
+    bind_size:       0
+    weak_bind_off:   0
+    weak_bind_size:  0
+    lazy_bind_off:   0
+    lazy_bind_size:  0
+    export_off:      32768
+    export_size:     56
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          32832
+    nsyms:           5
+    stroff:          32912
+    strsize:         24
+  - cmd:             LC_DYSYMTAB
+    cmdsize:         80
+    ilocalsym:       0
+    nlocalsym:       1
+    iextdefsym:      1
+    nextdefsym:      4
+    iundefsym:       5
+    nundefsym:       0
+    tocoff:          0
+    ntoc:            0
+    modtaboff:       0
+    nmodtab:         0
+    extrefsymoff:    0
+    nextrefsyms:     0
+    indirectsymoff:  0
+    nindirectsyms:   0
+    extreloff:       0
+    nextrel:         0
+    locreloff:       0
+    nlocrel:         0
+  - cmd:             LC_UUID
+    cmdsize:         24
+    uuid:            9927BB37-87F9-3AAA-B3C2-98C5C531CBD5
+  - cmd:             LC_BUILD_VERSION
+    cmdsize:         32
+    platform:        1
+    minos:           720896
+    sdk:             1769472
+    ntools:          1
+    Tools:
+      - tool:            3
+        version:         1771897088
+  - cmd:             LC_SOURCE_VERSION
+    cmdsize:         16
+    version:         0
+  - cmd:             LC_LOAD_DYLIB
+    cmdsize:         56
+    dylib:
+      name:            24
+      timestamp:       2
+      current_version: 89063424
+      compatibility_version: 65536
+    Content:         '/usr/lib/libSystem.B.dylib'
+    ZeroPadBytes:    6
+  - cmd:             LC_FUNCTION_STARTS
+    cmdsize:         16
+    dataoff:         32824
+    datasize:        8
+  - cmd:             LC_DATA_IN_CODE
+    cmdsize:         16
+    dataoff:         32832
+    datasize:        0
+  - cmd:             LC_CODE_SIGNATURE
+    cmdsize:         16
+    dataoff:         32944
+    datasize:        408
+LinkEditData:
+  ExportTrie:
+    TerminalSize:    0
+    NodeOffset:      0
+    Name:            ''
+    Flags:           0x0
+    Address:         0x0
+    Other:           0x0
+    ImportName:      ''
+    Children:
+      - TerminalSize:    0
+        NodeOffset:      30
+        Name:            _
+        Flags:           0x0
+        Address:         0x0
+        Other:           0x0
+        ImportName:      ''
+        Children:
+          - TerminalSize:    3
+            NodeOffset:      9
+            Name:            bar
+            Flags:           0x0
+            Address:         0x394
+            Other:           0x0
+            ImportName:      ''
+          - TerminalSize:    4
+            NodeOffset:      14
+            Name:            d
+            Flags:           0x0
+            Address:         0x4000
+            Other:           0x0
+            ImportName:      ''
+          - TerminalSize:    3
+            NodeOffset:      20
+            Name:            foo
+            Flags:           0x0
+            Address:         0x388
+            Other:           0x0
+            ImportName:      ''
+          - TerminalSize:    3
+            NodeOffset:      25
+            Name:            main
+            Flags:           0x0
+            Address:         0x3B4
+            Other:           0x0
+            ImportName:      ''
+  NameList:
+    - n_strx:          21
+      n_type:          0xE
+      n_sect:          3
+      n_desc:          0
+      n_value:         262148
+    - n_strx:          2
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         246676
+    - n_strx:          7
+      n_type:          0xF
+      n_sect:          3
+      n_desc:          0
+      n_value:         262144
+    - n_strx:          10
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         246664
+    - n_strx:          15
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         246708
+  StringTable:
+    - ' '
+    - _bar
+    - _d
+    - _foo
+    - _main
+    - _c
+  FunctionStarts:  [ 0x388, 0x394, 0x3B4 ]
+...
+)");
+
+  ASSERT_THAT_EXPECTED(ExpectedFileZeroOffset, llvm::Succeeded());
+  auto zero_module_sp =
+      std::make_shared<Module>(ExpectedFileZeroOffset->moduleSpec());
+  ObjectFile *zero_objfile = zero_module_sp->GetObjectFile();
+  ASSERT_NE(zero_objfile, nullptr);
+  // Now encode and decode an actual symbol table from our yaml.
+  Symtab *module_symtab = zero_module_sp->GetSymtab();
+  ASSERT_NE(module_symtab, nullptr);
+  module_symtab->PreloadSymbols();
+  const uint8_t addr_size = 8;
+  DataEncoder zero_file(eByteOrderLittle, addr_size);
+  module_symtab->Encode(zero_file);
+  llvm::ArrayRef<uint8_t> zero_filebytes = zero_file.GetData();
+
+  ASSERT_THAT_EXPECTED(ExpectedFileNonZeroOffset, llvm::Succeeded());
+  auto nonzero_module_sp =
+      std::make_shared<Module>(ExpectedFileNonZeroOffset->moduleSpec());
+  ObjectFile *nonzero_objfile = nonzero_module_sp->GetObjectFile();
+  ASSERT_NE(nonzero_objfile, nullptr);
+  // Now encode and decode an actual symbol table from our yaml.
+  Symtab *nonzero_module_symtab = nonzero_module_sp->GetSymtab();
+  ASSERT_NE(nonzero_module_symtab, nullptr);
+  nonzero_module_symtab->PreloadSymbols();
+  DataEncoder nonzero_file(eByteOrderLittle, addr_size);
+  module_symtab->Encode(nonzero_file);
+  llvm::ArrayRef<uint8_t> nonzero_filebytes = nonzero_file.GetData();
+
+  ASSERT_EQ(zero_filebytes, nonzero_filebytes);
+}
