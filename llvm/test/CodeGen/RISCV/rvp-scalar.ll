@@ -2274,9 +2274,7 @@ define i32 @maccu_h11(i32 %rd, i32 %a, i32 %b) nounwind {
 define i32 @maccsu_h11(i32 %rd, i32 %a, i32 %b) nounwind {
 ; RV32-LABEL: maccsu_h11:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    srai a1, a1, 16
-; RV32-NEXT:    srli a2, a2, 16
-; RV32-NEXT:    maccsu.h00 a0, a1, a2
+; RV32-NEXT:    maccsu.h11 a0, a1, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: maccsu_h11:
@@ -2336,9 +2334,7 @@ define i32 @maccu_h11_commute(i32 %rd, i32 %a, i32 %b) nounwind {
 define i32 @maccsu_h11_commute(i32 %rd, i32 %a, i32 %b) nounwind {
 ; RV32-LABEL: maccsu_h11_commute:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    srai a1, a1, 16
-; RV32-NEXT:    srli a2, a2, 16
-; RV32-NEXT:    maccsu.h00 a0, a1, a2
+; RV32-NEXT:    maccsu.h11 a0, a1, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: maccsu_h11_commute:
@@ -2409,9 +2405,7 @@ define i32 @maccu_h11_multiple_uses(i32 %a, i32 %b, i32 %c, ptr %out) nounwind {
 define i32 @maccsu_h11_multiple_uses(i32 %a, i32 %b, i32 %c, ptr %out) nounwind {
 ; RV32-LABEL: maccsu_h11_multiple_uses:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    srai a0, a0, 16
-; RV32-NEXT:    srli a1, a1, 16
-; RV32-NEXT:    mul a1, a0, a1
+; RV32-NEXT:    mulsu.h11 a1, a0, a1
 ; RV32-NEXT:    add a0, a2, a1
 ; RV32-NEXT:    sw a1, 0(a3)
 ; RV32-NEXT:    ret
@@ -3709,9 +3703,7 @@ define i32 @mulsu_h00_sext_inreg_zexti16_commute(i32 %a, i16 zeroext %b) nounwin
 define i32 @mulsu_h11(i32 %a, i32 %b) nounwind {
 ; RV32-LABEL: mulsu_h11:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    srai a0, a0, 16
-; RV32-NEXT:    srli a1, a1, 16
-; RV32-NEXT:    mul a0, a0, a1
+; RV32-NEXT:    mulsu.h11 a0, a0, a1
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: mulsu_h11:
