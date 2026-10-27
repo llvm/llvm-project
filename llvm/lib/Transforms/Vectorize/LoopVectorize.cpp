@@ -5205,7 +5205,6 @@ bool LoopVectorizationPlanner::planForEpilogueTF() {
     reportVectorizationInfo(
         "Failed to build initial tail-folded epilogue VPlan",
         "InvalidTailFoldedEpilogue", ORE, OrigLoop);
-    assert(VPlan1 && "Failed to build initial tail-folded epilogue VPlan");
     return false;
   }
 
@@ -5224,21 +5223,19 @@ bool LoopVectorizationPlanner::planForEpilogueTF() {
   if (VPlans.size() == NumPlansBefore) {
     reportVectorizationInfo("Failed to build tail-folded epilogue VPlan",
                             "InvalidTailFoldedEpilogue", ORE, OrigLoop);
-    llvm_unreachable("Failed to build tail-folded epilogue VPlan");
     return false;
   }
-  if (VPlans.back()->getSingleVF() != EpilogueVectorizationForceVF ||
-      !VPlans.back()->hasTailFolded()) {
+  VPlan &Plan = *VPlans.back();
+  if (Plan.getSingleVF() != EpilogueVectorizationForceVF ||
+      !Plan.hasTailFolded()) {
     reportVectorizationInfo(
         "Failed to build a valid tail-folded epilogue VPlan",
         "InvalidTailFoldedEpilogue", ORE, OrigLoop);
-    llvm_unreachable("Failed to build a valid tail-folded epilogue VPlan");
     VPlans.pop_back();
     return false;
   }
 
-  if (!cost(*VPlans.back(), EpilogueVectorizationForceVF, /*RU=*/nullptr,
-            EpilogueTfCM)
+  if (!cost(Plan, EpilogueVectorizationForceVF, /*RU=*/nullptr, EpilogueTfCM)
            .isValid()) {
     VPlans.pop_back();
     reportVectorizationInfo("This case of epilogue loop can't be tail-folded "
