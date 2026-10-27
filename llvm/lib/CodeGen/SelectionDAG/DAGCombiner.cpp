@@ -14086,8 +14086,8 @@ SDValue DAGCombiner::visitMSTORE(SDNode *N) {
     // standard store.
     if (uint64_t Lanes = calculateConstantLowMaskLanes(Mask)) {
       if (Lanes < VT.getVectorMinNumElements() && isPowerOf2_32(Lanes)) {
-        EVT SubVT =
-            VT.changeElementCount(*DAG.getContext(), ElementCount::getFixed(Lanes));
+        EVT SubVT = VT.changeElementCount(*DAG.getContext(),
+                                          ElementCount::getFixed(Lanes));
         unsigned IsFast = 0;
         if ((!LegalTypes || isTypeLegal(SubVT)) &&
             TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(),
@@ -30440,8 +30440,8 @@ SDValue DAGCombiner::visitSCALAR_TO_VECTOR(SDNode *N) {
     // If not, shorten the shuffled vector.
     if (VTNumElts != SrcNumElts) {
       SDValue ZeroIdx = DAG.getVectorIdxConstant(0, SDLoc(N));
-      EVT SubVT = SrcVT.changeElementCount(
-          *DAG.getContext(), ElementCount::getFixed(VTNumElts));
+      EVT SubVT = SrcVT.changeElementCount(*DAG.getContext(),
+                                           ElementCount::getFixed(VTNumElts));
       return DAG.getNode(ISD::EXTRACT_SUBVECTOR, SDLoc(N), SubVT, LegalShuffle,
                          ZeroIdx);
     }
