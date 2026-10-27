@@ -60,6 +60,9 @@ void DIEAbbrev::Profile(FoldingSetNodeID &ID) const {
 /// Emit - Print the abbreviation using the specified asm printer.
 ///
 void DIEAbbrev::Emit(const AsmPrinter *AP) const {
+  assert((Tag != DIE::PlaceholderTag) &&
+         "Abbreviation with placeholder tag should not be emitted");
+
   // Emit its Dwarf tag type.
   AP->emitULEB128(Tag, dwarf::TagString(Tag).data());
 
@@ -168,10 +171,19 @@ void DIEAbbrevSet::Emit(const AsmPrinter *AP, MCSection *Section) const {
 // DIE Implementation
 //===----------------------------------------------------------------------===//
 
-DIE *DIE::getParent() const { return dyn_cast_if_present<DIE *>(Owner); }
+DIE *DIE::getPhysicalParent() const {
+  return dyn_cast_if_present<DIE *>(Owner);
+}
+
+DIE *DIE::getParent() const {
+  DIE *Parent = getPhysicalParent();
+  assert((!Parent || !Parent->isPlaceholder()) &&
+         "Parent must not be requested when DIE is in a temporary placeholder");
+  return Parent;
+}
 
 void DIE::removeChild(DIE &Child) {
-  assert(Child.getParent() == this && "Not a child of this DIE");
+  assert(Child.getPhysicalParent() == this && "Not a child of this DIE");
   [[maybe_unused]] bool Removed = Children.deleteNode(Child);
   assert(Removed && "Child is missing from the list of children");
   Child.Owner = nullptr;
@@ -191,6 +203,9 @@ void DIE::takeChildren(DIE &Other, bool AtFront) {
 }
 
 DIEAbbrev DIE::generateAbbrev() const {
+  assert(!isPlaceholder() &&
+         "Abbrevs should not be generated for placeholder tags");
+
   DIEAbbrev Abbrev(Tag, hasChildren());
   for (const DIEValue &V : values())
     if (V.getForm() == dwarf::DW_FORM_implicit_const)
@@ -208,7 +223,7 @@ uint64_t DIE::getDebugSectionOffset() const {
 }
 
 DIEUnit *DIE::getUnit() const {
-  for (const DIE *P = this; P; P = P->getParent())
+  for (const DIE *P = this; P; P = P->getPhysicalParent())
     if (auto *Unit = dyn_cast_if_present<DIEUnit *>(P->Owner))
       return Unit;
   return nullptr;
@@ -278,6 +293,8 @@ LLVM_DUMP_METHOD void DIE::dump() const {
 unsigned DIE::computeOffsetsAndAbbrevs(const dwarf::FormParams &FormParams,
                                        DIEAbbrevSet &AbbrevSet,
                                        unsigned CUOffset) {
+  assert(!isPlaceholder() && "Cannot compute offsets for a placeholder DIE");
+
   // Unique the abbreviation and fill in the abbreviation number so this DIE
   // can be emitted.
   const DIEAbbrev &Abbrev = AbbrevSet.uniqueAbbreviation(*this);

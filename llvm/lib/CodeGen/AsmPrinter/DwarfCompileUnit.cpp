@@ -1998,8 +1998,8 @@ DIE &DwarfCompileUnit::getOrCreatePendingLocalScopeDIE(
   // which unit they belong to. The tags don't matter, as these DIEs are
   // removed before emission.
   if (!PendingLocalScopesDIE)
-    PendingLocalScopesDIE = &getUnitDie().addChildFront(
-        DIE::get(DIEValueAllocator, dwarf::DW_TAG_lexical_block));
+    PendingLocalScopesDIE =
+        &getUnitDie().addChildFront(DIE::getPlaceholder(DIEValueAllocator));
   PendingDIE = &PendingLocalScopesDIE->addChild(
       DIE::get(DIEValueAllocator, dwarf::DW_TAG_lexical_block));
   return *PendingDIE;
