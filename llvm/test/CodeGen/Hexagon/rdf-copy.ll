@@ -15,7 +15,7 @@
 ;         r0 = memw(r0 + #0)
 ;     }
 ;
-; CHECK-LABEL: LBB0_1
+; CHECK-LABEL: %while.cond
 ; CHECK: [[DST:r[0-9]+]] = [[SRC:r[0-9]+]]
 ; CHECK-DAG: memw([[SRC]]
 ; CHECK-NOT: memw([[DST]]
@@ -52,6 +52,7 @@ if.end:                                           ; preds = %if.end.loopexit, %e
 
 attributes #0 = { nounwind "target-features"="-packets" }
 
-!0 = !{!"any pointer", !1}
+!0 = !{!3, !3, i64 0}
 !1 = !{!"omnipotent char", !2}
 !2 = !{!"Simple C/C++ TBAA"}
+!3 = !{!"any pointer", !1}

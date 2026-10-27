@@ -56,11 +56,9 @@ define i32 @test5(i1 %C) {
   ret i32 %Z
 }
 
-; FIXME: Constants should be allowed for this optimization.
 define i32 @test5_asan(i1 %C) sanitize_address {
 ; CHECK-LABEL: @test5_asan(
-; CHECK-NEXT:    [[Y:%.*]] = select i1 [[C:%.*]], ptr @X, ptr @X2
-; CHECK-NEXT:    [[Z:%.*]] = load i32, ptr [[Y]], align 4
+; CHECK-NEXT:    [[Z:%.*]] = select i1 [[C:%.*]], i32 42, i32 47
 ; CHECK-NEXT:    ret i32 [[Z]]
 ;
   %Y = select i1 %C, ptr @X, ptr @X2		; <ptr> [#uses=1]
@@ -414,13 +412,13 @@ define i16 @load_from_zero_with_dynamic_offset(i64 %idx) {
   ret i16 %v
 }
 
-declare ptr @llvm.strip.invariant.group.p0(ptr %p)
+declare ptr @llvm.launder.invariant.group.p0(ptr %p)
 
-define i32 @load_via_strip_invariant_group() {
-; CHECK-LABEL: @load_via_strip_invariant_group(
+define i32 @load_via_launder_invariant_group() {
+; CHECK-LABEL: @load_via_launder_invariant_group(
 ; CHECK-NEXT:    ret i32 37
 ;
-  %a = call ptr @llvm.strip.invariant.group.p0(ptr @Y)
+  %a = call ptr @llvm.launder.invariant.group.p0(ptr @Y)
   %b = getelementptr i8, ptr %a, i64 8
   %d = load i32, ptr %b
   ret i32 %d

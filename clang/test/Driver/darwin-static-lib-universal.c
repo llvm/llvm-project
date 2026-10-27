@@ -1,4 +1,4 @@
-// REQUIRES: system-darwin
+// REQUIRES: system-darwin && target={{.*}}-{{darwin|macos}}{{.*}}
 
 // RUN: touch %t1.o %t2.o
 

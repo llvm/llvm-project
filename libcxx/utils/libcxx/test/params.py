@@ -502,5 +502,32 @@ DEFAULT_PARAMETERS = [
             ],
         ),
     ),
+    Parameter(
+        name="cmake",
+        type=str,
+        default="cmake",
+        help="The path of the CMake binary to use when performing CMake builds inside the test suite.",
+        actions=lambda cmake: [
+            AddSubstitution("%{cmake}", shlex.quote(cmake)),
+        ],
+    ),
+    Parameter(
+        name="cmake_make_program",
+        type=str,
+        default="ninja",
+        help="The CMAKE_MAKE_PROGRAM to use when performing CMake builds inside the test suite.",
+        actions=lambda make_program: [
+            AddSubstitution("%{cmake_make_program}", shlex.quote(make_program)),
+        ],
+    ),
+    Parameter(
+        name="cmake_generator",
+        type=str,
+        default="Ninja",
+        help="The CMake generator to use when performing CMake builds inside the test suite.",
+        actions=lambda generator: [
+            AddSubstitution("%{cmake_generator}", generator),
+        ],
+    ),
 ]
 # fmt: on

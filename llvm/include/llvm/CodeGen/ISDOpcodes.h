@@ -18,6 +18,8 @@
 
 namespace llvm {
 
+class StringRef;
+
 /// ISD namespace - This namespace contains an enum which represents all of the
 /// SelectionDAG node types and value types.
 ///
@@ -287,7 +289,7 @@ enum NodeType {
   /// Carry-setting nodes for multiple precision addition and subtraction.
   /// These nodes take two operands of the same value type, and produce two
   /// results.  The first result is the normal add or sub result, the second
-  /// result is the carry flag result.
+  /// result is the carry flag result as a glue.
   /// FIXME: These nodes are deprecated in favor of UADDO_CARRY and USUBO_CARRY.
   /// They are kept around for now to provide a smooth transition path
   /// toward the use of UADDO_CARRY/USUBO_CARRY and will eventually be removed.
@@ -296,23 +298,24 @@ enum NodeType {
 
   /// Carry-using nodes for multiple precision addition and subtraction. These
   /// nodes take three operands: The first two are the normal lhs and rhs to
-  /// the add or sub, and the third is the input carry flag.  These nodes
-  /// produce two results; the normal result of the add or sub, and the output
-  /// carry flag.  These nodes both read and write a carry flag to allow them
-  /// to them to be chained together for add and sub of arbitrarily large
-  /// values.
+  /// the add or sub, and the third is the input carry flag as a glue.  These
+  /// nodes produce two results; the normal result of the add or sub, and the
+  /// output carry flag as a glue.  These nodes both read and write a carry flag
+  /// to allow them to them to be chained together for add and sub of
+  /// arbitrarily large values.
   ADDE,
   SUBE,
 
   /// Carry-using nodes for multiple precision addition and subtraction.
   /// These nodes take three operands: The first two are the normal lhs and
-  /// rhs to the add or sub, and the third is a boolean value that is 1 if and
-  /// only if there is an incoming carry/borrow. These nodes produce two
+  /// rhs to the add or sub, and the third is a boolean value that is true if
+  /// and only if there is an incoming carry/borrow. These nodes produce two
   /// results: the normal result of the add or sub, and a boolean value that is
-  /// 1 if and only if there is an outgoing carry/borrow.
+  /// true if and only if there is an outgoing carry/borrow. If the type of the
+  /// boolean is not i1 then the high bits conform to getBooleanContents.
   ///
   /// Care must be taken if these opcodes are lowered to hardware instructions
-  /// that use the inverse logic -- 0 if and only if there is an
+  /// that use the inverse logic -- false if and only if there is an
   /// incoming/outgoing carry/borrow.  In such cases, you must preserve the
   /// semantics of these opcodes by inverting the incoming carry/borrow, feeding
   /// it to the add/sub hardware instruction, and then inverting the outgoing
@@ -636,6 +639,11 @@ enum NodeType {
   /// Result[J] = EXTRACT_SUBVECTOR(Interleaved, J * getVectorMinNumElements())
   VECTOR_INTERLEAVE,
 
+  /// VECTOR_REPEAT(FIXED_LENGTH_VECTOR)
+  /// Repeatedly copies the elements of the source fixed-length vector to fill a
+  /// scalable vector with the same minimum element count.
+  VECTOR_REPEAT,
+
   /// VECTOR_REVERSE(VECTOR) - Returns a vector, of the same type as VECTOR,
   /// whose elements are shuffled using the following algorithm:
   ///   RESULT[i] = VECTOR[VECTOR.ElementCount - 1 - i]
@@ -716,6 +724,14 @@ enum NodeType {
   /// right. shr(add(ext(X), ext(Y), 1), 1)
   AVGCEILS,
   AVGCEILU,
+
+  /// AVGSUBFLOORS/AVGSUBFLOORU - Averaging subtract - Subtract two integers
+  /// using an integer of type i[N+1], halving the result by shifting it one bit
+  /// right, i.e. rounding towards negative infinity. This is a signed
+  /// difference, not an absolute difference like ABDS/ABDU.
+  /// shr(sub(ext(X), ext(Y)), 1)
+  AVGSUBFLOORS,
+  AVGSUBFLOORU,
 
   /// ABDS/ABDU - Absolute difference - Return the absolute difference between
   /// two numbers interpreted as signed/unsigned.
@@ -1085,47 +1101,25 @@ enum NodeType {
   LRINT,
   LLRINT,
 
-  /// FMINNUM/FMAXNUM - Perform floating-point minimum maximum on two values,
-  /// following IEEE-754 definitions except for signed zero behavior.
-  ///
-  /// If one input is a signaling NaN, returns a quiet NaN. This matches
-  /// IEEE-754 2008's minNum/maxNum behavior for signaling NaNs (which differs
-  /// from 2019).
-  ///
-  /// These treat -0 as ordered less than +0, matching the behavior of IEEE-754
-  /// 2019's minimumNumber/maximumNumber.
-  ///
-  /// Note that that arithmetic on an sNaN doesn't consistently produce a qNaN,
-  /// so arithmetic feeding into a minnum/maxnum can produce inconsistent
-  /// results. FMAXIMUN/FMINIMUM or FMAXIMUMNUM/FMINIMUMNUM may be better choice
-  /// for non-distinction of sNaN/qNaN handling.
+  /// FMINNUM/FMAXNUM - Same semantics as the llvm.minnum/maxnum intrinsics.
   FMINNUM,
   FMAXNUM,
 
-  /// FMINNUM_IEEE/FMAXNUM_IEEE - Perform floating-point minimumNumber or
-  /// maximumNumber on two values, following IEEE-754 definitions. This differs
-  /// from FMINNUM/FMAXNUM in the handling of signaling NaNs, and signed zero.
+  /// FMINNUM_IEEE/FMAXNUM_IEEE - Same as FMINNUM/FMAXNUM, except that a
+  /// signaling NaN operand deterministically returns a quiet NaN, like IEEE-754
+  /// 2008's minNum/maxNum. -0 is ordered less than +0, relaxed by the nsz flag.
   ///
-  /// If one input is a signaling NaN, returns a quiet NaN. This matches
-  /// IEEE-754 2008's minnum/maxnum behavior for signaling NaNs (which differs
-  /// from 2019).
-  ///
-  /// These treat -0 as ordered less than +0, matching the behavior of IEEE-754
-  /// 2019's minimumNumber/maximumNumber.
-  ///
-  /// Deprecated, and will be removed soon, as FMINNUM/FMAXNUM have the same
-  /// semantics now.
+  /// Deprecated, and will be removed soon: this is a legal implementation of
+  /// FMINNUM/FMAXNUM, so targets should select those instead.
   FMINNUM_IEEE,
   FMAXNUM_IEEE,
 
-  /// FMINIMUM/FMAXIMUM - NaN-propagating minimum/maximum that also treat -0.0
-  /// as less than 0.0. While FMINNUM_IEEE/FMAXNUM_IEEE follow IEEE 754-2008
-  /// semantics, FMINIMUM/FMAXIMUM follow IEEE 754-2019 semantics.
+  /// FMINIMUM/FMAXIMUM - Same semantics as the llvm.minimum/maximum intrinsics.
   FMINIMUM,
   FMAXIMUM,
 
-  /// FMINIMUMNUM/FMAXIMUMNUM - minimumnum/maximumnum that is same with
-  /// FMINNUM_IEEE and FMAXNUM_IEEE besides if either operand is sNaN.
+  /// FMINIMUMNUM/FMAXIMUMNUM - Same semantics as the llvm.minimumnum/maximumnum
+  /// intrinsics.
   FMINIMUMNUM,
   FMAXIMUMNUM,
 
@@ -1631,6 +1625,10 @@ enum NodeType {
   /// bits conform to getBooleanContents similar to the SETCC operator.
   GET_ACTIVE_LANE_MASK,
 
+  /// Has one mask vector operand. Returns a mask with all ones up to but not
+  /// including the first active element in the input, followed by zeroes.
+  MASK_BEFOREFIRST,
+
   /// VECTOR_MATCH - this corresponds to the llvm.experimental.vector.match
   /// intrinsic.
   /// Operands: Source, Needle, Mask
@@ -1865,6 +1863,33 @@ inline bool isIntEqualitySetCC(CondCode Code) {
   return Code == SETEQ || Code == SETNE;
 }
 
+/// Convert a signed integer condition code to unsigned.
+/// For equality and unsigned conditions, returns the condition unchanged.
+/// For signed conditions, returns the corresponding unsigned condition.
+inline CondCode getUnsignedSetCC(CondCode Code) {
+  switch (Code) {
+  default:
+    llvm_unreachable("Non-integer setcc condition!");
+  case SETEQ:
+  case SETNE:
+  case SETUGT:
+  case SETULT:
+  case SETUGE:
+  case SETULE:
+  case SETTRUE:
+  case SETFALSE:
+    return Code;
+  case SETGT:
+    return SETUGT;
+  case SETLT:
+    return SETULT;
+  case SETGE:
+    return SETUGE;
+  case SETLE:
+    return SETULE;
+  }
+}
+
 /// Return true if this is a setcc instruction that performs an equality
 /// comparison when used with floating point operands.
 inline bool isFPEqualitySetCC(CondCode Code) {
@@ -1886,6 +1911,9 @@ inline unsigned getUnorderedFlavor(CondCode Cond) {
 /// Return the operation corresponding to !(X op Y), where 'op' is a valid
 /// SetCC operation.
 LLVM_ABI CondCode getSetCCInverse(CondCode Operation, EVT Type);
+
+/// Return the name of the given condition code, e.g. "setoeq".
+LLVM_ABI StringRef getCondCodeName(CondCode Operation);
 
 inline bool isExtOpcode(unsigned Opcode) {
   return Opcode == ISD::ANY_EXTEND || Opcode == ISD::ZERO_EXTEND ||

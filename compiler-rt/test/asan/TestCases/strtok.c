@@ -1,27 +1,28 @@
 // RUN: %clang_asan %s -o %t
 
 // Test overflows with strict_string_checks
+// Bionic's strtok calls strspn/strcspn/strchr/strlen via PLT.
+// DEFINE: %{no_intercept} = intercept_strtok=false%if android-37 %{:intercept_strspn=false:intercept_strchr=false:intercept_strlen=false%}
 
 // RUN: %env_asan_opts=strict_string_checks=true not %run %t test1 2>&1 | \
 // RUN:    FileCheck %s --check-prefix=CHECK1
-// RUN: %env_asan_opts=intercept_strtok=false %run %t test1 2>&1
+// RUN: %env_asan_opts=%{no_intercept} %run %t test1 2>&1
 // RUN: %env_asan_opts=strict_string_checks=true not %run %t test2 2>&1 | \
 // RUN:    FileCheck %s --check-prefix=CHECK2
-// RUN: %env_asan_opts=intercept_strtok=false %run %t test2 2>&1
+// RUN: %env_asan_opts=%{no_intercept} %run %t test2 2>&1
 // RUN: %env_asan_opts=strict_string_checks=true not %run %t test3 2>&1 | \
 // RUN:    FileCheck %s --check-prefix=CHECK3
-// RUN: %env_asan_opts=intercept_strtok=false %run %t test3 2>&1
+// RUN: %env_asan_opts=%{no_intercept} %run %t test3 2>&1
 // RUN: %env_asan_opts=strict_string_checks=true %run %t test4 2>&1
-// RUN: %env_asan_opts=intercept_strtok=false %run %t test4 2>&1
+// RUN: %env_asan_opts=%{no_intercept} %run %t test4 2>&1
 
 // Test overflows with !strict_string_checks
-// RUN: %env_asan_opts=strict_string_checks=false not %run %t test5 2>&1 | \
+// RUN: %env_asan_opts=strict_string_checks=false%if android-37 %{:intercept_strspn=false%} not %run %t test5 2>&1 | \
 // RUN:    FileCheck %s --check-prefix=CHECK5
-// RUN: %env_asan_opts=intercept_strtok=false %run %t test5 2>&1
+// RUN: %env_asan_opts=%{no_intercept} %run %t test5 2>&1
 // RUN: %env_asan_opts=strict_string_checks=false not %run %t test6 2>&1 | \
 // RUN:    FileCheck %s --check-prefix=CHECK6
-// RUN: %env_asan_opts=intercept_strtok=false %run %t test6 2>&1
-
+// RUN: %env_asan_opts=%{no_intercept} %run %t test6 2>&1
 
 #include <assert.h>
 #include <string.h>
