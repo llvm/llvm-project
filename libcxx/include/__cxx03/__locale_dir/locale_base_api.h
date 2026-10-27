@@ -12,7 +12,7 @@
 #if defined(_LIBCPP_MSVCRT_LIKE)
 #  include <__cxx03/__locale_dir/locale_base_api/win32.h>
 #elif defined(_AIX) || defined(__MVS__)
-#  include <__cxx03/__locale_dir/locale_base_api/ibm.h>
+#  include <__locale_dir/locale_base_api/ibm.h>
 #elif defined(__ANDROID__)
 #  include <__cxx03/__locale_dir/locale_base_api/android.h>
 #elif defined(__sun__)
