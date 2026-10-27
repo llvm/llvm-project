@@ -1,4 +1,490 @@
 {
+ "cuda_argmax.ll:argmax:agx-g13g": {
+  "bytes": 1188,
+  "cycles": 15584.3,
+  "gprs": 14,
+  "instructions": 187,
+  "launch_inputs": true,
+  "uniform_halves": 16,
+  "waits": 1
+ },
+ "cuda_argmax.ll:argmax:agx-g14c": {
+  "bytes": 1188,
+  "cycles": 15584.3,
+  "gprs": 14,
+  "instructions": 187,
+  "launch_inputs": true,
+  "uniform_halves": 16,
+  "waits": 1
+ },
+ "cuda_attn_decode.ll:attn_decode:agx-g13g": {
+  "bytes": 2298,
+  "cycles": 62070.8,
+  "gprs": 40,
+  "instructions": 336,
+  "launch_inputs": true,
+  "uniform_halves": 26,
+  "waits": 6
+ },
+ "cuda_attn_decode.ll:attn_decode:agx-g14c": {
+  "bytes": 2298,
+  "cycles": 62070.8,
+  "gprs": 40,
+  "instructions": 336,
+  "launch_inputs": true,
+  "uniform_halves": 26,
+  "waits": 6
+ },
+ "cuda_bitonic_smem.ll:bitonic_smem:agx-g13g": {
+  "bytes": 5106,
+  "cycles": 15106.4,
+  "gprs": 32,
+  "instructions": 879,
+  "launch_inputs": true,
+  "uniform_halves": 10,
+  "waits": 2
+ },
+ "cuda_bitonic_smem.ll:bitonic_smem:agx-g14c": {
+  "bytes": 5106,
+  "cycles": 15106.4,
+  "gprs": 32,
+  "instructions": 879,
+  "launch_inputs": true,
+  "uniform_halves": 10,
+  "waits": 2
+ },
+ "cuda_blur_rgba8.ll:blur_rgba8:agx-g13g": {
+  "bytes": 1156,
+  "cycles": 813.9,
+  "gprs": 18,
+  "instructions": 166,
+  "launch_inputs": true,
+  "uniform_halves": 18,
+  "waits": 4
+ },
+ "cuda_blur_rgba8.ll:blur_rgba8:agx-g14c": {
+  "bytes": 1156,
+  "cycles": 813.9,
+  "gprs": 18,
+  "instructions": 166,
+  "launch_inputs": true,
+  "uniform_halves": 18,
+  "waits": 4
+ },
+ "cuda_conv3x3.ll:conv3x3:agx-g13g": {
+  "bytes": 1328,
+  "cycles": 47442.4,
+  "gprs": 44,
+  "instructions": 198,
+  "launch_inputs": true,
+  "uniform_halves": 24,
+  "waits": 9
+ },
+ "cuda_conv3x3.ll:conv3x3:agx-g14c": {
+  "bytes": 1328,
+  "cycles": 47442.4,
+  "gprs": 44,
+  "instructions": 198,
+  "launch_inputs": true,
+  "uniform_halves": 24,
+  "waits": 9
+ },
+ "cuda_ddot.ll:ddot:agx-g13g": {
+  "bytes": 21252,
+  "cycles": 33036.2,
+  "gprs": 58,
+  "instructions": 2744,
+  "launch_inputs": true,
+  "uniform_halves": 20,
+  "waits": 2
+ },
+ "cuda_ddot.ll:ddot:agx-g14c": {
+  "bytes": 21252,
+  "cycles": 33036.2,
+  "gprs": 58,
+  "instructions": 2744,
+  "launch_inputs": true,
+  "uniform_halves": 20,
+  "waits": 2
+ },
+ "cuda_embedding.ll:embedding:agx-g13g": {
+  "bytes": 234,
+  "cycles": 716.9,
+  "gprs": 12,
+  "instructions": 37,
+  "launch_inputs": true,
+  "uniform_halves": 20,
+  "waits": 3
+ },
+ "cuda_embedding.ll:embedding:agx-g14c": {
+  "bytes": 234,
+  "cycles": 716.9,
+  "gprs": 12,
+  "instructions": 37,
+  "launch_inputs": true,
+  "uniform_halves": 20,
+  "waits": 3
+ },
+ "cuda_gelu_f16.ll:gelu_f16:agx-g13g": {
+  "bytes": 540,
+  "cycles": 1946.0,
+  "gprs": 24,
+  "instructions": 86,
+  "launch_inputs": true,
+  "uniform_halves": 16,
+  "waits": 1
+ },
+ "cuda_gelu_f16.ll:gelu_f16:agx-g14c": {
+  "bytes": 540,
+  "cycles": 1946.0,
+  "gprs": 24,
+  "instructions": 86,
+  "launch_inputs": true,
+  "uniform_halves": 16,
+  "waits": 1
+ },
+ "cuda_index_add.ll:index_add:agx-g13g": {
+  "bytes": 1006,
+  "cycles": 14982.4,
+  "gprs": 32,
+  "instructions": 155,
+  "launch_inputs": true,
+  "uniform_halves": 22,
+  "waits": 15
+ },
+ "cuda_index_add.ll:index_add:agx-g14c": {
+  "bytes": 762,
+  "cycles": 8662.1,
+  "gprs": 30,
+  "instructions": 113,
+  "launch_inputs": true,
+  "uniform_halves": 22,
+  "waits": 10
+ },
+ "cuda_jacobi2d.ll:jacobi2d:agx-g13g": {
+  "bytes": 654,
+  "cycles": 851.5,
+  "gprs": 19,
+  "instructions": 102,
+  "launch_inputs": true,
+  "uniform_halves": 18,
+  "waits": 5
+ },
+ "cuda_jacobi2d.ll:jacobi2d:agx-g14c": {
+  "bytes": 654,
+  "cycles": 851.5,
+  "gprs": 19,
+  "instructions": 102,
+  "launch_inputs": true,
+  "uniform_halves": 18,
+  "waits": 5
+ },
+ "cuda_layernorm_f16.ll:layernorm_f16:agx-g13g": {
+  "bytes": 946,
+  "cycles": 4078.0,
+  "gprs": 19,
+  "instructions": 154,
+  "launch_inputs": true,
+  "uniform_halves": 26,
+  "waits": 3
+ },
+ "cuda_layernorm_f16.ll:layernorm_f16:agx-g14c": {
+  "bytes": 946,
+  "cycles": 4078.0,
+  "gprs": 19,
+  "instructions": 154,
+  "launch_inputs": true,
+  "uniform_halves": 26,
+  "waits": 3
+ },
+ "cuda_mandelbrot.ll:mandelbrot:agx-g13g": {
+  "bytes": 368,
+  "cycles": 14752.1,
+  "gprs": 13,
+  "instructions": 61,
+  "launch_inputs": true,
+  "uniform_halves": 16,
+  "waits": 0
+ },
+ "cuda_mandelbrot.ll:mandelbrot:agx-g14c": {
+  "bytes": 368,
+  "cycles": 14752.1,
+  "gprs": 13,
+  "instructions": 61,
+  "launch_inputs": true,
+  "uniform_halves": 16,
+  "waits": 0
+ },
+ "cuda_nbody.ll:nbody:agx-g13g": {
+  "bytes": 798,
+  "cycles": 191323.5,
+  "gprs": 52,
+  "instructions": 126,
+  "launch_inputs": true,
+  "uniform_halves": 18,
+  "waits": 3
+ },
+ "cuda_nbody.ll:nbody:agx-g14c": {
+  "bytes": 798,
+  "cycles": 191323.5,
+  "gprs": 52,
+  "instructions": 126,
+  "launch_inputs": true,
+  "uniform_halves": 18,
+  "waits": 3
+ },
+ "cuda_permute4d.ll:permute4d:agx-g13g": {
+  "bytes": 15044,
+  "cycles": 1896.5,
+  "gprs": 46,
+  "instructions": 2096,
+  "launch_inputs": true,
+  "uniform_halves": 40,
+  "waits": 4
+ },
+ "cuda_permute4d.ll:permute4d:agx-g14c": {
+  "bytes": 15044,
+  "cycles": 1896.5,
+  "gprs": 46,
+  "instructions": 2096,
+  "launch_inputs": true,
+  "uniform_halves": 40,
+  "waits": 4
+ },
+ "cuda_philox.ll:philox:agx-g13g": {
+  "bytes": 832,
+  "cycles": 258.2,
+  "gprs": 14,
+  "instructions": 124,
+  "launch_inputs": true,
+  "uniform_halves": 14,
+  "waits": 0
+ },
+ "cuda_philox.ll:philox:agx-g14c": {
+  "bytes": 832,
+  "cycles": 258.2,
+  "gprs": 14,
+  "instructions": 124,
+  "launch_inputs": true,
+  "uniform_halves": 14,
+  "waits": 0
+ },
+ "cuda_q4_matvec.ll:q4_matvec:agx-g13g": {
+  "bytes": 1796,
+  "cycles": 4199.9,
+  "gprs": 47,
+  "instructions": 269,
+  "launch_inputs": true,
+  "uniform_halves": 20,
+  "waits": 7
+ },
+ "cuda_q4_matvec.ll:q4_matvec:agx-g14c": {
+  "bytes": 1796,
+  "cycles": 4199.9,
+  "gprs": 47,
+  "instructions": 269,
+  "launch_inputs": true,
+  "uniform_halves": 20,
+  "waits": 7
+ },
+ "cuda_q8_matvec.ll:q8_matvec:agx-g13g": {
+  "bytes": 1706,
+  "cycles": 6473.5,
+  "gprs": 39,
+  "instructions": 240,
+  "launch_inputs": true,
+  "uniform_halves": 20,
+  "waits": 10
+ },
+ "cuda_q8_matvec.ll:q8_matvec:agx-g14c": {
+  "bytes": 1706,
+  "cycles": 6473.5,
+  "gprs": 39,
+  "instructions": 240,
+  "launch_inputs": true,
+  "uniform_halves": 20,
+  "waits": 10
+ },
+ "cuda_radix_hist.ll:radix_hist:agx-g13g": {
+  "bytes": 266,
+  "cycles": 1936.0,
+  "gprs": 12,
+  "instructions": 45,
+  "launch_inputs": true,
+  "uniform_halves": 18,
+  "waits": 1
+ },
+ "cuda_radix_hist.ll:radix_hist:agx-g14c": {
+  "bytes": 266,
+  "cycles": 1936.0,
+  "gprs": 12,
+  "instructions": 45,
+  "launch_inputs": true,
+  "uniform_halves": 18,
+  "waits": 1
+ },
+ "cuda_reduce_shfl.ll:reduce_shfl:agx-g13g": {
+  "bytes": 246,
+  "cycles": 1516.7,
+  "gprs": 6,
+  "instructions": 43,
+  "launch_inputs": true,
+  "uniform_halves": 16,
+  "waits": 3
+ },
+ "cuda_reduce_shfl.ll:reduce_shfl:agx-g14c": {
+  "bytes": 198,
+  "cycles": 1413.8,
+  "gprs": 6,
+  "instructions": 34,
+  "launch_inputs": true,
+  "uniform_halves": 16,
+  "waits": 1
+ },
+ "cuda_rmsnorm.ll:rmsnorm:agx-g13g": {
+  "bytes": 562,
+  "cycles": 4634.5,
+  "gprs": 14,
+  "instructions": 92,
+  "launch_inputs": true,
+  "uniform_halves": 22,
+  "waits": 3
+ },
+ "cuda_rmsnorm.ll:rmsnorm:agx-g14c": {
+  "bytes": 562,
+  "cycles": 4634.5,
+  "gprs": 14,
+  "instructions": 92,
+  "launch_inputs": true,
+  "uniform_halves": 22,
+  "waits": 3
+ },
+ "cuda_rope.ll:rope:agx-g13g": {
+  "bytes": 630,
+  "cycles": 279.8,
+  "gprs": 13,
+  "instructions": 95,
+  "launch_inputs": true,
+  "uniform_halves": 18,
+  "waits": 1
+ },
+ "cuda_rope.ll:rope:agx-g14c": {
+  "bytes": 630,
+  "cycles": 279.8,
+  "gprs": 13,
+  "instructions": 95,
+  "launch_inputs": true,
+  "uniform_halves": 18,
+  "waits": 1
+ },
+ "cuda_scan_blelloch.ll:scan_blelloch:agx-g13g": {
+  "bytes": 1594,
+  "cycles": 5703.0,
+  "gprs": 28,
+  "instructions": 262,
+  "launch_inputs": true,
+  "uniform_halves": 14,
+  "waits": 1
+ },
+ "cuda_scan_blelloch.ll:scan_blelloch:agx-g14c": {
+  "bytes": 1594,
+  "cycles": 5703.0,
+  "gprs": 28,
+  "instructions": 262,
+  "launch_inputs": true,
+  "uniform_halves": 14,
+  "waits": 1
+ },
+ "cuda_sgemm_reg4x4.ll:sgemm_reg4x4:agx-g13g": {
+  "bytes": 3550,
+  "cycles": 93337.1,
+  "gprs": 70,
+  "instructions": 466,
+  "launch_inputs": true,
+  "uniform_halves": 24,
+  "waits": 2
+ },
+ "cuda_sgemm_reg4x4.ll:sgemm_reg4x4:agx-g14c": {
+  "bytes": 3550,
+  "cycles": 93337.1,
+  "gprs": 70,
+  "instructions": 466,
+  "launch_inputs": true,
+  "uniform_halves": 24,
+  "waits": 2
+ },
+ "cuda_softmax_online.ll:softmax_online:agx-g13g": {
+  "bytes": 1600,
+  "cycles": 3513.5,
+  "gprs": 20,
+  "instructions": 248,
+  "launch_inputs": true,
+  "uniform_halves": 16,
+  "waits": 2
+ },
+ "cuda_softmax_online.ll:softmax_online:agx-g14c": {
+  "bytes": 1600,
+  "cycles": 3513.5,
+  "gprs": 20,
+  "instructions": 248,
+  "launch_inputs": true,
+  "uniform_halves": 16,
+  "waits": 2
+ },
+ "cuda_spmv_csr.ll:spmv_csr:agx-g13g": {
+  "bytes": 478,
+  "cycles": 909.6,
+  "gprs": 19,
+  "instructions": 75,
+  "launch_inputs": true,
+  "uniform_halves": 28,
+  "waits": 6
+ },
+ "cuda_spmv_csr.ll:spmv_csr:agx-g14c": {
+  "bytes": 478,
+  "cycles": 909.6,
+  "gprs": 19,
+  "instructions": 75,
+  "launch_inputs": true,
+  "uniform_halves": 28,
+  "waits": 6
+ },
+ "cuda_spmv_csr_vector.ll:spmv_csr_vector:agx-g13g": {
+  "bytes": 340,
+  "cycles": 468.3,
+  "gprs": 13,
+  "instructions": 55,
+  "launch_inputs": true,
+  "uniform_halves": 28,
+  "waits": 3
+ },
+ "cuda_spmv_csr_vector.ll:spmv_csr_vector:agx-g14c": {
+  "bytes": 340,
+  "cycles": 468.3,
+  "gprs": 13,
+  "instructions": 55,
+  "launch_inputs": true,
+  "uniform_halves": 28,
+  "waits": 3
+ },
+ "cuda_swiglu.ll:swiglu:agx-g13g": {
+  "bytes": 278,
+  "cycles": 429.8,
+  "gprs": 21,
+  "instructions": 49,
+  "launch_inputs": true,
+  "uniform_halves": 20,
+  "waits": 2
+ },
+ "cuda_swiglu.ll:swiglu:agx-g14c": {
+  "bytes": 278,
+  "cycles": 429.8,
+  "gprs": 21,
+  "instructions": 49,
+  "launch_inputs": true,
+  "uniform_halves": 20,
+  "waits": 2
+ },
  "histogram.ll:histogram:agx-g13g": {
   "bytes": 124,
   "cycles": 248.3,
@@ -18,19 +504,19 @@
   "waits": 1
  },
  "matrixmul.ll:matrixMul:agx-g13g": {
-  "bytes": 590,
-  "cycles": 4565.0,
+  "bytes": 574,
+  "cycles": 4559.0,
   "gprs": 42,
-  "instructions": 89,
+  "instructions": 87,
   "launch_inputs": true,
   "uniform_halves": 22,
   "waits": 2
  },
  "matrixmul.ll:matrixMul:agx-g14c": {
-  "bytes": 590,
-  "cycles": 4565.0,
+  "bytes": 574,
+  "cycles": 4559.0,
   "gprs": 42,
-  "instructions": 89,
+  "instructions": 87,
   "launch_inputs": true,
   "uniform_halves": 22,
   "waits": 2
@@ -126,19 +612,19 @@
   "waits": 1
  },
  "transpose.ll:transpose:agx-g13g": {
-  "bytes": 146,
-  "cycles": 193.4,
+  "bytes": 130,
+  "cycles": 189.9,
   "gprs": 8,
-  "instructions": 23,
+  "instructions": 21,
   "launch_inputs": false,
   "uniform_halves": 16,
   "waits": 1
  },
  "transpose.ll:transpose:agx-g14c": {
-  "bytes": 146,
-  "cycles": 193.4,
+  "bytes": 130,
+  "cycles": 189.9,
   "gprs": 8,
-  "instructions": 23,
+  "instructions": 21,
   "launch_inputs": false,
   "uniform_halves": 16,
   "waits": 1

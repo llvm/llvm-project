@@ -74,7 +74,10 @@ def launch_args(src):
         return []
     for line in open(src):
         if line.startswith("; agx-cost:"):
-            return line.split(":", 1)[1].split()
+            # --map VA=@FILE: FILE relative to the kernel file (memory contents, e.g. CSR row offsets)
+            return [re.sub(r"=@(.*)$", lambda m: "=" + os.path.join(os.path.dirname(os.path.abspath(src)),
+                                                                      m.group(1)), x)
+                    for x in line.split(":", 1)[1].split()]
     return []
 
 
