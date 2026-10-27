@@ -4652,7 +4652,9 @@ static FormatStyle::LanguageKind getLanguageByFileName(StringRef &FileName) {
   if (FileName.ends_with_insensitive(".js") ||
       FileName.ends_with_insensitive(".mjs") ||
       FileName.ends_with_insensitive(".cjs") ||
-      FileName.ends_with_insensitive(".ts")) {
+      FileName.ends_with_insensitive(".ts") ||
+      FileName.ends_with_insensitive(".mts") ||
+      FileName.ends_with_insensitive(".cts")) {
     return FormatStyle::LK_JavaScript; // (module) JavaScript or TypeScript.
   }
   if (FileName.ends_with(".m") || FileName.ends_with(".mm"))
