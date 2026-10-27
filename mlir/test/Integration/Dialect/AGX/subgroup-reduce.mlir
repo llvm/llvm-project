@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-gpu-to-agxir='use-bare-ptr-memref-call-conv=1' \
+// RUN: mlir-opt %s -convert-gpu-to-air='use-bare-ptr-memref-call-conv=1' \
 // RUN:   -reconcile-unrealized-casts -o %t.mlir
 // RUN: %run_agx --grid 64 --wg 64 %t.mlir f32:iota*64 f32*64 | FileCheck %s
 

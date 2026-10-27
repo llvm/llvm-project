@@ -122,22 +122,6 @@ def LowerAffinePass : Pass<"lower-affine"> {
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
-// AGXToAGXIR
-//===----------------------------------------------------------------------===//
-
-def ConvertAGXToAGXIRPass : Pass<"convert-agx-to-agxir"> {
-  let summary = "Convert AGX dialect to AGXIR dialect";
-  let description = [{
-    This pass converts the AGX dialect operations (Apple GPUs) to AGXIR
-    intrinsic wrappers.
-  }];
-  let dependentDialects = [
-    "LLVM::LLVMDialect",
-    "AGXIR::AGXIRDialect",
-  ];
-}
-
-//===----------------------------------------------------------------------===//
 // AMDGPUToROCDL
 //===----------------------------------------------------------------------===//
 
@@ -710,33 +694,6 @@ def ConvertGpuOpsToNVVMOps : Pass<"convert-gpu-to-nvvm", "gpu::GPUModuleOp"> {
 //===----------------------------------------------------------------------===//
 // GPUToROCDL
 //===----------------------------------------------------------------------===//
-
-def ConvertGpuOpsToAGXIROps : Pass<"convert-gpu-to-agxir", "gpu::GPUModuleOp"> {
-  let summary = "Generate AGXIR operations for gpu operations";
-  let description = [{
-    Lowers GPU modules for Apple GPUs: GPU and AGX dialect operations become
-    AGXIR intrinsic wrappers, kernels become `agx_kernel` functions, and the
-    other dialects are converted to the LLVM dialect.
-  }];
-  let dependentDialects = [
-    "AGXIR::AGXIRDialect",
-    "agx::AGXDialect",
-    "cf::ControlFlowDialect",
-    "math::MathDialect",
-    "memref::MemRefDialect",
-    "scf::SCFDialect",
-    "vector::VectorDialect",
-  ];
-  let options = [
-    Option<"indexBitwidth", "index-bitwidth", "unsigned",
-           /*default=kDeriveIndexBitwidthFromDataLayout*/ "0",
-           "Bitwidth of the index type, 0 to use size of machine word">,
-    Option<"useBarePtrCallConv", "use-bare-ptr-memref-call-conv", "bool",
-           /*default=*/"false",
-           "Replace memref arguments in GPU functions with bare pointers. "
-           "All memrefs must have static shape">,
-  ];
-}
 
 def ArithEmulateF64 : Pass<"arith-emulate-f64"> {
   let summary = "Emulate f64 with 64-bit integers and a soft-float library";

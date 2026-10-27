@@ -1,22 +1,9 @@
 #!/usr/bin/env python3
-"""Compile a library kernel source (a gpu.module in standard dialects and agx operations) for several AGX chips, and
+"""Compile a library kernel source (a gpu.module in standard dialects and air operations) for several AGX chips, and
 pack the objects in one fat AGX object that a runtime loads with cuModuleLoadData (ZLUDA's zluda_agx picks the entry
 for its device).
 
-The kernel source names no chip. For each chip the pipeline is:
-
-  mlir-opt --agxir-attach-target=chip=CHIP --convert-gpu-to-agxir=use-bare-ptr-memref-call-conv=1
-           --reconcile-unrealized-casts
-  mlir-translate --mlir-to-llvmir   (the functions of the gpu.module)
-  opt -mtriple=agx -mcpu=CHIP -O3
-  llc -mtriple=agx -mcpu=CHIP -O3 -filetype=obj
-
-With --agx-strict (the default), each chip also gets an entry named "CHIP+agx-strict", compiled with the target feature
-+agx-strict in #agxir.target (so the agx operations take their portable forms) and in opt / llc (so only the
-instructions Mesa's asahi compiler emits are used). A runtime in strict mode loads those entries.
-
-With --via-air, the kernel source is compiled through AIR (standard dialects and air operations; agx operations are
-not accepted), the same for every chip up to AGX's code generation:
+The kernel source names no chip. It is compiled through AIR, the same for every chip up to AGX's code generation:
 
   mlir-opt --arith-emulate-f64 --convert-gpu-to-air=use-bare-ptr-memref-call-conv=1   (in the gpu.module)
            --reconcile-unrealized-casts
@@ -24,6 +11,10 @@ not accepted), the same for every chip up to AGX's code generation:
   opt -mtriple=air -passes=air-portable            (AIR's portable passes)
   opt -mtriple=agx -mcpu=CHIP -O3                  (agx-lower-air first)
   llc -mtriple=agx -mcpu=CHIP -O3 -filetype=obj
+
+With --agx-strict (the default), each G13 and G14 chip also gets an entry named "CHIP+agx-strict", compiled with the
+target feature +agx-strict in opt and llc, so that only the instructions Mesa's asahi compiler emits are used. A
+runtime in strict mode loads those entries.
 
 Fat AGX object layout (little-endian):
 
@@ -37,7 +28,7 @@ Fat AGX object layout (little-endian):
       then the objects (AGX ELF files), each 16-byte aligned.
 
   agx-build-fatbin.py --mlir-opt MLIR_OPT --mlir-translate MLIR_TRANSLATE --llc LLC [--opt OPT]
-                      [--chips agx-g13g,agx-g14c,...] [--no-agx-strict] [--via-air] kernels.mlir -o out.agxfat
+                      [--chips agx-g13g,agx-g14c,...] [--no-agx-strict] kernels.mlir -o out.agxfat
 """
 
 import argparse
@@ -83,31 +74,13 @@ def portable_air(a, src, tmp):
     return portable
 
 
-def compile_for(a, src, chip, tmp, features=""):
+def compile_for(a, chip, tmp, features=""):
     name = chip + features
     mattr = ["-mattr=" + features] if features else []
-    if a.via_air:
-        optimized = os.path.join(tmp, name + ".opt.bc")
-        subprocess.run([a.opt, "-mtriple=agx", "-mcpu=" + chip, *mattr, "-O3", a.portable, "-o", optimized],
-                       check=True)
-        obj = os.path.join(tmp, name + ".o")
-        subprocess.run([a.llc, "-mtriple=agx", "-mcpu=" + chip, *mattr, "-O3", "-filetype=obj", optimized, "-o",
-                        obj], check=True)
-        return open(obj, "rb").read()
-    attach = "--agxir-attach-target=chip=" + chip + (" features=" + features if features else "")
-    lowered = os.path.join(tmp, name + ".mlir")
-    subprocess.run([a.mlir_opt, src, attach,
-                    "--convert-gpu-to-agxir=use-bare-ptr-memref-call-conv=1", "--reconcile-unrealized-casts",
-                    "-o", lowered], check=True)
-    body = os.path.join(tmp, name + ".body.mlir")
-    open(body, "w").write(gpu_module_body(lowered))
-    ll = os.path.join(tmp, name + ".ll")
-    subprocess.run([a.mlir_translate, "--mlir-to-llvmir", body, "-o", ll], check=True)
-    optimized = os.path.join(tmp, name + ".opt.ll")
-    subprocess.run([a.opt, "-mtriple=agx", "-mcpu=" + chip, *mattr, "-O3", ll, "-o", optimized], check=True)
-    ll = optimized
+    optimized = os.path.join(tmp, name + ".opt.bc")
+    subprocess.run([a.opt, "-mtriple=agx", "-mcpu=" + chip, *mattr, "-O3", a.portable, "-o", optimized], check=True)
     obj = os.path.join(tmp, name + ".o")
-    subprocess.run([a.llc, "-mtriple=agx", "-mcpu=" + chip, *mattr, "-O3", "-filetype=obj", ll, "-o", obj],
+    subprocess.run([a.llc, "-mtriple=agx", "-mcpu=" + chip, *mattr, "-O3", "-filetype=obj", optimized, "-o", obj],
                    check=True)
     return open(obj, "rb").read()
 
@@ -135,20 +108,19 @@ def main():
     ap.add_argument("--chips", default=",".join(DEFAULT_CHIPS))
     ap.add_argument("--no-agx-strict", dest="agx_strict", action="store_false",
                     help="leave out the CHIP+agx-strict entries")
-    ap.add_argument("--via-air", action="store_true",
-                    help="compile through AIR (convert-gpu-to-air, air-portable, agx-lower-air)")
+    # The only pipeline now; accepted for the builds that still pass it.
+    ap.add_argument("--via-air", action="store_true", help=argparse.SUPPRESS)
     ap.add_argument("-o", dest="out", required=True)
     ap.add_argument("source")
     a = ap.parse_args()
     a.opt = a.opt or os.path.join(os.path.dirname(a.llc), "opt")
     with tempfile.TemporaryDirectory() as tmp:
         chips = [c for c in a.chips.split(",") if c]
-        if a.via_air:
-            a.portable = portable_air(a, a.source, tmp)
-        objects = [(c, compile_for(a, a.source, c, tmp)) for c in chips]
+        a.portable = portable_air(a, a.source, tmp)
+        objects = [(c, compile_for(a, c, tmp)) for c in chips]
         if a.agx_strict:
             # Mesa compiles for G13 and G14 only.
-            objects += [(c + STRICT, compile_for(a, a.source, c, tmp, STRICT)) for c in chips
+            objects += [(c + STRICT, compile_for(a, c, tmp, STRICT)) for c in chips
                         if c.startswith(("agx-g13", "agx-g14"))]
     open(a.out, "wb").write(pack(objects))
     return 0

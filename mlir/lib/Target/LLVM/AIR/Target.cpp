@@ -255,6 +255,10 @@ AIRSerializer::agxObject(llvm::Module &llvmModule) {
                          "default<O" + std::to_string(optLevel) + ">",
                          error)))
     return getOperation().emitError() << "AGX optimization: " << error;
+  // agx-lower-air retargets the module; it has reported why it did not.
+  if (llvmModule.getTargetTriple().getArch() != llvm::Triple::agx)
+    return getOperation().emitError()
+           << "the module's AIR could not be lowered to AGX";
 
   SmallVector<char, 0> object;
   {

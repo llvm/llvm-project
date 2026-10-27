@@ -169,31 +169,6 @@ if ("AGX" IN_LIST LLVM_TARGETS_TO_BUILD)
   )
 endif()
 
-add_mlir_dialect_library(MLIRAGXIRTarget
-  AGXIR/Target.cpp
-
-  OBJECT
-
-  LINK_COMPONENTS
-  MCParser
-  ${AGX_LIBS}
-
-  LINK_LIBS PUBLIC
-  MLIRIR
-  MLIRExecutionEngineUtils
-  MLIRSupport
-  MLIRGPUDialect
-  MLIRTargetLLVM
-  MLIRAGXIRToLLVMIRTranslation
-  )
-
-if ("AGX" IN_LIST LLVM_TARGETS_TO_BUILD)
-  target_compile_definitions(obj.MLIRAGXIRTarget
-    PRIVATE
-    MLIR_AGX_TARGET_ENABLED=1
-  )
-endif()
-
 if ("AMDGPU" IN_LIST LLVM_TARGETS_TO_BUILD)
   set(AMDGPU_LIBS
     AMDGPUAsmParser

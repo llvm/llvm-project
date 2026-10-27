@@ -169,17 +169,18 @@ def GpuNVVMAttachTarget: Pass<"nvvm-attach-target", ""> {
   ];
 }
 
-def GpuAGXIRAttachTarget: Pass<"agxir-attach-target", ""> {
-  let summary = "Attaches an AGXIR target attribute to a GPU Module.";
+def GpuAIRAttachTarget: Pass<"air-attach-target", ""> {
+  let summary = "Attaches an AIR target attribute to a GPU Module.";
   let description = [{
     This pass searches for all GPU Modules in the immediate regions and
-    attaches an AGXIR target (Apple GPUs) if the module matches the name
-    specified by the `module` argument.
+    attaches an AIR target (Apple GPUs) if the module matches the name
+    specified by the `module` argument. Without a chip the target is a
+    `.metallib`; with an AGX chip, an AGX object for that chip.
 
     Example:
     ```
-    // mlir-opt --agxir-attach-target="module=agx.* chip=agx-g14c" in.mlir
-    gpu.module @agx_module [#agxir.target<chip = "agx-g14c">] {...}
+    // mlir-opt --air-attach-target="module=agx.* chip=agx-g14c" in.mlir
+    gpu.module @agx_module [#air.target<chip = "agx-g14c">] {...}
     ```
   }];
   let options = [
@@ -187,19 +188,17 @@ def GpuAGXIRAttachTarget: Pass<"agxir-attach-target", ""> {
            /*default=*/ [{""}],
            "Regex used to identify the modules to attach the target to.">,
     Option<"triple", "triple", "std::string",
-           /*default=*/ "\"agx-apple-macosx\"",
-           "Target triple.">,
+           /*default=*/ "\"air64_v28-apple-macosx26.0.0\"",
+           "AIR target triple.">,
     Option<"chip", "chip", "std::string",
-           /*default=*/"\"agx-g14g\"",
-           "Target chip.">,
+           /*default=*/"\"\"",
+           "Target chip: empty for a .metallib, or an AGX processor.">,
     Option<"features", "features", "std::string",
            /*default=*/"\"\"",
-           "Target features.">,
+           "Target features (AGX chips).">,
     Option<"optLevel", "O", "unsigned",
-           /*default=*/"2",
+           /*default=*/"3",
            "Optimization level.">,
-    ListOption<"linkLibs", "l", "std::string",
-           "Extra bitcode libraries paths to link to.">,
   ];
 }
 

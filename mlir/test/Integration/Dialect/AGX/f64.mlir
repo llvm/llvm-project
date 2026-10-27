@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s -convert-gpu-to-agxir='use-bare-ptr-memref-call-conv=1' \
-// RUN:   -reconcile-unrealized-casts -o %t.mlir
+// RUN: mlir-opt %s -pass-pipeline='builtin.module(gpu.module(arith-emulate-f64,convert-gpu-to-air{use-bare-ptr-memref-call-conv=1}),reconcile-unrealized-casts)' \
+// RUN:   -o %t.mlir
 // RUN: %run_agx --grid 4 --wg 4 %t.mlir f64:1,0.1,1e308,3 f64:3,0.2,10,-0.0 f64*4 i32*4 | FileCheck %s
 
 // Double precision arithmetic is computed in software: a / b + sqrt(a),

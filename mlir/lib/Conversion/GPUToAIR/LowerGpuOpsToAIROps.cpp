@@ -8,8 +8,7 @@
 //
 // This file implements a pass that lowers GPU modules to the LLVM IR the AIR
 // target compiles, in AIR's address spaces (thread 0, device 1, constant 2,
-// threadgroup 3). It follows the GPU to AGXIR lowering, with calls to AIR's
-// functions in place of AGX intrinsics:
+// threadgroup 3), with calls to AIR's functions:
 //
 //   gpu.thread_id         air.thread_position_in_threadgroup
 //   gpu.block_id          air.threadgroup_position_in_grid
@@ -50,6 +49,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/IR/AttrTypeSubElements.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -211,9 +211,9 @@ struct GPUBarrierOpLowering : ConvertOpToLLVMPattern<gpu::BarrierOp> {
   }
 };
 
-/// gpu.shuffle: the source lane as the GPU to AGXIR lowering computes it,
-/// falling back to the current lane outside of the width, and an index
-/// shuffle of each 32-bit part.
+/// gpu.shuffle: the source lane (lane - offset, lane + offset, lane ^ offset
+/// or offset), valid within the thread's segment of `width` lanes and the
+/// thread's own lane outside of it, and an index shuffle of each 32-bit part.
 struct GPUShuffleOpLowering : ConvertOpToLLVMPattern<gpu::ShuffleOp> {
   using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
 
@@ -246,8 +246,14 @@ struct GPUShuffleOpLowering : ConvertOpToLLVMPattern<gpu::ShuffleOp> {
       srcLane = adaptor.getOffset();
       break;
     }
-    Value valid = LLVM::ICmpOp::create(rewriter, loc, LLVM::ICmpPredicate::slt,
-                                       srcLane, segmentEnd);
+    // The source lane must be in the thread's segment of `width` lanes.
+    Value segmentStart = LLVM::AndOp::create(rewriter, loc, i32, lane, negWidth);
+    Value valid = LLVM::AndOp::create(
+        rewriter, loc,
+        LLVM::ICmpOp::create(rewriter, loc, LLVM::ICmpPredicate::sge, srcLane,
+                             segmentStart),
+        LLVM::ICmpOp::create(rewriter, loc, LLVM::ICmpPredicate::slt, srcLane,
+                             segmentEnd));
     Value selected =
         LLVM::SelectOp::create(rewriter, loc, valid, srcLane, lane);
     Value lane16 =
@@ -457,6 +463,36 @@ struct MatrixFillOpLowering : ConvertOpToLLVMPattern<air::MatrixFillOp> {
   }
 };
 
+/// AIR has no generic address space: its address space 0 is the thread's.
+/// A memref without a memory space is device memory (the GPU dialect's
+/// buffers), except a memref.alloca, which is the thread's.
+static void assignDefaultMemorySpaces(gpu::GPUModuleOp m) {
+  MLIRContext *ctx = m.getContext();
+  auto space = [&](gpu::AddressSpace s) {
+    return gpu::AddressSpaceAttr::get(ctx, s);
+  };
+  m.walk([&](memref::AllocaOp op) {
+    MemRefType type = op.getType();
+    if (!type.getMemorySpace())
+      op.getResult().setType(
+          MemRefType::get(type.getShape(), type.getElementType(),
+                          type.getLayout(), space(gpu::AddressSpace::Private)));
+  });
+  AttrTypeReplacer replacer;
+  replacer.addReplacement([&](BaseMemRefType type) -> std::optional<Type> {
+    if (type.getMemorySpace())
+      return std::nullopt;
+    Attribute device = space(gpu::AddressSpace::Global);
+    if (auto ranked = dyn_cast<MemRefType>(type))
+      return MemRefType::get(ranked.getShape(), ranked.getElementType(),
+                             ranked.getLayout(), device);
+    return UnrankedMemRefType::get(type.getElementType(), device);
+  });
+  replacer.recursivelyReplaceElementsIn(m, /*replaceAttrs=*/true,
+                                        /*replaceLocs=*/false,
+                                        /*replaceTypes=*/true);
+}
+
 struct LowerGpuOpsToAIROpsPass final
     : public impl::ConvertGpuOpsToAIROpsBase<LowerGpuOpsToAIROpsPass> {
   using Base::Base;
@@ -483,6 +519,8 @@ struct LowerGpuOpsToAIROpsPass final
     if (indexBitwidth != kDeriveIndexBitwidthFromDataLayout)
       options.overrideIndexBitwidth(indexBitwidth);
     options.useBarePtrCallConv = useBarePtrCallConv;
+
+    assignDefaultMemorySpaces(m);
 
     // In-dialect lowering of gpu.all_reduce and friends first.
     {
@@ -521,7 +559,10 @@ struct LowerGpuOpsToAIROpsPass final
     if (failed(applyPartialConversion(m, target, std::move(llvmPatterns))))
       return signalPassFailure();
 
-    // Kernels carry the "air-kernel" function attribute.
+    // Kernels carry the "air-kernel" function attribute, and the threadgroup
+    // size when it is known as an AGX hint, which AIR ignores (the AGX
+    // backend budgets registers and barriers by it).
+    auto *gpuDialect = ctx->getLoadedDialect<gpu::GPUDialect>();
     m.walk([&](LLVM::LLVMFuncOp f) {
       if (!f->hasAttr(kKernelMarker))
         return;
@@ -530,6 +571,15 @@ struct LowerGpuOpsToAIROpsPass final
       if (ArrayAttr old = f.getPassthroughAttr())
         passthrough.append(old.begin(), old.end());
       passthrough.push_back(StringAttr::get(ctx, "air-kernel"));
+      auto knownBlockSize = gpuDialect->getKnownBlockSizeAttrHelper();
+      if (DenseI32ArrayAttr size = knownBlockSize.getAttr(f)) {
+        int64_t threads = 1;
+        for (int32_t d : size.asArrayRef())
+          threads *= d;
+        passthrough.push_back(ArrayAttr::get(
+            ctx, {StringAttr::get(ctx, "agx-max-threads-per-threadgroup"),
+                  StringAttr::get(ctx, std::to_string(threads))}));
+      }
       f.setPassthroughAttr(ArrayAttr::get(ctx, passthrough));
     });
   }

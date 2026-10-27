@@ -5,8 +5,10 @@ Usage:
   run-agx.py --llc LLC --objcopy OBJCOPY --agx-run AGX_RUN
       [--mlir-translate MLIR_TRANSLATE] kernel.{ll,mlir} --grid N --wg N ARG...
 
-A .mlir input is the output of the conversion to the LLVM and AGXIR
-dialects: the functions of its gpu.module are translated to LLVM IR.
+A .mlir input is the output of convert-gpu-to-air: the functions of its
+gpu.module are translated to LLVM IR, which is AIR (its kernels are
+"air-kernel"). AIR goes through AIR's portable passes (opt -passes=air-portable,
+next to llc), and the AGX backend lowers it (agx-lower-air) as it compiles.
 
 Each ARG is a kernel argument in order: `TYPE:V,V,...` is a buffer
 initialized with the values (TYPE is i32, u32, i64, f16, f32 or f64),
@@ -74,6 +76,12 @@ def main():
     with tempfile.TemporaryDirectory() as tmp:
         if a.ir.endswith('.mlir'):
             a.ir = translate(a.mlir_translate, a.ir, tmp)
+        if '"air-kernel"' in open(a.ir).read():
+            portable = os.path.join(tmp, 'k.portable.ll')
+            opt = os.path.join(os.path.dirname(a.llc), 'opt')
+            subprocess.run([opt, '-mtriple=air', '-passes=air-portable', '-S', a.ir, '-o', portable],
+                           check=True)
+            a.ir = portable
         if a.checked:
             return run_checked(a, tmp)
         asm = subprocess.run([a.llc, '-mtriple=agx', '-mcpu=' + a.cpu, a.ir, '-o', '-'],

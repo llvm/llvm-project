@@ -60,6 +60,16 @@ gpu.module @simd {
     gpu.barrier scope <subgroup> memfence [#gpu.address_space<global>]
     %c1 = arith.constant 1 : i32
     %c32 = arith.constant 32 : i32
+    // CHECK: %[[LANE:.*]] = llvm.call @air.thread_index_in_simdgroup()
+    // CHECK: %[[NEGW:.*]] = llvm.sub %{{.*}}, %[[W:.*]] : i32
+    // CHECK: %[[ADD:.*]] = llvm.add %[[LANE]], %[[W]] : i32
+    // CHECK: %[[END:.*]] = llvm.and %[[ADD]], %[[NEGW]] : i32
+    // CHECK: %[[SRC:.*]] = llvm.xor %[[LANE]], %{{.*}} : i32
+    // CHECK: %[[START:.*]] = llvm.and %[[LANE]], %[[NEGW]] : i32
+    // CHECK: %[[GE:.*]] = llvm.icmp "sge" %[[SRC]], %[[START]] : i32
+    // CHECK: %[[LT:.*]] = llvm.icmp "slt" %[[SRC]], %[[END]] : i32
+    // CHECK: %[[VALID:.*]] = llvm.and %[[GE]], %[[LT]] : i1
+    // CHECK: llvm.select %[[VALID]], %[[SRC]], %[[LANE]] : i1, i32
     // CHECK: llvm.call @air.simd_shuffle.u.i32(%{{.*}}, %{{.*}}) : (i32, i16) -> i32
     %sh, %ok = gpu.shuffle xor %v, %c1, %c32 : f32
     // CHECK: llvm.call @air.simd_ballot.i64(%{{.*}}) : (i1) -> i64
@@ -97,6 +107,35 @@ gpu.module @matrix {
     // CHECK: llvm.call @air.simdgroup_matrix_8x8_multiply_accumulate.v64f32.v64f16.v64f16.v64f32(%{{.*}}, %{{.*}}, %{{.*}}) : (vector<64xf16>, vector<64xf16>, vector<64xf32>) -> vector<64xf32>
     %e = air.simdgroup_matrix_multiply_accumulate %h, %h, %d : vector<64xf16>, vector<64xf32>
     air.simdgroup_matrix_store %e, %C[%i0, %i0] : vector<64xf32> -> memref<8x8xf32, strided<[8, 1]>, 1>
+    gpu.return
+  }
+}
+
+// -----
+
+// AIR has no generic address space: a memref without a memory space is device
+// memory, except an alloca, which is the thread's.
+gpu.module @default_space {
+  // CHECK-LABEL: llvm.func @k(
+  // CHECK-SAME: %{{.*}}: !llvm.ptr<1>
+  gpu.func @k(%out: memref<4xf32>) kernel {
+    %c0 = arith.constant 0 : index
+    // CHECK: llvm.alloca %{{.*}} x f32 : (i64) -> !llvm.ptr
+    %tmp = memref.alloca() : memref<4xf32>
+    %v = memref.load %tmp[%c0] : memref<4xf32>
+    // CHECK: llvm.store %{{.*}}, %{{.*}} : f32, !llvm.ptr<1>
+    memref.store %v, %out[%c0] : memref<4xf32>
+    gpu.return
+  }
+}
+
+// -----
+
+// A known threadgroup size is an AGX hint on the kernel.
+gpu.module @block_size {
+  // CHECK-LABEL: llvm.func @k(
+  // CHECK-SAME: passthrough = ["air-kernel", ["agx-max-threads-per-threadgroup", "128"]]
+  gpu.func @k() kernel attributes {known_block_size = array<i32: 64, 2, 1>} {
     gpu.return
   }
 }
