@@ -15995,6 +15995,12 @@ static bool needsConversionOfHalfVec(bool OpRequiresConversion, ASTContext &Ctx,
 ExprResult Sema::CreateCoopMatBinOp(SourceLocation OpLoc,
                                     BinaryOperatorKind Opc, Expr *LHSExpr,
                                     Expr *RHSExpr) {
+  // Check types.
+  QualType LHSTy = LHSExpr->getType();
+  QualType RHSTy = RHSExpr->getType();
+  if (CheckCoopMatrixTypes(LHSTy, LHSExpr->getBeginLoc(), RHSTy,
+                           RHSExpr->getBeginLoc()))
+    return ExprError();
   SmallVector<Expr *, 2> Args;
   Args.push_back(LHSExpr);
   Args.push_back(RHSExpr);
@@ -16016,6 +16022,14 @@ ExprResult Sema::CreateCoopMatBinOp(SourceLocation OpLoc,
 ExprResult Sema::CreateCoopMatScalarOp(SourceLocation OpLoc,
                                        BinaryOperatorKind Opc, Expr *LHSExpr,
                                        Expr *RHSExpr) {
+  // Check types.
+  QualType LHSTy = LHSExpr->getType();
+  QualType RHSTy = RHSExpr->getType();
+  if (!Context.hasSameType(
+          LHSTy->getAs<CooperativeMatrixType>()->getElementType(), RHSTy)) {
+    Diag(LHSExpr->getBeginLoc(), diag::err_incompatible_coopmat_types);
+    return ExprError();
+  }
   SmallVector<Expr *, 2> Args;
   Args.push_back(LHSExpr);
   Args.push_back(RHSExpr);
@@ -16065,15 +16079,9 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
     QualType LHSTy = LHSExpr->getType();
     QualType RHSTy = RHSExpr->getType();
     // Cooperative matrix support
-    if (LHSTy->isCooperativeMatrixType() && RHSTy->isCooperativeMatrixType()) {
-      // Check matrix types for assignment.
-      if (BO_Assign == Opc) {
-        if (CheckCoopMatrixTypes(LHSTy, LHSExpr->getBeginLoc(), RHSTy,
-                                 RHSExpr->getBeginLoc()))
-          return ExprError();
-      } else
-        return CreateCoopMatBinOp(OpLoc, Opc, LHSExpr, RHSExpr);
-    } else if (LHSTy->isCooperativeMatrixType() && RHSTy->isScalarType()) {
+    if (LHSTy->isCooperativeMatrixType() && RHSTy->isCooperativeMatrixType())
+      return CreateCoopMatBinOp(OpLoc, Opc, LHSExpr, RHSExpr);
+    else if (LHSTy->isCooperativeMatrixType() && RHSTy->isScalarType()) {
       return CreateCoopMatScalarOp(OpLoc, Opc, LHSExpr, RHSExpr);
     } else if (RHSTy->isCooperativeMatrixType() && LHSTy->isScalarType())
       return CreateCoopMatScalarOp(OpLoc, Opc, RHSExpr, LHSExpr);
@@ -16779,6 +16787,10 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
       return BuildBuiltinCallExpr(OpLoc, Builtin::BIcoop_mat_scalar_neg,
                                   {InputExpr});
     }
+    // The address operator cannot be applied to a cooperative matrix.
+    if (Opc == UO_AddrOf && Ty->isCooperativeMatrixType())
+      return ExprError(Diag(OpLoc, diag::err_invalid_coopmat_address_of)
+                       << InputExpr->getSourceRange());
     // The only legal unary operation for atomics is '&'.
     if ((Opc != UO_AddrOf && Ty->isAtomicType()) ||
     // OpenCL special types - image, sampler, pipe, and blocks are to be used

@@ -28,18 +28,18 @@ typedef float __attribute__((coop_mat(0, 16, 16, USE_A))) MatBadScope; // expect
 typedef float __attribute__((coop_mat(SCOPE, 16, 16, 99))) MatBadUse;  // expected-error {{invalid 'use' argument of cooperative matrix attribute}}
 
 // Invalid element types.
-typedef bool __attribute__((coop_mat(SCOPE, 16, 16, USE_A))) MatBadElement_t; // expected-error {{'bool' is invalid cooperative matrix element type}}
-typedef float * __attribute__((coop_mat(SCOPE, 16, 16, USE_A))) MatPtrElem_t; // expected-error-re {{'{{.*}}float *' is invalid cooperative matrix element type}}
+typedef bool __attribute__((coop_mat(SCOPE, 16, 16, USE_A))) MatBadElement_t; // expected-error {{cooperative matrix element type 'bool' is invalid}}
+typedef float * __attribute__((coop_mat(SCOPE, 16, 16, USE_A))) MatPtrElem_t; // expected-error-re {{cooperative matrix element type '{{.*}}float *' is invalid}}
 typedef float Arr4_t[4];
-typedef Arr4_t __attribute__((coop_mat(SCOPE, 16, 16, USE_A))) MatArrElem_t; // expected-error-re {{'Arr4_t'{{.*}} is invalid cooperative matrix element type}}
+typedef Arr4_t __attribute__((coop_mat(SCOPE, 16, 16, USE_A))) MatArrElem_t; // expected-error-re {{cooperative matrix element type 'Arr4_t'{{.*}} is invalid}}
 struct ElemS { float x; };
-typedef struct ElemS __attribute__((coop_mat(SCOPE, 16, 16, USE_A))) MatStructElem_t; // expected-error {{'struct ElemS' is invalid cooperative matrix element type}}
-typedef float4 __attribute__((coop_mat(SCOPE, 16, 16, USE_A))) MatVecElem_t; // expected-error-re {{'float4'{{.*}} is invalid cooperative matrix element type}}
+typedef struct ElemS __attribute__((coop_mat(SCOPE, 16, 16, USE_A))) MatStructElem_t; // expected-error {{cooperative matrix element type 'struct ElemS' is invalid}}
+typedef float4 __attribute__((coop_mat(SCOPE, 16, 16, USE_A))) MatVecElem_t; // expected-error-re {{cooperative matrix element type 'float4'{{.*}} is invalid}}
 
 // Assignment of coop_mat_load result to a plain scalar
 kernel void test_bad_assignment(__global float *ptr) {
     float bad;
-	bad = coop_mat_load(ptr, ROW_MAJOR, 16); // expected-error {{builtin return value should be assigned to cooperative matrix type variable}}
+	bad = coop_mat_load(ptr, ROW_MAJOR, 16); // expected-error {{builtin return value must be assigned to cooperative matrix type variable}}
     (void)bad;
 }
 
@@ -118,20 +118,34 @@ kernel void test_incompatible_muladd_shapes() {
     MatA_t       a;
     MatB8x16_t   b;
     MatC16x16_t  c;
-    (void)coop_mat_mulAdd(a, b, c); // expected-error {{two cooperative matrices with incompatible shapes}}
+    (void)coop_mat_mulAdd(a, b, c); // expected-error {{cooperative matrix types with incompatible shapes}}
 }
 
 // Test of cooperative matrix binary operators.
 kernel void test_unsupported_coopmat_binary_operator() {
-    MatA_t a;
-    MatB_t b;
-    (void)(a & b); // expected-error {{unsupported cooperative matrix binary operator}}
+    MatA_t a_1;
+    MatA_t a_2;
+    (void)(a_1 & a_2); // expected-error {{unsupported cooperative matrix binary operator}}
 }
 
 // Test of scalar cooperative-matrix operators.
 kernel void test_unsupported_coopmat_scalar_operator() {
     MatA_t a;
     (void)(a / 2.0f); // expected-error {{unsupported cooperative matrix scalar operator}}
+    (void)(2.0f / a); // expected-error {{unsupported cooperative matrix scalar operator}}
+}
+
+// Test of binary operations on cooperative-matrices with different component types.
+kernel void test_binary_operation_on_coopmat_with_different_component_types() {
+    MatC_t c_f;
+    MatC_int_t c_i;
+    float x = 2.5;
+    (void)(c_f + c_i); // expected-error {{incompatible cooperative matrix types}}
+    (void)(c_i + c_f); // expected-error {{incompatible cooperative matrix types}}
+    (void)(c_f * c_i); // expected-error {{incompatible cooperative matrix types}}
+    (void)(c_i * c_f); // expected-error {{incompatible cooperative matrix types}}
+    (void)(x * c_i); // expected-error {{incompatible cooperative matrix types}}
+    (void)(c_i * x); // expected-error {{incompatible cooperative matrix types}}
 }
 
 // Test of cooperative matrix assignment.
@@ -169,4 +183,10 @@ void test_coop_mat_init_invalid(void) {
 void test_coop_mat_length_invalid(void) {
   int Value = 0;
   uint len = coop_mat_length(Value); // expected-error {{argument must be a valid cooperative matrix}}
+}
+
+// Test of address-of operator
+kernel void test_address_of(void) {
+    MatA_t a;
+	(void)(&a); // expected-error {{cannot take the address of a cooperative matrix}}
 }

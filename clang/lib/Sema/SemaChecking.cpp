@@ -17659,7 +17659,8 @@ bool Sema::CheckCoopMatrixTypes(QualType ATy, SourceLocation ALoc, QualType BTy,
   if (!M0Ty || !M1Ty)
     return true;
 
-  if (!areCoopMatrixTypesCompatible(ATy, BTy)) {
+  if (!Context.hasSameType(M0Ty->getElementType(), M1Ty->getElementType()) ||
+      !areCoopMatrixTypesCompatible(ATy, BTy)) {
     Diag(ALoc, diag::err_incompatible_coopmat_types);
     return true;
   }
@@ -17751,9 +17752,14 @@ ExprResult Sema::BuiltinCoopMatrixScalarOp(CallExpr *TheCall,
 
   Expr *Arg0 = TheCall->getArg(0);
   auto *M0Ty = Arg0->getType()->getAs<CooperativeMatrixType>();
+  Expr *Arg1 = TheCall->getArg(1);
 
   if (!M0Ty) {
     Diag(Arg0->getBeginLoc(), diag::err_invalid_coopmat_arg);
+    return ExprError();
+  }
+  if (!Context.hasSameType(M0Ty->getElementType(), Arg1->getType())) {
+    Diag(Arg0->getBeginLoc(), diag::err_incompatible_coopmat_types);
     return ExprError();
   }
   TheCall->setType(Arg0->getType());

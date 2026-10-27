@@ -12038,10 +12038,6 @@ def err_invalid_coopmat_stride_type
     : Error<"stride argument for load/store of cooperative matrix must have "
             "type 'size_t'">;
 
-def err_coopmat_mismatch_element_and_pointer_type
-    : Error<"inconsistent between cooperative matrix element type and buffer "
-            "pointer type">;
-
 def err_invalid_coopmat_arg
     : Error<"argument must be a valid cooperative matrix">;
 
@@ -12049,16 +12045,16 @@ def err_invalid_coopmat_matrix_operand_type
     : Error<"fourth argument of 'coop_mat_mulAdd' must have enum or integer type">;
 
 def err_invalid_coopmat_assignment
-    : Error<"builtin return value should be assigned to cooperative matrix "
+    : Error<"builtin return value must be assigned to cooperative matrix "
             "type variable">;
 
 def err_invalid_coopmat_use : Error<"argument of cooperative matrix must have '%0' use">;
 
 def err_invalid_coopmat_element_type
-    : Error<"%0 is invalid cooperative matrix element type">;
+    : Error<"cooperative matrix element type %0 is invalid">;
 
 def err_coopmat_shapes_incompatible
-    : Error<"two cooperative matrices with incompatible shapes">;
+    : Error<"cooperative matrix types with incompatible shapes">;
 
 def err_unsupported_coopmat_binary_operator
     : Error<"unsupported cooperative matrix binary operator">;
@@ -12071,6 +12067,9 @@ def err_incompatible_coopmat_types
 
 def err_invalid_coopmat_builtin_arg
     : Error<"invalid argument of cooperative matrix builtin">;
+
+def err_invalid_coopmat_address_of
+    : Error<"cannot take the address of a cooperative matrix">;
 
 // MIG routine annotations.
 def warn_mig_server_routine_does_not_return_kern_return_t : Warning<
