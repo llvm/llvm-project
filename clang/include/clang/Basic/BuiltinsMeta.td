@@ -8,7 +8,7 @@
 
 // All metafunctions should be consteval.
 class CXXMetaBuiltin<string name, string prototype, list<Attribute> Attrs = []>
-    : LangBuiltin<"CXX_LANG"> {
+    : LangBuiltin<"REFLECTION_LANG"> {
   let Spellings = [!strconcat("__builtin_meta_", name)];
   let Prototype = prototype;
   let Attributes = !listconcat([Consteval], Attrs);

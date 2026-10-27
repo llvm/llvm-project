@@ -48,6 +48,7 @@ enum LanguageID : uint16_t {
   HLSL_LANG = 0x1000,        // builtin requires HLSL.
   C23_LANG = 0x2000,         // builtin requires C23 or later.
   C2Y_LANG = 0x4000,         // builtin requires C2y or later.
+  REFLECTION_LANG = 0x8000,  // builtin requires use of 'freflection' option.
   ALL_LANGUAGES = C_LANG | CXX_LANG | OBJC_LANG, // builtin for all languages.
   ALL_GNU_LANGUAGES = ALL_LANGUAGES | GNU_LANG,  // builtin requires GNU mode.
   ALL_MS_LANGUAGES = ALL_LANGUAGES | MS_LANG     // builtin requires MS mode.
