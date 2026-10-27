@@ -52,7 +52,7 @@ public:
   void PrepareThreadRefresh(std::vector<ThreadSP> threads) {
     next_threads = std::move(threads);
     refresh_threads = true;
-    m_private_state.SetValue(eStateStopped);
+    m_current_private_state_thread_sp->SetPrivateState(eStateStopped);
     m_mod_id.BumpStopID();
   }
 
