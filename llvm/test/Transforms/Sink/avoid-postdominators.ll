@@ -250,3 +250,33 @@ use:
 exit:
   ret float 0.0
 }
+
+; As above, but the store in %node may clobber %p, so once %v is in %node it
+; cannot move on to %use. Sinking would only move %v into a postdominator.
+define float @no_sink_load_blocked_by_store_in_postdominator(ptr %p, ptr %q,
+                                                             i1 %c, i1 %d) {
+; CHECK-LABEL: @no_sink_load_blocked_by_store_in_postdominator(
+; CHECK-NEXT:  entry:
+; AVOID-NEXT:    %v = load float, ptr %p
+; CHECK-NEXT:    br label %node
+; CHECK:       node:
+; DEFAULT-NEXT:  %v = load float, ptr %p
+; CHECK-NEXT:    store float 0.000000e+00, ptr %q
+;
+entry:
+  %v = load float, ptr %p
+  br label %node
+
+node:
+  store float 0.0, ptr %q
+  br i1 %c, label %leaf, label %exit
+
+leaf:
+  br i1 %d, label %use, label %exit
+
+use:
+  ret float %v
+
+exit:
+  ret float 0.0
+}

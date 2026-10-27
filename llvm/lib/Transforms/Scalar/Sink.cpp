@@ -255,8 +255,17 @@ static bool SinkInstruction(Instruction *Inst,
     // Sinking is repeated until nothing changes, so Inst may later move on
     // from SuccToSinkTo towards UsesDom. Find where it ends up.
     BasicBlock *Dest = SuccToSinkTo;
-    while (BasicBlock *Next = findSinkTarget(Inst, Dest, UsesDom, DT, LI))
+    while (BasicBlock *Next = findSinkTarget(Inst, Dest, UsesDom, DT, LI)) {
+      // Inst would be placed above every write in Dest, which may then keep
+      // it from moving on.
+      SmallPtrSet<Instruction *, 8> Writes;
+      for (Instruction &I : *Dest)
+        if (I.mayWriteToMemory())
+          Writes.insert(&I);
+      if (!isSafeToMove(Inst, AA, Writes))
+        break;
       Dest = Next;
+    }
     // If Dest postdominates BB, it executes whenever BB does, so sinking saves
     // no execution. Don't sink if that would keep more values live across the
     // region than it frees.
