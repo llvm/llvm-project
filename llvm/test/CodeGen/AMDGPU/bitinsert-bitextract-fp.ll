@@ -324,15 +324,25 @@ define b16 @test_bitinsert_half_full(b16 %base, half %val) {
 ; GFX9-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX12-LABEL: test_bitinsert_half_full:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_samplecnt 0x0
-; GFX12-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_mov_b32_e32 v0, v1
-; GFX12-NEXT:    s_setpc_b64 s[30:31]
+; GFX12-TRUE16-LABEL: test_bitinsert_half_full:
+; GFX12-TRUE16:       ; %bb.0:
+; GFX12-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-TRUE16-NEXT:    s_wait_expcnt 0x0
+; GFX12-TRUE16-NEXT:    s_wait_samplecnt 0x0
+; GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v1.l
+; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-FAKE16-LABEL: test_bitinsert_half_full:
+; GFX12-FAKE16:       ; %bb.0:
+; GFX12-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-FAKE16-NEXT:    s_wait_expcnt 0x0
+; GFX12-FAKE16-NEXT:    s_wait_samplecnt 0x0
+; GFX12-FAKE16-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX12-FAKE16-NEXT:    v_mov_b32_e32 v0, v1
+; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %result = bitinsert b16 %base, half %val, i32 0
   ret b16 %result
 }
