@@ -16977,6 +16977,8 @@ static SDValue PerformLegalizedInterleavedStoreCombine(
     return SDValue();
 
   StoreSDNode *BaseStore = Stores[0];
+  if (Subtarget->hasMVEIntegerOps() && BaseStore->getAlign() < EltBits / 8)
+    return SDValue();
   unsigned Bytes = SubVecTy.getStoreSize().getFixedValue();
   for (auto [Idx, Store] : enumerate(Stores)) {
     if (!DAG.areNonVolatileConsecutiveStores(Store, BaseStore, Bytes, Idx))
@@ -17079,10 +17081,10 @@ static SDValue PerformInterleavedStoreCombine(
   if (NumParts != 2 && NumParts != 3 && NumParts != 4)
     return SDValue();
 
-  EVT SubVecTy = ValueInterleaveOps[0].getValueType();
   if (NumParts == 3 && Subtarget->hasMVEIntegerOps())
     return SDValue();
 
+  EVT SubVecTy = ValueInterleaveOps[0].getValueType();
   if (Subtarget->hasNEON() && !SubVecTy.is64BitVector() &&
       !SubVecTy.is128BitVector())
     return SDValue();
@@ -17091,7 +17093,8 @@ static SDValue PerformInterleavedStoreCombine(
   unsigned EltBits = SubVecTy.getScalarSizeInBits();
   if (EltBits != 8 && EltBits != 16 && EltBits != 32)
     return SDValue();
-
+  if (Subtarget->hasMVEIntegerOps() && ST->getAlign() < EltBits / 8)
+    return SDValue();
   static constexpr Intrinsic::ID NEONStores[] = {Intrinsic::arm_neon_vst2,
                                                  Intrinsic::arm_neon_vst3,
                                                  Intrinsic::arm_neon_vst4};

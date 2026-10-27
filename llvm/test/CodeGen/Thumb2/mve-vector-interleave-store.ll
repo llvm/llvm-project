@@ -46,6 +46,25 @@ define arm_aapcs_vfpcc void @vector_interleave2_v4i32(ptr %dst, <4 x i32> %v0, <
   ret void
 }
 
+define arm_aapcs_vfpcc void @vector_interleave2_v4i32_align2(ptr %dst, <4 x i32> %v0, <4 x i32> %v1) {
+; CHECK-LABEL: vector_interleave2_v4i32_align2:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vmov.f32 s8, s2
+; CHECK-NEXT:    vmov.f32 s9, s6
+; CHECK-NEXT:    vmov.f32 s10, s3
+; CHECK-NEXT:    vmov.f32 s11, s7
+; CHECK-NEXT:    vstrh.16 q2, [r0, #16]
+; CHECK-NEXT:    vmov.f32 s8, s0
+; CHECK-NEXT:    vmov.f32 s9, s4
+; CHECK-NEXT:    vmov.f32 s10, s1
+; CHECK-NEXT:    vmov.f32 s11, s5
+; CHECK-NEXT:    vstrh.16 q2, [r0]
+; CHECK-NEXT:    bx lr
+  %interleave = call <8 x i32> @llvm.vector.interleave2.v8i32(<4 x i32> %v0, <4 x i32> %v1)
+  store <8 x i32> %interleave, ptr %dst, align 2
+  ret void
+}
+
 define arm_aapcs_vfpcc void @vector_interleave2_v4f32(ptr %dst, <4 x float> %v0, <4 x float> %v1) {
 ; CHECK-LABEL: vector_interleave2_v4f32:
 ; CHECK:       @ %bb.0:
