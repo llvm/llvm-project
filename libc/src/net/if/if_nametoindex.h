@@ -7,23 +7,19 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Linux implementation of if_freenameindex.
+/// Implementation header for if_nametoindex.
 ///
 //===----------------------------------------------------------------------===//
 
-#include "src/net/if_freenameindex.h"
-#include "hdr/stdint_proxy.h"
-#include "hdr/types/struct_if_nameindex.h"
-#include "src/__support/CPP/new.h"
-#include "src/__support/common.h"
+#ifndef LLVM_LIBC_SRC_NET_IF_IF_NAMETOINDEX_H
+#define LLVM_LIBC_SRC_NET_IF_IF_NAMETOINDEX_H
+
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(void, if_freenameindex, (struct if_nameindex * ptr)) {
-  // ptr was allocated in net::if_nameindex() as a single contiguous uint8_t[]
-  // buffer holding both the if_nameindex struct array and the interface name
-  // strings.
-  delete[] reinterpret_cast<uint8_t *>(ptr);
-}
+unsigned int if_nametoindex(const char *ifname);
 
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SRC_NET_IF_IF_NAMETOINDEX_H

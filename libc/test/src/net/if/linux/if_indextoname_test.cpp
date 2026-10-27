@@ -13,8 +13,8 @@
 
 #include "hdr/errno_macros.h"
 #include "hdr/net_if_macros.h"
-#include "src/net/if_indextoname.h"
-#include "src/net/if_nametoindex.h"
+#include "src/net/if/if_indextoname.h"
+#include "src/net/if/if_nametoindex.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/Test.h"
 

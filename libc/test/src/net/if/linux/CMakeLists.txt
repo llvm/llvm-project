@@ -1,35 +1,33 @@
-add_libc_testsuite(libc-net-tests)
-
 add_libc_test(
   if_indextoname_test
   SUITE
-    libc-net-tests
+    libc-net-if-tests
   SRCS
     if_indextoname_test.cpp
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.net_if_macros
-    libc.src.net.if_indextoname
-    libc.src.net.if_nametoindex
+    libc.src.net.if.if_indextoname
+    libc.src.net.if.if_nametoindex
     libc.test.UnitTest.ErrnoCheckingTest
 )
 
 add_libc_test(
   if_nametoindex_test
   SUITE
-    libc-net-tests
+    libc-net-if-tests
   SRCS
     if_nametoindex_test.cpp
   DEPENDS
     libc.hdr.errno_macros
-    libc.src.net.if_nametoindex
+    libc.src.net.if.if_nametoindex
     libc.test.UnitTest.ErrnoCheckingTest
 )
 
 add_libc_test(
   if_nameindex_test
   SUITE
-    libc-net-tests
+    libc-net-if-tests
   SRCS
     if_nameindex_test.cpp
   DEPENDS
@@ -45,9 +43,9 @@ add_libc_test(
     libc.src.__support.CPP.tuple
     libc.src.__support.error_or
     libc.src.__support.fixedvector
-    libc.src.net.if_freenameindex
-    libc.src.net.if_nameindex
-    libc.src.net.linux.if_nameindex_impl
+    libc.src.net.if.if_freenameindex
+    libc.src.net.if.if_nameindex
+    libc.src.net.if.linux.if_nameindex_impl
     libc.src.string.memory_utils.inline_memcpy
     libc.src.string.memory_utils.inline_memset
     libc.test.UnitTest.ErrnoCheckingTest
