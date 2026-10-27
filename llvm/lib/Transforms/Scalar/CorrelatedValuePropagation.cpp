@@ -996,6 +996,7 @@ static bool processSRem(BinaryOperator *SDI, const ConstantRange &LCR,
     Res->setDebugLoc(SDI->getDebugLoc());
   }
 
+  salvageDebugInfo(*SDI);
   SDI->replaceAllUsesWith(Res);
   SDI->eraseFromParent();
 
@@ -1017,6 +1018,7 @@ static bool processSDiv(BinaryOperator *SDI, const ConstantRange &LCR,
   // Check whether the division folds to a constant.
   ConstantRange DivCR = LCR.sdiv(RCR);
   if (const APInt *Elem = DivCR.getSingleElement()) {
+    salvageDebugInfo(*SDI);
     SDI->replaceAllUsesWith(ConstantInt::get(SDI->getType(), *Elem));
     SDI->eraseFromParent();
     return true;
@@ -1058,6 +1060,7 @@ static bool processSDiv(BinaryOperator *SDI, const ConstantRange &LCR,
     Res->setDebugLoc(SDI->getDebugLoc());
   }
 
+  salvageDebugInfo(*SDI);
   SDI->replaceAllUsesWith(Res);
   SDI->eraseFromParent();
 
@@ -1096,6 +1099,7 @@ static bool processAShr(BinaryOperator *SDI, LazyValueInfo *LVI) {
   if (NegOneOrZero.contains(LRange)) {
     // ashr of -1 or 0 never changes the value, so drop the whole instruction
     ++NumAShrsRemoved;
+    salvageDebugInfo(*SDI);
     SDI->replaceAllUsesWith(SDI->getOperand(0));
     SDI->eraseFromParent();
     return true;
@@ -1110,6 +1114,7 @@ static bool processAShr(BinaryOperator *SDI, LazyValueInfo *LVI) {
   BO->takeName(SDI);
   BO->setDebugLoc(SDI->getDebugLoc());
   BO->setIsExact(SDI->isExact());
+  salvageDebugInfo(*SDI);
   SDI->replaceAllUsesWith(BO);
   SDI->eraseFromParent();
 
@@ -1128,6 +1133,7 @@ static bool processSExt(SExtInst *SDI, LazyValueInfo *LVI) {
   ZExt->takeName(SDI);
   ZExt->setDebugLoc(SDI->getDebugLoc());
   ZExt->setNonNeg();
+  salvageDebugInfo(*SDI);
   SDI->replaceAllUsesWith(ZExt);
   SDI->eraseFromParent();
 
@@ -1290,6 +1296,7 @@ static bool processAnd(BinaryOperator *BinOp, LazyValueInfo *LVI) {
   if (!LRange.getUnsignedMax().ule(*RHS))
     return false;
 
+  salvageDebugInfo(*BinOp);
   BinOp->replaceAllUsesWith(LHS);
   BinOp->eraseFromParent();
   NumAnd++;

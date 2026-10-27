@@ -555,6 +555,8 @@ bool TypeSanitizer::sanitizeFunction(Function &F,
                                      const TargetLibraryInfo &TLI) {
   if (F.isDeclaration())
     return false;
+  if (F.hasFnAttribute(Attribute::DisableSanitizerInstrumentation))
+    return false;
   // This is required to prevent instrumenting call to __tysan_init from within
   // the module constructor.
   if (&F == TysanCtorFunction.getCallee() || &F == TysanGlobalsSetTypeFunction)
@@ -964,7 +966,7 @@ PreservedAnalyses TypeSanitizerPass::run(Module &M,
                                           kTysanInitName, /*InitArgTypes=*/{},
                                           /*InitArgs=*/{});
 
-  const InstrumentationOptions &Opts = InstrumentationOptions::Global;
+  const InstrumentationOptions &Opts = getInstrumentationOptions(M);
   TypeSanitizer TySan(Opts, M);
   TySan.instrumentGlobals(M);
   appendToGlobalCtors(M, TysanCtorFunction, 0);

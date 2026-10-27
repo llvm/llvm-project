@@ -56,7 +56,7 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(llvm::StringRef name) override;
 
 private:
   ExecutionContextRef m_exe_ctx_ref;
@@ -75,7 +75,7 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(llvm::StringRef name) override;
 
 private:
   // The lifetime of a ValueObject and all its derivative ValueObjects
@@ -153,7 +153,7 @@ LibstdcppMapIteratorSyntheticFrontEnd::GetChildAtIndex(uint32_t idx) {
 
 llvm::Expected<size_t>
 LibstdcppMapIteratorSyntheticFrontEnd::GetIndexOfChildWithName(
-    ConstString name) {
+    llvm::StringRef name) {
   if (name == "first")
     return 0;
   if (name == "second")
@@ -335,7 +335,8 @@ lldb::ChildCacheState LibStdcppSharedPtrSyntheticFrontEnd::Update() {
 }
 
 llvm::Expected<size_t>
-LibStdcppSharedPtrSyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
+LibStdcppSharedPtrSyntheticFrontEnd::GetIndexOfChildWithName(
+    llvm::StringRef name) {
   if (name == "pointer")
     return 0;
 
