@@ -69,8 +69,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.grp.setgrent
 
     # net/if.h entrypoints
-    libc.src.net.if_indextoname
-    libc.src.net.if_nametoindex
+    libc.src.net.if.if_indextoname
+    libc.src.net.if.if_nametoindex
 
     # netinet/ether.h entrypoints
     libc.src.netinet.ether.ether_ntoa
@@ -1770,8 +1770,8 @@ if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
       libc.src.libintl.textdomain
 
       # net/if.h entrypoints
-      libc.src.net.if_freenameindex
-      libc.src.net.if_nameindex
+      libc.src.net.if.if_freenameindex
+      libc.src.net.if.if_nameindex
 
       # netdb.h entrypoints
       libc.src.netdb.freeaddrinfo

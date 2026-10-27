@@ -11,8 +11,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_NET_IF_FREENAMEINDEX_H
-#define LLVM_LIBC_SRC_NET_IF_FREENAMEINDEX_H
+#ifndef LLVM_LIBC_SRC_NET_IF_IF_FREENAMEINDEX_H
+#define LLVM_LIBC_SRC_NET_IF_IF_FREENAMEINDEX_H
 
 #include "hdr/types/struct_if_nameindex.h"
 #include "src/__support/macros/config.h"
@@ -27,4 +27,4 @@ void if_freenameindex(struct if_nameindex *ptr);
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_NET_IF_FREENAMEINDEX_H
+#endif // LLVM_LIBC_SRC_NET_IF_IF_FREENAMEINDEX_H
