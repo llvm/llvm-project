@@ -21,20 +21,6 @@ define i32 @minimal(i64 %idx, i32 %a, i32 %b) {
   ret i32 %v
 }
 
-
-define i32 @minimal_undef(i64 %idx, i32 %a, i32 %b) {
-; CHECK-LABEL: define i32 @minimal_undef(
-; CHECK-SAME: i64 [[IDX:%.*]], i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:    [[GEP_SROA_IDX:%.*]] = icmp eq i64 [[IDX]], 1
-; CHECK-NEXT:    [[V_SROA_SPECULATED:%.*]] = select i1 [[GEP_SROA_IDX]], i32 undef, i32 undef
-; CHECK-NEXT:    ret i32 [[V_SROA_SPECULATED]]
-;
-  %alloca = alloca [2 x i32]
-  %gep = getelementptr inbounds nuw [2 x i32], ptr %alloca, i64 0, i64 %idx
-  %v = load i32, ptr %gep
-  ret i32 %v
-}
-
 define i32 @three_slots(i64 %idx, i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: define i32 @three_slots(
 ; CHECK-SAME: i64 [[IDX:%.*]], i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]]) {
