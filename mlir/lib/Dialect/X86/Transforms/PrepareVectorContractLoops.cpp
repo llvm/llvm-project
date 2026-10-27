@@ -20,10 +20,9 @@
 
 using namespace mlir;
 
-namespace {
-vector::ContractionOp getCandidate(scf::ForOp loop) {
+static vector::ContractionOp getCandidate(scf::ForOp loop) {
   if (loop.getNumRegionIterArgs() != 1) {
-    LDBG() << "reject loop at " << loop.getLoc() << ": expected one iter_arg\n";
+    LDBG() << "reject loop at " << loop.getLoc() << ": expected one iter_arg";
     return {};
   }
 
@@ -38,7 +37,7 @@ vector::ContractionOp getCandidate(scf::ForOp loop) {
         yield->getNumOperands() != 1 ||
         yield->getOperand(0) != contract.getResult()) {
       LDBG() << "reject contraction at " << contract.getLoc()
-             << ": not a single loop-carried accumulation\n";
+             << ": not a single loop-carried accumulation";
       continue;
     }
 
@@ -64,12 +63,13 @@ vector::ContractionOp getCandidate(scf::ForOp loop) {
         maps[2] == AffineMap::get(4, 0, {m, n}, ctx))
       return contract;
     LDBG() << "reject contraction at " << contract.getLoc()
-           << ": noncanonical matmul layout or iterators\n";
+           << ": noncanonical matmul layout or iterators";
   }
   return {};
 }
 
-bool isSimpleReadOutsideLoop(vector::TransferReadOp read, scf::ForOp loop) {
+static bool isSimpleReadOutsideLoop(vector::TransferReadOp read,
+                                    scf::ForOp loop) {
   return read && read->getParentOp() == loop &&
          isa<MemRefType>(read.getBase().getType()) &&
          loop.isDefinedOutsideOfLoop(read.getBase()) &&
@@ -77,6 +77,7 @@ bool isSimpleReadOutsideLoop(vector::TransferReadOp read, scf::ForOp loop) {
          !read.hasOutOfBoundsDim();
 }
 
+namespace {
 struct ExpandedRead {
   vector::TransferReadOp read;
   MemRefType type;
@@ -85,10 +86,11 @@ struct ExpandedRead {
   // Static view of a dynamic last dimension, or null.
   MemRefType view;
 };
+} // namespace
 
-std::optional<ExpandedRead> getExpandableRead(vector::TransferReadOp read,
-                                              unsigned factor,
-                                              scf::ForOp loop) {
+static std::optional<ExpandedRead>
+getExpandableRead(vector::TransferReadOp read, unsigned factor,
+                  scf::ForOp loop) {
   if (!isSimpleReadOutsideLoop(read, loop))
     return std::nullopt;
   auto type = cast<MemRefType>(read.getBase().getType());
@@ -135,8 +137,8 @@ std::optional<ExpandedRead> getExpandableRead(vector::TransferReadOp read,
                       view};
 }
 
-Value buildExpandedRead(PatternRewriter &rewriter, Location loc,
-                        ExpandedRead &info, VectorType resultType) {
+static Value buildExpandedRead(PatternRewriter &rewriter, Location loc,
+                               ExpandedRead &info, VectorType resultType) {
   OpBuilder::InsertionGuard guard(rewriter);
   rewriter.setInsertionPoint(info.read->getParentOp());
   Value base = info.read.getBase();
@@ -167,6 +169,7 @@ Value buildExpandedRead(PatternRewriter &rewriter, Location loc,
   return packed;
 }
 
+namespace {
 // Fold RHS unpacking into a VNNI contraction:
 //   - Match a packed RHS read transposed and flattened for a flat matmul.
 //   - Split the LHS memref's K dimension and reread it in packed lanes.

@@ -113,10 +113,8 @@ void populateVectorContractToAMXDotProductPatterns(RewritePatternSet &patterns);
 void populateMoveAccumulatorForContractLoopPatterns(
     RewritePatternSet &patterns);
 
-// Adds patterns that fold RHS unpacking into vector contractions inside
-// scf.for loops, so the contractions use VNNI-packed operands directly.
-// The patterns require constant innermost read indices; other indices may
-// be computed.
+// Adds patterns to prepare vector contractions inside scf.for loops for
+// subsequent lowering (e.g. multi-level-unroll).
 void populatePrepareVectorContractLoopsPatterns(RewritePatternSet &patterns);
 
 // A set of patterns that tile and unroll contractions in order to prepare them

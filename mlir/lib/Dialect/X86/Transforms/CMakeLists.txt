@@ -12,6 +12,7 @@ add_mlir_dialect_library(MLIRX86Transforms
   PrepareVectorContractLoops.cpp
 
   LINK_LIBS PUBLIC
+  MLIRAffineDialect
   MLIRArithDialect
   MLIRDialectUtils
   MLIRIR
