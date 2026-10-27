@@ -27,9 +27,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_MATH_EXP_INTEGER_UTILS_H
 
 namespace LIBC_NAMESPACE_DECL {
-
 namespace math {
-
 namespace static_rounding {
 
 // All constants below are generated via Sollya
@@ -192,6 +190,89 @@ LIBC_INLINE uint64_t exp_handle_rounding(TFrac result_frac, bool is_neg, int d,
 #endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
 }
 
+LIBC_ALWAYS_INLINE void exp_scale(uint64_t x_s_shifted, int x_e_unbiased,
+                                  bool is_neg, uint64_t &l2y_r_hi,
+                                  uint64_t &e_y, int &d) {
+  using FPBits = fputil::FPBits<double>;
+
+  // LSB(x_s_frac) = 2^-52
+  Frac64 x_s_frac(x_s_shifted);
+
+  Frac64 x_ln2 = x_s_frac * LOG2_E_F64;
+  uint64_t x_ln2_bits = x_ln2.val[0];
+
+  uint64_t k = 0;
+  uint64_t frac_bits = 0;
+  int shift = 0;
+
+  if (x_e_unbiased >= -1) {
+    shift = 62 - x_e_unbiased;
+    k = x_ln2_bits >> shift;
+    frac_bits = x_ln2_bits << (64 - shift);
+  } else {
+    k = 0;
+    shift = -x_e_unbiased - 2;
+    frac_bits = (shift < 64) ? (x_ln2_bits >> shift) : 0;
+  }
+
+  // As Frac64/Frac128 can't store the sign, we need to handle the sign
+  // separately:
+  // - Both branches are computing floor(x * log2(e)).
+  // - For negative x, we round up to the next multiple of 2^52, then clear
+  // the last 52 bits.
+  // - For positive x, we round down (just clear) the last 52 bits.
+  //
+  // Then, l2y_r_hi is the remainder of x * log2(e) after removing the
+  // integer part, which is used to look up EXP_MID and compute 2^lo.
+  //
+  // e_y is the biased exponent field, positioned for the final bit assembly.
+  if (LIBC_UNLIKELY(is_neg)) {
+    if (frac_bits != 0) {
+      k = k + 1;
+      l2y_r_hi = ~frac_bits + 1; // 1 - r
+    } else {
+      l2y_r_hi = 0;
+    }
+    e_y = (FPBits::EXP_BIAS << 20) - static_cast<uint32_t>(k << 20);
+  } else {
+    l2y_r_hi = frac_bits;
+    e_y = (FPBits::EXP_BIAS << 20) + static_cast<uint32_t>(k << 20);
+  }
+
+  d = static_cast<int>(k) - FPBits::EXP_BIAS;
+}
+
+LIBC_ALWAYS_INLINE Frac64 exp_fast_path(uint64_t l2y_r_hi) {
+  // Extract the top 4 fractional bits for the LUT index.
+  uint16_t x_mid = static_cast<uint16_t>((l2y_r_hi >> 60) & 0xf);
+
+  // The remaining 60 bits are the polynomial input.
+  uint64_t x_lo = l2y_r_hi & ((1ull << 60) - 1);
+
+  // Fast path: 64-bit calculations first
+
+  // Don't << 4, as the polynomial approximation is correct in range [0, 1/16],
+  // and x_lo is already in that range.
+  // LSB(x_lo_frac) = 2^-64
+  Frac64 x_lo_frac(x_lo);
+
+  Frac64 p = x_lo_frac * fputil::polyeval(x_lo_frac, EXP_64_COEFFS[0],
+                                          EXP_64_COEFFS[1], EXP_64_COEFFS[2],
+                                          EXP_64_COEFFS[3], EXP_64_COEFFS[4],
+                                          EXP_64_COEFFS[5]);
+
+  // With:
+  //  - p = 2^lo - 1 --> 2^lo = p + 1
+  //  - mid_val = 2^mid = EXP_MID[x_mid]
+  // We have:
+  //  2^mid * 2^lo = mid_val * (p + 1)
+  // The same applies for both of the 64-bit and 128-bit paths
+  // (Workaround because we're dealing with fractional representation of things)
+  Frac64 mid_val = EXP_MID[x_mid].to_frac64();
+  Frac64 result = fputil::multiply_add(mid_val, p, mid_val);
+  return result;
+}
+
 LIBC_ALWAYS_INLINE uint64_t exp_accurate_path(uint64_t x_s_shifted,
                                               int x_e_unbiased, bool is_neg,
                                               int rounding) {
@@ -253,9 +334,7 @@ LIBC_ALWAYS_INLINE uint64_t exp_accurate_path(uint64_t x_s_shifted,
 }
 
 } // namespace static_rounding
-
 } // namespace math
-
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_MATH_EXP_INTEGER_UTILS_H
