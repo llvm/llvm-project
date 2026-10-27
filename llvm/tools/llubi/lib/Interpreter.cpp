@@ -967,11 +967,16 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     return Ctx.fromBytes(Bytes, RetTy);
   }
 
-  AnyValue callMaskedLoadIntrinsic(CallBase &CB, const AnyValue &Ptr,
-                                   const AnyValue &Mask,
-                                   const AnyValue &PassThru) {
+  /// Implements llvm.masked.load, llvm.masked.expandload and
+  /// llvm.masked.store. For loads, \p Data holds the pass-through values and
+  /// is updated with the loaded lanes; for stores, it holds the values to
+  /// store.
+  AnyValue callMaskedLoadStoreIntrinsic(CallBase &CB, const AnyValue &Ptr,
+                                        const AnyValue &Mask, AnyValue Data) {
+    const bool IsStore = CB.getIntrinsicID() == Intrinsic::masked_store;
     StringRef IntrinsicName = Intrinsic::getBaseName(CB.getIntrinsicID());
-    Type *ElemTy = CB.getType()->getScalarType();
+    Type *ElemTy = (IsStore ? CB.getArgOperand(0)->getType() : CB.getType())
+                       ->getScalarType();
     // TODO: Support element types that are not a whole number of bytes.
     if (!DL.typeSizeEqualsStoreSize(ElemTy)) {
       reportError() << IntrinsicName << " with element type " << *ElemTy
@@ -981,14 +986,13 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
 
     const uint64_t AccessSize = Ctx.getEffectiveTypeStoreSize(ElemTy);
     const unsigned IndexBW =
-        DL.getIndexTypeSizeInBits(CB.getArgOperand(0)->getType());
-    AnyValue Res = PassThru;
+        DL.getIndexTypeSizeInBits(CB.getArgOperand(IsStore ? 1 : 0)->getType());
     AnyValue LanePtr = Ptr;
     GEPNoWrapFlags Flags = GEPNoWrapFlags::none();
 
     bool IsExpandLoad = CB.getIntrinsicID() == Intrinsic::masked_expandload;
 
-    for (auto [I, Lane] : enumerate(Res.asAggregate())) {
+    for (auto [I, Lane] : enumerate(Data.asAggregate())) {
       AnyValue AccumulatedOffset = AnyValue::poison();
       BooleanKind MaskLane = getMaskLane(Mask, I);
 
@@ -1000,7 +1004,10 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
       assert(MaskLane == BooleanKind::True || MaskLane == BooleanKind::False);
 
       if (MaskLane == BooleanKind::True) {
-        Lane = load(LanePtr, Align(1), ElemTy, /*NoUndef=*/false);
+        if (IsStore)
+          store(LanePtr, Align(1), Lane, ElemTy);
+        else
+          Lane = load(LanePtr, Align(1), ElemTy, /*NoUndef=*/false);
         // The first enabled base pointer may not be inbounds, but pointers
         // after that must be inbounds.
         Flags = GEPNoWrapFlags::inBounds();
@@ -1012,7 +1019,7 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
                                           AccumulatedOffset);
     }
 
-    return Res;
+    return IsStore ? AnyValue() : Data;
   }
 
 public:
@@ -1889,7 +1896,9 @@ public:
       return callSpeculativeLoadIntrinsic(CB, Args[0], Args[2]);
     case Intrinsic::masked_load:
     case Intrinsic::masked_expandload:
-      return callMaskedLoadIntrinsic(CB, Args[0], Args[1], Args[2]);
+      return callMaskedLoadStoreIntrinsic(CB, Args[0], Args[1], Args[2]);
+    case Intrinsic::masked_store:
+      return callMaskedLoadStoreIntrinsic(CB, Args[1], Args[2], Args[0]);
     case Intrinsic::experimental_noalias_scope_decl:
       // FIXME: Not implemented yet. Currently it acts as a noop.
       return AnyValue();
