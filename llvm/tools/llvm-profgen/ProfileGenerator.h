@@ -360,6 +360,11 @@ private:
   getFunctionProfileForLeafProbe(const AddrBasedCtxKey *CtxKey,
                                  const MCDecodedPseudoProbe *LeafProbe);
 
+  // For context trie nodes, infer callsite body samples from callee entry
+  // (head) samples. Creates FunctionSamples for nodes without samples and
+  // fixes under-counted callsites.
+  void inferCallsiteSamples();
+
   void convertToProfileMap(ContextTrieNode &Node,
                            SampleContextFrameVector &Context);
 

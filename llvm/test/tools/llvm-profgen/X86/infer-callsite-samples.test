@@ -1,0 +1,103 @@
+; Test --infer-callsite-samples: frames without samples of their own get
+; profiles, callsite counts are raised to their callees' head samples, and so
+; are the called targets the callsite is known to call.
+;
+; main calls top; top recurses through wrapper, which is inlined into it, and at
+; the bottom runs work's loop, which is inlined into wrapper (source at the end).
+; The one sample is in work's loop, so without inference only work's context has
+; a profile.
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/infer-callsite-samples-pseudoprobe.perfscript --binary=%S/Inputs/infer-callsite-samples-pseudoprobe.perfbin --output=%t1 --csspgo-preinliner=0 --gen-cs-nested-profile=0 --infer-callsite-samples=false
+; RUN: FileCheck %s --input-file %t1 --check-prefix=NOINFER
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/infer-callsite-samples-pseudoprobe.perfscript --binary=%S/Inputs/infer-callsite-samples-pseudoprobe.perfbin --output=%t2 --csspgo-preinliner=0 --gen-cs-nested-profile=0
+; RUN: FileCheck %s --input-file %t2 --check-prefix=INFER
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/recursion-compression-pseudoprobe.perfscript --binary=%S/Inputs/recursion-compression-pseudoprobe.perfbin --output=%t3 --csspgo-preinliner=0 --gen-cs-nested-profile=0
+; RUN: FileCheck %s --input-file %t3 --check-prefix=RECUR
+
+; NOINFER:     [main:5 @ top:5 @ _ZL7wrapperii.__uniq.{{[0-9]+}}:3 @ top:5 @ _ZL7wrapperii.__uniq.{{[0-9]+}}:5 @ _ZL4worki.__uniq.{{[0-9]+}}]:480:0
+; NOINFER-NOT: {{^}}[
+
+; With inference every frame on the path gets a profile whose callsite count is
+; raised to work's head samples (120). No callsite has a recorded target, so a
+; called target is added only for a callee whose profile is marked inlined
+; (ContextWasInlined): here only work, the sampled leaf, inlined into wrapper.
+; The wrappers' profiles, created by inference, are not marked, and top is
+; reached by calls.
+; INFER:      [main]:120:0
+; INFER-NEXT:  5: 120{{$}}
+; INFER-NEXT:  !CFGChecksum:
+; INFER-NEXT: [main:5 @ top]:120:0
+; INFER-NEXT:  5: 120{{$}}
+; INFER-NEXT:  !CFGChecksum:
+; INFER-NEXT: [main:5 @ top:5 @ _ZL7wrapperii.__uniq.{{[0-9]+}}]:120:0
+; INFER-NEXT:  3: 120{{$}}
+; INFER-NEXT:  !CFGChecksum:
+; INFER-NEXT: [main:5 @ top:5 @ _ZL7wrapperii.__uniq.{{[0-9]+}}:3 @ top]:120:0
+; INFER-NEXT:  5: 120{{$}}
+; INFER-NEXT:  !CFGChecksum:
+; INFER-NEXT: [main:5 @ top:5 @ _ZL7wrapperii.__uniq.{{[0-9]+}}:3 @ top:5 @ _ZL7wrapperii.__uniq.{{[0-9]+}}]:120:0
+; INFER-NEXT:  5: 120 _ZL4worki.__uniq.{{[0-9]+}}:120
+; INFER-NEXT:  !CFGChecksum:
+; INFER-NOT:  !Attributes:
+
+; Called callees: foo is inlined into main and calls the recursive fa and fb,
+; which are called, not inlined. The fb frame below fa:7 has no samples of its
+; own, so its recursive call at callsite 5 has no recorded target: the callsite
+; count is raised to fb's head samples (4), with no target. Deeper, the LBR
+; recorded fb's call to fa at callsite 6 once, while fa's head samples there
+; are 2: the recorded target is raised to 2 along with the callsite count.
+; RECUR:      [main:2 @ foo:5 @ fa:8 @ fa:7 @ fb]:4:0
+; RECUR-NEXT:  5: 4{{$}}
+; RECUR-NEXT:  !CFGChecksum:
+; RECUR:      [main:2 @ foo:5 @ fa:8 @ fa:7 @ fb:5 @ fb:6 @ fa:8 @ fa:7 @ fb]:4:1
+; RECUR-NEXT:  1: 1
+; RECUR-NEXT:  2: 0
+; RECUR-NEXT:  3: 1
+; RECUR-NEXT:  4: 0
+; RECUR-NEXT:  5: 0
+; RECUR-NEXT:  6: 2 fa:2
+
+; Inputs/infer-callsite-samples-pseudoprobe.perfbin and .perfscript were made
+; from the source below with
+;   clang -O2 -fno-pie -no-pie -fpseudo-probe-for-profiling -fno-omit-frame-pointer
+;         -mno-omit-leaf-frame-pointer -fno-optimize-sibling-calls -g test.c
+;   perf record -e cycles:u -j any,u -c 100003 --call-graph fp
+;   perf script -F ip,brstack --show-mmap-events --no-inline
+; keeping one sample and its 16 newest LBR entries.
+;
+; volatile int sink;
+;
+; // The sampled loop, inlined into wrapper.
+; __attribute__((always_inline)) static inline void work(int n) {
+;   int s = 0;
+;   for (int i = 1; i <= n; i++) {
+;     if (i % 3)
+;       s += i;
+;     else
+;       s -= i;
+;   }
+;   sink = s;
+; }
+;
+; void top(int d, int n);
+;
+; // Inlined into top. Its own code is never sampled: it recurses into top, or
+; // runs work's loop at the bottom.
+; __attribute__((always_inline)) static inline void wrapper(int d, int n) {
+;   if (d > 0)
+;     top(d - 1, n);
+;   else
+;     work(n);
+; }
+;
+; // The loop is fully unrolled, so wrapper's recursive call has two call
+; // instructions with the same call probe.
+; __attribute__((noinline)) void top(int d, int n) {
+;   for (int k = 0; k < 2; k++)
+;     wrapper(d, n + k);
+; }
+;
+; int main() {
+;   for (int i = 0; i < 4; i++)
+;     top(3, 2000000);
+;   return 0;
+; }
