@@ -48,11 +48,12 @@ void printVariableOpTypeOrInitialValue(OpAsmPrinter &p, Operation *op,
                                        DenseElementsAttr varShapeAttr,
                                        TypeAttr typeAttr,
                                        Attribute initialValueAttr);
+} // namespace tosa
+} // namespace mlir
 
 #include "mlir/Dialect/Tosa/IR/TosaInterfaces.h.inc"
 
-} // namespace tosa
-
+namespace mlir {
 namespace OpTrait {
 namespace tosa {
 
