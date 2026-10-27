@@ -3677,7 +3677,11 @@ struct AAIntraFnReachabilityFunction final
     }
     DeadEdges.clear();
     DeadBlocks.clear();
-    return Base::updateImpl(A);
+    // Queries made with an exclusion set can reuse an existing plain cache
+    // entry without retaining their own entry. Invalidated liveness assumptions
+    // can therefore change a client's answer even when no cached answer changes.
+    // Notify dependents as well as refreshing the cached queries.
+    return Base::updateImpl(A) | ChangeStatus::CHANGED;
   }
 
   bool isReachableImpl(Attributor &A, RQITy &RQI,
