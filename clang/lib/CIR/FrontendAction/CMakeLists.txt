@@ -11,11 +11,6 @@ add_clang_library(clangCIRFrontendAction
   CIRDiagnosticHandler.cpp
 
   DEPENDS
-  MLIRCIROpsIncGen
-  MLIRCIROpInterfacesIncGen
-  MLIRBuiltinLocationAttributesIncGen
-  MLIRBytecodeOpInterfaceIncGen
-  MLIRBuiltinOpsIncGen
   mlir-headers
 
   LINK_LIBS
