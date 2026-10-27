@@ -15,12 +15,54 @@ Verification so far
 * Output of this backend runs on a real Apple M2 Max through the AIR service
   (``/air``, a file-queue RPC that accepts AIR bitcode only and refuses to
   compile Metal source). ``verify_gpu.py --extended`` passes on a two-kernel
-  ``.air`` produced with ``-air-output=air``: ``inspect`` lists both kernels,
-  ``out[tid] = tid + 7`` reads back ``7, 8, 9, 10``, and two ordered dispatches
-  over an uploaded buffer read back ``16, 18, 22, 30``.
+  ``.air`` produced with ``-air-output=air``.
+* ``llvm/utils/air-gpu`` runs generated kernels on the M2 Max and checks every
+  result against a reference computed in Python. All of these groups pass:
+
+  ================= =========================================================
+  Group             Coverage
+  ================= =========================================================
+  ``llvm-math-f32`` every LLVM float intrinsic with an AIR function
+  ``llvm-math-afn`` the same with ``afn``, which selects ``air.fast_*``
+  ``llvm-int``      ``smin smax umin umax abs ctpop ctlz cttz bitreverse``
+  ``air-math-f32``  the AIR math functions called directly, precise and fast
+  ``simd``          shuffles (index, xor, up, down, quad xor), sum, min, max,
+                    prefix sums, and/or/xor, ballot, vote, for i32/u32/f32
+  ``atomics``       ``atomicrmw`` (all operations, both orderings), ``fadd``,
+                    ``cmpxchg``, atomic load/store, fences
+  ``threadgroup``   threadgroup memory with explicit 2- and 3-operand
+                    barriers, inserted barriers, threadgroup atomics, all
+                    with two SIMD-groups per threadgroup
+  ``sysvals``       all eleven compute system values
+  ================= =========================================================
+
 * No AIR in any test or fixture was produced by Apple's Metal compiler. The
   ``.metallib`` and ``.air`` files in ``Metal.jl/test/metallib`` are built
   from ``.metal`` sources with Apple's toolchain and are deliberately unused.
+
+Defects found on hardware and fixed
+===================================
+
+Each of these passed the FileCheck tests of the original branch.
+
+* Kernels reading a system value lost their ``!air.kernel`` entry, so
+  ``-filetype=obj`` silently wrote bare bitcode instead of a ``.metallib``.
+* Thirteen LLVM math intrinsics were not lowered (``tan``, ``asin``,
+  ``acos``, ``atan``, ``atan2``, ``sinh``, ``cosh``, ``tanh``, ``exp10``,
+  ``log10``, ``round``, ...): Metal reports undefined symbols, and for
+  ``round`` and ``log10`` its compiler service crashes. Precise intrinsics
+  were lowered to relaxed functions (``llvm.sqrt`` to ``air.fast_sqrt``,
+  1 ulp off).
+* ``atomicrmw umax``/``umin``/``fadd`` were given names that crash Metal's
+  compiler service; every atomic was emitted relaxed and with threadgroup
+  scope whatever its ordering and memory; ``cmpxchg`` and ``fence`` were
+  not lowered at all (the writer stopped).
+* The writer emitted an out-of-range type index for a call whose function
+  type differs from its callee's, giving bitcode no reader accepts.
+* Barriers were not inserted for threadgroup read after write, and were
+  inserted in the two-operand form in modules using the three-operand one.
+* ``air.threads_per_grid`` and ``air.thread_index_in_threadgroup`` were not
+  lowered.
 
 Blockers
 ========
@@ -66,17 +108,12 @@ accepts the ``.air`` and runs it, which exercises an equivalent load path.)
 
 *Unblock:* run ``xcrun metallib k.air -o k.metallib`` on a Mac.
 
-No Rust toolchain, so the AGX Performance Simulator cannot be built
---------------------------------------------------------------------
+The AGX Performance Simulator needed a Rust toolchain (resolved)
+----------------------------------------------------------------
 
 *What:* the simulator in ``/scratch/AGX-Performance-Simulator`` is a Rust
-crate (``agx_run``, ``agx_cost``). The container has no ``cargo``/``rustc``
-and no root to install them.
-
-*Impact:* AGX code produced from AIR cannot be executed, so the planned
-differential test (same kernel on the M2 Max via AIR and on the simulator via
-AGX) needs a toolchain fetched without root. ``llvm/utils/agx-bench`` and
-``agx-checked`` are blocked on the same binary.
+crate (``agx_run``, ``agx_cost``) and the container had no ``cargo`` or
+``rustc``. A standalone Rust 1.89.0 installed without root now builds both.
 
 The GitHub key here is scoped to one repository
 -----------------------------------------------
@@ -95,3 +132,68 @@ diagnostic, rather than miscompiling, AIR it has no AGX equivalent for:
 SIMD-group matrices (``air.simdgroup_matrix_8x8_*``), SIMD-group async
 copies, tensors (``air.*_private_tensor``), indirect argument buffers,
 function groups and the 8-operand ``air.atomic.global.cmpxchg.weak.i32``.
+
+Device and service limits
+=========================
+
+The AIR service hides how Metal fails
+-------------------------------------
+
+Besides the plain ``Tool failed`` above, the service reports
+``XPC_ERROR_CONNECTION_INTERRUPTED`` both for transient failures and when
+Metal's compiler service crashes on the library it was given; only retrying
+tells them apart. Several backend defects showed up only as such crashes.
+
+``llvm.sqrt`` is not correctly rounded through Metal as it is
+-------------------------------------------------------------
+
+Passed to Metal unchanged, ``llvm.sqrt.f32`` is 1 ulp off; ``air.sqrt.f32``
+is correctly rounded, which is why the intrinsic is now lowered to it.
+
+Weak compare-and-exchange
+-------------------------
+
+``air.atomic.*.cmpxchg.weak`` returns the value it found, which equals the
+expected value both on success and on a spurious failure. The backend lowers
+LLVM's strong ``cmpxchg`` to a single call and treats a match as success;
+on the M2 Max no spurious failure was seen. If Apple GPUs can fail it
+spuriously, a strong ``cmpxchg`` can report a success that did not happen.
+
+What the service cannot run
+---------------------------
+
+``execute`` dispatches compute kernels on buffers. Vertex, fragment, mesh and
+tessellation functions, textures and samplers cannot be bound, so the AIR
+for them (which the reference implementations use) cannot be verified here.
+
+AGX Performance Simulator gaps
+==============================
+
+Sub-32-bit kernel arguments cannot be set
+-----------------------------------------
+
+The AGX ABI packs kernel arguments in 16-bit halves of the uniform registers,
+but ``agx_run --uniform I=V`` sets whole 32-bit registers, and nothing says
+how to set one half. ``llvm/utils/agx-checked/run_checked.py`` writes
+``uniforms[half // 2]``, which overwrites the other half: a 16- or 8-bit
+argument at an odd half, or the argument sharing its register, gets a wrong
+value.
+
+No real AGX hardware
+--------------------
+
+AGX code is only run on the simulator here: there is no Apple silicon
+machine running Linux in this environment, so a passing differential test
+(same kernel through AIR on the M2 Max, through AGX on the simulator) shows
+agreement with the simulator's model, not with the hardware.
+
+Apple-compiled code within reach
+================================
+
+Closed-source compiled AIR is present in the workspace and could enter a test
+by accident: ``Metal.jl/test/metallib`` holds ``.metallib`` and ``.air``
+files built from ``.metal`` sources by Apple's compiler (its ``Makefile``
+shows how), and ``floor/etc/example/nbody.metallib`` is another. None is
+used. ``llvm/utils/air-gpu`` generates every kernel itself, and its README
+says not to add such files. The service accepts any AIR it is sent, so it
+would not catch one.
