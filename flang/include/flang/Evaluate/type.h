@@ -526,8 +526,8 @@ bool AreSameDerivedTypeIgnoringSequence(
     const semantics::DerivedTypeSpec &, const semantics::DerivedTypeSpec &);
 
 /// Check that KIND is consistent with the type. That is, for a type category
-/// that has a kind as part of its type, it must be non-zero, and otherwise
-/// zero.
+/// that has a kind as part of its type, it must be a kind valid for that type
+/// category, and otherwise zero.
 #define CHECK_KIND(KIND, TY) \
   { \
     if constexpr (std::is_same_v<TY, SomeDerived> || \
@@ -536,7 +536,7 @@ bool AreSameDerivedTypeIgnoringSequence(
       CHECK_MSG((KIND) == 0, "Type does not have a kind"); \
     } else { \
       CHECK_MSG(common::IsValidKindOfIntrinsicType(TY::category, (KIND)), \
-          "Type must come with a supported kind"); \
+          "Type must come with a kind valid for its type category"); \
     } \
   }
 
