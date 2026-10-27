@@ -50,8 +50,8 @@ void test_enum_values(void) {
     _Static_assert(CLK_COOPERATIVE_MATRIX_LAYOUT_COLUMN_MAJOR                   == 1, "col major");
     _Static_assert(CLK_COOPERATIVE_MATRIX_OPERAND_NONE                          == 0, "operand none");
     _Static_assert(CLK_COOPERATIVE_MATRIX_OPERAND_MATRIX_A_SIGNED               == 0x1, "A signed");
-    _Static_assert(CLK_COOPERATIVE_MATRIX_OPERAND_MATRIX_B_SIGNED               == 0x2, "A signed");
-    _Static_assert(CLK_COOPERATIVE_MATRIX_OPERAND_MATRIX_C_SIGNED               == 0x4, "A signed");
-    _Static_assert(CLK_COOPERATIVE_MATRIX_OPERAND_MATRIX_RESULT_SIGNED          == 0x8, "A signed");
+    _Static_assert(CLK_COOPERATIVE_MATRIX_OPERAND_MATRIX_B_SIGNED               == 0x2, "B signed");
+    _Static_assert(CLK_COOPERATIVE_MATRIX_OPERAND_MATRIX_C_SIGNED               == 0x4, "C signed");
+    _Static_assert(CLK_COOPERATIVE_MATRIX_OPERAND_MATRIX_RESULT_SIGNED          == 0x8, "Result signed");
     _Static_assert(CLK_COOPERATIVE_MATRIX_OPERAND_SATURATING_ACCUMULATION       == 0x10, "saturating accumulation");
 }
