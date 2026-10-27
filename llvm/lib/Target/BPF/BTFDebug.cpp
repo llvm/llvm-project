@@ -1240,6 +1240,8 @@ std::optional<uint32_t> BTFDebug::visitMapDefType(const DIType *Ty) {
 
 /// Read file contents from the actual file or from the source
 std::string BTFDebug::populateFileContent(const DIFile *File) {
+  if (!File)
+    return {};
   std::string FileName;
 
   if (!File->getFilename().starts_with("/") && File->getDirectory().size())
@@ -1260,9 +1262,8 @@ std::string BTFDebug::populateFileContent(const DIFile *File) {
   };
 
   std::unique_ptr<MemoryBuffer> Buf;
-  auto Source = File->getSource();
-  if (Source)
-    Buf = MemoryBuffer::getMemBufferCopy(*Source);
+  if (const std::optional Source = File->getSource(); Source.has_value())
+    Buf = MemoryBuffer::getMemBufferCopy(Source.value());
   else if (ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr = LoadFile(FileName))
     Buf = std::move(*BufOrErr);
   if (Buf)
@@ -1299,8 +1300,7 @@ void BTFDebug::emitCommonHeader() {
 }
 
 void BTFDebug::emitBTFSection() {
-  // Do not emit section if no types and only "" string.
-  if (!TypeEntries.size() && StringTable.getSize() == 1)
+  if (TypeEntries.empty())
     return;
 
   MCContext &Ctx = OS.getContext();
@@ -1337,6 +1337,10 @@ void BTFDebug::emitBTFSection() {
 }
 
 void BTFDebug::emitBTFExtSection() {
+  // If present, func_info must cover every function in the program.
+  if (HasIncompleteFuncInfo)
+    FuncInfoTable.clear();
+
   // Do not emit section if empty FuncInfoTable and LineInfoTable
   // and FieldRelocTable.
   if (!FuncInfoTable.size() && !LineInfoTable.size() &&
@@ -1353,7 +1357,8 @@ void BTFDebug::emitBTFExtSection() {
   OS.emitInt32(BTF::ExtHeaderSize);
 
   // Account for FuncInfo/LineInfo record size as well.
-  uint32_t FuncLen = 4, LineLen = 4;
+  uint32_t FuncLen = FuncInfoTable.empty() ? 0 : 4;
+  uint32_t LineLen = LineInfoTable.empty() ? 0 : 4;
   // Do not account for optional FieldReloc.
   uint32_t FieldRelocLen = 0;
   for (const auto &FuncSec : FuncInfoTable) {
@@ -1380,8 +1385,10 @@ void BTFDebug::emitBTFExtSection() {
   OS.emitInt32(FieldRelocLen);
 
   // Emit func_info table.
-  OS.AddComment("FuncInfo");
-  OS.emitInt32(BTF::BPFFuncInfoSize);
+  if (FuncLen) {
+    OS.AddComment("FuncInfo");
+    OS.emitInt32(BTF::BPFFuncInfoSize);
+  }
   for (const auto &FuncSec : FuncInfoTable) {
     OS.AddComment("FuncInfo section string offset=" +
                   std::to_string(FuncSec.first));
@@ -1394,8 +1401,10 @@ void BTFDebug::emitBTFExtSection() {
   }
 
   // Emit line_info table.
-  OS.AddComment("LineInfo");
-  OS.emitInt32(BTF::BPFLineInfoSize);
+  if (LineLen) {
+    OS.AddComment("LineInfo");
+    OS.emitInt32(BTF::BPFLineInfoSize);
+  }
   for (const auto &LineSec : LineInfoTable) {
     OS.AddComment("LineInfo section string offset=" +
                   std::to_string(LineSec.first));
@@ -1520,13 +1529,8 @@ void BTFDebug::beginFunctionImpl(const MachineFunction *MF) {
     // type if compiler removed it.
     const std::optional ProtoTypeId =
         visitSubroutineType(SP->getType(), true, FuncArgNames, VoidReturn);
-    if (!ProtoTypeId.has_value()) {
-      OS.getContext().reportError({}, "BTF function '" + MF->getName() +
-                                          "' has an unrepresentable prototype");
-      SkipInstruction = true;
-      return;
-    }
-    FuncTypeId = processDISubprogram(SP, ProtoTypeId.value(), Scope);
+    if (ProtoTypeId.has_value())
+      FuncTypeId = processDISubprogram(SP, ProtoTypeId.value(), Scope);
   }
 
   for (BTFTypeBase &TypeEntry : make_pointee_range(TypeEntries))
@@ -1540,7 +1544,10 @@ void BTFDebug::beginFunctionImpl(const MachineFunction *MF) {
   } else {
     SecNameOff = addString(".text");
   }
-  FuncInfoTable[SecNameOff].push_back({FuncLabel, FuncTypeId.value()});
+  if (FuncTypeId.has_value())
+    FuncInfoTable[SecNameOff].push_back({FuncLabel, FuncTypeId.value()});
+  else
+    HasIncompleteFuncInfo = true;
 }
 
 void BTFDebug::endFunctionImpl(const MachineFunction *MF) {
@@ -1943,6 +1950,11 @@ void BTFDebug::endModule() {
           genBTFTypeTags(DTy, StructTypeId).value_or(StructTypeId));
     }
   }
+
+  // The kernel requires a nonempty base BTF type section for line info.
+  if (TypeEntries.empty() && !LineInfoTable.empty())
+    addType(
+        std::make_unique<BTFTypeDerived>(0, BTF::BTF_KIND_PTR, StringRef()));
 
   // Complete BTF type cross refereences.
   for (BTFTypeBase &TypeEntry : make_pointee_range(TypeEntries))

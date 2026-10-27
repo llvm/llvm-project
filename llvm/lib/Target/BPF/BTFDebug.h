@@ -306,6 +306,7 @@ class BTFDebug : public DebugHandlerBase {
   BTFStringTable StringTable;
   std::vector<std::unique_ptr<BTFTypeBase>> TypeEntries;
   DenseMap<const DIType *, uint32_t> DIToIdMap;
+  bool HasIncompleteFuncInfo = false;
   std::map<uint32_t, std::vector<BTFFuncInfo>> FuncInfoTable;
   std::map<uint32_t, std::vector<BTFLineInfo>> LineInfoTable;
   std::map<uint32_t, std::vector<BTFFieldReloc>> FieldRelocTable;
