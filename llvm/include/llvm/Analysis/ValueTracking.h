@@ -36,7 +36,7 @@ class DominatorTree;
 class GEPOperator;
 class WithOverflowInst;
 struct KnownBits;
-class KnownFPClass;
+struct KnownFPClass;
 class Loop;
 class LoopInfo;
 class MDNode;
