@@ -17530,8 +17530,9 @@ SemaOpenMP::ActOnOpenMPFlattenDirective(ArrayRef<OMPClause *> Clauses,
   SmallVector<OMPLoopBasedDirective::HelperExprs, 4> LoopHelpers(NumLoops);
   Stmt *Body = nullptr;
   SmallVector<SmallVector<Stmt *>, 4> OriginalInits;
+  SmallVector<Stmt *, 4> NestedFinals;
   if (!checkTransformableLoopNest(OMPD_flatten, AStmt, NumLoops, LoopHelpers,
-                                  Body, OriginalInits))
+                                  Body, OriginalInits, &NestedFinals))
     return StmtError();
 
   // Delay flattening to when template is completely instantiated.
@@ -17834,10 +17835,14 @@ SemaOpenMP::ActOnOpenMPFlattenDirective(ArrayRef<OMPClause *> Clauses,
     ExprResult FinalCond = BuildHasIterations(/*Count=*/I + 1);
     if (!FinalCond.isUsable())
       return StmtError();
+    // If the loop has its own directive (e.g. reverse), restore its variable.
+    Stmt *Then = Final.get();
+    if (Stmt *Nested = NestedFinals[I])
+      Then = CompoundStmt::Create(Context, {Then, Nested}, FPOptionsOverride(),
+                                  CondLoc, CondLoc);
     Finals.push_back(IfStmt::Create(Context, CondLoc, IfStatementKind::Ordinary,
                                     nullptr, nullptr, FinalCond.get(), CondLoc,
-                                    CondLoc, Final.get(), SourceLocation(),
-                                    nullptr));
+                                    CondLoc, Then, SourceLocation(), nullptr));
   }
   Stmt *FinalsStmt = CompoundStmt::Create(Context, Finals, FPOptionsOverride(),
                                           FlattenedFor->getBeginLoc(),
@@ -18268,19 +18273,17 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
               FusedBody, InitStmt.get()->getBeginLoc(), SourceLocation(),
               IncrExpr.get()->getEndLoc());
 
-  // 8. Finals: those of in-range inner transformations, then this fuse's own.
-  // Out-of-range loops keep theirs inline.
-  SmallVector<OMPLoopBasedDirective::HelperExprs, 4> FusedLoopHelpers;
+  // 8. Finals of the fused loops, in sequence order. Out-of-range loops keep
+  // theirs inline.
   SmallVector<Stmt *, 4> AllFinalsStmts;
   for (unsigned I : llvm::seq<unsigned>(FirstVal - 1, LastVal)) {
     const LoopAnalysis &Loop = SeqAnalysis.Loops[I];
     if (Loop.isRegularLoop())
-      FusedLoopHelpers.push_back(Loop.HelperExprs);
+      if (Stmt *Own = buildLoopFinalization(Context, Loop.HelperExprs))
+        AllFinalsStmts.push_back(Own);
     if (Loop.TransformFinals)
       AllFinalsStmts.push_back(Loop.TransformFinals);
   }
-  if (Stmt *OwnFinals = buildLoopFinalization(Context, FusedLoopHelpers))
-    AllFinalsStmts.push_back(OwnFinals);
   Stmt *CombinedFinals = nullptr;
   if (AllFinalsStmts.size() == 1)
     CombinedFinals = AllFinalsStmts.front();
