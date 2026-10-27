@@ -1674,6 +1674,19 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
       return emitDXILUserSemanticLoad(B, Type, Decl, Semantic, Index,
                                       Signature);
     break;
+  case llvm::dxbc::PSV::SemanticKind::StartVertexLocation:
+    assert(Stage == llvm::Triple::Vertex &&
+           "SV_StartVertexLocation is in an unavailable stage and should have "
+           "been diagnosed by Sema");
+    if (CGM.getTarget().getTriple().isSPIRV())
+      return createSPIRVInputLoad(B, CGM.getModule(), Type,
+                                  Semantic->getAttrName()->getName(),
+                                  llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn,
+                                  /* BaseVertex */ 4424, InterpMode);
+    if (CGM.getTarget().getTriple().isDXIL())
+      return B.CreateCall(
+          CGM.getIntrinsic(llvm::Intrinsic::dx_start_vertex_location));
+    break;
   default:
     break;
   }

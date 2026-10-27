@@ -194,19 +194,40 @@ struct BPFUnwindLower : public MachineFunctionPass {
       for (MCSymbol *Sym : LP.BeginLabels)
         Begin[Sym] = LP.LandingPadBlock;
 
+    // The call is not always in the block of the label: an argument that is
+    // a select is computed after the label and takes blocks of its own.
+    SmallPtrSet<MachineInstr *, 8> Invokes;
     for (MachineBasicBlock &MBB : MF) {
-      MachineBasicBlock *Pad = nullptr;
-      for (MachineInstr &MI : MBB) {
-        if (MI.isEHLabel()) {
-          Pad = Begin.lookup(MI.getOperand(0).getMCSymbol());
-          Labels.push_back(&MI);
-        } else if (MI.isCall() && Pad) {
-          Sites.push_back({&MI, Pad});
-        } else if (MI.isCall() && leavesFrame(MI)) {
-          Resumes.push_back(&MI);
+      for (MachineInstr &Label : MBB) {
+        if (!Label.isEHLabel())
+          continue;
+        Labels.push_back(&Label);
+        MachineBasicBlock *Pad =
+            Begin.lookup(Label.getOperand(0).getMCSymbol());
+        if (!Pad)
+          continue;
+        SmallVector<std::pair<MachineBasicBlock *, MachineBasicBlock::iterator>,
+                    4>
+            Work{{&MBB, std::next(Label.getIterator())}};
+        SmallPtrSet<MachineBasicBlock *, 4> Seen;
+        while (!Work.empty()) {
+          auto [Cur, I] = Work.pop_back_val();
+          // The next label ends the range.
+          for (; I != Cur->end() && !I->isEHLabel(); ++I)
+            if (I->isCall() && Invokes.insert(&*I).second)
+              Sites.push_back({&*I, Pad});
+          if (I != Cur->end())
+            continue;
+          for (MachineBasicBlock *Succ : Cur->successors())
+            if (!Succ->isEHPad() && Seen.insert(Succ).second)
+              Work.push_back({Succ, Succ->begin()});
         }
       }
     }
+    for (MachineBasicBlock &MBB : MF)
+      for (MachineInstr &MI : MBB)
+        if (MI.isCall() && !Invokes.count(&MI) && leavesFrame(MI))
+          Resumes.push_back(&MI);
     if (Labels.empty() && Resumes.empty())
       return false;
     // There is no unwind_goto after the calls of it.
