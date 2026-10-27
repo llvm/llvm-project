@@ -217,6 +217,66 @@ void test_strcat(void) {
   strcat(x, y); //expected-warning{{Call to function 'strcat' is insecure as it does not provide bounding of the memory buffer. Replace unbounded copy functions with analogous functions that support length arguments such as 'strlcat'. CWE-119}}
 }
 
+// Windows-specific string functions
+char *lstrcpyA(char *dst, const char *src);
+char *lstrcatA(char *dst, const char *src);
+
+void test_lstrcpyA(void) {
+  char dst[4];
+  char *src;
+  lstrcpyA(dst, src); // expected-warning{{Call to function 'lstrcpyA' is insecure as it does not provide bounding of the memory buffer. Replace unbounded copy functions with analogous functions that support length arguments such as 'strlcpy'. CWE-119}}
+}
+
+void test_lstrcpyA_safe(void) {
+  char dst[10];
+  lstrcpyA(dst, "hello"); // no-warning
+}
+
+void test_lstrcatA(void) {
+  char dst[4] = "";
+  char *src;
+  lstrcatA(dst, src); // expected-warning{{Call to function 'lstrcatA' is insecure as it does not provide bounding of the memory buffer. Replace unbounded copy functions with analogous functions that support length arguments such as 'strlcat'. CWE-119}}
+}
+
+// Wide-character string functions.
+
+typedef __WCHAR_TYPE__ test_wchar_t;
+
+test_wchar_t *wcscpy(test_wchar_t *dst, const test_wchar_t *src);
+test_wchar_t *wcscat(test_wchar_t *dst, const test_wchar_t *src);
+test_wchar_t *lstrcpyW(test_wchar_t *dst, const test_wchar_t *src);
+test_wchar_t *lstrcatW(test_wchar_t *dst, const test_wchar_t *src);
+
+void test_wcscpy(const test_wchar_t *src) {
+  test_wchar_t dst[4];
+  wcscpy(dst, src); // expected-warning{{Call to function 'wcscpy' is insecure as it does not provide bounding of the memory buffer. Replace unbounded copy functions with analogous functions that support length arguments for wide-character strings. CWE-119}}
+}
+
+void test_wcscpy_small_buffer(void) {
+  test_wchar_t dst[4];
+  wcscpy(dst, L"hello"); // expected-warning{{Call to function 'wcscpy' is insecure as it does not provide bounding of the memory buffer. Replace unbounded copy functions with analogous functions that support length arguments for wide-character strings. CWE-119}}
+}
+
+void test_wcscpy_large_buffer(void) {
+  test_wchar_t dst[10];
+  wcscpy(dst, L"hello");
+}
+
+void test_wcscat(const test_wchar_t *src) {
+  test_wchar_t dst[4] = {0};
+  wcscat(dst, src); // expected-warning{{Call to function 'wcscat' is insecure as it does not provide bounding of the memory buffer. Replace unbounded copy functions with analogous functions that support length arguments for wide-character strings. CWE-119}}
+}
+
+void test_lstrcpyW(const test_wchar_t *src) {
+  test_wchar_t dst[4];
+  lstrcpyW(dst, src); // expected-warning{{Call to function 'lstrcpyW' is insecure as it does not provide bounding of the memory buffer. Replace unbounded copy functions with analogous functions that support length arguments for wide-character strings. CWE-119}}
+}
+
+void test_lstrcatW(const test_wchar_t *src) {
+  test_wchar_t dst[4] = {0};
+  lstrcatW(dst, src); // expected-warning{{Call to function 'lstrcatW' is insecure as it does not provide bounding of the memory buffer. Replace unbounded copy functions with analogous functions that support length arguments for wide-character strings. CWE-119}}
+}
+
 //===----------------------------------------------------------------------===
 // vfork()
 //===----------------------------------------------------------------------===
