@@ -203,7 +203,7 @@ auto ArrayConstructor<Type<TypeCategory::Character>>::set_LEN(
 
 bool ArrayConstructor<Type<TypeCategory::Character>>::operator==(
     const ArrayConstructor &that) const {
-  return length_ == that.length_ &&
+  return kind() == that.kind() && length_ == that.length_ &&
       static_cast<const Base &>(*this) == static_cast<const Base &>(that);
 }
 

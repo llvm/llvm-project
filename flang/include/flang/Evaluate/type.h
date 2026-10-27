@@ -10,11 +10,11 @@
 #define FORTRAN_EVALUATE_TYPE_H_
 
 // These definitions map Fortran's intrinsic types, characterized by byte
-// sizes encoded in KIND type parameter values, to their value representation
+// sizes encoded in kind values at runtime, to their value representation
 // types in the evaluation library, which are parameterized in terms of
 // total bit width and real precision.  Instances of the Type class template
 // are suitable for use as template parameters to instantiate other class
-// templates, like expressions, over the supported types and kinds.
+// templates, like expressions, over the supported types.
 
 #include "character-value.h"
 #include "common.h"

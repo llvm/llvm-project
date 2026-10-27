@@ -552,6 +552,9 @@ public:
   }
   static constexpr Result result(int kind) { return Result{kind}; }
   DynamicType GetType() const { return {Result::category, kind_}; }
+  bool operator==(const ArrayConstructor &that) const {
+    return kind() == that.kind() && Base::operator==(that);
+  }
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 
 private:

@@ -75,6 +75,27 @@ int main() {
   TEST(designator4 == anotherDesignator4);
   TEST(!(designator4 == designator8));
 
+  // Equality of array constructors must account for kind even when there
+  // are no elements from which to recover it.
+  using IntegerArray = ArrayConstructor<Type<TypeCategory::Integer>>;
+  IntegerArray integer1{1, IntegerArray::Base{}};
+  IntegerArray integer4{4, IntegerArray::Base{}};
+  IntegerArray anotherInteger1{1, IntegerArray::Base{}};
+  TEST(integer1 == anotherInteger1);
+  TEST(!(integer1 == integer4));
+
+  using CharacterArray = ArrayConstructor<Type<TypeCategory::Character>>;
+  CharacterArray character1{1, CharacterArray::Base{}};
+  CharacterArray character2{2, CharacterArray::Base{}};
+  CharacterArray anotherCharacter1{1, CharacterArray::Base{}};
+  TEST(character1 == anotherCharacter1);
+  TEST(!(character1 == character2));
+  character1.set_LEN(MakeSubscriptIntExpr(3));
+  anotherCharacter1.set_LEN(MakeSubscriptIntExpr(3));
+  character2.set_LEN(MakeSubscriptIntExpr(3));
+  TEST(character1 == anotherCharacter1);
+  TEST(!(character1 == character2));
+
   auto asExpr{[](const CoarrayRef &ref) {
     return DefaultIntegerExpr{Designator<DefaultIntegerExpr::Result>{
         defaultIntegerKind, DataRef{ref}}};
