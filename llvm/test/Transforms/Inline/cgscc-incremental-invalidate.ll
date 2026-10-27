@@ -165,8 +165,9 @@ bb:
 
   %tmp4 = call zeroext i1 @test2_barney(ptr %tmp2)
   %tmp5 = zext i1 %tmp4 to i32
-  store i32 %tmp5, ptr %tmp2, align 4
-  %tmp6 = call zeroext i1 @test2_barney(ptr null)
+  %tmp6 = add nuw i32 %tmp5, 4
+  store i32 %tmp6, ptr %tmp2, align 4
+  %tmp7 = call zeroext i1 @test2_barney(ptr null)
   call void @test2_ham(ptr %tmp1)
 ; CHECK:         call void @test2_ham(
 
