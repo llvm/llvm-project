@@ -203,6 +203,7 @@ static void localizeLoopLocalValue(mlir::Value local, mlir::Region &allocRegion,
                                    mlir::ConversionPatternRewriter &rewriter) {
   rewriter.moveOpBefore(local.getDefiningOp(), &allocRegion.front().front());
 }
+
 /// Holds information needed to inline a LOCAL_INIT copy_region into the
 /// omp.loop_nest body for per-iteration initialization.
 ///
