@@ -59709,6 +59709,7 @@ static SDValue combineToFPTruncExtElt(SDNode *N, SelectionDAG &DAG) {
 }
 
 static SDValue combineUIntToFP(SDNode *N, SelectionDAG &DAG,
+                               TargetLowering::DAGCombinerInfo &DCI,
                                const X86Subtarget &Subtarget) {
   bool IsStrict = N->isStrictFPOpcode();
   SDValue Op0 = N->getOperand(IsStrict ? 1 : 0);
@@ -59756,6 +59757,23 @@ static SDValue combineUIntToFP(SDNode *N, SelectionDAG &DAG,
       return DAG.getNode(ISD::STRICT_SINT_TO_FP, dl, {VT, MVT::Other},
                          {N->getOperand(0), P});
     return DAG.getNode(ISD::SINT_TO_FP, dl, VT, P);
+  }
+
+  if (InVT.isVector() && InVT.getScalarSizeInBits() > 32 &&
+      !Subtarget.hasDQI()) {
+    unsigned BitWidth = InVT.getScalarSizeInBits();
+    EVT TruncVT = InVT.changeVectorElementType(*DAG.getContext(), MVT::i32);
+    if ((DCI.isBeforeLegalize() ||
+         DAG.getTargetLoweringInfo().isTypeLegal(TruncVT)) &&
+        DAG.MaskedValueIsZero(Op0,
+                              APInt::getHighBitsSet(BitWidth, BitWidth - 32))) {
+      SDLoc dl(N);
+      SDValue Trunc = DAG.getNode(ISD::TRUNCATE, dl, TruncVT, Op0);
+      if (IsStrict)
+        return DAG.getNode(ISD::STRICT_UINT_TO_FP, dl, {VT, MVT::Other},
+                           {N->getOperand(0), Trunc});
+      return DAG.getNode(ISD::UINT_TO_FP, dl, VT, Trunc);
+    }
   }
 
   // Since UINT_TO_FP is legal (it's marked custom), dag combiner won't
@@ -64255,7 +64273,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
     return combineSIntToFP(N, DAG, DCI, Subtarget);
   case ISD::UINT_TO_FP:
   case ISD::STRICT_UINT_TO_FP:
-    return combineUIntToFP(N, DAG, Subtarget);
+    return combineUIntToFP(N, DAG, DCI, Subtarget);
   case ISD::FP_TO_SINT:     return combineFPToSInt(N, DAG, Subtarget);
   case ISD::LRINT:
   case ISD::LLRINT:         return combineLRINT_LLRINT(N, DAG, Subtarget);
