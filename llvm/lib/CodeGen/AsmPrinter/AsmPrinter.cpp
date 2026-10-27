@@ -4610,7 +4610,9 @@ static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *CV,
   }
 
   if (isa<ConstantPointerNull>(CV)) {
-    AP.OutStreamer->emitIntValue(0, Size);
+    // A null pointer constant can also represent a vector splat, whose
+    // allocation size can exceed emitIntValue's eight-byte limit.
+    AP.OutStreamer->emitZeros(Size);
     return;
   }
 
