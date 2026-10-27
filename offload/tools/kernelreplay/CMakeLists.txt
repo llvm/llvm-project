@@ -6,6 +6,7 @@ add_offload_tool(llvm-omp-kernel-replay llvm-omp-kernel-replay.cpp
 
 target_include_directories(llvm-omp-kernel-replay PRIVATE
   ${LIBOMPTARGET_INCLUDE_DIR}
+  ${CMAKE_CURRENT_BINARY_DIR}/../../liboffload/API
 )
 target_link_libraries(llvm-omp-kernel-replay PRIVATE
   omp

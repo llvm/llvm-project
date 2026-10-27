@@ -43,6 +43,8 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getTripleAttrName() { return "cir.triple"; }
     // TargetInfo::getABI(), e.g. "avx512" on x86 or "aapcs" on ARM.
     static llvm::StringRef getTargetABIAttrName() { return "cir.target_abi"; }
+    // -fc++-abi override, if not present the target default is used.
+    static llvm::StringRef getCXXABIAttrName() { return "cir.cxx_abi"; }
     static llvm::StringRef getSizeTypeWidthAttrName() { return "cir.size_type_width"; }
     static llvm::StringRef getIntTypeWidthAttrName() { return "cir.int_type_width"; }
     static llvm::StringRef getOptInfoAttrName() { return "cir.opt_info"; }
@@ -52,6 +54,7 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getNoReturnAttrName() { return "noreturn"; }
     static llvm::StringRef getMemoryEffectsAttrName() { return "memory_effects"; }
     static llvm::StringRef getUwtableAttrName() { return "uwtable"; }
+    static llvm::StringRef getFramePointerAttrName() { return "frame_pointer"; }
     static llvm::StringRef getReturnsTwiceAttrName() { return "returns_twice"; }
     static llvm::StringRef getColdAttrName() { return "cold"; }
     static llvm::StringRef getHotAttrName() { return "hot"; }
@@ -67,6 +70,7 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getNoUnwindAttrName() { return "nounwind"; }
     static llvm::StringRef getWillReturnAttrName() { return "willreturn"; }
     static llvm::StringRef getModuleLevelAsmAttrName() { return "cir.module_asm"; }
+    static llvm::StringRef getModuleFramePointerAttrName() { return "cir.frame_pointer"; }
     static llvm::StringRef getGlobalCtorsAttrName() { return "cir.global_ctors"; }
     static llvm::StringRef getGlobalDtorsAttrName() { return "cir.global_dtors"; }
     static llvm::StringRef getOffloadContainerAttrName() { return "cir.offload.container"; }
@@ -77,6 +81,8 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getAllocSizeAttrName() { return "allocsize"; }
     static llvm::StringRef getOptimizeForSizeAttrName() { return "optsize"; }
     static llvm::StringRef getMinSizeAttrName() { return "minsize"; }
+    static llvm::StringRef getOptNoneAttrName() { return "optnone"; }
+    static llvm::StringRef getNakedAttrName() { return "naked"; }
     // Note: we have to name this with the underscore instead of the dash like
     // traditional LLVM-IR does, because the LLVM-IR-Dialect doesn't have a way
     // of forming names with a dash instead of underscore in its auto-generated
@@ -101,12 +107,18 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getTargetCPUAttrName() { return "cir.target-cpu"; }
     static llvm::StringRef getTuneCPUAttrName() { return "cir.tune-cpu"; }
     static llvm::StringRef getTargetFeaturesAttrName() { return "cir.target-features"; }
+    static llvm::StringRef getAMDGPUFlatWorkGroupSizeAttrName() { return "cir.amdgpu-flat-work-group-size"; }
+    static llvm::StringRef getAMDGPUWavesPerEUAttrName() { return "cir.amdgpu-waves-per-eu"; }
     // Raw bytes of the device-side fat binary, read by CIRGen so LoweringPrepare
     // can build the runtime-registration globals without doing file I/O.
     static llvm::StringRef getCUDADeviceBinaryAttrName() { return "cir.cu.device_binary"; }
     // Mangled symbol name of the C++20 named-module initializer function,
     // precomputed by CIRGen so later passes don't need a live ASTContext.
     static llvm::StringRef getCXXModuleInitFnNameAttrName() { return "cir.cxx_module_init_fn_name"; }
+    // The initializer functions of the C++20 named modules this translation
+    // unit imports, as #cir.cxx_module_init attributes in the order the global
+    // init function calls them, precomputed by CIRGen for the same reason.
+    static llvm::StringRef getCXXModuleImportedInitsAttrName() { return "cir.cxx_module_imported_inits"; }
     // LangOptions facts that post-CIRGen lowering consumes, serialized by
     // CIRGen so a reloaded .cir module is self-describing without a live
     // clang::LangOptions. See #cir.lowering_lang_options.
@@ -114,6 +126,8 @@ def CIR_Dialect : Dialect {
     // Platform SDK version from -target-sdk-version, as printed by
     // llvm::VersionTuple (e.g. "12.3"). Absent when none was given.
     static llvm::StringRef getSDKVersionAttrName() { return "cir.sdk_version"; }
+    // Hash of the -cuid compilation unit ID. Absent when no CUID was given.
+    static llvm::StringRef getCUIDHashAttrName() { return "cir.cuid_hash"; }
     static llvm::StringRef getMustTailAttrName() { return "musttail"; }
     static llvm::StringRef getCatchCopyThunkAttrName() { return "cir.eh.catch_copy_thunk"; }
 
@@ -125,6 +139,7 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getAMDGPUNoRemoteMemoryAttrName() { return "cir.amdgpu_no_remote_memory"; }
     static llvm::StringRef getAMDGPUIgnoreDenormalModeAttrName() { return "cir.amdgpu_ignore_denormal_mode"; }
     static llvm::StringRef getAMDGPURawAtomicAttrName() { return "cir.amdgpu_raw_atomic"; }
+    static llvm::StringRef getAMDGPUNoPrivateAddrSpaceAttrName() { return "cir.amdgpu_no_private_addrspace"; }
     static llvm::StringRef getOpenCLKernelArgMetadataAttrName() { return "cir.cl.kernel_arg_metadata"; }
     static llvm::StringRef getMaxWorkGroupSizeAttrName() { return "cir.max_work_group_size"; }
     static llvm::StringRef getOpenCLVersionAttrName() { return "cir.cl.version"; }

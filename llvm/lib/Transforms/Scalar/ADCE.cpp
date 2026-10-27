@@ -39,7 +39,6 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/Value.h"
@@ -164,9 +163,9 @@ class AggressiveDeadCodeElimination {
   void makeUnconditional(BasicBlock *BB, BasicBlock *Target);
 
 public:
-  AggressiveDeadCodeElimination(Function &F, DominatorTree *DT,
-                                PostDominatorTree &PDT)
-      : Opts(ScalarOptions::Global), F(F), DT(DT), PDT(PDT) {}
+  AggressiveDeadCodeElimination(const ScalarOptions &Opts, Function &F,
+                                DominatorTree *DT, PostDominatorTree &PDT)
+      : Opts(Opts), F(F), DT(DT), PDT(PDT) {}
 
   ADCEChanged performDeadCodeElimination();
 };
@@ -417,32 +416,6 @@ ADCEChanged AggressiveDeadCodeElimination::removeDeadInstructions() {
   // Updates control and dataflow around dead blocks
   Changed.ChangedControlFlow = updateDeadRegions();
 
-  LLVM_DEBUG({
-    for (Instruction &I : instructions(F)) {
-      // Check if the instruction is alive.
-      if (isLive(&I))
-        continue;
-
-      if (auto *DII = dyn_cast<DbgVariableIntrinsic>(&I)) {
-        // Check if the scope of this variable location is alive.
-        if (AliveScopes.count(DII->getDebugLoc()->getScope()))
-          continue;
-
-        // If intrinsic is pointing at a live SSA value, there may be an
-        // earlier optimization bug: if we know the location of the variable,
-        // why isn't the scope of the location alive?
-        for (Value *V : DII->location_ops()) {
-          if (Instruction *II = dyn_cast<Instruction>(V)) {
-            if (isLive(II)) {
-              dbgs() << "Dropping debug info for " << *DII << "\n";
-              break;
-            }
-          }
-        }
-      }
-    }
-  });
-
   // The inverse of the live set is the dead set.  These are those instructions
   // that have no side effects and do not influence the control flow or return
   // value of the function, and may therefore be deleted safely.
@@ -615,8 +588,9 @@ PreservedAnalyses ADCEPass::run(Function &F, FunctionAnalysisManager &FAM) {
   // to update analysis if it is already available.
   auto *DT = FAM.getCachedResult<DominatorTreeAnalysis>(F);
   auto &PDT = FAM.getResult<PostDominatorTreeAnalysis>(F);
-  ADCEChanged Changed =
-      AggressiveDeadCodeElimination(F, DT, PDT).performDeadCodeElimination();
+  const ScalarOptions &Opts = getScalarOptions(F);
+  ADCEChanged Changed = AggressiveDeadCodeElimination(Opts, F, DT, PDT)
+                            .performDeadCodeElimination();
   if (!Changed.ChangedAnything)
     return PreservedAnalyses::all();
 

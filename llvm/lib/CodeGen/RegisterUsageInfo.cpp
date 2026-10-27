@@ -46,7 +46,7 @@ bool PhysicalRegisterUsageInfo::doInitialization(Module &M) {
 }
 
 bool PhysicalRegisterUsageInfo::doFinalization(Module &M) {
-  if (CodeGenOptions::Global.print_regusage)
+  if (getCodeGenOptions(M).print_regusage)
     print(errs());
 
   RegMasks.shrink_and_clear();

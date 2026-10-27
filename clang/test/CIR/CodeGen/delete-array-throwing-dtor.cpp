@@ -106,7 +106,8 @@ void test_delete_array_throwing_dtor(ThrowingDtor *ptr) {
 
 // LLVM: define {{.*}} void @_Z31test_delete_array_throwing_dtorP12ThrowingDtor(ptr {{.*}})
 //
-// `__array_idx` alloca and the function-entry null check.
+// Parameter and `__array_idx` allocas, and the function-entry null check.
+// LLVM:   %[[P_ADDR:[0-9]+]] = alloca ptr
 // LLVM:   %[[ARR_IDX:[0-9]+]] = alloca ptr
 // LLVM:   %[[PTR:.*]] = load ptr
 // LLVM:   %[[NOT_NULL:.*]] = icmp ne ptr %[[PTR]], null
