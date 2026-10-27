@@ -20,6 +20,7 @@
 #include "src/__support/macros/optimization.h"
 #include "src/__support/math/exp2f_double_eval.h"
 #include "src/__support/math/exp2f_float_eval.h"
+#include "src/__support/math/exp2f_integer_eval.h"
 #include "src/math/exp2f.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -35,21 +36,26 @@ namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 class Exp2fTest : public LIBC_NAMESPACE::testing::FPTest<float> {
 public:
-  void test_special_numbers(float (*func)(float)) {
+  void test_special_numbers(float (*func)(float), bool check_errno = true) {
     EXPECT_FP_EQ(aNaN, func(aNaN));
-    EXPECT_MATH_ERRNO(0);
+    if (check_errno)
+      EXPECT_MATH_ERRNO(0);
 
     EXPECT_FP_EQ(inf, func(inf));
-    EXPECT_MATH_ERRNO(0);
+    if (check_errno)
+      EXPECT_MATH_ERRNO(0);
 
     EXPECT_FP_EQ(0.0f, func(neg_inf));
-    EXPECT_MATH_ERRNO(0);
+    if (check_errno)
+      EXPECT_MATH_ERRNO(0);
 
     EXPECT_FP_EQ(1.0f, func(0.0f));
-    EXPECT_MATH_ERRNO(0);
+    if (check_errno)
+      EXPECT_MATH_ERRNO(0);
 
     EXPECT_FP_EQ(1.0f, func(-0.0f));
-    EXPECT_MATH_ERRNO(0);
+    if (check_errno)
+      EXPECT_MATH_ERRNO(0);
   }
 
   void test_overflow(float (*func)(float),
@@ -70,7 +76,7 @@ public:
   }
 
   void test_tricky_inputs(float (*func)(float), double ulp_tolerance = 0.5,
-                          bool all_rounding = true) {
+                          bool all_rounding = true, bool check_errno = true) {
     constexpr int N = 12;
     constexpr uint32_t INPUTS[N] = {
         0x3b429d37U, /*0x1.853a6ep-9f*/
@@ -95,7 +101,9 @@ public:
       } else {
         EXPECT_MPFR_MATCH(mpfr::Operation::Exp2, x, func(x), ulp_tolerance);
       }
-      EXPECT_MATH_ERRNO(0);
+      if (check_errno) {
+        EXPECT_MATH_ERRNO(0);
+      }
     }
   }
 
@@ -159,25 +167,44 @@ public:
   }
 };
 
-#define LIST_EXP2F_TESTS(suffix, func, ulp_tolerance, all_rounding)            \
+#define LIST_EXP2F_TESTS(suffix, func, ulp_tolerance, all_rounding,            \
+                         check_exception_and_errno, check_errno)               \
   using LlvmLibcExp2fTest##suffix = Exp2fTest;                                 \
   TEST_F(LlvmLibcExp2fTest##suffix, SpecialNumbers) {                          \
-    test_special_numbers(&func);                                               \
+    test_special_numbers(&func, check_errno);                                  \
   }                                                                            \
-  TEST_F(LlvmLibcExp2fTest##suffix, Overflow) { test_overflow(&func); }        \
+  TEST_F(LlvmLibcExp2fTest##suffix, Overflow) {                                \
+    test_overflow(&func, check_exception_and_errno);                           \
+  }                                                                            \
   TEST_F(LlvmLibcExp2fTest##suffix, TrickyInputs) {                            \
-    test_tricky_inputs(&func, ulp_tolerance, all_rounding);                    \
+    test_tricky_inputs(&func, ulp_tolerance, all_rounding, check_errno);       \
   }                                                                            \
   TEST_F(LlvmLibcExp2fTest##suffix, Underflow) {                               \
-    test_underflow(&func, ulp_tolerance, all_rounding);                        \
+    test_underflow(&func, ulp_tolerance, all_rounding,                         \
+                   check_exception_and_errno);                                 \
   }                                                                            \
   TEST_F(LlvmLibcExp2fTest##suffix, InFloatRange) {                            \
-    test_in_range(&func, ulp_tolerance, all_rounding);                         \
+    test_in_range(&func, ulp_tolerance, all_rounding, check_errno);            \
   }
 
 LIST_EXP2F_TESTS(Default, LIBC_NAMESPACE::exp2f,
-                 /*ulp_tolerance=*/TOLERANCE + 0.5, /*all_rounding=*/true)
+                 /*ulp_tolerance=*/TOLERANCE + 0.5, /*all_rounding=*/true,
+                 /*check_exception_and_errno=*/true, /*check_errno=*/true)
 LIST_EXP2F_TESTS(DoubleEval, LIBC_NAMESPACE::math::double_eval::exp2f,
-                 /*ulp_tolerance=*/TOLERANCE + 0.5, /*all_rounding=*/true)
+                 /*ulp_tolerance=*/TOLERANCE + 0.5, /*all_rounding=*/true,
+                 /*check_exception_and_errno=*/true, /*check_errno=*/true)
 LIST_EXP2F_TESTS(FloatEval, LIBC_NAMESPACE::math::float_eval::exp2f,
-                 /*ulp_tolerance=*/1.5, /*all_rounding=*/false)
+                 /*ulp_tolerance=*/1.5, /*all_rounding=*/false,
+                 /*check_exception_and_errno=*/true, /*check_errno=*/true)
+LIST_EXP2F_TESTS(IntegerEval, LIBC_NAMESPACE::math::integer_eval::exp2f,
+                 /*ulp_tolerance=*/0.5, /*all_rounding=*/false,
+                 /*check_exception_and_errno=*/false, /*check_errno=*/false)
+
+static float exp2f_static_rounding(float x) {
+  return LIBC_NAMESPACE::math::static_rounding::exp2f(
+      x, LIBC_NAMESPACE::fputil::quick_get_round());
+}
+
+LIST_EXP2F_TESTS(StaticRounding, exp2f_static_rounding,
+                 /*ulp_tolerance=*/0.5, /*all_rounding=*/true,
+                 /*check_exception_and_errno=*/false, /*check_errno=*/false)

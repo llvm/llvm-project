@@ -57,7 +57,7 @@ cl::opt<bool> AlignBlocks("align-blocks", cl::desc("align basic blocks"),
 cl::opt<unsigned> AlignBlocksMinSize(
     "align-blocks-min-size",
     cl::desc("minimal size of the basic block that should be aligned"),
-    cl::init(0), cl::ZeroOrMore, cl::Hidden, cl::cat(BoltOptCategory));
+    cl::init(0), cl::Hidden, cl::cat(BoltOptCategory));
 
 cl::opt<unsigned> AlignBlocksThreshold(
     "align-blocks-threshold",
@@ -76,7 +76,7 @@ cl::opt<unsigned> AlignFunctionsMaxBytes(
 cl::opt<unsigned>
     BlockAlignment("block-alignment",
                    cl::desc("boundary to use for alignment of basic blocks"),
-                   cl::init(16), cl::ZeroOrMore, cl::cat(BoltOptCategory));
+                   cl::init(16), cl::cat(BoltOptCategory));
 
 cl::opt<bool>
     PreserveBlocksAlignment("preserve-blocks-alignment",
@@ -119,14 +119,13 @@ cl::opt<bool>
 EnableBAT("enable-bat",
   cl::desc("write BOLT Address Translation tables"),
   cl::init(false),
-  cl::ZeroOrMore,
   cl::cat(BoltCategory));
 
 cl::opt<bool> EqualizeBBCounts(
     "equalize-bb-counts",
     cl::desc("use same count for BBs that should have equivalent count (used "
              "in non-LBR and shrink wrapping)"),
-    cl::ZeroOrMore, cl::init(false), cl::Hidden, cl::cat(BoltOptCategory));
+    cl::init(false), cl::Hidden, cl::cat(BoltOptCategory));
 
 llvm::cl::opt<bool> ForcePatch(
     "force-patch",
@@ -142,7 +141,6 @@ ExecutionCountThreshold("execution-count-threshold",
   cl::desc("perform profiling accuracy-sensitive optimizations only if "
            "function execution count >= the threshold (default: 0)"),
   cl::init(0),
-  cl::ZeroOrMore,
   cl::Hidden,
   cl::cat(BoltOptCategory));
 
@@ -271,7 +269,7 @@ cl::opt<bool> HotText(
         "Generate hot text symbols. Apply this option to a precompiled binary "
         "that manually calls into hugify, such that at runtime hugify call "
         "will put hot code into 2M pages. This requires relocation."),
-    cl::ZeroOrMore, cl::cat(BoltCategory));
+    cl::cat(BoltCategory));
 
 cl::opt<bool> Hugify(
     "hugify",
@@ -337,7 +335,7 @@ cl::opt<ProfileFormatKind> ProfileFormat(
                clEnumValN(PF_PreAgg, "preagg", "pre-aggregated profile format"),
                clEnumValN(PF_PerfScript, "perfscript",
                           "perfscript profile format")),
-    cl::ZeroOrMore, cl::Hidden, cl::cat(BoltCategory));
+    cl::Hidden, cl::cat(BoltCategory));
 
 cl::list<std::string> ReorderData(
     "reorder-data", cl::CommaSeparated, cl::desc("list of sections to reorder"),
@@ -380,7 +378,7 @@ cl::opt<bool> UpdateDebugSections(
 
 cl::opt<unsigned>
     Verbosity("v", cl::desc("set verbosity level for diagnostic output"),
-              cl::init(0), cl::ZeroOrMore, cl::cat(BoltCategory),
+              cl::init(0), cl::cat(BoltCategory),
               cl::sub(cl::SubCommand::getAll()));
 
 cl::opt<bool> FixBranchesWithLiveness(

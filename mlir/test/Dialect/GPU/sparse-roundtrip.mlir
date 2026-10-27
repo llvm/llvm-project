@@ -28,6 +28,32 @@ module attributes {gpu.container_module} {
     return
   }
 
+  // CHECK-LABEL: func @matvec_transpose
+  // CHECK: %{{.*}} = gpu.wait async
+  // CHECK: %{{.*}}, %{{.*}} = gpu.alloc async [%{{.*}}] (%{{.*}}) : memref<?xindex>
+  // CHECK: %{{.*}}, %{{.*}} = gpu.alloc async [%{{.*}}] (%{{.*}}) : memref<?xf64>
+  // CHECK: %{{.*}}, %{{.*}} = gpu.create_coo async [%{{.*}}] %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : memref<?xindex>, memref<?xindex>, memref<?xf64>
+  // CHECK: %{{.*}}, %{{.*}} = gpu.create_dn_tensor async [%{{.*}}] %{{.*}}, %{{.*}} : index into memref<?xf64>
+  // CHECK: %{{.*}}, %{{.*}} = gpu.spmv_buffer_size async [%{{.*}}] %{{.*}}{TRANSPOSE}, %{{.*}}, %{{.*}} into f64
+  // CHECK: %{{.*}} = gpu.spmv async [%{{.*}}] %{{.*}}{TRANSPOSE}, %{{.*}}, %{{.*}}, %{{.*}} : memref<?xf64> into f64
+  // CHECK: %{{.*}} = gpu.destroy_sp_mat async [%{{.*}}] %{{.*}}
+  // CHECK: %{{.*}} = gpu.destroy_dn_tensor async [%{{.*}}] %{{.*}}
+  // CHECK: gpu.wait [%{{.*}}]
+  // CHECK: return
+  func.func @matvec_transpose(%arg0: index) {
+    %token0 = gpu.wait async
+    %mem1, %token1 = gpu.alloc async [%token0] (%arg0) : memref<?xindex>
+    %mem2, %token2 = gpu.alloc async [%token1] (%arg0) : memref<?xf64>
+    %spmat, %token3 = gpu.create_coo async [%token2] %arg0, %arg0, %arg0, %mem1, %mem1, %mem2 : memref<?xindex>, memref<?xindex>, memref<?xf64>
+    %dnvec, %token4 = gpu.create_dn_tensor async [%token3] %mem2, %arg0 : index into memref<?xf64>
+    %bufferSz, %token5 = gpu.spmv_buffer_size async [%token4] %spmat{TRANSPOSE}, %dnvec, %dnvec into f64
+    %token6 = gpu.spmv async [%token5] %spmat{TRANSPOSE}, %dnvec, %dnvec, %mem2 : memref<?xf64> into f64
+    %token7 = gpu.destroy_sp_mat async [%token6] %spmat
+    %token8 = gpu.destroy_dn_tensor async [%token7] %dnvec
+    gpu.wait [%token8]
+    return
+  }
+
   // CHECK-LABEL: func @matmul
   // CHECK: %{{.*}} = gpu.wait async
   // CHECK: %{{.*}}, %{{.*}} = gpu.alloc async [%{{.*}}] (%{{.*}}) : memref<?xindex>
@@ -51,6 +77,84 @@ module attributes {gpu.container_module} {
     %token8 = gpu.destroy_sp_mat async [%token7] %spmat
     %token9 = gpu.destroy_dn_tensor async [%token8] %dnmat
     gpu.wait [%token9]
+    return
+  }
+
+  // CHECK-LABEL: func @matmul_transpose_a
+  // CHECK: %{{.*}} = gpu.wait async
+  // CHECK: %{{.*}}, %{{.*}} = gpu.alloc async [%{{.*}}] (%{{.*}}) : memref<?xindex>
+  // CHECK: %{{.*}}, %{{.*}} = gpu.alloc async [%{{.*}}] (%{{.*}}) : memref<?xf64>
+  // CHECK: %{{.*}}, %{{.*}} = gpu.create_coo async [%{{.*}}] %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : memref<?xindex>, memref<?xindex>, memref<?xf64>
+  // CHECK: %{{.*}}, %{{.*}} = gpu.create_dn_tensor async [%{{.*}}] %{{.*}}, %{{.*}}, %{{.*}} : index, index into memref<?xf64>
+  // CHECK: %{{.*}}, %{{.*}} = gpu.spmm_buffer_size async [%{{.*}}] %{{.*}}{TRANSPOSE}, %{{.*}}, %{{.*}} : index into f64
+  // CHECK: %{{.*}} = gpu.spmm async [%{{.*}}] %{{.*}}{TRANSPOSE}, %{{.*}}, %{{.*}}, %{{.*}} : memref<?xf64> into f64
+  // CHECK: %{{.*}} = gpu.destroy_sp_mat async [%{{.*}}] %{{.*}}
+  // CHECK: %{{.*}} = gpu.destroy_dn_tensor async [%{{.*}}] %{{.*}}
+  // CHECK: gpu.wait [%{{.*}}]
+  // CHECK: return
+  func.func @matmul_transpose_a(%arg0: index) {
+    %token0 = gpu.wait async
+    %mem1, %token1 = gpu.alloc async [%token0] (%arg0) : memref<?xindex>
+    %mem2, %token2 = gpu.alloc async [%token1] (%arg0) : memref<?xf64>
+    %spmat, %token3 = gpu.create_coo async [%token2] %arg0, %arg0, %arg0, %mem1, %mem1, %mem2 : memref<?xindex>, memref<?xindex>, memref<?xf64>
+    %dnmat, %token4 = gpu.create_dn_tensor async [%token3] %mem2, %arg0, %arg0 : index, index into memref<?xf64>
+    %bufferSz, %token5 = gpu.spmm_buffer_size async [%token4] %spmat{TRANSPOSE}, %dnmat, %dnmat : index into f64
+    %token6 = gpu.spmm async [%token5] %spmat{TRANSPOSE}, %dnmat, %dnmat, %mem2 : memref<?xf64> into f64
+    %token7 = gpu.destroy_sp_mat async [%token6] %spmat
+    %token8 = gpu.destroy_dn_tensor async [%token7] %dnmat
+    gpu.wait [%token8]
+    return
+  }
+
+  // CHECK-LABEL: func @matmul_transpose_b
+  // CHECK: %{{.*}} = gpu.wait async
+  // CHECK: %{{.*}}, %{{.*}} = gpu.alloc async [%{{.*}}] (%{{.*}}) : memref<?xindex>
+  // CHECK: %{{.*}}, %{{.*}} = gpu.alloc async [%{{.*}}] (%{{.*}}) : memref<?xf64>
+  // CHECK: %{{.*}}, %{{.*}} = gpu.create_coo async [%{{.*}}] %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : memref<?xindex>, memref<?xindex>, memref<?xf64>
+  // CHECK: %{{.*}}, %{{.*}} = gpu.create_dn_tensor async [%{{.*}}] %{{.*}}, %{{.*}}, %{{.*}} : index, index into memref<?xf64>
+  // CHECK: %{{.*}}, %{{.*}} = gpu.spmm_buffer_size async [%{{.*}}] %{{.*}}, %{{.*}}{TRANSPOSE}, %{{.*}} : index into f64
+  // CHECK: %{{.*}} = gpu.spmm async [%{{.*}}] %{{.*}}, %{{.*}}{TRANSPOSE}, %{{.*}}, %{{.*}} : memref<?xf64> into f64
+  // CHECK: %{{.*}} = gpu.destroy_sp_mat async [%{{.*}}] %{{.*}}
+  // CHECK: %{{.*}} = gpu.destroy_dn_tensor async [%{{.*}}] %{{.*}}
+  // CHECK: gpu.wait [%{{.*}}]
+  // CHECK: return
+  func.func @matmul_transpose_b(%arg0: index) {
+    %token0 = gpu.wait async
+    %mem1, %token1 = gpu.alloc async [%token0] (%arg0) : memref<?xindex>
+    %mem2, %token2 = gpu.alloc async [%token1] (%arg0) : memref<?xf64>
+    %spmat, %token3 = gpu.create_coo async [%token2] %arg0, %arg0, %arg0, %mem1, %mem1, %mem2 : memref<?xindex>, memref<?xindex>, memref<?xf64>
+    %dnmat, %token4 = gpu.create_dn_tensor async [%token3] %mem2, %arg0, %arg0 : index, index into memref<?xf64>
+    %bufferSz, %token5 = gpu.spmm_buffer_size async [%token4] %spmat, %dnmat{TRANSPOSE}, %dnmat : index into f64
+    %token6 = gpu.spmm async [%token5] %spmat, %dnmat{TRANSPOSE}, %dnmat, %mem2 : memref<?xf64> into f64
+    %token7 = gpu.destroy_sp_mat async [%token6] %spmat
+    %token8 = gpu.destroy_dn_tensor async [%token7] %dnmat
+    gpu.wait [%token8]
+    return
+  }
+
+  // CHECK-LABEL: func @matmul_transpose_ab
+  // CHECK: %{{.*}} = gpu.wait async
+  // CHECK: %{{.*}}, %{{.*}} = gpu.alloc async [%{{.*}}] (%{{.*}}) : memref<?xindex>
+  // CHECK: %{{.*}}, %{{.*}} = gpu.alloc async [%{{.*}}] (%{{.*}}) : memref<?xf64>
+  // CHECK: %{{.*}}, %{{.*}} = gpu.create_coo async [%{{.*}}] %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : memref<?xindex>, memref<?xindex>, memref<?xf64>
+  // CHECK: %{{.*}}, %{{.*}} = gpu.create_dn_tensor async [%{{.*}}] %{{.*}}, %{{.*}}, %{{.*}} : index, index into memref<?xf64>
+  // CHECK: %{{.*}}, %{{.*}} = gpu.spmm_buffer_size async [%{{.*}}] %{{.*}}{TRANSPOSE}, %{{.*}}{TRANSPOSE}, %{{.*}} : index into f64
+  // CHECK: %{{.*}} = gpu.spmm async [%{{.*}}] %{{.*}}{TRANSPOSE}, %{{.*}}{TRANSPOSE}, %{{.*}}, %{{.*}} : memref<?xf64> into f64
+  // CHECK: %{{.*}} = gpu.destroy_sp_mat async [%{{.*}}] %{{.*}}
+  // CHECK: %{{.*}} = gpu.destroy_dn_tensor async [%{{.*}}] %{{.*}}
+  // CHECK: gpu.wait [%{{.*}}]
+  // CHECK: return
+  func.func @matmul_transpose_ab(%arg0: index) {
+    %token0 = gpu.wait async
+    %mem1, %token1 = gpu.alloc async [%token0] (%arg0) : memref<?xindex>
+    %mem2, %token2 = gpu.alloc async [%token1] (%arg0) : memref<?xf64>
+    %spmat, %token3 = gpu.create_coo async [%token2] %arg0, %arg0, %arg0, %mem1, %mem1, %mem2 : memref<?xindex>, memref<?xindex>, memref<?xf64>
+    %dnmat, %token4 = gpu.create_dn_tensor async [%token3] %mem2, %arg0, %arg0 : index, index into memref<?xf64>
+    %bufferSz, %token5 = gpu.spmm_buffer_size async [%token4] %spmat{TRANSPOSE}, %dnmat{TRANSPOSE}, %dnmat : index into f64
+    %token6 = gpu.spmm async [%token5] %spmat{TRANSPOSE}, %dnmat{TRANSPOSE}, %dnmat, %mem2 : memref<?xf64> into f64
+    %token7 = gpu.destroy_sp_mat async [%token6] %spmat
+    %token8 = gpu.destroy_dn_tensor async [%token7] %dnmat
+    gpu.wait [%token8]
     return
   }
 

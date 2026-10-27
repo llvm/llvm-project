@@ -274,7 +274,9 @@ entry:
 
 ; GCN-LABEL: {{^}}i128_eq_const:
 ; SI: v_cmp_eq_u64
-; VI: s_cmp_eq_u64
+; VI: s_or_b64
+; VI-NOT: s_cmp
+; VI: s_cselect_b32 s{{[0-9]+}}, 0, -1
 define amdgpu_kernel void @i128_eq_const(ptr addrspace(1) %out, i128 %a) #0 {
 entry:
   %tmp0 = icmp eq i128 %a, 85070591730234615865843651857942052992

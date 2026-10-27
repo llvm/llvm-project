@@ -51,7 +51,7 @@ void ppp() { B b; }
 // Note: OGCG speculatively emits the VTT and VTables. This is not yet implemented in CIR.
 
 // Vtable definition for B
-// CIR: cir.global "private" {{.*}}@_ZTV1B = #cir.vtable<{#cir.const_array<[#cir.ptr<12 : i64> : !cir.ptr<!u8i>, #cir.ptr<null> : !cir.ptr<!u8i>, #cir.global_view<@_ZTI1B> : !cir.ptr<!u8i>]> : !cir.array<!cir.ptr<!u8i> x 3>}> : !rec_anon_struct3 {alignment = 8 : i64}
+// CIR: cir.global "private" {{.*}}@_ZTV1B = #cir.vtable<{#cir.const_array<[#cir.ptr<12 : i64> : !cir.ptr<!u8i>, #cir.ptr<null> : !cir.ptr<!u8i>, #cir.global_view<@_ZTI1B> : !cir.ptr<!u8i>]> : !cir.array<!cir.ptr<!u8i> x 3>}> : !rec_anon_struct3 align(8)
 // LLVM: @_ZTV1B = linkonce_odr constant { [3 x ptr] } { [3 x ptr] [ptr inttoptr (i64 12 to ptr), ptr null, ptr @_ZTI1B] }, comdat, align 8
 
 // OGCG: @_ZTV1B = linkonce_odr constant { [3 x ptr] } { [3 x ptr] [ptr inttoptr (i64 12 to ptr), ptr null, ptr @_ZTI1B] }, comdat, align 8
@@ -76,7 +76,7 @@ void ppp() { B b; }
 // CIR: cir.func {{.*}}@_Z1gv()
 // CIR:   %[[DF:.+]] = cir.alloca "df" {{.*}} init : !cir.ptr<!rec_DerivedFinal>
 // CIR:   cir.call @_ZN12DerivedFinalC1Ev(%[[DF]]) nothrow : (!cir.ptr<!rec_DerivedFinal> {{.*}}) -> ()
-// CIR:   %[[BASE_THIS_2:.+]] = cir.base_class_addr %[[DF]] : !cir.ptr<!rec_DerivedFinal> nonnull [0] -> !cir.ptr<!rec_Base>
+// CIR:   %[[BASE_THIS_2:.+]] = cir.base_class_addr nonnull %[[DF]] [0] : !cir.ptr<!rec_DerivedFinal> -> !cir.ptr<!rec_Base>
 // CIR:   cir.call @_ZN4Base1fEv(%[[BASE_THIS_2]]) : (!cir.ptr<!rec_Base> {{.*}}) -> ()
 // CIR:   cir.return
 
@@ -117,7 +117,7 @@ void ppp() { B b; }
 // CIR:   %[[THIS_ADDR:.*]] = cir.alloca "this" {{.*}} init : !cir.ptr<!cir.ptr<!rec_B>>
 // CIR:   cir.store %arg0, %[[THIS_ADDR]] : !cir.ptr<!rec_B>, !cir.ptr<!cir.ptr<!rec_B>>
 // CIR:   %[[THIS:.*]] = cir.load %[[THIS_ADDR]] : !cir.ptr<!cir.ptr<!rec_B>>, !cir.ptr<!rec_B>
-// CIR:   %[[BASE_A_ADDR:.*]] = cir.base_class_addr %[[THIS]] : !cir.ptr<!rec_B> nonnull [12] -> !cir.ptr<!rec_A>
+// CIR:   %[[BASE_A_ADDR:.*]] = cir.base_class_addr nonnull %[[THIS]] [12] : !cir.ptr<!rec_B> -> !cir.ptr<!rec_A>
 // CIR:   %[[VTABLE:.*]] = cir.vtable.address_point(@_ZTV1B, address_point = <index = 0, offset = 3>) : !cir.vptr
 // CIR:   %[[B_VPTR:.*]] = cir.vtable.get_vptr %[[THIS]] : !cir.ptr<!rec_B> -> !cir.ptr<!cir.vptr>
 // CIR:   cir.store align(8) %[[VTABLE]], %[[B_VPTR]] : !cir.vptr, !cir.ptr<!cir.vptr>

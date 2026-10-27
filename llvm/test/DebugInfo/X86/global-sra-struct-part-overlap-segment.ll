@@ -190,7 +190,7 @@ declare void @llvm.experimental.noalias.scope.decl(metadata)
 !22 = distinct !DISubprogram(name: "foo", scope: !2, file: !4, line: 5, type: !10, scopeLine: 5, flags: DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !3)
 !23 = !{!24}
 !24 = distinct !{!24, !25, !"mymod_bar_: %bar"}
-!25 = distinct !{!25, !"mymod_bar_"}
+!25 = distinct !{!25, i1 false, !"mymod_bar_"}
 !26 = !{!27}
 !27 = distinct !{!27, !25, !"mymod_bar_: %arg"}
 !28 = !{!24, !27}

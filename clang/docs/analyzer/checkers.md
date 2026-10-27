@@ -197,7 +197,7 @@ void test() {
 Null pointer dereferences of pointers with address spaces are not always defined
 as error. Specifically on x86/x86-64 target if the pointer address space is
 256 (x86 GS Segment), 257 (x86 FS Segment), or 258 (x86 SS Segment), a null
-dereference is not defined as error. See [X86/X86-64 Language Extensions](https://clang.llvm.org/docs/LanguageExtensions.html#memory-references-to-specified-segments)
+dereference is not defined as error. See [X86/X86-64 Language Extensions](../LanguageExtensions.md#memory-references-to-specified-segments)
 for reference.
 
 If the analyzer option `suppress-dereferences-from-any-address-space` is set
@@ -808,7 +808,7 @@ This checker does not accept the coding pattern where an enum type is used to
 store combinations of flag values.
 Such enums should be annotated with the `__attribute__((flag_enum))` or by the
 `[[clang::flag_enum]]` attribute to signal this intent. Refer to the
-[documentation](https://clang.llvm.org/docs/AttributeReference.html#flag-enum)
+[documentation](../AttributeReference.md#flag-enum)
 of this Clang attribute.
 
 ```cpp
@@ -901,7 +901,7 @@ arguments -- even if there is no such call in the codebase.
 This design rule is dictated by the SEI CERT rule [EXP47-C](https://wiki.sei.cmu.edu/confluence/display/c/EXP47-C.+Do+not+call+va_arg+with+an+argument+of+the+incorrect+type),
 which describes several issues related to the use of `va_arg()`. (The problem
 reported by this checker is shown in the second code example; the first,
-unrelated code example is covered by the clang diagnostic [-Wvarargs](https://clang.llvm.org/docs/DiagnosticsReference.html#wvarargs).)
+unrelated code example is covered by the clang diagnostic [-Wvarargs](../DiagnosticsReference.md#wvarargs).)
 
 ```cpp
 // This function expects a list of variadic arguments terminated by a NULL pointer.
@@ -3357,7 +3357,7 @@ int *direct_return() {
 
 The attribute states that the returned value is dangling after the lifetime
 of the annotated parameter, or of the implicit object argument, has ended.
-Refer to the [documentation](https://clang.llvm.org/docs/AttributeReference.html#lifetimebound)
+Refer to the [documentation](../AttributeReference.md#lifetimebound)
 of this Clang attribute.
 
 ```cpp
@@ -4281,6 +4281,106 @@ The cost is that an identity function is reported even though its result really 
 > void foo7(Vector<char>& buffer) {
 >   Vector<char>& alias = identity(buffer); // warn, although this is an alias
 >   someFunction();
+> }
+> ```
+
+Includes built-in recognition for std view types. For example:
+
+> ```cpp
+> void foo8(Vector<char>& buffer) {
+>   for (char& c : buffer | std::views::reverse) // warn
+>     someFunction();
+> }
+>
+> void foo9(Vector<char>& buffer) {
+>   // ok, C++23 extends the borrow() temporary across the loop
+>   for (char& c : borrow(buffer).get() | std::views::reverse)
+>     someFunction();
+> }
+>
+> void foo10(Vector<char>& buffer) {
+>   char* p = std::data(buffer); // warn
+>   someFunction();
+> }
+> ```
+
+#### alpha.webkit.UnborrowedCallArgsChecker
+
+The same rule as alpha.webkit.UnborrowedLocalVarsChecker, applied to function arguments.
+
+> ```cpp
+> void someFunction(char* pointer);
+> void someFunction(char& reference);
+> void someFunction(std::span<char> view);
+> void someFunctionByCopy(char value);
+>
+> void foo1(Vector<char>& buffer) {
+>   someFunction(buffer.data());   // warn
+>   someFunction(buffer[0]);       // warn
+>   someFunction(buffer.span());   // warn
+>   someFunctionByCopy(buffer[0]); // ok, someFunctionByCopy() receives a copy
+>                                  // of the element, not a view
+> }
+>
+> void foo2(Vector<char>& buffer) {
+>   buffer.append(buffer[0]);      // warn
+> }
+> ```
+
+The implicit object argument counts as an argument:
+
+> ```cpp
+> class Element {
+> public:
+>   void someMethod();
+> };
+>
+> void foo3(Vector<Element>& elements) {
+>   elements[0].someMethod(); // warn: 'this' is a pointer into elements
+> }
+> ```
+
+These examples do not warn:
+
+> ```cpp
+> void foo4(Vector<char>& buffer) {
+>   Borrow<Vector<char>> borrowed(buffer);
+>   someFunction(borrowed.get().data()); // ok, guarded by Borrow<T>
+>   someFunction(borrowed.get()[0]);     // ok, guarded by Borrow<T>
+> }
+> ```
+
+#### alpha.webkit.UnborrowedLambdaCapturesChecker
+
+The same rule as alpha.webkit.UnborrowedLocalVarsChecker, applied to lambda captures.
+
+Note: It is impossible for an escaping closure to capture a Borrow since Borrow is stack-only.
+
+> ```cpp
+> void takesCallback(const Function<void()>&);
+> void takesNoEscapeCallback([[clang::noescape]] const Function<void()>&);
+>
+> void foo1(Vector<char>& buffer) {
+>   takesCallback([data = buffer.data()] { use(data); }); // warn
+>
+>   Borrow<Vector<char>> borrowed(buffer);
+>   takesCallback([data = borrowed.get().data()] { use(data); }); // warn
+>   takesCallback([&borrowed] { use(borrowed.get().data()); }); // warn
+> }
+> ```
+
+A NOESCAPE callee runs the lambda before returning, so a `Borrow` in the enclosing scope protects the capture:
+
+> ```cpp
+> void foo2(Vector<char>& buffer) {
+>   Borrow<Vector<char>> borrowed(buffer);
+>   takesNoEscapeCallback([data = borrowed.get().data()] { use(data); }); // ok
+>   takesNoEscapeCallback([&borrowed] { use(borrowed.get().data()); }); // ok
+>
+>   takesNoEscapeCallback([&buffer] {
+>     Borrow<Vector<char>> b(buffer);
+>     use(b.get().data()); // ok
+>   });
 > }
 > ```
 

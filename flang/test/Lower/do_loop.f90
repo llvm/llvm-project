@@ -11,7 +11,7 @@
 ! Test a simple loop with the final value of the index variable read outside the loop
 ! CHECK-LABEL: simple_loop
 subroutine simple_loop
-  ! CHECK: %[[I_REF:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFsimple_loopEi"}
+  ! CHECK: %[[I_REF:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFsimple_loopEi"}>
   ! CHECK: %[[I_DECL:.*]]:2 = hlfir.declare %[[I_REF]]
   integer :: i
 
@@ -44,13 +44,13 @@ end subroutine
 ! Test a 2-nested loop with a body composed of a reduction. Values are read from a 2d array.
 ! CHECK-LABEL: nested_loop
 subroutine nested_loop
-  ! CHECK: %[[ARR_REF:.*]] = fir.alloca !fir.array<5x5xi32> {bindc_name = "arr", uniq_name = "_QFnested_loopEarr"}
+  ! CHECK: %[[ARR_REF:.*]] = fir.alloca !fir.array<5x5xi32> <{bindc_name = "arr", uniq_name = "_QFnested_loopEarr"}>
   ! CHECK: %[[ARR_DECL:.*]]:2 = hlfir.declare %[[ARR_REF]]
-  ! CHECK: %[[ASUM_REF:.*]] = fir.alloca i32 {bindc_name = "asum", uniq_name = "_QFnested_loopEasum"}
+  ! CHECK: %[[ASUM_REF:.*]] = fir.alloca i32 <{bindc_name = "asum", uniq_name = "_QFnested_loopEasum"}>
   ! CHECK: %[[ASUM_DECL:.*]]:2 = hlfir.declare %[[ASUM_REF]]
-  ! CHECK: %[[I_REF:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFnested_loopEi"}
+  ! CHECK: %[[I_REF:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFnested_loopEi"}>
   ! CHECK: %[[I_DECL:.*]]:2 = hlfir.declare %[[I_REF]]
-  ! CHECK: %[[J_REF:.*]] = fir.alloca i32 {bindc_name = "j", uniq_name = "_QFnested_loopEj"}
+  ! CHECK: %[[J_REF:.*]] = fir.alloca i32 <{bindc_name = "j", uniq_name = "_QFnested_loopEj"}>
   ! CHECK: %[[J_DECL:.*]]:2 = hlfir.declare %[[J_REF]]
   integer :: asum, arr(5,5)
   integer :: i, j
@@ -113,7 +113,7 @@ end subroutine
 ! CHECK-LABEL: down_counting_loop
 subroutine down_counting_loop()
   integer :: i
-  ! CHECK: %[[I_REF:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFdown_counting_loopEi"}
+  ! CHECK: %[[I_REF:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFdown_counting_loopEi"}>
   ! CHECK: %[[I_DECL:.*]]:2 = hlfir.declare %[[I_REF]]
 
   ! CHECK: %[[C5:.*]] = arith.constant 5 : i32
@@ -147,7 +147,7 @@ subroutine loop_with_variable_step(s,e,st)
   ! CHECK-DAG: %[[E_DECL:.*]]:2 = hlfir.declare %[[E_REF]]
   ! CHECK-DAG: %[[S_DECL:.*]]:2 = hlfir.declare %[[S_REF]]
   ! CHECK-DAG: %[[ST_DECL:.*]]:2 = hlfir.declare %[[ST_REF]]
-  ! CHECK-DAG: %[[I_REF:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFloop_with_variable_stepEi"}
+  ! CHECK-DAG: %[[I_REF:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFloop_with_variable_stepEi"}>
   ! CHECK-DAG: %[[I_DECL:.*]]:2 = hlfir.declare %[[I_REF]]
   ! CHECK: %[[S:.*]] = fir.load %[[S_DECL]]#0 : !fir.ref<i32>
   ! CHECK: %[[E:.*]] = fir.load %[[E_DECL]]#0 : !fir.ref<i32>
@@ -176,15 +176,15 @@ end subroutine
 ! CHECK-LABEL: loop_with_pointer_variables
 ! CHECK-SAME: (%[[S_REF:.*]]: !fir.ref<i32> {fir.bindc_name = "s", fir.target}, %[[E_REF:.*]]: !fir.ref<i32> {fir.bindc_name = "e", fir.target}, %[[ST_REF:.*]]: !fir.ref<i32> {fir.bindc_name = "st", fir.target}) {
 subroutine loop_with_pointer_variables(s,e,st)
-! CHECK-DAG:  %[[E_PTR_REF:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> {bindc_name = "eptr", uniq_name = "_QFloop_with_pointer_variablesEeptr"}
+! CHECK-DAG:  %[[E_PTR_REF:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> <{bindc_name = "eptr", uniq_name = "_QFloop_with_pointer_variablesEeptr"}>
 ! CHECK-DAG:  %[[E_PTR_DECL:.*]]:2 = hlfir.declare %[[E_PTR_REF]]
-! CHECK-DAG:  %[[I_REF:.*]] = fir.alloca i32 {bindc_name = "i", fir.target, uniq_name = "_QFloop_with_pointer_variablesEi"}
+! CHECK-DAG:  %[[I_REF:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFloop_with_pointer_variablesEi"}> {fir.target}
 ! CHECK-DAG:  %[[I_DECL:.*]]:2 = hlfir.declare %[[I_REF]]
-! CHECK-DAG:  %[[I_PTR_REF:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> {bindc_name = "iptr", uniq_name = "_QFloop_with_pointer_variablesEiptr"}
+! CHECK-DAG:  %[[I_PTR_REF:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> <{bindc_name = "iptr", uniq_name = "_QFloop_with_pointer_variablesEiptr"}>
 ! CHECK-DAG:  %[[I_PTR_DECL:.*]]:2 = hlfir.declare %[[I_PTR_REF]]
-! CHECK-DAG:  %[[S_PTR_REF:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> {bindc_name = "sptr", uniq_name = "_QFloop_with_pointer_variablesEsptr"}
+! CHECK-DAG:  %[[S_PTR_REF:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> <{bindc_name = "sptr", uniq_name = "_QFloop_with_pointer_variablesEsptr"}>
 ! CHECK-DAG:  %[[S_PTR_DECL:.*]]:2 = hlfir.declare %[[S_PTR_REF]]
-! CHECK-DAG:  %[[ST_PTR_REF:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> {bindc_name = "stptr", uniq_name = "_QFloop_with_pointer_variablesEstptr"}
+! CHECK-DAG:  %[[ST_PTR_REF:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> <{bindc_name = "stptr", uniq_name = "_QFloop_with_pointer_variablesEstptr"}>
 ! CHECK-DAG:  %[[ST_PTR_DECL:.*]]:2 = hlfir.declare %[[ST_PTR_REF]]
   integer, target :: i
   integer, target :: s, e, st
@@ -235,7 +235,7 @@ subroutine loop_with_non_default_integer(s,e,st)
   ! CHECK-DAG: %[[E_DECL:.*]]:2 = hlfir.declare %[[E_REF]]
   ! CHECK-DAG: %[[S_DECL:.*]]:2 = hlfir.declare %[[S_REF]]
   ! CHECK-DAG: %[[ST_DECL:.*]]:2 = hlfir.declare %[[ST_REF]]
-  ! CHECK-DAG: %[[I_REF:.*]] = fir.alloca i64 {bindc_name = "i", uniq_name = "_QFloop_with_non_default_integerEi"}
+  ! CHECK-DAG: %[[I_REF:.*]] = fir.alloca i64 <{bindc_name = "i", uniq_name = "_QFloop_with_non_default_integerEi"}>
   ! CHECK-DAG: %[[I_DECL:.*]]:2 = hlfir.declare %[[I_REF]]
   integer(kind=8):: i
   ! CHECK: %[[S:.*]] = fir.load %[[S_DECL]]#0 : !fir.ref<i64>
@@ -268,7 +268,7 @@ end subroutine
 ! CHECK-SAME: (%[[S_REF:.*]]: !fir.ref<f32> {fir.bindc_name = "s"}, %[[E_REF:.*]]: !fir.ref<f32> {fir.bindc_name = "e"}, %[[ST_REF:.*]]: !fir.ref<f32> {fir.bindc_name = "st"}) {
 subroutine loop_with_real_control(s,e,st)
   ! CHECK-DAG: %[[INDEX_REF:.*]] = fir.alloca index
-  ! CHECK-DAG: %[[X_REF:.*]] = fir.alloca f32 {bindc_name = "x", uniq_name = "_QFloop_with_real_controlEx"}
+  ! CHECK-DAG: %[[X_REF:.*]] = fir.alloca f32 <{bindc_name = "x", uniq_name = "_QFloop_with_real_controlEx"}>
   ! CHECK-DAG: %[[X_DECL:.*]]:2 = hlfir.declare %[[X_REF]]
   ! CHECK-DAG: %[[E_DECL:.*]]:2 = hlfir.declare %[[E_REF]]
   ! CHECK-DAG: %[[S_DECL:.*]]:2 = hlfir.declare %[[S_REF]]

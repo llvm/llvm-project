@@ -40,46 +40,14 @@ The members of the LLVM Qualification Group represent a diverse cross-section of
 They meet the criteria for inclusion described in the sub-sections below and are identified as [active contributors](#contribution-principles).
 Knowing their handles help us keep track of who’s who across platforms, coordinate activities, and recognize contributions.
 
-:::{list-table}
-:widths: 20 20 20 20 20
-:header-rows: 1
-
-* - Name
-  - Affiliation
-  - Discourse handle
-  - Discord handle
-  - GitHub handle
-* - Carlos Andrés Ramírez
-  - Woven by Toyota
-  - CarlosAndresRamirez
-  - carlos_andres_ramirez
-  - CarlosAndresRamirez
-* - Oscar Slotosch
-  - Validas
-  - slotosch
-  - oscarslotosch_66740
-  - slotosch
-* - Petter Berntsson
-  - Arm Limited
-  - petbernt
-  - petbernt
-  - petbernt
-* - Wendi Urribarri
-  - Woven by Toyota
-  - uwendi
-  - uwendi
-  - uwendi
-* - YoungJun Lee
-  - NSHC
-  - YoungJunLee
-  - YoungJunLee
-  - IamYJLee
-* - Zaky Hermawan
-  - (No affiliation)
-  - ZakyHermawan
-  - quarkz99
-  - zakyHermawan
-:::
+| Name | Affiliation | Discourse handle | Discord handle | GitHub handle |
+|---|---|---|---|---|
+| Carlos Andrés Ramírez | Woven by Toyota | `CarlosAndresRamirez` | `carlos_andres_ramirez` | `CarlosAndresRamirez` |
+| Oscar Slotosch | Validas | `slotosch` | `oscarslotosch_66740` | `slotosch` |
+| Petter Berntsson | Arm Limited | `petbernt` | `petbernt` | `petbernt` |
+| Wendi Urribarri | Woven by Toyota | `uwendi` | `uwendi` | `uwendi` |
+| YoungJun Lee | NSHC | `YoungJunLee` | `YoungJunLee` | `IamYJLee` |
+| Zaky Hermawan | (No affiliation) | `ZakyHermawan` | `quarkz99` | `zakyHermawan` |
 
 Organizations are limited to three representatives within the group to maintain diversity.
 
@@ -91,6 +59,29 @@ There are several ways to participate:
 - Engage in conversations on the LLVM Community Discord in the [#fusa-qual-wg](https://discord.com/channels/636084430946959380/1389362444169773117) channel. Note: You need to join the community's [Discord chat server](GettingInvolved.md#discord) first.
 - Join our monthly sync-up calls. Details on working sessions and meeting minutes are shared on the {doc}`GettingInvolved` page.
 - Contribute ideas, feedback, or patches via GitHub, Discourse, or directly in working documents.
+
+### Communication Channels
+
+The group uses its communication channels for different purposes:
+
+- **Sync-up meetings** are used for technical discussions, collective
+  decision-making, and unblocking issues that prevent the group from moving
+  forward.
+- **Discord** is used for coordination, quick questions, and preliminary
+  discussion, including preparation for sync-up meetings.
+- **Discourse** is used for public announcements and discussions involving
+  the broader LLVM community. It may also be used for topics that benefit
+  from longer, threaded discussion.
+- **GitHub pull requests** in the
+  [llvm-wgs repository](https://github.com/llvm/llvm-wgs/tree/main/fusa-qual-wg)
+  are the authoritative place for reviewing Working Group artifacts and
+  recording review outcomes.
+- **GitHub issues** are used for backlog items and for proposals, questions,
+  or actions that need to be tracked.
+
+When a discussion in another channel affects an artifact or tracked action,
+the relevant outcome should be recorded in the corresponding GitHub pull
+request or issue.
 
 ### Contribution Principles
 
@@ -194,6 +185,8 @@ Final decisions should be briefly documented (e.g., in meeting minutes, the corr
 
 ## Working Group artifacts
 
+### Repository
+
 The LLVM Qualification Working Group develops and maintains its public
 artifacts and working materials in the
 [fusa-qual-wg directory of the llvm-wgs repository](https://github.com/llvm/llvm-wgs/tree/main/fusa-qual-wg).
@@ -213,16 +206,39 @@ application.
 Feedback and contributions are welcome through the standard GitHub review
 process and the group's public discussion channels.
 
+### Review and Merging
+
+Pull requests affecting materials in the `fusa-qual-wg` directory require:
+
+- At least **one review from a Working Group member** for a trivial change,
+  such as archiving meeting materials.
+- At least **two Working Group member reviewers** for a non-trivial change
+  affecting the technical content, guidance, or processes of the Working
+  Group.
+
+A review may be recorded either through GitHub's approval mechanism or
+through an unambiguous approving comment, such as “LGTM” or
+“Looks good to me.”
+
+Before merging, review comments and objections should be addressed or
+otherwise resolved. Additional reviews from people outside the Working Group
+are also very welcome, but do not replace the required reviews from Working
+Group members.
+
 ## Current Topics & Backlog
 
 Our working group is actively engaged in discussions about the project's
-direction and tackling technical challenges. You can find our current
-discussions, challenges, and the project backlog in the following
-document: [Backlog](https://docs.google.com/document/d/10YZZ72ba09Ck_OiJaP9C4-7DeUiveaIKTE3IkaSKjzA/edit?usp=sharing)
+direction and tackling technical challenges.
 
-This document serves as our central hub for all ongoing topics and will
-be updated regularly to reflect our progress. We welcome your
-contributions and feedback.
+Concrete actions and backlog items are tracked through
+[open `fusa-qual-wg` issues](https://github.com/llvm/llvm-wgs/issues?q=is%3Aissue+state%3Aopen+label%3Afusa-qual-wg)
+in the `llvm-wgs` repository.
+
+A higher-level overview of the group's ongoing topics is available in the
+[Backlog](https://docs.google.com/document/d/10YZZ72ba09Ck_OiJaP9C4-7DeUiveaIKTE3IkaSKjzA/edit?usp=sharing)
+document.
+
+We welcome your contributions and feedback.
 
 ## Meeting Materials
 
