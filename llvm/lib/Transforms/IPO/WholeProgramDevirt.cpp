@@ -99,6 +99,7 @@
 #include "llvm/IR/ModuleSummaryIndexYAML.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ProfDataUtils.h"
+#include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/DebugCounter.h"
@@ -116,6 +117,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <limits>
 #include <map>
 #include <set>
 #include <string>
@@ -1218,7 +1220,30 @@ void DevirtModule::applySingleImplDevirt(VTableSlotInfo &SlotInfo,
       // call.
       if (Opts.wholeprogramdevirt_check == WPDCheckMode::Fallback ||
           DevirtSpeculatively) {
-        MDNode *Weights = MDBuilder(M.getContext()).createLikelyBranchWeights();
+        MDBuilder MDB(M.getContext());
+        // Stays likely when the call has no value profile.
+        MDNode *Weights = MDB.createLikelyBranchWeights();
+        uint64_t TotalCount = 0;
+        SmallVector<InstrProfValueData> ValueData = getValueProfDataFromInst(
+            CB, InstrProfValueKind::IPVK_IndirectCallTarget,
+            std::numeric_limits<uint32_t>::max(), TotalCount);
+        if (!ValueData.empty()) {
+          uint64_t TargetCount = 0;
+          uint64_t TargetGUID =
+              GlobalValue::getGUIDAssumingExternalLinkage(TheFn->getName());
+          for (const InstrProfValueData &VD : ValueData)
+            if (VD.Value == TargetGUID) {
+              TargetCount = VD.Count;
+              break;
+            }
+
+          // Calls that still go indirect. Stays at 0 even if a sampled
+          // profile reports more hits on the target than on the whole call.
+          uint64_t FallbackCount =
+              TotalCount - std::min(TotalCount, TargetCount);
+          Weights =
+              MDB.createBranchWeights(fitWeights({TargetCount, FallbackCount}));
+        }
         // Version the indirect call site. If the called value is equal to the
         // given callee, 'NewInst' will be executed, otherwise the original call
         // site will be executed.
