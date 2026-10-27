@@ -1887,8 +1887,8 @@ bool MachineSinking::aggressivelySinkIntoCycle(
         NewMI->substituteRegister(DefMO.getReg(), DestReg, DefMO.getSubReg(),
                                   *TRI);
       }
-      SinkBlock->insert(SinkBlock->SkipPHIsAndLabels(SinkBlock->begin()),
-                        NewMI);
+      MachineBasicBlock::iterator InsertPos = getSinkInsertPoint(*SinkBlock);
+      SinkBlock->insert(InsertPos, NewMI);
       SunkInstrs.insert({MapEntry, NewMI});
     }
 
@@ -1907,6 +1907,7 @@ bool MachineSinking::aggressivelySinkIntoCycle(
     RegSubRegPair &UseReg = Entry.first;
     MI->substituteRegister(UseReg.Reg, NewMI->getOperand(0).getReg(),
                            UseReg.SubReg, *TRI);
+    moveCrossedDebugRecords(*NewMI, std::next(NewMI->getIterator()), TRI);
   }
   // If we have replaced all uses, then delete the dead instruction
   if (I.isDead(*MRI))
