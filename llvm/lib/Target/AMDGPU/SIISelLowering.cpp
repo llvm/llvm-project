@@ -1029,6 +1029,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
   if (Subtarget->hasSafeSmemPrefetch() || Subtarget->hasVmemPrefInsts())
     setOperationAction(ISD::PREFETCH, MVT::Other, Custom);
+  // Type legalization cannot expand the i128 pointer of a buffer resource
+  // prefetch; lowerPREFETCH drops the prefetch instead.
+  setOperationAction(ISD::PREFETCH, MVT::i128, Custom);
 
   if (Subtarget->hasIEEEMinimumMaximumInsts()) {
     setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM},
@@ -5017,29 +5020,26 @@ SDValue SITargetLowering::lowerSET_ROUNDING(SDValue Op,
 }
 
 SDValue SITargetLowering::lowerPREFETCH(SDValue Op, SelectionDAG &DAG) const {
-  if (Op->isDivergent() &&
-      (!Subtarget->hasVmemPrefInsts() || !Op.getConstantOperandVal(4)))
-    // Cannot do I$ prefetch with divergent pointer.
+  unsigned AS = cast<MemSDNode>(Op)->getAddressSpace();
+  if (AS == AMDGPUAS::BUFFER_RESOURCE)
+    return Op.getOperand(0);
+  if (AS != AMDGPUAS::FLAT_ADDRESS && !AMDGPU::isExtendedGlobalAddrSpace(AS))
     return SDValue();
-
-  switch (cast<MemSDNode>(Op)->getAddressSpace()) {
-  case AMDGPUAS::FLAT_ADDRESS:
-  case AMDGPUAS::GLOBAL_ADDRESS:
-  case AMDGPUAS::CONSTANT_ADDRESS:
-    break;
-  case AMDGPUAS::CONSTANT_ADDRESS_32BIT:
-    if (Subtarget->hasSafeSmemPrefetch())
-      break;
-    [[fallthrough]];
-  default:
-    return SDValue();
-  }
 
   // I$ prefetch
   if (!Subtarget->hasSafeSmemPrefetch() && !Op.getConstantOperandVal(4))
     return SDValue();
 
-  return Op;
+  // Prefetch the 64-bit address that a 32-bit constant pointer is cast to, as
+  // a load does.
+  SDValue Ptr = Op.getOperand(1);
+  if (Ptr.getValueType() != MVT::i32)
+    return Op;
+  SmallVector<SDValue, 5> Ops(Op->ops());
+  Ops[1] = DAG.getAddrSpaceCast(SDLoc(Op), MVT::i64, Ptr,
+                                AMDGPUAS::CONSTANT_ADDRESS_32BIT,
+                                AMDGPUAS::CONSTANT_ADDRESS);
+  return SDValue(DAG.UpdateNodeOperands(Op.getNode(), Ops), 0);
 }
 
 // Work around DAG legality rules only based on the result type.
@@ -11316,8 +11316,18 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return SDValue();
   }
   case Intrinsic::amdgcn_implicit_buffer_ptr: {
-    if (getSubtarget()->isAmdHsaOrMesa(MF.getFunction()))
-      return emitNonHSAIntrinsicError(DAG, DL, VT);
+    if (!MFI->getUserSGPRInfo().hasImplicitBufferPtr()) {
+      const char *Error =
+          Subtarget->hasArchitectedFlatScratch()
+              ? "intrinsic not supported on subtarget"
+          : !Subtarget->isMesa3DOS()
+              ? "intrinsic not supported for OS"
+              : "intrinsic not supported for calling convention";
+      DAG.getContext()->diagnose(
+          DiagnosticInfoUnsupported(MF.getFunction(), Error, DL.getDebugLoc()));
+      return DAG.getPOISON(VT);
+    }
+
     return getPreloadedValue(DAG, *MFI, VT,
                              AMDGPUFunctionArgInfo::IMPLICIT_BUFFER_PTR);
   }
@@ -12978,7 +12988,7 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     unsigned Aux = Op.getConstantOperandVal(8 + OpOffset);
     Ops.push_back(DAG.getTargetConstant(
         Aux & (IsGFX12Plus ? AMDGPU::CPol::ALL : AMDGPU::CPol::ALL_pregfx12),
-        DL, MVT::i8)); // cpol
+        DL, MVT::i16)); // cpol
     Ops.push_back(DAG.getTargetConstant(
         Aux & (IsGFX12Plus ? AMDGPU::CPol::SWZ : AMDGPU::CPol::SWZ_pregfx12)
             ? 1
@@ -19483,18 +19493,6 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
     SelectionDAG &DAG = DCI.DAG;
     EVT VT = N->getValueType(0);
 
-    // When bf16 inline constants live in the upper half of the expanded fp32
-    // constant, only a splat is encodable as an inline constant. The high lane
-    // is dead here, so splat it.
-    if (VT == MVT::v2bf16 && Subtarget->hasBF16InlineConstFromUpperFP32()) {
-      auto *C = dyn_cast<ConstantFPSDNode>(N->getOperand(0));
-      if (C && AMDGPU::isInlinableLiteralBF16(
-                   C->getValueAPF().bitcastToAPInt().getSExtValue(),
-                   Subtarget->hasInv2PiInlineImm()))
-        return DAG.getBuildVector(VT, SDLoc(N),
-                                  {N->getOperand(0), N->getOperand(0)});
-    }
-
     // v2i16 (scalar_to_vector i16:x) -> v2i16 (bitcast (any_extend i16:x))
     if (VT == MVT::v2i16 || VT == MVT::v2f16 || VT == MVT::v2bf16) {
       SDLoc SL(N);
@@ -20114,7 +20112,7 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
                                              : &AMDGPU::VGPR_32_Lo256RegClass;
         break;
       default:
-        RC = Subtarget->has1024AddressableVGPRs()
+        RC = Subtarget->hasVGPRMSBs()
                  ? TRI->getAlignedLo256VGPRClassForBitWidth(BitWidth)
                  : TRI->getVGPRClassForBitWidth(BitWidth);
         if (!RC)
@@ -20212,8 +20210,12 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
   }
 
   auto Ret = TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
-  if (Ret.first)
+  if (Ret.first) {
     Ret.second = TRI->getPhysRegBaseClass(Ret.first);
+    if (!Subtarget->useRealTrue16Insts() &&
+        TRI->getRegSizeInBits(*Ret.second) == 16)
+      return std::pair(0U, nullptr);
+  }
 
   return Ret;
 }
@@ -21586,6 +21588,14 @@ SITargetLowering::getTargetMMOFlags(const Instruction &I) const {
     Flags |= MONoClobber;
   if (I.getMetadata("amdgpu.last.use"))
     Flags |= MOLastUse;
+  if (MDNode *N = I.getMetadata("amdgpu.cfs")) {
+    const ConstantAsMetadata *CAM = cast<ConstantAsMetadata>(N->getOperand(0));
+    ConstantInt *CI = cast<ConstantInt>(CAM->getValue());
+    unsigned CFS = CI->getZExtValue() & AMDGPU::CPol::CFS_MASK;
+    static_assert((MOCFSB0 << 1) == MOCFSB1,
+                  "MOCFSB0 and MOCFSB1 are not adjacent bits");
+    Flags |= static_cast<MachineMemOperand::Flags>(CFS * MOCFSB0);
+  }
   return Flags;
 }
 

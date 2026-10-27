@@ -1893,7 +1893,7 @@ def : Pat<(declare_scalar_param (symbol mcsym:$a), imm:$size),
 
 foreach t = [I32RT, I64RT] in {
   defvar inst_name = "MOV" # t.Size # "_PARAM";
-  def inst_name : BasicNVPTXInst<(outs t.RC:$dst), (ins t.RC:$src), "mov.b" # t.Size>;
+  def inst_name : BasicNVPTXInst<(outs t.RC:$dst), (ins t.Imm:$src), "mov.b" # t.Size>;
   def : Pat<(MoveParam (t.Ty (symbol mcsym:$src))),
             (!cast<NVPTXInst>(inst_name) (t.Ty mcsym:$src))>;
 }

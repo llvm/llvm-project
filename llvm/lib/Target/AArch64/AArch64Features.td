@@ -631,6 +631,9 @@ def FeatureSVE_LRCPC: ExtensionWithMArch<"sve-lrcpc", "SVE_LRCPC", "FEAT_SVE_LRC
   "Enable Armv9.8-A SVE weaker Release Consistency processor consistent (RCpc) model",
    [FeatureSVE2, FeatureRCPC3]>;
 
+def FeatureSVE_PERM256: ExtensionWithMArch<"sve-perm256", "SVE_PERM256", "FEAT_SVE_PERM256",
+  "Enable Armv9.8-A SVE 128-bit element permute instructions">;
+
 //===----------------------------------------------------------------------===//
 //  Future Architecture Technologies
 //===----------------------------------------------------------------------===//
@@ -646,6 +649,14 @@ def FeatureS1POE2: ExtensionWithMArch<"poe2", "POE2", "FEAT_S1POE2",
 
 def FeatureTEV: ExtensionWithMArch<"tev", "TEV", "FEAT_TEV",
   "Enable TIndex Exception-like Vector instructions">;
+
+def FeatureFPv2 : ExtensionWithMArch<"fpv2", "FPv2", "FEAT_FPv2",
+  "Enable IEEE 754-2019 floating-point standard alignment instructions",
+  [FeatureFullFP16]>;
+
+def FeatureSMEF16F8F16 : ExtensionWithMArch<"sme-f16f8f16", "SME_F16F8F16", "FEAT_SME_F16F8F16",
+  "Enable SME half-precision and FP8 sum-of-products accumulating to half-precision instructions",
+  [FeatureSME2, FeatureFP8]>;
 
 //===----------------------------------------------------------------------===//
 //  Other Features
@@ -1136,8 +1147,8 @@ def HasV9_7aOps : Architecture64<9, 7, "a", "v9.7a",
   !listconcat(HasV9_6aOps.DefaultExts, [FeatureSVE2p3, FeatureFPRCVT,
     FeatureF16F32DOT])>;
 def HasV9_8aOps : Architecture64<9, 8, "a", "v9.8a",
-  [HasV9_7aOps],
-  HasV9_7aOps.DefaultExts>;
+  [HasV9_7aOps, FeatureSVE_PERM256],
+  !listconcat(HasV9_7aOps.DefaultExts, [FeatureSVE_PERM256])>;
 def HasV8_0rOps : Architecture64<8, 0, "r", "v8r",
   [ //v8.1
     FeatureCRC, FeaturePAN, FeatureLSE, FeatureCONTEXTIDREL2,
