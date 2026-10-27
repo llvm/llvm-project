@@ -55,6 +55,11 @@ static cl::opt<unsigned> StressSGPRLimit(
     "amdgpu-stress-sgpr", cl::Hidden, cl::init(0),
     cl::desc("Limit SGPRs to N registers by reserving the rest"));
 
+static cl::opt<bool> StrictVGPRBankHints(
+    "amdgpu-strict-vgpr-bank-hints",
+    cl::desc("Restrict sched.bank values to the requested VGPR bank"),
+    cl::Hidden, cl::init(false));
+
 std::array<std::vector<int16_t>, 32> SIRegisterInfo::RegSplitParts;
 std::array<std::array<uint16_t, 32>, 9> SIRegisterInfo::SubRegFromChannelTable;
 
@@ -4328,6 +4333,26 @@ bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
       }
     }
     return false;
+  }
+  case AMDGPURI::BankHint:
+  case AMDGPURI::StrictBankHint: {
+    // Absolute bank preference from llvm.amdgcn.sched.bank. The bank number
+    // (0-3) is carried in Hint.second. Prefer physregs whose HW index falls in
+    // the requested 256-register bank. Advisory only: we return false so the
+    // default order still applies when the bank is full.
+    unsigned Bank = Hint.second;
+    if (Bank > 3)
+      return false;
+    unsigned BankStart = Bank * 256;
+    unsigned BankEnd = BankStart + 256;
+    for (MCPhysReg PhysReg : Order) {
+      if (MRI.isReserved(PhysReg))
+        continue;
+      unsigned HWIdx = getHWRegIndex(PhysReg);
+      if (HWIdx >= BankStart && HWIdx < BankEnd)
+        Hints.insert(PhysReg);
+    }
+    return StrictVGPRBankHints || Hint.first == AMDGPURI::StrictBankHint;
   }
   default:
     return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints, MF,

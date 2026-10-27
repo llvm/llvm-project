@@ -4478,4 +4478,19 @@ def int_amdgcn_global_load_monitor_b128 : AMDGPULoadMonitor<global_ptr_ty>;
 /// incoming block.
 def int_amdgcn_dead: DefaultAttrsIntrinsic<[llvm_any_ty], [],
     [IntrNoMem]>;
+
+// Hint the register allocator to place the result in a specific VGPR bank on
+// targets with 1024 addressable VGPRs (gfx1250). The bank operand is a
+// compile-time constant in [0, 3]:
+//   bank 0 = v0-v255, bank 1 = v256-v511, bank 2 = v512-v767, bank 3 = v768-v1023.
+// This is an identity function at the IR level; the bank argument is consumed by
+// the pre-RA AMDGPUSchedBank pass which attaches a register allocation hint.
+// The hint is advisory: the allocator honors it only when the bank has free
+// registers, and never spills to satisfy it.
+// The strict operand (i1) controls whether the hint is mandatory (true) or
+// advisory (false).
+def int_amdgcn_sched_bank : DefaultAttrsIntrinsic<
+  [llvm_any_ty], [LLVMMatchType<0>, llvm_i32_ty, llvm_i1_ty],
+  [IntrNoMem, IntrSpeculatable, IntrWillReturn,
+   ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
 }
