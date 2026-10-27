@@ -184,6 +184,7 @@ private:
   void foldOrderedAtomics(Function &F);
   void lowerHints();
   void lowerCalls();
+  void inlineCalls();
   bool lowerCall(CallInst &CI, StringRef Name, Value *&Result);
   bool lowerAtomic(IRBuilder<> &B, CallInst &CI, StringRef Name,
                    Value *&Result);
@@ -1500,6 +1501,34 @@ void LowerAIR::lowerHints() {
   }
 }
 
+// AIR may call its own functions (with return values); AGX inlines every
+// function into the kernels (AGXUsage.rst, "Kernel ABI"), so the calls become
+// their bodies here, before code generation, unless leaf calls are enabled.
+void LowerAIR::inlineCalls() {
+  if (agxExperimentalLeafCallsEnabled())
+    return;
+  SmallVector<CallBase *, 16> Calls;
+  // Recursive calls are left (an error in code generation).
+  for (unsigned Round = 0, Again = true; Again && Round < 16; ++Round) {
+    Again = false;
+    Calls.clear();
+    for (Function &F : M)
+      for (Instruction &I : instructions(F))
+        if (auto *CB = dyn_cast<CallBase>(&I))
+          if (Function *Callee = CB->getCalledFunction();
+              Callee && !Callee->isDeclaration() && Callee != &F)
+            Calls.push_back(CB);
+    for (CallBase *CB : Calls) {
+      InlineFunctionInfo IFI;
+      if (InlineFunction(*CB, IFI).isSuccess())
+        Again = true;
+    }
+  }
+  for (Function &F : make_early_inc_range(M))
+    if (F.hasLocalLinkage() && F.use_empty() && !F.isDeclaration())
+      F.eraseFromParent();
+}
+
 void LowerAIR::lowerCalls() {
   for (Function &F : make_early_inc_range(M)) {
     if (!F.isDeclaration() || !F.getName().starts_with("air."))
@@ -1675,6 +1704,7 @@ bool LowerAIR::run() {
   M.setDataLayout(TM.createDataLayout());
   for (AIRKernel &K : Kernels)
     passConstantBuffersByReference(K, K.NewF);
+  inlineCalls();
   return true;
 }
 
