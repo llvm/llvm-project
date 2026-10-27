@@ -197,6 +197,8 @@ static bool usesCheckFirstReplay(const VectorizeOptions &Opts,
                                  const LoopVectorizationLegality *Legal) {
   if (!Legal->hasUncountableEarlyExit())
     return false;
+  if (Opts.enable_check_first_masked_replay)
+    return false;
   if (Legal->hasUncountableExitWithSideEffects())
     return !Opts.enable_early_exit_vectorization_with_side_effects;
   return Opts.enable_check_first_early_exit_vectorization &&
@@ -5650,6 +5652,8 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // Scalar replay routes check.exit to the scalar preheader after region
   // dissolution.
   VPlanTransforms::wireCheckFirstExitToScalar(BestVPlan);
+  // Masked replay routes check.exit to the real early exit block instead.
+  VPlanTransforms::wireCheckFirstMaskedReplayToExit(BestVPlan);
   // Expand BranchOnTwoConds after dissolution, when latch has direct access to
   // its successors.
   RUN_VPLAN_PASS(VPlanTransforms::expandBranchOnTwoConds, BestVPlan);

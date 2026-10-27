@@ -69,6 +69,8 @@ defm : BoolField<"enable-early-exit-vectorization-with-side-effects", "false",
   "Enable vectorization of early exit loops with uncountable exits and side effects">;
 defm : BoolField<"enable-check-first-early-exit-vectorization", "false",
   "Enable check-first vectorization of early exit loops with multiple exits">;
+defm : BoolField<"enable-check-first-masked-replay", "false",
+  "Replace scalar replay in check-first early exit vectorization with a masked vector replay">;
 defm : BoolField<"enable-epilogue-vectorization", "true",
   "Enable vectorization of epilogue loops">;
 defm : BoolField<"enable-ind-var-reg-heur", "true",

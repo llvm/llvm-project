@@ -2284,16 +2284,29 @@ bool LoopVectorizationLegality::canCheckFirstSpeculateExitConditions(
 
   // Condition loads and instructions that do not touch memory are skipped.
   // Other loads are allowed. A load under a guard is still required to be
-  // dereferenceable for the whole trip, so it is not masked. Anything that
+  // dereferenceable for the whole trip, as flattening the guarded control flow
+  // makes it execute on every lane and it is not masked. Anything that
   // touches memory and is neither a load nor a store is rejected. That
   // includes calls, atomics, and similar operations. Each store must not alias
   // any condition load.
   for (auto *BB : TheLoop->blocks()) {
+    bool IsGuarded = !DT->dominates(BB, Latch);
     for (auto &I : *BB) {
       if (CondLoadSet.contains(&I) || !I.mayReadOrWriteMemory())
         continue;
-      if (isa<LoadInst>(&I))
+      if (auto *LI = dyn_cast<LoadInst>(&I)) {
+        if (IsGuarded &&
+            !isDereferenceableAndAlignedInLoop(LI, TheLoop, *PSE.getSE(), *DT,
+                                               AC)) {
+          reportVectorizationFailure(
+              "Load in a conditionally-executed block is not provably "
+              "dereferenceable for the whole trip count, so it cannot be "
+              "speculated on every lane",
+              "CheckFirstGuardedLoadNotDereferenceable", ORE, TheLoop);
+          return false;
+        }
         continue;
+      }
       auto *SI = dyn_cast<StoreInst>(&I);
       if (!SI) {
         reportVectorizationFailure(

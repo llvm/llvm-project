@@ -121,7 +121,6 @@ bool VPRecipeBase::mayWriteToMemory() const {
   case VPReductionSC:
   case VPVectorEndPointerSC:
   case VPVectorPointerSC:
-  case VPVectorEndPointerSC:
   case VPWidenCanonicalIVSC:
   case VPWidenCastSC:
   case VPWidenGEPSC:
@@ -185,7 +184,6 @@ bool VPRecipeBase::mayReadFromMemory() const {
   case VPReductionSC:
   case VPVectorEndPointerSC:
   case VPVectorPointerSC:
-  case VPVectorEndPointerSC:
   case VPWidenCanonicalIVSC:
   case VPWidenCastSC:
   case VPWidenGEPSC:
