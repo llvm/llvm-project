@@ -796,11 +796,11 @@ public:
 
   /// Returns true if frame pointer elimination should be disabled for this
   /// function.
-  LLVM_ABI bool disableFramePointerElim() const;
+  bool disableFramePointerElim() const;
 
   /// Returns true if the frame pointer must always either point to a new frame
   /// record or be un-modified in this function.
-  LLVM_ABI bool framePointerIsReserved() const;
+  bool framePointerIsReserved() const;
 
   /// getJumpTableInfo - Return the jump table info object for the current
   /// function.  This object contains information about jump tables in the
@@ -870,6 +870,14 @@ public:
 
   /// True if this function needs frame moves for debug or exceptions.
   bool needsFrameMoves() const;
+
+  /// True if this function describes its unwind information with Windows SEH
+  /// unwind opcodes (.seh_* directives, .pdata and .xdata) rather than CFI.
+  bool usesWindowsUnwindInfo() const;
+
+  /// True if this function uses SEH unwind opcodes and needs an unwind table
+  /// entry.
+  bool needsWinCFI() const;
 
   /// Get the function properties
   const MachineFunctionProperties &getProperties() const { return Properties; }
@@ -1331,6 +1339,10 @@ public:
   const std::vector<LandingPadInfo> &getLandingPads() const {
     return LandingPads;
   }
+
+  /// Forget the landing pads: a target turned them into ordinary blocks and
+  /// there is no exception table to emit.
+  void clearLandingPads() { LandingPads.clear(); }
 
   /// Provide the begin and end labels of an invoke style call and associate it
   /// with a try landing pad block.

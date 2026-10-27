@@ -91,6 +91,15 @@ DialectAsmPrinter::~DialectAsmPrinter() = default;
 
 OpAsmPrinter::~OpAsmPrinter() = default;
 
+void OpAsmPrinter::printOperands(OperandRange operands) {
+  llvm::interleaveComma(operands, getStream(),
+                        [this](Value value) { printOperand(value); });
+}
+
+void OpAsmPrinter::printOperandTypes(ValueTypeRange<OperandRange> types) {
+  llvm::interleaveComma(types, *this);
+}
+
 void OpAsmPrinter::printFunctionalType(Operation *op) {
   auto &os = getStream();
   os << '(';
@@ -201,6 +210,10 @@ struct AsmPrinterOptions {
   llvm::cl::opt<bool> useNameLocAsPrefix{
       "mlir-use-nameloc-as-prefix", llvm::cl::init(false),
       llvm::cl::desc("Print SSA IDs using NameLocs as prefixes")};
+
+  llvm::cl::opt<bool> alwaysUseAliasesOpt{
+      "mlir-print-always-use-aliases", llvm::cl::init(false),
+      llvm::cl::desc("Always use aliases even for non top-level ops")};
 };
 } // namespace
 
@@ -217,9 +230,9 @@ void mlir::registerAsmPrinterCLOptions() {
 OpPrintingFlags::OpPrintingFlags()
     : printDebugInfoFlag(false), printDebugInfoPrettyFormFlag(false),
       printGenericOpFormFlag(false), skipRegionsFlag(false),
-      assumeVerifiedFlag(false), printLocalScope(false),
-      printValueUsersFlag(false), printUniqueSSAIDsFlag(false),
-      useNameLocAsPrefix(false) {
+      assumeVerifiedFlag(false), alwaysUseAliasesFlag(false),
+      printLocalScope(false), printValueUsersFlag(false),
+      printUniqueSSAIDsFlag(false), useNameLocAsPrefix(false) {
   // Initialize based upon command line options, if they are available.
   if (!clOptions.isConstructed())
     return;
@@ -239,6 +252,7 @@ OpPrintingFlags::OpPrintingFlags()
   printValueUsersFlag = clOptions->printValueUsers;
   printUniqueSSAIDsFlag = clOptions->printUniqueSSAIDs;
   useNameLocAsPrefix = clOptions->useNameLocAsPrefix;
+  alwaysUseAliasesFlag = clOptions->alwaysUseAliasesOpt;
 }
 
 /// Enable the elision of large elements attributes, by printing a '...'
@@ -287,6 +301,11 @@ OpPrintingFlags &OpPrintingFlags::skipRegions(bool skip) {
 /// Do not verify the operation when using custom operation printers.
 OpPrintingFlags &OpPrintingFlags::assumeVerified(bool enable) {
   assumeVerifiedFlag = enable;
+  return *this;
+}
+
+OpPrintingFlags &OpPrintingFlags::alwaysUseAliases(bool enable) {
+  alwaysUseAliasesFlag = enable;
   return *this;
 }
 
@@ -367,6 +386,10 @@ bool OpPrintingFlags::shouldSkipRegions() const { return skipRegionsFlag; }
 /// Return if operation verification should be skipped.
 bool OpPrintingFlags::shouldAssumeVerified() const {
   return assumeVerifiedFlag;
+}
+
+bool OpPrintingFlags::shouldAlwaysUseAliases() const {
+  return alwaysUseAliasesFlag;
 }
 
 /// Return if the printer should use local scope when dumping the IR.
@@ -1332,6 +1355,9 @@ private:
 void AliasState::initialize(
     Operation *op, const OpPrintingFlags &printerFlags,
     DialectInterfaceCollection<OpAsmDialectInterface> &interfaces) {
+  // Each initialization starts fresh: a state reused across prints must not
+  // carry the previous op's aliases.
+  attrTypeToAlias.clear();
   AliasInitializer initializer(interfaces, aliasAllocator);
   initializer.initialize(op, printerFlags, attrTypeToAlias);
 }
@@ -1996,6 +2022,9 @@ public:
 
   /// Initialize the alias state to enable the printing of aliases.
   void initializeAliases(Operation *op) {
+    // A state reused across prints must not re-print the previous op's
+    // dialect resources.
+    dialectResources.clear();
     aliasState.initialize(op, printerFlags, interfaces);
   }
 
@@ -4236,7 +4265,12 @@ void Operation::print(raw_ostream &os, const OpPrintingFlags &printerFlags) {
 }
 void Operation::print(raw_ostream &os, AsmState &state) {
   OperationPrinter printer(os, state.getImpl());
-  if (!getParent() && !state.getPrinterFlags().shouldUseLocalScope()) {
+  // alwaysUseAliases takes precedence over local scope, not just as a
+  // tiebreak: pass instrumentation prints nested ops with local scope, so
+  // without precedence the per-function dumps this flag targets would never
+  // use aliases. The two compose: aliases stay consistent within each dump.
+  if (state.getPrinterFlags().shouldAlwaysUseAliases() ||
+      (!getParent() && !state.getPrinterFlags().shouldUseLocalScope())) {
     state.getImpl().initializeAliases(this);
     printer.printTopLevelOperation(this);
   } else {

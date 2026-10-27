@@ -48,7 +48,7 @@ public:
       : RegAllocPriorityAdvisorProvider(AdvisorMode::Default) {
     if (NotAsRequested)
       Ctx.emitError("Requested regalloc priority advisor analysis "
-                    "could be created. Using default");
+                    "could not be created. Using default");
   }
 
   // support for isa<> and dyn_cast.
@@ -147,15 +147,16 @@ void RegAllocPriorityAdvisorAnalysis::initializeProvider(LLVMContext &Ctx) {
   case RegAllocPriorityAdvisorProvider::AdvisorMode::Development:
 #if defined(LLVM_HAVE_TFLITE)
     Provider.reset(createDevelopmentModePriorityAdvisorProvider(Ctx));
-#else
-    Provider.reset(
-        new DefaultPriorityAdvisorProvider(/*NotAsRequested=*/true, Ctx));
 #endif
-    return;
+    break;
   case RegAllocPriorityAdvisorProvider::AdvisorMode::Release:
     Provider.reset(createReleaseModePriorityAdvisorProvider());
-    return;
+    break;
   }
+  // The requested advisor may not be supported by this build.
+  if (!Provider)
+    Provider.reset(
+        new DefaultPriorityAdvisorProvider(/*NotAsRequested=*/true, Ctx));
 }
 
 AnalysisKey RegAllocPriorityAdvisorAnalysis::Key;

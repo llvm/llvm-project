@@ -45,7 +45,7 @@ if (C_SUPPORTS_NODEFAULTLIBS_FLAG)
   endif ()
   if (COMPILER_RT_USE_BUILTINS_LIBRARY)
     # TODO: remote this check once we address PR51389.
-    if (${COMPILER_RT_BUILTINS_LIBRARY})
+    if (COMPILER_RT_BUILTINS_LIBRARY)
       list(APPEND CMAKE_REQUIRED_LIBRARIES "${COMPILER_RT_BUILTINS_LIBRARY}")
     endif()
   elseif (COMPILER_RT_HAS_GCC_S_LIB)
@@ -828,8 +828,9 @@ else()
   set(COMPILER_RT_HAS_DFSAN FALSE)
 endif()
 
+# FIXME: LSan is broken on Android and there is no evidence it is used.
 if (COMPILER_RT_HAS_SANITIZER_COMMON AND LSAN_SUPPORTED_ARCH AND
-    OS_NAME MATCHES "Android|Darwin|Linux|NetBSD|Fuchsia")
+    OS_NAME MATCHES "Darwin|Linux|NetBSD|Fuchsia")
   set(COMPILER_RT_HAS_LSAN TRUE)
 else()
   set(COMPILER_RT_HAS_LSAN FALSE)
@@ -926,7 +927,7 @@ else()
 endif()
 
 #TODO(kostyak): add back Android & Fuchsia when the code settles a bit.
-if (SCUDO_STANDALONE_SUPPORTED_ARCH AND
+if (SCUDO_STANDALONE_SUPPORTED_ARCH AND NOT LLVM_USE_SANITIZER AND
     COMPILER_RT_BUILD_SANITIZERS AND
     "scudo_standalone" IN_LIST COMPILER_RT_SANITIZERS_TO_BUILD AND
     OS_NAME MATCHES "Linux" AND

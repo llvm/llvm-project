@@ -87,7 +87,7 @@ define amdgpu_ps float @raw_ptr_buffer_atomic_cmpswap_i32__sgpr_val__sgpr_cmp__v
   ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY7]], implicit $exec
   ; CHECK-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[COPY7]], implicit $exec
   ; CHECK-NEXT:   [[S_AND_B64_1:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[S_AND_B64_]], [[V_CMP_EQ_U32_e64_]], implicit-def dead $scc
-  ; CHECK-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_1]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; CHECK-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 [[S_AND_B64_1]], implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
@@ -95,7 +95,7 @@ define amdgpu_ps float @raw_ptr_buffer_atomic_cmpswap_i32__sgpr_val__sgpr_cmp__v
   ; CHECK-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY8]], %subreg.sub0, [[COPY9]], %subreg.sub1
   ; CHECK-NEXT:   [[BUFFER_ATOMIC_CMPSWAP_OFFEN_RTN:%[0-9]+]]:vreg_64 = BUFFER_ATOMIC_CMPSWAP_OFFEN_RTN [[REG_SEQUENCE2]], [[COPY10]], [[REG_SEQUENCE1]], [[V_READFIRSTLANE_B32_4]], 0, 1, implicit $exec :: (volatile dereferenceable load store (i32) on %ir.rsrc, align 1, addrspace 8)
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_ATOMIC_CMPSWAP_OFFEN_RTN]].sub0
-  ; CHECK-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
+  ; CHECK-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def dead $scc
   ; CHECK-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4:
@@ -150,14 +150,14 @@ define amdgpu_ps void @raw_ptr_buffer_atomic_cmpswap_i32_noret__sgpr_val__sgpr_c
   ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY7]], implicit $exec
   ; CHECK-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[COPY7]], implicit $exec
   ; CHECK-NEXT:   [[S_AND_B64_1:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[S_AND_B64_]], [[V_CMP_EQ_U32_e64_]], implicit-def dead $scc
-  ; CHECK-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_1]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; CHECK-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 [[S_AND_B64_1]], implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY8]], %subreg.sub0, [[COPY9]], %subreg.sub1
   ; CHECK-NEXT:   BUFFER_ATOMIC_CMPSWAP_OFFEN [[REG_SEQUENCE2]], [[COPY10]], [[REG_SEQUENCE1]], [[V_READFIRSTLANE_B32_4]], 0, 0, implicit $exec :: (volatile dereferenceable load store (i32) on %ir.rsrc, align 1, addrspace 8)
-  ; CHECK-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
+  ; CHECK-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def dead $scc
   ; CHECK-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4:
@@ -220,11 +220,9 @@ define amdgpu_ps double @raw_ptr_buffer_atomic_cmpswap_i64__vgpr_val__vgpr_cmp__
   ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:vreg_64 = COPY [[BUFFER_ATOMIC_CMPSWAP_X2_OFFEN_RTN]].sub0_sub1
   ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[COPY10]].sub0
   ; CHECK-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[COPY10]].sub1
-  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY11]], implicit $exec
-  ; CHECK-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_]]
-  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY12]], implicit $exec
-  ; CHECK-NEXT:   $sgpr1 = COPY [[V_READFIRSTLANE_B32_1]]
-  ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit $sgpr0, implicit $sgpr1
+  ; CHECK-NEXT:   $vgpr0 = COPY [[COPY11]]
+  ; CHECK-NEXT:   $vgpr1 = COPY [[COPY12]]
+  ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1
   %ret = call i64 @llvm.amdgcn.raw.ptr.buffer.atomic.cmpswap.i64(i64 %val, i64 %cmp, ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0)
   %cast = bitcast i64 %ret to double
   ret double %cast
@@ -299,7 +297,7 @@ define amdgpu_ps double @raw_ptr_buffer_atomic_cmpswap_i64__sgpr_val__sgpr_cmp__
   ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY9]], implicit $exec
   ; CHECK-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[COPY9]], implicit $exec
   ; CHECK-NEXT:   [[S_AND_B64_1:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[S_AND_B64_]], [[V_CMP_EQ_U32_e64_]], implicit-def dead $scc
-  ; CHECK-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_1]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; CHECK-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 [[S_AND_B64_1]], implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
@@ -307,7 +305,7 @@ define amdgpu_ps double @raw_ptr_buffer_atomic_cmpswap_i64__sgpr_val__sgpr_cmp__
   ; CHECK-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY10]], %subreg.sub0_sub1, [[COPY11]], %subreg.sub2_sub3
   ; CHECK-NEXT:   [[BUFFER_ATOMIC_CMPSWAP_X2_OFFEN_RTN:%[0-9]+]]:vreg_128 = BUFFER_ATOMIC_CMPSWAP_X2_OFFEN_RTN [[REG_SEQUENCE4]], [[COPY12]], [[REG_SEQUENCE3]], [[V_READFIRSTLANE_B32_4]], 0, 1, implicit $exec :: (volatile dereferenceable load store (i64) on %ir.rsrc, align 1, addrspace 8)
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:vreg_64 = COPY [[BUFFER_ATOMIC_CMPSWAP_X2_OFFEN_RTN]].sub0_sub1
-  ; CHECK-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
+  ; CHECK-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def dead $scc
   ; CHECK-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4:
@@ -318,11 +316,9 @@ define amdgpu_ps double @raw_ptr_buffer_atomic_cmpswap_i64__sgpr_val__sgpr_cmp__
   ; CHECK-NEXT: bb.5:
   ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:vgpr_32 = COPY [[COPY17]].sub0
   ; CHECK-NEXT:   [[COPY19:%[0-9]+]]:vgpr_32 = COPY [[COPY17]].sub1
-  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_5:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY18]], implicit $exec
-  ; CHECK-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_5]]
-  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_6:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY19]], implicit $exec
-  ; CHECK-NEXT:   $sgpr1 = COPY [[V_READFIRSTLANE_B32_6]]
-  ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit $sgpr0, implicit $sgpr1
+  ; CHECK-NEXT:   $vgpr0 = COPY [[COPY18]]
+  ; CHECK-NEXT:   $vgpr1 = COPY [[COPY19]]
+  ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1
   %ret = call i64 @llvm.amdgcn.raw.ptr.buffer.atomic.cmpswap.i64(i64 %val, i64 %cmp, ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0)
   %cast = bitcast i64 %ret to double
   ret double %cast
@@ -371,14 +367,14 @@ define amdgpu_ps void @raw_ptr_buffer_atomic_cmpswap_i64_noret__sgpr_val__sgpr_c
   ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY9]], implicit $exec
   ; CHECK-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[COPY9]], implicit $exec
   ; CHECK-NEXT:   [[S_AND_B64_1:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[S_AND_B64_]], [[V_CMP_EQ_U32_e64_]], implicit-def dead $scc
-  ; CHECK-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_1]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; CHECK-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 [[S_AND_B64_1]], implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY10]], %subreg.sub0_sub1, [[COPY11]], %subreg.sub2_sub3
   ; CHECK-NEXT:   BUFFER_ATOMIC_CMPSWAP_X2_OFFEN [[REG_SEQUENCE4]], [[COPY12]], [[REG_SEQUENCE3]], [[V_READFIRSTLANE_B32_4]], 0, 0, implicit $exec :: (volatile dereferenceable load store (i64) on %ir.rsrc, align 1, addrspace 8)
-  ; CHECK-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
+  ; CHECK-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def dead $scc
   ; CHECK-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4:
@@ -415,11 +411,9 @@ define amdgpu_ps double @raw_ptr_buffer_atomic_cmpswap_i64__vgpr_val__vgpr_cmp__
   ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:vreg_64 = COPY [[BUFFER_ATOMIC_CMPSWAP_X2_OFFEN_RTN]].sub0_sub1
   ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[COPY10]].sub0
   ; CHECK-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[COPY10]].sub1
-  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY11]], implicit $exec
-  ; CHECK-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_]]
-  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY12]], implicit $exec
-  ; CHECK-NEXT:   $sgpr1 = COPY [[V_READFIRSTLANE_B32_1]]
-  ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit $sgpr0, implicit $sgpr1
+  ; CHECK-NEXT:   $vgpr0 = COPY [[COPY11]]
+  ; CHECK-NEXT:   $vgpr1 = COPY [[COPY12]]
+  ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1
   %voffset = add i32 %voffset.base, 4095
   %ret = call i64 @llvm.amdgcn.raw.ptr.buffer.atomic.cmpswap.i64(i64 %val, i64 %cmp, ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0)
   %cast = bitcast i64 %ret to double
