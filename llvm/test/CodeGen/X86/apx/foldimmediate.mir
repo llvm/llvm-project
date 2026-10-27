@@ -83,15 +83,15 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gr64 = COPY $rdi
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gr32 = COPY [[COPY]].sub_32bit
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gr32 = COPY [[COPY1]]
-    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG [[COPY2]], %subreg.sub_32bit
+    ; CHECK-NEXT: [[MOV32rr:%[0-9]+]]:gr32 = MOV32rr [[COPY1]]
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG [[MOV32rr]], %subreg.sub_32bit
     ; CHECK-NEXT: NOOP implicit [[SUBREG_TO_REG]]
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gr32 = COPY [[COPY1]]
-    ; CHECK-NEXT: NOOP implicit [[COPY3]]
-    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:gr32 = COPY [[COPY1]]
-    ; CHECK-NEXT: NOOP implicit [[COPY4]]
-    ; CHECK-NEXT: [[COPY5:%[0-9]+]]:gr32 = COPY [[COPY1]]
-    ; CHECK-NEXT: NOOP implicit [[COPY5]]
+    ; CHECK-NEXT: [[MOV32rr1:%[0-9]+]]:gr32 = MOV32rr [[COPY1]]
+    ; CHECK-NEXT: NOOP implicit [[MOV32rr1]]
+    ; CHECK-NEXT: [[MOV32rr2:%[0-9]+]]:gr32 = MOV32rr [[COPY1]]
+    ; CHECK-NEXT: NOOP implicit [[MOV32rr2]]
+    ; CHECK-NEXT: [[MOV32rr3:%[0-9]+]]:gr32 = MOV32rr [[COPY1]]
+    ; CHECK-NEXT: NOOP implicit [[MOV32rr3]]
     %0:gr64 = COPY $rdi
     %1:gr32 = COPY %0.sub_32bit
     %2:gr32 = MOV32r0 implicit-def dead $eflags
