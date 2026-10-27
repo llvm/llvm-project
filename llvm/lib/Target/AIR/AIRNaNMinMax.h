@@ -21,10 +21,9 @@
 
 namespace llvm {
 
-class AIRNaNMinMaxPass : public PassInfoMixin<AIRNaNMinMaxPass> {
+class AIRNaNMinMaxPass : public RequiredPassInfoMixin<AIRNaNMinMaxPass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 class AIRNaNMinMaxLegacy : public ModulePass {

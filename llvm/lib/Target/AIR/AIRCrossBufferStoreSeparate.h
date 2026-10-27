@@ -33,10 +33,9 @@
 namespace llvm {
 
 class AIRCrossBufferStoreSeparatePass
-    : public PassInfoMixin<AIRCrossBufferStoreSeparatePass> {
+    : public RequiredPassInfoMixin<AIRCrossBufferStoreSeparatePass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 class AIRCrossBufferStoreSeparateLegacy : public ModulePass {

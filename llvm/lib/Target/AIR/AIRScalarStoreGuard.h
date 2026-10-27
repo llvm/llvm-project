@@ -22,10 +22,9 @@
 namespace llvm {
 
 class AIRScalarStoreGuardPass
-    : public PassInfoMixin<AIRScalarStoreGuardPass> {
+    : public RequiredPassInfoMixin<AIRScalarStoreGuardPass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 class AIRScalarStoreGuardLegacy : public ModulePass {

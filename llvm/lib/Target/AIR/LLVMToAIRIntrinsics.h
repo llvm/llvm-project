@@ -22,10 +22,9 @@
 namespace llvm {
 
 class LLVMToAIRIntrinsicsPass
-    : public PassInfoMixin<LLVMToAIRIntrinsicsPass> {
+    : public RequiredPassInfoMixin<LLVMToAIRIntrinsicsPass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 class LLVMToAIRIntrinsicsLegacy : public ModulePass {

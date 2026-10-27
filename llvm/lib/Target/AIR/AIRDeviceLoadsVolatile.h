@@ -23,10 +23,9 @@
 namespace llvm {
 
 class AIRDeviceLoadsVolatilePass
-    : public PassInfoMixin<AIRDeviceLoadsVolatilePass> {
+    : public RequiredPassInfoMixin<AIRDeviceLoadsVolatilePass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 class AIRDeviceLoadsVolatileLegacy : public ModulePass {

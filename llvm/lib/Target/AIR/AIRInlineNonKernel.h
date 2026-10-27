@@ -23,10 +23,9 @@ namespace llvm {
 /// New-PM pass: inline every call to a defined function (AIR has no call
 /// stack).
 class AIRInlineNonKernelPass
-    : public PassInfoMixin<AIRInlineNonKernelPass> {
+    : public RequiredPassInfoMixin<AIRInlineNonKernelPass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 /// Legacy-PM wrapper so the pass runs from TargetPassConfig under `llc`.

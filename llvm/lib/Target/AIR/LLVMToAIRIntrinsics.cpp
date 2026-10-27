@@ -10,6 +10,7 @@
 #include "AIR.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringTable.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
@@ -23,13 +24,10 @@ namespace {
 // Layout must match the struct emitted by -gen-searchable-tables for the
 // IntrinsicRename class in AIRIntrinsicMappings.td.
 struct IntrinsicRename {
-  const char *LLVMName;
-  const char *AIRName;
+  StringTable::Offset LLVMName;
+  StringTable::Offset AIRName;
 };
 } // namespace
-
-#define GET_AIRIntrinsicRenames_DECL
-#include "AIRGenAIRIntrinsicMappings.inc"
 
 namespace {
 #define GET_AIRIntrinsicRenames_IMPL
@@ -69,8 +67,9 @@ static bool lowerMulHi(Module &M) {
 static bool llvmToAIRIntrinsics(Module &M) {
   bool Changed = false;
   for (const IntrinsicRename &Mapping : AIRIntrinsicRenames) {
-    if (Function *F = M.getFunction(Mapping.LLVMName)) {
-      F->setName(Mapping.AIRName);
+    if (Function *F =
+            M.getFunction(getIntrinsicRenameStr(Mapping.LLVMName))) {
+      F->setName(getIntrinsicRenameStr(Mapping.AIRName));
       Changed = true;
     }
   }

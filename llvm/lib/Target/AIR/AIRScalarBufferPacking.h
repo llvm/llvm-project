@@ -25,10 +25,9 @@
 namespace llvm {
 
 class AIRScalarBufferPackingPass
-    : public PassInfoMixin<AIRScalarBufferPackingPass> {
+    : public RequiredPassInfoMixin<AIRScalarBufferPackingPass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 class AIRScalarBufferPackingLegacy : public ModulePass {

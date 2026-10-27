@@ -22,10 +22,9 @@
 namespace llvm {
 
 class AIRNormalizeAllocasPass
-    : public PassInfoMixin<AIRNormalizeAllocasPass> {
+    : public RequiredPassInfoMixin<AIRNormalizeAllocasPass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 class AIRNormalizeAllocasLegacy : public ModulePass {

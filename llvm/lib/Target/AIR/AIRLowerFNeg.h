@@ -19,10 +19,9 @@
 
 namespace llvm {
 
-class AIRLowerFNegPass : public PassInfoMixin<AIRLowerFNegPass> {
+class AIRLowerFNegPass : public RequiredPassInfoMixin<AIRLowerFNegPass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 class AIRLowerFNegLegacy : public ModulePass {

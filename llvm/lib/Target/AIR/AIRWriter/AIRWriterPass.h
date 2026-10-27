@@ -28,13 +28,12 @@ ModulePass *createAIRWriterPass(raw_pwrite_stream &Out);
 
 /// New pass-manager wrapper that emits a `.metallib` container to \p Out.
 /// The output stream must outlive the pass.
-class AIRWriterPass : public PassInfoMixin<AIRWriterPass> {
+class AIRWriterPass : public RequiredPassInfoMixin<AIRWriterPass> {
   raw_pwrite_stream &OS;
 
 public:
   explicit AIRWriterPass(raw_pwrite_stream &Out) : OS(Out) {}
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 } // namespace llvm

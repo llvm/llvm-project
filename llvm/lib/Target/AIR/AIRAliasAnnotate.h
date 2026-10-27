@@ -23,10 +23,9 @@
 namespace llvm {
 
 class AIRAliasAnnotatePass
-    : public PassInfoMixin<AIRAliasAnnotatePass> {
+    : public RequiredPassInfoMixin<AIRAliasAnnotatePass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 class AIRAliasAnnotateLegacy : public ModulePass {

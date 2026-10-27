@@ -21,10 +21,9 @@
 
 namespace llvm {
 
-class AIRBarrierRenamePass : public PassInfoMixin<AIRBarrierRenamePass> {
+class AIRBarrierRenamePass : public RequiredPassInfoMixin<AIRBarrierRenamePass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 class AIRBarrierRenameLegacy : public ModulePass {

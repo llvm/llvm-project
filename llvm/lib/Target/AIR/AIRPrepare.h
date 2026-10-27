@@ -35,10 +35,9 @@
 
 namespace llvm {
 
-class AIRPreparePass : public PassInfoMixin<AIRPreparePass> {
+class AIRPreparePass : public RequiredPassInfoMixin<AIRPreparePass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 class AIRPrepareLegacy : public ModulePass {

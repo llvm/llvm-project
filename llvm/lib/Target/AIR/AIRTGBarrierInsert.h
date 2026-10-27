@@ -21,10 +21,9 @@
 namespace llvm {
 
 class AIRTGBarrierInsertPass
-    : public PassInfoMixin<AIRTGBarrierInsertPass> {
+    : public RequiredPassInfoMixin<AIRTGBarrierInsertPass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 class AIRTGBarrierInsertLegacy : public ModulePass {

@@ -406,12 +406,6 @@ std::vector<uint8_t> emitAIRBitcode(Module &M, PointeeTypeMap &PTM) {
       }
     };
     struct GroupKeyInfo {
-      static GroupKey getEmptyKey() {
-        return {~0u, DenseMapInfo<AttributeSet>::getEmptyKey()};
-      }
-      static GroupKey getTombstoneKey() {
-        return {~0u - 1, DenseMapInfo<AttributeSet>::getTombstoneKey()};
-      }
       static unsigned getHashValue(const GroupKey &K) {
         return hash_combine(K.ListIdx,
                             DenseMapInfo<AttributeSet>::getHashValue(K.AS));

@@ -19,10 +19,9 @@
 
 namespace llvm {
 
-class AIRLowerAtomicRMWPass : public PassInfoMixin<AIRLowerAtomicRMWPass> {
+class AIRLowerAtomicRMWPass : public RequiredPassInfoMixin<AIRLowerAtomicRMWPass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 class AIRLowerAtomicRMWLegacy : public ModulePass {

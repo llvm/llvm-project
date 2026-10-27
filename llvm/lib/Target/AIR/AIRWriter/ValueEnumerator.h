@@ -30,12 +30,6 @@ struct TypeEntry {
 }
 
 template <> struct DenseMapInfo<metal::TypeEntry> {
-  static metal::TypeEntry getEmptyKey() {
-    return {DenseMapInfo<Type *>::getEmptyKey(), nullptr};
-  }
-  static metal::TypeEntry getTombstoneKey() {
-    return {DenseMapInfo<Type *>::getTombstoneKey(), nullptr};
-  }
   static unsigned getHashValue(const metal::TypeEntry &E) {
     return hash_combine(DenseMapInfo<Type *>::getHashValue(E.type),
                         DenseMapInfo<Type *>::getHashValue(E.pointee));

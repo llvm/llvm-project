@@ -15,10 +15,9 @@
 namespace llvm {
 
 class AIRLegalizeUnsupportedIRPass
-    : public PassInfoMixin<AIRLegalizeUnsupportedIRPass> {
+    : public RequiredPassInfoMixin<AIRLegalizeUnsupportedIRPass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 class AIRLegalizeUnsupportedIRLegacy : public ModulePass {

@@ -191,7 +191,7 @@ AIRTargetMachine::AIRTargetMachine(const Target &T, const Triple &TT,
                                        std::optional<Reloc::Model> RM,
                                        std::optional<CodeModel::Model> CM,
                                        CodeGenOptLevel OL, bool JIT)
-    : CodeGenTargetMachineImpl(T, TT.computeDataLayout(), TT, CPU, FS, Options,
+    : CodeGenTargetMachineImpl(T, TT, CPU, FS, Options,
                                Reloc::Static, CodeModel::Small, OL),
       TLOF(std::make_unique<AIRTargetObjectFile>()),
       Subtarget(std::make_unique<AIRSubtarget>(TT, CPU, FS, *this)) {
@@ -222,7 +222,7 @@ bool AIRTargetMachine::addPassesToEmitFile(
     PM.add(createPrintModulePass(Out, "", true));
     break;
   case CodeGenFileType::ObjectFile:
-    if (TargetPassConfig::willCompleteCodeGenPipeline()) {
+    if (PassConfig->willCompleteCodeGenPipeline()) {
       PM.add(createAIREmbedderPass());
       if (!MMIWP)
         MMIWP = new MachineModuleInfoWrapperPass(this);

@@ -22,10 +22,9 @@
 namespace llvm {
 
 class AIRAsyncEventToAllocaPass
-    : public PassInfoMixin<AIRAsyncEventToAllocaPass> {
+    : public RequiredPassInfoMixin<AIRAsyncEventToAllocaPass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 class AIRAsyncEventToAllocaLegacy : public ModulePass {

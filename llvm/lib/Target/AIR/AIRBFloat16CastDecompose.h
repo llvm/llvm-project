@@ -22,10 +22,9 @@
 namespace llvm {
 
 class AIRBFloat16CastDecomposePass
-    : public PassInfoMixin<AIRBFloat16CastDecomposePass> {
+    : public RequiredPassInfoMixin<AIRBFloat16CastDecomposePass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 class AIRBFloat16CastDecomposeLegacy : public ModulePass {

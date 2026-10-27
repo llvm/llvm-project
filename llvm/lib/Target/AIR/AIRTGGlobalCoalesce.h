@@ -24,10 +24,9 @@
 namespace llvm {
 
 class AIRTGGlobalCoalescePass
-    : public PassInfoMixin<AIRTGGlobalCoalescePass> {
+    : public RequiredPassInfoMixin<AIRTGGlobalCoalescePass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 class AIRTGGlobalCoalesceLegacy : public ModulePass {

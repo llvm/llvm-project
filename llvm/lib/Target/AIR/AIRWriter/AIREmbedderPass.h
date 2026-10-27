@@ -22,10 +22,9 @@ ModulePass *createAIREmbedderPass();
 /// New pass-manager wrapper for the AIR embedder. Serializes the
 /// module into a .metallib byte blob and embeds it as a private global
 /// in the ".metallib" section.
-class AIREmbedderPass : public PassInfoMixin<AIREmbedderPass> {
+class AIREmbedderPass : public RequiredPassInfoMixin<AIREmbedderPass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 } // namespace llvm

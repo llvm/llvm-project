@@ -21,10 +21,9 @@
 namespace llvm {
 
 class AIRSplitI64ShufflePass
-    : public PassInfoMixin<AIRSplitI64ShufflePass> {
+    : public RequiredPassInfoMixin<AIRSplitI64ShufflePass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 class AIRSplitI64ShuffleLegacy : public ModulePass {

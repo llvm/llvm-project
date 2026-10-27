@@ -14,10 +14,9 @@
 
 namespace llvm {
 
-class AIRDemoteF64Pass : public PassInfoMixin<AIRDemoteF64Pass> {
+class AIRDemoteF64Pass : public RequiredPassInfoMixin<AIRDemoteF64Pass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 class AIRDemoteF64Legacy : public ModulePass {
