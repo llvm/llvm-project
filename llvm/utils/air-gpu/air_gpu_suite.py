@@ -89,7 +89,7 @@ class Case:
     """
 
     def __init__(self, name, ins, out, body, decls, ref, gen=None, ulps=None,
-                 source='', tgsize=N, full=None, abstol=None, absent=False):
+                 source='', tgsize=N, full=None, abstol=None, absent=False, out_init=None):
         self.name = name
         self.ins = ins
         self.out = out
@@ -103,6 +103,7 @@ class Case:
         self.full = full  # a complete kernel body instead of the template
         self.abstol = abstol  # floats: also accept |got - want| <= abstol
         self.absent = absent  # a probe for a function AIR does not have
+        self.out_init = out_init  # initial contents of the output buffer
 
 
 def kernel_ir(c):
@@ -112,7 +113,8 @@ def kernel_ir(c):
                      ['ptr addrspace(1) %out'])
     lines = ['define void @%s(%s) {' % (c.name, args), 'entry:',
              '  %t = call { i32, i32, i32 } @air.thread_position_in_grid.v3i32()',
-             '  %tid = extractvalue { i32, i32, i32 } %t, 0']
+             '  %tid = extractvalue { i32, i32, i32 } %t, 0',
+             '  %lane = and i32 %tid, 31', '  %lane16 = trunc i32 %lane to i16']
     for i, ty in enumerate(c.ins):
         irty = TYPES[ty][0]
         lines += ['  %%p%d = getelementptr %s, ptr addrspace(1) %%in%d, i32 %%tid' % (i, irty, i),
@@ -188,7 +190,10 @@ def call(job, queue, tries=4):
 
 def run_case(c, air, inputs, queue):
     buffers = [{'size': len(d), 'data': base64.b64encode(d).decode()} for d in inputs]
-    buffers.append({'size': N * TYPES[c.out][2]})
+    out = {'size': N * TYPES[c.out][2]}
+    if c.out_init is not None:
+        out['data'] = base64.b64encode(pack(c.out, c.out_init)).decode()
+    buffers.append(out)
     job = {'op': 'execute', 'air': base64.b64encode(air).decode(), 'buffers': buffers,
            'commands': [{'kernel': c.name,
                          'bindings': [{'index': i, 'buffer': i} for i in range(len(buffers))],
@@ -444,11 +449,177 @@ def group_llvm_int():
     ]
 
 
+def lanes(i, values):
+    """The inputs of the threads of thread i's SIMD-group."""
+    base = i // 32 * 32
+    return values[base:base + 32]
+
+
+def simd_case(name, ty, fn_suffix, call, ref, extra_decl_args='', ulps=None, abstol=None, gen=None):
+    irty = TYPES[ty][0]
+    decl = 'declare %s @%s.%s(%s)' % (irty, call[0], fn_suffix, ', '.join([irty] + list(call[2])))
+    body = '%%r = call %s @%s.%s(%s %%a0%s)' % (irty, call[0], fn_suffix, irty, call[1])
+    c = Case(name, [ty], ty, body, {decl}, ref, [gen], ulps, 'floor metal_group.hpp, Metal.jl simd.jl')
+    c.abstol = abstol
+    return c
+
+
+def group_simd():
+    """SIMD-group and quad-group operations (two SIMD-groups of 32)."""
+    cases = []
+    for ty, sfx in (('i32', 's.i32'), ('u32', 'u.i32'), ('f32', 'f32')):
+        w = (lambda x: x) if ty == 'f32' else (s32 if ty == 'i32' else u32)
+        tag = sfx.replace('.', '_')
+        cases += [
+            simd_case('simd_shuffle_' + tag, ty, sfx,
+                      ('air.simd_shuffle', ', i16 %next', ['i16']),
+                      lambda i, v: lanes(i, v[0])[(i % 32 + 1) % 32]),
+            simd_case('simd_shuffle_xor_' + tag, ty, sfx,
+                      ('air.simd_shuffle_xor', ', i16 5', ['i16']),
+                      lambda i, v: lanes(i, v[0])[(i % 32) ^ 5]),
+            simd_case('simd_shuffle_up_' + tag, ty, sfx,
+                      ('air.simd_shuffle_up', ', i16 3', ['i16']),
+                      lambda i, v: v[0][i] if i % 32 < 3 else v[0][i - 3]),
+            simd_case('simd_shuffle_down_' + tag, ty, sfx,
+                      ('air.simd_shuffle_down', ', i16 3', ['i16']),
+                      lambda i, v: v[0][i] if i % 32 >= 29 else v[0][i + 3]),
+            simd_case('quad_shuffle_xor_' + tag, ty, sfx,
+                      ('air.quad_shuffle_xor', ', i16 1', ['i16']),
+                      lambda i, v: v[0][i ^ 1]),
+            simd_case('simd_sum_' + tag, ty, sfx, ('air.simd_sum', '', []),
+                      lambda i, v, w=w: w(sum(lanes(i, v[0]))),
+                      ulps=64 if ty == 'f32' else None, abstol=1e-4 if ty == 'f32' else None),
+            simd_case('simd_min_' + tag, ty, sfx, ('air.simd_min', '', []),
+                      lambda i, v: min(lanes(i, v[0])), ulps=0 if ty == 'f32' else None),
+            simd_case('simd_max_' + tag, ty, sfx, ('air.simd_max', '', []),
+                      lambda i, v: max(lanes(i, v[0])), ulps=0 if ty == 'f32' else None),
+            simd_case('simd_prefix_inclusive_sum_' + tag, ty, sfx,
+                      ('air.simd_prefix_inclusive_sum', '', []),
+                      lambda i, v, w=w: w(sum(lanes(i, v[0])[:i % 32 + 1])),
+                      ulps=64 if ty == 'f32' else None, abstol=1e-4 if ty == 'f32' else None),
+            simd_case('simd_prefix_exclusive_sum_' + tag, ty, sfx,
+                      ('air.simd_prefix_exclusive_sum', '', []),
+                      lambda i, v, w=w: w(sum(lanes(i, v[0])[:i % 32])),
+                      ulps=64 if ty == 'f32' else None, abstol=1e-4 if ty == 'f32' else None),
+        ]
+        if ty != 'f32':
+            import functools, operator
+            for op, fn in (('and', operator.and_), ('or', operator.or_), ('xor', operator.xor)):
+                cases.append(simd_case('simd_%s_%s' % (op, tag), ty, sfx, ('air.simd_' + op, '', []),
+                                       lambda i, v, fn=fn, w=w: w(functools.reduce(fn, lanes(i, v[0])))))
+    for c in cases:
+        if c.ulps is None and c.ins == ['f32']:
+            c.ulps = 0
+        if '%next' in c.body:
+            c.body = '%nl = add i32 %lane, 1\n%nm = and i32 %nl, 31\n%next = trunc i32 %nm to i16\n' + c.body
+    # Ballot: bit k of the low word is thread k's predicate (odd input).
+    cases.append(Case('simd_ballot', ['u32'], 'u32',
+                      '%odd = trunc i32 %a0 to i1\n%m = call i64 @air.simd_ballot.i64(i1 %odd)\n'
+                      '%r = trunc i64 %m to i32',
+                      {'declare i64 @air.simd_ballot.i64(i1)'},
+                      lambda i, v: sum((x & 1) << k for k, x in enumerate(lanes(i, v[0]))),
+                      source='Metal.jl simd_ballot'))
+    cases.append(Case('simd_vote_any', ['u32'], 'u32',
+                      '%big = icmp ugt i32 %a0, 4000000000\n%m = call i64 @air.simd_ballot.i64(i1 %big)\n'
+                      '%b = call i1 @air.simd_vote_any.i64(i64 %m)\n%r = zext i1 %b to i32',
+                      {'declare i64 @air.simd_ballot.i64(i1)', 'declare i1 @air.simd_vote_any.i64(i64)'},
+                      lambda i, v: int(any(x > 4000000000 for x in lanes(i, v[0]))),
+                      source='Metal.jl simd_vote_any'))
+    return cases
+
+
+SLOTS = 8
+
+
+def fold_slots(values, fn, init, wrap):
+    """out[j] = fn folded over the inputs of threads i with i % SLOTS == j."""
+    out = [init] * N
+    for i, x in enumerate(values):
+        out[i % SLOTS] = wrap(fn(out[i % SLOTS], x))
+    return out
+
+
+def atomic_case(name, op, ty, fn, init=0, space='device', ordering='monotonic'):
+    irty = TYPES[ty][0]
+    wrap = (lambda x: x) if ty == 'f32' else (s32 if ty == 'i32' else u32)
+    if space == 'device':
+        body = ('%slot = and i32 %tid, 7\n'
+                '%sp = getelementptr {t}, ptr addrspace(1) %out, i32 %slot\n'
+                '%old = atomicrmw {op} ptr addrspace(1) %sp, {t} %a0 {o}\n').format(t=irty, op=op, o=ordering)
+        full = None
+    c = Case(name, [ty], ty, None, set(), None, ulps=0 if ty == 'f32' else None,
+             source='LLVM atomicrmw (AIRLowerAtomicRMW)', out_init=[init] * N)
+    expect = {}
+
+    def ref(i, v, fn=fn, init=init, wrap=wrap):
+        if 'r' not in expect:
+            expect['r'] = fold_slots(v[0], fn, init, wrap)
+        return expect['r'][i]
+    c.ref = ref
+    c.full = ('define void @{n}(ptr addrspace(1) %in0, ptr addrspace(1) %out) {{\n'
+              'entry:\n'
+              '  %t = call {{ i32, i32, i32 }} @air.thread_position_in_grid.v3i32()\n'
+              '  %tid = extractvalue {{ i32, i32, i32 }} %t, 0\n'
+              '  %p0 = getelementptr {t}, ptr addrspace(1) %in0, i32 %tid\n'
+              '  %a0 = load {t}, ptr addrspace(1) %p0\n'
+              '  ' + body.strip().replace('\n', '\n  ') + '\n'
+              '  ret void\n}}').format(n=name, t=irty)
+    return c
+
+
+def group_atomics():
+    """Atomics as front ends write them: atomicrmw, cmpxchg, atomic load/store."""
+    import operator
+    small = lambda i, r: r.randrange(0, 1000)
+    cases = [
+        atomic_case('atomic_add_i32', 'add', 'i32', operator.add),
+        atomic_case('atomic_sub_i32', 'sub', 'i32', operator.sub),
+        atomic_case('atomic_and_u32', 'and', 'u32', operator.and_, init=0xFFFFFFFF),
+        atomic_case('atomic_or_u32', 'or', 'u32', operator.or_),
+        atomic_case('atomic_xor_u32', 'xor', 'u32', operator.xor),
+        atomic_case('atomic_max_i32', 'max', 'i32', max, init=-(1 << 31)),
+        atomic_case('atomic_min_i32', 'min', 'i32', min, init=(1 << 31) - 1),
+        atomic_case('atomic_umax_u32', 'umax', 'u32', max),
+        atomic_case('atomic_umin_u32', 'umin', 'u32', min, init=0xFFFFFFFF),
+        atomic_case('atomic_add_seq_cst_i32', 'add', 'i32', operator.add, ordering='seq_cst'),
+    ]
+    # Float add: small integers, so the sum is exact whatever the order.
+    c = atomic_case('atomic_fadd_f32', 'fadd', 'f32', operator.add)
+    c.gen = [lambda i, r: float(r.randrange(-100, 100))]
+    cases.append(c)
+    # xchg on the thread's own slot: the old value (0) comes back, the slot holds the input.
+    cases.append(Case('atomic_xchg_i32', ['i32'], 'i32',
+                      '%sp = getelementptr i32, ptr addrspace(1) %out, i32 %tid\n'
+                      '%old = atomicrmw xchg ptr addrspace(1) %sp, i32 %a0 monotonic\n'
+                      '%r0 = add i32 %old, %a0\n'
+                      '%r = add i32 %r0, 0',
+                      set(), lambda i, v: v[0][i], out_init=[0] * N))
+    # Fix the xchg case: the template stores %r over the slot afterwards, which is the input as well.
+    # cmpxchg: each thread swaps its own slot from tid to the input, and keeps whether it succeeded.
+    cases.append(Case('cmpxchg_i32', ['i32'], 'i32',
+                      '%sp = getelementptr i32, ptr addrspace(1) %out, i32 %tid\n'
+                      '%pair = cmpxchg ptr addrspace(1) %sp, i32 %tid, i32 %a0 monotonic monotonic\n'
+                      '%ok = extractvalue { i32, i1 } %pair, 1\n'
+                      '%r = select i1 %ok, i32 %a0, i32 -1',
+                      set(), lambda i, v: v[0][i], out_init=list(range(N))))
+    # Atomic load and store.
+    cases.append(Case('atomic_load_store_i32', ['i32'], 'i32',
+                      '%la = load atomic i32, ptr addrspace(1) %p0 monotonic, align 4\n'
+                      '%r = add i32 %la, 1',
+                      set(), lambda i, v: s32(v[0][i] + 1)))
+    cases.append(Case('fence_i32', ['i32'], 'i32',
+                      'fence syncscope("workgroup") acq_rel\nfence seq_cst\n%r = add i32 %a0, 2',
+                      set(), lambda i, v: s32(v[0][i] + 2)))
+    return cases
+
+
 GROUPS = {
     'llvm-math-f32': group_llvm_math_f32,
     'air-math-f32': group_air_math_f32,
     'llvm-math-afn': group_llvm_math_afn,
     'llvm-int': group_llvm_int,
+    'simd': group_simd,
+    'atomics': group_atomics,
 }
 
 
