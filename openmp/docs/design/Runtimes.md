@@ -1428,9 +1428,7 @@ teams distribute` with a nested `parallel for`. The default value is `6`
 number of threads, the runtime then halves the number of threads of such a
 kernel, down to one wavefront, and doubles the number of teams, as long as the
 distribute loop has an iteration for every team and the number of teams stays
-within the device's limit and `OMP_NUM_TEAMS`. The former name
-`LIBOMPTARGET_AMDGPU_GENERIC_SPMD_TEAMS_PER_CU` is still honored if this
-variable is not set.
+within the device's limit and `OMP_NUM_TEAMS`.
 
 #### LIBOMPTARGET_AMDGPU_MAX_ASYNC_COPY_BYTES
 

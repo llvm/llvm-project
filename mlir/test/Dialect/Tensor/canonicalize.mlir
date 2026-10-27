@@ -3075,3 +3075,100 @@ func.func @expand_shape_no_partial_staticization(%arg0: tensor<10x10xf32>)
       : tensor<?x?xf32> into tensor<?x?x?xf32>
   return %e : tensor<?x?x?xf32>
 }
+
+// -----
+
+// CHECK-LABEL: func.func @select_splat_condition(
+// CHECK-SAME: %[[P:[^:]+]]: i1, %[[A:[^:]+]]: tensor<4xf32>, %[[B:[^:]+]]: tensor<4xf32>
+// CHECK-NOT: tensor.splat
+// CHECK: %[[X:.*]] = arith.select %[[P]], %[[A]], %[[B]] : tensor<4xf32>
+// CHECK-NOT: arith.select
+// CHECK: return %[[X]]
+func.func @select_splat_condition(%p: i1, %a: tensor<4xf32>, %b: tensor<4xf32>) -> tensor<4xf32> {
+  %m = tensor.splat %p : tensor<4xi1>
+  %x = arith.select %m, %a, %b : tensor<4xi1>, tensor<4xf32>
+  return %x : tensor<4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @select_splat_multidimensional(
+// CHECK-SAME: %[[P:[^:]+]]: i1, %[[A:[^:]+]]: tensor<2x4xi32>, %[[B:[^:]+]]: tensor<2x4xi32>
+// CHECK-NOT: tensor.splat
+// CHECK: %[[X:.*]] = arith.select %[[P]], %[[A]], %[[B]] : tensor<2x4xi32>
+// CHECK-NOT: arith.select
+// CHECK: return %[[X]]
+func.func @select_splat_multidimensional(%p: i1, %a: tensor<2x4xi32>, %b: tensor<2x4xi32>) -> tensor<2x4xi32> {
+  %m = tensor.splat %p : tensor<2x4xi1>
+  %x = arith.select %m, %a, %b : tensor<2x4xi1>, tensor<2x4xi32>
+  return %x : tensor<2x4xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @select_splat_dynamic(
+// CHECK-SAME: %[[P:[^:]+]]: i1, %[[A:[^:]+]]: tensor<?x4xi32>, %[[B:[^:]+]]: tensor<?x4xi32>
+// CHECK-NOT: tensor.splat
+// CHECK: %[[X:.*]] = arith.select %[[P]], %[[A]], %[[B]] : tensor<?x4xi32>
+// CHECK-NOT: arith.select
+// CHECK: return %[[X]]
+func.func @select_splat_dynamic(%p: i1, %a: tensor<?x4xi32>, %b: tensor<?x4xi32>, %n: index) -> tensor<?x4xi32> {
+  %m = tensor.splat %p[%n] : tensor<?x4xi1>
+  %x = arith.select %m, %a, %b : tensor<?x4xi1>, tensor<?x4xi32>
+  return %x : tensor<?x4xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @select_splat_rank_zero(
+// CHECK-SAME: %[[P:[^:]+]]: i1, %[[A:[^:]+]]: tensor<i32>, %[[B:[^:]+]]: tensor<i32>
+// CHECK-NOT: tensor.splat
+// CHECK: %[[X:.*]] = arith.select %[[P]], %[[A]], %[[B]] : tensor<i32>
+// CHECK-NOT: arith.select
+// CHECK: return %[[X]]
+func.func @select_splat_rank_zero(%p: i1, %a: tensor<i32>, %b: tensor<i32>) -> tensor<i32> {
+  %m = tensor.splat %p : tensor<i1>
+  %x = arith.select %m, %a, %b : tensor<i1>, tensor<i32>
+  return %x : tensor<i32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @select_splat_shared_mask(
+// CHECK-SAME: %[[P:[^:]+]]: i1, %[[A:[^:]+]]: tensor<4xi32>, %[[B:[^:]+]]: tensor<4xi32>
+// CHECK: %[[M:.*]] = tensor.splat %[[P]]
+// CHECK: %[[X:.*]] = arith.select %[[P]], %[[A]], %[[B]] : tensor<4xi32>
+// CHECK-NOT: arith.select
+// CHECK: return %[[X]], %[[M]]
+func.func @select_splat_shared_mask(%p: i1, %a: tensor<4xi32>, %b: tensor<4xi32>) -> (tensor<4xi32>, tensor<4xi1>) {
+  %m = tensor.splat %p : tensor<4xi1>
+  %x = arith.select %m, %a, %b : tensor<4xi1>, tensor<4xi32>
+  return %x, %m : tensor<4xi32>, tensor<4xi1>
+}
+
+// -----
+
+// An arbitrary tensor mask is not known to be a splat.
+// CHECK-LABEL: func.func @select_nonuniform_tensor(
+// CHECK-SAME: %[[P:[^:]+]]: tensor<4xi1>
+// CHECK: arith.select %[[P]], %{{.*}}, %{{.*}} : tensor<4xi1>, tensor<4xi32>
+func.func @select_nonuniform_tensor(%p: tensor<4xi1>, %a: tensor<4xi32>, %b: tensor<4xi32>) -> tensor<4xi32> {
+  %x = arith.select %p, %a, %b : tensor<4xi1>, tensor<4xi32>
+  return %x : tensor<4xi32>
+}
+
+// -----
+
+// Preserve the existing refinement of a select with a fully poisoned arm.
+// CHECK-LABEL: func.func @select_uniform_unselected_poison_tensor(
+// CHECK-SAME: %[[P:[^:]+]]: i1
+// CHECK-SAME: %[[A:[^:]+]]: tensor<4xi32>
+// CHECK-NOT: tensor.splat
+// CHECK-NOT: arith.select
+// CHECK: return %[[A]] : tensor<4xi32>
+func.func @select_uniform_unselected_poison_tensor(%p: i1, %a: tensor<4xi32>) -> tensor<4xi32> {
+  %bad = ub.poison : tensor<4xi32>
+  %m = tensor.splat %p : tensor<4xi1>
+  %x = arith.select %m, %a, %bad : tensor<4xi1>, tensor<4xi32>
+  return %x : tensor<4xi32>
+}
