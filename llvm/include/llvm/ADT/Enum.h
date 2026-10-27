@@ -147,6 +147,14 @@ public:
     return utohexstr(Value, true);
   }
 
+  /// Return first entry whose name matches Str, or null.
+  const EnumString *fromString(StringRef Str, unsigned StrIdx = 0) const {
+    for (const auto &EnumItem : EnumValues)
+      if (EnumItem.name(StrIdx) == Str)
+        return &EnumItem;
+    return nullptr;
+  }
+
   size_t size() const { return EnumValues.size(); }
   const EnumString &operator[](size_t Idx) const { return EnumValues[Idx]; }
   const EnumString *begin() const { return EnumValues.begin(); }
