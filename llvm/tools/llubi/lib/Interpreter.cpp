@@ -1113,7 +1113,8 @@ public:
             break;
           }
           const Pointer &WasOnPtr = WasOn.asPointer();
-          switch (auto Kind = getBundleAttrFromOBU(OBU); Kind) {
+          auto Kind = getBundleAttrFromOBU(OBU);
+          switch (Kind) {
           case BundleAttr::Align: {
             // Alignment assumptions should have 2 or 3 arguments.
             APInt Alignment = getIntNonPoison(getValue(GetBundleArg(1)));
