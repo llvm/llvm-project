@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s -test-vector-reduction-to-contract-patterns -split-input-file | FileCheck %s --check-prefixes=CHECK,KEEP-FLAGS
-// RUN: mlir-opt %s -test-vector-reduction-to-contract-patterns=allow-fast-math-flag-loss=true -split-input-file | FileCheck %s --check-prefixes=CHECK,DROP-FLAGS
+// RUN: mlir-opt %s -test-vector-reduction-to-contract-patterns -split-input-file | FileCheck %s --check-prefixes=CHECK,ALL
+// RUN: mlir-opt %s -test-vector-reduction-to-contract-patterns=allow-fast-math-flag-loss=false -split-input-file | FileCheck %s --check-prefixes=KEEP-FLAGS,ALL
 
 // TODO: Separate tests for vector.multi_reduction -> vector.contract and
 //  * pre-op + vector.contract -> vector.contract,
@@ -41,13 +41,14 @@ func.func @multidimreduction_contract_int(
 // -----
 
 // The flags of a vector.contract apply to both its multiply and its combining
-// op. By default (KEEP-FLAGS), a mulf and a multi_reduction with different
-// flags are not converted. With allow-fast-math-flag-loss=true (DROP-FLAGS),
-// they are, and the contract keeps only the flags that both carry.
+// op. By default (CHECK), the contract keeps only the flags that both the mulf
+// and the multi_reduction carry. With allow-fast-math-flag-loss=false
+// (KEEP-FLAGS), a mulf and a multi_reduction with different flags are not
+// converted.
 
-// CHECK-LABEL: multidimreduction_contract_fastmath
-//  CHECK-NEXT:   vector.contract {fastmath = #arith.fastmath<nnan,contract>,
-//  CHECK-SAME:   kind = #vector.kind<add>}
+// ALL-LABEL: multidimreduction_contract_fastmath
+//  ALL-NEXT:   vector.contract {fastmath = #arith.fastmath<nnan,contract>,
+//  ALL-SAME:   kind = #vector.kind<add>}
 func.func @multidimreduction_contract_fastmath(
   %arg0: vector<8x32x16xf32>,%arg1: vector<8x32x16xf32>, %acc: vector<8x16xf32>) -> vector<8x16xf32> {
   %0 = arith.mulf %arg0, %arg1 fastmath<nnan,contract> : vector<8x32x16xf32>
@@ -57,12 +58,12 @@ func.func @multidimreduction_contract_fastmath(
 
 // -----
 
-// CHECK-LABEL: multidimreduction_contract_fastmath_intersect
+// ALL-LABEL: multidimreduction_contract_fastmath_intersect
 //   KEEP-FLAGS-NOT:   vector.contract
 //       KEEP-FLAGS:   arith.mulf
 //  KEEP-FLAGS-NEXT:   vector.multi_reduction
-//  DROP-FLAGS-NEXT:   vector.contract {fastmath = #arith.fastmath<nnan>,
-//  DROP-FLAGS-SAME:   kind = #vector.kind<add>}
+//       CHECK-NEXT:   vector.contract {fastmath = #arith.fastmath<nnan>,
+//       CHECK-SAME:   kind = #vector.kind<add>}
 func.func @multidimreduction_contract_fastmath_intersect(
   %arg0: vector<8x32x16xf32>,%arg1: vector<8x32x16xf32>, %acc: vector<8x16xf32>) -> vector<8x16xf32> {
   %0 = arith.mulf %arg0, %arg1 fastmath<nnan,contract> : vector<8x32x16xf32>
@@ -72,12 +73,12 @@ func.func @multidimreduction_contract_fastmath_intersect(
 
 // -----
 
-// CHECK-LABEL: multidimreduction_contract_fastmath_strict_mul
+// ALL-LABEL: multidimreduction_contract_fastmath_strict_mul
 //   KEEP-FLAGS-NOT:   vector.contract
 //       KEEP-FLAGS:   arith.mulf
 //  KEEP-FLAGS-NEXT:   vector.multi_reduction
-//  DROP-FLAGS-NEXT:   vector.contract {indexing_maps =
-//   DROP-FLAGS-NOT:   fastmath
+//       CHECK-NEXT:   vector.contract {indexing_maps =
+//        CHECK-NOT:   fastmath
 func.func @multidimreduction_contract_fastmath_strict_mul(
   %arg0: vector<8x32x16xf32>,%arg1: vector<8x32x16xf32>, %acc: vector<8x16xf32>) -> vector<8x16xf32> {
   %0 = arith.mulf %arg0, %arg1 : vector<8x32x16xf32>
@@ -87,12 +88,12 @@ func.func @multidimreduction_contract_fastmath_strict_mul(
 
 // -----
 
-// CHECK-LABEL: multidimreduction_contract_fastmath_strict_reduction
+// ALL-LABEL: multidimreduction_contract_fastmath_strict_reduction
 //   KEEP-FLAGS-NOT:   vector.contract
 //       KEEP-FLAGS:   arith.mulf
 //  KEEP-FLAGS-NEXT:   vector.multi_reduction
-//  DROP-FLAGS-NEXT:   vector.contract {indexing_maps =
-//   DROP-FLAGS-NOT:   fastmath
+//       CHECK-NEXT:   vector.contract {indexing_maps =
+//        CHECK-NOT:   fastmath
 func.func @multidimreduction_contract_fastmath_strict_reduction(
   %arg0: vector<8x32x16xf32>,%arg1: vector<8x32x16xf32>, %acc: vector<8x16xf32>) -> vector<8x16xf32> {
   %0 = arith.mulf %arg0, %arg1 fastmath<fast> : vector<8x32x16xf32>
