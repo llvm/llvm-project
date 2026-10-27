@@ -2,10 +2,10 @@
 
 ; CHECK-LABEL: define void @kernel
 ; CHECK: sitofp i64 %{{.*}} to float
-; CHECK: call float @air.fast_sqrt.f32(float
-; CHECK: call float @air.fast_log.f32(float
+; CHECK: call float @air.sqrt.f32(float
+; CHECK: call float @air.log.f32(float
 ; CHECK: fmul float
-; CHECK: call float @air.fast_exp.f32(float
+; CHECK: call float @air.exp.f32(float
 ; CHECK-NOT: fptrunc
 ; CHECK: store float
 ; CHECK-NOT: sitofp i64 %{{.*}} to double

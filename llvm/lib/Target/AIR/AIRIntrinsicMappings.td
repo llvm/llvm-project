@@ -14,109 +14,88 @@
 
 include "llvm/TableGen/SearchableTable.td"
 
-class IntrinsicRename<string llvm, string air> {
-  string LLVMName = llvm;
-  string AIRName = air;
+// One record per function, for every scalar and vector type. The AIR name of
+// a call is built from the call's own overload suffix:
+//
+//   "air." ["fast_"] AIRName "." ["s." | "u."] <overload suffix>
+//
+// so llvm.sin.v4f32 becomes air.sin.v4f32, and llvm.smin.i32 air.min.s.i32.
+// "fast_" is used when the function has a relaxed variant, the call allows
+// approximate functions (afn) and the element type is float; that is the
+// convention of Metal.jl and floor, and calls without afn keep the precise
+// function. Intrinsics without a record are left alone: some (llvm.copysign,
+// llvm.memcpy, the saturating integer ops) are accepted by Metal as they are.
+//
+// Every record here is exercised on hardware by llvm/utils/air-gpu.
+
+class AIRFunction<string llvm, string air, bits<2> sign = 0, bit fast = 0,
+                  bits<4> numArgs = 0> {
+  string LLVMName = llvm;       // Base name of the LLVM intrinsic.
+  string AIRName = air;         // AIR function, without "air." and type suffix.
+  bits<2> Signedness = sign;    // 0: none, 1: signed (".s"), 2: unsigned (".u").
+  bit HasFast = fast;           // Whether air.fast_<AIRName> exists.
+  bits<4> NumArgs = numArgs;    // Leading operands AIR takes; 0 for all.
+  // Whether the AIR function lowers back to this intrinsic (AGXLowerAIR):
+  // false where several intrinsics share one AIR function.
+  bit Invertible = 1;
 }
 
-def AIRIntrinsicRenames : GenericTable {
-  let FilterClass = "IntrinsicRename";
-  let Fields = ["LLVMName", "AIRName"];
+def AIRFunctions : GenericTable {
+  let FilterClass = "AIRFunction";
+  let Fields = ["LLVMName", "AIRName", "Signedness", "HasFast", "NumArgs",
+                "Invertible"];
 }
 
-// LLVM math intrinsic -> AIR intrinsic name mappings.
+class AIRFloatFunction<string llvm, string air>
+    : AIRFunction<llvm, air, 0, 1>;
 
-def : IntrinsicRename<"llvm.maxnum.f32", "air.fmax.f32">;
-def : IntrinsicRename<"llvm.minnum.f32", "air.fmin.f32">;
-def : IntrinsicRename<"llvm.maxnum.f16", "air.fmax.f16">;
-def : IntrinsicRename<"llvm.minnum.f16", "air.fmin.f16">;
-def : IntrinsicRename<"llvm.maximum.f32", "air.fmax.f32">;
-def : IntrinsicRename<"llvm.minimum.f32", "air.fmin.f32">;
-def : IntrinsicRename<"llvm.maximum.f16", "air.fmax.f16">;
-def : IntrinsicRename<"llvm.minimum.f16", "air.fmin.f16">;
-def : IntrinsicRename<"llvm.maximum.v2f32", "air.fmax.v2f32">;
-def : IntrinsicRename<"llvm.maximum.v3f32", "air.fmax.v3f32">;
-def : IntrinsicRename<"llvm.maximum.v4f32", "air.fmax.v4f32">;
-def : IntrinsicRename<"llvm.minimum.v2f32", "air.fmin.v2f32">;
-def : IntrinsicRename<"llvm.minimum.v3f32", "air.fmin.v3f32">;
-def : IntrinsicRename<"llvm.minimum.v4f32", "air.fmin.v4f32">;
-def : IntrinsicRename<"llvm.maximum.v2f16", "air.fmax.v2f16">;
-def : IntrinsicRename<"llvm.maximum.v4f16", "air.fmax.v4f16">;
-def : IntrinsicRename<"llvm.minimum.v2f16", "air.fmin.v2f16">;
-def : IntrinsicRename<"llvm.minimum.v4f16", "air.fmin.v4f16">;
+// Floating point, with relaxed variants.
+def : AIRFloatFunction<"llvm.fabs", "fabs">;
+def : AIRFloatFunction<"llvm.floor", "floor">;
+def : AIRFloatFunction<"llvm.ceil", "ceil">;
+def : AIRFloatFunction<"llvm.trunc", "trunc">;
+def : AIRFloatFunction<"llvm.rint", "rint">;
+def : AIRFloatFunction<"llvm.round", "round">;
+def : AIRFloatFunction<"llvm.sqrt", "sqrt">;
+def : AIRFloatFunction<"llvm.exp", "exp">;
+def : AIRFloatFunction<"llvm.exp2", "exp2">;
+def : AIRFloatFunction<"llvm.exp10", "exp10">;
+def : AIRFloatFunction<"llvm.log", "log">;
+def : AIRFloatFunction<"llvm.log2", "log2">;
+def : AIRFloatFunction<"llvm.log10", "log10">;
+def : AIRFloatFunction<"llvm.sin", "sin">;
+def : AIRFloatFunction<"llvm.cos", "cos">;
+def : AIRFloatFunction<"llvm.tan", "tan">;
+def : AIRFloatFunction<"llvm.asin", "asin">;
+def : AIRFloatFunction<"llvm.acos", "acos">;
+def : AIRFloatFunction<"llvm.atan", "atan">;
+def : AIRFloatFunction<"llvm.atan2", "atan2">;
+def : AIRFloatFunction<"llvm.sinh", "sinh">;
+def : AIRFloatFunction<"llvm.cosh", "cosh">;
+def : AIRFloatFunction<"llvm.tanh", "tanh">;
+def : AIRFloatFunction<"llvm.asinh", "asinh">;
+def : AIRFloatFunction<"llvm.acosh", "acosh">;
+def : AIRFloatFunction<"llvm.atanh", "atanh">;
+def : AIRFloatFunction<"llvm.pow", "pow">;
+def : AIRFloatFunction<"llvm.minnum", "fmin">;
+def : AIRFloatFunction<"llvm.maxnum", "fmax">;
+// AIRNaNMinMax has already given these the NaN behaviour of LLVM; what is
+// left maps onto fmin/fmax.
+let Invertible = 0 in {
+def : AIRFloatFunction<"llvm.minimum", "fmin">;
+def : AIRFloatFunction<"llvm.maximum", "fmax">;
+}
 
-def : IntrinsicRename<"llvm.sin.f32", "air.sin.f32">;
-def : IntrinsicRename<"llvm.cos.f32", "air.cos.f32">;
-def : IntrinsicRename<"llvm.sin.f16", "air.sin.f16">;
-def : IntrinsicRename<"llvm.cos.f16", "air.cos.f16">;
+// Floating point, no relaxed variant.
+def : AIRFunction<"llvm.fma", "fma">;
 
-def : IntrinsicRename<"llvm.exp.f32",  "air.fast_exp.f32">;
-def : IntrinsicRename<"llvm.log.f32",  "air.fast_log.f32">;
-def : IntrinsicRename<"llvm.exp2.f32", "air.exp2.f32">;
-def : IntrinsicRename<"llvm.log2.f32", "air.log2.f32">;
-def : IntrinsicRename<"llvm.pow.f32",  "air.pow.f32">;
-def : IntrinsicRename<"llvm.exp.f16",  "air.fast_exp.f16">;
-def : IntrinsicRename<"llvm.log.f16",  "air.fast_log.f16">;
-def : IntrinsicRename<"llvm.exp2.f16", "air.fast_exp2.f16">;
-def : IntrinsicRename<"llvm.log2.f16", "air.fast_log2.f16">;
-
-def : IntrinsicRename<"llvm.sqrt.f32",  "air.fast_sqrt.f32">;
-def : IntrinsicRename<"llvm.fabs.f32",  "air.fabs.f32">;
-def : IntrinsicRename<"llvm.floor.f32", "air.fast_floor.f32">;
-def : IntrinsicRename<"llvm.ceil.f32",  "air.fast_ceil.f32">;
-def : IntrinsicRename<"llvm.sqrt.f16",  "air.fast_sqrt.f16">;
-def : IntrinsicRename<"llvm.fabs.f16",  "air.fabs.f16">;
-def : IntrinsicRename<"llvm.floor.f16", "air.fast_floor.f16">;
-def : IntrinsicRename<"llvm.ceil.f16",  "air.fast_ceil.f16">;
-
-def : IntrinsicRename<"llvm.fma.f32", "air.fma.f32">;
-def : IntrinsicRename<"llvm.fma.f16", "air.fma.f16">;
-
-def : IntrinsicRename<"llvm.rint.f32", "air.fast_rint.f32">;
-def : IntrinsicRename<"llvm.rint.f16", "air.fast_rint.f16">;
-
-def : IntrinsicRename<"llvm.maxnum.v2f32", "air.fast_fmax.v2f32">;
-def : IntrinsicRename<"llvm.maxnum.v3f32", "air.fast_fmax.v3f32">;
-def : IntrinsicRename<"llvm.maxnum.v4f32", "air.fast_fmax.v4f32">;
-def : IntrinsicRename<"llvm.minnum.v2f32", "air.fast_fmin.v2f32">;
-def : IntrinsicRename<"llvm.minnum.v3f32", "air.fast_fmin.v3f32">;
-def : IntrinsicRename<"llvm.minnum.v4f32", "air.fast_fmin.v4f32">;
-def : IntrinsicRename<"llvm.sin.v2f32", "air.sin.v2f32">;
-def : IntrinsicRename<"llvm.sin.v3f32", "air.sin.v3f32">;
-def : IntrinsicRename<"llvm.sin.v4f32", "air.sin.v4f32">;
-def : IntrinsicRename<"llvm.cos.v2f32", "air.cos.v2f32">;
-def : IntrinsicRename<"llvm.cos.v3f32", "air.cos.v3f32">;
-def : IntrinsicRename<"llvm.cos.v4f32", "air.cos.v4f32">;
-def : IntrinsicRename<"llvm.exp.v2f32", "air.fast_exp.v2f32">;
-def : IntrinsicRename<"llvm.exp.v3f32", "air.fast_exp.v3f32">;
-def : IntrinsicRename<"llvm.exp.v4f32", "air.fast_exp.v4f32">;
-def : IntrinsicRename<"llvm.log.v2f32", "air.fast_log.v2f32">;
-def : IntrinsicRename<"llvm.log.v3f32", "air.fast_log.v3f32">;
-def : IntrinsicRename<"llvm.log.v4f32", "air.fast_log.v4f32">;
-def : IntrinsicRename<"llvm.exp2.v2f32", "air.exp2.v2f32">;
-def : IntrinsicRename<"llvm.exp2.v3f32", "air.exp2.v3f32">;
-def : IntrinsicRename<"llvm.exp2.v4f32", "air.exp2.v4f32">;
-def : IntrinsicRename<"llvm.log2.v2f32", "air.log2.v2f32">;
-def : IntrinsicRename<"llvm.log2.v3f32", "air.log2.v3f32">;
-def : IntrinsicRename<"llvm.log2.v4f32", "air.log2.v4f32">;
-def : IntrinsicRename<"llvm.pow.v2f32", "air.pow.v2f32">;
-def : IntrinsicRename<"llvm.pow.v3f32", "air.pow.v3f32">;
-def : IntrinsicRename<"llvm.pow.v4f32", "air.pow.v4f32">;
-def : IntrinsicRename<"llvm.sqrt.v2f32", "air.fast_sqrt.v2f32">;
-def : IntrinsicRename<"llvm.sqrt.v3f32", "air.fast_sqrt.v3f32">;
-def : IntrinsicRename<"llvm.sqrt.v4f32", "air.fast_sqrt.v4f32">;
-def : IntrinsicRename<"llvm.fabs.v2f32", "air.fast_fabs.v2f32">;
-def : IntrinsicRename<"llvm.fabs.v3f32", "air.fast_fabs.v3f32">;
-def : IntrinsicRename<"llvm.fabs.v4f32", "air.fast_fabs.v4f32">;
-def : IntrinsicRename<"llvm.floor.v2f32", "air.fast_floor.v2f32">;
-def : IntrinsicRename<"llvm.floor.v3f32", "air.fast_floor.v3f32">;
-def : IntrinsicRename<"llvm.floor.v4f32", "air.fast_floor.v4f32">;
-def : IntrinsicRename<"llvm.ceil.v2f32", "air.fast_ceil.v2f32">;
-def : IntrinsicRename<"llvm.ceil.v3f32", "air.fast_ceil.v3f32">;
-def : IntrinsicRename<"llvm.ceil.v4f32", "air.fast_ceil.v4f32">;
-def : IntrinsicRename<"llvm.rint.v2f32", "air.fast_rint.v2f32">;
-def : IntrinsicRename<"llvm.rint.v3f32", "air.fast_rint.v3f32">;
-def : IntrinsicRename<"llvm.rint.v4f32", "air.fast_rint.v4f32">;
-def : IntrinsicRename<"llvm.fma.v2f32", "air.fma.v2f32">;
-def : IntrinsicRename<"llvm.fma.v3f32", "air.fma.v3f32">;
-def : IntrinsicRename<"llvm.fma.v4f32", "air.fma.v4f32">;
+// Integer.
+def : AIRFunction<"llvm.smin", "min", 1>;
+def : AIRFunction<"llvm.smax", "max", 1>;
+def : AIRFunction<"llvm.umin", "min", 2>;
+def : AIRFunction<"llvm.umax", "max", 2>;
+def : AIRFunction<"llvm.abs", "abs", 1, 0, 1>;
+def : AIRFunction<"llvm.ctpop", "popcount">;
+def : AIRFunction<"llvm.ctlz", "clz">;
+def : AIRFunction<"llvm.cttz", "ctz">;
+def : AIRFunction<"llvm.bitreverse", "reverse_bits">;

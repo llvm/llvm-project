@@ -9,11 +9,14 @@
 #include "LLVMToAIRIntrinsics.h"
 #include "AIR.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringTable.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/InitializePasses.h"
 
 using namespace llvm;
@@ -22,17 +25,97 @@ using namespace llvm;
 
 namespace {
 // Layout must match the struct emitted by -gen-searchable-tables for the
-// IntrinsicRename class in AIRIntrinsicMappings.td.
-struct IntrinsicRename {
+// AIRFunction class in AIRIntrinsicMappings.td.
+struct AIRFunction {
   StringTable::Offset LLVMName;
   StringTable::Offset AIRName;
+  uint8_t Signedness;
+  bool HasFast;
+  uint8_t NumArgs;
+  bool Invertible;
 };
 } // namespace
 
 namespace {
-#define GET_AIRIntrinsicRenames_IMPL
+#define GET_AIRFunctions_IMPL
 #include "AIRGenAIRIntrinsicMappings.inc"
 } // namespace
+
+static const AIRFunction *lookupAIRFunction(StringRef LLVMBaseName) {
+  static const StringMap<const AIRFunction *> Map = [] {
+    StringMap<const AIRFunction *> M;
+    for (const AIRFunction &F : AIRFunctions)
+      M[getAIRFunctionStr(F.LLVMName)] = &F;
+    return M;
+  }();
+  auto It = Map.find(LLVMBaseName);
+  return It == Map.end() ? nullptr : It->second;
+}
+
+/// The AIR function a call to intrinsic F maps to, or "" if none: see
+/// AIRIntrinsicMappings.td for the naming scheme.
+static std::string getAIRName(const Function &F, const AIRFunction &Fn,
+                              bool Fast) {
+  StringRef Base = Intrinsic::getBaseName(F.getIntrinsicID());
+  StringRef Suffix = F.getName().drop_front(Base.size()); // ".v4f32"
+  std::string Name = "air.";
+  if (Fast)
+    Name += "fast_";
+  Name += getAIRFunctionStr(Fn.AIRName);
+  Name += '.';
+  if (Fn.Signedness == 1)
+    Name += "s.";
+  else if (Fn.Signedness == 2)
+    Name += "u.";
+  Name += Suffix.drop_front();
+  return Name;
+}
+
+static bool lowerToAIRFunctions(Module &M) {
+  bool Changed = false;
+  for (Function &F : make_early_inc_range(M)) {
+    if (!F.isIntrinsic())
+      continue;
+    const AIRFunction *Fn =
+        lookupAIRFunction(Intrinsic::getBaseName(F.getIntrinsicID()));
+    if (!Fn)
+      continue;
+    unsigned NumArgs = Fn->NumArgs ? Fn->NumArgs : F.arg_size();
+    FunctionType *FTy = FunctionType::get(
+        F.getReturnType(), F.getFunctionType()->params().take_front(NumArgs),
+        false);
+    for (User *U : make_early_inc_range(F.users())) {
+      auto *CI = dyn_cast<CallInst>(U);
+      if (!CI || CI->getCalledFunction() != &F)
+        continue;
+      // Relaxed AIR functions exist for float only.
+      bool Fast = Fn->HasFast && isa<FPMathOperator>(CI) &&
+                  CI->hasApproxFunc() &&
+                  CI->getType()->getScalarType()->isFloatTy();
+      FunctionCallee AIRF =
+          M.getOrInsertFunction(getAIRName(F, *Fn, Fast), FTy);
+      if (auto *AF = dyn_cast<Function>(AIRF.getCallee())) {
+        AF->setDoesNotThrow();
+        AF->setWillReturn();
+        AF->setDoesNotAccessMemory();
+      }
+      IRBuilder<> B(CI);
+      SmallVector<Value *, 3> Args(CI->args().begin(),
+                                   CI->args().begin() + NumArgs);
+      CallInst *New = B.CreateCall(AIRF, Args);
+      New->takeName(CI);
+      New->copyMetadata(*CI);
+      if (isa<FPMathOperator>(New))
+        New->setFastMathFlags(CI->getFastMathFlags());
+      CI->replaceAllUsesWith(New);
+      CI->eraseFromParent();
+      Changed = true;
+    }
+    if (F.use_empty())
+      F.eraseFromParent();
+  }
+  return Changed;
+}
 
 // Lower __mulhi(a, b) -> (i32)((zext64(a) * zext64(b)) >> 32).
 static bool lowerMulHi(Module &M) {
@@ -65,14 +148,7 @@ static bool lowerMulHi(Module &M) {
 }
 
 static bool llvmToAIRIntrinsics(Module &M) {
-  bool Changed = false;
-  for (const IntrinsicRename &Mapping : AIRIntrinsicRenames) {
-    if (Function *F =
-            M.getFunction(getIntrinsicRenameStr(Mapping.LLVMName))) {
-      F->setName(getIntrinsicRenameStr(Mapping.AIRName));
-      Changed = true;
-    }
-  }
+  bool Changed = lowerToAIRFunctions(M);
   Changed |= lowerMulHi(M);
   return Changed;
 }
