@@ -168,7 +168,11 @@ lldb::thread_result_t DebuggerThread::DebuggerThreadAttachRoutine(
 Status DebuggerThread::StopDebugging(bool terminate) {
   Status error;
 
-  lldb::pid_t pid = m_process.GetProcessId();
+  // Make a copy of the process, since the termination sequence will reset
+  // DebuggerThread's internal copy and it needs to remain open for the Wait
+  // operation.
+  HostProcess process_copy = GetProcess();
+  lldb::pid_t pid = process_copy.GetProcessId();
 
   Log *log = GetLog(WindowsLog::Process);
   LLDB_LOG(log, "terminate = {0}, inferior={1}.", terminate, pid);
@@ -179,11 +183,7 @@ Status DebuggerThread::StopDebugging(bool terminate) {
   if (!m_is_shutting_down.compare_exchange_strong(expected, true))
     return error;
 
-  // Make a copy of the process, since the termination sequence will reset
-  // DebuggerThread's internal copy and it needs to remain open for the Wait
-  // operation.
-  HostProcess process_copy = m_process;
-  lldb::process_t handle = m_process.GetNativeProcess().GetSystemHandle();
+  lldb::process_t handle = process_copy.GetNativeProcess().GetSystemHandle();
 
   if (terminate) {
     if (handle != nullptr && handle != LLDB_INVALID_PROCESS) {
@@ -215,12 +215,11 @@ Status DebuggerThread::StopDebugging(bool terminate) {
 
   if (!terminate) {
     // Indicate that we want to detach.
-    m_pid_to_detach = GetProcess().GetProcessId();
+    m_pid_to_detach = pid;
 
     // Force a fresh break so that the detach can happen from the debugger
     // thread.
-    if (!::DebugBreakProcess(
-            GetProcess().GetNativeProcess().GetSystemHandle())) {
+    if (!::DebugBreakProcess(handle)) {
       error = Status(::GetLastError(), eErrorTypeWin32);
     }
   }
@@ -267,7 +266,10 @@ void DebuggerThread::ContinueAsyncDllEvent() {
 }
 
 void DebuggerThread::FreeProcessHandles() {
-  m_process = HostProcess();
+  {
+    std::lock_guard<std::mutex> guard(m_process_mutex);
+    m_process = HostProcess();
+  }
   m_main_thread = HostThread();
   if (m_image_file) {
     ::CloseHandle(m_image_file);
@@ -526,9 +528,12 @@ DebuggerThread::HandleCreateProcessEvent(const CREATE_PROCESS_DEBUG_INFO &info,
 
   // info.hProcess and info.hThread are closed automatically by Windows when
   // EXIT_PROCESS_DEBUG_EVENT is received.
-  m_process = HostProcess(info.hProcess);
-  static_cast<HostProcessWindows &>(m_process.GetNativeProcess())
-      .SetOwnsHandle(false);
+  {
+    std::lock_guard<std::mutex> guard(m_process_mutex);
+    m_process = HostProcess(info.hProcess);
+    static_cast<HostProcessWindows &>(m_process.GetNativeProcess())
+        .SetOwnsHandle(false);
+  }
   m_main_thread = HostThread(info.hThread);
   m_main_thread.GetNativeThread().SetOwnsHandle(false);
   m_image_file = info.hFile;

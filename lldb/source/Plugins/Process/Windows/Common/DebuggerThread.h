@@ -33,7 +33,10 @@ public:
   Status DebugLaunch(const ProcessLaunchInfo &launch_info);
   Status DebugAttach(lldb::pid_t pid, const ProcessAttachInfo &attach_info);
 
-  HostProcess GetProcess() const { return m_process; }
+  HostProcess GetProcess() const {
+    std::lock_guard<std::mutex> guard(m_process_mutex);
+    return m_process;
+  }
   HostThread GetMainThread() const { return m_main_thread; }
 
   /// The path the process was created with, as recorded in its process
@@ -76,6 +79,7 @@ private:
   DebugDelegateSP m_debug_delegate;
 
   HostProcess m_process;    // The process being debugged.
+  mutable std::mutex m_process_mutex; // Guards m_process.
   HostThread m_main_thread; // The main thread of the inferior.
 
   // The image file of the process being debugged.
