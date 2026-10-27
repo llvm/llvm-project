@@ -967,9 +967,9 @@ Expr<LogicalResult> FoldOperation(
     FoldingContext &context, Relational<T> &&relation) {
   if (auto array{ApplyElementwise(context, relation,
           std::function<Expr<LogicalResult>(Expr<T> &&, Expr<T> &&)>{
-              [=](Expr<T> &&x, Expr<T> &&y) {
+              [opr{relation.opr}](Expr<T> &&x, Expr<T> &&y) {
                 return Expr<LogicalResult>{Relational<SomeType>{
-                    Relational<T>{relation.opr, std::move(x), std::move(y)}}};
+                    Relational<T>{opr, std::move(x), std::move(y)}}};
               }})}) {
     return *array;
   }
@@ -1025,9 +1025,10 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldOperation(
   using LOGICAL = Type<TypeCategory::Logical, KIND>;
   if (auto array{ApplyElementwise(context, operation,
           std::function<Expr<LOGICAL>(Expr<LOGICAL> &&, Expr<LOGICAL> &&)>{
-              [=](Expr<LOGICAL> &&x, Expr<LOGICAL> &&y) {
+              [logicalOperator{operation.logicalOperator}](
+                  Expr<LOGICAL> &&x, Expr<LOGICAL> &&y) {
                 return Expr<LOGICAL>{LogicalOperation<KIND>{
-                    operation.logicalOperator, std::move(x), std::move(y)}};
+                    logicalOperator, std::move(x), std::move(y)}};
               }})}) {
     return *array;
   }
