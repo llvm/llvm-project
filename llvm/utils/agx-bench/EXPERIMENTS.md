@@ -39,6 +39,7 @@ cycles over a set (negative = faster) unless stated.
 | A9 | ZLUDA agx_libs: in the `_ta` tile GEMMs, load each B fragment just before its four matrix products (ZLUDA "tile GEMM with A transposed loads each B fragment...") | revert that ZLUDA commit (`gen_tile_gemm.py`) | K = 256: sgemm _ta -19% G13G / -8% G14G, hgemm _ta -32..-35% G13G / -1..-4% G14G (one sgemm _u_ta +0.8%); other variants moved +-10% both ways and keep their order | register pressure / spills (G14 `_tb` still spills 6 values at 128 GPRs) | cuBLAS sgemm / hgemm with transa = T |
 | A10 | ZLUDA agx_libs: in the 16-bit `_tb` tile GEMMs (C = A B^T: linear layers), load B first and each A fragment just before its products | revert that ZLUDA commit | K = 256: hgemm _tb -9..-13% on G14G (all four variants); G13G -12%..+21% (cf32_u_tb +21%), net ~+2% | register pressure | cuBLAS hgemm / gemmEx with transb = T on M2; check G13 cf32_u_tb |
 | A11 | ZLUDA cuBLAS sgemm with transa = T (single product, n >= 256, m, k >= 64): A^T written to scratch by agx_sgeam, then the untransposed tile kernel | `ZLUDA_AGX_GEMM_PRETRANSPOSE=0` (runtime) | tile kernel 22.7k -> 17.0k cycles per SIMD-group at K = 256 (G14G) for ~1.5 cycles per element of A transposed: break-even near n = 70 in the model | the model ignores bandwidth; a strided transpose is bandwidth-bound, so the threshold (256) is conservative | `cublasSgemm(T, N)` at 512..4096, with and without the variable |
+| A12 | ZLUDA cuBLAS sgemm split-K: single f32 products with <= 16 output tiles and K >= 1024 cut into S = min(16, 64 / tiles, K / 256) slices (one batched launch into scratch, then agx_sgeam sums into beta C) | `ZLUDA_AGX_GEMM_SPLITK=0` (runtime) | not measurable in agx_cost (one SIMD-group, not the spread over cores); expected ~S x on wall clock for 64 x 64 x 4096 minus S geam passes over m x n | the tile counts per core; that scratch traffic is cheap | `cublasSgemm` at 64x64x4096, 128x128x8192, 64x512x4096; watch the S elementwise geam launches (could become one reduction kernel) |
 
 ## Measured and rejected (model)
 
@@ -79,6 +80,7 @@ patent, which only a legal review can establish. Techniques already shipped in o
 | 1 | Magni, Dubach, O'Boyle, thread coarsening studies (Edinburgh) | papers (university repository) | R1-E6 (deferred) |
 | 1 | Lee et al., many-thread-aware prefetching for GPGPUs, MICRO 2010; NVIDIA developer blog on prefetching | paper, public blog | R12 |
 | 1 | "Characterizing Warp Divergence from Pascal to Blackwell" (arXiv); NVIDIA Research, SPMD divergence management (2014) | open-access papers | R11 |
+| 2 | Osama, Merrill, Cecka, Garland, "Stream-K", PPoPP 2023 (arXiv 2301.03598) | open-access paper (motivation only; the implementation is plain split-K as in open-source BLAS libraries) | A12 |
 | 1 | Tillet, Kung, Cox, Triton (MAPL 2019); ML-Triton (arXiv 2503.14985) | open-access papers | background |
 
 ## Compile time (policy)
