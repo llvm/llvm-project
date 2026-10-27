@@ -683,10 +683,9 @@ public:
 
 /// Reads \p MI's MMRAs to parse the "amdgpu-synchronize-as" MMRA.
 /// If this tag isn't present, or if it has no meaningful values, returns
-/// \p none, otherwise returns the address spaces specified by the MD.
+/// \p ATOMIC, otherwise returns the address spaces specified by the MD.
 /// Issues a diagnostic if an unexpected suffix is observed for the MMRA tag.
-static std::optional<SIAtomicAddrSpace>
-getSynchronizeAddrSpaceMD(const MachineInstr &MI) {
+static SIAtomicAddrSpace getSynchronizeAddrSpaceMD(const MachineInstr &MI) {
   return getSynchronizeAddrSpace(MMRAMetadata(MI.getMMRAMetadata()),
                                  &MI.getMF()->getFunction(), MI.getDebugLoc());
 }
@@ -910,9 +909,7 @@ SIMemOpAccess::getAtomicFenceInfo(const MachineBasicBlock::iterator &MI) const {
     return std::nullopt;
   }
 
-  auto SynchronizeAS = getSynchronizeAddrSpaceMD(*MI);
-  if (SynchronizeAS)
-    OrderingAddrSpace = *SynchronizeAS;
+  OrderingAddrSpace = getSynchronizeAddrSpaceMD(*MI);
 
   return SIMemOpInfo(ST, Ordering, Scope, OrderingAddrSpace,
                      SIAtomicAddrSpace::ATOMIC, IsCrossAddressSpaceOrdering,
