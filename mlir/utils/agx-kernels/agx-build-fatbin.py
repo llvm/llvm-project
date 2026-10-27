@@ -9,7 +9,7 @@ The kernel source names no chip. It is compiled through AIR, the same for every 
            --reconcile-unrealized-casts
   mlir-translate --mlir-to-llvmir   (the functions of the gpu.module)
   opt -mtriple=air -passes=air-portable            (AIR's portable passes)
-  opt -mtriple=agx -mcpu=CHIP -O3                  (agx-lower-air first)
+  opt -mtriple=agx -mcpu=CHIP -O3                  (agx-lower-air first; one run shared by the G13 and G14 chips)
   llc -mtriple=agx -mcpu=CHIP -O3 -filetype=obj
 
 With --agx-strict (the default), each G13 and G14 chip also gets an entry named "CHIP+agx-strict", compiled with the
@@ -75,12 +75,23 @@ def portable_air(a, src, tmp):
     return portable
 
 
-def compile_for(a, chip, tmp, features=""):
-    name = chip + features
+# AGX's IR-level target hooks (TargetTransformInfo, agx-lower-air) differ between chips only in the GPR count, which
+# is 128 on G13 and G14 as on the generic CPU: those chips share one opt -O3 run per feature string, made without
+# -mcpu so that no target-cpu attribute overrides llc's. Other chips get their own.
+SHARED_OPT = ("agx-g13", "agx-g14")
+
+
+def optimize(a, chip, tmp, features):
     mattr = ["-mattr=" + features] if features else []
-    optimized = os.path.join(tmp, name + ".opt.bc")
-    subprocess.run([a.opt, "-mtriple=agx", "-mcpu=" + chip, *mattr, "-O3", a.portable, "-o", optimized], check=True)
-    obj = os.path.join(tmp, name + ".o")
+    cpu = [] if chip is None else ["-mcpu=" + chip]
+    optimized = os.path.join(tmp, (chip or "shared") + features + ".opt.bc")
+    subprocess.run([a.opt, "-mtriple=agx", *cpu, *mattr, "-O3", a.portable, "-o", optimized], check=True)
+    return optimized
+
+
+def compile_for(a, chip, tmp, features, optimized):
+    mattr = ["-mattr=" + features] if features else []
+    obj = os.path.join(tmp, chip + features + ".o")
     subprocess.run([a.llc, "-mtriple=agx", "-mcpu=" + chip, *mattr, "-O3", "-filetype=obj", optimized, "-o", obj],
                    check=True)
     return open(obj, "rb").read()
@@ -126,7 +137,15 @@ def main():
             builds += [(c, STRICT) for c in chips if c.startswith(("agx-g13", "agx-g14"))]
         # The builds are independent opt and llc processes: run them side by side.
         with concurrent.futures.ThreadPoolExecutor(a.jobs) as pool:
-            objs = list(pool.map(lambda b: compile_for(a, b[0], tmp, b[1]), builds))
+            opts = {}
+            for c, f in builds:
+                key = (None if c.startswith(SHARED_OPT) else c, f)
+                if key not in opts:
+                    opts[key] = pool.submit(optimize, a, key[0], tmp, f)
+            objs = list(pool.map(
+                lambda b: compile_for(a, b[0], tmp, b[1],
+                                      opts[(None if b[0].startswith(SHARED_OPT) else b[0], b[1])].result()),
+                builds))
         objects = [(c + f, o) for (c, f), o in zip(builds, objs)]
     open(a.out, "wb").write(pack(objects))
     return 0
