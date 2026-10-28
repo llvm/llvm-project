@@ -1,8 +1,8 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1150 -global-isel=1 -global-isel-abort=1 -verify-machineinstrs -stop-after=ir-translator %s -o - | FileCheck %s --check-prefix=TRANSLATE
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -global-isel=1 -global-isel-abort=1 -verify-machineinstrs -stop-after=legalizer %s -o - | FileCheck %s --check-prefix=FALSE --implicit-check-not=G_IS_DEBUGGING_ENABLED --implicit-check-not=amdgcn.s.getreg --implicit-check-not=S_CBRANCH_CDBG
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1150 -global-isel=1 -global-isel-abort=1 -verify-machineinstrs -stop-after=legalizer %s -o - | FileCheck %s --check-prefix=CUSTOM --implicit-check-not=G_IS_DEBUGGING_ENABLED --implicit-check-not=S_CBRANCH_CDBG
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1150 -global-isel=0 -verify-machineinstrs -stop-after=finalize-isel %s -o - | FileCheck %s --check-prefix=SELECTED --implicit-check-not=S_GETREG_B32
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1150 -global-isel=1 -global-isel-abort=1 -verify-machineinstrs -stop-after=finalize-isel %s -o - | FileCheck %s --check-prefix=SELECTED --implicit-check-not=S_GETREG_B32
+; RUN: llc -mtriple=amdgpu11.50-amd-amdhsa -mcpu=gfx1150 -global-isel=1 -global-isel-abort=1 -verify-machineinstrs -stop-after=ir-translator %s -o - | FileCheck %s --check-prefix=TRANSLATE
+; RUN: llc -mtriple=amdgpu9.00-amd-amdhsa -mcpu=gfx900 -global-isel=1 -global-isel-abort=1 -verify-machineinstrs -stop-after=legalizer %s -o - | FileCheck %s --check-prefix=FALSE --implicit-check-not=G_IS_DEBUGGING_ENABLED --implicit-check-not=amdgcn.s.getreg --implicit-check-not=S_CBRANCH_CDBG
+; RUN: llc -mtriple=amdgpu11.50-amd-amdhsa -mcpu=gfx1150 -global-isel=1 -global-isel-abort=1 -verify-machineinstrs -stop-after=legalizer %s -o - | FileCheck %s --check-prefix=CUSTOM --implicit-check-not=G_IS_DEBUGGING_ENABLED --implicit-check-not=S_CBRANCH_CDBG
+; RUN: llc -mtriple=amdgpu11.50-amd-amdhsa -mcpu=gfx1150 -global-isel=0 -verify-machineinstrs -stop-after=finalize-isel %s -o - | FileCheck %s --check-prefix=SELECTED --implicit-check-not=S_GETREG_B32
+; RUN: llc -mtriple=amdgpu11.50-amd-amdhsa -mcpu=gfx1150 -global-isel=1 -global-isel-abort=1 -verify-machineinstrs -stop-after=finalize-isel %s -o - | FileCheck %s --check-prefix=SELECTED --implicit-check-not=S_GETREG_B32
 
 declare i1 @llvm.is.debugging.enabled()
 declare void @llvm.debugtrap()

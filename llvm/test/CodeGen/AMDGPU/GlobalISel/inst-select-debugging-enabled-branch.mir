@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O0 -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=amdgpu13.10-amd-amdhsa -mcpu=gfx1310 -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=amdgpu13.10-amd-amdhsa -mcpu=gfx1310 -O0 -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s
 
 ---
 name: negated_fallthrough
