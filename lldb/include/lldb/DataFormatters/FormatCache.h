@@ -10,11 +10,11 @@
 #ifndef LLDB_DATAFORMATTERS_FORMATCACHE_H
 #define LLDB_DATAFORMATTERS_FORMATCACHE_H
 
-#include <mutex>
-
 #include "lldb/lldb-public.h"
 
 #include "llvm/ADT/StringMap.h"
+
+#include <mutex>
 
 namespace lldb_private {
 class FormatCache {
