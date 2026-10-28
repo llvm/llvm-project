@@ -25,7 +25,99 @@ static cl::opt<unsigned> MaxStoreVectorBytes(
     "agx-max-store-vector-bytes", cl::init(16), cl::Hidden,
     cl::desc("The widest store the load/store vectorizer makes (bytes)"));
 
-unsigned AGXTTIImpl::maxStoreVectorBytes() { return MaxStoreVectorBytes; }
+static cl::opt<int> StorePressureLimit(
+    "agx-store-vector-pressure", cl::init(-1), cl::Hidden,
+    cl::desc("Merge no stores in functions whose estimated register "
+             "pressure (32-bit registers) is at least this (0: no limit; "
+             "-1, the default: the general purpose registers of the "
+             "subtarget)"));
+
+/// The most 32-bit registers that IR values hold at once in F: SSA liveness,
+/// each value by its size (at least one register).
+static unsigned estimatePressure(const Function &F) {
+  const DataLayout &DL = F.getDataLayout();
+  auto Size = [&](const Value *V) -> unsigned {
+    Type *T = V->getType();
+    if (T->isVoidTy() || T->isLabelTy() || T->isTokenTy() || T->isMetadataTy())
+      return 0;
+    return std::max<uint64_t>(1, divideCeil(DL.getTypeSizeInBits(T), 32));
+  };
+  auto Tracked = [](const Value *V) {
+    return isa<Instruction>(V) || isa<Argument>(V);
+  };
+  // Live-in sets by backward dataflow over the blocks.
+  DenseMap<const BasicBlock *, SmallPtrSet<const Value *, 32>> LiveIn;
+  for (bool Changed = true; Changed;) {
+    Changed = false;
+    for (const BasicBlock &BB : reverse(F)) {
+      SmallPtrSet<const Value *, 32> Live;
+      for (const BasicBlock *Succ : successors(&BB)) {
+        for (const Value *V : LiveIn[Succ])
+          Live.insert(V);
+        for (const PHINode &P : Succ->phis()) {
+          Live.erase(&P);
+          if (const Value *In = P.getIncomingValueForBlock(&BB); Tracked(In))
+            Live.insert(In);
+        }
+      }
+      for (const Instruction &I : reverse(BB)) {
+        Live.erase(&I);
+        if (!isa<PHINode>(I))
+          for (const Value *Op : I.operands())
+            if (Tracked(Op))
+              Live.insert(Op);
+      }
+      auto &Old = LiveIn[&BB];
+      if (Old.size() != Live.size()) {
+        Old = Live;
+        Changed = true;
+      }
+    }
+  }
+  unsigned Max = 0;
+  for (const BasicBlock &BB : F) {
+    SmallPtrSet<const Value *, 32> Live;
+    for (const BasicBlock *Succ : successors(&BB)) {
+      for (const Value *V : LiveIn[Succ])
+        Live.insert(V);
+      for (const PHINode &P : Succ->phis()) {
+        Live.erase(&P);
+        if (const Value *In = P.getIncomingValueForBlock(&BB); Tracked(In))
+          Live.insert(In);
+      }
+    }
+    unsigned Cur = 0;
+    for (const Value *V : Live)
+      Cur += Size(V);
+    Max = std::max(Max, Cur);
+    for (const Instruction &I : reverse(BB)) {
+      if (Live.erase(&I))
+        Cur -= Size(&I);
+      if (!isa<PHINode>(I))
+        for (const Value *Op : I.operands())
+          if (Tracked(Op) && Live.insert(Op).second)
+            Cur += Size(Op);
+      Max = std::max(Max, Cur);
+    }
+  }
+  return Max;
+}
+
+unsigned AGXTTIImpl::maxStoreVectorBytes() const {
+  // A kernel whose values nearly fill the register file: the vector
+  // stores' consecutive registers cost copies and spills (16 stores merged
+  // into 4: 122 -> 128 GPRs and spills, +300%; sgemm_reg4x4 -28% tput
+  // without them), more than the issue slots they save.
+  unsigned Limit = StorePressureLimit < 0 ? ST->getMaxGPRs()
+                                          : unsigned(StorePressureLimit);
+  if (Limit) {
+    if (!Pressure)
+      Pressure = estimatePressure(*Fn);
+    if (*Pressure >= Limit)
+      return 4;
+  }
+  return MaxStoreVectorBytes;
+}
 
 static cl::opt<unsigned> AGXThreadgroupUnroll(
     "agx-threadgroup-unroll", cl::init(0), cl::Hidden,

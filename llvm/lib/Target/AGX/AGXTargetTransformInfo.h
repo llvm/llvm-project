@@ -20,6 +20,8 @@ class AGXTTIImpl final : public BasicTTIImplBase<AGXTTIImpl> {
 
   const AGXSubtarget *ST;
   const AGXTargetLowering *TLI;
+  const Function *Fn;
+  mutable std::optional<unsigned> Pressure;
 
   const AGXSubtarget *getST() const { return ST; }
   const AGXTargetLowering *getTLI() const { return TLI; }
@@ -27,7 +29,7 @@ class AGXTTIImpl final : public BasicTTIImplBase<AGXTTIImpl> {
 public:
   explicit AGXTTIImpl(const AGXTargetMachine *TM, const Function &F)
       : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl(F)),
-        TLI(ST->getTargetLowering()) {}
+        TLI(ST->getTargetLowering()), Fn(&F) {}
 
   bool hasBranchDivergence(const Function *F = nullptr) const override {
     return true;
@@ -75,7 +77,10 @@ public:
     return vectorizableChain(ChainSizeInBytes, Alignment, AS) &&
            ChainSizeInBytes <= maxStoreVectorBytes();
   }
-  static unsigned maxStoreVectorBytes();
+  /// The widest store chain worth merging in this function: a vector store
+  /// takes its values in consecutive registers, which costs copies and
+  /// spills where the registers are nearly all live.
+  unsigned maxStoreVectorBytes() const;
   static bool vectorizableChain(unsigned Bytes, Align Alignment, unsigned AS) {
     return Alignment >= Align(4) && Bytes % 4 == 0 && Bytes <= 16 &&
            (AS == AGX::DEVICE_ADDRESS || AS == AGX::THREADGROUP_ADDRESS);
