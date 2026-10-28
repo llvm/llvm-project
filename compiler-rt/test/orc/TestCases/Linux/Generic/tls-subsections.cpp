@@ -13,8 +13,7 @@ thread_local int Data = 7;
 thread_local int Zero;
 thread_local int LinkOnceData
     __attribute__((section(".gnu.linkonce.td.data"))) = 11;
-thread_local int LinkOnceZero
-    __attribute__((section(".gnu.linkonce.tb.zero")));
+thread_local int LinkOnceZero __attribute__((section(".gnu.linkonce.tb.zero")));
 
 inline int &inlineData() {
   static thread_local int Value = 13;
