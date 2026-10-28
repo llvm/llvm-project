@@ -10,15 +10,20 @@
 // into the calling function.
 //===----------------------------------------------------------------------===//
 
+#include "flang/Optimizer/Builder/CUFCommon.h"
 #include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/Complex.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/IntrinsicCall.h"
+#include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/HLFIR/Passes.h"
+#include "flang/Optimizer/Support/AllocationPolicy.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Location.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -2445,22 +2450,64 @@ getVariable(fir::FirOpBuilder &builder, mlir::Location loc, mlir::Value val) {
   return {associate.getBase(), associate};
 }
 
-// A boxchar cannot carry volatility, so a dynamic-length character variable
-// only shows it on its FIR base or on the variable it designates.
+// A boxchar cannot carry volatility, and fir.box_addr drops it from a
+// POINTER/ALLOCATABLE descriptor, so follow the operand back through
+// emboxchar/box_addr/load/convert/designate to the hlfir.declare it comes
+// from and check the volatile attribute there.
 static bool isVolatileCharacter(hlfir::Entity var) {
-  if (fir::isa_volatile_type(var.getType()) ||
-      fir::isa_volatile_type(var.getFirBase().getType()))
-    return true;
-  if (auto designate = var.getDefiningOp<hlfir::DesignateOp>())
-    return isVolatileCharacter(hlfir::Entity{designate.getMemref()});
-  return false;
+  mlir::Value base = var;
+  while (true) {
+    if (fir::isa_volatile_type(base.getType()))
+      return true;
+    if (auto declare = base.getDefiningOp<hlfir::DeclareOp>()) {
+      auto attrs = declare.getFortranAttrs();
+      return fir::isa_volatile_type(declare.getMemref().getType()) ||
+             (attrs &&
+              fir::bitEnumContainsAny(
+                  *attrs, fir::FortranVariableFlagsEnum::fortran_volatile));
+    }
+    if (auto designate = base.getDefiningOp<hlfir::DesignateOp>())
+      base = designate.getMemref();
+    else if (auto embox = base.getDefiningOp<fir::EmboxCharOp>())
+      base = embox.getMemref();
+    else if (auto boxAddr = base.getDefiningOp<fir::BoxAddrOp>())
+      base = boxAddr.getVal();
+    else if (auto load = base.getDefiningOp<fir::LoadOp>())
+      base = load.getMemref();
+    else if (auto convert = base.getDefiningOp<fir::ConvertOp>())
+      base = convert.getValue();
+    else if (auto cast = base.getDefiningOp<fir::VolatileCastOp>())
+      base = cast.getValue();
+    else
+      return false;
+  }
 }
 
-// TRIM(x) of a character variable is x(1:LEN_TRIM(x)). Replace the operation
-// with a substring designator of x instead of the runtime call, which
-// allocates the result on the heap. Bufferization then copies the substring
-// into a stack temporary where a value is needed. Expressions are left to the
-// runtime: they have no storage to designate into.
+// TODO: share with the identical helpers in LoopTripCountVersioning.cpp.
+static bool isNoHostDeclareTarget(mlir::func::FuncOp func) {
+  auto iface = mlir::dyn_cast<mlir::omp::DeclareTargetInterface>(*func);
+  if (!iface)
+    return false;
+  mlir::omp::DeclareTargetAttr attr = iface.getDeclareTarget();
+  return attr &&
+         attr.getDeviceType() == mlir::omp::DeclareTargetDeviceType::nohost;
+}
+
+static bool runsOnDevice(mlir::Operation *op) {
+  if (cuf::isExecutingOnDevice(op) ||
+      op->getParentOfType<mlir::omp::TargetOp>())
+    return true;
+  auto func = op->getParentOfType<mlir::func::FuncOp>();
+  if (func && (cuf::isDeviceProcedure(func) || mlir::acc::isAccRoutine(func) ||
+               isNoHostDeclareTarget(func)))
+    return true;
+  auto offloadMod = op->getParentOfType<mlir::omp::OffloadModuleInterface>();
+  return offloadMod && offloadMod.getIsTargetDevice();
+}
+
+// Inline TRIM(x) of a character variable as a copy of x(1:LEN_TRIM(x)) into a
+// temporary placed by the allocation policy. Dynamic-size allocas are never
+// used: they are not reclaimed in CFG loops and are illegal on some devices.
 class CharTrimOpConversion : public mlir::OpRewritePattern<hlfir::CharTrimOp> {
 public:
   using mlir::OpRewritePattern<hlfir::CharTrimOp>::OpRewritePattern;
@@ -2471,26 +2518,56 @@ public:
     hlfir::Entity str{op.getChr()};
     if (!str.isVariable())
       return rewriter.notifyMatchFailure(op, "operand is not a variable");
+    if (str.isMutableBox())
+      return rewriter.notifyMatchFailure(op, "operand is not dereferenced");
+    // Lowering never produces a polymorphic character, but the verifier
+    // accepts fir.class<!fir.char<...>>, and translateToExtendedValue
+    // returns a BoxValue rather than a CharBoxValue for it.
+    if (str.isPolymorphic())
+      return rewriter.notifyMatchFailure(op, "operand is polymorphic");
     if (isVolatileCharacter(str))
       return rewriter.notifyMatchFailure(op, "operand is volatile");
 
     fir::FirOpBuilder builder{rewriter, op.getOperation()};
     const mlir::Location &loc = op->getLoc();
+    mlir::MLIRContext *ctx = builder.getContext();
+
+    // Decide where the temporary lives before emitting any IR. Only a
+    // constant-size temporary may go on the stack: a dynamic-size one would
+    // be allocated at the point of use and never reclaimed in a CFG loop.
+    auto charTy = mlir::cast<fir::CharacterType>(str.getFortranElementType());
+    fir::KindTy kind = charTy.getFKind();
+    fir::PendingAllocationInfo info;
+    info.isTemporary = true;
+    info.isDynamic = !charTy.hasConstantLen();
+    if (!info.isDynamic)
+      info.byteSize =
+          charTy.getLen() * builder.getKindMap().getCharacterBitsize(kind) / 8;
+    info.context = op;
+    // Keep the stack temporary small even under -fstack-arrays, as copy-in
+    // buffers do. Each site is bounded by small_array_threshold; the sum over
+    // sites is not budgeted here or by allocation-placement, which only
+    // reconsiders array allocations.
+    fir::AllocationPolicy policy = fir::getAllocationPolicy(op);
+    policy.stackArrays = false;
+    bool useStack =
+        !info.isDynamic && fir::shouldAllocateOnStack(info, policy,
+                                                      /*stackBytesUsed=*/0);
+    if (!useStack && runsOnDevice(op))
+      return rewriter.notifyMatchFailure(op, "heap temporary in device code");
+
     auto [exv, cleanup] = hlfir::translateToExtendedValue(loc, builder, str);
     assert(!cleanup && "variable to Exv should not produce cleanup");
     const fir::CharBoxValue *charBox = exv.getCharBox();
-    if (!charBox)
-      return rewriter.notifyMatchFailure(op, "operand is not a plain string");
+    assert(charBox && "scalar character variable must translate to CharBox");
 
     mlir::Type idxTy = builder.getIndexType();
     mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
     mlir::Value lenTrim =
         fir::factory::CharacterExprHelper{builder, loc}.createLenTrim(*charBox);
 
-    auto charTy = mlir::cast<fir::CharacterType>(str.getFortranElementType());
     // A dynamic-length character designator must be a boxchar.
-    mlir::Type substrTy =
-        fir::BoxCharType::get(builder.getContext(), charTy.getFKind());
+    mlir::Type substrTy = fir::BoxCharType::get(ctx, kind);
     auto substr = hlfir::DesignateOp::create(
         builder, loc, substrTy, str, /*component=*/{},
         /*compShape=*/mlir::Value{}, hlfir::DesignateOp::Subscripts{},
@@ -2498,7 +2575,28 @@ public:
         /*complexPart=*/std::nullopt, /*shape=*/mlir::Value{},
         /*typeParams=*/mlir::ValueRange{lenTrim},
         fir::FortranVariableFlagsAttr{});
-    mlir::Value result = hlfir::AsExprOp::create(builder, loc, substr);
+
+    // The temporary holds LEN_TRIM(x) characters. On the stack it is sized
+    // for the whole of x so that the allocation is constant and hoisted.
+    llvm::StringRef tmpName = ".tmp.trim";
+    auto dynCharTy = fir::CharacterType::getUnknownLen(ctx, kind);
+    mlir::Value temp;
+    if (useStack)
+      temp =
+          builder.createConvert(loc, fir::ReferenceType::get(dynCharTy),
+                                builder.createTemporary(loc, charTy, tmpName));
+    else
+      temp = builder.createHeapTemporary(loc, dynCharTy, tmpName, /*shape=*/{},
+                                         /*lenParams=*/{lenTrim});
+    auto declare = hlfir::DeclareOp::create(
+        builder, loc, temp, tmpName, /*shape=*/nullptr,
+        /*typeparams=*/mlir::ValueRange{lenTrim}, /*dummy_scope=*/nullptr,
+        /*storage=*/nullptr, /*storage_offset=*/0,
+        fir::FortranVariableFlagsAttr{});
+    hlfir::Entity tempVar{declare.getBase()};
+    hlfir::AssignOp::create(builder, loc, substr, tempVar);
+    mlir::Value result = hlfir::AsExprOp::create(
+        builder, loc, tempVar, builder.createBool(loc, !useStack));
     assert(result.getType() == op.getType() && "unexpected hlfir.expr type");
     rewriter.replaceOp(op, result);
     return mlir::success();

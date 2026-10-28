@@ -191,6 +191,7 @@
     if (lge(s,'00')) then
 
       ! CHECK-O0: fir.call @_FortranATrim
+      ! CHECK-O1-NOT: fir.call @_FortranATrim
       ! CHECK-O1: fir.iterate_while
 
       ! All the strings in SELECT CASE
@@ -286,6 +287,7 @@
     ! CHECK: fir.store %c-10_i32 to %[[N]] : !fir.ref<i32>
     n = -10
     ! CHECK-O0: fir.call @_FortranATrim(
+    ! CHECK-O1-NOT: fir.call @_FortranATrim(
     ! CHECK-O1: fir.iterate_while
     select case(trim(s))
     case default
@@ -300,6 +302,7 @@
     n = -2
 
     ! CHECK-O0: fir.call @_FortranATrim(
+    ! CHECK-O1-NOT: fir.call @_FortranATrim(
     ! CHECK-O1: fir.iterate_while
     select case(trim(s))
     end select
@@ -431,6 +434,7 @@
     ! CHECK: fir.is_present
     if (present(str)) then
       ! CHECK-O0: fir.call @_FortranATrim
+      ! CHECK-O1-NOT: fir.call @_FortranATrim
       ! CHECK-O1: fir.iterate_while
       select case (trim(str))
         ! == 'a'
