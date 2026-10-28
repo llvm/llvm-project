@@ -25,6 +25,7 @@
 
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/Function.h"
 
 #define DEBUG_TYPE "pisa-scope-selector"
 #define DEBUG_NAME "PISA Scope Selector"
