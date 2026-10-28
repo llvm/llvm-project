@@ -1912,8 +1912,7 @@ def note_unsatisfied_trait_reason
            "%ArrayType{is an array type}|"
            "%UnionType{is a union type}|"
            "%NotStructOrClass{is not a struct or class type}|"
-           "%OverridesAllPureVirtual{overrides all pure virtual functions from base class %1}|"
-           "%NotMarkedConst{is not marked 'const'}"
+           "%OverridesAllPureVirtual{overrides all pure virtual functions from base class %1}"
            "}0">;
 
 def warn_consteval_if_always_true : Warning<

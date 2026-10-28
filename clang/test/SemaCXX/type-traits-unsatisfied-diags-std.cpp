@@ -421,13 +421,11 @@ static_assert(std::is_const_v<int &>);
 
 static_assert(std::is_const_v<int>);
 // expected-error@-1 {{static assertion failed due to requirement 'std::is_const_v<int>'}} \
-// expected-note@-1 {{'int' is not const}} \
-// expected-note@-1 {{because it is not marked 'const'}}
+// expected-note@-1 {{'int' is not const}}
 
 static_assert(std::is_const<int>::value);
 // expected-error-re@-1 {{static assertion failed due to requirement 'std::{{.*}}is_const<int>::value'}} \
-// expected-note@-1 {{'int' is not const}} \
-// expected-note@-1 {{because it is not marked 'const'}}
+// expected-note@-1 {{'int' is not const}}
 
 namespace test_namespace {
     using namespace std;
@@ -552,13 +550,11 @@ namespace test_namespace {
 
     static_assert(is_const<int>::value);
     // expected-error-re@-1 {{static assertion failed due to requirement '{{.*}}is_const<int>::value'}} \
-    // expected-note@-1 {{'int' is not const}} \
-    // expected-note@-1 {{because it is not marked 'const'}}
+    // expected-note@-1 {{'int' is not const}}
 
     static_assert(is_const_v<int>);
     // expected-error@-1 {{static assertion failed due to requirement 'is_const_v<int>'}} \
-    // expected-note@-1 {{'int' is not const}} \
-    // expected-note@-1 {{because it is not marked 'const'}}
+    // expected-note@-1 {{'int' is not const}}
 }
 
 

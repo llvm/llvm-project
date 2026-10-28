@@ -147,8 +147,7 @@ static_assert(std::is_same<ExampleTypes::T, ExampleTypes::U>::value, "message");
 // expected-error@-1{{static assertion failed due to requirement 'std::is_same<int, float>::value': message}}
 static_assert(std::is_const<ExampleTypes::T>::value, "message");
 // expected-error@-1{{static assertion failed due to requirement 'std::is_const<int>::value': message}} \
-// expected-note@-1{{'ExampleTypes::T' (aka 'int') is not const}} \
-// expected-note@-1 {{because it is not marked 'const'}}
+// expected-note@-1{{'ExampleTypes::T' (aka 'int') is not const}}
 static_assert(!std::is_const<const ExampleTypes::T>::value, "message");
 // expected-error@-1{{static assertion failed due to requirement '!std::is_const<const int>::value': message}}
 static_assert(!(std::is_const<const ExampleTypes::T>::value), "message");
@@ -165,16 +164,13 @@ static_assert(std::is_same<decltype(std::is_const<const ExampleTypes::T>()), int
 // expected-error@-1{{static assertion failed due to requirement 'std::is_same<std::is_const<const int>, int>::value': message}}
 static_assert(std::is_const<decltype(ExampleTypes::T(3))>::value, "message");
 // expected-error@-1{{static assertion failed due to requirement 'std::is_const<int>::value': message}} \
-// expected-note@-1{{'decltype(ExampleTypes::T(3))' (aka 'int') is not const}} \
-// expected-note@-1{{because it is not marked 'const'}}
+// expected-note@-1{{'decltype(ExampleTypes::T(3))' (aka 'int') is not const}}
 static_assert(std::is_const<decltype(ExampleTypes::T())>::value, "message");
 // expected-error@-1{{static assertion failed due to requirement 'std::is_const<int>::value': message}} \
-// expected-note@-1{{'decltype(ExampleTypes::T())' (aka 'int') is not const}} \
-// expected-note@-1{{because it is not marked 'const'}}
+// expected-note@-1{{'decltype(ExampleTypes::T())' (aka 'int') is not const}}
 static_assert(std::is_const<decltype(ExampleTypes(3))>::value, "message");
 // expected-error@-1{{static assertion failed due to requirement 'std::is_const<ExampleTypes>::value': message}} \
-// expected-note@-1{{'decltype(ExampleTypes(3))' (aka 'ExampleTypes') is not const}} \
-// expected-note@-1{{because it is not marked 'const'}}
+// expected-note@-1{{'decltype(ExampleTypes(3))' (aka 'ExampleTypes') is not const}}
 struct BI_tag {};
 struct RAI_tag : BI_tag {};
 struct MyIterator {
@@ -215,12 +211,10 @@ template <class T>
 void foo3(T t) {
   static_assert(std::is_const<T>::value, "message");
   // expected-error-re@-1{{static assertion failed due to requirement 'std::is_const<(lambda at {{.*}}static-assert.cpp:{{[0-9]*}}:{{[0-9]*}})>::value': message}} \
-  // expected-note-re@-1{{'(lambda at {{.*}}static-assert.cpp:{{[0-9]*}}:{{[0-9]*}})' is not const}} \
-  // expected-note@-1{{because it is not marked 'const'}}
+  // expected-note-re@-1{{'(lambda at {{.*}}static-assert.cpp:{{[0-9]*}}:{{[0-9]*}})' is not const}}
   static_assert(std::is_const<decltype(t)>::value, "message");
   // expected-error-re@-1{{static assertion failed due to requirement 'std::is_const<(lambda at {{.*}}static-assert.cpp:{{[0-9]*}}:{{[0-9]*}})>::value': message}} \
-  // expected-note-re@-1{{'decltype(t)' (aka '(lambda at {{.*}}static-assert.cpp:{{[0-9]*}}:{{[0-9]*}})') is not const}} \
-  // expected-note@-1{{because it is not marked 'const'}}
+  // expected-note-re@-1{{'decltype(t)' (aka '(lambda at {{.*}}static-assert.cpp:{{[0-9]*}}:{{[0-9]*}})') is not const}}
 }
 void callFoo3() {
   foo3([]() {});
