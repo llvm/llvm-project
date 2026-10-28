@@ -408,6 +408,40 @@ def pm4add_i16x4 : RISCVBuiltin<"int64_t(_Vector<4, short>, _Vector<4, short>)">
 def pm4addu_u16x4 : RISCVBuiltin<"uint64_t(_Vector<4, unsigned short>, _Vector<4, unsigned short>)">;
 def pm4addsu_i16x4 : RISCVBuiltin<"int64_t(_Vector<4, short>, _Vector<4, unsigned short>)">;
 
+// Packed Multiplication with Horizontal Addition and Accumulate (32-bit)
+def pm4adda_i8x4 : RISCVBuiltin<"int(int, _Vector<4, signed char>, _Vector<4, signed char>)">;
+def pm4addau_u8x4 : RISCVBuiltin<"unsigned int(unsigned int, _Vector<4, unsigned char>, _Vector<4, unsigned char>)">;
+def pm4addasu_i8x4 : RISCVBuiltin<"int(int, _Vector<4, signed char>, _Vector<4, unsigned char>)">;
+def pm2adda_i16x2 : RISCVBuiltin<"int(int, _Vector<2, short>, _Vector<2, short>)">;
+def pm2adda_x_i16x2 : RISCVBuiltin<"int(int, _Vector<2, short>, _Vector<2, short>)">;
+def pm2addau_u16x2 : RISCVBuiltin<"unsigned int(unsigned int, _Vector<2, unsigned short>, _Vector<2, unsigned short>)">;
+def pmq2adda_i16x2 : RISCVBuiltin<"int(int, _Vector<2, short>, _Vector<2, short>)">;
+def pmqr2adda_i16x2 : RISCVBuiltin<"int(int, _Vector<2, short>, _Vector<2, short>)">;
+def pm2suba_i16x2 : RISCVBuiltin<"int(int, _Vector<2, short>, _Vector<2, short>)">;
+def pm2suba_x_i16x2 : RISCVBuiltin<"int(int, _Vector<2, short>, _Vector<2, short>)">;
+def pm2addasu_i16x2 : RISCVBuiltin<"int(int, _Vector<2, short>, _Vector<2, unsigned short>)">;
+
+// Packed Multiplication with Horizontal Addition and Accumulate (64-bit)
+def pm2adda_i16x4 : RISCVBuiltin<"_Vector<2, int>(_Vector<2, int>, _Vector<4, short>, _Vector<4, short>)">;
+def pm2adda_x_i16x4 : RISCVBuiltin<"_Vector<2, int>(_Vector<2, int>, _Vector<4, short>, _Vector<4, short>)">;
+def pm2addau_u16x4 : RISCVBuiltin<"_Vector<2, unsigned int>(_Vector<2, unsigned int>, _Vector<4, unsigned short>, _Vector<4, unsigned short>)">;
+def pmq2adda_i16x4 : RISCVBuiltin<"_Vector<2, int>(_Vector<2, int>, _Vector<4, short>, _Vector<4, short>)">;
+def pmqr2adda_i16x4 : RISCVBuiltin<"_Vector<2, int>(_Vector<2, int>, _Vector<4, short>, _Vector<4, short>)">;
+def pm2suba_i16x4 : RISCVBuiltin<"_Vector<2, int>(_Vector<2, int>, _Vector<4, short>, _Vector<4, short>)">;
+def pm2suba_x_i16x4 : RISCVBuiltin<"_Vector<2, int>(_Vector<2, int>, _Vector<4, short>, _Vector<4, short>)">;
+def pm2addasu_i16x4 : RISCVBuiltin<"_Vector<2, int>(_Vector<2, int>, _Vector<4, short>, _Vector<4, unsigned short>)">;
+def pm2adda_i32x2 : RISCVBuiltin<"int64_t(int64_t, _Vector<2, int>, _Vector<2, int>)">;
+def pm2adda_x_i32x2 : RISCVBuiltin<"int64_t(int64_t, _Vector<2, int>, _Vector<2, int>)">;
+def pm2addau_u32x2 : RISCVBuiltin<"uint64_t(uint64_t, _Vector<2, unsigned int>, _Vector<2, unsigned int>)">;
+def pmq2adda_i32x2 : RISCVBuiltin<"int64_t(int64_t, _Vector<2, int>, _Vector<2, int>)">;
+def pmqr2adda_i32x2 : RISCVBuiltin<"int64_t(int64_t, _Vector<2, int>, _Vector<2, int>)">;
+def pm2suba_i32x2 : RISCVBuiltin<"int64_t(int64_t, _Vector<2, int>, _Vector<2, int>)">;
+def pm2suba_x_i32x2 : RISCVBuiltin<"int64_t(int64_t, _Vector<2, int>, _Vector<2, int>)">;
+def pm2addasu_i32x2 : RISCVBuiltin<"int64_t(int64_t, _Vector<2, int>, _Vector<2, unsigned int>)">;
+def pm4adda_i16x4 : RISCVBuiltin<"int64_t(int64_t, _Vector<4, short>, _Vector<4, short>)">;
+def pm4addau_u16x4 : RISCVBuiltin<"uint64_t(uint64_t, _Vector<4, unsigned short>, _Vector<4, unsigned short>)">;
+def pm4addasu_i16x4 : RISCVBuiltin<"int64_t(int64_t, _Vector<4, short>, _Vector<4, unsigned short>)">;
+
 // Packed Widening Multiply Accumulate
 def pwmacc_i32x2 : RISCVBuiltin<"_Vector<2, int>(_Vector<2, int>, _Vector<2, short>, _Vector<2, short>)">;
 def pwmaccu_u32x2 : RISCVBuiltin<"_Vector<2, unsigned int>(_Vector<2, unsigned int>, _Vector<2, unsigned short>, _Vector<2, unsigned short>)">;
