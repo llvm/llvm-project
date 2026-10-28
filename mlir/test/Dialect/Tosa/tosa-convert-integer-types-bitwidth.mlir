@@ -4,8 +4,8 @@
 
 // CHECK-LABEL: func.func @clamp
 func.func @clamp(%arg: tensor<4xi48>) -> tensor<4xi48> {
-  // CHECK: tosa.clamp %{{.*}} min_val(-140737488355328 : i64) max_val(140737488355327 : i64) {test.marker = "keep"} : (tensor<4xi64>) -> tensor<4xi64>
-  %0 = tosa.clamp %arg min_val(-140737488355328 : i48) max_val(140737488355327 : i48) {test.marker = "keep"} : (tensor<4xi48>) -> tensor<4xi48>
+  // CHECK: tosa.clamp %{{.*}} min_val(-140737488355328 : i64) max_val(140737488355327 : i64) {test.unrelated_attribute_that_must_be_preserved = "keep"} : (tensor<4xi64>) -> tensor<4xi64>
+  %0 = tosa.clamp %arg min_val(-140737488355328 : i48) max_val(140737488355327 : i48) {test.unrelated_attribute_that_must_be_preserved = "keep"} : (tensor<4xi48>) -> tensor<4xi48>
   return %0 : tensor<4xi48>
 }
 
@@ -72,10 +72,10 @@ func.func private @mixed(%a: tensor<?xi48>, %b: tensor<*xi48>, %c: tensor<2xi32>
   return %b, %a, %c : tensor<*xi48>, tensor<?xi48>, tensor<2xi32>
 }
 // CHECK-LABEL: func.func @mixed_caller(
-// CHECK-SAME: %[[A:.*]]: tensor<?xi64>, %[[B:.*]]: tensor<*xi64>, %[[C:.*]]: tensor<2xi32>) -> (tensor<*xi64>, tensor<?xi64>, tensor<2xi32>) attributes {test.marker = "function"}
-func.func @mixed_caller(%a: tensor<?xi48>, %b: tensor<*xi48>, %c: tensor<2xi32>) -> (tensor<*xi48>, tensor<?xi48>, tensor<2xi32>) attributes {test.marker = "function"} {
-  // CHECK: %[[CALL:.*]]:3 = call @mixed(%[[A]], %[[B]], %[[C]]) {test.marker = "call"} : (tensor<?xi64>, tensor<*xi64>, tensor<2xi32>) -> (tensor<*xi64>, tensor<?xi64>, tensor<2xi32>)
-  %0:3 = func.call @mixed(%a, %b, %c) {test.marker = "call"} : (tensor<?xi48>, tensor<*xi48>, tensor<2xi32>) -> (tensor<*xi48>, tensor<?xi48>, tensor<2xi32>)
+// CHECK-SAME: %[[A:.*]]: tensor<?xi64>, %[[B:.*]]: tensor<*xi64>, %[[C:.*]]: tensor<2xi32>) -> (tensor<*xi64>, tensor<?xi64>, tensor<2xi32>) attributes {test.unrelated_attribute_that_must_be_preserved = "function"}
+func.func @mixed_caller(%a: tensor<?xi48>, %b: tensor<*xi48>, %c: tensor<2xi32>) -> (tensor<*xi48>, tensor<?xi48>, tensor<2xi32>) attributes {test.unrelated_attribute_that_must_be_preserved = "function"} {
+  // CHECK: %[[CALL:.*]]:3 = call @mixed(%[[A]], %[[B]], %[[C]]) {test.unrelated_attribute_that_must_be_preserved = "call"} : (tensor<?xi64>, tensor<*xi64>, tensor<2xi32>) -> (tensor<*xi64>, tensor<?xi64>, tensor<2xi32>)
+  %0:3 = func.call @mixed(%a, %b, %c) {test.unrelated_attribute_that_must_be_preserved = "call"} : (tensor<?xi48>, tensor<*xi48>, tensor<2xi32>) -> (tensor<*xi48>, tensor<?xi48>, tensor<2xi32>)
   // CHECK: return %[[CALL]]#0, %[[CALL]]#1, %[[CALL]]#2 : tensor<*xi64>, tensor<?xi64>, tensor<2xi32>
   return %0#0, %0#1, %0#2 : tensor<*xi48>, tensor<?xi48>, tensor<2xi32>
 }
