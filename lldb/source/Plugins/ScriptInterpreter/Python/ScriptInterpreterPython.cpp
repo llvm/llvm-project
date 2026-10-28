@@ -1022,12 +1022,11 @@ void ScriptInterpreterPythonImpl::IOHandlerInputComplete(IOHandler &io_handler,
     if (llvm::Error error = GenerateWatchpointCommandCallbackData(
             data_up->user_source, data_up->script_source,
             /*is_callback=*/false)) {
-      llvm::consumeError(std::move(error));
-      if (!batch_mode) {
-        if (LockableStreamFileSP error_sp = io_handler.GetErrorStreamFileSP()) {
-          LockedStreamFile locked_stream = error_sp->Lock();
-          locked_stream.Printf("Warning: No command attached to breakpoint.\n");
-        }
+      if (LockableStreamFileSP error_sp = io_handler.GetErrorStreamFileSP()) {
+        LockedStreamFile locked_stream = error_sp->Lock();
+        locked_stream << "error: " << llvm::toString(std::move(error)) << "\n";
+      } else {
+        llvm::consumeError(std::move(error));
       }
     } else {
       auto baton_sp =
