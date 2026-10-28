@@ -1,0 +1,33 @@
+## Check that --dx-pdb-in-private stores the generated PDB in the PRIV part.
+
+## File: --dx-pdb-path specifies the PDB output path.
+
+# RUN: llc %S/Inputs/SourceInfo.ll --filetype=obj -o %t.dxbc --dx-pdb-in-private --dx-pdb-path=%t.pdb
+# RUN: obj2yaml %t.dxbc | FileCheck %s
+# RUN: llvm-objcopy --dump-section=PRIV=%t.priv %t.dxbc
+# RUN: diff %t.pdb %t.priv
+# RUN: llvm-pdbutil pdb2yaml --dxcontainer %t.priv | FileCheck %s --check-prefix=PDB
+
+## Directory: --dx-pdb-path ending in '/' writes <md5>.pdb under that directory.
+
+# RUN: rm -rf %t.dir && mkdir %t.dir
+# RUN: llc %S/Inputs/SourceInfo.ll --filetype=obj -o %t.dir.dxbc --dx-pdb-in-private --dx-pdb-path=%t.dir/
+# RUN: obj2yaml %t.dir.dxbc | FileCheck %s
+# RUN: llvm-objcopy --dump-section=PRIV=%t.dir.priv %t.dir.dxbc
+# RUN: llvm-objcopy --dump-section=DXIL=%t.dir.bc %t.dir.dxbc
+# RUN: %md5sum %t.dir.bc >%t.dir.bc.md5
+# RUN: %python %S/Inputs/check_pdb_exists.py %t.dir %t.dir.bc.md5
+# RUN: cat %t.dir/*.pdb > %t.dir.pdb
+# RUN: diff %t.dir.pdb %t.dir.priv
+# RUN: llvm-pdbutil pdb2yaml --dxcontainer %t.dir.priv | FileCheck %s --check-prefix=PDB
+
+# CHECK:      - Name: PRIV
+# CHECK-NEXT:   Size:
+
+# PDB:       PartCount:       5
+# PDB:     Parts:
+# PDB-DAG:   - Name: ILDB
+# PDB-DAG:   - Name: HASH
+# PDB-DAG:   - Name: ILDN
+# PDB-DAG:   - Name: VERS
+# PDB-DAG:   - Name: SRCI

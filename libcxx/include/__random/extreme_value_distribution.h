@@ -10,9 +10,9 @@
 #define _LIBCPP___RANDOM_EXTREME_VALUE_DISTRIBUTION_H
 
 #include <__config>
+#include <__math/logarithms.h>
 #include <__random/is_valid.h>
 #include <__random/uniform_real_distribution.h>
-#include <cmath>
 #include <iosfwd>
 #include <limits>
 
@@ -43,8 +43,8 @@ public:
 
     _LIBCPP_HIDE_FROM_ABI explicit param_type(result_type __a = 0, result_type __b = 1) : __a_(__a), __b_(__b) {}
 
-    _LIBCPP_HIDE_FROM_ABI result_type a() const { return __a_; }
-    _LIBCPP_HIDE_FROM_ABI result_type b() const { return __b_; }
+    [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type a() const { return __a_; }
+    [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type b() const { return __b_; }
 
     friend _LIBCPP_HIDE_FROM_ABI bool operator==(const param_type& __x, const param_type& __y) {
       return __x.__a_ == __y.__a_ && __x.__b_ == __y.__b_;
@@ -70,21 +70,21 @@ public:
 
   // generating functions
   template <class _URNG>
-  _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g) {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g) {
     return (*this)(__g, __p_);
   }
   template <class _URNG>
-  _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g, const param_type& __p);
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g, const param_type& __p);
 
   // property functions
-  _LIBCPP_HIDE_FROM_ABI result_type a() const { return __p_.a(); }
-  _LIBCPP_HIDE_FROM_ABI result_type b() const { return __p_.b(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type a() const { return __p_.a(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type b() const { return __p_.b(); }
 
-  _LIBCPP_HIDE_FROM_ABI param_type param() const { return __p_; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI param_type param() const { return __p_; }
   _LIBCPP_HIDE_FROM_ABI void param(const param_type& __p) { __p_ = __p; }
 
-  _LIBCPP_HIDE_FROM_ABI result_type min() const { return -numeric_limits<result_type>::infinity(); }
-  _LIBCPP_HIDE_FROM_ABI result_type max() const { return numeric_limits<result_type>::infinity(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type min() const { return -numeric_limits<result_type>::infinity(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type max() const { return numeric_limits<result_type>::infinity(); }
 
   friend _LIBCPP_HIDE_FROM_ABI bool
   operator==(const extreme_value_distribution& __x, const extreme_value_distribution& __y) {
@@ -100,7 +100,7 @@ template <class _RealType>
 template <class _URNG>
 _RealType extreme_value_distribution<_RealType>::operator()(_URNG& __g, const param_type& __p) {
   static_assert(__libcpp_random_is_valid_urng<_URNG>::value, "");
-  return __p.a() - __p.b() * std::log(-std::log(1 - uniform_real_distribution<result_type>()(__g)));
+  return __p.a() - __p.b() * __math::log(-__math::log(1 - uniform_real_distribution<result_type>()(__g)));
 }
 
 template <class _CharT, class _Traits, class _RT>

@@ -1,5 +1,5 @@
 ; REQUIRES: amdgpu-registered-target
-; RUN: not opt -S -mtriple=amdgcn-amd-amdhsa -passes=hipstdpar-select-accelerator-code \
+; RUN: not opt -S -mtriple=amdgpu-amd-amdhsa -passes=hipstdpar-select-accelerator-code \
 ; RUN: %s 2>&1 | FileCheck %s
 
 ; CHECK: error: The Indirection Table must have 3 elements; 2 is incorrect.

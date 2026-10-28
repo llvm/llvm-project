@@ -486,8 +486,7 @@ bool ScopDetection::onlyValidRequiredInvariantLoads(
 
     for (auto NonAffineRegion : Context.NonAffineSubRegionSet) {
       if (isSafeToLoadUnconditionally(Load->getPointerOperand(),
-                                      Load->getType(), Load->getAlign(), DL,
-                                      nullptr))
+                                      Load->getType(), Load->getAlign(), DL))
         continue;
 
       if (NonAffineRegion->contains(Load) &&
@@ -872,7 +871,9 @@ ScopDetection::getDelinearizationTerms(DetectionContext &Context,
     std::vector<const SCEV *> MaxTerms;
     SCEVRemoveMax::rewrite(Pair.second, SE, &MaxTerms);
     if (!MaxTerms.empty()) {
-      Terms.insert(Terms.begin(), MaxTerms.begin(), MaxTerms.end());
+      for (const SCEV *Max : MaxTerms)
+        Terms.push_back(
+            SE.getTruncateOrSignExtend(Max, Pair.second->getType()));
       continue;
     }
     // In case the outermost expression is a plain add, we check if any of its
@@ -1417,7 +1418,7 @@ ScopDetection::countBeneficialLoops(Region *R, ScalarEvolution &SE,
   }
 
   auto SubLoops =
-      L ? L->getSubLoopsVector() : std::vector<Loop *>(LI.begin(), LI.end());
+      L ? L->getSubLoops() : std::vector<Loop *>(LI.begin(), LI.end());
 
   for (auto &SubLoop : SubLoops)
     if (R->contains(SubLoop)) {

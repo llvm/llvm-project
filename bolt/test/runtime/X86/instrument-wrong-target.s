@@ -6,7 +6,7 @@
 
 # RUN: llvm-mc -triple aarch64 -filetype=obj %s -o %t.o
 # RUN: ld.lld -q -pie -o %t.exe %t.o
-# RUN: not llvm-bolt --instrument -o %t.out %t.exe 2>&1 | FileCheck %s
+# RUN: not llvm-bolt --instrument --instrumentation-sleep-time=1 -o %t.out %t.exe 2>&1 | FileCheck %s
 
 # CHECK: BOLT-ERROR: linking object with arch x86_64 into context with arch aarch64
 
@@ -18,17 +18,3 @@ _start:
     .reloc 0, R_AARCH64_NONE
     ret
     .size _start, .-_start
-
-    .globl _init
-    .type _init, %function
-    # Force DT_INIT to be created (needed for instrumentation).
-_init:
-    ret
-    .size _init, .-_init
-
-    .globl _fini
-    .type _fini, %function
-    # Force DT_FINI to be created (needed for instrumentation).
-_fini:
-    ret
-    .size _fini, .-_fini

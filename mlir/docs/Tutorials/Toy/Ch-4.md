@@ -56,7 +56,7 @@ In this case, the interface is `DialectInlinerInterface`.
 
 ```c++
 /// This class defines the interface for handling inlining with Toy operations.
-/// We simplify inherit from the base interface class and override
+/// We simply inherit from the base interface class and override
 /// the necessary methods.
 struct ToyInlinerInterface : public DialectInlinerInterface {
   using DialectInlinerInterface::DialectInlinerInterface;
@@ -351,7 +351,8 @@ the operation definition specification (ODS) framework.
 The interface is defined by inheriting from `OpInterface`, which takes the name
 to be given to the generated C++ interface class as a template argument. For our
 purposes, we will simply name the generated class `ShapeInference`. We also
-provide a description for the interface.
+provide a description for the interface and the C++ namespace that the
+interface class should be generated in.
 
 ```tablegen
 def ShapeInferenceOpInterface : OpInterface<"ShapeInference"> {
@@ -359,6 +360,8 @@ def ShapeInferenceOpInterface : OpInterface<"ShapeInference"> {
     Interface to access a registered method to infer the return types for an
     operation that can be used during type inference.
   }];
+
+  let cppNamespace = "::mlir::toy";
 }
 ```
 

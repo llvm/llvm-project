@@ -56,6 +56,22 @@ This document describes the available MLIR passes and their contracts.
 
 [include "GPUPasses.md"]
 
+### NVVM-specific 'gpu' Dialect Passes
+
+[include "GPUNVVMPasses.md"]
+
+### ROCDL-specific 'gpu' Dialect Passes
+
+[include "GPUROCDLPasses.md"]
+
+### SPIR-V-specific 'gpu' Dialect Passes
+
+[include "GPUSPIRVPasses.md"]
+
+### XeVM-specific 'gpu' Dialect Passes
+
+[include "GPUXeVMPasses.md"]
+
 ## 'linalg' Dialect Passes
 
 [include "LinalgPasses.md"]
@@ -91,6 +107,10 @@ This document describes the available MLIR passes and their contracts.
 ## 'nvgpu' Dialect Passes
 
 [include "NVGPUPasses.md"]
+
+## 'nvvm' Dialect Passes
+
+[include "NVVMPasses.md"]
 
 ## 'quant' Dialect Passes
 

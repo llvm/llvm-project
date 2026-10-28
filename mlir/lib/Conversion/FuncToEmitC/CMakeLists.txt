@@ -9,6 +9,7 @@ add_mlir_conversion_library(MLIRFuncToEmitC
   MLIRConversionPassIncGen
 
   LINK_LIBS PUBLIC
+  MLIREmitCCommonConversion
   MLIREmitCDialect
   MLIRFuncDialect
   MLIRPass

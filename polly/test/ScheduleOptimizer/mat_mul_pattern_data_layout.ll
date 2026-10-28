@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=polly-custom<opt-isl>' -polly-pattern-matching-based-opts=true -polly-target-throughput-vector-fma=1 -polly-target-latency-vector-fma=8 -polly-target-1st-cache-level-associativity=8 -polly-target-2nd-cache-level-associativity=8 -polly-target-1st-cache-level-size=32768 -polly-target-2nd-cache-level-size=262144 -polly-optimized-scops -polly-target-vector-register-bitwidth=256 -disable-output < %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<opt-isl>' -plugin-arg=Polly,-polly-pattern-matching-based-opts=true -plugin-arg=Polly,-polly-target-throughput-vector-fma=1 -plugin-arg=Polly,-polly-target-latency-vector-fma=8 -plugin-arg=Polly,-polly-target-1st-cache-level-associativity=8 -plugin-arg=Polly,-polly-target-2nd-cache-level-associativity=8 -plugin-arg=Polly,-polly-target-1st-cache-level-size=32768 -plugin-arg=Polly,-polly-target-2nd-cache-level-size=262144 -plugin-arg=Polly,-polly-optimized-scops -plugin-arg=Polly,-polly-target-vector-register-bitwidth=256 -disable-output < %s
 ;
 ;    /* C := alpha*A*B + beta*C */
 ;    for (i = 0; i < _PB_NI; i++)

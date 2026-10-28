@@ -41,8 +41,8 @@ body:             |
     ; CHECK-TINY-NEXT: {{  $}}
     ; CHECK-TINY-NEXT: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm -1234
     ; CHECK-TINY-NEXT: $w0 = COPY [[MOVi32imm]]
-    %0(s32) = G_CONSTANT i32 -1234
-    $w0 = COPY %0(s32)
+    %0(i32) = G_CONSTANT i32 -1234
+    $w0 = COPY %0(i32)
 ...
 
 ---
@@ -71,8 +71,8 @@ body:             |
     ; CHECK-TINY-NEXT: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 1234
     ; CHECK-TINY-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64all = SUBREG_TO_REG [[MOVi32imm]], %subreg.sub_32
     ; CHECK-TINY-NEXT: $x0 = COPY [[SUBREG_TO_REG]]
-    %0(s64) = G_CONSTANT i64 1234
-    $x0 = COPY %0(s64)
+    %0(i64) = G_CONSTANT i64 1234
+    $x0 = COPY %0(i64)
 ...
 
 # 64b FP immediates need to be loaded.

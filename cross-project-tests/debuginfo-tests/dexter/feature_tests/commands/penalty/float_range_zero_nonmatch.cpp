@@ -5,7 +5,7 @@
 // UNSUPPORTED: system-darwin
 //
 // RUN: %dexter_regression_test_cxx_build %s -o %t
-// RUN: not %dexter_regression_test_run --binary %t -- %s | FileCheck %s
+// RUN: not %dexter_regression_test_run --use-heuristic --binary %t -- %s | FileCheck %s
 // CHECK: float_range_zero_nonmatch.cpp:
 
 int main() {

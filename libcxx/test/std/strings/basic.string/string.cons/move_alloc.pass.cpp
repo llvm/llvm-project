@@ -61,6 +61,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
 #endif
     S s1("Twas brillig, and the slivy toves did gyre and gymbal in the wabe", A(&alloc_stats));
     S s2(std::move(s1), A(1, &alloc_stats));
+    (void)s2;
   }
   assert(alloc_stats.alloc_count == alloc_count);
   {

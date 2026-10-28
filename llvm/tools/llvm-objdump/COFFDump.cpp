@@ -62,33 +62,32 @@ objdump::createCOFFDumper(const object::COFFObjectFile &Obj) {
   return std::make_unique<COFFDumper>(Obj);
 }
 
-constexpr EnumEntry<uint16_t> PEHeaderMagic[] = {
-    {"PE32", uint16_t(COFF::PE32Header::PE32)},
-    {"PE32+", uint16_t(COFF::PE32Header::PE32_PLUS)},
+constexpr EnumStringDef<uint16_t> PEHeaderMagicDefs[] = {
+    {{"PE32"}, uint16_t(COFF::PE32Header::PE32)},
+    {{"PE32+"}, uint16_t(COFF::PE32Header::PE32_PLUS)},
 };
+constexpr auto PEHeaderMagic = BUILD_ENUM_STRINGS(PEHeaderMagicDefs);
 
-constexpr EnumEntry<COFF::WindowsSubsystem> PEWindowsSubsystem[] = {
-    {"unspecified", COFF::IMAGE_SUBSYSTEM_UNKNOWN},
-    {"NT native", COFF::IMAGE_SUBSYSTEM_NATIVE},
-    {"Windows GUI", COFF::IMAGE_SUBSYSTEM_WINDOWS_GUI},
-    {"Windows CUI", COFF::IMAGE_SUBSYSTEM_WINDOWS_CUI},
-    {"POSIX CUI", COFF::IMAGE_SUBSYSTEM_POSIX_CUI},
-    {"Wince CUI", COFF::IMAGE_SUBSYSTEM_WINDOWS_CE_GUI},
-    {"EFI application", COFF::IMAGE_SUBSYSTEM_EFI_APPLICATION},
-    {"EFI boot service driver", COFF::IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER},
-    {"EFI runtime driver", COFF::IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER},
-    {"SAL runtime driver", COFF::IMAGE_SUBSYSTEM_EFI_ROM},
-    {"XBOX", COFF::IMAGE_SUBSYSTEM_XBOX},
+constexpr EnumStringDef<COFF::WindowsSubsystem> PEWindowsSubsystemDefs[] = {
+    {{"unspecified"}, COFF::IMAGE_SUBSYSTEM_UNKNOWN},
+    {{"NT native"}, COFF::IMAGE_SUBSYSTEM_NATIVE},
+    {{"Windows GUI"}, COFF::IMAGE_SUBSYSTEM_WINDOWS_GUI},
+    {{"Windows CUI"}, COFF::IMAGE_SUBSYSTEM_WINDOWS_CUI},
+    {{"POSIX CUI"}, COFF::IMAGE_SUBSYSTEM_POSIX_CUI},
+    {{"Wince CUI"}, COFF::IMAGE_SUBSYSTEM_WINDOWS_CE_GUI},
+    {{"EFI application"}, COFF::IMAGE_SUBSYSTEM_EFI_APPLICATION},
+    {{"EFI boot service driver"},
+     COFF::IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER},
+    {{"EFI runtime driver"}, COFF::IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER},
+    {{"SAL runtime driver"}, COFF::IMAGE_SUBSYSTEM_EFI_ROM},
+    {{"XBOX"}, COFF::IMAGE_SUBSYSTEM_XBOX},
 };
+constexpr auto PEWindowsSubsystem = BUILD_ENUM_STRINGS(PEWindowsSubsystemDefs);
 
 template <typename T, typename TEnum>
-static void printOptionalEnumName(T Value,
-                                  ArrayRef<EnumEntry<TEnum>> EnumValues) {
-  for (const EnumEntry<TEnum> &I : EnumValues)
-    if (I.Value == Value) {
-      outs() << "\t(" << I.Name << ')';
-      return;
-    }
+static void printOptionalEnumName(T Value, EnumStrings<TEnum> EnumValues) {
+  if (StringRef Name = EnumValues.toString(Value); !Name.empty())
+    outs() << "\t(" << Name << ')';
 }
 
 template <class PEHeader>
@@ -105,7 +104,7 @@ void COFFDumper::printPEHeader(const PEHeader &Hdr) const {
   };
 
   printU16("Magic", Hdr.Magic, "%04x");
-  printOptionalEnumName(Hdr.Magic, ArrayRef(PEHeaderMagic));
+  printOptionalEnumName(Hdr.Magic, EnumStrings(PEHeaderMagic));
   outs() << '\n';
   print("MajorLinkerVersion", Hdr.MajorLinkerVersion);
   print("MinorLinkerVersion", Hdr.MinorLinkerVersion);
@@ -130,7 +129,7 @@ void COFFDumper::printPEHeader(const PEHeader &Hdr) const {
   printU32("SizeOfHeaders", Hdr.SizeOfHeaders, "%08x\n");
   printU32("CheckSum", Hdr.CheckSum, "%08x\n");
   printU16("Subsystem", Hdr.Subsystem, "%08x");
-  printOptionalEnumName(Hdr.Subsystem, ArrayRef(PEWindowsSubsystem));
+  printOptionalEnumName(Hdr.Subsystem, EnumStrings(PEWindowsSubsystem));
   outs() << '\n';
 
   printU16("DllCharacteristics", Hdr.DLLCharacteristics, "%08x\n");

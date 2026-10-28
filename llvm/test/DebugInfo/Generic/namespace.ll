@@ -13,12 +13,6 @@
 ; CHECK-NOT: DW_AT_decl_file
 ; CHECK-NOT: DW_AT_decl_line
 
-; CHECK: [[FOO:0x[0-9a-f]*]]:{{ *}}DW_TAG_structure_type
-; CHECK:   DW_AT_name ("foo")
-; CHECK:   DW_AT_declaration
-; CHECK: [[BAR:0x[0-9a-f]*]]:{{ *}}DW_TAG_structure_type
-; CHECK:   DW_AT_name ("bar")
-
 ; CHECK: DW_TAG_subprogram
 ; CHECK:   DW_AT_MIPS_linkage_name
 ; CHECK:   DW_AT_name ("f1")
@@ -36,6 +30,12 @@
 ; CHECK:   DW_AT_name ("i")
 ; CHECK: [[VAR_FWD:0x[0-9a-f]*]]:{{ *}}DW_TAG_variable
 ; CHECK:   DW_AT_name ("var_fwd")
+
+; CHECK: [[FOO:0x[0-9a-f]*]]:{{ *}}DW_TAG_structure_type
+; CHECK:   DW_AT_name ("foo")
+; CHECK:   DW_AT_declaration
+; CHECK: [[BAR:0x[0-9a-f]*]]:{{ *}}DW_TAG_structure_type
+; CHECK:   DW_AT_name ("bar")
 
 ; CHECK: [[BAZ:0x[0-9a-f]*]]:{{.*}}DW_TAG_typedef
 ; CHECK:   DW_AT_name ("baz")

@@ -23,17 +23,6 @@ namespace llvm {
 
 namespace AArch64GISelUtils {
 
-/// \returns A value when \p MI is a vector splat of a Register or constant.
-/// Checks for generic opcodes and AArch64-specific generic opcodes.
-std::optional<RegOrConstant>
-getAArch64VectorSplat(const MachineInstr &MI, const MachineRegisterInfo &MRI);
-
-/// \returns A value when \p MI is a constant vector splat.
-/// Checks for generic opcodes and AArch64-specific generic opcodes.
-std::optional<int64_t>
-getAArch64VectorSplatScalar(const MachineInstr &MI,
-                            const MachineRegisterInfo &MRI);
-
 /// \returns true if \p MaybeSub and \p Pred are part of a CMN tree for an
 /// integer compare.
 bool isCMN(const MachineInstr *MaybeSub, const CmpInst::Predicate &Pred,
@@ -44,9 +33,12 @@ bool isCMN(const MachineInstr *MaybeSub, const CmpInst::Predicate &Pred,
 ///
 /// \note This only applies on Darwin.
 ///
-/// \returns true if \p MI was replaced with a G_BZERO.
-bool tryEmitBZero(MachineInstr &MI, MachineIRBuilder &MIRBuilder,
-                  const LibcallLoweringInfo &Libcalls, bool MinSize);
+/// \returns true if \p MI can be replaced with a G_BZERO.
+bool matchEmitBZero(const MachineInstr &MI, const MachineRegisterInfo &MRI,
+                    const LibcallLoweringInfo &Libcalls, bool MinSize);
+///
+/// Replace \p MI with a G_BZERO.
+void applyEmitBZero(MachineInstr &MI, MachineIRBuilder &MIRBuilder);
 
 /// Analyze a ptrauth discriminator value to try to find the constant integer
 /// and address parts, cracking a ptrauth_blend intrinsic if there is one.

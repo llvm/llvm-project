@@ -48,6 +48,6 @@ bl __tls_get_addr(d@tlsld)@invalid
 # ERR: :[[#@LINE+1]]:31: error: unexpected token
 bl __tls_get_addr(d@tlsld)@plt-32768
 
-# ERR: :[[#@LINE+1]]:21: error: invalid memory operand
+# ERR: :[[#@LINE+1]]:21: error: identifier expands to invalid register number
 bl __tls_get_addr-1(f@tlsld)@plt
 .endif

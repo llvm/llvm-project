@@ -7,9 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Interpreter/CommandOptionArgumentTable.h"
+#include "lldb/Core/PluginManager.h"
 #include "lldb/DataFormatters/FormatManager.h"
+#include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Utility/StreamString.h"
+#include "llvm/Support/FormatAdapters.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -181,6 +184,30 @@ llvm::StringRef LanguageTypeHelpTextCallback() {
   return help_text;
 }
 
+llvm::StringRef ScriptedExtensionHelpTextCallback() {
+  static std::string help_text;
+
+  llvm::SmallVector<std::pair<llvm::StringRef, llvm::StringRef>> extensions;
+  size_t longest = 0;
+  PluginManager::ForEachScriptedExtension(
+      [&](const ScriptedInterfaceInstance &instance) {
+        llvm::StringRef name =
+            ScriptInterpreter::ExtensionToString(instance.extension);
+        longest = std::max(longest, name.size());
+        extensions.emplace_back(name, instance.description);
+      });
+
+  StreamString sstr;
+  sstr << "The name of a scripting extension. One of the following:\n";
+  for (const auto &[name, description] : extensions)
+    sstr.Format("  {0} - {1}\n",
+                llvm::fmt_align(name, llvm::AlignStyle::Left, longest),
+                description);
+
+  help_text = std::string(sstr.GetString());
+  return help_text;
+}
+
 llvm::StringRef SummaryStringHelpTextCallback() {
   return "A summary string is a way to extract information from variables in "
          "order to present them using a summary.\n"
@@ -297,7 +324,7 @@ llvm::StringRef arch_helper() {
     StringList archs;
 
     ArchSpec::ListSupportedArchNames(archs);
-    g_archs_help.Printf("These are the supported architecture names:\n");
+    g_archs_help.PutCString("These are the supported architecture names:\n");
     archs.Join("\n", g_archs_help);
   }
   return g_archs_help.GetString();

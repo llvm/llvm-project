@@ -13,12 +13,11 @@
 #include "src/unistd/getuid.h"
 #include "src/unistd/unlink.h"
 
+#include "hdr/fcntl_macros.h"
+#include "hdr/sys_stat_macros.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
-
-#include "hdr/fcntl_macros.h"
-#include <sys/stat.h>
 
 using LlvmLibcChownTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 

@@ -31,7 +31,7 @@ llvm.func @_QPtest() {
       }
     }
     omp.terminator
-  }
+  } {omp.combined}
   llvm.return
 }
 
@@ -44,7 +44,7 @@ llvm.func @_QPtest() {
 // CHECK:       entry:                                            ; preds = %[[VAL_3:.*]]
 // CHECK:         br label %[[VAL_4:.*]]
 // CHECK:       omp.private.init:                                 ; preds = %[[VAL_2]]
-// CHECK:         %[[VAL_5:.*]] = tail call ptr @malloc(i64 ptrtoint (ptr getelementptr ({ i32 }, ptr null, i32 1) to i64))
+// CHECK:         %[[VAL_5:.*]] = tail call ptr @malloc(i64 4)
 // CHECK:         %[[VAL_6:.*]] = getelementptr { i32 }, ptr %[[VAL_5]], i32 0, i32 0
 // CHECK:         br label %[[VAL_7:.*]]
 // CHECK:       omp.private.copy:                                 ; preds = %[[VAL_4]]
@@ -146,7 +146,7 @@ llvm.func @_QPtest() {
 // CHECK:         %[[VAL_66:.*]] = getelementptr { %[[VAL_63]], { i64, i64, i64, ptr } }, ptr %[[VAL_67:.*]], i32 0, i32 1
 // CHECK:         %[[VAL_68:.*]] = getelementptr { i64, i64, i64, ptr }, ptr %[[VAL_66]], i32 0, i32 3
 // CHECK:         %[[VAL_69:.*]] = load ptr, ptr %[[VAL_68]], align 8
-// CHECK:         %[[VAL_70:.*]] = tail call ptr @malloc(i64 ptrtoint (ptr getelementptr ({ i32 }, ptr null, i32 1) to i64))
+// CHECK:         %[[VAL_70:.*]] = tail call ptr @malloc(i64 4)
 // CHECK:         store ptr %[[VAL_70]], ptr %[[VAL_65]], align 8
 // CHECK:         %[[VAL_71:.*]] = getelementptr { i32 }, ptr %[[VAL_69]], i32 0, i32 0
 // CHECK:         %[[VAL_72:.*]] = getelementptr { i32 }, ptr %[[VAL_70]], i32 0, i32 0

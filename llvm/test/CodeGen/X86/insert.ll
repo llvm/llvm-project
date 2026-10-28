@@ -58,8 +58,8 @@ define i32 @sub8_32(i32 noundef %res, ptr %byte) {
 ;
 ; X64-LABEL: sub8_32:
 ; X64:       # %bb.0: # %entry
+; X64-NEXT:    movb (%rsi), %dil
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    movb (%rsi), %al
 ; X64-NEXT:    retq
 entry:
   %and = and i32 %res, -256
@@ -81,8 +81,8 @@ define i32 @sub16_32(i32 noundef %res, ptr %byte) {
 ;
 ; X64-LABEL: sub16_32:
 ; X64:       # %bb.0: # %entry
+; X64-NEXT:    movw (%rsi), %di
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    movw (%rsi), %ax
 ; X64-NEXT:    retq
 entry:
   %and = and i32 %res, -65536
@@ -90,4 +90,60 @@ entry:
   %conv2 = zext i16 %d to i32
   %or = or i32 %and, %conv2
   ret i32 %or
+}
+
+define void @sub8_32_store_i64ptr(i32 noundef %res, ptr %byte, ptr %out) {
+; X86-LABEL: sub8_32_store_i64ptr:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movb (%edx), %cl
+; X86-NEXT:    movl %ecx, (%eax)
+; X86-NEXT:    movl $0, 4(%eax)
+; X86-NEXT:    retl
+;
+; X64-LABEL: sub8_32_store_i64ptr:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    movb (%rsi), %dil
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    movq %rax, (%rdx)
+; X64-NEXT:    retq
+entry:
+  %and = and i32 %res, -256
+  %d = load i8, ptr %byte, align 1
+  %conv2 = zext i8 %d to i32
+  %or = or i32 %and, %conv2
+  %z = zext i32 %or to i64
+  store i64 %z, ptr %out
+  ret void
+}
+
+define void @sub16_32_store_i64ptr(i32 noundef %res, ptr %byte, ptr %out) {
+; X86-LABEL: sub16_32_store_i64ptr:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    shll $16, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movzwl (%edx), %edx
+; X86-NEXT:    orl %eax, %edx
+; X86-NEXT:    movl %edx, (%ecx)
+; X86-NEXT:    movl $0, 4(%ecx)
+; X86-NEXT:    retl
+;
+; X64-LABEL: sub16_32_store_i64ptr:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    movw (%rsi), %di
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    movq %rax, (%rdx)
+; X64-NEXT:    retq
+entry:
+  %and = and i32 %res, -65536
+  %d = load i16, ptr %byte, align 1
+  %conv2 = zext i16 %d to i32
+  %or = or i32 %and, %conv2
+  %z = zext i32 %or to i64
+  store i64 %z, ptr %out
+  ret void
 }

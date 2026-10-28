@@ -2200,10 +2200,9 @@ _mm256_cvtpd_ps(__m256d __a) {
 /// \param __a
 ///    A 256-bit vector of [8 x float].
 /// \returns A 256-bit integer vector containing the converted values.
-static __inline __m256i __DEFAULT_FN_ATTRS
-_mm256_cvtps_epi32(__m256 __a)
-{
-  return (__m256i)__builtin_ia32_cvtps2dq256((__v8sf) __a);
+static __inline __m256i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_cvtps_epi32(__m256 __a) {
+  return (__m256i)__builtin_ia32_cvtps2dq256((__v8sf)__a);
 }
 
 /// Converts a 128-bit vector of [4 x float] into a 256-bit vector of [4
@@ -2236,10 +2235,9 @@ _mm256_cvtps_pd(__m128 __a) {
 /// \param __a
 ///    A 256-bit vector of [4 x double].
 /// \returns A 128-bit integer vector containing the converted values.
-static __inline __m128i __DEFAULT_FN_ATTRS
-_mm256_cvttpd_epi32(__m256d __a)
-{
-  return (__m128i)__builtin_ia32_cvttpd2dq256((__v4df) __a);
+static __inline __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_cvttpd_epi32(__m256d __a) {
+  return (__m128i)__builtin_ia32_cvttpd2dq256((__v4df)__a);
 }
 
 /// Converts a 256-bit vector of [4 x double] into a 128-bit vector of
@@ -2256,10 +2254,9 @@ _mm256_cvttpd_epi32(__m256d __a)
 /// \param __a
 ///    A 256-bit vector of [4 x double].
 /// \returns A 128-bit integer vector containing the converted values.
-static __inline __m128i __DEFAULT_FN_ATTRS
-_mm256_cvtpd_epi32(__m256d __a)
-{
-  return (__m128i)__builtin_ia32_cvtpd2dq256((__v4df) __a);
+static __inline __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_cvtpd_epi32(__m256d __a) {
+  return (__m128i)__builtin_ia32_cvtpd2dq256((__v4df)__a);
 }
 
 /// Converts a vector of [8 x float] into eight signed truncated (rounded
@@ -2276,10 +2273,9 @@ _mm256_cvtpd_epi32(__m256d __a)
 /// \param __a
 ///    A 256-bit vector of [8 x float].
 /// \returns A 256-bit integer vector containing the converted values.
-static __inline __m256i __DEFAULT_FN_ATTRS
-_mm256_cvttps_epi32(__m256 __a)
-{
-  return (__m256i)__builtin_ia32_cvttps2dq256((__v8sf) __a);
+static __inline __m256i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_cvttps_epi32(__m256 __a) {
+  return (__m256i)__builtin_ia32_cvttps2dq256((__v8sf)__a);
 }
 
 /// Returns the first element of the input vector of [4 x double].

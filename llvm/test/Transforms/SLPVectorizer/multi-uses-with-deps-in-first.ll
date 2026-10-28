@@ -7,7 +7,7 @@ define void @test(double %add) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: double [[ADD:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> <double poison, double 0.000000e+00>, double [[ADD]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> <double poison, double 0.000000e+00>, double [[ADD]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = fmul <2 x double> [[TMP0]], zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = fmul <2 x double> [[TMP0]], zeroinitializer
 ; CHECK-NEXT:    br label [[COND_TRUE45:%.*]]

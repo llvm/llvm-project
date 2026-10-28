@@ -435,8 +435,12 @@ define void @ccmp64rr_of(i64 %a, i64 %b, i64 %c) {
 ; CHECK-LABEL: ccmp64rr_of:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    cmpq %rdx, %rdi # encoding: [0x48,0x39,0xd7]
-; CHECK-NEXT:    ccmpbq {dfv=of} %rsi, %rdi # encoding: [0x62,0xf4,0xc4,0x02,0x39,0xf7]
-; CHECK-NEXT:    jno .LBB6_1 # encoding: [0x71,A]
+; CHECK-NEXT:    setb %al # encoding: [0x0f,0x92,0xc0]
+; CHECK-NEXT:    cmpq %rsi, %rdi # encoding: [0x48,0x39,0xf7]
+; CHECK-NEXT:    seto %cl # encoding: [0x0f,0x90,0xc1]
+; CHECK-NEXT:    notb %cl # encoding: [0xf6,0xd1]
+; CHECK-NEXT:    testb %cl, %al # encoding: [0x84,0xc8]
+; CHECK-NEXT:    jne .LBB6_1 # encoding: [0x75,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB6_1, kind: FK_PCRel_1
 ; CHECK-NEXT:  # %bb.2: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
@@ -449,8 +453,12 @@ define void @ccmp64rr_of(i64 %a, i64 %b, i64 %c) {
 ; NDD-LABEL: ccmp64rr_of:
 ; NDD:       # %bb.0: # %bb
 ; NDD-NEXT:    cmpq %rdx, %rdi # encoding: [0x48,0x39,0xd7]
-; NDD-NEXT:    ccmpbq {dfv=of} %rsi, %rdi # encoding: [0x62,0xf4,0xc4,0x02,0x39,0xf7]
-; NDD-NEXT:    jno .LBB6_1 # encoding: [0x71,A]
+; NDD-NEXT:    setb %al # encoding: [0x0f,0x92,0xc0]
+; NDD-NEXT:    cmpq %rsi, %rdi # encoding: [0x48,0x39,0xf7]
+; NDD-NEXT:    seto %cl # encoding: [0x0f,0x90,0xc1]
+; NDD-NEXT:    notb %cl # EVEX TO LEGACY Compression encoding: [0xf6,0xd1]
+; NDD-NEXT:    testb %cl, %al # encoding: [0x84,0xc8]
+; NDD-NEXT:    jne .LBB6_1 # encoding: [0x75,A]
 ; NDD-NEXT:    # fixup A - offset: 1, value: .LBB6_1, kind: FK_PCRel_1
 ; NDD-NEXT:  # %bb.2: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
@@ -465,7 +473,8 @@ define void @ccmp64rr_of(i64 %a, i64 %b, i64 %c) {
 ; PREFER_NO_LEGACY_SETCC-NEXT:    cmpq %rdx, %rdi # encoding: [0x48,0x39,0xd7]
 ; PREFER_NO_LEGACY_SETCC-NEXT:    setzub %al # encoding: [0x62,0xf4,0x7f,0x18,0x42,0xc0]
 ; PREFER_NO_LEGACY_SETCC-NEXT:    cmpq %rsi, %rdi # encoding: [0x48,0x39,0xf7]
-; PREFER_NO_LEGACY_SETCC-NEXT:    setzuno %cl # encoding: [0x62,0xf4,0x7f,0x18,0x41,0xc1]
+; PREFER_NO_LEGACY_SETCC-NEXT:    setzuo %cl # encoding: [0x62,0xf4,0x7f,0x18,0x40,0xc1]
+; PREFER_NO_LEGACY_SETCC-NEXT:    notb %cl # encoding: [0xf6,0xd1]
 ; PREFER_NO_LEGACY_SETCC-NEXT:    testb %cl, %al # encoding: [0x84,0xc8]
 ; PREFER_NO_LEGACY_SETCC-NEXT:    jne .LBB6_1 # encoding: [0x75,A]
 ; PREFER_NO_LEGACY_SETCC-NEXT:    # fixup A - offset: 1, value: .LBB6_1, kind: FK_PCRel_1
@@ -482,7 +491,8 @@ define void @ccmp64rr_of(i64 %a, i64 %b, i64 %c) {
 ; PREFER_LEGACY_SETCC-NEXT:    cmpq %rdx, %rdi # encoding: [0x48,0x39,0xd7]
 ; PREFER_LEGACY_SETCC-NEXT:    setb %al # encoding: [0x0f,0x92,0xc0]
 ; PREFER_LEGACY_SETCC-NEXT:    cmpq %rsi, %rdi # encoding: [0x48,0x39,0xf7]
-; PREFER_LEGACY_SETCC-NEXT:    setno %cl # encoding: [0x0f,0x91,0xc1]
+; PREFER_LEGACY_SETCC-NEXT:    seto %cl # encoding: [0x0f,0x90,0xc1]
+; PREFER_LEGACY_SETCC-NEXT:    notb %cl # encoding: [0xf6,0xd1]
 ; PREFER_LEGACY_SETCC-NEXT:    testb %cl, %al # encoding: [0x84,0xc8]
 ; PREFER_LEGACY_SETCC-NEXT:    jne .LBB6_1 # encoding: [0x75,A]
 ; PREFER_LEGACY_SETCC-NEXT:    # fixup A - offset: 1, value: .LBB6_1, kind: FK_PCRel_1
@@ -2096,6 +2106,160 @@ define i32 @test_or_fp_int(double %a, double %b, i32 %c, i32 %d) {
   %sel = select i1 %cmp, i1 true, i1 %cmp1
   %ext = zext i1 %sel to i32
   ret i32 %ext
+}
+
+; (b != d) && (a < c): AND of two comparisons - fold into CCMP+CMOV
+define i32 @ccmp_cmov_and(i32 %a, i32 %b, i32 %c, i32 %d) {
+; CHECK-LABEL: ccmp_cmov_and:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
+; CHECK-NEXT:    cmpl %edx, %edi # encoding: [0x39,0xd7]
+; CHECK-NEXT:    ccmpll {dfv=zf} %ecx, %esi # encoding: [0x62,0xf4,0x14,0x0c,0x39,0xce]
+; CHECK-NEXT:    cmovnel %esi, %eax # encoding: [0x0f,0x45,0xc6]
+; CHECK-NEXT:    retq # encoding: [0xc3]
+;
+; NDD-LABEL: ccmp_cmov_and:
+; NDD:       # %bb.0: # %entry
+; NDD-NEXT:    cmpl %edx, %edi # encoding: [0x39,0xd7]
+; NDD-NEXT:    ccmpll {dfv=zf} %ecx, %esi # encoding: [0x62,0xf4,0x14,0x0c,0x39,0xce]
+; NDD-NEXT:    cmovnel %esi, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x45,0xfe]
+; NDD-NEXT:    retq # encoding: [0xc3]
+;
+; ZU_COMMON-LABEL: ccmp_cmov_and:
+; ZU_COMMON:       # %bb.0: # %entry
+; ZU_COMMON-NEXT:    cmpl %edx, %edi # encoding: [0x39,0xd7]
+; ZU_COMMON-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
+; ZU_COMMON-NEXT:    cmovll %esi, %eax # encoding: [0x0f,0x4c,0xc6]
+; ZU_COMMON-NEXT:    cmpl %ecx, %esi # encoding: [0x39,0xce]
+; ZU_COMMON-NEXT:    cmovel %edi, %eax # encoding: [0x0f,0x44,0xc7]
+; ZU_COMMON-NEXT:    retq # encoding: [0xc3]
+entry:
+  %cmp1 = icmp ne i32 %b, %d
+  %cmp2 = icmp slt i32 %a, %c
+  %and = and i1 %cmp1, %cmp2
+  %sel = select i1 %and, i32 %b, i32 %a
+  ret i32 %sel
+}
+
+; (b != d && a < c) || (a > d): AND+OR - fold into CCMP+CCMP+CMOV
+define i32 @ccmp_cmov_and_or(i32 %a, i32 %b, i32 %c, i32 %d) {
+; CHECK-LABEL: ccmp_cmov_and_or:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
+; CHECK-NEXT:    cmpl %edx, %edi # encoding: [0x39,0xd7]
+; CHECK-NEXT:    ccmpll {dfv=zf} %ecx, %esi # encoding: [0x62,0xf4,0x14,0x0c,0x39,0xce]
+; CHECK-NEXT:    ccmpel {dfv=} %ecx, %edi # encoding: [0x62,0xf4,0x04,0x04,0x39,0xcf]
+; CHECK-NEXT:    cmovgl %esi, %eax # encoding: [0x0f,0x4f,0xc6]
+; CHECK-NEXT:    retq # encoding: [0xc3]
+;
+; NDD-LABEL: ccmp_cmov_and_or:
+; NDD:       # %bb.0: # %entry
+; NDD-NEXT:    cmpl %edx, %edi # encoding: [0x39,0xd7]
+; NDD-NEXT:    ccmpll {dfv=zf} %ecx, %esi # encoding: [0x62,0xf4,0x14,0x0c,0x39,0xce]
+; NDD-NEXT:    ccmpel {dfv=} %ecx, %edi # encoding: [0x62,0xf4,0x04,0x04,0x39,0xcf]
+; NDD-NEXT:    cmovgl %esi, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x4f,0xfe]
+; NDD-NEXT:    retq # encoding: [0xc3]
+;
+; ZU_COMMON-LABEL: ccmp_cmov_and_or:
+; ZU_COMMON:       # %bb.0: # %entry
+; ZU_COMMON-NEXT:    cmpl %ecx, %edi # encoding: [0x39,0xcf]
+; ZU_COMMON-NEXT:    movl %edi, %r8d # encoding: [0x41,0x89,0xf8]
+; ZU_COMMON-NEXT:    cmovgl %esi, %r8d # encoding: [0x44,0x0f,0x4f,0xc6]
+; ZU_COMMON-NEXT:    cmpl %edx, %edi # encoding: [0x39,0xd7]
+; ZU_COMMON-NEXT:    movl %r8d, %eax # encoding: [0x44,0x89,0xc0]
+; ZU_COMMON-NEXT:    cmovll %esi, %eax # encoding: [0x0f,0x4c,0xc6]
+; ZU_COMMON-NEXT:    cmpl %ecx, %esi # encoding: [0x39,0xce]
+; ZU_COMMON-NEXT:    cmovel %r8d, %eax # encoding: [0x41,0x0f,0x44,0xc0]
+; ZU_COMMON-NEXT:    retq # encoding: [0xc3]
+entry:
+  %cmp1 = icmp ne i32 %b, %d
+  %cmp2 = icmp slt i32 %a, %c
+  %and = and i1 %cmp1, %cmp2
+  %cmp3 = icmp sgt i32 %a, %d
+  %or = or i1 %and, %cmp3
+  %sel = select i1 %or, i32 %b, i32 %a
+  ret i32 %sel
+}
+
+; (a > d) || (a < c && b != d): AND+OR with outer OR first
+define i32 @ccmp_cmov_and_or_c(i32 %a, i32 %b, i32 %c, i32 %d) {
+; CHECK-LABEL: ccmp_cmov_and_or_c:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
+; CHECK-NEXT:    cmpl %ecx, %esi # encoding: [0x39,0xce]
+; CHECK-NEXT:    ccmpnel {dfv=} %edx, %edi # encoding: [0x62,0xf4,0x04,0x05,0x39,0xd7]
+; CHECK-NEXT:    ccmpgel {dfv=} %ecx, %edi # encoding: [0x62,0xf4,0x04,0x0d,0x39,0xcf]
+; CHECK-NEXT:    cmovgl %esi, %eax # encoding: [0x0f,0x4f,0xc6]
+; CHECK-NEXT:    retq # encoding: [0xc3]
+;
+; NDD-LABEL: ccmp_cmov_and_or_c:
+; NDD:       # %bb.0: # %entry
+; NDD-NEXT:    cmpl %ecx, %esi # encoding: [0x39,0xce]
+; NDD-NEXT:    ccmpnel {dfv=} %edx, %edi # encoding: [0x62,0xf4,0x04,0x05,0x39,0xd7]
+; NDD-NEXT:    ccmpgel {dfv=} %ecx, %edi # encoding: [0x62,0xf4,0x04,0x0d,0x39,0xcf]
+; NDD-NEXT:    cmovgl %esi, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x4f,0xfe]
+; NDD-NEXT:    retq # encoding: [0xc3]
+;
+; ZU_COMMON-LABEL: ccmp_cmov_and_or_c:
+; ZU_COMMON:       # %bb.0: # %entry
+; ZU_COMMON-NEXT:    cmpl %ecx, %esi # encoding: [0x39,0xce]
+; ZU_COMMON-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
+; ZU_COMMON-NEXT:    cmovnel %esi, %eax # encoding: [0x0f,0x45,0xc6]
+; ZU_COMMON-NEXT:    cmpl %edx, %edi # encoding: [0x39,0xd7]
+; ZU_COMMON-NEXT:    cmovgel %edi, %eax # encoding: [0x0f,0x4d,0xc7]
+; ZU_COMMON-NEXT:    cmpl %ecx, %edi # encoding: [0x39,0xcf]
+; ZU_COMMON-NEXT:    cmovgl %esi, %eax # encoding: [0x0f,0x4f,0xc6]
+; ZU_COMMON-NEXT:    retq # encoding: [0xc3]
+entry:
+  %cmp1 = icmp ne i32 %b, %d
+  %cmp2 = icmp slt i32 %a, %c
+  %and = and i1 %cmp2, %cmp1
+  %cmp3 = icmp sgt i32 %a, %d
+  %or = or i1 %cmp3, %and
+  %sel = select i1 %or, i32 %b, i32 %a
+  ret i32 %sel
+}
+
+; (b != d) && ((a < c) || (a > d)): OR nested inside an AND. This shape needs
+; the De Morgan negation bookkeeping in the CCMP conjunction emitter; a naive
+; emitter miscompiles it (the inner OR wrongly forces the result true when the
+; AND's left operand is false).
+define i32 @ccmp_cmov_and_of_or(i32 %a, i32 %b, i32 %c, i32 %d) {
+; CHECK-LABEL: ccmp_cmov_and_of_or:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
+; CHECK-NEXT:    cmpl %ecx, %edi # encoding: [0x39,0xcf]
+; CHECK-NEXT:    ccmplel {dfv=sf} %edx, %edi # encoding: [0x62,0xf4,0x24,0x0e,0x39,0xd7]
+; CHECK-NEXT:    ccmpll {dfv=zf} %ecx, %esi # encoding: [0x62,0xf4,0x14,0x0c,0x39,0xce]
+; CHECK-NEXT:    cmovnel %esi, %eax # encoding: [0x0f,0x45,0xc6]
+; CHECK-NEXT:    retq # encoding: [0xc3]
+;
+; NDD-LABEL: ccmp_cmov_and_of_or:
+; NDD:       # %bb.0: # %entry
+; NDD-NEXT:    cmpl %ecx, %edi # encoding: [0x39,0xcf]
+; NDD-NEXT:    ccmplel {dfv=sf} %edx, %edi # encoding: [0x62,0xf4,0x24,0x0e,0x39,0xd7]
+; NDD-NEXT:    ccmpll {dfv=zf} %ecx, %esi # encoding: [0x62,0xf4,0x14,0x0c,0x39,0xce]
+; NDD-NEXT:    cmovnel %esi, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x45,0xfe]
+; NDD-NEXT:    retq # encoding: [0xc3]
+;
+; ZU_COMMON-LABEL: ccmp_cmov_and_of_or:
+; ZU_COMMON:       # %bb.0: # %entry
+; ZU_COMMON-NEXT:    cmpl %ecx, %edi # encoding: [0x39,0xcf]
+; ZU_COMMON-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
+; ZU_COMMON-NEXT:    cmovgl %esi, %eax # encoding: [0x0f,0x4f,0xc6]
+; ZU_COMMON-NEXT:    cmpl %edx, %edi # encoding: [0x39,0xd7]
+; ZU_COMMON-NEXT:    cmovll %esi, %eax # encoding: [0x0f,0x4c,0xc6]
+; ZU_COMMON-NEXT:    cmpl %ecx, %esi # encoding: [0x39,0xce]
+; ZU_COMMON-NEXT:    cmovel %edi, %eax # encoding: [0x0f,0x44,0xc7]
+; ZU_COMMON-NEXT:    retq # encoding: [0xc3]
+entry:
+  %cmp1 = icmp ne i32 %b, %d
+  %cmp2 = icmp slt i32 %a, %c
+  %cmp3 = icmp sgt i32 %a, %d
+  %or = or i1 %cmp2, %cmp3
+  %and = and i1 %cmp1, %or
+  %sel = select i1 %and, i32 %b, i32 %a
+  ret i32 %sel
 }
 
 declare dso_local void @foo(...)

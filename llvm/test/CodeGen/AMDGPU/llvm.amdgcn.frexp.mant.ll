@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga < %s  | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu8.02 < %s  | FileCheck -check-prefix=GCN %s
 
 declare float @llvm.fabs.f32(float) #0
 declare double @llvm.fabs.f64(double) #0

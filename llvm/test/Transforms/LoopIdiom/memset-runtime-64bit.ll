@@ -287,9 +287,8 @@ define void @NestedFor32(ptr %ar, i32 %n, i32 %m, i32 %o) {
 ; CHECK:       for.body.us.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[O]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[M]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[O]] to i64
 ; CHECK-NEXT:    [[WIDE_TRIP_COUNT10:%.*]] = zext i32 [[N]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP2]], 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext i32 [[M]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP0]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl i64 [[TMP5]], 2

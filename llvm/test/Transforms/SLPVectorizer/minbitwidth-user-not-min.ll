@@ -6,7 +6,7 @@ define void @test(ptr %block, ptr noalias %pixels, i1 %b) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: ptr [[BLOCK:%.*]], ptr noalias [[PIXELS:%.*]], i1 [[B:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i1> <i1 true, i1 poison, i1 false, i1 false>, i1 [[B]], i32 1
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i1> <i1 true, i1 poison, i1 false, i1 false>, i1 [[B]], i64 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext <4 x i1> [[TMP0]] to <4 x i8>
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i16>, ptr [[BLOCK]], align 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult <4 x i16> [[TMP2]], zeroinitializer

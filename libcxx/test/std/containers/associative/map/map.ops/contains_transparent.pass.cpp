@@ -41,11 +41,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
 
 TEST_CONSTEXPR_CXX26 bool test() {
   test<std::map<std::pair<int, int>, int, Comp> >();
-
-  // FIXME: remove when multimap is made constexpr
-  if (!TEST_IS_CONSTANT_EVALUATED) {
-    test<std::multimap<std::pair<int, int>, int, Comp> >();
-  }
+  test<std::multimap<std::pair<int, int>, int, Comp> >();
   return true;
 }
 

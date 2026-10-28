@@ -261,6 +261,8 @@ void SetThreadName(std::thread &thread, const std::string &name) {
 #endif
 }
 
+void PlatformInit() {}
+
 } // namespace fuzzer
 
 #endif // LIBFUZZER_WINDOWS

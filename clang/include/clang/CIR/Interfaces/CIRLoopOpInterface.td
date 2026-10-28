@@ -46,6 +46,65 @@ def LoopOpInterface : OpInterface<"LoopOpInterface", [
       /*defaultImplementation=*/"return nullptr;"
     >,
     InterfaceMethod<[{
+        Returns a pointer to the loop's per-iteration cleanup region, or
+        nullptr if the loop has no (non-empty) cleanup region. When present,
+        this region runs on every per-iteration exit edge (condition-false
+        exit, end-of-iteration, break/continue, and EH unwinding when the
+        cleanup kind includes EH).
+      }],
+      /*retTy=*/"mlir::Region *",
+      /*methodName=*/"maybeGetCleanup",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/"return nullptr;"
+    >,
+    InterfaceMethod<[{
+        Returns the cleanup-kind attribute for the loop's per-iteration
+        cleanup region, or a null attribute if the loop has no cleanup kind
+        (e.g. do-while, or a for/while without a cleanup region).
+      }],
+      /*retTy=*/"::cir::CleanupKindAttr",
+      /*methodName=*/"maybeGetCleanupKind",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/"return {};"
+    >,
+    InterfaceMethod<[{
+        Returns the loop's `#cir.loop_hint` attribute, or a null attribute if
+        the loop has none.
+      }],
+      /*retTy=*/"::cir::LoopHintAttr",
+      /*methodName=*/"getLoopHintsAttr",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/"return {};"
+    >,
+    InterfaceMethod<[{
+        Returns the loop's id, a `distinct` attribute that identifies the loop
+        (and, once the loop is flattened, the branches that belong to it), or a
+        null attribute if the loop has none.
+      }],
+      /*retTy=*/"::mlir::DistinctAttr",
+      /*methodName=*/"getLoopIdAttr",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/"return {};"
+    >,
+    InterfaceMethod<[{
+        Sets the loop's `#cir.loop_hint` attribute.
+      }],
+      /*retTy=*/"void",
+      /*methodName=*/"setLoopHintsAttr",
+      /*args=*/(ins "::cir::LoopHintAttr":$hints)
+    >,
+    InterfaceMethod<[{
+        Sets the loop's id, see `getLoopIdAttr`.
+      }],
+      /*retTy=*/"void",
+      /*methodName=*/"setLoopIdAttr",
+      /*args=*/(ins "::mlir::DistinctAttr":$id)
+    >,
+    InterfaceMethod<[{
         Returns the first region to be executed in the loop.
       }],
       /*retTy=*/"mlir::Region &",

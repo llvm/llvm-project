@@ -212,23 +212,29 @@ let Namespace = "Hexagon" in {
   def VTMP : Ri<0, "vtmp">, DwarfRegNum<[131]>;
 
   // Aliases of the V* registers used to hold double vec values.
-  let SubRegIndices = [vsub_lo, vsub_hi, vsub_fake], CoveredBySubRegs = 1 in {
-    def W0 : Rd<0, "v1:0", [V0, V1, VF0]>, DwarfRegNum<[99]>;
-    def W1 : Rd<2, "v3:2", [V2, V3, VF1]>, DwarfRegNum<[101]>;
-    def W2 : Rd<4, "v5:4", [V4, V5, VF2]>, DwarfRegNum<[103]>;
-    def W3 : Rd<6, "v7:6", [V6, V7, VF3]>, DwarfRegNum<[105]>;
-    def W4 : Rd<8, "v9:8", [V8, V9, VF4]>, DwarfRegNum<[107]>;
-    def W5 : Rd<10, "v11:10", [V10, V11, VF5]>, DwarfRegNum<[109]>;
-    def W6 : Rd<12, "v13:12", [V12, V13, VF6]>, DwarfRegNum<[111]>;
-    def W7 : Rd<14, "v15:14", [V14, V15, VF7]>, DwarfRegNum<[113]>;
-    def W8 : Rd<16, "v17:16", [V16, V17, VF8]>, DwarfRegNum<[115]>;
-    def W9 : Rd<18, "v19:18", [V18, V19, VF9]>, DwarfRegNum<[117]>;
-    def W10 : Rd<20, "v21:20", [V20, V21, VF10]>, DwarfRegNum<[119]>;
-    def W11 : Rd<22, "v23:22", [V22, V23, VF11]>, DwarfRegNum<[121]>;
-    def W12 : Rd<24, "v25:24", [V24, V25, VF12]>, DwarfRegNum<[123]>;
-    def W13 : Rd<26, "v27:26", [V26, V27, VF13]>, DwarfRegNum<[125]>;
-    def W14 : Rd<28, "v29:28", [V28, V29, VF14]>, DwarfRegNum<[127]>;
-    def W15 : Rd<30, "v31:30", [V30, V31, VF15]>, DwarfRegNum<[129]>;
+  // VF[0-15] registers are intentionally not listed as sub-registers of
+  // W0-W15 here: doing so would introduce artificial (fake) sub-register
+  // regunit sharing that misleads generic passes such as MachineCopy-
+  // Propagation into treating DBG_VALUEs of $wN as users of unrelated
+  // $vM COPYs, tripping the hasDebugOperandForReg assertion in
+  // updateDbgUsersToReg.
+  let SubRegIndices = [vsub_lo, vsub_hi], CoveredBySubRegs = 1 in {
+  def W0  : Rd< 0,  "v1:0",  [V0,  V1]>,  DwarfRegNum<[99]>;
+  def W1  : Rd< 2,  "v3:2",  [V2,  V3]>,  DwarfRegNum<[101]>;
+  def W2  : Rd< 4,  "v5:4",  [V4,  V5]>,  DwarfRegNum<[103]>;
+  def W3  : Rd< 6,  "v7:6",  [V6,  V7]>,  DwarfRegNum<[105]>;
+  def W4  : Rd< 8,  "v9:8",  [V8,  V9]>,  DwarfRegNum<[107]>;
+  def W5  : Rd<10, "v11:10", [V10, V11]>, DwarfRegNum<[109]>;
+  def W6  : Rd<12, "v13:12", [V12, V13]>, DwarfRegNum<[111]>;
+  def W7  : Rd<14, "v15:14", [V14, V15]>, DwarfRegNum<[113]>;
+  def W8  : Rd<16, "v17:16", [V16, V17]>, DwarfRegNum<[115]>;
+  def W9  : Rd<18, "v19:18", [V18, V19]>, DwarfRegNum<[117]>;
+  def W10 : Rd<20, "v21:20", [V20, V21]>, DwarfRegNum<[119]>;
+  def W11 : Rd<22, "v23:22", [V22, V23]>, DwarfRegNum<[121]>;
+  def W12 : Rd<24, "v25:24", [V24, V25]>, DwarfRegNum<[123]>;
+  def W13 : Rd<26, "v27:26", [V26, V27]>, DwarfRegNum<[125]>;
+  def W14 : Rd<28, "v29:28", [V28, V29]>, DwarfRegNum<[127]>;
+  def W15 : Rd<30, "v31:30", [V30, V31]>, DwarfRegNum<[129]>;
   }
 
   // Reverse Aliases of the V* registers used to hold double vec values.

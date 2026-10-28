@@ -56,9 +56,6 @@ void undefined(uint32x2_t v2i32, uint32x4_t v4i32, uint16x8_t v8i16, uint8x16_t 
   // bf16
   vbfdot_f32(v2f32, v4bf16, v4bf16); // expected-error {{always_inline function 'vbfdot_f32' requires target feature 'bf16'}}
   vcreate_bf16(10);
-  vdup_lane_bf16(v4bf16, 2); // expected-error {{'__builtin_neon_splat_lane_bf16' needs target feature bf16}}
-  vdup_n_bf16(bf16); // expected-error {{always_inline function 'vdup_n_bf16' requires target feature 'bf16'}}
-  vld1_bf16(0); // expected-error {{'__builtin_neon_vld1_bf16' needs target feature bf16}}
   vcvt_f32_bf16(v4bf16); // expected-error {{always_inline function 'vcvt_f32_bf16' requires target feature 'bf16'}}
   vcvt_bf16_f32(v4f32); // expected-error {{always_inline function 'vcvt_bf16_f32' requires target feature 'bf16'}}
   // v8.1 - qrdmla

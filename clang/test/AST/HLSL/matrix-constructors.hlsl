@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -x hlsl -ast-dump -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -x hlsl -hlsl-entry ok -ast-dump -o - %s | FileCheck %s
 
 
 typedef float float2x1 __attribute__((matrix_type(2,1)));
@@ -8,6 +8,7 @@ typedef float float4x4 __attribute__((matrix_type(4,4)));
 typedef float float2 __attribute__((ext_vector_type(2)));
 typedef float float4 __attribute__((ext_vector_type(4)));
 
+[shader("compute")]
 [numthreads(1,1,1)]
 void ok() {
 // CHECK: VarDecl 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> col:{{[0-9]+}} A 'float2x3':'matrix<float, 2, 3>' cinit

@@ -134,8 +134,11 @@ static ValueRange genLoopWithIterator(
         });
     {
       OpBuilder::InsertionGuard guard(rewriter);
-      it->linkNewScope(forOp.getInductionVar());
       rewriter.setInsertionPointToStart(forOp.getBody());
+      if (it->randomAccessible())
+        it->locate(rewriter, loc, forOp.getInductionVar());
+      else
+        it->linkNewScope(forOp.getInductionVar());
       SmallVector<Value> ret = bodyBuilder(rewriter, loc, forOp.getBodyRegion(),
                                            it, forOp.getRegionIterArgs());
 
@@ -186,7 +189,7 @@ namespace {
 class ExtractIterSpaceConverter
     : public OpConversionPattern<ExtractIterSpaceOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(ExtractIterSpaceOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -206,7 +209,7 @@ public:
 /// Sparse codegen rule for number of entries operator.
 class ExtractValOpConverter : public OpConversionPattern<ExtractValOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(ExtractValOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -221,7 +224,7 @@ public:
 
 class SparseIterateOpConverter : public OpConversionPattern<IterateOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(IterateOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -277,7 +280,7 @@ public:
 };
 
 class SparseCoIterateOpConverter : public OpConversionPattern<CoIterateOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(CoIterateOp op, OneToNOpAdaptor adaptor,

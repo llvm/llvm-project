@@ -60,20 +60,20 @@ CodeGen::arrangeCXXMethodType(CodeGenModule &CGM,
 const CGFunctionInfo &CodeGen::arrangeCXXMethodCall(
     CodeGenModule &CGM, CanQualType returnType, ArrayRef<CanQualType> argTypes,
     FunctionType::ExtInfo info,
-    ArrayRef<FunctionProtoType::ExtParameterInfo> paramInfos,
-    RequiredArgs args) {
+    ArrayRef<FunctionProtoType::ExtParameterInfo> paramInfos, RequiredArgs args,
+    const FunctionDecl *CallerFD) {
   return CGM.getTypes().arrangeLLVMFunctionInfo(
       returnType, FnInfoOpts::IsInstanceMethod, argTypes, info, paramInfos,
-      args);
+      args, CallerFD);
 }
 
 const CGFunctionInfo &CodeGen::arrangeFreeFunctionCall(
     CodeGenModule &CGM, CanQualType returnType, ArrayRef<CanQualType> argTypes,
     FunctionType::ExtInfo info,
-    ArrayRef<FunctionProtoType::ExtParameterInfo> paramInfos,
-    RequiredArgs args) {
+    ArrayRef<FunctionProtoType::ExtParameterInfo> paramInfos, RequiredArgs args,
+    const FunctionDecl *CallerFD) {
   return CGM.getTypes().arrangeLLVMFunctionInfo(
-      returnType, FnInfoOpts::None, argTypes, info, paramInfos, args);
+      returnType, FnInfoOpts::None, argTypes, info, paramInfos, args, CallerFD);
 }
 
 ImplicitCXXConstructorArgs
@@ -130,7 +130,7 @@ llvm::Value *CodeGen::getCXXDestructorImplicitParam(
   CGF.CurCodeDecl = D;
   CGF.CurFuncDecl = D;
   CGF.CurFn = InsertBlock->getParent();
-  CGF.Builder.SetInsertPoint(InsertBlock, InsertPoint);
+  CGF.Builder.SetInsertPoint(InsertPoint);
   return CGM.getCXXABI().getCXXDestructorImplicitParam(
       CGF, D, Type, ForVirtualBase, Delegating);
 }

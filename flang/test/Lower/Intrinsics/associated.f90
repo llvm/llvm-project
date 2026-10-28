@@ -5,7 +5,7 @@
 subroutine associated_test(scalar, array)
     real, pointer :: scalar, array(:)
     real, target :: ziel
-    ! CHECK: %[[ziel:.*]] = fir.alloca f32 {bindc_name = "ziel"
+    ! CHECK: %[[ziel:.*]] = fir.alloca f32 <{bindc_name = "ziel"
     ! CHECK: %[[scalar_load:.*]] = fir.load %{{.*}} : !fir.ref<!fir.box<!fir.ptr<f32>>>
     ! CHECK: %[[addr0:.*]] = fir.box_addr %[[scalar_load]] : (!fir.box<!fir.ptr<f32>>) -> !fir.ptr<f32>
     ! CHECK: %[[addrToInt0:.*]] = fir.convert %[[addr0]]

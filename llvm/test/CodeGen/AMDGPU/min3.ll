@@ -1,7 +1,7 @@
-; RUN: llc -mtriple=amdgcn < %s | FileCheck -check-prefixes=GCN,SI %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -check-prefixes=GCN,VI %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,GFX9,GFX9_1250 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1250 < %s | FileCheck -check-prefixes=GCN,GFX1250,GFX9_1250 %s
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -check-prefixes=GCN,SI %s
+; RUN: llc -mtriple=amdgpu8.02 < %s | FileCheck -check-prefixes=GCN,VI %s
+; RUN: llc -mtriple=amdgpu9.00 < %s | FileCheck -check-prefixes=GCN,GFX9,GFX9_1250 %s
+; RUN: llc -mtriple=amdgpu12.50 < %s | FileCheck -check-prefixes=GCN,GFX1250,GFX9_1250 %s
 
 ; GCN-LABEL: {{^}}v_test_imin3_slt_i32:
 ; GCN: v_min3_i32

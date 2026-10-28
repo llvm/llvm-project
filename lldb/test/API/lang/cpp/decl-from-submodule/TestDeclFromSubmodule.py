@@ -8,11 +8,12 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@requireExpressionEvaluation
 class DeclFromSubmoduleTestCase(TestBase):
     # Requires DWARF debug info which is not retained when linking with link.exe.
     @skipIfWindows
-    # Lookup for decls in submodules fails in Linux
-    @expectedFailureAll(oslist=["linux"])
+    # Lookup for decls in submodules fails in Linux and FreeBSD
+    @expectedFailureAll(oslist=["linux", "freebsd"])
     def test_expr(self):
         self.build()
         lldbutil.run_to_source_breakpoint(self, "return 0", lldb.SBFileSpec("main.cpp"))

@@ -747,6 +747,60 @@ TEST(ExternalIOTests, TestWriteAfterEndfile) {
       << "EndIoStatement() for Close";
 }
 
+TEST(ExternalIOTests, TestUnformattedWriteAfterEndfile) {
+  // Test that unformatted write after ENDFILE with IOSTAT= returns
+  // IostatWriteAfterEndfile instead of crashing. This specifically tests
+  // the fix in BeginUnformattedIO() that checks IsAfterEndfile() before
+  // calling io.Emit().
+  //
+  // OPEN(NEWUNIT=unit,ACCESS='SEQUENTIAL',ACTION='READWRITE',&
+  //   FORM='UNFORMATTED',STATUS='SCRATCH')
+  auto *io{IONAME(BeginOpenNewUnit)(__FILE__, __LINE__)};
+  ASSERT_TRUE(IONAME(SetAccess)(io, "SEQUENTIAL", 10))
+      << "SetAccess(SEQUENTIAL)";
+  ASSERT_TRUE(IONAME(SetAction)(io, "READWRITE", 9)) << "SetAction(READWRITE)";
+  ASSERT_TRUE(IONAME(SetForm)(io, "UNFORMATTED", 11)) << "SetForm(UNFORMATTED)";
+  ASSERT_TRUE(IONAME(SetStatus)(io, "SCRATCH", 7)) << "SetStatus(SCRATCH)";
+  int unit{-1};
+  ASSERT_TRUE(IONAME(GetNewUnit)(io, unit)) << "GetNewUnit()";
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for OpenNewUnit";
+
+  // Set up descriptor for I/O
+  StaticDescriptor<0> staticDescriptor;
+  Descriptor &desc{staticDescriptor.descriptor()};
+  std::int64_t buffer{1234};
+  static constexpr std::size_t recl{sizeof buffer};
+  desc.Establish(TypeCode{CFI_type_int64_t}, recl, &buffer, 0);
+  desc.Check();
+
+  // WRITE(unit) buffer
+  io = IONAME(BeginUnformattedOutput)(unit, __FILE__, __LINE__);
+  ASSERT_TRUE(IONAME(OutputDescriptor)(io, desc)) << "OutputDescriptor()";
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement for WRITE before ENDFILE";
+
+  // ENDFILE(unit)
+  io = IONAME(BeginEndfile)(unit, __FILE__, __LINE__);
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement for ENDFILE";
+
+  // WRITE(unit,IOSTAT=iostat) buffer - should return error, not crash
+  buffer = 5678;
+  io = IONAME(BeginUnformattedOutput)(unit, __FILE__, __LINE__);
+  IONAME(EnableHandlers)(io, true /*IOSTAT=*/);
+  // The write may or may not succeed at OutputDescriptor depending on
+  // when the error is detected, but EndIoStatement must return the error
+  IONAME(OutputDescriptor)(io, desc);
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatWriteAfterEndfile)
+      << "EndIoStatement for unformatted WRITE after ENDFILE";
+
+  // CLOSE(UNIT=unit)
+  io = IONAME(BeginClose)(unit, __FILE__, __LINE__);
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for Close";
+}
+
 TEST(ExternalIOTests, TestUTF8Encoding) {
   // OPEN(FILE="utf8test",NEWUNIT=unit,ACCESS='SEQUENTIAL',ACTION='READWRITE',&
   //   FORM='FORMATTED',STATUS='REPLACE',ENCODING='UTF-8')
@@ -924,12 +978,15 @@ TEST(ExternalIOTests, TestUCS) {
 }
 
 TEST(ExternalIOTests, BigUnitNumbers) {
-  if (std::numeric_limits<ExternalUnit>::max() <
-      std::numeric_limits<std::int64_t>::max()) {
-    std::int64_t unit64Ok = std::numeric_limits<ExternalUnit>::max();
+  if (Fortran::common::numeric_limits<ExternalUnit>::max() <
+      Fortran::common::numeric_limits<std::int64_t>::max()) {
+    std::int64_t unit64Ok =
+        Fortran::common::numeric_limits<ExternalUnit>::max();
     std::int64_t unit64Bad = unit64Ok + 1;
     std::int64_t unit64Bad2 =
-        static_cast<std::int64_t>(std::numeric_limits<ExternalUnit>::min()) - 1;
+        static_cast<std::int64_t>(
+            Fortran::common::numeric_limits<ExternalUnit>::min()) -
+        1;
     EXPECT_EQ(IONAME(CheckUnitNumberInRange64)(unit64Ok, true), IostatOk);
     EXPECT_EQ(IONAME(CheckUnitNumberInRange64)(unit64Ok, false), IostatOk);
     EXPECT_EQ(
@@ -1009,7 +1066,7 @@ TEST(ExternalIOTests, OpenNewExtant) {
       << "EndIoStatement() for OpenUnit(NEW)";
   // OPEN(10,STATUS='OLD')
   io = IONAME(BeginOpenUnit)(10, __FILE__, __LINE__);
-  ASSERT_TRUE(IONAME(SetFile)(io, "opennewextant", 15))
+  ASSERT_TRUE(IONAME(SetFile)(io, "opennewextant", 13))
       << "SetFile(opennewextant)";
   ASSERT_TRUE(IONAME(SetStatus)(io, "OLD", 3)) << "SetStatus(OLD)";
   ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
