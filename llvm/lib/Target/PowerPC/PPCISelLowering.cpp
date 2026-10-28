@@ -13326,6 +13326,10 @@ Instruction *PPCTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
   return nullptr;
 }
 
+bool PPCTargetLowering::fenceClearsLoadLinkedReservation() const {
+  return !Subtarget.fenceKeepsReservation();
+}
+
 MachineBasicBlock *PPCTargetLowering::EmitAtomicBinary(MachineInstr &MI,
                                                        MachineBasicBlock *BB,
                                                        unsigned BinOpcode,
@@ -13510,7 +13514,7 @@ static bool isSignExtended(MachineInstr &MI, const PPCInstrInfo *TII) {
 }
 
 // Sign extend operand OpIdx if the value is not known to be sign extended.
-// Assumes the operand is a register. The flag IsByte controls which intruction
+// Assumes the operand is a register. The flag IsByte controls which instruction
 // is used for the sign extension.
 static void signExtendOperandIfUnknown(MachineInstr &MI, MachineBasicBlock *BB,
                                        unsigned OpIdx, bool IsByte,
@@ -16501,7 +16505,7 @@ SDValue PPCTargetLowering::combineBVLoadsSpecialValue(SDValue Op,
     return SDValue();
 
   LLVM_DEBUG(llvm::dbgs() << "\ncombineBVLoadsSpecialValue: Build vector ("
-                          << VT.getEVTString() << "): ";
+                          << VT << "): ";
              Op->dump());
 
   unsigned NumElems = VT.getVectorNumElements();
