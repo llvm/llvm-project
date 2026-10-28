@@ -9,11 +9,9 @@ define void @alt_zext_sext_unsigned_demoted_operand(ptr noalias %p, ptr noalias 
 ; CHECK-NEXT:    [[PQ0:%.*]] = getelementptr inbounds i32, ptr [[Q]], i64 0
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i8>, ptr [[PA0]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext <4 x i8> [[TMP0]] to <4 x i32>
-; CHECK-NEXT:    [[TMP2:%.*]] = sext <4 x i8> [[TMP0]] to <4 x i32>
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult <4 x i8> [[TMP0]], splat (i8 -6)
 ; CHECK-NEXT:    [[TMP5:%.*]] = sext <4 x i1> [[TMP4]] to <4 x i32>
-; CHECK-NEXT:    [[TMP6:%.*]] = and <4 x i32> [[TMP3]], [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = and <4 x i32> [[TMP1]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = mul <4 x i32> [[TMP6]], splat (i32 16843009)
 ; CHECK-NEXT:    store <4 x i32> [[TMP7]], ptr [[PQ0]], align 4
 ; CHECK-NEXT:    ret void
@@ -69,8 +67,9 @@ define void @alt_sext_zext_signed_demoted_operand(ptr noalias %p, ptr noalias %q
 ; CHECK-NEXT:    [[PA0:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 0
 ; CHECK-NEXT:    [[PQ0:%.*]] = getelementptr inbounds i32, ptr [[Q]], i64 0
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i8>, ptr [[PA0]], align 1
-; CHECK-NEXT:    [[TMP1:%.*]] = sext <4 x i8> [[TMP0]] to <4 x i32>
-; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i8> [[TMP0]] to <4 x i32>
+; CHECK-NEXT:    [[TMP8:%.*]] = sext <4 x i8> [[TMP0]] to <4 x i16>
+; CHECK-NEXT:    [[TMP1:%.*]] = sext <4 x i16> [[TMP8]] to <4 x i32>
+; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i16> [[TMP8]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp slt <4 x i8> [[TMP0]], splat (i8 100)
 ; CHECK-NEXT:    [[TMP5:%.*]] = sext <4 x i1> [[TMP4]] to <4 x i32>
@@ -131,9 +130,7 @@ define void @alt_uitofp_sitofp_unsigned_demoted_operand(ptr noalias %p, ptr noal
 ; CHECK-NEXT:    [[PQ0:%.*]] = getelementptr inbounds i32, ptr [[Q]], i64 0
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i8>, ptr [[PA0]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = uitofp <4 x i8> [[TMP0]] to <4 x float>
-; CHECK-NEXT:    [[TMP2:%.*]] = sitofp <4 x i8> [[TMP0]] to <4 x float>
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> [[TMP2]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x float> [[TMP3]] to <4 x i32>
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x float> [[TMP1]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult <4 x i8> [[TMP0]], splat (i8 -6)
 ; CHECK-NEXT:    [[TMP6:%.*]] = sext <4 x i1> [[TMP5]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP7:%.*]] = and <4 x i32> [[TMP4]], [[TMP6]]
@@ -191,8 +188,9 @@ define void @alt_sitofp_uitofp_signed_demoted_operand(ptr noalias %p, ptr noalia
 ; CHECK-NEXT:    [[PA0:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 0
 ; CHECK-NEXT:    [[PQ0:%.*]] = getelementptr inbounds i32, ptr [[Q]], i64 0
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i8>, ptr [[PA0]], align 1
-; CHECK-NEXT:    [[TMP1:%.*]] = sitofp <4 x i8> [[TMP0]] to <4 x float>
-; CHECK-NEXT:    [[TMP2:%.*]] = uitofp <4 x i8> [[TMP0]] to <4 x float>
+; CHECK-NEXT:    [[TMP8:%.*]] = sext <4 x i8> [[TMP0]] to <4 x i16>
+; CHECK-NEXT:    [[TMP1:%.*]] = sitofp <4 x i16> [[TMP8]] to <4 x float>
+; CHECK-NEXT:    [[TMP2:%.*]] = uitofp <4 x i16> [[TMP8]] to <4 x float>
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> [[TMP2]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x float> [[TMP3]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp slt <4 x i8> [[TMP0]], splat (i8 100)

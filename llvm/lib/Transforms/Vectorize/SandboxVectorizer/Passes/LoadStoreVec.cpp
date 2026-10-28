@@ -28,18 +28,13 @@ namespace sandboxir {
 #define DEBUG_PREFIX_LOCAL DEBUG_PREFIX "LoadStoreVec: "
 
 std::optional<Type *> LoadStoreVec::canVectorize(BndlRef<Instruction *> Bndl) {
-  // Check if in the same BB.
-  if (LegalityAnalysis::differentBlock(Bndl))
-    return std::nullopt;
+  LLVM_DEBUG(dbgs() << DEBUG_PREFIX << "canVectorize() Bundle:\n";
+             VecUtils::dump(Bndl));
+  const auto &LegalityRes = Legality->canVectorizeLSV(Bndl);
+  LLVM_DEBUG(dbgs() << DEBUG_PREFIX << "Legality: " << LegalityRes << "\n");
 
-  // Check if instructions repeat.
-  if (!LegalityAnalysis::areUnique(Bndl))
+  if (LegalityRes.getSubclassID() != LegalityResultID::Widen)
     return std::nullopt;
-
-  // Check scheduling.
-  if (!Sched->trySchedule(Bndl))
-    return std::nullopt;
-
   return VecUtils::getCombinedVectorTypeFor(Bndl, *DL);
 }
 
@@ -334,8 +329,10 @@ bool LoadStoreVec::runOnRegion(Region &Rgn, const Analyses &RegionAnalyses) {
   DL = &F.getParent()->getDataLayout();
   Ctx = &F.getContext();
   A = &RegionAnalyses;
-  Sched =
-      std::make_unique<Scheduler>(A->getAA(), *Ctx, SchedDirection::BottomUp);
+  InstrMaps IMaps;
+  Legality = std::make_unique<LegalityAnalysis>(
+      A->getAA(), A->getScalarEvolution(), F.getParent()->getDataLayout(),
+      A->getTTI(), F.getContext(), IMaps, SchedDirection::BottomUp);
 
   auto Opc = Bndl[0]->getOpcode();
   assert(
@@ -353,7 +350,6 @@ bool LoadStoreVec::runOnRegion(Region &Rgn, const Analyses &RegionAnalyses) {
   default:
     llvm_unreachable("Expected Load or Store");
   }
-  Sched.reset();
   return Changed;
 }
 

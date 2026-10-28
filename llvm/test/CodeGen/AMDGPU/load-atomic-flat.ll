@@ -197,9 +197,8 @@ define amdgpu_cs void @atomic_load_i16x4_monotonic_agent(ptr addrspace(0) %p, pt
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    flat_load_dwordx2 v[0:1], v[0:1] glc dlc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_lshrrev_b32_e32 v4, 16, v1
 ; GFX10-NEXT:    v_add_nc_u16 v0, v0, v0 op_sel:[0,1,0]
-; GFX10-NEXT:    v_mad_u16 v0, v1, v4, v0
+; GFX10-NEXT:    v_mad_u16 v0, v1, v1, v0 op_sel:[0,1,0,0]
 ; GFX10-NEXT:    global_store_short v[2:3], v0, off
 ; GFX10-NEXT:    s_endpgm
 ;
