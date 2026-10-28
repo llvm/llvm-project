@@ -56,7 +56,7 @@ void PISAInstPrinter::printInst(const MCInst *MI, uint64_t Address,
 }
 
 void PISAInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) {
-  if (MCRegister::isPhysicalRegister(Reg)) {
+  if (Reg.isPhysical()) {
     OS << getRegisterName(Reg);
   } else {
     std::pair<const char *, unsigned> DecodedReg =
