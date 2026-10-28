@@ -295,10 +295,5 @@ define zeroext i1 @test_is_not_nan_f32(float %x) #0 {
 
 declare i1 @llvm.is.fpclass.f64(double, i32)
 declare i1 @llvm.is.fpclass.f32(float, i32)
-declare float @llvm.fabs.f32(float)
-declare double @llvm.fabs.f64(double)
-declare fp128 @llvm.fabs.f128(fp128)
-declare <4 x float> @llvm.fabs.v4f32(<4 x float>)
-declare <2 x double> @llvm.fabs.v2f64(<2 x double>)
 
 attributes #0 = {strictfp}
