@@ -102,6 +102,15 @@ else:
                     + libc_bitcode_library
                     + " "
                 )
+            libm_bitcode_library = os.path.join(
+                config.llvm_shlib_dir, config.target_triple, "libm.bc"
+            )
+            if os.path.exists(libm_bitcode_library):
+                librt_flags += (
+                    "-Xclang -mlink-builtin-bitcode -Xclang "
+                    + libm_bitcode_library
+                    + " "
+                )
             config.substitutions.append(("%librt ", librt_flags))
         # Check if the linker supports --start-group and --end-group
         # For nvptx64 target, it falls back to the default.
@@ -114,6 +123,12 @@ else:
             )
         else:
             config.substitutions.append(("%librt ", "-lm " + base_lib + " -lc "))
+
+# spirv-link does not support -lm, libm.bc is linked via %librt.
+if "spirv" in config.target_arch:
+    config.substitutions.append(("%libm", ""))
+else:
+    config.substitutions.append(("%libm", "-lm"))
 
 builtins_test_crt = get_required_attr(config, "builtins_test_crt")
 if builtins_test_crt:
