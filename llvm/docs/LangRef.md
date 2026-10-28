@@ -14178,7 +14178,7 @@ This instruction requires several arguments:
      tail call void @take_ptr(ptr %x)
      ret void
    }
-   
+
    ; Invalid (assuming @take_ptr dereferences the pointer), because the frame
    ; @frameaddress names is torn down before @take_ptr runs.
    define void @invalid_frameaddress() {
