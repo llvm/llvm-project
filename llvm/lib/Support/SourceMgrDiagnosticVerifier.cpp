@@ -272,13 +272,12 @@ SourceMgrDiagnosticVerifier::process(raw_ostream &os, SourceMgr &mgr,
               diag.getMessage(), reportUnexpected);
   if (result == MatchResult::Unexpected)
     mgr.PrintMessage(
-        os, SMDiagnostic(mgr, diag.getLoc(), diag.getFilename(),
-                         diag.getLineNo(), diag.getColumnNo(),
-                         SourceMgr::DK_Error,
-                         "unexpected " + getDiagKindStr(diag.getKind()).str() +
-                             ": " + diag.getMessage().str(),
-                         diag.getLineContents(), diag.getRanges(),
-                         diag.getFixIts()));
+        os, SMDiagnostic(
+                mgr, diag.getLoc(), diag.getFilename(), diag.getLineNo(),
+                diag.getColumnNo(), SourceMgr::DK_Error,
+                "unexpected " + getDiagKindStr(diag.getKind()).str() + ": " +
+                    diag.getMessage().str(),
+                diag.getLineContents(), diag.getRanges(), diag.getFixIts()));
   mgr.setDiagHandler(handler, handlerCtx);
   return result;
 }
