@@ -466,32 +466,23 @@ class CounterFieldFeature<string name, string fieldName, int value>
     : SubtargetFeature<name # "-" # value, fieldName, !cast<string>(value),
                        "Counter field " # fieldName # " is " # value>;
 
-def FeatureVmcntLoShift10 :
-  CounterFieldFeature<"vmcnt-lo-shift", "VmcntLoShift", 10>;
-def FeatureVmcntLoBits6 :
-  CounterFieldFeature<"vmcnt-lo-bits", "VmcntLoBits", 6>;
-def FeatureVmcntHiBits2 :
-  CounterFieldFeature<"vmcnt-hi-bits", "VmcntHiBits", 2>;
-def FeatureExpcntShift0 : CounterFieldFeature<"expcnt-shift", "ExpcntShift", 0>;
-def FeatureLgkmcntShift4 :
-  CounterFieldFeature<"lgkmcnt-shift", "LgkmcntShift", 4>;
-def FeatureLgkmcntBits6 : CounterFieldFeature<"lgkmcnt-bits", "LgkmcntBits", 6>;
-def FeatureLoadStorecntShift8 :
-  CounterFieldFeature<"loadcnt-storecnt-shift", "LoadStorecntShift", 8>;
-def FeatureLoadcntBits6 : CounterFieldFeature<"loadcnt-bits", "LoadcntBits", 6>;
-def FeatureSamplecntBits6 :
-  CounterFieldFeature<"samplecnt-bits", "SamplecntBits", 6>;
-def FeatureBvhcntBits3 : CounterFieldFeature<"bvhcnt-bits", "BvhcntBits", 3>;
-def FeatureDscntBits6 : CounterFieldFeature<"dscnt-bits", "DscntBits", 6>;
-def FeatureStorecntBits6 :
-  CounterFieldFeature<"storecnt-bits", "StorecntBits", 6>;
-def FeatureKmcntBits5 : CounterFieldFeature<"kmcnt-bits", "KmcntBits", 5>;
-def FeatureXcntBits6 : CounterFieldFeature<"xcnt-bits", "XcntBits", 6>;
-def FeatureAsynccntBits6 :
-  CounterFieldFeature<"asynccnt-bits", "AsynccntBits", 6>;
-def FeatureHoldCntBits1 : CounterFieldFeature<"holdcnt-bits", "HoldCntBits", 1>;
-def FeatureBarrierMemberCountBits8 :
-  CounterFieldFeature<"barrier-member-count-bits", "BarrierMemberCountBits", 8>;
+def FeatureVmcntLoShift10          : CounterFieldFeature<"vmcnt-lo-shift", "VmcntLoShift", 10>;
+def FeatureVmcntLoBits6            : CounterFieldFeature<"vmcnt-lo-bits", "VmcntLoBits", 6>;
+def FeatureVmcntHiBits2            : CounterFieldFeature<"vmcnt-hi-bits", "VmcntHiBits", 2>;
+def FeatureExpcntShift0            : CounterFieldFeature<"expcnt-shift", "ExpcntShift", 0>;
+def FeatureLgkmcntShift4           : CounterFieldFeature<"lgkmcnt-shift", "LgkmcntShift", 4>;
+def FeatureLgkmcntBits6            : CounterFieldFeature<"lgkmcnt-bits", "LgkmcntBits", 6>;
+def FeatureLoadStorecntShift8      : CounterFieldFeature<"loadcnt-storecnt-shift", "LoadStorecntShift", 8>;
+def FeatureLoadcntBits6            : CounterFieldFeature<"loadcnt-bits", "LoadcntBits", 6>;
+def FeatureSamplecntBits6          : CounterFieldFeature<"samplecnt-bits", "SamplecntBits", 6>;
+def FeatureBvhcntBits3             : CounterFieldFeature<"bvhcnt-bits", "BvhcntBits", 3>;
+def FeatureDscntBits6              : CounterFieldFeature<"dscnt-bits", "DscntBits", 6>;
+def FeatureStorecntBits6           : CounterFieldFeature<"storecnt-bits", "StorecntBits", 6>;
+def FeatureKmcntBits5              : CounterFieldFeature<"kmcnt-bits", "KmcntBits", 5>;
+def FeatureXcntBits6               : CounterFieldFeature<"xcnt-bits", "XcntBits", 6>;
+def FeatureAsynccntBits6           : CounterFieldFeature<"asynccnt-bits", "AsynccntBits", 6>;
+def FeatureHoldCntBits1            : CounterFieldFeature<"holdcnt-bits", "HoldCntBits", 1>;
+def FeatureBarrierMemberCountBits8 : CounterFieldFeature<"barrier-member-count-bits", "BarrierMemberCountBits", 8>;
 
 defm GCN3Encoding : AMDGPUSubtargetFeature<"gcn3-encoding",
   "Encoding format for VI",
@@ -1898,9 +1889,7 @@ def FeatureGFX11 : GCNSubtargetFeatureGeneration<"GFX11",
    FeatureInstCacheLineSize128, FeatureMTBUFInsts, FeatureFormattedMUBUFInsts,
    Feature32BitNumRecordsBufferResource,
    FeatureMaxWavesPerEU16,
-   FeatureVmcntLoShift10, FeatureVmcntLoBits6, FeatureExpcntShift0,
-   FeatureLgkmcntShift4, FeatureLgkmcntBits6, FeatureStorecntBits6,
-   FeatureHoldCntBits1
+   FeatureVmcntLoShift10, FeatureVmcntLoBits6, FeatureExpcntShift0, FeatureLgkmcntShift4, FeatureLgkmcntBits6, FeatureStorecntBits6, FeatureHoldCntBits1
   ]
 >;
 
@@ -1931,11 +1920,7 @@ def FeatureGFX12 : GCNSubtargetFeatureGeneration<"GFX12",
    FeatureAgentScopeFineGrainedRemoteMemoryAtomics, FeatureFlatOffsetBits24,
    FeatureFlatSignedOffset, FeatureInstCacheLineSize128,
    FeatureMaxWavesPerEU16,
-   FeatureVmcntLoShift10, FeatureVmcntLoBits6, FeatureExpcntShift0,
-   FeatureLgkmcntShift4, FeatureLgkmcntBits6, FeatureStorecntBits6,
-   FeatureHoldCntBits1,
-   FeatureLoadStorecntShift8, FeatureLoadcntBits6, FeatureSamplecntBits6,
-   FeatureBvhcntBits3, FeatureDscntBits6, FeatureKmcntBits5
+   FeatureVmcntLoShift10, FeatureVmcntLoBits6, FeatureExpcntShift0, FeatureLgkmcntShift4, FeatureLgkmcntBits6, FeatureStorecntBits6, FeatureHoldCntBits1, FeatureLoadStorecntShift8, FeatureLoadcntBits6, FeatureSamplecntBits6, FeatureBvhcntBits3, FeatureDscntBits6, FeatureKmcntBits5
   ]
 >;
 
@@ -1970,12 +1955,7 @@ def FeatureGFX13 : GCNSubtargetFeatureGeneration<"GFX13",
    FeatureMTBUFInsts, FeatureFormattedMUBUFInsts,
    Feature45BitNumRecordsBufferResource,
    FeatureMaxWavesPerEU16, FeatureCacheFillSize,
-   FeatureVmcntLoShift10, FeatureVmcntLoBits6, FeatureExpcntShift0,
-   FeatureLgkmcntShift4, FeatureLgkmcntBits6, FeatureStorecntBits6,
-   FeatureHoldCntBits1,
-   FeatureLoadStorecntShift8, FeatureLoadcntBits6, FeatureSamplecntBits6,
-   FeatureBvhcntBits3, FeatureDscntBits6, FeatureKmcntBits5,
-   FeatureBarrierMemberCountBits8
+   FeatureVmcntLoShift10, FeatureVmcntLoBits6, FeatureExpcntShift0, FeatureLgkmcntShift4, FeatureLgkmcntBits6, FeatureStorecntBits6, FeatureHoldCntBits1, FeatureLoadStorecntShift8, FeatureLoadcntBits6, FeatureSamplecntBits6, FeatureBvhcntBits3, FeatureDscntBits6, FeatureKmcntBits5, FeatureBarrierMemberCountBits8
   ]
 >;
 //===----------------------------------------------------------------------===//
