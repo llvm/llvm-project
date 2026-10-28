@@ -139,8 +139,8 @@ public:
   StorageUniquer();
   ~StorageUniquer();
 
-  /// Set the flag specifying if multi-threading is disabled within the uniquer.
-  void disableMultithreading(bool disable = true);
+  /// Set whether thread-safe locking is enabled within the uniquer.
+  void setThreadSafeLocking(bool enable);
 
   /// Register a new parametric storage class, this is necessary to create
   /// instances of this class type. `id` is the type identifier that will be

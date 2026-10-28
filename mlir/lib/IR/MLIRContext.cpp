@@ -151,6 +151,9 @@ public:
   /// Enable support for multi-threading within MLIR.
   bool threadingIsEnabled = true;
 
+  /// Enable locking for context access independently of parallel execution.
+  bool threadSafeLockingIsEnabled = true;
+
   /// Track if we are currently executing in a threaded execution environment
   /// (like the pass-manager): this is only a debugging feature to help reducing
   /// the chances of data races one some context APIs.
@@ -287,14 +290,15 @@ public:
       ownedThreadPool = std::make_unique<llvm::DefaultThreadPool>();
       threadPool = ownedThreadPool.get();
     } else {
-      disableUniquerMultithreading(true);
+      setThreadSafeLocking(false);
     }
   }
-  /// Update the threading mode for each of the uniquers.
-  void disableUniquerMultithreading(bool disable) {
-    affineUniquer.disableMultithreading(disable);
-    attributeUniquer.disableMultithreading(disable);
-    typeUniquer.disableMultithreading(disable);
+  /// Update the locking mode for context access and each of the uniquers.
+  void setThreadSafeLocking(bool enable) {
+    threadSafeLockingIsEnabled = enable;
+    affineUniquer.setThreadSafeLocking(enable);
+    attributeUniquer.setThreadSafeLocking(enable);
+    typeUniquer.setThreadSafeLocking(enable);
   }
   ~MLIRContextImpl() {
     for (auto typeMapping : registeredTypes)
@@ -632,7 +636,7 @@ void MLIRContext::disableMultithreading(bool disable) {
 
   impl->threadingIsEnabled = !disable;
 
-  impl->disableUniquerMultithreading(disable);
+  impl->setThreadSafeLocking(!disable);
 
   // Destroy thread pool (stop all threads) if it is no longer needed, or create
   // a new one if multithreading was re-enabled.
@@ -651,6 +655,16 @@ void MLIRContext::disableMultithreading(bool disable) {
     impl->ownedThreadPool = std::make_unique<llvm::DefaultThreadPool>();
     impl->threadPool = impl->ownedThreadPool.get();
   }
+}
+
+#if LLVM_ENABLE_THREADS
+bool MLIRContext::isThreadSafeLockingEnabled() {
+  return impl->threadSafeLockingIsEnabled;
+}
+#endif
+
+void MLIRContext::enableThreadSafeLocking() {
+  impl->setThreadSafeLocking(true);
 }
 
 void MLIRContext::setThreadPool(llvm::ThreadPoolInterface &pool) {
@@ -916,8 +930,8 @@ OperationName::OperationName(StringRef name, MLIRContext *context) {
   MLIRContextImpl &ctxImpl = context->getImpl();
 
   // Check for an existing name in read-only mode.
-  bool isMultithreadingEnabled = context->isMultithreadingEnabled();
-  if (isMultithreadingEnabled) {
+  bool shouldLock = context->isThreadSafeLockingEnabled();
+  if (shouldLock) {
     // Check the registered info map first. In the overwhelmingly common case,
     // the entry will be in here and it also removes the need to acquire any
     // locks.
@@ -936,7 +950,7 @@ OperationName::OperationName(StringRef name, MLIRContext *context) {
   }
 
   // Acquire a writer-lock so that we can safely create the new instance.
-  ScopedWriterLock lock(ctxImpl.operationInfoMutex, isMultithreadingEnabled);
+  ScopedWriterLock lock(ctxImpl.operationInfoMutex, shouldLock);
 
   auto it = ctxImpl.operations.try_emplace(name);
   if (it.second) {
