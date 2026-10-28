@@ -3288,6 +3288,21 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  fmaximum_mag_numf80_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fmaximum_mag_numf80_test.cpp
+  HDRS
+    FMaximumMagNumTest.h
+  DEPENDS
+    libc.src.math.fmaximum_mag_numf80
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.float80
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   fmaximum_mag_numbf16_test
   SUITE
     libc-math-smoke-tests
@@ -3673,6 +3688,21 @@ add_fp_unittest(
     libc.src.math.fminimum_mag_numf128
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.float128
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fminimum_mag_numf80_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fminimum_mag_numf80_test.cpp
+  HDRS
+    FMinimumMagNumTest.h
+  DEPENDS
+    libc.src.math.fminimum_mag_numf80
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.float80
     libc.src.__support.FPUtil.fp_bits
 )
 
