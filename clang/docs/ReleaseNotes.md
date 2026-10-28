@@ -1132,7 +1132,7 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   initialization. (#GH196469)
 
 - Fixed incorrect evaluation of compound requirements when a return-type
-  requirement contains a lambda with constrained template parameters. (#GH236286)
+  requirement contains a lambda with constrained template parameters.
 
 #### Bug Fixes to AST Handling
 
