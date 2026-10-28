@@ -1781,7 +1781,7 @@ let hasSideEffects = 1 in {
                    Requires<[HasHardQuad]>;
 }
 
-// Floating point conditional move instrucitons with %fcc0-%fcc3.
+// Floating point conditional move instructions with %fcc0-%fcc3.
 let Predicates = [HasV9] in {
   let Constraints = "$f = $rd", intcc = 0 in {
     def V9MOVFCCrr

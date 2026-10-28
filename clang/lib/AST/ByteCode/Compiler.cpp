@@ -7261,13 +7261,13 @@ bool Compiler<Emitter>::visitCXXForRangeStmt(const CXXForRangeStmt *S) {
 template <class Emitter>
 bool Compiler<Emitter>::visitBreakStmt(const BreakStmt *S) {
   if (LabelInfoStack.empty())
-    return false;
+    return this->emitInvalidTargetLabel(/*IsContinue=*/false, S);
 
   OptLabelTy TargetLabel = std::nullopt;
-  const Stmt *TargetLoop = S->getNamedLoopOrSwitch();
   const VariableScope<Emitter> *BreakScope = nullptr;
 
-  if (!TargetLoop) {
+  if (!S->isNamed()) {
+
     for (const auto &LI : llvm::reverse(LabelInfoStack)) {
       if (LI.BreakLabel) {
         TargetLabel = *LI.BreakLabel;
@@ -7276,6 +7276,12 @@ bool Compiler<Emitter>::visitBreakStmt(const BreakStmt *S) {
       }
     }
   } else {
+    const Stmt *TargetLoop = S->getNamedLoopOrSwitch();
+    // May be null if the named loop is outside of the
+    // current evaluation context, i.e. not a valid target.
+    if (!TargetLoop)
+      return this->emitInvalidTargetLabel(/*IsContinue=*/false, S);
+
     for (const auto &LI : LabelInfoStack) {
       if (LI.Name == TargetLoop) {
         TargetLabel = *LI.BreakLabel;
@@ -7301,13 +7307,12 @@ bool Compiler<Emitter>::visitBreakStmt(const BreakStmt *S) {
 template <class Emitter>
 bool Compiler<Emitter>::visitContinueStmt(const ContinueStmt *S) {
   if (LabelInfoStack.empty())
-    return false;
+    return this->emitInvalidTargetLabel(/*IsContinue=*/true, S);
 
   OptLabelTy TargetLabel = std::nullopt;
-  const Stmt *TargetLoop = S->getNamedLoopOrSwitch();
   const VariableScope<Emitter> *ContinueScope = nullptr;
 
-  if (!TargetLoop) {
+  if (!S->isNamed()) {
     for (const auto &LI : llvm::reverse(LabelInfoStack)) {
       if (LI.ContinueLabel) {
         TargetLabel = *LI.ContinueLabel;
@@ -7316,6 +7321,12 @@ bool Compiler<Emitter>::visitContinueStmt(const ContinueStmt *S) {
       }
     }
   } else {
+    const Stmt *TargetLoop = S->getNamedLoopOrSwitch();
+    // May be null if the named loop is outside of the
+    // current evaluation context, i.e. not a valid target.
+    if (!TargetLoop)
+      return this->emitInvalidTargetLabel(/*IsContinue=*/true, S);
+
     for (auto LI : LabelInfoStack) {
       if (LI.Name == TargetLoop) {
         TargetLabel = *LI.ContinueLabel;

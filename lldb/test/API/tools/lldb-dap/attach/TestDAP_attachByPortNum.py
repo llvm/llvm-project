@@ -94,7 +94,7 @@ class TestDAP_attachByPortNum(DAPTestCaseBase):
         port = -1
         attach_args = AttachArgs(program, gdbRemotePort=port)
         pending = session.initialize_and_launch(attach_args)
-        session.configuration_done().result_or_error()
+        session.verify_configuration_done(expected_success=False)
         pending.error(f"The user can't attach to invalid port {port}")
 
     @skipIfWindows
@@ -120,5 +120,5 @@ class TestDAP_attachByPortNum(DAPTestCaseBase):
                 gdbRemotePort=port,
             )
         )
-        session.configuration_done().result_or_error()
+        session.verify_configuration_done(expected_success=False)
         pending.error(f"The user can't attach with illegal port ({port})")
