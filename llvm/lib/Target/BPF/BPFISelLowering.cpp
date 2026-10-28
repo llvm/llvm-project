@@ -177,6 +177,10 @@ BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
 
   setBooleanContents(ZeroOrOneBooleanContent);
   setMaxAtomicSizeInBitsSupported(64);
+  // AtomicExpand turns operations on 8 and 16 bits into cmpxchg of the word
+  // that they are in. Its loops start with a relaxed atomic load.
+  if (STI.hasLoadAcqStoreRel())
+    setMinCmpXchgSizeInBits(32);
   setMinimumJumpTableEntries(BPFMinimumJumpTableEntries);
 
   // Function alignments
@@ -215,6 +219,7 @@ BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
   HasJmp32 = STI.getHasJmp32();
   HasJmpExt = STI.getHasJmpExt();
   HasMovsx = STI.hasMovsx();
+  HasLoadAcqStoreRel = STI.hasLoadAcqStoreRel();
 
   AllowsMisalignedMemAccess = STI.getAllowsMisalignedMemAccess();
 }
@@ -805,13 +810,46 @@ SDValue BPFTargetLowering::LowerATOMIC_LOAD_STORE(SDValue Op,
   SDNode *N = Op.getNode();
   SDLoc DL(N);
 
+  // A seq_cst store is xchg by now, see shouldExpandAtomicStoreInIR(), which
+  // makes load acquire enough for a seq_cst load.
   if (cast<AtomicSDNode>(N)->getMergedOrdering() ==
-      AtomicOrdering::SequentiallyConsistent)
+          AtomicOrdering::SequentiallyConsistent &&
+      (N->getOpcode() == ISD::ATOMIC_STORE || !HasLoadAcqStoreRel))
     fail(DL, DAG,
          "sequentially consistent (seq_cst) "
          "atomic load/store is not supported");
 
   return Op;
+}
+
+TargetLowering::AtomicExpansionKind
+BPFTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
+  if (!HasLoadAcqStoreRel)
+    return TargetLowering::shouldExpandAtomicRMWInIR(AI);
+
+  switch (AI->getOperation()) {
+  case AtomicRMWInst::Add:
+  case AtomicRMWInst::Sub:
+  case AtomicRMWInst::And:
+  case AtomicRMWInst::Or:
+  case AtomicRMWInst::Xor:
+  case AtomicRMWInst::Xchg:
+    // There are insns for 32 and 64 bits.
+    if (AI->getDataLayout().getTypeSizeInBits(AI->getType()) >= 32)
+      return AtomicExpansionKind::None;
+    [[fallthrough]];
+  default:
+    return AtomicExpansionKind::CmpXChg;
+  }
+}
+
+TargetLowering::AtomicExpansionKind
+BPFTargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
+  // Store release is not ordered with a later load. xchg is fully ordered.
+  if (HasLoadAcqStoreRel &&
+      SI->getOrdering() == AtomicOrdering::SequentiallyConsistent)
+    return AtomicExpansionKind::Expand;
+  return AtomicExpansionKind::None;
 }
 
 SDValue BPFTargetLowering::LowerATOMIC_FENCE(SDValue Op,
@@ -824,7 +862,25 @@ SDValue BPFTargetLowering::LowerATOMIC_FENCE(SDValue Op,
     // MEMBARRIER is a compiler barrier; it codegens to a no-op.
     return DAG.getNode(ISD::MEMBARRIER, DL, MVT::Other, Op.getOperand(0));
 
-  report_fatal_error("Runtime fence is not supported at the moment");
+  // There is no insn for that. An atomic insn that returns the old value is
+  // fully ordered: add zero to a slot in the stack. Without alu32 that is
+  // 'lock *(u64 *)(r10 - 8) += r1', which is not ordered.
+  if (!HasAlu32)
+    report_fatal_error("Runtime fence is not supported at the moment");
+
+  MachineFunction &MF = DAG.getMachineFunction();
+  SDValue Slot = DAG.CreateStackTemporary(MVT::i64);
+  MachinePointerInfo PtrInfo = MachinePointerInfo::getFixedStack(
+      MF, cast<FrameIndexSDNode>(Slot)->getIndex());
+  SDValue Zero = DAG.getConstant(0, DL, MVT::i64);
+  SDValue Chain = DAG.getStore(Op.getOperand(0), DL, Zero, Slot, PtrInfo);
+  MachineMemOperand *MMO = MF.getMachineMemOperand(
+      PtrInfo, MachineMemOperand::MOLoad | MachineMemOperand::MOStore,
+      LLT::scalar(64), Align(8), MMOMetadata(), SyncScope::System,
+      AtomicOrdering::SequentiallyConsistent);
+  return DAG
+      .getAtomic(ISD::ATOMIC_LOAD_ADD, DL, MVT::i64, Chain, Slot, Zero, MMO)
+      .getValue(1);
 }
 
 static Function *createBPFUnreachable(Module *M) {
