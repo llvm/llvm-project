@@ -483,6 +483,7 @@ namespace llvm {
     /// register EAX to i16 by referencing its sub-register AX.
     bool isTruncateFree(Type *Ty1, Type *Ty2) const override;
     bool isTruncateFree(EVT VT1, EVT VT2) const override;
+    bool isTruncateFree(SDValue Val, EVT VT2) const override;
 
     bool allowTruncateForTailCall(Type *Ty1, Type *Ty2) const override;
 

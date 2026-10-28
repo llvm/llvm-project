@@ -6227,17 +6227,15 @@ define <4 x float> @uitofp_4i64_to_4f32_zext(<4 x i32> %a) {
 ;
 ; AVX512DQ-LABEL: uitofp_4i64_to_4f32_zext:
 ; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    vpmovzxdq {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; AVX512DQ-NEXT:    vcvtqq2ps %zmm0, %ymm0
-; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512DQ-NEXT:    vcvtudq2ps %zmm0, %zmm0
+; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    retq
 ;
 ; AVX512VLDQ-LABEL: uitofp_4i64_to_4f32_zext:
 ; AVX512VLDQ:       # %bb.0:
-; AVX512VLDQ-NEXT:    vpmovzxdq {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; AVX512VLDQ-NEXT:    vcvtqq2ps %ymm0, %xmm0
-; AVX512VLDQ-NEXT:    vzeroupper
+; AVX512VLDQ-NEXT:    vcvtudq2ps %xmm0, %xmm0
 ; AVX512VLDQ-NEXT:    retq
   %ext = zext <4 x i32> %a to <4 x i64>
   %cvt = uitofp <4 x i64> %ext to <4 x float>
