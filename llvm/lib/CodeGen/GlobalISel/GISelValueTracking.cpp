@@ -1513,7 +1513,8 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     }
 
     // For x * x, result is positive or NaN.
-    if (!NegSrc.isValid() && (InterestedClasses & (fcNegative | fcNan)) == fcNone) {
+    if (!NegSrc.isValid() &&
+        (InterestedClasses & (fcNegative | fcNan)) == fcNone) {
       break;
     }
 
@@ -1537,11 +1538,14 @@ void GISelValueTracking::computeKnownFPClass(Register R,
       }
 
       if (NegSrc.isValid()) {
-        Known = IsFMA ? KnownFPClass::fma_neg_square(KnownSrc, KnownAddend, Mode)
-          : KnownFPClass::fmuladd_neg_square(KnownSrc, KnownAddend, Mode);
+        Known =
+            IsFMA
+                ? KnownFPClass::fma_neg_square(KnownSrc, KnownAddend, Mode)
+                : KnownFPClass::fmuladd_neg_square(KnownSrc, KnownAddend, Mode);
       } else {
-        Known = IsFMA ? KnownFPClass::fma_square(KnownSrc, KnownAddend, Mode)
-          : KnownFPClass::fmuladd_square(KnownSrc, KnownAddend, Mode);
+        Known = IsFMA
+                    ? KnownFPClass::fma_square(KnownSrc, KnownAddend, Mode)
+                    : KnownFPClass::fmuladd_square(KnownSrc, KnownAddend, Mode);
       }
 
       break;
@@ -1564,8 +1568,10 @@ void GISelValueTracking::computeKnownFPClass(Register R,
       for (KnownFPClass &K : KnownSrc)
         K.knownNot(KnownNotFromFlags);
     }
-    Known = IsFMA ? KnownFPClass::fma(KnownSrc[0], KnownSrc[1], KnownSrc[2], Mode)
-      : KnownFPClass::fmuladd(KnownSrc[0], KnownSrc[1], KnownSrc[2], Mode);
+    Known = IsFMA
+                ? KnownFPClass::fma(KnownSrc[0], KnownSrc[1], KnownSrc[2], Mode)
+                : KnownFPClass::fmuladd(KnownSrc[0], KnownSrc[1], KnownSrc[2],
+                                        Mode);
     break;
   }
   case TargetOpcode::G_FSQRT:

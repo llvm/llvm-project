@@ -868,7 +868,7 @@ KnownFPClass KnownFPClass::fma_neg_square(const KnownFPClass &KnownSquared_,
   KnownFPClass KnownAddend = applyInputDenormalMode(KnownAddend_, Mode);
 
   KnownFPClass NegSquared = neg_square(KnownSquared, DenormalMode::getIEEE());
-  KnownFPClass Known = fadd_impl(NegSquared, KnownAddend,  /*IsFMA=*/true);
+  KnownFPClass Known = fadd_impl(NegSquared, KnownAddend, /*IsFMA=*/true);
 
   if (KnownAddend.isKnownNever(fcPosInf | fcNan) &&
       NegSquared.isKnownNever(fcNan))
@@ -888,8 +888,8 @@ KnownFPClass KnownFPClass::fmuladd_square(const KnownFPClass &KnownSquared,
 }
 
 KnownFPClass KnownFPClass::fmuladd_neg_square(const KnownFPClass &KnownSquared,
-                                          const KnownFPClass &KnownAddend,
-                                          DenormalMode Mode) {
+                                              const KnownFPClass &KnownAddend,
+                                              DenormalMode Mode) {
   KnownFPClass FMA = fma_neg_square(KnownSquared, KnownAddend, Mode);
   KnownFPClass MulAdd = fadd(neg_square(KnownSquared, Mode), KnownAddend, Mode);
   return FMA.intersectWith(MulAdd);

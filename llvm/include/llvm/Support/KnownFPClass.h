@@ -352,9 +352,11 @@ struct KnownFPClass {
   fmuladd_square(const KnownFPClass &Squared, const KnownFPClass &Addend,
                  DenormalMode Mode = DenormalMode::getDynamic());
 
-  /// Report known values for fmuladd (-x, x, addend) and fmuladd (x, -x, addend)
-  LLVM_ABI static KnownFPClass fmuladd_neg_square(const KnownFPClass &Squared,
-      const KnownFPClass &Addend, DenormalMode = DenormalMode::getDynamic());
+  /// Report known values for fmuladd (-x, x, addend) and fmuladd (x, -x,
+  /// addend)
+  LLVM_ABI static KnownFPClass
+  fmuladd_neg_square(const KnownFPClass &Squared, const KnownFPClass &Addend,
+                     DenormalMode = DenormalMode::getDynamic());
 
   /// Propagate known class for sqrt
   LLVM_ABI static KnownFPClass
@@ -557,4 +559,3 @@ inline KnownFPClass operator|(const KnownFPClass &LHS, KnownFPClass &&RHS) {
 } // namespace llvm
 
 #endif
-

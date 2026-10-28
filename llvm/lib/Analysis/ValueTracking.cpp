@@ -5547,15 +5547,14 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         }
 
         if (NegSrc)
-          Known = IsFMA ? KnownFPClass::fma_neg_square(KnownSrc, KnownAddend,
-                                                       Mode)
-                        : KnownFPClass::fmuladd_neg_square(KnownSrc,
-                                                           KnownAddend, Mode);
+          Known =
+              IsFMA ? KnownFPClass::fma_neg_square(KnownSrc, KnownAddend, Mode)
+                    : KnownFPClass::fmuladd_neg_square(KnownSrc, KnownAddend,
+                                                       Mode);
         else
-          Known = IsFMA
-                      ? KnownFPClass::fma_square(KnownSrc, KnownAddend, Mode)
-                      : KnownFPClass::fmuladd_square(KnownSrc, KnownAddend,
-                                                     Mode);
+          Known =
+              IsFMA ? KnownFPClass::fma_square(KnownSrc, KnownAddend, Mode)
+                    : KnownFPClass::fmuladd_square(KnownSrc, KnownAddend, Mode);
         break;
       }
 
