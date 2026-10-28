@@ -1174,6 +1174,16 @@ static TypedAttr createInitialValueForReduceOp(Operation *op, Type elementTy,
     return rewriter.getIntegerAttr(
         elementTy, APInt::getSignedMinValue(elementTy.getIntOrFloatBitWidth()));
 
+  if (isa<tosa::ArgMinOp>(op) && isa<FloatType>(elementTy))
+    return rewriter.getFloatAttr(
+        elementTy,
+        getFloatMinMaxIdentity(cast<FloatType>(elementTy).getFloatSemantics(),
+                               /*negative=*/false, allowNonFinites));
+
+  if (isa<tosa::ArgMinOp>(op) && isa<IntegerType>(elementTy))
+    return rewriter.getIntegerAttr(
+        elementTy, APInt::getSignedMaxValue(elementTy.getIntOrFloatBitWidth()));
+
   return {};
 }
 
@@ -1451,9 +1461,9 @@ static LogicalResult reduceMatchAndRewriteHelper(OpTy op, uint64_t axis,
 }
 
 // Insert missing leading batch dimensions, taking their sizes from `other`.
-static Value broadcastMatMulTLeadingDimensions(PatternRewriter &rewriter,
-                                               Location loc, Value operand,
-                                               Value other) {
+static Value broadcastMatMulLeadingDimensions(PatternRewriter &rewriter,
+                                              Location loc, Value operand,
+                                              Value other) {
   auto type = cast<RankedTensorType>(operand.getType());
   int64_t missingDims =
       cast<RankedTensorType>(other.getType()).getRank() - type.getRank();
@@ -1475,13 +1485,12 @@ static Value broadcastMatMulTLeadingDimensions(PatternRewriter &rewriter,
 }
 
 // Expand an existing singleton batch dimension to `size`, preserving the rank.
-// Missing dimensions are handled by broadcastMatMulTLeadingDimensions.
+// Missing dimensions are handled by broadcastMatMulLeadingDimensions.
 // linalg.broadcast inserts dimensions, so first remove the singleton dimension
 // with a rank-reducing slice, then reinsert it at the target size.
-static Value broadcastMatMulTSingletonDimension(PatternRewriter &rewriter,
-                                                Location loc, Value operand,
-                                                int64_t dim,
-                                                OpFoldResult size) {
+static Value broadcastMatMulSingletonDimension(PatternRewriter &rewriter,
+                                               Location loc, Value operand,
+                                               int64_t dim, OpFoldResult size) {
   auto type = cast<RankedTensorType>(operand.getType());
   SmallVector<int64_t> sliceShape(type.getShape());
   sliceShape.erase(sliceShape.begin() + dim);
@@ -1503,13 +1512,13 @@ static Value broadcastMatMulTSingletonDimension(PatternRewriter &rewriter,
 
 // Align the ranks, then broadcast each shared batch dimension independently.
 static std::pair<Value, Value>
-normalizeMatMulTBatchDimensions(PatternRewriter &rewriter, Location loc,
-                                Value a, Value b, int64_t batchRank) {
+normalizeMatMulBatchDimensions(PatternRewriter &rewriter, Location loc, Value a,
+                               Value b, int64_t batchRank) {
   int64_t aRank = cast<RankedTensorType>(a.getType()).getRank();
   int64_t bRank = cast<RankedTensorType>(b.getType()).getRank();
   int64_t firstSharedDim = std::max(aRank, bRank) - std::min(aRank, bRank);
-  a = broadcastMatMulTLeadingDimensions(rewriter, loc, a, b);
-  b = broadcastMatMulTLeadingDimensions(rewriter, loc, b, a);
+  a = broadcastMatMulLeadingDimensions(rewriter, loc, a, b);
+  b = broadcastMatMulLeadingDimensions(rewriter, loc, b, a);
 
   IndexPool indexPool;
   // The inserted leading dimensions already match their partner's sizes.
@@ -1526,11 +1535,11 @@ normalizeMatMulTBatchDimensions(PatternRewriter &rewriter, Location loc,
     auto [size, masterOperand] =
         computeTargetSize(rewriter, loc, indexPool, ValueRange{a, b}, dim);
     if (aSize == 1) {
-      a = broadcastMatMulTSingletonDimension(rewriter, loc, a, dim, size);
+      a = broadcastMatMulSingletonDimension(rewriter, loc, a, dim, size);
       continue;
     }
     if (bSize == 1) {
-      b = broadcastMatMulTSingletonDimension(rewriter, loc, b, dim, size);
+      b = broadcastMatMulSingletonDimension(rewriter, loc, b, dim, size);
       continue;
     }
     a = broadcastDynamicDimension(rewriter, loc, indexPool, a, dim, size,
@@ -1541,14 +1550,15 @@ normalizeMatMulTBatchDimensions(PatternRewriter &rewriter, Location loc,
   return {a, b};
 }
 
-MatMulTOperands
-mlir::tosa::prepareMatMulTOperands(PatternRewriter &rewriter, Location loc,
-                                   Value a, Value b,
-                                   RankedTensorType outputType) {
+MatMulTOperands mlir::tosa::prepareMatMulOperands(PatternRewriter &rewriter,
+                                                  Location loc, Value a,
+                                                  Value b,
+                                                  RankedTensorType outputType,
+                                                  bool transposeB) {
   const int64_t outputRank = outputType.getRank();
   const int64_t batchRank = outputRank - 2;
   auto normalizedOperands =
-      normalizeMatMulTBatchDimensions(rewriter, loc, a, b, batchRank);
+      normalizeMatMulBatchDimensions(rewriter, loc, a, b, batchRank);
   a = normalizedOperands.first;
   b = normalizedOperands.second;
 
@@ -1557,7 +1567,8 @@ mlir::tosa::prepareMatMulTOperands(PatternRewriter &rewriter, Location loc,
   for (int64_t batchDim = 0; batchDim < batchRank; ++batchDim)
     outputShape.push_back(tensor::getMixedSize(rewriter, loc, a, batchDim));
   outputShape.push_back(tensor::getMixedSize(rewriter, loc, a, outputRank - 2));
-  outputShape.push_back(tensor::getMixedSize(rewriter, loc, b, outputRank - 2));
+  outputShape.push_back(
+      tensor::getMixedSize(rewriter, loc, b, outputRank - 1 - transposeB));
   SmallVector<Value> dynamicDims;
   for (auto [dim, size] : llvm::enumerate(outputShape))
     if (outputType.isDynamicDim(dim))
@@ -1611,8 +1622,9 @@ public:
 
     const int64_t outputRank = outputType.getRank();
     const int64_t batchRank = outputRank - 2;
-    auto [a, b, zeroTensor] = prepareMatMulTOperands(
-        rewriter, loc, adaptor.getA(), adaptor.getB(), outputType);
+    auto [a, b, zeroTensor] =
+        prepareMatMulOperands(rewriter, loc, adaptor.getA(), adaptor.getB(),
+                              outputType, /*transposeB=*/true);
     Type outputElementType = outputType.getElementType();
 
     int64_t loopRank = outputRank + 1;
@@ -2683,40 +2695,42 @@ struct TileConverter : public OpConversionPattern<tosa::TileOp> {
   }
 };
 
-// Tosa argmax lowering represents the ArgMax op as an linalg.indexed_generic
+// Tosa argmin/argmax lowering represents the op as a linalg.generic
 // op, producing two output buffers.
 //
-// The first output buffer contains the index of the found maximum value. It is
+// The first output buffer contains the index of the found min/max value. It is
 // initialized to 0 and is resulting integer type.
 //
-// The second output buffer contains the maximum value found. It is initialized
-// to the minimum representable value of the input element type. After being
-// populated by indexed_generic, this buffer is disgarded as only the index is
+// The second output buffer contains the min/max value found. It is initialized
+// to the max/min representable value of the input element type. After being
+// populated by generic, this buffer is discarded as only the index is
 // requested.
 //
-// The indexed_generic op updates both the maximum value and index if the
-// current value exceeds the running max.
-class ArgMaxConverter : public OpRewritePattern<tosa::ArgMaxOp> {
+// The generic op updates both the min/max value and index if the
+// current value is lower than/exceeds the running min/max.
+template <typename SrcOp>
+class ArgMinMaxConverter : public OpRewritePattern<SrcOp> {
 public:
-  ArgMaxConverter(MLIRContext *context, bool allowNonFinites)
-      : OpRewritePattern<tosa::ArgMaxOp>(context),
-        allowNonFinites(allowNonFinites) {}
+  ArgMinMaxConverter(MLIRContext *context, bool allowNonFinites)
+      : OpRewritePattern<SrcOp>(context), allowNonFinites(allowNonFinites) {}
 
-  LogicalResult matchAndRewrite(tosa::ArgMaxOp argmaxOp,
+  LogicalResult matchAndRewrite(SrcOp argOp,
                                 PatternRewriter &rewriter) const final {
-    auto loc = argmaxOp.getLoc();
-    Value input = argmaxOp.getInput();
+    constexpr bool isMin = std::is_same_v<SrcOp, tosa::ArgMinOp>;
+
+    auto loc = argOp.getLoc();
+    Value input = argOp.getInput();
     auto inputTy = cast<ShapedType>(input.getType());
-    auto resultTy = cast<ShapedType>(argmaxOp.getOutput().getType());
+    auto resultTy = cast<ShapedType>(argOp.getOutput().getType());
     auto inElementTy = inputTy.getElementType();
     auto outElementTy = resultTy.getElementType();
-    int axis = argmaxOp.getAxis();
-    auto resultMaxTy = RankedTensorType::get(resultTy.getShape(), inElementTy);
+    int axis = argOp.getAxis();
+    auto resultValueTy =
+        RankedTensorType::get(resultTy.getShape(), inElementTy);
 
     if (!isa<IntegerType>(outElementTy))
-      return rewriter.notifyMatchFailure(
-          argmaxOp,
-          "tosa.arg_max to linalg.* requires integer-like result type");
+      return rewriter.notifyMatchFailure(argOp,
+                                         "requires integer-like result type");
 
     SmallVector<Value> dynDims;
     for (int i = 0; i < inputTy.getRank(); i++) {
@@ -2737,27 +2751,25 @@ public:
                                ValueRange{emptyTensorIdx})
             .result();
 
-    // Second fill the output buffer for the running max.
-    auto emptyTensorMax =
+    // Second fill the output buffer for the running min/max.
+    auto emptyTensorValue =
         tensor::EmptyOp::create(rewriter, loc, resultTy.getShape(), inElementTy,
                                 dynDims)
             .getResult();
-    auto fillValueMaxAttr = createInitialValueForReduceOp(
-        argmaxOp, inElementTy, rewriter, allowNonFinites);
+    auto fillValueAttr = createInitialValueForReduceOp(
+        argOp, inElementTy, rewriter, allowNonFinites);
 
-    if (!fillValueMaxAttr)
-      return rewriter.notifyMatchFailure(
-          argmaxOp, "unsupported tosa.argmax element type");
+    if (!fillValueAttr)
+      return rewriter.notifyMatchFailure(argOp, "unsupported element type");
 
-    auto fillValueMax =
-        arith::ConstantOp::create(rewriter, loc, fillValueMaxAttr);
-    auto filledTensorMax =
-        linalg::FillOp::create(rewriter, loc, ValueRange{fillValueMax},
-                               ValueRange{emptyTensorMax})
+    auto fillValue = arith::ConstantOp::create(rewriter, loc, fillValueAttr);
+    auto filledTensorValue =
+        linalg::FillOp::create(rewriter, loc, ValueRange{fillValue},
+                               ValueRange{emptyTensorValue})
             .result();
 
-    // We need to reduce along the arg-max axis, with parallel operations along
-    // the rest.
+    // We need to reduce along the specified axis, with parallel operations
+    // along the rest.
     SmallVector<utils::IteratorType, 4> iteratorTypes;
     iteratorTypes.resize(inputTy.getRank(), utils::IteratorType::parallel);
     iteratorTypes[axis] = utils::IteratorType::reduction;
@@ -2774,8 +2786,8 @@ public:
     auto maps = AffineMap::inferFromExprList({srcExprs, dstExprs, dstExprs},
                                              rewriter.getContext());
     auto linalgOp = linalg::GenericOp::create(
-        rewriter, loc, ArrayRef<Type>({resultTy, resultMaxTy}), input,
-        ValueRange({filledTensorIdx, filledTensorMax}), maps, iteratorTypes,
+        rewriter, loc, ArrayRef<Type>({resultTy, resultValueTy}), input,
+        ValueRange({filledTensorIdx, filledTensorValue}), maps, iteratorTypes,
         [&](OpBuilder &nestedBuilder, Location nestedLoc,
             ValueRange blockArgs) {
           auto newValue = blockArgs[0];
@@ -2788,47 +2800,50 @@ public:
 
           Value predicate;
           if (isa<FloatType>(inElementTy)) {
-            if (argmaxOp.getNanMode() == NanPropagationMode::IGNORE) {
-              // Only update index & max value for non NaN values. If all
+            if (argOp.getNanMode() == NanPropagationMode::IGNORE) {
+              // Only update index & value for non NaN values. If all
               // values are NaNs, the initial index will be return which is 0.
-              predicate = arith::CmpFOp::create(rewriter, nestedLoc,
-                                                arith::CmpFPredicate::OGT,
-                                                newValue, oldValue);
+              predicate = arith::CmpFOp::create(
+                  rewriter, nestedLoc,
+                  isMin ? arith::CmpFPredicate::OLT : arith::CmpFPredicate::OGT,
+                  newValue, oldValue);
             } else {
-              // Update max value if either of the following is true:
-              // - new value is bigger
-              // - cur max is not NaN and new value is NaN
-              Value gt = arith::CmpFOp::create(rewriter, nestedLoc,
-                                               arith::CmpFPredicate::UGT,
-                                               newValue, oldValue);
+              // Update value if either of the following is true:
+              // - new value is smaller/bigger
+              // - cur value is not NaN and new value is NaN
+              Value comparison = arith::CmpFOp::create(
+                  rewriter, nestedLoc,
+                  isMin ? arith::CmpFPredicate::ULT : arith::CmpFPredicate::UGT,
+                  newValue, oldValue);
               Value oldNonNaN = arith::CmpFOp::create(rewriter, nestedLoc,
                                                       arith::CmpFPredicate::ORD,
                                                       oldValue, oldValue);
-              predicate = arith::AndIOp::create(
-                  rewriter, nestedLoc, rewriter.getI1Type(), gt, oldNonNaN);
+              predicate = arith::AndIOp::create(rewriter, nestedLoc,
+                                                rewriter.getI1Type(),
+                                                comparison, oldNonNaN);
             }
           } else if (isa<IntegerType>(inElementTy)) {
             predicate = arith::CmpIOp::create(rewriter, nestedLoc,
-                                              arith::CmpIPredicate::sgt,
+                                              isMin ? arith::CmpIPredicate::slt
+                                                    : arith::CmpIPredicate::sgt,
                                               newValue, oldValue);
           } else {
             didEncounterError = true;
             return;
           }
 
-          auto resultMax = arith::SelectOp::create(
+          auto resultValue = arith::SelectOp::create(
               rewriter, nestedLoc, predicate, newValue, oldValue);
           auto resultIndex = arith::SelectOp::create(
               rewriter, nestedLoc, predicate, newIndex, oldIndex);
           linalg::YieldOp::create(nestedBuilder, nestedLoc,
-                                  ValueRange({resultIndex, resultMax}));
+                                  ValueRange({resultIndex, resultValue}));
         });
 
     if (didEncounterError)
-      return rewriter.notifyMatchFailure(
-          argmaxOp, "unsupported tosa.argmax element type");
+      return rewriter.notifyMatchFailure(argOp, "unsupported element type");
 
-    rewriter.replaceOp(argmaxOp, linalgOp.getResult(0));
+    rewriter.replaceOp(argOp, linalgOp.getResult(0));
     return success();
   }
 
@@ -3521,6 +3536,7 @@ void mlir::tosa::populateTosaToLinalgConversionPatterns(
       ReduceConverter<tosa::ReduceMaxOp>,
       ReduceConverter<tosa::ReduceSumOp>,
       ReduceConverter<tosa::ReduceProductOp>,
-      ArgMaxConverter>(patterns->getContext(), options.allowNonFinites);
+      ArgMinMaxConverter<tosa::ArgMaxOp>,
+      ArgMinMaxConverter<tosa::ArgMinOp>>(patterns->getContext(), options.allowNonFinites);
   // clang-format on
 }

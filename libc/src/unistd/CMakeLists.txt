@@ -274,6 +274,20 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  getresgid
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.getresgid
+)
+
+add_entrypoint_object(
+  getresuid
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.getresuid
+)
+
+add_entrypoint_object(
   getsid
   ALIAS
   DEPENDS
@@ -456,10 +470,24 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  setresgid
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.setresgid
+)
+
+add_entrypoint_object(
   setreuid
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.setreuid
+)
+
+add_entrypoint_object(
+  setresuid
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.setresuid
 )
 
 add_entrypoint_object(

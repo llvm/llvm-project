@@ -24,6 +24,7 @@
 ; CHECK-NEXT:   ee-instrument<post-inline>
 ; CHECK-NEXT:   scalarize-masked-mem-intrin
 ; CHECK-NEXT:   expand-reductions
+; CHECK-NEXT:   sjlj-eh-prepare
 ; CHECK-NEXT:   dwarf-eh-prepare
 ; CHECK-NEXT:   inline-asm-prepare
 ; CHECK-NEXT:   safe-stack

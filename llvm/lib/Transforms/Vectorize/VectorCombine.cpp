@@ -1330,7 +1330,7 @@ bool VectorCombine::scalarizeOpOrCmp(Instruction &I) {
           cast<Constant>(VecC), Builder.getInt64(*Index));
 
   Value *Scalar;
-  // We need to pass the flags during the creation of instrucitons. Constant
+  // We need to pass the flags during the creation of instructions. Constant
   // folding might remove the instructions, so post setting the flags might
   // pollute the later instructions.
   if (CI) {
@@ -2807,7 +2807,8 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
   // often allow a major reduction in total cost that wouldn't happen as
   // individual folds.
   auto MergeInner = [&](Value *&Op, int Offset, MutableArrayRef<int> Mask,
-                        TTI::TargetCostKind CostKind) -> bool {
+                        TTI::TargetCostKind CostKind,
+                        Instruction *BinOp) -> bool {
     Value *InnerOp;
     ArrayRef<int> InnerMask;
     if (match(Op, m_OneUse(m_Shuffle(m_Value(InnerOp), m_Undef(),
@@ -2820,17 +2821,20 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
           M = InnerMask[M - Offset];
           M = 0 <= M ? M + Offset : M;
         }
-      OldCost += TTI.getInstructionCost(cast<Instruction>(Op), CostKind);
+      // Op is only removed if the binop using it is removed too.
+      bool Removed = BinOp->hasOneUser();
+      if (Removed)
+        OldCost += TTI.getInstructionCost(cast<Instruction>(Op), CostKind);
       Op = InnerOp;
-      return true;
+      return Removed;
     }
     return false;
   };
   bool ReducedInstCount = false;
-  ReducedInstCount |= MergeInner(X, 0, NewMask0, CostKind);
-  ReducedInstCount |= MergeInner(Y, 0, NewMask1, CostKind);
-  ReducedInstCount |= MergeInner(Z, NumSrcElts, NewMask0, CostKind);
-  ReducedInstCount |= MergeInner(W, NumSrcElts, NewMask1, CostKind);
+  ReducedInstCount |= MergeInner(X, 0, NewMask0, CostKind, LHS);
+  ReducedInstCount |= MergeInner(Y, 0, NewMask1, CostKind, LHS);
+  ReducedInstCount |= MergeInner(Z, NumSrcElts, NewMask0, CostKind, RHS);
+  ReducedInstCount |= MergeInner(W, NumSrcElts, NewMask1, CostKind, RHS);
   bool SingleSrcBinOp = (X == Y) && (Z == W) && (NewMask0 == NewMask1);
   // SingleSrcBinOp only reduces instruction count if we also eliminate the
   // original binop(s). If binops have multiple uses, they won't be eliminated.
@@ -7236,9 +7240,8 @@ PreservedAnalyses VectorCombinePass::run(Function &F,
   const DataLayout *DL = &F.getDataLayout();
   TTI::TargetCostKind CostKind =
       F.hasOptSize() ? TTI::TCK_CodeSize : TTI::TCK_RecipThroughput;
-  VectorCombine Combiner(
-      F.getContext().getLibraryOptions().get<VectorizeOptions>(), F, TTI, DT,
-      AA, AC, DL, CostKind, TryEarlyFoldsOnly);
+  VectorCombine Combiner(getVectorizeOptions(F), F, TTI, DT, AA, AC, DL,
+                         CostKind, TryEarlyFoldsOnly);
   if (!Combiner.run())
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
