@@ -453,6 +453,28 @@ body:             |
 
 ...
 ---
+name:            fadd_vector_bitcast_bf16_to_f16
+legalized:       true
+body:             |
+  bb.1.entry:
+    ; The bitcast reinterprets the bits of bf16 1.0 (0x3F80) as f16 1.875, so
+    ; the sum is 3.75 rather than 2.0. Don't fold through the bitcast.
+    ; CHECK-LABEL: name: fadd_vector_bitcast_bf16_to_f16
+    ; CHECK: %one:_(bf16) = G_FCONSTANT bfloat 1.000000e+00
+    ; CHECK-NEXT: %bv:_(<4 x bf16>) = G_BUILD_VECTOR %one(bf16), %one(bf16), %one(bf16), %one(bf16)
+    ; CHECK-NEXT: %cast:_(<4 x f16>) = G_BITCAST %bv(<4 x bf16>)
+    ; CHECK-NEXT: %res:_(<4 x f16>) = G_FADD %cast, %cast
+    ; CHECK-NEXT: $d0 = COPY %res(<4 x f16>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
+    %one:_(bf16) = G_FCONSTANT bfloat 1.0
+    %bv:_(<4 x bf16>) = G_BUILD_VECTOR %one(bf16), %one(bf16), %one(bf16), %one(bf16)
+    %cast:_(<4 x f16>) = G_BITCAST %bv(<4 x bf16>)
+    %res:_(<4 x f16>) = G_FADD %cast, %cast
+    $d0 = COPY %res(<4 x f16>)
+    RET_ReallyLR implicit $d0
+
+...
+---
 name:            zext_vector
 legalized:       true
 body:             |
