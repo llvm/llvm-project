@@ -1,0 +1,63 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef _LIBCPP___NEW_NEW_AT_LEAST_H
+#define _LIBCPP___NEW_NEW_AT_LEAST_H
+
+#include <__config>
+#include <__cstddef/size_t.h>
+#include <__new/align_val_t.h>
+#include <__new/allocation_result.h>
+#include <__utility/assume.h>
+#include <__utility/element_count.h>
+#include <cstdint>
+
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#  pragma GCC system_header
+#endif
+
+#if _LIBCPP_AVAILABILITY_HAS_NEW_AT_LEAST
+
+_LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
+
+// `__new_at_least` acts like an overload of `operator new` which takes a size (and possibly alignment) and returns
+// a pointer as well as the actually allocated amount of memory. If the user replaces the relevant `operator new`
+// overload this will fall back to calling that. Otherwise it tries to allocate in a way to get the actually allocated
+// size, depending on what the platform provides.
+// This cannot be used in places where `operator new[]` is required, since it doesn't check whether `operator new[]` is
+// overridden and doesn't forward to it.
+
+_LIBCPP_MALLOC_SPAN _LIBCPP_EXPORTED_FROM_ABI __allocation_result<void*> __new_at_least(size_t);
+#  if _LIBCPP_HAS_ALIGNED_ALLOCATION
+_LIBCPP_MALLOC_SPAN _LIBCPP_EXPORTED_FROM_ABI __allocation_result<void*> __new_at_least(size_t, align_val_t);
+#  endif
+
+template <class _Tp>
+_LIBCPP_HIDE_FROM_ABI __allocation_result<_Tp*> __new_at_least(__element_count __n) {
+#  if _LIBCPP_HAS_ALIGNED_ALLOCATION
+  auto [__ptr, __count] =
+      _LIBCPP_ALIGNOF(_Tp) > _LIBCPP_DEFAULT_NEW_ALIGNMENT
+          ? std::__new_at_least(size_t(__n) * sizeof(_Tp), align_val_t(_LIBCPP_ALIGNOF(_Tp)))
+          : std::__new_at_least(size_t(__n) * sizeof(_Tp));
+#  else
+  auto [__ptr, __count] = std::__new_at_least(size_t(__n) * sizeof(_Tp));
+#  endif
+  std::__assume(__ptr);
+  std::__assume((reinterpret_cast<uintptr_t>(__ptr) & (_LIBCPP_ALIGNOF(_Tp) - 1)) == 0);
+  std::__assume(__count >= size_t(__n) * sizeof(_Tp));
+
+  return {static_cast<_Tp*>(__ptr), __count / sizeof(_Tp)};
+}
+
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
+_LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_AVAILABILITY_HAS_NEW_AT_LEAST
+
+#endif // _LIBCPP___NEW_NEW_AT_LEAST_H
