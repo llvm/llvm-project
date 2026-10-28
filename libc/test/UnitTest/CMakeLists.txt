@@ -102,6 +102,7 @@ add_unittest_framework_library(
     libc.hdr.stdint_proxy
     libc.src.__support.big_int
     libc.src.__support.c_string
+    libc.src.__support.CPP.functional
     libc.src.__support.CPP.string
     libc.src.__support.CPP.string_view
     libc.src.__support.CPP.type_traits
@@ -124,6 +125,7 @@ add_unittest_framework_library(
 if(LIBC_TEST_SUBPROCESS_TESTS)
   set(libc_death_test_deps
     libc.hdr.stdint_proxy
+    libc.src.__support.CPP.functional
     libc.src.__support.CPP.scope
     libc.src.__support.libc_assert
   )
@@ -158,6 +160,7 @@ else()
       ExecuteFunction.h
     DEPENDS
       libc.hdr.stdint_proxy
+      libc.src.__support.CPP.functional
   )
 endif()
 
@@ -229,6 +232,7 @@ add_unittest_framework_library(
     FPExceptMatcher.h
   DEPENDS
     .LibcTest
+    libc.src.__support.CPP.functional
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.fenv_impl
     libc.hdr.types.fenv_t

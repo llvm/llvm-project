@@ -1052,6 +1052,7 @@ static mlir::Value lowerComplexFDiv(LoweringPreparePass &pass,
                                     rhsImag);
   }
   }
+  llvm_unreachable("fully covered switch");
 }
 
 void LoweringPreparePass::lowerComplexFDivOp(cir::ComplexFDivOp op) {
