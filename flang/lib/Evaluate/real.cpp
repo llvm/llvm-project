@@ -678,8 +678,7 @@ ValueWithRealFlags<Real<W, P>> Real<W, P>::Read(
   auto raw{converted.binary.raw()};
   const std::uint64_t lo{static_cast<std::uint64_t>(raw)};
   Word word{lo};
-  if constexpr (sizeof(typename decltype(converted.binary)::RawType) >
-      sizeof(std::uint64_t)) {
+  if constexpr (decltype(converted.binary)::bits > 64) {
     const std::uint64_t hi{static_cast<std::uint64_t>(raw >> 64)};
     if (hi) {
       word = word.IOR(Word{hi}.SHIFTL(64));
