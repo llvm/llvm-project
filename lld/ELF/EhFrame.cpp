@@ -20,6 +20,7 @@
 #include "InputFiles.h"
 #include "InputSection.h"
 #include "Relocations.h"
+#include "Symbols.h"
 #include "Target.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 
@@ -138,6 +139,31 @@ uint8_t elf::getFdeEncoding(const EhInputSection &sec,
 
 bool elf::hasLSDA(const EhInputSection &sec, const EhSectionPiece &p) {
   return EhReader(&sec, p.data(sec)).hasLSDA();
+}
+
+// pc_range follows the 4-byte length, 4-byte CIE pointer, and pc_begin, and
+// uses pc_begin's encoding.
+bool elf::hasZeroPcRange(const EhInputSection &sec, const EhSectionPiece &p,
+                         uint8_t enc) {
+  Ctx &ctx = sec.getCtx();
+  size_t pSize = getAugPSize(ctx, enc);
+  ArrayRef<uint8_t> d = p.data(sec);
+  if (pSize == 0 || d.size() < 8 + 2 * pSize ||
+      !llvm::all_of(d.slice(8 + pSize, pSize), [](uint8_t c) { return !c; }))
+    return false;
+  // With linker relaxation, pc_range is computed by an ADD/SUB relocation pair,
+  // which GNU as emits even for an empty function. The range is zero if both
+  // relocations resolve to the same address.
+  if (ctx.arg.emachine == EM_LOONGARCH || ctx.arg.emachine == EM_RISCV) {
+    uint64_t off = p.inputOff + 8 + pSize;
+    SmallVector<uint64_t, 2> vals;
+    for (size_t i = p.firstRelocation;
+         i < sec.rels.size() && sec.rels[i].offset < off + pSize; ++i)
+      if (const Relocation &r = sec.rels[i]; r.offset >= off)
+        vals.push_back(r.sym->getVA(ctx, r.addend));
+    return vals.empty() || (vals.size() == 2 && vals[0] == vals[1]);
+  }
+  return true;
 }
 
 StringRef EhReader::getAugmentation() {
