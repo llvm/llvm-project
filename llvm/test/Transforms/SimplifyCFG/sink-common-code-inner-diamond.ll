@@ -12,12 +12,8 @@ define void @inner_diamond(i1 %c1, i1 %c2, ptr %p, i32 %x, i32 %y) {
 ; CHECK-NEXT:    call void @g()
 ; CHECK-NEXT:    br label %[[END:.*]]
 ; CHECK:       [[IF]]:
-; CHECK-NEXT:    br i1 [[C2]], label %[[THEN:.*]], label %[[ELSE:.*]]
-; CHECK:       [[THEN]]:
-; CHECK-NEXT:    store i32 [[X]], ptr [[P]], align 4
-; CHECK-NEXT:    br label %[[END]]
-; CHECK:       [[ELSE]]:
-; CHECK-NEXT:    store i32 [[Y]], ptr [[P]], align 4
+; CHECK-NEXT:    [[X_Y:%.*]] = select i1 [[C2]], i32 [[X]], i32 [[Y]]
+; CHECK-NEXT:    store i32 [[X_Y]], ptr [[P]], align 4
 ; CHECK-NEXT:    br label %[[END]]
 ; CHECK:       [[END]]:
 ; CHECK-NEXT:    ret void
@@ -51,15 +47,12 @@ define i32 @inner_diamond_with_phi(i1 %c1, i1 %c2, ptr %p, i32 %x, i32 %y) {
 ; CHECK-NEXT:    call void @g()
 ; CHECK-NEXT:    br label %[[END:.*]]
 ; CHECK:       [[IF]]:
-; CHECK-NEXT:    br i1 [[C2]], label %[[THEN:.*]], label %[[ELSE:.*]]
-; CHECK:       [[THEN]]:
-; CHECK-NEXT:    store i32 [[X]], ptr [[P]], align 4
-; CHECK-NEXT:    br label %[[END]]
-; CHECK:       [[ELSE]]:
-; CHECK-NEXT:    store i32 [[Y]], ptr [[P]], align 4
+; CHECK-NEXT:    [[X_Y:%.*]] = select i1 [[C2]], i32 [[X]], i32 [[Y]]
+; CHECK-NEXT:    [[Y_X:%.*]] = select i1 [[C2]], i32 [[Y]], i32 [[X]]
+; CHECK-NEXT:    store i32 [[X_Y]], ptr [[P]], align 4
 ; CHECK-NEXT:    br label %[[END]]
 ; CHECK:       [[END]]:
-; CHECK-NEXT:    [[R:%.*]] = phi i32 [ 0, %[[OTHER]] ], [ [[Y]], %[[THEN]] ], [ [[X]], %[[ELSE]] ]
+; CHECK-NEXT:    [[R:%.*]] = phi i32 [ 0, %[[OTHER]] ], [ [[Y_X]], %[[IF]] ]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   br i1 %c1, label %other, label %if
@@ -95,18 +88,15 @@ define i64 @inner_diamond_two_stores_with_two_phis(ptr %sp, ptr %sp.out, i64 %a,
 ; CHECK-NEXT:    [[LT:%.*]] = icmp ult i32 [[KA]], [[KB]]
 ; CHECK-NEXT:    [[KEY:%.*]] = getelementptr inbounds nuw i8, ptr [[SP]], i64 8
 ; CHECK-NEXT:    [[SP_NEXT:%.*]] = getelementptr inbounds nuw i8, ptr [[SP]], i64 16
-; CHECK-NEXT:    br i1 [[LT]], label %[[THEN:.*]], label %[[ELSE:.*]]
-; CHECK:       [[THEN]]:
-; CHECK-NEXT:    store i64 [[B]], ptr [[SP]], align 8
-; CHECK-NEXT:    store i32 [[KB]], ptr [[KEY]], align 8
-; CHECK-NEXT:    br label %[[END]]
-; CHECK:       [[ELSE]]:
-; CHECK-NEXT:    store i64 [[A]], ptr [[SP]], align 8
-; CHECK-NEXT:    store i32 [[KA]], ptr [[KEY]], align 8
+; CHECK-NEXT:    [[B_A:%.*]] = select i1 [[LT]], i64 [[B]], i64 [[A]]
+; CHECK-NEXT:    [[KB_KA:%.*]] = select i1 [[LT]], i32 [[KB]], i32 [[KA]]
+; CHECK-NEXT:    [[A_B:%.*]] = select i1 [[LT]], i64 [[A]], i64 [[B]]
+; CHECK-NEXT:    store i64 [[B_A]], ptr [[SP]], align 8
+; CHECK-NEXT:    store i32 [[KB_KA]], ptr [[KEY]], align 8
 ; CHECK-NEXT:    br label %[[END]]
 ; CHECK:       [[END]]:
-; CHECK-NEXT:    [[CUR:%.*]] = phi i64 [ [[V]], %[[OTHER]] ], [ [[A]], %[[THEN]] ], [ [[B]], %[[ELSE]] ]
-; CHECK-NEXT:    [[SP_NEW:%.*]] = phi ptr [ [[SP]], %[[OTHER]] ], [ [[SP_NEXT]], %[[THEN]] ], [ [[SP_NEXT]], %[[ELSE]] ]
+; CHECK-NEXT:    [[CUR:%.*]] = phi i64 [ [[V]], %[[OTHER]] ], [ [[A_B]], %[[IF]] ]
+; CHECK-NEXT:    [[SP_NEW:%.*]] = phi ptr [ [[SP]], %[[OTHER]] ], [ [[SP_NEXT]], %[[IF]] ]
 ; CHECK-NEXT:    store ptr [[SP_NEW]], ptr [[SP_OUT]], align 8
 ; CHECK-NEXT:    ret i64 [[CUR]]
 ;
@@ -266,20 +256,12 @@ define void @two_diamonds_each_sinks(i1 %c1, i1 %c2, i1 %c3, ptr %p, ptr %q, i32
 ; CHECK-NEXT:    call void @g()
 ; CHECK-NEXT:    br label %[[END:.*]]
 ; CHECK:       [[IF1]]:
-; CHECK-NEXT:    br i1 [[C3]], label %[[THEN1:.*]], label %[[ELSE1:.*]]
-; CHECK:       [[THEN1]]:
-; CHECK-NEXT:    store i32 [[X]], ptr [[P]], align 4
-; CHECK-NEXT:    br label %[[END]]
-; CHECK:       [[ELSE1]]:
-; CHECK-NEXT:    store i32 [[Y]], ptr [[P]], align 4
+; CHECK-NEXT:    [[X_Y:%.*]] = select i1 [[C3]], i32 [[X]], i32 [[Y]]
+; CHECK-NEXT:    store i32 [[X_Y]], ptr [[P]], align 4
 ; CHECK-NEXT:    br label %[[END]]
 ; CHECK:       [[IF2]]:
-; CHECK-NEXT:    br i1 [[C3]], label %[[THEN2:.*]], label %[[ELSE2:.*]]
-; CHECK:       [[THEN2]]:
-; CHECK-NEXT:    store i32 [[Y]], ptr [[Q]], align 4
-; CHECK-NEXT:    br label %[[END]]
-; CHECK:       [[ELSE2]]:
-; CHECK-NEXT:    store i32 [[X]], ptr [[Q]], align 4
+; CHECK-NEXT:    [[Y_X:%.*]] = select i1 [[C3]], i32 [[Y]], i32 [[X]]
+; CHECK-NEXT:    store i32 [[Y_X]], ptr [[Q]], align 4
 ; CHECK-NEXT:    br label %[[END]]
 ; CHECK:       [[END]]:
 ; CHECK-NEXT:    ret void
