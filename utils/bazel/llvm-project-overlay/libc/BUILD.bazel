@@ -7228,6 +7228,16 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_fmaximum_magf80",
+    hdrs = ["src/__support/math/fmaximum_magf80.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_fputil_float80",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_fmaximum_magl",
     hdrs = ["src/__support/math/fmaximum_magl.h"],
     deps = [
@@ -7502,6 +7512,16 @@ libc_support_library(
         ":__support_fputil_basic_operations",
         ":__support_macros_config",
         ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fminimum_magf80",
+    hdrs = ["src/__support/math/fminimum_magf80.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_fputil_float80",
+        ":__support_macros_config",
     ],
 )
 
@@ -14247,6 +14267,15 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "fmaximum_magf80",
+    additional_deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_float80",
+        ":__support_math_fmaximum_magf80",
+    ],
+)
+
+libc_math_function(
     name = "fmaximum_magf16",
     additional_deps = [
         ":__support_math_fmaximum_magf16",
@@ -14462,6 +14491,15 @@ libc_math_function(
         ":__support_cpp_bit",
         ":__support_fputil_float128",
         ":__support_math_fminimum_magf128",
+    ],
+)
+
+libc_math_function(
+    name = "fminimum_magf80",
+    additional_deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_float80",
+        ":__support_math_fminimum_magf80",
     ],
 )
 

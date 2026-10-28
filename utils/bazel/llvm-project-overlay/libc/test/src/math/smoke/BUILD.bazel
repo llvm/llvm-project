@@ -915,6 +915,14 @@ math_test(
 )
 
 math_test(
+    name = "fmaximum_magf80",
+    hdrs = ["FMaximumMagTest.h"],
+    deps = [
+        "//libc:__support_fputil_float80",
+    ],
+)
+
+math_test(
     name = "fmaximum_mag_num",
     hdrs = ["FMaximumMagNumTest.h"],
 )
@@ -1115,6 +1123,14 @@ math_test(
     hdrs = ["FMinimumMagTest.h"],
     deps = [
         "//libc:__support_fputil_float128",
+    ],
+)
+
+math_test(
+    name = "fminimum_magf80",
+    hdrs = ["FMinimumMagTest.h"],
+    deps = [
+        "//libc:__support_fputil_float80",
     ],
 )
 

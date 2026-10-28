@@ -2363,6 +2363,17 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fmaximum_magf80
+  SRCS
+    fmaximum_magf80.cpp
+  HDRS
+    ../fmaximum_magf80.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.math.fmaximum_magf80
+)
+
+add_entrypoint_object(
   fmaximum_magbf16
   SRCS
     fmaximum_magbf16.cpp
@@ -2626,6 +2637,17 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.CPP.bit
     libc.src.__support.math.fminimum_magf128
+)
+
+add_entrypoint_object(
+  fminimum_magf80
+  SRCS
+    fminimum_magf80.cpp
+  HDRS
+    ../fminimum_magf80.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.math.fminimum_magf80
 )
 
 add_entrypoint_object(
