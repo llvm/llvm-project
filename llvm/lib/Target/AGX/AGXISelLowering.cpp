@@ -229,6 +229,47 @@ AGXTargetLowering::AGXTargetLowering(const TargetMachine &TM,
   MaxStoresPerMemset = MaxStoresPerMemsetOptSize = ~0U;
 }
 
+static cl::opt<unsigned> AGXAddressingModes(
+    "agx-addressing-modes", cl::init(1), cl::Hidden,
+    cl::desc("Addressing modes reported to IR passes (LSR): 0 the generic "
+             "default, 1 the hardware's base + immediate only, 2 also base "
+             "+ scaled index"));
+
+/// The addresses loads and stores take (SelectDeviceAddr, SelectLocalAddr):
+/// a device access is a 64-bit base plus either a constant offset in
+/// elements (16-bit signed) or an extended 32-bit index scaled by the
+/// element size times 1, 2 or 4; threadgroup and private ones a base plus
+/// a constant offset.
+bool AGXTargetLowering::isLegalAddressingMode(const DataLayout &DL,
+                                              const AddrMode &AM, Type *Ty,
+                                              unsigned AS,
+                                              Instruction *I) const {
+  if (AGXAddressingModes == 0)
+    return TargetLowering::isLegalAddressingMode(DL, AM, Ty, AS, I);
+  if (AM.BaseGV || AM.ScalableOffset)
+    return false;
+  uint64_t Elem = 1;
+  if (Ty && Ty->isSized())
+    Elem = std::max<uint64_t>(
+        1, DL.getTypeStoreSize(Ty->getScalarType()).getFixedValue());
+  bool Device = AS != AGX::THREADGROUP_ADDRESS && AS != AGX::PRIVATE_ADDRESS;
+  if (AM.Scale == 0) {
+    if (!Device)
+      return isInt<16>(AM.BaseOffs);
+    return AM.BaseOffs % int64_t(Elem) == 0 &&
+           isInt<16>(AM.BaseOffs / int64_t(Elem));
+  }
+  // A register without a base: base + 0.
+  if (AM.Scale == 1 && !AM.HasBaseReg)
+    return Device ? AM.BaseOffs % int64_t(Elem) == 0 &&
+                        isInt<16>(AM.BaseOffs / int64_t(Elem))
+                  : isInt<16>(AM.BaseOffs);
+  if (!Device || AGXAddressingModes < 2 || AM.BaseOffs != 0)
+    return false;
+  return AM.Scale == int64_t(Elem) || AM.Scale == int64_t(2 * Elem) ||
+         AM.Scale == int64_t(4 * Elem);
+}
+
 EVT AGXTargetLowering::getSetCCResultType(const DataLayout &DL,
                                           LLVMContext &Context,
                                           EVT VT) const {
