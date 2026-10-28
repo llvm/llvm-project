@@ -6,8 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Frontend/Directive/Spelling.h"
+
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Frontend/Directive/Version.h"
 
 #include <cassert>
