@@ -120,6 +120,14 @@ public:
                       bool hasLoc, const MemoryBuffer *buf, unsigned lineNo,
                       StringRef message, bool reportUnexpected = true);
 
+  /// Like the overload above, but takes the kind, location and message from
+  /// \p diag, and reports an unexpected \p diag as an error prefixed with
+  /// 'unexpected <kind>: '. This is meant to be called from \p mgr's
+  /// diagnostic handler, so the handler is disabled while the verifier prints
+  /// its own errors.
+  MatchResult process(raw_ostream &os, SourceMgr &mgr, const SMDiagnostic &diag,
+                      bool reportUnexpected = true);
+
   /// Reports (through \p mgr) any expected diagnostic that was never matched
   /// by a call to \p process. Returns whether verification succeeded overall,
   /// i.e. no diagnostic mismatches were recorded either here or by \p
