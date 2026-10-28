@@ -232,7 +232,9 @@ def compile_air(llc, ir, tmp, tag):
     r = subprocess.run([llc, '-mtriple=air', '-filetype=obj', '-air-output=air', ll, '-o', air],
                        capture_output=True, text=True)
     if r.returncode:
-        return None, r.stderr.strip()[-400:]
+        err = r.stderr.strip()
+        lines = [l for l in err.splitlines() if 'error' in l.lower()]
+        return None, (lines[0] if lines else err)[-400:] or 'llc exited with %d' % r.returncode
     return open(air, 'rb').read(), None
 
 
@@ -2858,6 +2860,668 @@ def group_llvm_math_ext():
     return cases
 
 
+CF2_HELPERS = '''define internal { i32, i32 } @cf2_divmod(i32 %a, i32 %b, ptr %rem) noinline {
+entry:
+  %q = udiv i32 %a, %b
+  %m = urem i32 %a, %b
+  store i32 %m, ptr %rem
+  %p0 = insertvalue { i32, i32 } poison, i32 %q, 0
+  %p = insertvalue { i32, i32 } %p0, i32 %m, 1
+  ret { i32, i32 } %p
+}'''
+
+CF2_VEC = '''define internal <4 x float> @cf2_scale(<4 x float> %v, float %s) noinline {
+entry:
+  %i = insertelement <4 x float> poison, float %s, i64 0
+  %sp = shufflevector <4 x float> %i, <4 x float> poison, <4 x i32> zeroinitializer
+  %r = fmul <4 x float> %v, %sp
+  ret <4 x float> %r
+}'''
+
+CF2_FACT = '''define internal i32 @cf2_fact(i32 %n) noinline {
+entry:
+  %z = icmp ule i32 %n, 1
+  br i1 %z, label %base, label %rec
+base:
+  ret i32 1
+rec:
+  %n1 = sub i32 %n, 1
+  %f = call i32 @cf2_fact(i32 %n1)
+  %r = mul i32 %n, %f
+  ret i32 %r
+}'''
+
+CF2_FNPTR = '''define internal i32 @cf2_inc(i32 %x) noinline {
+entry:
+  %r = add i32 %x, 1
+  ret i32 %r
+}
+
+define internal i32 @cf2_dbl(i32 %x) noinline {
+entry:
+  %r = shl i32 %x, 1
+  ret i32 %r
+}'''
+
+
+def group_llvm_control_ext():
+    """Loops with several exits, early returns, calls returning aggregates
+    and vectors, unreachable, assume/expect, sparse and narrow switches,
+    threadgroup reductions with barriers in uniform loops, reconvergence
+    before SIMD-group functions, and probes for recursion and indirect calls."""
+    cases = []
+
+    def multi_exit(i, v):
+        a, lim, s = v[0][i], v[1][i] & 255, 0
+        for k in range(32):
+            if a >> k & 1:
+                return k + 1000
+            s += k
+            if s > lim:
+                return s + 2000
+        return 7
+    cases.append(ir_case(
+        'cf_multi_exit_loop', ['u32', 'u32'], 'u32',
+        '%lim = and i32 %a1, 255\nbr label %h\n'
+        'h:\n%k = phi i32 [ 0, %entry ], [ %k1, %cont ]\n%s = phi i32 [ 0, %entry ], [ %s1, %cont ]\n'
+        '%bit = lshr i32 %a0, %k\n%b1 = and i32 %bit, 1\n%set = icmp ne i32 %b1, 0\n'
+        'br i1 %set, label %found, label %latch\n'
+        'latch:\n%s1 = add i32 %s, %k\n%over = icmp ugt i32 %s1, %lim\nbr i1 %over, label %ovf, label %cont\n'
+        'cont:\n%k1 = add i32 %k, 1\n%end = icmp eq i32 %k1, 32\nbr i1 %end, label %none, label %h\n'
+        'found:\n%rf = add i32 %k, 1000\nbr label %exit\n'
+        'ovf:\n%ro = add i32 %s1, 2000\nbr label %exit\n'
+        'none:\nbr label %exit\n'
+        'exit:\n%r = phi i32 [ %rf, %found ], [ %ro, %ovf ], [ 7, %none ]',
+        multi_exit, gen=[lambda i, r: r.choice([0, 1 << r.randrange(32), r.randrange(1 << 32)]) &
+                         ~((1 << r.randrange(0, 12)) - 1) & 0xffffffff, None]))
+    c = full_case('cf_return_in_loop', ['u32'], 'u32',
+                  lambda i, v: 0xdeadbeef if any(((v[0][i] >> k) & 0xf) == 0xf for k in range(0, 32, 4))
+                  else sum((v[0][i] >> k) & 0xf for k in range(0, 32, 4)),
+                  '%pa = getelementptr i32, ptr addrspace(1) %in0, i32 %tid\n%a = load i32, ptr addrspace(1) %pa\n'
+                  'br label %h\n'
+                  'h:\n%k = phi i32 [ 0, %entry ], [ %k1, %next ]\n%s = phi i32 [ 0, %entry ], [ %s1, %next ]\n'
+                  '%sh = lshr i32 %a, %k\n%d = and i32 %sh, 15\n%bad = icmp eq i32 %d, 15\n'
+                  'br i1 %bad, label %early, label %next\n'
+                  'early:\nret void\n'
+                  'next:\n%s1 = add i32 %s, %d\n%k1 = add i32 %k, 4\n%more = icmp ult i32 %k1, 32\n'
+                  'br i1 %more, label %h, label %done\n'
+                  'done:\n%po = getelementptr i32, ptr addrspace(1) %out, i32 %tid\n'
+                  'store i32 %s1, ptr addrspace(1) %po\nret void',
+                  gen=[lambda i, r: r.randrange(1 << 32) & r.choice([0xeeeeeeee, 0xffffffff, 0x77777777])])
+    c.out_init = [0xdeadbeef] * N
+    cases.append(c)
+    small = lambda i, r: r.randrange(0, 100000)
+    cases.append(ir_case('cf_call_aggregate_ptr', ['u32', 'u32'], 'u32',
+                         '%rem = alloca i32\n%p = call { i32, i32 } @cf2_divmod(i32 %a0, i32 %a1, ptr %rem)\n'
+                         '%q = extractvalue { i32, i32 } %p, 0\n%m = extractvalue { i32, i32 } %p, 1\n'
+                         '%m2 = load i32, ptr %rem\n%qm = mul i32 %q, 1000\n%x = add i32 %qm, %m\n'
+                         '%r = add i32 %x, %m2', lambda i, v: u32(v[0][i] // v[1][i] * 1000 + 2 * (v[0][i] % v[1][i])),
+                         {CF2_HELPERS}, [small, lambda i, r: r.randrange(1, 300)]))
+    cases.append(ir_case('cf_call_vector', ['f32'] * 5, 'f32',
+                         VEC4_F32 + '%w = call <4 x float> @cf2_scale(<4 x float> %v, float %a4)\n'
+                         '%r = extractelement <4 x float> %w, i32 %k',
+                         lambda i, v: f32(v[i % 4][i] * v[4][i]), {CF2_VEC}, ulps=0))
+    cases.append(ir_case('cf_switch_unreachable', ['u32'], 'u32',
+                         '%s = and i32 %a0, 3\n'
+                         'switch i32 %s, label %u [ i32 0, label %c0 i32 1, label %c1 i32 2, label %c2 i32 3, label %c3 ]\n'
+                         'u:\nunreachable\n'
+                         'c0:\nbr label %j\nc1:\n%v1 = add i32 %a0, 5\nbr label %j\n'
+                         'c2:\n%v2 = lshr i32 %a0, 3\nbr label %j\nc3:\n%v3 = mul i32 %a0, 7\nbr label %j\n'
+                         'j:\n%r = phi i32 [ 99, %c0 ], [ %v1, %c1 ], [ %v2, %c2 ], [ %v3, %c3 ]',
+                         lambda i, v: (99, u32(v[0][i] + 5), v[0][i] >> 3, u32(v[0][i] * 7))[v[0][i] & 3]))
+    cases.append(ir_case('cf_assume_expect', ['u32'], 'u32',
+                         '%m = and i32 %a0, 15\n%in = icmp ult i32 %m, 16\ncall void @llvm.assume(i1 %in)\n'
+                         '%big = icmp ugt i32 %m, 12\n%e = call i1 @llvm.expect.i1(i1 %big, i1 false)\n'
+                         'br i1 %e, label %rare, label %common\n'
+                         'rare:\n%x = mul i32 %m, 100\nbr label %j\ncommon:\n%y = add i32 %m, 1\nbr label %j\n'
+                         'j:\n%r = phi i32 [ %x, %rare ], [ %y, %common ]',
+                         lambda i, v: (v[0][i] & 15) * 100 if v[0][i] & 15 > 12 else (v[0][i] & 15) + 1,
+                         {'declare void @llvm.assume(i1)', 'declare i1 @llvm.expect.i1(i1, i1)'}))
+    sparse = [0, 1 << 40, -1, 12345678901, -(1 << 62), 7]
+    cases.append(ir_case('cf_switch_i64_sparse', ['i64'], 'u32',
+                         'switch i64 %a0, label %d [ i64 0, label %c0 i64 1099511627776, label %c1 '
+                         'i64 -1, label %c2 i64 12345678901, label %c3 i64 -4611686018427387904, label %c4 ]\n'
+                         'c0:\nbr label %j\nc1:\nbr label %j\nc2:\nbr label %j\nc3:\nbr label %j\nc4:\nbr label %j\n'
+                         'd:\nbr label %j\n'
+                         'j:\n%r = phi i32 [ 10, %c0 ], [ 11, %c1 ], [ 12, %c2 ], [ 13, %c3 ], [ 14, %c4 ], [ 0, %d ]',
+                         lambda i, v: {0: 10, 1 << 40: 11, -1: 12, 12345678901: 13, -(1 << 62): 14}.get(v[0][i], 0),
+                         gen=[lambda i, r: r.choice(sparse + [r.randrange(-(1 << 63), 1 << 63)])]))
+    cases.append(ir_case('cf_switch_i8', ['i8'], 'i32',
+                         'switch i8 %a0, label %d [ i8 -128, label %c0 i8 -1, label %c1 i8 0, label %c2 i8 127, label %c3 ]\n'
+                         'c0:\nbr label %j\nc1:\nbr label %j\nc2:\nbr label %j\nc3:\nbr label %j\n'
+                         'd:\n%x = sext i8 %a0 to i32\nbr label %j\n'
+                         'j:\n%r = phi i32 [ 1000, %c0 ], [ 1001, %c1 ], [ 1002, %c2 ], [ 1003, %c3 ], [ %x, %d ]',
+                         lambda i, v: {-128: 1000, -1: 1001, 0: 1002, 127: 1003}.get(v[0][i], v[0][i]),
+                         gen=[lambda i, r: r.choice([-128, -1, 0, 127, r.randrange(-128, 128)])]))
+    cases.append(ir_case('cf_loop_i64_countdown', ['u32'], 'u64',
+                         '%n0 = and i32 %a0, 63\n%n = zext i32 %n0 to i64\nbr label %h\n'
+                         'h:\n%k = phi i64 [ %n, %entry ], [ %k1, %b ]\n%s = phi i64 [ 1, %entry ], [ %s1, %b ]\n'
+                         '%go = icmp sgt i64 %k, 0\nbr i1 %go, label %b, label %x\n'
+                         'b:\n%s3 = mul i64 %s, 3\n%s1 = add i64 %s3, %k\n%k1 = sub i64 %k, 1\nbr label %h\n'
+                         'x:\n%r = add i64 %s, 0',
+                         lambda i, v: functools.reduce(lambda s, k: u64(s * 3 + k), range(v[0][i] & 63, 0, -1), 1)))
+    cases.append(ir_case('cf_nested_if_float_phi', ['f32', 'f32'], 'f32',
+                         '%c1 = fcmp ogt float %a0, 0.0\nbr i1 %c1, label %p, label %n\n'
+                         'p:\n%c2 = fcmp olt float %a1, %a0\nbr i1 %c2, label %pp, label %pn\n'
+                         'pp:\n%x1 = fsub float %a0, %a1\nbr label %j\n'
+                         'pn:\n%x2 = fmul float %a1, 2.0\nbr label %j\n'
+                         'n:\n%x3 = fneg float %a0\nbr label %j\n'
+                         'j:\n%r = phi float [ %x1, %pp ], [ %x2, %pn ], [ %x3, %n ]',
+                         lambda i, v: (f32(v[0][i] - v[1][i]) if v[1][i] < v[0][i] else f32(v[1][i] * 2))
+                         if v[0][i] > 0 else -v[0][i], ulps=0))
+    # A loop whose trip count differs per lane, then a SIMD-group sum: every
+    # lane must be back (reconverged) for the reduction.
+    cases.append(ir_case('cf_divergent_loop_then_simd_sum', ['u32'], 'u32',
+                         '%n = and i32 %a0, 31\nbr label %h\n'
+                         'h:\n%k = phi i32 [ 0, %entry ], [ %k1, %h ]\n%s = phi i32 [ 0, %entry ], [ %s1, %h ]\n'
+                         '%s1 = add i32 %s, %k\n%k1 = add i32 %k, 1\n%more = icmp ult i32 %k, %n\n'
+                         'br i1 %more, label %h, label %x\n'
+                         'x:\n%r = call i32 @air.simd_sum.u.i32(i32 %s1)',
+                         lambda i, v: u32(sum(sum(range((x & 31) + 1)) for x in lanes(i, v[0]))),
+                         {'declare i32 @air.simd_sum.u.i32(i32)'}))
+    # Pointer select between two private variables.
+    cases.append(ir_case('cf_select_private_ptr', ['u32', 'u32'], 'u32',
+                         '%x = alloca i32\n%y = alloca i32\nstore i32 %a0, ptr %x\nstore i32 %a1, ptr %y\n'
+                         '%c = icmp ugt i32 %a0, %a1\n%p = select i1 %c, ptr %x, ptr %y\nstore i32 0, ptr %p\n'
+                         '%lx = load i32, ptr %x\n%ly = load i32, ptr %y\n%l2 = shl i32 %ly, 1\n%r = add i32 %lx, %l2',
+                         lambda i, v: u32((0 if v[0][i] > v[1][i] else v[0][i]) +
+                                          2 * (v[1][i] if v[0][i] > v[1][i] else 0))))
+    # Threadgroup tree reduction: a barrier inside a loop all threads run.
+    c = Case('tg_tree_reduce', ['i32'], 'i32', None, TG_DECLS, lambda i, v: s32(sum(v[0])), tgsize=64)
+    c.full = tg_kernel(c.name, (
+        '%sp = getelementptr [64 x i32], ptr addrspace(3) @tg, i32 0, i32 %lid\n'
+        'store i32 %a0, ptr addrspace(3) %sp\ncall void @air.wg.barrier(i32 2, i32 1)\nbr label %h\n'
+        'h:\n%s = phi i32 [ 32, %entry ], [ %s1, %latch ]\n%act = icmp ult i32 %lid, %s\n'
+        'br i1 %act, label %add, label %latch\n'
+        'add:\n%oi = add i32 %lid, %s\n%op = getelementptr [64 x i32], ptr addrspace(3) @tg, i32 0, i32 %oi\n'
+        '%x = load i32, ptr addrspace(3) %sp\n%y = load i32, ptr addrspace(3) %op\n%xy = add i32 %x, %y\n'
+        'store i32 %xy, ptr addrspace(3) %sp\nbr label %latch\n'
+        'latch:\ncall void @air.wg.barrier(i32 2, i32 1)\n%s1 = lshr i32 %s, 1\n%more = icmp ne i32 %s1, 0\n'
+        'br i1 %more, label %h, label %done\n'
+        'done:\n%r = load i32, ptr addrspace(3) @tg\nstore i32 %r, ptr addrspace(1) %po'))
+    cases.append(c)
+    # Barriers on both sides of a branch whose condition is uniform.
+    def uniform_ref(i, v):
+        return v[0][63 - i] if v[0][0] < 0 else v[0][(i + 1) % 64]
+    c = Case('tg_uniform_branch_barrier', ['i32'], 'i32', None, TG_DECLS, uniform_ref, tgsize=64)
+    c.full = tg_kernel(c.name, (
+        '%sp = getelementptr [64 x i32], ptr addrspace(3) @tg, i32 0, i32 %lid\n'
+        'store i32 %a0, ptr addrspace(3) %sp\n%u = load i32, ptr addrspace(1) %in0\n'
+        '%neg = icmp slt i32 %u, 0\nbr i1 %neg, label %rev, label %rot\n'
+        'rev:\ncall void @air.wg.barrier(i32 2, i32 1)\n%rl = sub i32 63, %lid\nbr label %j\n'
+        'rot:\ncall void @air.wg.barrier(i32 2, i32 1)\n%l1 = add i32 %lid, 1\n%l2 = and i32 %l1, 63\nbr label %j\n'
+        'j:\n%idx = phi i32 [ %rl, %rev ], [ %l2, %rot ]\n'
+        '%rp = getelementptr [64 x i32], ptr addrspace(3) @tg, i32 0, i32 %idx\n'
+        '%r = load i32, ptr addrspace(3) %rp\nstore i32 %r, ptr addrspace(1) %po'))
+    cases.append(c)
+    # Probe: an indirect call (Metal has no function pointers outside
+    # visible functions); expected to be refused.
+    # (Recursion is not probed: llc -mtriple=air does not terminate on a
+    # recursive internal function and is killed for lack of memory.)
+    c = ir_case('cf_indirect_call', ['u32'], 'u32',
+                '%odd = trunc i32 %a0 to i1\n%fp = select i1 %odd, ptr @cf2_inc, ptr @cf2_dbl\n'
+                '%r = call i32 %fp(i32 %a0)',
+                lambda i, v: u32(v[0][i] + 1) if v[0][i] & 1 else u32(v[0][i] * 2), {CF2_FNPTR})
+    c.absent = True
+    cases.append(c)
+    return cases
+
+
+def group_llvm_memory_ext():
+    """Constant tables of floats, structs and 2D arrays; threadgroup arrays
+    of structs, bytes, halfwords and vectors; more atomics; volatile;
+    memcpy of dynamic length and memmove; private vectors and structs with
+    dynamic indices; bool arrays; negative and 64-bit GEP indices; whole
+    aggregate loads and stores."""
+    cases = []
+    coef = [0.5, -1.25, 2.0, 0.375, -3.0, 1.0, 0.0625, -0.75]
+    coef = [f32(x) for x in coef]
+
+    def horner(i, v):
+        acc, x = 0.0, v[0][i]
+        for k in range(8):
+            acc = f32(f32(acc * x) + coef[k])
+        return acc
+    c = full_case('const_float_table_horner', ['f32'], 'f32', horner,
+                  '%pa = getelementptr float, ptr addrspace(1) %in0, i32 %tid\n%x = load float, ptr addrspace(1) %pa\n'
+                  'br label %h\n'
+                  'h:\n%k = phi i32 [ 0, %entry ], [ %k1, %h ]\n%acc = phi float [ 0.0, %entry ], [ %a1, %h ]\n'
+                  '%cp = getelementptr [8 x float], ptr addrspace(2) @coef_table, i32 0, i32 %k\n'
+                  '%cf = load float, ptr addrspace(2) %cp\n%m = fmul float %acc, %x\n%a1 = fadd float %m, %cf\n'
+                  '%k1 = add i32 %k, 1\n%more = icmp ult i32 %k1, 8\nbr i1 %more, label %h, label %x2\n'
+                  'x2:\n%po = getelementptr float, ptr addrspace(1) %out, i32 %tid\n'
+                  'store float %a1, ptr addrspace(1) %po\nret void', gen=[lambda i, r: r.uniform(-2, 2)], ulps=0)
+    c.full = ('@coef_table = internal addrspace(2) constant [8 x float] [%s]\n' %
+              ', '.join('float %r' % x for x in coef)) + c.full
+    cases.append(c)
+    st = [(3, 0.5), (-7, 1.25), (100, -2.0), (0, 8.0)]
+    c = full_case('const_struct_table', ['u32'], 'f32', lambda i, v: f32(st[v[0][i] & 3][0] + st[v[0][i] & 3][1]),
+                  '%pa = getelementptr i32, ptr addrspace(1) %in0, i32 %tid\n%a = load i32, ptr addrspace(1) %pa\n'
+                  '%k = and i32 %a, 3\n'
+                  '%p0 = getelementptr [4 x { i32, float }], ptr addrspace(2) @st_table, i32 0, i32 %k, i32 0\n'
+                  '%p1 = getelementptr [4 x { i32, float }], ptr addrspace(2) @st_table, i32 0, i32 %k, i32 1\n'
+                  '%i = load i32, ptr addrspace(2) %p0\n%f = load float, ptr addrspace(2) %p1\n'
+                  '%fi = sitofp i32 %i to float\n%r = fadd float %fi, %f\n'
+                  '%po = getelementptr float, ptr addrspace(1) %out, i32 %tid\nstore float %r, ptr addrspace(1) %po\n'
+                  'ret void', ulps=0)
+    c.full = ('@st_table = internal addrspace(2) constant [4 x { i32, float }] [%s]\n' %
+              ', '.join('{ i32, float } { i32 %d, float %r }' % x for x in st)) + c.full
+    cases.append(c)
+    t2 = [[r * 4 + c_ for c_ in range(4)] for r in range(4)]
+    t2 = [[x * x * 17 % 251 for x in row] for row in t2]
+    c = full_case('const_2d_table', ['u32'], 'u32', lambda i, v: t2[v[0][i] >> 2 & 3][v[0][i] & 3],
+                  '%pa = getelementptr i32, ptr addrspace(1) %in0, i32 %tid\n%a = load i32, ptr addrspace(1) %pa\n'
+                  '%c = and i32 %a, 3\n%r0 = lshr i32 %a, 2\n%rw = and i32 %r0, 3\n'
+                  '%p = getelementptr [4 x [4 x i32]], ptr addrspace(2) @t2_table, i32 0, i32 %rw, i32 %c\n'
+                  '%r = load i32, ptr addrspace(2) %p\n'
+                  '%po = getelementptr i32, ptr addrspace(1) %out, i32 %tid\nstore i32 %r, ptr addrspace(1) %po\n'
+                  'ret void')
+    c.full = ('@t2_table = internal addrspace(2) constant [4 x [4 x i32]] [%s]\n' %
+              ', '.join('[4 x i32] [%s]' % ', '.join('i32 %d' % x for x in row) for row in t2)) + c.full
+    cases.append(c)
+
+    def tg_full(name, ty, body):
+        """A kernel over in0/out with threadgroup global @tg_<name> of type ty."""
+        k = tg_kernel(name, 'BODY').split('\n', 1)[1]
+        return ('@tg_%s = internal addrspace(3) global %s undef, align 16\n' % (name, ty) +
+                k.replace('BODY', body.strip().replace('\n', '\n  ').replace('@tg', '@tg_' + name)))
+    # Threadgroup array of structs: thread l stores {l*3, a}, reads lane l^1's.
+    c = Case('tg_struct_array', ['i32'], 'i32', None, TG_DECLS,
+             lambda i, v: s32((i ^ 1) * 3 + v[0][i ^ 1]), tgsize=64,
+             gen=[lambda i, r: r.randrange(-1000000, 1000000)])
+    c.full = tg_full(c.name, '[64 x { i32, float }]', (
+        '%f0 = getelementptr [64 x { i32, float }], ptr addrspace(3) @tg, i32 0, i32 %lid, i32 0\n'
+        '%f1 = getelementptr [64 x { i32, float }], ptr addrspace(3) @tg, i32 0, i32 %lid, i32 1\n'
+        '%l3 = mul i32 %lid, 3\nstore i32 %l3, ptr addrspace(3) %f0\n%af = sitofp i32 %a0 to float\n'
+        'store float %af, ptr addrspace(3) %f1\ncall void @air.wg.barrier(i32 2, i32 1)\n'
+        '%o = xor i32 %lid, 1\n'
+        '%g0 = getelementptr [64 x { i32, float }], ptr addrspace(3) @tg, i32 0, i32 %o, i32 0\n'
+        '%g1 = getelementptr [64 x { i32, float }], ptr addrspace(3) @tg, i32 0, i32 %o, i32 1\n'
+        '%x = load i32, ptr addrspace(3) %g0\n%y = load float, ptr addrspace(3) %g1\n'
+        '%yi = fptosi float %y to i32\n%r = add i32 %x, %yi\nstore i32 %r, ptr addrspace(1) %po'))
+    cases.append(c)
+    for bits in (8, 16):
+        it = 'i%d' % bits
+        c = Case('tg_%s_array' % it, ['u32'], 'u32', None, TG_DECLS,
+                 lambda i, v, b=bits: v[0][63 - i] & ((1 << b) - 1), tgsize=64)
+        c.full = tg_full(c.name, '[64 x %s]' % it, (
+            '%%sp = getelementptr [64 x {t}], ptr addrspace(3) @tg, i32 0, i32 %%lid\n'
+            '%%v = trunc i32 %%a0 to {t}\nstore {t} %%v, ptr addrspace(3) %%sp\n'
+            'call void @air.wg.barrier(i32 2, i32 1)\n%%rl = sub i32 63, %%lid\n'
+            '%%rp = getelementptr [64 x {t}], ptr addrspace(3) @tg, i32 0, i32 %%rl\n'
+            '%%x = load {t}, ptr addrspace(3) %%rp\n%%r = zext {t} %%x to i32\n'
+            'store i32 %%r, ptr addrspace(1) %%po').replace('%%', '%').format(t=it))
+        cases.append(c)
+    c = Case('tg_v4f32_lanes', ['f32'], 'f32', None, TG_DECLS,
+             lambda i, v: v[0][(15 - i // 4) * 4 + i % 4], tgsize=64, ulps=0)
+    c.full = tg_full(c.name, '[16 x <4 x float>]', (
+        '%q = lshr i32 %lid, 2\n%k = and i32 %lid, 3\n'
+        '%sp = getelementptr [16 x <4 x float>], ptr addrspace(3) @tg, i32 0, i32 %q, i32 %k\n'
+        '%af = bitcast i32 %a0 to float\nstore float %af, ptr addrspace(3) %sp\n'
+        'call void @air.wg.barrier(i32 2, i32 1)\n%rq = sub i32 15, %q\n'
+        '%vp = getelementptr [16 x <4 x float>], ptr addrspace(3) @tg, i32 0, i32 %rq\n'
+        '%vv = load <4 x float>, ptr addrspace(3) %vp\n%e = extractelement <4 x float> %vv, i32 %k\n'
+        '%ei = bitcast float %e to i32\nstore i32 %ei, ptr addrspace(1) %po'))
+    cases.append(c)
+    # Unique old values from a threadgroup counter: out[old] = 1 for every thread.
+    c = Case('tg_atomic_inc_unique', ['u32'], 'u32', None, TG_DECLS, lambda i, v: 1, tgsize=64,
+             out_init=[0] * N)
+    c.full = tg_full(c.name, 'i32', (
+        '%z = icmp eq i32 %lid, 0\nbr i1 %z, label %init, label %go\n'
+        'init:\nstore i32 0, ptr addrspace(3) @tg\nbr label %go\n'
+        'go:\ncall void @air.wg.barrier(i32 2, i32 1)\n'
+        '%old = atomicrmw add ptr addrspace(3) @tg, i32 1 monotonic\n'
+        '%slot = getelementptr i32, ptr addrspace(1) %out, i32 %old\nstore i32 1, ptr addrspace(1) %slot'))
+    cases.append(c)
+    import operator
+    cases.append(atomic_case('atomic_fmax_f32', 'fmax', 'f32', max, init=-1000.0))
+    cases[-1].gen = [lambda i, r: float(r.randrange(-100, 100))]
+    cases.append(atomic_case('atomic_fmin_f32', 'fmin', 'f32', min, init=1000.0))
+    cases[-1].gen = [lambda i, r: float(r.randrange(-100, 100))]
+    for name, op, fn, init in (('atomic_add_i64', 'add', operator.add, 0),
+                               ('atomic_umax_u64', 'umax', max, 0),
+                               ('atomic_umin_u64', 'umin', min, (1 << 64) - 1)):
+        c = atomic_case(name, op, 'u64', fn, init=init)
+        c.ref = (lambda i, v, fn=fn, init=init: fold_slots(v[0], fn, init, u64)[i])
+        cases.append(c)
+    c = atomic_case('tg_atomic_fadd_f32', 'fadd', 'f32', operator.add)
+    c.gen = [lambda i, r: float(r.randrange(-100, 100))]
+    c.tgsize = 64
+    c.ref = lambda i, v: float(sum(v[0]))
+    c.decls = TG_DECLS
+    c.full = tg_full(c.name, 'float', (
+        '%z = icmp eq i32 %lid, 0\nbr i1 %z, label %init, label %go\n'
+        'init:\nstore float 0.0, ptr addrspace(3) @tg\nbr label %go\n'
+        'go:\ncall void @air.wg.barrier(i32 2, i32 1)\n%af = bitcast i32 %a0 to float\n'
+        '%old = atomicrmw fadd ptr addrspace(3) @tg, float %af monotonic\n'
+        'call void @air.wg.barrier(i32 2, i32 1)\n%r = load float, ptr addrspace(3) @tg\n'
+        '%ri = bitcast float %r to i32\nstore i32 %ri, ptr addrspace(1) %po'))
+    c.out_init = None
+    cases.append(c)
+    # A float stored through a pointer computed as an i32 element (and the
+    # reverse): opaque pointers carry no element type.
+    cases.append(full_case('pun_store_float_i32_gep', ['f32'], 'f32', lambda i, v: f32(v[0][i] + 1),
+                           '%pa = getelementptr float, ptr addrspace(1) %in0, i32 %tid\n'
+                           '%a = load float, ptr addrspace(1) %pa\n%r = fadd float %a, 1.0\n'
+                           '%po = getelementptr i32, ptr addrspace(1) %out, i32 %tid\n'
+                           'store float %r, ptr addrspace(1) %po\nret void', ulps=0))
+    cases.append(full_case('pun_load_i32_float_gep', ['u32'], 'u32', lambda i, v: v[0][i] ^ 1,
+                           '%pa = getelementptr float, ptr addrspace(1) %in0, i32 %tid\n'
+                           '%a = load i32, ptr addrspace(1) %pa\n%r = xor i32 %a, 1\n'
+                           '%po = getelementptr i32, ptr addrspace(1) %out, i32 %tid\n'
+                           'store i32 %r, ptr addrspace(1) %po\nret void'))
+    # A compare-exchange loop (how front ends write an atomic float multiply).
+    c = full_case('cmpxchg_loop_fmul', ['f32'], 'f32',
+                  lambda i, v: functools.reduce(lambda a, b: a * b, v[0][i % 8::8], 1.0) if i < 8 else 1.0,
+                  '%pa = getelementptr float, ptr addrspace(1) %in0, i32 %tid\n%a = load float, ptr addrspace(1) %pa\n'
+                  '%slot = and i32 %tid, 7\n%sp = getelementptr float, ptr addrspace(1) %out, i32 %slot\n'
+                  '%init = load i32, ptr addrspace(1) %sp\nbr label %loop\n'
+                  'loop:\n%cur = phi i32 [ %init, %entry ], [ %seen, %loop ]\n'
+                  '%cf = bitcast i32 %cur to float\n%nf = fmul float %cf, %a\n%ni = bitcast float %nf to i32\n'
+                  '%pair = cmpxchg ptr addrspace(1) %sp, i32 %cur, i32 %ni monotonic monotonic\n'
+                  '%seen = extractvalue { i32, i1 } %pair, 0\n%ok = extractvalue { i32, i1 } %pair, 1\n'
+                  'br i1 %ok, label %done, label %loop\ndone:\nret void',
+                  gen=[lambda i, r: r.choice([0.5, 2.0, -1.0, 1.0, 4.0, -0.25])], ulps=0)
+    c.out_init = [1.0] * N
+    cases.append(c)
+    cases.append(ir_case('volatile_load_store', ['u32'], 'u32',
+                         '%v = load volatile i32, ptr addrspace(1) %p0\n%r = xor i32 %v, 85',
+                         lambda i, v: v[0][i] ^ 85))
+    # memcpy of a dynamic length: thread s < 16 copies (in1[s] & 15) + 1 bytes of its 16-byte slot.
+    def memcpy_ref(i, v):
+        s, n = i // 4, (v[1][i // 4] & 15) + 1
+        src = v[0][i].to_bytes(4, 'little')
+        return int.from_bytes(bytes(src[j] if 4 * (i % 4) + j < n else 0xaa for j in range(4)), 'little')
+    c = full_case('memcpy_dynamic_len', ['u32', 'u32'], 'u32', memcpy_ref,
+                  '%go = icmp ult i32 %tid, 16\nbr i1 %go, label %body, label %done\nbody:\n'
+                  '%pb = getelementptr i32, ptr addrspace(1) %in1, i32 %tid\n%b = load i32, ptr addrspace(1) %pb\n'
+                  '%n0 = and i32 %b, 15\n%n = add i32 %n0, 1\n%n64 = zext i32 %n to i64\n%off = shl i32 %tid, 4\n'
+                  '%src = getelementptr i8, ptr addrspace(1) %in0, i32 %off\n'
+                  '%dst = getelementptr i8, ptr addrspace(1) %out, i32 %off\n'
+                  'call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) %dst, ptr addrspace(1) %src, i64 %n64, i1 false)\n'
+                  'br label %done\ndone:\nret void',
+                  {'declare void @llvm.memcpy.p1.p1.i64(ptr addrspace(1), ptr addrspace(1), i64, i1)'})
+    c.out_init = [0xaaaaaaaa] * N
+    cases.append(c)
+    cases.append(ir_case('memmove_overlap_private', ['u32'], 'u32',
+                         '%arr = alloca [8 x i32], align 4\nbr label %f\n'
+                         'f:\n%k = phi i32 [ 0, %entry ], [ %k1, %f ]\n%v = add i32 %a0, %k\n'
+                         '%sl = getelementptr [8 x i32], ptr %arr, i32 0, i32 %k\nstore i32 %v, ptr %sl\n'
+                         '%k1 = add i32 %k, 1\n%m = icmp ult i32 %k1, 8\nbr i1 %m, label %f, label %mv\n'
+                         'mv:\n%d = getelementptr i32, ptr %arr, i32 1\n'
+                         'call void @llvm.memmove.p0.p0.i32(ptr align 4 %d, ptr align 4 %arr, i32 28, i1 false)\n'
+                         '%s = and i32 %tid, 7\n%sp = getelementptr [8 x i32], ptr %arr, i32 0, i32 %s\n'
+                         '%r = load i32, ptr %sp', lambda i, v: u32(v[0][i] + max(0, i % 8 - 1)),
+                         {'declare void @llvm.memmove.p0.p0.i32(ptr, ptr, i32, i1 immarg)'}))
+    c = full_case('memmove_device_overlap', ['u32'], 'u32',
+                  lambda i, v: v[0][i] if i % 8 == 0 else v[0][i - 1],
+                  '%go = icmp ult i32 %tid, 8\nbr i1 %go, label %body, label %done\nbody:\n'
+                  '%b = shl i32 %tid, 3\n%s = getelementptr i32, ptr addrspace(1) %in0, i32 %b\n'
+                  '%d = getelementptr i32, ptr addrspace(1) %out, i32 %b\n'
+                  'call void @llvm.memcpy.p1.p1.i32(ptr addrspace(1) %d, ptr addrspace(1) %s, i32 32, i1 false)\n'
+                  '%d1 = getelementptr i32, ptr addrspace(1) %d, i32 1\n'
+                  'call void @llvm.memmove.p1.p1.i32(ptr addrspace(1) %d1, ptr addrspace(1) %d, i32 28, i1 false)\n'
+                  'br label %done\ndone:\nret void',
+                  {'declare void @llvm.memcpy.p1.p1.i32(ptr addrspace(1), ptr addrspace(1), i32, i1)',
+                   'declare void @llvm.memmove.p1.p1.i32(ptr addrspace(1), ptr addrspace(1), i32, i1)'})
+    cases.append(c)
+    cases.append(ir_case('alloca_vector_dynamic', ['f32'] * 4, 'f32',
+                         VEC4_F32 + '%a = alloca <4 x float>\nstore <4 x float> %v, ptr %a\n'
+                         '%j = xor i32 %k, 2\n%p = getelementptr float, ptr %a, i32 %j\n%r = load float, ptr %p',
+                         lambda i, v: v[(i % 4) ^ 2][i], ulps=0))
+    cases.append(ir_case('alloca_struct_dynamic', ['u32', 'u32'], 'u32',
+                         '%s = alloca { i32, [4 x i32] }\n%h = getelementptr { i32, [4 x i32] }, ptr %s, i32 0, i32 0\n'
+                         'store i32 %a1, ptr %h\n%k = and i32 %a0, 3\n'
+                         '%e0 = getelementptr { i32, [4 x i32] }, ptr %s, i32 0, i32 1, i32 0\n'
+                         'store i32 10, ptr %e0\n%e1 = getelementptr { i32, [4 x i32] }, ptr %s, i32 0, i32 1, i32 1\n'
+                         'store i32 11, ptr %e1\n%e2 = getelementptr { i32, [4 x i32] }, ptr %s, i32 0, i32 1, i32 2\n'
+                         'store i32 12, ptr %e2\n%e3 = getelementptr { i32, [4 x i32] }, ptr %s, i32 0, i32 1, i32 3\n'
+                         'store i32 13, ptr %e3\n'
+                         '%ek = getelementptr { i32, [4 x i32] }, ptr %s, i32 0, i32 1, i32 %k\nstore i32 %tid, ptr %ek\n'
+                         '%j = xor i32 %k, 1\n%ej = getelementptr { i32, [4 x i32] }, ptr %s, i32 0, i32 1, i32 %j\n'
+                         '%x = load i32, ptr %ej\n%y = load i32, ptr %ek\n%hv = load i32, ptr %h\n'
+                         '%xy = mul i32 %x, 1000\n%z = add i32 %xy, %y\n%r = xor i32 %z, %hv',
+                         lambda i, v: u32((10 + ((v[0][i] & 3) ^ 1)) * 1000 + i) ^ v[1][i]))
+    cases.append(ir_case('bool_load_i1', ['i1', 'u32'], 'u32', '%r = select i1 %a0, i32 %a1, i32 7',
+                         lambda i, v: v[1][i] if v[0][i] else 7))
+    cases.append(ir_case('bool_i8_trunc_store', ['u8', 'u32'], 'u8',
+                         '%b = trunc i8 %a0 to i1\n%c = icmp ugt i32 %a1, 2147483648\n%x = xor i1 %b, %c\n'
+                         '%r = zext i1 %x to i8', lambda i, v: (v[0][i] & 1) ^ int(v[1][i] > 1 << 31),
+                         gen=[lambda i, r: r.randrange(2), None]))
+    cases.append(full_case('gep_negative_index', ['u32'], 'u32', lambda i, v: v[0][63 - i],
+                           '%end = getelementptr i32, ptr addrspace(1) %in0, i32 63\n%n = sub i32 0, %tid\n'
+                           '%p = getelementptr inbounds i32, ptr addrspace(1) %end, i32 %n\n'
+                           '%r = load i32, ptr addrspace(1) %p\n'
+                           '%po = getelementptr i32, ptr addrspace(1) %out, i32 %tid\n'
+                           'store i32 %r, ptr addrspace(1) %po\nret void'))
+    cases.append(full_case('gep_i64_index_nuw', ['f32'], 'f32', lambda i, v: f32(v[0][i ^ 1] * 3),
+                           '%t64 = zext i32 %tid to i64\n%j = xor i64 %t64, 1\n'
+                           '%p = getelementptr inbounds nuw float, ptr addrspace(1) %in0, i64 %j\n'
+                           '%x = load float, ptr addrspace(1) %p\n%r = fmul float %x, 3.0\n'
+                           '%po = getelementptr inbounds nuw float, ptr addrspace(1) %out, i64 %t64\n'
+                           'store float %r, ptr addrspace(1) %po\nret void', ulps=0))
+    # Whole-aggregate loads and stores.
+    def agg_gen(i, r):
+        return r.randrange(1 << 32) if i % 2 == 0 else struct.unpack('<I', struct.pack('<f', r.uniform(-100, 100)))[0]
+
+    def agg_ref(i, v):
+        if i % 2 == 0:
+            return u32(v[0][i] + 1)
+        x = struct.unpack('<f', struct.pack('<I', v[0][i]))[0]
+        return struct.unpack('<I', struct.pack('<f', f32(x * 2)))[0]
+    cases.append(full_case('aggregate_struct_load_store', ['u32'], 'u32', agg_ref,
+                           '%go = icmp ult i32 %tid, 32\nbr i1 %go, label %body, label %done\nbody:\n'
+                           '%ps = getelementptr { i32, float }, ptr addrspace(1) %in0, i32 %tid\n'
+                           '%s = load { i32, float }, ptr addrspace(1) %ps\n'
+                           '%i = extractvalue { i32, float } %s, 0\n%f = extractvalue { i32, float } %s, 1\n'
+                           '%i1 = add i32 %i, 1\n%f2 = fmul float %f, 2.0\n'
+                           '%t0 = insertvalue { i32, float } poison, i32 %i1, 0\n'
+                           '%t1 = insertvalue { i32, float } %t0, float %f2, 1\n'
+                           '%po = getelementptr { i32, float }, ptr addrspace(1) %out, i32 %tid\n'
+                           'store { i32, float } %t1, ptr addrspace(1) %po\nbr label %done\ndone:\nret void',
+                           gen=[agg_gen]))
+    cases.append(full_case('aggregate_array_load_store', ['u32'], 'u32', lambda i, v: v[0][i // 4 * 4 + 3 - i % 4],
+                           '%go = icmp ult i32 %tid, 16\nbr i1 %go, label %body, label %done\nbody:\n'
+                           '%pa = getelementptr [4 x i32], ptr addrspace(1) %in0, i32 %tid\n'
+                           '%a = load [4 x i32], ptr addrspace(1) %pa\n' +
+                           ''.join('%%e%d = extractvalue [4 x i32] %%a, %d\n' % (k, k) for k in range(4)) +
+                           '%b0 = insertvalue [4 x i32] poison, i32 %e3, 0\n%b1 = insertvalue [4 x i32] %b0, i32 %e2, 1\n'
+                           '%b2 = insertvalue [4 x i32] %b1, i32 %e1, 2\n%b3 = insertvalue [4 x i32] %b2, i32 %e0, 3\n'
+                           '%po = getelementptr [4 x i32], ptr addrspace(1) %out, i32 %tid\n'
+                           'store [4 x i32] %b3, ptr addrspace(1) %po\nbr label %done\ndone:\nret void'))
+    le = lambda bs: int.from_bytes(bytes(bs), 'little')
+
+    def unaligned_store_ref(i, v):
+        buf = bytearray(b'\xcc' * 4 * N)
+        for t in range(28):
+            buf[1 + 9 * t:9 + 9 * t] = v[0][t].to_bytes(8, 'little')
+        return le(buf[4 * i:4 * i + 4])
+    c = full_case('store_unaligned_i64', ['u64'], 'u32', unaligned_store_ref,
+                  '%go = icmp ult i32 %tid, 28\nbr i1 %go, label %body, label %done\nbody:\n'
+                  '%pa = getelementptr i64, ptr addrspace(1) %in0, i32 %tid\n%a = load i64, ptr addrspace(1) %pa\n'
+                  '%o9 = mul i32 %tid, 9\n%o = add i32 %o9, 1\n'
+                  '%po = getelementptr i8, ptr addrspace(1) %out, i32 %o\n'
+                  'store i64 %a, ptr addrspace(1) %po, align 1\nbr label %done\ndone:\nret void')
+    c.out_init = [0xcccccccc] * N
+    cases.append(c)
+    return cases
+
+
+def f32_bits(x):
+    return struct.unpack('<I', struct.pack('<f', x))[0]
+
+
+def group_llvm_conv_ext():
+    """Narrow integers to and from float, the sign operations on float
+    encodings (NaN payloads), <2 x half> as i32, doubles a front end writes
+    (constants and exact arithmetic), i1 to float, vector and scalar casts."""
+    cases = []
+    for name, ti, to, inst, ref, gen in (
+            ('sitofp_i8_f32', 'i8', 'f32', 'sitofp i8 %a0 to float', float, None),
+            ('uitofp_u8_f32', 'u8', 'f32', 'uitofp i8 %a0 to float', float, None),
+            ('sitofp_i16_f32', 'i16', 'f32', 'sitofp i16 %a0 to float', float, None),
+            ('uitofp_u16_f32', 'u16', 'f32', 'uitofp i16 %a0 to float', float, None),
+            ('fptosi_f32_i8', 'f32', 'i8', 'fptosi float %a0 to i8', int, lambda i, r: r.uniform(-128.99, 127.99)),
+            ('fptoui_f32_u8', 'f32', 'u8', 'fptoui float %a0 to i8', int, lambda i, r: r.uniform(0, 255.99)),
+            ('fptosi_f32_i16', 'f32', 'i16', 'fptosi float %a0 to i16', int, lambda i, r: r.uniform(-32768.9, 32767.9)),
+            ('fptoui_f32_u16', 'f32', 'u16', 'fptoui float %a0 to i16', int, lambda i, r: r.uniform(0, 65535.9)),
+            ('uitofp_i1_f32', 'u32', 'f32', '%b = trunc i32 %a0 to i1\n%r = uitofp i1 %b to float',
+             lambda x: float(x & 1), None),
+            ('sitofp_i1_f32', 'u32', 'f32', '%b = trunc i32 %a0 to i1\n%r = sitofp i1 %b to float',
+             lambda x: -1.0 if x & 1 else 0.0, None),
+            ('trunc_i64_i8', 'i64', 'i8', 'trunc i64 %a0 to i8', s8, None),
+            ('sext_i16_i64', 'i16', 'i64', 'sext i16 %a0 to i64', int, None),
+            ('zext_i8_i64', 'u8', 'u64', 'zext i8 %a0 to i64', int, None)):
+        body = inst if inst.startswith('%') else '%r = ' + inst
+        cases.append(ir_case(name, [ti], to, body, lambda i, v, ref=ref: ref(v[0][i]), gen=[gen],
+                             ulps=0 if to == 'f32' else None, bitexact=to == 'f32'))
+    # Sign operations act on the encoding: NaN payloads (and subnormals) intact.
+    nan_bits = lambda i, r: r.choice([0x7f800001 + r.randrange(0x3fffff), 0x7fc00000 + r.randrange(0x3fffff),
+                                      0xff800001 + r.randrange(0x7fffff), r.randrange(1 << 32)]) & 0xffffffff
+    normal_bits = lambda i, r: r.choice([nan_bits(i, r), r.randrange(0x00800000, 0x7f800000) | r.randrange(2) << 31])
+    sub_bits = lambda i, r: r.randrange(1, 0x800000) | r.randrange(2) << 31
+    for name, gen in (('nan', normal_bits), ('subnormal', sub_bits)):
+        cases.append(ir_case('bits_fneg_' + name, ['u32'], 'u32',
+                             '%f = bitcast i32 %a0 to float\n%n = fneg float %f\n%r = bitcast float %n to i32',
+                             lambda i, v: v[0][i] ^ 0x80000000, gen=[gen]))
+        cases.append(ir_case('bits_fabs_' + name, ['u32'], 'u32',
+                             '%f = bitcast i32 %a0 to float\n%n = call float @llvm.fabs.f32(float %f)\n'
+                             '%r = bitcast float %n to i32', lambda i, v: v[0][i] & 0x7fffffff,
+                             {'declare float @llvm.fabs.f32(float)'}, gen=[gen]))
+        cases.append(ir_case('bits_copysign_' + name, ['u32', 'u32'], 'u32',
+                             '%f = bitcast i32 %a0 to float\n%s = bitcast i32 %a1 to float\n'
+                             '%n = call float @llvm.copysign.f32(float %f, float %s)\n%r = bitcast float %n to i32',
+                             lambda i, v: v[0][i] & 0x7fffffff | v[1][i] & 0x80000000,
+                             {'declare float @llvm.copysign.f32(float, float)'}, gen=[gen, None]))
+    cases.append(ir_case('bits_select_float', ['u32', 'u32'], 'u32',
+                         '%f = bitcast i32 %a0 to float\n%g = bitcast i32 %a1 to float\n%c = trunc i32 %tid to i1\n'
+                         '%s = select i1 %c, float %f, float %g\n%r = bitcast float %s to i32',
+                         lambda i, v: v[0][i] if i & 1 else v[1][i], gen=[nan_bits, sub_bits]))
+    c = full_case('bits_float_load_store', ['u32'], 'u32', lambda i, v: v[0][i ^ 1],
+                  '%j = xor i32 %tid, 1\n%pa = getelementptr float, ptr addrspace(1) %in0, i32 %j\n'
+                  '%f = load float, ptr addrspace(1) %pa\n%po = getelementptr float, ptr addrspace(1) %out, i32 %tid\n'
+                  'store float %f, ptr addrspace(1) %po\nret void', gen=[lambda i, r: r.choice([nan_bits(i, r), sub_bits(i, r)])])
+    cases.append(c)
+    cases.append(ir_case('bits_pun_private', ['f32'], 'u32',
+                         '%m = alloca float\n%x = fmul float %a0, 3.0\nstore float %x, ptr %m\n%r = load i32, ptr %m',
+                         lambda i, v: f32_bits(f32(v[0][i] * 3))))
+    # <2 x half> in an i32.
+    h2 = lambda i, r: f16_bits(f16(r.choice([-1, 1]) * r.uniform(1, 2) * 2.0 ** r.randrange(-10, 10))) | \
+        f16_bits(f16(r.choice([-1, 1]) * r.uniform(1, 2) * 2.0 ** r.randrange(-10, 10))) << 16
+    cases.append(ir_case('v2f16_bitcast_fmul', ['u32'], 'u32',
+                         '%h = bitcast i32 %a0 to <2 x half>\n%m = fmul <2 x half> %h, <half 2.0, half 0.5>\n'
+                         '%r = bitcast <2 x half> %m to i32',
+                         lambda i, v: f16_bits(f16(bits_f16(v[0][i] & 0xffff) * 2)) |
+                         f16_bits(f16(bits_f16(v[0][i] >> 16) * 0.5)) << 16, gen=[h2]))
+    cases.append(ir_case('bitcast_v2i32_i64', ['u32', 'u32'], 'u64',
+                         '%x0 = insertelement <2 x i32> poison, i32 %a0, i32 0\n'
+                         '%x = insertelement <2 x i32> %x0, i32 %a1, i32 1\n%r = bitcast <2 x i32> %x to i64',
+                         lambda i, v: v[1][i] << 32 | v[0][i]))
+    cases.append(ir_case('bitcast_i64_v2f32', ['u64'], 'f32',
+                         '%v = bitcast i64 %a0 to <2 x float>\n%k = and i32 %tid, 1\n'
+                         '%r = extractelement <2 x float> %v, i32 %k',
+                         lambda i, v: struct.unpack('<f', struct.pack('<I', v[0][i] >> 32 * (i & 1) & 0xffffffff))[0],
+                         gen=[lambda i, r: f32_bits(r.uniform(-9, 9)) | f32_bits(r.uniform(-9, 9)) << 32], ulps=0))
+    # Doubles as front ends write them (AIR has no double: the backend
+    # demotes them); only cases where the double result is exact in float.
+    cases.append(ir_case('fptrunc_double_const', ['f32'], 'f32',
+                         '%c = fptrunc double 0x3FB999999999999A to float\n%r = fmul float %a0, %c',
+                         lambda i, v: f32(v[0][i] * f32(0.1)), ulps=0))
+    cases.append(ir_case('double_exact_arith', ['f32'], 'f32',
+                         '%d = fpext float %a0 to double\n%m = fmul double %d, 3.0\n%s = fadd double %m, 0.5\n'
+                         '%r = fptrunc double %s to float', lambda i, v: v[0][i] * 3 + 0.5,
+                         gen=[lambda i, r: float(r.randrange(-100000, 100000))], ulps=0))
+    cases.append(ir_case('sitofp_i32_double_fptrunc', ['i32'], 'f32',
+                         '%d = sitofp i32 %a0 to double\n%r = fptrunc double %d to float',
+                         lambda i, v: int_to_f32(v[0][i]), ulps=0))
+    cases.append(ir_case('double_compare', ['f32', 'f32'], 'u32',
+                         '%x = fpext float %a0 to double\n%y = fpext float %a1 to double\n'
+                         '%c = fcmp olt double %x, %y\n%r = zext i1 %c to i32',
+                         lambda i, v: int(v[0][i] < v[1][i])))
+    return cases
+
+
+DISPATCH_ROLES = ['thread_position_in_grid', 'thread_position_in_threadgroup',
+                  'threadgroup_position_in_grid', 'threads_per_threadgroup', 'threadgroups_per_grid',
+                  'threads_per_grid']
+
+
+def dispatch_case(name, grid, group, body, decls, ref):
+    """A kernel over a grid of 64 threads with shape grid and threadgroups
+    group: the thread at (x, y, z) stores %r at out[x + gx*(y + gy*z)]."""
+    gx, gy, _ = grid
+    c = Case(name, ['u32'], 'u32', None, set(decls), lambda i, v: ref(i % gx, i // gx % gy, i // (gx * gy)))
+    c.grid, c.group = list(grid), list(group)
+    c.full = ('define void @%s(ptr addrspace(1) %%in0, ptr addrspace(1) %%out) {\nentry:\n'
+              '  %%t = call { i32, i32, i32 } @air.thread_position_in_grid.v3i32()\n'
+              '  %%x = extractvalue { i32, i32, i32 } %%t, 0\n  %%y = extractvalue { i32, i32, i32 } %%t, 1\n'
+              '  %%z = extractvalue { i32, i32, i32 } %%t, 2\n'
+              '  %%zy = mul i32 %%z, %d\n  %%yz = add i32 %%y, %%zy\n  %%row = mul i32 %%yz, %d\n'
+              '  %%lin = add i32 %%row, %%x\n  ' % (name, gy, gx) +
+              body.strip().replace('\n', '\n  ') +
+              '\n  %po = getelementptr i32, ptr addrspace(1) %out, i32 %lin\n'
+              '  store i32 %r, ptr addrspace(1) %po\n  ret void\n}')
+    return c
+
+
+def group_dispatch_3d():
+    """System values and threadgroup memory in 2D and 3D grids: the y and z
+    components, the linear thread index in a 3D threadgroup, the OpenCL-style
+    ids with dimension 1 and 2."""
+    cases = []
+    for tag, grid, group in (('2d', (16, 4, 1), (8, 2, 1)), ('3d', (4, 4, 4), (2, 2, 2))):
+        G, T = grid, group
+        values = {
+            'thread_position_in_grid': lambda p: p,
+            'thread_position_in_threadgroup': lambda p, T=T: tuple(p[d] % T[d] for d in range(3)),
+            'threadgroup_position_in_grid': lambda p, T=T: tuple(p[d] // T[d] for d in range(3)),
+            'threads_per_threadgroup': lambda p, T=T: T,
+            'threadgroups_per_grid': lambda p, T=T, G=G: tuple(G[d] // T[d] for d in range(3)),
+            'threads_per_grid': lambda p, G=G: G,
+        }
+        for role in DISPATCH_ROLES:
+            for comp in ((1, 2) if tag == '3d' else (0, 1)):
+                cases.append(dispatch_case(
+                    'dsp%s_%s_%d' % (tag, role, comp), G, T,
+                    '%%s = call { i32, i32, i32 } @air.%s.v3i32()\n%%r = extractvalue { i32, i32, i32 } %%s, %d'
+                    % (role, comp), {'declare { i32, i32, i32 } @air.%s.v3i32()' % role},
+                    lambda x, y, z, f=values[role], comp=comp: f((x, y, z))[comp]))
+        lin = lambda x, y, z, T=T: x % T[0] + T[0] * (y % T[1] + T[1] * (z % T[2]))
+        for role in ('thread_index_in_threadgroup', 'thread_index_in_simdgroup'):
+            cases.append(dispatch_case('dsp%s_%s' % (tag, role), G, T, '%%r = call i32 @air.%s.i32()' % role,
+                                       {'declare i32 @air.%s.i32()' % role}, lin))
+        for fn, dim, f in (('get_global_id', 1, lambda x, y, z: y), ('get_global_id', 2, lambda x, y, z: z),
+                           ('get_local_id', 1, lambda x, y, z, T=T: y % T[1]),
+                           ('get_group_id', 1, lambda x, y, z, T=T: y // T[1])):
+            if tag == '2d' and dim == 2:
+                continue
+            cases.append(dispatch_case('dsp%s_air_%s_%d' % (tag, fn, dim), G, T,
+                                       '%%r = call i32 @air.%s.i32(i32 %d)' % (fn, dim),
+                                       {'declare i32 @air.%s.i32(i32)' % fn}, f))
+        # Threadgroup memory indexed by the linear thread index: reverse within the threadgroup.
+        size = T[0] * T[1] * T[2]
+        c = dispatch_case('dsp%s_tg_reverse' % tag, G, T,
+                          '%%li = call i32 @air.thread_index_in_threadgroup.i32()\n'
+                          '%%sp = getelementptr [64 x i32], ptr addrspace(3) @tgd%s, i32 0, i32 %%li\n'
+                          'store i32 %%lin, ptr addrspace(3) %%sp\ncall void @air.wg.barrier(i32 2, i32 1)\n'
+                          '%%rl = sub i32 %d, %%li\n'
+                          '%%rp = getelementptr [64 x i32], ptr addrspace(3) @tgd%s, i32 0, i32 %%rl\n'
+                          '%%r = load i32, ptr addrspace(3) %%rp' % (tag, size - 1, tag),
+                          {'declare i32 @air.thread_index_in_threadgroup.i32()',
+                           'declare void @air.wg.barrier(i32, i32)'}, None)
+
+        def rev(x, y, z, T=T, G=G, lin=lin):
+            l = lin(x, y, z)
+            r = T[0] * T[1] * T[2] - 1 - l
+            lx, ly, lz = r % T[0], r // T[0] % T[1], r // (T[0] * T[1])
+            bx, by, bz = x - x % T[0], y - y % T[1], z - z % T[2]
+            return (bx + lx) + G[0] * ((by + ly) + G[1] * (bz + lz))
+        c.ref = lambda i, v, rev=rev, G=G: rev(i % G[0], i // G[0] % G[1], i // (G[0] * G[1]))
+        c.full = '@tgd%s = internal addrspace(3) global [64 x i32] undef, align 4\n' % tag + c.full
+        cases.append(c)
+    return cases
+
+
 GROUPS = {
     'llvm-float-ieee': group_llvm_float_ieee,
     'llvm-int-ops': group_llvm_int_ops,
@@ -2882,6 +3546,10 @@ GROUPS = {
     'llvm-int-narrow': group_llvm_int_narrow,
     'llvm-vector-ext': group_llvm_vector_ext,
     'llvm-math-ext': group_llvm_math_ext,
+    'llvm-control-ext': group_llvm_control_ext,
+    'llvm-memory-ext': group_llvm_memory_ext,
+    'llvm-conv-ext': group_llvm_conv_ext,
+    'dispatch-3d': group_dispatch_3d,
 }
 
 
