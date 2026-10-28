@@ -66,6 +66,48 @@ void lowerCmpIntrinsics(Module &M) {
   }
 }
 
+// AIR integer functions on 65- to 128-bit integers back to the LLVM
+// intrinsics they came from, which expandWideIntegers splits into limbs.
+// The portable passes name an intrinsic's AIR function after its type
+// (air.clz.i128, air.abs.s.i128: in every module ZLUDA links its i128
+// helpers into), and the AIR writer has no wide integer calls.
+void wideAIRFunctionsToIntrinsics(Module &M) {
+  static constexpr std::pair<StringLiteral, Intrinsic::ID> Fns[] = {
+      {"air.clz.", Intrinsic::ctlz},         {"air.ctz.", Intrinsic::cttz},
+      {"air.popcount.", Intrinsic::ctpop},   {"air.abs.s.", Intrinsic::abs},
+      {"air.min.s.", Intrinsic::smin},       {"air.max.s.", Intrinsic::smax},
+      {"air.min.u.", Intrinsic::umin},       {"air.max.u.", Intrinsic::umax},
+      {"air.reverse_bits.", Intrinsic::bitreverse}};
+  for (Function &F : make_early_inc_range(M)) {
+    if (!F.isDeclaration())
+      continue;
+    Type *T = F.getReturnType();
+    if (!T->isIntegerTy() || T->getIntegerBitWidth() <= 64)
+      continue;
+    const auto *Fn = find_if(Fns, [&](const auto &P) {
+      return F.getName().starts_with(P.first);
+    });
+    if (Fn == std::end(Fns))
+      continue;
+    for (User *U : make_early_inc_range(F.users())) {
+      auto *CI = dyn_cast<CallInst>(U);
+      if (!CI || CI->getCalledFunction() != &F)
+        continue;
+      IRBuilder<> B(CI);
+      SmallVector<Value *, 2> Args(CI->args());
+      // llvm.abs takes the INT_MIN-is-poison flag AIR's abs has not.
+      if (Fn->second == Intrinsic::abs)
+        Args.push_back(B.getFalse());
+      Value *R = B.CreateIntrinsic(Fn->second, {T}, Args);
+      R->takeName(CI);
+      CI->replaceAllUsesWith(R);
+      CI->eraseFromParent();
+    }
+    if (F.use_empty())
+      F.eraseFromParent();
+  }
+}
+
 // Integers of 65 to 128 bits (AIR has none; agx-raise-to-air keeps them as
 // a type hint, llvm/IR/AIR.h) as two i64 limbs. The high limb of an N-bit
 // value holds its bits 64 to N - 1, zero above.
@@ -1026,6 +1068,7 @@ bool legalizeUnsupportedIR(Module &M) {
   defineThreadgroupGlobals(M);
   stripLifetimeIntrinsics(M);
   expandIntrinsicsMetalMishandles(M);
+  wideAIRFunctionsToIntrinsics(M);
   expandWideIntegers(M);
   lowerFreezeInsts(M);
   canonicalizeNNegZExt(M);
