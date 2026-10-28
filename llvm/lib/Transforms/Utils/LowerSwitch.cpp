@@ -28,8 +28,8 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/MDBuilder.h"
-#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Value.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -326,7 +326,8 @@ unsigned Clusterify(CaseVector &Cases, SwitchInst *SI) {
       ++CaseIdx;
       continue;
     }
-    uint32_t W = (HasWeights && CaseIdx + 1 < Weights.size()) ? Weights[CaseIdx + 1] : 0;
+    uint32_t W =
+        (HasWeights && CaseIdx + 1 < Weights.size()) ? Weights[CaseIdx + 1] : 0;
     Cases.push_back(CaseRange(Case.getCaseValue(), Case.getCaseValue(),
                               Case.getCaseSuccessor(), W));
     ++NumSimpleCases;
@@ -350,7 +351,8 @@ unsigned Clusterify(CaseVector &Cases, SwitchInst *SI) {
              "Cases should be strictly ascending");
       if ((nextValue == currentValue + 1) && (currentBB == nextBB)) {
         I->High = J->High;
-        I->Weight = (UINT32_MAX - I->Weight > J->Weight) ? I->Weight + J->Weight : UINT32_MAX;
+        I->Weight = (UINT32_MAX - I->Weight > J->Weight) ? I->Weight + J->Weight
+                                                         : UINT32_MAX;
       } else if (++I != J) {
         *I = *J;
       }
