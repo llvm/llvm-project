@@ -396,8 +396,8 @@ public:
     Value *Inf = mul(Y, L);
     R = sel(B.CreateFCmpOEQ(abs(Inf), k(INFINITY)),
             sel(gt(Inf, 0.0), k(INFINITY), k(0.0)), R);
-    // A negative x: an odd integer y gives the sign, any other non-integer
-    // a NaN.
+    // A negative x: an odd integer y gives the sign, any other finite
+    // non-integer a NaN (for x = -inf, the infinity or zero above).
     Value *YInt = B.CreateFCmpOEQ(call(Intrinsic::trunc, {Y}), Y);
     Value *Half = mul(Y, k(0.5));
     Value *YOdd = B.CreateAnd(
@@ -405,8 +405,8 @@ public:
     Value *Neg = lt(copysign(k(1.0), X), 0.0);
     R = sel(B.CreateAnd(Neg, YOdd), B.CreateFNeg(R), R);
     Value *YFinite = B.CreateFCmpOLT(abs(Y), k(INFINITY));
-    R = sel(B.CreateAnd(B.CreateAnd(lt(X, 0.0), YFinite),
-                        B.CreateNot(YInt)),
+    Value *NegFinite = B.CreateAnd(lt(X, 0.0), gt(X, -INFINITY));
+    R = sel(B.CreateAnd(B.CreateAnd(NegFinite, YFinite), B.CreateNot(YInt)),
             k(NAN), R);
     // |x| = 1 with y infinite, x = 1, y = 0: 1 (even with a NaN).
     R = sel(B.CreateAnd(B.CreateFCmpOEQ(AX, k(1.0)),

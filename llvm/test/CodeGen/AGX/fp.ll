@@ -349,6 +349,7 @@ define agx_kernel void @transcendental(ptr addrspace(1) %out, float %a, float %b
 ; CHECK-NEXT:    bfi r2, 0, u3, 1
 ; CHECK-NEXT:    fcmpsel eq, r4, r6, u3, r1, r21
 ; CHECK-NEXT:    icmpsel ult, r4, r2, r5, r4, r1
+; CHECK-NEXT:    fcmpsel gt, r4, r3, r20, r4, r1
 ; CHECK-NEXT:    fcmpsel lt, r1, r3, 0.0, r4, r1
 ; CHECK-NEXT:    fcmpsel eq, r4, r3, r3, 0, 1
 ; CHECK-NEXT:    icmpsel ult, r2, r2, r5, r1, r17

@@ -1406,8 +1406,40 @@ bool AGXCodeGenPrepare::combineUniformAtomics(Function &F,
   return Changed;
 }
 
+/// powi(x, n) with a variable n: pow(|x|, n) (AGX has no powi library
+/// function, and SelectionDAG's fallback, pow(x, n), is NaN for a negative x),
+/// with the sign of x for an odd n. A constant n is left to SelectionDAG's
+/// multiplications.
+static bool expandPowI(Function &F) {
+  SmallVector<IntrinsicInst *, 4> Calls;
+  for (Instruction &I : instructions(F))
+    if (auto *II = dyn_cast<IntrinsicInst>(&I);
+        II && II->getIntrinsicID() == Intrinsic::powi &&
+        !isa<Constant>(II->getArgOperand(1)) &&
+        (II->getType()->isFloatTy() || II->getType()->isHalfTy()))
+      Calls.push_back(II);
+  for (IntrinsicInst *II : Calls) {
+    IRBuilder<> B(II);
+    B.setFastMathFlags(II->getFastMathFlags());
+    Type *F32 = B.getFloatTy();
+    Value *X = B.CreateFPExt(II->getArgOperand(0), F32);
+    Value *N = II->getArgOperand(1);
+    Value *Mag = B.CreateBinaryIntrinsic(
+        Intrinsic::pow, B.CreateUnaryIntrinsic(Intrinsic::fabs, X),
+        B.CreateSIToFP(N, F32));
+    Value *Odd = B.CreateTrunc(N, B.getInt1Ty());
+    Value *R = B.CreateCopySign(
+        Mag, B.CreateSelect(Odd, X, ConstantFP::get(F32, 1.0)));
+    R = B.CreateFPTrunc(R, II->getType());
+    R->takeName(II);
+    II->replaceAllUsesWith(R);
+    II->eraseFromParent();
+  }
+  return !Calls.empty();
+}
+
 bool AGXCodeGenPrepare::expandMath(Function &F, const AGXSubtarget &ST) {
-  bool Changed = false;
+  bool Changed = expandPowI(F);
   // An expansion may use functions that are expanded in turn (tan's sin).
   for (;;) {
     SmallVector<IntrinsicInst *, 8> Calls;
