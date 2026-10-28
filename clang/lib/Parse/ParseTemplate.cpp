@@ -1394,7 +1394,8 @@ ParsedTemplateArgument Parser::ParseTemplateArgument() {
   else
     ExprArg = ParseConstantExpressionInExprEvalContext(
         TypoCorrectionTypeBehavior::AllowBoth);
-  if (ExprArg.isInvalid() || !ExprArg.get()) {
+  if (ExprArg.isInvalid() || !ExprArg.get() ||
+      ExprArg.get()->containsErrors()) {
     return ParsedTemplateArgument();
   }
 
