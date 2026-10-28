@@ -4,13 +4,17 @@ lldb-dap implements the
 [Debug Adapter Protocol](https://microsoft.github.io/debug-adapter-protocol/specification)
 (DAP). This page specifies what lldb-dap adds to the protocol, such as new requests and additional fields in protocol types.
 
-Conventions:
+## Naming rules
 
-- New requests should be prefixed with `__lldb_`.
-- Added properties on standard messages are prefixed with `$__lldb_` if the field
-  would not make sense for any other debugger (e.g. `$__lldb_version`);
-  otherwise, they use plain names (e.g. `compileUnitId`).
-
+- The `command` field of an extension request must have the `__lldb_` prefix
+  (e.g. `__lldb_moduleSymbols`).
+- The `event` field of an extension event must have the `__lldb_` prefix.
+- An extension field on an official
+  [DAP type](https://microsoft.github.io/debug-adapter-protocol/specification#Types)
+  must have the `$__lldb_` prefix (e.g. `$__lldb_version` on `Capabilities`).
+- A field of an extension type has no prefix. Extension types are the
+  arguments, response body and event body of an extension request or event,
+  and the types they use (e.g. `startIndex` on `ModuleSymbolsArguments`).
 
 ## Summary
 
