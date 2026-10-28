@@ -176,10 +176,8 @@ body:             |
   ; CHECK-NEXT:   renamable $sgpr52_sgpr53 = lr-split COPY killed renamable $sgpr20_sgpr21
   ; CHECK-NEXT:   renamable $sgpr54_sgpr55 = lr-split COPY killed renamable $sgpr22_sgpr23
   ; CHECK-NEXT:   $sgpr4_sgpr5 = SI_SPILL_S64_RESTORE %stack.0, implicit $exec, implicit $sgpr32 :: (load (s64) from %stack.0, align 4, addrspace 5)
-  ; CHECK-NEXT:   SI_SPILL_S64_SAVE killed renamable $sgpr6_sgpr7, %stack.1, implicit $exec, implicit $sgpr32 :: (store (s64) into %stack.1, align 4, addrspace 5)
-  ; CHECK-NEXT:   $sgpr6_sgpr7 = SI_SPILL_S64_RESTORE %stack.1, implicit $exec, implicit $sgpr32 :: (load (s64) from %stack.1, align 4, addrspace 5)
-  ; CHECK-NEXT:   SI_SPILL_S64_SAVE killed renamable $sgpr10_sgpr11, %stack.2, implicit $exec, implicit $sgpr32 :: (store (s64) into %stack.2, align 4, addrspace 5)
-  ; CHECK-NEXT:   $sgpr10_sgpr11 = SI_SPILL_S64_RESTORE %stack.2, implicit $exec, implicit $sgpr32 :: (load (s64) from %stack.2, align 4, addrspace 5)
+  ; CHECK-NEXT:   SI_SPILL_S64_SAVE renamable $sgpr6_sgpr7, %stack.1, implicit $exec, implicit $sgpr32 :: (store (s64) into %stack.1, align 4, addrspace 5)
+  ; CHECK-NEXT:   SI_SPILL_S64_SAVE renamable $sgpr10_sgpr11, %stack.2, implicit $exec, implicit $sgpr32 :: (store (s64) into %stack.2, align 4, addrspace 5)
   ; CHECK-NEXT:   renamable $sgpr64_sgpr65 = lr-split COPY killed renamable $sgpr24_sgpr25
   ; CHECK-NEXT:   renamable $sgpr36_sgpr37 = lr-split COPY killed renamable $sgpr26_sgpr27
   ; CHECK-NEXT:   renamable $sgpr38_sgpr39 = lr-split COPY killed renamable $sgpr28_sgpr29

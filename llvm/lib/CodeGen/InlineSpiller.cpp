@@ -216,6 +216,7 @@ private:
   bool isSibling(Register Reg);
   bool hoistSpillInsideBB(LiveInterval &SpillLI, MachineInstr &CopyMI);
   void eliminateRedundantSpills(LiveInterval &LI, VNInfo *VNI);
+  void eliminateRedundantRestores();
 
   void markValueUsed(LiveInterval *, VNInfo *);
   bool hasPhysRegAvailable(const MachineInstr &MI);
@@ -521,6 +522,108 @@ bool InlineSpiller::hoistSpillInsideBB(LiveInterval &SpillLI,
     HSpiller.addToMergeableSpills(*MII, StackSlot, Original);
   ++NumSpills;
   return true;
+}
+
+void InlineSpiller::eliminateRedundantRestores() {
+  for (MachineBasicBlock &MBB : MF) {
+    auto First = MBB.getFirstNonDebugInstr();
+    for (auto I = First; I != MBB.instr_end();) {
+      auto Current = I++;
+      if (Current == First)
+        continue;
+      MachineInstr &MI = *Current;
+      if (MI.isBundled())
+        continue;
+      int LoadFI;
+      TypeSize LoadSize = TypeSize::getZero();
+      Register LoadReg = TII.isLoadFromStackSlot(MI, LoadFI, LoadSize);
+      if (!LoadReg.isValid())
+        continue;
+
+      MachineOperand *LoadOperand = MI.findRegisterDefOperand(LoadReg, &TRI);
+      if (!LoadOperand || LoadOperand->getSubReg())
+        continue;
+
+      MachineInstr &MaybeStore = *prev_nodbg(Current, First);
+      if (MaybeStore.isBundled())
+        continue;
+
+      int StoreFI;
+      TypeSize StoreSize = TypeSize::getZero();
+      Register StoreReg =
+          TII.isStoreToStackSlot(MaybeStore, StoreFI, StoreSize);
+      if (!StoreReg.isValid())
+        continue;
+
+      MachineOperand *StoreOperand =
+          MaybeStore.findRegisterUseOperand(StoreReg, &TRI);
+      if (!StoreOperand || StoreOperand->getSubReg())
+        continue;
+
+      if (StoreFI != LoadFI ||
+          !MF.getFrameInfo().isSpillSlotObjectIndex(LoadFI))
+        continue;
+
+      if (StoreSize.isZero() || StoreSize != LoadSize)
+        continue;
+      if (StoreSize * 8 != TRI.getRegSizeInBits(StoreReg, MRI) ||
+          LoadSize * 8 != TRI.getRegSizeInBits(LoadReg, MRI))
+        continue;
+
+      if (MI.hasOrderedMemoryRef() || MaybeStore.hasOrderedMemoryRef())
+        continue;
+
+      auto GetAssignedReg = [&](Register Reg) -> Register {
+        if (Reg.isVirtual()) {
+          if (!VRM.hasPhys(Reg))
+            return Register();
+          return VRM.getPhys(Reg);
+        }
+        return Reg;
+      };
+      if (Register LoadAssign = GetAssignedReg(LoadReg);
+          !LoadAssign.isValid() || LoadAssign != GetAssignedReg(StoreReg))
+        continue;
+
+      MachineInstr *Copy = BuildMI(MBB, MI, MI.getDebugLoc(),
+                                   TII.get(TargetOpcode::COPY), LoadReg)
+                               .addReg(StoreReg)
+                               .getInstr();
+      MaybeStore.clearRegisterKills(StoreReg, &TRI);
+      LIS.ReplaceMachineInstrInMaps(MI, *Copy);
+      MF.substituteDebugValuesForInst(MI, *Copy, /*MaxOperand=*/1);
+      MI.eraseFromParent();
+      ++NumReloadsRemoved;
+      SlotIndex Use = LIS.getInstructionIndex(*Copy).getRegSlot();
+      SlotIndex BlockStart = LIS.getMBBStartIdx(&MBB);
+      if (StoreReg.isPhysical()) {
+        for (MCRegUnit Unit : TRI.regunits(StoreReg.asMCReg())) {
+          if (MRI.isReservedRegUnit(Unit))
+            continue;
+          if (LiveRange *LR = LIS.getCachedRegUnit(Unit))
+            LR->extendInBlock(BlockStart, Use);
+        }
+        continue;
+      }
+      LiveInterval &StoreLI = LIS.getInterval(StoreReg);
+      Register StorePhys;
+      if (Matrix && VRM.hasPhys(StoreReg)) {
+        StorePhys = VRM.getPhys(StoreReg);
+        Matrix->unassign(StoreLI);
+      }
+      StoreLI.extendInBlock(BlockStart, Use);
+      if (StoreLI.hasSubRanges()) {
+        SlotIndex StoreUse = LIS.getInstructionIndex(MaybeStore).getRegSlot();
+        for (LiveInterval::SubRange &SubLI : StoreLI.subranges()) {
+          if (!SubLI.getVNInfoBefore(StoreUse))
+            continue;
+          SubLI.extendInBlock(BlockStart, Use);
+        }
+      }
+      if (Matrix && StorePhys.isValid())
+        Matrix->assign(StoreLI, StorePhys);
+    }
+  }
 }
 
 /// eliminateRedundantSpills - SLI:VNI is known to be on the stack. Remove any
@@ -1479,7 +1582,10 @@ void InlineSpiller::spill(LiveRangeEdit &edit, AllocationOrder *order) {
 }
 
 /// Optimizations after all the reg selections and spills are done.
-void InlineSpiller::postOptimization() { HSpiller.hoistAllSpills(); }
+void InlineSpiller::postOptimization() {
+  eliminateRedundantRestores();
+  HSpiller.hoistAllSpills();
+}
 
 /// When a spill is inserted, add the spill to MergeableSpills map.
 void HoistSpillHelper::addToMergeableSpills(MachineInstr &Spill, int StackSlot,

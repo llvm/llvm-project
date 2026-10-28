@@ -1,0 +1,66 @@
+# RUN: llc -mtriple=sparcv9 -run-pass=greedy -verify-machineinstrs \
+# RUN:   -verify-regalloc %s -o - | FileCheck %s
+
+# Even though both accesses use the same spill slot and assigned register,
+# the 32-bit store/load does not preserve the full 64-bit register value and
+# cannot become a COPY.
+---
+name: partial_width
+tracksRegLiveness: true
+stack:
+  - { id: 0, type: spill-slot, size: 8, alignment: 8 }
+body: |
+  bb.0:
+    liveins: $i0
+
+    ; CHECK-LABEL: name: partial_width
+    ; CHECK: [[SOURCE:%[0-9]+]]:i64regs = COPY $i0
+    ; CHECK-NEXT: STri %stack.0, 0, [[SOURCE]]
+    ; CHECK-NEXT: [[RESULT:%[0-9]+]]:i64regs = LDri %stack.0, 0
+    ; CHECK-NEXT: $i0 = COPY [[RESULT]]
+    %0:i64regs = COPY $i0
+    STri %stack.0, 0, %0 :: (store (s32) into %stack.0)
+    %1:i64regs = LDri %stack.0, 0 :: (load (s32) from %stack.0)
+    $i0 = COPY %1
+    RETL 8, implicit $i0
+...
+
+# A full-width pair preserves the register value and can be forwarded even
+# when the accesses were present before register allocation.
+---
+name: full_width
+tracksRegLiveness: true
+stack:
+  - { id: 0, type: spill-slot, size: 8, alignment: 8 }
+body: |
+  bb.0:
+    liveins: $i0
+
+    ; CHECK-LABEL: name: full_width
+    ; CHECK: [[SOURCE:%[0-9]+]]:i64regs = COPY $i0
+    ; CHECK-NEXT: STXri %stack.0, 0, [[SOURCE]]
+    ; CHECK-NEXT: [[RESULT:%[0-9]+]]:i64regs = COPY [[SOURCE]]
+    ; CHECK-NEXT: $i0 = COPY [[RESULT]]
+    %0:i64regs = COPY $i0
+    STXri %stack.0, 0, %0 :: (store (s64) into %stack.0)
+    %1:i64regs = LDXri %stack.0, 0 :: (load (s64) from %stack.0)
+    $i0 = COPY %1
+    RETL 8, implicit $i0
+...
+
+---
+name: physical_partial_width
+tracksRegLiveness: true
+stack:
+  - { id: 0, type: spill-slot, size: 8, alignment: 8 }
+body: |
+  bb.0:
+    liveins: $i0
+
+    ; CHECK-LABEL: name: physical_partial_width
+    ; CHECK: STri %stack.0, 0, $i0
+    ; CHECK-NEXT: $i0 = LDri %stack.0, 0
+    STri %stack.0, 0, $i0 :: (store (s32) into %stack.0)
+    $i0 = LDri %stack.0, 0 :: (load (s32) from %stack.0)
+    RETL 8, implicit $i0
+...
