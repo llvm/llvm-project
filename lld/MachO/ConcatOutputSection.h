@@ -148,7 +148,7 @@ struct ThunkKey {
 
   ThunkKey(Symbol *sym, int64_t addend) : sym(sym), addend(addend) {}
   ThunkKey(const Relocation &r)
-      : ThunkKey(cast<Symbol *>(r.referent), r.addend) {}
+      : ThunkKey(cast<Symbol *>(r.referent), r.getAddend()) {}
 
   bool operator==(const ThunkKey &other) const {
     if (addend != other.addend)
