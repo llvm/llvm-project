@@ -1307,9 +1307,9 @@ define i8 @combine_i8_sdiv_pow2(i8 %x) {
 ;
 ; CHECK-GI-LABEL: combine_i8_sdiv_pow2:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    sbfx w8, w0, #7, #1
-; CHECK-GI-NEXT:    ubfx w8, w8, #4, #4
-; CHECK-GI-NEXT:    add w8, w0, w8
+; CHECK-GI-NEXT:    sxtb w8, w0
+; CHECK-GI-NEXT:    ubfx w8, w8, #7, #8
+; CHECK-GI-NEXT:    add w8, w0, w8, lsr #4
 ; CHECK-GI-NEXT:    sbfx w0, w8, #4, #4
 ; CHECK-GI-NEXT:    ret
   %1 = sdiv i8 %x, 16
@@ -1328,9 +1328,9 @@ define i8 @combine_i8_sdiv_negpow2(i8 %x) {
 ;
 ; CHECK-GI-LABEL: combine_i8_sdiv_negpow2:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    sbfx w8, w0, #7, #1
-; CHECK-GI-NEXT:    ubfx w8, w8, #2, #6
-; CHECK-GI-NEXT:    add w8, w0, w8
+; CHECK-GI-NEXT:    sxtb w8, w0
+; CHECK-GI-NEXT:    ubfx w8, w8, #7, #8
+; CHECK-GI-NEXT:    add w8, w0, w8, lsr #2
 ; CHECK-GI-NEXT:    sxtb w8, w8
 ; CHECK-GI-NEXT:    neg w0, w8, asr #6
 ; CHECK-GI-NEXT:    ret
@@ -1349,9 +1349,9 @@ define i16 @combine_i16_sdiv_pow2(i16 %x) {
 ;
 ; CHECK-GI-LABEL: combine_i16_sdiv_pow2:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    sbfx w8, w0, #15, #1
-; CHECK-GI-NEXT:    ubfx w8, w8, #12, #4
-; CHECK-GI-NEXT:    add w8, w0, w8
+; CHECK-GI-NEXT:    sxth w8, w0
+; CHECK-GI-NEXT:    ubfx w8, w8, #15, #16
+; CHECK-GI-NEXT:    add w8, w0, w8, lsr #12
 ; CHECK-GI-NEXT:    sbfx w0, w8, #4, #12
 ; CHECK-GI-NEXT:    ret
   %1 = sdiv i16 %x, 16
@@ -1370,9 +1370,9 @@ define i16 @combine_i16_sdiv_negpow2(i16 %x) {
 ;
 ; CHECK-GI-LABEL: combine_i16_sdiv_negpow2:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    sbfx w8, w0, #15, #1
-; CHECK-GI-NEXT:    ubfx w8, w8, #8, #8
-; CHECK-GI-NEXT:    add w8, w0, w8
+; CHECK-GI-NEXT:    sxth w8, w0
+; CHECK-GI-NEXT:    ubfx w8, w8, #15, #16
+; CHECK-GI-NEXT:    add w8, w0, w8, lsr #8
 ; CHECK-GI-NEXT:    sxth w8, w8
 ; CHECK-GI-NEXT:    neg w0, w8, asr #8
 ; CHECK-GI-NEXT:    ret
@@ -1498,9 +1498,8 @@ define i5 @combine_i5_sdiv_const100(i5 %x) {
 ; CHECK-GI-LABEL: combine_i5_sdiv_const100:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    sbfx w8, w0, #0, #5
-; CHECK-GI-NEXT:    asr w8, w8, #4
-; CHECK-GI-NEXT:    ubfx w8, w8, #3, #2
-; CHECK-GI-NEXT:    add w8, w0, w8
+; CHECK-GI-NEXT:    ubfx w8, w8, #4, #5
+; CHECK-GI-NEXT:    add w8, w0, w8, lsr #3
 ; CHECK-GI-NEXT:    sbfx w8, w8, #0, #5
 ; CHECK-GI-NEXT:    asr w0, w8, #2
 ; CHECK-GI-NEXT:    ret
@@ -1549,8 +1548,7 @@ define i8 @combine_i8_sdiv_const100(i8 %x) {
 ; CHECK-GI-NEXT:    sxtb w8, w0
 ; CHECK-GI-NEXT:    mov w9, #41 // =0x29
 ; CHECK-GI-NEXT:    mul w8, w8, w9
-; CHECK-GI-NEXT:    asr w8, w8, #8
-; CHECK-GI-NEXT:    asr w8, w8, #4
+; CHECK-GI-NEXT:    asr w8, w8, #12
 ; CHECK-GI-NEXT:    ubfx w9, w8, #7, #1
 ; CHECK-GI-NEXT:    add w0, w8, w9
 ; CHECK-GI-NEXT:    ret
@@ -1573,8 +1571,7 @@ define i16 @combine_i16_sdiv_const7(i16 %x) {
 ; CHECK-GI-NEXT:    sxth w8, w0
 ; CHECK-GI-NEXT:    mov w9, #18725 // =0x4925
 ; CHECK-GI-NEXT:    mul w8, w8, w9
-; CHECK-GI-NEXT:    asr w8, w8, #16
-; CHECK-GI-NEXT:    asr w8, w8, #1
+; CHECK-GI-NEXT:    asr w8, w8, #17
 ; CHECK-GI-NEXT:    ubfx w9, w8, #15, #1
 ; CHECK-GI-NEXT:    add w0, w8, w9
 ; CHECK-GI-NEXT:    ret
@@ -1597,8 +1594,7 @@ define i16 @combine_i16_sdiv_const100(i16 %x) {
 ; CHECK-GI-NEXT:    sxth w8, w0
 ; CHECK-GI-NEXT:    mov w9, #5243 // =0x147b
 ; CHECK-GI-NEXT:    mul w8, w8, w9
-; CHECK-GI-NEXT:    asr w8, w8, #16
-; CHECK-GI-NEXT:    asr w8, w8, #3
+; CHECK-GI-NEXT:    asr w8, w8, #19
 ; CHECK-GI-NEXT:    ubfx w9, w8, #15, #1
 ; CHECK-GI-NEXT:    add w0, w8, w9
 ; CHECK-GI-NEXT:    ret
@@ -1750,74 +1746,55 @@ define <16 x i16> @combine_vec_sdiv_by_one_obfuscated(<16 x i16> %x) "target-fea
 ;
 ; CHECK-GI-LABEL: combine_vec_sdiv_by_one_obfuscated:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v2.2d, #0000000000000000
-; CHECK-GI-NEXT:    movi v3.8h, #1
-; CHECK-GI-NEXT:    smov w8, v0.h[0]
-; CHECK-GI-NEXT:    mov v3.h[0], v2.h[0]
-; CHECK-GI-NEXT:    smov w9, v3.h[0]
-; CHECK-GI-NEXT:    smov w16, v3.h[7]
-; CHECK-GI-NEXT:    sdiv w14, w8, w9
-; CHECK-GI-NEXT:    smov w8, v0.h[1]
-; CHECK-GI-NEXT:    smov w9, v3.h[1]
-; CHECK-GI-NEXT:    sdiv w15, w8, w9
-; CHECK-GI-NEXT:    smov w8, v0.h[2]
-; CHECK-GI-NEXT:    smov w9, v3.h[2]
-; CHECK-GI-NEXT:    sdiv w13, w8, w9
-; CHECK-GI-NEXT:    smov w8, v0.h[3]
-; CHECK-GI-NEXT:    smov w9, v3.h[3]
-; CHECK-GI-NEXT:    sdiv w12, w8, w9
-; CHECK-GI-NEXT:    smov w8, v0.h[4]
-; CHECK-GI-NEXT:    smov w9, v3.h[4]
-; CHECK-GI-NEXT:    sdiv w11, w8, w9
-; CHECK-GI-NEXT:    smov w8, v0.h[5]
-; CHECK-GI-NEXT:    smov w9, v3.h[5]
-; CHECK-GI-NEXT:    sdiv w10, w8, w9
-; CHECK-GI-NEXT:    smov w8, v0.h[6]
-; CHECK-GI-NEXT:    smov w9, v3.h[6]
-; CHECK-GI-NEXT:    movi v3.8h, #1
-; CHECK-GI-NEXT:    smov w17, v3.h[0]
-; CHECK-GI-NEXT:    smov w18, v3.h[1]
-; CHECK-GI-NEXT:    smov w0, v3.h[2]
-; CHECK-GI-NEXT:    smov w1, v3.h[3]
-; CHECK-GI-NEXT:    smov w2, v3.h[4]
-; CHECK-GI-NEXT:    smov w3, v3.h[5]
-; CHECK-GI-NEXT:    sdiv w8, w8, w9
-; CHECK-GI-NEXT:    smov w9, v0.h[7]
-; CHECK-GI-NEXT:    fmov s0, w14
-; CHECK-GI-NEXT:    mov v0.h[1], w15
-; CHECK-GI-NEXT:    smov w15, v1.h[6]
-; CHECK-GI-NEXT:    mov v0.h[2], w13
-; CHECK-GI-NEXT:    sdiv w9, w9, w16
-; CHECK-GI-NEXT:    smov w16, v1.h[0]
+; CHECK-GI-NEXT:    smov w17, v1.h[0]
+; CHECK-GI-NEXT:    mov w8, #1 // =0x1
+; CHECK-GI-NEXT:    smov w9, v0.h[0]
+; CHECK-GI-NEXT:    smov w18, v1.h[1]
+; CHECK-GI-NEXT:    smov w10, v0.h[1]
+; CHECK-GI-NEXT:    smov w0, v1.h[2]
+; CHECK-GI-NEXT:    smov w11, v0.h[2]
+; CHECK-GI-NEXT:    smov w1, v1.h[3]
+; CHECK-GI-NEXT:    smov w12, v0.h[3]
+; CHECK-GI-NEXT:    smov w13, v0.h[4]
+; CHECK-GI-NEXT:    smov w14, v0.h[5]
+; CHECK-GI-NEXT:    smov w15, v0.h[6]
+; CHECK-GI-NEXT:    sdiv w17, w17, w8
+; CHECK-GI-NEXT:    smov w16, v0.h[7]
+; CHECK-GI-NEXT:    smov w2, v1.h[4]
+; CHECK-GI-NEXT:    smov w3, v1.h[5]
+; CHECK-GI-NEXT:    sdiv w9, w9, wzr
+; CHECK-GI-NEXT:    fmov s2, w17
+; CHECK-GI-NEXT:    sdiv w18, w18, w8
+; CHECK-GI-NEXT:    fmov s0, w9
+; CHECK-GI-NEXT:    sdiv w10, w10, w8
+; CHECK-GI-NEXT:    mov v2.h[1], w18
+; CHECK-GI-NEXT:    sdiv w0, w0, w8
+; CHECK-GI-NEXT:    mov v0.h[1], w10
+; CHECK-GI-NEXT:    smov w10, v1.h[6]
+; CHECK-GI-NEXT:    sdiv w11, w11, w8
+; CHECK-GI-NEXT:    mov v2.h[2], w0
+; CHECK-GI-NEXT:    sdiv w1, w1, w8
+; CHECK-GI-NEXT:    mov v0.h[2], w11
+; CHECK-GI-NEXT:    smov w11, v1.h[7]
+; CHECK-GI-NEXT:    sdiv w12, w12, w8
+; CHECK-GI-NEXT:    mov v2.h[3], w1
+; CHECK-GI-NEXT:    sdiv w2, w2, w8
 ; CHECK-GI-NEXT:    mov v0.h[3], w12
-; CHECK-GI-NEXT:    smov w12, v1.h[7]
-; CHECK-GI-NEXT:    mov v0.h[4], w11
-; CHECK-GI-NEXT:    sdiv w16, w16, w17
-; CHECK-GI-NEXT:    smov w17, v1.h[1]
-; CHECK-GI-NEXT:    mov v0.h[5], w10
-; CHECK-GI-NEXT:    mov v0.h[6], w8
-; CHECK-GI-NEXT:    sdiv w17, w17, w18
-; CHECK-GI-NEXT:    smov w18, v1.h[2]
-; CHECK-GI-NEXT:    fmov s2, w16
-; CHECK-GI-NEXT:    smov w16, v3.h[6]
-; CHECK-GI-NEXT:    mov v0.h[7], w9
-; CHECK-GI-NEXT:    sdiv w18, w18, w0
-; CHECK-GI-NEXT:    smov w0, v1.h[3]
-; CHECK-GI-NEXT:    mov v2.h[1], w17
-; CHECK-GI-NEXT:    sdiv w0, w0, w1
-; CHECK-GI-NEXT:    smov w1, v1.h[4]
-; CHECK-GI-NEXT:    mov v2.h[2], w18
-; CHECK-GI-NEXT:    sdiv w1, w1, w2
-; CHECK-GI-NEXT:    smov w2, v1.h[5]
-; CHECK-GI-NEXT:    mov v2.h[3], w0
-; CHECK-GI-NEXT:    sdiv w14, w2, w3
-; CHECK-GI-NEXT:    mov v2.h[4], w1
-; CHECK-GI-NEXT:    sdiv w13, w15, w16
-; CHECK-GI-NEXT:    smov w15, v3.h[7]
-; CHECK-GI-NEXT:    mov v2.h[5], w14
-; CHECK-GI-NEXT:    sdiv w10, w12, w15
-; CHECK-GI-NEXT:    mov v2.h[6], w13
-; CHECK-GI-NEXT:    mov v2.h[7], w10
+; CHECK-GI-NEXT:    sdiv w13, w13, w8
+; CHECK-GI-NEXT:    mov v2.h[4], w2
+; CHECK-GI-NEXT:    sdiv w9, w3, w8
+; CHECK-GI-NEXT:    mov v0.h[4], w13
+; CHECK-GI-NEXT:    sdiv w14, w14, w8
+; CHECK-GI-NEXT:    mov v2.h[5], w9
+; CHECK-GI-NEXT:    sdiv w10, w10, w8
+; CHECK-GI-NEXT:    mov v0.h[5], w14
+; CHECK-GI-NEXT:    sdiv w15, w15, w8
+; CHECK-GI-NEXT:    mov v2.h[6], w10
+; CHECK-GI-NEXT:    sdiv w16, w16, w8
+; CHECK-GI-NEXT:    mov v0.h[6], w15
+; CHECK-GI-NEXT:    sdiv w8, w11, w8
+; CHECK-GI-NEXT:    mov v0.h[7], w16
+; CHECK-GI-NEXT:    mov v2.h[7], w8
 ; CHECK-GI-NEXT:    mov v1.16b, v2.16b
 ; CHECK-GI-NEXT:    ret
   %zero_and_ones = shufflevector <16 x i16> zeroinitializer, <16 x i16> splat (i16 1), <16 x i32> <i32 0, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>

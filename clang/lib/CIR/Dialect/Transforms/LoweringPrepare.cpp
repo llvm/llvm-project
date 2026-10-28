@@ -131,12 +131,13 @@ struct LoweringPreparePass
   /// Get the declaration for the 'wrapper' function for a global-TLS variable.
   cir::FuncOp getOrCreateThreadLocalWrapper(CIRBaseBuilderTy &builder,
                                             cir::GlobalOp op);
-  // Function that generates the guard global variable, get-global, and 'if'
-  // condition for global TLS init function generation. This inserts an 'if'
-  // with the store at the beginning of the 'then' region, so inserts into the
-  // body should happen after that.
-  cir::IfOp buildGlobalTlsGuardCheck(CIRBaseBuilderTy &builder,
-                                     mlir::Location loc, cir::GlobalOp guard);
+  // Function that generates the get-global and 'if' condition on a guard
+  // variable for an init function that must run once: the global TLS init
+  // function, or the initializer of a C++20 named-module interface unit. This
+  // inserts an 'if' with the store at the beginning of the 'then' region, so
+  // inserts into the body should happen after that.
+  cir::IfOp buildInitGuardCheck(CIRBaseBuilderTy &builder, mlir::Location loc,
+                                cir::GlobalOp guard, bool threadLocal);
   /// Handle the dtor region by registering destructor with __cxa_atexit
   cir::FuncOp getOrCreateDtorFunc(CIRBaseBuilderTy &builder, cir::GlobalOp op,
                                   mlir::Region &dtorRegion,
@@ -148,19 +149,26 @@ struct LoweringPreparePass
 
   /// Build a function named `fnName` with the given linkage that calls each
   /// of `initializers` in order, then returns, and register it in
-  /// `globalCtorList` under `priority`. Shared by the default
-  /// `_GLOBAL__sub_I_*` initializer function and the per-priority
-  /// `_GLOBAL__I_<priority>` initializer functions.
-  cir::FuncOp buildGlobalInitCallerFunc(
-      llvm::StringRef fnName, cir::GlobalLinkageKind linkage,
-      llvm::ArrayRef<cir::FuncOp> initializers, uint32_t priority);
+  /// `globalCtorList` under `priority`. With a `guard` byte, the calls run
+  /// only when it is still zero and set it first. Shared by the default
+  /// `_GLOBAL__sub_I_*` initializer function, the C++20 named-module
+  /// initializer, and the per-priority `_GLOBAL__I_<priority>` initializer
+  /// functions.
+  cir::FuncOp
+  buildGlobalInitCallerFunc(llvm::StringRef fnName,
+                            cir::GlobalLinkageKind linkage,
+                            llvm::ArrayRef<cir::FuncOp> initializers,
+                            uint32_t priority, cir::GlobalOp guard = {});
 
   /// Build a module init function that calls all the dynamic initializers.
   void buildCXXGlobalInitFunc();
   /// Build one `_GLOBAL__I_<priority>` function per distinct priority found
   /// in `prioritizedDynamicInitializers`, in ascending priority order, and
-  /// register each with `globalCtorList`.
-  void buildCXXGlobalPriorityInitFuncs();
+  /// register each with `globalCtorList`. The first of them, the highest
+  /// priority, calls `importedInits` before its own initializers and takes
+  /// them out of the vector, as classic CodeGen does.
+  void buildCXXGlobalPriorityInitFuncs(
+      llvm::SmallVectorImpl<cir::FuncOp> &importedInits);
   // Build an init function for all of the ordered global thread local storage
   // variables.
   void buildCXXGlobalTlsFunc();
@@ -340,6 +348,16 @@ struct LoweringPreparePass
       return std::nullopt;
     }
     return sdkVersion;
+  }
+
+  /// Appends the CUID hash recorded on the module by CIRGen, if any, to
+  /// \p name.
+  std::string addCUIDSuffix(llvm::StringRef name) {
+    std::string result = name.str();
+    if (auto cuidHash = mlirModule->getAttrOfType<mlir::StringAttr>(
+            CIRDialect::getCUIDHashAttrName()))
+      result += ("_" + cuidHash.getValue()).str();
+    return result;
   }
 
   /// Tracks current module.
@@ -1034,6 +1052,7 @@ static mlir::Value lowerComplexFDiv(LoweringPreparePass &pass,
                                     rhsImag);
   }
   }
+  llvm_unreachable("fully covered switch");
 }
 
 void LoweringPreparePass::lowerComplexFDivOp(cir::ComplexFDivOp op) {
@@ -1430,12 +1449,13 @@ LoweringPreparePass::buildCXXGlobalVarDeclInitFunc(cir::GlobalOp op) {
 
   cir::IfOp guardIf;
   if (needsTlsGuard) {
-    guardIf = buildGlobalTlsGuardCheck(
+    guardIf = buildInitGuardCheck(
         builder, op.getLoc(),
         getOrCreateStaticLocalDeclGuardAddress(
             builder, op, op.getTlsRefs()->getGuardName().getValue(),
             /*isLocalVarDecl=*/false,
-            /*useInt8GuardVariable=*/op.hasInternalLinkage()));
+            /*useInt8GuardVariable=*/op.hasInternalLinkage()),
+        /*threadLocal=*/true);
     builder.setInsertionPointToEnd(&guardIf.getThenRegion().front());
   }
 
@@ -2138,9 +2158,11 @@ LoweringPreparePass::createGlobalThreadLocalGuard(CIRBaseBuilderTy &builder,
   return g;
 }
 
-cir::IfOp LoweringPreparePass::buildGlobalTlsGuardCheck(
-    CIRBaseBuilderTy &builder, mlir::Location loc, cir::GlobalOp guard) {
-  cir::GetGlobalOp getGuard = builder.createGetGlobal(guard, /*tls=*/true);
+cir::IfOp LoweringPreparePass::buildInitGuardCheck(CIRBaseBuilderTy &builder,
+                                                   mlir::Location loc,
+                                                   cir::GlobalOp guard,
+                                                   bool threadLocal) {
+  cir::GetGlobalOp getGuard = builder.createGetGlobal(guard, threadLocal);
   mlir::Value getGuardValue = getGuard;
 
   // Classic codegen always just loads the first byte of the guard instead of
@@ -2178,8 +2200,9 @@ void LoweringPreparePass::buildCXXGlobalTlsFunc() {
   mlir::Block *entryBB = tlsInit.addEntryBlock();
   builder.setInsertionPointToStart(entryBB);
 
-  cir::IfOp ifOperation = buildGlobalTlsGuardCheck(
-      builder, loc, createGlobalThreadLocalGuard(builder, loc));
+  cir::IfOp ifOperation = buildInitGuardCheck(
+      builder, loc, createGlobalThreadLocalGuard(builder, loc),
+      /*threadLocal=*/true);
 
   // Emit the body of the guarded spot.
   builder.setInsertionPointToEnd(&ifOperation.getThenRegion().front());
@@ -2205,23 +2228,38 @@ static std::string getPrioritySuffix(unsigned priority) {
 
 cir::FuncOp LoweringPreparePass::buildGlobalInitCallerFunc(
     llvm::StringRef fnName, cir::GlobalLinkageKind linkage,
-    llvm::ArrayRef<cir::FuncOp> initializers, uint32_t priority) {
+    llvm::ArrayRef<cir::FuncOp> initializers, uint32_t priority,
+    cir::GlobalOp guard) {
   CIRBaseBuilderTy builder(getContext());
   builder.setInsertionPointToEnd(&mlirModule.getBodyRegion().back());
   auto fnType = cir::FuncType::get({}, builder.getVoidTy());
   cir::FuncOp fn = buildRuntimeFunction(builder, fnName, mlirModule.getLoc(),
                                         fnType, linkage);
   builder.setInsertionPointToStart(fn.addEntryBlock());
-  for (cir::FuncOp init : initializers)
-    builder.createCallOp(init.getLoc(), init, {}, /*attrs=*/{},
-                         /*argAttrs=*/{}, /*resAttrs=*/{},
-                         init.getCallingConv());
-  cir::ReturnOp::create(builder, fn.getLoc());
+  mlir::Location loc = fn.getLoc();
+  auto emitCalls = [&] {
+    for (cir::FuncOp init : initializers)
+      builder.createCallOp(init.getLoc(), init, {}, /*attrs=*/{},
+                           /*argAttrs=*/{}, /*resAttrs=*/{},
+                           init.getCallingConv());
+  };
+  if (guard) {
+    cir::IfOp guardIf =
+        buildInitGuardCheck(builder, loc, guard, /*threadLocal=*/false);
+    builder.setInsertionPointToEnd(&guardIf.getThenRegion().front());
+    emitCalls();
+    cir::YieldOp::create(builder, loc);
+    builder.setInsertionPointAfter(guardIf);
+  } else {
+    emitCalls();
+  }
+  cir::ReturnOp::create(builder, loc);
   globalCtorList.emplace_back(fnName, priority);
   return fn;
 }
 
-void LoweringPreparePass::buildCXXGlobalPriorityInitFuncs() {
+void LoweringPreparePass::buildCXXGlobalPriorityInitFuncs(
+    llvm::SmallVectorImpl<cir::FuncOp> &importedInits) {
   // std::map keeps priorities in ascending order, so each group is already
   // ready to emit into its own function, named after its priority so that
   // the functions are naturally ordered relative to one another.
@@ -2230,40 +2268,89 @@ void LoweringPreparePass::buildCXXGlobalPriorityInitFuncs() {
     fnName += "_GLOBAL__I_";
     fnName += getPrioritySuffix(priority);
 
+    llvm::SmallVector<cir::FuncOp> calls(importedInits.begin(),
+                                         importedInits.end());
+    calls.append(initializers.begin(), initializers.end());
+    importedInits.clear();
     buildGlobalInitCallerFunc(fnName, cir::GlobalLinkageKind::InternalLinkage,
-                              initializers, priority);
+                              calls, priority);
   }
 }
 
 void LoweringPreparePass::buildCXXGlobalInitFunc() {
-  buildCXXGlobalPriorityInitFuncs();
+  CIRBaseBuilderTy builder(getContext());
+  builder.setInsertionPointToEnd(&mlirModule.getBodyRegion().back());
+  mlir::Location loc = mlirModule.getLoc();
 
-  if (dynamicInitializers.empty())
-    return;
+  // The initializers of the imported C++20 named modules, recorded by CIRGen
+  // as the mangled names of functions this translation unit declares, at the
+  // location of the import, and calls before its own initializers.
+  llvm::SmallVector<cir::FuncOp> importedInits;
+  if (auto inits = mlirModule->getAttrOfType<mlir::ArrayAttr>(
+          cir::CIRDialect::getCXXModuleImportedInitsAttrName()))
+    for (auto init : inits.getAsRange<cir::CXXModuleInitAttr>())
+      importedInits.push_back(
+          buildRuntimeFunction(builder, init.getName().getValue(),
+                               init.getLoc(), builder.getVoidFnTy()));
 
-  SmallString<256> fnName;
-  cir::GlobalLinkageKind linkage;
-  // Include the filename in the symbol name. Including "sub_" matches gcc
-  // and makes sure these symbols appear lexicographically behind the symbols
-  // with priority (TBD).  Module implementation units behave the same
-  // way as a non-modular TU with imports.
   // The C++20 named-module init function name is precomputed by CIRGen and
   // stored as a module-level attribute.  Its presence is what marks this
   // module as a named-module interface unit, so the name and the external
   // linkage that goes with it both come from the attribute and this pass needs
   // no live ASTContext.  Modules built directly from textual CIR can opt in to
   // the module-init form by setting the same attribute.
-  if (auto fnNameAttr = mlirModule->getAttrOfType<mlir::StringAttr>(
+  if (auto moduleInitFnName = mlirModule->getAttrOfType<mlir::StringAttr>(
           cir::CIRDialect::getCXXModuleInitFnNameAttrName())) {
-    fnName += fnNameAttr.getValue();
-    linkage = cir::GlobalLinkageKind::ExternalLinkage;
-  } else {
-    fnName += "_GLOBAL__sub_I_";
-    fnName += getTransformedFileName(mlirModule);
-    linkage = cir::GlobalLinkageKind::InternalLinkage;
+    // As in classic CodeGen's EmitCXXModuleInitFunc, an interface unit gets
+    // one initializer function, even with nothing to run, since importing
+    // translation units may call it. It runs the imported modules'
+    // initializers, then the unit's own in priority order, which get no
+    // `_GLOBAL__I_<priority>` function of their own. The global ctor entry
+    // and every importing translation unit call it, so a guard byte makes
+    // the initializers run once; there is none when there is nothing to run.
+    llvm::SmallVector<cir::FuncOp> initializers(importedInits.begin(),
+                                                importedInits.end());
+    for (const auto &[priority, inits] : prioritizedDynamicInitializers)
+      initializers.append(inits.begin(), inits.end());
+    initializers.append(dynamicInitializers.begin(), dynamicInitializers.end());
+
+    llvm::StringRef fnName = moduleInitFnName.getValue();
+    cir::GlobalOp guard;
+    if (!initializers.empty()) {
+      cir::IntType guardTy = builder.getSIntNTy(8);
+      guard =
+          createGuardGlobalOp(builder, loc, (fnName + "__in_chrg").str(),
+                              guardTy, cir::GlobalLinkageKind::InternalLinkage);
+      guard.setAlignment(clang::CharUnits::One().getAsAlign().value());
+      guard.setInitialValueAttr(cir::IntAttr::get(guardTy, 0));
+    }
+    buildGlobalInitCallerFunc(fnName, cir::GlobalLinkageKind::ExternalLinkage,
+                              initializers,
+                              cir::GlobalCtorAttr::getDefaultPriority(), guard);
+    return;
   }
 
-  buildGlobalInitCallerFunc(fnName, linkage, dynamicInitializers,
+  // Any other translation unit, as in classic CodeGen's
+  // EmitCXXGlobalInitFunc: one function per priority, the imported modules'
+  // initializers in front of the first, then the default-priority function
+  // for the rest, only when there is something left to call.
+  buildCXXGlobalPriorityInitFuncs(importedInits);
+  if (importedInits.empty() && dynamicInitializers.empty())
+    return;
+
+  llvm::SmallVector<cir::FuncOp> initializers(importedInits.begin(),
+                                              importedInits.end());
+  initializers.append(dynamicInitializers.begin(), dynamicInitializers.end());
+
+  // Include the filename in the symbol name. Including "sub_" matches gcc
+  // and makes sure these symbols appear lexicographically behind the symbols
+  // with priority (TBD).  Module implementation units behave the same
+  // way as a non-modular TU with imports.
+  SmallString<256> fnName;
+  fnName += "_GLOBAL__sub_I_";
+  fnName += getTransformedFileName(mlirModule);
+  buildGlobalInitCallerFunc(fnName, cir::GlobalLinkageKind::InternalLinkage,
+                            initializers,
                             cir::GlobalCtorAttr::getDefaultPriority());
 }
 
@@ -2719,7 +2806,8 @@ void LoweringPreparePass::runOnOp(mlir::Operation *op) {
       globalDtorList.emplace_back(fnOp.getName(), globalDtor.value());
 
     if (mlir::Attribute attr =
-            fnOp->getAttr(cir::CUDAKernelNameAttr::getMnemonic())) {
+            fnOp->getAttr(cir::CUDAKernelNameAttr::getMnemonic());
+        attr && !fnOp.isDeclaration()) {
       auto kernelNameAttr = dyn_cast<CUDAKernelNameAttr>(attr);
       llvm::StringRef kernelName = kernelNameAttr.getKernelName();
       cudaKernelMap[kernelName] = fnOp;
@@ -2773,14 +2861,11 @@ void LoweringPreparePass::buildCUDAModuleCtor() {
     return;
 
   // There's no device-side binary, so no need to proceed for CUDA.
-  // HIP has to create an external symbol in this case, which is NYI.
+  // HIP creates an external symbol in this case.
   auto deviceBinaryAttr = mlirModule->getAttrOfType<mlir::StringAttr>(
       CIRDialect::getCUDADeviceBinaryAttrName());
-  if (!deviceBinaryAttr) {
-    if (isHIP)
-      assert(!cir::MissingFeatures::hipModuleCtor());
+  if (!deviceBinaryAttr && !isHIP)
     return;
-  }
 
   // Set up common types and builder.
   llvm::StringRef cudaPrefix = getCUDAPrefix(getLangOpts());
@@ -2802,22 +2887,28 @@ void LoweringPreparePass::buildCUDAModuleCtor() {
   llvm::StringRef fatbinSectionName =
       getLangOpts().HIP ? ".hipFatBinSegment" : ".nvFatBinSegment";
 
-  // Create the fatbin string constant with GPU binary contents.
-  // The dialect verifier guarantees the attribute is typed as the array.
-  auto fatbinType = mlir::cast<ArrayType>(deviceBinaryAttr.getType());
-  std::string fatbinStrName = addUnderscoredPrefix(cudaPrefix, "_fatbin_str");
-  GlobalOp fatbinStr = GlobalOp::create(builder, loc, fatbinStrName, fatbinType,
-                                        /*isConstant=*/true, {},
-                                        GlobalLinkageKind::PrivateLinkage);
-  if (isHIP) {
-    const unsigned HIPCodeObjectAlign = 4096;
-    fatbinStr.setAlignment(HIPCodeObjectAlign);
-  } else {
-    fatbinStr.setAlignment(8);
-  }
+  GlobalOp fatbinStr;
+  if (deviceBinaryAttr) {
+    // Create the fatbin string constant with GPU binary contents.
+    // The dialect verifier guarantees the attribute is typed as the array.
+    auto fatbinType = mlir::cast<ArrayType>(deviceBinaryAttr.getType());
+    std::string fatbinStrName = addUnderscoredPrefix(cudaPrefix, "_fatbin_str");
+    fatbinStr = GlobalOp::create(builder, loc, fatbinStrName, fatbinType,
+                                 /*isConstant=*/true, {},
+                                 GlobalLinkageKind::PrivateLinkage);
+    constexpr unsigned HIPCodeObjectAlign = 4096;
+    fatbinStr.setAlignment(isHIP ? HIPCodeObjectAlign : 8);
 
-  fatbinStr.setInitialValueAttr(
-      cir::ConstArrayAttr::get(fatbinType, deviceBinaryAttr));
+    fatbinStr.setInitialValueAttr(
+        cir::ConstArrayAttr::get(fatbinType, deviceBinaryAttr));
+  } else {
+    // If fatbin is not available, create an external symbol __hip_fatbin in
+    // section .hip_fatbin. It is populated elsewhere, e.g. by lld through a
+    // linker script.
+    fatbinStr = GlobalOp::create(
+        builder, loc, addCUIDSuffix("__hip_fatbin"), builder.getUIntNTy(8),
+        /*isConstant=*/true, {}, GlobalLinkageKind::ExternalLinkage);
+  }
   fatbinStr.setSection(fatbinConstName);
   fatbinStr.setPrivate();
 
@@ -2852,6 +2943,8 @@ void LoweringPreparePass::buildCUDAModuleCtor() {
   // Create the GPU binary handle global variable.
   std::string gpubinHandleName =
       addUnderscoredPrefix(cudaPrefix, "_gpubin_handle");
+  if (isHIP)
+    gpubinHandleName = addCUIDSuffix(gpubinHandleName);
 
   GlobalOp gpuBinHandle = GlobalOp::create(
       builder, loc, gpubinHandleName, voidPtrPtrTy,
@@ -3054,9 +3147,6 @@ std::optional<FuncOp> LoweringPreparePass::buildCUDAModuleDtor() {
 /// the dtor list would cause a double-free. It is meant to be registered via
 /// atexit() at the end of the module ctor.
 std::optional<FuncOp> LoweringPreparePass::buildHIPModuleDtor() {
-  if (!mlirModule->getAttr(CIRDialect::getCUDADeviceBinaryAttrName()))
-    return {};
-
   llvm::StringRef prefix = getCUDAPrefix(getLangOpts());
 
   VoidType voidTy = VoidType::get(&getContext());
@@ -3078,7 +3168,8 @@ std::optional<FuncOp> LoweringPreparePass::buildHIPModuleDtor() {
       buildRuntimeFunction(builder, dtorName, loc, FuncType::get({}, voidTy),
                            GlobalLinkageKind::InternalLinkage);
 
-  std::string gpubinName = addUnderscoredPrefix(prefix, "_gpubin_handle");
+  std::string gpubinName =
+      addCUIDSuffix(addUnderscoredPrefix(prefix, "_gpubin_handle"));
   GlobalOp gpuBinGlobal = cast<GlobalOp>(mlirModule.lookupSymbol(gpubinName));
 
   mlir::Block *entryBlock = dtor.addEntryBlock();
@@ -3255,6 +3346,17 @@ void LoweringPreparePass::buildCUDARegisterVars(cir::CIRBaseBuilderTy &builder,
   FuncOp cudaRegisterVar;
   FuncOp cudaRegisterManagedVar;
 
+  // void __cudaRegisterSurface(void **fatbinHandle,
+  //                            const struct surfaceReference *hostVar,
+  //                            const void **deviceAddress,
+  //                            const char *deviceName,
+  //                            int type, int ext);
+  FuncOp cudaRegisterSurface = buildRuntimeFunction(
+      globalBuilder, addUnderscoredPrefix(cudaPrefix, "RegisterSurface"), loc,
+      FuncType::get(
+          {voidPtrPtrTy, voidPtrTy, voidPtrTy, voidPtrTy, intTy, intTy},
+          voidTy));
+
   auto makeConstantString = [&](llvm::StringRef str) -> GlobalOp {
     auto strType = ArrayType::get(&getContext(), charTy, 1 + str.size());
     auto tmpString = cir::GlobalOp::create(
@@ -3270,15 +3372,6 @@ void LoweringPreparePass::buildCUDARegisterVars(cir::CIRBaseBuilderTy &builder,
   mlir::Value fatbinHandle = *regGlobalFunc.args_begin();
 
   for (auto &[global, regAttr] : cudaDeviceVars) {
-    switch (regAttr.getKind()) {
-    case cir::CUDADeviceVarKind::Variable:
-      break;
-    case cir::CUDADeviceVarKind::Surface:
-      llvm_unreachable("Surface registration NYI");
-    case cir::CUDADeviceVarKind::Texture:
-      llvm_unreachable("Texture registration NYI");
-    }
-
     // External managed variables are registered by their defining TU.
     if (regAttr.getIsManaged() && global.isDeclaration())
       continue;
@@ -3302,6 +3395,7 @@ void LoweringPreparePass::buildCUDARegisterVars(cir::CIRBaseBuilderTy &builder,
             FuncType::get(
                 {voidPtrPtrTy, voidPtrTy, voidPtrTy, voidPtrTy, sizeTy, intTy},
                 voidTy));
+
       llvm::StringRef name = global.getSymName();
       assert(name.ends_with(".managed") &&
              "HIP managed variables not transformed");
@@ -3317,29 +3411,50 @@ void LoweringPreparePass::buildCUDARegisterVars(cir::CIRBaseBuilderTy &builder,
           loc, cudaRegisterManagedVar,
           {fatbinHandle, managedPtr, hostVar, deviceName, varSize, align});
     } else {
-      // void __{cuda|hip}RegisterVar(void **fatbinHandle,
-      //                              char *hostVar, char *deviceAddress,
-      //                              const char *deviceName, int ext,
-      //                              size_t size, int constant,
-      //                              int normalized);
-      // OG ignores parameter types, treating pointers as void*.
-      if (!cudaRegisterVar)
-        cudaRegisterVar = buildRuntimeFunction(
-            globalBuilder, addUnderscoredPrefix(cudaPrefix, "RegisterVar"), loc,
-            FuncType::get({voidPtrPtrTy, voidPtrTy, voidPtrTy, voidPtrTy, intTy,
-                           sizeTy, intTy, intTy},
-                          voidTy));
       auto isExtern = ConstantOp::create(
           builder, loc, IntAttr::get(intTy, regAttr.getIsExtern() ? 1 : 0));
-      auto varSize = ConstantOp::create(
-          builder, loc, IntAttr::get(sizeTy, size.getFixedValue()));
-      auto isConstant = ConstantOp::create(
-          builder, loc, IntAttr::get(intTy, regAttr.getIsConstant() ? 1 : 0));
-      auto normalized =
-          ConstantOp::create(builder, loc, IntAttr::get(intTy, 0));
-      builder.createCallOp(loc, cudaRegisterVar,
-                           {fatbinHandle, hostVar, deviceName, deviceName,
-                            isExtern, varSize, isConstant, normalized});
+
+      switch (regAttr.getKind()) {
+      case cir::CUDADeviceVarKind::Variable: {
+        // void __{cuda|hip}RegisterVar(void **fatbinHandle,
+        //                              char *hostVar, char *deviceAddress,
+        //                              const char *deviceName, int ext,
+        //                              size_t size, int constant,
+        //                              int normalized);
+        // OG ignores parameter types, treating pointers as void*.
+        if (!cudaRegisterVar)
+          cudaRegisterVar = buildRuntimeFunction(
+              globalBuilder, addUnderscoredPrefix(cudaPrefix, "RegisterVar"),
+              loc,
+              FuncType::get({voidPtrPtrTy, voidPtrTy, voidPtrTy, voidPtrTy,
+                             intTy, sizeTy, intTy, intTy},
+                            voidTy));
+
+        auto varSize = ConstantOp::create(
+            builder, loc, IntAttr::get(sizeTy, size.getFixedValue()));
+        auto isConstant = ConstantOp::create(
+            builder, loc, IntAttr::get(intTy, regAttr.getIsConstant() ? 1 : 0));
+        auto normalized =
+            ConstantOp::create(builder, loc, IntAttr::get(intTy, 0));
+
+        builder.createCallOp(loc, cudaRegisterVar,
+                             {fatbinHandle, hostVar, deviceName, deviceName,
+                              isExtern, varSize, isConstant, normalized});
+        break;
+      }
+
+      case cir::CUDADeviceVarKind::Surface: {
+        cir::ConstantOp surfaceType = ConstantOp::create(
+            builder, loc, IntAttr::get(intTy, regAttr.getSurfTexType()));
+        builder.createCallOp(loc, cudaRegisterSurface,
+                             {fatbinHandle, hostVar, deviceName, deviceName,
+                              surfaceType, isExtern});
+        break;
+      }
+
+      case cir::CUDADeviceVarKind::Texture:
+        llvm_unreachable("Texture registration NYI");
+      }
     }
   }
 }
@@ -3375,7 +3490,7 @@ void LoweringPreparePass::runOnOperation() {
     buildCUDAModuleCtor();
     // The fatbin global now references the same attribute; drop the module's
     // reference so an emitted .cir doesn't print the bytes twice. This has to
-    // happen out here because the ctor and both dtor builders test the
+    // happen out here because the ctor and the CUDA dtor builder test the
     // attribute to decide whether a device-side binary exists at all.
     mlirModule->removeAttr(CIRDialect::getCUDADeviceBinaryAttrName());
   }

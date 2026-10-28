@@ -324,9 +324,11 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.copysign
     libc.src.math.copysignf
     libc.src.math.copysignf128
+    libc.src.math.copysignf80
     libc.src.math.copysignl
     libc.src.math.cos
     libc.src.math.cosf
+    libc.src.math.cosh
     libc.src.math.coshf
     libc.src.math.cospif
     libc.src.math.ddivl
@@ -346,6 +348,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fabs
     libc.src.math.fabsf
     libc.src.math.fabsf128
+    libc.src.math.fabsf80
     libc.src.math.fabsl
     libc.src.math.fadd
     libc.src.math.faddl
@@ -411,6 +414,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fmull
     libc.src.math.frexp
     libc.src.math.frexpf
+    libc.src.math.frexpf128
     libc.src.math.frexpl
     # FIXME: Broken.
     # libc.src.math.fromfp
@@ -425,11 +429,13 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fsubl
     libc.src.math.getpayload
     libc.src.math.getpayloadf
+    libc.src.math.getpayloadf128
     libc.src.math.getpayloadl
     libc.src.math.hypot
     libc.src.math.hypotf
     libc.src.math.ilogb
     libc.src.math.ilogbf
+    libc.src.math.ilogbf128
     libc.src.math.ilogbl
     libc.src.math.iscanonicalf128
     libc.src.math.isnan
@@ -445,6 +451,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.lgammaf
     libc.src.math.llogb
     libc.src.math.llogbf
+    libc.src.math.llogbf128
     libc.src.math.llogbl
     libc.src.math.llrint
     libc.src.math.llrintf
@@ -463,6 +470,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.log2f
     libc.src.math.logb
     libc.src.math.logbf
+    libc.src.math.logbf128
     libc.src.math.logbl
     libc.src.math.logf
     libc.src.math.lrint
@@ -478,6 +486,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.modfl
     libc.src.math.nan
     libc.src.math.nanf
+    libc.src.math.nanf128
     libc.src.math.nanl
     libc.src.math.nearbyint
     libc.src.math.nearbyintf
@@ -523,14 +532,17 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.scalbnl
     libc.src.math.setpayload
     libc.src.math.setpayloadf
+    libc.src.math.setpayloadf128
     libc.src.math.setpayloadl
     libc.src.math.setpayloadsig
     libc.src.math.setpayloadsigf
+    libc.src.math.setpayloadsigf128
     libc.src.math.setpayloadsigl
     libc.src.math.sin
     libc.src.math.sincos
     libc.src.math.sincosf
     libc.src.math.sinf
+    libc.src.math.sinh
     libc.src.math.sinhf
     libc.src.math.sinpif
     libc.src.math.sqrt
@@ -545,9 +557,11 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.tgammaf
     libc.src.math.totalorder
     libc.src.math.totalorderf
+    libc.src.math.totalorderf128
     libc.src.math.totalorderl
     libc.src.math.totalordermag
     libc.src.math.totalordermagf
+    libc.src.math.totalordermagf128
     libc.src.math.totalordermagl
     libc.src.math.trunc
     libc.src.math.truncf
@@ -715,6 +729,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.canonicalizebf16
   libc.src.math.ceilbf16
   libc.src.math.copysignbf16
+  libc.src.math.exp2bf16
   libc.src.math.expbf16
   libc.src.math.fabsbf16
   libc.src.math.fdimbf16

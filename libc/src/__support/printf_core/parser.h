@@ -116,8 +116,8 @@ public:
   // specified format section. This can either be a raw format section with no
   // conversion, or a format section with a conversion that has all of its
   // variables stored in the format section.
-  LIBC_INLINE BasicFormatSection<CharT> get_next_section() {
-    BasicFormatSection<CharT> section;
+  LIBC_INLINE FormatSection<CharT> get_next_section() {
+    FormatSection<CharT> section;
     size_t starting_pos = cur_pos;
     if (str[cur_pos] == CharT{'%'}) {
       // format section

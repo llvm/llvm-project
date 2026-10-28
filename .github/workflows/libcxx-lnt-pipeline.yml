@@ -38,11 +38,6 @@ on:
         required: false
         type: boolean
         default: false
-      lnt-url:
-        description: 'The URL of the LNT instance to submit to'
-        required: false
-        type: string
-        default: https://lnt.llvm.org
 
 jobs:
   # Validate the inputs and select the configuration of the machine to benchmark on.
@@ -68,8 +63,9 @@ jobs:
     needs:
       - benchmark
     if: ${{ inputs.submit-lnt }}
-    uses: $/.github/workflows/libcxx-lnt-submit.yml
+    uses: $/.github/workflows/lnt-submit.yml
     with:
       artifact-name: lnt-report
       test-suite: libcxx
-      lnt-url: ${{ inputs.lnt-url }}
+    secrets:
+      LNT_SUBMISSION_TOKEN: ${{ secrets.LNT_SUBMISSION_TOKEN }}

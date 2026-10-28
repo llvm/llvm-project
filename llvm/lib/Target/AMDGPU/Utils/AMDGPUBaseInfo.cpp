@@ -438,6 +438,10 @@ struct FP4FP8DstByteSelInfo {
   bool HasFP4DstByteSel;
 };
 
+struct VOP3PHasNoOpSelHiInfo {
+  uint32_t Opcode;
+};
+
 #define GET_DPMACCInstructionTable_DECL
 #define GET_DPMACCInstructionTable_IMPL
 #define GET_MTBUFInfoTable_DECL
@@ -468,6 +472,8 @@ struct FP4FP8DstByteSelInfo {
 #define GET_VOPDXYTable_IMPL
 #define GET_VOPTrue16Table_DECL
 #define GET_VOPTrue16Table_IMPL
+#define GET_VOP3PHasNoOpSelHiTable_DECL
+#define GET_VOP3PHasNoOpSelHiTable_IMPL
 #define GET_True16D16Table_IMPL
 #define GET_WMMAOpcode2AddrMappingTable_DECL
 #define GET_WMMAOpcode2AddrMappingTable_IMPL
@@ -826,6 +832,10 @@ unsigned getTemporalHintType(const MCInstrDesc TID) {
 }
 
 bool isTrue16Inst(unsigned Opc) { return isTrue16Opcode(Opc) != nullptr; }
+
+bool hasNoOpSelHi(unsigned Opc) {
+  return getVOP3PHasNoOpSelHiHelper(Opc) != nullptr;
+}
 
 FPType getFPDstSelType(unsigned Opc) {
   const FP4FP8DstByteSelInfo *Info = getFP4FP8DstByteSelHelper(Opc);
@@ -1314,7 +1324,7 @@ unsigned getVGPREncodingGranule(const MCSubtargetInfo &STI,
                       ? *EnableWavefrontSize32
                       : STI.getFeatureBits().test(FeatureWavefrontSize32);
 
-  if (STI.getFeatureBits().test(Feature1024AddressableVGPRs))
+  if (STI.getFeatureBits().test(FeatureVGPRMSBs))
     return IsWave32 ? 16 : 8;
 
   return IsWave32 ? 8 : 4;
@@ -1324,7 +1334,7 @@ unsigned getArchVGPRAllocGranule() { return 4; }
 
 unsigned getAddressableNumArchVGPRs(const MCSubtargetInfo &STI) {
   const auto &Features = STI.getFeatureBits();
-  if (Features.test(Feature1024AddressableVGPRs))
+  if (Features.test(FeatureVGPRMSBs))
     return Features.test(FeatureWavefrontSize32) ? 1024 : 512;
   return 256;
 }
@@ -2950,12 +2960,16 @@ bool isInlinableLiteral32(int32_t Literal, bool HasInv2Pi) {
          (Val == 0x3e22f983 && HasInv2Pi);
 }
 
-bool isInlinableLiteralBF16(int16_t Literal, bool HasInv2Pi) {
+bool isInlinableLiteralBF16(int16_t Literal, bool HasInv2Pi, bool *IsBF16) {
   if (!HasInv2Pi)
     return false;
+  if (IsBF16)
+    *IsBF16 = false;
   if (isInlinableIntLiteral(Literal))
     return true;
   uint16_t Val = static_cast<uint16_t>(Literal);
+  if (IsBF16)
+    *IsBF16 = true;
   return Val == 0x3F00 || // 0.5
          Val == 0xBF00 || // -0.5
          Val == 0x3F80 || // 1.0

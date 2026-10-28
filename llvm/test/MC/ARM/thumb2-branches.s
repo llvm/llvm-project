@@ -127,7 +127,7 @@
 @ CHECK: bgt.w	#1048574                @ encoding: [0x3f,0xf3,0xff,0xaf]
 
 @------------------------------------------------------------------------------
-@ same branch insturction encoding to conditional or unconditional depending
+@ same branch instruction encoding to conditional or unconditional depending
 @ on whether it is in an IT block or not
 @------------------------------------------------------------------------------
 
@@ -268,7 +268,7 @@
 @ CHECK: bgt.w	#1048574                @ encoding: [0x3f,0xf3,0xff,0xaf]
 
 @------------------------------------------------------------------------------
-@ same branch insturction encoding to conditional or unconditional depending
+@ same branch instruction encoding to conditional or unconditional depending
 @ on whether it is in an IT block or not
 @------------------------------------------------------------------------------
 

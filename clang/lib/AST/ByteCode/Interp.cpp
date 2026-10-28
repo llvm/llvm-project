@@ -21,6 +21,7 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/SemaProxy.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -1024,7 +1025,7 @@ bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   }
 
   // Block and string pointers are the only ones we can actually read from.
-  if (!Ptr.isReadablePointerType())
+  if (!Ptr.isStringPointer())
     return diagnoseDummy(S, OpPC, Ptr, AK);
 
   assert(Ptr.isStringPointer());
@@ -1242,7 +1243,7 @@ static bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
 }
 
 static bool CheckCallDepth(InterpState &S, CodePtr OpPC) {
-  if ((S.Current->getDepth() + 1) > S.getLangOpts().ConstexprCallDepth) {
+  if ((S.FrameDepth + 1) > S.getLangOpts().ConstexprCallDepth) {
     S.FFDiag(S.Current->getSource(OpPC),
              diag::note_constexpr_depth_limit_exceeded)
         << S.getLangOpts().ConstexprCallDepth;
@@ -1949,7 +1950,7 @@ bool checkDestructor(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
 
 /// Opcode. Check if the function decl can be called at compile time.
 bool CheckFunctionDecl(InterpState &S, CodePtr OpPC, const FunctionDecl *FD) {
-  if (S.checkingPotentialConstantExpression() && S.Current->getDepth() != 0)
+  if (S.checkingPotentialConstantExpression() && !S.Current->isBottomFrame())
     return false;
 
   const FunctionDecl *Definition = nullptr;
@@ -2055,9 +2056,25 @@ bool PtrPtrCast(InterpState &S, CodePtr OpPC, bool SrcIsVoidPtr,
   return true;
 }
 
-static void compileFunction(InterpState &S, const Function *Func) {
+static void compileFunction(InterpState &S, const Function *Func,
+                            CodePtr OpPC) {
+  const FunctionDecl *Fn = Func->getDecl();
+
+  // [C++26] [temp.inst] p5
+  // [...] the function template specialization is implicitly instantiated
+  // when the specialization is referenced in a context that requires a function
+  // definition to exist or if the existence of the definition affects the
+  // semantics of the program.
+  if (FunctionDefinitionCanBeLazilyInstantiated(Fn) && S.inConstantContext()) {
+    SemaProxy *SProxy = S.getSemaProxy();
+    if (!SProxy)
+      return;
+    SProxy->instantiateFunctionDefinition(S.Current->getLocation(OpPC),
+                                          const_cast<FunctionDecl *>(Fn));
+  }
+
   const FunctionDecl *Definition;
-  if (!Func->getDecl()->hasBody(Definition))
+  if (!Fn->hasBody(Definition))
     return;
   if (!Definition)
     return;
@@ -2090,7 +2107,7 @@ bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,
   }
 
   if (!Func->isFullyCompiled())
-    compileFunction(S, Func);
+    compileFunction(S, Func, OpPC);
 
   if (!CheckCallable(S, OpPC, Func))
     return false;
@@ -2099,11 +2116,11 @@ bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,
     return false;
 
   InterpFrame *NewFrame = S.allocFrame(Func, S.PC, VarArgSize);
-  S.Current = NewFrame;
+  S.enterFrame(NewFrame);
 
   InterpStateCCOverride CCOverride(S, Func->isImmediate());
   bool Success = Interpret(S);
-  S.resetCurrentFrame();
+  S.exitFrame();
   return Success;
 }
 
@@ -2169,7 +2186,7 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
   }
 
   if (!Func->isFullyCompiled())
-    compileFunction(S, Func);
+    compileFunction(S, Func, OpPC);
 
   if (!CheckCallable(S, OpPC, Func))
     return cleanup();
@@ -2184,7 +2201,7 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
     return cleanup();
 
   InterpFrame *NewFrame = S.allocFrame(Func, S.PC, VarArgSize);
-  S.Current = NewFrame;
+  S.enterFrame(NewFrame);
 
   InterpStateCCOverride CCOverride(S, Func->isImmediate());
   bool Success = Interpret(S);
@@ -2192,7 +2209,7 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
   if (InstancePtrTracked)
     S.InitializingPtrs.pop_back();
 
-  S.resetCurrentFrame();
+  S.exitFrame();
   return Success;
 }
 
@@ -2625,7 +2642,7 @@ bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
   // because the Call/CallVirt below might access the instance pointer
   // but the Function's information about them is wrong.
   if (!F->isFullyCompiled())
-    compileFunction(S, F);
+    compileFunction(S, F, OpPC);
 
   if (!CheckCallable(S, OpPC, F))
     return false;
@@ -2981,7 +2998,7 @@ bool CheckPointerToIntegralCast(InterpState &S, CodePtr OpPC,
   S.CCEDiag(E, diag::note_constexpr_invalid_cast_ptrtoint)
       << diag::ConstexprInvalidCastKind::ThisConversionOrReinterpret
       << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
-  if (Ptr.isBlockPointer() && !Ptr.isZero())
+  if ((Ptr.isBlockPointer() && !Ptr.isZero()) || Ptr.isOpaquePointer())
     S.CCEDiag(E, diag::note_constexpr_has_lvalue) << S.Current->getRange(OpPC);
   if (Ptr.isIntegralPointer())
     return true;

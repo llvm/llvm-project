@@ -423,7 +423,7 @@ bool clang::interp::DoBitCast(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                               std::byte *Buff, Bits BitWidth, Bits FullBitWidth,
                               bool &HasIndeterminateBits) {
   assert(Ptr.isLive());
-  assert(Ptr.isBlockPointer());
+  assert(Ptr.isReadablePointerType());
   assert(Buff);
   assert(BitWidth <= FullBitWidth);
   assert(FullBitWidth.isFullByte());
@@ -431,7 +431,7 @@ bool clang::interp::DoBitCast(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 
   BitcastBuffer Buffer(FullBitWidth);
   size_t BuffSize = FullBitWidth.roundToBytes();
-  QualType DataType = Ptr.getFieldDesc()->getDataType(S.getASTContext());
+  QualType DataType = Ptr.getType();
   if (!CheckBitcastType(S, OpPC, DataType, /*IsToType=*/false))
     return false;
 
