@@ -4759,8 +4759,7 @@ void CGDebugInfo::collectVarDeclProps(const VarDecl *VD, llvm::DIFile *&Unit,
 
   // Get context for static locals (that are technically globals) the same way
   // we do for "local" locals -- by using current lexical block.
-  if (VD->isStaticLocal()) {
-    assert(!LexicalBlockStack.empty() && "Region stack mismatch, stack empty!");
+  if (VD->isStaticLocal() && !LexicalBlockStack.empty()) {
     VDContext = LexicalBlockStack.back();
     return;
   }
