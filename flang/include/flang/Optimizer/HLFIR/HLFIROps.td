@@ -1288,7 +1288,9 @@ def hlfir_CopyInOp : hlfir_Op<"copy_in", [MemoryEffects<[MemAlloc]>]> {
     temporary, so that a copy standing in for a variable with an alignment
     requirement satisfies the same requirement. It must be a positive power of
     two. Code generation applies it to the inline buffer allocation; copies
-    made by the runtime do not honor it yet.
+    made by the runtime do not honor it yet, and on targets where an aligned
+    fir.allocmem lowers to an ordinary malloc (Windows, GPU device code) a
+    heap-allocated buffer only gets the allocator's alignment.
   }];
 
   let arguments = (ins Arg<fir_BaseBoxType, "", [MemRead]>:$var,
