@@ -836,11 +836,13 @@ SmallVector<APFloat>
 llvm::ConstantFoldVectorFPBinop(unsigned Opcode, const Register Op1,
                                 const Register Op2,
                                 const MachineRegisterInfo &MRI) {
-  GBuildVector *SrcVec2 = getBuildVectorLikeDef(Op2, MRI);
+  // Unlike the integer fold, don't look through G_BITCAST: it may reinterpret
+  // the element bits in a different FP semantics format (e.g. bf16 to f16).
+  auto *SrcVec2 = getOpcodeDef<GBuildVector>(Op2, MRI);
   if (!SrcVec2)
     return {};
 
-  GBuildVector *SrcVec1 = getBuildVectorLikeDef(Op1, MRI);
+  auto *SrcVec1 = getOpcodeDef<GBuildVector>(Op1, MRI);
   if (!SrcVec1)
     return {};
 
