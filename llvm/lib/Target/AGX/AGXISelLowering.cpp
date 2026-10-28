@@ -1308,17 +1308,40 @@ SDValue AGXTargetLowering::PerformDAGCombine(SDNode *N,
   case AGXISD::LOOP: {
     // On (b ^ 1) for a boolean b: on b == 0, which the branch compares
     // itself (AGXFoldOperands), instead of an xor and a compare with zero.
+    // Likewise on a ^ b, a != b, and on (a ^ b) == 0 or != 0, a == b or
+    // a != b: one compare of the two instead of an xor and a compare.
     SDValue Cond = N->getOperand(1);
-    if (Cond.getOpcode() != ISD::XOR || !isOneConstant(Cond.getOperand(1)) ||
-        !Cond.hasOneUse() ||
-        DCI.DAG.computeKnownBits(Cond.getOperand(0)).countMaxActiveBits() > 1)
-      return SDValue();
+    SelectionDAG &DAG = DCI.DAG;
     SDLoc DL(N);
-    SDValue Zero = DCI.DAG.getSetCC(DL, MVT::i32, Cond.getOperand(0),
-                                    DCI.DAG.getConstant(0, DL, MVT::i32),
-                                    ISD::SETEQ);
-    return DCI.DAG.getNode(N->getOpcode(), DL, MVT::Other, N->getOperand(0),
-                           Zero, N->getOperand(2));
+    auto Branch = [&](SDValue C) {
+      return DAG.getNode(N->getOpcode(), DL, MVT::Other, N->getOperand(0), C,
+                         N->getOperand(2));
+    };
+    auto IsBool = [&](SDValue V) {
+      return DAG.computeKnownBits(V).countMaxActiveBits() <= 1;
+    };
+    if (Cond.getOpcode() == ISD::XOR && Cond.hasOneUse()) {
+      SDValue A = Cond.getOperand(0), B = Cond.getOperand(1);
+      if (isOneConstant(B) && IsBool(A))
+        return Branch(DAG.getSetCC(DL, MVT::i32, A,
+                                   DAG.getConstant(0, DL, MVT::i32),
+                                   ISD::SETEQ));
+      if (!isa<ConstantSDNode>(B) && IsBool(A) && IsBool(B))
+        return Branch(DAG.getSetCC(DL, MVT::i32, A, B, ISD::SETNE));
+      return SDValue();
+    }
+    if (Cond.getOpcode() == ISD::SETCC && Cond.hasOneUse() &&
+        isNullConstant(Cond.getOperand(1)) &&
+        Cond.getOperand(0).getOpcode() == ISD::XOR &&
+        Cond.getOperand(0).hasOneUse()) {
+      ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
+      SDValue X = Cond.getOperand(0);
+      if ((CC == ISD::SETEQ || CC == ISD::SETNE) &&
+          X.getValueType() == MVT::i32)
+        return Branch(DAG.getSetCC(DL, Cond.getValueType(), X.getOperand(0),
+                                   X.getOperand(1), CC));
+    }
+    return SDValue();
   }
   case AGXISD::BFI7:
   case AGXISD::EXTR7:
