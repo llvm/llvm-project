@@ -959,7 +959,32 @@ VPValue *VPSCEVExpander::expandAsPtrAdd(const SCEVNAryExpr *S) {
   return Builder.createNoWrapPtrAdd(Base, Offset, GEPFlags, DL);
 }
 
+#ifndef NDEBUG
+/// Returns true if \p V dominates the insert point of \p Builder.
+static bool dominatesInsertPoint(const VPValue *V, const VPBuilder &Builder) {
+  const VPRecipeBase *R = V->getDefiningRecipe();
+  if (!R)
+    return true;
+  VPDominatorTree VPDT(Builder.getPlan());
+  if (VPRecipeBase *InsertPt = Builder.getRecipeAtInsertPoint())
+    return VPDT.properlyDominates(R, InsertPt);
+  return VPDT.dominates(R->getParent(), Builder.getInsertBlock());
+}
+#endif
+
 VPValue *VPSCEVExpander::expand(const SCEV *S) {
+  PointerIntPair<const SCEV *, 1, bool> Key(S, SafeUDivMode);
+  if (VPValue *V = InsertedExpressions.lookup(Key)) {
+    assert(dominatesInsertPoint(V, Builder) &&
+           "reused expansion must dominate the insert point");
+    return V;
+  }
+  VPValue *V = expandImpl(S);
+  InsertedExpressions[Key] = V;
+  return V;
+}
+
+VPValue *VPSCEVExpander::expandImpl(const SCEV *S) {
   if (VPValue *V = tryToReuseIRValue(S))
     return V;
 

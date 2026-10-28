@@ -426,6 +426,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.copysignl
     libc.src.math.cos
     libc.src.math.cosf
+    libc.src.math.cosh
     libc.src.math.coshf
     libc.src.math.dfmal
     libc.src.math.dsqrtl
@@ -623,6 +624,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.sincos
     libc.src.math.sincosf
     libc.src.math.sinf
+    libc.src.math.sinh
     libc.src.math.sinhf
     libc.src.math.sqrt
     libc.src.math.sqrtf

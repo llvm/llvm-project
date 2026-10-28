@@ -3500,8 +3500,6 @@ class TypePromotionTransaction {
     /// instances of the new value with the original value.
     Value *New;
 
-    using use_iterator = SmallVectorImpl<InstructionAndIdx>::iterator;
-
   public:
     /// Replace all the use of \p Inst by \p New.
     UsesReplacer(Instruction *Inst, Value *New)
@@ -3631,9 +3629,6 @@ public:
 private:
   /// The ordered list of actions made so far.
   SmallVector<std::unique_ptr<TypePromotionAction>, 16> Actions;
-
-  using CommitPt =
-      SmallVectorImpl<std::unique_ptr<TypePromotionAction>>::iterator;
 
   SetOfInstrs &RemovedInsts;
 };
