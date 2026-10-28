@@ -4603,7 +4603,6 @@ void OpOperandAdaptorEmitter::emitDef(
 
 /// Headers declaring the C++ constructs used by every generated op declaration.
 static constexpr StringRef opDeclBaseIncludes[] = {
-    "mlir/IR/Builders.h",
     "mlir/IR/OpDefinition.h",
 };
 
