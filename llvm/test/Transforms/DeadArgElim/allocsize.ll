@@ -1,60 +1,46 @@
 ; RUN: opt < %s -passes=deadargelim -S | FileCheck %s
 ; PR36867
 
-; Deleting an argument ahead of the one allocsize names renumbers it, so the
-; attribute has to follow rather than be dropped.
-
-; CHECK-LABEL: define internal i64 @MagickMallocAligned(i64 %s)
-; CHECK-SAME: #[[ONE:[0-9]+]]
+; CHECK-LABEL: @MagickMallocAligned
+; CHECK-NOT: allocsize
 define internal i64 @MagickMallocAligned(i64 %DEADARG1, i64 %s) allocsize(1) {
         ret i64 %s
 }
 
 define i64 @NeedsArg(i64 %s) {
-; CHECK-LABEL: define i64 @NeedsArg(
-; CHECK: call i64 @MagickMallocAligned(i64 %s)
 	%c = call i64 @MagickMallocAligned(i64 0, i64 %s)
 	ret i64 %c
 }
 
-define i64 @Test2(i64 %s) {
 ; CHECK-LABEL: define i64 @Test2(
-; CHECK: call i64 @MagickMallocAligned(i64 %s) #[[ONE]]
+; CHECK-NEXT: %c = call i64 @MagickMallocAligned(i64 %s){{$}}
+define i64 @Test2(i64 %s) {
 	%c = call i64 @MagickMallocAligned(i64 0, i64 %s) allocsize(1)
 	ret i64 %c
 }
 
-; Both indices of a calloc-like allocsize are renumbered.
-
-; CHECK-LABEL: define internal ptr @two_args(i64 %n, i64 %sz)
-; CHECK-SAME: #[[TWO:[0-9]+]]
-define internal ptr @two_args(i64 %DEADARG2, i64 %n, i64 %sz) allocsize(1, 2) {
-  %p = call ptr @allocate(i64 %n, i64 %sz)
-  ret ptr %p
+; An allocator keeps its allocsize argument and attribute, even though the
+; argument is unused in the body.
+; CHECK-LABEL: define internal ptr @alloc_unused_size(i64 %s) #0
+define internal ptr @alloc_unused_size(i64 %s) allocsize(0) allockind("alloc,uninitialized") "alloc-family"="test" {
+        ret ptr null
 }
 
-define ptr @calls_two_args(i64 %n, i64 %sz) {
-  %p = call ptr @two_args(i64 0, i64 %n, i64 %sz)
-  ret ptr %p
+; Callers must keep passing the size, also to an allocator whose signature
+; cannot change.
+; CHECK-LABEL: define ptr @ext_alloc_unused_size(i64 %s) #0
+define ptr @ext_alloc_unused_size(i64 %s) allocsize(0) allockind("alloc,uninitialized") "alloc-family"="test" {
+        ret ptr null
 }
 
-; The argument allocsize names is otherwise unused, but removing it would cost
-; the attribute, so it is kept alive.
-
-; CHECK-LABEL: define internal ptr @unused_size(i64 %n)
-; CHECK-SAME: #[[THREE:[0-9]+]]
-define internal ptr @unused_size(i64 %DEADARG3, i64 %n) allocsize(1) nounwind {
-  %p = call ptr @allocate(i64 0, i64 0)
-  ret ptr %p
+; CHECK-LABEL: define ptr @CallsAllocators(
+; CHECK: call ptr @alloc_unused_size(i64 8) #1
+; CHECK: call ptr @ext_alloc_unused_size(i64 16) #1
+define ptr @CallsAllocators() {
+	%p = call ptr @alloc_unused_size(i64 8) allocsize(0)
+	%q = call ptr @ext_alloc_unused_size(i64 16) allocsize(0)
+	ret ptr %p
 }
 
-define ptr @calls_unused_size(i64 %n) {
-  %p = call ptr @unused_size(i64 0, i64 %n)
-  ret ptr %p
-}
-
-declare ptr @allocate(i64, i64)
-
-; CHECK-DAG: attributes #[[ONE]] = { allocsize(0) }
-; CHECK-DAG: attributes #[[TWO]] = { allocsize(0,1) }
-; CHECK-DAG: attributes #[[THREE]] = { nounwind allocsize(0) }
+; CHECK: attributes #0 = { allockind("alloc,uninitialized") allocsize(0) "alloc-family"="test" }
+; CHECK: attributes #1 = { allocsize(0) }
