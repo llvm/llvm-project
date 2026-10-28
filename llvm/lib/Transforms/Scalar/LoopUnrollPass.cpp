@@ -195,7 +195,6 @@ struct UnrolledInstState {
 
 /// Hashing and equality testing for a set of the instruction states.
 struct UnrolledInstStateKeyInfo {
-  using PtrInfo = DenseMapInfo<Instruction *>;
   using PairInfo = DenseMapInfo<std::pair<Instruction *, int>>;
 
   static inline unsigned getHashValue(const UnrolledInstState &S) {
