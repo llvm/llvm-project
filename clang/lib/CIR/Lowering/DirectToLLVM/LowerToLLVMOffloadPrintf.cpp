@@ -675,7 +675,7 @@ void AMDGPUPrintfLowering::callBufferedPrintfArgPush(
 
 mlir::Value AMDGPUPrintfLowering::emitAMDGPUPrintfCall(mlir::ValueRange args,
                                                        bool isBuffered) {
-  auto numOps = args.size();
+  size_t numOps = args.size();
   assert(numOps >= 1);
 
   mlir::Value fmt = args[0];
