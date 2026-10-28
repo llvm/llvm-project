@@ -142,7 +142,7 @@ define agx_kernel void @threadgroup(ptr addrspace(1) %out) {
 ; CHECK-NEXT:    threadgroup_store i32, x, r1, r2l, 0
 ; CHECK-NEXT:    threadgroup_barrier
 ; CHECK-NEXT:    threadgroup_load i32, x, r2, r3l, 0
-; CHECK-NEXT:    device_store 0, i32, x, r2, u0_u1, r1, signed
+; CHECK-NEXT:    device_store 0, i32, x, r2, u0_u1, r1, unsigned
 ; CHECK-NEXT:    stop
 ; CHECK-NEXT:    trap
 ; CHECK-NEXT:    trap

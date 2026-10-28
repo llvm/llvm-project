@@ -36,6 +36,7 @@ add_llvm_target(AGXCodeGen
   AGXFrameLowering.cpp
   AGXHoistGuardedLoads.cpp
   AGXNarrowInductions.cpp
+  AGXSpecialRegisterRanges.cpp
   AGXVectorAccesses.cpp
   AGXISelDAGToDAG.cpp
   AGXISelLowering.cpp

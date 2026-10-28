@@ -66,6 +66,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAGXTarget() {
   initializeAGXThreadgroupAddressesPass(PR);
   initializeAGXHoistGuardedLoadsPass(PR);
   initializeAGXNarrowInductionsPass(PR);
+  initializeAGXSpecialRegisterRangesPassPass(PR);
   initializeAGXVectorAccessesPass(PR);
   initializeAGXLowerGenericAddressesPass(PR);
   initializeAGXDAGToDAGISelLegacyPass(PR);
@@ -310,6 +311,9 @@ bool AGXPassConfig::addPreISel() {
   // 64-bit address arithmetic.
   if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createAGXNarrowInductionsPass());
+  // After loop strength reduction, which would form 64-bit offsets from
+  // the bounded indices (EXPERIMENTS.md L14-E1).
+  addPass(createAGXSpecialRegisterRangesPass());
   // Bring the CFG into the structured form AGXAnnotateControlFlow expects.
   addPass(createLowerSwitchPass());
   addPass(createFixIrreduciblePass());
