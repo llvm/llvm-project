@@ -11,14 +11,21 @@
 ; ((wi ^ x) & x) | mul, where x = (mul ^ C) & mul
 ; x appears in both the XOR and the AND feeding the top OR.
 define amdgpu_ps float @bitop3_xor_and_or(i32 %wi, i32 %mul) {
-; GCN-LABEL: bitop3_xor_and_or:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    s_mov_b32 s0, 0xaaaaaaaa
-; GCN-NEXT:    v_xor_b32_e32 v2, 0xaaaaaaaa, v1
-; GCN-NEXT:    v_bitop3_b32 v3, v1, v1, s0 bitop3:0x48
-; GCN-NEXT:    v_bitop3_b32 v0, v0, v2, v1 bitop3:0x78
-; GCN-NEXT:    v_and_or_b32 v0, v0, v3, v1
-; GCN-NEXT:    ; return to shader part epilog
+; SDAG-LABEL: bitop3_xor_and_or:
+; SDAG:       ; %bb.0:
+; SDAG-NEXT:    v_bitop3_b32 v0, v1, v0, v1 bitop3:0x30
+; SDAG-NEXT:    s_mov_b32 s0, 0x55555555
+; SDAG-NEXT:    v_and_or_b32 v0, v0, s0, v1
+; SDAG-NEXT:    ; return to shader part epilog
+;
+; GISEL-LABEL: bitop3_xor_and_or:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_mov_b32 s0, 0xaaaaaaaa
+; GISEL-NEXT:    v_xor_b32_e32 v2, 0xaaaaaaaa, v1
+; GISEL-NEXT:    v_bitop3_b32 v3, v1, v1, s0 bitop3:0x48
+; GISEL-NEXT:    v_bitop3_b32 v0, v0, v2, v1 bitop3:0x78
+; GISEL-NEXT:    v_and_or_b32 v0, v0, v3, v1
+; GISEL-NEXT:    ; return to shader part epilog
 ;
 ; O0-LABEL: bitop3_xor_and_or:
 ; O0:       ; %bb.0:
@@ -248,10 +255,8 @@ define amdgpu_ps float @bitop3_fshl_or_xor(i32 %v) {
 define amdgpu_ps float @bitop3_and_xor_constant(i32 %wi, i32 %salt) {
 ; SDAG-LABEL: bitop3_and_xor_constant:
 ; SDAG:       ; %bb.0:
-; SDAG-NEXT:    s_mov_b32 s0, 0x79ad5691
-; SDAG-NEXT:    v_bitop3_b32 v2, v0, v1, v0 bitop3:0xc
-; SDAG-NEXT:    v_bitop3_b32 v0, v0, s0, v1 bitop3:0xc6
-; SDAG-NEXT:    v_and_b32_e32 v0, v0, v2
+; SDAG-NEXT:    s_mov_b32 s0, 0x8652a96e
+; SDAG-NEXT:    v_bitop3_b32 v0, v0, s0, v1 bitop3:8
 ; SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GISEL-LABEL: bitop3_and_xor_constant:

@@ -8285,6 +8285,15 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
   if (SDValue Combined = visitANDLike(N0, N1, N))
     return Combined;
 
+  // Fold (X ^ C) & X --> X & ~C.
+  // The constant inversion makes the XOR unnecessary.
+  SDValue SharedX;
+  APInt C;
+  if (VT.isScalarInteger() &&
+      sd_match(N, m_And(m_OneUse(m_Xor(m_Value(SharedX), m_ConstInt(C))),
+                        m_Deferred(SharedX))))
+    return DAG.getNode(ISD::AND, DL, VT, SharedX, DAG.getConstant(~C, DL, VT));
+
   // Simplify: (and (op x...), (op y...))  -> (op (and x, y))
   if (N0.getOpcode() == N1.getOpcode())
     if (SDValue V = hoistLogicOpWithSameOpcodeHands(N))
