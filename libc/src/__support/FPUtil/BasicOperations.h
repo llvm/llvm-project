@@ -281,6 +281,16 @@ LIBC_INLINE constexpr int issignaling_impl(const T &x) {
 }
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
+LIBC_INLINE constexpr int iscanonical_impl(const T &x) {
+  if constexpr (get_fp_type<T>() == FPType::X86_Binary80) {
+    FPBits<T> sx(x);
+    // The explicit integer bit is set exactly when the exponent is nonzero.
+    return sx.get_implicit_bit() == (sx.get_biased_exponent() != 0);
+  }
+  return 1;
+}
+
+template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
 LIBC_INLINE constexpr int canonicalize(T &cx, const T &x) {
   FPBits<T> sx(x);
   if constexpr (get_fp_type<T>() == FPType::X86_Binary80) {
