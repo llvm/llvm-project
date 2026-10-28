@@ -252,7 +252,7 @@ static bool enumeratePointerFields(const Pointer &P, const Context &Ctx,
 //
 // NOTE: This is a version of checkBitCastConstexprEligibilityType() in
 // ExprConstant.cpp.
-static bool CheckBitcastType(InterpState &S, CodePtr OpPC, QualType T,
+static bool checkBitcastType(InterpState &S, CodePtr OpPC, QualType T,
                              bool IsToType) {
   enum {
     E_Union = 0,
@@ -297,20 +297,20 @@ static bool CheckBitcastType(InterpState &S, CodePtr OpPC, QualType T,
   if (const RecordDecl *RD = T->getAsRecordDecl()) {
     if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
       for (const CXXBaseSpecifier &BS : CXXRD->bases()) {
-        if (!CheckBitcastType(S, OpPC, BS.getType(), IsToType))
+        if (!checkBitcastType(S, OpPC, BS.getType(), IsToType))
           return note(C_Base, BS.getType(), BS.getBeginLoc());
       }
     }
     for (const FieldDecl *FD : RD->fields()) {
       if (FD->getType()->isReferenceType())
         return diag(E_Reference);
-      if (!CheckBitcastType(S, OpPC, FD->getType(), IsToType))
+      if (!checkBitcastType(S, OpPC, FD->getType(), IsToType))
         return note(C_Member, FD->getType(), FD->getSourceRange());
     }
   }
 
   if (T->isArrayType() &&
-      !CheckBitcastType(S, OpPC, S.getASTContext().getBaseElementType(T),
+      !checkBitcastType(S, OpPC, S.getASTContext().getBaseElementType(T),
                         IsToType))
     return false;
 
@@ -326,8 +326,8 @@ static bool CheckBitcastType(InterpState &S, CodePtr OpPC, QualType T,
       // so its layout is unspecified. For now, we'll simply treat these cases
       // as unsupported (this should only be possible with OpenCL bool vectors
       // whose element count isn't a multiple of the byte size).
-      const Expr *E = S.Current->getExpr(OpPC);
-      S.FFDiag(E, diag::note_constexpr_bit_cast_invalid_vector)
+      S.FFDiag(S.Current->getSource(OpPC),
+               diag::note_constexpr_bit_cast_invalid_vector)
           << QualType(VT, 0) << EltSize << NElts << ASTCtx.getCharWidth();
       return false;
     }
@@ -432,7 +432,7 @@ bool clang::interp::DoBitCast(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   BitcastBuffer Buffer(FullBitWidth);
   size_t BuffSize = FullBitWidth.roundToBytes();
   QualType DataType = Ptr.getType();
-  if (!CheckBitcastType(S, OpPC, DataType, /*IsToType=*/false))
+  if (!checkBitcastType(S, OpPC, DataType, /*IsToType=*/false))
     return false;
 
   bool Success = readPointerToBuffer(S.getContext(), Ptr, Buffer,
@@ -470,9 +470,9 @@ bool clang::interp::DoBitCastPtr(InterpState &S, CodePtr OpPC,
   QualType FromType = FromPtr.getFieldDesc()->getDataType(S.getASTContext());
   QualType ToType = ToPtr.getFieldDesc()->getDataType(S.getASTContext());
 
-  if (!CheckBitcastType(S, OpPC, ToType, /*IsToType=*/true))
+  if (!checkBitcastType(S, OpPC, ToType, /*IsToType=*/true))
     return false;
-  if (!CheckBitcastType(S, OpPC, FromType, /*IsToType=*/false))
+  if (!checkBitcastType(S, OpPC, FromType, /*IsToType=*/false))
     return false;
 
   const ASTContext &ASTCtx = S.getASTContext();
