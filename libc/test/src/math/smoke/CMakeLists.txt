@@ -5378,6 +5378,7 @@ add_fp_unittest(
     libc.src.math.atanbf16
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
+    libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.bfloat16
 )
 
