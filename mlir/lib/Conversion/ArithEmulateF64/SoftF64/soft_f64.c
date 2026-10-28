@@ -161,13 +161,22 @@ LOCAL u64 unpack(u64 x, i32 *exp) {
   return (den ? frac : frac | IMPLICIT) << sh;
 }
 
+// The significand (with its implicit bit) and the biased exponent of a
+// finite value, a denormal as exponent 1 without the implicit bit (not
+// normalized: round_pack normalizes the sum).
+LOCAL u64 unpack_raw(u64 x, i32 *exp) {
+  i32 e = (x >> 52) & 0x7ff;
+  *exp = e ? e : 1;
+  return (x & FRAC) | (e ? IMPLICIT : 0);
+}
+
 LOCAL u64 add_r(u64 a, u64 b, int rm) {
   u64 aa = a & ~SIGN, ba = b & ~SIGN;
   // The larger magnitude first.
   int swap = ba > aa;
   u64 x = swap ? b : a, y = swap ? a : b;
   i32 xe, ye;
-  u64 xs = unpack(x, &xe), ys = unpack(y, &ye);
+  u64 xs = unpack_raw(x, &xe), ys = unpack_raw(y, &ye);
   // Leading one at bit 61 (10 guard bits, one spare bit for the carry).
   xs <<= 9;
   ys = shr_sticky64(ys << 9, xe - ye);
