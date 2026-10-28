@@ -36,15 +36,19 @@ public:
 
     y = T(1.0);
     x = inf;
-    EXPECT_FP_EQ(nan, func(x, y, &quotient));
+    EXPECT_FP_EQ_WITH_EXCEPTION(nan, func(x, y, &quotient), FE_INVALID);
+    EXPECT_MATH_ERRNO(EDOM);
     x = neg_inf;
-    EXPECT_FP_EQ(nan, func(x, y, &quotient));
+    EXPECT_FP_EQ_WITH_EXCEPTION(nan, func(x, y, &quotient), FE_INVALID);
+    EXPECT_MATH_ERRNO(EDOM);
 
     x = T(1.0);
     y = zero;
-    EXPECT_FP_EQ(nan, func(x, y, &quotient));
+    EXPECT_FP_EQ_WITH_EXCEPTION(nan, func(x, y, &quotient), FE_INVALID);
+    EXPECT_MATH_ERRNO(EDOM);
     y = neg_zero;
-    EXPECT_FP_EQ(nan, func(x, y, &quotient));
+    EXPECT_FP_EQ_WITH_EXCEPTION(nan, func(x, y, &quotient), FE_INVALID);
+    EXPECT_MATH_ERRNO(EDOM);
 
     y = nan;
     x = T(1.0);
@@ -57,6 +61,27 @@ public:
     x = nan;
     y = nan;
     EXPECT_FP_EQ(nan, func(x, y, &quotient));
+
+    const T snan = FPBits::signaling_nan().get_val();
+    const T finite = T(1.0);
+    const T others[] = {finite, zero, inf, nan, snan};
+    T result = zero;
+    for (T other : others) {
+      EXPECT_FP_EQ_WITH_EXCEPTION(nan, result = func(snan, other, &quotient),
+                                  FE_INVALID);
+      EXPECT_MATH_ERRNO(0);
+      EXPECT_FALSE(FPBits(result).is_signaling_nan());
+      EXPECT_FP_EQ_WITH_EXCEPTION(nan, result = func(other, snan, &quotient),
+                                  FE_INVALID);
+      EXPECT_MATH_ERRNO(0);
+      EXPECT_FALSE(FPBits(result).is_signaling_nan());
+    }
+
+    // A quiet NaN takes precedence over an otherwise invalid domain.
+    EXPECT_FP_EQ_WITH_EXCEPTION(nan, func(nan, zero, &quotient), 0);
+    EXPECT_MATH_ERRNO(0);
+    EXPECT_FP_EQ_WITH_EXCEPTION(nan, func(inf, nan, &quotient), 0);
+    EXPECT_MATH_ERRNO(0);
 
     x = zero;
     y = T(1.0);
