@@ -108,6 +108,24 @@ protected:
     return id;
   }
 
+  uint32_t addPointerType(spirv::StorageClass storageClass,
+                          uint32_t pointeeType) {
+    auto id = nextID++;
+    addInstruction(spirv::Opcode::OpTypePointer,
+                   {id, static_cast<uint32_t>(storageClass), pointeeType});
+    return id;
+  }
+
+  uint32_t addGlobalVariable(uint32_t pointerType,
+                             spirv::StorageClass storageClass,
+                             uint32_t initializer) {
+    auto id = nextID++;
+    addInstruction(
+        spirv::Opcode::OpVariable,
+        {pointerType, id, static_cast<uint32_t>(storageClass), initializer});
+    return id;
+  }
+
   uint32_t addFunctionType(uint32_t retType, ArrayRef<uint32_t> paramTypes) {
     auto id = nextID++;
     SmallVector<uint32_t, 4> operands;
@@ -536,4 +554,53 @@ TEST_F(DeserializationTest, FunctionMalformedLabelFailure) {
 
   ASSERT_FALSE(deserialize());
   expectDiagnostic("OpLabel should only have result <id>");
+}
+
+//===----------------------------------------------------------------------===//
+// Global variables
+//===----------------------------------------------------------------------===//
+
+// The serializer never emits OpConstantNull for scalars, so this cannot be
+// covered by a roundtrip test.
+TEST_F(DeserializationTest, GlobalVariableNullConstantInitializerSuccess) {
+  addHeader();
+  auto int32Type = addIntType(32);
+  auto ptrType = addPointerType(spirv::StorageClass::Private, int32Type);
+  auto nullConstant = nextID++;
+  addInstruction(spirv::Opcode::OpConstantNull, {int32Type, nullConstant});
+  addGlobalVariable(ptrType, spirv::StorageClass::Private, nullConstant);
+
+  OwningOpRef<spirv::ModuleOp> module = deserialize();
+  ASSERT_TRUE(module);
+  spirv::GlobalVariableOp varOp;
+  module->walk([&](spirv::GlobalVariableOp op) { varOp = op; });
+  ASSERT_TRUE(varOp);
+  auto initializer = dyn_cast_or_null<IntegerAttr>(varOp.getInitializerAttr());
+  ASSERT_TRUE(initializer);
+  EXPECT_TRUE(initializer.getValue().isZero());
+}
+
+TEST_F(DeserializationTest, GlobalVariableInitializerTypeMismatchFailure) {
+  addHeader();
+  auto int32Type = addIntType(32);
+  auto boolType = addBoolType();
+  auto ptrType = addPointerType(spirv::StorageClass::Private, boolType);
+  auto constant = nextID++;
+  addInstruction(spirv::Opcode::OpConstant, {int32Type, constant, 42});
+  addGlobalVariable(ptrType, spirv::StorageClass::Private, constant);
+
+  ASSERT_FALSE(deserialize());
+  expectDiagnostic("initializer <id> 4 of type 'si32' does not match the "
+                   "pointee type of '!spirv.ptr<i1, Private>'");
+}
+
+TEST_F(DeserializationTest, GlobalVariableUnknownInitializerFailure) {
+  addHeader();
+  auto int32Type = addIntType(32);
+  auto ptrType = addPointerType(spirv::StorageClass::Private, int32Type);
+  addGlobalVariable(ptrType, spirv::StorageClass::Private,
+                    /*initializer=*/42);
+
+  ASSERT_FALSE(deserialize());
+  expectDiagnostic("unknown <id> 42 used as initializer");
 }

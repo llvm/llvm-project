@@ -484,15 +484,16 @@ def SPIRV_GlobalVariableOp
 
     Initializer is optional.  If Initializer is present, it will be
     the initial value of the variable’s memory content. Initializer
-    must be an symbol defined from a constant instruction or other
-    `spirv.GlobalVariable` operation in module scope. Initializer must
-    have the same type as the type of the defined symbol.
+    must be either a symbol defined by a `spirv.SpecConstant` or
+    `spirv.SpecConstantComposite` operation in module scope, or the
+    value of a normal constant. Initializer must have the same type as
+    the type pointed to by the variable type.
 
     <!-- End of AutoGen section -->
 
     ```
     variable-op ::= `spirv.GlobalVariable` spirv-type symbol-ref-id
-                    (`initializer(` symbol-ref-id `)`)?
+                    (`initializer(` (symbol-ref-id | attribute-value) `)`)?
                     (`bind(` integer-literal, integer-literal `)`)?
                     (`built_in(` string-literal `)`)?
                     attribute-dict?
@@ -502,20 +503,29 @@ def SPIRV_GlobalVariableOp
     descriptor set and binding number. `built_in` specifies SPIR-V
     BuiltIn decoration associated with the op.
 
+    A normal constant (`OpConstant`, `OpConstantComposite`, `OpConstantNull`,
+    etc.) has no symbol in the dialect, so it is given as an attribute that
+    follows the rules of the value of `spirv.Constant`, with the type pointed
+    to by the variable type as the constant type.
+
     #### Example:
 
     ```mlir
     spirv.GlobalVariable @var0 : !spirv.ptr<f32, Input>
-    spirv.GlobalVariable @var1 initializer(@var0) : !spirv.ptr<f32, Output>
+    spirv.SpecConstant @init = 0.0 : f32
+    spirv.GlobalVariable @var1 initializer(@init) : !spirv.ptr<f32, Private>
     spirv.GlobalVariable @var2 bind(1, 2) : !spirv.ptr<f32, Uniform>
     spirv.GlobalVariable @var3 built_in("GlobalInvocationId") : !spirv.ptr<vector<3xi32>, Input>
+    spirv.GlobalVariable @var4 initializer(42 : i32) : !spirv.ptr<i32, Private>
+    spirv.GlobalVariable @var5 initializer(dense<[1.0, 2.0]> : vector<2xf32>) : !spirv.ptr<vector<2xf32>, Private>
+    spirv.GlobalVariable @var6 initializer([1 : i32, 2 : i32]) : !spirv.ptr<!spirv.array<2 x i32>, Private>
     ```
   }];
 
   let arguments = (ins
     TypeAttr:$type,
     StrAttr:$sym_name,
-    OptionalAttr<FlatSymbolRefAttr>:$initializer,
+    OptionalAttr<AnyAttr>:$initializer,
     OptionalAttr<I32Attr>:$location,
     OptionalAttr<I32Attr>:$binding,
     OptionalAttr<I32Attr>:$descriptor_set,
@@ -529,7 +539,7 @@ def SPIRV_GlobalVariableOp
   let builders = [
     OpBuilder<(ins "TypeAttr":$type,
                    "StringAttr":$sym_name,
-                   CArg<"FlatSymbolRefAttr", "nullptr">:$initializer),
+                   CArg<"Attribute", "nullptr">:$initializer),
     [{
       $_state.addAttribute("type", type);
       $_state.addAttribute(getSymNameAttrName($_state.name), sym_name);
@@ -547,7 +557,7 @@ def SPIRV_GlobalVariableOp
       "spirv::BuiltIn":$builtin)>,
     OpBuilder<(ins "Type":$type,
                    "StringRef":$sym_name,
-                    CArg<"FlatSymbolRefAttr", "{}">:$initializer),
+                    CArg<"Attribute", "{}">:$initializer),
     [{
       $_state.addAttribute("type", TypeAttr::get(type));
       $_state.addAttribute(getSymNameAttrName($_state.name), $_builder.getStringAttr(sym_name));

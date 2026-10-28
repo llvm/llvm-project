@@ -1068,8 +1068,10 @@ spirv::Deserializer::processGlobalVariable(ArrayRef<uint32_t> operands) {
   }
   wordIndex++;
 
-  // Initializer.
-  FlatSymbolRefAttr initializer = nullptr;
+  // Initializer. It is either a symbol, for a global variable or a
+  // specialization constant, or the value of a normal constant, which has no
+  // symbol.
+  Attribute initializer = nullptr;
 
   if (wordIndex < operands.size()) {
     Operation *op = nullptr;
@@ -1080,11 +1082,23 @@ spirv::Deserializer::processGlobalVariable(ArrayRef<uint32_t> operands) {
       op = initOp;
     else if (auto initOp = getSpecConstantComposite(operands[wordIndex]))
       op = initOp;
-    else
-      return emitError(unknownLoc, "unknown <id> ")
-             << operands[wordIndex] << "used as initializer";
 
-    initializer = SymbolRefAttr::get(op);
+    if (op) {
+      initializer = SymbolRefAttr::get(op);
+    } else if (std::optional<std::pair<Attribute, Type>> constInfo =
+                   getConstant(operands[wordIndex])) {
+      // SPIR-V spec: "Initializer must have the same type as the type pointed
+      // to by Result Type."
+      if (constInfo->second != ptrType.getPointeeType()) {
+        return emitError(unknownLoc, "initializer <id> ")
+               << operands[wordIndex] << " of type " << constInfo->second
+               << " does not match the pointee type of " << type;
+      }
+      initializer = constInfo->first;
+    } else {
+      return emitError(unknownLoc, "unknown <id> ")
+             << operands[wordIndex] << " used as initializer";
+    }
     wordIndex++;
   }
   if (wordIndex != operands.size()) {
