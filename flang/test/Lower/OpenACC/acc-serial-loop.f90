@@ -41,15 +41,15 @@ subroutine acc_serial_loop
   integer :: vectorNum = 128
   integer, parameter :: tileSize = 2
 
-! CHECK: %[[A:.*]] = fir.alloca !fir.array<10xf32> {{{.*}}uniq_name = "{{.*}}Ea"}
+! CHECK: %[[A:.*]] = fir.alloca !fir.array<10xf32> <{{{.*}}uniq_name = "{{.*}}Ea"}>
 ! CHECK: %[[DECLA:.*]]:2 = hlfir.declare %[[A]]
-! CHECK: %[[B:.*]] = fir.alloca !fir.array<10xf32> {{{.*}}uniq_name = "{{.*}}Eb"}
+! CHECK: %[[B:.*]] = fir.alloca !fir.array<10xf32> <{{{.*}}uniq_name = "{{.*}}Eb"}>
 ! CHECK: %[[DECLB:.*]]:2 = hlfir.declare %[[B]]
-! CHECK: %[[C:.*]] = fir.alloca !fir.array<10xf32> {{{.*}}uniq_name = "{{.*}}Ec"}
+! CHECK: %[[C:.*]] = fir.alloca !fir.array<10xf32> <{{{.*}}uniq_name = "{{.*}}Ec"}>
 ! CHECK: %[[DECLC:.*]]:2 = hlfir.declare %[[C]]
-! CHECK: %[[F:.*]] = fir.alloca !fir.box<!fir.ptr<f32>> {bindc_name = "f", uniq_name = "{{.*}}Ef"}
+! CHECK: %[[F:.*]] = fir.alloca !fir.box<!fir.ptr<f32>> <{bindc_name = "f", uniq_name = "{{.*}}Ef"}>
 ! CHECK: %[[DECLF:.*]]:2 = hlfir.declare %[[F]]
-! CHECK: %[[G:.*]] = fir.alloca !fir.box<!fir.ptr<f32>> {bindc_name = "g", uniq_name = "{{.*}}Eg"}
+! CHECK: %[[G:.*]] = fir.alloca !fir.box<!fir.ptr<f32>> <{bindc_name = "g", uniq_name = "{{.*}}Eg"}>
 ! CHECK: %[[DECLG:.*]]:2 = hlfir.declare %[[G]]
 ! CHECK: %[[IFCONDITION:.*]] = fir.address_of(@{{.*}}ifcondition) : !fir.ref<!fir.logical<4>>
 ! CHECK: %[[DECLIFCONDITION:.*]]:2 = hlfir.declare %[[IFCONDITION]]

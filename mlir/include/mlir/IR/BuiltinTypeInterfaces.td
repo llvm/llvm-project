@@ -246,11 +246,12 @@ def ShapedTypeInterface : TypeInterface<"ShapedType"> {
     This interface provides a common API for interacting with multi-dimensional
     container types. These types contain a shape and an element type.
 
-    A shape is a list of sizes corresponding to the dimensions of the container.
-    If the number of dimensions in the shape is unknown, the shape is "unranked".
-    If the number of dimensions is known, the shape "ranked". The sizes of the
-    dimensions of the shape must be positive, or kDynamic (in which case the
-    size of the dimension is dynamic, or not statically known).
+    A shape is a list of sizes corresponding to the dimensions of the
+    container. If the number of dimensions in the shape is unknown, the shape is
+    "unranked". If the number of dimensions is known, the shape is "ranked". The
+    size of each dimension must be positive and not larger than "signed int64
+    max", or `kDynamic` (in which case the size of the dimension is dynamic, or
+    not statically known).
   }];
   let methods = [
     InterfaceMethod<[{

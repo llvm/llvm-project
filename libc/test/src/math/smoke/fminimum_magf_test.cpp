@@ -10,4 +10,4 @@
 
 #include "src/math/fminimum_magf.h"
 
-LIST_FMINIMUM_MAG_TESTS(float, LIBC_NAMESPACE::fminimum_magf)
+LIST_FMINIMUM_MAG_TESTS(FminimumMagf, float, LIBC_NAMESPACE::fminimum_magf)

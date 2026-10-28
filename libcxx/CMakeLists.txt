@@ -320,11 +320,15 @@ option(LIBCXX_HAS_EXTERNAL_THREAD_API
    This option may only be set to ON when LIBCXX_ENABLE_THREADS=ON." OFF)
 option(LIBCXX_HAS_C11_THREAD_API "Ignore auto-detection and force use of C11 thread API" OFF)
 
-if (LIBCXX_ENABLE_THREADS)
-  set(LIBCXX_PSTL_BACKEND "std_thread" CACHE STRING "Which PSTL backend to use")
+if (APPLE)
+  set(LIBCXX_PSTL_BACKEND_DEFAULT_VALUE "libdispatch")
+elseif(LIBCXX_ENABLE_THREADS)
+  set(LIBCXX_PSTL_BACKEND_DEFAULT_VALUE "std_thread")
 else()
-  set(LIBCXX_PSTL_BACKEND "serial" CACHE STRING "Which PSTL backend to use")
+  set(LIBCXX_PSTL_BACKEND_DEFAULT_VALUE "serial")
 endif()
+
+set(LIBCXX_PSTL_BACKEND "${LIBCXX_PSTL_BACKEND_DEFAULT_VALUE}" CACHE STRING "Which PSTL backend to use")
 
 # Misc options ----------------------------------------------------------------
 # FIXME: Turn -pedantic back ON. It is currently off because it warns

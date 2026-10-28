@@ -507,6 +507,25 @@ class MockGDBServerResponder:
         pass
 
 
+class MockGDBServerXMLResponder(MockGDBServerResponder):
+    def __init__(self, docs, register_data):
+        super().__init__()
+        self.docs = docs
+        self.register_data = register_data
+
+    def qXferRead(self, obj, annex, offset, length):
+        try:
+            return self.docs[annex], False
+        except KeyError:
+            return None, False
+
+    def readRegister(self, regnum):
+        return "E01"
+
+    def readRegisters(self):
+        return self.register_data
+
+
 class ServerChannel(ABC):
     """
     A wrapper class for TCP or pty-based server.

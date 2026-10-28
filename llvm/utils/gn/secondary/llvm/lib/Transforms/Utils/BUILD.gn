@@ -97,7 +97,6 @@ static_library("Utils") {
     "SizeOpts.cpp",
     "SplitModule.cpp",
     "SplitModuleByCategory.cpp",
-    "SplitModuleCommon.cpp",
     "StripConvergenceIntrinsics.cpp",
     "StripGCRelocates.cpp",
     "StripNonLineTableDebugInfo.cpp",
